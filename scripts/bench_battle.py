@@ -8,10 +8,12 @@
 
 1. **1A 示範戰鬥（簡易 AI）**：地圖 test_heights_8x8，與 Phase 1A 基準相同的設定，可直接比較。
 2. **1A 10 輪戰鬥（簡易 AI）**：同一陣容但所有單位 HP ×5、``max_rounds=10``。
-3. **效用 AI**：test_heights_8x8 與三張示範地圖（與 ``trpg battle --map <id> --seed 42`` 相同）。
+3. **效用 AI**：test_heights_8x8 與四張示範地圖（與 ``trpg battle --map <id> --seed 42`` 相同）。
 
-每種情境回報：輪數、動作數、事件數、整場時間（含簡易 AI 決策）、重播時間（只有
-``begin_battle`` ＋ 逐一 ``resolve``）與每個 ``resolve`` 的平均時間。取 ``--repeat`` 次中的中位數。
+每種情境回報：輪數、動作數、事件數、整場時間（含 AI 決策）、重播時間（只有
+``begin_battle`` ＋ 逐一 ``resolve``）、每個 ``resolve`` 的平均時間，以及每個動作（含 AI 決策與
+``resolve``）的平均與中位數。整場與重播取 ``--repeat`` 次中的中位數；每個動作的中位數取所有重複
+的所有動作合併後的中位數（Phase 1C 決定 #1 的目標：效用 AI 在示範地圖上 ≤ 5 ms）。
 """
 
 from __future__ import annotations
@@ -34,7 +36,7 @@ ENEMIES = ("bandit", "bandit_archer", "bandit_boss")
 MAP_ID = "test_heights_8x8"
 SEED = 42
 HP_SCALE = 5
-DEMO_MAPS = ("bridge_chasm", "oil_depot", "swamp")
+DEMO_MAPS = ("bridge_chasm", "oil_depot", "swamp", "ruined_fort")
 
 
 def _timed[T](fn: Callable[[], T], repeat: int) -> tuple[T, float]:
@@ -61,8 +63,30 @@ def _scale_hp(setup: BattleSetup, factor: int) -> BattleSetup:
     return setup.model_copy(update={"units": units, "max_rounds": 10})
 
 
+def _timed_run(setup: BattleSetup, policy: Policy, repeat: int) -> tuple[BattleRun, float, float]:
+    """跑 ``repeat`` 次：回傳（結果、整場時間中位數、每個動作時間的中位數）。"""
+    totals: list[float] = []
+    per_action: list[float] = []
+    run: BattleRun | None = None
+    for _ in range(repeat):
+        last = [0.0]
+
+        def on_step(step: object, result: object, last: list[float] = last) -> None:
+            now = time.perf_counter()
+            if step is not None:
+                per_action.append(now - last[0])
+            last[0] = now
+
+        start = time.perf_counter()
+        last[0] = start
+        run = run_battle(setup, SEED, policy, on_step=on_step)
+        totals.append(time.perf_counter() - start)
+    assert run is not None
+    return run, statistics.median(totals), statistics.median(per_action)
+
+
 def _report(title: str, setup: BattleSetup, repeat: int, policy: Policy = choose_action) -> None:
-    run, full = _timed(lambda: run_battle(setup, SEED, policy), repeat)
+    run, full, median_action = _timed_run(setup, policy, repeat)
     replayed, resolve_only = _timed(lambda: replay(setup, SEED, run.actions), repeat)
     _check_same(run, replayed)
     n = len(run.actions)
@@ -74,6 +98,7 @@ def _report(title: str, setup: BattleSetup, repeat: int, policy: Policy = choose
     print(f"  重播（begin_battle ＋ {n} 次 resolve）：{resolve_only * 1000:.1f} ms")
     print(f"  每個 resolve 平均：{resolve_only / n * 1e6:.0f} µs")
     print(f"  每個動作平均（含 AI）：{full / n * 1e6:.0f} µs")
+    print(f"  每個動作中位數（含 AI）：{median_action * 1e6:.0f} µs")
 
 
 def _check_same(a: BattleRun, b: BattleRun) -> None:
@@ -97,6 +122,8 @@ def main(argv: list[str] | None = None) -> int:
     ai = UtilityAI(library.ai_profiles)
     _report(f"效用 AI：{MAP_ID}", setup, args.utility_repeat, ai)
     for map_id in DEMO_MAPS:
+        if map_id not in library.maps:
+            continue
         _report(f"效用 AI：{map_id}", _demo(library, map_id), args.utility_repeat, ai)
     return 0
 

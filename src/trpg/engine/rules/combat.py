@@ -28,6 +28,7 @@ __all__ = [
     "concealed_max_distance",
     "concealment_problem",
     "cover_modifier",
+    "cover_object_between",
     "defense_value_permille",
     "element_modifier_ppm",
     "half_cover",
@@ -96,6 +97,34 @@ class Cover:
     pos: XY
 
 
+def cover_object_between(
+    state: BattleState, attacker_xy: XY, target_xy: XY
+) -> tuple[ObjectId, XY] | None:
+    """幾何部分的半掩護判定：從 ``attacker_xy`` 看向 ``target_xy`` 時提供掩護的物件與其格子。
+
+    不看武器（呼叫端負責「近戰無視」）；條件見 :func:`half_cover`。
+    """
+    tx, ty = target_xy
+    wx, wy = attacker_xy[0] - tx, attacker_xy[1] - ty
+    attacker_height = state.tile(*attacker_xy).height
+    for dx, dy in _COVER_DIRECTIONS:
+        if dx * wx + dy * wy <= 0:
+            continue
+        cx, cy = tx + dx, ty + dy
+        if not state.in_bounds(cx, cy):
+            continue
+        oid = state.tile(cx, cy).object_id
+        if oid is None:
+            continue
+        obj = state.objects[oid]
+        if HALF_COVER not in state.ruleset.object_def(obj.kind).tags:
+            continue
+        if attacker_height > state.tile(cx, cy).height + 1:
+            continue
+        return obj.id, (cx, cy)
+    return None
+
+
 def half_cover(state: BattleState, attacker: UnitState, target: UnitState) -> Cover | None:
     """``attacker`` 攻擊 ``target`` 時，目標是否受到半掩護。
 
@@ -114,31 +143,18 @@ def half_cover(state: BattleState, attacker: UnitState, target: UnitState) -> Co
     penalty = state.ruleset.core.half_cover_hit_penalty
     if penalty <= 0:
         return None
-    tx, ty = target.pos.x, target.pos.y
-    wx, wy = attacker.pos.x - tx, attacker.pos.y - ty
-    attacker_height = state.tile(attacker.pos.x, attacker.pos.y).height
-    for dx, dy in _COVER_DIRECTIONS:
-        if dx * wx + dy * wy <= 0:
-            continue
-        cx, cy = tx + dx, ty + dy
-        if not state.in_bounds(cx, cy):
-            continue
-        obj = state.object_at(cx, cy)
-        if obj is None:
-            continue
-        definition = state.ruleset.object_def(obj.kind)
-        if HALF_COVER not in definition.tags:
-            continue
-        if attacker_height > state.tile(cx, cy).height + 1:
-            continue
-        return Cover(
-            penalty=penalty,
-            object_id=obj.id,
-            kind=obj.kind,
-            name_zh=definition.name_zh,
-            pos=(cx, cy),
-        )
-    return None
+    found = cover_object_between(state, attacker.xy, target.xy)
+    if found is None:
+        return None
+    oid, pos = found
+    obj = state.objects[oid]
+    return Cover(
+        penalty=penalty,
+        object_id=oid,
+        kind=obj.kind,
+        name_zh=state.ruleset.object_def(obj.kind).name_zh,
+        pos=pos,
+    )
 
 
 def cover_modifier(state: BattleState, attacker: UnitState, target: UnitState) -> int:

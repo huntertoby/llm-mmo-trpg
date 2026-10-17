@@ -176,3 +176,152 @@ def test_profiles_default_by_weapon() -> None:
     )
     assert mage.units[U1].ai_profile == "cunning"
     _ = make_setup  # 保持匯入（其他測試共用）
+
+
+# ---------------------------------------------------------------------------
+# Phase 1C：掩護考量（3.5、4-4）與效能最佳化（2.5 #1）
+# ---------------------------------------------------------------------------
+
+
+def _two_firing_spots() -> BattleState:
+    """弓手在 (3, 4) 的牆後（看不到敵人），只能走到 (2, 4) 或 (4, 4)：兩格與敵方弓手 (3, 0)
+    的距離、高度、視線都相同；只有 (4, 4) 的上方 (4, 3) 有木箱提供半掩護。"""
+    m = make_map(
+        "0000000\n0000000\n0000000\n0000000\n0000000",
+        ".......\n.......\n.......\n...#...\n.......",
+        objects=[(4, 3, "crate")],
+        ally=[(3, 4)],
+        enemy=[(3, 0)],
+    )
+    state = make_state(
+        m,
+        [
+            spawn(Team.ALLY, (3, 4), "hero_archer"),
+            spawn(Team.ENEMY, (3, 0), no_reactions("bandit_archer")),
+        ],
+    )
+    state = give_turn(state, U1)
+    state.units[U1].ap = 0  # 只看「結束回合時站在哪裡」
+    state.units[U1].move_points = 1
+    return state
+
+
+def test_archer_prefers_covered_firing_position() -> None:
+    from trpg.engine.rules.combat import cover_object_between  # noqa: PLC0415
+    from trpg.engine.rules.geometry import has_line_of_sight  # noqa: PLC0415
+
+    state = _two_firing_spots()
+    enemy = state.units[U2].xy
+    # 兩個位置等價：都看得到敵人、距離相同；目前位置看不到
+    assert has_line_of_sight(state, (2, 4), enemy) and has_line_of_sight(state, (4, 4), enemy)
+    assert not has_line_of_sight(state, (3, 4), enemy)
+    assert manhattan((2, 4), enemy) == manhattan((4, 4), enemy)
+    assert cover_object_between(state, enemy, (4, 4)) is not None
+    assert cover_object_between(state, enemy, (2, 4)) is None
+    dests = [(a.dest.x, a.dest.y) for a in legal_actions_of(state) if isinstance(a, Move)]
+    assert dests == [(2, 4), (4, 4)]  # 沒有掩護的格子在合法動作順序中排在前面
+    choice = ai("archer")(state)
+    assert isinstance(choice, Move) and (choice.dest.x, choice.dest.y) == (4, 4)
+    # 對照：拿掉掩護權重時兩者同分，依順序選 (2, 4)
+    profiles = library().ai_profiles
+    archer = profiles.by_id()["archer"]
+    no_cover = archer.model_copy(update={"weights": archer.weights.model_copy(update={"cover": 0})})
+    table = profiles.model_copy(
+        update={"profiles": tuple(no_cover if p.id == "archer" else p for p in profiles.profiles)}
+    )
+    plain = UtilityAI(table, override="archer")(state)
+    assert isinstance(plain, Move) and (plain.dest.x, plain.dest.y) == (2, 4)
+
+
+def legal_actions_of(state: BattleState) -> list[object]:
+    from trpg.engine import legal_actions  # noqa: PLC0415
+
+    return list(legal_actions(state))
+
+
+def test_cunning_shoves_enemy_out_of_cover() -> None:
+    # 盜賊 (2, 1) 緊鄰矮牆 (2, 0)；戰士從 (1, 1) 往右推，盜賊被推到 (3, 1)，離開掩護
+    m = make_map("00000\n00000\n00000", objects=[(2, 0, "low_wall")], ally=[(1, 1)], enemy=[(2, 1)])
+    state = give_turn(
+        make_state(
+            m,
+            [
+                spawn(Team.ALLY, (1, 1), "hero_fighter"),
+                spawn(Team.ENEMY, (2, 1), no_reactions()),
+                spawn(Team.ALLY, (0, 2), "hero_archer"),
+            ],
+        ),
+        U1,
+    )
+    shove = Shove(unit_id=U1, target_id=U2)
+    assert ai("cunning")(state) == shove
+    # 莽夫不在乎掩護：直接攻擊
+    assert ai("brute")(state) == Attack(unit_id=U1, target_id=U2)
+    scores = {s.action: s.score for s in ai("cunning").rank(state)}
+    assert scores[shove] > scores[Attack(unit_id=U1, target_id=U2)]
+
+
+def test_cunning_attacks_cover_object_when_it_can_break_it() -> None:
+    # 盜賊躲在快壞掉的木箱後面（從弓手的角度）；狡猾的弓手先打掉木箱
+    m = make_map(
+        "0000000\n0000000\n0000000", objects=[(4, 1, "crate")], ally=[(0, 1)], enemy=[(5, 1)]
+    )
+    state = give_turn(
+        make_state(
+            m, [spawn(Team.ALLY, (0, 1), "hero_archer"), spawn(Team.ENEMY, (5, 1), no_reactions())]
+        ),
+        U1,
+    )
+    crate = ObjectId("obj_0001")
+    state.objects[crate].hp = 2
+    assert ai("cunning")(state) == Attack(unit_id=U1, target_object_id=crate)
+    # 木箱還很堅固時（打不掉），直接射擊盜賊
+    sturdy = state.clone()
+    sturdy.objects[crate].hp = 15
+    assert ai("cunning")(sturdy) == Attack(unit_id=U1, target_id=U2)
+
+
+@pytest.mark.parametrize("map_id", ["bridge_chasm", "oil_depot", "swamp"])
+def test_fast_move_scores_match_full_preview(map_id: str) -> None:
+    """沒有風險的移動用虛擬分數，與完整 preview 算出的分數完全相同；有風險者跑完整 preview。"""
+    from trpg.engine import build_setup  # noqa: PLC0415
+    from trpg.engine.ai.utility import is_risky_move, score_action  # noqa: PLC0415
+
+    lib = library()
+    encounter = lib.map(map_id).encounter
+    assert encounter is not None
+    setup = build_setup(lib, map_id, encounter.allies, encounter.enemies, max_rounds=3)
+    policy = ai()
+    checked = 0
+
+    def check(step: object, result: object) -> None:
+        nonlocal checked
+        state = result.state  # type: ignore[attr-defined]
+        if state.ended or state.pending is not None or state.active is None or checked > 400:
+            return
+        unit = state.active
+        profile = policy.profile_for(unit)
+        for scored in policy.rank(state):
+            if not isinstance(scored.action, Move):
+                continue
+            full = score_action(state, scored.action, profile)
+            assert full.score == scored.score, scored.action
+            assert (scored.preview is None) is not is_risky_move(state, unit, scored.action)
+            checked += 1
+
+    run_battle(setup, 5, policy, on_step=check)
+    assert checked > 0
+
+
+def test_pruned_ai_matches_exhaustive_choice_on_demo_scene() -> None:
+    """候選篩選不改變上方情境測試的選擇（與完整評分所有動作的結果相同）。"""
+    for state, profile in ((_crossroads(), p) for p in ("brute", "archer", "cunning", "guard")):
+        full = max(
+            (s for s in ai(profile).rank_all(state) if s.score > 0),
+            key=lambda s: s.score,
+            default=None,
+        )
+        chosen = ai(profile)(state)
+        assert full is not None
+        best = [s.action for s in ai(profile).rank_all(state) if s.score == full.score]
+        assert chosen == best[0]

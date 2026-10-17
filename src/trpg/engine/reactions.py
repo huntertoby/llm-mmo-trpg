@@ -70,6 +70,7 @@ def _decide(ctx: Ctx, unit: UnitState, rule: ReactionRule, trigger: UnitState) -
     if rule.mode == "auto":
         return True
     if ctx.preview is not None:
+        ctx.mark_branch()
         return ctx.preview == "max"
     if ctx.decisions:
         return ctx.decisions.pop(0)
@@ -131,6 +132,7 @@ def perform_unit_attack(ctx: Ctx, attacker: UnitState, target: UnitState, *, pri
     """
     forced: ForcedOutcome | None = None
     if ctx.preview is not None:
+        ctx.mark_branch()
         if primary:
             forced = "hit" if ctx.preview == "min" else "crit"
         else:

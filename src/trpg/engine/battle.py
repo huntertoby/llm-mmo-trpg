@@ -86,6 +86,7 @@ __all__ = [
     "resolve_with",
     "resume",
     "shove_problem",
+    "simulate_preview",
     "start_battle",
 ]
 
@@ -642,6 +643,20 @@ def resolve_with(
         )
         return ResolveResult(paused, ctx.events, pending)
     return finish_resolution(ctx)
+
+
+def simulate_preview(base: BattleState, action: Action) -> tuple[ResolveResult, ResolveResult]:
+    """內部 API：預覽用的「最少後果」與「最多後果」兩次模擬。
+
+    ``min`` 模擬沒有經過任何分歧點（擲骰、檢定、反應決定、強制命中結果）時，``max`` 的結果必定
+    相同，直接重用而不再模擬一次（例如沒有藉機攻擊、沒有踩上冰面的移動）。
+    """
+    low_ctx = Ctx(base.clone(), preview="min")
+    ACTION_HANDLERS[action.type](low_ctx, low_ctx.state.units[action.unit_id], action)
+    low = finish_resolution(low_ctx)
+    if not low_ctx.preview_branched():
+        return low, low
+    return low, resolve_with(base, action, preview="max")
 
 
 def resolve(state: BattleState, action: Action) -> ResolveResult:

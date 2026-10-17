@@ -109,14 +109,19 @@ class Ruleset(ContentModel):
     def surface_def(self, surface: Surface) -> SurfaceDef:
         return self.surfaces.get(surface)
 
+    # 查表是引擎最常呼叫的函式之一：直接讀 ``__pydantic_private__``，略過 BaseModel.__getattr__
+    # 的私有屬性慢速路徑（結果與 ``self._terrain_index`` 相同）。
     def reaction_def(self, reaction_id: str) -> ReactionDef:
-        return self._reaction_index[reaction_id]
+        index: dict[str, ReactionDef] = self.__pydantic_private__["_reaction_index"]  # type: ignore[index]
+        return index[reaction_id]
 
     def terrain_def(self, terrain_id: str) -> TerrainDef:
-        return self._terrain_index[terrain_id]
+        index: dict[str, TerrainDef] = self.__pydantic_private__["_terrain_index"]  # type: ignore[index]
+        return index[terrain_id]
 
     def status_def(self, status_id: str) -> StatusDef:
-        return self._status_index[status_id]
+        index: dict[str, StatusDef] = self.__pydantic_private__["_status_index"]  # type: ignore[index]
+        return index[status_id]
 
 
 @dataclass(frozen=True)

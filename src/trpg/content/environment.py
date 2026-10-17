@@ -166,7 +166,9 @@ class ObjectTable(ContentModel):
         return dict(self._index)
 
     def get(self, object_id: str) -> ObjectDef:
-        return self._index[object_id]
+        # 略過 BaseModel.__getattr__ 的私有屬性慢速路徑（見 Ruleset.terrain_def）
+        index: dict[str, ObjectDef] = self.__pydantic_private__["_index"]  # type: ignore[index]
+        return index[object_id]
 
     def summary(self) -> str:
         return f"{len(self.objects)} 種物件"
@@ -271,7 +273,9 @@ class SurfaceTable(ContentModel):
         return self
 
     def get(self, surface: Surface) -> SurfaceDef:
-        return self._index[surface]
+        # 略過 BaseModel.__getattr__ 的私有屬性慢速路徑（見 Ruleset.terrain_def）
+        index: dict[Surface, SurfaceDef] = self.__pydantic_private__["_index"]  # type: ignore[index]
+        return index[surface]
 
     def status_refs(self) -> list[str]:
         refs: list[str] = []
@@ -546,6 +550,9 @@ class AiWeights(ContentModel):
     protect: int = 0
     objective: int = 0
     hazard: int = 0
+    cover: int = 0
+    expose: int = 0
+    cover_damage: int = 0
 
 
 class AiProfile(ContentModel):
@@ -556,9 +563,15 @@ class AiProfile(ContentModel):
 
 
 class AiProfileTable(ContentModel):
-    """``content/ai_profiles.yaml``：至少包含 brute、archer、cunning、guard。"""
+    """``content/ai_profiles.yaml``：至少包含 brute、archer、cunning、guard。
+
+    ``move_candidates``：每次決策中，``Move`` 先以便宜的位置價值排序，只保留前 N 個候選；其中
+    有風險的移動（可能被藉機攻擊、踩上有進入效果的表面、墜落、撤離、倒地站起）才跑完整
+    ``preview``，其餘的分數直接由位置價值算出（與完整預覽的分數相同）。
+    """
 
     profiles: tuple[AiProfile, ...] = Field(min_length=1)
+    move_candidates: int = Field(default=8, ge=1)
 
     @model_validator(mode="after")
     def _check(self) -> AiProfileTable:

@@ -19,7 +19,7 @@ from fractions import Fraction
 from itertools import product
 
 from trpg.engine.actions import Action, Attack, Shove, Trip
-from trpg.engine.battle import _actor, resolve_with
+from trpg.engine.battle import _actor, simulate_preview
 from trpg.engine.events import (
     DamageDealt,
     EnteredDeadlyTerrain,
@@ -328,8 +328,7 @@ def preview(state: BattleState, action: Action) -> Preview:
     不合法時拋出 ``IllegalActionError``。
     """
     actor = _actor(state, action)
-    low = resolve_with(state, action, preview="min")
-    high = resolve_with(state, action, preview="max")
+    low, high = simulate_preview(state, action)
     min_events, max_events = list(low.events), list(high.events)
     hit: Fraction | None = None
     crit: Fraction | None = None

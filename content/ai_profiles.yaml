@@ -1,4 +1,5 @@
-# 效用 AI 的行為模式（docs/專案計畫.md 5.9；docs/phases/Phase1計畫.md 6.1-13）。
+# 效用 AI 的行為模式（docs/專案計畫.md 5.9；docs/phases/Phase1計畫.md 6.1-13；
+# 掩護權重與候選移動數見 docs/phases/Phase1C計畫.md 2.5 #1、3.5）。
 # AI 對每個合法動作跑 preview，分數 = 預覽收益 + 命中率 × 位置價值的變化（動作後 − 動作前）；
 # 分數 > 0 的動作中取最高者（平手依 legal_actions 的順序），沒有正分的動作時結束回合。
 #
@@ -12,6 +13,8 @@
 #   status         每個施加在敵人身上的狀態（倒地等）
 #   surface        每名因此站在有害表面（火、毒）上的敵人
 #   defend         防禦動作：每名 6 格內的敵人
+#   expose         每名因此離開掩護的敵人（被推離半掩護物件旁，或掩護物被摧毀；取最少與最多後果的平均）
+#   cover_damage   對「緊鄰敵人的半掩護物件」造成的每點傷害
 # 位置價值（行動者在動作後的位置）：
 #   approach       與最近敵人的距離（越近越好）
 #   threat         能直接攻擊到的敵人數
@@ -20,6 +23,12 @@
 #   protect        與最需要保護的友方（HP 比例最低）的距離（越近越好）
 #   objective      與勝利條件格子（出口、守點）的距離（越近越好）
 #   hazard         站在有害表面上（扣分）
+#   cover          看得到、且從其位置看過來自己受到半掩護的敵人數（偏好有掩護的射擊位置）
+#
+# move_candidates：每次決策中，移動先以「直接放到目的地」的位置價值排序，只保留前 N 個；其中有風險的
+# 移動（可能被藉機攻擊、踩上有進入效果的表面、墜落、撤離、倒地站起）才跑完整 preview，其餘的分數
+# 直接由位置價值算出（與完整 preview 的分數相同）。攻擊、推擊等其他動作一律跑完整 preview。
+move_candidates: 6
 profiles:
   - id: brute
     name_zh: 莽夫
@@ -28,11 +37,11 @@ profiles:
   - id: archer
     name_zh: 弓手
     description_zh: 重視距離、高處與視線。
-    weights: {damage: 6, kill: 20, friendly_fire: 8, approach: 1, threat: 10, keep_distance: 40, height: 15, objective: 8, hazard: 10, defend: 1}
+    weights: {damage: 6, kill: 20, friendly_fire: 8, approach: 1, threat: 10, keep_distance: 40, height: 15, objective: 8, hazard: 10, defend: 1, cover: 12}
   - id: cunning
     name_zh: 狡猾
     description_zh: 重視環境擊殺、推擊與表面。
-    weights: {damage: 5, env_damage: 8, kill: 30, env_kill: 120, friendly_fire: 8, push: 15, status: 10, surface: 15, approach: 3, threat: 4, keep_distance: 10, objective: 8, hazard: 12, defend: 1}
+    weights: {damage: 5, env_damage: 8, kill: 30, env_kill: 120, friendly_fire: 8, push: 15, status: 10, surface: 15, approach: 3, threat: 4, keep_distance: 10, objective: 8, hazard: 12, defend: 1, cover: 6, expose: 35, cover_damage: 1}
   - id: guard
     name_zh: 守衛
     description_zh: 重視保護同伴與守點。

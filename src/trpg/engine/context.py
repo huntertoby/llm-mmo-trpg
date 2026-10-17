@@ -2,7 +2,7 @@
 
 from __future__ import annotations
 
-from typing import Any, Literal
+from typing import Any, Literal, cast
 
 from trpg.content.library import Ruleset
 from trpg.content.rules import CoreRules
@@ -19,15 +19,21 @@ type PreviewMode = Literal["min", "max"]
 
 
 class FixedRng(Rng):
-    """預覽用的亂數：``randint`` 一律回傳下限（``min``）或上限（``max``）。"""
+    """預覽用的亂數：``randint`` 一律回傳下限（``min``）或上限（``max``）。
 
-    __slots__ = ("_mode",)
+    ``used`` 記錄是否被呼叫過（``lo < hi`` 時 ``min`` 與 ``max`` 的結果才會不同）。
+    """
+
+    __slots__ = ("_mode", "used")
 
     def __init__(self, mode: PreviewMode) -> None:
         super().__init__(0)
         self._mode = mode
+        self.used = False
 
     def randint(self, lo: int, hi: int) -> int:
+        if lo < hi:
+            self.used = True
         return lo if self._mode == "min" else hi
 
 
@@ -44,6 +50,7 @@ class Ctx:
     """
 
     __slots__ = (
+        "branched",
         "core",
         "decisions",
         "events",
@@ -68,13 +75,28 @@ class Ctx:
         self.core: CoreRules = state.ruleset.core
         self.decisions = list(decisions)
         self.preview = preview
+        self.branched = False
+        """預覽模式下是否經過任何「``min`` 與 ``max`` 會不同」的分歧點（擲骰、檢定、反應決定、
+        強制命中結果）。沒有時兩種模式的結果完全相同，``preview`` 只需模擬一次。"""
         self.surface_entries: list[tuple[UnitId, tuple[int, int], int]] = []
         """表面在單位腳下被建立或改變：``(單位, 格子, 深度)``，由效果佇列在清空前依單位 ID
         觸發進入效果（Phase 1C 決定 #6）。"""
 
     def emit[E: EventBase](self, cls: type[E], **fields: Any) -> E:
-        """建立事件（自動填入 ``seq`` 與 ``round``）並加入事件列表。"""
-        event = cls(seq=self.state.next_event_seq, round=self.state.round, **fields)
+        """建立事件（自動填入 ``seq`` 與 ``round``）並加入事件列表。
+
+        預覽模式下以 ``model_construct`` 建立（略過驗證；事件只在預覽內部使用，不會序列化或重播），
+        正式結算一律完整驗證。
+        """
+        if self.preview is not None:
+            event = cast(
+                "E",
+                cls.model_construct(
+                    seq=self.state.next_event_seq, round=self.state.round, **fields
+                ),
+            )
+        else:
+            event = cls(seq=self.state.next_event_seq, round=self.state.round, **fields)
         self.state.next_event_seq += 1
         self.events.append(event)
         return event
@@ -83,8 +105,20 @@ class Ctx:
         if self.preview is None:
             self.state.rng_state = self.rng.get_state()
 
+    def mark_branch(self) -> None:
+        """預覽模式下標記一個分歧點（見 :attr:`branched`）。"""
+        if self.preview is not None:
+            self.branched = True
+
+    def preview_branched(self) -> bool:
+        """這次預覽模擬的 ``min`` 與 ``max`` 結果是否可能不同。"""
+        rng = self.rng
+        return self.branched or (isinstance(rng, FixedRng) and rng.used)
+
     def check_d20(self) -> int:
         """守方的檢定骰（例如冰面滑倒）：預覽 ``min`` 回傳 20（通過，沒有後果）、``max`` 回傳 1。"""
+        if self.preview is not None:
+            self.branched = True
         if self.preview == "min":
             return 20
         if self.preview == "max":

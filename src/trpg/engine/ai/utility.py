@@ -8,30 +8,56 @@
 收益的估計：攻擊主要目標的傷害用預覽的精確期望值；其他傷害（爆炸、擴散……）取最少與最多後果
 的平均再乘上命中率；「確定」的連鎖乘上命中率，「只是可能」的擊倒再除以 4。這些是啟發式，
 供 Phase 2 以模擬調整。
+
+掩護（Phase 1C）：位置價值的 ``cover`` 為「看得到、且從其位置看過來我受到半掩護」的敵人數；
+收益的 ``expose`` 為動作讓幾名敵人離開掩護（被推離或掩護物被摧毀），``cover_damage`` 為對
+「緊鄰敵人的掩護物」造成的每點傷害。
+
+效能（Phase 1C 決定 #1）：每次決策只算一次「動作前」的位置價值；``Move`` 先以「直接把行動者放到
+目的地」的位置價值（不跑引擎）排序，只保留前 ``move_candidates`` 個（``ai_profiles.yaml``）；
+其中有風險的移動（可能被藉機攻擊、踩上有進入效果的表面、墜落、撤離、倒地站起）才跑完整
+``preview``。沒有風險的移動結果是確定的（只有位置改變），其分數與完整預覽算出的分數相同。
+``preview`` 本身在最少後果的模擬沒有經過分歧點時也只模擬一次。
 """
 
 from __future__ import annotations
 
-from dataclasses import dataclass
+from dataclasses import dataclass, replace
 from fractions import Fraction
 
 from trpg.content.environment import AiProfile, AiProfileTable, AiWeights
-from trpg.engine.actions import Action, Attack, Defend, EndTurn
+from trpg.engine.actions import Action, Attack, Defend, EndTurn, Move
 from trpg.engine.battle import legal_actions
-from trpg.engine.events import DamageDealt, EventBase, StatusApplied, UnitDowned, UnitMoved
+from trpg.engine.events import (
+    DamageDealt,
+    EventBase,
+    ObjectDamaged,
+    StatusApplied,
+    UnitDowned,
+    UnitMoved,
+)
 from trpg.engine.preview import Preview, preview
-from trpg.engine.rules.combat import attack_problem
-from trpg.engine.rules.geometry import manhattan
+from trpg.engine.rules.combat import HALF_COVER, attack_problem, cover_object_between
+from trpg.engine.rules.geometry import XY, has_line_of_sight, manhattan, neighbors4
 from trpg.engine.state import BattleState, UnitState
-from trpg.shared.types import Surface, Team, UnitId
+from trpg.shared.types import ObjectId, Surface, Team, UnitId
 
-__all__ = ["ActionScore", "UtilityAI", "position_value", "score_action"]
+__all__ = [
+    "ActionScore",
+    "UtilityAI",
+    "is_risky_move",
+    "position_value",
+    "reactive_enemies",
+    "score_action",
+    "virtual_move_score",
+]
 
 _DEFEND_RADIUS = 6
 _POSSIBLE_KILL_DIVISOR = 4
 _DOWNED_PENALTY = 1000
 _ESCAPED_BONUS = 1000
 _ATTACK_CAUSES = ("attack",)
+_PRONE = "prone"
 
 
 @dataclass(frozen=True, slots=True)
@@ -69,33 +95,97 @@ def _objective_distance(state: BattleState, unit: UnitState) -> int:
     return min(manhattan(unit.xy, t) for t in objective.tiles)
 
 
-def _protect_distance(state: BattleState, unit: UnitState) -> int:
+def _ward(state: BattleState, unit: UnitState) -> XY | None:
+    """最需要保護的友方（HP 比例最低，同比例依 ID）的位置；沒有其他友方時為 ``None``。"""
     allies = [u for u in state.living_units() if u.team is unit.team and u.id != unit.id]
     if not allies:
-        return 0
-    ward = min(allies, key=lambda u: (Fraction(u.hp, u.max_hp), u.id))
-    return manhattan(unit.xy, ward.xy)
+        return None
+    return min(allies, key=lambda u: (Fraction(u.hp, u.max_hp), u.id)).xy
+
+
+def _protect_distance(state: BattleState, unit: UnitState) -> int:
+    ward = _ward(state, unit)
+    return 0 if ward is None else manhattan(unit.xy, ward)
 
 
 def position_value(state: BattleState, unit_id: UnitId, w: AiWeights) -> Fraction:
     """行動者在 ``state`` 中所在位置的價值。"""
-    unit = state.units[unit_id]
+    return _unit_position_value(state, state.units[unit_id], w)
+
+
+@dataclass(frozen=True, slots=True)
+class _Scene:
+    """同一次決策中不隨行動者位置改變的資料（虛擬移動評分時共用）。"""
+
+    enemies: list[UnitState]
+    ward: XY | None
+
+
+def _scene(state: BattleState, unit: UnitState) -> _Scene:
+    return _Scene(_enemies(state, unit), _ward(state, unit))
+
+
+def _unit_position_value(
+    state: BattleState, unit: UnitState, w: AiWeights, scene: _Scene | None = None
+) -> Fraction:
+    """``unit`` 的位置價值；``unit`` 可以是「放到別的格子」的虛擬複本（位置以 ``unit.xy`` 為準，
+    其他單位以 ``state`` 為準）。``scene`` 為同一決策中共用的敵人清單與保護對象。"""
     if unit.escaped:
         return Fraction(_ESCAPED_BONUS * max(w.objective, 1))
     if unit.downed:
         return Fraction(-_DOWNED_PENALTY)
-    enemies = _enemies(state, unit)
+    if scene is None:
+        scene = _scene(state, unit)
+    xy = unit.xy
+    enemies = scene.enemies
     value = 0
     if enemies:
-        value -= w.approach * min(manhattan(unit.xy, e.xy) for e in enemies)
-        value += w.threat * sum(1 for e in enemies if attack_problem(state, unit, e) is None)
-        value -= w.keep_distance * sum(1 for e in enemies if manhattan(unit.xy, e.xy) <= 2)  # noqa: PLR2004
-    value += w.height * state.tile(*unit.xy).height
-    value -= w.protect * _protect_distance(state, unit)
-    value -= w.objective * _objective_distance(state, unit)
-    if _harmful(state, unit.xy):
+        value -= w.approach * min(manhattan(xy, e.xy) for e in enemies)
+        if w.threat:
+            value += w.threat * sum(1 for e in enemies if attack_problem(state, unit, e) is None)
+        value -= w.keep_distance * sum(1 for e in enemies if manhattan(xy, e.xy) <= 2)  # noqa: PLR2004
+        if w.cover:
+            value += w.cover * _covered_from(state, xy, enemies)
+    value += w.height * state.tile(*xy).height
+    if w.protect and scene.ward is not None:
+        value -= w.protect * manhattan(xy, scene.ward)
+    if w.objective:
+        value -= w.objective * _objective_distance(state, unit)
+    if _harmful(state, xy):
         value -= w.hazard
     return Fraction(value)
+
+
+def _covered_from(state: BattleState, xy: XY, enemies: list[UnitState]) -> int:
+    """看得到 ``xy``、且從其位置看過來 ``xy`` 受到半掩護的敵人數。"""
+    return sum(
+        1
+        for e in enemies
+        if cover_object_between(state, e.xy, xy) is not None and has_line_of_sight(state, e.xy, xy)
+    )
+
+
+def _in_cover(state: BattleState, unit: UnitState) -> bool:
+    """``unit`` 四方向相鄰處有未摧毀的半掩護物件（「躲在掩護後」）。"""
+    for nxt in neighbors4(state, unit.xy):
+        oid = state.tile(*nxt).object_id
+        if oid is not None and HALF_COVER in state.ruleset.object_def(state.objects[oid].kind).tags:
+            return True
+    return False
+
+
+def _cover_objects_near_enemies(state: BattleState, actor: UnitState) -> set[ObjectId]:
+    """緊鄰（四方向）敵人的半掩護物件。"""
+    result: set[ObjectId] = set()
+    for e in _enemies(state, actor):
+        for nxt in neighbors4(state, e.xy):
+            oid = state.tile(*nxt).object_id
+            if (
+                oid is not None
+                and HALF_COVER in state.ruleset.object_def(state.objects[oid].kind).tags
+            ):
+                result.add(oid)
+    return result
 
 
 def _last_cause(events: tuple[EventBase, ...]) -> dict[UnitId, str]:
@@ -172,48 +262,204 @@ def _gains(state: BattleState, actor: UnitState, p: Preview, w: AiWeights) -> Fr
         1 for u in after.living_units() if u.team is not team and _harmful(after, u.xy)
     )
     gains += w.surface * hit * (after_harm - before_harm)
+    if w.expose or w.cover_damage:
+        gains += _cover_gains(state, actor, p, w, hit)
     if isinstance(p.action, Defend):
         near = sum(1 for e in _enemies(state, actor) if manhattan(actor.xy, e.xy) <= _DEFEND_RADIUS)
         gains += w.defend * near
     return gains
 
 
-def score_action(state: BattleState, action: Action, profile: AiProfile) -> ActionScore:
-    """單一動作的分數（``EndTurn`` 固定為 0）。"""
+def _cover_gains(
+    state: BattleState, actor: UnitState, p: Preview, w: AiWeights, hit: Fraction
+) -> Fraction:
+    """推離掩護（``expose``）與破壞敵人的掩護物（``cover_damage``）的收益。"""
+    team = actor.team
+    before = sum(1 for e in _enemies(state, actor) if _in_cover(state, e))
+    exposed = Fraction(0)
+    for after in (p.min_state, p.max_state):
+        now = sum(1 for e in after.living_units() if e.team is not team and _in_cover(after, e))
+        exposed += before - now
+    gains = w.expose * hit * exposed / 2
+    if w.cover_damage:
+        shields = _cover_objects_near_enemies(state, actor)
+        if shields:
+            dealt = sum(
+                e.amount
+                for events in (p.min_events, p.max_events)
+                for e in events
+                if isinstance(e, ObjectDamaged) and e.object_id in shields
+            )
+            gains += w.cover_damage * hit * Fraction(dealt, 2)
+    return gains
+
+
+def score_action(
+    state: BattleState,
+    action: Action,
+    profile: AiProfile,
+    *,
+    before: Fraction | None = None,
+) -> ActionScore:
+    """單一動作的分數（``EndTurn`` 固定為 0），以完整 ``preview`` 計算。
+
+    ``before`` 為行動者在 ``state`` 的位置價值（省略時重新計算）。
+    """
     if isinstance(action, EndTurn):
         return ActionScore(action, Fraction(0), None)
     w = profile.weights
     actor = state.units[action.unit_id]
     p = preview(state, action)
-    before = position_value(state, actor.id, w)
+    if before is None:
+        before = position_value(state, actor.id, w)
     after = position_value(p.min_state, actor.id, w)
     # 位置變化只在動作成功時發生（攻擊、技巧動作乘上命中率／成功率）
     hit = p.hit_chance if p.hit_chance is not None else Fraction(1)
     return ActionScore(action, _gains(state, actor, p, w) + hit * (after - before), p)
 
 
+def virtual_move_score(
+    state: BattleState,
+    unit: UnitState,
+    move: Move,
+    w: AiWeights,
+    before: Fraction,
+    *,
+    scene: _Scene | None = None,
+) -> Fraction:
+    """不跑引擎的移動分數：把行動者直接放到目的地後的位置價值 − 動作前的位置價值。
+
+    對沒有風險的移動（:func:`is_risky_move` 為假）而言，這就是完整 ``preview`` 的分數。
+    """
+    moved = replace(unit, pos=move.path[-1])
+    return _unit_position_value(state, moved, w, scene) - before
+
+
+def reactive_enemies(state: BattleState, unit: UnitState) -> list[XY]:
+    """可能對 ``unit`` 藉機攻擊的敵人位置：存活、本輪反應次數未用完、有「敵人離開相鄰格」的
+    反應規則（不檢查耐力與武器，寧可多算）。"""
+    limit = state.ruleset.core.reactions_per_round
+    return [
+        e.xy
+        for e in _enemies(state, unit)
+        if e.reactions_used < limit
+        and any(rule.when.event == "enemy_leaves_adjacent" for rule in e.reactions)
+    ]
+
+
+def is_risky_move(
+    state: BattleState, unit: UnitState, move: Move, enemies: list[XY] | None = None
+) -> bool:
+    """移動是否可能有「位置改變」以外的後果（需要完整 ``preview`` 才能評分）。
+
+    - 倒地（先站起來）；
+    - 路徑上離開某個「本輪還能反應、且有藉機攻擊規則」的敵人的相鄰格（可能被藉機攻擊）；
+    - 走上有進入效果的表面（燃燒、冰面滑倒檢定）；
+    - 往下的落差達到墜落門檻；
+    - 撤離勝利條件下，我方走上出口格。
+    """
+    if unit.has_status(_PRONE):
+        return True
+    if enemies is None:
+        enemies = reactive_enemies(state, unit)
+    rules = state.ruleset
+    min_drop = rules.core.fall_damage_min_drop
+    objective = state.objective
+    exits = objective.tiles if objective.kind == "escape" and unit.team is Team.ALLY else ()
+    path = move.path
+    last = len(path) - 1
+    prev_height = state.tile(path[0].x, path[0].y).height
+    for i, pos in enumerate(path):
+        xy = (pos.x, pos.y)
+        if i < last:
+            nxt = (path[i + 1].x, path[i + 1].y)
+            if any(manhattan(xy, e) == 1 and manhattan(nxt, e) != 1 for e in enemies):
+                return True
+        if i == 0:
+            continue
+        tile = state.tile(*xy)
+        if tile.surface is not Surface.NONE and rules.surface_def(tile.surface).on_enter:
+            return True
+        if prev_height - tile.height >= min_drop:
+            return True
+        if xy in exits:
+            return True
+        prev_height = tile.height
+    return False
+
+
 class UtilityAI:
     """效用評分 AI（可當作 ``Policy`` 使用：``UtilityAI(profiles)(state) -> Action``）。
 
     行動者的行為模式取 ``UnitState.ai_profile``；``override`` 可強制所有單位使用同一模式
-    （測試用）。
+    （測試用）；``move_candidates`` 可覆寫 ``ai_profiles.yaml`` 的候選移動數。
     """
 
-    def __init__(self, profiles: AiProfileTable, *, override: str | None = None) -> None:
+    def __init__(
+        self,
+        profiles: AiProfileTable,
+        *,
+        override: str | None = None,
+        move_candidates: int | None = None,
+    ) -> None:
         self._profiles = profiles.by_id()
         self._override = override
+        self._move_candidates = (
+            profiles.move_candidates if move_candidates is None else move_candidates
+        )
 
     def profile_for(self, unit: UnitState) -> AiProfile:
         key = self._override or unit.ai_profile or "brute"
         return self._profiles.get(key, self._profiles["brute"])
 
-    def rank(self, state: BattleState) -> list[ActionScore]:
-        """所有合法動作的分數（依 ``legal_actions`` 的順序）。"""
+    @property
+    def move_candidates(self) -> int:
+        return self._move_candidates
+
+    def rank_all(self, state: BattleState) -> list[ActionScore]:
+        """所有合法動作以完整 ``preview`` 計算的分數（依 ``legal_actions`` 的順序；不篩選，
+        較慢，供測試與分析使用）。"""
         unit = state.active
         if unit is None:
             raise ValueError("目前沒有行動中的單位")
         profile = self.profile_for(unit)
-        return [score_action(state, a, profile) for a in legal_actions(state)]
+        before = position_value(state, unit.id, profile.weights)
+        return [score_action(state, a, profile, before=before) for a in legal_actions(state)]
+
+    def rank(self, state: BattleState) -> list[ActionScore]:
+        """候選動作的分數（依 ``legal_actions`` 的順序）。
+
+        非移動的動作全部以完整 ``preview`` 評分；``Move`` 先以 :func:`virtual_move_score`
+        排序，只保留前 ``move_candidates`` 個，其中有風險者（:func:`is_risky_move`）才跑完整
+        ``preview``，其餘直接使用虛擬分數（``preview`` 欄位為 ``None``）。
+        """
+        unit = state.active
+        if unit is None:
+            raise ValueError("目前沒有行動中的單位")
+        profile = self.profile_for(unit)
+        w = profile.weights
+        actions = legal_actions(state)
+        before = position_value(state, unit.id, w)
+        scored: dict[int, ActionScore] = {}
+        estimates: list[tuple[Fraction, int]] = []
+        scene = _scene(state, unit)
+        for index, action in enumerate(actions):
+            if isinstance(action, Move):
+                estimates.append(
+                    (virtual_move_score(state, unit, action, w, before, scene=scene), index)
+                )
+            else:
+                scored[index] = score_action(state, action, profile, before=before)
+        estimates.sort(key=lambda item: (-item[0], item[1]))
+        enemies = reactive_enemies(state, unit)
+        for estimate, index in estimates[: self._move_candidates]:
+            move = actions[index]
+            assert isinstance(move, Move)
+            if is_risky_move(state, unit, move, enemies):
+                scored[index] = score_action(state, move, profile, before=before)
+            else:
+                scored[index] = ActionScore(move, estimate, None)
+        return [scored[i] for i in sorted(scored)]
 
     def __call__(self, state: BattleState) -> Action:
         unit = state.active
