@@ -20,14 +20,16 @@ from trpg.engine import (
 from trpg.engine.events import (
     BattleEnded,
     InitiativeRolled,
+    InitiativeTieBroken,
     RoundEnded,
     RoundStarted,
     StatusRemoved,
     TurnStarted,
     UnitDowned,
 )
+from trpg.engine.state import UnitState
 from trpg.shared.errors import IllegalActionError
-from trpg.shared.types import Pos, Team, UnitId
+from trpg.shared.types import Attribute, Pos, Team, UnitId
 
 U1, U2 = UnitId("unit_0001"), UnitId("unit_0002")
 
@@ -116,26 +118,58 @@ def test_not_your_turn_and_battle_over() -> None:
 
 
 def test_initiative_order_and_ties() -> None:
+    """先攻：總值高者先；同值比敏捷；仍相同以戰鬥亂數決定並寫入事件（PM 決定，1B）。"""
     m = make_map("0000\n0000")
     spawns = [
         spawn(Team.ALLY, (0, 0), template("hero_fighter", attributes={"dex": 16})),
         spawn(Team.ALLY, (0, 1), template("hero_fighter", attributes={"dex": 9})),
         spawn(Team.ENEMY, (3, 0), template("bandit", attributes={"dex": 10})),
         spawn(Team.ENEMY, (3, 1), template("bandit", attributes={"dex": 10})),
+        spawn(Team.ENEMY, (2, 1), template("bandit", attributes={"dex": 11})),
     ]
     setup = make_setup(m, spawns)
-    saw_tie = False
-    for seed in range(60):
+    saw_dex_tiebreak = False
+    tie_orders: set[tuple[UnitId, ...]] = set()
+    for seed in range(120):
         result = begin_battle(setup, seed)
         rolled = {e.unit_id: e for e in result.events if isinstance(e, InitiativeRolled)}
-        assert [rolled[u].modifier for u in sorted(rolled)] == [3, -1, 0, 0]
+        assert [rolled[u].modifier for u in sorted(rolled)] == [3, -1, 0, 0, 0]
         for uid, ev in rolled.items():
             assert ev.total == ev.roll + ev.modifier == result.state.units[uid].initiative
         order = result.state.turn_order
-        assert order == sorted(rolled, key=lambda u: (-rolled[u].total, u))
-        totals = [rolled[u].total for u in order]
-        saw_tie = saw_tie or len(set(totals)) < len(totals)
-    assert saw_tie
+        units = result.state.units
+
+        def key(u: UnitId, units: dict[UnitId, UnitState] = units) -> tuple[int, int]:
+            return (-units[u].initiative, -units[u].attributes[Attribute.DEX])
+
+        assert order == sorted(order, key=key)  # 總值 → 敏捷（穩定排序保留亂數決定的部分）
+        ties = [e for e in result.events if isinstance(e, InitiativeTieBroken)]
+        for tie in ties:
+            members = [u for u in order if key(u) == (-tie.total, -tie.dex)]
+            assert tuple(members) == tie.order and len(members) >= 2
+            tie_orders.add(tie.order)
+        totals = [units[u].initiative for u in order]
+        dex = [units[u].attributes[Attribute.DEX] for u in order]
+        saw_dex_tiebreak = saw_dex_tiebreak or any(
+            totals[i] == totals[i + 1] and dex[i] > dex[i + 1] for i in range(len(order) - 1)
+        )
+    assert saw_dex_tiebreak
+    # 兩個敏捷 10 的盜賊同值時，兩種順序都出現過（由亂數決定，而非 ID）
+    pair = {UnitId("unit_0003"), UnitId("unit_0004")}
+    assert {o for o in tie_orders if set(o) == pair} == {
+        (UnitId("unit_0003"), UnitId("unit_0004")),
+        (UnitId("unit_0004"), UnitId("unit_0003")),
+    }
+
+
+def test_initiative_tie_is_deterministic() -> None:
+    m = make_map("0000\n0000")
+    spawns = [spawn(Team.ALLY, (0, 0)), spawn(Team.ALLY, (0, 1)), spawn(Team.ENEMY, (3, 0))]
+    setup = make_setup(m, spawns)
+    for seed in range(20):
+        assert begin_battle(setup, seed).state.turn_order == (
+            begin_battle(setup, seed).state.turn_order
+        )
 
 
 def test_rounds_advance_after_everyone_acts() -> None:

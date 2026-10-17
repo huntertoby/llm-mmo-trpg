@@ -6,6 +6,8 @@ from fractions import Fraction
 from itertools import product
 
 import pytest
+from hypothesis import given, settings
+from hypothesis import strategies as st
 
 from tests.engine.helpers import (
     give_turn,
@@ -16,7 +18,7 @@ from tests.engine.helpers import (
     template,
     with_rolls,
 )
-from trpg.engine import Attack, BattleState, Defend, resolve
+from trpg.engine import Attack, BattleState, Defend, legal_actions, resolve
 from trpg.engine.effects import ApplyStatusEffect, DamageEffect, run_effects
 from trpg.engine.events import AttackRolled, DamageDealt
 from trpg.engine.rules import combat
@@ -308,3 +310,91 @@ def test_range_and_target_errors() -> None:
         resolve(state, Attack(unit_id=U1, target_id=U2))
     with pytest.raises(IllegalActionError, match="找不到目標"):
         resolve(state, Attack(unit_id=U1, target_id=UnitId("unit_9999")))
+
+
+# ---------------------------------------------------------------------------
+# 近戰高度差（PM 決定，1B）與視線對稱
+# ---------------------------------------------------------------------------
+
+
+@pytest.mark.parametrize(
+    ("heights", "weapon", "allowed"),
+    [
+        ("10\n00", "one_handed_sword", True),  # 差 1 層可以
+        ("20\n00", "one_handed_sword", False),  # 差 2 層不行
+        ("02\n00", "one_handed_sword", False),  # 低打高同樣限制
+        ("30\n00", "dagger", False),
+        ("20\n00", "bow", True),  # 遠程不受限制
+    ],
+)
+def test_melee_height_difference_limit(heights: str, weapon: str, allowed: bool) -> None:
+    m = make_map(heights)
+    a = spawn(Team.ALLY, (0, 0), "hero_fighter", weapon=weapon)
+    t = spawn(Team.ENEMY, (1, 0), "bandit")
+    state = give_turn(make_state(m, [a, t]), U1)
+    action = Attack(unit_id=U1, target_id=U2)
+    assert (action in legal_actions(state)) is allowed
+    if allowed:
+        resolve(state, action)
+    else:
+        with pytest.raises(IllegalActionError, match="高度差過大，無法近戰"):
+            resolve(state, action)
+
+
+def test_reach_weapon_obeys_height_limit() -> None:
+    """射程 2 的長柄武器同樣受限制（以修改射程的單手劍模擬）。"""
+    m = make_map("200\n000")
+    lib = library()
+    spear = lib.weapons["one_handed_sword"].model_copy(update={"range": 2})
+    a = spawn(Team.ALLY, (0, 0), "hero_fighter")
+    a = a.model_copy(update={"weapon": spear})
+    t = spawn(Team.ENEMY, (2, 0), "bandit")
+    state = give_turn(make_state(m, [a, t]), U1)
+    with pytest.raises(IllegalActionError, match="高度差過大"):
+        resolve(state, Attack(unit_id=U1, target_id=U2))
+
+
+@settings(max_examples=60, deadline=None)
+@given(
+    heights=st.lists(st.integers(0, 3), min_size=36, max_size=36),
+    a=st.tuples(st.integers(0, 5), st.integers(0, 5)),
+    b=st.tuples(st.integers(0, 5), st.integers(0, 5)),
+)
+def test_property_line_of_sight_is_symmetric(
+    heights: list[int], a: tuple[int, int], b: tuple[int, int]
+) -> None:
+    rows = "\n".join("".join(str(h) for h in heights[y * 6 : y * 6 + 6]) for y in range(6))
+    state = _los_state(rows)
+    assert has_line_of_sight(state, a, b) == has_line_of_sight(state, b, a)
+
+
+def _los_state(rows: str) -> BattleState:
+    cached = _LOS_CACHE.get(rows)
+    if cached is None:
+        lines = rows.split("\n")
+        corner = (len(lines[0]) - 1, len(lines) - 1)
+        m = make_map(rows, ally=[(0, 0)], enemy=[corner])
+        cached = make_state(m, [spawn(Team.ALLY, (0, 0)), spawn(Team.ENEMY, corner)])
+        _LOS_CACHE[rows] = cached
+    return cached
+
+
+_LOS_CACHE: dict[str, BattleState] = {}
+
+
+def test_line_of_sight_asymmetric_case_is_now_blocked_both_ways() -> None:
+    """Bresenham 兩個方向的格子不同的例子：只有一個方向被擋時，兩邊都看不到。"""
+    found = False
+    for blocker in [(x, y) for y in range(3) for x in range(5)]:
+        rows = ["00000", "00000", "00000"]
+        bx, by = blocker
+        rows[by] = rows[by][:bx] + "3" + rows[by][bx + 1 :]
+        state = _los_state("\n".join(rows))
+        a, b = (0, 0), (4, 1)
+        one = all(state.tile(*c).height < 1 for c in bresenham(a, b)[1:-1])
+        two = all(state.tile(*c).height < 1 for c in bresenham(b, a)[1:-1])
+        if one != two:
+            found = True
+            assert not has_line_of_sight(state, a, b)
+            assert not has_line_of_sight(state, b, a)
+    assert found

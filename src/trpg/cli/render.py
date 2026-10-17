@@ -20,6 +20,7 @@ from trpg.engine.events import (
     EventBase,
     Healed,
     InitiativeRolled,
+    InitiativeTieBroken,
     MoveBlocked,
     RoundEnded,
     RoundStarted,
@@ -194,6 +195,10 @@ def describe_event(e: EventBase, state: BattleState) -> str | None:  # noqa: PLR
         return f"戰鬥開始：{state.map_name_zh}（{state.width}×{state.height}），種子 {e.seed}"
     if isinstance(e, InitiativeRolled):
         return f"先攻：{name[e.unit_id]} d20={e.roll} {_signed(e.modifier)} = {e.total}"
+    if isinstance(e, InitiativeTieBroken):
+        return f"先攻平手（總值 {e.total}、敏捷 {e.dex}），以亂數決定：" + " → ".join(
+            name[u] for u in e.order
+        )
     if isinstance(e, TurnOrderSet):
         return "行動順序：" + " → ".join(name[u] for u in e.order)
     if isinstance(e, RoundStarted | RoundEnded):

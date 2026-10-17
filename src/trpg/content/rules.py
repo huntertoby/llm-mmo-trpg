@@ -55,6 +55,8 @@ class CoreRules(ContentModel):
     hit_mod_cap: int = Field(ge=1)
     proficiency: int
     height_hit_bonus: int = Field(ge=0)
+    melee_height_limit: int = Field(ge=0)
+    melee_height_limit_max_range: int = Field(ge=1)
     initiative_attr_base: int
     initiative_attr_divisor: int = Field(ge=1)
 

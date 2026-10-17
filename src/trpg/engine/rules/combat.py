@@ -10,7 +10,7 @@ from dataclasses import dataclass
 
 from trpg.content.library import Ruleset
 from trpg.engine.events import AdvantageState
-from trpg.engine.rules.geometry import has_line_of_sight, manhattan
+from trpg.engine.rules.geometry import XY, has_line_of_sight, manhattan
 from trpg.engine.state import BattleState, UnitState
 from trpg.shared.rng import Rng
 from trpg.shared.types import Attribute, Element
@@ -26,7 +26,10 @@ __all__ = [
     "defense_value_permille",
     "element_modifier_ppm",
     "hit_modifier",
+    "is_height_limited",
     "is_hit",
+    "melee_height_problem",
+    "reach_problem",
     "roll_attack",
     "situational_modifier",
 ]
@@ -165,6 +168,35 @@ def element_modifier_ppm(unit: UnitState, element: Element, rules: Ruleset) -> i
     return max(value, floor)
 
 
+def is_height_limited(state: BattleState, unit: UnitState) -> bool:
+    """近戰與長柄武器（射程 ≤ ``melee_height_limit_max_range``）受高度差限制。"""
+    return unit.weapon.range <= state.ruleset.core.melee_height_limit_max_range
+
+
+def melee_height_problem(state: BattleState, attacker: UnitState, target_xy: XY) -> str | None:
+    """近戰攻擊的高度差超過 ``melee_height_limit`` 時的原因；沒有問題時回傳 ``None``。"""
+    if not is_height_limited(state, attacker):
+        return None
+    limit = state.ruleset.core.melee_height_limit
+    diff = abs(state.tile(*attacker.xy).height - state.tile(*target_xy).height)
+    if diff > limit:
+        return f"高度差過大，無法近戰：相差 {diff} 層（上限 {limit} 層）"
+    return None
+
+
+def reach_problem(state: BattleState, attacker: UnitState, target_xy: XY, what: str) -> str | None:
+    """射程、近戰高度差與視線的檢查（目標可以是單位或物件所在的格子）。"""
+    distance = manhattan(attacker.xy, target_xy)
+    if distance > attacker.weapon.range:
+        return f"目標超出射程：距離 {distance}，射程 {attacker.weapon.range}"
+    height_problem = melee_height_problem(state, attacker, target_xy)
+    if height_problem is not None:
+        return height_problem
+    if not has_line_of_sight(state, attacker.xy, target_xy):
+        return f"視線被阻擋：{attacker.name_zh} 看不到 {what}"
+    return None
+
+
 def attack_problem(state: BattleState, attacker: UnitState, target: UnitState) -> str | None:
     """不能攻擊的原因（繁體中文）；可以攻擊時回傳 ``None``（不檢查 AP）。"""
     if target.downed:
@@ -173,9 +205,4 @@ def attack_problem(state: BattleState, attacker: UnitState, target: UnitState) -
         return "不能攻擊自己"
     if target.team is attacker.team:
         return f"不能攻擊友方單位：{target.name_zh}"
-    distance = manhattan(attacker.xy, target.xy)
-    if distance > attacker.weapon.range:
-        return f"目標超出射程：距離 {distance}，射程 {attacker.weapon.range}"
-    if not has_line_of_sight(state, attacker.xy, target.xy):
-        return f"視線被阻擋：{attacker.name_zh} 看不到 {target.name_zh}"
-    return None
+    return reach_problem(state, attacker, target.xy, target.name_zh)

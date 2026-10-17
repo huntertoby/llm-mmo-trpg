@@ -15,6 +15,8 @@ hit_slope: 4                  # 命中修正斜率
 hit_mod_cap: 8                # 命中修正上下限 ±8
 proficiency: 2                # 熟練加值
 height_hit_bonus: 2           # 高打低 +2、低打高 −2
+melee_height_limit: 1         # 近戰（射程 <= melee_height_limit_max_range）攻擊的高度差上限
+melee_height_limit_max_range: 2   # 射程不超過此值的武器（近戰、長柄）受高度差限制
 initiative_attr_base: 10      # 先攻：d20 + (敏捷 − 10) // 2
 initiative_attr_divisor: 2
 

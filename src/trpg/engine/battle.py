@@ -25,6 +25,7 @@ from trpg.engine.events import (
     AttackRolled,
     BattleStarted,
     InitiativeRolled,
+    InitiativeTieBroken,
     RoundStarted,
     TurnOrderSet,
     UnitStoodUp,
@@ -169,11 +170,31 @@ def begin_battle(setup: BattleSetup, seed: int) -> ResolveResult:
         ctx.emit(
             InitiativeRolled, unit_id=unit.id, roll=roll, modifier=modifier, total=unit.initiative
         )
-    state.turn_order = [u.id for u in sorted(state.units_sorted(), key=lambda u: -u.initiative)]
+    state.turn_order = _initiative_order(ctx)
     ctx.emit(TurnOrderSet, order=tuple(state.turn_order))
     ctx.emit(RoundStarted)
     start_turn(ctx, state.turn_order[0])
     return finish_resolution(ctx)
+
+
+def _initiative_order(ctx: Ctx) -> list[UnitId]:
+    """先攻順序：總值高者先；同值先比敏捷值；仍相同時以戰鬥亂數決定（``docs/專案計畫.md`` 5.0）。
+
+    仍平手的每一組（依單位 ID 排序後）以 ``rng.shuffled`` 洗牌一次，並產生
+    ``initiative_tie_broken`` 事件記錄結果。
+    """
+    units = ctx.state.units_sorted()
+    groups: dict[tuple[int, int], list[UnitId]] = {}
+    for unit in units:
+        groups.setdefault((unit.initiative, unit.attributes[Attribute.DEX]), []).append(unit.id)
+    order: list[UnitId] = []
+    for key in sorted(groups, key=lambda k: (-k[0], -k[1])):
+        members = groups[key]
+        if len(members) > 1:
+            members = ctx.rng.shuffled(members)
+            ctx.emit(InitiativeTieBroken, total=key[0], dex=key[1], order=tuple(members))
+        order.extend(members)
+    return order
 
 
 def start_battle(setup: BattleSetup, seed: int) -> BattleState:

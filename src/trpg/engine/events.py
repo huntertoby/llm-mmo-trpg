@@ -27,6 +27,7 @@ __all__ = [
     "EventBase",
     "Healed",
     "InitiativeRolled",
+    "InitiativeTieBroken",
     "MoveBlocked",
     "MoveMode",
     "RoundEnded",
@@ -72,6 +73,15 @@ class InitiativeRolled(EventBase):
     roll: int
     modifier: int
     total: int
+
+
+class InitiativeTieBroken(EventBase):
+    """先攻總值與敏捷值都相同的一組單位，以戰鬥亂數決定的順序。"""
+
+    type: Literal["initiative_tie_broken"] = "initiative_tie_broken"
+    total: int
+    dex: int
+    order: tuple[UnitId, ...]
 
 
 class TurnOrderSet(EventBase):
@@ -231,6 +241,7 @@ class ChainLimitReached(EventBase):
 type Event = Annotated[
     BattleStarted
     | InitiativeRolled
+    | InitiativeTieBroken
     | TurnOrderSet
     | RoundStarted
     | RoundEnded
