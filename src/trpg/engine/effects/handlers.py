@@ -33,7 +33,7 @@ from trpg.engine.rules.movement import is_deadly
 from trpg.engine.state import BattleState, StatusInstance, UnitState
 from trpg.shared.types import Element, Pos, Surface, Team
 
-__all__ = ["ability_modifier", "apply_status", "arrive", "weather_permille"]
+__all__ = ["ability_modifier", "apply_status", "arrive", "enter_surface", "weather_permille"]
 
 
 def weather_permille(state: BattleState, element: Element) -> int:
@@ -58,6 +58,7 @@ def _damage(ctx: Ctx, effect: EffectBase) -> list[EventBase]:
     rolls: tuple[int, ...] = ()
     mod_ppm = PPM
     weather = PERMILLE
+    base_amount: int | None = None
     if effect.mode == "lethal":
         amount = unit.hp
     elif effect.mode == "percent_max_hp":
@@ -79,6 +80,7 @@ def _damage(ctx: Ctx, effect: EffectBase) -> list[EventBase]:
             // (PERMILLE * PPM * PERMILLE * PERMILLE),
             effect.min_damage,
         )
+        base_amount = max(raw_permille * weather // (PERMILLE * PERMILLE), effect.min_damage)
     hp_before = unit.hp
     unit.hp = max(0, unit.hp - amount)
     events: list[EventBase] = [
@@ -97,6 +99,7 @@ def _damage(ctx: Ctx, effect: EffectBase) -> list[EventBase]:
             pos=unit.pos,
             weather_permille=weather,
             multiplier_permille=effect.multiplier_permille,
+            base_amount=base_amount,
         )
     ]
     if unit.hp <= 0:
@@ -163,11 +166,13 @@ def arrive(
     if objective.kind == "escape" and unit.team is Team.ALLY and dest in objective.tiles:
         events.extend(escape_unit(ctx, unit))
         return events
-    events.extend(_enter_surface(ctx, unit))
+    events.extend(enter_surface(ctx, unit))
     return events
 
 
-def _enter_surface(ctx: Ctx, unit: UnitState) -> list[EventBase]:
+def enter_surface(ctx: Ctx, unit: UnitState) -> list[EventBase]:
+    """``unit`` 所在格表面的進入效果：``surface_entered``（套用狀態），有檢定時擲骰
+    （``check_rolled``）。走進表面、被推進表面，以及表面出現在腳下時都會呼叫。"""
     surface = ctx.state.tile(*unit.xy).surface
     if surface is Surface.NONE:
         return []

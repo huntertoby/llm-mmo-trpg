@@ -35,6 +35,7 @@ from trpg.engine.effects.models import (
     PushEffect,
     RemoveStatusEffect,
 )
+from trpg.engine.effects.world import object_push_block, push_distance, unit_push_block
 from trpg.engine.events import (
     BattleStarted,
     InitiativeRolled,
@@ -84,6 +85,7 @@ __all__ = [
     "resolve",
     "resolve_with",
     "resume",
+    "shove_problem",
     "start_battle",
 ]
 
@@ -392,7 +394,32 @@ def maneuver_problem(state: BattleState, unit: UnitState, target: UnitState) -> 
     return None
 
 
+_PUSH_BLOCK_REASONS = {
+    "out_of_bounds": "會被推出地圖",
+    "occupied": "另一側有單位",
+    "obstacle": "另一側被擋住",
+    "too_high": "另一側比較高",
+}
+
+
+def shove_problem(state: BattleState, unit: UnitState, target: UnitState) -> str | None:
+    """推擊推不動的原因（距離減半後為 0、目標格被擋、出界）；推得動時回傳 ``None``。
+
+    只檢查第一格（之後的格子在結算時逐格判斷）。推進致命地形不算被擋。
+    """
+    distance = push_distance(state, target, state.ruleset.core.shove_distance)
+    if distance <= 0:
+        return f"推不動：{target.name_zh} 不為所動（推擊距離減半後為 0 格）"
+    dx, dy = _direction(unit.xy, target.xy)
+    nxt = (target.pos.x + dx, target.pos.y + dy)
+    reason = unit_push_block(state, target.xy, nxt, target.id)
+    if reason is not None:
+        return f"推不動：{target.name_zh} {_PUSH_BLOCK_REASONS[reason]}"
+    return None
+
+
 def interact_problem(state: BattleState, unit: UnitState, obj: ObjectState) -> str | None:
+    """互動（推動物件）的問題：可推動、相鄰、高度差不超過 ``interact_height_limit``、推得動。"""
     definition = state.object_def(obj)
     if obj.destroyed:
         return f"物件已被摧毀：{definition.name_zh}"
@@ -400,6 +427,14 @@ def interact_problem(state: BattleState, unit: UnitState, obj: ObjectState) -> s
         return f"{definition.name_zh}無法推動"
     if manhattan(unit.xy, obj.xy) != 1:
         return f"物件必須相鄰：{definition.name_zh}"
+    limit = state.ruleset.core.interact_height_limit
+    diff = abs(state.tile(*unit.xy).height - state.tile(*obj.xy).height)
+    if diff > limit:
+        return f"高度差過大：相差 {diff} 層（上限 {limit} 層）"
+    dx, dy = _direction(unit.xy, obj.xy)
+    reason = object_push_block(state, obj.xy, (obj.pos.x + dx, obj.pos.y + dy))
+    if reason is not None:
+        return f"推不動：{definition.name_zh}{_PUSH_BLOCK_REASONS[reason]}"
     return None
 
 
@@ -512,6 +547,9 @@ def _do_shove(ctx: Ctx, unit: UnitState, action: Action) -> None:
     assert isinstance(action, Shove)
     _require_ap(unit, ctx.core.maneuver_ap_cost)
     target = _maneuver_target(ctx, unit, action.target_id)
+    problem = shove_problem(ctx.state, unit, target)
+    if problem is not None:
+        raise IllegalActionError(problem)
     unit.ap -= ctx.core.maneuver_ap_cost
     if _contest(ctx, "shove", unit, target, Attribute.STR):
         execute(
@@ -662,7 +700,11 @@ def legal_actions(state: BattleState) -> list[Action]:
         )
     if unit.ap >= core.maneuver_ap_cost:
         foes = [t for t in state.living_units() if maneuver_problem(state, unit, t) is None]
-        actions.extend(Shove(unit_id=unit.id, target_id=t.id) for t in foes)
+        actions.extend(
+            Shove(unit_id=unit.id, target_id=t.id)
+            for t in foes
+            if shove_problem(state, unit, t) is None
+        )
         actions.extend(
             Trip(unit_id=unit.id, target_id=t.id) for t in foes if not t.has_status(PRONE)
         )
@@ -708,7 +750,9 @@ def _has_ap_action(state: BattleState, unit: UnitState) -> bool:
         if any(object_attack_problem(state, unit, o) is None for o in state.objects_sorted()):
             return True
     if unit.ap >= core.maneuver_ap_cost and any(
-        maneuver_problem(state, unit, t) is None for t in state.living_units()
+        maneuver_problem(state, unit, t) is None
+        and (not t.has_status(PRONE) or shove_problem(state, unit, t) is None)
+        for t in state.living_units()
     ):
         return True
     return unit.ap >= core.interact_ap_cost and any(

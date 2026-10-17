@@ -127,8 +127,8 @@ def _tick_surfaces(ctx: Ctx, tiles: list[XY]) -> None:
             continue
         after = ctx.rules.surface_def(tile.surface).expires_to
         set_surface(ctx, xy, after, cause="expired")
-        if after is tile.surface:  # 到期後變回同一種表面：只重設持續時間
-            continue
+    # 到期後變成的表面若有進入效果，站在上面的單位立即觸發（Phase 1C 決定 #6）
+    execute(ctx, [])
 
 
 def _spread_fire(ctx: Ctx, fires: list[XY]) -> None:

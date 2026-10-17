@@ -5,6 +5,7 @@
 - ``damage_dealt``（攻擊或效果造成的元素傷害）→ 元素觸及目標所在的格子。
 - ``object_damaged`` → 元素觸及物件所在的格子；HP ≤ 0 的 ``breakable`` 物件摧毀。
 - ``object_exploded`` → 範圍內的單位受到爆炸傷害，每一格被爆炸的元素觸及。
+- ``object_destroyed``（被傷害打破）→ 物件的 ``spill``：該格與四方向相鄰格產生表面（漏油）。
 - ``element_touched``（``element_touch`` 效果、產生帶元素的表面）→ 元素觸及該格。
 - ``surface_entered``／``check_rolled`` → 表面的進入效果（燃燒、冰面滑倒）。
 
@@ -37,6 +38,7 @@ from trpg.engine.events import (
     ElementTouched,
     EventBase,
     ObjectDamaged,
+    ObjectDestroyed,
     ObjectExploded,
     SurfaceEntered,
 )
@@ -228,7 +230,7 @@ def _outcome_effects(  # noqa: PLR0911
                 cause="conduct",
                 element=element,
                 flat=amount,
-                apply_weather=False,  # 基準傷害（主要目標受到的傷害）已含天氣修正
+                apply_weather=False,  # 基準傷害已含天氣修正；元素修正由每個單位各自套用
             )
             for unit in targets
         ]
@@ -283,7 +285,8 @@ def _on_damage(ctx: Ctx, event: EventBase, depth: int) -> list[EffectBase]:
         depth,
         source_id=event.source_id,
         categories=TILE_CATEGORIES,
-        damage=event.amount,
+        # 雷電擴散的基準：主要目標套用自身抗性與格擋之前的傷害（Phase 1C 決定 #3）
+        damage=event.amount if event.base_amount is None else event.base_amount,
         exclude_unit=event.target_id,
     )
 
@@ -314,6 +317,26 @@ def _on_object_damaged(ctx: Ctx, event: EventBase, depth: int) -> list[EffectBas
             )
         )
     return effects
+
+
+@register_trigger("object_destroyed")
+def _on_object_destroyed(ctx: Ctx, event: EventBase, depth: int) -> list[EffectBase]:
+    """被傷害打破（不是被引爆）的物件若定義了 ``spill``，在該格與四方向相鄰格產生表面（漏油）。"""
+    assert isinstance(event, ObjectDestroyed)
+    if event.cause != "damage":
+        return []
+    spill = ctx.rules.object_def(event.kind).spill
+    if spill is None:
+        return []
+    x, y = event.pos.x, event.pos.y
+    tiles = [(x, y), (x, y - 1), (x + 1, y), (x, y + 1), (x - 1, y)]
+    return [
+        CreateSurfaceEffect(
+            depth=depth, pos=xy, surface=spill.surface, cause=f"spill:{event.object_id}"
+        )
+        for xy in tiles
+        if ctx.state.in_bounds(*xy)
+    ]
 
 
 @register_trigger("object_exploded")

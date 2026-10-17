@@ -107,6 +107,7 @@ def test_fire_attack_on_oil_barrel_explodes() -> None:
 
 
 def test_physical_attack_destroys_barrel_without_explosion() -> None:
+    """非火焰傷害打破油桶：不爆炸，改為漏油（Phase 1C 決定 #5，詳見 test_phase1c_decisions）。"""
     m = make_map("000\n000", objects=[(1, 0, "oil_barrel")], surfaces=[(1, 1, "oil")])
     state = give_turn(
         make_state(m, [spawn(Team.ALLY, (0, 0), "hero_fighter"), spawn(Team.ENEMY, (2, 1))]), U1
@@ -114,7 +115,12 @@ def test_physical_attack_destroys_barrel_without_explosion() -> None:
     result = run_effects(state, [DamageObjectEffect(object_id=O1, flat=100, source_id=U1)])
     assert [type(e) for e in result.events if isinstance(e, ObjectExploded)] == []
     assert result.state.objects[O1].destroyed
-    assert surfaces(result.state) == {(1, 1): Surface.OIL}
+    assert surfaces(result.state) == {
+        (0, 0): Surface.OIL,
+        (1, 0): Surface.OIL,
+        (2, 0): Surface.OIL,
+        (1, 1): Surface.OIL,
+    }
 
 
 def test_chain_reaction_stops_at_depth_limit() -> None:

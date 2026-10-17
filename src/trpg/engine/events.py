@@ -243,6 +243,11 @@ class DamageDealt(EventBase):
     """天氣的元素傷害倍率（‰）。"""
     multiplier_permille: int = 1000
     """其他倍率（格擋 500）。"""
+    base_amount: int | None = None
+    """套用目標自身的元素修正與格擋等倍率 **之前** 的傷害（已含暴擊骰與天氣）。
+
+    雷電擴散以此為基準（Phase 1C 決定 #3），每個被擴散的單位再各自套用自己的元素修正。
+    ``None`` 表示與 ``amount`` 相同（以最大 HP 比例計算的傷害）。"""
 
 
 class Healed(EventBase):

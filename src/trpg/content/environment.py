@@ -34,6 +34,7 @@ __all__ = [
     "ReactionTable",
     "ReactionUnless",
     "ReactionWhen",
+    "SpillDef",
     "SurfaceCheck",
     "SurfaceDamage",
     "SurfaceDef",
@@ -93,6 +94,20 @@ class ExplosionDef(ContentModel):
     element: Element = Element.FIRE
 
 
+class SpillDef(ContentModel):
+    """物件被 **傷害** 打破（``destroy cause = damage``，例如物理攻擊打破油桶）時，在該格與四方向
+    相鄰格產生 ``surface``（漏油）。被火焰引爆、燒毀、掉落等其他原因摧毀時不會漏出。"""
+
+    surface: Surface
+
+    @field_validator("surface")
+    @classmethod
+    def _not_none(cls, value: Surface) -> Surface:
+        if value is Surface.NONE:
+            raise ValueError("spill.surface 不可為 none")
+        return value
+
+
 class ObjectDef(ContentModel):
     """一種格子物件（``content/objects.yaml``）。"""
 
@@ -102,6 +117,7 @@ class ObjectDef(ContentModel):
     max_hp: int | None = Field(default=None, ge=1)
     tags: tuple[str, ...] = ()
     explosion: ExplosionDef | None = None
+    spill: SpillDef | None = None
 
     @field_validator("glyph")
     @classmethod
@@ -124,6 +140,8 @@ class ObjectDef(ContentModel):
             raise ValueError(f"物件 {self.id}：breakable 必須設定 max_hp")
         if "explosive" in self.tags and self.explosion is None:
             raise ValueError(f"物件 {self.id}：explosive 必須設定 explosion")
+        if self.spill is not None and "breakable" not in self.tags:
+            raise ValueError(f"物件 {self.id}：spill 只能用於 breakable 物件")
         return self
 
     def has_tag(self, tag: str) -> bool:
@@ -295,8 +313,9 @@ class InteractionOutcome(ContentModel):
     - ``ignite_object``：物件著火（``burning_object_rounds`` 次環境回合後摧毀），並在該格產生
       fire 表面。
     - ``explode``：物件爆炸（參數見 ``objects.yaml`` 的 ``explosion``）。
-    - ``conduct``：沿相連的 water 格（與帶 ``conductive`` 的物件）擴散，其上的其他單位受到原傷害
-      × ``damage_permille`` 的同元素傷害（最低 ``min_damage``）。
+    - ``conduct``：沿相連的 water 格（與帶 ``conductive`` 的物件）擴散，其上的其他單位（含友方與
+      攻擊者自己，不含主要目標）受到「主要目標套用自身抗性與格擋之前的傷害」× ``damage_permille``
+      的同元素傷害（最低 ``min_damage``），再各自套用自己的元素修正。
     - ``push``：推動該格的物件或單位（方向與距離由觸及的效果提供）。
     - ``spread_surface``：沿觸及的方向，在下一格產生 ``surface``。
     - ``fill_chasm``：移除物件，該格地形改為 ``terrain``。

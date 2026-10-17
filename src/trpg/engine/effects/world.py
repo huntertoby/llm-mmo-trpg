@@ -51,10 +51,18 @@ from trpg.engine.events import (
 from trpg.engine.lifecycle import make_unit
 from trpg.engine.rules.combat import PERMILLE
 from trpg.engine.rules.movement import is_deadly, is_standable
-from trpg.engine.state import BattleState, ObjectState
+from trpg.engine.state import BattleState, ObjectState, UnitState
 from trpg.shared.types import ObjectId, Pos, Surface, Team, UnitId
 
-__all__ = ["change_height", "creation_result", "remove_object", "set_surface"]
+__all__ = [
+    "change_height",
+    "creation_result",
+    "object_push_block",
+    "push_distance",
+    "remove_object",
+    "set_surface",
+    "unit_push_block",
+]
 
 STEADFAST = "steadfast"
 
@@ -79,11 +87,15 @@ def set_surface(
     duration: int | None = None,
     team: Team | None = None,
     use_default_duration: bool = True,
+    depth: int = 0,
 ) -> list[EventBase]:
     """把 ``xy`` 的表面設為 ``surface``（不查互動表）。
 
     持續回合：``duration`` 優先；否則 ``use_default_duration`` 時用表面定義的預設值（``None`` 為
     永久）。表面與持續時間都沒有改變時不產生事件。
+
+    表面種類改變且新表面有進入效果時，若有單位站在這一格，記錄到 ``ctx.surface_entries``，
+    由效果佇列在清空前觸發（``depth`` 為造成改變的效果深度）。
     """
     state = ctx.state
     tile = state.tile(*xy)
@@ -106,6 +118,11 @@ def set_surface(
     )
     if before is surface:
         return []  # 只刷新持續時間
+    if surface is not Surface.NONE and ctx.rules.surface_def(surface).on_enter is not None:
+        unit = state.unit_at(*xy)
+        if unit is not None:
+            # 表面出現在單位腳下：效果佇列清空前依單位 ID 觸發進入效果（Phase 1C 決定 #6）
+            ctx.surface_entries.append((unit.id, xy, depth))
     return [
         ctx.emit(
             SurfaceChanged,
@@ -138,8 +155,11 @@ def creation_result(state: BattleState, xy: XY, surface: Surface) -> tuple[Surfa
 
 
 def _surface_allowed(state: BattleState, xy: XY) -> bool:
-    """致命地形上（沒有木橋）不能有表面。"""
-    return not is_deadly(state, xy)
+    """致命地形上（沒有木橋）與牆壁（不可進入、非致命的地形）上不能有表面。"""
+    if is_deadly(state, xy):
+        return False
+    terrain = state.ruleset.terrain_def(state.tile(*xy).terrain)
+    return terrain.walkable or terrain.deadly
 
 
 @register_effect("create_surface")
@@ -160,7 +180,9 @@ def _create_surface(ctx: Ctx, effect: EffectBase) -> list[EventBase]:
     if final is None:
         return []
     duration = effect.duration if final is effect.surface else None
-    events = set_surface(ctx, xy, final, cause=cause, duration=duration, team=effect.team)
+    events = set_surface(
+        ctx, xy, final, cause=cause, duration=duration, team=effect.team, depth=effect.depth
+    )
     element = ctx.rules.surface_def(final).element if final is not Surface.NONE else None
     if (
         effect.react
@@ -366,19 +388,15 @@ def _push_unit(ctx: Ctx, effect: PushEffect, unit_id: UnitId) -> list[EventBase]
     if unit is None or not unit.alive:
         return []
     events: list[EventBase] = []
-    distance = effect.distance
-    if unit.has_tag(STEADFAST):
-        distance = distance * ctx.core.steadfast_push_permille // PERMILLE
-        if distance != effect.distance:
-            events.append(
-                ctx.emit(
-                    PushResisted, unit_id=unit.id, requested=effect.distance, distance=distance
-                )
-            )
+    distance = push_distance(state, unit, effect.distance)
+    if unit.has_tag(STEADFAST) and distance != effect.distance:
+        events.append(
+            ctx.emit(PushResisted, unit_id=unit.id, requested=effect.distance, distance=distance)
+        )
     dx, dy = effect.direction
     for _ in range(distance):
         nxt = (unit.pos.x + dx, unit.pos.y + dy)
-        reason = _unit_push_block(state, unit.xy, nxt, unit.id)
+        reason = unit_push_block(state, unit.xy, nxt, unit.id)
         if reason is not None:
             to_pos = Pos(x=max(nxt[0], 0), y=max(nxt[1], 0))
             events.append(ctx.emit(MoveBlocked, unit_id=unit.id, to_pos=to_pos, reason=reason))
@@ -390,7 +408,19 @@ def _push_unit(ctx: Ctx, effect: PushEffect, unit_id: UnitId) -> list[EventBase]
     return events
 
 
-def _unit_push_block(state: BattleState, cur: XY, nxt: XY, unit_id: UnitId) -> str | None:
+def push_distance(state: BattleState, unit: UnitState, requested: int) -> int:
+    """單位實際被推的格數：帶 ``steadfast`` 標籤者 × ``steadfast_push_permille``（無條件捨去）。
+
+    技能的推擊效果（Phase 2）遇到 0 格時只是不移動；基本動作 ``Shove`` 遇到 0 格時不合法。
+    """
+    if unit.has_tag(STEADFAST):
+        return requested * state.ruleset.core.steadfast_push_permille // PERMILLE
+    return requested
+
+
+def unit_push_block(state: BattleState, cur: XY, nxt: XY, unit_id: UnitId) -> str | None:
+    """單位從 ``cur`` 被推向 ``nxt`` 時的阻擋原因（``out_of_bounds``／``occupied``／
+    ``obstacle``／``too_high``）；可以推過去時回傳 ``None``（致命地形不阻擋）。"""
     if not state.in_bounds(*nxt):
         return "out_of_bounds"
     other = state.unit_at(*nxt)
@@ -415,7 +445,7 @@ def _push_object(ctx: Ctx, effect: PushEffect, object_id: ObjectId) -> list[Even
     for _ in range(effect.distance):
         cur = obj.xy
         nxt = (cur[0] + dx, cur[1] + dy)
-        reason = _object_push_block(state, cur, nxt)
+        reason = object_push_block(state, cur, nxt)
         if reason is not None:
             events.append(_fizzle(ctx, "push", nxt, reason))
             break
@@ -429,7 +459,8 @@ def _push_object(ctx: Ctx, effect: PushEffect, object_id: ObjectId) -> list[Even
     return events
 
 
-def _object_push_block(state: BattleState, cur: XY, nxt: XY) -> str | None:
+def object_push_block(state: BattleState, cur: XY, nxt: XY) -> str | None:
+    """物件從 ``cur`` 被推向 ``nxt`` 時的阻擋原因；可以推過去時回傳 ``None``。"""
     if not state.in_bounds(*nxt):
         return "out_of_bounds"
     if state.tile(*nxt).object_id is not None:
@@ -534,6 +565,7 @@ def _change_tile(ctx: Ctx, effect: EffectBase) -> list[EventBase]:
                     final,
                     cause="map_event" if cause == "effect" else cause,
                     use_default_duration=False,
+                    depth=effect.depth,
                 )
             )
     return events

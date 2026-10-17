@@ -138,6 +138,13 @@ rules:
     target: surface
     surface: ice
     then: [{op: set_surface, surface: water}]
+  - id: oil_on_fire_burns
+    description_zh: 油漏到火焰上會繼續燃燒（保留火焰）
+    trigger: surface_created
+    surface_created: oil
+    target: surface
+    surface: fire
+    then: [{op: keep}]
   - id: fire_on_water_fizzles
     description_zh: 在水上產生火焰會被澆熄（保留水）
     trigger: surface_created

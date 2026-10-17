@@ -9,6 +9,7 @@ from trpg.content.rules import CoreRules
 from trpg.engine.events import EventBase
 from trpg.engine.state import BattleState
 from trpg.shared.rng import Rng
+from trpg.shared.types import UnitId
 
 __all__ = ["Ctx", "FixedRng", "PreviewMode"]
 
@@ -38,9 +39,20 @@ class Ctx:
 
     - ``decisions``：``prompt`` 反應的決定（依詢問順序消耗，見 :mod:`trpg.engine.reactions`）。
     - ``preview``：預覽模式（``None`` 為正式結算）。
+    - ``surface_entries``：等待觸發的「表面出現在腳下」進入效果
+      （見 :mod:`trpg.engine.effects.queue`）。
     """
 
-    __slots__ = ("core", "decisions", "events", "preview", "rng", "rules", "state")
+    __slots__ = (
+        "core",
+        "decisions",
+        "events",
+        "preview",
+        "rng",
+        "rules",
+        "state",
+        "surface_entries",
+    )
 
     def __init__(
         self,
@@ -56,6 +68,9 @@ class Ctx:
         self.core: CoreRules = state.ruleset.core
         self.decisions = list(decisions)
         self.preview = preview
+        self.surface_entries: list[tuple[UnitId, tuple[int, int], int]] = []
+        """表面在單位腳下被建立或改變：``(單位, 格子, 深度)``，由效果佇列在清空前依單位 ID
+        觸發進入效果（Phase 1C 決定 #6）。"""
 
     def emit[E: EventBase](self, cls: type[E], **fields: Any) -> E:
         """建立事件（自動填入 ``seq`` 與 ``round``）並加入事件列表。"""

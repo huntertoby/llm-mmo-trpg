@@ -4,6 +4,8 @@
   （排序穩定：鍵相同時保留產生順序）。
 - 每個效果結算後產生事件；事件經 :mod:`trpg.engine.triggers` 對照表觸發新效果，``depth + 1``。
 - ``depth`` 超過 ``max_chain_depth`` 的效果不入列，改產生 ``chain_limit_reached`` 事件。
+- 表面在單位腳下被建立或改變時（``Ctx.surface_entries``），佇列清空前依 **單位 ID** 順序觸發該表面
+  的進入效果（燃燒、冰面滑倒檢定……），其後續效果照常入列（Phase 1C 決定 #6）。
 """
 
 from __future__ import annotations
@@ -61,7 +63,10 @@ def execute(ctx: Ctx, effects: Sequence[Effect] | Sequence[EffectBase]) -> None:
     queue: deque[EffectBase] = deque()
     for effect in sort_effects(list(effects)):
         _enqueue(ctx, queue, effect, max_depth)
-    while queue:
+    while queue or ctx.surface_entries:
+        if not queue:
+            _flush_surface_entries(ctx, queue, max_depth)
+            continue
         effect = queue.popleft()
         produced = handler_for(_effect_kind(effect))(ctx, effect)
         follow_ups: list[EffectBase] = []
@@ -69,6 +74,31 @@ def execute(ctx: Ctx, effects: Sequence[Effect] | Sequence[EffectBase]) -> None:
             follow_ups.extend(triggers.effects_for(ctx, event, effect.depth + 1))
         for follow_up in sort_effects(follow_ups):
             _enqueue(ctx, queue, follow_up, max_depth)
+
+
+def _flush_surface_entries(ctx: Ctx, queue: deque[EffectBase], max_depth: int) -> None:
+    """依單位 ID 觸發「表面出現在腳下」的進入效果（每個單位每格一次）。
+
+    觸發時單位必須仍存活、仍站在該格，且該格目前的表面有進入效果。
+    """
+    # 延遲匯入：handlers 會向本模組註冊處理器。
+    from trpg.engine.effects.handlers import enter_surface  # noqa: PLC0415
+
+    entries = sorted(ctx.surface_entries, key=lambda e: e[0])
+    ctx.surface_entries = []
+    seen: set[tuple[str, tuple[int, int]]] = set()
+    follow_ups: list[EffectBase] = []
+    for unit_id, xy, depth in entries:
+        if (unit_id, xy) in seen:
+            continue
+        seen.add((unit_id, xy))
+        unit = ctx.state.units.get(unit_id)
+        if unit is None or not unit.alive or unit.xy != xy:
+            continue
+        for event in enter_surface(ctx, unit):
+            follow_ups.extend(triggers.effects_for(ctx, event, depth + 1))
+    for follow_up in sort_effects(follow_ups):
+        _enqueue(ctx, queue, follow_up, max_depth)
 
 
 def _enqueue(ctx: Ctx, queue: deque[EffectBase], effect: EffectBase, max_depth: int) -> None:

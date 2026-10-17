@@ -11,7 +11,7 @@ from trpg.cli.main import main
 DEMOS = {
     # 地圖：戰鬥紀錄中應出現的環境互動
     "oil_depot": ("爆炸了", "的油變成了火焰"),
-    "bridge_chasm": ("木橋", "掉進了深淵"),
+    "bridge_chasm": ("木橋", "燒毀"),
     "swamp": ("傳導雷電", "天氣 ×"),
 }
 
