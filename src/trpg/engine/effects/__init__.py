@@ -2,7 +2,9 @@
 
 - :mod:`~trpg.engine.effects.models`：效果的資料模型（``Effect`` union）。
 - :mod:`~trpg.engine.effects.queue`：佇列、處理器註冊表（``register_effect``）。
-- :mod:`~trpg.engine.effects.handlers`：Phase 1A 的處理器（匯入本套件時自動註冊）。
+- :mod:`~trpg.engine.effects.handlers`：單位效果的處理器（匯入本套件時自動註冊）。
+- :mod:`~trpg.engine.effects.world`：Phase 1B 的環境效果處理器（物件、表面、地形、推擊、產生單位）。
+- 互動表的觸發函式在 :mod:`trpg.engine.interactions`（同樣在匯入本套件時註冊）。
 
 :func:`run_effects` 是給測試用的內部 API：直接把效果放進佇列執行，不需要技能系統。
 """
@@ -11,16 +13,30 @@ from __future__ import annotations
 
 from collections.abc import Sequence
 
+from trpg.engine import interactions as _interactions
 from trpg.engine.context import Ctx
 from trpg.engine.effects import handlers as _handlers
+from trpg.engine.effects import world as _world
 from trpg.engine.effects.models import (
     ApplyStatusEffect,
+    ChangeTileEffect,
+    CreateObstacleEffect,
+    CreateSurfaceEffect,
     DamageEffect,
+    DamageObjectEffect,
+    DestroyObjectEffect,
     Effect,
     EffectBase,
+    ElementTouchEffect,
+    ExplodeEffect,
     HealEffect,
+    IgniteObjectEffect,
+    LowerTerrainEffect,
     MoveUnitEffect,
+    PushEffect,
+    RaiseTerrainEffect,
     RemoveStatusEffect,
+    SpawnUnitEffect,
 )
 from trpg.engine.effects.queue import execute, register_effect
 from trpg.engine.results import ResolveResult
@@ -28,18 +44,30 @@ from trpg.engine.state import BattleState
 
 __all__ = [
     "ApplyStatusEffect",
+    "ChangeTileEffect",
+    "CreateObstacleEffect",
+    "CreateSurfaceEffect",
     "DamageEffect",
+    "DamageObjectEffect",
+    "DestroyObjectEffect",
     "Effect",
     "EffectBase",
+    "ElementTouchEffect",
+    "ExplodeEffect",
     "HealEffect",
+    "IgniteObjectEffect",
+    "LowerTerrainEffect",
     "MoveUnitEffect",
+    "PushEffect",
+    "RaiseTerrainEffect",
     "RemoveStatusEffect",
+    "SpawnUnitEffect",
     "execute",
     "register_effect",
     "run_effects",
 ]
 
-del _handlers  # 只為了註冊處理器
+del _handlers, _interactions, _world  # 只為了註冊處理器與觸發函式
 
 
 def run_effects(state: BattleState, effects: Sequence[EffectBase]) -> ResolveResult:

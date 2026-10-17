@@ -16,7 +16,7 @@ from trpg.cli.render import (
     render_unit_table,
 )
 from trpg.content.library import ContentLibrary
-from trpg.engine.actions import Action, Move
+from trpg.engine.actions import Move, Step
 from trpg.engine.events import EVENT_LIST_ADAPTER, EventBase, RoundStarted, UnitMoved
 from trpg.engine.results import ResolveResult
 from trpg.engine.runner import LOG_FORMAT, BattleLog, replay, run_battle
@@ -35,7 +35,7 @@ def cmd_map_show(library: ContentLibrary, map_id: str, out: TextIO) -> int:
     return 0
 
 
-def _walk_summary(action: Action, events: list[EventBase], state: BattleState) -> str | None:
+def _walk_summary(action: Step, events: list[EventBase], state: BattleState) -> str | None:
     if not isinstance(action, Move):
         return None
     steps = [e for e in events if isinstance(e, UnitMoved) and e.mode == "walk"]
@@ -55,7 +55,7 @@ class _Printer:
     def __init__(self, out: TextIO) -> None:
         self.out = out
 
-    def __call__(self, action: Action | None, result: ResolveResult) -> None:
+    def __call__(self, action: Step | None, result: ResolveResult) -> None:
         state = result.state
         walk_printed = False
         for event in result.events:

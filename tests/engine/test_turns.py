@@ -2,6 +2,8 @@
 
 from __future__ import annotations
 
+from typing import Any
+
 import pytest
 
 from tests.engine.helpers import give_turn, make_map, make_setup, make_state, spawn, template
@@ -34,7 +36,7 @@ from trpg.shared.types import Attribute, Pos, Team, UnitId
 U1, U2 = UnitId("unit_0001"), UnitId("unit_0002")
 
 
-def _duel(**core: int) -> BattleState:
+def _duel(**core: Any) -> BattleState:
     m = make_map("000\n000")
     return make_state(
         m,

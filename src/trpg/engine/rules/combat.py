@@ -7,13 +7,14 @@
 from __future__ import annotations
 
 from dataclasses import dataclass
+from typing import Literal
 
 from trpg.content.library import Ruleset
 from trpg.engine.events import AdvantageState
 from trpg.engine.rules.geometry import XY, has_line_of_sight, manhattan
 from trpg.engine.state import BattleState, UnitState
 from trpg.shared.rng import Rng
-from trpg.shared.types import Attribute, Element
+from trpg.shared.types import Attribute, Element, Surface
 
 __all__ = [
     "PPM",
@@ -23,9 +24,12 @@ __all__ = [
     "attack_problem",
     "attack_value",
     "combine_advantage",
+    "concealed_max_distance",
+    "concealment_problem",
     "defense_value_permille",
     "element_modifier_ppm",
     "hit_modifier",
+    "is_concealed",
     "is_height_limited",
     "is_hit",
     "melee_height_problem",
@@ -40,6 +44,7 @@ NATURAL_MISS = 1
 NATURAL_HIT = 20
 DEFENDING = "defending"
 PRONE = "prone"
+CONCEALED = "concealed"
 
 
 def attack_value(unit: UnitState) -> int:
@@ -73,10 +78,32 @@ def situational_modifier(state: BattleState, attacker: UnitState, target: UnitSt
     return 0
 
 
-def advantage_sources(attacker: UnitState, target: UnitState) -> tuple[bool, bool]:
+def is_concealed(state: BattleState, unit: UnitState) -> bool:
+    """隱蔽：帶 ``concealed`` 狀態，或站在 ``conceal`` 表面（黑暗）／``conceal`` 物件（草叢）上。"""
+    if unit.has_status(CONCEALED):
+        return True
+    tile = state.tile(*unit.xy)
+    if tile.surface is not Surface.NONE and state.ruleset.surface_def(tile.surface).conceal:
+        return True
+    return tile.object_id is not None and state.object_has_tag(*unit.xy, "conceal")
+
+
+def concealed_max_distance(state: BattleState) -> int:
+    """隱蔽的目標可被攻擊的最遠距離（夜晚由天氣覆寫）。"""
+    weather = state.weather
+    if weather is not None and weather.concealed_ranged_max_distance is not None:
+        return weather.concealed_ranged_max_distance
+    return state.ruleset.core.concealed_ranged_max_distance
+
+
+def advantage_sources(
+    state: BattleState, attacker: UnitState, target: UnitState
+) -> tuple[bool, bool]:
     """是否存在（優勢來源, 劣勢來源）。
 
-    Phase 1A 的來源：目標倒地時，近戰攻擊有優勢、遠程攻擊有劣勢（1B 加入隱蔽、天氣等）。
+    - 目標倒地：近戰攻擊有優勢、遠程攻擊有劣勢。
+    - 目標隱蔽：劣勢。
+    - 天氣（濃霧）：遠程攻擊超過 ``ranged_disadvantage_beyond`` 格有劣勢。
     """
     advantage = False
     disadvantage = False
@@ -85,12 +112,22 @@ def advantage_sources(attacker: UnitState, target: UnitState) -> tuple[bool, boo
             advantage = True
         else:
             disadvantage = True
+    if is_concealed(state, target):
+        disadvantage = True
+    weather = state.weather
+    if (
+        weather is not None
+        and weather.ranged_disadvantage_beyond is not None
+        and not attacker.weapon.is_melee
+        and manhattan(attacker.xy, target.xy) > weather.ranged_disadvantage_beyond
+    ):
+        disadvantage = True
     return advantage, disadvantage
 
 
-def advantage_state(attacker: UnitState, target: UnitState) -> AdvantageState:
+def advantage_state(state: BattleState, attacker: UnitState, target: UnitState) -> AdvantageState:
     """優勢／劣勢：同時存在時互相抵消，不疊加。"""
-    return combine_advantage(*advantage_sources(attacker, target))
+    return combine_advantage(*advantage_sources(state, attacker, target))
 
 
 def combine_advantage(advantage: bool, disadvantage: bool) -> AdvantageState:
@@ -127,22 +164,40 @@ class AttackRoll:
     crit: bool
 
 
-def roll_attack(state: BattleState, rng: Rng, attacker: UnitState, target: UnitState) -> AttackRoll:
-    """擲命中骰（有優勢或劣勢時擲 2 顆 d20 取高／低）。暴擊需命中且自然骰 ≥ 武器暴擊範圍。"""
+type ForcedOutcome = Literal["miss", "hit", "crit"]
+"""預覽用：強制判定結果（``hit`` 為命中但不暴擊）。"""
+
+
+def roll_attack(
+    state: BattleState,
+    rng: Rng,
+    attacker: UnitState,
+    target: UnitState,
+    forced: ForcedOutcome | None = None,
+) -> AttackRoll:
+    """擲命中骰（有優勢或劣勢時擲 2 顆 d20 取高／低）。暴擊需命中且自然骰 ≥ 武器暴擊範圍。
+
+    ``forced`` 只供預覽使用：不擲骰，直接採用指定結果。
+    """
     rules = state.ruleset
-    adv = advantage_state(attacker, target)
-    if adv == "none":
-        rolls: tuple[int, ...] = (rng.d20(),)
+    adv = advantage_state(state, attacker, target)
+    modifier = hit_modifier(attacker, target, rules)
+    situational = situational_modifier(state, attacker, target)
+    proficiency = rules.core.proficiency
+    if forced is not None:
+        natural = _forced_natural(forced, modifier + proficiency + situational, attacker, rules)
+        rolls: tuple[int, ...] = (natural,)
+    elif adv == "none":
+        rolls = (rng.d20(),)
         natural = rolls[0]
     else:
         rolls = (rng.d20(), rng.d20())
         natural = max(rolls) if adv == "advantage" else min(rolls)
-    modifier = hit_modifier(attacker, target, rules)
-    situational = situational_modifier(state, attacker, target)
-    proficiency = rules.core.proficiency
     total = natural + modifier + proficiency + situational
     hit = is_hit(natural, total, rules.core.hit_target)
     crit = hit and natural >= attacker.weapon.crit_range
+    if forced is not None:
+        hit, crit = forced != "miss", forced == "crit"
     return AttackRoll(
         rolls=rolls,
         advantage=adv,
@@ -157,6 +212,18 @@ def roll_attack(state: BattleState, rng: Rng, attacker: UnitState, target: UnitS
         hit=hit,
         crit=crit,
     )
+
+
+def _forced_natural(forced: ForcedOutcome, bonus: int, attacker: UnitState, rules: Ruleset) -> int:
+    """與強制結果相符的自然骰（只用於事件內容；結果本身由 ``forced`` 決定）。"""
+    if forced == "miss":
+        return NATURAL_MISS
+    if forced == "crit":
+        return NATURAL_HIT
+    for natural in range(2, attacker.weapon.crit_range):
+        if is_hit(natural, natural + bonus, rules.core.hit_target):
+            return natural
+    return NATURAL_HIT
 
 
 def element_modifier_ppm(unit: UnitState, element: Element, rules: Ruleset) -> int:
@@ -199,10 +266,24 @@ def reach_problem(state: BattleState, attacker: UnitState, target_xy: XY, what: 
 
 def attack_problem(state: BattleState, attacker: UnitState, target: UnitState) -> str | None:
     """不能攻擊的原因（繁體中文）；可以攻擊時回傳 ``None``（不檢查 AP）。"""
-    if target.downed:
-        return f"目標已倒下：{target.name_zh}"
+    if not target.alive:
+        return f"目標已不在戰場上：{target.name_zh}"
     if target.id == attacker.id:
         return "不能攻擊自己"
     if target.team is attacker.team:
         return f"不能攻擊友方單位：{target.name_zh}"
-    return reach_problem(state, attacker, target.xy, target.name_zh)
+    problem = reach_problem(state, attacker, target.xy, target.name_zh)
+    if problem is not None:
+        return problem
+    return concealment_problem(state, attacker, target)
+
+
+def concealment_problem(state: BattleState, attacker: UnitState, target: UnitState) -> str | None:
+    """隱蔽的目標超過一定距離無法選為目標。"""
+    if not is_concealed(state, target):
+        return None
+    limit = concealed_max_distance(state)
+    distance = manhattan(attacker.xy, target.xy)
+    if distance > limit:
+        return f"目標隱蔽中：超過 {limit} 格無法選為目標（距離 {distance}）"
+    return None

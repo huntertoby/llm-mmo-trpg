@@ -2,6 +2,8 @@
 
 from __future__ import annotations
 
+from typing import Any
+
 import pytest
 
 from tests.engine.helpers import give_turn, make_map, make_state, spawn, template
@@ -20,7 +22,7 @@ def P(x: int, y: int) -> Pos:
 
 
 def _solo(
-    heights: str, pos: tuple[int, int], terrain: str | None = None, **core: int
+    heights: str, pos: tuple[int, int], terrain: str | None = None, **core: Any
 ) -> BattleState:
     m = make_map(heights, terrain)
     w = len(heights.strip().split("\n")[0])

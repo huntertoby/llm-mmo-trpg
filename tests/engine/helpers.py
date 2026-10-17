@@ -10,6 +10,7 @@ from trpg.content.battle import UnitTemplate
 from trpg.content.library import ContentLibrary, load_library
 from trpg.content.maps import MapDef
 from trpg.engine import BattleSetup, BattleState, UnitSpawn, start_battle
+from trpg.engine.state import SpawnTemplate
 from trpg.shared.rng import Rng, RngState
 from trpg.shared.types import Attribute, Team, UnitId
 
@@ -30,26 +31,39 @@ def make_map(
     *,
     ally: Sequence[tuple[int, int]] = ((0, 0),),
     enemy: Sequence[tuple[int, int]] | None = None,
+    objects: Sequence[tuple[int, int, str]] = (),
+    surfaces: Sequence[tuple[int, int, str]] = (),
+    objective: dict[str, object] | None = None,
+    events: Sequence[dict[str, object]] = (),
 ) -> MapDef:
-    """以字串建立地圖。``terrain`` 圖例：``.`` 石地、``x`` 深淵、``~`` 岩漿、``g`` 草地。"""
+    """以字串建立地圖。
+
+    ``terrain`` 圖例：``.`` 石地、``x`` 深淵、``~`` 岩漿、``g`` 草地、``d`` 泥土。
+
+    ``objects``／``surfaces``：``(x, y, 種類)``。``objective``、``events`` 直接以地圖檔格式給定。
+    """
     rows = heights.strip().split("\n")
     w, h = len(rows[0]), len(rows)
     if terrain is None:
         terrain = "\n".join("." * w for _ in range(h))
-    return MapDef.model_validate(
-        {
-            "id": "test_map",
-            "name_zh": "測試",
-            "size": [w, h],
-            "heights": heights.strip(),
-            "terrain": terrain.strip(),
-            "legend": {".": "stone", "x": "chasm", "~": "lava", "g": "grass"},
-            "start_zones": {
-                "ally": [list(c) for c in ally],
-                "enemy": [list(c) for c in (enemy or [(w - 1, h - 1)])],
-            },
-        }
-    )
+    data: dict[str, object] = {
+        "id": "test_map",
+        "name_zh": "測試",
+        "size": [w, h],
+        "heights": heights.strip(),
+        "terrain": terrain.strip(),
+        "legend": {".": "stone", "x": "chasm", "~": "lava", "g": "grass", "d": "dirt"},
+        "objects": [{"at": [x, y], "kind": k} for x, y, k in objects],
+        "surfaces": [{"at": [x, y], "surface": k} for x, y, k in surfaces],
+        "events": list(events),
+        "start_zones": {
+            "ally": [list(c) for c in ally],
+            "enemy": [list(c) for c in (enemy or [(w - 1, h - 1)])],
+        },
+    }
+    if objective is not None:
+        data["objective"] = objective
+    return MapDef.model_validate(data)
 
 
 def template(base: str = "bandit", **overrides: object) -> UnitTemplate:
@@ -72,22 +86,49 @@ def spawn(
 
 
 def make_setup(
-    map_def: MapDef, spawns: Sequence[UnitSpawn], *, max_rounds: int | None = None, **core: int
+    map_def: MapDef,
+    spawns: Sequence[UnitSpawn],
+    *,
+    max_rounds: int | None = None,
+    weather: str | None = None,
+    spawn_templates: Sequence[str] = (),
+    **core: int,
 ) -> BattleSetup:
     """``core`` 可覆寫 ``rules/core.yaml`` 的數值。
 
-    例如 ``fall_damage_permille_per_level=200``。
+    例如 ``fall_damage_permille_per_level=200``。``spawn_templates`` 為地圖事件會產生的單位範本。
     """
-    rs = library().ruleset
+    lib = library()
+    rs = lib.ruleset
     if core:
         rs = rs.model_copy(update={"core": rs.core.model_copy(update=core)})
-    return BattleSetup(map=map_def, ruleset=rs, units=tuple(spawns), max_rounds=max_rounds)
+    templates = {
+        t: SpawnTemplate(template=lib.unit(t), weapon=lib.weapon_of(lib.unit(t)))
+        for t in spawn_templates
+    }
+    return BattleSetup(
+        map=map_def,
+        ruleset=rs,
+        units=tuple(spawns),
+        max_rounds=max_rounds,
+        weather=None if weather is None else lib.weather_def(weather),
+        spawn_templates=templates,
+    )
 
 
 def make_state(
-    map_def: MapDef, spawns: Sequence[UnitSpawn], *, seed: int = 0, **core: int
+    map_def: MapDef,
+    spawns: Sequence[UnitSpawn],
+    *,
+    seed: int = 0,
+    weather: str | None = None,
+    spawn_templates: Sequence[str] = (),
+    **core: int,
 ) -> BattleState:
-    return start_battle(make_setup(map_def, spawns, **core), seed)
+    return start_battle(
+        make_setup(map_def, spawns, weather=weather, spawn_templates=spawn_templates, **core),
+        seed,
+    )
 
 
 def give_turn(state: BattleState, unit_id: str) -> BattleState:
@@ -116,3 +157,13 @@ def with_rolls(state: BattleState, rolls: Sequence[tuple[int, int]]) -> BattleSt
     s = state.clone()
     s.rng_state = rng_state_for(rolls)
     return s
+
+
+def no_reactions(base: str = "bandit", **overrides: object) -> UnitTemplate:
+    """沒有反應規則的範本（不格擋、不藉機攻擊），方便驗證其他規則。"""
+    return template(base, reactions=[], **overrides)
+
+
+def unit_at(state: BattleState, x: int, y: int) -> str | None:
+    u = state.unit_at(x, y)
+    return None if u is None else u.id

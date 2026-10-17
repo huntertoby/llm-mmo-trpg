@@ -3,7 +3,9 @@
 - 以 ``dataclass(slots=True)`` 實作（複製比 pydantic model 快，Phase 2 模擬器要跑大量戰鬥），
   以 pydantic :class:`~pydantic.TypeAdapter` 序列化為 JSON 並完整往返。
 - 單位以 ID 為鍵的字典存放；需要迭代時一律依 ID 排序（:meth:`BattleState.units_sorted`）。
-- 地圖格子 :class:`Tile` 不可變，整張地圖是 ``tuple``，複製狀態時共用；改變格子時替換元素。
+- 地圖格子 :class:`Tile` 不可變；整張地圖是 ``list``，複製狀態時複製串列（格子本身共用），
+  改變格子時替換元素（:meth:`BattleState.set_tile`）。
+- 格子物件 :class:`ObjectState` 以 ID 為鍵存放；摧毀後保留在字典中（``destroyed=True``）。
 - :attr:`BattleState.ruleset` 是整份規則資料（不可變、複製時共用），讓重播不依賴當下的資料檔。
 - 亂數狀態存放在 :attr:`BattleState.rng_state`，``resolve`` 內部以 ``Rng.from_state`` 還原。
 """
@@ -12,14 +14,19 @@ from __future__ import annotations
 
 from dataclasses import dataclass, field, replace
 
-from pydantic import TypeAdapter
+from pydantic import BaseModel, ConfigDict, TypeAdapter
 
-from trpg.content.battle import WeaponDef
+from trpg.content.battle import ReactionRule, UnitTemplate, WeaponDef
+from trpg.content.environment import ObjectDef, WeatherDef
 from trpg.content.library import Ruleset
+from trpg.content.maps import MapEvent, Objective
 from trpg.shared.types import Attribute, Element, ObjectId, Pos, ResistGroup, Surface, Team, UnitId
 
 __all__ = [
     "BattleState",
+    "ObjectState",
+    "PendingResolution",
+    "SpawnTemplate",
     "StatusInstance",
     "Tile",
     "UnitState",
@@ -39,12 +46,70 @@ class StatusInstance:
 
 @dataclass(slots=True, frozen=True)
 class Tile:
-    """一格地圖。``surface``、``object_id`` 於 Phase 1B 起使用。"""
+    """一格地圖。
+
+    - ``surface_remaining``：表面剩餘的環境回合數（``None`` 為永久）。
+    - ``surface_team``：產生表面者的陣營（聖光表面只治療同陣營；地圖原有的表面為 ``None``）。
+    - ``object_id``：格上的物件（最多一個；摧毀後清除）。
+    """
 
     height: int
     terrain: str
     surface: Surface = Surface.NONE
+    surface_remaining: int | None = None
+    surface_team: Team | None = None
     object_id: ObjectId | None = None
+
+
+@dataclass(slots=True)
+class ObjectState:
+    """戰場上的格子物件（可變；只在 ``resolve`` 內部的複本上修改）。
+
+    ``burning``：著火後剩餘的環境回合數，歸零時摧毀（``None`` 表示沒有著火）。
+    """
+
+    id: ObjectId
+    kind: str
+    pos: Pos
+    hp: int | None
+    max_hp: int | None
+    burning: int | None = None
+    destroyed: bool = False
+
+    @property
+    def xy(self) -> tuple[int, int]:
+        return (self.pos.x, self.pos.y)
+
+    def clone(self) -> ObjectState:
+        return replace(self)
+
+
+class SpawnTemplate(BaseModel):
+    """可在戰鬥中產生的單位（地圖事件的援軍、Phase 2 的召喚）。"""
+
+    model_config = ConfigDict(frozen=True, extra="forbid")
+
+    template: UnitTemplate
+    weapon: WeaponDef
+
+
+@dataclass(slots=True, frozen=True)
+class PendingResolution:
+    """暫停中的結算（``prompt`` 反應等待決定）。
+
+    恢復時從 ``base_state_json``（動作之前的狀態）以 ``decisions`` 重新結算 ``action_json``；
+    結算是確定的，因此會重現暫停前的所有結果，再接著套用新的決定。
+    ``events_emitted`` 是已回傳給呼叫端的事件數（恢復時只回傳之後的事件）。
+    """
+
+    action_json: str
+    decisions: tuple[bool, ...]
+    base_state_json: str
+    events_emitted: int
+    kind: str
+    unit_id: UnitId
+    reaction: str
+    trigger_unit_id: UnitId | None
 
 
 @dataclass(slots=True)
@@ -71,10 +136,17 @@ class UnitState:
     move_points: int = 0
     statuses: list[StatusInstance] = field(default_factory=list)
     downed: bool = False
+    stamina: int = 0
+    max_stamina: int = 0
+    reactions: tuple[ReactionRule, ...] = ()
+    reactions_used: int = 0
+    escaped: bool = False
+    ai_profile: str | None = None
 
     @property
     def alive(self) -> bool:
-        return not self.downed
+        """仍在戰場上（未倒下、未撤離）。"""
+        return not self.downed and not self.escaped
 
     @property
     def xy(self) -> tuple[int, int]:
@@ -105,7 +177,7 @@ class BattleState:
     map_name_zh: str
     width: int
     height: int
-    tiles: tuple[Tile, ...]
+    tiles: list[Tile]
     ruleset: Ruleset
     units: dict[UnitId, UnitState]
     turn_order: list[UnitId]
@@ -119,6 +191,12 @@ class BattleState:
     ended: bool = False
     winner: Team | None = None
     end_reason: str | None = None
+    objects: dict[ObjectId, ObjectState] = field(default_factory=dict)
+    weather: WeatherDef | None = None
+    objective: Objective = field(default_factory=Objective)
+    map_events: tuple[MapEvent, ...] = ()
+    spawn_templates: dict[str, SpawnTemplate] = field(default_factory=dict)
+    pending: PendingResolution | None = None
 
     # ------------------------------------------------------------------
     # 複製
@@ -128,7 +206,9 @@ class BattleState:
         """深度足夠的複本：之後修改複本不會影響原狀態。"""
         return replace(
             self,
+            tiles=list(self.tiles),
             units={uid: unit.clone() for uid, unit in self.units.items()},
+            objects={oid: obj.clone() for oid, obj in self.objects.items()},
             turn_order=list(self.turn_order),
         )
 
@@ -141,6 +221,29 @@ class BattleState:
 
     def tile(self, x: int, y: int) -> Tile:
         return self.tiles[y * self.width + x]
+
+    def set_tile(self, x: int, y: int, tile: Tile) -> None:
+        self.tiles[y * self.width + x] = tile
+
+    # ------------------------------------------------------------------
+    # 物件
+    # ------------------------------------------------------------------
+
+    def object_at(self, x: int, y: int) -> ObjectState | None:
+        """``(x, y)`` 上未摧毀的物件。"""
+        oid = self.tiles[y * self.width + x].object_id
+        return None if oid is None else self.objects[oid]
+
+    def object_def(self, obj: ObjectState) -> ObjectDef:
+        return self.ruleset.object_def(obj.kind)
+
+    def object_has_tag(self, x: int, y: int, tag: str) -> bool:
+        obj = self.object_at(x, y)
+        return obj is not None and tag in self.ruleset.object_def(obj.kind).tags
+
+    def objects_sorted(self) -> list[ObjectState]:
+        """未摧毀的物件，依 ID 排序。"""
+        return [self.objects[o] for o in sorted(self.objects) if not self.objects[o].destroyed]
 
     # ------------------------------------------------------------------
     # 單位

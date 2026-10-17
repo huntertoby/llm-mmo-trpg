@@ -10,7 +10,7 @@ from typing import Annotated, Literal
 
 from pydantic import BaseModel, ConfigDict, Field, TypeAdapter
 
-from trpg.shared.types import Element, Pos, Team, UnitId
+from trpg.shared.types import Attribute, Element, ObjectId, Pos, Surface, Team, UnitId
 
 __all__ = [
     "EVENT_ADAPTER",
@@ -20,31 +20,60 @@ __all__ = [
     "BattleEnded",
     "BattleStarted",
     "ChainLimitReached",
+    "CheckRolled",
     "DamageCause",
     "DamageDealt",
+    "EffectFizzled",
+    "ElementTouched",
+    "EndReason",
     "EnteredDeadlyTerrain",
+    "EnvironmentEnded",
+    "EnvironmentStarted",
     "Event",
     "EventBase",
     "Healed",
     "InitiativeRolled",
     "InitiativeTieBroken",
+    "ManeuverRolled",
+    "MapEventTriggered",
     "MoveBlocked",
     "MoveMode",
+    "ObjectAttacked",
+    "ObjectCreated",
+    "ObjectDamaged",
+    "ObjectDestroyCause",
+    "ObjectDestroyed",
+    "ObjectExploded",
+    "ObjectIgnited",
+    "ObjectMoved",
+    "PushResisted",
+    "ReactionDeclined",
+    "ReactionTriggered",
     "RoundEnded",
     "RoundStarted",
     "StatusApplied",
     "StatusRemoved",
+    "SurfaceChanged",
+    "SurfaceEntered",
+    "TerrainChanged",
     "TurnEnded",
     "TurnOrderSet",
     "TurnStarted",
     "UnitDowned",
+    "UnitEscaped",
     "UnitFell",
     "UnitMoved",
+    "UnitSpawned",
     "UnitStoodUp",
 ]
 
 type AdvantageState = Literal["none", "advantage", "disadvantage"]
-type DamageCause = Literal["attack", "fall", "deadly_terrain", "status", "effect"]
+type DamageCause = Literal[
+    "attack", "fall", "deadly_terrain", "status", "effect", "explosion", "conduct", "surface"
+]
+"""``attack``：普攻與反應攻擊；``explosion``：爆炸；``conduct``：雷電沿水擴散；
+``surface``：站在表面上（毒、聖光）。"""
+type ObjectDestroyCause = Literal["damage", "burned", "explosion", "filled", "fell", "effect"]
 type MoveMode = Literal["walk", "forced", "teleport"]
 """``walk``：主動移動的一步；``forced``：強制位移（推擊等）；``teleport``：傳送（不墜落）。"""
 
@@ -110,10 +139,17 @@ class TurnEnded(EventBase):
     ap_carried: int
 
 
+type EndReason = Literal[
+    "eliminate", "round_limit", "escaped", "escape_failed", "defended", "point_lost"
+]
+"""``eliminate``：一方全滅；``escaped``：我方全員撤離；``escape_failed``：撤離超時；
+``defended``：守點成功；``point_lost``：守點被占領；``round_limit``：輪數上限（平手）。"""
+
+
 class BattleEnded(EventBase):
     type: Literal["battle_ended"] = "battle_ended"
     winner: Team | None
-    reason: Literal["eliminate", "round_limit"]
+    reason: EndReason
 
 
 # ---------------------------------------------------------------------------
@@ -140,7 +176,7 @@ class MoveBlocked(EventBase):
     type: Literal["move_blocked"] = "move_blocked"
     unit_id: UnitId
     to_pos: Pos
-    reason: Literal["out_of_bounds", "occupied"]
+    reason: Literal["out_of_bounds", "occupied", "obstacle", "too_high"]
 
 
 class UnitFell(EventBase):
@@ -197,6 +233,11 @@ class DamageDealt(EventBase):
     amount: int
     hp_before: int
     hp_after: int
+    pos: Pos | None = None
+    weather_permille: int = 1000
+    """天氣的元素傷害倍率（‰）。"""
+    multiplier_permille: int = 1000
+    """其他倍率（格擋 500）。"""
 
 
 class Healed(EventBase):
@@ -238,6 +279,217 @@ class ChainLimitReached(EventBase):
     depth: int
 
 
+# ---------------------------------------------------------------------------
+# Phase 1B：物件、表面、地形
+# ---------------------------------------------------------------------------
+
+
+class ObjectAttacked(EventBase):
+    """普攻以物件為目標（一律命中）。"""
+
+    type: Literal["object_attacked"] = "object_attacked"
+    attacker_id: UnitId
+    object_id: ObjectId
+
+
+class ObjectDamaged(EventBase):
+    type: Literal["object_damaged"] = "object_damaged"
+    object_id: ObjectId
+    pos: Pos
+    source_id: UnitId | None
+    cause: DamageCause
+    element: Element
+    rolls: tuple[int, ...]
+    amount: int
+    hp_before: int
+    hp_after: int
+
+
+class ObjectDestroyed(EventBase):
+    type: Literal["object_destroyed"] = "object_destroyed"
+    object_id: ObjectId
+    kind: str
+    pos: Pos
+    cause: ObjectDestroyCause
+
+
+class ObjectIgnited(EventBase):
+    """物件著火，``rounds`` 次環境回合後摧毀。"""
+
+    type: Literal["object_ignited"] = "object_ignited"
+    object_id: ObjectId
+    pos: Pos
+    rounds: int
+
+
+class ObjectExploded(EventBase):
+    type: Literal["object_exploded"] = "object_exploded"
+    object_id: ObjectId
+    pos: Pos
+    radius: int
+    source_id: UnitId | None
+
+
+class ObjectMoved(EventBase):
+    type: Literal["object_moved"] = "object_moved"
+    object_id: ObjectId
+    from_pos: Pos
+    to_pos: Pos
+
+
+class ObjectCreated(EventBase):
+    type: Literal["object_created"] = "object_created"
+    object_id: ObjectId
+    kind: str
+    pos: Pos
+
+
+class SurfaceChanged(EventBase):
+    """表面改變（``cause``：``effect``、``expired``、``interaction:<規則 ID>``、``weather``……）。"""
+
+    type: Literal["surface_changed"] = "surface_changed"
+    pos: Pos
+    before: Surface
+    after: Surface
+    remaining: int | None
+    cause: str
+
+
+class TerrainChanged(EventBase):
+    type: Literal["terrain_changed"] = "terrain_changed"
+    pos: Pos
+    height_before: int
+    height_after: int
+    terrain_before: str
+    terrain_after: str
+
+
+class ElementTouched(EventBase):
+    """元素觸及一格（由 ``element_touch`` 效果產生，互動表據此產生後續效果）。"""
+
+    type: Literal["element_touched"] = "element_touched"
+    pos: Pos
+    element: Element
+    source_id: UnitId | None
+    direction: tuple[int, int] | None
+    push_distance: int
+    damage: int
+    objects_only: bool
+
+
+class SurfaceEntered(EventBase):
+    type: Literal["surface_entered"] = "surface_entered"
+    unit_id: UnitId
+    pos: Pos
+    surface: Surface
+
+
+class CheckRolled(EventBase):
+    """屬性檢定（例如冰面滑倒）：``total = roll + modifier ≥ dc`` 即通過。"""
+
+    type: Literal["check_rolled"] = "check_rolled"
+    unit_id: UnitId
+    reason: str
+    attr: Attribute
+    roll: int
+    modifier: int
+    total: int
+    dc: int
+    success: bool
+    fail_status: str | None = None
+    """檢定失敗時獲得的狀態（由觸發表套用）。"""
+
+
+class EffectFizzled(EventBase):
+    """效果沒有發生（例如障礙物無處可放）。"""
+
+    type: Literal["effect_fizzled"] = "effect_fizzled"
+    effect_kind: str
+    pos: Pos | None
+    reason: str
+
+
+# ---------------------------------------------------------------------------
+# Phase 1B：技巧動作、推擊、反應
+# ---------------------------------------------------------------------------
+
+
+class ManeuverRolled(EventBase):
+    """技巧動作的對抗判定（推擊：力量 vs 力量；絆倒：敏捷 vs 敏捷）。"""
+
+    type: Literal["maneuver_rolled"] = "maneuver_rolled"
+    maneuver: Literal["shove", "trip"]
+    attacker_id: UnitId
+    target_id: UnitId
+    natural: int
+    modifier: int
+    proficiency: int
+    total: int
+    target_number: int
+    success: bool
+
+
+class PushResisted(EventBase):
+    """``steadfast`` 使推擊距離減少。"""
+
+    type: Literal["push_resisted"] = "push_resisted"
+    unit_id: UnitId
+    requested: int
+    distance: int
+
+
+class ReactionTriggered(EventBase):
+    type: Literal["reaction_triggered"] = "reaction_triggered"
+    unit_id: UnitId
+    reaction: str
+    trigger_unit_id: UnitId | None
+    stamina_spent: int
+
+
+class ReactionDeclined(EventBase):
+    """``prompt`` 反應被拒絕。"""
+
+    type: Literal["reaction_declined"] = "reaction_declined"
+    unit_id: UnitId
+    reaction: str
+    trigger_unit_id: UnitId | None
+
+
+# ---------------------------------------------------------------------------
+# Phase 1B：環境回合、地圖事件、勝利條件
+# ---------------------------------------------------------------------------
+
+
+class EnvironmentStarted(EventBase):
+    type: Literal["environment_started"] = "environment_started"
+
+
+class EnvironmentEnded(EventBase):
+    type: Literal["environment_ended"] = "environment_ended"
+
+
+class MapEventTriggered(EventBase):
+    type: Literal["map_event_triggered"] = "map_event_triggered"
+    index: int
+    kind: Literal["spawn_units", "terrain_change"]
+
+
+class UnitSpawned(EventBase):
+    type: Literal["unit_spawned"] = "unit_spawned"
+    unit_id: UnitId
+    template_id: str
+    team: Team
+    pos: Pos
+
+
+class UnitEscaped(EventBase):
+    """單位抵達出口，離開戰場。"""
+
+    type: Literal["unit_escaped"] = "unit_escaped"
+    unit_id: UnitId
+    pos: Pos
+
+
 type Event = Annotated[
     BattleStarted
     | InitiativeRolled
@@ -259,7 +511,29 @@ type Event = Annotated[
     | StatusApplied
     | StatusRemoved
     | UnitDowned
-    | ChainLimitReached,
+    | ChainLimitReached
+    | ObjectAttacked
+    | ObjectDamaged
+    | ObjectDestroyed
+    | ObjectIgnited
+    | ObjectExploded
+    | ObjectMoved
+    | ObjectCreated
+    | SurfaceChanged
+    | TerrainChanged
+    | ElementTouched
+    | SurfaceEntered
+    | CheckRolled
+    | EffectFizzled
+    | ManeuverRolled
+    | PushResisted
+    | ReactionTriggered
+    | ReactionDeclined
+    | EnvironmentStarted
+    | EnvironmentEnded
+    | MapEventTriggered
+    | UnitSpawned
+    | UnitEscaped,
     Field(discriminator="type"),
 ]
 

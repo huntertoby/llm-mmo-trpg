@@ -1,53 +1,38 @@
-"""回合流程、勝負判定（``docs/專案計畫.md`` 5.2.1、``docs/phases/Phase1計畫.md`` 4.4）。
+"""回合流程（``docs/專案計畫.md`` 5.2.1、``docs/phases/Phase1計畫.md`` 4.4）。
 
 回合開始：AP 回復為 ``ap_per_turn + min(保留, ap_carry_max)``、移動點數回滿、
-移除「到自己下回合開始」的狀態、結算持續傷害（燃燒）。
+移除「到自己下回合開始」的狀態、結算持續傷害（燃燒），再結算站立表面的回合開始效果
+（毒、聖光、火焰）。
 回合結束：倒數型狀態 −1（歸零移除）、記錄保留的 AP。
-全員行動完為一輪；超過 ``max_rounds`` 時以平手結束（Phase 1B 在輪與輪之間執行環境回合）。
+全員行動完為一輪：``round_ended`` → 環境回合 → 勝利條件的每輪判定 → 輪數上限 →
+``round_started``（反應次數重設）。
 """
 
 from __future__ import annotations
 
-from typing import Literal
-
 from trpg.engine.context import Ctx
 from trpg.engine.effects import execute
-from trpg.engine.effects.models import DamageEffect, EffectBase, RemoveStatusEffect
+from trpg.engine.effects.models import (
+    ApplyStatusEffect,
+    DamageEffect,
+    EffectBase,
+    HealEffect,
+    RemoveStatusEffect,
+)
+from trpg.engine.environment import run_environment
 from trpg.engine.events import (
-    BattleEnded,
     RoundEnded,
     RoundStarted,
     StatusRemoved,
     TurnEnded,
     TurnStarted,
 )
+from trpg.engine.objectives import check_battle_end, check_round_end, end_battle
 from trpg.engine.results import ResolveResult
-from trpg.engine.state import StatusInstance
-from trpg.shared.types import Team, UnitId
+from trpg.engine.state import StatusInstance, UnitState
+from trpg.shared.types import Surface, UnitId
 
 __all__ = ["advance_turn", "check_battle_end", "end_turn", "finish_resolution", "start_turn"]
-
-
-def check_battle_end(ctx: Ctx) -> bool:
-    """全滅判定：只剩一方（或雙方皆無）存活單位時結束戰鬥。回傳戰鬥是否已結束。"""
-    state = ctx.state
-    if state.ended:
-        return True
-    teams = sorted({u.team for u in state.living_units()})
-    if len(teams) >= 2:  # noqa: PLR2004 - 雙方
-        return False
-    winner = teams[0] if teams else None
-    _end_battle(ctx, winner, "eliminate")
-    return True
-
-
-def _end_battle(ctx: Ctx, winner: Team | None, reason: Literal["eliminate", "round_limit"]) -> None:
-    state = ctx.state
-    state.ended = True
-    state.winner = winner
-    state.end_reason = reason
-    state.active_unit = None
-    ctx.emit(BattleEnded, winner=winner, reason=reason)
 
 
 def start_turn(ctx: Ctx, unit_id: UnitId) -> None:
@@ -80,11 +65,41 @@ def start_turn(ctx: Ctx, unit_id: UnitId) -> None:
                     dice=tick.dice,
                 )
             )
-    # 先移除到期狀態，再結算持續傷害（各自依狀態 ID 順序）
+    # 先移除到期狀態，再結算持續傷害（各自依狀態 ID 順序），最後是表面效果
     if expiring:
         execute(ctx, expiring)
     if ticking:
         execute(ctx, ticking)
+    surface_effects = _surface_turn_start(ctx, unit)
+    if surface_effects and unit.alive:
+        execute(ctx, surface_effects)
+
+
+def _surface_turn_start(ctx: Ctx, unit: UnitState) -> list[EffectBase]:
+    """站在表面上的回合開始效果（``surfaces.yaml`` 的 ``on_turn_start``）。"""
+    tile = ctx.state.tile(*unit.xy)
+    if tile.surface is Surface.NONE:
+        return []
+    on_start = ctx.rules.surface_def(tile.surface).on_turn_start
+    if on_start is None:
+        return []
+    effects: list[EffectBase] = []
+    heal = on_start.heal
+    if heal is not None:
+        ally = not heal.allies_only or tile.surface_team is None or tile.surface_team is unit.team
+        excluded = heal.exclude_tag is not None and unit.has_tag(heal.exclude_tag)
+        if ally and not excluded:
+            effects.append(HealEffect(target_id=unit.id, dice=heal.dice))
+    damage = on_start.damage
+    if damage is not None and (damage.only_tag is None or unit.has_tag(damage.only_tag)):
+        effects.append(
+            DamageEffect(
+                target_id=unit.id, cause="surface", element=damage.element, dice=damage.dice
+            )
+        )
+    if on_start.apply_status is not None:
+        effects.append(ApplyStatusEffect(target_id=unit.id, status_id=on_start.apply_status))
+    return effects
 
 
 def end_turn(ctx: Ctx) -> None:
@@ -117,19 +132,35 @@ def end_turn(ctx: Ctx) -> None:
     ctx.emit(TurnEnded, unit_id=unit.id, ap_carried=unit.ap_carry)
 
 
+def _end_round(ctx: Ctx) -> bool:
+    """一輪結束：環境回合與每輪勝負判定。回傳戰鬥是否已結束。"""
+    state = ctx.state
+    ctx.emit(RoundEnded)
+    run_environment(ctx)
+    if check_round_end(ctx):
+        return True
+    if state.max_rounds is not None and state.round >= state.max_rounds:
+        end_battle(ctx, None, "round_limit")
+        return True
+    state.round += 1
+    for unit in state.units.values():
+        unit.reactions_used = 0
+    ctx.emit(RoundStarted)
+    return False
+
+
 def advance_turn(ctx: Ctx) -> None:
-    """輪到先攻順序中的下一位；必要時開始新的一輪。跳過在回合開始時倒下的單位。"""
+    """輪到先攻順序中的下一位；必要時結束本輪（環境回合）並開始新的一輪。
+
+    跳過在回合開始時倒下的單位。
+    """
     state = ctx.state
     while not check_battle_end(ctx):
         next_pos = state.turn_pos + 1 if state.active_unit is not None else state.turn_pos
         state.active_unit = None
         if next_pos >= len(state.turn_order):
-            ctx.emit(RoundEnded)
-            if state.max_rounds is not None and state.round >= state.max_rounds:
-                _end_battle(ctx, None, "round_limit")
+            if _end_round(ctx):
                 return
-            state.round += 1
-            ctx.emit(RoundStarted)
             next_pos = 0
         state.turn_pos = next_pos
         start_turn(ctx, state.turn_order[next_pos])
@@ -139,7 +170,7 @@ def advance_turn(ctx: Ctx) -> None:
 
 
 def finish_resolution(ctx: Ctx) -> ResolveResult:
-    """一次結算的收尾：勝負判定、行動者倒下時換下一位、寫回亂數狀態。"""
+    """一次結算的收尾：勝負判定、行動者離場時換下一位、寫回亂數狀態。"""
     if not check_battle_end(ctx) and ctx.state.active_unit is None:
         advance_turn(ctx)
     ctx.finish_rng()

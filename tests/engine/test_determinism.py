@@ -24,7 +24,7 @@ from trpg.engine import (
     state_from_json,
     state_to_json,
 )
-from trpg.engine.actions import ACTION_ADAPTER, ACTION_LIST_ADAPTER
+from trpg.engine.actions import ACTION_ADAPTER, STEP_ADAPTER, STEP_LIST_ADAPTER
 from trpg.engine.battle import has_only_end_turn
 from trpg.engine.events import EVENT_LIST_ADAPTER, EventBase
 from trpg.engine.runner import BattleLog, BattleRun, replay, run_battle
@@ -69,10 +69,10 @@ def test_state_json_round_trip_through_a_battle() -> None:
 
 def test_actions_and_events_round_trip() -> None:
     run = run_battle(demo_setup(), 7)
-    text = ACTION_LIST_ADAPTER.dump_json(run.actions)
-    assert ACTION_LIST_ADAPTER.validate_json(text) == run.actions
+    text = STEP_LIST_ADAPTER.dump_json(run.actions)
+    assert STEP_LIST_ADAPTER.validate_json(text) == run.actions
     for action in run.actions[:20]:
-        assert ACTION_ADAPTER.validate_json(ACTION_ADAPTER.dump_json(action)) == action
+        assert STEP_ADAPTER.validate_json(STEP_ADAPTER.dump_json(action)) == action
     etext = events_json(run.events)
     restored = EVENT_LIST_ADAPTER.validate_json(etext)
     assert restored == run.events

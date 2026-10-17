@@ -32,13 +32,27 @@ PRONE = "prone"
 
 
 def is_standable(state: BattleState, xy: XY) -> bool:
-    """地形可站立（可主動進入且非致命）。Phase 1B 會再考慮 ``blocks_move`` 物件與木橋。"""
-    return standable(state.ruleset.terrain_def(state.tile(*xy).terrain))
+    """單位能否站上（並停在）這一格。
+
+    地形可站立（可主動進入且非致命），或有 ``over_chasm`` 物件（木橋）架在上面；
+    且沒有 ``blocks_move`` 物件。
+    """
+    tile = state.tile(*xy)
+    if tile.object_id is not None:
+        tags = state.ruleset.object_def(state.objects[tile.object_id].kind).tags
+        if "blocks_move" in tags:
+            return False
+        if "over_chasm" in tags:
+            return True
+    return standable(state.ruleset.terrain_def(tile.terrain))
 
 
 def is_deadly(state: BattleState, xy: XY) -> bool:
-    """致命地形（Phase 1B：``over_chasm`` 物件會讓深淵格變安全）。"""
-    return state.ruleset.terrain_def(state.tile(*xy).terrain).deadly
+    """致命地形；有 ``over_chasm`` 物件（木橋）架在上面時不致命。"""
+    tile = state.tile(*xy)
+    if not state.ruleset.terrain_def(tile.terrain).deadly:
+        return False
+    return not (tile.object_id is not None and state.object_has_tag(*xy, "over_chasm"))
 
 
 def step_cost(state: BattleState, a: XY, b: XY) -> int | None:

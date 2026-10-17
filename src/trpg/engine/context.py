@@ -2,7 +2,7 @@
 
 from __future__ import annotations
 
-from typing import Any
+from typing import Any, Literal
 
 from trpg.content.library import Ruleset
 from trpg.content.rules import CoreRules
@@ -10,7 +10,24 @@ from trpg.engine.events import EventBase
 from trpg.engine.state import BattleState
 from trpg.shared.rng import Rng
 
-__all__ = ["Ctx"]
+__all__ = ["Ctx", "FixedRng", "PreviewMode"]
+
+type PreviewMode = Literal["min", "max"]
+"""預覽模式：``min`` 為「最少後果」（傷害骰取最小、次要判定對守方有利、prompt 反應不使用），
+``max`` 為「最多後果」（傷害骰取最大、次要判定對守方不利、prompt 反應使用）。"""
+
+
+class FixedRng(Rng):
+    """預覽用的亂數：``randint`` 一律回傳下限（``min``）或上限（``max``）。"""
+
+    __slots__ = ("_mode",)
+
+    def __init__(self, mode: PreviewMode) -> None:
+        super().__init__(0)
+        self._mode = mode
+
+    def randint(self, lo: int, hi: int) -> int:
+        return lo if self._mode == "min" else hi
 
 
 class Ctx:
@@ -18,16 +35,27 @@ class Ctx:
 
     ``state`` 是呼叫端狀態的 **複本**，可以就地修改；``rng`` 由 ``state.rng_state`` 還原，
     結算結束時寫回（:meth:`finish_rng`）。
+
+    - ``decisions``：``prompt`` 反應的決定（依詢問順序消耗，見 :mod:`trpg.engine.reactions`）。
+    - ``preview``：預覽模式（``None`` 為正式結算）。
     """
 
-    __slots__ = ("core", "events", "rng", "rules", "state")
+    __slots__ = ("core", "decisions", "events", "preview", "rng", "rules", "state")
 
-    def __init__(self, state: BattleState) -> None:
+    def __init__(
+        self,
+        state: BattleState,
+        *,
+        decisions: tuple[bool, ...] = (),
+        preview: PreviewMode | None = None,
+    ) -> None:
         self.state = state
-        self.rng = Rng.from_state(state.rng_state)
+        self.rng: Rng = Rng.from_state(state.rng_state) if preview is None else FixedRng(preview)
         self.events: list[EventBase] = []
         self.rules: Ruleset = state.ruleset
         self.core: CoreRules = state.ruleset.core
+        self.decisions = list(decisions)
+        self.preview = preview
 
     def emit[E: EventBase](self, cls: type[E], **fields: Any) -> E:
         """建立事件（自動填入 ``seq`` 與 ``round``）並加入事件列表。"""
@@ -37,4 +65,13 @@ class Ctx:
         return event
 
     def finish_rng(self) -> None:
-        self.state.rng_state = self.rng.get_state()
+        if self.preview is None:
+            self.state.rng_state = self.rng.get_state()
+
+    def check_d20(self) -> int:
+        """守方的檢定骰（例如冰面滑倒）：預覽 ``min`` 回傳 20（通過，沒有後果）、``max`` 回傳 1。"""
+        if self.preview == "min":
+            return 20
+        if self.preview == "max":
+            return 1
+        return self.rng.d20()

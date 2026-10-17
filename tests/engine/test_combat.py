@@ -85,8 +85,10 @@ def test_advantage_and_disadvantage_probabilities() -> None:
 
 
 def _duel(attacker_weapon: str = "one_handed_sword", **target_overrides: object) -> BattleState:
+    """戰士 vs 盜賊。盜賊不設反應（不格擋），以便直接驗證 1A 的傷害公式。"""
     m = make_map(FLAT3)
     a = spawn(Team.ALLY, (0, 1), "hero_fighter", weapon=attacker_weapon)
+    target_overrides.setdefault("reactions", [])
     t = spawn(Team.ENEMY, (1, 1), template("bandit", **target_overrides))
     state = make_state(m, [a, t])
     return give_turn(state, U1)
@@ -96,10 +98,10 @@ def test_prone_target_gives_melee_advantage_ranged_disadvantage() -> None:
     state = _duel()
     s = run_effects(state, [ApplyStatusEffect(target_id=U2, status_id="prone")]).state
     attacker, target = s.units[U1], s.units[U2]
-    assert advantage_state(attacker, target) == "advantage"
+    assert advantage_state(s, attacker, target) == "advantage"
     bow_state = _duel("bow")
     bow_state = run_effects(bow_state, [ApplyStatusEffect(target_id=U2, status_id="prone")]).state
-    assert advantage_state(bow_state.units[U1], bow_state.units[U2]) == ("disadvantage")
+    assert advantage_state(bow_state, bow_state.units[U1], bow_state.units[U2]) == ("disadvantage")
     # 優勢時擲兩顆取高
     s = with_rolls(s, [(20, 3), (20, 17)])
     s.active_unit = U1
@@ -124,7 +126,7 @@ def test_combine_advantage(adv: bool, dis: bool, expected: str) -> None:
 def test_advantage_and_disadvantage_cancel_rolls_one_die(monkeypatch: pytest.MonkeyPatch) -> None:
     """優勢與劣勢同時存在時互相抵消：只擲一顆 d20。"""
     state = with_rolls(_duel(), [(20, 15), (20, 2)])
-    monkeypatch.setattr(combat, "advantage_sources", lambda a, t: (True, True))
+    monkeypatch.setattr(combat, "advantage_sources", lambda s, a, t: (True, True))
     events = resolve(state, Attack(unit_id=U1, target_id=U2)).events
     rolled = next(e for e in events if isinstance(e, AttackRolled))
     assert rolled.rolls == (15,) and rolled.advantage == "none"

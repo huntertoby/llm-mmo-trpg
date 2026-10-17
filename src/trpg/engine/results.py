@@ -8,17 +8,23 @@ from pydantic import BaseModel, ConfigDict
 
 from trpg.engine.events import EventBase
 from trpg.engine.state import BattleState
+from trpg.shared.types import UnitId
 
 __all__ = ["Pending", "ResolveResult"]
 
 
 class Pending(BaseModel):
-    """結算暫停、等待玩家決定（Phase 1B 的 ``prompt`` 反應使用；1A 一律為 ``None``）。"""
+    """結算暫停、等待玩家決定（``prompt`` 反應）。
+
+    以 ``resume(state, Decision(unit_id=..., accept=...))`` 繼續。
+    """
 
     model_config = ConfigDict(frozen=True, extra="forbid")
 
     kind: str
-    unit_id: str
+    unit_id: UnitId
+    reaction: str = ""
+    trigger_unit_id: UnitId | None = None
 
 
 class ResolveResult(NamedTuple):

@@ -53,3 +53,23 @@ weapons:
     element: fire
     crit_range: 20
     two_handed: true
+  - id: lightning_staff
+    name_zh: 雷電法杖
+    range: 5
+    dice: 1d6
+    flat: 0
+    attack_bonus: 0
+    scaling_attr: int
+    element: lightning
+    crit_range: 20
+    two_handed: true
+  - id: frost_staff
+    name_zh: 冰霜法杖
+    range: 5
+    dice: 1d6
+    flat: 0
+    attack_bonus: 0
+    scaling_attr: int
+    element: ice
+    crit_range: 20
+    two_handed: true

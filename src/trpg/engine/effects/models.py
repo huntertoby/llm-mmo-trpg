@@ -14,19 +14,34 @@ from typing import Annotated, Literal
 from pydantic import BaseModel, ConfigDict, Field, TypeAdapter
 
 from trpg.content.battle import Dice
-from trpg.engine.events import DamageCause, MoveMode
-from trpg.shared.types import Element, Pos, UnitId
+from trpg.engine.events import DamageCause, MoveMode, ObjectDestroyCause
+from trpg.shared.types import Element, ObjectId, Pos, Surface, Team, UnitId
 
 __all__ = [
     "EFFECT_LIST_ADAPTER",
     "ApplyStatusEffect",
+    "ChangeTileEffect",
+    "CreateObstacleEffect",
+    "CreateSurfaceEffect",
     "DamageEffect",
+    "DamageObjectEffect",
+    "DestroyObjectEffect",
     "Effect",
     "EffectBase",
+    "ElementTouchEffect",
+    "ExplodeEffect",
     "HealEffect",
+    "IgniteObjectEffect",
+    "LowerTerrainEffect",
     "MoveUnitEffect",
+    "PushEffect",
+    "RaiseTerrainEffect",
     "RemoveStatusEffect",
+    "SpawnUnitEffect",
 ]
+
+type XY = tuple[int, int]
+type Direction = tuple[int, int]
 
 
 class EffectBase(BaseModel):
@@ -54,6 +69,8 @@ class DamageEffect(EffectBase):
     - ``lethal``：直接把 HP 降為 0（致命地形）。
 
     ``apply_element_mod=False`` 時不套用元素修正（墜落、致命地形等以最大 HP 比例計算的傷害）。
+    ``multiplier_permille``：最後再乘上的倍率（格擋 500 = 傷害減半），無條件捨去，最低
+    ``min_damage``。``mode == "roll"`` 時另套用天氣的元素傷害修正。
     """
 
     kind: Literal["damage"] = "damage"
@@ -68,6 +85,7 @@ class DamageEffect(EffectBase):
     permille: int = Field(default=0, ge=0)
     apply_element_mod: bool = True
     min_damage: int = Field(default=1, ge=0)
+    multiplier_permille: int = Field(default=1000, ge=0)
 
     def sort_target(self) -> str:
         return self.target_id
@@ -136,8 +154,180 @@ class RemoveStatusEffect(EffectBase):
         return self.target_id
 
 
+# ---------------------------------------------------------------------------
+# Phase 1B：環境效果
+# ---------------------------------------------------------------------------
+
+
+class _AtPos(EffectBase):
+    pos: XY
+
+    def sort_pos(self) -> tuple[int, int]:
+        return (self.pos[1], self.pos[0])
+
+
+class PushEffect(EffectBase):
+    """推擊：沿 ``direction``（單位向量）推動單位或物件 ``distance`` 格（逐格移動，遇阻擋停止）。
+
+    - 單位：帶 ``steadfast`` 標籤者距離 × ``steadfast_push_permille``（無條件捨去）；
+      目的地有其他單位、``blocks_move`` 物件、比目前高、或超出地圖時停止。每一步都可能墜落、
+      落入致命地形、進入表面。
+    - 物件（需 ``pushable``）：目的地有物件、有單位、比目前高、或超出地圖時停止；推入致命地形時
+      物件掉落並摧毀。
+    """
+
+    kind: Literal["push"] = "push"
+    target_id: UnitId | None = None
+    object_id: ObjectId | None = None
+    direction: Direction
+    distance: int = Field(ge=0)
+
+    def sort_target(self) -> str:
+        return self.target_id or self.object_id or ""
+
+
+class CreateSurfaceEffect(_AtPos):
+    """在 ``pos`` 產生表面。
+
+    ``react=True``（技能、天氣、地圖事件）：先查互動表的 ``surface_created`` 規則（例如水熄滅火），
+    產生後若表面帶元素，格上物件會被該元素觸及（例如在油桶上產生火焰會引爆）。
+    ``react=False``：互動規則的直接結果，不再觸發其他互動。
+    ``duration`` 為 ``None`` 時使用表面定義的預設值。
+    """
+
+    kind: Literal["create_surface"] = "create_surface"
+    surface: Surface
+    duration: int | None = Field(default=None, ge=1)
+    team: Team | None = None
+    react: bool = True
+    cause: str = "effect"
+
+
+class DamageObjectEffect(EffectBase):
+    """對物件造成傷害（攻擊命中物件時一律命中，不擲命中骰，不暴擊，物件沒有抗性）。"""
+
+    kind: Literal["damage_object"] = "damage_object"
+    object_id: ObjectId
+    element: Element = Element.PHYSICAL
+    dice: Dice | None = None
+    flat: int = 0
+    scaled_permille: int = 0
+    min_damage: int = Field(default=1, ge=0)
+    cause: DamageCause = "effect"
+
+    def sort_target(self) -> str:
+        return self.object_id
+
+
+class DestroyObjectEffect(EffectBase):
+    """摧毀物件。``set_terrain`` 不為空時該格地形改為此地形（大地填平深淵）。
+
+    木橋（``over_chasm``）摧毀後，格上的單位落入原本的致命地形。
+    """
+
+    kind: Literal["destroy_object"] = "destroy_object"
+    object_id: ObjectId
+    cause: ObjectDestroyCause = "effect"
+    set_terrain: str | None = None
+
+    def sort_target(self) -> str:
+        return self.object_id
+
+
+class RaiseTerrainEffect(_AtPos):
+    """地形隆起（高度 +``amount``，上限 3）；站在上面的單位跟著升高。"""
+
+    kind: Literal["raise_terrain"] = "raise_terrain"
+    amount: int = Field(default=1, ge=1)
+
+
+class LowerTerrainEffect(_AtPos):
+    """地形下陷（高度 −``amount``，下限 0）；站在上面的單位跟著下降（落差達門檻時墜落）。"""
+
+    kind: Literal["lower_terrain"] = "lower_terrain"
+    amount: int = Field(default=1, ge=1)
+
+
+class CreateObstacleEffect(_AtPos):
+    """產生障礙物（物件 ``object_kind``）；該格已有物件、單位或不可站立時沒有效果。"""
+
+    kind: Literal["create_obstacle"] = "create_obstacle"
+    object_kind: str = "earth_wall"
+
+
+class SpawnUnitEffect(_AtPos):
+    """產生單位（``template_id`` 必須在 ``BattleState.spawn_templates`` 中）。
+
+    目的地不可站立或已有單位時改到最近的安全格；新單位排在先攻順序的最後。
+    """
+
+    kind: Literal["spawn_unit"] = "spawn_unit"
+    template_id: str
+    team: Team
+
+
+class ElementTouchEffect(_AtPos):
+    """元素觸及一格（技能直接指定格子、環境火勢蔓延、風吹……）：依互動表產生後續效果。
+
+    ``direction``／``push_distance`` 供風的推擊與火勢蔓延使用；``damage`` 為雷電擴散的基準傷害。
+    ``objects_only``：只套用物件類規則（產生帶元素的表面後使用）。
+    """
+
+    kind: Literal["element_touch"] = "element_touch"
+    element: Element
+    direction: Direction | None = None
+    push_distance: int = Field(default=0, ge=0)
+    damage: int = Field(default=0, ge=0)
+    objects_only: bool = False
+
+
+class ExplodeEffect(EffectBase):
+    """物件爆炸（參數見物件定義的 ``explosion``）：摧毀物件、範圍內單位受傷、每一格被元素觸及。"""
+
+    kind: Literal["explode"] = "explode"
+    object_id: ObjectId
+
+    def sort_target(self) -> str:
+        return self.object_id
+
+
+class IgniteObjectEffect(EffectBase):
+    """物件著火：``burning_object_rounds`` 次環境回合後摧毀。"""
+
+    kind: Literal["ignite_object"] = "ignite_object"
+    object_id: ObjectId
+
+    def sort_target(self) -> str:
+        return self.object_id
+
+
+class ChangeTileEffect(_AtPos):
+    """地圖事件：改變一格的高度、地形或表面（省略的欄位不變）。"""
+
+    kind: Literal["change_tile"] = "change_tile"
+    height: int | None = Field(default=None, ge=0, le=3)
+    terrain: str | None = None
+    surface: Surface | None = None
+
+
 type Effect = Annotated[
-    DamageEffect | HealEffect | MoveUnitEffect | ApplyStatusEffect | RemoveStatusEffect,
+    DamageEffect
+    | HealEffect
+    | MoveUnitEffect
+    | ApplyStatusEffect
+    | RemoveStatusEffect
+    | PushEffect
+    | CreateSurfaceEffect
+    | DamageObjectEffect
+    | DestroyObjectEffect
+    | RaiseTerrainEffect
+    | LowerTerrainEffect
+    | CreateObstacleEffect
+    | SpawnUnitEffect
+    | ElementTouchEffect
+    | ExplodeEffect
+    | IgniteObjectEffect
+    | ChangeTileEffect,
     Field(discriminator="kind"),
 ]
 

@@ -1,51 +1,78 @@
-"""引擎對外 API：``start_battle``、``legal_actions``、``resolve``。
+"""引擎對外 API：``begin_battle``／``start_battle``、``legal_actions``、``resolve``、``resume``。
 
 - ``resolve`` 是純函式：在狀態複本上結算，不修改傳入的 ``state``；不合法時拋出
   :class:`~trpg.shared.errors.IllegalActionError`（繁體中文原因）。
 - 動作處理器以 ``type`` 為鍵註冊在 :data:`ACTION_HANDLERS`
-  （Phase 1B、Phase 2 擴充新動作時新增一筆）。
+  （Phase 2 擴充新動作時新增一筆）。
+- 暫停點：``prompt`` 反應需要玩家決定時，``resolve`` 回傳的狀態帶 ``pending``（顯示到暫停為止的
+  結果），``ResolveResult.pending`` 說明在等誰；``resume(state, decision)`` 從動作之前的狀態
+  以全部決定重新結算（結算是確定的），只回傳暫停之後的事件。
 """
 
 from __future__ import annotations
 
 from collections.abc import Callable
-from dataclasses import dataclass
+from dataclasses import dataclass, replace
 
-from trpg.content.maps import standable
-from trpg.engine.actions import Action, Attack, Defend, EndTurn, Move
-from trpg.engine.context import Ctx
+from trpg.engine.actions import (
+    ACTION_ADAPTER,
+    Action,
+    Attack,
+    Decision,
+    Defend,
+    EndTurn,
+    Interact,
+    Move,
+    Shove,
+    Trip,
+)
+from trpg.engine.context import Ctx, PreviewMode
 from trpg.engine.effects import execute
 from trpg.engine.effects.models import (
     ApplyStatusEffect,
-    DamageEffect,
+    DamageObjectEffect,
     MoveUnitEffect,
+    PushEffect,
     RemoveStatusEffect,
 )
 from trpg.engine.events import (
-    AttackRolled,
     BattleStarted,
     InitiativeRolled,
     InitiativeTieBroken,
+    ManeuverRolled,
+    ObjectAttacked,
     RoundStarted,
     TurnOrderSet,
     UnitStoodUp,
 )
+from trpg.engine.lifecycle import make_unit
+from trpg.engine.reactions import PauseForDecision, opportunity_attacks, perform_unit_attack
 from trpg.engine.results import ResolveResult
-from trpg.engine.rules.combat import attack_problem, roll_attack
-from trpg.engine.rules.geometry import XY
+from trpg.engine.rules.combat import attack_problem, is_hit, reach_problem
+from trpg.engine.rules.geometry import XY, manhattan
 from trpg.engine.rules.movement import (
     available_move_budget,
+    is_deadly,
+    is_standable,
     path_map,
     stand_up_cost,
     step_cost,
 )
 from trpg.engine.setup import BattleSetup, BattleSetupError
-from trpg.engine.state import BattleState, Tile, UnitState
+from trpg.engine.state import (
+    BattleState,
+    ObjectState,
+    PendingResolution,
+    Tile,
+    UnitState,
+    state_from_json,
+    state_to_json,
+)
 from trpg.engine.turns import advance_turn, end_turn, finish_resolution, start_turn
 from trpg.shared.errors import IllegalActionError
 from trpg.shared.ids import IdAllocator
 from trpg.shared.rng import Rng
-from trpg.shared.types import Attribute, Pos, Team, UnitId
+from trpg.shared.types import Attribute, ObjectId, Pos, Team, UnitId
 
 __all__ = [
     "ACTION_HANDLERS",
@@ -55,6 +82,8 @@ __all__ = [
     "legal_actions",
     "plan_move",
     "resolve",
+    "resolve_with",
+    "resume",
     "start_battle",
 ]
 
@@ -83,28 +112,28 @@ def _unit_names(setup: BattleSetup) -> list[str]:
     return names
 
 
-def _place_units(setup: BattleSetup, tiles: tuple[Tile, ...]) -> list[XY]:
-    width = setup.map.width
+def _place_units(setup: BattleSetup, state: BattleState) -> list[XY]:
     used: set[XY] = set()
-    positions: list[XY | None] = []
+    for spawn in setup.units:
+        if spawn.position is None:
+            continue
+        x, y = spawn.position
+        if not state.in_bounds(x, y):
+            raise BattleSetupError(f"起始位置超出地圖範圍：({x}, {y})")
+        if not is_standable(state, (x, y)) or is_deadly(state, (x, y)):
+            terrain = setup.ruleset.terrain_def(state.tile(x, y).terrain)
+            raise BattleSetupError(f"起始位置不可站立：({x}, {y}) 是{terrain.name_zh}")
+        if (x, y) in used:
+            raise BattleSetupError(f"起始位置重複：({x}, {y})")
+        used.add((x, y))
+    result: list[XY] = []
     for spawn in setup.units:
         if spawn.position is not None:
-            x, y = spawn.position
-            if not setup.map.in_bounds(x, y):
-                raise BattleSetupError(f"起始位置超出地圖範圍：({x}, {y})")
-            terrain = setup.ruleset.terrain_def(tiles[y * width + x].terrain)
-            if not standable(terrain):
-                raise BattleSetupError(f"起始位置不可站立：({x}, {y}) 是{terrain.name_zh}")
-            if (x, y) in used:
-                raise BattleSetupError(f"起始位置重複：({x}, {y})")
-            used.add((x, y))
-        positions.append(spawn.position)
-    result: list[XY] = []
-    for spawn, given in zip(setup.units, positions, strict=True):
-        if given is not None:
-            result.append(given)
+            result.append(spawn.position)
             continue
-        free = [c for c in setup.map.start_zones[spawn.team] if c not in used]
+        free = [
+            c for c in setup.map.start_zones[spawn.team] if c not in used and is_standable(state, c)
+        ]
         if not free:
             raise BattleSetupError(f"{spawn.team.display_name}起始區的格子不足")
         used.add(free[0])
@@ -112,36 +141,48 @@ def _place_units(setup: BattleSetup, tiles: tuple[Tile, ...]) -> list[XY]:
     return result
 
 
+def _initial_board(setup: BattleSetup) -> tuple[list[Tile], dict[ObjectId, ObjectState]]:
+    map_def = setup.map
+    width = map_def.width
+    surfaces = {s.at: s for s in map_def.surfaces}
+    tiles: list[Tile] = []
+    for y, row in enumerate(map_def.grid()):
+        for x, (h, t) in enumerate(row):
+            placed = surfaces.get((x, y))
+            tiles.append(
+                Tile(height=h, terrain=t)
+                if placed is None
+                else Tile(
+                    height=h,
+                    terrain=t,
+                    surface=placed.surface,
+                    surface_remaining=placed.duration,
+                )
+            )
+    objects: dict[ObjectId, ObjectState] = {}
+    ids = IdAllocator("obj")
+    for placement in map_def.objects:
+        definition = setup.ruleset.object_def(placement.kind)
+        oid = ObjectId(ids.next())
+        x, y = placement.at
+        objects[oid] = ObjectState(
+            id=oid,
+            kind=definition.id,
+            pos=Pos(x=x, y=y),
+            hp=definition.max_hp,
+            max_hp=definition.max_hp,
+        )
+        tiles[y * width + x] = replace(tiles[y * width + x], object_id=oid)
+    return tiles, objects
+
+
 def begin_battle(setup: BattleSetup, seed: int) -> ResolveResult:
-    """建立初始狀態：放置單位、擲先攻、開始第 1 輪與第一位的回合。回傳狀態與開場事件。"""
+    """建立初始狀態：放置物件與單位、擲先攻、開始第 1 輪與第一位的回合。回傳狀態與開場事件。"""
     teams = {spawn.team for spawn in setup.units}
     if teams != set(Team):
         raise BattleSetupError("雙方都至少要有一個單位")
     map_def = setup.map
-    tiles = tuple(Tile(height=h, terrain=t) for row in map_def.grid() for h, t in row)
-    positions = _place_units(setup, tiles)
-    names = _unit_names(setup)
-    ids = IdAllocator("unit")
-    units: dict[UnitId, UnitState] = {}
-    for spawn, (x, y), name in zip(setup.units, positions, names, strict=True):
-        uid = UnitId(ids.next())
-        t = spawn.template
-        units[uid] = UnitState(
-            id=uid,
-            template_id=t.id,
-            name_zh=name,
-            team=spawn.team,
-            pos=Pos(x=x, y=y),
-            hp=t.max_hp,
-            max_hp=t.max_hp,
-            attributes=dict(t.attributes),
-            speed=t.speed,
-            armor_bonus=t.armor_bonus,
-            weapon=spawn.weapon,
-            resist=dict(t.resist),
-            element_mods=dict(t.element_mods),
-            tags=t.tags,
-        )
+    tiles, objects = _initial_board(setup)
     state = BattleState(
         map_id=map_def.id,
         map_name_zh=map_def.name_zh,
@@ -149,7 +190,7 @@ def begin_battle(setup: BattleSetup, seed: int) -> ResolveResult:
         height=map_def.height,
         tiles=tiles,
         ruleset=setup.ruleset,
-        units=units,
+        units={},
         turn_order=[],
         turn_pos=0,
         active_unit=None,
@@ -157,7 +198,26 @@ def begin_battle(setup: BattleSetup, seed: int) -> ResolveResult:
         max_rounds=setup.max_rounds,
         seed=seed,
         rng_state=Rng(seed).get_state(),
+        objects=objects,
+        weather=setup.weather,
+        objective=setup.effective_objective,
+        map_events=map_def.events,
+        spawn_templates=dict(setup.spawn_templates),
     )
+    positions = _place_units(setup, state)
+    names = _unit_names(setup)
+    ids = IdAllocator("unit")
+    for spawn, (x, y), name in zip(setup.units, positions, names, strict=True):
+        uid = UnitId(ids.next())
+        state.units[uid] = make_unit(
+            uid,
+            template=spawn.template,
+            weapon=spawn.weapon,
+            team=spawn.team,
+            pos=Pos(x=x, y=y),
+            name=name,
+            rules=setup.ruleset,
+        )
     ctx = Ctx(state)
     core = ctx.core
     ctx.emit(BattleStarted, map_id=map_def.id, seed=seed)
@@ -210,6 +270,9 @@ def start_battle(setup: BattleSetup, seed: int) -> BattleState:
 def _actor(state: BattleState, action: Action) -> UnitState:
     if state.ended:
         raise IllegalActionError("戰鬥已結束")
+    if state.pending is not None:
+        who = state.units[state.pending.unit_id].name_zh
+        raise IllegalActionError(f"結算暫停中：等待 {who} 決定是否使用反應，請使用 resume")
     active = state.active
     if active is None:
         raise IllegalActionError("目前沒有行動中的單位")
@@ -261,8 +324,12 @@ def plan_move(state: BattleState, unit: UnitState, path: tuple[Pos, ...]) -> Mov
             raise IllegalActionError(f"路徑不連續：{prev} → {cur} 不相鄰")
         cost = step_cost(state, prev, cur)
         if cost is None:
-            terrain = state.ruleset.terrain_def(state.tile(*cur).terrain)
-            if not standable(terrain):
+            if not is_standable(state, cur):
+                obj = state.object_at(*cur)
+                if obj is not None and state.object_has_tag(*cur, "blocks_move"):
+                    name = state.object_def(obj).name_zh
+                    raise IllegalActionError(f"被{name}阻擋：{cur}")
+                terrain = state.ruleset.terrain_def(state.tile(*cur).terrain)
                 raise IllegalActionError(f"無法進入{terrain.name_zh}：{cur}")
             h0, h1 = state.tile(*prev).height, state.tile(*cur).height
             raise IllegalActionError(
@@ -283,14 +350,61 @@ def plan_move(state: BattleState, unit: UnitState, path: tuple[Pos, ...]) -> Mov
     return plan
 
 
-def _attack_target(state: BattleState, unit: UnitState, action: Attack) -> UnitState:
-    target = state.units.get(action.target_id)
+def _attack_target(state: BattleState, unit: UnitState, target_id: UnitId) -> UnitState:
+    target = state.units.get(target_id)
     if target is None:
-        raise IllegalActionError(f"找不到目標：{action.target_id}")
+        raise IllegalActionError(f"找不到目標：{target_id}")
     problem = attack_problem(state, unit, target)
     if problem is not None:
         raise IllegalActionError(problem)
     return target
+
+
+def object_attack_problem(state: BattleState, unit: UnitState, obj: ObjectState) -> str | None:
+    """不能攻擊物件的原因；可以攻擊時回傳 ``None``（不檢查 AP）。"""
+    definition = state.object_def(obj)
+    if obj.destroyed:
+        return f"物件已被摧毀：{definition.name_zh}"
+    if "breakable" not in definition.tags or obj.hp is None:
+        return f"{definition.name_zh}無法被攻擊"
+    return reach_problem(state, unit, obj.xy, definition.name_zh)
+
+
+def _live_object(state: BattleState, object_id: ObjectId) -> ObjectState:
+    obj = state.objects.get(object_id)
+    if obj is None or obj.destroyed:
+        raise IllegalActionError(f"找不到物件：{object_id}")
+    return obj
+
+
+def maneuver_problem(state: BattleState, unit: UnitState, target: UnitState) -> str | None:
+    """技巧動作（推擊、絆倒）的目標問題：必須是相鄰、高度差不超過近戰上限的敵人。"""
+    if not target.alive:
+        return f"目標已不在戰場上：{target.name_zh}"
+    if target.team is unit.team:
+        return f"只能對敵方單位使用：{target.name_zh}"
+    if manhattan(unit.xy, target.xy) != 1:
+        return f"目標必須相鄰：{target.name_zh}"
+    limit = state.ruleset.core.melee_height_limit
+    diff = abs(state.tile(*unit.xy).height - state.tile(*target.xy).height)
+    if diff > limit:
+        return f"高度差過大：相差 {diff} 層（上限 {limit} 層）"
+    return None
+
+
+def interact_problem(state: BattleState, unit: UnitState, obj: ObjectState) -> str | None:
+    definition = state.object_def(obj)
+    if obj.destroyed:
+        return f"物件已被摧毀：{definition.name_zh}"
+    if "pushable" not in definition.tags:
+        return f"{definition.name_zh}無法推動"
+    if manhattan(unit.xy, obj.xy) != 1:
+        return f"物件必須相鄰：{definition.name_zh}"
+    return None
+
+
+def _direction(a: XY, b: XY) -> tuple[int, int]:
+    return (b[0] - a[0], b[1] - a[1])
 
 
 # ---------------------------------------------------------------------------
@@ -306,9 +420,12 @@ def _do_move(ctx: Ctx, unit: UnitState, action: Action) -> None:
         execute(ctx, [RemoveStatusEffect(target_id=unit.id, status_id=PRONE, reason="stood_up")])
         ctx.emit(UnitStoodUp, unit_id=unit.id, cost=plan.stand_up)
     for dest, cost in plan.steps:
+        opportunity_attacks(ctx, unit, unit.xy, dest)
+        if not unit.alive:
+            break
         unit.move_points -= cost
         execute(ctx, [MoveUnitEffect(unit_id=unit.id, dest=dest, mode="walk", cost=cost)])
-        if unit.downed:
+        if not unit.alive or unit.has_status(PRONE):
             break
 
 
@@ -316,46 +433,35 @@ def _do_attack(ctx: Ctx, unit: UnitState, action: Action) -> None:
     assert isinstance(action, Attack)
     cost = ctx.core.basic_attack_ap_cost
     _require_ap(unit, cost)
-    target = _attack_target(ctx.state, unit, action)
-    unit.ap -= cost
-    roll = roll_attack(ctx.state, ctx.rng, unit, target)
-    ctx.emit(
-        AttackRolled,
-        attacker_id=unit.id,
-        target_id=target.id,
-        rolls=roll.rolls,
-        advantage=roll.advantage,
-        natural=roll.natural,
-        attack_value=roll.attack_value,
-        defense_value_permille=roll.defense_value_permille,
-        hit_modifier=roll.hit_modifier,
-        proficiency=roll.proficiency,
-        situational=roll.situational,
-        total=roll.total,
-        target_number=roll.target_number,
-        hit=roll.hit,
-        crit=roll.crit,
-    )
-    if not roll.hit:
+    if action.target_object_id is not None:
+        obj = _live_object(ctx.state, action.target_object_id)
+        problem = object_attack_problem(ctx.state, unit, obj)
+        if problem is not None:
+            raise IllegalActionError(problem)
+        unit.ap -= cost
+        ctx.emit(ObjectAttacked, attacker_id=unit.id, object_id=obj.id)
+        weapon = unit.weapon
+        execute(
+            ctx,
+            [
+                DamageObjectEffect(
+                    object_id=obj.id,
+                    source_id=unit.id,
+                    cause="attack",
+                    element=weapon.element,
+                    dice=weapon.dice,
+                    flat=weapon.flat,
+                    scaled_permille=unit.attributes[weapon.scaling_attr]
+                    * ctx.core.basic_attack_attr_multiplier_permille,
+                    min_damage=ctx.core.min_damage_on_hit,
+                )
+            ],
+        )
         return
-    weapon = unit.weapon
-    multiplier = ctx.core.basic_attack_attr_multiplier_permille
-    execute(
-        ctx,
-        [
-            DamageEffect(
-                target_id=target.id,
-                source_id=unit.id,
-                cause="attack",
-                element=weapon.element,
-                dice=weapon.dice,
-                flat=weapon.flat,
-                scaled_permille=unit.attributes[weapon.scaling_attr] * multiplier,
-                crit=roll.crit,
-                min_damage=ctx.core.min_damage_on_hit,
-            )
-        ],
-    )
+    assert action.target_id is not None
+    target = _attack_target(ctx.state, unit, action.target_id)
+    unit.ap -= cost
+    perform_unit_attack(ctx, unit, target, primary=True)
 
 
 def _do_defend(ctx: Ctx, unit: UnitState, action: Action) -> None:
@@ -368,6 +474,91 @@ def _do_defend(ctx: Ctx, unit: UnitState, action: Action) -> None:
     execute(ctx, [ApplyStatusEffect(target_id=unit.id, status_id=DEFENDING, source_id=unit.id)])
 
 
+def _contest(ctx: Ctx, kind: str, unit: UnitState, target: UnitState, attr: Attribute) -> bool:
+    """技巧動作的對抗：``d20 + 比例修正（攻方屬性 vs 守方屬性）+ 熟練 ≥ hit_target``。"""
+    rules = ctx.rules
+    modifier = rules.hit_table.modifier(unit.attributes[attr], max(1, target.attributes[attr]))
+    proficiency = rules.core.proficiency
+    # 預覽：技巧動作本身視為成功（成功率另以 preview 計算）
+    natural = 20 if ctx.preview is not None else ctx.rng.d20()
+    total = natural + modifier + proficiency
+    success = is_hit(natural, total, rules.core.hit_target)
+    ctx.emit(
+        ManeuverRolled,
+        maneuver=kind,
+        attacker_id=unit.id,
+        target_id=target.id,
+        natural=natural,
+        modifier=modifier,
+        proficiency=proficiency,
+        total=total,
+        target_number=rules.core.hit_target,
+        success=success,
+    )
+    return success
+
+
+def _maneuver_target(ctx: Ctx, unit: UnitState, target_id: UnitId) -> UnitState:
+    target = ctx.state.units.get(target_id)
+    if target is None:
+        raise IllegalActionError(f"找不到目標：{target_id}")
+    problem = maneuver_problem(ctx.state, unit, target)
+    if problem is not None:
+        raise IllegalActionError(problem)
+    return target
+
+
+def _do_shove(ctx: Ctx, unit: UnitState, action: Action) -> None:
+    assert isinstance(action, Shove)
+    _require_ap(unit, ctx.core.maneuver_ap_cost)
+    target = _maneuver_target(ctx, unit, action.target_id)
+    unit.ap -= ctx.core.maneuver_ap_cost
+    if _contest(ctx, "shove", unit, target, Attribute.STR):
+        execute(
+            ctx,
+            [
+                PushEffect(
+                    source_id=unit.id,
+                    target_id=target.id,
+                    direction=_direction(unit.xy, target.xy),
+                    distance=ctx.core.shove_distance,
+                )
+            ],
+        )
+
+
+def _do_trip(ctx: Ctx, unit: UnitState, action: Action) -> None:
+    assert isinstance(action, Trip)
+    _require_ap(unit, ctx.core.maneuver_ap_cost)
+    target = _maneuver_target(ctx, unit, action.target_id)
+    if target.has_status(PRONE):
+        raise IllegalActionError(f"目標已經倒地：{target.name_zh}")
+    unit.ap -= ctx.core.maneuver_ap_cost
+    if _contest(ctx, "trip", unit, target, Attribute.DEX):
+        execute(ctx, [ApplyStatusEffect(target_id=target.id, status_id=PRONE, source_id=unit.id)])
+
+
+def _do_interact(ctx: Ctx, unit: UnitState, action: Action) -> None:
+    assert isinstance(action, Interact)
+    _require_ap(unit, ctx.core.interact_ap_cost)
+    obj = _live_object(ctx.state, action.object_id)
+    problem = interact_problem(ctx.state, unit, obj)
+    if problem is not None:
+        raise IllegalActionError(problem)
+    unit.ap -= ctx.core.interact_ap_cost
+    execute(
+        ctx,
+        [
+            PushEffect(
+                source_id=unit.id,
+                object_id=obj.id,
+                direction=_direction(unit.xy, obj.xy),
+                distance=1,
+            )
+        ],
+    )
+
+
 def _do_end_turn(ctx: Ctx, unit: UnitState, action: Action) -> None:
     assert isinstance(action, EndTurn)
     end_turn(ctx)
@@ -378,20 +569,66 @@ ACTION_HANDLERS: dict[str, ActionHandler] = {
     "move": _do_move,
     "attack": _do_attack,
     "defend": _do_defend,
+    "shove": _do_shove,
+    "trip": _do_trip,
+    "interact": _do_interact,
     "end_turn": _do_end_turn,
 }
 
 
+def resolve_with(
+    base: BattleState,
+    action: Action,
+    decisions: tuple[bool, ...] = (),
+    *,
+    preview: PreviewMode | None = None,
+) -> ResolveResult:
+    """內部 API：以 ``decisions`` 結算 ``action``（``preview`` 不為 ``None`` 時為預覽模擬）。"""
+    ctx = Ctx(base.clone(), decisions=decisions, preview=preview)
+    actor = ctx.state.units[action.unit_id]
+    try:
+        ACTION_HANDLERS[action.type](ctx, actor, action)
+    except PauseForDecision as pause:
+        assert preview is None
+        paused = ctx.state
+        pending = pause.pending
+        paused.pending = PendingResolution(
+            action_json=ACTION_ADAPTER.dump_json(action).decode("utf-8"),
+            decisions=decisions,
+            base_state_json=state_to_json(base),
+            events_emitted=len(ctx.events),
+            kind=pending.kind,
+            unit_id=pending.unit_id,
+            reaction=pending.reaction,
+            trigger_unit_id=pending.trigger_unit_id,
+        )
+        return ResolveResult(paused, ctx.events, pending)
+    return finish_resolution(ctx)
+
+
 def resolve(state: BattleState, action: Action) -> ResolveResult:
-    """結算 ``action``，回傳新狀態、事件與 ``pending``（Phase 1A 一律為 ``None``）。
+    """結算 ``action``，回傳新狀態、事件與 ``pending``。
+
+    ``pending`` 只在等待 ``prompt`` 反應的決定時不為 ``None``。
 
     不修改傳入的 ``state``。不合法時拋出 :class:`IllegalActionError`。
     """
     _actor(state, action)
-    ctx = Ctx(state.clone())
-    actor = ctx.state.units[action.unit_id]
-    ACTION_HANDLERS[action.type](ctx, actor, action)
-    return finish_resolution(ctx)
+    return resolve_with(state, action)
+
+
+def resume(state: BattleState, decision: Decision) -> ResolveResult:
+    """回答暫停中的 ``prompt`` 反應並繼續結算；只回傳暫停之後的事件。不修改傳入的 ``state``。"""
+    pending = state.pending
+    if pending is None:
+        raise IllegalActionError("目前沒有等待中的決定")
+    if decision.unit_id != pending.unit_id:
+        who = state.units[pending.unit_id].name_zh
+        raise IllegalActionError(f"現在等待的是 {who} 的決定")
+    base = state_from_json(pending.base_state_json)
+    action = ACTION_ADAPTER.validate_json(pending.action_json)
+    result = resolve_with(base, action, (*pending.decisions, decision.accept))
+    return ResolveResult(result.state, result.events[pending.events_emitted :], result.pending)
 
 
 # ---------------------------------------------------------------------------
@@ -402,11 +639,13 @@ def resolve(state: BattleState, action: Action) -> ResolveResult:
 def legal_actions(state: BattleState) -> list[Action]:
     """目前行動者的所有合法動作（確定性順序）。
 
-    順序：攻擊（依目標 ID）→ 防禦 → 移動（每個可達格一條最短路徑，依 ``(y, x)``；倒地時另含
-    「只站起來」）→ 結束回合。``resolve`` 接受任何合法路徑，這裡每個目的地只列一條代表路徑。
+    順序：攻擊單位（依目標 ID）→ 攻擊物件（依物件 ID）→ 推擊 → 絆倒（依目標 ID）→ 互動（依物件
+    ID）→ 防禦 → 移動（每個可達格一條最短路徑，依 ``(y, x)``；倒地時另含「只站起來」）→
+    結束回合。``resolve`` 接受任何合法路徑，這裡每個目的地只列一條代表路徑。
+    暫停中（``pending``）時回傳空串列。
     """
     unit = state.active
-    if state.ended or unit is None:
+    if state.ended or unit is None or state.pending is not None:
         return []
     core = state.ruleset.core
     actions: list[Action] = []
@@ -415,6 +654,23 @@ def legal_actions(state: BattleState) -> list[Action]:
             Attack(unit_id=unit.id, target_id=target.id)
             for target in state.living_units()
             if attack_problem(state, unit, target) is None
+        )
+        actions.extend(
+            Attack(unit_id=unit.id, target_object_id=obj.id)
+            for obj in state.objects_sorted()
+            if object_attack_problem(state, unit, obj) is None
+        )
+    if unit.ap >= core.maneuver_ap_cost:
+        foes = [t for t in state.living_units() if maneuver_problem(state, unit, t) is None]
+        actions.extend(Shove(unit_id=unit.id, target_id=t.id) for t in foes)
+        actions.extend(
+            Trip(unit_id=unit.id, target_id=t.id) for t in foes if not t.has_status(PRONE)
+        )
+    if unit.ap >= core.interact_ap_cost:
+        actions.extend(
+            Interact(unit_id=unit.id, object_id=obj.id)
+            for obj in state.objects_sorted()
+            if interact_problem(state, unit, obj) is None
         )
     if unit.ap >= core.defend_ap_cost and not unit.has_status(DEFENDING):
         actions.append(Defend(unit_id=unit.id))
@@ -434,10 +690,10 @@ def legal_actions(state: BattleState) -> list[Action]:
 def has_only_end_turn(state: BattleState) -> bool:
     """``legal_actions(state)`` 是否只剩 ``EndTurn``（不建立動作列表的快速版本）。
 
-    驅動迴圈用它判斷是否自動結束回合。戰鬥已結束時回傳 ``False``。
+    驅動迴圈用它判斷是否自動結束回合。戰鬥已結束或暫停中時回傳 ``False``。
     """
     unit = state.active
-    if state.ended or unit is None:
+    if state.ended or unit is None or state.pending is not None:
         return False
     return not (_has_ap_action(state, unit) or _can_move(state, unit))
 
@@ -446,8 +702,17 @@ def _has_ap_action(state: BattleState, unit: UnitState) -> bool:
     core = state.ruleset.core
     if unit.ap >= core.defend_ap_cost and not unit.has_status(DEFENDING):
         return True
-    return unit.ap >= core.basic_attack_ap_cost and any(
-        attack_problem(state, unit, target) is None for target in state.living_units()
+    if unit.ap >= core.basic_attack_ap_cost:
+        if any(attack_problem(state, unit, t) is None for t in state.living_units()):
+            return True
+        if any(object_attack_problem(state, unit, o) is None for o in state.objects_sorted()):
+            return True
+    if unit.ap >= core.maneuver_ap_cost and any(
+        maneuver_problem(state, unit, t) is None for t in state.living_units()
+    ):
+        return True
+    return unit.ap >= core.interact_ap_cost and any(
+        interact_problem(state, unit, o) is None for o in state.objects_sorted()
     )
 
 
