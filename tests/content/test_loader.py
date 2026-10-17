@@ -20,7 +20,15 @@ ELEMENTS_FILE = PROJECT_ROOT / "content" / "elements.yaml"
 
 
 def _valid_elements() -> list[dict[str, str]]:
-    return [{"id": e.value, "name_zh": e.display_name, "description_zh": "說明"} for e in Element]
+    return [
+        {
+            "id": e.value,
+            "name_zh": e.display_name,
+            "description_zh": "說明",
+            "resist_group": e.resist_group.value,
+        }
+        for e in Element
+    ]
 
 
 def _write_yaml(path: Path, data: object) -> Path:
@@ -48,7 +56,7 @@ def test_elements_yaml_loads() -> None:
     assert sorted(entry.id.value for entry in table.elements) == sorted(e.value for e in Element)
     assert table.by_id(Element.FIRE).name_zh == "火焰"
     assert all(entry.name_zh and entry.description_zh for entry in table.elements)
-    assert table.summary() == "7 種元素"
+    assert table.summary() == "9 種元素"
 
 
 def test_elements_names_match_enum_display_names() -> None:
@@ -116,15 +124,31 @@ def test_missing_element(tmp_path: Path) -> None:
 
 
 def test_duplicate_element(tmp_path: Path) -> None:
-    rows = [*_valid_elements(), {"id": "fire", "name_zh": "火", "description_zh": "重複"}]
+    dup = {"id": "fire", "name_zh": "火", "description_zh": "重複", "resist_group": "elemental"}
+    rows = [*_valid_elements(), dup]
     path = _write_yaml(tmp_path / "elements.yaml", {"elements": rows})
     _assert_content_error(path, ElementTable, "重複的元素", "fire")
 
 
 def test_unknown_element(tmp_path: Path) -> None:
-    rows = [*_valid_elements(), {"id": "water", "name_zh": "水", "description_zh": "未知"}]
+    bad = {"id": "water", "name_zh": "水", "description_zh": "未知", "resist_group": "nature"}
+    rows = [*_valid_elements(), bad]
     path = _write_yaml(tmp_path / "elements.yaml", {"elements": rows})
-    _assert_content_error(path, ElementTable, "elements.7.id")
+    _assert_content_error(path, ElementTable, "elements.9.id")
+
+
+def test_wrong_resist_group(tmp_path: Path) -> None:
+    rows = _valid_elements()
+    rows[1]["resist_group"] = "nature"  # fire 應為 elemental
+    path = _write_yaml(tmp_path / "elements.yaml", {"elements": rows})
+    _assert_content_error(path, ElementTable, "resist_group", "elemental")
+
+
+def test_missing_resist_group(tmp_path: Path) -> None:
+    rows = _valid_elements()
+    del rows[0]["resist_group"]
+    path = _write_yaml(tmp_path / "elements.yaml", {"elements": rows})
+    _assert_content_error(path, ElementTable, "resist_group")
 
 
 def test_missing_field(tmp_path: Path) -> None:
@@ -178,4 +202,6 @@ def test_utf8_bom_is_accepted(tmp_path: Path) -> None:
 
 def test_element_entry_rejects_empty_name() -> None:
     with pytest.raises(ValueError):
-        ElementEntry.model_validate({"id": "fire", "name_zh": "", "description_zh": "x"})
+        ElementEntry.model_validate(
+            {"id": "fire", "name_zh": "", "description_zh": "x", "resist_group": "elemental"}
+        )

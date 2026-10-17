@@ -1,24 +1,40 @@
-# 元素表：每個 trpg.shared.types.Element 恰好一筆。
-# 欄位：id（元素代碼，小寫英文）、name_zh（顯示名稱）、description_zh（說明）。
+# 元素表：每個 trpg.shared.types.Element 恰好一筆（docs/專案計畫.md 5.1.1）。
+# 欄位：id（元素代碼，小寫英文）、name_zh（顯示名稱）、description_zh（說明）、
+#       resist_group（抗性分組：physical／elemental／nature／spirit，必須與程式內的對照一致）。
 elements:
   - id: physical
     name_zh: 物理
-    description_zh: 刀劍、拳腳、鈍器與墜落等不帶元素的傷害。
+    description_zh: 刀劍、拳腳、鈍器與墜落等不帶元素的傷害，擅長破壞物件。
+    resist_group: physical
   - id: fire
     name_zh: 火焰
-    description_zh: 點燃易燃物與油表面，引爆爆炸物；遇水熄滅。
+    description_zh: 點燃易燃物與油表面，引爆爆炸物，造成持續燃燒；遇水熄滅。
+    resist_group: elemental
   - id: ice
     name_zh: 冰霜
     description_zh: 把水凍成冰表面，冰上的單位可能滑倒。
+    resist_group: elemental
   - id: lightning
     name_zh: 雷電
-    description_zh: 沿著導電物與相連的水面擴散。
+    description_zh: 沿著導電物與相連的水面擴散、連鎖。
+    resist_group: elemental
   - id: poison
     name_zh: 毒素
     description_zh: 造成持續傷害，可形成毒表面或毒霧。
+    resist_group: nature
+  - id: wind
+    name_zh: 風
+    description_zh: 推擊單位與物件，讓火勢蔓延、吹散毒霧。
+    resist_group: nature
+  - id: earth
+    name_zh: 大地
+    description_zh: 產生障礙物，讓地形隆起或下陷而改變高度。
+    resist_group: nature
   - id: holy
     name_zh: 神聖
-    description_zh: 淨化與治癒之力，可形成聖光表面。
+    description_zh: 淨化與治癒之力，可形成聖光表面治療友方、傷害不死者。
+    resist_group: spirit
   - id: shadow
     name_zh: 暗影
-    description_zh: 侵蝕心智與視線，擅長削弱、詛咒與隱匿。
+    description_zh: 侵蝕心智與視線，可形成阻擋視線的黑暗表面，擅長隱匿與恐懼。
+    resist_group: spirit

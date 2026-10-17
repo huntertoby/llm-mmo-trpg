@@ -72,7 +72,7 @@ def test_content_check_success(
     assert main(["content", "check"]) == 0
     out = capsys.readouterr().out
     assert "內容檢查通過" in out
-    assert "elements.yaml：7 種元素" in out
+    assert "elements.yaml：9 種元素" in out
 
 
 def test_content_check_failure(

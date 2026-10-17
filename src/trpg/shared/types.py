@@ -1,6 +1,6 @@
 """最基礎的共用型別：ID、格子座標、元素／表面／屬性／稀有度列舉。
 
-只放之後確定會用到的型別；戰鬥模型（單位、格子、技能等）於 Phase 1 起另行設計。
+只放跨子套件共用的型別；戰鬥狀態模型（單位、格子等）放在 ``trpg.engine.state``。
 """
 
 from __future__ import annotations
@@ -11,6 +11,7 @@ from typing import NewType
 from pydantic import BaseModel, ConfigDict, Field
 
 __all__ = [
+    "ELEMENT_RESIST_GROUP",
     "Attribute",
     "BattleId",
     "Element",
@@ -19,8 +20,10 @@ __all__ = [
     "ObjectId",
     "Pos",
     "Rarity",
+    "ResistGroup",
     "SkillId",
     "Surface",
+    "Team",
     "UnitId",
 ]
 
@@ -72,19 +75,39 @@ class Pos(BaseModel):
 
 
 class Element(StrEnum):
-    """傷害與效果的元素。"""
+    """傷害與效果的元素（9 種，見 ``docs/專案計畫.md`` 5.1.1）。水不是元素，只是表面。"""
 
     PHYSICAL = "physical"
     FIRE = "fire"
     ICE = "ice"
     LIGHTNING = "lightning"
     POISON = "poison"
+    WIND = "wind"
+    EARTH = "earth"
     HOLY = "holy"
     SHADOW = "shadow"
 
     @property
     def display_name(self) -> str:
         return _ELEMENT_NAMES[self]
+
+    @property
+    def resist_group(self) -> ResistGroup:
+        """此元素所屬的抗性分組。"""
+        return ELEMENT_RESIST_GROUP[self]
+
+
+class ResistGroup(StrEnum):
+    """4 組抗性（角色面板只顯示這 4 個數字）。"""
+
+    PHYSICAL = "physical"
+    ELEMENTAL = "elemental"
+    NATURE = "nature"
+    SPIRIT = "spirit"
+
+    @property
+    def display_name(self) -> str:
+        return _RESIST_GROUP_NAMES[self]
 
 
 class Surface(StrEnum):
@@ -97,10 +120,26 @@ class Surface(StrEnum):
     ICE = "ice"
     POISON = "poison"
     HOLY = "holy"
+    DARKNESS = "darkness"
 
     @property
     def display_name(self) -> str:
         return _SURFACE_NAMES[self]
+
+
+class Team(StrEnum):
+    """戰鬥中的陣營。地圖起始區以此為鍵。"""
+
+    ALLY = "ally"
+    ENEMY = "enemy"
+
+    @property
+    def display_name(self) -> str:
+        return _TEAM_NAMES[self]
+
+    @property
+    def opponent(self) -> Team:
+        return Team.ENEMY if self is Team.ALLY else Team.ALLY
 
 
 class Attribute(StrEnum):
@@ -138,8 +177,35 @@ _ELEMENT_NAMES: dict[Element, str] = {
     Element.ICE: "冰霜",
     Element.LIGHTNING: "雷電",
     Element.POISON: "毒素",
+    Element.WIND: "風",
+    Element.EARTH: "大地",
     Element.HOLY: "神聖",
     Element.SHADOW: "暗影",
+}
+
+# 對應 docs/專案計畫.md 5.1.1 的「抗性分組」欄
+ELEMENT_RESIST_GROUP: dict[Element, ResistGroup] = {
+    Element.PHYSICAL: ResistGroup.PHYSICAL,
+    Element.FIRE: ResistGroup.ELEMENTAL,
+    Element.ICE: ResistGroup.ELEMENTAL,
+    Element.LIGHTNING: ResistGroup.ELEMENTAL,
+    Element.POISON: ResistGroup.NATURE,
+    Element.WIND: ResistGroup.NATURE,
+    Element.EARTH: ResistGroup.NATURE,
+    Element.HOLY: ResistGroup.SPIRIT,
+    Element.SHADOW: ResistGroup.SPIRIT,
+}
+
+_RESIST_GROUP_NAMES: dict[ResistGroup, str] = {
+    ResistGroup.PHYSICAL: "物理",
+    ResistGroup.ELEMENTAL: "元素",
+    ResistGroup.NATURE: "自然",
+    ResistGroup.SPIRIT: "靈性",
+}
+
+_TEAM_NAMES: dict[Team, str] = {
+    Team.ALLY: "我方",
+    Team.ENEMY: "敵方",
 }
 
 _SURFACE_NAMES: dict[Surface, str] = {
@@ -150,6 +216,7 @@ _SURFACE_NAMES: dict[Surface, str] = {
     Surface.ICE: "冰",
     Surface.POISON: "毒",
     Surface.HOLY: "聖光",
+    Surface.DARKNESS: "黑暗",
 }
 
 # 對應 docs/專案計畫.md 第 7.2 節

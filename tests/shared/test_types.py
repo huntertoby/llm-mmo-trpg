@@ -9,7 +9,17 @@ from pydantic import ValidationError
 
 from trpg.shared.errors import ContentError, IllegalActionError, TrpgError
 from trpg.shared.ids import IdAllocator, IdAllocatorState
-from trpg.shared.types import Attribute, Element, Pos, Rarity, Surface, UnitId
+from trpg.shared.types import (
+    ELEMENT_RESIST_GROUP,
+    Attribute,
+    Element,
+    Pos,
+    Rarity,
+    ResistGroup,
+    Surface,
+    Team,
+    UnitId,
+)
 
 # ---------------------------------------------------------------------------
 # Pos
@@ -74,15 +84,28 @@ def test_enum_values() -> None:
         "ice",
         "lightning",
         "poison",
+        "wind",
+        "earth",
         "holy",
         "shadow",
     ]
-    assert [s.value for s in Surface] == ["none", "oil", "water", "fire", "ice", "poison", "holy"]
+    assert [s.value for s in Surface] == [
+        "none",
+        "oil",
+        "water",
+        "fire",
+        "ice",
+        "poison",
+        "holy",
+        "darkness",
+    ]
+    assert [g.value for g in ResistGroup] == ["physical", "elemental", "nature", "spirit"]
+    assert [t.value for t in Team] == ["ally", "enemy"]
     assert [a.value for a in Attribute] == ["str", "dex", "con", "int", "wis", "wil"]
     assert [r.value for r in Rarity] == ["common", "uncommon", "rare", "epic", "legendary"]
 
 
-@pytest.mark.parametrize("enum_cls", [Element, Surface, Attribute, Rarity])
+@pytest.mark.parametrize("enum_cls", [Element, Surface, Attribute, Rarity, ResistGroup, Team])
 def test_enum_display_names_complete(enum_cls: type[StrEnum]) -> None:
     names = [member.display_name for member in enum_cls]  # type: ignore[attr-defined]
     assert all(isinstance(n, str) and n for n in names)
@@ -95,6 +118,30 @@ def test_enum_is_str() -> None:
     assert Element("fire") is Element.FIRE
     assert Attribute.STR.display_name == "力量"
     assert Rarity.LEGENDARY.display_name == "傳說"
+
+
+def test_new_display_names() -> None:
+    assert Element.WIND.display_name == "風"
+    assert Element.EARTH.display_name == "大地"
+    assert Surface.DARKNESS.display_name == "黑暗"
+    assert ResistGroup.SPIRIT.display_name == "靈性"
+
+
+def test_element_resist_groups() -> None:
+    # docs/專案計畫.md 5.1.1
+    assert set(ELEMENT_RESIST_GROUP) == set(Element)
+    groups = {g: sorted(e.value for e in Element if e.resist_group is g) for g in ResistGroup}
+    assert groups == {
+        ResistGroup.PHYSICAL: ["physical"],
+        ResistGroup.ELEMENTAL: ["fire", "ice", "lightning"],
+        ResistGroup.NATURE: ["earth", "poison", "wind"],
+        ResistGroup.SPIRIT: ["holy", "shadow"],
+    }
+
+
+def test_team_opponent() -> None:
+    assert Team.ALLY.opponent is Team.ENEMY
+    assert Team.ENEMY.opponent is Team.ALLY
 
 
 def test_id_newtypes_are_str() -> None:

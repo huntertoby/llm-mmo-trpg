@@ -10,7 +10,7 @@ from collections import Counter
 
 from pydantic import BaseModel, ConfigDict, Field, model_validator
 
-from trpg.shared.types import Element
+from trpg.shared.types import ELEMENT_RESIST_GROUP, Element, ResistGroup
 
 __all__ = ["ContentModel", "ElementEntry", "ElementTable"]
 
@@ -31,6 +31,17 @@ class ElementEntry(ContentModel):
     id: Element
     name_zh: str = Field(min_length=1)
     description_zh: str = Field(min_length=1)
+    resist_group: ResistGroup
+
+    @model_validator(mode="after")
+    def _resist_group_matches_code(self) -> ElementEntry:
+        expected = ELEMENT_RESIST_GROUP[self.id]
+        if self.resist_group is not expected:
+            raise ValueError(
+                f"元素 {self.id.value} 的 resist_group 應為 {expected.value}，"
+                f"收到 {self.resist_group.value}"
+            )
+        return self
 
 
 class ElementTable(ContentModel):
