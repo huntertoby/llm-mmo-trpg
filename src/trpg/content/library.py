@@ -21,6 +21,7 @@ from trpg.content.battle import (
     WeaponTable,
 )
 from trpg.content.environment import (
+    AiProfileTable,
     InteractionTable,
     ObjectDef,
     ObjectTable,
@@ -129,6 +130,7 @@ class ContentLibrary:
     units: dict[str, UnitTemplate]
     maps: dict[str, MapDef]
     weather: dict[str, WeatherDef]
+    ai_profiles: AiProfileTable
     files: list[tuple[Path, ContentModel]] = field(default_factory=list)
 
     def unit(self, template_id: str) -> UnitTemplate:
@@ -194,6 +196,7 @@ def load_library(content_dir: Path | None = None) -> ContentLibrary:
     interactions = load("interactions.yaml", InteractionTable)
     reactions = load("reactions.yaml", ReactionTable)
     weather = load("weather.yaml", WeatherTable)
+    ai_profiles = load("ai_profiles.yaml", AiProfileTable)
     try:
         ruleset = Ruleset(
             core=core,
@@ -215,6 +218,8 @@ def load_library(content_dir: Path | None = None) -> ContentLibrary:
         path = root / "units" / f"{template_id}.yaml"
         if template.weapon not in weapon_map:
             raise ContentError(path, f"未知的武器：{template.weapon}")
+        if template.ai_profile is not None and template.ai_profile not in ai_profiles.by_id():
+            raise ContentError(path, f"未知的行為模式：{template.ai_profile}")
         for rule in template.reactions or ():
             try:
                 check_rule(rule, reaction_index)
@@ -238,6 +243,7 @@ def load_library(content_dir: Path | None = None) -> ContentLibrary:
         units=units,
         maps=maps,
         weather=weather_map,
+        ai_profiles=ai_profiles,
         files=files,
     )
 

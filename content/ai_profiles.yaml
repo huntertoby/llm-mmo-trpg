@@ -1,0 +1,39 @@
+# 效用 AI 的行為模式（docs/專案計畫.md 5.9；docs/phases/Phase1計畫.md 6.1-13）。
+# AI 對每個合法動作跑 preview，分數 = 預覽收益 + 命中率 × 位置價值的變化（動作後 − 動作前）；
+# 分數 > 0 的動作中取最高者（平手依 legal_actions 的順序），沒有正分的動作時結束回合。
+#
+# 預覽收益（乘上命中率／成功率的期望值）：
+#   damage         每點對敵傷害（攻擊的主要傷害用精確期望值）
+#   env_damage     每點對敵的環境傷害（爆炸、雷電擴散、墜落、致命地形、表面）額外加分
+#   kill           每擊倒一名敵人（確定 ×命中率；只是可能 ×命中率 ÷4）
+#   env_kill       以環境擊倒（墜落、深淵、爆炸……）額外加分
+#   friendly_fire  每點對友方（含自己）傷害的扣分（取最少與最多後果的平均）
+#   push           每名被強制位移的敵人
+#   status         每個施加在敵人身上的狀態（倒地等）
+#   surface        每名因此站在有害表面（火、毒）上的敵人
+#   defend         防禦動作：每名 6 格內的敵人
+# 位置價值（行動者在動作後的位置）：
+#   approach       與最近敵人的距離（越近越好）
+#   threat         能直接攻擊到的敵人數
+#   keep_distance  2 格內的敵人數（扣分）
+#   height         所在高度
+#   protect        與最需要保護的友方（HP 比例最低）的距離（越近越好）
+#   objective      與勝利條件格子（出口、守點）的距離（越近越好）
+#   hazard         站在有害表面上（扣分）
+profiles:
+  - id: brute
+    name_zh: 莽夫
+    description_zh: 重視傷害與接近目標。
+    weights: {damage: 10, kill: 40, friendly_fire: 4, approach: 6, threat: 4, objective: 8, hazard: 8, defend: 1}
+  - id: archer
+    name_zh: 弓手
+    description_zh: 重視距離、高處與視線。
+    weights: {damage: 6, kill: 20, friendly_fire: 8, approach: 1, threat: 10, keep_distance: 40, height: 15, objective: 8, hazard: 10, defend: 1}
+  - id: cunning
+    name_zh: 狡猾
+    description_zh: 重視環境擊殺、推擊與表面。
+    weights: {damage: 5, env_damage: 8, kill: 30, env_kill: 120, friendly_fire: 8, push: 15, status: 10, surface: 15, approach: 3, threat: 4, keep_distance: 10, objective: 8, hazard: 12, defend: 1}
+  - id: guard
+    name_zh: 守衛
+    description_zh: 重視保護同伴與守點。
+    weights: {damage: 3, kill: 15, friendly_fire: 10, approach: 1, threat: 2, protect: 12, objective: 25, hazard: 8, defend: 6}

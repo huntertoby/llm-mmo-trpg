@@ -5,6 +5,7 @@ max_hp: 40
 speed: 5
 armor_bonus: 1
 weapon: fire_staff
+ai_profile: cunning
 resist: {elemental: 150}
 element_mods: {}
 tags: [hero]

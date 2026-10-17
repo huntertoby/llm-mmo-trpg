@@ -19,6 +19,9 @@ from trpg.shared.types import Attribute, Element, Surface
 __all__ = [
     "OBJECT_TAGS",
     "REACTION_EVENTS",
+    "AiProfile",
+    "AiProfileTable",
+    "AiWeights",
     "ElementCapability",
     "ExplosionDef",
     "InteractionOutcome",
@@ -497,3 +500,56 @@ def check_rule(rule: ReactionRule, index: dict[str, ReactionDef]) -> None:
             f"反應 {rule.reaction} 不支援事件 {rule.when.event}"
             f"（可用：{', '.join(definition.events)}）"
         )
+
+
+# ---------------------------------------------------------------------------
+# 效用 AI 的行為模式
+# ---------------------------------------------------------------------------
+
+
+class AiWeights(ContentModel):
+    """效用 AI 的權重（意義見 ``content/ai_profiles.yaml``）。未列出的權重為 0。"""
+
+    damage: int = 0
+    env_damage: int = 0
+    kill: int = 0
+    env_kill: int = 0
+    friendly_fire: int = 0
+    push: int = 0
+    status: int = 0
+    surface: int = 0
+    defend: int = 0
+    approach: int = 0
+    threat: int = 0
+    keep_distance: int = 0
+    height: int = 0
+    protect: int = 0
+    objective: int = 0
+    hazard: int = 0
+
+
+class AiProfile(ContentModel):
+    id: str = Field(pattern=ID_PATTERN)
+    name_zh: str = Field(min_length=1)
+    description_zh: str = Field(min_length=1)
+    weights: AiWeights
+
+
+class AiProfileTable(ContentModel):
+    """``content/ai_profiles.yaml``：至少包含 brute、archer、cunning、guard。"""
+
+    profiles: tuple[AiProfile, ...] = Field(min_length=1)
+
+    @model_validator(mode="after")
+    def _check(self) -> AiProfileTable:
+        _unique([p.id for p in self.profiles], "行為模式 ID")
+        missing = [p for p in ("brute", "archer", "cunning", "guard") if p not in self.by_id()]
+        if missing:
+            raise ValueError(f"缺少行為模式：{', '.join(missing)}")
+        return self
+
+    def by_id(self) -> dict[str, AiProfile]:
+        return {p.id: p for p in self.profiles}
+
+    def summary(self) -> str:
+        return f"{len(self.profiles)} 種行為模式"

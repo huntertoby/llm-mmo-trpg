@@ -11,6 +11,7 @@ from pathlib import Path
 
 from trpg.content.battle import StatusTable, TerrainTable, WeaponTable
 from trpg.content.environment import (
+    AiProfileTable,
     InteractionTable,
     ObjectTable,
     ReactionTable,
@@ -44,6 +45,7 @@ KNOWN_CONTENT_FILES: tuple[ContentFile, ...] = (
     ContentFile("interactions.yaml", InteractionTable),
     ContentFile("weather.yaml", WeatherTable),
     ContentFile("reactions.yaml", ReactionTable),
+    ContentFile("ai_profiles.yaml", AiProfileTable),
 )
 """單一資料檔。資料夾（``units/``、``maps/``）與跨檔案檢查由
 :func:`trpg.content.library.load_library` 負責。"""
