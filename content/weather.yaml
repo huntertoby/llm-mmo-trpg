@@ -1,0 +1,23 @@
+# 天氣（docs/專案計畫.md 5.7）。BattleSetup 指定天氣；地圖檔可用 weather 欄位給預設值。
+# 欄位：element_damage_permille（元素傷害增減 ‰）、puddles_per_round（每次環境回合隨機產生的水窪數）、
+#       sight_range_permille（視線距離倍率，基準為 rules/core.yaml 的 base_sight_range）、
+#       ranged_disadvantage_beyond（遠程攻擊超過此距離有劣勢）、
+#       concealed_ranged_max_distance（覆寫「隱蔽目標可被遠程攻擊的最遠距離」）。
+weather:
+  - id: clear
+    name_zh: 晴朗
+    description_zh: 無特殊效果。
+  - id: rain
+    name_zh: 下雨
+    description_zh: 火焰傷害 −30%、雷電傷害 +20%；每輪隨機產生水窪。
+    element_damage_permille: {fire: -300, lightning: 200}
+    puddles_per_round: 2
+  - id: fog
+    name_zh: 濃霧
+    description_zh: 視線範圍減半；遠程攻擊超過 4 格有劣勢。
+    sight_range_permille: 500
+    ranged_disadvantage_beyond: 4
+  - id: night
+    name_zh: 夜晚
+    description_zh: 隱蔽效果增強：隱蔽的目標超過 1 格就無法被遠程攻擊選為目標。
+    concealed_ranged_max_distance: 1

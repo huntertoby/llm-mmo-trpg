@@ -18,6 +18,9 @@ from trpg.shared.types import Attribute, Element, ResistGroup
 __all__ = [
     "ID_PATTERN",
     "Dice",
+    "ReactionRule",
+    "ReactionUnless",
+    "ReactionWhen",
     "StatusDef",
     "StatusTable",
     "StatusTickDamage",
@@ -212,6 +215,32 @@ class StatusTable(ContentModel):
 
 
 # ---------------------------------------------------------------------------
+# 反應規則（單位範本引用；反應定義見 trpg.content.environment）
+# ---------------------------------------------------------------------------
+
+
+class ReactionWhen(ContentModel):
+    event: Literal["targeted_by_melee", "targeted_by_attack", "enemy_leaves_adjacent"]
+
+
+class ReactionUnless(ContentModel):
+    self_stamina_below: int | None = Field(default=None, ge=0)
+
+
+class ReactionRule(ContentModel):
+    """玩家（或範本）預先設定的反應規則（``docs/專案計畫.md`` 5.2.1 的格式）。
+
+    ``mode``：``auto`` 條件成立時自動執行；``prompt`` 暫停結算並詢問（``resolve`` 回傳
+    ``pending``，以 ``resume`` 繼續）。
+    """
+
+    reaction: str = Field(pattern=ID_PATTERN)
+    when: ReactionWhen
+    unless: ReactionUnless | None = None
+    mode: Literal["auto", "prompt"] = "auto"
+
+
+# ---------------------------------------------------------------------------
 # 單位範本
 # ---------------------------------------------------------------------------
 
@@ -224,6 +253,11 @@ class UnitTemplate(ContentModel):
 
     - ``resist``：4 組抗性（‰），未列出的分組為 0；可為負值表示易傷。
     - ``element_mods``：個別元素的弱點（正值）或抗性（負值），‰。
+    - ``stamina``：耐力（格擋等反應消耗）；省略時用 ``rules/core.yaml`` 的 ``default_stamina``。
+    - ``reactions``：反應規則；省略時用 ``reactions.yaml`` 的 ``default_rules``；
+      ``[]`` 表示沒有反應。
+    - ``ai_profile``：效用 AI 的行為模式（``ai_profiles.yaml``）；省略時遠程武器用 ``archer``、
+      其他用 ``brute``。
     - 元素修正 ＝ (1 − 分組抗性) × (1 + 個別弱點 − 個別抗性)，
       下限見 ``element_mod_floor_permille``。
     """
@@ -238,6 +272,9 @@ class UnitTemplate(ContentModel):
     resist: dict[ResistGroup, int] = Field(default_factory=dict, validate_default=True)
     element_mods: dict[Element, int] = Field(default_factory=dict)
     tags: tuple[str, ...] = ()
+    stamina: int | None = Field(default=None, ge=0)
+    reactions: tuple[ReactionRule, ...] | None = None
+    ai_profile: str | None = Field(default=None, pattern=ID_PATTERN)
 
     @field_validator("attributes")
     @classmethod

@@ -35,5 +35,24 @@ fall_damage_cap_permille: 300          # 單次墜落上限 30%
 deadly_terrain_elite_permille: 300     # 精英與 Boss 落入致命地形受 30% 最大 HP
 prone_stand_up_move_permille: 500      # 倒地站起消耗一半移動點數（無條件進位）
 
+# --- 技巧動作與互動（Phase 1B）---
+maneuver_ap_cost: 1           # 推擊（Shove）、絆倒（Trip）
+interact_ap_cost: 1           # 互動（推動物件）
+shove_distance: 1             # 推擊距離
+steadfast_push_permille: 500  # steadfast 標籤：推擊距離 ×50%（無條件捨去）
+ability_mod_base: 10          # 檢定的屬性修正：(屬性 − 10) // 2
+ability_mod_divisor: 2
+
+# --- 反應（Phase 1B）---
+reactions_per_round: 1        # 每輪反應次數
+default_stamina: 30           # 單位範本未指定耐力時的預設值
+
+# --- 視線與隱蔽（Phase 1B）---
+base_sight_range: 24          # 基準視線距離（曼哈頓）；濃霧等天氣以倍率縮短
+concealed_ranged_max_distance: 2   # 隱蔽的目標超過此距離無法被攻擊選為目標
+
+# --- 環境回合（Phase 1B）---
+burning_object_rounds: 1      # 著火的物件在第幾次環境回合摧毀（1 = 下一次環境回合）
+
 # --- 效果佇列 ---
 max_chain_depth: 3            # 連鎖深度上限

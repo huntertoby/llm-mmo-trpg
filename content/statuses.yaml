@@ -24,3 +24,9 @@ statuses:
     on_turn_start_damage:
       dice: 1d6
       element: fire
+  - id: concealed
+    name_zh: 隱蔽
+    description_zh: 對其攻擊有劣勢；超過 2 格的遠程攻擊無法選為目標。站在黑暗表面或草叢中的單位也視為隱蔽。
+    duration: 2
+    expires: turn_end
+    stacking: refresh

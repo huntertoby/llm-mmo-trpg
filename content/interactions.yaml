@@ -1,0 +1,165 @@
+# 元素 × 標籤／表面互動表（docs/專案計畫.md 5.1 的表格，全部由這份資料驅動）。
+#
+# trigger：
+#   element          元素觸及一格（攻擊或效果造成的元素傷害、爆炸、技能直接指定格子、風吹……）
+#   surface_created  效果要在一格產生 surface_created 表面；符合的規則取代預設行為（新表面取代舊表面）
+# target：surface（該格目前的表面）、object（該格物件帶 object_tag）、unit（該格有存活單位）
+# 同一次觸及中，每一類 target 只套用第一條符合的規則（依檔案順序）。
+# then 的 op 見 src/trpg/content/environment.py 的 InteractionOutcome。
+#
+# 表格中由其他資料檔或引擎通則處理的列：
+#   「holy 表面｜回合開始時站在上面的單位」→ surfaces.yaml 的 holy.on_turn_start
+#   「任意傷害｜breakable 且 HP ≤ 0｜物件摧毀；橋斷則格上單位墜落」→ damage_object 效果
+#     （breakable 標籤 + over_chasm 標籤：摧毀後格子恢復原本的致命地形）
+#   「shadow／earth／wind 可產生……」→ 下方 capabilities（技能原語於 Phase 2 使用）
+rules:
+  # --- 火焰 ---
+  - id: fire_explodes_explosive
+    description_zh: 火焰引爆易爆物（3×3 範圍傷害）
+    trigger: element
+    element: fire
+    target: object
+    object_tag: explosive
+    then: [{op: explode}]
+  - id: fire_ignites_flammable_object
+    description_zh: 火焰點燃可燃物件，產生火焰表面
+    trigger: element
+    element: fire
+    target: object
+    object_tag: flammable
+    then: [{op: ignite_object}]
+  - id: fire_ignites_oil
+    description_zh: 火焰點燃油，產生火焰表面
+    trigger: element
+    element: fire
+    target: surface
+    surface: oil
+    then: [{op: set_surface, surface: fire}]
+  - id: fire_melts_ice
+    description_zh: 火焰融化冰，變成水
+    trigger: element
+    element: fire
+    target: surface
+    surface: ice
+    then: [{op: set_surface, surface: water}]
+  # --- 雷電 ---
+  - id: lightning_conducts_water
+    description_zh: 雷電沿相連的水擴散到其他單位
+    trigger: element
+    element: lightning
+    target: surface
+    surface: water
+    then: [{op: conduct, damage_permille: 1000, min_damage: 1}]
+  - id: lightning_conducts_object
+    description_zh: 雷電沿導電物件擴散
+    trigger: element
+    element: lightning
+    target: object
+    object_tag: conductive
+    then: [{op: conduct, damage_permille: 1000, min_damage: 1}]
+  # --- 冰霜 ---
+  - id: ice_freezes_water
+    description_zh: 冰霜使水結冰（進入時滑倒檢定）
+    trigger: element
+    element: ice
+    target: surface
+    surface: water
+    then: [{op: set_surface, surface: ice}]
+  - id: ice_freezes_object
+    description_zh: 冰霜使可結冰的物件結冰
+    trigger: element
+    element: ice
+    target: object
+    object_tag: freezable
+    then: [{op: set_surface, surface: ice}]
+  # --- 神聖 ---
+  - id: holy_purifies_poison
+    description_zh: 神聖淨化毒
+    trigger: element
+    element: holy
+    target: surface
+    surface: poison
+    then: [{op: set_surface, surface: none}]
+  - id: holy_dispels_darkness
+    description_zh: 神聖驅散黑暗
+    trigger: element
+    element: holy
+    target: surface
+    surface: darkness
+    then: [{op: set_surface, surface: none}]
+  # --- 風 ---
+  - id: wind_spreads_fire
+    description_zh: 風讓火焰沿推擊方向蔓延 1 格
+    trigger: element
+    element: wind
+    target: surface
+    surface: fire
+    then: [{op: spread_surface, surface: fire}]
+  - id: wind_disperses_poison
+    description_zh: 風吹散毒
+    trigger: element
+    element: wind
+    target: surface
+    surface: poison
+    then: [{op: set_surface, surface: none}]
+  - id: wind_pushes_object
+    description_zh: 風推動可推動的物件（距離由效果決定）
+    trigger: element
+    element: wind
+    target: object
+    object_tag: pushable
+    then: [{op: push}]
+  - id: wind_pushes_unit
+    description_zh: 風推動單位（距離由效果決定；steadfast 減半）
+    trigger: element
+    element: wind
+    target: unit
+    then: [{op: push}]
+  # --- 大地 ---
+  - id: earth_fills_chasm
+    description_zh: 大地填平架在深淵上的物件，格子變為可站立地形
+    trigger: element
+    element: earth
+    target: object
+    object_tag: over_chasm
+    then: [{op: fill_chasm, terrain: dirt}]
+  # --- 產生表面時 ---
+  - id: water_extinguishes_fire
+    description_zh: 製造水的效果熄滅火焰
+    trigger: surface_created
+    surface_created: water
+    target: surface
+    surface: fire
+    then: [{op: set_surface, surface: none}]
+  - id: fire_on_ice_melts
+    description_zh: 在冰上產生火焰會融化成水
+    trigger: surface_created
+    surface_created: fire
+    target: surface
+    surface: ice
+    then: [{op: set_surface, surface: water}]
+  - id: fire_on_water_fizzles
+    description_zh: 在水上產生火焰會被澆熄（保留水）
+    trigger: surface_created
+    surface_created: fire
+    target: surface
+    surface: water
+    then: [{op: keep}]
+
+capabilities:
+  - element: shadow
+    effect: create_surface
+    surface: darkness
+    description_zh: 暗影可在任意格產生黑暗表面（阻擋視線，站在裡面的單位隱蔽）
+  - element: earth
+    effect: raise_terrain
+    description_zh: 大地可使地形隆起（高度 +1，上限 3）
+  - element: earth
+    effect: lower_terrain
+    description_zh: 大地可使地形下陷（高度 −1，下限 0）
+  - element: earth
+    effect: create_obstacle
+    description_zh: 大地可產生障礙物
+  - element: wind
+    effect: push
+    description_zh: 風可推擊物件與單位（距離由技能決定）

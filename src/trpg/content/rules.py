@@ -75,6 +75,25 @@ class CoreRules(ContentModel):
     deadly_terrain_elite_permille: int = Field(ge=0, le=1000)
     prone_stand_up_move_permille: int = Field(ge=0, le=1000)
 
+    # 技巧動作與互動（1B）
+    maneuver_ap_cost: int = Field(ge=0)
+    interact_ap_cost: int = Field(ge=0)
+    shove_distance: int = Field(ge=0)
+    steadfast_push_permille: int = Field(ge=0, le=1000)
+    ability_mod_base: int
+    ability_mod_divisor: int = Field(ge=1)
+
+    # 反應（1B）
+    reactions_per_round: int = Field(ge=0)
+    default_stamina: int = Field(ge=0)
+
+    # 視線與隱蔽（1B）
+    base_sight_range: int = Field(ge=1)
+    concealed_ranged_max_distance: int = Field(ge=0)
+
+    # 環境回合（1B）
+    burning_object_rounds: int = Field(ge=1)
+
     # 效果佇列
     max_chain_depth: int = Field(ge=0)
 

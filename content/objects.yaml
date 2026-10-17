@@ -1,0 +1,40 @@
+# 格子物件（docs/專案計畫.md 5.1；docs/phases/Phase1計畫.md 6.1-1）。
+# 欄位：id、name_zh、glyph（戰場網格顯示用的單一 ASCII 字元）、max_hp（breakable 必填）、
+#       tags（引擎認得的標籤，見 src/trpg/content/environment.py 的 OBJECT_TAGS）、
+#       explosion（explosive 必填：radius 切比雪夫半徑、dice、flat、element）。
+# 新物件只要組合既有標籤，就自動支援所有互動規則（interactions.yaml），不需要寫新程式。
+objects:
+  - id: wooden_bridge
+    name_zh: 木橋
+    glyph: "="
+    max_hp: 12
+    tags: [breakable, flammable, over_chasm]
+  - id: oil_barrel
+    name_zh: 油桶
+    glyph: "&"
+    max_hp: 8
+    tags: [breakable, flammable, explosive, pushable]
+    explosion:
+      radius: 1          # 3×3
+      dice: 2d6
+      flat: 0
+      element: fire
+  - id: stone_pillar
+    name_zh: 石柱
+    glyph: "|"
+    max_hp: 60
+    tags: [blocks_sight, blocks_move, breakable]
+  - id: grass
+    name_zh: 草叢
+    glyph: ";"
+    tags: [conceal, flammable]
+  - id: crate
+    name_zh: 木箱
+    glyph: "["
+    max_hp: 15
+    tags: [blocks_move, breakable, pushable]
+  - id: earth_wall
+    name_zh: 土牆
+    glyph: "^"
+    max_hp: 25
+    tags: [blocks_move, blocks_sight, breakable]

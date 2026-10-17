@@ -1,0 +1,54 @@
+# 表面（docs/專案計畫.md 5.1；docs/phases/Phase1計畫.md 6.1-2）。每個非 none 的表面恰好一筆。
+# 欄位：id、name_zh、glyph（網格第三個字元）、duration（由效果產生時持續的環境回合數；省略為永久。
+#       地圖上原有的表面預設永久）、expires_to（到期後變成的表面，預設 none）、
+#       element（表面本身帶的元素：產生時格上物件會被觸及）、flammable（火勢會蔓延過來）、
+#       blocks_sight（阻擋穿越的視線）、conceal（站在上面的單位隱蔽）、
+#       on_enter（進入時：check 檢定 d20 + 屬性修正 >= dc，失敗得到 fail_status；apply_status）、
+#       on_turn_start（站在上面的單位回合開始時：damage／heal／apply_status）。
+surfaces:
+  - id: oil
+    name_zh: 油
+    glyph: o
+    flammable: true
+  - id: water
+    name_zh: 水
+    glyph: w
+  - id: fire
+    name_zh: 火焰
+    glyph: "*"
+    duration: 2
+    element: fire
+    on_enter:
+      apply_status: burning
+    on_turn_start:
+      apply_status: burning
+  - id: ice
+    name_zh: 冰
+    glyph: i
+    duration: 3
+    expires_to: water
+    element: ice
+    on_enter:
+      check: {attr: dex, dc: 12, fail_status: prone}
+  - id: poison
+    name_zh: 毒
+    glyph: p
+    duration: 3
+    element: poison
+    on_turn_start:
+      damage: {dice: 1d4, element: poison}
+  - id: holy
+    name_zh: 聖光
+    glyph: "+"
+    duration: 3
+    element: holy
+    on_turn_start:
+      heal: {dice: 1d4, allies_only: true, exclude_tag: undead}
+      damage: {dice: 1d4, element: holy, only_tag: undead}
+  - id: darkness
+    name_zh: 黑暗
+    glyph: "%"
+    duration: 3
+    element: shadow
+    blocks_sight: true
+    conceal: true

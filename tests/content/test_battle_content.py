@@ -179,12 +179,7 @@ def test_status_turn_end_requires_duration() -> None:
 def test_ruleset_detects_stale_hit_table(library: ContentLibrary) -> None:
     rs = library.ruleset
     with pytest.raises(ValidationError, match="gen_hit_table"):
-        Ruleset(
-            core=rs.core.model_copy(update={"hit_slope": 3}),
-            hit_table=rs.hit_table,
-            terrain=rs.terrain,
-            statuses=rs.statuses,
-        )
+        Ruleset.model_validate({**dict(rs), "core": rs.core.model_copy(update={"hit_slope": 3})})
 
 
 # ---------------------------------------------------------------------------
@@ -261,8 +256,28 @@ def test_check_map_cross_file(library: ContentLibrary) -> None:
     stairs = MapDef.model_validate(_map_data(heights="2222\n1111\n0000\n"))
     assert check_map(stairs, terrain, core) == []
 
+    # 物件：未知種類報錯；blocks_move 的物件擋住起始區
+    objects = library.ruleset.objects.by_id()
     with_objects = MapDef.model_validate(_map_data(objects=[{"at": [1, 1], "kind": "crate"}]))
-    assert "objects" in check_map(with_objects, terrain, core)[0]
+    assert check_map(with_objects, terrain, core, objects) == []
+    assert "未知的物件" in check_map(with_objects, terrain, core)[0]
+    on_crate = MapDef.model_validate(_map_data(objects=[{"at": [0, 2], "kind": "crate"}]))
+    assert "不可站立" in check_map(on_crate, terrain, core, objects)[0]
+    # 木橋讓深淵可以通過
+    bridged = MapDef.model_validate(
+        _map_data(
+            terrain="....\nxxxx\n....\n",
+            objects=[{"at": [2, 1], "kind": "wooden_bridge"}],
+        )
+    )
+    assert check_map(bridged, terrain, core, objects) == []
+    walled = MapDef.model_validate(
+        _map_data(
+            terrain="....\nx...\n....\n",
+            objects=[{"at": [x, 1], "kind": "stone_pillar"} for x in (1, 2, 3)],
+        )
+    )
+    assert all("連通性" in p for p in check_map(walled, terrain, core, objects))
 
 
 def test_real_maps_start_zones(library: ContentLibrary) -> None:

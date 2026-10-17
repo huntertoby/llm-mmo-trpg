@@ -10,6 +10,13 @@ from dataclasses import dataclass
 from pathlib import Path
 
 from trpg.content.battle import StatusTable, TerrainTable, WeaponTable
+from trpg.content.environment import (
+    InteractionTable,
+    ObjectTable,
+    ReactionTable,
+    SurfaceTable,
+    WeatherTable,
+)
 from trpg.content.loader import default_content_dir, load_content_file
 from trpg.content.rules import CoreRules, HitTable
 from trpg.content.schemas import ContentModel, ElementTable
@@ -32,6 +39,11 @@ KNOWN_CONTENT_FILES: tuple[ContentFile, ...] = (
     ContentFile("terrain.yaml", TerrainTable),
     ContentFile("weapons.yaml", WeaponTable),
     ContentFile("statuses.yaml", StatusTable),
+    ContentFile("objects.yaml", ObjectTable),
+    ContentFile("surfaces.yaml", SurfaceTable),
+    ContentFile("interactions.yaml", InteractionTable),
+    ContentFile("weather.yaml", WeatherTable),
+    ContentFile("reactions.yaml", ReactionTable),
 )
 """單一資料檔。資料夾（``units/``、``maps/``）與跨檔案檢查由
 :func:`trpg.content.library.load_library` 負責。"""

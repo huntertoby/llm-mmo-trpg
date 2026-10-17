@@ -7,19 +7,28 @@
 from __future__ import annotations
 
 from collections import deque
+from typing import Annotated, Literal
 
 from pydantic import Field, model_validator
 
 from trpg.content.battle import ID_PATTERN, TerrainDef
+from trpg.content.environment import ObjectDef
 from trpg.content.rules import CoreRules
 from trpg.content.schemas import ContentModel
 from trpg.shared.types import Surface, Team
 
 __all__ = [
     "MAX_HEIGHT",
+    "Encounter",
     "MapDef",
+    "MapEvent",
     "MapObjectPlacement",
     "MapSurfacePlacement",
+    "Objective",
+    "SpawnPlacement",
+    "SpawnUnitsEvent",
+    "TerrainChangeEvent",
+    "TileChange",
     "check_map",
     "standable",
     "step_allowed",
@@ -33,17 +42,100 @@ type XY = tuple[int, int]
 
 
 class MapObjectPlacement(ContentModel):
-    """地圖上的物件（Phase 1B 起支援）。"""
+    """地圖上的物件。``kind`` 為 ``objects.yaml`` 的 ID。"""
 
     at: tuple[int, int]
     kind: str = Field(pattern=ID_PATTERN)
 
 
 class MapSurfacePlacement(ContentModel):
-    """地圖上的初始表面（Phase 1B 起支援）。"""
+    """地圖上的初始表面。``duration`` 省略時為永久。"""
 
     at: tuple[int, int]
     surface: Surface
+    duration: int | None = Field(default=None, ge=1)
+
+
+class Objective(ContentModel):
+    """勝利條件（``docs/專案計畫.md`` 5.8）。
+
+    - ``eliminate``：擊倒所有敵人。
+    - ``escape``：我方存活單位在 ``rounds`` 輪內全部抵達 ``tiles``（出口格）即勝；抵達者離開戰場。
+      第 ``rounds`` 輪結束時仍未全部撤離即敗。
+    - ``defend``：守住 ``tiles``（守點格）``rounds`` 輪；某輪結束時有敵方單位站在守點格上即敗。
+
+    任何模式下，我方全滅即敗；敵方全滅即勝。
+    """
+
+    kind: Literal["eliminate", "escape", "defend"] = "eliminate"
+    rounds: int | None = Field(default=None, ge=1)
+    tiles: tuple[tuple[int, int], ...] = ()
+
+    @model_validator(mode="after")
+    def _check(self) -> Objective:
+        if self.kind == "eliminate":
+            if self.rounds is not None or self.tiles:
+                raise ValueError("eliminate 不需要 rounds 與 tiles")
+        elif self.rounds is None or not self.tiles:
+            raise ValueError(f"{self.kind} 必須設定 rounds 與 tiles")
+        if len(set(self.tiles)) != len(self.tiles):
+            raise ValueError("objective.tiles 不可重複")
+        return self
+
+
+class Encounter(ContentModel):
+    """地圖的預設陣容（單位範本 ID）。"""
+
+    allies: tuple[str, ...] = Field(min_length=1)
+    enemies: tuple[str, ...] = Field(min_length=1)
+
+
+class SpawnPlacement(ContentModel):
+    template: str = Field(pattern=ID_PATTERN)
+    at: tuple[int, int]
+    team: Team = Team.ENEMY
+
+
+class SpawnUnitsEvent(ContentModel):
+    """第 ``round`` 輪結束（環境回合）時在指定格產生單位。"""
+
+    kind: Literal["spawn_units"]
+    round: int = Field(ge=1)
+    units: tuple[SpawnPlacement, ...] = Field(min_length=1)
+
+    def positions(self) -> list[tuple[int, int]]:
+        return [u.at for u in self.units]
+
+
+class TileChange(ContentModel):
+    """一格的變化：高度、地形、表面（省略的欄位不變）。"""
+
+    at: tuple[int, int]
+    height: int | None = Field(default=None, ge=0, le=3)
+    terrain: str | None = Field(default=None, pattern=ID_PATTERN)
+    surface: Surface | None = None
+
+    @model_validator(mode="after")
+    def _check(self) -> TileChange:
+        if self.height is None and self.terrain is None and self.surface is None:
+            raise ValueError(
+                "terrain_change 的每一格至少要改變 height、terrain 或 surface 其中之一"
+            )
+        return self
+
+
+class TerrainChangeEvent(ContentModel):
+    """第 ``round`` 輪結束（環境回合）時改變指定格。"""
+
+    kind: Literal["terrain_change"]
+    round: int = Field(ge=1)
+    tiles: tuple[TileChange, ...] = Field(min_length=1)
+
+    def positions(self) -> list[tuple[int, int]]:
+        return [t.at for t in self.tiles]
+
+
+type MapEvent = Annotated[SpawnUnitsEvent | TerrainChangeEvent, Field(discriminator="kind")]
 
 
 def _grid_lines(text: str) -> list[str]:
@@ -63,6 +155,10 @@ class MapDef(ContentModel):
     objects: tuple[MapObjectPlacement, ...] = ()
     surfaces: tuple[MapSurfacePlacement, ...] = ()
     start_zones: dict[Team, tuple[tuple[int, int], ...]]
+    objective: Objective = Field(default_factory=Objective)
+    weather: str = Field(default="clear", pattern=ID_PATTERN)
+    encounter: Encounter | None = None
+    events: tuple[MapEvent, ...] = ()
 
     @property
     def width(self) -> int:
@@ -147,11 +243,21 @@ class MapDef(ContentModel):
                 if cell in seen:
                     problems.append(f"start_zones 的 {list(cell)} 重複出現")
                 seen.add(cell)
-        placed = [("objects", o.at) for o in self.objects]
+        placed: list[tuple[str, tuple[int, int]]] = [("objects", o.at) for o in self.objects]
         placed += [("surfaces", s.at) for s in self.surfaces]
+        placed += [("objective.tiles", t) for t in self.objective.tiles]
+        for event in self.events:
+            placed += [(f"events（第 {event.round} 輪）", at) for at in event.positions()]
         problems += [
             f"{what} 的 {list(at)} 超出地圖範圍" for what, at in placed if not self.in_bounds(*at)
         ]
+        groups: tuple[tuple[str, list[tuple[int, int]]], ...] = (
+            ("objects", [o.at for o in self.objects]),
+            ("surfaces", [s.at for s in self.surfaces]),
+        )
+        for what, spots in groups:
+            dup = sorted({c for c in spots if spots.count(c) > 1})
+            problems += [f"{what} 的 {list(c)} 重複（每格最多一個）" for c in dup]
         return problems
 
     def summary(self) -> str:
@@ -168,8 +274,30 @@ def step_allowed(from_height: int, to_height: int, to_terrain: TerrainDef, core:
     return standable(to_terrain) and to_height - from_height <= core.max_climb_height
 
 
+type Passable = list[list[bool]]
+
+
+def _passable_grid(
+    map_def: MapDef, terrain: dict[str, TerrainDef], objects: dict[str, ObjectDef]
+) -> Passable:
+    """每格是否可站立：地形可站立或有 ``over_chasm`` 物件，且沒有 ``blocks_move`` 物件。"""
+    grid = map_def.grid()
+    placed = {o.at: objects[o.kind] for o in map_def.objects if o.kind in objects}
+    result: Passable = []
+    for y, row in enumerate(grid):
+        cells = []
+        for x, (_, tid) in enumerate(row):
+            obj = placed.get((x, y))
+            ok = standable(terrain[tid]) or (obj is not None and obj.has_tag("over_chasm"))
+            if obj is not None and obj.has_tag("blocks_move"):
+                ok = False
+            cells.append(ok)
+        result.append(cells)
+    return result
+
+
 def _reachable_from(
-    start: XY, grid: list[list[tuple[int, str]]], terrain: dict[str, TerrainDef], core: CoreRules
+    start: XY, grid: list[list[tuple[int, str]]], passable: Passable, core: CoreRules
 ) -> set[XY]:
     height, width = len(grid), len(grid[0])
     seen = {start}
@@ -180,44 +308,68 @@ def _reachable_from(
         for nx, ny in ((x, y - 1), (x + 1, y), (x, y + 1), (x - 1, y)):
             if not (0 <= nx < width and 0 <= ny < height) or (nx, ny) in seen:
                 continue
-            nh, nt = grid[ny][nx]
-            if step_allowed(h, nh, terrain[nt], core):
+            if passable[ny][nx] and grid[ny][nx][0] - h <= core.max_climb_height:
                 seen.add((nx, ny))
                 queue.append((nx, ny))
     return seen
 
 
-def check_map(map_def: MapDef, terrain: dict[str, TerrainDef], core: CoreRules) -> list[str]:
+def check_map(
+    map_def: MapDef,
+    terrain: dict[str, TerrainDef],
+    core: CoreRules,
+    objects: dict[str, ObjectDef] | None = None,
+) -> list[str]:
     """需要其他資料檔才能做的檢查；回傳問題清單（空清單表示通過）。
 
-    - 圖例的地形 ID 存在於地形表。
-    - 起始區不在不可站立的格子上。
+    - 圖例的地形 ID、物件種類存在。
+    - 起始區與勝利條件的格子可站立（考慮物件：``blocks_move`` 不可站、``over_chasm`` 可站）。
+    - 表面不放在致命地形上；地圖事件的地形 ID 存在。
     - 連通性：每一個起始格都能走到對方起始區的至少一格（依移動規則，往上一步最多
-      ``max_climb_height`` 層，不經過不可站立的地形）。
-    - Phase 1A 尚不支援 ``objects``／``surfaces``，必須為空。
+      ``max_climb_height`` 層，不經過不可站立的格子）。
     """
+    objects = objects or {}
     problems: list[str] = []
     unknown = sorted({tid for tid in map_def.legend.values() if tid not in terrain})
     if unknown:
         return [f"legend 使用了未知的地形：{', '.join(unknown)}"]
-    if map_def.objects:
-        problems.append("objects 目前（Phase 1A）尚未支援，必須為空")
-    if map_def.surfaces:
-        problems.append("surfaces 目前（Phase 1A）尚未支援，必須為空")
+    unknown_objects = sorted({o.kind for o in map_def.objects if o.kind not in objects})
+    if unknown_objects:
+        return [f"objects 使用了未知的物件：{', '.join(unknown_objects)}"]
     grid = map_def.grid()
+    passable = _passable_grid(map_def, terrain, objects)
     for team, cells in sorted(map_def.start_zones.items()):
         for x, y in cells:
-            tdef = terrain[grid[y][x][1]]
-            if not standable(tdef):
-                problems.append(
-                    f"start_zones.{team.value} 的 [{x}, {y}] 位於不可站立的地形 {tdef.id}"
-                )
+            if not passable[y][x]:
+                problems.append(f"start_zones.{team.value} 的 [{x}, {y}] 位於不可站立的格子")
+    problems += [
+        f"objective.tiles 的 [{x}, {y}] 位於不可站立的格子"
+        for x, y in map_def.objective.tiles
+        if not passable[y][x]
+    ]
+    problems += [
+        f"surfaces 的 {list(s.at)} 位於致命地形"
+        for s in map_def.surfaces
+        if terrain[grid[s.at[1]][s.at[0]][1]].deadly
+    ]
+    problems += [
+        f"surfaces 的 {list(s.at)} 不可為 none"
+        for s in map_def.surfaces
+        if s.surface is Surface.NONE
+    ]
+    for event in map_def.events:
+        if isinstance(event, TerrainChangeEvent):
+            problems += [
+                f"events（第 {event.round} 輪）使用了未知的地形：{t.terrain}"
+                for t in event.tiles
+                if t.terrain is not None and t.terrain not in terrain
+            ]
     if problems:
         return problems
     for team, cells in sorted(map_def.start_zones.items()):
         targets = set(map_def.start_zones[team.opponent])
         for cell in cells:
-            if not _reachable_from(cell, grid, terrain, core) & targets:
+            if not _reachable_from(cell, grid, passable, core) & targets:
                 problems.append(
                     f"start_zones.{team.value} 的 {list(cell)} 無法走到 "
                     f"{team.opponent.value} 的起始區（連通性檢查失敗）"

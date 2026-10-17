@@ -1,0 +1,26 @@
+# 反應（docs/專案計畫.md 5.2.1；docs/phases/Phase1計畫.md 6.1-9）。
+# reactions：反應定義（effect 的語意由引擎實作，數值在這裡）。
+#   reduce_damage：本次攻擊傷害 ×(1 − damage_reduction_permille)，無條件捨去，最低 1。
+#   basic_attack：以武器普攻觸發者（不花 AP；requires_melee_weapon 時只有近戰武器能用）。
+# default_rules：單位範本沒有指定 reactions 時使用的預設規則（格式照計畫範例；mode 預設 auto）。
+# 每個單位每輪最多反應 rules/core.yaml 的 reactions_per_round 次（每輪開始時重設）。
+reactions:
+  - id: block
+    name_zh: 格擋
+    description_zh: 被近戰攻擊命中後，傷害減半，消耗 10 耐力。
+    effect: reduce_damage
+    events: [targeted_by_melee, targeted_by_attack]
+    stamina_cost: 10
+    damage_reduction_permille: 500
+  - id: opportunity_attack
+    name_zh: 藉機攻擊
+    description_zh: 敵人離開相鄰格時，以近戰武器攻擊一次（不花 AP）。
+    effect: basic_attack
+    events: [enemy_leaves_adjacent]
+    requires_melee_weapon: true
+default_rules:
+  - reaction: block
+    when: {event: targeted_by_melee}
+    unless: {self_stamina_below: 20}
+  - reaction: opportunity_attack
+    when: {event: enemy_leaves_adjacent}
