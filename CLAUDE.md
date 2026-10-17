@@ -18,8 +18,8 @@ LLM 說書人開放世界 MMO-TRPG。核心初衷：**LLM 為每位玩家長出�
 
 ## 實作守則（精簡自 `docs/專案計畫.md` 第 0 節）
 
-1. **規則引擎是純函式且確定性**：`resolve(state, action, rng) → (state, events, pending)`。相同種子與輸入必得相同結果。引擎內禁止呼叫 LLM、讀取時間、使用 `random` 模組全域函式、使用 `uuid4`。
-2. **確定性的 Python 細節**：只用傳入的 `trpg.shared.rng.Rng`；需要順序時一律排序，不依賴 `set` 迭代順序或內建 `hash()`（字串 hash 每次執行不同）；數值結算以整數為主，百分比用整數千分比（‰）或 `Fraction`。
+1. **規則引擎是純函式且確定性**：`resolve(state, action) → (state, events, pending)`，亂數狀態存放在戰鬥狀態內，「初始狀態 ＋ 動作列表」即可完整重播。相同種子與輸入必得相同結果。引擎內禁止呼叫 LLM、讀取時間、使用 `random` 模組全域函式、使用 `uuid4`。
+2. **確定性的 Python 細節**：只用 `trpg.shared.rng.Rng`（由戰鬥狀態內的 `rng_state` 還原）；需要順序時一律排序，不依賴 `set` 迭代順序或內建 `hash()`（字串 hash 每次執行不同）；數值結算以整數為主，百分比用整數千分比（‰）或 `Fraction`。
 3. **LLM 只能提議，不能裁決**：LLM 輸出先經 pydantic 驗證，再由引擎檢查合法性。LLM 沒有任何能直接修改數值、產生物品或資源的工具。
 4. **內容即資料**：原語、形狀、骨架、物件、互動表、地圖、詞條、印記、共鳴等都放在頂層 `content/`（YAML／JSON），以 pydantic schema 驗證；新增內容不需改引擎程式。
 5. **模組依賴方向**：`trpg.engine` 不得匯入 `trpg.llm`、`trpg.narrative`、`trpg.api`、`trpg.roguelite`、`trpg.sim`、`trpg.skillgen`、`trpg.cli`；`trpg.shared` 不得匯入任何其他 `trpg` 子套件。由 import-linter 與 `tests/test_architecture.py` 檢查。
