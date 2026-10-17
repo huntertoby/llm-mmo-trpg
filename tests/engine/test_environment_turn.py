@@ -5,8 +5,28 @@ from __future__ import annotations
 from collections.abc import Sequence
 from typing import Any
 
-from tests.engine.helpers import give_turn, make_map, make_state, no_reactions, spawn, template
-from trpg.engine import BattleState, EndTurn, resolve, telegraph
+from hypothesis import HealthCheck, given, settings
+from hypothesis import strategies as st
+
+from tests.engine.helpers import (
+    give_turn,
+    library,
+    make_map,
+    make_state,
+    no_reactions,
+    spawn,
+    template,
+)
+from trpg.engine import (
+    BattleState,
+    Decision,
+    EndTurn,
+    begin_battle,
+    build_setup,
+    resolve,
+    resume,
+    telegraph,
+)
 from trpg.engine.events import (
     EnvironmentEnded,
     EnvironmentStarted,
@@ -19,6 +39,7 @@ from trpg.engine.events import (
     TerrainChanged,
     UnitSpawned,
 )
+from trpg.engine.runner import run_battle
 from trpg.shared.types import ObjectId, Surface, Team, UnitId
 
 U1, U2, U3 = UnitId("unit_0001"), UnitId("unit_0002"), UnitId("unit_0003")
@@ -257,3 +278,30 @@ def test_explosion_during_environment_is_telegraphed() -> None:
     assert any(isinstance(e, ObjectExploded) for e in events)
     assert any(isinstance(e, ObjectIgnited) for e in events) is False
     assert any(isinstance(e, ObjectDestroyed) for e in events)
+
+
+@settings(max_examples=12, deadline=None, suppress_health_check=[HealthCheck.too_slow])
+@given(seed=st.integers(min_value=0, max_value=2**32), map_index=st.integers(0, 2))
+def test_property_telegraph_matches_every_environment_turn_on_demo_maps(
+    seed: int, map_index: int
+) -> None:
+    """三張示範地圖的整場對戰：每一次環境回合，都與「本輪最後一個 EndTurn 之前」的預告完全相同。
+
+    （預告是在本輪最後一個動作之前取得；之後狀態不再改變時，預告必須與實際一致。）
+    """
+    lib = library()
+    map_id = ("bridge_chasm", "oil_depot", "swamp")[map_index]
+    encounter = lib.map(map_id).encounter
+    assert encounter is not None
+    setup = build_setup(lib, map_id, encounter.allies, encounter.enemies, max_rounds=8)
+    run = run_battle(setup, seed)
+    state = begin_battle(setup, seed).state
+    environment_turns = 0
+    for step in run.actions:
+        forecast = telegraph(state) if isinstance(step, EndTurn) else None
+        result = resume(state, step) if isinstance(step, Decision) else resolve(state, step)
+        if forecast is not None and any(isinstance(e, EnvironmentStarted) for e in result.events):
+            environment_turns += 1
+            assert _strip(_env_events(result.events)) == _strip(forecast.events)
+        state = result.state
+    assert environment_turns >= 1 or state.round == 1

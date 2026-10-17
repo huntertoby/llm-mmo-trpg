@@ -400,3 +400,39 @@ def test_line_of_sight_asymmetric_case_is_now_blocked_both_ways() -> None:
             assert not has_line_of_sight(state, a, b)
             assert not has_line_of_sight(state, b, a)
     assert found
+
+
+@settings(max_examples=60, deadline=None)
+@given(
+    heights=st.lists(st.integers(0, 3), min_size=36, max_size=36),
+    cells=st.lists(st.sampled_from(["", "pillar", "darkness", "grass"]), min_size=36, max_size=36),
+    fog=st.booleans(),
+    a=st.tuples(st.integers(0, 5), st.integers(0, 5)),
+    b=st.tuples(st.integers(0, 5), st.integers(0, 5)),
+)
+def test_property_line_of_sight_is_symmetric_with_environment(
+    heights: list[int],
+    cells: list[str],
+    fog: bool,
+    a: tuple[int, int],
+    b: tuple[int, int],
+) -> None:
+    """1B 的視線阻擋（石柱 blocks_sight、黑暗表面、濃霧距離）下視線仍然對稱。
+
+    地圖右側多一行高度 0 的走道（x = 6）放起始區，保證連通；a、b 只取 x ≤ 5。
+    """
+    rows = "\n".join("".join(str(h) for h in heights[y * 6 : y * 6 + 6]) + "0" for y in range(6))
+    objects = [
+        (i % 6, i // 6, "stone_pillar" if c == "pillar" else "grass")
+        for i, c in enumerate(cells)
+        if c in ("pillar", "grass")
+    ]
+    surfaces = [(i % 6, i // 6, "darkness") for i, c in enumerate(cells) if c == "darkness"]
+    m = make_map(rows, ally=[(6, 0)], enemy=[(6, 5)], objects=objects, surfaces=surfaces)
+    state = make_state(
+        m,
+        [spawn(Team.ALLY, (6, 0)), spawn(Team.ENEMY, (6, 5))],
+        weather="fog" if fog else None,
+        base_sight_range=8,  # 濃霧時 4 格：讓距離限制在 6×6 內也會發生
+    )
+    assert has_line_of_sight(state, a, b) == has_line_of_sight(state, b, a)
