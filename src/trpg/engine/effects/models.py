@@ -70,7 +70,8 @@ class DamageEffect(EffectBase):
 
     ``apply_element_mod=False`` 時不套用元素修正（墜落、致命地形等以最大 HP 比例計算的傷害）。
     ``multiplier_permille``：最後再乘上的倍率（格擋 500 = 傷害減半），無條件捨去，最低
-    ``min_damage``。``mode == "roll"`` 時另套用天氣的元素傷害修正。
+    ``min_damage``。``mode == "roll"`` 時另套用天氣的元素傷害修正（``apply_weather=False`` 時
+    不套用：例如雷電擴散的基準傷害已含天氣修正，避免重複計算）。
     """
 
     kind: Literal["damage"] = "damage"
@@ -84,6 +85,7 @@ class DamageEffect(EffectBase):
     crit: bool = False
     permille: int = Field(default=0, ge=0)
     apply_element_mod: bool = True
+    apply_weather: bool = True
     min_damage: int = Field(default=1, ge=0)
     multiplier_permille: int = Field(default=1000, ge=0)
 

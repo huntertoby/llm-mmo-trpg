@@ -69,7 +69,8 @@ def _damage(ctx: Ctx, effect: EffectBase) -> list[EventBase]:
         raw_permille = (sum(rolls) + effect.flat) * PERMILLE + effect.scaled_permille
         if effect.apply_element_mod:
             mod_ppm = element_modifier_ppm(unit, effect.element, ctx.rules)
-        weather = weather_permille(ctx.state, effect.element)
+        if effect.apply_weather:
+            weather = weather_permille(ctx.state, effect.element)
         amount = max(
             raw_permille
             * mod_ppm

@@ -228,6 +228,7 @@ def _outcome_effects(  # noqa: PLR0911
                 cause="conduct",
                 element=element,
                 flat=amount,
+                apply_weather=False,  # 基準傷害（主要目標受到的傷害）已含天氣修正
             )
             for unit in targets
         ]

@@ -235,7 +235,7 @@ def test_burning_bridge_collapses_at_environment_turn() -> None:
 # ---------------------------------------------------------------------------
 
 
-def _swamp() -> BattleState:
+def _swamp(weather: str | None = None) -> BattleState:
     """水 (0..2, 1) 相連；目標在 (0, 1)，同一片水裡的 (2, 1)，水外的 (2, 2)。"""
     m = make_map(
         "0000\n0000\n0000",
@@ -251,6 +251,7 @@ def _swamp() -> BattleState:
             spawn(Team.ENEMY, (2, 1), template("bandit", max_hp=200)),
             spawn(Team.ENEMY, (2, 2), template("bandit", max_hp=200)),
         ],
+        weather=weather,
     )
     return give_turn(state, U1)
 
@@ -265,6 +266,18 @@ def test_lightning_conducts_through_connected_water() -> None:
     assert [e.target_id for e in conducted] == [U3]  # (2, 2) 不在水裡
     assert conducted[0].element is Element.LIGHTNING
     assert conducted[0].amount == direct[0].amount  # damage_permille 1000
+
+
+def test_lightning_conduct_applies_rain_bonus_only_once() -> None:
+    """下雨時主要目標的雷電傷害已含 +20%；擴散的傷害以它為基準，不再乘一次天氣。"""
+    state = _swamp(weather="rain")
+    result = resolve(with_rolls(state, [(20, 15), (6, 6)]), Attack(unit_id=U1, target_id=U2))
+    damage = [e for e in result.events if isinstance(e, DamageDealt)]
+    direct = next(e for e in damage if e.cause == "attack")
+    conducted = next(e for e in damage if e.cause == "conduct")
+    assert direct.weather_permille == 1200
+    assert conducted.weather_permille == 1000
+    assert conducted.amount == direct.amount
 
 
 def test_ice_freezes_water_then_slip_check() -> None:
