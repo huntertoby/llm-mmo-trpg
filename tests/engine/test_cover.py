@@ -349,3 +349,27 @@ def test_battle_log_shows_cover_source() -> None:
     result = resolve(with_rolls(side, [(20, 15)]), Attack(unit_id=U1, target_id=U2))
     text = describe_event(_attack_roll(result.events), result.state)
     assert text is not None and "掩護" not in text
+
+
+# ---------------------------------------------------------------------------
+# Phase 2A 決定 #1：站在高台上的目標不被旁邊地面的掩護物掩護
+# ---------------------------------------------------------------------------
+
+
+def test_target_on_high_platform_is_not_covered_by_ground_crate() -> None:
+    # 木箱在 (2, 2)（高 0），盜賊站在 (3, 2)（高 2 的高台），弓手在 (0, 2) 也在地面：
+    # 木箱 0 + 1 < 目標高度 2 → 不提供半掩護
+    heights = "0002000\n0002000\n0002000\n0002000\n0002000"
+    state = _archery((0, 2), (3, 2), heights=heights)
+    assert half_cover(state, state.units[U1], state.units[U2]) is None
+    p = preview(state, Attack(unit_id=U1, target_id=U2))
+    assert p.cover is None and p.notes == ()
+
+
+def test_target_on_ground_beside_crate_still_covered_and_low_target_on_one_step() -> None:
+    # 地面目標：照舊（上面的測試 test_ranged_attack_behind_crate_has_minus_two 已涵蓋）；
+    # 目標只高 1 層時，木箱（0 + 1 ≥ 1）仍提供掩護
+    heights = "0001000\n0001000\n0001000\n0001000\n0001000"
+    state = _archery((0, 2), (3, 2), heights=heights)
+    cover = half_cover(state, state.units[U1], state.units[U2])
+    assert cover is not None and cover.object_id == CRATE

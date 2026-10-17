@@ -92,8 +92,11 @@ warn_required_dynamic_aliases = true
 # ---------------------------------------------------------------------------
 [tool.pytest.ini_options]
 testpaths = ["tests"]
-addopts = "-ra"
+addopts = "-ra -m 'not slow'"
 pythonpath = ["src"]
+markers = [
+    "slow: 耗時的批次模擬（平衡檢查）；預設不跑，用 `-m slow` 執行，勝率報表改由 scripts/sim_demo_maps.py 檢查",
+]
 
 # ---------------------------------------------------------------------------
 # import-linter（本機未安裝時由 tests/test_architecture.py 提供等效檢查）

@@ -107,6 +107,7 @@ def cover_object_between(
     tx, ty = target_xy
     wx, wy = attacker_xy[0] - tx, attacker_xy[1] - ty
     attacker_height = state.tile(*attacker_xy).height
+    target_height = state.tile(*target_xy).height
     for dx, dy in _COVER_DIRECTIONS:
         if dx * wx + dy * wy <= 0:
             continue
@@ -119,8 +120,11 @@ def cover_object_between(
         obj = state.objects[oid]
         if HALF_COVER not in state.ruleset.object_def(obj.kind).tags:
             continue
-        if attacker_height > state.tile(cx, cy).height + 1:
+        cover_height = state.tile(cx, cy).height
+        if attacker_height > cover_height + 1:
             continue
+        if cover_height + 1 < target_height:
+            continue  # 目標站得比掩護物高（站在高台上）：旁邊地面的掩護物擋不到它
         return obj.id, (cx, cy)
     return None
 
@@ -133,7 +137,9 @@ def half_cover(state: BattleState, attacker: UnitState, target: UnitState) -> Co
     1. C 與目標四方向相鄰；
     2. C 上有未摧毀、帶 ``half_cover`` 標籤的物件；
     3. C 相對於目標的方向向量與「目標指向攻擊者」的向量內積 > 0（C 在目標朝向攻擊者的一側）；
-    4. 攻擊者的高度不高於「C 的地形高度 ＋ 1」（物件視為 1 層高；攻擊者高出至少 1 層時無視）。
+    4. 攻擊者的高度不高於「C 的地形高度 ＋ 1」（物件視為 1 層高；攻擊者高出至少 1 層時無視）；
+    5. 目標所在格的高度不高於「C 的地形高度 ＋ 1」（Phase 2A 決定 #1：站在高台上的目標不再被
+       旁邊地面的掩護物掩護）。
 
     近戰（含長柄）無視半掩護；單位不提供掩護。多個掩護物同時符合時只計一次，來源取上、右、下、
     左順序中的第一個（確定性）。懲罰為 ``half_cover_hit_penalty``（為 0 時視為沒有掩護）。

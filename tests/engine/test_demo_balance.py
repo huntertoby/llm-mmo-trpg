@@ -1,7 +1,9 @@
 """示範地圖的平衡（docs/phases/Phase1C計畫.md 2.5 #4）：效用 AI 跑 20 個種子，
 我方勝率 35%–65%、平均輪數 4–6。與 ``scripts/sim_demo_maps.py`` 相同的設定。
 
-兩張地圖一組平行執行（約 20 秒）。
+Phase 2A 決定 #2：勝率檢查標記為 ``slow``，預設不跑（``pytest -m slow`` 才會執行）；
+技能加入後平衡由 2C 統一調整，勝率改由 ``scripts/sim_demo_maps.py`` 的報表檢查。
+重播測試很快，仍然預設執行。
 """
 
 from __future__ import annotations
@@ -43,6 +45,7 @@ def results() -> dict[str, tuple[int, list[int]]]:
         return {m: (w, r) for m, w, r in pool.map(_simulate, DEMO_MAPS)}
 
 
+@pytest.mark.slow
 @pytest.mark.parametrize("map_id", DEMO_MAPS)
 def test_demo_map_win_rate_and_length(
     map_id: str, results: dict[str, tuple[int, list[int]]]
