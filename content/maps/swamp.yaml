@@ -1,5 +1,6 @@
 # 示範地圖：沼澤（下雨）。大片水窪導電：雷電沿相連的水擴散；火焰在雨中減弱。
 # 第 2 輪結束時，泥沼漫出，西側一排格子積水。
+# Phase 1C：兩段殘牆（全掩護）與倒木、木箱（半掩護）；盜賊盾衛（守衛模式）保護受傷的同伴。
 id: swamp
 name_zh: 沼澤
 size: [10, 10]
@@ -17,22 +18,26 @@ heights: |
   0000000000
 terrain: |
   ,,,,,,,,,,
+  ,,,,,,,#,,
+  ,,,,,,,#,,
   ,,,,,,,,,,
   ,,,,,,,,,,
   ,,,,,,,,,,
   ,,,,,,,,,,
-  ,,,,,,,,,,
-  ,,,,,,,,,,
-  ,,,,,,,,,,
-  ,,,,,,,,,,
+  ,,#,,,,,,,
+  ,,#,,,,,,,
   ,,,,,,,,,,
 legend:
   ",": dirt
+  "#": wall
 objects:
   - {at: [2, 2], kind: grass}
   - {at: [7, 3], kind: grass}
   - {at: [3, 7], kind: grass}
   - {at: [8, 6], kind: grass}
+  - {at: [2, 5], kind: fallen_log}
+  - {at: [7, 6], kind: fallen_log}
+  - {at: [3, 8], kind: crate}
 surfaces:
   - {at: [4, 2], surface: water}
   - {at: [5, 2], surface: water}
@@ -59,7 +64,7 @@ start_zones:
   enemy: [[5, 3], [6, 4], [5, 5], [4, 4]]
 encounter:
   allies: [hero_fighter, hero_archer, hero_stormcaller]
-  enemies: [bandit, bandit, bandit_archer, bandit_boss]
+  enemies: [bandit, bandit_shieldbearer, bandit_archer, bandit_boss]
 events:
   - kind: terrain_change
     round: 2

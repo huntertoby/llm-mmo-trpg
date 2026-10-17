@@ -233,10 +233,10 @@ def test_property_arbitrary_actions_are_legal_or_rejected(data: st.DataObject, s
 
 
 # ---------------------------------------------------------------------------
-# Phase 1B：示範地圖（物件、表面、環境回合、反應、地圖事件）
+# Phase 1B／1C：示範地圖（物件、表面、環境回合、反應、地圖事件、牆壁與掩護）
 # ---------------------------------------------------------------------------
 
-DEMO_MAPS = ("bridge_chasm", "oil_depot", "swamp")
+DEMO_MAPS = ("bridge_chasm", "oil_depot", "swamp", "ruined_fort")
 
 
 def _demo_map_setup(map_id: str, max_rounds: int) -> BattleSetup:
@@ -247,7 +247,9 @@ def _demo_map_setup(map_id: str, max_rounds: int) -> BattleSetup:
 
 
 @PROPERTY_SETTINGS
-@given(seed=st.integers(min_value=0, max_value=2**64 - 1), map_index=st.integers(0, 2))
+@given(
+    seed=st.integers(min_value=0, max_value=2**64 - 1), map_index=st.integers(0, len(DEMO_MAPS) - 1)
+)
 def test_property_demo_maps_replay(seed: int, map_index: int) -> None:
     setup = _demo_map_setup(DEMO_MAPS[map_index], max_rounds=8)
     run = run_battle(setup, seed)
@@ -258,7 +260,7 @@ def test_property_demo_maps_replay(seed: int, map_index: int) -> None:
 
 
 @PROPERTY_SETTINGS
-@given(seed=st.integers(min_value=0, max_value=2**32), map_index=st.integers(0, 2))
+@given(seed=st.integers(min_value=0, max_value=2**32), map_index=st.integers(0, len(DEMO_MAPS) - 1))
 def test_property_demo_maps_legal_actions_resolve(seed: int, map_index: int) -> None:
     setup = _demo_map_setup(DEMO_MAPS[map_index], max_rounds=4)
     for state in _random_walk(setup, seed, 40)[::4]:

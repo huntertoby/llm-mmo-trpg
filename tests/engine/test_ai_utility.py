@@ -281,7 +281,7 @@ def test_cunning_attacks_cover_object_when_it_can_break_it() -> None:
     assert ai("cunning")(sturdy) == Attack(unit_id=U1, target_id=U2)
 
 
-@pytest.mark.parametrize("map_id", ["bridge_chasm", "oil_depot", "swamp"])
+@pytest.mark.parametrize("map_id", ["bridge_chasm", "oil_depot", "swamp", "ruined_fort"])
 def test_fast_move_scores_match_full_preview(map_id: str) -> None:
     """沒有風險的移動用虛擬分數，與完整 preview 算出的分數完全相同；有風險者跑完整 preview。"""
     from trpg.engine import build_setup  # noqa: PLC0415

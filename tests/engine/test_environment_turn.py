@@ -285,18 +285,18 @@ def test_explosion_during_environment_is_telegraphed() -> None:
 
 
 @settings(max_examples=12, deadline=None, suppress_health_check=[HealthCheck.too_slow])
-@given(seed=st.integers(min_value=0, max_value=2**32), map_index=st.integers(0, 2))
+@given(seed=st.integers(min_value=0, max_value=2**32), map_index=st.integers(0, 3))
 def test_property_telegraph_matches_every_environment_turn_on_demo_maps(
     seed: int, map_index: int
 ) -> None:
-    """三張示範地圖的整場對戰：每一次環境回合，都與「本輪最後一個 EndTurn 之前」的預告完全相同。
+    """四張示範地圖的整場對戰：每一次環境回合，都與「本輪最後一個 EndTurn 之前」的預告完全相同。
 
     （預告是在本輪最後一個動作之前取得；之後狀態不再改變時，預告必須與實際一致。
     若這個 EndTurn 之後、環境回合之前還有改變戰場的事件——例如下一位單位回合開始時被燃燒燒死、
     接著直接進入環境回合——預告的前提不成立，該次不比較。）
     """
     lib = library()
-    map_id = ("bridge_chasm", "oil_depot", "swamp")[map_index]
+    map_id = ("bridge_chasm", "oil_depot", "swamp", "ruined_fort")[map_index]
     encounter = lib.map(map_id).encounter
     assert encounter is not None
     setup = build_setup(lib, map_id, encounter.allies, encounter.enemies, max_rounds=8)

@@ -1,0 +1,20 @@
+# 盜賊盾衛（Phase 1C 決定 #7）：持盾、高護甲、守衛行為模式（保護受傷的同伴、守點）。
+# 盾牌讓格擋對遠程攻擊也有效（targeted_by_attack）；耐力降到 10 以下時不再格擋。
+id: bandit_shieldbearer
+name_zh: 盜賊盾衛
+attributes: {str: 13, dex: 10, con: 14, int: 8, wis: 10, wil: 10}
+max_hp: 32
+speed: 4
+armor_bonus: 6
+weapon: one_handed_sword
+stamina: 30
+ai_profile: guard
+reactions:
+  - reaction: block
+    when: {event: targeted_by_attack}
+    unless: {self_stamina_below: 10}
+  - reaction: opportunity_attack
+    when: {event: enemy_leaves_adjacent}
+resist: {physical: 100}
+element_mods: {}
+tags: [humanoid, shield]

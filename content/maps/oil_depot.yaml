@@ -1,5 +1,7 @@
 # 示範地圖：油庫。油桶與漏油遍地；火焰與範圍攻擊大顯身手，站在油上的近戰要小心。
 # 盜賊們守在漏油的倉庫中央；第 3 輪結束時，援軍從東北角出現（提前一輪預告）。
+# Phase 1C：倉庫東側的牆壁（全掩護）；我方前方的矮牆與木箱提供半掩護——油桶也是半掩護，
+# 但躲在油桶後面很危險。
 id: oil_depot
 name_zh: 油庫
 size: [10, 10]
@@ -17,16 +19,17 @@ heights: |
 terrain: |
   ..........
   ..........
+  .........#
+  .........#
   ..........
   ..........
-  ..........
-  ..........
-  ..........
-  ..........
+  .........#
+  .........#
   ..........
   ..........
 legend:
   ".": stone
+  "#": wall
 objects:
   - {at: [5, 3], kind: oil_barrel}
   - {at: [5, 6], kind: oil_barrel}
@@ -34,7 +37,8 @@ objects:
   - {at: [8, 6], kind: oil_barrel}
   - {at: [3, 2], kind: crate}
   - {at: [3, 7], kind: crate}
-  - {at: [7, 1], kind: crate}
+  - {at: [2, 3], kind: low_wall}
+  - {at: [2, 6], kind: low_wall}
 surfaces:
   - {at: [6, 3], surface: oil}
   - {at: [7, 3], surface: oil}

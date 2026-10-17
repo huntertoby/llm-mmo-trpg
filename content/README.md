@@ -13,19 +13,19 @@
 | 檔案 | 內容 | 階段 |
 |---|---|---|
 | `elements.yaml` | 9 種元素的中文名稱、說明與抗性分組（每個元素恰好一筆） | Phase 0、1A |
-| `rules/core.yaml` | 核心戰鬥規則數值（AP、命中、傷害、墜落、連鎖深度……） | Phase 1A |
+| `rules/core.yaml` | 核心戰鬥規則數值（AP、命中、傷害、墜落、連鎖深度、半掩護懲罰……） | Phase 1A、1B、1C |
 | `rules/hit_table.yaml` | 命中修正整數門檻表（由 `scripts/gen_hit_table.py` 產生，勿手改） | Phase 1A |
-| `terrain.yaml` | 地形（可否行走、致命、顯示字元） | Phase 1A |
+| `terrain.yaml` | 地形（可否行走、致命、阻擋視線、顯示字元；1C 加入牆壁 `wall`） | Phase 1A、1C |
 | `weapons.yaml` | 武器 | Phase 1A |
 | `statuses.yaml` | 狀態（防禦、倒地、燃燒、隱蔽） | Phase 1A、1B |
-| `objects.yaml` | 格子物件與標籤（木橋、油桶、石柱、草叢、木箱、土牆） | Phase 1B |
+| `objects.yaml` | 格子物件與標籤（木橋、油桶、石柱、草叢、木箱、土牆；1C 加入 `half_cover` 標籤、矮牆、倒木、油桶漏油 `spill`） | Phase 1B、1C |
 | `surfaces.yaml` | 表面（油、水、火、冰、毒、聖光、黑暗）：持續回合、進入與回合開始效果 | Phase 1B |
 | `interactions.yaml` | 元素 × 標籤／表面互動表與元素能力 | Phase 1B |
 | `weather.yaml` | 天氣（晴朗、下雨、濃霧、夜晚） | Phase 1B |
 | `reactions.yaml` | 反應（格擋、藉機攻擊）與預設反應規則 | Phase 1B |
-| `ai_profiles.yaml` | 效用 AI 的行為模式權重（莽夫、弓手、狡猾、守衛） | Phase 1B |
-| `units/` | 單位範本（一檔一個，檔名 = id） | Phase 1A、1B |
-| `maps/` | 地圖（一檔一張，檔名 = id；格式見 `docs/phases/Phase1計畫.md` 5.2，1B 加入 `objects`、`surfaces`、`objective`、`weather`、`encounter`、`events`）；示範地圖 `bridge_chasm`、`oil_depot`、`swamp` | Phase 1A、1B |
+| `ai_profiles.yaml` | 效用 AI 的行為模式權重（莽夫、弓手、狡猾、守衛；1C 加入掩護權重與 `move_candidates`） | Phase 1B、1C |
+| `units/` | 單位範本（一檔一個，檔名 = id；1C 加入盜賊盾衛 `bandit_shieldbearer`） | Phase 1A、1B、1C |
+| `maps/` | 地圖（一檔一張，檔名 = id；格式見 `docs/phases/Phase1計畫.md` 5.2，1B 加入 `objects`、`surfaces`、`objective`、`weather`、`encounter`、`events`）；圖例 `#` 慣例對應牆壁；示範地圖 `bridge_chasm`、`oil_depot`、`swamp`、`ruined_fort` | Phase 1A、1B、1C |
 
 ## 未來的子資料夾規劃
 
