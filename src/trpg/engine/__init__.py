@@ -39,6 +39,7 @@ from trpg.engine.actions import (
 )
 from trpg.engine.battle import begin_battle, legal_actions, resolve, resume, start_battle
 from trpg.engine.environment import Telegraph, telegraph
+from trpg.engine.preview import Preview, preview
 from trpg.engine.results import Pending, ResolveResult
 from trpg.engine.setup import (
     BattleSetup,
@@ -62,6 +63,7 @@ __all__ = [
     "Interact",
     "Move",
     "Pending",
+    "Preview",
     "ResolveResult",
     "Shove",
     "Step",
@@ -73,6 +75,7 @@ __all__ = [
     "deploy_allies",
     "deployment_tiles",
     "legal_actions",
+    "preview",
     "resolve",
     "resume",
     "start_battle",
