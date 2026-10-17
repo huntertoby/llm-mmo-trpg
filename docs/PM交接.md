@@ -22,7 +22,10 @@
 | Phase 1A 戰鬥核心 | ✅ 完成 | `Phase1計畫.md` 第 5 節／`Phase1A報告.md` |
 | Phase 1B 環境與戰術 | ✅ 完成 | `Phase1計畫.md` 第 6 節／`Phase1B報告.md` |
 | Phase 1C 掩護與牆壁 | ✅ 完成 | `Phase1C計畫.md`／`Phase1C報告.md` |
-| **Phase 2 技能系統** | ⏭️ 下一步 | 尚未撰寫規格 |
+| **Phase 2A-1 技能資料與解譯器** | 🚧 實作中 | `Phase2A計畫.md` 第 5 節 |
+| Phase 2A-2 條件與 AI | ⏭️ 待 2A-1 驗收 | `Phase2A計畫.md` 第 6 節 |
+
+- 2A 的規則決定（使用者已同意）：範圍技能每個目標各擲命中骰；技能直接效果預設不誤傷友方，`affects: all` 為可選的「敵我不分」標記（2B 給預算折扣）；有害表面敵我不分、有益表面只幫施放者陣營、地圖表面中立；法力戰鬥中不回復；冷卻 1 ＝ 每回合一次；法術屬性倍率 0.5。
 
 - 最新 commit 在 GitHub `huntertoby/llm-mmo-trpg`（私人）的 `main`；CI（Windows／Ubuntu × Python 3.12／3.13）全綠。
 - 529 個測試；`trpg battle --map <id> --seed <n>` 可在終端機跑完整戰鬥並重播。
