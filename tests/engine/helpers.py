@@ -2,13 +2,15 @@
 
 from __future__ import annotations
 
-from collections.abc import Sequence
+from collections.abc import Mapping, Sequence
 from functools import cache
 from pathlib import Path
+from typing import Any
 
 from trpg.content.battle import UnitTemplate
 from trpg.content.library import ContentLibrary, load_library
 from trpg.content.maps import MapDef
+from trpg.content.skills import SkillDef, SkillTable
 from trpg.engine import BattleSetup, BattleState, UnitSpawn, start_battle
 from trpg.engine.state import SpawnTemplate
 from trpg.shared.rng import Rng, RngState
@@ -91,11 +93,14 @@ def spawn(
     *,
     skills: Sequence[str] | None = (),
 ) -> UnitSpawn:
-    """``skills`` 預設為空（Phase 1 的測試不帶技能）；``None`` 表示沿用範本的技能。"""
+    """以範本 ID 指定時，``skills`` 預設為空（Phase 1 的測試不帶技能）；``None`` 表示沿用範本
+    的技能。直接給範本物件時一律沿用它的技能。"""
     lib = library()
     t = lib.unit(tmpl) if isinstance(tmpl, str) else tmpl
     w = lib.weapons[weapon or t.weapon]
-    if skills is not None:
+    if (isinstance(tmpl, str) and skills is not None) or (
+        weapon is not None and weapon != t.weapon and skills is not None
+    ):
         t = t.model_copy(update={"skills": tuple(skills)})
     return UnitSpawn(template=t, weapon=w, team=team, position=pos)
 
@@ -107,6 +112,7 @@ def make_setup(
     max_rounds: int | None = None,
     weather: str | None = None,
     spawn_templates: Sequence[str] = (),
+    skills: Sequence[SkillDef] = (),
     **core: int,
 ) -> BattleSetup:
     """``core`` 可覆寫 ``rules/core.yaml`` 的數值。
@@ -117,6 +123,9 @@ def make_setup(
     rs = lib.ruleset
     if core:
         rs = rs.model_copy(update={"core": rs.core.model_copy(update=core)})
+    if skills:  # 測試專用技能：加進規則集（重建查表索引）
+        rs = rs.model_copy(update={"skills": SkillTable(skills=(*rs.skills.skills, *skills))})
+        rs.model_post_init(None)
     templates = {
         t: SpawnTemplate(template=lib.unit(t), weapon=lib.weapon_of(lib.unit(t)))
         for t in spawn_templates
@@ -138,10 +147,13 @@ def make_state(
     seed: int = 0,
     weather: str | None = None,
     spawn_templates: Sequence[str] = (),
+    skills: Sequence[SkillDef] = (),
     **core: int,
 ) -> BattleState:
     return start_battle(
-        make_setup(map_def, spawns, weather=weather, spawn_templates=spawn_templates, **core),
+        make_setup(
+            map_def, spawns, weather=weather, spawn_templates=spawn_templates, skills=skills, **core
+        ),
         seed,
     )
 
@@ -182,3 +194,42 @@ def no_reactions(base: str = "bandit", **overrides: object) -> UnitTemplate:
 def unit_at(state: BattleState, x: int, y: int) -> str | None:
     u = state.unit_at(x, y)
     return None if u is None else u.id
+
+
+def make_skill(
+    skill_id: str,
+    shape: Mapping[str, Any],
+    effects: Sequence[Mapping[str, Any]],
+    *,
+    category: str = "spell",
+    weapon_req: str | None = None,
+    ap_cost: int = 1,
+    attr: str | None = None,
+    cost: Mapping[str, Any] | None = None,
+) -> SkillDef:
+    """測試專用技能（不放在 ``content/``）。法術技預設需要法器、縮放智力；武器技預設近戰、力量。"""
+    spell = category == "spell"
+    return SkillDef.model_validate(
+        {
+            "id": skill_id,
+            "name_zh": f"測試技 {skill_id[-6:]}",
+            "tier": 1,
+            "rarity": "common",
+            "skeleton": "area",
+            "category": category,
+            "weapon_req": weapon_req or ("focus" if spell else "melee"),
+            "ap_cost": ap_cost,
+            "scaling_attr": attr or ("int" if spell else "str"),
+            "shape": shape,
+            "effects": list(effects),
+            "cost": cost or {"mana": 0},
+        }
+    )
+
+
+def caster_template(
+    skills: Sequence[SkillDef | str], *, base: str = "hero_mage", **overrides: object
+) -> UnitTemplate:
+    """施放者範本：沒有反應規則、法力 99、裝備 ``skills``。"""
+    ids = [s if isinstance(s, str) else s.id for s in skills]
+    return template(base, reactions=[], max_mana=99, skills=ids, **overrides)

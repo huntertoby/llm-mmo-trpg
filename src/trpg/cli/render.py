@@ -302,12 +302,12 @@ def _attack_text(e: AttackRolled, name: dict[str, str], state: BattleState) -> s
 def _skill_used_text(e: SkillUsed, name: dict[str, str]) -> str:
     costs = [f"AP {e.ap}"]
     if e.mana:
-        costs.append(f"法力 {e.mana}（剩 {e.mana_after}）")
+        costs.append(f"法力 {e.mana}")
     if e.hp_spent:
         costs.append(f"HP {e.hp_spent}")
     if e.cooldown:
         costs.append(f"冷卻 {e.cooldown} 回合")
-    return f"{name[e.unit_id]} 使用「{e.name_zh}」（{'，'.join(costs)}）"
+    return f"{name[e.unit_id]} 施放「{e.name_zh}」（{'，'.join(costs)}）→ 影響 {len(e.tiles)} 格"
 
 
 def _damage_text(e: DamageDealt, name: dict[str, str]) -> str:

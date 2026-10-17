@@ -28,7 +28,11 @@ __all__ = [
 ]
 
 LOG_FORMAT = "trpg-battle-log/4"
-"""``/3``（Phase 1C）：加入掩護（``attack_rolled.cover``）、``damage_dealt.base_amount``、牆壁地形，
+"""``/4``（Phase 2A）：加入 ``use_skill`` 動作與技能事件（``skill_used``、
+``skill_cooldown_changed``），``turn_started`` 帶法力，``attack_rolled``／``maneuver_rolled``
+帶 ``skill_id``；``/3`` 的紀錄無法重播。
+
+``/3``（Phase 1C）：加入掩護（``attack_rolled.cover``）、``damage_dealt.base_amount``、牆壁地形，
 且結算規則改變（表面在腳下立即生效、漏油、推不動的推擊不合法），``/2`` 的紀錄無法重播。
 
 ``/2``（Phase 1B）：``actions`` 改為步驟列表（動作或 ``decision``）；狀態加入物件、表面等欄位。

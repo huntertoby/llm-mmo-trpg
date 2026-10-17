@@ -376,12 +376,14 @@ def skill_estimate(  # noqa: PLR0917
     scene: _Scene,
     w: AiWeights,
     before: Fraction,
-) -> Fraction:
-    """技能選取的便宜估計（不跑引擎），只用來篩出每個技能最值得完整評分的幾個選取。
+) -> Fraction | None:
+    """技能選取的便宜估計（不跑引擎），用來篩出每個技能最值得完整評分的幾個選取；
+    ``None`` 表示不納入候選（Phase 2A 5.3 的簡單篩選）。
 
     - 含 ``teleport``：把行動者放到目標格後的位置價值變化（同 :func:`virtual_move_score`）；
-    - 其餘：影響範圍內的敵人數 × 3 − 友方數 × 3，有治療效果的再加上受傷友方每人 2；
-      最後以與施放者的距離為平手判定（近者優先，保持確定）。
+    - 其餘：影響範圍內要有敵方單位、可破壞物件，或（有治療的技能）受傷的友方，否則不納入；
+      分數 ＝ 敵人數 × 3 ＋ 受傷友方 × 2（有治療時）− 其他友方 × 3 ＋ 可破壞物件數，最後以與
+      施放者的距離為平手判定（近者優先，保持確定）。
     """
     skill = state.ruleset.skill_def(action.skill_id)
     if any(e.type == "teleport" for e in skill.effects) and action.target_pos is not None:
@@ -389,16 +391,26 @@ def skill_estimate(  # noqa: PLR0917
         moved.pos = action.target_pos
         return _unit_position_value(state, moved, w, scene) - before
     area = compute_area(state, unit, skill, action)
-    score = Fraction(0)
     heals = any(e.type == "heal" for e in skill.effects)
+    score = Fraction(0)
+    useful = False
     for uid in area.units:
         other = state.units[uid]
         if other.team is not unit.team:
             score += 3
+            useful = True
         elif heals and other.hp < other.max_hp:
             score += 2
+            useful = True
         else:
             score -= 3
+    for xy in area.tiles:
+        obj = state.object_at(*xy)
+        if obj is not None and obj.hp is not None:
+            score += 1
+            useful = True
+    if not useful:
+        return None
     return score - Fraction(manhattan(unit.xy, area.origin), 1000)
 
 
@@ -571,7 +583,8 @@ class UtilityAI:
         for index, action in enumerate(actions):
             if isinstance(action, UseSkill):
                 est = skill_estimate(state, unit, action, scene, w, before)
-                by_skill.setdefault(action.skill_id, []).append((est, index))
+                if est is not None:
+                    by_skill.setdefault(action.skill_id, []).append((est, index))
         chosen: list[int] = []
         for options in by_skill.values():
             options.sort(key=lambda item: (-item[0], item[1]))

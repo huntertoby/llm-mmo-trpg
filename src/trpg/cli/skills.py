@@ -90,9 +90,9 @@ def effect_summary(library: ContentLibrary, skill: SkillDef, spec: EffectSpec) -
     return f"{_effect_core(library, skill, spec)}（{_AFFECTS[affects]}）"
 
 
-def _cost_summary(skill: SkillDef) -> str:
+def _cost_summary(skill: SkillDef, *, with_ap: bool = True) -> str:
     cost = skill.cost
-    parts = [f"AP {skill.ap_cost}"]
+    parts = [f"AP {skill.ap_cost}"] if with_ap else []
     if cost.mana:
         parts.append(f"法力 {cost.mana}")
     if cost.hp_percent:
@@ -104,18 +104,31 @@ def _cost_summary(skill: SkillDef) -> str:
     return "，".join(parts)
 
 
+def _pad(text: str, width: int) -> str:
+    """以顯示寬度（全形 2、半形 1）補空白。"""
+    used = sum(2 if ord(ch) > _WIDE_CHAR_START else 1 for ch in text)
+    return text + " " * max(width - used, 1)
+
+
+_WIDE_CHAR_START = 0x2E80
+
+
 def cmd_skills_list(library: ContentLibrary, out: TextIO) -> int:
     skills = sorted(library.skills.values(), key=lambda s: s.id)
     print(f"技能（共 {len(skills)} 個）：", file=out)
+    print(
+        f"  {_pad('ID', 24)}{_pad('名稱', 12)}{_pad('骨架', 10)}{_pad('AP', 4)}代價 / 效果",
+        file=out,
+    )
     for skill in skills:
+        cost = _cost_summary(skill, with_ap=False)
         effects = "；".join(effect_summary(library, skill, e) for e in skill.effects)
         print(
-            f"  {skill.id}  {skill.name_zh}  T{skill.tier} {_RARITY[skill.rarity]}"
-            f" {_CATEGORY[skill.category]}／{_WEAPON_REQ[skill.weapon_req]}"
-            f"  {_cost_summary(skill)}",
+            f"  {_pad(skill.id, 24)}{_pad(skill.name_zh, 12)}{_pad(skill.skeleton, 10)}"
+            f"{_pad(str(skill.ap_cost), 4)}{cost or '無'}",
             file=out,
         )
-        print(f"      {shape_summary(library, skill.shape)}：{effects}", file=out)
+        print(f"    {shape_summary(library, skill.shape)}：{effects}", file=out)
     return 0
 
 
