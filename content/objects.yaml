@@ -2,6 +2,8 @@
 # 欄位：id、name_zh、glyph（戰場網格顯示用的單一 ASCII 字元）、max_hp（breakable 必填）、
 #       tags（引擎認得的標籤，見 src/trpg/content/environment.py 的 OBJECT_TAGS）、
 #       explosion（explosive 必填：radius 切比雪夫半徑、dice、flat、element）。
+# half_cover（Phase 1C）：遠程攻擊時，目標四方向相鄰、位於攻擊者那一側的 half_cover 物件提供
+#       半掩護（命中 −2，見 rules/core.yaml 的 half_cover_hit_penalty）；物件本身視為 1 層高。
 # 新物件只要組合既有標籤，就自動支援所有互動規則（interactions.yaml），不需要寫新程式。
 objects:
   - id: wooden_bridge
@@ -13,7 +15,7 @@ objects:
     name_zh: 油桶
     glyph: "&"
     max_hp: 8
-    tags: [breakable, flammable, explosive, pushable]
+    tags: [breakable, flammable, explosive, pushable, half_cover]   # 躲在油桶後面很危險（刻意的）
     explosion:
       radius: 1          # 3×3
       dice: 2d6
@@ -32,9 +34,19 @@ objects:
     name_zh: 木箱
     glyph: "["
     max_hp: 15
-    tags: [blocks_move, breakable, pushable]
+    tags: [blocks_move, breakable, pushable, half_cover, flammable]
   - id: earth_wall
     name_zh: 土牆
     glyph: "^"
     max_hp: 25
     tags: [blocks_move, blocks_sight, breakable]
+  - id: low_wall
+    name_zh: 矮牆
+    glyph: "_"
+    max_hp: 40
+    tags: [blocks_move, breakable, half_cover]
+  - id: fallen_log
+    name_zh: 倒木
+    glyph: "-"
+    max_hp: 20
+    tags: [blocks_move, breakable, half_cover, flammable]

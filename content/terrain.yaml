@@ -1,7 +1,9 @@
 # 地形表。
 # 欄位：id、name_zh、glyph（文字網格顯示用的單一 ASCII 字元）、
 #       walkable（能否主動走進）、deadly（致命地形：被強制位移進入時一般單位死亡，
-#       帶 elite 標籤者改受 30% 最大 HP 並移到最近的安全格）。
+#       帶 elite 標籤者改受 30% 最大 HP 並移到最近的安全格）、
+#       blocks_sight（阻擋穿越這一格的視線，即全掩護；Phase 1C）。
+# 地圖檔的 legend 以 "#" 對應 wall；但顯示字元 "#" 已由深淵使用，牆壁顯示為 "@"。
 terrain:
   - id: stone
     name_zh: 石地
@@ -25,3 +27,8 @@ terrain:
     glyph: "~"
     walkable: false
     deadly: true
+  - id: wall
+    name_zh: 牆壁
+    glyph: "@"
+    walkable: false
+    blocks_sight: true    # 全掩護：不可通行、不可站立、阻擋視線；一般攻擊無法破壞

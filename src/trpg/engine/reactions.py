@@ -149,6 +149,8 @@ def perform_unit_attack(ctx: Ctx, attacker: UnitState, target: UnitState, *, pri
         proficiency=roll.proficiency,
         situational=roll.situational,
         total=roll.total,
+        cover=roll.cover,
+        cover_object_id=roll.cover_object_id,
         target_number=roll.target_number,
         hit=roll.hit,
         crit=roll.crit,

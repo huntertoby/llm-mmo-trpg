@@ -14,11 +14,12 @@ from trpg.engine.events import AdvantageState
 from trpg.engine.rules.geometry import XY, has_line_of_sight, manhattan
 from trpg.engine.state import BattleState, UnitState
 from trpg.shared.rng import Rng
-from trpg.shared.types import Attribute, Element, Surface
+from trpg.shared.types import Attribute, Element, ObjectId, Surface
 
 __all__ = [
     "PPM",
     "AttackRoll",
+    "Cover",
     "advantage_sources",
     "advantage_state",
     "attack_problem",
@@ -26,8 +27,10 @@ __all__ = [
     "combine_advantage",
     "concealed_max_distance",
     "concealment_problem",
+    "cover_modifier",
     "defense_value_permille",
     "element_modifier_ppm",
+    "half_cover",
     "hit_modifier",
     "is_concealed",
     "is_height_limited",
@@ -45,6 +48,10 @@ NATURAL_HIT = 20
 DEFENDING = "defending"
 PRONE = "prone"
 CONCEALED = "concealed"
+HALF_COVER = "half_cover"
+
+# 掩護物的搜尋順序：目標的上、右、下、左（與 geometry.neighbors4 一致）
+_COVER_DIRECTIONS: tuple[XY, ...] = ((0, -1), (1, 0), (0, 1), (-1, 0))
 
 
 def attack_value(unit: UnitState) -> int:
@@ -76,6 +83,68 @@ def situational_modifier(state: BattleState, attacker: UnitState, target: UnitSt
     if ha < ht:
         return -bonus
     return 0
+
+
+@dataclass(frozen=True, slots=True)
+class Cover:
+    """半掩護（``docs/phases/Phase1C計畫.md`` 3.2）：命中 ``−penalty``，來源為 ``object_id``。"""
+
+    penalty: int
+    object_id: ObjectId
+    kind: str
+    name_zh: str
+    pos: XY
+
+
+def half_cover(state: BattleState, attacker: UnitState, target: UnitState) -> Cover | None:
+    """``attacker`` 攻擊 ``target`` 時，目標是否受到半掩護。
+
+    遠程攻擊（武器射程 > ``melee_height_limit_max_range``）時，目標受到半掩護若且唯若存在格子 C：
+
+    1. C 與目標四方向相鄰；
+    2. C 上有未摧毀、帶 ``half_cover`` 標籤的物件；
+    3. C 相對於目標的方向向量與「目標指向攻擊者」的向量內積 > 0（C 在目標朝向攻擊者的一側）；
+    4. 攻擊者的高度不高於「C 的地形高度 ＋ 1」（物件視為 1 層高；攻擊者高出至少 1 層時無視）。
+
+    近戰（含長柄）無視半掩護；單位不提供掩護。多個掩護物同時符合時只計一次，來源取上、右、下、
+    左順序中的第一個（確定性）。懲罰為 ``half_cover_hit_penalty``（為 0 時視為沒有掩護）。
+    """
+    if is_height_limited(state, attacker):
+        return None
+    penalty = state.ruleset.core.half_cover_hit_penalty
+    if penalty <= 0:
+        return None
+    tx, ty = target.pos.x, target.pos.y
+    wx, wy = attacker.pos.x - tx, attacker.pos.y - ty
+    attacker_height = state.tile(attacker.pos.x, attacker.pos.y).height
+    for dx, dy in _COVER_DIRECTIONS:
+        if dx * wx + dy * wy <= 0:
+            continue
+        cx, cy = tx + dx, ty + dy
+        if not state.in_bounds(cx, cy):
+            continue
+        obj = state.object_at(cx, cy)
+        if obj is None:
+            continue
+        definition = state.ruleset.object_def(obj.kind)
+        if HALF_COVER not in definition.tags:
+            continue
+        if attacker_height > state.tile(cx, cy).height + 1:
+            continue
+        return Cover(
+            penalty=penalty,
+            object_id=obj.id,
+            kind=obj.kind,
+            name_zh=definition.name_zh,
+            pos=(cx, cy),
+        )
+    return None
+
+
+def cover_modifier(state: BattleState, attacker: UnitState, target: UnitState) -> int:
+    """半掩護的命中修正（沒有掩護時為 0，有掩護時為負值）。"""
+    cover = half_cover(state, attacker, target)
+    return 0 if cover is None else -cover.penalty
 
 
 def is_concealed(state: BattleState, unit: UnitState) -> bool:
@@ -158,6 +227,8 @@ class AttackRoll:
     hit_modifier: int
     proficiency: int
     situational: int
+    cover: int
+    cover_object_id: ObjectId | None
     total: int
     target_number: int
     hit: bool
@@ -177,15 +248,20 @@ def roll_attack(
 ) -> AttackRoll:
     """擲命中骰（有優勢或劣勢時擲 2 顆 d20 取高／低）。暴擊需命中且自然骰 ≥ 武器暴擊範圍。
 
+    ``total = 自然骰 ＋ 命中修正 ＋ 熟練 ＋ 情境（高度） ＋ 掩護（半掩護為負值）``。
+
     ``forced`` 只供預覽使用：不擲骰，直接採用指定結果。
     """
     rules = state.ruleset
     adv = advantage_state(state, attacker, target)
     modifier = hit_modifier(attacker, target, rules)
     situational = situational_modifier(state, attacker, target)
+    cover = half_cover(state, attacker, target)
+    cover_mod = 0 if cover is None else -cover.penalty
     proficiency = rules.core.proficiency
     if forced is not None:
-        natural = _forced_natural(forced, modifier + proficiency + situational, attacker, rules)
+        bonus = modifier + proficiency + situational + cover_mod
+        natural = _forced_natural(forced, bonus, attacker, rules)
         rolls: tuple[int, ...] = (natural,)
     elif adv == "none":
         rolls = (rng.d20(),)
@@ -193,7 +269,7 @@ def roll_attack(
     else:
         rolls = (rng.d20(), rng.d20())
         natural = max(rolls) if adv == "advantage" else min(rolls)
-    total = natural + modifier + proficiency + situational
+    total = natural + modifier + proficiency + situational + cover_mod
     hit = is_hit(natural, total, rules.core.hit_target)
     crit = hit and natural >= attacker.weapon.crit_range
     if forced is not None:
@@ -207,6 +283,8 @@ def roll_attack(
         hit_modifier=modifier,
         proficiency=proficiency,
         situational=situational,
+        cover=cover_mod,
+        cover_object_id=None if cover is None else cover.object_id,
         total=total,
         target_number=rules.core.hit_target,
         hit=hit,

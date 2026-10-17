@@ -269,6 +269,11 @@ def standable(terrain: TerrainDef) -> bool:
     return terrain.walkable and not terrain.deadly
 
 
+def _is_solid(terrain: TerrainDef) -> bool:
+    """牆壁這類地形：不可進入、也不是致命地形（不能放物件或表面）。"""
+    return not terrain.walkable and not terrain.deadly
+
+
 def step_allowed(from_height: int, to_height: int, to_terrain: TerrainDef, core: CoreRules) -> bool:
     """主動移動一步是否可行（不考慮單位與物件）：目標可站立，且往上不超過 ``max_climb_height``。"""
     return standable(to_terrain) and to_height - from_height <= core.max_climb_height
@@ -324,7 +329,8 @@ def check_map(
 
     - 圖例的地形 ID、物件種類存在。
     - 起始區與勝利條件的格子可站立（考慮物件：``blocks_move`` 不可站、``over_chasm`` 可站）。
-    - 表面不放在致命地形上；地圖事件的地形 ID 存在。
+    - 表面不放在致命地形上；表面與物件不放在牆壁（不可進入且非致命的地形）上；
+      地圖事件的地形 ID 存在。
     - 連通性：每一個起始格都能走到對方起始區的至少一格（依移動規則，往上一步最多
       ``max_climb_height`` 層，不經過不可站立的格子）。
     """
@@ -351,6 +357,16 @@ def check_map(
         f"surfaces 的 {list(s.at)} 位於致命地形"
         for s in map_def.surfaces
         if terrain[grid[s.at[1]][s.at[0]][1]].deadly
+    ]
+    problems += [
+        f"surfaces 的 {list(s.at)} 位於牆壁等不可站立的地形"
+        for s in map_def.surfaces
+        if _is_solid(terrain[grid[s.at[1]][s.at[0]][1]])
+    ]
+    problems += [
+        f"objects 的 {list(o.at)} 位於牆壁等不可站立的地形"
+        for o in map_def.objects
+        if _is_solid(terrain[grid[o.at[1]][o.at[0]][1]])
     ]
     problems += [
         f"surfaces 的 {list(s.at)} 不可為 none"

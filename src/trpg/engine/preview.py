@@ -41,7 +41,9 @@ from trpg.engine.events import (
 from trpg.engine.rules.combat import (
     PERMILLE,
     PPM,
+    Cover,
     advantage_state,
+    half_cover,
     hit_modifier,
     is_hit,
     situational_modifier,
@@ -84,7 +86,8 @@ class DamageRange:
 class Preview:
     action: Action
     hit_chance: Fraction | None
-    """命中率（攻擊）或成功率（推擊、絆倒）；攻擊物件為 1；其他動作為 ``None``。"""
+    """命中率（攻擊）或成功率（推擊、絆倒）；攻擊物件為 1；其他動作為 ``None``。
+    攻擊單位時已包含高度、半掩護與優劣勢（隱蔽、倒地、天氣）。"""
     crit_chance: Fraction | None
     damage: DamageRange | None
     affected_tiles: tuple[XY, ...]
@@ -95,6 +98,10 @@ class Preview:
     max_events: tuple[EventBase, ...]
     min_state: BattleState
     max_state: BattleState
+    cover: Cover | None = None
+    """攻擊單位時目標受到的半掩護（來源物件與懲罰）；沒有時為 ``None``。"""
+    notes: tuple[str, ...] = ()
+    """命中修正的說明（繁體中文），例如 ``("半掩護 −2：木箱 (3, 4)",)``。"""
 
 
 # ---------------------------------------------------------------------------
@@ -240,6 +247,13 @@ def _amount_table(
     return table
 
 
+def _cover_notes(cover: Cover | None) -> tuple[str, ...]:
+    if cover is None:
+        return ()
+    x, y = cover.pos
+    return (f"半掩護 −{cover.penalty}：{cover.name_zh} ({x}, {y})",)
+
+
 def _attack_numbers(
     state: BattleState,
     action: Attack,
@@ -256,10 +270,12 @@ def _attack_numbers(
     else:
         assert action.target_id is not None
         target = state.units[action.target_id]
+        cover = half_cover(state, actor, target)
         bonus = (
             hit_modifier(actor, target, state.ruleset)
             + core.proficiency
             + situational_modifier(state, actor, target)
+            - (0 if cover is None else cover.penalty)
         )
         naturals = _naturals(advantage_state(state, actor, target))
         hit, crit = _chances(naturals, bonus, core.hit_target, weapon.crit_range)
@@ -318,8 +334,11 @@ def preview(state: BattleState, action: Action) -> Preview:
     hit: Fraction | None = None
     crit: Fraction | None = None
     damage: DamageRange | None = None
+    cover: Cover | None = None
     if isinstance(action, Attack):
         hit, crit, damage = _attack_numbers(state, action, actor, min_events, max_events)
+        if action.target_id is not None:
+            cover = half_cover(state, actor, state.units[action.target_id])
     elif isinstance(action, Shove | Trip):
         hit, crit = _maneuver_chance(state, actor, action), Fraction(0)
     certain = outcomes(min_events)
@@ -339,4 +358,6 @@ def preview(state: BattleState, action: Action) -> Preview:
         max_events=tuple(max_events),
         min_state=low.state,
         max_state=high.state,
+        cover=cover,
+        notes=_cover_notes(cover),
     )

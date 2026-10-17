@@ -265,7 +265,7 @@ def _signed(n: int) -> str:
     return f"+{n}" if n >= 0 else str(n)
 
 
-def _attack_text(e: AttackRolled, name: dict[str, str]) -> str:
+def _attack_text(e: AttackRolled, name: dict[str, str], state: BattleState) -> str:
     if e.advantage == "none":
         dice = f"d20={e.natural}"
     else:
@@ -274,6 +274,13 @@ def _attack_text(e: AttackRolled, name: dict[str, str]) -> str:
     parts = [dice, f"修正 {_signed(e.hit_modifier)}", f"熟練 {_signed(e.proficiency)}"]
     if e.situational:
         parts.append(f"高度 {_signed(e.situational)}")
+    cover_note = ""
+    if e.cover:
+        parts.append(f"半掩護 {_signed(e.cover)}")
+        obj = state.objects.get(e.cover_object_id) if e.cover_object_id is not None else None
+        if obj is not None:
+            cover_name = state.ruleset.object_def(obj.kind).name_zh
+            cover_note = f"［命中 −{-e.cover}：{cover_name}掩護］"
     if e.natural == 20:  # noqa: PLR2004 - 自然 20
         verdict = "自然 20，暴擊！" if e.crit else "自然 20，命中"
     elif e.natural == 1:
@@ -282,7 +289,7 @@ def _attack_text(e: AttackRolled, name: dict[str, str]) -> str:
         verdict = ("暴擊！" if e.crit else "命中") if e.hit else "失手"
     return (
         f"{name[e.attacker_id]} 攻擊 {name[e.target_id]}：{' '.join(parts)} = {e.total}"
-        f"（目標 {e.target_number}）→ {verdict}"
+        f"（目標 {e.target_number}）→ {verdict}{cover_note}"
     )
 
 
@@ -344,7 +351,7 @@ def describe_event(e: EventBase, state: BattleState) -> str | None:  # noqa: PLR
         terrain = state.ruleset.terrain_def(e.terrain).name_zh
         return f"  {name[e.unit_id]} 掉進了{terrain}！"
     if isinstance(e, AttackRolled):
-        return "  " + _attack_text(e, name)
+        return "  " + _attack_text(e, name, state)
     if isinstance(e, DamageDealt):
         return "    " + _damage_text(e, name)
     if isinstance(e, Healed):

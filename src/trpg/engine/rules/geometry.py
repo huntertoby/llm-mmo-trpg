@@ -66,8 +66,11 @@ def sight_range(state: BattleState) -> int:
 
 
 def blocks_sight_at(state: BattleState, xy: XY) -> bool:
-    """物件 ``blocks_sight`` 或表面 ``blocks_sight``（黑暗）阻擋穿越這一格的視線。"""
+    """地形 ``blocks_sight``（牆壁）、物件 ``blocks_sight`` 或表面 ``blocks_sight``（黑暗）
+    阻擋穿越這一格的視線。"""
     tile = state.tile(*xy)
+    if state.ruleset.terrain_def(tile.terrain).blocks_sight:
+        return True
     if tile.object_id is not None and state.object_has_tag(*xy, "blocks_sight"):
         return True
     return tile.surface is not Surface.NONE and state.ruleset.surface_def(tile.surface).blocks_sight
@@ -86,8 +89,8 @@ def has_line_of_sight(state: BattleState, a: XY, b: XY) -> bool:
     - 距離超過 :func:`sight_range`（濃霧）時看不到。
     - Bresenham 直線在兩個方向畫出的格子可能不同，因此 **兩個方向都畫線**，兩條線經過的格子
       （不含兩端）都沒有阻擋才算可見。
-    - 阻擋條件：格子高度 ``≥ max(兩端高度) + 1``、物件帶 ``blocks_sight``、表面 ``blocks_sight``
-      （黑暗）。
+    - 阻擋條件：格子高度 ``≥ max(兩端高度) + 1``、地形 ``blocks_sight``（牆壁，不論高度）、
+      物件帶 ``blocks_sight``、表面 ``blocks_sight``（黑暗）。
     """
     if manhattan(a, b) > sight_range(state):
         return False

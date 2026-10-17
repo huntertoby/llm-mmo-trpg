@@ -85,6 +85,7 @@ class TerrainDef(ContentModel):
     - ``walkable``：單位能否主動走進這一格（``chasm``、``lava`` 為否）。
     - ``deadly``：致命地形。單位被強制位移進來時，一般單位死亡；``elite`` 改受最大 HP 一定比例的
       傷害並移到最近的安全格。
+    - ``blocks_sight``：阻擋穿越這一格的視線（全掩護，例如 ``wall``）。
     - ``glyph``：``trpg map show`` 與戰鬥網格顯示用的單一 ASCII 字元。
     """
 
@@ -93,6 +94,7 @@ class TerrainDef(ContentModel):
     glyph: str = Field(min_length=1, max_length=1, pattern=r"^[!-~]$")
     walkable: bool
     deadly: bool = False
+    blocks_sight: bool = False
 
 
 class TerrainTable(ContentModel):

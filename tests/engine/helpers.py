@@ -38,7 +38,7 @@ def make_map(
 ) -> MapDef:
     """以字串建立地圖。
 
-    ``terrain`` 圖例：``.`` 石地、``x`` 深淵、``~`` 岩漿、``g`` 草地、``d`` 泥土。
+    ``terrain`` 圖例：``.`` 石地、``x`` 深淵、``~`` 岩漿、``g`` 草地、``d`` 泥土、``#`` 牆壁。
 
     ``objects``／``surfaces``：``(x, y, 種類)``。``objective``、``events`` 直接以地圖檔格式給定。
     """
@@ -52,7 +52,14 @@ def make_map(
         "size": [w, h],
         "heights": heights.strip(),
         "terrain": terrain.strip(),
-        "legend": {".": "stone", "x": "chasm", "~": "lava", "g": "grass", "d": "dirt"},
+        "legend": {
+            ".": "stone",
+            "x": "chasm",
+            "~": "lava",
+            "g": "grass",
+            "d": "dirt",
+            "#": "wall",
+        },
         "objects": [{"at": [x, y], "kind": k} for x, y, k in objects],
         "surfaces": [{"at": [x, y], "surface": k} for x, y, k in surfaces],
         "events": list(events),

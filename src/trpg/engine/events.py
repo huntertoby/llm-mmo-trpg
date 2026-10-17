@@ -201,7 +201,10 @@ class EnteredDeadlyTerrain(EventBase):
 
 
 class AttackRolled(EventBase):
-    """命中判定：``total = natural + hit_modifier + proficiency + situational``。"""
+    """命中判定：``total = natural + hit_modifier + proficiency + situational + cover``。
+
+    ``cover`` 為半掩護的修正（0 或負值），``cover_object_id`` 為提供掩護的物件（Phase 1C）。
+    """
 
     type: Literal["attack_rolled"] = "attack_rolled"
     attacker_id: UnitId
@@ -218,6 +221,8 @@ class AttackRolled(EventBase):
     target_number: int
     hit: bool
     crit: bool
+    cover: int = 0
+    cover_object_id: ObjectId | None = None
 
 
 class DamageDealt(EventBase):

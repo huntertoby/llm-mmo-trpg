@@ -78,6 +78,7 @@ class CoreRules(ContentModel):
     # 技巧動作與互動（1B）
     maneuver_ap_cost: int = Field(ge=0)
     interact_ap_cost: int = Field(ge=0)
+    interact_height_limit: int = Field(ge=0)
     shove_distance: int = Field(ge=0)
     steadfast_push_permille: int = Field(ge=0, le=1000)
     ability_mod_base: int
@@ -90,6 +91,9 @@ class CoreRules(ContentModel):
     # 視線與隱蔽（1B）
     base_sight_range: int = Field(ge=1)
     concealed_ranged_max_distance: int = Field(ge=0)
+
+    # 掩護（1C）
+    half_cover_hit_penalty: int = Field(ge=0)
 
     # 環境回合（1B）
     burning_object_rounds: int = Field(ge=1)

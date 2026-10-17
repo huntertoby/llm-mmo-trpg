@@ -398,6 +398,8 @@ def _unit_push_block(state: BattleState, cur: XY, nxt: XY, unit_id: UnitId) -> s
         return "occupied"
     if state.object_has_tag(*nxt, "blocks_move"):
         return "obstacle"
+    if not is_standable(state, nxt) and not is_deadly(state, nxt):
+        return "obstacle"  # 牆壁等不可站立、非致命的地形
     if state.tile(*nxt).height > state.tile(*cur).height:
         return "too_high"
     return None
@@ -434,6 +436,8 @@ def _object_push_block(state: BattleState, cur: XY, nxt: XY) -> str | None:
         return "obstacle"
     if state.unit_at(*nxt) is not None:
         return "occupied"
+    if not is_standable(state, nxt) and not is_deadly(state, nxt):
+        return "obstacle"  # 牆壁等不可站立、非致命的地形
     if state.tile(*nxt).height > state.tile(*cur).height:
         return "too_high"
     return None
