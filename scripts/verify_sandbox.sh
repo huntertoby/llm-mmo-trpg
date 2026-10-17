@@ -5,7 +5,8 @@
 # 本腳本設定環境變數後執行同一個 scripts/check.py：
 #   - pytest 與 mypy 各在獨立的 uv tool 環境，用 PYTHONPATH 讓它們看到系統的 pydantic／PyYAML，
 #     並把 pytest 的 site-packages 給 mypy（讓測試檔的 `import pytest` 有型別）。
-#   - 工作區沒有 types-PyYAML，借用 pyright 內附的 typeshed PyYAML stub 給 mypy（MYPYPATH）。
+#   - 工作區沒有 types-PyYAML，借用 pyright 內附的 typeshed PyYAML stub：在暫存資料夾建立
+#     `yaml-stubs` 連結（與 types-PyYAML 安裝後的結構相同），加進 PYTHONPATH 讓 mypy 當成已安裝的 stub。
 #   - 工作區沒有 import-linter，check.py 會印出略過警告（由 tests/test_architecture.py 保底）。
 set -euo pipefail
 
@@ -15,9 +16,11 @@ DIST=/usr/local/lib/python3.13/dist-packages
 PYTEST_SITE=$(ls -d /root/.local/share/uv/tools/pytest/lib/python3*/site-packages | head -n1)
 YAML_STUBS=$(ls -d /root/.local/share/uv/tools/pyright/lib/python3*/site-packages/pyright/dist/dist/typeshed-fallback/stubs/PyYAML | head -n1)
 
-export PYTHONPATH="src:$DIST:$PYTEST_SITE"
-export MYPYPATH="$YAML_STUBS"
-echo "PYTHONPATH=$PYTHONPATH"
-echo "MYPYPATH=$MYPYPATH"
+STUB_SITE=$(mktemp -d)
+trap 'rm -rf "$STUB_SITE"' EXIT
+ln -s "$YAML_STUBS/yaml" "$STUB_SITE/yaml-stubs"
 
-exec /usr/bin/python3 scripts/check.py
+export PYTHONPATH="src:$DIST:$PYTEST_SITE:$STUB_SITE"
+echo "PYTHONPATH=$PYTHONPATH"
+
+/usr/bin/python3 scripts/check.py

@@ -1,0 +1,24 @@
+# 元素表：每個 trpg.shared.types.Element 恰好一筆。
+# 欄位：id（元素代碼，小寫英文）、name_zh（顯示名稱）、description_zh（說明）。
+elements:
+  - id: physical
+    name_zh: 物理
+    description_zh: 刀劍、拳腳、鈍器與墜落等不帶元素的傷害。
+  - id: fire
+    name_zh: 火焰
+    description_zh: 點燃易燃物與油表面，引爆爆炸物；遇水熄滅。
+  - id: ice
+    name_zh: 冰霜
+    description_zh: 把水凍成冰表面，冰上的單位可能滑倒。
+  - id: lightning
+    name_zh: 雷電
+    description_zh: 沿著導電物與相連的水面擴散。
+  - id: poison
+    name_zh: 毒素
+    description_zh: 造成持續傷害，可形成毒表面或毒霧。
+  - id: holy
+    name_zh: 神聖
+    description_zh: 淨化與治癒之力，可形成聖光表面。
+  - id: shadow
+    name_zh: 暗影
+    description_zh: 侵蝕心智與視線，擅長削弱、詛咒與隱匿。
