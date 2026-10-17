@@ -1,0 +1,61 @@
+# 示範地圖：油庫。油桶與漏油遍地；火焰與範圍攻擊大顯身手，站在油上的近戰要小心。
+# 盜賊們守在漏油的倉庫中央；第 3 輪結束時，援軍從東北角出現（提前一輪預告）。
+id: oil_depot
+name_zh: 油庫
+size: [10, 10]
+heights: |
+  0000000000
+  0000000000
+  0000000000
+  0000000000
+  0000000000
+  0000000000
+  0000000000
+  0000000000
+  0000000000
+  0000000000
+terrain: |
+  ..........
+  ..........
+  ..........
+  ..........
+  ..........
+  ..........
+  ..........
+  ..........
+  ..........
+  ..........
+legend:
+  ".": stone
+objects:
+  - {at: [5, 3], kind: oil_barrel}
+  - {at: [5, 6], kind: oil_barrel}
+  - {at: [8, 3], kind: oil_barrel}
+  - {at: [8, 6], kind: oil_barrel}
+  - {at: [3, 2], kind: crate}
+  - {at: [3, 7], kind: crate}
+  - {at: [7, 1], kind: crate}
+surfaces:
+  - {at: [6, 3], surface: oil}
+  - {at: [7, 3], surface: oil}
+  - {at: [6, 4], surface: oil}
+  - {at: [7, 4], surface: oil}
+  - {at: [6, 5], surface: oil}
+  - {at: [7, 5], surface: oil}
+  - {at: [6, 6], surface: oil}
+  - {at: [7, 6], surface: oil}
+  - {at: [5, 4], surface: oil}
+  - {at: [5, 5], surface: oil}
+  - {at: [8, 4], surface: oil}
+  - {at: [8, 5], surface: oil}
+start_zones:
+  ally: [[0, 4], [0, 5], [1, 3], [1, 6]]
+  enemy: [[6, 4], [6, 5], [7, 4], [7, 5]]
+encounter:
+  allies: [hero_fighter, hero_archer, hero_mage]
+  enemies: [bandit, bandit, bandit_archer, bandit_boss]
+events:
+  - kind: spawn_units
+    round: 3
+    units:
+      - {template: bandit, at: [9, 0], team: enemy}

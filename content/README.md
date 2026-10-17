@@ -17,9 +17,15 @@
 | `rules/hit_table.yaml` | 命中修正整數門檻表（由 `scripts/gen_hit_table.py` 產生，勿手改） | Phase 1A |
 | `terrain.yaml` | 地形（可否行走、致命、顯示字元） | Phase 1A |
 | `weapons.yaml` | 武器 | Phase 1A |
-| `statuses.yaml` | 狀態（防禦、倒地、燃燒） | Phase 1A |
-| `units/` | 單位範本（一檔一個，檔名 = id） | Phase 1A |
-| `maps/` | 地圖（一檔一張，檔名 = id；格式見 `docs/phases/Phase1計畫.md` 5.2） | Phase 1A |
+| `statuses.yaml` | 狀態（防禦、倒地、燃燒、隱蔽） | Phase 1A、1B |
+| `objects.yaml` | 格子物件與標籤（木橋、油桶、石柱、草叢、木箱、土牆） | Phase 1B |
+| `surfaces.yaml` | 表面（油、水、火、冰、毒、聖光、黑暗）：持續回合、進入與回合開始效果 | Phase 1B |
+| `interactions.yaml` | 元素 × 標籤／表面互動表與元素能力 | Phase 1B |
+| `weather.yaml` | 天氣（晴朗、下雨、濃霧、夜晚） | Phase 1B |
+| `reactions.yaml` | 反應（格擋、藉機攻擊）與預設反應規則 | Phase 1B |
+| `ai_profiles.yaml` | 效用 AI 的行為模式權重（莽夫、弓手、狡猾、守衛） | Phase 1B |
+| `units/` | 單位範本（一檔一個，檔名 = id） | Phase 1A、1B |
+| `maps/` | 地圖（一檔一張，檔名 = id；格式見 `docs/phases/Phase1計畫.md` 5.2，1B 加入 `objects`、`surfaces`、`objective`、`weather`、`encounter`、`events`）；示範地圖 `bridge_chasm`、`oil_depot`、`swamp` | Phase 1A、1B |
 
 ## 未來的子資料夾規劃
 
@@ -28,8 +34,6 @@
 | `primitives/` | 效果原語（傷害、控制、位移、地形、召喚……）與參數範圍 | Phase 2 | 第 6 節 |
 | `shapes/` | 目標形狀（單體、直線、錐形、範圍……） | Phase 2 | 第 6 節 |
 | `skeletons/` | 技能骨架：規定技能結構與預算分配 | Phase 2 | 第 6 節 |
-| `objects/` | 格子物件與標籤（木橋、油桶、石柱、水窪……） | Phase 1 | 第 5.1 節 |
-| `interactions/` | 元素 × 標籤／表面互動表 | Phase 1 | 第 5.1 節 |
 | `maps/`（已建立） | 地圖類型與手工地圖模板 | Phase 1–2 | 第 5.1 節 |
 | `marks/` | 印記的觸發條件（由事件日誌統計） | Phase 3–4 | 第 7 節 |
 | `resonance/` | 裝備共鳴效果 | Phase 5 | 第 8 節 |

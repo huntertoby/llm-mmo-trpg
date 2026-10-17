@@ -1,0 +1,69 @@
+# 示範地圖：沼澤（下雨）。大片水窪導電：雷電沿相連的水擴散；火焰在雨中減弱。
+# 第 2 輪結束時，泥沼漫出，西側一排格子積水。
+id: swamp
+name_zh: 沼澤
+size: [10, 10]
+weather: rain
+heights: |
+  0000000000
+  0000000000
+  0000000000
+  0000000000
+  0000000000
+  0000000000
+  0000000000
+  0000000000
+  0000000000
+  0000000000
+terrain: |
+  ,,,,,,,,,,
+  ,,,,,,,,,,
+  ,,,,,,,,,,
+  ,,,,,,,,,,
+  ,,,,,,,,,,
+  ,,,,,,,,,,
+  ,,,,,,,,,,
+  ,,,,,,,,,,
+  ,,,,,,,,,,
+  ,,,,,,,,,,
+legend:
+  ",": dirt
+objects:
+  - {at: [2, 2], kind: grass}
+  - {at: [7, 3], kind: grass}
+  - {at: [3, 7], kind: grass}
+  - {at: [8, 6], kind: grass}
+surfaces:
+  - {at: [4, 2], surface: water}
+  - {at: [5, 2], surface: water}
+  - {at: [6, 2], surface: water}
+  - {at: [4, 3], surface: water}
+  - {at: [5, 3], surface: water}
+  - {at: [6, 3], surface: water}
+  - {at: [3, 4], surface: water}
+  - {at: [4, 4], surface: water}
+  - {at: [5, 4], surface: water}
+  - {at: [6, 4], surface: water}
+  - {at: [7, 4], surface: water}
+  - {at: [3, 5], surface: water}
+  - {at: [4, 5], surface: water}
+  - {at: [5, 5], surface: water}
+  - {at: [6, 5], surface: water}
+  - {at: [4, 6], surface: water}
+  - {at: [5, 6], surface: water}
+  - {at: [8, 1], surface: water}
+  - {at: [8, 2], surface: water}
+  - {at: [9, 2], surface: water}
+start_zones:
+  ally: [[0, 6], [1, 7], [0, 8], [1, 9]]
+  enemy: [[5, 3], [6, 4], [5, 5], [4, 4]]
+encounter:
+  allies: [hero_fighter, hero_archer, hero_stormcaller]
+  enemies: [bandit, bandit, bandit_archer, bandit_boss]
+events:
+  - kind: terrain_change
+    round: 2
+    tiles:
+      - {at: [2, 3], surface: water}
+      - {at: [2, 4], surface: water}
+      - {at: [2, 5], surface: water}

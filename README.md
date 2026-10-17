@@ -4,7 +4,8 @@
 
 ## 目前進度
 
-**Phase 1A：戰鬥核心**（確定性規則引擎：狀態模型、地圖、先攻、AP、移動、判定、傷害、效果佇列、勝負；簡易 AI 自動對戰與重播）。
+**Phase 1B：環境與戰術**（物件與表面、元素 × 標籤互動表、推擊／絆倒／互動、環境回合與預告、地圖事件、天氣、反應規則與暫停點、撤離與守點、部署、預覽、效用 AI；3 張示範地圖）。
+Phase 1A 已完成戰鬥核心（確定性規則引擎：狀態模型、地圖、先攻、AP、移動、判定、傷害、效果佇列、勝負）。
 Phase 0 已完成基礎建設（專案骨架、程式品質工具、可種子化亂數產生器、共用型別、內容資料載入、CLI、CI）。
 第一里程碑是單人 roguelite 原型（Phase 0–4），各階段內容見 `docs/專案計畫.md` 第 14 節。
 
@@ -38,6 +39,10 @@ Phase 0 已完成基礎建設（專案骨架、程式品質工具、可種子化
    uv run trpg content check
    uv run trpg map show test_heights_8x8
    uv run trpg battle --map test_heights_8x8 --seed 42
+   uv run trpg map show oil_depot
+   uv run trpg battle --map oil_depot --seed 42
+   uv run trpg battle --map bridge_chasm --seed 42
+   uv run trpg battle --map swamp --seed 42 --weather fog --deploy "0,6;1,7"
    uv run trpg battle --map test_heights_8x8 --seed 42 --log-json battle.json
    uv run trpg battle replay battle.json
    uv run trpg --version

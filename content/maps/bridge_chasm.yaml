@@ -1,0 +1,45 @@
+# 示範地圖：吊橋深淵（docs/專案計畫.md 5.1 地圖類型）。
+# 兩條木橋橫跨中央的深淵；位移（推擊）與燒斷木橋都能讓敵人墜落。
+id: bridge_chasm
+name_zh: 吊橋深淵
+size: [10, 10]
+heights: |
+  0000000000
+  0000000000
+  0000000000
+  0000000000
+  1100000011
+  1100000011
+  0000000000
+  0000000000
+  0000000000
+  0000000000
+terrain: |
+  ....xx....
+  ....xx....
+  ....xx....
+  ....xx....
+  ....xx....
+  ....xx....
+  ....xx....
+  ....xx....
+  ....xx....
+  ....xx....
+legend:
+  ".": stone
+  "x": chasm
+objects:
+  - {at: [4, 2], kind: wooden_bridge}
+  - {at: [5, 2], kind: wooden_bridge}
+  - {at: [4, 7], kind: wooden_bridge}
+  - {at: [5, 7], kind: wooden_bridge}
+  - {at: [3, 1], kind: crate}
+  - {at: [6, 8], kind: crate}
+  - {at: [2, 4], kind: stone_pillar}
+  - {at: [7, 5], kind: stone_pillar}
+start_zones:
+  ally: [[0, 3], [1, 4], [0, 5], [1, 6]]
+  enemy: [[9, 3], [8, 4], [9, 5], [8, 6]]
+encounter:
+  allies: [hero_fighter, hero_archer, hero_mage]
+  enemies: [bandit, bandit, bandit_archer, bandit_boss]
