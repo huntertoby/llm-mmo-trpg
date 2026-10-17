@@ -4,7 +4,8 @@
 
 ## 目前進度
 
-**Phase 0：基礎建設**（專案骨架、程式品質工具、可種子化亂數產生器、共用型別、內容資料載入、最小 CLI、CI）。
+**Phase 1A：戰鬥核心**（確定性規則引擎：狀態模型、地圖、先攻、AP、移動、判定、傷害、效果佇列、勝負；簡易 AI 自動對戰與重播）。
+Phase 0 已完成基礎建設（專案骨架、程式品質工具、可種子化亂數產生器、共用型別、內容資料載入、CLI、CI）。
 第一里程碑是單人 roguelite 原型（Phase 0–4），各階段內容見 `docs/專案計畫.md` 第 14 節。
 
 ## 在 Windows 上安裝與執行
@@ -35,6 +36,10 @@
    uv run trpg rng --seed 42 --count 5
    uv run trpg rng --seed 42 --count 5 --sides 20
    uv run trpg content check
+   uv run trpg map show test_heights_8x8
+   uv run trpg battle --map test_heights_8x8 --seed 42
+   uv run trpg battle --map test_heights_8x8 --seed 42 --log-json battle.json
+   uv run trpg battle replay battle.json
    uv run trpg --version
    ```
 
