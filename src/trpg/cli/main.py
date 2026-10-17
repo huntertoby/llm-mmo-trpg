@@ -10,6 +10,7 @@
 - ``trpg battle --map <map_id> --seed <n> [--rounds-max 30] [--log-json <path>]
   [--ai utility|simple] [--weather <id>] [--deploy x,y;x,y] [--allies ...] [--enemies ...]``：
   雙方由效用 AI（預設）自動對戰，印出每輪戰場、環境預告與繁體中文戰鬥紀錄。
+- ``trpg skills list`` / ``trpg skills show <id>``：技能的自動摘要。
 - ``trpg battle replay <path>``：讀取 ``--log-json`` 的輸出，重播並驗證最終狀態一致。
 """
 
@@ -22,6 +23,7 @@ from pathlib import Path
 
 from trpg import __version__
 from trpg.cli.battle import cmd_battle, cmd_map_show, cmd_replay
+from trpg.cli.skills import cmd_skills_list, cmd_skills_show
 from trpg.content.library import ContentLibrary, load_library
 from trpg.content.loader import default_content_dir
 from trpg.content.registry import load_all_content
@@ -71,6 +73,14 @@ def build_parser() -> argparse.ArgumentParser:
     )
     show = map_commands.add_parser("show", help="以文字網格印出地圖")
     show.add_argument("map_id", help="地圖 ID（content/maps/<id>.yaml）")
+
+    skills_parser = commands.add_parser("skills", help="技能工具")
+    skills_commands = skills_parser.add_subparsers(
+        dest="skills_command", metavar="<subcommand>", required=True
+    )
+    skills_commands.add_parser("list", help="列出所有技能與效果摘要")
+    skills_show = skills_commands.add_parser("show", help="顯示一個技能的詳細資料")
+    skills_show.add_argument("skill_id", help="技能 ID（content/skills/<id>.yaml）")
 
     battle = commands.add_parser(
         "battle",
@@ -195,7 +205,7 @@ def _battle(parser: argparse.ArgumentParser, args: argparse.Namespace) -> int:
     )
 
 
-def main(argv: list[str] | None = None) -> int:
+def main(argv: list[str] | None = None) -> int:  # noqa: PLR0911
     """CLI 主程式；回傳結束代碼（方便測試）。"""
     parser = build_parser()
     try:
@@ -209,6 +219,10 @@ def main(argv: list[str] | None = None) -> int:
         return _cmd_content_check()
     if args.command == "map" and args.map_command == "show":
         return _with_library(lambda lib: cmd_map_show(lib, args.map_id, sys.stdout))
+    if args.command == "skills":
+        if args.skills_command == "list":
+            return _with_library(lambda lib: cmd_skills_list(lib, sys.stdout))
+        return _with_library(lambda lib: cmd_skills_show(lib, args.skill_id, sys.stdout))
     if args.command == "battle":
         if args.battle_command == "replay":
             return cmd_replay(args.path, sys.stdout)

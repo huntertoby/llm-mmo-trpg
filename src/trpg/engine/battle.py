@@ -14,6 +14,7 @@ from __future__ import annotations
 from collections.abc import Callable
 from dataclasses import dataclass, replace
 
+from trpg.content.skills import SkillDef, skill_slot_problems, weapon_problem
 from trpg.engine.actions import (
     ACTION_ADAPTER,
     Action,
@@ -25,6 +26,7 @@ from trpg.engine.actions import (
     Move,
     Shove,
     Trip,
+    UseSkill,
 )
 from trpg.engine.context import Ctx, PreviewMode
 from trpg.engine.effects import execute
@@ -40,16 +42,16 @@ from trpg.engine.events import (
     BattleStarted,
     InitiativeRolled,
     InitiativeTieBroken,
-    ManeuverRolled,
     ObjectAttacked,
     RoundStarted,
     TurnOrderSet,
     UnitStoodUp,
 )
 from trpg.engine.lifecycle import make_unit
+from trpg.engine.maneuvers import contest
 from trpg.engine.reactions import PauseForDecision, opportunity_attacks, perform_unit_attack
 from trpg.engine.results import ResolveResult
-from trpg.engine.rules.combat import attack_problem, is_hit, reach_problem
+from trpg.engine.rules.combat import attack_problem, reach_problem
 from trpg.engine.rules.geometry import XY, manhattan
 from trpg.engine.rules.movement import (
     available_move_budget,
@@ -60,6 +62,8 @@ from trpg.engine.rules.movement import (
     step_cost,
 )
 from trpg.engine.setup import BattleSetup, BattleSetupError
+from trpg.engine.skills.interpreter import use_skill
+from trpg.engine.skills.targeting import has_selection, selections, skill_problem
 from trpg.engine.state import (
     BattleState,
     ObjectState,
@@ -179,12 +183,30 @@ def _initial_board(setup: BattleSetup) -> tuple[list[Tile], dict[ObjectId, Objec
     return tiles, objects
 
 
+def _check_loadouts(setup: BattleSetup) -> None:
+    """每個單位的技能裝備必須合法：存在、武器相容、不超過欄位上限。"""
+    rules = setup.ruleset
+    for spawn in setup.units:
+        defs: list[SkillDef] = []
+        for skill_id in spawn.template.skills:
+            try:
+                defs.append(rules.skill_def(skill_id))
+            except KeyError:
+                raise BattleSetupError(f"{spawn.template.name_zh}：未知的技能 {skill_id}") from None
+        problems = [weapon_problem(s, spawn.weapon.weapon_class) for s in defs]
+        problems += skill_slot_problems(defs, rules.core.skill_slots)
+        found = next((p for p in problems if p is not None), None)
+        if found is not None:
+            raise BattleSetupError(f"{spawn.template.name_zh}：{found}")
+
+
 def begin_battle(setup: BattleSetup, seed: int) -> ResolveResult:
     """建立初始狀態：放置物件與單位、擲先攻、開始第 1 輪與第一位的回合。回傳狀態與開場事件。"""
     teams = {spawn.team for spawn in setup.units}
     if teams != set(Team):
         raise BattleSetupError("雙方都至少要有一個單位")
     map_def = setup.map
+    _check_loadouts(setup)
     tiles, objects = _initial_board(setup)
     state = BattleState(
         map_id=map_def.id,
@@ -510,30 +532,6 @@ def _do_defend(ctx: Ctx, unit: UnitState, action: Action) -> None:
     execute(ctx, [ApplyStatusEffect(target_id=unit.id, status_id=DEFENDING, source_id=unit.id)])
 
 
-def _contest(ctx: Ctx, kind: str, unit: UnitState, target: UnitState, attr: Attribute) -> bool:
-    """技巧動作的對抗：``d20 + 比例修正（攻方屬性 vs 守方屬性）+ 熟練 ≥ hit_target``。"""
-    rules = ctx.rules
-    modifier = rules.hit_table.modifier(unit.attributes[attr], max(1, target.attributes[attr]))
-    proficiency = rules.core.proficiency
-    # 預覽：技巧動作本身視為成功（成功率另以 preview 計算）
-    natural = 20 if ctx.preview is not None else ctx.rng.d20()
-    total = natural + modifier + proficiency
-    success = is_hit(natural, total, rules.core.hit_target)
-    ctx.emit(
-        ManeuverRolled,
-        maneuver=kind,
-        attacker_id=unit.id,
-        target_id=target.id,
-        natural=natural,
-        modifier=modifier,
-        proficiency=proficiency,
-        total=total,
-        target_number=rules.core.hit_target,
-        success=success,
-    )
-    return success
-
-
 def _maneuver_target(ctx: Ctx, unit: UnitState, target_id: UnitId) -> UnitState:
     target = ctx.state.units.get(target_id)
     if target is None:
@@ -552,7 +550,7 @@ def _do_shove(ctx: Ctx, unit: UnitState, action: Action) -> None:
     if problem is not None:
         raise IllegalActionError(problem)
     unit.ap -= ctx.core.maneuver_ap_cost
-    if _contest(ctx, "shove", unit, target, Attribute.STR):
+    if contest(ctx, "shove", unit, target, Attribute.STR):
         execute(
             ctx,
             [
@@ -573,7 +571,7 @@ def _do_trip(ctx: Ctx, unit: UnitState, action: Action) -> None:
     if target.has_status(PRONE):
         raise IllegalActionError(f"目標已經倒地：{target.name_zh}")
     unit.ap -= ctx.core.maneuver_ap_cost
-    if _contest(ctx, "trip", unit, target, Attribute.DEX):
+    if contest(ctx, "trip", unit, target, Attribute.DEX):
         execute(ctx, [ApplyStatusEffect(target_id=target.id, status_id=PRONE, source_id=unit.id)])
 
 
@@ -604,6 +602,11 @@ def _do_end_turn(ctx: Ctx, unit: UnitState, action: Action) -> None:
     advance_turn(ctx)
 
 
+def _do_use_skill(ctx: Ctx, unit: UnitState, action: Action) -> None:
+    assert isinstance(action, UseSkill)
+    use_skill(ctx, unit, action)
+
+
 ACTION_HANDLERS: dict[str, ActionHandler] = {
     "move": _do_move,
     "attack": _do_attack,
@@ -611,6 +614,7 @@ ACTION_HANDLERS: dict[str, ActionHandler] = {
     "shove": _do_shove,
     "trip": _do_trip,
     "interact": _do_interact,
+    "use_skill": _do_use_skill,
     "end_turn": _do_end_turn,
 }
 
@@ -723,6 +727,7 @@ def legal_actions(state: BattleState) -> list[Action]:
         actions.extend(
             Trip(unit_id=unit.id, target_id=t.id) for t in foes if not t.has_status(PRONE)
         )
+    actions.extend(_skill_actions(state, unit))
     if unit.ap >= core.interact_ap_cost:
         actions.extend(
             Interact(unit_id=unit.id, object_id=obj.id)
@@ -743,6 +748,21 @@ def legal_actions(state: BattleState) -> list[Action]:
             actions.append(Move(unit_id=unit.id, path=path))
     actions.append(EndTurn(unit_id=unit.id))
     return actions
+
+
+def _usable_skills(state: BattleState, unit: UnitState) -> list[SkillDef]:
+    rules = state.ruleset
+    skills = [rules.skill_def(sid) for sid in sorted(unit.skills)]
+    return [s for s in skills if s.is_active and skill_problem(state, unit, s) is None]
+
+
+def _skill_actions(state: BattleState, unit: UnitState) -> list[Action]:
+    """可用的技能動作：依技能 ID，再依選取（目標 ID／座標／方向）排序。"""
+    return [
+        action
+        for skill in _usable_skills(state, unit)
+        for action, _area in selections(state, unit, skill)
+    ]
 
 
 _POS_CACHE: dict[XY, Pos] = {}
@@ -781,6 +801,8 @@ def _has_ap_action(state: BattleState, unit: UnitState) -> bool:
         and (not t.has_status(PRONE) or shove_problem(state, unit, t) is None)
         for t in state.living_units()
     ):
+        return True
+    if any(has_selection(state, unit, s) for s in _usable_skills(state, unit)):
         return True
     return unit.ap >= core.interact_ap_cost and any(
         interact_problem(state, unit, o) is None for o in state.objects_sorted()

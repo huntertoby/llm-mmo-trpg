@@ -18,6 +18,7 @@ from trpg.shared.types import Attribute, Element, ObjectId, Surface
 
 __all__ = [
     "PPM",
+    "AttackProfile",
     "AttackRoll",
     "Cover",
     "advantage_sources",
@@ -40,6 +41,7 @@ __all__ = [
     "reach_problem",
     "roll_attack",
     "situational_modifier",
+    "weapon_profile",
 ]
 
 PPM = 1_000_000
@@ -60,6 +62,33 @@ def attack_value(unit: UnitState) -> int:
     return unit.attributes[unit.weapon.scaling_attr] + unit.weapon.attack_bonus
 
 
+@dataclass(frozen=True, slots=True)
+class AttackProfile:
+    """一次命中判定使用的攻擊者參數（普攻取自武器；技能取自技能，Phase 2A）。
+
+    - ``attack_value``：攻擊值（命中修正的分子）。
+    - ``melee``：近戰（射程 1）——倒地目標有優勢／遠程有劣勢、濃霧的遠程劣勢。
+    - ``height_limited``：近戰與長柄（射程 ≤ ``melee_height_limit_max_range``）——無視半掩護。
+    - ``crit_range``：暴擊的最低自然骰值。
+    """
+
+    attack_value: int
+    melee: bool
+    height_limited: bool
+    crit_range: int
+
+
+def weapon_profile(state: BattleState, attacker: UnitState) -> AttackProfile:
+    """普攻的參數：取自 ``attacker`` 的武器。"""
+    weapon = attacker.weapon
+    return AttackProfile(
+        attack_value=attack_value(attacker),
+        melee=weapon.is_melee,
+        height_limited=weapon.range <= state.ruleset.core.melee_height_limit_max_range,
+        crit_range=weapon.crit_range,
+    )
+
+
 def defense_value_permille(unit: UnitState, rules: Ruleset) -> int:
     """防禦值（×1000）＝ (敏捷 ＋ 護甲) × (1 ＋ 防禦姿態加成)。基礎防禦值最低視為 1。"""
     base = max(1, unit.attributes[Attribute.DEX] + unit.armor_bonus)
@@ -67,11 +96,15 @@ def defense_value_permille(unit: UnitState, rules: Ruleset) -> int:
     return base * (PERMILLE + bonus)
 
 
-def hit_modifier(attacker: UnitState, target: UnitState, rules: Ruleset) -> int:
+def hit_modifier(
+    attacker: UnitState,
+    target: UnitState,
+    rules: Ruleset,
+    profile: AttackProfile | None = None,
+) -> int:
     """命中修正 ＝ clamp(round(slope × log2(攻擊值 ÷ 防禦值)), ±cap)，以整數門檻表計算。"""
-    return rules.hit_table.modifier(
-        attack_value(attacker) * PERMILLE, defense_value_permille(target, rules)
-    )
+    value = attack_value(attacker) if profile is None else profile.attack_value
+    return rules.hit_table.modifier(value * PERMILLE, defense_value_permille(target, rules))
 
 
 def situational_modifier(state: BattleState, attacker: UnitState, target: UnitState) -> int:
@@ -129,7 +162,12 @@ def cover_object_between(
     return None
 
 
-def half_cover(state: BattleState, attacker: UnitState, target: UnitState) -> Cover | None:
+def half_cover(
+    state: BattleState,
+    attacker: UnitState,
+    target: UnitState,
+    profile: AttackProfile | None = None,
+) -> Cover | None:
     """``attacker`` 攻擊 ``target`` 時，目標是否受到半掩護。
 
     遠程攻擊（武器射程 > ``melee_height_limit_max_range``）時，目標受到半掩護若且唯若存在格子 C：
@@ -144,7 +182,8 @@ def half_cover(state: BattleState, attacker: UnitState, target: UnitState) -> Co
     近戰（含長柄）無視半掩護；單位不提供掩護。多個掩護物同時符合時只計一次，來源取上、右、下、
     左順序中的第一個（確定性）。懲罰為 ``half_cover_hit_penalty``（為 0 時視為沒有掩護）。
     """
-    if is_height_limited(state, attacker):
+    limited = is_height_limited(state, attacker) if profile is None else profile.height_limited
+    if limited:
         return None
     penalty = state.ruleset.core.half_cover_hit_penalty
     if penalty <= 0:
@@ -188,7 +227,10 @@ def concealed_max_distance(state: BattleState) -> int:
 
 
 def advantage_sources(
-    state: BattleState, attacker: UnitState, target: UnitState
+    state: BattleState,
+    attacker: UnitState,
+    target: UnitState,
+    profile: AttackProfile | None = None,
 ) -> tuple[bool, bool]:
     """是否存在（優勢來源, 劣勢來源）。
 
@@ -196,10 +238,11 @@ def advantage_sources(
     - 目標隱蔽：劣勢。
     - 天氣（濃霧）：遠程攻擊超過 ``ranged_disadvantage_beyond`` 格有劣勢。
     """
+    melee = attacker.weapon.is_melee if profile is None else profile.melee
     advantage = False
     disadvantage = False
     if target.has_status(PRONE):
-        if attacker.weapon.is_melee:
+        if melee:
             advantage = True
         else:
             disadvantage = True
@@ -209,16 +252,21 @@ def advantage_sources(
     if (
         weather is not None
         and weather.ranged_disadvantage_beyond is not None
-        and not attacker.weapon.is_melee
+        and not melee
         and manhattan(attacker.xy, target.xy) > weather.ranged_disadvantage_beyond
     ):
         disadvantage = True
     return advantage, disadvantage
 
 
-def advantage_state(state: BattleState, attacker: UnitState, target: UnitState) -> AdvantageState:
+def advantage_state(
+    state: BattleState,
+    attacker: UnitState,
+    target: UnitState,
+    profile: AttackProfile | None = None,
+) -> AdvantageState:
     """優勢／劣勢：同時存在時互相抵消，不疊加。"""
-    return combine_advantage(*advantage_sources(state, attacker, target))
+    return combine_advantage(*advantage_sources(state, attacker, target, profile))
 
 
 def combine_advantage(advantage: bool, disadvantage: bool) -> AdvantageState:
@@ -261,29 +309,33 @@ type ForcedOutcome = Literal["miss", "hit", "crit"]
 """預覽用：強制判定結果（``hit`` 為命中但不暴擊）。"""
 
 
-def roll_attack(
+def roll_attack(  # noqa: PLR0917
     state: BattleState,
     rng: Rng,
     attacker: UnitState,
     target: UnitState,
     forced: ForcedOutcome | None = None,
+    profile: AttackProfile | None = None,
 ) -> AttackRoll:
     """擲命中骰（有優勢或劣勢時擲 2 顆 d20 取高／低）。暴擊需命中且自然骰 ≥ 武器暴擊範圍。
 
     ``total = 自然骰 ＋ 命中修正 ＋ 熟練 ＋ 情境（高度） ＋ 掩護（半掩護為負值）``。
 
-    ``forced`` 只供預覽使用：不擲骰，直接採用指定結果。
+    ``forced`` 只供預覽使用：不擲骰，直接採用指定結果。``profile`` 為技能的攻擊參數
+    （省略時取自 ``attacker`` 的武器）。
     """
     rules = state.ruleset
-    adv = advantage_state(state, attacker, target)
-    modifier = hit_modifier(attacker, target, rules)
+    if profile is None:
+        profile = weapon_profile(state, attacker)
+    adv = advantage_state(state, attacker, target, profile)
+    modifier = hit_modifier(attacker, target, rules, profile)
     situational = situational_modifier(state, attacker, target)
-    cover = half_cover(state, attacker, target)
+    cover = half_cover(state, attacker, target, profile)
     cover_mod = 0 if cover is None else -cover.penalty
     proficiency = rules.core.proficiency
     if forced is not None:
         bonus = modifier + proficiency + situational + cover_mod
-        natural = _forced_natural(forced, bonus, attacker, rules)
+        natural = _forced_natural(forced, bonus, profile.crit_range, rules)
         rolls: tuple[int, ...] = (natural,)
     elif adv == "none":
         rolls = (rng.d20(),)
@@ -293,14 +345,14 @@ def roll_attack(
         natural = max(rolls) if adv == "advantage" else min(rolls)
     total = natural + modifier + proficiency + situational + cover_mod
     hit = is_hit(natural, total, rules.core.hit_target)
-    crit = hit and natural >= attacker.weapon.crit_range
+    crit = hit and natural >= profile.crit_range
     if forced is not None:
         hit, crit = forced != "miss", forced == "crit"
     return AttackRoll(
         rolls=rolls,
         advantage=adv,
         natural=natural,
-        attack_value=attack_value(attacker),
+        attack_value=profile.attack_value,
         defense_value_permille=defense_value_permille(target, rules),
         hit_modifier=modifier,
         proficiency=proficiency,
@@ -314,13 +366,13 @@ def roll_attack(
     )
 
 
-def _forced_natural(forced: ForcedOutcome, bonus: int, attacker: UnitState, rules: Ruleset) -> int:
+def _forced_natural(forced: ForcedOutcome, bonus: int, crit_range: int, rules: Ruleset) -> int:
     """與強制結果相符的自然骰（只用於事件內容；結果本身由 ``forced`` 決定）。"""
     if forced == "miss":
         return NATURAL_MISS
     if forced == "crit":
         return NATURAL_HIT
-    for natural in range(2, attacker.weapon.crit_range):
+    for natural in range(2, crit_range):
         if is_hit(natural, natural + bonus, rules.core.hit_target):
             return natural
     return NATURAL_HIT

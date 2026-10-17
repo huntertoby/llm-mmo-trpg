@@ -152,6 +152,13 @@ class UnitState:
     reactions_used: int = 0
     escaped: bool = False
     ai_profile: str | None = None
+    mana: int = 0
+    max_mana: int = 0
+    skills: tuple[str, ...] = ()
+    cooldowns: dict[str, int] = field(default_factory=dict)
+    """技能剩餘冷卻回合（只列出 > 0 的）；自己回合開始時 −1。"""
+    skill_uses: dict[str, int] = field(default_factory=dict)
+    """本場已使用次數（``uses_per_battle`` 檢查用）。"""
 
     @property
     def alive(self) -> bool:
@@ -175,7 +182,7 @@ class UnitState:
         return tag in self.tags
 
     def clone(self) -> UnitState:
-        # 屬性、抗性等字典在戰鬥中不會被修改，可以共用；只有狀態清單需要複製。
+        # 屬性、抗性等字典在戰鬥中不會被修改，可以共用；狀態清單、冷卻與使用次數需要複製。
         # 明確列出欄位（比 dataclasses.replace 快數倍；tests/engine/test_state_clone.py 檢查
         # 這裡涵蓋所有欄位）。
         return UnitState(
@@ -205,6 +212,11 @@ class UnitState:
             reactions_used=self.reactions_used,
             escaped=self.escaped,
             ai_profile=self.ai_profile,
+            mana=self.mana,
+            max_mana=self.max_mana,
+            skills=self.skills,
+            cooldowns=dict(self.cooldowns),
+            skill_uses=dict(self.skill_uses),
         )
 
 

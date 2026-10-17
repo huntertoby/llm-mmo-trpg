@@ -42,6 +42,8 @@ from trpg.engine.events import (
     ReactionTriggered,
     RoundEnded,
     RoundStarted,
+    SkillCooldownChanged,
+    SkillUsed,
     StatusApplied,
     StatusRemoved,
     SurfaceChanged,
@@ -255,6 +257,7 @@ def render_unit_table(state: BattleState) -> str:
             continue
         lines.append(
             f"  {markers[unit.id]} {team} {unit.name_zh}：HP {unit.hp}/{unit.max_hp}"
+            f"{f' 法力 {unit.mana}/{unit.max_mana}' if unit.max_mana else ''}"
             f" 耐力 {unit.stamina} 位置 {_xy(unit.pos)} 武器 {unit.weapon.name_zh}"
             f"{_status_text(state, unit)}"
         )
@@ -287,10 +290,24 @@ def _attack_text(e: AttackRolled, name: dict[str, str], state: BattleState) -> s
         verdict = "自然 1，失手"
     else:
         verdict = ("暴擊！" if e.crit else "命中") if e.hit else "失手"
+    verb = "攻擊"
+    if e.skill_id is not None:
+        verb = f"以「{state.ruleset.skill_def(e.skill_id).name_zh}」攻擊"
     return (
-        f"{name[e.attacker_id]} 攻擊 {name[e.target_id]}：{' '.join(parts)} = {e.total}"
+        f"{name[e.attacker_id]} {verb} {name[e.target_id]}：{' '.join(parts)} = {e.total}"
         f"（目標 {e.target_number}）→ {verdict}{cover_note}"
     )
+
+
+def _skill_used_text(e: SkillUsed, name: dict[str, str]) -> str:
+    costs = [f"AP {e.ap}"]
+    if e.mana:
+        costs.append(f"法力 {e.mana}（剩 {e.mana_after}）")
+    if e.hp_spent:
+        costs.append(f"HP {e.hp_spent}")
+    if e.cooldown:
+        costs.append(f"冷卻 {e.cooldown} 回合")
+    return f"{name[e.unit_id]} 使用「{e.name_zh}」（{'，'.join(costs)}）"
 
 
 def _damage_text(e: DamageDealt, name: dict[str, str]) -> str:
@@ -332,7 +349,8 @@ def describe_event(e: EventBase, state: BattleState) -> str | None:  # noqa: PLR
     if isinstance(e, RoundStarted | RoundEnded):
         return None
     if isinstance(e, TurnStarted):
-        return f"— {name[e.unit_id]} 的回合（AP {e.ap}，移動 {e.move_points}）"
+        mana = f"，法力 {e.mana}/{e.max_mana}" if e.max_mana else ""
+        return f"— {name[e.unit_id]} 的回合（AP {e.ap}，移動 {e.move_points}{mana}）"
     if isinstance(e, TurnEnded):
         kept = f"，保留 {e.ap_carried} AP" if e.ap_carried else ""
         return f"  {name[e.unit_id]} 結束回合{kept}"
@@ -352,6 +370,12 @@ def describe_event(e: EventBase, state: BattleState) -> str | None:  # noqa: PLR
         return f"  {name[e.unit_id]} 掉進了{terrain}！"
     if isinstance(e, AttackRolled):
         return "  " + _attack_text(e, name, state)
+    if isinstance(e, SkillUsed):
+        return "  " + _skill_used_text(e, name)
+    if isinstance(e, SkillCooldownChanged):
+        if e.remaining > 0:
+            return None
+        return f"  {name[e.unit_id]} 的「{state.ruleset.skill_def(e.skill_id).name_zh}」冷卻結束"
     if isinstance(e, DamageDealt):
         return "    " + _damage_text(e, name)
     if isinstance(e, Healed):
@@ -432,7 +456,7 @@ def _describe_environment(  # noqa: PLR0911, PLR0912
             f"{_signed(e.modifier)} = {e.total}（DC {e.dc}）→ {verdict}"
         )
     if isinstance(e, ManeuverRolled):
-        kind = "推擊" if e.maneuver == "shove" else "絆倒"
+        kind = {"shove": "推擊", "trip": "絆倒", "knock_prone": "擊倒"}[e.maneuver]
         verdict = "成功" if e.success else "失敗"
         return (
             f"  {name[e.attacker_id]} 對 {name[e.target_id]} 使出{kind}：d20={e.natural} "

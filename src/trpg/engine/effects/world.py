@@ -226,6 +226,7 @@ def _element_touch(ctx: Ctx, effect: EffectBase) -> list[EventBase]:
             push_distance=effect.push_distance,
             damage=effect.damage,
             objects_only=effect.objects_only,
+            tile_only=effect.tile_only,
         )
     ]
 
@@ -251,7 +252,10 @@ def _damage_object(ctx: Ctx, effect: EffectBase) -> list[EventBase]:
         rolls = tuple(ctx.rng.roll(effect.dice.sides) for _ in range(effect.dice.count))
     raw_permille = (sum(rolls) + effect.flat) * PERMILLE + effect.scaled_permille
     weather = weather_permille(ctx.state, effect.element)
-    amount = max(raw_permille * weather // (PERMILLE * PERMILLE), effect.min_damage)
+    amount = max(
+        raw_permille * weather * effect.multiplier_permille // (PERMILLE * PERMILLE * PERMILLE),
+        effect.min_damage,
+    )
     hp_before = obj.hp
     obj.hp = max(0, obj.hp - amount)
     return [

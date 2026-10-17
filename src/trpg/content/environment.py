@@ -553,6 +553,7 @@ class AiWeights(ContentModel):
     cover: int = 0
     expose: int = 0
     cover_damage: int = 0
+    heal: int = 0
 
 
 class AiProfile(ContentModel):

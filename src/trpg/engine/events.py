@@ -51,6 +51,8 @@ __all__ = [
     "ReactionTriggered",
     "RoundEnded",
     "RoundStarted",
+    "SkillCooldownChanged",
+    "SkillUsed",
     "StatusApplied",
     "StatusRemoved",
     "SurfaceChanged",
@@ -131,6 +133,8 @@ class TurnStarted(EventBase):
     unit_id: UnitId
     ap: int
     move_points: int
+    mana: int = 0
+    max_mana: int = 0
 
 
 class TurnEnded(EventBase):
@@ -223,6 +227,8 @@ class AttackRolled(EventBase):
     crit: bool
     cover: int = 0
     cover_object_id: ObjectId | None = None
+    skill_id: str | None = None
+    """技能的命中判定時為技能 ID（Phase 2A）；普攻為 ``None``。"""
 
 
 class DamageDealt(EventBase):
@@ -385,6 +391,8 @@ class ElementTouched(EventBase):
     push_distance: int
     damage: int
     objects_only: bool
+    tile_only: bool = False
+    """只套用表面與物件類規則（技能的範圍傷害觸及沒有單位的格子）。"""
 
 
 class SurfaceEntered(EventBase):
@@ -428,7 +436,7 @@ class ManeuverRolled(EventBase):
     """技巧動作的對抗判定（推擊：力量 vs 力量；絆倒：敏捷 vs 敏捷）。"""
 
     type: Literal["maneuver_rolled"] = "maneuver_rolled"
-    maneuver: Literal["shove", "trip"]
+    maneuver: Literal["shove", "trip", "knock_prone"]
     attacker_id: UnitId
     target_id: UnitId
     natural: int
@@ -437,6 +445,8 @@ class ManeuverRolled(EventBase):
     total: int
     target_number: int
     success: bool
+    skill_id: str | None = None
+    """技能的擊倒對抗判定時為技能 ID。"""
 
 
 class PushResisted(EventBase):
@@ -463,6 +473,39 @@ class ReactionDeclined(EventBase):
     unit_id: UnitId
     reaction: str
     trigger_unit_id: UnitId | None
+
+
+# ---------------------------------------------------------------------------
+# Phase 2A：技能
+# ---------------------------------------------------------------------------
+
+
+class SkillUsed(EventBase):
+    """施放者使用技能（代價已支付）。
+
+    ``tiles`` 為影響的格子（依 (y, x) 排序）；``mana_after`` 為使用後的法力；``hp_spent`` 為
+    支付的 HP；``cooldown`` 為設定的冷卻回合（沒有冷卻為 ``None``）。
+    """
+
+    type: Literal["skill_used"] = "skill_used"
+    unit_id: UnitId
+    skill_id: str
+    name_zh: str
+    ap: int
+    mana: int
+    mana_after: int
+    hp_spent: int = 0
+    cooldown: int | None = None
+    tiles: tuple[Pos, ...]
+
+
+class SkillCooldownChanged(EventBase):
+    """技能的冷卻回合改變（使用後設定、自己回合開始時 −1）。"""
+
+    type: Literal["skill_cooldown_changed"] = "skill_cooldown_changed"
+    unit_id: UnitId
+    skill_id: str
+    remaining: int
 
 
 # ---------------------------------------------------------------------------
@@ -543,7 +586,9 @@ type Event = Annotated[
     | EnvironmentEnded
     | MapEventTriggered
     | UnitSpawned
-    | UnitEscaped,
+    | UnitEscaped
+    | SkillUsed
+    | SkillCooldownChanged,
     Field(discriminator="type"),
 ]
 

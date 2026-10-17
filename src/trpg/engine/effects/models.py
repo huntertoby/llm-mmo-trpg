@@ -94,12 +94,14 @@ class DamageEffect(EffectBase):
 
 
 class HealEffect(EffectBase):
-    """治療：``骰子 ＋ flat``，不超過最大 HP；倒下的單位不能被治療（Phase 1 沒有復活）。"""
+    """治療：``骰子 ＋ flat ＋ scaled_permille ÷ 1000``，不超過最大 HP；倒下的單位不能被治療
+    （Phase 1 沒有復活）。``scaled_permille`` 為縮放屬性 × 法術倍率（Phase 2A 的治療技能）。"""
 
     kind: Literal["heal"] = "heal"
     target_id: UnitId
     dice: Dice | None = None
     flat: int = 0
+    scaled_permille: int = 0
 
     def sort_target(self) -> str:
         return self.target_id
@@ -216,6 +218,8 @@ class DamageObjectEffect(EffectBase):
     scaled_permille: int = 0
     min_damage: int = Field(default=1, ge=0)
     cause: DamageCause = "effect"
+    multiplier_permille: int = Field(default=1000, ge=0)
+    """最後再乘上的倍率（武器技的技能倍率），無條件捨去，最低 ``min_damage``。"""
 
     def sort_target(self) -> str:
         return self.object_id
@@ -272,7 +276,8 @@ class ElementTouchEffect(_AtPos):
     """元素觸及一格（技能直接指定格子、環境火勢蔓延、風吹……）：依互動表產生後續效果。
 
     ``direction``／``push_distance`` 供風的推擊與火勢蔓延使用；``damage`` 為雷電擴散的基準傷害。
-    ``objects_only``：只套用物件類規則（產生帶元素的表面後使用）。
+    ``objects_only``：只套用物件類規則（產生帶元素的表面後使用）；``tile_only``：只套用表面與物件
+    類規則，不含單位（技能的範圍傷害觸及沒有單位的格子）。
     """
 
     kind: Literal["element_touch"] = "element_touch"
@@ -281,6 +286,7 @@ class ElementTouchEffect(_AtPos):
     push_distance: int = Field(default=0, ge=0)
     damage: int = Field(default=0, ge=0)
     objects_only: bool = False
+    tile_only: bool = False
 
 
 class ExplodeEffect(EffectBase):

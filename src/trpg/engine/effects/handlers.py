@@ -116,7 +116,7 @@ def _heal(ctx: Ctx, effect: EffectBase) -> list[EventBase]:
     rolls: tuple[int, ...] = ()
     if effect.dice is not None:
         rolls = tuple(ctx.rng.roll(effect.dice.sides) for _ in range(effect.dice.count))
-    amount = max(0, sum(rolls) + effect.flat)
+    amount = max(0, ((sum(rolls) + effect.flat) * PERMILLE + effect.scaled_permille) // PERMILLE)
     hp_before = unit.hp
     unit.hp = min(unit.max_hp, unit.hp + amount)
     return [

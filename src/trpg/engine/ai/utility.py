@@ -26,7 +26,7 @@ from dataclasses import dataclass
 from fractions import Fraction
 
 from trpg.content.environment import AiProfile, AiProfileTable, AiWeights
-from trpg.engine.actions import Action, Attack, Defend, EndTurn, Move
+from trpg.engine.actions import Action, Attack, Defend, EndTurn, Move, UseSkill
 from trpg.engine.battle import legal_actions
 from trpg.engine.events import (
     DamageDealt,
@@ -39,6 +39,7 @@ from trpg.engine.events import (
 from trpg.engine.preview import Preview, preview
 from trpg.engine.rules.combat import HALF_COVER, attack_problem, cover_object_between
 from trpg.engine.rules.geometry import XY, chebyshev, has_line_of_sight, manhattan, neighbors4
+from trpg.engine.skills.targeting import compute_area
 from trpg.engine.state import BattleState, UnitState
 from trpg.shared.types import ObjectId, Surface, Team, UnitId
 
@@ -198,9 +199,15 @@ def _last_cause(events: tuple[EventBase, ...]) -> dict[UnitId, str]:
     return cause
 
 
-def _gains(state: BattleState, actor: UnitState, p: Preview, w: AiWeights) -> Fraction:  # noqa: PLR0912
+def _gains(state: BattleState, actor: UnitState, p: Preview, w: AiWeights) -> Fraction:  # noqa: PLR0912, PLR0915
     hit = p.hit_chance if p.hit_chance is not None else Fraction(1)
     team = actor.team
+    skill_primary: dict[UnitId, bool] = {}
+    if isinstance(p.action, UseSkill):
+        foes = [t for t in p.targets if not t.ally]
+        if foes:
+            hit = sum((t.hit_chance for t in foes), Fraction(0)) / len(foes)
+        skill_primary = {t.unit_id: True for t in foes if t.damage is not None}
 
     def is_enemy(uid: UnitId) -> bool:
         return state.units[uid].team is not team if uid in state.units else False
@@ -214,12 +221,15 @@ def _gains(state: BattleState, actor: UnitState, p: Preview, w: AiWeights) -> Fr
     env_enemy = Fraction(0)
     friendly = Fraction(0)
     for events in (p.min_events, p.max_events):
-        primary_seen = False
+        seen: set[UnitId] = set()
         for e in events:
             if not isinstance(e, DamageDealt) or e.cause == "deadly_terrain":
                 continue  # 致命地形的「傷害」是擊倒本身，由 kill／env_kill 計分
-            if e.target_id == primary and e.cause == "attack" and not primary_seen:
-                primary_seen = True
+            first = e.target_id not in seen
+            if e.cause == "attack" and (
+                (e.target_id == primary and first) or e.target_id in skill_primary
+            ):
+                seen.add(e.target_id)
                 continue
             if is_enemy(e.target_id):
                 other_enemy += e.amount
@@ -229,6 +239,11 @@ def _gains(state: BattleState, actor: UnitState, p: Preview, w: AiWeights) -> Fr
                 friendly += e.amount
     if p.damage is not None and primary is not None:
         gains += w.damage * p.damage.expected
+    for t in p.targets:  # 技能：每個目標各自的命中率與期望傷害
+        if t.damage is not None and not t.ally:
+            gains += w.damage * t.damage.expected
+    healed = sum(Fraction(lo + hi, 2) for uid, lo, hi in p.healed if uid in state.units)
+    gains += w.heal * healed
     gains += w.damage * hit * other_enemy / 2
     gains += w.env_damage * hit * env_enemy / 2
     gains -= w.friendly_fire * friendly / 2
@@ -348,6 +363,43 @@ def worth_previewing(state: BattleState, scene: _Scene, action: Attack) -> bool:
     if any(tag in tags for tag in _ALWAYS_PREVIEW_TAGS):
         return True
     return any(chebyshev(obj.xy, e.xy) <= _OBJECT_NEAR_ENEMY for e in scene.enemies)
+
+
+SKILL_CANDIDATES = 3
+"""每個技能最多評分（完整 ``preview``）的選取數。"""
+
+
+def skill_estimate(  # noqa: PLR0917
+    state: BattleState,
+    unit: UnitState,
+    action: UseSkill,
+    scene: _Scene,
+    w: AiWeights,
+    before: Fraction,
+) -> Fraction:
+    """技能選取的便宜估計（不跑引擎），只用來篩出每個技能最值得完整評分的幾個選取。
+
+    - 含 ``teleport``：把行動者放到目標格後的位置價值變化（同 :func:`virtual_move_score`）；
+    - 其餘：影響範圍內的敵人數 × 3 − 友方數 × 3，有治療效果的再加上受傷友方每人 2；
+      最後以與施放者的距離為平手判定（近者優先，保持確定）。
+    """
+    skill = state.ruleset.skill_def(action.skill_id)
+    if any(e.type == "teleport" for e in skill.effects) and action.target_pos is not None:
+        moved = unit.clone()
+        moved.pos = action.target_pos
+        return _unit_position_value(state, moved, w, scene) - before
+    area = compute_area(state, unit, skill, action)
+    score = Fraction(0)
+    heals = any(e.type == "heal" for e in skill.effects)
+    for uid in area.units:
+        other = state.units[uid]
+        if other.team is not unit.team:
+            score += 3
+        elif heals and other.hp < other.max_hp:
+            score += 2
+        else:
+            score -= 3
+    return score - Fraction(manhattan(unit.xy, area.origin), 1000)
 
 
 def virtual_move_score(
@@ -487,8 +539,12 @@ class UtilityAI:
                 scored[index] = ActionScore(action, defend_score(state, unit, w), None)
             elif isinstance(action, Attack) and not worth_previewing(state, scene, action):
                 continue
+            elif isinstance(action, UseSkill):
+                continue  # 技能在下面依估計篩選後才評分
             else:
                 scored[index] = score_action(state, action, profile, before=before)
+        for index in self._skill_candidates(state, unit, actions, scene, w, before):
+            scored[index] = score_action(state, actions[index], profile, before=before)
         estimates.sort(key=lambda item: (-item[0], item[1]))
         enemies = reactive_enemies(state, unit)
         for estimate, index in estimates[: self._move_candidates]:
@@ -499,6 +555,28 @@ class UtilityAI:
             else:
                 scored[index] = ActionScore(move, estimate, None)
         return [scored[i] for i in sorted(scored)]
+
+    def _skill_candidates(  # noqa: PLR0917
+        self,
+        state: BattleState,
+        unit: UnitState,
+        actions: list[Action],
+        scene: _Scene,
+        w: AiWeights,
+        before: Fraction,
+    ) -> list[int]:
+        """每個技能依便宜的估計（:func:`skill_estimate`）只保留前 ``skill_candidates`` 個選取，
+        回傳它們在 ``actions`` 的索引（遞增）。"""
+        by_skill: dict[str, list[tuple[Fraction, int]]] = {}
+        for index, action in enumerate(actions):
+            if isinstance(action, UseSkill):
+                est = skill_estimate(state, unit, action, scene, w, before)
+                by_skill.setdefault(action.skill_id, []).append((est, index))
+        chosen: list[int] = []
+        for options in by_skill.values():
+            options.sort(key=lambda item: (-item[0], item[1]))
+            chosen.extend(index for _, index in options[:SKILL_CANDIDATES])
+        return sorted(chosen)
 
     def __call__(self, state: BattleState) -> Action:
         unit = state.active

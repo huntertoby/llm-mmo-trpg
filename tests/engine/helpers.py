@@ -84,11 +84,19 @@ def template(base: str = "bandit", **overrides: object) -> UnitTemplate:
 
 
 def spawn(
-    team: Team, pos: tuple[int, int], tmpl: UnitTemplate | str = "bandit", weapon: str | None = None
+    team: Team,
+    pos: tuple[int, int],
+    tmpl: UnitTemplate | str = "bandit",
+    weapon: str | None = None,
+    *,
+    skills: Sequence[str] | None = (),
 ) -> UnitSpawn:
+    """``skills`` 預設為空（Phase 1 的測試不帶技能）；``None`` 表示沿用範本的技能。"""
     lib = library()
     t = lib.unit(tmpl) if isinstance(tmpl, str) else tmpl
     w = lib.weapons[weapon or t.weapon]
+    if skills is not None:
+        t = t.model_copy(update={"skills": tuple(skills)})
     return UnitSpawn(template=t, weapon=w, team=team, position=pos)
 
 

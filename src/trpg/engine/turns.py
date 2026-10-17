@@ -23,6 +23,7 @@ from trpg.engine.environment import run_environment
 from trpg.engine.events import (
     RoundEnded,
     RoundStarted,
+    SkillCooldownChanged,
     StatusRemoved,
     TurnEnded,
     TurnStarted,
@@ -44,7 +45,15 @@ def start_turn(ctx: Ctx, unit_id: UnitId) -> None:
     unit.ap = core.ap_per_turn + min(unit.ap_carry, core.ap_carry_max)
     unit.ap_carry = 0
     unit.move_points = unit.speed
-    ctx.emit(TurnStarted, unit_id=unit.id, ap=unit.ap, move_points=unit.move_points)
+    ctx.emit(
+        TurnStarted,
+        unit_id=unit.id,
+        ap=unit.ap,
+        move_points=unit.move_points,
+        mana=unit.mana,
+        max_mana=unit.max_mana,
+    )
+    _tick_cooldowns(ctx, unit)
 
     expiring: list[EffectBase] = []
     ticking: list[EffectBase] = []
@@ -73,6 +82,18 @@ def start_turn(ctx: Ctx, unit_id: UnitId) -> None:
     surface_effects = _surface_turn_start(ctx, unit)
     if surface_effects and unit.alive:
         execute(ctx, surface_effects)
+
+
+def _tick_cooldowns(ctx: Ctx, unit: UnitState) -> None:
+    """自己的回合開始：每個冷卻中的技能 −1（歸零移除）。"""
+    for skill_id in sorted(unit.cooldowns):
+        remaining = unit.cooldowns[skill_id] - 1
+        if remaining <= 0:
+            del unit.cooldowns[skill_id]
+            remaining = 0
+        else:
+            unit.cooldowns[skill_id] = remaining
+        ctx.emit(SkillCooldownChanged, unit_id=unit.id, skill_id=skill_id, remaining=remaining)
 
 
 def _surface_turn_start(ctx: Ctx, unit: UnitState) -> list[EffectBase]:

@@ -36,6 +36,7 @@ from trpg.engine.actions import (
     Shove,
     Step,
     Trip,
+    UseSkill,
 )
 from trpg.engine.battle import begin_battle, legal_actions, resolve, resume, start_battle
 from trpg.engine.environment import Telegraph, telegraph
@@ -70,6 +71,7 @@ __all__ = [
     "Telegraph",
     "Trip",
     "UnitSpawn",
+    "UseSkill",
     "begin_battle",
     "build_setup",
     "deploy_allies",

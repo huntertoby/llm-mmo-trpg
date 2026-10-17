@@ -18,12 +18,14 @@ from dataclasses import dataclass
 from fractions import Fraction
 from itertools import product
 
-from trpg.engine.actions import Action, Attack, Shove, Trip
+from trpg.engine.actions import Action, Attack, Shove, Trip, UseSkill
 from trpg.engine.battle import _actor, simulate_preview
 from trpg.engine.events import (
+    AttackRolled,
     DamageDealt,
     EnteredDeadlyTerrain,
     EventBase,
+    Healed,
     ObjectDamaged,
     ObjectDestroyed,
     ObjectExploded,
@@ -48,10 +50,23 @@ from trpg.engine.rules.combat import (
     is_hit,
     situational_modifier,
 )
+from trpg.engine.skills.targeting import (
+    compute_area,
+    damage_parameters,
+    resolve_effects,
+    skill_profile,
+)
 from trpg.engine.state import BattleState, UnitState
 from trpg.shared.types import Attribute, ObjectId, UnitId
 
-__all__ = ["DamageRange", "Outcome", "Preview", "dice_distribution", "preview"]
+__all__ = [
+    "DamageRange",
+    "Outcome",
+    "Preview",
+    "TargetPreview",
+    "dice_distribution",
+    "preview",
+]
 
 type XY = tuple[int, int]
 
@@ -83,6 +98,17 @@ class DamageRange:
 
 
 @dataclass(frozen=True, slots=True)
+class TargetPreview:
+    """技能對一個需要命中判定的單位的預覽（沒有傷害效果時 ``damage`` 為 ``None``）。"""
+
+    unit_id: UnitId
+    hit_chance: Fraction
+    crit_chance: Fraction
+    damage: DamageRange | None
+    ally: bool = False
+
+
+@dataclass(frozen=True, slots=True)
 class Preview:
     action: Action
     hit_chance: Fraction | None
@@ -102,6 +128,10 @@ class Preview:
     """攻擊單位時目標受到的半掩護（來源物件與懲罰）；沒有時為 ``None``。"""
     notes: tuple[str, ...] = ()
     """命中修正的說明（繁體中文），例如 ``("半掩護 −2：木箱 (3, 4)",)``。"""
+    targets: tuple[TargetPreview, ...] = ()
+    """技能：每個需要命中判定的單位（依單位 ID）的命中率、暴擊率與傷害範圍。"""
+    healed: tuple[tuple[UnitId, int, int], ...] = ()
+    """技能：治療 ``(單位, 最少, 最多)``（含所有治療效果的總和）。"""
 
 
 # ---------------------------------------------------------------------------
@@ -322,6 +352,108 @@ def _maneuver_chance(state: BattleState, actor: UnitState, action: Shove | Trip)
     return hit
 
 
+def _damage_expectation(  # noqa: PLR0917
+    state: BattleState,
+    actor: UnitState,
+    action: UseSkill,
+    target_id: UnitId,
+    hit: Fraction,
+    crit: Fraction,
+    min_events: list[EventBase],
+    max_events: list[EventBase],
+) -> DamageRange | None:
+    """技能對 ``target_id`` 的傷害範圍：最少／最多取自模擬事件，期望值依效果的骰子分布精確計算
+    （事件與效果數量對不上時退回最少與最多的平均）。"""
+    skill = state.ruleset.skill_def(action.skill_id)
+
+    def direct(events: list[EventBase]) -> list[DamageDealt]:
+        return [
+            e
+            for e in events
+            if isinstance(e, DamageDealt)
+            and e.cause == "attack"
+            and e.source_id == actor.id
+            and e.target_id == target_id
+        ]
+
+    low, high = direct(min_events), direct(max_events)
+    if not low or not high:
+        return None
+    minimum, maximum = sum(e.amount for e in low), sum(e.amount for e in high)
+    specs = [
+        skill.effects[r.spec_index] for r in resolve_effects(state, skill) if r.type == "damage"
+    ]
+    if hit == 0:
+        return DamageRange(minimum, maximum, Fraction(0), Fraction(0))
+    if len(specs) != len(low):
+        mid = Fraction(minimum + maximum, 2)
+        return DamageRange(minimum, maximum, mid * hit, mid)
+    core = state.ruleset.core
+    total = Fraction(0)
+    for spec, event in zip(specs, low, strict=True):
+        params = damage_parameters(state, actor, skill, spec)
+        dice = params.dice
+        count, sides = (0, 1) if dice is None else (dice.count, dice.sides)
+        normal, doubled = dice_distribution(count, sides), dice_distribution(count * 2, sides)
+        table: dict[int, int] = {}
+        for value in sorted(set(normal) | set(doubled)):
+            raw = (value + params.flat) * PERMILLE + params.scaled_permille
+            table[value] = max(
+                raw
+                * event.element_mod_ppm
+                * event.weather_permille
+                * event.multiplier_permille
+                // (PERMILLE * PPM * PERMILLE * PERMILLE),
+                core.min_damage_on_hit,
+            )
+        total += ((hit - crit) * _expected(normal, table) + crit * _expected(doubled, table)) / hit
+    return DamageRange(minimum, maximum, total * hit, total)
+
+
+def _skill_targets(
+    state: BattleState,
+    actor: UnitState,
+    action: UseSkill,
+    min_events: list[EventBase],
+    max_events: list[EventBase],
+) -> tuple[TargetPreview, ...]:
+    skill = state.ruleset.skill_def(action.skill_id)
+    profile = skill_profile(state, actor, skill)
+    core = state.ruleset.core
+    rolled = sorted(
+        {e.target_id for e in max_events if isinstance(e, AttackRolled) and e.skill_id == skill.id}
+    )
+    result: list[TargetPreview] = []
+    for uid in rolled:
+        target = state.units[uid]
+        cover = half_cover(state, actor, target, profile)
+        bonus = (
+            hit_modifier(actor, target, state.ruleset, profile)
+            + core.proficiency
+            + situational_modifier(state, actor, target)
+            - (0 if cover is None else cover.penalty)
+        )
+        naturals = _naturals(advantage_state(state, actor, target, profile))
+        hit, crit = _chances(naturals, bonus, core.hit_target, profile.crit_range)
+        damage = _damage_expectation(state, actor, action, uid, hit, crit, min_events, max_events)
+        result.append(TargetPreview(uid, hit, crit, damage, ally=target.team is actor.team))
+    return tuple(result)
+
+
+def _skill_heals(
+    actor: UnitState, min_events: list[EventBase], max_events: list[EventBase]
+) -> tuple[tuple[UnitId, int, int], ...]:
+    def totals(events: list[EventBase]) -> dict[UnitId, int]:
+        out: dict[UnitId, int] = {}
+        for e in events:
+            if isinstance(e, Healed) and e.source_id == actor.id:
+                out[e.target_id] = out.get(e.target_id, 0) + e.amount
+        return out
+
+    low, high = totals(min_events), totals(max_events)
+    return tuple((uid, low.get(uid, 0), high[uid]) for uid in sorted(high))
+
+
 def preview(state: BattleState, action: Action) -> Preview:
     """預覽 ``action`` 的結果（不修改 ``state``、不消耗亂數）。
 
@@ -340,10 +472,19 @@ def preview(state: BattleState, action: Action) -> Preview:
             cover = half_cover(state, actor, state.units[action.target_id])
     elif isinstance(action, Shove | Trip):
         hit, crit = _maneuver_chance(state, actor, action), Fraction(0)
+    targets: tuple[TargetPreview, ...] = ()
+    healed: tuple[tuple[UnitId, int, int], ...] = ()
+    if isinstance(action, UseSkill):
+        targets = _skill_targets(state, actor, action, min_events, max_events)
+        healed = _skill_heals(actor, min_events, max_events)
     certain = outcomes(min_events)
     certain_set = set(certain)
     possible = [o for o in outcomes(max_events) if o not in certain_set]
     tiles, units = _affected(high.state, max_events)
+    if isinstance(action, UseSkill):
+        area = compute_area(state, actor, state.ruleset.skill_def(action.skill_id), action)
+        tiles = tuple(sorted({*tiles, *area.tiles}, key=lambda p: (p[1], p[0])))
+        units = tuple(sorted({*units, *area.units}))
     return Preview(
         action=action,
         hit_chance=hit,
@@ -359,4 +500,6 @@ def preview(state: BattleState, action: Action) -> Preview:
         max_state=high.state,
         cover=cover,
         notes=_cover_notes(cover),
+        targets=targets,
+        healed=healed,
     )

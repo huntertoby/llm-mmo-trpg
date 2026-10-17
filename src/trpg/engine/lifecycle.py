@@ -90,4 +90,7 @@ def make_unit(
         max_stamina=stamina,
         reactions=tuple(reactions),
         ai_profile=default_ai_profile(template, weapon),
+        mana=template.max_mana,
+        max_mana=template.max_mana,
+        skills=template.skills,
     )

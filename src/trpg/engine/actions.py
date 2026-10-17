@@ -23,12 +23,14 @@ __all__ = [
     "Attack",
     "Decision",
     "Defend",
+    "Direction",
     "EndTurn",
     "Interact",
     "Move",
     "Shove",
     "Step",
     "Trip",
+    "UseSkill",
 ]
 
 
@@ -98,6 +100,30 @@ class Interact(_ActionBase):
     mode: Literal["push"] = "push"
 
 
+type Direction = Literal["north", "east", "south", "west"]
+"""技能的方向（只有東南西北四個；``north`` 為 ``y − 1``）。"""
+
+
+class UseSkill(_ActionBase):
+    """使用技能（Phase 2A）。依形狀的 ``targeting`` 只允許對應的欄位：
+
+    - ``unit``（單體、連鎖）：``target_id`` 或 ``target_object_id`` 恰好一個；
+    - ``tile``（十字、方陣、指定格）：``target_pos``；
+    - ``direction``（直線、錐形）：``direction``；
+    - ``self``／``none``（自身、環形、範圍光環）：都不給。
+
+    是否合法（欄位是否對應形狀、射程、視線、代價）由引擎檢查，不合法時拋出
+    :class:`~trpg.shared.errors.IllegalActionError`。
+    """
+
+    type: Literal["use_skill"] = "use_skill"
+    skill_id: str
+    target_id: UnitId | None = None
+    target_object_id: ObjectId | None = None
+    target_pos: Pos | None = None
+    direction: Direction | None = None
+
+
 class EndTurn(_ActionBase):
     """結束回合。"""
 
@@ -105,7 +131,8 @@ class EndTurn(_ActionBase):
 
 
 type Action = Annotated[
-    Move | Attack | Defend | Shove | Trip | Interact | EndTurn, Field(discriminator="type")
+    Move | Attack | UseSkill | Defend | Shove | Trip | Interact | EndTurn,
+    Field(discriminator="type"),
 ]
 
 ACTION_ADAPTER: TypeAdapter[Action] = TypeAdapter(Action)
@@ -123,7 +150,7 @@ class Decision(BaseModel):
 
 
 type Step = Annotated[
-    Move | Attack | Defend | Shove | Trip | Interact | EndTurn | Decision,
+    Move | Attack | UseSkill | Defend | Shove | Trip | Interact | EndTurn | Decision,
     Field(discriminator="type"),
 ]
 """戰鬥紀錄中的一步：動作（``resolve``）或決定（``resume``）。"""

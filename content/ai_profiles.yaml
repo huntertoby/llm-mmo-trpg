@@ -15,6 +15,7 @@
 #   defend         防禦動作：每名 6 格內的敵人
 #   expose         每名因此離開掩護的敵人（被推離半掩護物件旁，或掩護物被摧毀；取最少與最多後果的平均）
 #   cover_damage   對「緊鄰敵人的半掩護物件」造成的每點傷害
+#   heal           每點實際治療到友方（含自己）的 HP（Phase 2A；取最少與最多後果的平均）
 # 位置價值（行動者在動作後的位置）：
 #   approach       與最近敵人的距離（越近越好）
 #   threat         能直接攻擊到的敵人數
@@ -33,16 +34,16 @@ profiles:
   - id: brute
     name_zh: 莽夫
     description_zh: 重視傷害與接近目標。
-    weights: {damage: 10, kill: 40, friendly_fire: 4, approach: 6, threat: 4, objective: 8, hazard: 8, defend: 1}
+    weights: {damage: 10, kill: 40, friendly_fire: 4, approach: 6, threat: 4, objective: 8, hazard: 8, defend: 1, heal: 4}
   - id: archer
     name_zh: 弓手
     description_zh: 重視距離、高處與視線。
-    weights: {damage: 6, kill: 20, friendly_fire: 8, approach: 1, threat: 10, keep_distance: 40, height: 15, objective: 8, hazard: 10, defend: 1, cover: 12}
+    weights: {damage: 6, kill: 20, friendly_fire: 8, approach: 1, threat: 10, keep_distance: 40, height: 15, objective: 8, hazard: 10, defend: 1, cover: 12, heal: 4}
   - id: cunning
     name_zh: 狡猾
     description_zh: 重視環境擊殺、推擊與表面。
-    weights: {damage: 5, env_damage: 8, kill: 30, env_kill: 120, friendly_fire: 8, push: 15, status: 10, surface: 15, approach: 3, threat: 4, keep_distance: 10, objective: 8, hazard: 12, defend: 1, cover: 6, expose: 35, cover_damage: 1}
+    weights: {damage: 5, env_damage: 8, kill: 30, env_kill: 120, friendly_fire: 8, push: 15, status: 10, surface: 15, approach: 3, threat: 4, keep_distance: 10, objective: 8, hazard: 12, defend: 1, cover: 6, expose: 35, cover_damage: 1, heal: 4}
   - id: guard
     name_zh: 守衛
     description_zh: 重視保護同伴與守點。
-    weights: {damage: 3, kill: 15, friendly_fire: 10, approach: 1, threat: 2, protect: 12, objective: 25, hazard: 8, defend: 6}
+    weights: {damage: 3, kill: 15, friendly_fire: 10, approach: 1, threat: 2, protect: 12, objective: 25, hazard: 8, defend: 6, heal: 10}

@@ -126,7 +126,7 @@ def test_combine_advantage(adv: bool, dis: bool, expected: str) -> None:
 def test_advantage_and_disadvantage_cancel_rolls_one_die(monkeypatch: pytest.MonkeyPatch) -> None:
     """優勢與劣勢同時存在時互相抵消：只擲一顆 d20。"""
     state = with_rolls(_duel(), [(20, 15), (20, 2)])
-    monkeypatch.setattr(combat, "advantage_sources", lambda s, a, t: (True, True))
+    monkeypatch.setattr(combat, "advantage_sources", lambda s, a, t, p=None: (True, True))
     events = resolve(state, Attack(unit_id=U1, target_id=U2)).events
     rolled = next(e for e in events if isinstance(e, AttackRolled))
     assert rolled.rolls == (15,) and rolled.advantage == "none"

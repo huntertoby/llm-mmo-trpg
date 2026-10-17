@@ -38,7 +38,9 @@ from trpg.content.maps import MapDef, SpawnUnitsEvent, check_map
 from trpg.content.rules import CoreRules, HitTable
 from trpg.content.schemas import ContentModel, ElementTable
 from trpg.content.skills import (
+    PrimitiveDef,
     PrimitiveTable,
+    ShapeDef,
     ShapeTable,
     SkillDef,
     SkillTable,
@@ -77,6 +79,8 @@ class Ruleset(ContentModel):
     skills: SkillTable = SkillTable()
 
     _skill_index: dict[str, SkillDef] = PrivateAttr(default_factory=dict)
+    _shape_index: dict[str, ShapeDef] = PrivateAttr(default_factory=dict)
+    _primitive_index: dict[str, PrimitiveDef] = PrivateAttr(default_factory=dict)
     _terrain_index: dict[str, TerrainDef] = PrivateAttr(default_factory=dict)
     _status_index: dict[str, StatusDef] = PrivateAttr(default_factory=dict)
     _reaction_index: dict[str, ReactionDef] = PrivateAttr(default_factory=dict)
@@ -87,6 +91,8 @@ class Ruleset(ContentModel):
         self._status_index = self.statuses.by_id()
         self._reaction_index = self.reactions.by_id()
         self._skill_index = self.skills.by_id()
+        self._shape_index = self.shapes.by_id()
+        self._primitive_index = self.primitives.by_id()
 
     @model_validator(mode="after")
     def _check(self) -> Ruleset:
@@ -137,6 +143,14 @@ class Ruleset(ContentModel):
     def status_def(self, status_id: str) -> StatusDef:
         index: dict[str, StatusDef] = self.__pydantic_private__["_status_index"]  # type: ignore[index]
         return index[status_id]
+
+    def shape_def(self, shape_id: str) -> ShapeDef:
+        index: dict[str, ShapeDef] = self.__pydantic_private__["_shape_index"]  # type: ignore[index]
+        return index[shape_id]
+
+    def primitive_def(self, primitive_id: str) -> PrimitiveDef:
+        index: dict[str, PrimitiveDef] = self.__pydantic_private__["_primitive_index"]  # type: ignore[index]
+        return index[primitive_id]
 
     def skill_def(self, skill_id: str) -> SkillDef:
         """技能定義；找不到時拋出 ``KeyError``。"""

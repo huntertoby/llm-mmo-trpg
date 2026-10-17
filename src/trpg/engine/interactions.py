@@ -387,7 +387,11 @@ def _on_explosion(ctx: Ctx, event: EventBase, depth: int) -> list[EffectBase]:
 @register_trigger("element_touched")
 def _on_touch(ctx: Ctx, event: EventBase, depth: int) -> list[EffectBase]:
     assert isinstance(event, ElementTouched)
-    categories: tuple[Category, ...] = ("object",) if event.objects_only else ALL_CATEGORIES
+    categories: tuple[Category, ...] = ALL_CATEGORIES
+    if event.objects_only:
+        categories = ("object",)
+    elif event.tile_only:
+        categories = TILE_CATEGORIES
     return touch_outcomes(
         ctx,
         event.element,

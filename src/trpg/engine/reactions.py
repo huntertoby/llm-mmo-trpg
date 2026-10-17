@@ -113,10 +113,15 @@ def _try(
     return None
 
 
-def block_multiplier(ctx: Ctx, attacker: UnitState, target: UnitState) -> int:
-    """命中後、傷害前：目標的格擋類反應。回傳傷害倍率（‰，沒有格擋時 1000）。"""
+def block_multiplier(
+    ctx: Ctx, attacker: UnitState, target: UnitState, melee: bool | None = None
+) -> int:
+    """命中後、傷害前：目標的格擋類反應。回傳傷害倍率（‰，沒有格擋時 1000）。
+
+    ``melee``：這次攻擊是否算近戰（技能傳入；省略時看攻擊者的武器）。
+    """
     events: tuple[str, ...] = ("targeted_by_attack",)
-    if is_melee_attack(ctx, attacker):
+    if is_melee_attack(ctx, attacker) if melee is None else melee:
         events = ("targeted_by_melee", "targeted_by_attack")
     definition = _try(ctx, target, events, "reduce_damage", attacker)
     if definition is None:

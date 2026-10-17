@@ -12,7 +12,7 @@ ap_cost: 1
 scaling_attr: dex
 shape: {type: self}
 effects:
-  - {type: apply_status, status: concealed, duration: 2}
+  - {type: apply_status, status: concealed, duration: 2, affects: self}
 condition: null
 cost: {mana: 3, cooldown: 4}
 tags: [stealth, utility]
