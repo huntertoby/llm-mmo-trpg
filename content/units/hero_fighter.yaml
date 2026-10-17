@@ -5,7 +5,7 @@
 id: hero_fighter
 name_zh: 戰士
 attributes: {str: 16, dex: 12, con: 14, int: 10, wis: 10, wil: 10}
-max_hp: 34
+max_hp: 60
 speed: 5
 armor_bonus: 4
 weapon: one_handed_sword

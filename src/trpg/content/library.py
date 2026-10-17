@@ -9,7 +9,7 @@ from __future__ import annotations
 from dataclasses import dataclass, field
 from pathlib import Path
 
-from pydantic import model_validator
+from pydantic import PrivateAttr, model_validator
 
 from trpg.content.battle import (
     StatusDef,
@@ -45,6 +45,14 @@ class Ruleset(ContentModel):
     terrain: TerrainTable
     statuses: StatusTable
 
+    _terrain_index: dict[str, TerrainDef] = PrivateAttr(default_factory=dict)
+    _status_index: dict[str, StatusDef] = PrivateAttr(default_factory=dict)
+
+    def model_post_init(self, context: object, /) -> None:
+        # 查表索引（不屬於資料本身，不參與序列化與相等比較）
+        self._terrain_index = self.terrain.by_id()
+        self._status_index = self.statuses.by_id()
+
     @model_validator(mode="after")
     def _check(self) -> Ruleset:
         if (self.hit_table.slope, self.hit_table.cap) != (
@@ -62,16 +70,10 @@ class Ruleset(ContentModel):
         return self
 
     def terrain_def(self, terrain_id: str) -> TerrainDef:
-        for t in self.terrain.terrain:
-            if t.id == terrain_id:
-                return t
-        raise KeyError(terrain_id)
+        return self._terrain_index[terrain_id]
 
     def status_def(self, status_id: str) -> StatusDef:
-        for s in self.statuses.statuses:
-            if s.id == status_id:
-                return s
-        raise KeyError(status_id)
+        return self._status_index[status_id]
 
 
 @dataclass(frozen=True)
