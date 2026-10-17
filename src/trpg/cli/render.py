@@ -8,40 +8,65 @@ from __future__ import annotations
 import string
 from dataclasses import dataclass, field
 
-from trpg.content.battle import TerrainDef
-from trpg.content.maps import MapDef
+from trpg.content.library import Ruleset
+from trpg.content.maps import MapDef, SpawnUnitsEvent
+from trpg.engine.environment import Telegraph
 from trpg.engine.events import (
     AttackRolled,
     BattleEnded,
     BattleStarted,
     ChainLimitReached,
+    CheckRolled,
     DamageDealt,
+    EffectFizzled,
+    ElementTouched,
     EnteredDeadlyTerrain,
+    EnvironmentEnded,
+    EnvironmentStarted,
     EventBase,
     Healed,
     InitiativeRolled,
     InitiativeTieBroken,
+    ManeuverRolled,
+    MapEventTriggered,
     MoveBlocked,
+    ObjectAttacked,
+    ObjectCreated,
+    ObjectDamaged,
+    ObjectDestroyed,
+    ObjectExploded,
+    ObjectIgnited,
+    ObjectMoved,
+    PushResisted,
+    ReactionDeclined,
+    ReactionTriggered,
     RoundEnded,
     RoundStarted,
     StatusApplied,
     StatusRemoved,
+    SurfaceChanged,
+    SurfaceEntered,
+    TerrainChanged,
     TurnEnded,
     TurnOrderSet,
     TurnStarted,
     UnitDowned,
+    UnitEscaped,
     UnitFell,
     UnitMoved,
+    UnitSpawned,
     UnitStoodUp,
 )
+from trpg.engine.rules.combat import is_concealed
 from trpg.engine.state import BattleState, UnitState
-from trpg.shared.types import Pos, Team
+from trpg.shared.types import Pos, Surface, Team
 
 __all__ = [
     "BattleStats",
     "describe_event",
     "render_battle_grid",
     "render_map",
+    "render_telegraph",
     "render_unit_table",
     "unit_markers",
 ]
@@ -56,6 +81,29 @@ _CAUSE_NAMES = {
     "deadly_terrain": "致命地形",
     "status": "持續",
     "effect": "",
+    "explosion": "爆炸",
+    "conduct": "傳導",
+    "surface": "表面",
+}
+
+_END_REASONS = {
+    "eliminate": "全滅",
+    "escaped": "撤離成功",
+    "escape_failed": "撤離超時",
+    "defended": "守住守點",
+    "point_lost": "守點失守",
+    "round_limit": "輪數上限",
+}
+
+_OBJECTIVES = {"eliminate": "擊倒所有敵人", "escape": "撤離", "defend": "守點"}
+
+_DESTROY_CAUSES = {
+    "damage": "被摧毀",
+    "burned": "燒毀",
+    "explosion": "炸毀",
+    "filled": "被填平",
+    "fell": "掉落深處",
+    "effect": "被摧毀",
 }
 
 
@@ -67,13 +115,22 @@ def _header(width: int) -> str:
     return "    " + "".join(f"{x:<3}" for x in range(width)).rstrip()
 
 
-def render_map(map_def: MapDef, terrain: dict[str, TerrainDef]) -> str:
-    """``trpg map show``：每格顯示「高度 ＋ 地形字元」。
+def _surface_glyphs(ruleset: Ruleset) -> dict[Surface, str]:
+    return {sd.id: sd.glyph for sd in ruleset.surfaces.surfaces}
+
+
+def render_map(map_def: MapDef, ruleset: Ruleset) -> str:
+    """``trpg map show``：每格顯示「高度 ＋ 地形或物件字元 ＋ 表面字元」。
 
     起始區以 ``a``（我方）／``e``（敵方）標示。
     """
+    terrain = ruleset.terrain.by_id()
+    objects = ruleset.objects.by_id()
     zones = {cell: "a" for cell in map_def.start_zones[Team.ALLY]}
     zones.update({cell: "e" for cell in map_def.start_zones[Team.ENEMY]})
+    placed = {o.at: objects[o.kind].glyph for o in map_def.objects}
+    surf_glyph = _surface_glyphs(ruleset)
+    surfaces = {s.at: surf_glyph[s.surface] for s in map_def.surfaces}
     grid = map_def.grid()
     lines = [
         f"{map_def.name_zh}（{map_def.id}，{map_def.width}×{map_def.height}）",
@@ -82,16 +139,46 @@ def render_map(map_def: MapDef, terrain: dict[str, TerrainDef]) -> str:
     for y, row in enumerate(grid):
         cells = []
         for x, (h, tid) in enumerate(row):
-            mark = zones.get((x, y), terrain[tid].glyph)
-            cells.append(f"{h}{mark}")
-        lines.append(f"{y:>2}  " + " ".join(cells))
+            mark = zones.get((x, y), placed.get((x, y), terrain[tid].glyph))
+            cells.append(f"{h}{mark}{surfaces.get((x, y), ' ')}")
+        lines.append(f"{y:>2}  " + " ".join(cells).rstrip())
     used = sorted({tid for row in grid for _, tid in row})
     legend = "、".join(f"{terrain[t].glyph} {terrain[t].name_zh}" for t in used)
     lines.append("")
     lines.append("圖例：數字為高度（0–3）；" + legend + "；a 我方起始區、e 敵方起始區")
-    if map_def.objects:
-        lines.append("物件：" + "、".join(f"{o.kind} {list(o.at)}" for o in map_def.objects))
+    kinds = sorted({o.kind for o in map_def.objects})
+    if kinds:
+        lines.append(
+            "物件：" + "、".join(f"{objects[k].glyph} {objects[k].name_zh}" for k in kinds)
+        )
+    used_surfaces = sorted({s.surface for s in map_def.surfaces})
+    if used_surfaces:
+        lines.append(
+            "表面（第三個字元）："
+            + "、".join(f"{surf_glyph[s]} {ruleset.surface_def(s).name_zh}" for s in used_surfaces)
+        )
+    lines.append(
+        f"勝利條件：{_objective_text(map_def)}；天氣：{map_def.weather}"
+        + (
+            f"；預設陣容：我方 {','.join(map_def.encounter.allies)}、"
+            f"敵方 {','.join(map_def.encounter.enemies)}"
+            if map_def.encounter
+            else ""
+        )
+    )
+    for event in map_def.events:
+        what = "援軍" if isinstance(event, SpawnUnitsEvent) else "地形變化"
+        lines.append(f"地圖事件：第 {event.round} 輪結束時 {what}")
     return "\n".join(lines)
+
+
+def _objective_text(map_def: MapDef) -> str:
+    o = map_def.objective
+    text = _OBJECTIVES[o.kind]
+    if o.kind != "eliminate":
+        tiles = "、".join(f"({x}, {y})" for x, y in o.tiles)
+        text += f"（{o.rounds} 輪內，格子 {tiles}）"
+    return text
 
 
 def unit_markers(state: BattleState) -> dict[str, str]:
@@ -107,28 +194,54 @@ def unit_markers(state: BattleState) -> dict[str, str]:
 
 
 def render_battle_grid(state: BattleState) -> str:
+    """戰場網格：每格「高度 ＋ 單位／物件／地形字元 ＋ 表面字元」。"""
     markers = unit_markers(state)
     occupancy = state.occupancy()
+    surf_glyph = _surface_glyphs(state.ruleset)
     lines = [_header(state.width)]
     for y in range(state.height):
         cells = []
         for x in range(state.width):
             tile = state.tile(x, y)
             unit = occupancy.get((x, y))
-            mark = markers[unit.id] if unit else state.ruleset.terrain_def(tile.terrain).glyph
-            cells.append(f"{tile.height}{mark}")
-        lines.append(f"{y:>2}  " + " ".join(cells))
+            obj = state.object_at(x, y)
+            if unit is not None:
+                mark = markers[unit.id]
+            elif obj is not None:
+                mark = state.object_def(obj).glyph
+            else:
+                mark = state.ruleset.terrain_def(tile.terrain).glyph
+            surface = surf_glyph[tile.surface] if tile.surface is not Surface.NONE else " "
+            cells.append(f"{tile.height}{mark}{surface}")
+        lines.append(f"{y:>2}  " + " ".join(cells).rstrip())
     return "\n".join(lines)
 
 
+def render_legend(state: BattleState) -> str:
+    """戰場上出現的物件與表面的圖例。"""
+    kinds = sorted({o.kind for o in state.objects_sorted()})
+    surfaces = sorted(
+        {state.tile(x, y).surface for y in range(state.height) for x in range(state.width)}
+        - {Surface.NONE}
+    )
+    parts = [
+        f"{state.ruleset.object_def(k).glyph} {state.ruleset.object_def(k).name_zh}" for k in kinds
+    ]
+    parts += [
+        f"{state.ruleset.surface_def(s).glyph} {state.ruleset.surface_def(s).name_zh}（表面）"
+        for s in surfaces
+    ]
+    return ("  圖例：" + "、".join(parts)) if parts else ""
+
+
 def _status_text(state: BattleState, unit: UnitState) -> str:
-    if not unit.statuses:
-        return ""
     parts = []
     for s in unit.statuses:
         name = state.ruleset.status_def(s.status_id).name_zh
         parts.append(name if s.remaining is None else f"{name}{s.remaining}")
-    return "［" + "、".join(parts) + "］"
+    if not unit.has_status("concealed") and is_concealed(state, unit):
+        parts.append("隱蔽")
+    return ("［" + "、".join(parts) + "］") if parts else ""
 
 
 def render_unit_table(state: BattleState) -> str:
@@ -136,12 +249,14 @@ def render_unit_table(state: BattleState) -> str:
     lines = []
     for unit in state.units_sorted():
         team = unit.team.display_name
-        if unit.downed:
-            lines.append(f"  {markers[unit.id]} {team} {unit.name_zh}：倒下")
+        if unit.downed or unit.escaped:
+            what = "倒下" if unit.downed else "已撤離"
+            lines.append(f"  {markers[unit.id]} {team} {unit.name_zh}：{what}")
             continue
         lines.append(
             f"  {markers[unit.id]} {team} {unit.name_zh}：HP {unit.hp}/{unit.max_hp}"
-            f" 位置 {_xy(unit.pos)} 武器 {unit.weapon.name_zh}{_status_text(state, unit)}"
+            f" 耐力 {unit.stamina} 位置 {_xy(unit.pos)} 武器 {unit.weapon.name_zh}"
+            f"{_status_text(state, unit)}"
         )
     return "\n".join(lines)
 
@@ -177,10 +292,16 @@ def _damage_text(e: DamageDealt, name: dict[str, str]) -> str:
     kind = f"{cause}{element}" if cause and e.cause != "status" else element
     if e.cause in ("fall", "deadly_terrain"):
         kind = cause
+    elif e.cause in ("explosion", "conduct", "surface"):
+        kind = f"{cause}{element}"
     rolls = f"［骰 {'+'.join(str(r) for r in e.rolls)}］" if e.rolls else ""
     mod = ""
     if e.element_mod_ppm != _PPM:
         mod = f"（元素修正 ×{e.element_mod_ppm / _PPM:g}）"
+    if e.weather_permille != 1000:  # noqa: PLR2004
+        mod += f"（天氣 ×{e.weather_permille / 1000:g}）"
+    if e.multiplier_permille != 1000:  # noqa: PLR2004
+        mod += f"（格擋 ×{e.multiplier_permille / 1000:g}）"
     return (
         f"{name[e.target_id]} 受到 {e.amount} 點{kind}傷害{rolls}{mod}"
         f"，HP {e.hp_before} → {e.hp_after}"
@@ -243,8 +364,133 @@ def describe_event(e: EventBase, state: BattleState) -> str | None:  # noqa: PLR
     if isinstance(e, BattleEnded):
         if e.winner is None:
             return "戰鬥結束：達到輪數上限，平手" if e.reason == "round_limit" else "戰鬥結束：平手"
-        return f"戰鬥結束：{e.winner.display_name}勝利（全滅）"
+        return f"戰鬥結束：{e.winner.display_name}勝利（{_END_REASONS[e.reason]}）"
+    return _describe_environment(e, state, name, statuses)
+
+
+def _obj_name(state: BattleState, object_id: str) -> str:
+    obj = state.objects.get(object_id)  # type: ignore[call-overload]
+    return "物件" if obj is None else state.ruleset.object_def(obj.kind).name_zh
+
+
+def _surface_name(state: BattleState, surface: Surface) -> str:
+    return "無" if surface is Surface.NONE else state.ruleset.surface_def(surface).name_zh
+
+
+def _describe_environment(  # noqa: PLR0911, PLR0912
+    e: EventBase, state: BattleState, name: dict[str, str], statuses: dict[str, str]
+) -> str | None:
+    """Phase 1B 的事件（物件、表面、反應、環境回合……）。"""
+    if isinstance(e, EnvironmentStarted):
+        return "～ 環境回合 ～"
+    if isinstance(e, EnvironmentEnded | ElementTouched | SurfaceEntered):
+        return None
+    if isinstance(e, ObjectAttacked):
+        target = _obj_name(state, e.object_id) + _xy_of(state, e.object_id)
+        return f"  {name[e.attacker_id]} 攻擊 {target}"
+    if isinstance(e, ObjectDamaged):
+        rolls = f"［骰 {'+'.join(str(r) for r in e.rolls)}］" if e.rolls else ""
+        return (
+            f"    {_obj_name(state, e.object_id)} 受到 {e.amount} 點{e.element.display_name}傷害"
+            f"{rolls}，HP {e.hp_before} → {e.hp_after}"
+        )
+    if isinstance(e, ObjectDestroyed):
+        return f"  ＊ {_obj_name(state, e.object_id)} {_xy(e.pos)} {_DESTROY_CAUSES[e.cause]}！"
+    if isinstance(e, ObjectExploded):
+        return f"  ＊ {_obj_name(state, e.object_id)} {_xy(e.pos)} 爆炸了！"
+    if isinstance(e, ObjectIgnited):
+        return (
+            f"  {_obj_name(state, e.object_id)} {_xy(e.pos)} 著火了（{e.rounds} 次環境回合後燒毀）"
+        )
+    if isinstance(e, ObjectMoved):
+        return f"  {_obj_name(state, e.object_id)} 被推到 {_xy(e.to_pos)}"
+    if isinstance(e, ObjectCreated):
+        return f"  {_xy(e.pos)} 出現了{state.ruleset.object_def(e.kind).name_zh}"
+    if isinstance(e, SurfaceChanged):
+        before, after = _surface_name(state, e.before), _surface_name(state, e.after)
+        if e.after is Surface.NONE:
+            return f"  {_xy(e.pos)} 的{before}消失了"
+        if e.before is Surface.NONE:
+            return f"  {_xy(e.pos)} 出現了{after}"
+        return f"  {_xy(e.pos)} 的{before}變成了{after}"
+    if isinstance(e, TerrainChanged):
+        if e.terrain_before != e.terrain_after:
+            t = state.ruleset.terrain_def(e.terrain_after).name_zh
+            return f"  {_xy(e.pos)} 變成了{t}"
+        return f"  {_xy(e.pos)} 的高度 {e.height_before} → {e.height_after}"
+    if isinstance(e, CheckRolled):
+        verdict = "通過" if e.success else "失敗"
+        return (
+            f"  {name[e.unit_id]} {e.attr.display_name}檢定：d20={e.roll} "
+            f"{_signed(e.modifier)} = {e.total}（DC {e.dc}）→ {verdict}"
+        )
+    if isinstance(e, ManeuverRolled):
+        kind = "推擊" if e.maneuver == "shove" else "絆倒"
+        verdict = "成功" if e.success else "失敗"
+        return (
+            f"  {name[e.attacker_id]} 對 {name[e.target_id]} 使出{kind}：d20={e.natural} "
+            f"修正 {_signed(e.modifier)} 熟練 {_signed(e.proficiency)} = {e.total}"
+            f"（目標 {e.target_number}）→ {verdict}"
+        )
+    if isinstance(e, PushResisted):
+        return f"  {name[e.unit_id]} 穩如泰山：推擊距離 {e.requested} → {e.distance}"
+    if isinstance(e, ReactionTriggered):
+        reaction = state.ruleset.reaction_def(e.reaction).name_zh
+        cost = f"（耐力 −{e.stamina_spent}）" if e.stamina_spent else ""
+        return f"  ⟳ {name[e.unit_id]} 反應：{reaction}{cost}"
+    if isinstance(e, ReactionDeclined):
+        reaction = state.ruleset.reaction_def(e.reaction).name_zh
+        return f"  {name[e.unit_id]} 放棄反應：{reaction}"
+    if isinstance(e, MapEventTriggered):
+        return "  地圖事件：" + ("援軍出現！" if e.kind == "spawn_units" else "地形改變！")
+    if isinstance(e, UnitSpawned):
+        return f"  {name.get(e.unit_id, e.unit_id)} 出現在 {_xy(e.pos)}"
+    if isinstance(e, UnitEscaped):
+        return f"  {name[e.unit_id]} 從 {_xy(e.pos)} 撤離戰場"
+    if isinstance(e, EffectFizzled):
+        return None
     return None  # pragma: no cover - 新事件類型尚未有中文描述
+
+
+def _xy_of(state: BattleState, object_id: str) -> str:
+    obj = state.objects.get(object_id)  # type: ignore[call-overload]
+    return "" if obj is None else " " + _xy(obj.pos)
+
+
+def render_telegraph(state: BattleState, forecast: Telegraph) -> str:
+    """環境預告（每輪開始時顯示）：本輪結束時環境回合將發生的變化。"""
+    lines: list[str] = []
+    name = {uid: u.name_zh for uid, u in state.units.items()}
+    exploded = {c.object_id for c in forecast.changes if c.kind == "object_exploded"}
+    for c in forecast.changes:
+        if c.kind == "object_destroyed" and c.object_id in exploded:
+            continue
+        where = f"({c.pos.x}, {c.pos.y})" if c.pos is not None else ""
+        if c.kind == "surface" and c.after is not None and c.before is not None:
+            after = _surface_name(state, Surface(c.after))
+            before = _surface_name(state, Surface(c.before))
+            lines.append(f"{where} {before}→{after}")
+        elif c.kind == "object_destroyed" and c.object_id is not None:
+            lines.append(f"{where} {_obj_name(state, c.object_id)}將會倒塌")
+        elif c.kind == "object_exploded" and c.object_id is not None:
+            lines.append(f"{where} {_obj_name(state, c.object_id)}將會爆炸")
+        elif c.kind == "object_ignited" and c.object_id is not None:
+            lines.append(f"{where} {_obj_name(state, c.object_id)}將會著火")
+        elif c.kind == "terrain":
+            lines.append(f"{where} 地形改變")
+        elif c.kind == "unit_spawned":
+            lines.append(f"{where} 援軍出現")
+        elif c.kind == "unit_downed" and c.unit_id is not None:
+            lines.append(f"{name.get(c.unit_id, c.unit_id)} 將會倒下")
+    for oid, rounds in forecast.burning:
+        lines.append(f"{_obj_name(state, oid)}還能撐 {rounds} 次環境回合")
+    for event in forecast.upcoming:
+        what = "援軍" if isinstance(event, SpawnUnitsEvent) else "地形變化"
+        lines.append(f"下一輪結束時：{what}")
+    if not lines:
+        return ""
+    unique = list(dict.fromkeys(lines))
+    return "  環境預告：" + "；".join(unique)
 
 
 @dataclass

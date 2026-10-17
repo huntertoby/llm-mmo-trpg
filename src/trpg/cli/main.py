@@ -7,8 +7,9 @@
   （未給 ``--sides`` 時印 ``next_u32()``，給了則印擲骰結果）。
 - ``trpg content check``：載入並驗證 ``content/`` 下目前所有已知資料檔。
 - ``trpg map show <map_id>``：以文字網格印出地圖。
-- ``trpg battle --map <map_id> --seed <n> [--rounds-max 30] [--log-json <path>]``：
-  雙方由簡易 AI 自動對戰，印出每輪戰場與繁體中文戰鬥紀錄。
+- ``trpg battle --map <map_id> --seed <n> [--rounds-max 30] [--log-json <path>]
+  [--ai utility|simple] [--weather <id>] [--deploy x,y;x,y] [--allies ...] [--enemies ...]``：
+  雙方由效用 AI（預設）自動對戰，印出每輪戰場、環境預告與繁體中文戰鬥紀錄。
 - ``trpg battle replay <path>``：讀取 ``--log-json`` 的輸出，重播並驗證最終狀態一致。
 """
 
@@ -20,7 +21,7 @@ from collections.abc import Callable
 from pathlib import Path
 
 from trpg import __version__
-from trpg.cli.battle import DEFAULT_ALLIES, DEFAULT_ENEMIES, cmd_battle, cmd_map_show, cmd_replay
+from trpg.cli.battle import cmd_battle, cmd_map_show, cmd_replay
 from trpg.content.library import ContentLibrary, load_library
 from trpg.content.loader import default_content_dir
 from trpg.content.registry import load_all_content
@@ -73,8 +74,8 @@ def build_parser() -> argparse.ArgumentParser:
 
     battle = commands.add_parser(
         "battle",
-        help="雙方由簡易 AI 自動對戰（或 battle replay 重播紀錄）",
-        description="雙方由簡易 AI 自動對戰。另有子命令：trpg battle replay <path>",
+        help="雙方由 AI 自動對戰（或 battle replay 重播紀錄）",
+        description="雙方由 AI 自動對戰。另有子命令：trpg battle replay <path>",
     )
     battle.add_argument("--map", dest="map_id", help="地圖 ID")
     battle.add_argument("--seed", type=_non_negative_int, help="種子（0 <= seed < 2**64）")
@@ -83,13 +84,22 @@ def build_parser() -> argparse.ArgumentParser:
     )
     battle.add_argument(
         "--allies",
-        default=",".join(DEFAULT_ALLIES),
-        help=f"我方單位範本，以逗號分隔（預設 {','.join(DEFAULT_ALLIES)}）",
+        default=None,
+        help="我方單位範本，以逗號分隔（預設為地圖的 encounter，沒有時為戰士、弓手、法師）",
     )
     battle.add_argument(
         "--enemies",
-        default=",".join(DEFAULT_ENEMIES),
-        help=f"敵方單位範本，以逗號分隔（預設 {','.join(DEFAULT_ENEMIES)}）",
+        default=None,
+        help="敵方單位範本，以逗號分隔（預設為地圖的 encounter，沒有時為盜賊、盜賊弓手、盜賊頭目）",
+    )
+    battle.add_argument(
+        "--ai", choices=("utility", "simple"), default="utility", help="AI（預設 utility 效用 AI）"
+    )
+    battle.add_argument("--weather", default=None, help="天氣 ID（預設為地圖的天氣）")
+    battle.add_argument(
+        "--deploy",
+        default=None,
+        help="部署：我方單位依序的起始位置，例如 0,6;1,7（必須在起始區內）",
     )
     battle.add_argument("--log-json", type=Path, default=None, help="輸出動作列表與事件 JSON")
     battle_commands = battle.add_subparsers(dest="battle_command", metavar="<subcommand>")
@@ -153,10 +163,21 @@ def _battle(parser: argparse.ArgumentParser, args: argparse.Namespace) -> int:
     if args.seed > MASK64:
         print(f"錯誤：seed 必須 < 2**64，收到 {args.seed}", file=sys.stderr)
         return 2
-    allies, enemies = _split(args.allies), _split(args.enemies)
-    if not allies or not enemies:
+    allies = None if args.allies is None else _split(args.allies)
+    enemies = None if args.enemies is None else _split(args.enemies)
+    if allies == [] or enemies == []:
         print("錯誤：雙方都至少要有一個單位", file=sys.stderr)
         return 2
+    deploy: list[tuple[int, int]] | None = None
+    if args.deploy:
+        try:
+            deploy = [
+                (int(a), int(b))
+                for a, b in (part.split(",") for part in args.deploy.split(";") if part.strip())
+            ]
+        except ValueError:
+            print(f"錯誤：--deploy 格式應為 x,y;x,y，收到 {args.deploy!r}", file=sys.stderr)
+            return 2
     return _with_library(
         lambda lib: cmd_battle(
             lib,
@@ -167,6 +188,9 @@ def _battle(parser: argparse.ArgumentParser, args: argparse.Namespace) -> int:
             enemies=enemies,
             log_json=args.log_json,
             out=sys.stdout,
+            ai=args.ai,
+            weather=args.weather,
+            deploy=deploy,
         )
     )
 

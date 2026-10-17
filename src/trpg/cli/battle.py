@@ -12,18 +12,31 @@ from trpg.cli.render import (
     BattleStats,
     describe_event,
     render_battle_grid,
+    render_legend,
     render_map,
+    render_telegraph,
     render_unit_table,
 )
 from trpg.content.library import ContentLibrary
 from trpg.engine.actions import Move, Step
+from trpg.engine.ai import Policy
+from trpg.engine.ai.simple import choose_action
+from trpg.engine.ai.utility import UtilityAI
+from trpg.engine.environment import telegraph
 from trpg.engine.events import EVENT_LIST_ADAPTER, EventBase, RoundStarted, UnitMoved
 from trpg.engine.results import ResolveResult
 from trpg.engine.runner import LOG_FORMAT, BattleLog, replay, run_battle
-from trpg.engine.setup import build_setup
+from trpg.engine.setup import BattleSetupError, build_setup, deploy_allies
 from trpg.engine.state import BattleState, state_to_json
 
-__all__ = ["DEFAULT_ALLIES", "DEFAULT_ENEMIES", "cmd_battle", "cmd_map_show", "cmd_replay"]
+__all__ = [
+    "DEFAULT_ALLIES",
+    "DEFAULT_ENEMIES",
+    "cmd_battle",
+    "cmd_map_show",
+    "cmd_replay",
+    "default_lineup",
+]
 
 DEFAULT_ALLIES = ("hero_fighter", "hero_archer", "hero_mage")
 DEFAULT_ENEMIES = ("bandit", "bandit_archer", "bandit_boss")
@@ -31,7 +44,7 @@ DEFAULT_ENEMIES = ("bandit", "bandit_archer", "bandit_boss")
 
 def cmd_map_show(library: ContentLibrary, map_id: str, out: TextIO) -> int:
     map_def = library.map(map_id)
-    print(render_map(map_def, library.ruleset.terrain.by_id()), file=out)
+    print(render_map(map_def, library.ruleset), file=out)
     return 0
 
 
@@ -62,7 +75,13 @@ class _Printer:
             if isinstance(event, RoundStarted):
                 print(f"\n=== 第 {event.round} 輪 ===", file=self.out)
                 print(render_battle_grid(state), file=self.out)
+                legend = render_legend(state)
+                if legend:
+                    print(legend, file=self.out)
                 print(render_unit_table(state), file=self.out)
+                forecast = render_telegraph(state, telegraph(state))
+                if forecast:
+                    print(forecast, file=self.out)
                 print("", file=self.out)
                 continue
             if isinstance(event, UnitMoved) and event.mode == "walk":
@@ -77,19 +96,48 @@ class _Printer:
                 print(text, file=self.out)
 
 
+def default_lineup(library: ContentLibrary, map_id: str) -> tuple[list[str], list[str]]:
+    """地圖的預設陣容（``encounter``）。
+
+    沒有時使用 :data:`DEFAULT_ALLIES`／:data:`DEFAULT_ENEMIES`。
+    """
+    encounter = library.map(map_id).encounter
+    if encounter is None:
+        return list(DEFAULT_ALLIES), list(DEFAULT_ENEMIES)
+    return list(encounter.allies), list(encounter.enemies)
+
+
 def cmd_battle(
     library: ContentLibrary,
     *,
     map_id: str,
     seed: int,
     rounds_max: int,
-    allies: list[str],
-    enemies: list[str],
+    allies: list[str] | None,
+    enemies: list[str] | None,
     log_json: Path | None,
     out: TextIO,
+    ai: str = "utility",
+    weather: str | None = None,
+    deploy: list[tuple[int, int]] | None = None,
 ) -> int:
-    setup = build_setup(library, map_id, allies, enemies, max_rounds=rounds_max)
-    run = run_battle(setup, seed, on_step=_Printer(out))
+    default_allies, default_enemies = default_lineup(library, map_id)
+    setup = build_setup(
+        library,
+        map_id,
+        allies or default_allies,
+        enemies or default_enemies,
+        max_rounds=rounds_max,
+        weather=weather,
+    )
+    if deploy:
+        try:
+            setup = deploy_allies(setup, deploy)
+        except BattleSetupError as exc:
+            print(f"錯誤：{exc}", file=sys.stderr)
+            return 2
+    policy: Policy = UtilityAI(library.ai_profiles) if ai == "utility" else choose_action
+    run = run_battle(setup, seed, policy, on_step=_Printer(out))
     state = run.state
     print("\n=== 結算 ===", file=out)
     print(render_battle_grid(state), file=out)
