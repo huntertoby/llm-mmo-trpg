@@ -1,0 +1,26 @@
+# 狀態表（docs/phases/Phase1計畫.md 4.5）。
+# 欄位：id、name_zh、description_zh、duration（預設持續回合；省略表示不倒數）、
+#       expires（turn_end：帶有者回合結束時 −1，歸零移除；own_turn_start：帶有者下回合開始時移除；
+#                never：只能由效果或動作移除）、stacking（refresh：重複施加時刷新持續時間，不疊加）、
+#       on_turn_start_damage（回合開始時的持續傷害：dice、element）。
+# 數值型的規則效果（防禦 +25%、倒地站起的移動消耗）放在 rules/core.yaml。
+statuses:
+  - id: defending
+    name_zh: 防禦
+    description_zh: 防禦值 +25%，持續到自己的下回合開始。
+    expires: own_turn_start
+    stacking: refresh
+  - id: prone
+    name_zh: 倒地
+    description_zh: 移動前要先站起來（消耗一半移動點數）；近戰攻擊倒地者有優勢，遠程攻擊有劣勢。
+    expires: never
+    stacking: refresh
+  - id: burning
+    name_zh: 燃燒
+    description_zh: 回合開始時受到 1d6 火焰傷害，持續 2 回合；重複施加時刷新持續時間。
+    duration: 2
+    expires: turn_end
+    stacking: refresh
+    on_turn_start_damage:
+      dice: 1d6
+      element: fire

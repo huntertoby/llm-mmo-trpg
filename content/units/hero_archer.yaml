@@ -1,0 +1,10 @@
+id: hero_archer
+name_zh: 弓手
+attributes: {str: 10, dex: 16, con: 12, int: 10, wis: 12, wil: 10}
+max_hp: 26
+speed: 5
+armor_bonus: 2
+weapon: bow
+resist: {}
+element_mods: {}
+tags: [hero]

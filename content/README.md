@@ -13,6 +13,13 @@
 | 檔案 | 內容 | 階段 |
 |---|---|---|
 | `elements.yaml` | 9 種元素的中文名稱、說明與抗性分組（每個元素恰好一筆） | Phase 0、1A |
+| `rules/core.yaml` | 核心戰鬥規則數值（AP、命中、傷害、墜落、連鎖深度……） | Phase 1A |
+| `rules/hit_table.yaml` | 命中修正整數門檻表（由 `scripts/gen_hit_table.py` 產生，勿手改） | Phase 1A |
+| `terrain.yaml` | 地形（可否行走、致命、顯示字元） | Phase 1A |
+| `weapons.yaml` | 武器 | Phase 1A |
+| `statuses.yaml` | 狀態（防禦、倒地、燃燒） | Phase 1A |
+| `units/` | 單位範本（一檔一個，檔名 = id） | Phase 1A |
+| `maps/` | 地圖（一檔一張，檔名 = id；格式見 `docs/phases/Phase1計畫.md` 5.2） | Phase 1A |
 
 ## 未來的子資料夾規劃
 
@@ -23,7 +30,7 @@
 | `skeletons/` | 技能骨架：規定技能結構與預算分配 | Phase 2 | 第 6 節 |
 | `objects/` | 格子物件與標籤（木橋、油桶、石柱、水窪……） | Phase 1 | 第 5.1 節 |
 | `interactions/` | 元素 × 標籤／表面互動表 | Phase 1 | 第 5.1 節 |
-| `maps/` | 地圖類型與手工地圖模板 | Phase 1–2 | 第 5.1 節 |
+| `maps/`（已建立） | 地圖類型與手工地圖模板 | Phase 1–2 | 第 5.1 節 |
 | `marks/` | 印記的觸發條件（由事件日誌統計） | Phase 3–4 | 第 7 節 |
 | `resonance/` | 裝備共鳴效果 | Phase 5 | 第 8 節 |
 | `affixes/` | 裝備詞條（四類，含技能強化詞條） | Phase 5 | 第 8 節 |

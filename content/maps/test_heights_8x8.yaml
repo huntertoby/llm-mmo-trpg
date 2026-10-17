@@ -1,0 +1,30 @@
+# 測試地圖：中央高台與深淵。格式見 docs/phases/Phase1計畫.md 5.2。
+id: test_heights_8x8
+name_zh: 測試高台
+size: [8, 8]
+heights: |        # 每個字元一格，0–3
+  00000000
+  00111100
+  00122100
+  00122100
+  00111100
+  00000000
+  00000000
+  00000000
+terrain: |        # 圖例見 legend
+  ........
+  ........
+  ...xx...
+  ........
+  ........
+  ........
+  ........
+  ........
+legend:
+  ".": stone
+  "x": chasm
+objects: []        # Phase 1B 使用：[{ at: [3, 4], kind: oil_barrel }]
+surfaces: []       # Phase 1B 使用
+start_zones:
+  ally: [[0, 6], [1, 6], [0, 7], [1, 7]]
+  enemy: [[6, 0], [7, 0], [6, 1], [7, 1]]

@@ -1,0 +1,10 @@
+id: bandit_boss
+name_zh: 盜賊頭目
+attributes: {str: 16, dex: 10, con: 16, int: 10, wis: 10, wil: 12}
+max_hp: 44
+speed: 5
+armor_bonus: 4
+weapon: greatsword
+resist: {physical: 150}
+element_mods: {}
+tags: [boss, elite, humanoid, steadfast]

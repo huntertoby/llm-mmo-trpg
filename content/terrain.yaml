@@ -1,0 +1,27 @@
+# 地形表。
+# 欄位：id、name_zh、glyph（文字網格顯示用的單一 ASCII 字元）、
+#       walkable（能否主動走進）、deadly（致命地形：被強制位移進入時一般單位死亡，
+#       帶 elite 標籤者改受 30% 最大 HP 並移到最近的安全格）。
+terrain:
+  - id: stone
+    name_zh: 石地
+    glyph: "."
+    walkable: true
+  - id: grass
+    name_zh: 草地
+    glyph: '"'
+    walkable: true
+  - id: dirt
+    name_zh: 泥土
+    glyph: ","
+    walkable: true
+  - id: chasm
+    name_zh: 深淵
+    glyph: "#"
+    walkable: false
+    deadly: true
+  - id: lava
+    name_zh: 岩漿
+    glyph: "~"
+    walkable: false
+    deadly: true

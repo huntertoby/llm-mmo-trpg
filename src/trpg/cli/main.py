@@ -14,6 +14,7 @@ import argparse
 import sys
 
 from trpg import __version__
+from trpg.content.library import load_library
 from trpg.content.loader import default_content_dir
 from trpg.content.registry import load_all_content
 from trpg.shared.errors import ContentError
@@ -73,13 +74,16 @@ def _cmd_content_check() -> int:
     content_dir = default_content_dir()
     try:
         loaded = load_all_content(content_dir)
+        library = load_library(content_dir)
     except ContentError as exc:
         print(f"內容檢查失敗：\n{exc}", file=sys.stderr)
         return 1
     print(f"內容檢查通過（{content_dir}）：")
-    for path, model in loaded:
+    known = {path for path, _ in loaded}
+    files = loaded + [(p, m) for p, m in library.files if p not in known]
+    for path, model in files:
         print(f"  {path.relative_to(content_dir).as_posix()}：{model.summary()}")
-    print(f"共 {len(loaded)} 個檔案。")
+    print(f"共 {len(files)} 個檔案；跨檔案檢查（武器引用、地圖地形與連通性）通過。")
     return 0
 
 

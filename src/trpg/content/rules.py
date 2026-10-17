@@ -1,0 +1,147 @@
+"""規則數值（``content/rules/core.yaml``）與命中修正對照表（``content/rules/hit_table.yaml``）。
+
+命中修正（``docs/phases/Phase1計畫.md`` 4.3）::
+
+    命中修正 = clamp(round(slope × log2(攻擊值 ÷ 防禦值)), −cap, +cap)
+
+執行期不得使用浮點數 ``log2``。改用整數比較：對每個修正值 ``k``（``−cap+1 … cap``），
+``修正 ≥ k`` 等價於 ``攻擊值 ÷ 防禦值 ≥ 2^((k − 0.5) / slope)``。門檻
+``t_k = 2^((2k − 1) / (2·slope))`` 以 ``scale``（10⁶）放大後 **無條件進位** 存成整數，
+執行期以 ``攻擊值 × scale ≥ 防禦值 × T_k`` 判斷。進位讓整數判斷永遠不會給出比真實值更高的修正
+（只有比例落在門檻上方不到 10⁻⁶ 相對誤差的極窄區間時會低 1）。
+
+:func:`compute_hit_thresholds` 以 :mod:`decimal` 高精度計算，``scripts/gen_hit_table.py`` 用它
+產生資料檔；測試另以 :class:`fractions.Fraction` 做完全精確的驗證。
+"""
+
+from __future__ import annotations
+
+import itertools
+from decimal import ROUND_CEILING, Decimal, localcontext
+
+from pydantic import Field, model_validator
+
+from trpg.content.schemas import ContentModel
+
+__all__ = [
+    "HIT_TABLE_SCALE",
+    "CoreRules",
+    "HitTable",
+    "HitThreshold",
+    "compute_hit_thresholds",
+]
+
+HIT_TABLE_SCALE = 1_000_000
+"""門檻比例的放大倍數（10⁶）。"""
+
+_DECIMAL_PRECISION = 60
+
+
+class CoreRules(ContentModel):
+    """``content/rules/core.yaml``：所有可調整的戰鬥規則數值。
+
+    百分比一律以整數千分比（‰）表示，欄位名稱以 ``_permille`` 結尾。
+    """
+
+    # 行動經濟
+    ap_per_turn: int = Field(ge=0)
+    ap_carry_max: int = Field(ge=0)
+    basic_attack_ap_cost: int = Field(ge=0)
+    defend_ap_cost: int = Field(ge=0)
+
+    # 判定
+    hit_target: int = Field(ge=1)
+    hit_slope: int = Field(ge=1)
+    hit_mod_cap: int = Field(ge=1)
+    proficiency: int
+    height_hit_bonus: int = Field(ge=0)
+    initiative_attr_base: int
+    initiative_attr_divisor: int = Field(ge=1)
+
+    # 傷害
+    basic_attack_attr_multiplier_permille: int = Field(ge=0)
+    element_mod_floor_permille: int = Field(ge=0, le=1000)
+    min_damage_on_hit: int = Field(ge=0)
+    defend_defense_bonus_permille: int = Field(ge=0)
+
+    # 移動與環境
+    move_climb_extra_cost: int = Field(ge=0)
+    max_climb_height: int = Field(ge=0, le=3)
+    fall_damage_min_drop: int = Field(ge=1)
+    fall_damage_permille_per_level: int = Field(ge=0)
+    fall_damage_cap_permille: int = Field(ge=0, le=1000)
+    deadly_terrain_elite_permille: int = Field(ge=0, le=1000)
+    prone_stand_up_move_permille: int = Field(ge=0, le=1000)
+
+    # 效果佇列
+    max_chain_depth: int = Field(ge=0)
+
+    def summary(self) -> str:
+        return f"每回合 {self.ap_per_turn} AP、命中門檻 {self.hit_target}"
+
+
+class HitThreshold(ContentModel):
+    """修正值 ``mod`` 的門檻。
+
+    ``攻擊值 × scale ≥ 防禦值 × min_ratio_scaled`` 時修正至少為 ``mod``。
+    """
+
+    mod: int
+    min_ratio_scaled: int = Field(ge=1)
+
+
+class HitTable(ContentModel):
+    """``content/rules/hit_table.yaml``（由 ``scripts/gen_hit_table.py`` 產生，請勿手改）。"""
+
+    slope: int = Field(ge=1)
+    cap: int = Field(ge=1)
+    scale: int = Field(ge=1)
+    thresholds: tuple[HitThreshold, ...]
+
+    @model_validator(mode="after")
+    def _check_shape(self) -> HitTable:
+        mods = [t.mod for t in self.thresholds]
+        expected = list(range(-self.cap + 1, self.cap + 1))
+        if mods != expected:
+            raise ValueError(f"thresholds 的 mod 必須依序為 {expected[0]}…{expected[-1]}")
+        ratios = [t.min_ratio_scaled for t in self.thresholds]
+        if any(a >= b for a, b in itertools.pairwise(ratios)):
+            raise ValueError("thresholds 的 min_ratio_scaled 必須嚴格遞增")
+        return self
+
+    def modifier(self, attack_num: int, defense_num: int) -> int:
+        """以整數比較求命中修正。
+
+        ``attack_num ÷ defense_num`` 即攻擊值 ÷ 防禦值（呼叫端可把兩者同乘一個分母以表示分數，
+        例如防禦姿態的 +25%）。``attack_num <= 0`` 時回傳 ``−cap``。
+        """
+        if defense_num <= 0:
+            raise ValueError(f"防禦值必須 > 0，收到 {defense_num}")
+        if attack_num <= 0:
+            return -self.cap
+        lhs = attack_num * self.scale
+        for threshold in reversed(self.thresholds):
+            if lhs >= defense_num * threshold.min_ratio_scaled:
+                return threshold.mod
+        return -self.cap
+
+    def summary(self) -> str:
+        return f"斜率 {self.slope}、上下限 ±{self.cap}，{len(self.thresholds)} 個門檻"
+
+
+def compute_hit_thresholds(
+    slope: int, cap: int, scale: int = HIT_TABLE_SCALE
+) -> tuple[HitThreshold, ...]:
+    """以高精度十進位計算 ``ceil(2^((2k − 1) / (2·slope)) × scale)``，``k = −cap+1 … cap``。"""
+    if slope < 1 or cap < 1 or scale < 1:
+        raise ValueError("slope、cap、scale 都必須 >= 1")
+    result: list[HitThreshold] = []
+    with localcontext() as ctx:
+        ctx.prec = _DECIMAL_PRECISION
+        ln2 = Decimal(2).ln()
+        for k in range(-cap + 1, cap + 1):
+            exponent = Decimal(2 * k - 1) / Decimal(2 * slope)
+            value = (exponent * ln2).exp() * scale
+            scaled = int(value.to_integral_value(rounding=ROUND_CEILING))
+            result.append(HitThreshold(mod=k, min_ratio_scaled=scaled))
+    return tuple(result)

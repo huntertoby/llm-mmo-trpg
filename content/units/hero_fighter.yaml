@@ -1,0 +1,14 @@
+# 單位範本。欄位：id、name_zh、attributes（6 項屬性）、max_hp、speed（每回合移動點數）、
+# armor_bonus（護甲加值，計入防禦值）、weapon（weapons.yaml 的 id）、
+# resist（4 組抗性 ‰：physical／elemental／nature／spirit，省略為 0）、
+# element_mods（個別元素修正 ‰：正值為弱點、負值為抗性）、tags。
+id: hero_fighter
+name_zh: 戰士
+attributes: {str: 16, dex: 12, con: 14, int: 10, wis: 10, wil: 10}
+max_hp: 34
+speed: 5
+armor_bonus: 4
+weapon: one_handed_sword
+resist: {physical: 100}
+element_mods: {}
+tags: [hero]

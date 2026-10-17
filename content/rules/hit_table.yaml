@@ -1,0 +1,23 @@
+# 命中修正對照表：由 scripts/gen_hit_table.py 產生，請勿手改。
+# 修正值至少為 mod 的條件：攻擊值 × scale >= 防禦值 × min_ratio_scaled
+# min_ratio_scaled = ceil(2^((2·mod − 1) / (2·slope)) × scale)；低於最小門檻時為 −cap。
+slope: 4
+cap: 8
+scale: 1000000
+thresholds:
+  - {mod: -7, min_ratio_scaled: 272627}
+  - {mod: -6, min_ratio_scaled: 324210}
+  - {mod: -5, min_ratio_scaled: 385553}
+  - {mod: -4, min_ratio_scaled: 458503}
+  - {mod: -3, min_ratio_scaled: 545254}
+  - {mod: -2, min_ratio_scaled: 648420}
+  - {mod: -1, min_ratio_scaled: 771106}
+  - {mod: 0, min_ratio_scaled: 917005}
+  - {mod: 1, min_ratio_scaled: 1090508}
+  - {mod: 2, min_ratio_scaled: 1296840}
+  - {mod: 3, min_ratio_scaled: 1542211}
+  - {mod: 4, min_ratio_scaled: 1834009}
+  - {mod: 5, min_ratio_scaled: 2181016}
+  - {mod: 6, min_ratio_scaled: 2593680}
+  - {mod: 7, min_ratio_scaled: 3084422}
+  - {mod: 8, min_ratio_scaled: 3668017}

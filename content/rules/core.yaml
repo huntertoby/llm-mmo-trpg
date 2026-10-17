@@ -1,0 +1,37 @@
+# 核心戰鬥規則數值（docs/phases/Phase1計畫.md 3.5、docs/專案計畫.md 第 5 節）。
+# 百分比一律為整數千分比（‰）。修改 hit_slope 或 hit_mod_cap 後必須執行
+#   uv run python scripts/gen_hit_table.py
+# 重新產生 rules/hit_table.yaml（載入時會檢查兩者一致）。
+
+# --- 行動經濟 ---
+ap_per_turn: 3                # 每回合 AP
+ap_carry_max: 1               # 可保留到下回合的 AP
+basic_attack_ap_cost: 1       # 普攻消耗
+defend_ap_cost: 1             # 防禦動作消耗
+
+# --- 判定 ---
+hit_target: 11                # d20 + 命中修正 + 熟練 + 情境 >= 11
+hit_slope: 4                  # 命中修正斜率
+hit_mod_cap: 8                # 命中修正上下限 ±8
+proficiency: 2                # 熟練加值
+height_hit_bonus: 2           # 高打低 +2、低打高 −2
+initiative_attr_base: 10      # 先攻：d20 + (敏捷 − 10) // 2
+initiative_attr_divisor: 2
+
+# --- 傷害 ---
+basic_attack_attr_multiplier_permille: 300   # 普攻的屬性倍率（0.3）
+element_mod_floor_permille: 250              # 元素修正下限（總減傷上限 75%）
+min_damage_on_hit: 1                         # 命中時的最低傷害
+defend_defense_bonus_permille: 250           # 防禦動作：防禦值 +25%
+
+# --- 移動與環境 ---
+move_climb_extra_cost: 1               # 爬升一層額外消耗 1 格移動
+max_climb_height: 1                    # 一步最多往上 1 層（2 層以上不可通行）
+fall_damage_min_drop: 2                # 往下 2 層以上才會墜落受傷（以「落差 − 1」層計算）
+fall_damage_permille_per_level: 100    # 每層 10% 最大 HP
+fall_damage_cap_permille: 300          # 單次墜落上限 30%
+deadly_terrain_elite_permille: 300     # 精英與 Boss 落入致命地形受 30% 最大 HP
+prone_stand_up_move_permille: 500      # 倒地站起消耗一半移動點數（無條件進位）
+
+# --- 效果佇列 ---
+max_chain_depth: 3            # 連鎖深度上限

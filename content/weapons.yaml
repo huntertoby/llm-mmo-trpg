@@ -1,0 +1,55 @@
+# 武器表。
+# 欄位：id、name_zh、range（射程，曼哈頓距離；1 為近戰）、dice（傷害骰 NdM）、flat（固定傷害）、
+#       attack_bonus（攻擊值加值）、scaling_attr（縮放屬性：str/dex/con/int/wis/wil）、
+#       element（元素）、crit_range（暴擊最低自然骰值，20 表示只有自然 20）、two_handed（雙手）。
+weapons:
+  - id: one_handed_sword
+    name_zh: 單手劍
+    range: 1
+    dice: 1d8
+    flat: 0
+    attack_bonus: 0
+    scaling_attr: str
+    element: physical
+    crit_range: 20
+    two_handed: false
+  - id: greatsword
+    name_zh: 雙手劍
+    range: 1
+    dice: 2d6
+    flat: 0
+    attack_bonus: 0
+    scaling_attr: str
+    element: physical
+    crit_range: 20
+    two_handed: true
+  - id: dagger
+    name_zh: 匕首
+    range: 1
+    dice: 1d4
+    flat: 0
+    attack_bonus: 0
+    scaling_attr: dex
+    element: physical
+    crit_range: 19
+    two_handed: false
+  - id: bow
+    name_zh: 弓
+    range: 8
+    dice: 1d8
+    flat: 0
+    attack_bonus: 0
+    scaling_attr: dex
+    element: physical
+    crit_range: 20
+    two_handed: true
+  - id: fire_staff
+    name_zh: 火焰法杖
+    range: 5
+    dice: 1d6
+    flat: 0
+    attack_bonus: 0
+    scaling_attr: int
+    element: fire
+    crit_range: 20
+    two_handed: true

@@ -1,0 +1,280 @@
+"""戰鬥用的內容 schema：骰子、地形、武器、狀態、單位範本。
+
+對應資料檔：``content/terrain.yaml``、``content/weapons.yaml``、``content/statuses.yaml``、
+``content/units/*.yaml``。
+"""
+
+from __future__ import annotations
+
+import re
+from collections import Counter
+from typing import Literal
+
+from pydantic import Field, field_validator, model_serializer, model_validator
+
+from trpg.content.schemas import ContentModel
+from trpg.shared.types import Attribute, Element, ResistGroup
+
+__all__ = [
+    "ID_PATTERN",
+    "Dice",
+    "StatusDef",
+    "StatusTable",
+    "StatusTickDamage",
+    "TerrainDef",
+    "TerrainTable",
+    "UnitTemplate",
+    "WeaponDef",
+    "WeaponTable",
+]
+
+ID_PATTERN = r"^[a-z][a-z0-9_]*$"
+"""內容 ID 與標籤的格式：小寫英文開頭的 snake_case。"""
+
+_DICE_RE = re.compile(r"^\s*(\d+)\s*d\s*(\d+)\s*$")
+_MAX_DICE_COUNT = 100
+_MAX_DICE_SIDES = 1000
+
+
+def _unique_ids(ids: list[str], what: str) -> None:
+    dup = sorted(i for i, n in Counter(ids).items() if n > 1)
+    if dup:
+        raise ValueError(f"重複的{what} ID：{', '.join(dup)}")
+
+
+# ---------------------------------------------------------------------------
+# 骰子
+# ---------------------------------------------------------------------------
+
+
+class Dice(ContentModel):
+    """``NdM`` 骰子（資料檔中寫成字串 ``"2d6"``，序列化時也輸出字串）。"""
+
+    count: int = Field(ge=1, le=_MAX_DICE_COUNT)
+    sides: int = Field(ge=1, le=_MAX_DICE_SIDES)
+
+    @model_validator(mode="before")
+    @classmethod
+    def _parse_text(cls, data: object) -> object:
+        if isinstance(data, str):
+            match = _DICE_RE.match(data)
+            if match is None:
+                raise ValueError(f"骰子格式應為 NdM（例如 2d6），收到 {data!r}")
+            return {"count": int(match.group(1)), "sides": int(match.group(2))}
+        return data
+
+    @model_serializer(mode="plain")
+    def _to_text(self) -> str:
+        return str(self)
+
+    def __str__(self) -> str:
+        return f"{self.count}d{self.sides}"
+
+
+# ---------------------------------------------------------------------------
+# 地形
+# ---------------------------------------------------------------------------
+
+
+class TerrainDef(ContentModel):
+    """一種地形。
+
+    - ``walkable``：單位能否主動走進這一格（``chasm``、``lava`` 為否）。
+    - ``deadly``：致命地形。單位被強制位移進來時，一般單位死亡；``elite`` 改受最大 HP 一定比例的
+      傷害並移到最近的安全格。
+    - ``glyph``：``trpg map show`` 與戰鬥網格顯示用的單一 ASCII 字元。
+    """
+
+    id: str = Field(pattern=ID_PATTERN)
+    name_zh: str = Field(min_length=1)
+    glyph: str = Field(min_length=1, max_length=1, pattern=r"^[!-~]$")
+    walkable: bool
+    deadly: bool = False
+
+
+class TerrainTable(ContentModel):
+    """``content/terrain.yaml``。"""
+
+    terrain: tuple[TerrainDef, ...] = Field(min_length=1)
+
+    @model_validator(mode="after")
+    def _check(self) -> TerrainTable:
+        _unique_ids([t.id for t in self.terrain], "地形")
+        glyphs = [t.glyph for t in self.terrain]
+        dup = sorted(g for g, n in Counter(glyphs).items() if n > 1)
+        if dup:
+            raise ValueError(f"重複的地形顯示字元：{', '.join(dup)}")
+        return self
+
+    def by_id(self) -> dict[str, TerrainDef]:
+        return {t.id: t for t in self.terrain}
+
+    def summary(self) -> str:
+        return f"{len(self.terrain)} 種地形"
+
+
+# ---------------------------------------------------------------------------
+# 武器
+# ---------------------------------------------------------------------------
+
+
+class WeaponDef(ContentModel):
+    """一把武器。
+
+    - ``range``：射程（曼哈頓距離）；``1`` 為近戰（相鄰）。
+    - ``crit_range``：暴擊的最低自然骰值，``20`` 表示只有自然 20，``19`` 表示 19–20。
+    """
+
+    id: str = Field(pattern=ID_PATTERN)
+    name_zh: str = Field(min_length=1)
+    range: int = Field(ge=1)
+    dice: Dice
+    flat: int = 0
+    attack_bonus: int = 0
+    scaling_attr: Attribute
+    element: Element = Element.PHYSICAL
+    crit_range: int = Field(default=20, ge=2, le=20)
+    two_handed: bool = False
+
+    @property
+    def is_melee(self) -> bool:
+        return self.range == 1
+
+
+class WeaponTable(ContentModel):
+    """``content/weapons.yaml``。"""
+
+    weapons: tuple[WeaponDef, ...] = Field(min_length=1)
+
+    @model_validator(mode="after")
+    def _check(self) -> WeaponTable:
+        _unique_ids([w.id for w in self.weapons], "武器")
+        return self
+
+    def by_id(self) -> dict[str, WeaponDef]:
+        return {w.id: w for w in self.weapons}
+
+    def summary(self) -> str:
+        return f"{len(self.weapons)} 把武器"
+
+
+# ---------------------------------------------------------------------------
+# 狀態
+# ---------------------------------------------------------------------------
+
+
+class StatusTickDamage(ContentModel):
+    """回合開始時受到的持續傷害。"""
+
+    dice: Dice
+    element: Element
+
+
+class StatusDef(ContentModel):
+    """一種狀態。
+
+    - ``duration``：預設持續回合；``None`` 表示不倒數（直到被移除或到期條件成立）。
+    - ``expires``：``turn_end`` 每次在帶有者的回合結束時 −1，歸零移除；
+      ``own_turn_start`` 在帶有者的下個回合開始時移除；``never`` 只能由效果或動作移除。
+    - ``stacking``：重複施加時的規則；目前只有 ``refresh``（刷新持續時間，不疊加）。
+    """
+
+    id: str = Field(pattern=ID_PATTERN)
+    name_zh: str = Field(min_length=1)
+    description_zh: str = Field(min_length=1)
+    duration: int | None = Field(default=None, ge=1)
+    expires: Literal["turn_end", "own_turn_start", "never"]
+    stacking: Literal["refresh"] = "refresh"
+    on_turn_start_damage: StatusTickDamage | None = None
+
+    @model_validator(mode="after")
+    def _check(self) -> StatusDef:
+        if self.expires == "turn_end" and self.duration is None:
+            raise ValueError(f"狀態 {self.id}：expires 為 turn_end 時必須設定 duration")
+        return self
+
+
+class StatusTable(ContentModel):
+    """``content/statuses.yaml``。"""
+
+    statuses: tuple[StatusDef, ...] = Field(min_length=1)
+
+    @model_validator(mode="after")
+    def _check(self) -> StatusTable:
+        _unique_ids([s.id for s in self.statuses], "狀態")
+        return self
+
+    def by_id(self) -> dict[str, StatusDef]:
+        return {s.id: s for s in self.statuses}
+
+    def summary(self) -> str:
+        return f"{len(self.statuses)} 種狀態"
+
+
+# ---------------------------------------------------------------------------
+# 單位範本
+# ---------------------------------------------------------------------------
+
+_MAX_ATTR = 999
+_PERMILLE = 1000
+
+
+class UnitTemplate(ContentModel):
+    """``content/units/<id>.yaml``：一個單位範本（Phase 1 直接給定屬性與武器）。
+
+    - ``resist``：4 組抗性（‰），未列出的分組為 0；可為負值表示易傷。
+    - ``element_mods``：個別元素的弱點（正值）或抗性（負值），‰。
+    - 元素修正 ＝ (1 − 分組抗性) × (1 + 個別弱點 − 個別抗性)，
+      下限見 ``element_mod_floor_permille``。
+    """
+
+    id: str = Field(pattern=ID_PATTERN)
+    name_zh: str = Field(min_length=1)
+    attributes: dict[Attribute, int]
+    max_hp: int = Field(ge=1)
+    speed: int = Field(default=5, ge=0)
+    armor_bonus: int = 0
+    weapon: str = Field(pattern=ID_PATTERN)
+    resist: dict[ResistGroup, int] = Field(default_factory=dict, validate_default=True)
+    element_mods: dict[Element, int] = Field(default_factory=dict)
+    tags: tuple[str, ...] = ()
+
+    @field_validator("attributes")
+    @classmethod
+    def _all_attributes(cls, value: dict[Attribute, int]) -> dict[Attribute, int]:
+        missing = [a.value for a in Attribute if a not in value]
+        if missing:
+            raise ValueError(f"缺少屬性：{', '.join(missing)}")
+        bad = [f"{a.value}={v}" for a, v in value.items() if not 1 <= v <= _MAX_ATTR]
+        if bad:
+            raise ValueError(f"屬性值必須在 1–{_MAX_ATTR}：{', '.join(bad)}")
+        return {a: value[a] for a in Attribute}
+
+    @field_validator("resist")
+    @classmethod
+    def _resist_range(cls, value: dict[ResistGroup, int]) -> dict[ResistGroup, int]:
+        bad = [f"{g.value}={v}" for g, v in value.items() if not -_PERMILLE <= v <= _PERMILLE]
+        if bad:
+            raise ValueError(f"分組抗性必須在 -1000–1000‰：{', '.join(bad)}")
+        return {g: value.get(g, 0) for g in ResistGroup}
+
+    @field_validator("element_mods")
+    @classmethod
+    def _element_mod_range(cls, value: dict[Element, int]) -> dict[Element, int]:
+        bad = [f"{e.value}={v}" for e, v in value.items() if v < -_PERMILLE]
+        if bad:
+            raise ValueError(f"個別元素修正不可低於 -1000‰：{', '.join(bad)}")
+        return {e: value[e] for e in Element if e in value}
+
+    @field_validator("tags")
+    @classmethod
+    def _tags_format(cls, value: tuple[str, ...]) -> tuple[str, ...]:
+        bad = [t for t in value if re.match(ID_PATTERN, t) is None]
+        if bad:
+            raise ValueError(f"標籤必須是小寫 snake_case：{', '.join(bad)}")
+        if len(set(value)) != len(value):
+            raise ValueError("標籤不可重複")
+        return tuple(sorted(value))
+
+    def summary(self) -> str:
+        return f"{self.name_zh}（HP {self.max_hp}，武器 {self.weapon}）"
