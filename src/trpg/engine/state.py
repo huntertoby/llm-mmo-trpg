@@ -12,7 +12,7 @@
 
 from __future__ import annotations
 
-from dataclasses import dataclass, field, replace
+from dataclasses import dataclass, field
 
 from pydantic import BaseModel, ConfigDict, TypeAdapter
 
@@ -81,7 +81,17 @@ class ObjectState:
         return (self.pos.x, self.pos.y)
 
     def clone(self) -> ObjectState:
-        return replace(self)
+        # 明確列出欄位（比 dataclasses.replace 快數倍；tests/engine/test_state_clone.py 檢查
+        # 這裡涵蓋所有欄位）。
+        return ObjectState(
+            id=self.id,
+            kind=self.kind,
+            pos=self.pos,
+            hp=self.hp,
+            max_hp=self.max_hp,
+            burning=self.burning,
+            destroyed=self.destroyed,
+        )
 
 
 class SpawnTemplate(BaseModel):
@@ -166,7 +176,36 @@ class UnitState:
 
     def clone(self) -> UnitState:
         # 屬性、抗性等字典在戰鬥中不會被修改，可以共用；只有狀態清單需要複製。
-        return replace(self, statuses=list(self.statuses))
+        # 明確列出欄位（比 dataclasses.replace 快數倍；tests/engine/test_state_clone.py 檢查
+        # 這裡涵蓋所有欄位）。
+        return UnitState(
+            id=self.id,
+            template_id=self.template_id,
+            name_zh=self.name_zh,
+            team=self.team,
+            pos=self.pos,
+            hp=self.hp,
+            max_hp=self.max_hp,
+            attributes=self.attributes,
+            speed=self.speed,
+            armor_bonus=self.armor_bonus,
+            weapon=self.weapon,
+            resist=self.resist,
+            element_mods=self.element_mods,
+            tags=self.tags,
+            initiative=self.initiative,
+            ap=self.ap,
+            ap_carry=self.ap_carry,
+            move_points=self.move_points,
+            statuses=list(self.statuses),
+            downed=self.downed,
+            stamina=self.stamina,
+            max_stamina=self.max_stamina,
+            reactions=self.reactions,
+            reactions_used=self.reactions_used,
+            escaped=self.escaped,
+            ai_profile=self.ai_profile,
+        )
 
 
 @dataclass(slots=True)
@@ -203,13 +242,36 @@ class BattleState:
     # ------------------------------------------------------------------
 
     def clone(self) -> BattleState:
-        """深度足夠的複本：之後修改複本不會影響原狀態。"""
-        return replace(
-            self,
+        """深度足夠的複本：之後修改複本不會影響原狀態。
+
+        明確列出欄位（比 dataclasses.replace 快；tests/engine/test_state_clone.py 檢查涵蓋
+        所有欄位）。
+        """
+        return BattleState(
+            map_id=self.map_id,
+            map_name_zh=self.map_name_zh,
+            width=self.width,
+            height=self.height,
             tiles=list(self.tiles),
+            ruleset=self.ruleset,
             units={uid: unit.clone() for uid, unit in self.units.items()},
-            objects={oid: obj.clone() for oid, obj in self.objects.items()},
             turn_order=list(self.turn_order),
+            turn_pos=self.turn_pos,
+            active_unit=self.active_unit,
+            round=self.round,
+            max_rounds=self.max_rounds,
+            seed=self.seed,
+            rng_state=self.rng_state,
+            next_event_seq=self.next_event_seq,
+            ended=self.ended,
+            winner=self.winner,
+            end_reason=self.end_reason,
+            objects={oid: obj.clone() for oid, obj in self.objects.items()},
+            weather=self.weather,
+            objective=self.objective,
+            map_events=self.map_events,
+            spawn_templates=self.spawn_templates,
+            pending=self.pending,
         )
 
     # ------------------------------------------------------------------

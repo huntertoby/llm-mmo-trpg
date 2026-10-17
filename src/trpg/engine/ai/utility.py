@@ -22,7 +22,7 @@
 
 from __future__ import annotations
 
-from dataclasses import dataclass, replace
+from dataclasses import dataclass
 from fractions import Fraction
 
 from trpg.content.environment import AiProfile, AiProfileTable, AiWeights
@@ -38,18 +38,20 @@ from trpg.engine.events import (
 )
 from trpg.engine.preview import Preview, preview
 from trpg.engine.rules.combat import HALF_COVER, attack_problem, cover_object_between
-from trpg.engine.rules.geometry import XY, has_line_of_sight, manhattan, neighbors4
+from trpg.engine.rules.geometry import XY, chebyshev, has_line_of_sight, manhattan, neighbors4
 from trpg.engine.state import BattleState, UnitState
 from trpg.shared.types import ObjectId, Surface, Team, UnitId
 
 __all__ = [
     "ActionScore",
     "UtilityAI",
+    "defend_score",
     "is_risky_move",
     "position_value",
     "reactive_enemies",
     "score_action",
     "virtual_move_score",
+    "worth_previewing",
 ]
 
 _DEFEND_RADIUS = 6
@@ -318,6 +320,36 @@ def score_action(
     return ActionScore(action, _gains(state, actor, p, w) + hit * (after - before), p)
 
 
+def defend_score(state: BattleState, unit: UnitState, w: AiWeights) -> Fraction:
+    """防禦的分數：``defend`` × 6 格內的敵人數（防禦只替自己加上狀態，位置不變；與完整
+    ``preview`` 的分數相同）。"""
+    near = sum(1 for e in _enemies(state, unit) if manhattan(unit.xy, e.xy) <= _DEFEND_RADIUS)
+    return Fraction(w.defend * near)
+
+
+_ALWAYS_PREVIEW_TAGS = ("explosive", "conductive", "blocks_sight")
+_OBJECT_NEAR_ENEMY = 2
+
+
+def worth_previewing(state: BattleState, scene: _Scene, action: Attack) -> bool:
+    """攻擊物件的便宜篩選：只有可能帶來收益的物件才跑完整 ``preview``。
+
+    - 易爆（連鎖爆炸）、導電（雷電擴散）、阻擋視線（打掉後視線改變）的物件一律評估；
+    - 其他物件只在 2 格（切比雪夫距離）內有敵人時評估（橋上的敵人、掩護後的敵人、點燃後
+      波及的範圍）。
+
+    被略過的物件攻擊不會傷到敵人、不會改變行動者的位置價值，分數不會是正的，因此不影響選擇。
+    攻擊單位一律評估。
+    """
+    if action.target_object_id is None:
+        return True
+    obj = state.objects[action.target_object_id]
+    tags = state.ruleset.object_def(obj.kind).tags
+    if any(tag in tags for tag in _ALWAYS_PREVIEW_TAGS):
+        return True
+    return any(chebyshev(obj.xy, e.xy) <= _OBJECT_NEAR_ENEMY for e in scene.enemies)
+
+
 def virtual_move_score(
     state: BattleState,
     unit: UnitState,
@@ -331,7 +363,8 @@ def virtual_move_score(
 
     對沒有風險的移動（:func:`is_risky_move` 為假）而言，這就是完整 ``preview`` 的分數。
     """
-    moved = replace(unit, pos=move.path[-1])
+    moved = unit.clone()
+    moved.pos = move.path[-1]
     return _unit_position_value(state, moved, w, scene) - before
 
 
@@ -429,9 +462,11 @@ class UtilityAI:
     def rank(self, state: BattleState) -> list[ActionScore]:
         """候選動作的分數（依 ``legal_actions`` 的順序）。
 
-        非移動的動作全部以完整 ``preview`` 評分；``Move`` 先以 :func:`virtual_move_score`
-        排序，只保留前 ``move_candidates`` 個，其中有風險者（:func:`is_risky_move`）才跑完整
-        ``preview``，其餘直接使用虛擬分數（``preview`` 欄位為 ``None``）。
+        攻擊單位、推擊、絆倒、互動以完整 ``preview`` 評分；攻擊物件先經
+        :func:`worth_previewing` 篩選；防禦直接計算（:func:`defend_score`）；``Move`` 先以
+        :func:`virtual_move_score` 排序，只保留前 ``move_candidates`` 個，其中有風險者
+        （:func:`is_risky_move`）才跑完整 ``preview``，其餘直接使用虛擬分數（``preview`` 欄位為
+        ``None``）。
         """
         unit = state.active
         if unit is None:
@@ -448,6 +483,10 @@ class UtilityAI:
                 estimates.append(
                     (virtual_move_score(state, unit, action, w, before, scene=scene), index)
                 )
+            elif isinstance(action, Defend):
+                scored[index] = ActionScore(action, defend_score(state, unit, w), None)
+            elif isinstance(action, Attack) and not worth_previewing(state, scene, action):
+                continue
             else:
                 scored[index] = score_action(state, action, profile, before=before)
         estimates.sort(key=lambda item: (-item[0], item[1]))

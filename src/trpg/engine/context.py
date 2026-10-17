@@ -2,7 +2,7 @@
 
 from __future__ import annotations
 
-from typing import Any, Literal, cast
+from typing import Any, Literal
 
 from trpg.content.library import Ruleset
 from trpg.content.rules import CoreRules
@@ -83,20 +83,8 @@ class Ctx:
         觸發進入效果（Phase 1C 決定 #6）。"""
 
     def emit[E: EventBase](self, cls: type[E], **fields: Any) -> E:
-        """建立事件（自動填入 ``seq`` 與 ``round``）並加入事件列表。
-
-        預覽模式下以 ``model_construct`` 建立（略過驗證；事件只在預覽內部使用，不會序列化或重播），
-        正式結算一律完整驗證。
-        """
-        if self.preview is not None:
-            event = cast(
-                "E",
-                cls.model_construct(
-                    seq=self.state.next_event_seq, round=self.state.round, **fields
-                ),
-            )
-        else:
-            event = cls(seq=self.state.next_event_seq, round=self.state.round, **fields)
+        """建立事件（自動填入 ``seq`` 與 ``round``）並加入事件列表。"""
+        event = cls(seq=self.state.next_event_seq, round=self.state.round, **fields)
         self.state.next_event_seq += 1
         self.events.append(event)
         return event

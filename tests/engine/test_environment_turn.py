@@ -45,6 +45,10 @@ from trpg.shared.types import ObjectId, Surface, Team, UnitId
 U1, U2, U3 = UnitId("unit_0001"), UnitId("unit_0002"), UnitId("unit_0003")
 
 
+_NON_BOARD_EVENTS = frozenset({"turn_ended", "turn_started", "round_ended", "status_removed"})
+"""不改變環境回合結果的事件（預告取得之後若只發生這些事件，預告仍必須準確）。"""
+
+
 def _strip(events: Sequence[Any]) -> list[dict[str, Any]]:
     return [e.model_dump(exclude={"seq"}) for e in events]
 
@@ -287,7 +291,9 @@ def test_property_telegraph_matches_every_environment_turn_on_demo_maps(
 ) -> None:
     """三張示範地圖的整場對戰：每一次環境回合，都與「本輪最後一個 EndTurn 之前」的預告完全相同。
 
-    （預告是在本輪最後一個動作之前取得；之後狀態不再改變時，預告必須與實際一致。）
+    （預告是在本輪最後一個動作之前取得；之後狀態不再改變時，預告必須與實際一致。
+    若這個 EndTurn 之後、環境回合之前還有改變戰場的事件——例如下一位單位回合開始時被燃燒燒死、
+    接著直接進入環境回合——預告的前提不成立，該次不比較。）
     """
     lib = library()
     map_id = ("bridge_chasm", "oil_depot", "swamp")[map_index]
@@ -301,7 +307,11 @@ def test_property_telegraph_matches_every_environment_turn_on_demo_maps(
         forecast = telegraph(state) if isinstance(step, EndTurn) else None
         result = resume(state, step) if isinstance(step, Decision) else resolve(state, step)
         if forecast is not None and any(isinstance(e, EnvironmentStarted) for e in result.events):
-            environment_turns += 1
-            assert _strip(_env_events(result.events)) == _strip(forecast.events)
+            start = next(
+                i for i, e in enumerate(result.events) if isinstance(e, EnvironmentStarted)
+            )
+            if all(getattr(e, "type", "") in _NON_BOARD_EVENTS for e in result.events[:start]):
+                environment_turns += 1
+                assert _strip(_env_events(result.events)) == _strip(forecast.events)
         state = result.state
     assert environment_turns >= 1 or state.round == 1

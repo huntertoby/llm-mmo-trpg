@@ -738,10 +738,22 @@ def legal_actions(state: BattleState) -> list[Action]:
         pm = path_map(state, unit, budget)
         ends = sorted((xy for xy in pm.cost if pm.can_end_at(xy)), key=lambda p: (p[1], p[0]))
         for xy in ends:
-            path = tuple(Pos(x=x, y=y) for x, y in pm.path_to(xy))
+            # 座標物件共用快取（Pos 不可變）
+            path = tuple(_pos(x, y) for x, y in pm.path_to(xy))
             actions.append(Move(unit_id=unit.id, path=path))
     actions.append(EndTurn(unit_id=unit.id))
     return actions
+
+
+_POS_CACHE: dict[XY, Pos] = {}
+
+
+def _pos(x: int, y: int) -> Pos:
+    """共用的 ``Pos``（不可變，可安全共用）。"""
+    pos = _POS_CACHE.get((x, y))
+    if pos is None:
+        pos = _POS_CACHE[(x, y)] = Pos(x=x, y=y)
+    return pos
 
 
 def has_only_end_turn(state: BattleState) -> bool:
