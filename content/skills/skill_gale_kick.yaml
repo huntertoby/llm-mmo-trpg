@@ -1,0 +1,23 @@
+id: skill_gale_kick
+schema_version: 1
+name_zh: 颶風踢
+tier: 1
+rank: 1
+rarity: rare
+kind: active
+skeleton: displace
+category: weapon
+weapon_req: melee
+ap_cost: 1
+scaling_attr: str
+shape: {type: single, range: weapon}
+effects:
+  - {type: damage, multiplier_permille: 800}
+  - {type: push, distance: 2}
+condition: null
+cost: {mana: 3, cooldown: 2}
+tags: [physical, melee, push]
+narrative:
+  concept: 一腳把敵人踢出掩護，甚至踢下懸崖
+  cast_flavor: 你側身蹬出一腳，勁風把對手整個人掀飛
+provenance: {origin: builtin, owner_id: null, created_by: null, parents: [], bound: true, tradeable: false}

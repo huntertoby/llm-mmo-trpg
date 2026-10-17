@@ -128,10 +128,13 @@ class WeaponDef(ContentModel):
 
     - ``range``：射程（曼哈頓距離）；``1`` 為近戰（相鄰）。
     - ``crit_range``：暴擊的最低自然骰值，``20`` 表示只有自然 20，``19`` 表示 19–20。
+    - ``weapon_class``：武器大類（Phase 2A）：``melee`` 近戰、``ranged`` 遠程、``focus`` 法器；
+      技能的 ``weapon_req`` 與之對照。法器的攻擊加值也計入法術技的命中。
     """
 
     id: str = Field(pattern=ID_PATTERN)
     name_zh: str = Field(min_length=1)
+    weapon_class: Literal["melee", "ranged", "focus"]
     range: int = Field(ge=1)
     dice: Dice
     flat: int = 0
@@ -260,6 +263,10 @@ class UnitTemplate(ContentModel):
       ``[]`` 表示沒有反應。
     - ``ai_profile``：效用 AI 的行為模式（``ai_profiles.yaml``）；省略時遠程武器用 ``archer``、
       其他用 ``brute``。
+    - ``skills``：裝備的技能 ID（``content/skills/``，順序即 ``legal_actions`` 的順序）；數量上限依
+      ``core.yaml`` 的 ``skill_slots``，``weapon_req`` 必須與武器的 ``weapon_class`` 相容
+      （載入時檢查）。
+    - ``max_mana``：法力上限（戰鬥開始時為滿，Phase 2A 不回復）。
     - 元素修正 ＝ (1 − 分組抗性) × (1 + 個別弱點 − 個別抗性)，
       下限見 ``element_mod_floor_permille``。
     """
@@ -277,6 +284,18 @@ class UnitTemplate(ContentModel):
     stamina: int | None = Field(default=None, ge=0)
     reactions: tuple[ReactionRule, ...] | None = None
     ai_profile: str | None = Field(default=None, pattern=ID_PATTERN)
+    skills: tuple[str, ...] = Field(default=(), max_length=32)
+    max_mana: int = Field(default=0, ge=0)
+
+    @field_validator("skills")
+    @classmethod
+    def _skills_format(cls, value: tuple[str, ...]) -> tuple[str, ...]:
+        bad = [s for s in value if re.match(r"^skill_[a-z0-9_]+$", s) is None]
+        if bad:
+            raise ValueError(f"技能 ID 格式應為 skill_xxx：{', '.join(bad)}")
+        if len(set(value)) != len(value):
+            raise ValueError("技能不可重複裝備")
+        return value
 
     @field_validator("attributes")
     @classmethod

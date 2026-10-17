@@ -1,0 +1,23 @@
+id: skill_ashen_oath
+schema_version: 1
+name_zh: 灰燼誓約
+tier: 2
+rank: 1
+rarity: rare
+kind: active
+skeleton: area
+category: spell
+weapon_req: focus
+ap_cost: 2
+scaling_attr: int
+shape: {type: cone, size: 3}
+effects:
+  - {type: damage, dice: 2d6, element: fire}
+  - {type: create_surface, surface: fire, duration: 2}
+condition: null
+cost: {mana: 12, cooldown: 2}
+tags: [fire, ash, area]
+narrative:
+  concept: 在燒毀村莊中覺醒的灰燼之力
+  cast_flavor: 灰燼從你掌心捲起，化作燎原之火
+provenance: {origin: builtin, owner_id: null, created_by: null, parents: [], bound: true, tradeable: false}

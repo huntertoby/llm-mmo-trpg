@@ -21,6 +21,7 @@ from trpg.content.environment import (
 from trpg.content.loader import default_content_dir, load_content_file
 from trpg.content.rules import CoreRules, HitTable
 from trpg.content.schemas import ContentModel, ElementTable
+from trpg.content.skills import PrimitiveTable, ShapeTable
 
 __all__ = ["KNOWN_CONTENT_FILES", "ContentFile", "load_all_content"]
 
@@ -46,8 +47,10 @@ KNOWN_CONTENT_FILES: tuple[ContentFile, ...] = (
     ContentFile("weather.yaml", WeatherTable),
     ContentFile("reactions.yaml", ReactionTable),
     ContentFile("ai_profiles.yaml", AiProfileTable),
+    ContentFile("skill_shapes.yaml", ShapeTable),
+    ContentFile("skill_primitives.yaml", PrimitiveTable),
 )
-"""單一資料檔。資料夾（``units/``、``maps/``）與跨檔案檢查由
+"""單一資料檔。資料夾（``units/``、``maps/``、``skills/``）與跨檔案檢查由
 :func:`trpg.content.library.load_library` 負責。"""
 
 

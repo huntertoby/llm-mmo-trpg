@@ -1,0 +1,22 @@
+id: skill_vanish
+schema_version: 1
+name_zh: 隱匿
+tier: 1
+rank: 1
+rarity: rare
+kind: active
+skeleton: control
+category: weapon
+weapon_req: ranged
+ap_cost: 1
+scaling_attr: dex
+shape: {type: self}
+effects:
+  - {type: apply_status, status: concealed, duration: 2}
+condition: null
+cost: {mana: 3, cooldown: 4}
+tags: [stealth, utility]
+narrative:
+  concept: 獵人最擅長的事：讓別人找不到自己
+  cast_flavor: 你壓低身形，融進周圍的陰影
+provenance: {origin: builtin, owner_id: null, created_by: null, parents: [], bound: true, tradeable: false}

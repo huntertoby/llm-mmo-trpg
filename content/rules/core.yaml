@@ -58,5 +58,13 @@ half_cover_hit_penalty: 2     # 遠程攻擊半掩護後的目標：命中 −2�
 # --- 環境回合（Phase 1B）---
 burning_object_rounds: 1      # 著火的物件在第幾次環境回合摧毀（1 = 下一次環境回合）
 
+# --- 技能（Phase 2A，docs/phases/Phase2A計畫.md 4.2、4.5）---
+spell_attr_multiplier_permille: 500   # 法術技與治療：縮放屬性 × 0.5 加進骰值
+skill_slots:                          # 戰鬥時可裝備的技能數量上限（依 kind）
+  active: 6
+  passive: 2
+  reaction: 1
+  stance: 1
+
 # --- 效果佇列 ---
 max_chain_depth: 3            # 連鎖深度上限

@@ -161,8 +161,17 @@ def test_unit_validation(overrides: dict[str, object], fragment: str) -> None:
 
 
 def test_weapon_validation() -> None:
-    base = {"id": "w", "name_zh": "武", "range": 1, "dice": "1d4", "scaling_attr": "str"}
+    base = {
+        "id": "w",
+        "name_zh": "武",
+        "weapon_class": "melee",
+        "range": 1,
+        "dice": "1d4",
+        "scaling_attr": "str",
+    }
     assert WeaponDef.model_validate(base).crit_range == 20
+    with pytest.raises(ValidationError, match="weapon_class"):
+        WeaponDef.model_validate({**base, "weapon_class": "staff"})
     with pytest.raises(ValidationError):
         WeaponDef.model_validate({**base, "range": 0})
     with pytest.raises(ValidationError):

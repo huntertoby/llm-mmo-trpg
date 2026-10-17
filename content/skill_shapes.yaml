@@ -1,0 +1,71 @@
+# 技能的目標形狀（docs/phases/Phase2A計畫.md 3.3）。10 種形狀全部由引擎實作
+# （src/trpg/engine/skills/shapes.py），這裡定義名稱、選取方式與參數範圍。
+#
+# targeting：UseSkill 需要的欄位
+#   self／none  不需要選取（self＝施放者所在格；none＝依參數決定範圍）
+#   unit        target_id（單位）或 target_object_id（可被攻擊的物件）
+#   tile        target_pos（格子）
+#   direction   direction（north／east／south／west）
+# params：形狀的整數參數與範圍（min～max）；allow_weapon 表示可寫 "weapon"（武器射程）。
+# 「射程」一律為曼哈頓距離；被選中的格子或單位必須在施放者的視線內。
+shapes:
+  - id: self
+    name_zh: 自身
+    description_zh: 只影響施放者所在的格子。
+    targeting: self
+  - id: single
+    name_zh: 單體
+    description_zh: 選取射程內看得到的一個單位或可被攻擊的物件。
+    targeting: unit
+    params:
+      range: {min: 1, max: 10, allow_weapon: true}
+  - id: line
+    name_zh: 直線
+    description_zh: 選一個方向，影響正前方 size 格；遇到牆壁停在它之前，遇到阻擋視線的物件則包含該格後停止。
+    targeting: direction
+    params:
+      size: {min: 2, max: 6}
+  - id: cone
+    name_zh: 錐形
+    description_zh: 選一個方向，第 k 排為正前方第 k 格及其左右各 k−1 格，只含施放者看得到的格子。
+    targeting: direction
+    params:
+      size: {min: 2, max: 4}
+  - id: cross
+    name_zh: 十字
+    description_zh: 選射程內的一個中心格（0 為施放者自己），影響中心與四方向相鄰格。
+    targeting: tile
+    params:
+      range: {min: 0, max: 6}
+  - id: square3
+    name_zh: 方陣
+    description_zh: 選射程內的一個中心格，影響以中心為準的 3×3。
+    targeting: tile
+    params:
+      range: {min: 0, max: 6}
+  - id: ring
+    name_zh: 環形
+    description_zh: 影響與施放者切比雪夫距離恰為 radius 的格子，不需要選取。
+    targeting: none
+    params:
+      radius: {min: 1, max: 2}
+  - id: ground_tile
+    name_zh: 指定格
+    description_zh: 選射程內的一格，只影響該格。
+    targeting: tile
+    params:
+      range: {min: 1, max: 6}
+  - id: chain
+    name_zh: 連鎖
+    description_zh: 選第一個目標，之後每跳選距上一個目標 jump_range 格內、看得到、尚未被擊中的最近同陣營單位（同距離依單位 ID），最多 jumps 跳。
+    targeting: unit
+    params:
+      range: {min: 1, max: 6}
+      jumps: {min: 1, max: 3}
+      jump_range: {min: 1, max: 3}
+  - id: allies_in_radius
+    name_zh: 範圍光環
+    description_zh: 影響與施放者曼哈頓距離不超過 radius 的格子（含自己），不需要選取。
+    targeting: none
+    params:
+      radius: {min: 1, max: 3}

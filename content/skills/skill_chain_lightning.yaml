@@ -1,0 +1,22 @@
+id: skill_chain_lightning
+schema_version: 1
+name_zh: 連鎖閃電
+tier: 2
+rank: 1
+rarity: rare
+kind: active
+skeleton: area
+category: spell
+weapon_req: focus
+ap_cost: 2
+scaling_attr: int
+shape: {type: chain, range: 5, jumps: 2, jump_range: 3}
+effects:
+  - {type: damage, dice: 1d10, element: lightning}
+condition: null
+cost: {mana: 10}
+tags: [lightning, spell, chain]
+narrative:
+  concept: 雷電不挑對象，只挑最近的導體
+  cast_flavor: 閃電從杖尖竄出，在敵人之間跳躍
+provenance: {origin: builtin, owner_id: null, created_by: null, parents: [], bound: true, tradeable: false}

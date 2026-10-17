@@ -1,0 +1,22 @@
+id: skill_smoke_arrow
+schema_version: 1
+name_zh: 煙幕箭
+tier: 1
+rank: 1
+rarity: rare
+kind: active
+skeleton: control
+category: weapon
+weapon_req: ranged
+ap_cost: 1
+scaling_attr: dex
+shape: {type: square3, range: 5}
+effects:
+  - {type: create_surface, surface: darkness}
+condition: null
+cost: {mana: 4, cooldown: 3}
+tags: [shadow, ranged, area, utility]
+narrative:
+  concept: 用濃煙切斷敵人的視線，換取撤退或換位的空檔
+  cast_flavor: 箭矢在落點炸開一團濃稠的黑煙
+provenance: {origin: builtin, owner_id: null, created_by: null, parents: [], bound: true, tradeable: false}

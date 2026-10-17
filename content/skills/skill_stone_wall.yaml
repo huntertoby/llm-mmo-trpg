@@ -1,0 +1,22 @@
+id: skill_stone_wall
+schema_version: 1
+name_zh: 石牆術
+tier: 1
+rank: 1
+rarity: rare
+kind: active
+skeleton: control
+category: spell
+weapon_req: focus
+ap_cost: 1
+scaling_attr: int
+shape: {type: ground_tile, range: 3}
+effects:
+  - {type: create_obstacle, object: earth_wall}
+condition: null
+cost: {mana: 5, cooldown: 2}
+tags: [earth, spell, obstacle]
+narrative:
+  concept: 憑空立起一面牆，擋住視線也擋住去路
+  cast_flavor: 大地隆起，砌成一道厚實的土牆
+provenance: {origin: builtin, owner_id: null, created_by: null, parents: [], bound: true, tradeable: false}

@@ -28,6 +28,7 @@ __all__ = [
     "CoreRules",
     "HitTable",
     "HitThreshold",
+    "SkillSlots",
     "compute_hit_thresholds",
 ]
 
@@ -35,6 +36,15 @@ HIT_TABLE_SCALE = 1_000_000
 """門檻比例的放大倍數（10⁶）。"""
 
 _DECIMAL_PRECISION = 60
+
+
+class SkillSlots(ContentModel):
+    """戰鬥時可裝備的技能欄位上限（依技能 ``kind``，``docs/design/06-技能.md`` 6.13）。"""
+
+    active: int = Field(ge=0)
+    passive: int = Field(ge=0)
+    reaction: int = Field(ge=0)
+    stance: int = Field(ge=0)
 
 
 class CoreRules(ContentModel):
@@ -97,6 +107,10 @@ class CoreRules(ContentModel):
 
     # 環境回合（1B）
     burning_object_rounds: int = Field(ge=1)
+
+    # 技能（2A）
+    spell_attr_multiplier_permille: int = Field(ge=0)
+    skill_slots: SkillSlots
 
     # 效果佇列
     max_chain_depth: int = Field(ge=0)

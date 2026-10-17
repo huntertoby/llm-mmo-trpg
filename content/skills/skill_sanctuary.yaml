@@ -1,0 +1,23 @@
+id: skill_sanctuary
+schema_version: 1
+name_zh: 聖域
+tier: 2
+rank: 1
+rarity: rare
+kind: active
+skeleton: aura
+category: spell
+weapon_req: focus
+ap_cost: 2
+scaling_attr: int
+shape: {type: allies_in_radius, radius: 2}
+effects:
+  - {type: heal, dice: 1d6}
+  - {type: create_surface, surface: holy, affects: allies}
+condition: null
+cost: {mana: 10, cooldown: 3}
+tags: [holy, spell, heal, aura]
+narrative:
+  concept: 在同伴腳下展開一片溫暖的光
+  cast_flavor: 柔和的光芒從你腳下擴散，同伴的傷口慢慢癒合
+provenance: {origin: builtin, owner_id: null, created_by: null, parents: [], bound: true, tradeable: false}

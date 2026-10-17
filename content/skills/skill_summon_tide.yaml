@@ -1,0 +1,22 @@
+id: skill_summon_tide
+schema_version: 1
+name_zh: 喚潮
+tier: 1
+rank: 1
+rarity: rare
+kind: active
+skeleton: control
+category: spell
+weapon_req: focus
+ap_cost: 1
+scaling_attr: int
+shape: {type: cross, range: 4}
+effects:
+  - {type: create_surface, surface: water}
+condition: null
+cost: {mana: 6, cooldown: 2}
+tags: [water, spell, area, utility]
+narrative:
+  concept: 讓潮水湧上乾燥的地面，為接下來的雷電鋪路
+  cast_flavor: 你的杖尖點向地面，積水憑空湧出
+provenance: {origin: builtin, owner_id: null, created_by: null, parents: [], bound: true, tradeable: false}

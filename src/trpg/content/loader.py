@@ -64,7 +64,8 @@ def _summarize_validation_error(exc: ValidationError) -> str:
     lines = []
     for err in errors[:_MAX_REPORTED_ERRORS]:
         loc = ".".join(str(part) for part in err["loc"]) or "（根）"
-        lines.append(f"  - {loc}: {err['msg']}")
+        msg = err["msg"].removeprefix("Value error, ")  # 自訂驗證訊息已是中文，不需要英文前綴
+        lines.append(f"  - {loc}: {msg}")
     if len(errors) > _MAX_REPORTED_ERRORS:
         lines.append(f"  - ……另有 {len(errors) - _MAX_REPORTED_ERRORS} 個錯誤")
     return f"驗證失敗（{len(errors)} 個錯誤）：\n" + "\n".join(lines)

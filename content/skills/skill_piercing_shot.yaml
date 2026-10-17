@@ -1,0 +1,22 @@
+id: skill_piercing_shot
+schema_version: 1
+name_zh: 穿透射擊
+tier: 1
+rank: 1
+rarity: common
+kind: active
+skeleton: area
+category: weapon
+weapon_req: ranged
+ap_cost: 2
+scaling_attr: dex
+shape: {type: line, size: 5}
+effects:
+  - {type: damage, multiplier_permille: 1000}
+condition: null
+cost: {mana: 6, cooldown: 2}
+tags: [physical, ranged, line]
+narrative:
+  concept: 敵人排成一列時，一支箭就夠了
+  cast_flavor: 你屏住呼吸，放出一支貫穿整排敵人的長箭
+provenance: {origin: builtin, owner_id: null, created_by: null, parents: [], bound: true, tradeable: false}

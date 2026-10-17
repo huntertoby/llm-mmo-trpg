@@ -1,0 +1,23 @@
+id: skill_fire_bolt
+schema_version: 1
+name_zh: 火焰箭
+tier: 1
+rank: 1
+rarity: common
+kind: active
+skeleton: strike
+category: spell
+weapon_req: focus
+ap_cost: 1
+scaling_attr: int
+shape: {type: single, range: 5}
+effects:
+  - {type: damage, dice: 2d8, element: fire}
+  - {type: apply_status, status: burning}
+condition: null
+cost: {mana: 6}
+tags: [fire, spell, burn]
+narrative:
+  concept: 最基本也最可靠的火焰咒語
+  cast_flavor: 你的指尖燃起火光，一道火箭射向目標
+provenance: {origin: builtin, owner_id: null, created_by: null, parents: [], bound: true, tradeable: false}

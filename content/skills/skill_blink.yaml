@@ -1,0 +1,22 @@
+id: skill_blink
+schema_version: 1
+name_zh: 閃現
+tier: 1
+rank: 1
+rarity: rare
+kind: active
+skeleton: displace
+category: spell
+weapon_req: any
+ap_cost: 1
+scaling_attr: int
+shape: {type: ground_tile, range: 3}
+effects:
+  - {type: teleport}
+condition: null
+cost: {mana: 5, cooldown: 3}
+tags: [arcane, teleport, mobility]
+narrative:
+  concept: 在眨眼之間出現在別的地方
+  cast_flavor: 空氣微微扭曲，你的身影已在三步之外
+provenance: {origin: builtin, owner_id: null, created_by: null, parents: [], bound: true, tradeable: false}

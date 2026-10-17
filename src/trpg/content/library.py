@@ -37,6 +37,15 @@ from trpg.content.loader import default_content_dir, load_content_file
 from trpg.content.maps import MapDef, SpawnUnitsEvent, check_map
 from trpg.content.rules import CoreRules, HitTable
 from trpg.content.schemas import ContentModel, ElementTable
+from trpg.content.skills import (
+    PrimitiveTable,
+    ShapeTable,
+    SkillDef,
+    SkillTable,
+    skill_problems,
+    skill_slot_problems,
+    weapon_problem,
+)
 from trpg.shared.errors import ContentError
 from trpg.shared.types import Surface
 
@@ -45,6 +54,7 @@ __all__ = [
     "ContentLibrary",
     "Ruleset",
     "load_library",
+    "unit_skill_problems",
 ]
 
 REQUIRED_STATUSES = ("burning", "concealed", "defending", "prone")
@@ -62,7 +72,11 @@ class Ruleset(ContentModel):
     surfaces: SurfaceTable
     interactions: InteractionTable
     reactions: ReactionTable
+    shapes: ShapeTable
+    primitives: PrimitiveTable
+    skills: SkillTable = SkillTable()
 
+    _skill_index: dict[str, SkillDef] = PrivateAttr(default_factory=dict)
     _terrain_index: dict[str, TerrainDef] = PrivateAttr(default_factory=dict)
     _status_index: dict[str, StatusDef] = PrivateAttr(default_factory=dict)
     _reaction_index: dict[str, ReactionDef] = PrivateAttr(default_factory=dict)
@@ -72,6 +86,7 @@ class Ruleset(ContentModel):
         self._terrain_index = self.terrain.by_id()
         self._status_index = self.statuses.by_id()
         self._reaction_index = self.reactions.by_id()
+        self._skill_index = self.skills.by_id()
 
     @model_validator(mode="after")
     def _check(self) -> Ruleset:
@@ -123,6 +138,11 @@ class Ruleset(ContentModel):
         index: dict[str, StatusDef] = self.__pydantic_private__["_status_index"]  # type: ignore[index]
         return index[status_id]
 
+    def skill_def(self, skill_id: str) -> SkillDef:
+        """技能定義；找不到時拋出 ``KeyError``。"""
+        index: dict[str, SkillDef] = self.__pydantic_private__["_skill_index"]  # type: ignore[index]
+        return index[skill_id]
+
 
 @dataclass(frozen=True)
 class ContentLibrary:
@@ -132,6 +152,7 @@ class ContentLibrary:
     elements: ElementTable
     ruleset: Ruleset
     weapons: dict[str, WeaponDef]
+    skills: dict[str, SkillDef]
     units: dict[str, UnitTemplate]
     maps: dict[str, MapDef]
     weather: dict[str, WeatherDef]
@@ -202,6 +223,9 @@ def load_library(content_dir: Path | None = None) -> ContentLibrary:
     reactions = load("reactions.yaml", ReactionTable)
     weather = load("weather.yaml", WeatherTable)
     ai_profiles = load("ai_profiles.yaml", AiProfileTable)
+    shapes = load("skill_shapes.yaml", ShapeTable)
+    primitives = load("skill_primitives.yaml", PrimitiveTable)
+    skills = _load_dir(root / "skills", SkillDef, files)
     try:
         ruleset = Ruleset(
             core=core,
@@ -212,24 +236,19 @@ def load_library(content_dir: Path | None = None) -> ContentLibrary:
             surfaces=surfaces,
             interactions=interactions,
             reactions=reactions,
+            shapes=shapes,
+            primitives=primitives,
+            skills=SkillTable(skills=tuple(skills[k] for k in sorted(skills))),
         )
     except ValueError as exc:
         raise ContentError(root / "rules", str(exc)) from exc
 
+    _check_skills(root, skills, ruleset)
     units = _load_dir(root / "units", UnitTemplate, files)
     weapon_map = weapons.by_id()
-    reaction_index = reactions.by_id()
-    for template_id, template in units.items():
-        path = root / "units" / f"{template_id}.yaml"
-        if template.weapon not in weapon_map:
-            raise ContentError(path, f"未知的武器：{template.weapon}")
-        if template.ai_profile is not None and template.ai_profile not in ai_profiles.by_id():
-            raise ContentError(path, f"未知的行為模式：{template.ai_profile}")
-        for rule in template.reactions or ():
-            try:
-                check_rule(rule, reaction_index)
-            except ValueError as exc:
-                raise ContentError(path, str(exc)) from exc
+    _check_units(
+        root, units, weapons=weapon_map, skills=skills, ruleset=ruleset, ai_profiles=ai_profiles
+    )
 
     maps = _load_dir(root / "maps", MapDef, files)
     terrain_map = terrain.by_id()
@@ -245,12 +264,73 @@ def load_library(content_dir: Path | None = None) -> ContentLibrary:
         elements=elements,
         ruleset=ruleset,
         weapons=weapon_map,
+        skills=skills,
         units=units,
         maps=maps,
         weather=weather_map,
         ai_profiles=ai_profiles,
         files=files,
     )
+
+
+def _check_skills(root: Path, skills: dict[str, SkillDef], ruleset: Ruleset) -> None:
+    """技能引用的形狀、原語、狀態、物件都存在，參數在範圍內。"""
+    shape_map = ruleset.shapes.by_id()
+    primitive_map = ruleset.primitives.by_id()
+    status_ids = {s.id for s in ruleset.statuses.statuses}
+    object_ids = {o.id for o in ruleset.objects.objects}
+    for skill_id, skill in skills.items():
+        problems = skill_problems(
+            skill, shape_map, primitive_map, status_ids=status_ids, object_ids=object_ids
+        )
+        if problems:
+            raise ContentError(root / "skills" / f"{skill_id}.yaml", "；".join(problems))
+
+
+def _check_units(
+    root: Path,
+    units: dict[str, UnitTemplate],
+    *,
+    weapons: dict[str, WeaponDef],
+    skills: dict[str, SkillDef],
+    ruleset: Ruleset,
+    ai_profiles: AiProfileTable,
+) -> None:
+    """單位範本引用的武器、行為模式、反應與技能都存在且合法。"""
+    reaction_index = ruleset.reactions.by_id()
+    for template_id, template in units.items():
+        path = root / "units" / f"{template_id}.yaml"
+        if template.weapon not in weapons:
+            raise ContentError(path, f"未知的武器：{template.weapon}")
+        if template.ai_profile is not None and template.ai_profile not in ai_profiles.by_id():
+            raise ContentError(path, f"未知的行為模式：{template.ai_profile}")
+        for rule in template.reactions or ():
+            try:
+                check_rule(rule, reaction_index)
+            except ValueError as exc:
+                raise ContentError(path, str(exc)) from exc
+        problems = unit_skill_problems(template, weapons[template.weapon], skills, ruleset.core)
+        if problems:
+            raise ContentError(path, "；".join(problems))
+
+
+def unit_skill_problems(
+    template: UnitTemplate, weapon: WeaponDef, skills: dict[str, SkillDef], core: CoreRules
+) -> list[str]:
+    """單位範本裝備的技能是否存在、與武器相容、沒有超過欄位上限（繁體中文，空串列為通過）。"""
+    problems: list[str] = []
+    equipped: list[SkillDef] = []
+    for skill_id in template.skills:
+        skill = skills.get(skill_id)
+        if skill is None:
+            problems.append(f"skills：未知的技能 {skill_id!r}")
+            continue
+        equipped.append(skill)
+        problem = weapon_problem(skill, weapon.weapon_class)
+        if problem is not None:
+            problems.append(f"skills：{problem}")
+    problems += [f"skills：{p}" for p in skill_slot_problems(equipped, core.skill_slots)]
+    return problems
 
 
 def _map_reference_problems(

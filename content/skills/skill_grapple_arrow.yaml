@@ -1,0 +1,23 @@
+id: skill_grapple_arrow
+schema_version: 1
+name_zh: 鉤索箭
+tier: 1
+rank: 1
+rarity: rare
+kind: active
+skeleton: displace
+category: weapon
+weapon_req: ranged
+ap_cost: 1
+scaling_attr: dex
+shape: {type: single, range: weapon}
+effects:
+  - {type: damage, multiplier_permille: 600}
+  - {type: pull, distance: 2}
+condition: null
+cost: {mana: 3, cooldown: 2}
+tags: [physical, ranged, pull]
+narrative:
+  concept: 箭尾拖著細索，把躲在遠處的敵人拖到面前
+  cast_flavor: 鉤索箭釘進目標的衣甲，你用力一扯
+provenance: {origin: builtin, owner_id: null, created_by: null, parents: [], bound: true, tradeable: false}
