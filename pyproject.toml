@@ -1,0 +1,130 @@
+[project]
+name = "llm-mmo-trpg"
+version = "0.0.1"
+description = "LLM 說書人開放世界 MMO-TRPG（第一里程碑：單人 roguelite 原型）"
+readme = "README.md"
+requires-python = ">=3.12"
+dependencies = [
+    "pydantic>=2.7",
+    "pyyaml>=6",
+]
+
+[project.scripts]
+trpg = "trpg.cli.main:main"
+
+[dependency-groups]
+dev = [
+    "pytest",
+    "hypothesis",
+    "ruff",
+    "mypy",
+    "import-linter",
+    "types-PyYAML",
+]
+
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
+
+[tool.hatch.build.targets.wheel]
+packages = ["src/trpg"]
+exclude = ["**/ruff.toml"]
+
+# ---------------------------------------------------------------------------
+# ruff
+# ---------------------------------------------------------------------------
+[tool.ruff]
+line-length = 100
+target-version = "py312"
+src = ["src", "tests", "scripts"]
+
+[tool.ruff.lint]
+select = ["E", "F", "W", "I", "B", "UP", "SIM", "RUF", "TID", "PL"]
+ignore = [
+    # PLR0913：參數過多。CLI 與之後的引擎函式常需要多個明確參數，視情況審查即可。
+    "PLR0913",
+    # RUF001/RUF002/RUF003：全形標點（，：（）等）在繁體中文字串、docstring 與註解中是正常用法。
+    "RUF001",
+    "RUF002",
+    "RUF003",
+]
+
+[tool.ruff.lint.flake8-tidy-imports]
+ban-relative-imports = "all"
+
+# 禁用 API：引擎必須確定性。
+# 注意：ruff 的 per-file-ignores 只能整條規則（TID251）一起關閉，無法只放行時間函式。
+# 因此 api/cli/llm/narrative 與 scripts 各有一份巢狀 ruff.toml（extend 本檔），
+# 在那裡把 banned-api 改成「只禁 random」。詳見 docs/phases/Phase0報告.md。
+[tool.ruff.lint.flake8-tidy-imports.banned-api]
+"random".msg = "引擎必須確定性，禁止使用 random 模組，請使用 trpg.shared.rng.Rng。"
+"time.time".msg = "引擎必須確定性，禁止讀取系統時間；時間只能由上層（api/cli/llm/narrative）傳入。"
+"time.monotonic".msg = "引擎必須確定性，禁止讀取系統時間；時間只能由上層（api/cli/llm/narrative）傳入。"
+"time.perf_counter".msg = "引擎必須確定性，禁止讀取系統時間；時間只能由上層（api/cli/llm/narrative）傳入。"
+"datetime.datetime.now".msg = "引擎必須確定性，禁止讀取系統時間；時間只能由上層（api/cli/llm/narrative）傳入。"
+"datetime.datetime.utcnow".msg = "引擎必須確定性，禁止讀取系統時間；時間只能由上層（api/cli/llm/narrative）傳入。"
+"datetime.date.today".msg = "引擎必須確定性，禁止讀取系統時間；時間只能由上層（api/cli/llm/narrative）傳入。"
+"uuid.uuid4".msg = "引擎必須確定性，禁止 uuid4，請使用 trpg.shared.ids.IdAllocator。"
+
+[tool.ruff.lint.per-file-ignores]
+# 測試常用魔術數字（測試向量、邊界值）。測試檔仍禁止 random 與時間函式（TID251 未放行）。
+"tests/**" = ["PLR2004"]
+
+# ---------------------------------------------------------------------------
+# mypy
+# ---------------------------------------------------------------------------
+[tool.mypy]
+strict = true
+plugins = ["pydantic.mypy"]
+files = ["src", "tests", "scripts"]
+mypy_path = "src"
+explicit_package_bases = true
+
+[tool.pydantic-mypy]
+init_forbid_extra = true
+init_typed = true
+warn_required_dynamic_aliases = true
+
+# ---------------------------------------------------------------------------
+# pytest
+# ---------------------------------------------------------------------------
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+addopts = "-ra"
+pythonpath = ["src"]
+
+# ---------------------------------------------------------------------------
+# import-linter（本機未安裝時由 tests/test_architecture.py 提供等效檢查）
+# ---------------------------------------------------------------------------
+[tool.importlinter]
+root_package = "trpg"
+
+[[tool.importlinter.contracts]]
+name = "engine 不得匯入上層模組"
+type = "forbidden"
+source_modules = ["trpg.engine"]
+forbidden_modules = [
+    "trpg.llm",
+    "trpg.narrative",
+    "trpg.api",
+    "trpg.roguelite",
+    "trpg.sim",
+    "trpg.skillgen",
+    "trpg.cli",
+]
+
+[[tool.importlinter.contracts]]
+name = "shared 不得匯入其他 trpg 子套件"
+type = "forbidden"
+source_modules = ["trpg.shared"]
+forbidden_modules = [
+    "trpg.engine",
+    "trpg.content",
+    "trpg.skillgen",
+    "trpg.sim",
+    "trpg.llm",
+    "trpg.narrative",
+    "trpg.roguelite",
+    "trpg.api",
+    "trpg.cli",
+]

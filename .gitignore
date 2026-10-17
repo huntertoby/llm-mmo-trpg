@@ -1,0 +1,52 @@
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+*.egg-info/
+.eggs/
+build/
+dist/
+wheels/
+*.egg
+
+# 虛擬環境與 uv
+.venv/
+venv/
+env/
+.uv/
+
+# 工具快取
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+.hypothesis/
+.import_linter_cache/
+.coverage
+.coverage.*
+htmlcov/
+.tox/
+.nox/
+
+# 編譯產物（亂數參考 C 程式等）
+*.o
+*.out
+*.exe
+scripts/rng_reference/rng_vectors
+
+# 本機設定與機密
+.env
+.env.*
+*.local.*
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+
+# OS
+.DS_Store
+Thumbs.db
+desktop.ini

@@ -1,0 +1,6 @@
+# 上層模組可以讀取時間（例如紀錄、逾時、LLM 呼叫計時），但仍禁止 random。
+# ruff 的 per-file-ignores 只能整條關閉 TID251，所以用巢狀設定覆寫 banned-api。
+extend = "../../../pyproject.toml"
+
+[lint.flake8-tidy-imports.banned-api]
+"random".msg = "禁止使用 random 模組，請使用 trpg.shared.rng.Rng（需要確定性的亂數一律由 Rng 提供）。"
