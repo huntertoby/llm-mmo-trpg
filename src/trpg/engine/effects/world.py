@@ -170,7 +170,8 @@ def _create_surface(ctx: Ctx, effect: EffectBase) -> list[EventBase]:
     if not state.in_bounds(*xy):
         return [_fizzle(ctx, effect.kind, xy, "out_of_bounds")]
     if not _surface_allowed(state, xy):
-        return [_fizzle(ctx, effect.kind, xy, "deadly_terrain")]
+        reason = "deadly_terrain" if is_deadly(state, xy) else "solid_terrain"
+        return [_fizzle(ctx, effect.kind, xy, reason)]
     final: Surface | None = effect.surface
     cause = effect.cause
     if effect.react:

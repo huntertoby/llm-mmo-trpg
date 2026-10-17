@@ -21,6 +21,7 @@ from trpg.engine import Attack, BattleState, EndTurn, Interact, Shove, legal_act
 from trpg.engine.effects import (
     CreateSurfaceEffect,
     DamageEffect,
+    DamageObjectEffect,
     ElementTouchEffect,
     PushEffect,
     run_effects,
@@ -432,3 +433,15 @@ def test_fire_spreading_onto_unit_at_environment_turn_burns_and_is_telegraphed()
     assert [e.model_dump(exclude={"seq"}) for e in forecast.events] == [
         e.model_dump(exclude={"seq"}) for e in env_events[: len(forecast.events)]
     ]
+
+
+def test_spill_and_surfaces_never_land_on_walls() -> None:
+    from trpg.engine.events import EffectFizzled  # noqa: PLC0415
+
+    m = make_map("000\n000", "..#\n...", objects=[(1, 0, "oil_barrel")], enemy=[(2, 1)])
+    state = make_state(m, [spawn(Team.ALLY, (0, 1)), spawn(Team.ENEMY, (2, 1))])
+    broken = run_effects(state, [DamageObjectEffect(object_id=O1, flat=99)])
+    assert broken.state.tile(2, 0).surface is Surface.NONE  # 牆壁上沒有油
+    assert broken.state.tile(1, 0).surface is Surface.OIL
+    fizzled = [e for e in broken.events if isinstance(e, EffectFizzled)]
+    assert [(e.pos, e.reason) for e in fizzled] == [(P(2, 0), "solid_terrain")]
