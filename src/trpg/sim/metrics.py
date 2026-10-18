@@ -13,9 +13,10 @@
 - **DPR** ＝ 單位造成的（直接＋間接）傷害 ÷ 該單位存活的輪數（該輪開始時仍在場；``max(1, …)``）。
 - **控制回合** ＝ 單位在 *自己回合開始時*（``turn_started`` 當下）帶有 stun／root／slow 的次數，
   歸給該狀態最後一次施加者（``status_applied.source_id``）；追溯不到歸環境。
-- **墜落與致命地形** 的傷害在引擎裡沒有 ``source_id``；若該單位在同一個動作內被 *強制位移*
-  （``unit_moved`` 的 ``mode == "forced"``：推、拉、擊退），歸給這個動作的行動者（推下深淵的人），
-  否則歸環境（自己走進去）。
+- **墜落與致命地形** 的傷害在引擎裡沒有 ``source_id``，所以在同一個動作內追溯：
+  該單位被 *強制位移*（``unit_moved`` 的 ``mode == "forced"``：推、拉、擊退）→ 歸這個動作的行動者；
+  或它腳下的物件（木橋）在這個動作內被摧毀而掉進致命地形 → 歸最後打到那個物件的單位。
+  追溯不到（自己走進去、橋是被火燒掉的……）歸環境。
 - **單一動作** ＝ 一個 ``Step``（玩家／AI 的一個動作，含它觸發的反應與連鎖）所產生的事件。
   動作的邊界由 :class:`StepTrace`（``run_battle`` 的 ``on_step`` 回呼）記錄；沒有記錄的
   ``BattleRun`` 會以重播取得。
@@ -37,8 +38,11 @@ from trpg.engine.events import (
     AttackRolled,
     ChainLimitReached,
     DamageDealt,
+    EnteredDeadlyTerrain,
     EventBase,
     Healed,
+    ObjectDamaged,
+    ObjectDestroyed,
     RoundStarted,
     SkillUsed,
     StatusApplied,
@@ -334,6 +338,9 @@ def metrics_from_events(  # noqa: PLR0912, PLR0915 - 單一事件迴圈，拆開
     slice_damage: dict[UnitId, int] = {}
     slice_terrain: dict[UnitId, int] = {}
     forced: set[UnitId] = set()
+    object_hit_by: dict[tuple[int, int], UnitId] = {}
+    object_destroyed: set[tuple[int, int]] = set()
+    fell_because_of: dict[UnitId, UnitId] = {}
 
     def flush() -> None:
         nonlocal one_shots
@@ -349,6 +356,9 @@ def metrics_from_events(  # noqa: PLR0912, PLR0915 - 單一事件迴圈，拆開
         slice_damage.clear()
         slice_terrain.clear()
         forced.clear()
+        object_hit_by.clear()
+        object_destroyed.clear()
+        fell_because_of.clear()
 
     current: str | None = None
     caster: UnitId | None = None
@@ -363,6 +373,15 @@ def metrics_from_events(  # noqa: PLR0912, PLR0915 - 單一事件迴圈，拆開
         elif isinstance(event, UnitMoved):
             if event.mode == "forced":
                 forced.add(event.unit_id)
+        elif isinstance(event, ObjectDamaged):
+            if event.source_id is not None:
+                object_hit_by[(event.pos.x, event.pos.y)] = event.source_id
+        elif isinstance(event, ObjectDestroyed):
+            object_destroyed.add((event.pos.x, event.pos.y))
+        elif isinstance(event, EnteredDeadlyTerrain):
+            where = (event.pos.x, event.pos.y)
+            if where in object_destroyed and where in object_hit_by:
+                fell_because_of[event.unit_id] = object_hit_by[where]
         elif isinstance(event, UnitSpawned):
             present.add(event.unit_id)
         elif isinstance(event, UnitEscaped):
@@ -414,14 +433,12 @@ def metrics_from_events(  # noqa: PLR0912, PLR0915 - 單一事件迴圈，拆開
             amount = event.hp_before - event.hp_after
             target = info[event.target_id]
             source = event.source_id if event.source_id in info else None
-            if (
-                source is None
-                and event.cause in ("fall", TERRAIN_CAUSE)
-                and event.target_id in forced
-            ):
+            if source is None and event.cause in ("fall", TERRAIN_CAUSE):
                 pusher = actors[slice_index] if actors is not None else None
-                if pusher is not None and pusher in info and pusher != event.target_id:
-                    source = pusher
+                if event.target_id in forced and pusher is not None and pusher != event.target_id:
+                    source = pusher if pusher in info else None
+                elif event.target_id in fell_because_of:
+                    source = fell_because_of[event.target_id]
             last_hit[event.target_id] = source
             acc[event.target_id].taken += amount
             if event.cause == TERRAIN_CAUSE:

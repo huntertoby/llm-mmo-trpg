@@ -15,8 +15,11 @@ from trpg.engine.events import (
     ChainLimitReached,
     DamageCause,
     DamageDealt,
+    EnteredDeadlyTerrain,
     EventBase,
     Healed,
+    ObjectDamaged,
+    ObjectDestroyed,
     RoundStarted,
     SkillUsed,
     StatusApplied,
@@ -28,7 +31,7 @@ from trpg.engine.events import (
 )
 from trpg.engine.runner import run_battle
 from trpg.engine.setup import build_setup
-from trpg.shared.types import Element, Pos, Team, UnitId
+from trpg.shared.types import Element, ObjectId, Pos, Team, UnitId
 from trpg.sim.metrics import (
     BattleMetrics,
     UnitInfo,
@@ -53,8 +56,8 @@ class Stream:
         self.events: list[EventBase] = []
         self.round = 1
 
-    def add[E: EventBase](self, kind: type[E], **fields: Any) -> E:
-        event = kind(seq=len(self.events), round=self.round, **fields)
+    def add[E: EventBase](self, event_type: type[E], /, **fields: Any) -> E:
+        event = event_type(seq=len(self.events), round=self.round, **fields)
         self.events.append(event)
         return event
 
@@ -366,6 +369,38 @@ def test_falls_and_deadly_terrain_after_a_forced_move_belong_to_the_pusher() -> 
     # 沒有行動者資料時，同樣的事件全部歸環境
     plain = _metrics(s.events, [opening, one, s.mark()])
     assert plain.environment_damage == {"enemy": 30, "ally": 50}
+
+
+def test_units_dropped_by_a_destroyed_bridge_are_attributed_to_who_hit_it() -> None:
+    bridge, spot = ObjectId("obj_1"), Pos(x=4, y=7)
+    s = Stream()
+    s.add(RoundStarted)
+    opening = s.mark()
+    # 動作 1（A1）：打壞木橋，橋上的 E1 掉進深淵
+    s.add(
+        ObjectDamaged,
+        object_id=bridge,
+        pos=spot,
+        source_id=A1,
+        cause="attack",
+        element=Element.PHYSICAL,
+        rolls=(),
+        amount=12,
+        hp_before=12,
+        hp_after=0,
+    )
+    s.add(ObjectDestroyed, object_id=bridge, kind="wooden_bridge", pos=spot, cause="damage")
+    s.add(EnteredDeadlyTerrain, unit_id=E1, pos=spot, terrain="chasm")
+    s.damage(E1, None, 30, 0, "deadly_terrain")
+    s.add(UnitDowned, unit_id=E1)
+    one = s.mark()
+    # 動作 2（A2）：橋是燒掉的（沒有單位打它）→ 掉下去的 A1 歸環境
+    s.add(ObjectDestroyed, object_id=bridge, kind="wooden_bridge", pos=spot, cause="burned")
+    s.add(EnteredDeadlyTerrain, unit_id=A1, pos=spot, terrain="chasm")
+    s.damage(A1, None, 50, 0, "deadly_terrain")
+    m = _metrics(s.events, [opening, one, s.mark()], actors=[None, A1, A2])
+    assert (_unit(m, A1).damage_indirect, _unit(m, A1).kills) == (30, 1)
+    assert m.environment_damage == {"ally": 50}
 
 
 def test_a_unit_forced_into_terrain_by_itself_is_environment_damage() -> None:

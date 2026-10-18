@@ -290,6 +290,8 @@ class BatchReport(_Model):
     rounds_median: float
     rounds_min: int
     rounds_max: int
+    actions_mean: float
+    """每場平均的總動作數（含自動結束回合）。"""
     teams: tuple[TeamSummary, ...]
     templates: tuple[TemplateRow, ...]
     control: tuple[ControlRow, ...]
@@ -501,6 +503,7 @@ def build_report(
         rounds_median=float(statistics.median(rounds)) if rounds else 0.0,
         rounds_min=min(rounds, default=0),
         rounds_max=max(rounds, default=0),
+        actions_mean=_ratio(sum(m.actions for m in done), n),
         teams=_team_summaries(done),
         templates=_template_rows(done),
         control=_control_rows(done),
@@ -553,6 +556,7 @@ def format_report(report: BatchReport) -> str:
         f"輪數：平均 {r.rounds_mean:.2f}、中位數 {r.rounds_median:g}、"
         f"最小 {r.rounds_min}、最大 {r.rounds_max}"
     )
+    out.append(f"動作數：每場平均 {r.actions_mean:.1f}")
     out.append("")
     out.append("陣營 DPR（每輪傷害，每場平均）與環境：")
     out += _table(

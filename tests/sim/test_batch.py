@@ -234,6 +234,7 @@ def test_aggregates_rates_rounds_templates_control_and_skills() -> None:
     assert report.ally_win_rate == pytest.approx(1 / 3)
     assert (report.rounds_mean, report.rounds_median) == (6.0, 6.0)
     assert (report.rounds_min, report.rounds_max) == (4, 8)
+    assert report.actions_mean == 10.0
     ally = report.team(Team.ALLY)
     # 陣營 DPR：每場（傷害 ÷ 輪數）再平均：m1 40/4、m2 12/6、m3 0
     assert ally.dpr_direct == pytest.approx((10 + 2 + 0) / 3)
