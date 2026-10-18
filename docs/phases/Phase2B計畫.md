@@ -137,6 +137,21 @@ Claude-Session: https://claude.ai/code/session_01TEkeBiT3th5ANVbeFLXNGb
 
 > 實作者另外要讀：`docs/phases/Phase2B-1報告.md` 第 6、7 節。
 
+### 4.0 2B-1 驗收後的 PM 決定（2B-2 一併實作）
+
+| # | 項目 | 決定 |
+|---|---|---|
+| 1 | Boss 轉換只在技能路徑 | **改**：轉換搬進 `handlers.apply_status`，所有來源都轉換（抵抗判定仍只對技能與動作） |
+| 2 | AI 狀態價值尺度 | 2C 以模擬調整 |
+| 3 | 定身連站起也不行 | **改**：定身時仍可站起（站起不是移動格子），站起後不能移動；補一個測試 |
+| 4 | 虛弱只算攻擊、易傷算所有骰值傷害 | 接受 |
+| 5 | 轉換後持續沿用原效果 | 接受 |
+| 6 | 遞減的記錄範圍 | 接受 |
+| 7 | 同一技能兩個同類別控制時預覽不一致 | 以互斥規則排除：4.4 新增第 6 條 |
+| 8 | 在自己回合內被暈眩 | 接受；反應技能與陷阱實作時再處理 |
+| 9 | 示範技能數值 | 依 4.8 |
+| 10 | 勝率變化 | 2C 處理 |
+
 ### 4.1 模組與依賴
 
 - 預算計算與驗證放在 `trpg.skillgen`（例如 `skillgen/budget.py`、`skillgen/validate.py`），對外提供 `skill_budget(skill, library) -> BudgetReport` 與 `validate_skill(skill, library) -> list[Violation]`。
@@ -230,6 +245,7 @@ total       = raw × 技能條件倍率 × Π 協同係數
 | 3 | 同一技能不得同時有 `push` 與 `pull` |
 | 4 | `self` 形狀不得有對象為 `enemies` 的效果 |
 | 5 | 同一技能不得同時有對敵方的 `damage` 與對友方的 `heal`（屬於不同骨架） |
+| 6 | 同一技能不得施加兩個相同 `control_group` 的狀態 |
 
 ### 4.5 骨架（6.9，`content/skeletons/<id>.yaml`）
 
@@ -277,6 +293,7 @@ total       = raw × 技能條件倍率 × Π 協同係數
 5. 停用的骨架被拒。
 6. 全部示範技能通過；`trpg skills budget --all` 的輸出附在報告。
 7. 2B-1 的驗收測試仍通過（數值調整後若有情境測試失敗，修正測試的設定而不是放寬規則，並在報告說明）。
+8. 4.0 #1：非技能來源（測試中直接排入 `ApplyStatusEffect`）對 Boss 施加暈眩 → 轉為緩速；#3：倒地＋定身的單位可以站起但不能移動。
 
 ---
 
