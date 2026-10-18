@@ -103,6 +103,11 @@ def _print_totals(report: BudgetReport, out: TextIO) -> None:
         file=out,
     )
     print(f"  代價折抵 {parts}", file=out)
+    if report.allowance_capped:
+        print(
+            f"  代價折抵 +{report.allowance_raw_permille}‰ → 上限 +{report.allowance_cap}‰",
+            file=out,
+        )
     print(
         f"  比例 ＝ total ÷ 可用預算 ＝ {_pct(report.ratio)}"
         f"（合格區間 {_pct(report.min_ratio)}–{_pct(report.max_ratio)}）→ {_verdict(report)}",
@@ -115,7 +120,7 @@ def cmd_skills_budget_all(library: ContentLibrary, out: TextIO) -> int:
     print(f"技能預算總表（共 {len(skills)} 個；合格區間以 total ÷ 可用預算計）：", file=out)
     print(
         f"  {pad('ID', 26)}{pad('名稱', 12)}{pad('T', 3)}{pad('AP', 4)}{pad('total', 8)}"
-        f"{pad('可用', 8)}{pad('比例', 8)}違規",
+        f"{pad('可用', 8)}{pad('折抵‰', 11)}{pad('比例', 8)}違規",
         file=out,
     )
     bad = 0
@@ -124,14 +129,17 @@ def cmd_skills_budget_all(library: ContentLibrary, out: TextIO) -> int:
         bad += bool(violations)
         try:
             report = skill_budget(skill, library)
-            cells = (_num(report.total), _num(report.usable), _pct(report.ratio))
+            allow = f"+{report.allowance_permille}"
+            if report.allowance_capped:
+                allow = f"+{report.allowance_raw_permille}→{report.allowance_cap}"
+            cells = (_num(report.total), _num(report.usable), _pct(report.ratio), allow)
         except BudgetError:
-            cells = ("—", "—", "—")
+            cells = ("—", "—", "—", "—")
         rules = "、".join(v.rule for v in violations) or "—"
         print(
             f"  {pad(skill.id, 26)}{pad(skill.name_zh, 12)}{pad(str(skill.tier), 3)}"
             f"{pad(str(skill.ap_cost), 4)}{pad(cells[0], 8)}{pad(cells[1], 8)}"
-            f"{pad(cells[2], 8)}{rules}",
+            f"{pad(cells[3], 11)}{pad(cells[2], 8)}{rules}",
             file=out,
         )
     print(f"通過 {len(skills) - bad} 個，違規 {bad} 個。", file=out)

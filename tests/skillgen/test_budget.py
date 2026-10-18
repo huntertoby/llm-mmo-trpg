@@ -126,7 +126,7 @@ def test_hand_case_5_synergy_area_and_control() -> None:
 
 def test_hand_case_6_cost_allowance_caps() -> None:
     """代價折抵：冷卻 6 回合 ＝ 300（上限）、每場 2 次 ＝ 250、法力 40 ＝ 200 → 上限 150、
-    HP 300‰ ＝ 300 → 上限 200；合計 900‰。"""
+    HP 300‰ ＝ 300 → 上限 200；加總 900‰，再以總上限截斷為 500‰（2C-1 3.1）。"""
     s = skill(cost={"mana": 40, "cooldown": 6, "uses_per_battle": 2, "hp_percent": 300})
     report = skill_budget(s, lib())
     assert dict(report.allowance_parts) == {
@@ -135,8 +135,29 @@ def test_hand_case_6_cost_allowance_caps() -> None:
         "法力 40": 150,
         "HP 30%": 200,
     }
-    assert report.allowance_permille == 900
-    assert report.usable == F(14) * F(19, 10)
+    assert report.allowance_raw_permille == 900
+    assert report.allowance_capped
+    assert report.allowance_permille == 500
+    assert report.usable == F(14) * F(3, 2)
+
+
+def test_total_allowance_cap_comes_from_skill_budget_yaml() -> None:
+    assert lib().budget.allowance.total_cap == 500
+
+
+def test_allowance_below_the_total_cap_is_untouched() -> None:
+    """冷卻 4（+200）＋ 法力 10（+50）＝ 250‰ < 500‰：不截斷。"""
+    report = skill_budget(skill(cost={"mana": 10, "cooldown": 4}), lib())
+    assert report.allowance_permille == report.allowance_raw_permille == 250
+    assert not report.allowance_capped
+
+
+def test_total_allowance_cap_applies_after_each_part_cap() -> None:
+    """各項的個別上限先套用（冷卻 300、法力 150＝450），未達 500 → 不截斷；
+    再加每場 1 次（400）→ 850 → 截斷為 500。"""
+    assert skill_budget(skill(cost={"mana": 99, "cooldown": 6}), lib()).allowance_permille == 450
+    report = skill_budget(skill(cost={"mana": 99, "cooldown": 6, "uses_per_battle": 1}), lib())
+    assert (report.allowance_raw_permille, report.allowance_permille) == (850, 500)
 
 
 @pytest.mark.parametrize(("uses", "expected"), [(1, 400), (2, 250), (3, 100), (5, 100)], ids=str)

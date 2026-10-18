@@ -16,7 +16,7 @@ reaction_coefficient_permille: 600                     # 反應技（只計算�
 condition_permille: {none: 1000, common: 850, harsh: 600}
 all_target_permille: 800    # affects: all（敵我不分）的對象係數
 
-# 代價折抵（‰，加總後乘上去）
+# 代價折抵（‰，各項加總、以 total_cap 截斷後乘上去）
 allowance:
   cooldown_per_turn: 50     # 冷卻每回合
   cooldown_cap: 300
@@ -26,6 +26,7 @@ allowance:
   mana_cap: 150
   hp_per_permille: 1        # hp_percent 每 1‰
   hp_cap: 200
+  total_cap: 500            # 各項先套用自己的上限，加總後再截斷在這個值（Phase 2C-1）
 
 # 稀有度的結構上限（其餘限制由各資料檔的 min_rarity 決定）
 rarity:

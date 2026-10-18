@@ -75,3 +75,21 @@ def test_content_check_fails_on_a_skill_that_breaks_the_rules(
     assert code == 1
     assert "技能違規" in err and "skill_cleave" in err
     assert "exclusion.no_cooldown_big_area" in err and "budget.over" in err and "%" in err
+
+
+def test_budget_shows_when_the_allowance_is_capped(
+    capsys: pytest.CaptureFixture[str], tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """折抵加總超過 total_cap 時，單一技能與總表都要顯示截斷（Phase 2C-1 3.1）。"""
+    content = tmp_path / "content"
+    shutil.copytree(PROJECT_ROOT / "content", content)
+    path = content / "skills" / "skill_bone_crusher.yaml"
+    data = yaml.safe_load(path.read_text(encoding="utf-8"))
+    data["cost"] = {"mana": 40, "cooldown": 6, "uses_per_battle": 1}  # 150 + 300 + 400 ＝ 850
+    path.write_text(yaml.safe_dump(data, allow_unicode=True), encoding="utf-8")
+    monkeypatch.setenv(CONTENT_DIR_ENV, str(content))
+    _, out, _ = _run(["skills", "budget", "skill_bone_crusher"], capsys)
+    assert "代價折抵 +850‰ → 上限 +500‰" in out
+    assert "折抵 500‰" in out
+    _, out, _ = _run(["skills", "budget", "--all"], capsys)
+    assert "+850→500" in out

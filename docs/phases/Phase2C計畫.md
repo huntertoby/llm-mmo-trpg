@@ -81,13 +81,14 @@ Claude-Session: https://claude.ai/code/session_01NdQCBhJQhD7yNJCL9fewD4
 ```python
 @dataclass(frozen=True)
 class BatchSpec:
-    name: str                       # 報表標題，例如 "swamp"
-    setup: BattleSetup              # 沿用 build_setup；max_rounds 預設 30
+    name: str  # 報表標題，例如 "swamp"
+    setup: BattleSetup  # 沿用 build_setup；max_rounds 預設 30
     seeds: tuple[int, ...]
-    policy_factory: Callable[[], Policy]   # 每場戰鬥新建一個 policy（避免跨場狀態）
+    policy_factory: Callable[[], Policy]  # 每場戰鬥新建一個 policy（避免跨場狀態）
+
 
 def run_batch(spec: BatchSpec, *, jobs: int = 1) -> BatchReport: ...
-def battle_metrics(run: BattleRun) -> BattleMetrics: ...   # 純函式，只讀 setup、事件與最終狀態
+def battle_metrics(run: BattleRun) -> BattleMetrics: ...  # 純函式，只讀 setup、事件與最終狀態
 ```
 
 - 每場戰鬥的例外要被捕捉並記為異常（3.4），不中斷整批。
@@ -197,11 +198,13 @@ pydantic 模型，以 `kind` 區分：
 ### 4.4 指揮官與紀錄
 
 ```python
-type Commander = Callable[[BattleState, Team], OrderSet | None]   # None ＝ 沿用上一個指令
+type Commander = Callable[[BattleState, Team], OrderSet | None]  # None ＝ 沿用上一個指令
 
-class CommandedAI:   # 可當作 Policy
+
+class CommandedAI:  # 可當作 Policy
     def __init__(self, ai: UtilityAI, commanders: Mapping[Team, Commander]) -> None: ...
-    order_log: list[OrderRecord]   # round、team、orders、ignored（無效指令與原因）
+
+    order_log: list[OrderRecord]  # round、team、orders、ignored（無效指令與原因）
 ```
 
 - **呼叫時機**：某陣營在每一輪的第一次決策時，以及該陣營看到的存活單位數（敵我任一方）自上次呼叫後有變化時。

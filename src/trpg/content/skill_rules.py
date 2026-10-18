@@ -64,6 +64,8 @@ class CostAllowance(ContentModel):
     hp_per_permille: int = Field(ge=0)
     """``hp_percent`` 每 1‰ 的折抵。"""
     hp_cap: int = Field(ge=0)
+    total_cap: int = Field(ge=0)
+    """各項先套用自己的上限，加總後再以此截斷（‰）。"""
 
 
 class RarityLimit(ContentModel):

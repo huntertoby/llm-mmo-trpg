@@ -63,12 +63,24 @@ class BudgetReport:
     tier_budget: int
     ap_coefficient: Fraction
     allowance_parts: tuple[tuple[str, int], ...]
+    allowance_cap: int
+    """折抵加總的上限（‰）。"""
     min_ratio: Fraction
     max_ratio: Fraction
 
     @property
-    def allowance_permille(self) -> int:
+    def allowance_raw_permille(self) -> int:
+        """各項（已套用各自上限）加總，尚未套用總上限。"""
         return sum(value for _, value in self.allowance_parts)
+
+    @property
+    def allowance_permille(self) -> int:
+        """實際採用的折抵（‰）：加總後以 ``allowance_cap`` 截斷。"""
+        return min(self.allowance_raw_permille, self.allowance_cap)
+
+    @property
+    def allowance_capped(self) -> bool:
+        return self.allowance_raw_permille > self.allowance_cap
 
     @property
     def usable(self) -> Fraction:
@@ -274,6 +286,7 @@ def skill_budget(skill: SkillDef, library: ContentLibrary) -> BudgetReport:
         tier_budget=tier_budget,
         ap_coefficient=_ap_coefficient(skill, budget),
         allowance_parts=_allowance_parts(skill, budget),
+        allowance_cap=budget.allowance.total_cap,
         min_ratio=Fraction(budget.min_ratio_permille, _PERMILLE),
         max_ratio=Fraction(budget.max_ratio_permille, _PERMILLE),
     )
