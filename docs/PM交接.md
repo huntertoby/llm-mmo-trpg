@@ -25,7 +25,7 @@
 | Phase 2C-1 批次模擬器與報表 | ✅ 完成 | `Phase2C計畫.md` 第 3 節／`Phase2C-1報告.md` |
 | Phase 2C-2 控制分派與戰術指令 | ✅ 完成 | `Phase2C計畫.md` 第 4 節／`Phase2C-2報告.md` |
 | Phase 2C-3 地圖類型與 build 矩陣 | ✅ 完成 | `Phase2C計畫.md` 第 5 節／`Phase2C-3報告.md` |
-| **Phase 2C-4 Phase 2 收尾** | ⏭️ 下一步 | 規格尚未撰寫（範圍見第 3 節；`Phase2C計畫.md` 第 6 節的舊大綱已作廢） |
+| **Phase 2C-4 Phase 2 收尾** | 🔨 實作中 | `Phase2C-4計畫.md`（範圍見第 3 節） |
 
 - 最新 commit 在 GitHub `huntertoby/llm-mmo-trpg`（私人）的 `main`；使用者電腦已同步到 `02b17ba`（之後只多了文件 commit）。
 - 1037 個測試（6 個 `slow` 預設不跑，其中 3 個平衡測試已知失敗）。

@@ -329,7 +329,7 @@ trpg sim matrix [--builds a,b] [--maps a,b] [--seeds 20] [--jobs N] [--json out.
 
 ## 6. Phase 2C-4｜Phase 2 收尾
 
-> **本節原本的「平衡」大綱已作廢**（2026-10-18 使用者決定：先確定遊戲能 work，平衡等效果模板補齊後再做）。新範圍見 `docs/PM交接.md` 3.2，由接手 PM 寫成正式規格（可寫在本節或新檔 `Phase2C-4計畫.md`）。
+> **本節原本的「平衡」大綱已作廢**（2026-10-18 使用者決定：先確定遊戲能 work，平衡等效果模板補齊後再做）。正式規格見 `docs/phases/Phase2C-4計畫.md`。
 
 ---
 
