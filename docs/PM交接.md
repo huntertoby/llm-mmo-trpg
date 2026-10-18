@@ -1,6 +1,6 @@
 # PM 交接文件
 
-> 給接手的 PM（新對話中的 Claude）。最後更新：2026-10-18，Phase 2B 全部完成時。
+> 給接手的 PM（新對話中的 Claude）。最後更新：2026-10-18 晚上，Phase 2C-3 完成時。
 > 讀完本檔再讀 `CLAUDE.md` 與 `docs/專案計畫.md`（總覽，約 1 萬字元）即可接手；設計細節依需要讀 `docs/design/` 下的主題檔。
 
 ---
@@ -19,49 +19,76 @@
 | 階段 | 狀態 | 規格／報告 |
 |---|---|---|
 | Phase 0 基礎建設 | ✅ 完成 | `docs/phases/Phase0計畫.md`／`Phase0報告.md` |
-| Phase 1A 戰鬥核心 | ✅ 完成 | `Phase1計畫.md` 第 5 節／`Phase1A報告.md` |
-| Phase 1B 環境與戰術 | ✅ 完成 | `Phase1計畫.md` 第 6 節／`Phase1B報告.md` |
-| Phase 1C 掩護與牆壁 | ✅ 完成 | `Phase1C計畫.md`／`Phase1C報告.md` |
-| Phase 2A-1 技能資料與解譯器 | ✅ 完成 | `Phase2A計畫.md` 第 5 節／`Phase2A-1報告.md` |
-| Phase 2A-2 條件與 AI | ✅ 完成 | `Phase2A計畫.md` 第 6 節／`Phase2A-2報告.md` |
-| Phase 2B-1 新狀態與控制遞減 | ✅ 完成 | `Phase2B計畫.md` 第 3 節／`Phase2B-1報告.md` |
-| Phase 2B-2 預算與驗證器 | ✅ 完成 | `Phase2B計畫.md` 第 4 節／`Phase2B-2報告.md` |
-| Phase 2B-3 隨機組合器 | ✅ 完成 | `Phase2B計畫.md` 第 5 節／`Phase2B-3報告.md` |
-| **Phase 2C 模擬、戰術指令、地圖類型與平衡** | 🔄 進行中（2C-1～2C-3 ✅；2C-4 平衡規格待寫） | `Phase2C計畫.md`（2C-1～2C-3 詳細，2C-4 待補） |
+| Phase 1A／1B／1C 戰鬥核心、環境、掩護 | ✅ 完成 | `Phase1計畫.md`、`Phase1C計畫.md`／各報告 |
+| Phase 2A 技能資料、解譯器、條件與 AI | ✅ 完成 | `Phase2A計畫.md`／`Phase2A-1、2A-2報告.md` |
+| Phase 2B 新狀態、預算驗證、隨機組合器 | ✅ 完成 | `Phase2B計畫.md`／`Phase2B-1～3報告.md` |
+| Phase 2C-1 批次模擬器與報表 | ✅ 完成 | `Phase2C計畫.md` 第 3 節／`Phase2C-1報告.md` |
+| Phase 2C-2 控制分派與戰術指令 | ✅ 完成 | `Phase2C計畫.md` 第 4 節／`Phase2C-2報告.md` |
+| Phase 2C-3 地圖類型與 build 矩陣 | ✅ 完成 | `Phase2C計畫.md` 第 5 節／`Phase2C-3報告.md` |
+| **Phase 2C-4 Phase 2 收尾** | ⏭️ 下一步 | 規格尚未撰寫（範圍見第 3 節；`Phase2C計畫.md` 第 6 節的舊大綱已作廢） |
 
-- 2A 的規則決定（使用者已同意）：範圍技能每個目標各擲命中骰；技能直接效果預設不誤傷友方，`affects: all` 為可選的「敵我不分」標記（2B 給預算折扣）；有害表面敵我不分、有益表面只幫施放者陣營、地圖表面中立；法力戰鬥中不回復；冷卻 1 ＝ 每回合一次；法術屬性倍率 0.5。
+- 最新 commit 在 GitHub `huntertoby/llm-mmo-trpg`（私人）的 `main`；使用者電腦已同步到 `02b17ba`（之後只多了文件 commit）。
+- 1037 個測試（6 個 `slow` 預設不跑，其中 3 個平衡測試已知失敗）。
+- 主要指令：
+  - `trpg battle --map <id> --seed <n> [--ally-commander id] [--enemy-commander id] [--log-json f]`、`trpg battle replay f`
+  - `trpg map list`（10 張正式地圖，8 種類型都有）
+  - `trpg sim maps [--maps a,b] [--seeds 20] [--jobs N] [--enemy-commander id]`：勝率、DPR、控制回合、技能使用率、異常
+  - `trpg sim matrix [--seeds 20] [--jobs N]`：6 個 build × 8 種地圖類型（20 種子約 9 分鐘，`--jobs 2`）
+  - `trpg sim skills [--demo] [--random N]`：技能對同階標準敵人的 DPR
+  - `trpg skills list／budget --all／random --seed N`；`scripts/skill_fuzz.py --count 1000`
+- 腳本指揮官（`trpg.sim.commanders`）：`focus_lowest_hp`、`protect_weakest`、`hold_start`、`use_env`。
 
-- 最新 commit 在 GitHub `huntertoby/llm-mmo-trpg`（私人）的 `main`；CI（Windows／Ubuntu × Python 3.12／3.13）全綠。
-- 924 個測試（另有 4 個 `slow` 平衡測試預設不跑，其中 3 個因勝率偏高而失敗，留給 2C）；23 個示範技能（`trpg skills list`、`trpg skills budget --all`）；`trpg skills random --seed N` 產生隨機技能；`scripts/skill_fuzz.py --count 1000` 約 17 秒全部通過；`trpg battle --map <id> --seed <n>` 可在終端機跑完整戰鬥並重播。
-- 示範地圖：`test_flat_6x6`、`test_heights_8x8`、`bridge_chasm`、`oil_depot`、`swamp`、`ruined_fort`。
+## 3. 下一步
 
-## 3. 下一步：Phase 2C
+### 3.1 使用者已同意的方向（2026-10-18）
 
-依 `docs/專案計畫.md` 第 14 節 Phase 2 與 `docs/design/06-技能.md` 6.8：批次模擬器與報表（DPR、控制回合、異常）、build × 地圖類型矩陣、補齊 8 種地圖類型（`docs/design/05-戰鬥.md` 5.1）、示範地圖與敵人的平衡。規格可能需要拆成 2C-1／2C-2。
+**先確定遊戲能 work，平衡延後。** 平衡要等效果模板補齊後再一次調，不然補完又要重調。順序：
 
-寫 2C 規格前先讀 `docs/phases/Phase2B-3報告.md` 第 6、7 節。**累積到 2C 的待辦（PM 已有傾向）**：
-1. **勝率**：bridge_chasm 75%、oil_depot 45%、swamp 85%、ruined_fort 85%（種子 0–19）；3 個 slow 平衡測試失敗。統一調整陣容、敵人技能、英雄法力。
-2. **AI 權重全部未經模擬**：狀態價值（放血斬曾被過度使用）、mana／cooldown／exposed／heal 權重；AI 很少用控場、位移、場地型技能（隱匿、喚潮、石牆術）。
-3. **代價折抵沒有總上限**（最高可達 +1050‰）：傾向設總上限約 +500‰。
-4. **結構型原語點數偏低**（控場平均重抽 2.8 次）：用模擬決定是否調高。
-5. **高階隨機技能強度**（例如 T5 8d8）沒有經過戰鬥驗證：需要對應階級的標準敵人。
-6. **組合器的抽選權重寫在程式碼裡**：傾向搬到 `content/`。
-7. 示範技能數值：2B-2／2B-3 為了預算調整過（盾擊、處決 2 AP；橫掃劈砍 ×1.4；火焰箭下修），一併以模擬評估。
-8. AI 效能：每動作中位數最高約 4.7 ms，目前餘裕足夠。
-9. **戰術指令接口（使用者已同意，見 `docs/design/05-戰鬥.md` 5.9.1）**：2C 調 AI 權重時一併做——效用 AI 接受戰術指令（schema 與評分加成）、`run_battle` 支援每個單位或陣營使用不同的 policy；用腳本指令測試，不接 LLM（LLM 指揮官在 Phase 3）。
+1. **2C-4｜Phase 2 收尾**（小，一位實作者）
+2. **補模板 A**：`shield`、`damage_reduction`、`taunt`、`buff_attr`、`haste`、`heal_over_time`、`cleanse`，加上 `fear`、`silence`、`blind`、`mark` 等狀態；讓技能能施加 `defending`。解鎖坦克、輔助、治療、術士。
+3. **補模板 B**：事件觸發系統（`on_hit`、`on_damaged`、`on_turn_start`……）→ 啟用被動、反應、姿態、陷阱骨架；層數累積／消耗（`builder_finisher`）；替隊友擋攻擊的反應技。
+4. **最小網頁畫面**（Phase 4 的一部分提前：格子地圖、點選移動與攻擊）。
+5. **Phase 3** LLM 技能生成（含 LLM 戰術指揮官）。
+6. 之後才回頭做平衡（見 3.3）。召喚物範圍最大，放更後面。
+
+（模板 A／B 與網頁的階段名稱、是否改動 `docs/專案計畫.md` 第 14 節的階段順序，由接手 PM 和使用者確認後再寫入。）
+
+### 3.2 2C-4 的範圍（PM 與使用者已討論，接手 PM 寫成規格）
+
+| # | 項目 |
+|---|---|
+| 1 | 每場戰鬥都打得完：查 `lava_crossing` 有 1 場打滿 30 輪平手的原因（疑似雙方都不願過岩漿），修 AI 或地圖 |
+| 2 | 每個 AI 行為模式都給基本的環境權重（目前 brute／archer／guard 的 env 權重為 0，`use_environment` 指令乘上去還是 0） |
+| 3 | 3 個失敗的 slow 平衡測試改為已知問題（例如 `xfail` 附原因），勝率目標寫進報告 |
+| 4 | 10 張地圖 × 20 種子，在「無指揮官」與各腳本指揮官設定下都沒有 exception／max_actions／draw |
+| 5 | 逐條對照 `docs/專案計畫.md` 第 14 節 Phase 2 驗收，在報告中打勾，正式結束 Phase 2 |
+
+**不做**：勝率、技能數值、AI 權重、指令加成的平衡；坦克強弱；火焰箭超標。
+
+### 3.3 延後到平衡階段的累積待辦
+
+- 勝率：大多數地圖我方 75–95%，`oil_depot` 10–45%（偏難可以保留）；目標 35–65%、一般遭遇 4–6 輪。
+- build 矩陣（`Phase2C-3報告.md`）：`build_storm` 8 種類型中 7 種前段；`build_tank` 0 種（原因是 **沒有保護型模板**，坦克只是少帶技能的戰士，補模板 A 後重測）。
+- AI 很少用控場、位移、場地技能；控制回合每場接近 0。所有 AI 權重、狀態價值、指令加成（集火 ×1.5 的算法等）未經模擬。
+- `skill_fire_bolt` 的 DPR 超過同階 P95 × 1.2。
+- 結構型原語點數偏低（2B-3 #3）；技能報表在平地 1 對 3，控場、位移、光環骨架的 DPR 偏低，可能要另設情境。
+- 冰面 DEX DC12 滑倒對 AI 的影響未評估；敵方集火時 `bridge_chasm` 我方勝率反而上升，原因未查。
+- 代價折抵總上限已定為 +500‰；組合器權重已搬到 `content/skill_composer.yaml`。
+
+### 3.4 已接受的技術細節（不用再問）
+
+2C-1～2C-3 報告的其他「待 PM 決定」都已接受，例如：傷害只算實際扣血、友軍誤傷另列；墜落／致命地形／爆炸／燃燒的傷害由引擎帶來源；`boss_burst` 門檻 60%；滑倒停在友軍格時退回最近空格（以 teleport 事件表示，客戶端之後要處理）；policy／指揮官 factory 必須是模組層級類別（`--jobs` 要 pickle）。
 
 ## 4. 已確認但尚未落地的設計決定
 
-- 戰鬥節奏目標：一般遭遇 4–6 輪、Boss 戰 6–10 輪（使用者已同意）。
-- 元素與表面的中文名稱之後再定，現在的暫定即可。
-- 吊橋深淵兩端開了繞行通道（為了節奏），先接受，做地圖類型時再檢討。
+- 戰鬥節奏目標：一般遭遇 4–6 輪、Boss 戰 6–10 輪。
+- 元素與表面的中文名稱之後再定。
+- 吊橋深淵兩端的繞行通道先接受。
+- 冰窟＝致命地形（`ice_hole`）＋可破壞的薄冰（`thin_ice`）。
 
 ## 5. 仍待使用者決定的設計問題
 
-見 `docs/專案計畫.md` 第 3.2 節，重點：
-- #5 世界觀與美術風格（未定；Phase 3 寫 prompt 前要定）
-- #8 技能等級成長方式（暫定靠使用成長）
-- #9 技能欄位數量（暫定主動 6、被動 2、反應 1）
+見 `docs/專案計畫.md` 第 3.2 節：#5 世界觀與美術風格（Phase 3 寫 prompt 前要定）、#8 技能等級成長方式、#9 技能欄位數量。
 
 ## 6. 工作流程（照做即可）
 
@@ -129,6 +156,9 @@ git bundle create /mnt/user-data/outputs/sync.bundle <使用者電腦的 HEAD>..
 - **平行工作**（例如文件整理與程式實作同時進行）用 `isolation: "worktree"` 的 agent，完成後再合併；`.claude/` 已加入 `.gitignore`。
 - **建立新的 GitHub repo** 在這個環境做不到（權限只限已加入的 repo），要請使用者在網頁上建。
 - 平衡調整很耗 token：讓 agent 寫腳本輸出摘要表，由 PM 決定數值，不要讓 agent 反覆試。
+- **平行派工實例（2C-2／2C-3）**：兩個 `isolation: "worktree"` 的 agent 同時跑，完成後在 main 上 `git merge --ff-only <先完成的分支>`、再 `git merge --no-ff <另一個分支>`；這次沒有衝突。合併後自己跑一次 `check.py` 與一場 `--log-json`／`replay`。
+- **同步失敗的殘留**：沒有刪除權限時 merge 會半途失敗，HEAD 不變但留下一堆未追蹤的新檔案。取得刪除權限後，刪掉 `.git/index.lock`、`.git/objects/maintenance.lock`、`.git/objects/pack/tmp_*`，以及 `git status` 列出的、正好是 bundle 裡新增的那些未追蹤檔案，再重新 `fetch`／`merge`。
+- 大型模擬（`sim matrix --seeds 20`）要 9 分鐘以上，agent 會在背景等；通知可能先來一兩次「仍在等待」，不用處理。
 
 ## 7. 節省 token 的原則
 
