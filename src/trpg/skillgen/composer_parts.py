@@ -215,7 +215,11 @@ def _shape_param(ctx: Ctx, name: str, low: int, high: int, allow_weapon: bool) -
 
 
 def _beneficial_affects(ctx: Ctx) -> str:
-    return "allies" if ctx.shape in _ALLY_SHAPES else "self"
+    """有益效果的對象：範圍型光環是範圍內友方；光環骨架的 ``single`` 是被選中的友方（含自己，
+    2D-1）；其他形狀（自身、控場的單體……）只作用在施放者身上。"""
+    if ctx.shape in _ALLY_SHAPES or (ctx.shape == "single" and ctx.skeleton.id == "aura"):
+        return "allies"
+    return "self"
 
 
 def _affects_enemies(ctx: Ctx, primitive_id: str, spec: dict[str, Any]) -> bool:
@@ -303,9 +307,14 @@ def _damage_effect(ctx: Ctx, weight: int) -> None:
     ctx.add(spec, (("multiplier_permille", _multiplier_ladder(ctx.rules.multipliers), weight),))
 
 
-def _heal_effect(ctx: Ctx, weight: int) -> None:
-    spec = {"type": "heal", "affects": "self" if ctx.shape == "self" else "allies"}
+def _heal_effect(ctx: Ctx, weight: int, primitive_id: str = "heal") -> None:
+    """治療與護盾（骰子強度旋鈕相同）。"""
+    spec = {"type": primitive_id, "affects": "self" if ctx.shape == "self" else "allies"}
     ctx.add(spec, (("dice", dice_ladder(ctx.rules.dice), weight),))
+
+
+def _cleanse_effect(ctx: Ctx) -> None:
+    ctx.add({"type": "cleanse", "affects": "self" if ctx.shape == "self" else "allies"}, ())
 
 
 def _fixed_effect(ctx: Ctx, primitive_id: str) -> None:
@@ -329,8 +338,10 @@ def _make_effect(ctx: Ctx, primitive_id: str, *, core: bool, beneficial_only: bo
     weight = ctx.rules.structure.knob_weight_core if core else ctx.rules.structure.knob_weight_other
     if primitive_id == "damage":
         _damage_effect(ctx, weight)
-    elif primitive_id == "heal":
-        _heal_effect(ctx, weight)
+    elif primitive_id in ("heal", "shield"):
+        _heal_effect(ctx, weight, primitive_id)
+    elif primitive_id == "cleanse":
+        _cleanse_effect(ctx)
     elif primitive_id in ("push", "pull"):
         distances = tuple(ctx.rules.structure.push_pull_distances)
         ctx.add({"type": primitive_id}, (("distance", distances, 1),))

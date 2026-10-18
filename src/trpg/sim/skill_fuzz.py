@@ -98,6 +98,10 @@ class FuzzReport:
     seed_start: int
     outcomes: list[SkillOutcome] = field(default_factory=list)
     compose_errors: list[tuple[int, str]] = field(default_factory=list)
+    primitive_ids: tuple[str, ...] = ()
+    """規則集中的全部原語（摘要列出沒出現的，次數 0）。"""
+    status_ids: tuple[str, ...] = ()
+    """規則集中可由技能施加的狀態（有 ``budget_points``）。"""
 
 
 # ---------------------------------------------------------------------------
@@ -333,7 +337,14 @@ def run_fuzz(
     progress: Callable[[int], None] | None = None,
 ) -> FuzzReport:
     """組出並驗收 ``seed_start … seed_start + count − 1`` 的隨機技能。"""
-    report = FuzzReport(seed_start)
+    rules = library.ruleset
+    report = FuzzReport(
+        seed_start,
+        primitive_ids=tuple(sorted(p.id for p in rules.primitives.primitives)),
+        status_ids=tuple(
+            sorted(s.id for s in rules.statuses.statuses if s.budget_points is not None)
+        ),
+    )
     for index in range(count):
         seed = seed_start + index
         try:
@@ -424,6 +435,14 @@ def format_report(report: FuzzReport) -> str:
     lines += _distribution("形狀", Counter(s.shape.type for s in skills), len(skills))
     lines += _distribution("AP", Counter(f"AP {s.ap_cost}" for s in skills), len(skills))
     lines += _distribution("分類", Counter(s.category for s in skills), len(skills))
+    lines.append("")
+    # 2D-1：各原語與各狀態的出現次數（以效果計；沒出現的列 0，方便確認新內容都被抽到）
+    primitives = Counter(e.type for s in skills for e in s.effects)
+    primitives.update({p: 0 for p in report.primitive_ids})
+    lines += _distribution("原語（效果數）", primitives, sum(primitives.values()))
+    statuses = Counter(e.status for s in skills for e in s.effects if e.status is not None)
+    statuses.update({p: 0 for p in report.status_ids})
+    lines += _distribution("施加的狀態（效果數）", statuses, sum(statuses.values()))
     lines.append("")
     lines += _histogram([o.ratio for o in outcomes])
     lines += _problem_lines(report, errors)
