@@ -2,13 +2,15 @@
 
 from __future__ import annotations
 
-from collections.abc import Callable, Sequence
+from collections.abc import Callable, Mapping, Sequence
 from typing import cast
 
 from pydantic import BaseModel, ConfigDict
 
 from trpg.engine.actions import Action, Decision, EndTurn, Step
 from trpg.engine.ai import Policy
+from trpg.engine.ai.commanded import OrderLogging
+from trpg.engine.ai.orders import OrderRecord
 from trpg.engine.ai.simple import choose_action
 from trpg.engine.battle import begin_battle, has_only_end_turn, resolve, resume
 from trpg.engine.events import Event, EventBase
@@ -16,6 +18,7 @@ from trpg.engine.results import Pending, ResolveResult
 from trpg.engine.setup import BattleSetup
 from trpg.engine.state import BattleState
 from trpg.shared.errors import TrpgError
+from trpg.shared.types import Team, UnitId
 
 __all__ = [
     "LOG_FORMAT",
@@ -55,7 +58,7 @@ def accept_all(state: BattleState, pending: Pending) -> Decision:
 class BattleRun:
     """一場自動對戰的結果：最終狀態、步驟列表、全部事件（含開場事件）。"""
 
-    __slots__ = ("actions", "events", "seed", "setup", "state")
+    __slots__ = ("actions", "events", "orders", "seed", "setup", "state")
 
     def __init__(
         self,
@@ -64,7 +67,11 @@ class BattleRun:
         state: BattleState,
         actions: list[Step],
         events: list[EventBase],
+        *,
+        orders: list[OrderRecord] | None = None,
     ) -> None:
+        self.orders: list[OrderRecord] = [] if orders is None else orders
+        """指揮官下達的指令紀錄（Phase 2C-2；沒有指揮官時為空）。"""
         self.setup = setup
         self.seed = seed
         self.state = state
@@ -79,6 +86,7 @@ class BattleRun:
             actions=self.actions,
             events=cast("list[Event]", self.events),
             final_state=self.state,
+            orders=self.orders,
         )
 
 
@@ -93,6 +101,8 @@ class BattleLog(BaseModel):
     actions: list[Step]
     events: list[Event]
     final_state: BattleState
+    orders: list[OrderRecord] = []
+    """戰術指令紀錄（Phase 2C-2）。重播只重播動作，不重新呼叫指揮官；舊紀錄沒有這個欄位。"""
 
 
 def run_battle(
@@ -103,8 +113,9 @@ def run_battle(
     decide: DecisionPolicy = accept_all,
     on_step: StepCallback | None = None,
     max_actions: int = DEFAULT_MAX_ACTIONS,
+    controllers: Mapping[UnitId | Team, Policy] | None = None,
 ) -> BattleRun:
-    """雙方都由 ``policy`` 決策，跑到戰鬥結束。
+    """跑到戰鬥結束。行動者的 policy 依序查：``controllers`` 的單位 ID → 陣營 → ``policy``。
 
     ``legal_actions`` 只剩 ``EndTurn`` 時（:func:`has_only_end_turn`）自動結束回合，不詢問
     policy。結算暫停（``prompt`` 反應）時以 ``decide`` 回答並 ``resume``。``on_step`` 在開場與
@@ -130,7 +141,7 @@ def run_battle(
                 assert state.active_unit is not None
                 action: Action = EndTurn(unit_id=state.active_unit)
             else:
-                action = policy(state)
+                action = _controller_for(state, policy, controllers)(state)
             step = action
             result = resolve(state, action)
         if on_step is not None:
@@ -139,7 +150,35 @@ def run_battle(
         pending = result.pending
         steps.append(step)
         events.extend(result.events)
-    return BattleRun(setup, seed, state, steps, events)
+    orders = _collect_orders(policy, controllers)
+    return BattleRun(setup, seed, state, steps, events, orders=orders)
+
+
+def _controller_for(
+    state: BattleState, policy: Policy, controllers: Mapping[UnitId | Team, Policy] | None
+) -> Policy:
+    if not controllers:
+        return policy
+    unit = state.active
+    assert unit is not None
+    by_unit = controllers.get(unit.id)
+    if by_unit is not None:
+        return by_unit
+    return controllers.get(unit.team, policy)
+
+
+def _collect_orders(
+    policy: Policy, controllers: Mapping[UnitId | Team, Policy] | None
+) -> list[OrderRecord]:
+    """會記錄指令的 policy（同一個物件只算一次）的指令紀錄，依輪數與陣營排序（穩定）。"""
+    seen: set[int] = set()
+    records: list[OrderRecord] = []
+    for candidate in (policy, *(controllers or {}).values()):
+        if isinstance(candidate, OrderLogging) and id(candidate) not in seen:
+            seen.add(id(candidate))
+            records.extend(candidate.order_log)
+    records.sort(key=lambda r: (r.round, r.team.value))
+    return records
 
 
 def replay(setup: BattleSetup, seed: int, steps: Sequence[Step]) -> BattleRun:

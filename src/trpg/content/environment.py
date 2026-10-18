@@ -29,6 +29,7 @@ __all__ = [
     "InteractionTable",
     "ObjectDef",
     "ObjectTable",
+    "OrderBonuses",
     "ReactionDef",
     "ReactionRule",
     "ReactionTable",
@@ -574,6 +575,25 @@ class AiProfile(ContentModel):
     填入，行為模式自己也可以覆寫個別狀態。"""
 
 
+class OrderBonuses(ContentModel):
+    """戰術指令的評分加成（Phase 2C-2；``content/ai_profiles.yaml`` 的 ``orders:``）。
+
+    - ``focus_permille``：集火——對目標的預覽收益（傷害、擊倒、狀態、推擊、表面、離開掩護）
+      乘上這個倍率（‰；1500 ＝ 原收益再加 50%）；位置價值的 ``approach`` 改看與目標的距離；
+    - ``hold_weight``：守位——每超出 ``radius`` 一格的位置價值扣分；
+    - ``retreat_weight``：撤退——與目標格每一格距離的位置價值扣分（``approach``、``threat`` 視為
+      0）；
+    - ``protect_min``：保護——``protect`` 權重至少為這個值（對象固定為指令指定的友方）；
+    - ``environment_permille``：利用環境——環境傷害、環境擊倒、推擊、表面、離開掩護的收益倍率（‰）。
+    """
+
+    focus_permille: int = Field(default=1500, ge=1000)
+    hold_weight: int = Field(default=20, ge=0)
+    retreat_weight: int = Field(default=15, ge=0)
+    protect_min: int = Field(default=12, ge=0)
+    environment_permille: int = Field(default=2000, ge=1000)
+
+
 class AiProfileTable(ContentModel):
     """``content/ai_profiles.yaml``：至少包含 brute、archer、cunning、guard。
 
@@ -592,6 +612,7 @@ class AiProfileTable(ContentModel):
     move_candidates: int = Field(default=8, ge=1)
     skill_candidates: int = Field(default=3, ge=1)
     status_values: dict[str, int] = Field(default_factory=dict)
+    orders: OrderBonuses = Field(default_factory=OrderBonuses)
 
     @model_validator(mode="before")
     @classmethod

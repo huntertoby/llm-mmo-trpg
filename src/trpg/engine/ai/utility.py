@@ -29,11 +29,21 @@
 
 from __future__ import annotations
 
+from collections.abc import Callable
 from dataclasses import dataclass
 from fractions import Fraction
 
-from trpg.content.environment import AiProfile, AiProfileTable, AiWeights
+from trpg.content.environment import AiProfile, AiProfileTable, AiWeights, OrderBonuses
 from trpg.engine.actions import Action, Attack, Defend, EndTurn, Move, UseSkill
+from trpg.engine.ai.orders import (
+    FocusTarget,
+    HoldPosition,
+    Protect,
+    RetreatTo,
+    TacticalOrder,
+    UseEnvironment,
+    validate_order,
+)
 from trpg.engine.battle import legal_actions, legal_actions_with_areas
 from trpg.engine.events import (
     DamageDealt,
@@ -59,11 +69,14 @@ from trpg.shared.types import ObjectId, Surface, Team, UnitId
 
 __all__ = [
     "ActionScore",
+    "OrderContext",
+    "OrdersSource",
     "UtilityAI",
     "defend_score",
     "is_risky_move",
     "position_value",
     "reactive_enemies",
+    "resolve_orders",
     "score_action",
     "virtual_move_score",
     "worth_previewing",
@@ -77,6 +90,69 @@ _ATTACK_CAUSES = ("attack",)
 _PRONE = "prone"
 _SURFACE_HARM = 8
 """讓友方站上有害的新表面的扣分：相當於這麼多點傷害（乘上 ``friendly_fire``）。"""
+
+
+type OrdersSource = Callable[[BattleState, UnitId], tuple[TacticalOrder, ...]]
+"""``(狀態, 行動者 ID) -> 該單位適用的戰術指令``（見 :mod:`trpg.engine.ai.orders`）。"""
+
+
+@dataclass(frozen=True, slots=True)
+class OrderContext:
+    """一次決策中，行動者適用的有效戰術指令（已驗證）與加成數值。"""
+
+    bonuses: OrderBonuses
+    focus: UnitId | None = None
+    hold: tuple[XY, int] | None = None
+    retreat: XY | None = None
+    ward: UnitId | None = None
+    env: bool = False
+
+
+def resolve_orders(
+    state: BattleState,
+    unit: UnitState,
+    orders: tuple[TacticalOrder, ...],
+    bonuses: OrderBonuses,
+) -> OrderContext | None:
+    """濾掉無效指令（:func:`~trpg.engine.ai.orders.validate_order`；保護自己也無效），
+    全部無效或沒有指令時回傳 ``None``（此時評分與沒有指令完全相同）。"""
+    focus: UnitId | None = None
+    hold: tuple[XY, int] | None = None
+    retreat: XY | None = None
+    ward: UnitId | None = None
+    env = False
+    for order in orders:
+        if validate_order(state, unit.team, order) is not None:
+            continue
+        match order:
+            case FocusTarget(target=target):
+                focus = target
+            case HoldPosition(at=at, radius=radius):
+                hold = (at, radius)
+            case RetreatTo(at=at):
+                retreat = at
+            case Protect(ward=target) if target != unit.id:
+                ward = target
+            case UseEnvironment():
+                env = True
+            case _:
+                pass
+    if focus is None and hold is None and retreat is None and ward is None and not env:
+        return None
+    return OrderContext(bonuses, focus, hold, retreat, ward, env)
+
+
+def _order_weights(w: AiWeights, orders: OrderContext | None) -> AiWeights:
+    """指令調整後的權重：撤退時 ``approach``、``threat`` 視為 0；保護時 ``protect`` 至少為
+    ``protect_min``。"""
+    if orders is None:
+        return w
+    update: dict[str, int] = {}
+    if orders.retreat is not None:
+        update.update(approach=0, threat=0)
+    if orders.ward is not None:
+        update["protect"] = max(w.protect, orders.bonuses.protect_min)
+    return w.model_copy(update=update) if update else w
 
 
 @dataclass(frozen=True, slots=True)
@@ -114,22 +190,24 @@ def _objective_distance(state: BattleState, unit: UnitState) -> int:
     return min(manhattan(unit.xy, t) for t in objective.tiles)
 
 
-def _ward(state: BattleState, unit: UnitState) -> XY | None:
-    """最需要保護的友方（HP 比例最低，同比例依 ID）的位置；沒有其他友方時為 ``None``。"""
+def _ward(state: BattleState, unit: UnitState, orders: OrderContext | None = None) -> XY | None:
+    """最需要保護的友方（HP 比例最低，同比例依 ID）的位置；沒有其他友方時為 ``None``。
+    保護指令（``orders.ward``）指定了對象時固定用它。"""
+    if orders is not None and orders.ward is not None:
+        return state.units[orders.ward].xy
     allies = [u for u in state.living_units() if u.team is unit.team and u.id != unit.id]
     if not allies:
         return None
     return min(allies, key=lambda u: (Fraction(u.hp, u.max_hp), u.id)).xy
 
 
-def _protect_distance(state: BattleState, unit: UnitState) -> int:
-    ward = _ward(state, unit)
-    return 0 if ward is None else manhattan(unit.xy, ward)
-
-
-def position_value(state: BattleState, unit_id: UnitId, w: AiWeights) -> Fraction:
-    """行動者在 ``state`` 中所在位置的價值。"""
-    return _unit_position_value(state, state.units[unit_id], w)
+def position_value(
+    state: BattleState, unit_id: UnitId, w: AiWeights, orders: OrderContext | None = None
+) -> Fraction:
+    """行動者在 ``state`` 中所在位置的價值（``orders``：戰術指令的調整，見
+    :func:`resolve_orders`）。"""
+    unit = state.units[unit_id]
+    return _unit_position_value(state, unit, _order_weights(w, orders), _scene(state, unit, orders))
 
 
 @dataclass(frozen=True, slots=True)
@@ -138,13 +216,21 @@ class _Scene:
 
     enemies: list[UnitState]
     ward: XY | None
+    orders: OrderContext | None = None
+    focus_xy: XY | None = None
+    """集火目標的位置（目標還在場上時）；``approach`` 改以它計算。"""
 
 
-def _scene(state: BattleState, unit: UnitState) -> _Scene:
-    return _Scene(_enemies(state, unit), _ward(state, unit))
+def _scene(state: BattleState, unit: UnitState, orders: OrderContext | None = None) -> _Scene:
+    focus_xy = None
+    if orders is not None and orders.focus is not None:
+        target = state.units.get(orders.focus)
+        if target is not None and target.alive:
+            focus_xy = target.xy
+    return _Scene(_enemies(state, unit), _ward(state, unit, orders), orders, focus_xy)
 
 
-def _unit_position_value(
+def _unit_position_value(  # noqa: PLR0912
     state: BattleState, unit: UnitState, w: AiWeights, scene: _Scene | None = None
 ) -> Fraction:
     """``unit`` 的位置價值；``unit`` 可以是「放到別的格子」的虛擬複本（位置以 ``unit.xy`` 為準，
@@ -159,7 +245,10 @@ def _unit_position_value(
     enemies = scene.enemies
     value = 0
     if enemies:
-        value -= w.approach * min(manhattan(xy, e.xy) for e in enemies)
+        if scene.focus_xy is not None:
+            value -= w.approach * manhattan(xy, scene.focus_xy)
+        else:
+            value -= w.approach * min(manhattan(xy, e.xy) for e in enemies)
         if w.threat:
             value += w.threat * sum(1 for e in enemies if attack_problem(state, unit, e) is None)
         value -= w.keep_distance * sum(1 for e in enemies if manhattan(xy, e.xy) <= 2)  # noqa: PLR2004
@@ -172,9 +261,22 @@ def _unit_position_value(
         value -= w.protect * manhattan(xy, scene.ward)
     if w.objective:
         value -= w.objective * _objective_distance(state, unit)
+    if scene.orders is not None:
+        value -= _order_penalty(scene.orders, xy)
     if _harmful(state, xy):
         value -= w.hazard
     return Fraction(value)
+
+
+def _order_penalty(orders: OrderContext, xy: XY) -> int:
+    """守位與撤退指令的位置扣分。"""
+    penalty = 0
+    if orders.hold is not None:
+        at, radius = orders.hold
+        penalty += orders.bonuses.hold_weight * max(0, manhattan(xy, at) - radius)
+    if orders.retreat is not None:
+        penalty += orders.bonuses.retreat_weight * manhattan(xy, orders.retreat)
+    return penalty
 
 
 def _outgunners(state: BattleState, unit: UnitState, enemies: list[UnitState]) -> list[UnitState]:
@@ -239,7 +341,13 @@ def _useful_damage(damage: DamageRange, hit: Fraction, hp: int) -> Fraction:
 
 
 def _status_gains(
-    state: BattleState, actor: UnitState, p: Preview, profile: AiProfile, hit: Fraction
+    state: BattleState,
+    actor: UnitState,
+    p: Preview,
+    profile: AiProfile,
+    hit: Fraction,
+    *,
+    only: UnitId | None = None,
 ) -> Fraction:
     """對敵人施加狀態的收益。
 
@@ -261,11 +369,12 @@ def _status_gains(
         if isinstance(e, StatusApplied)
         and e.target_id in state.units
         and state.units[e.target_id].team is not actor.team
+        and (only is None or e.target_id == only)
     }
     for _, status_id in sorted(applied):
         gains += hit * value(status_id)
     for t in p.targets:
-        if t.ally:
+        if t.ally or (only is not None and t.unit_id != only):
             continue
         target = state.units[t.unit_id]
         for chance in t.status_chances:
@@ -275,8 +384,13 @@ def _status_gains(
 
 
 def _gains(  # noqa: PLR0912, PLR0915
-    state: BattleState, actor: UnitState, p: Preview, profile: AiProfile
+    state: BattleState,
+    actor: UnitState,
+    p: Preview,
+    profile: AiProfile,
+    only: UnitId | None = None,
 ) -> Fraction:
+    """預覽收益。``only`` 給定時只計入對該單位（敵人）的收益——集火指令的加成用。"""
     w = profile.weights
     hit = p.hit_chance if p.hit_chance is not None else Fraction(1)
     team = actor.team
@@ -310,18 +424,20 @@ def _gains(  # noqa: PLR0912, PLR0915
                 seen.add(e.target_id)
                 continue
             if is_enemy(e.target_id):
-                other_enemy += e.amount
-                if e.cause not in _ATTACK_CAUSES:
-                    env_enemy += e.amount
-            elif e.target_id in state.units:
+                if only is None or e.target_id == only:
+                    other_enemy += e.amount
+                    if e.cause not in _ATTACK_CAUSES:
+                        env_enemy += e.amount
+            elif e.target_id in state.units and only is None:
                 friendly += e.amount
-    if p.damage is not None and primary is not None:
+    if p.damage is not None and primary is not None and (only is None or primary == only):
         gains += w.damage * _useful_damage(p.damage, hit, state.units[primary].hp)
     for t in p.targets:  # 技能：每個目標各自的命中率與期望傷害
-        if t.damage is not None and not t.ally:
+        if t.damage is not None and not t.ally and (only is None or t.unit_id == only):
             gains += w.damage * _useful_damage(t.damage, t.hit_chance, state.units[t.unit_id].hp)
     healed = sum(Fraction(lo + hi, 2) for uid, lo, hi in p.healed if uid in state.units)
-    gains += w.heal * healed
+    if only is None:
+        gains += w.heal * healed
     gains += w.damage * hit * other_enemy / 2
     gains += w.env_damage * hit * env_enemy / 2
     gains -= w.friendly_fire * friendly / 2
@@ -332,6 +448,8 @@ def _gains(  # noqa: PLR0912, PLR0915
     for uid, factor in [(u, hit) for u in sorted(certain_down)] + [
         (u, hit / _POSSIBLE_KILL_DIVISOR) for u in sorted(possible_down)
     ]:
+        if only is not None and uid != only:
+            continue
         if is_enemy(uid):
             gains += w.kill * factor
             if causes.get(uid, "attack") not in _ATTACK_CAUSES:
@@ -342,32 +460,42 @@ def _gains(  # noqa: PLR0912, PLR0915
     pushed = {
         e.unit_id
         for e in p.min_events
-        if isinstance(e, UnitMoved) and e.mode == "forced" and is_enemy(e.unit_id)
+        if isinstance(e, UnitMoved)
+        and e.mode == "forced"
+        and is_enemy(e.unit_id)
+        and (only is None or e.unit_id == only)
     }
     gains += w.push * hit * len(pushed)
-    gains += _status_gains(state, actor, p, profile, hit)
+    gains += _status_gains(state, actor, p, profile, hit, only=only)
     for t in p.targets:  # 技能附帶的擊倒：命中率 × 對抗成功率（預覽的 min 只視為失敗）
         if (
             t.knock_chance is not None
             and not t.ally
+            and (only is None or t.unit_id == only)
             and not state.units[t.unit_id].has_status(_PRONE)
         ):
             gains += w.status * t.hit_chance * t.knock_chance
     after = p.min_state
-    before_harm = sum(1 for u in _enemies(state, actor) if _harmful(state, u.xy))
+    before_harm = sum(
+        1
+        for u in _enemies(state, actor)
+        if (only is None or u.id == only) and _harmful(state, u.xy)
+    )
     after_harm = sum(
-        1 for u in after.living_units() if u.team is not team and _harmful(after, u.xy)
+        1
+        for u in after.living_units()
+        if u.team is not team and (only is None or u.id == only) and _harmful(after, u.xy)
     )
     gains += w.surface * hit * (after_harm - before_harm)
-    if isinstance(p.action, UseSkill):  # 讓友方站上有害的新表面（火、毒……）
+    if isinstance(p.action, UseSkill) and only is None:  # 讓友方站上有害的新表面（火、毒……）
         gains -= (
             w.friendly_fire
             * _SURFACE_HARM
             * (_harmed_allies(after, actor) - _harmed_allies(state, actor))
         )
     if w.expose or w.cover_damage:
-        gains += _cover_gains(state, actor, p, w, hit)
-    if isinstance(p.action, Defend):
+        gains += _cover_gains(state, actor, p, w, hit, only)
+    if isinstance(p.action, Defend) and only is None:
         near = sum(1 for e in _enemies(state, actor) if manhattan(actor.xy, e.xy) <= _DEFEND_RADIUS)
         gains += w.defend * near
     return gains
@@ -382,18 +510,29 @@ def _harmed_allies(state: BattleState, actor: UnitState) -> int:
     )
 
 
-def _cover_gains(
-    state: BattleState, actor: UnitState, p: Preview, w: AiWeights, hit: Fraction
+def _cover_gains(  # noqa: PLR0917
+    state: BattleState,
+    actor: UnitState,
+    p: Preview,
+    w: AiWeights,
+    hit: Fraction,
+    only: UnitId | None = None,
 ) -> Fraction:
     """推離掩護（``expose``）與破壞敵人的掩護物（``cover_damage``）的收益。"""
     team = actor.team
-    before = sum(1 for e in _enemies(state, actor) if _in_cover(state, e))
+    before = sum(
+        1 for e in _enemies(state, actor) if (only is None or e.id == only) and _in_cover(state, e)
+    )
     exposed = Fraction(0)
     for after in (p.min_state, p.max_state):
-        now = sum(1 for e in after.living_units() if e.team is not team and _in_cover(after, e))
+        now = sum(
+            1
+            for e in after.living_units()
+            if e.team is not team and (only is None or e.id == only) and _in_cover(after, e)
+        )
         exposed += before - now
     gains = w.expose * hit * exposed / 2
-    if w.cover_damage:
+    if w.cover_damage and only is None:
         shields = _cover_objects_near_enemies(state, actor)
         if shields:
             dealt = sum(
@@ -412,25 +551,60 @@ def score_action(
     profile: AiProfile,
     *,
     before: Fraction | None = None,
+    orders: OrderContext | None = None,
 ) -> ActionScore:
     """單一動作的分數（``EndTurn`` 固定為 0），以完整 ``preview`` 計算。
 
-    ``before`` 為行動者在 ``state`` 的位置價值（省略時重新計算）。
+    ``before`` 為行動者在 ``state`` 的位置價值（省略時重新計算）；``orders`` 為行動者適用的
+    戰術指令（:func:`resolve_orders`；``None`` 時與沒有指令的分數完全相同）。
     """
     if isinstance(action, EndTurn):
         return ActionScore(action, Fraction(0), None)
-    w = profile.weights
+    w = _order_weights(profile.weights, orders)
+    if w is not profile.weights:
+        profile = profile.model_copy(update={"weights": w})
     actor = state.units[action.unit_id]
     p = preview(state, action)
     if before is None:
-        before = position_value(state, actor.id, w)
-    after = position_value(p.min_state, actor.id, w)
+        before = position_value(state, actor.id, w, orders)
+    after = position_value(p.min_state, actor.id, w, orders)
     # 位置變化只在動作成功時發生（攻擊、技巧動作乘上命中率／成功率）
     hit = p.hit_chance if p.hit_chance is not None else Fraction(1)
     score = _gains(state, actor, p, profile) + hit * (after - before)
+    if orders is not None:
+        score += _order_bonus(state, actor, p, profile, orders)
     if isinstance(action, UseSkill):
         score -= skill_cost(state, actor, action, w)
     return ActionScore(action, score, p)
+
+
+def _order_bonus(
+    state: BattleState, actor: UnitState, p: Preview, profile: AiProfile, orders: OrderContext
+) -> Fraction:
+    """集火與利用環境的收益加成：（倍率 − 1）× 對應的預覽收益。"""
+    bonus = Fraction(0)
+    if orders.focus is not None:
+        extra = Fraction(orders.bonuses.focus_permille - 1000, 1000)
+        bonus += extra * _gains(state, actor, p, profile, only=orders.focus)
+    if orders.env:
+        extra = Fraction(orders.bonuses.environment_permille - 1000, 1000)
+        zeroed = {
+            key: 0
+            for key in (
+                "damage",
+                "kill",
+                "status",
+                "friendly_fire",
+                "heal",
+                "defend",
+                "cover_damage",
+            )
+        }
+        env_only = profile.model_copy(
+            update={"weights": profile.weights.model_copy(update=zeroed), "status_values": {}}
+        )
+        bonus += extra * _gains(state, actor, p, env_only)
+    return bonus
 
 
 def skill_cost(state: BattleState, actor: UnitState, action: UseSkill, w: AiWeights) -> Fraction:
@@ -634,8 +808,12 @@ class UtilityAI:
         override: str | None = None,
         move_candidates: int | None = None,
         skill_candidates: int | None = None,
+        orders: OrdersSource | None = None,
     ) -> None:
         self._profiles = profiles.by_id()
+        self._bonuses = profiles.orders
+        self.orders: OrdersSource | None = orders
+        """戰術指令的來源（Phase 2C-2）；``None`` 時完全不受指令影響。"""
         self._override = override
         self._move_candidates = (
             profiles.move_candidates if move_candidates is None else move_candidates
@@ -657,6 +835,12 @@ class UtilityAI:
         """每種技能最多跑完整 ``preview`` 的選取數。"""
         return self._skill_limit
 
+    def order_context(self, state: BattleState, unit: UnitState) -> OrderContext | None:
+        """``unit`` 此刻適用的有效戰術指令；沒有指令來源或沒有有效指令時為 ``None``。"""
+        if self.orders is None:
+            return None
+        return resolve_orders(state, unit, self.orders(state, unit.id), self._bonuses)
+
     def rank_all(self, state: BattleState) -> list[ActionScore]:
         """所有合法動作以完整 ``preview`` 計算的分數（依 ``legal_actions`` 的順序；不篩選，
         較慢，供測試與分析使用）。"""
@@ -664,8 +848,11 @@ class UtilityAI:
         if unit is None:
             raise ValueError("目前沒有行動中的單位")
         profile = self.profile_for(unit)
-        before = position_value(state, unit.id, profile.weights)
-        return [score_action(state, a, profile, before=before) for a in legal_actions(state)]
+        ctx = self.order_context(state, unit)
+        before = position_value(state, unit.id, profile.weights, ctx)
+        return [
+            score_action(state, a, profile, before=before, orders=ctx) for a in legal_actions(state)
+        ]
 
     def rank(self, state: BattleState) -> list[ActionScore]:
         """候選動作的分數（依 ``legal_actions`` 的順序）。
@@ -680,12 +867,13 @@ class UtilityAI:
         if unit is None:
             raise ValueError("目前沒有行動中的單位")
         profile = self.profile_for(unit)
-        w = profile.weights
+        ctx = self.order_context(state, unit)
+        w = _order_weights(profile.weights, ctx)
         actions, areas = legal_actions_with_areas(state)
-        before = position_value(state, unit.id, w)
+        before = position_value(state, unit.id, w, ctx)
         scored: dict[int, ActionScore] = {}
         estimates: list[tuple[Fraction, int]] = []
-        scene = _scene(state, unit)
+        scene = _scene(state, unit, ctx)
         for index, action in enumerate(actions):
             if isinstance(action, Move):
                 estimates.append(
@@ -698,16 +886,16 @@ class UtilityAI:
             elif isinstance(action, UseSkill):
                 continue  # 技能在下面依估計篩選後才評分
             else:
-                scored[index] = score_action(state, action, profile, before=before)
+                scored[index] = score_action(state, action, profile, before=before, orders=ctx)
         for index in self._skill_candidates(state, unit, actions, areas, scene, w, before):
-            scored[index] = score_action(state, actions[index], profile, before=before)
+            scored[index] = score_action(state, actions[index], profile, before=before, orders=ctx)
         estimates.sort(key=lambda item: (-item[0], item[1]))
         enemies = reactive_enemies(state, unit)
         for estimate, index in estimates[: self._move_candidates]:
             move = actions[index]
             assert isinstance(move, Move)
             if is_risky_move(state, unit, move, enemies):
-                scored[index] = score_action(state, move, profile, before=before)
+                scored[index] = score_action(state, move, profile, before=before, orders=ctx)
             else:
                 scored[index] = ActionScore(move, estimate, None)
         return [scored[i] for i in sorted(scored)]
