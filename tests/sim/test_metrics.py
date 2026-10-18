@@ -15,23 +15,19 @@ from trpg.engine.events import (
     ChainLimitReached,
     DamageCause,
     DamageDealt,
-    EnteredDeadlyTerrain,
     EventBase,
     Healed,
-    ObjectDamaged,
-    ObjectDestroyed,
     RoundStarted,
     SkillUsed,
     StatusApplied,
     StatusRemoved,
     TurnStarted,
     UnitDowned,
-    UnitMoved,
     UnitSpawned,
 )
 from trpg.engine.runner import run_battle
 from trpg.engine.setup import build_setup
-from trpg.shared.types import Element, ObjectId, Pos, Team, UnitId
+from trpg.shared.types import Element, Pos, Team, UnitId
 from trpg.sim.metrics import (
     BattleMetrics,
     UnitInfo,
@@ -160,9 +156,9 @@ def _scenario() -> tuple[list[EventBase], list[int]]:
     s.damage(E1, A2, 8, 0)
     s.add(UnitDowned, unit_id=E1)
     bounds.append(s.mark())
-    # 動作 5：A1 對 Boss 一擊 55（≥ 50% 最大 HP），連鎖上限 2 次
+    # 動作 5：A1 對 Boss 一擊 60（≥ 60% 最大 HP），連鎖上限 2 次
     s.attack(A1, BOSS, None)
-    s.damage(BOSS, A1, 100, 45)
+    s.damage(BOSS, A1, 100, 40)
     s.add(ChainLimitReached, effect_kind="damage", depth=8)
     s.add(ChainLimitReached, effect_kind="damage", depth=8)
     bounds.append(s.mark())
@@ -179,7 +175,6 @@ def _metrics(events: list[EventBase], bounds: list[int] | None, **kw: Any) -> Ba
         units=UNITS,
         events=events,
         bounds=bounds,
-        actors=kw.get("actors"),
         ap_spent=kw.get("ap_spent", {}),
         winner=kw.get("winner", Team.ALLY),
         rounds=kw.get("rounds", 2),
@@ -195,14 +190,14 @@ def test_damage_is_attributed_to_sources_and_split_into_direct_and_indirect() ->
     events, bounds = _scenario()
     m = _metrics(events, bounds)
     a1, a2, e1 = _unit(m, A1), _unit(m, A2), _unit(m, E1)
-    assert (a1.damage_direct, a1.damage_indirect) == (12 + 55, 8)  # 技能 12 ＋ Boss 55；爆炸 8
+    assert (a1.damage_direct, a1.damage_indirect) == (12 + 60, 8)  # 技能 12 ＋ Boss 60；爆炸 8
     assert a1.damage_friendly == 10  # 誤傷 A2 不計入直接
     assert (a2.damage_direct, a2.damage_indirect) == (8, 0)  # 溢出的傷害只算實際扣掉的 HP
     assert e1.damage_taken == 12 + 8 + 2 + 8
     assert a2.damage_taken == 10
     assert m.environment_damage == {"enemy": 2}  # 墜落沒有來源
-    assert m.team_damage(Team.ALLY) == 12 + 55 + 8 + 8
-    assert m.team_damage(Team.ALLY, direct=True) == 12 + 55 + 8
+    assert m.team_damage(Team.ALLY) == 12 + 60 + 8 + 8
+    assert m.team_damage(Team.ALLY, direct=True) == 12 + 60 + 8
     assert m.team_damage(Team.ALLY, direct=False) == 8
     assert m.team_damage(Team.ENEMY) == 0
 
@@ -217,7 +212,7 @@ def test_dpr_divides_by_the_rounds_the_unit_was_in_the_battle() -> None:
         (E1, 1),
         (BOSS, 2),
     ]
-    assert _unit(m, A1).dpr == Fraction(12 + 55 + 8, 2)
+    assert _unit(m, A1).dpr == Fraction(12 + 60 + 8, 2)
     assert _unit(m, A2).dpr == Fraction(8, 2)
     assert _unit(m, E1).dpr == 0
 
@@ -255,7 +250,7 @@ def test_anomaly_raw_data_boss_burst_chain_limit_and_result() -> None:
     events, bounds = _scenario()
     m = _metrics(events, bounds)
     assert m.chain_limit_count == 2
-    assert m.boss_burst is not None and "55／100" in m.boss_burst
+    assert m.boss_burst is not None and "60／100" in m.boss_burst
     assert m.one_shot_count == 0  # E1 在同一個動作內只受到 12 ＋ 8 ＋ 2
     assert (m.result, m.rounds, m.actions) == ("ally", 2, 5)
     assert _metrics(events, bounds, winner=None).result == "draw"
@@ -273,7 +268,7 @@ def test_boss_downed_in_round_one_is_a_burst_otherwise_each_action_is_checked() 
     s.add(UnitDowned, unit_id=BOSS)
     m = _metrics(s.events, [first, second, s.mark()])
     assert m.boss_burst == "Boss 在第 1 輪被擊倒"
-    # 第 2 輪才倒下、且每個動作都 < 50% 最大 HP：不是 burst
+    # 第 2 輪才倒下、且每個動作都 < 60% 最大 HP：不是 burst
     s2 = Stream()
     s2.add(RoundStarted)
     b0 = s2.mark()
@@ -285,6 +280,19 @@ def test_boss_downed_in_round_one_is_a_burst_otherwise_each_action_is_checked() 
     s2.damage(BOSS, A1, 30, 0)
     s2.add(UnitDowned, unit_id=BOSS)
     assert _metrics(s2.events, [b0, b1, b2, s2.mark()]).boss_burst is None
+
+
+def test_boss_burst_threshold_is_sixty_percent_of_max_hp() -> None:
+    def burst(after: int) -> str | None:
+        s = Stream()
+        s.add(RoundStarted)
+        opening = s.mark()
+        s.round = 2
+        s.damage(BOSS, A1, 100, after)
+        return _metrics(s.events, [opening, s.mark()]).boss_burst
+
+    assert burst(41) is None  # 59%
+    assert burst(40) is not None  # 剛好 60%
 
 
 def test_one_shot_counts_actions_that_remove_a_non_boss_units_whole_hp() -> None:
@@ -344,73 +352,41 @@ def test_reinforcements_count_rounds_from_the_round_after_they_arrive() -> None:
     assert next(u for u in m.units if u.unit_id == A1).alive_rounds == 3
 
 
-def _push(s: Stream, unit: UnitId, mode: Any = "forced") -> None:
-    s.add(UnitMoved, unit_id=unit, from_pos=Pos(x=1, y=1), to_pos=Pos(x=2, y=1), mode=mode, cost=0)
-
-
-def test_falls_and_deadly_terrain_after_a_forced_move_belong_to_the_pusher() -> None:
+def test_falls_and_deadly_terrain_use_the_source_carried_by_the_event() -> None:
     s = Stream()
     s.add(RoundStarted)
     opening = s.mark()
-    # 動作 1（A1 行動）：E1 被強制位移後掉進深淵 → 歸 A1，A1 得到擊倒
-    _push(s, E1)
-    s.damage(E1, None, 30, 0, "deadly_terrain")
+    # 動作 1：E1 被 A1 推下深淵，引擎在傷害事件上帶了推擊者 → 歸 A1，A1 得到擊倒
+    s.damage(E1, A1, 30, 0, "deadly_terrain")
     s.add(UnitDowned, unit_id=E1)
     one = s.mark()
-    # 動作 2（A2 行動）：A1 自己走進深淵（walk）→ 沒人推，歸環境
-    _push(s, A1, "walk")
+    # 動作 2：A1 自己走進深淵，沒有來源 → 歸環境
     s.damage(A1, None, 50, 0, "deadly_terrain")
     s.add(UnitDowned, unit_id=A1)
-    m = _metrics(s.events, [opening, one, s.mark()], actors=[None, A1, A2])
+    m = _metrics(s.events, [opening, one, s.mark()])
     e1, a1 = _unit(m, E1), _unit(m, A1)
-    assert e1.damage_taken == 30 and _unit(m, A1).damage_indirect == 30
-    assert _unit(m, A1).kills == 1 and a1.damage_taken == 50
+    assert e1.damage_taken == 30 and a1.damage_indirect == 30
+    assert a1.kills == 1 and a1.damage_taken == 50
     assert m.environment_damage == {"ally": 50}
-    # 沒有行動者資料時，同樣的事件全部歸環境
-    plain = _metrics(s.events, [opening, one, s.mark()])
-    assert plain.environment_damage == {"enemy": 30, "ally": 50}
 
 
-def test_units_dropped_by_a_destroyed_bridge_are_attributed_to_who_hit_it() -> None:
-    bridge, spot = ObjectId("obj_1"), Pos(x=4, y=7)
+def test_fall_damage_with_a_source_counts_as_indirect_damage_of_that_unit() -> None:
     s = Stream()
     s.add(RoundStarted)
     opening = s.mark()
-    # 動作 1（A1）：打壞木橋，橋上的 E1 掉進深淵
-    s.add(
-        ObjectDamaged,
-        object_id=bridge,
-        pos=spot,
-        source_id=A1,
-        cause="attack",
-        element=Element.PHYSICAL,
-        rolls=(),
-        amount=12,
-        hp_before=12,
-        hp_after=0,
-    )
-    s.add(ObjectDestroyed, object_id=bridge, kind="wooden_bridge", pos=spot, cause="damage")
-    s.add(EnteredDeadlyTerrain, unit_id=E1, pos=spot, terrain="chasm")
-    s.damage(E1, None, 30, 0, "deadly_terrain")
-    s.add(UnitDowned, unit_id=E1)
-    one = s.mark()
-    # 動作 2（A2）：橋是燒掉的（沒有單位打它）→ 掉下去的 A1 歸環境
-    s.add(ObjectDestroyed, object_id=bridge, kind="wooden_bridge", pos=spot, cause="burned")
-    s.add(EnteredDeadlyTerrain, unit_id=A1, pos=spot, terrain="chasm")
-    s.damage(A1, None, 50, 0, "deadly_terrain")
-    m = _metrics(s.events, [opening, one, s.mark()], actors=[None, A1, A2])
-    assert (_unit(m, A1).damage_indirect, _unit(m, A1).kills) == (30, 1)
-    assert m.environment_damage == {"ally": 50}
+    s.damage(E1, A2, 30, 22, "fall")
+    m = _metrics(s.events, [opening, s.mark()])
+    assert (_unit(m, A2).damage_direct, _unit(m, A2).damage_indirect) == (0, 8)
+    assert m.environment_damage == {}
 
 
-def test_a_unit_forced_into_terrain_by_itself_is_environment_damage() -> None:
+def test_a_source_on_the_same_team_is_friendly_fire_not_dps() -> None:
     s = Stream()
     s.add(RoundStarted)
     opening = s.mark()
-    _push(s, A1)  # 自己的位移技能也算強制位移，但行動者就是自己
-    s.damage(A1, None, 50, 0, "deadly_terrain")
-    m = _metrics(s.events, [opening, s.mark()], actors=[None, A1])
-    assert m.environment_damage == {"ally": 50}
+    s.damage(A2, A1, 40, 25, "fall")  # 隊友把人推下去
+    m = _metrics(s.events, [opening, s.mark()])
+    assert _unit(m, A1).damage_friendly == 15 and _unit(m, A1).damage_indirect == 0
 
 
 def test_deadly_terrain_is_a_designed_kill_so_it_is_not_a_one_shot_but_can_burst_a_boss() -> None:
@@ -418,13 +394,11 @@ def test_deadly_terrain_is_a_designed_kill_so_it_is_not_a_one_shot_but_can_burst
     s.add(RoundStarted)
     opening = s.mark()
     s.round = 2
-    _push(s, E1)
-    s.damage(E1, None, 30, 0, "deadly_terrain")
+    s.damage(E1, A1, 30, 0, "deadly_terrain")
     s.add(UnitDowned, unit_id=E1)
     one = s.mark()
-    _push(s, BOSS)
-    s.damage(BOSS, None, 100, 40, "deadly_terrain")
-    m = _metrics(s.events, [opening, one, s.mark()], actors=[None, A1, A1])
+    s.damage(BOSS, A1, 100, 40, "deadly_terrain")
+    m = _metrics(s.events, [opening, one, s.mark()])
     assert m.one_shot_count == 0
     assert m.boss_burst is not None and "60／100" in m.boss_burst
 
