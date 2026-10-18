@@ -23,12 +23,11 @@ from trpg.engine.context import Ctx
 from trpg.engine.effects.models import ApplyStatusEffect
 from trpg.engine.events import StatusConverted, StatusResisted, StatusSaveRolled
 from trpg.engine.rules.combat import PERMILLE, is_hit
+from trpg.engine.rules.statuses import boss_converted_status
 from trpg.engine.state import BattleState, UnitState
 from trpg.shared.types import Attribute
 
 __all__ = ["StatusPlan", "control_dr_active", "plan_status", "status_effect", "status_save_chance"]
-
-BOSS_TAG = "boss"
 
 
 @dataclass(frozen=True, slots=True)
@@ -59,9 +58,8 @@ def plan_status(state: BattleState, target: UnitState, status_id: str) -> Status
     """Boss 轉換、抵抗屬性與遞減後的守方屬性值（純函式，供結算與預覽共用）。"""
     rules = state.ruleset
     definition = rules.status_def(status_id)
-    final = status_id
-    if definition.control_group == "hard" and target.has_tag(BOSS_TAG):
-        final = rules.core.boss_control_conversion.get(status_id, status_id)
+    final = boss_converted_status(rules, target, status_id)
+    if final != status_id:
         definition = rules.status_def(final)
     attr = definition.save_attr
     if attr is None:

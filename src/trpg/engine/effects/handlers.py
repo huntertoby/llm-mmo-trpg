@@ -22,6 +22,7 @@ from trpg.engine.events import (
     MoveBlocked,
     MoveMode,
     StatusApplied,
+    StatusConverted,
     StatusRemoved,
     SurfaceEntered,
     UnitFell,
@@ -31,6 +32,7 @@ from trpg.engine.lifecycle import down_unit, escape_unit
 from trpg.engine.rules.combat import PERMILLE, PPM, element_modifier_ppm
 from trpg.engine.rules.movement import is_deadly
 from trpg.engine.rules.statuses import (
+    boss_converted_status,
     damage_dealt_permille,
     damage_taken_permille,
     healing_received_permille,
@@ -248,27 +250,42 @@ def apply_status(ctx: Ctx, effect: ApplyStatusEffect) -> list[EventBase]:
     unit = ctx.state.units.get(effect.target_id)
     if unit is None or not unit.alive:
         return []
-    definition = ctx.rules.status_def(effect.status_id)
-    duration = effect.duration if effect.duration is not None else definition.duration
-    existing = unit.get_status(effect.status_id)
-    instance = StatusInstance(
-        status_id=effect.status_id, remaining=duration, source_id=effect.source_id
-    )
+    events: list[EventBase] = []
+    status_id = effect.status_id
+    duration = effect.duration
+    if duration is None:
+        duration = ctx.rules.status_def(status_id).duration  # 轉換後持續時間沿用原效果
+    converted = boss_converted_status(ctx.rules, unit, status_id)
+    if converted != status_id:  # Boss 硬控轉換：所有來源一致（技能路徑已先轉換，這裡不會再轉）
+        events.append(
+            ctx.emit(
+                StatusConverted,
+                target_id=unit.id,
+                from_status=status_id,
+                to_status=converted,
+                source_id=effect.source_id,
+            )
+        )
+        status_id = converted
+    definition = ctx.rules.status_def(status_id)
+    existing = unit.get_status(status_id)
+    instance = StatusInstance(status_id=status_id, remaining=duration, source_id=effect.source_id)
     # 目前只有 refresh：重複施加時以新的持續時間取代，不疊加
-    others = [s for s in unit.statuses if s.status_id != effect.status_id]
+    others = [s for s in unit.statuses if s.status_id != status_id]
     unit.statuses = sorted([*others, instance], key=lambda s: s.status_id)
     if definition.control_group is not None:  # 控制遞減：同類別在 R + control_dr_rounds 輪結束前
         unit.control_dr[definition.control_group] = ctx.state.round + ctx.core.control_dr_rounds
-    return [
+    events.append(
         ctx.emit(
             StatusApplied,
             target_id=unit.id,
-            status_id=effect.status_id,
+            status_id=status_id,
             duration=duration,
             refreshed=existing is not None,
             source_id=effect.source_id,
         )
-    ]
+    )
+    return events
 
 
 @register_effect("apply_status")

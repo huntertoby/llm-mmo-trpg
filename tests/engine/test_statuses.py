@@ -93,6 +93,20 @@ def test_root_blocks_voluntary_movement_but_not_forced_movement() -> None:
     assert pushed.state.units[U1].xy == (1, 2)
 
 
+def test_a_prone_rooted_unit_can_stand_up_but_not_move() -> None:
+    """2B-2 4.0 #3：站起不是移動格子，定身時仍可站起；站起後不能移動。"""
+    state = _with_status(_with_status(_duel(), U1, "prone", 1), U1, "root", 1)
+    moves = [a for a in legal_actions(state) if isinstance(a, Move)]
+    assert [m.path for m in moves] == [(Pos(x=1, y=1),)]  # 只有「原地站起」
+    with pytest.raises(IllegalActionError, match="定身"):
+        resolve(state, Move(unit_id=U1, path=(Pos(x=1, y=1), Pos(x=1, y=2))))
+    result = resolve(state, moves[0])
+    assert not result.state.units[U1].has_status("prone")
+    assert result.state.units[U1].xy == (1, 1)
+    assert result.state.units[U1].has_status("root")
+    assert not [a for a in legal_actions(result.state) if isinstance(a, Move)]
+
+
 def test_without_root_the_unit_can_move() -> None:
     assert any(isinstance(a, Move) for a in legal_actions(_duel()))
 

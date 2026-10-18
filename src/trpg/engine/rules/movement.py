@@ -19,6 +19,7 @@ from trpg.shared.types import Pos, UnitId
 __all__ = [
     "PathMap",
     "available_move_budget",
+    "can_only_stand_up",
     "find_path",
     "is_deadly",
     "is_standable",
@@ -83,6 +84,15 @@ def available_move_budget(state: BattleState, unit: UnitState) -> int | None:
         return unit.move_points
     cost = stand_up_cost(state, unit)
     return None if cost > unit.move_points else unit.move_points - cost
+
+
+def can_only_stand_up(state: BattleState, unit: UnitState) -> bool:
+    """被定身的倒地單位：不能走格子，但付得起站起的消耗時仍可以只站起來。"""
+    return (
+        is_rooted(state.ruleset, unit)
+        and unit.has_status(PRONE)
+        and stand_up_cost(state, unit) <= unit.move_points
+    )
 
 
 class PathMap:

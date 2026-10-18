@@ -55,6 +55,7 @@ from trpg.engine.rules.combat import attack_problem, reach_problem
 from trpg.engine.rules.geometry import XY, manhattan
 from trpg.engine.rules.movement import (
     available_move_budget,
+    can_only_stand_up,
     is_deadly,
     is_standable,
     path_map,
@@ -335,15 +336,16 @@ class MovePlan:
         return self.stand_up + sum(cost for _, cost in self.steps)
 
 
-def _require_free_to_move(state: BattleState, unit: UnitState) -> None:
-    if is_rooted(state.ruleset, unit):
+def _require_free_to_move(state: BattleState, unit: UnitState, steps: int) -> None:
+    """定身時不能走格子；倒地的單位仍可只站起來（``steps == 0``，站起不是移動格子）。"""
+    if steps > 0 and is_rooted(state.ruleset, unit):
         raise IllegalActionError(f"{unit.name_zh} 被定身，不能主動移動")
 
 
 def plan_move(state: BattleState, unit: UnitState, path: tuple[Pos, ...]) -> MovePlan:
     """驗證 ``path``；不合法時拋出 :class:`IllegalActionError`。"""
     prone = unit.has_status(PRONE)
-    _require_free_to_move(state, unit)
+    _require_free_to_move(state, unit, max(len(path) - 1, 0))
     if not path:
         raise IllegalActionError("路徑不可為空")
     start = (path[0].x, path[0].y)
@@ -765,7 +767,9 @@ def _legal_actions(
     if unit.ap >= core.defend_ap_cost and not unit.has_status(DEFENDING):
         actions.append(Defend(unit_id=unit.id))
     budget = available_move_budget(state, unit)
-    if budget is not None:
+    if can_only_stand_up(state, unit):
+        actions.append(Move(unit_id=unit.id, path=(unit.pos,)))
+    elif budget is not None:
         if unit.has_status(PRONE):
             actions.append(Move(unit_id=unit.id, path=(unit.pos,)))
         pm = path_map(state, unit, budget)
@@ -841,6 +845,8 @@ def _has_ap_action(state: BattleState, unit: UnitState) -> bool:
 
 
 def _can_move(state: BattleState, unit: UnitState) -> bool:
+    if can_only_stand_up(state, unit):
+        return True
     budget = available_move_budget(state, unit)
     if budget is None:
         return False

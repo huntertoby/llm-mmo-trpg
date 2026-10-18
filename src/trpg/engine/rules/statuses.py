@@ -14,6 +14,7 @@ from trpg.content.library import Ruleset
 from trpg.engine.state import UnitState
 
 __all__ = [
+    "boss_converted_status",
     "damage_dealt_permille",
     "damage_taken_permille",
     "healing_received_permille",
@@ -23,6 +24,15 @@ __all__ = [
 ]
 
 PERMILLE = 1000
+BOSS_TAG = "boss"
+
+
+def boss_converted_status(rules: Ruleset, unit: UnitState, status_id: str) -> str:
+    """帶 ``boss`` 標籤的單位被施加 ``control_group: hard`` 的狀態時改施加的狀態
+    （``boss_control_conversion``）；不需要轉換時回傳原狀態。所有來源共用。"""
+    if rules.status_def(status_id).control_group == "hard" and unit.has_tag(BOSS_TAG):
+        return rules.core.boss_control_conversion.get(status_id, status_id)
+    return status_id
 
 
 def _combined(rules: Ruleset, unit: UnitState, field: Callable[[StatusDef], int]) -> int:

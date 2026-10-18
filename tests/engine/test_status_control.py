@@ -267,6 +267,27 @@ def test_a_boss_is_not_converted_for_other_control_or_for_non_bosses(
     assert not of(plain, StatusConverted) and plain.state.units[U2].has_status("stun")
 
 
+def test_a_non_skill_source_also_converts_stun_on_a_boss() -> None:
+    """2B-2 4.0 #1：直接排入 ``ApplyStatusEffect``（沒有技能、不擲抵抗）也會轉換。"""
+    state = _boss_state()
+    result = run_effects(
+        state, [ApplyStatusEffect(source_id=None, target_id=U2, status_id="stun", duration=None)]
+    )
+    (conv,) = of(result, StatusConverted)
+    assert (conv.target_id, conv.from_status, conv.to_status) == (U2, "stun", "slow")
+    assert not of(result, StatusSaveRolled)  # 非技能來源不擲抵抗
+    (applied,) = of(result, StatusApplied)
+    assert (applied.status_id, applied.duration) == ("slow", 1)  # 持續時間沿用暈眩的 1 回合
+    boss = result.state.units[U2]
+    assert boss.has_status("slow") and not boss.has_status("stun")
+    # 對照：一般單位不轉換
+    plain = run_effects(
+        _foe_state(),
+        [ApplyStatusEffect(source_id=None, target_id=U2, status_id="stun", duration=None)],
+    )
+    assert not of(plain, StatusConverted) and plain.state.units[U2].has_status("stun")
+
+
 def test_the_demo_boss_carries_the_boss_tag_and_the_shield_bash_stuns() -> None:
     """內容層：盜賊頭目帶 boss 標籤（會被轉換）；盾擊施加暈眩且冷卻 ≥ 4。"""
     lib = library()
