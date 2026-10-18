@@ -38,6 +38,7 @@ from trpg.content.loader import default_content_dir, load_content_file
 from trpg.content.maps import MapDef, SpawnUnitsEvent, check_map
 from trpg.content.rules import CoreRules, HitTable
 from trpg.content.schemas import ContentModel, ElementTable
+from trpg.content.sim_builds import BuildTable
 from trpg.content.skill_rules import (
     BudgetRules,
     ExclusionTable,
@@ -211,6 +212,7 @@ class ContentLibrary:
     ai_profiles: AiProfileTable
     budget: BudgetRules
     composer: ComposerRules
+    builds: BuildTable
     synergies: SynergyTable
     exclusions: ExclusionTable
     skeletons: dict[str, SkeletonDef]
@@ -285,6 +287,7 @@ def load_library(content_dir: Path | None = None) -> ContentLibrary:
     conditions = load("skill_conditions.yaml", ConditionTable)
     budget = load("skill_budget.yaml", BudgetRules)
     composer = load("skill_composer.yaml", ComposerRules)
+    builds = load("sim/builds.yaml", BuildTable)
     synergies = load("skill_synergies.yaml", SynergyTable)
     exclusions = load("skill_exclusions.yaml", ExclusionTable)
     skeletons = _load_dir(root / "skeletons", SkeletonDef, files)
@@ -321,6 +324,16 @@ def load_library(content_dir: Path | None = None) -> ContentLibrary:
         root, units, weapons=weapon_map, skills=skills, ruleset=ruleset, ai_profiles=ai_profiles
     )
 
+    _check_builds(
+        root,
+        builds,
+        units,
+        weapons=weapon_map,
+        skills=skills,
+        ruleset=ruleset,
+        ai_profiles=ai_profiles,
+    )
+
     maps = _load_dir(root / "maps", MapDef, files)
     terrain_map = terrain.by_id()
     weather_map = weather.by_id()
@@ -342,6 +355,7 @@ def load_library(content_dir: Path | None = None) -> ContentLibrary:
         ai_profiles=ai_profiles,
         budget=budget,
         composer=composer,
+        builds=builds,
         synergies=synergies,
         exclusions=exclusions,
         skeletons=skeletons,
@@ -424,11 +438,12 @@ def _check_units(
     skills: dict[str, SkillDef],
     ruleset: Ruleset,
     ai_profiles: AiProfileTable,
+    source: Path | None = None,
 ) -> None:
-    """單位範本引用的武器、行為模式、反應與技能都存在且合法。"""
+    """單位範本引用的武器、行為模式、反應與技能都存在且合法（``source``：錯誤訊息指向的檔案）。"""
     reaction_index = ruleset.reactions.by_id()
     for template_id, template in units.items():
-        path = root / "units" / f"{template_id}.yaml"
+        path = source or root / "units" / f"{template_id}.yaml"
         if template.weapon not in weapons:
             raise ContentError(path, f"未知的武器：{template.weapon}")
         if template.ai_profile is not None and template.ai_profile not in ai_profiles.by_id():
@@ -441,6 +456,36 @@ def _check_units(
         problems = unit_skill_problems(template, weapons[template.weapon], skills, ruleset.core)
         if problems:
             raise ContentError(path, "；".join(problems))
+
+
+def _check_builds(
+    root: Path,
+    builds: BuildTable,
+    units: dict[str, UnitTemplate],
+    *,
+    weapons: dict[str, WeaponDef],
+    skills: dict[str, SkillDef],
+    ruleset: Ruleset,
+    ai_profiles: AiProfileTable,
+) -> None:
+    """build 的英雄範本合法（武器、技能、行為模式），隊友存在，build ID 不與單位範本衝突。"""
+    path = root / "sim" / "builds.yaml"
+    unknown = sorted(c for c in builds.companions if c not in units)
+    if unknown:
+        raise ContentError(path, f"companions 引用了未知的單位範本：{', '.join(unknown)}")
+    clash = sorted(b.id for b in builds.builds if b.id in units)
+    if clash:
+        raise ContentError(path, f"build ID 與單位範本重複：{', '.join(clash)}")
+    heroes = {b.id: b.hero for b in builds.builds}
+    _check_units(
+        root,
+        heroes,
+        weapons=weapons,
+        skills=skills,
+        ruleset=ruleset,
+        ai_profiles=ai_profiles,
+        source=path,
+    )
 
 
 def unit_skill_problems(

@@ -132,9 +132,9 @@ def test_new_maps_play_through_without_errors(map_id: str) -> None:
 
 
 def test_breaking_thin_ice_drops_the_unit_into_the_hole_and_credits_the_breaker() -> None:
+    from trpg.engine import begin_battle  # noqa: PLC0415
     from trpg.engine.effects import DamageObjectEffect, MoveUnitEffect, run_effects  # noqa: PLC0415
     from trpg.engine.events import DamageDealt  # noqa: PLC0415
-    from trpg.engine.runner import begin_battle  # noqa: PLC0415
 
     state = begin_battle(map_spec(library(), "frozen_lake", (0,)).setup, 0).state
     ally = next(u for u in state.units_sorted() if u.team is Team.ALLY)
