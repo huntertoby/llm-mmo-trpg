@@ -554,6 +554,9 @@ class AiWeights(ContentModel):
     expose: int = 0
     cover_damage: int = 0
     heal: int = 0
+    exposed: int = 0
+    mana: int = 0
+    cooldown: int = 0
 
 
 class AiProfile(ContentModel):
@@ -569,10 +572,13 @@ class AiProfileTable(ContentModel):
     ``move_candidates``：每次決策中，``Move`` 先以便宜的位置價值排序，只保留前 N 個候選；其中
     有風險的移動（可能被藉機攻擊、踩上有進入效果的表面、墜落、撤離、倒地站起）才跑完整
     ``preview``，其餘的分數直接由位置價值算出（與完整預覽的分數相同）。
+
+    ``skill_candidates``：每種技能最多保留幾個選取跑完整 ``preview``（先以便宜的估計排序）。
     """
 
     profiles: tuple[AiProfile, ...] = Field(min_length=1)
     move_candidates: int = Field(default=8, ge=1)
+    skill_candidates: int = Field(default=3, ge=1)
 
     @model_validator(mode="after")
     def _check(self) -> AiProfileTable:

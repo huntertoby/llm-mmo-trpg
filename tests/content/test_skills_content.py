@@ -12,7 +12,13 @@ from pydantic import ValidationError
 
 from tests.engine.helpers import PROJECT_ROOT, library
 from trpg.content.library import load_library
-from trpg.content.skills import REQUIRED_SHAPES, SKELETON_IDS, SkillDef, default_affects
+from trpg.content.skills import (
+    REQUIRED_CONDITIONS,
+    REQUIRED_SHAPES,
+    SKELETON_IDS,
+    SkillDef,
+    default_affects,
+)
 from trpg.shared.errors import ContentError
 
 SHAPES = ("self", "single", "line", "cone", "cross", "square3", "ring", "ground_tile")
@@ -102,7 +108,6 @@ def test_default_affects_follow_primitive_harmfulness() -> None:
         ({"ap_cost": None}, "ap_cost 必須是 1 到 3"),
         ({"ap_cost": 4}, "ap_cost 必須是 1 到 3"),
         ({"kind": "passive", "ap_cost": 2}, "ap_cost 必須為 null"),
-        ({"condition": {"type": "self_hp_below"}}, "條件在 Phase 2A-2 才實作"),
         ({"skeleton": "blob"}, "未知的骨架"),
         ({"id": "ashen"}, "id"),
         ({"cost": {"mana": 1, "cooldown": 7}}, "cooldown"),
@@ -268,3 +273,52 @@ def test_shape_table_must_define_every_engine_shape(tmp_path: Path) -> None:
     path.write_text(yaml.safe_dump(data, allow_unicode=True), encoding="utf-8")
     with pytest.raises(ContentError, match="缺少引擎實作的形狀：chain"):
         load_library(root)
+
+
+# ---------------------------------------------------------------------------
+# 條件（Phase 2A-2 6.1）
+# ---------------------------------------------------------------------------
+
+
+def test_condition_table_defines_every_engine_condition_with_a_harshness() -> None:
+    table = library().ruleset.conditions
+    assert {c.id for c in table.conditions} == set(REQUIRED_CONDITIONS)
+    assert {c.harshness for c in table.conditions} == {"common", "harsh"}
+
+
+def test_demo_skills_use_conditions_at_both_levels() -> None:
+    skills = list(library().skills.values())
+    assert any(s.condition is not None for s in skills)
+    assert any(e.condition is not None for s in skills for e in s.effects)
+
+
+@pytest.mark.parametrize(
+    ("condition", "fragment"),
+    [
+        ({"type": "moon_phase"}, "未知的條件 'moon_phase'"),
+        ({"type": "target_hp_below"}, "缺少必要參數 permille"),
+        ({"type": "target_hp_below", "permille": 1000}, "必須在 1–999"),
+        ({"type": "height_advantage", "permille": 300}, "不接受參數 permille"),
+        ({"type": "target_has_status", "status": "petrified"}, "未知的狀態 'petrified'"),
+        ({"type": "target_on_surface"}, "缺少必要參數 surface"),
+    ],
+)
+@pytest.mark.parametrize("level", ["skill", "effect"])
+def test_condition_problems_are_rejected_at_load(
+    tmp_path: Path, condition: dict[str, Any], fragment: str, level: str
+) -> None:
+    data = _skill(id="skill_t_bad_condition")
+    if level == "skill":
+        data["condition"] = condition
+    else:
+        data["effects"] = [{**data["effects"][0], "condition": condition}]
+    _rejects(tmp_path, fragment, data)
+
+
+def test_a_valid_condition_loads_and_unknown_condition_fields_are_rejected() -> None:
+    ok = SkillDef.model_validate(
+        _skill(condition={"type": "target_on_surface", "surface": "water"})
+    )
+    assert ok.condition is not None and ok.condition.surface is not None
+    with pytest.raises(ValidationError):
+        SkillDef.model_validate(_skill(condition={"type": "self_hp_below", "bogus": 1}))

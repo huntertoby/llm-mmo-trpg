@@ -16,7 +16,7 @@
 
 from __future__ import annotations
 
-from trpg.content.skills import EffectSpec, SkillDef
+from trpg.content.skills import ConditionSpec, EffectSpec, SkillDef
 from trpg.engine.actions import UseSkill
 from trpg.engine.context import Ctx
 from trpg.engine.effects import execute
@@ -46,10 +46,11 @@ from trpg.engine.maneuvers import contest
 from trpg.engine.reactions import block_multiplier
 from trpg.engine.rules.combat import PERMILLE, AttackProfile, AttackRoll, ForcedOutcome, roll_attack
 from trpg.engine.rules.geometry import XY
+from trpg.engine.skills.conditions import Subject, condition_met
 from trpg.engine.skills.targeting import (
     ResolvedEffect,
     SkillArea,
-    compute_area,
+    checked_area,
     damage_parameters,
     hp_cost,
     resolve_effects,
@@ -77,7 +78,7 @@ def use_skill(ctx: Ctx, caster: UnitState, action: UseSkill) -> None:
     problem = skill_problem(ctx.state, caster, skill)
     if problem is not None:
         raise IllegalActionError(problem)
-    area = compute_area(ctx.state, caster, skill, action)
+    area = checked_area(ctx.state, caster, skill, action)
     _pay_costs(ctx, caster, skill, area)
     _Cast(ctx, caster, skill, action, area).run()
 
@@ -154,7 +155,7 @@ class _Cast:
         if any(e.affects in ("enemies", "all") for e in self.effects):
             rolled += self.enemies
         if any(e.affects == "all" for e in self.effects):
-            rolled += self.allies
+            rolled += [u for u in self.allies if u is not self.caster]  # 敵我不分也不打到自己
         for unit in sorted(rolled, key=lambda u: u.id):
             forced: ForcedOutcome | None = None
             if ctx.preview is not None:
@@ -195,8 +196,8 @@ class _Cast:
         roll = self.hits.get(unit.id)
         return roll is not None and roll.hit
 
-    def targets(self, affects: str) -> list[UnitState]:
-        """``affects`` 對應的存活單位（敵方與 ``all`` 的友方需命中）。"""
+    def targets(self, affects: str, condition: ConditionSpec | None = None) -> list[UnitState]:
+        """``affects`` 對應的存活單位（敵方與 ``all`` 的友方需命中），再套用效果層級的條件。"""
         if affects == "enemies":
             chosen = [u for u in self.enemies if self._hit(u)]
         elif affects == "allies":
@@ -208,13 +209,23 @@ class _Cast:
             chosen = [self.caster]
         else:
             chosen = []
-        return sorted((u for u in chosen if u.alive), key=lambda u: u.id)
+        alive = (u for u in chosen if u.alive and self.holds(condition, Subject(u, u.xy)))
+        return sorted(alive, key=lambda u: u.id)
 
-    def tiles(self, affects: str) -> list[XY]:
-        """地形類效果的作用格：``tiles`` 為全部影響格；其他為對象單位目前所在的格子。"""
+    def holds(self, condition: ConditionSpec | None, subject: Subject) -> bool:
+        """效果層級的條件對 ``subject`` 是否成立（判斷「結算到這個效果當下」的狀態）。"""
+        return condition_met(self.ctx.state, self.caster, condition, subject)
+
+    def tile_holds(self, condition: ConditionSpec | None, xy: XY) -> bool:
+        """條件對格子 ``xy``（連同站在上面的單位）是否成立。"""
+        return self.holds(condition, Subject(self.ctx.state.unit_at(*xy), xy))
+
+    def tiles(self, affects: str, condition: ConditionSpec | None = None) -> list[XY]:
+        """地形類效果的作用格：``tiles`` 為全部影響格；其他為對象單位目前所在的格子。
+        效果層級的條件對每個格子分別判斷。"""
         if affects == "tiles":
-            return list(self.area.tiles)
-        cells = {u.xy for u in self.targets(affects)}
+            return [xy for xy in self.area.tiles if self.tile_holds(condition, xy)]
+        cells = {u.xy for u in self.targets(affects, condition)}
         return sorted(cells, key=lambda p: (p[1], p[0]))
 
     # ------------------------------------------------------------------
@@ -241,9 +252,9 @@ class _Cast:
         if kind in ("push", "pull"):
             return self.displace(effect, spec, pull=kind == "pull")
         if kind == "knock_prone":
-            return self.knock_prone(effect)
+            return self.knock_prone(effect, spec)
         if kind == "teleport":
-            return self.teleport()
+            return self.teleport(spec)
         if kind == "apply_status":
             return self.apply_status(effect, spec)
         return self.tile_effect(effect, spec)
@@ -255,7 +266,7 @@ class _Cast:
         dice, flat, scaled, multiplier, element = params
         min_damage = self.ctx.core.min_damage_on_hit
         batch: list[EffectBase] = []
-        for unit in self.targets(effect.affects):
+        for unit in self.targets(effect.affects, spec.condition):
             roll = self.hits.get(unit.id)
             block = self.blocks.get(unit.id, PERMILLE)
             batch.append(
@@ -275,7 +286,7 @@ class _Cast:
         if effect.affects in _TOUCHING_AFFECTS:
             for xy in self.area.tiles:
                 obj = self.ctx.state.object_at(*xy)
-                if obj is None or obj.hp is None:
+                if obj is None or obj.hp is None or not self.tile_holds(spec.condition, xy):
                     continue
                 if "breakable" not in self.ctx.rules.object_def(obj.kind).tags:
                     continue
@@ -309,7 +320,7 @@ class _Cast:
         remaining = [
             ElementTouchEffect(source_id=self.caster.id, pos=xy, element=element, tile_only=True)
             for xy in self.area.tiles
-            if xy not in touched
+            if xy not in touched and self.tile_holds(spec.condition, xy)
         ]
         if remaining:
             execute(self.ctx, remaining)
@@ -326,7 +337,7 @@ class _Cast:
                 dice=spec.dice,
                 scaled_permille=scaled,
             )
-            for unit in self.targets(effect.affects)
+            for unit in self.targets(effect.affects, spec.condition)
         ]
 
     # -- 位移 ----------------------------------------------------------
@@ -344,7 +355,7 @@ class _Cast:
     def displace(self, effect: ResolvedEffect, spec: EffectSpec, *, pull: bool) -> list[EffectBase]:
         assert spec.distance is not None
         batch: list[EffectBase] = []
-        for unit in self.targets(effect.affects):
+        for unit in self.targets(effect.affects, spec.condition):
             direction = self._displace_direction(unit, pull=pull)
             if direction is None:
                 continue
@@ -358,9 +369,9 @@ class _Cast:
             )
         return batch
 
-    def knock_prone(self, effect: ResolvedEffect) -> list[EffectBase]:
+    def knock_prone(self, effect: ResolvedEffect, spec: EffectSpec) -> list[EffectBase]:
         batch: list[EffectBase] = []
-        for unit in self.targets(effect.affects):
+        for unit in self.targets(effect.affects, spec.condition):
             if unit.has_status(PRONE):
                 continue
             if contest(
@@ -377,9 +388,11 @@ class _Cast:
                 )
         return batch
 
-    def teleport(self) -> list[EffectBase]:
+    def teleport(self, spec: EffectSpec) -> list[EffectBase]:
         pos = self.action.target_pos
         assert pos is not None
+        if not self.holds(spec.condition, Subject(self.caster, self.caster.xy)):
+            return []
         return [
             MoveUnitEffect(
                 source_id=self.caster.id,
@@ -398,7 +411,7 @@ class _Cast:
                 status_id=spec.status,
                 duration=spec.duration,
             )
-            for unit in self.targets(effect.affects)
+            for unit in self.targets(effect.affects, spec.condition)
         ]
 
     # -- 地形 ----------------------------------------------------------
@@ -407,7 +420,7 @@ class _Cast:
         state = self.ctx.state
         source = self.caster.id
         batch: list[EffectBase] = []
-        for xy in self.tiles(effect.affects):
+        for xy in self.tiles(effect.affects, spec.condition):
             if effect.type == "create_surface":
                 assert spec.surface is not None
                 batch.append(

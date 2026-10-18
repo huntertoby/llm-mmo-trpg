@@ -28,6 +28,7 @@ from trpg.engine.rules.combat import AttackProfile, attack_value, concealment_pr
 from trpg.engine.rules.geometry import XY, has_line_of_sight, manhattan
 from trpg.engine.rules.movement import is_deadly, is_standable
 from trpg.engine.skills import shapes
+from trpg.engine.skills.conditions import skill_condition_problem
 from trpg.engine.state import BattleState, ObjectState, UnitState
 from trpg.shared.errors import IllegalActionError
 from trpg.shared.types import Element, ObjectId, Pos, UnitId
@@ -36,6 +37,7 @@ __all__ = [
     "DamageParameters",
     "ResolvedEffect",
     "SkillArea",
+    "checked_area",
     "compute_area",
     "damage_parameters",
     "has_selection",
@@ -125,7 +127,7 @@ def skill_profile(state: BattleState, caster: UnitState, skill: SkillDef) -> Att
 
     - 武器技：沿用 ``attack_value``（武器的縮放屬性值 ＋ 武器加值）與武器的近戰性質。
     - 法術技：技能縮放屬性值 ＋ 武器加值（只有法器類武器才加）；一律視為遠程。
-    - 暴擊：自然 20。
+    - 暴擊：武器技使用武器的 ``crit_range``（Phase 2A-2 決定 #3）；法術技只有自然 20。
     """
     height_limited = skill_is_height_limited(state, caster, skill)
     if skill.category == "weapon":
@@ -133,7 +135,7 @@ def skill_profile(state: BattleState, caster: UnitState, skill: SkillDef) -> Att
             attack_value=attack_value(caster),
             melee=caster.weapon.is_melee,
             height_limited=height_limited,
-            crit_range=20,
+            crit_range=caster.weapon.crit_range,
         )
     bonus = caster.weapon.attack_bonus if caster.weapon.weapon_class == "focus" else 0
     return AttackProfile(
@@ -355,6 +357,18 @@ def compute_area(  # noqa: PLR0912, PLR0915
     )
 
 
+def checked_area(
+    state: BattleState, caster: UnitState, skill: SkillDef, action: UseSkill
+) -> SkillArea:
+    """:func:`compute_area` 再加上技能層級的條件（``condition``）；不成立時拋出
+    ``IllegalActionError``。``legal_actions``、AI 與解譯器都用這個。"""
+    area = compute_area(state, caster, skill, action)
+    problem = skill_condition_problem(state, caster, skill, area.tiles)
+    if problem is not None:
+        raise IllegalActionError(problem)
+    return area
+
+
 def _center_tiles(state: BattleState, shape_type: str, center: XY) -> tuple[XY, ...]:
     if shape_type == "cross":
         return shapes.cross_tiles(state, center)
@@ -400,7 +414,7 @@ def selections(
     """
     for action in _candidates(state, caster, skill):
         try:
-            area = compute_area(state, caster, skill, action)
+            area = checked_area(state, caster, skill, action)
         except IllegalActionError:
             continue
         yield action, area

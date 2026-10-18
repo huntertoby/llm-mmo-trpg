@@ -38,6 +38,8 @@ from trpg.content.maps import MapDef, SpawnUnitsEvent, check_map
 from trpg.content.rules import CoreRules, HitTable
 from trpg.content.schemas import ContentModel, ElementTable
 from trpg.content.skills import (
+    ConditionDef,
+    ConditionTable,
     PrimitiveDef,
     PrimitiveTable,
     ShapeDef,
@@ -76,11 +78,13 @@ class Ruleset(ContentModel):
     reactions: ReactionTable
     shapes: ShapeTable
     primitives: PrimitiveTable
+    conditions: ConditionTable
     skills: SkillTable = SkillTable()
 
     _skill_index: dict[str, SkillDef] = PrivateAttr(default_factory=dict)
     _shape_index: dict[str, ShapeDef] = PrivateAttr(default_factory=dict)
     _primitive_index: dict[str, PrimitiveDef] = PrivateAttr(default_factory=dict)
+    _condition_index: dict[str, ConditionDef] = PrivateAttr(default_factory=dict)
     _terrain_index: dict[str, TerrainDef] = PrivateAttr(default_factory=dict)
     _status_index: dict[str, StatusDef] = PrivateAttr(default_factory=dict)
     _reaction_index: dict[str, ReactionDef] = PrivateAttr(default_factory=dict)
@@ -93,6 +97,7 @@ class Ruleset(ContentModel):
         self._skill_index = self.skills.by_id()
         self._shape_index = self.shapes.by_id()
         self._primitive_index = self.primitives.by_id()
+        self._condition_index = self.conditions.by_id()
 
     @model_validator(mode="after")
     def _check(self) -> Ruleset:
@@ -151,6 +156,10 @@ class Ruleset(ContentModel):
     def primitive_def(self, primitive_id: str) -> PrimitiveDef:
         index: dict[str, PrimitiveDef] = self.__pydantic_private__["_primitive_index"]  # type: ignore[index]
         return index[primitive_id]
+
+    def condition_def(self, condition_id: str) -> ConditionDef:
+        index: dict[str, ConditionDef] = self.__pydantic_private__["_condition_index"]  # type: ignore[index]
+        return index[condition_id]
 
     def skill_def(self, skill_id: str) -> SkillDef:
         """技能定義；找不到時拋出 ``KeyError``。"""
@@ -239,6 +248,7 @@ def load_library(content_dir: Path | None = None) -> ContentLibrary:
     ai_profiles = load("ai_profiles.yaml", AiProfileTable)
     shapes = load("skill_shapes.yaml", ShapeTable)
     primitives = load("skill_primitives.yaml", PrimitiveTable)
+    conditions = load("skill_conditions.yaml", ConditionTable)
     skills = _load_dir(root / "skills", SkillDef, files)
     try:
         ruleset = Ruleset(
@@ -252,6 +262,7 @@ def load_library(content_dir: Path | None = None) -> ContentLibrary:
             reactions=reactions,
             shapes=shapes,
             primitives=primitives,
+            conditions=conditions,
             skills=SkillTable(skills=tuple(skills[k] for k in sorted(skills))),
         )
     except ValueError as exc:
@@ -291,11 +302,17 @@ def _check_skills(root: Path, skills: dict[str, SkillDef], ruleset: Ruleset) -> 
     """技能引用的形狀、原語、狀態、物件都存在，參數在範圍內。"""
     shape_map = ruleset.shapes.by_id()
     primitive_map = ruleset.primitives.by_id()
+    condition_map = ruleset.conditions.by_id()
     status_ids = {s.id for s in ruleset.statuses.statuses}
     object_ids = {o.id for o in ruleset.objects.objects}
     for skill_id, skill in skills.items():
         problems = skill_problems(
-            skill, shape_map, primitive_map, status_ids=status_ids, object_ids=object_ids
+            skill,
+            shape_map,
+            primitive_map,
+            status_ids=status_ids,
+            object_ids=object_ids,
+            conditions=condition_map,
         )
         if problems:
             raise ContentError(root / "skills" / f"{skill_id}.yaml", "；".join(problems))

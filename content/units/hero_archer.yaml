@@ -9,4 +9,4 @@ resist: {}
 element_mods: {}
 tags: [hero]
 max_mana: 24
-skills: [skill_piercing_shot, skill_grapple_arrow, skill_smoke_arrow, skill_vanish]
+skills: [skill_piercing_shot, skill_grapple_arrow, skill_smoke_arrow, skill_vanish, skill_high_ground_shot]

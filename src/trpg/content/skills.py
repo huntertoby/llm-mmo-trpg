@@ -21,7 +21,7 @@ from __future__ import annotations
 
 import re
 from collections import Counter
-from collections.abc import Iterable
+from collections.abc import Callable, Iterable
 from dataclasses import dataclass
 from typing import Any, Literal
 
@@ -34,11 +34,15 @@ from trpg.shared.types import Attribute, Element, Surface
 
 __all__ = [
     "AFFECTS_VALUES",
+    "REQUIRED_CONDITIONS",
     "REQUIRED_SHAPES",
     "SKELETON_IDS",
     "SKILL_ID_PATTERN",
     "WEAPON_CLASSES",
     "Affects",
+    "ConditionDef",
+    "ConditionSpec",
+    "ConditionTable",
     "EffectSpec",
     "NarrativeDef",
     "ParamDef",
@@ -52,6 +56,7 @@ __all__ = [
     "SkillCost",
     "SkillDef",
     "SkillTable",
+    "condition_text",
     "default_affects",
     "skill_problems",
     "skill_slot_problems",
@@ -91,6 +96,15 @@ REQUIRED_SHAPES: tuple[str, ...] = (
     "allies_in_radius",
 )
 """引擎實作的 10 種形狀（``trpg.engine.skills.shapes``），資料檔必須全部定義。"""
+
+REQUIRED_CONDITIONS: tuple[str, ...] = (
+    "target_hp_below",
+    "self_hp_below",
+    "height_advantage",
+    "target_on_surface",
+    "target_has_status",
+)
+"""引擎實作的 5 種條件（``trpg.engine.skills.conditions``），資料檔必須全部定義。"""
 
 type Targeting = Literal["self", "unit", "tile", "direction", "none"]
 type Affects = Literal["enemies", "allies", "all", "self", "tiles"]
@@ -251,6 +265,86 @@ def default_affects(primitive: PrimitiveDef) -> Affects:
 
 
 # ---------------------------------------------------------------------------
+# 條件
+# ---------------------------------------------------------------------------
+
+
+class ConditionDef(ContentModel):
+    """一種條件（``content/skill_conditions.yaml``）。
+
+    ``harshness``：``common`` 常見／``harsh`` 嚴苛，供 Phase 2B 的條件倍率使用（2A 只存不用）。
+    ``params`` 沿用原語參數的格式（``int``／``status``／``surface``）。
+    """
+
+    id: str = Field(pattern=ID_PATTERN)
+    name_zh: str = Field(min_length=1)
+    description_zh: str = Field(min_length=1)
+    harshness: Literal["common", "harsh"]
+    params: dict[str, PrimitiveParam] = Field(default_factory=dict)
+
+    def summary(self) -> str:
+        return self.name_zh
+
+
+class ConditionTable(ContentModel):
+    """``content/skill_conditions.yaml``。"""
+
+    conditions: tuple[ConditionDef, ...] = Field(min_length=1)
+
+    @model_validator(mode="after")
+    def _check(self) -> ConditionTable:
+        _unique((c.id for c in self.conditions), "條件")
+        ids = {c.id for c in self.conditions}
+        missing = [c for c in REQUIRED_CONDITIONS if c not in ids]
+        if missing:
+            raise ValueError(f"缺少引擎實作的條件：{', '.join(missing)}")
+        unknown = sorted(ids - set(REQUIRED_CONDITIONS))
+        if unknown:
+            raise ValueError(f"引擎尚未實作的條件：{', '.join(unknown)}")
+        return self
+
+    def by_id(self) -> dict[str, ConditionDef]:
+        return {c.id: c for c in self.conditions}
+
+    def summary(self) -> str:
+        return f"{len(self.conditions)} 種條件"
+
+
+class ConditionSpec(ContentModel):
+    """技能或效果上的條件：``type`` 加上該條件的參數（範圍見 ``skill_conditions.yaml``）。"""
+
+    type: str = Field(pattern=ID_PATTERN)
+    permille: int | None = None
+    surface: Surface | None = None
+    status: str | None = Field(default=None, pattern=ID_PATTERN)
+
+    def param_values(self) -> dict[str, Any]:
+        """已填寫的參數（依名稱排序）。"""
+        names = ("permille", "status", "surface")
+        return {n: getattr(self, n) for n in names if getattr(self, n) is not None}
+
+
+def condition_text(
+    condition: ConditionSpec,
+    *,
+    status_name: Callable[[str], str] = str,
+    surface_name: Callable[[Surface], str] = lambda surface: surface.value,
+) -> str:
+    """條件的一句話（繁體中文），例如「目標血量低於 40%」。"""
+    kind = condition.type
+    if kind in ("target_hp_below", "self_hp_below") and condition.permille is not None:
+        who = "目標" if kind == "target_hp_below" else "自身"
+        return f"{who}血量低於 {condition.permille / 10:g}%"
+    if kind == "height_advantage":
+        return "居高臨下"
+    if kind == "target_on_surface" and condition.surface is not None:
+        return f"目標站在「{surface_name(condition.surface)}」表面上"
+    if kind == "target_has_status" and condition.status is not None:
+        return f"目標帶有狀態「{status_name(condition.status)}」"
+    return kind
+
+
+# ---------------------------------------------------------------------------
 # 技能
 # ---------------------------------------------------------------------------
 
@@ -278,7 +372,7 @@ class ShapeSpec(ContentModel):
 class EffectSpec(ContentModel):
     """技能的一個效果原語（flat 結構；哪些參數合法由原語定義決定）。
 
-    ``condition`` 為效果層級的條件，2A-2 才實作，2A-1 必須為 ``null``。
+    ``condition`` 為效果層級的條件：對每個對象（單位或格子）分別判斷，不成立的對象不受此效果影響。
     """
 
     type: str = Field(pattern=ID_PATTERN)
@@ -292,14 +386,7 @@ class EffectSpec(ContentModel):
     surface: Surface | None = None
     object: str | None = Field(default=None, pattern=ID_PATTERN)
     amount: int | None = None
-    condition: Any = None
-
-    @field_validator("condition")
-    @classmethod
-    def _no_condition(cls, value: Any) -> Any:
-        if value is not None:
-            raise ValueError("效果層級的條件在 Phase 2A-2 才實作，現在必須為 null")
-        return value
+    condition: ConditionSpec | None = None
 
     def param_values(self) -> dict[str, Any]:
         """已填寫的原語參數（不含 ``type``、``affects``、``condition``）。"""
@@ -360,7 +447,7 @@ class SkillDef(ContentModel):
     scaling_attr: Attribute
     shape: ShapeSpec
     effects: tuple[EffectSpec, ...]
-    condition: Any = None
+    condition: ConditionSpec | None = None
     cost: SkillCost = Field(default_factory=SkillCost)
     tags: tuple[str, ...] = ()
     narrative: NarrativeDef = Field(default_factory=NarrativeDef)
@@ -371,13 +458,6 @@ class SkillDef(ContentModel):
     def _skeleton(cls, value: str) -> str:
         if value not in SKELETON_IDS:
             raise ValueError(f"未知的骨架 {value!r}（可用：{', '.join(SKELETON_IDS)}）")
-        return value
-
-    @field_validator("condition")
-    @classmethod
-    def _no_condition(cls, value: Any) -> Any:
-        if value is not None:
-            raise ValueError("技能條件在 Phase 2A-2 才實作，現在必須為 null")
         return value
 
     @field_validator("tags")
@@ -520,6 +600,38 @@ class _Refs:
     primitives: dict[str, PrimitiveDef]
     status_ids: set[str]
     object_ids: set[str]
+    conditions: dict[str, ConditionDef]
+
+
+def _condition_problems(where: str, condition: ConditionSpec, refs: _Refs) -> list[str]:
+    """條件的類型存在、必要參數齊全、參數在範圍內、引用的狀態與表面存在。"""
+    definition = refs.conditions.get(condition.type)
+    if definition is None:
+        known = ", ".join(sorted(refs.conditions))
+        return [f"{where}.type：未知的條件 {condition.type!r}（可用：{known}）"]
+    problems: list[str] = []
+    values = condition.param_values()
+    for name, value in values.items():
+        spec = definition.params.get(name)
+        if spec is None:
+            problems.append(f"{where}.{name}：條件 {definition.id} 不接受參數 {name}")
+        elif spec.type == "int":
+            assert isinstance(value, int)
+            if (spec.min is not None and value < spec.min) or (
+                spec.max is not None and value > spec.max
+            ):
+                problems.append(
+                    f"{where}.{name}：條件 {definition.id} 的 {name} "
+                    f"必須在 {spec.min}–{spec.max}，收到 {value}"
+                )
+        elif spec.type == "status" and value not in refs.status_ids:
+            problems.append(f"{where}.{name}：未知的狀態 {value!r}")
+        elif spec.type == "surface" and value is Surface.NONE:
+            problems.append(f"{where}.{name}：條件的表面不能是 none")
+    for name, spec in definition.params.items():
+        if spec.required and name not in values:
+            problems.append(f"{where}.{name}：條件 {definition.id} 缺少必要參數 {name}")
+    return problems
 
 
 def _effect_problems(skill: SkillDef, index: int, effect: EffectSpec, refs: _Refs) -> list[str]:
@@ -529,6 +641,8 @@ def _effect_problems(skill: SkillDef, index: int, effect: EffectSpec, refs: _Ref
         known = ", ".join(sorted(refs.primitives))
         return [f"{where}.type：未知的效果原語 {effect.type!r}（可用：{known}）"]
     problems: list[str] = []
+    if effect.condition is not None:
+        problems += _condition_problems(f"{where}.condition", effect.condition, refs)
     values = effect.param_values()
     for name, value in values.items():
         if name not in primitive.params:
@@ -561,8 +675,9 @@ def skill_problems(
     *,
     status_ids: set[str],
     object_ids: set[str],
+    conditions: dict[str, ConditionDef],
 ) -> list[str]:
-    """技能引用的形狀、原語、狀態、物件是否存在、參數是否在範圍內（繁體中文，空串列為通過）。"""
+    """技能引用的形狀、原語、條件、狀態、物件是否存在、參數是否在範圍內（繁體中文，空串列為通過）。"""
     problems: list[str] = []
     shape = shapes.get(skill.shape.type)
     if shape is None:
@@ -570,7 +685,9 @@ def skill_problems(
         problems.append(f"shape.type：未知的形狀 {skill.shape.type!r}（可用：{known}）")
     else:
         problems += _int_param_problems("shape", skill.shape.param_values(), shape)
-    refs = _Refs(primitives, status_ids, object_ids)
+    refs = _Refs(primitives, status_ids, object_ids, conditions)
+    if skill.condition is not None:
+        problems += _condition_problems("condition", skill.condition, refs)
     for index, effect in enumerate(skill.effects):
         problems += _effect_problems(skill, index, effect, refs)
     return problems

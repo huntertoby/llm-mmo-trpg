@@ -10,4 +10,4 @@ resist: {elemental: 150}
 element_mods: {}
 tags: [hero]
 max_mana: 40
-skills: [skill_fire_bolt, skill_ashen_oath, skill_blink]
+skills: [skill_fire_bolt, skill_ashen_oath, skill_blink, skill_cinder_burst]

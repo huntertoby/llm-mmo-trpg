@@ -176,15 +176,19 @@ def test_affects_all_rolls_against_and_damages_allies_in_the_area() -> None:
     assert {e.target_id for e in of(missed, DamageDealt) if e.cause == "attack"} == {U3}
 
 
-def test_affects_all_includes_the_caster_when_the_shape_includes_them() -> None:
+def test_affects_all_never_hits_the_caster_even_when_the_shape_includes_them() -> None:
+    """Phase 2A-2 決定 #4：敵我不分只影響其他單位，施放者自己不擲骰、不受傷。"""
     skill = make_skill(
         SID,
         {"type": "allies_in_radius", "radius": 1},
         [{"type": "damage", "dice": "1d6", "element": "fire", "affects": "all"}],
     )
-    state = with_rolls(battle(skill, [(4, 3)]), [(20, 19)] * 2)
+    state = with_rolls(battle(skill, [(4, 3)], allies=[(2, 3)]), [(20, 19)] * 3)
     result = cast(state)
-    assert U1 in {r.target_id for r in of(result, AttackRolled)}
+    rolled = {r.target_id for r in of(result, AttackRolled)}
+    assert U1 not in rolled and rolled == {U2, U3}  # 友方 U2、敵方 U3
+    assert U1 not in {d.target_id for d in of(result, DamageDealt)}
+    assert result.state.units[U1].hp == state.units[U1].hp
 
 
 def _end_turns_until(state: BattleState, uids: set[UnitId]) -> list[Healed]:

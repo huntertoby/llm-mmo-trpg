@@ -8,6 +8,7 @@ from pathlib import Path
 
 import pytest
 
+from tests.engine.helpers import library
 from trpg.cli.main import main
 
 
@@ -42,10 +43,11 @@ def test_skills_list_is_a_table_of_every_skill(capsys: pytest.CaptureFixture[str
     code, out, _ = _run(["skills", "list"], capsys)
     assert code == 0
     lines = out.splitlines()
-    assert "技能（共 14 個）" in lines[0]
+    total = len(library().skills)
+    assert f"技能（共 {total} 個）" in lines[0]
     header = lines[1].split()
     assert header[:4] == ["ID", "名稱", "骨架", "AP"]
-    assert sum(1 for line in lines if re.match(r"\s+skill_\w+\s", line)) == 14
+    assert sum(1 for line in lines if re.match(r"\s+skill_\w+\s", line)) == total
     assert "灰燼誓約" in out and "法力 12，冷卻 2 回合" in out
 
 

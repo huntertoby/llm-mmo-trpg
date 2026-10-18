@@ -18,6 +18,7 @@ from dataclasses import dataclass
 from fractions import Fraction
 from itertools import product
 
+from trpg.content.skills import SkillDef
 from trpg.engine.actions import Action, Attack, Shove, Trip, UseSkill
 from trpg.engine.battle import _actor, simulate_preview
 from trpg.engine.events import (
@@ -50,6 +51,7 @@ from trpg.engine.rules.combat import (
     is_hit,
     situational_modifier,
 )
+from trpg.engine.skills.conditions import Subject, condition_met
 from trpg.engine.skills.targeting import (
     compute_area,
     damage_parameters,
@@ -106,6 +108,9 @@ class TargetPreview:
     crit_chance: Fraction
     damage: DamageRange | None
     ally: bool = False
+    knock_chance: Fraction | None = None
+    """技能含 ``knock_prone`` 且會對這個單位生效時，擊倒的對抗成功率（命中之後；比照推擊、絆倒的
+    :func:`_maneuver_chance`）；沒有擊倒效果時為 ``None``。"""
 
 
 @dataclass(frozen=True, slots=True)
@@ -380,8 +385,14 @@ def _damage_expectation(  # noqa: PLR0917
     if not low or not high:
         return None
     minimum, maximum = sum(e.amount for e in low), sum(e.amount for e in high)
+    target = state.units[target_id]
     specs = [
-        skill.effects[r.spec_index] for r in resolve_effects(state, skill) if r.type == "damage"
+        skill.effects[r.spec_index]
+        for r in resolve_effects(state, skill)
+        if r.type == "damage"
+        and condition_met(
+            state, actor, skill.effects[r.spec_index].condition, Subject(target, target.xy)
+        )
     ]
     if hit == 0:
         return DamageRange(minimum, maximum, Fraction(0), Fraction(0))
@@ -410,6 +421,25 @@ def _damage_expectation(  # noqa: PLR0917
     return DamageRange(minimum, maximum, total * hit, total)
 
 
+def _knock_chance(
+    state: BattleState, actor: UnitState, skill: SkillDef, target: UnitState
+) -> Fraction | None:
+    """技能對 ``target`` 的擊倒對抗成功率（技能屬性對相同屬性）；不會擊倒時為 ``None``。"""
+    enemy = target.team is not actor.team
+    if not any(
+        r.type == "knock_prone" and (r.affects == "all" or (enemy and r.affects == "enemies"))
+        for r in resolve_effects(state, skill)
+    ):
+        return None
+    attr = skill.scaling_attr
+    rules = state.ruleset
+    modifier = rules.hit_table.modifier(actor.attributes[attr], max(1, target.attributes[attr]))
+    hit, _ = _chances(
+        _naturals("none"), modifier + rules.core.proficiency, rules.core.hit_target, 21
+    )
+    return hit
+
+
 def _skill_targets(
     state: BattleState,
     actor: UnitState,
@@ -436,7 +466,12 @@ def _skill_targets(
         naturals = _naturals(advantage_state(state, actor, target, profile))
         hit, crit = _chances(naturals, bonus, core.hit_target, profile.crit_range)
         damage = _damage_expectation(state, actor, action, uid, hit, crit, min_events, max_events)
-        result.append(TargetPreview(uid, hit, crit, damage, ally=target.team is actor.team))
+        knock = _knock_chance(state, actor, skill, target)
+        result.append(
+            TargetPreview(
+                uid, hit, crit, damage, ally=target.team is actor.team, knock_chance=knock
+            )
+        )
     return tuple(result)
 
 

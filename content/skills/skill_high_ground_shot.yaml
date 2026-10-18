@@ -1,0 +1,26 @@
+id: skill_high_ground_shot
+schema_version: 1
+name_zh: 高處狙擊
+tier: 1
+rank: 1
+rarity: common
+kind: active
+skeleton: strike
+category: weapon
+weapon_req: ranged
+ap_cost: 2
+scaling_attr: dex
+shape: {type: single, range: weapon}
+effects:
+  - {type: damage, multiplier_permille: 1000}
+  # 站得比目標高時，居高臨下多補一箭
+  - type: damage
+    multiplier_permille: 800
+    condition: {type: height_advantage}
+condition: null
+cost: {mana: 5, cooldown: 2}
+tags: [physical, ranged, height]
+narrative:
+  concept: 把地形優勢變成準頭與力道
+  cast_flavor: 你俯視戰場，屏息瞄準，一箭射向低處的目標
+provenance: {origin: builtin, owner_id: null, created_by: null, parents: [], bound: true, tradeable: false}

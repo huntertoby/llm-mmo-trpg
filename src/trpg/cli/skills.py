@@ -6,7 +6,14 @@ from typing import TextIO
 
 from trpg.content.battle import Dice
 from trpg.content.library import ContentLibrary
-from trpg.content.skills import EffectSpec, ShapeSpec, SkillDef, default_affects
+from trpg.content.skills import (
+    ConditionSpec,
+    EffectSpec,
+    ShapeSpec,
+    SkillDef,
+    condition_text,
+    default_affects,
+)
 
 __all__ = ["cmd_skills_list", "cmd_skills_show", "effect_summary", "shape_summary"]
 
@@ -87,7 +94,19 @@ def effect_summary(library: ContentLibrary, skill: SkillDef, spec: EffectSpec) -
     """一個效果的一句話，含對象，例如「2d6＋智力加成的火焰傷害（敵方）」。"""
     primitive = library.ruleset.primitive_def(spec.type)
     affects = spec.affects or default_affects(primitive)
-    return f"{_effect_core(library, skill, spec)}（{_AFFECTS[affects]}）"
+    text = f"{_effect_core(library, skill, spec)}（{_AFFECTS[affects]}）"
+    if spec.condition is not None:
+        text += f"，若{_condition(library, spec.condition)}"
+    return text
+
+
+def _condition(library: ContentLibrary, condition: ConditionSpec) -> str:
+    rules = library.ruleset
+    return condition_text(
+        condition,
+        status_name=lambda sid: rules.status_def(sid).name_zh,
+        surface_name=lambda surface: rules.surface_def(surface).name_zh,
+    )
 
 
 def _cost_summary(skill: SkillDef, *, with_ap: bool = True) -> str:
@@ -128,7 +147,8 @@ def cmd_skills_list(library: ContentLibrary, out: TextIO) -> int:
             f"{_pad(str(skill.ap_cost), 4)}{cost or '無'}",
             file=out,
         )
-        print(f"    {shape_summary(library, skill.shape)}：{effects}", file=out)
+        when = f"［條件：{_condition(library, skill.condition)}］" if skill.condition else ""
+        print(f"    {shape_summary(library, skill.shape)}{when}：{effects}", file=out)
     return 0
 
 
@@ -149,6 +169,8 @@ def cmd_skills_show(library: ContentLibrary, skill_id: str, out: TextIO) -> int:
     )
     print(f"  代價 {_cost_summary(skill)}", file=out)
     print(f"  形狀 {shape_summary(library, skill.shape)}", file=out)
+    if skill.condition is not None:
+        print(f"  使用條件 {_condition(library, skill.condition)}", file=out)
     print("  效果：", file=out)
     for i, spec in enumerate(skill.effects, start=1):
         print(f"    {i}. {effect_summary(library, skill, spec)}", file=out)
