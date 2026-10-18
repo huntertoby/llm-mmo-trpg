@@ -223,7 +223,7 @@ def _xy(pos: object) -> XY | None:
     return None if x is None or y is None else (x, y)
 
 
-def _outcome(e: EventBase) -> Outcome | None:  # noqa: PLR0911, PLR0912
+def _outcome(e: EventBase) -> Outcome | None:  # noqa: C901, PLR0911, PLR0912
     if isinstance(e, DamageDealt):
         return Outcome("damaged", unit_id=e.target_id, detail=e.cause)
     if isinstance(e, ShieldGained):

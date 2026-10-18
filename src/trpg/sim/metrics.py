@@ -311,7 +311,7 @@ class _Acc:
     control: dict[str, int] = field(default_factory=dict)
 
 
-def metrics_from_events(  # noqa: PLR0912, PLR0915 - 單一事件迴圈，拆開反而難讀
+def metrics_from_events(  # noqa: C901, PLR0912, PLR0915 - 單一事件迴圈，拆開反而難讀
     *,
     seed: int,
     units: Sequence[UnitInfo],

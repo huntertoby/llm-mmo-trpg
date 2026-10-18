@@ -345,7 +345,7 @@ def _tiles_to_units(
     return tuple(sorted(u.id for u in units))
 
 
-def compute_area(  # noqa: PLR0912, PLR0915
+def compute_area(  # noqa: C901, PLR0912, PLR0915
     state: BattleState, caster: UnitState, skill: SkillDef, action: UseSkill
 ) -> SkillArea:
     """驗證 ``action`` 的選取並計算影響範圍；不合法或影響範圍為空時拋出 ``IllegalActionError``。"""

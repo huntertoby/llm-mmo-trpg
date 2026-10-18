@@ -20,6 +20,7 @@ dev = [
     "mypy",
     "import-linter",
     "types-PyYAML",
+    "pytest-xdist>=3.8.0",
 ]
 
 [build-system]
@@ -41,7 +42,7 @@ src = ["src", "tests", "scripts"]
 cache-dir = ".ruff_cache"
 
 [tool.ruff.lint]
-select = ["E", "F", "W", "I", "B", "UP", "SIM", "RUF", "TID", "PL"]
+select = ["E", "F", "W", "I", "B", "UP", "SIM", "RUF", "TID", "PL", "C90"]
 ignore = [
     # PLR0913：參數過多。CLI 與之後的引擎函式常需要多個明確參數，視情況審查即可。
     "PLR0913",
@@ -50,6 +51,11 @@ ignore = [
     "RUF002",
     "RUF003",
 ]
+
+# 複雜度上限：新程式碼不得超過；既有超標函式以 `# noqa: C901` 標示（Phase 2E-3 時共 7 個）。
+# 新增任何複雜度類 noqa（C901、PLR0911、PLR0912、PLR0915）都要在階段報告中列出理由。
+[tool.ruff.lint.mccabe]
+max-complexity = 15
 
 [tool.ruff.lint.flake8-tidy-imports]
 ban-relative-imports = "all"

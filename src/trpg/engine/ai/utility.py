@@ -583,7 +583,7 @@ def _buff_gains(state: BattleState, actor: UnitState, p: Preview, profile: AiPro
     return gains
 
 
-def _gains(  # noqa: PLR0912, PLR0915
+def _gains(  # noqa: C901, PLR0912, PLR0915
     state: BattleState,
     actor: UnitState,
     p: Preview,

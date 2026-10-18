@@ -182,7 +182,7 @@ def run_batches(specs: Sequence[BatchSpec], *, jobs: int = 1) -> list[BatchRepor
     if jobs == 1 or len(tasks) <= 1:
         results = [(i, run_one(spec_list[i], seed)) for i, seed in tasks]
     else:
-        with multiprocessing.get_context().Pool(
+        with multiprocessing.get_context("spawn").Pool(
             min(jobs, len(tasks)), initializer=_worker_init, initargs=(spec_list,)
         ) as pool:
             results = pool.map(_worker, tasks, chunksize=1)

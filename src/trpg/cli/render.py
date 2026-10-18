@@ -420,7 +420,7 @@ def _trap_text(
     return f"  {owner} 在 {_xy(e.pos)} 的陷阱「{skill}」消失了（{why}）"
 
 
-def describe_event(e: EventBase, state: BattleState) -> str | None:  # noqa: PLR0911, PLR0912
+def describe_event(e: EventBase, state: BattleState) -> str | None:  # noqa: C901, PLR0911, PLR0912
     """把一個事件轉成一行繁體中文；不需要顯示的事件回傳 ``None``。"""
     name: dict[str, str] = {uid: u.name_zh for uid, u in state.units.items()}
     statuses = {s.id: s.name_zh for s in state.ruleset.statuses.statuses}
@@ -546,7 +546,7 @@ def _surface_name(state: BattleState, surface: Surface) -> str:
     return "無" if surface is Surface.NONE else state.ruleset.surface_def(surface).name_zh
 
 
-def _describe_environment(  # noqa: PLR0911, PLR0912
+def _describe_environment(  # noqa: C901, PLR0911, PLR0912
     e: EventBase, state: BattleState, name: dict[str, str], statuses: dict[str, str]
 ) -> str | None:
     """Phase 1B 的事件（物件、表面、反應、環境回合……）。"""

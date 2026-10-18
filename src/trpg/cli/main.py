@@ -29,6 +29,7 @@
 from __future__ import annotations
 
 import argparse
+import os
 import sys
 from collections.abc import Callable
 from pathlib import Path
@@ -64,6 +65,18 @@ def _positive_int(text: str) -> int:
     if value < 1:
         raise argparse.ArgumentTypeError(f"必須 >= 1，收到 {value}")
     return value
+
+
+def _jobs_arg(text: str) -> int:
+    value = int(text)
+    if value < 0:
+        raise argparse.ArgumentTypeError(f"必須 >= 0，收到 {value}")
+    return value
+
+
+def _resolve_jobs(jobs: int) -> int:
+    """``0`` 代表依 CPU 邏輯核心數；報表與 ``jobs`` 無關，只影響速度。"""
+    return jobs if jobs > 0 else max(1, os.cpu_count() or 1)
 
 
 def build_parser() -> argparse.ArgumentParser:  # noqa: PLR0915
@@ -132,7 +145,9 @@ def build_parser() -> argparse.ArgumentParser:  # noqa: PLR0915
     sim_maps.add_argument(
         "--seed-start", type=_non_negative_int, default=0, help="起始種子（預設 0）"
     )
-    sim_maps.add_argument("--jobs", type=_positive_int, default=1, help="平行行程數（預設 1）")
+    sim_maps.add_argument(
+        "--jobs", type=_jobs_arg, default=0, help="平行行程數（預設 0＝CPU 邏輯核心數）"
+    )
     sim_maps.add_argument("--json", type=Path, default=None, help="另外寫出完整報表 JSON")
     _add_commander_args(sim_maps)
 
@@ -197,7 +212,9 @@ def _add_sim_report_parsers(
     matrix.add_argument(
         "--seed-start", type=_non_negative_int, default=0, help="起始種子（預設 0）"
     )
-    matrix.add_argument("--jobs", type=_positive_int, default=1, help="平行行程數（預設 1）")
+    matrix.add_argument(
+        "--jobs", type=_jobs_arg, default=0, help="平行行程數（預設 0＝CPU 邏輯核心數）"
+    )
     matrix.add_argument("--json", type=Path, default=None, help="另外寫出完整報表 JSON")
     completion = sim_commands.add_parser(
         "completion",
@@ -210,7 +227,9 @@ def _add_sim_report_parsers(
     completion.add_argument(
         "--seed-start", type=_non_negative_int, default=0, help="起始種子（預設 0）"
     )
-    completion.add_argument("--jobs", type=_positive_int, default=1, help="平行行程數（預設 1）")
+    completion.add_argument(
+        "--jobs", type=_jobs_arg, default=0, help="平行行程數（預設 0＝CPU 邏輯核心數）"
+    )
     skills = sim_commands.add_parser(
         "skills", help="技能報表：施放者 DPR、勝率、使用率，依階級與骨架彙總，標出 DPR 離群的技能"
     )
@@ -222,7 +241,9 @@ def _add_sim_report_parsers(
     skills.add_argument(
         "--seed-start", type=_non_negative_int, default=0, help="起始種子（預設 0）"
     )
-    skills.add_argument("--jobs", type=_positive_int, default=1, help="平行行程數（預設 1）")
+    skills.add_argument(
+        "--jobs", type=_jobs_arg, default=0, help="平行行程數（預設 0＝CPU 邏輯核心數）"
+    )
     skills.add_argument("--json", type=Path, default=None, help="另外寫出完整報表 JSON")
 
 
@@ -302,7 +323,7 @@ def _sim_matrix(args: argparse.Namespace) -> int:
             maps=maps,
             seeds=args.seeds,
             seed_start=args.seed_start,
-            jobs=args.jobs,
+            jobs=_resolve_jobs(args.jobs),
             json_path=args.json,
             out=sys.stdout,
             err=sys.stderr,
@@ -321,7 +342,7 @@ def _sim_completion(args: argparse.Namespace) -> int:
             maps=maps,
             seeds=args.seeds,
             seed_start=args.seed_start,
-            jobs=args.jobs,
+            jobs=_resolve_jobs(args.jobs),
             out=sys.stdout,
             err=sys.stderr,
         )
@@ -336,7 +357,7 @@ def _sim_skills(args: argparse.Namespace) -> int:
             random_count=args.random,
             seeds=args.seeds,
             seed_start=args.seed_start,
-            jobs=args.jobs,
+            jobs=_resolve_jobs(args.jobs),
             json_path=args.json,
             out=sys.stdout,
             err=sys.stderr,
@@ -409,7 +430,7 @@ def _sim_maps(args: argparse.Namespace) -> int:
             maps=maps,
             seeds=args.seeds,
             seed_start=args.seed_start,
-            jobs=args.jobs,
+            jobs=_resolve_jobs(args.jobs),
             json_path=args.json,
             out=sys.stdout,
             err=sys.stderr,
@@ -419,7 +440,7 @@ def _sim_maps(args: argparse.Namespace) -> int:
     )
 
 
-def main(argv: list[str] | None = None) -> int:  # noqa: PLR0911, PLR0912
+def main(argv: list[str] | None = None) -> int:  # noqa: C901, PLR0911, PLR0912
     """CLI 主程式；回傳結束代碼（方便測試）。"""
     parser = build_parser()
     try:

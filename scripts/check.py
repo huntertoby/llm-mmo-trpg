@@ -39,7 +39,7 @@ STEPS: tuple[Step, ...] = (
     Step("ruff format --check", "ruff", "ruff", ("format", "--check", ".")),
     Step("mypy", "mypy", "mypy", ()),
     Step("lint-imports", None, "lint-imports", (), optional=True),
-    Step("pytest", "pytest", "pytest", ()),
+    Step("pytest", "pytest", "pytest", ("-q", "-n", "auto")),
 )
 
 
