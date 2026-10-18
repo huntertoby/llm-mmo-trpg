@@ -16,6 +16,9 @@ __all__ = ["cmd_skills_budget", "cmd_skills_budget_all", "library_violations", "
 _RARITY = {"common": "普通", "rare": "稀有", "epic": "史詩", "legendary": "傳說"}
 
 
+_AP_LABEL = {"passive": "被動", "reaction": "反應", "stance": "姿態"}
+
+
 def _num(value: Fraction) -> str:
     return f"{float(value):.2f}"
 
@@ -145,7 +148,7 @@ def cmd_skills_budget_all(library: ContentLibrary, out: TextIO) -> int:
         rules = "、".join(v.rule for v in violations) or "—"
         print(
             f"  {pad(skill.id, 26)}{pad(skill.name_zh, 12)}{pad(str(skill.tier), 3)}"
-            f"{pad('被動' if skill.kind == 'passive' else str(skill.ap_cost), 4)}"
+            f"{pad(_AP_LABEL.get(skill.kind) or str(skill.ap_cost), 4)}"
             f"{pad(cells[0], 8)}{pad(cells[1], 8)}"
             f"{pad(cells[3], 11)}{pad(cells[2], 8)}{rules}",
             file=out,

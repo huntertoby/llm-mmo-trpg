@@ -26,6 +26,7 @@ from trpg.shared.rng import Rng
 from trpg.shared.types import Element
 from trpg.skillgen.budget import BudgetError
 from trpg.skillgen.composer_parts import (
+    REACTION_EVENTS,
     Ctx,
     Retry,
     build_condition,
@@ -33,7 +34,10 @@ from trpg.skillgen.composer_parts import (
     build_effects,
     build_passive_cost,
     build_passive_effects,
+    build_reaction_cost,
+    build_reaction_effects,
     build_shape,
+    build_stance_effects,
     choose_core,
 )
 from trpg.skillgen.composer_tuning import tune
@@ -89,14 +93,14 @@ def _skeleton_feasible(
 ) -> bool:
     """骨架在這個稀有度做得出技能：啟用、稀有度夠、有可用的核心原語，要求條件時有可用條件。
 
-    預設只考慮主動技能；被動骨架（2E-1）只在明確指定（``explicit``）或由 :func:`_wants_passive`
-    決定時使用，所以不影響其他種子的抽選。
+    預設只考慮主動技能；被動骨架（2E-1）、反應與姿態骨架（2E-2）只在明確指定（``explicit``）或由
+    :func:`_wants_passive`、:func:`_wants_special` 決定時使用，所以不影響其他種子的抽選。
     """
     rank = rarity_rank(rarity)
     if not skeleton.enabled or rank < rarity_rank(skeleton.min_rarity):
         return False
     if "active" not in skeleton.kinds:
-        return explicit and skeleton.kinds == ("passive",)
+        return explicit and skeleton.kinds in (("passive",), ("reaction",), ("stance",))
     primitives = library.ruleset.primitives.by_id()
     if not any(rarity_rank(primitives[p].min_rarity) <= rank for p in skeleton.core.primitives):
         return False
@@ -154,6 +158,25 @@ def _wants_passive(seed: int, rarity: SkillRarity, library: ContentLibrary) -> b
         .fork("composer.passive")
         .chance_permille(library.composer.passive.skeleton_permille)
     )
+
+
+def _wants_special(seed: int, rarity: SkillRarity, library: ContentLibrary) -> str | None:
+    """未指定骨架時，這個種子是否改組反應技（``reaction``）或姿態（``stance``）。
+
+    與 :func:`_wants_passive` 一樣用獨立的亂數串流；抽中但組不出合格技能時由呼叫端退回一般主動技能。
+    """
+    for name, permille in (
+        ("reaction", library.composer.reaction.skeleton_permille),
+        ("stance", library.composer.stance.skeleton_permille),
+    ):
+        skeleton = library.skeletons.get(name)
+        if (
+            skeleton is not None
+            and _skeleton_feasible(skeleton, rarity, library, explicit=True)
+            and Rng(seed).fork(f"composer.{name}").chance_permille(permille)
+        ):
+            return name
+    return None
 
 
 def _known(library: ContentLibrary, skeleton: str) -> SkeletonDef:
@@ -298,6 +321,79 @@ def _attempt_passive(
     raise Retry
 
 
+def _attempt_reaction(
+    rng: Rng, library: ContentLibrary, seed: int, *, tier: int, rarity: SkillRarity, category: str
+) -> SkillDef:
+    """反應技的一次嘗試：事件 → 形狀與效果 → 代價 → 調整強度。"""
+    rules = library.composer
+    skeleton = library.skeletons["reaction"]
+    if rng.chance_permille(rules.reaction.intercept_permille):
+        event = "ally_hit_adjacent"
+    else:
+        event = rng.choice(REACTION_EVENTS)
+    weapon_req, scaling = _weapon_and_attr(rng, category, rules)
+    if category == "spell" or event == "ally_hit_adjacent":
+        theme = rng.choice(_SPELL_ELEMENTS)
+    else:
+        infuse = rng.chance_permille(rules.infuse_permille)
+        theme = rng.choice(_SPELL_ELEMENTS) if infuse else Element.PHYSICAL
+    ctx = Ctx(library, rng, skeleton, rarity, tier, category, 1, theme)
+    build_reaction_effects(ctx, event)
+    base: dict[str, Any] = {
+        "id": f"skill_rand_{seed}",
+        "name_zh": "暫定",
+        "tier": tier,
+        "rarity": rarity,
+        "kind": "reaction",
+        "skeleton": skeleton.id,
+        "category": category,
+        "weapon_req": weapon_req,
+        "scaling_attr": scaling,
+        "shape": {"type": ctx.shape, **ctx.shape_params},
+        "condition": None,
+        "reaction": {"event": event},
+        "ap_cost": None,
+        "cost": build_reaction_cost(ctx),
+        "provenance": {"origin": "level_up"},
+    }
+    if tune(rng, library, base, ctx.effects, ctx.knobs):
+        return _finish(library, seed, base, ctx)
+    raise Retry
+
+
+def _attempt_stance(
+    rng: Rng, library: ContentLibrary, seed: int, tier: int, rarity: SkillRarity
+) -> SkillDef:
+    """姿態的一次嘗試：姿態狀態（＋自身護盾）→ 代價 → 調整強度。"""
+    rules = library.composer
+    skeleton = library.skeletons["stance"]
+    w = rules.spell_attr_weights
+    scaling = _weighted(rng, ("int", "wis", "wil"), (w.int_, w.wis, w.wil))
+    theme = rng.choice(_SPELL_ELEMENTS)
+    ctx = Ctx(library, rng, skeleton, rarity, tier, "spell", 1, theme)
+    build_stance_effects(ctx)
+    mana = rules.stance.mana
+    base: dict[str, Any] = {
+        "id": f"skill_rand_{seed}",
+        "name_zh": "暫定",
+        "tier": tier,
+        "rarity": rarity,
+        "kind": "stance",
+        "skeleton": skeleton.id,
+        "category": "spell",
+        "weapon_req": "any",
+        "ap_cost": None,
+        "scaling_attr": scaling,
+        "shape": {"type": "self"},
+        "condition": None,
+        "cost": {"mana": rng.randint(mana.min, mana.max) + (tier - 1)},
+        "provenance": {"origin": "level_up"},
+    }
+    if tune(rng, library, base, ctx.effects, ctx.knobs):
+        return _finish(library, seed, base, ctx)
+    raise Retry
+
+
 def _finish(library: ContentLibrary, seed: int, base: dict[str, Any], ctx: Ctx) -> SkillDef:
     """加上名稱、標籤與暫定的敘事文字。"""
     draft = SkillDef.model_validate({**base, "effects": ctx.effects})
@@ -314,6 +410,35 @@ def _finish(library: ContentLibrary, seed: int, base: dict[str, Any], ctx: Ctx) 
         },
     }
     return SkillDef.model_validate(data)
+
+
+def _compose_special(
+    seed: int,
+    lib: ContentLibrary,
+    kind: str,
+    *,
+    tier: int,
+    rarity: SkillRarity,
+    category: str | None,
+) -> ComposeResult | None:
+    """反應技或姿態：用獨立的亂數串流重抽，不動主串流；做不出合格技能回傳 ``None``。"""
+    rng = Rng(seed).fork(f"composer.{kind}.build")
+    chosen = category
+    if kind == "reaction" and chosen is None:
+        chosen = _choose_category(rng, lib.skeletons["reaction"], None, lib.composer)
+    for attempt in range(1, MAX_ATTEMPTS + 1):
+        try:
+            if kind == "reaction":
+                skill = _attempt_reaction(
+                    rng, lib, seed, tier=tier, rarity=rarity, category=chosen or "weapon"
+                )
+            else:
+                skill = _attempt_stance(rng, lib, seed, tier, rarity)
+        except (Retry, ValidationError, BudgetError):
+            continue
+        if not validate_skill(skill, lib):
+            return ComposeResult(skill, attempt)
+    return None
 
 
 def compose_with_stats(
@@ -336,6 +461,25 @@ def compose_with_stats(
     passive = skeleton_def.kinds == ("passive",) or (
         skeleton is None and _wants_passive(seed, rarity_value, lib)
     )
+    special: str | None = None
+    if not passive:
+        explicit_kind = skeleton_def.kinds[0] if skeleton_def.kinds[0] != "active" else None
+        special = explicit_kind or (
+            _wants_special(seed, rarity_value, lib) if skeleton is None else None
+        )
+    if special is not None:
+        if ap_cost is not None or (special == "stance" and category not in (None, "spell")):
+            raise ComposeError("反應技與姿態不花 AP：不能指定 ap_cost（姿態也不能是武器技）")
+        found = _compose_special(
+            seed, lib, special, tier=tier_value, rarity=rarity_value, category=category
+        )
+        if found is not None:
+            return found
+        if skeleton is not None:
+            raise ComposeError(
+                f"種子 {seed}：{MAX_ATTEMPTS} 次重抽都做不出合格的{special}"
+                f"（階級 {tier_value}、{rarity_value}）"
+            )
     if passive and (ap_cost is not None or category not in (None, "spell")):
         raise ComposeError("被動技能是法術技、不花 AP：不能指定 ap_cost 或武器技")
     category_value = (

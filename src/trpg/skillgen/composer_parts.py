@@ -22,6 +22,7 @@ from trpg.shared.rng import Rng
 from trpg.shared.types import Element, Surface
 
 __all__ = [
+    "REACTION_EVENTS",
     "Ctx",
     "Knob",
     "Retry",
@@ -30,7 +31,10 @@ __all__ = [
     "build_effects",
     "build_passive_cost",
     "build_passive_effects",
+    "build_reaction_cost",
+    "build_reaction_effects",
     "build_shape",
+    "build_stance_effects",
     "choose_core",
     "dice_ladder",
 ]
@@ -174,17 +178,19 @@ def _has_status(ctx: Ctx, beneficial: bool) -> bool:
         s.budget_points is not None
         and s.beneficial == beneficial
         and rarity_rank(s.min_rarity) <= ctx.rank
+        and not s.stance
         for s in ctx.library.ruleset.statuses.statuses
     )
 
 
-def build_shape(ctx: Ctx, core: list[str]) -> None:
-    """形狀（骨架允許、稀有度夠、核心原語接受），再依形狀的參數範圍隨機填值。"""
+def build_shape(ctx: Ctx, core: list[str], only: tuple[str, ...] | None = None) -> None:
+    """形狀（骨架允許、稀有度夠、核心原語接受；``only`` 再限縮），再依形狀的參數範圍隨機填值。"""
     shapes = ctx.library.ruleset.shapes.by_id()
     allowed = [
         s
         for s in ctx.skeleton.shapes
-        if rarity_rank(shapes[s].min_rarity) <= ctx.rank
+        if (only is None or s in only)
+        and rarity_rank(shapes[s].min_rarity) <= ctx.rank
         and all(_accepts(ctx.primitive(p), s) for p in core)
     ]
     if not allowed:
@@ -236,8 +242,8 @@ def _status_candidates(ctx: Ctx, beneficial: bool) -> list[StatusDef]:
     for status in ctx.library.ruleset.statuses.statuses:
         if status.budget_points is None or status.beneficial != beneficial or status.id in used:
             continue
-        if rarity_rank(status.min_rarity) > ctx.rank:
-            continue
+        if rarity_rank(status.min_rarity) > ctx.rank or status.stance:
+            continue  # 姿態狀態只有姿態技能（build_stance_effects）會施加
         if status.id == "stun" and ctx.shape != "single":
             continue
         if status.control_group is not None and status.control_group in ctx.control_groups:
@@ -596,3 +602,102 @@ def build_passive_cost(ctx: Ctx) -> dict[str, Any]:
     if ctx.chance(rules.cooldown_permille):
         cost["cooldown"] = ctx.rng.randint(rules.cooldown.min, rules.cooldown.max)
     return cost
+
+
+# ---------------------------------------------------------------------------
+# 反應技與姿態（Phase 2E-2）
+# ---------------------------------------------------------------------------
+
+REACTION_EVENTS = ("hit_by_melee", "hit_by_attack", "enemy_leaves_adjacent")
+"""非擋攻擊的反應事件（擋攻擊的 ``ally_hit_adjacent`` 另外抽）。"""
+
+
+def _shield_if_allowed(ctx: Ctx, *, core: bool) -> None:
+    if rarity_rank(ctx.primitive("shield").min_rarity) <= ctx.rank:
+        weight = (
+            ctx.rules.structure.knob_weight_core if core else ctx.rules.structure.knob_weight_other
+        )
+        _heal_effect(ctx, weight, "shield")
+
+
+def build_reaction_effects(ctx: Ctx, event: str) -> None:
+    """反應技的形狀與效果。
+
+    擋攻擊：形狀 self，``intercept`` ＋ 自身護盾（讓高階也有強度旋鈕）；其他事件：自身增益
+    （形狀 self）或對觸發者的傷害、有害狀態、推拉（形狀 single）。
+    """
+    rules = ctx.rules.reaction
+    if event == "ally_hit_adjacent":
+        ctx.shape, ctx.shape_params = "self", {}
+        ctx.core_count = 1
+        ctx.add({"type": "intercept"}, ())
+        _shield_if_allowed(ctx, core=False)
+        return
+    weight = ctx.rules.structure.knob_weight_core
+    if ctx.chance(rules.self_permille):
+        options = [
+            n for n in ("heal", "shield") if rarity_rank(ctx.primitive(n).min_rarity) <= ctx.rank
+        ]
+        if _has_status(ctx, True):
+            options.append("apply_status")
+        if not options:
+            raise Retry
+        build_shape(ctx, [], only=("self",))
+        ctx.core_count = 1
+        name = ctx.rng.choice(options)
+        if name == "apply_status":
+            _status_effect(ctx, beneficial=True)
+        else:
+            _heal_effect(ctx, weight, name)
+        return
+    options = [
+        n
+        for n in ("damage", "apply_status", "push", "pull")
+        if rarity_rank(ctx.primitive(n).min_rarity) <= ctx.rank
+        and (n != "apply_status" or _has_status(ctx, False))
+    ]
+    if not options:
+        raise Retry
+    name = ctx.rng.choice(options)
+    build_shape(ctx, [name], only=("single",))
+    ctx.core_count = 1
+    _make_effect(ctx, name, core=True, beneficial_only=False)
+    if ctx.chance(rules.second_effect_permille):
+        pool = _secondary_pool(ctx)
+        if pool:
+            _make_effect(ctx, ctx.rng.choice(pool), core=False, beneficial_only=False)
+
+
+def build_reaction_cost(ctx: Ctx) -> dict[str, Any]:
+    """反應技的代價：法力（隨階級增加）與偶爾的冷卻（不花 AP）。"""
+    rules = ctx.rules.reaction
+    mana = ctx.rng.randint(rules.mana.min, rules.mana.max) + (ctx.tier - 1) * rules.mana_per_tier
+    cost: dict[str, Any] = {"mana": mana}
+    cooldown = (
+        ctx.rng.randint(rules.cooldown.min, rules.cooldown.max)
+        if ctx.chance(rules.cooldown_permille)
+        else 0
+    )
+    cooldown = max(cooldown, ctx.min_cooldown)
+    if cooldown:
+        cost["cooldown"] = cooldown
+    return cost
+
+
+def build_stance_effects(ctx: Ctx) -> None:
+    """姿態的效果：一個姿態狀態（對自己，不帶持續），階級 2 以上（或抽中）再加一個自身護盾。"""
+    stances = sorted(
+        (
+            s
+            for s in ctx.library.ruleset.statuses.statuses
+            if s.stance and s.budget_points is not None and rarity_rank(s.min_rarity) <= ctx.rank
+        ),
+        key=lambda s: s.id,
+    )
+    if not stances:
+        raise Retry
+    ctx.shape, ctx.shape_params = "self", {}
+    ctx.core_count = 1
+    ctx.add({"type": "apply_status", "status": ctx.rng.choice(stances).id, "affects": "self"}, ())
+    if ctx.tier > 1 or ctx.chance(ctx.rules.stance.shield_permille):
+        _shield_if_allowed(ctx, core=False)

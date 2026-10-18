@@ -22,7 +22,17 @@ from trpg.skillgen.skill_yaml import skill_from_yaml, skill_to_yaml
 from trpg.skillgen.validate import validate_skill
 
 FAST_SEEDS = range(100)
-ENABLED = ("strike", "area", "control", "displace", "combo", "aura", "passive")
+ENABLED = (
+    "strike",
+    "area",
+    "control",
+    "displace",
+    "combo",
+    "aura",
+    "passive",
+    "reaction",
+    "stance",
+)
 RARITIES = ("common", "rare", "epic", "legendary")
 
 
@@ -46,7 +56,8 @@ def test_every_fast_seed_composes_a_valid_skill_in_the_budget_window() -> None:
         assert validate_skill(skill, library) == []
         assert skill.id == f"skill_rand_{seed}" and skill.name_zh.endswith(f"#{seed}")
         assert skill.provenance.origin == "level_up"
-        assert skill.kind == ("passive" if skill.skeleton == "passive" else "active")
+        expected = {"passive": "passive", "reaction": "reaction", "stance": "stance"}
+        assert skill.kind == expected.get(skill.skeleton, "active")
         assert skill.narrative.concept
         ratio = skill_budget(skill, library).ratio
         assert low <= ratio <= high, (seed, float(ratio))
@@ -212,10 +223,67 @@ def test_passives_only_appear_from_epic_and_do_not_change_other_seeds() -> None:
     passives = [s for s in skills if s.kind == "passive"]
     assert passives and all(s.rarity in ("epic", "legendary") for s in passives)
     for seed in range(40):
-        for rarity in ("common", "rare"):
-            assert compose_random_skill(seed, rarity=rarity).kind == "active"
+        assert compose_random_skill(seed, rarity="common").kind == "active"
+        assert compose_random_skill(seed, rarity="rare").kind != "passive"
 
 
 def test_explicit_non_passive_skeleton_never_becomes_a_passive() -> None:
     for seed in range(30):
         assert compose_random_skill(seed, skeleton="strike", rarity="epic").kind == "active"
+
+
+# ---------------------------------------------------------------------------
+# 反應技與姿態（Phase 2E-2）
+# ---------------------------------------------------------------------------
+
+
+def test_explicit_reactions_are_valid_in_every_tier_and_cover_every_event() -> None:
+    library = lib()
+    events: set[str] = set()
+    low, high = tuning_bounds(library)
+    for tier in range(1, 6):
+        for seed in range(30):
+            skill = compose_random_skill(seed, skeleton="reaction", rarity="rare", tier=tier)
+            assert validate_skill(skill, library) == [], (tier, seed)
+            assert skill.kind == "reaction" and skill.ap_cost is None and skill.reaction
+            assert skill.shape.type in ("self", "single")
+            events.add(skill.reaction.event)
+            assert low <= skill_budget(skill, library).ratio <= high, (tier, seed)
+    assert events == {"hit_by_melee", "hit_by_attack", "enemy_leaves_adjacent", "ally_hit_adjacent"}
+
+
+def test_explicit_stances_are_valid_in_every_tier_and_have_a_stance_status() -> None:
+    library = lib()
+    stances = {s.id for s in library.ruleset.statuses.statuses if s.stance}
+    seen: set[str] = set()
+    for tier in range(1, 6):
+        for seed in range(30):
+            skill = compose_random_skill(seed, skeleton="stance", rarity="rare", tier=tier)
+            assert validate_skill(skill, library) == [], (tier, seed)
+            assert skill.kind == "stance" and skill.ap_cost is None and skill.shape.type == "self"
+            seen |= {e.status for e in skill.effects if getattr(e, "status", None) in stances}
+    assert seen == stances
+
+
+def test_reactions_and_stances_need_rare_and_ignore_ap_arguments() -> None:
+    with pytest.raises(ComposeError):
+        compose_random_skill(1, skeleton="reaction", rarity="common")
+    with pytest.raises(ComposeError):
+        compose_random_skill(1, skeleton="stance", rarity="common")
+    with pytest.raises(ComposeError, match="AP"):
+        compose_random_skill(1, skeleton="reaction", rarity="rare", ap_cost=2)
+
+
+def test_reactions_and_stances_never_use_stance_statuses_elsewhere() -> None:
+    stances = {s.id for s in lib().ruleset.statuses.statuses if s.stance}
+    for seed in range(120):
+        skill = compose_random_skill(seed, rarity="epic")
+        if skill.kind != "stance":
+            assert not stances & {getattr(e, "status", None) for e in skill.effects}, seed
+
+
+def test_random_reactions_and_stances_appear_without_changing_common_seeds() -> None:
+    skills = [compose_random_skill(seed, rarity="rare") for seed in range(200)]
+    kinds = {s.kind for s in skills}
+    assert {"reaction", "stance"} <= kinds
+    assert all(compose_random_skill(seed, rarity="common").kind == "active" for seed in range(60))

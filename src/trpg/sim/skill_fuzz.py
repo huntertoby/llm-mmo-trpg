@@ -35,7 +35,7 @@ from trpg.engine import (
     start_battle,
 )
 from trpg.engine.ai.utility import UtilityAI
-from trpg.engine.events import SkillTriggered
+from trpg.engine.events import ReactionTriggered, SkillTriggered
 from trpg.engine.runner import run_battle
 from trpg.engine.state import StatusInstance, Tile
 from trpg.shared.types import Surface, Team, UnitId
@@ -91,7 +91,7 @@ class SkillOutcome:
     battle_winner: str | None = None
     ratio: Fraction = Fraction(0)
     triggers: int = 0
-    """被動：整場戰鬥中這個技能實際觸發的次數（主動技能恆為 0）。"""
+    """被動與反應技：整場戰鬥中這個技能實際觸發的次數（主動技能與姿態恆為 0）。"""
 
 
 @dataclass(slots=True)
@@ -310,7 +310,10 @@ def _try_battle(library: ContentLibrary, outcome: SkillOutcome) -> None:
     )
     outcome.battle_ran = True
     outcome.triggers = sum(
-        1 for e in run.events if isinstance(e, SkillTriggered) and e.skill_id == outcome.skill.id
+        1
+        for e in run.events
+        if (isinstance(e, SkillTriggered) and e.skill_id == outcome.skill.id)
+        or (isinstance(e, ReactionTriggered) and e.reaction == outcome.skill.id)
     )
     winner = run.state.winner
     outcome.battle_winner = "平手" if winner is None else winner.display_name
@@ -323,8 +326,8 @@ def check_skill(
     outcome = SkillOutcome(seed=seed, skill=skill, attempts=attempts)
     outcome.violations = len(validate_skill(skill, library))
     outcome.ratio = skill_budget(skill, library).ratio
-    passive = skill.kind == "passive"
-    # 被動沒有合法選取可施放：改成每個被動都打一場，數它實際觸發了幾次（2E-1）
+    passive = skill.kind in ("passive", "reaction")
+    # 被動與反應技沒有合法選取可施放：改成各打一場，數它實際觸發了幾次（2E-1、2E-2）
     outcome.castable = passive
     steps: list[Callable[[ContentLibrary, SkillOutcome], None]] = [] if passive else [_try_cast]
     if with_battle or passive:
@@ -432,6 +435,13 @@ def format_report(report: FuzzReport) -> str:
     lines.append(
         f"  被動 {len(passives)} 個（每個打一場戰鬥）；其中實際觸發過 {fired} 個"
         f"，共觸發 {sum(o.triggers for o in passives)} 次"
+    )
+    reactions = [o for o in outcomes if o.skill.kind == "reaction"]
+    stances = [o for o in outcomes if o.skill.kind == "stance"]
+    lines.append(
+        f"  反應技 {len(reactions)} 個（每個打一場戰鬥）；其中實際觸發過"
+        f" {sum(1 for o in reactions if o.triggers > 0)} 個，共觸發"
+        f" {sum(o.triggers for o in reactions)} 次；姿態 {len(stances)} 個"
     )
     lines.append(f"  例外 {len(errors) + len(report.compose_errors)} 個")
     attempts = [o.attempts for o in outcomes]

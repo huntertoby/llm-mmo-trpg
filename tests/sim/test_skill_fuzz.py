@@ -33,8 +33,12 @@ def test_one_hundred_seeds_pass_validation_cast_and_run_without_exceptions() -> 
     assert all(o.violations == 0 for o in report.outcomes)
     assert all(o.castable for o in report.outcomes)
     assert all(o.error is None for o in report.outcomes)
-    # 每 10 個挑 1 個打一場；被動（2E-1）每個都打一場
-    expected = {o.seed for o in report.outcomes if o.seed % 10 == 0 or o.skill.kind == "passive"}
+    # 每 10 個挑 1 個打一場；被動（2E-1）與反應技（2E-2）每個都打一場
+    expected = {
+        o.seed
+        for o in report.outcomes
+        if o.seed % 10 == 0 or o.skill.kind in ("passive", "reaction")
+    }
     assert {o.seed for o in report.outcomes if o.battle_ran} == expected
     passives = [o for o in report.outcomes if o.skill.kind == "passive"]
     assert passives and sum(o.triggers for o in passives) > 0

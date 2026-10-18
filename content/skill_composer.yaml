@@ -75,6 +75,23 @@ passive:
   cooldown_permille: 250
   cooldown: {min: 1, max: 2}
 
+# 反應技（Phase 2E-2，初值）：稀有度 rare 以上、未指定骨架時改組反應技的機率（獨立的亂數串流）
+reaction:
+  skeleton_permille: 100
+  intercept_permille: 300             # 事件為「相鄰友方被命中」（擋攻擊）的機率
+  self_permille: 350                  # 其他事件：自身增益（其餘對觸發者）
+  second_effect_permille: 300
+  mana: {min: 0, max: 3}
+  mana_per_tier: 1
+  cooldown_permille: 400
+  cooldown: {min: 1, max: 3}
+
+# 姿態（Phase 2E-2，初值）
+stance:
+  skeleton_permille: 60
+  shield_permille: 500                # 階級 2 以上一定帶
+  mana: {min: 0, max: 2}
+
 # 強度調整：比例收在 [low, high]，目標均勻分佈在 [low, high − margin]
 tuning:
   low_permille: 750

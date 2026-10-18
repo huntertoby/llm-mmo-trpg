@@ -26,6 +26,8 @@ __all__ = [
     "IntRange",
     "LadderRange",
     "PassiveRules",
+    "ReactionRules",
+    "StanceRules",
     "StructureRules",
     "TuningRules",
 ]
@@ -180,6 +182,36 @@ class PassiveRules(ContentModel):
     cooldown: IntRange
 
 
+class ReactionRules(ContentModel):
+    """反應技的抽選（Phase 2E-2 4.1）。
+
+    ``skeleton_permille``：稀有度 rare 以上、未指定骨架時，改組反應技的機率（獨立的亂數串流，
+    沒抽到的種子與 2E-1 的技能完全相同；抽到但做不出合格技能時退回一般主動技能）。
+    """
+
+    skeleton_permille: int = _PERMILLE
+    intercept_permille: int = _PERMILLE
+    """事件為 ``ally_hit_adjacent``（擋攻擊，形狀 self）的機率；其餘事件三選一。"""
+    self_permille: int = _PERMILLE
+    """非擋攻擊的反應技是自身增益（形狀 self）的機率；其餘對觸發者（形狀 single）。"""
+    second_effect_permille: int = _PERMILLE
+    """多帶一個附帶效果的機率。"""
+    mana: IntRange
+    mana_per_tier: int = Field(ge=0)
+    cooldown_permille: int = _PERMILLE
+    cooldown: IntRange
+
+
+class StanceRules(ContentModel):
+    """姿態的抽選（Phase 2E-2 4.3）。"""
+
+    skeleton_permille: int = _PERMILLE
+    """稀有度 rare 以上、未指定骨架時，改組姿態的機率（獨立的亂數串流）。"""
+    shield_permille: int = _PERMILLE
+    """姿態之外多帶一個自身護盾（有強度旋鈕，讓高階也湊得到預算）的機率；階級 2 以上一定帶。"""
+    mana: IntRange
+
+
 class ComposerRules(ContentModel):
     """``content/skill_composer.yaml``。"""
 
@@ -205,6 +237,8 @@ class ComposerRules(ContentModel):
     cost: CostRules
     tuning: TuningRules
     passive: PassiveRules
+    reaction: ReactionRules
+    stance: StanceRules
 
     @model_validator(mode="after")
     def _check(self) -> ComposerRules:
