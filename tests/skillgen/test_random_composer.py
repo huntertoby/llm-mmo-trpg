@@ -170,3 +170,15 @@ def test_one_thousand_seeds_are_all_valid_and_spread_out() -> None:
     assert set(counts) == set(ENABLED) and max(counts.values()) <= 400
     ratios = [skill_budget(s, library).ratio for s in skills]
     assert min(ratios) >= Fraction(75, 100) and max(ratios) <= Fraction(95, 100)
+
+
+def test_effects_are_not_repeated_except_distinct_statuses_and_combo_damage() -> None:
+    for seed in range(300):
+        skill = compose_random_skill(seed)
+        kinds = Counter(e.type for e in skill.effects)
+        for kind, count in kinds.items():
+            if count > 1:
+                assert kind in ("apply_status", "damage")
+                assert kind == "apply_status" or skill.skeleton == "combo"
+        statuses = [e.status for e in skill.effects if e.type == "apply_status"]
+        assert len(statuses) == len(set(statuses))

@@ -226,8 +226,9 @@ def _affects_enemies(ctx: Ctx, primitive_id: str, spec: dict[str, Any]) -> bool:
 
 def _status_candidates(ctx: Ctx, beneficial: bool) -> list[StatusDef]:
     out: list[StatusDef] = []
+    used = {e.get("status") for e in ctx.effects}
     for status in ctx.library.ruleset.statuses.statuses:
-        if status.budget_points is None or status.beneficial != beneficial:
+        if status.budget_points is None or status.beneficial != beneficial or status.id in used:
             continue
         if rarity_rank(status.min_rarity) > ctx.rank:
             continue
@@ -376,6 +377,8 @@ def _share_capped_without_core_knob(ctx: Ctx, name: str) -> bool:
 
 def _conflicts(ctx: Ctx, name: str) -> bool:
     types = [e["type"] for e in ctx.effects]
+    if name in types and name != "apply_status":  # 同一種效果不重複（兩個表面只有後者生效）
+        return True
     if "teleport" in types and name in ("damage", "push", "pull", "knock_prone"):
         return True
     return (name == "pull" and "push" in types) or (name == "push" and "pull" in types)
