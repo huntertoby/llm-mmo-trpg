@@ -13,6 +13,10 @@
 收益的 ``expose`` 為動作讓幾名敵人離開掩護（被推離或掩護物被摧毀），``cover_damage`` 為對
 「緊鄰敵人的掩護物」造成的每點傷害。
 
+接近（Phase 2C-4）：位置價值的 ``approach`` 用「走路的步數」（繞過牆、深淵、岩漿，不看單位）而不是
+曼哈頓距離。否則隔著河的雙方，在橋被燒斷、只剩一條繞遠的陸路時，任何一步繞路都會讓距離變大而
+沒有正分，永遠不會接近（``lava_crossing`` 的平手）。走路步數每次決策只算一次（:class:`_Walk`）。
+
 效能（Phase 1C 決定 #1）：每次決策只算一次「動作前」的位置價值；``Move`` 先以「直接把行動者放到
 目的地」的位置價值（不跑引擎）排序，只保留前 ``move_candidates`` 個（``ai_profiles.yaml``）；
 其中有風險的移動（可能被藉機攻擊、踩上有進入效果的表面、墜落、撤離、倒地站起）才跑完整
@@ -29,6 +33,7 @@
 
 from __future__ import annotations
 
+from collections import deque
 from collections.abc import Callable
 from dataclasses import dataclass
 from fractions import Fraction
@@ -54,7 +59,12 @@ from trpg.engine.events import (
     UnitMoved,
 )
 from trpg.engine.preview import DamageRange, Preview, preview
-from trpg.engine.rules.combat import HALF_COVER, attack_problem, cover_object_between
+from trpg.engine.rules.combat import (
+    HALF_COVER,
+    attack_problem,
+    cover_object_between,
+    is_concealed,
+)
 from trpg.engine.rules.geometry import (
     XY,
     bresenham,
@@ -63,6 +73,7 @@ from trpg.engine.rules.geometry import (
     manhattan,
     neighbors4,
 )
+from trpg.engine.rules.movement import is_standable, step_cost
 from trpg.engine.skills.targeting import ResolvedEffect, SkillArea, hp_cost, resolve_effects
 from trpg.engine.state import BattleState, UnitState
 from trpg.shared.types import ObjectId, Surface, Team, UnitId
@@ -83,6 +94,7 @@ __all__ = [
 ]
 
 _DEFEND_RADIUS = 6
+_KEEP_DISTANCE = 2
 _POSSIBLE_KILL_DIVISOR = 4
 _DOWNED_PENALTY = 1000
 _ESCAPED_BONUS = 1000
@@ -202,12 +214,73 @@ def _ward(state: BattleState, unit: UnitState, orders: OrderContext | None = Non
 
 
 def position_value(
-    state: BattleState, unit_id: UnitId, w: AiWeights, orders: OrderContext | None = None
+    state: BattleState,
+    unit_id: UnitId,
+    w: AiWeights,
+    orders: OrderContext | None = None,
+    *,
+    walk: _Walk | None = None,
 ) -> Fraction:
     """行動者在 ``state`` 中所在位置的價值（``orders``：戰術指令的調整，見
-    :func:`resolve_orders`）。"""
+    :func:`resolve_orders`；``walk``：同一次決策共用的走路步數，省略時重新計算）。"""
     unit = state.units[unit_id]
-    return _unit_position_value(state, unit, _order_weights(w, orders), _scene(state, unit, orders))
+    return _unit_position_value(
+        state, unit, _order_weights(w, orders), _scene(state, unit, orders, walk)
+    )
+
+
+class _Walk:
+    """一次決策開始時，每名敵人到各格的走路步數（只看地形與物件，不看單位；單位走路的
+    規則見 :func:`~trpg.engine.rules.movement.step_cost`）。
+
+    動作後的狀態裡，敵人若被推開，沿用原位置的步數再加上被推開的距離；動作後新出現的單位
+    （召喚物）沒有步數，改用曼哈頓距離。
+    """
+
+    __slots__ = ("dist", "origin")
+
+    def __init__(self, state: BattleState, enemies: list[UnitState]) -> None:
+        self.origin: dict[UnitId, XY] = {e.id: e.xy for e in enemies}
+        self.dist: dict[UnitId, dict[XY, int]] = {e.id: _steps_to(state, e.xy) for e in enemies}
+
+    def to(self, enemy: UnitState, xy: XY) -> int | None:
+        """``xy`` 走到 ``enemy`` 的步數；不連通時為 ``None``，沒有紀錄的單位用曼哈頓距離。"""
+        steps = self.dist.get(enemy.id)
+        if steps is None:
+            return manhattan(xy, enemy.xy)
+        base = steps.get(xy)
+        if base is None:
+            return None
+        return base + manhattan(self.origin[enemy.id], enemy.xy)
+
+
+def _steps_to(state: BattleState, target: XY) -> dict[XY, int]:
+    """從 ``target`` 反向的廣度優先搜尋：每個能走到 ``target`` 的格子的步數。"""
+    dist = {target: 0}
+    queue = deque([target])
+    while queue:
+        cur = queue.popleft()
+        for nxt in neighbors4(state, cur):
+            if (
+                nxt not in dist
+                and is_standable(state, nxt)
+                and step_cost(state, nxt, cur) is not None
+            ):
+                dist[nxt] = dist[cur] + 1
+                queue.append(nxt)
+    return dist
+
+
+def _approach_distance(scene: _Scene, xy: XY) -> int:
+    """``xy`` 到最近敵人（有集火目標時為目標）的距離：走得到的敵人用走路步數，全都走不到時
+    退回曼哈頓距離。"""
+    targets = scene.enemies if scene.focus is None else [scene.focus]
+    walk = scene.walk
+    if walk is not None:
+        steps = [d for e in targets if (d := walk.to(e, xy)) is not None]
+        if steps:
+            return min(steps)
+    return min(manhattan(xy, e.xy) for e in targets)
 
 
 @dataclass(frozen=True, slots=True)
@@ -217,20 +290,30 @@ class _Scene:
     enemies: list[UnitState]
     ward: XY | None
     orders: OrderContext | None = None
-    focus_xy: XY | None = None
-    """集火目標的位置（目標還在場上時）；``approach`` 改以它計算。"""
+    focus: UnitState | None = None
+    """集火目標（還在場上時）；``approach`` 改以它計算。"""
+    walk: _Walk | None = None
 
 
-def _scene(state: BattleState, unit: UnitState, orders: OrderContext | None = None) -> _Scene:
-    focus_xy = None
+def _scene(
+    state: BattleState,
+    unit: UnitState,
+    orders: OrderContext | None = None,
+    walk: _Walk | None = None,
+) -> _Scene:
+    """決策的共用資料；``walk`` 省略時重新計算（一次決策內請共用同一個）。"""
+    focus = None
     if orders is not None and orders.focus is not None:
         target = state.units.get(orders.focus)
         if target is not None and target.alive:
-            focus_xy = target.xy
-    return _Scene(_enemies(state, unit), _ward(state, unit, orders), orders, focus_xy)
+            focus = target
+    enemies = _enemies(state, unit)
+    if walk is None and enemies:
+        walk = _Walk(state, enemies)
+    return _Scene(enemies, _ward(state, unit, orders), orders, focus, walk)
 
 
-def _unit_position_value(  # noqa: PLR0912
+def _unit_position_value(
     state: BattleState, unit: UnitState, w: AiWeights, scene: _Scene | None = None
 ) -> Fraction:
     """``unit`` 的位置價值；``unit`` 可以是「放到別的格子」的虛擬複本（位置以 ``unit.xy`` 為準，
@@ -245,13 +328,18 @@ def _unit_position_value(  # noqa: PLR0912
     enemies = scene.enemies
     value = 0
     if enemies:
-        if scene.focus_xy is not None:
-            value -= w.approach * manhattan(xy, scene.focus_xy)
-        else:
-            value -= w.approach * min(manhattan(xy, e.xy) for e in enemies)
+        value -= w.approach * _approach_distance(scene, xy)
         if w.threat:
             value += w.threat * sum(1 for e in enemies if attack_problem(state, unit, e) is None)
-        value -= w.keep_distance * sum(1 for e in enemies if manhattan(xy, e.xy) <= 2)  # noqa: PLR2004
+        if w.keep_distance:
+            # 隱蔽的敵人必須走到 2 格內才打得到（concealed_ranged_max_distance），所以遠程單位為了
+            # 攻擊而進入 2 格內不扣分；否則兩名隱蔽的弓手會互相等待到平手（dark_forest 種子 7）
+            close = sum(
+                1
+                for e in enemies
+                if manhattan(xy, e.xy) <= _KEEP_DISTANCE and not is_concealed(state, e)
+            )
+            value -= w.keep_distance * close
         if w.cover:
             value += w.cover * _covered_from(state, xy, enemies)
         if w.exposed:
@@ -558,6 +646,7 @@ def score_action(
     *,
     before: Fraction | None = None,
     orders: OrderContext | None = None,
+    walk: _Walk | None = None,
 ) -> ActionScore:
     """單一動作的分數（``EndTurn`` 固定為 0），以完整 ``preview`` 計算。
 
@@ -571,9 +660,11 @@ def score_action(
         profile = profile.model_copy(update={"weights": w})
     actor = state.units[action.unit_id]
     p = preview(state, action)
+    if walk is None:
+        walk = _scene(state, actor, orders).walk
     if before is None:
-        before = position_value(state, actor.id, w, orders)
-    after = position_value(p.min_state, actor.id, w, orders)
+        before = position_value(state, actor.id, w, orders, walk=walk)
+    after = position_value(p.min_state, actor.id, w, orders, walk=walk)
     # 位置變化只在動作成功時發生（攻擊、技巧動作乘上命中率／成功率）
     hit = p.hit_chance if p.hit_chance is not None else Fraction(1)
     score = _gains(state, actor, p, profile) + hit * (after - before)
@@ -857,9 +948,11 @@ class UtilityAI:
             raise ValueError("目前沒有行動中的單位")
         profile = self.profile_for(unit)
         ctx = self.order_context(state, unit)
-        before = position_value(state, unit.id, profile.weights, ctx)
+        walk = _scene(state, unit, ctx).walk
+        before = position_value(state, unit.id, profile.weights, ctx, walk=walk)
         return [
-            score_action(state, a, profile, before=before, orders=ctx) for a in legal_actions(state)
+            score_action(state, a, profile, before=before, orders=ctx, walk=walk)
+            for a in legal_actions(state)
         ]
 
     def rank(self, state: BattleState) -> list[ActionScore]:
@@ -878,10 +971,11 @@ class UtilityAI:
         ctx = self.order_context(state, unit)
         w = _order_weights(profile.weights, ctx)
         actions, areas = legal_actions_with_areas(state)
-        before = position_value(state, unit.id, w, ctx)
+        scene = _scene(state, unit, ctx)
+        walk = scene.walk
+        before = position_value(state, unit.id, w, ctx, walk=walk)
         scored: dict[int, ActionScore] = {}
         estimates: list[tuple[Fraction, int]] = []
-        scene = _scene(state, unit, ctx)
         for index, action in enumerate(actions):
             if isinstance(action, Move):
                 estimates.append(
@@ -894,16 +988,22 @@ class UtilityAI:
             elif isinstance(action, UseSkill):
                 continue  # 技能在下面依估計篩選後才評分
             else:
-                scored[index] = score_action(state, action, profile, before=before, orders=ctx)
+                scored[index] = score_action(
+                    state, action, profile, before=before, orders=ctx, walk=walk
+                )
         for index in self._skill_candidates(state, unit, actions, areas, scene, w, before):
-            scored[index] = score_action(state, actions[index], profile, before=before, orders=ctx)
+            scored[index] = score_action(
+                state, actions[index], profile, before=before, orders=ctx, walk=walk
+            )
         estimates.sort(key=lambda item: (-item[0], item[1]))
         enemies = reactive_enemies(state, unit)
         for estimate, index in estimates[: self._move_candidates]:
             move = actions[index]
             assert isinstance(move, Move)
             if is_risky_move(state, unit, move, enemies):
-                scored[index] = score_action(state, move, profile, before=before, orders=ctx)
+                scored[index] = score_action(
+                    state, move, profile, before=before, orders=ctx, walk=walk
+                )
             else:
                 scored[index] = ActionScore(move, estimate, None)
         return [scored[i] for i in sorted(scored)]
