@@ -1,0 +1,74 @@
+# 隨機技能組合器的調參資料（docs/phases/Phase2C計畫.md 3.1；原本寫在 skillgen/random_composer.py、
+# composer_parts.py、composer_tuning.py）。‰＝千分比。這裡只放「抽選機率與範圍」；
+# 組合的流程與亂數呼叫順序在程式碼。改動任何數值都會改變「種子 → 技能」的對應。
+
+# 頂層參數（每個種子只抽一次）
+rarity_weights: {common: 35, rare: 35, epic: 20, legendary: 10}
+ap_weights: {1: 35, 2: 50, 3: 15}     # AP 的嘗試順序權重（結構太強或太弱時換 AP）
+spell_share_permille: {default: 500, aura: 850}   # 骨架 → 法術占比
+spell_any_weapon_permille: 250        # 法術技的武器需求為「任何」（其餘為法器）
+spell_attr_weights: {int: 60, wis: 20, wil: 20}
+melee_permille: 500                   # 武器技是近戰（其餘遠程）
+melee_dex_permille: 250               # 近戰武器技以敏捷為主屬性（其餘力量）
+infuse_permille: 350                  # 武器技帶元素（其餘物理）
+
+# 強度旋鈕的階梯
+dice:
+  sides: [4, 6, 8, 10, 12]
+  max_count: 8                        # 顆數 1–8，依平均值由弱到強排序
+multipliers:                          # 武器倍率（‰），range(start, stop, step) 依序接起來
+  - {start: 500, stop: 3000, step: 100}
+  - {start: 3000, stop: 6000, step: 250}
+  - {start: 6000, stop: 10001, step: 500}
+duration:
+  cap: 6                              # 持續上限（回合）
+  movement_extra: 1                   # 移動類狀態最多比預設多幾回合（硬控不可延長）
+  other_extra: 3
+  surface_extra: 3
+  status_weight: 2                    # 旋鈕被選到的權重
+  surface_weight: 1
+
+# 核心、形狀、效果
+structure:
+  knob_weight_core: 6                 # 核心效果的旋鈕權重
+  knob_weight_other: 1
+  push_pull_distances: [1, 2]
+  displace_second_core_permille: 250  # 位移骨架有第二個核心原語
+  combo_double_damage_permille: 500   # 連段有第二段傷害
+  control_buff_permille: 250          # 控場核心狀態為自我增益
+  stun_min_cooldown: 4
+  big_ring_radius: 2                  # 達到這個半徑的環形算大範圍（強制冷卻）
+  big_cone_size: 4                    # 達到這個大小的錐形算大範圍
+  cross_zero_range_permille: 150      # 十字與 3×3 以自身為中心（施放距離 0）
+  cross_min_range: 2
+  other_min_range: 3
+  fallback_secondary: [apply_status, push, pull, knock_prone]   # 骨架沒指定附帶原語時
+
+# 條件
+condition:
+  skill_permille: 300                 # 稀有（含）以上有條件
+  effect_level_permille: 500          # 有條件時掛在單一效果上
+  target_conditions: [target_hp_below, height_advantage, target_on_surface, target_has_status]
+  target_hp_below: {min: 200, max: 600}   # ‰
+  self_hp_below: {min: 300, max: 700}
+
+# 代價
+cost:
+  spell_mana_per_ap: {min: 2, max: 4}     # 法術法力 ＝ 亂數 × AP ＋ (階級 − 1) × spell_mana_per_tier
+  spell_mana_per_tier: 2
+  weapon_free_permille: 350               # 武器技不花法力
+  weapon_mana_per_ap: {min: 1, max: 3}
+  no_cooldown_permille: 300               # AP ≤ no_cooldown_max_ap 時沒有冷卻
+  no_cooldown_max_ap: 2
+  cooldown_base_max: 2                    # 冷卻 ＝ 1 到 (cooldown_base_max + AP)
+  cooldown_cap: 6
+  uses_per_battle_permille: 120
+  uses_per_battle: {min: 1, max: 2}
+
+# 強度調整：比例收在 [low, high]，目標均勻分佈在 [low, high − margin]
+tuning:
+  low_permille: 750
+  high_permille: 950
+  target_margin_permille: 20
+  target_steps: 100
+  jump_share_permille: 600            # 依缺口一次跳多格時實際跳的比例

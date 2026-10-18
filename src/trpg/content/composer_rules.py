@@ -1,0 +1,208 @@
+"""隨機技能組合器的調參資料（``content/skill_composer.yaml``；Phase 2C-1 3.1）。
+
+這些數值是「抽選機率與範圍」，不是演算法：稀有度與 AP 的權重、法術比例、骰子與倍率的階梯、
+條件與代價的機率與範圍、強度調整的目標區間……改動它們會改變隨機技能的分佈（種子對應的技能也會
+不同），但不需要改程式。組合的流程與亂數呼叫順序仍在 ``trpg.skillgen``。
+
+只定義 schema；``trpg.content`` 不得匯入 ``trpg.skillgen``。
+"""
+
+from __future__ import annotations
+
+from typing import Literal
+
+from pydantic import Field, model_validator
+
+from trpg.content.schemas import ContentModel
+from trpg.content.skills import RARITY_ORDER
+
+__all__ = [
+    "AttrWeights",
+    "ComposerRules",
+    "ConditionRules",
+    "CostRules",
+    "DiceRules",
+    "DurationRules",
+    "IntRange",
+    "LadderRange",
+    "StructureRules",
+    "TuningRules",
+]
+
+_PERMILLE_MAX = 1000
+_MIN_SIDES = 2
+_PERMILLE = Field(ge=0, le=_PERMILLE_MAX)
+
+
+class IntRange(ContentModel):
+    """閉區間 ``[min, max]``（含兩端）。"""
+
+    min: int
+    max: int
+
+    @model_validator(mode="after")
+    def _check(self) -> IntRange:
+        if self.min > self.max:
+            raise ValueError("min 不可大於 max")
+        return self
+
+
+class LadderRange(ContentModel):
+    """``range(start, stop, step)`` 的一段；倍率階梯由數段接起來。"""
+
+    start: int = Field(ge=1)
+    stop: int = Field(ge=1)
+    step: int = Field(ge=1)
+
+
+class DiceRules(ContentModel):
+    """骰子旋鈕的階梯：顆數 1–``max_count``、面數 ``sides``，依平均值由弱到強排序。"""
+
+    sides: tuple[int, ...] = Field(min_length=1)
+    max_count: int = Field(ge=1)
+
+    @model_validator(mode="after")
+    def _check(self) -> DiceRules:
+        if len(set(self.sides)) != len(self.sides) or any(s < _MIN_SIDES for s in self.sides):
+            raise ValueError("sides 必須是不重複且 ≥ 2 的整數")
+        return self
+
+
+class AttrWeights(ContentModel):
+    int_: int = Field(alias="int", ge=0)
+    wis: int = Field(ge=0)
+    wil: int = Field(ge=0)
+
+
+class DurationRules(ContentModel):
+    """狀態與表面持續的旋鈕上限。"""
+
+    cap: int = Field(ge=1)
+    """持續的絕對上限（回合）。"""
+    movement_extra: int = Field(ge=0)
+    """移動類狀態可比預設持續多幾回合（硬控不可延長）。"""
+    other_extra: int = Field(ge=0)
+    """其他狀態可比預設持續多幾回合。"""
+    surface_extra: int = Field(ge=0)
+    """表面可比預設持續多幾回合。"""
+    status_weight: int = Field(ge=1)
+    surface_weight: int = Field(ge=1)
+
+
+class StructureRules(ContentModel):
+    """核心、形狀、效果的抽選。"""
+
+    knob_weight_core: int = Field(ge=1)
+    """核心效果的旋鈕權重。"""
+    knob_weight_other: int = Field(ge=1)
+    push_pull_distances: tuple[int, ...] = Field(min_length=1)
+    """推拉距離旋鈕的階梯。"""
+    displace_second_core_permille: int = _PERMILLE
+    combo_double_damage_permille: int = _PERMILLE
+    control_buff_permille: int = _PERMILLE
+    """控場骨架的核心狀態是自我增益的機率。"""
+    stun_min_cooldown: int = Field(ge=0)
+    big_ring_radius: int = Field(ge=1)
+    big_cone_size: int = Field(ge=1)
+    """環形半徑、錐形大小達到這個值就算大範圍（強制冷卻）。"""
+    cross_zero_range_permille: int = _PERMILLE
+    """十字與 3×3 的施放距離為 0（以自身為中心）的機率。"""
+    cross_min_range: int = Field(ge=0)
+    other_min_range: int = Field(ge=0)
+    fallback_secondary: tuple[str, ...]
+    """骨架沒有指定附帶原語清單時的後備清單。"""
+
+
+class ConditionRules(ContentModel):
+    skill_permille: int = _PERMILLE
+    """稀有（含）以上的技能有條件的機率。"""
+    effect_level_permille: int = _PERMILLE
+    """有條件時，條件掛在單一效果（而非整個技能）的機率。"""
+    target_conditions: tuple[str, ...]
+    """目標型條件（需要影響範圍內有敵人）。"""
+    target_hp_below: IntRange
+    self_hp_below: IntRange
+
+
+class CostRules(ContentModel):
+    spell_mana_per_ap: IntRange
+    """法術的法力 ＝ 這個範圍的亂數 × AP ＋ （階級 − 1）× ``spell_mana_per_tier``。"""
+    spell_mana_per_tier: int = Field(ge=0)
+    weapon_free_permille: int = _PERMILLE
+    """武器技不花法力的機率。"""
+    weapon_mana_per_ap: IntRange
+    no_cooldown_permille: int = _PERMILLE
+    """AP 不超過 ``no_cooldown_max_ap`` 時沒有冷卻的機率。"""
+    no_cooldown_max_ap: int = Field(ge=1)
+    cooldown_base_max: int = Field(ge=1)
+    """冷卻 ＝ 1 到（``cooldown_base_max`` ＋ AP）的亂數。"""
+    cooldown_cap: int = Field(ge=1)
+    uses_per_battle_permille: int = _PERMILLE
+    uses_per_battle: IntRange
+
+
+class TuningRules(ContentModel):
+    """強度調整的目標比例與步長（組合器收在合格區間內）。"""
+
+    low_permille: int = Field(ge=1, le=1000)
+    high_permille: int = Field(ge=1, le=1000)
+    target_margin_permille: int = Field(ge=0, le=1000)
+    """目標比例均勻分佈在 ``[low, high − margin]``。"""
+    target_steps: int = Field(ge=1)
+    jump_share_permille: int = Field(ge=1, le=1000)
+    """依缺口一次跳多格時，實際跳的比例。"""
+
+    @model_validator(mode="after")
+    def _check(self) -> TuningRules:
+        if self.low_permille + self.target_margin_permille > self.high_permille:
+            raise ValueError("low_permille ＋ target_margin_permille 不可超過 high_permille")
+        return self
+
+
+class ComposerRules(ContentModel):
+    """``content/skill_composer.yaml``。"""
+
+    rarity_weights: dict[Literal["common", "rare", "epic", "legendary"], int]
+    ap_weights: dict[int, int]
+    """AP 嘗試順序的權重。"""
+    spell_share_permille: dict[str, int]
+    """骨架 → 法術占比（‰）；``default`` 是沒列出的骨架。"""
+    spell_any_weapon_permille: int = _PERMILLE
+    """法術技的武器需求為「任何」（其餘為法器）的機率。"""
+    spell_attr_weights: AttrWeights
+    melee_permille: int = _PERMILLE
+    """武器技是近戰（其餘為遠程）的機率。"""
+    melee_dex_permille: int = _PERMILLE
+    infuse_permille: int = _PERMILLE
+    """武器技帶元素（其餘為物理）的機率。"""
+    dice: DiceRules
+    multipliers: tuple[LadderRange, ...] = Field(min_length=1)
+    """武器倍率階梯（‰），依序接起來。"""
+    duration: DurationRules
+    structure: StructureRules
+    condition: ConditionRules
+    cost: CostRules
+    tuning: TuningRules
+
+    @model_validator(mode="after")
+    def _check(self) -> ComposerRules:
+        if set(self.rarity_weights) != set(RARITY_ORDER):
+            raise ValueError(f"rarity_weights 必須剛好有 {', '.join(RARITY_ORDER)}")
+        if sorted(self.ap_weights) != [1, 2, 3]:
+            raise ValueError("ap_weights 必須剛好有 AP 1、2、3")
+        if any(w < 0 for w in (*self.rarity_weights.values(), *self.ap_weights.values())):
+            raise ValueError("權重不可為負")
+        if sum(self.rarity_weights.values()) <= 0 or sum(self.ap_weights.values()) <= 0:
+            raise ValueError("權重總和必須大於 0")
+        if "default" not in self.spell_share_permille:
+            raise ValueError("spell_share_permille 必須有 default")
+        if any(not 0 <= v <= _PERMILLE_MAX for v in self.spell_share_permille.values()):
+            raise ValueError("spell_share_permille 必須在 0–1000")
+        return self
+
+    def multiplier_ladder(self) -> tuple[int, ...]:
+        return tuple(v for r in self.multipliers for v in range(r.start, r.stop, r.step))
+
+    def summary(self) -> str:
+        weights = "／".join(str(w) for w in self.rarity_weights.values())
+        return f"稀有度權重 {weights}"

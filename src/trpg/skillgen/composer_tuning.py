@@ -20,14 +20,14 @@ from trpg.skillgen.budget import BudgetError, skill_budget
 from trpg.skillgen.composer_parts import Knob
 from trpg.skillgen.validate import share_violations
 
-__all__ = ["HIGH", "LOW", "tune"]
+__all__ = ["tune", "tuning_bounds"]
 
-LOW = Fraction(75, 100)
-"""調整後的比例下限（驗證器的合格區間是 0.70–1.00，組合器收在 0.75–0.95）。"""
-HIGH = Fraction(95, 100)
 
-_TARGET_STEPS = 100
-_JUMP_SHARE = Fraction(3, 5)
+def tuning_bounds(library: ContentLibrary) -> tuple[Fraction, Fraction]:
+    """調整後的比例區間 ``(low, high)``（``skill_composer.yaml``；驗證器的合格區間是 0.70–1.00，
+    組合器收在 0.75–0.95）。"""
+    rules = library.composer.tuning
+    return Fraction(rules.low_permille, 1000), Fraction(rules.high_permille, 1000)
 
 
 class _Evaluator:
@@ -35,6 +35,8 @@ class _Evaluator:
         self, library: ContentLibrary, base: dict[str, Any], effects: list[dict[str, Any]]
     ) -> None:
         self.library = library
+        self.high = tuning_bounds(library)[1]
+        self.jump_share = Fraction(library.composer.tuning.jump_share_permille, 1000)
         self.base = base
         self.effects = effects
         self.shares = 0
@@ -78,7 +80,7 @@ def _raise(knob: Knob, ev: _Evaluator, ratio: Fraction, target: Fraction) -> tup
     knob.pos = start + 1
     _apply(knob, ev.effects)
     one = ev.ratio()
-    if one is None or one > HIGH or ev.shares > shares:
+    if one is None or one > ev.high or ev.shares > shares:
         knob.pos = start
         _apply(knob, ev.effects)
         ev.shares = shares
@@ -86,12 +88,12 @@ def _raise(knob: Knob, ev: _Evaluator, ratio: Fraction, target: Fraction) -> tup
     step = one - ratio
     gap = target - one
     if gap > 0 and step > 0 and knob.can_up():
-        extra = min(int(gap / step * _JUMP_SHARE), len(knob.values) - 1 - knob.pos)
+        extra = min(int(gap / step * ev.jump_share), len(knob.values) - 1 - knob.pos)
         if extra > 0:
             knob.pos += extra
             _apply(knob, ev.effects)
             far = ev.ratio()
-            if far is not None and far <= HIGH and ev.shares <= shares:
+            if far is not None and far <= ev.high and ev.shares <= shares:
                 return far, True
             knob.pos = start + 1
             _apply(knob, ev.effects)
@@ -106,19 +108,21 @@ def tune(
     effects: list[dict[str, Any]],
     knobs: list[Knob],
 ) -> bool:
-    """調整旋鈕使比例落在 ``[LOW, HIGH]``；成功時 ``effects`` 已是最終數值。
+    """調整旋鈕使比例落在 ``[low, high]``；成功時 ``effects`` 已是最終數值。
 
-    先抽目標比例（均勻分佈在 ``[LOW, HIGH − 0.02]``）再往上調，所以整體的比例分佈是均勻的。
+    先抽目標比例（均勻分佈在 ``[low, high − margin]``）再往上調，所以整體的比例分佈是均勻的。
     """
+    rules = library.composer.tuning
+    low, high = tuning_bounds(library)
     ev = _Evaluator(library, base, effects)
     for knob in knobs:
         knob.pos = 0
         _apply(knob, effects)
     ratio = ev.ratio()
-    if ratio is None or ratio > HIGH:
+    if ratio is None or ratio > high:
         return False
-    span = HIGH - LOW - Fraction(2, 100)
-    target = LOW + span * Fraction(rng.randint(0, _TARGET_STEPS), _TARGET_STEPS)
+    span = high - low - Fraction(rules.target_margin_permille, 1000)
+    target = low + span * Fraction(rng.randint(0, rules.target_steps), rules.target_steps)
     blocked: set[int] = set()
     while ratio < target:
         live = [k for k in knobs if k.can_up() and id(k) not in blocked]
@@ -128,4 +132,4 @@ def tune(
         ratio, accepted = _raise(knob, ev, ratio, target)
         if not accepted:
             blocked.add(id(knob))
-    return ratio >= LOW and ev.shares == 0
+    return ratio >= low and ev.shares == 0

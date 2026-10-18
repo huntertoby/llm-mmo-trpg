@@ -11,7 +11,7 @@ from tests.skillgen.helpers import lib
 from trpg.content.skills import SkillDef, SkillRarity
 from trpg.skillgen.budget import skill_budget
 from trpg.skillgen.composer_parts import dice_ladder
-from trpg.skillgen.composer_tuning import HIGH, LOW
+from trpg.skillgen.composer_tuning import tuning_bounds
 from trpg.skillgen.random_composer import (
     MAX_ATTEMPTS,
     ComposeError,
@@ -40,6 +40,7 @@ def test_different_seeds_give_different_skills() -> None:
 
 def test_every_fast_seed_composes_a_valid_skill_in_the_budget_window() -> None:
     library = lib()
+    low, high = tuning_bounds(library)
     for seed in FAST_SEEDS:
         skill = compose_random_skill(seed)
         assert validate_skill(skill, library) == []
@@ -47,7 +48,7 @@ def test_every_fast_seed_composes_a_valid_skill_in_the_budget_window() -> None:
         assert skill.provenance.origin == "level_up"
         assert skill.kind == "active" and skill.narrative.concept
         ratio = skill_budget(skill, library).ratio
-        assert LOW <= ratio <= HIGH, (seed, float(ratio))
+        assert low <= ratio <= high, (seed, float(ratio))
 
 
 def test_category_matches_weapon_req_and_tags_start_with_the_theme() -> None:
@@ -59,7 +60,7 @@ def test_category_matches_weapon_req_and_tags_start_with_the_theme() -> None:
 
 
 def test_dice_use_the_allowed_sides_and_counts() -> None:
-    sides = {int(d.split("d")[1]) for d in dice_ladder()}
+    sides = {int(d.split("d")[1]) for d in dice_ladder(lib().composer.dice)}
     assert sides == {4, 6, 8, 10, 12}
     for seed in FAST_SEEDS:
         for effect in compose_random_skill(seed, category="spell").effects:

@@ -10,9 +10,11 @@
 from __future__ import annotations
 
 from dataclasses import dataclass, field
+from functools import cache
 from typing import Any
 
 from trpg.content.battle import StatusDef
+from trpg.content.composer_rules import ComposerRules, DiceRules, DurationRules, LadderRange
 from trpg.content.library import ContentLibrary
 from trpg.content.skill_rules import SkeletonDef
 from trpg.content.skills import PrimitiveDef, SkillRarity, default_affects, rarity_rank
@@ -31,21 +33,9 @@ __all__ = [
     "dice_ladder",
 ]
 
+# 抽選機率與範圍在 ``content/skill_composer.yaml``（``library.composer``）；這裡只留結構判斷。
 _BIG_SHAPES = frozenset({"square3", "allies_in_radius"})
 _ALLY_SHAPES = frozenset({"allies_in_radius", "square3"})
-_BIG_RING_RADIUS = 2
-_BIG_CONE_SIZE = 4
-_NO_COOLDOWN_MAX_AP = 2
-_DICE_SIDES = (4, 6, 8, 10, 12)
-_DICE_MAX_COUNT = 8
-_DURATION_CAP = 6
-_FALLBACK_SECONDARY = ("apply_status", "push", "pull", "knock_prone")
-_TARGET_CONDITIONS = (
-    "target_hp_below",
-    "height_advantage",
-    "target_on_surface",
-    "target_has_status",
-)
 
 
 class Retry(Exception):
@@ -91,6 +81,10 @@ class Ctx:
     core_count: int = 0
 
     @property
+    def rules(self) -> ComposerRules:
+        return self.library.composer
+
+    @property
     def rank(self) -> int:
         return rarity_rank(self.rarity)
 
@@ -115,18 +109,20 @@ class Ctx:
 # ---------------------------------------------------------------------------
 
 
-def dice_ladder() -> tuple[str, ...]:
-    """骰子由弱到強：顆數 1–8、面數 {4, 6, 8, 10, 12}，依平均值排序。"""
+@cache
+def dice_ladder(rules: DiceRules) -> tuple[str, ...]:
+    """骰子由弱到強：顆數 1–``max_count``、面數 ``sides``，依平均值排序。"""
     combos = sorted(
         (count * (sides + 1), sides, count)
-        for count in range(1, _DICE_MAX_COUNT + 1)
-        for sides in _DICE_SIDES
+        for count in range(1, rules.max_count + 1)
+        for sides in rules.sides
     )
     return tuple(f"{count}d{sides}" for _, sides, count in combos)
 
 
-_DICE = dice_ladder()
-_MULTIPLIERS = (*range(500, 3000, 100), *range(3000, 6000, 250), *range(6000, 10001, 500))
+@cache
+def _multiplier_ladder(ranges: tuple[LadderRange, ...]) -> tuple[int, ...]:
+    return tuple(v for r in ranges for v in range(r.start, r.stop, r.step))
 
 
 # ---------------------------------------------------------------------------
@@ -143,7 +139,9 @@ def _core_count(ctx: Ctx, options: list[str]) -> int:
     if limit < 1:
         raise Retry
     if ctx.skeleton.id in ("control", "aura", "displace"):
-        return ctx.rng.randint(1, limit) if ctx.skeleton.id != "displace" else 1 + ctx.chance(250)
+        if ctx.skeleton.id == "displace":
+            return 1 + ctx.chance(ctx.rules.structure.displace_second_core_permille)
+        return ctx.rng.randint(1, limit)
     return 1
 
 
@@ -163,7 +161,8 @@ def choose_core(ctx: Ctx) -> list[str]:
     if "teleport" in picked:  # 傳送只能搭配 ground_tile，不與其他位移並存
         picked = ["teleport"]
     if ctx.skeleton.id == "combo":  # 連段：第二個核心是帶條件的追加傷害
-        picked = ["damage", "damage"] if ctx.chance(500) else ["damage"]
+        double = ctx.chance(ctx.rules.structure.combo_double_damage_permille)
+        picked = ["damage", "damage"] if double else ["damage"]
     return picked
 
 
@@ -203,9 +202,10 @@ def _shape_param(ctx: Ctx, name: str, low: int, high: int, allow_weapon: bool) -
     if allow_weapon and ctx.category == "weapon":
         return "weapon"
     if name == "range" and ctx.shape in ("cross", "square3"):
-        return 0 if ctx.chance(150) else rng.randint(max(low, 2), high)
+        zero = ctx.chance(ctx.rules.structure.cross_zero_range_permille)
+        return 0 if zero else rng.randint(max(low, ctx.rules.structure.cross_min_range), high)
     if name == "range":
-        return rng.randint(min(max(low, 3), high), high)
+        return rng.randint(min(max(low, ctx.rules.structure.other_min_range), high), high)
     return rng.randint(low, high)
 
 
@@ -240,13 +240,15 @@ def _status_candidates(ctx: Ctx, beneficial: bool) -> list[StatusDef]:
     return sorted(out, key=lambda s: s.id)
 
 
-def _duration_values(default: int | None, group: str | None) -> tuple[int, ...]:
+def _duration_values(
+    default: int | None, group: str | None, rules: DurationRules
+) -> tuple[int, ...]:
     if default is None:
         return ()
     if group == "hard":
         return (default,)
-    extra = 1 if group == "movement" else 3
-    return tuple(range(1, min(default + extra, _DURATION_CAP) + 1))
+    extra = rules.movement_extra if group == "movement" else rules.other_extra
+    return tuple(range(1, min(default + extra, rules.cap) + 1))
 
 
 def _status_effect(ctx: Ctx, *, beneficial: bool) -> None:
@@ -262,9 +264,10 @@ def _status_effect(ctx: Ctx, *, beneficial: bool) -> None:
     if status.control_group is not None:
         ctx.control_groups.append(status.control_group)
     if status.id == "stun":
-        ctx.min_cooldown = max(ctx.min_cooldown, 4)
-    values = _duration_values(status.duration, status.control_group)
-    ctx.add(spec, (("duration", values, 2),) if len(values) > 1 else ())
+        ctx.min_cooldown = max(ctx.min_cooldown, ctx.rules.structure.stun_min_cooldown)
+    values = _duration_values(status.duration, status.control_group, ctx.rules.duration)
+    weight = ctx.rules.duration.status_weight
+    ctx.add(spec, (("duration", values, weight),) if len(values) > 1 else ())
     if values:
         spec["duration"] = values[0]
 
@@ -284,24 +287,25 @@ def _surface_effect(ctx: Ctx, *, beneficial_only: bool) -> None:
     if surface.duration is None:
         ctx.add(spec, ())
         return
-    values = tuple(range(1, min(surface.duration + 3, _DURATION_CAP) + 1))
-    ctx.add(spec, (("duration", values, 1),))
+    duration = ctx.rules.duration
+    values = tuple(range(1, min(surface.duration + duration.surface_extra, duration.cap) + 1))
+    ctx.add(spec, (("duration", values, duration.surface_weight),))
 
 
 def _damage_effect(ctx: Ctx, weight: int) -> None:
     if ctx.category == "spell":
         spec: dict[str, Any] = {"type": "damage", "element": ctx.theme.value}
-        ctx.add(spec, (("dice", _DICE, weight),))
+        ctx.add(spec, (("dice", dice_ladder(ctx.rules.dice), weight),))
         return
     spec = {"type": "damage"}
     if ctx.theme is not Element.PHYSICAL:
         spec["element"] = ctx.theme.value
-    ctx.add(spec, (("multiplier_permille", _MULTIPLIERS, weight),))
+    ctx.add(spec, (("multiplier_permille", _multiplier_ladder(ctx.rules.multipliers), weight),))
 
 
 def _heal_effect(ctx: Ctx, weight: int) -> None:
     spec = {"type": "heal", "affects": "self" if ctx.shape == "self" else "allies"}
-    ctx.add(spec, (("dice", _DICE, weight),))
+    ctx.add(spec, (("dice", dice_ladder(ctx.rules.dice), weight),))
 
 
 def _fixed_effect(ctx: Ctx, primitive_id: str) -> None:
@@ -322,13 +326,14 @@ def _fixed_effect(ctx: Ctx, primitive_id: str) -> None:
 
 def _make_effect(ctx: Ctx, primitive_id: str, *, core: bool, beneficial_only: bool) -> None:
     """加入一個效果（含旋鈕）；做不出來時拋出 :class:`Retry`。"""
-    weight = 6 if core else 1
+    weight = ctx.rules.structure.knob_weight_core if core else ctx.rules.structure.knob_weight_other
     if primitive_id == "damage":
         _damage_effect(ctx, weight)
     elif primitive_id == "heal":
         _heal_effect(ctx, weight)
     elif primitive_id in ("push", "pull"):
-        ctx.add({"type": primitive_id}, (("distance", (1, 2), 1),))
+        distances = tuple(ctx.rules.structure.push_pull_distances)
+        ctx.add({"type": primitive_id}, (("distance", distances, 1),))
     elif primitive_id == "apply_status":
         _status_effect(ctx, beneficial=beneficial_only or _wants_buff(ctx, core))
     elif primitive_id == "create_surface":
@@ -343,12 +348,17 @@ def _wants_buff(ctx: Ctx, core: bool) -> bool:
         return False
     if ctx.shape == "self" or "teleport" in [e["type"] for e in ctx.effects]:
         return True
-    return core and ctx.skeleton.id == "control" and ctx.chance(250)
+    return (
+        core
+        and ctx.skeleton.id == "control"
+        and ctx.chance(ctx.rules.structure.control_buff_permille)
+    )
 
 
 def _secondary_pool(ctx: Ctx) -> list[str]:
     rules = ctx.skeleton.secondary
-    pool = list(rules.primitives) if rules.primitives is not None else list(_FALLBACK_SECONDARY)
+    fallback = ctx.rules.structure.fallback_secondary
+    pool = list(rules.primitives) if rules.primitives is not None else list(fallback)
     primitives = ctx.library.ruleset.primitives.by_id()
     kept: list[str] = []
     for name in sorted(pool):
@@ -414,10 +424,13 @@ def build_effects(ctx: Ctx, core: list[str]) -> None:
 
 def _condition_spec(ctx: Ctx, kind: str) -> dict[str, Any]:
     rng = ctx.rng
+    rules = ctx.rules.condition
     if kind == "target_hp_below":
-        return {"type": kind, "permille": rng.randint(200, 600)}
+        low, high = rules.target_hp_below.min, rules.target_hp_below.max
+        return {"type": kind, "permille": rng.randint(low, high)}
     if kind == "self_hp_below":
-        return {"type": kind, "permille": rng.randint(300, 700)}
+        low, high = rules.self_hp_below.min, rules.self_hp_below.max
+        return {"type": kind, "permille": rng.randint(low, high)}
     if kind == "target_on_surface":
         names = sorted(s.value for s in Surface if s is not Surface.NONE)
         return {"type": kind, "surface": rng.choice(names)}
@@ -443,8 +456,12 @@ def _condition_kinds(ctx: Ctx, enemy_effects: list[int]) -> list[str]:
     elif ctx.shape == "self" or not enemy_effects:
         kinds = ["self_hp_below"]
     else:
-        kinds = ["self_hp_below", *_TARGET_CONDITIONS]
+        kinds = ["self_hp_below", *ctx.rules.condition.target_conditions]
     return [k for k in kinds if k in available]
+
+
+def _rolls_condition(ctx: Ctx) -> bool:
+    return ctx.rank >= rarity_rank("rare") and ctx.chance(ctx.rules.condition.skill_permille)
 
 
 def build_condition(ctx: Ctx) -> dict[str, Any] | None:
@@ -453,7 +470,7 @@ def build_condition(ctx: Ctx) -> dict[str, Any] | None:
     稀有（含）以上 30% 機率有條件；骨架要求條件（連段）時一定有。
     """
     required = ctx.skeleton.requires_condition
-    if not required and not (ctx.rank >= rarity_rank("rare") and ctx.chance(300)):
+    if not required and not _rolls_condition(ctx):
         return None
     enemy = _enemy_effects(ctx)
     kinds = _condition_kinds(ctx, enemy)
@@ -464,7 +481,7 @@ def build_condition(ctx: Ctx) -> dict[str, Any] | None:
     spec = _condition_spec(ctx, ctx.rng.choice(kinds))
     damages = [i for i, e in enumerate(ctx.effects) if e["type"] == "damage"]
     effect_level = ctx.skeleton.id == "combo" and len(damages) > 1
-    if effect_level or (not required and ctx.chance(500)):
+    if effect_level or (not required and ctx.chance(ctx.rules.condition.effect_level_permille)):
         index = damages[1] if effect_level else ctx.rng.choice(enemy or [0])
         ctx.effects[index]["condition"] = spec
         return None
@@ -480,28 +497,37 @@ def _needs_cooldown(ctx: Ctx) -> bool:
     params = ctx.shape_params
     return (
         ctx.shape in _BIG_SHAPES
-        or (ctx.shape == "ring" and params.get("radius") == _BIG_RING_RADIUS)
-        or (ctx.shape == "cone" and params.get("size") == _BIG_CONE_SIZE)
+        or (ctx.shape == "ring" and params.get("radius") == ctx.rules.structure.big_ring_radius)
+        or (ctx.shape == "cone" and params.get("size") == ctx.rules.structure.big_cone_size)
     )
 
 
 def build_cost(ctx: Ctx) -> dict[str, Any]:
     """AP 之外的代價：法力、冷卻、每場次數。"""
     rng = ctx.rng
+    rules = ctx.rules.cost
     ap = ctx.ap_cost
     if ctx.category == "spell":
-        mana = rng.randint(2, 4) * ap + (ctx.tier - 1) * 2
+        mana_range = rules.spell_mana_per_ap
+        mana = rng.randint(mana_range.min, mana_range.max) * ap + (ctx.tier - 1) * (
+            rules.spell_mana_per_tier
+        )
     else:
-        mana = 0 if ctx.chance(350) else rng.randint(1, 3) * ap
+        mana_range = rules.weapon_mana_per_ap
+        mana = (
+            0
+            if ctx.chance(rules.weapon_free_permille)
+            else rng.randint(mana_range.min, mana_range.max) * ap
+        )
     cost: dict[str, Any] = {"mana": mana}
     cooldown: int | None = None
-    if not (ap <= _NO_COOLDOWN_MAX_AP and ctx.chance(300)):
-        cooldown = min(rng.randint(1, 2 + ap), 6)
+    if not (ap <= rules.no_cooldown_max_ap and ctx.chance(rules.no_cooldown_permille)):
+        cooldown = min(rng.randint(1, rules.cooldown_base_max + ap), rules.cooldown_cap)
     floor = max(ctx.min_cooldown, 1 if _needs_cooldown(ctx) else 0)
     if floor:
-        cooldown = min(max(cooldown or 0, floor), 6)
+        cooldown = min(max(cooldown or 0, floor), rules.cooldown_cap)
     if cooldown is not None:
         cost["cooldown"] = cooldown
-    if ctx.chance(120):
-        cost["uses_per_battle"] = rng.randint(1, 2)
+    if ctx.chance(rules.uses_per_battle_permille):
+        cost["uses_per_battle"] = rng.randint(rules.uses_per_battle.min, rules.uses_per_battle.max)
     return cost

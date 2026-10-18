@@ -25,6 +25,7 @@
 | `reactions.yaml` | 反應（格擋、藉機攻擊）與預設反應規則 | Phase 1B |
 | `ai_profiles.yaml` | 效用 AI 的行為模式權重（莽夫、弓手、狡猾、守衛；1C 加入掩護權重與 `move_candidates`） | Phase 1B、1C |
 | `skill_budget.yaml` | 技能預算規則：AP 係數、條件倍率、代價折抵、合格區間、各稀有度的效果數上限（階級預算 `tier_budget` 在 `rules/core.yaml`） | Phase 2B-2 |
+| `skill_composer.yaml` | 隨機技能組合器的調參：稀有度與 AP 權重、法術占比、骰子與倍率階梯、條件與代價的機率與範圍、強度調整區間（數值即「種子 → 技能」的對應） | Phase 2C-1 |
 | `skill_synergies.yaml` | 協同係數（依驗證器推導的機制標籤查表） | Phase 2B-2 |
 | `skill_exclusions.yaml` | 技能互斥規則表（以資料表達的 when／forbid／require） | Phase 2B-2 |
 | `skeletons/` | 12 種技能骨架（一檔一個，檔名 = id）；2B 啟用 6 種，其餘 `enabled: false` | Phase 2B-2 |

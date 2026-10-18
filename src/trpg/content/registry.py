@@ -10,6 +10,7 @@ from dataclasses import dataclass
 from pathlib import Path
 
 from trpg.content.battle import StatusTable, TerrainTable, WeaponTable
+from trpg.content.composer_rules import ComposerRules
 from trpg.content.environment import (
     AiProfileTable,
     InteractionTable,
@@ -52,6 +53,7 @@ KNOWN_CONTENT_FILES: tuple[ContentFile, ...] = (
     ContentFile("skill_primitives.yaml", PrimitiveTable),
     ContentFile("skill_conditions.yaml", ConditionTable),
     ContentFile("skill_budget.yaml", BudgetRules),
+    ContentFile("skill_composer.yaml", ComposerRules),
     ContentFile("skill_synergies.yaml", SynergyTable),
     ContentFile("skill_exclusions.yaml", ExclusionTable),
 )

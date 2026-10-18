@@ -20,6 +20,7 @@ from trpg.content.battle import (
     WeaponDef,
     WeaponTable,
 )
+from trpg.content.composer_rules import ComposerRules
 from trpg.content.environment import (
     AiProfileTable,
     InteractionTable,
@@ -209,6 +210,7 @@ class ContentLibrary:
     weather: dict[str, WeatherDef]
     ai_profiles: AiProfileTable
     budget: BudgetRules
+    composer: ComposerRules
     synergies: SynergyTable
     exclusions: ExclusionTable
     skeletons: dict[str, SkeletonDef]
@@ -282,6 +284,7 @@ def load_library(content_dir: Path | None = None) -> ContentLibrary:
     primitives = load("skill_primitives.yaml", PrimitiveTable)
     conditions = load("skill_conditions.yaml", ConditionTable)
     budget = load("skill_budget.yaml", BudgetRules)
+    composer = load("skill_composer.yaml", ComposerRules)
     synergies = load("skill_synergies.yaml", SynergyTable)
     exclusions = load("skill_exclusions.yaml", ExclusionTable)
     skeletons = _load_dir(root / "skeletons", SkeletonDef, files)
@@ -338,6 +341,7 @@ def load_library(content_dir: Path | None = None) -> ContentLibrary:
         weather=weather_map,
         ai_profiles=ai_profiles,
         budget=budget,
+        composer=composer,
         synergies=synergies,
         exclusions=exclusions,
         skeletons=skeletons,

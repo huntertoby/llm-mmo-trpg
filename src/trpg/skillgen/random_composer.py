@@ -16,6 +16,7 @@ from typing import Any
 
 from pydantic import ValidationError
 
+from trpg.content.composer_rules import ComposerRules
 from trpg.content.library import ContentLibrary, load_library
 from trpg.content.skill_rules import SkeletonDef
 from trpg.content.skills import SkillDef, SkillRarity, rarity_rank
@@ -48,14 +49,9 @@ __all__ = [
 MAX_ATTEMPTS = 50
 
 _RARITIES: tuple[SkillRarity, ...] = ("common", "rare", "epic", "legendary")
-_RARITY_WEIGHTS = (35, 35, 20, 10)
-_AP_WEIGHTS = ((1, 35), (2, 50), (3, 15))
-_SPELL_SHARE_PERMILLE = {"aura": 850}
-_SPELL_SHARE_DEFAULT = 500
 _SPELL_ELEMENTS: tuple[Element, ...] = tuple(
     e for e in sorted(Element, key=lambda e: e.value) if e is not Element.PHYSICAL
 )
-_INFUSE_PERMILLE = 350
 
 
 class ComposeError(TrpgError):
@@ -118,7 +114,7 @@ def _choose_rarity_and_skeleton(
         )
         if not rarities:
             raise ComposeError(f"骨架 {skeleton} 在任何稀有度都做不出技能")
-        weights = tuple(_RARITY_WEIGHTS[_RARITIES.index(r)] for r in rarities)
+        weights = tuple(library.composer.rarity_weights[r] for r in rarities)
         picked = _weighted(rng, rarities, weights)
     else:
         picked = rarity
@@ -141,28 +137,32 @@ def _known(library: ContentLibrary, skeleton: str) -> SkeletonDef:
     return library.skeletons[skeleton]
 
 
-def _choose_category(rng: Rng, skeleton: SkeletonDef, category: str | None) -> str:
+def _choose_category(
+    rng: Rng, skeleton: SkeletonDef, category: str | None, rules: ComposerRules
+) -> str:
     if category is not None:
         return category
-    share = _SPELL_SHARE_PERMILLE.get(skeleton.id, _SPELL_SHARE_DEFAULT)
+    shares = rules.spell_share_permille
+    share = shares.get(skeleton.id, shares["default"])
     return "spell" if rng.chance_permille(share) else "weapon"
 
 
-def _weapon_and_attr(rng: Rng, category: str) -> tuple[str, str]:
+def _weapon_and_attr(rng: Rng, category: str, rules: ComposerRules) -> tuple[str, str]:
     if category == "spell":
-        req = "any" if rng.chance_permille(250) else "focus"
-        return req, _weighted(rng, ("int", "wis", "wil"), (60, 20, 20))
-    if rng.chance_permille(500):
-        return "melee", "dex" if rng.chance_permille(250) else "str"
+        req = "any" if rng.chance_permille(rules.spell_any_weapon_permille) else "focus"
+        w = rules.spell_attr_weights
+        return req, _weighted(rng, ("int", "wis", "wil"), (w.int_, w.wis, w.wil))
+    if rng.chance_permille(rules.melee_permille):
+        return "melee", "dex" if rng.chance_permille(rules.melee_dex_permille) else "str"
     return "ranged", "dex"
 
 
-def _ap_order(rng: Rng, ap_cost: int | None) -> list[int]:
+def _ap_order(rng: Rng, ap_cost: int | None, rules: ComposerRules) -> list[int]:
     """AP 的嘗試順序：指定時只有它；否則依權重抽出（不重複）。"""
     if ap_cost is not None:
         return [ap_cost]
-    remaining = [ap for ap, _ in _AP_WEIGHTS]
-    weights = dict(_AP_WEIGHTS)
+    weights = rules.ap_weights
+    remaining = sorted(weights)
     order: list[int] = []
     while remaining:
         pick = _weighted(rng, tuple(remaining), tuple(weights[a] for a in remaining))
@@ -184,14 +184,15 @@ def _attempt(
     的技能換個 AP 常常就合格）；每個 AP 各抽一次代價並調整強度，第一個成功的為準。
     """
     tier, rarity, skeleton, category = fixed
-    order = _ap_order(rng, ap_cost)
-    weapon_req, scaling = _weapon_and_attr(rng, category)
+    rules = library.composer
+    order = _ap_order(rng, ap_cost, rules)
+    weapon_req, scaling = _weapon_and_attr(rng, category, rules)
     if category == "spell":
         theme = rng.choice(_SPELL_ELEMENTS)
     else:
         theme = (
             rng.choice(_SPELL_ELEMENTS)
-            if rng.chance_permille(_INFUSE_PERMILLE)
+            if rng.chance_permille(rules.infuse_permille)
             else Element.PHYSICAL
         )
     ctx = Ctx(library, rng, skeleton, rarity, tier, category, order[0], theme)
@@ -256,7 +257,7 @@ def compose_with_stats(
     if tier_value not in lib.ruleset.core.tier_budget:
         raise ComposeError(f"沒有階級 {tier_value} 的預算")
     rarity_value, skeleton_def = _choose_rarity_and_skeleton(rng, rarity, skeleton, lib)
-    category_value = _choose_category(rng, skeleton_def, category)
+    category_value = _choose_category(rng, skeleton_def, category, lib.composer)
     fixed = (tier_value, rarity_value, skeleton_def, category_value)
     for attempt in range(1, MAX_ATTEMPTS + 1):
         try:
