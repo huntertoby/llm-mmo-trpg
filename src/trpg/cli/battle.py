@@ -20,6 +20,16 @@ from trpg.cli.render import (
 from trpg.content.library import ContentLibrary
 from trpg.engine.actions import Move, Step
 from trpg.engine.ai import Policy
+from trpg.engine.ai.orders import (
+    FocusTarget,
+    HoldPosition,
+    OrderRecord,
+    OrderSet,
+    Protect,
+    RetreatTo,
+    TacticalOrder,
+    UseEnvironment,
+)
 from trpg.engine.ai.simple import choose_action
 from trpg.engine.ai.utility import UtilityAI
 from trpg.engine.environment import telegraph
@@ -28,6 +38,8 @@ from trpg.engine.results import ResolveResult
 from trpg.engine.runner import LOG_FORMAT, BattleLog, replay, run_battle
 from trpg.engine.setup import BattleSetupError, build_setup, deploy_allies
 from trpg.engine.state import BattleState, state_to_json
+from trpg.shared.types import Team, UnitId
+from trpg.sim.commanders import build_commanded_ai
 
 __all__ = [
     "DEFAULT_ALLIES",
@@ -36,6 +48,8 @@ __all__ = [
     "cmd_map_show",
     "cmd_replay",
     "default_lineup",
+    "describe_order",
+    "describe_order_record",
 ]
 
 DEFAULT_ALLIES = ("hero_fighter", "hero_archer", "hero_mage")
@@ -60,6 +74,43 @@ def _walk_summary(action: Step, events: list[EventBase], state: BattleState) -> 
     return (
         f"  {unit.name_zh} 從 ({start.x}, {start.y}) 移動到 ({end.x}, {end.y})（消耗 {cost} 移動）"
     )
+
+
+def describe_order(order: TacticalOrder, state: BattleState) -> str:
+    """一條戰術指令的繁體中文說明（單位以名稱顯示）。"""
+
+    def name(uid: UnitId) -> str:
+        unit = state.units.get(uid)
+        return uid if unit is None else unit.name_zh
+
+    match order:
+        case FocusTarget(target=target):
+            return f"集火 {name(target)}"
+        case HoldPosition(at=at, radius=radius):
+            return f"守住 ({at[0]}, {at[1]}) 半徑 {radius}"
+        case RetreatTo(at=at):
+            return f"撤往 ({at[0]}, {at[1]})"
+        case Protect(ward=ward):
+            return f"保護 {name(ward)}"
+        case UseEnvironment():
+            return "利用環境"
+    raise AssertionError(order)  # pragma: no cover
+
+
+def describe_order_record(record: OrderRecord, state: BattleState) -> list[str]:
+    """指揮官下達的指令（新指令一行；被忽略的指令另起一行附原因）。"""
+    parts = [describe_order(o, state) for o in record.orders.team_orders]
+    for uid in sorted(record.orders.unit_orders):
+        unit = state.units.get(uid)
+        label = uid if unit is None else unit.name_zh
+        orders = record.orders.unit_orders[uid]
+        text = "、".join(describe_order(o, state) for o in orders) or "無"
+        parts.append(f"{label}：{text}")
+    lines = [f"{record.team.display_name}指令：{'；'.join(parts) if parts else '（無）'}"]
+    lines.extend(
+        f"  （忽略：{describe_order(i.order, state)}，{i.reason}）" for i in record.ignored
+    )
+    return lines
 
 
 class _Printer:
@@ -120,6 +171,8 @@ def cmd_battle(
     ai: str = "utility",
     weather: str | None = None,
     deploy: list[tuple[int, int]] | None = None,
+    ally_commander: str | None = None,
+    enemy_commander: str | None = None,
 ) -> int:
     default_allies, default_enemies = default_lineup(library, map_id)
     setup = build_setup(
@@ -137,6 +190,24 @@ def cmd_battle(
             print(f"錯誤：{exc}", file=sys.stderr)
             return 2
     policy: Policy = UtilityAI(library.ai_profiles) if ai == "utility" else choose_action
+    if ally_commander is not None or enemy_commander is not None:
+        if ai != "utility":
+            print("錯誤：指揮官只能搭配效用 AI（--ai utility）", file=sys.stderr)
+            return 2
+
+        shown: dict[Team, OrderSet] = {}
+
+        def show(record: OrderRecord, state: BattleState) -> None:
+            """只印出與該陣營上一次不同的指令（紀錄 ``BattleLog.orders`` 仍保留每一次）。"""
+            if shown.get(record.team) == record.orders and not record.ignored:
+                return
+            shown[record.team] = record.orders
+            for line in describe_order_record(record, state):
+                print(line, file=out)
+
+        policy = build_commanded_ai(
+            library.ai_profiles, ally=ally_commander, enemy=enemy_commander, on_order=show
+        )
     run = run_battle(setup, seed, policy, on_step=_Printer(out))
     state = run.state
     print("\n=== 結算 ===", file=out)

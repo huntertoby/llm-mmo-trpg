@@ -29,6 +29,7 @@ from trpg.engine.ai.utility import UtilityAI
 from trpg.engine.runner import DEFAULT_MAX_ACTIONS
 from trpg.engine.setup import BattleSetup, build_setup
 from trpg.shared.types import Team
+from trpg.sim.commanders import CommandedPolicyFactory
 from trpg.sim.metrics import (
     CONTROL_STATUSES,
     LONG_BATTLE_ROUNDS,
@@ -111,18 +112,21 @@ def map_spec(
     seeds: Sequence[int],
     *,
     max_rounds: int = DEFAULT_MAX_ROUNDS,
+    ally_commander: str | None = None,
+    enemy_commander: str | None = None,
 ) -> BatchSpec:
-    """地圖預設陣容（``encounter``）、效用 AI 的 :class:`BatchSpec`。"""
+    """地圖預設陣容（``encounter``）、效用 AI 的 :class:`BatchSpec`。
+
+    指定 ``ally_commander``／``enemy_commander``（:data:`~trpg.sim.commanders.COMMANDER_IDS`）時，
+    該陣營由腳本指揮官下戰術指令（Phase 2C-2）。"""
     encounter = library.map(map_id).encounter
     if encounter is None:
         raise ValueError(f"{map_id} 沒有預設陣容（encounter）")
     setup = build_setup(library, map_id, encounter.allies, encounter.enemies, max_rounds=max_rounds)
-    return BatchSpec(
-        name=map_id,
-        setup=setup,
-        seeds=tuple(seeds),
-        policy_factory=UtilityPolicyFactory(library.ai_profiles),
-    )
+    factory: Callable[[], Policy] = UtilityPolicyFactory(library.ai_profiles)
+    if ally_commander is not None or enemy_commander is not None:
+        factory = CommandedPolicyFactory(library.ai_profiles, ally_commander, enemy_commander)
+    return BatchSpec(name=map_id, setup=setup, seeds=tuple(seeds), policy_factory=factory)
 
 
 @dataclass(frozen=True)

@@ -18,6 +18,7 @@ from trpg.sim.batch import (
     map_spec,
     run_batches,
 )
+from trpg.sim.commanders import describe_commander
 
 __all__ = ["cmd_sim_maps", "default_sim_maps"]
 
@@ -43,11 +44,22 @@ def cmd_sim_maps(
     json_path: Path | None,
     out: TextIO,
     err: TextIO,
+    ally_commander: str | None = None,
+    enemy_commander: str | None = None,
 ) -> int:
     map_ids = default_sim_maps(library) if maps is None else maps
     seed_list = tuple(range(seed_start, seed_start + seeds))
     try:
-        specs = [map_spec(library, map_id, seed_list) for map_id in map_ids]
+        specs = [
+            map_spec(
+                library,
+                map_id,
+                seed_list,
+                ally_commander=ally_commander,
+                enemy_commander=enemy_commander,
+            )
+            for map_id in map_ids
+        ]
     except ValueError as exc:
         print(f"錯誤：{exc}", file=err)
         return 2
@@ -59,6 +71,9 @@ def cmd_sim_maps(
         f"max_rounds={DEFAULT_MAX_ROUNDS}",
         file=out,
     )
+    for label, commander_id in (("我方", ally_commander), ("敵方", enemy_commander)):
+        if commander_id is not None:
+            print(f"{label}指揮官：{commander_id}（{describe_commander(commander_id)}）", file=out)
     for report in reports:
         print("", file=out)
         print(format_report(report), file=out)

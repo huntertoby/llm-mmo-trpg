@@ -14,6 +14,8 @@
 - ``trpg skills random --seed N [--tier T] [--rarity R] [--skeleton S] [--count C]``：隨機組合器。
 - ``trpg sim maps [--maps a,b] [--seeds 20] [--seed-start 0] [--jobs N] [--json out.json]``：
   每張地圖以預設陣容批次模擬，印出勝率、輪數、DPR、控制回合、技能使用與異常。
+- ``trpg battle`` 與 ``trpg sim maps`` 都可加 ``--ally-commander``／``--enemy-commander <id>``
+  （腳本指揮官，見 ``trpg.sim.commanders``）。
 - ``trpg battle replay <path>``：讀取 ``--log-json`` 的輸出，重播並驗證最終狀態一致。
 """
 
@@ -36,6 +38,7 @@ from trpg.content.registry import load_all_content
 from trpg.content.skills import SKELETON_IDS
 from trpg.shared.errors import ContentError
 from trpg.shared.rng import MASK64, Rng
+from trpg.sim.commanders import COMMANDER_IDS
 
 __all__ = ["build_parser", "main"]
 
@@ -54,7 +57,7 @@ def _positive_int(text: str) -> int:
     return value
 
 
-def build_parser() -> argparse.ArgumentParser:
+def build_parser() -> argparse.ArgumentParser:  # noqa: PLR0915
     parser = argparse.ArgumentParser(prog="trpg", description="LLM-MMO-TRPG 開發工具")
     parser.add_argument("--version", action="version", version=f"trpg {__version__}")
     commands = parser.add_subparsers(dest="command", metavar="<command>", required=True)
@@ -121,6 +124,7 @@ def build_parser() -> argparse.ArgumentParser:
     )
     sim_maps.add_argument("--jobs", type=_positive_int, default=1, help="平行行程數（預設 1）")
     sim_maps.add_argument("--json", type=Path, default=None, help="另外寫出完整報表 JSON")
+    _add_commander_args(sim_maps)
 
     battle = commands.add_parser(
         "battle",
@@ -152,6 +156,7 @@ def build_parser() -> argparse.ArgumentParser:
         help="部署：我方單位依序的起始位置，例如 0,6;1,7（必須在起始區內）",
     )
     battle.add_argument("--log-json", type=Path, default=None, help="輸出動作列表與事件 JSON")
+    _add_commander_args(battle)
     battle_commands = battle.add_subparsers(dest="battle_command", metavar="<subcommand>")
     replay = battle_commands.add_parser("replay", help="重播 --log-json 的輸出並驗證一致")
     replay.add_argument("path", type=Path, help="戰鬥紀錄 JSON")
@@ -207,6 +212,16 @@ def _with_library(fn: Callable[[ContentLibrary], int]) -> int:
         return 1
 
 
+def _add_commander_args(parser: argparse.ArgumentParser) -> None:
+    for flag, who in (("--ally-commander", "我方"), ("--enemy-commander", "敵方")):
+        parser.add_argument(
+            flag,
+            choices=COMMANDER_IDS,
+            default=None,
+            help=f"{who}的腳本指揮官（戰術指令；預設：沒有）",
+        )
+
+
 def _split(text: str) -> list[str]:
     return [part.strip() for part in text.split(",") if part.strip()]
 
@@ -249,6 +264,8 @@ def _battle(parser: argparse.ArgumentParser, args: argparse.Namespace) -> int:
             ai=args.ai,
             weather=args.weather,
             deploy=deploy,
+            ally_commander=args.ally_commander,
+            enemy_commander=args.enemy_commander,
         )
     )
 
@@ -268,6 +285,8 @@ def _sim_maps(args: argparse.Namespace) -> int:
             json_path=args.json,
             out=sys.stdout,
             err=sys.stderr,
+            ally_commander=args.ally_commander,
+            enemy_commander=args.enemy_commander,
         )
     )
 
