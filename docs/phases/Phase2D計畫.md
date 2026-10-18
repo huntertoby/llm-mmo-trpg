@@ -206,6 +206,26 @@ Claude-Session: https://claude.ai/code/session_01WzRQ8LmeGFZixwbXumwejE
 
 > 2D-1 驗收後才開始。實作者先讀 `docs/phases/Phase2D-1報告.md`。
 
+### 4.0 PM 決定（2D-1 報告「待 PM 決定」）
+
+| # | 項目 | 決定 | 由誰實作 |
+|---|---|---|---|
+| 1 | `DamageDealt.amount` 為護盾前的名目傷害，另有 `absorbed`；指標用 `hp_before − hp_after` | 接受（DPR 只算實際扣血，符合 3.3） | — |
+| 2 | 嘲諷優先於集火指令；來源為 None 的嘲諷無效果 | 接受 | — |
+| 3 | `skill_war_hymn` 持續 4、`skill_purify` 法力 1 無冷卻、`skill_taunting_roar` 法力 0 冷卻 2（為了通過預算下限） | 接受 | — |
+| 4 | `shield`、`cleanse` 的 `min_rarity` 為 common | 接受 | — |
+| 5 | `cleanse` 也移除 `prone` | 接受（倒地是有害狀態） | — |
+| 6 | 再生的治療算進來源的 `healing_done` | 接受 | — |
+| 7 | 減傷與易傷依序相乘、最後捨去一次 | 接受 | — |
+| 8 | 護盾沒有禁止施加在敵人身上 | 接受（骨架已限制組合器；手寫技能自負） | — |
+| 9 | 防禦動作的 preview 不計 `ally_status_values` | 接受 | — |
+| 10 | 矩陣標準 2 不通過；坦克、治療、輔助的價值不在 DPR | **本階段補指標**（4.6-4），只記錄、不調數值 | 2D-2 |
+
+另外兩個小項目：
+
+- **`trpg battle --ally-build <build_id>[,<build_id>…]`**：讓 CLI 能直接用 `content/sim/builds.yaml` 的 build 英雄組我方隊伍（與 `sim matrix` 相同的組隊方式：指定的 build 英雄，不足 3 人時以 companions 補齊）。2D-1 是用腳本呼叫 `cmd_battle` 才做到。加一個快速測試。
+- **矩陣的保護指標**：見 4.6-4。
+
 ### 4.1 新的控制類別
 
 `control_group` 新增 `mental`（心智）：`fear`、`silence` 屬於此類，適用既有的控制遞減（`control_dr_rounds` 輪內守方屬性 ×150%）。`mental` 不是 `hard`，對 Boss 不轉換。
@@ -260,6 +280,7 @@ Claude-Session: https://claude.ai/code/session_01WzRQ8LmeGFZixwbXumwejE
 2. `uv run pytest -q -m slow`：列出每個 slow 測試的結果；非平衡的 slow 測試必須通過。
 3. `trpg sim completion --seeds 20 --jobs 2`（全量）：`exception`、`max_actions`、`draw` 皆為 0；附摘要表與執行時間。
 4. `trpg sim matrix --seeds 20 --jobs 2`（9 個 build）：附勝率、DPR、排名矩陣與 6.8 標準檢查結果；**只記錄、不調整**。另附一張與 2C-4 矩陣的對照（`build_tank` 前段類型數的變化）。
+   - 矩陣報表新增 **保護矩陣**：build 英雄每場平均的「治療量 ＋ 護盾吸收量 ＋ 承受傷害（坦克吸引火力）」，以及「我方隊友存活率」（戰鬥結束時隊友存活人數 ÷ 隊友人數）。排名矩陣維持以勝率排名；保護矩陣只列數字，不納入 6.8 標準的判定。
 5. **Phase 2D 驗收總表**：逐條對照 `docs/專案計畫.md` 第 14 節 Phase 2D，每條標 ✅／⚠️／❌ 並附證據：
    | # | 項目 |
    |---|---|
