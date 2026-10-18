@@ -12,6 +12,8 @@
   雙方由效用 AI（預設）自動對戰，印出每輪戰場、環境預告與繁體中文戰鬥紀錄。
 - ``trpg skills list`` / ``trpg skills show <id>``：技能的自動摘要。
 - ``trpg skills random --seed N [--tier T] [--rarity R] [--skeleton S] [--count C]``：隨機組合器。
+- ``trpg sim maps [--maps a,b] [--seeds 20] [--seed-start 0] [--jobs N] [--json out.json]``：
+  每張地圖以預設陣容批次模擬，印出勝率、輪數、DPR、控制回合、技能使用與異常。
 - ``trpg battle replay <path>``：讀取 ``--log-json`` 的輸出，重播並驗證最終狀態一致。
 """
 
@@ -25,6 +27,7 @@ from pathlib import Path
 from trpg import __version__
 from trpg.cli.battle import cmd_battle, cmd_map_show, cmd_replay
 from trpg.cli.budget import cmd_skills_budget, cmd_skills_budget_all, library_violations
+from trpg.cli.sim import cmd_sim_maps
 from trpg.cli.skills import cmd_skills_list, cmd_skills_show
 from trpg.cli.skills_random import cmd_skills_random
 from trpg.content.library import ContentLibrary, load_library
@@ -101,6 +104,23 @@ def build_parser() -> argparse.ArgumentParser:
         "--rarity", choices=("common", "rare", "epic", "legendary"), help="稀有度"
     )
     skills_random.add_argument("--skeleton", choices=SKELETON_IDS, help="骨架")
+
+    sim = commands.add_parser("sim", help="批次模擬與平衡報表")
+    sim_commands = sim.add_subparsers(dest="sim_command", metavar="<subcommand>", required=True)
+    sim_maps = sim_commands.add_parser(
+        "maps", help="每張地圖以預設陣容跑 N 個種子：勝率、輪數、DPR、控制回合、技能使用、異常"
+    )
+    sim_maps.add_argument(
+        "--maps", default=None, help="地圖 ID，以逗號分隔（預設：全部有 encounter 的非測試地圖）"
+    )
+    sim_maps.add_argument(
+        "--seeds", type=_positive_int, default=20, help="每張地圖的場數（預設 20）"
+    )
+    sim_maps.add_argument(
+        "--seed-start", type=_non_negative_int, default=0, help="起始種子（預設 0）"
+    )
+    sim_maps.add_argument("--jobs", type=_positive_int, default=1, help="平行行程數（預設 1）")
+    sim_maps.add_argument("--json", type=Path, default=None, help="另外寫出完整報表 JSON")
 
     battle = commands.add_parser(
         "battle",
@@ -233,7 +253,26 @@ def _battle(parser: argparse.ArgumentParser, args: argparse.Namespace) -> int:
     )
 
 
-def main(argv: list[str] | None = None) -> int:  # noqa: PLR0911
+def _sim_maps(args: argparse.Namespace) -> int:
+    maps = None if args.maps is None else _split(args.maps)
+    if maps == []:
+        print("錯誤：--maps 至少要有一張地圖", file=sys.stderr)
+        return 2
+    return _with_library(
+        lambda lib: cmd_sim_maps(
+            lib,
+            maps=maps,
+            seeds=args.seeds,
+            seed_start=args.seed_start,
+            jobs=args.jobs,
+            json_path=args.json,
+            out=sys.stdout,
+            err=sys.stderr,
+        )
+    )
+
+
+def main(argv: list[str] | None = None) -> int:  # noqa: PLR0911, PLR0912
     """CLI 主程式；回傳結束代碼（方便測試）。"""
     parser = build_parser()
     try:
@@ -271,6 +310,8 @@ def main(argv: list[str] | None = None) -> int:  # noqa: PLR0911
                 )
             )
         return _with_library(lambda lib: cmd_skills_show(lib, args.skill_id, sys.stdout))
+    if args.command == "sim":
+        return _sim_maps(args)
     if args.command == "battle":
         if args.battle_command == "replay":
             return cmd_replay(args.path, sys.stdout)
