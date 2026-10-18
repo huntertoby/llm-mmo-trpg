@@ -586,7 +586,9 @@ def _order_bonus(
     if orders.focus is not None:
         extra = Fraction(orders.bonuses.focus_permille - 1000, 1000)
         bonus += extra * _gains(state, actor, p, profile, only=orders.focus)
-    if orders.env:
+    w = profile.weights
+    if orders.env and (w.env_damage or w.env_kill or w.push or w.surface or w.expose):
+        # 這些權重全是 0 的行為模式沒有環境收益可以加成（結果必為 0，省下一次 _gains）
         extra = Fraction(orders.bonuses.environment_permille - 1000, 1000)
         zeroed = {
             key: 0

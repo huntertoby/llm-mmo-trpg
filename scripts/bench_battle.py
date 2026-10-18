@@ -23,13 +23,26 @@ import statistics
 import sys
 import time
 from collections.abc import Callable
+from dataclasses import dataclass
 
 from trpg.content.library import ContentLibrary, load_library
+from trpg.engine.actions import Action
 from trpg.engine.ai import Policy
+from trpg.engine.ai.orders import (
+    FocusTarget,
+    HoldPosition,
+    Protect,
+    RetreatTo,
+    TacticalOrder,
+    UseEnvironment,
+)
 from trpg.engine.ai.simple import choose_action
 from trpg.engine.ai.utility import UtilityAI
 from trpg.engine.runner import BattleRun, replay, run_battle
 from trpg.engine.setup import BattleSetup, UnitSpawn, build_setup
+from trpg.engine.state import BattleState
+from trpg.shared.types import UnitId
+from trpg.sim.commanders import build_commanded_ai
 
 ALLIES = ("hero_fighter", "hero_archer", "hero_mage")
 ENEMIES = ("bandit", "bandit_archer", "bandit_boss")
@@ -63,8 +76,13 @@ def _scale_hp(setup: BattleSetup, factor: int) -> BattleSetup:
     return setup.model_copy(update={"units": units, "max_rounds": 10})
 
 
-def _timed_run(setup: BattleSetup, policy: Policy, repeat: int) -> tuple[BattleRun, float, float]:
-    """跑 ``repeat`` 次：回傳（結果、整場時間中位數、每個動作時間的中位數）。"""
+def _timed_run(
+    setup: BattleSetup, policy: Policy | FreshPolicy, repeat: int
+) -> tuple[BattleRun, float, float]:
+    """跑 ``repeat`` 次：回傳（結果、整場時間中位數、每個動作時間的中位數）。
+
+    ``policy`` 可以是 ``Policy``，或 :class:`FreshPolicy`（每次重複新建一個 policy；指揮官有
+    跨決策的狀態）。"""
     totals: list[float] = []
     per_action: list[float] = []
     run: BattleRun | None = None
@@ -79,13 +97,26 @@ def _timed_run(setup: BattleSetup, policy: Policy, repeat: int) -> tuple[BattleR
 
         start = time.perf_counter()
         last[0] = start
-        run = run_battle(setup, SEED, policy, on_step=on_step)
+        current = policy.fresh() if isinstance(policy, FreshPolicy) else policy
+        run = run_battle(setup, SEED, current, on_step=on_step)
         totals.append(time.perf_counter() - start)
     assert run is not None
     return run, statistics.median(totals), statistics.median(per_action)
 
 
-def _report(title: str, setup: BattleSetup, repeat: int, policy: Policy = choose_action) -> None:
+@dataclass(frozen=True)
+class FreshPolicy:
+    """每次重複新建 policy（Phase 2C-2：戰術指令的效能比較）。"""
+
+    fresh: Callable[[], Policy]
+
+    def __call__(self, state: BattleState) -> Action:  # 只為了符合 Policy 型別
+        raise NotImplementedError
+
+
+def _report(
+    title: str, setup: BattleSetup, repeat: int, policy: Policy | FreshPolicy = choose_action
+) -> None:
     run, full, median_action = _timed_run(setup, policy, repeat)
     replayed, resolve_only = _timed(lambda: replay(setup, SEED, run.actions), repeat)
     _check_same(run, replayed)
@@ -101,6 +132,70 @@ def _report(title: str, setup: BattleSetup, repeat: int, policy: Policy = choose
     print(f"  每個動作中位數（含 AI）：{median_action * 1e6:.0f} µs")
 
 
+def _decision_bench(library: ContentLibrary, map_id: str, rounds: int) -> None:
+    """同一批決策狀態，有無戰術指令的單次決策時間（交錯計時，取中位數）。
+
+    狀態取自一場無指令的效用 AI 戰鬥；每種指令各測一次（集火＝最低 HP 的敵人，撤退＝(0, 0)），
+    「四種合併」同時給集火、守位、保護、利用環境（最重的組合）。
+    """
+    setup = _demo(library, map_id)
+    states: list[BattleState] = []
+    base = UtilityAI(library.ai_profiles)
+
+    def collect(state: BattleState) -> Action:
+        states.append(state.clone())
+        return base(state)
+
+    run_battle(setup, SEED, collect)
+
+    def focus(state: BattleState, uid: UnitId) -> tuple[TacticalOrder, ...]:
+        me = state.units[uid]
+        foes = [u for u in state.living_units() if u.team is not me.team]
+        return (FocusTarget(target=min(foes, key=lambda u: (u.hp, u.id)).id),) if foes else ()
+
+    def hold(state: BattleState, uid: UnitId) -> tuple[TacticalOrder, ...]:
+        return (HoldPosition(at=state.units[uid].xy),)
+
+    def retreat(state: BattleState, uid: UnitId) -> tuple[TacticalOrder, ...]:
+        return (RetreatTo(at=(0, 0)),)
+
+    def protect(state: BattleState, uid: UnitId) -> tuple[TacticalOrder, ...]:
+        me = state.units[uid]
+        allies = [u for u in state.living_units() if u.team is me.team and u.id != uid]
+        return (Protect(ward=allies[0].id),) if allies else ()
+
+    def environment(state: BattleState, uid: UnitId) -> tuple[TacticalOrder, ...]:
+        return (UseEnvironment(),)
+
+    def everything(state: BattleState, uid: UnitId) -> tuple[TacticalOrder, ...]:
+        return (*focus(state, uid), *hold(state, uid), *protect(state, uid), UseEnvironment())
+
+    plain = UtilityAI(library.ai_profiles)
+    sources = {
+        "集火": focus,
+        "守位": hold,
+        "撤退": retreat,
+        "保護": protect,
+        "利用環境": environment,
+        "四種合併": everything,
+    }
+    variants = {
+        name: UtilityAI(library.ai_profiles, orders=source) for name, source in sources.items()
+    }
+    samples: dict[str, list[float]] = {"無指令": [], **{name: [] for name in variants}}
+    for _ in range(rounds):
+        for state in states:
+            for name, policy in (("無指令", plain), *variants.items()):
+                start = time.perf_counter()
+                policy(state)
+                samples[name].append(time.perf_counter() - start)
+    base_median = statistics.median(samples["無指令"])
+    print(f"[決策時間：{map_id}（{len(states)} 個決策 × {rounds} 次）]")
+    for name, values in samples.items():
+        median = statistics.median(values)
+        print(f"  {name}：中位數 {median * 1e6:.0f} µs（{median / base_median - 1:+.1%}）")
+
+
 def _check_same(a: BattleRun, b: BattleRun) -> None:
     if a.state != b.state:
         raise SystemExit("重播結果不一致")
@@ -110,6 +205,7 @@ def main(argv: list[str] | None = None) -> int:
     parser = argparse.ArgumentParser(description="戰鬥效能基準")
     parser.add_argument("--repeat", type=int, default=20)
     parser.add_argument("--utility-repeat", type=int, default=3)
+    parser.add_argument("--decision-repeat", type=int, default=3)
     args = parser.parse_args(argv)
     library = load_library()
     setup = build_setup(library, MAP_ID, ALLIES, ENEMIES, max_rounds=30)
@@ -125,6 +221,19 @@ def main(argv: list[str] | None = None) -> int:
         if map_id not in library.maps:
             continue
         _report(f"效用 AI：{map_id}", _demo(library, map_id), args.utility_repeat, ai)
+    for map_id in DEMO_MAPS:
+        if map_id in library.maps:
+            _decision_bench(library, map_id, args.decision_repeat)
+    commanded = FreshPolicy(
+        lambda: build_commanded_ai(
+            library.ai_profiles, ally="focus_lowest_hp", enemy="focus_lowest_hp"
+        )
+    )
+    for map_id in DEMO_MAPS:
+        if map_id not in library.maps:
+            continue
+        title = f"效用 AI＋指揮官（雙方 focus_lowest_hp）：{map_id}"
+        _report(title, _demo(library, map_id), args.utility_repeat, commanded)
     return 0
 
 
