@@ -115,7 +115,7 @@ git bundle create /mnt/user-data/outputs/sync.bundle <使用者電腦的 HEAD>..
 
 1. `mcp__remote-devices__device_commit_files` 把 `/mnt/user-data/outputs/sync.bundle` 寫到 `F:\PythonProject\LLM-MMO-TRPG\sync.bundle`。
    **bundle 檔名每次都要不同**（例如 `sync-<hash>.bundle`）：同名檔案可能被快取成舊版，導致 `Already up to date` 卻沒有更新。
-2. 若 git 回報 `unable to unlink … Operation not permitted`，先用 `mcp__remote-devices__device_request_delete_permission`（資料夾 `F:\\PythonProject\\LLM-MMO-TRPG`）取得刪除權限，清掉 `.git/*.lock` 與失敗 merge 留下的未追蹤檔案後重試。每個新對話都要重新取得。
+2. 若 git 回報 `unable to unlink … Operation not permitted`，先用 `mcp__remote-devices__device_request_delete_permission`（資料夾 `F:\PythonProject\LLM-MMO-TRPG`）取得刪除權限，清掉 `.git/*.lock` 與失敗 merge 留下的未追蹤檔案後重試。每個新對話都要重新取得。
 3. `mcp__remote-devices__device_bash`：等檔案出現（迴圈檢查 `[ -s sync.bundle ]`）後 `git fetch sync.bundle main && git merge --ff-only FETCH_HEAD`，再 `rm sync.bundle`。**不要用 `-q`**，失敗才看得到原因。
 3. 使用者電腦的 HEAD 用 `git log --oneline -1` 查。git 的檔案權限差異已用 `core.fileMode false` 處理。
 4. 使用者也可以自己在 Windows 執行 `git pull`（origin 已設定為 GitHub）。
