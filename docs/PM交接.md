@@ -1,6 +1,6 @@
 # PM 交接文件
 
-> 給接手的 PM（新對話中的 Claude）。最後更新：2026-10-18 晚上，Phase 2C-3 完成時。
+> 給接手的 PM（新對話中的 Claude）。最後更新：2026-10-18 晚上，Phase 2C-4 完成時（2C-4 報告的「待 PM 決定」尚待 PM 回覆使用者後處理）。
 > 讀完本檔再讀 `CLAUDE.md` 與 `docs/專案計畫.md`（總覽，約 1 萬字元）即可接手；設計細節依需要讀 `docs/design/` 下的主題檔。
 
 ---
@@ -25,7 +25,8 @@
 | Phase 2C-1 批次模擬器與報表 | ✅ 完成 | `Phase2C計畫.md` 第 3 節／`Phase2C-1報告.md` |
 | Phase 2C-2 控制分派與戰術指令 | ✅ 完成 | `Phase2C計畫.md` 第 4 節／`Phase2C-2報告.md` |
 | Phase 2C-3 地圖類型與 build 矩陣 | ✅ 完成 | `Phase2C計畫.md` 第 5 節／`Phase2C-3報告.md` |
-| **Phase 2C-4 Phase 2 收尾** | 🔨 實作中 | `Phase2C-4計畫.md`（範圍見第 3 節） |
+| Phase 2C-4 Phase 2 收尾 | ✅ 完成（Phase 2 結束，驗收 11 ✅／2 ⚠️ 觸發移到補模板 B） | `Phase2C-4計畫.md`／`Phase2C-4報告.md` |
+| **補模板 A** | ⏭️ 下一步 | 階段名稱與規格待和使用者確認（見 3.1） |
 
 - 最新 commit 在 GitHub `huntertoby/llm-mmo-trpg`（私人）的 `main`；使用者電腦已同步到 `02b17ba`（之後只多了文件 commit）。
 - 1037 個測試（6 個 `slow` 預設不跑，其中 3 個平衡測試已知失敗）。
