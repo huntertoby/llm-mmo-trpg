@@ -18,3 +18,5 @@ reactions:
 resist: {physical: 100}
 element_mods: {}
 tags: [humanoid, shield]
+max_mana: 8
+skills: [skill_shield_bash]

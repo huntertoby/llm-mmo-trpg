@@ -8,7 +8,7 @@ from __future__ import annotations
 
 import re
 from collections import Counter
-from typing import Literal
+from typing import Any, Literal
 
 from pydantic import Field, PrivateAttr, field_validator, model_validator
 
@@ -564,6 +564,9 @@ class AiProfile(ContentModel):
     name_zh: str = Field(min_length=1)
     description_zh: str = Field(min_length=1)
     weights: AiWeights
+    status_values: dict[str, int] = Field(default_factory=dict)
+    """對敵人施加各狀態的價值（等值傷害點數）；由 :class:`AiProfileTable` 的 ``status_values``
+    填入，行為模式自己也可以覆寫個別狀態。"""
 
 
 class AiProfileTable(ContentModel):
@@ -574,11 +577,31 @@ class AiProfileTable(ContentModel):
     ``preview``，其餘的分數直接由位置價值算出（與完整預覽的分數相同）。
 
     ``skill_candidates``：每種技能最多保留幾個選取跑完整 ``preview``（先以便宜的估計排序）。
+
+    ``status_values``（Phase 2B-1）：對敵人施加各種狀態的價值，單位為「等值的傷害點數」，AI 的
+    收益 ＝ 行為模式的 ``damage`` 權重 × 價值 × 命中率 × 施加成功率。沒有列出的狀態使用
+    ``status`` 權重（每個狀態固定分數）。
     """
 
     profiles: tuple[AiProfile, ...] = Field(min_length=1)
     move_candidates: int = Field(default=8, ge=1)
     skill_candidates: int = Field(default=3, ge=1)
+    status_values: dict[str, int] = Field(default_factory=dict)
+
+    @model_validator(mode="before")
+    @classmethod
+    def _share_status_values(cls, data: Any) -> Any:
+        """把表格層級的 ``status_values`` 填入每個行為模式（行為模式自己列出的優先）。"""
+        if not isinstance(data, dict) or not isinstance(data.get("status_values"), dict):
+            return data
+        shared = data["status_values"]
+        profiles = [
+            {**p, "status_values": {**shared, **p.get("status_values", {})}}
+            if isinstance(p, dict)
+            else p
+            for p in data.get("profiles", [])
+        ]
+        return {**data, "profiles": profiles}
 
     @model_validator(mode="after")
     def _check(self) -> AiProfileTable:

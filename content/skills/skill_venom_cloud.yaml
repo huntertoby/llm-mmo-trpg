@@ -1,0 +1,23 @@
+id: skill_venom_cloud
+schema_version: 1
+name_zh: 毒霧
+tier: 2
+rank: 1
+rarity: rare
+kind: active
+skeleton: control
+category: spell
+weapon_req: focus
+ap_cost: 2
+scaling_attr: int
+shape: {type: square3, range: 5}
+effects:
+  - {type: apply_status, status: poison}
+  - {type: apply_status, status: vulnerable}
+condition: null
+cost: {mana: 10, cooldown: 3}
+tags: [poison, spell, area, control]
+narrative:
+  concept: 一團綠色的霧氣，吸進去的人會失去抵抗力
+  cast_flavor: 你把一小瓶毒液拋向半空，它在落地前就化成了翻滾的毒霧
+provenance: {origin: builtin, owner_id: null, created_by: null, parents: [], bound: true, tradeable: false}

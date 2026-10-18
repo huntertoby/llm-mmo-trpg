@@ -1,0 +1,23 @@
+id: skill_frost_shackle
+schema_version: 1
+name_zh: 寒鎖
+tier: 1
+rank: 1
+rarity: common
+kind: active
+skeleton: control
+category: spell
+weapon_req: focus
+ap_cost: 1
+scaling_attr: int
+shape: {type: single, range: 5}
+effects:
+  - {type: damage, dice: 1d6, element: ice}
+  - {type: apply_status, status: root, duration: 1}
+condition: null
+cost: {mana: 5, cooldown: 2}
+tags: [ice, spell, control]
+narrative:
+  concept: 讓腳下的寒氣凝成鎖鏈，把逼近的敵人釘在原地
+  cast_flavor: 冰晶從地面竄起，纏住了目標的腳踝
+provenance: {origin: builtin, owner_id: null, created_by: null, parents: [], bound: true, tradeable: false}

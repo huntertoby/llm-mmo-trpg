@@ -36,6 +36,12 @@
 # 移動（可能被藉機攻擊、踩上有進入效果的表面、墜落、撤離、倒地站起）才跑完整 preview，其餘的分數
 # 直接由位置價值算出（與完整 preview 的分數相同）。攻擊、推擊等其他動作一律跑完整 preview。
 move_candidates: 6
+# status_values（Phase 2B-1）：對敵人施加各狀態的價值，單位是「等值的傷害點數」。
+# 收益 = 行為模式的 damage 權重 × 價值 × 命中率 × 施加成功率（有 save_attr 的狀態要乘上抵抗判定的失敗率）。
+# 沒列出的狀態（燃燒、倒地……）維持原本的規則：每個施加的狀態固定加 status 權重。
+# 初值未經模擬（Phase 2C 統一調整）：暈眩約一整回合的行動，定身與緩速約半回合的走位，
+# 虛弱與易傷約 25% 的傷害差，流血與中毒約 1d4 × 3 回合。
+status_values: {stun: 12, root: 6, slow: 4, weaken: 5, vulnerable: 6, bleed: 6, poison: 6}
 profiles:
   - id: brute
     name_zh: 莽夫

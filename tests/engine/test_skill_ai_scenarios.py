@@ -244,11 +244,13 @@ def test_archer_can_still_walk_behind_cover_instead_of_throwing_smoke() -> None:
 # ---------------------------------------------------------------------------
 
 
-def test_only_the_boss_and_the_archer_have_skills() -> None:
+def test_only_the_boss_the_archer_and_the_shieldbearer_have_skills() -> None:
+    # 2B-1：盾衛有了盾擊（暈眩）；盜賊仍只有普攻
     lib = library()
     assert lib.unit("bandit_boss").skills and lib.unit("bandit_archer").skills
-    assert not lib.unit("bandit").skills and not lib.unit("bandit_shieldbearer").skills
-    for template_id in ("bandit_boss", "bandit_archer"):
+    assert lib.unit("bandit_shieldbearer").skills == ("skill_shield_bash",)
+    assert not lib.unit("bandit").skills
+    for template_id in ("bandit_boss", "bandit_archer", "bandit_shieldbearer"):
         t = lib.unit(template_id)
         assert 1 <= len(t.skills) <= 2 and t.max_mana > 0
 

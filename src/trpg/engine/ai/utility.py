@@ -238,7 +238,46 @@ def _useful_damage(damage: DamageRange, hit: Fraction, hp: int) -> Fraction:
     return min(damage.expected_if_hit, Fraction(hp)) * hit
 
 
-def _gains(state: BattleState, actor: UnitState, p: Preview, w: AiWeights) -> Fraction:  # noqa: PLR0912, PLR0915
+def _status_gains(
+    state: BattleState, actor: UnitState, p: Preview, profile: AiProfile, hit: Fraction
+) -> Fraction:
+    """對敵人施加狀態的收益。
+
+    - 不需要抵抗判定的狀態（出現在 ``min`` 的 ``StatusApplied``）：``hit`` × 價值；
+    - 需要抵抗判定的狀態（``TargetPreview.status_chances``）：該目標的命中率 × 施加成功率 × 價值，
+      目標已帶有該狀態時不算（重複施加只是刷新）；
+    - 價值：``status_values`` 有列出的狀態＝``damage`` 權重 × 等值傷害點數，其他用 ``status`` 權重。
+    """
+    w, values = profile.weights, profile.status_values
+
+    def value(status_id: str) -> Fraction:
+        points = values.get(status_id)
+        return Fraction(w.status) if points is None else Fraction(w.damage * points)
+
+    gains = Fraction(0)
+    applied = {
+        (e.target_id, e.status_id)
+        for e in p.min_events
+        if isinstance(e, StatusApplied)
+        and e.target_id in state.units
+        and state.units[e.target_id].team is not actor.team
+    }
+    for _, status_id in sorted(applied):
+        gains += hit * value(status_id)
+    for t in p.targets:
+        if t.ally:
+            continue
+        target = state.units[t.unit_id]
+        for chance in t.status_chances:
+            if not target.has_status(chance.status_id):
+                gains += t.hit_chance * chance.apply_chance * value(chance.status_id)
+    return gains
+
+
+def _gains(  # noqa: PLR0912, PLR0915
+    state: BattleState, actor: UnitState, p: Preview, profile: AiProfile
+) -> Fraction:
+    w = profile.weights
     hit = p.hit_chance if p.hit_chance is not None else Fraction(1)
     team = actor.team
     skill_primary: dict[UnitId, bool] = {}
@@ -306,12 +345,7 @@ def _gains(state: BattleState, actor: UnitState, p: Preview, w: AiWeights) -> Fr
         if isinstance(e, UnitMoved) and e.mode == "forced" and is_enemy(e.unit_id)
     }
     gains += w.push * hit * len(pushed)
-    statuses = {
-        (e.target_id, e.status_id)
-        for e in p.min_events
-        if isinstance(e, StatusApplied) and is_enemy(e.target_id)
-    }
-    gains += w.status * hit * len(statuses)
+    gains += _status_gains(state, actor, p, profile, hit)
     for t in p.targets:  # 技能附帶的擊倒：命中率 × 對抗成功率（預覽的 min 只視為失敗）
         if (
             t.knock_chance is not None
@@ -393,7 +427,7 @@ def score_action(
     after = position_value(p.min_state, actor.id, w)
     # 位置變化只在動作成功時發生（攻擊、技巧動作乘上命中率／成功率）
     hit = p.hit_chance if p.hit_chance is not None else Fraction(1)
-    score = _gains(state, actor, p, w) + hit * (after - before)
+    score = _gains(state, actor, p, profile) + hit * (after - before)
     if isinstance(action, UseSkill):
         score -= skill_cost(state, actor, action, w)
     return ActionScore(action, score, p)

@@ -1,0 +1,23 @@
+id: skill_rending_strike
+schema_version: 1
+name_zh: 放血斬
+tier: 1
+rank: 1
+rarity: common
+kind: active
+skeleton: strike
+category: weapon
+weapon_req: melee
+ap_cost: 1
+scaling_attr: str
+shape: {type: single, range: weapon}
+effects:
+  - {type: damage, multiplier_permille: 800}
+  - {type: apply_status, status: bleed}
+condition: null
+cost: {mana: 4, cooldown: 2}
+tags: [physical, melee, bleed]
+narrative:
+  concept: 刀鋒劃開血管，傷口一路滲血
+  cast_flavor: 你順勢一抹，刀刃在對手身上拉出一道長長的口子
+provenance: {origin: builtin, owner_id: null, created_by: null, parents: [], bound: true, tradeable: false}
