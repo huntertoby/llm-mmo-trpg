@@ -1,6 +1,6 @@
 # PM 交接文件
 
-> 給接手的 PM（新對話中的 Claude）。最後更新：2026-10-18，Phase 2A 全部完成時。
+> 給接手的 PM（新對話中的 Claude）。最後更新：2026-10-18，Phase 2B 全部完成時。
 > 讀完本檔再讀 `CLAUDE.md` 與 `docs/專案計畫.md`（總覽，約 1 萬字元）即可接手；設計細節依需要讀 `docs/design/` 下的主題檔。
 
 ---
@@ -24,29 +24,30 @@
 | Phase 1C 掩護與牆壁 | ✅ 完成 | `Phase1C計畫.md`／`Phase1C報告.md` |
 | Phase 2A-1 技能資料與解譯器 | ✅ 完成 | `Phase2A計畫.md` 第 5 節／`Phase2A-1報告.md` |
 | Phase 2A-2 條件與 AI | ✅ 完成 | `Phase2A計畫.md` 第 6 節／`Phase2A-2報告.md` |
-| **Phase 2B 預算與隨機組合器** | 🚧 2B-1 ✅（`Phase2B-1報告.md`）→ 2B-2 ✅（`Phase2B-2報告.md`）→ 2B-3 進行中 | `Phase2B計畫.md` |
+| Phase 2B-1 新狀態與控制遞減 | ✅ 完成 | `Phase2B計畫.md` 第 3 節／`Phase2B-1報告.md` |
+| Phase 2B-2 預算與驗證器 | ✅ 完成 | `Phase2B計畫.md` 第 4 節／`Phase2B-2報告.md` |
+| Phase 2B-3 隨機組合器 | ✅ 完成 | `Phase2B計畫.md` 第 5 節／`Phase2B-3報告.md` |
+| **Phase 2C 模擬、地圖類型與平衡** | ⏭️ 下一步 | 尚未撰寫規格 |
 
 - 2A 的規則決定（使用者已同意）：範圍技能每個目標各擲命中骰；技能直接效果預設不誤傷友方，`affects: all` 為可選的「敵我不分」標記（2B 給預算折扣）；有害表面敵我不分、有益表面只幫施放者陣營、地圖表面中立；法力戰鬥中不回復；冷卻 1 ＝ 每回合一次；法術屬性倍率 0.5。
 
 - 最新 commit 在 GitHub `huntertoby/llm-mmo-trpg`（私人）的 `main`；CI（Windows／Ubuntu × Python 3.12／3.13）全綠。
-- 702 個測試（另有 4 個 `slow` 平衡測試預設不跑）；17 個示範技能（`trpg skills list`）；`trpg battle --map <id> --seed <n>` 可在終端機跑完整戰鬥並重播。
+- 924 個測試（另有 4 個 `slow` 平衡測試預設不跑，其中 3 個因勝率偏高而失敗，留給 2C）；23 個示範技能（`trpg skills list`、`trpg skills budget --all`）；`trpg skills random --seed N` 產生隨機技能；`scripts/skill_fuzz.py --count 1000` 約 17 秒全部通過；`trpg battle --map <id> --seed <n>` 可在終端機跑完整戰鬥並重播。
 - 示範地圖：`test_flat_6x6`、`test_heights_8x8`、`bridge_chasm`、`oil_depot`、`swamp`、`ruined_fort`。
 
-## 3. 下一步：Phase 2B
+## 3. 下一步：Phase 2C
 
-依 `docs/專案計畫.md` 第 14 節 Phase 2 與 `docs/design/06-技能.md`。技能格式與解譯器已完成（2A），剩下：
+依 `docs/專案計畫.md` 第 14 節 Phase 2 與 `docs/design/06-技能.md` 6.8：批次模擬器與報表（DPR、控制回合、異常）、build × 地圖類型矩陣、補齊 8 種地圖類型（`docs/design/05-戰鬥.md` 5.1）、示範地圖與敵人的平衡。規格可能需要拆成 2C-1／2C-2。
 
-| 子階段 | 內容 |
-|---|---|
-| 2B | 預算計算（6.5，含 AP 係數、`affects: all` 的折扣）、硬性上限與互斥規則（6.6）、骨架（6.9，`content/skeletons/`）、稀有度限制（6.12）、隨機組合器；新狀態（slow、root、stun、weaken、vulnerable、bleed、poison）與控制遞減；預算驗收：隨機 1,000 個技能全部可執行且無例外 |
-| 2C | 批次模擬器與報表（DPR、控制回合、異常）、build × 地圖類型矩陣（6.8）、補齊 8 種地圖類型（`docs/design/05-戰鬥.md` 5.1）、示範地圖與敵人的平衡 |
-
-寫 2B 規格前先讀 `docs/phases/Phase2A-2報告.md` 的第 6、7 節。**2A-2 遺留、PM 已有傾向的待辦**：
-1. **平衡**：加了技能後我方勝率偏高（bridge_chasm 90%、ruined_fort 85%），敵人技能 80 場只用 62 次 → 2C 統一調整（陣容、敵人技能、英雄法力）。
-2. **AI 效能**：ruined_fort 每動作中位數約 7 ms（目標 ≤ 8 ms），餘裕小。2B 加入隨機技能後若變慢，優先做視線快取與合併重複預覽。
-3. **冷門技能**：隱匿、喚潮、石牆術幾乎不被 AI 使用（缺少對應的位置價值）。2C 的 build 矩陣會暴露這個問題；可考慮讓 AI 評估「水面＋雷電」這類組合。
-4. **條件語意**（2A-2 報告第 6 節第 4 點）：技能層級的目標條件在範圍技能上為「至少一個對象成立」——暫時接受。
-5. `legal_actions_with_areas` 新引擎 API：接受。
+寫 2C 規格前先讀 `docs/phases/Phase2B-3報告.md` 第 6、7 節。**累積到 2C 的待辦（PM 已有傾向）**：
+1. **勝率**：bridge_chasm 75%、oil_depot 45%、swamp 85%、ruined_fort 85%（種子 0–19）；3 個 slow 平衡測試失敗。統一調整陣容、敵人技能、英雄法力。
+2. **AI 權重全部未經模擬**：狀態價值（放血斬曾被過度使用）、mana／cooldown／exposed／heal 權重；AI 很少用控場、位移、場地型技能（隱匿、喚潮、石牆術）。
+3. **代價折抵沒有總上限**（最高可達 +1050‰）：傾向設總上限約 +500‰。
+4. **結構型原語點數偏低**（控場平均重抽 2.8 次）：用模擬決定是否調高。
+5. **高階隨機技能強度**（例如 T5 8d8）沒有經過戰鬥驗證：需要對應階級的標準敵人。
+6. **組合器的抽選權重寫在程式碼裡**：傾向搬到 `content/`。
+7. 示範技能數值：2B-2／2B-3 為了預算調整過（盾擊、處決 2 AP；橫掃劈砍 ×1.4；火焰箭下修），一併以模擬評估。
+8. AI 效能：每動作中位數最高約 4.7 ms，目前餘裕足夠。
 
 ## 4. 已確認但尚未落地的設計決定
 
