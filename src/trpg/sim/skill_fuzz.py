@@ -48,6 +48,7 @@ __all__ = [
     "FuzzReport",
     "SkillOutcome",
     "battle_setup",
+    "caster_base",
     "check_skill",
     "format_report",
     "run_fuzz",
@@ -115,6 +116,8 @@ def _unit_template(
 
 
 def _ruleset_with(library: ContentLibrary, skill: SkillDef) -> Ruleset:
+    if skill.id in library.skills:  # 內容庫裡的技能（示範技能）已在規則包內
+        return library.ruleset
     rules = library.ruleset.model_copy(
         update={"skills": SkillTable(skills=(*library.ruleset.skills.skills, skill))}
     )
@@ -262,14 +265,29 @@ def _try_cast(library: ContentLibrary, outcome: SkillOutcome) -> None:
         return
 
 
-def battle_setup(library: ContentLibrary, skill: SkillDef) -> BattleSetup:
-    """AI 對戰用的設定：施放者（只裝備這個技能）＋友方弓手 對 盜賊與盜賊弓手，``test_flat_6x6``。"""
+def caster_base(skill: SkillDef) -> str:
+    """施放者的範本 ID（依技能的 ``weapon_req`` 配相容武器的英雄）。"""
+    return _BASE_UNIT[skill.weapon_req]
+
+
+def battle_setup(
+    library: ContentLibrary,
+    skill: SkillDef,
+    *,
+    ally: str = "hero_archer",
+    enemies: Sequence[str] = ("bandit", "bandit_archer"),
+) -> BattleSetup:
+    """AI 對戰用的設定：施放者（只裝備這個技能）＋一名友方 對 ``enemies``，``test_flat_6x6``。
+
+    預設是友方弓手對盜賊與盜賊弓手（隨機技能驗收用）；``trpg sim skills`` 改用沒有技能的標準隊友
+    與同階標準敵人。
+    """
     caster = _unit_template(
         library, _BASE_UNIT[skill.weapon_req], skills=(skill.id,), reactions=True, mana=_MANA
     )
-    ally = library.unit("hero_archer")
-    foes = (library.unit("bandit"), library.unit("bandit_archer"))
-    units = [_spawn(library, caster, Team.ALLY, None), _spawn(library, ally, Team.ALLY, None)]
+    friend = library.unit(ally)
+    foes = tuple(library.unit(e) for e in enemies)
+    units = [_spawn(library, caster, Team.ALLY, None), _spawn(library, friend, Team.ALLY, None)]
     units += [_spawn(library, f, Team.ENEMY, None) for f in foes]
     return BattleSetup(
         map=library.map(ARENA_MAP),
