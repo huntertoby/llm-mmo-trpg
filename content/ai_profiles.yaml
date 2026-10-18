@@ -20,6 +20,10 @@
 #   cooldown       技能的冷卻機會成本：每回合冷卻（扣在技能的分數上）
 #   （技能對友方造成的傷害用 friendly_fire；讓友方站上有害的新表面，每名友方扣
 #     friendly_fire × 8，相當於一場小火的傷害）
+# 環境權重的原則（Phase 2C-4；初值未經模擬，平衡階段再調）：非狡猾型也要有基本的環境權重，否則
+# 「利用環境」指令（×2）乘上 0 仍是 0。env_damage ≈ 該行為模式 damage 的 0.3 倍；env_kill ≈ 該
+# 模式自己的 kill；push、surface、expose 取較小的值。目的是在明顯的機會出現時（例如把敵人推下
+# 深淵）會做，但不會為了環境放棄正常攻擊。狡猾型（cunning）維持原本的高權重。
 # 位置價值（行動者在動作後的位置）：
 #   approach       與最近敵人的距離（越近越好）
 #   threat         能直接攻擊到的敵人數
@@ -28,7 +32,8 @@
 #   protect        與最需要保護的友方（HP 比例最低）的距離（越近越好）
 #   objective      與勝利條件格子（出口、守點）的距離（越近越好）
 #   hazard         站在有害表面上（扣分）
-#   cover          看得到、且從其位置看過來自己受到半掩護的敵人數（偏好有掩護的射擊位置）
+#   cover          在射程內看得到、且從其位置看過來自己受到半掩護的敵人數（偏好有掩護的射擊位置；射程外的
+#                  敵人打不到自己，不算——否則雙方躲在掩護後互相射程外時會永遠不接近，Phase 2C-4）
 #   exposed        能打到自己、自己卻打不到的敵人數（射程更長，或自己被遮住；扣分）。互相打得到的對射
 #                  不算，所以不會讓弓手不敢進入射擊位置；煙幕、隱蔽讓敵人打不到自己時降低
 #
@@ -54,11 +59,11 @@ profiles:
   - id: brute
     name_zh: 莽夫
     description_zh: 重視傷害與接近目標。
-    weights: {damage: 10, kill: 40, friendly_fire: 4, approach: 6, threat: 4, objective: 8, hazard: 8, defend: 1, heal: 8, mana: 1, cooldown: 1}
+    weights: {damage: 10, env_damage: 3, kill: 40, env_kill: 40, push: 4, surface: 5, expose: 10, friendly_fire: 4, approach: 6, threat: 4, objective: 8, hazard: 8, defend: 1, heal: 8, mana: 1, cooldown: 1}
   - id: archer
     name_zh: 弓手
     description_zh: 重視距離、高處與視線。
-    weights: {damage: 6, kill: 20, friendly_fire: 8, approach: 1, threat: 10, keep_distance: 40, height: 15, objective: 8, hazard: 10, defend: 1, cover: 12, heal: 6, exposed: 20, mana: 1, cooldown: 2}
+    weights: {damage: 6, env_damage: 2, kill: 20, env_kill: 20, push: 3, surface: 5, expose: 15, friendly_fire: 8, approach: 1, threat: 10, keep_distance: 40, height: 15, objective: 8, hazard: 10, defend: 1, cover: 12, heal: 6, exposed: 20, mana: 1, cooldown: 2}
   - id: cunning
     name_zh: 狡猾
     description_zh: 重視環境擊殺、推擊與表面。
@@ -66,4 +71,4 @@ profiles:
   - id: guard
     name_zh: 守衛
     description_zh: 重視保護同伴與守點。
-    weights: {damage: 3, kill: 15, friendly_fire: 10, approach: 1, threat: 2, protect: 12, objective: 25, hazard: 8, defend: 6, heal: 10, mana: 1, cooldown: 1}
+    weights: {damage: 3, env_damage: 1, kill: 15, env_kill: 15, push: 4, surface: 4, expose: 5, friendly_fire: 10, approach: 1, threat: 2, protect: 12, objective: 25, hazard: 8, defend: 6, heal: 10, mana: 1, cooldown: 1}

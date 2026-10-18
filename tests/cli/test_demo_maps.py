@@ -19,8 +19,8 @@ DEMOS = {
 
 # 2A-2 起敵方有技能，種子 42 的吊橋戰沒有半掩護的畫面；2B-2 的預算校準調整了示範技能數值，
 # 種子 42 的沼澤戰在第一個環境回合前就結束，改用種子 1；2C-4 的掩護判定只算射程內的敵人，
-# 軌跡改變，吊橋戰改用種子 13、廢墟要塞改用種子 1；其餘仍用 42
-SEEDS = {"bridge_chasm": 13, "swamp": 1, "ruined_fort": 1}
+# 軌跡改變，吊橋戰改用種子 7（2C-4 的環境權重再次改變軌跡）、廢墟要塞改用種子 1；其餘仍用 42
+SEEDS = {"bridge_chasm": 7, "swamp": 1, "ruined_fort": 1}
 
 
 def _run(argv: list[str], capsys: pytest.CaptureFixture[str]) -> tuple[int, str, str]:
