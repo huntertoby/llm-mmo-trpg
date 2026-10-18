@@ -11,6 +11,7 @@
   [--ai utility|simple] [--weather <id>] [--deploy x,y;x,y] [--allies ...] [--enemies ...]``：
   雙方由效用 AI（預設）自動對戰，印出每輪戰場、環境預告與繁體中文戰鬥紀錄。
 - ``trpg skills list`` / ``trpg skills show <id>``：技能的自動摘要。
+- ``trpg skills random --seed N [--tier T] [--rarity R] [--skeleton S] [--count C]``：隨機組合器。
 - ``trpg battle replay <path>``：讀取 ``--log-json`` 的輸出，重播並驗證最終狀態一致。
 """
 
@@ -25,9 +26,11 @@ from trpg import __version__
 from trpg.cli.battle import cmd_battle, cmd_map_show, cmd_replay
 from trpg.cli.budget import cmd_skills_budget, cmd_skills_budget_all, library_violations
 from trpg.cli.skills import cmd_skills_list, cmd_skills_show
+from trpg.cli.skills_random import cmd_skills_random
 from trpg.content.library import ContentLibrary, load_library
 from trpg.content.loader import default_content_dir
 from trpg.content.registry import load_all_content
+from trpg.content.skills import SKELETON_IDS
 from trpg.shared.errors import ContentError
 from trpg.shared.rng import MASK64, Rng
 
@@ -85,6 +88,19 @@ def build_parser() -> argparse.ArgumentParser:
     skills_budget = skills_commands.add_parser("budget", help="顯示技能的預算明細（或 --all 總表）")
     skills_budget.add_argument("skill_id", nargs="?", help="技能 ID；省略時需加 --all")
     skills_budget.add_argument("--all", action="store_true", help="列出所有技能的預算總表")
+
+    skills_random = skills_commands.add_parser(
+        "random", help="隨機組合器：組出合格的隨機技能，印出 YAML 與預算摘要"
+    )
+    skills_random.add_argument("--seed", type=_non_negative_int, required=True, help="起始種子")
+    skills_random.add_argument(
+        "--count", type=_positive_int, default=1, help="個數（種子依序 +1，預設 1）"
+    )
+    skills_random.add_argument("--tier", type=int, choices=range(1, 6), help="階級 1–5")
+    skills_random.add_argument(
+        "--rarity", choices=("common", "rare", "epic", "legendary"), help="稀有度"
+    )
+    skills_random.add_argument("--skeleton", choices=SKELETON_IDS, help="骨架")
 
     battle = commands.add_parser(
         "battle",
@@ -241,6 +257,19 @@ def main(argv: list[str] | None = None) -> int:  # noqa: PLR0911
                 print("錯誤：請指定技能 ID，或使用 --all", file=sys.stderr)
                 return 2
             return _with_library(lambda lib: cmd_skills_budget(lib, args.skill_id, sys.stdout))
+        if args.skills_command == "random":
+            return _with_library(
+                lambda lib: cmd_skills_random(
+                    lib,
+                    seed=args.seed,
+                    count=args.count,
+                    tier=args.tier,
+                    rarity=args.rarity,
+                    skeleton=args.skeleton,
+                    out=sys.stdout,
+                    err=sys.stderr,
+                )
+            )
         return _with_library(lambda lib: cmd_skills_show(lib, args.skill_id, sys.stdout))
     if args.command == "battle":
         if args.battle_command == "replay":

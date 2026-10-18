@@ -74,3 +74,33 @@ def test_content_check_includes_skill_files(capsys: pytest.CaptureFixture[str]) 
     assert code == 0
     assert "skill_shapes.yaml" in out and "skill_primitives.yaml" in out
     assert "skills/skill_ashen_oath.yaml" in out
+
+
+def test_skills_random_prints_yaml_and_the_budget_summary(
+    capsys: pytest.CaptureFixture[str],
+) -> None:
+    code = main(["skills", "random", "--seed", "5", "--tier", "3", "--skeleton", "area"])
+    out = capsys.readouterr().out
+    assert code == 0
+    assert "id: skill_rand_5" in out and "tier: 3" in out and "skeleton: area" in out
+    assert "效果點數" in out and "比例 ＝ total ÷ 可用預算" in out and "驗證：通過" in out
+
+
+def test_skills_random_count_runs_consecutive_seeds_and_is_reproducible(
+    capsys: pytest.CaptureFixture[str],
+) -> None:
+    assert main(["skills", "random", "--seed", "40", "--count", "3", "--rarity", "epic"]) == 0
+    first = capsys.readouterr().out
+    assert [f"# 種子 {n}" in first for n in (40, 41, 42)] == [True, True, True]
+    assert first.count("驗證：通過") == 3 and "rarity: epic" in first
+    assert main(["skills", "random", "--seed", "40", "--count", "3", "--rarity", "epic"]) == 0
+    assert capsys.readouterr().out == first
+
+
+def test_skills_random_reports_impossible_parameters(
+    capsys: pytest.CaptureFixture[str],
+) -> None:
+    code = main(["skills", "random", "--seed", "1", "--skeleton", "displace", "--rarity", "common"])
+    captured = capsys.readouterr()
+    assert code == 1 and "錯誤" in captured.err and "displace" in captured.err
+    assert main(["skills", "random", "--seed", "1", "--tier", "9"]) == 2

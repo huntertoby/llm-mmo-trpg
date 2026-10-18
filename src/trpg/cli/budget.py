@@ -7,10 +7,11 @@ from typing import TextIO
 
 from trpg.cli.skills import pad
 from trpg.content.library import ContentLibrary
+from trpg.content.skills import SkillDef
 from trpg.skillgen.budget import BudgetError, BudgetReport, skill_budget
 from trpg.skillgen.validate import Violation, validate_skill
 
-__all__ = ["cmd_skills_budget", "cmd_skills_budget_all", "library_violations"]
+__all__ = ["cmd_skills_budget", "cmd_skills_budget_all", "library_violations", "print_skill_budget"]
 
 _RARITY = {"common": "普通", "rare": "稀有", "epic": "史詩", "legendary": "傳說"}
 
@@ -58,6 +59,11 @@ def cmd_skills_budget(library: ContentLibrary, skill_id: str, out: TextIO) -> in
     skill = library.skills.get(skill_id)
     if skill is None:
         raise KeyError(f"找不到技能：{skill_id}")
+    return print_skill_budget(library, skill, out)
+
+
+def print_skill_budget(library: ContentLibrary, skill: SkillDef, out: TextIO) -> int:
+    """技能的預算明細與驗證結果；有違規時回傳 1。"""
     print(
         f"{skill.name_zh}（{skill.id}）  階級 T{skill.tier}  稀有度 {_RARITY[skill.rarity]}"
         f"  骨架 {skill.skeleton}  AP {skill.ap_cost}",
