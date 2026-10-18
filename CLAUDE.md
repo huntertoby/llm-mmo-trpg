@@ -34,7 +34,7 @@ LLM 說書人開放世界 MMO-TRPG。核心初衷：**LLM 為每位玩家長出�
 
 ## 技術選型
 
-Python 3.12＋（`requires-python >= 3.12`）、uv、pydantic v2、pytest、hypothesis、ruff、mypy（strict）、import-linter；伺服器 FastAPI（Phase 4 起）；前端 React ＋ PixiJS（Phase 4 起）。
+Python 3.12＋（`requires-python >= 3.12`）、uv、pydantic v2、pytest、hypothesis、ruff、mypy（strict）、import-linter；伺服器 FastAPI（Phase 3 起）；前端 React ＋ PixiJS（Phase 3 起）。
 
 ## 專案結構
 
@@ -44,7 +44,7 @@ content/    資料檔
 tests/      對應 src/trpg/ 的測試
 docs/       計畫、階段規格與報告
 scripts/    check.py（本機完整檢查）等
-client/     前端（Phase 4 起）
+client/     前端（Phase 3 起）
 ```
 
 ## 常用指令

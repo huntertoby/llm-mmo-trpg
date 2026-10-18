@@ -1,6 +1,6 @@
 # PM 交接文件
 
-> 給接手的 PM（新對話中的 Claude）。最後更新：2026-10-18 晚上，Phase 2C-4 完成時（2C-4 報告的「待 PM 決定」尚待 PM 回覆使用者後處理）。
+> 給接手的 PM（新對話中的 Claude）。最後更新：2026-10-18 深夜，Phase 2 結束、階段順序改為 v0.2.1 時。
 > 讀完本檔再讀 `CLAUDE.md` 與 `docs/專案計畫.md`（總覽，約 1 萬字元）即可接手；設計細節依需要讀 `docs/design/` 下的主題檔。
 
 ---
@@ -26,50 +26,57 @@
 | Phase 2C-2 控制分派與戰術指令 | ✅ 完成 | `Phase2C計畫.md` 第 4 節／`Phase2C-2報告.md` |
 | Phase 2C-3 地圖類型與 build 矩陣 | ✅ 完成 | `Phase2C計畫.md` 第 5 節／`Phase2C-3報告.md` |
 | Phase 2C-4 Phase 2 收尾 | ✅ 完成（Phase 2 結束，驗收 11 ✅／2 ⚠️ 觸發移到補模板 B） | `Phase2C-4計畫.md`／`Phase2C-4報告.md` |
-| **補模板 A** | ⏭️ 下一步 | 階段名稱與規格待和使用者確認（見 3.1） |
+| **Phase 2D 補模板 A** | ⏭️ 下一步 | 規格尚未撰寫（範圍見 `docs/專案計畫.md` 第 14 節 Phase 2D 與本檔 3.2） |
 
 - 最新 commit 在 GitHub `huntertoby/llm-mmo-trpg`（私人）的 `main`；使用者電腦已同步到 `02b17ba`（之後只多了文件 commit）。
-- 1037 個測試（6 個 `slow` 預設不跑，其中 3 個平衡測試已知失敗）。
+- 1094 個測試（7 個 `slow` 預設不跑；平衡測試 `test_demo_map_win_rate_and_length` 標 `xfail(strict=False)`，目前 2 xfail、2 xpass）。
 - 主要指令：
   - `trpg battle --map <id> --seed <n> [--ally-commander id] [--enemy-commander id] [--log-json f]`、`trpg battle replay f`
   - `trpg map list`（10 張正式地圖，8 種類型都有）
   - `trpg sim maps [--maps a,b] [--seeds 20] [--jobs N] [--enemy-commander id]`：勝率、DPR、控制回合、技能使用率、異常
   - `trpg sim matrix [--seeds 20] [--jobs N]`：6 個 build × 8 種地圖類型（20 種子約 9 分鐘，`--jobs 2`）
   - `trpg sim skills [--demo] [--random N]`：技能對同階標準敵人的 DPR
+  - `trpg sim completion [--maps a,b] [--seeds 20] [--jobs N]`：9 種指揮官設定 × 地圖的完成度檢查（exception／max_actions／draw 必須為 0；全量約 7.5 分鐘，`--jobs 2`）
   - `trpg skills list／budget --all／random --seed N`；`scripts/skill_fuzz.py --count 1000`
 - 腳本指揮官（`trpg.sim.commanders`）：`focus_lowest_hp`、`protect_weakest`、`hold_start`、`use_env`。
 
 ## 3. 下一步
 
-### 3.1 使用者已同意的方向（2026-10-18）
+### 3.1 使用者已同意的方向（2026-10-18，已寫入 `docs/專案計畫.md` v0.2.1 第 14 節）
 
-**先確定遊戲能 work，平衡延後。** 平衡要等效果模板補齊後再一次調，不然補完又要重調。順序：
+**先確定遊戲能 work，平衡延後。** 順序：
 
-1. **2C-4｜Phase 2 收尾**（小，一位實作者）
-2. **補模板 A**：`shield`、`damage_reduction`、`taunt`、`buff_attr`、`haste`、`heal_over_time`、`cleanse`，加上 `fear`、`silence`、`blind`、`mark` 等狀態；讓技能能施加 `defending`。解鎖坦克、輔助、治療、術士。
-3. **補模板 B**：事件觸發系統（`on_hit`、`on_damaged`、`on_turn_start`……）→ 啟用被動、反應、姿態、陷阱骨架；層數累積／消耗（`builder_finisher`）；替隊友擋攻擊的反應技。
-4. **最小網頁畫面**（Phase 4 的一部分提前：格子地圖、點選移動與攻擊）。
-5. **Phase 3** LLM 技能生成（含 LLM 戰術指揮官）。
-6. 之後才回頭做平衡（見 3.3）。召喚物範圍最大，放更後面。
+| 階段 | 內容 | 檢查點 |
+|---|---|---|
+| **Phase 2D｜補模板 A** | `shield`、`damage_reduction`、`taunt`、`buff_attr`、`haste`、`heal_over_time`、`cleanse`；`fear`、`silence`、`blind`、`mark` 等狀態；技能可施加 `defending`。解鎖坦克、輔助、治療、術士 | — |
+| **Phase 2E｜補模板 B** | 事件觸發系統（`on_hit`、`on_damaged`、`on_turn_start`……）→ 被動、反應、姿態、陷阱骨架；層數累積／消耗（`builder_finisher`）；替隊友擋攻擊的反應技。補上 Phase 2 驗收中標 ⚠️ 的兩條（技能層級觸發、觸發深度上限） | — |
+| **Phase 3｜網頁 ＋ roguelite** | （原 Phase 4，**已與 Phase 3 調換**）FastAPI ＋ React／PixiJS、roguelite 循環；升級選項先用隨機組合器；隊友指示只做快捷按鈕；美術用色塊 | 🎮 戰鬥手感檢查 |
+| **Phase 4｜LLM 技能生成** | （原 Phase 3）LLM 技能生成、LLM 戰術指揮官、LLM 命名、文字隊友指令，接進網頁。開始前要定 #5 世界觀與美術風格 | 🎯 好玩檢查點 |
+| 平衡 | 見 3.3 | — |
 
-（模板 A／B 與網頁的階段名稱、是否改動 `docs/專案計畫.md` 第 14 節的階段順序，由接手 PM 和使用者確認後再寫入。）
+- 使用者選這個順序的理由：先有畫面才能判斷好不好玩；試玩時 build 種類要齊全（所以模板 A、B 在網頁之前）。
+- 召喚物範圍最大，放在更後面。
+- 2D 規模比 2C 子階段大：撰寫規格時建議拆成 2D-1／2D-2（例如「保護與增益模板」與「新狀態 ＋ AI 評分」），每個約 30 分鐘、25 萬 token。
 
-### 3.2 2C-4 的範圍（PM 與使用者已討論，接手 PM 寫成規格）
+### 3.2 2C-4 報告「待 PM 決定」的處理（已接受，寫 2D 規格時放進開頭的「PM 決定」表）
 
-| # | 項目 |
-|---|---|
-| 1 | 每場戰鬥都打得完：查 `lava_crossing` 有 1 場打滿 30 輪平手的原因（疑似雙方都不願過岩漿），修 AI 或地圖 |
-| 2 | 每個 AI 行為模式都給基本的環境權重（目前 brute／archer／guard 的 env 權重為 0，`use_environment` 指令乘上去還是 0） |
-| 3 | 3 個失敗的 slow 平衡測試改為已知問題（例如 `xfail` 附原因），勝率目標寫進報告 |
-| 4 | 10 張地圖 × 20 種子，在「無指揮官」與各腳本指揮官設定下都沒有 exception／max_actions／draw |
-| 5 | 逐條對照 `docs/專案計畫.md` 第 14 節 Phase 2 驗收，在報告中打勾，正式結束 Phase 2 |
-
-**不做**：勝率、技能數值、AI 權重、指令加成的平衡；坦克強弱；火焰箭超標。
+| # | 項目 | 決定 |
+|---|---|---|
+| 1 | 接近距離改用走路步數 | 接受 |
+| 2 | `keep_distance` 不計隱蔽敵人 | 接受 |
+| 3 | 掩護只算射程內的敵人 | 接受 |
+| 4 | `hold_start` 連續 3 輪無 HP 變化就解除 | 接受 |
+| 5 | 環境權重沒有 A/B | 平衡階段 |
+| 6 | 勝率表、build 矩陣過時（最弱 build 變成 `build_assassin`） | 2D 結束時重跑矩陣（2D 驗收已含） |
+| 7 | oil_depot、swamp 的平衡測試 XPASS | 平衡完成後移除 xfail |
+| 8 | completion 快速測試約 30 秒 | 接受 |
+| 9 | Phase 2 驗收第 1、11 條 ⚠️ | 排入 2E |
+| 10 | `trpg sim completion` 有異常時結束碼為 1 | 接受 |
 
 ### 3.3 延後到平衡階段的累積待辦
 
-- 勝率：大多數地圖我方 75–95%，`oil_depot` 10–45%（偏難可以保留）；目標 35–65%、一般遭遇 4–6 輪。
-- build 矩陣（`Phase2C-3報告.md`）：`build_storm` 8 種類型中 7 種前段；`build_tank` 0 種（原因是 **沒有保護型模板**，坦克只是少帶技能的戰士，補模板 A 後重測）。
+- 勝率：大多數地圖我方 70–95%（2C-4 後 `lava_crossing` 75%、`ruined_fort` 70%），`oil_depot` 偏難（保留）；目標 35–65%、一般遭遇 4–6 輪。
+- build 矩陣（`Phase2C-3報告.md`）：`build_storm` 8 種類型中 7 種前段；`build_tank` 曾 0 種（原因是 **沒有保護型模板**，補模板 A 後重測）；2C-4 改 AI 後標準 2 不通過的變成 `build_assassin`。
 - AI 很少用控場、位移、場地技能；控制回合每場接近 0。所有 AI 權重、狀態價值、指令加成（集火 ×1.5 的算法等）未經模擬。
 - `skill_fire_bolt` 的 DPR 超過同階 P95 × 1.2。
 - 結構型原語點數偏低（2B-3 #3）；技能報表在平地 1 對 3，控場、位移、光環骨架的 DPR 偏低，可能要另設情境。
@@ -89,7 +96,7 @@
 
 ## 5. 仍待使用者決定的設計問題
 
-見 `docs/專案計畫.md` 第 3.2 節：#5 世界觀與美術風格（Phase 3 寫 prompt 前要定）、#8 技能等級成長方式、#9 技能欄位數量。
+見 `docs/專案計畫.md` 第 3.2 節：#5 世界觀與美術風格（新 Phase 4 寫 prompt 前要定；Phase 3 網頁先用色塊）、#8 技能等級成長方式、#9 技能欄位數量。
 
 ## 6. 工作流程（照做即可）
 
@@ -159,6 +166,7 @@ git bundle create /mnt/user-data/outputs/sync.bundle <使用者電腦的 HEAD>..
 - 平衡調整很耗 token：讓 agent 寫腳本輸出摘要表，由 PM 決定數值，不要讓 agent 反覆試。
 - **平行派工實例（2C-2／2C-3）**：兩個 `isolation: "worktree"` 的 agent 同時跑，完成後在 main 上 `git merge --ff-only <先完成的分支>`、再 `git merge --no-ff <另一個分支>`；這次沒有衝突。合併後自己跑一次 `check.py` 與一場 `--log-json`／`replay`。
 - **同步失敗的殘留**：沒有刪除權限時 merge 會半途失敗，HEAD 不變但留下一堆未追蹤的新檔案。取得刪除權限後，刪掉 `.git/index.lock`、`.git/objects/maintenance.lock`、`.git/objects/pack/tmp_*`，以及 `git status` 列出的、正好是 bundle 裡新增的那些未追蹤檔案，再重新 `fetch`／`merge`。
+- 2C-4 的 agent（Sonnet）跑了約 68 分鐘、28 萬 token，主因是 1,800 場的完成度檢查跑了兩次；規格要求大型模擬時，寫明「只在最後跑一次全量」。
 - 大型模擬（`sim matrix --seeds 20`）要 9 分鐘以上，agent 會在背景等；通知可能先來一兩次「仍在等待」，不用處理。
 
 ## 7. 節省 token 的原則
