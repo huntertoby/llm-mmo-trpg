@@ -63,7 +63,12 @@ from trpg.engine.rules.movement import (
 )
 from trpg.engine.setup import BattleSetup, BattleSetupError
 from trpg.engine.skills.interpreter import use_skill
-from trpg.engine.skills.targeting import has_selection, selections, skill_problem
+from trpg.engine.skills.targeting import (
+    SkillArea,
+    has_selection,
+    selections,
+    skill_problem,
+)
 from trpg.engine.state import (
     BattleState,
     ObjectState,
@@ -85,6 +90,7 @@ __all__ = [
     "begin_battle",
     "has_only_end_turn",
     "legal_actions",
+    "legal_actions_with_areas",
     "plan_move",
     "resolve",
     "resolve_with",
@@ -701,9 +707,24 @@ def legal_actions(state: BattleState) -> list[Action]:
     結束回合。``resolve`` 接受任何合法路徑，這裡每個目的地只列一條代表路徑。
     暫停中（``pending``）時回傳空串列。
     """
+    return legal_actions_with_areas(state)[0]
+
+
+def legal_actions_with_areas(state: BattleState) -> tuple[list[Action], dict[int, SkillArea]]:
+    """:func:`legal_actions`，另外回傳每個技能動作的影響範圍（以 ``id(action)`` 為鍵）。
+
+    AI 評分技能時需要影響範圍；一併取得可以省下重複計算 :func:`compute_area`。
+    """
     unit = state.active
     if state.ended or unit is None or state.pending is not None:
-        return []
+        return [], {}
+    areas: dict[int, SkillArea] = {}
+    return _legal_actions(state, unit, areas), areas
+
+
+def _legal_actions(
+    state: BattleState, unit: UnitState, areas: dict[int, SkillArea]
+) -> list[Action]:
     core = state.ruleset.core
     actions: list[Action] = []
     if unit.ap >= core.basic_attack_ap_cost:
@@ -727,7 +748,7 @@ def legal_actions(state: BattleState) -> list[Action]:
         actions.extend(
             Trip(unit_id=unit.id, target_id=t.id) for t in foes if not t.has_status(PRONE)
         )
-    actions.extend(_skill_actions(state, unit))
+    actions.extend(_skill_actions(state, unit, areas))
     if unit.ap >= core.interact_ap_cost:
         actions.extend(
             Interact(unit_id=unit.id, object_id=obj.id)
@@ -756,13 +777,16 @@ def _usable_skills(state: BattleState, unit: UnitState) -> list[SkillDef]:
     return [s for s in skills if s.is_active and skill_problem(state, unit, s) is None]
 
 
-def _skill_actions(state: BattleState, unit: UnitState) -> list[Action]:
+def _skill_actions(
+    state: BattleState, unit: UnitState, areas: dict[int, SkillArea]
+) -> list[Action]:
     """可用的技能動作：依技能 ID，再依選取（目標 ID／座標／方向）排序。"""
-    return [
-        action
-        for skill in _usable_skills(state, unit)
-        for action, _area in selections(state, unit, skill)
-    ]
+    actions: list[Action] = []
+    for skill in _usable_skills(state, unit):
+        for action, area in selections(state, unit, skill):
+            actions.append(action)
+            areas[id(action)] = area
+    return actions
 
 
 _POS_CACHE: dict[XY, Pos] = {}

@@ -18,6 +18,13 @@
 其中有風險的移動（可能被藉機攻擊、踩上有進入效果的表面、墜落、撤離、倒地站起）才跑完整
 ``preview``。沒有風險的移動結果是確定的（只有位置改變），其分數與完整預覽算出的分數相同。
 ``preview`` 本身在最少後果的模擬沒有經過分歧點時也只模擬一次。
+
+技能（Phase 2A）：每個技能的選取先以便宜的估計（:func:`skill_estimate`）篩選與排序，每種技能只保留
+前 ``skill_candidates`` 個跑完整 ``preview``；分數＝預覽收益（每個目標各自的命中率與期望傷害、治療
+實際補到的量、友方誤傷與讓友方站上有害表面的扣分、擊倒對抗的成功率）＋位置價值的變化 −
+法力與冷卻的機會成本（``mana``、``cooldown`` 權重）。場地型技能（煙幕、石牆、隱匿）沒有敵人在範圍
+內也是候選：只要它可能改變自己的處境（涵蓋自己的格子、或擋在敵人與自己之間），由位置價值的差決定
+值不值得。
 """
 
 from __future__ import annotations
@@ -27,7 +34,7 @@ from fractions import Fraction
 
 from trpg.content.environment import AiProfile, AiProfileTable, AiWeights
 from trpg.engine.actions import Action, Attack, Defend, EndTurn, Move, UseSkill
-from trpg.engine.battle import legal_actions
+from trpg.engine.battle import legal_actions, legal_actions_with_areas
 from trpg.engine.events import (
     DamageDealt,
     EventBase,
@@ -36,10 +43,17 @@ from trpg.engine.events import (
     UnitDowned,
     UnitMoved,
 )
-from trpg.engine.preview import Preview, preview
+from trpg.engine.preview import DamageRange, Preview, preview
 from trpg.engine.rules.combat import HALF_COVER, attack_problem, cover_object_between
-from trpg.engine.rules.geometry import XY, chebyshev, has_line_of_sight, manhattan, neighbors4
-from trpg.engine.skills.targeting import compute_area
+from trpg.engine.rules.geometry import (
+    XY,
+    bresenham,
+    chebyshev,
+    has_line_of_sight,
+    manhattan,
+    neighbors4,
+)
+from trpg.engine.skills.targeting import ResolvedEffect, SkillArea, hp_cost, resolve_effects
 from trpg.engine.state import BattleState, UnitState
 from trpg.shared.types import ObjectId, Surface, Team, UnitId
 
@@ -61,6 +75,8 @@ _DOWNED_PENALTY = 1000
 _ESCAPED_BONUS = 1000
 _ATTACK_CAUSES = ("attack",)
 _PRONE = "prone"
+_SURFACE_HARM = 8
+"""讓友方站上有害的新表面的扣分：相當於這麼多點傷害（乘上 ``friendly_fire``）。"""
 
 
 @dataclass(frozen=True, slots=True)
@@ -149,6 +165,8 @@ def _unit_position_value(
         value -= w.keep_distance * sum(1 for e in enemies if manhattan(xy, e.xy) <= 2)  # noqa: PLR2004
         if w.cover:
             value += w.cover * _covered_from(state, xy, enemies)
+        if w.exposed:
+            value -= w.exposed * _outgunned_by(state, unit, enemies)
     value += w.height * state.tile(*xy).height
     if w.protect and scene.ward is not None:
         value -= w.protect * manhattan(xy, scene.ward)
@@ -157,6 +175,18 @@ def _unit_position_value(
     if _harmful(state, xy):
         value -= w.hazard
     return Fraction(value)
+
+
+def _outgunned_by(state: BattleState, unit: UnitState, enemies: list[UnitState]) -> int:
+    """現在就能攻擊到 ``unit``、而 ``unit`` 打不到的敵人數（射程更長、或被煙幕與隱蔽遮住）。
+    雙方互相打得到的對射不算，所以不會讓弓手不敢進入射擊位置。"""
+    return sum(
+        1
+        for e in enemies
+        if manhattan(e.xy, unit.xy) <= e.weapon.range
+        and attack_problem(state, e, unit) is None
+        and attack_problem(state, unit, e) is not None
+    )
 
 
 def _covered_from(state: BattleState, xy: XY, enemies: list[UnitState]) -> int:
@@ -199,6 +229,11 @@ def _last_cause(events: tuple[EventBase, ...]) -> dict[UnitId, str]:
     return cause
 
 
+def _useful_damage(damage: DamageRange, hit: Fraction, hp: int) -> Fraction:
+    """命中時有用的傷害：超過目標剩餘 HP 的部分是浪費（擊倒另由 ``kill`` 計分）。"""
+    return min(damage.expected_if_hit, Fraction(hp)) * hit
+
+
 def _gains(state: BattleState, actor: UnitState, p: Preview, w: AiWeights) -> Fraction:  # noqa: PLR0912, PLR0915
     hit = p.hit_chance if p.hit_chance is not None else Fraction(1)
     team = actor.team
@@ -238,10 +273,10 @@ def _gains(state: BattleState, actor: UnitState, p: Preview, w: AiWeights) -> Fr
             elif e.target_id in state.units:
                 friendly += e.amount
     if p.damage is not None and primary is not None:
-        gains += w.damage * p.damage.expected
+        gains += w.damage * _useful_damage(p.damage, hit, state.units[primary].hp)
     for t in p.targets:  # 技能：每個目標各自的命中率與期望傷害
         if t.damage is not None and not t.ally:
-            gains += w.damage * t.damage.expected
+            gains += w.damage * _useful_damage(t.damage, t.hit_chance, state.units[t.unit_id].hp)
     healed = sum(Fraction(lo + hi, 2) for uid, lo, hi in p.healed if uid in state.units)
     gains += w.heal * healed
     gains += w.damage * hit * other_enemy / 2
@@ -273,18 +308,40 @@ def _gains(state: BattleState, actor: UnitState, p: Preview, w: AiWeights) -> Fr
         if isinstance(e, StatusApplied) and is_enemy(e.target_id)
     }
     gains += w.status * hit * len(statuses)
+    for t in p.targets:  # 技能附帶的擊倒：命中率 × 對抗成功率（預覽的 min 只視為失敗）
+        if (
+            t.knock_chance is not None
+            and not t.ally
+            and not state.units[t.unit_id].has_status(_PRONE)
+        ):
+            gains += w.status * t.hit_chance * t.knock_chance
     after = p.min_state
     before_harm = sum(1 for u in _enemies(state, actor) if _harmful(state, u.xy))
     after_harm = sum(
         1 for u in after.living_units() if u.team is not team and _harmful(after, u.xy)
     )
     gains += w.surface * hit * (after_harm - before_harm)
+    if isinstance(p.action, UseSkill):  # 讓友方站上有害的新表面（火、毒……）
+        gains -= (
+            w.friendly_fire
+            * _SURFACE_HARM
+            * (_harmed_allies(after, actor) - _harmed_allies(state, actor))
+        )
     if w.expose or w.cover_damage:
         gains += _cover_gains(state, actor, p, w, hit)
     if isinstance(p.action, Defend):
         near = sum(1 for e in _enemies(state, actor) if manhattan(actor.xy, e.xy) <= _DEFEND_RADIUS)
         gains += w.defend * near
     return gains
+
+
+def _harmed_allies(state: BattleState, actor: UnitState) -> int:
+    """站在有害表面上的友方數（不含行動者；行動者自己的位置由 ``hazard`` 計分）。"""
+    return sum(
+        1
+        for u in state.living_units()
+        if u.team is actor.team and u.id != actor.id and _harmful(state, u.xy)
+    )
 
 
 def _cover_gains(
@@ -332,7 +389,20 @@ def score_action(
     after = position_value(p.min_state, actor.id, w)
     # 位置變化只在動作成功時發生（攻擊、技巧動作乘上命中率／成功率）
     hit = p.hit_chance if p.hit_chance is not None else Fraction(1)
-    return ActionScore(action, _gains(state, actor, p, w) + hit * (after - before), p)
+    score = _gains(state, actor, p, w) + hit * (after - before)
+    if isinstance(action, UseSkill):
+        score -= skill_cost(state, actor, action, w)
+    return ActionScore(action, score, p)
+
+
+def skill_cost(state: BattleState, actor: UnitState, action: UseSkill, w: AiWeights) -> Fraction:
+    """技能的機會成本：法力（不回復）、冷卻（這幾回合不能再用）與 HP 代價（算作對自己的傷害）。"""
+    skill = state.ruleset.skill_def(action.skill_id)
+    return Fraction(
+        w.mana * skill.cost.mana
+        + w.cooldown * (skill.cost.cooldown or 0)
+        + w.friendly_fire * hp_cost(actor, skill)
+    )
 
 
 def defend_score(state: BattleState, unit: UnitState, w: AiWeights) -> Fraction:
@@ -365,32 +435,33 @@ def worth_previewing(state: BattleState, scene: _Scene, action: Attack) -> bool:
     return any(chebyshev(obj.xy, e.xy) <= _OBJECT_NEAR_ENEMY for e in scene.enemies)
 
 
-SKILL_CANDIDATES = 3
-"""每個技能最多評分（完整 ``preview``）的選取數。"""
-
-
 def skill_estimate(  # noqa: PLR0917
     state: BattleState,
     unit: UnitState,
     action: UseSkill,
+    area: SkillArea,
     scene: _Scene,
     w: AiWeights,
     before: Fraction,
 ) -> Fraction | None:
-    """技能選取的便宜估計（不跑引擎），用來篩出每個技能最值得完整評分的幾個選取；
-    ``None`` 表示不納入候選（Phase 2A 5.3 的簡單篩選）。
+    """技能選取（影響範圍為 ``area``）的便宜估計（不跑引擎），用來篩出每個技能最值得完整評分的
+    幾個選取；``None`` 表示不納入候選（這是 ``worth_previewing`` 在技能上的對應）。
 
     - 含 ``teleport``：把行動者放到目標格後的位置價值變化（同 :func:`virtual_move_score`）；
-    - 其餘：影響範圍內要有敵方單位、可破壞物件，或（有治療的技能）受傷的友方，否則不納入；
-      分數 ＝ 敵人數 × 3 ＋ 受傷友方 × 2（有治療時）− 其他友方 × 3 ＋ 可破壞物件數，最後以與
-      施放者的距離為平手判定（近者優先，保持確定）。
+    - 影響範圍內有敵方單位、可破壞物件，或（有治療的技能）受傷的友方：分數 ＝ 敵人數 × 3 ＋
+      受傷友方 × 2 − 其他友方 × 3 ＋ 可破壞物件數；
+    - 場地型技能（效果只作用在格子或自己身上：煙幕、石牆、隱匿……）沒有上述對象時，看它是否
+      可能改變自己的處境（:func:`_field_value`）：涵蓋自己所在的格子，或擋在敵人與自己之間；
+    - 其餘不納入。平手以與施放者的距離判定（近者優先，保持確定）。
+
+    估計只決定「誰值得完整預覽」；值不值得施放由預覽的收益、位置價值的差與機會成本決定。
     """
     skill = state.ruleset.skill_def(action.skill_id)
     if any(e.type == "teleport" for e in skill.effects) and action.target_pos is not None:
         moved = unit.clone()
         moved.pos = action.target_pos
         return _unit_position_value(state, moved, w, scene) - before
-    area = compute_area(state, unit, skill, action)
+    effects = resolve_effects(state, skill)
     heals = any(e.type == "heal" for e in skill.effects)
     score = Fraction(0)
     useful = False
@@ -402,7 +473,7 @@ def skill_estimate(  # noqa: PLR0917
         elif heals and other.hp < other.max_hp:
             score += 2
             useful = True
-        else:
+        elif other.id != unit.id:
             score -= 3
     for xy in area.tiles:
         obj = state.object_at(*xy)
@@ -410,8 +481,37 @@ def skill_estimate(  # noqa: PLR0917
             score += 1
             useful = True
     if not useful:
-        return None
+        field = _field_value(state, unit, area.tiles, scene) if _is_field_skill(effects) else 0
+        if field == 0:
+            return None
+        score = Fraction(field)
     return score - Fraction(manhattan(unit.xy, area.origin), 1000)
+
+
+def _is_field_skill(effects: tuple[ResolvedEffect, ...]) -> bool:
+    """場地型技能：每個效果都只作用在格子或施放者自己身上。"""
+    return all(e.affects in ("tiles", "self") for e in effects)
+
+
+def _field_value(state: BattleState, unit: UnitState, tiles: tuple[XY, ...], scene: _Scene) -> int:
+    """場地型技能的選取可能改變自己處境的程度（Phase 2A-2 決定 #2）。
+
+    只看「現在就能攻擊到自己」的敵人（沒有人打得到自己時，煙幕與隱蔽沒有用處）：涵蓋自己的格子
+    2 分，每名這樣的敵人與自己之間的視線穿過影響範圍 1 分。
+    """
+    threats = [
+        e
+        for e in scene.enemies
+        if manhattan(e.xy, unit.xy) <= e.weapon.range and attack_problem(state, e, unit) is None
+    ]
+    if not threats:
+        return 0
+    covered = set(tiles)
+    value = 2 if unit.xy in covered else 0
+    for enemy in threats:
+        if any(xy in covered for xy in bresenham(enemy.xy, unit.xy)[1:-1]):
+            value += 1
+    return value
 
 
 def virtual_move_score(
@@ -498,11 +598,15 @@ class UtilityAI:
         *,
         override: str | None = None,
         move_candidates: int | None = None,
+        skill_candidates: int | None = None,
     ) -> None:
         self._profiles = profiles.by_id()
         self._override = override
         self._move_candidates = (
             profiles.move_candidates if move_candidates is None else move_candidates
+        )
+        self._skill_limit = (
+            profiles.skill_candidates if skill_candidates is None else skill_candidates
         )
 
     def profile_for(self, unit: UnitState) -> AiProfile:
@@ -512,6 +616,11 @@ class UtilityAI:
     @property
     def move_candidates(self) -> int:
         return self._move_candidates
+
+    @property
+    def skill_candidates(self) -> int:
+        """每種技能最多跑完整 ``preview`` 的選取數。"""
+        return self._skill_limit
 
     def rank_all(self, state: BattleState) -> list[ActionScore]:
         """所有合法動作以完整 ``preview`` 計算的分數（依 ``legal_actions`` 的順序；不篩選，
@@ -537,7 +646,7 @@ class UtilityAI:
             raise ValueError("目前沒有行動中的單位")
         profile = self.profile_for(unit)
         w = profile.weights
-        actions = legal_actions(state)
+        actions, areas = legal_actions_with_areas(state)
         before = position_value(state, unit.id, w)
         scored: dict[int, ActionScore] = {}
         estimates: list[tuple[Fraction, int]] = []
@@ -555,7 +664,7 @@ class UtilityAI:
                 continue  # 技能在下面依估計篩選後才評分
             else:
                 scored[index] = score_action(state, action, profile, before=before)
-        for index in self._skill_candidates(state, unit, actions, scene, w, before):
+        for index in self._skill_candidates(state, unit, actions, areas, scene, w, before):
             scored[index] = score_action(state, actions[index], profile, before=before)
         estimates.sort(key=lambda item: (-item[0], item[1]))
         enemies = reactive_enemies(state, unit)
@@ -573,6 +682,7 @@ class UtilityAI:
         state: BattleState,
         unit: UnitState,
         actions: list[Action],
+        areas: dict[int, SkillArea],
         scene: _Scene,
         w: AiWeights,
         before: Fraction,
@@ -582,13 +692,13 @@ class UtilityAI:
         by_skill: dict[str, list[tuple[Fraction, int]]] = {}
         for index, action in enumerate(actions):
             if isinstance(action, UseSkill):
-                est = skill_estimate(state, unit, action, scene, w, before)
+                est = skill_estimate(state, unit, action, areas[id(action)], scene, w, before)
                 if est is not None:
                     by_skill.setdefault(action.skill_id, []).append((est, index))
         chosen: list[int] = []
         for options in by_skill.values():
             options.sort(key=lambda item: (-item[0], item[1]))
-            chosen.extend(index for _, index in options[:SKILL_CANDIDATES])
+            chosen.extend(index for _, index in options[: self._skill_limit])
         return sorted(chosen)
 
     def __call__(self, state: BattleState) -> Action:

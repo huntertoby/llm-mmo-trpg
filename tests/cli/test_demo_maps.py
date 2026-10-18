@@ -9,12 +9,15 @@ import pytest
 from trpg.cli.main import main
 
 DEMOS = {
-    # 地圖：戰鬥紀錄中應出現的環境互動（種子 42）
+    # 地圖：戰鬥紀錄中應出現的環境互動（種子見 SEEDS；AI 或內容改動後種子會漂移，依需要重選）
     "oil_depot": ("爆炸了", "的油變成了火焰"),
     "bridge_chasm": ("木橋", "掉進了深淵", "命中 −2：矮牆掩護"),
     "swamp": ("傳導雷電", "天氣 ×", "盜賊盾衛"),
     "ruined_fort": ("半掩護 -2", "命中 −2：矮牆掩護"),
 }
+
+
+SEEDS = {"bridge_chasm": 6}  # 2A-2 起敵方有技能，種子 42 的吊橋戰沒有半掩護的畫面；其餘仍用 42
 
 
 def _run(argv: list[str], capsys: pytest.CaptureFixture[str]) -> tuple[int, str, str]:
@@ -27,7 +30,8 @@ def _run(argv: list[str], capsys: pytest.CaptureFixture[str]) -> tuple[int, str,
 def test_demo_map_battle_has_winner_and_interactions(
     map_id: str, capsys: pytest.CaptureFixture[str]
 ) -> None:
-    code, out, _ = _run(["battle", "--map", map_id, "--seed", "42"], capsys)
+    seed = SEEDS.get(map_id, 42)
+    code, out, _ = _run(["battle", "--map", map_id, "--seed", str(seed)], capsys)
     assert code == 0
     verdict = out.split("勝方：")[1].splitlines()[0]
     assert "勝利" in verdict

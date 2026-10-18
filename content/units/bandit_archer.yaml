@@ -8,3 +8,5 @@ weapon: bow
 resist: {}
 element_mods: {fire: 250}   # 皮甲與箭袋易燃：火焰弱點 +25%
 tags: [humanoid]
+max_mana: 9
+skills: [skill_fire_arrow]

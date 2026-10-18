@@ -16,6 +16,10 @@
 #   expose         每名因此離開掩護的敵人（被推離半掩護物件旁，或掩護物被摧毀；取最少與最多後果的平均）
 #   cover_damage   對「緊鄰敵人的半掩護物件」造成的每點傷害
 #   heal           每點實際治療到友方（含自己）的 HP（Phase 2A；取最少與最多後果的平均）
+#   mana           技能的法力機會成本：每點法力（扣在技能的分數上）。法力不回復，花掉就沒了
+#   cooldown       技能的冷卻機會成本：每回合冷卻（扣在技能的分數上）
+#   （技能對友方造成的傷害用 friendly_fire；讓友方站上有害的新表面，每名友方扣
+#     friendly_fire × 8，相當於一場小火的傷害）
 # 位置價值（行動者在動作後的位置）：
 #   approach       與最近敵人的距離（越近越好）
 #   threat         能直接攻擊到的敵人數
@@ -25,6 +29,8 @@
 #   objective      與勝利條件格子（出口、守點）的距離（越近越好）
 #   hazard         站在有害表面上（扣分）
 #   cover          看得到、且從其位置看過來自己受到半掩護的敵人數（偏好有掩護的射擊位置）
+#   exposed        能打到自己、自己卻打不到的敵人數（射程更長，或自己被遮住；扣分）。互相打得到的對射
+#                  不算，所以不會讓弓手不敢進入射擊位置；煙幕、隱蔽讓敵人打不到自己時降低
 #
 # move_candidates：每次決策中，移動先以「直接放到目的地」的位置價值排序，只保留前 N 個；其中有風險的
 # 移動（可能被藉機攻擊、踩上有進入效果的表面、墜落、撤離、倒地站起）才跑完整 preview，其餘的分數
@@ -34,16 +40,16 @@ profiles:
   - id: brute
     name_zh: 莽夫
     description_zh: 重視傷害與接近目標。
-    weights: {damage: 10, kill: 40, friendly_fire: 4, approach: 6, threat: 4, objective: 8, hazard: 8, defend: 1, heal: 4}
+    weights: {damage: 10, kill: 40, friendly_fire: 4, approach: 6, threat: 4, objective: 8, hazard: 8, defend: 1, heal: 8, mana: 1, cooldown: 1}
   - id: archer
     name_zh: 弓手
     description_zh: 重視距離、高處與視線。
-    weights: {damage: 6, kill: 20, friendly_fire: 8, approach: 1, threat: 10, keep_distance: 40, height: 15, objective: 8, hazard: 10, defend: 1, cover: 12, heal: 4}
+    weights: {damage: 6, kill: 20, friendly_fire: 8, approach: 1, threat: 10, keep_distance: 40, height: 15, objective: 8, hazard: 10, defend: 1, cover: 12, heal: 6, exposed: 20, mana: 1, cooldown: 2}
   - id: cunning
     name_zh: 狡猾
     description_zh: 重視環境擊殺、推擊與表面。
-    weights: {damage: 5, env_damage: 8, kill: 30, env_kill: 120, friendly_fire: 8, push: 15, status: 10, surface: 15, approach: 3, threat: 4, keep_distance: 10, objective: 8, hazard: 12, defend: 1, cover: 6, expose: 35, cover_damage: 1, heal: 4}
+    weights: {damage: 5, env_damage: 8, kill: 30, env_kill: 120, friendly_fire: 8, push: 15, status: 10, surface: 15, approach: 3, threat: 4, keep_distance: 10, objective: 8, hazard: 12, defend: 1, cover: 6, expose: 35, cover_damage: 1, heal: 6, mana: 1, cooldown: 1}
   - id: guard
     name_zh: 守衛
     description_zh: 重視保護同伴與守點。
-    weights: {damage: 3, kill: 15, friendly_fire: 10, approach: 1, threat: 2, protect: 12, objective: 25, hazard: 8, defend: 6, heal: 10}
+    weights: {damage: 3, kill: 15, friendly_fire: 10, approach: 1, threat: 2, protect: 12, objective: 25, hazard: 8, defend: 6, heal: 10, mana: 1, cooldown: 1}

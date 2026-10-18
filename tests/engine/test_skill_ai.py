@@ -17,7 +17,7 @@ from tests.engine.helpers import (
 from tests.engine.skill_helpers import FLAT7, SID, U1, U2
 from trpg.content.skills import SkillDef
 from trpg.engine import BattleState, UseSkill
-from trpg.engine.ai.utility import SKILL_CANDIDATES, UtilityAI, score_action
+from trpg.engine.ai.utility import UtilityAI, score_action
 from trpg.shared.types import Pos, Team
 
 
@@ -86,4 +86,4 @@ def test_each_skill_keeps_only_its_best_few_selections() -> None:
     )
     state = _state([SID], [(4, 3)], extra=[skill])
     listed = [a for a in _ai().rank(state) if isinstance(a.action, UseSkill)]
-    assert len(listed) <= SKILL_CANDIDATES
+    assert len(listed) <= _ai().skill_candidates
