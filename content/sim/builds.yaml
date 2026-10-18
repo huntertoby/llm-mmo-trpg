@@ -58,7 +58,7 @@ builds:
 
   - id: build_tank
     name_zh: 坦克
-    theme_zh: 重擊、盾擊與旋風斬，靠護甲與血量站在前線；在走廊（堵口）有利，在被遠程風箏的開闊地不利。
+    theme_zh: 重擊、盾擊、嘲諷怒吼與守護結界，用嘲諷把敵人的攻擊吸到自己身上，再靠護盾與護甲扛住；在走廊（堵口）有利，在被遠程風箏的開闊地不利。
     hero:
       id: build_tank
       name_zh: 坦克英雄
@@ -67,10 +67,11 @@ builds:
       speed: 5
       armor_bonus: 4
       weapon: one_handed_sword
+      ai_profile: guard
       resist: {physical: 100}
       tags: [hero, sim]
       max_mana: 20
-      skills: [skill_bone_crusher, skill_shield_bash, skill_whirlwind]
+      skills: [skill_bone_crusher, skill_shield_bash, skill_taunting_roar, skill_guardian_aegis]
 
   - id: build_ranged
     name_zh: 遠程
@@ -101,3 +102,37 @@ builds:
       tags: [hero, sim]
       max_mana: 20
       skills: [skill_rending_strike, skill_execute, skill_blink]
+
+  - id: build_support
+    name_zh: 輔助
+    theme_zh: 戰歌強化全隊、順風加速護衛、寒鎖定住逼近的敵人；自己不擅長殺敵，隊友越多、陣線越穩越發光。
+    hero:
+      id: build_support
+      name_zh: 輔助英雄
+      attributes: {str: 8, dex: 12, con: 10, int: 12, wis: 16, wil: 12}
+      max_hp: 40
+      speed: 5
+      armor_bonus: 1
+      weapon: frost_staff
+      ai_profile: support
+      resist: {elemental: 150}
+      tags: [hero, sim]
+      max_mana: 40
+      skills: [skill_war_hymn, skill_tailwind, skill_frost_shackle]
+
+  - id: build_healer
+    name_zh: 治療
+    theme_zh: 聖域範圍治療、再生持續回血、淨化解除負面，並以守護結界替最危險的同伴擋下一擊。
+    hero:
+      id: build_healer
+      name_zh: 治療英雄
+      attributes: {str: 8, dex: 12, con: 10, int: 12, wis: 16, wil: 12}
+      max_hp: 40
+      speed: 5
+      armor_bonus: 1
+      weapon: frost_staff
+      ai_profile: support
+      resist: {elemental: 150}
+      tags: [hero, sim]
+      max_mana: 40
+      skills: [skill_sanctuary, skill_renewal, skill_purify, skill_guardian_aegis]
