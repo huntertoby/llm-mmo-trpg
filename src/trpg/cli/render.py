@@ -321,7 +321,7 @@ def _skill_used_text(e: SkillUsed, name: dict[str, str]) -> str:
 _REMOVE_REASONS = {
     "depleted": "護盾耗盡了",
     "cleansed": "被淨化了",
-    "source_lost": "解除了（嘲諷者離場）",
+    "source_lost": "解除了（來源離場）",
 }
 
 
