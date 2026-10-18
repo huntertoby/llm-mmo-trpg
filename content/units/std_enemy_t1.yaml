@@ -1,0 +1,13 @@
+# 分階標準敵人（Phase 2C-3 5.5）：屬性與防禦比照盜賊，沒有技能，行為模式 brute。
+# HP ＝ 30 × tier_budget[1] ÷ tier_budget[1]，四捨五入（rules/core.yaml 的 tier_budget 改動時要同步）。
+id: std_enemy_t1
+name_zh: 標準敵人（1 階）
+attributes: {str: 12, dex: 14, con: 12, int: 8, wis: 10, wil: 8}
+max_hp: 30
+speed: 5
+armor_bonus: 2
+weapon: dagger
+ai_profile: brute
+resist: {}
+element_mods: {}
+tags: [sim]

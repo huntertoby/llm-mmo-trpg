@@ -202,6 +202,8 @@ class UnitFell(EventBase):
     unit_id: UnitId
     drop: int
     levels: int
+    source_id: UnitId | None = None
+    """造成墜落的單位（推擊者、降低地形的施放者）；走下去或追溯不到時為 ``None``。"""
 
 
 class EnteredDeadlyTerrain(EventBase):
@@ -209,6 +211,8 @@ class EnteredDeadlyTerrain(EventBase):
     unit_id: UnitId
     pos: Pos
     terrain: str
+    source_id: UnitId | None = None
+    """讓單位進入致命地形的單位（推擊者、打斷或燒斷橋的人）；追溯不到時為 ``None``。"""
 
 
 # ---------------------------------------------------------------------------

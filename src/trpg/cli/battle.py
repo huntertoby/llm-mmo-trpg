@@ -62,6 +62,20 @@ def cmd_map_show(library: ContentLibrary, map_id: str, out: TextIO) -> int:
     return 0
 
 
+def cmd_map_list(library: ContentLibrary, out: TextIO) -> int:
+    """``trpg map list``：每張地圖的 ID、類型、大小、名稱，以及是否有預設遭遇。"""
+    print("| 地圖 | 類型 | 大小 | 名稱 | 遭遇 |", file=out)
+    print("|---|---|---|---|---|", file=out)
+    for map_id, map_def in sorted(library.maps.items()):
+        encounter = "有" if map_def.encounter is not None else "—"
+        print(
+            f"| {map_id} | {map_def.archetype} | {map_def.width}×{map_def.height} "
+            f"| {map_def.name_zh} | {encounter} |",
+            file=out,
+        )
+    return 0
+
+
 def _walk_summary(action: Step, events: list[EventBase], state: BattleState) -> str | None:
     if not isinstance(action, Move):
         return None

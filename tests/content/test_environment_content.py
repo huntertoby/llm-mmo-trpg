@@ -241,6 +241,7 @@ def _map(**overrides: object) -> dict[str, object]:
     data: dict[str, object] = {
         "id": "m",
         "name_zh": "地圖",
+        "archetype": "test",
         "size": [4, 3],
         "heights": "0000\n0000\n0000\n",
         "terrain": "....\n....\n....\n",

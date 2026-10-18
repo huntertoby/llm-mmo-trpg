@@ -27,6 +27,11 @@ terrain:
     glyph: "~"
     walkable: false
     deadly: true
+  - id: ice_hole
+    name_zh: 冰窟
+    glyph: "O"
+    walkable: false
+    deadly: true          # 比照深淵：被推進去的單位死亡；上面可架 thin_ice（薄冰）物件
   - id: wall
     name_zh: 牆壁
     glyph: "@"

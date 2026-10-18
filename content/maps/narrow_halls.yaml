@@ -1,0 +1,46 @@
+# 地圖類型：狹窄走廊（corridor）。中央的厚牆把戰場切成東西兩間大廳，只靠兩條走廊相連：
+# 北邊 1 格寬（y=2）、南邊 2 格寬（y=5、6）。走廊長 4 格，一旦有人堵住就是一夫當關。
+# 直線、貫穿與範圍技能（走廊裡的人排成一列）、坦克（堵口）有利；需要繞側翼、靠高度或位移的
+# build 不利。大廳各有兩根石柱、一個木箱與一個油桶（走廊口的油桶是雙面刃）。
+id: narrow_halls
+name_zh: 狹窄長廊
+archetype: corridor
+size: [12, 9]
+heights: |
+  000000000000
+  000000000000
+  000000000000
+  000000000000
+  000000000000
+  000000000000
+  000000000000
+  000000000000
+  000000000000
+terrain: |
+  ....####....
+  ....####....
+  ............
+  ....####....
+  ....####....
+  ............
+  ............
+  ....####....
+  ....####....
+legend:
+  ".": stone
+  "#": wall
+objects:
+  - {at: [2, 1], kind: stone_pillar}
+  - {at: [9, 1], kind: stone_pillar}
+  - {at: [1, 2], kind: crate}
+  - {at: [10, 2], kind: crate}
+  - {at: [3, 3], kind: oil_barrel}
+  - {at: [8, 3], kind: oil_barrel}
+  - {at: [2, 7], kind: stone_pillar}
+  - {at: [9, 7], kind: stone_pillar}
+start_zones:
+  ally: [[0, 3], [1, 4], [0, 5], [1, 6]]
+  enemy: [[11, 3], [10, 4], [11, 5], [10, 6]]
+encounter:
+  allies: [hero_fighter, hero_archer, hero_mage]
+  enemies: [bandit_shieldbearer, bandit, bandit_archer, bandit_archer]

@@ -7,11 +7,15 @@
   （未給 ``--sides`` 時印 ``next_u32()``，給了則印擲骰結果）。
 - ``trpg content check``：載入並驗證 ``content/`` 下目前所有已知資料檔。
 - ``trpg map show <map_id>``：以文字網格印出地圖。
+- ``trpg map list``：列出所有地圖的類型、大小與是否有預設遭遇。
 - ``trpg battle --map <map_id> --seed <n> [--rounds-max 30] [--log-json <path>]
   [--ai utility|simple] [--weather <id>] [--deploy x,y;x,y] [--allies ...] [--enemies ...]``：
   雙方由效用 AI（預設）自動對戰，印出每輪戰場、環境預告與繁體中文戰鬥紀錄。
 - ``trpg skills list`` / ``trpg skills show <id>``：技能的自動摘要。
 - ``trpg skills random --seed N [--tier T] [--rarity R] [--skeleton S] [--count C]``：隨機組合器。
+- ``trpg sim matrix [--builds a,b] [--maps a,b] [--seeds 20] [--jobs N] [--json out.json]``：
+  build × 地圖矩陣（勝率、英雄 DPR、存活率、排名、6.8 標準檢查）。
+- ``trpg sim skills [--demo] [--random N] [--seeds 10] [--jobs N]``：技能報表（DPR 分佈、離群）。
 - ``trpg sim maps [--maps a,b] [--seeds 20] [--seed-start 0] [--jobs N] [--json out.json]``：
   每張地圖以預設陣容批次模擬，印出勝率、輪數、DPR、控制回合、技能使用與異常。
 - ``trpg battle`` 與 ``trpg sim maps`` 都可加 ``--ally-commander``／``--enemy-commander <id>``
@@ -27,9 +31,10 @@ from collections.abc import Callable
 from pathlib import Path
 
 from trpg import __version__
-from trpg.cli.battle import cmd_battle, cmd_map_show, cmd_replay
+from trpg.cli.battle import cmd_battle, cmd_map_list, cmd_map_show, cmd_replay
 from trpg.cli.budget import cmd_skills_budget, cmd_skills_budget_all, library_violations
 from trpg.cli.sim import cmd_sim_maps
+from trpg.cli.sim_matrix import cmd_sim_matrix, cmd_sim_skills
 from trpg.cli.skills import cmd_skills_list, cmd_skills_show
 from trpg.cli.skills_random import cmd_skills_random
 from trpg.content.library import ContentLibrary, load_library
@@ -83,6 +88,7 @@ def build_parser() -> argparse.ArgumentParser:  # noqa: PLR0915
     )
     show = map_commands.add_parser("show", help="以文字網格印出地圖")
     show.add_argument("map_id", help="地圖 ID（content/maps/<id>.yaml）")
+    map_commands.add_parser("list", help="列出所有地圖的類型、大小與是否有預設遭遇")
 
     skills_parser = commands.add_parser("skills", help="技能工具")
     skills_commands = skills_parser.add_subparsers(
@@ -160,7 +166,40 @@ def build_parser() -> argparse.ArgumentParser:  # noqa: PLR0915
     battle_commands = battle.add_subparsers(dest="battle_command", metavar="<subcommand>")
     replay = battle_commands.add_parser("replay", help="重播 --log-json 的輸出並驗證一致")
     replay.add_argument("path", type=Path, help="戰鬥紀錄 JSON")
+    _add_sim_report_parsers(sim_commands)
     return parser
+
+
+def _add_sim_report_parsers(
+    sim_commands: argparse._SubParsersAction[argparse.ArgumentParser],
+) -> None:
+    """``trpg sim matrix``（build × 地圖矩陣）與 ``trpg sim skills``（技能報表）。"""
+    matrix = sim_commands.add_parser(
+        "matrix", help="build × 地圖矩陣：勝率、英雄 DPR、存活率、排名與 6.8 標準檢查"
+    )
+    matrix.add_argument("--builds", default=None, help="build ID，以逗號分隔（預設：全部）")
+    matrix.add_argument(
+        "--maps", default=None, help="地圖 ID，以逗號分隔（預設：全部有 encounter 的非測試地圖）"
+    )
+    matrix.add_argument("--seeds", type=_positive_int, default=20, help="每格的場數（預設 20）")
+    matrix.add_argument(
+        "--seed-start", type=_non_negative_int, default=0, help="起始種子（預設 0）"
+    )
+    matrix.add_argument("--jobs", type=_positive_int, default=1, help="平行行程數（預設 1）")
+    matrix.add_argument("--json", type=Path, default=None, help="另外寫出完整報表 JSON")
+    skills = sim_commands.add_parser(
+        "skills", help="技能報表：施放者 DPR、勝率、使用率，依階級與骨架彙總，標出 DPR 離群的技能"
+    )
+    skills.add_argument("--demo", action="store_true", help="測示範技能（content/skills/）")
+    skills.add_argument(
+        "--random", type=_non_negative_int, default=0, metavar="N", help="測 N 個隨機技能"
+    )
+    skills.add_argument("--seeds", type=_positive_int, default=10, help="每個技能的場數（預設 10）")
+    skills.add_argument(
+        "--seed-start", type=_non_negative_int, default=0, help="起始種子（預設 0）"
+    )
+    skills.add_argument("--jobs", type=_positive_int, default=1, help="平行行程數（預設 1）")
+    skills.add_argument("--json", type=Path, default=None, help="另外寫出完整報表 JSON")
 
 
 def _cmd_rng(seed: int, count: int, sides: int | None) -> int:
@@ -224,6 +263,43 @@ def _add_commander_args(parser: argparse.ArgumentParser) -> None:
 
 def _split(text: str) -> list[str]:
     return [part.strip() for part in text.split(",") if part.strip()]
+
+
+def _sim_matrix(args: argparse.Namespace) -> int:
+    builds = None if args.builds is None else _split(args.builds)
+    maps = None if args.maps is None else _split(args.maps)
+    if builds == [] or maps == []:
+        print("錯誤：--builds 與 --maps 至少要有一個", file=sys.stderr)
+        return 2
+    return _with_library(
+        lambda lib: cmd_sim_matrix(
+            lib,
+            builds=builds,
+            maps=maps,
+            seeds=args.seeds,
+            seed_start=args.seed_start,
+            jobs=args.jobs,
+            json_path=args.json,
+            out=sys.stdout,
+            err=sys.stderr,
+        )
+    )
+
+
+def _sim_skills(args: argparse.Namespace) -> int:
+    return _with_library(
+        lambda lib: cmd_sim_skills(
+            lib,
+            demo=args.demo or args.random == 0,
+            random_count=args.random,
+            seeds=args.seeds,
+            seed_start=args.seed_start,
+            jobs=args.jobs,
+            json_path=args.json,
+            out=sys.stdout,
+            err=sys.stderr,
+        )
+    )
 
 
 def _battle(parser: argparse.ArgumentParser, args: argparse.Namespace) -> int:
@@ -303,6 +379,8 @@ def main(argv: list[str] | None = None) -> int:  # noqa: PLR0911, PLR0912
         return _cmd_rng(args.seed, args.count, args.sides)
     if args.command == "content" and args.content_command == "check":
         return _cmd_content_check()
+    if args.command == "map" and args.map_command == "list":
+        return _with_library(lambda lib: cmd_map_list(lib, sys.stdout))
     if args.command == "map" and args.map_command == "show":
         return _with_library(lambda lib: cmd_map_show(lib, args.map_id, sys.stdout))
     if args.command == "skills":
@@ -330,6 +408,10 @@ def main(argv: list[str] | None = None) -> int:  # noqa: PLR0911, PLR0912
             )
         return _with_library(lambda lib: cmd_skills_show(lib, args.skill_id, sys.stdout))
     if args.command == "sim":
+        if args.sim_command == "matrix":
+            return _sim_matrix(args)
+        if args.sim_command == "skills":
+            return _sim_skills(args)
         return _sim_maps(args)
     if args.command == "battle":
         if args.battle_command == "replay":

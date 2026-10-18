@@ -1,0 +1,48 @@
+# 地圖類型：廢墟高台（ruined_heights）的變體：懸崖前哨。東側是高度 3 的高台，敵人佔據；
+# 高台西緣是懸崖（落差 3 層，無法攀爬），只有中央一座 2 格寬的階梯（高度 1→2→3）可以直接登上，
+# 另有東北角的小坡（高度 1→2）可以繞後。從高台被推下來會受到墜落傷害。
+# 遠程、高處射擊與位移（把人推下懸崖）有利；沒有射程、必須爬階梯硬攻的近戰不利。
+id: cliff_outpost
+name_zh: 懸崖前哨
+archetype: ruined_heights
+size: [10, 10]
+heights: |
+  0000000000
+  0000000001
+  0003333332
+  0003333333
+  0001233333
+  0001233333
+  0003333333
+  0003333333
+  0000000000
+  0000000000
+terrain: |
+  ..........
+  ..........
+  ..........
+  ......#...
+  ..........
+  ..........
+  ......#...
+  ..........
+  ..........
+  ..........
+legend:
+  ".": stone
+  "#": wall
+objects:
+  - {at: [1, 2], kind: crate}
+  - {at: [7, 2], kind: low_wall}
+  - {at: [5, 3], kind: low_wall}
+  - {at: [8, 4], kind: crate}
+  - {at: [7, 5], kind: stone_pillar}
+  - {at: [5, 6], kind: low_wall}
+  - {at: [2, 7], kind: crate}
+  - {at: [1, 8], kind: fallen_log}
+start_zones:
+  ally: [[0, 3], [1, 4], [0, 5], [1, 6]]
+  enemy: [[7, 3], [8, 3], [7, 6], [8, 5]]
+encounter:
+  allies: [hero_fighter, hero_archer, hero_mage]
+  enemies: [bandit_archer, bandit_archer, bandit_shieldbearer, bandit]

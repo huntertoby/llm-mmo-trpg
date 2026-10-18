@@ -1,0 +1,91 @@
+# 地圖類型：冰湖（frozen_lake）。湖面（x=3–8）整片是永久的冰面：走進去要過敏捷檢定（DC 12），
+# 失敗倒地；火焰會把冰融成水。湖面散布 6 個冰窟（致命地形，被推進去直接死亡），其中兩個蓋著薄冰
+# （可以走，但 HP 只有 6，打破後上面的單位落入冰窟）。兩岸是穩固的石地。
+# 位移（推進冰窟）、冰凍與控場有利；近戰硬衝的 build 容易滑倒，火焰系會融掉自己的優勢。
+id: frozen_lake
+name_zh: 冰湖
+archetype: frozen_lake
+size: [12, 10]
+heights: |
+  000000000000
+  000000000000
+  000000000000
+  000000000000
+  000000000000
+  000000000000
+  000000000000
+  000000000000
+  000000000000
+  000000000000
+terrain: |
+  ............
+  ............
+  ....O.......
+  ......O.....
+  ........O...
+  ...O........
+  .....O......
+  .......O....
+  ............
+  ............
+legend:
+  ".": stone
+  "O": ice_hole
+objects:
+  - {at: [2, 2], kind: stone_pillar}
+  - {at: [6, 3], kind: thin_ice}
+  - {at: [10, 3], kind: low_wall}
+  - {at: [2, 4], kind: crate}
+  - {at: [9, 5], kind: crate}
+  - {at: [1, 6], kind: low_wall}
+  - {at: [5, 6], kind: thin_ice}
+  - {at: [9, 7], kind: stone_pillar}
+surfaces:
+  - {at: [3, 1], surface: ice}
+  - {at: [4, 1], surface: ice}
+  - {at: [5, 1], surface: ice}
+  - {at: [6, 1], surface: ice}
+  - {at: [7, 1], surface: ice}
+  - {at: [8, 1], surface: ice}
+  - {at: [3, 2], surface: ice}
+  - {at: [5, 2], surface: ice}
+  - {at: [6, 2], surface: ice}
+  - {at: [7, 2], surface: ice}
+  - {at: [8, 2], surface: ice}
+  - {at: [3, 3], surface: ice}
+  - {at: [4, 3], surface: ice}
+  - {at: [5, 3], surface: ice}
+  - {at: [7, 3], surface: ice}
+  - {at: [8, 3], surface: ice}
+  - {at: [3, 4], surface: ice}
+  - {at: [4, 4], surface: ice}
+  - {at: [5, 4], surface: ice}
+  - {at: [6, 4], surface: ice}
+  - {at: [7, 4], surface: ice}
+  - {at: [4, 5], surface: ice}
+  - {at: [5, 5], surface: ice}
+  - {at: [6, 5], surface: ice}
+  - {at: [7, 5], surface: ice}
+  - {at: [8, 5], surface: ice}
+  - {at: [3, 6], surface: ice}
+  - {at: [4, 6], surface: ice}
+  - {at: [6, 6], surface: ice}
+  - {at: [7, 6], surface: ice}
+  - {at: [8, 6], surface: ice}
+  - {at: [3, 7], surface: ice}
+  - {at: [4, 7], surface: ice}
+  - {at: [5, 7], surface: ice}
+  - {at: [6, 7], surface: ice}
+  - {at: [8, 7], surface: ice}
+  - {at: [3, 8], surface: ice}
+  - {at: [4, 8], surface: ice}
+  - {at: [5, 8], surface: ice}
+  - {at: [6, 8], surface: ice}
+  - {at: [7, 8], surface: ice}
+  - {at: [8, 8], surface: ice}
+start_zones:
+  ally: [[0, 3], [1, 4], [1, 5], [0, 6]]
+  enemy: [[11, 6], [10, 5], [10, 4], [11, 3]]
+encounter:
+  allies: [hero_fighter, hero_archer, hero_mage]
+  enemies: [bandit, bandit, bandit_archer, bandit_shieldbearer]

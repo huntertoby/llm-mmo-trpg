@@ -1,0 +1,103 @@
+# 代表性 build（Phase 2C-3 5.3；docs/design/06-技能.md 6.8 的 build × 地圖類型矩陣）。
+# 一個 build ＝ 一名英雄（屬性、HP、武器、行為模式、技能）。矩陣的我方隊伍 ＝ build 英雄 ＋
+# companions（沒有技能的標準隊友），敵方是地圖的 encounter.enemies。
+# 屬性、HP、護甲比照既有英雄範本（近戰＝戰士、法系＝法師／雷術士、遠程＝弓手），讓 build 之間的差異
+# 主要來自技能；技能的 weapon_req 與武器分類必須相容（載入時檢查），所以部分技能依主題換成同武器
+# 分類的技能（見 docs/phases/Phase2C-3報告.md）。
+companions: [sim_companion_fighter, sim_companion_archer]
+builds:
+  - id: build_push
+    name_zh: 位移流
+    theme_zh: 把人踢下深淵、撞牆、推進冰窟；在深淵、岩漿、冰湖與高台有利，在沒有地形可利用的平原不利。
+    hero:
+      id: build_push
+      name_zh: 位移流英雄
+      attributes: {str: 16, dex: 12, con: 14, int: 10, wis: 10, wil: 10}
+      max_hp: 60
+      speed: 5
+      armor_bonus: 4
+      weapon: one_handed_sword
+      resist: {physical: 100}
+      tags: [hero, sim]
+      max_mana: 20
+      skills: [skill_gale_kick, skill_shield_bash, skill_blink]
+
+  - id: build_fire
+    name_zh: 火焰流
+    theme_zh: 點燃油與草叢、引爆油桶、範圍火焰；在油庫與森林有利，在雨天與冰湖（火會融冰）不利。
+    hero:
+      id: build_fire
+      name_zh: 火焰流英雄
+      attributes: {str: 8, dex: 12, con: 10, int: 16, wis: 12, wil: 12}
+      max_hp: 40
+      speed: 5
+      armor_bonus: 1
+      weapon: fire_staff
+      ai_profile: cunning
+      resist: {elemental: 150}
+      tags: [hero, sim]
+      max_mana: 40
+      skills: [skill_fire_bolt, skill_cinder_burst, skill_ashen_oath]
+
+  - id: build_storm
+    name_zh: 雷電／水流
+    theme_zh: 雷電沿水擴散、召水與定身；在沼澤（水窪）有利，在乾燥的平原與走廊以外的地方沒有導體。
+    hero:
+      id: build_storm
+      name_zh: 雷電流英雄
+      attributes: {str: 8, dex: 12, con: 10, int: 16, wis: 12, wil: 12}
+      max_hp: 40
+      speed: 5
+      armor_bonus: 1
+      weapon: lightning_staff
+      ai_profile: cunning
+      resist: {elemental: 150}
+      tags: [hero, sim]
+      max_mana: 40
+      skills: [skill_chain_lightning, skill_summon_tide, skill_frost_shackle]
+
+  - id: build_tank
+    name_zh: 坦克
+    theme_zh: 重擊、盾擊與旋風斬，靠護甲與血量站在前線；在走廊（堵口）有利，在被遠程風箏的開闊地不利。
+    hero:
+      id: build_tank
+      name_zh: 坦克英雄
+      attributes: {str: 16, dex: 12, con: 14, int: 10, wis: 10, wil: 10}
+      max_hp: 60
+      speed: 5
+      armor_bonus: 4
+      weapon: one_handed_sword
+      resist: {physical: 100}
+      tags: [hero, sim]
+      max_mana: 20
+      skills: [skill_bone_crusher, skill_shield_bash, skill_whirlwind]
+
+  - id: build_ranged
+    name_zh: 遠程
+    theme_zh: 穿透射擊、居高射擊與煙幕箭；在高台與開闊地有利，在視線破碎的森林與走廊不利。
+    hero:
+      id: build_ranged
+      name_zh: 遠程英雄
+      attributes: {str: 10, dex: 16, con: 12, int: 10, wis: 12, wil: 10}
+      max_hp: 46
+      speed: 5
+      armor_bonus: 2
+      weapon: bow
+      tags: [hero, sim]
+      max_mana: 24
+      skills: [skill_piercing_shot, skill_high_ground_shot, skill_smoke_arrow]
+
+  - id: build_assassin
+    name_zh: 刺殺
+    theme_zh: 匕首的高暴擊、流血與處決；近身貼上殘血目標才發光，在視線被遮擋的森林有利，在空曠處容易被集火。
+    hero:
+      id: build_assassin
+      name_zh: 刺殺英雄
+      attributes: {str: 14, dex: 16, con: 12, int: 10, wis: 10, wil: 10}   # 匕首吃敏捷、技能吃力量
+      max_hp: 50
+      speed: 5
+      armor_bonus: 2
+      weapon: dagger
+      tags: [hero, sim]
+      max_mana: 20
+      skills: [skill_rending_strike, skill_execute, skill_blink]

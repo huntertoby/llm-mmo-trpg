@@ -24,6 +24,11 @@ objects:
       element: fire
     spill:               # 非火焰傷害打破時不爆炸，改為漏油（之後可被點燃）
       surface: oil
+  - id: thin_ice
+    name_zh: 薄冰
+    glyph: ":"
+    max_hp: 6
+    tags: [breakable, over_chasm]   # 架在冰窟上：可以走，打破後格上的單位落入冰窟（比照木橋）
   - id: stone_pillar
     name_zh: 石柱
     glyph: "|"

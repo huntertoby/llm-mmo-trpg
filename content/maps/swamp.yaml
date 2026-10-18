@@ -3,6 +3,7 @@
 # Phase 1C：兩段殘牆（全掩護）與倒木、木箱（半掩護）；盜賊盾衛（守衛模式）保護受傷的同伴。
 id: swamp
 name_zh: 沼澤
+archetype: swamp
 size: [10, 10]
 weather: rain
 heights: |

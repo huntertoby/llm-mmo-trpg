@@ -1,6 +1,7 @@
 # 測試地圖：中央高台與深淵。格式見 docs/phases/Phase1計畫.md 5.2。
 id: test_heights_8x8
 name_zh: 測試高台
+archetype: test
 size: [8, 8]
 heights: |        # 每個字元一格，0–3
   00000000

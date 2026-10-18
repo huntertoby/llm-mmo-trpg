@@ -1,0 +1,43 @@
+# 地圖類型：開闊平原（open_plain）。幾乎沒有東西可以躲：只有兩根倒木、兩個木箱和中央兩格緩坡
+# （高度 1）。沒有爆炸、沒有表面、沒有致命地形，輸贏取決於誰先打出單體爆發、誰機動得快。
+# 單體高傷害、遠程與機動有利；靠環境（火、油、推落）與控場鋪墊的 build 沒有發揮空間。敵方帶頭目。
+id: open_plain
+name_zh: 開闊平原
+archetype: open_plain
+size: [10, 10]
+heights: |
+  0000000000
+  0000000000
+  0000000000
+  0000000000
+  0000100000
+  0000010000
+  0000000000
+  0000000000
+  0000000000
+  0000000000
+terrain: |
+  """"""""""
+  """"",""""
+  """"""""""
+  """""",,""
+  """"""""""
+  """"""""""
+  "",,""""""
+  """"""""""
+  """","""""
+  """"""""""
+legend:
+  '"': grass
+  ",": dirt
+objects:
+  - {at: [3, 2], kind: fallen_log}
+  - {at: [5, 4], kind: crate}
+  - {at: [4, 5], kind: crate}
+  - {at: [6, 7], kind: fallen_log}
+start_zones:
+  ally: [[0, 3], [0, 4], [1, 5], [0, 6]]
+  enemy: [[9, 6], [9, 5], [8, 4], [9, 3]]
+encounter:
+  allies: [hero_fighter, hero_archer, hero_mage]
+  enemies: [bandit_boss, bandit, bandit, bandit_archer]

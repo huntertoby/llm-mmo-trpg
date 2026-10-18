@@ -4,6 +4,7 @@
 # 木箱與倒木提供半掩護（遠程攻擊命中 −2）。
 id: bridge_chasm
 name_zh: 吊橋深淵
+archetype: bridge_chasm
 size: [10, 10]
 heights: |
   0000000000

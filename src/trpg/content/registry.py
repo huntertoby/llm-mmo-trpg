@@ -22,6 +22,7 @@ from trpg.content.environment import (
 from trpg.content.loader import default_content_dir, load_content_file
 from trpg.content.rules import CoreRules, HitTable
 from trpg.content.schemas import ContentModel, ElementTable
+from trpg.content.sim_builds import BuildTable
 from trpg.content.skill_rules import BudgetRules, ExclusionTable, SynergyTable
 from trpg.content.skills import ConditionTable, PrimitiveTable, ShapeTable
 
@@ -54,6 +55,7 @@ KNOWN_CONTENT_FILES: tuple[ContentFile, ...] = (
     ContentFile("skill_conditions.yaml", ConditionTable),
     ContentFile("skill_budget.yaml", BudgetRules),
     ContentFile("skill_composer.yaml", ComposerRules),
+    ContentFile("sim/builds.yaml", BuildTable),
     ContentFile("skill_synergies.yaml", SynergyTable),
     ContentFile("skill_exclusions.yaml", ExclusionTable),
 )

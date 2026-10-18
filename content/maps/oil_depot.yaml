@@ -4,6 +4,7 @@
 # 但躲在油桶後面很危險。
 id: oil_depot
 name_zh: 油庫
+archetype: oil_depot
 size: [10, 10]
 heights: |
   0000000000

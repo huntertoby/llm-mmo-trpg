@@ -492,14 +492,31 @@ def _do_move(ctx: Ctx, unit: UnitState, action: Action) -> None:
         unit.move_points -= plan.stand_up
         execute(ctx, [RemoveStatusEffect(target_id=unit.id, status_id=PRONE, reason="stood_up")])
         ctx.emit(UnitStoodUp, unit_id=unit.id, cost=plan.stand_up)
+    walked: list[XY] = [unit.xy]
     for dest, cost in plan.steps:
         opportunity_attacks(ctx, unit, unit.xy, dest)
         if not unit.alive:
             break
         unit.move_points -= cost
         execute(ctx, [MoveUnitEffect(unit_id=unit.id, dest=dest, mode="walk", cost=cost)])
+        walked.append(unit.xy)
         if not unit.alive or unit.has_status(PRONE):
             break
+    _slide_back_if_stacked(ctx, unit, walked)
+
+
+def _slide_back_if_stacked(ctx: Ctx, unit: UnitState, walked: list[XY]) -> None:
+    """途中倒地（滑倒、被反應擊倒）而停在友軍所在的格子（走路可穿越友軍）時，單位滑回走過的
+    最近一個沒有其他單位的格子，避免兩個單位疊在同一格（Phase 2C-3：冰湖地圖暴露的問題）。"""
+    if not unit.alive:
+        return
+    state = ctx.state
+    if not any(u.alive and u.id != unit.id and u.xy == unit.xy for u in state.units.values()):
+        return
+    for back in reversed(walked[:-1]):
+        if not any(u.alive and u.id != unit.id and u.xy == back for u in state.units.values()):
+            execute(ctx, [MoveUnitEffect(unit_id=unit.id, dest=back, mode="teleport")])
+            return
 
 
 def _do_attack(ctx: Ctx, unit: UnitState, action: Action) -> None:

@@ -298,6 +298,7 @@ def _map_data(terrain: str, **extra: object) -> dict[str, object]:
     data: dict[str, object] = {
         "id": "walls",
         "name_zh": "牆",
+        "archetype": "test",
         "size": [5, 3],
         "heights": "00000\n00000\n00000",
         "terrain": terrain,

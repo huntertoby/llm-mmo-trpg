@@ -57,6 +57,7 @@ def _fall_damage(ctx: Ctx, event: EventBase, depth: int) -> list[EffectBase]:
     return [
         DamageEffect(
             depth=depth,
+            source_id=event.source_id,
             target_id=event.unit_id,
             cause="fall",
             mode="percent_max_hp",
@@ -74,6 +75,7 @@ def _deadly_terrain(ctx: Ctx, event: EventBase, depth: int) -> list[EffectBase]:
         return [
             DamageEffect(
                 depth=depth,
+                source_id=event.source_id,
                 target_id=unit.id,
                 cause="deadly_terrain",
                 mode="lethal",
@@ -83,6 +85,7 @@ def _deadly_terrain(ctx: Ctx, event: EventBase, depth: int) -> list[EffectBase]:
     effects: list[EffectBase] = [
         DamageEffect(
             depth=depth,
+            source_id=event.source_id,
             target_id=unit.id,
             cause="deadly_terrain",
             mode="percent_max_hp",
