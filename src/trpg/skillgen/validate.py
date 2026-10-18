@@ -281,7 +281,7 @@ def _skeleton_violations(
         add("shape", f"形狀只能是 {'、'.join(skeleton.shapes)}，收到 {skill.shape.type}")
     out += _effect_role_violations(skill, library, skeleton)
     if report is not None:
-        out += _share_violations(skill, skeleton, report)
+        out += _share_violations(skill, library, skeleton, report)
     if skeleton.requires_condition and not _has_condition(skill):
         add("condition", "技能或效果必須有條件")
     forbidden = set(skeleton.forbid_affects)
@@ -352,7 +352,7 @@ def _effect_role_violations(
 
 
 def _share_violations(
-    skill: SkillDef, skeleton: SkeletonDef, report: BudgetReport
+    skill: SkillDef, library: ContentLibrary, skeleton: SkeletonDef, report: BudgetReport
 ) -> list[Violation]:
     """核心效果的最低占比與個別原語的最高占比（以效果點數計）。"""
     if report.raw <= 0:
@@ -362,7 +362,7 @@ def _share_violations(
         (
             eb.points
             for eb, effect in zip(report.effects, skill.effects, strict=True)
-            if effect.type in skeleton.core.primitives
+            if _is_core(library, skeleton, effect)
         ),
         Fraction(0),
     )
