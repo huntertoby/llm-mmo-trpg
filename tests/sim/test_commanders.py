@@ -14,6 +14,7 @@ from trpg.sim.batch import map_spec, run_batch, run_batches
 from trpg.sim.commanders import (
     COMMANDER_FACTORIES,
     COMMANDER_IDS,
+    HOLD_QUIET_ROUNDS,
     CommandedPolicyFactory,
     FocusLowestHp,
     HoldStart,
@@ -80,6 +81,38 @@ def test_hold_start_remembers_the_first_positions() -> None:
     moved.units[U2].downed = True
     third = commander(moved, Team.ALLY)
     assert third is not None and set(third.unit_orders) == {U1}
+
+
+def _at_round(state: BattleState, round_: int) -> BattleState:
+    s = state.clone()
+    s.round = round_
+    return s
+
+
+def test_hold_start_releases_after_quiet_rounds_and_stays_released() -> None:
+    state = _state()
+    commander = HoldStart()
+    held = commander(_at_round(state, 1), Team.ALLY)
+    assert held is not None and held.unit_orders  # 第 1 輪：記下 HP 總和
+    for round_ in range(2, 2 + HOLD_QUIET_ROUNDS - 1):  # 還差一輪
+        held = commander(_at_round(state, round_), Team.ALLY)
+        assert held is not None and held.unit_orders
+    released = commander(_at_round(state, 1 + HOLD_QUIET_ROUNDS), Team.ALLY)
+    assert released is not None and not released.unit_orders and not released.team_orders
+    hurt = _at_round(state, 2 + HOLD_QUIET_ROUNDS)
+    hurt.units[U3].hp -= 1  # 之後有人受傷也不會重新守位
+    again = commander(hurt, Team.ALLY)
+    assert again is not None and not again.unit_orders
+
+
+def test_hold_start_does_not_release_while_someone_is_taking_damage() -> None:
+    state = _state()
+    commander = HoldStart()
+    for round_ in range(1, 3 * HOLD_QUIET_ROUNDS):
+        s = _at_round(state, round_)
+        s.units[U3].hp = state.units[U3].hp - round_  # 每輪都有 HP 變化
+        orders = commander(s, Team.ALLY)
+        assert orders is not None and orders.unit_orders
 
 
 def test_use_env_orders_the_whole_team() -> None:

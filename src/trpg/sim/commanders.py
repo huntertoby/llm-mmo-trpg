@@ -31,6 +31,7 @@ from trpg.shared.types import Team, UnitId
 __all__ = [
     "COMMANDER_FACTORIES",
     "COMMANDER_IDS",
+    "HOLD_QUIET_ROUNDS",
     "CommandedPolicyFactory",
     "FocusLowestHp",
     "HoldStart",
@@ -68,14 +69,41 @@ class ProtectWeakest:
         return OrderSet(team_orders=(Protect(ward=ward.id),))
 
 
+HOLD_QUIET_ROUNDS = 3
+"""``hold_start`` 連續這麼多輪沒有任何單位的 HP 變化（無人交戰）就解除守位。"""
+
+
 class HoldStart:
     """``hold_start``：每個單位守在自己的起始格（radius 1）。起始格是第一次看到該單位時的位置
-    （每場新建一個，所以記得的是這場戰鬥的起點）。"""
+    （每場新建一個，所以記得的是這場戰鬥的起點）。
+
+    **解除條件**（Phase 2C-4）：連續 :data:`HOLD_QUIET_ROUNDS` 輪沒有任何單位的 HP 變化時，
+    指揮官放棄守位並且不再下指令。否則雙方都不願離開高處或掩護時，守位會讓戰鬥永遠打不完
+    （``ruined_fort`` 我方守位、敵方弓手留在高台上）。守位只是評分的扣分，敵人進入射程時
+    單位本來就會還擊，所以不需要「敵人進入射程」的解除條件。"""
 
     def __init__(self) -> None:
         self._starts: dict[UnitId, tuple[int, int]] = {}
+        self._round = -1
+        self._hp_total = -1
+        self._quiet = 0
+        self._released = False
+
+    def _watch(self, state: BattleState) -> None:
+        """每輪第一次被呼叫時，比較全場 HP 總和與上一輪是否相同。"""
+        if state.round == self._round:
+            return
+        self._round = state.round
+        total = sum(u.hp for u in state.living_units())
+        self._quiet = self._quiet + 1 if total == self._hp_total else 0
+        self._hp_total = total
+        if self._quiet >= HOLD_QUIET_ROUNDS:
+            self._released = True
 
     def __call__(self, state: BattleState, team: Team) -> OrderSet | None:
+        self._watch(state)
+        if self._released:
+            return OrderSet()
         for u in state.living_units():
             if u.team is team:
                 self._starts.setdefault(u.id, u.xy)
