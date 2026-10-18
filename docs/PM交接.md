@@ -1,6 +1,6 @@
 # PM 交接文件
 
-> 給接手的 PM（新對話中的 Claude）。最後更新：2026-10-19，Phase 2E 規格完成、2E-1 實作中。
+> 給接手的 PM（新對話中的 Claude）。最後更新：2026-10-19，Phase 2E-1 完成、2E-2 實作中。
 > 讀完本檔再讀 `CLAUDE.md` 與 `docs/專案計畫.md`（總覽，約 1 萬字元）即可接手；設計細節依需要讀 `docs/design/` 下的主題檔。
 
 ---
@@ -28,8 +28,8 @@
 | Phase 2C-4 Phase 2 收尾 | ✅ 完成（Phase 2 結束，驗收 11 ✅／2 ⚠️ 觸發移到補模板 B） | `Phase2C-4計畫.md`／`Phase2C-4報告.md` |
 | Phase 2D-1 保護、增益與嘲諷 | ✅ 完成（1141 測試；待 PM 決定已處理於 2D 計畫 4.0） | `Phase2D計畫.md` 第 3 節／`Phase2D-1報告.md` |
 | Phase 2D-2 負面狀態、術士與收尾 | ✅ 完成（1172 測試；2D 驗收 7 條全 ✅） | `Phase2D計畫.md` 第 4 節／`Phase2D-2報告.md` |
-| **Phase 2E-1 觸發核心 ＋ 被動** | 🔄 實作中 | `Phase2E計畫.md` 第 3 節 |
-| Phase 2E-2 反應技、擋攻擊、姿態 | ⏳ | `Phase2E計畫.md` 第 4 節 |
+| Phase 2E-1 觸發核心 ＋ 被動 | ✅ 完成（1230 測試；Phase 2 ⚠️ #1、#11 已補） | `Phase2E計畫.md` 第 3 節／`Phase2E-1報告.md` |
+| **Phase 2E-2 反應技、擋攻擊、姿態** | 🔄 實作中 | `Phase2E計畫.md` 第 4 節 |
 | Phase 2E-3 層數、陷阱與收尾 | ⏳ | `Phase2E計畫.md` 第 5 節 |
 
 - 最新 commit 在 GitHub `huntertoby/llm-mmo-trpg`（私人）的 `main`；使用者電腦已同步到 2D-2 完成的 commit。

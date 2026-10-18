@@ -206,6 +206,23 @@ trigger:
 
 > PM 可能依 2E-1 報告修訂本節。
 
+### 4.0 PM 決定（2E-1 報告「待 PM 決定」）
+
+全部接受：
+
+| # | 項目 | 決定 |
+|---|---|---|
+| 1 | `on_kill`＋`other` 對倒下單位無效；擊殺的那一擊不觸發 `on_hit` | 接受 |
+| 2 | 觸發傷害的 `cause` 維持 `attack`（計入 DPR、可再觸發 `on_damaged`） | 接受；反應技的傷害同樣處理 |
+| 3 | 被護盾吸收的傷害也算 `on_damaged` | 接受 |
+| 4 | `trigger.target` 預設 `self` | 接受 |
+| 5 | `hits_landed` 只對帶 `every_n_hits` 被動的單位計數 | 接受 |
+| 6 | `SkillMatch.kinds` | 接受 |
+| 7 | 組合器被動機率 150‰ 與法力、冷卻初值 | 接受（平衡階段） |
+| 8 | `LOG_FORMAT` `/8`，舊紀錄不能重播 | 接受；本子階段有新事件時再升版 |
+| 9 | 被動欄位上限維持 2 | 接受 |
+| 10 | 手寫被動未加入既有 build | 接受；`build_guardian`（4.4）帶 `skill_thorn_skin`，2E-3 的新 build 也可以帶被動 |
+
 ### 4.1 反應技（`kind: reaction`）
 
 - `SkillDef` 新增 `reaction: ReactionSpec | None`（`kind: reaction` 必須有，其他不可有），欄位 `event`：
