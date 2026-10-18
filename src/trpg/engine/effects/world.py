@@ -275,9 +275,13 @@ def _damage_object(ctx: Ctx, effect: EffectBase) -> list[EventBase]:
 
 
 def remove_object(
-    ctx: Ctx, obj: ObjectState, cause: ObjectDestroyCause, set_terrain: str | None = None
+    ctx: Ctx,
+    obj: ObjectState,
+    cause: ObjectDestroyCause,
+    set_terrain: str | None = None,
+    source_id: UnitId | None = None,
 ) -> list[EventBase]:
-    """摧毀物件；之後若該格變成致命地形，清除表面並讓格上的單位落入。"""
+    """摧毀物件；之後若該格變成致命地形，清除表面並讓格上的單位落入（來源為 ``source_id``）。"""
     state = ctx.state
     obj.destroyed = True
     xy = obj.xy
@@ -306,7 +310,13 @@ def remove_object(
         if unit is not None:
             terrain = state.tile(*xy).terrain
             events.append(
-                ctx.emit(EnteredDeadlyTerrain, unit_id=unit.id, pos=unit.pos, terrain=terrain)
+                ctx.emit(
+                    EnteredDeadlyTerrain,
+                    unit_id=unit.id,
+                    pos=unit.pos,
+                    terrain=terrain,
+                    source_id=source_id,
+                )
             )
     return events
 
@@ -317,7 +327,7 @@ def _destroy_object(ctx: Ctx, effect: EffectBase) -> list[EventBase]:
     obj = _live_object(ctx.state, effect.object_id)
     if obj is None:
         return []
-    return remove_object(ctx, obj, effect.cause, effect.set_terrain)
+    return remove_object(ctx, obj, effect.cause, effect.set_terrain, effect.source_id)
 
 
 @register_effect("explode")
@@ -338,7 +348,7 @@ def _explode(ctx: Ctx, effect: EffectBase) -> list[EventBase]:
             source_id=effect.source_id,
         )
     ]
-    events.extend(remove_object(ctx, obj, "explosion"))
+    events.extend(remove_object(ctx, obj, "explosion", source_id=effect.source_id))
     return events
 
 
@@ -349,6 +359,7 @@ def _ignite_object(ctx: Ctx, effect: EffectBase) -> list[EventBase]:
     if obj is None or obj.burning is not None:
         return []
     obj.burning = ctx.core.burning_object_rounds
+    obj.burn_source = effect.source_id
     return [ctx.emit(ObjectIgnited, object_id=obj.id, pos=obj.pos, rounds=obj.burning)]
 
 
@@ -406,7 +417,7 @@ def _push_unit(ctx: Ctx, effect: PushEffect, unit_id: UnitId) -> list[EventBase]
             to_pos = Pos(x=max(nxt[0], 0), y=max(nxt[1], 0))
             events.append(ctx.emit(MoveBlocked, unit_id=unit.id, to_pos=to_pos, reason=reason))
             break
-        moved = arrive(ctx, unit, nxt, "forced")
+        moved = arrive(ctx, unit, nxt, "forced", source_id=effect.source_id)
         events.extend(moved)
         if not unit.alive or any(isinstance(e, EnteredDeadlyTerrain) for e in moved):
             break
@@ -459,7 +470,7 @@ def _push_object(ctx: Ctx, effect: PushEffect, object_id: ObjectId) -> list[Even
         state.set_tile(*nxt, replace(state.tile(*nxt), object_id=obj.id))
         events.append(ctx.emit(ObjectMoved, object_id=obj.id, from_pos=_pos(cur), to_pos=obj.pos))
         if is_deadly(state, nxt):
-            events.extend(remove_object(ctx, obj, "fell"))
+            events.extend(remove_object(ctx, obj, "fell", source_id=effect.source_id))
             break
     return events
 
@@ -484,7 +495,9 @@ def object_push_block(state: BattleState, cur: XY, nxt: XY) -> str | None:
 # ---------------------------------------------------------------------------
 
 
-def change_height(ctx: Ctx, xy: XY, new_height: int) -> list[EventBase]:
+def change_height(
+    ctx: Ctx, xy: XY, new_height: int, source_id: UnitId | None = None
+) -> list[EventBase]:
     """改變高度；站在上面的單位跟著移動（往下落差達門檻時墜落）。"""
     state = ctx.state
     tile = state.tile(*xy)
@@ -506,7 +519,15 @@ def change_height(ctx: Ctx, xy: XY, new_height: int) -> list[EventBase]:
     unit = state.unit_at(*xy)
     min_drop = ctx.core.fall_damage_min_drop
     if unit is not None and drop >= min_drop:
-        events.append(ctx.emit(UnitFell, unit_id=unit.id, drop=drop, levels=drop - (min_drop - 1)))
+        events.append(
+            ctx.emit(
+                UnitFell,
+                unit_id=unit.id,
+                drop=drop,
+                levels=drop - (min_drop - 1),
+                source_id=source_id,
+            )
+        )
     return events
 
 
@@ -515,7 +536,9 @@ def _raise_terrain(ctx: Ctx, effect: EffectBase) -> list[EventBase]:
     assert isinstance(effect, RaiseTerrainEffect)
     if not ctx.state.in_bounds(*effect.pos):
         return []
-    return change_height(ctx, effect.pos, ctx.state.tile(*effect.pos).height + effect.amount)
+    return change_height(
+        ctx, effect.pos, ctx.state.tile(*effect.pos).height + effect.amount, effect.source_id
+    )
 
 
 @register_effect("lower_terrain")
@@ -523,7 +546,9 @@ def _lower_terrain(ctx: Ctx, effect: EffectBase) -> list[EventBase]:
     assert isinstance(effect, LowerTerrainEffect)
     if not ctx.state.in_bounds(*effect.pos):
         return []
-    return change_height(ctx, effect.pos, ctx.state.tile(*effect.pos).height - effect.amount)
+    return change_height(
+        ctx, effect.pos, ctx.state.tile(*effect.pos).height - effect.amount, effect.source_id
+    )
 
 
 @register_effect("change_tile")

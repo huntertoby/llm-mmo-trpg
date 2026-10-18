@@ -110,7 +110,9 @@ def _burn_objects(ctx: Ctx) -> None:
             continue
         obj.burning -= 1
         if obj.burning <= 0:
-            destroy.append(DestroyObjectEffect(object_id=obj.id, cause="burned"))
+            destroy.append(
+                DestroyObjectEffect(object_id=obj.id, cause="burned", source_id=obj.burn_source)
+            )
     if destroy:
         execute(ctx, destroy)
 

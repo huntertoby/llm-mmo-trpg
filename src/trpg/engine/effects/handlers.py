@@ -38,7 +38,7 @@ from trpg.engine.rules.statuses import (
     healing_received_permille,
 )
 from trpg.engine.state import BattleState, StatusInstance, UnitState
-from trpg.shared.types import Element, Pos, Surface, Team
+from trpg.shared.types import Element, Pos, Surface, Team, UnitId
 
 __all__ = ["ability_modifier", "apply_status", "arrive", "enter_surface", "weather_permille"]
 
@@ -157,10 +157,17 @@ def _heal(ctx: Ctx, effect: EffectBase) -> list[EventBase]:
 
 
 def arrive(
-    ctx: Ctx, unit: UnitState, dest: tuple[int, int], mode: MoveMode, cost: int = 0
+    ctx: Ctx,
+    unit: UnitState,
+    dest: tuple[int, int],
+    mode: MoveMode,
+    cost: int = 0,
+    *,
+    source_id: UnitId | None = None,
 ) -> list[EventBase]:
     """把單位移到 ``dest`` 並結算抵達的後果（不檢查合法性與阻擋）。
 
+    - ``source_id``：強制位移的推擊者；墜落與致命地形的傷害帶上這個來源（走進去時為 ``None``）。
     - ``walk``／``forced`` 往下落差達 ``fall_damage_min_drop`` 時墜落（``unit_fell``）。
     - 落入致命地形：``entered_deadly_terrain``（之後由觸發表處理死亡或精英傳送）。
     - 進入有 ``on_enter`` 的表面：``surface_entered``（套用狀態）；有檢定時擲骰
@@ -179,11 +186,19 @@ def arrive(
     min_drop = ctx.core.fall_damage_min_drop
     if mode != "teleport" and drop >= min_drop:
         levels = drop - (min_drop - 1)
-        events.append(ctx.emit(UnitFell, unit_id=unit.id, drop=drop, levels=levels))
+        events.append(
+            ctx.emit(UnitFell, unit_id=unit.id, drop=drop, levels=levels, source_id=source_id)
+        )
     if is_deadly(state, dest):
         terrain = state.tile(*dest).terrain
         events.append(
-            ctx.emit(EnteredDeadlyTerrain, unit_id=unit.id, pos=unit.pos, terrain=terrain)
+            ctx.emit(
+                EnteredDeadlyTerrain,
+                unit_id=unit.id,
+                pos=unit.pos,
+                terrain=terrain,
+                source_id=source_id,
+            )
         )
         return events
     objective = state.objective

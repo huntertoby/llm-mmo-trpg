@@ -66,6 +66,7 @@ class ObjectState:
     """戰場上的格子物件（可變；只在 ``resolve`` 內部的複本上修改）。
 
     ``burning``：著火後剩餘的環境回合數，歸零時摧毀（``None`` 表示沒有著火）。
+    ``burn_source``：點燃它的單位（燒斷橋造成的墜落歸給點燃者；追溯不到為 ``None``）。
     """
 
     id: ObjectId
@@ -75,6 +76,7 @@ class ObjectState:
     max_hp: int | None
     burning: int | None = None
     destroyed: bool = False
+    burn_source: UnitId | None = None
 
     @property
     def xy(self) -> tuple[int, int]:
@@ -91,6 +93,7 @@ class ObjectState:
             max_hp=self.max_hp,
             burning=self.burning,
             destroyed=self.destroyed,
+            burn_source=self.burn_source,
         )
 
 
