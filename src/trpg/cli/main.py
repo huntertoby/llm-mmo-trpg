@@ -18,6 +18,8 @@
 - ``trpg sim skills [--demo] [--random N] [--seeds 10] [--jobs N]``：技能報表（DPR 分佈、離群）。
 - ``trpg sim maps [--maps a,b] [--seeds 20] [--seed-start 0] [--jobs N] [--json out.json]``：
   每張地圖以預設陣容批次模擬，印出勝率、輪數、DPR、控制回合、技能使用與異常。
+- ``trpg sim completion [--maps a,b] [--seeds 20] [--seed-start 0] [--jobs N]``：完成度檢查
+  （9 種指揮官設定 × 地圖 × 種子；exception、max_actions、draw 必須為 0，否則結束碼 1）。
 - ``trpg battle`` 與 ``trpg sim maps`` 都可加 ``--ally-commander``／``--enemy-commander <id>``
   （腳本指揮官，見 ``trpg.sim.commanders``）。
 - ``trpg battle replay <path>``：讀取 ``--log-json`` 的輸出，重播並驗證最終狀態一致。
@@ -34,6 +36,7 @@ from trpg import __version__
 from trpg.cli.battle import cmd_battle, cmd_map_list, cmd_map_show, cmd_replay
 from trpg.cli.budget import cmd_skills_budget, cmd_skills_budget_all, library_violations
 from trpg.cli.sim import cmd_sim_maps
+from trpg.cli.sim_completion import cmd_sim_completion
 from trpg.cli.sim_matrix import cmd_sim_matrix, cmd_sim_skills
 from trpg.cli.skills import cmd_skills_list, cmd_skills_show
 from trpg.cli.skills_random import cmd_skills_random
@@ -187,6 +190,18 @@ def _add_sim_report_parsers(
     )
     matrix.add_argument("--jobs", type=_positive_int, default=1, help="平行行程數（預設 1）")
     matrix.add_argument("--json", type=Path, default=None, help="另外寫出完整報表 JSON")
+    completion = sim_commands.add_parser(
+        "completion",
+        help="完成度檢查：9 種指揮官設定 × 地圖 × 種子，確認沒有 exception／max_actions／draw",
+    )
+    completion.add_argument(
+        "--maps", default=None, help="地圖 ID，以逗號分隔（預設：全部有 encounter 的非測試地圖）"
+    )
+    completion.add_argument("--seeds", type=_positive_int, default=20, help="每格的場數（預設 20）")
+    completion.add_argument(
+        "--seed-start", type=_non_negative_int, default=0, help="起始種子（預設 0）"
+    )
+    completion.add_argument("--jobs", type=_positive_int, default=1, help="平行行程數（預設 1）")
     skills = sim_commands.add_parser(
         "skills", help="技能報表：施放者 DPR、勝率、使用率，依階級與骨架彙總，標出 DPR 離群的技能"
     )
@@ -280,6 +295,24 @@ def _sim_matrix(args: argparse.Namespace) -> int:
             seed_start=args.seed_start,
             jobs=args.jobs,
             json_path=args.json,
+            out=sys.stdout,
+            err=sys.stderr,
+        )
+    )
+
+
+def _sim_completion(args: argparse.Namespace) -> int:
+    maps = None if args.maps is None else _split(args.maps)
+    if maps == []:
+        print("錯誤：--maps 至少要有一張地圖", file=sys.stderr)
+        return 2
+    return _with_library(
+        lambda lib: cmd_sim_completion(
+            lib,
+            maps=maps,
+            seeds=args.seeds,
+            seed_start=args.seed_start,
+            jobs=args.jobs,
             out=sys.stdout,
             err=sys.stderr,
         )
@@ -412,6 +445,8 @@ def main(argv: list[str] | None = None) -> int:  # noqa: PLR0911, PLR0912
             return _sim_matrix(args)
         if args.sim_command == "skills":
             return _sim_skills(args)
+        if args.sim_command == "completion":
+            return _sim_completion(args)
         return _sim_maps(args)
     if args.command == "battle":
         if args.battle_command == "replay":
