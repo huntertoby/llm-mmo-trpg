@@ -301,6 +301,23 @@ total       = raw × 技能條件倍率 × Π 協同係數
 
 > 實作者另外要讀：`docs/phases/Phase2B-2報告.md` 第 6、7 節。
 
+### 5.0 2B-2 驗收後的 PM 決定（2B-3 一併實作，先做）
+
+| # | 項目 | 決定 |
+|---|---|---|
+| 1 | 階級曲線幾乎是平的 | **改**：`tier_budget` ＝ `{1: 14, 2: 18, 3: 23, 4: 29, 5: 36}`（每階約 +27%；傷害另外隨屬性與裝備成長，曲線不要太陡）。因此不合格的 T2 示範技能 **提高強度**（骰子、倍率、持續），不要降階；報告列出前後對照 |
+| 2 | AP 1 輔助技能加了效果 | 接受。另外給 `water` 表面預設持續 3 回合，讓持續時間計入點數（對應的測試與示範技能一併確認） |
+| 3 | 勝率改變 | 2C 處理；慢速平衡測試失敗照舊允許（只列出） |
+| 4 | 盾擊 2 AP、橫掃劈砍 ×1.4 | 2C 以模擬評估 |
+| 5 | 光環的「有益」只看對象 | **改**：`statuses.yaml` 與 `surfaces.yaml` 加 `beneficial: bool`（holy、concealed 為 true；defending 依語意），`aura` 骨架的核心狀態與表面必須 `beneficial: true`；組合器不得產出「對友方施加有害狀態或表面」的技能 |
+| 6 | 骨架細節 | 接受（組合器依資料生成） |
+| 7 | `dot`／`debuff` 推導 | 接受 |
+| 8 | 稀有度細節 | 接受 |
+| 9 | 日誌格式 `/6` | 接受 |
+| 10 | 非技能來源不擲抵抗；passive／stance 沒有預算算法 | 接受 |
+
+5.0 的改動完成後先 commit，再開始 5.1。
+
 ### 5.1 隨機組合器（`trpg.skillgen.random_composer`）
 
 `compose_random_skill(seed, *, tier=None, rarity=None, skeleton=None, category=None, ap_cost=None) -> SkillDef`
