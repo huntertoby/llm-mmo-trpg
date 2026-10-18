@@ -1,6 +1,6 @@
 # PM 交接文件
 
-> 給接手的 PM（新對話中的 Claude）。最後更新：2026-10-19，Phase 2E-2 完成、2E-3 實作中。
+> 給接手的 PM（新對話中的 Claude）。最後更新：2026-10-19，**Phase 2E 全部完成**、下一步 Phase 3。
 > 讀完本檔再讀 `CLAUDE.md` 與 `docs/專案計畫.md`（總覽，約 1 萬字元）即可接手；設計細節依需要讀 `docs/design/` 下的主題檔。
 
 ---
@@ -29,20 +29,23 @@
 | Phase 2D-1 保護、增益與嘲諷 | ✅ 完成（1141 測試；待 PM 決定已處理於 2D 計畫 4.0） | `Phase2D計畫.md` 第 3 節／`Phase2D-1報告.md` |
 | Phase 2D-2 負面狀態、術士與收尾 | ✅ 完成（1172 測試；2D 驗收 7 條全 ✅） | `Phase2D計畫.md` 第 4 節／`Phase2D-2報告.md` |
 | Phase 2E-1 觸發核心 ＋ 被動 | ✅ 完成（1230 測試；Phase 2 ⚠️ #1、#11 已補） | `Phase2E計畫.md` 第 3 節／`Phase2E-1報告.md` |
-| Phase 2E-2 反應技、擋攻擊、姿態 | ✅ 完成（1286 測試） | `Phase2E計畫.md` 第 4 節／`Phase2E-2報告.md` | `Phase2E計畫.md` 第 4 節 |
-| **Phase 2E-3 層數、陷阱與收尾** | 🔄 實作中 | `Phase2E計畫.md` 第 5 節 |
+| Phase 2E-2 反應技、擋攻擊、姿態 | ✅ 完成（1286 測試） | `Phase2E計畫.md` 第 4 節／`Phase2E-2報告.md` |
+| Phase 2E-3 層數、陷阱與收尾 | ✅ 完成（1341 測試；2E 驗收全 ✅；待 PM 決定已處理於 3.2） | `Phase2E計畫.md` 第 5 節／`Phase2E-3報告.md`（5.4 為 2E 驗收總表） |
+| **Phase 3 網頁 ＋ roguelite** | ⏭️ 下一步 | 規格尚未撰寫（見 3.1） |
 
-- 最新 commit 在 GitHub `huntertoby/llm-mmo-trpg`（私人）的 `main`；使用者電腦已同步到 2D-2 完成的 commit。
-- 1172 個測試（`slow` 預設不跑；平衡測試 `test_demo_map_win_rate_and_length` 標 `xfail(strict=False)`，目前 2 xfail、2 xpass）。
+- 最新 commit 在 GitHub `huntertoby/llm-mmo-trpg`（私人）的 `main`；使用者電腦已同步到 2E-3 驗收後的 commit。
+- 1341 個測試（`slow` 預設不跑；平衡測試 `test_demo_map_win_rate_and_length` 標 `xfail(strict=False)`，目前 2 xfail、2 xpass）。
 - 主要指令：
   - `trpg battle --map <id> --seed <n> [--ally-build build_a,build_b] [--ally-commander id] [--enemy-commander id] [--log-json f]`、`trpg battle replay f`
   - `trpg map list`（10 張正式地圖，8 種類型都有）
   - `trpg sim maps [--maps a,b] [--seeds 20] [--jobs N] [--enemy-commander id]`：勝率、DPR、控制回合、技能使用率、異常
-  - `trpg sim matrix [--seeds 20] [--jobs N]`：9 個 build × 8 種地圖類型，含保護矩陣（20 種子約 9 分鐘，`--jobs 2`）
+  - `trpg sim matrix [--seeds 20] [--jobs N]`：12 個 build × 8 種地圖類型，含保護矩陣（20 種子約 15 分鐘，`--jobs 2`）
   - `trpg sim skills [--demo] [--random N]`：技能對同階標準敵人的 DPR
-  - `trpg sim completion [--maps a,b] [--seeds 20] [--jobs N]`：9 種指揮官設定 × 地圖的完成度檢查（exception／max_actions／draw 必須為 0；全量約 7.5 分鐘，`--jobs 2`）
+  - `trpg sim completion [--maps a,b] [--seeds 20] [--jobs N]`：9 種指揮官設定 × 地圖的完成度檢查（exception／max_actions／draw 必須為 0；全量約 14 分鐘，`--jobs 2`）
   - `trpg skills list／budget --all／random --seed N`；`scripts/skill_fuzz.py --count 1000`
 - 腳本指揮官（`trpg.sim.commanders`）：`focus_lowest_hp`、`protect_weakest`、`hold_start`、`use_env`。
+- 12 個 build（`content/sim/builds.yaml`）：push、fire、storm、tank、ranged、assassin、support、healer、warlock、guardian、striker、trapper。47 個手寫技能。
+- 技能系統（2E 後）：12 個骨架中 11 個可用（只有 `summon` 停用）；觸發時機 `content/skill_triggers.yaml`；層數 `content/stacks.yaml`；技能觸發深度上限 `max_trigger_depth: 3`。`LOG_FORMAT` 為 `trpg-battle-log/9` 以後（舊紀錄不能重播）。
 
 ## 3. 下一步
 
@@ -52,8 +55,8 @@
 
 | 階段 | 內容 | 檢查點 |
 |---|---|---|
-| **Phase 2D｜補模板 A** | `shield`、`damage_reduction`、`taunt`、`buff_attr`、`haste`、`heal_over_time`、`cleanse`；`fear`、`silence`、`blind`、`mark` 等狀態；技能可施加 `defending`。解鎖坦克、輔助、治療、術士 | — |
-| **Phase 2E｜補模板 B** | 事件觸發系統（`on_hit`、`on_damaged`、`on_turn_start`……）→ 被動、反應、姿態、陷阱骨架；層數累積／消耗（`builder_finisher`）；替隊友擋攻擊的反應技。補上 Phase 2 驗收中標 ⚠️ 的兩條（技能層級觸發、觸發深度上限） | — |
+| ~~Phase 2D｜補模板 A~~ ✅ | `shield`、`damage_reduction`、`taunt`、`buff_attr`、`haste`、`heal_over_time`、`cleanse`；`fear`、`silence`、`blind`、`mark` 等狀態；技能可施加 `defending`。解鎖坦克、輔助、治療、術士 | — |
+| ~~Phase 2E｜補模板 B~~ ✅ | 事件觸發系統（`on_hit`、`on_damaged`、`on_turn_start`……）→ 被動、反應、姿態、陷阱骨架；層數累積／消耗（`builder_finisher`）；替隊友擋攻擊的反應技。補上 Phase 2 驗收中標 ⚠️ 的兩條（技能層級觸發、觸發深度上限） | — |
 | **Phase 3｜網頁 ＋ roguelite** | （原 Phase 4，**已與 Phase 3 調換**）FastAPI ＋ React／PixiJS、roguelite 循環；升級選項先用隨機組合器；隊友指示只做快捷按鈕；美術用色塊 | 🎮 戰鬥手感檢查 |
 | **Phase 4｜LLM 技能生成** | （原 Phase 3）LLM 技能生成、LLM 戰術指揮官、LLM 命名、文字隊友指令，接進網頁。開始前要定 #5 世界觀與美術風格 | 🎯 好玩檢查點 |
 | 平衡 | 見 3.3 | — |
@@ -61,22 +64,46 @@
 - 使用者選這個順序的理由：先有畫面才能判斷好不好玩；試玩時 build 種類要齊全（所以模板 A、B 在網頁之前）。
 - 召喚物範圍最大，放在更後面。
 - 2E 使用者決定（2026-10-19）：拆三段；層數支援施放者型與目標型；姿態 1 AP 進入、持續到取消；陷阱對敵方隱藏。見 `Phase2E計畫.md` 0.2。
-- 2D 規模比 2C 子階段大：撰寫規格時建議拆成 2D-1／2D-2（例如「保護與增益模板」與「新狀態 ＋ AI 評分」），每個約 30 分鐘、25 萬 token。
+- **Phase 3 是下一步，規模很大**：寫規格前先跟使用者確認拆法（建議方向：FastAPI 本機 API 與戰鬥狀態序列化 → 前端格子渲染與操作 → 技能／反應／預覽等戰鬥 UI → roguelite 循環與存檔），每段控制在約 30–45 分鐘；前端技術（React ＋ PixiJS）見 `docs/design/12-技術與結構.md`。使用者要在瀏覽器試玩，做 `docs/專案計畫.md` 第 14 節的「戰鬥手感檢查」。
+- Phase 3 時要處理的既有約定：滑倒退回以 teleport 事件表示（3.4）；陷阱只對放置者陣營顯示（CLI 已用 `^`）；`pending`／`resume` 的反應詢問要有 UI。
 
-### 3.2 2C-4 報告「待 PM 決定」的處理（已接受，寫 2D 規格時放進開頭的「PM 決定」表）
+### 3.1.1 Phase 2 還沒補的模板（設計文件 6.3 有、目前沒有排階段）
+
+| 類別 | 還沒做的 | 影響 |
+|---|---|---|
+| 召喚 | `summon` 骨架（唯一停用的骨架） | 召喚流 build 做不出來；之前決定放後面 |
+| 改寫規則型（傳說） | `grant_ap`、`reset_cooldown`、`cheat_death`、`copy_skill`、`redirect_damage`、`extra_reaction` | 傳說稀有度沒有專屬內容 |
+| 修正型被動 | 「燃燒中的敵人受到傷害 +10%」這類常駐加成（2E 只做觸發型，決定 E） | — |
+| 增益互動 | `steal_buff`、驅散敵方增益、`restore_resource` | — |
+| 零星原語 | `delayed_damage`、`execute_bonus`、`swap`、`leap`、`conceal`、`grant_advantage_next`、`ignite_tile` | 部分可用現有原語近似 |
+| 條件 | `moved_this_turn`、`adjacent_ally`、`target_isolated`、`first_round`（現有 5 種） | 連段骨架的「本回合做過某事」做不出來 |
+
+PM 建議（已跟使用者說過）：不擋 Phase 3；召喚與連段條件是整類 build 的缺口，Phase 3 試玩後看需要再排「補模板 C」。
+
+### 3.1.2 加快階段速度（2E 的經驗，寫下一份規格時照做）
+
+- 2E 三段實際：2E-1 48 分、2E-2 56 分、2E-3 100 分（規格估 30 分）。分析 agent 紀錄：約一半時間在 **等全量 pytest／`check.py`**（單次 6–10 分鐘，每段跑 2–3 次），另一半是模型思考與撰寫；2E-3 多出的約 30 分鐘是全量 completion（14 分）＋ matrix（約 15 分）。
+- 規格的「工作環境」一節要寫明：**開發中只跑相關測試檔；全量 `check.py` 只在子階段最後跑一次**（commit 前只跑 ruff、mypy 與相關測試）。
+- 大型模擬（completion、matrix）**不要放在實作子階段裡**：獨立成一個小收尾段，或由 PM 驗收時自己在背景跑。
+- 可以考慮引入 `pytest-xdist` 讓全量測試平行（要先確認測試沒有共用狀態），交給一個小任務處理。
+- 一段的範圍以「一套規則 ＋ 其測試」為上限；像 2E-2 一次三套規則（反應、攔截、姿態）就會超時。
+
+### 3.2 2E-3 報告「待 PM 決定」的處理（已接受；寫 Phase 3 規格時放進開頭的「PM 決定」表）
 
 | # | 項目 | 決定 |
 |---|---|---|
-| 1 | 接近距離改用走路步數 | 接受 |
-| 2 | `keep_distance` 不計隱蔽敵人 | 接受 |
-| 3 | 掩護只算射程內的敵人 | 接受 |
-| 4 | `hold_start` 連續 3 輪無 HP 變化就解除 | 接受 |
-| 5 | 環境權重沒有 A/B | 平衡階段 |
-| 6 | 勝率表、build 矩陣過時（最弱 build 變成 `build_assassin`） | 2D 結束時重跑矩陣（2D 驗收已含） |
-| 7 | oil_depot、swamp 的平衡測試 XPASS | 平衡完成後移除 xfail |
-| 8 | completion 快速測試約 30 秒 | 接受 |
-| 9 | Phase 2 驗收第 1、11 條 ⚠️ | 排入 2E |
-| 10 | `trpg sim completion` 有異常時結束碼為 1 | 接受 |
+| 1 | 放置陷阱時同格被拒會洩漏隱藏陷阱的存在 | 接受；目前只有玩家放陷阱。敵方陷阱屬第 5 節的待決定問題，屆時一起處理 |
+| 2 | 放置者倒下或逃離時其陷阱全部移除 | 接受 |
+| 3 | 傳送不觸發陷阱，步行與強制位移會 | 接受 |
+| 4 | 施放者型 `add_stack` 要命中才累積 | 接受 |
+| 5 | 目標型層數到期那一輪回合開始時清空 | 接受 |
+| 6 | 陷阱超過觸發深度上限時留在原地、不結算 | 接受 |
+| 7 | 陷阱觸發後被定身或暈眩則移動中止 | 接受 |
+| 8 | 陷阱係數 800、終結技期望 500、AI 陷阱機率 700 等初值；`build_trapper` 常把陷阱放在角落、灰燼地雷很少用 | 平衡階段（3.3） |
+| 9 | 矩陣報表沒有 `trigger_limit` 欄位（抽樣 360 場為 0） | 接受；平衡階段或需要時再加欄位 |
+| 10 | 傷害標籤改為「（格擋/加成 ×x）」 | 接受 |
+
+2C-4、2D、2E-1、2E-2 的「待 PM 決定」都已處理，見各計畫檔開頭的 PM 決定表（`Phase2D計畫.md` 0、4.0；`Phase2E計畫.md` 0.1、4.0、5.0）。
 
 ### 3.3 延後到平衡階段的累積待辦
 
@@ -89,6 +116,7 @@
 - 代價折抵總上限已定為 +500‰；組合器權重已搬到 `content/skill_composer.yaml`。
 - **2D 後新增**：`build_tank` 改版（嘲諷＋護盾、`guard` 行為模式）後前段類型 2 → 0、英雄 DPR 5–8 → 1–2.5（疑似 `guard` 的 damage 權重 3 讓坦克太被動）；`build_healer` 也 0 次前段。保護矩陣有數字但沒轉成勝率——要決定保護型 build 的評估指標（標準 2 是否改看保護矩陣）或調 AI／數值。
 - **2E-2 後新增**：`build_guardian`（攔截＋姿態）小樣本 8 張地圖 4 張第 1，可能偏強；姿態狀態 11 點只合階級 1，高階由組合器加護盾湊預算；反應技在 fuzz 中很少觸發（7/70）。
+- **2E-3 後新增**：build 矩陣（12 個 build、2400 場、異常 0）6.8 標準 1 通過、標準 2 不通過：`build_tank`、`build_striker` 沒有任何前段類型；`build_trapper` 的 AI 陷阱擺位差（常放角落）。
 - 控制回合統計（`CONTROL_STATUSES`）只算 stun、root、slow，未含 feared、silenced、blinded、taunted。
 - `skill_dread_gaze`、`skill_hush` 貼著預算下限 70.4%；`skill_hex_bolt` 的 `marked` 只有 1 回合；AI 會對已被標記的目標重複施放咒印飛彈。
 
