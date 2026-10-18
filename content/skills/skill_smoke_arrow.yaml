@@ -12,7 +12,7 @@ ap_cost: 1
 scaling_attr: dex
 shape: {type: square3, range: 5}
 effects:
-  - {type: create_surface, surface: darkness}
+  - {type: create_surface, surface: darkness, duration: 5}
 condition: null
 cost: {mana: 4, cooldown: 3}
 tags: [shadow, ranged, area, utility]

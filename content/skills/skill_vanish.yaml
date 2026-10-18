@@ -12,9 +12,9 @@ ap_cost: 1
 scaling_attr: dex
 shape: {type: self}
 effects:
-  - {type: apply_status, status: concealed, duration: 2, affects: self}
+  - {type: apply_status, status: concealed, duration: 4, affects: self}
 condition: null
-cost: {mana: 3, cooldown: 4}
+cost: {mana: 3, cooldown: 2}
 tags: [stealth, utility]
 narrative:
   concept: 獵人最擅長的事：讓別人找不到自己

@@ -8,11 +8,11 @@ kind: active
 skeleton: control
 category: weapon
 weapon_req: melee
-ap_cost: 1
+ap_cost: 2
 scaling_attr: str
 shape: {type: single, range: weapon}
 effects:
-  - {type: damage, multiplier_permille: 500}
+  - {type: damage, multiplier_permille: 700}
   - {type: apply_status, status: stun, duration: 1}
 condition: null
 cost: {mana: 4, cooldown: 4}

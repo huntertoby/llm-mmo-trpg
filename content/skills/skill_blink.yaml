@@ -13,6 +13,8 @@ scaling_attr: int
 shape: {type: ground_tile, range: 3}
 effects:
   - {type: teleport}
+  # 閃現之後短暫隱蔽：2B-2 預算驗證要求（只有傳送的點數低於 AP 1 技能的合格下限）
+  - {type: apply_status, status: concealed, duration: 2, affects: self}
 condition: null
 cost: {mana: 5, cooldown: 3}
 tags: [arcane, teleport, mobility]

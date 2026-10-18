@@ -9,6 +9,7 @@ import pytest
 from tests.engine.helpers import (
     caster_template,
     give_turn,
+    library,
     make_map,
     make_state,
     no_reactions,
@@ -80,11 +81,15 @@ def test_preview_expected_damage_matches_exhaustive_enumeration() -> None:
     (target,) = preview(state, action).targets
     assert target.damage is not None
     assert target.damage.expected == target.damage.expected_if_hit * target.hit_chance
-    # 2d8 + 智力 × 0.5：命中（不暴擊）的期望值 = (9 + 智力 × 0.5)，暴擊為 2 倍骰（18 + …）
+    # 骰子 + 智力 × 0.5：命中（不暴擊）的期望值 = (骰子平均 + 智力 × 0.5)，暴擊為 2 倍骰
+    # （火焰箭的骰子隨預算校準調整，從技能資料讀取）
+    dice = library().ruleset.skill_def(FIRE_BOLT).effects[0].dice
+    assert dice is not None
+    average = Fraction(dice.count * (dice.sides + 1), 2)
     attr = state.units[U1].attributes["int"]  # type: ignore[index]
     flat = Fraction(attr, 2)
     crit_share = target.crit_chance / target.hit_chance
-    expected = (1 - crit_share) * (9 + flat) + crit_share * (18 + flat)
+    expected = (1 - crit_share) * (average + flat) + crit_share * (2 * average + flat)
     assert abs(target.damage.expected_if_hit - expected) < 1  # 每顆骰各自無條件捨去 ≤ 1
 
 

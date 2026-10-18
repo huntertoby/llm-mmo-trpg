@@ -10,11 +10,11 @@ category: spell
 weapon_req: focus
 ap_cost: 1
 scaling_attr: int
-shape: {type: ground_tile, range: 3}
+shape: {type: cross, range: 3}
 effects:
   - {type: create_obstacle, object: earth_wall}
 condition: null
-cost: {mana: 5, cooldown: 2}
+cost: {mana: 5}
 tags: [earth, spell, obstacle]
 narrative:
   concept: 憑空立起一面牆，擋住視線也擋住去路

@@ -13,8 +13,10 @@ scaling_attr: int
 shape: {type: cross, range: 4}
 effects:
   - {type: create_surface, surface: water}
+  # 潮水濕滑難行：2B-2 預算驗證要求（只有水表面的點數遠低於 AP 1 技能的合格下限）
+  - {type: apply_status, status: slow, duration: 1}
 condition: null
-cost: {mana: 6, cooldown: 2}
+cost: {mana: 6}
 tags: [water, spell, area, utility]
 narrative:
   concept: 讓潮水湧上乾燥的地面，為接下來的雷電鋪路

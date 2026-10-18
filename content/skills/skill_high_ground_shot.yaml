@@ -3,7 +3,7 @@ schema_version: 1
 name_zh: 高處狙擊
 tier: 1
 rank: 1
-rarity: common
+rarity: rare
 kind: active
 skeleton: strike
 category: weapon

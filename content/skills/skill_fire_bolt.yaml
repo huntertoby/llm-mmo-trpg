@@ -12,8 +12,8 @@ ap_cost: 1
 scaling_attr: int
 shape: {type: single, range: 5}
 effects:
-  - {type: damage, dice: 2d8, element: fire}
-  - {type: apply_status, status: burning}
+  - {type: damage, dice: 1d8, element: fire}
+  - {type: apply_status, status: burning, duration: 1}
 condition: null
 cost: {mana: 6}
 tags: [fire, spell, burn]

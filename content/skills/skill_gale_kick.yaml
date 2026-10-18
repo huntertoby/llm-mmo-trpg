@@ -12,7 +12,7 @@ ap_cost: 1
 scaling_attr: str
 shape: {type: single, range: weapon}
 effects:
-  - {type: damage, multiplier_permille: 800}
+  - {type: damage, multiplier_permille: 400}
   - {type: push, distance: 2}
 condition: null
 cost: {mana: 3, cooldown: 2}

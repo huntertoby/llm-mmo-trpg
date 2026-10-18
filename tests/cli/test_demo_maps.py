@@ -17,7 +17,9 @@ DEMOS = {
 }
 
 
-SEEDS = {"bridge_chasm": 6}  # 2A-2 起敵方有技能，種子 42 的吊橋戰沒有半掩護的畫面；其餘仍用 42
+# 2A-2 起敵方有技能，種子 42 的吊橋戰沒有半掩護的畫面；2B-2 的預算校準調整了示範技能數值，
+# 種子 42 的沼澤戰在第一個環境回合前就結束，改用種子 1；其餘仍用 42
+SEEDS = {"bridge_chasm": 6, "swamp": 1}
 
 
 def _run(argv: list[str], capsys: pytest.CaptureFixture[str]) -> tuple[int, str, str]:

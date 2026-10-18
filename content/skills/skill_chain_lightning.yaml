@@ -12,7 +12,7 @@ ap_cost: 2
 scaling_attr: int
 shape: {type: chain, range: 5, jumps: 2, jump_range: 3}
 effects:
-  - {type: damage, dice: 1d10, element: lightning}
+  - {type: damage, dice: 2d8, element: lightning}
 condition: null
 cost: {mana: 10}
 tags: [lightning, spell, chain]

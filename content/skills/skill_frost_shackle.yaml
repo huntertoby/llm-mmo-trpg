@@ -3,7 +3,7 @@ schema_version: 1
 name_zh: 寒鎖
 tier: 1
 rank: 1
-rarity: common
+rarity: rare
 kind: active
 skeleton: control
 category: spell
@@ -12,7 +12,7 @@ ap_cost: 1
 scaling_attr: int
 shape: {type: single, range: 5}
 effects:
-  - {type: damage, dice: 1d6, element: ice}
+  - {type: damage, dice: 1d4, element: ice}
   - {type: apply_status, status: root, duration: 1}
 condition: null
 cost: {mana: 5, cooldown: 2}

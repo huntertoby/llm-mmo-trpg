@@ -12,7 +12,7 @@ ap_cost: 2
 scaling_attr: str
 shape: {type: cone, size: 2}
 effects:
-  - {type: damage, multiplier_permille: 1000}
+  - {type: damage, multiplier_permille: 1400}
 condition: null
 cost: {mana: 4, cooldown: 2}
 tags: [physical, melee, area]
