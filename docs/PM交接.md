@@ -1,6 +1,6 @@
 # PM 交接文件
 
-> 給接手的 PM（新對話中的 Claude）。最後更新：2026-10-18，Phase 1 全部完成時。
+> 給接手的 PM（新對話中的 Claude）。最後更新：2026-10-18，Phase 2A 全部完成時。
 > 讀完本檔再讀 `CLAUDE.md` 與 `docs/專案計畫.md`（總覽，約 1 萬字元）即可接手；設計細節依需要讀 `docs/design/` 下的主題檔。
 
 ---
@@ -23,28 +23,30 @@
 | Phase 1B 環境與戰術 | ✅ 完成 | `Phase1計畫.md` 第 6 節／`Phase1B報告.md` |
 | Phase 1C 掩護與牆壁 | ✅ 完成 | `Phase1C計畫.md`／`Phase1C報告.md` |
 | Phase 2A-1 技能資料與解譯器 | ✅ 完成 | `Phase2A計畫.md` 第 5 節／`Phase2A-1報告.md` |
-| **Phase 2A-2 條件與 AI** | 🚧 實作中 | `Phase2A計畫.md` 第 6 節 |
+| Phase 2A-2 條件與 AI | ✅ 完成 | `Phase2A計畫.md` 第 6 節／`Phase2A-2報告.md` |
+| **Phase 2B 預算與隨機組合器** | ⏭️ 下一步 | 尚未撰寫規格 |
 
 - 2A 的規則決定（使用者已同意）：範圍技能每個目標各擲命中骰；技能直接效果預設不誤傷友方，`affects: all` 為可選的「敵我不分」標記（2B 給預算折扣）；有害表面敵我不分、有益表面只幫施放者陣營、地圖表面中立；法力戰鬥中不回復；冷卻 1 ＝ 每回合一次；法術屬性倍率 0.5。
 
 - 最新 commit 在 GitHub `huntertoby/llm-mmo-trpg`（私人）的 `main`；CI（Windows／Ubuntu × Python 3.12／3.13）全綠。
-- 529 個測試；`trpg battle --map <id> --seed <n>` 可在終端機跑完整戰鬥並重播。
+- 702 個測試（另有 4 個 `slow` 平衡測試預設不跑）；17 個示範技能（`trpg skills list`）；`trpg battle --map <id> --seed <n>` 可在終端機跑完整戰鬥並重播。
 - 示範地圖：`test_flat_6x6`、`test_heights_8x8`、`bridge_chasm`、`oil_depot`、`swamp`、`ruined_fort`。
 
-## 3. 下一步：Phase 2 技能系統
+## 3. 下一步：Phase 2B
 
-依 `docs/專案計畫.md` 第 14 節 Phase 2 與 `docs/design/06-技能.md`。**拆成小階段，各由一個 agent 完成**：
+依 `docs/專案計畫.md` 第 14 節 Phase 2 與 `docs/design/06-技能.md`。技能格式與解譯器已完成（2A），剩下：
 
 | 子階段 | 內容 |
 |---|---|
-| 2A | 技能資料格式（含 `ap_cost`、`skeleton`、`rarity`、`scaling_attr`、`category`、`weapon_req`、來源欄位，見 6.4、6.9–6.13、17.5）、原語與形狀的資料檔、技能解譯器（技能 JSON → 引擎效果佇列）、單位可裝備並在戰鬥中使用技能、`preview` 與 AI 支援技能 |
-| 2B | 預算計算（6.5，含 AP 係數）、硬性上限與互斥規則（6.6）、骨架（6.9）、稀有度限制（6.12）、隨機組合器 |
-| 2C | 批次模擬器與報表（DPR、控制回合、異常）、build × 地圖類型矩陣（6.8）、補齊 8 種地圖類型（`docs/design/05-戰鬥.md` 5.1） |
+| 2B | 預算計算（6.5，含 AP 係數、`affects: all` 的折扣）、硬性上限與互斥規則（6.6）、骨架（6.9，`content/skeletons/`）、稀有度限制（6.12）、隨機組合器；新狀態（slow、root、stun、weaken、vulnerable、bleed、poison）與控制遞減；預算驗收：隨機 1,000 個技能全部可執行且無例外 |
+| 2C | 批次模擬器與報表（DPR、控制回合、異常）、build × 地圖類型矩陣（6.8）、補齊 8 種地圖類型（`docs/design/05-戰鬥.md` 5.1）、示範地圖與敵人的平衡 |
 
-**併入 2A 或之後處理的待辦（已決定，尚未實作）**：
-1. **掩護要看目標高度**：半掩護只在「掩護物格子高度 ≥ 目標所在高度」時有效（目前站在高台上的目標也會被旁邊地面的木箱掩護，不合理）。
-2. **平衡測試改為慢速測試**：`test_demo_balance.py`（約 20 秒、隨機波動 ±11%）加上 `@pytest.mark.slow`，預設不跑；CI 另開一個 job 或改由 `scripts/sim_demo_maps.py` 出報表。
-3. **AI 候選篩選要擴充**：1C 的效用 AI 只考慮前 6 名移動、有限種類的物件攻擊；加入技能後要把技能動作納入候選與評分。
+寫 2B 規格前先讀 `docs/phases/Phase2A-2報告.md` 的第 6、7 節。**2A-2 遺留、PM 已有傾向的待辦**：
+1. **平衡**：加了技能後我方勝率偏高（bridge_chasm 90%、ruined_fort 85%），敵人技能 80 場只用 62 次 → 2C 統一調整（陣容、敵人技能、英雄法力）。
+2. **AI 效能**：ruined_fort 每動作中位數約 7 ms（目標 ≤ 8 ms），餘裕小。2B 加入隨機技能後若變慢，優先做視線快取與合併重複預覽。
+3. **冷門技能**：隱匿、喚潮、石牆術幾乎不被 AI 使用（缺少對應的位置價值）。2C 的 build 矩陣會暴露這個問題；可考慮讓 AI 評估「水面＋雷電」這類組合。
+4. **條件語意**（2A-2 報告第 6 節第 4 點）：技能層級的目標條件在範圍技能上為「至少一個對象成立」——暫時接受。
+5. `legal_actions_with_areas` 新引擎 API：接受。
 
 ## 4. 已確認但尚未落地的設計決定
 
@@ -113,7 +115,8 @@ git bundle create /mnt/user-data/outputs/sync.bundle <使用者電腦的 HEAD>..
 
 1. `mcp__remote-devices__device_commit_files` 把 `/mnt/user-data/outputs/sync.bundle` 寫到 `F:\PythonProject\LLM-MMO-TRPG\sync.bundle`。
    **bundle 檔名每次都要不同**（例如 `sync-<hash>.bundle`）：同名檔案可能被快取成舊版，導致 `Already up to date` 卻沒有更新。
-2. `mcp__remote-devices__device_bash`：等檔案出現（迴圈檢查 `[ -s sync.bundle ]`）後 `git fetch sync.bundle main && git merge --ff-only FETCH_HEAD`，再 `rm sync.bundle`。**不要用 `-q`**，失敗才看得到原因。
+2. 若 git 回報 `unable to unlink … Operation not permitted`，先用 `mcp__remote-devices__device_request_delete_permission`（資料夾 `F:\\PythonProject\\LLM-MMO-TRPG`）取得刪除權限，清掉 `.git/*.lock` 與失敗 merge 留下的未追蹤檔案後重試。每個新對話都要重新取得。
+3. `mcp__remote-devices__device_bash`：等檔案出現（迴圈檢查 `[ -s sync.bundle ]`）後 `git fetch sync.bundle main && git merge --ff-only FETCH_HEAD`，再 `rm sync.bundle`。**不要用 `-q`**，失敗才看得到原因。
 3. 使用者電腦的 HEAD 用 `git log --oneline -1` 查。git 的檔案權限差異已用 `core.fileMode false` 處理。
 4. 使用者也可以自己在 Windows 執行 `git pull`（origin 已設定為 GitHub）。
 
