@@ -7,6 +7,7 @@
   （未給 ``--sides`` 時印 ``next_u32()``，給了則印擲骰結果）。
 - ``trpg content check``：載入並驗證 ``content/`` 下目前所有已知資料檔。
 - ``trpg map show <map_id>``：以文字網格印出地圖。
+- ``trpg map list``：列出所有地圖的類型、大小與是否有預設遭遇。
 - ``trpg battle --map <map_id> --seed <n> [--rounds-max 30] [--log-json <path>]
   [--ai utility|simple] [--weather <id>] [--deploy x,y;x,y] [--allies ...] [--enemies ...]``：
   雙方由效用 AI（預設）自動對戰，印出每輪戰場、環境預告與繁體中文戰鬥紀錄。
@@ -25,7 +26,7 @@ from collections.abc import Callable
 from pathlib import Path
 
 from trpg import __version__
-from trpg.cli.battle import cmd_battle, cmd_map_show, cmd_replay
+from trpg.cli.battle import cmd_battle, cmd_map_list, cmd_map_show, cmd_replay
 from trpg.cli.budget import cmd_skills_budget, cmd_skills_budget_all, library_violations
 from trpg.cli.sim import cmd_sim_maps
 from trpg.cli.skills import cmd_skills_list, cmd_skills_show
@@ -80,6 +81,7 @@ def build_parser() -> argparse.ArgumentParser:
     )
     show = map_commands.add_parser("show", help="以文字網格印出地圖")
     show.add_argument("map_id", help="地圖 ID（content/maps/<id>.yaml）")
+    map_commands.add_parser("list", help="列出所有地圖的類型、大小與是否有預設遭遇")
 
     skills_parser = commands.add_parser("skills", help="技能工具")
     skills_commands = skills_parser.add_subparsers(
@@ -284,6 +286,8 @@ def main(argv: list[str] | None = None) -> int:  # noqa: PLR0911, PLR0912
         return _cmd_rng(args.seed, args.count, args.sides)
     if args.command == "content" and args.content_command == "check":
         return _cmd_content_check()
+    if args.command == "map" and args.map_command == "list":
+        return _with_library(lambda lib: cmd_map_list(lib, sys.stdout))
     if args.command == "map" and args.map_command == "show":
         return _with_library(lambda lib: cmd_map_show(lib, args.map_id, sys.stdout))
     if args.command == "skills":

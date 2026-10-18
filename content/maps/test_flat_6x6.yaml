@@ -1,6 +1,7 @@
 # 測試地圖：6×6 平地，少量草地與泥土。
 id: test_flat_6x6
 name_zh: 測試平原
+archetype: test
 size: [6, 6]
 heights: |
   000000

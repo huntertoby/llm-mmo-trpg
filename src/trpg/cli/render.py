@@ -140,7 +140,7 @@ def render_map(map_def: MapDef, ruleset: Ruleset) -> str:
     surfaces = {s.at: surf_glyph[s.surface] for s in map_def.surfaces}
     grid = map_def.grid()
     lines = [
-        f"{map_def.name_zh}（{map_def.id}，{map_def.width}×{map_def.height}）",
+        f"{map_def.name_zh}（{map_def.id}，類型 {map_def.archetype}，{map_def.width}×{map_def.height}）",
         _header(map_def.width),
     ]
     for y, row in enumerate(grid):

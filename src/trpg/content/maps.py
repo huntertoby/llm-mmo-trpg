@@ -18,7 +18,10 @@ from trpg.content.schemas import ContentModel
 from trpg.shared.types import Surface, Team
 
 __all__ = [
+    "ARCHETYPES",
     "MAX_HEIGHT",
+    "TEST_ARCHETYPE",
+    "Archetype",
     "Encounter",
     "MapDef",
     "MapEvent",
@@ -39,6 +42,33 @@ _MIN_SIZE = 1
 _MAX_SIZE = 64
 
 type XY = tuple[int, int]
+
+
+type Archetype = Literal[
+    "bridge_chasm",
+    "oil_depot",
+    "swamp",
+    "ruined_heights",
+    "forest",
+    "corridor",
+    "open_plain",
+    "frozen_lake",
+    "test",
+]
+"""地圖類型（``docs/design/05-戰鬥.md`` 5.1 的 8 種類型，另加測試地圖用的 ``test``）。"""
+
+ARCHETYPES: tuple[str, ...] = (
+    "bridge_chasm",
+    "oil_depot",
+    "swamp",
+    "ruined_heights",
+    "forest",
+    "corridor",
+    "open_plain",
+    "frozen_lake",
+    "test",
+)
+TEST_ARCHETYPE = "test"
 
 
 class MapObjectPlacement(ContentModel):
@@ -148,6 +178,7 @@ class MapDef(ContentModel):
 
     id: str = Field(pattern=ID_PATTERN)
     name_zh: str = Field(min_length=1)
+    archetype: Archetype
     size: tuple[int, int]
     heights: str
     terrain: str

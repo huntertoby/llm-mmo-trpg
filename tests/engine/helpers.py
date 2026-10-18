@@ -51,6 +51,7 @@ def make_map(
     data: dict[str, object] = {
         "id": "test_map",
         "name_zh": "測試",
+        "archetype": "test",
         "size": [w, h],
         "heights": heights.strip(),
         "terrain": terrain.strip(),

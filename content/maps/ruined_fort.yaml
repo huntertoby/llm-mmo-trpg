@@ -6,6 +6,7 @@
 # 兩名盜賊弓手占據高台，盜賊守在缺口；我方從西側攻入。
 id: ruined_fort
 name_zh: 廢墟要塞
+archetype: ruined_heights
 size: [10, 10]
 heights: |
   0000000000
