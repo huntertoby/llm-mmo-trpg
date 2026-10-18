@@ -2,7 +2,7 @@
 #   when     技能符合這個比對時規則才適用（省略＝永遠適用）
 #   forbid   適用時，技能不得符合這個比對
 #   require  適用時，技能必須符合這個比對
-# 比對（SkillMatch）的欄位全部成立才算符合：shapes、has_cooldown、min_cooldown、statuses、
+# 比對（SkillMatch）的欄位全部成立才算符合：kinds、shapes、has_cooldown、min_cooldown、statuses、
 # primitives_any、primitives_all、effects_any、effects_all、repeated_control_group（見
 # src/trpg/content/skill_rules.py）。
 rules:
@@ -30,7 +30,7 @@ rules:
   - id: self_shape_no_enemy_effect
     name_zh: 自身形狀不打敵人
     message_zh: self 形狀不得有對象為 enemies 的效果
-    when: {shapes: [{type: self}]}
+    when: {shapes: [{type: self}], kinds: [active, reaction, stance]}   # 被動的 self 形狀是「作用在觸發對象」
     forbid: {effects_any: [{affects: [enemies]}]}
   - id: no_damage_with_ally_heal
     name_zh: 傷害與友方治療不並存

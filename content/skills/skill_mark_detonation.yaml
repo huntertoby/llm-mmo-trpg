@@ -1,0 +1,24 @@
+# 被動（Phase 2E-1，數值為初值，未經模擬）：命中已被標記的目標時引爆標記，造成暗影傷害。
+id: skill_mark_detonation
+schema_version: 1
+name_zh: 標記引爆
+tier: 2
+rank: 1
+rarity: epic
+kind: passive
+skeleton: passive
+category: spell
+weapon_req: any
+ap_cost: null
+scaling_attr: int
+shape: {type: self}
+effects:
+  - {type: damage, dice: 2d6, element: shadow, affects: enemies}
+condition: {type: target_has_status, status: marked}
+trigger: {event: on_hit, target: other, max_per_round: 1}
+cost: {mana: 2}
+tags: [shadow, spell, passive, mark]
+narrative:
+  concept: 命中帶著咒印的敵人時，讓咒印當場炸開
+  cast_flavor: 咒印發出刺眼的黑光，在目標體內炸裂
+provenance: {origin: builtin, owner_id: null, created_by: null, parents: [], bound: true, tradeable: false}

@@ -7,6 +7,7 @@ from typing import Any, Literal
 from trpg.content.library import Ruleset
 from trpg.content.rules import CoreRules
 from trpg.engine.events import EventBase
+from trpg.engine.skill_triggers import Fired, PassiveIndex, observe
 from trpg.engine.state import BattleState
 from trpg.shared.rng import Rng
 from trpg.shared.types import UnitId
@@ -47,6 +48,10 @@ class Ctx:
     - ``preview``：預覽模式（``None`` 為正式結算）。
     - ``surface_entries``：等待觸發的「表面出現在腳下」進入效果
       （見 :mod:`trpg.engine.effects.queue`）。
+    - 被動技能的觸發（見 :mod:`trpg.engine.skill_triggers`）：``fired`` 是收集到、尚未結算的觸發；
+      ``trigger_depth`` 是目前正在結算的觸發深度（動作本身為 0）；``trigger_hold`` 大於 0 時暫不
+      結算（施放技能、一次普攻的期間）；``settling`` 表示正在結算觸發（不重入）；
+      ``passives`` 是被動技能的索引（第一次需要時建立）。
     """
 
     __slots__ = (
@@ -54,11 +59,16 @@ class Ctx:
         "core",
         "decisions",
         "events",
+        "fired",
+        "passives",
         "preview",
         "rng",
         "rules",
+        "settling",
         "state",
         "surface_entries",
+        "trigger_depth",
+        "trigger_hold",
     )
 
     def __init__(
@@ -78,6 +88,11 @@ class Ctx:
         self.branched = False
         """預覽模式下是否經過任何「``min`` 與 ``max`` 會不同」的分歧點（擲骰、檢定、反應決定、
         強制命中結果）。沒有時兩種模式的結果完全相同，``preview`` 只需模擬一次。"""
+        self.fired: list[Fired] = []
+        self.trigger_depth = 0
+        self.trigger_hold = 0
+        self.settling = False
+        self.passives: PassiveIndex | None = None
         self.surface_entries: list[tuple[UnitId, tuple[int, int], int]] = []
         """表面在單位腳下被建立或改變：``(單位, 格子, 深度)``，由效果佇列在清空前依單位 ID
         觸發進入效果（Phase 1C 決定 #6）。"""
@@ -87,6 +102,7 @@ class Ctx:
         event = cls(seq=self.state.next_event_seq, round=self.state.round, **fields)
         self.state.next_event_seq += 1
         self.events.append(event)
+        observe(self, event)
         return event
 
     def finish_rng(self) -> None:

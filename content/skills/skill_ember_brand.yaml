@@ -1,0 +1,24 @@
+# 被動（Phase 2E-1，數值為初值，未經模擬）：命中時讓目標燃燒。
+id: skill_ember_brand
+schema_version: 1
+name_zh: 餘燼烙印
+tier: 1
+rank: 1
+rarity: epic
+kind: passive
+skeleton: passive
+category: spell
+weapon_req: any
+ap_cost: null
+scaling_attr: int
+shape: {type: self}
+effects:
+  - {type: apply_status, status: burning, duration: 3, affects: enemies}
+condition: null
+trigger: {event: on_hit, target: other, max_per_round: 1}
+cost: {mana: 2}
+tags: [fire, spell, passive]
+narrative:
+  concept: 每一次命中都在敵人身上留下一點燒不盡的餘燼
+  cast_flavor: 傷口邊緣冒出細小的火星，慢慢蔓延開來
+provenance: {origin: builtin, owner_id: null, created_by: null, parents: [], bound: true, tradeable: false}

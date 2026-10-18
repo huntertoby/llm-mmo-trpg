@@ -316,7 +316,8 @@ def test_shielded_cannot_be_applied_by_apply_status() -> None:
         skill_budget(s, lib())
 
 
-def test_passive_skills_have_no_budget_formula_yet() -> None:
-    s = skill(kind="passive", ap_cost=None, skeleton="passive")
-    with pytest.raises(BudgetError, match="passive"):
-        skill_budget(s, lib())
+def test_passive_budget_uses_the_trigger_coefficient() -> None:
+    library = lib()
+    report = skill_budget(library.skills["skill_ember_brand"], library)
+    assert report.coefficient_label is not None and "on_hit" in report.coefficient_label
+    assert F(7, 10) <= report.ratio <= 1

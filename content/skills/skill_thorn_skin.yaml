@@ -1,0 +1,24 @@
+# 被動（Phase 2E-1，數值為初值，未經模擬）：受傷時對近身的傷害來源反彈物理傷害（遠程攻擊者不受影響）。
+id: skill_thorn_skin
+schema_version: 1
+name_zh: 荊棘之膚
+tier: 1
+rank: 1
+rarity: epic
+kind: passive
+skeleton: passive
+category: spell
+weapon_req: any
+ap_cost: null
+scaling_attr: str
+shape: {type: self}
+effects:
+  - {type: damage, dice: 2d4, element: physical, affects: enemies}
+condition: null
+trigger: {event: on_damaged, target: other, max_per_round: 1, max_distance: 1}
+cost: {mana: 0}
+tags: [physical, spell, passive]
+narrative:
+  concept: 皮膚下長出尖刺，貼身的攻擊者自己也要付出代價
+  cast_flavor: 尖刺從你的皮膚下彈出，扎進攻擊者的手
+provenance: {origin: builtin, owner_id: null, created_by: null, parents: [], bound: true, tradeable: false}

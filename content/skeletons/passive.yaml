@@ -1,9 +1,13 @@
-# 2B 停用：需要觸發時機系統（被動的執行）。
+# 被動（Phase 2E-1 啟用）：觸發時機（skill_triggers.yaml）加效果。
+# 形狀 self 只表示「作用在 trigger.target 指定的單位」，不是範圍；效果不擲命中（自動命中），狀態照常擲抵抗。
+# 預算：tier_budget × 觸發時機的係數 × (1000 ＋ 代價折抵) ÷ 1000（見 skill_budget.yaml 的 passive_extra_trigger_permille）。
+# min_rarity: epic（Phase 2E 決定 H，6.12「史詩：觸發」）。
 id: passive
 name_zh: 被動
 description_zh: 觸發時機加效果。
 kinds: [passive]
-enabled: false
+enabled: true
+min_rarity: epic
 shapes: [self]
-core: {primitives: [damage, heal, apply_status]}
+core: {primitives: [damage, heal, shield, apply_status]}
 secondary: {max_count: 1}

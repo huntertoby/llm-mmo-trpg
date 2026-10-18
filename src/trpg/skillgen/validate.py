@@ -64,6 +64,7 @@ def validate_skill(skill: SkillDef, library: ContentLibrary) -> list[Violation]:
     if reference:
         return reference
     out = _cap_violations(skill, library)
+    out += _passive_violations(skill, library)
     out += _exclusion_violations(skill, library)
     report, budget_out = _budget_violations(skill, library)
     out += _skeleton_violations(skill, library, report)
@@ -85,6 +86,7 @@ def _reference_violations(skill: SkillDef, library: ContentLibrary) -> list[Viol
         status_ids={s.id for s in rules.statuses.statuses},
         object_ids={o.id for o in rules.objects.objects},
         conditions=rules.conditions.by_id(),
+        triggers=rules.skill_triggers.by_id(),
     )
     if skill.skeleton not in library.skeletons:
         problems.append(f"skeleton：沒有骨架資料檔 {skill.skeleton!r}")
@@ -147,6 +149,39 @@ def _rule_rewrite_violations(skill: SkillDef, library: ContentLibrary) -> list[V
     return out
 
 
+def _passive_violations(skill: SkillDef, library: ContentLibrary) -> list[Violation]:
+    """被動技能（2E-1 3.2）：法術技、任何武器；``target: self`` 時效果只能作用在持有者自己。
+
+    ``trigger`` 的有無、時機存在、``n``、``target: other`` 與 ``has_other``、
+    ``max_per_round`` 的範圍由 schema 與 :func:`trpg.content.skills.skill_problems` 檢查。
+    """
+    trigger = skill.trigger
+    if skill.kind != "passive" or trigger is None:
+        return []
+    out: list[Violation] = []
+    if skill.category != "spell" or skill.weapon_req != "any":
+        out.append(
+            Violation(
+                skill.id,
+                "passive.category",
+                "被動技能必須是法術技且 weapon_req: any（觸發的效果自動命中，不看武器）",
+            )
+        )
+    if trigger.target == "self":
+        for index, effect in enumerate(skill.effects):
+            affects = resolved_affects(library.ruleset, effect)
+            if affects != "self":
+                out.append(
+                    Violation(
+                        skill.id,
+                        "passive.affects",
+                        f"effects[{index}]（{effect.type}）：trigger.target 為 self 時，"
+                        f"效果的 affects 只能是 self，收到 {affects}",
+                    )
+                )
+    return out
+
+
 # ---------------------------------------------------------------------------
 # 4.4 互斥規則
 # ---------------------------------------------------------------------------
@@ -181,6 +216,8 @@ def _repeated_control_group(skill: SkillDef, library: ContentLibrary) -> bool:
 
 
 def _match_shape_cost(skill: SkillDef, match: SkillMatch) -> bool:
+    if match.kinds is not None and skill.kind not in match.kinds:
+        return False
     if match.shapes is not None and not any(_shape_matches(skill, p) for p in match.shapes):
         return False
     if match.has_cooldown is not None and (skill.cost.cooldown is not None) != match.has_cooldown:
@@ -445,6 +482,13 @@ def _rarity_violations(skill: SkillDef, library: ContentLibrary) -> list[Violati
     needs.append(
         ("shape", f"形狀 {skill.shape.type}", rules.shapes.by_id()[skill.shape.type].min_rarity)
     )
+    skeleton = library.skeletons.get(skill.skeleton)
+    if skeleton is not None:
+        needs.append(("skeleton", f"骨架 {skeleton.id}", skeleton.min_rarity))
+    if skill.trigger is not None:
+        timing = rules.skill_triggers.by_id().get(skill.trigger.event)
+        if timing is not None:
+            needs.append(("trigger", f"觸發時機 {timing.id}", timing.min_rarity))
     primitives, statuses, conditions = (
         rules.primitives.by_id(),
         rules.statuses.by_id(),

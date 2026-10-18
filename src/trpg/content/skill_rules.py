@@ -25,6 +25,7 @@ from trpg.content.skills import (
     SKELETON_IDS,
     Affects,
     SkillKind,
+    SkillRarity,
 )
 
 __all__ = [
@@ -81,6 +82,8 @@ class BudgetRules(ContentModel):
     max_ratio_permille: int = Field(ge=1, le=_PERMILLE_MAX)
     ap_coefficient_permille: dict[int, int]
     reaction_coefficient_permille: int = Field(ge=1)
+    passive_extra_trigger_permille: int = Field(default=800, ge=1, le=1000)
+    """被動技能的 ``trigger.max_per_round`` 每多 1 次，可用預算 × 這個值（‰）。"""
     condition_permille: dict[Literal["none", "common", "harsh"], int]
     all_target_permille: int = Field(ge=1, le=1000)
     """``affects: all``（敵我不分）的對象係數。"""
@@ -194,8 +197,11 @@ class SkillMatch(ContentModel):
     - ``primitives_any``：有其中任一個原語；``primitives_all``：每個原語都有。
     - ``effects_any``：有效果符合其中任一個；``effects_all``：每個比對都有效果符合。
     - ``repeated_control_group``：``True`` 表示施加了兩個以上相同 ``control_group`` 的狀態。
+    - ``kinds``：技能的 ``kind`` 是其中之一（2E-1：被動的 ``self`` 形狀是「作用在觸發對象」，
+      不受 ``self`` 形狀不打敵人的限制）。
     """
 
+    kinds: tuple[SkillKind, ...] | None = None
     shapes: tuple[ShapePattern, ...] | None = None
     has_cooldown: bool | None = None
     min_cooldown: int | None = Field(default=None, ge=1)
@@ -284,6 +290,7 @@ class SkeletonDef(ContentModel):
     - ``kinds``：骨架適用的技能 ``kind``。
     - ``forbid_affects``：技能不得有對這些對象的效果（光環不得傷害敵方）。
     - ``requires_condition``：技能或效果必須有條件。
+    - ``min_rarity``：使用此骨架的最低稀有度（省略為 common）。
     """
 
     id: str = Field(pattern=ID_PATTERN)
@@ -296,6 +303,8 @@ class SkeletonDef(ContentModel):
     secondary: SecondaryRules = Field(default_factory=SecondaryRules)
     forbid_affects: tuple[Affects, ...] = ()
     requires_condition: bool = False
+    min_rarity: SkillRarity = "common"
+    """使用此骨架的最低稀有度（2E：被動 epic；之後的反應技、姿態、蓄力／終結、陷阱 rare）。"""
 
     @model_validator(mode="after")
     def _check(self) -> SkeletonDef:

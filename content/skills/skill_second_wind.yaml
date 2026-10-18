@@ -1,0 +1,24 @@
+# 被動（Phase 2E-1，數值為初值，未經模擬）：回合開始時若血量過半已失去，治療自己。
+id: skill_second_wind
+schema_version: 1
+name_zh: 回氣
+tier: 1
+rank: 1
+rarity: epic
+kind: passive
+skeleton: passive
+category: spell
+weapon_req: any
+ap_cost: null
+scaling_attr: wis
+shape: {type: self}
+effects:
+  - {type: heal, dice: 3d6, affects: self}
+condition: {type: self_hp_below, permille: 500}
+trigger: {event: on_turn_start, target: self, max_per_round: 1}
+cost: {mana: 2}
+tags: [nature, spell, passive, heal]
+narrative:
+  concept: 傷勢沉重時，每次回合開始都能擠出一口氣緩過來
+  cast_flavor: 你深吸一口氣，痠痛的肌肉重新有了力氣
+provenance: {origin: builtin, owner_id: null, created_by: null, parents: [], bound: true, tradeable: false}

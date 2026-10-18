@@ -66,6 +66,7 @@ from trpg.engine.rules.movement import (
 )
 from trpg.engine.rules.statuses import base_attribute, effective_attribute, is_rooted
 from trpg.engine.setup import BattleSetup, BattleSetupError
+from trpg.engine.skill_triggers import collect_move, settle
 from trpg.engine.skills.interpreter import use_skill
 from trpg.engine.skills.targeting import (
     SkillArea,
@@ -514,6 +515,9 @@ def _do_move(ctx: Ctx, unit: UnitState, action: Action) -> None:
         if not unit.alive or unit.has_status(PRONE):
             break
     _slide_back_if_stacked(ctx, unit, walked)
+    if len(walked) > 1 and unit.alive:  # 被動技能 on_move：一次主動移動動作完成後（強制位移不算）
+        collect_move(ctx, unit)
+        settle(ctx)
 
 
 def _slide_back_if_stacked(ctx: Ctx, unit: UnitState, walked: list[XY]) -> None:

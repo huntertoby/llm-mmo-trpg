@@ -269,6 +269,7 @@ def test_each_enabled_skeleton_has_a_valid_example() -> None:
         "displace": variant("skill_gale_kick"),
         "aura": variant("skill_sanctuary"),
         "combo": variant("skill_execute", skeleton="combo"),
+        "passive": variant("skill_ember_brand"),
     }
     assert set(examples) == {s.id for s in lib().skeletons.values() if s.enabled}
     for skeleton_id, example in examples.items():
@@ -277,7 +278,7 @@ def test_each_enabled_skeleton_has_a_valid_example() -> None:
 
 
 @pytest.mark.parametrize(
-    "skeleton_id", ["builder_finisher", "trap", "summon", "reaction", "stance", "passive"]
+    "skeleton_id", ["builder_finisher", "trap", "summon", "reaction", "stance"]
 )
 def test_disabled_skeletons_are_rejected(skeleton_id: str) -> None:
     assert not lib().skeletons[skeleton_id].enabled

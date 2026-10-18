@@ -36,6 +36,12 @@ def library_violations(library: ContentLibrary) -> list[Violation]:
     return out
 
 
+def _cost_label(skill: SkillDef) -> str:
+    if skill.trigger is not None:
+        return f"觸發 {skill.trigger.event}"
+    return f"AP {skill.ap_cost}"
+
+
 def _verdict(report: BudgetReport) -> str:
     if report.over_budget:
         return "超出預算"
@@ -66,7 +72,7 @@ def print_skill_budget(library: ContentLibrary, skill: SkillDef, out: TextIO) ->
     """技能的預算明細與驗證結果；有違規時回傳 1。"""
     print(
         f"{skill.name_zh}（{skill.id}）  階級 T{skill.tier}  稀有度 {_RARITY[skill.rarity]}"
-        f"  骨架 {skill.skeleton}  AP {skill.ap_cost}",
+        f"  骨架 {skill.skeleton}  {_cost_label(skill)}",
         file=out,
     )
     violations = validate_skill(skill, library)
@@ -98,7 +104,8 @@ def _print_totals(report: BudgetReport, out: TextIO) -> None:
     print(f"  total ＝ raw × 條件 × 協同 ＝ {_num(report.total)}", file=out)
     parts = "、".join(f"{label} +{value}‰" for label, value in report.allowance_parts) or "無"
     print(
-        f"  可用預算 ＝ tier_budget {report.tier_budget} × AP 係數 {_num(report.ap_coefficient)}"
+        f"  可用預算 ＝ tier_budget {report.tier_budget}"
+        f" × {report.coefficient_label} {_num(report.ap_coefficient)}"
         f" × (1000 + 折抵 {report.allowance_permille}‰) ÷ 1000 ＝ {_num(report.usable)}",
         file=out,
     )
@@ -138,7 +145,8 @@ def cmd_skills_budget_all(library: ContentLibrary, out: TextIO) -> int:
         rules = "、".join(v.rule for v in violations) or "—"
         print(
             f"  {pad(skill.id, 26)}{pad(skill.name_zh, 12)}{pad(str(skill.tier), 3)}"
-            f"{pad(str(skill.ap_cost), 4)}{pad(cells[0], 8)}{pad(cells[1], 8)}"
+            f"{pad('被動' if skill.kind == 'passive' else str(skill.ap_cost), 4)}"
+            f"{pad(cells[0], 8)}{pad(cells[1], 8)}"
             f"{pad(cells[3], 11)}{pad(cells[2], 8)}{rules}",
             file=out,
         )

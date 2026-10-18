@@ -32,6 +32,12 @@ from trpg.engine.events import (
 from trpg.engine.objectives import check_battle_end, check_round_end, end_battle
 from trpg.engine.results import ResolveResult
 from trpg.engine.rules.statuses import move_points_for_turn, skip_turn_status
+from trpg.engine.skill_triggers import (
+    collect_turn_end,
+    collect_turn_start,
+    reset_round_counts,
+    settle,
+)
 from trpg.engine.state import StatusInstance, UnitState
 from trpg.shared.types import Surface, UnitId
 
@@ -99,6 +105,9 @@ def start_turn(ctx: Ctx, unit_id: UnitId) -> None:
     surface_effects = _surface_turn_start(ctx, unit)
     if surface_effects and unit.alive:
         execute(ctx, surface_effects)
+    if unit.alive:  # 被動技能 on_turn_start：在狀態與表面的回合開始效果之後
+        collect_turn_start(ctx, unit)
+        settle(ctx)
 
 
 def skip_turn_if_stunned(ctx: Ctx) -> bool:
@@ -166,6 +175,10 @@ def end_turn(ctx: Ctx) -> None:
     state = ctx.state
     assert state.active_unit is not None
     unit = state.units[state.active_unit]
+    collect_turn_end(ctx, unit)  # 被動技能 on_turn_end：在狀態倒數之前
+    settle(ctx)
+    if not unit.alive:
+        return  # 被自己的觸發擊倒：已離開先攻順序，回合流程接著開始下一位
     kept: list[StatusInstance] = []
     expired: list[str] = []
     for status in unit.statuses:
@@ -207,6 +220,7 @@ def _end_round(ctx: Ctx) -> bool:
     state.round += 1
     for unit in state.units.values():
         unit.reactions_used = 0
+    reset_round_counts(iter(state.units_sorted()))
     ctx.emit(RoundStarted)
     return False
 
@@ -234,7 +248,8 @@ def advance_turn(ctx: Ctx) -> None:
 
 
 def finish_resolution(ctx: Ctx) -> ResolveResult:
-    """一次結算的收尾：勝負判定、行動者離場時換下一位、寫回亂數狀態。"""
+    """一次結算的收尾：（尚未結算的）被動觸發、勝負判定、行動者離場時換下一位、寫回亂數狀態。"""
+    settle(ctx)
     if not check_battle_end(ctx) and ctx.state.active_unit is None:
         advance_turn(ctx)
     ctx.finish_rng()

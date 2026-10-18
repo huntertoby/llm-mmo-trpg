@@ -127,6 +127,10 @@ class CoreRules(ContentModel):
     # 效果佇列
     max_chain_depth: int = Field(ge=0)
 
+    # 技能觸發（2E-1）
+    max_trigger_depth: int = Field(default=3, ge=0)
+    """技能觸發的連鎖深度上限：動作本身為 0，由觸發產生的觸發深度 +1，超過上限不結算。"""
+
     @model_validator(mode="after")
     def _check_tier_budget(self) -> CoreRules:
         if sorted(self.tier_budget) != [1, 2, 3, 4, 5]:

@@ -23,7 +23,7 @@ import re
 from collections import Counter
 from collections.abc import Callable, Iterable
 from dataclasses import dataclass
-from typing import Any, Literal
+from typing import TYPE_CHECKING, Any, Literal
 
 from pydantic import Field, field_validator, model_validator
 
@@ -31,6 +31,9 @@ from trpg.content.battle import ID_PATTERN, Dice
 from trpg.content.rules import SkillSlots
 from trpg.content.schemas import ContentModel
 from trpg.shared.types import Attribute, Element, Surface
+
+if TYPE_CHECKING:
+    from trpg.content.skill_triggers import SkillTriggerDef
 
 __all__ = [
     "AFFECTS_VALUES",
@@ -58,6 +61,7 @@ __all__ = [
     "SkillCost",
     "SkillDef",
     "SkillTable",
+    "TriggerSpec",
     "condition_text",
     "default_affects",
     "rarity_rank",
@@ -508,6 +512,34 @@ class Provenance(ContentModel):
     tradeable: bool = False
 
 
+class TriggerSpec(ContentModel):
+    """被動技能的觸發設定（``docs/phases/Phase2E計畫.md`` 3.2）。
+
+    - ``event``：``content/skill_triggers.yaml`` 的 ID。
+    - ``n``：只有 ``every_n_hits`` 使用（2 或 3）。
+    - ``target``：效果作用的單位——``self``（持有者）或 ``other``（該時機的另一方）。
+    - ``max_per_round``：每輪最多觸發幾次（每輪開始時重設）。
+    - ``max_distance``：``target: other`` 時，另一方與持有者的曼哈頓距離上限。
+    """
+
+    event: str = Field(pattern=ID_PATTERN)
+    n: int | None = None
+    target: Literal["self", "other"] = "self"
+    max_per_round: int = Field(default=1, ge=1, le=3)
+    max_distance: int | None = Field(default=None, ge=1)
+
+    @model_validator(mode="after")
+    def _check(self) -> TriggerSpec:
+        if self.event == "every_n_hits":
+            if self.n not in (2, 3):
+                raise ValueError(f"every_n_hits 的 n 必須是 2 或 3，收到 {self.n}")
+        elif self.n is not None:
+            raise ValueError(f"只有 every_n_hits 使用 n，{self.event} 不可填 n")
+        if self.max_distance is not None and self.target != "other":
+            raise ValueError("max_distance 只能搭配 target: other")
+        return self
+
+
 class SkillDef(ContentModel):
     """一個技能（``content/skills/<id>.yaml``）。"""
 
@@ -527,6 +559,7 @@ class SkillDef(ContentModel):
     shape: ShapeSpec
     effects: tuple[EffectSpec, ...]
     condition: ConditionSpec | None = None
+    trigger: TriggerSpec | None = None
     cost: SkillCost = Field(default_factory=SkillCost)
     tags: tuple[str, ...] = ()
     narrative: NarrativeDef = Field(default_factory=NarrativeDef)
@@ -565,6 +598,10 @@ class SkillDef(ContentModel):
                 )
         elif self.ap_cost is not None:
             raise ValueError(f"{self.kind} 技能的 ap_cost 必須為 null（不花 AP）")
+        if self.kind == "passive" and self.trigger is None:
+            raise ValueError("被動技能（kind: passive）必須有 trigger")
+        if self.kind != "passive" and self.trigger is not None:
+            raise ValueError(f"只有被動技能可以有 trigger，收到 kind: {self.kind}")
         allowed = ("melee", "ranged") if self.category == "weapon" else ("focus", "any")
         if self.weapon_req not in allowed:
             name = "武器技" if self.category == "weapon" else "法術技"
@@ -749,6 +786,23 @@ def _filled_by_category(skill: SkillDef, primitive: PrimitiveDef, name: str) -> 
     return primitive.id == "damage" and name == "dice" and skill.category == "weapon"
 
 
+def _trigger_problems(skill: SkillDef, triggers: dict[str, SkillTriggerDef]) -> list[str]:
+    """被動技能的觸發設定：時機存在、``target: other`` 只用在有另一方的時機。"""
+    spec = skill.trigger
+    if spec is None:
+        return []
+    definition = triggers.get(spec.event)
+    if definition is None:
+        known = ", ".join(sorted(triggers))
+        return [f"trigger.event：未知的觸發時機 {spec.event!r}（可用：{known}）"]
+    if spec.target == "other" and not definition.has_other:
+        return [
+            f"trigger.target：觸發時機 {definition.id}（{definition.name_zh}）沒有另一方，"
+            "target 只能是 self"
+        ]
+    return []
+
+
 def skill_problems(
     skill: SkillDef,
     shapes: dict[str, ShapeDef],
@@ -757,8 +811,12 @@ def skill_problems(
     status_ids: set[str],
     object_ids: set[str],
     conditions: dict[str, ConditionDef],
+    triggers: dict[str, SkillTriggerDef] | None = None,
 ) -> list[str]:
-    """技能引用的形狀、原語、條件、狀態、物件是否存在、參數是否在範圍內（繁體中文，空串列為通過）。"""
+    """技能引用的形狀、原語、條件、狀態、物件是否存在、參數是否在範圍內（繁體中文，空串列為通過）。
+
+    ``triggers``：觸發時機表（省略時不檢查被動的 ``trigger``）。
+    """
     problems: list[str] = []
     shape = shapes.get(skill.shape.type)
     if shape is None:
@@ -767,6 +825,8 @@ def skill_problems(
     else:
         problems += _int_param_problems("shape", skill.shape.param_values(), shape)
     refs = _Refs(primitives, status_ids, object_ids, conditions)
+    if triggers is not None:
+        problems += _trigger_problems(skill, triggers)
     if skill.condition is not None:
         problems += _condition_problems("condition", skill.condition, refs)
     for index, effect in enumerate(skill.effects):

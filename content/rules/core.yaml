@@ -77,3 +77,6 @@ budget_reference_weapon_damage: 7      # 武器技的預算基準：倍率 100% 
 
 # --- 效果佇列 ---
 max_chain_depth: 3            # 連鎖深度上限
+
+# --- 技能觸發（Phase 2E-1，docs/phases/Phase2E計畫.md 3.3）---
+max_trigger_depth: 3          # 技能觸發的連鎖深度上限（動作本身為 0；觸發產生的觸發 +1；超過就不結算）

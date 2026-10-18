@@ -22,6 +22,7 @@ from trpg.engine.results import Pending
 from trpg.engine.rules.combat import ForcedOutcome, attack_problem, roll_attack
 from trpg.engine.rules.geometry import XY, manhattan
 from trpg.engine.rules.statuses import effective_attribute, skip_turn_status
+from trpg.engine.skill_triggers import holding
 from trpg.engine.state import UnitState
 from trpg.shared.errors import TrpgError
 
@@ -136,8 +137,13 @@ def perform_unit_attack(ctx: Ctx, attacker: UnitState, target: UnitState, *, pri
     """一次普攻：命中判定 → （命中時）格擋反應 → 傷害。
 
     ``primary``：是否為動作本身的攻擊（預覽時主要攻擊視為命中，次要攻擊如藉機攻擊在
-    ``min`` 模式視為失手、``max`` 模式視為暴擊）。
+    ``min`` 模式視為失手、``max`` 模式視為暴擊）。被動技能的觸發等傷害結算完才處理。
     """
+    with holding(ctx):
+        _attack_once(ctx, attacker, target, primary=primary)
+
+
+def _attack_once(ctx: Ctx, attacker: UnitState, target: UnitState, *, primary: bool) -> None:
     forced: ForcedOutcome | None = None
     if ctx.preview is not None:
         ctx.mark_branch()

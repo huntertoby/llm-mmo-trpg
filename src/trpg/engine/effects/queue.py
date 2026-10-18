@@ -4,6 +4,8 @@
   （排序穩定：鍵相同時保留產生順序）。
 - 每個效果結算後產生事件；事件經 :mod:`trpg.engine.triggers` 對照表觸發新效果，``depth + 1``。
 - ``depth`` 超過 ``max_chain_depth`` 的效果不入列，改產生 ``chain_limit_reached`` 事件。
+- 佇列清空之後，才依序結算這段期間收集到的被動技能觸發（:mod:`trpg.engine.skill_triggers`）；
+  觸發的效果以新的 ``execute`` 結算（``depth`` 從 0 開始），觸發深度另計。
 - 表面在單位腳下被建立或改變時（``Ctx.surface_entries``），佇列清空前依 **單位 ID** 順序觸發該表面
   的進入效果（燃燒、冰面滑倒檢定……），其後續效果照常入列（Phase 1C 決定 #6）。
 """
@@ -17,6 +19,7 @@ from trpg.engine import triggers
 from trpg.engine.context import Ctx
 from trpg.engine.effects.models import Effect, EffectBase
 from trpg.engine.events import ChainLimitReached, EventBase
+from trpg.engine.skill_triggers import settle
 from trpg.shared.errors import TrpgError
 
 __all__ = ["EffectHandler", "execute", "handler_for", "register_effect", "sort_effects"]
@@ -74,6 +77,7 @@ def execute(ctx: Ctx, effects: Sequence[Effect] | Sequence[EffectBase]) -> None:
             follow_ups.extend(triggers.effects_for(ctx, event, effect.depth + 1))
         for follow_up in sort_effects(follow_ups):
             _enqueue(ctx, queue, follow_up, max_depth)
+    settle(ctx)  # 佇列清空之後才結算被動技能的觸發（施放技能與普攻期間暫緩，見 holding）
 
 
 def _flush_surface_entries(ctx: Ctx, queue: deque[EffectBase], max_depth: int) -> None:

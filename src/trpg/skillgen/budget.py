@@ -6,6 +6,7 @@
     raw       ＝ Σ 效果點數
     total     ＝ raw × 技能條件倍率 × Π 協同係數
     可用預算  ＝ tier_budget[tier] × AP係數 × (1000 ＋ 代價折抵‰) ÷ 1000
+               （被動技能以觸發時機的係數取代 AP 係數，見 :func:`_passive_coefficient`）
     合格      ＝ 0.7 × 可用預算 ≤ total ≤ 1.0 × 可用預算
 
 「強度係數」已併入各原語的點數算法（骰子平均值、武器倍率、距離、持續 ÷ 預設持續，見
@@ -67,6 +68,8 @@ class BudgetReport:
     """折抵加總的上限（‰）。"""
     min_ratio: Fraction
     max_ratio: Fraction
+    coefficient_label: str = "AP 係數"
+    """可用預算公式中係數的名稱：主動技能為 AP 係數、被動為觸發係數（2E-1）。"""
 
     @property
     def allowance_raw_permille(self) -> int:
@@ -241,6 +244,26 @@ def _allowance_parts(skill: SkillDef, budget: BudgetRules) -> tuple[tuple[str, i
     return tuple(parts)
 
 
+def _passive_coefficient(skill: SkillDef, library: ContentLibrary) -> tuple[Fraction, str]:
+    """被動技能的係數：觸發時機的係數（``every_n_hits`` 依 n），``max_per_round`` 每多 1 次再乘
+    ``passive_extra_trigger_permille``。"""
+    trigger = skill.trigger
+    if trigger is None:
+        raise BudgetError(f"被動技能 {skill.id} 沒有 trigger，無法計算預算")
+    definition = library.ruleset.skill_triggers.by_id().get(trigger.event)
+    if definition is None:
+        raise BudgetError(f"未知的觸發時機 {trigger.event!r}")
+    if (
+        definition.budget_by_n_permille is not None
+        and trigger.n not in definition.budget_by_n_permille
+    ):
+        raise BudgetError(f"觸發時機 {trigger.event} 的 n 必須是 2 或 3，收到 {trigger.n}")
+    coefficient = Fraction(definition.coefficient_permille(trigger.n), _PERMILLE)
+    extra = Fraction(library.budget.passive_extra_trigger_permille, _PERMILLE)
+    coefficient *= extra ** (trigger.max_per_round - 1)
+    return coefficient, f"觸發係數（{definition.id}）"
+
+
 def _ap_coefficient(skill: SkillDef, budget: BudgetRules) -> Fraction:
     if skill.kind == "reaction":
         return Fraction(budget.reaction_coefficient_permille, _PERMILLE)
@@ -274,6 +297,10 @@ def skill_budget(skill: SkillDef, library: ContentLibrary) -> BudgetReport:
     tier_budget = rules.core.tier_budget.get(skill.tier)
     if tier_budget is None:
         raise BudgetError(f"沒有階級 {skill.tier} 的預算（tier_budget）")
+    if skill.kind == "passive":
+        coefficient, label = _passive_coefficient(skill, library)
+    else:
+        coefficient, label = _ap_coefficient(skill, budget), "AP 係數"
     return BudgetReport(
         skill_id=skill.id,
         tier=skill.tier,
@@ -284,9 +311,10 @@ def skill_budget(skill: SkillDef, library: ContentLibrary) -> BudgetReport:
         synergies=synergies,
         total=total,
         tier_budget=tier_budget,
-        ap_coefficient=_ap_coefficient(skill, budget),
+        ap_coefficient=coefficient,
         allowance_parts=_allowance_parts(skill, budget),
         allowance_cap=budget.allowance.total_cap,
         min_ratio=Fraction(budget.min_ratio_permille, _PERMILLE),
         max_ratio=Fraction(budget.max_ratio_permille, _PERMILLE),
+        coefficient_label=label,
     )

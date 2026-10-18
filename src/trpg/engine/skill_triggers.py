@@ -1,0 +1,311 @@
+"""被動技能的觸發分派（Phase 2E-1，``docs/phases/Phase2E計畫.md`` 3.3）。
+
+做法：
+
+1. **收集**：:meth:`~trpg.engine.context.Ctx.emit` 把每個事件交給 :func:`observe`；它看出
+   ``attack_rolled``（命中、暴擊、自然 20、每命中 n 次）與 ``damage_dealt``（受傷、擊倒），
+   為持有對應被動技能的單位記下一筆 :class:`Fired`。回合開始／結束與移動後由回合流程與移動
+   動作直接呼叫 :func:`collect_turn_start`、:func:`collect_turn_end`、:func:`collect_move`。
+2. **延後結算**：觸發不在事件發生當下結算，而是等一個效果佇列清空（:func:`settle`；施放技能與普攻
+   則等整個技能／整次攻擊結束，見 :func:`holding`）。同一批依「事件順序 → 持有者單位 ID → 技能 ID」
+   排序；觸發的效果以新的效果佇列結算，其間收集到的觸發 **深度 +1**，成為下一批。
+3. **檢查**：持有者在場、沒有 ``skip_turn``、沒被沉默、每輪次數、另一方、距離、技能條件、代價；
+   通過後若深度超過 ``max_trigger_depth`` 發出 ``trigger_limit_reached``（不付代價、不計次數），
+   否則付代價、發出 ``skill_triggered`` 並結算技能效果（自動命中，歸給持有者）。
+
+另一方倒下（``on_kill``）時，效果的對象清單是空的：傷害與狀態對倒下的單位無效，被動骨架沒有
+以位置為準的效果（2E-1 的保守處理）。
+
+這個模組在載入時不匯入效果佇列與技能解譯器（它們反過來匯入 :mod:`trpg.engine.context`），
+:func:`settle` 在呼叫時才延後匯入。
+"""
+
+from __future__ import annotations
+
+from collections.abc import Iterator
+from contextlib import contextmanager
+from dataclasses import dataclass
+from typing import TYPE_CHECKING
+
+from trpg.content.skills import SkillDef
+from trpg.engine.events import (
+    AttackRolled,
+    DamageDealt,
+    EventBase,
+    SkillCooldownChanged,
+    SkillTriggered,
+    TriggerLimitReached,
+)
+from trpg.engine.rules.geometry import manhattan
+from trpg.engine.rules.statuses import blocks_spells, skip_turn_status
+from trpg.engine.skills.conditions import skill_condition_met
+from trpg.engine.skills.targeting import hp_cost
+from trpg.engine.state import UnitState
+from trpg.shared.types import UnitId
+
+if TYPE_CHECKING:
+    from trpg.engine.context import Ctx
+
+__all__ = [
+    "Fired",
+    "PassiveIndex",
+    "collect_move",
+    "collect_turn_end",
+    "collect_turn_start",
+    "holding",
+    "observe",
+    "reset_round_counts",
+    "settle",
+]
+
+_OBSERVED = frozenset({"attack_rolled", "damage_dealt"})
+
+
+@dataclass(frozen=True, slots=True)
+class Fired:
+    """一筆待結算的觸發：``seq`` 是引起它的事件順序（直接呼叫時為當下的事件序號）。"""
+
+    seq: int
+    owner_id: UnitId
+    skill_id: str
+    event: str
+    other_id: UnitId | None
+    depth: int
+
+
+class PassiveIndex:
+    """戰鬥中所有單位裝備的被動技能，依觸發時機分組（單位 ID、技能 ID 排序）。"""
+
+    __slots__ = ("any", "by_event", "by_unit")
+
+    def __init__(self, ctx: Ctx) -> None:
+        self.by_event: dict[str, list[tuple[UnitId, SkillDef]]] = {}
+        self.by_unit: dict[UnitId, list[SkillDef]] = {}
+        rules = ctx.rules
+        for unit in ctx.state.units_sorted():
+            for skill_id in sorted(unit.skills):
+                skill = rules.skill_def(skill_id)
+                if skill.trigger is None:
+                    continue
+                self.by_event.setdefault(skill.trigger.event, []).append((unit.id, skill))
+                self.by_unit.setdefault(unit.id, []).append(skill)
+        self.any = bool(self.by_event)
+
+    def owners(self, event: str) -> list[tuple[UnitId, SkillDef]]:
+        return self.by_event.get(event, [])
+
+
+def _index(ctx: Ctx) -> PassiveIndex:
+    index = ctx.passives
+    if index is None:
+        index = ctx.passives = PassiveIndex(ctx)
+    return index
+
+
+# ---------------------------------------------------------------------------
+# 收集
+# ---------------------------------------------------------------------------
+
+
+def _fire(ctx: Ctx, seq: int, owner_id: UnitId, skill: SkillDef, other_id: UnitId | None) -> None:
+    assert skill.trigger is not None
+    ctx.fired.append(
+        Fired(seq, owner_id, skill.id, skill.trigger.event, other_id, ctx.trigger_depth + 1)
+    )
+
+
+_NATURAL_MAX = 20
+
+
+def observe(ctx: Ctx, event: EventBase) -> None:
+    """``Ctx.emit`` 的掛鉤：看出需要觸發被動的事件。"""
+    if getattr(event, "type", None) not in _OBSERVED:
+        return
+    index = _index(ctx)
+    if not index.any:
+        return
+    if isinstance(event, AttackRolled):
+        _on_attack(ctx, index, event)
+    elif isinstance(event, DamageDealt):
+        _on_damage(ctx, index, event)
+
+
+def _on_attack(ctx: Ctx, index: PassiveIndex, event: AttackRolled) -> None:
+    attacker = event.attacker_id
+    if event.natural == _NATURAL_MAX:
+        for owner, skill in index.owners("on_natural_20"):
+            if owner == attacker:
+                _fire(ctx, event.seq, owner, skill, event.target_id)
+    if not event.hit:
+        return
+    for owner, skill in index.owners("on_hit"):
+        if owner == attacker:
+            _fire(ctx, event.seq, owner, skill, event.target_id)
+    if event.crit:
+        for owner, skill in index.owners("on_crit"):
+            if owner == attacker:
+                _fire(ctx, event.seq, owner, skill, event.target_id)
+    counters = [(o, s) for o, s in index.owners("every_n_hits") if o == attacker]
+    if counters:
+        unit = ctx.state.units[attacker]
+        unit.hits_landed += 1
+        for owner, skill in counters:
+            assert skill.trigger is not None and skill.trigger.n is not None
+            if unit.hits_landed % skill.trigger.n == 0:
+                _fire(ctx, event.seq, owner, skill, event.target_id)
+
+
+def _on_damage(ctx: Ctx, index: PassiveIndex, event: DamageDealt) -> None:
+    if event.amount <= 0:
+        return
+    for owner, skill in index.owners("on_damaged"):
+        if owner == event.target_id:
+            _fire(ctx, event.seq, owner, skill, event.source_id)
+    if event.hp_after <= 0 and event.source_id is not None and event.source_id != event.target_id:
+        for owner, skill in index.owners("on_kill"):
+            if owner == event.source_id:
+                _fire(ctx, event.seq, owner, skill, event.target_id)
+
+
+def _collect_own(ctx: Ctx, unit: UnitState, event: str) -> None:
+    index = _index(ctx)
+    if not index.any:
+        return
+    seq = ctx.state.next_event_seq
+    for owner, skill in index.owners(event):
+        if owner == unit.id:
+            _fire(ctx, seq, owner, skill, None)
+
+
+def collect_turn_start(ctx: Ctx, unit: UnitState) -> None:
+    """``on_turn_start``：回合開始，在狀態與表面的回合開始效果之後。"""
+    _collect_own(ctx, unit, "on_turn_start")
+
+
+def collect_turn_end(ctx: Ctx, unit: UnitState) -> None:
+    """``on_turn_end``：回合結束，在狀態倒數之前。"""
+    _collect_own(ctx, unit, "on_turn_end")
+
+
+def collect_move(ctx: Ctx, unit: UnitState) -> None:
+    """``on_move``：一次主動移動動作完成後。"""
+    _collect_own(ctx, unit, "on_move")
+
+
+def reset_round_counts(units: Iterator[UnitState]) -> None:
+    """每輪開始：被動技能的本輪觸發次數歸零。"""
+    for unit in units:
+        if unit.trigger_counts:
+            unit.trigger_counts = {}
+
+
+# ---------------------------------------------------------------------------
+# 結算
+# ---------------------------------------------------------------------------
+
+
+@contextmanager
+def holding(ctx: Ctx) -> Iterator[None]:
+    """括號內不結算觸發（施放技能、一次普攻），結束後一次結算。"""
+    ctx.trigger_hold += 1
+    try:
+        yield
+    finally:
+        ctx.trigger_hold -= 1
+    settle(ctx)
+
+
+def settle(ctx: Ctx) -> None:
+    """結算收集到的觸發（括號內或已在結算中時不做事）。"""
+    if ctx.settling or ctx.trigger_hold or not ctx.fired:
+        return
+    ctx.settling = True
+    try:
+        while ctx.fired:
+            batch = sorted(ctx.fired, key=lambda f: (f.seq, f.owner_id, f.skill_id))
+            ctx.fired = []
+            for fired in batch:
+                _resolve_one(ctx, fired)
+    finally:
+        ctx.settling = False
+        ctx.trigger_depth = 0
+
+
+def _usable(ctx: Ctx, owner: UnitState, skill: SkillDef) -> bool:
+    """持有者目前能不能觸發這個被動（狀態、每輪次數與代價）。"""
+    assert skill.trigger is not None
+    rules = ctx.rules
+    if not owner.alive or skip_turn_status(rules, owner) is not None:
+        return False
+    if skill.category == "spell" and blocks_spells(rules, owner):
+        return False
+    if owner.trigger_counts.get(skill.id, 0) >= skill.trigger.max_per_round:
+        return False
+    if owner.mana < skill.cost.mana or owner.cooldowns.get(skill.id, 0) > 0:
+        return False
+    limit = skill.cost.uses_per_battle
+    if limit is not None and owner.skill_uses.get(skill.id, 0) >= limit:
+        return False
+    cost = hp_cost(owner, skill)
+    return not (cost and owner.hp <= cost)
+
+
+def _resolve_one(ctx: Ctx, fired: Fired) -> None:
+    # 延後匯入：技能解譯器與效果佇列匯入 context（context 匯入本模組）。
+    from trpg.engine.skills.interpreter import use_triggered_skill  # noqa: PLC0415
+
+    state = ctx.state
+    if state.ended:
+        return
+    owner = state.units.get(fired.owner_id)
+    skill = ctx.rules.skill_def(fired.skill_id)
+    trigger = skill.trigger
+    assert trigger is not None
+    if owner is None or not _usable(ctx, owner, skill):
+        return
+    other: UnitState | None = None
+    if trigger.target == "other":
+        other = None if fired.other_id is None else state.units.get(fired.other_id)
+        if other is None or (not other.alive and fired.event != "on_kill"):
+            return
+        if (
+            trigger.max_distance is not None
+            and manhattan(owner.xy, other.xy) > trigger.max_distance
+        ):
+            return
+    subject = owner if other is None else other
+    if not skill_condition_met(state, owner, skill, [subject.xy]):
+        return
+    if fired.depth > ctx.core.max_trigger_depth:
+        ctx.emit(TriggerLimitReached, unit_id=owner.id, skill_id=skill.id, depth=fired.depth)
+        return
+    _pay(ctx, owner, skill, fired)
+    ctx.trigger_depth = fired.depth
+    use_triggered_skill(ctx, owner, skill, other)
+
+
+def _pay(ctx: Ctx, owner: UnitState, skill: SkillDef, fired: Fired) -> None:
+    hp = hp_cost(owner, skill)
+    owner.mana -= skill.cost.mana
+    owner.hp -= hp
+    owner.trigger_counts[skill.id] = owner.trigger_counts.get(skill.id, 0) + 1
+    if skill.cost.uses_per_battle is not None:
+        owner.skill_uses[skill.id] = owner.skill_uses.get(skill.id, 0) + 1
+    cooldown = skill.cost.cooldown
+    if cooldown is not None:
+        owner.cooldowns[skill.id] = cooldown
+    ctx.emit(
+        SkillTriggered,
+        unit_id=owner.id,
+        skill_id=skill.id,
+        name_zh=skill.name_zh,
+        trigger=fired.event,
+        other_id=fired.other_id,
+        trigger_depth=fired.depth,
+        mana=skill.cost.mana,
+        mana_after=owner.mana,
+        hp_spent=hp,
+        cooldown=cooldown,
+    )
+    if cooldown is not None:
+        ctx.emit(SkillCooldownChanged, unit_id=owner.id, skill_id=skill.id, remaining=cooldown)

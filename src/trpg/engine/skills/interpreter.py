@@ -50,6 +50,7 @@ from trpg.engine.reactions import block_multiplier
 from trpg.engine.rules.combat import PERMILLE, AttackProfile, AttackRoll, ForcedOutcome, roll_attack
 from trpg.engine.rules.geometry import XY
 from trpg.engine.rules.statuses import effective_attribute
+from trpg.engine.skill_triggers import holding
 from trpg.engine.skills.conditions import Subject, condition_met
 from trpg.engine.skills.targeting import (
     ResolvedEffect,
@@ -83,8 +84,23 @@ def use_skill(ctx: Ctx, caster: UnitState, action: UseSkill) -> None:
     if problem is not None:
         raise IllegalActionError(problem)
     area = checked_area(ctx.state, caster, skill, action)
-    _pay_costs(ctx, caster, skill, area)
-    _Cast(ctx, caster, skill, action, area).run()
+    with holding(ctx):  # 被動的觸發等整個技能結算完才處理
+        _pay_costs(ctx, caster, skill, area)
+        _Cast(ctx, caster, skill, action, area).run()
+
+
+def use_triggered_skill(
+    ctx: Ctx, owner: UnitState, skill: SkillDef, other: UnitState | None
+) -> None:
+    """結算被動技能的效果（代價與 ``skill_triggered`` 已由呼叫端處理）。
+
+    作用的單位是 ``other``（``trigger.target: other``，倒下時沒有對象）或持有者自己；效果自動命中
+    （不擲命中、沒有格擋與暴擊），狀態照常擲抵抗。
+    """
+    subject = owner if other is None else other
+    units = (subject.id,) if subject.alive else ()
+    area = SkillArea(tiles=(subject.xy,), units=units, origin=owner.xy)
+    _TriggeredCast(ctx, owner, skill, area).run()
 
 
 def _pay_costs(ctx: Ctx, caster: UnitState, skill: SkillDef, area: SkillArea) -> None:
@@ -127,7 +143,12 @@ class _Cast:
     """一次施放的工作狀態（命中結果、格擋倍率與影響範圍）。"""
 
     def __init__(
-        self, ctx: Ctx, caster: UnitState, skill: SkillDef, action: UseSkill, area: SkillArea
+        self,
+        ctx: Ctx,
+        caster: UnitState,
+        skill: SkillDef,
+        action: UseSkill | None,
+        area: SkillArea,
     ) -> None:
         self.ctx = ctx
         self.caster = caster
@@ -414,6 +435,7 @@ class _Cast:
         return batch
 
     def teleport(self, spec: EffectSpec) -> list[EffectBase]:
+        assert self.action is not None
         pos = self.action.target_pos
         assert pos is not None
         if not self.holds(spec.condition, Subject(self.caster, self.caster.xy)):
@@ -478,3 +500,16 @@ class _Cast:
             elif effect.type == "lower_terrain":
                 batch.append(LowerTerrainEffect(source_id=source, pos=xy, amount=spec.amount or 1))
         return batch
+
+
+class _TriggeredCast(_Cast):
+    """被動技能的施放：沒有 ``UseSkill`` 動作，效果自動命中（Phase 2E 決定 F）。"""
+
+    def __init__(self, ctx: Ctx, caster: UnitState, skill: SkillDef, area: SkillArea) -> None:
+        super().__init__(ctx, caster, skill, None, area)
+
+    def roll_hits(self) -> None:
+        """不擲命中：沒有 ``attack_rolled``，也沒有格擋。"""
+
+    def _hit(self, unit: UnitState) -> bool:
+        return unit.id != self.caster.id

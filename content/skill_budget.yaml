@@ -10,6 +10,9 @@ max_ratio_permille: 1000     # 超預算上限（1.0）
 
 ap_coefficient_permille: {1: 500, 2: 1000, 3: 1600}   # 主動技能依 ap_cost
 reaction_coefficient_permille: 600                     # 反應技（只計算，不生成）
+# 被動技能（Phase 2E-1）：可用預算 ＝ tier_budget × 觸發時機的係數（skill_triggers.yaml）× (1000 ＋ 代價折抵) ÷ 1000；
+# trigger.max_per_round 每多 1 次，可用預算再 × 這個值（次數越多，每次能分到的預算越少）。初值，未經模擬。
+passive_extra_trigger_permille: 800
 
 # 條件倍率：none 無條件、common／harsh 依 skill_conditions.yaml 的 harshness。
 # 技能層級的條件乘在 total，效果層級的條件只乘該效果。

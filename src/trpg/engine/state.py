@@ -168,6 +168,10 @@ class UnitState:
     control_dr: dict[str, int] = field(default_factory=dict)
     """控制遞減：控制類別 → 遞減持續到的輪數（含；``state.round`` 不超過它時，同類別的抵抗判定中
     守方屬性 ×``control_dr_resist_permille``）。"""
+    trigger_counts: dict[str, int] = field(default_factory=dict)
+    """被動技能本輪已觸發的次數（技能 ID → 次數，只列出 > 0 的）；每輪開始時重設（Phase 2E-1）。"""
+    hits_landed: int = 0
+    """整場戰鬥累計的命中次數（``every_n_hits`` 的計數；只有裝備了該類被動的單位會累計）。"""
 
     @property
     def alive(self) -> bool:
@@ -227,6 +231,8 @@ class UnitState:
             cooldowns=dict(self.cooldowns),
             skill_uses=dict(self.skill_uses),
             control_dr=dict(self.control_dr),
+            trigger_counts=dict(self.trigger_counts),
+            hits_landed=self.hits_landed,
         )
 
 

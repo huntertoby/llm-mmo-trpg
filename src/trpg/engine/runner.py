@@ -30,8 +30,12 @@ __all__ = [
     "run_battle",
 ]
 
-LOG_FORMAT = "trpg-battle-log/7"
-"""``/7``（Phase 2D-1）：護盾（``StatusInstance.amount``、``shield_gained``／``shield_absorbed``、
+LOG_FORMAT = "trpg-battle-log/8"
+"""``/8``（Phase 2E-1）：被動技能的觸發（``skill_triggered``、``trigger_limit_reached``；
+單位狀態加入 ``trigger_counts``、``hits_landed``；規則包加入 ``skill_triggers``）；
+``/7`` 的紀錄無法重播。
+
+``/7``（Phase 2D-1）：護盾（``StatusInstance.amount``、``shield_gained``／``shield_absorbed``、
 ``damage_dealt.absorbed``）、有效屬性（狀態的屬性加值）與嘲諷；``/6`` 的紀錄無法重播。
 
 ``/5``（Phase 2B-1）：新狀態、抵抗判定（``status_save_rolled``）、控制遞減（單位狀態加入

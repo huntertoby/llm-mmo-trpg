@@ -17,7 +17,7 @@ from trpg.content.skill_rules import BudgetRules, SkeletonDef
 from trpg.content.skills import SKELETON_IDS, ShapeDef
 from trpg.shared.errors import ContentError
 
-ENABLED = {"strike", "area", "control", "displace", "aura", "combo"}
+ENABLED = {"strike", "area", "control", "displace", "aura", "combo", "passive"}
 
 
 def _copy(tmp_path: Path) -> Path:

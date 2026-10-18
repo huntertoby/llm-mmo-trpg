@@ -54,6 +54,7 @@ __all__ = [
     "ShieldAbsorbed",
     "ShieldGained",
     "SkillCooldownChanged",
+    "SkillTriggered",
     "SkillUsed",
     "StatusApplied",
     "StatusConverted",
@@ -63,6 +64,7 @@ __all__ = [
     "SurfaceChanged",
     "SurfaceEntered",
     "TerrainChanged",
+    "TriggerLimitReached",
     "TurnEnded",
     "TurnOrderSet",
     "TurnSkipped",
@@ -589,6 +591,37 @@ class SkillUsed(EventBase):
     tiles: tuple[Pos, ...]
 
 
+class SkillTriggered(EventBase):
+    """被動技能觸發（Phase 2E-1）。
+
+    ``trigger``：觸發時機 ID（``skill_triggers.yaml``）；
+    ``other_id``：該時機的另一方（沒有為 ``None``）；
+    ``trigger_depth``：觸發深度（動作本身為 0，由動作直接引起的觸發為 1，觸發產生的觸發再 +1）。
+    之後是技能效果原本的事件。
+    """
+
+    type: Literal["skill_triggered"] = "skill_triggered"
+    unit_id: UnitId
+    skill_id: str
+    name_zh: str
+    trigger: str
+    other_id: UnitId | None
+    trigger_depth: int
+    mana: int = 0
+    mana_after: int = 0
+    hp_spent: int = 0
+    cooldown: int | None = None
+
+
+class TriggerLimitReached(EventBase):
+    """觸發會讓 ``trigger_depth`` 超過 ``max_trigger_depth``，所以沒有結算。"""
+
+    type: Literal["trigger_limit_reached"] = "trigger_limit_reached"
+    unit_id: UnitId
+    skill_id: str
+    depth: int
+
+
 class SkillCooldownChanged(EventBase):
     """技能的冷卻回合改變（使用後設定、自己回合開始時 −1）。"""
 
@@ -684,7 +717,9 @@ type Event = Annotated[
     | UnitSpawned
     | UnitEscaped
     | SkillUsed
-    | SkillCooldownChanged,
+    | SkillCooldownChanged
+    | SkillTriggered
+    | TriggerLimitReached,
     Field(discriminator="type"),
 ]
 

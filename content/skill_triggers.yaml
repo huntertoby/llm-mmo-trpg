@@ -1,0 +1,62 @@
+# 技能的觸發時機（docs/phases/Phase2E計畫.md 3.1）。被動技能（kind: passive）的 trigger.event 引用這裡的 id。
+# 帶有此被動的單位稱為「持有者」；has_other 為 true 的時機有「另一方」單位，trigger.target: other 才能使用。
+# budget_coefficient_permille：被動的預算係數（‰），取代主動技能的 AP 係數
+#   可用預算 ＝ tier_budget × 係數 × (1000 ＋ 代價折抵) ÷ 1000；max_per_round 每多 1 次 × passive_extra_trigger_permille
+# budget_by_n_permille：every_n_hits 依 n（2 或 3）查表
+# min_rarity：使用此時機的最低稀有度（Phase 2E 決定 H：被動全部 epic）
+# 所有係數都是初值，未經模擬（Phase 2E 決定 J）。
+triggers:
+  - id: on_hit
+    name_zh: 命中時
+    description_zh: 持有者的攻擊（普攻或技能）命中一個單位，在該次傷害結算之後。另一方為被命中的單位。
+    has_other: true
+    budget_coefficient_permille: 400
+    min_rarity: epic
+  - id: on_crit
+    name_zh: 暴擊時
+    description_zh: 同「命中時」，且為暴擊。另一方為被命中的單位。
+    has_other: true
+    budget_coefficient_permille: 250
+    min_rarity: epic
+  - id: on_natural_20
+    name_zh: 擲出自然 20 時
+    description_zh: 持有者的攻擊擲出自然 20（不論是否命中，只計單位目標）。另一方為攻擊目標。
+    has_other: true
+    budget_coefficient_permille: 150
+    min_rarity: epic
+  - id: on_kill
+    name_zh: 擊倒時
+    description_zh: 持有者造成的傷害（任何來源歸給持有者）讓單位倒下。另一方為倒下的單位（對它的傷害與狀態無效）。
+    has_other: true
+    budget_coefficient_permille: 300
+    min_rarity: epic
+  - id: on_damaged
+    name_zh: 受傷時
+    description_zh: 持有者受到傷害（數值大於 0，任何原因）。另一方為傷害來源（沒有來源時無）。
+    has_other: true
+    budget_coefficient_permille: 400
+    min_rarity: epic
+  - id: on_turn_start
+    name_zh: 回合開始時
+    description_zh: 持有者回合開始，在狀態與表面的回合開始效果之後（被跳過的回合不觸發）。
+    has_other: false
+    budget_coefficient_permille: 500
+    min_rarity: epic
+  - id: on_turn_end
+    name_zh: 回合結束時
+    description_zh: 持有者回合結束，在狀態倒數之前（被跳過的回合不觸發）。
+    has_other: false
+    budget_coefficient_permille: 500
+    min_rarity: epic
+  - id: on_move
+    name_zh: 移動後
+    description_zh: 持有者的一次主動移動動作完成後（不是每一步；強制位移不算）。
+    has_other: false
+    budget_coefficient_permille: 300
+    min_rarity: epic
+  - id: every_n_hits
+    name_zh: 每命中 n 次
+    description_zh: 持有者累計命中第 n、2n、3n…次時（計數方式同「命中時」；n 由技能指定，2 或 3）。另一方為被命中的單位。
+    has_other: true
+    budget_by_n_permille: {2: 500, 3: 600}
+    min_rarity: epic
