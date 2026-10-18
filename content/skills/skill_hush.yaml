@@ -1,0 +1,22 @@
+id: skill_hush
+schema_version: 1
+name_zh: 噤聲
+tier: 1
+rank: 1
+rarity: rare
+kind: active
+skeleton: control
+category: spell
+weapon_req: focus
+ap_cost: 1
+scaling_attr: int
+shape: {type: single, range: 4}
+effects:
+  - {type: apply_status, status: silenced, duration: 1}
+condition: null
+cost: {mana: 3}
+tags: [shadow, spell, control, silence]
+narrative:
+  concept: 封住敵人的喉嚨，讓咒語卡在嘴邊
+  cast_flavor: 一道無聲的暗影掩住了目標的口鼻
+provenance: {origin: builtin, owner_id: null, created_by: null, parents: [], bound: true, tradeable: false}

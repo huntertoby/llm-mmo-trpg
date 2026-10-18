@@ -136,3 +136,20 @@ builds:
       tags: [hero, sim]
       max_mana: 40
       skills: [skill_sanctuary, skill_renewal, skill_purify, skill_guardian_aegis]
+
+  - id: build_warlock
+    name_zh: 術士
+    theme_zh: 以咒印標記獵物，再用恐懼、沉默與黑霧削弱敵人的行動；站在遠處用負面狀態控制戰場。
+    hero:
+      id: build_warlock
+      name_zh: 術士英雄
+      attributes: {str: 8, dex: 12, con: 10, int: 16, wis: 12, wil: 12}
+      max_hp: 40
+      speed: 5
+      armor_bonus: 1
+      weapon: fire_staff
+      ai_profile: cunning
+      resist: {elemental: 150}
+      tags: [hero, sim]
+      max_mana: 40
+      skills: [skill_hex_bolt, skill_dread_gaze, skill_hush, skill_blinding_dark]

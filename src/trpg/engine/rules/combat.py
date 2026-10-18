@@ -12,7 +12,13 @@ from typing import Literal
 from trpg.content.library import Ruleset
 from trpg.engine.events import AdvantageState
 from trpg.engine.rules.geometry import XY, has_line_of_sight, manhattan
-from trpg.engine.rules.statuses import effective_attribute, forced_target_sources
+from trpg.engine.rules.statuses import (
+    attack_range_cap,
+    effective_attribute,
+    forced_target_sources,
+    grants_advantage_against,
+    has_attack_disadvantage_status,
+)
 from trpg.engine.state import BattleState, UnitState
 from trpg.shared.rng import Rng
 from trpg.shared.types import Attribute, Element, ObjectId, Surface
@@ -239,6 +245,7 @@ def advantage_sources(
     - 目標隱蔽：劣勢。
     - 天氣（濃霧）：遠程攻擊超過 ``ranged_disadvantage_beyond`` 格有劣勢。
     - 攻擊者被嘲諷（``forces_target``）：攻擊嘲諷者以外的單位有劣勢（Phase 2D-1）。
+    - 攻擊者恐懼或致盲：任何攻擊都有劣勢；目標被標記：優勢（Phase 2D-2）。
     """
     melee = attacker.weapon.is_melee if profile is None else profile.melee
     advantage = False
@@ -253,6 +260,10 @@ def advantage_sources(
     taunters = forced_target_sources(state.ruleset, attacker)
     if taunters and target.id not in taunters:
         disadvantage = True
+    if has_attack_disadvantage_status(state.ruleset, attacker):  # 恐懼、致盲：任何攻擊都有劣勢
+        disadvantage = True
+    if grants_advantage_against(state.ruleset, target):  # 被標記
+        advantage = True
     weather = state.weather
     if (
         weather is not None
@@ -432,13 +443,16 @@ def attack_problem(state: BattleState, attacker: UnitState, target: UnitState) -
     problem = reach_problem(state, attacker, target.xy, target.name_zh)
     if problem is not None:
         return problem
+    cap = attack_range_cap(state.ruleset, attacker)
+    if cap is not None and manhattan(attacker.xy, target.xy) > cap:
+        return f"致盲中：只能攻擊 {cap} 格內的目標（距離 {manhattan(attacker.xy, target.xy)}）"
     return concealment_problem(state, attacker, target)
 
 
 def concealment_problem(state: BattleState, attacker: UnitState, target: UnitState) -> str | None:
     """隱蔽的目標超過一定距離無法選為目標。"""
-    if not is_concealed(state, target):
-        return None
+    if not is_concealed(state, target) or grants_advantage_against(state.ruleset, target):
+        return None  # 被標記者不受隱蔽的選取限制
     limit = concealed_max_distance(state)
     distance = manhattan(attacker.xy, target.xy)
     if distance > limit:

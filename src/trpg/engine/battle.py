@@ -56,6 +56,8 @@ from trpg.engine.rules.geometry import XY, manhattan
 from trpg.engine.rules.movement import (
     available_move_budget,
     can_only_stand_up,
+    fear_blocks_step,
+    fear_origins,
     is_deadly,
     is_standable,
     path_map,
@@ -344,7 +346,9 @@ def _require_free_to_move(state: BattleState, unit: UnitState, steps: int) -> No
         raise IllegalActionError(f"{unit.name_zh} 被定身，不能主動移動")
 
 
-def plan_move(state: BattleState, unit: UnitState, path: tuple[Pos, ...]) -> MovePlan:
+def plan_move(  # noqa: PLR0912
+    state: BattleState, unit: UnitState, path: tuple[Pos, ...]
+) -> MovePlan:
     """驗證 ``path``；不合法時拋出 :class:`IllegalActionError`。"""
     prone = unit.has_status(PRONE)
     _require_free_to_move(state, unit, max(len(path) - 1, 0))
@@ -356,6 +360,7 @@ def plan_move(state: BattleState, unit: UnitState, path: tuple[Pos, ...]) -> Mov
     if len(path) == 1 and not prone:
         raise IllegalActionError("路徑至少要移動一格")
     occupancy = state.occupancy()
+    fear = fear_origins(state, unit)
     steps: list[tuple[XY, int]] = []
     prev = start
     for pos in path[1:]:
@@ -364,6 +369,10 @@ def plan_move(state: BattleState, unit: UnitState, path: tuple[Pos, ...]) -> Mov
             raise IllegalActionError(f"超出地圖範圍：{cur}")
         if abs(cur[0] - prev[0]) + abs(cur[1] - prev[1]) != 1:
             raise IllegalActionError(f"路徑不連續：{prev} → {cur} 不相鄰")
+        if fear and fear_blocks_step(fear, prev, cur):
+            raise IllegalActionError(
+                f"{unit.name_zh} 正在恐懼中，不能靠近恐懼的來源：{prev} → {cur}"
+            )
         cost = step_cost(state, prev, cur)
         if cost is None:
             if not is_standable(state, cur):

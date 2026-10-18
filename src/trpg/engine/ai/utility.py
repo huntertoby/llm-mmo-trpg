@@ -450,6 +450,23 @@ def _useful_damage(damage: DamageRange, hit: Fraction, hp: int) -> Fraction:
     return min(damage.expected_if_hit, Fraction(hp)) * hit
 
 
+def _has_usable_spell(state: BattleState, unit: UnitState) -> bool:
+    """單位有法力足夠的法術技（不看冷卻與 AP；沉默只對這樣的單位有價值）。"""
+    rules = state.ruleset
+    for sid in sorted(unit.skills):
+        skill = rules.skill_def(sid)
+        if skill.is_active and skill.category == "spell" and unit.mana >= skill.cost.mana:
+            return True
+    return False
+
+
+def _wasted_on(state: BattleState, status_id: str, target: UnitState) -> bool:
+    """狀態對這個目標沒有價值：沉默（``blocks_spells``）施加在沒有可用法術技的單位上。"""
+    return state.ruleset.status_def(status_id).blocks_spells and not _has_usable_spell(
+        state, target
+    )
+
+
 def _status_gains(
     state: BattleState,
     actor: UnitState,
@@ -464,12 +481,15 @@ def _status_gains(
     - 不需要抵抗判定的狀態（出現在 ``min`` 的 ``StatusApplied``）：``hit`` × 價值；
     - 需要抵抗判定的狀態（``TargetPreview.status_chances``）：該目標的命中率 × 施加成功率 × 價值，
       目標已帶有該狀態時不算（重複施加只是刷新）；
-    - 價值：``status_values`` 有列出的狀態＝``damage`` 權重 × 等值傷害點數，其他用 ``status`` 權重。
+    - 價值：``status_values`` 有列出的狀態＝``damage`` 權重 × 等值傷害點數，其他用 ``status`` 權重；
+      沉默施加在沒有可用法術技的目標上價值為 0（Phase 2D-2）。
     """
     w, values = profile.weights, profile.status_values
 
-    def value(status_id: str) -> Fraction:
+    def value(status_id: str, target: UnitState) -> Fraction:
         points = values.get(status_id)
+        if points is not None and _wasted_on(state, status_id, target):
+            return Fraction(0)
         return Fraction(w.status) if points is None else Fraction(w.damage * points)
 
     gains = Fraction(0)
@@ -481,15 +501,15 @@ def _status_gains(
         and state.units[e.target_id].team is not actor.team
         and (only is None or e.target_id == only)
     }
-    for _, status_id in sorted(applied):
-        gains += hit * value(status_id)
+    for target_id, status_id in sorted(applied):
+        gains += hit * value(status_id, state.units[target_id])
     for t in p.targets:
         if t.ally or (only is not None and t.unit_id != only):
             continue
         target = state.units[t.unit_id]
         for chance in t.status_chances:
             if not target.has_status(chance.status_id):
-                gains += t.hit_chance * chance.apply_chance * value(chance.status_id)
+                gains += t.hit_chance * chance.apply_chance * value(chance.status_id, target)
     return gains
 
 

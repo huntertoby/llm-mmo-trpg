@@ -12,7 +12,7 @@ import heapq
 
 from trpg.content.maps import standable
 from trpg.engine.rules.geometry import XY, manhattan, neighbors4
-from trpg.engine.rules.statuses import is_rooted
+from trpg.engine.rules.statuses import fear_sources, is_rooted
 from trpg.engine.state import BattleState, UnitState
 from trpg.shared.types import Pos, UnitId
 
@@ -20,6 +20,8 @@ __all__ = [
     "PathMap",
     "available_move_budget",
     "can_only_stand_up",
+    "fear_blocks_step",
+    "fear_origins",
     "find_path",
     "is_deadly",
     "is_standable",
@@ -123,10 +125,22 @@ class PathMap:
         return path
 
 
+def fear_origins(state: BattleState, unit: UnitState) -> tuple[XY, ...]:
+    """恐懼的來源所在格（依單位 ID 排序）；來源已不在場上的不算。"""
+    ids = sorted(fear_sources(state.ruleset, unit))
+    return tuple(state.units[i].xy for i in ids if i in state.units and state.units[i].alive)
+
+
+def fear_blocks_step(origins: tuple[XY, ...], cur: XY, nxt: XY) -> bool:
+    """恐懼：這一步會讓自己與任一恐懼來源的曼哈頓距離變小。"""
+    return any(manhattan(nxt, o) < manhattan(cur, o) for o in origins)
+
+
 def path_map(state: BattleState, unit: UnitState, budget: int | None) -> PathMap:
     """從 ``unit`` 目前位置出發的 Dijkstra；``budget`` 為 ``None`` 表示不限成本。"""
     start = unit.xy
     occupied = {xy: u for xy, u in state.occupancy().items() if u.id != unit.id}
+    fear = fear_origins(state, unit)
     cost: dict[XY, int] = {start: 0}
     prev: dict[XY, XY] = {}
     heap: list[tuple[int, int, XY]] = [(0, 0, start)]
@@ -140,7 +154,7 @@ def path_map(state: BattleState, unit: UnitState, budget: int | None) -> PathMap
             if other is not None and other.team is not unit.team:
                 continue
             c = step_cost(state, cur, nxt)
-            if c is None:
+            if c is None or (fear and fear_blocks_step(fear, cur, nxt)):
                 continue
             nd = d + c
             if budget is not None and nd > budget:

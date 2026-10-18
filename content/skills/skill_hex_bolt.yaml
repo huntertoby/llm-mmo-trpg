@@ -1,0 +1,23 @@
+id: skill_hex_bolt
+schema_version: 1
+name_zh: 咒印飛彈
+tier: 1
+rank: 1
+rarity: common
+kind: active
+skeleton: strike
+category: spell
+weapon_req: focus
+ap_cost: 1
+scaling_attr: int
+shape: {type: single, range: 5}
+effects:
+  - {type: damage, dice: 1d8, element: shadow}
+  - {type: apply_status, status: marked, duration: 1}
+condition: null
+cost: {mana: 3}
+tags: [shadow, spell, mark]
+narrative:
+  concept: 射出一枚帶著咒印的暗影，讓目標成為所有人的靶子
+  cast_flavor: 暗影在目標身上烙下一道發光的符文
+provenance: {origin: builtin, owner_id: null, created_by: null, parents: [], bound: true, tradeable: false}

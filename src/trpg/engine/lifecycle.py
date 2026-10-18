@@ -6,6 +6,7 @@ from trpg.content.battle import UnitTemplate, WeaponDef
 from trpg.content.library import Ruleset
 from trpg.engine.context import Ctx
 from trpg.engine.events import EventBase, StatusRemoved, UnitDowned, UnitEscaped
+from trpg.engine.rules.statuses import is_removed_with_source
 from trpg.engine.state import UnitState
 from trpg.shared.types import Pos, Team, UnitId
 
@@ -31,13 +32,14 @@ def _remove_from_order(ctx: Ctx, unit: UnitState) -> None:
 
 
 def _release_forced_targets(ctx: Ctx, source: UnitState) -> list[EventBase]:
-    """嘲諷者離場（倒下或撤離）：以它為來源的嘲諷狀態（``forces_target``）立即移除。"""
+    """來源離場（倒下或撤離）：以它為來源的嘲諷與恐懼狀態立即移除。"""
     events: list[EventBase] = []
     for other in ctx.state.units_sorted():
         lost = [
             s.status_id
             for s in other.statuses
-            if s.source_id == source.id and ctx.rules.status_def(s.status_id).forces_target
+            if s.source_id == source.id
+            and is_removed_with_source(ctx.rules.status_def(s.status_id))
         ]
         if not lost:
             continue

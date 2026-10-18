@@ -1,0 +1,23 @@
+id: skill_blinding_dark
+schema_version: 1
+name_zh: 蔽目黑霧
+tier: 1
+rank: 1
+rarity: rare
+kind: active
+skeleton: control
+category: spell
+weapon_req: focus
+ap_cost: 2
+scaling_attr: int
+shape: {type: square3, range: 4}
+effects:
+  - {type: apply_status, status: blinded, duration: 1}
+  - {type: damage, dice: 1d4, element: shadow}
+condition: null
+cost: {mana: 8, cooldown: 3}
+tags: [shadow, spell, control, blind]
+narrative:
+  concept: 在敵群之中撒下一團黑霧，讓他們只看得見眼前幾步
+  cast_flavor: 濃稠的黑霧在地面炸開，吞沒了周圍的光
+provenance: {origin: builtin, owner_id: null, created_by: null, parents: [], bound: true, tradeable: false}

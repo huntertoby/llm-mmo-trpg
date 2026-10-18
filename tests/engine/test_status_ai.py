@@ -145,6 +145,10 @@ def test_status_values_are_defined_for_every_new_status() -> None:
         "bleed",
         "poison",
         "taunted",  # 2D-1
+        "feared",  # 2D-2
+        "silenced",
+        "blinded",
+        "marked",
     }
     assert all(v > 0 for v in values.values())
     for profile in library().ai_profiles.profiles:

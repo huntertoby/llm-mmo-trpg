@@ -13,7 +13,7 @@
 #   healing_received_permille  受到的治療倍率
 #   save_attr                  由技能或動作施加時的抵抗屬性（守方用此屬性，攻方用技能的縮放屬性）；
 #                              省略表示命中即施加。表面與環境造成的狀態不擲抵抗
-#   control_group              控制類別（movement／hard）：成功施加後，目標在 core.yaml 的
+#   control_group              控制類別（movement／mental／hard）：成功施加後，目標在 core.yaml 的
 #                              control_dr_rounds 輪內對同類別的抵抗判定守方屬性 ×150%；
 #                              hard 類別的狀態施加在 boss 標籤的單位上時依 boss_control_conversion 轉換
 # 2B-2 的預算欄位：
@@ -30,6 +30,14 @@
 #                       刷新時來源改為最新的施放者
 #   absorbs_damage      護盾：狀態帶有吸收量（StatusInstance.amount，由 shield 原語施加），骰值傷害在所有倍率之後、
 #                       扣 HP 之前先扣護盾；吸收量歸零時移除（原因 depleted）。不能由 apply_status 施加（無 budget_points）
+# 2D-2（負面狀態；數值全是初值，未經模擬，平衡階段再調）：
+#   fear_source              恐懼：帶有者主動移動時，每一步都不能讓自己與狀態來源的曼哈頓距離變小（強制位移照常）；
+#                            攻擊（任何目標）有劣勢；來源倒下或離場時此狀態立即移除。刷新時來源改為最新的施放者
+#   blocks_spells            沉默：不能使用 category: spell 的技能（武器技與基本攻擊照常），從合法動作中排除
+#   attack_range_cap         致盲：攻擊與以單位為目標的技能只能選擇此距離（曼哈頓）以內的單位；攻擊有劣勢
+#   grants_advantage_against 被標記：對帶有者的攻擊有優勢；帶有者不受 concealed（含黑暗表面、草叢）的
+#                            「無法選為目標」限制（隱蔽的劣勢仍在，與優勢互相抵消）
+# control_group 新增 mental（心智：恐懼、沉默）：適用控制遞減，不是 hard，對 Boss 不轉換。
 statuses:
   - id: defending
     name_zh: 防禦
@@ -189,3 +197,44 @@ statuses:
     budget_points: 4
     save_attr: wil
     forces_target: true
+  - id: feared
+    name_zh: 恐懼
+    description_zh: 主動移動時不能靠近恐懼的來源；攻擊有劣勢。來源倒下時消失。
+    duration: 2
+    expires: turn_end
+    stacking: refresh
+    budget_points: 5
+    min_rarity: rare
+    save_attr: wis
+    control_group: mental
+    fear_source: true
+  - id: silenced
+    name_zh: 沉默
+    description_zh: 不能使用法術技（武器技與基本攻擊照常）。
+    duration: 1
+    expires: turn_end
+    stacking: refresh
+    budget_points: 5
+    min_rarity: rare
+    save_attr: wil
+    control_group: mental
+    blocks_spells: true
+  - id: blinded
+    name_zh: 致盲
+    description_zh: 攻擊與以單位為目標的技能只能選擇 2 格以內的單位；攻擊有劣勢。
+    duration: 1
+    expires: turn_end
+    stacking: refresh
+    budget_points: 4
+    min_rarity: rare
+    save_attr: wis
+    attack_range_cap: 2
+  - id: marked
+    name_zh: 被標記
+    description_zh: 對其攻擊有優勢；隱蔽也無法讓它免於被選為目標。
+    duration: 2
+    expires: turn_end
+    stacking: refresh
+    budget_points: 4
+    save_attr: wis
+    grants_advantage_against: true

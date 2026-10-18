@@ -15,13 +15,19 @@ from trpg.engine.state import UnitState
 from trpg.shared.types import Attribute, UnitId
 
 __all__ = [
+    "attack_range_cap",
     "base_attribute",
+    "blocks_spells",
     "boss_converted_status",
     "damage_dealt_permille",
     "damage_taken_permille",
     "effective_attribute",
+    "fear_sources",
     "forced_target_sources",
+    "grants_advantage_against",
+    "has_attack_disadvantage_status",
     "healing_received_permille",
+    "is_removed_with_source",
     "is_rooted",
     "move_points_for_turn",
     "shield_amount",
@@ -114,3 +120,45 @@ def forced_target_sources(rules: Ruleset, unit: UnitState) -> frozenset[UnitId]:
         for s in unit.statuses
         if s.source_id is not None and rules.status_def(s.status_id).forces_target
     )
+
+
+def fear_sources(rules: Ruleset, unit: UnitState) -> frozenset[UnitId]:
+    """對 ``unit`` 施加恐懼（``fear_source``）的狀態來源。"""
+    return frozenset(
+        s.source_id
+        for s in unit.statuses
+        if s.source_id is not None and rules.status_def(s.status_id).fear_source
+    )
+
+
+def blocks_spells(rules: Ruleset, unit: UnitState) -> bool:
+    """是否帶有 ``blocks_spells`` 的狀態（沉默）：不能使用法術技。"""
+    return any(rules.status_def(s.status_id).blocks_spells for s in unit.statuses)
+
+
+def attack_range_cap(rules: Ruleset, unit: UnitState) -> int | None:
+    """攻擊與以單位為目標的技能的距離上限（致盲）；多個時取最小，沒有時為 ``None``。"""
+    caps = [
+        cap
+        for s in unit.statuses
+        if (cap := rules.status_def(s.status_id).attack_range_cap) is not None
+    ]
+    return min(caps) if caps else None
+
+
+def grants_advantage_against(rules: Ruleset, unit: UnitState) -> bool:
+    """對 ``unit`` 的攻擊有優勢，且 ``unit`` 不受隱蔽的選取限制（被標記）。"""
+    return any(rules.status_def(s.status_id).grants_advantage_against for s in unit.statuses)
+
+
+def has_attack_disadvantage_status(rules: Ruleset, unit: UnitState) -> bool:
+    """帶有讓自己攻擊有劣勢的狀態（恐懼、致盲）。"""
+    return any(
+        d.fear_source or d.attack_range_cap is not None
+        for d in (rules.status_def(s.status_id) for s in unit.statuses)
+    )
+
+
+def is_removed_with_source(definition: StatusDef) -> bool:
+    """來源倒下或離場時立即移除的狀態（嘲諷、恐懼）。"""
+    return definition.forces_target or definition.fear_source

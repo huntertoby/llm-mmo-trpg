@@ -249,6 +249,8 @@ def test_min_rarity_tables_match_the_spec() -> None:
         "hasted",
         "regenerating",
         "taunted",
+        # 2D-2（feared、silenced、blinded 為 rare）
+        "marked",
     }
     for status in rules.statuses.statuses:
         if status.budget_points is not None:

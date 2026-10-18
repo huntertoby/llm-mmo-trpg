@@ -281,6 +281,11 @@ def test_status_and_surface_points_match_the_spec() -> None:
         "regenerating": 4,
         "shielded": None,  # 只能由 shield 原語施加
         "taunted": 4,
+        # 2D-2
+        "feared": 5,
+        "silenced": 5,
+        "blinded": 4,
+        "marked": 4,
     }
     surfaces = {s.id.value: s.budget_points for s in rules.surfaces.surfaces}
     assert surfaces == {

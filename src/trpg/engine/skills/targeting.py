@@ -27,7 +27,7 @@ from trpg.engine.actions import Direction, UseSkill
 from trpg.engine.rules.combat import AttackProfile, attack_value, concealment_problem
 from trpg.engine.rules.geometry import XY, has_line_of_sight, manhattan
 from trpg.engine.rules.movement import is_deadly, is_standable
-from trpg.engine.rules.statuses import effective_attribute
+from trpg.engine.rules.statuses import attack_range_cap, blocks_spells, effective_attribute
 from trpg.engine.skills import shapes
 from trpg.engine.skills.conditions import skill_condition_problem
 from trpg.engine.state import BattleState, ObjectState, UnitState
@@ -172,6 +172,8 @@ def skill_problem(  # noqa: PLR0911
     problem = weapon_problem(skill, unit.weapon.weapon_class)
     if problem is not None:
         return problem
+    if skill.category == "spell" and blocks_spells(state.ruleset, unit):
+        return f"沉默中：不能使用法術技：{skill.name_zh}"
     if unit.mana < skill.cost.mana:
         return f"法力不足：需要 {skill.cost.mana}，剩餘 {unit.mana}"
     remaining = unit.cooldowns.get(skill.id, 0)
@@ -214,6 +216,9 @@ def _unit_target_problem(  # noqa: PLR0917
     problem = _reach_problem(state, caster, skill, target.xy, target.name_zh, reach)
     if problem is not None:
         return problem
+    cap = attack_range_cap(state.ruleset, caster)  # 致盲：以單位為目標的技能只能選近處的單位
+    if cap is not None and manhattan(caster.xy, target.xy) > cap:
+        return f"致盲中：只能選擇 {cap} 格內的單位（距離 {manhattan(caster.xy, target.xy)}）"
     return concealment_problem(state, caster, target) if enemy else None
 
 

@@ -203,7 +203,7 @@ class StatusDef(ContentModel):
     - ``damage_taken_permille``：受到的骰值傷害倍率（易傷 1250；不含墜落、致命地形等百分比傷害）。
     - ``healing_received_permille``：受到的治療倍率（中毒 500）。
     - ``save_attr``：由技能或動作施加時，守方抵抗用的屬性（省略表示命中即施加）。
-    - ``control_group``：控制類別（``movement``、``hard``），成功施加後觸發控制遞減。
+    - ``control_group``：控制類別（``movement``、``mental``、``hard``），成功施加後觸發控制遞減。
 
     Phase 2B-2 的預算欄位：
 
@@ -219,6 +219,14 @@ class StatusDef(ContentModel):
     - ``forces_target``：嘲諷——帶有者對 **狀態來源以外** 的單位發動攻擊時有劣勢；來源倒下或離場
       時此狀態立即移除。
     - ``absorbs_damage``：護盾——狀態帶有吸收量（``StatusInstance.amount``），骰值傷害先扣護盾。
+
+    Phase 2D-2 的欄位：
+
+    - ``fear_source``：恐懼——主動移動時每一步都不能讓自己與狀態來源的曼哈頓距離變小；攻擊有劣勢；
+      來源倒下或離場時此狀態立即移除。
+    - ``blocks_spells``：沉默——不能使用 ``category: spell`` 的技能。
+    - ``attack_range_cap``：致盲——攻擊與以單位為目標的技能只能選此距離以內的單位；攻擊有劣勢。
+    - ``grants_advantage_against``：被標記——對帶有者的攻擊有優勢；不受隱蔽的「無法選為目標」限制。
     """
 
     id: str = Field(pattern=ID_PATTERN)
@@ -232,6 +240,10 @@ class StatusDef(ContentModel):
     attr_bonus: dict[Attribute, int] = Field(default_factory=dict)
     forces_target: bool = False
     absorbs_damage: bool = False
+    fear_source: bool = False
+    blocks_spells: bool = False
+    attack_range_cap: int | None = Field(default=None, ge=1)
+    grants_advantage_against: bool = False
     move_permille: int = Field(default=1000, ge=0, le=10000)
     prevents_move: bool = False
     skip_turn: bool = False
@@ -239,7 +251,7 @@ class StatusDef(ContentModel):
     damage_taken_permille: int = Field(default=1000, ge=0, le=10000)
     healing_received_permille: int = Field(default=1000, ge=0, le=10000)
     save_attr: Attribute | None = None
-    control_group: Literal["movement", "hard"] | None = None
+    control_group: Literal["movement", "mental", "hard"] | None = None
     budget_points: int | None = Field(default=None, ge=0)
     min_rarity: Literal["common", "rare", "epic", "legendary"] = "common"
     beneficial: bool = False
