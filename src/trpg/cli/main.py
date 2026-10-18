@@ -23,6 +23,7 @@ from pathlib import Path
 
 from trpg import __version__
 from trpg.cli.battle import cmd_battle, cmd_map_show, cmd_replay
+from trpg.cli.budget import cmd_skills_budget, cmd_skills_budget_all, library_violations
 from trpg.cli.skills import cmd_skills_list, cmd_skills_show
 from trpg.content.library import ContentLibrary, load_library
 from trpg.content.loader import default_content_dir
@@ -81,6 +82,9 @@ def build_parser() -> argparse.ArgumentParser:
     skills_commands.add_parser("list", help="列出所有技能與效果摘要")
     skills_show = skills_commands.add_parser("show", help="顯示一個技能的詳細資料")
     skills_show.add_argument("skill_id", help="技能 ID（content/skills/<id>.yaml）")
+    skills_budget = skills_commands.add_parser("budget", help="顯示技能的預算明細（或 --all 總表）")
+    skills_budget.add_argument("skill_id", nargs="?", help="技能 ID；省略時需加 --all")
+    skills_budget.add_argument("--all", action="store_true", help="列出所有技能的預算總表")
 
     battle = commands.add_parser(
         "battle",
@@ -137,12 +141,20 @@ def _cmd_content_check() -> int:
     except ContentError as exc:
         print(f"內容檢查失敗：\n{exc}", file=sys.stderr)
         return 1
+    violations = library_violations(library)
+    if violations:
+        lines = "\n".join(f"  - {v}" for v in violations)
+        print(f"內容檢查失敗：{len(violations)} 項技能違規：\n{lines}", file=sys.stderr)
+        return 1
     print(f"內容檢查通過（{content_dir}）：")
     known = {path for path, _ in loaded}
     files = loaded + [(p, m) for p, m in library.files if p not in known]
     for path, model in files:
         print(f"  {path.relative_to(content_dir).as_posix()}：{model.summary()}")
-    print(f"共 {len(files)} 個檔案；跨檔案檢查（武器引用、地圖地形與連通性）通過。")
+    print(
+        f"共 {len(files)} 個檔案；跨檔案檢查（武器引用、地圖地形與連通性）通過；"
+        f"{len(library.skills)} 個技能通過預算與結構驗證。"
+    )
     return 0
 
 
@@ -222,6 +234,12 @@ def main(argv: list[str] | None = None) -> int:  # noqa: PLR0911
     if args.command == "skills":
         if args.skills_command == "list":
             return _with_library(lambda lib: cmd_skills_list(lib, sys.stdout))
+        if args.skills_command == "budget":
+            if args.all:
+                return _with_library(lambda lib: cmd_skills_budget_all(lib, sys.stdout))
+            if args.skill_id is None:
+                parser.error("請指定技能 ID，或使用 --all")
+            return _with_library(lambda lib: cmd_skills_budget(lib, args.skill_id, sys.stdout))
         return _with_library(lambda lib: cmd_skills_show(lib, args.skill_id, sys.stdout))
     if args.command == "battle":
         if args.battle_command == "replay":

@@ -5,6 +5,7 @@
 1. 依賴方向（CLAUDE.md 守則 5）：
    - ``trpg.engine`` 不得匯入 llm、narrative、api、roguelite、sim、skillgen、cli。
    - ``trpg.shared`` 不得匯入任何其他 ``trpg`` 子套件。
+   - ``trpg.content`` 不得匯入 ``trpg.skillgen``（Phase 2B-2 4.1：驗證器依賴內容資料，不能反過來）。
 2. 確定性：``engine``、``shared``、``content``、``skillgen``、``sim``、``roguelite`` 內
    不得使用 ``random``、``secrets``、``uuid4``／``uuid1``、``os.urandom``、時間函式等。
 """
@@ -27,6 +28,8 @@ ENGINE_FORBIDDEN = (
     "trpg.skillgen",
     "trpg.cli",
 )
+
+CONTENT_FORBIDDEN = ("trpg.skillgen",)
 
 DETERMINISTIC_PACKAGES = ("engine", "shared", "content", "skillgen", "sim", "roguelite")
 
@@ -172,6 +175,10 @@ def dependency_violations(
             for forbidden in ENGINE_FORBIDDEN:
                 if _is_within(target, forbidden):
                     out.append(Violation(where, f"trpg.engine 不得匯入 {target}"))
+        if _is_within(current, "trpg.content"):
+            for forbidden in CONTENT_FORBIDDEN:
+                if _is_within(target, forbidden):
+                    out.append(Violation(where, f"trpg.content 不得匯入 {target}"))
         if _is_within(current, "trpg.shared"):
             for sub in subpackages:
                 if sub != "trpg.shared" and _is_within(target, sub):
@@ -272,6 +279,9 @@ def test_scanner_detects_dependency_violations() -> None:
         ("trpg.shared.rng", False, "from trpg.engine import x"),
         ("trpg.shared.rng", False, "from trpg.content.loader import load_content_file"),
         ("trpg.shared", True, "from ..cli import main"),
+        ("trpg.content.library", False, "from trpg.skillgen.validate import validate_skill"),
+        ("trpg.content", True, "import trpg.skillgen"),
+        ("trpg.content.skills", False, "from ..skillgen import budget"),
     ]
     for current, is_package, source in cases:
         found = dependency_violations(ast.parse(source), current, is_package, "<snippet>")
@@ -285,6 +295,8 @@ def test_scanner_allows_legal_dependencies() -> None:
         ("trpg.shared.types", False, "from trpg.shared.errors import TrpgError"),
         ("trpg.shared.types", False, "from .errors import TrpgError"),
         ("trpg.cli.main", False, "from trpg.llm import client"),
+        ("trpg.skillgen.validate", False, "from trpg.content.library import ContentLibrary"),
+        ("trpg.cli.budget", False, "from trpg.skillgen.validate import validate_skill"),
     ]
     for current, is_package, source in cases:
         found = dependency_violations(ast.parse(source), current, is_package, "<snippet>")
