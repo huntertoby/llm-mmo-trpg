@@ -226,6 +226,7 @@ class SurfaceDef(ContentModel):
     - ``blocks_sight``：視線穿越時被阻擋（兩端除外）；``conceal``：站在上面的單位獲得隱蔽。
     - ``budget_points``：技能產生此表面（預設持續時間）的預算點數（2B-2）；
       ``None`` 表示不能由技能產生。
+    - ``beneficial``（2B-3）：對站在上面的友方有益（聖光）。光環骨架的核心表面必須有益。
     """
 
     id: Surface
@@ -240,6 +241,7 @@ class SurfaceDef(ContentModel):
     on_enter: SurfaceEnter | None = None
     on_turn_start: SurfaceTurnStart | None = None
     budget_points: int | None = Field(default=None, ge=0)
+    beneficial: bool = False
 
     @field_validator("glyph")
     @classmethod

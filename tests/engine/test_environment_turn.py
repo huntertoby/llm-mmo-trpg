@@ -161,7 +161,9 @@ def test_surface_duration_and_expiry() -> None:
     assert [(e.pos.x, e.before, e.after) for e in expired] == [(2, Surface.POISON, Surface.NONE)]
     for _ in range(2):
         state, events = _finish_round(state)
-    assert state.tile(1, 0).surface is Surface.WATER and state.tile(1, 0).surface_remaining is None
+    assert (
+        state.tile(1, 0).surface is Surface.WATER and state.tile(1, 0).surface_remaining == 3
+    )  # 水預設持續 3 回合
 
 
 def test_rain_creates_puddles_and_telegraph_matches() -> None:

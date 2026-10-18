@@ -1,6 +1,6 @@
 """預算計算（Phase 2B-2 4.2；驗收 2）：手算案例與 ``skill_budget`` 的結果完全相等。
 
-``tier_budget`` 取自 ``core.yaml``（T1 ＝ 14、T2 ＝ 15）；每個案例的註解列出手算過程。
+``tier_budget`` 取自 ``core.yaml``（T1 ＝ 14、T2 ＝ 18）；每個案例的註解列出手算過程。
 """
 
 from __future__ import annotations
@@ -30,7 +30,7 @@ def _spell(**overrides: Any) -> Any:
 
 
 def test_tier_budget_comes_from_core_yaml() -> None:
-    assert lib().ruleset.core.tier_budget == {1: 14, 2: 15, 3: 19, 4: 24, 5: 30}
+    assert lib().ruleset.core.tier_budget == {1: 14, 2: 18, 3: 23, 4: 29, 5: 36}
 
 
 # ---------------------------------------------------------------------------
@@ -51,8 +51,8 @@ def test_hand_case_1_weapon_skill() -> None:
 
 
 def test_hand_case_2_spell_skill_with_dice_average() -> None:
-    """法術技：3d6 平均 10.5；單體；階級 2（15）、AP 2、冷卻 1（+50）＋法力 10（+50）＝ +100‰；
-    可用 ＝ 15 × 1.1 ＝ 16.5；比例 ＝ 10.5 ÷ 16.5 ＝ 7/11。"""
+    """法術技：3d6 平均 10.5；單體；階級 2（18）、AP 2、冷卻 1（+50）＋法力 10（+50）＝ +100‰；
+    可用 ＝ 18 × 1.1 ＝ 19.8；比例 ＝ 10.5 ÷ 19.8 ＝ 35/66。"""
     s = _spell(
         tier=2,
         effects=[{"type": "damage", "dice": "3d6", "element": "fire"}],
@@ -60,8 +60,8 @@ def test_hand_case_2_spell_skill_with_dice_average() -> None:
     )
     report = skill_budget(s, lib())
     assert report.total == F(21, 2)
-    assert report.usable == F(33, 2)
-    assert report.ratio == F(7, 11)
+    assert report.usable == F(99, 5)
+    assert report.ratio == F(35, 66)
 
 
 def test_hand_case_3_affects_all_target_coefficient() -> None:
@@ -191,7 +191,9 @@ def test_duration_scales_status_and_surface_points() -> None:
     assert points({"type": "apply_status", "status": "concealed", "duration": 4}) == 6  # 3 × 4 ÷ 2
     assert points({"type": "apply_status", "status": "stun", "duration": 1}) == 8
     assert points({"type": "create_surface", "surface": "fire", "duration": 1}) == F(3, 2)
-    assert points({"type": "create_surface", "surface": "water", "duration": 7}) == 1  # 永久表面
+    assert points({"type": "create_surface", "surface": "water", "duration": 6}) == 2  # 1 × 6 ÷ 3
+    assert points({"type": "create_surface", "surface": "water"}) == 1  # 預設持續 3 回合
+    assert points({"type": "create_surface", "surface": "oil", "duration": 7}) == 2  # 永久表面
 
 
 def test_structural_primitive_points() -> None:

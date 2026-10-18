@@ -19,12 +19,15 @@
 # 2B-2 的預算欄位：
 #   budget_points  技能施加此狀態（預設持續時間）的預算點數；省略表示不能由技能施加（defending）
 #   min_rarity     技能使用此狀態的最低稀有度（省略為 common）
+# 2B-3：
+#   beneficial     對帶有者有益（省略為 false）；光環骨架的核心狀態必須有益
 statuses:
   - id: defending
     name_zh: 防禦
     description_zh: 防禦值 +25%，持續到自己的下回合開始。
     expires: own_turn_start
     stacking: refresh
+    beneficial: true
   - id: prone
     name_zh: 倒地
     description_zh: 移動前要先站起來（消耗一半移動點數）；近戰攻擊倒地者有優勢，遠程攻擊有劣勢。
@@ -50,6 +53,7 @@ statuses:
     stacking: refresh
     budget_points: 3
     min_rarity: rare
+    beneficial: true
   - id: slow
     name_zh: 緩速
     description_zh: 回合開始時的移動點數減半（無條件捨去）。

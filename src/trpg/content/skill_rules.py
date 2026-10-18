@@ -252,11 +252,13 @@ class SkeletonCore(ContentModel):
     """骨架的核心效果：``primitives`` 之一，且（有填時）對象在 ``affects`` 內。
 
     ``min_share_permille``：核心效果的點數占全部效果點數的最低比例（‰）。
+    ``beneficial_only``（2B-3）：核心的狀態與表面必須是 ``beneficial: true``（光環）。
     """
 
     primitives: tuple[str, ...]
     affects: tuple[Affects, ...] | None = None
     min_share_permille: int = Field(default=0, ge=0, le=1000)
+    beneficial_only: bool = False
 
 
 class SecondaryRules(ContentModel):

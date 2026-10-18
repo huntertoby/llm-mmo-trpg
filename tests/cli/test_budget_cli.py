@@ -26,9 +26,9 @@ def test_budget_for_one_skill_prints_the_breakdown(capsys: pytest.CaptureFixture
     assert "damage" in out and "形狀 ×1.6" in out  # 錐形 3
     assert "create_surface" in out and "fire 3×1" in out
     assert "raw ＝ 16.00" in out and "total ＝ raw × 條件 × 協同 ＝ 16.00" in out
-    assert "tier_budget 15 × AP 係數 1.00 × (1000 + 折抵 160‰) ÷ 1000 ＝ 17.40" in out
+    assert "tier_budget 18 × AP 係數 1.00 × (1000 + 折抵 160‰) ÷ 1000 ＝ 20.88" in out
     assert "冷卻 2 回合 +100‰、法力 12 +60‰" in out
-    assert "比例 ＝ total ÷ 可用預算 ＝ 92.0%" in out and "→ 合格" in out
+    assert "比例 ＝ total ÷ 可用預算 ＝ 76.6%" in out and "→ 合格" in out
     assert "驗證：通過" in out
 
 

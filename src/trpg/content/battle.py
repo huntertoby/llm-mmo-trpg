@@ -202,6 +202,8 @@ class StatusDef(ContentModel):
 
     - ``budget_points``：技能施加此狀態（預設持續時間）的預算點數；``None`` 表示不能由技能施加。
     - ``min_rarity``：技能使用此狀態的最低稀有度。
+    - ``beneficial``（2B-3）：對帶有者有益（防禦、隱蔽）。光環骨架的核心狀態必須有益；
+      隨機組合器不會對友方施加無益的狀態。
     """
 
     id: str = Field(pattern=ID_PATTERN)
@@ -221,6 +223,7 @@ class StatusDef(ContentModel):
     control_group: Literal["movement", "hard"] | None = None
     budget_points: int | None = Field(default=None, ge=0)
     min_rarity: Literal["common", "rare", "epic", "legendary"] = "common"
+    beneficial: bool = False
 
     @model_validator(mode="after")
     def _check(self) -> StatusDef:

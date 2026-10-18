@@ -12,7 +12,7 @@ ap_cost: 2
 scaling_attr: int
 shape: {type: allies_in_radius, radius: 2}
 effects:
-  - {type: heal, dice: 1d6}
+  - {type: heal, dice: 1d10}
   - {type: create_surface, surface: holy, affects: allies}
 condition: null
 cost: {mana: 10, cooldown: 3}

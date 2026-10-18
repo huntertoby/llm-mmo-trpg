@@ -143,7 +143,7 @@ def test_preview_of_a_heal_reports_the_range_per_ally() -> None:
     p = preview(state, action)
     assert not p.targets  # 友方與自己不擲骰
     (entry,) = [h for h in p.healed if h[0] == U2]
-    low = resolve(with_rolls(state, [(6, 1), (6, 1)]), action)
+    low = resolve(with_rolls(state, [(10, 1), (6, 1)]), action)
     healed_low = next(e.amount for e in low.events if isinstance(e, Healed) and e.target_id == U2)
     assert healed_low == entry[1]
     assert entry[1] <= entry[2]

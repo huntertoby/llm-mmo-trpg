@@ -5,7 +5,8 @@
 #       blocks_sight（阻擋穿越的視線）、conceal（站在上面的單位隱蔽）、
 #       on_enter（進入時：check 檢定 d20 + 屬性修正 >= dc，失敗得到 fail_status；apply_status）、
 #       on_turn_start（站在上面的單位回合開始時：damage／heal／apply_status）、
-#       budget_points（2B-2：技能產生此表面、預設持續時間的預算點數；省略表示不能由技能產生）。
+#       budget_points（2B-2：技能產生此表面、預設持續時間的預算點數；省略表示不能由技能產生）、
+#       beneficial（2B-3：對站在上面的友方有益，預設 false；光環骨架的核心表面必須有益）。
 surfaces:
   - id: oil
     name_zh: 油
@@ -16,6 +17,7 @@ surfaces:
     name_zh: 水
     glyph: w
     budget_points: 1
+    duration: 3
   - id: fire
     name_zh: 火焰
     glyph: "*"
@@ -48,6 +50,7 @@ surfaces:
     glyph: "+"
     budget_points: 4
     duration: 3
+    beneficial: true
     element: holy
     on_turn_start:
       heal: {dice: 1d4, allies_only: true, exclude_tag: undead}

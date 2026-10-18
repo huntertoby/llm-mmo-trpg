@@ -12,8 +12,8 @@ ap_cost: 2
 scaling_attr: int
 shape: {type: square3, range: 5}
 effects:
-  - {type: apply_status, status: poison}
-  - {type: apply_status, status: vulnerable}
+  - {type: apply_status, status: poison, duration: 5}
+  - {type: apply_status, status: vulnerable, duration: 2}
 condition: null
 cost: {mana: 10, cooldown: 3}
 tags: [poison, spell, area, control]

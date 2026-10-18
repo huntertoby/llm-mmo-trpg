@@ -143,7 +143,7 @@ def test_preview_of_a_conditional_damage_skill_matches_the_resolution(
     (target,) = preview(state, action).targets
     assert target.damage is not None
     # 最小骰值：d20 = 19（命中、不暴擊），所有傷害骰 = 1
-    script_rolls(monkeypatch, [19, 1, 1, 1, 1])
+    script_rolls(monkeypatch, [19, *([1] * 6)])
     result = resolve(state, action)
     dealt = sum(d.amount for d in of(result, DamageDealt) if d.cause == "attack")
     assert dealt == target.damage.minimum

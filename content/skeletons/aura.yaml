@@ -7,5 +7,6 @@ shapes: [self, allies_in_radius, square3]
 core:
   primitives: [heal, apply_status, create_surface]
   affects: [allies, self]
+  beneficial_only: true   # 核心的狀態與表面必須 beneficial: true（statuses.yaml、surfaces.yaml）
 secondary: {max_count: 1}
 forbid_affects: [enemies, all]

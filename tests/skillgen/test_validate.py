@@ -384,6 +384,33 @@ def test_aura_structure() -> None:
     assert only(ok, "skeleton") == []
 
 
+def test_aura_core_status_and_surface_must_be_beneficial() -> None:
+    radius = {"type": "allies_in_radius", "radius": 2}
+    heal = {"type": "heal", "dice": "1d6"}
+    burn = {"type": "apply_status", "status": "burning", "affects": "allies"}
+    fire = {"type": "create_surface", "surface": "fire", "affects": "allies"}
+    assert "skeleton.core_beneficial" in rules_of(
+        spell(skeleton="aura", shape=radius, effects=[burn])
+    )
+    assert "skeleton.core_beneficial" in rules_of(
+        spell(skeleton="aura", shape=radius, effects=[fire])
+    )
+    veil = {"type": "apply_status", "status": "concealed", "affects": "allies"}
+    holy = {"type": "create_surface", "surface": "holy", "affects": "allies"}
+    for good in (veil, holy):
+        assert "skeleton.core_beneficial" not in rules_of(
+            spell(skeleton="aura", shape=radius, effects=[heal, good])
+        )
+
+
+def test_beneficial_flags_in_content() -> None:
+    rules = lib().ruleset
+    statuses = {s.id for s in rules.statuses.statuses if s.beneficial}
+    surfaces = {s.id.value for s in rules.surfaces.surfaces if s.beneficial}
+    assert statuses == {"defending", "concealed"}
+    assert surfaces == {"holy"}
+
+
 def test_combo_structure_requires_a_condition() -> None:
     assert "skeleton.condition" in rules_of(skill(skeleton="combo"))
     skill_level = skill(skeleton="combo", condition={"type": "target_hp_below", "permille": 500})

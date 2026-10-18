@@ -322,6 +322,8 @@ def _effect_role_violations(
                 skill.id, "skeleton.core", f"骨架 {skeleton.id}：沒有核心效果（需要 {names}）"
             )
         )
+    if skeleton.core.beneficial_only:
+        out += _beneficial_core_violations(skill, library, skeleton)
     rules = skeleton.secondary
     for index, effect in secondary:
         allowed = rules.primitives is None or effect.type in rules.primitives
@@ -348,6 +350,38 @@ def _effect_role_violations(
                 f"骨架 {skeleton.id}：附帶效果最多 {rules.max_count} 個，收到 {len(secondary)} 個",
             )
         )
+    return out
+
+
+def _beneficial_core_violations(
+    skill: SkillDef, library: ContentLibrary, skeleton: SkeletonDef
+) -> list[Violation]:
+    """核心效果的狀態與表面必須有益（``beneficial``）。"""
+    rules = library.ruleset
+    statuses = rules.statuses.by_id()
+    out: list[Violation] = []
+    for index, effect in enumerate(skill.effects):
+        if not _is_core(library, skeleton, effect):
+            continue
+        name: str | None = None
+        if effect.type == "apply_status" and effect.status in statuses:
+            if not statuses[effect.status].beneficial:
+                name = f"狀態 {effect.status}"
+        elif (
+            effect.type == "create_surface"
+            and effect.surface is not None
+            and not rules.surfaces.get(effect.surface).beneficial
+        ):
+            name = f"表面 {effect.surface.value}"
+        if name is not None:
+            out.append(
+                Violation(
+                    skill.id,
+                    "skeleton.core_beneficial",
+                    f"骨架 {skeleton.id}：effects[{index}]（{effect.type}）的{name}不是有益的"
+                    "（beneficial），不能作為核心",
+                )
+            )
     return out
 
 

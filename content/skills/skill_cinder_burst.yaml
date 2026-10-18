@@ -12,10 +12,10 @@ ap_cost: 2
 scaling_attr: int
 shape: {type: single, range: 5}
 effects:
-  - {type: damage, dice: 1d6, element: fire}
-  # 目標已經在燃燒時，餘燼被引爆：額外 3d6 火焰傷害
+  - {type: damage, dice: 1d8, element: fire}
+  # 目標已經在燃燒時，餘燼被引爆：額外 4d6 火焰傷害
   - type: damage
-    dice: 3d6
+    dice: 4d6
     element: fire
     condition: {type: target_has_status, status: burning}
 condition: null
