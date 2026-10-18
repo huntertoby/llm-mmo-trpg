@@ -5,7 +5,7 @@ from __future__ import annotations
 from trpg.content.battle import UnitTemplate, WeaponDef
 from trpg.content.library import Ruleset
 from trpg.engine.context import Ctx
-from trpg.engine.events import EventBase, UnitDowned, UnitEscaped
+from trpg.engine.events import EventBase, StatusRemoved, UnitDowned, UnitEscaped
 from trpg.engine.state import UnitState
 from trpg.shared.types import Pos, Team, UnitId
 
@@ -30,14 +30,34 @@ def _remove_from_order(ctx: Ctx, unit: UnitState) -> None:
             state.turn_pos -= 1
 
 
+def _release_forced_targets(ctx: Ctx, source: UnitState) -> list[EventBase]:
+    """嘲諷者離場（倒下或撤離）：以它為來源的嘲諷狀態（``forces_target``）立即移除。"""
+    events: list[EventBase] = []
+    for other in ctx.state.units_sorted():
+        lost = [
+            s.status_id
+            for s in other.statuses
+            if s.source_id == source.id and ctx.rules.status_def(s.status_id).forces_target
+        ]
+        if not lost:
+            continue
+        other.statuses = [s for s in other.statuses if s.status_id not in lost]
+        events += [
+            ctx.emit(StatusRemoved, target_id=other.id, status_id=status_id, reason="source_lost")
+            for status_id in lost
+        ]
+    return events
+
+
 def down_unit(ctx: Ctx, unit: UnitState) -> list[EventBase]:
-    """單位倒下（HP ≤ 0）：標記倒下、立即移出先攻順序，產生 ``unit_downed``。"""
+    """單位倒下（HP ≤ 0）：標記倒下、立即移出先攻順序，產生 ``unit_downed``；
+    以它為來源的嘲諷立即解除。"""
     if unit.downed:
         return []
     unit.downed = True
     unit.hp = 0
     _remove_from_order(ctx, unit)
-    return [ctx.emit(UnitDowned, unit_id=unit.id)]
+    return [ctx.emit(UnitDowned, unit_id=unit.id), *_release_forced_targets(ctx, unit)]
 
 
 def escape_unit(ctx: Ctx, unit: UnitState) -> list[EventBase]:
@@ -46,7 +66,10 @@ def escape_unit(ctx: Ctx, unit: UnitState) -> list[EventBase]:
         return []
     unit.escaped = True
     _remove_from_order(ctx, unit)
-    return [ctx.emit(UnitEscaped, unit_id=unit.id, pos=unit.pos)]
+    return [
+        ctx.emit(UnitEscaped, unit_id=unit.id, pos=unit.pos),
+        *_release_forced_targets(ctx, unit),
+    ]
 
 
 def default_ai_profile(template: UnitTemplate, weapon: WeaponDef) -> str:

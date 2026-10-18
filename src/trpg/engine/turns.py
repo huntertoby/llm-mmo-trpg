@@ -83,6 +83,14 @@ def start_turn(ctx: Ctx, unit_id: UnitId) -> None:
                     dice=tick.dice,
                 )
             )
+        if definition.on_turn_start_heal is not None:
+            ticking.append(
+                HealEffect(
+                    target_id=unit.id,
+                    source_id=status.source_id,
+                    dice=definition.on_turn_start_heal.dice,
+                )
+            )
     # 先移除到期狀態，再結算持續傷害（各自依狀態 ID 順序），最後是表面效果
     if expiring:
         execute(ctx, expiring)
@@ -169,7 +177,10 @@ def end_turn(ctx: Ctx) -> None:
                 continue
             kept.append(
                 StatusInstance(
-                    status_id=status.status_id, remaining=remaining, source_id=status.source_id
+                    status_id=status.status_id,
+                    remaining=remaining,
+                    source_id=status.source_id,
+                    amount=status.amount,
                 )
             )
             continue

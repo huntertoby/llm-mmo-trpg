@@ -262,7 +262,10 @@ def _changes(events: list[EventBase]) -> list[TelegraphChange]:
             )
         if isinstance(e, DamageDealt):
             return TelegraphChange(
-                kind="unit_damaged", pos=e.pos, unit_id=e.target_id, amount=e.amount
+                kind="unit_damaged",
+                pos=e.pos,
+                unit_id=e.target_id,
+                amount=e.amount - e.absorbed,
             )
         if isinstance(e, UnitDowned):
             return TelegraphChange(kind="unit_downed", unit_id=e.unit_id)

@@ -1,11 +1,11 @@
 id: aura
 name_zh: 光環
-description_zh: 範圍內友方（或自己）獲得治療、增益或有益表面；不得有對敵方的效果。
+description_zh: 單一友方（含自己）或範圍內友方獲得治療、護盾、增益、淨化或有益表面；不得有對敵方的效果。
 kinds: [active]
 enabled: true
-shapes: [self, allies_in_radius, square3]
+shapes: [self, single, allies_in_radius, square3]   # 2D-1：single＝單一友方（含自己），視為半徑 0 的光環
 core:
-  primitives: [heal, apply_status, create_surface]
+  primitives: [heal, shield, cleanse, apply_status, create_surface]
   affects: [allies, self]
   beneficial_only: true   # 核心的狀態與表面必須 beneficial: true（statuses.yaml、surfaces.yaml）
 secondary: {max_count: 1}

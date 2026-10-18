@@ -21,7 +21,7 @@ from trpg.engine.events import AttackRolled, ReactionDeclined, ReactionTriggered
 from trpg.engine.results import Pending
 from trpg.engine.rules.combat import ForcedOutcome, attack_problem, roll_attack
 from trpg.engine.rules.geometry import XY, manhattan
-from trpg.engine.rules.statuses import skip_turn_status
+from trpg.engine.rules.statuses import effective_attribute, skip_turn_status
 from trpg.engine.state import UnitState
 from trpg.shared.errors import TrpgError
 
@@ -179,7 +179,7 @@ def perform_unit_attack(ctx: Ctx, attacker: UnitState, target: UnitState, *, pri
                 element=weapon.element,
                 dice=weapon.dice,
                 flat=weapon.flat,
-                scaled_permille=attacker.attributes[weapon.scaling_attr]
+                scaled_permille=effective_attribute(ctx.rules, attacker, weapon.scaling_attr)
                 * ctx.core.basic_attack_attr_multiplier_permille,
                 crit=roll.crit,
                 min_damage=ctx.core.min_damage_on_hit,

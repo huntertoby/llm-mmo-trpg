@@ -27,6 +27,7 @@ from trpg.engine.actions import Direction, UseSkill
 from trpg.engine.rules.combat import AttackProfile, attack_value, concealment_problem
 from trpg.engine.rules.geometry import XY, has_line_of_sight, manhattan
 from trpg.engine.rules.movement import is_deadly, is_standable
+from trpg.engine.rules.statuses import effective_attribute
 from trpg.engine.skills import shapes
 from trpg.engine.skills.conditions import skill_condition_problem
 from trpg.engine.state import BattleState, ObjectState, UnitState
@@ -132,14 +133,14 @@ def skill_profile(state: BattleState, caster: UnitState, skill: SkillDef) -> Att
     height_limited = skill_is_height_limited(state, caster, skill)
     if skill.category == "weapon":
         return AttackProfile(
-            attack_value=attack_value(caster),
+            attack_value=attack_value(caster, state.ruleset),
             melee=caster.weapon.is_melee,
             height_limited=height_limited,
             crit_range=caster.weapon.crit_range,
         )
     bonus = caster.weapon.attack_bonus if caster.weapon.weapon_class == "focus" else 0
     return AttackProfile(
-        attack_value=caster.attributes[skill.scaling_attr] + bonus,
+        attack_value=effective_attribute(state.ruleset, caster, skill.scaling_attr) + bonus,
         melee=False,
         height_limited=height_limited,
         crit_range=20,
@@ -444,7 +445,7 @@ def damage_parameters(
     """法術技：效果自己的骰子與元素、屬性 × ``spell_attr_multiplier``；武器技：武器的骰子與
     固定值、屬性 × 普攻倍率、效果的 ``multiplier_permille``，元素省略時繼承武器（元素灌注）。"""
     core = state.ruleset.core
-    attr = caster.attributes[skill.scaling_attr]
+    attr = effective_attribute(state.ruleset, caster, skill.scaling_attr)
     if skill.category == "spell":
         assert spec.element is not None
         return DamageParameters(

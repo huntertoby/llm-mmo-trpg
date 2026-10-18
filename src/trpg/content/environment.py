@@ -560,6 +560,8 @@ class AiWeights(ContentModel):
     expose: int = 0
     cover_damage: int = 0
     heal: int = 0
+    shield: int = 0
+    support: int = 0
     exposed: int = 0
     mana: int = 0
     cooldown: int = 0
@@ -573,6 +575,9 @@ class AiProfile(ContentModel):
     status_values: dict[str, int] = Field(default_factory=dict)
     """對敵人施加各狀態的價值（等值傷害點數）；由 :class:`AiProfileTable` 的 ``status_values``
     填入，行為模式自己也可以覆寫個別狀態。"""
+    ally_status_values: dict[str, int] = Field(default_factory=dict)
+    """對友方（含自己）施加各增益的價值（等值傷害點數，Phase 2D-1）；收益 ＝ ``support`` 權重 ×
+    價值 × 新增的持續比例。由 :class:`AiProfileTable` 的 ``ally_status_values`` 填入。"""
 
 
 class OrderBonuses(ContentModel):
@@ -606,23 +611,34 @@ class AiProfileTable(ContentModel):
     ``status_values``（Phase 2B-1）：對敵人施加各種狀態的價值，單位為「等值的傷害點數」，AI 的
     收益 ＝ 行為模式的 ``damage`` 權重 × 價值 × 命中率 × 施加成功率。沒有列出的狀態使用
     ``status`` 權重（每個狀態固定分數）。
+
+    ``ally_status_values``（Phase 2D-1）：對友方施加各增益的價值（同單位）；淨化的收益用
+    ``status_values``（沒列出的狀態用 3）。
     """
 
     profiles: tuple[AiProfile, ...] = Field(min_length=1)
     move_candidates: int = Field(default=8, ge=1)
     skill_candidates: int = Field(default=3, ge=1)
     status_values: dict[str, int] = Field(default_factory=dict)
+    ally_status_values: dict[str, int] = Field(default_factory=dict)
     orders: OrderBonuses = Field(default_factory=OrderBonuses)
 
     @model_validator(mode="before")
     @classmethod
     def _share_status_values(cls, data: Any) -> Any:
         """把表格層級的 ``status_values`` 填入每個行為模式（行為模式自己列出的優先）。"""
-        if not isinstance(data, dict) or not isinstance(data.get("status_values"), dict):
+        if not isinstance(data, dict):
             return data
-        shared = data["status_values"]
+        shared = data.get("status_values")
+        ally_shared = data.get("ally_status_values")
+        if not isinstance(shared, dict) and not isinstance(ally_shared, dict):
+            return data
         profiles = [
-            {**p, "status_values": {**shared, **p.get("status_values", {})}}
+            {
+                **p,
+                "status_values": {**(shared or {}), **p.get("status_values", {})},
+                "ally_status_values": {**(ally_shared or {}), **p.get("ally_status_values", {})},
+            }
             if isinstance(p, dict)
             else p
             for p in data.get("profiles", [])

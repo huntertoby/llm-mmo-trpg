@@ -1,0 +1,22 @@
+id: skill_taunting_roar
+schema_version: 1
+name_zh: 挑釁怒吼
+tier: 1
+rank: 1
+rarity: rare
+kind: active
+skeleton: control
+category: spell
+weapon_req: any
+ap_cost: 1
+scaling_attr: str
+shape: {type: ring, radius: 1}
+effects:
+  - {type: apply_status, status: taunted, duration: 2}
+condition: null
+cost: {mana: 0, cooldown: 2}
+tags: [taunt, control, shout]
+narrative:
+  concept: 用一聲怒吼逼所有靠近的敵人把目光放在自己身上
+  cast_flavor: 你猛然踏前一步，震耳的吼聲讓周圍的敵人無法移開視線
+provenance: {origin: builtin, owner_id: null, created_by: null, parents: [], bound: true, tradeable: false}

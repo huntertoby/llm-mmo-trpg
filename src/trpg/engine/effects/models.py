@@ -21,6 +21,7 @@ __all__ = [
     "EFFECT_LIST_ADAPTER",
     "ApplyStatusEffect",
     "ChangeTileEffect",
+    "CleanseEffect",
     "CreateObstacleEffect",
     "CreateSurfaceEffect",
     "DamageEffect",
@@ -37,6 +38,7 @@ __all__ = [
     "PushEffect",
     "RaiseTerrainEffect",
     "RemoveStatusEffect",
+    "ShieldEffect",
     "SpawnUnitEffect",
 ]
 
@@ -153,6 +155,31 @@ class RemoveStatusEffect(EffectBase):
     target_id: UnitId
     status_id: str
     reason: Literal["expired", "removed", "stood_up"] = "removed"
+
+    def sort_target(self) -> str:
+        return self.target_id
+
+
+class ShieldEffect(EffectBase):
+    """護盾（Phase 2D-1）：護盾量 ＝ ``骰子 ＋ flat ＋ scaled_permille ÷ 1000``（與治療同一公式，
+    無條件捨去）。目標獲得 ``shielded`` 狀態；已有護盾時吸收量取較大值並刷新持續時間。"""
+
+    kind: Literal["shield"] = "shield"
+    target_id: UnitId
+    dice: Dice | None = None
+    flat: int = 0
+    scaled_permille: int = 0
+
+    def sort_target(self) -> str:
+        return self.target_id
+
+
+class CleanseEffect(EffectBase):
+    """淨化（Phase 2D-1）：移除目標身上所有非有益（``beneficial: false``）的狀態，依狀態 ID 排序
+    逐一發出 ``status_removed``（原因 ``cleansed``）。"""
+
+    kind: Literal["cleanse"] = "cleanse"
+    target_id: UnitId
 
     def sort_target(self) -> str:
         return self.target_id
@@ -324,6 +351,8 @@ type Effect = Annotated[
     | MoveUnitEffect
     | ApplyStatusEffect
     | RemoveStatusEffect
+    | ShieldEffect
+    | CleanseEffect
     | PushEffect
     | CreateSurfaceEffect
     | DamageObjectEffect

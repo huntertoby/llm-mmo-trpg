@@ -24,6 +24,7 @@ __all__ = [
     "StatusDef",
     "StatusTable",
     "StatusTickDamage",
+    "StatusTickHeal",
     "TerrainDef",
     "TerrainTable",
     "UnitTemplate",
@@ -178,6 +179,12 @@ class StatusTickDamage(ContentModel):
     element: Element
 
 
+class StatusTickHeal(ContentModel):
+    """回合開始時的持續治療（Phase 2D-1，再生）。"""
+
+    dice: Dice
+
+
 class StatusDef(ContentModel):
     """一種狀態。
 
@@ -189,7 +196,7 @@ class StatusDef(ContentModel):
     Phase 2B-1 的數值效果欄位（千分比一律 ‰，1000 = ×1；多個狀態的同一欄位依序相乘、逐步
     無條件捨去）：
 
-    - ``move_permille``：回合開始時的移動點數倍率（緩速 500）。
+    - ``move_permille``：回合開始時的移動點數倍率（緩速 500、加速 1500）。
     - ``prevents_move``：不能主動移動（定身；強制位移照常）。
     - ``skip_turn``：回合開始時跳過整個回合，且不能執行反應（暈眩）。
     - ``damage_dealt_permille``：自己造成的攻擊傷害（``cause: attack``）倍率（虛弱 750）。
@@ -204,6 +211,14 @@ class StatusDef(ContentModel):
     - ``min_rarity``：技能使用此狀態的最低稀有度。
     - ``beneficial``（2B-3）：對帶有者有益（防禦、隱蔽）。光環骨架的核心狀態必須有益；
       隨機組合器不會對友方施加無益的狀態。
+
+    Phase 2D-1 的欄位：
+
+    - ``attr_bonus``：帶有者的有效屬性加值（多個狀態相加；先攻不受影響）。
+    - ``on_turn_start_heal``：回合開始時治療（與 ``on_turn_start_damage`` 同一時點）。
+    - ``forces_target``：嘲諷——帶有者對 **狀態來源以外** 的單位發動攻擊時有劣勢；來源倒下或離場
+      時此狀態立即移除。
+    - ``absorbs_damage``：護盾——狀態帶有吸收量（``StatusInstance.amount``），骰值傷害先扣護盾。
     """
 
     id: str = Field(pattern=ID_PATTERN)
@@ -213,7 +228,11 @@ class StatusDef(ContentModel):
     expires: Literal["turn_end", "own_turn_start", "never"]
     stacking: Literal["refresh"] = "refresh"
     on_turn_start_damage: StatusTickDamage | None = None
-    move_permille: int = Field(default=1000, ge=0, le=1000)
+    on_turn_start_heal: StatusTickHeal | None = None
+    attr_bonus: dict[Attribute, int] = Field(default_factory=dict)
+    forces_target: bool = False
+    absorbs_damage: bool = False
+    move_permille: int = Field(default=1000, ge=0, le=10000)
     prevents_move: bool = False
     skip_turn: bool = False
     damage_dealt_permille: int = Field(default=1000, ge=0, le=10000)

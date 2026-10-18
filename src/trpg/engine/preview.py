@@ -34,6 +34,7 @@ from trpg.engine.events import (
     ObjectIgnited,
     ObjectMoved,
     ReactionTriggered,
+    ShieldGained,
     StatusApplied,
     SurfaceChanged,
     TerrainChanged,
@@ -52,6 +53,7 @@ from trpg.engine.rules.combat import (
     is_hit,
     situational_modifier,
 )
+from trpg.engine.rules.statuses import effective_attribute, shield_amount
 from trpg.engine.skills.conditions import Subject, condition_met
 from trpg.engine.skills.targeting import (
     compute_area,
@@ -217,6 +219,8 @@ def _xy(pos: object) -> XY | None:
 def _outcome(e: EventBase) -> Outcome | None:  # noqa: PLR0911, PLR0912
     if isinstance(e, DamageDealt):
         return Outcome("damaged", unit_id=e.target_id, detail=e.cause)
+    if isinstance(e, ShieldGained):
+        return Outcome("shield", unit_id=e.unit_id)
     if isinstance(e, UnitDowned):
         return Outcome("downed", unit_id=e.unit_id)
     if isinstance(e, UnitMoved) and e.mode != "walk":
@@ -299,14 +303,18 @@ def _amount_table(
     weather: int,
     mult: int,
     status_ppm: int,
+    shield: int = 0,
 ) -> dict[int, int]:
     weapon = unit.weapon
     core = state.ruleset.core
-    scaled = unit.attributes[weapon.scaling_attr] * core.basic_attack_attr_multiplier_permille
+    scaled = (
+        effective_attribute(state.ruleset, unit, weapon.scaling_attr)
+        * core.basic_attack_attr_multiplier_permille
+    )
     table: dict[int, int] = {}
     for s in sums:
         raw = (s + weapon.flat) * PERMILLE + scaled
-        table[s] = max(
+        amount = max(
             raw
             * mod_ppm
             * weather
@@ -315,6 +323,7 @@ def _amount_table(
             // (PERMILLE * PPM * PERMILLE * PERMILLE * PPM),
             core.min_damage_on_hit,
         )
+        table[s] = max(0, amount - shield)  # 護盾先吸收；表中是實際扣血
     return table
 
 
@@ -358,25 +367,41 @@ def _attack_numbers(
         return hit, crit, None
     normal_dist = dice_distribution(weapon.dice.count, weapon.dice.sides)
     status_ppm = PPM
+    shield = 0
     if isinstance(low, DamageDealt):
         mod, weather, mult = low.element_mod_ppm, low.weather_permille, low.multiplier_permille
         status_ppm = low.status_ppm
+        shield = shield_amount(state.ruleset, state.units[low.target_id])
     else:
         mod, weather, mult = PPM, _object_weather(state, actor), PERMILLE
     sums = sorted(set(normal_dist) | set(crit_dist))
     table = _amount_table(
-        state, actor, sums, mod_ppm=mod, weather=weather, mult=mult, status_ppm=status_ppm
+        state,
+        actor,
+        sums,
+        mod_ppm=mod,
+        weather=weather,
+        mult=mult,
+        status_ppm=status_ppm,
+        shield=shield,
     )
     e_normal = _expected(normal_dist, table)
     e_crit = _expected(crit_dist, table) if crit_dist else Fraction(0)
     expected_if_hit = Fraction(0) if hit == 0 else ((hit - crit) * e_normal + crit * e_crit) / hit
     damage = DamageRange(
-        minimum=getattr(low, "amount", 0),
-        maximum=getattr(high, "amount", 0),
+        minimum=_dealt(low),
+        maximum=_dealt(high),
         expected=expected_if_hit * hit,
         expected_if_hit=expected_if_hit,
     )
     return hit, crit, damage
+
+
+def _dealt(event: EventBase) -> int:
+    """主要傷害事件的實際扣血（傷害 − 護盾吸收）；物件傷害為 ``amount``。"""
+    if isinstance(event, DamageDealt):
+        return event.amount - event.absorbed
+    return int(getattr(event, "amount", 0))
 
 
 def _object_weather(state: BattleState, actor: UnitState) -> int:
@@ -390,7 +415,9 @@ def _maneuver_chance(state: BattleState, actor: UnitState, action: Shove | Trip)
     target = state.units[action.target_id]
     attr = Attribute.STR if isinstance(action, Shove) else Attribute.DEX
     rules = state.ruleset
-    modifier = rules.hit_table.modifier(actor.attributes[attr], max(1, target.attributes[attr]))
+    modifier = rules.hit_table.modifier(
+        effective_attribute(rules, actor, attr), max(1, effective_attribute(rules, target, attr))
+    )
     hit, _ = _chances(
         _naturals("none"), modifier + rules.core.proficiency, rules.core.hit_target, 21
     )
@@ -424,7 +451,8 @@ def _damage_expectation(  # noqa: PLR0917
     low, high = direct(min_events), direct(max_events)
     if not low or not high:
         return None
-    minimum, maximum = sum(e.amount for e in low), sum(e.amount for e in high)
+    minimum = sum(e.amount - e.absorbed for e in low)
+    maximum = sum(e.amount - e.absorbed for e in high)
     target = state.units[target_id]
     specs = [
         skill.effects[r.spec_index]
@@ -441,6 +469,9 @@ def _damage_expectation(  # noqa: PLR0917
         return DamageRange(minimum, maximum, mid * hit, mid)
     core = state.ruleset.core
     total = Fraction(0)
+    shield = shield_amount(
+        state.ruleset, target
+    )  # 依序被每個傷害效果吸收（以最少後果估計用掉的量）
     for spec, event in zip(specs, low, strict=True):
         params = damage_parameters(state, actor, skill, spec)
         dice = params.dice
@@ -449,7 +480,7 @@ def _damage_expectation(  # noqa: PLR0917
         table: dict[int, int] = {}
         for value in sorted(set(normal) | set(doubled)):
             raw = (value + params.flat) * PERMILLE + params.scaled_permille
-            table[value] = max(
+            nominal = max(
                 raw
                 * event.element_mod_ppm
                 * event.weather_permille
@@ -458,6 +489,8 @@ def _damage_expectation(  # noqa: PLR0917
                 // (PERMILLE * PPM * PERMILLE * PERMILLE * PPM),
                 core.min_damage_on_hit,
             )
+            table[value] = max(0, nominal - shield)
+        shield = max(0, shield - event.amount)
         total += ((hit - crit) * _expected(normal, table) + crit * _expected(doubled, table)) / hit
     return DamageRange(minimum, maximum, total * hit, total)
 
@@ -474,7 +507,9 @@ def _knock_chance(
         return None
     attr = skill.scaling_attr
     rules = state.ruleset
-    modifier = rules.hit_table.modifier(actor.attributes[attr], max(1, target.attributes[attr]))
+    modifier = rules.hit_table.modifier(
+        effective_attribute(rules, actor, attr), max(1, effective_attribute(rules, target, attr))
+    )
     hit, _ = _chances(
         _naturals("none"), modifier + rules.core.proficiency, rules.core.hit_target, 21
     )

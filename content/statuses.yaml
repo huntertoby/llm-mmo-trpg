@@ -21,6 +21,15 @@
 #   min_rarity     技能使用此狀態的最低稀有度（省略為 common）
 # 2B-3：
 #   beneficial     對帶有者有益（省略為 false）；光環骨架的核心狀態必須有益
+# 2D-1（保護、增益與嘲諷；數值全是初值，未經模擬，平衡階段再調）：
+#   attr_bonus          {屬性: 加值}：帶有者的有效屬性加值（多個狀態相加）。命中比例、抵抗判定、對抗判定、
+#                       傷害／治療／護盾的屬性縮放都用有效屬性（trpg.engine.rules.statuses.effective_attribute）；
+#                       先攻在戰鬥開始時擲，不受影響
+#   on_turn_start_heal  回合開始時治療（dice）；與 on_turn_start_damage 同一時點，受 healing_received_permille 影響
+#   forces_target       嘲諷：帶有者對「狀態來源以外」的單位發動攻擊時有劣勢；來源倒下或離場時此狀態立即移除。
+#                       刷新時來源改為最新的施放者
+#   absorbs_damage      護盾：狀態帶有吸收量（StatusInstance.amount，由 shield 原語施加），骰值傷害在所有倍率之後、
+#                       扣 HP 之前先扣護盾；吸收量歸零時移除（原因 depleted）。不能由 apply_status 施加（無 budget_points）
 statuses:
   - id: defending
     name_zh: 防禦
@@ -28,6 +37,7 @@ statuses:
     expires: own_turn_start
     stacking: refresh
     beneficial: true
+    budget_points: 2
   - id: prone
     name_zh: 倒地
     description_zh: 移動前要先站起來（消耗一半移動點數）；近戰攻擊倒地者有優勢，遠程攻擊有劣勢。
@@ -125,3 +135,57 @@ statuses:
     on_turn_start_damage:
       dice: 1d4
       element: poison
+  - id: guarded
+    name_zh: 護衛
+    description_zh: 受到的骰值傷害 ×70%（不含墜落、致命地形等百分比傷害）。
+    duration: 2
+    expires: turn_end
+    stacking: refresh
+    beneficial: true
+    budget_points: 4
+    damage_taken_permille: 700
+  - id: empowered
+    name_zh: 激昂
+    description_zh: 六個屬性各 +2（命中、抵抗、傷害與治療的縮放都用加值後的屬性；先攻不變）。
+    duration: 2
+    expires: turn_end
+    stacking: refresh
+    beneficial: true
+    budget_points: 4
+    attr_bonus: {str: 2, dex: 2, con: 2, int: 2, wis: 2, wil: 2}
+  - id: hasted
+    name_zh: 加速
+    description_zh: 回合開始時的移動點數 ×150%（無條件捨去）。
+    duration: 2
+    expires: turn_end
+    stacking: refresh
+    beneficial: true
+    budget_points: 3
+    move_permille: 1500
+  - id: regenerating
+    name_zh: 再生
+    description_zh: 回合開始時恢復 1d4 HP，持續 3 回合。
+    duration: 3
+    expires: turn_end
+    stacking: refresh
+    beneficial: true
+    budget_points: 4
+    on_turn_start_heal:
+      dice: 1d4
+  - id: shielded
+    name_zh: 護盾
+    description_zh: 帶有吸收量；受到的骰值傷害先扣護盾，吸收量歸零時消失。
+    duration: 2
+    expires: turn_end
+    stacking: refresh
+    beneficial: true
+    absorbs_damage: true
+  - id: taunted
+    name_zh: 嘲諷
+    description_zh: 對嘲諷者以外的目標發動攻擊時有劣勢；嘲諷者倒下時消失。
+    duration: 2
+    expires: turn_end
+    stacking: refresh
+    budget_points: 4
+    save_attr: wil
+    forces_target: true

@@ -5,6 +5,7 @@ from __future__ import annotations
 from trpg.engine.context import Ctx
 from trpg.engine.events import ManeuverRolled
 from trpg.engine.rules.combat import is_hit
+from trpg.engine.rules.statuses import effective_attribute
 from trpg.engine.state import UnitState
 from trpg.shared.types import Attribute
 
@@ -27,7 +28,9 @@ def contest(
     次要的對抗（技能附帶的擊倒）是分歧點——``min`` 視為失敗、``max`` 視為成功。
     """
     rules = ctx.rules
-    modifier = rules.hit_table.modifier(unit.attributes[attr], max(1, target.attributes[attr]))
+    modifier = rules.hit_table.modifier(
+        effective_attribute(rules, unit, attr), max(1, effective_attribute(rules, target, attr))
+    )
     proficiency = rules.core.proficiency
     if ctx.preview is None:
         natural = ctx.rng.d20()

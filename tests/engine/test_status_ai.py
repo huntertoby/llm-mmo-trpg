@@ -136,7 +136,16 @@ def test_the_mage_does_not_reroot_an_already_rooted_enemy() -> None:
 
 def test_status_values_are_defined_for_every_new_status() -> None:
     values = library().ai_profiles.status_values
-    assert set(values) == {"stun", "root", "slow", "weaken", "vulnerable", "bleed", "poison"}
+    assert set(values) == {
+        "stun",
+        "root",
+        "slow",
+        "weaken",
+        "vulnerable",
+        "bleed",
+        "poison",
+        "taunted",  # 2D-1
+    }
     assert all(v > 0 for v in values.values())
     for profile in library().ai_profiles.profiles:
         assert profile.status_values == values  # 表格層級的價值填入每個行為模式

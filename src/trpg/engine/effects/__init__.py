@@ -20,6 +20,7 @@ from trpg.engine.effects import world as _world
 from trpg.engine.effects.models import (
     ApplyStatusEffect,
     ChangeTileEffect,
+    CleanseEffect,
     CreateObstacleEffect,
     CreateSurfaceEffect,
     DamageEffect,
@@ -36,6 +37,7 @@ from trpg.engine.effects.models import (
     PushEffect,
     RaiseTerrainEffect,
     RemoveStatusEffect,
+    ShieldEffect,
     SpawnUnitEffect,
 )
 from trpg.engine.effects.queue import execute, register_effect
@@ -45,6 +47,7 @@ from trpg.engine.state import BattleState
 __all__ = [
     "ApplyStatusEffect",
     "ChangeTileEffect",
+    "CleanseEffect",
     "CreateObstacleEffect",
     "CreateSurfaceEffect",
     "DamageEffect",
@@ -61,6 +64,7 @@ __all__ = [
     "PushEffect",
     "RaiseTerrainEffect",
     "RemoveStatusEffect",
+    "ShieldEffect",
     "SpawnUnitEffect",
     "execute",
     "register_effect",

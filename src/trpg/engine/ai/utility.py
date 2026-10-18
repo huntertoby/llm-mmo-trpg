@@ -39,7 +39,8 @@ from dataclasses import dataclass
 from fractions import Fraction
 
 from trpg.content.environment import AiProfile, AiProfileTable, AiWeights, OrderBonuses
-from trpg.engine.actions import Action, Attack, Defend, EndTurn, Move, UseSkill
+from trpg.content.skills import SkillDef
+from trpg.engine.actions import Action, Attack, Defend, EndTurn, Move, Shove, Trip, UseSkill
 from trpg.engine.ai.orders import (
     FocusTarget,
     HoldPosition,
@@ -54,7 +55,9 @@ from trpg.engine.events import (
     DamageDealt,
     EventBase,
     ObjectDamaged,
+    ShieldGained,
     StatusApplied,
+    StatusRemoved,
     UnitDowned,
     UnitMoved,
 )
@@ -74,6 +77,7 @@ from trpg.engine.rules.geometry import (
     neighbors4,
 )
 from trpg.engine.rules.movement import is_standable, step_cost
+from trpg.engine.rules.statuses import forced_target_sources, shield_amount
 from trpg.engine.skills.targeting import ResolvedEffect, SkillArea, hp_cost, resolve_effects
 from trpg.engine.state import BattleState, UnitState
 from trpg.shared.types import ObjectId, Surface, Team, UnitId
@@ -176,6 +180,15 @@ class ActionScore:
 
 def _enemies(state: BattleState, unit: UnitState) -> list[UnitState]:
     return [u for u in state.living_units() if u.team is not unit.team]
+
+
+def _taunter(state: BattleState, unit: UnitState) -> UnitState | None:
+    """嘲諷 ``unit`` 的敵人（``forces_target`` 狀態的來源，還在場上時）；沒有時為 ``None``。"""
+    for uid in sorted(forced_target_sources(state.ruleset, unit)):
+        source = state.units.get(uid)
+        if source is not None and source.alive and source.team is not unit.team:
+            return source
+    return None
 
 
 def _harmful(state: BattleState, xy: tuple[int, int]) -> bool:
@@ -307,6 +320,9 @@ def _scene(
         target = state.units.get(orders.focus)
         if target is not None and target.alive:
             focus = target
+    taunter = _taunter(state, unit)
+    if taunter is not None:  # 嘲諷優先於集火指令：接近改以嘲諷者計算
+        focus = taunter
     enemies = _enemies(state, unit)
     if walk is None and enemies:
         walk = _Walk(state, enemies)
@@ -477,6 +493,57 @@ def _status_gains(
     return gains
 
 
+def _support_gains(state: BattleState, p: Preview, profile: AiProfile) -> Fraction:
+    """友方支援的收益（Phase 2D-1）：護盾、增益與淨化。
+
+    - 護盾：``shield`` × 實際增加的吸收量（新吸收量 − 原吸收量，下限 0；取最少與最多後果的平均）；
+    - 增益（``ally_status_values``）：``support`` × 價值 × 新增的持續比例
+      （新持續 − 剩餘 ÷ 新持續，下限 0；沒有預設持續的狀態＝尚未帶有時 1，已帶有 0）；
+      目標在動作後倒下時為 0；
+    - 淨化：``support`` × 被移除的每個狀態在 ``status_values`` 的價值（沒列出的用 3）。
+    """
+    w = profile.weights
+    actor = state.units[p.action.unit_id]
+    gains = Fraction(0)
+    if w.shield:
+        gained = Fraction(0)
+        for events in (p.min_events, p.max_events):
+            for e in events:
+                if isinstance(e, ShieldGained) and state.units[e.unit_id].team is actor.team:
+                    gained += max(0, e.total - shield_amount(state.ruleset, state.units[e.unit_id]))
+        gains += w.shield * gained / 2
+    if w.support:
+        gains += _buff_gains(state, actor, p, profile)
+    return gains
+
+
+def _buff_gains(state: BattleState, actor: UnitState, p: Preview, profile: AiProfile) -> Fraction:
+    """友方增益與淨化的收益（:func:`_support_gains` 的後半）。"""
+    w = profile.weights
+    gains = Fraction(0)
+    after = p.min_state
+    for e in p.min_events:
+        if isinstance(e, StatusApplied):
+            target = state.units.get(e.target_id)
+            points = profile.ally_status_values.get(e.status_id)
+            if target is None or target.team is not actor.team or points is None:
+                continue
+            if not after.units[e.target_id].alive:
+                continue
+            current = target.get_status(e.status_id)
+            if e.duration is None:
+                share = Fraction(0 if current is not None else 1)
+            else:
+                remaining = 0 if current is None or current.remaining is None else current.remaining
+                share = Fraction(max(0, e.duration - remaining), e.duration)
+            gains += w.support * points * share
+        elif isinstance(e, StatusRemoved) and e.reason == "cleansed":
+            target = state.units.get(e.target_id)
+            if target is not None and target.team is actor.team:
+                gains += w.support * profile.status_values.get(e.status_id, 3)
+    return gains
+
+
 def _gains(  # noqa: PLR0912, PLR0915
     state: BattleState,
     actor: UnitState,
@@ -519,11 +586,11 @@ def _gains(  # noqa: PLR0912, PLR0915
                 continue
             if is_enemy(e.target_id):
                 if only is None or e.target_id == only:
-                    other_enemy += e.amount
+                    other_enemy += e.amount - e.absorbed  # 被護盾吸收的不算
                     if e.cause not in _ATTACK_CAUSES:
-                        env_enemy += e.amount
+                        env_enemy += e.amount - e.absorbed
             elif e.target_id in state.units and only is None:
-                friendly += e.amount
+                friendly += e.amount - e.absorbed
     if p.damage is not None and primary is not None and (only is None or primary == only):
         gains += w.damage * _useful_damage(p.damage, hit, state.units[primary].hp)
     for t in p.targets:  # 技能：每個目標各自的命中率與期望傷害
@@ -532,6 +599,8 @@ def _gains(  # noqa: PLR0912, PLR0915
     healed = sum(Fraction(lo + hi, 2) for uid, lo, hi in p.healed if uid in state.units)
     if only is None:
         gains += w.heal * healed
+        if isinstance(p.action, UseSkill):  # 防禦動作的 defending 由 ``defend`` 權重計分，不重複算
+            gains += _support_gains(state, p, profile)
     gains += w.damage * hit * other_enemy / 2
     gains += w.env_damage * hit * env_enemy / 2
     gains -= w.friendly_fire * friendly / 2
@@ -773,7 +842,6 @@ def skill_estimate(  # noqa: PLR0917
         moved.pos = action.target_pos
         return _unit_position_value(state, moved, w, scene) - before
     effects = resolve_effects(state, skill)
-    heals = any(e.type == "heal" for e in skill.effects)
     score = Fraction(0)
     useful = False
     for uid in area.units:
@@ -781,7 +849,7 @@ def skill_estimate(  # noqa: PLR0917
         if other.team is not unit.team:
             score += 3
             useful = True
-        elif heals and other.hp < other.max_hp:
+        elif _supports(state, unit, skill, effects, other):
             score += 2
             useful = True
         elif other.id != unit.id:
@@ -797,6 +865,44 @@ def skill_estimate(  # noqa: PLR0917
             return None
         score = Fraction(field)
     return score - Fraction(manhattan(unit.xy, area.origin), 1000)
+
+
+def _supports(
+    state: BattleState,
+    caster: UnitState,
+    skill: SkillDef,
+    effects: tuple[ResolvedEffect, ...],
+    target: UnitState,
+) -> bool:
+    """技能的支援效果（治療、護盾、淨化、增益）對友方 ``target`` 有沒有用（便宜的估計）。"""
+    for resolved in effects:
+        helps = resolved.affects in ("allies", "all") or (
+            resolved.affects == "self" and target.id == caster.id
+        )
+        if not helps:
+            continue
+        spec = skill.effects[resolved.spec_index]
+        if resolved.type == "heal" and target.hp < target.max_hp:
+            return True
+        if resolved.type == "shield":
+            return True
+        if resolved.type == "cleanse" and any(
+            not state.ruleset.status_def(s.status_id).beneficial for s in target.statuses
+        ):
+            return True
+        if resolved.type == "apply_status" and spec.status is not None:
+            definition = state.ruleset.status_def(spec.status)
+            if not definition.beneficial:
+                continue
+            current = target.get_status(spec.status)
+            duration = spec.duration or definition.duration
+            if current is None or (
+                duration is not None
+                and current.remaining is not None
+                and current.remaining < duration
+            ):
+                return True
+    return False
 
 
 def _is_field_skill(effects: tuple[ResolvedEffect, ...]) -> bool:
@@ -891,6 +997,22 @@ def is_risky_move(
             return True
         prev_height = tile.height
     return False
+
+
+def _hits_unit(scored: ActionScore, uid: UnitId) -> bool:
+    """動作的有害效果是否影響到單位 ``uid``（攻擊、推擊、絆倒的目標；技能的敵方命中目標，或
+    預覽中受到傷害者）。"""
+    action = scored.action
+    if isinstance(action, Attack | Shove | Trip):
+        return action.target_id == uid
+    p = scored.preview
+    if p is None or not isinstance(action, UseSkill):
+        return False
+    if any(t.unit_id == uid and not t.ally for t in p.targets):
+        return True
+    return any(
+        isinstance(e, DamageDealt) and e.target_id == uid for e in (*p.min_events, *p.max_events)
+    )
 
 
 class UtilityAI:
@@ -1036,8 +1158,16 @@ class UtilityAI:
         unit = state.active
         if unit is None:
             raise ValueError("目前沒有行動中的單位")
+        ranked = self.rank(state)
+        taunter = _taunter(state, unit)
+        if taunter is not None:
+            # 被嘲諷：只要有分數 > 0、且有害效果影響到嘲諷者的動作，就只在這些動作與移動之間選
+            # （移動的 approach 已改以嘲諷者計算）；否則照一般規則行動
+            hostile = [s for s in ranked if s.score > 0 and _hits_unit(s, taunter.id)]
+            if hostile:
+                ranked = [s for s in ranked if isinstance(s.action, Move) or s in hostile]
         best: ActionScore | None = None
-        for scored in self.rank(state):
+        for scored in ranked:
             if scored.score > 0 and (best is None or scored.score > best.score):
                 best = scored
         return best.action if best is not None else EndTurn(unit_id=unit.id)

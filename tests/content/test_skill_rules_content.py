@@ -73,7 +73,19 @@ def test_the_initial_skeleton_structure_matches_the_spec() -> None:
     assert set(sk["displace"].core.primitives) == {"push", "pull", "teleport", "knock_prone"}
     assert sk["displace"].secondary.max_share_permille == {"damage": 500}
     assert sk["displace"].secondary.max_count == 2
-    assert set(sk["aura"].shapes) == {"self", "allies_in_radius", "square3"}
+    assert set(sk["aura"].shapes) == {
+        "self",
+        "single",
+        "allies_in_radius",
+        "square3",
+    }  # 2D-1 加 single
+    assert set(sk["aura"].core.primitives) == {
+        "heal",
+        "shield",
+        "cleanse",
+        "apply_status",
+        "create_surface",
+    }
     assert (
         set(sk["aura"].forbid_affects) == {"enemies", "all"} and sk["aura"].secondary.max_count == 1
     )
@@ -217,9 +229,27 @@ def test_min_rarity_tables_match_the_spec() -> None:
     for shape in rules.shapes.shapes:
         assert shape.min_rarity == ("common" if shape.id in common_shapes else "rare"), shape.id
     for primitive in rules.primitives.primitives:
-        expected = "common" if primitive.id in {"damage", "heal", "apply_status"} else "rare"
+        expected = (
+            "common"
+            if primitive.id in {"damage", "heal", "apply_status", "shield", "cleanse"}
+            else "rare"
+        )
         assert primitive.min_rarity == expected, primitive.id
-    common_statuses = {"burning", "slow", "weaken", "vulnerable", "bleed", "poison"}
+    common_statuses = {
+        "burning",
+        "slow",
+        "weaken",
+        "vulnerable",
+        "bleed",
+        "poison",
+        # 2D-1
+        "defending",
+        "guarded",
+        "empowered",
+        "hasted",
+        "regenerating",
+        "taunted",
+    }
     for status in rules.statuses.statuses:
         if status.budget_points is not None:
             expected = "common" if status.id in common_statuses else "rare"

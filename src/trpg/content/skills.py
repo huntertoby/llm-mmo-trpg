@@ -281,6 +281,7 @@ class PrimitiveDef(ContentModel):
     - ``acts_on``：``unit``（對單位）、``tile``（對格子；預設 ``affects: tiles``）、
       ``caster``（只對施放者；``affects`` 一律為 ``self``）。
     - ``allowed_shapes``：只能搭配這些形狀（``None`` 為不限）。
+    - ``forbid_affects``：不可搭配的 ``affects``（淨化不能對敵方使用）。
     - ``budget_basis``／``base_points``：預算點數的算法（``docs/phases/Phase2B計畫.md`` 4.2）：
       ``fixed`` 固定 ``base_points``、``per_distance`` ``base_points × distance``、
       ``dice_average`` 骰子平均值、``damage`` 法術為骰子平均值而武器為倍率 × 基準武器傷害、
@@ -296,6 +297,7 @@ class PrimitiveDef(ContentModel):
     harmful: bool
     acts_on: Literal["unit", "tile", "caster"] = "unit"
     allowed_shapes: tuple[str, ...] | None = None
+    forbid_affects: tuple[Affects, ...] = ()
     params: dict[str, PrimitiveParam] = Field(default_factory=dict)
     budget_basis: (
         Literal["fixed", "per_distance", "dice_average", "damage", "status", "surface"] | None
@@ -734,6 +736,8 @@ def _effect_problems(skill: SkillDef, index: int, effect: EffectSpec, refs: _Ref
         problems.append(f"{where}.affects：{primitive.id} 只能對施放者（self），收到 {affects}")
     if primitive.acts_on != "tile" and affects == "tiles":
         problems.append(f"{where}.affects：{primitive.id} 是對單位的效果，不能用 tiles")
+    if affects in primitive.forbid_affects:
+        problems.append(f"{where}.affects：{primitive.id} 不能搭配 affects: {affects}")
     if primitive.allowed_shapes is not None and skill.shape.type not in primitive.allowed_shapes:
         allowed = "、".join(primitive.allowed_shapes)
         problems.append(f"{where}：{primitive.id} 只能搭配形狀 {allowed}，收到 {skill.shape.type}")

@@ -263,7 +263,7 @@ def test_status_and_surface_points_match_the_spec() -> None:
     rules = lib().ruleset
     statuses = {s.id: s.budget_points for s in rules.statuses.statuses}
     assert statuses == {
-        "defending": None,
+        "defending": 2,  # 2D-1：技能可以施加防禦
         "prone": 3,
         "burning": 3,
         "concealed": 3,
@@ -274,6 +274,13 @@ def test_status_and_surface_points_match_the_spec() -> None:
         "vulnerable": 4,
         "bleed": 3,
         "poison": 3,
+        # 2D-1
+        "guarded": 4,
+        "empowered": 4,
+        "hasted": 3,
+        "regenerating": 4,
+        "shielded": None,  # 只能由 shield 原語施加
+        "taunted": 4,
     }
     surfaces = {s.id.value: s.budget_points for s in rules.surfaces.surfaces}
     assert surfaces == {
@@ -298,9 +305,9 @@ def test_the_budget_is_exact_not_floating_point() -> None:
 # ---------------------------------------------------------------------------
 
 
-def test_defending_cannot_be_applied_by_a_skill() -> None:
-    s = skill(effects=[{"type": "apply_status", "status": "defending"}])
-    with pytest.raises(BudgetError, match="defending"):
+def test_shielded_cannot_be_applied_by_apply_status() -> None:
+    s = skill(effects=[{"type": "apply_status", "status": "shielded"}])
+    with pytest.raises(BudgetError, match="shielded"):
         skill_budget(s, lib())
 
 

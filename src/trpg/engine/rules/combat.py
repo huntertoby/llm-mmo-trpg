@@ -12,6 +12,7 @@ from typing import Literal
 from trpg.content.library import Ruleset
 from trpg.engine.events import AdvantageState
 from trpg.engine.rules.geometry import XY, has_line_of_sight, manhattan
+from trpg.engine.rules.statuses import effective_attribute, forced_target_sources
 from trpg.engine.state import BattleState, UnitState
 from trpg.shared.rng import Rng
 from trpg.shared.types import Attribute, Element, ObjectId, Surface
@@ -57,9 +58,9 @@ HALF_COVER = "half_cover"
 _COVER_DIRECTIONS: tuple[XY, ...] = ((0, -1), (1, 0), (0, 1), (-1, 0))
 
 
-def attack_value(unit: UnitState) -> int:
-    """攻擊值 ＝ 縮放屬性值 ＋ 武器攻擊加值。"""
-    return unit.attributes[unit.weapon.scaling_attr] + unit.weapon.attack_bonus
+def attack_value(unit: UnitState, rules: Ruleset) -> int:
+    """攻擊值 ＝ 縮放屬性值（有效屬性） ＋ 武器攻擊加值。"""
+    return effective_attribute(rules, unit, unit.weapon.scaling_attr) + unit.weapon.attack_bonus
 
 
 @dataclass(frozen=True, slots=True)
@@ -82,7 +83,7 @@ def weapon_profile(state: BattleState, attacker: UnitState) -> AttackProfile:
     """普攻的參數：取自 ``attacker`` 的武器。"""
     weapon = attacker.weapon
     return AttackProfile(
-        attack_value=attack_value(attacker),
+        attack_value=attack_value(attacker, state.ruleset),
         melee=weapon.is_melee,
         height_limited=weapon.range <= state.ruleset.core.melee_height_limit_max_range,
         crit_range=weapon.crit_range,
@@ -91,7 +92,7 @@ def weapon_profile(state: BattleState, attacker: UnitState) -> AttackProfile:
 
 def defense_value_permille(unit: UnitState, rules: Ruleset) -> int:
     """防禦值（×1000）＝ (敏捷 ＋ 護甲) × (1 ＋ 防禦姿態加成)。基礎防禦值最低視為 1。"""
-    base = max(1, unit.attributes[Attribute.DEX] + unit.armor_bonus)
+    base = max(1, effective_attribute(rules, unit, Attribute.DEX) + unit.armor_bonus)
     bonus = rules.core.defend_defense_bonus_permille if unit.has_status(DEFENDING) else 0
     return base * (PERMILLE + bonus)
 
@@ -103,7 +104,7 @@ def hit_modifier(
     profile: AttackProfile | None = None,
 ) -> int:
     """命中修正 ＝ clamp(round(slope × log2(攻擊值 ÷ 防禦值)), ±cap)，以整數門檻表計算。"""
-    value = attack_value(attacker) if profile is None else profile.attack_value
+    value = attack_value(attacker, rules) if profile is None else profile.attack_value
     return rules.hit_table.modifier(value * PERMILLE, defense_value_permille(target, rules))
 
 
@@ -237,6 +238,7 @@ def advantage_sources(
     - 目標倒地：近戰攻擊有優勢、遠程攻擊有劣勢。
     - 目標隱蔽：劣勢。
     - 天氣（濃霧）：遠程攻擊超過 ``ranged_disadvantage_beyond`` 格有劣勢。
+    - 攻擊者被嘲諷（``forces_target``）：攻擊嘲諷者以外的單位有劣勢（Phase 2D-1）。
     """
     melee = attacker.weapon.is_melee if profile is None else profile.melee
     advantage = False
@@ -247,6 +249,9 @@ def advantage_sources(
         else:
             disadvantage = True
     if is_concealed(state, target):
+        disadvantage = True
+    taunters = forced_target_sources(state.ruleset, attacker)
+    if taunters and target.id not in taunters:
         disadvantage = True
     weather = state.weather
     if (

@@ -37,11 +37,14 @@ __all__ = [
 
 @dataclass(slots=True, frozen=True)
 class StatusInstance:
-    """單位身上的一個狀態。``remaining`` 為剩餘回合（``None`` 表示不倒數）。"""
+    """單位身上的一個狀態。``remaining`` 為剩餘回合（``None`` 表示不倒數）。
+
+    ``amount``：護盾的剩餘吸收量（只有 ``absorbs_damage`` 的狀態使用，Phase 2D-1）。"""
 
     status_id: str
     remaining: int | None = None
     source_id: UnitId | None = None
+    amount: int | None = None
 
 
 @dataclass(slots=True, frozen=True)

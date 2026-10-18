@@ -16,6 +16,9 @@
 #   expose         每名因此離開掩護的敵人（被推離半掩護物件旁，或掩護物被摧毀；取最少與最多後果的平均）
 #   cover_damage   對「緊鄰敵人的半掩護物件」造成的每點傷害
 #   heal           每點實際治療到友方（含自己）的 HP（Phase 2A；取最少與最多後果的平均）
+#   shield         每點實際增加的護盾量（新吸收量 − 原吸收量，下限 0；Phase 2D-1，初值未經模擬）
+#   support        友方增益：× ally_status_values 的價值 × 新增的持續比例（新持續 − 剩餘 ÷ 新持續，下限 0）；
+#                  淨化：× 被移除的每個狀態在 status_values 的價值（沒列出的用 3）
 #   mana           技能的法力機會成本：每點法力（扣在技能的分數上）。法力不回復，花掉就沒了
 #   cooldown       技能的冷卻機會成本：每回合冷卻（扣在技能的分數上）
 #   （技能對友方造成的傷害用 friendly_fire；讓友方站上有害的新表面，每名友方扣
@@ -46,7 +49,12 @@ move_candidates: 6
 # 沒列出的狀態（燃燒、倒地……）維持原本的規則：每個施加的狀態固定加 status 權重。
 # 初值未經模擬（Phase 2C 統一調整）：暈眩約一整回合的行動，定身與緩速約半回合的走位，
 # 虛弱與易傷約 25% 的傷害差，流血與中毒約 1d4 × 3 回合。
-status_values: {stun: 12, root: 6, slow: 4, weaken: 5, vulnerable: 6, bleed: 6, poison: 6}
+# 2D-1：加上 taunted（嘲諷，約半個回合的行動被迫集中在施放者身上）。
+status_values: {stun: 12, root: 6, slow: 4, weaken: 5, vulnerable: 6, bleed: 6, poison: 6, taunted: 5}
+# ally_status_values（Phase 2D-1）：對友方（含自己）施加各增益的價值，同樣是「等值的傷害點數」，收益 =
+# 行為模式的 support 權重 × 價值 × 新增的持續比例。初值未經模擬（平衡階段再調）：再生約 1d4 × 3 回合的
+# 治療，護衛約 30% 的減傷、激昂與加速約一回合的額外輸出或走位。
+ally_status_values: {guarded: 5, empowered: 5, hasted: 3, regenerating: 6, defending: 3}
 # orders（Phase 2C-2）：戰術指令的評分加成，初值未經模擬（2C-4 調整）。指令只改評分，不改合法動作。
 #   focus_permille        集火：對目標的預覽收益（傷害、擊倒、狀態、推擊、表面、離開掩護）×1.5；
 #                         位置價值的 approach 改以「與目標的距離」計算
@@ -59,16 +67,20 @@ profiles:
   - id: brute
     name_zh: 莽夫
     description_zh: 重視傷害與接近目標。
-    weights: {damage: 10, env_damage: 3, kill: 40, env_kill: 40, push: 4, surface: 5, expose: 10, friendly_fire: 4, approach: 6, threat: 4, objective: 8, hazard: 8, defend: 1, heal: 8, mana: 1, cooldown: 1}
+    weights: {damage: 10, env_damage: 3, kill: 40, env_kill: 40, push: 4, surface: 5, expose: 10, friendly_fire: 4, approach: 6, threat: 4, objective: 8, hazard: 8, defend: 1, heal: 8, shield: 6, support: 3, mana: 1, cooldown: 1}
   - id: archer
     name_zh: 弓手
     description_zh: 重視距離、高處與視線。
-    weights: {damage: 6, env_damage: 2, kill: 20, env_kill: 20, push: 3, surface: 5, expose: 15, friendly_fire: 8, approach: 1, threat: 10, keep_distance: 40, height: 15, objective: 8, hazard: 10, defend: 1, cover: 12, heal: 6, exposed: 20, mana: 1, cooldown: 2}
+    weights: {damage: 6, env_damage: 2, kill: 20, env_kill: 20, push: 3, surface: 5, expose: 15, friendly_fire: 8, approach: 1, threat: 10, keep_distance: 40, height: 15, objective: 8, hazard: 10, defend: 1, cover: 12, heal: 6, shield: 5, support: 3, exposed: 20, mana: 1, cooldown: 2}
   - id: cunning
     name_zh: 狡猾
     description_zh: 重視環境擊殺、推擊與表面。
-    weights: {damage: 5, env_damage: 8, kill: 30, env_kill: 120, friendly_fire: 8, push: 15, status: 10, surface: 15, approach: 3, threat: 4, keep_distance: 10, objective: 8, hazard: 12, defend: 1, cover: 6, expose: 35, cover_damage: 1, heal: 6, mana: 1, cooldown: 1}
+    weights: {damage: 5, env_damage: 8, kill: 30, env_kill: 120, friendly_fire: 8, push: 15, status: 10, surface: 15, approach: 3, threat: 4, keep_distance: 10, objective: 8, hazard: 12, defend: 1, cover: 6, expose: 35, cover_damage: 1, heal: 6, shield: 5, support: 4, mana: 1, cooldown: 1}
   - id: guard
     name_zh: 守衛
     description_zh: 重視保護同伴與守點。
-    weights: {damage: 3, env_damage: 1, kill: 15, env_kill: 15, push: 4, surface: 4, expose: 5, friendly_fire: 10, approach: 1, threat: 2, protect: 12, objective: 25, hazard: 8, defend: 6, heal: 10, mana: 1, cooldown: 1}
+    weights: {damage: 3, env_damage: 1, kill: 15, env_kill: 15, push: 4, surface: 4, expose: 5, friendly_fire: 10, approach: 1, threat: 2, protect: 12, objective: 25, hazard: 8, defend: 6, heal: 10, shield: 8, support: 6, mana: 1, cooldown: 1}
+  - id: support
+    name_zh: 支援
+    description_zh: 重視治療、護盾、增益，並保持距離（2D-1；權重初值未經模擬）。
+    weights: {damage: 4, env_damage: 1, kill: 20, env_kill: 15, push: 3, surface: 3, expose: 5, friendly_fire: 10, approach: 1, threat: 2, keep_distance: 20, protect: 15, objective: 10, hazard: 10, defend: 2, heal: 12, shield: 10, support: 12, status: 3, mana: 1, cooldown: 1}

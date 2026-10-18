@@ -23,7 +23,7 @@ from trpg.engine.context import Ctx
 from trpg.engine.effects.models import ApplyStatusEffect
 from trpg.engine.events import StatusConverted, StatusResisted, StatusSaveRolled
 from trpg.engine.rules.combat import PERMILLE, is_hit
-from trpg.engine.rules.statuses import boss_converted_status
+from trpg.engine.rules.statuses import boss_converted_status, effective_attribute
 from trpg.engine.state import BattleState, UnitState
 from trpg.shared.types import Attribute
 
@@ -64,7 +64,7 @@ def plan_status(state: BattleState, target: UnitState, status_id: str) -> Status
     attr = definition.save_attr
     if attr is None:
         return StatusPlan(status_id, final, None, 0, False)
-    value = target.attributes[attr]
+    value = effective_attribute(rules, target, attr)
     group = definition.control_group
     diminished = group is not None and control_dr_active(state, target, group)
     if diminished:
@@ -75,7 +75,9 @@ def plan_status(state: BattleState, target: UnitState, status_id: str) -> Status
 def _modifier(
     state: BattleState, caster: UnitState, attack_attr: Attribute, plan: StatusPlan
 ) -> int:
-    return state.ruleset.hit_table.modifier(caster.attributes[attack_attr], plan.defense_value)
+    return state.ruleset.hit_table.modifier(
+        effective_attribute(state.ruleset, caster, attack_attr), plan.defense_value
+    )
 
 
 def status_save_chance(
@@ -137,7 +139,7 @@ def status_effect(
         target_id=target.id,
         status_id=plan.status_id,
         attack_attr=attack_attr,
-        attack_value=caster.attributes[attack_attr],
+        attack_value=effective_attribute(ctx.rules, caster, attack_attr),
         save_attr=plan.save_attr,
         defense_value=plan.defense_value,
         diminished=plan.diminished,

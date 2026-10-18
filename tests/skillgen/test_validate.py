@@ -92,7 +92,7 @@ def test_budget_boundaries_are_inclusive() -> None:
 
 
 def test_unavailable_budget_is_reported() -> None:
-    s = skill(effects=[{"type": "apply_status", "status": "defending"}])
+    s = skill(effects=[{"type": "apply_status", "status": "shielded"}])
     assert "budget.unavailable" in rules_of(s)
 
 
@@ -361,7 +361,8 @@ def test_displace_structure() -> None:
 def test_aura_structure() -> None:
     heal = {"type": "heal", "dice": "1d6"}
     radius = {"type": "allies_in_radius", "radius": 2}
-    assert "skeleton.shape" in rules_of(spell(skeleton="aura", effects=[heal]))
+    line = {"type": "line", "size": 2}
+    assert "skeleton.shape" in rules_of(spell(skeleton="aura", shape=line, effects=[heal]))
     enemy = [heal, {"type": "apply_status", "status": "slow", "affects": "enemies"}]
     assert "skeleton.forbidden_affects" in rules_of(
         spell(skeleton="aura", shape=radius, effects=enemy)
@@ -407,7 +408,16 @@ def test_beneficial_flags_in_content() -> None:
     rules = lib().ruleset
     statuses = {s.id for s in rules.statuses.statuses if s.beneficial}
     surfaces = {s.id.value for s in rules.surfaces.surfaces if s.beneficial}
-    assert statuses == {"defending", "concealed"}
+    assert statuses == {
+        "defending",
+        "concealed",
+        # 2D-1
+        "guarded",
+        "empowered",
+        "hasted",
+        "regenerating",
+        "shielded",
+    }
     assert surfaces == {"holy"}
 
 

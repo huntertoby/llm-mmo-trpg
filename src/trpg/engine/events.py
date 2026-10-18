@@ -51,6 +51,8 @@ __all__ = [
     "ReactionTriggered",
     "RoundEnded",
     "RoundStarted",
+    "ShieldAbsorbed",
+    "ShieldGained",
     "SkillCooldownChanged",
     "SkillUsed",
     "StatusApplied",
@@ -272,7 +274,10 @@ class DamageDealt(EventBase):
     ``None`` 表示與 ``amount`` 相同（以最大 HP 比例計算的傷害）。"""
     status_ppm: int = 1_000_000
     """狀態的傷害倍率（百萬分比）：攻擊者的 ``damage_dealt_permille``（虛弱，只對 ``attack``）
-    × 目標的 ``damage_taken_permille``（易傷，骰值傷害）。"""
+    × 目標的 ``damage_taken_permille``（易傷、護衛，骰值傷害）。"""
+    absorbed: int = 0
+    """被護盾吸收的點數（Phase 2D-1）。``amount`` 是所有倍率之後、護盾之前的傷害；實際扣血為
+    ``amount − absorbed``（即 ``hp_before − hp_after``，致命以上的過量不算在內）。"""
 
 
 class Healed(EventBase):
@@ -285,6 +290,26 @@ class Healed(EventBase):
     hp_after: int
     received_permille: int = 1000
     """目標的狀態治療倍率（‰，中毒 500）。"""
+
+
+class ShieldGained(EventBase):
+    """單位獲得護盾（Phase 2D-1）：``amount`` 為這次的護盾量，``total`` 為取較大值之後的吸收量。"""
+
+    type: Literal["shield_gained"] = "shield_gained"
+    unit_id: UnitId
+    source_id: UnitId | None
+    amount: int
+    total: int
+    rolls: tuple[int, ...] = ()
+
+
+class ShieldAbsorbed(EventBase):
+    """護盾吸收了一次傷害（先於對應的 ``damage_dealt``）。"""
+
+    type: Literal["shield_absorbed"] = "shield_absorbed"
+    unit_id: UnitId
+    absorbed: int
+    remaining: int
 
 
 class StatusApplied(EventBase):
@@ -344,7 +369,7 @@ class StatusRemoved(EventBase):
     type: Literal["status_removed"] = "status_removed"
     target_id: UnitId
     status_id: str
-    reason: Literal["expired", "removed", "stood_up"]
+    reason: Literal["expired", "removed", "stood_up", "depleted", "cleansed", "source_lost"]
 
 
 class UnitDowned(EventBase):
@@ -626,6 +651,8 @@ type Event = Annotated[
     | AttackRolled
     | DamageDealt
     | Healed
+    | ShieldGained
+    | ShieldAbsorbed
     | StatusApplied
     | StatusRemoved
     | StatusSaveRolled

@@ -23,6 +23,7 @@ from trpg.engine.control import status_effect
 from trpg.engine.effects import execute
 from trpg.engine.effects.models import (
     ApplyStatusEffect,
+    CleanseEffect,
     CreateObstacleEffect,
     CreateSurfaceEffect,
     DamageEffect,
@@ -35,6 +36,7 @@ from trpg.engine.effects.models import (
     MoveUnitEffect,
     PushEffect,
     RaiseTerrainEffect,
+    ShieldEffect,
 )
 from trpg.engine.events import (
     AttackRolled,
@@ -47,6 +49,7 @@ from trpg.engine.maneuvers import contest
 from trpg.engine.reactions import block_multiplier
 from trpg.engine.rules.combat import PERMILLE, AttackProfile, AttackRoll, ForcedOutcome, roll_attack
 from trpg.engine.rules.geometry import XY
+from trpg.engine.rules.statuses import effective_attribute
 from trpg.engine.skills.conditions import Subject, condition_met
 from trpg.engine.skills.targeting import (
     ResolvedEffect,
@@ -250,6 +253,13 @@ class _Cast:
             return self.damage(effect, spec)
         if kind == "heal":
             return self.heal(effect, spec)
+        if kind == "shield":
+            return self.shield(effect, spec)
+        if kind == "cleanse":
+            return [
+                CleanseEffect(target_id=unit.id, source_id=self.caster.id)
+                for unit in self.targets(effect.affects, spec.condition)
+            ]
         if kind in ("push", "pull"):
             return self.displace(effect, spec, pull=kind == "pull")
         if kind == "knock_prone":
@@ -326,13 +336,27 @@ class _Cast:
         if remaining:
             execute(self.ctx, remaining)
 
+    def _spell_scaled(self) -> int:
+        """治療與護盾的屬性加成（‰）：有效縮放屬性 × ``spell_attr_multiplier_permille``。"""
+        attr = effective_attribute(self.ctx.rules, self.caster, self.skill.scaling_attr)
+        return attr * self.ctx.core.spell_attr_multiplier_permille
+
     def heal(self, effect: ResolvedEffect, spec: EffectSpec) -> list[EffectBase]:
-        scaled = (
-            self.caster.attributes[self.skill.scaling_attr]
-            * self.ctx.core.spell_attr_multiplier_permille
-        )
+        scaled = self._spell_scaled()
         return [
             HealEffect(
+                target_id=unit.id,
+                source_id=self.caster.id,
+                dice=spec.dice,
+                scaled_permille=scaled,
+            )
+            for unit in self.targets(effect.affects, spec.condition)
+        ]
+
+    def shield(self, effect: ResolvedEffect, spec: EffectSpec) -> list[EffectBase]:
+        scaled = self._spell_scaled()
+        return [
+            ShieldEffect(
                 target_id=unit.id,
                 source_id=self.caster.id,
                 dice=spec.dice,

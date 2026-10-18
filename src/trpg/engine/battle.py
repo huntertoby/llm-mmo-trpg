@@ -62,7 +62,7 @@ from trpg.engine.rules.movement import (
     stand_up_cost,
     step_cost,
 )
-from trpg.engine.rules.statuses import is_rooted
+from trpg.engine.rules.statuses import base_attribute, effective_attribute, is_rooted
 from trpg.engine.setup import BattleSetup, BattleSetupError
 from trpg.engine.skills.interpreter import use_skill
 from trpg.engine.skills.targeting import (
@@ -256,7 +256,7 @@ def begin_battle(setup: BattleSetup, seed: int) -> ResolveResult:
     ctx.emit(BattleStarted, map_id=map_def.id, seed=seed)
     for unit in state.units_sorted():
         roll = ctx.rng.d20()
-        modifier = (unit.attributes[Attribute.DEX] - core.initiative_attr_base) // (
+        modifier = (base_attribute(unit, Attribute.DEX) - core.initiative_attr_base) // (
             core.initiative_attr_divisor
         )
         unit.initiative = roll + modifier
@@ -279,7 +279,9 @@ def _initiative_order(ctx: Ctx) -> list[UnitId]:
     units = ctx.state.units_sorted()
     groups: dict[tuple[int, int], list[UnitId]] = {}
     for unit in units:
-        groups.setdefault((unit.initiative, unit.attributes[Attribute.DEX]), []).append(unit.id)
+        groups.setdefault((unit.initiative, base_attribute(unit, Attribute.DEX)), []).append(
+            unit.id
+        )
     order: list[UnitId] = []
     for key in sorted(groups, key=lambda k: (-k[0], -k[1])):
         members = groups[key]
@@ -541,7 +543,7 @@ def _do_attack(ctx: Ctx, unit: UnitState, action: Action) -> None:
                     element=weapon.element,
                     dice=weapon.dice,
                     flat=weapon.flat,
-                    scaled_permille=unit.attributes[weapon.scaling_attr]
+                    scaled_permille=effective_attribute(ctx.rules, unit, weapon.scaling_attr)
                     * ctx.core.basic_attack_attr_multiplier_permille,
                     min_damage=ctx.core.min_damage_on_hit,
                 )

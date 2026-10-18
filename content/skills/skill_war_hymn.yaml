@@ -1,0 +1,22 @@
+id: skill_war_hymn
+schema_version: 1
+name_zh: 戰歌
+tier: 1
+rank: 1
+rarity: rare
+kind: active
+skeleton: aura
+category: spell
+weapon_req: focus
+ap_cost: 2
+scaling_attr: wis
+shape: {type: allies_in_radius, radius: 2}
+effects:
+  - {type: apply_status, status: empowered, duration: 4, affects: allies}
+condition: null
+cost: {mana: 8, cooldown: 3}
+tags: [spell, buff, aura, support]
+narrative:
+  concept: 一首激昂的戰歌，讓身邊每個人都覺得自己無所不能
+  cast_flavor: 你高聲唱起古老的戰歌，同伴的眼神一下子亮了起來
+provenance: {origin: builtin, owner_id: null, created_by: null, parents: [], bound: true, tradeable: false}

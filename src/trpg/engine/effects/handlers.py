@@ -6,11 +6,13 @@ from __future__ import annotations
 from trpg.engine.context import Ctx
 from trpg.engine.effects.models import (
     ApplyStatusEffect,
+    CleanseEffect,
     DamageEffect,
     EffectBase,
     HealEffect,
     MoveUnitEffect,
     RemoveStatusEffect,
+    ShieldEffect,
 )
 from trpg.engine.effects.queue import register_effect
 from trpg.engine.events import (
@@ -21,6 +23,8 @@ from trpg.engine.events import (
     Healed,
     MoveBlocked,
     MoveMode,
+    ShieldAbsorbed,
+    ShieldGained,
     StatusApplied,
     StatusConverted,
     StatusRemoved,
@@ -35,10 +39,14 @@ from trpg.engine.rules.statuses import (
     boss_converted_status,
     damage_dealt_permille,
     damage_taken_permille,
+    effective_attribute,
     healing_received_permille,
 )
 from trpg.engine.state import BattleState, StatusInstance, UnitState
 from trpg.shared.types import Element, Pos, Surface, Team, UnitId
+
+SHIELD_STATUS = "shielded"
+"""``shield`` 原語施加的狀態 ID（``absorbs_damage``）。"""
 
 __all__ = ["ability_modifier", "apply_status", "arrive", "enter_surface", "weather_permille"]
 
@@ -67,6 +75,8 @@ def _damage(ctx: Ctx, effect: EffectBase) -> list[EventBase]:
     weather = PERMILLE
     base_amount: int | None = None
     status_ppm = PPM
+    absorbed = 0
+    events: list[EventBase] = []
     if effect.mode == "lethal":
         amount = unit.hp
     elif effect.mode == "percent_max_hp":
@@ -97,9 +107,10 @@ def _damage(ctx: Ctx, effect: EffectBase) -> list[EventBase]:
         base_amount = max(
             raw_permille * weather * dealt // (PERMILLE * PERMILLE * PERMILLE), effect.min_damage
         )
+        absorbed = _absorb(ctx, unit, amount, events)  # 護盾：所有倍率之後、扣 HP 之前
     hp_before = unit.hp
-    unit.hp = max(0, unit.hp - amount)
-    events: list[EventBase] = [
+    unit.hp = max(0, unit.hp - (amount - absorbed))
+    events += [
         ctx.emit(
             DamageDealt,
             target_id=unit.id,
@@ -117,11 +128,46 @@ def _damage(ctx: Ctx, effect: EffectBase) -> list[EventBase]:
             multiplier_permille=effect.multiplier_permille,
             base_amount=base_amount,
             status_ppm=status_ppm,
+            absorbed=absorbed,
         )
     ]
     if unit.hp <= 0:
         events.extend(down_unit(ctx, unit))
     return events
+
+
+def _absorb(ctx: Ctx, unit: UnitState, amount: int, events: list[EventBase]) -> int:
+    """護盾吸收 ``amount`` 點傷害，回傳吸收的點數；吸收量歸零的護盾狀態立即移除。"""
+    absorbed = 0
+    kept: list[StatusInstance] = []
+    removed: list[str] = []
+    for status in unit.statuses:
+        if (
+            amount - absorbed > 0
+            and status.amount is not None
+            and ctx.rules.status_def(status.status_id).absorbs_damage
+        ):
+            take = min(status.amount, amount - absorbed)
+            absorbed += take
+            left = status.amount - take
+            if left > 0:
+                kept.append(
+                    StatusInstance(status.status_id, status.remaining, status.source_id, left)
+                )
+            else:
+                removed.append(status.status_id)
+            if take > 0:
+                events.append(
+                    ctx.emit(ShieldAbsorbed, unit_id=unit.id, absorbed=take, remaining=left)
+                )
+            continue
+        kept.append(status)
+    unit.statuses = kept
+    for status_id in removed:
+        events.append(
+            ctx.emit(StatusRemoved, target_id=unit.id, status_id=status_id, reason="depleted")
+        )
+    return absorbed
 
 
 @register_effect("heal")
@@ -153,6 +199,53 @@ def _heal(ctx: Ctx, effect: EffectBase) -> list[EventBase]:
             hp_after=unit.hp,
             received_permille=received,
         )
+    ]
+
+
+@register_effect("shield")
+def _shield(ctx: Ctx, effect: EffectBase) -> list[EventBase]:
+    assert isinstance(effect, ShieldEffect)
+    unit = ctx.state.units.get(effect.target_id)
+    if unit is None or not unit.alive:
+        return []
+    rolls: tuple[int, ...] = ()
+    if effect.dice is not None:
+        rolls = tuple(ctx.rng.roll(effect.dice.sides) for _ in range(effect.dice.count))
+    amount = max(0, ((sum(rolls) + effect.flat) * PERMILLE + effect.scaled_permille) // PERMILLE)
+    status_id = SHIELD_STATUS
+    current = unit.get_status(status_id)
+    total = max(amount, 0 if current is None or current.amount is None else current.amount)
+    duration = ctx.rules.status_def(status_id).duration
+    instance = StatusInstance(status_id, duration, effect.source_id, total)
+    others = [s for s in unit.statuses if s.status_id != status_id]
+    unit.statuses = sorted([*others, instance], key=lambda s: s.status_id)
+    return [
+        ctx.emit(
+            ShieldGained,
+            unit_id=unit.id,
+            source_id=effect.source_id,
+            amount=amount,
+            total=total,
+            rolls=rolls,
+        )
+    ]
+
+
+@register_effect("cleanse")
+def _cleanse(ctx: Ctx, effect: EffectBase) -> list[EventBase]:
+    assert isinstance(effect, CleanseEffect)
+    unit = ctx.state.units.get(effect.target_id)
+    if unit is None or not unit.alive:
+        return []
+    removable = [
+        s.status_id for s in unit.statuses if not ctx.rules.status_def(s.status_id).beneficial
+    ]
+    if not removable:
+        return []
+    unit.statuses = [s for s in unit.statuses if s.status_id not in removable]
+    return [
+        ctx.emit(StatusRemoved, target_id=unit.id, status_id=status_id, reason="cleansed")
+        for status_id in sorted(removable)
     ]
 
 
@@ -224,7 +317,7 @@ def enter_surface(ctx: Ctx, unit: UnitState) -> list[EventBase]:
     check = definition.on_enter.check
     if check is not None:
         roll = ctx.check_d20()
-        modifier = ability_modifier(ctx, unit.attributes[check.attr])
+        modifier = ability_modifier(ctx, effective_attribute(ctx.rules, unit, check.attr))
         total = roll + modifier
         events.append(
             ctx.emit(
