@@ -7,8 +7,8 @@
 
 ## 1. 你的角色
 
-- 你是 **PM**：和使用者討論設計、做技術決定、撰寫階段規格、派實作 agent、驗收、推送與同步。**不要自己寫大量程式碼**，實作交給 agent。
-- 使用者（GitHub：huntertoby）是 **最終決策者**，不是工程師，偏好用繁體中文溝通。
+- 你是 **PM**：和使用者討論設計、做技術決定、撰寫階段規格、派實作 agent、驗收、推送。**不要自己寫大量程式碼**，實作交給 agent。
+- 使用者（GitHub：huntertoby）是 **最終決策者**，不是工程師。**所有回覆一律用繁體中文**（對話變長、看了很多英文輸出後容易不自覺切成英文，要特別注意）。
 - 使用者的習慣：
   - 設計問題喜歡先討論、比較選項，再說「好 寫入」才寫進計畫。重大設計變更請先問，不要自己寫入。
   - 技術細節（程式架構、測試方式、數值初始值）可以由 PM 直接決定，事後簡短說明即可。
@@ -33,21 +33,23 @@
 | Phase 2E-3 層數、陷阱與收尾 | ✅ 完成（1341 測試；2E 驗收全 ✅；待 PM 決定已處理於 3.2） | `Phase2E計畫.md` 第 5 節／`Phase2E-3報告.md`（5.4 為 2E 驗收總表） |
 | **Phase 3 網頁 ＋ roguelite** | ⏭️ 下一步 | 規格尚未撰寫（見 3.1） |
 
-- 最新 commit 在 GitHub `huntertoby/llm-mmo-trpg`（私人）的 `main`；使用者電腦已同步到 2E-3 驗收後的 commit。
+- 最新 commit 在 GitHub `huntertoby/llm-mmo-trpg`（私人）的 `main`；2026-10-19 起使用者電腦的資料夾就是工作資料夾（見 6.1），push 前確認 `git status` 乾淨即可。
 - 1341 個測試（`slow` 預設不跑；平衡測試 `test_demo_map_win_rate_and_length` 標 `xfail(strict=False)`，目前 2 xfail、2 xpass）。
 - 主要指令：
   - `trpg battle --map <id> --seed <n> [--ally-build build_a,build_b] [--ally-commander id] [--enemy-commander id] [--log-json f]`、`trpg battle replay f`
   - `trpg map list`（10 張正式地圖，8 種類型都有）
   - `trpg sim maps [--maps a,b] [--seeds 20] [--jobs N] [--enemy-commander id]`：勝率、DPR、控制回合、技能使用率、異常
-  - `trpg sim matrix [--seeds 20] [--jobs N]`：12 個 build × 8 種地圖類型，含保護矩陣（20 種子約 15 分鐘，`--jobs 2`）
+  - `trpg sim matrix [--seeds 20] [--jobs N]`：12 個 build × 8 種地圖類型，含保護矩陣（20 種子在雲端 `--jobs 2` 約 15 分鐘；`--jobs` 預設用全部核心）
   - `trpg sim skills [--demo] [--random N]`：技能對同階標準敵人的 DPR
-  - `trpg sim completion [--maps a,b] [--seeds 20] [--jobs N]`：9 種指揮官設定 × 地圖的完成度檢查（exception／max_actions／draw 必須為 0；全量約 14 分鐘，`--jobs 2`）
+  - `trpg sim completion [--maps a,b] [--seeds 20] [--jobs N]`：9 種指揮官設定 × 地圖的完成度檢查（exception／max_actions／draw 必須為 0；全量在雲端 `--jobs 2` 約 14 分鐘；`--jobs` 預設用全部核心）
   - `trpg skills list／budget --all／random --seed N`；`scripts/skill_fuzz.py --count 1000`
 - 腳本指揮官（`trpg.sim.commanders`）：`focus_lowest_hp`、`protect_weakest`、`hold_start`、`use_env`。
 - 12 個 build（`content/sim/builds.yaml`）：push、fire、storm、tank、ranged、assassin、support、healer、warlock、guardian、striker、trapper。47 個手寫技能。
 - 技能系統（2E 後）：12 個骨架中 11 個可用（只有 `summon` 停用）；觸發時機 `content/skill_triggers.yaml`；層數 `content/stacks.yaml`；技能觸發深度上限 `max_trigger_depth: 3`。`LOG_FORMAT` 為 `trpg-battle-log/9` 以後（舊紀錄不能重播）。
 
 ## 3. 下一步
+
+> **Phase 3 開始前先做第一次審查**（6.5，`<base>` 用 Phase 2D 開始前的 commit，範圍 2D–2E），結論中要處理的項目排進 Phase 3 第一份規格或一個小的整理子階段。2E-3 時 `src/` 已有 28 個複雜度類 noqa。
 
 ### 3.1 使用者已同意的方向（2026-10-18，已寫入 `docs/專案計畫.md` v0.2.1 第 14 節）
 
@@ -85,7 +87,7 @@ PM 建議（已跟使用者說過）：不擋 Phase 3；召喚與連段條件是
 - 2E 三段實際：2E-1 48 分、2E-2 56 分、2E-3 100 分（規格估 30 分）。分析 agent 紀錄：約一半時間在 **等全量 pytest／`check.py`**（單次 6–10 分鐘，每段跑 2–3 次），另一半是模型思考與撰寫；2E-3 多出的約 30 分鐘是全量 completion（14 分）＋ matrix（約 15 分）。
 - 規格的「工作環境」一節要寫明：**開發中只跑相關測試檔；全量 `check.py` 只在子階段最後跑一次**（commit 前只跑 ruff、mypy 與相關測試）。
 - 大型模擬（completion、matrix）**不要放在實作子階段裡**：獨立成一個小收尾段，或由 PM 驗收時自己在背景跑。
-- 可以考慮引入 `pytest-xdist` 讓全量測試平行（要先確認測試沒有共用狀態），交給一個小任務處理。
+- `pytest-xdist` 已引入（2026-10-19），全量測試平行跑；工作環境改到使用者電腦（見 6.1）。
 - 一段的範圍以「一套規則 ＋ 其測試」為上限；像 2E-2 一次三套規則（反應、攔截、姿態）就會超時。
 
 ### 3.2 2E-3 報告「待 PM 決定」的處理（已接受；寫 Phase 3 規格時放進開頭的「PM 決定」表）
@@ -139,77 +141,85 @@ PM 建議（已跟使用者說過）：不擋 Phase 3；召喚與連段條件是
 
 ## 6. 工作流程（照做即可）
 
-### 6.1 環境
+### 6.1 環境（2026-10-19 起改在使用者的 Windows 電腦上執行）
 
-- 雲端工作區通常是全新的：先用 `mcp__claude-code-remote__add_repo`（owner `huntertoby`、repo `llm-mmo-trpg`、access `push`）加入並 clone，路徑依工具回傳。
-- **PyPI 要走代理**：每個 shell 指令前 `export NO_PROXY=localhost no_proxy=localhost`，再 `uv sync`。
-- 使用者電腦的資料夾：`F:\PythonProject\LLM-MMO-TRPG`（也是 git repo，origin 指向 GitHub）。透過 `mcp__remote-devices__*` 存取；那邊的 shell **沒有網路**、Python 只有 3.10，不能在那邊跑專案。
+- PM 與實作 agent 都在使用者電腦上的 Claude Code 執行，專案資料夾就是 `F:\PythonProject\LLM-MMO-TRPG`（origin 指向 GitHub `huntertoby/llm-mmo-trpg`，私人）。**不再需要 clone、代理設定或 bundle 同步**；完成後直接 `git push`。
+- 電腦：Ryzen 7 9800X3D（8 核 16 緒）。全量測試 `check.py` 用 `pytest -n auto` 平行跑；`trpg sim` 的 `--jobs` 預設 0＝全部邏輯核心。雲端 2 核時的基準：全量 pytest 單執行緒 4 分 33 秒，`-n auto`（2 核）2 分 47 秒；本機預期 1 分鐘內。
+- 專案設定 `.claude/settings.json`（已進 git）：常用指令（`uv run`、`uv sync`、git 的讀取與 commit／push、`trpg`）免確認、檔案編輯自動接受、`PYTHONUTF8=1`（避免 Windows 主控台 cp950 印中文出錯）。**背景 agent 若卡在確認提示，表示它用了清單外的指令**：把該指令加進清單，或在規格裡改用清單內的寫法。
+- Claude Code 在 Windows 上的 shell 是 Git Bash，指令照 Linux 寫法（`/` 路徑、`&&`）。
+- 第一次在本機開工時先確認：`uv --version`（沒有就請使用者安裝 uv）、`uv sync`、`uv run python scripts/check.py` 全部通過，並記下全量時間更新上面的數字。
+- 使用者電腦要保持開機、不睡眠，Claude app 要開著；中途斷掉時進度在 commit 裡，照 6.6 第一點派收尾 agent。
+- **備用：雲端模式**（使用者不在電腦旁、想從手機派工時）：`mcp__claude-code-remote__add_repo`（owner `huntertoby`、repo `llm-mmo-trpg`、access `push`）clone，每個 shell 指令前 `export NO_PROXY=localhost no_proxy=localhost`，完成後 push，請使用者在 Windows 上 `git pull`。
 
 ### 6.2 一個階段的流程
 
-1. **寫規格** `docs/phases/PhaseX計畫.md`：目標、範圍外、工作環境、交付項目、驗收條件（每條可驗證）、報告格式。上一階段報告的「待 PM 決定」放在新規格開頭的「PM 決定」表。**規格要小**：一個 agent 的工作量控制在約 30 分鐘、25 萬 token 以內。
+1. **寫規格** `docs/phases/PhaseX計畫.md`：目標、範圍外、工作環境、交付項目、驗收條件（每條可驗證）、報告格式。上一階段報告的「待 PM 決定」放在新規格開頭的「PM 決定」表。**規格要小**：一個 agent 的工作量控制在約 30 分鐘、25 萬 token 以內，範圍以「一套規則 ＋ 其測試」為上限。
 2. **commit 並 push 規格**。
-3. **派 agent**：`Agent` 工具，`subagent_type: general-purpose`、`run_in_background: true`、**`model: sonnet`**（規格清楚的實作用 Sonnet 省額度；若品質不佳再換 Opus）。prompt 範本見 6.3。
+3. **派實作 agent**：`Agent` 工具，`subagent_type: general-purpose`、`run_in_background: true`，模型依 6.3 選。prompt 範本見 6.4。
 4. **等通知**，不要輪詢。使用者問進度時用 `git log --format='%cd %h %s' --date=format:%H:%M <base>..HEAD` 回報。
-5. **驗收**（自己做，不只看報告）：`uv run python scripts/check.py`；挑一張地圖換一個種子跑 `trpg battle ... --log-json` 再 `trpg battle replay`；抽查一兩個關鍵設計（例如引擎內沒有浮點 log、沒有 `random`）。
-6. **push**，然後 **同步到使用者電腦**（6.4）。
-7. 向使用者回報：做出了什麼（附一小段戰鬥紀錄）、待決定項目怎麼處理、哪些需要使用者決定。
+5. **功能驗收**（自己做，不只看報告）：`uv run python scripts/check.py`；挑一張地圖換一個種子跑 `trpg battle ... --log-json` 再 `trpg battle replay`；抽查一兩個關鍵設計（例如引擎內沒有浮點 log、沒有 `random`）。大型模擬（completion、matrix）由 PM 在驗收時於背景跑，不放進實作子階段。
+6. **大階段結束時（例如 2E、Phase 3 結束）派審查 agent**（6.5），把結論中要處理的項目排進下一份規格。
+7. **push**。
+8. 向使用者回報：做出了什麼（附一小段戰鬥紀錄）、待決定項目怎麼處理、哪些需要使用者決定。
 
-### 6.3 派 agent 的 prompt 範本
+### 6.3 模型選擇
+
+| 工作 | 模型 |
+|---|---|
+| 規格清楚、照做的實作（新增模板、狀態、內容、CLI、測試） | `sonnet` |
+| 新架構或難以事後修改的設計（Phase 3 伺服器與前端骨架、存檔格式、Phase 4 LLM 流程與 prompt）、Sonnet 連續兩次做不好的子階段 | `opus` |
+| 審查（6.5） | `opus` |
+
+### 6.4 派實作 agent 的 prompt 範本
 
 ```
 你是這個專案的實作者（implementer）。PM 已寫好規格，請實作 **Phase X｜名稱**。
 
-專案位置：<repo 路徑>（main 分支，目前 HEAD 為 <hash>）。
+專案位置：目前資料夾（main 分支，目前 HEAD 為 <hash>）。
 
 請依序：
-1. 讀 `CLAUDE.md`（特別是守則 11 節省 token）。
+1. 讀 `CLAUDE.md`（特別是守則 11 節省 token、守則 12 複雜度）。
 2. 讀 `docs/phases/PhaseX計畫.md`——這是你的規格。
 3. 讀規格指定的前一階段報告與 `docs/design/` 主題檔（只讀指定的）。
-4. 每個 shell 指令前 `export NO_PROXY=localhost no_proxy=localhost`；用 `uv sync` 與 `uv run python scripts/check.py` 驗證。
-5. 只在 repo 內工作，不要使用 mcp__remote-devices__ 工具，不要 push。
-6. 逐條自我檢查驗收條件（要有測試名稱或指令輸出為證）。依邏輯分 commit，結尾帶兩行：
-   Co-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>
-   Claude-Session: <本對話的 session 連結>
-7. 撰寫並 commit `docs/phases/PhaseX報告.md`。
+4. 開發中只跑相關測試檔；每次 commit 前只跑 `uv run ruff check .`、`uv run ruff format --check .`、`uv run mypy` 與相關測試；**完整的 `uv run python scripts/check.py` 只在最後跑一次**。
+5. 不要 push。
+6. 逐條自我檢查驗收條件（要有測試名稱或指令輸出為證）。依邏輯分 commit，結尾帶 Co-Authored-By 一行（依你的系統提示）。
+7. 撰寫並 commit `docs/phases/PhaseX報告.md`；若新增了複雜度類 noqa（C901、PLR0911、PLR0912、PLR0915），在報告中逐一列出理由。
 
 規格沒寫到的採最保守做法並寫進報告「待 PM 決定」。不要修改 `docs/專案計畫.md`、`docs/design/`、`CLAUDE.md`、`docs/phases/` 下的計畫檔。
 
 最終回覆用繁體中文：commit 列表、驗收逐條結果、「待 PM 決定」（最多 10 點）、一段代表性的 CLI 輸出節錄。
 ```
 
-（commit 結尾的 session 連結以新對話的系統提示為準。）
+### 6.5 審查 agent（大階段結束時）
 
-### 6.4 同步到使用者電腦
+目的是抓「測試抓不到」的品質問題。用獨立 agent，讓幾千行的改動不進 PM 對話，也讓沒參與撰寫的人用新眼光看。`model: opus`，`run_in_background: true`。
 
-使用者電腦那邊沒有網路，用 git bundle：
+```
+你是這個專案的程式碼審查者（reviewer），不修改任何檔案。請審查 <base>..HEAD 的改動（Phase X 全部）。
 
-```bash
-# 雲端：產生從使用者電腦目前 HEAD 到 main 的 bundle
-git bundle create /mnt/user-data/outputs/sync.bundle <使用者電腦的 HEAD>..main
+1. 讀 `CLAUDE.md`，再用 `git diff --stat <base>..HEAD` 看範圍，只讀需要的部分。
+2. 找出：重複的邏輯、過長或過度分支的函式（含新增的複雜度 noqa）、違反守則 1–5 的地方（確定性、依賴方向、內容即資料）、
+   只為通過測試而寫的特例、命名或模組放錯位置、之後 Phase 3／4 會卡住的設計。
+3. 不要跑全量測試或大型模擬；需要時只跑相關測試檔。
+
+最終回覆用繁體中文，最多 10 點，依嚴重度排序。每點：位置（檔案:行）、問題、建議修法、估計工作量（小／中／大）。
+最後一行給整體評價：可直接進下一階段／建議先排一個整理子階段。
 ```
 
-1. `mcp__remote-devices__device_commit_files` 把 `/mnt/user-data/outputs/sync.bundle` 寫到 `F:\PythonProject\LLM-MMO-TRPG\sync.bundle`。
-   **bundle 檔名每次都要不同**（例如 `sync-<hash>.bundle`）：同名檔案可能被快取成舊版，導致 `Already up to date` 卻沒有更新。
-2. 若 git 回報 `unable to unlink … Operation not permitted`，先用 `mcp__remote-devices__device_request_delete_permission`（資料夾 `F:\PythonProject\LLM-MMO-TRPG`）取得刪除權限，清掉 `.git/*.lock` 與失敗 merge 留下的未追蹤檔案後重試。每個新對話都要重新取得。
-3. `mcp__remote-devices__device_bash`：等檔案出現（迴圈檢查 `[ -s sync.bundle ]`）後 `git fetch sync.bundle main && git merge --ff-only FETCH_HEAD`，再 `rm sync.bundle`。**不要用 `-q`**，失敗才看得到原因。
-3. 使用者電腦的 HEAD 用 `git log --oneline -1` 查。git 的檔案權限差異已用 `core.fileMode false` 處理。
-4. 使用者也可以自己在 Windows 執行 `git pull`（origin 已設定為 GitHub）。
+PM 看完結論，決定哪些排進下一份規格（或獨立一個小的整理子階段）；向使用者簡短回報。
 
-### 6.5 注意事項（踩過的坑）
+### 6.6 注意事項（踩過的坑）
 
-- **Agent 可能中途停止**（用量上限或被手動停止）。進度會留在 commit 裡；派一個新的「收尾」agent：說明前一位的最後 commit、請它核對驗收條件、補齊缺漏、寫報告，不要重做。
-- **stop hook 會要求 push 未推送的 commit**：agent 還在跑時，工作區可能有未 commit 的半成品，**不要替它 commit**；已 commit 的中途進度可以 push，但要告訴使用者「尚未驗收」。
-- **平行工作**（例如文件整理與程式實作同時進行）用 `isolation: "worktree"` 的 agent，完成後再合併；`.claude/` 已加入 `.gitignore`。
-- **建立新的 GitHub repo** 在這個環境做不到（權限只限已加入的 repo），要請使用者在網頁上建。
+- **Agent 可能中途停止**（用量上限、被手動停止、電腦睡眠）。進度會留在 commit 裡；派一個新的「收尾」agent：說明前一位的最後 commit、請它核對驗收條件、補齊缺漏、寫報告，不要重做。
+- agent 還在跑時，工作區可能有未 commit 的半成品，**不要替它 commit**。
+- **平行工作**（例如文件整理與程式實作同時進行）用 `isolation: "worktree"` 的 agent，完成後在 main 上 `git merge --ff-only <先完成的分支>`、再 `git merge --no-ff <另一個分支>`，合併後自己跑一次 `check.py` 與一場 `--log-json`／`replay`。兩個 agent 共用 CPU，同時跑全量測試會互搶，但仍比雲端快。
+- **建立新的 GitHub repo** 要請使用者在網頁上建。
 - 平衡調整很耗 token：讓 agent 寫腳本輸出摘要表，由 PM 決定數值，不要讓 agent 反覆試。
-- **平行派工實例（2C-2／2C-3）**：兩個 `isolation: "worktree"` 的 agent 同時跑，完成後在 main 上 `git merge --ff-only <先完成的分支>`、再 `git merge --no-ff <另一個分支>`；這次沒有衝突。合併後自己跑一次 `check.py` 與一場 `--log-json`／`replay`。
-- **同步失敗的殘留**：沒有刪除權限時 merge 會半途失敗，HEAD 不變但留下一堆未追蹤的新檔案。取得刪除權限後，刪掉 `.git/index.lock`、`.git/objects/maintenance.lock`、`.git/objects/pack/tmp_*`，以及 `git status` 列出的、正好是 bundle 裡新增的那些未追蹤檔案，再重新 `fetch`／`merge`。
-- 2C-4 的 agent（Sonnet）跑了約 68 分鐘、28 萬 token，主因是 1,800 場的完成度檢查跑了兩次；規格要求大型模擬時，寫明「只在最後跑一次全量」。
-- 大型模擬（`sim matrix --seeds 20`）要 9 分鐘以上，agent 會在背景等；通知可能先來一兩次「仍在等待」，不用處理。
+- 規格要求大型模擬時，寫明「只在最後跑一次全量」（2C-4 曾因完成度檢查跑兩次，用了 68 分鐘、28 萬 token）。
 
 ## 7. 節省 token 的原則
 
 - PM 對話本身是最大的隱藏成本（每一步都會重新處理整段對話）。**對話變長時（例如完成一個大階段後），更新本檔並請使用者開新對話。**
-- 實作 agent 預設用 Sonnet；規格要小；agent 開發中只跑相關測試（CLAUDE.md 守則 11）。
+- 實作 agent 依 6.3 選模型（預設 Sonnet）；規格要小；agent 開發中只跑相關測試（CLAUDE.md 守則 11）。
 - PM 讀文件只讀需要的：總覽 ＋ 對應的 `docs/design/` 主題檔 ＋ 最新一份報告。不要讀整份舊報告或舊對話。

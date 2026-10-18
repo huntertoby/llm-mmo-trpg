@@ -50,4 +50,5 @@ scripts/rng_reference/rng_vectors
 .DS_Store
 Thumbs.db
 desktop.ini
-.claude/
+.claude/*
+!.claude/settings.json
