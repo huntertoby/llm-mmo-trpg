@@ -61,6 +61,7 @@ from trpg.content.skills import (
     skill_slot_problems,
     weapon_problem,
 )
+from trpg.content.stacks import StackDef, StackTable
 from trpg.shared.errors import ContentError
 from trpg.shared.types import Surface
 
@@ -103,6 +104,7 @@ class Ruleset(ContentModel):
     primitives: PrimitiveTable
     conditions: ConditionTable
     skill_triggers: SkillTriggerTable = SkillTriggerTable.model_construct(triggers=())
+    stacks: StackTable = StackTable()
     skills: SkillTable = SkillTable()
 
     _skill_index: dict[str, SkillDef] = PrivateAttr(default_factory=dict)
@@ -110,6 +112,7 @@ class Ruleset(ContentModel):
     _primitive_index: dict[str, PrimitiveDef] = PrivateAttr(default_factory=dict)
     _condition_index: dict[str, ConditionDef] = PrivateAttr(default_factory=dict)
     _trigger_index: dict[str, SkillTriggerDef] = PrivateAttr(default_factory=dict)
+    _stack_index: dict[str, StackDef] = PrivateAttr(default_factory=dict)
     _terrain_index: dict[str, TerrainDef] = PrivateAttr(default_factory=dict)
     _status_index: dict[str, StatusDef] = PrivateAttr(default_factory=dict)
     _reaction_index: dict[str, ReactionDef] = PrivateAttr(default_factory=dict)
@@ -124,6 +127,7 @@ class Ruleset(ContentModel):
         self._primitive_index = self.primitives.by_id()
         self._condition_index = self.conditions.by_id()
         self._trigger_index = self.skill_triggers.by_id()
+        self._stack_index = self.stacks.by_id()
 
     @model_validator(mode="after")
     def _check(self) -> Ruleset:
@@ -200,6 +204,11 @@ class Ruleset(ContentModel):
         index: dict[str, SkillTriggerDef] = self.__pydantic_private__["_trigger_index"]  # type: ignore[index]
         return index[trigger_id]
 
+    def stack_def(self, stack_id: str) -> StackDef:
+        """層數定義；找不到時拋出 ``KeyError``。"""
+        index: dict[str, StackDef] = self.__pydantic_private__["_stack_index"]  # type: ignore[index]
+        return index[stack_id]
+
     def skill_def(self, skill_id: str) -> SkillDef:
         """技能定義；找不到時拋出 ``KeyError``。"""
         index: dict[str, SkillDef] = self.__pydantic_private__["_skill_index"]  # type: ignore[index]
@@ -268,7 +277,9 @@ def _load_dir[M: ContentModel](
     return result
 
 
-def load_library(content_dir: Path | None = None) -> ContentLibrary:
+def load_library(  # noqa: PLR0915
+    content_dir: Path | None = None,
+) -> ContentLibrary:
     """載入並交叉驗證 ``content/`` 下全部戰鬥內容；任何問題都拋出 :class:`ContentError`。"""
     root = default_content_dir() if content_dir is None else content_dir
     files: list[tuple[Path, ContentModel]] = []
@@ -295,6 +306,7 @@ def load_library(content_dir: Path | None = None) -> ContentLibrary:
     primitives = load("skill_primitives.yaml", PrimitiveTable)
     conditions = load("skill_conditions.yaml", ConditionTable)
     skill_triggers = load("skill_triggers.yaml", SkillTriggerTable)
+    stacks = load("stacks.yaml", StackTable)
     budget = load("skill_budget.yaml", BudgetRules)
     composer = load("skill_composer.yaml", ComposerRules)
     builds = load("sim/builds.yaml", BuildTable)
@@ -316,6 +328,7 @@ def load_library(content_dir: Path | None = None) -> ContentLibrary:
             primitives=primitives,
             conditions=conditions,
             skill_triggers=skill_triggers,
+            stacks=stacks,
             skills=SkillTable(skills=tuple(skills[k] for k in sorted(skills))),
         )
     except ValueError as exc:
@@ -380,6 +393,7 @@ def _check_skills(root: Path, skills: dict[str, SkillDef], ruleset: Ruleset) -> 
     primitive_map = ruleset.primitives.by_id()
     condition_map = ruleset.conditions.by_id()
     trigger_map = ruleset.skill_triggers.by_id()
+    stack_map = ruleset.stacks.by_id()
     status_ids = {s.id for s in ruleset.statuses.statuses}
     object_ids = {o.id for o in ruleset.objects.objects}
     for skill_id, skill in skills.items():
@@ -391,6 +405,7 @@ def _check_skills(root: Path, skills: dict[str, SkillDef], ruleset: Ruleset) -> 
             object_ids=object_ids,
             conditions=condition_map,
             triggers=trigger_map,
+            stacks=stack_map,
         )
         if problems:
             raise ContentError(root / "skills" / f"{skill_id}.yaml", "；".join(problems))

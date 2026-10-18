@@ -16,6 +16,12 @@ stance_coefficient_permille: 1000
 # 被動技能（Phase 2E-1）：可用預算 ＝ tier_budget × 觸發時機的係數（skill_triggers.yaml）× (1000 ＋ 代價折抵) ÷ 1000；
 # trigger.max_per_round 每多 1 次，可用預算再 × 這個值（次數越多，每次能分到的預算越少）。初值，未經模擬。
 passive_extra_trigger_permille: 800
+# 陷阱技能（Phase 2E-3）：觸發不確定，可用預算 ＝ tier_budget × AP 係數 × 這個值 × (1000 ＋ 代價折抵) ÷ 1000。
+# 陷阱的影響範圍倍率取 trap.shape（single／cross／square3）對應的形狀倍率。初值，未經模擬。
+trap_coefficient_permille: 800
+# consume_stack 的加成點數 ＝ 同技能傷害點數 × 期望消耗層數 × per_stack_permille ÷ 1000；
+# 期望消耗層數 ＝ 該層數上限 × 這個值 ÷ 1000（500＝上限的一半；玩家不一定每次都累積滿）。初值，未經模擬。
+consume_stack_expected_permille: 500
 
 # 條件倍率：none 無條件、common／harsh 依 skill_conditions.yaml 的 harshness。
 # 技能層級的條件乘在 total，效果層級的條件只乘該效果。

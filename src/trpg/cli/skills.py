@@ -51,7 +51,7 @@ def shape_summary(library: ContentLibrary, shape: ShapeSpec) -> str:
     return f"{name}（{'，'.join(parts)}）" if parts else name
 
 
-def _effect_core(library: ContentLibrary, skill: SkillDef, spec: EffectSpec) -> str:  # noqa: PLR0911
+def _effect_core(library: ContentLibrary, skill: SkillDef, spec: EffectSpec) -> str:  # noqa: PLR0911, PLR0912
     rules = library.ruleset
     kind = spec.type
     if kind == "damage":
@@ -84,10 +84,36 @@ def _effect_core(library: ContentLibrary, skill: SkillDef, spec: EffectSpec) -> 
         return f"生成「{rules.object_def(spec.object).name_zh}」"
     if kind == "destroy_object":
         return "摧毀可破壞的物件"
+    if kind in ("add_stack", "consume_stack"):
+        return _stack_core(library, skill, spec)
+    if kind == "place_trap":
+        return _trap_core(skill)
     if kind in ("raise_terrain", "lower_terrain"):
         verb = "抬高" if kind == "raise_terrain" else "降低"
         return f"{verb}地形 {spec.amount or 1} 層"
     return rules.primitive_def(kind).name_zh
+
+
+def _stack_core(library: ContentLibrary, skill: SkillDef, spec: EffectSpec) -> str:
+    assert spec.stack is not None
+    stack = library.ruleset.stack_def(spec.stack)
+    if spec.type == "add_stack":
+        return f"累積 {spec.amount or 1} 層「{stack.name_zh}」（上限 {stack.max}）"
+    assert spec.per_stack_permille is not None
+    need = f"（至少 {skill.cost.stacks} 層才能施放）" if skill.cost.stacks else ""
+    return f"消耗全部「{stack.name_zh}」，每層使本技能傷害 +{spec.per_stack_permille / 10:g}%{need}"
+
+
+def _trap_core(skill: SkillDef) -> str:
+    trap = skill.trap
+    assert trap is not None
+    trigger = (
+        f"敵人踩上時觸發（{trap.rounds} 輪後消失）"
+        if trap.trigger == "enter"
+        else (f"{trap.rounds} 輪後引爆")
+    )
+    shape = {"single": "該格", "cross": "十字範圍", "square3": "3×3 範圍"}[trap.shape]
+    return f"放置隱藏陷阱：{trigger}，以{shape}結算其餘效果"
 
 
 def effect_summary(library: ContentLibrary, skill: SkillDef, spec: EffectSpec) -> str:

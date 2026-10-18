@@ -30,8 +30,12 @@ __all__ = [
     "run_battle",
 ]
 
-LOG_FORMAT = "trpg-battle-log/9"
-"""``/9``（Phase 2E-2）：反應技（``reaction_triggered`` 的 ``reaction`` 可以是技能 ID）、替隊友
+LOG_FORMAT = "trpg-battle-log/10"
+"""``/10``（Phase 2E-3）：層數（單位狀態加入 ``stacks``／``stack_expiry``、``stacks_changed``、
+規則包的 ``stacks``）、陷阱（戰鬥狀態加入 ``traps``、``trap_placed``／``trap_triggered``／
+``trap_expired``）、傷害加成（``damage_dealt`` 的倍率含層數加成）；``/9`` 的紀錄無法重播。
+
+``/9``（Phase 2E-2）：反應技（``reaction_triggered`` 的 ``reaction`` 可以是技能 ID）、替隊友
 擋攻擊（``attack_intercepted``）、姿態（``end_stance`` 動作、``status_removed`` 的新原因、規則包的
 ``stance_ap_cost``）；``/8`` 的紀錄無法重播。
 

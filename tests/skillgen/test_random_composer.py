@@ -32,6 +32,8 @@ ENABLED = (
     "passive",
     "reaction",
     "stance",
+    "builder_finisher",
+    "trap",
 )
 RARITIES = ("common", "rare", "epic", "legendary")
 

@@ -596,6 +596,9 @@ class AiProfile(ContentModel):
     ally_status_values: dict[str, int] = Field(default_factory=dict)
     """對友方（含自己）施加各增益的價值（等值傷害點數，Phase 2D-1）；收益 ＝ ``support`` 權重 ×
     價值 × 新增的持續比例。由 :class:`AiProfileTable` 的 ``ally_status_values`` 填入。"""
+    trap_likelihood_permille: int = Field(default=700, ge=0, le=1000)
+    """放置陷阱時，估計陷阱真的會被踩中或波及敵人的機率（‰，Phase 2E-3）；由 :class:`AiProfileTable`
+    的同名欄位填入。"""
 
 
 class OrderBonuses(ContentModel):
@@ -639,6 +642,8 @@ class AiProfileTable(ContentModel):
     skill_candidates: int = Field(default=3, ge=1)
     status_values: dict[str, int] = Field(default_factory=dict)
     ally_status_values: dict[str, int] = Field(default_factory=dict)
+    trap_likelihood_permille: int = Field(default=700, ge=0, le=1000)
+    """AI 放置陷阱的收益 ＝ 陷阱效果的價值 × 範圍波及的預期敵人數 × 這個機率（‰；初值未經模擬）。"""
     orders: OrderBonuses = Field(default_factory=OrderBonuses)
 
     @model_validator(mode="before")
@@ -649,10 +654,17 @@ class AiProfileTable(ContentModel):
             return data
         shared = data.get("status_values")
         ally_shared = data.get("ally_status_values")
-        if not isinstance(shared, dict) and not isinstance(ally_shared, dict):
+        trap_shared = data.get("trap_likelihood_permille")
+        if (
+            not isinstance(shared, dict)
+            and not isinstance(ally_shared, dict)
+            and trap_shared is None
+        ):
             return data
+        trap_default = {} if trap_shared is None else {"trap_likelihood_permille": trap_shared}
         profiles = [
             {
+                **trap_default,
                 **p,
                 "status_values": {**(shared or {}), **p.get("status_values", {})},
                 "ally_status_values": {**(ally_shared or {}), **p.get("ally_status_values", {})},

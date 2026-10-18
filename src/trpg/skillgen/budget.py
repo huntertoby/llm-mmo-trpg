@@ -126,7 +126,7 @@ def _fmt(value: Fraction) -> str:
     return f"{float(value):g}"
 
 
-def _base_points(
+def _base_points(  # noqa: PLR0911
     skill: SkillDef, effect: EffectSpec, primitive: PrimitiveDef, library: ContentLibrary
 ) -> tuple[Fraction, str]:
     """基礎點數（含強度）與一句說明。"""
@@ -141,6 +141,12 @@ def _base_points(
         assert primitive.base_points is not None
         distance = effect.distance or 1
         return Fraction(primitive.base_points * distance), f"{primitive.base_points}×{distance} 格"
+    if basis == "per_amount":
+        assert primitive.base_points is not None
+        amount = effect.amount or 1
+        return Fraction(primitive.base_points * amount), f"{primitive.base_points}×{amount} 層"
+    if basis == "consume_stack":
+        return _consume_stack_points(skill, effect, library)
     if basis == "dice_average" or (basis == "damage" and skill.category == "spell"):
         if effect.dice is None:
             raise BudgetError(f"效果 {primitive.id} 缺少 dice，無法計算點數")
@@ -152,6 +158,42 @@ def _base_points(
     if basis == "status":
         return _status_points(effect, rules.statuses.by_id())
     return _surface_points(effect, library)
+
+
+def _consume_stack_points(
+    skill: SkillDef, effect: EffectSpec, library: ContentLibrary
+) -> tuple[Fraction, str]:
+    """``consume_stack`` 的加成點數：同技能傷害效果（含形狀與對象倍率）× 期望消耗層數 ×
+    ``per_stack_permille``；期望消耗＝層數上限 × ``consume_stack_expected_permille``。"""
+    rules, budget = library.ruleset, library.budget
+    if effect.stack is None or effect.per_stack_permille is None:
+        raise BudgetError("consume_stack 缺少 stack 或 per_stack_permille")
+    expected = Fraction(
+        rules.stack_def(effect.stack).max * budget.consume_stack_expected_permille, _PERMILLE
+    )
+    primitives = rules.primitives.by_id()
+    damage = Fraction(0)
+    for other in skill.effects:
+        if other.type == "damage":
+            base, _ = _base_points(skill, other, primitives["damage"], library)
+            damage += base * _shape_multiplier(skill, other, primitives["damage"], library)
+    bonus = damage * expected * Fraction(effect.per_stack_permille, _PERMILLE)
+    return bonus, f"傷害 {_fmt(damage)} × 期望 {_fmt(expected)} 層 × {effect.per_stack_permille}‰"
+
+
+def _shape_multiplier(
+    skill: SkillDef, effect: EffectSpec, primitive: PrimitiveDef, library: ContentLibrary
+) -> Fraction:
+    """形狀倍率（只對作用在單位的效果）；陷阱技能取 ``trap.shape`` 的倍率（觸發時的影響範圍）。"""
+    rules = library.ruleset
+    affects = resolved_affects(rules, effect)
+    if not (affects in _SHAPED_AFFECTS and primitive.acts_on != "caster"):
+        return Fraction(1)
+    if skill.trap is not None:
+        shape = rules.shapes.by_id()[skill.trap.shape]
+        return Fraction(shape.budget.permille_for({}), _PERMILLE)
+    shape = rules.shapes.by_id()[skill.shape.type]
+    return Fraction(shape.budget.permille_for(skill.shape.param_values()), _PERMILLE)
 
 
 def _status_points(effect: EffectSpec, statuses: dict[str, StatusDef]) -> tuple[Fraction, str]:
@@ -195,11 +237,12 @@ def _effect_budget(
         raise BudgetError(f"未知的效果原語 {effect.type!r}")
     base, note = _base_points(skill, effect, primitive, library)
     affects = resolved_affects(rules, effect)
-    shaped = affects in _SHAPED_AFFECTS and primitive.acts_on != "caster"
-    shape_permille = rules.shapes.by_id()[skill.shape.type].budget.permille_for(
-        skill.shape.param_values()
+    # consume_stack 的加成點數已含傷害效果的形狀倍率
+    shape = (
+        Fraction(1)
+        if primitive.budget_basis == "consume_stack"
+        else _shape_multiplier(skill, effect, primitive, library)
     )
-    shape = Fraction(shape_permille, _PERMILLE) if shaped else Fraction(1)
     target = Fraction(budget.all_target_permille, _PERMILLE) if affects == "all" else Fraction(1)
     condition = Fraction(1)
     if effect.condition is not None:
@@ -304,6 +347,9 @@ def skill_budget(skill: SkillDef, library: ContentLibrary) -> BudgetReport:
     else:
         coefficient = _ap_coefficient(skill, budget)
         label = {"reaction": "反應係數", "stance": "姿態係數"}.get(skill.kind, "AP 係數")
+        if skill.trap is not None:
+            coefficient *= Fraction(budget.trap_coefficient_permille, _PERMILLE)
+            label = "AP 係數 × 陷阱係數"
     return BudgetReport(
         skill_id=skill.id,
         tier=skill.tier,

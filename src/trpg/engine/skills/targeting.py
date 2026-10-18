@@ -16,6 +16,7 @@ from typing import NamedTuple
 
 from trpg.content.battle import Dice
 from trpg.content.skills import (
+    CONSUME_STACK,
     Affects,
     EffectSpec,
     PrimitiveDef,
@@ -56,6 +57,7 @@ __all__ = [
     "skill_is_height_limited",
     "skill_problem",
     "skill_profile",
+    "stack_problem",
 ]
 
 _PERMILLE = 1000
@@ -196,6 +198,22 @@ def _resource_problem(  # noqa: PLR0911
     cost = hp_cost(unit, skill)
     if cost and unit.hp <= cost:
         return f"HP 不足以支付代價：需要 {cost}，目前 {unit.hp}（支付後不可倒下）"
+    return stack_problem(state, unit, skill)
+
+
+def stack_problem(state: BattleState, unit: UnitState, skill: SkillDef) -> str | None:
+    """層數需求（``cost.stacks``）不足的原因；沒有需求或足夠時為 ``None``。"""
+    need = skill.cost.stacks
+    if need is None:
+        return None
+    for effect in skill.effects:
+        if effect.type == CONSUME_STACK and effect.stack is not None:
+            definition = state.ruleset.stack_def(effect.stack)
+            if definition.owner == "self":
+                have = unit.stacks.get(definition.id, 0)
+                if have < need:
+                    return f"層數不足：需要「{definition.name_zh}」{need} 層，目前 {have} 層"
+                return None
     return None
 
 
@@ -383,6 +401,10 @@ def compute_area(  # noqa: PLR0912, PLR0915
             other = state.unit_at(*center)
             if other is not None and other.id != caster.id:
                 raise IllegalActionError(f"無法傳送到已有單位的格子：{center}（{other.name_zh}）")
+        if skill.trap is not None:
+            problem = _trap_site_problem(state, center)
+            if problem is not None:
+                raise IllegalActionError(problem)
         origin = center
         tiles = _center_tiles(state, spec.type, center)
     elif targeting == "direction":
@@ -410,6 +432,19 @@ def compute_area(  # noqa: PLR0912, PLR0915
     return SkillArea(
         tiles=tiles, units=_tiles_to_units(state, tiles, chain), origin=origin, direction=direction
     )
+
+
+def _trap_site_problem(state: BattleState, center: XY) -> str | None:
+    """陷阱的放置格：可站立、不是致命地形、沒有單位、沒有其他陷阱（同一格只能有一個；這個檢查
+    不分陣營，所以放置的合法性會洩漏對方陷阱的存在——2E 敵人沒有陷阱技能，記錄在報告）。"""
+    if not is_standable(state, center) or is_deadly(state, center):
+        return f"無法在不可站立的格子放置陷阱：{center}"
+    other = state.unit_at(*center)
+    if other is not None:
+        return f"無法在已有單位的格子放置陷阱：{center}（{other.name_zh}）"
+    if state.trap_at(*center) is not None:
+        return f"這一格已經有陷阱：{center}"
+    return None
 
 
 def checked_area(

@@ -1,9 +1,13 @@
-# 2B 停用：需要「層數」系統（累積與消耗），之後的階段才實作。
+# 蓄力與終結（Phase 2E-3）：一個技能累積層數（add_stack），另一個消耗層數（consume_stack）換成傷害加成。
 id: builder_finisher
 name_zh: 蓄力與終結
-description_zh: 一個技能累積層數，另一個消耗層數。
+description_zh: 一個技能累積層數，另一個消耗層數換成更高的傷害。
 kinds: [active]
-enabled: false
+enabled: true
+min_rarity: rare
 shapes: [single, line, cone]
-core: {primitives: [damage]}
-secondary: {max_count: 1}
+core: {primitives: [damage], min_share_permille: 400}
+secondary:
+  primitives: [add_stack, consume_stack, apply_status]
+  max_count: 2
+require_any_primitives: [add_stack, consume_stack]

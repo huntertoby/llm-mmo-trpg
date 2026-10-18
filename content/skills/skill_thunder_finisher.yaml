@@ -1,0 +1,24 @@
+# 終結技（Phase 2E-3，數值為初值，未經模擬）：至少 2 層靜電才能施放，消耗全部靜電，每層 +25% 傷害。
+id: skill_thunder_finisher
+schema_version: 1
+name_zh: 雷霆終結
+tier: 2
+rank: 1
+rarity: rare
+kind: active
+skeleton: builder_finisher
+category: spell
+weapon_req: focus
+ap_cost: 2
+scaling_attr: int
+shape: {type: single, range: 5}
+effects:
+  - {type: damage, dice: 2d10, element: lightning}
+  - {type: consume_stack, stack: static_charge, per_stack_permille: 250, affects: self}
+condition: null
+cost: {mana: 8, cooldown: 3, stacks: 2}
+tags: [lightning, spell, finisher]
+narrative:
+  concept: 把累積的靜電一次放出，化作貫穿一點的落雷
+  cast_flavor: 你周身的電光驟然匯向指尖，一道落雷劈向目標
+provenance: {origin: builtin, owner_id: null, created_by: null, parents: [], bound: true, tradeable: false}

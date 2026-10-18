@@ -34,10 +34,14 @@ from trpg.shared.types import Attribute, Element, Surface
 
 if TYPE_CHECKING:
     from trpg.content.skill_triggers import SkillTriggerDef
+    from trpg.content.stacks import StackDef
 
 __all__ = [
+    "ADD_STACK",
     "AFFECTS_VALUES",
+    "CONSUME_STACK",
     "INTERCEPT",
+    "PLACE_TRAP",
     "RARITY_ORDER",
     "REQUIRED_CONDITIONS",
     "REQUIRED_SHAPES",
@@ -64,6 +68,7 @@ __all__ = [
     "SkillCost",
     "SkillDef",
     "SkillTable",
+    "TrapSpec",
     "TriggerSpec",
     "condition_text",
     "default_affects",
@@ -272,10 +277,10 @@ class PrimitiveParam(ContentModel):
     """原語的一個參數。
 
     ``type``：``dice``（``NdM``）、``int``（``min``～``max``）、``status``／``surface``／
-    ``object``（引用其他資料檔的 ID）、``element``。
+    ``object``／``stack``（引用其他資料檔的 ID）、``element``。
     """
 
-    type: Literal["dice", "int", "status", "surface", "object", "element"]
+    type: Literal["dice", "int", "status", "surface", "object", "element", "stack"]
     required: bool = False
     min: int | None = None
     max: int | None = None
@@ -294,6 +299,8 @@ class PrimitiveDef(ContentModel):
     - ``forbid_affects``：不可搭配的 ``affects``（淨化不能對敵方使用）。
     - ``budget_basis``／``base_points``：預算點數的算法（``docs/phases/Phase2B計畫.md`` 4.2）：
       ``fixed`` 固定 ``base_points``、``per_distance`` ``base_points × distance``、
+      ``per_amount`` ``base_points × amount``（2E-3 的 ``add_stack``）、
+      ``consume_stack`` 同技能傷害點數 × 期望消耗層數 × ``per_stack_permille``（2E-3）、
       ``dice_average`` 骰子平均值、``damage`` 法術為骰子平均值而武器為倍率 × 基準武器傷害、
       ``status``／``surface`` 為該狀態或表面的 ``budget_points`` × 持續 ÷ 預設持續。
       ``None`` 表示無法計算預算（驗證器會拒絕）。
@@ -310,13 +317,24 @@ class PrimitiveDef(ContentModel):
     forbid_affects: tuple[Affects, ...] = ()
     params: dict[str, PrimitiveParam] = Field(default_factory=dict)
     budget_basis: (
-        Literal["fixed", "per_distance", "dice_average", "damage", "status", "surface"] | None
+        Literal[
+            "fixed",
+            "per_distance",
+            "per_amount",
+            "dice_average",
+            "damage",
+            "status",
+            "surface",
+            "consume_stack",
+        ]
+        | None
     ) = None
     base_points: int | None = Field(default=None, ge=0)
 
     @model_validator(mode="after")
     def _check_budget(self) -> PrimitiveDef:
-        if self.budget_basis in ("fixed", "per_distance") and self.base_points is None:
+        needs_points = ("fixed", "per_distance", "per_amount")
+        if self.budget_basis in needs_points and self.base_points is None:
             raise ValueError(f"原語 {self.id}：budget_basis {self.budget_basis} 必須填 base_points")
         return self
 
@@ -475,6 +493,8 @@ class EffectSpec(ContentModel):
     surface: Surface | None = None
     object: str | None = Field(default=None, pattern=ID_PATTERN)
     amount: int | None = None
+    stack: str | None = Field(default=None, pattern=ID_PATTERN)
+    per_stack_permille: int | None = Field(default=None, ge=1, le=_PERMILLE)
     condition: ConditionSpec | None = None
 
     def param_values(self) -> dict[str, Any]:
@@ -487,6 +507,8 @@ class EffectSpec(ContentModel):
             "element",
             "multiplier_permille",
             "object",
+            "per_stack_permille",
+            "stack",
             "status",
             "surface",
         )
@@ -500,6 +522,9 @@ class SkillCost(ContentModel):
     cooldown: int | None = Field(default=None, ge=1, le=_MAX_COOLDOWN)
     uses_per_battle: int | None = Field(default=None, ge=1)
     hp_percent: int | None = Field(default=None, ge=1, le=_PERMILLE - 1)
+    stacks: int | None = Field(default=None, ge=1)
+    """施放前至少要有幾層（Phase 2E-3）：對應技能裡 ``owner: self`` 的 ``consume_stack`` 的層數；
+    不足時不可施放。需求本身不消耗層數（消耗由 ``consume_stack`` 負責）。"""
 
 
 class NarrativeDef(ContentModel):
@@ -557,6 +582,11 @@ SKILL_REACTION_EVENTS: tuple[str, ...] = (
 INTERCEPT = "intercept"
 """替隊友擋攻擊的原語 ID（只能出現在 ``event: ally_hit_adjacent`` 的反應技）。"""
 
+ADD_STACK = "add_stack"
+CONSUME_STACK = "consume_stack"
+PLACE_TRAP = "place_trap"
+"""Phase 2E-3 的原語 ID：累積層數、消耗層數、放置陷阱。"""
+
 
 class ReactionSpec(ContentModel):
     """反應技的觸發設定（``docs/phases/Phase2E計畫.md`` 4.1）。
@@ -569,6 +599,20 @@ class ReactionSpec(ContentModel):
     """
 
     event: ReactionEvent
+
+
+class TrapSpec(ContentModel):
+    """陷阱技能的設定（``docs/phases/Phase2E計畫.md`` 5.2；技能必須有 ``place_trap`` 原語）。
+
+    - ``trigger``：``enter`` 為敵人進入陷阱格時觸發、``rounds`` 輪（放置者的回合開始時倒數）後
+      未觸發就消失；``delay`` 為 ``rounds`` 輪後（放置者回合開始時）觸發。
+    - ``shape``：觸發時以陷阱格為中心的影響範圍（``single``、``cross``、``square3``）。
+    - 技能其餘的效果就是陷阱觸發時的效果（自動命中；狀態照常擲抵抗）。
+    """
+
+    trigger: Literal["enter", "delay"]
+    rounds: int = Field(default=2, ge=1, le=6)
+    shape: Literal["single", "cross", "square3"] = "single"
 
 
 class SkillDef(ContentModel):
@@ -592,6 +636,7 @@ class SkillDef(ContentModel):
     condition: ConditionSpec | None = None
     trigger: TriggerSpec | None = None
     reaction: ReactionSpec | None = None
+    trap: TrapSpec | None = None
     cost: SkillCost = Field(default_factory=SkillCost)
     tags: tuple[str, ...] = ()
     narrative: NarrativeDef = Field(default_factory=NarrativeDef)
@@ -635,6 +680,7 @@ class SkillDef(ContentModel):
         if self.kind != "passive" and self.trigger is not None:
             raise ValueError(f"只有被動技能可以有 trigger，收到 kind: {self.kind}")
         self._check_reaction_and_stance()
+        self._check_trap_and_stacks()
         allowed = ("melee", "ranged") if self.category == "weapon" else ("focus", "any")
         if self.weapon_req not in allowed:
             name = "武器技" if self.category == "weapon" else "法術技"
@@ -671,6 +717,25 @@ class SkillDef(ContentModel):
                 raise ValueError("ally_hit_adjacent 的反應技形狀必須是 self")
         elif INTERCEPT in types:
             raise ValueError("intercept 只能用在反應技")
+
+    def _check_trap_and_stacks(self) -> None:
+        """陷阱與層數的結構（2E-3）：``trap`` 與 ``place_trap`` 成對；陷阱技能是形狀
+        ``ground_tile`` 的主動技能，其餘效果在觸發時結算，所以不能有 ``teleport``，也不能累積
+        或消耗層數（觸發時的施放者是放置時的快照）。"""
+        types = [e.type for e in self.effects]
+        if (PLACE_TRAP in types) != (self.trap is not None):
+            raise ValueError("place_trap 原語與 trap 欄位必須成對出現")
+        if self.cost.stacks is not None and CONSUME_STACK not in types:
+            raise ValueError("cost.stacks 需要一個 consume_stack 效果")
+        if self.trap is None:
+            return
+        if types.count(PLACE_TRAP) != 1:
+            raise ValueError("陷阱技能只能有一個 place_trap")
+        if self.kind != "active" or self.shape.type != "ground_tile":
+            raise ValueError("陷阱技能必須是形狀 ground_tile 的主動技能")
+        banned = [t for t in types if t in ("teleport", ADD_STACK, CONSUME_STACK)]
+        if banned:
+            raise ValueError(f"陷阱技能不能有 {'、'.join(banned)}（陷阱觸發時才結算其餘效果）")
 
     def _check_effect(self, index: int, effect: EffectSpec) -> None:
         where = f"effects[{index}]（{effect.type}）"
@@ -768,6 +833,8 @@ def _value_problem(
         return f"{where}.{name}：未知的狀態 {value!r}"
     elif spec.type == "object" and value not in refs.object_ids:
         return f"{where}.{name}：未知的物件 {value!r}"
+    elif spec.type == "stack" and refs.stacks is not None and value not in refs.stacks:
+        return f"{where}.{name}：未知的層數 {value!r}"
     elif spec.type == "surface" and value is Surface.NONE:
         return f"{where}.{name}：不能產生 none 表面"
     return None
@@ -781,6 +848,7 @@ class _Refs:
     status_ids: set[str]
     object_ids: set[str]
     conditions: dict[str, ConditionDef]
+    stacks: dict[str, StackDef] | None = None
 
 
 def _condition_problems(where: str, condition: ConditionSpec, refs: _Refs) -> list[str]:
@@ -842,7 +910,45 @@ def _effect_problems(skill: SkillDef, index: int, effect: EffectSpec, refs: _Ref
     if primitive.allowed_shapes is not None and skill.shape.type not in primitive.allowed_shapes:
         allowed = "、".join(primitive.allowed_shapes)
         problems.append(f"{where}：{primitive.id} 只能搭配形狀 {allowed}，收到 {skill.shape.type}")
+    problems += _stack_effect_problems(where, effect, affects, refs)
     return problems
+
+
+def _stack_effect_problems(where: str, effect: EffectSpec, affects: str, refs: _Refs) -> list[str]:
+    """層數原語的跨檔案檢查：層數的 ``owner`` 決定對象（``self`` 型只能對施放者自己、``target`` 型
+    只能對敵方），累積量不超過上限。"""
+    if effect.type not in (ADD_STACK, CONSUME_STACK) or refs.stacks is None:
+        return []
+    stack = refs.stacks.get(effect.stack or "")
+    if stack is None:
+        return []
+    want = "self" if stack.owner == "self" else "enemies"
+    problems: list[str] = []
+    if affects != want:
+        problems.append(
+            f"{where}.affects：層數 {stack.id}（owner: {stack.owner}）的{effect.type}"
+            f"只能是 affects: {want}，收到 {affects}"
+        )
+    if effect.type == ADD_STACK and effect.amount is not None and effect.amount > stack.max:
+        problems.append(f"{where}.amount：超過層數 {stack.id} 的上限 {stack.max}")
+    return problems
+
+
+def _cost_stack_problems(skill: SkillDef, stacks: dict[str, StackDef]) -> list[str]:
+    """``cost.stacks``（施放前至少要有幾層）：對應 ``owner: self`` 的 ``consume_stack``。"""
+    need = skill.cost.stacks
+    if need is None:
+        return []
+    owned = [
+        stacks[e.stack]
+        for e in skill.effects
+        if e.type == CONSUME_STACK and e.stack in stacks and stacks[e.stack].owner == "self"
+    ]
+    if not owned:
+        return ["cost.stacks：需要一個 owner: self 的層數的 consume_stack 效果"]
+    if need > owned[0].max:
+        return [f"cost.stacks：{need} 超過層數 {owned[0].id} 的上限 {owned[0].max}"]
+    return []
 
 
 def _filled_by_category(skill: SkillDef, primitive: PrimitiveDef, name: str) -> bool:
@@ -876,10 +982,12 @@ def skill_problems(
     object_ids: set[str],
     conditions: dict[str, ConditionDef],
     triggers: dict[str, SkillTriggerDef] | None = None,
+    stacks: dict[str, StackDef] | None = None,
 ) -> list[str]:
     """技能引用的形狀、原語、條件、狀態、物件是否存在、參數是否在範圍內（繁體中文，空串列為通過）。
 
-    ``triggers``：觸發時機表（省略時不檢查被動的 ``trigger``）。
+    ``triggers``：觸發時機表（省略時不檢查被動的 ``trigger``）；``stacks``：層數表（省略時不檢查
+    層數原語引用的層數）。
     """
     problems: list[str] = []
     shape = shapes.get(skill.shape.type)
@@ -888,7 +996,9 @@ def skill_problems(
         problems.append(f"shape.type：未知的形狀 {skill.shape.type!r}（可用：{known}）")
     else:
         problems += _int_param_problems("shape", skill.shape.param_values(), shape)
-    refs = _Refs(primitives, status_ids, object_ids, conditions)
+    refs = _Refs(primitives, status_ids, object_ids, conditions, stacks)
+    if stacks is not None:
+        problems += _cost_stack_problems(skill, stacks)
     if triggers is not None:
         problems += _trigger_problems(skill, triggers)
     if skill.condition is not None:

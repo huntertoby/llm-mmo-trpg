@@ -86,6 +86,10 @@ class BudgetRules(ContentModel):
     """姿態技能的預算係數（‰；2E-2）：可用預算 ＝ tier_budget × 係數 ×（1000 ＋ 折抵）÷ 1000。"""
     passive_extra_trigger_permille: int = Field(default=800, ge=1, le=1000)
     """被動技能的 ``trigger.max_per_round`` 每多 1 次，可用預算 × 這個值（‰）。"""
+    trap_coefficient_permille: int = Field(default=800, ge=1, le=1000)
+    """陷阱技能（Phase 2E-3）：觸發不確定，可用預算再 × 這個值（‰；初值，未經模擬）。"""
+    consume_stack_expected_permille: int = Field(default=500, ge=1, le=1000)
+    """``consume_stack`` 的預算以「期望消耗層數 ＝ 該層數上限 × 這個值」估算加成點數（‰；初值）。"""
     condition_permille: dict[Literal["none", "common", "harsh"], int]
     all_target_permille: int = Field(ge=1, le=1000)
     """``affects: all``（敵我不分）的對象係數。"""
@@ -305,6 +309,8 @@ class SkeletonDef(ContentModel):
     secondary: SecondaryRules = Field(default_factory=SecondaryRules)
     forbid_affects: tuple[Affects, ...] = ()
     requires_condition: bool = False
+    require_any_primitives: tuple[str, ...] = ()
+    """技能的效果至少要有其中一個原語（蓄力與終結：add_stack／consume_stack；陷阱：place_trap）。"""
     min_rarity: SkillRarity = "common"
     """使用此骨架的最低稀有度（2E：被動 epic；之後的反應技、姿態、蓄力／終結、陷阱 rare）。"""
 

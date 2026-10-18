@@ -38,7 +38,9 @@ from trpg.engine.skill_triggers import (
     reset_round_counts,
     settle,
 )
+from trpg.engine.stacks import expire_stacks
 from trpg.engine.state import StatusInstance, UnitState
+from trpg.engine.traps import tick_traps
 from trpg.shared.types import Surface, UnitId
 
 __all__ = [
@@ -105,6 +107,8 @@ def start_turn(ctx: Ctx, unit_id: UnitId) -> None:
     surface_effects = _surface_turn_start(ctx, unit)
     if surface_effects and unit.alive:
         execute(ctx, surface_effects)
+    if unit.alive and state.traps:  # 放置者的陷阱倒數（Phase 2E-3）：delay 到期觸發、enter 到期消失
+        tick_traps(ctx, unit)
     if unit.alive:  # 被動技能 on_turn_start：在狀態與表面的回合開始效果之後
         collect_turn_start(ctx, unit)
         settle(ctx)
@@ -222,6 +226,7 @@ def _end_round(ctx: Ctx) -> bool:
         unit.reactions_used = 0
     reset_round_counts(iter(state.units_sorted()))
     ctx.emit(RoundStarted)
+    expire_stacks(ctx)  # 到期的層數在新的一輪開始時清空（Phase 2E-3）
     return False
 
 

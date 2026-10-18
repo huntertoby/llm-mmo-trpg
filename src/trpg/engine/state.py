@@ -29,6 +29,7 @@ __all__ = [
     "SpawnTemplate",
     "StatusInstance",
     "Tile",
+    "TrapState",
     "UnitState",
     "state_from_json",
     "state_to_json",
@@ -62,6 +63,28 @@ class Tile:
     surface_remaining: int | None = None
     surface_team: Team | None = None
     object_id: ObjectId | None = None
+
+
+@dataclass(slots=True, frozen=True)
+class TrapState:
+    """戰場上的陷阱（Phase 2E-3；不可變，更新時替換）。
+
+    - ``owner_id``／``team``：放置者與其陣營（只有這個陣營看得到，見 ``trpg.engine.traps``）。
+    - ``skill_id``：陷阱技能（觸發時的效果、觸發方式與範圍都來自它的 ``trap`` 欄位）。
+    - ``remaining``：剩餘輪數，放置者每次回合開始 −1，歸零時 ``delay`` 觸發、``enter`` 消失。
+    - ``attributes``：放置時施放者的有效屬性快照（觸發時的傷害與抵抗判定用）。
+    """
+
+    owner_id: UnitId
+    team: Team
+    pos: Pos
+    skill_id: str
+    remaining: int
+    attributes: dict[Attribute, int]
+
+    @property
+    def xy(self) -> tuple[int, int]:
+        return (self.pos.x, self.pos.y)
 
 
 @dataclass(slots=True)
@@ -172,6 +195,10 @@ class UnitState:
     """被動技能本輪已觸發的次數（技能 ID → 次數，只列出 > 0 的）；每輪開始時重設（Phase 2E-1）。"""
     hits_landed: int = 0
     """整場戰鬥累計的命中次數（``every_n_hits`` 的計數；只有裝備了該類被動的單位會累計）。"""
+    stacks: dict[str, int] = field(default_factory=dict)
+    """身上的層數（層數 ID → 層數，只列出 > 0 的；Phase 2E-3，定義在 ``stacks.yaml``）。"""
+    stack_expiry: dict[str, int] = field(default_factory=dict)
+    """有 ``expires_after_rounds`` 的層數：層數 ID → 在這一輪開始時清空。"""
 
     @property
     def alive(self) -> bool:
@@ -233,6 +260,8 @@ class UnitState:
             control_dr=dict(self.control_dr),
             trigger_counts=dict(self.trigger_counts),
             hits_landed=self.hits_landed,
+            stacks=dict(self.stacks),
+            stack_expiry=dict(self.stack_expiry),
         )
 
 
@@ -264,6 +293,8 @@ class BattleState:
     map_events: tuple[MapEvent, ...] = ()
     spawn_templates: dict[str, SpawnTemplate] = field(default_factory=dict)
     pending: PendingResolution | None = None
+    traps: list[TrapState] = field(default_factory=list)
+    """戰場上的陷阱（Phase 2E-3），依 ``(y, x)`` 排序；同一格最多一個。"""
 
     # ------------------------------------------------------------------
     # 複製
@@ -300,6 +331,7 @@ class BattleState:
             map_events=self.map_events,
             spawn_templates=self.spawn_templates,
             pending=self.pending,
+            traps=list(self.traps),
         )
 
     # ------------------------------------------------------------------
@@ -334,6 +366,17 @@ class BattleState:
     def objects_sorted(self) -> list[ObjectState]:
         """未摧毀的物件，依 ID 排序。"""
         return [self.objects[o] for o in sorted(self.objects) if not self.objects[o].destroyed]
+
+    # ------------------------------------------------------------------
+    # 陷阱
+    # ------------------------------------------------------------------
+
+    def trap_at(self, x: int, y: int) -> TrapState | None:
+        """``(x, y)`` 上的陷阱（不論陣營；AI 與預覽請改用 ``trpg.engine.traps.visible_traps``）。"""
+        for trap in self.traps:
+            if trap.pos.x == x and trap.pos.y == y:
+                return trap
+        return None
 
     # ------------------------------------------------------------------
     # 單位

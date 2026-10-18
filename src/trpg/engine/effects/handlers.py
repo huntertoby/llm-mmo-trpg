@@ -44,6 +44,7 @@ from trpg.engine.rules.statuses import (
     stance_status_ids,
 )
 from trpg.engine.state import BattleState, StatusInstance, UnitState
+from trpg.engine.traps import queue_trap_entry
 from trpg.shared.types import Element, Pos, Surface, Team, UnitId
 
 SHIELD_STATUS = "shielded"
@@ -279,6 +280,8 @@ def arrive(
             UnitMoved, unit_id=unit.id, from_pos=from_pos, to_pos=unit.pos, mode=mode, cost=cost
         )
     ]
+    if mode != "teleport":
+        queue_trap_entry(ctx, unit, dest)  # 進入敵方陷阱格（主動或強制移動；傳送不算）
     min_drop = ctx.core.fall_damage_min_drop
     if mode != "teleport" and drop >= min_drop:
         levels = drop - (min_drop - 1)

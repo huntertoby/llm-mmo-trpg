@@ -27,6 +27,8 @@ ENABLED = {
     "passive",
     "reaction",
     "stance",
+    "builder_finisher",
+    "trap",
 }
 
 

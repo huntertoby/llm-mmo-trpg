@@ -48,6 +48,7 @@ from trpg.engine.events import (
     SkillCooldownChanged,
     SkillTriggered,
     SkillUsed,
+    StacksChanged,
     StatusApplied,
     StatusConverted,
     StatusRemoved,
@@ -56,6 +57,9 @@ from trpg.engine.events import (
     SurfaceChanged,
     SurfaceEntered,
     TerrainChanged,
+    TrapExpired,
+    TrapPlaced,
+    TrapTriggered,
     TriggerLimitReached,
     TurnEnded,
     TurnOrderSet,
@@ -70,6 +74,7 @@ from trpg.engine.events import (
 )
 from trpg.engine.rules.combat import is_concealed
 from trpg.engine.state import BattleState, UnitState
+from trpg.engine.traps import visible_traps
 from trpg.shared.types import Pos, Surface, Team
 
 __all__ = [
@@ -81,6 +86,9 @@ __all__ = [
     "render_unit_table",
     "unit_markers",
 ]
+
+TRAP_GLYPH = "^"
+"""網格上我方陷阱的字元（只顯示放置者陣營看得到的陷阱）。"""
 
 _PPM = 1_000_000
 _PERMILLE = 1000
@@ -211,6 +219,7 @@ def render_battle_grid(state: BattleState) -> str:
     markers = unit_markers(state)
     occupancy = state.occupancy()
     surf_glyph = _surface_glyphs(state.ruleset)
+    my_traps = {t.xy for t in visible_traps(state, Team.ALLY)}  # 只顯示我方（玩家陣營）的陷阱
     lines = [_header(state.width)]
     for y in range(state.height):
         cells = []
@@ -222,6 +231,8 @@ def render_battle_grid(state: BattleState) -> str:
                 mark = markers[unit.id]
             elif obj is not None:
                 mark = state.object_def(obj).glyph
+            elif (x, y) in my_traps:
+                mark = TRAP_GLYPH
             else:
                 mark = state.ruleset.terrain_def(tile.terrain).glyph
             surface = surf_glyph[tile.surface] if tile.surface is not Surface.NONE else " "
@@ -244,6 +255,8 @@ def render_legend(state: BattleState) -> str:
         f"{state.ruleset.surface_def(s).glyph} {state.ruleset.surface_def(s).name_zh}（表面）"
         for s in surfaces
     ]
+    if visible_traps(state, Team.ALLY):
+        parts.append(f"{TRAP_GLYPH} 我方陷阱")
     return ("  圖例：" + "、".join(parts)) if parts else ""
 
 
@@ -252,6 +265,8 @@ def _status_text(state: BattleState, unit: UnitState) -> str:
     for s in unit.statuses:
         name = state.ruleset.status_def(s.status_id).name_zh
         parts.append(name if s.remaining is None else f"{name}{s.remaining}")
+    for stack_id, count in sorted(unit.stacks.items()):  # 層數（2E-3）
+        parts.append(f"{state.ruleset.stack_def(stack_id).name_zh}×{count}")
     if not unit.has_status("concealed") and is_concealed(state, unit):
         parts.append("隱蔽")
     return ("［" + "、".join(parts) + "］") if parts else ""
@@ -370,7 +385,7 @@ def _damage_text(e: DamageDealt, name: dict[str, str]) -> str:
     if e.weather_permille != 1000:  # noqa: PLR2004
         mod += f"（天氣 ×{e.weather_permille / 1000:g}）"
     if e.multiplier_permille != 1000:  # noqa: PLR2004
-        mod += f"（格擋 ×{e.multiplier_permille / 1000:g}）"
+        mod += f"（格擋/加成 ×{e.multiplier_permille / 1000:g}）"
     if e.status_ppm != _PPM:
         mod += f"（狀態 ×{e.status_ppm / _PPM:g}）"
     shield = f"（護盾吸收 {e.absorbed}）" if e.absorbed else ""
@@ -378,6 +393,31 @@ def _damage_text(e: DamageDealt, name: dict[str, str]) -> str:
         f"{name[e.target_id]} 受到 {e.amount} 點{kind}傷害{rolls}{mod}{shield}"
         f"，HP {e.hp_before} → {e.hp_after}"
     )
+
+
+def _stacks_text(e: StacksChanged, name: dict[str, str], state: BattleState) -> str:
+    stack = state.ruleset.stack_def(e.stack_id).name_zh
+    verb = {"gained": "累積", "consumed": "消耗", "expired": "過期清空"}[e.reason]
+    return f"    {name[e.unit_id]} 的「{stack}」{verb}：{e.before} → {e.after} 層"
+
+
+def _trap_text(
+    e: TrapPlaced | TrapTriggered | TrapExpired, name: dict[str, str], state: BattleState
+) -> str:
+    skill = state.ruleset.skill_def(e.skill_id).name_zh
+    owner = name[e.owner_id]
+    if isinstance(e, TrapPlaced):
+        when = (
+            f"敵人踩上時觸發，{e.rounds} 輪後消失"
+            if e.trigger == "enter"
+            else f"{e.rounds} 輪後引爆"
+        )
+        return f"    {owner} 在 {_xy(e.pos)} 設下陷阱「{skill}」（{when}）"
+    if isinstance(e, TrapTriggered):
+        who = f"{name[e.unit_id]} 踩中了" if e.unit_id is not None else "引爆了"
+        return f"  ！{who} {_xy(e.pos)} 的陷阱「{skill}」（{owner} 設置）"
+    why = "放置者離場" if e.reason == "source_lost" else "沒人踩到，時間到"
+    return f"  {owner} 在 {_xy(e.pos)} 的陷阱「{skill}」消失了（{why}）"
 
 
 def describe_event(e: EventBase, state: BattleState) -> str | None:  # noqa: PLR0911, PLR0912
@@ -455,6 +495,10 @@ def describe_event(e: EventBase, state: BattleState) -> str | None:  # noqa: PLR
         why = _REMOVE_REASONS.get(e.reason)
         text = f"  {name[e.target_id]} 的「{statuses[e.status_id]}」"
         return text + (f"{why}" if why else "結束了")
+    if isinstance(e, StacksChanged):
+        return _stacks_text(e, name, state)
+    if isinstance(e, TrapPlaced | TrapTriggered | TrapExpired):
+        return _trap_text(e, name, state)
     if isinstance(e, UnitDowned):
         return f"  ＊ {name[e.unit_id]} 倒下了！"
     if isinstance(e, ChainLimitReached):

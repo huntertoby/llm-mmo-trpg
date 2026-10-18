@@ -20,6 +20,7 @@ from trpg.engine.context import Ctx
 from trpg.engine.effects.models import Effect, EffectBase
 from trpg.engine.events import ChainLimitReached, EventBase
 from trpg.engine.skill_triggers import settle
+from trpg.engine.traps import flush_trap_entries
 from trpg.shared.errors import TrpgError
 
 __all__ = ["EffectHandler", "execute", "handler_for", "register_effect", "sort_effects"]
@@ -66,9 +67,12 @@ def execute(ctx: Ctx, effects: Sequence[Effect] | Sequence[EffectBase]) -> None:
     queue: deque[EffectBase] = deque()
     for effect in sort_effects(list(effects)):
         _enqueue(ctx, queue, effect, max_depth)
-    while queue or ctx.surface_entries:
+    while queue or ctx.surface_entries or ctx.trap_entries:
         if not queue:
-            _flush_surface_entries(ctx, queue, max_depth)
+            if ctx.surface_entries:
+                _flush_surface_entries(ctx, queue, max_depth)
+            else:
+                flush_trap_entries(ctx)  # 單位進入敵方陷阱格（Phase 2E-3）
             continue
         effect = queue.popleft()
         produced = handler_for(_effect_kind(effect))(ctx, effect)

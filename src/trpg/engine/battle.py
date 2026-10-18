@@ -45,6 +45,7 @@ from trpg.engine.events import (
     InitiativeTieBroken,
     ObjectAttacked,
     RoundStarted,
+    TrapTriggered,
     TurnOrderSet,
     UnitStoodUp,
 )
@@ -69,6 +70,7 @@ from trpg.engine.rules.statuses import (
     base_attribute,
     effective_attribute,
     is_rooted,
+    skip_turn_status,
     stance_status_ids,
 )
 from trpg.engine.setup import BattleSetup, BattleSetupError
@@ -516,10 +518,17 @@ def _do_move(ctx: Ctx, unit: UnitState, action: Action) -> None:
         if not unit.alive:
             break
         unit.move_points -= cost
+        mark, had_traps = len(ctx.events), bool(ctx.state.traps)
         execute(ctx, [MoveUnitEffect(unit_id=unit.id, dest=dest, mode="walk", cost=cost)])
         walked.append(unit.xy)
         if not unit.alive or unit.has_status(PRONE):
             break
+        if (
+            had_traps
+            and (is_rooted(ctx.rules, unit) or skip_turn_status(ctx.rules, unit) is not None)
+            and any(isinstance(e, TrapTriggered) for e in ctx.events[mark:])
+        ):
+            break  # 踩到陷阱被定身或暈眩：不能再繼續走（Phase 2E-3）
     _slide_back_if_stacked(ctx, unit, walked)
     if len(walked) > 1 and unit.alive:  # 被動技能 on_move：一次主動移動動作完成後（強制位移不算）
         collect_move(ctx, unit)

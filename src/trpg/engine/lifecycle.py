@@ -8,6 +8,7 @@ from trpg.engine.context import Ctx
 from trpg.engine.events import EventBase, StatusRemoved, UnitDowned, UnitEscaped
 from trpg.engine.rules.statuses import is_removed_with_source, stance_status_ids
 from trpg.engine.state import UnitState
+from trpg.engine.traps import remove_traps_of
 from trpg.shared.types import Pos, Team, UnitId
 
 __all__ = ["default_ai_profile", "down_unit", "escape_unit", "make_unit"]
@@ -59,11 +60,13 @@ def down_unit(ctx: Ctx, unit: UnitState) -> list[EventBase]:
     unit.downed = True
     unit.hp = 0
     _remove_from_order(ctx, unit)
-    return [
+    events: list[EventBase] = [
         ctx.emit(UnitDowned, unit_id=unit.id),
         *_drop_stances(ctx, unit),
         *_release_forced_targets(ctx, unit),
     ]
+    remove_traps_of(ctx, unit.id)  # 放置者離場，陷阱消失（Phase 2E-3）
+    return events
 
 
 def _drop_stances(ctx: Ctx, unit: UnitState) -> list[EventBase]:
@@ -84,11 +87,13 @@ def escape_unit(ctx: Ctx, unit: UnitState) -> list[EventBase]:
         return []
     unit.escaped = True
     _remove_from_order(ctx, unit)
-    return [
+    events: list[EventBase] = [
         ctx.emit(UnitEscaped, unit_id=unit.id, pos=unit.pos),
         *_drop_stances(ctx, unit),
         *_release_forced_targets(ctx, unit),
     ]
+    remove_traps_of(ctx, unit.id)
+    return events
 
 
 def default_ai_profile(template: UnitTemplate, weapon: WeaponDef) -> str:

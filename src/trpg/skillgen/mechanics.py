@@ -38,7 +38,9 @@ def mechanic_tags(skill: SkillDef, rules: Ruleset) -> tuple[str, ...]:
     """技能的機制標籤（依 ``MECHANIC_TAGS`` 的順序）。"""
     statuses = rules.statuses.by_id()
     found: set[str] = set()
-    if skill.shape.type not in _SINGLE_TARGET_SHAPES:
+    if skill.shape.type not in _SINGLE_TARGET_SHAPES or (
+        skill.trap is not None and skill.trap.shape != "single"
+    ):
         found.add("area")
     for effect in skill.effects:
         kind = effect.type

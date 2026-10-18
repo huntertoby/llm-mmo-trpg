@@ -66,6 +66,7 @@ from trpg.engine.events import (
     EventBase,
     ObjectDamaged,
     ShieldGained,
+    StacksChanged,
     StatusApplied,
     StatusRemoved,
     UnitDowned,
@@ -88,8 +89,10 @@ from trpg.engine.rules.geometry import (
 )
 from trpg.engine.rules.movement import is_standable, step_cost
 from trpg.engine.rules.statuses import forced_target_sources, shield_amount, stance_status_ids
+from trpg.engine.skills import shapes
 from trpg.engine.skills.targeting import ResolvedEffect, SkillArea, hp_cost, resolve_effects
 from trpg.engine.state import BattleState, UnitState
+from trpg.engine.traps import visible_traps
 from trpg.shared.types import ObjectId, Surface, Team, UnitId
 
 __all__ = [
@@ -115,6 +118,12 @@ _ESCAPED_BONUS = 1000
 _ATTACK_CAUSES = ("attack",)
 _PRONE = "prone"
 _SURFACE_HARM = 8
+_TRAP_MAX_ACTIVE = 2
+"""AI 同時最多放幾個陷阱（Phase 2E-3；不要求聰明，避免一回合鋪滿整張地圖）。"""
+_TRAP_NEAR = 3
+"""AI 只在最近的敵人 1–3 格（曼哈頓）內的格子放陷阱。"""
+_TRAP_SHAPE_FACTOR = {"single": Fraction(1), "cross": Fraction(3, 2), "square3": Fraction(2)}
+"""陷阱觸發時預期波及的敵人數（相對單體）。"""
 """讓友方站上有害的新表面的扣分：相當於這麼多點傷害（乘上 ``friendly_fire``）。"""
 
 
@@ -631,6 +640,9 @@ def _gains(  # noqa: PLR0912, PLR0915
         gains += w.heal * healed
         if isinstance(p.action, UseSkill):  # 防禦動作的 defending 由 ``defend`` 權重計分，不重複算
             gains += _support_gains(state, p, profile)
+    if isinstance(p.action, UseSkill) and only is None:
+        gains += _stack_gains(state, actor, p, profile, hit)
+        gains += _trap_gains(state, p, profile)
     gains += w.damage * hit * other_enemy / 2
     gains += w.env_damage * hit * env_enemy / 2
     gains -= w.friendly_fire * friendly / 2
@@ -692,6 +704,51 @@ def _gains(  # noqa: PLR0912, PLR0915
         near = sum(1 for e in _enemies(state, actor) if manhattan(actor.xy, e.xy) <= _DEFEND_RADIUS)
         gains += w.defend * near
     return gains
+
+
+def _stack_gains(
+    state: BattleState, actor: UnitState, p: Preview, profile: AiProfile, hit: Fraction
+) -> Fraction:
+    """累積層數的收益（Phase 2E-3）：每一層 ＝ ``damage`` 權重 × 該層數的 ``ai_value`` × 命中率。
+    自己身上與敵人身上的層數都算；消耗層數不扣分——消耗的價值已經包含在終結技預覽的傷害加成裡
+    （預覽跑的是真的引擎），所以有層數時終結技的分數自然比較高。"""
+    gains = Fraction(0)
+    w = profile.weights
+    for e in p.max_events:
+        if not isinstance(e, StacksChanged) or e.reason != "gained" or e.unit_id not in state.units:
+            continue
+        mine = e.unit_id == actor.id
+        if not mine and state.units[e.unit_id].team is actor.team:
+            continue
+        gains += (
+            w.damage * hit * state.ruleset.stack_def(e.stack_id).ai_value * (e.after - e.before)
+        )
+    return gains
+
+
+def _trap_gains(state: BattleState, p: Preview, profile: AiProfile) -> Fraction:
+    """放置陷阱的收益（Phase 2E-3，粗估）：陷阱觸發時的效果（傷害骰平均值或武器倍率、狀態的價值）
+    × 範圍波及的預期敵人數 × ``trap_likelihood_permille``（陷阱真的會被踩中／波及的機率）。
+    放置本身在預覽裡沒有任何效果，所以收益完全來自這個估計。"""
+    assert isinstance(p.action, UseSkill)
+    skill = state.ruleset.skill_def(p.action.skill_id)
+    if skill.trap is None:
+        return Fraction(0)
+    w, values = profile.weights, profile.status_values
+    value = Fraction(0)
+    for spec in skill.effects:
+        if spec.type == "damage":
+            if spec.dice is not None:
+                value += w.damage * Fraction(spec.dice.count * (spec.dice.sides + 1), 2)
+            else:
+                reference = state.ruleset.core.budget_reference_weapon_damage
+                value += w.damage * Fraction((spec.multiplier_permille or 1000) * reference, 1000)
+        elif spec.type == "apply_status" and spec.status is not None:
+            points = values.get(spec.status)
+            value += Fraction(w.status) if points is None else Fraction(w.damage * points)
+        elif spec.type == "create_surface":
+            value += w.surface
+    return value * _TRAP_SHAPE_FACTOR[skill.trap.shape] * profile.trap_likelihood_permille / 1000
 
 
 def _harmed_allies(state: BattleState, actor: UnitState) -> int:
@@ -869,6 +926,8 @@ def skill_estimate(  # noqa: PLR0917
     skill = state.ruleset.skill_def(action.skill_id)
     if skill.kind == "stance" and stance_status_ids(state.ruleset, unit):
         return None  # 已經有姿態：AI 不主動換姿態（也不主動取消，Phase 2E-2）
+    if skill.trap is not None:
+        return _trap_estimate(state, unit, skill, area, scene)
     if any(e.type == "teleport" for e in skill.effects) and action.target_pos is not None:
         moved = unit.clone()
         moved.pos = action.target_pos
@@ -897,6 +956,30 @@ def skill_estimate(  # noqa: PLR0917
             return None
         score = Fraction(field)
     return score - Fraction(manhattan(unit.xy, area.origin), 1000)
+
+
+def _trap_estimate(
+    state: BattleState, unit: UnitState, skill: SkillDef, area: SkillArea, scene: _Scene
+) -> Fraction | None:
+    """陷阱選取的便宜估計：自己陣營的陷阱還沒滿、波及範圍內沒有友方（含自己）、且最近的敵人在
+    1–3 格內。分數 ＝ 3 格內敵人數 × 4 − 最近敵人的距離。AI 只讀自己陣營的陷阱（隱藏規則）。"""
+    assert skill.trap is not None
+    if len(visible_traps(state, unit.team)) >= _TRAP_MAX_ACTIVE:
+        return None
+    center = area.origin
+    if skill.trap.shape == "cross":
+        blast = shapes.cross_tiles(state, center)
+    elif skill.trap.shape == "square3":
+        blast = shapes.square3_tiles(state, center)
+    else:
+        blast = (center,)
+    if any(u.team is unit.team and u.xy in blast for u in state.living_units()):
+        return None
+    distances = [manhattan(center, e.xy) for e in scene.enemies]
+    near = [d for d in distances if d <= _TRAP_NEAR]
+    if not near:
+        return None
+    return Fraction(len(near) * 4 - min(near)) - Fraction(manhattan(unit.xy, center), 1000)
 
 
 def _supports(

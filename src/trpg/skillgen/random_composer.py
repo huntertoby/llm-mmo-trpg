@@ -99,8 +99,15 @@ def _skeleton_feasible(
     rank = rarity_rank(rarity)
     if not skeleton.enabled or rank < rarity_rank(skeleton.min_rarity):
         return False
+    if skeleton.id in _EXPLICIT_ONLY_ACTIVE:
+        return explicit and _active_feasible(skeleton, rank, library)
     if "active" not in skeleton.kinds:
         return explicit and skeleton.kinds in (("passive",), ("reaction",), ("stance",))
+    return _active_feasible(skeleton, rank, library)
+
+
+def _active_feasible(skeleton: SkeletonDef, rank: int, library: ContentLibrary) -> bool:
+    """主動骨架：有可用的核心原語，要求條件時有可用條件。"""
     primitives = library.ruleset.primitives.by_id()
     if not any(rarity_rank(primitives[p].min_rarity) <= rank for p in skeleton.core.primitives):
         return False
@@ -108,6 +115,10 @@ def _skeleton_feasible(
         conditions = library.ruleset.conditions.conditions
         return any(rarity_rank(c.min_rarity) <= rank for c in conditions)
     return True
+
+
+_EXPLICIT_ONLY_ACTIVE = frozenset({"builder_finisher", "trap"})
+"""主動骨架中，只在明確指定或由 :func:`_wants_special` 決定時使用的（2E-3；不影響其他種子）。"""
 
 
 def _feasible_skeletons(rarity: SkillRarity, library: ContentLibrary) -> list[SkeletonDef]:
@@ -161,13 +172,15 @@ def _wants_passive(seed: int, rarity: SkillRarity, library: ContentLibrary) -> b
 
 
 def _wants_special(seed: int, rarity: SkillRarity, library: ContentLibrary) -> str | None:
-    """未指定骨架時，這個種子是否改組反應技（``reaction``）或姿態（``stance``）。
+    """未指定骨架時，這個種子是否改組反應技、姿態、蓄力與終結（``builder_finisher``）或陷阱（``trap``）。
 
     與 :func:`_wants_passive` 一樣用獨立的亂數串流；抽中但組不出合格技能時由呼叫端退回一般主動技能。
     """
     for name, permille in (
         ("reaction", library.composer.reaction.skeleton_permille),
         ("stance", library.composer.stance.skeleton_permille),
+        ("builder_finisher", library.composer.builder.skeleton_permille),
+        ("trap", library.composer.trap.skeleton_permille),
     ):
         skeleton = library.skeletons.get(name)
         if (
@@ -264,6 +277,8 @@ def _attempt(
         "condition": condition,
         "provenance": {"origin": "level_up"},
     }
+    if ctx.trap is not None:
+        base["trap"] = ctx.trap
     for ap in order:
         ctx.ap_cost = ap
         base = {**base, "ap_cost": ap, "cost": build_cost(ctx)}
@@ -420,15 +435,19 @@ def _compose_special(
     tier: int,
     rarity: SkillRarity,
     category: str | None,
+    ap_cost: int | None = None,
 ) -> ComposeResult | None:
-    """反應技或姿態：用獨立的亂數串流重抽，不動主串流；做不出合格技能回傳 ``None``。"""
+    """反應技、姿態、蓄力與終結、陷阱：用獨立的亂數串流重抽；做不出合格技能回傳 ``None``。"""
     rng = Rng(seed).fork(f"composer.{kind}.build")
     chosen = category
-    if kind == "reaction" and chosen is None:
-        chosen = _choose_category(rng, lib.skeletons["reaction"], None, lib.composer)
+    if kind in ("reaction", "builder_finisher", "trap") and chosen is None:
+        chosen = _choose_category(rng, lib.skeletons[kind], None, lib.composer)
     for attempt in range(1, MAX_ATTEMPTS + 1):
         try:
-            if kind == "reaction":
+            if kind in _EXPLICIT_ONLY_ACTIVE:  # 主動骨架：走一般的主動技能流程
+                fixed = (tier, rarity, lib.skeletons[kind], chosen or "spell")
+                skill = _attempt(rng, lib, seed, fixed, ap_cost)
+            elif kind == "reaction":
                 skill = _attempt_reaction(
                     rng, lib, seed, tier=tier, rarity=rarity, category=chosen or "weapon"
                 )
@@ -468,10 +487,18 @@ def compose_with_stats(
             _wants_special(seed, rarity_value, lib) if skeleton is None else None
         )
     if special is not None:
-        if ap_cost is not None or (special == "stance" and category not in (None, "spell")):
+        if special not in _EXPLICIT_ONLY_ACTIVE and (
+            ap_cost is not None or (special == "stance" and category not in (None, "spell"))
+        ):
             raise ComposeError("反應技與姿態不花 AP：不能指定 ap_cost（姿態也不能是武器技）")
         found = _compose_special(
-            seed, lib, special, tier=tier_value, rarity=rarity_value, category=category
+            seed,
+            lib,
+            special,
+            tier=tier_value,
+            rarity=rarity_value,
+            category=category,
+            ap_cost=ap_cost,
         )
         if found is not None:
             return found

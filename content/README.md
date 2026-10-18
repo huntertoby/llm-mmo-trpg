@@ -28,8 +28,9 @@
 | `skill_composer.yaml` | 隨機技能組合器的調參：稀有度與 AP 權重、法術占比、骰子與倍率階梯、條件與代價的機率與範圍、強度調整區間（數值即「種子 → 技能」的對應） | Phase 2C-1 |
 | `skill_synergies.yaml` | 協同係數（依驗證器推導的機制標籤查表） | Phase 2B-2 |
 | `skill_exclusions.yaml` | 技能互斥規則表（以資料表達的 when／forbid／require） | Phase 2B-2 |
-| `sim/builds.yaml` | 代表性 build（6 個英雄範本與主題說明）與標準隊友；`trpg sim matrix` 的我方隊伍＝build 英雄＋隊友 | Phase 2C-3 |
-| `skeletons/` | 12 種技能骨架（一檔一個，檔名 = id）；2B 啟用 6 種，其餘 `enabled: false` | Phase 2B-2 |
+| `stacks.yaml` | 層數（`static_charge` 靜電、`sunder` 破甲印）：owner、上限、到期輪數、AI 估值；原語 `add_stack`／`consume_stack` 引用 | Phase 2E-3 |
+| `sim/builds.yaml` | 代表性 build（12 個英雄範本與主題說明；2E-3 加入蓄力流、陷阱流）與標準隊友；`trpg sim matrix` 的我方隊伍＝build 英雄＋隊友 | Phase 2C-3 |
+| `skeletons/` | 12 種技能骨架（一檔一個，檔名 = id）；2E-3 起啟用 11 種（只剩召喚 `summon` 為 `enabled: false`） | Phase 2B-2 |
 | `units/` | 單位範本（一檔一個，檔名 = id；1C 加入盜賊盾衛 `bandit_shieldbearer`；2C-3 加入標準隊友 `sim_companion_*` 與分階標準敵人 `std_enemy_t1`～`t5`，標籤 `sim`） | Phase 1A、1B、1C、2C-3 |
 | `maps/` | 地圖（一檔一張，檔名 = id；格式見 `docs/phases/Phase1計畫.md` 5.2，1B 加入 `objects`、`surfaces`、`objective`、`weather`、`encounter`、`events`）；圖例 `#` 慣例對應牆壁；必填 `archetype`（8 種地圖類型加 `test`）；10 張非測試地圖：`bridge_chasm`、`lava_crossing`（吊橋深淵類型）、`oil_depot`、`swamp`、`ruined_fort`、`cliff_outpost`（廢墟高台類型）、`dark_forest`、`narrow_halls`、`open_plain`、`frozen_lake`；用 `trpg map list` 查看 | Phase 1A、1B、1C、2C-3 |
 

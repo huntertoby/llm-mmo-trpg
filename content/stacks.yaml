@@ -1,0 +1,20 @@
+# 層數（Phase 2E-3 5.1；數值為初值，未經模擬）。
+# 層數由原語 add_stack 增加、consume_stack 消耗全部（見 skill_primitives.yaml）。
+#   owner  self＝累積在施放者自己身上（蓄能資源）；target＝累積在被命中的目標身上（疊印記）
+#   max    上限，累積超過時截斷
+#   expires_after_rounds  每次累積會刷新；之後這麼多輪沒有再累積，整個層數在那一輪開始時清空（省略＝不過期）
+#   ai_value  效用 AI 對每一層的估值（等值傷害點數）
+stacks:
+  - id: static_charge
+    name_zh: 靜電
+    description_zh: 累積在施放者自己身上的蓄能；雷霆終結消耗全部靜電，每層提高傷害。
+    owner: self
+    max: 5
+    ai_value: 3
+  - id: sunder
+    name_zh: 破甲印
+    description_zh: 疊在被命中的目標身上的印記；碎甲重擊消耗目標身上的全部破甲印，每層提高傷害。3 輪沒有再疊就清空。
+    owner: target
+    max: 3
+    expires_after_rounds: 3
+    ai_value: 3

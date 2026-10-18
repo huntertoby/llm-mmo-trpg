@@ -1,0 +1,26 @@
+# 陷阱（Phase 2E-3，數值為初值，未經模擬）：敵人踩上去時觸發，造成傷害並定身 2 回合；3 輪沒人踩就消失。
+id: skill_bear_trap
+schema_version: 1
+name_zh: 捕獸夾
+tier: 2
+rank: 1
+rarity: rare
+kind: active
+skeleton: trap
+category: spell
+weapon_req: any
+ap_cost: 2
+scaling_attr: dex
+shape: {type: ground_tile, range: 4}
+trap: {trigger: enter, rounds: 3, shape: single}
+effects:
+  - {type: place_trap}
+  - {type: damage, dice: 1d8, element: physical}
+  - {type: apply_status, status: root, duration: 2}
+condition: null
+cost: {mana: 6, cooldown: 2}
+tags: [physical, spell, trap, control]
+narrative:
+  concept: 鋸齒狀的鐵顎藏在落葉底下，等著獵物自己踩進來
+  cast_flavor: 你蹲下身把鐵夾撐開、扳上機括，再用枯葉蓋住
+provenance: {origin: builtin, owner_id: null, created_by: null, parents: [], bound: true, tradeable: false}

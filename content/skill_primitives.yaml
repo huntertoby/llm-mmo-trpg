@@ -156,3 +156,35 @@ primitives:
     base_points: 4
     acts_on: caster
     allowed_shapes: [self]
+  # --- Phase 2E-3：層數與陷阱（點數為初值，未經模擬）---
+  - id: add_stack
+    name_zh: 累積層數
+    description_zh: 依該層數（stacks.yaml）的 owner 把 amount 層加在施放者自己（affects 只能是 self；技能有對敵方的效果時，至少命中一名敵人才累積）或命中的目標（affects 只能是 enemies）身上，超過上限截斷。
+    category: structural
+    harmful: true
+    min_rarity: rare
+    budget_basis: per_amount
+    base_points: 2
+    params:
+      stack: {type: stack, required: true, description_zh: 層數 ID（stacks.yaml）}
+      amount: {type: int, required: true, min: 1, max: 3, description_zh: 累積的層數}
+  - id: consume_stack
+    name_zh: 消耗層數
+    description_zh: 消耗全部該層數（self 型從施放者、target 型從每個被命中的目標）；同一技能的傷害效果依消耗的層數 × per_stack_permille 加成（200 ＝ 每層 +20%）。沒有層數也可施放（加成 0）。預算以期望消耗＝上限的一半估算加成點數。
+    category: structural
+    harmful: true
+    min_rarity: rare
+    budget_basis: consume_stack
+    params:
+      stack: {type: stack, required: true, description_zh: 層數 ID（stacks.yaml）}
+      per_stack_permille: {type: int, required: true, min: 50, max: 500, description_zh: 每層的傷害加成（‰）}
+  - id: place_trap
+    name_zh: 放置陷阱
+    description_zh: 在目標格放一個對放置者陣營以外隱藏的陷阱，同一格只能有一個。陷阱帶著同一技能其餘的效果（自動命中，狀態照常擲抵抗；施放者的屬性在放置時快照），敵人進入（trap.trigger enter）或延遲回合數到了（delay）時，以陷阱格為中心依 trap.shape 結算。需要技能的 trap 欄位。
+    category: structural
+    harmful: false
+    min_rarity: rare
+    budget_basis: fixed
+    base_points: 2
+    acts_on: caster
+    allowed_shapes: [ground_tile]

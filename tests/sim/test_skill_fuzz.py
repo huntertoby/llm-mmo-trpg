@@ -33,17 +33,21 @@ def test_one_hundred_seeds_pass_validation_cast_and_run_without_exceptions() -> 
     assert all(o.violations == 0 for o in report.outcomes)
     assert all(o.castable for o in report.outcomes)
     assert all(o.error is None for o in report.outcomes)
-    # 每 10 個挑 1 個打一場；被動（2E-1）與反應技（2E-2）每個都打一場
+    # 每 10 個挑 1 個打一場；被動（2E-1）、反應技（2E-2）與陷阱（2E-3）每個都打一場
     expected = {
         o.seed
         for o in report.outcomes
-        if o.seed % 10 == 0 or o.skill.kind in ("passive", "reaction")
+        if o.seed % 10 == 0 or o.skill.kind in ("passive", "reaction") or o.skill.skeleton == "trap"
     }
     assert {o.seed for o in report.outcomes if o.battle_ran} == expected
     passives = [o for o in report.outcomes if o.skill.kind == "passive"]
     assert passives and sum(o.triggers for o in passives) > 0
     kinds = ("passive", "reaction")
-    assert all(o.triggers == 0 for o in report.outcomes if o.skill.kind not in kinds)
+    assert all(
+        o.triggers == 0
+        for o in report.outcomes
+        if o.skill.kind not in kinds and o.skill.skeleton != "trap"
+    )
     assert all(o.selections >= 1 for o in report.outcomes if o.skill.kind not in kinds)
 
 
@@ -119,7 +123,9 @@ def test_one_thousand_skills_pass_everything_and_the_summary_is_reproducible() -
     assert all(o.violations == 0 and o.castable and o.error is None for o in report.outcomes)
     skills = [o.skill for o in report.outcomes]
     counts = Counter(s.skeleton for s in skills)
-    assert len(counts) == 6 and max(counts.values()) <= 400
+    enabled = {s.id for s in lib().skeletons.values() if s.enabled}
+    assert set(counts) == enabled and max(counts.values()) <= 400  # 2E-3：11 種骨架都抽得到
+    assert counts["builder_finisher"] > 0 and counts["trap"] > 0
     assert {s.tier for s in skills} == {1, 2, 3, 4, 5}
     assert len({s.rarity for s in skills}) == 4
     assert format_report(report) == format_report(run_fuzz(lib(), count=1000))

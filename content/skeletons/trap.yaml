@@ -1,9 +1,13 @@
-# 2B 停用：需要延遲觸發與地面陷阱系統。
+# 陷阱（Phase 2E-3）：放置對敵方隱藏的地面陷阱，敵人踩上或延遲回合數到了就觸發。
 id: trap
 name_zh: 陷阱
-description_zh: 延遲觸發的地面效果。
+description_zh: 在地面放置隱藏的陷阱，觸發時以陷阱格為中心結算技能的其餘效果。
 kinds: [active]
-enabled: false
-shapes: [ground_tile, cross, square3]
+enabled: true
+min_rarity: rare
+shapes: [ground_tile]
 core: {primitives: [damage, apply_status, create_surface]}
-secondary: {max_count: 1}
+secondary:
+  primitives: [place_trap, damage, apply_status, create_surface]
+  max_count: 3
+require_any_primitives: [place_trap]

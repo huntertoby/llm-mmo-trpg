@@ -18,7 +18,15 @@ from __future__ import annotations
 
 from collections.abc import Callable
 
-from trpg.content.skills import INTERCEPT, ConditionSpec, EffectSpec, SkillDef
+from trpg.content.skills import (
+    ADD_STACK,
+    CONSUME_STACK,
+    INTERCEPT,
+    PLACE_TRAP,
+    ConditionSpec,
+    EffectSpec,
+    SkillDef,
+)
 from trpg.engine.actions import UseSkill
 from trpg.engine.context import Ctx
 from trpg.engine.control import status_effect
@@ -53,6 +61,7 @@ from trpg.engine.rules.combat import PERMILLE, AttackProfile, AttackRoll, Forced
 from trpg.engine.rules.geometry import XY
 from trpg.engine.rules.statuses import effective_attribute
 from trpg.engine.skill_triggers import holding
+from trpg.engine.skills import shapes
 from trpg.engine.skills.conditions import Subject, condition_met
 from trpg.engine.skills.targeting import (
     ResolvedEffect,
@@ -65,11 +74,13 @@ from trpg.engine.skills.targeting import (
     skill_problem,
     skill_profile,
 )
-from trpg.engine.state import UnitState
+from trpg.engine.stacks import add_stacks, consume_stacks
+from trpg.engine.state import TrapState, UnitState
+from trpg.engine.traps import place_trap
 from trpg.shared.errors import IllegalActionError
 from trpg.shared.types import Element, Pos, UnitId
 
-__all__ = ["use_reaction_skill", "use_skill", "use_triggered_skill"]
+__all__ = ["use_reaction_skill", "use_skill", "use_trap_skill", "use_triggered_skill"]
 
 PRONE = "prone"
 _TOUCHING_AFFECTS = ("enemies", "all", "tiles")
@@ -89,7 +100,11 @@ def use_skill(ctx: Ctx, caster: UnitState, action: UseSkill) -> None:
     area = checked_area(ctx.state, caster, skill, action)
     with holding(ctx):  # 被動的觸發等整個技能結算完才處理
         _pay_costs(ctx, caster, skill, area)
-        _Cast(ctx, caster, skill, action, area).run()
+        if skill.trap is not None:  # 陷阱技能：施放時只放置陷阱，其餘效果等觸發時結算
+            assert action.target_pos is not None
+            place_trap(ctx, caster, skill, (action.target_pos.x, action.target_pos.y))
+        else:
+            _Cast(ctx, caster, skill, action, area).run()
 
 
 def use_triggered_skill(
@@ -104,6 +119,36 @@ def use_triggered_skill(
     units = (subject.id,) if subject.alive else ()
     area = SkillArea(tiles=(subject.xy,), units=units, origin=owner.xy)
     _TriggeredCast(ctx, owner, skill, area).run()
+
+
+def use_trap_skill(ctx: Ctx, trap: TrapState, skill: SkillDef, *, depth: int) -> None:
+    """結算陷阱觸發的效果（``trap_triggered`` 已由呼叫端發出，陷阱已移除；Phase 2E-3）。
+
+    施放者是放置者在放置時的快照（屬性取 ``trap.attributes``、沒有狀態），影響範圍是以陷阱格為
+    中心的 ``trap.shape``；效果自動命中（不擲命中、沒有格擋與暴擊），狀態照常擲抵抗。期間引起的
+    被動觸發與反應的深度從 ``depth`` 起算。
+    """
+    assert skill.trap is not None
+    state = ctx.state
+    caster = state.units[trap.owner_id].clone()
+    caster.attributes = dict(trap.attributes)
+    caster.statuses = []
+    center = trap.xy
+    if skill.trap.shape == "cross":
+        tiles = shapes.cross_tiles(state, center)
+    elif skill.trap.shape == "square3":
+        tiles = shapes.square3_tiles(state, center)
+    else:
+        tiles = (center,)
+    units = tuple(sorted(u.id for xy in tiles if (u := state.unit_at(*xy)) is not None))
+    area = SkillArea(tiles=tiles, units=units, origin=center)
+    outer = ctx.trigger_depth
+    ctx.trigger_depth = depth
+    try:
+        with holding(ctx):
+            _TriggeredCast(ctx, caster, skill, area).run()
+    finally:
+        ctx.trigger_depth = outer
 
 
 def use_reaction_skill(
@@ -198,6 +243,10 @@ class _Cast:
         self.allies = [u for u in units if u.team is caster.team]
         self.hits: dict[str, AttackRoll] = {}
         self.blocks: dict[str, int] = {}
+        self.caster_bonus = 0
+        """消耗施放者層數得到的傷害加成（‰，所有目標共用；``consume_stack`` 的結果）。"""
+        self.target_bonus: dict[str, int] = {}
+        """消耗目標層數得到的傷害加成（‰），單位 ID → 加成。"""
 
     # ------------------------------------------------------------------
     # 命中
@@ -313,6 +362,7 @@ class _Cast:
 
     def run(self) -> None:
         self.roll_hits()
+        self.consume_stacks()
         for effect in self.effects:
             spec = self.skill.effects[effect.spec_index]
             start = len(self.ctx.events)
@@ -322,6 +372,43 @@ class _Cast:
             if effect.type == "damage" and effect.affects in _TOUCHING_AFFECTS:
                 self.touch_untouched_tiles(spec, start)
         self.react_to_hits()
+
+    def consume_stacks(self) -> None:
+        """``consume_stack``：命中判定之後、第一個效果之前消耗層數，換成同一技能傷害效果的加成。
+        ``owner: self`` 的層數從施放者消耗（沒有命中也消耗）；``owner: target`` 的從每個被命中的
+        目標各自消耗。沒有層數也可施放（加成 0）。"""
+        rules = self.ctx.rules
+        for effect in self.effects:
+            if effect.type != CONSUME_STACK:
+                continue
+            spec = self.skill.effects[effect.spec_index]
+            assert spec.stack is not None and spec.per_stack_permille is not None
+            if rules.stack_def(spec.stack).owner == "self":
+                spent = consume_stacks(self.ctx, self.caster, spec.stack, source_id=self.caster.id)
+                self.caster_bonus += spent * spec.per_stack_permille
+                continue
+            for unit in self.targets(effect.affects, spec.condition):
+                spent = consume_stacks(self.ctx, unit, spec.stack, source_id=self.caster.id)
+                self.target_bonus[unit.id] = (
+                    self.target_bonus.get(unit.id, 0) + spent * spec.per_stack_permille
+                )
+
+    def add_stack(self, effect: ResolvedEffect, spec: EffectSpec) -> None:
+        """``add_stack``：``owner: self`` 的層數加在施放者身上（技能有對敵方的效果時，至少命中一名
+        敵人才累積）；``owner: target`` 的加在每個被命中的目標身上。"""
+        assert spec.stack is not None
+        amount = spec.amount or 1
+        if self.ctx.rules.stack_def(spec.stack).owner == "self":
+            # 命中的敵人即使被這一擊擊倒也算（命中判定在效果結算之前就決定了）
+            connected = not any(e.hostile for e in self.effects) or any(
+                self._hit(u) for u in self.enemies
+            )
+            subject = Subject(self.caster, self.caster.xy)
+            if connected and self.caster.alive and self.holds(spec.condition, subject):
+                add_stacks(self.ctx, self.caster, spec.stack, amount, source_id=self.caster.id)
+            return
+        for unit in self.targets(effect.affects, spec.condition):
+            add_stacks(self.ctx, unit, spec.stack, amount, source_id=self.caster.id)
 
     def react_to_hits(self) -> None:
         """全部效果結算之後：每個被命中的單位（依單位 ID）各自可以用 ``hit_by_*`` 反應技反應。"""
@@ -351,8 +438,11 @@ class _Cast:
             return self.knock_prone(effect, spec)
         if kind == "teleport":
             return self.teleport(spec)
-        if kind == INTERCEPT:
-            return []  # 攔截由反應機制處理（reactions.try_intercept）；結算時這個原語沒有效果
+        if kind in (INTERCEPT, PLACE_TRAP, CONSUME_STACK):
+            return []  # 攔截由反應機制處理；陷阱在 use_skill 放置；消耗層數在 consume_stacks
+        if kind == ADD_STACK:
+            self.add_stack(effect, spec)
+            return []
         if kind == "apply_status":
             return self.apply_status(effect, spec)
         return self.tile_effect(effect, spec)
@@ -367,6 +457,7 @@ class _Cast:
         for unit in self.targets(effect.affects, spec.condition):
             roll = self.hits.get(unit.id)
             block = self.blocks.get(unit.id, PERMILLE)
+            bonus = PERMILLE + self.caster_bonus + self.target_bonus.get(unit.id, 0)
             batch.append(
                 DamageEffect(
                     target_id=unit.id,
@@ -378,7 +469,7 @@ class _Cast:
                     scaled_permille=scaled,
                     crit=roll is not None and roll.crit,
                     min_damage=min_damage,
-                    multiplier_permille=multiplier * block // PERMILLE,
+                    multiplier_permille=multiplier * block * bonus // (PERMILLE * PERMILLE),
                 )
             )
         if effect.affects in _TOUCHING_AFFECTS:
@@ -398,7 +489,7 @@ class _Cast:
                         flat=flat,
                         scaled_permille=scaled,
                         min_damage=min_damage,
-                        multiplier_permille=multiplier,
+                        multiplier_permille=multiplier * (PERMILLE + self.caster_bonus) // PERMILLE,
                     )
                 )
         return batch

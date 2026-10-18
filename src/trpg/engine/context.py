@@ -48,6 +48,7 @@ class Ctx:
     - ``preview``：預覽模式（``None`` 為正式結算）。
     - ``surface_entries``：等待觸發的「表面出現在腳下」進入效果
       （見 :mod:`trpg.engine.effects.queue`）。
+    - ``trap_entries``：等待結算的陷阱進入（Phase 2E-3）。
     - 被動技能的觸發（見 :mod:`trpg.engine.skill_triggers`）：``fired`` 是收集到、尚未結算的觸發；
       ``trigger_depth`` 是目前正在結算的觸發深度（動作本身為 0）；``trigger_hold`` 大於 0 時暫不
       結算（施放技能、一次普攻的期間）；``settling`` 表示正在結算觸發（不重入）；
@@ -67,6 +68,7 @@ class Ctx:
         "settling",
         "state",
         "surface_entries",
+        "trap_entries",
         "trigger_depth",
         "trigger_hold",
     )
@@ -96,6 +98,9 @@ class Ctx:
         self.surface_entries: list[tuple[UnitId, tuple[int, int], int]] = []
         """表面在單位腳下被建立或改變：``(單位, 格子, 深度)``，由效果佇列在清空前依單位 ID
         觸發進入效果（Phase 1C 決定 #6）。"""
+        self.trap_entries: list[tuple[UnitId, tuple[int, int]]] = []
+        """單位（主動或強制移動）進入敵方陷阱格：``(單位, 格子)``，效果佇列清空時依記錄順序
+        結算（Phase 2E-3，:mod:`trpg.engine.traps`）。"""
 
     def emit[E: EventBase](self, cls: type[E], **fields: Any) -> E:
         """建立事件（自動填入 ``seq`` 與 ``round``）並加入事件列表。"""

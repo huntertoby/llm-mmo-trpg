@@ -36,9 +36,12 @@ from trpg.engine.events import (
     ObjectMoved,
     ReactionTriggered,
     ShieldGained,
+    StacksChanged,
     StatusApplied,
     SurfaceChanged,
     TerrainChanged,
+    TrapPlaced,
+    TrapTriggered,
     UnitDowned,
     UnitEscaped,
     UnitFell,
@@ -63,6 +66,7 @@ from trpg.engine.skills.targeting import (
     skill_profile,
 )
 from trpg.engine.state import BattleState, UnitState
+from trpg.engine.traps import strip_hidden_traps
 from trpg.shared.types import Attribute, ObjectId, UnitId
 
 __all__ = [
@@ -85,7 +89,8 @@ class Outcome:
     ``kind``：``damaged``、``downed``、``moved``、``fell``、``deadly_terrain``、``escaped``、
     ``status``、``surface``、``terrain``、``object_damaged``、``object_destroyed``、
     ``object_exploded``、``object_ignited``、``object_moved``、``reaction``、``intercepted``
-    （``unit_id`` 是守護者、``detail`` 是被保護的單位）。
+    （``unit_id`` 是守護者、``detail`` 是被保護的單位）、``stacks``（2E-3；``detail`` 是
+    ``層數:原因``）、``trap_placed``、``trap_triggered``。
     """
 
     kind: str
@@ -253,6 +258,12 @@ def _outcome(e: EventBase) -> Outcome | None:  # noqa: PLR0911, PLR0912
         return Outcome("reaction", unit_id=e.unit_id, detail=e.reaction)
     if isinstance(e, AttackIntercepted):
         return Outcome("intercepted", unit_id=e.guardian_id, detail=e.target_id)
+    if isinstance(e, StacksChanged):
+        return Outcome("stacks", unit_id=e.unit_id, detail=f"{e.stack_id}:{e.reason}")
+    if isinstance(e, TrapPlaced):
+        return Outcome("trap_placed", unit_id=e.owner_id, pos=_xy(e.pos), detail=e.skill_id)
+    if isinstance(e, TrapTriggered):
+        return Outcome("trap_triggered", unit_id=e.unit_id, pos=_xy(e.pos), detail=e.skill_id)
     return None
 
 
@@ -605,7 +616,7 @@ def preview(state: BattleState, action: Action) -> Preview:
     不合法時拋出 ``IllegalActionError``。
     """
     actor = _actor(state, action)
-    low, high = simulate_preview(state, action)
+    low, high = simulate_preview(strip_hidden_traps(state, actor.team), action)
     min_events, max_events = list(low.events), list(high.events)
     hit: Fraction | None = None
     crit: Fraction | None = None

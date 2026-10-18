@@ -212,6 +212,38 @@ class StanceRules(ContentModel):
     mana: IntRange
 
 
+class BuilderRules(ContentModel):
+    """蓄力與終結的抽選（Phase 2E-3 5.1）。"""
+
+    skeleton_permille: int = _PERMILLE
+    """稀有度 rare 以上、未指定骨架時，改組蓄力／終結技的機率（獨立的亂數串流）。"""
+    builder_permille: int = _PERMILLE
+    """技能是累積層數（``add_stack``）的機率（其餘為消耗層數）。"""
+    max_amount: int = Field(default=1, ge=1)
+    """``add_stack`` 一次累積層數的旋鈕上限（再受該層數的 ``max`` 限制）。"""
+    per_stack: LadderRange
+    """``consume_stack`` 的 ``per_stack_permille`` 階梯（‰；``range(start, stop, step)``）。"""
+    max_required_stacks: int = Field(default=1, ge=1)
+    """消耗施放者層數的技能，``cost.stacks`` 抽 1 到這個值（再受該層數的 ``max`` 限制）。"""
+    required_permille: int = _PERMILLE
+    """消耗施放者層數的技能帶 ``cost.stacks`` 的機率。"""
+
+
+class TrapRules(ContentModel):
+    """陷阱的抽選（Phase 2E-3 5.2）。"""
+
+    skeleton_permille: int = _PERMILLE
+    """稀有度 rare 以上、未指定骨架時，改組陷阱的機率（獨立的亂數串流）。"""
+    delay_permille: int = _PERMILLE
+    """觸發方式為 ``delay`` 的機率（其餘為 ``enter``）。"""
+    enter_rounds: IntRange
+    """``enter`` 陷阱的存續輪數。"""
+    delay_rounds: IntRange
+    """``delay`` 陷阱的延遲輪數。"""
+    shape_weights: dict[Literal["single", "cross", "square3"], int]
+    """觸發範圍 ``trap.shape`` 的抽選權重。"""
+
+
 class ComposerRules(ContentModel):
     """``content/skill_composer.yaml``。"""
 
@@ -239,6 +271,8 @@ class ComposerRules(ContentModel):
     passive: PassiveRules
     reaction: ReactionRules
     stance: StanceRules
+    builder: BuilderRules
+    trap: TrapRules
 
     @model_validator(mode="after")
     def _check(self) -> ComposerRules:

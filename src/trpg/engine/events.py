@@ -57,6 +57,7 @@ __all__ = [
     "SkillCooldownChanged",
     "SkillTriggered",
     "SkillUsed",
+    "StacksChanged",
     "StatusApplied",
     "StatusConverted",
     "StatusRemoved",
@@ -65,6 +66,9 @@ __all__ = [
     "SurfaceChanged",
     "SurfaceEntered",
     "TerrainChanged",
+    "TrapExpired",
+    "TrapPlaced",
+    "TrapTriggered",
     "TriggerLimitReached",
     "TurnEnded",
     "TurnOrderSet",
@@ -656,6 +660,61 @@ class SkillCooldownChanged(EventBase):
     remaining: int
 
 
+class StacksChanged(EventBase):
+    """層數改變（Phase 2E-3）：``before`` → ``after``。
+
+    ``reason``：``gained``（``add_stack``）、``consumed``（``consume_stack``）、``expired``
+    （``expires_after_rounds`` 到期）。
+    """
+
+    type: Literal["stacks_changed"] = "stacks_changed"
+    unit_id: UnitId
+    stack_id: str
+    before: int
+    after: int
+    reason: Literal["gained", "consumed", "expired"]
+    source_id: UnitId | None = None
+
+
+# ---------------------------------------------------------------------------
+# Phase 2E-3：陷阱
+# ---------------------------------------------------------------------------
+
+
+class TrapPlaced(EventBase):
+    """放置者放下陷阱（對放置者陣營以外的玩家隱藏；事件紀錄是全知的）。"""
+
+    type: Literal["trap_placed"] = "trap_placed"
+    owner_id: UnitId
+    team: Team
+    pos: Pos
+    skill_id: str
+    trigger: Literal["enter", "delay"]
+    rounds: int
+
+
+class TrapTriggered(EventBase):
+    """陷阱觸發並移除；之後是陷阱效果的事件。``unit_id`` 是踩到的敵人（``delay`` 為 ``None``）。"""
+
+    type: Literal["trap_triggered"] = "trap_triggered"
+    owner_id: UnitId
+    pos: Pos
+    skill_id: str
+    cause: Literal["enter", "delay"]
+    unit_id: UnitId | None = None
+    trigger_depth: int = 0
+
+
+class TrapExpired(EventBase):
+    """陷阱消失而沒有觸發：``timeout`` 為 ``enter`` 陷阱輪數到了，``source_lost`` 為放置者離場。"""
+
+    type: Literal["trap_expired"] = "trap_expired"
+    owner_id: UnitId
+    pos: Pos
+    skill_id: str
+    reason: Literal["timeout", "source_lost"]
+
+
 # ---------------------------------------------------------------------------
 # Phase 1B：環境回合、地圖事件、勝利條件
 # ---------------------------------------------------------------------------
@@ -745,7 +804,11 @@ type Event = Annotated[
     | SkillUsed
     | SkillCooldownChanged
     | SkillTriggered
-    | TriggerLimitReached,
+    | TriggerLimitReached
+    | StacksChanged
+    | TrapPlaced
+    | TrapTriggered
+    | TrapExpired,
     Field(discriminator="type"),
 ]
 

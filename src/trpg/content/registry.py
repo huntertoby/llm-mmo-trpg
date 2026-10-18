@@ -26,6 +26,7 @@ from trpg.content.sim_builds import BuildTable
 from trpg.content.skill_rules import BudgetRules, ExclusionTable, SynergyTable
 from trpg.content.skill_triggers import SkillTriggerTable
 from trpg.content.skills import ConditionTable, PrimitiveTable, ShapeTable
+from trpg.content.stacks import StackTable
 
 __all__ = ["KNOWN_CONTENT_FILES", "ContentFile", "load_all_content"]
 
@@ -55,6 +56,7 @@ KNOWN_CONTENT_FILES: tuple[ContentFile, ...] = (
     ContentFile("skill_primitives.yaml", PrimitiveTable),
     ContentFile("skill_conditions.yaml", ConditionTable),
     ContentFile("skill_triggers.yaml", SkillTriggerTable),
+    ContentFile("stacks.yaml", StackTable),
     ContentFile("skill_budget.yaml", BudgetRules),
     ContentFile("skill_composer.yaml", ComposerRules),
     ContentFile("sim/builds.yaml", BuildTable),

@@ -88,6 +88,7 @@ def _reference_violations(skill: SkillDef, library: ContentLibrary) -> list[Viol
         object_ids={o.id for o in rules.objects.objects},
         conditions=rules.conditions.by_id(),
         triggers=rules.skill_triggers.by_id(),
+        stacks=rules.stacks.by_id(),
     )
     if skill.skeleton not in library.skeletons:
         problems.append(f"skeleton：沒有骨架資料檔 {skill.skeleton!r}")
@@ -360,6 +361,9 @@ def _skeleton_violations(
         out += _share_violations(skill, library, skeleton, report)
     if skeleton.requires_condition and not _has_condition(skill):
         add("condition", "技能或效果必須有條件")
+    needed = skeleton.require_any_primitives
+    if needed and not any(e.type in needed for e in skill.effects):
+        add("required_primitive", f"效果至少要有 {'、'.join(needed)} 其中之一")
     forbidden = set(skeleton.forbid_affects)
     for index, effect in enumerate(skill.effects):
         actual = affect_set(resolved_affects(library.ruleset, effect))

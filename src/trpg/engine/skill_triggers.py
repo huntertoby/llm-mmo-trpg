@@ -39,7 +39,7 @@ from trpg.engine.events import (
 from trpg.engine.rules.geometry import manhattan
 from trpg.engine.rules.statuses import blocks_spells, skip_turn_status
 from trpg.engine.skills.conditions import skill_condition_met
-from trpg.engine.skills.targeting import hp_cost
+from trpg.engine.skills.targeting import hp_cost, stack_problem
 from trpg.engine.state import UnitState
 from trpg.shared.types import UnitId
 
@@ -240,7 +240,9 @@ def settle(ctx: Ctx) -> None:
         ctx.trigger_depth = 0
 
 
-def _usable(ctx: Ctx, owner: UnitState, skill: SkillDef) -> bool:
+def _usable(  # noqa: PLR0911
+    ctx: Ctx, owner: UnitState, skill: SkillDef
+) -> bool:
     """持有者目前能不能觸發這個被動（狀態、每輪次數與代價）。"""
     assert skill.trigger is not None
     rules = ctx.rules
@@ -256,7 +258,9 @@ def _usable(ctx: Ctx, owner: UnitState, skill: SkillDef) -> bool:
     if limit is not None and owner.skill_uses.get(skill.id, 0) >= limit:
         return False
     cost = hp_cost(owner, skill)
-    return not (cost and owner.hp <= cost)
+    if cost and owner.hp <= cost:
+        return False
+    return stack_problem(ctx.state, owner, skill) is None
 
 
 def _resolve_one(ctx: Ctx, fired: Fired) -> None:

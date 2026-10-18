@@ -85,6 +85,10 @@ class Ctx:
     control_groups: list[str] = field(default_factory=list)
     min_cooldown: int = 0
     core_count: int = 0
+    trap: dict[str, Any] | None = None
+    """陷阱技能的 ``trap`` 欄位（Phase 2E-3；``build_effects`` 決定）。"""
+    required_stacks: int = 0
+    """消耗施放者層數的技能，``cost.stacks`` 要求的層數（0 ＝ 沒有需求）。"""
 
     @property
     def rules(self) -> ComposerRules:
@@ -386,6 +390,8 @@ def _secondary_pool(ctx: Ctx) -> list[str]:
             continue
         if rules.harmful_only and not primitive.harmful:
             continue
+        if name in ("add_stack", "consume_stack", "place_trap"):
+            continue  # 層數與陷阱的結構效果由 _stack_effect、_trap_setup 加入
         if "enemies" in ctx.skeleton.forbid_affects and default_affects(primitive) == "enemies":
             continue
         if ctx.shape == "self" and default_affects(primitive) == "enemies":
@@ -415,18 +421,64 @@ def _conflicts(ctx: Ctx, name: str) -> bool:
 
 def _secondary_count(ctx: Ctx) -> int:
     limit = ctx.library.budget.rarity[ctx.rarity].max_effects - len(ctx.effects)
-    most = min(ctx.skeleton.secondary.max_count, limit)
+    structural = 1 if ctx.skeleton.id in ("builder_finisher", "trap") else 0  # 層數／陷阱的結構效果
+    most = min(ctx.skeleton.secondary.max_count - structural, limit)
     if most <= 0:
         return 0
     return ctx.rng.randint(1 if ctx.rank >= rarity_rank("epic") else 0, most)
 
 
+def _trap_setup(ctx: Ctx) -> None:
+    """陷阱技能：第一個效果是 ``place_trap``，並抽 ``trap`` 欄位（觸發方式、輪數、範圍）。"""
+    rules = ctx.rules.trap
+    delay = ctx.chance(rules.delay_permille)
+    span = rules.delay_rounds if delay else rules.enter_rounds
+    shapes = tuple(sorted(rules.shape_weights))
+    roll = ctx.rng.randint(1, sum(rules.shape_weights.values()))
+    shape = shapes[-1]
+    for name in shapes:
+        roll -= rules.shape_weights[name]
+        if roll <= 0:
+            shape = name
+            break
+    ctx.trap = {
+        "trigger": "delay" if delay else "enter",
+        "rounds": ctx.rng.randint(span.min, span.max),
+        "shape": shape,
+    }
+    ctx.add({"type": "place_trap"}, ())
+
+
+def _stack_effect(ctx: Ctx) -> None:
+    """蓄力與終結：一個 ``add_stack``（累積）或 ``consume_stack``（消耗），層數 ID 依資料表抽。"""
+    rules = ctx.rules.builder
+    stacks = sorted(ctx.library.ruleset.stacks.stacks, key=lambda s: s.id)
+    if not stacks:
+        raise Retry
+    stack = ctx.rng.choice(stacks)
+    affects = "self" if stack.owner == "self" else "enemies"
+    if ctx.chance(rules.builder_permille):
+        amounts = tuple(range(1, min(stack.max, rules.max_amount) + 1))
+        spec: dict[str, Any] = {"type": "add_stack", "stack": stack.id, "affects": affects}
+        ctx.add(spec, (("amount", amounts, ctx.rules.structure.knob_weight_other),))
+        return
+    ladder = tuple(range(rules.per_stack.start, rules.per_stack.stop, rules.per_stack.step))
+    spec = {"type": "consume_stack", "stack": stack.id, "affects": affects}
+    ctx.add(spec, (("per_stack_permille", ladder, ctx.rules.structure.knob_weight_other),))
+    if stack.owner == "self" and ctx.chance(rules.required_permille):
+        ctx.required_stacks = ctx.rng.randint(1, min(stack.max, rules.max_required_stacks))
+
+
 def build_effects(ctx: Ctx, core: list[str]) -> None:
     """核心效果，再加 0 到 ``max_count`` 個附帶效果。"""
     beneficial = ctx.skeleton.core.beneficial_only
-    ctx.core_count = len(core)
+    if ctx.skeleton.id == "trap":
+        _trap_setup(ctx)
+    ctx.core_count = len(ctx.effects) + len(core)
     for name in core:
         _make_effect(ctx, name, core=True, beneficial_only=beneficial)
+    if ctx.skeleton.id == "builder_finisher":
+        _stack_effect(ctx)
     if ctx.skeleton.id == "aura" or ctx.skeleton.core.beneficial_only:
         return
     for _ in range(_secondary_count(ctx)):
@@ -489,6 +541,8 @@ def build_condition(ctx: Ctx) -> dict[str, Any] | None:
     稀有（含）以上 30% 機率有條件；骨架要求條件（連段）時一定有。
     """
     required = ctx.skeleton.requires_condition
+    if ctx.skeleton.id in ("builder_finisher", "trap"):
+        return None  # 蓄力／終結與陷阱不帶技能條件（陷阱觸發時沒有施放時的選取）
     if not required and not _rolls_condition(ctx):
         return None
     enemy = _enemy_effects(ctx)
@@ -549,6 +603,8 @@ def build_cost(ctx: Ctx) -> dict[str, Any]:
         cost["cooldown"] = cooldown
     if ctx.chance(rules.uses_per_battle_permille):
         cost["uses_per_battle"] = rng.randint(rules.uses_per_battle.min, rules.uses_per_battle.max)
+    if ctx.required_stacks:
+        cost["stacks"] = ctx.required_stacks
     return cost
 
 

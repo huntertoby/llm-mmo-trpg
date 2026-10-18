@@ -1,0 +1,24 @@
+# 終結技（Phase 2E-3，數值為初值，未經模擬）：消耗目標身上的全部破甲印，每層 +30% 傷害；沒有破甲印也可施放。
+id: skill_armor_breaker
+schema_version: 1
+name_zh: 碎甲重擊
+tier: 2
+rank: 1
+rarity: rare
+kind: active
+skeleton: builder_finisher
+category: weapon
+weapon_req: melee
+ap_cost: 2
+scaling_attr: str
+shape: {type: single, range: weapon}
+effects:
+  - {type: damage, multiplier_permille: 1500}
+  - {type: consume_stack, stack: sunder, per_stack_permille: 300}
+condition: null
+cost: {mana: 4, cooldown: 2}
+tags: [physical, melee, finisher]
+narrative:
+  concept: 把先前撬鬆的甲片一口氣砸碎
+  cast_flavor: 你雙手握緊武器，朝著早已鬆動的裂縫全力劈下
+provenance: {origin: builtin, owner_id: null, created_by: null, parents: [], bound: true, tradeable: false}
