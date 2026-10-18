@@ -35,7 +35,7 @@ from trpg.content.skills import (
 from trpg.skillgen.budget import BudgetError, BudgetReport, skill_budget
 from trpg.skillgen.mechanics import affect_set, resolved_affects
 
-__all__ = ["Violation", "validate_skill"]
+__all__ = ["Violation", "share_violations", "validate_skill"]
 
 _PERMILLE = 1000
 _MAX_EFFECTS = 4
@@ -383,6 +383,13 @@ def _beneficial_core_violations(
                 )
             )
     return out
+
+
+def share_violations(
+    skill: SkillDef, library: ContentLibrary, report: BudgetReport
+) -> list[Violation]:
+    """骨架的占比限制（核心效果的最低占比、個別原語的最高占比）；組合器調整強度時使用。"""
+    return _share_violations(skill, library, library.skeletons[skill.skeleton], report)
 
 
 def _share_violations(
