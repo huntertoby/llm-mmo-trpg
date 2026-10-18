@@ -388,11 +388,14 @@ def _candidates(state: BattleState, caster: UnitState, skill: SkillDef) -> Itera
     sid = skill.id
     uid = caster.id
     if shape.targeting == "unit":
+        reach = shape_reach(skill, caster)  # 射程外的目標不可能合法，先篩掉（省下例外的成本）
         for unit in state.living_units():
-            yield UseSkill(unit_id=uid, skill_id=sid, target_id=unit.id)
+            if manhattan(caster.xy, unit.xy) <= reach:
+                yield UseSkill(unit_id=uid, skill_id=sid, target_id=unit.id)
         if skill.shape.type != "chain":
             for obj in state.objects_sorted():
-                yield UseSkill(unit_id=uid, skill_id=sid, target_object_id=ObjectId(obj.id))
+                if manhattan(caster.xy, obj.xy) <= reach:
+                    yield UseSkill(unit_id=uid, skill_id=sid, target_object_id=ObjectId(obj.id))
     elif shape.targeting == "tile":
         for x, y in shapes.center_candidates(state, caster.xy, shape_reach(skill, caster)):
             yield UseSkill(unit_id=uid, skill_id=sid, target_pos=Pos(x=x, y=y))

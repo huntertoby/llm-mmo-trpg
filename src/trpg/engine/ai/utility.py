@@ -177,16 +177,20 @@ def _unit_position_value(
     return Fraction(value)
 
 
-def _outgunned_by(state: BattleState, unit: UnitState, enemies: list[UnitState]) -> int:
-    """現在就能攻擊到 ``unit``、而 ``unit`` 打不到的敵人數（射程更長、或被煙幕與隱蔽遮住）。
+def _outgunners(state: BattleState, unit: UnitState, enemies: list[UnitState]) -> list[UnitState]:
+    """現在就能攻擊到 ``unit``、而 ``unit`` 打不到的敵人（射程更長、或被煙幕與隱蔽遮住）。
     雙方互相打得到的對射不算，所以不會讓弓手不敢進入射擊位置。"""
-    return sum(
-        1
+    return [
+        e
         for e in enemies
         if manhattan(e.xy, unit.xy) <= e.weapon.range
         and attack_problem(state, e, unit) is None
         and attack_problem(state, unit, e) is not None
-    )
+    ]
+
+
+def _outgunned_by(state: BattleState, unit: UnitState, enemies: list[UnitState]) -> int:
+    return len(_outgunners(state, unit, enemies))
 
 
 def _covered_from(state: BattleState, xy: XY, enemies: list[UnitState]) -> int:
@@ -496,14 +500,11 @@ def _is_field_skill(effects: tuple[ResolvedEffect, ...]) -> bool:
 def _field_value(state: BattleState, unit: UnitState, tiles: tuple[XY, ...], scene: _Scene) -> int:
     """場地型技能的選取可能改變自己處境的程度（Phase 2A-2 決定 #2）。
 
-    只看「現在就能攻擊到自己」的敵人（沒有人打得到自己時，煙幕與隱蔽沒有用處）：涵蓋自己的格子
-    2 分，每名這樣的敵人與自己之間的視線穿過影響範圍 1 分。
+    位置價值只在「有敵人打得到自己、自己卻打不到」時（``exposed``，:func:`_outgunned_by`）才會被
+    煙幕與隱蔽改善，所以只看這些敵人：涵蓋自己的格子 2 分，每名這樣的敵人與自己之間的視線穿過
+    影響範圍 1 分。
     """
-    threats = [
-        e
-        for e in scene.enemies
-        if manhattan(e.xy, unit.xy) <= e.weapon.range and attack_problem(state, e, unit) is None
-    ]
+    threats = _outgunners(state, unit, scene.enemies)
     if not threats:
         return 0
     covered = set(tiles)
