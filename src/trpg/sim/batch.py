@@ -253,6 +253,8 @@ class TeamSummary(_Model):
     """每場平均的友軍誤傷。"""
     environment_damage_taken: float
     """每場平均受到的環境傷害（追溯不到來源）。"""
+    shield_absorbed: float = 0.0
+    """每場平均被己方護盾吸收的傷害（Phase 2D-1；不計入 DPR 與承受傷害）。"""
 
     @property
     def dpr(self) -> float:
@@ -392,6 +394,9 @@ def _team_summaries(done: Sequence[BattleMetrics]) -> tuple[TeamSummary, ...]:
                 dpr_indirect=_ratio(indirect, n),
                 damage_friendly=_ratio(friendly, n),
                 environment_damage_taken=_ratio(env, n),
+                shield_absorbed=_ratio(
+                    sum(u.shield_absorbed for m in done for u in m.units if u.team is team), n
+                ),
             )
         )
     return tuple(out)
@@ -564,7 +569,7 @@ def format_report(report: BatchReport) -> str:
     out.append("")
     out.append("陣營 DPR（每輪傷害，每場平均）與環境：")
     out += _table(
-        ["陣營", "DPR", "直接", "間接", "友軍誤傷／場", "受環境傷害／場"],
+        ["陣營", "DPR", "直接", "間接", "友軍誤傷／場", "受環境傷害／場", "護盾吸收／場"],
         [
             [
                 _TEAM_LABEL[t.team.value],
@@ -573,6 +578,7 @@ def format_report(report: BatchReport) -> str:
                 f"{t.dpr_indirect:.2f}",
                 f"{t.damage_friendly:.2f}",
                 f"{t.environment_damage_taken:.2f}",
+                f"{t.shield_absorbed:.2f}",
             ]
             for t in r.teams
         ],

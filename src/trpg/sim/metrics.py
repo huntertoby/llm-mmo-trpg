@@ -122,6 +122,8 @@ class UnitMetrics(_Model):
     downed: bool
     control_inflicted: dict[str, int]
     """狀態 → 在自己回合開始時帶著該狀態的（被此單位施加的）單位次數。"""
+    shield_absorbed: int = 0
+    """這個單位身上的護盾吸收的傷害（Phase 2D-1；不計入 ``damage_taken``）。"""
 
     @property
     def damage_dealt(self) -> int:
@@ -290,6 +292,7 @@ class _Acc:
     indirect: int = 0
     friendly: int = 0
     taken: int = 0
+    absorbed: int = 0
     healing: int = 0
     kills: int = 0
     downed: bool = False
@@ -410,6 +413,7 @@ def metrics_from_events(  # noqa: PLR0912, PLR0915 - 單一事件迴圈，拆開
             source = event.source_id if event.source_id in info else None
             last_hit[event.target_id] = source
             acc[event.target_id].taken += amount
+            acc[event.target_id].absorbed += event.absorbed
             if event.cause == TERRAIN_CAUSE:
                 slice_terrain[event.target_id] = slice_terrain.get(event.target_id, 0) + amount
             elif event.cause not in INDIRECT_ACTION_CAUSES:
@@ -464,6 +468,7 @@ def metrics_from_events(  # noqa: PLR0912, PLR0915 - 單一事件迴圈，拆開
                 kills=acc[u.unit_id].kills,
                 downed=acc[u.unit_id].downed,
                 control_inflicted=dict(sorted(acc[u.unit_id].control.items())),
+                shield_absorbed=acc[u.unit_id].absorbed,
             )
             for u in units
         ),

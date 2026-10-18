@@ -42,6 +42,8 @@ from trpg.engine.events import (
     ReactionTriggered,
     RoundEnded,
     RoundStarted,
+    ShieldAbsorbed,
+    ShieldGained,
     SkillCooldownChanged,
     SkillUsed,
     StatusApplied,
@@ -316,6 +318,13 @@ def _skill_used_text(e: SkillUsed, name: dict[str, str]) -> str:
     return f"{name[e.unit_id]} 施放「{e.name_zh}」（{'，'.join(costs)}）→ 影響 {len(e.tiles)} 格"
 
 
+_REMOVE_REASONS = {
+    "depleted": "護盾耗盡了",
+    "cleansed": "被淨化了",
+    "source_lost": "解除了（嘲諷者離場）",
+}
+
+
 def _damage_text(e: DamageDealt, name: dict[str, str]) -> str:
     cause = _CAUSE_NAMES[e.cause]
     element = e.element.display_name
@@ -334,8 +343,9 @@ def _damage_text(e: DamageDealt, name: dict[str, str]) -> str:
         mod += f"（格擋 ×{e.multiplier_permille / 1000:g}）"
     if e.status_ppm != _PPM:
         mod += f"（狀態 ×{e.status_ppm / _PPM:g}）"
+    shield = f"（護盾吸收 {e.absorbed}）" if e.absorbed else ""
     return (
-        f"{name[e.target_id]} 受到 {e.amount} 點{kind}傷害{rolls}{mod}"
+        f"{name[e.target_id]} 受到 {e.amount} 點{kind}傷害{rolls}{mod}{shield}"
         f"，HP {e.hp_before} → {e.hp_after}"
     )
 
@@ -397,10 +407,17 @@ def describe_event(e: EventBase, state: BattleState) -> str | None:  # noqa: PLR
         verb = "刷新" if e.refreshed else "獲得"
         turns = f"（{e.duration} 回合）" if e.duration else ""
         return f"  {name[e.target_id]} {verb}狀態「{statuses[e.status_id]}」{turns}"
+    if isinstance(e, ShieldGained):
+        extra = f"（取較大值，共 {e.total}）" if e.total != e.amount else ""
+        return f"    {name[e.unit_id]} 獲得 {e.amount} 點護盾{extra}"
+    if isinstance(e, ShieldAbsorbed):
+        return f"    {name[e.unit_id]} 的護盾吸收了 {e.absorbed} 點傷害，剩餘 {e.remaining}"
     if isinstance(e, StatusRemoved):
         if e.reason == "stood_up":
             return None
-        return f"  {name[e.target_id]} 的「{statuses[e.status_id]}」結束了"
+        why = _REMOVE_REASONS.get(e.reason)
+        text = f"  {name[e.target_id]} 的「{statuses[e.status_id]}」"
+        return text + (f"{why}" if why else "結束了")
     if isinstance(e, UnitDowned):
         return f"  ＊ {name[e.unit_id]} 倒下了！"
     if isinstance(e, ChainLimitReached):
@@ -591,9 +608,10 @@ class BattleStats:
                 s.hits += e.hit
                 s.crits += e.crit
             elif isinstance(e, DamageDealt):
-                stats.per_unit[e.target_id].taken += e.amount
+                actual = e.amount - e.absorbed  # 被護盾吸收的不算
+                stats.per_unit[e.target_id].taken += actual
                 if e.source_id is not None:
-                    stats.per_unit[e.source_id].dealt += e.amount
+                    stats.per_unit[e.source_id].dealt += actual
                 last_source[e.target_id] = e.source_id
             elif isinstance(e, UnitDowned):
                 killer = last_source.get(e.unit_id)
