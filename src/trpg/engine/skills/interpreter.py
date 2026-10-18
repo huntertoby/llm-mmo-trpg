@@ -19,6 +19,7 @@ from __future__ import annotations
 from trpg.content.skills import ConditionSpec, EffectSpec, SkillDef
 from trpg.engine.actions import UseSkill
 from trpg.engine.context import Ctx
+from trpg.engine.control import status_effect
 from trpg.engine.effects import execute
 from trpg.engine.effects.models import (
     ApplyStatusEffect,
@@ -403,16 +404,23 @@ class _Cast:
         ]
 
     def apply_status(self, effect: ResolvedEffect, spec: EffectSpec) -> list[EffectBase]:
+        """施加狀態：對敵方先轉換（Boss）、再擲抵抗判定（:mod:`trpg.engine.control`）；
+        對友方與自己不擲。"""
         assert spec.status is not None
-        return [
-            ApplyStatusEffect(
-                source_id=self.caster.id,
-                target_id=unit.id,
+        batch: list[EffectBase] = []
+        for unit in self.targets(effect.affects, spec.condition):
+            planned = status_effect(
+                self.ctx,
+                caster=self.caster,
+                target=unit,
                 status_id=spec.status,
                 duration=spec.duration,
+                attack_attr=self.skill.scaling_attr,
+                skill_id=self.skill.id,
             )
-            for unit in self.targets(effect.affects, spec.condition)
-        ]
+            if planned is not None:
+                batch.append(planned)
+        return batch
 
     # -- 地形 ----------------------------------------------------------
 

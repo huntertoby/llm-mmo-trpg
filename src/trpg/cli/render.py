@@ -45,12 +45,16 @@ from trpg.engine.events import (
     SkillCooldownChanged,
     SkillUsed,
     StatusApplied,
+    StatusConverted,
     StatusRemoved,
+    StatusResisted,
+    StatusSaveRolled,
     SurfaceChanged,
     SurfaceEntered,
     TerrainChanged,
     TurnEnded,
     TurnOrderSet,
+    TurnSkipped,
     TurnStarted,
     UnitDowned,
     UnitEscaped,
@@ -74,6 +78,7 @@ __all__ = [
 ]
 
 _PPM = 1_000_000
+_PERMILLE = 1000
 _LABEL_WIDTH = 14
 _WIDE_CHAR_START = 0x2E7F  # 之後的 CJK 字元在終端機佔兩格
 
@@ -326,6 +331,8 @@ def _damage_text(e: DamageDealt, name: dict[str, str]) -> str:
         mod += f"（天氣 ×{e.weather_permille / 1000:g}）"
     if e.multiplier_permille != 1000:  # noqa: PLR2004
         mod += f"（格擋 ×{e.multiplier_permille / 1000:g}）"
+    if e.status_ppm != _PPM:
+        mod += f"（狀態 ×{e.status_ppm / _PPM:g}）"
     return (
         f"{name[e.target_id]} 受到 {e.amount} 點{kind}傷害{rolls}{mod}"
         f"，HP {e.hp_before} → {e.hp_after}"
@@ -379,7 +386,12 @@ def describe_event(e: EventBase, state: BattleState) -> str | None:  # noqa: PLR
     if isinstance(e, DamageDealt):
         return "    " + _damage_text(e, name)
     if isinstance(e, Healed):
-        return f"    {name[e.target_id]} 回復 {e.amount} HP，HP {e.hp_before} → {e.hp_after}"
+        half = (
+            f"（治療 ×{e.received_permille / _PERMILLE:g}）"
+            if e.received_permille != _PERMILLE
+            else ""
+        )
+        return f"    {name[e.target_id]} 回復 {e.amount} HP{half}，HP {e.hp_before} → {e.hp_after}"
     if isinstance(e, StatusApplied):
         verb = "刷新" if e.refreshed else "獲得"
         turns = f"（{e.duration} 回合）" if e.duration else ""
@@ -396,7 +408,34 @@ def describe_event(e: EventBase, state: BattleState) -> str | None:  # noqa: PLR
         if e.winner is None:
             return "戰鬥結束：達到輪數上限，平手" if e.reason == "round_limit" else "戰鬥結束：平手"
         return f"戰鬥結束：{e.winner.display_name}勝利（{_END_REASONS[e.reason]}）"
+    control = _describe_control(e, name, statuses)
+    if control is not None:
+        return control
     return _describe_environment(e, state, name, statuses)
+
+
+def _describe_control(e: EventBase, name: dict[str, str], statuses: dict[str, str]) -> str | None:
+    """狀態的抵抗判定、Boss 轉換與跳過回合（Phase 2B-1）。"""
+    if isinstance(e, StatusSaveRolled):
+        verdict = "施加成功" if e.applied else "被抵抗"
+        dr = "，遞減中" if e.diminished else ""
+        return (
+            f"  {name[e.attacker_id]} 對 {name[e.target_id]} 施加「{statuses[e.status_id]}」"
+            f"（{e.attack_attr.display_name} {e.attack_value} vs "
+            f"{e.save_attr.display_name} {e.defense_value}{dr}）：d20={e.natural} "
+            f"修正 {_signed(e.modifier)} 熟練 {_signed(e.proficiency)} = {e.total}"
+            f"（目標 {e.target_number}）→ {verdict}"
+        )
+    if isinstance(e, StatusResisted):
+        return f"  {name[e.target_id]} 抵抗了「{statuses[e.status_id]}」"
+    if isinstance(e, StatusConverted):
+        return (
+            f"  {name[e.target_id]} 是首領：「{statuses[e.from_status]}」"
+            f"轉為「{statuses[e.to_status]}」"
+        )
+    if isinstance(e, TurnSkipped):
+        return f"  {name[e.unit_id]} 受到「{statuses[e.status_id]}」影響，跳過這個回合"
+    return None
 
 
 def _obj_name(state: BattleState, object_id: str) -> str:

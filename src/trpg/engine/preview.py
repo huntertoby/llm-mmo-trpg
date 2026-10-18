@@ -21,6 +21,7 @@ from itertools import product
 from trpg.content.skills import SkillDef
 from trpg.engine.actions import Action, Attack, Shove, Trip, UseSkill
 from trpg.engine.battle import _actor, simulate_preview
+from trpg.engine.control import plan_status, status_save_chance
 from trpg.engine.events import (
     AttackRolled,
     DamageDealt,
@@ -65,6 +66,7 @@ __all__ = [
     "DamageRange",
     "Outcome",
     "Preview",
+    "StatusChance",
     "TargetPreview",
     "dice_distribution",
     "preview",
@@ -100,6 +102,25 @@ class DamageRange:
 
 
 @dataclass(frozen=True, slots=True)
+class StatusChance:
+    """技能施加在某個目標身上的、需要抵抗判定的狀態（命中之後）。
+
+    ``status_id`` 是 Boss 轉換之後實際施加的狀態（``original_id`` 為技能寫的狀態）；
+    ``apply_chance`` 為施加成功率（攻方勝出），``resist_chance`` ＝ 1 − 施加成功率。
+    已含控制遞減（``diminished``）。
+    """
+
+    status_id: str
+    original_id: str
+    apply_chance: Fraction
+    diminished: bool = False
+
+    @property
+    def resist_chance(self) -> Fraction:
+        return 1 - self.apply_chance
+
+
+@dataclass(frozen=True, slots=True)
 class TargetPreview:
     """技能對一個需要命中判定的單位的預覽（沒有傷害效果時 ``damage`` 為 ``None``）。"""
 
@@ -111,6 +132,9 @@ class TargetPreview:
     knock_chance: Fraction | None = None
     """技能含 ``knock_prone`` 且會對這個單位生效時，擊倒的對抗成功率（命中之後；比照推擊、絆倒的
     :func:`_maneuver_chance`）；沒有擊倒效果時為 ``None``。"""
+    status_chances: tuple[StatusChance, ...] = ()
+    """技能會對這個敵方單位施加、且要擲抵抗判定的狀態（定身、暈眩……）的施加成功率；
+    預覽的 ``min`` 視為全部被抵抗、``max`` 視為全部施加成功。"""
 
 
 @dataclass(frozen=True, slots=True)
@@ -267,7 +291,14 @@ def _primary_damage(events: list[EventBase], actor: UnitId, target: str) -> Even
 
 
 def _amount_table(
-    state: BattleState, unit: UnitState, sums: list[int], *, mod_ppm: int, weather: int, mult: int
+    state: BattleState,
+    unit: UnitState,
+    sums: list[int],
+    *,
+    mod_ppm: int,
+    weather: int,
+    mult: int,
+    status_ppm: int,
 ) -> dict[int, int]:
     weapon = unit.weapon
     core = state.ruleset.core
@@ -276,7 +307,12 @@ def _amount_table(
     for s in sums:
         raw = (s + weapon.flat) * PERMILLE + scaled
         table[s] = max(
-            raw * mod_ppm * weather * mult // (PERMILLE * PPM * PERMILLE * PERMILLE),
+            raw
+            * mod_ppm
+            * weather
+            * mult
+            * status_ppm
+            // (PERMILLE * PPM * PERMILLE * PERMILLE * PPM),
             core.min_damage_on_hit,
         )
     return table
@@ -321,12 +357,16 @@ def _attack_numbers(
     if low is None or high is None:
         return hit, crit, None
     normal_dist = dice_distribution(weapon.dice.count, weapon.dice.sides)
+    status_ppm = PPM
     if isinstance(low, DamageDealt):
         mod, weather, mult = low.element_mod_ppm, low.weather_permille, low.multiplier_permille
+        status_ppm = low.status_ppm
     else:
         mod, weather, mult = PPM, _object_weather(state, actor), PERMILLE
     sums = sorted(set(normal_dist) | set(crit_dist))
-    table = _amount_table(state, actor, sums, mod_ppm=mod, weather=weather, mult=mult)
+    table = _amount_table(
+        state, actor, sums, mod_ppm=mod, weather=weather, mult=mult, status_ppm=status_ppm
+    )
     e_normal = _expected(normal_dist, table)
     e_crit = _expected(crit_dist, table) if crit_dist else Fraction(0)
     expected_if_hit = Fraction(0) if hit == 0 else ((hit - crit) * e_normal + crit * e_crit) / hit
@@ -414,7 +454,8 @@ def _damage_expectation(  # noqa: PLR0917
                 * event.element_mod_ppm
                 * event.weather_permille
                 * event.multiplier_permille
-                // (PERMILLE * PPM * PERMILLE * PERMILLE),
+                * event.status_ppm
+                // (PERMILLE * PPM * PERMILLE * PERMILLE * PPM),
                 core.min_damage_on_hit,
             )
         total += ((hit - crit) * _expected(normal, table) + crit * _expected(doubled, table)) / hit
@@ -438,6 +479,30 @@ def _knock_chance(
         _naturals("none"), modifier + rules.core.proficiency, rules.core.hit_target, 21
     )
     return hit
+
+
+def _status_chances(
+    state: BattleState, actor: UnitState, skill: SkillDef, target: UnitState
+) -> tuple[StatusChance, ...]:
+    """技能對敵方 ``target`` 施加、且要擲抵抗判定的狀態（含 Boss 轉換與控制遞減）。"""
+    if target.team is actor.team:
+        return ()
+    chances: dict[str, StatusChance] = {}
+    for resolved in resolve_effects(state, skill):
+        spec = skill.effects[resolved.spec_index]
+        if resolved.type != "apply_status" or resolved.affects not in ("enemies", "all"):
+            continue
+        assert spec.status is not None
+        if not condition_met(state, actor, spec.condition, Subject(target, target.xy)):
+            continue
+        plan = plan_status(state, target, spec.status)
+        if plan.save_attr is None:
+            continue
+        chance = status_save_chance(state, actor, skill.scaling_attr, plan)
+        chances[plan.status_id] = StatusChance(
+            plan.status_id, plan.original_id, chance, plan.diminished
+        )
+    return tuple(chances[k] for k in sorted(chances))
 
 
 def _skill_targets(
@@ -469,7 +534,13 @@ def _skill_targets(
         knock = _knock_chance(state, actor, skill, target)
         result.append(
             TargetPreview(
-                uid, hit, crit, damage, ally=target.team is actor.team, knock_chance=knock
+                uid,
+                hit,
+                crit,
+                damage,
+                ally=target.team is actor.team,
+                knock_chance=knock,
+                status_chances=_status_chances(state, actor, skill, target),
             )
         )
     return tuple(result)
