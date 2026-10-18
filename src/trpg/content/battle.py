@@ -185,6 +185,18 @@ class StatusDef(ContentModel):
     - ``expires``：``turn_end`` 每次在帶有者的回合結束時 −1，歸零移除；
       ``own_turn_start`` 在帶有者的下個回合開始時移除；``never`` 只能由效果或動作移除。
     - ``stacking``：重複施加時的規則；目前只有 ``refresh``（刷新持續時間，不疊加）。
+
+    Phase 2B-1 的數值效果欄位（千分比一律 ‰，1000 = ×1；多個狀態的同一欄位依序相乘、逐步
+    無條件捨去）：
+
+    - ``move_permille``：回合開始時的移動點數倍率（緩速 500）。
+    - ``prevents_move``：不能主動移動（定身；強制位移照常）。
+    - ``skip_turn``：回合開始時跳過整個回合，且不能執行反應（暈眩）。
+    - ``damage_dealt_permille``：自己造成的攻擊傷害（``cause: attack``）倍率（虛弱 750）。
+    - ``damage_taken_permille``：受到的骰值傷害倍率（易傷 1250；不含墜落、致命地形等百分比傷害）。
+    - ``healing_received_permille``：受到的治療倍率（中毒 500）。
+    - ``save_attr``：由技能或動作施加時，守方抵抗用的屬性（省略表示命中即施加）。
+    - ``control_group``：控制類別（``movement``、``hard``），成功施加後觸發控制遞減。
     """
 
     id: str = Field(pattern=ID_PATTERN)
@@ -194,9 +206,19 @@ class StatusDef(ContentModel):
     expires: Literal["turn_end", "own_turn_start", "never"]
     stacking: Literal["refresh"] = "refresh"
     on_turn_start_damage: StatusTickDamage | None = None
+    move_permille: int = Field(default=1000, ge=0, le=1000)
+    prevents_move: bool = False
+    skip_turn: bool = False
+    damage_dealt_permille: int = Field(default=1000, ge=0, le=10000)
+    damage_taken_permille: int = Field(default=1000, ge=0, le=10000)
+    healing_received_permille: int = Field(default=1000, ge=0, le=10000)
+    save_attr: Attribute | None = None
+    control_group: Literal["movement", "hard"] | None = None
 
     @model_validator(mode="after")
     def _check(self) -> StatusDef:
+        if self.control_group is not None and self.save_attr is None:
+            raise ValueError(f"狀態 {self.id}：有 control_group 的狀態必須設定 save_attr")
         if self.expires == "turn_end" and self.duration is None:
             raise ValueError(f"狀態 {self.id}：expires 為 turn_end 時必須設定 duration")
         return self

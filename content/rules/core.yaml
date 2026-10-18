@@ -66,5 +66,10 @@ skill_slots:                          # 戰鬥時可裝備的技能數量上限�
   reaction: 1
   stance: 1
 
+# --- 狀態與控制（Phase 2B-1，docs/phases/Phase2B計畫.md 3.3–3.4）---
+control_dr_rounds: 2                   # 控制遞減：成功施加後，同類別遞減到第 R+2 輪結束（R＝目前輪數）
+control_dr_resist_permille: 1500       # 遞減期間，同類別的抵抗判定中守方屬性 ×150%
+boss_control_conversion: {stun: slow}  # Boss 的硬控（control_group: hard）轉換對照
+
 # --- 效果佇列 ---
 max_chain_depth: 3            # 連鎖深度上限

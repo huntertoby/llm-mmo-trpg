@@ -27,8 +27,11 @@ __all__ = [
     "run_battle",
 ]
 
-LOG_FORMAT = "trpg-battle-log/4"
-"""``/4``（Phase 2A）：加入 ``use_skill`` 動作與技能事件（``skill_used``、
+LOG_FORMAT = "trpg-battle-log/5"
+"""``/5``（Phase 2B-1）：新狀態、抵抗判定（``status_save_rolled``）、控制遞減（單位狀態加入
+``control_dr``）、Boss 轉換與 ``turn_skipped``；傷害與治療帶狀態倍率，``/4`` 的紀錄無法重播。
+
+``/4``（Phase 2A）：加入 ``use_skill`` 動作與技能事件（``skill_used``、
 ``skill_cooldown_changed``），``turn_started`` 帶法力，``attack_rolled``／``maneuver_rolled``
 帶 ``skill_id``；``/3`` 的紀錄無法重播。
 

@@ -10,7 +10,7 @@ from trpg.shared.types import Team
 
 _COPIED = {
     BattleState: {"tiles", "units", "objects", "turn_order"},
-    UnitState: {"statuses", "cooldowns", "skill_uses"},
+    UnitState: {"statuses", "cooldowns", "skill_uses", "control_dr"},
     ObjectState: set(),
 }
 
@@ -45,6 +45,7 @@ def test_clone_is_independent_and_equal() -> None:
         assert copy.units[uid] is not unit and copy.units[uid].statuses is not unit.statuses
         assert copy.units[uid].cooldowns is not unit.cooldowns
         assert copy.units[uid].skill_uses is not unit.skill_uses
+        assert copy.units[uid].control_dr is not unit.control_dr
     for oid, obj in state.objects.items():
         assert copy.objects[oid] is not obj
     copy.units[next(iter(copy.units))].hp = 1

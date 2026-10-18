@@ -54,12 +54,16 @@ __all__ = [
     "SkillCooldownChanged",
     "SkillUsed",
     "StatusApplied",
+    "StatusConverted",
     "StatusRemoved",
+    "StatusResisted",
+    "StatusSaveRolled",
     "SurfaceChanged",
     "SurfaceEntered",
     "TerrainChanged",
     "TurnEnded",
     "TurnOrderSet",
+    "TurnSkipped",
     "TurnStarted",
     "UnitDowned",
     "UnitEscaped",
@@ -135,6 +139,14 @@ class TurnStarted(EventBase):
     move_points: int
     mana: int = 0
     max_mana: int = 0
+
+
+class TurnSkipped(EventBase):
+    """回合開始時因 ``skip_turn`` 狀態（暈眩）直接結束回合。"""
+
+    type: Literal["turn_skipped"] = "turn_skipped"
+    unit_id: UnitId
+    status_id: str
 
 
 class TurnEnded(EventBase):
@@ -254,6 +266,9 @@ class DamageDealt(EventBase):
 
     雷電擴散以此為基準（Phase 1C 決定 #3），每個被擴散的單位再各自套用自己的元素修正。
     ``None`` 表示與 ``amount`` 相同（以最大 HP 比例計算的傷害）。"""
+    status_ppm: int = 1_000_000
+    """狀態的傷害倍率（百萬分比）：攻擊者的 ``damage_dealt_permille``（虛弱，只對 ``attack``）
+    × 目標的 ``damage_taken_permille``（易傷，骰值傷害）。"""
 
 
 class Healed(EventBase):
@@ -264,6 +279,8 @@ class Healed(EventBase):
     amount: int
     hp_before: int
     hp_after: int
+    received_permille: int = 1000
+    """目標的狀態治療倍率（‰，中毒 500）。"""
 
 
 class StatusApplied(EventBase):
@@ -272,6 +289,50 @@ class StatusApplied(EventBase):
     status_id: str
     duration: int | None
     refreshed: bool
+    source_id: UnitId | None
+
+
+class StatusSaveRolled(EventBase):
+    """施加狀態的抵抗判定：攻方（技能的縮放屬性）對守方（狀態的 ``save_attr``）的比例公式。
+
+    ``diminished``：守方正處於該控制類別的遞減期間，``defense_value`` 已乘上遞減倍率。
+    ``applied``：攻方成功（狀態會被施加）；失敗時緊接著 ``status_resisted``。
+    """
+
+    type: Literal["status_save_rolled"] = "status_save_rolled"
+    attacker_id: UnitId
+    target_id: UnitId
+    status_id: str
+    attack_attr: Attribute
+    attack_value: int
+    save_attr: Attribute
+    defense_value: int
+    diminished: bool
+    natural: int
+    modifier: int
+    proficiency: int
+    total: int
+    target_number: int
+    applied: bool
+    skill_id: str | None = None
+
+
+class StatusResisted(EventBase):
+    """目標抵抗了狀態，沒有被施加。"""
+
+    type: Literal["status_resisted"] = "status_resisted"
+    target_id: UnitId
+    status_id: str
+    source_id: UnitId | None
+
+
+class StatusConverted(EventBase):
+    """Boss 的硬控轉換（``boss_control_conversion``）：``from_status`` 改為施加 ``to_status``。"""
+
+    type: Literal["status_converted"] = "status_converted"
+    target_id: UnitId
+    from_status: str
+    to_status: str
     source_id: UnitId | None
 
 
@@ -563,6 +624,10 @@ type Event = Annotated[
     | Healed
     | StatusApplied
     | StatusRemoved
+    | StatusSaveRolled
+    | StatusResisted
+    | StatusConverted
+    | TurnSkipped
     | UnitDowned
     | ChainLimitReached
     | ObjectAttacked

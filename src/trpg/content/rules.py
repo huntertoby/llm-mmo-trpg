@@ -112,6 +112,12 @@ class CoreRules(ContentModel):
     spell_attr_multiplier_permille: int = Field(ge=0)
     skill_slots: SkillSlots
 
+    # 狀態與控制（2B-1）
+    control_dr_rounds: int = Field(ge=0)
+    control_dr_resist_permille: int = Field(ge=1000, le=10000)
+    boss_control_conversion: dict[str, str]
+    """帶 ``boss`` 標籤的單位被施加 ``control_group: hard`` 的狀態時，改為施加對照表中的狀態。"""
+
     # 效果佇列
     max_chain_depth: int = Field(ge=0)
 

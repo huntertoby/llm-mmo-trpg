@@ -159,6 +159,9 @@ class UnitState:
     """技能剩餘冷卻回合（只列出 > 0 的）；自己回合開始時 −1。"""
     skill_uses: dict[str, int] = field(default_factory=dict)
     """本場已使用次數（``uses_per_battle`` 檢查用）。"""
+    control_dr: dict[str, int] = field(default_factory=dict)
+    """控制遞減：控制類別 → 遞減持續到的輪數（含；``state.round`` 不超過它時，同類別的抵抗判定中
+    守方屬性 ×``control_dr_resist_permille``）。"""
 
     @property
     def alive(self) -> bool:
@@ -217,6 +220,7 @@ class UnitState:
             skills=self.skills,
             cooldowns=dict(self.cooldowns),
             skill_uses=dict(self.skill_uses),
+            control_dr=dict(self.control_dr),
         )
 
 

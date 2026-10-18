@@ -61,7 +61,19 @@ __all__ = [
     "unit_skill_problems",
 ]
 
-REQUIRED_STATUSES = ("burning", "concealed", "defending", "prone")
+REQUIRED_STATUSES = (
+    "burning",
+    "concealed",
+    "defending",
+    "prone",
+    "slow",
+    "root",
+    "stun",
+    "weaken",
+    "vulnerable",
+    "bleed",
+    "poison",
+)
 """引擎規則直接引用的狀態 ID，必須存在於 ``statuses.yaml``。"""
 
 
@@ -113,6 +125,14 @@ class Ruleset(ContentModel):
         missing = [s for s in REQUIRED_STATUSES if s not in ids]
         if missing:
             raise ValueError(f"statuses.yaml 缺少引擎需要的狀態：{', '.join(missing)}")
+        by_status = self.statuses.by_id()
+        for source, target in sorted(self.core.boss_control_conversion.items()):
+            if source not in by_status or by_status[source].control_group != "hard":
+                raise ValueError(
+                    f"core.yaml 的 boss_control_conversion：{source} 必須是 hard 類別的控制狀態"
+                )
+            if target not in by_status:
+                raise ValueError(f"core.yaml 的 boss_control_conversion 引用了未知的狀態：{target}")
         unknown = sorted({ref for ref in self.surfaces.status_refs() if ref not in ids})
         if unknown:
             raise ValueError(f"surfaces.yaml 引用了未知的狀態：{', '.join(unknown)}")
@@ -269,6 +289,12 @@ def load_library(content_dir: Path | None = None) -> ContentLibrary:
         raise ContentError(root / "rules", str(exc)) from exc
 
     _check_skills(root, skills, ruleset)
+    unknown_values = sorted(set(ai_profiles.status_values) - {s.id for s in statuses.statuses})
+    if unknown_values:
+        raise ContentError(
+            root / "ai_profiles.yaml",
+            f"status_values 引用了未知的狀態：{', '.join(unknown_values)}",
+        )
     units = _load_dir(root / "units", UnitTemplate, files)
     weapon_map = weapons.by_id()
     _check_units(

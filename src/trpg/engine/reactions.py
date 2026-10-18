@@ -21,6 +21,7 @@ from trpg.engine.events import AttackRolled, ReactionDeclined, ReactionTriggered
 from trpg.engine.results import Pending
 from trpg.engine.rules.combat import ForcedOutcome, attack_problem, roll_attack
 from trpg.engine.rules.geometry import XY, manhattan
+from trpg.engine.rules.statuses import skip_turn_status
 from trpg.engine.state import UnitState
 from trpg.shared.errors import TrpgError
 
@@ -52,6 +53,8 @@ def _usable(ctx: Ctx, unit: UnitState, rule: ReactionRule) -> ReactionDef | None
     definition = ctx.rules.reaction_def(rule.reaction)
     if not unit.alive or unit.reactions_used >= ctx.core.reactions_per_round:
         return None
+    if skip_turn_status(ctx.rules, unit) is not None:
+        return None  # 暈眩中不能執行反應
     unless = rule.unless
     if (
         unless is not None

@@ -1,9 +1,21 @@
-# 狀態表（docs/phases/Phase1計畫.md 4.5）。
+# 狀態表（docs/phases/Phase1計畫.md 4.5、docs/phases/Phase2B計畫.md 3.1）。
 # 欄位：id、name_zh、description_zh、duration（預設持續回合；省略表示不倒數）、
 #       expires（turn_end：帶有者回合結束時 −1，歸零移除；own_turn_start：帶有者下回合開始時移除；
 #                never：只能由效果或動作移除）、stacking（refresh：重複施加時刷新持續時間，不疊加）、
 #       on_turn_start_damage（回合開始時的持續傷害：dice、element）。
 # 數值型的規則效果（防禦 +25%、倒地站起的移動消耗）放在 rules/core.yaml。
+# 2B-1 的數值效果欄位（‰：1000 = ×1，省略為 1000；同一欄位有多個狀態時依序相乘、逐步無條件捨去）：
+#   move_permille              回合開始時的移動點數倍率（緩速 500）
+#   prevents_move              true：不能主動移動（強制位移照常）
+#   skip_turn                  true：回合開始時跳過整個回合（沒有 AP、移動點數與反應），發出 turn_skipped
+#   damage_dealt_permille      自己造成的攻擊傷害（cause: attack）倍率
+#   damage_taken_permille      受到的骰值傷害倍率（不含墜落、致命地形等以最大 HP 比例計算的傷害）
+#   healing_received_permille  受到的治療倍率
+#   save_attr                  由技能或動作施加時的抵抗屬性（守方用此屬性，攻方用技能的縮放屬性）；
+#                              省略表示命中即施加。表面與環境造成的狀態不擲抵抗
+#   control_group              控制類別（movement／hard）：成功施加後，目標在 core.yaml 的
+#                              control_dr_rounds 輪內對同類別的抵抗判定守方屬性 ×150%；
+#                              hard 類別的狀態施加在 boss 標籤的單位上時依 boss_control_conversion 轉換
 statuses:
   - id: defending
     name_zh: 防禦
@@ -30,3 +42,65 @@ statuses:
     duration: 2
     expires: turn_end
     stacking: refresh
+  - id: slow
+    name_zh: 緩速
+    description_zh: 回合開始時的移動點數減半（無條件捨去）。
+    duration: 2
+    expires: turn_end
+    stacking: refresh
+    move_permille: 500
+    save_attr: dex
+    control_group: movement
+  - id: root
+    name_zh: 定身
+    description_zh: 不能主動移動（仍可被推擊、拉扯等強制位移）。
+    duration: 1
+    expires: turn_end
+    stacking: refresh
+    prevents_move: true
+    save_attr: str
+    control_group: movement
+  - id: stun
+    name_zh: 暈眩
+    description_zh: 跳過整個回合：沒有 AP、移動點數與反應。
+    duration: 1
+    expires: turn_end
+    stacking: refresh
+    skip_turn: true
+    save_attr: con
+    control_group: hard
+  - id: weaken
+    name_zh: 虛弱
+    description_zh: 自己造成的攻擊傷害 ×75%。
+    duration: 2
+    expires: turn_end
+    stacking: refresh
+    damage_dealt_permille: 750
+    save_attr: con
+  - id: vulnerable
+    name_zh: 易傷
+    description_zh: 受到的骰值傷害 ×125%（不含墜落、致命地形等百分比傷害）。
+    duration: 2
+    expires: turn_end
+    stacking: refresh
+    damage_taken_permille: 1250
+    save_attr: wil
+  - id: bleed
+    name_zh: 流血
+    description_zh: 回合開始時受到 1d4 物理傷害，持續 3 回合。
+    duration: 3
+    expires: turn_end
+    stacking: refresh
+    on_turn_start_damage:
+      dice: 1d4
+      element: physical
+  - id: poison
+    name_zh: 中毒
+    description_zh: 回合開始時受到 1d4 毒素傷害，持續 3 回合；受到的治療減半。
+    duration: 3
+    expires: turn_end
+    stacking: refresh
+    healing_received_permille: 500
+    on_turn_start_damage:
+      dice: 1d4
+      element: poison

@@ -61,6 +61,7 @@ from trpg.engine.rules.movement import (
     stand_up_cost,
     step_cost,
 )
+from trpg.engine.rules.statuses import is_rooted
 from trpg.engine.setup import BattleSetup, BattleSetupError
 from trpg.engine.skills.interpreter import use_skill
 from trpg.engine.skills.targeting import (
@@ -334,9 +335,15 @@ class MovePlan:
         return self.stand_up + sum(cost for _, cost in self.steps)
 
 
+def _require_free_to_move(state: BattleState, unit: UnitState) -> None:
+    if is_rooted(state.ruleset, unit):
+        raise IllegalActionError(f"{unit.name_zh} 被定身，不能主動移動")
+
+
 def plan_move(state: BattleState, unit: UnitState, path: tuple[Pos, ...]) -> MovePlan:
     """驗證 ``path``；不合法時拋出 :class:`IllegalActionError`。"""
     prone = unit.has_status(PRONE)
+    _require_free_to_move(state, unit)
     if not path:
         raise IllegalActionError("路徑不可為空")
     start = (path[0].x, path[0].y)

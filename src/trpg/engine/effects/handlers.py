@@ -30,6 +30,11 @@ from trpg.engine.events import (
 from trpg.engine.lifecycle import down_unit, escape_unit
 from trpg.engine.rules.combat import PERMILLE, PPM, element_modifier_ppm
 from trpg.engine.rules.movement import is_deadly
+from trpg.engine.rules.statuses import (
+    damage_dealt_permille,
+    damage_taken_permille,
+    healing_received_permille,
+)
 from trpg.engine.state import BattleState, StatusInstance, UnitState
 from trpg.shared.types import Element, Pos, Surface, Team
 
@@ -59,6 +64,7 @@ def _damage(ctx: Ctx, effect: EffectBase) -> list[EventBase]:
     mod_ppm = PPM
     weather = PERMILLE
     base_amount: int | None = None
+    status_ppm = PPM
     if effect.mode == "lethal":
         amount = unit.hp
     elif effect.mode == "percent_max_hp":
@@ -72,15 +78,23 @@ def _damage(ctx: Ctx, effect: EffectBase) -> list[EventBase]:
             mod_ppm = element_modifier_ppm(unit, effect.element, ctx.rules)
         if effect.apply_weather:
             weather = weather_permille(ctx.state, effect.element)
+        dealt = PERMILLE
+        source = None if effect.source_id is None else ctx.state.units.get(effect.source_id)
+        if effect.cause == "attack" and source is not None:
+            dealt = damage_dealt_permille(ctx.rules, source)  # 虛弱
+        status_ppm = dealt * damage_taken_permille(ctx.rules, unit)  # 易傷；千分比 × 千分比
         amount = max(
             raw_permille
             * mod_ppm
             * weather
             * effect.multiplier_permille
-            // (PERMILLE * PPM * PERMILLE * PERMILLE),
+            * status_ppm
+            // (PERMILLE * PPM * PERMILLE * PERMILLE * PPM),
             effect.min_damage,
         )
-        base_amount = max(raw_permille * weather // (PERMILLE * PERMILLE), effect.min_damage)
+        base_amount = max(
+            raw_permille * weather * dealt // (PERMILLE * PERMILLE * PERMILLE), effect.min_damage
+        )
     hp_before = unit.hp
     unit.hp = max(0, unit.hp - amount)
     events: list[EventBase] = [
@@ -100,6 +114,7 @@ def _damage(ctx: Ctx, effect: EffectBase) -> list[EventBase]:
             weather_permille=weather,
             multiplier_permille=effect.multiplier_permille,
             base_amount=base_amount,
+            status_ppm=status_ppm,
         )
     ]
     if unit.hp <= 0:
@@ -116,7 +131,13 @@ def _heal(ctx: Ctx, effect: EffectBase) -> list[EventBase]:
     rolls: tuple[int, ...] = ()
     if effect.dice is not None:
         rolls = tuple(ctx.rng.roll(effect.dice.sides) for _ in range(effect.dice.count))
-    amount = max(0, ((sum(rolls) + effect.flat) * PERMILLE + effect.scaled_permille) // PERMILLE)
+    received = healing_received_permille(ctx.rules, unit)  # 中毒
+    amount = max(
+        0,
+        ((sum(rolls) + effect.flat) * PERMILLE + effect.scaled_permille)
+        * received
+        // (PERMILLE * PERMILLE),
+    )
     hp_before = unit.hp
     unit.hp = min(unit.max_hp, unit.hp + amount)
     return [
@@ -128,6 +149,7 @@ def _heal(ctx: Ctx, effect: EffectBase) -> list[EventBase]:
             amount=unit.hp - hp_before,
             hp_before=hp_before,
             hp_after=unit.hp,
+            received_permille=received,
         )
     ]
 
@@ -235,6 +257,8 @@ def apply_status(ctx: Ctx, effect: ApplyStatusEffect) -> list[EventBase]:
     # 目前只有 refresh：重複施加時以新的持續時間取代，不疊加
     others = [s for s in unit.statuses if s.status_id != effect.status_id]
     unit.statuses = sorted([*others, instance], key=lambda s: s.status_id)
+    if definition.control_group is not None:  # 控制遞減：同類別在 R + control_dr_rounds 輪結束前
+        unit.control_dr[definition.control_group] = ctx.state.round + ctx.core.control_dr_rounds
     return [
         ctx.emit(
             StatusApplied,

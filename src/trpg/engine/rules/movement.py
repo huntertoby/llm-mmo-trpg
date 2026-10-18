@@ -12,6 +12,7 @@ import heapq
 
 from trpg.content.maps import standable
 from trpg.engine.rules.geometry import XY, manhattan, neighbors4
+from trpg.engine.rules.statuses import is_rooted
 from trpg.engine.state import BattleState, UnitState
 from trpg.shared.types import Pos, UnitId
 
@@ -75,7 +76,9 @@ def stand_up_cost(state: BattleState, unit: UnitState) -> int:
 
 
 def available_move_budget(state: BattleState, unit: UnitState) -> int | None:
-    """本回合還能用於走路的點數（倒地時扣掉站起的消耗）；站不起來時回傳 ``None``。"""
+    """本回合還能用於走路的點數（倒地時扣掉站起的消耗）；站不起來或被定身時回傳 ``None``。"""
+    if is_rooted(state.ruleset, unit):
+        return None
     if not unit.has_status(PRONE):
         return unit.move_points
     cost = stand_up_cost(state, unit)

@@ -26,14 +26,23 @@ from trpg.engine.events import (
     SkillCooldownChanged,
     StatusRemoved,
     TurnEnded,
+    TurnSkipped,
     TurnStarted,
 )
 from trpg.engine.objectives import check_battle_end, check_round_end, end_battle
 from trpg.engine.results import ResolveResult
+from trpg.engine.rules.statuses import move_points_for_turn, skip_turn_status
 from trpg.engine.state import StatusInstance, UnitState
 from trpg.shared.types import Surface, UnitId
 
-__all__ = ["advance_turn", "check_battle_end", "end_turn", "finish_resolution", "start_turn"]
+__all__ = [
+    "advance_turn",
+    "check_battle_end",
+    "end_turn",
+    "finish_resolution",
+    "skip_turn_if_stunned",
+    "start_turn",
+]
 
 
 def start_turn(ctx: Ctx, unit_id: UnitId) -> None:
@@ -44,7 +53,7 @@ def start_turn(ctx: Ctx, unit_id: UnitId) -> None:
     state.active_unit = unit.id
     unit.ap = core.ap_per_turn + min(unit.ap_carry, core.ap_carry_max)
     unit.ap_carry = 0
-    unit.move_points = unit.speed
+    unit.move_points = move_points_for_turn(ctx.rules, unit)
     ctx.emit(
         TurnStarted,
         unit_id=unit.id,
@@ -82,6 +91,27 @@ def start_turn(ctx: Ctx, unit_id: UnitId) -> None:
     surface_effects = _surface_turn_start(ctx, unit)
     if surface_effects and unit.alive:
         execute(ctx, surface_effects)
+
+
+def skip_turn_if_stunned(ctx: Ctx) -> bool:
+    """行動者帶有 ``skip_turn`` 狀態（暈眩）時跳過整個回合：沒有 AP 與移動點數，發出
+    ``turn_skipped``，然後照常結束回合（狀態倒數）。回傳是否跳過。
+
+    回合開始的處理（冷卻、持續傷害）已在 :func:`start_turn` 完成；在那之中倒下者不會走到這裡。
+    """
+    state = ctx.state
+    if state.active_unit is None:
+        return False
+    unit = state.units[state.active_unit]
+    status_id = skip_turn_status(ctx.rules, unit)
+    if status_id is None:
+        return False
+    unit.ap = 0
+    unit.ap_carry = 0
+    unit.move_points = 0
+    ctx.emit(TurnSkipped, unit_id=unit.id, status_id=status_id)
+    end_turn(ctx)
+    return True
 
 
 def _tick_cooldowns(ctx: Ctx, unit: UnitState) -> None:
@@ -186,6 +216,8 @@ def advance_turn(ctx: Ctx) -> None:
         state.turn_pos = next_pos
         start_turn(ctx, state.turn_order[next_pos])
         if state.active_unit is not None:
+            if skip_turn_if_stunned(ctx):
+                continue  # active_unit 仍是這位，下一圈取順序中的下一位
             check_battle_end(ctx)
             return
 
