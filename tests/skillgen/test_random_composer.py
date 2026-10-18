@@ -22,7 +22,7 @@ from trpg.skillgen.skill_yaml import skill_from_yaml, skill_to_yaml
 from trpg.skillgen.validate import validate_skill
 
 FAST_SEEDS = range(100)
-ENABLED = ("strike", "area", "control", "displace", "combo", "aura")
+ENABLED = ("strike", "area", "control", "displace", "combo", "aura", "passive")
 RARITIES = ("common", "rare", "epic", "legendary")
 
 
@@ -46,7 +46,8 @@ def test_every_fast_seed_composes_a_valid_skill_in_the_budget_window() -> None:
         assert validate_skill(skill, library) == []
         assert skill.id == f"skill_rand_{seed}" and skill.name_zh.endswith(f"#{seed}")
         assert skill.provenance.origin == "level_up"
-        assert skill.kind == "active" and skill.narrative.concept
+        assert skill.kind == ("passive" if skill.skeleton == "passive" else "active")
+        assert skill.narrative.concept
         ratio = skill_budget(skill, library).ratio
         assert low <= ratio <= high, (seed, float(ratio))
 
@@ -108,7 +109,9 @@ def test_impossible_parameters_raise_a_compose_error() -> None:
     with pytest.raises(ComposeError, match="未知的骨架"):
         compose_random_skill(1, skeleton="nope")
     with pytest.raises(ComposeError, match="passive"):
-        compose_random_skill(1, skeleton="passive")
+        compose_random_skill(1, skeleton="passive", rarity="rare")
+    with pytest.raises(ComposeError, match="被動"):
+        compose_random_skill(1, skeleton="passive", rarity="epic", category="weapon")
 
 
 def test_skeleton_without_rarity_picks_a_feasible_rarity() -> None:
@@ -183,3 +186,36 @@ def test_effects_are_not_repeated_except_distinct_statuses_and_combo_damage() ->
                 assert kind == "apply_status" or skill.skeleton == "combo"
         statuses = [e.status for e in skill.effects if e.type == "apply_status"]
         assert len(statuses) == len(set(statuses))
+
+
+# ---------------------------------------------------------------------------
+# 被動（Phase 2E-1）
+# ---------------------------------------------------------------------------
+
+
+def test_explicit_passive_composes_valid_passives_for_every_trigger() -> None:
+    library = lib()
+    events: set[str] = set()
+    for seed in range(60):
+        skill = compose_random_skill(seed, skeleton="passive", rarity="epic")
+        assert validate_skill(skill, library) == []
+        assert skill.kind == "passive" and skill.ap_cost is None and skill.trigger is not None
+        assert skill.category == "spell" and skill.shape.type == "self"
+        events.add(skill.trigger.event)
+        low, high = tuning_bounds(library)
+        assert low <= skill_budget(skill, library).ratio <= high, seed
+    assert len(events) >= 6
+
+
+def test_passives_only_appear_from_epic_and_do_not_change_other_seeds() -> None:
+    skills = [compose_random_skill(seed) for seed in FAST_SEEDS]
+    passives = [s for s in skills if s.kind == "passive"]
+    assert passives and all(s.rarity in ("epic", "legendary") for s in passives)
+    for seed in range(40):
+        for rarity in ("common", "rare"):
+            assert compose_random_skill(seed, rarity=rarity).kind == "active"
+
+
+def test_explicit_non_passive_skeleton_never_becomes_a_passive() -> None:
+    for seed in range(30):
+        assert compose_random_skill(seed, skeleton="strike", rarity="epic").kind == "active"

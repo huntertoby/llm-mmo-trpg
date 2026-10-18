@@ -328,7 +328,7 @@ def format_skill_report(report: SkillsReport) -> str:
             "DPR",
             "勝率",
             "輪數",
-            "次／場",
+            "次／場（被動＝觸發）",
             "次／輪",
             "命中率",
             "平均傷害",

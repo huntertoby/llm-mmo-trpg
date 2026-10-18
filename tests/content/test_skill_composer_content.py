@@ -90,3 +90,11 @@ def test_missing_composer_file_is_a_content_error(tmp_path: Path) -> None:
     (root / "skill_composer.yaml").unlink()
     with pytest.raises(ContentError):
         load_library(root)
+
+
+def test_passive_rules_are_present_and_in_range() -> None:
+    from tests.engine.helpers import library  # noqa: PLC0415
+
+    rules = library().composer.passive
+    assert 0 < rules.skeleton_permille < 1000
+    assert rules.mana.min >= 0 and rules.cooldown.min >= 1

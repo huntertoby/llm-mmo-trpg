@@ -12,7 +12,7 @@ import pytest
 
 from tests.skillgen.helpers import lib, skill
 from trpg.sim import skill_fuzz
-from trpg.sim.skill_fuzz import check_skill, format_report, run_fuzz
+from trpg.sim.skill_fuzz import FuzzReport, check_skill, format_report, run_fuzz
 
 SCRIPT = Path(__file__).resolve().parents[2] / "scripts" / "skill_fuzz.py"
 
@@ -33,8 +33,13 @@ def test_one_hundred_seeds_pass_validation_cast_and_run_without_exceptions() -> 
     assert all(o.violations == 0 for o in report.outcomes)
     assert all(o.castable for o in report.outcomes)
     assert all(o.error is None for o in report.outcomes)
-    assert sum(1 for o in report.outcomes if o.battle_ran) == 10  # 每 10 個挑 1 個
-    assert all(o.selections >= 1 for o in report.outcomes)
+    # 每 10 個挑 1 個打一場；被動（2E-1）每個都打一場
+    expected = {o.seed for o in report.outcomes if o.seed % 10 == 0 or o.skill.kind == "passive"}
+    assert {o.seed for o in report.outcomes if o.battle_ran} == expected
+    passives = [o for o in report.outcomes if o.skill.kind == "passive"]
+    assert passives and sum(o.triggers for o in passives) > 0
+    assert all(o.triggers == 0 for o in report.outcomes if o.skill.kind != "passive")
+    assert all(o.selections >= 1 for o in report.outcomes if o.skill.kind != "passive")
 
 
 def test_the_summary_is_identical_between_two_runs_and_lists_the_distributions() -> None:
@@ -113,3 +118,13 @@ def test_one_thousand_skills_pass_everything_and_the_summary_is_reproducible() -
     assert {s.tier for s in skills} == {1, 2, 3, 4, 5}
     assert len({s.rarity for s in skills}) == 4
     assert format_report(report) == format_report(run_fuzz(lib(), count=1000))
+
+
+def test_a_passive_is_fought_and_its_triggers_are_counted() -> None:
+    library = lib()
+    ember = library.skills["skill_second_wind"]
+    outcome = check_skill(library, 3, with_battle=False, attempts=1, skill=ember)
+    assert outcome.error is None and outcome.castable and outcome.battle_ran
+    assert outcome.triggers > 0
+    text = format_report(FuzzReport(3, outcomes=[outcome], primitive_ids=(), status_ids=()))
+    assert "被動 1 個" in text and "實際觸發過 1 個" in text

@@ -43,10 +43,12 @@ from trpg.engine.events import (
     RoundStarted,
     ShieldAbsorbed,
     ShieldGained,
+    SkillTriggered,
     SkillUsed,
     StatusApplied,
     StatusConverted,
     StatusRemoved,
+    TriggerLimitReached,
     TurnStarted,
     UnitDowned,
     UnitEscaped,
@@ -128,6 +130,8 @@ class UnitMetrics(_Model):
     """這個單位身上的護盾吸收的傷害（Phase 2D-1；不計入 ``damage_taken``）。"""
     shield_provided: int = 0
     """這個單位施放的護盾所吸收的傷害（Phase 2D-2；歸給護盾最後一次施加者）。"""
+    triggers_fired: int = 0
+    """這個單位的被動觸發次數（Phase 2E-1）。"""
 
     @property
     def damage_dealt(self) -> int:
@@ -168,6 +172,8 @@ class BattleMetrics(_Model):
     boss_burst: str | None
     """``boss_burst`` 的原因（沒有時為 ``None``）。"""
     one_shot_count: int
+    trigger_limit_count: int = 0
+    """被動因觸發深度上限而沒有結算的次數（``TriggerLimitReached``；Phase 2E-1）。"""
 
     def team_damage(self, team: Team, *, direct: bool | None = None) -> int:
         """陣營造成的傷害；``direct`` 為 ``None`` 時直接＋間接。"""
@@ -300,6 +306,7 @@ class _Acc:
     provided: int = 0
     healing: int = 0
     kills: int = 0
+    triggers: int = 0
     downed: bool = False
     control: dict[str, int] = field(default_factory=dict)
 
@@ -332,6 +339,7 @@ def metrics_from_events(  # noqa: PLR0912, PLR0915 - 單一事件迴圈，拆開
     skills: dict[str, list[int]] = {}  # [使用, 擲骰, 命中, 傷害, 治療]
     skill_users: dict[str, set[str]] = {}
     chain_limit = 0
+    trigger_limit = 0
     boss_round_one_down = False
     one_shots = 0
     boss_burst_hits: list[str] = []
@@ -403,6 +411,13 @@ def metrics_from_events(  # noqa: PLR0912, PLR0915 - 單一事件迴圈，拆開
                 boss_round_one_down = True
         elif isinstance(event, ChainLimitReached):
             chain_limit += 1
+        elif isinstance(event, TriggerLimitReached):
+            trigger_limit += 1
+        elif isinstance(event, SkillTriggered):
+            current, caster = event.skill_id, event.unit_id
+            skills.setdefault(current, [0, 0, 0, 0, 0])[_USES] += 1
+            skill_users.setdefault(current, set()).add(info[event.unit_id].team.value)
+            acc[event.unit_id].triggers += 1
         elif isinstance(event, SkillUsed):
             current, caster = event.skill_id, event.unit_id
             skills.setdefault(current, [0, 0, 0, 0, 0])[_USES] += 1
@@ -478,6 +493,7 @@ def metrics_from_events(  # noqa: PLR0912, PLR0915 - 單一事件迴圈，拆開
                 damage_taken=acc[u.unit_id].taken,
                 healing_done=acc[u.unit_id].healing,
                 kills=acc[u.unit_id].kills,
+                triggers_fired=acc[u.unit_id].triggers,
                 downed=acc[u.unit_id].downed,
                 control_inflicted=dict(sorted(acc[u.unit_id].control.items())),
                 shield_absorbed=acc[u.unit_id].absorbed,
@@ -495,6 +511,7 @@ def metrics_from_events(  # noqa: PLR0912, PLR0915 - 單一事件迴圈，拆開
         chain_limit_count=chain_limit,
         boss_burst=boss_burst,
         one_shot_count=one_shots,
+        trigger_limit_count=trigger_limit,
     )
 
 

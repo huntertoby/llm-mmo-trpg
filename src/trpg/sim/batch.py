@@ -73,6 +73,7 @@ ANOMALY_KINDS: Final = (
     "chain_limit",
     "boss_burst",
     "one_shot",
+    "trigger_limit",
 )
 
 _TEAM_LABEL = {"ally": "我方", "enemy": "敵方", "environment": "環境"}
@@ -354,6 +355,10 @@ def _anomalies(outcomes: Sequence[BattleOutcome]) -> tuple[Anomaly, ...]:
             seeds["chain_limit"].append(m.seed)
             details["chain_limit"][m.seed] = f"{m.chain_limit_count} 次"
             counts["chain_limit"] += m.chain_limit_count
+        if m.trigger_limit_count:
+            seeds["trigger_limit"].append(m.seed)
+            details["trigger_limit"][m.seed] = f"{m.trigger_limit_count} 次"
+            counts["trigger_limit"] += m.trigger_limit_count
         if m.boss_burst is not None:
             seeds["boss_burst"].append(m.seed)
             details["boss_burst"][m.seed] = m.boss_burst

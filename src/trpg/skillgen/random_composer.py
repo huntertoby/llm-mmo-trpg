@@ -19,6 +19,7 @@ from pydantic import ValidationError
 from trpg.content.composer_rules import ComposerRules
 from trpg.content.library import ContentLibrary, load_library
 from trpg.content.skill_rules import SkeletonDef
+from trpg.content.skill_triggers import EVERY_N_HITS
 from trpg.content.skills import SkillDef, SkillRarity, rarity_rank
 from trpg.shared.errors import TrpgError
 from trpg.shared.rng import Rng
@@ -30,6 +31,8 @@ from trpg.skillgen.composer_parts import (
     build_condition,
     build_cost,
     build_effects,
+    build_passive_cost,
+    build_passive_effects,
     build_shape,
     choose_core,
 )
@@ -81,11 +84,19 @@ def _weighted[T](rng: Rng, items: tuple[T, ...], weights: tuple[int, ...]) -> T:
     return items[-1]  # pragma: no cover
 
 
-def _skeleton_feasible(skeleton: SkeletonDef, rarity: SkillRarity, library: ContentLibrary) -> bool:
-    """骨架在這個稀有度做得出技能：啟用、是主動技能、有可用的核心原語，要求條件時有可用條件。"""
-    if not skeleton.enabled or "active" not in skeleton.kinds:
-        return False
+def _skeleton_feasible(
+    skeleton: SkeletonDef, rarity: SkillRarity, library: ContentLibrary, *, explicit: bool = False
+) -> bool:
+    """骨架在這個稀有度做得出技能：啟用、稀有度夠、有可用的核心原語，要求條件時有可用條件。
+
+    預設只考慮主動技能；被動骨架（2E-1）只在明確指定（``explicit``）或由 :func:`_wants_passive`
+    決定時使用，所以不影響其他種子的抽選。
+    """
     rank = rarity_rank(rarity)
+    if not skeleton.enabled or rank < rarity_rank(skeleton.min_rarity):
+        return False
+    if "active" not in skeleton.kinds:
+        return explicit and skeleton.kinds == ("passive",)
     primitives = library.ruleset.primitives.by_id()
     if not any(rarity_rank(primitives[p].min_rarity) <= rank for p in skeleton.core.primitives):
         return False
@@ -110,7 +121,8 @@ def _choose_rarity_and_skeleton(
         rarities = tuple(
             r
             for r in _RARITIES
-            if skeleton is None or _skeleton_feasible(_known(library, skeleton), r, library)
+            if skeleton is None
+            or _skeleton_feasible(_known(library, skeleton), r, library, explicit=True)
         )
         if not rarities:
             raise ComposeError(f"骨架 {skeleton} 在任何稀有度都做不出技能")
@@ -120,13 +132,28 @@ def _choose_rarity_and_skeleton(
         picked = rarity
     if skeleton is not None:
         chosen = _known(library, skeleton)
-        if not _skeleton_feasible(chosen, picked, library):
-            raise ComposeError(f"骨架 {skeleton} 不能產生稀有度 {picked} 的主動技能")
+        if not _skeleton_feasible(chosen, picked, library, explicit=True):
+            raise ComposeError(f"骨架 {skeleton} 不能產生稀有度 {picked} 的技能")
         return picked, chosen
     feasible = _feasible_skeletons(picked, library)
     if not feasible:
         raise ComposeError(f"稀有度 {picked} 沒有可用的骨架")
     return picked, rng.choice(feasible)
+
+
+def _wants_passive(seed: int, rarity: SkillRarity, library: ContentLibrary) -> bool:
+    """未指定骨架時，這個種子是否改組被動：稀有度夠、骨架啟用，且（獨立亂數串流）抽中機率。
+
+    用 ``Rng(seed).fork`` 的獨立串流抽，所以沒有抽到被動的種子，得到與加入被動之前完全相同的技能。
+    """
+    skeleton = library.skeletons.get("passive")
+    if skeleton is None or not _skeleton_feasible(skeleton, rarity, library, explicit=True):
+        return False
+    return (
+        Rng(seed)
+        .fork("composer.passive")
+        .chance_permille(library.composer.passive.skeleton_permille)
+    )
 
 
 def _known(library: ContentLibrary, skeleton: str) -> SkeletonDef:
@@ -222,6 +249,55 @@ def _attempt(
     raise Retry
 
 
+def _attempt_passive(
+    rng: Rng, library: ContentLibrary, seed: int, tier: int, rarity: SkillRarity
+) -> SkillDef:
+    """被動技能的一次嘗試：觸發時機 → 作用對象 → 效果 → 代價 → 調整強度。"""
+    rules = library.composer
+    skeleton = library.skeletons["passive"]
+    timings = [
+        t
+        for t in sorted(library.ruleset.skill_triggers.triggers, key=lambda t: t.id)
+        if rarity_rank(t.min_rarity) <= rarity_rank(rarity)
+    ]
+    timing = rng.choice(timings)
+    n = rng.choice((2, 3)) if timing.id == EVERY_N_HITS else None
+    target = (
+        "other"
+        if timing.has_other and rng.chance_permille(rules.passive.other_permille)
+        else "self"
+    )
+    w = rules.spell_attr_weights
+    scaling = _weighted(rng, ("int", "wis", "wil"), (w.int_, w.wis, w.wil))
+    theme = rng.choice(_SPELL_ELEMENTS)
+    ctx = Ctx(library, rng, skeleton, rarity, tier, "spell", 1, theme)
+    ctx.shape = "self"
+    build_passive_effects(ctx, target)
+    trigger: dict[str, Any] = {"event": timing.id, "target": target, "max_per_round": 1}
+    if n is not None:
+        trigger["n"] = n
+    base: dict[str, Any] = {
+        "id": f"skill_rand_{seed}",
+        "name_zh": "暫定",
+        "tier": tier,
+        "rarity": rarity,
+        "kind": "passive",
+        "skeleton": skeleton.id,
+        "category": "spell",
+        "weapon_req": "any",
+        "ap_cost": None,
+        "scaling_attr": scaling,
+        "shape": {"type": "self"},
+        "condition": None,
+        "trigger": trigger,
+        "cost": build_passive_cost(ctx),
+        "provenance": {"origin": "level_up"},
+    }
+    if tune(rng, library, base, ctx.effects, ctx.knobs):
+        return _finish(library, seed, base, ctx)
+    raise Retry
+
+
 def _finish(library: ContentLibrary, seed: int, base: dict[str, Any], ctx: Ctx) -> SkillDef:
     """加上名稱、標籤與暫定的敘事文字。"""
     draft = SkillDef.model_validate({**base, "effects": ctx.effects})
@@ -257,18 +333,29 @@ def compose_with_stats(
     if tier_value not in lib.ruleset.core.tier_budget:
         raise ComposeError(f"沒有階級 {tier_value} 的預算")
     rarity_value, skeleton_def = _choose_rarity_and_skeleton(rng, rarity, skeleton, lib)
-    category_value = _choose_category(rng, skeleton_def, category, lib.composer)
+    passive = skeleton_def.kinds == ("passive",) or (
+        skeleton is None and _wants_passive(seed, rarity_value, lib)
+    )
+    if passive and (ap_cost is not None or category not in (None, "spell")):
+        raise ComposeError("被動技能是法術技、不花 AP：不能指定 ap_cost 或武器技")
+    category_value = (
+        "spell" if passive else _choose_category(rng, skeleton_def, category, lib.composer)
+    )
     fixed = (tier_value, rarity_value, skeleton_def, category_value)
     for attempt in range(1, MAX_ATTEMPTS + 1):
         try:
-            skill = _attempt(rng, lib, seed, fixed, ap_cost)
+            if passive:
+                skill = _attempt_passive(rng, lib, seed, tier_value, rarity_value)
+            else:
+                skill = _attempt(rng, lib, seed, fixed, ap_cost)
         except (Retry, ValidationError, BudgetError):
             continue
         if not validate_skill(skill, lib):
             return ComposeResult(skill, attempt)
     raise ComposeError(
         f"種子 {seed}：{MAX_ATTEMPTS} 次重抽都做不出合格的技能"
-        f"（階級 {tier_value}、{rarity_value}、{skeleton_def.id}、{category_value}、AP {ap_cost}）"
+        f"（階級 {tier_value}、{rarity_value}、{'passive' if passive else skeleton_def.id}、"
+        f"{category_value}、AP {ap_cost}）"
     )
 
 

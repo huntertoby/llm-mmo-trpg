@@ -65,6 +65,16 @@ cost:
   uses_per_battle_permille: 120
   uses_per_battle: {min: 1, max: 2}
 
+# 被動（Phase 2E-1，初值）：稀有度 epic 以上、未指定骨架時改組被動的機率（獨立的亂數串流，不影響其他種子）
+passive:
+  skeleton_permille: 150
+  other_permille: 600                 # 有「另一方」的時機：效果作用在另一方（其餘作用在持有者）
+  second_effect_permille: 350         # 多帶一個附帶效果
+  mana: {min: 0, max: 3}              # 法力 ＝ 亂數 ＋ (階級 − 1) × mana_per_tier
+  mana_per_tier: 1
+  cooldown_permille: 250
+  cooldown: {min: 1, max: 2}
+
 # 強度調整：比例收在 [low, high]，目標均勻分佈在 [low, high − margin]
 tuning:
   low_permille: 750

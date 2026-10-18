@@ -25,6 +25,7 @@ __all__ = [
     "DurationRules",
     "IntRange",
     "LadderRange",
+    "PassiveRules",
     "StructureRules",
     "TuningRules",
 ]
@@ -159,6 +160,26 @@ class TuningRules(ContentModel):
         return self
 
 
+class PassiveRules(ContentModel):
+    """被動技能的抽選（Phase 2E-1 3.7）。
+
+    ``skeleton_permille``：稀有度 epic 以上、未指定骨架時，改組被動的機率（用獨立的亂數串流抽，
+    所以沒有抽到被動的種子與 2D 的技能完全相同）。
+    """
+
+    skeleton_permille: int = _PERMILLE
+    other_permille: int = _PERMILLE
+    """觸發時機有另一方時，效果作用在另一方（``target: other``）的機率（其餘作用在持有者）。"""
+    second_effect_permille: int = _PERMILLE
+    """被動多帶一個附帶效果的機率。"""
+    mana: IntRange
+    """法力（階級 −1 後另加 ``mana_per_tier`` × 階級）。"""
+    mana_per_tier: int = Field(ge=0)
+    cooldown_permille: int = _PERMILLE
+    """有冷卻的機率。"""
+    cooldown: IntRange
+
+
 class ComposerRules(ContentModel):
     """``content/skill_composer.yaml``。"""
 
@@ -183,6 +204,7 @@ class ComposerRules(ContentModel):
     condition: ConditionRules
     cost: CostRules
     tuning: TuningRules
+    passive: PassiveRules
 
     @model_validator(mode="after")
     def _check(self) -> ComposerRules:

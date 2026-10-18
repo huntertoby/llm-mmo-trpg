@@ -45,6 +45,7 @@ from trpg.engine.events import (
     ShieldAbsorbed,
     ShieldGained,
     SkillCooldownChanged,
+    SkillTriggered,
     SkillUsed,
     StatusApplied,
     StatusConverted,
@@ -54,6 +55,7 @@ from trpg.engine.events import (
     SurfaceChanged,
     SurfaceEntered,
     TerrainChanged,
+    TriggerLimitReached,
     TurnEnded,
     TurnOrderSet,
     TurnSkipped,
@@ -318,6 +320,23 @@ def _skill_used_text(e: SkillUsed, name: dict[str, str]) -> str:
     return f"{name[e.unit_id]} 施放「{e.name_zh}」（{'，'.join(costs)}）→ 影響 {len(e.tiles)} 格"
 
 
+def _skill_triggered_text(e: SkillTriggered, name: dict[str, str], state: BattleState) -> str:
+    timing = state.ruleset.trigger_def(e.trigger).name_zh
+    costs = []
+    if e.mana:
+        costs.append(f"法力 {e.mana}")
+    if e.hp_spent:
+        costs.append(f"HP {e.hp_spent}")
+    if e.cooldown:
+        costs.append(f"冷卻 {e.cooldown} 回合")
+    other = f"，對象 {name[e.other_id]}" if e.other_id is not None else ""
+    cost = f"（{'，'.join(costs)}）" if costs else ""
+    return (
+        f"{name[e.unit_id]} 的被動「{e.name_zh}」觸發（{timing}，深度 {e.trigger_depth}）"
+        f"{other}{cost}"
+    )
+
+
 _REMOVE_REASONS = {
     "depleted": "護盾耗盡了",
     "cleansed": "被淨化了",
@@ -390,6 +409,13 @@ def describe_event(e: EventBase, state: BattleState) -> str | None:  # noqa: PLR
         return "  " + _attack_text(e, name, state)
     if isinstance(e, SkillUsed):
         return "  " + _skill_used_text(e, name)
+    if isinstance(e, SkillTriggered):
+        return "  ★ " + _skill_triggered_text(e, name, state)
+    if isinstance(e, TriggerLimitReached):
+        return (
+            f"  （觸發深度達到上限，{name[e.unit_id]} 的被動「{e.skill_id}」沒有觸發"
+            f"，深度 {e.depth}）"
+        )
     if isinstance(e, SkillCooldownChanged):
         if e.remaining > 0:
             return None

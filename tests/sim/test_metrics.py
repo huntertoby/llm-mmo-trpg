@@ -462,3 +462,27 @@ def test_real_battle_control_turns_never_exceed_turns_taken(map_id: str) -> None
     inflicted = sum(sum(u.control_inflicted.values()) for u in m.units)
     inflicted += sum(m.environment_control.values())
     assert inflicted <= sum(u.turns for u in m.units) * 3
+
+
+def test_triggered_passives_are_counted_and_attributed_like_a_skill_use() -> None:
+    from trpg.engine.events import SkillTriggered, TriggerLimitReached  # noqa: PLC0415
+
+    s = Stream()
+    s.turn(A1)
+    s.add(
+        SkillTriggered,
+        unit_id=A1,
+        skill_id="skill_ember_brand",
+        name_zh="餘燼烙印",
+        trigger="on_hit",
+        other_id=E1,
+        trigger_depth=1,
+    )
+    s.damage(E1, A1, 30, 22)
+    s.add(TriggerLimitReached, unit_id=A1, skill_id="skill_ember_brand", depth=4)
+    m = _metrics(s.events, None)
+    assert _unit(m, A1).triggers_fired == 1 and _unit(m, E1).triggers_fired == 0
+    assert m.trigger_limit_count == 1
+    assert m.skills["skill_ember_brand"].uses == 1
+    assert m.skills["skill_ember_brand"].damage == 8
+    assert m.skill_users["skill_ember_brand"] == ("ally",)

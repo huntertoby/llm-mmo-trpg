@@ -28,6 +28,8 @@ __all__ = [
     "build_condition",
     "build_cost",
     "build_effects",
+    "build_passive_cost",
+    "build_passive_effects",
     "build_shape",
     "choose_core",
     "dice_ladder",
@@ -259,8 +261,8 @@ def _status_effect(ctx: Ctx, *, beneficial: bool) -> None:
     candidates = _status_candidates(ctx, beneficial)
     if not candidates:
         raise Retry
-    if ctx.shape == "self" and not beneficial:
-        raise Retry  # 自身形狀不得有對敵方的效果
+    if ctx.shape == "self" and not beneficial and ctx.skeleton.id != "passive":
+        raise Retry  # 自身形狀不得有對敵方的效果（被動的 self 形狀是「作用在觸發對象」）
     status = ctx.rng.choice(candidates)
     spec: dict[str, Any] = {"type": "apply_status", "status": status.id}
     if beneficial:
@@ -541,4 +543,56 @@ def build_cost(ctx: Ctx) -> dict[str, Any]:
         cost["cooldown"] = cooldown
     if ctx.chance(rules.uses_per_battle_permille):
         cost["uses_per_battle"] = rng.randint(rules.uses_per_battle.min, rules.uses_per_battle.max)
+    return cost
+
+
+# ---------------------------------------------------------------------------
+# 被動（Phase 2E-1）
+# ---------------------------------------------------------------------------
+
+
+def _passive_options(ctx: Ctx, target: str) -> list[str]:
+    """被動的核心原語：作用在另一方（敵人）是傷害或有害狀態，作用在持有者是治療、護盾或增益。"""
+    names = ["damage", "apply_status"] if target == "other" else ["heal", "shield", "apply_status"]
+    return [
+        name
+        for name in names
+        if rarity_rank(ctx.primitive(name).min_rarity) <= ctx.rank
+        and (name != "apply_status" or _has_status(ctx, target == "self"))
+    ]
+
+
+def _passive_effect(ctx: Ctx, name: str, target: str, *, core: bool) -> None:
+    weight = ctx.rules.structure.knob_weight_core if core else ctx.rules.structure.knob_weight_other
+    if name == "damage":
+        _damage_effect(ctx, weight)
+    elif name in ("heal", "shield"):
+        _heal_effect(ctx, weight, name)
+    else:
+        _status_effect(ctx, beneficial=target == "self")
+
+
+def build_passive_effects(ctx: Ctx, target: str) -> None:
+    """被動的效果：一個核心效果，再依機率多一個不同原語的附帶效果（骨架 ``max_count: 1``）。
+
+    ``target``：``trigger.target``（``other`` 或 ``self``）；形狀固定為 ``self``。
+    """
+    options = _passive_options(ctx, target)
+    if not options:
+        raise Retry
+    first = ctx.rng.choice(options)
+    ctx.core_count = 1
+    _passive_effect(ctx, first, target, core=True)
+    rest = [name for name in options if name != first]
+    if rest and ctx.chance(ctx.rules.passive.second_effect_permille):
+        _passive_effect(ctx, ctx.rng.choice(rest), target, core=False)
+
+
+def build_passive_cost(ctx: Ctx) -> dict[str, Any]:
+    """被動的代價：法力（隨階級增加）與偶爾的冷卻。"""
+    rules = ctx.rules.passive
+    mana = ctx.rng.randint(rules.mana.min, rules.mana.max) + (ctx.tier - 1) * rules.mana_per_tier
+    cost: dict[str, Any] = {"mana": mana}
+    if ctx.chance(rules.cooldown_permille):
+        cost["cooldown"] = ctx.rng.randint(rules.cooldown.min, rules.cooldown.max)
     return cost
