@@ -6,34 +6,40 @@
 # 效果層級的 condition：對該效果的每個對象（單位，或地形類效果的格子）分別判斷，不成立的對象
 #   不受這個效果影響。效果依技能內的順序結算，判斷的是「結算到該效果當下」的狀態。
 #
-# harshness：common 常見／harsh 嚴苛，供 Phase 2B 的條件倍率使用（2A 只存不用）
+# harshness：common 常見／harsh 嚴苛，決定預算的條件倍率（2B-2：0.85／0.6）
+# min_rarity：使用此條件的最低稀有度（2B-2：條件從 rare 起才能使用）
 # params：沿用原語參數的格式（type：int／status／surface）
 conditions:
   - id: target_hp_below
     name_zh: 目標血量低於
     description_zh: 目標的目前 HP ÷ 最大 HP 低於 permille ‰。
     harshness: common
+    min_rarity: rare
     params:
       permille: {type: int, required: true, min: 1, max: 999}
   - id: self_hp_below
     name_zh: 自身血量低於
     description_zh: 施放者的目前 HP ÷ 最大 HP 低於 permille ‰。
     harshness: harsh
+    min_rarity: rare
     params:
       permille: {type: int, required: true, min: 1, max: 999}
   - id: height_advantage
     name_zh: 居高臨下
     description_zh: 施放者所在格的高度大於目標所在格的高度。
     harshness: common
+    min_rarity: rare
   - id: target_on_surface
     name_zh: 目標站在表面上
     description_zh: 目標腳下的格子是指定的表面（例如水、油、火）。
     harshness: common
+    min_rarity: rare
     params:
       surface: {type: surface, required: true}
   - id: target_has_status
     name_zh: 目標帶有狀態
     description_zh: 目標身上有指定的狀態（例如燃燒、倒地）。
     harshness: common
+    min_rarity: rare
     params:
       status: {type: status, required: true}

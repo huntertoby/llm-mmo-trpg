@@ -1,0 +1,11 @@
+id: aura
+name_zh: 光環
+description_zh: 範圍內友方（或自己）獲得治療、增益或有益表面；不得有對敵方的效果。
+kinds: [active]
+enabled: true
+shapes: [self, allies_in_radius, square3]
+core:
+  primitives: [heal, apply_status, create_surface]
+  affects: [allies, self]
+secondary: {max_count: 1}
+forbid_affects: [enemies, all]

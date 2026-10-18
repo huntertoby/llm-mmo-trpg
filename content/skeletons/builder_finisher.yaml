@@ -1,0 +1,9 @@
+# 2B 停用：需要「層數」系統（累積與消耗），之後的階段才實作。
+id: builder_finisher
+name_zh: 蓄力與終結
+description_zh: 一個技能累積層數，另一個消耗層數。
+kinds: [active]
+enabled: false
+shapes: [single, line, cone]
+core: {primitives: [damage]}
+secondary: {max_count: 1}

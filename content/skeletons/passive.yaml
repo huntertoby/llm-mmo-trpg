@@ -1,0 +1,9 @@
+# 2B 停用：需要觸發時機系統（被動的執行）。
+id: passive
+name_zh: 被動
+description_zh: 觸發時機加效果。
+kinds: [passive]
+enabled: false
+shapes: [self]
+core: {primitives: [damage, heal, apply_status]}
+secondary: {max_count: 1}

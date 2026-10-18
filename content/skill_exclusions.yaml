@@ -1,0 +1,45 @@
+# 互斥規則表（docs/phases/Phase2B計畫.md 4.4）。規則以資料表達，驗證器通用處理：
+#   when     技能符合這個比對時規則才適用（省略＝永遠適用）
+#   forbid   適用時，技能不得符合這個比對
+#   require  適用時，技能必須符合這個比對
+# 比對（SkillMatch）的欄位全部成立才算符合：shapes、has_cooldown、min_cooldown、statuses、
+# primitives_any、primitives_all、effects_any、effects_all、repeated_control_group（見
+# src/trpg/content/skill_rules.py）。
+rules:
+  - id: no_cooldown_big_area
+    name_zh: 無冷卻的大範圍
+    message_zh: 沒有冷卻的技能不得使用 square3、allies_in_radius、ring 半徑 2、cone 大小 4
+    when: {has_cooldown: false}
+    forbid:
+      shapes:
+        - {type: square3}
+        - {type: allies_in_radius}
+        - {type: ring, radius: 2}
+        - {type: cone, size: 4}
+  - id: stun_single_long_cooldown
+    name_zh: 暈眩的限制
+    message_zh: 施加 stun 的技能形狀只能是 single，且冷卻至少 4 回合
+    when: {statuses: [stun]}
+    require:
+      shapes: [{type: single}]
+      min_cooldown: 4
+  - id: no_push_with_pull
+    name_zh: 推拉不並存
+    message_zh: 同一技能不得同時有 push 與 pull
+    forbid: {primitives_all: [push, pull]}
+  - id: self_shape_no_enemy_effect
+    name_zh: 自身形狀不打敵人
+    message_zh: self 形狀不得有對象為 enemies 的效果
+    when: {shapes: [{type: self}]}
+    forbid: {effects_any: [{affects: [enemies]}]}
+  - id: no_damage_with_ally_heal
+    name_zh: 傷害與友方治療不並存
+    message_zh: 同一技能不得同時有對敵方的 damage 與對友方的 heal（屬於不同骨架）
+    forbid:
+      effects_all:
+        - {type: damage, affects: [enemies]}
+        - {type: heal, affects: [allies, self]}
+  - id: no_repeated_control_group
+    name_zh: 同類控制不重複
+    message_zh: 同一技能不得施加兩個相同 control_group 的狀態
+    forbid: {repeated_control_group: true}

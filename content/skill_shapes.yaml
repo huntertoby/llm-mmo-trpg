@@ -8,57 +8,79 @@
 #   direction   direction（north／east／south／west）
 # params：形狀的整數參數與範圍（min～max）；allow_weapon 表示可寫 "weapon"（武器射程）。
 # 「射程」一律為曼哈頓距離；被選中的格子或單位必須在施放者的視線內。
+# min_rarity：使用此形狀的最低稀有度（2B-2）。
+# budget：預算的形狀倍率（‰）。base_permille 為基礎值；param ＋ per_unit_permille 為每單位參數加成；
+#   by_value_permille 為依參數值查表（優先於前兩者，必須涵蓋參數的整個範圍）。
+#   只套用在對象為 enemies／allies／all／tiles 的效果（affects: self 與 teleport 一律 1.0）。
 shapes:
   - id: self
     name_zh: 自身
     description_zh: 只影響施放者所在的格子。
     targeting: self
+    min_rarity: common
+    budget: {base_permille: 1000}
   - id: single
     name_zh: 單體
     description_zh: 選取射程內看得到的一個單位或可被攻擊的物件。
     targeting: unit
+    min_rarity: common
+    budget: {base_permille: 1000}
     params:
       range: {min: 1, max: 10, allow_weapon: true}
   - id: line
     name_zh: 直線
     description_zh: 選一個方向，影響正前方 size 格；遇到牆壁停在它之前，遇到阻擋視線的物件則包含該格後停止。
     targeting: direction
+    min_rarity: common
+    budget: {base_permille: 800, param: size, per_unit_permille: 200}
     params:
       size: {min: 2, max: 6}
   - id: cone
     name_zh: 錐形
     description_zh: 選一個方向，第 k 排為正前方第 k 格及其左右各 k−1 格，只含施放者看得到的格子。
     targeting: direction
+    min_rarity: common
+    budget: {param: size, by_value_permille: {2: 1300, 3: 1600, 4: 2000}}
     params:
       size: {min: 2, max: 4}
   - id: cross
     name_zh: 十字
     description_zh: 選射程內的一個中心格（0 為施放者自己），影響中心與四方向相鄰格。
     targeting: tile
+    min_rarity: rare
+    budget: {base_permille: 1800}
     params:
       range: {min: 0, max: 6}
   - id: square3
     name_zh: 方陣
     description_zh: 選射程內的一個中心格，影響以中心為準的 3×3。
     targeting: tile
+    min_rarity: rare
+    budget: {base_permille: 2000}
     params:
       range: {min: 0, max: 6}
   - id: ring
     name_zh: 環形
     description_zh: 影響與施放者切比雪夫距離恰為 radius 的格子，不需要選取。
     targeting: none
+    min_rarity: common
+    budget: {param: radius, by_value_permille: {1: 1800, 2: 2200}}
     params:
       radius: {min: 1, max: 2}
   - id: ground_tile
     name_zh: 指定格
     description_zh: 選射程內的一格，只影響該格。
     targeting: tile
+    min_rarity: rare
+    budget: {base_permille: 1000}
     params:
       range: {min: 1, max: 6}
   - id: chain
     name_zh: 連鎖
     description_zh: 選第一個目標，之後每跳選距上一個目標 jump_range 格內、看得到、尚未被擊中的最近同陣營單位（同距離依單位 ID），最多 jumps 跳。
     targeting: unit
+    min_rarity: rare
+    budget: {base_permille: 1000, param: jumps, per_unit_permille: 250}
     params:
       range: {min: 1, max: 6}
       jumps: {min: 1, max: 3}
@@ -67,5 +89,7 @@ shapes:
     name_zh: 範圍光環
     description_zh: 影響與施放者曼哈頓距離不超過 radius 的格子（含自己），不需要選取。
     targeting: none
+    min_rarity: common
+    budget: {base_permille: 1000, param: radius, per_unit_permille: 400}
     params:
       radius: {min: 1, max: 3}

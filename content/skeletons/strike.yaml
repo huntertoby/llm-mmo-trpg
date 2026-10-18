@@ -1,0 +1,13 @@
+# 技能骨架（docs/design/06-技能.md 6.9、docs/phases/Phase2B計畫.md 4.5）。
+# core：核心效果（primitives 之一；affects 限制對象；min_share_permille＝核心效果點數占全部效果點數的下限）
+# secondary：附帶效果（不是核心的效果）——primitives 允許的原語（省略＝不限）、harmful_only、max_count、
+#            max_share_permille（個別原語占全部效果點數的上限）
+# forbid_affects：不得有對這些對象的效果；requires_condition：技能或效果必須有條件
+id: strike
+name_zh: 打擊
+description_zh: 單體傷害，搭配 0–1 個附帶效果（例如擊倒、流血）。
+kinds: [active]
+enabled: true
+shapes: [single]
+core: {primitives: [damage], min_share_permille: 600}
+secondary: {harmful_only: true, max_count: 1}

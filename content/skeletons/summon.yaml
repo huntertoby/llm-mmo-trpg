@@ -1,0 +1,9 @@
+# 2B 停用：需要召喚物系統（summon 原語尚未實作）。
+id: summon
+name_zh: 召喚
+description_zh: 召喚物與持續時間。
+kinds: [active]
+enabled: false
+shapes: [ground_tile]
+core: {primitives: [summon]}
+secondary: {max_count: 1}

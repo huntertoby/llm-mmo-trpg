@@ -1,0 +1,13 @@
+# 協同係數（docs/phases/Phase2B計畫.md 4.2）。依「機制標籤」查表；標籤由驗證器從技能內容推導，不由人填寫：
+#   damage  有 damage            heal     有 heal
+#   area    形狀不是 self／single／ground_tile
+#   displace 有 push／pull／teleport／knock_prone
+#   control 施加帶 control_group 的狀態
+#   debuff  施加降低攻擊傷害或提高受傷的狀態（weaken、vulnerable）
+#   dot     施加有回合開始傷害的狀態（burning、bleed、poison）或產生有持續傷害的表面
+#   surface 有 create_surface    terrain  有 create_obstacle／destroy_object／地形升降
+# 技能同時帶有一條規則的全部標籤時乘上該係數；符合多條時全部相乘。
+synergies:
+  - {tags: [area, control], coefficient_permille: 1200}
+  - {tags: [damage, debuff], coefficient_permille: 1150}
+  - {tags: [area, displace], coefficient_permille: 1100}

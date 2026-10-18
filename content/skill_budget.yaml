@@ -1,0 +1,39 @@
+# 技能預算的規則數值（docs/phases/Phase2B計畫.md 4.2–4.3、4.6）。‰＝千分比（1000 = ×1）。
+# 階級預算 tier_budget 與武器基準傷害 budget_reference_weapon_damage 在 rules/core.yaml；
+# 基礎點數在 skill_primitives.yaml、狀態與表面的 budget_points 在 statuses.yaml／surfaces.yaml、
+# 形狀倍率在 skill_shapes.yaml、協同係數在 skill_synergies.yaml。
+#
+#   可用預算 ＝ tier_budget[階級] × AP 係數 × (1000 ＋ 代價折抵) ÷ 1000
+#   合格     ＝ min_ratio ≤ total ÷ 可用預算 ≤ max_ratio
+min_ratio_permille: 700      # 過弱下限（0.7）
+max_ratio_permille: 1000     # 超預算上限（1.0）
+
+ap_coefficient_permille: {1: 500, 2: 1000, 3: 1600}   # 主動技能依 ap_cost
+reaction_coefficient_permille: 600                     # 反應技（只計算，不生成）
+
+# 條件倍率：none 無條件、common／harsh 依 skill_conditions.yaml 的 harshness。
+# 技能層級的條件乘在 total，效果層級的條件只乘該效果。
+condition_permille: {none: 1000, common: 850, harsh: 600}
+all_target_permille: 800    # affects: all（敵我不分）的對象係數
+
+# 代價折抵（‰，加總後乘上去）
+allowance:
+  cooldown_per_turn: 50     # 冷卻每回合
+  cooldown_cap: 300
+  uses_per_battle: {1: 400, 2: 250}
+  uses_default: 100         # 每場 3 次以上
+  mana_per_point: 5         # 法力每點
+  mana_cap: 150
+  hp_per_permille: 1        # hp_percent 每 1‰
+  hp_cap: 200
+
+# 稀有度的結構上限（其餘限制由各資料檔的 min_rarity 決定）
+rarity:
+  common: {max_effects: 2}
+  rare: {max_effects: 4}
+  epic: {max_effects: 4}
+  legendary: {max_effects: 4}
+
+# 改寫規則型原語（目前沒有此類原語）
+max_rule_rewrite: 1           # 每個技能最多 1 個
+rule_rewrite_min_cooldown: 4  # 必須 uses_per_battle: 1 或冷卻至少這麼多回合

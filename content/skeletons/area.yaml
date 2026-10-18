@@ -1,0 +1,10 @@
+id: area
+name_zh: 範圍
+description_zh: 形狀傷害，搭配表面或狀態等附帶效果。
+kinds: [active]
+enabled: true
+shapes: [line, cone, cross, square3, ring, chain]
+core: {primitives: [damage], min_share_permille: 500}
+secondary:
+  primitives: [create_surface, apply_status, push, knock_prone, destroy_object]
+  max_count: 2

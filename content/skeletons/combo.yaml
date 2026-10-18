@@ -1,0 +1,9 @@
+id: combo
+name_zh: 連段
+description_zh: 以條件觸發的傷害（本回合或目標狀態等）；技能或效果必須有條件。
+kinds: [active]
+enabled: true
+shapes: [single, line, cone, chain]
+core: {primitives: [damage], min_share_permille: 500}
+secondary: {max_count: 1}
+requires_condition: true

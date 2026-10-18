@@ -1,0 +1,12 @@
+id: control
+name_zh: 控場
+description_zh: 狀態、表面、障礙或地形為主，傷害為輔。
+kinds: [active]
+enabled: true
+shapes: [self, single, line, cone, cross, square3, ring, ground_tile, chain, allies_in_radius]
+core:
+  primitives: [apply_status, create_surface, create_obstacle, raise_terrain, lower_terrain]
+secondary:
+  primitives: [damage]
+  max_count: 1
+  max_share_permille: {damage: 400}

@@ -34,6 +34,7 @@ from trpg.shared.types import Attribute, Element, Surface
 
 __all__ = [
     "AFFECTS_VALUES",
+    "RARITY_ORDER",
     "REQUIRED_CONDITIONS",
     "REQUIRED_SHAPES",
     "SKELETON_IDS",
@@ -50,6 +51,7 @@ __all__ = [
     "PrimitiveParam",
     "PrimitiveTable",
     "Provenance",
+    "ShapeBudget",
     "ShapeDef",
     "ShapeSpec",
     "ShapeTable",
@@ -58,6 +60,7 @@ __all__ = [
     "SkillTable",
     "condition_text",
     "default_affects",
+    "rarity_rank",
     "skill_problems",
     "skill_slot_problems",
     "weapon_problem",
@@ -116,6 +119,15 @@ type Origin = Literal["builtin", "level_up", "drop", "crafted", "taught", "tome"
 
 AFFECTS_VALUES: tuple[str, ...] = ("enemies", "allies", "all", "self", "tiles")
 
+RARITY_ORDER: tuple[str, ...] = ("common", "rare", "epic", "legendary")
+"""稀有度由低到高。"""
+
+
+def rarity_rank(rarity: str) -> int:
+    """稀有度的高低（普通 0 … 傳說 3）。"""
+    return RARITY_ORDER.index(rarity)
+
+
 _MAX_EFFECTS = 4
 _MAX_DISPLACE = 2
 _MAX_COOLDOWN = 6
@@ -150,11 +162,44 @@ class ParamDef(ContentModel):
         return self
 
 
+class ShapeBudget(ContentModel):
+    """形狀倍率（‰，``docs/phases/Phase2B計畫.md`` 4.2）。
+
+    倍率 ＝ ``by_value_permille[參數值]``（有表格時），否則 ``base_permille ＋ per_unit_permille ×
+    參數值``（``param`` 為 ``None`` 時只有 ``base_permille``）。
+    """
+
+    base_permille: int = Field(default=1000, ge=1)
+    param: str | None = None
+    per_unit_permille: int = Field(default=0, ge=0)
+    by_value_permille: dict[int, int] | None = None
+
+    @model_validator(mode="after")
+    def _check(self) -> ShapeBudget:
+        if self.param is None and (self.per_unit_permille or self.by_value_permille):
+            raise ValueError("設定 per_unit_permille 或 by_value_permille 時必須指定 param")
+        if self.by_value_permille is not None and not self.by_value_permille:
+            raise ValueError("by_value_permille 不可為空")
+        return self
+
+    def permille_for(self, values: dict[str, int | str]) -> int:
+        """``values`` 是技能形狀已填的參數；表格缺少該值時回傳 ``base_permille``。"""
+        if self.param is None:
+            return self.base_permille
+        raw = values.get(self.param)
+        value = raw if isinstance(raw, int) else 0
+        if self.by_value_permille is not None:
+            return self.by_value_permille.get(value, self.base_permille)
+        return self.base_permille + self.per_unit_permille * value
+
+
 class ShapeDef(ContentModel):
     """一種目標形狀。``targeting`` 決定 ``UseSkill`` 需要哪個欄位：
 
     ``unit``＝``target_id`` 或 ``target_object_id``、``tile``＝``target_pos``、
     ``direction``＝``direction``、``self``／``none``＝不需要。
+
+    ``min_rarity``：使用此形狀的最低稀有度；``budget``：預算的形狀倍率（2B-2）。
     """
 
     id: str = Field(pattern=ID_PATTERN)
@@ -162,6 +207,23 @@ class ShapeDef(ContentModel):
     description_zh: str = Field(min_length=1)
     targeting: Targeting
     params: dict[str, ParamDef] = Field(default_factory=dict)
+    min_rarity: SkillRarity = "common"
+    budget: ShapeBudget = Field(default_factory=ShapeBudget)
+
+    @model_validator(mode="after")
+    def _check_budget(self) -> ShapeDef:
+        param = self.budget.param
+        if param is None:
+            return self
+        spec = self.params.get(param)
+        if spec is None:
+            raise ValueError(f"形狀 {self.id}：budget.param {param!r} 不是這個形狀的參數")
+        table = self.budget.by_value_permille
+        if table is not None:
+            missing = [v for v in range(spec.min, spec.max + 1) if v not in table]
+            if missing:
+                raise ValueError(f"形狀 {self.id}：by_value_permille 缺少參數值 {missing}")
+        return self
 
     def summary(self) -> str:
         return self.name_zh
@@ -219,7 +281,11 @@ class PrimitiveDef(ContentModel):
     - ``acts_on``：``unit``（對單位）、``tile``（對格子；預設 ``affects: tiles``）、
       ``caster``（只對施放者；``affects`` 一律為 ``self``）。
     - ``allowed_shapes``：只能搭配這些形狀（``None`` 為不限）。
-    - ``base_points``：預算點數，**2B 才使用**，資料檔不要填。
+    - ``budget_basis``／``base_points``：預算點數的算法（``docs/phases/Phase2B計畫.md`` 4.2）：
+      ``fixed`` 固定 ``base_points``、``per_distance`` ``base_points × distance``、
+      ``dice_average`` 骰子平均值、``damage`` 法術為骰子平均值而武器為倍率 × 基準武器傷害、
+      ``status``／``surface`` 為該狀態或表面的 ``budget_points`` × 持續 ÷ 預設持續。
+      ``None`` 表示無法計算預算（驗證器會拒絕）。
     """
 
     id: str = Field(pattern=ID_PATTERN)
@@ -231,7 +297,16 @@ class PrimitiveDef(ContentModel):
     acts_on: Literal["unit", "tile", "caster"] = "unit"
     allowed_shapes: tuple[str, ...] | None = None
     params: dict[str, PrimitiveParam] = Field(default_factory=dict)
-    base_points: int | None = None
+    budget_basis: (
+        Literal["fixed", "per_distance", "dice_average", "damage", "status", "surface"] | None
+    ) = None
+    base_points: int | None = Field(default=None, ge=0)
+
+    @model_validator(mode="after")
+    def _check_budget(self) -> PrimitiveDef:
+        if self.budget_basis in ("fixed", "per_distance") and self.base_points is None:
+            raise ValueError(f"原語 {self.id}：budget_basis {self.budget_basis} 必須填 base_points")
+        return self
 
     def summary(self) -> str:
         return self.name_zh
@@ -272,7 +347,8 @@ def default_affects(primitive: PrimitiveDef) -> Affects:
 class ConditionDef(ContentModel):
     """一種條件（``content/skill_conditions.yaml``）。
 
-    ``harshness``：``common`` 常見／``harsh`` 嚴苛，供 Phase 2B 的條件倍率使用（2A 只存不用）。
+    ``harshness``：``common`` 常見／``harsh`` 嚴苛，決定預算的條件倍率（2B-2）。
+    ``min_rarity``：使用此條件的最低稀有度。
     ``params`` 沿用原語參數的格式（``int``／``status``／``surface``）。
     """
 
@@ -280,6 +356,7 @@ class ConditionDef(ContentModel):
     name_zh: str = Field(min_length=1)
     description_zh: str = Field(min_length=1)
     harshness: Literal["common", "harsh"]
+    min_rarity: SkillRarity = "common"
     params: dict[str, PrimitiveParam] = Field(default_factory=dict)
 
     def summary(self) -> str:

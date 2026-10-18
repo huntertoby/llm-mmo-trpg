@@ -224,6 +224,8 @@ class SurfaceDef(ContentModel):
     - ``element``：表面本身帶的元素（例如 fire 表面 = 火焰）；產生此表面時，格上物件會被該元素觸及。
     - ``flammable``：環境回合火表面會蔓延到這種表面（例如 oil）。
     - ``blocks_sight``：視線穿越時被阻擋（兩端除外）；``conceal``：站在上面的單位獲得隱蔽。
+    - ``budget_points``：技能產生此表面（預設持續時間）的預算點數（2B-2）；
+      ``None`` 表示不能由技能產生。
     """
 
     id: Surface
@@ -237,6 +239,7 @@ class SurfaceDef(ContentModel):
     conceal: bool = False
     on_enter: SurfaceEnter | None = None
     on_turn_start: SurfaceTurnStart | None = None
+    budget_points: int | None = Field(default=None, ge=0)
 
     @field_validator("glyph")
     @classmethod

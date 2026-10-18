@@ -21,6 +21,7 @@ from trpg.content.environment import (
 from trpg.content.loader import default_content_dir, load_content_file
 from trpg.content.rules import CoreRules, HitTable
 from trpg.content.schemas import ContentModel, ElementTable
+from trpg.content.skill_rules import BudgetRules, ExclusionTable, SynergyTable
 from trpg.content.skills import ConditionTable, PrimitiveTable, ShapeTable
 
 __all__ = ["KNOWN_CONTENT_FILES", "ContentFile", "load_all_content"]
@@ -50,6 +51,9 @@ KNOWN_CONTENT_FILES: tuple[ContentFile, ...] = (
     ContentFile("skill_shapes.yaml", ShapeTable),
     ContentFile("skill_primitives.yaml", PrimitiveTable),
     ContentFile("skill_conditions.yaml", ConditionTable),
+    ContentFile("skill_budget.yaml", BudgetRules),
+    ContentFile("skill_synergies.yaml", SynergyTable),
+    ContentFile("skill_exclusions.yaml", ExclusionTable),
 )
 """單一資料檔。資料夾（``units/``、``maps/``、``skills/``）與跨檔案檢查由
 :func:`trpg.content.library.load_library` 負責。"""

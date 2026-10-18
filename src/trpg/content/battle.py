@@ -197,6 +197,11 @@ class StatusDef(ContentModel):
     - ``healing_received_permille``：受到的治療倍率（中毒 500）。
     - ``save_attr``：由技能或動作施加時，守方抵抗用的屬性（省略表示命中即施加）。
     - ``control_group``：控制類別（``movement``、``hard``），成功施加後觸發控制遞減。
+
+    Phase 2B-2 的預算欄位：
+
+    - ``budget_points``：技能施加此狀態（預設持續時間）的預算點數；``None`` 表示不能由技能施加。
+    - ``min_rarity``：技能使用此狀態的最低稀有度。
     """
 
     id: str = Field(pattern=ID_PATTERN)
@@ -214,6 +219,8 @@ class StatusDef(ContentModel):
     healing_received_permille: int = Field(default=1000, ge=0, le=10000)
     save_attr: Attribute | None = None
     control_group: Literal["movement", "hard"] | None = None
+    budget_points: int | None = Field(default=None, ge=0)
+    min_rarity: Literal["common", "rare", "epic", "legendary"] = "common"
 
     @model_validator(mode="after")
     def _check(self) -> StatusDef:

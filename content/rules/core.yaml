@@ -71,5 +71,9 @@ control_dr_rounds: 2                   # 控制遞減：成功施加後，同類
 control_dr_resist_permille: 1500       # 遞減期間，同類別的抵抗判定中守方屬性 ×150%
 boss_control_conversion: {stun: slow}  # Boss 的硬控（control_group: hard）轉換對照
 
+# --- 技能預算（Phase 2B-2，docs/phases/Phase2B計畫.md 4.2；其餘預算數值在 skill_budget.yaml）---
+tier_budget: {1: 14, 2: 15, 3: 19, 4: 24, 5: 30}   # 各階級的基礎預算點數（T1、T2 由 scripts/calibrate_tier_budget.py 校準；T3–T5 外推，見 Phase2B-2報告）
+budget_reference_weapon_damage: 7      # 武器技的預算基準：倍率 100% ＝ 7 點
+
 # --- 效果佇列 ---
 max_chain_depth: 3            # 連鎖深度上限

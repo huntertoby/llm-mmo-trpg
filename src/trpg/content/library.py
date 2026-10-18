@@ -37,7 +37,15 @@ from trpg.content.loader import default_content_dir, load_content_file
 from trpg.content.maps import MapDef, SpawnUnitsEvent, check_map
 from trpg.content.rules import CoreRules, HitTable
 from trpg.content.schemas import ContentModel, ElementTable
+from trpg.content.skill_rules import (
+    BudgetRules,
+    ExclusionTable,
+    SkeletonDef,
+    SkillMatch,
+    SynergyTable,
+)
 from trpg.content.skills import (
+    SKELETON_IDS,
     ConditionDef,
     ConditionTable,
     PrimitiveDef,
@@ -200,6 +208,10 @@ class ContentLibrary:
     maps: dict[str, MapDef]
     weather: dict[str, WeatherDef]
     ai_profiles: AiProfileTable
+    budget: BudgetRules
+    synergies: SynergyTable
+    exclusions: ExclusionTable
+    skeletons: dict[str, SkeletonDef]
     files: list[tuple[Path, ContentModel]] = field(default_factory=list)
 
     def unit(self, template_id: str) -> UnitTemplate:
@@ -269,6 +281,10 @@ def load_library(content_dir: Path | None = None) -> ContentLibrary:
     shapes = load("skill_shapes.yaml", ShapeTable)
     primitives = load("skill_primitives.yaml", PrimitiveTable)
     conditions = load("skill_conditions.yaml", ConditionTable)
+    budget = load("skill_budget.yaml", BudgetRules)
+    synergies = load("skill_synergies.yaml", SynergyTable)
+    exclusions = load("skill_exclusions.yaml", ExclusionTable)
+    skeletons = _load_dir(root / "skeletons", SkeletonDef, files)
     skills = _load_dir(root / "skills", SkillDef, files)
     try:
         ruleset = Ruleset(
@@ -289,6 +305,7 @@ def load_library(content_dir: Path | None = None) -> ContentLibrary:
         raise ContentError(root / "rules", str(exc)) from exc
 
     _check_skills(root, skills, ruleset)
+    _check_skill_rules(root, ruleset, exclusions, skeletons)
     unknown_values = sorted(set(ai_profiles.status_values) - {s.id for s in statuses.statuses})
     if unknown_values:
         raise ContentError(
@@ -320,6 +337,10 @@ def load_library(content_dir: Path | None = None) -> ContentLibrary:
         maps=maps,
         weather=weather_map,
         ai_profiles=ai_profiles,
+        budget=budget,
+        synergies=synergies,
+        exclusions=exclusions,
+        skeletons=skeletons,
         files=files,
     )
 
@@ -342,6 +363,53 @@ def _check_skills(root: Path, skills: dict[str, SkillDef], ruleset: Ruleset) -> 
         )
         if problems:
             raise ContentError(root / "skills" / f"{skill_id}.yaml", "；".join(problems))
+
+
+def _match_problems(match: SkillMatch | None, ruleset: Ruleset) -> list[str]:
+    """互斥規則的比對引用的形狀、狀態、原語是否存在。"""
+    if match is None:
+        return []
+    shape_ids, primitive_ids = set(ruleset.shapes.by_id()), set(ruleset.primitives.by_id())
+    status_ids = {s.id for s in ruleset.statuses.statuses}
+    problems = [f"未知的形狀 {p.type!r}" for p in match.shapes or () if p.type not in shape_ids]
+    problems += [f"未知的狀態 {s!r}" for s in match.statuses or () if s not in status_ids]
+    refs = [*(match.primitives_any or ()), *(match.primitives_all or ())]
+    refs += [e.type for e in [*(match.effects_any or ()), *(match.effects_all or ())] if e.type]
+    problems += [f"未知的原語 {r!r}" for r in refs if r not in primitive_ids]
+    return problems
+
+
+def _check_skill_rules(
+    root: Path,
+    ruleset: Ruleset,
+    exclusions: ExclusionTable,
+    skeletons: dict[str, SkeletonDef],
+) -> None:
+    """互斥規則與骨架引用的形狀、狀態、原語都存在；12 種骨架各一個資料檔。"""
+    path = root / "skill_exclusions.yaml"
+    for rule in exclusions.rules:
+        found = [
+            *_match_problems(rule.when, ruleset),
+            *_match_problems(rule.forbid, ruleset),
+            *_match_problems(rule.require, ruleset),
+        ]
+        if found:
+            raise ContentError(path, f"互斥規則 {rule.id}：" + "；".join(found))
+    missing = [i for i in SKELETON_IDS if i not in skeletons]
+    if missing:
+        raise ContentError(root / "skeletons", f"缺少骨架資料檔：{', '.join(missing)}")
+    shape_ids, primitive_ids = set(ruleset.shapes.by_id()), set(ruleset.primitives.by_id())
+    for skeleton_id, skeleton in skeletons.items():
+        where = root / "skeletons" / f"{skeleton_id}.yaml"
+        unknown = [s for s in skeleton.shapes if s not in shape_ids]
+        if unknown:
+            raise ContentError(where, f"未知的形狀：{', '.join(unknown)}")
+        if not skeleton.enabled:
+            continue  # 停用的骨架可以引用尚未實作的原語
+        used = [*skeleton.core.primitives, *(skeleton.secondary.primitives or ())]
+        unknown = [p for p in used if p not in primitive_ids]
+        if unknown:
+            raise ContentError(where, f"未知的原語：{', '.join(unknown)}")
 
 
 def _check_units(

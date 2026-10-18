@@ -118,8 +118,23 @@ class CoreRules(ContentModel):
     boss_control_conversion: dict[str, str]
     """帶 ``boss`` 標籤的單位被施加 ``control_group: hard`` 的狀態時，改為施加對照表中的狀態。"""
 
+    # 技能預算（2B-2）
+    tier_budget: dict[int, int]
+    """各階級（1–5）的基礎預算點數，必須嚴格遞增。"""
+    budget_reference_weapon_damage: int = Field(ge=1)
+    """武器技的預算基準：倍率 100% ＝ 這麼多點。"""
+
     # 效果佇列
     max_chain_depth: int = Field(ge=0)
+
+    @model_validator(mode="after")
+    def _check_tier_budget(self) -> CoreRules:
+        if sorted(self.tier_budget) != [1, 2, 3, 4, 5]:
+            raise ValueError("tier_budget 必須剛好有階級 1 到 5")
+        values = [self.tier_budget[t] for t in range(1, 6)]
+        if any(a >= b for a, b in itertools.pairwise(values)) or values[0] < 1:
+            raise ValueError(f"tier_budget 必須是隨階級嚴格遞增的正整數，收到 {values}")
+        return self
 
     def summary(self) -> str:
         return f"每回合 {self.ap_per_turn} AP、命中門檻 {self.hit_target}"

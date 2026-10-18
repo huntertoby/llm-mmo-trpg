@@ -1,0 +1,9 @@
+# 2B 停用：需要觸發時機系統（反應技的執行）。
+id: reaction
+name_zh: 反應技
+description_zh: 以反應而非 AP 觸發。
+kinds: [reaction]
+enabled: false
+shapes: [self, single]
+core: {primitives: [damage, apply_status, push, pull]}
+secondary: {max_count: 1}

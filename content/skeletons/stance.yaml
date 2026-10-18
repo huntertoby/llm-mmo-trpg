@@ -1,0 +1,9 @@
+# 2B 停用：需要姿態切換系統。
+id: stance
+name_zh: 姿態
+description_zh: 切換狀態，持續到取消。
+kinds: [stance]
+enabled: false
+shapes: [self]
+core: {primitives: [apply_status]}
+secondary: {max_count: 1}

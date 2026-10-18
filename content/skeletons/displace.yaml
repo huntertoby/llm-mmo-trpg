@@ -1,0 +1,11 @@
+id: displace
+name_zh: 位移
+description_zh: 以位移為核心（推、拉、傳送、擊倒），傷害與其他附帶效果為輔。
+kinds: [active]
+enabled: true
+shapes: [single, ground_tile, line, cone]
+core: {primitives: [push, pull, teleport, knock_prone]}
+secondary:
+  primitives: [damage, apply_status, create_surface]
+  max_count: 2
+  max_share_permille: {damage: 500}

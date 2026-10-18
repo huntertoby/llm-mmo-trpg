@@ -1,8 +1,11 @@
 # 技能的效果原語（docs/phases/Phase2A計畫.md 3.4）。Phase 2A 支援 12 個 ID（11 種）。
-# 不放預算點數（Phase 2B 才加；schema 已預留 base_points）。
 #
 # category：numeric 數值型／structural 結構型／rule_rewrite 改寫規則型（2A 沒有）
-# min_rarity：使用此原語的最低稀有度（2A 只存不用）
+# min_rarity：使用此原語的最低稀有度（2B-2 起由驗證器檢查：數值型 common、結構型 rare）
+# budget_basis／base_points：預算點數的算法（docs/phases/Phase2B計畫.md 4.2）
+#   fixed 固定 base_points／per_distance base_points × 距離／dice_average 骰子平均值／
+#   damage 法術為骰子平均值、武器為倍率 × core.yaml 的 budget_reference_weapon_damage／
+#   status、surface 為該狀態或表面的 budget_points × 持續 ÷ 預設持續
 # harmful：有害。省略 affects 時的預設：地形類 tiles、施放者專屬 self、有害 enemies、有益 allies
 # acts_on：unit（對單位）／tile（對格子；affects 為單位類別時作用在這些單位腳下的格子）／caster
 # allowed_shapes：只能搭配這些形狀
@@ -13,6 +16,7 @@ primitives:
     description_zh: 法術技：骰值＋縮放屬性×0.5；武器技：（武器骰＋固定值＋縮放屬性×0.3）×倍率。同時傷害影響格中的可破壞物件。
     category: numeric
     harmful: true
+    budget_basis: damage
     params:
       dice: {type: dice, required: true, description_zh: 法術技必填；武器技不可填（用武器骰）}
       multiplier_permille: {type: int, min: 1, max: 10000, description_zh: 武器技的倍率（‰），預設 1000}
@@ -22,6 +26,7 @@ primitives:
     description_zh: 治療量＝骰值＋縮放屬性×0.5，不超過最大 HP。
     category: numeric
     harmful: false
+    budget_basis: dice_average
     params:
       dice: {type: dice, required: true}
   - id: push
@@ -29,6 +34,9 @@ primitives:
     description_zh: 以施放者（中心格型為中心）為原點往外推；被擋住時停在擋住前的格子，steadfast 減半。
     category: structural
     harmful: true
+    min_rarity: rare
+    budget_basis: per_distance
+    base_points: 2
     params:
       distance: {type: int, required: true, min: 1, max: 2}
   - id: pull
@@ -36,6 +44,9 @@ primitives:
     description_zh: 往施放者（中心格型為中心）的方向拉，規則同推擊。
     category: structural
     harmful: true
+    min_rarity: rare
+    budget_basis: per_distance
+    base_points: 2
     params:
       distance: {type: int, required: true, min: 1, max: 2}
   - id: knock_prone
@@ -43,11 +54,17 @@ primitives:
     description_zh: 對抗判定（技能的縮放屬性 vs 目標同屬性），成功才倒地。
     category: structural
     harmful: true
+    min_rarity: rare
+    budget_basis: fixed
+    base_points: 3
   - id: teleport
     name_zh: 傳送
     description_zh: 施放者移動到目標格（必須可站立且沒有單位）；不觸發藉機攻擊。
     category: structural
     harmful: false
+    min_rarity: rare
+    budget_basis: fixed
+    base_points: 4
     acts_on: caster
     allowed_shapes: [ground_tile]
   - id: apply_status
@@ -55,6 +72,7 @@ primitives:
     description_zh: 施加 statuses.yaml 中的狀態，重複施加時刷新持續時間。
     category: numeric
     harmful: true
+    budget_basis: status
     params:
       status: {type: status, required: true}
       duration: {type: int, min: 1, max: 10}
@@ -63,6 +81,8 @@ primitives:
     description_zh: 在影響格產生表面（先查互動表，例如水熄滅火）；表面記錄施放者陣營。
     category: structural
     harmful: false
+    min_rarity: rare
+    budget_basis: surface
     acts_on: tile
     params:
       surface: {type: surface, required: true}
@@ -72,12 +92,18 @@ primitives:
     description_zh: 摧毀影響格中的可破壞物件。
     category: structural
     harmful: false
+    min_rarity: rare
+    budget_basis: fixed
+    base_points: 2
     acts_on: tile
   - id: create_obstacle
     name_zh: 產生障礙
     description_zh: 在影響格中的空格產生物件。
     category: structural
     harmful: false
+    min_rarity: rare
+    budget_basis: fixed
+    base_points: 3
     acts_on: tile
     params:
       object: {type: object, required: true}
@@ -86,6 +112,9 @@ primitives:
     description_zh: 影響格的高度 +1（上限 3），站在上面的單位跟著升高。
     category: structural
     harmful: false
+    min_rarity: rare
+    budget_basis: fixed
+    base_points: 2
     acts_on: tile
     params:
       amount: {type: int, min: 1, max: 1}
@@ -94,6 +123,9 @@ primitives:
     description_zh: 影響格的高度 −1（下限 0），站在上面的單位跟著下降（落差達門檻時墜落）。
     category: structural
     harmful: false
+    min_rarity: rare
+    budget_basis: fixed
+    base_points: 2
     acts_on: tile
     params:
       amount: {type: int, min: 1, max: 1}

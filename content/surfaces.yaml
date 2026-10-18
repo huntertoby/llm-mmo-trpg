@@ -4,18 +4,22 @@
 #       element（表面本身帶的元素：產生時格上物件會被觸及）、flammable（火勢會蔓延過來）、
 #       blocks_sight（阻擋穿越的視線）、conceal（站在上面的單位隱蔽）、
 #       on_enter（進入時：check 檢定 d20 + 屬性修正 >= dc，失敗得到 fail_status；apply_status）、
-#       on_turn_start（站在上面的單位回合開始時：damage／heal／apply_status）。
+#       on_turn_start（站在上面的單位回合開始時：damage／heal／apply_status）、
+#       budget_points（2B-2：技能產生此表面、預設持續時間的預算點數；省略表示不能由技能產生）。
 surfaces:
   - id: oil
     name_zh: 油
     glyph: o
+    budget_points: 2
     flammable: true
   - id: water
     name_zh: 水
     glyph: w
+    budget_points: 1
   - id: fire
     name_zh: 火焰
     glyph: "*"
+    budget_points: 3
     duration: 2
     element: fire
     on_enter:
@@ -25,6 +29,7 @@ surfaces:
   - id: ice
     name_zh: 冰
     glyph: i
+    budget_points: 3
     duration: 3
     expires_to: water
     element: ice
@@ -33,6 +38,7 @@ surfaces:
   - id: poison
     name_zh: 毒
     glyph: p
+    budget_points: 3
     duration: 3
     element: poison
     on_turn_start:
@@ -40,6 +46,7 @@ surfaces:
   - id: holy
     name_zh: 聖光
     glyph: "+"
+    budget_points: 4
     duration: 3
     element: holy
     on_turn_start:
@@ -48,6 +55,7 @@ surfaces:
   - id: darkness
     name_zh: 黑暗
     glyph: "%"
+    budget_points: 2
     duration: 3
     element: shadow
     blocks_sight: true
