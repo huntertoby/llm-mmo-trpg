@@ -170,3 +170,37 @@ builds:
       tags: [hero, sim]
       max_mana: 20
       skills: [skill_taunting_roar, skill_stand_firm, skill_bulwark_stance, skill_thorn_skin]
+
+  - id: build_striker
+    name_zh: 蓄力流
+    theme_zh: 用靜電掌一下一下累積靜電，累積到足夠層數再以雷霆終結一次放出；被動餘燼烙印讓每次命中多一筆火焰傷害。蓄力與終結需要幾個回合的鋪陳，在能安穩輸出的地方發光，被貼身集火或沒有時間蓄力時不利（Phase 2E-3，初值未經模擬）。
+    hero:
+      id: build_striker
+      name_zh: 蓄力流英雄
+      attributes: {str: 8, dex: 12, con: 10, int: 16, wis: 12, wil: 12}
+      max_hp: 40
+      speed: 5
+      armor_bonus: 1
+      weapon: lightning_staff
+      ai_profile: cunning
+      resist: {elemental: 150}
+      tags: [hero, sim]
+      max_mana: 40
+      skills: [skill_static_palm, skill_thunder_finisher, skill_ember_brand]
+
+  - id: build_trapper
+    name_zh: 陷阱流
+    theme_zh: 在敵人必經之處埋下灰燼地雷與捕獸夾，再用寒鎖拖住逼近的敵人讓陷阱有時間生效；敵人被迫走過狹窄通道時發光，在開闊地、敵人可以繞開時不利（Phase 2E-3，初值未經模擬）。
+    hero:
+      id: build_trapper
+      name_zh: 陷阱流英雄
+      attributes: {str: 8, dex: 14, con: 10, int: 16, wis: 12, wil: 12}
+      max_hp: 40
+      speed: 5
+      armor_bonus: 1
+      weapon: fire_staff
+      ai_profile: archer
+      resist: {elemental: 150}
+      tags: [hero, sim]
+      max_mana: 40
+      skills: [skill_cinder_mine, skill_bear_trap, skill_frost_shackle]
