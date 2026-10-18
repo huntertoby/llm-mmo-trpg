@@ -1,6 +1,6 @@
 # PM 交接文件
 
-> 給接手的 PM（新對話中的 Claude）。最後更新：2026-10-18 深夜，Phase 2 結束、階段順序改為 v0.2.1 時。
+> 給接手的 PM（新對話中的 Claude）。最後更新：2026-10-19，Phase 2D 完成、下一步 2E 時。
 > 讀完本檔再讀 `CLAUDE.md` 與 `docs/專案計畫.md`（總覽，約 1 萬字元）即可接手；設計細節依需要讀 `docs/design/` 下的主題檔。
 
 ---
@@ -27,15 +27,16 @@
 | Phase 2C-3 地圖類型與 build 矩陣 | ✅ 完成 | `Phase2C計畫.md` 第 5 節／`Phase2C-3報告.md` |
 | Phase 2C-4 Phase 2 收尾 | ✅ 完成（Phase 2 結束，驗收 11 ✅／2 ⚠️ 觸發移到補模板 B） | `Phase2C-4計畫.md`／`Phase2C-4報告.md` |
 | Phase 2D-1 保護、增益與嘲諷 | ✅ 完成（1141 測試；待 PM 決定已處理於 2D 計畫 4.0） | `Phase2D計畫.md` 第 3 節／`Phase2D-1報告.md` |
-| **Phase 2D-2 負面狀態、術士與收尾** | 🔨 實作中 | `Phase2D計畫.md` 第 4 節 |
+| Phase 2D-2 負面狀態、術士與收尾 | ✅ 完成（1172 測試；2D 驗收 7 條全 ✅） | `Phase2D計畫.md` 第 4 節／`Phase2D-2報告.md` |
+| **Phase 2E 補模板 B** | ⏭️ 下一步 | 規格尚未撰寫（範圍見 `docs/專案計畫.md` 第 14 節 Phase 2E；2D-2 報告第 9 節「給 2E 的備註」） |
 
-- 最新 commit 在 GitHub `huntertoby/llm-mmo-trpg`（私人）的 `main`；使用者電腦已同步到 `66f3c39`（2D-1 完成）。
-- 1094 個測試（7 個 `slow` 預設不跑；平衡測試 `test_demo_map_win_rate_and_length` 標 `xfail(strict=False)`，目前 2 xfail、2 xpass）。
+- 最新 commit 在 GitHub `huntertoby/llm-mmo-trpg`（私人）的 `main`；使用者電腦已同步到 2D-2 完成的 commit。
+- 1172 個測試（`slow` 預設不跑；平衡測試 `test_demo_map_win_rate_and_length` 標 `xfail(strict=False)`，目前 2 xfail、2 xpass）。
 - 主要指令：
-  - `trpg battle --map <id> --seed <n> [--ally-commander id] [--enemy-commander id] [--log-json f]`、`trpg battle replay f`
+  - `trpg battle --map <id> --seed <n> [--ally-build build_a,build_b] [--ally-commander id] [--enemy-commander id] [--log-json f]`、`trpg battle replay f`
   - `trpg map list`（10 張正式地圖，8 種類型都有）
   - `trpg sim maps [--maps a,b] [--seeds 20] [--jobs N] [--enemy-commander id]`：勝率、DPR、控制回合、技能使用率、異常
-  - `trpg sim matrix [--seeds 20] [--jobs N]`：6 個 build × 8 種地圖類型（20 種子約 9 分鐘，`--jobs 2`）
+  - `trpg sim matrix [--seeds 20] [--jobs N]`：9 個 build × 8 種地圖類型，含保護矩陣（20 種子約 9 分鐘，`--jobs 2`）
   - `trpg sim skills [--demo] [--random N]`：技能對同階標準敵人的 DPR
   - `trpg sim completion [--maps a,b] [--seeds 20] [--jobs N]`：9 種指揮官設定 × 地圖的完成度檢查（exception／max_actions／draw 必須為 0；全量約 7.5 分鐘，`--jobs 2`）
   - `trpg skills list／budget --all／random --seed N`；`scripts/skill_fuzz.py --count 1000`
@@ -83,6 +84,9 @@
 - 結構型原語點數偏低（2B-3 #3）；技能報表在平地 1 對 3，控場、位移、光環骨架的 DPR 偏低，可能要另設情境。
 - 冰面 DEX DC12 滑倒對 AI 的影響未評估；敵方集火時 `bridge_chasm` 我方勝率反而上升，原因未查。
 - 代價折抵總上限已定為 +500‰；組合器權重已搬到 `content/skill_composer.yaml`。
+- **2D 後新增**：`build_tank` 改版（嘲諷＋護盾、`guard` 行為模式）後前段類型 2 → 0、英雄 DPR 5–8 → 1–2.5（疑似 `guard` 的 damage 權重 3 讓坦克太被動）；`build_healer` 也 0 次前段。保護矩陣有數字但沒轉成勝率——要決定保護型 build 的評估指標（標準 2 是否改看保護矩陣）或調 AI／數值。
+- 控制回合統計（`CONTROL_STATUSES`）只算 stun、root、slow，未含 feared、silenced、blinded、taunted。
+- `skill_dread_gaze`、`skill_hush` 貼著預算下限 70.4%；`skill_hex_bolt` 的 `marked` 只有 1 回合；AI 會對已被標記的目標重複施放咒印飛彈。
 
 ### 3.4 已接受的技術細節（不用再問）
 
