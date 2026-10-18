@@ -261,7 +261,8 @@ def test_explicit_stances_are_valid_in_every_tier_and_have_a_stance_status() -> 
             skill = compose_random_skill(seed, skeleton="stance", rarity="rare", tier=tier)
             assert validate_skill(skill, library) == [], (tier, seed)
             assert skill.kind == "stance" and skill.ap_cost is None and skill.shape.type == "self"
-            seen |= {e.status for e in skill.effects if getattr(e, "status", None) in stances}
+            used = {getattr(e, "status", "") for e in skill.effects}
+            seen |= used & stances
     assert seen == stances
 
 

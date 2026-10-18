@@ -42,8 +42,9 @@ def test_one_hundred_seeds_pass_validation_cast_and_run_without_exceptions() -> 
     assert {o.seed for o in report.outcomes if o.battle_ran} == expected
     passives = [o for o in report.outcomes if o.skill.kind == "passive"]
     assert passives and sum(o.triggers for o in passives) > 0
-    assert all(o.triggers == 0 for o in report.outcomes if o.skill.kind != "passive")
-    assert all(o.selections >= 1 for o in report.outcomes if o.skill.kind != "passive")
+    kinds = ("passive", "reaction")
+    assert all(o.triggers == 0 for o in report.outcomes if o.skill.kind not in kinds)
+    assert all(o.selections >= 1 for o in report.outcomes if o.skill.kind not in kinds)
 
 
 def test_the_summary_is_identical_between_two_runs_and_lists_the_distributions() -> None:
