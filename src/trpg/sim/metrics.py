@@ -13,6 +13,9 @@
 - **DPR** ＝ 單位造成的（直接＋間接）傷害 ÷ 該單位存活的輪數（該輪開始時仍在場；``max(1, …)``）。
 - **控制回合** ＝ 單位在 *自己回合開始時*（``turn_started`` 當下）帶有 stun／root／slow 的次數，
   歸給該狀態最後一次施加者（``status_applied.source_id``）；追溯不到歸環境。
+- **墜落與致命地形** 的傷害在引擎裡沒有 ``source_id``；若該單位在同一個動作內被 *強制位移*
+  （``unit_moved`` 的 ``mode == "forced"``：推、拉、擊退），歸給這個動作的行動者（推下深淵的人），
+  否則歸環境（自己走進去）。
 - **單一動作** ＝ 一個 ``Step``（玩家／AI 的一個動作，含它觸發的反應與連鎖）所產生的事件。
   動作的邊界由 :class:`StepTrace`（``run_battle`` 的 ``on_step`` 回呼）記錄；沒有記錄的
   ``BattleRun`` 會以重播取得。
@@ -44,6 +47,7 @@ from trpg.engine.events import (
     TurnStarted,
     UnitDowned,
     UnitEscaped,
+    UnitMoved,
     UnitSpawned,
 )
 from trpg.engine.results import ResolveResult
@@ -58,6 +62,7 @@ __all__ = [
     "CONTROL_STATUSES",
     "INDIRECT_ACTION_CAUSES",
     "LONG_BATTLE_ROUNDS",
+    "TERRAIN_CAUSE",
     "BattleMetrics",
     "MaxActionsExceeded",
     "SkillMetrics",
@@ -81,6 +86,9 @@ LONG_BATTLE_ROUNDS = 10
 INDIRECT_ACTION_CAUSES: frozenset[str] = frozenset({"status", "surface"})
 """不計入「單一動作傷害」（``boss_burst``、``one_shot``）的 cause：每個單位回合開始時的持續傷害
 與站在表面上的傷害，是回合推進的結果，不是那個動作本身造成的。"""
+TERRAIN_CAUSE = "deadly_terrain"
+"""致命地形是設計好的秒殺（地圖檢查限量），不計入非 Boss 的 ``one_shot``
+（否則每個推下深淵都是異常）；對 Boss 仍計入 ``boss_burst``。"""
 
 _USES, _ROLLS, _HITS, _DAMAGE, _HEALED = range(5)
 
@@ -195,6 +203,7 @@ class MaxActionsExceeded(TrpgError):
 class StepTrace:
     """``run_battle(on_step=…)`` 的回呼：記錄每一步結束時的事件累計數與每個單位花掉的 AP。
 
+    ``actors[i]`` 是第 ``i`` 步的行動者（開場與 ``Decision`` 為 ``None``）。
     ``bounds[0]`` 是開場事件的數量，``bounds[i]`` 是第 ``i`` 步結算後的事件累計數，所以第 ``i`` 步
     （``i ≥ 1``）的事件是 ``events[bounds[i-1]:bounds[i]]``。
 
@@ -203,12 +212,14 @@ class StepTrace:
 
     def __init__(self) -> None:
         self.bounds: list[int] = []
+        self.actors: list[UnitId | None] = []
         self.ap_spent: dict[UnitId, int] = {}
         self.steps = 0
         self._count = 0
         self._ap: dict[UnitId, int] = {}
 
     def __call__(self, step: Step | None, result: ResolveResult) -> None:
+        self.actors.append(None if step is None or isinstance(step, Decision) else step.unit_id)
         if step is not None:
             self.steps += 1
             if not isinstance(step, EndTurn | Decision):
@@ -225,11 +236,12 @@ class StepTrace:
 class TrackedRun(BattleRun):
     """附帶 :class:`StepTrace` 結果的 ``BattleRun``（由 :func:`run_tracked` 建立）。"""
 
-    __slots__ = ("ap_spent", "bounds")
+    __slots__ = ("actors", "ap_spent", "bounds")
 
     def __init__(self, run: BattleRun, trace: StepTrace) -> None:
         super().__init__(run.setup, run.seed, run.state, run.actions, run.events)
         self.bounds = tuple(trace.bounds)
+        self.actors = tuple(trace.actors)
         self.ap_spent = dict(trace.ap_spent)
 
 
@@ -290,6 +302,7 @@ def metrics_from_events(  # noqa: PLR0912, PLR0915 - 單一事件迴圈，拆開
     units: Sequence[UnitInfo],
     events: Sequence[EventBase],
     bounds: Sequence[int] | None,
+    actors: Sequence[UnitId | None] | None = None,
     ap_spent: Mapping[UnitId, int],
     winner: Team | None,
     rounds: int,
@@ -298,7 +311,8 @@ def metrics_from_events(  # noqa: PLR0912, PLR0915 - 單一事件迴圈，拆開
     """由事件序列計算 :class:`BattleMetrics`（純函式）。
 
     ``units`` 是全部出過場的單位（含援軍）；``bounds`` 是 :class:`StepTrace` 的動作邊界
-    （``None`` 時整個事件序列視為同一個動作）。
+    （``None`` 時整個事件序列視為同一個動作）；``actors`` 是各動作的行動者（用來追溯墜落與致命地形
+    的來源，沒有時這類傷害歸環境）。
     """
     info = {u.unit_id: u for u in units}
     acc = {u.unit_id: _Acc() for u in units}
@@ -318,17 +332,23 @@ def metrics_from_events(  # noqa: PLR0912, PLR0915 - 單一事件迴圈，拆開
     edges = list(bounds) if bounds else [len(events)]
     slice_index = 0
     slice_damage: dict[UnitId, int] = {}
+    slice_terrain: dict[UnitId, int] = {}
+    forced: set[UnitId] = set()
 
     def flush() -> None:
         nonlocal one_shots
-        for target_id, total in sorted(slice_damage.items()):
+        for target_id in sorted(set(slice_damage) | set(slice_terrain)):
             target = info[target_id]
+            total = slice_damage.get(target_id, 0)
             if target.boss:
+                total += slice_terrain.get(target_id, 0)
                 if total * 1000 >= target.max_hp * BOSS_BURST_FRACTION_PERMILLE:
                     boss_burst_hits.append(f"單一動作對 {target_id} 造成 {total}／{target.max_hp}")
             elif total >= target.max_hp:
                 one_shots += 1
         slice_damage.clear()
+        slice_terrain.clear()
+        forced.clear()
 
     current: str | None = None
     caster: UnitId | None = None
@@ -340,6 +360,9 @@ def metrics_from_events(  # noqa: PLR0912, PLR0915 - 單一事件迴圈，拆開
         if isinstance(event, RoundStarted):
             for unit_id in present:
                 acc[unit_id].alive_rounds += 1
+        elif isinstance(event, UnitMoved):
+            if event.mode == "forced":
+                forced.add(event.unit_id)
         elif isinstance(event, UnitSpawned):
             present.add(event.unit_id)
         elif isinstance(event, UnitEscaped):
@@ -391,9 +414,19 @@ def metrics_from_events(  # noqa: PLR0912, PLR0915 - 單一事件迴圈，拆開
             amount = event.hp_before - event.hp_after
             target = info[event.target_id]
             source = event.source_id if event.source_id in info else None
+            if (
+                source is None
+                and event.cause in ("fall", TERRAIN_CAUSE)
+                and event.target_id in forced
+            ):
+                pusher = actors[slice_index] if actors is not None else None
+                if pusher is not None and pusher in info and pusher != event.target_id:
+                    source = pusher
             last_hit[event.target_id] = source
             acc[event.target_id].taken += amount
-            if event.cause not in INDIRECT_ACTION_CAUSES:
+            if event.cause == TERRAIN_CAUSE:
+                slice_terrain[event.target_id] = slice_terrain.get(event.target_id, 0) + amount
+            elif event.cause not in INDIRECT_ACTION_CAUSES:
                 slice_damage[event.target_id] = slice_damage.get(event.target_id, 0) + amount
             enemy_hit = source is not None and info[source].team is not target.team
             if source is None:
@@ -469,10 +502,11 @@ def battle_metrics(run: BattleRun) -> BattleMetrics:
     """
     if isinstance(run, TrackedRun):
         bounds: Sequence[int] = run.bounds
+        actors: Sequence[UnitId | None] = run.actors
         ap_spent: Mapping[UnitId, int] = run.ap_spent
     else:
         trace = _trace_by_replay(run)
-        bounds, ap_spent = trace.bounds, trace.ap_spent
+        bounds, actors, ap_spent = trace.bounds, trace.actors, trace.ap_spent
     units = [
         UnitInfo(u.id, u.template_id, u.team, u.max_hp, u.tags) for u in run.state.units.values()
     ]
@@ -481,6 +515,7 @@ def battle_metrics(run: BattleRun) -> BattleMetrics:
         units=units,
         events=run.events,
         bounds=bounds,
+        actors=actors,
         ap_spent=ap_spent,
         winner=run.state.winner,
         rounds=run.state.round,

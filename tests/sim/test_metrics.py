@@ -23,6 +23,7 @@ from trpg.engine.events import (
     StatusRemoved,
     TurnStarted,
     UnitDowned,
+    UnitMoved,
     UnitSpawned,
 )
 from trpg.engine.runner import run_battle
@@ -175,6 +176,7 @@ def _metrics(events: list[EventBase], bounds: list[int] | None, **kw: Any) -> Ba
         units=UNITS,
         events=events,
         bounds=bounds,
+        actors=kw.get("actors"),
         ap_spent=kw.get("ap_spent", {}),
         winner=kw.get("winner", Team.ALLY),
         rounds=kw.get("rounds", 2),
@@ -337,6 +339,59 @@ def test_reinforcements_count_rounds_from_the_round_after_they_arrive() -> None:
     )
     assert next(u for u in m.units if u.unit_id == late).alive_rounds == 2
     assert next(u for u in m.units if u.unit_id == A1).alive_rounds == 3
+
+
+def _push(s: Stream, unit: UnitId, mode: Any = "forced") -> None:
+    s.add(UnitMoved, unit_id=unit, from_pos=Pos(x=1, y=1), to_pos=Pos(x=2, y=1), mode=mode, cost=0)
+
+
+def test_falls_and_deadly_terrain_after_a_forced_move_belong_to_the_pusher() -> None:
+    s = Stream()
+    s.add(RoundStarted)
+    opening = s.mark()
+    # 動作 1（A1 行動）：E1 被強制位移後掉進深淵 → 歸 A1，A1 得到擊倒
+    _push(s, E1)
+    s.damage(E1, None, 30, 0, "deadly_terrain")
+    s.add(UnitDowned, unit_id=E1)
+    one = s.mark()
+    # 動作 2（A2 行動）：A1 自己走進深淵（walk）→ 沒人推，歸環境
+    _push(s, A1, "walk")
+    s.damage(A1, None, 50, 0, "deadly_terrain")
+    s.add(UnitDowned, unit_id=A1)
+    m = _metrics(s.events, [opening, one, s.mark()], actors=[None, A1, A2])
+    e1, a1 = _unit(m, E1), _unit(m, A1)
+    assert e1.damage_taken == 30 and _unit(m, A1).damage_indirect == 30
+    assert _unit(m, A1).kills == 1 and a1.damage_taken == 50
+    assert m.environment_damage == {"ally": 50}
+    # 沒有行動者資料時，同樣的事件全部歸環境
+    plain = _metrics(s.events, [opening, one, s.mark()])
+    assert plain.environment_damage == {"enemy": 30, "ally": 50}
+
+
+def test_a_unit_forced_into_terrain_by_itself_is_environment_damage() -> None:
+    s = Stream()
+    s.add(RoundStarted)
+    opening = s.mark()
+    _push(s, A1)  # 自己的位移技能也算強制位移，但行動者就是自己
+    s.damage(A1, None, 50, 0, "deadly_terrain")
+    m = _metrics(s.events, [opening, s.mark()], actors=[None, A1])
+    assert m.environment_damage == {"ally": 50}
+
+
+def test_deadly_terrain_is_a_designed_kill_so_it_is_not_a_one_shot_but_can_burst_a_boss() -> None:
+    s = Stream()
+    s.add(RoundStarted)
+    opening = s.mark()
+    s.round = 2
+    _push(s, E1)
+    s.damage(E1, None, 30, 0, "deadly_terrain")
+    s.add(UnitDowned, unit_id=E1)
+    one = s.mark()
+    _push(s, BOSS)
+    s.damage(BOSS, None, 100, 40, "deadly_terrain")
+    m = _metrics(s.events, [opening, one, s.mark()], actors=[None, A1, A1])
+    assert m.one_shot_count == 0
+    assert m.boss_burst is not None and "60／100" in m.boss_burst
 
 
 # ---------------------------------------------------------------------------
