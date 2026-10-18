@@ -22,6 +22,7 @@
   （9 種指揮官設定 × 地圖 × 種子；exception、max_actions、draw 必須為 0，否則結束碼 1）。
 - ``trpg battle`` 與 ``trpg sim maps`` 都可加 ``--ally-commander``／``--enemy-commander <id>``
   （腳本指揮官，見 ``trpg.sim.commanders``）。
+- ``trpg battle --ally-build <build_id>[,…]``：我方用 build 英雄（不足 3 人以標準隊友補齊）。
 - ``trpg battle replay <path>``：讀取 ``--log-json`` 的輸出，重播並驗證最終狀態一致。
 """
 
@@ -149,6 +150,14 @@ def build_parser() -> argparse.ArgumentParser:  # noqa: PLR0915
         "--allies",
         default=None,
         help="我方單位範本，以逗號分隔（預設為地圖的 encounter，沒有時為戰士、弓手、法師）",
+    )
+    battle.add_argument(
+        "--ally-build",
+        default=None,
+        help=(
+            "我方用 content/sim/builds.yaml 的 build 英雄（以逗號分隔；不足 3 人時以標準隊友補齊，"
+            "與 sim matrix 相同）；不可與 --allies 同時使用"
+        ),
     )
     battle.add_argument(
         "--enemies",
@@ -335,7 +344,9 @@ def _sim_skills(args: argparse.Namespace) -> int:
     )
 
 
-def _battle(parser: argparse.ArgumentParser, args: argparse.Namespace) -> int:
+def _battle(  # noqa: PLR0911
+    parser: argparse.ArgumentParser, args: argparse.Namespace
+) -> int:
     if args.map_id is None or args.seed is None:
         print(
             "錯誤：trpg battle 需要 --map 與 --seed（或使用 trpg battle replay <path>）",
@@ -349,6 +360,13 @@ def _battle(parser: argparse.ArgumentParser, args: argparse.Namespace) -> int:
     enemies = None if args.enemies is None else _split(args.enemies)
     if allies == [] or enemies == []:
         print("錯誤：雙方都至少要有一個單位", file=sys.stderr)
+        return 2
+    ally_builds = None if args.ally_build is None else _split(args.ally_build)
+    if ally_builds == []:
+        print("錯誤：--ally-build 至少要指定一個 build", file=sys.stderr)
+        return 2
+    if ally_builds is not None and allies is not None:
+        print("錯誤：--ally-build 不可與 --allies 同時使用", file=sys.stderr)
         return 2
     deploy: list[tuple[int, int]] | None = None
     if args.deploy:
@@ -368,6 +386,7 @@ def _battle(parser: argparse.ArgumentParser, args: argparse.Namespace) -> int:
             rounds_max=args.rounds_max,
             allies=allies,
             enemies=enemies,
+            ally_builds=ally_builds,
             log_json=args.log_json,
             out=sys.stdout,
             ai=args.ai,

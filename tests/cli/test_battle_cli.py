@@ -128,3 +128,35 @@ def test_custom_lineup(capsys: pytest.CaptureFixture[str]) -> None:
         capsys,
     )
     assert code == 0 and "盜賊1" in out and "盜賊2" in out
+
+
+def test_ally_build_uses_build_heroes_and_fills_with_companions(
+    tmp_path: Path, capsys: pytest.CaptureFixture[str]
+) -> None:
+    """``--ally-build``：build 英雄 ＋ 標準隊友（與 sim matrix 相同），紀錄可重播。"""
+    log = tmp_path / "build.json"
+    argv = ["battle", "--map", "test_flat_6x6", "--seed", "3", "--ally-build", "build_warlock"]
+    code, out, _ = _run([*argv, "--log-json", str(log)], capsys)
+    assert code == 0 and "術士英雄" in out and "勝方：" in out
+    units = json.loads(log.read_text(encoding="utf-8"))["setup"]["units"]
+    allies = [u["template"]["id"] for u in units if u["team"] == "ally"]
+    assert allies == ["build_warlock", "sim_companion_fighter", "sim_companion_archer"]
+    code, out, _ = _run(["battle", "replay", str(log)], capsys)
+    assert code == 0 and "重播驗證通過" in out
+
+
+def test_ally_build_rejects_unknown_builds_and_allies_together(
+    capsys: pytest.CaptureFixture[str],
+) -> None:
+    code, _, err = _run(
+        ["battle", "--map", "test_flat_6x6", "--seed", "1", "--ally-build", "build_nope"], capsys
+    )
+    assert code == 2 and "未知的 build" in err
+    code, _, err = _run(
+        [
+            "battle", "--map", "test_flat_6x6", "--seed", "1",
+            "--ally-build", "build_tank", "--allies", "hero_mage",
+        ],
+        capsys,
+    )  # fmt: skip
+    assert code == 2 and "--allies" in err

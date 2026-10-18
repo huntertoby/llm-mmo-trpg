@@ -40,6 +40,7 @@ from trpg.engine.setup import BattleSetupError, build_setup, deploy_allies
 from trpg.engine.state import BattleState, state_to_json
 from trpg.shared.types import Team, UnitId
 from trpg.sim.commanders import build_commanded_ai
+from trpg.sim.matrix import library_with_builds
 
 __all__ = [
     "DEFAULT_ALLIES",
@@ -54,6 +55,9 @@ __all__ = [
 
 DEFAULT_ALLIES = ("hero_fighter", "hero_archer", "hero_mage")
 DEFAULT_ENEMIES = ("bandit", "bandit_archer", "bandit_boss")
+
+TEAM_SIZE = 3
+"""``--ally-build`` 補齊到的隊伍人數（build 英雄 ＋ 標準隊友，與 sim matrix 相同）。"""
 
 
 def cmd_map_show(library: ContentLibrary, map_id: str, out: TextIO) -> int:
@@ -182,6 +186,7 @@ def cmd_battle(
     enemies: list[str] | None,
     log_json: Path | None,
     out: TextIO,
+    ally_builds: list[str] | None = None,
     ai: str = "utility",
     weather: str | None = None,
     deploy: list[tuple[int, int]] | None = None,
@@ -189,6 +194,17 @@ def cmd_battle(
     enemy_commander: str | None = None,
 ) -> int:
     default_allies, default_enemies = default_lineup(library, map_id)
+    if ally_builds:
+        known = library.builds.by_id()
+        unknown = [b for b in ally_builds if b not in known]
+        if unknown:
+            print(
+                f"錯誤：未知的 build：{', '.join(unknown)}（可用：{', '.join(sorted(known))}）",
+                file=sys.stderr,
+            )
+            return 2
+        library = library_with_builds(library)
+        allies = [*ally_builds, *library.builds.companions][: max(TEAM_SIZE, len(ally_builds))]
     setup = build_setup(
         library,
         map_id,

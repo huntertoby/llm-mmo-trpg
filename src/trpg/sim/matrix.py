@@ -82,6 +82,12 @@ class RawCell:
     rounds_mean: float
     errors: int = 0
     """`exception`／`max_actions` 的場次（不進任何彙總）。"""
+    hero_healing: float = 0.0
+    hero_shield: float = 0.0
+    hero_taken: float = 0.0
+    teammate_survival: float = 0.0
+    """保護指標（Phase 2D-2）：build 英雄每場平均的治療量、護盾吸收量（它施放的護盾）、承受傷害，
+    以及戰鬥結束時隊友的存活率。只列數字，不進排名與 6.8 標準。"""
 
 
 class MatrixCell(_Model):
@@ -101,6 +107,10 @@ class MatrixCell(_Model):
     errors: int
     rank: int
     top: bool
+    hero_healing: float = 0.0
+    hero_shield: float = 0.0
+    hero_taken: float = 0.0
+    teammate_survival: float = 0.0
 
 
 class ArchetypeCell(_Model):
@@ -115,6 +125,10 @@ class ArchetypeCell(_Model):
     rounds_mean: float
     rank: int
     top: bool
+    hero_healing: float = 0.0
+    hero_shield: float = 0.0
+    hero_taken: float = 0.0
+    teammate_survival: float = 0.0
 
 
 class Standards(_Model):
@@ -209,13 +223,19 @@ def assemble_matrix(
                 errors=c.errors,
                 rank=rank,
                 top=rank <= top,
+                hero_healing=c.hero_healing,
+                hero_shield=c.hero_shield,
+                hero_taken=c.hero_taken,
+                teammate_survival=c.teammate_survival,
             )
             for c, rank in zip(row, ranks, strict=True)
         ]
     archetypes = tuple(dict.fromkeys(m.archetype for m in maps))
     archetype_cells: list[ArchetypeCell] = []
     for archetype in archetypes:
-        rows: list[tuple[str, tuple[str, ...], Fraction, float, float, float]] = []
+        rows: list[
+            tuple[str, tuple[str, ...], Fraction, float, float, float, tuple[float, ...]]
+        ] = []
         for build in builds:
             mine = [c for c in raw if c.build_id == build and c.archetype == archetype]
             k = len(mine)
@@ -227,6 +247,12 @@ def assemble_matrix(
                     sum(c.hero_dpr for c in mine) / k,
                     sum(c.hero_survival for c in mine) / k,
                     sum(c.rounds_mean for c in mine) / k,
+                    (
+                        sum(c.hero_healing for c in mine) / k,
+                        sum(c.hero_shield for c in mine) / k,
+                        sum(c.hero_taken for c in mine) / k,
+                        sum(c.teammate_survival for c in mine) / k,
+                    ),
                 )
             )
         keys = {i: (r[2], r[3]) for i, r in enumerate(rows)}
@@ -242,8 +268,12 @@ def assemble_matrix(
                 rounds_mean=r,
                 rank=rank,
                 top=rank <= top,
+                hero_healing=prot[0],
+                hero_shield=prot[1],
+                hero_taken=prot[2],
+                teammate_survival=prot[3],
             )
-            for (b, ms, w, d, s, r), rank in zip(rows, ranks, strict=True)
+            for (b, ms, w, d, s, r, prot), rank in zip(rows, ranks, strict=True)
         ]
     always = tuple(
         b for b in builds if archetypes and all(c.top for c in archetype_cells if c.build_id == b)
@@ -331,6 +361,12 @@ def _raw_cell(build: str, map_id: str, archetype: str, report: BatchReport) -> R
         hero_survival=0.0 if hero is None else hero.survival,
         rounds_mean=report.rounds_mean,
         errors=report.battles - report.completed,
+        hero_healing=0.0 if hero is None else hero.healing,
+        hero_shield=0.0 if hero is None else hero.shield_provided,
+        hero_taken=0.0 if hero is None else hero.damage_taken,
+        teammate_survival=(
+            0.0 if hero is None or hero.teammate_survival is None else hero.teammate_survival
+        ),
     )
 
 
@@ -419,6 +455,31 @@ def format_matrix(report: MatrixReport) -> str:
         heading,
         [
             [b, *(f"{report.archetype_cell(b, a).hero_dpr:.2f}" for a in archetypes)]
+            for b in report.builds
+        ],
+    )
+    out.append("")
+    out.append(
+        "## 保護矩陣（build 英雄每場平均；只列數字，不進排名與 6.8 標準）"
+        "：治療量／護盾吸收量（它施放的護盾）／承受傷害／隊友存活率"
+    )
+    out += _table(
+        ["build", *archetypes],
+        [
+            [
+                b,
+                *(
+                    "／".join(
+                        (
+                            f"{c.hero_healing:.1f}",
+                            f"{c.hero_shield:.1f}",
+                            f"{c.hero_taken:.1f}",
+                            _pct(c.teammate_survival),
+                        )
+                    )
+                    for c in (report.archetype_cell(b, a) for a in archetypes)
+                ),
+            ]
             for b in report.builds
         ],
     )

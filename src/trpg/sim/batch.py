@@ -242,6 +242,11 @@ class TemplateRow(_Model):
     """戰鬥結束時未倒下的比例。"""
     ap_per_turn: float | None
     """平均每回合花掉的 AP（總 AP ÷ 總回合數）。"""
+    shield_provided: float = 0.0
+    """每個實例施放的護盾所吸收的傷害（Phase 2D-2 保護指標）。"""
+    teammate_survival: float | None = None
+    """我方實例：戰鬥結束時隊友（同陣營其他單位）存活人數 ÷ 隊友人數，各實例平均；
+    沒有隊友或敵方為 ``None``（Phase 2D-2 保護指標）。"""
 
 
 class TeamSummary(_Model):
@@ -402,12 +407,33 @@ def _team_summaries(done: Sequence[BattleMetrics]) -> tuple[TeamSummary, ...]:
     return tuple(out)
 
 
+def _mate_survival(team: Team, values: Sequence[Fraction | None]) -> float | None:
+    known = [v for v in values if v is not None]
+    if team is not Team.ALLY or not known:
+        return None
+    return _ratio(sum(known, Fraction(0)), len(known))
+
+
 def _template_rows(done: Sequence[BattleMetrics]) -> tuple[TemplateRow, ...]:
-    groups: dict[tuple[Team, str], list[tuple[Fraction, int, int, int, bool, int, int]]] = {}
+    groups: dict[
+        tuple[Team, str], list[tuple[Fraction, int, int, int, bool, int, int, int, Fraction | None]]
+    ] = {}
     for m in done:
         for u in m.units:
+            mates = [o for o in m.units if o.team is u.team and o.unit_id != u.unit_id]
+            alive = Fraction(sum(1 for o in mates if not o.downed), len(mates)) if mates else None
             groups.setdefault((u.team, u.template_id), []).append(
-                (u.dpr, u.damage_taken, u.healing_done, u.kills, u.downed, u.ap_spent, u.turns)
+                (
+                    u.dpr,
+                    u.damage_taken,
+                    u.healing_done,
+                    u.kills,
+                    u.downed,
+                    u.ap_spent,
+                    u.turns,
+                    u.shield_provided,
+                    alive,
+                )
             )
     rows: list[TemplateRow] = []
     for (team, template_id), items in sorted(
@@ -426,6 +452,8 @@ def _template_rows(done: Sequence[BattleMetrics]) -> tuple[TemplateRow, ...]:
                 kills=_ratio(sum(i[3] for i in items), n),
                 survival=_ratio(sum(1 for i in items if not i[4]), n),
                 ap_per_turn=_ratio(sum(i[5] for i in items), turns) if turns else None,
+                shield_provided=_ratio(sum(i[7] for i in items), n),
+                teammate_survival=_mate_survival(team, [i[8] for i in items]),
             )
         )
     return tuple(rows)
@@ -586,7 +614,19 @@ def format_report(report: BatchReport) -> str:
     out.append("")
     out.append("單位範本（每個實例的平均）：")
     out += _table(
-        ["範本", "陣營", "實例", "DPR", "承受傷害", "治療量", "擊倒", "存活率", "AP／回合"],
+        [
+            "範本",
+            "陣營",
+            "實例",
+            "DPR",
+            "承受傷害",
+            "治療量",
+            "護盾提供",
+            "擊倒",
+            "存活率",
+            "隊友存活率",
+            "AP／回合",
+        ],
         [
             [
                 t.template_id,
@@ -595,8 +635,10 @@ def format_report(report: BatchReport) -> str:
                 f"{t.dpr:.2f}",
                 f"{t.damage_taken:.1f}",
                 f"{t.healing:.1f}",
+                f"{t.shield_provided:.1f}",
                 f"{t.kills:.2f}",
                 _pct(t.survival),
+                "—" if t.teammate_survival is None else _pct(t.teammate_survival),
                 "—" if t.ap_per_turn is None else f"{t.ap_per_turn:.2f}",
             ]
             for t in r.templates

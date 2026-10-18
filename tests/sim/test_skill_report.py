@@ -138,4 +138,4 @@ def test_skills_cli_runs_with_demo_and_random(capsys: pytest.CaptureFixture[str]
     captured = capsys.readouterr()
     assert "技能報表：2 個技能" in captured.out and "執行時間" in captured.err
     assert main(["sim", "skills", "--demo", "--random", "1", "--seeds", "1", "--jobs", "2"]) == 0
-    assert "技能報表：30 個技能" in capsys.readouterr().out
+    assert "技能報表：34 個技能" in capsys.readouterr().out

@@ -41,6 +41,8 @@ from trpg.engine.events import (
     EventBase,
     Healed,
     RoundStarted,
+    ShieldAbsorbed,
+    ShieldGained,
     SkillUsed,
     StatusApplied,
     StatusConverted,
@@ -124,6 +126,8 @@ class UnitMetrics(_Model):
     """狀態 → 在自己回合開始時帶著該狀態的（被此單位施加的）單位次數。"""
     shield_absorbed: int = 0
     """這個單位身上的護盾吸收的傷害（Phase 2D-1；不計入 ``damage_taken``）。"""
+    shield_provided: int = 0
+    """這個單位施放的護盾所吸收的傷害（Phase 2D-2；歸給護盾最後一次施加者）。"""
 
     @property
     def damage_dealt(self) -> int:
@@ -293,6 +297,7 @@ class _Acc:
     friendly: int = 0
     taken: int = 0
     absorbed: int = 0
+    provided: int = 0
     healing: int = 0
     kills: int = 0
     downed: bool = False
@@ -330,6 +335,7 @@ def metrics_from_events(  # noqa: PLR0912, PLR0915 - 單一事件迴圈，拆開
     boss_round_one_down = False
     one_shots = 0
     boss_burst_hits: list[str] = []
+    shield_owner: dict[UnitId, UnitId | None] = {}
 
     edges = list(bounds) if bounds else [len(events)]
     slice_index = 0
@@ -434,6 +440,12 @@ def metrics_from_events(  # noqa: PLR0912, PLR0915 - 單一事件迴圈，拆開
                 and enemy_hit
             ):
                 skills.setdefault(current, [0, 0, 0, 0, 0])[_DAMAGE] += amount
+        elif isinstance(event, ShieldGained):
+            shield_owner[event.unit_id] = event.source_id
+        elif isinstance(event, ShieldAbsorbed):
+            owner = shield_owner.get(event.unit_id)
+            if owner is not None and owner in acc:
+                acc[owner].provided += event.absorbed
         elif isinstance(event, Healed):
             if event.source_id is not None and event.source_id in info:
                 acc[event.source_id].healing += event.amount
@@ -469,6 +481,7 @@ def metrics_from_events(  # noqa: PLR0912, PLR0915 - 單一事件迴圈，拆開
                 downed=acc[u.unit_id].downed,
                 control_inflicted=dict(sorted(acc[u.unit_id].control.items())),
                 shield_absorbed=acc[u.unit_id].absorbed,
+                shield_provided=acc[u.unit_id].provided,
             )
             for u in units
         ),
