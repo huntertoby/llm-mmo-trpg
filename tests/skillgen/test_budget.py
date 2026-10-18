@@ -198,7 +198,9 @@ def test_hand_case_7_synergy_stack_and_debuff() -> None:
 def test_ap_coefficients_and_reaction() -> None:
     one, three = skill_budget(skill(ap_cost=1), lib()), skill_budget(skill(ap_cost=3), lib())
     assert (one.ap_coefficient, three.ap_coefficient) == (F(1, 2), F(8, 5))
-    reaction = skill(kind="reaction", ap_cost=None, skeleton="reaction")
+    reaction = skill(
+        kind="reaction", ap_cost=None, skeleton="reaction", reaction={"event": "hit_by_melee"}
+    )
     assert skill_budget(reaction, lib()).ap_coefficient == F(3, 5)
 
 
@@ -286,6 +288,9 @@ def test_status_and_surface_points_match_the_spec() -> None:
         "silenced": 5,
         "blinded": 4,
         "marked": 4,
+        # 2E-2：姿態（stance）
+        "stance_fury": 11,
+        "stance_bulwark": 11,
     }
     surfaces = {s.id.value: s.budget_points for s in rules.surfaces.surfaces}
     assert surfaces == {

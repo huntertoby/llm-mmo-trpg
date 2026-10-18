@@ -24,7 +24,7 @@ from __future__ import annotations
 
 from collections.abc import Iterator
 from contextlib import contextmanager
-from dataclasses import dataclass
+from dataclasses import dataclass, replace
 from typing import TYPE_CHECKING
 
 from trpg.content.skills import SkillDef
@@ -54,6 +54,7 @@ __all__ = [
     "collect_turn_start",
     "holding",
     "observe",
+    "redirect_fired",
     "reset_round_counts",
     "settle",
 ]
@@ -190,6 +191,14 @@ def collect_turn_end(ctx: Ctx, unit: UnitState) -> None:
 def collect_move(ctx: Ctx, unit: UnitState) -> None:
     """``on_move``：一次主動移動動作完成後。"""
     _collect_own(ctx, unit, "on_move")
+
+
+def redirect_fired(ctx: Ctx, seq: int, old: UnitId, new: UnitId) -> None:
+    """攔截（2E-2）：引起事件 ``seq`` 的攻擊已改為作用在 ``new``——還沒結算的觸發，另一方由 ``old``
+    改為 ``new``（例如攻擊者的「命中時」被動，對象是實際挨打的守護者）。"""
+    ctx.fired = [
+        replace(f, other_id=new) if f.seq == seq and f.other_id == old else f for f in ctx.fired
+    ]
 
 
 def reset_round_counts(units: Iterator[UnitState]) -> None:

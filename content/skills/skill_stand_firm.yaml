@@ -1,0 +1,26 @@
+# 反應技（Phase 2E-2，數值為初值，未經模擬）：相鄰友方被單體攻擊命中時，攔下這次攻擊（intercept）並獲得護衛。
+id: skill_stand_firm
+schema_version: 1
+name_zh: 挺身而出
+tier: 1
+rank: 1
+rarity: rare
+kind: reaction
+skeleton: reaction
+category: weapon
+weapon_req: melee
+ap_cost: null
+scaling_attr: str
+shape: {type: self}
+effects:
+  - {type: intercept}
+  - {type: apply_status, status: guarded, duration: 2, affects: self}
+condition: null
+trigger: null
+reaction: {event: ally_hit_adjacent}
+cost: {mana: 0, cooldown: 1}
+tags: [guard, reaction, intercept]
+narrative:
+  concept: 在同伴挨刀的瞬間擋到他身前，用自己的身體扛下這一擊
+  cast_flavor: 你一步橫跨到同伴身前，刀鋒結結實實砍在你的護甲上
+provenance: {origin: builtin, owner_id: null, created_by: null, parents: [], bound: true, tradeable: false}

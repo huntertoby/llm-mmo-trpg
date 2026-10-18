@@ -16,7 +16,9 @@
 
 from __future__ import annotations
 
-from trpg.content.skills import ConditionSpec, EffectSpec, SkillDef
+from collections.abc import Callable
+
+from trpg.content.skills import INTERCEPT, ConditionSpec, EffectSpec, SkillDef
 from trpg.engine.actions import UseSkill
 from trpg.engine.context import Ctx
 from trpg.engine.control import status_effect
@@ -46,7 +48,7 @@ from trpg.engine.events import (
     SkillUsed,
 )
 from trpg.engine.maneuvers import contest
-from trpg.engine.reactions import block_multiplier
+from trpg.engine.reactions import block_multiplier, hit_reactions, try_intercept
 from trpg.engine.rules.combat import PERMILLE, AttackProfile, AttackRoll, ForcedOutcome, roll_attack
 from trpg.engine.rules.geometry import XY
 from trpg.engine.rules.statuses import effective_attribute
@@ -59,14 +61,15 @@ from trpg.engine.skills.targeting import (
     damage_parameters,
     hp_cost,
     resolve_effects,
+    skill_ap_cost,
     skill_problem,
     skill_profile,
 )
 from trpg.engine.state import UnitState
 from trpg.shared.errors import IllegalActionError
-from trpg.shared.types import Element, Pos
+from trpg.shared.types import Element, Pos, UnitId
 
-__all__ = ["use_skill"]
+__all__ = ["use_reaction_skill", "use_skill", "use_triggered_skill"]
 
 PRONE = "prone"
 _TOUCHING_AFFECTS = ("enemies", "all", "tiles")
@@ -103,8 +106,41 @@ def use_triggered_skill(
     _TriggeredCast(ctx, owner, skill, area).run()
 
 
+def use_reaction_skill(
+    ctx: Ctx,
+    owner: UnitState,
+    skill: SkillDef,
+    trigger: UnitState | None,
+    *,
+    depth: int,
+    on_paid: Callable[[], None] | None = None,
+) -> None:
+    """立刻施放反應技（Phase 2E-2；``ReactionTriggered`` 已由呼叫端發出）：不花 AP，付法力、HP 與
+    冷卻，產生 ``skill_used``，然後照一般技能擲命中與抵抗。
+
+    ``shape: single`` 的目標固定為 ``trigger``；``shape: self`` 的目標是持有者自己。
+    ``depth``：這次反應的觸發深度（外層深度 + 1）；施放期間引起的被動觸發與反應再 +1。
+    ``on_paid``：代價付完、效果結算之前呼叫（攔截用它發出 ``attack_intercepted``）。
+    """
+    if skill.shape.type == "single":
+        assert trigger is not None
+        area = SkillArea(tiles=(trigger.xy,), units=(trigger.id,), origin=owner.xy)
+    else:
+        area = SkillArea(tiles=(owner.xy,), units=(owner.id,), origin=owner.xy)
+    outer = ctx.trigger_depth
+    ctx.trigger_depth = depth
+    try:
+        with holding(ctx):
+            _pay_costs(ctx, owner, skill, area)
+            if on_paid is not None:
+                on_paid()
+            _Cast(ctx, owner, skill, None, area).run()
+    finally:
+        ctx.trigger_depth = outer
+
+
 def _pay_costs(ctx: Ctx, caster: UnitState, skill: SkillDef, area: SkillArea) -> None:
-    ap = skill.ap_cost or 0
+    ap = skill_ap_cost(ctx.state, skill)
     hp = hp_cost(caster, skill)
     caster.ap -= ap
     caster.mana -= skill.cost.mana
@@ -187,7 +223,7 @@ class _Cast:
                 ctx.mark_branch()
                 forced = "hit" if ctx.preview == "min" else "crit"
             roll = roll_attack(ctx.state, ctx.rng, self.caster, unit, forced, self.profile)
-            ctx.emit(
+            rolled_event = ctx.emit(
                 AttackRolled,
                 attacker_id=self.caster.id,
                 target_id=unit.id,
@@ -208,10 +244,28 @@ class _Cast:
                 skill_id=self.skill.id,
             )
             self.hits[unit.id] = roll
+            if roll.hit and self.skill.shape.type == "single":
+                guardian = try_intercept(
+                    ctx, self.caster, unit, rolled_event.seq, skill_id=self.skill.id
+                )
+                if guardian is not None:
+                    self._redirect(unit, guardian)
+                    unit = guardian  # noqa: PLW2901 - 之後的格擋與傷害都是守護者的
             if roll.hit and self._affected_by_damage(unit):
                 self.blocks[unit.id] = block_multiplier(
                     ctx, self.caster, unit, melee=self.profile.height_limited
                 )
+
+    def _redirect(self, original: UnitState, guardian: UnitState) -> None:
+        """替隊友擋攻擊：這次單體攻擊的所有效果改為作用在守護者身上（沿用原本的命中結果，不重擲；
+        位移方向由施放者到守護者重新計算）。"""
+        roll = self.hits.pop(original.id)
+        self.hits[guardian.id] = roll
+        self.enemies = [guardian if u.id == original.id else u for u in self.enemies]
+        area = self.area
+        self.area = SkillArea(
+            tiles=(guardian.xy,), units=(guardian.id,), origin=area.origin, direction=area.direction
+        )
 
     # ------------------------------------------------------------------
     # 選出效果的對象
@@ -267,6 +321,16 @@ class _Cast:
                 execute(self.ctx, batch)
             if effect.type == "damage" and effect.affects in _TOUCHING_AFFECTS:
                 self.touch_untouched_tiles(spec, start)
+        self.react_to_hits()
+
+    def react_to_hits(self) -> None:
+        """全部效果結算之後：每個被命中的單位（依單位 ID）各自可以用 ``hit_by_*`` 反應技反應。"""
+        melee = self.profile.height_limited
+        for uid in sorted(self.hits):
+            roll = self.hits[uid]
+            unit = self.ctx.state.units[UnitId(uid)]
+            if roll.hit and unit.team is not self.caster.team:
+                hit_reactions(self.ctx, self.caster, unit, melee=melee)
 
     def build(self, effect: ResolvedEffect, spec: EffectSpec) -> list[EffectBase]:  # noqa: PLR0911
         kind = effect.type
@@ -287,6 +351,8 @@ class _Cast:
             return self.knock_prone(effect, spec)
         if kind == "teleport":
             return self.teleport(spec)
+        if kind == INTERCEPT:
+            return []  # 攔截由反應機制處理（reactions.try_intercept）；結算時這個原語沒有效果
         if kind == "apply_status":
             return self.apply_status(effect, spec)
         return self.tile_effect(effect, spec)

@@ -27,7 +27,12 @@ from trpg.engine.actions import Direction, UseSkill
 from trpg.engine.rules.combat import AttackProfile, attack_value, concealment_problem
 from trpg.engine.rules.geometry import XY, has_line_of_sight, manhattan
 from trpg.engine.rules.movement import is_deadly, is_standable
-from trpg.engine.rules.statuses import attack_range_cap, blocks_spells, effective_attribute
+from trpg.engine.rules.statuses import (
+    attack_range_cap,
+    blocks_spells,
+    effective_attribute,
+    skip_turn_status,
+)
 from trpg.engine.skills import shapes
 from trpg.engine.skills.conditions import skill_condition_problem
 from trpg.engine.state import BattleState, ObjectState, UnitState
@@ -43,8 +48,11 @@ __all__ = [
     "damage_parameters",
     "has_selection",
     "hp_cost",
+    "reaction_problem",
+    "reaction_target_problem",
     "resolve_effects",
     "selections",
+    "skill_ap_cost",
     "skill_is_height_limited",
     "skill_problem",
     "skill_profile",
@@ -160,15 +168,18 @@ def hp_cost(unit: UnitState, skill: SkillDef) -> int:
     return -(-unit.max_hp * permille // _PERMILLE)
 
 
-def skill_problem(  # noqa: PLR0911
+def skill_ap_cost(state: BattleState, skill: SkillDef) -> int:
+    """施放技能花的 AP：主動技能是 ``ap_cost``、姿態是 ``core.yaml`` 的 ``stance_ap_cost``，
+    反應技與被動不花 AP。"""
+    if skill.kind == "stance":
+        return state.ruleset.core.stance_ap_cost
+    return skill.ap_cost or 0
+
+
+def _resource_problem(  # noqa: PLR0911
     state: BattleState, unit: UnitState, skill: SkillDef
 ) -> str | None:
-    """技能目前不能使用的原因（繁體中文）；可以使用時回傳 ``None``（不檢查選取）。"""
-    if not skill.is_active:
-        return f"只有主動技能可以使用：{skill.name_zh}"
-    ap_cost = skill.ap_cost or 0
-    if unit.ap < ap_cost:
-        return f"AP 不足：需要 {ap_cost}，剩餘 {unit.ap}"
+    """武器相容、沉默、法力、冷卻、每場次數與 HP 代價（不含 AP）。"""
     problem = weapon_problem(skill, unit.weapon.weapon_class)
     if problem is not None:
         return problem
@@ -186,6 +197,44 @@ def skill_problem(  # noqa: PLR0911
     if cost and unit.hp <= cost:
         return f"HP 不足以支付代價：需要 {cost}，目前 {unit.hp}（支付後不可倒下）"
     return None
+
+
+def skill_problem(state: BattleState, unit: UnitState, skill: SkillDef) -> str | None:
+    """技能目前不能使用的原因（繁體中文）；可以使用時回傳 ``None``（不檢查選取）。
+
+    主動技能與姿態可以用 ``UseSkill`` 施放；姿態另外檢查「已經在這個姿態」（Phase 2E-2）。
+    """
+    if not skill.is_actionable:
+        return f"只有主動技能與姿態可以使用：{skill.name_zh}"
+    ap_cost = skill_ap_cost(state, skill)
+    if unit.ap < ap_cost:
+        return f"AP 不足：需要 {ap_cost}，剩餘 {unit.ap}"
+    if skill.kind == "stance" and any(
+        e.type == "apply_status" and e.status is not None and unit.has_status(e.status)
+        for e in skill.effects
+    ):
+        return f"已經在這個姿態中：{skill.name_zh}"
+    return _resource_problem(state, unit, skill)
+
+
+def reaction_problem(state: BattleState, unit: UnitState, skill: SkillDef) -> str | None:
+    """反應技目前不能施放的原因（單位、狀態與代價；不含每輪次數與目標）。反應不花 AP。"""
+    if not unit.alive:
+        return f"{unit.name_zh} 已不在戰場上"
+    if skip_turn_status(state.ruleset, unit) is not None:
+        return f"{unit.name_zh} 暈眩中，不能執行反應"
+    return _resource_problem(state, unit, skill)
+
+
+def reaction_target_problem(
+    state: BattleState, unit: UnitState, skill: SkillDef, trigger: UnitState
+) -> str | None:
+    """``shape: single`` 的反應技能不能打觸發者的原因：必須在射程內（含高度與視線），並套用致盲的
+    距離上限與隱蔽限制（同一般技能的單位目標）。``shape: self`` 沒有目標限制。"""
+    if skill.shape.type != "single":
+        return None
+    effects = resolve_effects(state, skill)
+    return _unit_target_problem(state, unit, skill, effects, trigger, shape_reach(skill, unit))
 
 
 # ---------------------------------------------------------------------------

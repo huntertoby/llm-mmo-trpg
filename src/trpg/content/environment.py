@@ -8,12 +8,14 @@ from __future__ import annotations
 
 import re
 from collections import Counter
+from collections.abc import Mapping
 from typing import Any, Literal
 
 from pydantic import Field, PrivateAttr, field_validator, model_validator
 
 from trpg.content.battle import ID_PATTERN, Dice, ReactionRule, ReactionUnless, ReactionWhen
 from trpg.content.schemas import ContentModel
+from trpg.content.skills import SkillDef
 from trpg.shared.types import Attribute, Element, Surface
 
 __all__ = [
@@ -520,11 +522,27 @@ class ReactionTable(ContentModel):
         return f"{len(self.reactions)} 種反應、{len(self.default_rules)} 條預設規則"
 
 
-def check_rule(rule: ReactionRule, index: dict[str, ReactionDef]) -> None:
-    """反應規則引用的反應存在，且事件是該反應支援的事件。"""
+def check_rule(
+    rule: ReactionRule, index: dict[str, ReactionDef], skills: Mapping[str, SkillDef] | None = None
+) -> None:
+    """反應規則引用的反應存在，且事件是該反應支援的事件。
+
+    ``reaction`` 可以是內建反應（``reactions.yaml``），或（給定 ``skills`` 時）``kind: reaction``
+    的技能 ID——此時規則的事件必須等於技能的 ``reaction.event``（Phase 2E-2）。
+    """
     definition = index.get(rule.reaction)
     if definition is None:
-        raise ValueError(f"未知的反應：{rule.reaction}")
+        skill = None if skills is None else skills.get(rule.reaction)
+        if skill is None:
+            raise ValueError(f"未知的反應：{rule.reaction}")
+        if skill.kind != "reaction" or skill.reaction is None:
+            raise ValueError(f"技能 {rule.reaction} 不是反應技，不能作為反應規則")
+        if rule.when.event != skill.reaction.event:
+            raise ValueError(
+                f"反應技 {rule.reaction} 的事件是 {skill.reaction.event}，"
+                f"規則卻寫 {rule.when.event}"
+            )
+        return
     if rule.when.event not in definition.events:
         raise ValueError(
             f"反應 {rule.reaction} 不支援事件 {rule.when.event}"

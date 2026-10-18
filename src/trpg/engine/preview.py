@@ -23,6 +23,7 @@ from trpg.engine.actions import Action, Attack, Shove, Trip, UseSkill
 from trpg.engine.battle import _actor, simulate_preview
 from trpg.engine.control import plan_status, status_save_chance
 from trpg.engine.events import (
+    AttackIntercepted,
     AttackRolled,
     DamageDealt,
     EnteredDeadlyTerrain,
@@ -83,7 +84,8 @@ class Outcome:
 
     ``kind``：``damaged``、``downed``、``moved``、``fell``、``deadly_terrain``、``escaped``、
     ``status``、``surface``、``terrain``、``object_damaged``、``object_destroyed``、
-    ``object_exploded``、``object_ignited``、``object_moved``、``reaction``。
+    ``object_exploded``、``object_ignited``、``object_moved``、``reaction``、``intercepted``
+    （``unit_id`` 是守護者、``detail`` 是被保護的單位）。
     """
 
     kind: str
@@ -249,6 +251,8 @@ def _outcome(e: EventBase) -> Outcome | None:  # noqa: PLR0911, PLR0912
         return Outcome("object_moved", object_id=e.object_id, pos=_xy(e.to_pos))
     if isinstance(e, ReactionTriggered):
         return Outcome("reaction", unit_id=e.unit_id, detail=e.reaction)
+    if isinstance(e, AttackIntercepted):
+        return Outcome("intercepted", unit_id=e.guardian_id, detail=e.target_id)
     return None
 
 

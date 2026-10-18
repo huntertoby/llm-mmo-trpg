@@ -131,6 +131,10 @@ class CoreRules(ContentModel):
     max_trigger_depth: int = Field(default=3, ge=0)
     """技能觸發的連鎖深度上限：動作本身為 0，由觸發產生的觸發深度 +1，超過上限不結算。"""
 
+    # 姿態（2E-2）
+    stance_ap_cost: int = Field(default=1, ge=0)
+    """進入姿態（``kind: stance``）花的 AP；取消姿態（``EndStance``）免費。"""
+
     @model_validator(mode="after")
     def _check_tier_budget(self) -> CoreRules:
         if sorted(self.tier_budget) != [1, 2, 3, 4, 5]:

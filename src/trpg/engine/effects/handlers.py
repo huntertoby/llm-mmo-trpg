@@ -41,6 +41,7 @@ from trpg.engine.rules.statuses import (
     damage_taken_permille,
     effective_attribute,
     healing_received_permille,
+    stance_status_ids,
 )
 from trpg.engine.state import BattleState, StatusInstance, UnitState
 from trpg.shared.types import Element, Pos, Surface, Team, UnitId
@@ -238,8 +239,10 @@ def _cleanse(ctx: Ctx, effect: EffectBase) -> list[EventBase]:
     if unit is None or not unit.alive:
         return []
     removable = [
-        s.status_id for s in unit.statuses if not ctx.rules.status_def(s.status_id).beneficial
-    ]
+        s.status_id
+        for s in unit.statuses
+        if not (d := ctx.rules.status_def(s.status_id)).beneficial and not d.stance
+    ]  # 姿態不被淨化移除（2E-2）
     if not removable:
         return []
     unit.statuses = [s for s in unit.statuses if s.status_id not in removable]
@@ -378,6 +381,13 @@ def apply_status(ctx: Ctx, effect: ApplyStatusEffect) -> list[EventBase]:
     definition = ctx.rules.status_def(status_id)
     existing = unit.get_status(status_id)
     instance = StatusInstance(status_id=status_id, remaining=duration, source_id=effect.source_id)
+    if definition.stance:  # 同時只能有一個姿態：先移除其他姿態（2E-2）
+        for old in stance_status_ids(ctx.rules, unit):
+            if old != status_id:
+                unit.statuses = [s for s in unit.statuses if s.status_id != old]
+                events.append(
+                    ctx.emit(StatusRemoved, target_id=unit.id, status_id=old, reason="replaced")
+                )
     # 目前只有 refresh：重複施加時以新的持續時間取代，不疊加
     others = [s for s in unit.statuses if s.status_id != status_id]
     unit.statuses = sorted([*others, instance], key=lambda s: s.status_id)

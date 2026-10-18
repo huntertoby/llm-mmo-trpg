@@ -82,6 +82,8 @@ class BudgetRules(ContentModel):
     max_ratio_permille: int = Field(ge=1, le=_PERMILLE_MAX)
     ap_coefficient_permille: dict[int, int]
     reaction_coefficient_permille: int = Field(ge=1)
+    stance_coefficient_permille: int = Field(default=1000, ge=1)
+    """姿態技能的預算係數（‰；2E-2）：可用預算 ＝ tier_budget × 係數 ×（1000 ＋ 折抵）÷ 1000。"""
     passive_extra_trigger_permille: int = Field(default=800, ge=1, le=1000)
     """被動技能的 ``trigger.max_per_round`` 每多 1 次，可用預算 × 這個值（‰）。"""
     condition_permille: dict[Literal["none", "common", "harsh"], int]

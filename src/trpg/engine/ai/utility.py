@@ -40,7 +40,17 @@ from fractions import Fraction
 
 from trpg.content.environment import AiProfile, AiProfileTable, AiWeights, OrderBonuses
 from trpg.content.skills import SkillDef
-from trpg.engine.actions import Action, Attack, Defend, EndTurn, Move, Shove, Trip, UseSkill
+from trpg.engine.actions import (
+    Action,
+    Attack,
+    Defend,
+    EndStance,
+    EndTurn,
+    Move,
+    Shove,
+    Trip,
+    UseSkill,
+)
 from trpg.engine.ai.orders import (
     FocusTarget,
     HoldPosition,
@@ -77,7 +87,7 @@ from trpg.engine.rules.geometry import (
     neighbors4,
 )
 from trpg.engine.rules.movement import is_standable, step_cost
-from trpg.engine.rules.statuses import forced_target_sources, shield_amount
+from trpg.engine.rules.statuses import forced_target_sources, shield_amount, stance_status_ids
 from trpg.engine.skills.targeting import ResolvedEffect, SkillArea, hp_cost, resolve_effects
 from trpg.engine.state import BattleState, UnitState
 from trpg.shared.types import ObjectId, Surface, Team, UnitId
@@ -857,6 +867,8 @@ def skill_estimate(  # noqa: PLR0917
     估計只決定「誰值得完整預覽」；值不值得施放由預覽的收益、位置價值的差與機會成本決定。
     """
     skill = state.ruleset.skill_def(action.skill_id)
+    if skill.kind == "stance" and stance_status_ids(state.ruleset, unit):
+        return None  # 已經有姿態：AI 不主動換姿態（也不主動取消，Phase 2E-2）
     if any(e.type == "teleport" for e in skill.effects) and action.target_pos is not None:
         moved = unit.clone()
         moved.pos = action.target_pos
@@ -1113,6 +1125,8 @@ class UtilityAI:
         ctx = self.order_context(state, unit)
         w = _order_weights(profile.weights, ctx)
         actions, areas = legal_actions_with_areas(state)
+        if all(isinstance(a, EndStance | EndTurn) for a in actions):
+            return []  # 只剩結束回合與取消姿態（AI 不取消姿態）：不需要評分
         scene = _scene(state, unit, ctx)
         walk = scene.walk
         before = position_value(state, unit.id, w, ctx, walk=walk)
@@ -1127,8 +1141,8 @@ class UtilityAI:
                 scored[index] = ActionScore(action, defend_score(state, unit, w), None)
             elif isinstance(action, Attack) and not worth_previewing(state, scene, action):
                 continue
-            elif isinstance(action, UseSkill):
-                continue  # 技能在下面依估計篩選後才評分
+            elif isinstance(action, UseSkill | EndStance):
+                continue  # 技能在下面依估計篩選後才評分；AI 不主動取消姿態
             else:
                 scored[index] = score_action(
                     state, action, profile, before=before, orders=ctx, walk=walk

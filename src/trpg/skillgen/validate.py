@@ -65,6 +65,7 @@ def validate_skill(skill: SkillDef, library: ContentLibrary) -> list[Violation]:
         return reference
     out = _cap_violations(skill, library)
     out += _passive_violations(skill, library)
+    out += _stance_violations(skill, library)
     out += _exclusion_violations(skill, library)
     report, budget_out = _budget_violations(skill, library)
     out += _skeleton_violations(skill, library, report)
@@ -179,6 +180,44 @@ def _passive_violations(skill: SkillDef, library: ContentLibrary) -> list[Violat
                         f"效果的 affects 只能是 self，收到 {affects}",
                     )
                 )
+    return out
+
+
+def _stance_violations(skill: SkillDef, library: ContentLibrary) -> list[Violation]:
+    """姿態（2E-2 4.3）：姿態技能的核心 ``apply_status`` 必須是 ``stance: true`` 的狀態，
+    且不設持續回合；其他技能不得施加姿態狀態（取消只能靠 ``EndStance``，不會自己到期）。"""
+    statuses = library.ruleset.statuses.by_id()
+    out: list[Violation] = []
+    for index, effect in enumerate(skill.effects):
+        if effect.type != "apply_status" or effect.status not in statuses:
+            continue
+        is_stance = statuses[effect.status].stance
+        where = f"effects[{index}]（{effect.status}）"
+        if is_stance and skill.kind != "stance":
+            out.append(
+                Violation(
+                    skill.id,
+                    "stance.misuse",
+                    f"{where}：姿態狀態只能由姿態技能（kind: stance）施加",
+                )
+            )
+        elif skill.kind == "stance" and not is_stance:
+            out.append(
+                Violation(
+                    skill.id, "stance.status", f"{where}：姿態技能施加的狀態必須是 stance: true"
+                )
+            )
+        if is_stance and effect.duration is not None:
+            out.append(
+                Violation(
+                    skill.id, "stance.duration", f"{where}：姿態狀態不設 duration（到取消為止）"
+                )
+            )
+    if skill.kind == "stance" and not any(
+        e.type == "apply_status" and e.status in statuses and statuses[e.status].stance
+        for e in skill.effects
+    ):
+        out.append(Violation(skill.id, "stance.status", "姿態技能必須施加一個 stance: true 的狀態"))
     return out
 
 

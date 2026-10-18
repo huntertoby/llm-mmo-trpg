@@ -1,9 +1,14 @@
-# 2B 停用：需要觸發時機系統（反應技的執行）。
+# 反應技（Phase 2E-2 啟用）：被攻擊命中、相鄰友方被攻擊或敵人離開相鄰格時，不花 AP 立刻施放一次（SkillDef.reaction.event）。
+# 形狀 self（目標為自己）或 single（目標固定為觸發者，必須在射程內）；照一般技能擲命中與抵抗。
+# intercept 只能搭配 event: ally_hit_adjacent（形狀 self），而 ally_hit_adjacent 一定要有 intercept（SkillDef 驗證）。
+# 預算：tier_budget × reaction_coefficient_permille（600‰）× (1000 ＋ 代價折抵) ÷ 1000（skill_budget.yaml，初值）。
+# min_rarity: rare（Phase 2E 決定 H）。
 id: reaction
 name_zh: 反應技
 description_zh: 以反應而非 AP 觸發。
 kinds: [reaction]
-enabled: false
+enabled: true
+min_rarity: rare
 shapes: [self, single]
-core: {primitives: [damage, apply_status, push, pull]}
+core: {primitives: [damage, apply_status, push, pull, intercept]}
 secondary: {max_count: 1}

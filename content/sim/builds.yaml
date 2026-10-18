@@ -153,3 +153,20 @@ builds:
       tags: [hero, sim]
       max_mana: 40
       skills: [skill_hex_bolt, skill_dread_gaze, skill_hush, skill_blinding_dark]
+
+  - id: build_guardian
+    name_zh: 守護者
+    theme_zh: 嘲諷吸引火力、堅壁姿態減傷、挺身而出替隊友擋下單體攻擊，荊棘之膚讓貼身的攻擊者自己受傷；隊友越脆弱、被集火越兇越發光，單打獨鬥與被範圍技能轟炸時不利（Phase 2E-2，初值未經模擬）。
+    hero:
+      id: build_guardian
+      name_zh: 守護者英雄
+      attributes: {str: 16, dex: 12, con: 14, int: 10, wis: 10, wil: 10}
+      max_hp: 60
+      speed: 5
+      armor_bonus: 4
+      weapon: one_handed_sword
+      ai_profile: guard
+      resist: {physical: 100}
+      tags: [hero, sim]
+      max_mana: 20
+      skills: [skill_taunting_roar, skill_stand_firm, skill_bulwark_stance, skill_thorn_skin]

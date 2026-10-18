@@ -80,3 +80,6 @@ max_chain_depth: 3            # 連鎖深度上限
 
 # --- 技能觸發（Phase 2E-1，docs/phases/Phase2E計畫.md 3.3）---
 max_trigger_depth: 3          # 技能觸發的連鎖深度上限（動作本身為 0；觸發產生的觸發 +1；超過就不結算）
+
+# --- 姿態（Phase 2E-2，docs/phases/Phase2E計畫.md 4.3）---
+stance_ap_cost: 1             # 進入姿態花的 AP；取消姿態（EndStance）免費、只能在自己的回合

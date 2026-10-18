@@ -21,6 +21,7 @@ from trpg.engine.actions import (
     Attack,
     Decision,
     Defend,
+    EndStance,
     EndTurn,
     Interact,
     Move,
@@ -64,7 +65,12 @@ from trpg.engine.rules.movement import (
     stand_up_cost,
     step_cost,
 )
-from trpg.engine.rules.statuses import base_attribute, effective_attribute, is_rooted
+from trpg.engine.rules.statuses import (
+    base_attribute,
+    effective_attribute,
+    is_rooted,
+    stance_status_ids,
+)
 from trpg.engine.setup import BattleSetup, BattleSetupError
 from trpg.engine.skill_triggers import collect_move, settle
 from trpg.engine.skills.interpreter import use_skill
@@ -643,6 +649,20 @@ def _do_interact(ctx: Ctx, unit: UnitState, action: Action) -> None:
     )
 
 
+def _do_end_stance(ctx: Ctx, unit: UnitState, action: Action) -> None:
+    assert isinstance(action, EndStance)
+    stances = stance_status_ids(ctx.rules, unit)
+    if not stances:
+        raise IllegalActionError(f"{unit.name_zh} 目前沒有姿態可以取消")
+    execute(
+        ctx,
+        [
+            RemoveStatusEffect(target_id=unit.id, status_id=status_id, reason="stance_ended")
+            for status_id in stances
+        ],
+    )
+
+
 def _do_end_turn(ctx: Ctx, unit: UnitState, action: Action) -> None:
     assert isinstance(action, EndTurn)
     end_turn(ctx)
@@ -662,6 +682,7 @@ ACTION_HANDLERS: dict[str, ActionHandler] = {
     "trip": _do_trip,
     "interact": _do_interact,
     "use_skill": _do_use_skill,
+    "end_stance": _do_end_stance,
     "end_turn": _do_end_turn,
 }
 
@@ -743,9 +764,10 @@ def resume(state: BattleState, decision: Decision) -> ResolveResult:
 def legal_actions(state: BattleState) -> list[Action]:
     """目前行動者的所有合法動作（確定性順序）。
 
-    順序：攻擊單位（依目標 ID）→ 攻擊物件（依物件 ID）→ 推擊 → 絆倒（依目標 ID）→ 互動（依物件
-    ID）→ 防禦 → 移動（每個可達格一條最短路徑，依 ``(y, x)``；倒地時另含「只站起來」）→
-    結束回合。``resolve`` 接受任何合法路徑，這裡每個目的地只列一條代表路徑。
+    順序：攻擊單位（依目標 ID）→ 攻擊物件（依物件 ID）→ 推擊 → 絆倒（依目標 ID）→ 技能 →
+    互動（依物件 ID）→ 防禦 → 取消姿態（有姿態時）→ 移動（每個可達格一條最短路徑，依
+    ``(y, x)``；倒地時另含「只站起來」）→ 結束回合。``resolve`` 接受任何合法路徑，這裡每個目的地
+    只列一條代表路徑。
     暫停中（``pending``）時回傳空串列。
     """
     return legal_actions_with_areas(state)[0]
@@ -798,6 +820,8 @@ def _legal_actions(
         )
     if unit.ap >= core.defend_ap_cost and not unit.has_status(DEFENDING):
         actions.append(Defend(unit_id=unit.id))
+    if stance_status_ids(state.ruleset, unit):
+        actions.append(EndStance(unit_id=unit.id))
     budget = available_move_budget(state, unit)
     if can_only_stand_up(state, unit):
         actions.append(Move(unit_id=unit.id, path=(unit.pos,)))
@@ -817,7 +841,7 @@ def _legal_actions(
 def _usable_skills(state: BattleState, unit: UnitState) -> list[SkillDef]:
     rules = state.ruleset
     skills = [rules.skill_def(sid) for sid in sorted(unit.skills)]
-    return [s for s in skills if s.is_active and skill_problem(state, unit, s) is None]
+    return [s for s in skills if s.is_actionable and skill_problem(state, unit, s) is None]
 
 
 def _skill_actions(
@@ -851,6 +875,8 @@ def has_only_end_turn(state: BattleState) -> bool:
     unit = state.active
     if state.ended or unit is None or state.pending is not None:
         return False
+    if stance_status_ids(state.ruleset, unit):
+        return False  # 還可以取消姿態（EndStance）
     return not (_has_ap_action(state, unit) or _can_move(state, unit))
 
 

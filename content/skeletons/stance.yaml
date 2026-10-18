@@ -1,9 +1,13 @@
-# 2B 停用：需要姿態切換系統。
+# 姿態（Phase 2E-2 啟用）：花 core.yaml 的 stance_ap_cost（1）AP 進入，持續到取消；同時只能有一個姿態，進入新姿態會取代舊的。
+# 核心效果是對自己施加 stance: true 的狀態（statuses.yaml 的 budget_points 是點數）。
+# 預算：tier_budget × stance_coefficient_permille（skill_budget.yaml，初值 1000）× (1000 ＋ 代價折抵) ÷ 1000。
+# min_rarity: rare（Phase 2E 決定 H）。
 id: stance
 name_zh: 姿態
 description_zh: 切換狀態，持續到取消。
 kinds: [stance]
-enabled: false
+enabled: true
+min_rarity: rare
 shapes: [self]
 core: {primitives: [apply_status]}
 secondary: {max_count: 1}

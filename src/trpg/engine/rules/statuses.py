@@ -32,6 +32,7 @@ __all__ = [
     "move_points_for_turn",
     "shield_amount",
     "skip_turn_status",
+    "stance_status_ids",
 ]
 
 PERMILLE = 1000
@@ -162,3 +163,8 @@ def has_attack_disadvantage_status(rules: Ruleset, unit: UnitState) -> bool:
 def is_removed_with_source(definition: StatusDef) -> bool:
     """來源倒下或離場時立即移除的狀態（嘲諷、恐懼）。"""
     return definition.forces_target or definition.fear_source
+
+
+def stance_status_ids(rules: Ruleset, unit: UnitState) -> list[str]:
+    """``unit`` 目前的姿態狀態 ID（``stance: true``；正常情況最多一個）。"""
+    return [s.status_id for s in unit.statuses if rules.status_def(s.status_id).stance]

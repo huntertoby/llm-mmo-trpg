@@ -2,11 +2,11 @@
 
 from __future__ import annotations
 
-from trpg.content.battle import UnitTemplate, WeaponDef
+from trpg.content.battle import ReactionRule, ReactionWhen, UnitTemplate, WeaponDef
 from trpg.content.library import Ruleset
 from trpg.engine.context import Ctx
 from trpg.engine.events import EventBase, StatusRemoved, UnitDowned, UnitEscaped
-from trpg.engine.rules.statuses import is_removed_with_source
+from trpg.engine.rules.statuses import is_removed_with_source, stance_status_ids
 from trpg.engine.state import UnitState
 from trpg.shared.types import Pos, Team, UnitId
 
@@ -59,7 +59,23 @@ def down_unit(ctx: Ctx, unit: UnitState) -> list[EventBase]:
     unit.downed = True
     unit.hp = 0
     _remove_from_order(ctx, unit)
-    return [ctx.emit(UnitDowned, unit_id=unit.id), *_release_forced_targets(ctx, unit)]
+    return [
+        ctx.emit(UnitDowned, unit_id=unit.id),
+        *_drop_stances(ctx, unit),
+        *_release_forced_targets(ctx, unit),
+    ]
+
+
+def _drop_stances(ctx: Ctx, unit: UnitState) -> list[EventBase]:
+    """倒下或撤離：移除姿態狀態（2E-2）。"""
+    stances = stance_status_ids(ctx.rules, unit)
+    if not stances:
+        return []
+    unit.statuses = [s for s in unit.statuses if s.status_id not in stances]
+    return [
+        ctx.emit(StatusRemoved, target_id=unit.id, status_id=status_id, reason="downed")
+        for status_id in stances
+    ]
 
 
 def escape_unit(ctx: Ctx, unit: UnitState) -> list[EventBase]:
@@ -70,6 +86,7 @@ def escape_unit(ctx: Ctx, unit: UnitState) -> list[EventBase]:
     _remove_from_order(ctx, unit)
     return [
         ctx.emit(UnitEscaped, unit_id=unit.id, pos=unit.pos),
+        *_drop_stances(ctx, unit),
         *_release_forced_targets(ctx, unit),
     ]
 
@@ -79,6 +96,22 @@ def default_ai_profile(template: UnitTemplate, weapon: WeaponDef) -> str:
     if template.ai_profile is not None:
         return template.ai_profile
     return "brute" if weapon.is_melee else "archer"
+
+
+def _auto_reaction_rules(
+    template: UnitTemplate, rules: Ruleset, written: tuple[ReactionRule, ...]
+) -> list[ReactionRule]:
+    """範本裝備了反應技、卻沒有為它寫規則時，自動加一條 ``auto`` 規則（排在其他規則之前，
+    依技能 ID 排序；Phase 2E-2 4.1）。"""
+    covered = {rule.reaction for rule in written}
+    auto: list[ReactionRule] = []
+    for skill_id in sorted(template.skills):
+        skill = rules.skill_def(skill_id)
+        if skill.kind == "reaction" and skill.reaction is not None and skill_id not in covered:
+            auto.append(
+                ReactionRule(reaction=skill_id, when=ReactionWhen(event=skill.reaction.event))
+            )
+    return auto
 
 
 def make_unit(
@@ -96,6 +129,7 @@ def make_unit(
     reactions = (
         template.reactions if template.reactions is not None else rules.reactions.default_rules
     )
+    reactions = (*_auto_reaction_rules(template, rules, reactions), *reactions)
     return UnitState(
         id=uid,
         template_id=template.id,

@@ -1,0 +1,25 @@
+# 反應技（Phase 2E-2，數值為初值，未經模擬）：被近戰攻擊命中後，立刻對攻擊者反擊一次（武器傷害，照一般技能擲命中）。
+id: skill_riposte
+schema_version: 1
+name_zh: 還擊
+tier: 1
+rank: 1
+rarity: rare
+kind: reaction
+skeleton: reaction
+category: weapon
+weapon_req: melee
+ap_cost: null
+scaling_attr: str
+shape: {type: single, range: weapon}
+effects:
+  - {type: damage, multiplier_permille: 900}
+condition: null
+trigger: null
+reaction: {event: hit_by_melee}
+cost: {mana: 0}
+tags: [counter, reaction, physical]
+narrative:
+  concept: 格開刀鋒的同時順勢反刺，讓貼身攻擊的人自己付出代價
+  cast_flavor: 你側身讓過刀鋒，劍尖順勢遞了回去
+provenance: {origin: builtin, owner_id: null, created_by: null, parents: [], bound: true, tradeable: false}

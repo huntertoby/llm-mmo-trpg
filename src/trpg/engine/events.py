@@ -16,6 +16,7 @@ __all__ = [
     "EVENT_ADAPTER",
     "EVENT_LIST_ADAPTER",
     "AdvantageState",
+    "AttackIntercepted",
     "AttackRolled",
     "BattleEnded",
     "BattleStarted",
@@ -371,7 +372,19 @@ class StatusRemoved(EventBase):
     type: Literal["status_removed"] = "status_removed"
     target_id: UnitId
     status_id: str
-    reason: Literal["expired", "removed", "stood_up", "depleted", "cleansed", "source_lost"]
+    reason: Literal[
+        "expired",
+        "removed",
+        "stood_up",
+        "depleted",
+        "cleansed",
+        "source_lost",
+        "replaced",
+        "stance_ended",
+        "downed",
+    ]
+    """``replaced``：被新的姿態取代；``stance_ended``：``EndStance`` 取消姿態；``downed``：
+    單位倒下或撤離時移除姿態（Phase 2E-2）。"""
 
 
 class UnitDowned(EventBase):
@@ -558,6 +571,18 @@ class ReactionTriggered(EventBase):
     stamina_spent: int
 
 
+class AttackIntercepted(EventBase):
+    """替隊友擋攻擊（Phase 2E-2 ``intercept``）：``attacker_id`` 對 ``target_id`` 的單體攻擊已命中，
+    傷害與其他效果改為作用在 ``guardian_id`` 身上（``skill_id`` 為攻擊所用的技能，普攻為
+    ``None``）。之後是攻擊對守護者結算的事件。"""
+
+    type: Literal["attack_intercepted"] = "attack_intercepted"
+    guardian_id: UnitId
+    attacker_id: UnitId
+    target_id: UnitId
+    skill_id: str | None = None
+
+
 class ReactionDeclined(EventBase):
     """``prompt`` 反應被拒絕。"""
 
@@ -711,6 +736,7 @@ type Event = Annotated[
     | PushResisted
     | ReactionTriggered
     | ReactionDeclined
+    | AttackIntercepted
     | EnvironmentStarted
     | EnvironmentEnded
     | MapEventTriggered

@@ -37,6 +37,11 @@
 #   attack_range_cap         致盲：攻擊與以單位為目標的技能只能選擇此距離（曼哈頓）以內的單位；攻擊有劣勢
 #   grants_advantage_against 被標記：對帶有者的攻擊有優勢；帶有者不受 concealed（含黑暗表面、草叢）的
 #                            「無法選為目標」限制（隱蔽的劣勢仍在，與優勢互相抵消）
+# 2E-2（姿態；數值全是初值，未經模擬，平衡階段再調）：
+#   stance   姿態：持續到取消（expires: never、不設 duration），帶有者同時最多一個姿態狀態，施加新的會先移除舊的
+#            （StatusRemoved 原因 replaced）；倒下或撤離時移除；淨化（cleanse）不移除；EndStance 免費取消。
+#            姿態技能（kind: stance）進入時花 core.yaml 的 stance_ap_cost。budget_points 是姿態技能的點數（可用預算 ＝
+#            tier_budget × skill_budget.yaml 的 stance_coefficient_permille）
 # control_group 新增 mental（心智：恐懼、沉默）：適用控制遞減，不是 hard，對 Boss 不轉換。
 statuses:
   - id: defending
@@ -238,3 +243,25 @@ statuses:
     budget_points: 4
     save_attr: wis
     grants_advantage_against: true
+  - id: stance_fury
+    name_zh: 狂怒姿態
+    description_zh: 力量 +2，但受到的骰值傷害 ×120%；持續到取消。
+    expires: never
+    stacking: refresh
+    beneficial: true
+    budget_points: 11
+    min_rarity: rare
+    stance: true
+    attr_bonus: {str: 2}
+    damage_taken_permille: 1200
+  - id: stance_bulwark
+    name_zh: 堅壁姿態
+    description_zh: 受到的骰值傷害 ×75%，但回合開始時的移動點數減半；持續到取消。
+    expires: never
+    stacking: refresh
+    beneficial: true
+    budget_points: 11
+    min_rarity: rare
+    stance: true
+    damage_taken_permille: 750
+    move_permille: 500

@@ -24,6 +24,7 @@ __all__ = [
     "Decision",
     "Defend",
     "Direction",
+    "EndStance",
     "EndTurn",
     "Interact",
     "Move",
@@ -124,6 +125,12 @@ class UseSkill(_ActionBase):
     direction: Direction | None = None
 
 
+class EndStance(_ActionBase):
+    """取消目前的姿態（Phase 2E-2）：只能在自己的回合，免費（不花 AP）。"""
+
+    type: Literal["end_stance"] = "end_stance"
+
+
 class EndTurn(_ActionBase):
     """結束回合。"""
 
@@ -131,7 +138,7 @@ class EndTurn(_ActionBase):
 
 
 type Action = Annotated[
-    Move | Attack | UseSkill | Defend | Shove | Trip | Interact | EndTurn,
+    Move | Attack | UseSkill | Defend | Shove | Trip | Interact | EndStance | EndTurn,
     Field(discriminator="type"),
 ]
 
@@ -150,7 +157,7 @@ class Decision(BaseModel):
 
 
 type Step = Annotated[
-    Move | Attack | UseSkill | Defend | Shove | Trip | Interact | EndTurn | Decision,
+    Move | Attack | UseSkill | Defend | Shove | Trip | Interact | EndStance | EndTurn | Decision,
     Field(discriminator="type"),
 ]
 """戰鬥紀錄中的一步：動作（``resolve``）或決定（``resume``）。"""

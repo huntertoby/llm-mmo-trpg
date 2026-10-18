@@ -154,7 +154,7 @@ class RemoveStatusEffect(EffectBase):
     kind: Literal["remove_status"] = "remove_status"
     target_id: UnitId
     status_id: str
-    reason: Literal["expired", "removed", "stood_up"] = "removed"
+    reason: Literal["expired", "removed", "stood_up", "stance_ended"] = "removed"
 
     def sort_target(self) -> str:
         return self.target_id

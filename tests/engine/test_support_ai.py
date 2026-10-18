@@ -62,6 +62,8 @@ def test_the_support_profile_exists_and_values_support_over_damage() -> None:
         "hasted": 3,
         "regenerating": 6,
         "defending": 3,
+        "stance_fury": 8,  # 2E-2：姿態以自身為對象，由效用 AI 的 ally_status_values 計分
+        "stance_bulwark": 8,
     }
     assert library().ai_profiles.status_values["taunted"] == 5
 

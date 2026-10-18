@@ -267,6 +267,8 @@ def _passive_coefficient(skill: SkillDef, library: ContentLibrary) -> tuple[Frac
 def _ap_coefficient(skill: SkillDef, budget: BudgetRules) -> Fraction:
     if skill.kind == "reaction":
         return Fraction(budget.reaction_coefficient_permille, _PERMILLE)
+    if skill.kind == "stance":
+        return Fraction(budget.stance_coefficient_permille, _PERMILLE)
     if skill.kind == "active" and skill.ap_cost is not None:
         coefficient = budget.ap_coefficient_permille.get(skill.ap_cost)
         if coefficient is None:
@@ -300,7 +302,8 @@ def skill_budget(skill: SkillDef, library: ContentLibrary) -> BudgetReport:
     if skill.kind == "passive":
         coefficient, label = _passive_coefficient(skill, library)
     else:
-        coefficient, label = _ap_coefficient(skill, budget), "AP 係數"
+        coefficient = _ap_coefficient(skill, budget)
+        label = {"reaction": "反應係數", "stance": "姿態係數"}.get(skill.kind, "AP 係數")
     return BudgetReport(
         skill_id=skill.id,
         tier=skill.tier,

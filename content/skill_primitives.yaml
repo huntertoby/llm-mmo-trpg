@@ -146,3 +146,13 @@ primitives:
     acts_on: tile
     params:
       amount: {type: int, min: 1, max: 1}
+  - id: intercept
+    name_zh: 替隊友擋攻擊
+    description_zh: 只能出現在 event 為 ally_hit_adjacent 的反應技。相鄰友方被單體攻擊命中後、傷害與其他效果結算之前，這次攻擊的所有效果改為作用在持有者身上（不重擲命中；位移方向重新計算；範圍技能不攔截）。守護者的護盾、減傷、抗性照常結算。點數為初值，未經模擬。
+    category: structural
+    harmful: false
+    min_rarity: rare
+    budget_basis: fixed
+    base_points: 4
+    acts_on: caster
+    allowed_shapes: [self]

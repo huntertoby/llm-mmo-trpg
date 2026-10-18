@@ -30,8 +30,12 @@ __all__ = [
     "run_battle",
 ]
 
-LOG_FORMAT = "trpg-battle-log/8"
-"""``/8``（Phase 2E-1）：被動技能的觸發（``skill_triggered``、``trigger_limit_reached``；
+LOG_FORMAT = "trpg-battle-log/9"
+"""``/9``（Phase 2E-2）：反應技（``reaction_triggered`` 的 ``reaction`` 可以是技能 ID）、替隊友
+擋攻擊（``attack_intercepted``）、姿態（``end_stance`` 動作、``status_removed`` 的新原因、規則包的
+``stance_ap_cost``）；``/8`` 的紀錄無法重播。
+
+``/8``（Phase 2E-1）：被動技能的觸發（``skill_triggered``、``trigger_limit_reached``；
 單位狀態加入 ``trigger_counts``、``hits_landed``；規則包加入 ``skill_triggers``）；
 ``/7`` 的紀錄無法重播。
 

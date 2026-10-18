@@ -1,0 +1,23 @@
+# 姿態（Phase 2E-2，數值為初值，未經模擬）：進入花 1 AP，持續到取消；力量 +2，但受到的骰值傷害 ×120%。
+id: skill_fury_stance
+schema_version: 1
+name_zh: 狂怒姿態
+tier: 1
+rank: 1
+rarity: rare
+kind: stance
+skeleton: stance
+category: weapon
+weapon_req: melee
+ap_cost: null
+scaling_attr: str
+shape: {type: self}
+effects:
+  - {type: apply_status, status: stance_fury, affects: self}
+condition: null
+cost: {mana: 0}
+tags: [stance, buff]
+narrative:
+  concept: 放下防守，把全身的力氣押在下一擊
+  cast_flavor: 你低吼一聲，肌肉繃緊，眼中只剩下敵人
+provenance: {origin: builtin, owner_id: null, created_by: null, parents: [], bound: true, tradeable: false}

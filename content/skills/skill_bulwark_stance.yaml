@@ -1,0 +1,23 @@
+# 姿態（Phase 2E-2，數值為初值，未經模擬）：進入花 1 AP，持續到取消；受到的骰值傷害 ×75%，但移動點數減半。
+id: skill_bulwark_stance
+schema_version: 1
+name_zh: 堅壁姿態
+tier: 1
+rank: 1
+rarity: rare
+kind: stance
+skeleton: stance
+category: weapon
+weapon_req: melee
+ap_cost: null
+scaling_attr: str
+shape: {type: self}
+effects:
+  - {type: apply_status, status: stance_bulwark, affects: self}
+condition: null
+cost: {mana: 0}
+tags: [stance, defense]
+narrative:
+  concept: 沉下重心、舉盾守住陣線，寸步不讓
+  cast_flavor: 你雙腳扎進地面，把自己變成一堵牆
+provenance: {origin: builtin, owner_id: null, created_by: null, parents: [], bound: true, tradeable: false}

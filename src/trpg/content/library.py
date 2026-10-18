@@ -463,9 +463,11 @@ def _check_units(
             raise ContentError(path, f"未知的行為模式：{template.ai_profile}")
         for rule in template.reactions or ():
             try:
-                check_rule(rule, reaction_index)
+                check_rule(rule, reaction_index, skills)
             except ValueError as exc:
                 raise ContentError(path, str(exc)) from exc
+            if rule.reaction in skills and rule.reaction not in template.skills:
+                raise ContentError(path, f"反應規則引用了沒有裝備的反應技：{rule.reaction}")
         problems = unit_skill_problems(template, weapons[template.weapon], skills, ruleset.core)
         if problems:
             raise ContentError(path, "；".join(problems))

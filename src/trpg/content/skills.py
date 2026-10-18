@@ -37,11 +37,13 @@ if TYPE_CHECKING:
 
 __all__ = [
     "AFFECTS_VALUES",
+    "INTERCEPT",
     "RARITY_ORDER",
     "REQUIRED_CONDITIONS",
     "REQUIRED_SHAPES",
     "SKELETON_IDS",
     "SKILL_ID_PATTERN",
+    "SKILL_REACTION_EVENTS",
     "WEAPON_CLASSES",
     "Affects",
     "ConditionDef",
@@ -54,6 +56,7 @@ __all__ = [
     "PrimitiveParam",
     "PrimitiveTable",
     "Provenance",
+    "ReactionSpec",
     "ShapeBudget",
     "ShapeDef",
     "ShapeSpec",
@@ -116,6 +119,9 @@ REQUIRED_CONDITIONS: tuple[str, ...] = (
 type Targeting = Literal["self", "unit", "tile", "direction", "none"]
 type Affects = Literal["enemies", "allies", "all", "self", "tiles"]
 type SkillKind = Literal["active", "reaction", "passive", "stance"]
+type ReactionEvent = Literal[
+    "hit_by_melee", "hit_by_attack", "ally_hit_adjacent", "enemy_leaves_adjacent"
+]
 type SkillRarity = Literal["common", "rare", "epic", "legendary"]
 type SkillCategory = Literal["weapon", "spell"]
 type WeaponReq = Literal["melee", "ranged", "focus", "any"]
@@ -540,6 +546,31 @@ class TriggerSpec(ContentModel):
         return self
 
 
+SKILL_REACTION_EVENTS: tuple[str, ...] = (
+    "hit_by_melee",
+    "hit_by_attack",
+    "ally_hit_adjacent",
+    "enemy_leaves_adjacent",
+)
+"""反應技（``kind: reaction``）的觸發事件（Phase 2E-2 4.1）。"""
+
+INTERCEPT = "intercept"
+"""替隊友擋攻擊的原語 ID（只能出現在 ``event: ally_hit_adjacent`` 的反應技）。"""
+
+
+class ReactionSpec(ContentModel):
+    """反應技的觸發設定（``docs/phases/Phase2E計畫.md`` 4.1）。
+
+    - ``hit_by_melee``：持有者被近戰攻擊命中、傷害結算之後（仍存活）。
+    - ``hit_by_attack``：被任何攻擊命中、傷害結算之後（仍存活）。
+    - ``ally_hit_adjacent``：與持有者相鄰（曼哈頓距離 1）的友方被攻擊命中、**傷害結算之前**
+      （只給 ``intercept`` 使用）。
+    - ``enemy_leaves_adjacent``：敵人離開相鄰格時（同藉機攻擊）。
+    """
+
+    event: ReactionEvent
+
+
 class SkillDef(ContentModel):
     """一個技能（``content/skills/<id>.yaml``）。"""
 
@@ -560,6 +591,7 @@ class SkillDef(ContentModel):
     effects: tuple[EffectSpec, ...]
     condition: ConditionSpec | None = None
     trigger: TriggerSpec | None = None
+    reaction: ReactionSpec | None = None
     cost: SkillCost = Field(default_factory=SkillCost)
     tags: tuple[str, ...] = ()
     narrative: NarrativeDef = Field(default_factory=NarrativeDef)
@@ -602,6 +634,7 @@ class SkillDef(ContentModel):
             raise ValueError("被動技能（kind: passive）必須有 trigger")
         if self.kind != "passive" and self.trigger is not None:
             raise ValueError(f"只有被動技能可以有 trigger，收到 kind: {self.kind}")
+        self._check_reaction_and_stance()
         allowed = ("melee", "ranged") if self.category == "weapon" else ("focus", "any")
         if self.weapon_req not in allowed:
             name = "武器技" if self.category == "weapon" else "法術技"
@@ -612,6 +645,32 @@ class SkillDef(ContentModel):
         for index, effect in enumerate(self.effects):
             self._check_effect(index, effect)
         return self
+
+    def _check_reaction_and_stance(self) -> None:
+        """反應技與姿態的結構（2E-2）：``reaction`` 欄位、形狀、``intercept`` 與 ``teleport``。"""
+        if self.kind == "reaction" and self.reaction is None:
+            raise ValueError("反應技（kind: reaction）必須有 reaction")
+        if self.kind != "reaction" and self.reaction is not None:
+            raise ValueError(f"只有反應技可以有 reaction，收到 kind: {self.kind}")
+        types = [e.type for e in self.effects]
+        if self.kind in ("reaction", "stance") and "teleport" in types:
+            raise ValueError("反應技與姿態不能有 teleport（沒有可選的目標格）")
+        if self.kind == "stance" and self.shape.type != "self":
+            raise ValueError(f"姿態的形狀只能是 self，收到 {self.shape.type}")
+        if self.kind == "reaction":
+            assert self.reaction is not None
+            if self.shape.type not in ("self", "single"):
+                raise ValueError(f"反應技的形狀只能是 self 或 single，收到 {self.shape.type}")
+            intercepts = INTERCEPT in types
+            guarding = self.reaction.event == "ally_hit_adjacent"
+            if guarding and not intercepts:
+                raise ValueError("ally_hit_adjacent 的反應技必須有 intercept 效果")
+            if intercepts and not guarding:
+                raise ValueError("intercept 只能用在 event: ally_hit_adjacent 的反應技")
+            if guarding and self.shape.type != "self":
+                raise ValueError("ally_hit_adjacent 的反應技形狀必須是 self")
+        elif INTERCEPT in types:
+            raise ValueError("intercept 只能用在反應技")
 
     def _check_effect(self, index: int, effect: EffectSpec) -> None:
         where = f"effects[{index}]（{effect.type}）"
@@ -639,6 +698,11 @@ class SkillDef(ContentModel):
     @property
     def is_active(self) -> bool:
         return self.kind == "active"
+
+    @property
+    def is_actionable(self) -> bool:
+        """玩家可以在自己的回合用 ``UseSkill`` 施放：主動技能與姿態（花 AP）。"""
+        return self.kind in ("active", "stance")
 
 
 class SkillTable(ContentModel):

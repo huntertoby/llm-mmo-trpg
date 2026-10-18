@@ -227,6 +227,11 @@ class StatusDef(ContentModel):
     - ``blocks_spells``：沉默——不能使用 ``category: spell`` 的技能。
     - ``attack_range_cap``：致盲——攻擊與以單位為目標的技能只能選此距離以內的單位；攻擊有劣勢。
     - ``grants_advantage_against``：被標記——對帶有者的攻擊有優勢；不受隱蔽的「無法選為目標」限制。
+
+    Phase 2E-2 的欄位：
+
+    - ``stance``：姿態——持續到取消（``expires: never``），帶有者同時最多一個姿態狀態，施加新的會先
+      移除舊的（原因 ``replaced``）；倒下／撤離時移除；淨化不移除。
     """
 
     id: str = Field(pattern=ID_PATTERN)
@@ -244,6 +249,7 @@ class StatusDef(ContentModel):
     blocks_spells: bool = False
     attack_range_cap: int | None = Field(default=None, ge=1)
     grants_advantage_against: bool = False
+    stance: bool = False
     move_permille: int = Field(default=1000, ge=0, le=10000)
     prevents_move: bool = False
     skip_turn: bool = False
@@ -258,6 +264,8 @@ class StatusDef(ContentModel):
 
     @model_validator(mode="after")
     def _check(self) -> StatusDef:
+        if self.stance and (self.expires != "never" or self.duration is not None):
+            raise ValueError(f"狀態 {self.id}：姿態（stance）必須 expires: never 且不設 duration")
         if self.control_group is not None and self.save_attr is None:
             raise ValueError(f"狀態 {self.id}：有 control_group 的狀態必須設定 save_attr")
         if self.expires == "turn_end" and self.duration is None:
@@ -288,7 +296,17 @@ class StatusTable(ContentModel):
 
 
 class ReactionWhen(ContentModel):
-    event: Literal["targeted_by_melee", "targeted_by_attack", "enemy_leaves_adjacent"]
+    """反應規則的觸發事件。``targeted_by_*`` 是被攻擊命中之後、傷害之前（內建格擋）；
+    ``hit_by_*``、``ally_hit_adjacent`` 是反應技的事件（Phase 2E-2，見 ``ReactionSpec``）。"""
+
+    event: Literal[
+        "targeted_by_melee",
+        "targeted_by_attack",
+        "enemy_leaves_adjacent",
+        "hit_by_melee",
+        "hit_by_attack",
+        "ally_hit_adjacent",
+    ]
 
 
 class ReactionUnless(ContentModel):

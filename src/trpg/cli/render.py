@@ -12,6 +12,7 @@ from trpg.content.library import Ruleset
 from trpg.content.maps import MapDef, SpawnUnitsEvent
 from trpg.engine.environment import Telegraph
 from trpg.engine.events import (
+    AttackIntercepted,
     AttackRolled,
     BattleEnded,
     BattleStarted,
@@ -309,6 +310,13 @@ def _attack_text(e: AttackRolled, name: dict[str, str], state: BattleState) -> s
     )
 
 
+def _reaction_name(state: BattleState, reaction_id: str) -> str:
+    """反應的顯示名稱：內建反應（``reactions.yaml``）或反應技（技能 ID）。"""
+    if reaction_id.startswith("skill_"):
+        return f"「{state.ruleset.skill_def(reaction_id).name_zh}」"
+    return state.ruleset.reaction_def(reaction_id).name_zh
+
+
 def _skill_used_text(e: SkillUsed, name: dict[str, str]) -> str:
     costs = [f"AP {e.ap}"]
     if e.mana:
@@ -341,6 +349,9 @@ _REMOVE_REASONS = {
     "depleted": "護盾耗盡了",
     "cleansed": "被淨化了",
     "source_lost": "解除了（來源離場）",
+    "replaced": "被新的姿態取代了",
+    "stance_ended": "取消了姿態",
+    "downed": "解除了（倒下）",
 }
 
 
@@ -549,12 +560,17 @@ def _describe_environment(  # noqa: PLR0911, PLR0912
     if isinstance(e, PushResisted):
         return f"  {name[e.unit_id]} 穩如泰山：推擊距離 {e.requested} → {e.distance}"
     if isinstance(e, ReactionTriggered):
-        reaction = state.ruleset.reaction_def(e.reaction).name_zh
+        reaction = _reaction_name(state, e.reaction)
         cost = f"（耐力 −{e.stamina_spent}）" if e.stamina_spent else ""
         return f"  ⟳ {name[e.unit_id]} 反應：{reaction}{cost}"
     if isinstance(e, ReactionDeclined):
-        reaction = state.ruleset.reaction_def(e.reaction).name_zh
-        return f"  {name[e.unit_id]} 放棄反應：{reaction}"
+        return f"  {name[e.unit_id]} 放棄反應：{_reaction_name(state, e.reaction)}"
+    if isinstance(e, AttackIntercepted):
+        skill = "" if e.skill_id is None else f"「{state.ruleset.skill_def(e.skill_id).name_zh}」"
+        return (
+            f"  🛡 {name[e.guardian_id]} 攔截了 {name[e.attacker_id]} 對 {name[e.target_id]} 的"
+            f"攻擊{skill}——改由 {name[e.guardian_id]} 承受"
+        )
     if isinstance(e, MapEventTriggered):
         return "  地圖事件：" + ("援軍出現！" if e.kind == "spawn_units" else "地形改變！")
     if isinstance(e, UnitSpawned):

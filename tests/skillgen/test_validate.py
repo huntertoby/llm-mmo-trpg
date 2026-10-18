@@ -270,6 +270,8 @@ def test_each_enabled_skeleton_has_a_valid_example() -> None:
         "aura": variant("skill_sanctuary"),
         "combo": variant("skill_execute", skeleton="combo"),
         "passive": variant("skill_ember_brand"),
+        "reaction": variant("skill_riposte"),
+        "stance": variant("skill_fury_stance"),
     }
     assert set(examples) == {s.id for s in lib().skeletons.values() if s.enabled}
     for skeleton_id, example in examples.items():
@@ -277,9 +279,7 @@ def test_each_enabled_skeleton_has_a_valid_example() -> None:
         assert violations(example) == [], skeleton_id
 
 
-@pytest.mark.parametrize(
-    "skeleton_id", ["builder_finisher", "trap", "summon", "reaction", "stance"]
-)
+@pytest.mark.parametrize("skeleton_id", ["builder_finisher", "trap", "summon"])
 def test_disabled_skeletons_are_rejected(skeleton_id: str) -> None:
     assert not lib().skeletons[skeleton_id].enabled
     assert "skeleton.disabled" in rules_of(skill(skeleton=skeleton_id))
@@ -418,6 +418,9 @@ def test_beneficial_flags_in_content() -> None:
         "hasted",
         "regenerating",
         "shielded",
+        # 2E-2
+        "stance_fury",
+        "stance_bulwark",
     }
     assert surfaces == {"holy"}
 
@@ -444,7 +447,9 @@ def test_combo_structure_requires_a_condition() -> None:
 
 
 def test_a_skill_kind_must_match_its_skeleton() -> None:
-    assert "skeleton.kind" in rules_of(skill(kind="reaction", ap_cost=None))
+    assert "skeleton.kind" in rules_of(
+        skill(kind="reaction", ap_cost=None, reaction={"event": "hit_by_melee"})
+    )
 
 
 def _root() -> dict[str, Any]:
