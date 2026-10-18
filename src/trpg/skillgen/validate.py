@@ -4,7 +4,8 @@
 
 1. ``reference``：引用的形狀、原語、條件、狀態、物件存在、參數在範圍內（沿用
    :func:`trpg.content.skills.skill_problems`）。有這類問題時不再往下檢查。
-2. ``cap.*``：硬性上限（4.3）。
+2. ``cap.*``：硬性上限（4.3：效果數量、改寫規則型原語、``weapon_req`` 大類；推擊與拉扯的 2 格上限
+   已由第 1 項的參數範圍檢查涵蓋）。
 3. ``exclusion.<id>``：互斥規則（4.4，規則在 ``skill_exclusions.yaml``，通用處理）。
 4. ``skeleton.*``：骨架結構（4.5）。
 5. ``rarity.*``：稀有度限制（4.6）。
@@ -37,7 +38,6 @@ from trpg.skillgen.mechanics import affect_set, resolved_affects
 __all__ = ["Violation", "validate_skill"]
 
 _PERMILLE = 1000
-_MAX_DISPLACE = 2
 _MAX_EFFECTS = 4
 _WEAPON_REQ = {"weapon": ("melee", "ranged"), "spell": ("focus", "any")}
 
@@ -104,13 +104,6 @@ def _cap_violations(skill: SkillDef, library: ContentLibrary) -> list[Violation]
 
     if not 1 <= len(skill.effects) <= _MAX_EFFECTS:
         add("cap.effects", f"效果原語必須有 1 到 {_MAX_EFFECTS} 個，收到 {len(skill.effects)} 個")
-    for index, effect in enumerate(skill.effects):
-        if effect.type in ("push", "pull") and not 1 <= (effect.distance or 0) <= _MAX_DISPLACE:
-            add(
-                "cap.displace",
-                f"effects[{index}]（{effect.type}）：推擊與拉扯最多 {_MAX_DISPLACE} 格，"
-                f"收到 {effect.distance}",
-            )
     allowed = _WEAPON_REQ[skill.category]
     if skill.weapon_req not in allowed:
         add(

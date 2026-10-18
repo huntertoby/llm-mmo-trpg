@@ -238,7 +238,8 @@ def main(argv: list[str] | None = None) -> int:  # noqa: PLR0911
             if args.all:
                 return _with_library(lambda lib: cmd_skills_budget_all(lib, sys.stdout))
             if args.skill_id is None:
-                parser.error("請指定技能 ID，或使用 --all")
+                print("錯誤：請指定技能 ID，或使用 --all", file=sys.stderr)
+                return 2
             return _with_library(lambda lib: cmd_skills_budget(lib, args.skill_id, sys.stdout))
         return _with_library(lambda lib: cmd_skills_show(lib, args.skill_id, sys.stdout))
     if args.command == "battle":
