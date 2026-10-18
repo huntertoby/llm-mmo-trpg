@@ -296,11 +296,17 @@ def _outgunned_by(state: BattleState, unit: UnitState, enemies: list[UnitState])
 
 
 def _covered_from(state: BattleState, xy: XY, enemies: list[UnitState]) -> int:
-    """看得到 ``xy``、且從其位置看過來 ``xy`` 受到半掩護的敵人數。"""
+    """在射程內看得到 ``xy``、且從其位置看過來 ``xy`` 受到半掩護的敵人數。
+
+    射程外的敵人不算：掩護只在對方打得到自己時才有意義。否則雙方各躲在掩護後、彼此都在射程外時，
+    離開掩護的扣分會壓過 ``approach`` 的收益，造成永遠不接近的僵局（``lava_crossing`` 種子 19）。
+    """
     return sum(
         1
         for e in enemies
-        if cover_object_between(state, e.xy, xy) is not None and has_line_of_sight(state, e.xy, xy)
+        if manhattan(e.xy, xy) <= e.weapon.range
+        and cover_object_between(state, e.xy, xy) is not None
+        and has_line_of_sight(state, e.xy, xy)
     )
 
 
