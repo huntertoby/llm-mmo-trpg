@@ -1,0 +1,51 @@
+# 地圖類型：吊橋深淵（bridge_chasm）的變體：岩漿河。一條 2 格寬的岩漿河切開戰場，兩岸高度 1；
+# 中央有一座 2×2 的寬木橋，北端被牆封住，只剩最南邊一格寬的陸路可以繞過去。橋是主戰場：
+# 推擊、燒斷木橋、爆炸都能把人送進岩漿（致命地形）。位移流與火焰流有利；怕被推的近戰重甲不利。
+# 敵方是兩名盾衛加兩名弓手，弓手在對岸居高（高度 1 的岸邊）射擊橋上的人。
+id: lava_crossing
+name_zh: 岩漿渡橋
+archetype: bridge_chasm
+size: [10, 10]
+heights: |
+  1111001111
+  1111001111
+  1111001111
+  1111001111
+  1111001111
+  1111001111
+  1111001111
+  1111001111
+  1111001111
+  1111001111
+terrain: |
+  ....##....
+  ....vv....
+  ....vv....
+  ....vv....
+  ....vv....
+  ....vv....
+  ....vv....
+  ....vv....
+  ....vv....
+  ..........
+legend:
+  ".": stone
+  "v": lava
+  "#": wall
+objects:
+  - {at: [3, 2], kind: crate}
+  - {at: [6, 2], kind: low_wall}
+  - {at: [7, 3], kind: stone_pillar}
+  - {at: [4, 4], kind: wooden_bridge}
+  - {at: [5, 4], kind: wooden_bridge}
+  - {at: [4, 5], kind: wooden_bridge}
+  - {at: [5, 5], kind: wooden_bridge}
+  - {at: [2, 6], kind: stone_pillar}
+  - {at: [3, 7], kind: low_wall}
+  - {at: [6, 7], kind: crate}
+start_zones:
+  ally: [[0, 3], [1, 4], [0, 5], [1, 6]]
+  enemy: [[9, 6], [8, 5], [9, 4], [8, 3]]
+encounter:
+  allies: [hero_fighter, hero_archer, hero_mage]
+  enemies: [bandit_shieldbearer, bandit_shieldbearer, bandit_archer, bandit_archer]

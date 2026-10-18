@@ -1,0 +1,65 @@
+# 地圖類型：森林（forest）。大片草叢（conceal、flammable）與零星的樹幹（牆壁，全掩護）打碎視線，
+# 倒木提供半掩護。草叢讓人容易躲藏伏擊，但一把火就能燒出一條路——火焰系、潛行系（消失、煙幕箭）、
+# 近身刺殺有利；視線被樹幹切斷，站著不動的遠程與長射程範圍技不利。敵方沒有頭目，靠人多與弓手。
+id: dark_forest
+name_zh: 幽暗森林
+archetype: forest
+size: [10, 10]
+heights: |
+  0000000000
+  0000000000
+  0000000000
+  0000000000
+  0000000000
+  0000000000
+  0000000000
+  0000000000
+  0000000000
+  0000000000
+terrain: |
+  """"""""""
+  """#""""""
+  """""""#""
+  ""#"""""""
+  """""#""""
+  """"#"""""
+  """""""#""
+  ""#"""""""
+  """"""#"""
+  """"""""""
+legend:
+  '"': grass
+  "#": wall
+objects:
+  - {at: [2, 1], kind: grass}
+  - {at: [5, 1], kind: grass}
+  - {at: [8, 1], kind: grass}
+  - {at: [1, 2], kind: grass}
+  - {at: [4, 2], kind: grass}
+  - {at: [6, 2], kind: fallen_log}
+  - {at: [8, 2], kind: grass}
+  - {at: [3, 3], kind: grass}
+  - {at: [4, 3], kind: fallen_log}
+  - {at: [6, 3], kind: grass}
+  - {at: [4, 4], kind: grass}
+  - {at: [6, 4], kind: grass}
+  - {at: [7, 4], kind: grass}
+  - {at: [2, 5], kind: grass}
+  - {at: [3, 5], kind: grass}
+  - {at: [5, 5], kind: grass}
+  - {at: [3, 6], kind: grass}
+  - {at: [5, 6], kind: fallen_log}
+  - {at: [6, 6], kind: grass}
+  - {at: [1, 7], kind: grass}
+  - {at: [3, 7], kind: fallen_log}
+  - {at: [5, 7], kind: grass}
+  - {at: [8, 7], kind: grass}
+  - {at: [1, 8], kind: grass}
+  - {at: [4, 8], kind: grass}
+  - {at: [7, 8], kind: grass}
+start_zones:
+  ally: [[0, 3], [1, 4], [0, 5], [1, 6]]
+  enemy: [[9, 6], [8, 5], [9, 4], [8, 3]]
+encounter:
+  allies: [hero_fighter, hero_archer, hero_mage]
+  enemies: [bandit, bandit, bandit, bandit_archer]
