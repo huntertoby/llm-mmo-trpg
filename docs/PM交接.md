@@ -34,7 +34,7 @@
 | Phase 2F 整理（Phase 3 前審查的結論） | ✅ 完成（1395 測試；noqa 19→14；對照戰鬥不變；completion 1800 場異常 0） | `Phase2F計畫.md`／`Phase2F-1、2F-2報告.md` |
 | Phase 2G 完整性檢查的補強 | ✅ 完成（1427 測試；12 個示範技能；覆蓋率測試允許清單為空；待 PM 決定見計畫 0.1、0.2） | `Phase2G計畫.md` |
 | Phase 2H 冰凍、自身狀態代價、雙屬性與專精 | ✅ 完成（1486 測試；`LOG_FORMAT` /11；待 PM 決定見計畫 0.1、0.2；completion 1800 場、matrix 2400 場異常 0） | `Phase2H計畫.md` |
-| **Phase 3 網頁 ＋ roguelite** | 3-1 ✅（1516 測試；noqa 23→20）；3-2 ✅（1577 測試；noqa 20）；3-3 ✅（1587 測試＋前端 30；`uv run python scripts/play.py` 可試玩）；下一步寫 3-4 規格（戰鬥 UI，sonnet） | `Phase3計畫.md`（0 節為決定、3 節為 3-1 規格） |
+| **Phase 3 網頁 ＋ roguelite** | 3-1 ✅（1516 測試；noqa 23→20）；3-2 ✅（1577 測試；noqa 20）；3-3 ✅（1587 測試＋前端 30；`uv run python scripts/play.py` 可試玩）；**3-4a 實作中**（逐步播放、HUD、技能 UI，sonnet）；3-4b 待寫 | `Phase3計畫.md`（0 節為決定、3 節為 3-1 規格） |
 
 - 最新 commit 在 GitHub `huntertoby/llm-mmo-trpg`（私人）的 `main`；2026-10-19 起使用者電腦的資料夾就是工作資料夾（見 6.1），push 前確認 `git status` 乾淨即可。
 - 1486 個測試（`slow` 預設不跑；平衡測試 `test_demo_map_win_rate_and_length` 標 `xfail(strict=False)`，目前 2 xfail、2 xpass）。
@@ -51,6 +51,8 @@
 - 技能系統（2E 後）：12 個骨架中 11 個可用（只有 `summon` 停用）；觸發時機 `content/skill_triggers.yaml`；層數 `content/stacks.yaml`；技能觸發深度上限 `max_trigger_depth: 3`。`LOG_FORMAT` 為 `trpg-battle-log/11`（2H-1 起；舊紀錄不能重播）。
 
 ## 3. 下一步
+
+> 2026-10-19 起另有 **玩法 PM**（`docs/玩法PM交接.md`）：和使用者討論玩法問題，決定記在該檔第 3 節。狀態為「已決定，待排入」的項目由你排進階段規格。
 
 ### 3.0 接手後要做的：和使用者討論 Phase 3（2026-10-19）
 
