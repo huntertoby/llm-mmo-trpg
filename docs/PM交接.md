@@ -32,7 +32,7 @@
 | Phase 2E-2 反應技、擋攻擊、姿態 | ✅ 完成（1286 測試） | `Phase2E計畫.md` 第 4 節／`Phase2E-2報告.md` |
 | Phase 2E-3 層數、陷阱與收尾 | ✅ 完成（1341 測試；2E 驗收全 ✅；待 PM 決定已處理於 3.2） | `Phase2E計畫.md` 第 5 節／`Phase2E-3報告.md`（5.4 為 2E 驗收總表） |
 | Phase 2F 整理（Phase 3 前審查的結論） | ✅ 完成（1395 測試；noqa 19→14；對照戰鬥不變；completion 1800 場異常 0） | `Phase2F計畫.md`／`Phase2F-1、2F-2報告.md` |
-| Phase 2G 完整性檢查的補強 | 🔄 2G-1 進行中（狀態取較長、裝備未用技能、覆蓋率測試）；2G-2 示範技能 | `Phase2G計畫.md` |
+| Phase 2G 完整性檢查的補強 | 🔄 2G-1 ✅（1403 測試；待 PM 決定見計畫 0.1）；2G-2 示範技能進行中 | `Phase2G計畫.md` |
 | **Phase 3 網頁 ＋ roguelite** | 2G 之後 | 規格尚未撰寫（見 3.1） |
 
 - 最新 commit 在 GitHub `huntertoby/llm-mmo-trpg`（私人）的 `main`；2026-10-19 起使用者電腦的資料夾就是工作資料夾（見 6.1），push 前確認 `git status` 乾淨即可。
@@ -170,6 +170,7 @@ PM 建議（已跟使用者說過）：不擋 Phase 3；召喚與連段條件是
 - **2D 後新增**：`build_tank` 改版（嘲諷＋護盾、`guard` 行為模式）後前段類型 2 → 0、英雄 DPR 5–8 → 1–2.5（疑似 `guard` 的 damage 權重 3 讓坦克太被動）；`build_healer` 也 0 次前段。保護矩陣有數字但沒轉成勝率——要決定保護型 build 的評估指標（標準 2 是否改看保護矩陣）或調 AI／數值。
 - **2E-2 後新增**：`build_guardian`（攔截＋姿態）小樣本 8 張地圖 4 張第 1，可能偏強；姿態狀態 11 點只合階級 1，高階由組合器加護盾湊預算；反應技在 fuzz 中很少觸發（7/70）。
 - **2E-3 後新增**：build 矩陣（12 個 build、2400 場、異常 0）6.8 標準 1 通過、標準 2 不通過：`build_tank`、`build_striker` 沒有任何前段類型；`build_trapper` 的 AI 陷阱擺位差（常放角落）。
+- **2G-1 後新增**：`build_tank` 主動技能 6 個（加了破甲擊、碎甲重擊）但法力只有 20。
 - 控制回合統計（`CONTROL_STATUSES`）只算 stun、root、slow，未含 feared、silenced、blinded、taunted。
 - `skill_dread_gaze`、`skill_hush` 貼著預算下限 70.4%；`skill_hex_bolt` 的 `marked` 只有 1 回合；AI 會對已被標記的目標重複施放咒印飛彈。
 
