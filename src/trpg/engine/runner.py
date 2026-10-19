@@ -38,8 +38,8 @@ __all__ = [
 ]
 
 LOG_FORMAT = "trpg-battle-log/20"
-"""``/20``（Phase 3D-2b）：位移他人原語 ``teleport_target``（形狀 ``unit_then_tile``，``UseSkill`` 帶
-``target_id`` 與 ``target_pos``）、``swap_any``（形狀 ``unit_pair``，帶 ``target_id`` 與新欄位
+"""``/20``（Phase 3D-2b）：位移他人原語 ``teleport_target``（形狀 ``unit_then_tile``，``UseSkill``
+帶 ``target_id`` 與 ``target_pos``）、``swap_any``（形狀 ``unit_pair``，帶 ``target_id`` 與新欄位
 ``second_target_id``）、``unit_moved`` 的新 ``mode``（``teleported``）、``maneuver_rolled`` 的新
 ``maneuver``（``teleport``／``swap``）與新欄位 ``resist_bonus``、核心規則
 ``teleport_enemy_resist_bonus``／``teleport_lethal_resist_bonus``；``swap`` 對敵人改用位移檢定

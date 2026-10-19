@@ -35,7 +35,7 @@ def _to_turn(client: TestClient, skill_id: str) -> dict[str, Any]:
 
     def gap(action: dict[str, Any]) -> int:
         end = action["path"][-1]
-        return min(abs(end["x"] - x) + abs(end["y"] - y) for x, y in foes)
+        return int(min(abs(end["x"] - x) + abs(end["y"] - y) for x, y in foes))
 
     moves = [a for a in battle["legal_actions"] if a["type"] == "move"]
     battle = _post(client, battle["battle_id"], "actions", min(moves, key=gap))

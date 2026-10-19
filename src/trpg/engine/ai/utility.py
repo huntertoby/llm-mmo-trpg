@@ -71,6 +71,7 @@ from trpg.engine.actions import (
     Trip,
     UseSkill,
 )
+from trpg.engine.ai.displace import DISPLACE_PRIMITIVES, displace_estimate, exposure, is_hurt
 from trpg.engine.ai.orders import (
     FocusTarget,
     HoldPosition,
@@ -114,7 +115,7 @@ from trpg.engine.rules.geometry import (
     manhattan,
     neighbors4,
 )
-from trpg.engine.rules.movement import is_standable, step_cost
+from trpg.engine.rules.movement import is_deadly, is_standable, step_cost
 from trpg.engine.rules.statuses import forced_target_sources, shield_amount, stance_status_ids
 from trpg.engine.skills.scaling import mastery_duration_bonus
 from trpg.engine.skills.targeting import (
@@ -642,6 +643,8 @@ def _gain_frame(
     state: BattleState, actor: UnitState, p: Preview, profile: AiProfile, only: UnitId | None
 ) -> _GainFrame:
     hit = p.hit_chance if p.hit_chance is not None else Fraction(1)
+    if p.displace_chance is not None:
+        hit *= p.displace_chance  # 位移他人：收益只在位移成功時發生（Phase 3D-2b）
     skill_primary: dict[UnitId, bool] = {}
     if isinstance(p.action, UseSkill):
         foes = [t for t in p.targets if not t.ally]
@@ -776,6 +779,43 @@ def _surface_gains(f: _GainFrame) -> Fraction:
     return gains
 
 
+def _tile_value(f: _GainFrame, state: BattleState, uid: UnitId, xy: XY) -> Fraction:
+    """單位 ``uid`` 站在 ``xy`` 對敵方的價值（位移他人的收益用）：敵人在致命地形上是擊倒
+    （``kill`` ＋ ``env_kill``）、友方在致命地形上是損失（``kill``），其中 1/4 已由
+    ``_kill_gains`` 計入，所以這裡取 3/4；有害表面取 ``surface``。"""
+    w = f.w
+    if is_deadly(state, xy):
+        weight = w.kill + w.env_kill if f.is_enemy(uid) else w.kill
+        return Fraction(weight * (_POSSIBLE_KILL_DIVISOR - 1), _POSSIBLE_KILL_DIVISOR)
+    return Fraction(w.surface) if _harmful(state, xy) else Fraction(0)
+
+
+def _displace_gains(f: _GainFrame) -> Fraction:
+    """被傳送或互換的單位（預覽最多後果的模擬）走到更危險或更安全的格子：敵人走向危險、友方
+    離開危險是收益，反過來是損失（Phase 3D-2b；乘上位移成功率，已含在 ``f.hit``）。"""
+    if f.only is not None or not isinstance(f.p.action, UseSkill):
+        return Fraction(0)
+    after, state = f.p.max_state, f.state
+    moved: set[UnitId] = set()
+    for m in f.p.moves:
+        if m.kind in ("teleport", "swap"):
+            moved.update(uid for uid in (m.unit_id, m.other_id) if uid is not None)
+    gains = Fraction(0)
+    for uid in sorted(moved):
+        if uid not in state.units or uid not in after.units:
+            continue
+        delta = _tile_value(f, after, uid, after.units[uid].xy) - _tile_value(
+            f, state, uid, state.units[uid].xy
+        )
+        gains += delta if f.is_enemy(uid) else -delta
+        mover, landed = state.units[uid], after.units[uid]
+        if not f.is_enemy(uid) and is_hurt(mover):  # 快倒下的隊友離開敵人（兩格內的敵人數變少）
+            gains += f.w.kill * (
+                exposure(state, mover, mover.xy) - exposure(after, landed, landed.xy)
+            )
+    return f.hit * gains
+
+
 def _defend_gains(f: _GainFrame) -> Fraction:
     """防禦動作：每名 6 格內的敵人。"""
     if not isinstance(f.p.action, Defend) or f.only is not None:
@@ -796,7 +836,7 @@ def _gains(
     """預覽收益。``only`` 給定時只計入對該單位（敵人）的收益——集火指令的加成用。"""
     f = _gain_frame(state, actor, p, profile, only)
     gains = _damage_gains(f) + _ally_gains(f) + _kill_gains(f) + _push_gains(f)
-    gains += _surface_gains(f)
+    gains += _surface_gains(f) + _displace_gains(f)
     if f.w.expose or f.w.cover_damage:
         gains += _cover_gains(state, actor, p, f.w, f.hit, only)
     return gains + _defend_gains(f)
@@ -1133,12 +1173,9 @@ def skill_estimate(  # noqa: PLR0917
         return None  # 已經有姿態：AI 不主動換姿態（也不主動取消，Phase 2E-2）
     if skill.trap is not None:
         return _trap_estimate(state, unit, skill, area, scene, rules=trap)
-    if any(e.type in ("teleport", LEAP) for e in skill.effects) and action.target_pos is not None:
-        moved = unit.clone()
-        moved.pos = action.target_pos
-        return _unit_position_value(state, moved, w, scene) - before
-    if any(e.type in SCENE_PRIMITIVES for e in skill.effects):  # 投擲物件、推倒（Phase 3C-5b）
-        return scene_estimate(state, unit, skill, action, area)
+    special = _special_estimate(state, unit, skill, action, area, scene, w, before)
+    if not isinstance(special, _Unhandled):
+        return special
     effects = resolve_effects(state, skill)
     score = Fraction(0)
     useful = False
@@ -1163,6 +1200,37 @@ def skill_estimate(  # noqa: PLR0917
             return None
         score = Fraction(field)
     return score - Fraction(manhattan(unit.xy, area.origin), 1000)
+
+
+class _Unhandled:
+    """:func:`_special_estimate` 沒有處理這個技能（交給一般估計）。"""
+
+
+_UNHANDLED = _Unhandled()
+
+
+def _special_estimate(  # noqa: PLR0917
+    state: BattleState,
+    unit: UnitState,
+    skill: SkillDef,
+    action: UseSkill,
+    area: SkillArea,
+    scene: _Scene,
+    w: AiWeights,
+    before: Fraction,
+) -> Fraction | _Unhandled | None:
+    """位置型與組合型技能的估計：傳送與跳躍（自己的位置價值變化）、投擲物件與推倒（Phase 3C-5b）、
+    位移他人（Phase 3D-2b）；其他技能回傳 ``_UNHANDLED``。"""
+    effect_types = {e.type for e in skill.effects}
+    if effect_types & {"teleport", LEAP} and action.target_pos is not None:
+        moved = unit.clone()
+        moved.pos = action.target_pos
+        return _unit_position_value(state, moved, w, scene) - before
+    if effect_types & set(SCENE_PRIMITIVES):
+        return scene_estimate(state, unit, skill, action, area)
+    if effect_types & set(DISPLACE_PRIMITIVES):
+        return displace_estimate(state, unit, skill, action, _harmful)
+    return _UNHANDLED
 
 
 def _trap_estimate(
