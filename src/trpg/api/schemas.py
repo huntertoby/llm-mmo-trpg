@@ -30,6 +30,8 @@ __all__ = [
     "CreateBattleRequest",
     "DamageOut",
     "DecisionRequest",
+    "Glossary",
+    "GlossaryEntry",
     "HealOut",
     "MapSummary",
     "OutcomeOut",
@@ -72,6 +74,25 @@ class BuildSummary(_ApiModel):
     skills: tuple[str, ...]
 
 
+class GlossaryEntry(_ApiModel):
+    id: str
+    name_zh: str
+    description_zh: str | None = None
+    tags: tuple[str, ...] = ()
+
+
+class Glossary(_ApiModel):
+    """名詞對照表（由內容庫產生）：ID → 中文名與簡短說明。"""
+
+    terrain: tuple[GlossaryEntry, ...]
+    surfaces: tuple[GlossaryEntry, ...]
+    objects: tuple[GlossaryEntry, ...]
+    statuses: tuple[GlossaryEntry, ...]
+    reactions: tuple[GlossaryEntry, ...]
+    elements: tuple[GlossaryEntry, ...]
+    attributes: tuple[GlossaryEntry, ...]
+
+
 # ---------------------------------------------------------------------------
 # 戰鬥
 # ---------------------------------------------------------------------------
@@ -103,6 +124,8 @@ class StepOut(_ApiModel):
     actor_id: UnitId | None
     step: Step | None
     events: tuple[dict[str, Any], ...]
+    view: BattleView
+    """這一步結算後的戰場（我方視角）；前端逐步播放時用。"""
 
 
 class BattleOutcome(_ApiModel):
@@ -118,6 +141,9 @@ class BattleResponse(_ApiModel):
     battle_id: str
     hero_id: UnitId
     awaiting: Awaiting
+    initial_view: BattleView
+    """本次請求開始推進 **之前** 的戰場（建立戰鬥時為開場事件之後、第一個動作之前）；沒有推進時
+    與 ``view`` 相同。"""
     view: BattleView
     legal_actions: tuple[Action, ...]
     """輪到主角（``awaiting == "action"``）時的合法動作（含 ``end_turn``）；其他時候為空。"""

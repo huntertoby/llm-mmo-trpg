@@ -1,0 +1,78 @@
+"""名詞對照表（Phase 3-4a 6.2）：地形、表面、物件、狀態、反應、元素、屬性的 ID → 中文名。
+
+由內容庫產生，前端不再手寫中文名；只保留色塊等純顯示用的對照。``tags`` 是前端判斷外觀需要的
+簡短旗標（地形：``blocked``／``deadly``／``blocks_sight``；表面：``flammable``／``beneficial``……；
+物件：``objects.yaml`` 的標籤）。
+"""
+
+from __future__ import annotations
+
+from trpg.api.schemas import Glossary, GlossaryEntry
+from trpg.content.library import ContentLibrary
+from trpg.shared.types import Attribute
+
+__all__ = ["build_glossary"]
+
+
+def _entry(
+    id_: str, name_zh: str, description_zh: str | None = None, tags: tuple[str, ...] = ()
+) -> GlossaryEntry:
+    return GlossaryEntry(id=id_, name_zh=name_zh, description_zh=description_zh, tags=tags)
+
+
+def _terrain_tags(walkable: bool, deadly: bool, blocks_sight: bool) -> tuple[str, ...]:
+    tags = [
+        tag
+        for tag, on in (
+            ("blocked", not walkable),
+            ("deadly", deadly),
+            ("blocks_sight", blocks_sight),
+        )
+        if on
+    ]
+    return tuple(tags)
+
+
+def build_glossary(library: ContentLibrary) -> Glossary:
+    rules = library.ruleset
+    return Glossary(
+        terrain=tuple(
+            _entry(t.id, t.name_zh, None, _terrain_tags(t.walkable, t.deadly, t.blocks_sight))
+            for t in rules.terrain.terrain
+        ),
+        surfaces=tuple(
+            _entry(
+                s.id.value,
+                s.name_zh,
+                None,
+                tuple(
+                    tag
+                    for tag, on in (
+                        ("flammable", s.flammable),
+                        ("beneficial", s.beneficial),
+                        ("blocks_sight", s.blocks_sight),
+                        ("conceal", s.conceal),
+                    )
+                    if on
+                ),
+            )
+            for s in rules.surfaces.surfaces
+        ),
+        objects=tuple(_entry(o.id, o.name_zh, None, o.tags) for o in rules.objects.objects),
+        statuses=tuple(
+            _entry(
+                s.id,
+                s.name_zh,
+                s.description_zh,
+                ("beneficial",) if s.beneficial else (),
+            )
+            for s in rules.statuses.statuses
+        ),
+        reactions=tuple(
+            _entry(r.id, r.name_zh, r.description_zh) for r in rules.reactions.reactions
+        ),
+        elements=tuple(
+            _entry(e.id.value, e.name_zh, e.description_zh) for e in library.elements.elements
+        ),
+        attributes=tuple(_entry(a.value, a.display_name) for a in Attribute),
+    )

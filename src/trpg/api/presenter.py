@@ -63,13 +63,22 @@ def step_out(record: StepRecord, team: Team = VIEW_TEAM) -> StepOut:
         actor_id=None if record.step is None else record.step.unit_id,
         step=step_view(record.step, state, team),
         events=tuple(event_out(e, state) for e in events),
+        view=project_for(state, team),
     )
 
 
-def battle_response(session: BattleSession, records: list[StepRecord]) -> BattleResponse:
+def battle_response(
+    session: BattleSession,
+    records: list[StepRecord],
+    before: BattleState | None = None,
+) -> BattleResponse:
+    """``before`` 是本次請求開始推進前的狀態（``initial_view`` 的來源）；建立戰鬥時省略，
+    取開場那一步（``records[0]``）的狀態；沒有推進時為目前狀態。"""
     state = session.state
     awaiting = session.awaiting
     pending = session.pending if awaiting == "decision" else None
+    if before is None:
+        before = records[0].result.state if records else state
     outcome = (
         BattleOutcome(winner=state.winner, end_reason=state.end_reason, round=state.round)
         if state.ended
@@ -79,6 +88,7 @@ def battle_response(session: BattleSession, records: list[StepRecord]) -> Battle
         battle_id=session.battle_id,
         hero_id=session.hero_id,
         awaiting=awaiting,
+        initial_view=project_for(before, VIEW_TEAM),
         view=project_for(state, VIEW_TEAM),
         legal_actions=tuple(legal_actions(state)) if awaiting == "action" else (),
         pending=pending,

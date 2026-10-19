@@ -61,6 +61,26 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/glossary": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Get Glossary
+         * @description 地形、表面、物件、狀態、反應、元素、屬性的 ID → 中文名（由內容庫產生）。
+         */
+        get: operations["get_glossary_api_glossary_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/battles": {
         parameters: {
             query?: never;
@@ -235,6 +255,7 @@ export interface components {
              * @enum {string}
              */
             awaiting: "action" | "decision" | "ended" | "stalled";
+            initial_view: components["schemas"]["BattleView"];
             view: components["schemas"]["BattleView"];
             /** Legal Actions */
             legal_actions: components["schemas"]["Action"][];
@@ -413,6 +434,40 @@ export interface components {
             kind: "focus_target";
             /** Target */
             target: string;
+        };
+        /**
+         * Glossary
+         * @description 名詞對照表（由內容庫產生）：ID → 中文名與簡短說明。
+         */
+        Glossary: {
+            /** Terrain */
+            terrain: components["schemas"]["GlossaryEntry"][];
+            /** Surfaces */
+            surfaces: components["schemas"]["GlossaryEntry"][];
+            /** Objects */
+            objects: components["schemas"]["GlossaryEntry"][];
+            /** Statuses */
+            statuses: components["schemas"]["GlossaryEntry"][];
+            /** Reactions */
+            reactions: components["schemas"]["GlossaryEntry"][];
+            /** Elements */
+            elements: components["schemas"]["GlossaryEntry"][];
+            /** Attributes */
+            attributes: components["schemas"]["GlossaryEntry"][];
+        };
+        /** GlossaryEntry */
+        GlossaryEntry: {
+            /** Id */
+            id: string;
+            /** Name Zh */
+            name_zh: string;
+            /** Description Zh */
+            description_zh?: string | null;
+            /**
+             * Tags
+             * @default []
+             */
+            tags: string[];
         };
         /** HTTPValidationError */
         HTTPValidationError: {
@@ -808,6 +863,7 @@ export interface components {
             events: {
                 [key: string]: unknown;
             }[];
+            view: components["schemas"]["BattleView"];
         };
         /**
          * Surface
@@ -1069,6 +1125,26 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    get_glossary_api_glossary_get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Glossary"];
                 };
             };
         };

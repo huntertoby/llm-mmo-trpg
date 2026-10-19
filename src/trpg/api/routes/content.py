@@ -1,10 +1,11 @@
-"""內容端點：地圖列表、build 列表、技能卡片。"""
+"""內容端點：地圖列表、build 列表、技能卡片、名詞對照表。"""
 
 from __future__ import annotations
 
 from fastapi import APIRouter, HTTPException, Request
 
-from trpg.api.schemas import BuildSummary, MapSummary
+from trpg.api.glossary import build_glossary
+from trpg.api.schemas import BuildSummary, Glossary, MapSummary
 from trpg.api.sessions import playable_maps
 from trpg.api.state import store_of
 from trpg.narrative.skills import SkillCard, skill_card
@@ -43,3 +44,9 @@ def get_skill(skill_id: str, request: Request) -> SkillCard:
     if skill is None:
         raise HTTPException(status_code=404, detail=f"找不到技能 {skill_id}")
     return skill_card(library, skill)
+
+
+@router.get("/glossary")
+def get_glossary(request: Request) -> Glossary:
+    """地形、表面、物件、狀態、反應、元素、屬性的 ID → 中文名（由內容庫產生）。"""
+    return build_glossary(store_of(request).library)

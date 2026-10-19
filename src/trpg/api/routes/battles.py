@@ -44,16 +44,18 @@ def get_battle(battle_id: str, request: Request) -> BattleResponse:
 def post_action(battle_id: str, action: Action, request: Request) -> BattleResponse:
     session = store_of(request).get(battle_id)
     with session.lock:
+        before = session.state
         records = session.act(action)
-        return battle_response(session, records)
+        return battle_response(session, records, before)
 
 
 @router.post("/{battle_id}/decision")
 def post_decision(battle_id: str, body: DecisionRequest, request: Request) -> BattleResponse:
     session = store_of(request).get(battle_id)
     with session.lock:
+        before = session.state
         records = session.decide(body.accept)
-        return battle_response(session, records)
+        return battle_response(session, records, before)
 
 
 @router.post("/{battle_id}/preview")

@@ -99,6 +99,28 @@
         }
       }
     },
+    "/api/glossary": {
+      "get": {
+        "tags": [
+          "content"
+        ],
+        "summary": "Get Glossary",
+        "description": "地形、表面、物件、狀態、反應、元素、屬性的 ID → 中文名（由內容庫產生）。",
+        "operationId": "get_glossary_api_glossary_get",
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Glossary"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
     "/api/battles": {
       "post": {
         "tags": [
@@ -667,6 +689,9 @@
             ],
             "title": "Awaiting"
           },
+          "initial_view": {
+            "$ref": "#/components/schemas/BattleView"
+          },
           "view": {
             "$ref": "#/components/schemas/BattleView"
           },
@@ -714,6 +739,7 @@
           "battle_id",
           "hero_id",
           "awaiting",
+          "initial_view",
           "view",
           "legal_actions",
           "pending",
@@ -1168,6 +1194,110 @@
         ],
         "title": "FocusTarget",
         "description": "集火指定敵人。"
+      },
+      "Glossary": {
+        "properties": {
+          "terrain": {
+            "items": {
+              "$ref": "#/components/schemas/GlossaryEntry"
+            },
+            "type": "array",
+            "title": "Terrain"
+          },
+          "surfaces": {
+            "items": {
+              "$ref": "#/components/schemas/GlossaryEntry"
+            },
+            "type": "array",
+            "title": "Surfaces"
+          },
+          "objects": {
+            "items": {
+              "$ref": "#/components/schemas/GlossaryEntry"
+            },
+            "type": "array",
+            "title": "Objects"
+          },
+          "statuses": {
+            "items": {
+              "$ref": "#/components/schemas/GlossaryEntry"
+            },
+            "type": "array",
+            "title": "Statuses"
+          },
+          "reactions": {
+            "items": {
+              "$ref": "#/components/schemas/GlossaryEntry"
+            },
+            "type": "array",
+            "title": "Reactions"
+          },
+          "elements": {
+            "items": {
+              "$ref": "#/components/schemas/GlossaryEntry"
+            },
+            "type": "array",
+            "title": "Elements"
+          },
+          "attributes": {
+            "items": {
+              "$ref": "#/components/schemas/GlossaryEntry"
+            },
+            "type": "array",
+            "title": "Attributes"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "terrain",
+          "surfaces",
+          "objects",
+          "statuses",
+          "reactions",
+          "elements",
+          "attributes"
+        ],
+        "title": "Glossary",
+        "description": "名詞對照表（由內容庫產生）：ID → 中文名與簡短說明。"
+      },
+      "GlossaryEntry": {
+        "properties": {
+          "id": {
+            "type": "string",
+            "title": "Id"
+          },
+          "name_zh": {
+            "type": "string",
+            "title": "Name Zh"
+          },
+          "description_zh": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Description Zh"
+          },
+          "tags": {
+            "items": {
+              "type": "string"
+            },
+            "type": "array",
+            "title": "Tags",
+            "default": []
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "id",
+          "name_zh"
+        ],
+        "title": "GlossaryEntry"
       },
       "HTTPValidationError": {
         "properties": {
@@ -2211,6 +2341,9 @@
             },
             "type": "array",
             "title": "Events"
+          },
+          "view": {
+            "$ref": "#/components/schemas/BattleView"
           }
         },
         "additionalProperties": false,
@@ -2218,7 +2351,8 @@
         "required": [
           "actor_id",
           "step",
-          "events"
+          "events",
+          "view"
         ],
         "title": "StepOut",
         "description": "自動推進中結算的一步。``actor_id`` 與 ``step`` 在開場時為 ``None``。\n\n``events`` 已依我方視角過濾（:func:`trpg.engine.event_filter.filter_events`），每個事件是\n事件的 JSON 再加上 ``text``（繁體中文描述；沒有描述的事件不含此鍵）。``seq`` 保留原值，\n過濾後可能跳號。"
