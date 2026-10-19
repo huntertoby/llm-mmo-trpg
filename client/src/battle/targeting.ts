@@ -35,9 +35,16 @@ export interface TargetSet {
   tiles: Map<string, Action>;
   /** 方向 → 動作。 */
   directions: Map<Direction, Action>;
-  /** 投擲物件（兩段選取）：物件 ID → （落點 "x,y" → 動作）。 */
+  /**
+   * 兩段選取（投擲物件、傳送他人、任意兩者互換）：第 1 段選的 ID（物件或單位）→（第 2 段 → 動作）。
+   * 投擲與傳送的第 2 段是落點 "x,y"；互換的第 2 段是另一個單位的 ID（兩個方向都登記）。
+   */
   hurls: Map<string, Map<string, Action>>;
+  /** 兩段選取的種類（沒有兩段選取時 `null`）。 */
+  pairKind: PairKind | null;
 }
+
+export type PairKind = "hurl" | "teleport" | "swap";
 
 export type ModeKind = "skill" | "attack" | "shove" | "trip" | "interact" | "shove_aside" | "defend" | "end_stance" | "stand";
 
@@ -52,30 +59,57 @@ export interface ActionMode {
 }
 
 function emptyTargets(): TargetSet {
-  return { self: null, units: new Map(), objects: new Map(), tiles: new Map(), directions: new Map(), hurls: new Map() };
+  return {
+    self: null,
+    units: new Map(),
+    objects: new Map(),
+    tiles: new Map(),
+    directions: new Map(),
+    hurls: new Map(),
+    pairKind: null,
+  };
 }
 
 function setOnce<K>(map: Map<K, Action>, key: K, action: Action): void {
   if (!map.has(key)) map.set(key, action);
 }
 
-function addHurl(t: TargetSet, objectId: string, landing: Pos, action: Action): void {
-  let landings = t.hurls.get(objectId);
-  if (landings === undefined) {
-    landings = new Map();
-    t.hurls.set(objectId, landings);
+function addPair(t: TargetSet, kind: PairKind, first: string, second: string, action: Action): void {
+  t.pairKind = kind;
+  let seconds = t.hurls.get(first);
+  if (seconds === undefined) {
+    seconds = new Map();
+    t.hurls.set(first, seconds);
   }
-  setOnce(landings, posKey(landing), action);
+  setOnce(seconds, second, action);
 }
 
-/** 把一個動作登記到它的目標（單位 > 投擲（物件＋落點）> 物件 > 格子 > 方向 > 自身；同一目標取第一個）。 */
+/** 兩段選取的動作登記到它的第 1 段與第 2 段；不是兩段選取時回傳 `false`。 */
+function addTwoStage(t: TargetSet, action: Extract<Action, { type: "use_skill" }>): boolean {
+  if (action.target_object_id != null && action.target_pos != null) {
+    addPair(t, "hurl", action.target_object_id, posKey(action.target_pos), action); // 投擲物件：物件 → 落點
+    return true;
+  }
+  if (action.target_id != null && action.second_target_id != null) {
+    // 任意兩者互換：伺服器每組只列一次，兩個方向都登記，玩家先點哪一個都行
+    addPair(t, "swap", action.target_id, action.second_target_id, action);
+    addPair(t, "swap", action.second_target_id, action.target_id, action);
+    return true;
+  }
+  if (action.target_id != null && action.target_pos != null) {
+    addPair(t, "teleport", action.target_id, posKey(action.target_pos), action); // 傳送他人：單位 → 落點
+    return true;
+  }
+  return false;
+}
+
+/** 把一個動作登記到它的目標（兩段選取（物件＋落點、單位＋落點、單位＋單位）> 單位 > 物件 > 格子 > 方向 > 自身；同一目標取第一個）。 */
 function addTarget(t: TargetSet, action: Action): void {
   switch (action.type) {
     case "use_skill":
     case "attack": {
-      if (action.type === "use_skill" && action.target_object_id != null && action.target_pos != null) {
-        addHurl(t, action.target_object_id, action.target_pos, action); // 投擲物件：先選物件、再選落點
-      } else if (action.target_id != null) setOnce(t.units, action.target_id, action);
+      if (action.type === "use_skill" && addTwoStage(t, action)) return;
+      if (action.target_id != null) setOnce(t.units, action.target_id, action);
       else if (action.target_object_id != null) setOnce(t.objects, action.target_object_id, action);
       else if (action.type === "use_skill" && action.target_pos != null)
         setOnce(t.tiles, posKey(action.target_pos), action);
@@ -302,40 +336,69 @@ function unitIdsAt(view: BattleView, tile: Pos): string[] {
   return [...here.filter((u) => !u.downed), ...here.filter((u) => u.downed)].map((u) => u.id);
 }
 
-// ---- 投擲物件的兩段選取 ---------------------------------------------------------
+// ---- 兩段選取（投擲物件、傳送他人、任意兩者互換）-------------------------------------
 
-/** 這個模式是投擲物件（先選物件、再選落點）。 */
+/** 這個模式是兩段選取（先選物件或單位、再選落點或第二個單位）。 */
 export function isHurlMode(mode: ActionMode): boolean {
   return mode.targets.hurls.size > 0;
 }
 
-/** 第一段：`tile` 上可以舉起的物件 ID（沒有時 `null`）。 */
+/** 第一段：`tile` 上可以選的物件或單位 ID（沒有時 `null`）。 */
 export function hurlObjectAt(mode: ActionMode, view: BattleView, tile: Pos): string | null {
   for (const o of view.objects) {
     if (samePos(o.pos, tile) && mode.targets.hurls.has(o.id)) return o.id;
   }
+  for (const id of unitIdsAt(view, tile)) {
+    if (mode.targets.hurls.has(id)) return id;
+  }
   return null;
 }
 
-/** 第二段：選了物件 `objectId` 之後，`tile` 這個落點對應的動作（不是合法落點時 `null`）。 */
-export function hurlActionAt(mode: ActionMode, objectId: string | null, tile: Pos): Action | null {
-  if (objectId === null) return null;
-  return mode.targets.hurls.get(objectId)?.get(posKey(tile)) ?? null;
+/**
+ * 第二段：選了 `pick` 之後，`tile` 對應的動作（不是合法的第二段時 `null`）。
+ * 互換的第二段是另一個單位，要用 `view` 找出 `tile` 上的單位。
+ */
+export function hurlActionAt(mode: ActionMode, pick: string | null, tile: Pos, view?: BattleView): Action | null {
+  if (pick === null) return null;
+  const seconds = mode.targets.hurls.get(pick);
+  if (seconds === undefined) return null;
+  if (mode.targets.pairKind !== "swap") return seconds.get(posKey(tile)) ?? null;
+  if (view === undefined) return null;
+  for (const id of unitIdsAt(view, tile)) {
+    const hit = seconds.get(id);
+    if (hit !== undefined) return hit;
+  }
+  return null;
 }
 
-/** 第二段的合法落點（依伺服器列出的順序）。 */
-export function hurlLandings(mode: ActionMode, objectId: string | null): Pos[] {
-  if (objectId === null) return [];
-  return [...(mode.targets.hurls.get(objectId)?.keys() ?? [])].map((key) => {
+/** 第二段的合法格子（依伺服器列出的順序）；互換是另一個單位所在的格子。 */
+export function hurlLandings(mode: ActionMode, pick: string | null, view?: BattleView): Pos[] {
+  if (pick === null) return [];
+  const keys = [...(mode.targets.hurls.get(pick)?.keys() ?? [])];
+  if (mode.targets.pairKind === "swap") {
+    return keys.flatMap((id) => {
+      const u = view?.units.find((x) => x.id === id);
+      return u === undefined ? [] : [u.pos];
+    });
+  }
+  return keys.map((key) => {
     const [x, y] = key.split(",").map(Number);
     return { x: x as number, y: y as number };
   });
 }
 
-/** 投擲物件的提示文字（兩段選取）。 */
-export function hurlPromptText(objectName: string | null, landingCount: number, objectCount: number): string {
-  if (objectName === null) return `第 1 段：點選要舉起的物件（紅框 ${objectCount} 個）。Esc／右鍵取消。`;
-  return `第 2 段：已舉起${objectName}，點選落點（紅框 ${landingCount} 個）；再點其他物件可改選，點同一個物件取消。`;
+/** 兩段選取的提示文字。 */
+export function hurlPromptText(
+  pickName: string | null,
+  secondCount: number,
+  firstCount: number,
+  kind: PairKind = "hurl",
+): string {
+  const first = { hurl: "要舉起的物件", teleport: "要傳送的單位", swap: "要互換的第一個單位" }[kind];
+  const second = { hurl: "落點", teleport: "落點（致命地形的成功率極低，Boss 不能選）", swap: "第二個單位" }[kind];
+  const verb = { hurl: "已舉起", teleport: "已選定", swap: "已選定" }[kind];
+  if (pickName === null) return `第 1 段：點選${first}（紅框 ${firstCount} 個）。Esc／右鍵取消。`;
+  return `第 2 段：${verb}${pickName}，點選${second}（紅框 ${secondCount} 個）；再點其他目標可改選，點同一個取消。`;
 }
 
 /**
@@ -350,7 +413,7 @@ export function actionAtTile(
   hurlPick: string | null = null,
 ): Action | null {
   const t = mode.targets;
-  if (t.hurls.size > 0) return hurlActionAt(mode, hurlPick, tile);
+  if (t.hurls.size > 0) return hurlActionAt(mode, hurlPick, tile, view);
   for (const id of unitIdsAt(view, tile)) {
     const hit = t.units.get(id);
     if (hit !== undefined) return hit;
@@ -379,7 +442,7 @@ export interface TargetTiles {
   directions: { pos: Pos; direction: Direction }[];
 }
 
-/** 模式的合法目標所在的格子（高亮用）；投擲物件第一段是可舉起的物件、第二段是合法落點。 */
+/** 模式的合法目標所在的格子（高亮用）；兩段選取第一段是可選的物件或單位、第二段是合法落點或單位。 */
 export function targetTiles(
   mode: ActionMode,
   view: BattleView,
@@ -389,10 +452,10 @@ export function targetTiles(
   const t = mode.targets;
   const targets: Pos[] = [];
   if (t.hurls.size > 0) {
-    if (hurlPick !== null) return { targets: hurlLandings(mode, hurlPick), directions: [] };
+    if (hurlPick !== null) return { targets: hurlLandings(mode, hurlPick, view), directions: [] };
     for (const id of t.hurls.keys()) {
-      const o = view.objects.find((x) => x.id === id);
-      if (o !== undefined) targets.push(o.pos);
+      const at = view.objects.find((x) => x.id === id)?.pos ?? view.units.find((x) => x.id === id)?.pos;
+      if (at !== undefined) targets.push(at);
     }
     return { targets, directions: [] };
   }

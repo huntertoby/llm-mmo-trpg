@@ -51,7 +51,7 @@ export interface EventBase {
   [key: string]: unknown;
 }
 
-export type MoveMode = "walk" | "forced" | "teleport" | "dash" | "leap" | "swap";
+export type MoveMode = "walk" | "forced" | "teleport" | "teleported" | "dash" | "leap" | "swap";
 
 export interface UnitMovedEvent extends EventBase {
   type: "unit_moved";

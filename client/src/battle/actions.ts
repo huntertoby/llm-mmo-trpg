@@ -33,6 +33,9 @@ function objectLabel(view: BattleView, objectId: string): string {
 }
 
 function skillTarget(a: Extract<Action, { type: "use_skill" }>, view: BattleView, names: UnitNames): string {
+  if (a.target_id != null && a.second_target_id != null)
+    return `${names.label(a.target_id)} ⇄ ${names.label(a.second_target_id)}`; // 任意兩者互換
+  if (a.target_id != null && a.target_pos != null) return `${names.label(a.target_id)} → ${posText(a.target_pos)}`; // 傳送他人
   if (a.target_id != null) return names.label(a.target_id);
   if (a.target_object_id != null) return objectLabel(view, a.target_object_id);
   if (a.target_pos != null) return posText(a.target_pos);

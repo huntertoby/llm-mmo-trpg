@@ -228,14 +228,17 @@ export function BattleScreen({ initial, onExit }: Props) {
     const overlays = previewOverlays(preview, view);
     if (mode !== null) {
       const tt = targetTiles(mode, view, hero, hurlPick);
-      const pickedObject = hurlPick === null ? undefined : view.objects.find((o) => o.id === hurlPick);
+      const pickedAt =
+        hurlPick === null
+          ? undefined
+          : (view.objects.find((o) => o.id === hurlPick)?.pos ?? view.units.find((u) => u.id === hurlPick)?.pos);
       return {
         moves: [],
         attacks: tt.targets,
         directions: tt.directions.map((d) => ({ pos: d.pos, arrow: DIRECTION_ARROWS[d.direction] })),
         preview: previewTiles,
         overlays,
-        picked: pickedObject === undefined ? [] : [pickedObject.pos],
+        picked: pickedAt === undefined ? [] : [pickedAt],
         ...common,
       };
     }

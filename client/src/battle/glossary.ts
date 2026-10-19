@@ -190,4 +190,7 @@ export const HIGHLIGHT = {
   dash: 0xff8c42,
   leap: 0x7dd3ff,
   swap: 0xd88cff,
+  // 位移他人預覽（Phase 3D-2b）：被傳送的單位、落點、致命地形的落點
+  banish: 0xb98cff,
+  banish_lethal: 0xff3030,
 } as const;

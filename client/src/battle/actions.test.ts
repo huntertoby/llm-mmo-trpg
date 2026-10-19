@@ -100,6 +100,15 @@ describe("labels and skill ids", () => {
     expect(actionLabel({ type: "end_turn", unit_id: H }, view, {})).toBe("結束回合");
   });
 
+  it("labels teleporting and swapping others by both picks", () => {
+    const view = smallView({ units: [unit(H, "ally", 0, 0), unit("unit_0003", "enemy", 2, 1), unit("unit_0004", "enemy", 2, 0)] });
+    const names = { skill_banish: "放逐", skill_void: "虛空互換" };
+    const banish: Action = { type: "use_skill", unit_id: H, skill_id: "skill_banish", target_id: "unit_0003", target_pos: p(4, 4) };
+    const swap: Action = { type: "use_skill", unit_id: H, skill_id: "skill_void", target_id: "unit_0003", second_target_id: "unit_0004" };
+    expect(actionLabel(banish, view, names)).toMatch(/^技能：放逐 → .* → \(4, 4\)$/);
+    expect(actionLabel(swap, view, names)).toMatch(/^技能：虛空互換 → .* ⇄ .*$/);
+  });
+
   it("collects skill ids from legal actions and ally loadouts, sorted", () => {
     const view = smallView({ units: [unit(H, "ally", 0, 0, { skills: ["skill_z", "skill_fire"] })] });
     expect(skillIdsOf(LEGAL, view)).toEqual(["skill_aoe", "skill_cone", "skill_fire", "skill_self", "skill_z"]);

@@ -73,6 +73,9 @@ const OVERLAY_COLORS: Readonly<Record<OverlayKind, number>> = {
   dash_end: HIGHLIGHT.dash,
   leap_to: HIGHLIGHT.leap,
   swap: HIGHLIGHT.swap,
+  teleport_from: HIGHLIGHT.banish,
+  teleport_to: HIGHLIGHT.banish,
+  teleport_lethal: HIGHLIGHT.banish_lethal,
 };
 
 function hpColor(ratio: number): number {
@@ -344,6 +347,9 @@ export class BattleRenderer {
       case "dash_end":
       case "leap_to":
       case "swap":
+      case "teleport_from":
+      case "teleport_to":
+      case "teleport_lethal":
         g.rect(o.x + 3, o.y + 3, T - 6, T - 6)
           .fill({ color, alpha: 0.18 })
           .stroke({ width: 3, color });

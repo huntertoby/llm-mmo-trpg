@@ -48,18 +48,20 @@ type HelpProps = Pick<
   mode: ActionMode;
 };
 
-/** 投擲物件：兩段選取的提示（第 1 段選物件、第 2 段選落點）與「重選物件」。 */
+/** 兩段選取（投擲物件、傳送他人、任意兩者互換）的提示與「重選」。 */
 function HurlHelp({ mode, view, hurlPick, onHurlReset }: HelpProps) {
-  const picked = hurlPick === null ? undefined : view.objects.find((o) => o.id === hurlPick);
-  const name = picked === undefined ? null : objectStyle(picked.kind).name;
-  const landings = hurlLandings(mode, hurlPick).length;
+  const pickedObject = hurlPick === null ? undefined : view.objects.find((o) => o.id === hurlPick);
+  const pickedUnit = hurlPick === null ? undefined : view.units.find((u) => u.id === hurlPick);
+  const name = pickedObject !== undefined ? objectStyle(pickedObject.kind).name : (pickedUnit?.name_zh ?? null);
+  const seconds = hurlLandings(mode, hurlPick, view).length;
+  const kind = mode.targets.pairKind ?? "hurl";
   return (
     <div className="mode-help">
       <div className="section-title">{mode.label}</div>
-      <div className="small muted">{hurlPromptText(name, landings, mode.targets.hurls.size)}</div>
+      <div className="small muted">{hurlPromptText(name, seconds, mode.targets.hurls.size, kind)}</div>
       {hurlPick !== null && (
         <button type="button" className="small-button" onClick={onHurlReset}>
-          重選物件
+          {kind === "hurl" ? "重選物件" : "重選單位"}
         </button>
       )}
     </div>

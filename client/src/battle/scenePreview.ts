@@ -15,7 +15,10 @@ export type OverlayKind =
   | "dash_path" // 衝鋒經過的格子（Phase 3D-2）
   | "dash_end" // 衝鋒的終點（目標身旁）
   | "leap_to" // 跳躍的落點
-  | "swap"; // 交換位置的兩格
+  | "swap" // 交換位置的兩格
+  | "teleport_from" // 傳送他人：被傳送的單位原位置（Phase 3D-2b）
+  | "teleport_to" // 傳送他人：落點
+  | "teleport_lethal"; // 傳送他人：落在致命地形（成功率極低）
 
 export interface Overlay {
   pos: Pos;
@@ -73,14 +76,15 @@ export function previewOverlays(p: PreviewOut | null, view: BattleView): Overlay
     out.push({ pos: pos(h.from_pos), kind: "hurl_from", label: "舉" });
     out.push({ pos: pos(h.to_pos), kind: "hurl_to", label: "落" });
   }
-  for (const m of p.moves ?? []) out.push(...moveOverlays(m));
+  const lethal = (p.displace_checks ?? []).some((c) => c.lethal);
+  for (const m of p.moves ?? []) out.push(...moveOverlays(m, lethal));
   return out;
 }
 
 type MoveOut = NonNullable<PreviewOut["moves"]>[number];
 
 /** 自身位移（衝鋒、跳躍、交換位置）的標記：衝鋒畫路線與終點、跳躍畫落點、交換位置畫兩格。 */
-function moveOverlays(m: MoveOut): Overlay[] {
+function moveOverlays(m: MoveOut, lethal: boolean): Overlay[] {
   const path = m.path;
   const last = path[path.length - 1];
   if (last === undefined) return [];
@@ -90,6 +94,14 @@ function moveOverlays(m: MoveOut): Overlay[] {
   }
   if (m.kind === "leap") return [{ pos: pos(last), kind: "leap_to", label: "躍" }];
   const first = path[0];
+  if (m.kind === "teleport") {
+    return first === undefined
+      ? []
+      : [
+          { pos: pos(first), kind: "teleport_from", label: "傳" },
+          { pos: pos(last), kind: lethal ? "teleport_lethal" : "teleport_to", label: lethal ? "險" : "落" },
+        ];
+  }
   return first === undefined
     ? []
     : [
@@ -116,7 +128,37 @@ function moveLine(m: MoveOut, names: UnitNames): string {
     return `衝鋒：${who} 沿 ${path.map((xy) => posText(xy)).join("→")} 衝到 ${other} 身旁（途中會被藉機攻擊、踩到陷阱）`;
   }
   if (m.kind === "leap") return `跳躍：${who} 越過中間的單位與低矮地形，落在 ${last === undefined ? "?" : posText(last)}（不會被藉機攻擊）`;
+  if (m.kind === "teleport") {
+    return `傳送：${who} ${first === undefined ? "?" : posText(first)} → ${last === undefined ? "?" : posText(last)}（落點的陷阱與表面照常結算，不會被藉機攻擊）`;
+  }
   return `交換：${who} ${first === undefined ? "?" : posText(first)} ⇄ ${other} ${last === undefined ? "?" : posText(last)}`;
+}
+
+type CheckOut = NonNullable<PreviewOut["displace_checks"]>[number];
+
+function pct(permille: number): string {
+  const p = permille / 10;
+  return `${Number.isInteger(p) ? p : p.toFixed(1)}%`;
+}
+
+/** 位移的抵抗判定文字：每個敵方的成功率（致命地形特別標示）、總成功率；友方不檢定。 */
+export function displaceLines(p: PreviewOut, names: UnitNames): string[] {
+  const checks: readonly CheckOut[] = p.displace_checks ?? [];
+  const moves = p.moves ?? [];
+  if (checks.length === 0) {
+    if (moves.some((m) => m.kind === "teleport")) return ["傳送：友方不需檢定，必定成功"];
+    if (moves.some((m) => m.kind === "swap")) return ["互換：友方不需檢定，必定成功"];
+    return [];
+  }
+  const lines = checks.map((c) =>
+    c.lethal
+      ? `⚠ 傳送到致命地形：${names.label(c.unit_id)} 要過極難的抵抗（抵抗 +${c.resist_bonus}），成功率只有 ${pct(c.success_permille)}；失敗時不會移動`
+      : `位移檢定：${names.label(c.unit_id)} 成功率 ${pct(c.success_permille)}${c.resist_bonus > 0 ? `（抵抗 +${c.resist_bonus}）` : ""}`,
+  );
+  if (checks.length > 1 && p.displace_permille != null) {
+    lines.push(`互換成功率：${pct(p.displace_permille)}（每個敵人都要被你勝過）`);
+  }
+  return lines;
 }
 
 /** 預覽文字中場景物件與自身位移的幾行（穿透、推倒、投擲、衝鋒、跳躍、交換）。 */
@@ -147,5 +189,6 @@ export function sceneLines(p: PreviewOut, names: UnitNames, view: BattleView): s
     lines.push(`投擲：${name}${posText(h.from_pos)} → ${posText(h.to_pos)}，${HURL_OUTCOME[h.outcome] ?? h.outcome}`);
   }
   for (const m of p.moves ?? []) lines.push(moveLine(m, names));
+  lines.push(...displaceLines(p, names));
   return lines;
 }

@@ -284,3 +284,55 @@ describe("hurling an object (two-stage selection, Phase 3C-5b)", () => {
     expect(hurlPromptText("油桶", 5, 2)).toContain("油桶");
   });
 });
+
+describe("teleporting and swapping others (two-stage selection, Phase 3D-2b)", () => {
+  // 單位 unit_0003 (2,1) 與 unit_0004 (2,0) 都能傳送；落點各兩個。
+  const tele = (id: string, x: number, y: number): Action => skill("banish", { target_id: id, target_pos: { x, y } });
+  const teleOptions = [tele("unit_0003", 0, 0), tele("unit_0003", 3, 1), tele("unit_0004", 0, 0)];
+  const teleMode = skillMode({ skillId: "banish", name: "放逐", costs: [], cooldown: 0, actions: teleOptions, disabledReason: null });
+  const crowd = smallView({
+    units: [hero, unit("unit_0003", "enemy", 2, 1), unit("unit_0004", "enemy", 2, 0)],
+  });
+
+  it("groups unit-and-landing pairs by the unit, not as plain unit targets", () => {
+    expect(isHurlMode(teleMode)).toBe(true);
+    expect(teleMode.targets.pairKind).toBe("teleport");
+    expect(teleMode.targets.units.size).toBe(0);
+    expect([...teleMode.targets.hurls.keys()]).toEqual(["unit_0003", "unit_0004"]);
+    expect(hurlLandings(teleMode, "unit_0003")).toEqual([{ x: 0, y: 0 }, { x: 3, y: 1 }]);
+  });
+
+  it("stage 1 highlights the units and clicking one picks it; stage 2 gives the action", () => {
+    expect(targetTiles(teleMode, crowd, hero).targets).toEqual([{ x: 2, y: 1 }, { x: 2, y: 0 }]);
+    expect(hurlObjectAt(teleMode, crowd, { x: 2, y: 1 })).toBe("unit_0003");
+    expect(hurlObjectAt(teleMode, crowd, { x: 1, y: 1 })).toBeNull(); // 主角自己不能被傳送
+    expect(actionAtTile(teleMode, crowd, hero, { x: 2, y: 1 })).toBeNull();
+    expect(actionAtTile(teleMode, crowd, hero, { x: 3, y: 1 }, "unit_0003")).toBe(teleOptions[1]);
+    expect(actionAtTile(teleMode, crowd, hero, { x: 3, y: 1 }, "unit_0004")).toBeNull(); // 不是這個單位的落點
+  });
+
+  // 互換：伺服器每組只列一次（unit_0001 < unit_0003 < unit_0004），客戶端兩個方向都登記。
+  const swap = (a: string, b: string): Action => skill("void", { target_id: a, second_target_id: b });
+  const swapOptions = [swap("unit_0001", "unit_0003"), swap("unit_0003", "unit_0004")];
+  const swapMode = skillMode({ skillId: "void", name: "虛空互換", costs: [], cooldown: 0, actions: swapOptions, disabledReason: null });
+
+  it("registers each swap pair in both directions and picks the second by the unit on the tile", () => {
+    expect(swapMode.targets.pairKind).toBe("swap");
+    expect([...swapMode.targets.hurls.keys()].sort()).toEqual(["unit_0001", "unit_0003", "unit_0004"]);
+    expect(hurlObjectAt(swapMode, crowd, { x: 1, y: 1 })).toBe("unit_0001"); // 主角也可以是互換的一方
+    expect(hurlObjectAt(swapMode, crowd, { x: 2, y: 0 })).toBe("unit_0004");
+    // 先選 unit_0004：第二個單位只能是 unit_0003（pair 以另一個方向登記）
+    expect(hurlLandings(swapMode, "unit_0004", crowd)).toEqual([{ x: 2, y: 1 }]);
+    expect(hurlActionAt(swapMode, "unit_0004", { x: 2, y: 1 }, crowd)).toBe(swapOptions[1]);
+    expect(actionAtTile(swapMode, crowd, hero, { x: 2, y: 1 }, "unit_0001")).toBe(swapOptions[0]);
+    expect(actionAtTile(swapMode, crowd, hero, { x: 2, y: 0 }, "unit_0001")).toBeNull(); // 這一組不存在
+    expect(hurlActionAt(swapMode, "unit_0004", { x: 2, y: 1 })).toBeNull(); // 沒有 view 無法找單位
+  });
+
+  it("says what each kind of two-stage selection asks for", () => {
+    expect(hurlPromptText(null, 0, 2, "teleport")).toContain("要傳送的單位");
+    expect(hurlPromptText("單位3", 4, 2, "teleport")).toContain("致命地形");
+    expect(hurlPromptText(null, 0, 3, "swap")).toContain("第一個單位");
+    expect(hurlPromptText("單位3", 1, 3, "swap")).toContain("第二個單位");
+  });
+});

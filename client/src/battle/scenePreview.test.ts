@@ -151,3 +151,50 @@ describe("sceneLines", () => {
     expect([[1, 0], [-1, 0], [0, 1], [0, -1]].map((d) => directionText(d))).toEqual(["東", "西", "南", "北"]);
   });
 });
+
+describe("displacing others (Phase 3D-2b)", () => {
+  const teleport = { kind: "teleport", unit_id: "unit_0003", other_id: null, path: [[2, 1], [3, 2]] };
+  const check = { unit_id: "unit_0003", success_permille: 500, resist_bonus: 2, lethal: false };
+  const lethal = { unit_id: "unit_0003", success_permille: 100, resist_bonus: 10, lethal: true };
+
+  it("marks the unit's tile and the landing of a teleport", () => {
+    const marks = previewOverlays({ ...base, moves: [teleport], displace_checks: [check] } as unknown as PreviewOut, view);
+    expect(marks).toEqual([
+      { pos: { x: 2, y: 1 }, kind: "teleport_from", label: "傳" },
+      { pos: { x: 3, y: 2 }, kind: "teleport_to", label: "落" },
+    ]);
+  });
+
+  it("marks a deadly landing differently", () => {
+    const marks = previewOverlays({ ...base, moves: [teleport], displace_checks: [lethal] } as unknown as PreviewOut, view);
+    expect(marks[1]).toEqual({ pos: { x: 3, y: 2 }, kind: "teleport_lethal", label: "險" });
+  });
+
+  it("shows the success chance and calls out the deadly one", () => {
+    const normal = sceneLines({ ...base, moves: [teleport], displace_checks: [check], displace_permille: 500 } as unknown as PreviewOut, names, view);
+    expect(normal.some((l) => l.startsWith("傳送："))).toBe(true);
+    expect(normal.some((l) => l.includes("成功率 50%") && l.includes("抵抗 +2"))).toBe(true);
+    const deadly = sceneLines({ ...base, moves: [teleport], displace_checks: [lethal], displace_permille: 100 } as unknown as PreviewOut, names, view);
+    const warn = deadly.find((l) => l.includes("致命地形"));
+    expect(warn).toContain("成功率只有 10%");
+    expect(warn).toContain("失敗時不會移動");
+  });
+
+  it("multiplies the enemy chances for a pair and says allies need no check", () => {
+    const second = { unit_id: "unit_0004", success_permille: 600, resist_bonus: 0, lethal: false };
+    const swap = { kind: "swap", unit_id: "unit_0003", other_id: "unit_0004", path: [[2, 1], [2, 0]] };
+    const lines = sceneLines(
+      { ...base, moves: [swap], displace_checks: [{ ...second, unit_id: "unit_0003" }, second], displace_permille: 360 } as unknown as PreviewOut,
+      names,
+      view,
+    );
+    expect(lines.some((l) => l.includes("互換成功率：36%"))).toBe(true);
+    const friendly = sceneLines({ ...base, moves: [teleport], displace_checks: [], displace_permille: null } as unknown as PreviewOut, names, view);
+    expect(friendly).toContain("傳送：友方不需檢定，必定成功");
+  });
+
+  it("states the Boss immunity note through the preview lines", () => {
+    const p = { ...base, notes: ["單位3 是 Boss：對傳送到致命地形免疫，致命地形不能選為落點"] } as unknown as PreviewOut;
+    expect(previewLines(p, names, view).some((l) => l.includes("Boss") && l.includes("致命地形"))).toBe(true);
+  });
+});
