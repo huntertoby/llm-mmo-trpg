@@ -20,6 +20,7 @@ from trpg.shared.types import Element, ObjectId, Pos, Surface, Team, UnitId
 __all__ = [
     "EFFECT_LIST_ADAPTER",
     "ApplyStatusEffect",
+    "BombBlastEffect",
     "ChangeTileEffect",
     "CleanseEffect",
     "CreateObstacleEffect",
@@ -172,6 +173,8 @@ class ApplyStatusEffect(EffectBase):
     duration: int | None = Field(default=None, ge=1)
     amount: int | None = Field(default=None, ge=1)
     """狀態的數值（``StatusInstance.amount``）；``soul_link`` 的轉移千分比（Phase 3C-4b）。"""
+    skill_id: str | None = None
+    """施加狀態的技能（``StatusInstance.skill_id``；定時炸彈，Phase 3D-8b）。"""
 
     def sort_target(self) -> str:
         return self.target_id
@@ -192,10 +195,25 @@ class RemoveStatusEffect(EffectBase):
         "stolen",
         "dispelled",
         "revealed",
+        "downed",
     ] = "removed"
 
     def sort_target(self) -> str:
         return self.target_id
+
+
+class BombBlastEffect(EffectBase):
+    """定時炸彈爆炸（Phase 3D-8b，:mod:`trpg.engine.bombs`）：在攜帶者 ``unit_id`` 目前的位置爆炸。
+    ``source_id`` 是施放者、``skill_id`` 是帶有 ``delayed_damage`` 的技能；``cause`` 是倒數歸零或
+    攜帶者倒下。處理器發出 ``bomb_exploded``，傷害由它的觸發函式結算。"""
+
+    kind: Literal["bomb_blast"] = "bomb_blast"
+    unit_id: UnitId
+    skill_id: str
+    cause: Literal["timer", "downed"]
+
+    def sort_target(self) -> str:
+        return self.unit_id
 
 
 class ShieldEffect(EffectBase):
@@ -417,6 +435,7 @@ type Effect = Annotated[
     | MoveUnitEffect
     | SwapUnitsEffect
     | ApplyStatusEffect
+    | BombBlastEffect
     | RemoveStatusEffect
     | ShieldEffect
     | CleanseEffect

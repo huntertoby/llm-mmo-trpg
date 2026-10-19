@@ -46,12 +46,15 @@ __all__ = [
 class StatusInstance:
     """單位身上的一個狀態。``remaining`` 為剩餘回合（``None`` 表示不倒數）。
 
-    ``amount``：護盾的剩餘吸收量（只有 ``absorbs_damage`` 的狀態使用，Phase 2D-1）。"""
+    ``amount``：護盾的剩餘吸收量（只有 ``absorbs_damage`` 的狀態使用，Phase 2D-1）。
+    ``skill_id``：施加這個狀態的技能（只有定時炸彈 ``time_bomb`` 使用，Phase 3D-8b：``remaining`` 是
+    環境回合的倒數，爆炸的骰子、元素與半徑取自這個技能的 ``delayed_damage`` 效果）。"""
 
     status_id: str
     remaining: int | None = None
     source_id: UnitId | None = None
     amount: int | None = None
+    skill_id: str | None = None
 
 
 @dataclass(slots=True, frozen=True)
@@ -299,6 +302,8 @@ class UnitState:
     它），但不在戰場上。"""
     activations: tuple[Activation, ...] = ()
     """生效中的常駐類傳說（Phase 3D-6），依啟動順序。修正型傳說與規則改變只在這裡列出時生效。"""
+    revived: bool = False
+    """這個單位在本場戰鬥已經被復活過一次（``revive``，Phase 3D-8b）：每單位每場最多被復活 1 次。"""
 
     @property
     def alive(self) -> bool:
@@ -377,6 +382,7 @@ class UnitState:
             summon_expires_round=self.summon_expires_round,
             dismissed=self.dismissed,
             activations=self.activations,
+            revived=self.revived,
         )
 
 

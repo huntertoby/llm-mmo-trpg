@@ -12,9 +12,11 @@ STATUSES = ENGINE / "rules" / "statuses.py"
 BASE_USERS = {
     ENGINE / "battle.py": {"begin_battle", "_initiative_order"},
     ENGINE / "skills" / "scaling.py": {"mastery_active"},
+    ENGINE / "skills" / "revive.py": {"_order_index"},
 }
-"""先攻（戰鬥開始時擲，用基礎屬性）與專精加成（Phase 2H-2：配點決定專精，不受戰鬥中增益影響）
-是可以用 ``base_attribute`` 的地方。"""
+"""先攻（戰鬥開始時擲，用基礎屬性）、專精加成（Phase 2H-2：配點決定專精，不受戰鬥中增益影響）與
+復活的單位回到先攻順序（Phase 3D-8b：比的是先攻值與基礎敏捷，同開場的排序）是可以用
+``base_attribute`` 的地方。"""
 
 
 def _functions_with_attribute_reads(path: Path) -> list[tuple[str, int]]:

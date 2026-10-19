@@ -15,6 +15,9 @@ from pydantic import BaseModel, ConfigDict
 
 from trpg.content.battle import ReactionRule
 from trpg.content.maps import Objective
+from trpg.content.skills import TIME_BOMB
+from trpg.engine.bombs import bomb_spec
+from trpg.engine.skills.revive import revivable
 from trpg.engine.state import (
     Activation,
     BattleState,
@@ -74,6 +77,8 @@ class StatusView(_ViewModel):
     remaining: int | None
     source_id: UnitId | None
     amount: int | None
+    blast_radius: int | None = None
+    """定時炸彈（``time_bomb``，Phase 3D-8b）的爆炸半徑（曼哈頓距離）；其他狀態為 ``None``。"""
 
 
 REACTION_TRIGGER_TEXT: dict[str, str] = {
@@ -157,6 +162,8 @@ class UnitView(_ViewModel):
     source_max: int
     """源力上限（``core.yaml`` 的 ``source_max``）。"""
     downed: bool
+    revivable: bool = False
+    """倒下而且可以被復活（Phase 3D-8b）：不是撤離或消失、不是召喚物、本場還沒被復活過。"""
     escaped: bool
     owner_id: UnitId | None
     """召喚物的召喚者（Phase 3D-4a）；一般單位為 ``None``。"""
@@ -282,12 +289,16 @@ def _zone_views(state: BattleState) -> tuple[ZoneView, ...]:
     return tuple(views)
 
 
-def _status_view(status: StatusInstance) -> StatusView:
+def _status_view(state: BattleState, status: StatusInstance) -> StatusView:
+    radius = None
+    if status.status_id == TIME_BOMB and status.skill_id is not None:
+        radius = bomb_spec(state, status.skill_id).radius
     return StatusView(
         status_id=status.status_id,
         remaining=status.remaining,
         source_id=status.source_id,
         amount=status.amount,
+        blast_radius=radius,
     )
 
 
@@ -344,7 +355,7 @@ def _unit_view(state: BattleState, unit: UnitState, team: Team) -> UnitView:
         weapon_name_zh=unit.weapon.name_zh,
         tags=unit.tags,
         skills=unit.skills if unit.team is team else (),
-        statuses=tuple(_status_view(s) for s in unit.statuses),
+        statuses=tuple(_status_view(state, s) for s in unit.statuses),
         stacks=dict(sorted(unit.stacks.items())),
         cooldowns=_visible_cooldowns(state, unit, team),
         reaction_available=unit.alive
@@ -357,6 +368,7 @@ def _unit_view(state: BattleState, unit: UnitState, team: Team) -> UnitView:
         source=unit.source,
         source_max=state.ruleset.core.source_max,
         downed=unit.downed,
+        revivable=revivable(unit),
         escaped=unit.escaped,
         owner_id=unit.owner_id,
         summon_expires_round=unit.summon_expires_round,

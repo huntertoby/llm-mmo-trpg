@@ -605,7 +605,11 @@ def apply_status(ctx: Ctx, effect: ApplyStatusEffect) -> list[EventBase]:
     definition = ctx.rules.status_def(status_id)
     existing = unit.get_status(status_id)
     instance = StatusInstance(
-        status_id=status_id, remaining=duration, source_id=effect.source_id, amount=effect.amount
+        status_id=status_id,
+        remaining=duration,
+        source_id=effect.source_id,
+        amount=effect.amount,
+        skill_id=effect.skill_id,
     )
     if definition.stance:  # 同時只能有一個姿態：先移除其他姿態（2E-2）
         for old in stance_status_ids(ctx.rules, unit):
@@ -625,6 +629,7 @@ def apply_status(ctx: Ctx, effect: ApplyStatusEffect) -> list[EventBase]:
             remaining=existing.remaining,
             source_id=existing.source_id,
             amount=existing.amount,
+            skill_id=existing.skill_id,
         )
     others = [s for s in unit.statuses if s.status_id != status_id]
     unit.statuses = sorted([*others, instance], key=lambda s: s.status_id)

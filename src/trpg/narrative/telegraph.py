@@ -6,12 +6,12 @@ from __future__ import annotations
 from collections.abc import Callable
 
 from trpg.content.maps import MapEvent, SpawnUnitsEvent
-from trpg.engine.environment import TelegraphChange
+from trpg.engine.environment import TelegraphBomb, TelegraphChange
 from trpg.engine.state import BattleState
 from trpg.narrative.events import DIRECTION_TEXT, cells_text, xy_text
 from trpg.shared.types import Pos, Surface
 
-__all__ = ["change_text", "upcoming_text"]
+__all__ = ["bomb_text", "change_text", "upcoming_text"]
 
 
 def _surface_name(value: str | None) -> str:
@@ -96,6 +96,13 @@ def _zone_expired(state: BattleState, c: TelegraphChange, _t: Callable[[str], st
     return f"「{_zone_name(state, c)}」區域將消失（{why}）"
 
 
+def _bomb_exploded(state: BattleState, c: TelegraphChange, _t: Callable[[str], str]) -> str:
+    return (
+        f"{_unit_name(state, c)} 身上的定時炸彈將在{_where(c)} 爆炸"
+        f"（半徑 {c.amount or 0} 格，{cells_text(c.tiles)}）"
+    )
+
+
 _CHANGE_TEXT: dict[str, Callable[[BattleState, TelegraphChange, Callable[[str], str]], str]] = {
     "surface": _surface,
     "terrain": _terrain,
@@ -107,6 +114,7 @@ _CHANGE_TEXT: dict[str, Callable[[BattleState, TelegraphChange, Callable[[str], 
     "unit_downed": _downed,
     "zone_moved": _zone_moved,
     "zone_expired": _zone_expired,
+    "bomb_exploded": _bomb_exploded,
 }
 
 
@@ -115,6 +123,14 @@ def change_text(
 ) -> str:
     """一項預告變化的一行文字。``template_name`` 把單位範本 ID 轉成中文名（援軍用）。"""
     return _CHANGE_TEXT[change.kind](state, change, template_name)
+
+
+def bomb_text(state: BattleState, bomb: TelegraphBomb) -> str:
+    """帶著定時炸彈的單位的一行文字（倒數與爆炸範圍；Phase 3D-8b）。"""
+    unit = state.units.get(bomb.unit_id)
+    name = bomb.unit_id if unit is None else unit.name_zh
+    when = "下一次環境回合就會爆炸" if bomb.explodes else f"還要 {bomb.remaining} 次環境回合爆炸"
+    return f"{name} 身上的定時炸彈{when}（半徑 {bomb.radius} 格）"
 
 
 def upcoming_text(event: MapEvent, template_name: Callable[[str], str] = str) -> str:

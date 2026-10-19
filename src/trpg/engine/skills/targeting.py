@@ -24,6 +24,7 @@ from trpg.content.skills import (
     HURL_OBJECT,
     LEAP,
     PIERCE_SHAPES,
+    REVIVE,
     SUMMON,
     SWAP,
     TOPPLE,
@@ -59,6 +60,7 @@ from trpg.engine.skills.mobility import (
     swap_pair_problem,
     swap_problem,
 )
+from trpg.engine.skills.revive import revive_candidates, revive_target_problem
 from trpg.engine.skills.scaling import mastery_reach_bonus, skill_scaling_value
 from trpg.engine.state import BattleState, ObjectState, UnitState
 from trpg.shared.errors import IllegalActionError
@@ -464,6 +466,34 @@ def _self_move_target_problem(
     return None
 
 
+def _unit_pick_problem(  # noqa: PLR0917
+    state: BattleState,
+    caster: UnitState,
+    skill: SkillDef,
+    effects: tuple[ResolvedEffect, ...],
+    target: UnitState,
+    reach: int,
+) -> str | None:
+    """單位目標的選取問題：一般技能看 :func:`_unit_target_problem` 與自身位移的額外限制；復活
+    （Phase 3D-8b）的目標是倒下的友方。"""
+    if any(e.type == REVIVE for e in effects):
+        return _revive_pick_problem(state, caster, skill, target, reach)
+    problem = _unit_target_problem(state, caster, skill, effects, target, reach)
+    if problem is None:
+        problem = _self_move_target_problem(state, caster, effects, target, reach)
+    return problem
+
+
+def _revive_pick_problem(
+    state: BattleState, caster: UnitState, skill: SkillDef, target: UnitState, reach: int
+) -> str | None:
+    """復活（Phase 3D-8b）的目標：射程與視線內、倒下而且可以被復活的友方。"""
+    problem = revive_target_problem(state, caster, target)
+    if problem is not None:
+        return problem
+    return _reach_problem(state, caster, skill, target.xy, target.name_zh, reach)
+
+
 def _object_target_problem(  # noqa: PLR0917
     state: BattleState,
     caster: UnitState,
@@ -529,9 +559,7 @@ def _unit_area(
             raise IllegalActionError(f"找不到目標：{action.target_id}")
         if any(e.type == TOPPLE for e in effects):
             raise IllegalActionError(f"推倒技能只能以可推倒的物件為目標：{skill.name_zh}")
-        problem = _unit_target_problem(state, caster, skill, effects, target, reach)
-        if problem is None:
-            problem = _self_move_target_problem(state, caster, effects, target, reach)
+        problem = _unit_pick_problem(state, caster, skill, effects, target, reach)
         if problem is not None:
             raise IllegalActionError(problem)
         if spec.type != "chain":
@@ -854,10 +882,11 @@ def _candidates(state: BattleState, caster: UnitState, skill: SkillDef) -> Itera
         reach = shape_reach(
             state, skill, caster
         )  # 射程外的目標不可能合法，先篩掉（省下例外的成本）
-        for unit in state.living_units():
+        revive = any(e.type == REVIVE for e in skill.effects)
+        for unit in revive_candidates(state, caster) if revive else state.living_units():
             if manhattan(caster.xy, unit.xy) <= reach:
                 yield UseSkill(unit_id=uid, skill_id=sid, target_id=unit.id)
-        if skill.shape.type != "chain":
+        if skill.shape.type != "chain" and not revive:
             for obj in state.objects_sorted():
                 if manhattan(caster.xy, obj.xy) <= reach:
                     yield UseSkill(unit_id=uid, skill_id=sid, target_object_id=ObjectId(obj.id))

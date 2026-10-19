@@ -31,6 +31,7 @@ from trpg.content.skills import (
     COPY_SKILL,
     DAMAGE_MULTIPLIER,
     DASH,
+    DELAYED_DAMAGE,
     DISPEL,
     EXTRA_REACTION,
     GAMBLE,
@@ -41,15 +42,19 @@ from trpg.content.skills import (
     PLACE_TRAP,
     REDIRECT_DAMAGE,
     REDIRECT_STATUS,
+    REFUND_AP,
+    REFUND_COOLDOWN,
     RESET_COOLDOWN,
     RESTORE_RESOURCE,
     REVEAL,
+    REVIVE,
     SELF_DAMAGE_OF_HIT,
     STEAL_BUFF,
     SUMMON,
     SWAP,
     SWAP_ANY,
     TELEPORT_TARGET,
+    TIME_BOMB,
     TOPPLE,
     ZONE,
     ConditionSpec,
@@ -98,6 +103,7 @@ from trpg.engine.events import (
     SkillUsed,
     UnitCharged,
     UnitDashed,
+    UnitDowned,
 )
 from trpg.engine.maneuvers import contest
 from trpg.engine.pierce import NO_PIERCE, PierceTrace, pierce_trace
@@ -111,6 +117,7 @@ from trpg.engine.reactions import (
     spell_hit_reactions,
     try_intercept,
 )
+from trpg.engine.refunds import refund_ap, refund_cooldown
 from trpg.engine.resources import (
     dispelled_buffs,
     pick_stolen_buff,
@@ -127,6 +134,7 @@ from trpg.engine.skill_triggers import collect_cast, collect_move, holding
 from trpg.engine.skills.charge import aside_direction
 from trpg.engine.skills.conditions import Subject, condition_met
 from trpg.engine.skills.mobility import ChargeRoute, charge_route, dash_route
+from trpg.engine.skills.revive import revive_unit
 from trpg.engine.skills.scaling import mastery_duration_bonus, skill_scaling_value
 from trpg.engine.skills.targeting import (
     PaidCost,
@@ -669,6 +677,8 @@ class _Cast:
                     self.touch_untouched_tiles(spec, start)
                 if spec.lifesteal_permille is not None:
                     self.lifesteal(spec.lifesteal_permille, start)
+                if spec.on_kill:
+                    self.on_kill(spec.on_kill, start)
         self.backlash_on_miss()
         self.react_to_hits()
         self.shorten_cooldown()
@@ -726,11 +736,43 @@ class _Cast:
             if sub.type == SELF_DAMAGE_OF_HIT:
                 self.self_damage_of_hit(sub)
                 continue
+            if sub.type in (REFUND_AP, REFUND_COOLDOWN):
+                self.refund(sub)
+                continue
             primitive = self.ctx.rules.primitive_def(sub.type)
             affects = sub.affects or default_affects(primitive)
             batch = self.build(ResolvedEffect(-1, sub.type, primitive, affects), sub)
             if batch:
                 execute(self.ctx, batch)
+
+    # -- 技能內的擊殺時效果（Phase 3D-8b）-----------------------------------
+
+    def on_kill(self, branch: tuple[EffectSpec, ...], start: int) -> None:
+        """``on_kill``：這個傷害效果（``start`` 之後的事件，含連鎖）讓施放者造成傷害的敵人倒下時，
+        對施放者結算 ``branch``（對象一律是施放者；一個效果只結算一次，施放者自己倒下則不結算）。"""
+        caster, state = self.caster, self.ctx.state
+        events = self.ctx.events[start:]
+        hurt = {
+            e.target_id
+            for e in events
+            if isinstance(e, DamageDealt) and e.source_id == caster.id and e.cause == "attack"
+        }
+        killed = any(
+            isinstance(e, UnitDowned)
+            and e.unit_id in hurt
+            and state.units[e.unit_id].team is not caster.team
+            for e in events
+        )
+        if killed and caster.alive:
+            self.resolve_branch(tuple(sub.model_copy(update={"affects": "self"}) for sub in branch))
+
+    def refund(self, spec: EffectSpec) -> None:
+        """``refund_ap``（返還 AP）與 ``refund_cooldown``（本技能冷卻歸零，見
+        :mod:`trpg.engine.refunds`）。"""
+        if spec.type == REFUND_AP:
+            refund_ap(self.ctx, self.caster, self.skill.id, spec.amount or 1)
+        else:
+            refund_cooldown(self.ctx, self.caster, self.skill.id)
 
     def self_damage_of_hit(self, spec: EffectSpec) -> None:
         """``self_damage_of_hit``：施放者受到「本次施放對敵人造成的傷害（扣掉護盾吸收）」的
@@ -1009,6 +1051,35 @@ class _Cast:
         reveal_traps(self.ctx, self.caster, self.area.tiles)
         if not batch and len(self.ctx.events) == before:
             self.ctx.emit(EffectFizzled, effect_kind=spec.type, pos=None, reason="nothing_hidden")
+        return batch
+
+    def revive(self, _effect: ResolvedEffect, spec: EffectSpec) -> list[EffectBase]:
+        """``revive``（Phase 3D-8b）：選定的倒下友方站起來（:mod:`trpg.engine.skills.revive`）。"""
+        assert self.action is not None and self.action.target_id is not None
+        assert spec.hp_permille is not None
+        target = self.ctx.state.units[self.action.target_id]
+        revive_unit(self.ctx, self.caster, target, self.skill.id, spec.hp_permille)
+        return []
+
+    def delayed_damage(self, effect: ResolvedEffect, spec: EffectSpec) -> list[EffectBase]:
+        """``delayed_damage``（Phase 3D-8b）：命中的敵人身上附加定時炸彈（狀態 ``time_bomb``，剩餘
+        回合 ＝ 倒數；已經有炸彈的目標不再附加）。爆炸見 :mod:`trpg.engine.bombs`。"""
+        batch: list[EffectBase] = []
+        for unit in self.targets(effect.affects, spec.condition):
+            if unit.has_status(TIME_BOMB):
+                self.ctx.emit(
+                    EffectFizzled, effect_kind=spec.type, pos=unit.pos, reason="already_bombed"
+                )
+                continue
+            batch.append(
+                ApplyStatusEffect(
+                    source_id=self.caster.id,
+                    target_id=unit.id,
+                    status_id=TIME_BOMB,
+                    duration=spec.rounds,
+                    skill_id=self.skill.id,
+                )
+            )
         return batch
 
     def steal_buff(self, effect: ResolvedEffect, spec: EffectSpec) -> list[EffectBase]:
@@ -1818,6 +1889,8 @@ _Cast._SIMPLE = {
     STEAL_BUFF: _Cast.steal_buff,
     DISPEL: _Cast.dispel,
     REVEAL: _Cast.reveal,
+    REVIVE: _Cast.revive,
+    DELAYED_DAMAGE: _Cast.delayed_damage,
     HURL_OBJECT: _Cast.hurl_object,
     SUMMON: _Cast.summon,
     ZONE: _Cast.zone,

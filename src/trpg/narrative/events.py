@@ -13,11 +13,14 @@ from typing import Any
 from trpg.engine.events import (
     ActivationExpired,
     ApGranted,
+    ApRefunded,
     AttackIntercepted,
     AttackRolled,
     BacklashTriggered,
     BattleEnded,
     BattleStarted,
+    BombExploded,
+    BombTicked,
     ChainLimitReached,
     CheckRolled,
     Collided,
@@ -91,6 +94,7 @@ from trpg.engine.events import (
     UnitEscaped,
     UnitFell,
     UnitMoved,
+    UnitRevived,
     UnitSpawned,
     UnitStoodUp,
     UnitSummoned,
@@ -620,6 +624,34 @@ def _ap_granted(e: ApGranted, v: _View) -> str:
     if e.deferred:
         return f"    {target} 獲得 {e.amount} AP（下次回合開始時加上，共 {e.ap_after}）"
     return f"    {target} 獲得 {e.amount} AP（現在 {e.ap_after} AP）"
+
+
+@_handles(ApRefunded)
+def _ap_refunded(e: ApRefunded, v: _View) -> str:
+    return f"    {v.name[e.unit_id]} 返還了 {e.amount} AP（擊殺時效果，現在 {e.ap_after} AP）"
+
+
+@_handles(UnitRevived)
+def _unit_revived(e: UnitRevived, v: _View) -> str:
+    moved = "" if e.pos == e.from_pos else f"（原位置被占用，改站在 {xy_text(e.pos)}）"
+    return (
+        f"  ✚ {v.name[e.source_id]} 讓 {v.name[e.unit_id]} 重新站了起來"
+        f"（HP {e.hp}，位置 {xy_text(e.pos)}）{moved}"
+    )
+
+
+@_handles(BombTicked)
+def _bomb_ticked(e: BombTicked, v: _View) -> str:
+    return f"  ◷ {v.name[e.unit_id]} 身上的定時炸彈還剩 {e.remaining} 輪（爆炸半徑 {e.radius} 格）"
+
+
+@_handles(BombExploded)
+def _bomb_exploded(e: BombExploded, v: _View) -> str:
+    why = "倒數歸零" if e.cause == "timer" else f"{v.name[e.unit_id]} 倒下了"
+    return (
+        f"  ＊ 定時炸彈在 {xy_text(e.pos)} 爆炸了！（{why}，半徑 {e.radius} 格，"
+        f"{e.element.display_name}）"
+    )
 
 
 @_handles(DamageRedirected)

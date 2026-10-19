@@ -178,7 +178,19 @@ def _damage(lib: ContentLibrary, skill: SkillDef, spec: EffectSpec) -> str:
     scale = scaling_text(spec)
     if scale is not None:
         extras.append(scale)
+    if spec.on_kill:
+        kill = "、".join(_on_kill_text(lib, skill, sub) for sub in spec.on_kill)
+        extras.append(f"若這一招讓敵人倒下：{kill}")
     return text + "".join(f"，{e}" for e in extras)
+
+
+def _on_kill_text(lib: ContentLibrary, skill: SkillDef, sub: EffectSpec) -> str:
+    """擊殺時效果（``on_kill``，Phase 3D-8b）的一句話（對象一律是施放者）。"""
+    if sub.type == "refund_ap":
+        return f"返還 {sub.amount or 1} AP"
+    if sub.type == "refund_cooldown":
+        return "本技能冷卻歸零"
+    return f"你{_effect_core(lib, skill, sub)}"
 
 
 def _heal(_lib: ContentLibrary, skill: SkillDef, spec: EffectSpec) -> str:
@@ -504,6 +516,24 @@ def _reveal(_lib: ContentLibrary, _skill: SkillDef, spec: EffectSpec) -> str:
     )
 
 
+def _revive(_lib: ContentLibrary, _skill: SkillDef, spec: EffectSpec) -> str:
+    return (
+        f"讓射程內倒下的友方以 {(spec.hp_permille or 0) / 10:g}% 最大 HP 站起來"
+        "（站回原位置，被占用時站到附近最近的空格；每個單位每場最多一次，召喚物不能被復活）"
+    )
+
+
+def _delayed_damage(lib: ContentLibrary, skill: SkillDef, spec: EffectSpec) -> str:
+    assert spec.dice is not None and spec.element is not None
+    where = "，只波及目標自己" if not spec.radius else f"，波及半徑 {spec.radius} 格內的所有單位"
+    return (
+        f"在目標身上綁定時炸彈（{lib.ruleset.status_def('time_bomb').name_zh}）：{spec.rounds} 次"
+        f"環境回合後在目標當下的位置爆炸{where}（敵我不分），{_dice(spec.dice)}＋"
+        f"{scaling_label(skill)}加成的{spec.element.display_name}傷害；目標倒下時立即爆炸；"
+        "可被淨化移除"
+    )
+
+
 def _hurl_object(_lib: ContentLibrary, skill: SkillDef, spec: EffectSpec) -> str:
     assert spec.dice is not None
     text = f"把 {spec.range} 格內的可推動物件丟到落點，落點單位受 {_dice(spec.dice)} 物理傷害"
@@ -559,6 +589,8 @@ _EFFECT_TEXT: dict[str, _EffectText] = {
     "steal_buff": _steal_buff,
     "dispel": _dispel,
     "reveal": _reveal,
+    "revive": _revive,
+    "delayed_damage": _delayed_damage,
     "hurl_object": _hurl_object,
     "topple": _topple,
     "zone": _zone,

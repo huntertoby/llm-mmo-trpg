@@ -23,6 +23,7 @@ from typing import Literal
 from pydantic import BaseModel, ConfigDict
 
 from trpg.content.maps import MapEvent, SpawnUnitsEvent
+from trpg.engine.bombs import blast_tiles, bomb_carriers, bomb_spec, tick_bombs
 from trpg.engine.context import Ctx
 from trpg.engine.effects import execute
 from trpg.engine.effects.models import (
@@ -35,6 +36,7 @@ from trpg.engine.effects.models import (
 )
 from trpg.engine.effects.world import set_surface
 from trpg.engine.events import (
+    BombExploded,
     DamageDealt,
     EnvironmentEnded,
     EnvironmentStarted,
@@ -61,6 +63,7 @@ from trpg.shared.types import Element, ObjectId, Pos, Surface, UnitId
 
 __all__ = [
     "Telegraph",
+    "TelegraphBomb",
     "TelegraphChange",
     "environment_rng",
     "run_environment",
@@ -103,6 +106,7 @@ def run_environment(ctx: Ctx) -> None:
         _tick_surfaces(ctx, tiles)
         _spread_fire(ctx, fires)
         move_zones(ctx)  # 持續區域：到期與移動型的前進（Phase 3D-5）
+        tick_bombs(ctx)  # 定時炸彈的倒數與爆炸（Phase 3D-8b）
         expire_orphan_summons(ctx)  # 召喚者不在場的分身到期（Phase 3D-6）
         _weather(ctx, tiles)
         _map_events(ctx)
@@ -211,6 +215,7 @@ type ChangeKind = Literal[
     "unit_downed",
     "zone_moved",
     "zone_expired",
+    "bomb_exploded",
 ]
 
 
@@ -220,6 +225,9 @@ class TelegraphChange(BaseModel):
     持續區域（Phase 3D-5）：``zone_moved`` 的 ``tiles`` 是區域前進後的格子、``before`` 是方向；
     ``zone_expired`` 的 ``tiles`` 是消失前的格子、``before`` 是消失原因；兩者的 ``after`` 都是區域
     技能 ID、``amount`` 是區域編號。一個區域在一次環境回合只列一項（``speed`` 2 時取最後的位置）。
+
+    定時炸彈（Phase 3D-8b）：``bomb_exploded`` 的 ``pos`` 是爆炸的位置、``unit_id`` 是攜帶者、
+    ``amount`` 是半徑、``tiles`` 是波及的格子（受傷的單位另列 ``unit_damaged``）。
     """
 
     model_config = ConfigDict(frozen=True, extra="forbid")
@@ -234,6 +242,20 @@ class TelegraphChange(BaseModel):
     tiles: tuple[Pos, ...] = ()
 
 
+class TelegraphBomb(BaseModel):
+    """目前帶著定時炸彈的單位（Phase 3D-8b）：倒數、爆炸半徑與波及的格子（以目前位置展開；
+    ``explodes`` 為真表示下一次環境回合就會爆炸）。"""
+
+    model_config = ConfigDict(frozen=True, extra="forbid")
+
+    unit_id: UnitId
+    pos: Pos
+    remaining: int
+    radius: int
+    tiles: tuple[Pos, ...]
+    explodes: bool
+
+
 class Telegraph(BaseModel):
     """下一次環境回合將發生的所有變化。
 
@@ -242,6 +264,7 @@ class Telegraph(BaseModel):
     - ``changes``：由事件整理的變化清單。
     - ``burning``：目前著火的物件與「還能撐幾次環境回合」。
     - ``upcoming``：再下一輪結束時的地圖事件（提前一輪預告）。
+    - ``bombs``：目前帶著定時炸彈的單位與倒數（Phase 3D-8b；環境回合之前的狀態）。
     """
 
     model_config = ConfigDict(frozen=True, extra="forbid")
@@ -251,6 +274,7 @@ class Telegraph(BaseModel):
     changes: tuple[TelegraphChange, ...]
     burning: tuple[tuple[ObjectId, int], ...]
     upcoming: tuple[MapEvent, ...]
+    bombs: tuple[TelegraphBomb, ...] = ()
 
 
 def _changes(events: list[EventBase]) -> list[TelegraphChange]:
@@ -285,6 +309,14 @@ def _changes(events: list[EventBase]) -> list[TelegraphChange]:
             )
         if isinstance(e, UnitDowned):
             return TelegraphChange(kind="unit_downed", unit_id=e.unit_id)
+        if isinstance(e, BombExploded):
+            return TelegraphChange(
+                kind="bomb_exploded",
+                pos=e.pos,
+                unit_id=e.unit_id,
+                amount=e.radius,
+                tiles=e.tiles,
+            )
         return _zone_change(e)
 
     changes = [c for e in events if (c := convert(e)) is not None]
@@ -313,6 +345,25 @@ def _zone_change(e: EventBase) -> TelegraphChange | None:
     return None
 
 
+def _bombs(state: BattleState) -> tuple[TelegraphBomb, ...]:
+    """帶著定時炸彈的單位（依單位 ID）：倒數、半徑與目前位置展開的波及格子。"""
+    found: list[TelegraphBomb] = []
+    for unit, status in bomb_carriers(state):
+        radius = bomb_spec(state, status.skill_id or "").radius or 0
+        remaining = status.remaining or 0
+        found.append(
+            TelegraphBomb(
+                unit_id=unit.id,
+                pos=unit.pos,
+                remaining=remaining,
+                radius=radius,
+                tiles=tuple(Pos(x=x, y=y) for x, y in blast_tiles(state, unit.pos, radius)),
+                explodes=remaining <= 1,
+            )
+        )
+    return tuple(found)
+
+
 def telegraph(state: BattleState) -> Telegraph:
     """預告下一次環境回合（本輪結束時）的變化：在狀態複本上執行 :func:`run_environment`。"""
     burning = tuple((o.id, o.burning) for o in state.objects_sorted() if o.burning is not None)
@@ -329,4 +380,5 @@ def telegraph(state: BattleState) -> Telegraph:
         changes=tuple(_changes(ctx.events)),
         burning=burning,
         upcoming=upcoming,
+        bombs=_bombs(state),
     )

@@ -19,11 +19,15 @@ __all__ = [
     "ActivationExpired",
     "AdvantageState",
     "ApGranted",
+    "ApRefunded",
     "AttackIntercepted",
     "AttackRolled",
     "BacklashTriggered",
     "BattleEnded",
     "BattleStarted",
+    "BombCause",
+    "BombExploded",
+    "BombTicked",
     "ChainLimitReached",
     "CheckRolled",
     "Collided",
@@ -106,6 +110,7 @@ __all__ = [
     "UnitEscaped",
     "UnitFell",
     "UnitMoved",
+    "UnitRevived",
     "UnitSpawned",
     "UnitStoodUp",
     "UnitSummoned",
@@ -920,6 +925,61 @@ class ApGranted(EventBase):
     deferred: bool = False
 
 
+class ApRefunded(EventBase):
+    """擊殺時效果 ``refund_ap``（Phase 3D-8b）：``unit_id`` 獲得 ``amount`` AP（已扣掉超過 AP 上限的
+    部分；用專用的效果，不是 ``grant_ap``）。"""
+
+    type: Literal["ap_refunded"] = "ap_refunded"
+    unit_id: UnitId
+    skill_id: str
+    amount: int
+    ap_after: int
+
+
+class UnitRevived(EventBase):
+    """復活（``revive``，Phase 3D-8b）：倒下的 ``unit_id`` 以 ``hp`` 站起來，站在 ``pos``（原位置
+    ``from_pos`` 被占用或不能站立時為最近的空格）；``source_id`` 是施放者。"""
+
+    type: Literal["unit_revived"] = "unit_revived"
+    unit_id: UnitId
+    source_id: UnitId
+    skill_id: str
+    hp: int
+    pos: Pos
+    from_pos: Pos
+
+
+class BombTicked(EventBase):
+    """定時炸彈（``delayed_damage``，Phase 3D-8b）的環境回合倒數：``unit_id`` 身上的炸彈還剩
+    ``remaining`` 輪（歸零時改發 ``bomb_exploded``）。"""
+
+    type: Literal["bomb_ticked"] = "bomb_ticked"
+    unit_id: UnitId
+    remaining: int
+    pos: Pos
+    radius: int
+
+
+type BombCause = Literal["timer", "downed"]
+"""炸彈爆炸的原因：倒數歸零、攜帶者倒下。"""
+
+
+class BombExploded(EventBase):
+    """定時炸彈在 ``pos`` 爆炸（Phase 3D-8b）：攜帶者 ``unit_id``（``cause: downed`` 時已倒下）、
+    施放者 ``source_id``；影響範圍是 ``tiles``（半徑 ``radius`` 內的格子）。受傷的單位由其後的
+    ``damage_dealt`` 事件說明。"""
+
+    type: Literal["bomb_exploded"] = "bomb_exploded"
+    unit_id: UnitId
+    source_id: UnitId
+    skill_id: str
+    pos: Pos
+    radius: int
+    element: Element
+    cause: BombCause
+    tiles: tuple[Pos, ...] = ()
+
+
 class DeathCheated(EventBase):
     """不死（``cheat_death`` 的狀態）擋下致命傷害：HP 留在 1，之後移除該狀態（``spent``）。"""
 
@@ -1313,6 +1373,10 @@ type Event = Annotated[
     | TrapExpired
     | SourceChanged
     | ApGranted
+    | ApRefunded
+    | UnitRevived
+    | BombTicked
+    | BombExploded
     | DeathCheated
     | DamageRedirected
     | ReactionsGranted

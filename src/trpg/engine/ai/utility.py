@@ -50,6 +50,7 @@ from trpg.content.skills import (
     CHARGE_THROUGH,
     CHEAT_DEATH,
     CHEAT_DEATH_STATUS,
+    DELAYED_DAMAGE,
     DISPEL,
     EXTRA_REACTION,
     GRANT_AP,
@@ -60,7 +61,9 @@ from trpg.content.skills import (
     RESET_COOLDOWN,
     RESTORE_RESOURCE,
     REVEAL,
+    REVIVE,
     STEAL_BUFF,
+    TIME_BOMB,
     EffectSpec,
     SkillDef,
 )
@@ -90,8 +93,10 @@ from trpg.engine.ai.scene_objects import SCENE_PRIMITIVES, has_fire_follow_up, s
 from trpg.engine.ai.summon import has_summon, summon_estimate, summon_gains, summon_template
 from trpg.engine.ai.zone import hostile_zone_at, is_zone_skill, zone_estimate, zone_gains
 from trpg.engine.battle import legal_actions, legal_actions_with_areas
+from trpg.engine.bombs import blast_tiles
 from trpg.engine.events import (
     ApGranted,
+    ApRefunded,
     DamageDealt,
     EventBase,
     ObjectDamaged,
@@ -106,6 +111,7 @@ from trpg.engine.events import (
     TrapRevealed,
     UnitDowned,
     UnitMoved,
+    UnitRevived,
 )
 from trpg.engine.preview import DamageRange, Preview, preview
 from trpg.engine.resources import restorable_cooldowns
@@ -1053,6 +1059,8 @@ _REWRITE_SCORED = frozenset(
         STEAL_BUFF,
         DISPEL,
         REVEAL,
+        REVIVE,
+        DELAYED_DAMAGE,
     }
 )
 """預覽事件之外還要另外加分的改寫規則型原語（:func:`_rewrite_gains`）。"""
@@ -1087,12 +1095,58 @@ def _rewrite_gains(
     types = {e.type for e in skill.effects}
     rules = profile.rewrite
     source = skill.cost.source or 0
-    if not types & _REWRITE_SCORED and not source:
+    on_kill = any(e.on_kill for e in skill.effects)  # 擊殺時效果（3D-8b）
+    if not types & _REWRITE_SCORED and not source and not on_kill:
         return Fraction(0)
     points = Fraction(-rules.source_points * source)
     for e in p.min_events:
         points += _rewrite_event_points(state, actor, e, types, rules)
+    points += _bomb_points(state, actor, skill, p, rules)
+    revived = sum(1 for e in p.min_events if isinstance(e, UnitRevived) and e.source_id == actor.id)
+    points += rules.revive_points * revived  # 復活（3D-8b）
+    points += _kill_points(actor, skill, p, rules)
     return profile.weights.damage * points
+
+
+def _kill_points(actor: UnitState, skill: SkillDef, p: Preview, rules: RewriteAiRules) -> Fraction:
+    """擊殺時效果（``on_kill``，3D-8b）的收益：返還的 AP × ``refund_ap_points``、本技能冷卻歸零 ×
+    ``cooldown_points`` × 技能的冷卻回合；只出現在「最多後果」的預覽（能擊殺的情形），所以再 ×
+    命中率近似。"""
+    total = Fraction(0)
+    for e in p.max_events:
+        if isinstance(e, ApRefunded) and e.unit_id == actor.id:
+            total += rules.refund_ap_points * e.amount
+        elif (
+            isinstance(e, SkillCooldownChanged)
+            and e.unit_id == actor.id
+            and e.skill_id == skill.id
+            and e.remaining == 0
+        ):
+            total += rules.cooldown_points * (skill.cost.cooldown or 0)
+    return total * (p.hit_chance if p.hit_chance is not None else Fraction(1))
+
+
+def _bomb_points(
+    state: BattleState, actor: UnitState, skill: SkillDef, p: Preview, rules: RewriteAiRules
+) -> Fraction:
+    """定時炸彈（3D-8b）的收益：骰子平均 ×（炸彈半徑內的敵人數 − 友方數，含施放者）×
+    ``bomb_points_permille``——炸彈附在敵人身上時，以目前的位置估計波及的人（它會移動，所以只是
+    近似）。預覽沒有施加炸彈（失手）時為 0。"""
+    spec = next((e for e in skill.effects if e.type == DELAYED_DAMAGE), None)
+    if spec is None or spec.dice is None:
+        return Fraction(0)
+    average = Fraction(spec.dice.count * (spec.dice.sides + 1), 2)
+    total = Fraction(0)
+    for e in p.min_events:
+        if not (isinstance(e, StatusApplied) and e.status_id == TIME_BOMB):
+            continue
+        carrier = state.units[e.target_id]
+        tiles = set(blast_tiles(state, carrier.pos, spec.radius or 0))
+        near = [u for u in state.living_units() if u.xy in tiles]
+        enemies = sum(1 for u in near if u.team is not actor.team)
+        friends = len(near) - enemies
+        total += average * (enemies - friends) * rules.bomb_points_permille / 1000
+    return total
 
 
 def _rewrite_event_points(
@@ -1312,6 +1366,8 @@ def _placement_estimate(
     路徑上的對象數）、常駐類傳說的啟動（3D-6：有敵人就是候選）；其他技能回傳 ``_UNHANDLED``。"""
     if skill.is_activatable:  # 常駐類傳說（Phase 3D-6）：場上還有敵人時才考慮啟動
         return Fraction(1) if scene.enemies else None
+    if any(e.type == REVIVE for e in skill.effects):  # 復活（3D-8b）：每個可復活的友方都是候選
+        return Fraction(1)
     if skill.trap is not None:
         return _trap_estimate(state, unit, skill, area, scene, rules=trap)
     if has_summon(skill):
