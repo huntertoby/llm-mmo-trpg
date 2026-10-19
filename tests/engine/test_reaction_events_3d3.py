@@ -620,7 +620,7 @@ def test_previews_include_the_new_reactions() -> None:
     [
         ("build_assassin", "open_plain", 1, "迎頭痛擊"),
         ("build_tank", "swamp", 0, "悲憤"),
-        ("build_ranged", "narrow_halls", 0, "掩護射擊"),
+        ("build_ranged", "open_plain", 6, "掩護射擊"),
     ],
 )
 def test_ai_battles_with_the_new_reactions_replay(

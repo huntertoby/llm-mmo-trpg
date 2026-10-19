@@ -1,0 +1,27 @@
+# 夾擊（Phase 3D-8c，數值為初值，未經模擬）：目標的對面格站著自己的友方（夾擊）時，額外造成 80% 武器傷害。
+id: skill_pincer_strike
+schema_version: 1
+name_zh: 前後夾擊
+tier: 1
+rank: 1
+rarity: rare
+kind: active
+skeleton: strike
+category: weapon
+weapon_req: melee
+ap_cost: 2
+scaling_attr: dex
+shape: {type: single, range: weapon}
+effects:
+  - {type: damage, multiplier_permille: 1000}
+  # 3D-8c 夾擊條件：目標的對面站著自己的友方
+  - type: damage
+    multiplier_permille: 800
+    condition: {type: flanked}
+condition: null
+cost: {mana: 5, cooldown: 2}
+tags: [physical, melee, flank]
+narrative:
+  concept: 同伴在前面牽制，你繞到另一側補上致命的一刀
+  cast_flavor: 敵人的注意力全被正面的同伴吸住，你從另一側無聲地貼上去，刀鋒毫無阻礙地送進他的肋下
+provenance: {origin: builtin, owner_id: null, created_by: null, parents: [], bound: true, tradeable: false}

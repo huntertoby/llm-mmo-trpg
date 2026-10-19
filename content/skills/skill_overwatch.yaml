@@ -1,0 +1,24 @@
+# 監視射擊（Phase 3D-8c，數值為初值，未經模擬）：花 1 AP 進入監視——持續到自己的下回合開始，期間敵人在武器射程與視線內
+# 完成一步移動，就自動普攻一次（內建反應 overwatch_shot，佔本輪反應，射擊後監視結束）。
+id: skill_overwatch
+schema_version: 1
+name_zh: 監視射擊
+tier: 1
+rank: 1
+rarity: rare
+kind: active
+skeleton: aura
+category: weapon
+weapon_req: ranged
+ap_cost: 1
+scaling_attr: dex
+shape: {type: self}
+effects:
+  - {type: apply_status, status: overwatch, affects: self}
+condition: null
+cost: {mana: 0, cooldown: 1}
+tags: [physical, ranged, overwatch, stance_like]
+narrative:
+  concept: 弓已拉滿，視線鎖住前方的空地，誰敢踏進射程就吃一箭
+  cast_flavor: 你半蹲在掩體後，箭搭上弦，目光像釘子一樣釘住敵人必經的路口
+provenance: {origin: builtin, owner_id: null, created_by: null, parents: [], bound: true, tradeable: false}

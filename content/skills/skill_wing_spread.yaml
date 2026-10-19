@@ -1,0 +1,23 @@
+# 暫時獲得技能（Phase 3D-8c，數值為初值，未經模擬）：給自己「飛行」3 輪。
+id: skill_wing_spread
+schema_version: 1
+name_zh: 展翼
+tier: 1
+rank: 1
+rarity: rare
+kind: active
+skeleton: aura
+category: spell
+weapon_req: any
+ap_cost: 2
+scaling_attr: wis
+shape: {type: self}
+effects:
+  - {type: grant_skill, skill: skill_flight, duration: 3, affects: self}
+condition: null
+cost: {mana: 4, cooldown: 4}
+tags: [wind, spell, buff, flight]
+narrative:
+  concept: 背後長出光之翼，接下來三輪可以飛
+  cast_flavor: 肩胛骨一陣發熱，兩道半透明的光翼從你背後舒展開來
+provenance: {origin: builtin, owner_id: null, created_by: null, parents: [], bound: true, tradeable: false}

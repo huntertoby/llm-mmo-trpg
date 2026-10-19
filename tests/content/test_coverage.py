@@ -41,6 +41,13 @@ def _equipped() -> set[str]:
     lib = library()
     ids = {s for b in lib.builds.builds for s in b.hero.skills}
     ids |= {s for unit in lib.units.values() for s in unit.skills}
+    # 3D-8c：裝備的 grant_skill 技能暫時給出的技能（不佔欄位）也算被裝備
+    ids |= {
+        e.skill
+        for sid in ids
+        for e in lib.skills[sid].effects
+        if e.type == "grant_skill" and e.skill is not None
+    }
     return ids
 
 

@@ -457,7 +457,15 @@ def test_every_status_has_a_polarity_consistent_with_beneficial() -> None:
         if status.stance or status.prevents_death or status.redirects_damage:
             assert status.polarity == "neutral", status.id
     buffs = {s.id for s in statuses if s.polarity == "buff"}
-    assert buffs == {"defending", "guarded", "empowered", "hasted", "regenerating", "shielded"}
+    assert buffs == {
+        "defending",
+        "guarded",
+        "empowered",
+        "hasted",
+        "regenerating",
+        "shielded",
+        "overwatch",  # 3D-8c：監視（可被奪取或驅散）
+    }
 
 
 def test_a_status_without_polarity_is_rejected() -> None:

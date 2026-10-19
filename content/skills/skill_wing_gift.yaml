@@ -1,0 +1,23 @@
+# 暫時獲得技能（Phase 3D-8c，數值為初值，未經模擬）：給射程內的友方「飛行」3 輪。
+id: skill_wing_gift
+schema_version: 1
+name_zh: 賜予羽翼
+tier: 1
+rank: 1
+rarity: rare
+kind: active
+skeleton: aura
+category: spell
+weapon_req: any
+ap_cost: 2
+scaling_attr: wis
+shape: {type: single, range: 4}
+effects:
+  - {type: grant_skill, skill: skill_flight, duration: 3, affects: allies}
+condition: null
+cost: {mana: 4, cooldown: 4}
+tags: [wind, spell, buff, flight, support]
+narrative:
+  concept: 把風之翼借給同伴，讓他三輪內也能掠過戰場
+  cast_flavor: 你指尖的微光落在同伴的肩上，兩道光翼緩緩展開
+provenance: {origin: builtin, owner_id: null, created_by: null, parents: [], bound: true, tradeable: false}

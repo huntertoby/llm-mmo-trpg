@@ -33,10 +33,11 @@ BUILD_IDS = (
     "build_gambler",  # Phase 3D-7a
     "build_seer",  # Phase 3D-8a
     "build_bomber",  # Phase 3D-8b
+    "build_winged",  # Phase 3D-8c
 )
 
 
-def test_builds_file_loads_with_eighteen_builds_and_two_companions() -> None:
+def test_builds_file_loads_with_nineteen_builds_and_two_companions() -> None:
     lib = library()
     assert tuple(b.id for b in lib.builds.builds) == BUILD_IDS
     assert lib.builds.companions == ("sim_companion_fighter", "sim_companion_archer")

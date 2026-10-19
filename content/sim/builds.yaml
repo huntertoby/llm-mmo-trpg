@@ -29,6 +29,9 @@ companions: [sim_companion_fighter, sim_companion_archer]
 # Phase 3D-8b：build_healer 以返魂術（復活）換下不死誓約（主動欄位已滿）；新增 build_bomber（定時炸彈流）：定時炸彈符、灰燼收割
 # （擊殺時返還 AP 並重置冷卻），並接收被換下的不死誓約（3C-6 再整理）。
 # Phase 3D-7a：新增 build_gambler（賭徒／狂戰士流）：血祭重擊（賭注）、孤注一擲（失手反噬）搭配捨身突刺、狂怒姿態與嗜血（3C-6 再整理）。
+# Phase 3D-8c：build_ranged 以監視射擊（overwatch）換下升高平台（主動欄位已滿；升高平台改由 build_winged 接收）、build_assassin 以前後夾擊
+# （flanked）換下魯莽突刺（魯莽突刺仍在 build_gambler）；新增 build_winged（飛翼流）：展翼、賜予羽翼（grant_skill，暫時獲得「飛行」），
+# 搭配升高平台、穿透射擊、居高射擊與狙擊，並接收被換下的升高平台（3C-6 再整理）。
 builds:
   - id: build_push
     name_zh: 位移流
@@ -111,7 +114,7 @@ builds:
       weapon: bow
       tags: [hero, sim]
       max_mana: 24
-      skills: [skill_piercing_shot, skill_high_ground_shot, skill_sniper_shot, skill_raise_perch, skill_lucky_break, skill_time_surge, skill_armor_piercing_arrow, skill_timber_piercer, skill_covering_fire]
+      skills: [skill_piercing_shot, skill_high_ground_shot, skill_sniper_shot, skill_overwatch, skill_lucky_break, skill_time_surge, skill_armor_piercing_arrow, skill_timber_piercer, skill_covering_fire]
 
   - id: build_assassin
     name_zh: 刺殺
@@ -124,9 +127,10 @@ builds:
       speed: 5
       armor_bonus: 2
       weapon: dagger
+      ai_profile: flanker   # 3D-8c：移動時偏好夾擊位置
       tags: [hero, sim]
       max_mana: 20
-      skills: [skill_rending_strike, skill_execute, skill_blink, skill_fury_stance, skill_crippling_crit, skill_reckless_lunge, skill_pick_off, skill_first_strike, skill_ambush_stab]
+      skills: [skill_rending_strike, skill_execute, skill_blink, skill_fury_stance, skill_crippling_crit, skill_pincer_strike, skill_pick_off, skill_first_strike, skill_ambush_stab]
 
   - id: build_support
     name_zh: 輔助
@@ -330,3 +334,18 @@ builds:
       tags: [hero, sim]
       max_mana: 40
       skills: [skill_time_bomb_rune, skill_ash_harvest, skill_frost_shackle, skill_blink, skill_undying_oath, skill_ember_brand]
+
+  - id: build_winged
+    name_zh: 飛翼流
+    theme_zh: 展翼讓自己（或賜予羽翼讓隊友）暫時能飛：三輪內掠過深淵、岩漿與敵陣，再抬高平台居高射擊。在地形破碎、需要越過障礙的地圖最有用，翅膀期滿或法力耗盡後只是普通的弓手（Phase 3D-8c，初值未經模擬）。
+    hero:
+      id: build_winged
+      name_zh: 飛翼流英雄
+      attributes: {str: 10, dex: 16, con: 12, int: 10, wis: 14, wil: 10}
+      max_hp: 44
+      speed: 5
+      armor_bonus: 2
+      weapon: bow
+      tags: [hero, sim]
+      max_mana: 30
+      skills: [skill_wing_spread, skill_wing_gift, skill_raise_perch, skill_piercing_shot, skill_high_ground_shot, skill_sniper_shot]

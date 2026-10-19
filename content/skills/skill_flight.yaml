@@ -1,0 +1,25 @@
+# 被給的技能（Phase 3D-8c，數值為初值，未經模擬）：只由「展翼」「賜予羽翼」暫時給出；射程 4 格的傳送（飛越地形與單位），
+# 落地後短暫隱蔽。不會裝進任何 build（暫時技能不佔欄位）。
+id: skill_flight
+schema_version: 1
+name_zh: 飛行
+tier: 1
+rank: 1
+rarity: rare
+kind: active
+skeleton: displace
+category: spell
+weapon_req: any
+ap_cost: 1
+scaling_attr: int
+shape: {type: ground_tile, range: 4}
+effects:
+  - {type: teleport}
+  - {type: apply_status, status: concealed, duration: 2, affects: self}
+condition: null
+cost: {mana: 3}
+tags: [wind, teleport, mobility, flight]
+narrative:
+  concept: 一對光之翼托著你掠過地面
+  cast_flavor: 羽翼一振，你貼著地面掠過四步之外，落地時輕得像一片羽毛
+provenance: {origin: builtin, owner_id: null, created_by: null, parents: [], bound: true, tradeable: false}

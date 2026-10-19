@@ -296,6 +296,7 @@ def test_status_and_surface_points_match_the_spec() -> None:
         "soul_link": None,  # 3C-4b：只能由 redirect_damage 原語施加
         "revealed": None,  # 3D-8a：只能由 reveal 原語施加
         "time_bomb": None,  # 3D-8b：只能由 delayed_damage 原語施加
+        "overwatch": 6,  # 3D-8c：監視（反應 overwatch_shot 需要它）
     }
     surfaces = {s.id.value: s.budget_points for s in rules.surfaces.surfaces}
     assert surfaces == {

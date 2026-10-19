@@ -132,6 +132,7 @@ def test_the_initial_skeleton_structure_matches_the_spec() -> None:
         "zone",  # 3D-5（跟隨型光環）
         "rule_change",  # 3D-6（規則改變型傳說）
         "revive",  # 3D-8b
+        "grant_skill",  # 3D-8c
     }
     assert (
         set(sk["aura"].forbid_affects) == {"enemies", "all"} and sk["aura"].secondary.max_count == 1
