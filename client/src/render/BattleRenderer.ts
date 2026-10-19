@@ -14,6 +14,7 @@ import { lerpPos, type MoveAnim } from "../battle/animation";
 import type { DrawModel, ObjectDraw, TileDraw, UnitDraw } from "../battle/drawModel";
 import { canvasSize, pixelToTile, TILE_SIZE, tileCenter, tileOrigin } from "../battle/geometry";
 import { HIGHLIGHT } from "../battle/glossary";
+import type { TelegraphMark } from "../battle/telegraph";
 
 export interface DirectionMark {
   pos: Pos;
@@ -28,6 +29,10 @@ export interface Highlights {
   directions: readonly DirectionMark[];
   /** 預覽的影響範圍（橘色）。 */
   preview: readonly Pos[];
+  /** 環境預告：下一次環境回合會變化的格子（半透明外框與小圖示）。 */
+  telegraph: readonly TelegraphMark[];
+  /** 反應詢問的觸發者所在格（洋紅色雙框）。 */
+  focus: Pos | null;
   hover: Pos | null;
 }
 
@@ -236,6 +241,17 @@ export class BattleRenderer {
       const o = tileOrigin(p);
       g.rect(o.x + 1, o.y + 1, T - 2, T - 2).fill({ color: HIGHLIGHT.preview, alpha: 0.38 });
     }
+    for (const m of h.telegraph) {
+      const o = tileOrigin(m.pos);
+      g.rect(o.x + 3, o.y + 3, T - 6, T - 6)
+        .fill({ color: m.color, alpha: 0.16 })
+        .stroke({ width: 2, color: m.color, alpha: 0.85 });
+      const badge = new Graphics().circle(o.x + T - 11, o.y + 11, 9).fill({ color: 0x000000, alpha: 0.65 });
+      const glyph = label(m.glyph, 12, m.color, true);
+      glyph.anchor.set(0.5);
+      glyph.position.set(o.x + T - 11, o.y + 11);
+      this.highlights.addChild(badge, glyph);
+    }
     for (const d of h.directions) {
       const o = tileOrigin(d.pos);
       g.rect(o.x + 2, o.y + 2, T - 4, T - 4).fill({ color: HIGHLIGHT.direction, alpha: 0.3 });
@@ -249,6 +265,15 @@ export class BattleRenderer {
       g.rect(o.x + 2, o.y + 2, T - 4, T - 4).stroke({ width: 3, color: HIGHLIGHT.attack });
     }
     this.highlights.addChild(g);
+    if (h.focus !== null) {
+      const o = tileOrigin(h.focus);
+      const frame = new Graphics()
+        .rect(o.x + 1, o.y + 1, T - 2, T - 2)
+        .stroke({ width: 3, color: HIGHLIGHT.trigger })
+        .rect(o.x + 6, o.y + 6, T - 12, T - 12)
+        .stroke({ width: 2, color: HIGHLIGHT.trigger, alpha: 0.8 });
+      this.hover.addChild(frame);
+    }
     if (h.hover !== null) {
       const o = tileOrigin(h.hover);
       const frame = new Graphics()

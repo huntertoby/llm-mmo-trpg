@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 import type { PreviewOut } from "../api/types";
-import { damageText, outcomeText, percent, previewLines } from "./previewText";
+import { chainLines, damageText, outcomeText, percent, previewLines } from "./previewText";
 import { smallView } from "./testFixtures";
 import { unitNames } from "./units";
 
@@ -19,6 +19,8 @@ const base = {
   notes: [],
   targets: [],
   healed: [],
+  min_events: [],
+  max_events: [],
 } as unknown as PreviewOut;
 
 describe("previewText", () => {
@@ -67,5 +69,37 @@ describe("previewText", () => {
       );
       expect(text).not.toBe("");
     }
+  });
+});
+
+describe("chain preview", () => {
+  const ev = (type: string, text?: string) => ({ seq: 1, round: 1, type, ...(text ? { text } : {}) });
+  const p = {
+    ...base,
+    min_events: [ev("attack_rolled", "攻擊"), ev("object_exploded", "  油桶 (2, 2) 爆炸")],
+    max_events: [
+      ev("object_exploded", "油桶 (2, 2) 爆炸"),
+      ev("surface_changed", "(2, 1) 變成火焰"),
+      ev("surface_changed", "(2, 1) 變成火焰"),
+      ev("unit_fell", "b 墜落"),
+      ev("object_ignited"),
+    ],
+    certain: [{ kind: "object_exploded", unit_id: null, object_id: "obj_0001", pos: [2, 2], detail: null }],
+    possible: [{ kind: "downed", unit_id: "unit_0003", object_id: null, pos: null, detail: null }],
+  } as unknown as PreviewOut;
+
+  it("splits chain events into certain and possible by their Chinese text", () => {
+    expect(chainLines(p)).toEqual({
+      certain: ["油桶 (2, 2) 爆炸"],
+      possible: ["(2, 1) 變成火焰", "b 墜落"],
+    });
+    expect(chainLines(base)).toEqual({ certain: [], possible: [] });
+  });
+
+  it("does not repeat chain outcomes in the summary when asked to skip them", () => {
+    expect(previewLines(p, names, view)).toContain("確定：油桶 (2, 2) 爆炸");
+    const skipped = previewLines(p, names, view, true);
+    expect(skipped.some((l) => l.includes("爆炸"))).toBe(false);
+    expect(skipped).toContain("可能：a 單位3 倒下");
   });
 });

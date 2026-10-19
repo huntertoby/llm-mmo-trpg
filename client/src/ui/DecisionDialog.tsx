@@ -1,48 +1,55 @@
-// 反應詢問（簡單版；正式視窗在 3-4）。
-import type { Pending } from "../api/types";
-import { reactionName } from "../battle/glossary";
+// 反應詢問視窗：觸發者（格子上以洋紅色雙框標示）、反應名稱與說明、代價、接受／拒絕。
+// 不遮住戰場（戰場上要看得到觸發者）。「之後都自動」只在接受時有意義：詢問期間伺服器不收
+// 動作，所以由呼叫端記在本地，輪到主角時再送 `set_reaction_mode`。
+import { useState } from "react";
+import type { Pending, ReactionRuleView } from "../api/types";
+import { glossaryEntry, reactionName } from "../battle/glossary";
+import { costText } from "../battle/reactions";
 import type { UnitNames } from "../battle/units";
 
 interface Props {
   pending: Pending;
+  rule: ReactionRuleView | null;
   names: UnitNames;
+  /** 引發詢問的事件的中文描述（找不到時 `null`）。 */
+  eventText: string | null;
   enabled: boolean;
-  onDecide(accept: boolean): void;
+  onDecide(accept: boolean, always: boolean): void;
 }
 
-export function costText(p: Pending): string {
-  const parts: string[] = [];
-  if (p.stamina_cost > 0) parts.push(`耐力 ${p.stamina_cost}`);
-  if (p.mana_cost > 0) parts.push(`法力 ${p.mana_cost}`);
-  if (p.hp_cost_permille > 0) parts.push(`HP ${p.hp_cost_permille / 10}%`);
-  return parts.length === 0 ? "無代價" : parts.join("、");
-}
-
-export function DecisionDialog({ pending, names, enabled, onDecide }: Props) {
-  const reaction = reactionName(pending.reaction);
-  const trigger =
-    pending.trigger_unit_id == null ? "" : `（觸發者：${names.label(pending.trigger_unit_id)}）`;
+export function DecisionDialog({ pending, rule, names, eventText, enabled, onDecide }: Props) {
+  const [always, setAlways] = useState(false);
+  const reaction = rule?.name_zh ?? reactionName(pending.reaction);
+  const description = rule?.description_zh ?? glossaryEntry("reactions", pending.reaction)?.description_zh ?? null;
+  const trigger = pending.trigger_unit_id == null ? null : names.label(pending.trigger_unit_id);
   return (
-    <div className="modal-backdrop">
-      <div className="modal" role="dialog" aria-label="反應詢問">
-        <div className="modal-title">反應：{reaction}</div>
-        <p>
-          {names.label(pending.unit_id)} 可以使用「{reaction}」{trigger}。
-        </p>
-        <p>代價：{costText(pending)}</p>
-        <div className="modal-buttons">
-          <button
-            type="button"
-            className="primary"
-            disabled={!enabled}
-            onClick={() => onDecide(true)}
-          >
-            接受
-          </button>
-          <button type="button" disabled={!enabled} onClick={() => onDecide(false)}>
-            拒絕
-          </button>
-        </div>
+    <div className="decision-card" role="dialog" aria-label="反應詢問">
+      <div className="modal-title">反應詢問：{reaction}</div>
+      {eventText !== null && <p className="small muted">{eventText}</p>}
+      <p>
+        {names.label(pending.unit_id)} 可以使用「{reaction}」
+        {trigger !== null && (
+          <>
+            （觸發者：<b>{trigger}</b>，已在戰場上以洋紅色框標示）
+          </>
+        )}
+        。
+      </p>
+      {description !== null && <p className="small muted">{description}</p>}
+      <p>
+        代價：<b>{costText(pending)}</b>
+      </p>
+      <label className="small always-auto">
+        <input type="checkbox" checked={always} onChange={(e) => setAlways(e.target.checked)} />
+        接受，且之後都自動（輪到你時改為「自動」）
+      </label>
+      <div className="modal-buttons">
+        <button type="button" className="primary" disabled={!enabled} onClick={() => onDecide(true, always)}>
+          接受
+        </button>
+        <button type="button" disabled={!enabled} onClick={() => onDecide(false, false)}>
+          拒絕
+        </button>
       </div>
     </div>
   );

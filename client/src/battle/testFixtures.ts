@@ -40,6 +40,8 @@ export function unit(id: string, team: "ally" | "enemy", x: number, y: number, o
     stacks: {},
     cooldowns: {},
     reaction_available: true,
+    reaction_rules: [],
+    ap_carry: 0,
     downed: false,
     escaped: false,
     ...over,

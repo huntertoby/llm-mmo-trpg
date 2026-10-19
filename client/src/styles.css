@@ -541,3 +541,94 @@ button.selected {
     height: auto;
   }
 }
+
+/* 3-4b：反應詢問視窗（不遮住戰場）、反應設定、環境預告、隊友指令、連鎖預覽 */
+.decision-card {
+  position: fixed;
+  left: 16px;
+  bottom: 16px;
+  z-index: 20;
+  max-width: 440px;
+  background: var(--panel);
+  border: 2px solid #ff4fd8;
+  border-radius: 6px;
+  padding: 12px 16px;
+  box-shadow: 0 4px 24px rgb(0 0 0 / 60%);
+}
+
+.decision-card p {
+  margin: 6px 0;
+}
+
+.always-auto {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  margin: 6px 0;
+}
+
+.always-auto input {
+  padding: 0;
+}
+
+.reaction-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  padding: 4px 0;
+  border-top: 1px solid var(--panel-border);
+}
+
+.reaction-name {
+  font-weight: 700;
+}
+
+.segmented {
+  display: flex;
+  flex-shrink: 0;
+}
+
+.segmented button {
+  border-radius: 0;
+  padding: 3px 9px;
+}
+
+.segmented button:first-child {
+  border-radius: 4px 0 0 4px;
+}
+
+.segmented button:last-child {
+  border-radius: 0 4px 4px 0;
+}
+
+.segmented button.selected {
+  background: #3d5a99;
+  border-color: #5878c0;
+  opacity: 1;
+}
+
+.telegraph-list,
+.telegraph-hover,
+.order-list {
+  margin: 4px 0;
+  padding-left: 18px;
+}
+
+.telegraph-hover {
+  color: var(--accent);
+}
+
+.order-ignored {
+  color: var(--danger);
+}
+
+.chain-box {
+  margin-top: 6px;
+  border-top: 1px solid var(--panel-border);
+}
+
+.chain-box ul {
+  margin: 0;
+  padding-left: 18px;
+}

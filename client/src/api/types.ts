@@ -32,6 +32,14 @@ export type PreviewOut = Schemas["PreviewOut"];
 export type UseSkill = Schemas["UseSkill"];
 export type Direction = Schemas["Direction"];
 export type Awaiting = BattleResponse["awaiting"];
+export type ReactionRuleView = Schemas["ReactionRuleView"];
+export type ReactionMode = ReactionRuleView["mode"];
+export type SetReactionModeAction = Schemas["SetReactionMode"];
+export type TelegraphOut = Schemas["TelegraphOut"];
+export type TelegraphChange = Schemas["TelegraphChangeOut"];
+export type OrderSet = Schemas["OrderSet"];
+export type TacticalOrder = Schemas["TacticalOrder"];
+export type IgnoredOrder = Schemas["IgnoredOrder"];
 
 /** 所有事件共有的欄位（`text` 只在有中文描述時存在）。 */
 export interface EventBase {

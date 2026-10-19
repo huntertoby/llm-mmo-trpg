@@ -56,8 +56,9 @@ export function Hud({ view, hero, skills }: Props) {
       <Bar label="法力" value={hero.mana} max={hero.max_mana} className="mana" />
       <Bar label="耐力" value={hero.stamina} max={hero.max_stamina} className="stamina" />
       <div className="hud-row">
-        <span className="hud-chip" title="剩餘行動點數">
+        <span className="hud-chip" title="剩餘行動點數（自己的回合已含上回合保留的 AP）">
           AP <b>{hero.ap}</b>
+          {hero.ap_carry > 0 && <span className="muted">（下回合保留 +{hero.ap_carry}）</span>}
         </span>
         <span className="hud-chip" title="剩餘移動點數">
           移動 <b>{hero.move_points}</b>

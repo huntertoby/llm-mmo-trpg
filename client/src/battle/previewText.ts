@@ -1,5 +1,5 @@
 // 預覽結果 → 顯示文字（純函式）。機率以千分比（‰）、期望傷害以 ×1000 傳來，這裡轉成百分比與小數。
-import type { BattleView, PreviewOut } from "../api/types";
+import { asEvent, type BattleView, type PreviewOut } from "../api/types";
 import { objectName, statusName, surfaceName } from "./glossary";
 import type { UnitNames } from "./units";
 
@@ -82,8 +82,65 @@ export function outcomeText(o: Outcome, names: UnitNames, view: BattleView): str
   }
 }
 
-/** 預覽的顯示行（依序：總覽、各目標、治療、確定的後果、可能的後果、備註）。 */
-export function previewLines(p: PreviewOut, names: UnitNames, view: BattleView): string[] {
+/** 連鎖事件的類型（油桶爆炸、點燃、表面與地形變化、墜落、致命地形、陷阱觸發）。 */
+export const CHAIN_EVENT_TYPES: ReadonlySet<string> = new Set([
+  "object_exploded",
+  "object_ignited",
+  "object_destroyed",
+  "surface_changed",
+  "terrain_changed",
+  "unit_fell",
+  "entered_deadly_terrain",
+  "trap_triggered",
+]);
+
+/** 與 CHAIN_EVENT_TYPES 對應的 certain／possible 結果類型（有連鎖事件文字時不重複列出）。 */
+const CHAIN_OUTCOME_KINDS: ReadonlySet<string> = new Set([
+  "object_exploded",
+  "object_ignited",
+  "object_destroyed",
+  "surface",
+  "terrain",
+  "fell",
+  "deadly_terrain",
+  "trap_triggered",
+]);
+
+export interface ChainLines {
+  /** 最少後果的模擬中也會發生的連鎖（確定）。 */
+  certain: string[];
+  /** 只在最多後果的模擬中發生的連鎖（可能）。 */
+  possible: string[];
+}
+
+function chainTexts(events: readonly Record<string, unknown>[]): string[] {
+  const texts: string[] = [];
+  for (const raw of events) {
+    const e = asEvent(raw);
+    if (!CHAIN_EVENT_TYPES.has(e.type) || e.text === undefined) continue;
+    const text = e.text.trim();
+    if (!texts.includes(text)) texts.push(text);
+  }
+  return texts;
+}
+
+/** 預覽的連鎖事件（伺服器過濾後的 min_events／max_events 的中文 text）。 */
+export function chainLines(p: PreviewOut): ChainLines {
+  const certain = chainTexts(p.min_events);
+  const possible = chainTexts(p.max_events).filter((t) => !certain.includes(t));
+  return { certain, possible };
+}
+
+/**
+ * 預覽的顯示行（依序：總覽、各目標、治療、確定的後果、可能的後果、備註）。
+ * skipChain：連鎖類的結果由 chainLines 另外列出時不重複。
+ */
+export function previewLines(
+  p: PreviewOut,
+  names: UnitNames,
+  view: BattleView,
+  skipChain = false,
+): string[] {
   const lines: string[] = [];
   const head: string[] = [];
   if (p.hit_permille != null) head.push(`命中 ${percent(p.hit_permille)}`);
@@ -110,8 +167,9 @@ export function previewLines(p: PreviewOut, names: UnitNames, view: BattleView):
   for (const h of p.healed) {
     lines.push(`治療 ${names.label(h.unit_id)} ${h.minimum}–${h.maximum}`);
   }
-  for (const o of p.certain) lines.push(`確定：${outcomeText(o, names, view)}`);
-  for (const o of p.possible) lines.push(`可能：${outcomeText(o, names, view)}`);
+  const shown = (o: Outcome) => !skipChain || !CHAIN_OUTCOME_KINDS.has(o.kind);
+  for (const o of p.certain.filter(shown)) lines.push(`確定：${outcomeText(o, names, view)}`);
+  for (const o of p.possible.filter(shown)) lines.push(`可能：${outcomeText(o, names, view)}`);
   for (const n of p.notes) lines.push(n);
   return lines;
 }

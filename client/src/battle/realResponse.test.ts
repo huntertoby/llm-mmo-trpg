@@ -6,6 +6,7 @@ import { classifyActions } from "./actions";
 import { buildDrawModel } from "./drawModel";
 import { OBJECTS, TERRAIN } from "./glossary";
 import { logLines } from "./log";
+import { telegraphMarks } from "./telegraph";
 import { unitNames } from "./units";
 import fixture from "./fixtures/oil_depot_seed3.json";
 
@@ -40,5 +41,16 @@ describe("a real create-battle response", () => {
     const lines = logLines(response.steps, unitNames(response.view));
     expect(lines[0]?.text).toMatch(/^戰鬥開始：/);
     expect(lines.some((l) => l.text.startsWith("先攻："))).toBe(true);
+  });
+
+  it("carries the hero's reaction rules, the telegraph and the orders", () => {
+    const hero = response.view.units.find((u) => u.id === response.hero_id);
+    expect(hero?.reaction_rules.length).toBeGreaterThan(0);
+    expect(hero?.reaction_rules.every((r) => r.mode === "auto" && r.name_zh !== "")).toBe(true);
+    const enemies = response.view.units.filter((u) => u.team === "enemy");
+    expect(enemies.every((u) => u.reaction_rules.length === 0)).toBe(true);
+    expect(response.telegraph.round).toBe(response.view.round);
+    expect(telegraphMarks(response.telegraph, response.view).length).toBeLessThanOrEqual(response.telegraph.changes.length);
+    expect(response.orders_ignored).toEqual([]);
   });
 });

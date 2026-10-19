@@ -175,4 +175,5 @@ export const HIGHLIGHT = {
   burning: 0xff5a00,
   flammable: 0xe0a040,
   deadly: 0xff3030,
+  trigger: 0xff4fd8,
 } as const;

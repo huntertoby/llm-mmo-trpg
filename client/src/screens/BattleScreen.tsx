@@ -4,11 +4,18 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { flushSync } from "react-dom";
 import { api, ApiError } from "../api/client";
-import type { Action, BattleResponse, BattleView, Pos } from "../api/types";
+import type { Action, BattleResponse, BattleView, OrderSet, Pos, ReactionMode } from "../api/types";
 import { actionForClick, actionLabel, classifyActions, type LabeledAction } from "../battle/actions";
 import { buildDrawModel } from "../battle/drawModel";
 import { posKey, samePos } from "../battle/geometry";
 import type { LogLine } from "../battle/log";
+import {
+  EMPTY_ORDERS,
+  orderFromTile,
+  orderTargetTiles,
+  withOrder,
+  type OrderKind,
+} from "../battle/orders";
 import {
   frameOps,
   playbackPlan,
@@ -16,6 +23,14 @@ import {
   type PlayOp,
   type PlaySpeed,
 } from "../battle/playback";
+import {
+  pendingAutoActions,
+  queueAuto,
+  ruleOfPending,
+  setModeAction,
+  triggerEventText,
+} from "../battle/reactions";
+import { marksTextAt, telegraphMarks } from "../battle/telegraph";
 import {
   actionAtTile,
   basicModes,
@@ -36,8 +51,11 @@ import { DecisionDialog } from "../ui/DecisionDialog";
 import { EndPanel } from "../ui/EndPanel";
 import { ErrorBanner } from "../ui/ErrorBanner";
 import { Hud } from "../ui/Hud";
+import { OrdersPanel } from "../ui/OrdersPanel";
+import { ReactionPanel } from "../ui/ReactionPanel";
 import { SkillBar } from "../ui/SkillBar";
 import { loadSpeed, saveSpeed, SpeedControl } from "../ui/SpeedControl";
+import { TelegraphPanel } from "../ui/TelegraphPanel";
 import { TurnBar } from "../ui/TurnBar";
 import { UnitInfo } from "../ui/UnitInfo";
 import { useSkillCards, useSkillNames } from "../ui/useSkillCards";
@@ -49,7 +67,15 @@ interface Props {
 }
 
 const BANNER_MS = 1000;
-const NO_HIGHLIGHTS: Highlights = { moves: [], attacks: [], directions: [], preview: [], hover: null };
+const NO_HIGHLIGHTS: Highlights = {
+  moves: [],
+  attacks: [],
+  directions: [],
+  preview: [],
+  telegraph: [],
+  focus: null,
+  hover: null,
+};
 
 function errorText(e: unknown): string {
   if (e instanceof ApiError) return e.message;
@@ -79,6 +105,10 @@ export function BattleScreen({ initial, onExit }: Props) {
   const [speed, setSpeed] = useState<PlaySpeed>(loadSpeed);
   const [modeKey, setModeKey] = useState<string | null>(null);
   const [panelPreview, setPanelPreview] = useState<Action | null>(null);
+  /** 正在等玩家在戰場上點目標的隊友指令。 */
+  const [orderPick, setOrderPick] = useState<OrderKind | null>(null);
+  /** 詢問視窗勾了「之後都自動」：輪到主角時才能送 set_reaction_mode，先記在這裡。 */
+  const [autoQueue, setAutoQueue] = useState<string[]>([]);
   const busyRef = useRef(true);
   const speedRef = useRef(speed);
   const skipRef = useRef(false);
@@ -132,6 +162,16 @@ export function BattleScreen({ initial, onExit }: Props) {
     [hero, response.legal_actions, view, skillNames, liveNames],
   );
   const model = useMemo(() => buildDrawModel(shown, heroId, acting), [shown, heroId, acting]);
+  const marks = useMemo(
+    () => (busy || view.ended ? [] : telegraphMarks(response.telegraph, view)),
+    [busy, view, response.telegraph],
+  );
+  const focusTile = useMemo<Pos | null>(() => {
+    const trigger = response.pending?.trigger_unit_id;
+    if (response.awaiting !== "decision" || trigger == null) return null;
+    return view.units.find((u) => u.id === trigger)?.pos ?? null;
+  }, [response, view]);
+  const canOrder = !busy && response.awaiting !== "ended" && response.awaiting !== "stalled";
 
   // 回應換了（動作送出、狀態改變）就取消選取。
   useEffect(() => {
@@ -151,7 +191,11 @@ export function BattleScreen({ initial, onExit }: Props) {
 
   // ---- 高亮 -----------------------------------------------------------------
   const highlights = useMemo<Highlights>(() => {
-    if (!canAct || hero === null) return { ...NO_HIGHLIGHTS, hover };
+    const common = { telegraph: marks, focus: focusTile, hover };
+    if (orderPick !== null && canOrder) {
+      return { ...NO_HIGHLIGHTS, ...common, attacks: orderTargetTiles(orderPick, view, heroId) };
+    }
+    if (!canAct || hero === null) return { ...NO_HIGHLIGHTS, ...common };
     const previewTiles = (preview?.affected_tiles ?? []).map(([x, y]): Pos => ({ x: x as number, y: y as number }));
     if (mode !== null) {
       const tt = targetTiles(mode, view, hero);
@@ -160,7 +204,7 @@ export function BattleScreen({ initial, onExit }: Props) {
         attacks: tt.targets,
         directions: tt.directions.map((d) => ({ pos: d.pos, arrow: DIRECTION_ARROWS[d.direction] })),
         preview: previewTiles,
-        hover,
+        ...common,
       };
     }
     const moves = [...classified.moves.values()].map((m) => m.path[m.path.length - 1] as Pos);
@@ -168,8 +212,8 @@ export function BattleScreen({ initial, onExit }: Props) {
       const u = view.units.find((x) => x.id === id);
       return u === undefined ? [] : [u.pos];
     });
-    return { moves, attacks, directions: [], preview: previewTiles, hover };
-  }, [canAct, hero, mode, classified, view, preview, hover]);
+    return { moves, attacks, directions: [], preview: previewTiles, ...common };
+  }, [canAct, canOrder, hero, heroId, mode, classified, view, preview, hover, marks, focusTile, orderPick]);
 
   // ---- 播放 -----------------------------------------------------------------
   const sleep = useCallback(
@@ -300,11 +344,43 @@ export function BattleScreen({ initial, onExit }: Props) {
     (accept: boolean) => void run(() => api.decide(battleId, accept)),
     [battleId, run],
   );
+  const decideWith = useCallback(
+    (accept: boolean, always: boolean) => {
+      const reaction = response.pending?.reaction;
+      if (accept && always && reaction !== undefined) setAutoQueue((q) => queueAuto(q, reaction));
+      decide(accept);
+    },
+    [decide, response.pending],
+  );
+  const setReaction = useCallback(
+    (reaction: string, m: ReactionMode) => act(setModeAction(heroId, reaction, m)),
+    [act, heroId],
+  );
+  const issueOrders = useCallback(
+    (orders: OrderSet) => {
+      setOrderPick(null);
+      void run(() => api.setOrders(battleId, orders));
+    },
+    [battleId, run],
+  );
+
+  // 詢問視窗勾了「之後都自動」：輪到主角時（可以送動作）才補送 set_reaction_mode。
+  useEffect(() => {
+    if (!canAct || hero === null || autoQueue.length === 0) return;
+    const [first] = pendingAutoActions(autoQueue, hero);
+    if (first === undefined || first.type !== "set_reaction_mode") {
+      setAutoQueue([]);
+      return;
+    }
+    setAutoQueue((q) => q.filter((r) => r !== first.reaction));
+    act(first);
+  }, [canAct, hero, autoQueue, act]);
 
   // ---- 選取與點選 -------------------------------------------------------------
   const cancel = useCallback(() => {
     setModeKey(null);
     setPanelPreview(null);
+    setOrderPick(null);
   }, []);
 
   useEffect(() => {
@@ -323,6 +399,7 @@ export function BattleScreen({ initial, onExit }: Props) {
         return;
       }
       setPanelPreview(null);
+      setOrderPick(null);
       setModeKey((cur) => (cur === m.key ? null : m.key));
     },
     [act],
@@ -336,8 +413,26 @@ export function BattleScreen({ initial, onExit }: Props) {
     [modes, pickMode],
   );
 
+  const pickOrder = useCallback(
+    (kind: OrderKind) => {
+      setModeKey(null);
+      setPanelPreview(null);
+      if (kind === "use_environment") {
+        issueOrders(withOrder(response.orders, { kind }));
+        return;
+      }
+      setOrderPick((cur) => (cur === kind ? null : kind));
+    },
+    [issueOrders, response.orders],
+  );
+
   const onTileClick = useCallback(
     (tile: Pos) => {
+      if (orderPick !== null && canOrder) {
+        const order = orderFromTile(orderPick, view, tile);
+        if (order !== null) issueOrders(withOrder(response.orders, order));
+        return;
+      }
       if (canAct && hero !== null) {
         if (mode !== null) {
           const a = actionAtTile(mode, view, hero, tile);
@@ -352,7 +447,7 @@ export function BattleScreen({ initial, onExit }: Props) {
       }
       setSelected(unitAt(shown, tile)?.id ?? null);
     },
-    [act, canAct, classified, hero, mode, shown, view],
+    [act, canAct, canOrder, classified, hero, issueOrders, mode, orderPick, response.orders, shown, view],
   );
 
   const onTileHover = useCallback((tile: Pos | null) => {
@@ -388,6 +483,7 @@ export function BattleScreen({ initial, onExit }: Props) {
         </div>
         <div className="battle-side">
           <Hud view={shown} hero={shownHero} skills={skillNames} />
+          <ReactionPanel hero={hero} enabled={canAct} queued={autoQueue} onSet={setReaction} />
           <SkillBar
             buttons={buttons}
             cards={cards}
@@ -416,12 +512,35 @@ export function BattleScreen({ initial, onExit }: Props) {
             />
           )}
           <SpeedControl speed={speed} playing={playing} onSpeed={setSpeed} onSkipNow={skipNow} />
+          <TelegraphPanel
+            telegraph={response.telegraph}
+            marks={marks}
+            hoverTexts={marksTextAt(marks, hover)}
+          />
+          <OrdersPanel
+            orders={response.orders}
+            ignored={response.orders_ignored}
+            names={liveNames}
+            enabled={canOrder}
+            picking={orderPick}
+            onPick={pickOrder}
+            onProtectHero={() => issueOrders(withOrder(response.orders, { kind: "protect", ward: heroId }))}
+            onCancelPick={() => setOrderPick(null)}
+            onClear={() => issueOrders(EMPTY_ORDERS)}
+          />
           <UnitInfo unit={infoUnit} names={names} heroId={heroId} skills={skillNames} />
           <BattleLog lines={lines} />
         </div>
       </div>
       {response.awaiting === "decision" && response.pending !== null && !busy && (
-        <DecisionDialog pending={response.pending} names={liveNames} enabled={!busy} onDecide={decide} />
+        <DecisionDialog
+          pending={response.pending}
+          rule={ruleOfPending(hero, response.pending)}
+          names={liveNames}
+          eventText={triggerEventText(response)}
+          enabled={!busy}
+          onDecide={decideWith}
+        />
       )}
     </div>
   );

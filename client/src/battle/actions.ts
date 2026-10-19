@@ -1,6 +1,7 @@
 // 合法動作分類（純函式）：可移動的格子、可攻擊的敵人、其他動作（附中文標籤）、結束回合。
 import type { Action, AttackAction, BattleView, MoveAction, Pos } from "../api/types";
-import { DIRECTIONS, objectStyle } from "./glossary";
+import { DIRECTIONS, objectStyle, reactionName } from "./glossary";
+import { REACTION_MODE_LABELS } from "./reactions";
 import { posKey, samePos } from "./geometry";
 import { unitNames, type UnitNames } from "./units";
 
@@ -70,6 +71,8 @@ export function actionLabel(
       return `推動：${objectLabel(view, action.object_id)}`;
     case "end_stance":
       return "結束姿態";
+    case "set_reaction_mode":
+      return `反應設定：${reactionName(action.reaction)} → ${REACTION_MODE_LABELS[action.mode]}`;
     case "end_turn":
       return "結束回合";
   }

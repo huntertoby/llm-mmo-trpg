@@ -3,7 +3,7 @@
 import type { Action, BattleView, PreviewOut } from "../api/types";
 import type { LabeledAction } from "../battle/actions";
 import { DIRECTIONS } from "../battle/glossary";
-import { previewLines } from "../battle/previewText";
+import { chainLines, previewLines } from "../battle/previewText";
 import { DIRECTION_ARROWS, DIRECTION_ORDER, isSelfOnly, type ActionMode } from "../battle/targeting";
 import type { UnitNames } from "../battle/units";
 
@@ -75,7 +75,9 @@ function ModeHelp({ mode, enabled, onAction, onPreviewAction }: HelpProps) {
 
 export function ActionPanel(props: Props) {
   const { enabled, basic, mode, endTurn, fallback, preview, view, names } = props;
-  const lines = preview === null ? [] : previewLines(preview, names, view);
+  const chain = preview === null ? null : chainLines(preview);
+  const hasChain = chain !== null && (chain.certain.length > 0 || chain.possible.length > 0);
+  const lines = preview === null ? [] : previewLines(preview, names, view, hasChain);
   return (
     <div className="panel action-panel">
       <div className="action-hint">
@@ -117,7 +119,7 @@ export function ActionPanel(props: Props) {
           </button>
         </>
       )}
-      {lines.length > 0 && (
+      {(lines.length > 0 || hasChain) && (
         <div className="preview-box" aria-label="預覽">
           <div className="section-title">預覽</div>
           <ul>
@@ -125,6 +127,23 @@ export function ActionPanel(props: Props) {
               <li key={`${i}:${l}`}>{l}</li>
             ))}
           </ul>
+          {chain !== null && hasChain && (
+            <div className="chain-box" aria-label="可能發生的連鎖">
+              <div className="section-title">可能發生的連鎖</div>
+              <ul>
+                {chain.certain.map((t) => (
+                  <li key={`c:${t}`}>
+                    <b>確定</b>　{t}
+                  </li>
+                ))}
+                {chain.possible.map((t) => (
+                  <li key={`p:${t}`}>
+                    <span className="muted">可能</span>　{t}
+                  </li>
+                ))}
+              </ul>
+            </div>
+          )}
         </div>
       )}
       <details className="fallback">
