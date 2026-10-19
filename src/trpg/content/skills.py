@@ -42,6 +42,7 @@ __all__ = [
     "BASIC_ACTIONS",
     "CASTER_CONDITIONS",
     "CHANGE_TARGETS",
+    "CHARGE_THROUGH",
     "CHEAT_DEATH",
     "CHEAT_DEATH_STATUS",
     "CONSUME_STACK",
@@ -344,6 +345,7 @@ class PrimitiveParam(ContentModel):
         "tag",
         "bool",
         "resource",
+        "on_hit",
     ]
     required: bool = False
     min: int | None = None
@@ -367,6 +369,7 @@ class PrimitiveDef(ContentModel):
       ``consume_status`` ``then`` 的點數 × 期望倍率 × 濺射 × 「需要先有狀態」折扣（3C-3b）、
       ``consume_stack`` 同技能傷害點數 × 期望消耗層數 × ``per_stack_permille``（2E-3）、
       ``hurl_object`` 骰子平均 × 「需要附近有物件」折扣（＋擊倒點數，3C-5a）、
+      ``charge_through`` （骰子平均 ＋ on_hit 點數）× 預期被撞到的敵人數（3D-2c）、
       ``dice_average`` 骰子平均值、``damage`` 法術為骰子平均值而武器為倍率 × 基準武器傷害、
       ``status``／``surface`` 為該狀態或表面的 ``budget_points`` × 持續 ÷ 預設持續。
       ``None`` 表示無法計算預算（驗證器會拒絕）。
@@ -395,6 +398,7 @@ class PrimitiveDef(ContentModel):
             "consume_status",
             "hurl_object",
             "restore_resource",
+            "charge_through",
         ]
         | None
     ) = None
@@ -602,6 +606,9 @@ class EffectSpec(ContentModel):
     resource: Literal["mana", "cooldown"] | None = None
     """``restore_resource`` 專用（Phase 3D-1）：``mana`` 回復法力 ``amount``；``cooldown`` 讓目標
     所有技能（不含花源力的技能與施放中的這個技能）冷卻 −``amount``。"""
+    on_hit: Literal["knock_prone", "push_aside"] | None = None
+    """``charge_through`` 專用（Phase 3D-2c）：被撞到的敵人除了傷害之外的效果——``knock_prone``
+    擊倒（對抗判定）或 ``push_aside`` 推到路徑旁一格。"""
     condition: ConditionSpec | None = None
 
     def param_values(self) -> dict[str, Any]:
@@ -616,6 +623,7 @@ class EffectSpec(ContentModel):
             "knock_prone",
             "multiplier_permille",
             "object",
+            "on_hit",
             "per_stack_permille",
             "permille",
             "range",
@@ -769,7 +777,9 @@ SWAP_ANY = "swap_any"
 （形狀 ``unit_pair``）。"""
 PAIR_MOVES: tuple[str, ...] = (TELEPORT_TARGET, SWAP_ANY)
 PAIR_SHAPES: dict[str, str] = {TELEPORT_TARGET: "unit_then_tile", SWAP_ANY: "unit_pair"}
-SELF_MOVES: tuple[str, ...] = (DASH, LEAP, SWAP, "teleport")
+CHARGE_THROUGH = "charge_through"
+"""Phase 3D-2c 的直線衝撞原語 ID（6.22）：形狀 ``ground_tile`` 選終點格，沿直線衝過去。"""
+SELF_MOVES: tuple[str, ...] = (DASH, LEAP, SWAP, CHARGE_THROUGH, "teleport")
 """改變施放者位置的原語；一個技能最多一個。"""
 _MAX_COOLDOWN_RESTORE = 2
 """``restore_resource`` 的 ``resource: cooldown`` 一次最多縮短的回合（Phase 3D-1）。"""
@@ -1185,7 +1195,7 @@ class SkillDef(ContentModel):
         效果。"""
         types = [e.type for e in self.effects]
         moves = [t for t in types if t in SELF_MOVES]
-        if not any(t in (DASH, LEAP, SWAP) for t in moves):
+        if not any(t in (DASH, LEAP, SWAP, CHARGE_THROUGH) for t in moves):
             return
         if self.kind != "active":
             raise ValueError(f"{'、'.join(moves)} 只能用在主動技能，收到 kind: {self.kind}")
@@ -1193,6 +1203,21 @@ class SkillDef(ContentModel):
             raise ValueError(f"一個技能最多一個改變自身位置的原語，收到 {'、'.join(moves)}")
         if DASH in types and types[0] != DASH:
             raise ValueError("dash 必須是技能的第一個效果（衝鋒一律最先結算）")
+        if CHARGE_THROUGH in types:
+            self._check_charge_through(types)
+
+    def _check_charge_through(self, types: list[str]) -> None:
+        """``charge_through``（Phase 3D-2c）：形狀 ``ground_tile``、第一個效果；其餘效果只能作用在
+        施放者自己（沿途的敵人由衝撞自己結算，隊友不受影響）。"""
+        if types[0] != CHARGE_THROUGH:
+            raise ValueError("charge_through 必須是技能的第一個效果（衝撞一律最先結算）")
+        if self.shape.type != "ground_tile":
+            raise ValueError(f"charge_through 的形狀必須是 ground_tile，收到 {self.shape.type}")
+        for effect in self.effects[1:]:
+            if effect.affects != "self":
+                raise ValueError(
+                    "charge_through 以外的效果必須明寫 affects: self（只作用在施放者）"
+                )
 
     def _check_pair_moves(self) -> None:
         """位移他人（Phase 3D-2b）：``teleport_target`` 與形狀 ``unit_then_tile``、``swap_any`` 與

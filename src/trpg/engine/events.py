@@ -89,6 +89,7 @@ __all__ = [
     "TurnOrderSet",
     "TurnSkipped",
     "TurnStarted",
+    "UnitCharged",
     "UnitDashed",
     "UnitDowned",
     "UnitEscaped",
@@ -229,6 +230,17 @@ class UnitDashed(EventBase):
     type: Literal["unit_dashed"] = "unit_dashed"
     unit_id: UnitId
     target_id: UnitId
+    path: tuple[Pos, ...]
+
+
+class UnitCharged(EventBase):
+    """直線衝撞（``charge_through``，Phase 3D-2c）開始：``unit_id`` 朝 ``target``（選的終點）直線
+    衝去，``path`` 是施放者依序經過的格子（含起點、含有單位的格子，終點是實際停下的格子；被擋住時
+    比 ``target`` 短）；每個空格另有 ``unit_moved``（``mode: dash``），沿途的敵人各自有命中判定。"""
+
+    type: Literal["unit_charged"] = "unit_charged"
+    unit_id: UnitId
+    target: Pos
     path: tuple[Pos, ...]
 
 
@@ -1080,6 +1092,7 @@ type Event = Annotated[
     | ReactionsGranted
     | ResourceRestored
     | UnitDashed
+    | UnitCharged
     | SkillCopied,
     Field(discriminator="type"),
 ]

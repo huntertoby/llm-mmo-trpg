@@ -163,6 +163,14 @@ def _leap(_lib: ContentLibrary, _skill: SkillDef, _spec: EffectSpec) -> str:
     return "跳到目標格（無視中間的單位與低矮地形；不觸發藉機攻擊）"
 
 
+def _charge_through(_lib: ContentLibrary, skill: SkillDef, spec: EffectSpec) -> str:
+    after = f"擊倒（{scaling_label(skill)}對抗）" if spec.on_hit == "knock_prone" else "推到路徑旁"
+    return (
+        f"沿直線衝到終點格：沿途每個敵人各擲命中，命中受 {spec.dice} 物理傷害並{after}"
+        "（隊友讓路；不觸發藉機攻擊）"
+    )
+
+
 def _swap(_lib: ContentLibrary, skill: SkillDef, spec: EffectSpec) -> str:
     check = f"（{scaling_label(skill)}對抗）" if spec.affects == "enemies" else ""
     return "與目標交換位置" + check
@@ -313,6 +321,7 @@ _EFFECT_TEXT: dict[str, _EffectText] = {
     "teleport": _teleport,
     "dash": _dash,
     "leap": _leap,
+    "charge_through": _charge_through,
     "swap": _swap,
     "teleport_target": _teleport_target,
     "swap_any": _swap_any,

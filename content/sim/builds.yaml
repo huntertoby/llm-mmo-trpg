@@ -11,6 +11,7 @@ companions: [sim_companion_fighter, sim_companion_archer]
 # Phase 3C-5a：build_push 加震地推倒（topple）、build_fire 加念力投擲（hurl_object；油桶落地爆炸，3C-6 再整理成念力流）。
 # Phase 3D-1：連段條件與資源互動的示範技能（衝勢劈砍、並肩斬、獵殺落單、先發制人、連段雷光、專注湧流、疾時之潮、竊取祝福）。
 # Phase 3D-2：新增 build_charger（衝鋒流）：猛虎衝撞（dash）、騰躍（leap）、調虎離山與護衛換位（swap）。
+# Phase 3D-2c：build_charger 的盾擊換成蠻牛衝陣（charge_through，主動欄位已滿）。
 # Phase 3D-2b：新增 build_banisher（放逐流）：放逐（teleport_target）、虛空互換（swap_any）。
 # Phase 3C-3a：build_push 加破城衝撞與裂骨印記（撞擊）、build_fire 加烈焰護身（on_cast_tag）、build_warlock 加蝕心追擊（on_status_applied）。
 # Phase 3C-2：修正技能（kind: modifier，裝在被動欄位，上限 3）——build_push 加重踏、build_fire 加灼傷之痕與餘燼循環、
@@ -219,7 +220,7 @@ builds:
 
   - id: build_charger
     name_zh: 衝鋒流
-    theme_zh: 猛虎衝撞一個箭步衝到敵人面前、打完再把他推飛撞牆；騰躍越過人群與障礙脫離包圍，調虎離山與護衛換位把敵人換進險地或把隊友換出險境。地形越開闊越能衝，被定身或四面被圍死（沒有相鄰空格可衝）時不利（Phase 3D-2，初值未經模擬）。
+    theme_zh: 猛虎衝撞一個箭步衝到敵人面前、打完再把他推飛撞牆；蠻牛衝陣選終點格直線衝過敵陣、沿途每個敵人各擲命中並撞倒（隊友讓路），騰躍越過人群與障礙脫離包圍，調虎離山與護衛換位把敵人換進險地或把隊友換出險境。地形越開闊越能衝，被定身或四面被圍死（沒有相鄰空格可衝）時不利（Phase 3D-2，初值未經模擬）。
     hero:
       id: build_charger
       name_zh: 衝鋒流英雄
@@ -231,7 +232,7 @@ builds:
       resist: {physical: 100}
       tags: [hero, sim]
       max_mana: 24
-      skills: [skill_tiger_charge, skill_vault_leap, skill_decoy_swap, skill_guard_swap, skill_gale_kick, skill_shield_bash]
+      skills: [skill_tiger_charge, skill_vault_leap, skill_decoy_swap, skill_guard_swap, skill_gale_kick, skill_bull_rush]
 
   - id: build_banisher
     name_zh: 放逐流

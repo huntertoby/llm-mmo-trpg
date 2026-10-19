@@ -76,6 +76,7 @@ from trpg.engine.events import (
     TurnOrderSet,
     TurnSkipped,
     TurnStarted,
+    UnitCharged,
     UnitDashed,
     UnitDowned,
     UnitEscaped,
@@ -296,6 +297,7 @@ _MOVE_VERBS = {
 _FIZZLE_TEXT = {
     "dash_blocked": "  衝鋒被擋下，沒有抵達目標身旁：其餘效果不結算",
     "dash_no_path": "  衝鋒找不到路：其餘效果不結算",
+    "charge_no_path": "  衝撞被擋住，停不下來",
     "swap_blocked": "  無法交換位置（有一方站不上對方的格子）",
 }
 
@@ -311,6 +313,13 @@ def _unit_dashed(e: UnitDashed, v: _View) -> str:
     if len(e.path) == 1:
         return f"  ➤ {v.name[e.unit_id]} 衝向 {v.name[e.target_id]}（已在身旁）"
     return f"  ➤ {v.name[e.unit_id]} 衝向 {v.name[e.target_id]}：{route}"
+
+
+@_handles(UnitCharged)
+def _unit_charged(e: UnitCharged, v: _View) -> str:
+    route = "→".join(xy_text(p) for p in e.path)
+    blocked = "" if e.path[-1] == e.target else f"（被擋住，停在 {xy_text(e.path[-1])}）"
+    return f"  ➤ {v.name[e.unit_id]} 直線衝撞：{route}{blocked}"
 
 
 @_handles(UnitStoodUp)

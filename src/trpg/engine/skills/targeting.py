@@ -17,6 +17,7 @@ from typing import NamedTuple
 
 from trpg.content.battle import Dice
 from trpg.content.skills import (
+    CHARGE_THROUGH,
     COPY_SKILL,
     DASH,
     HURL_OBJECT,
@@ -45,6 +46,9 @@ from trpg.engine.rules.statuses import (
 from trpg.engine.skills import shapes
 from trpg.engine.skills.conditions import skill_condition_problem
 from trpg.engine.skills.mobility import (
+    ChargeRoute,
+    charge_candidates,
+    charge_route,
     dash_route,
     leap_candidates,
     leap_problem,
@@ -318,7 +322,9 @@ def skill_problem(state: BattleState, unit: UnitState, skill: SkillDef) -> str |
         for e in skill.effects
     ):
         return f"已經在這個姿態中：{skill.name_zh}"
-    if any(e.type in (DASH, LEAP) for e in skill.effects):  # 自身位移（3D-2）：定身、倒地不能衝跳
+    if any(
+        e.type in (DASH, LEAP, CHARGE_THROUGH) for e in skill.effects
+    ):  # 自身位移（3D-2）：定身、倒地不能衝跳
         problem = self_move_problem(state, unit)
         if problem is not None:
             return problem
@@ -533,6 +539,11 @@ def _tile_area(
     if action.target_pos is None:
         raise IllegalActionError("此技能必須指定 target_pos（目標格）")
     center = (action.target_pos.x, action.target_pos.y)
+    if any(e.type == CHARGE_THROUGH for e in effects):  # 直線衝撞（3D-2c）：影響格是沿途的格子
+        route = charge_route(state, caster, center, reach)
+        if not isinstance(route, ChargeRoute):
+            raise IllegalActionError(route)
+        return route.cells, route.stop
     if any(e.type == LEAP for e in effects):  # 跳躍：無視視線與中間的單位，另有自己的落點規則
         problem = leap_problem(state, caster, center, reach)
         if problem is not None:
@@ -731,9 +742,10 @@ def compute_area(
         tiles = _self_area(state, caster, skill, action, targeting)
     if not tiles:
         raise IllegalActionError("影響範圍為空：沒有任何格子會受到影響")
-    return SkillArea(
-        tiles=tiles, units=_tiles_to_units(state, tiles, chain), origin=origin, direction=direction
-    )
+    units = _tiles_to_units(state, tiles, chain)
+    if any(e.type == CHARGE_THROUGH for e in effects):  # 隊友讓路：只有沿途的敵人會被撞
+        units = tuple(u for u in units if state.units[u].team is not caster.team)
+    return SkillArea(tiles=tiles, units=units, origin=origin, direction=direction)
 
 
 def _trap_site_problem(state: BattleState, center: XY) -> str | None:
@@ -806,6 +818,8 @@ def _candidates(state: BattleState, caster: UnitState, skill: SkillDef) -> Itera
 def _tile_candidates(state: BattleState, caster: UnitState, skill: SkillDef) -> list[XY]:
     """中心格型的候選格：射程內看得到的格子；跳躍無視視線，另有自己的落點規則。"""
     reach = shape_reach(state, skill, caster)
+    if any(e.type == CHARGE_THROUGH for e in skill.effects):
+        return charge_candidates(state, caster, reach)
     if any(e.type == LEAP for e in skill.effects):
         return leap_candidates(state, caster, reach)
     return shapes.center_candidates(state, caster.xy, reach)

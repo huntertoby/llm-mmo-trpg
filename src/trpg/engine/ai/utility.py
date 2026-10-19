@@ -47,6 +47,7 @@ from trpg.content.environment import (
     TrapAiRules,
 )
 from trpg.content.skills import (
+    CHARGE_THROUGH,
     CHEAT_DEATH,
     CHEAT_DEATH_STATUS,
     EXTRA_REACTION,
@@ -127,7 +128,7 @@ from trpg.engine.skills.targeting import (
 )
 from trpg.engine.state import BattleState, UnitState, reaction_limit
 from trpg.engine.traps import visible_traps
-from trpg.shared.types import ObjectId, Surface, Team, UnitId
+from trpg.shared.types import ObjectId, Pos, Surface, Team, UnitId
 
 __all__ = [
     "ActionScore",
@@ -1156,6 +1157,7 @@ def skill_estimate(  # noqa: PLR0917
     """技能選取（影響範圍為 ``area``）的便宜估計（不跑引擎），用來篩出每個技能最值得完整評分的
     幾個選取；``None`` 表示不納入候選（這是 ``worth_previewing`` 在技能上的對應）。
 
+    - 含 ``charge_through``：沿途的敵人數 × 3 ＋ 終點的位置價值變化（沒有敵人就不納入）；
     - 含 ``teleport`` 或 ``leap``：把行動者放到目標格後的位置價值變化（同
       :func:`virtual_move_score`；跳躍用來脫離或上高處，Phase 3D-2）；
     - 含 ``hurl_object`` 或 ``topple``：落點與爆炸範圍內、或倒下壓住的敵人數
@@ -1222,6 +1224,12 @@ def _special_estimate(  # noqa: PLR0917
     """位置型與組合型技能的估計：傳送與跳躍（自己的位置價值變化）、投擲物件與推倒（Phase 3C-5b）、
     位移他人（Phase 3D-2b）；其他技能回傳 ``_UNHANDLED``。"""
     effect_types = {e.type for e in skill.effects}
+    if CHARGE_THROUGH in effect_types:  # 直線衝撞（3D-2c）：路徑上的敵人數 ＋ 終點的位置價值變化
+        if not area.units:
+            return None
+        moved = unit.clone()
+        moved.pos = Pos(x=area.origin[0], y=area.origin[1])
+        return 3 * len(area.units) + _unit_position_value(state, moved, w, scene) - before
     if effect_types & {"teleport", LEAP} and action.target_pos is not None:
         moved = unit.clone()
         moved.pos = action.target_pos

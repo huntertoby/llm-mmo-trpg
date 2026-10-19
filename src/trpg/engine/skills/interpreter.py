@@ -23,6 +23,7 @@ from typing import ClassVar, Literal
 from trpg.content.battle import Dice
 from trpg.content.skills import (
     ADD_STACK,
+    CHARGE_THROUGH,
     CHEAT_DEATH,
     CHEAT_DEATH_STATUS,
     CONSUME_STACK,
@@ -84,6 +85,7 @@ from trpg.engine.events import (
     SkillCooldownChanged,
     SkillCopied,
     SkillUsed,
+    UnitCharged,
     UnitDashed,
 )
 from trpg.engine.maneuvers import contest
@@ -103,8 +105,9 @@ from trpg.engine.rules.geometry import XY, axis_direction, manhattan
 from trpg.engine.rules.movement import is_deadly
 from trpg.engine.rules.statuses import is_rooted, skip_turn_status
 from trpg.engine.skill_triggers import collect_cast, collect_move, holding
+from trpg.engine.skills.charge import aside_direction
 from trpg.engine.skills.conditions import Subject, condition_met
-from trpg.engine.skills.mobility import dash_route
+from trpg.engine.skills.mobility import ChargeRoute, charge_route, dash_route
 from trpg.engine.skills.scaling import mastery_duration_bonus, skill_scaling_value
 from trpg.engine.skills.targeting import (
     PaidCost,
@@ -411,7 +414,6 @@ class _Cast:
         )
 
     def roll_hits(self) -> None:
-        ctx = self.ctx
         rolled: list[UnitState] = []
         rolling = [e for e in self.effects if e.type not in _OWN_CHECK]  # 位移他人自己擲抵抗
         if any(e.affects in ("enemies", "all") for e in rolling):
@@ -419,51 +421,59 @@ class _Cast:
         if any(e.affects == "all" for e in rolling):
             rolled += [u for u in self.allies if u is not self.caster]  # 敵我不分也不打到自己
         for unit in sorted(rolled, key=lambda u: u.id):
-            forced: ForcedOutcome | None = None
-            if ctx.preview is not None:
-                ctx.mark_branch()
-                forced = "hit" if ctx.preview == "min" else "crit"
-            bonus = self._modifier(modifiers.hit_bonus, unit)
-            roll = roll_attack(
-                ctx.state, ctx.rng, self.caster, unit, forced, self.profile, bonus=bonus
-            )
-            rolled_event = ctx.emit(
-                AttackRolled,
-                attacker_id=self.caster.id,
-                target_id=unit.id,
-                rolls=roll.rolls,
-                advantage=roll.advantage,
-                natural=roll.natural,
-                attack_value=roll.attack_value,
-                defense_value_permille=roll.defense_value_permille,
-                hit_modifier=roll.hit_modifier,
-                proficiency=roll.proficiency,
-                situational=roll.situational,
-                total=roll.total,
-                cover=roll.cover,
-                cover_object_id=roll.cover_object_id,
-                target_number=roll.target_number,
-                hit=roll.hit,
-                crit=roll.crit,
-                skill_id=self.skill.id,
-                modifier_bonus=roll.modifier_bonus,
-            )
-            self.hits[unit.id] = roll
-            if roll.hit and self.skill.shape.type == "single":
-                guardian = try_intercept(
-                    ctx, self.caster, unit, rolled_event.seq, skill_id=self.skill.id
-                )
-                if guardian is not None:
-                    self._redirect(unit, guardian)
-                    unit = guardian  # noqa: PLW2901 - 之後的格擋與傷害都是守護者的
-            if roll.hit and self._affected_by_damage(unit):
-                self.blocks[unit.id] = block_multiplier(
-                    ctx, self.caster, unit, melee=self.profile.height_limited
-                )
+            self._roll_one(unit)
         if self.modified:
-            hit = [Subject(u, u.xy) for u in self.enemies if self._hit(u)]
-            state = ctx.state
-            self.cooldown_delta = modifiers.cooldown_delta(state, self.caster, self.use, hit)
+            self._update_cooldown_delta()
+
+    def _update_cooldown_delta(self) -> None:
+        """修正規則的命中後冷卻修正：以目前已命中的敵人計算（命中判定之後呼叫）。"""
+        hit = [Subject(u, u.xy) for u in self.enemies if self._hit(u)]
+        self.cooldown_delta = modifiers.cooldown_delta(self.ctx.state, self.caster, self.use, hit)
+
+    def _roll_one(self, unit: UnitState, *, force_block: bool = False) -> AttackRoll:
+        """對 ``unit`` 擲一次命中（發出 ``attack_rolled``、記錄結果；單體命中時給守護者攔截的機會，
+        命中且受傷害效果影響——或 ``force_block``（直線衝撞自己結算傷害）——時決定格擋倍率）。"""
+        ctx = self.ctx
+        forced: ForcedOutcome | None = None
+        if ctx.preview is not None:
+            ctx.mark_branch()
+            forced = "hit" if ctx.preview == "min" else "crit"
+        bonus = self._modifier(modifiers.hit_bonus, unit)
+        roll = roll_attack(ctx.state, ctx.rng, self.caster, unit, forced, self.profile, bonus=bonus)
+        rolled_event = ctx.emit(
+            AttackRolled,
+            attacker_id=self.caster.id,
+            target_id=unit.id,
+            rolls=roll.rolls,
+            advantage=roll.advantage,
+            natural=roll.natural,
+            attack_value=roll.attack_value,
+            defense_value_permille=roll.defense_value_permille,
+            hit_modifier=roll.hit_modifier,
+            proficiency=roll.proficiency,
+            situational=roll.situational,
+            total=roll.total,
+            cover=roll.cover,
+            cover_object_id=roll.cover_object_id,
+            target_number=roll.target_number,
+            hit=roll.hit,
+            crit=roll.crit,
+            skill_id=self.skill.id,
+            modifier_bonus=roll.modifier_bonus,
+        )
+        self.hits[unit.id] = roll
+        if roll.hit and self.skill.shape.type == "single":
+            guardian = try_intercept(
+                ctx, self.caster, unit, rolled_event.seq, skill_id=self.skill.id
+            )
+            if guardian is not None:
+                self._redirect(unit, guardian)
+                unit = guardian
+        if roll.hit and (force_block or self._affected_by_damage(unit)):
+            self.blocks[unit.id] = block_multiplier(
+                ctx, self.caster, unit, melee=self.profile.height_limited
+            )
+        return roll
 
     def _modifier(
         self,
@@ -700,6 +710,9 @@ class _Cast:
             return self.displace(effect, spec, pull=kind == "pull")
         if kind == "teleport":
             return self.teleport(spec)
+        if kind == CHARGE_THROUGH:
+            self.charge(spec)  # 自己一步一步結算（移動、命中、傷害、擊倒或推開交錯）
+            return []
         if kind == LEAP:
             return self.leap(spec)
         if kind == SWAP:
@@ -1169,22 +1182,25 @@ class _Cast:
     def knock_prone(self, effect: ResolvedEffect, spec: EffectSpec) -> list[EffectBase]:
         batch: list[EffectBase] = []
         for unit in self.targets(effect.affects, spec.condition):
-            if unit.has_status(PRONE):
-                continue
-            if contest(
-                self.ctx,
-                "knock_prone",
-                self.caster,
-                unit,
-                self.skill.scaling_attr,
-                skill_id=self.skill.id,
-                primary=False,
-                attack_value=skill_scaling_value(self.ctx.rules, self.caster, self.skill),
-            ):
-                batch.append(
-                    ApplyStatusEffect(source_id=self.caster.id, target_id=unit.id, status_id=PRONE)
-                )
+            batch += self._knock_down(unit)
         return batch
+
+    def _knock_down(self, unit: UnitState) -> list[EffectBase]:
+        """對 ``unit`` 擲擊倒的對抗判定（技能的縮放屬性 vs 目標同屬性），成功才倒地。"""
+        if unit.has_status(PRONE):
+            return []
+        if not contest(
+            self.ctx,
+            "knock_prone",
+            self.caster,
+            unit,
+            self.skill.scaling_attr,
+            skill_id=self.skill.id,
+            primary=False,
+            attack_value=skill_scaling_value(self.ctx.rules, self.caster, self.skill),
+        ):
+            return []
+        return [ApplyStatusEffect(source_id=self.caster.id, target_id=unit.id, status_id=PRONE)]
 
     def teleport(self, spec: EffectSpec) -> list[EffectBase]:
         assert self.action is not None
@@ -1216,6 +1232,94 @@ class _Cast:
                 mode="leap",
             )
         ]
+
+    def charge(self, spec: EffectSpec) -> None:
+        """``charge_through``（Phase 3D-2c）：沿直線衝向選取的終點。一格一格走：空格移動
+        （``mode: dash``，陷阱、表面與墜落照常結算，被定身、倒地或倒下就停下；不給藉機攻擊的機會）；
+        有單位的格子穿過去，敵人在被穿過時各擲一次命中（依路徑順序）。隊友不受影響。"""
+        action, caster, ctx = self.action, self.caster, self.ctx
+        assert action is not None and action.target_pos is not None
+        if not self.holds(spec.condition, Subject(caster, caster.xy)):
+            return
+        dest = (action.target_pos.x, action.target_pos.y)
+        route = charge_route(ctx.state, caster, dest, shape_reach(ctx.state, self.skill, caster))
+        if not isinstance(route, ChargeRoute):
+            ctx.emit(EffectFizzled, effect_kind=CHARGE_THROUGH, pos=None, reason="charge_no_path")
+            return
+        start = caster.xy
+        ctx.emit(
+            UnitCharged,
+            unit_id=caster.id,
+            target=action.target_pos,
+            path=tuple(Pos(x=x, y=y) for x, y in (start, *route.cells)),
+        )
+        moved = self._charge_walk(spec, route, start)
+        if moved and caster.alive:
+            collect_move(ctx, caster)  # on_move 被動：衝撞算主動移動
+        if self.modified:
+            self._update_cooldown_delta()
+
+    def _charge_walk(self, spec: EffectSpec, route: ChargeRoute, start: XY) -> bool:
+        """衝撞沿路線前進；回傳施放者有沒有移動過。"""
+        caster, state = self.caster, self.ctx.state
+        first = route.cells[0]
+        travel = (first[0] - start[0], first[1] - start[1])
+        moved = False
+        for cell in route.cells:
+            if not caster.alive:
+                break
+            occupant = state.unit_at(*cell)
+            if occupant is not None and occupant.id != caster.id:
+                if occupant.team is not caster.team:
+                    self._charge_hit(spec, occupant, travel)
+                if state.unit_at(*cell) is not None:
+                    continue  # 還站在那裡：穿過去；倒下或被推開了就走進這一格
+            execute(
+                self.ctx,
+                [MoveUnitEffect(source_id=caster.id, unit_id=caster.id, dest=cell, mode="dash")],
+            )
+            moved = True
+            if not self._dash_continues(cell):
+                break
+        return moved
+
+    def _charge_hit(self, spec: EffectSpec, unit: UnitState, travel: XY) -> None:
+        """衝撞穿過敵人 ``unit``：擲命中；命中受 ``dice`` 物理傷害（暴擊、格擋與修正規則照常），
+        還活著時依 ``on_hit`` 擊倒或推到路徑旁。"""
+        assert spec.dice is not None
+        roll = self._roll_one(unit, force_block=True)
+        if not roll.hit:
+            return
+        block = self.blocks.get(unit.id, PERMILLE)
+        bonus = self._modifier(modifiers.damage_permille, unit)
+        execute(
+            self.ctx,
+            [
+                DamageEffect(
+                    target_id=unit.id,
+                    source_id=self.caster.id,
+                    cause="attack",
+                    element=Element.PHYSICAL,
+                    dice=spec.dice,
+                    crit=roll.crit,
+                    min_damage=self.ctx.core.min_damage_on_hit,
+                    multiplier_permille=block * bonus // PERMILLE,
+                )
+            ],
+        )
+        if not unit.alive:
+            return
+        if spec.on_hit == "knock_prone":
+            follow = self._knock_down(unit)
+        else:
+            direction = aside_direction(self.ctx.state, unit, travel)
+            follow = [
+                PushEffect(
+                    source_id=self.caster.id, target_id=unit.id, direction=direction, distance=1
+                )
+            ]
+        if follow:
+            execute(self.ctx, follow)
 
     def displace_check(
         self, kind: Literal["teleport", "swap"], target: UnitState, bonus: int

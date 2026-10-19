@@ -4,7 +4,7 @@ description_zh: 以位移為核心（推、拉、傳送、擊倒），傷害與�
 kinds: [active]
 enabled: true
 shapes: [single, ground_tile, line, cone, object_then_tile, unit_then_tile, unit_pair]   # object_then_tile：投擲物件（3C-5a）、unit_then_tile／unit_pair：位移他人（3D-2b）；只給手寫技能
-core: {primitives: [push, pull, teleport, knock_prone, hurl_object, topple, leap, swap, teleport_target, swap_any]}   # hurl_object、topple（3C-5a）、leap、swap（3D-2）、teleport_target、swap_any（3D-2b）：隨機組合器不使用
+core: {primitives: [push, pull, teleport, knock_prone, hurl_object, topple, leap, swap, teleport_target, swap_any, charge_through]}   # hurl_object、topple（3C-5a）、leap、swap（3D-2）、teleport_target、swap_any（3D-2b）、charge_through（3D-2c）：隨機組合器不使用
 secondary:
   primitives: [damage, apply_status, create_surface, dash]   # dash：衝鋒（3D-2），必須是第一個效果
   max_count: 2

@@ -18,7 +18,7 @@ from dataclasses import dataclass
 from fractions import Fraction
 from itertools import product
 
-from trpg.content.skills import SWAP, SWAP_ANY, TELEPORT_TARGET, SkillDef
+from trpg.content.skills import CHARGE_THROUGH, SWAP, SWAP_ANY, TELEPORT_TARGET, SkillDef
 from trpg.engine import modifiers
 from trpg.engine.actions import Action, Attack, Interact, Shove, Trip, UseSkill
 from trpg.engine.battle import _actor, action_ap_cost, simulate_preview
@@ -45,6 +45,7 @@ from trpg.engine.events import (
     TerrainChanged,
     TrapPlaced,
     TrapTriggered,
+    UnitCharged,
     UnitDashed,
     UnitDowned,
     UnitEscaped,
@@ -210,6 +211,8 @@ class MoveInfo:
     ``swap``）。
 
     ``kind``：``dash``（``path`` 為衝鋒的路線，含起點與終點，``other_id`` 是衝鋒的目標）、
+    ``charge``（Phase 3D-2c 直線衝撞：``path`` 是依序經過的格子，含起點、含有單位的格子與停下的
+    格子；沿途的敵人在 ``Preview.targets``）、
     ``leap``（``path`` 是起點與落點）、``swap``（``unit_id`` 與 ``other_id`` 交換，``path`` 是
     ``unit_id`` 的起點與終點）。"""
 
@@ -626,10 +629,16 @@ def _knock_chance(
 ) -> Fraction | None:
     """技能對 ``target`` 的擊倒對抗成功率（技能屬性對相同屬性）；不會擊倒時為 ``None``。"""
     enemy = target.team is not actor.team
-    if not any(
+    resolved = resolve_effects(state, skill)
+    prone = any(
         r.type == "knock_prone" and (r.affects == "all" or (enemy and r.affects == "enemies"))
-        for r in resolve_effects(state, skill)
-    ):
+        for r in resolved
+    )
+    charge_prone = enemy and any(
+        r.type == CHARGE_THROUGH and skill.effects[r.spec_index].on_hit == "knock_prone"
+        for r in resolved
+    )
+    if not (prone or charge_prone):
         return None
     attr = skill.scaling_attr
     rules = state.ruleset
@@ -666,6 +675,29 @@ def _status_chances(
     return tuple(chances[k] for k in sorted(chances))
 
 
+def _positions_at_roll(
+    actor: UnitState, events: list[EventBase], skill_id: str
+) -> dict[UnitId, UnitState]:
+    """每個被擲命中的單位 → 擲骰當下的施放者（只有施放者在技能中途移動時才有，例如直線衝撞從
+    經過敵人前的格子出手；命中率要以那個位置計算）。"""
+    here = actor.pos
+    out: dict[UnitId, UnitState] = {}
+    for e in events:
+        if isinstance(e, UnitMoved) and e.unit_id == actor.id:
+            here = e.to_pos
+        elif (
+            isinstance(e, AttackRolled)
+            and e.skill_id == skill_id
+            and e.attacker_id == actor.id
+            and here != actor.pos
+            and e.target_id not in out
+        ):
+            moved = actor.clone()
+            moved.pos = here
+            out[e.target_id] = moved
+    return out
+
+
 def _skill_targets(
     state: BattleState,
     actor: UnitState,
@@ -681,17 +713,19 @@ def _skill_targets(
         {e.target_id for e in max_events if isinstance(e, AttackRolled) and e.skill_id == skill.id}
     )
     result: list[TargetPreview] = []
+    at_roll = _positions_at_roll(actor, max_events, skill.id)
     for uid in rolled:
         target = state.units[uid]
-        cover = half_cover(state, actor, target, profile)
+        shooter = at_roll.get(uid, actor)  # 直線衝撞：從經過時的位置出手
+        cover = half_cover(state, shooter, target, profile)
         bonus = (
-            hit_modifier(actor, target, state.ruleset, profile)
+            hit_modifier(shooter, target, state.ruleset, profile)
             + core.proficiency
-            + situational_modifier(state, actor, target)
+            + situational_modifier(state, shooter, target)
             - (0 if cover is None else cover.penalty)
             + modifiers.hit_bonus(state, actor, use, Subject(target, target.xy))
         )
-        naturals = _naturals(advantage_state(state, actor, target, profile))
+        naturals = _naturals(advantage_state(state, shooter, target, profile))
         hit, crit = _chances(naturals, bonus, core.hit_target, profile.crit_range)
         damage = _damage_expectation(state, actor, action, uid, hit, crit, min_events, max_events)
         knock = _knock_chance(state, actor, skill, target)
@@ -850,6 +884,8 @@ def _move_infos(events: list[EventBase]) -> tuple[MoveInfo, ...]:
         if isinstance(e, UnitDashed):
             path = tuple((p.x, p.y) for p in e.path)
             infos.append(MoveInfo("dash", e.unit_id, e.target_id, path))
+        elif isinstance(e, UnitCharged):
+            infos.append(MoveInfo("charge", e.unit_id, None, tuple((p.x, p.y) for p in e.path)))
         elif isinstance(e, UnitMoved) and e.mode == "leap":
             path = ((e.from_pos.x, e.from_pos.y), (e.to_pos.x, e.to_pos.y))
             infos.append(MoveInfo("leap", e.unit_id, None, path))

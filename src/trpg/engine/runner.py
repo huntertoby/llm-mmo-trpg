@@ -37,8 +37,13 @@ __all__ = [
     "run_battle",
 ]
 
-LOG_FORMAT = "trpg-battle-log/20"
-"""``/20``（Phase 3D-2b）：位移他人原語 ``teleport_target``（形狀 ``unit_then_tile``，``UseSkill``
+LOG_FORMAT = "trpg-battle-log/21"
+"""``/21``（Phase 3D-2c）：直線衝撞原語 ``charge_through``（形狀 ``ground_tile``，``UseSkill`` 帶
+``target_pos`` ＝終點格；``dice``、新欄位 ``on_hit``）、事件 ``unit_charged``、戰鬥紀錄中新的
+``effect_fizzled`` 原因 ``charge_no_path``；``/20`` 的規則集沒有這個原語，舊紀錄的規則包不能由新版
+程式重播。
+
+``/20``（Phase 3D-2b）：位移他人原語 ``teleport_target``（形狀 ``unit_then_tile``，``UseSkill``
 帶 ``target_id`` 與 ``target_pos``）、``swap_any``（形狀 ``unit_pair``，帶 ``target_id`` 與新欄位
 ``second_target_id``）、``unit_moved`` 的新 ``mode``（``teleported``）、``maneuver_rolled`` 的新
 ``maneuver``（``teleport``／``swap``）與新欄位 ``resist_bonus``、核心規則

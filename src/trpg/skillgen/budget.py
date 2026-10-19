@@ -221,6 +221,22 @@ def _hurl_object_points(
     return points, note
 
 
+def _charge_through_points(
+    _skill: SkillDef, effect: EffectSpec, library: ContentLibrary
+) -> tuple[Fraction, str]:
+    """``charge_through`` 的點數（3D-2c）：（骰子平均 ＋ ``on_hit`` 的點數）× 預期被撞到的敵人數。
+    ``on_hit`` 的點數：``knock_prone`` 為擊倒原語的 ``base_points``、``push_aside`` 為推擊 1 格。"""
+    if effect.dice is None or effect.on_hit is None:
+        raise BudgetError("charge_through 缺少 dice 或 on_hit，無法計算點數")
+    primitives = library.ruleset.primitives.by_id()
+    follow = (
+        primitives["knock_prone" if effect.on_hit == "knock_prone" else "push"].base_points or 0
+    )
+    expected = library.budget.charge_through_expected_targets_permille
+    points = (_dice_average(effect.dice) + follow) * Fraction(expected, _PERMILLE)
+    return points, f"（{effect.dice} 平均 ＋ {effect.on_hit} {follow}）× 預期 {expected}‰ 個敵人"
+
+
 def _consume_stack_points(
     skill: SkillDef, effect: EffectSpec, library: ContentLibrary
 ) -> tuple[Fraction, str]:
@@ -271,6 +287,7 @@ _SPECIAL_BASES: dict[
     "consume_stack": _consume_stack_points,
     "consume_status": _consume_status_points,
     "hurl_object": _hurl_object_points,
+    "charge_through": _charge_through_points,
     "restore_resource": _restore_resource_points,
 }
 """需要整個技能或特殊規則的 ``budget_basis`` → 點數算法。"""

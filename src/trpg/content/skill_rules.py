@@ -183,6 +183,8 @@ class BudgetRules(ContentModel):
     """``push``／``pull`` 填了 ``collision_dice`` 時，每顆骰加的預算點數（Phase 3C-3a；初值）。"""
     hurl_object_discount_permille: int = Field(default=800, ge=1, le=1000)
     """``hurl_object`` 的「需要附近有可投擲的物件」折扣（Phase 3C-5a；初值，未經模擬）。"""
+    charge_through_expected_targets_permille: int = Field(default=1500, ge=100, le=5000)
+    """``charge_through`` 預期被撞到的敵人數（‰；Phase 3D-2c；初值，未經模擬）。"""
     restore_mana_point_permille: int = Field(default=700, ge=0, le=5000)
     """``restore_resource`` 回復法力：每點法力折合的預算點數（‰；Phase 3D-1；初值）。"""
     restore_cooldown_points: int = Field(default=3, ge=0)

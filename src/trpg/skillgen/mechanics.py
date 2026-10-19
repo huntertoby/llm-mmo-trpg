@@ -26,6 +26,7 @@ _DISPLACE = frozenset(
         "swap",
         "teleport_target",
         "swap_any",
+        "charge_through",
     }
 )
 _TERRAIN = frozenset({"create_obstacle", "destroy_object", "raise_terrain", "lower_terrain"})

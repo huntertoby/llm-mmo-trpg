@@ -6,13 +6,18 @@
 
 from __future__ import annotations
 
+from dataclasses import dataclass
+
 from trpg.engine.rules.geometry import XY, bresenham, manhattan
-from trpg.engine.rules.movement import is_deadly, is_standable, path_map
+from trpg.engine.rules.movement import is_deadly, is_standable, path_map, step_cost
 from trpg.engine.rules.statuses import is_rooted
 from trpg.engine.skills.shapes import is_wall
 from trpg.engine.state import BattleState, UnitState
 
 __all__ = [
+    "ChargeRoute",
+    "charge_candidates",
+    "charge_route",
     "dash_route",
     "leap_candidates",
     "leap_problem",
@@ -56,6 +61,86 @@ def dash_route(state: BattleState, caster: UnitState, target: XY, reach: int) ->
         return None
     best = min(goals, key=lambda xy: (pm.cost[xy], xy[1], xy[0]))
     return pm.path_to(best)
+
+
+@dataclass(frozen=True, slots=True)
+class ChargeRoute:
+    """直線衝撞（Phase 3D-2c）的路線：``cells`` 是施放者依序經過的格子（不含起點，含有單位的格子；
+    施放者不會停在有單位的格子，所以最後一格一定是空的），``stop`` 是停下的格子（＝``cells`` 的
+    最後一格）。"""
+
+    cells: tuple[XY, ...]
+    stop: XY
+
+
+def _sign(value: int) -> int:
+    return (value > 0) - (value < 0)
+
+
+def _charge_line_problem(state: BattleState, caster: UnitState, dest: XY, reach: int) -> str | None:
+    """衝撞終點的方向問題：在地圖內、與施放者同一列或同一行、在射程內。"""
+    if not state.in_bounds(*dest):
+        return f"超出地圖範圍：{dest}"
+    dx, dy = dest[0] - caster.xy[0], dest[1] - caster.xy[1]
+    if dx == 0 and dy == 0:
+        return "不能衝撞到原地"
+    if dx != 0 and dy != 0:
+        return f"衝撞只能走直線：{dest} 與施放者不在同一列或同一行"
+    if abs(dx) + abs(dy) > reach:
+        return f"目標超出射程：距離 {abs(dx) + abs(dy)}，射程 {reach}"
+    return None
+
+
+def _charge_dest_problem(state: BattleState, caster: UnitState, dest: XY, reach: int) -> str | None:
+    """衝撞終點本身的問題：方向、射程，以及要可站立、沒有單位。"""
+    problem = _charge_line_problem(state, caster, dest, reach)
+    if problem is not None:
+        return problem
+    if not is_standable(state, dest):
+        return f"無法衝撞到不可站立的格子：{dest}"
+    other = state.unit_at(*dest)
+    if other is not None:
+        return f"終點必須是空格：{dest}（{other.name_zh}）"
+    return None
+
+
+def charge_route(state: BattleState, caster: UnitState, dest: XY, reach: int) -> ChargeRoute | str:
+    """衝撞到終點格 ``dest`` 的路線；不合法時回傳原因（繁體中文）。
+
+    終點要與施放者同一列或同一行、距離在 ``reach`` 內、可站立且沒有單位。沿直線一格一格走（步行
+    規則：不可站立的格子與爬升過高的格子擋住），被擋住時停在擋住前的格子；單位（敵我）不擋，但
+    不能停在有單位的格子，所以停點往回退到最後一個空格；退到起點就停不下來，不能施放。
+    """
+    problem = _charge_dest_problem(state, caster, dest, reach)
+    if problem is not None:
+        return problem
+    x0, y0 = caster.xy
+    step = (_sign(dest[0] - x0), _sign(dest[1] - y0))
+    cells: list[XY] = []
+    prev = caster.xy
+    for i in range(1, manhattan(caster.xy, dest) + 1):
+        cell = (x0 + step[0] * i, y0 + step[1] * i)
+        if step_cost(state, prev, cell) is None:
+            break
+        cells.append(cell)
+        prev = cell
+    while cells and state.unit_at(*cells[-1]) is not None:
+        cells.pop()
+    if not cells:
+        return f"衝撞被擋住，停不下來：{dest} 方向的第一個空格就過不去"
+    return ChargeRoute(cells=tuple(cells), stop=cells[-1])
+
+
+def charge_candidates(state: BattleState, caster: UnitState, reach: int) -> list[XY]:
+    """射程內四個方向所有合法的衝撞終點（依 ``(y, x)`` 排序）。"""
+    x0, y0 = caster.xy
+    cells = [
+        (x0 + dx * i, y0 + dy * i)
+        for dx, dy in ((0, -1), (1, 0), (0, 1), (-1, 0))
+        for i in range(1, reach + 1)
+    ]
+    legal = [c for c in cells if isinstance(charge_route(state, caster, c, reach), ChargeRoute)]
+    return sorted(legal, key=lambda p: (p[1], p[0]))
 
 
 def _leap_blocked(state: BattleState, start: XY, dest: XY) -> XY | None:
