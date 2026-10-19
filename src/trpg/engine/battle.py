@@ -725,6 +725,11 @@ def resolve_with(
             unit_id=pending.unit_id,
             reaction=pending.reaction,
             trigger_unit_id=pending.trigger_unit_id,
+            skill_id=pending.skill_id,
+            trigger_event_seq=pending.trigger_event_seq,
+            stamina_cost=pending.stamina_cost,
+            mana_cost=pending.mana_cost,
+            hp_cost_permille=pending.hp_cost_permille,
         )
         return ResolveResult(paused, ctx.events, pending)
     return finish_resolution(ctx)

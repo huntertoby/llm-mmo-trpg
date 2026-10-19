@@ -13,6 +13,7 @@
 from __future__ import annotations
 
 from dataclasses import dataclass, field
+from typing import Literal
 
 from pydantic import BaseModel, ConfigDict, TypeAdapter
 
@@ -148,10 +149,15 @@ class PendingResolution:
     decisions: tuple[bool, ...]
     base_state_json: str
     events_emitted: int
-    kind: str
+    kind: Literal["reaction"]
     unit_id: UnitId
     reaction: str
     trigger_unit_id: UnitId | None
+    skill_id: str | None = None
+    trigger_event_seq: int | None = None
+    stamina_cost: int = 0
+    mana_cost: int = 0
+    hp_cost_permille: int = 0
 
 
 @dataclass(slots=True)

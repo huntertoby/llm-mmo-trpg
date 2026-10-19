@@ -27,6 +27,8 @@ from trpg.engine.effects.models import DamageEffect
 from trpg.engine.events import (
     AttackIntercepted,
     AttackRolled,
+    DamageDealt,
+    EventBase,
     ReactionDeclined,
     ReactionTriggered,
 )
@@ -111,7 +113,71 @@ def _skill_usable(
     return check_trigger_depth(ctx, unit.id, skill.id, depth)
 
 
-def _decide(ctx: Ctx, unit: UnitState, rule: ReactionRule, trigger: UnitState) -> bool:
+_TRIGGER_EVENT_MATCHERS: dict[str, Callable[[EventBase, UnitState, UnitState], bool]] = {
+    "targeted_by_melee": lambda e, u, t: (
+        isinstance(e, AttackRolled) and e.target_id == u.id and e.attacker_id == t.id
+    ),
+    "targeted_by_attack": lambda e, u, t: (
+        isinstance(e, AttackRolled) and e.target_id == u.id and e.attacker_id == t.id
+    ),
+    "hit_by_melee": lambda e, u, t: (
+        isinstance(e, DamageDealt) and e.target_id == u.id and e.source_id == t.id
+    ),
+    "hit_by_attack": lambda e, u, t: (
+        isinstance(e, DamageDealt) and e.target_id == u.id and e.source_id == t.id
+    ),
+    "ally_hit_adjacent": lambda e, _u, t: isinstance(e, AttackRolled) and e.attacker_id == t.id,
+}
+
+
+def _trigger_event_seq(ctx: Ctx, unit: UnitState, event: str, trigger: UnitState) -> int | None:
+    """引發詢問的事件 ``seq``：本次結算中最近一個符合的事件；找不到時為 ``None``
+    （例如 ``enemy_leaves_adjacent`` 的移動事件尚未發出）。"""
+    matches = _TRIGGER_EVENT_MATCHERS.get(event)
+    if matches is None:
+        return None
+    for e in reversed(ctx.events):
+        if matches(e, unit, trigger):
+            return e.seq
+    return None
+
+
+def _pending(
+    ctx: Ctx,
+    unit: UnitState,
+    rule: ReactionRule,
+    picked: ReactionDef | SkillDef,
+    trigger: UnitState,
+) -> Pending:
+    """暫停詢問的公開資料：誰、什麼反應、接受要付出什麼。"""
+    if isinstance(picked, SkillDef):
+        return Pending(
+            kind="reaction",
+            unit_id=unit.id,
+            reaction=rule.reaction,
+            trigger_unit_id=trigger.id,
+            skill_id=picked.id,
+            trigger_event_seq=_trigger_event_seq(ctx, unit, rule.when.event, trigger),
+            mana_cost=picked.cost.mana,
+            hp_cost_permille=picked.cost.hp_percent or 0,
+        )
+    return Pending(
+        kind="reaction",
+        unit_id=unit.id,
+        reaction=rule.reaction,
+        trigger_unit_id=trigger.id,
+        trigger_event_seq=_trigger_event_seq(ctx, unit, rule.when.event, trigger),
+        stamina_cost=picked.stamina_cost,
+    )
+
+
+def _decide(
+    ctx: Ctx,
+    unit: UnitState,
+    rule: ReactionRule,
+    picked: ReactionDef | SkillDef,
+    trigger: UnitState,
+) -> bool:
     if rule.mode == "auto":
         return True
     if ctx.preview is not None:
@@ -119,11 +185,7 @@ def _decide(ctx: Ctx, unit: UnitState, rule: ReactionRule, trigger: UnitState) -
         return ctx.preview == "max"
     if ctx.decisions:
         return ctx.decisions.pop(0)
-    raise PauseForDecision(
-        Pending(
-            kind="reaction", unit_id=unit.id, reaction=rule.reaction, trigger_unit_id=trigger.id
-        )
-    )
+    raise PauseForDecision(_pending(ctx, unit, rule, picked, trigger))
 
 
 def _use(ctx: Ctx, unit: UnitState, picked: ReactionDef | SkillDef, trigger: UnitState) -> None:
@@ -178,7 +240,7 @@ def _react(
         picked = _candidate(ctx, unit, rule, trigger, effect, skills)
         if picked is None:
             continue
-        if _decide(ctx, unit, rule, trigger):
+        if _decide(ctx, unit, rule, picked, trigger):
             _use(ctx, unit, picked, trigger)
             return picked
         ctx.emit(ReactionDeclined, unit_id=unit.id, reaction=picked.id, trigger_unit_id=trigger.id)
