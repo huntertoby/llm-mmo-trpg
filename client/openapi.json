@@ -1,0 +1,2749 @@
+{
+  "openapi": "3.1.0",
+  "info": {
+    "title": "LLM-MMO-TRPG 本機 API",
+    "version": "0.0.1"
+  },
+  "paths": {
+    "/api/maps": {
+      "get": {
+        "tags": [
+          "content"
+        ],
+        "summary": "List Maps",
+        "description": "可以開戰的地圖（有預設遭遇的地圖，依 ID 排序）。",
+        "operationId": "list_maps_api_maps_get",
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "items": {
+                    "$ref": "#/components/schemas/MapSummary"
+                  },
+                  "type": "array",
+                  "title": "Response List Maps Api Maps Get"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/builds": {
+      "get": {
+        "tags": [
+          "content"
+        ],
+        "summary": "List Builds",
+        "description": "主角可選的 build（內容檔順序）。",
+        "operationId": "list_builds_api_builds_get",
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "items": {
+                    "$ref": "#/components/schemas/BuildSummary"
+                  },
+                  "type": "array",
+                  "title": "Response List Builds Api Builds Get"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/skills/{skill_id}": {
+      "get": {
+        "tags": [
+          "content"
+        ],
+        "summary": "Get Skill",
+        "operationId": "get_skill_api_skills__skill_id__get",
+        "parameters": [
+          {
+            "name": "skill_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Skill Id"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SkillCard"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/battles": {
+      "post": {
+        "tags": [
+          "battles"
+        ],
+        "summary": "Create Battle",
+        "description": "建立戰鬥並推進到第一次輪到主角；``steps`` 含開場事件。",
+        "operationId": "create_battle_api_battles_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/CreateBattleRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "201": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/BattleResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/battles/{battle_id}": {
+      "get": {
+        "tags": [
+          "battles"
+        ],
+        "summary": "Get Battle",
+        "operationId": "get_battle_api_battles__battle_id__get",
+        "parameters": [
+          {
+            "name": "battle_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Battle Id"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/BattleResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/battles/{battle_id}/actions": {
+      "post": {
+        "tags": [
+          "battles"
+        ],
+        "summary": "Post Action",
+        "operationId": "post_action_api_battles__battle_id__actions_post",
+        "parameters": [
+          {
+            "name": "battle_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Battle Id"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "oneOf": [
+                  {
+                    "$ref": "#/components/schemas/Move"
+                  },
+                  {
+                    "$ref": "#/components/schemas/Attack"
+                  },
+                  {
+                    "$ref": "#/components/schemas/UseSkill"
+                  },
+                  {
+                    "$ref": "#/components/schemas/Defend"
+                  },
+                  {
+                    "$ref": "#/components/schemas/Shove"
+                  },
+                  {
+                    "$ref": "#/components/schemas/Trip"
+                  },
+                  {
+                    "$ref": "#/components/schemas/Interact"
+                  },
+                  {
+                    "$ref": "#/components/schemas/EndStance"
+                  },
+                  {
+                    "$ref": "#/components/schemas/EndTurn"
+                  }
+                ],
+                "discriminator": {
+                  "propertyName": "type",
+                  "mapping": {
+                    "move": "#/components/schemas/Move",
+                    "attack": "#/components/schemas/Attack",
+                    "use_skill": "#/components/schemas/UseSkill",
+                    "defend": "#/components/schemas/Defend",
+                    "shove": "#/components/schemas/Shove",
+                    "trip": "#/components/schemas/Trip",
+                    "interact": "#/components/schemas/Interact",
+                    "end_stance": "#/components/schemas/EndStance",
+                    "end_turn": "#/components/schemas/EndTurn"
+                  }
+                },
+                "title": "Action"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/BattleResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/battles/{battle_id}/decision": {
+      "post": {
+        "tags": [
+          "battles"
+        ],
+        "summary": "Post Decision",
+        "operationId": "post_decision_api_battles__battle_id__decision_post",
+        "parameters": [
+          {
+            "name": "battle_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Battle Id"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/DecisionRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/BattleResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/battles/{battle_id}/preview": {
+      "post": {
+        "tags": [
+          "battles"
+        ],
+        "summary": "Post Preview",
+        "operationId": "post_preview_api_battles__battle_id__preview_post",
+        "parameters": [
+          {
+            "name": "battle_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Battle Id"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "oneOf": [
+                  {
+                    "$ref": "#/components/schemas/Move"
+                  },
+                  {
+                    "$ref": "#/components/schemas/Attack"
+                  },
+                  {
+                    "$ref": "#/components/schemas/UseSkill"
+                  },
+                  {
+                    "$ref": "#/components/schemas/Defend"
+                  },
+                  {
+                    "$ref": "#/components/schemas/Shove"
+                  },
+                  {
+                    "$ref": "#/components/schemas/Trip"
+                  },
+                  {
+                    "$ref": "#/components/schemas/Interact"
+                  },
+                  {
+                    "$ref": "#/components/schemas/EndStance"
+                  },
+                  {
+                    "$ref": "#/components/schemas/EndTurn"
+                  }
+                ],
+                "discriminator": {
+                  "propertyName": "type",
+                  "mapping": {
+                    "move": "#/components/schemas/Move",
+                    "attack": "#/components/schemas/Attack",
+                    "use_skill": "#/components/schemas/UseSkill",
+                    "defend": "#/components/schemas/Defend",
+                    "shove": "#/components/schemas/Shove",
+                    "trip": "#/components/schemas/Trip",
+                    "interact": "#/components/schemas/Interact",
+                    "end_stance": "#/components/schemas/EndStance",
+                    "end_turn": "#/components/schemas/EndTurn"
+                  }
+                },
+                "title": "Action"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PreviewOut"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/battles/{battle_id}/orders": {
+      "put": {
+        "tags": [
+          "battles"
+        ],
+        "summary": "Put Orders",
+        "description": "設定我方隊友的戰術指令（取代目前的指令；空集合 ＝ 取消）。不推進戰鬥。",
+        "operationId": "put_orders_api_battles__battle_id__orders_put",
+        "parameters": [
+          {
+            "name": "battle_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Battle Id"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/OrderSet"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/BattleResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/battles/{battle_id}/log": {
+      "get": {
+        "tags": [
+          "battles"
+        ],
+        "summary": "Get Log",
+        "description": "與 ``trpg battle --log-json`` 同格式的完整紀錄（可用 ``trpg battle replay`` 重播）。",
+        "operationId": "get_log_api_battles__battle_id__log_get",
+        "parameters": [
+          {
+            "name": "battle_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Battle Id"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    }
+  },
+  "components": {
+    "schemas": {
+      "Action": {
+        "oneOf": [
+          {
+            "$ref": "#/components/schemas/Move"
+          },
+          {
+            "$ref": "#/components/schemas/Attack"
+          },
+          {
+            "$ref": "#/components/schemas/UseSkill"
+          },
+          {
+            "$ref": "#/components/schemas/Defend"
+          },
+          {
+            "$ref": "#/components/schemas/Shove"
+          },
+          {
+            "$ref": "#/components/schemas/Trip"
+          },
+          {
+            "$ref": "#/components/schemas/Interact"
+          },
+          {
+            "$ref": "#/components/schemas/EndStance"
+          },
+          {
+            "$ref": "#/components/schemas/EndTurn"
+          }
+        ],
+        "discriminator": {
+          "propertyName": "type",
+          "mapping": {
+            "attack": "#/components/schemas/Attack",
+            "defend": "#/components/schemas/Defend",
+            "end_stance": "#/components/schemas/EndStance",
+            "end_turn": "#/components/schemas/EndTurn",
+            "interact": "#/components/schemas/Interact",
+            "move": "#/components/schemas/Move",
+            "shove": "#/components/schemas/Shove",
+            "trip": "#/components/schemas/Trip",
+            "use_skill": "#/components/schemas/UseSkill"
+          }
+        }
+      },
+      "Attack": {
+        "properties": {
+          "unit_id": {
+            "type": "string",
+            "title": "Unit Id"
+          },
+          "type": {
+            "type": "string",
+            "const": "attack",
+            "title": "Type",
+            "default": "attack"
+          },
+          "target_id": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Target Id"
+          },
+          "target_object_id": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Target Object Id"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "unit_id"
+        ],
+        "title": "Attack",
+        "description": "以武器普攻單位 ``target_id`` 或物件 ``target_object_id``（恰好給一個）。\n\n攻擊物件一律命中（不擲命中骰、不暴擊），物件必須帶 ``breakable``。"
+      },
+      "BattleOutcome": {
+        "properties": {
+          "winner": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/Team"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "end_reason": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "End Reason"
+          },
+          "round": {
+            "type": "integer",
+            "title": "Round"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "winner",
+          "end_reason",
+          "round"
+        ],
+        "title": "BattleOutcome"
+      },
+      "BattleResponse": {
+        "properties": {
+          "battle_id": {
+            "type": "string",
+            "title": "Battle Id"
+          },
+          "hero_id": {
+            "type": "string",
+            "title": "Hero Id"
+          },
+          "awaiting": {
+            "type": "string",
+            "enum": [
+              "action",
+              "decision",
+              "ended",
+              "stalled"
+            ],
+            "title": "Awaiting"
+          },
+          "view": {
+            "$ref": "#/components/schemas/BattleView"
+          },
+          "legal_actions": {
+            "items": {
+              "$ref": "#/components/schemas/Action"
+            },
+            "type": "array",
+            "title": "Legal Actions"
+          },
+          "pending": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/Pending"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "orders": {
+            "$ref": "#/components/schemas/OrderSet"
+          },
+          "steps": {
+            "items": {
+              "$ref": "#/components/schemas/StepOut"
+            },
+            "type": "array",
+            "title": "Steps"
+          },
+          "outcome": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/BattleOutcome"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "battle_id",
+          "hero_id",
+          "awaiting",
+          "view",
+          "legal_actions",
+          "pending",
+          "orders",
+          "steps",
+          "outcome"
+        ],
+        "title": "BattleResponse",
+        "description": "建立、讀取、動作、決定、戰術指令共用的回應。"
+      },
+      "BattleView": {
+        "properties": {
+          "team": {
+            "$ref": "#/components/schemas/Team"
+          },
+          "map_id": {
+            "type": "string",
+            "title": "Map Id"
+          },
+          "map_name_zh": {
+            "type": "string",
+            "title": "Map Name Zh"
+          },
+          "width": {
+            "type": "integer",
+            "title": "Width"
+          },
+          "height": {
+            "type": "integer",
+            "title": "Height"
+          },
+          "tiles": {
+            "items": {
+              "$ref": "#/components/schemas/TileView"
+            },
+            "type": "array",
+            "title": "Tiles"
+          },
+          "objects": {
+            "items": {
+              "$ref": "#/components/schemas/ObjectView"
+            },
+            "type": "array",
+            "title": "Objects"
+          },
+          "units": {
+            "items": {
+              "$ref": "#/components/schemas/UnitView"
+            },
+            "type": "array",
+            "title": "Units"
+          },
+          "traps": {
+            "items": {
+              "$ref": "#/components/schemas/TrapView"
+            },
+            "type": "array",
+            "title": "Traps"
+          },
+          "turn_order": {
+            "items": {
+              "type": "string"
+            },
+            "type": "array",
+            "title": "Turn Order"
+          },
+          "active_unit": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Active Unit"
+          },
+          "round": {
+            "type": "integer",
+            "title": "Round"
+          },
+          "max_rounds": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Max Rounds"
+          },
+          "weather_id": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Weather Id"
+          },
+          "weather_name_zh": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Weather Name Zh"
+          },
+          "objective": {
+            "$ref": "#/components/schemas/Objective"
+          },
+          "ended": {
+            "type": "boolean",
+            "title": "Ended"
+          },
+          "winner": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/Team"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "end_reason": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "End Reason"
+          },
+          "pending": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/PendingView"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "team",
+          "map_id",
+          "map_name_zh",
+          "width",
+          "height",
+          "tiles",
+          "objects",
+          "units",
+          "traps",
+          "turn_order",
+          "active_unit",
+          "round",
+          "max_rounds",
+          "weather_id",
+          "weather_name_zh",
+          "objective",
+          "ended",
+          "winner",
+          "end_reason",
+          "pending"
+        ],
+        "title": "BattleView",
+        "description": "``team`` 視角的戰場。"
+      },
+      "BuildSummary": {
+        "properties": {
+          "id": {
+            "type": "string",
+            "title": "Id"
+          },
+          "name_zh": {
+            "type": "string",
+            "title": "Name Zh"
+          },
+          "theme_zh": {
+            "type": "string",
+            "title": "Theme Zh"
+          },
+          "skills": {
+            "items": {
+              "type": "string"
+            },
+            "type": "array",
+            "title": "Skills"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "id",
+          "name_zh",
+          "theme_zh",
+          "skills"
+        ],
+        "title": "BuildSummary"
+      },
+      "CoverOut": {
+        "properties": {
+          "penalty": {
+            "type": "integer",
+            "title": "Penalty"
+          },
+          "object_id": {
+            "type": "string",
+            "title": "Object Id"
+          },
+          "kind": {
+            "type": "string",
+            "title": "Kind"
+          },
+          "name_zh": {
+            "type": "string",
+            "title": "Name Zh"
+          },
+          "pos": {
+            "$ref": "#/components/schemas/XY"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "penalty",
+          "object_id",
+          "kind",
+          "name_zh",
+          "pos"
+        ],
+        "title": "CoverOut"
+      },
+      "CreateBattleRequest": {
+        "properties": {
+          "map_id": {
+            "type": "string",
+            "title": "Map Id"
+          },
+          "seed": {
+            "type": "integer",
+            "maximum": 1.8446744073709552e+19,
+            "minimum": 0.0,
+            "title": "Seed"
+          },
+          "hero_build": {
+            "type": "string",
+            "title": "Hero Build"
+          },
+          "ally_builds": {
+            "anyOf": [
+              {
+                "items": {
+                  "type": "string"
+                },
+                "type": "array"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Ally Builds"
+          },
+          "max_rounds": {
+            "type": "integer",
+            "maximum": 200.0,
+            "minimum": 1.0,
+            "title": "Max Rounds",
+            "default": 30
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "map_id",
+          "seed",
+          "hero_build"
+        ],
+        "title": "CreateBattleRequest",
+        "description": "建立戰鬥。``ally_builds`` 省略時與 ``trpg battle --ally-build <hero_build>`` 相同，以標準\n隊友補齊到 3 人；給了（可以是空串列）就只用 ``hero_build`` ＋ 這些 build。"
+      },
+      "DamageOut": {
+        "properties": {
+          "minimum": {
+            "type": "integer",
+            "title": "Minimum"
+          },
+          "maximum": {
+            "type": "integer",
+            "title": "Maximum"
+          },
+          "expected_milli": {
+            "type": "integer",
+            "title": "Expected Milli"
+          },
+          "expected_if_hit_milli": {
+            "type": "integer",
+            "title": "Expected If Hit Milli"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "minimum",
+          "maximum",
+          "expected_milli",
+          "expected_if_hit_milli"
+        ],
+        "title": "DamageOut"
+      },
+      "Decision": {
+        "properties": {
+          "type": {
+            "type": "string",
+            "const": "decision",
+            "title": "Type",
+            "default": "decision"
+          },
+          "unit_id": {
+            "type": "string",
+            "title": "Unit Id"
+          },
+          "accept": {
+            "type": "boolean",
+            "title": "Accept"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "unit_id",
+          "accept"
+        ],
+        "title": "Decision",
+        "description": "對 ``prompt`` 反應的回答：``unit_id`` 為被詢問的反應者，``accept`` 是否使用反應。"
+      },
+      "DecisionRequest": {
+        "properties": {
+          "accept": {
+            "type": "boolean",
+            "title": "Accept"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "accept"
+        ],
+        "title": "DecisionRequest"
+      },
+      "Defend": {
+        "properties": {
+          "unit_id": {
+            "type": "string",
+            "title": "Unit Id"
+          },
+          "type": {
+            "type": "string",
+            "const": "defend",
+            "title": "Type",
+            "default": "defend"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "unit_id"
+        ],
+        "title": "Defend",
+        "description": "防禦姿態：防禦值 +25%，到自己的下回合開始。"
+      },
+      "Direction": {
+        "type": "string",
+        "enum": [
+          "north",
+          "east",
+          "south",
+          "west"
+        ]
+      },
+      "EndStance": {
+        "properties": {
+          "unit_id": {
+            "type": "string",
+            "title": "Unit Id"
+          },
+          "type": {
+            "type": "string",
+            "const": "end_stance",
+            "title": "Type",
+            "default": "end_stance"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "unit_id"
+        ],
+        "title": "EndStance",
+        "description": "取消目前的姿態（Phase 2E-2）：只能在自己的回合，免費（不花 AP）。"
+      },
+      "EndTurn": {
+        "properties": {
+          "unit_id": {
+            "type": "string",
+            "title": "Unit Id"
+          },
+          "type": {
+            "type": "string",
+            "const": "end_turn",
+            "title": "Type",
+            "default": "end_turn"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "unit_id"
+        ],
+        "title": "EndTurn",
+        "description": "結束回合。"
+      },
+      "FocusTarget": {
+        "properties": {
+          "kind": {
+            "type": "string",
+            "const": "focus_target",
+            "title": "Kind",
+            "default": "focus_target"
+          },
+          "target": {
+            "type": "string",
+            "title": "Target"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "target"
+        ],
+        "title": "FocusTarget",
+        "description": "集火指定敵人。"
+      },
+      "HTTPValidationError": {
+        "properties": {
+          "detail": {
+            "items": {
+              "$ref": "#/components/schemas/ValidationError"
+            },
+            "type": "array",
+            "title": "Detail"
+          }
+        },
+        "type": "object",
+        "title": "HTTPValidationError"
+      },
+      "HealOut": {
+        "properties": {
+          "unit_id": {
+            "type": "string",
+            "title": "Unit Id"
+          },
+          "minimum": {
+            "type": "integer",
+            "title": "Minimum"
+          },
+          "maximum": {
+            "type": "integer",
+            "title": "Maximum"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "unit_id",
+          "minimum",
+          "maximum"
+        ],
+        "title": "HealOut"
+      },
+      "HoldPosition": {
+        "properties": {
+          "kind": {
+            "type": "string",
+            "const": "hold_position",
+            "title": "Kind",
+            "default": "hold_position"
+          },
+          "at": {
+            "$ref": "#/components/schemas/XY"
+          },
+          "radius": {
+            "type": "integer",
+            "maximum": 3.0,
+            "minimum": 0.0,
+            "title": "Radius",
+            "default": 1
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "at"
+        ],
+        "title": "HoldPosition",
+        "description": "守在指定格子附近。"
+      },
+      "Interact": {
+        "properties": {
+          "unit_id": {
+            "type": "string",
+            "title": "Unit Id"
+          },
+          "type": {
+            "type": "string",
+            "const": "interact",
+            "title": "Type",
+            "default": "interact"
+          },
+          "object_id": {
+            "type": "string",
+            "title": "Object Id"
+          },
+          "mode": {
+            "type": "string",
+            "const": "push",
+            "title": "Mode",
+            "default": "push"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "unit_id",
+          "object_id"
+        ],
+        "title": "Interact",
+        "description": "互動：推動相鄰的 ``pushable`` 物件 1 格（沿「行動者 → 物件」方向）。"
+      },
+      "MapSummary": {
+        "properties": {
+          "id": {
+            "type": "string",
+            "title": "Id"
+          },
+          "name_zh": {
+            "type": "string",
+            "title": "Name Zh"
+          },
+          "archetype": {
+            "type": "string",
+            "title": "Archetype"
+          },
+          "width": {
+            "type": "integer",
+            "title": "Width"
+          },
+          "height": {
+            "type": "integer",
+            "title": "Height"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "id",
+          "name_zh",
+          "archetype",
+          "width",
+          "height"
+        ],
+        "title": "MapSummary"
+      },
+      "Move": {
+        "properties": {
+          "unit_id": {
+            "type": "string",
+            "title": "Unit Id"
+          },
+          "type": {
+            "type": "string",
+            "const": "move",
+            "title": "Type",
+            "default": "move"
+          },
+          "path": {
+            "items": {
+              "$ref": "#/components/schemas/Pos"
+            },
+            "type": "array",
+            "minItems": 1,
+            "title": "Path"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "unit_id",
+          "path"
+        ],
+        "title": "Move",
+        "description": "沿 ``path`` 移動（不花 AP）。``path[0]`` 必須是目前位置，之後每一步都相鄰。\n\n倒地的單位移動前會先站起（消耗一半移動點數）；倒地時 ``path`` 可以只有起點，表示只站起來。\n途中滑倒（冰面）、倒下或撤離時停止。"
+      },
+      "ObjectView": {
+        "properties": {
+          "id": {
+            "type": "string",
+            "title": "Id"
+          },
+          "kind": {
+            "type": "string",
+            "title": "Kind"
+          },
+          "pos": {
+            "$ref": "#/components/schemas/Pos"
+          },
+          "hp": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Hp"
+          },
+          "max_hp": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Max Hp"
+          },
+          "burning": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Burning"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "id",
+          "kind",
+          "pos",
+          "hp",
+          "max_hp",
+          "burning"
+        ],
+        "title": "ObjectView"
+      },
+      "Objective": {
+        "properties": {
+          "kind": {
+            "type": "string",
+            "enum": [
+              "eliminate",
+              "escape",
+              "defend"
+            ],
+            "title": "Kind",
+            "default": "eliminate"
+          },
+          "rounds": {
+            "anyOf": [
+              {
+                "type": "integer",
+                "minimum": 1.0
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Rounds"
+          },
+          "tiles": {
+            "items": {
+              "prefixItems": [
+                {
+                  "type": "integer"
+                },
+                {
+                  "type": "integer"
+                }
+              ],
+              "type": "array",
+              "maxItems": 2,
+              "minItems": 2
+            },
+            "type": "array",
+            "title": "Tiles",
+            "default": []
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "title": "Objective",
+        "description": "勝利條件（``docs/專案計畫.md`` 5.8）。\n\n- ``eliminate``：擊倒所有敵人。\n- ``escape``：我方存活單位在 ``rounds`` 輪內全部抵達 ``tiles``（出口格）即勝；抵達者離開戰場。\n  第 ``rounds`` 輪結束時仍未全部撤離即敗。\n- ``defend``：守住 ``tiles``（守點格）``rounds`` 輪；某輪結束時有敵方單位站在守點格上即敗。\n\n任何模式下，我方全滅即敗；敵方全滅即勝。"
+      },
+      "OrderSet": {
+        "properties": {
+          "team_orders": {
+            "items": {
+              "$ref": "#/components/schemas/TacticalOrder"
+            },
+            "type": "array",
+            "title": "Team Orders",
+            "default": []
+          },
+          "unit_orders": {
+            "additionalProperties": {
+              "items": {
+                "$ref": "#/components/schemas/TacticalOrder"
+              },
+              "type": "array"
+            },
+            "type": "object",
+            "title": "Unit Orders"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "title": "OrderSet",
+        "description": "一個陣營目前的指令。單位有自己的指令時，**完全取代** 陣營指令。每種 ``kind`` 最多一個。"
+      },
+      "OutcomeOut": {
+        "properties": {
+          "kind": {
+            "type": "string",
+            "title": "Kind"
+          },
+          "unit_id": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Unit Id"
+          },
+          "object_id": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Object Id"
+          },
+          "pos": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/XY"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "detail": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Detail"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "kind",
+          "unit_id",
+          "object_id",
+          "pos",
+          "detail"
+        ],
+        "title": "OutcomeOut"
+      },
+      "Pending": {
+        "properties": {
+          "kind": {
+            "type": "string",
+            "const": "reaction",
+            "title": "Kind"
+          },
+          "unit_id": {
+            "type": "string",
+            "title": "Unit Id"
+          },
+          "reaction": {
+            "type": "string",
+            "title": "Reaction",
+            "default": ""
+          },
+          "trigger_unit_id": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Trigger Unit Id"
+          },
+          "skill_id": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Skill Id"
+          },
+          "trigger_event_seq": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Trigger Event Seq"
+          },
+          "stamina_cost": {
+            "type": "integer",
+            "title": "Stamina Cost",
+            "default": 0
+          },
+          "mana_cost": {
+            "type": "integer",
+            "title": "Mana Cost",
+            "default": 0
+          },
+          "hp_cost_permille": {
+            "type": "integer",
+            "title": "Hp Cost Permille",
+            "default": 0
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "kind",
+          "unit_id"
+        ],
+        "title": "Pending",
+        "description": "結算暫停、等待玩家決定（``prompt`` 反應）。\n\n以 ``resume(state, Decision(unit_id=..., accept=...))`` 繼續。"
+      },
+      "PendingView": {
+        "properties": {
+          "kind": {
+            "type": "string",
+            "title": "Kind"
+          },
+          "unit_id": {
+            "type": "string",
+            "title": "Unit Id"
+          },
+          "reaction": {
+            "type": "string",
+            "title": "Reaction"
+          },
+          "trigger_unit_id": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Trigger Unit Id"
+          },
+          "skill_id": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Skill Id"
+          },
+          "trigger_event_seq": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Trigger Event Seq"
+          },
+          "stamina_cost": {
+            "type": "integer",
+            "title": "Stamina Cost"
+          },
+          "mana_cost": {
+            "type": "integer",
+            "title": "Mana Cost"
+          },
+          "hp_cost_permille": {
+            "type": "integer",
+            "title": "Hp Cost Permille"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "kind",
+          "unit_id",
+          "reaction",
+          "trigger_unit_id",
+          "skill_id",
+          "trigger_event_seq",
+          "stamina_cost",
+          "mana_cost",
+          "hp_cost_permille"
+        ],
+        "title": "PendingView",
+        "description": "目前的反應詢問（只有公開欄位；內部的重播資料不外流）。"
+      },
+      "Pos": {
+        "properties": {
+          "x": {
+            "type": "integer",
+            "minimum": 0.0,
+            "title": "X"
+          },
+          "y": {
+            "type": "integer",
+            "minimum": 0.0,
+            "title": "Y"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "x",
+          "y"
+        ],
+        "title": "Pos",
+        "description": "格子座標（不可變、可雜湊）。\n\n座標系：``x`` 向右遞增、``y`` 向下遞增（與文字網格與螢幕座標一致），原點在左上角。"
+      },
+      "PreviewOut": {
+        "properties": {
+          "action": {
+            "$ref": "#/components/schemas/Action"
+          },
+          "hit_permille": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Hit Permille"
+          },
+          "crit_permille": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Crit Permille"
+          },
+          "damage": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/DamageOut"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "affected_tiles": {
+            "items": {
+              "$ref": "#/components/schemas/XY"
+            },
+            "type": "array",
+            "title": "Affected Tiles"
+          },
+          "affected_units": {
+            "items": {
+              "type": "string"
+            },
+            "type": "array",
+            "title": "Affected Units"
+          },
+          "certain": {
+            "items": {
+              "$ref": "#/components/schemas/OutcomeOut"
+            },
+            "type": "array",
+            "title": "Certain"
+          },
+          "possible": {
+            "items": {
+              "$ref": "#/components/schemas/OutcomeOut"
+            },
+            "type": "array",
+            "title": "Possible"
+          },
+          "cover": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/CoverOut"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "notes": {
+            "items": {
+              "type": "string"
+            },
+            "type": "array",
+            "title": "Notes"
+          },
+          "targets": {
+            "items": {
+              "$ref": "#/components/schemas/TargetOut"
+            },
+            "type": "array",
+            "title": "Targets"
+          },
+          "healed": {
+            "items": {
+              "$ref": "#/components/schemas/HealOut"
+            },
+            "type": "array",
+            "title": "Healed"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "action",
+          "hit_permille",
+          "crit_permille",
+          "damage",
+          "affected_tiles",
+          "affected_units",
+          "certain",
+          "possible",
+          "cover",
+          "notes",
+          "targets",
+          "healed"
+        ],
+        "title": "PreviewOut",
+        "description": ":class:`trpg.engine.preview.Preview` 的公開版本：不含模擬後的完整狀態與原始事件。"
+      },
+      "Protect": {
+        "properties": {
+          "kind": {
+            "type": "string",
+            "const": "protect",
+            "title": "Kind",
+            "default": "protect"
+          },
+          "ward": {
+            "type": "string",
+            "title": "Ward"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "ward"
+        ],
+        "title": "Protect",
+        "description": "保護指定友方。"
+      },
+      "RetreatTo": {
+        "properties": {
+          "kind": {
+            "type": "string",
+            "const": "retreat_to",
+            "title": "Kind",
+            "default": "retreat_to"
+          },
+          "at": {
+            "$ref": "#/components/schemas/XY"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "at"
+        ],
+        "title": "RetreatTo",
+        "description": "撤往指定格子。"
+      },
+      "Shove": {
+        "properties": {
+          "unit_id": {
+            "type": "string",
+            "title": "Unit Id"
+          },
+          "type": {
+            "type": "string",
+            "const": "shove",
+            "title": "Type",
+            "default": "shove"
+          },
+          "target_id": {
+            "type": "string",
+            "title": "Target Id"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "unit_id",
+          "target_id"
+        ],
+        "title": "Shove",
+        "description": "推擊（技巧動作）：相鄰敵人，力量對抗；成功時沿「行動者 → 目標」方向推 1 格。"
+      },
+      "SkillCard": {
+        "properties": {
+          "id": {
+            "type": "string",
+            "title": "Id"
+          },
+          "name_zh": {
+            "type": "string",
+            "title": "Name Zh"
+          },
+          "skeleton": {
+            "type": "string",
+            "title": "Skeleton"
+          },
+          "tier": {
+            "type": "integer",
+            "title": "Tier"
+          },
+          "rank": {
+            "type": "integer",
+            "title": "Rank"
+          },
+          "rarity": {
+            "type": "string",
+            "title": "Rarity"
+          },
+          "kind": {
+            "type": "string",
+            "title": "Kind"
+          },
+          "category": {
+            "type": "string",
+            "title": "Category"
+          },
+          "weapon_req": {
+            "type": "string",
+            "title": "Weapon Req"
+          },
+          "scaling": {
+            "type": "string",
+            "title": "Scaling"
+          },
+          "ap_cost": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Ap Cost"
+          },
+          "cost": {
+            "items": {
+              "type": "string"
+            },
+            "type": "array",
+            "title": "Cost"
+          },
+          "shape": {
+            "type": "string",
+            "title": "Shape"
+          },
+          "condition": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Condition"
+          },
+          "effects": {
+            "items": {
+              "type": "string"
+            },
+            "type": "array",
+            "title": "Effects"
+          },
+          "mastery": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Mastery"
+          },
+          "tags": {
+            "items": {
+              "type": "string"
+            },
+            "type": "array",
+            "title": "Tags"
+          },
+          "concept": {
+            "type": "string",
+            "title": "Concept"
+          },
+          "cast_flavor": {
+            "type": "string",
+            "title": "Cast Flavor"
+          },
+          "rarity_id": {
+            "type": "string",
+            "title": "Rarity Id"
+          },
+          "kind_id": {
+            "type": "string",
+            "title": "Kind Id"
+          },
+          "category_id": {
+            "type": "string",
+            "title": "Category Id"
+          },
+          "weapon_req_id": {
+            "type": "string",
+            "title": "Weapon Req Id"
+          },
+          "scaling_attrs": {
+            "items": {
+              "type": "string"
+            },
+            "type": "array",
+            "title": "Scaling Attrs"
+          },
+          "mastery_id": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Mastery Id"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "id",
+          "name_zh",
+          "skeleton",
+          "tier",
+          "rank",
+          "rarity",
+          "kind",
+          "category",
+          "weapon_req",
+          "scaling",
+          "ap_cost",
+          "cost",
+          "shape",
+          "condition",
+          "effects",
+          "mastery",
+          "tags",
+          "concept",
+          "cast_flavor",
+          "rarity_id",
+          "kind_id",
+          "category_id",
+          "weapon_req_id",
+          "scaling_attrs",
+          "mastery_id"
+        ],
+        "title": "SkillCard",
+        "description": "一張技能卡片的顯示內容（繁體中文文字，給網頁技能卡片用）。\n\n``*_id`` 與 ``scaling_attrs`` 是對應的英文代碼（Phase 3-2；給前端上色、排序與篩選用）。"
+      },
+      "StatusChanceOut": {
+        "properties": {
+          "status_id": {
+            "type": "string",
+            "title": "Status Id"
+          },
+          "original_id": {
+            "type": "string",
+            "title": "Original Id"
+          },
+          "apply_permille": {
+            "type": "integer",
+            "title": "Apply Permille"
+          },
+          "diminished": {
+            "type": "boolean",
+            "title": "Diminished"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "status_id",
+          "original_id",
+          "apply_permille",
+          "diminished"
+        ],
+        "title": "StatusChanceOut"
+      },
+      "StatusView": {
+        "properties": {
+          "status_id": {
+            "type": "string",
+            "title": "Status Id"
+          },
+          "remaining": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Remaining"
+          },
+          "source_id": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Source Id"
+          },
+          "amount": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Amount"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "status_id",
+          "remaining",
+          "source_id",
+          "amount"
+        ],
+        "title": "StatusView"
+      },
+      "Step": {
+        "oneOf": [
+          {
+            "$ref": "#/components/schemas/Move"
+          },
+          {
+            "$ref": "#/components/schemas/Attack"
+          },
+          {
+            "$ref": "#/components/schemas/UseSkill"
+          },
+          {
+            "$ref": "#/components/schemas/Defend"
+          },
+          {
+            "$ref": "#/components/schemas/Shove"
+          },
+          {
+            "$ref": "#/components/schemas/Trip"
+          },
+          {
+            "$ref": "#/components/schemas/Interact"
+          },
+          {
+            "$ref": "#/components/schemas/EndStance"
+          },
+          {
+            "$ref": "#/components/schemas/EndTurn"
+          },
+          {
+            "$ref": "#/components/schemas/Decision"
+          }
+        ],
+        "discriminator": {
+          "propertyName": "type",
+          "mapping": {
+            "attack": "#/components/schemas/Attack",
+            "decision": "#/components/schemas/Decision",
+            "defend": "#/components/schemas/Defend",
+            "end_stance": "#/components/schemas/EndStance",
+            "end_turn": "#/components/schemas/EndTurn",
+            "interact": "#/components/schemas/Interact",
+            "move": "#/components/schemas/Move",
+            "shove": "#/components/schemas/Shove",
+            "trip": "#/components/schemas/Trip",
+            "use_skill": "#/components/schemas/UseSkill"
+          }
+        }
+      },
+      "StepOut": {
+        "properties": {
+          "actor_id": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Actor Id"
+          },
+          "step": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/Step"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "events": {
+            "items": {
+              "additionalProperties": true,
+              "type": "object"
+            },
+            "type": "array",
+            "title": "Events"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "actor_id",
+          "step",
+          "events"
+        ],
+        "title": "StepOut",
+        "description": "自動推進中結算的一步。``actor_id`` 與 ``step`` 在開場時為 ``None``。\n\n``events`` 已依我方視角過濾（:func:`trpg.engine.event_filter.filter_events`），每個事件是\n事件的 JSON 再加上 ``text``（繁體中文描述；沒有描述的事件不含此鍵）。``seq`` 保留原值，\n過濾後可能跳號。"
+      },
+      "Surface": {
+        "type": "string",
+        "enum": [
+          "none",
+          "oil",
+          "water",
+          "fire",
+          "ice",
+          "poison",
+          "holy",
+          "darkness"
+        ],
+        "title": "Surface",
+        "description": "格子的表面狀態。"
+      },
+      "TacticalOrder": {
+        "oneOf": [
+          {
+            "$ref": "#/components/schemas/FocusTarget"
+          },
+          {
+            "$ref": "#/components/schemas/HoldPosition"
+          },
+          {
+            "$ref": "#/components/schemas/RetreatTo"
+          },
+          {
+            "$ref": "#/components/schemas/Protect"
+          },
+          {
+            "$ref": "#/components/schemas/UseEnvironment"
+          }
+        ],
+        "discriminator": {
+          "propertyName": "kind",
+          "mapping": {
+            "focus_target": "#/components/schemas/FocusTarget",
+            "hold_position": "#/components/schemas/HoldPosition",
+            "protect": "#/components/schemas/Protect",
+            "retreat_to": "#/components/schemas/RetreatTo",
+            "use_environment": "#/components/schemas/UseEnvironment"
+          }
+        }
+      },
+      "TargetOut": {
+        "properties": {
+          "unit_id": {
+            "type": "string",
+            "title": "Unit Id"
+          },
+          "hit_permille": {
+            "type": "integer",
+            "title": "Hit Permille"
+          },
+          "crit_permille": {
+            "type": "integer",
+            "title": "Crit Permille"
+          },
+          "damage": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/DamageOut"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "ally": {
+            "type": "boolean",
+            "title": "Ally"
+          },
+          "knock_permille": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Knock Permille"
+          },
+          "status_chances": {
+            "items": {
+              "$ref": "#/components/schemas/StatusChanceOut"
+            },
+            "type": "array",
+            "title": "Status Chances"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "unit_id",
+          "hit_permille",
+          "crit_permille",
+          "damage",
+          "ally",
+          "knock_permille",
+          "status_chances"
+        ],
+        "title": "TargetOut"
+      },
+      "Team": {
+        "type": "string",
+        "enum": [
+          "ally",
+          "enemy"
+        ],
+        "title": "Team",
+        "description": "戰鬥中的陣營。地圖起始區以此為鍵。"
+      },
+      "TileView": {
+        "properties": {
+          "x": {
+            "type": "integer",
+            "title": "X"
+          },
+          "y": {
+            "type": "integer",
+            "title": "Y"
+          },
+          "height": {
+            "type": "integer",
+            "title": "Height"
+          },
+          "terrain": {
+            "type": "string",
+            "title": "Terrain"
+          },
+          "surface": {
+            "$ref": "#/components/schemas/Surface"
+          },
+          "surface_remaining": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Surface Remaining"
+          },
+          "surface_team": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/Team"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "object_id": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Object Id"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "x",
+          "y",
+          "height",
+          "terrain",
+          "surface",
+          "surface_remaining",
+          "surface_team",
+          "object_id"
+        ],
+        "title": "TileView"
+      },
+      "TrapView": {
+        "properties": {
+          "owner_id": {
+            "type": "string",
+            "title": "Owner Id"
+          },
+          "team": {
+            "$ref": "#/components/schemas/Team"
+          },
+          "pos": {
+            "$ref": "#/components/schemas/Pos"
+          },
+          "skill_id": {
+            "type": "string",
+            "title": "Skill Id"
+          },
+          "remaining": {
+            "type": "integer",
+            "title": "Remaining"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "owner_id",
+          "team",
+          "pos",
+          "skill_id",
+          "remaining"
+        ],
+        "title": "TrapView"
+      },
+      "Trip": {
+        "properties": {
+          "unit_id": {
+            "type": "string",
+            "title": "Unit Id"
+          },
+          "type": {
+            "type": "string",
+            "const": "trip",
+            "title": "Type",
+            "default": "trip"
+          },
+          "target_id": {
+            "type": "string",
+            "title": "Target Id"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "unit_id",
+          "target_id"
+        ],
+        "title": "Trip",
+        "description": "絆倒（技巧動作）：相鄰敵人，敏捷對抗；成功時目標倒地。"
+      },
+      "UnitView": {
+        "properties": {
+          "id": {
+            "type": "string",
+            "title": "Id"
+          },
+          "template_id": {
+            "type": "string",
+            "title": "Template Id"
+          },
+          "name_zh": {
+            "type": "string",
+            "title": "Name Zh"
+          },
+          "team": {
+            "$ref": "#/components/schemas/Team"
+          },
+          "pos": {
+            "$ref": "#/components/schemas/Pos"
+          },
+          "hp": {
+            "type": "integer",
+            "title": "Hp"
+          },
+          "max_hp": {
+            "type": "integer",
+            "title": "Max Hp"
+          },
+          "shield": {
+            "type": "integer",
+            "title": "Shield"
+          },
+          "mana": {
+            "type": "integer",
+            "title": "Mana"
+          },
+          "max_mana": {
+            "type": "integer",
+            "title": "Max Mana"
+          },
+          "stamina": {
+            "type": "integer",
+            "title": "Stamina"
+          },
+          "max_stamina": {
+            "type": "integer",
+            "title": "Max Stamina"
+          },
+          "ap": {
+            "type": "integer",
+            "title": "Ap"
+          },
+          "move_points": {
+            "type": "integer",
+            "title": "Move Points"
+          },
+          "speed": {
+            "type": "integer",
+            "title": "Speed"
+          },
+          "initiative": {
+            "type": "integer",
+            "title": "Initiative"
+          },
+          "weapon_name_zh": {
+            "type": "string",
+            "title": "Weapon Name Zh"
+          },
+          "tags": {
+            "items": {
+              "type": "string"
+            },
+            "type": "array",
+            "title": "Tags"
+          },
+          "skills": {
+            "items": {
+              "type": "string"
+            },
+            "type": "array",
+            "title": "Skills"
+          },
+          "statuses": {
+            "items": {
+              "$ref": "#/components/schemas/StatusView"
+            },
+            "type": "array",
+            "title": "Statuses"
+          },
+          "stacks": {
+            "additionalProperties": {
+              "type": "integer"
+            },
+            "type": "object",
+            "title": "Stacks"
+          },
+          "cooldowns": {
+            "additionalProperties": {
+              "type": "integer"
+            },
+            "type": "object",
+            "title": "Cooldowns"
+          },
+          "reaction_available": {
+            "type": "boolean",
+            "title": "Reaction Available"
+          },
+          "downed": {
+            "type": "boolean",
+            "title": "Downed"
+          },
+          "escaped": {
+            "type": "boolean",
+            "title": "Escaped"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "id",
+          "template_id",
+          "name_zh",
+          "team",
+          "pos",
+          "hp",
+          "max_hp",
+          "shield",
+          "mana",
+          "max_mana",
+          "stamina",
+          "max_stamina",
+          "ap",
+          "move_points",
+          "speed",
+          "initiative",
+          "weapon_name_zh",
+          "tags",
+          "skills",
+          "statuses",
+          "stacks",
+          "cooldowns",
+          "reaction_available",
+          "downed",
+          "escaped"
+        ],
+        "title": "UnitView"
+      },
+      "UseEnvironment": {
+        "properties": {
+          "kind": {
+            "type": "string",
+            "const": "use_environment",
+            "title": "Kind",
+            "default": "use_environment"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "title": "UseEnvironment",
+        "description": "優先利用環境（爆炸、推落、表面）。"
+      },
+      "UseSkill": {
+        "properties": {
+          "unit_id": {
+            "type": "string",
+            "title": "Unit Id"
+          },
+          "type": {
+            "type": "string",
+            "const": "use_skill",
+            "title": "Type",
+            "default": "use_skill"
+          },
+          "skill_id": {
+            "type": "string",
+            "title": "Skill Id"
+          },
+          "target_id": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Target Id"
+          },
+          "target_object_id": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Target Object Id"
+          },
+          "target_pos": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/Pos"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "direction": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/Direction"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "unit_id",
+          "skill_id"
+        ],
+        "title": "UseSkill",
+        "description": "使用技能（Phase 2A）。依形狀的 ``targeting`` 只允許對應的欄位：\n\n- ``unit``（單體、連鎖）：``target_id`` 或 ``target_object_id`` 恰好一個；\n- ``tile``（十字、方陣、指定格）：``target_pos``；\n- ``direction``（直線、錐形）：``direction``；\n- ``self``／``none``（自身、環形、範圍光環）：都不給。\n\n是否合法（欄位是否對應形狀、射程、視線、代價）由引擎檢查，不合法時拋出\n:class:`~trpg.shared.errors.IllegalActionError`。"
+      },
+      "ValidationError": {
+        "properties": {
+          "loc": {
+            "items": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "integer"
+                }
+              ]
+            },
+            "type": "array",
+            "title": "Location"
+          },
+          "msg": {
+            "type": "string",
+            "title": "Message"
+          },
+          "type": {
+            "type": "string",
+            "title": "Error Type"
+          },
+          "input": {
+            "title": "Input"
+          },
+          "ctx": {
+            "type": "object",
+            "title": "Context"
+          }
+        },
+        "type": "object",
+        "required": [
+          "loc",
+          "msg",
+          "type"
+        ],
+        "title": "ValidationError"
+      },
+      "XY": {
+        "prefixItems": [
+          {
+            "type": "integer"
+          },
+          {
+            "type": "integer"
+          }
+        ],
+        "type": "array",
+        "maxItems": 2,
+        "minItems": 2
+      }
+    }
+  }
+}

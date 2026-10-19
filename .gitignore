@@ -52,3 +52,6 @@ Thumbs.db
 desktop.ini
 .claude/*
 !.claude/settings.json
+
+# 前端（client/dist 已由上面的 dist/ 涵蓋）
+node_modules/
