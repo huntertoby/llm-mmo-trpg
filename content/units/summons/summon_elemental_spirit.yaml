@@ -1,0 +1,15 @@
+# 召喚物（Phase 3D-4a，docs/design/06-技能.md 6.16 B；數值為初值，未經模擬）：元素之靈。
+# 會移動、以火焰法杖射程（5 格）攻擊；由效用 AI 的 archer 模式控制。
+id: summon_elemental_spirit
+name_zh: 元素之靈
+attributes: {str: 8, dex: 14, con: 10, int: 12, wis: 10, wil: 10}
+max_hp: 14
+speed: 5
+armor_bonus: 0
+weapon: fire_staff
+ai_profile: archer
+resist: {elemental: 250}
+element_mods: {}
+tags: [summoned, elemental]
+reactions: []
+summon: true

@@ -163,6 +163,17 @@ def _leap(_lib: ContentLibrary, _skill: SkillDef, _spec: EffectSpec) -> str:
     return "跳到目標格（無視中間的單位與低矮地形；不觸發藉機攻擊）"
 
 
+def _summon(lib: ContentLibrary, _skill: SkillDef, spec: EffectSpec) -> str:
+    try:
+        summon = lib.ruleset.summon_def(spec.unit or "")
+    except KeyError:
+        name = spec.unit or "召喚物"
+    else:
+        template, weapon = summon.template, summon.weapon
+        name = f"{template.name_zh}（HP {template.max_hp}，{weapon.name_zh}）"
+    return f"在目標空格召喚{name}，持續 {spec.duration} 輪（緊接在你之後行動，由 AI 控制）"
+
+
 def _charge_through(_lib: ContentLibrary, skill: SkillDef, spec: EffectSpec) -> str:
     after = f"擊倒（{scaling_label(skill)}對抗）" if spec.on_hit == "knock_prone" else "推到路徑旁"
     return (
@@ -322,6 +333,7 @@ _EFFECT_TEXT: dict[str, _EffectText] = {
     "dash": _dash,
     "leap": _leap,
     "charge_through": _charge_through,
+    "summon": _summon,
     "swap": _swap,
     "teleport_target": _teleport_target,
     "swap_any": _swap_any,

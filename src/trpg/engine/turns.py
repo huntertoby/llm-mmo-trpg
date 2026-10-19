@@ -3,7 +3,7 @@
 回合開始：AP 回復為 ``ap_per_turn + min(保留, ap_carry_max)``、移動點數回滿、
 移除「到自己下回合開始」的狀態、結算持續傷害（燃燒），再結算站立表面的回合開始效果
 （毒、聖光、火焰）。
-回合結束：倒數型狀態 −1（歸零移除）、記錄保留的 AP。
+回合結束：倒數型狀態 −1（歸零移除）、記錄保留的 AP、到期的召喚物消失（Phase 3D-4a）。
 全員行動完為一輪：``round_ended`` → 環境回合 → 勝利條件的每輪判定 → 輪數上限 →
 ``round_started``（反應次數重設）。
 """
@@ -41,6 +41,7 @@ from trpg.engine.skill_triggers import (
 )
 from trpg.engine.stacks import expire_stacks
 from trpg.engine.state import StatusInstance, UnitState
+from trpg.engine.summons import expire_summons
 from trpg.engine.traps import tick_traps
 from trpg.shared.types import Surface, UnitId
 
@@ -215,6 +216,7 @@ def end_turn(ctx: Ctx) -> None:
     unit.ap_carry = min(unit.ap, ctx.core.ap_carry_max)
     unit.ap = 0
     unit.move_points = 0
+    expire_summons(ctx, unit)  # 召喚物到期：在召喚者的回合結束時消失（Phase 3D-4a）
     ctx.emit(TurnEnded, unit_id=unit.id, ap_carried=unit.ap_carry)
 
 

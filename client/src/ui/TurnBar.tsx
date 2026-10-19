@@ -25,7 +25,7 @@ export function TurnBar({ view, names, acting }: Props) {
       <ol className="turn-order" aria-label="先攻順序">
         {view.turn_order.map((id) => {
           const u = byId.get(id);
-          const gone = u === undefined || u.downed || u.escaped;
+          const gone = u === undefined || u.downed || u.escaped || u.dismissed;
           const ratio = u === undefined || u.max_hp <= 0 ? 0 : Math.max(0, Math.min(1, u.hp / u.max_hp));
           const cls = [
             "turn-chip",

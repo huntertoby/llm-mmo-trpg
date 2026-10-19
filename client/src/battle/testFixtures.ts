@@ -47,6 +47,9 @@ export function unit(id: string, team: "ally" | "enemy", x: number, y: number, o
     source_max: 3,
     downed: false,
     escaped: false,
+    owner_id: null,
+    summon_expires_round: null,
+    dismissed: false,
     ...over,
   };
 }

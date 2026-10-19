@@ -171,6 +171,10 @@ class CoreRules(ContentModel):
     source_min_at_start: int = Field(default=1, ge=0)
     """我方單位每場戰鬥開場至少有這麼多源力（敵人一律 0）。"""
 
+    # 召喚（3D-4a）
+    summon_limit_per_owner: int = Field(default=2, ge=1, le=6)
+    """同一召喚者同時存在的召喚物上限（Phase 3D-4a）；超過時最舊的消失。"""
+
     @model_validator(mode="after")
     def _check_source(self) -> CoreRules:
         if self.source_min_at_start > self.source_max:

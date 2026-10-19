@@ -39,6 +39,7 @@ from trpg.content.skills import (
     SkillDef,
     on_hit_carrier,
 )
+from trpg.content.summons import summon_dpr
 from trpg.skillgen.mechanics import mechanic_tags, resolved_affects
 
 __all__ = ["BudgetError", "BudgetReport", "EffectBudget", "skill_budget"]
@@ -240,6 +241,23 @@ def _charge_through_points(
     return points, f"（{effect.dice} 平均 ＋ {effect.on_hit} {follow}）× 預期 {expected}‰ 個敵人"
 
 
+def _summon_points(
+    _skill: SkillDef, effect: EffectSpec, library: ContentLibrary
+) -> tuple[Fraction, str]:
+    """``summon`` 的點數（3D-4a）：召喚物每輪預估傷害 × 持續輪數 ×
+    ``summon_round_value_permille``。"""
+    if effect.unit is None or effect.duration is None:
+        raise BudgetError("summon 缺少 unit 或 duration，無法計算點數")
+    try:
+        summon = library.ruleset.summon_def(effect.unit)
+    except KeyError:
+        raise BudgetError(f"未知的召喚物範本：{effect.unit}") from None
+    dpr = summon_dpr(summon)
+    permille = library.budget.summon_round_value_permille
+    points = dpr * effect.duration * Fraction(permille, _PERMILLE)
+    return points, f"每輪 {_fmt(dpr)} × {effect.duration} 輪 × {permille}‰"
+
+
 def _consume_stack_points(
     skill: SkillDef, effect: EffectSpec, library: ContentLibrary
 ) -> tuple[Fraction, str]:
@@ -291,6 +309,7 @@ _SPECIAL_BASES: dict[
     "consume_status": _consume_status_points,
     "hurl_object": _hurl_object_points,
     "charge_through": _charge_through_points,
+    "summon": _summon_points,
     "restore_resource": _restore_resource_points,
 }
 """需要整個技能或特殊規則的 ``budget_basis`` → 點數算法。"""

@@ -1,0 +1,15 @@
+# 召喚物（Phase 3D-4a，docs/design/06-技能.md 6.16 B；數值為初值，未經模擬）：骷髏戰士。
+# 近戰（單手劍）；由效用 AI 的 brute 模式控制。
+id: summon_skeleton_warrior
+name_zh: 骷髏戰士
+attributes: {str: 12, dex: 10, con: 12, int: 6, wis: 8, wil: 8}
+max_hp: 20
+speed: 4
+armor_bonus: 2
+weapon: one_handed_sword
+ai_profile: brute
+resist: {}
+element_mods: {}
+tags: [summoned, undead]
+reactions: []
+summon: true

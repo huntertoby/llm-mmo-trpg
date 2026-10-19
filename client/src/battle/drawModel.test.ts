@@ -1,7 +1,8 @@
 import { describe, expect, it } from "vitest";
 import { buildDrawModel, shadeForHeight, tileAt, tileFill } from "./drawModel";
 import { surfaceName, TERRAIN, TEAM_COLORS } from "./glossary";
-import { smallView } from "./testFixtures";
+import { smallView, unit } from "./testFixtures";
+import { isAlive, onField } from "./units";
 
 describe("buildDrawModel", () => {
   const model = buildDrawModel(smallView(), "unit_0001");
@@ -41,6 +42,18 @@ describe("buildDrawModel", () => {
     const enemy = model.units.find((u) => u.id === "unit_0003")!;
     expect(enemy).toMatchObject({ marker: "a", team: "enemy", active: false });
     expect(model.units.find((u) => u.id === "unit_0004")?.marker).toBe("b");
+  });
+
+  it("draws summons like other units and removes dismissed summons (Phase 3D-4a)", () => {
+    const view = smallView();
+    const summoned = unit("unit_0006", "ally", 3, 0, { owner_id: "unit_0001", summon_expires_round: 3 });
+    const gone = unit("unit_0007", "ally", 3, 2, { owner_id: "unit_0001", dismissed: true });
+    const drawn = buildDrawModel({ ...view, units: [...view.units, summoned, gone] }, "unit_0001");
+    expect(drawn.units.map((u) => u.id)).toContain("unit_0006");
+    expect(drawn.units.map((u) => u.id)).not.toContain("unit_0007");
+    expect(isAlive(gone)).toBe(false);
+    expect(onField(gone)).toBe(false);
+    expect(isAlive(summoned)).toBe(true);
   });
 
   it("distinguishes flammable and burning objects and shows traps", () => {

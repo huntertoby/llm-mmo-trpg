@@ -21,7 +21,7 @@ from __future__ import annotations
 
 import re
 from collections import Counter
-from collections.abc import Callable, Iterable
+from collections.abc import Callable, Collection, Iterable
 from dataclasses import dataclass
 from typing import TYPE_CHECKING, Any, Literal
 
@@ -73,6 +73,7 @@ __all__ = [
     "SKELETON_IDS",
     "SKILL_ID_PATTERN",
     "SKILL_REACTION_EVENTS",
+    "SUMMON",
     "SWAP",
     "SWAP_ANY",
     "TELEPORT_TARGET",
@@ -392,7 +393,8 @@ class PrimitiveParam(ContentModel):
     """原語的一個參數。
 
     ``type``：``dice``（``NdM``）、``int``（``min``～``max``）、``status``／``surface``／
-    ``object``／``stack``（引用其他資料檔的 ID）、``element``。
+    ``object``／``stack``（引用其他資料檔的 ID）、``element``、``summon``（召喚物範本 ID，
+    ``content/units/summons/``，Phase 3D-4a）。
     """
 
     type: Literal[
@@ -410,6 +412,7 @@ class PrimitiveParam(ContentModel):
         "bool",
         "resource",
         "on_hit",
+        "summon",
     ]
     required: bool = False
     min: int | None = None
@@ -434,6 +437,7 @@ class PrimitiveDef(ContentModel):
       ``consume_stack`` 同技能傷害點數 × 期望消耗層數 × ``per_stack_permille``（2E-3）、
       ``hurl_object`` 骰子平均 × 「需要附近有物件」折扣（＋擊倒點數，3C-5a）、
       ``charge_through`` （骰子平均 ＋ on_hit 點數）× 預期被撞到的敵人數（3D-2c）、
+      ``summon`` 召喚物每輪預估傷害 × 持續輪數 × ``summon_round_value_permille``（3D-4a）、
       ``dice_average`` 骰子平均值、``damage`` 法術為骰子平均值而武器為倍率 × 基準武器傷害、
       ``status``／``surface`` 為該狀態或表面的 ``budget_points`` × 持續 ÷ 預設持續。
       ``None`` 表示無法計算預算（驗證器會拒絕）。
@@ -463,6 +467,7 @@ class PrimitiveDef(ContentModel):
             "hurl_object",
             "restore_resource",
             "charge_through",
+            "summon",
         ]
         | None
     ) = None
@@ -673,6 +678,10 @@ class EffectSpec(ContentModel):
     on_hit: Literal["knock_prone", "push_aside"] | None = None
     """``charge_through`` 專用（Phase 3D-2c）：被撞到的敵人除了傷害之外的效果——``knock_prone``
     擊倒（對抗判定）或 ``push_aside`` 推到路徑旁一格。"""
+    unit: str | None = Field(default=None, pattern=ID_PATTERN)
+    """``summon`` 專用（Phase 3D-4a）：召喚物範本 ID（``content/units/summons/``）。"""
+    count: int | None = Field(default=None, ge=1)
+    """``summon`` 專用（Phase 3D-4a）：一次召喚的數量（目前只能是 1）。"""
     condition: ConditionSpec | None = None
 
     def param_values(self) -> dict[str, Any]:
@@ -680,6 +689,7 @@ class EffectSpec(ContentModel):
         names = (
             "amount",
             "collision_dice",
+            "count",
             "dice",
             "distance",
             "duration",
@@ -699,6 +709,7 @@ class EffectSpec(ContentModel):
             "surface",
             "tag",
             "then",
+            "unit",
             "which",
         )
         return {n: getattr(self, n) for n in names if getattr(self, n) is not None}
@@ -851,6 +862,8 @@ PAIR_MOVES: tuple[str, ...] = (TELEPORT_TARGET, SWAP_ANY)
 PAIR_SHAPES: dict[str, str] = {TELEPORT_TARGET: "unit_then_tile", SWAP_ANY: "unit_pair"}
 CHARGE_THROUGH = "charge_through"
 """Phase 3D-2c 的直線衝撞原語 ID（6.22）：形狀 ``ground_tile`` 選終點格，沿直線衝過去。"""
+SUMMON = "summon"
+"""Phase 3D-4a 的召喚原語 ID（6.16 B）：在 ``ground_tile`` 選的空格召喚 ``unit`` 範本。"""
 SELF_MOVES: tuple[str, ...] = (DASH, LEAP, SWAP, CHARGE_THROUGH, "teleport")
 """改變施放者位置的原語；一個技能最多一個。"""
 _MAX_COOLDOWN_RESTORE = 2
@@ -1240,6 +1253,7 @@ class SkillDef(ContentModel):
         self._check_pierce()
         self._check_self_moves()
         self._check_pair_moves()
+        self._check_summon()
         if self.kind == "passive" and self.trigger is None:
             raise ValueError("被動技能（kind: passive）必須有 trigger")
         if self.kind != "passive" and self.trigger is not None:
@@ -1322,6 +1336,23 @@ class SkillDef(ContentModel):
                 raise ValueError(
                     "charge_through 以外的效果必須明寫 affects: self（只作用在施放者）"
                 )
+
+    def _check_summon(self) -> None:
+        """召喚（Phase 3D-4a）：只能用在主動技能（形狀 ``ground_tile`` 由原語表限制）；每個技能最多
+        一個召喚效果，``count`` 目前只能是 1；其餘效果必須明寫 ``affects: self``（選的格子是召喚
+        位置，必須是空格，不另外對它結算效果）。"""
+        summons = [e for e in self.effects if e.type == SUMMON]
+        if not summons:
+            return
+        if self.kind != "active":
+            raise ValueError(f"summon 只能用在主動技能，收到 kind: {self.kind}")
+        if len(summons) > 1:
+            raise ValueError("一個技能最多一個 summon 效果")
+        if (summons[0].count or 1) != 1:
+            raise ValueError(f"summon 的 count 目前只能是 1，收到 {summons[0].count}")
+        for effect in self.effects:
+            if effect.type != SUMMON and effect.affects != "self":
+                raise ValueError("summon 以外的效果必須明寫 affects: self（只作用在施放者）")
 
     def _check_pair_moves(self) -> None:
         """位移他人（Phase 3D-2b）：``teleport_target`` 與形狀 ``unit_then_tile``、``swap_any`` 與
@@ -1589,15 +1620,25 @@ def _value_problem(
                 f"{where}.{name}：{primitive.id} 的 {name} "
                 f"必須在 {spec.min}–{spec.max}，收到 {value}"
             )
-    elif spec.type == "status" and value not in refs.status_ids:
-        return f"{where}.{name}：未知的狀態 {value!r}"
-    elif spec.type == "object" and value not in refs.object_ids:
-        return f"{where}.{name}：未知的物件 {value!r}"
-    elif spec.type == "stack" and refs.stacks is not None and value not in refs.stacks:
-        return f"{where}.{name}：未知的層數 {value!r}"
     elif spec.type == "surface" and value is Surface.NONE:
         return f"{where}.{name}：不能產生 none 表面"
+    else:
+        return _reference_problem(where, name, spec.type, value, refs)
     return None
+
+
+def _reference_problem(where: str, name: str, kind: str, value: object, refs: _Refs) -> str | None:
+    """引用其他資料檔 ID 的參數（狀態、物件、層數、召喚物範本）是否存在。"""
+    known: dict[str, tuple[Collection[object] | None, str]] = {
+        "status": (refs.status_ids, "狀態"),
+        "object": (refs.object_ids, "物件"),
+        "stack": (refs.stacks, "層數"),
+        "summon": (refs.summon_ids, "召喚物範本"),
+    }
+    entry = known.get(kind)
+    if entry is None or entry[0] is None or value in entry[0]:
+        return None
+    return f"{where}.{name}：未知的{entry[1]} {value!r}"
 
 
 @dataclass(frozen=True, slots=True)
@@ -1609,6 +1650,7 @@ class _Refs:
     object_ids: set[str]
     conditions: dict[str, ConditionDef]
     stacks: dict[str, StackDef] | None = None
+    summon_ids: set[str] | None = None
 
 
 def _condition_problems(where: str, condition: ConditionSpec, refs: _Refs) -> list[str]:
@@ -1774,11 +1816,13 @@ def skill_problems(
     triggers: dict[str, SkillTriggerDef] | None = None,
     stacks: dict[str, StackDef] | None = None,
     dual_min_rarity: str | None = None,
+    summon_ids: set[str] | None = None,
 ) -> list[str]:
     """技能引用的形狀、原語、條件、狀態、物件是否存在、參數是否在範圍內（繁體中文，空串列為通過）。
 
     ``triggers``：觸發時機表（省略時不檢查被動的 ``trigger``）；``stacks``：層數表（省略時不檢查
-    層數原語引用的層數）；``dual_min_rarity``：雙屬性縮放的最低稀有度（省略時不檢查）。
+    層數原語引用的層數）；``dual_min_rarity``：雙屬性縮放的最低稀有度（省略時不檢查）；
+    ``summon_ids``：召喚物範本 ID（省略時不檢查 ``summon`` 的 ``unit``）。
     """
     problems: list[str] = []
     if (
@@ -1798,7 +1842,7 @@ def skill_problems(
     if skill.trap is not None and skill.trap.shape not in shapes:
         known = ", ".join(sorted(shapes))
         problems.append(f"trap.shape：未知的形狀 {skill.trap.shape!r}（可用：{known}）")
-    refs = _Refs(primitives, status_ids, object_ids, conditions, stacks)
+    refs = _Refs(primitives, status_ids, object_ids, conditions, stacks, summon_ids)
     if stacks is not None:
         problems += _cost_stack_problems(skill, stacks)
     self_status = skill.cost.self_status

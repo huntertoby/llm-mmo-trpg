@@ -4,7 +4,8 @@
   ``source_max``。跨戰鬥保留由 Phase 3-5 處理（戰鬥結果帶出剩餘源力，見
   :func:`trpg.engine.results.battle_result`）。
 - 戰鬥中取得：我方單位進入源泉格（:func:`take_source_well`）、我方單位擊倒精英
-  （:func:`credit_elite_kill`），各 +1、不超過上限。
+  （:func:`credit_elite_kill`），各 +1、不超過上限。召喚物（Phase 3D-4a）沒有源力：不取用源泉，
+  它擊倒的精英也沒有人得到源力。
 - 花費：施放有 ``cost.source`` 的技能（:func:`spend_source`）。
 
 每次改變都發出 ``source_changed``。
@@ -65,7 +66,12 @@ def take_source_well(ctx: Ctx, unit: UnitState) -> list[EventBase]:
     """我方單位抵達源泉格：+1 源力（不超過上限），源泉消失。敵方單位不取用（源泉保留）。"""
     state = ctx.state
     xy = unit.xy
-    if unit.team is not Team.ALLY or not unit.alive or xy not in state.source_wells:
+    if (
+        unit.team is not Team.ALLY
+        or not unit.alive
+        or unit.is_summon  # 召喚物沒有源力（Phase 3D-4a）：源泉保留
+        or xy not in state.source_wells
+    ):
         return []
     state.source_wells = tuple(w for w in state.source_wells if w != xy)
     return change_source(ctx, unit, 1, "well", pos=unit.pos)
@@ -82,6 +88,7 @@ def credit_elite_kill(ctx: Ctx, downed: UnitState, source_id: UnitId | None) -> 
         or killer.team is not Team.ALLY
         or killer.team is downed.team
         or not killer.alive
+        or killer.is_summon  # 召喚物沒有源力（Phase 3D-4a）：召喚物擊倒的精英沒有人得到源力
     ):
         return []
     return change_source(ctx, killer, 1, "kill_elite", other_id=downed.id)

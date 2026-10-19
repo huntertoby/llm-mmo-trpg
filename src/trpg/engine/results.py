@@ -95,7 +95,7 @@ def battle_result(state: BattleState) -> BattleResult:
             source=u.source,
         )
         for u in state.units_sorted()
-        if u.team is Team.ALLY
+        if u.team is Team.ALLY and not u.is_summon  # 召喚物不帶出戰鬥（Phase 3D-4a）
     )
     return BattleResult(
         ended=state.ended,

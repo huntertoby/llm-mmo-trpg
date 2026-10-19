@@ -1,0 +1,24 @@
+# 主動（Phase 3D-4a 示範，數值為初值，未經模擬）：在射程內的空格召喚骷髏戰士，持續 2 輪；
+# 骷髏緊接在施放者之後行動，由效用 AI 控制。3D-4b 再整理召喚師 build。
+id: skill_raise_skeleton
+schema_version: 1
+name_zh: 喚起骷髏
+tier: 1
+rank: 1
+rarity: rare
+kind: active
+skeleton: summon
+category: spell
+weapon_req: any
+ap_cost: 1
+scaling_attr: int
+shape: {type: ground_tile, range: 3}
+effects:
+  - {type: summon, unit: summon_skeleton_warrior, duration: 2}
+condition: null
+cost: {mana: 6, cooldown: 3}
+tags: [shadow, spell, summon]
+narrative:
+  concept: 從地底喚起一具聽命的骷髏戰士，替你擋在前線
+  cast_flavor: 你低聲念出亡者的名字，泥土翻動，一隻白骨手臂破土而出
+provenance: {origin: builtin, owner_id: null, created_by: null, parents: [], bound: true, tradeable: false}

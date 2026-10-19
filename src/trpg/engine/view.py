@@ -139,6 +139,12 @@ class UnitView(_ViewModel):
     """源力上限（``core.yaml`` 的 ``source_max``）。"""
     downed: bool
     escaped: bool
+    owner_id: UnitId | None
+    """召喚物的召喚者（Phase 3D-4a）；一般單位為 ``None``。"""
+    summon_expires_round: int | None
+    """召喚物在召喚者這一輪的回合結束時消失（Phase 3D-4a）；一般單位為 ``None``。"""
+    dismissed: bool
+    """召喚物已消失（Phase 3D-4a）：不在戰場上，保留在清單中讓紀錄能查名字。"""
 
 
 class TrapView(_ViewModel):
@@ -269,6 +275,9 @@ def _unit_view(state: BattleState, unit: UnitState, team: Team) -> UnitView:
         source_max=state.ruleset.core.source_max,
         downed=unit.downed,
         escaped=unit.escaped,
+        owner_id=unit.owner_id,
+        summon_expires_round=unit.summon_expires_round,
+        dismissed=unit.dismissed,
     )
 
 

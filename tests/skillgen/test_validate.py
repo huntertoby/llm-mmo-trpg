@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+from dataclasses import replace
 from typing import Any
 
 import pytest
@@ -276,6 +277,7 @@ def test_each_enabled_skeleton_has_a_valid_example() -> None:
         "trap": variant("skill_cinder_mine"),
         "modifier": variant("skill_searing_scar"),
         "consume_status": variant("skill_detonate_burning"),
+        "summon": variant("skill_raise_skeleton"),
     }
     assert set(examples) == {s.id for s in lib().skeletons.values() if s.enabled}
     for skeleton_id, example in examples.items():
@@ -283,10 +285,13 @@ def test_each_enabled_skeleton_has_a_valid_example() -> None:
         assert violations(example) == [], skeleton_id
 
 
-@pytest.mark.parametrize("skeleton_id", ["summon"])
-def test_disabled_skeletons_are_rejected(skeleton_id: str) -> None:
-    assert not lib().skeletons[skeleton_id].enabled
-    assert "skeleton.disabled" in rules_of(skill(skeleton=skeleton_id))
+def test_disabled_skeletons_are_rejected() -> None:
+    # 3D-4a 啟用了最後一個停用的骨架（summon）；以停用的複本驗證拒絕規則仍有效
+    base = lib()
+    disabled = base.skeletons["summon"].model_copy(update={"enabled": False})
+    library_ = replace(base, skeletons={**base.skeletons, "summon": disabled})
+    assert "skeleton.disabled" in rules_of(variant("skill_raise_skeleton"), library_)
+    assert "skeleton.disabled" not in rules_of(variant("skill_raise_skeleton"))
 
 
 def test_strike_structure() -> None:

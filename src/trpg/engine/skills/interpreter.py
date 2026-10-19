@@ -41,6 +41,7 @@ from trpg.content.skills import (
     RESET_COOLDOWN,
     RESTORE_RESOURCE,
     STEAL_BUFF,
+    SUMMON,
     SWAP,
     SWAP_ANY,
     TELEPORT_TARGET,
@@ -129,6 +130,7 @@ from trpg.engine.skills.targeting import (
 from trpg.engine.source import spend_source
 from trpg.engine.stacks import add_stacks, consume_stacks
 from trpg.engine.state import BattleState, LastCast, TrapState, UnitState
+from trpg.engine.summons import summon_unit
 from trpg.engine.traps import place_trap
 from trpg.shared.errors import IllegalActionError
 from trpg.shared.types import Element, Pos, UnitId
@@ -1242,6 +1244,19 @@ class _Cast:
             )
         ]
 
+    def summon(self, _effect: ResolvedEffect, spec: EffectSpec) -> list[EffectBase]:
+        """``summon``（Phase 3D-4a）：在選取的格子召喚 ``unit``，持續 ``duration`` 輪（直接結算，
+        見 :mod:`trpg.engine.summons`）。"""
+        action = self.action
+        if action is None or action.target_pos is None:
+            return []
+        if not self.holds(spec.condition, Subject(self.caster, self.caster.xy)):
+            return []
+        assert spec.unit is not None and spec.duration is not None
+        xy = (action.target_pos.x, action.target_pos.y)
+        summon_unit(self.ctx, self.caster, spec.unit, xy, spec.duration, self.skill.id)
+        return []
+
     def leap(self, spec: EffectSpec) -> list[EffectBase]:
         """``leap``（Phase 3D-2）：跳到指定的空格（選取時已檢查落點與路徑）；不觸發藉機攻擊。"""
         assert self.action is not None
@@ -1497,6 +1512,7 @@ _Cast._SIMPLE = {
     RESTORE_RESOURCE: _Cast.restore_resource,
     STEAL_BUFF: _Cast.steal_buff,
     HURL_OBJECT: _Cast.hurl_object,
+    SUMMON: _Cast.summon,
 }
 """只需要 ``(effect, spec)`` 的原語 → 展開方法。"""
 

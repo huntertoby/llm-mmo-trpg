@@ -78,6 +78,8 @@ __all__ = [
     "StatusRemoved",
     "StatusResisted",
     "StatusSaveRolled",
+    "SummonExpired",
+    "SummonExpiryReason",
     "SurfaceChanged",
     "SurfaceEntered",
     "TerrainChanged",
@@ -97,6 +99,7 @@ __all__ = [
     "UnitMoved",
     "UnitSpawned",
     "UnitStoodUp",
+    "UnitSummoned",
 ]
 
 type AdvantageState = Literal["none", "advantage", "disadvantage"]
@@ -1021,6 +1024,36 @@ class UnitEscaped(EventBase):
     pos: Pos
 
 
+class UnitSummoned(EventBase):
+    """召喚物出現（Phase 3D-4a）：``owner_id`` 以 ``skill_id`` 召喚 ``template_id``，排在先攻順序
+    ``order_index`` 的位置（緊接在召喚者之後），在召喚者第 ``expires_round`` 輪的回合結束時消失。"""
+
+    type: Literal["unit_summoned"] = "unit_summoned"
+    unit_id: UnitId
+    owner_id: UnitId
+    template_id: str
+    team: Team
+    pos: Pos
+    skill_id: str
+    expires_round: int
+    order_index: int
+
+
+type SummonExpiryReason = Literal["expired", "owner_gone", "limit"]
+"""召喚物消失的原因：``expired`` 到期、``owner_gone`` 召喚者倒下或撤離、``limit`` 超過同時存在的
+上限（最舊的消失）。"""
+
+
+class SummonExpired(EventBase):
+    """召喚物消失（Phase 3D-4a），離開戰場與先攻順序。"""
+
+    type: Literal["summon_expired"] = "summon_expired"
+    unit_id: UnitId
+    owner_id: UnitId
+    reason: SummonExpiryReason
+    pos: Pos
+
+
 type Event = Annotated[
     BattleStarted
     | InitiativeRolled
@@ -1077,6 +1110,8 @@ type Event = Annotated[
     | MapEventTriggered
     | UnitSpawned
     | UnitEscaped
+    | UnitSummoned
+    | SummonExpired
     | SkillUsed
     | SkillCooldownChanged
     | SkillTriggered

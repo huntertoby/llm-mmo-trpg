@@ -23,6 +23,7 @@ from trpg.content.skills import (
     HURL_OBJECT,
     LEAP,
     PIERCE_SHAPES,
+    SUMMON,
     SWAP,
     TOPPLE,
     Affects,
@@ -85,6 +86,7 @@ __all__ = [
     "skill_problem",
     "skill_profile",
     "stack_problem",
+    "summon_site_problem",
     "teleport_landing_problem",
 ]
 
@@ -558,11 +560,23 @@ def _tile_area(
         other = state.unit_at(*center)
         if other is not None and other.id != caster.id:
             raise IllegalActionError(f"無法傳送到已有單位的格子：{center}（{other.name_zh}）")
+    problem = _site_problem(state, skill, effects, center)
+    if problem is not None:
+        raise IllegalActionError(problem)
+    return center_tiles(state, skill.shape.type, center), center
+
+
+def _site_problem(
+    state: BattleState, skill: SkillDef, effects: tuple[ResolvedEffect, ...], center: XY
+) -> str | None:
+    """放置類技能的目標格限制：陷阱（2E-3）與召喚（3D-4a）都必須是空格。"""
     if skill.trap is not None:
         problem = _trap_site_problem(state, center)
         if problem is not None:
-            raise IllegalActionError(problem)
-    return center_tiles(state, skill.shape.type, center), center
+            return problem
+    if any(e.type == SUMMON for e in effects):
+        return summon_site_problem(state, center)
+    return None
 
 
 def hurl_object_problem(
@@ -767,6 +781,19 @@ def _trap_site_problem(state: BattleState, center: XY) -> str | None:
     return None
 
 
+def summon_site_problem(state: BattleState, xy: XY) -> str | None:
+    """召喚位置（Phase 3D-4a）的問題（``None`` 為可以）：在地圖內、可站立、不是致命地形、沒有
+    單位。射程與視線由技能形狀檢查。"""
+    if not state.in_bounds(*xy):
+        return f"召喚位置超出地圖：{xy}"
+    if not is_standable(state, xy) or is_deadly(state, xy):
+        return f"無法在不可站立的格子召喚：{xy}"
+    other = state.unit_at(*xy)
+    if other is not None:
+        return f"無法在已有單位的格子召喚：{xy}（{other.name_zh}）"
+    return None
+
+
 def checked_area(
     state: BattleState, caster: UnitState, skill: SkillDef, action: UseSkill
 ) -> SkillArea:
@@ -828,7 +855,10 @@ def _tile_candidates(state: BattleState, caster: UnitState, skill: SkillDef) -> 
         return charge_candidates(state, caster, reach)
     if any(e.type == LEAP for e in skill.effects):
         return leap_candidates(state, caster, reach)
-    return shapes.center_candidates(state, caster.xy, reach)
+    tiles = shapes.center_candidates(state, caster.xy, reach)
+    if any(e.type == SUMMON for e in skill.effects):  # 召喚（3D-4a）：只列出可以召喚的空格
+        return [xy for xy in tiles if summon_site_problem(state, xy) is None]
+    return tiles
 
 
 def _hurl_candidates(state: BattleState, caster: UnitState, skill: SkillDef) -> Iterator[UseSkill]:

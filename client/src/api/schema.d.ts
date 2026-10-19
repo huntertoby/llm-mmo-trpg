@@ -1298,6 +1298,12 @@ export interface components {
             downed: boolean;
             /** Escaped */
             escaped: boolean;
+            /** Owner Id */
+            owner_id: string | null;
+            /** Summon Expires Round */
+            summon_expires_round: number | null;
+            /** Dismissed */
+            dismissed: boolean;
         };
         /** UpcomingEventOut */
         UpcomingEventOut: {

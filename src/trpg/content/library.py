@@ -63,6 +63,7 @@ from trpg.content.skills import (
     weapon_problem,
 )
 from trpg.content.stacks import StackDef, StackTable
+from trpg.content.summons import SummonDef, SummonTable
 from trpg.shared.errors import ContentError
 from trpg.shared.types import Surface
 
@@ -107,7 +108,10 @@ class Ruleset(ContentModel):
     skill_triggers: SkillTriggerTable = SkillTriggerTable.model_construct(triggers=())
     stacks: StackTable = StackTable()
     skills: SkillTable = SkillTable()
+    summons: SummonTable = SummonTable()
+    """召喚物範本（Phase 3D-4a，``content/units/summons/``）：嵌入規則包，重播不依賴資料檔。"""
 
+    _summon_index: dict[str, SummonDef] = PrivateAttr(default_factory=dict)
     _skill_index: dict[str, SkillDef] = PrivateAttr(default_factory=dict)
     _shape_index: dict[str, ShapeDef] = PrivateAttr(default_factory=dict)
     _primitive_index: dict[str, PrimitiveDef] = PrivateAttr(default_factory=dict)
@@ -130,6 +134,7 @@ class Ruleset(ContentModel):
         self._condition_index = self.conditions.by_id()
         self._trigger_index = self.skill_triggers.by_id()
         self._stack_index = self.stacks.by_id()
+        self._summon_index = self.summons.by_id()
         self._modifier_ids = frozenset(s.id for s in self.skills.skills if s.is_modifier)
 
     @model_validator(mode="after")
@@ -229,6 +234,11 @@ class Ruleset(ContentModel):
         """技能定義；找不到時拋出 ``KeyError``。"""
         index: dict[str, SkillDef] = self.__pydantic_private__["_skill_index"]  # type: ignore[index]
         return index[skill_id]
+
+    def summon_def(self, summon_id: str) -> SummonDef:
+        """召喚物範本；找不到時拋出 ``KeyError``。"""
+        index: dict[str, SummonDef] = self.__pydantic_private__["_summon_index"]  # type: ignore[index]
+        return index[summon_id]
 
     def has_modifier(self, skill_ids: Iterable[str]) -> bool:
         """``skill_ids`` 之中是否有修正技能（``kind: modifier``，3C-2；引擎的快速路徑）。"""
@@ -335,6 +345,7 @@ def load_library(  # noqa: PLR0915
     exclusions = load("skill_exclusions.yaml", ExclusionTable)
     skeletons = _load_dir(root / "skeletons", SkeletonDef, files)
     skills = _load_dir(root / "skills", SkillDef, files)
+    summons = _load_summons(root, weapons.by_id(), files)
     try:
         ruleset = Ruleset(
             core=core,
@@ -351,6 +362,7 @@ def load_library(  # noqa: PLR0915
             skill_triggers=skill_triggers,
             stacks=stacks,
             skills=SkillTable(skills=tuple(skills[k] for k in sorted(skills))),
+            summons=summons,
         )
     except ValueError as exc:
         raise ContentError(root / "rules", str(exc)) from exc
@@ -365,8 +377,20 @@ def load_library(  # noqa: PLR0915
         )
     units = _load_dir(root / "units", UnitTemplate, files)
     weapon_map = weapons.by_id()
+    stray = sorted(t for t, u in units.items() if u.summon)
+    if stray:
+        raise ContentError(root / "units", f"召喚物範本要放在 units/summons/：{', '.join(stray)}")
     _check_units(
         root, units, weapons=weapon_map, skills=skills, ruleset=ruleset, ai_profiles=ai_profiles
+    )
+    _check_units(
+        root,
+        {s.id: s.template for s in summons.summons},
+        weapons=weapon_map,
+        skills=skills,
+        ruleset=ruleset,
+        ai_profiles=ai_profiles,
+        source=root / "units" / "summons",
     )
 
     _check_builds(
@@ -408,6 +432,29 @@ def load_library(  # noqa: PLR0915
     )
 
 
+def _load_summons(
+    root: Path, weapons: dict[str, WeaponDef], files: list[tuple[Path, ContentModel]]
+) -> SummonTable:
+    """``content/units/summons/``（Phase 3D-4a；資料夾可以不存在）：召喚物範本與它的武器。"""
+    if not (root / "units").is_dir():
+        raise ContentError(root / "units", "找不到資料夾")
+    directory = root / "units" / "summons"
+    if not directory.is_dir():
+        return SummonTable()
+    templates = _load_dir(directory, UnitTemplate, files)
+    defs: list[SummonDef] = []
+    for summon_id in sorted(templates):
+        template = templates[summon_id]
+        path = directory / f"{summon_id}.yaml"
+        if not template.summon:
+            raise ContentError(path, "召喚物範本必須寫 summon: true")
+        weapon = weapons.get(template.weapon)
+        if weapon is None:
+            raise ContentError(path, f"未知的武器：{template.weapon}")
+        defs.append(SummonDef(template=template, weapon=weapon))
+    return SummonTable(summons=tuple(defs))
+
+
 def _check_skills(root: Path, skills: dict[str, SkillDef], ruleset: Ruleset) -> None:
     """技能引用的形狀、原語、狀態、物件都存在，參數在範圍內。"""
     shape_map = ruleset.shapes.by_id()
@@ -417,6 +464,7 @@ def _check_skills(root: Path, skills: dict[str, SkillDef], ruleset: Ruleset) -> 
     stack_map = ruleset.stacks.by_id()
     status_ids = {s.id for s in ruleset.statuses.statuses}
     object_ids = {o.id for o in ruleset.objects.objects}
+    summon_ids = set(ruleset.summons.by_id())
     for skill_id, skill in skills.items():
         problems = skill_problems(
             skill,
@@ -428,6 +476,7 @@ def _check_skills(root: Path, skills: dict[str, SkillDef], ruleset: Ruleset) -> 
             triggers=trigger_map,
             stacks=stack_map,
             dual_min_rarity=ruleset.core.dual_scaling_min_rarity,
+            summon_ids=summon_ids,
         )
         if problems:
             raise ContentError(root / "skills" / f"{skill_id}.yaml", "；".join(problems))

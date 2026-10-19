@@ -51,11 +51,13 @@ from trpg.engine.events import (
     StatusApplied,
     StatusConverted,
     StatusRemoved,
+    SummonExpired,
     TriggerLimitReached,
     TurnStarted,
     UnitDowned,
     UnitEscaped,
     UnitSpawned,
+    UnitSummoned,
 )
 from trpg.engine.results import ResolveResult
 from trpg.engine.runner import DEFAULT_MAX_ACTIONS, BattleRun, run_battle
@@ -336,7 +338,7 @@ def metrics_from_events(  # noqa: C901, PLR0912, PLR0915 - 單一事件迴圈，
     """
     info = {u.unit_id: u for u in units}
     acc = {u.unit_id: _Acc() for u in units}
-    spawned = {e.unit_id for e in events if isinstance(e, UnitSpawned)}
+    spawned = {e.unit_id for e in events if isinstance(e, UnitSpawned | UnitSummoned)}
     present = {u.unit_id for u in units if u.unit_id not in spawned}
     statuses: dict[UnitId, dict[str, UnitId | None]] = {}
     last_hit: dict[UnitId, UnitId | None] = {}
@@ -381,9 +383,9 @@ def metrics_from_events(  # noqa: C901, PLR0912, PLR0915 - 單一事件迴圈，
         if isinstance(event, RoundStarted):
             for unit_id in present:
                 acc[unit_id].alive_rounds += 1
-        elif isinstance(event, UnitSpawned):
+        elif isinstance(event, UnitSpawned | UnitSummoned):
             present.add(event.unit_id)
-        elif isinstance(event, UnitEscaped):
+        elif isinstance(event, UnitEscaped | SummonExpired):
             present.discard(event.unit_id)
         elif isinstance(event, TurnStarted):
             acc[event.unit_id].turns += 1

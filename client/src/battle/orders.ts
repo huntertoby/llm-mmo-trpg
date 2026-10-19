@@ -33,17 +33,17 @@ export function orderButton(kind: OrderKind): OrderButton {
 }
 
 function livingUnitAt(view: BattleView, tile: Pos) {
-  return view.units.find((u) => !u.downed && !u.escaped && samePos(u.pos, tile));
+  return view.units.find((u) => !u.downed && !u.escaped && !u.dismissed && samePos(u.pos, tile));
 }
 
 /** 該種指令可以點選的格子（高亮用）：集火＝活著的敵人、保護＝活著的隊友（不含主角）。 */
 export function orderTargetTiles(kind: OrderKind, view: BattleView, heroId: string): Pos[] {
   if (kind === "focus_target") {
-    return view.units.filter((u) => u.team !== view.team && !u.downed && !u.escaped).map((u) => u.pos);
+    return view.units.filter((u) => u.team !== view.team && !u.downed && !u.escaped && !u.dismissed).map((u) => u.pos);
   }
   if (kind === "protect") {
     return view.units
-      .filter((u) => u.team === view.team && u.id !== heroId && !u.downed && !u.escaped)
+      .filter((u) => u.team === view.team && u.id !== heroId && !u.downed && !u.escaped && !u.dismissed)
       .map((u) => u.pos);
   }
   return [];

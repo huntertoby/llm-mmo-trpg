@@ -3583,6 +3583,32 @@
           "escaped": {
             "type": "boolean",
             "title": "Escaped"
+          },
+          "owner_id": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Owner Id"
+          },
+          "summon_expires_round": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Summon Expires Round"
+          },
+          "dismissed": {
+            "type": "boolean",
+            "title": "Dismissed"
           }
         },
         "additionalProperties": false,
@@ -3616,7 +3642,10 @@
           "source",
           "source_max",
           "downed",
-          "escaped"
+          "escaped",
+          "owner_id",
+          "summon_expires_round",
+          "dismissed"
         ],
         "title": "UnitView"
       },

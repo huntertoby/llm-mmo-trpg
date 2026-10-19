@@ -332,7 +332,7 @@ export function fallbackActions(legal: readonly Action[], hero: UnitView): Actio
 // ---- 點選 / 滑過 ----------------------------------------------------------
 
 function unitIdsAt(view: BattleView, tile: Pos): string[] {
-  const here = view.units.filter((u) => !u.escaped && samePos(u.pos, tile));
+  const here = view.units.filter((u) => !u.escaped && !u.dismissed && samePos(u.pos, tile));
   return [...here.filter((u) => !u.downed), ...here.filter((u) => u.downed)].map((u) => u.id);
 }
 

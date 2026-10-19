@@ -119,8 +119,9 @@ def _active_feasible(skeleton: SkeletonDef, rank: int, library: ContentLibrary) 
     return True
 
 
-_HAND_WRITTEN_ONLY = frozenset({"consume_status"})
-"""隨機組合器不產生的骨架（3C-3b：``consume_status`` 的 ``then`` 要手寫，組合器不支援巢狀效果）。"""
+_HAND_WRITTEN_ONLY = frozenset({"consume_status", "summon"})
+"""隨機組合器不產生的骨架（3C-3b：``consume_status`` 的 ``then`` 要手寫，組合器不支援巢狀效果；
+3D-4a：``summon`` 只給手寫技能，召喚物範本與持續輪數另外設計）。"""
 
 _EXPLICIT_ONLY_ACTIVE = frozenset({"builder_finisher", "trap"})
 """主動骨架中，只在明確指定或由 :func:`_wants_special` 決定時使用的（2E-3；不影響其他種子）。"""

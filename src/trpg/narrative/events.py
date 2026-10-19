@@ -65,6 +65,7 @@ from trpg.engine.events import (
     StatusRemoved,
     StatusResisted,
     StatusSaveRolled,
+    SummonExpired,
     SurfaceChanged,
     SurfaceEntered,
     TerrainChanged,
@@ -84,6 +85,7 @@ from trpg.engine.events import (
     UnitMoved,
     UnitSpawned,
     UnitStoodUp,
+    UnitSummoned,
 )
 from trpg.engine.skill_triggers import MODIFIER_ON_HIT
 from trpg.engine.state import BattleState
@@ -299,6 +301,8 @@ _FIZZLE_TEXT = {
     "dash_no_path": "  衝鋒找不到路：其餘效果不結算",
     "charge_no_path": "  衝撞被擋住，停不下來",
     "swap_blocked": "  無法交換位置（有一方站不上對方的格子）",
+    "summon_blocked": "  召喚位置被占據，召喚失敗",
+    "unknown_summon": "  召喚失敗（未知的召喚物）",
 }
 
 
@@ -783,6 +787,29 @@ def _unit_spawned(e: UnitSpawned, v: _View) -> str:
 @_handles(UnitEscaped)
 def _unit_escaped(e: UnitEscaped, v: _View) -> str:
     return f"  {v.name[e.unit_id]} 從 {xy_text(e.pos)} 撤離戰場"
+
+
+@_handles(UnitSummoned)
+def _unit_summoned(e: UnitSummoned, v: _View) -> str:
+    owner = v.name.get(e.owner_id, e.owner_id)
+    summon = v.name.get(e.unit_id, e.unit_id)
+    return (
+        f"  {owner} 召喚了 {summon}，出現在 {xy_text(e.pos)}"
+        f"（緊接在 {owner} 之後行動，第 {e.expires_round} 輪 {owner} 的回合結束時消失）"
+    )
+
+
+_SUMMON_EXPIRY_TEXT = {
+    "expired": "時間到了",
+    "owner_gone": "召喚者離場",
+    "limit": "超過同時存在的上限，最舊的召喚物",
+}
+
+
+@_handles(SummonExpired)
+def _summon_expired(e: SummonExpired, v: _View) -> str:
+    why = _SUMMON_EXPIRY_TEXT[e.reason]
+    return f"  {why}：{v.name.get(e.unit_id, e.unit_id)} 消失了"
 
 
 # ---------------------------------------------------------------------------

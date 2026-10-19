@@ -92,7 +92,7 @@ function errorText(e: unknown): string {
 
 function unitAt(view: BattleView, tile: Pos | null) {
   if (tile === null) return undefined;
-  const here = view.units.filter((u) => !u.escaped && samePos(u.pos, tile));
+  const here = view.units.filter((u) => !u.escaped && !u.dismissed && samePos(u.pos, tile));
   return here.find((u) => !u.downed) ?? here[0];
 }
 
@@ -211,7 +211,7 @@ export function BattleScreen({ initial, onExit }: Props) {
   const hoverAction = useMemo<Action | null>(() => {
     if (!canAct || hover === null || hero === null) return null;
     if (mode !== null) return actionAtTile(mode, view, hero, hover, hurlPick);
-    const target = view.units.find((u) => !u.downed && !u.escaped && samePos(u.pos, hover));
+    const target = view.units.find((u) => !u.downed && !u.escaped && !u.dismissed && samePos(u.pos, hover));
     return target === undefined ? null : (classified.attacks.get(target.id) ?? null);
   }, [canAct, hover, hero, mode, view, classified, hurlPick]);
   const selfAction = mode !== null && isSelfOnly(mode.targets) ? mode.targets.self : null;

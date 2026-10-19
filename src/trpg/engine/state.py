@@ -240,11 +240,23 @@ class UnitState:
     turn_cast_tags: tuple[str, ...] = ()
     """本回合已施放的主動技能的標籤（依施放順序、含重複；``cast_tag_this_turn`` 條件，Phase 3D-1）；
     自己回合開始時清除。"""
+    owner_id: UnitId | None = None
+    """召喚物的召喚者（Phase 3D-4a）；一般單位為 ``None``。"""
+    summon_expires_round: int | None = None
+    """召喚物在召喚者這一輪（含）的回合結束時消失（施放輪 ＋ ``duration``；Phase 3D-4a）。"""
+    dismissed: bool = False
+    """召喚物已消失（到期、召喚者離場或超過上限；Phase 3D-4a）。保留在 ``units`` 中（事件仍引用
+    它），但不在戰場上。"""
 
     @property
     def alive(self) -> bool:
-        """仍在戰場上（未倒下、未撤離）。"""
-        return not self.downed and not self.escaped
+        """仍在戰場上（未倒下、未撤離、召喚物未消失）。"""
+        return not self.downed and not self.escaped and not self.dismissed
+
+    @property
+    def is_summon(self) -> bool:
+        """召喚物（Phase 3D-4a）：不計入勝負條件、沒有源力、不能撤離。"""
+        return self.owner_id is not None
 
     @property
     def xy(self) -> tuple[int, int]:
@@ -309,6 +321,9 @@ class UnitState:
             extra_reactions=self.extra_reactions,
             moved_this_turn=self.moved_this_turn,
             turn_cast_tags=self.turn_cast_tags,
+            owner_id=self.owner_id,
+            summon_expires_round=self.summon_expires_round,
+            dismissed=self.dismissed,
         )
 
 

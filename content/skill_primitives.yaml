@@ -384,3 +384,17 @@ primitives:
     base_points: 4
     forbid_affects: [allies, all, self]
 
+  # --- Phase 3D-4a：召喚（docs/design/06-技能.md 6.16 B；點數為初值，未經模擬）---
+  - id: summon
+    name_zh: 召喚
+    description_zh: 在目標格（形狀 ground_tile；必須可站立、不是致命地形、沒有單位）召喚 unit 範本（content/units/summons/）的召喚物，屬於施放者陣營，由效用 AI 控制。召喚物緊接在召喚者之後行動（插入先攻順序，不擲先攻；同一召喚者的召喚物依召喚順序排在一起），持續 duration 輪：在召喚者第 duration 次回合結束時消失（施放當回合不算）；召喚者倒下或撤離時一併消失。同一召喚者同時存在的召喚物超過 summon_limit_per_owner（core.yaml）時，最舊的消失。召喚物沒有源力、不取用源泉、不計入勝負條件、不能撤離。必須是主動技能，其餘效果只能作用在施放者自己。
+    category: structural
+    harmful: false
+    min_rarity: rare
+    budget_basis: summon
+    acts_on: caster
+    allowed_shapes: [ground_tile]
+    params:
+      unit: {type: summon, required: true, description_zh: 召喚物範本 ID（content/units/summons/）}
+      duration: {type: int, required: true, min: 1, max: 4, description_zh: 召喚物存在的輪數}
+      count: {type: int, min: 1, max: 1, description_zh: 一次召喚的數量（目前只能是 1；省略為 1）}

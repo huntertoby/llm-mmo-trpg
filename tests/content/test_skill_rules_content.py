@@ -31,6 +31,7 @@ ENABLED = {
     "trap",
     "modifier",
     "consume_status",
+    "summon",
 }
 
 

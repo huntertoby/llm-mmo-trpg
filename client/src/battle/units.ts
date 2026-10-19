@@ -37,11 +37,11 @@ export function unitNames(view: BattleView): UnitNames {
   };
 }
 
-/** 仍在戰場上（未撤離）的單位；倒下的單位保留（淡化顯示）。 */
+/** 仍在戰場上（未撤離、召喚物未消失）的單位；倒下的單位保留（淡化顯示）。 */
 export function onField(u: UnitView): boolean {
-  return !u.escaped;
+  return !u.escaped && !u.dismissed;
 }
 
 export function isAlive(u: UnitView): boolean {
-  return !u.downed && !u.escaped;
+  return !u.downed && onField(u);
 }

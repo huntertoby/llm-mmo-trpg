@@ -6,6 +6,7 @@
 - ``defend``：守住守點 ``rounds`` 輪即勝（``defended``）；某輪結束（環境回合之後）時有敵方單位
   站在守點格上即敗（``point_lost``）。
 - 任何模式：我方全滅（且沒有人撤離）即敗；敵方全滅即勝（``eliminate``）。
+- 召喚物（Phase 3D-4a）不計入任何勝負條件：全滅判定不看它們，敵方召喚物站在守點上也不算失守。
 
 :func:`check_battle_end` 在每次結算後與回合交接時檢查；:func:`check_round_end` 在每輪的
 環境回合之後檢查。
@@ -34,7 +35,7 @@ def check_battle_end(ctx: Ctx) -> bool:
     state = ctx.state
     if state.ended:
         return True
-    living = state.living_units()
+    living = [u for u in state.living_units() if not u.is_summon]  # 召喚物不計入（Phase 3D-4a）
     allies = [u for u in living if u.team is Team.ALLY]
     enemies = [u for u in living if u.team is Team.ENEMY]
     escaped = any(u.escaped for u in state.units.values() if u.team is Team.ALLY)
@@ -65,7 +66,9 @@ def check_round_end(ctx: Ctx) -> bool:
     elif objective.kind == "defend":
         assert objective.rounds is not None
         tiles = set(objective.tiles)
-        if any(u.team is Team.ENEMY and u.xy in tiles for u in state.living_units()):
+        if any(
+            u.team is Team.ENEMY and not u.is_summon and u.xy in tiles for u in state.living_units()
+        ):
             end_battle(ctx, Team.ENEMY, "point_lost")
             return True
         if state.round >= objective.rounds:

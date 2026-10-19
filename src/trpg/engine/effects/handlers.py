@@ -413,7 +413,12 @@ def arrive(
         return events
     events.extend(take_source_well(ctx, unit))  # 我方進入源泉格（Phase 3C-4a；傳送也算）
     objective = state.objective
-    if objective.kind == "escape" and unit.team is Team.ALLY and dest in objective.tiles:
+    if (
+        objective.kind == "escape"
+        and unit.team is Team.ALLY
+        and not unit.is_summon  # 召喚物不能撤離（Phase 3D-4a）
+        and dest in objective.tiles
+    ):
         events.extend(escape_unit(ctx, unit))
         return events
     events.extend(enter_surface(ctx, unit))

@@ -382,6 +382,8 @@ class UnitTemplate(ContentModel):
       ``core.yaml`` 的 ``skill_slots``，``weapon_req`` 必須與武器的 ``weapon_class`` 相容
       （載入時檢查）。
     - ``max_mana``：法力上限（戰鬥開始時為滿，Phase 2A 不回復）。
+    - ``summon``：召喚物範本（Phase 3D-4a；放在 ``content/units/summons/``，只能由 ``summon``
+      原語產生，不能直接參戰）。
     - 元素修正 ＝ (1 − 分組抗性) × (1 + 個別弱點 − 個別抗性)，
       下限見 ``element_mod_floor_permille``。
     """
@@ -401,6 +403,7 @@ class UnitTemplate(ContentModel):
     ai_profile: str | None = Field(default=None, pattern=ID_PATTERN)
     skills: tuple[str, ...] = Field(default=(), max_length=32)
     max_mana: int = Field(default=0, ge=0)
+    summon: bool = False
 
     @field_validator("skills")
     @classmethod

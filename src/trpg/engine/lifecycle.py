@@ -1,17 +1,32 @@
-"""單位離開戰場（倒下、撤離）、建立單位與先攻順序維護（效果處理器與回合流程共用）。"""
+"""單位離開戰場（倒下、撤離、召喚物消失）、建立單位與先攻順序維護（效果處理器與回合流程共用）。"""
 
 from __future__ import annotations
 
 from trpg.content.battle import ReactionRule, ReactionWhen, UnitTemplate, WeaponDef
 from trpg.content.library import Ruleset
 from trpg.engine.context import Ctx
-from trpg.engine.events import EventBase, StatusRemoved, UnitDowned, UnitEscaped
+from trpg.engine.events import (
+    EventBase,
+    StatusRemoved,
+    SummonExpired,
+    SummonExpiryReason,
+    UnitDowned,
+    UnitEscaped,
+)
 from trpg.engine.rules.statuses import is_removed_with_source, stance_status_ids
 from trpg.engine.state import UnitState
 from trpg.engine.traps import remove_traps_of
 from trpg.shared.types import Pos, Team, UnitId
 
-__all__ = ["default_ai_profile", "down_unit", "escape_unit", "make_unit"]
+__all__ = [
+    "default_ai_profile",
+    "dismiss_summon",
+    "dismiss_summons_of",
+    "down_unit",
+    "escape_unit",
+    "make_unit",
+    "summons_of",
+]
 
 
 def _remove_from_order(ctx: Ctx, unit: UnitState) -> None:
@@ -65,6 +80,7 @@ def down_unit(ctx: Ctx, unit: UnitState) -> list[EventBase]:
         *_drop_stances(ctx, unit),
         *_release_forced_targets(ctx, unit),
         *remove_traps_of(ctx, unit.id),  # 放置者離場，陷阱消失（Phase 2E-3）
+        *dismiss_summons_of(ctx, unit, "owner_gone"),  # 召喚者倒下：召喚物一併消失（3D-4a）
     ]
     return events
 
@@ -92,7 +108,39 @@ def escape_unit(ctx: Ctx, unit: UnitState) -> list[EventBase]:
         *_drop_stances(ctx, unit),
         *_release_forced_targets(ctx, unit),
         *remove_traps_of(ctx, unit.id),
+        *dismiss_summons_of(ctx, unit, "owner_gone"),
     ]
+    return events
+
+
+def summons_of(ctx: Ctx, owner_id: UnitId) -> list[UnitState]:
+    """``owner_id`` 仍在戰場上的召喚物，依召喚順序（單位 ID 依建立順序分配）。"""
+    return [u for u in ctx.state.units_sorted() if u.owner_id == owner_id and u.alive]
+
+
+def dismiss_summon(ctx: Ctx, unit: UnitState, reason: SummonExpiryReason) -> list[EventBase]:
+    """召喚物消失（Phase 3D-4a）：離開戰場與先攻順序（同倒下：是目前行動者時 ``active_unit``
+    變成 ``None``），姿態、以它為來源的嘲諷與恐懼、它的陷阱一併移除。不算倒下（沒有
+    ``unit_downed``，不觸發倒下相關的反應與被動）。"""
+    if not unit.alive or unit.owner_id is None:
+        return []
+    unit.dismissed = True
+    _remove_from_order(ctx, unit)
+    return [
+        ctx.emit(
+            SummonExpired, unit_id=unit.id, owner_id=unit.owner_id, reason=reason, pos=unit.pos
+        ),
+        *_drop_stances(ctx, unit),
+        *_release_forced_targets(ctx, unit),
+        *remove_traps_of(ctx, unit.id),
+    ]
+
+
+def dismiss_summons_of(ctx: Ctx, owner: UnitState, reason: SummonExpiryReason) -> list[EventBase]:
+    """``owner`` 的全部召喚物消失（依召喚順序）。"""
+    events: list[EventBase] = []
+    for summon in summons_of(ctx, owner.id):
+        events += dismiss_summon(ctx, summon, reason)
     return events
 
 

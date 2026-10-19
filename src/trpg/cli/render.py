@@ -193,7 +193,7 @@ def _status_text(state: BattleState, unit: UnitState) -> str:
 
 def _source_text(state: BattleState, unit: UnitState) -> str:
     """我方單位的源力（Phase 3C-4a），例如「 源力 2/3」；敵方不顯示（一律 0）。"""
-    if unit.team is not Team.ALLY:
+    if unit.team is not Team.ALLY or unit.is_summon:  # 召喚物沒有源力（Phase 3D-4a）
         return ""
     return f" 源力 {unit.source}/{state.ruleset.core.source_max}"
 
@@ -203,8 +203,8 @@ def render_unit_table(state: BattleState) -> str:
     lines = []
     for unit in state.units_sorted():
         team = unit.team.display_name
-        if unit.downed or unit.escaped:
-            what = "倒下" if unit.downed else "已撤離"
+        if unit.downed or unit.escaped or unit.dismissed:
+            what = "倒下" if unit.downed else "已撤離" if unit.escaped else "已消失"
             lines.append(f"  {markers[unit.id]} {team} {unit.name_zh}：{what}")
             continue
         lines.append(
@@ -298,7 +298,13 @@ class BattleStats:
             unit = state.units[uid]  # type: ignore[index]
             label = f"{unit.team.display_name} {unit.name_zh}"
             pad = _LABEL_WIDTH - sum(2 if ord(ch) > _WIDE_CHAR_START else 1 for ch in label)
-            result = "倒下" if unit.downed else f"HP {unit.hp}/{unit.max_hp}"
+            result = (
+                "倒下"
+                if unit.downed
+                else "已消失"
+                if unit.dismissed
+                else f"HP {unit.hp}/{unit.max_hp}"
+            )
             lines.append(
                 f"  {markers[uid]:<4} {label}{' ' * max(pad, 1)}{s.dealt:>8} {s.taken:>8}"
                 f" {s.hits:>4}/{s.attacks:<4} {s.crits:>4} {s.kills:>4} {result}"
