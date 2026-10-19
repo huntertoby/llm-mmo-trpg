@@ -112,7 +112,6 @@ from trpg.engine.skills.targeting import (
     center_tiles,
     hp_cost,
     resolve_effects,
-    skill_ap_cost,
 )
 from trpg.engine.state import BattleState, UnitState
 from trpg.engine.traps import visible_traps
@@ -929,8 +928,8 @@ def _rewrite_gains(
     """改寫規則型原語的收益減去源力成本（Phase 3C-4a；``ai_profiles.yaml`` 的 ``rewrite``，
     × ``damage`` 權重）。最簡單的近似：
 
-    - ``grant_ap``：自己淨多出的 AP（獲得 − 這次花的 AP）× ``ap_points``；給友方的 AP 再 ×
-      ``ally_ap_permille``（所以優先給自己）；
+    - ``grant_ap``：獲得的 AP × ``ap_points``（≈ 多一次動作的價值；與其他動作一樣不扣這次動作
+      本身花的 AP）；給友方的 AP 再 × ``ally_ap_permille``（所以優先給自己）；
     - ``reset_cooldown``：被重置的冷卻回合數 × ``cooldown_points``；
     - ``cheat_death``：``undying_points`` × 目標已損失 HP 的比例（HP 越低越值得；已帶有則 0）；
     - 源力：每點扣 ``source_points``。
@@ -942,8 +941,6 @@ def _rewrite_gains(
     if not types & {GRANT_AP, RESET_COOLDOWN, CHEAT_DEATH} and not source:
         return Fraction(0)
     points = Fraction(-rules.source_points * source)
-    if GRANT_AP in types:
-        points -= rules.ap_points * skill_ap_cost(state, skill, actor)
     for e in p.min_events:
         if isinstance(e, ApGranted):
             ally = Fraction(rules.ally_ap_permille, 1000)

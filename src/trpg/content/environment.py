@@ -627,17 +627,17 @@ class RewriteAiRules(ContentModel):
     ``rewrite:``）。單位都是「等值傷害點數」，收益 ＝ 行為模式的 ``damage`` 權重 × 點數。
     評分是最簡單的近似（合法地使用即可，不要求用得好），初值未經模擬。
 
-    - ``ap_points``：自己淨多出的每點 AP（獲得的 AP − 這次動作花的 AP）。
+    - ``ap_points``：獲得的每點 AP（≈ 多一次動作的價值）。
     - ``ally_ap_permille``：給友方的 AP 相對給自己的價值（‰）。
     - ``cooldown_points``：被重置的每一回合冷卻。
     - ``undying_points``：不死的價值 × 目標已損失 HP 的比例（滿血 0，HP 越低越值得）。
     - ``source_points``：每花一點源力的機會成本（扣分）。
     """
 
-    ap_points: int = Field(default=4, ge=0)
+    ap_points: int = Field(default=6, ge=0)
     ally_ap_permille: int = Field(default=600, ge=0, le=1000)
-    cooldown_points: int = Field(default=2, ge=0)
-    undying_points: int = Field(default=20, ge=0)
+    cooldown_points: int = Field(default=4, ge=0)
+    undying_points: int = Field(default=40, ge=0)
     source_points: int = Field(default=3, ge=0)
 
 
