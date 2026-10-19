@@ -166,7 +166,7 @@ def choose_core(ctx: Ctx) -> list[str]:
     options = [
         p
         for p in ctx.skeleton.core.primitives
-        if rarity_rank(ctx.primitive(p).min_rarity) <= ctx.rank
+        if rarity_rank(ctx.primitive(p).min_rarity) <= ctx.rank and _composable(ctx, p)
     ]
     beneficial = ctx.skeleton.core.beneficial_only
     options = [p for p in options if p != "apply_status" or _has_status(ctx, beneficial)]
@@ -393,6 +393,8 @@ def _secondary_pool(ctx: Ctx) -> list[str]:
     for name in sorted(pool):
         primitive = primitives[name]
         if rarity_rank(primitive.min_rarity) > ctx.rank or not _accepts(primitive, ctx.shape):
+            continue
+        if not _composable(ctx, name):
             continue
         if rules.harmful_only and not primitive.harmful:
             continue
@@ -644,6 +646,11 @@ def _self_status_cost(ctx: Ctx) -> dict[str, Any] | None:
 # ---------------------------------------------------------------------------
 
 
+def _composable(ctx: Ctx, name: str) -> bool:
+    """組合器可以使用的原語：改寫規則型（Phase 3C-4a 的 ``grant_ap`` 等）只給手寫技能。"""
+    return ctx.primitive(name).category != "rule_rewrite"
+
+
 def _skeleton_allows(ctx: Ctx, name: str, *, core: bool) -> bool:
     """原語 ``name`` 是否在骨架資料允許的範圍：核心看 ``core.primitives``，
     附帶看 ``secondary.primitives``（``None`` 表示不限）。"""
@@ -661,6 +668,7 @@ def _usable_primitives(
         name
         for name in names
         if _skeleton_allows(ctx, name, core=core)
+        and _composable(ctx, name)
         and rarity_rank(ctx.primitive(name).min_rarity) <= ctx.rank
         and (name != "apply_status" or _has_status(ctx, beneficial))
     ]
