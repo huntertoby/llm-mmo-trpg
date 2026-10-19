@@ -222,6 +222,23 @@
 | 9 | `gamble` 在 `strike` 骨架標 `harmful: true`；組合器不產生 | 接受；3C-6 讓組合器產生賭博型 |
 | 10 | 既有問題：單體武器技在 `legal_actions` 多一筆 `target_id: null`、只扣代價 | **3C-6 修正**（或證明無害並記錄） |
 
+### 0.14 3D-7b 驗收與「待 PM 決定」的處理（2026-10-20）
+
+- 驗收：`check.py` 全過（pytest 2609、vitest 131）；`narrow_halls` 種子 6（`build_gambler,build_striker`）重播一致；實作者紀錄確認超載到 5 層反噬並清空、反噬後 HP 留 1。`LOG_FORMAT` 升為 `/28`。
+
+| # | 項目 | 決定 |
+|---|---|---|
+| 1 | 欄位名 `scaling`（`scale` 已被 `consume_status` 用） | 接受 |
+| 2 | `distance` 相鄰也算 1 步 | 接受 |
+| 3 | 爆骰、暴擊範圍、以血換力算賭博型（自動 `gamble` 標籤、變異加成）；距離與人數縮放不算 | 接受 |
+| 4 | `explode`／`scaling` 只能用在技能自己的傷害效果 | 接受 |
+| 5 | 超載標籤 `overcurrent`、加成以施放前層數計、反噬套自身抗性 | 接受 |
+| 6 | AI 不避開超載（低血量仍連續施放到門檻） | **3C-6**：低血量規則（3D-7a 的 `ai_profiles.yaml` `gamble`）也套用到會超載的技能 |
+| 7 | 預算初值；狂野之刃倍率 ×2.0 | 平衡階段 |
+| 8 | 賭徒 build 較少用 3D-7a 技能 | 3C-6 整理 build |
+| 9 | 遠程換下煙霧箭、坦克換下碎骨重擊 | 接受；3C-6 整理 build |
+| 10 | 新欄位沒有最低稀有度；組合器不產生；`enemies_adjacent_target` 沒有示範技能 | 3C-6（組合器、示範技能補 1 個） |
+
 ---
 
 ## 1. Phase 3D-1｜連段條件 ＋ 資源互動（sonnet）
