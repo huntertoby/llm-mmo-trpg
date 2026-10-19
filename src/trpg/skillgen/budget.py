@@ -28,8 +28,10 @@ from trpg.content.battle import Dice, StatusDef
 from trpg.content.library import ContentLibrary
 from trpg.content.skill_rules import BudgetRules, ModifierBudget
 from trpg.content.skills import (
+    DAMAGE_MULTIPLIER,
     EXTRA_REACTION,
     GRANT_AP,
+    SELF_DAMAGE_OF_HIT,
     ConditionDef,
     EffectSpec,
     ModifierChange,
@@ -320,6 +322,96 @@ def _zone_points(
     return total, " ".join(notes)
 
 
+def _damage_points(skill: SkillDef, library: ContentLibrary) -> Fraction:
+    """技能傷害效果（含形狀與對象倍率，不含賭注分支）的點數合計：``damage_multiplier`` 與
+    ``self_damage_of_hit`` 以它為基礎。"""
+    primitives = library.ruleset.primitives.by_id()
+    total = Fraction(0)
+    for other in skill.effects:
+        if other.type == "damage":
+            base, _ = _base_points(skill, other, primitives["damage"], library)
+            total += base * _shape_multiplier(skill, other, primitives["damage"], library)
+    return total
+
+
+def _self_harm(sub: EffectSpec, library: ContentLibrary) -> bool:
+    """分支效果是對施放者自己的有害效果（自傷、非增益的狀態）。"""
+    rules = library.ruleset
+    if resolved_affects(rules, sub) != "self":
+        return False
+    if sub.type == "damage":
+        return True
+    if sub.type == "apply_status":
+        return not rules.status_def(sub.status or "").beneficial
+    return False
+
+
+def _branch_points(
+    skill: SkillDef, branch: tuple[EffectSpec, ...], library: ContentLibrary
+) -> Fraction:
+    """賭注一個分支（或失手反噬）的點數：一般效果照一般算法；``damage_multiplier`` ＝ 傷害點數 ×
+    （倍率 − 1）；``self_damage_of_hit`` ＝ 傷害點數 × n‰；對自己的有害效果再折合
+    ``gamble_self_harm_permille`` 並計為負點數（代價）。"""
+    damage = _damage_points(skill, library)
+    harm = Fraction(library.budget.gamble_self_harm_permille, _PERMILLE)
+    total = Fraction(0)
+    for sub in branch:
+        if sub.type == DAMAGE_MULTIPLIER:
+            assert sub.damage_multiplier_permille is not None
+            total += damage * Fraction(sub.damage_multiplier_permille - _PERMILLE, _PERMILLE)
+        elif sub.type == SELF_DAMAGE_OF_HIT:
+            assert sub.self_damage_permille_of_hit is not None
+            total -= damage * Fraction(sub.self_damage_permille_of_hit, _PERMILLE) * harm
+        else:
+            points = _effect_budget(skill, 0, sub, library).points
+            total += -points * harm if _self_harm(sub, library) else points
+    return total
+
+
+def _gamble_points(
+    skill: SkillDef, effect: EffectSpec, library: ContentLibrary
+) -> tuple[Fraction, str]:
+    """``gamble`` 的點數（3D-7a）：期望值 ＝ 成功率 × win ＋ 失敗率 × lose。"""
+    if effect.chance_permille is None:
+        raise BudgetError("gamble 缺少 chance_permille，無法計算點數")
+    chance = effect.chance_permille
+    win = _branch_points(skill, effect.win or (), library)
+    lose = _branch_points(skill, effect.lose or (), library)
+    points = (chance * win + (_PERMILLE - chance) * lose) / _PERMILLE
+    lose_chance = (_PERMILLE - chance) / 10
+    return points, f"{chance / 10:g}% × win {_fmt(win)} ＋ {lose_chance:g}% × lose {_fmt(lose)}"
+
+
+def _on_miss_budget(skill: SkillDef, library: ContentLibrary, index: int) -> EffectBudget | None:
+    """失手反噬 ``cost.on_miss`` 的一列（3D-7a）：反噬點數 × 自傷折合 × 預估觸發率（負點數）。"""
+    if not skill.cost.on_miss:
+        return None
+    budget = library.budget
+    rate = Fraction(budget.gamble_on_miss_rate_permille, _PERMILLE)
+    harm = Fraction(budget.gamble_self_harm_permille, _PERMILLE)
+    cost = sum(
+        (
+            _effect_budget(skill, 0, sub.model_copy(update={"affects": "self"}), library).points
+            for sub in skill.cost.on_miss
+        ),
+        Fraction(0),
+    )
+    points = -cost * harm * rate
+    return EffectBudget(
+        index=index,
+        type="cost.on_miss",
+        note=(
+            f"失手反噬 {_fmt(cost)} × 自傷折合 {budget.gamble_self_harm_permille}‰"
+            f" × 觸發率 {budget.gamble_on_miss_rate_permille}‰"
+        ),
+        base=points,
+        shape=Fraction(1),
+        target=Fraction(1),
+        condition=Fraction(1),
+        points=points,
+    )
+
+
 def _consume_stack_points(
     skill: SkillDef, effect: EffectSpec, library: ContentLibrary
 ) -> tuple[Fraction, str]:
@@ -388,6 +480,7 @@ _SPECIAL_BASES: dict[
     "zone": _zone_points,
     "restore_resource": _restore_resource_points,
     "rule_change": _rule_change_points,
+    "gamble": _gamble_points,
 }
 """需要整個技能或特殊規則的 ``budget_basis`` → 點數算法。"""
 
@@ -398,7 +491,7 @@ def _shape_multiplier(
     """形狀倍率（只對作用在單位的效果）；陷阱技能取 ``trap.shape`` 的倍率（觸發時的影響範圍）。"""
     rules = library.ruleset
     affects = resolved_affects(rules, effect)
-    if primitive.budget_basis == "zone":  # 持續區域（3D-5）：格數已算進觸發次數
+    if primitive.budget_basis in ("zone", "gamble"):  # 持續區域（3D-5）、賭注（3D-7a）：已含倍率
         return Fraction(1)
     if not (affects in _SHAPED_AFFECTS and primitive.acts_on != "caster"):
         return Fraction(1)
@@ -718,6 +811,20 @@ def _activation_coefficient(skill: SkillDef, library: ContentLibrary) -> tuple[F
     return Fraction(coefficient, _PERMILLE), f"啟動 AP {ap} 係數（限時）"
 
 
+def _action_coefficient(skill: SkillDef, budget: BudgetRules) -> tuple[Fraction, str]:
+    """主動、反應、姿態技能的係數：AP 係數（反應與姿態用各自的係數），陷阱再 × 陷阱係數，
+    賭博型（3D-7a）再 × 變異加成。"""
+    coefficient = _ap_coefficient(skill, budget)
+    label = {"reaction": "反應係數", "stance": "姿態係數"}.get(skill.kind, "AP 係數")
+    if skill.trap is not None:
+        coefficient *= Fraction(budget.trap_coefficient_permille, _PERMILLE)
+        label = "AP 係數 × 陷阱係數"
+    if skill.is_gamble:  # 賭博型：期望值計，可用預算 × 變異加成
+        coefficient *= Fraction(budget.gamble_variance_bonus_permille, _PERMILLE)
+        label += f" × 變異加成 {budget.gamble_variance_bonus_permille}‰"
+    return coefficient, label
+
+
 def skill_budget(skill: SkillDef, library: ContentLibrary) -> BudgetReport:
     """計算 ``skill`` 的預算明細；缺少點數資料時拋出 :class:`BudgetError`。"""
     rules, budget = library.ruleset, library.budget
@@ -725,6 +832,9 @@ def skill_budget(skill: SkillDef, library: ContentLibrary) -> BudgetReport:
         effects = _modifier_budgets(skill, library)
     else:
         effects = tuple(_effect_budget(skill, i, e, library) for i, e in enumerate(skill.effects))
+        miss = _on_miss_budget(skill, library, len(effects))
+        if miss is not None:
+            effects += (miss,)
     raw = sum((e.points for e in effects), Fraction(0))
     condition_multiplier = Fraction(1)
     if skill.condition is not None:
@@ -756,11 +866,7 @@ def skill_budget(skill: SkillDef, library: ContentLibrary) -> BudgetReport:
         coefficient = Fraction(budget.modifier.coefficient_permille, _PERMILLE)
         label = "修正係數"
     else:
-        coefficient = _ap_coefficient(skill, budget)
-        label = {"reaction": "反應係數", "stance": "姿態係數"}.get(skill.kind, "AP 係數")
-        if skill.trap is not None:
-            coefficient *= Fraction(budget.trap_coefficient_permille, _PERMILLE)
-            label = "AP 係數 × 陷阱係數"
+        coefficient, label = _action_coefficient(skill, budget)
     return BudgetReport(
         skill_id=skill.id,
         tier=skill.tier,

@@ -97,6 +97,7 @@ def _reference_violations(skill: SkillDef, library: ContentLibrary) -> list[Viol
         dual_min_rarity=rules.core.dual_scaling_min_rarity,
         summon_ids=set(rules.summons.by_id()),
         rule_change_ids=set(rules.rule_changes.by_id()),
+        unsafe_statuses=rules.unsafe_backlash_statuses(),
     )
     if skill.skeleton not in library.skeletons:
         problems.append(f"skeleton：沒有骨架資料檔 {skill.skeleton!r}")
@@ -545,7 +546,7 @@ def _share_violations(
     core_points = sum(
         (
             eb.points
-            for eb, effect in zip(report.effects, skill.effects, strict=True)
+            for eb, effect in zip(report.effects, skill.effects, strict=False)  # 失手反噬列在最後
             if _is_core(library, skeleton, effect)
         ),
         Fraction(0),

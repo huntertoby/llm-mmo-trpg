@@ -429,3 +429,20 @@ primitives:
     allowed_shapes: [self]
     params:
       rule: {type: rule_change, required: true, description_zh: rule_changes.yaml 的規則改變 ID}
+
+  # --- Phase 3D-7a：賭博型（docs/design/06-技能.md 6.17 A；點數為初值，未經模擬）---
+  # win／lose 的效果類型只有 damage、heal、shield、apply_status，以及只能出現在分支裡的
+  # damage_multiplier（本次傷害 × damage_multiplier_permille‰）與 self_damage_of_hit（施放者受本次
+  # 傷害的 self_damage_permille_of_hit‰）；後兩者不是原語，沒有獨立的條目。
+  - id: gamble
+    name_zh: 賭注
+    description_zh: 命中判定之後（未命中則整個不結算；技能沒有對敵方的效果時直接擲）擲一次 d1000，不超過 chance_permille 結算 win 的效果，否則結算 lose 的效果（各 0–2 個，至少一邊有效果）。win／lose 可以對施放者自己（affects self，例如失敗的反噬）；damage_multiplier 讓本次施放的傷害效果乘上倍率，self_damage_of_hit 讓施放者受到本次造成傷害的 n‰。施放者受到的反噬傷害不會讓他的 HP 低於 1，反噬狀態不能是硬控、跳過回合或持續傷害。必須是主動技能的最後一個效果。預算以期望值計（成功率 × win ＋ 失敗率 × lose），對自己的有害效果打折（gamble_self_harm_permille）。
+    category: structural
+    harmful: true
+    min_rarity: rare
+    budget_basis: gamble
+    acts_on: caster
+    params:
+      chance_permille: {type: int, required: true, min: 50, max: 950, description_zh: 成功（結算 win）的機率（‰）}
+      win: {type: effects, description_zh: 成功時結算的效果（0–2 個）}
+      lose: {type: effects, description_zh: 失敗時結算的效果（0–2 個）}

@@ -132,3 +132,13 @@ rule_rewrite_min_cooldown_with_source: 2   # 花源力（傳說，cost.source）
 #   整場（battle）的可用預算再 × legendary_battle_budget_permille（使用者決定：整場的效果較弱）。
 #   規則改變（rule_change 原語）每一類的點數在 rule_changes.yaml 的 kinds。初值，以模擬調整。
 legendary_battle_budget_permille: 600
+
+# 賭博型技能（Phase 3D-7a，docs/design/06-技能.md 6.17）：預算以期望值計——gamble 效果的點數 ＝ 成功率 × win ＋ 失敗率 × lose
+#   （damage_multiplier ＝ 同技能傷害效果點數 ×（倍率 − 1）；self_damage_of_hit ＝ 同技能傷害點數 × n‰ 的自傷）。
+#   對施放者自己的有害效果（自傷、反噬狀態）折合 gamble_self_harm_permille‰ 後從總點數扣除；
+#   失手反噬（cost.on_miss）同樣折合，再 × gamble_on_miss_rate_permille‰（預估未命中的比例）。
+#   可用預算再 × gamble_variance_bonus_permille‰（平均強度略高 10% 作為冒險補償）。全部為初值，未經模擬。
+gamble_variance_bonus_permille: 1100
+gamble_self_harm_permille: 500
+gamble_on_miss_rate_permille: 300
+

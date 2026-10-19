@@ -1,0 +1,30 @@
+# 血祭重擊（Phase 3D-7a 示範，賭注 gamble；docs/design/06-技能.md 6.17 A，數值為初值，未經模擬）：
+# 命中之後擲 d1000——60%：這一擊的傷害 ×2；40%：你受到這一擊造成傷害的一半（反噬，不致命）。
+id: skill_blood_sacrifice
+schema_version: 1
+name_zh: 血祭重擊
+tier: 1
+rank: 1
+rarity: rare
+kind: active
+skeleton: strike
+category: weapon
+weapon_req: melee
+ap_cost: 2
+scaling_attr: str
+shape: {type: single, range: weapon}
+effects:
+  - {type: damage, multiplier_permille: 1200}
+  - type: gamble
+    chance_permille: 600
+    win:
+      - {type: damage_multiplier, damage_multiplier_permille: 2000}
+    lose:
+      - {type: self_damage_of_hit, self_damage_permille_of_hit: 500}
+condition: null
+cost: {mana: 4, cooldown: 2}
+tags: [physical, melee]
+narrative:
+  concept: 把自己的血獻給劍，賭這一擊的威力
+  cast_flavor: 你劃開自己的手掌，讓鮮血順著劍身淌下，劈出一道赤紅的斬擊
+provenance: {origin: builtin, owner_id: null, created_by: null, parents: [], bound: true, tradeable: false}

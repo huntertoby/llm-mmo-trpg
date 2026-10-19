@@ -216,6 +216,14 @@ class BudgetRules(ContentModel):
     """``restore_resource`` 縮短冷卻：每回合折合的預算點數（Phase 3D-1；初值）。"""
     pierce_bonus_permille: int = Field(default=150, ge=0, le=1000)
     """有 ``pierce`` 的技能，總點數再加這個比例（‰；Phase 3C-5b；初值，未經模擬）。"""
+    gamble_variance_bonus_permille: int = Field(default=1100, ge=1000, le=2000)
+    """帶賭博機制的技能（Phase 3D-7a，6.17）：預算以期望值計，可用預算再 × 這個「變異加成」（‰；
+    平均強度略高於同級穩定技能，作為冒險的補償；初值，未經模擬）。"""
+    gamble_self_harm_permille: int = Field(default=500, ge=0, le=1000)
+    """賭注分支與失手反噬中，對施放者自己的有害效果（自傷、反噬狀態）折合的預算：效果點數 × 這個值
+    （‰）後從總點數扣除（Phase 3D-7a；初值）。"""
+    gamble_on_miss_rate_permille: int = Field(default=300, ge=0, le=1000)
+    """失手反噬 ``cost.on_miss`` 的預估觸發率（‰；Phase 3D-7a；約等於未命中的比例，初值）。"""
     condition_permille: dict[Literal["none", "common", "harsh"], int]
     all_target_permille: int = Field(ge=1, le=1000)
     """``affects: all``（敵我不分）的對象係數。"""

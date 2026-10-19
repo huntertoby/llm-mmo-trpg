@@ -39,6 +39,7 @@ if TYPE_CHECKING:
 __all__ = [
     "ADD_STACK",
     "AFFECTS_VALUES",
+    "BACKLASH_TYPES",
     "BASIC_ACTIONS",
     "CASTER_CONDITIONS",
     "CHANGE_TARGETS",
@@ -49,8 +50,12 @@ __all__ = [
     "CONSUME_STATUS",
     "CONSUME_THEN_TYPES",
     "COPY_SKILL",
+    "DAMAGE_MULTIPLIER",
     "DASH",
     "EXTRA_REACTION",
+    "GAMBLE",
+    "GAMBLE_BRANCH_TYPES",
+    "GAMBLE_TAG",
     "GRANT_AP",
     "HURL_OBJECT",
     "INTERCEPT",
@@ -70,6 +75,7 @@ __all__ = [
     "RESET_COOLDOWN",
     "RULE_CHANGE",
     "SELF_CONDITIONS",
+    "SELF_DAMAGE_OF_HIT",
     "SELF_ONLY_CHANGES",
     "SKELETON_IDS",
     "SKILL_ID_PATTERN",
@@ -449,6 +455,7 @@ class PrimitiveDef(ContentModel):
       ``charge_through`` （骰子平均 ＋ on_hit 點數）× 預期被撞到的敵人數（3D-2c）、
       ``summon`` 召喚物每輪預估傷害 × 持續輪數 × ``summon_round_value_permille``（3D-4a）、
       ``zone`` 區域效果點數 × 預估觸發次數（格數 × 輪數 × 係數，3D-5）、
+      ``gamble`` 成功率 × win 的點數 ＋ 失敗率 × lose 的點數（期望值，3D-7a）、
       ``dice_average`` 骰子平均值、``damage`` 法術為骰子平均值而武器為倍率 × 基準武器傷害、
       ``status``／``surface`` 為該狀態或表面的 ``budget_points`` × 持續 ÷ 預設持續。
       ``None`` 表示無法計算預算（驗證器會拒絕）。
@@ -481,6 +488,7 @@ class PrimitiveDef(ContentModel):
             "summon",
             "zone",
             "rule_change",
+            "gamble",
         ]
         | None
     ) = None
@@ -706,6 +714,18 @@ class EffectSpec(ContentModel):
     """``zone`` 的 ``anchor: moving`` 專用（Phase 3D-5）：每次環境回合前進的格數。"""
     rule: str | None = Field(default=None, pattern=ID_PATTERN)
     """``rule_change`` 專用（Phase 3D-6）：``content/rule_changes.yaml`` 的規則改變 ID。"""
+    chance_permille: int | None = Field(default=None, ge=1, le=_PERMILLE - 1)
+    """``gamble`` 專用（Phase 3D-7a）：成功（結算 ``win``）的機率（‰）；d1000 不超過它就成功。"""
+    win: tuple[EffectSpec, ...] | None = None
+    lose: tuple[EffectSpec, ...] | None = None
+    """``gamble`` 專用：成功／失敗時結算的效果（各 0–2 個，至少一邊有效果；類型見
+    :data:`GAMBLE_BRANCH_TYPES`）；對象 ``self`` 即對施放者（失敗的反噬）。"""
+    damage_multiplier_permille: int | None = Field(
+        default=None, ge=100, le=_MAX_MULTIPLIER_PERMILLE
+    )
+    """``damage_multiplier`` 專用：本次施放的傷害效果 × 這個倍率（‰；2000 ＝ 加倍）。"""
+    self_damage_permille_of_hit: int | None = Field(default=None, ge=1, le=_PERMILLE)
+    """``self_damage_of_hit`` 專用：施放者受到「本次施放對敵人造成的傷害」的 n‰（反噬，不致命）。"""
     effects: tuple[EffectSpec, ...] | None = None
     """``zone`` 專用（Phase 3D-5）：區域結算的效果（1–2 個，只能用 :data:`ZONE_EFFECT_TYPES`，
     不可自帶 ``affects``／``condition``；對象由區域的 ``affects`` 決定）。"""
@@ -716,14 +736,17 @@ class EffectSpec(ContentModel):
         names = (
             "amount",
             "anchor",
+            "chance_permille",
             "collision_dice",
             "count",
+            "damage_multiplier_permille",
             "dice",
             "distance",
             "duration",
             "effects",
             "element",
             "knock_prone",
+            "lose",
             "multiplier_permille",
             "object",
             "on_hit",
@@ -733,6 +756,7 @@ class EffectSpec(ContentModel):
             "resource",
             "rule",
             "scale",
+            "self_damage_permille_of_hit",
             "speed",
             "splash",
             "stack",
@@ -743,6 +767,7 @@ class EffectSpec(ContentModel):
             "unit",
             "when",
             "which",
+            "win",
         )
         return {n: getattr(self, n) for n in names if getattr(self, n) is not None}
 
@@ -773,6 +798,9 @@ class SkillCost(ContentModel):
     """施放後施放者自己獲得的狀態（Phase 2H-1）；只有主動技能可以使用。"""
     source: int | None = Field(default=None, ge=1, le=2)
     """花費的源力（Phase 3C-4a，1 或 2）：只有傳說技能可以、而且必須有；源力不足時不能施放。"""
+    on_miss: tuple[EffectSpec, ...] = ()
+    """失手反噬（Phase 3D-7a，6.17 C）：攻擊沒命中（含自然 1）時對施放者結算的效果（至多 2 個，
+    類型見 :data:`BACKLASH_TYPES`，對象只能是施放者自己）；命中則不結算。"""
 
 
 class NarrativeDef(ContentModel):
@@ -908,6 +936,27 @@ ZONE_MOVING_SHAPES: tuple[str, ...] = ("line", "cone")
 ZONE_CASTER_SHAPES: tuple[str, ...] = ("self", "ring", "allies_in_radius")
 """``anchor: caster`` 可用的形狀（以施放者為中心、不需要選取的形狀；跟著施放者重新展開）。"""
 _ZONE_ONLY_FIELDS = ("anchor", "when", "speed", "effects")
+GAMBLE = "gamble"
+GAMBLE_TAG = "gamble"
+"""帶賭博機制的技能自動加上的標籤。"""
+DAMAGE_MULTIPLIER = "damage_multiplier"
+SELF_DAMAGE_OF_HIT = "self_damage_of_hit"
+"""Phase 3D-7a 的賭博型原語（6.17 A）：``gamble``（賭注：成敗兩個分支）；``damage_multiplier``
+（本次傷害 × 倍率）與 ``self_damage_of_hit``（施放者受本次傷害的 n‰）只能出現在賭注的分支裡，
+不是 ``skill_primitives.yaml`` 的原語。"""
+GAMBLE_BRANCH_TYPES: tuple[str, ...] = (
+    "damage",
+    "heal",
+    "shield",
+    "apply_status",
+    DAMAGE_MULTIPLIER,
+    SELF_DAMAGE_OF_HIT,
+)
+"""賭注分支（``win``／``lose``）可用的效果類型。"""
+BACKLASH_TYPES: tuple[str, ...] = ("damage", "apply_status")
+"""失手反噬（``cost.on_miss``）可用的效果類型。"""
+_MAX_BRANCH_EFFECTS = 2
+_GAMBLE_ONLY_FIELDS = ("chance_permille", "win", "lose")
 _MAX_ZONE_EFFECTS = 2
 SELF_MOVES: tuple[str, ...] = (DASH, LEAP, SWAP, CHARGE_THROUGH, "teleport")
 """改變施放者位置的原語；一個技能最多一個。"""
@@ -1308,6 +1357,7 @@ class SkillDef(ContentModel):
         self._check_pair_moves()
         self._check_summon()
         self._check_zone()
+        self._check_gamble()
         if self.kind == "passive" and self.trigger is None:
             raise ValueError("被動技能（kind: passive）必須有 trigger")
         if self.kind != "passive" and self.trigger is not None:
@@ -1324,7 +1374,13 @@ class SkillDef(ContentModel):
             )
         for index, effect in enumerate(self.effects):
             self._check_effect(index, effect)
+        self._add_gamble_tag()
         return self
+
+    def _add_gamble_tag(self) -> None:
+        """帶賭博機制的技能自動加標籤 ``gamble``（傾向向量與「用法決定進化」用；Phase 3D-7a）。"""
+        if self.is_gamble and GAMBLE_TAG not in self.tags:
+            object.__setattr__(self, "tags", (*self.tags, GAMBLE_TAG))
 
     def _check_legendary(self) -> None:
         """傳說技能（Phase 3C-4a、3D-6，6.14.4）必須花源力（``cost.source``），非傳說不能花。核心
@@ -1486,6 +1542,102 @@ class SkillDef(ContentModel):
                     f"{where}.effects[{sub_index}]：區域的效果不可自帶 affects 或 condition"
                 )
             self._check_effect(0, sub)
+
+    def _check_gamble(self) -> None:
+        """賭博型（Phase 3D-7a）：``gamble`` 只能用在主動技能、每個技能一個而且是最後一個效果；
+        ``cost.on_miss`` 只有主動技能可以有。分支與反噬的內容見 :meth:`_check_branch`。"""
+        gambles = [e for e in self.effects if e.type == GAMBLE]
+        for index, effect in enumerate(self.effects):
+            if effect.type != GAMBLE and any(
+                getattr(effect, f) is not None for f in _GAMBLE_ONLY_FIELDS
+            ):
+                raise ValueError(f"effects[{index}]：只有 gamble 使用 chance_permille、win、lose")
+            if effect.type in (DAMAGE_MULTIPLIER, SELF_DAMAGE_OF_HIT):
+                raise ValueError(f"effects[{index}]：{effect.type} 只能出現在 gamble 的分支裡")
+        self._check_on_miss()
+        if not gambles:
+            return
+        if self.kind != "active":
+            raise ValueError(f"gamble 只能用在主動技能，收到 kind: {self.kind}")
+        if len(gambles) > 1:
+            raise ValueError("一個技能最多一個 gamble 效果")
+        if self.effects[-1].type != GAMBLE:
+            raise ValueError("gamble 必須是技能的最後一個效果（成敗分支最後結算）")
+        self._check_gamble_effect(gambles[0], f"effects[{len(self.effects) - 1}]（gamble）")
+
+    def _check_on_miss(self) -> None:
+        """``cost.on_miss``（失手反噬）：只有主動技能可以有。"""
+        if not self.cost.on_miss:
+            return
+        if self.kind != "active":
+            raise ValueError(f"只有主動技能可以有 cost.on_miss，收到 kind: {self.kind}")
+        self._check_branch("cost.on_miss", self.cost.on_miss, BACKLASH_TYPES, backlash=True)
+
+    def _check_gamble_effect(self, gamble: EffectSpec, where: str) -> None:
+        """``gamble`` 效果本身：必填 ``chance_permille``、``win`` 與 ``lose`` 至少一邊有效果。"""
+        if gamble.chance_permille is None:
+            raise ValueError(f"{where}：必須填 chance_permille")
+        if not (gamble.win or gamble.lose):
+            raise ValueError(f"{where}：win 與 lose 至少要有一邊有效果")
+        for name in ("win", "lose"):
+            branch = getattr(gamble, name) or ()
+            if branch:
+                self._check_branch(f"{where}.{name}", branch, GAMBLE_BRANCH_TYPES, backlash=False)
+
+    def _check_branch(
+        self,
+        where: str,
+        branch: tuple[EffectSpec, ...],
+        allowed: tuple[str, ...],
+        *,
+        backlash: bool,
+    ) -> None:
+        """賭注分支或失手反噬的效果列表：1–2 個、類型在 ``allowed`` 內、不自帶 ``condition``；
+        反噬的對象只能是施放者自己；倍率與自傷各至多一個，而且技能要有傷害效果可以乘。"""
+        if not 1 <= len(branch) <= _MAX_BRANCH_EFFECTS:
+            raise ValueError(
+                f"{where}：必須有 1 到 {_MAX_BRANCH_EFFECTS} 個效果，收到 {len(branch)}"
+            )
+        has_damage = any(e.type == "damage" for e in self.effects)
+        for i, sub in enumerate(branch):
+            at = f"{where}[{i}]（{sub.type}）"
+            if sub.type not in allowed:
+                raise ValueError(f"{at}：只能使用 {'、'.join(allowed)}")
+            if sub.condition is not None:
+                raise ValueError(f"{at}：不可自帶 condition")
+            if backlash and sub.affects not in (None, "self"):
+                raise ValueError(f"{at}：失手反噬的對象只能是施放者（省略 affects 或寫 self）")
+            if sub.affects == "tiles":
+                raise ValueError(f"{at}：不能用 affects: tiles")
+            self._check_branch_fields(at, sub, has_damage=has_damage)
+            if sub.type not in (DAMAGE_MULTIPLIER, SELF_DAMAGE_OF_HIT):
+                self._check_effect(0, sub)
+        for special in (DAMAGE_MULTIPLIER, SELF_DAMAGE_OF_HIT):
+            if sum(1 for e in branch if e.type == special) > 1:
+                raise ValueError(f"{where}：每個分支最多一個 {special}")
+
+    @staticmethod
+    def _check_branch_fields(where: str, sub: EffectSpec, *, has_damage: bool) -> None:
+        """分支效果的專用欄位：``damage_multiplier`` 與 ``self_damage_of_hit`` 必填自己的數值、
+        不可自帶 ``affects``，而且技能要有傷害效果；其他類型不可填這兩個欄位。"""
+        if sub.type == DAMAGE_MULTIPLIER:
+            if (
+                sub.damage_multiplier_permille is None
+                or sub.damage_multiplier_permille == _PERMILLE
+            ):
+                raise ValueError(f"{where}：必須填 damage_multiplier_permille（不等於 1000）")
+        elif sub.damage_multiplier_permille is not None:
+            raise ValueError(f"{where}：只有 damage_multiplier 使用 damage_multiplier_permille")
+        if sub.type == SELF_DAMAGE_OF_HIT:
+            if sub.self_damage_permille_of_hit is None:
+                raise ValueError(f"{where}：必須填 self_damage_permille_of_hit")
+        elif sub.self_damage_permille_of_hit is not None:
+            raise ValueError(f"{where}：只有 self_damage_of_hit 使用 self_damage_permille_of_hit")
+        if sub.type in (DAMAGE_MULTIPLIER, SELF_DAMAGE_OF_HIT):
+            if sub.affects is not None:
+                raise ValueError(f"{where}：不可自帶 affects")
+            if not has_damage:
+                raise ValueError(f"{where}：技能必須有傷害效果")
 
     def _check_pair_moves(self) -> None:
         """位移他人（Phase 3D-2b）：``teleport_target`` 與形狀 ``unit_then_tile``、``swap_any`` 與
@@ -1689,6 +1841,11 @@ class SkillDef(ContentModel):
         return f"{self.name_zh}（階級 {self.tier}，{self.skeleton}，AP {self.ap_cost}）"
 
     @property
+    def is_gamble(self) -> bool:
+        """帶賭博機制（Phase 3D-7a）：有 ``gamble`` 效果或失手反噬 ``cost.on_miss``。"""
+        return bool(self.cost.on_miss) or any(e.type == GAMBLE for e in self.effects)
+
+    @property
     def is_active(self) -> bool:
         return self.kind == "active"
 
@@ -1806,6 +1963,8 @@ class _Refs:
     stacks: dict[str, StackDef] | None = None
     summon_ids: set[str] | None = None
     rule_change_ids: set[str] | None = None
+    unsafe_statuses: frozenset[str] | None = None
+    """不能當反噬的狀態（硬控、跳過回合、持續傷害；Phase 3D-7a）；``None`` 不檢查。"""
 
 
 def _condition_problems(where: str, condition: ConditionSpec, refs: _Refs) -> list[str]:
@@ -1870,6 +2029,56 @@ def _effect_problems(skill: SkillDef, index: int, effect: EffectSpec, refs: _Ref
     problems += _stack_effect_problems(where, effect, affects, refs)
     problems += _consume_status_problems(skill, index, effect, refs)
     problems += _zone_problems(skill, index, effect, refs)
+    problems += _gamble_problems(skill, index, effect, refs)
+    return problems
+
+
+def _branch_problems(
+    where: str, skill: SkillDef, branch: tuple[EffectSpec, ...], refs: _Refs, *, backlash: bool
+) -> list[str]:
+    """賭注分支或失手反噬的跨檔案檢查（Phase 3D-7a）：真正的原語（傷害、治療、護盾、施加狀態）
+    當成同一技能的效果檢查；對施放者自己的狀態不能是硬控、跳過回合或持續傷害（反噬不致命、不讓
+    施放者跳過回合）；對敵方的效果需要技能本身有對敵方的效果（才有命中判定）。"""
+    problems: list[str] = []
+    carrier = skill.model_copy(update={"effects": branch})
+    hostile = any(
+        (e.affects or _default_affects_of(refs, e)) in ("enemies", "all")
+        for e in skill.effects
+        if e.type != GAMBLE
+    )
+    for i, sub in enumerate(branch):
+        if sub.type in (DAMAGE_MULTIPLIER, SELF_DAMAGE_OF_HIT):
+            continue
+        prefix = f"effects[{i}]"
+        problems += [
+            f"{where}[{i}]{p.removeprefix(prefix)}" for p in _effect_problems(carrier, i, sub, refs)
+        ]
+        affects = "self" if backlash else sub.affects or _default_affects_of(refs, sub)
+        unsafe = refs.unsafe_statuses or frozenset()
+        if affects == "self" and sub.type == "apply_status" and sub.status in unsafe:
+            problems.append(
+                f"{where}[{i}].status：反噬不能使用硬控、跳過回合或持續傷害的狀態（{sub.status}）"
+            )
+        if affects in ("enemies", "all") and not hostile and not backlash:
+            problems.append(f"{where}[{i}].affects：技能沒有對敵方的效果，沒有命中判定可以依據")
+    return problems
+
+
+def _default_affects_of(refs: _Refs, effect: EffectSpec) -> str:
+    primitive = refs.primitives.get(effect.type)
+    return "enemies" if primitive is None else default_affects(primitive)
+
+
+def _gamble_problems(skill: SkillDef, index: int, effect: EffectSpec, refs: _Refs) -> list[str]:
+    """``gamble`` 的跨檔案檢查（Phase 3D-7a）：``win``／``lose`` 的效果。"""
+    if effect.type != GAMBLE:
+        return []
+    problems: list[str] = []
+    for name in ("win", "lose"):
+        branch = getattr(effect, name) or ()
+        problems += _branch_problems(
+            f"effects[{index}].{name}", skill, branch, refs, backlash=False
+        )
     return problems
 
 
@@ -1990,13 +2199,15 @@ def skill_problems(
     dual_min_rarity: str | None = None,
     summon_ids: set[str] | None = None,
     rule_change_ids: set[str] | None = None,
+    unsafe_statuses: frozenset[str] | None = None,
 ) -> list[str]:
     """技能引用的形狀、原語、條件、狀態、物件是否存在、參數是否在範圍內（繁體中文，空串列為通過）。
 
     ``triggers``：觸發時機表（省略時不檢查被動的 ``trigger``）；``stacks``：層數表（省略時不檢查
     層數原語引用的層數）；``dual_min_rarity``：雙屬性縮放的最低稀有度（省略時不檢查）；
     ``summon_ids``：召喚物範本 ID（省略時不檢查 ``summon`` 的 ``unit``）；``rule_change_ids``：
-    規則改變 ID（Phase 3D-6，省略時不檢查 ``rule_change`` 的 ``rule``）。
+    規則改變 ID（Phase 3D-6，省略時不檢查 ``rule_change`` 的 ``rule``）；``unsafe_statuses``：
+    不能當反噬的狀態 ID（Phase 3D-7a，省略時不檢查）。
     """
     problems: list[str] = []
     if (
@@ -2017,7 +2228,14 @@ def skill_problems(
         known = ", ".join(sorted(shapes))
         problems.append(f"trap.shape：未知的形狀 {skill.trap.shape!r}（可用：{known}）")
     refs = _Refs(
-        primitives, status_ids, object_ids, conditions, stacks, summon_ids, rule_change_ids
+        primitives,
+        status_ids,
+        object_ids,
+        conditions,
+        stacks,
+        summon_ids,
+        rule_change_ids,
+        unsafe_statuses,
     )
     if stacks is not None:
         problems += _cost_stack_problems(skill, stacks)
@@ -2030,6 +2248,7 @@ def skill_problems(
         problems += _condition_problems("condition", skill.condition, refs)
     for index, effect in enumerate(skill.effects):
         problems += _effect_problems(skill, index, effect, refs)
+    problems += _branch_problems("cost.on_miss", skill, skill.cost.on_miss, refs, backlash=True)
     problems += _modifier_problems(skill, refs)
     problems += _legendary_problems(skill, primitives)
     return problems

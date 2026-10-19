@@ -1,0 +1,28 @@
+# 孤注一擲（Phase 3D-7a 示範，失手反噬 cost.on_miss；docs/design/06-技能.md 6.17 C，數值為初值，未經模擬）：
+# 傷害 +80%；失手（含自然 1）時你倒地（命中則沒有代價）。
+id: skill_all_in
+schema_version: 1
+name_zh: 孤注一擲
+tier: 1
+rank: 1
+rarity: rare
+kind: active
+skeleton: strike
+category: weapon
+weapon_req: melee
+ap_cost: 2
+scaling_attr: str
+shape: {type: single, range: weapon}
+effects:
+  - {type: damage, multiplier_permille: 1800}
+condition: null
+cost:
+  mana: 3
+  cooldown: 1
+  on_miss:
+    - {type: apply_status, status: prone}
+tags: [physical, melee]
+narrative:
+  concept: 不留退路的全力一擊，打中了酣暢淋漓，打偏了就摔個狗吃屎
+  cast_flavor: 你把重心全押在前腳，連人帶劍朝對手撲去
+provenance: {origin: builtin, owner_id: null, created_by: null, parents: [], bound: true, tradeable: false}

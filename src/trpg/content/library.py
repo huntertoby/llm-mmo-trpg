@@ -205,6 +205,15 @@ class Ruleset(ContentModel):
                     f"rule_changes.yaml 的 {rule.id} 引用了未知的召喚物範本：{rule.unit}"
                 )
 
+    def unsafe_backlash_statuses(self) -> frozenset[str]:
+        """不能當反噬的狀態 ID（Phase 3D-7a）：硬控類、會讓持有者跳過回合、回合開始時持續傷害
+        （反噬不會讓施放者跳過回合，也不會讓他的 HP 低於 1）。"""
+        return frozenset(
+            s.id
+            for s in self.statuses.statuses
+            if s.skip_turn or s.control_group == "hard" or s.on_turn_start_damage is not None
+        )
+
     def object_def(self, kind: str) -> ObjectDef:
         return self.objects.get(kind)
 
@@ -504,6 +513,7 @@ def _check_skills(root: Path, skills: dict[str, SkillDef], ruleset: Ruleset) -> 
             dual_min_rarity=ruleset.core.dual_scaling_min_rarity,
             summon_ids=summon_ids,
             rule_change_ids=rule_change_ids,
+            unsafe_statuses=ruleset.unsafe_backlash_statuses(),
         )
         if skill.rule_change_id is not None and skill.ap_cost != activation_ap:
             problems.append(
