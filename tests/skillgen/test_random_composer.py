@@ -290,3 +290,19 @@ def test_random_reactions_and_stances_appear_without_changing_common_seeds() -> 
     kinds = {s.kind for s in skills}
     assert {"reaction", "stance"} <= kinds
     assert all(compose_random_skill(seed, rarity="common").kind == "active" for seed in range(60))
+
+    """Phase 2H-1：400 個種子中有自身狀態代價的技能都是主動技能，狀態在允許清單內、2–3 回合。"""
+    """Phase 2H-1：400 個種子中有自身狀態代價的技能都是主動技能，狀態在允許內、2–3 回合。"""
+    library = lib()
+    allowed = set(library.budget.allowance.self_status.allowed)
+    found = [
+        skill
+        for seed in range(400)
+        if (skill := compose_random_skill(seed, library=library)).cost.self_status is not None
+    ]
+    assert found
+    for skill in found:
+        assert skill.kind == "active"
+        assert skill.cost.self_status is not None
+        assert skill.cost.self_status.status in allowed
+        assert skill.cost.self_status.duration in (2, 3)

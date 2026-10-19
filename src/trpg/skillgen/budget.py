@@ -22,7 +22,7 @@ from fractions import Fraction
 from trpg.content.battle import Dice, StatusDef
 from trpg.content.library import ContentLibrary
 from trpg.content.skill_rules import BudgetRules
-from trpg.content.skills import ConditionDef, EffectSpec, PrimitiveDef, SkillDef
+from trpg.content.skills import ConditionDef, EffectSpec, PrimitiveDef, SelfStatusCost, SkillDef
 from trpg.skillgen.mechanics import mechanic_tags, resolved_affects
 
 __all__ = ["BudgetError", "BudgetReport", "EffectBudget", "skill_budget"]
@@ -259,7 +259,9 @@ def _effect_budget(
     )
 
 
-def _allowance_parts(skill: SkillDef, budget: BudgetRules) -> tuple[tuple[str, int], ...]:
+def _allowance_parts(
+    skill: SkillDef, budget: BudgetRules, statuses: dict[str, StatusDef]
+) -> tuple[tuple[str, int], ...]:
     """代價折抵（‰）的各項；沒有該代價的項目不列出。"""
     allowance, cost = budget.allowance, skill.cost
     parts: list[tuple[str, int]] = []
@@ -284,7 +286,21 @@ def _allowance_parts(skill: SkillDef, budget: BudgetRules) -> tuple[tuple[str, i
                 min(cost.hp_percent * allowance.hp_per_permille, allowance.hp_cap),
             )
         )
+    if cost.self_status is not None:
+        parts.append(_self_status_allowance(cost.self_status, budget, statuses))
     return tuple(parts)
+
+
+def _self_status_allowance(
+    cost: SelfStatusCost, budget: BudgetRules, statuses: dict[str, StatusDef]
+) -> tuple[str, int]:
+    """自身狀態代價的折抵：狀態點數 × 有效回合（duration − 1）× 每點折抵，先套用自己的上限。"""
+    rule = budget.allowance.self_status
+    status = statuses.get(cost.status)
+    if status is None or status.budget_points is None:
+        raise BudgetError(f"自身狀態代價 {cost.status!r} 沒有預算點數")
+    value = status.budget_points * (cost.duration - 1) * rule.per_point_permille
+    return (f"自身{status.name_zh} {cost.duration} 回合", min(value, rule.cap))
 
 
 def _passive_coefficient(skill: SkillDef, library: ContentLibrary) -> tuple[Fraction, str]:
@@ -361,7 +377,7 @@ def skill_budget(skill: SkillDef, library: ContentLibrary) -> BudgetReport:
         total=total,
         tier_budget=tier_budget,
         ap_coefficient=coefficient,
-        allowance_parts=_allowance_parts(skill, budget),
+        allowance_parts=_allowance_parts(skill, budget, rules.statuses.by_id()),
         allowance_cap=budget.allowance.total_cap,
         min_ratio=Fraction(budget.min_ratio_permille, _PERMILLE),
         max_ratio=Fraction(budget.max_ratio_permille, _PERMILLE),

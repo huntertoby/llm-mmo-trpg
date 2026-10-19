@@ -906,7 +906,7 @@ def score_action(
     if orders is not None:
         score += _order_bonus(state, actor, p, profile, orders)
     if isinstance(action, UseSkill):
-        score -= skill_cost(state, actor, action, w)
+        score -= skill_cost(state, actor, action, w, profile.status_values)
     return ActionScore(action, score, p)
 
 
@@ -941,14 +941,28 @@ def _order_bonus(
     return bonus
 
 
-def skill_cost(state: BattleState, actor: UnitState, action: UseSkill, w: AiWeights) -> Fraction:
-    """技能的機會成本：法力（不回復）、冷卻（這幾回合不能再用）與 HP 代價（算作對自己的傷害）。"""
+def skill_cost(
+    state: BattleState,
+    actor: UnitState,
+    action: UseSkill,
+    w: AiWeights,
+    status_values: dict[str, int] | None = None,
+) -> Fraction:
+    """技能的機會成本：法力（不回復）、冷卻（這幾回合不能再用）、HP 代價（算作對自己的傷害）與
+    自身狀態代價（Phase 2H-1：``damage`` 權重 × 狀態價值 × 有效回合 ``duration − 1``，價值取
+    ``status_values``，沒列出的狀態用 ``status`` 權重，與對敵人施加同一狀態的收益對稱）。"""
     skill = state.ruleset.skill_def(action.skill_id)
-    return Fraction(
+    cost = Fraction(
         w.mana * skill.cost.mana
         + w.cooldown * (skill.cost.cooldown or 0)
         + w.friendly_fire * hp_cost(actor, skill)
     )
+    self_status = skill.cost.self_status
+    if self_status is not None:
+        points = (status_values or {}).get(self_status.status)
+        value = w.status if points is None else w.damage * points
+        cost += value * (self_status.duration - 1)
+    return cost
 
 
 def defend_score(state: BattleState, unit: UnitState, w: AiWeights) -> Fraction:

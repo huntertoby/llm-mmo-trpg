@@ -381,8 +381,8 @@ def metrics_from_events(  # noqa: C901, PLR0912, PLR0915 - 單一事件迴圈，
         elif isinstance(event, TurnStarted):
             acc[event.unit_id].turns += 1
             for status_id, source in sorted(statuses.get(event.unit_id, {}).items()):
-                if status_id not in CONTROL_STATUSES:
-                    continue
+                if status_id not in CONTROL_STATUSES or source == event.unit_id:
+                    continue  # 自己施加給自己的（自身狀態代價）不算控制
                 if source is not None and source in info:
                     bucket = acc[source].control
                     bucket[status_id] = bucket.get(status_id, 0) + 1

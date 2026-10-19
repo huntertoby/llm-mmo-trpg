@@ -38,6 +38,10 @@ allowance:
   mana_cap: 150
   hp_per_permille: 1        # hp_percent 每 1‰
   hp_cap: 200
+  # 自身狀態代價（Phase 2H-1，初值，未經模擬）：折抵 ＝ 狀態 budget_points × 有效回合 × per_point_permille，
+  # 有效回合 ＝ duration − 1（狀態在施放當回合結束就 −1，所以 duration 限制為 2–3）；先套用 cap，再和其他折抵一起截斷在 total_cap。
+  # 狀態只能是 allowed 之內的自身負面狀態；只有主動技能可以使用。
+  self_status: {allowed: [vulnerable, weaken, slow, root], per_point_permille: 40, cap: 250}
   total_cap: 500            # 各項先套用自己的上限，加總後再截斷在這個值（Phase 2C-1）
 
 # 稀有度的結構上限（其餘限制由各資料檔的 min_rarity 決定）

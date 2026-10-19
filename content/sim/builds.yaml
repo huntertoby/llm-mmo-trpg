@@ -105,7 +105,7 @@ builds:
       weapon: dagger
       tags: [hero, sim]
       max_mana: 20
-      skills: [skill_rending_strike, skill_execute, skill_blink, skill_fury_stance, skill_crippling_crit]
+      skills: [skill_rending_strike, skill_execute, skill_blink, skill_fury_stance, skill_crippling_crit, skill_reckless_lunge]
 
   - id: build_support
     name_zh: 輔助

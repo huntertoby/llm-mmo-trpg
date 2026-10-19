@@ -98,3 +98,10 @@ def test_uncovered_allowlist_is_not_stale() -> None:
         assert not stale, f"{category} 允許清單過時（已被使用，請刪除）：{sorted(stale)}"
         unknown = {i for i in allowed if i not in defined[category]}
         assert not unknown, f"{category} 允許清單含不存在的 ID：{sorted(unknown)}"
+
+
+def test_self_status_cost_is_used_by_a_handwritten_skill() -> None:
+    """Phase 2H-1：自身狀態代價至少被一個手寫技能使用；冰凍至少被一個手寫技能施加。"""
+    skills = _skills()
+    assert any(s.cost.self_status for s in skills)
+    assert "frozen" in _used()["status"]

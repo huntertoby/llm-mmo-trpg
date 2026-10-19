@@ -142,6 +142,16 @@ class CostRules(ContentModel):
     cooldown_cap: int = Field(ge=1)
     uses_per_battle_permille: int = _PERMILLE
     uses_per_battle: IntRange
+    self_status_permille: int = _PERMILLE
+    """主動技能加入自身狀態代價（``cost.self_status``）的機率（Phase 2H-1）。"""
+    self_status_duration: IntRange
+    """自身狀態代價的持續回合範圍（必須在 2–3 之內）。"""
+
+    @model_validator(mode="after")
+    def _check_self_status_duration(self) -> CostRules:
+        if self.self_status_duration.min < 2 or self.self_status_duration.max > 3:  # noqa: PLR2004
+            raise ValueError("self_status_duration 必須在 2–3 之內")
+        return self
 
 
 class TuningRules(ContentModel):

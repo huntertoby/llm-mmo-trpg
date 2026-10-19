@@ -515,6 +515,18 @@ class EffectSpec(ContentModel):
         return {n: getattr(self, n) for n in names if getattr(self, n) is not None}
 
 
+class SelfStatusCost(ContentModel):
+    """自身狀態代價（Phase 2H-1）：施放結算完之後，施放者自己獲得 ``status``（不擲抵抗）。
+
+    狀態在帶有者回合結束時倒數，所以施放當回合結束就會 −1：``duration`` 限制為 2–3
+    （1 等於沒有效果），預算折抵用的「有效回合」＝ ``duration − 1``。允許的狀態與折抵見
+    ``content/skill_budget.yaml`` 的 ``allowance.self_status``。
+    """
+
+    status: str = Field(pattern=ID_PATTERN)
+    duration: int = Field(ge=2, le=3)
+
+
 class SkillCost(ContentModel):
     """技能代價（``docs/phases/Phase2A計畫.md`` 3.5）。``hp_percent`` 是最大 HP 的千分比（‰）。"""
 
@@ -525,6 +537,8 @@ class SkillCost(ContentModel):
     stacks: int | None = Field(default=None, ge=1)
     """施放前至少要有幾層（Phase 2E-3）：對應技能裡 ``owner: self`` 的 ``consume_stack`` 的層數；
     不足時不可施放。需求本身不消耗層數（消耗由 ``consume_stack`` 負責）。"""
+    self_status: SelfStatusCost | None = None
+    """施放後施放者自己獲得的狀態（Phase 2H-1）；只有主動技能可以使用。"""
 
 
 class NarrativeDef(ContentModel):
@@ -677,6 +691,8 @@ class SkillDef(ContentModel):
                 )
         elif self.ap_cost is not None:
             raise ValueError(f"{self.kind} 技能的 ap_cost 必須為 null（不花 AP）")
+        if self.cost.self_status is not None and self.kind != "active":
+            raise ValueError(f"只有主動技能可以有 cost.self_status，收到 kind: {self.kind}")
         if self.kind == "passive" and self.trigger is None:
             raise ValueError("被動技能（kind: passive）必須有 trigger")
         if self.kind != "passive" and self.trigger is not None:
@@ -1004,6 +1020,9 @@ def skill_problems(
     refs = _Refs(primitives, status_ids, object_ids, conditions, stacks)
     if stacks is not None:
         problems += _cost_stack_problems(skill, stacks)
+    self_status = skill.cost.self_status
+    if self_status is not None and self_status.status not in status_ids:
+        problems.append(f"cost.self_status：未知的狀態 {self_status.status!r}")
     if triggers is not None:
         problems += _trigger_problems(skill, triggers)
     if skill.condition is not None:

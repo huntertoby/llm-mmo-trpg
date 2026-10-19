@@ -611,7 +611,32 @@ def build_cost(ctx: Ctx) -> dict[str, Any]:
         cost["uses_per_battle"] = rng.randint(rules.uses_per_battle.min, rules.uses_per_battle.max)
     if ctx.required_stacks:
         cost["stacks"] = ctx.required_stacks
+    self_status = _self_status_cost(ctx)
+    if self_status is not None:
+        cost["self_status"] = self_status
     return cost
+
+
+def _self_status_cost(ctx: Ctx) -> dict[str, Any] | None:
+    """自身狀態代價（Phase 2H-1）：小機率從允許清單抽一個稀有度夠的狀態。"""
+    rules = ctx.rules.cost
+    if not ctx.chance(rules.self_status_permille):
+        return None
+    statuses = ctx.library.ruleset.statuses.by_id()
+    options = sorted(
+        status_id
+        for status_id in ctx.library.budget.allowance.self_status.allowed
+        if (status := statuses.get(status_id)) is not None
+        and status.budget_points is not None
+        and rarity_rank(status.min_rarity) <= ctx.rank
+    )
+    if not options:
+        return None
+    span = rules.self_status_duration
+    return {
+        "status": ctx.rng.choice(options),
+        "duration": ctx.rng.randint(span.min, span.max),
+    }
 
 
 # ---------------------------------------------------------------------------

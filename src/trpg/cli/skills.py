@@ -135,13 +135,16 @@ def _condition(library: ContentLibrary, condition: ConditionSpec) -> str:
     )
 
 
-def _cost_summary(skill: SkillDef, *, with_ap: bool = True) -> str:
+def _cost_summary(library: ContentLibrary, skill: SkillDef, *, with_ap: bool = True) -> str:
     cost = skill.cost
     parts = [f"AP {skill.ap_cost}"] if with_ap else []
     if cost.mana:
         parts.append(f"法力 {cost.mana}")
     if cost.hp_percent:
         parts.append(f"HP {cost.hp_percent / 10:g}%")
+    if cost.self_status:
+        name = library.ruleset.status_def(cost.self_status.status).name_zh
+        parts.append(f"施放後自身{name} {cost.self_status.duration} 回合")
     if cost.cooldown:
         parts.append(f"冷卻 {cost.cooldown} 回合")
     if cost.uses_per_battle:
@@ -166,7 +169,7 @@ def cmd_skills_list(library: ContentLibrary, out: TextIO) -> int:
         file=out,
     )
     for skill in skills:
-        cost = _cost_summary(skill, with_ap=False)
+        cost = _cost_summary(library, skill, with_ap=False)
         effects = "；".join(effect_summary(library, skill, e) for e in skill.effects)
         print(
             f"  {pad(skill.id, 24)}{pad(skill.name_zh, 12)}{pad(skill.skeleton, 10)}"
@@ -193,7 +196,7 @@ def cmd_skills_show(library: ContentLibrary, skill_id: str, out: TextIO) -> int:
         f"  縮放屬性 {skill.scaling_attr.display_name}",
         file=out,
     )
-    print(f"  代價 {_cost_summary(skill)}", file=out)
+    print(f"  代價 {_cost_summary(library, skill)}", file=out)
     print(f"  形狀 {shape_summary(library, skill.shape)}", file=out)
     if skill.condition is not None:
         print(f"  使用條件 {_condition(library, skill.condition)}", file=out)

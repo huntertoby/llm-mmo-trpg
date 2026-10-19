@@ -54,6 +54,18 @@ _PERMILLE_MAX = 10_000
 # ---------------------------------------------------------------------------
 
 
+class SelfStatusAllowance(ContentModel):
+    """自身狀態代價的折抵（Phase 2H-1；初值，未經模擬）。
+
+    折抵（‰）＝ 狀態的 ``budget_points`` × 有效回合（``duration − 1``）× ``per_point_permille``，
+    先以 ``cap`` 截斷，再和其他折抵一起截斷在 ``total_cap``。
+    """
+
+    allowed: tuple[str, ...] = Field(min_length=1)
+    per_point_permille: int = Field(ge=0)
+    cap: int = Field(ge=0)
+
+
 class CostAllowance(ContentModel):
     """代價折抵（‰，各項加總後乘上去：可用預算 ×（1000 ＋ 折抵）÷ 1000）。"""
 
@@ -67,6 +79,7 @@ class CostAllowance(ContentModel):
     hp_per_permille: int = Field(ge=0)
     """``hp_percent`` 每 1‰ 的折抵。"""
     hp_cap: int = Field(ge=0)
+    self_status: SelfStatusAllowance
     total_cap: int = Field(ge=0)
     """各項先套用自己的上限，加總後再以此截斷（‰）。"""
 

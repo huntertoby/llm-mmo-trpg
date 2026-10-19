@@ -1,0 +1,22 @@
+id: skill_reckless_lunge
+schema_version: 1
+name_zh: 捨身突刺
+tier: 2
+rank: 1
+rarity: rare
+kind: active
+skeleton: strike
+category: weapon
+weapon_req: melee
+ap_cost: 2
+scaling_attr: str
+shape: {type: single, range: weapon}
+effects:
+  - {type: damage, multiplier_permille: 2800}
+condition: null
+cost: {mana: 4, cooldown: 2, self_status: {status: vulnerable, duration: 2}}
+tags: [physical, melee, sacrifice]
+narrative:
+  concept: 不顧防禦的全力一擊，換來短暫的破綻
+  cast_flavor: 你放下所有防備撲了上去，刀鋒帶著豁出去的力道
+provenance: {origin: builtin, owner_id: null, created_by: null, parents: [], bound: true, tradeable: false}

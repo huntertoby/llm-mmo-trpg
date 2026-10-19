@@ -115,6 +115,13 @@ def _cap_violations(skill: SkillDef, library: ContentLibrary) -> list[Violation]
             f"weapon_req 只能是大類 {'、'.join(allowed)}（{skill.category}），"
             f"收到 {skill.weapon_req}",
         )
+    self_status = skill.cost.self_status
+    allowed_self = library.budget.allowance.self_status.allowed
+    if self_status is not None and self_status.status not in allowed_self:
+        add(
+            "cap.self_status",
+            f"自身狀態代價只能是 {'、'.join(allowed_self)}，收到 {self_status.status}",
+        )
     out += _rule_rewrite_violations(skill, library)
     return out
 

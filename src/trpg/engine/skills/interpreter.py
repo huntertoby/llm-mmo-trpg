@@ -106,6 +106,7 @@ def use_skill(ctx: Ctx, caster: UnitState, action: UseSkill) -> None:
             place_trap(ctx, caster, skill, (action.target_pos.x, action.target_pos.y))
         else:
             _Cast(ctx, caster, skill, action, area).run()
+        _apply_self_status(ctx, caster, skill)
 
 
 def use_triggered_skill(
@@ -199,6 +200,29 @@ def _pay_costs(ctx: Ctx, caster: UnitState, skill: SkillDef, area: SkillArea) ->
         ctx.emit(
             SkillCooldownChanged, unit_id=caster.id, skill_id=skill.id, remaining=paid.cooldown
         )
+
+
+def _apply_self_status(ctx: Ctx, caster: UnitState, skill: SkillDef) -> None:
+    """自身狀態代價（``cost.self_status``，Phase 2H-1）：施放結算完之後，施放者獲得該狀態
+    （不擲抵抗）。
+
+    放在結算之後而不是支付代價當下，這樣虛弱不會削弱這次施放本身的傷害；施放者在結算中倒下則
+    不施加。
+    """
+    cost = skill.cost.self_status
+    if cost is None:
+        return
+    execute(
+        ctx,
+        [
+            ApplyStatusEffect(
+                source_id=caster.id,
+                target_id=caster.id,
+                status_id=cost.status,
+                duration=cost.duration,
+            )
+        ],
+    )
 
 
 def _axis_direction(dx: int, dy: int) -> XY | None:
