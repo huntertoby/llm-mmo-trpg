@@ -1,0 +1,33 @@
+# 主動（Phase 3D-5 示範，docs/design/06-技能.md 6.16 G；數值為初值，未經模擬）：在前方升起一道火牆
+# （錐形 2：正前方 1 格 ＋ 第 2 排 3 格），每次環境回合向施放方向前進 1 格，持續 2 輪。敵人進入火牆或在
+# 火牆裡開始回合時受到 1d6 火焰傷害；火牆經過的格子留下火焰。
+id: skill_fire_wall
+schema_version: 1
+name_zh: 火牆
+tier: 2
+rank: 1
+rarity: rare
+kind: active
+skeleton: control
+category: spell
+weapon_req: focus
+ap_cost: 2
+scaling_attr: int
+shape: {type: cone, size: 2}
+effects:
+  - type: zone
+    anchor: moving
+    speed: 1
+    when: both
+    duration: 2
+    affects: enemies
+    surface: fire
+    effects:
+      - {type: damage, dice: 1d6, element: fire}
+condition: null
+cost: {mana: 10, cooldown: 4}
+tags: [fire, spell, zone]
+narrative:
+  concept: 一道會自己往前推進的火牆，把敵人逼退或吞沒
+  cast_flavor: 你往前一揮，地面竄起一排烈焰，像浪一樣朝敵陣滾去
+provenance: {origin: builtin, owner_id: null, created_by: null, parents: [], bound: true, tradeable: false}

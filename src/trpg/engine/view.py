@@ -24,6 +24,7 @@ from trpg.engine.state import (
 )
 from trpg.engine.summons import totem_of
 from trpg.engine.traps import visible_traps
+from trpg.engine.zones import next_zone_cells, zone_cells, zone_is_harmful, zone_spec
 from trpg.shared.types import Pos, Surface, Team, UnitId
 
 __all__ = [
@@ -36,6 +37,7 @@ __all__ = [
     "TileView",
     "TrapView",
     "UnitView",
+    "ZoneView",
     "project_for",
 ]
 
@@ -158,6 +160,33 @@ class TrapView(_ViewModel):
     remaining: int
 
 
+class ZoneView(_ViewModel):
+    """持續區域（Phase 3D-5；雙方都看得到）。
+
+    - ``cells``：目前的格子（跟隨型以施放者目前的位置展開）。
+    - ``next_cells``：移動型區域在本輪環境回合之後的格子（只看幾何的預告；不移動或在那之前就
+      消失的區域為 ``None``，空串列表示全部會撞上牆壁而消失）。
+    - ``expires_round``：施放者在這一輪的回合結束時區域消失。
+    - ``harmful``：效果含傷害或有害狀態（網頁用來決定顏色）。
+    """
+
+    id: int
+    owner_id: UnitId
+    team: Team
+    skill_id: str
+    name_zh: str
+    anchor: Literal["tile", "caster", "moving"]
+    affects: Literal["enemies", "allies", "all"]
+    when: Literal["enter", "turn_start", "both"]
+    cells: tuple[Pos, ...]
+    direction: str | None
+    """移動型區域的方向（``north``／``east``／``south``／``west``）。"""
+    speed: int
+    expires_round: int
+    harmful: bool
+    next_cells: tuple[Pos, ...] | None
+
+
 class PendingView(_ViewModel):
     """目前的反應詢問（只有公開欄位；內部的重播資料不外流）。"""
 
@@ -200,6 +229,39 @@ class BattleView(_ViewModel):
     pending: PendingView | None
     source_wells: tuple[Pos, ...]
     """尚未被取用的源泉格（Phase 3C-4a；我方單位進入時 +1 源力，之後消失；雙方都看得到）。"""
+    zones: tuple[ZoneView, ...] = ()
+    """持續區域（Phase 3D-5），依編號排序；雙方都看得到。"""
+
+
+def _pos(cells: tuple[tuple[int, int], ...]) -> tuple[Pos, ...]:
+    return tuple(Pos(x=x, y=y) for x, y in cells)
+
+
+def _zone_views(state: BattleState) -> tuple[ZoneView, ...]:
+    views: list[ZoneView] = []
+    for zone in state.zones:
+        spec = zone_spec(state, zone)
+        assert spec.affects in ("enemies", "allies", "all") and spec.when is not None
+        upcoming = next_zone_cells(state, zone)
+        views.append(
+            ZoneView(
+                id=zone.id,
+                owner_id=zone.owner_id,
+                team=zone.team,
+                skill_id=zone.skill_id,
+                name_zh=state.ruleset.skill_def(zone.skill_id).name_zh,
+                anchor=zone.anchor,
+                affects=spec.affects,
+                when=spec.when,
+                cells=_pos(zone_cells(state, zone)),
+                direction=zone.direction,
+                speed=zone.speed,
+                expires_round=zone.expires_round,
+                harmful=zone_is_harmful(state, spec),
+                next_cells=None if upcoming is None else _pos(upcoming),
+            )
+        )
+    return tuple(views)
 
 
 def _status_view(status: StatusInstance) -> StatusView:
@@ -352,4 +414,5 @@ def project_for(state: BattleState, team: Team) -> BattleView:
         end_reason=state.end_reason,
         pending=None if state.pending is None else _pending_view(state.pending),
         source_wells=tuple(Pos(x=x, y=y) for x, y in state.source_wells),
+        zones=_zone_views(state),
     )

@@ -6,6 +6,7 @@
 - ``depth`` 超過 ``max_chain_depth`` 的效果不入列，改產生 ``chain_limit_reached`` 事件。
 - 佇列清空之後，才依序結算這段期間收集到的被動技能觸發（:mod:`trpg.engine.skill_triggers`）；
   觸發的效果以新的 ``execute`` 結算（``depth`` 從 0 開始），觸發深度另計。
+- 佇列清空時也依序結算記下的陷阱進入（Phase 2E-3）與持續區域進入（Phase 3D-5）。
 - 表面在單位腳下被建立或改變時（``Ctx.surface_entries``），佇列清空前依 **單位 ID** 順序觸發該表面
   的進入效果（燃燒、冰面滑倒檢定……），其後續效果照常入列（Phase 1C 決定 #6）。
 """
@@ -21,6 +22,7 @@ from trpg.engine.effects.models import Effect, EffectBase
 from trpg.engine.events import ChainLimitReached, EventBase
 from trpg.engine.skill_triggers import settle
 from trpg.engine.traps import flush_trap_entries
+from trpg.engine.zones import flush_zone_entries
 from trpg.shared.errors import TrpgError
 
 __all__ = ["EffectHandler", "execute", "handler_for", "register_effect", "sort_effects"]
@@ -67,12 +69,14 @@ def execute(ctx: Ctx, effects: Sequence[Effect] | Sequence[EffectBase]) -> None:
     queue: deque[EffectBase] = deque()
     for effect in sort_effects(list(effects)):
         _enqueue(ctx, queue, effect, max_depth)
-    while queue or ctx.surface_entries or ctx.trap_entries:
+    while queue or ctx.surface_entries or ctx.trap_entries or ctx.zone_entries:
         if not queue:
             if ctx.surface_entries:
                 _flush_surface_entries(ctx, queue, max_depth)
-            else:
+            elif ctx.trap_entries:
                 flush_trap_entries(ctx)  # 單位進入敵方陷阱格（Phase 2E-3）
+            else:
+                flush_zone_entries(ctx)  # 單位進入持續區域（Phase 3D-5）
             continue
         effect = queue.popleft()
         produced = handler_for(_effect_kind(effect))(ctx, effect)

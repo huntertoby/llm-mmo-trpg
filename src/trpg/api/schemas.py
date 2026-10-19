@@ -161,6 +161,8 @@ class TelegraphChangeOut(_ApiModel):
     object_id: ObjectId | None
     unit_id: UnitId | None
     amount: int | None
+    tiles: tuple[Pos, ...] = ()
+    """持續區域（Phase 3D-5）：``zone_moved`` 前進後的格子、``zone_expired`` 消失前的格子。"""
     text: str
 
 

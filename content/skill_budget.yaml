@@ -44,6 +44,14 @@ charge_through_expected_targets_permille: 1500
 summon_round_value_permille: 800
 # 3D-4b 圖騰：點數 ＝ 光環狀態的 budget_points × 預期受惠的友方數 × duration × summon_round_value_permille ÷ 1000²。初值，未經模擬。
 totem_expected_allies_permille: 1000
+# 3D-5 持續區域：點數 ＝ effects 的基礎點數合計 × 預估觸發次數（形狀格數 × duration × zone_cell_round_permille ÷ 1000）
+#   × zone_both_permille（when: both 時）× zone_moving_permille（anchor: moving 時）
+#   ＋ 表面（surface）的點數 × 形狀格數 ×（moving 時 1 ＋ duration × speed 次新覆蓋，否則 1）× zone_surface_permille。
+# 形狀倍率不另外套用（格數已算進觸發次數）。初值，未經模擬。
+zone_cell_round_permille: 120
+zone_both_permille: 1500
+zone_moving_permille: 1500
+zone_surface_permille: 300
 # 3D-1：restore_resource 的點數（初值，未經模擬）：法力每點 700‰ 點、冷卻每回合 3 點
 restore_mana_point_permille: 700
 restore_cooldown_points: 3

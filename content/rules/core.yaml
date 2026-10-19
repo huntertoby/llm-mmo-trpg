@@ -101,3 +101,6 @@ source_min_at_start: 1        # 我方單位每場開場至少 1 點（敵人一
 
 # --- 召喚（Phase 3D-4a，docs/design/06-技能.md 6.16 B；初值，未經模擬）---
 summon_limit_per_owner: 2     # 同一召喚者同時存在的召喚物上限；超過時最舊的消失
+
+# --- 持續區域（Phase 3D-5，docs/design/06-技能.md 6.16 G；初值，未經模擬）---
+zone_limit_per_owner: 2       # 同一施放者同時存在的區域上限；超過時最舊的消失

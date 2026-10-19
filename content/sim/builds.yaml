@@ -271,4 +271,4 @@ builds:
       resist: {elemental: 100}
       tags: [hero, sim]
       max_mana: 40
-      skills: [skill_summon_spirit, skill_raise_skeleton, skill_plant_totem, skill_frost_shackle]
+      skills: [skill_summon_spirit, skill_raise_skeleton, skill_plant_totem, skill_frost_shackle, skill_fire_wall]

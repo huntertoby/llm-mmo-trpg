@@ -16,6 +16,7 @@ from trpg.engine.events import (
 from trpg.engine.rules.statuses import is_removed_with_source, stance_status_ids
 from trpg.engine.state import UnitState
 from trpg.engine.traps import remove_traps_of
+from trpg.engine.zones import remove_caster_zones_of
 from trpg.shared.types import Pos, Team, UnitId
 
 __all__ = [
@@ -80,6 +81,7 @@ def down_unit(ctx: Ctx, unit: UnitState) -> list[EventBase]:
         *_drop_stances(ctx, unit),
         *_release_forced_targets(ctx, unit),
         *remove_traps_of(ctx, unit.id),  # 放置者離場，陷阱消失（Phase 2E-3）
+        *remove_caster_zones_of(ctx, unit.id),  # 施放者離場，跟隨型區域消失（Phase 3D-5）
         *dismiss_summons_of(ctx, unit, "owner_gone"),  # 召喚者倒下：召喚物一併消失（3D-4a）
     ]
     return events
@@ -108,6 +110,7 @@ def escape_unit(ctx: Ctx, unit: UnitState) -> list[EventBase]:
         *_drop_stances(ctx, unit),
         *_release_forced_targets(ctx, unit),
         *remove_traps_of(ctx, unit.id),
+        *remove_caster_zones_of(ctx, unit.id),
         *dismiss_summons_of(ctx, unit, "owner_gone"),
     ]
     return events
@@ -133,6 +136,7 @@ def dismiss_summon(ctx: Ctx, unit: UnitState, reason: SummonExpiryReason) -> lis
         *_drop_stances(ctx, unit),
         *_release_forced_targets(ctx, unit),
         *remove_traps_of(ctx, unit.id),
+        *remove_caster_zones_of(ctx, unit.id),
     ]
 
 

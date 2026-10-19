@@ -34,6 +34,7 @@ __all__ = [
     "Tile",
     "TrapState",
     "UnitState",
+    "ZoneState",
     "reaction_limit",
     "state_from_json",
     "state_to_json",
@@ -95,6 +96,40 @@ class TrapState:
     @property
     def xy(self) -> tuple[int, int]:
         return (self.pos.x, self.pos.y)
+
+
+type ZoneAnchor = Literal["tile", "caster", "moving"]
+
+
+@dataclass(slots=True, frozen=True)
+class ZoneState:
+    """戰場上的持續區域（Phase 3D-5，``docs/design/06-技能.md`` 6.16 G；不可變，更新時替換）。
+
+    - ``id``：區域編號（依建立順序，從 1 起；:attr:`BattleState.next_zone_id`）。
+    - ``owner_id``／``team``：施放者與其陣營（``affects`` 依這個陣營判斷敵我）。
+    - ``skill_id``：區域技能（``effects``、``when``、``affects``、``surface`` 都來自它唯一的
+      ``zone`` 效果）。
+    - ``anchor``：``tile`` 固定、``caster`` 跟隨施放者、``moving`` 每次環境回合沿 ``direction``
+      前進 ``speed`` 格。
+    - ``cells``：``tile``／``moving`` 的格子（依 ``(y, x)`` 排序）；``caster`` 為空，格子由施放者
+      目前的位置與 ``shape``／``radius`` 展開（:func:`trpg.engine.zones.zone_cells`）。
+    - ``expires_round``：施放輪 ＋ ``duration``；施放者在那一輪（或之後）的回合結束時消失，施放者
+      不在場時在那一輪的環境回合消失。
+    - ``attributes``：建立時施放者的有效屬性快照（結算效果用，同陷阱）。
+    """
+
+    id: int
+    owner_id: UnitId
+    team: Team
+    skill_id: str
+    anchor: ZoneAnchor
+    cells: tuple[Pos, ...]
+    expires_round: int
+    attributes: tuple[tuple[Attribute, int], ...]
+    direction: str | None = None
+    speed: int = 0
+    shape: str = "self"
+    radius: int | None = None
 
 
 @dataclass(slots=True)
@@ -362,6 +397,10 @@ class BattleState:
     casts: tuple[LastCast, ...] = ()
     """本輪以 ``UseSkill`` 施放過的主動技能，依施放順序（Phase 3C-4b；``copy_skill`` 複製其中
     最後一個別人施放的）。每次記錄時順便丟掉舊輪的。"""
+    zones: list[ZoneState] = field(default_factory=list)
+    """戰場上的持續區域（Phase 3D-5），依 ``id`` 排序。"""
+    next_zone_id: int = 1
+    """下一個區域的編號（Phase 3D-5）。"""
 
     # ------------------------------------------------------------------
     # 複製
@@ -401,6 +440,8 @@ class BattleState:
             traps=list(self.traps),
             source_wells=self.source_wells,
             casts=self.casts,
+            zones=list(self.zones),
+            next_zone_id=self.next_zone_id,
         )
 
     # ------------------------------------------------------------------

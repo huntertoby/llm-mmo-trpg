@@ -175,6 +175,10 @@ class CoreRules(ContentModel):
     summon_limit_per_owner: int = Field(default=2, ge=1, le=6)
     """同一召喚者同時存在的召喚物上限（Phase 3D-4a）；超過時最舊的消失。"""
 
+    # 持續區域（3D-5）
+    zone_limit_per_owner: int = Field(default=2, ge=1, le=6)
+    """同一施放者同時存在的區域上限（Phase 3D-5）；超過時最舊的消失。"""
+
     @model_validator(mode="after")
     def _check_source(self) -> CoreRules:
         if self.source_min_at_start > self.source_max:

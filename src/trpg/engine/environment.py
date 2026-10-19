@@ -6,6 +6,8 @@
 2. **表面持續回合 −1**：歸零時變成 ``expires_to``（例如冰融化成水）。
 3. **火勢蔓延**：環境回合開始時的每一格火焰，蔓延到四方向相鄰、可燃（``flammable`` 表面或
    未著火的 ``flammable`` 物件）的格子（以火焰觸及該格，依互動表點燃或引爆）。
+3a. **持續區域**（Phase 3D-5）：施放者不在場而到期的區域消失；移動型區域前進
+   （:func:`trpg.engine.zones.move_zones`）。
 4. **天氣**：下雨時隨機產生水窪。
 5. **地圖事件**：本輪結束時的 ``spawn_units``／``terrain_change``。
 
@@ -46,10 +48,13 @@ from trpg.engine.events import (
     TerrainChanged,
     UnitDowned,
     UnitSpawned,
+    ZoneExpired,
+    ZoneMoved,
 )
 from trpg.engine.rules.geometry import XY, neighbors4
 from trpg.engine.rules.movement import is_deadly, is_standable
 from trpg.engine.state import BattleState
+from trpg.engine.zones import move_zones
 from trpg.shared.rng import Rng
 from trpg.shared.types import Element, ObjectId, Pos, Surface, UnitId
 
@@ -96,6 +101,7 @@ def run_environment(ctx: Ctx) -> None:
         _burn_objects(ctx)
         _tick_surfaces(ctx, tiles)
         _spread_fire(ctx, fires)
+        move_zones(ctx)  # 持續區域：到期與移動型的前進（Phase 3D-5）
         _weather(ctx, tiles)
         _map_events(ctx)
         ctx.emit(EnvironmentEnded)
@@ -201,11 +207,18 @@ type ChangeKind = Literal[
     "unit_spawned",
     "unit_damaged",
     "unit_downed",
+    "zone_moved",
+    "zone_expired",
 ]
 
 
 class TelegraphChange(BaseModel):
-    """預告的一項變化（由模擬事件整理而成，方便顯示在地圖上）。"""
+    """預告的一項變化（由模擬事件整理而成，方便顯示在地圖上）。
+
+    持續區域（Phase 3D-5）：``zone_moved`` 的 ``tiles`` 是區域前進後的格子、``before`` 是方向；
+    ``zone_expired`` 的 ``tiles`` 是消失前的格子、``before`` 是消失原因；兩者的 ``after`` 都是區域
+    技能 ID、``amount`` 是區域編號。一個區域在一次環境回合只列一項（``speed`` 2 時取最後的位置）。
+    """
 
     model_config = ConfigDict(frozen=True, extra="forbid")
 
@@ -216,6 +229,7 @@ class TelegraphChange(BaseModel):
     object_id: ObjectId | None = None
     unit_id: UnitId | None = None
     amount: int | None = None
+    tiles: tuple[Pos, ...] = ()
 
 
 class Telegraph(BaseModel):
@@ -269,9 +283,32 @@ def _changes(events: list[EventBase]) -> list[TelegraphChange]:
             )
         if isinstance(e, UnitDowned):
             return TelegraphChange(kind="unit_downed", unit_id=e.unit_id)
-        return None
+        return _zone_change(e)
 
-    return [c for e in events if (c := convert(e)) is not None]
+    changes = [c for e in events if (c := convert(e)) is not None]
+    last_move = {c.amount: i for i, c in enumerate(changes) if c.kind == "zone_moved"}
+    return [c for i, c in enumerate(changes) if c.kind != "zone_moved" or last_move[c.amount] == i]
+
+
+def _zone_change(e: EventBase) -> TelegraphChange | None:
+    """持續區域的預告（Phase 3D-5）：前進後的位置與消失。"""
+    if isinstance(e, ZoneMoved):
+        return TelegraphChange(
+            kind="zone_moved",
+            tiles=e.cells,
+            before=e.direction,
+            after=e.skill_id,
+            amount=e.zone_id,
+        )
+    if isinstance(e, ZoneExpired):
+        return TelegraphChange(
+            kind="zone_expired",
+            tiles=e.cells,
+            before=e.reason,
+            after=e.skill_id,
+            amount=e.zone_id,
+        )
+    return None
 
 
 def telegraph(state: BattleState) -> Telegraph:

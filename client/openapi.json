@@ -938,6 +938,14 @@
             },
             "type": "array",
             "title": "Source Wells"
+          },
+          "zones": {
+            "items": {
+              "$ref": "#/components/schemas/ZoneView"
+            },
+            "type": "array",
+            "title": "Zones",
+            "default": []
           }
         },
         "additionalProperties": false,
@@ -3270,6 +3278,14 @@
             ],
             "title": "Amount"
           },
+          "tiles": {
+            "items": {
+              "$ref": "#/components/schemas/Pos"
+            },
+            "type": "array",
+            "title": "Tiles",
+            "default": []
+          },
           "text": {
             "type": "string",
             "title": "Text"
@@ -4004,6 +4020,120 @@
         "type": "array",
         "maxItems": 2,
         "minItems": 2
+      },
+      "ZoneView": {
+        "properties": {
+          "id": {
+            "type": "integer",
+            "title": "Id"
+          },
+          "owner_id": {
+            "type": "string",
+            "title": "Owner Id"
+          },
+          "team": {
+            "$ref": "#/components/schemas/Team"
+          },
+          "skill_id": {
+            "type": "string",
+            "title": "Skill Id"
+          },
+          "name_zh": {
+            "type": "string",
+            "title": "Name Zh"
+          },
+          "anchor": {
+            "type": "string",
+            "enum": [
+              "tile",
+              "caster",
+              "moving"
+            ],
+            "title": "Anchor"
+          },
+          "affects": {
+            "type": "string",
+            "enum": [
+              "enemies",
+              "allies",
+              "all"
+            ],
+            "title": "Affects"
+          },
+          "when": {
+            "type": "string",
+            "enum": [
+              "enter",
+              "turn_start",
+              "both"
+            ],
+            "title": "When"
+          },
+          "cells": {
+            "items": {
+              "$ref": "#/components/schemas/Pos"
+            },
+            "type": "array",
+            "title": "Cells"
+          },
+          "direction": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Direction"
+          },
+          "speed": {
+            "type": "integer",
+            "title": "Speed"
+          },
+          "expires_round": {
+            "type": "integer",
+            "title": "Expires Round"
+          },
+          "harmful": {
+            "type": "boolean",
+            "title": "Harmful"
+          },
+          "next_cells": {
+            "anyOf": [
+              {
+                "items": {
+                  "$ref": "#/components/schemas/Pos"
+                },
+                "type": "array"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Next Cells"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "id",
+          "owner_id",
+          "team",
+          "skill_id",
+          "name_zh",
+          "anchor",
+          "affects",
+          "when",
+          "cells",
+          "direction",
+          "speed",
+          "expires_round",
+          "harmful",
+          "next_cells"
+        ],
+        "title": "ZoneView",
+        "description": "持續區域（Phase 3D-5；雙方都看得到）。\n\n- ``cells``：目前的格子（跟隨型以施放者目前的位置展開）。\n- ``next_cells``：移動型區域在本輪環境回合之後的格子（只看幾何的預告；不移動或在那之前就\n  消失的區域為 ``None``，空串列表示全部會撞上牆壁而消失）。\n- ``expires_round``：施放者在這一輪的回合結束時區域消失。\n- ``harmful``：效果含傷害或有害狀態（網頁用來決定顏色）。"
       }
     }
   }

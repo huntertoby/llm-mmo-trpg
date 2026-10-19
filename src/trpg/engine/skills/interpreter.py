@@ -46,6 +46,7 @@ from trpg.content.skills import (
     SWAP_ANY,
     TELEPORT_TARGET,
     TOPPLE,
+    ZONE,
     ConditionSpec,
     EffectSpec,
     SkillDef,
@@ -129,9 +130,10 @@ from trpg.engine.skills.targeting import (
 )
 from trpg.engine.source import spend_source
 from trpg.engine.stacks import add_stacks, consume_stacks
-from trpg.engine.state import BattleState, LastCast, TrapState, UnitState
+from trpg.engine.state import BattleState, LastCast, TrapState, UnitState, ZoneState
 from trpg.engine.summons import summon_unit
 from trpg.engine.traps import place_trap
+from trpg.engine.zones import create_zone, zone_spec
 from trpg.shared.errors import IllegalActionError
 from trpg.shared.types import Element, Pos, UnitId
 
@@ -155,7 +157,7 @@ REWRITE_PRIMITIVES = (
 )
 """由 :meth:`_Cast.rewrite` 結算的改寫規則型原語。"""
 _TOUCHING_AFFECTS = ("enemies", "all", "tiles")
-_OWN_CHECK = (SWAP, SWAP_ANY, TELEPORT_TARGET)
+_OWN_CHECK = (SWAP, SWAP_ANY, TELEPORT_TARGET, ZONE)
 """位移類原語自己擲抵抗判定（Phase 3D-2b），不另外擲命中。"""
 
 
@@ -283,6 +285,31 @@ def use_trap_skill(ctx: Ctx, trap: TrapState, skill: SkillDef, *, depth: int) ->
     try:
         with holding(ctx):
             _TriggeredCast(ctx, caster, skill, area).run()
+    finally:
+        ctx.trigger_depth = outer
+
+
+def use_zone_effects(ctx: Ctx, zone: ZoneState, unit: UnitState, *, depth: int) -> None:
+    """結算持續區域對 ``unit`` 的效果（``zone_triggered`` 已由呼叫端發出；Phase 3D-5）。
+
+    施放者是區域建立時的快照（屬性取 ``zone.attributes``、沒有狀態），對象只有 ``unit``；``effects``
+    的對象一律是區域的 ``affects``。效果自動命中（不擲命中、沒有格擋與暴擊），狀態照常擲抵抗；
+    期間引起的被動觸發與反應的深度從 ``depth`` 起算。
+    """
+    state = ctx.state
+    skill = state.ruleset.skill_def(zone.skill_id)
+    spec = zone_spec(state, zone)
+    caster = state.units[zone.owner_id].clone()
+    caster.attributes = dict(zone.attributes)
+    caster.statuses = []
+    subs = tuple(e.model_copy(update={"affects": spec.affects}) for e in spec.effects or ())
+    carrier = skill.model_copy(update={"effects": subs})
+    area = SkillArea(tiles=(unit.xy,), units=(unit.id,), origin=unit.xy)
+    outer = ctx.trigger_depth
+    ctx.trigger_depth = depth
+    try:
+        with holding(ctx):
+            _TriggeredCast(ctx, caster, carrier, area).run()
     finally:
         ctx.trigger_depth = outer
 
@@ -1257,6 +1284,12 @@ class _Cast:
         summon_unit(self.ctx, self.caster, spec.unit, xy, spec.duration, self.skill.id)
         return []
 
+    def zone(self, _effect: ResolvedEffect, spec: EffectSpec) -> list[EffectBase]:
+        """``zone``（Phase 3D-5）：在影響範圍建立持續區域（直接結算，見
+        :mod:`trpg.engine.zones`）。"""
+        create_zone(self.ctx, self.caster, self.skill, spec, self.area.tiles, self.area.direction)
+        return []
+
     def leap(self, spec: EffectSpec) -> list[EffectBase]:
         """``leap``（Phase 3D-2）：跳到指定的空格（選取時已檢查落點與路徑）；不觸發藉機攻擊。"""
         assert self.action is not None
@@ -1513,6 +1546,7 @@ _Cast._SIMPLE = {
     STEAL_BUFF: _Cast.steal_buff,
     HURL_OBJECT: _Cast.hurl_object,
     SUMMON: _Cast.summon,
+    ZONE: _Cast.zone,
 }
 """只需要 ``(effect, spec)`` 的原語 → 展開方法。"""
 

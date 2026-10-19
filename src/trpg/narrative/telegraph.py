@@ -8,7 +8,7 @@ from collections.abc import Callable
 from trpg.content.maps import MapEvent, SpawnUnitsEvent
 from trpg.engine.environment import TelegraphChange
 from trpg.engine.state import BattleState
-from trpg.narrative.events import xy_text
+from trpg.narrative.events import DIRECTION_TEXT, cells_text, xy_text
 from trpg.shared.types import Pos, Surface
 
 __all__ = ["change_text", "upcoming_text"]
@@ -71,6 +71,31 @@ def _downed(state: BattleState, c: TelegraphChange, _t: Callable[[str], str]) ->
     return f"{_unit_name(state, c)} 將倒下"
 
 
+def _zone_name(state: BattleState, c: TelegraphChange) -> str:
+    try:
+        return state.ruleset.skill_def(c.after or "").name_zh
+    except KeyError:
+        return "區域"
+
+
+_ZONE_EXPIRY = {
+    "timeout": "時間到了",
+    "owner_gone": "施放者離場",
+    "limit": "超過上限",
+    "blocked": "前方都是牆壁或地圖邊緣",
+}
+
+
+def _zone_moved(state: BattleState, c: TelegraphChange, _t: Callable[[str], str]) -> str:
+    direction = DIRECTION_TEXT.get(c.before or "", c.before or "")
+    return f"「{_zone_name(state, c)}」區域將向{direction}前進到 {cells_text(c.tiles)}"
+
+
+def _zone_expired(state: BattleState, c: TelegraphChange, _t: Callable[[str], str]) -> str:
+    why = _ZONE_EXPIRY.get(c.before or "", c.before or "")
+    return f"「{_zone_name(state, c)}」區域將消失（{why}）"
+
+
 _CHANGE_TEXT: dict[str, Callable[[BattleState, TelegraphChange, Callable[[str], str]], str]] = {
     "surface": _surface,
     "terrain": _terrain,
@@ -80,6 +105,8 @@ _CHANGE_TEXT: dict[str, Callable[[BattleState, TelegraphChange, Callable[[str], 
     "unit_spawned": _spawned,
     "unit_damaged": _damaged,
     "unit_downed": _downed,
+    "zone_moved": _zone_moved,
+    "zone_expired": _zone_expired,
 }
 
 

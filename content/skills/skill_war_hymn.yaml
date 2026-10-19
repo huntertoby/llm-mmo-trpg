@@ -1,3 +1,6 @@
+# Phase 3D-5 改寫（docs/phases/Phase3D計畫.md 5、docs/design/06-技能.md 6.16 G；數值為初值，未經模擬）：
+# 原本是「施放當下讓 2 格內的友方獲得激昂 4 回合」的光環，改成跟著施放者移動的持續區域——
+# 3 輪內，友方進入施放者 2 格內、或在 2 格內開始回合時，獲得激昂 1 回合。
 id: skill_war_hymn
 schema_version: 1
 name_zh: 戰歌
@@ -12,11 +15,17 @@ ap_cost: 2
 scaling_attr: wis
 shape: {type: allies_in_radius, radius: 2}
 effects:
-  - {type: apply_status, status: empowered, duration: 4, affects: allies}
+  - type: zone
+    anchor: caster
+    when: both
+    duration: 3
+    affects: allies
+    effects:
+      - {type: apply_status, status: empowered, duration: 1}
 condition: null
 cost: {mana: 8, cooldown: 3}
 tags: [spell, buff, aura, support]
 narrative:
-  concept: 一首激昂的戰歌，讓身邊每個人都覺得自己無所不能
-  cast_flavor: 你高聲唱起古老的戰歌，同伴的眼神一下子亮了起來
+  concept: 一首激昂的戰歌，歌聲走到哪裡，身邊的人就覺得自己無所不能
+  cast_flavor: 你高聲唱起古老的戰歌，歌聲隨著你的腳步擴散，同伴的眼神一下子亮了起來
 provenance: {origin: builtin, owner_id: null, created_by: null, parents: [], bound: true, tradeable: false}

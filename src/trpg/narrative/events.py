@@ -87,19 +87,26 @@ from trpg.engine.events import (
     UnitSpawned,
     UnitStoodUp,
     UnitSummoned,
+    ZoneCreated,
+    ZoneExpired,
+    ZoneMoved,
+    ZoneTriggered,
 )
 from trpg.engine.skill_triggers import MODIFIER_ON_HIT
 from trpg.engine.state import BattleState
 from trpg.shared.types import Pos, Surface
 
 __all__ = [
+    "DIRECTION_TEXT",
     "SILENT_EVENT_TYPES",
     "battle_started_text",
+    "cells_text",
     "describe_event",
     "object_name",
     "reaction_name",
     "surface_name",
     "xy_text",
+    "zone_anchor_text",
 ]
 
 _PPM = 1_000_000
@@ -819,6 +826,68 @@ def _totem_pulsed(e: TotemPulsed, v: _View) -> str:
     status = v.statuses[e.status_id]
     totem = v.name.get(e.unit_id, e.unit_id)
     return f"  {totem} 散發光環（{e.radius} 格內）：{names} 獲得「{status}」"
+
+
+DIRECTION_TEXT = {"north": "北", "east": "東", "south": "南", "west": "西"}
+"""方向的中文（持續區域的紀錄與預告，Phase 3D-5）。"""
+
+
+def cells_text(cells: tuple[Pos, ...], limit: int = 4) -> str:
+    """格子清單的短文字：最多列 ``limit`` 格，其餘以「等 N 格」帶過。"""
+    shown = "、".join(xy_text(p) for p in cells[:limit])
+    return shown if len(cells) <= limit else f"{shown} 等 {len(cells)} 格"
+
+
+def zone_anchor_text(anchor: str, direction: str | None, speed: int) -> str:
+    """區域錨點的說明（紀錄、技能說明與網頁共用的字句）。"""
+    if anchor == "caster":
+        return "跟著施放者移動"
+    if anchor == "moving" and direction is not None:
+        return f"每次環境回合向{DIRECTION_TEXT[direction]}前進 {speed} 格"
+    return "固定不動"
+
+
+@_handles(ZoneCreated)
+def _zone_created(e: ZoneCreated, v: _View) -> str:
+    skill = v.state.ruleset.skill_def(e.skill_id).name_zh
+    owner = v.name.get(e.owner_id, e.owner_id)
+    where = cells_text(e.cells)
+    anchor = zone_anchor_text(e.anchor, e.direction, e.speed)
+    return (
+        f"    {owner} 展開持續區域「{skill}」：{where}（{anchor}，"
+        f"第 {e.expires_round} 輪 {owner} 的回合結束時消失）"
+    )
+
+
+@_handles(ZoneMoved)
+def _zone_moved(e: ZoneMoved, v: _View) -> str:
+    skill = v.state.ruleset.skill_def(e.skill_id).name_zh
+    direction = DIRECTION_TEXT.get(e.direction, e.direction)
+    return f"  「{skill}」區域向{direction}前進：{cells_text(e.cells)}"
+
+
+@_handles(ZoneTriggered)
+def _zone_triggered(e: ZoneTriggered, v: _View) -> str:
+    skill = v.state.ruleset.skill_def(e.skill_id).name_zh
+    unit = v.name.get(e.unit_id, e.unit_id)
+    if e.cause == "enter":
+        return f"  ◇ {unit} 進入「{skill}」區域（深度 {e.trigger_depth}）"
+    return f"  ◇ {unit} 在「{skill}」區域內開始回合（深度 {e.trigger_depth}）"
+
+
+_ZONE_EXPIRY_TEXT = {
+    "timeout": "時間到了",
+    "owner_gone": "施放者離場",
+    "limit": "超過同時存在的上限，最舊的區域",
+    "blocked": "前方都是牆壁或地圖邊緣",
+}
+
+
+@_handles(ZoneExpired)
+def _zone_expired(e: ZoneExpired, v: _View) -> str:
+    skill = v.state.ruleset.skill_def(e.skill_id).name_zh
+    owner = v.name.get(e.owner_id, e.owner_id)
+    return f"  {_ZONE_EXPIRY_TEXT[e.reason]}：{owner} 的「{skill}」區域消失了"
 
 
 # ---------------------------------------------------------------------------

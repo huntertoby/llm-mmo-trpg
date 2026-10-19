@@ -9,6 +9,7 @@ export type TileView = Schemas["TileView"];
 export type UnitView = Schemas["UnitView"];
 export type ObjectView = Schemas["ObjectView"];
 export type TrapView = Schemas["TrapView"];
+export type ZoneView = Schemas["ZoneView"];
 export type StatusView = Schemas["StatusView"];
 export type Pending = Schemas["Pending"];
 export type Action = Schemas["Action"];

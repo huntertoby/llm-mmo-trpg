@@ -398,3 +398,21 @@ primitives:
       unit: {type: summon, required: true, description_zh: 召喚物範本 ID（content/units/summons/）}
       duration: {type: int, required: true, min: 1, max: 4, description_zh: 召喚物存在的輪數}
       count: {type: int, min: 1, max: 1, description_zh: 一次召喚的數量（目前只能是 1；省略為 1）}
+
+  # --- Phase 3D-5：持續區域（docs/design/06-技能.md 6.16 G；點數為初值，未經模擬）---
+  - id: zone
+    name_zh: 持續區域
+    description_zh: 在技能形狀的格子上建立持續 duration 輪的區域（施放者第 duration 次回合結束時消失，施放當回合不算；施放者不在場時於那一輪的環境回合消失）。anchor：tile 固定在施放時的格子、caster 跟隨施放者（形狀 self／ring／allies_in_radius，每次施放者移動就以新位置重新展開；施放者倒下或離場時消失）、moving 每次環境回合沿施放方向前進 speed 格（形狀 line／cone；前進到牆壁或地圖外的格子消失，全部消失時區域消失）。單位進入區域（區域建立、移動或跟隨到他身上也算；在區域內移動不算）或回合開始時站在區域內（when：enter／turn_start／both），依 affects（enemies／allies／all）對他結算 effects（1–2 個 damage／heal／shield／apply_status；自動命中，狀態照常擲抵抗，施放者屬性在建立時快照；施放者自己不受 all 的有害效果）。surface：區域新覆蓋的格子留下表面。同一施放者同時存在的區域超過 zone_limit_per_owner（core.yaml）時最舊的消失。必須是主動技能唯一的效果。
+    category: structural
+    harmful: false
+    min_rarity: rare
+    budget_basis: zone
+    forbid_affects: [self, tiles]
+    allowed_shapes: [self, ground_tile, cross, square3, line, cone, ring, allies_in_radius]
+    params:
+      anchor: {type: anchor, required: true, description_zh: tile 固定、caster 跟隨施放者、moving 沿施放方向移動}
+      when: {type: zone_when, required: true, description_zh: enter 進入時、turn_start 回合開始時、both 兩者}
+      duration: {type: int, required: true, min: 1, max: 4, description_zh: 區域持續的輪數}
+      effects: {type: effects, required: true, description_zh: 區域結算的效果（1–2 個）}
+      speed: {type: int, min: 1, max: 2, description_zh: anchor moving 每次環境回合前進的格數}
+      surface: {type: surface, description_zh: 區域新覆蓋的格子留下的表面（省略＝不留）}

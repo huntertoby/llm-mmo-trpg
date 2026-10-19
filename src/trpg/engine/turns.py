@@ -3,7 +3,8 @@
 回合開始：AP 回復為 ``ap_per_turn + min(保留, ap_carry_max)``、移動點數回滿、
 移除「到自己下回合開始」的狀態、結算持續傷害（燃燒），再結算站立表面的回合開始效果
 （毒、聖光、火焰）。
-回合結束：倒數型狀態 −1（歸零移除）、記錄保留的 AP、到期的召喚物消失（Phase 3D-4a）。
+回合結束：倒數型狀態 −1（歸零移除）、記錄保留的 AP、到期的召喚物（Phase 3D-4a）與持續區域
+（Phase 3D-5）消失。回合開始時站在持續區域內的效果在表面效果之後結算。
 全員行動完為一輪：``round_ended`` → 環境回合 → 勝利條件的每輪判定 → 輪數上限 →
 ``round_started``（反應次數重設）。
 """
@@ -43,6 +44,7 @@ from trpg.engine.stacks import expire_stacks
 from trpg.engine.state import StatusInstance, UnitState
 from trpg.engine.summons import expire_summons, pulse_totem, totem_of
 from trpg.engine.traps import tick_traps
+from trpg.engine.zones import expire_zones_at_turn_end, zones_turn_start
 from trpg.shared.types import Surface, UnitId
 
 __all__ = [
@@ -117,6 +119,8 @@ def start_turn(ctx: Ctx, unit_id: UnitId) -> None:
     surface_effects = _surface_turn_start(ctx, unit)
     if surface_effects and unit.alive:
         execute(ctx, surface_effects)
+    if unit.alive and state.zones:  # 站在持續區域內的回合開始效果（Phase 3D-5）
+        zones_turn_start(ctx, unit)
     if unit.alive and state.traps:  # 放置者的陷阱倒數（Phase 2E-3）：delay 到期觸發、enter 到期消失
         tick_traps(ctx, unit)
     if unit.alive and unit.is_summon:  # 圖騰的光環（Phase 3D-4b）
@@ -221,6 +225,7 @@ def end_turn(ctx: Ctx) -> None:
     unit.ap = 0
     unit.move_points = 0
     expire_summons(ctx, unit)  # 召喚物到期：在召喚者的回合結束時消失（Phase 3D-4a）
+    expire_zones_at_turn_end(ctx, unit)  # 持續區域到期：在施放者的回合結束時消失（Phase 3D-5）
     ctx.emit(TurnEnded, unit_id=unit.id, ap_carried=unit.ap_carry)
 
 

@@ -199,6 +199,14 @@ class BudgetRules(ContentModel):
     totem_expected_allies_permille: int = Field(default=1000, ge=0, le=5000)
     """圖騰（Phase 3D-4b）的點數 ＝ 光環狀態的 ``budget_points`` × 預期受惠的友方數（‰）× 持續輪數
     × ``summon_round_value_permille``（初值，未經模擬）。"""
+    zone_cell_round_permille: int = Field(default=120, ge=1, le=5000)
+    """``zone``（Phase 3D-5）：每格每輪預估的觸發次數（‰；初值，未經模擬）。"""
+    zone_both_permille: int = Field(default=1500, ge=1000, le=5000)
+    """``zone`` 的 ``when: both``（進入與回合開始都結算）的倍率（‰）。"""
+    zone_moving_permille: int = Field(default=1500, ge=1000, le=5000)
+    """``zone`` 的 ``anchor: moving``（掃過更多格子）的倍率（‰）。"""
+    zone_surface_permille: int = Field(default=300, ge=0, le=5000)
+    """``zone`` 留下的表面：每個新覆蓋格的表面點數折合（‰）。"""
     restore_mana_point_permille: int = Field(default=700, ge=0, le=5000)
     """``restore_resource`` 回復法力：每點法力折合的預算點數（‰；Phase 3D-1；初值）。"""
     restore_cooldown_points: int = Field(default=3, ge=0)

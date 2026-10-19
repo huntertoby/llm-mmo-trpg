@@ -268,6 +268,58 @@ def _summon_points(
     return points, f"每輪 {_fmt(dpr)} × {effect.duration} 輪 × {permille}‰"
 
 
+def zone_cell_count(skill: SkillDef) -> int:
+    """持續區域（3D-5）的形狀格數（純幾何，不看地圖上的牆壁）。"""
+    shape = skill.shape
+    size = shape.size or 1
+    radius = shape.radius or 1
+    counts = {
+        "cross": 5,
+        "square3": 9,
+        "line": size,
+        "cone": size * size,
+        "ring": 8 * radius,
+        "allies_in_radius": 2 * radius * radius + 2 * radius + 1,
+    }
+    return counts.get(shape.type, 1)
+
+
+def _zone_points(
+    skill: SkillDef, effect: EffectSpec, library: ContentLibrary
+) -> tuple[Fraction, str]:
+    """``zone`` 的點數（3D-5）：``effects`` 的基礎點數合計 × 格數 × 輪數 × 每格每輪的觸發率
+    （× ``both`` 倍率、× ``moving`` 倍率）＋ 表面點數 × 新覆蓋的格數 × 表面折合。"""
+    rules = library.budget
+    primitives = library.ruleset.primitives.by_id()
+    if effect.duration is None:
+        raise BudgetError("zone 缺少 duration，無法計算點數")
+    per_trigger = Fraction(0)
+    for sub in effect.effects or ():
+        points, _ = _base_points(skill, sub, primitives[sub.type], library)
+        per_trigger += points
+    cells = zone_cell_count(skill)
+    rate = rules.zone_cell_round_permille
+    total = per_trigger * cells * effect.duration * Fraction(rate, _PERMILLE)
+    notes = [f"每次 {_fmt(per_trigger)} × {cells} 格 × {effect.duration} 輪 × {rate}‰"]
+    if effect.when == "both":
+        total *= Fraction(rules.zone_both_permille, _PERMILLE)
+        notes.append(f"× 兩種時機 {rules.zone_both_permille}‰")
+    if effect.anchor == "moving":
+        total *= Fraction(rules.zone_moving_permille, _PERMILLE)
+        notes.append(f"× 移動 {rules.zone_moving_permille}‰")
+    if effect.surface is not None:
+        surface, _ = _surface_points(effect.model_copy(update={"duration": None}), library)
+        covered = (
+            cells * (1 + effect.duration * (effect.speed or 1))
+            if effect.anchor == "moving"
+            else cells
+        )
+        extra = surface * covered * Fraction(rules.zone_surface_permille, _PERMILLE)
+        total += extra
+        notes.append(f"＋ 表面 {_fmt(surface)} × {covered} 格 × {rules.zone_surface_permille}‰")
+    return total, " ".join(notes)
+
+
 def _consume_stack_points(
     skill: SkillDef, effect: EffectSpec, library: ContentLibrary
 ) -> tuple[Fraction, str]:
@@ -320,6 +372,7 @@ _SPECIAL_BASES: dict[
     "hurl_object": _hurl_object_points,
     "charge_through": _charge_through_points,
     "summon": _summon_points,
+    "zone": _zone_points,
     "restore_resource": _restore_resource_points,
 }
 """需要整個技能或特殊規則的 ``budget_basis`` → 點數算法。"""
@@ -331,6 +384,8 @@ def _shape_multiplier(
     """形狀倍率（只對作用在單位的效果）；陷阱技能取 ``trap.shape`` 的倍率（觸發時的影響範圍）。"""
     rules = library.ruleset
     affects = resolved_affects(rules, effect)
+    if primitive.budget_basis == "zone":  # 持續區域（3D-5）：格數已算進觸發次數
+        return Fraction(1)
     if not (affects in _SHAPED_AFFECTS and primitive.acts_on != "caster"):
         return Fraction(1)
     if skill.trap is not None:

@@ -49,6 +49,7 @@ __all__ = [
     "TrapAiRules",
     "WeatherDef",
     "WeatherTable",
+    "ZoneAiRules",
 ]
 
 OBJECT_TAGS: frozenset[str] = frozenset(
@@ -668,6 +669,19 @@ class SummonAiRules(ContentModel):
     totem_ally_points: int = Field(default=3, ge=0)
 
 
+class ZoneAiRules(ContentModel):
+    """持續區域的 AI 數值（Phase 3D-5；``content/ai_profiles.yaml`` 的 ``zone:``；初值未經模擬）。
+
+    - ``likelihood_permille``：建立區域時，估計之後每輪真的會有對象觸發一次的比例（‰）。收益 ＝
+      區域每次觸發的價值 × 區域格內與移動路徑上的對象數 × 持續輪數 × 這個比例（建立當下就在
+      區域內的對象，預覽已經算過一次）。
+    - ``path_permille``：移動型區域路徑上（還沒被覆蓋）的對象，相對於格內對象的權重（‰）。
+    """
+
+    likelihood_permille: int = Field(default=400, ge=0, le=1000)
+    path_permille: int = Field(default=500, ge=0, le=1000)
+
+
 class AiProfile(ContentModel):
     id: str = Field(pattern=ID_PATTERN)
     name_zh: str = Field(min_length=1)
@@ -688,6 +702,8 @@ class AiProfile(ContentModel):
     """改寫規則型原語與源力的 AI 數值（Phase 3C-4a）；由 :class:`AiProfileTable` 的同名欄位填入。"""
     summon: SummonAiRules = Field(default_factory=SummonAiRules)
     """召喚的 AI 數值（Phase 3D-4b）；由 :class:`AiProfileTable` 的同名欄位填入。"""
+    zone: ZoneAiRules = Field(default_factory=ZoneAiRules)
+    """持續區域的 AI 數值（Phase 3D-5）；由 :class:`AiProfileTable` 的同名欄位填入。"""
 
 
 class OrderBonuses(ContentModel):
@@ -736,6 +752,7 @@ class AiProfileTable(ContentModel):
     trap: TrapAiRules = Field(default_factory=TrapAiRules)
     rewrite: RewriteAiRules = Field(default_factory=RewriteAiRules)
     summon: SummonAiRules = Field(default_factory=SummonAiRules)
+    zone: ZoneAiRules = Field(default_factory=ZoneAiRules)
     orders: OrderBonuses = Field(default_factory=OrderBonuses)
 
     @model_validator(mode="before")
@@ -748,7 +765,7 @@ class AiProfileTable(ContentModel):
         ally_shared = data.get("ally_status_values")
         trap_shared = {
             key: data[key]
-            for key in ("trap_likelihood_permille", "trap", "rewrite", "summon")
+            for key in ("trap_likelihood_permille", "trap", "rewrite", "summon", "zone")
             if key in data
         }
         if not isinstance(shared, dict) and not isinstance(ally_shared, dict) and not trap_shared:

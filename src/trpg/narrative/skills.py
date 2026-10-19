@@ -254,6 +254,32 @@ def _consume_status(lib: ContentLibrary, skill: SkillDef, spec: EffectSpec) -> s
     return text + "；目標沒有該狀態則不生效"
 
 
+_ZONE_WHEN = {
+    "enter": "進入區域時",
+    "turn_start": "在區域內開始回合時",
+    "both": "進入區域或在區域內開始回合時",
+}
+_ZONE_WHO = {"enemies": "敵人", "allies": "友方", "all": "任何單位"}
+_DIRECTION_WORD = "施放方向"
+
+
+def _zone(lib: ContentLibrary, skill: SkillDef, spec: EffectSpec) -> str:
+    """持續區域（Phase 3D-5）的一句話。"""
+    assert spec.when is not None and spec.effects
+    if spec.anchor == "caster":
+        anchor = "跟著你移動"
+    elif spec.anchor == "moving":
+        anchor = f"每次環境回合向{_DIRECTION_WORD}前進 {spec.speed or 1} 格"
+    else:
+        anchor = "固定不動"
+    who = _ZONE_WHO[spec.affects or "enemies"]
+    then = "、".join(_effect_core(lib, skill, sub) for sub in spec.effects)
+    text = f"建立持續 {spec.duration} 輪的區域（{anchor}）：{who}{_ZONE_WHEN[spec.when]}，{then}"
+    if spec.surface is not None:
+        text += f"；區域經過的格子留下「{lib.ruleset.surface_def(spec.surface).name_zh}」"
+    return text
+
+
 def _place_trap(_lib: ContentLibrary, skill: SkillDef, _spec: EffectSpec) -> str:
     trap = skill.trap
     assert trap is not None
@@ -365,6 +391,7 @@ _EFFECT_TEXT: dict[str, _EffectText] = {
     "steal_buff": _steal_buff,
     "hurl_object": _hurl_object,
     "topple": _topple,
+    "zone": _zone,
 }
 
 
@@ -380,7 +407,7 @@ def effect_summary(library: ContentLibrary, skill: SkillDef, spec: EffectSpec) -
     primitive = library.ruleset.primitive_def(spec.type)
     affects = spec.affects or default_affects(primitive)
     text = _effect_core(library, skill, spec)
-    if spec.type != "summon":  # 召喚的對象是選定的空格，不寫「（自己）」（3D-4b）
+    if spec.type not in ("summon", "zone"):  # 召喚的空格、區域的對象已寫在句中（3D-4b、3D-5）
         text += f"（{_AFFECTS[affects]}）"
     if spec.condition is not None:
         text += f"，若{condition_summary(library, spec.condition)}"

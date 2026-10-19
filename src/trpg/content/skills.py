@@ -79,6 +79,10 @@ __all__ = [
     "TELEPORT_TARGET",
     "TOPPLE",
     "WEAPON_CLASSES",
+    "ZONE",
+    "ZONE_CASTER_SHAPES",
+    "ZONE_EFFECT_TYPES",
+    "ZONE_MOVING_SHAPES",
     "Affects",
     "BasicAction",
     "ConditionDef",
@@ -413,6 +417,8 @@ class PrimitiveParam(ContentModel):
         "resource",
         "on_hit",
         "summon",
+        "anchor",
+        "zone_when",
     ]
     required: bool = False
     min: int | None = None
@@ -438,6 +444,7 @@ class PrimitiveDef(ContentModel):
       ``hurl_object`` 骰子平均 × 「需要附近有物件」折扣（＋擊倒點數，3C-5a）、
       ``charge_through`` （骰子平均 ＋ on_hit 點數）× 預期被撞到的敵人數（3D-2c）、
       ``summon`` 召喚物每輪預估傷害 × 持續輪數 × ``summon_round_value_permille``（3D-4a）、
+      ``zone`` 區域效果點數 × 預估觸發次數（格數 × 輪數 × 係數，3D-5）、
       ``dice_average`` 骰子平均值、``damage`` 法術為骰子平均值而武器為倍率 × 基準武器傷害、
       ``status``／``surface`` 為該狀態或表面的 ``budget_points`` × 持續 ÷ 預設持續。
       ``None`` 表示無法計算預算（驗證器會拒絕）。
@@ -468,6 +475,7 @@ class PrimitiveDef(ContentModel):
             "restore_resource",
             "charge_through",
             "summon",
+            "zone",
         ]
         | None
     ) = None
@@ -682,17 +690,31 @@ class EffectSpec(ContentModel):
     """``summon`` 專用（Phase 3D-4a）：召喚物範本 ID（``content/units/summons/``）。"""
     count: int | None = Field(default=None, ge=1)
     """``summon`` 專用（Phase 3D-4a）：一次召喚的數量（目前只能是 1）。"""
+    anchor: Literal["tile", "caster", "moving"] | None = None
+    """``zone`` 專用（Phase 3D-5）：``tile`` 固定在施放時的格子、``caster`` 跟隨施放者、``moving``
+    每次環境回合沿施放方向前進 ``speed`` 格。"""
+    when: Literal["enter", "turn_start", "both"] | None = None
+    """``zone`` 專用（Phase 3D-5）：區域效果結算的時機——單位 **進入** 區域時、**回合開始時** 站在
+    區域內時，或兩者。（設計文件寫作 ``on``；YAML 1.1 會把 ``on`` 讀成布林值，所以欄位名用
+    ``when``。）"""
+    speed: int | None = Field(default=None, ge=1)
+    """``zone`` 的 ``anchor: moving`` 專用（Phase 3D-5）：每次環境回合前進的格數。"""
+    effects: tuple[EffectSpec, ...] | None = None
+    """``zone`` 專用（Phase 3D-5）：區域結算的效果（1–2 個，只能用 :data:`ZONE_EFFECT_TYPES`，
+    不可自帶 ``affects``／``condition``；對象由區域的 ``affects`` 決定）。"""
     condition: ConditionSpec | None = None
 
     def param_values(self) -> dict[str, Any]:
         """已填寫的原語參數（不含 ``type``、``affects``、``condition``）。"""
         names = (
             "amount",
+            "anchor",
             "collision_dice",
             "count",
             "dice",
             "distance",
             "duration",
+            "effects",
             "element",
             "knock_prone",
             "multiplier_permille",
@@ -703,6 +725,7 @@ class EffectSpec(ContentModel):
             "range",
             "resource",
             "scale",
+            "speed",
             "splash",
             "stack",
             "status",
@@ -710,6 +733,7 @@ class EffectSpec(ContentModel):
             "tag",
             "then",
             "unit",
+            "when",
             "which",
         )
         return {n: getattr(self, n) for n in names if getattr(self, n) is not None}
@@ -864,6 +888,16 @@ CHARGE_THROUGH = "charge_through"
 """Phase 3D-2c 的直線衝撞原語 ID（6.22）：形狀 ``ground_tile`` 選終點格，沿直線衝過去。"""
 SUMMON = "summon"
 """Phase 3D-4a 的召喚原語 ID（6.16 B）：在 ``ground_tile`` 選的空格召喚 ``unit`` 範本。"""
+ZONE = "zone"
+"""Phase 3D-5 的持續區域原語 ID（6.16 G）：在格子上建立持續 ``duration`` 輪的區域。"""
+ZONE_EFFECT_TYPES: tuple[str, ...] = ("damage", "heal", "shield", "apply_status")
+"""``zone`` 的 ``effects`` 可用的原語（Phase 3D-5；與 ``consume_status`` 的 ``then`` 相同）。"""
+ZONE_MOVING_SHAPES: tuple[str, ...] = ("line", "cone")
+"""``anchor: moving`` 可用的形狀（選方向的形狀；區域沿施放方向前進）。"""
+ZONE_CASTER_SHAPES: tuple[str, ...] = ("self", "ring", "allies_in_radius")
+"""``anchor: caster`` 可用的形狀（以施放者為中心、不需要選取的形狀；跟著施放者重新展開）。"""
+_ZONE_ONLY_FIELDS = ("anchor", "when", "speed", "effects")
+_MAX_ZONE_EFFECTS = 2
 SELF_MOVES: tuple[str, ...] = (DASH, LEAP, SWAP, CHARGE_THROUGH, "teleport")
 """改變施放者位置的原語；一個技能最多一個。"""
 _MAX_COOLDOWN_RESTORE = 2
@@ -1254,6 +1288,7 @@ class SkillDef(ContentModel):
         self._check_self_moves()
         self._check_pair_moves()
         self._check_summon()
+        self._check_zone()
         if self.kind == "passive" and self.trigger is None:
             raise ValueError("被動技能（kind: passive）必須有 trigger")
         if self.kind != "passive" and self.trigger is not None:
@@ -1353,6 +1388,56 @@ class SkillDef(ContentModel):
         for effect in self.effects:
             if effect.type != SUMMON and effect.affects != "self":
                 raise ValueError("summon 以外的效果必須明寫 affects: self（只作用在施放者）")
+
+    def _check_zone(self) -> None:
+        """持續區域（Phase 3D-5）：只能用在主動技能，而且是技能唯一的效果；``anchor``、``when``、
+        ``duration``、``effects`` 必填，``affects`` 必須是 ``enemies``／``allies``／``all``；
+        ``moving`` 要搭配選方向的形狀並填 ``speed``，``caster`` 要搭配以施放者為中心的形狀。"""
+        zones = [e for e in self.effects if e.type == ZONE]
+        for index, effect in enumerate(self.effects):
+            if effect.type != ZONE and any(
+                getattr(effect, f) is not None for f in _ZONE_ONLY_FIELDS
+            ):
+                raise ValueError(f"effects[{index}]：只有 zone 使用 anchor、when、speed、effects")
+        if not zones:
+            return
+        if self.kind != "active":
+            raise ValueError(f"zone 只能用在主動技能，收到 kind: {self.kind}")
+        if len(self.effects) != 1:
+            raise ValueError("zone 必須是技能唯一的效果")
+        self._check_zone_effect(zones[0])
+
+    def _check_zone_effect(self, zone: EffectSpec) -> None:
+        where = "effects[0]（zone）"
+        if zone.anchor is None or zone.when is None or zone.duration is None:
+            raise ValueError(f"{where}：必須填 anchor、when、duration")
+        if zone.affects not in ("enemies", "allies", "all"):
+            raise ValueError(f"{where}：affects 必須明寫 enemies、allies 或 all")
+        if zone.anchor == "moving":
+            if self.shape.type not in ZONE_MOVING_SHAPES:
+                allowed = "、".join(ZONE_MOVING_SHAPES)
+                raise ValueError(f"{where}：anchor: moving 的形狀必須是 {allowed}")
+            if zone.speed is None:
+                raise ValueError(f"{where}：anchor: moving 必須填 speed")
+        elif zone.speed is not None:
+            raise ValueError(f"{where}：只有 anchor: moving 使用 speed")
+        if zone.anchor == "caster" and self.shape.type not in ZONE_CASTER_SHAPES:
+            allowed = "、".join(ZONE_CASTER_SHAPES)
+            raise ValueError(f"{where}：anchor: caster 的形狀必須是 {allowed}")
+        subs = zone.effects or ()
+        if not 1 <= len(subs) <= _MAX_ZONE_EFFECTS:
+            raise ValueError(f"{where}：effects 必須有 1 到 {_MAX_ZONE_EFFECTS} 個效果")
+        for sub_index, sub in enumerate(subs):
+            if sub.type not in ZONE_EFFECT_TYPES:
+                allowed = "、".join(ZONE_EFFECT_TYPES)
+                raise ValueError(
+                    f"{where}.effects[{sub_index}]：只能使用 {allowed}，收到 {sub.type}"
+                )
+            if sub.affects is not None or sub.condition is not None:
+                raise ValueError(
+                    f"{where}.effects[{sub_index}]：區域的效果不可自帶 affects 或 condition"
+                )
+            self._check_effect(0, sub)
 
     def _check_pair_moves(self) -> None:
         """位移他人（Phase 3D-2b）：``teleport_target`` 與形狀 ``unit_then_tile``、``swap_any`` 與
@@ -1714,6 +1799,23 @@ def _effect_problems(skill: SkillDef, index: int, effect: EffectSpec, refs: _Ref
         problems.append(f"{where}：{primitive.id} 只能搭配形狀 {allowed}，收到 {skill.shape.type}")
     problems += _stack_effect_problems(where, effect, affects, refs)
     problems += _consume_status_problems(skill, index, effect, refs)
+    problems += _zone_problems(skill, index, effect, refs)
+    return problems
+
+
+def _zone_problems(skill: SkillDef, index: int, effect: EffectSpec, refs: _Refs) -> list[str]:
+    """``zone`` 的跨檔案檢查（Phase 3D-5）：``effects`` 當成同一技能的效果檢查（原語、參數、
+    引用）。"""
+    if effect.type != ZONE:
+        return []
+    problems: list[str] = []
+    subs = effect.effects or ()
+    carrier = skill.model_copy(update={"effects": subs})
+    for sub_index, sub in enumerate(subs):
+        problems += [
+            f"effects[{index}].effects{p.removeprefix('effects')}"
+            for p in _effect_problems(carrier, sub_index, sub, refs)
+        ]
     return problems
 
 

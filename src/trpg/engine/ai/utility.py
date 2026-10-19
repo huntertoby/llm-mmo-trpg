@@ -85,6 +85,7 @@ from trpg.engine.ai.orders import (
 )
 from trpg.engine.ai.scene_objects import SCENE_PRIMITIVES, has_fire_follow_up, scene_estimate
 from trpg.engine.ai.summon import has_summon, summon_estimate, summon_gains, summon_template
+from trpg.engine.ai.zone import hostile_zone_at, is_zone_skill, zone_estimate, zone_gains
 from trpg.engine.battle import legal_actions, legal_actions_with_areas
 from trpg.engine.events import (
     ApGranted,
@@ -417,8 +418,8 @@ def _unit_position_value(
         value -= w.objective * _objective_distance(state, unit)
     if scene.orders is not None:
         value -= _order_penalty(scene.orders, xy)
-    if _harmful(state, xy):
-        value -= w.hazard
+    if _harmful(state, xy) or (state.zones and hostile_zone_at(state, xy, unit.team)):
+        value -= w.hazard  # 有害表面，或敵方會傷害自己的持續區域（Phase 3D-5）
     return Fraction(value)
 
 
@@ -715,6 +716,7 @@ def _ally_gains(f: _GainFrame) -> Fraction:
         gains += _stack_gains(state, f.actor, p, f.profile, f.hit)
         gains += _trap_gains(state, p, f.profile)
         gains += summon_gains(state, f.actor, p.min_events, f.profile)  # 召喚（Phase 3D-4a）
+        gains += zone_gains(state, f.actor, p.min_events, f.profile)  # 持續區域（Phase 3D-5）
     return gains
 
 
@@ -1186,6 +1188,8 @@ def skill_estimate(  # noqa: PLR0917
 
     - 含 ``summon``（Phase 3D-4a）：召喚位置越靠近最近的敵人越高
       （:func:`~trpg.engine.ai.summon.summon_estimate`）；
+    - 含 ``zone``（Phase 3D-5）：區域格內與移動路徑上的對象數
+      （:func:`~trpg.engine.ai.zone.zone_estimate`）；
     - 含 ``charge_through``：沿途的敵人數 × 3 ＋ 終點的位置價值變化（沒有敵人就不納入）；
     - 含 ``teleport`` 或 ``leap``：把行動者放到目標格後的位置價值變化（同
       :func:`virtual_move_score`；跳躍用來脫離或上高處，Phase 3D-2）；
@@ -1202,10 +1206,9 @@ def skill_estimate(  # noqa: PLR0917
     skill = effective_skill(state, action)
     if skill.kind == "stance" and stance_status_ids(state.ruleset, unit):
         return None  # 已經有姿態：AI 不主動換姿態（也不主動取消，Phase 2E-2）
-    if skill.trap is not None:
-        return _trap_estimate(state, unit, skill, area, scene, rules=trap)
-    if has_summon(skill):  # 召喚（3D-4a）：召喚位置越靠近敵人越好
-        return summon_estimate(state, unit, area.origin, summon_template(skill))
+    placed = _placement_estimate(state, unit, skill, area, scene, trap=trap)
+    if not isinstance(placed, _Unhandled):
+        return placed
     special = _special_estimate(state, unit, skill, action, area, scene, w, before)
     if not isinstance(special, _Unhandled):
         return special
@@ -1240,6 +1243,28 @@ class _Unhandled:
 
 
 _UNHANDLED = _Unhandled()
+
+
+def _placement_estimate(
+    state: BattleState,
+    unit: UnitState,
+    skill: SkillDef,
+    area: SkillArea,
+    scene: _Scene,
+    *,
+    trap: TrapAiRules,
+) -> Fraction | _Unhandled | None:
+    """放置類技能的估計：陷阱、召喚（3D-4a：位置越靠近敵人越好）、持續區域（3D-5：格內與移動
+    路徑上的對象數）；其他技能回傳 ``_UNHANDLED``。"""
+    if skill.trap is not None:
+        return _trap_estimate(state, unit, skill, area, scene, rules=trap)
+    if has_summon(skill):
+        return summon_estimate(state, unit, area.origin, summon_template(skill))
+    if is_zone_skill(skill):
+        return zone_estimate(
+            state, unit, skill, tiles=area.tiles, direction=area.direction, origin=area.origin
+        )
+    return _UNHANDLED
 
 
 def _special_estimate(  # noqa: PLR0917

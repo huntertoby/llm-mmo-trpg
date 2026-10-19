@@ -315,6 +315,11 @@ export interface components {
             pending: components["schemas"]["PendingView"] | null;
             /** Source Wells */
             source_wells: components["schemas"]["Pos"][];
+            /**
+             * Zones
+             * @default []
+             */
+            zones: components["schemas"]["ZoneView"][];
         };
         /** BuildSummary */
         BuildSummary: {
@@ -1186,6 +1191,11 @@ export interface components {
             unit_id: string | null;
             /** Amount */
             amount: number | null;
+            /**
+             * Tiles
+             * @default []
+             */
+            tiles: components["schemas"]["Pos"][];
             /** Text */
             text: string;
         };
@@ -1456,6 +1466,54 @@ export interface components {
             number,
             number
         ];
+        /**
+         * ZoneView
+         * @description 持續區域（Phase 3D-5；雙方都看得到）。
+         *
+         *     - ``cells``：目前的格子（跟隨型以施放者目前的位置展開）。
+         *     - ``next_cells``：移動型區域在本輪環境回合之後的格子（只看幾何的預告；不移動或在那之前就
+         *       消失的區域為 ``None``，空串列表示全部會撞上牆壁而消失）。
+         *     - ``expires_round``：施放者在這一輪的回合結束時區域消失。
+         *     - ``harmful``：效果含傷害或有害狀態（網頁用來決定顏色）。
+         */
+        ZoneView: {
+            /** Id */
+            id: number;
+            /** Owner Id */
+            owner_id: string;
+            team: components["schemas"]["Team"];
+            /** Skill Id */
+            skill_id: string;
+            /** Name Zh */
+            name_zh: string;
+            /**
+             * Anchor
+             * @enum {string}
+             */
+            anchor: "tile" | "caster" | "moving";
+            /**
+             * Affects
+             * @enum {string}
+             */
+            affects: "enemies" | "allies" | "all";
+            /**
+             * When
+             * @enum {string}
+             */
+            when: "enter" | "turn_start" | "both";
+            /** Cells */
+            cells: components["schemas"]["Pos"][];
+            /** Direction */
+            direction: string | null;
+            /** Speed */
+            speed: number;
+            /** Expires Round */
+            expires_round: number;
+            /** Harmful */
+            harmful: boolean;
+            /** Next Cells */
+            next_cells: components["schemas"]["Pos"][] | null;
+        };
     };
     responses: never;
     parameters: never;

@@ -21,8 +21,17 @@ from trpg.engine.rules.combat import is_concealed
 from trpg.engine.state import BattleState, UnitState
 from trpg.engine.summons import totem_of
 from trpg.engine.traps import visible_traps
-from trpg.narrative.events import object_name, surface_name, xy_text
-from trpg.shared.types import Surface, Team
+from trpg.engine.zones import next_zone_cells, zone_cells, zone_spec
+from trpg.narrative.events import (
+    DIRECTION_TEXT,
+    cells_text,
+    object_name,
+    surface_name,
+    xy_text,
+    zone_anchor_text,
+)
+from trpg.narrative.telegraph import change_text
+from trpg.shared.types import Pos, Surface, Team
 
 __all__ = [
     "BattleStats",
@@ -30,11 +39,14 @@ __all__ = [
     "render_map",
     "render_telegraph",
     "render_unit_table",
+    "render_zone_lines",
     "unit_markers",
 ]
 
 TRAP_GLYPH = "^"
 WELL_GLYPH = "$"
+ZONE_GLYPH = "!"
+"""持續區域（Phase 3D-5）涵蓋的空格的顯示字元（單位、物件、陷阱、源泉優先）。"""
 """源泉格（Phase 3C-4a）的顯示字元。"""
 """網格上我方陷阱的字元（只顯示放置者陣營看得到的陷阱）。"""
 
@@ -142,6 +154,7 @@ def render_battle_grid(state: BattleState) -> str:
     occupancy = state.occupancy()
     surf_glyph = _surface_glyphs(state.ruleset)
     my_traps = {t.xy for t in visible_traps(state, Team.ALLY)}  # 只顯示我方（玩家陣營）的陷阱
+    zoned = {xy for zone in state.zones for xy in zone_cells(state, zone)}  # 持續區域（3D-5）
     lines = [_header(state.width)]
     for y in range(state.height):
         cells = []
@@ -157,6 +170,8 @@ def render_battle_grid(state: BattleState) -> str:
                 mark = TRAP_GLYPH
             elif (x, y) in state.source_wells:
                 mark = WELL_GLYPH
+            elif (x, y) in zoned:
+                mark = ZONE_GLYPH
             else:
                 mark = state.ruleset.terrain_def(tile.terrain).glyph
             surface = surf_glyph[tile.surface] if tile.surface is not Surface.NONE else " "
@@ -185,6 +200,8 @@ def render_legend(state: BattleState) -> str:
         parts.append(f"{TRAP_GLYPH} 我方陷阱")
     if state.source_wells:
         parts.append(f"{WELL_GLYPH} 源泉")
+    if state.zones:
+        parts.append(f"{ZONE_GLYPH} 持續區域（單位表下方有名稱、範圍與剩餘輪數）")
     return ("  圖例：" + "、".join(parts)) if parts else ""
 
 
@@ -216,6 +233,30 @@ def _summon_text(state: BattleState, unit: UnitState) -> str:
     return f" ［{kind}：{owner}召喚，第 {unit.summon_expires_round} 輪結束時消失］"
 
 
+def render_zone_lines(state: BattleState) -> list[str]:
+    """持續區域（Phase 3D-5）：每個區域一行——名稱、施放者、錨點、消失輪、格子與下一輪的位置。"""
+    lines = []
+    for zone in state.zones:
+        skill = state.ruleset.skill_def(zone.skill_id).name_zh
+        owner = state.units[zone.owner_id].name_zh
+        anchor = zone_anchor_text(zone.anchor, zone.direction, zone.speed)
+        affects = {"enemies": "敵方", "allies": "友方", "all": "所有人"}[
+            zone_spec(state, zone).affects or "all"
+        ]
+        cells = tuple(Pos(x=x, y=y) for x, y in zone_cells(state, zone))
+        line = (
+            f"  {ZONE_GLYPH} 區域「{skill}」（{owner}，影響{affects}，{anchor}，"
+            f"第 {zone.expires_round} 輪 {owner} 的回合結束時消失）：{cells_text(cells)}"
+        )
+        upcoming = next_zone_cells(state, zone)
+        if upcoming is not None and zone.direction is not None:
+            nxt = tuple(Pos(x=x, y=y) for x, y in upcoming)
+            direction = DIRECTION_TEXT[zone.direction]
+            line += f"；本輪結束時向{direction}移到 {cells_text(nxt) or '（消失）'}"
+        lines.append(line)
+    return lines
+
+
 def render_unit_table(state: BattleState) -> str:
     markers = unit_markers(state)
     lines = []
@@ -232,6 +273,7 @@ def render_unit_table(state: BattleState) -> str:
             f" 耐力 {unit.stamina} 位置 {xy_text(unit.pos)} 武器 {unit.weapon.name_zh}"
             f"{_status_text(state, unit)}{_summon_text(state, unit)}"
         )
+    lines += render_zone_lines(state)
     return "\n".join(lines)
 
 
@@ -240,7 +282,8 @@ def render_telegraph(state: BattleState, forecast: Telegraph) -> str:
     lines: list[str] = []
     name = {uid: u.name_zh for uid, u in state.units.items()}
     exploded = {c.object_id for c in forecast.changes if c.kind == "object_exploded"}
-    for c in forecast.changes:
+    zone_kinds = ("zone_moved", "zone_expired")  # 持續區域（3D-5）：沿用網頁的預告文字
+    for c in (c for c in forecast.changes if c.kind not in zone_kinds):
         if c.kind == "object_destroyed" and c.object_id in exploded:
             continue
         where = f"({c.pos.x}, {c.pos.y})" if c.pos is not None else ""
@@ -260,6 +303,7 @@ def render_telegraph(state: BattleState, forecast: Telegraph) -> str:
             lines.append(f"{where} 援軍出現")
         elif c.kind == "unit_downed" and c.unit_id is not None:
             lines.append(f"{name.get(c.unit_id, c.unit_id)} 將會倒下")
+    lines += [change_text(state, c) for c in forecast.changes if c.kind in zone_kinds]
     for oid, rounds in forecast.burning:
         lines.append(f"{object_name(state, oid)}還能撐 {rounds} 次環境回合")
     for event in forecast.upcoming:
