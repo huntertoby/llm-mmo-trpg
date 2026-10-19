@@ -34,9 +34,9 @@
 | Phase 2F 整理（Phase 3 前審查的結論） | ✅ 完成（1395 測試；noqa 19→14；對照戰鬥不變；completion 1800 場異常 0） | `Phase2F計畫.md`／`Phase2F-1、2F-2報告.md` |
 | Phase 2G 完整性檢查的補強 | ✅ 完成（1427 測試；12 個示範技能；覆蓋率測試允許清單為空；待 PM 決定見計畫 0.1、0.2） | `Phase2G計畫.md` |
 | Phase 2H 冰凍、自身狀態代價、雙屬性與專精 | ✅ 完成（1486 測試；`LOG_FORMAT` /11；待 PM 決定見計畫 0.1、0.2；completion 1800 場、matrix 2400 場異常 0） | `Phase2H計畫.md` |
-| **Phase 3D 補模板 D**（玩法 #5 八項缺口、#6 賭博型技能、#7 常見技能；3C-5 之後、3-5 之前；3C-6 收尾移到 3D 之後） | 規格完成（2026-10-19）；3D-6 待使用者確認傳說核心 | `Phase3D計畫.md` |
+| **Phase 3D 補模板 D**（玩法 #5 八項缺口、#6 賭博型技能、#7 常見技能；3C-5 之後、3-5 之前；3C-6 收尾移到 3D 之後） | 3D-1 ✅（連段條件、資源互動；/18）；其餘見規格 0 節 | `Phase3D計畫.md` |
 | **Phase 3 網頁 ＋ roguelite** | 3-1 ✅（1516 測試；noqa 23→20）；3-2 ✅（1577 測試；noqa 20）；3-3 ✅（1587 測試＋前端 30；`uv run python scripts/play.py` 可試玩）；3-4a ✅（開場逐步播放、HUD、技能 UI）；3-4b ✅（反應設定與詢問視窗、環境預告、快捷指令）；**下一步 3-5、3-6（見 3.0）** | `Phase3計畫.md`（0 節為決定與各段驗收紀錄；3–6 節為 3-1～3-4b 規格）／`Phase3-1～3-4b報告.md` |
-| **Phase 3C 補模板 C**（撥開、改造、協同、源力、傳說、場景物件原語；排在 3-5 前） | 3C-1 ✅（撥開，vitest 73）；3C-2 ✅（修正規則，pytest 1704、vitest 74）；3C-3a ✅（撞擊與 3 個觸發時機，pytest 1750；`LOG_FORMAT` /12）；3C-3b ✅（表面歸屬、消耗狀態、貼牆推擊，pytest 1804；/13）；3C-4a ✅（源力、傳說、3 個改寫規則，pytest 1865；/14）；3C-4b ✅（轉移傷害、複製、額外反應，pytest 1918、vitest 78；/15）；3C-5a ✅（投擲、推倒，pytest 1952；/16）；3C-5b ✅（穿透、物件 AI 與預覽，pytest 1993、vitest 92；/17）；**下一步 3D-1**；其餘進行中，進度見規格 0 節 | `Phase3C計畫.md`／`Phase3C-N報告.md` |
+| **Phase 3C 補模板 C**（撥開、改造、協同、源力、傳說、場景物件原語；排在 3-5 前） | 3C-1 ✅（撥開，vitest 73）；3C-2 ✅（修正規則，pytest 1704、vitest 74）；3C-3a ✅（撞擊與 3 個觸發時機，pytest 1750；`LOG_FORMAT` /12）；3C-3b ✅（表面歸屬、消耗狀態、貼牆推擊，pytest 1804；/13）；3C-4a ✅（源力、傳說、3 個改寫規則，pytest 1865；/14）；3C-4b ✅（轉移傷害、複製、額外反應，pytest 1918、vitest 78；/15）；3C-5a ✅（投擲、推倒，pytest 1952；/16）；3C-5b ✅（穿透、物件 AI 與預覽，pytest 1993、vitest 92；/17）；其餘進行中，進度見規格 0 節 | `Phase3C計畫.md`／`Phase3C-N報告.md` |
 
 - 最新 commit 在 GitHub `huntertoby/llm-mmo-trpg`（私人）的 `main`；2026-10-19 起使用者電腦的資料夾就是工作資料夾（見 6.1），push 前確認 `git status` 乾淨即可。
 - 1614 個 pytest ＋ 69 個前端 vitest（`check.py` 一併跑，本機約 1 分鐘）；`slow` 預設不跑；平衡測試 `test_demo_map_win_rate_and_length` 標 `xfail(strict=False)`，目前 2 xfail、2 xpass）。
