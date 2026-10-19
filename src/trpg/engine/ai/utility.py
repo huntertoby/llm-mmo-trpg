@@ -588,7 +588,183 @@ def _buff_gains(state: BattleState, actor: UnitState, p: Preview, profile: AiPro
     return gains
 
 
-def _gains(  # noqa: C901, PLR0912, PLR0915
+@dataclass(frozen=True)
+class _GainFrame:
+    """一次預覽收益計算共用的資料。``only`` 給定時只計入對該單位（敵人）的收益。"""
+
+    state: BattleState
+    actor: UnitState
+    p: Preview
+    profile: AiProfile
+    only: UnitId | None
+    hit: Fraction
+    primary: UnitId | None
+    """攻擊的主要目標（有精確期望傷害時）。"""
+    skill_primary: dict[UnitId, bool]
+    """技能中有精確期望傷害的敵方目標。"""
+
+    @property
+    def w(self) -> AiWeights:
+        return self.profile.weights
+
+    def is_enemy(self, uid: UnitId) -> bool:
+        units = self.state.units
+        return units[uid].team is not self.actor.team if uid in units else False
+
+    def counts(self, uid: UnitId) -> bool:
+        """這個單位的收益是否計入（集火時只計目標）。"""
+        return self.only is None or uid == self.only
+
+
+def _gain_frame(
+    state: BattleState, actor: UnitState, p: Preview, profile: AiProfile, only: UnitId | None
+) -> _GainFrame:
+    hit = p.hit_chance if p.hit_chance is not None else Fraction(1)
+    skill_primary: dict[UnitId, bool] = {}
+    if isinstance(p.action, UseSkill):
+        foes = [t for t in p.targets if not t.ally]
+        if foes:
+            hit = sum((t.hit_chance for t in foes), Fraction(0)) / len(foes)
+        skill_primary = {t.unit_id: True for t in foes if t.damage is not None}
+    primary = None
+    if isinstance(p.action, Attack) and p.action.target_id is not None and p.damage is not None:
+        primary = p.action.target_id
+    return _GainFrame(state, actor, p, profile, only, hit, primary, skill_primary)
+
+
+def _event_damage(f: _GainFrame) -> tuple[Fraction, Fraction, Fraction]:
+    """預覽事件中、不屬於精確期望傷害的傷害（取 min／max 兩種結果的總和）：
+    對敵人的、其中的環境傷害、對友方的。被護盾吸收的不算。"""
+    other_enemy = Fraction(0)
+    env_enemy = Fraction(0)
+    friendly = Fraction(0)
+    for events in (f.p.min_events, f.p.max_events):
+        seen: set[UnitId] = set()
+        for e in events:
+            if not isinstance(e, DamageDealt) or e.cause == "deadly_terrain":
+                continue  # 致命地形的「傷害」是擊倒本身，由 kill／env_kill 計分
+            first = e.target_id not in seen
+            if e.cause == "attack" and (
+                (e.target_id == f.primary and first) or e.target_id in f.skill_primary
+            ):
+                seen.add(e.target_id)
+                continue
+            if f.is_enemy(e.target_id):
+                if f.counts(e.target_id):
+                    other_enemy += e.amount - e.absorbed
+                    if e.cause not in _ATTACK_CAUSES:
+                        env_enemy += e.amount - e.absorbed
+            elif e.target_id in f.state.units and f.only is None:
+                friendly += e.amount - e.absorbed
+    return other_enemy, env_enemy, friendly
+
+
+def _damage_gains(f: _GainFrame) -> Fraction:
+    """傷害：主要傷害用精確期望；其他取 min／max 平均 × 命中率；對友方的傷害扣分。"""
+    w, state = f.w, f.state
+    gains = Fraction(0)
+    if f.p.damage is not None and f.primary is not None and f.counts(f.primary):
+        gains += w.damage * _useful_damage(f.p.damage, f.hit, state.units[f.primary].hp)
+    for t in f.p.targets:  # 技能：每個目標各自的命中率與期望傷害
+        if t.damage is not None and not t.ally and f.counts(t.unit_id):
+            gains += w.damage * _useful_damage(t.damage, t.hit_chance, state.units[t.unit_id].hp)
+    other_enemy, env_enemy, friendly = _event_damage(f)
+    gains += w.damage * f.hit * other_enemy / 2
+    gains += w.env_damage * f.hit * env_enemy / 2
+    gains -= w.friendly_fire * friendly / 2
+    return gains
+
+
+def _ally_gains(f: _GainFrame) -> Fraction:
+    """治療、友方增益、層數與陷阱（集火時不計）。"""
+    if f.only is not None:
+        return Fraction(0)
+    p, state = f.p, f.state
+    healed = sum(Fraction(lo + hi, 2) for uid, lo, hi in p.healed if uid in state.units)
+    gains = Fraction(f.w.heal) * healed
+    if isinstance(p.action, UseSkill):  # 防禦動作的 defending 由 ``defend`` 權重計分，不重複算
+        gains += _support_gains(state, p, f.profile)
+        gains += _stack_gains(state, f.actor, p, f.profile, f.hit)
+        gains += _trap_gains(state, p, f.profile)
+    return gains
+
+
+def _kill_gains(f: _GainFrame) -> Fraction:
+    """擊倒：確定的 ×命中率，只是可能的 ×命中率 ÷4；倒下的是友方則扣分。"""
+    p, w = f.p, f.w
+    gains = Fraction(0)
+    certain_down = {e.unit_id for e in p.min_events if isinstance(e, UnitDowned)}
+    possible_down = {e.unit_id for e in p.max_events if isinstance(e, UnitDowned)} - certain_down
+    causes = _last_cause(p.max_events) | _last_cause(p.min_events)
+    for uid, factor in [(u, f.hit) for u in sorted(certain_down)] + [
+        (u, f.hit / _POSSIBLE_KILL_DIVISOR) for u in sorted(possible_down)
+    ]:
+        if f.only is not None and uid != f.only:
+            continue
+        if f.is_enemy(uid):
+            gains += w.kill * factor
+            if causes.get(uid, "attack") not in _ATTACK_CAUSES:
+                gains += w.env_kill * factor
+        elif uid in f.state.units:
+            gains -= w.kill * factor
+    return gains
+
+
+def _push_gains(f: _GainFrame) -> Fraction:
+    """被強制位移的敵人、施加的狀態，以及技能附帶的擊倒（倒地）。"""
+    p, w = f.p, f.w
+    pushed = {
+        e.unit_id
+        for e in p.min_events
+        if isinstance(e, UnitMoved)
+        and e.mode == "forced"
+        and f.is_enemy(e.unit_id)
+        and f.counts(e.unit_id)
+    }
+    gains = w.push * f.hit * len(pushed)
+    gains += _status_gains(f.state, f.actor, p, f.profile, f.hit, only=f.only)
+    for t in p.targets:  # 技能附帶的擊倒：命中率 × 對抗成功率（預覽的 min 只視為失敗）
+        if (
+            t.knock_chance is not None
+            and not t.ally
+            and f.counts(t.unit_id)
+            and not f.state.units[t.unit_id].has_status(_PRONE)
+        ):
+            gains += w.status * t.hit_chance * t.knock_chance
+    return gains
+
+
+def _surface_gains(f: _GainFrame) -> Fraction:
+    """站在有害表面上的敵人數變化；技能讓友方站上有害的新表面則扣分。"""
+    state, actor, team = f.state, f.actor, f.actor.team
+    after = f.p.min_state
+    before_harm = sum(1 for u in _enemies(state, actor) if f.counts(u.id) and _harmful(state, u.xy))
+    after_harm = sum(
+        1
+        for u in after.living_units()
+        if u.team is not team and f.counts(u.id) and _harmful(after, u.xy)
+    )
+    gains = f.w.surface * f.hit * (after_harm - before_harm)
+    if isinstance(f.p.action, UseSkill) and f.only is None:  # 讓友方站上有害的新表面（火、毒……）
+        gains -= (
+            f.w.friendly_fire
+            * _SURFACE_HARM
+            * (_harmed_allies(after, actor) - _harmed_allies(state, actor))
+        )
+    return gains
+
+
+def _defend_gains(f: _GainFrame) -> Fraction:
+    """防禦動作：每名 6 格內的敵人。"""
+    if not isinstance(f.p.action, Defend) or f.only is not None:
+        return Fraction(0)
+    near = sum(
+        1 for e in _enemies(f.state, f.actor) if manhattan(f.actor.xy, e.xy) <= _DEFEND_RADIUS
+    )
+    return Fraction(f.w.defend * near)
+
+
+def _gains(
     state: BattleState,
     actor: UnitState,
     p: Preview,
@@ -596,119 +772,12 @@ def _gains(  # noqa: C901, PLR0912, PLR0915
     only: UnitId | None = None,
 ) -> Fraction:
     """預覽收益。``only`` 給定時只計入對該單位（敵人）的收益——集火指令的加成用。"""
-    w = profile.weights
-    hit = p.hit_chance if p.hit_chance is not None else Fraction(1)
-    team = actor.team
-    skill_primary: dict[UnitId, bool] = {}
-    if isinstance(p.action, UseSkill):
-        foes = [t for t in p.targets if not t.ally]
-        if foes:
-            hit = sum((t.hit_chance for t in foes), Fraction(0)) / len(foes)
-        skill_primary = {t.unit_id: True for t in foes if t.damage is not None}
-
-    def is_enemy(uid: UnitId) -> bool:
-        return state.units[uid].team is not team if uid in state.units else False
-
-    primary = None
-    if isinstance(p.action, Attack) and p.action.target_id is not None and p.damage is not None:
-        primary = p.action.target_id
-    gains = Fraction(0)
-    # 傷害：主要傷害用精確期望；其他取 min/max 平均 × 命中率
-    other_enemy = Fraction(0)
-    env_enemy = Fraction(0)
-    friendly = Fraction(0)
-    for events in (p.min_events, p.max_events):
-        seen: set[UnitId] = set()
-        for e in events:
-            if not isinstance(e, DamageDealt) or e.cause == "deadly_terrain":
-                continue  # 致命地形的「傷害」是擊倒本身，由 kill／env_kill 計分
-            first = e.target_id not in seen
-            if e.cause == "attack" and (
-                (e.target_id == primary and first) or e.target_id in skill_primary
-            ):
-                seen.add(e.target_id)
-                continue
-            if is_enemy(e.target_id):
-                if only is None or e.target_id == only:
-                    other_enemy += e.amount - e.absorbed  # 被護盾吸收的不算
-                    if e.cause not in _ATTACK_CAUSES:
-                        env_enemy += e.amount - e.absorbed
-            elif e.target_id in state.units and only is None:
-                friendly += e.amount - e.absorbed
-    if p.damage is not None and primary is not None and (only is None or primary == only):
-        gains += w.damage * _useful_damage(p.damage, hit, state.units[primary].hp)
-    for t in p.targets:  # 技能：每個目標各自的命中率與期望傷害
-        if t.damage is not None and not t.ally and (only is None or t.unit_id == only):
-            gains += w.damage * _useful_damage(t.damage, t.hit_chance, state.units[t.unit_id].hp)
-    healed = sum(Fraction(lo + hi, 2) for uid, lo, hi in p.healed if uid in state.units)
-    if only is None:
-        gains += w.heal * healed
-        if isinstance(p.action, UseSkill):  # 防禦動作的 defending 由 ``defend`` 權重計分，不重複算
-            gains += _support_gains(state, p, profile)
-    if isinstance(p.action, UseSkill) and only is None:
-        gains += _stack_gains(state, actor, p, profile, hit)
-        gains += _trap_gains(state, p, profile)
-    gains += w.damage * hit * other_enemy / 2
-    gains += w.env_damage * hit * env_enemy / 2
-    gains -= w.friendly_fire * friendly / 2
-    # 擊倒
-    certain_down = {e.unit_id for e in p.min_events if isinstance(e, UnitDowned)}
-    possible_down = {e.unit_id for e in p.max_events if isinstance(e, UnitDowned)} - certain_down
-    causes = _last_cause(p.max_events) | _last_cause(p.min_events)
-    for uid, factor in [(u, hit) for u in sorted(certain_down)] + [
-        (u, hit / _POSSIBLE_KILL_DIVISOR) for u in sorted(possible_down)
-    ]:
-        if only is not None and uid != only:
-            continue
-        if is_enemy(uid):
-            gains += w.kill * factor
-            if causes.get(uid, "attack") not in _ATTACK_CAUSES:
-                gains += w.env_kill * factor
-        elif uid in state.units:
-            gains -= w.kill * factor
-    # 推擊、狀態、表面
-    pushed = {
-        e.unit_id
-        for e in p.min_events
-        if isinstance(e, UnitMoved)
-        and e.mode == "forced"
-        and is_enemy(e.unit_id)
-        and (only is None or e.unit_id == only)
-    }
-    gains += w.push * hit * len(pushed)
-    gains += _status_gains(state, actor, p, profile, hit, only=only)
-    for t in p.targets:  # 技能附帶的擊倒：命中率 × 對抗成功率（預覽的 min 只視為失敗）
-        if (
-            t.knock_chance is not None
-            and not t.ally
-            and (only is None or t.unit_id == only)
-            and not state.units[t.unit_id].has_status(_PRONE)
-        ):
-            gains += w.status * t.hit_chance * t.knock_chance
-    after = p.min_state
-    before_harm = sum(
-        1
-        for u in _enemies(state, actor)
-        if (only is None or u.id == only) and _harmful(state, u.xy)
-    )
-    after_harm = sum(
-        1
-        for u in after.living_units()
-        if u.team is not team and (only is None or u.id == only) and _harmful(after, u.xy)
-    )
-    gains += w.surface * hit * (after_harm - before_harm)
-    if isinstance(p.action, UseSkill) and only is None:  # 讓友方站上有害的新表面（火、毒……）
-        gains -= (
-            w.friendly_fire
-            * _SURFACE_HARM
-            * (_harmed_allies(after, actor) - _harmed_allies(state, actor))
-        )
-    if w.expose or w.cover_damage:
-        gains += _cover_gains(state, actor, p, w, hit, only)
-    if isinstance(p.action, Defend) and only is None:
-        near = sum(1 for e in _enemies(state, actor) if manhattan(actor.xy, e.xy) <= _DEFEND_RADIUS)
-        gains += w.defend * near
-    return gains
+    f = _gain_frame(state, actor, p, profile, only)
+    gains = _damage_gains(f) + _ally_gains(f) + _kill_gains(f) + _push_gains(f)
+    gains += _surface_gains(f)
+    if f.w.expose or f.w.cover_damage:
+        gains += _cover_gains(state, actor, p, f.w, f.hit, only)
+    return gains + _defend_gains(f)
 
 
 def _stack_gains(
