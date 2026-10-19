@@ -180,6 +180,32 @@ button.primary {
   opacity: 0.3;
 }
 
+/* 召喚物（Phase 3D-4b）：虛線青綠外框，右上角顯示剩餘輪數 */
+.turn-chip.summon {
+  position: relative;
+  border: 2px dashed #5eead4;
+  padding: 0 1px 1px;
+}
+
+.turn-chip-left {
+  position: absolute;
+  top: -7px;
+  right: -7px;
+  min-width: 14px;
+  height: 14px;
+  line-height: 14px;
+  border-radius: 7px;
+  background: #000;
+  color: #5eead4;
+  font-size: 10px;
+  text-align: center;
+}
+
+.hud-summon-list {
+  margin: 2px 0 0;
+  padding-left: 18px;
+}
+
 .battle-main {
   display: flex;
   gap: 8px;

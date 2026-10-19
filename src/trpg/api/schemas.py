@@ -22,6 +22,7 @@ from trpg.engine.preview import (
     PierceInfo,
     Preview,
     StatusChance,
+    SummonInfo,
     TargetPreview,
     ToppleInfo,
 )
@@ -355,6 +356,21 @@ class HurlOut(_ApiModel):
     placed_pos: XY | None
 
 
+class SummonOut(_ApiModel):
+    """預覽中會出現的召喚物（Phase 3D-4b）：``expires_round`` 是在召喚者第幾輪的回合結束時消失，
+    ``totem_radius`` 是圖騰的光環半徑（不是圖騰為 ``None``），``replaces`` 是因超過同時存在的上限
+    而消失的舊召喚物。"""
+
+    unit_id: UnitId
+    template_id: str
+    name_zh: str
+    pos: XY
+    expires_round: int
+    max_hp: int
+    totem_radius: int | None
+    replaces: tuple[UnitId, ...]
+
+
 class MoveOut(_ApiModel):
     """預覽中的自身位移（Phase 3D-2）：``kind`` 為 dash（路線，``other_id`` 是衝鋒的目標）／
     leap（起點與落點）／swap（``unit_id`` 與 ``other_id`` 交換，``path`` 是 ``unit_id`` 的起點與
@@ -414,6 +430,8 @@ class PreviewOut(_ApiModel):
     （``unit_id`` 被傳送到 ``path`` 的終點，Phase 3D-2b）。"""
     displace_checks: tuple[DisplaceCheckOut, ...] = ()
     """位移的抵抗判定（Phase 3D-2b：``swap``、``swap_any``、``teleport_target`` 的敵方目標）。"""
+    summons: tuple[SummonOut, ...] = ()
+    """動作會召喚的單位（Phase 3D-4b）。"""
     displace_permille: int | None = None
     """位移成功的總機率（千分比；所有敵方目標都沒抵抗成功）；沒有檢定（全是友方）為 ``None``。"""
 
@@ -478,6 +496,19 @@ def _topple(t: ToppleInfo) -> ToppleOut:
     )
 
 
+def _summon(s: SummonInfo) -> SummonOut:
+    return SummonOut(
+        unit_id=s.unit_id,
+        template_id=s.template_id,
+        name_zh=s.name_zh,
+        pos=s.pos,
+        expires_round=s.expires_round,
+        max_hp=s.max_hp,
+        totem_radius=s.totem_radius,
+        replaces=s.replaces,
+    )
+
+
 def _hurl(h: HurlInfo) -> HurlOut:
     return HurlOut(
         object_id=h.object_id,
@@ -528,6 +559,7 @@ def preview_out(
         pierce=_pierce(p.pierce),
         topples=tuple(_topple(t) for t in p.topples),
         hurls=tuple(_hurl(h) for h in p.hurls),
+        summons=tuple(_summon(x) for x in p.summons),
         moves=tuple(
             MoveOut(kind=m.kind, unit_id=m.unit_id, other_id=m.other_id, path=m.path)
             for m in p.moves

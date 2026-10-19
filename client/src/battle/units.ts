@@ -1,4 +1,5 @@
-// 單位的代號與名稱（同 CLI：我方 A、B、C……，敵方 a、b、c……，依單位 ID 排序）。
+// 單位的代號與名稱（同 CLI：我方 A、B、C……，敵方 a、b、c……，依單位 ID 排序；召喚物不分陣營，
+// 一律用數字 1–9，超過 9 個後循環）。
 import type { BattleView, UnitView } from "../api/types";
 
 const UPPER = "ABCDEFGHIJKLMNOPQRSTUVWXYZ";
@@ -8,7 +9,12 @@ export function unitMarkers(units: readonly UnitView[]): Map<string, string> {
   const sorted = [...units].sort((a, b) => (a.id < b.id ? -1 : a.id > b.id ? 1 : 0));
   const counters = { ally: 0, enemy: 0 };
   const markers = new Map<string, string>();
+  let summons = 0;
   for (const u of sorted) {
+    if (u.owner_id !== null) {
+      markers.set(u.id, String((summons++ % 9) + 1));
+      continue;
+    }
     const i = counters[u.team]++;
     const letters = u.team === "ally" ? UPPER : LOWER;
     markers.set(u.id, letters[i % 26] ?? "?");

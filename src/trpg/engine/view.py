@@ -22,6 +22,7 @@ from trpg.engine.state import (
     UnitState,
     reaction_limit,
 )
+from trpg.engine.summons import totem_of
 from trpg.engine.traps import visible_traps
 from trpg.shared.types import Pos, Surface, Team, UnitId
 
@@ -145,6 +146,8 @@ class UnitView(_ViewModel):
     """召喚物在召喚者這一輪的回合結束時消失（Phase 3D-4a）；一般單位為 ``None``。"""
     dismissed: bool
     """召喚物已消失（Phase 3D-4a）：不在戰場上，保留在清單中讓紀錄能查名字。"""
+    totem_radius: int | None
+    """圖騰（Phase 3D-4b）：光環半徑（回合開始時給範圍內友方狀態）；不是圖騰為 ``None``。"""
 
 
 class TrapView(_ViewModel):
@@ -278,6 +281,7 @@ def _unit_view(state: BattleState, unit: UnitState, team: Team) -> UnitView:
         owner_id=unit.owner_id,
         summon_expires_round=unit.summon_expires_round,
         dismissed=unit.dismissed,
+        totem_radius=None if (totem := totem_of(state, unit)) is None else totem.radius,
     )
 
 

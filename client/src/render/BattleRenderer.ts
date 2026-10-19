@@ -77,6 +77,9 @@ const OVERLAY_COLORS: Readonly<Record<OverlayKind, number>> = {
   teleport_from: HIGHLIGHT.banish,
   teleport_to: HIGHLIGHT.banish,
   teleport_lethal: HIGHLIGHT.banish_lethal,
+  summon_at: HIGHLIGHT.summon,
+  summon_aura: HIGHLIGHT.summon,
+  summon_gone: HIGHLIGHT.banish_lethal,
 };
 
 function hpColor(ratio: number): number {
@@ -88,6 +91,7 @@ function hpColor(ratio: number): number {
 export class BattleRenderer {
   private readonly app = new Application();
   private readonly tiles = new Container();
+  private readonly auras = new Container();
   private readonly highlights = new Container();
   private readonly objects = new Container();
   private readonly traps = new Container();
@@ -118,7 +122,7 @@ export class BattleRenderer {
     }
     host.appendChild(this.app.canvas);
     const stage = this.app.stage;
-    stage.addChild(this.tiles, this.objects, this.highlights, this.traps, this.units, this.hover);
+    stage.addChild(this.tiles, this.auras, this.objects, this.highlights, this.traps, this.units, this.hover);
     stage.eventMode = "static";
     stage.on("pointermove", (e: FederatedPointerEvent) => this.callbacks.onTileHover(this.tileOf(e)));
     stage.on("pointerleave", () => this.callbacks.onTileHover(null));
@@ -150,11 +154,18 @@ export class BattleRenderer {
     }
     this.app.stage.hitArea = new Rectangle(0, 0, size.width, size.height);
     clearLayer(this.tiles);
+    clearLayer(this.auras);
     clearLayer(this.objects);
     clearLayer(this.traps);
     clearLayer(this.units);
     this.unitSprites.clear();
     for (const t of model.tiles) this.tiles.addChild(this.tileSprite(t));
+    const aura = new Graphics();
+    for (const a of model.auras) {
+      const o = tileOrigin(a);
+      aura.rect(o.x + 2, o.y + 2, T - 4, T - 4).fill({ color: HIGHLIGHT.summon, alpha: 0.14 });
+    }
+    this.auras.addChild(aura);
     for (const o of model.objects) this.objects.addChild(this.objectSprite(o));
     for (const trap of model.traps) {
       const c = tileCenter(trap);
@@ -236,10 +247,28 @@ export class BattleRenderer {
     c.position.set(center.x, center.y);
     c.alpha = u.downed ? 0.35 : 1;
     const r = T * 0.32;
-    const g = new Graphics().circle(0, 0, r).fill(u.fill);
-    if (u.hero) g.circle(0, 0, r + 2).stroke({ width: 2, color: HIGHLIGHT.hero });
-    if (u.active) g.circle(0, 0, r + 5).stroke({ width: 3, color: HIGHLIGHT.active });
+    const g = new Graphics();
+    if (u.summon) {
+      // 召喚物（Phase 3D-4b）：菱形加青綠外框，和一般單位的圓形區別
+      const d = r * 1.25;
+      const diamond = [0, -d, d, 0, 0, d, -d, 0];
+      g.poly(diamond).fill(u.fill).stroke({ width: 3, color: HIGHLIGHT.summon });
+      if (u.active) g.poly([0, -d - 5, d + 5, 0, 0, d + 5, -d - 5, 0]).stroke({ width: 3, color: HIGHLIGHT.active });
+    } else {
+      g.circle(0, 0, r).fill(u.fill);
+      if (u.hero) g.circle(0, 0, r + 2).stroke({ width: 2, color: HIGHLIGHT.hero });
+      if (u.active) g.circle(0, 0, r + 5).stroke({ width: 3, color: HIGHLIGHT.active });
+    }
     c.addChild(g);
+    if (u.summon) {
+      // 右上角小徽章：圖騰標「圖」，其他標剩餘輪數
+      const badgeText = u.totem ? "圖" : String(u.remaining ?? "");
+      const badge = new Graphics().circle(T * 0.3, -T * 0.3, 9).fill({ color: 0x000000, alpha: 0.75 }).stroke({ width: 1, color: HIGHLIGHT.summon });
+      const badgeLabel = label(badgeText, 12, HIGHLIGHT.summon, true);
+      badgeLabel.anchor.set(0.5);
+      badgeLabel.position.set(T * 0.3, -T * 0.3);
+      c.addChild(badge, badgeLabel);
+    }
     const marker = label(u.marker, 18, 0xffffff, true);
     marker.anchor.set(0.5);
     c.addChild(marker);
@@ -342,6 +371,9 @@ export class BattleRenderer {
       case "behind":
         g.rect(o.x + 2, o.y + 2, T - 4, T - 4).stroke({ width: 3, color });
         break;
+      case "summon_aura":
+        g.rect(o.x + 2, o.y + 2, T - 4, T - 4).fill({ color, alpha: 0.22 });
+        break;
       case "pierced":
       case "hurl_from":
       case "hurl_to":
@@ -352,6 +384,8 @@ export class BattleRenderer {
       case "teleport_from":
       case "teleport_to":
       case "teleport_lethal":
+      case "summon_at":
+      case "summon_gone":
         g.rect(o.x + 3, o.y + 3, T - 6, T - 6)
           .fill({ color, alpha: 0.18 })
           .stroke({ width: 3, color });

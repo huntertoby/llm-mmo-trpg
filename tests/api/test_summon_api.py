@@ -64,3 +64,26 @@ def test_summons_take_no_individual_orders(client: TestClient) -> None:
     put = client.put(f"/api/battles/{battle_id}/orders", json=orders)
     assert put.status_code == 422, put.text
     assert "由 AI 控制" in put.text
+
+
+def test_the_preview_shows_the_summon_site_and_the_view_marks_totems(client: TestClient) -> None:
+    created = client.post(
+        "/api/battles", json={"map_id": "open_plain", "seed": 0, "hero_build": "build_summoner"}
+    ).json()
+    battle_id, hero = created["battle_id"], created["hero_id"]
+    totem = next(
+        a
+        for a in created["legal_actions"]
+        if a["type"] == "use_skill" and a["skill_id"] == "skill_plant_totem"
+    )
+    preview = client.post(f"/api/battles/{battle_id}/preview", json=totem).json()
+    [info] = preview["summons"]
+    assert info["template_id"] == "summon_war_totem" and info["totem_radius"] == 2
+    assert info["pos"] == [totem["target_pos"]["x"], totem["target_pos"]["y"]]
+    assert info["replaces"] == [] and info["max_hp"] == 18 and info["expires_round"] >= 2
+    # 施放後視圖標出圖騰與光環半徑；一般單位沒有
+    data = client.post(f"/api/battles/{battle_id}/actions", json=totem).json()
+    units = {u["id"]: u for u in data["view"]["units"]}
+    totems = [u for u in units.values() if u["totem_radius"] is not None]
+    assert [u["name_zh"] for u in totems] == ["戰意圖騰1"] and totems[0]["owner_id"] == hero
+    assert units[hero]["totem_radius"] is None

@@ -2438,6 +2438,14 @@
             "title": "Displace Checks",
             "default": []
           },
+          "summons": {
+            "items": {
+              "$ref": "#/components/schemas/SummonOut"
+            },
+            "type": "array",
+            "title": "Summons",
+            "default": []
+          },
           "displace_permille": {
             "anyOf": [
               {
@@ -3018,6 +3026,65 @@
         ],
         "title": "StepOut",
         "description": "自動推進中結算的一步。``actor_id`` 與 ``step`` 在開場時為 ``None``。\n\n``events`` 已依我方視角過濾（:func:`trpg.engine.event_filter.filter_events`），每個事件是\n事件的 JSON 再加上 ``text``（繁體中文描述；沒有描述的事件不含此鍵）。``seq`` 保留原值，\n過濾後可能跳號。"
+      },
+      "SummonOut": {
+        "properties": {
+          "unit_id": {
+            "type": "string",
+            "title": "Unit Id"
+          },
+          "template_id": {
+            "type": "string",
+            "title": "Template Id"
+          },
+          "name_zh": {
+            "type": "string",
+            "title": "Name Zh"
+          },
+          "pos": {
+            "$ref": "#/components/schemas/XY"
+          },
+          "expires_round": {
+            "type": "integer",
+            "title": "Expires Round"
+          },
+          "max_hp": {
+            "type": "integer",
+            "title": "Max Hp"
+          },
+          "totem_radius": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Totem Radius"
+          },
+          "replaces": {
+            "items": {
+              "type": "string"
+            },
+            "type": "array",
+            "title": "Replaces"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "unit_id",
+          "template_id",
+          "name_zh",
+          "pos",
+          "expires_round",
+          "max_hp",
+          "totem_radius",
+          "replaces"
+        ],
+        "title": "SummonOut",
+        "description": "預覽中會出現的召喚物（Phase 3D-4b）：``expires_round`` 是在召喚者第幾輪的回合結束時消失，\n``totem_radius`` 是圖騰的光環半徑（不是圖騰為 ``None``），``replaces`` 是因超過同時存在的上限\n而消失的舊召喚物。"
       },
       "Surface": {
         "type": "string",
@@ -3609,6 +3676,17 @@
           "dismissed": {
             "type": "boolean",
             "title": "Dismissed"
+          },
+          "totem_radius": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Totem Radius"
           }
         },
         "additionalProperties": false,
@@ -3645,7 +3723,8 @@
           "escaped",
           "owner_id",
           "summon_expires_round",
-          "dismissed"
+          "dismissed",
+          "totem_radius"
         ],
         "title": "UnitView"
       },

@@ -8,6 +8,7 @@ import {
   surfaceName,
   terrainStyle,
 } from "./glossary";
+import { auraTiles, isTotem, remainingRounds } from "./summons";
 import { onField, unitMarkers } from "./units";
 
 export interface TileDraw {
@@ -53,12 +54,23 @@ export interface UnitDraw {
   active: boolean;
   hero: boolean;
   downed: boolean;
+  /** 召喚物（Phase 3D-4b）：畫成菱形加外框，不分陣營。 */
+  summon: boolean;
+  /** 圖騰：不移動、不攻擊的召喚物，角落標「圖」。 */
+  totem: boolean;
+  /** 召喚物還能行動的輪數（含本輪）；一般單位為 `null`。 */
+  remaining: number | null;
 }
 
 export interface TrapDraw {
   x: number;
   y: number;
   color: number;
+}
+
+export interface AuraDraw {
+  x: number;
+  y: number;
 }
 
 export interface DrawModel {
@@ -69,6 +81,8 @@ export interface DrawModel {
   /** 倒下的單位在前（先畫，壓在下面）。 */
   units: UnitDraw[];
   traps: TrapDraw[];
+  /** 在場圖騰的光環涵蓋的格子（淡色底，Phase 3D-4b）。 */
+  auras: AuraDraw[];
 }
 
 export const MAX_HEIGHT = 3;
@@ -162,10 +176,25 @@ export function buildDrawModel(
       active: u.id === acting,
       hero: u.id === heroId,
       downed: u.downed,
+      summon: u.owner_id !== null,
+      totem: isTotem(u),
+      remaining: remainingRounds(view, u),
     }))
     .sort((a, b) => Number(b.downed) - Number(a.downed));
   const traps: TrapDraw[] = view.traps.map((t) => ({ x: t.pos.x, y: t.pos.y, color: HIGHLIGHT.trap }));
-  return { width: view.width, height: view.height, tiles, objects, units, traps };
+  const seen = new Set<string>();
+  const auras: AuraDraw[] = [];
+  for (const u of view.units) {
+    if (u.totem_radius === null || u.downed || !onField(u)) continue;
+    for (const t of auraTiles(u.pos, u.totem_radius, view)) {
+      const key = `${t.x},${t.y}`;
+      if (!seen.has(key)) {
+        seen.add(key);
+        auras.push(t);
+      }
+    }
+  }
+  return { width: view.width, height: view.height, tiles, objects, units, traps, auras };
 }
 
 export function tileAt(model: DrawModel, p: Pos): TileDraw | undefined {

@@ -621,7 +621,7 @@ export function BattleScreen({ initial, onExit }: Props) {
             onCancelPick={() => setOrderPick(null)}
             onClear={() => issueOrders(EMPTY_ORDERS)}
           />
-          <UnitInfo unit={infoUnit} names={names} heroId={heroId} skills={skillNames} />
+          <UnitInfo unit={infoUnit} names={names} heroId={heroId} skills={skillNames} view={view} />
           <BattleLog lines={lines} />
         </div>
       </div>

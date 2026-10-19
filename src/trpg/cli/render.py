@@ -230,7 +230,7 @@ def render_unit_table(state: BattleState) -> str:
             f"{f' 法力 {unit.mana}/{unit.max_mana}' if unit.max_mana else ''}"
             f"{_source_text(state, unit)}"
             f" 耐力 {unit.stamina} 位置 {xy_text(unit.pos)} 武器 {unit.weapon.name_zh}"
-            f"{_status_text(state, unit)}"
+            f"{_status_text(state, unit)}{_summon_text(state, unit)}"
         )
     return "\n".join(lines)
 

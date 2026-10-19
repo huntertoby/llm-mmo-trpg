@@ -200,3 +200,20 @@ def test_the_summoner_build_also_summons_skeletons_and_spirits() -> None:
         if isinstance(e, UnitSummoned)
     }
     assert {"summon_skeleton_warrior", "summon_elemental_spirit"} <= kinds
+
+
+def test_the_preview_lists_the_summon_and_the_oldest_it_replaces() -> None:
+    state = cast(arena(), 2, 3).state  # 第一個圖騰
+    ready = state.clone()
+    ready.units[U1].cooldowns = {}
+    ready.units[U1].ap = ready.ruleset.core.ap_per_turn
+    state = cast(ready, 1, 2).state  # 第二個（上限 2）
+    ready = state.clone()
+    ready.units[U1].cooldowns = {}
+    ready.units[U1].ap = ready.ruleset.core.ap_per_turn
+    totems = [u.id for u in state.units_sorted() if u.template_id == TOTEM]
+    p = preview(ready, UseSkill(unit_id=U1, skill_id=SID, target_pos=Pos(x=1, y=4)))
+    [info] = p.summons
+    assert (info.template_id, info.pos, info.totem_radius, info.max_hp) == (TOTEM, (1, 4), 2, 18)
+    assert info.replaces == (totems[0],)  # 最舊的先消失
+    assert info.name_zh == "戰意圖騰"

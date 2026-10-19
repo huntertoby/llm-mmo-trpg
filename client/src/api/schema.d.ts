@@ -912,6 +912,11 @@ export interface components {
              * @default []
              */
             displace_checks: components["schemas"]["DisplaceCheckOut"][];
+            /**
+             * Summons
+             * @default []
+             */
+            summons: components["schemas"]["SummonOut"][];
             /** Displace Permille */
             displace_permille?: number | null;
         };
@@ -1112,6 +1117,29 @@ export interface components {
             view: components["schemas"]["BattleView"];
         };
         /**
+         * SummonOut
+         * @description 預覽中會出現的召喚物（Phase 3D-4b）：``expires_round`` 是在召喚者第幾輪的回合結束時消失，
+         *     ``totem_radius`` 是圖騰的光環半徑（不是圖騰為 ``None``），``replaces`` 是因超過同時存在的上限
+         *     而消失的舊召喚物。
+         */
+        SummonOut: {
+            /** Unit Id */
+            unit_id: string;
+            /** Template Id */
+            template_id: string;
+            /** Name Zh */
+            name_zh: string;
+            pos: components["schemas"]["XY"];
+            /** Expires Round */
+            expires_round: number;
+            /** Max Hp */
+            max_hp: number;
+            /** Totem Radius */
+            totem_radius: number | null;
+            /** Replaces */
+            replaces: string[];
+        };
+        /**
          * Surface
          * @description 格子的表面狀態。
          * @enum {string}
@@ -1304,6 +1332,8 @@ export interface components {
             summon_expires_round: number | null;
             /** Dismissed */
             dismissed: boolean;
+            /** Totem Radius */
+            totem_radius: number | null;
         };
         /** UpcomingEventOut */
         UpcomingEventOut: {

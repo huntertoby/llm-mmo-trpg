@@ -2,6 +2,7 @@
 // 伺服器的 `PreviewOut.pierce／topples／hurls` → 畫在格子上的標記（Overlay）與預覽文字。
 import type { BattleView, Pos, PreviewOut } from "../api/types";
 import { objectName } from "./glossary";
+import { auraTiles } from "./summons";
 import type { UnitNames } from "./units";
 
 export type OverlayKind =
@@ -19,7 +20,10 @@ export type OverlayKind =
   | "swap" // 交換位置的兩格
   | "teleport_from" // 傳送他人：被傳送的單位原位置（Phase 3D-2b）
   | "teleport_to" // 傳送他人：落點
-  | "teleport_lethal"; // 傳送他人：落在致命地形（成功率極低）
+  | "teleport_lethal" // 傳送他人：落在致命地形（成功率極低）
+  | "summon_at" // 召喚物出現的格子（Phase 3D-4b）
+  | "summon_aura" // 圖騰光環涵蓋的格子
+  | "summon_gone"; // 因超過上限而消失的舊召喚物
 
 export interface Overlay {
   pos: Pos;
@@ -76,6 +80,17 @@ export function previewOverlays(p: PreviewOut | null, view: BattleView): Overlay
   for (const h of p.hurls ?? []) {
     out.push({ pos: pos(h.from_pos), kind: "hurl_from", label: "舉" });
     out.push({ pos: pos(h.to_pos), kind: "hurl_to", label: "落" });
+  }
+  for (const s of p.summons ?? []) {
+    const at = pos(s.pos);
+    if (s.totem_radius != null) {
+      for (const t of auraTiles(at, s.totem_radius, view)) out.push({ pos: t, kind: "summon_aura", label: "" });
+    }
+    out.push({ pos: at, kind: "summon_at", label: s.totem_radius == null ? "召" : "圖" });
+    for (const id of s.replaces) {
+      const old = unitPos(view, id);
+      if (old !== null) out.push({ pos: old, kind: "summon_gone", label: "消" });
+    }
   }
   const lethal = (p.displace_checks ?? []).some((c) => c.lethal);
   for (const m of p.moves ?? []) out.push(...(m.kind === "charge" ? chargeOverlays(m, p, view) : moveOverlays(m, lethal)));

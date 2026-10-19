@@ -193,4 +193,6 @@ export const HIGHLIGHT = {
   // 位移他人預覽（Phase 3D-2b）：被傳送的單位、落點、致命地形的落點
   banish: 0xb98cff,
   banish_lethal: 0xff3030,
+  // 召喚（Phase 3D-4b）：召喚物的外框、預覽的召喚位置與圖騰光環
+  summon: 0x5eead4,
 } as const;

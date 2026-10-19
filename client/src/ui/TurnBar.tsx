@@ -1,5 +1,6 @@
 // 回合列：輪數、目前行動者、先攻順序（每個單位的代號與 HP 小條，目前行動者強調）。
 import type { BattleView } from "../api/types";
+import { remainingRounds, summonKind } from "../battle/summons";
 import type { UnitNames } from "../battle/units";
 
 interface Props {
@@ -32,10 +33,18 @@ export function TurnBar({ view, names, acting }: Props) {
             u?.team ?? "",
             id === activeId ? "active" : "",
             gone ? "gone" : "",
+            u?.owner_id == null ? "" : "summon",
           ].join(" ");
+          const kind = u === undefined ? null : summonKind(u);
+          const left = u === undefined ? null : remainingRounds(view, u);
+          const note =
+            kind === null || u === undefined || u.owner_id === null
+              ? ""
+              : `　${kind}（${names.name(u.owner_id)}召喚${left === null ? "" : `，剩 ${left} 輪`}）`;
           return (
-            <li key={id} className={cls} title={`${names.label(id)}　HP ${u?.hp ?? 0} / ${u?.max_hp ?? 0}`}>
+            <li key={id} className={cls} title={`${names.label(id)}　HP ${u?.hp ?? 0} / ${u?.max_hp ?? 0}${note}`}>
               <span className="turn-chip-marker">{names.marker(id)}</span>
+              {left !== null && <span className="turn-chip-left">{left}</span>}
               <span className="turn-chip-hp">
                 <span style={{ width: `${ratio * 100}%` }} />
               </span>

@@ -1,7 +1,8 @@
 // 單位資訊：滑過或點選單位時顯示（文字即可）。
-import type { StatusView, UnitView } from "../api/types";
+import type { BattleView, StatusView, UnitView } from "../api/types";
 import { stackName, statusName } from "../battle/glossary";
 import type { SkillNames } from "../battle/actions";
+import { remainingRounds, summonKind } from "../battle/summons";
 import type { UnitNames } from "../battle/units";
 
 interface Props {
@@ -9,6 +10,8 @@ interface Props {
   names: UnitNames;
   heroId: string;
   skills: SkillNames;
+  /** 召喚物的剩餘輪數要用目前輪數計算。 */
+  view?: BattleView;
 }
 
 function statusText(s: StatusView): string {
@@ -17,12 +20,13 @@ function statusText(s: StatusView): string {
   return `${statusName(s.status_id)}${amount}${left}`;
 }
 
-export function UnitInfo({ unit, names, heroId, skills }: Props) {
+export function UnitInfo({ unit, names, heroId, skills, view }: Props) {
   if (unit === null) {
     return <div className="panel unit-info muted">滑過或點選單位以查看資訊</div>;
   }
   const team = unit.team === "ally" ? "我方" : "敵方";
-  const tags = [team, unit.id === heroId ? "主角" : "", unit.downed ? "倒下" : ""].filter(Boolean);
+  const kind = summonKind(unit);
+  const tags = [team, unit.id === heroId ? "主角" : "", kind ?? "", unit.downed ? "倒下" : ""].filter(Boolean);
   const stacks = Object.entries(unit.stacks);
   const cooldowns = Object.entries(unit.cooldowns);
   const rows: [string, string][] = [
@@ -33,6 +37,14 @@ export function UnitInfo({ unit, names, heroId, skills }: Props) {
     ["武器", unit.weapon_name_zh],
     ["位置", `(${unit.pos.x}, ${unit.pos.y})`],
   ];
+  if (unit.owner_id !== null) {
+    const left = view === undefined ? null : remainingRounds(view, unit);
+    rows.push([
+      "召喚者",
+      `${names.name(unit.owner_id)}${left === null ? "" : `；剩 ${left} 輪（第 ${unit.summon_expires_round} 輪結束時消失）`}`,
+    ]);
+  }
+  if (unit.totem_radius !== null) rows.push(["光環", `${unit.totem_radius} 格內的友方在圖騰行動時獲得增益`]);
   return (
     <div className="panel unit-info">
       <div className="unit-title">

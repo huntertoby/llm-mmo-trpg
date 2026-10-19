@@ -2,6 +2,7 @@
 import { asEvent, type BattleView, type PreviewOut } from "../api/types";
 import { objectName, statusName, surfaceName } from "./glossary";
 import { sceneLines } from "./scenePreview";
+import { summonLines } from "./summons";
 import type { UnitNames } from "./units";
 
 type Outcome = PreviewOut["certain"][number];
@@ -173,6 +174,7 @@ export function previewLines(
     lines.push(`撞擊傷害 ${names.label(c.unit_id)} 最多 ${c.maximum}`);
   }
   lines.push(...sceneLines(p, names, view)); // 穿透、推倒、投擲（Phase 3C-5b）
+  lines.push(...summonLines(p, names)); // 召喚位置、持續與被擠掉的舊召喚物（Phase 3D-4b）
   const shown = (o: Outcome) => !skipChain || !CHAIN_OUTCOME_KINDS.has(o.kind);
   for (const o of p.certain.filter(shown)) lines.push(`確定：${outcomeText(o, names, view)}`);
   for (const o of p.possible.filter(shown)) lines.push(`可能：${outcomeText(o, names, view)}`);

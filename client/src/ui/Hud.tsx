@@ -2,6 +2,7 @@
 import type { BattleView, StatusView, UnitView } from "../api/types";
 import { glossaryName, stackName, statusName, surfaceName } from "../battle/glossary";
 import type { SkillNames } from "../battle/actions";
+import { summonLine, summonsOf } from "../battle/summons";
 
 interface Props {
   view: BattleView;
@@ -43,6 +44,7 @@ export function Hud({ view, hero, skills }: Props) {
   if (hero === null) return null;
   const stacks = Object.entries(hero.stacks).filter(([, n]) => n > 0);
   const cooldowns = Object.entries(hero.cooldowns).filter(([, n]) => n > 0);
+  const summons = summonsOf(view, hero.id);
   return (
     <div className="panel hud" aria-label="主角狀態">
       <div className="hud-title">{hero.name_zh}</div>
@@ -82,6 +84,16 @@ export function Hud({ view, hero, skills }: Props) {
         <span className="muted">狀態：</span>
         {hero.statuses.length === 0 ? "無" : hero.statuses.map(statusLine).join("、")}
       </div>
+      {summons.length > 0 && (
+        <div className="hud-line hud-summons" aria-label="召喚物">
+          <span className="muted">召喚物：</span>
+          <ul className="hud-summon-list">
+            {summons.map((u) => (
+              <li key={u.id}>{summonLine(view, u)}</li>
+            ))}
+          </ul>
+        </div>
+      )}
       {cooldowns.length > 0 && (
         <div className="hud-line">
           <span className="muted">冷卻：</span>

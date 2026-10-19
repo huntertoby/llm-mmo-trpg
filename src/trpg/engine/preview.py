@@ -41,6 +41,7 @@ from trpg.engine.events import (
     ShieldGained,
     StacksChanged,
     StatusApplied,
+    SummonExpired,
     SurfaceChanged,
     TerrainChanged,
     TrapPlaced,
@@ -51,6 +52,7 @@ from trpg.engine.events import (
     UnitEscaped,
     UnitFell,
     UnitMoved,
+    UnitSummoned,
 )
 from trpg.engine.maneuvers import contest_chance
 from trpg.engine.pierce import pierce_trace
@@ -91,6 +93,7 @@ __all__ = [
     "PierceInfo",
     "Preview",
     "StatusChance",
+    "SummonInfo",
     "TargetPreview",
     "ToppleInfo",
     "dice_distribution",
@@ -191,6 +194,23 @@ class ToppleInfo:
 
 
 @dataclass(frozen=True, slots=True)
+class SummonInfo:
+    """預覽中會出現的召喚物（Phase 3D-4b；取自 ``unit_summoned`` 事件與模擬後的狀態）。
+
+    ``expires_round``：在召喚者這一輪的回合結束時消失；``totem_radius``：圖騰的光環半徑（不是圖騰
+    為 ``None``）；``replaces``：因超過上限而消失的舊召喚物（最舊的先）。"""
+
+    unit_id: UnitId
+    template_id: str
+    name_zh: str
+    pos: XY
+    expires_round: int
+    max_hp: int
+    totem_radius: int | None
+    replaces: tuple[UnitId, ...]
+
+
+@dataclass(frozen=True, slots=True)
 class HurlInfo:
     """預覽中發生的物件投擲（Phase 3C-5b；取自 ``object_hurled`` 事件）。
 
@@ -278,6 +298,8 @@ class Preview:
     """技能的位移抵抗判定（Phase 3D-2b：``swap``、``swap_any``、``teleport_target`` 的敵方）。"""
     displace_chance: Fraction | None = None
     """位移他人成功的總機率（所有敵方目標都沒抵抗成功）；沒有檢定（全是友方）為 ``None``。"""
+    summons: tuple[SummonInfo, ...] = ()
+    """動作會召喚的單位（Phase 3D-4b；召喚位置、持續與被擠掉的舊召喚物）。"""
 
 
 # ---------------------------------------------------------------------------
@@ -833,6 +855,35 @@ def _scene_infos(
     return tuple(topples.values()), tuple(hurls.values())
 
 
+def _summon_infos(state: BattleState, events: list[EventBase]) -> tuple[SummonInfo, ...]:
+    """模擬事件中的召喚（``state`` 為動作前的狀態，用來查範本；``limit`` 消失的舊召喚物並入
+    新召喚物的 ``replaces``）。"""
+    infos: list[SummonInfo] = []
+    replaced: list[UnitId] = []
+    for e in events:
+        if isinstance(e, SummonExpired) and e.reason == "limit":
+            replaced.append(e.unit_id)
+        elif isinstance(e, UnitSummoned):
+            try:
+                template = state.ruleset.summon_def(e.template_id).template
+            except KeyError:
+                continue
+            infos.append(
+                SummonInfo(
+                    unit_id=e.unit_id,
+                    template_id=e.template_id,
+                    name_zh=template.name_zh,
+                    pos=(e.pos.x, e.pos.y),
+                    expires_round=e.expires_round,
+                    max_hp=template.max_hp,
+                    totem_radius=None if template.totem is None else template.totem.radius,
+                    replaces=tuple(replaced),
+                )
+            )
+            replaced = []
+    return tuple(infos)
+
+
 def _displace_checks(
     state: BattleState, actor: UnitState, action: UseSkill
 ) -> tuple[DisplaceCheck, ...]:
@@ -982,4 +1033,5 @@ def preview(state: BattleState, action: Action) -> Preview:
         moves=_move_infos(max_events),
         displace_checks=checks,
         displace_chance=chance,
+        summons=_summon_infos(state, max_events),
     )
