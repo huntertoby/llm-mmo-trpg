@@ -18,7 +18,7 @@ from tests.engine.helpers import (
 )
 from tests.engine.skill_helpers import FLAT7, U1, U2, U3
 from tests.engine.test_passive_triggers import always
-from trpg.content.skills import SkillDef
+from trpg.content.skills import SkillDef, skill_problems
 from trpg.engine import Attack, BattleState, UseSkill, resolve
 from trpg.engine.ai.utility import UtilityAI
 from trpg.engine.context import Ctx
@@ -297,8 +297,6 @@ def test_the_ai_saves_undying_for_a_wounded_ally() -> None:
 
 
 def _problems(skill: SkillDef) -> None:
-    from trpg.content.skills import skill_problems  # noqa: PLC0415
-
     rules = library().ruleset
     problems = skill_problems(
         skill,
