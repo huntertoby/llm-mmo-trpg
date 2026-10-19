@@ -1,6 +1,6 @@
 # PM 交接文件
 
-> 給接手的 PM（新對話中的 Claude）。最後更新：2026-10-19，**Phase 2F-1 完成並驗收**、下一步派 Phase 2F-2（見 3.0，只做 2F-2）。
+> 給接手的 PM（新對話中的 Claude）。最後更新：2026-10-19，**Phase 2F 全部完成並驗收**；下一步是 Phase 3，等使用者安排（見 3.0）。
 > 讀完本檔再讀 `CLAUDE.md` 與 `docs/專案計畫.md`（總覽，約 1 萬字元）即可接手；設計細節依需要讀 `docs/design/` 下的主題檔。
 
 ---
@@ -31,11 +31,11 @@
 | Phase 2E-1 觸發核心 ＋ 被動 | ✅ 完成（1230 測試；Phase 2 ⚠️ #1、#11 已補） | `Phase2E計畫.md` 第 3 節／`Phase2E-1報告.md` |
 | Phase 2E-2 反應技、擋攻擊、姿態 | ✅ 完成（1286 測試） | `Phase2E計畫.md` 第 4 節／`Phase2E-2報告.md` |
 | Phase 2E-3 層數、陷阱與收尾 | ✅ 完成（1341 測試；2E 驗收全 ✅；待 PM 決定已處理於 3.2） | `Phase2E計畫.md` 第 5 節／`Phase2E-3報告.md`（5.4 為 2E 驗收總表） |
-| Phase 2F 整理（Phase 3 前審查的結論） | 2F-1 ✅（noqa 19→17；待 PM 決定 1 點：陷阱推擊中斷改測 `_move_interrupted`，接受，不新增原語）；2F-2 ⏭️ | `Phase2F計畫.md`／`Phase2F-1報告.md` |
+| Phase 2F 整理（Phase 3 前審查的結論） | ✅ 完成（1395 測試；noqa 19→14；對照戰鬥不變；completion 1800 場異常 0） | `Phase2F計畫.md`／`Phase2F-1、2F-2報告.md` |
 | **Phase 3 網頁 ＋ roguelite** | 2F 之後 | 規格尚未撰寫（見 3.1） |
 
 - 最新 commit 在 GitHub `huntertoby/llm-mmo-trpg`（私人）的 `main`；2026-10-19 起使用者電腦的資料夾就是工作資料夾（見 6.1），push 前確認 `git status` 乾淨即可。
-- 1341 個測試（`slow` 預設不跑；平衡測試 `test_demo_map_win_rate_and_length` 標 `xfail(strict=False)`，目前 2 xfail、2 xpass）。
+- 1395 個測試（`slow` 預設不跑；平衡測試 `test_demo_map_win_rate_and_length` 標 `xfail(strict=False)`，目前 2 xfail、2 xpass）。
 - 主要指令：
   - `trpg battle --map <id> --seed <n> [--ally-build build_a,build_b] [--ally-commander id] [--enemy-commander id] [--log-json f]`、`trpg battle replay f`
   - `trpg map list`（10 張正式地圖，8 種類型都有）
@@ -50,16 +50,17 @@
 
 ## 3. 下一步
 
-### 3.0 接手後馬上要做的（2026-10-19 前任 PM 留）
+### 3.0 目前狀態（2026-10-19）
 
-1. **commit 並 push**：工作區有本檔的未 commit 修改（訊息：`Accept Phase 2F-1`）；2F-1 的實作 commit（`6c43476`..`fff545e`）也還沒 push，一起 push。
-2. **派 Phase 2F-2 實作 agent**（`sonnet`，背景執行）。規格是 `docs/phases/Phase2F計畫.md` 第 0–2、4、5 節；用 6.4 範本，另外交代：
-   - 先讀 `docs/phases/Phase2F-1報告.md` 了解 2F-1 改了什麼。
-   - 開工前用目前 HEAD 存 3 場對照戰鬥 JSON（同 2F-1 報告的指令），並先跑一次組合器退回統計。
-   - 最後各跑一次 `scripts/skill_fuzz.py --count 1000` 與完整的 `scripts/check.py`。
-   - 最終回覆要有：退回統計前後對照表、對照戰鬥比對結論、noqa 前後數量（2F-1 結束時為 17；驗收要求 2F 結束時比 2F 開始前的 19 少至少 4 個，即 ≤ 15）。
-3. **驗收 2F-2**（6.2 第 5 步）：重點看 (a) 3 場對照戰鬥與 2F-1 結束時相同（AI 行為不能變）；(b) 反應技 `skeleton.core` 退回明顯下降；(c) 若報告問「要不要把 heal／shield 加進反應技骨架」，這是設計問題，**要問使用者**。2F 結束後在背景跑一次 `trpg sim completion`（異常必須為 0）。
-4. **2F-2 驗收、push、更新本檔進度後就停下**，向使用者回報結果。**不要開始 Phase 3**（不寫規格、不問拆法），使用者會另外安排。
+- Phase 2F 已全部完成、驗收並 push。**不要自行開始 Phase 3**，等使用者安排；使用者回來後先確認 Phase 3 拆法（3.1 最後一段）。
+- **待使用者決定**：反應技骨架要不要加入 `heal`／`shield`（見下方 2F-2 驗收紀錄第 1 點）。
+
+**2F-2 驗收紀錄**：驗收 7 條全通過。PM 自己複驗：3 場對照戰鬥與 2F-1 結束時逐位元相同，`replay` 通過；`check.py` 全過（本機 1 分 33 秒）；`trpg sim completion` 全量 1800 場異常 0（本機 `--jobs 16` 100 秒）；noqa 19→14。反應技 `skeleton.core` 退回 108→0，反應技退回總數 335→254。待 PM 決定的處理：
+1. 反應技骨架要不要加 heal／shield：**設計問題，已問使用者，尚未回覆**。目前「自身增益」分支只剩有益狀態（`apply_status`）。
+2. `ReactionWhen.event` Literal 意義不同，不併入 `SKILL_REACTION_EVENTS`：接受。
+3. AI 陷阱 `trap:` 放在 `ai_profiles.yaml` 表格層級，可依模式覆寫，未知形狀用預設係數：接受。不在載入時驗證形狀 ID。
+4. `passive.yaml` 新增 `required_category`／`required_weapon_req`：接受。
+5. `skill_estimate` 等加 keyword-only 參數：接受。
 
 ### 3.0.1 Phase 3-1 預留事項（本次不做，留給之後寫規格時用）
 
