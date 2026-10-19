@@ -1407,6 +1407,101 @@
         "title": "FocusTarget",
         "description": "集火指定敵人。"
       },
+      "GambleBranchOut": {
+        "properties": {
+          "kind": {
+            "type": "string",
+            "enum": [
+              "win",
+              "lose"
+            ],
+            "title": "Kind"
+          },
+          "permille": {
+            "type": "integer",
+            "title": "Permille"
+          },
+          "multiplier_permille": {
+            "type": "integer",
+            "title": "Multiplier Permille"
+          },
+          "targets": {
+            "items": {
+              "$ref": "#/components/schemas/TargetOut"
+            },
+            "type": "array",
+            "title": "Targets"
+          },
+          "self_damage_min": {
+            "type": "integer",
+            "title": "Self Damage Min"
+          },
+          "self_damage_max": {
+            "type": "integer",
+            "title": "Self Damage Max"
+          },
+          "self_statuses": {
+            "items": {
+              "type": "string"
+            },
+            "type": "array",
+            "title": "Self Statuses"
+          },
+          "self_healed_min": {
+            "type": "integer",
+            "title": "Self Healed Min"
+          },
+          "self_healed_max": {
+            "type": "integer",
+            "title": "Self Healed Max"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "kind",
+          "permille",
+          "multiplier_permille",
+          "targets",
+          "self_damage_min",
+          "self_damage_max",
+          "self_statuses",
+          "self_healed_min",
+          "self_healed_max"
+        ],
+        "title": "GambleBranchOut",
+        "description": "賭注一個分支的預覽（Phase 3D-7a）：``kind`` 為 ``win``／``lose``，``permille`` 是這個分支\n發生的機率（命中之後）。``multiplier_permille`` 是本次傷害的倍率；``targets`` 是強制這個分支時\n各目標的命中率與傷害範圍（已含倍率）；``self_damage_*`` 是施放者自己受到的傷害（最少與最多）、\n``self_statuses`` 是他獲得的狀態、``self_healed_*`` 是他回復的 HP。"
+      },
+      "GambleOut": {
+        "properties": {
+          "chance_permille": {
+            "type": "integer",
+            "title": "Chance Permille"
+          },
+          "branches": {
+            "prefixItems": [
+              {
+                "$ref": "#/components/schemas/GambleBranchOut"
+              },
+              {
+                "$ref": "#/components/schemas/GambleBranchOut"
+              }
+            ],
+            "type": "array",
+            "maxItems": 2,
+            "minItems": 2,
+            "title": "Branches"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "chance_permille",
+          "branches"
+        ],
+        "title": "GambleOut",
+        "description": "賭注技能的預覽（Phase 3D-7a）：成功率與兩個分支（依序 ``win``、``lose``）。玩家是在知情下\n下注：網頁依它列出「60%：傷害 ×2｜40%：你受 15 傷害」。"
+      },
       "Glossary": {
         "properties": {
           "terrain": {
@@ -2517,6 +2612,24 @@
               }
             ],
             "title": "Displace Permille"
+          },
+          "gamble": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/GambleOut"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "miss_notes": {
+            "items": {
+              "type": "string"
+            },
+            "type": "array",
+            "title": "Miss Notes",
+            "default": []
           }
         },
         "additionalProperties": false,

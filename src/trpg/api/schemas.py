@@ -17,6 +17,7 @@ from trpg.engine.actions import Action, Step, UseSkill
 from trpg.engine.ai.orders import IgnoredOrder, OrderSet
 from trpg.engine.preview import (
     DamageRange,
+    GambleOutcome,
     HurlInfo,
     Outcome,
     PierceInfo,
@@ -394,6 +395,31 @@ class DisplaceCheckOut(_ApiModel):
     lethal: bool
 
 
+class GambleBranchOut(_ApiModel):
+    """賭注一個分支的預覽（Phase 3D-7a）：``kind`` 為 ``win``／``lose``，``permille`` 是這個分支
+    發生的機率（命中之後）。``multiplier_permille`` 是本次傷害的倍率；``targets`` 是強制這個分支時
+    各目標的命中率與傷害範圍（已含倍率）；``self_damage_*`` 是施放者自己受到的傷害（最少與最多）、
+    ``self_statuses`` 是他獲得的狀態、``self_healed_*`` 是他回復的 HP。"""
+
+    kind: Literal["win", "lose"]
+    permille: int
+    multiplier_permille: int
+    targets: tuple[TargetOut, ...]
+    self_damage_min: int
+    self_damage_max: int
+    self_statuses: tuple[str, ...]
+    self_healed_min: int
+    self_healed_max: int
+
+
+class GambleOut(_ApiModel):
+    """賭注技能的預覽（Phase 3D-7a）：成功率與兩個分支（依序 ``win``、``lose``）。玩家是在知情下
+    下注：網頁依它列出「60%：傷害 ×2｜40%：你受 15 傷害」。"""
+
+    chance_permille: int
+    branches: tuple[GambleBranchOut, GambleBranchOut]
+
+
 class PreviewOut(_ApiModel):
     """:class:`trpg.engine.preview.Preview` 的公開版本：不含模擬後的完整狀態與原始事件。"""
 
@@ -436,6 +462,11 @@ class PreviewOut(_ApiModel):
     """動作會召喚的單位（Phase 3D-4b）。"""
     displace_permille: int | None = None
     """位移成功的總機率（千分比；所有敵方目標都沒抵抗成功）；沒有檢定（全是友方）為 ``None``。"""
+    gamble: GambleOut | None = None
+    """技能有賭注時（Phase 3D-7a）：成功率與兩個分支各自的結果；其他欄位（傷害範圍、連鎖）只算
+    賭注以外的效果。"""
+    miss_notes: tuple[str, ...] = ()
+    """失手反噬 ``cost.on_miss`` 的說明（Phase 3D-7a，例「失手時：你獲得「倒地」」）。"""
 
 
 def _damage(d: DamageRange | None) -> DamageOut | None:
@@ -522,6 +553,31 @@ def _hurl(h: HurlInfo) -> HurlOut:
     )
 
 
+def _gamble(p: Preview) -> GambleOut | None:
+    info = p.gamble
+    if info is None:
+        return None
+    win, lose = info.branches
+    return GambleOut(
+        chance_permille=info.chance_permille,
+        branches=(_gamble_branch(win), _gamble_branch(lose)),
+    )
+
+
+def _gamble_branch(b: GambleOutcome) -> GambleBranchOut:
+    return GambleBranchOut(
+        kind=b.kind,
+        permille=_milli(b.chance),
+        multiplier_permille=b.multiplier_permille,
+        targets=tuple(_target(t) for t in b.preview.targets),
+        self_damage_min=b.self_damage[0],
+        self_damage_max=b.self_damage[1],
+        self_statuses=b.self_statuses,
+        self_healed_min=b.self_healed[0],
+        self_healed_max=b.self_healed[1],
+    )
+
+
 def preview_out(
     p: Preview,
     min_events: tuple[dict[str, Any], ...],
@@ -576,4 +632,6 @@ def preview_out(
             for c in p.displace_checks
         ),
         displace_permille=permille(p.displace_chance),
+        gamble=_gamble(p),
+        miss_notes=p.miss_notes,
     )

@@ -1,5 +1,6 @@
 // 預覽結果 → 顯示文字（純函式）。機率以千分比（‰）、期望傷害以 ×1000 傳來，這裡轉成百分比與小數。
 import { asEvent, type BattleView, type PreviewOut } from "../api/types";
+import { gambleLines } from "./gamble";
 import { objectName, statusName, surfaceName } from "./glossary";
 import { sceneLines } from "./scenePreview";
 import { summonLines } from "./summons";
@@ -174,6 +175,8 @@ export function previewLines(
   for (const c of p.collisions ?? []) {
     lines.push(`撞擊傷害 ${names.label(c.unit_id)} 最多 ${c.maximum}`);
   }
+  lines.push(...gambleLines(p, names)); // 賭注的兩個分支（Phase 3D-7a）
+  for (const n of p.miss_notes ?? []) lines.push(n); // 失手反噬（Phase 3D-7a）
   lines.push(...sceneLines(p, names, view)); // 穿透、推倒、投擲（Phase 3C-5b）
   lines.push(...summonLines(p, names)); // 召喚位置、持續與被擠掉的舊召喚物（Phase 3D-4b）
   lines.push(...zonePreviewLines(p.min_events)); // 建立的持續區域（Phase 3D-5）

@@ -516,6 +516,50 @@ export interface components {
             target: string;
         };
         /**
+         * GambleBranchOut
+         * @description 賭注一個分支的預覽（Phase 3D-7a）：``kind`` 為 ``win``／``lose``，``permille`` 是這個分支
+         *     發生的機率（命中之後）。``multiplier_permille`` 是本次傷害的倍率；``targets`` 是強制這個分支時
+         *     各目標的命中率與傷害範圍（已含倍率）；``self_damage_*`` 是施放者自己受到的傷害（最少與最多）、
+         *     ``self_statuses`` 是他獲得的狀態、``self_healed_*`` 是他回復的 HP。
+         */
+        GambleBranchOut: {
+            /**
+             * Kind
+             * @enum {string}
+             */
+            kind: "win" | "lose";
+            /** Permille */
+            permille: number;
+            /** Multiplier Permille */
+            multiplier_permille: number;
+            /** Targets */
+            targets: components["schemas"]["TargetOut"][];
+            /** Self Damage Min */
+            self_damage_min: number;
+            /** Self Damage Max */
+            self_damage_max: number;
+            /** Self Statuses */
+            self_statuses: string[];
+            /** Self Healed Min */
+            self_healed_min: number;
+            /** Self Healed Max */
+            self_healed_max: number;
+        };
+        /**
+         * GambleOut
+         * @description 賭注技能的預覽（Phase 3D-7a）：成功率與兩個分支（依序 ``win``、``lose``）。玩家是在知情下
+         *     下注：網頁依它列出「60%：傷害 ×2｜40%：你受 15 傷害」。
+         */
+        GambleOut: {
+            /** Chance Permille */
+            chance_permille: number;
+            /** Branches */
+            branches: [
+                components["schemas"]["GambleBranchOut"],
+                components["schemas"]["GambleBranchOut"]
+            ];
+        };
+        /**
          * Glossary
          * @description 名詞對照表（由內容庫產生）：ID → 中文名與簡短說明。
          */
@@ -947,6 +991,12 @@ export interface components {
             summons: components["schemas"]["SummonOut"][];
             /** Displace Permille */
             displace_permille?: number | null;
+            gamble?: components["schemas"]["GambleOut"] | null;
+            /**
+             * Miss Notes
+             * @default []
+             */
+            miss_notes: string[];
         };
         /**
          * Protect
