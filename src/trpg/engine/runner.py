@@ -21,11 +21,17 @@ from trpg.shared.errors import TrpgError
 from trpg.shared.types import Team, UnitId
 
 __all__ = [
+    "DEFAULT_MAX_ACTIONS",
     "LOG_FORMAT",
     "BattleLog",
     "BattleRun",
     "DecisionPolicy",
+    "StepLimitExceeded",
+    "StopCondition",
     "accept_all",
+    "advance",
+    "apply_step",
+    "auto_step",
     "replay",
     "run_battle",
 ]
@@ -67,6 +73,12 @@ DEFAULT_MAX_ACTIONS = 20_000
 type StepCallback = Callable[[Step | None, ResolveResult], None]
 type DecisionPolicy = Callable[[BattleState, Pending], Decision]
 """``prompt`` 反應的決策函式。"""
+type StopCondition = Callable[[BattleState, Pending | None], bool]
+""":func:`advance` 的停止條件（例如「輪到玩家操控的單位」）。"""
+
+
+class StepLimitExceeded(TrpgError):
+    """自動推進超過步數上限仍未結束（或未輪到玩家）。"""
 
 
 def accept_all(state: BattleState, pending: Pending) -> Decision:
@@ -138,39 +150,89 @@ def run_battle(
 
     ``legal_actions`` 只剩 ``EndTurn`` 時（:func:`has_only_end_turn`）自動結束回合，不詢問
     policy。結算暫停（``prompt`` 反應）時以 ``decide`` 回答並 ``resume``。``on_step`` 在開場與
-    每一步結算後呼叫（開場時 step 為 ``None``）。超過 ``max_actions`` 步仍未結束時拋出錯誤
-    （設定 ``max_rounds`` 可保證結束）。
+    每一步結算後呼叫（開場時 step 為 ``None``）。超過 ``max_actions`` 步仍未結束時拋出
+    :class:`StepLimitExceeded`（設定 ``max_rounds`` 可保證結束）。
+    推進迴圈本身是 :func:`advance`（網頁 API 的自動推進共用同一個函式）。
     """
     result = begin_battle(setup, seed)
     if on_step is not None:
         on_step(None, result)
-    state = result.state
     events: list[EventBase] = list(result.events)
+
+    def record(step: Step | None, step_result: ResolveResult) -> None:
+        if on_step is not None:
+            on_step(step, step_result)
+        events.extend(step_result.events)
+
+    state, _pending, steps = advance(
+        result.state,
+        None,
+        policy,
+        decide=decide,
+        on_step=record,
+        max_actions=max_actions,
+        controllers=controllers,
+    )
+    orders = _collect_orders(policy, controllers)
+    return BattleRun(setup, seed, state, steps, events, orders=orders)
+
+
+def auto_step(
+    state: BattleState,
+    pending: Pending | None,
+    policy: Policy,
+    *,
+    decide: DecisionPolicy = accept_all,
+    controllers: Mapping[UnitId | Team, Policy] | None = None,
+) -> Step:
+    """自動驅動的下一步：暫停中以 ``decide`` 回答；只剩 ``EndTurn`` 時結束回合；否則問 policy。"""
+    if pending is not None:
+        return decide(state, pending)
+    if has_only_end_turn(state):
+        assert state.active_unit is not None
+        return EndTurn(unit_id=state.active_unit)
+    return _controller_for(state, policy, controllers)(state)
+
+
+def apply_step(state: BattleState, step: Step) -> ResolveResult:
+    """結算一個步驟：決定以 ``resume``、動作以 ``resolve``（與 :func:`replay` 相同）。"""
+    if isinstance(step, Decision):
+        return resume(state, step)
+    action: Action = step
+    return resolve(state, action)
+
+
+def advance(
+    state: BattleState,
+    pending: Pending | None,
+    policy: Policy,
+    *,
+    decide: DecisionPolicy = accept_all,
+    on_step: StepCallback | None = None,
+    max_actions: int = DEFAULT_MAX_ACTIONS,
+    controllers: Mapping[UnitId | Team, Policy] | None = None,
+    stop: StopCondition | None = None,
+) -> tuple[BattleState, Pending | None, list[Step]]:
+    """以 :func:`auto_step` 持續結算，直到戰鬥結束或 ``stop(state, pending)`` 為真。
+
+    回傳 ``(最後狀態, 最後的 pending, 這次結算的步驟)``。``on_step`` 在每一步結算後呼叫
+    （呼叫者可以藉此逐步保存進度：超過 ``max_actions`` 步時拋出 :class:`StepLimitExceeded`，
+    已結算的步驟都已經通知過）。
+    """
     steps: list[Step] = []
-    pending: Pending | None = None
     while not state.ended:
+        if stop is not None and stop(state, pending):
+            break
         if len(steps) >= max_actions:
-            raise TrpgError(f"超過 {max_actions} 個動作仍未結束戰鬥")
-        step: Step
-        if pending is not None:
-            step = decide(state, pending)
-            result = resume(state, step)
-        else:
-            if has_only_end_turn(state):
-                assert state.active_unit is not None
-                action: Action = EndTurn(unit_id=state.active_unit)
-            else:
-                action = _controller_for(state, policy, controllers)(state)
-            step = action
-            result = resolve(state, action)
+            raise StepLimitExceeded(f"超過 {max_actions} 個動作仍未結束戰鬥")
+        step = auto_step(state, pending, policy, decide=decide, controllers=controllers)
+        result = apply_step(state, step)
         if on_step is not None:
             on_step(step, result)
         state = result.state
         pending = result.pending
         steps.append(step)
-        events.extend(result.events)
-    orders = _collect_orders(policy, controllers)
-    return BattleRun(setup, seed, state, steps, events, orders=orders)
+    return state, pending, steps
 
 
 def _controller_for(
@@ -206,7 +268,7 @@ def replay(setup: BattleSetup, seed: int, steps: Sequence[Step]) -> BattleRun:
     state = result.state
     events: list[EventBase] = list(result.events)
     for step in steps:
-        result = resume(state, step) if isinstance(step, Decision) else resolve(state, step)
+        result = apply_step(state, step)
         state = result.state
         events.extend(result.events)
     return BattleRun(setup, seed, state, list(steps), events)

@@ -77,13 +77,26 @@ class CommandedAI:
         issued = commander(state, team)
         if issued is None:
             return
-        self._current[team] = issued
+        self.issue(state, team, issued)
+
+    def issue(self, state: BattleState, team: Team, orders: OrderSet) -> OrderRecord:
+        """直接下達 ``team`` 的指令（下一次該陣營的決策即生效），並記入 ``order_log``。
+
+        指揮官的指令也經過這裡；玩家操控的陣營（網頁 API 的隊友快捷指令）不註冊指揮官，
+        直接呼叫本方法。無效的指令照常記入 ``ignored``。
+        """
+        self._current[team] = orders
         record = OrderRecord(
-            round=state.round, team=team, orders=issued, ignored=_ignored(state, team, issued)
+            round=state.round, team=team, orders=orders, ignored=_ignored(state, team, orders)
         )
         self.order_log.append(record)
         if self.on_order is not None:
             self.on_order(record, state)
+        return record
+
+    def current_orders(self, team: Team) -> OrderSet:
+        """``team`` 目前的指令（沒有時為空的 :class:`OrderSet`）。"""
+        return self._current.get(team, OrderSet())
 
     def __call__(self, state: BattleState) -> Action:
         unit = state.active

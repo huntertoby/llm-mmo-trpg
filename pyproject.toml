@@ -5,8 +5,10 @@ description = "LLM 說書人開放世界 MMO-TRPG（第一里程碑：單人 rog
 readme = "README.md"
 requires-python = ">=3.12"
 dependencies = [
+    "fastapi>=0.146.0",
     "pydantic>=2.7",
     "pyyaml>=6",
+    "uvicorn>=0.54.0",
 ]
 
 [project.scripts]
@@ -21,6 +23,7 @@ dev = [
     "import-linter",
     "types-PyYAML",
     "pytest-xdist>=3.8.0",
+    "httpx>=0.28.1",
 ]
 
 [build-system]
@@ -134,6 +137,12 @@ forbidden_modules = [
     "trpg.roguelite",
     "trpg.sim",
 ]
+
+[[tool.importlinter.contracts]]
+name = "api 不得匯入 cli"
+type = "forbidden"
+source_modules = ["trpg.api"]
+forbidden_modules = ["trpg.cli"]
 
 [[tool.importlinter.contracts]]
 name = "content 不得匯入 skillgen"

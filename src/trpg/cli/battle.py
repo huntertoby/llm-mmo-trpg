@@ -40,7 +40,13 @@ from trpg.engine.state import BattleState, state_to_json
 from trpg.narrative.events import describe_event
 from trpg.shared.types import Team, UnitId
 from trpg.sim.commanders import build_commanded_ai
-from trpg.sim.matrix import library_with_builds
+from trpg.sim.lineup import (
+    DEFAULT_ALLIES,
+    DEFAULT_ENEMIES,
+    UnknownBuildError,
+    build_allies,
+    default_lineup,
+)
 
 __all__ = [
     "DEFAULT_ALLIES",
@@ -52,12 +58,6 @@ __all__ = [
     "describe_order",
     "describe_order_record",
 ]
-
-DEFAULT_ALLIES = ("hero_fighter", "hero_archer", "hero_mage")
-DEFAULT_ENEMIES = ("bandit", "bandit_archer", "bandit_boss")
-
-TEAM_SIZE = 3
-"""``--ally-build`` 補齊到的隊伍人數（build 英雄 ＋ 標準隊友，與 sim matrix 相同）。"""
 
 
 def cmd_map_show(library: ContentLibrary, map_id: str, out: TextIO) -> int:
@@ -165,17 +165,6 @@ class _Printer:
                 print(text, file=self.out)
 
 
-def default_lineup(library: ContentLibrary, map_id: str) -> tuple[list[str], list[str]]:
-    """地圖的預設陣容（``encounter``）。
-
-    沒有時使用 :data:`DEFAULT_ALLIES`／:data:`DEFAULT_ENEMIES`。
-    """
-    encounter = library.map(map_id).encounter
-    if encounter is None:
-        return list(DEFAULT_ALLIES), list(DEFAULT_ENEMIES)
-    return list(encounter.allies), list(encounter.enemies)
-
-
 def cmd_battle(
     library: ContentLibrary,
     *,
@@ -195,16 +184,11 @@ def cmd_battle(
 ) -> int:
     default_allies, default_enemies = default_lineup(library, map_id)
     if ally_builds:
-        known = library.builds.by_id()
-        unknown = [b for b in ally_builds if b not in known]
-        if unknown:
-            print(
-                f"錯誤：未知的 build：{', '.join(unknown)}（可用：{', '.join(sorted(known))}）",
-                file=sys.stderr,
-            )
+        try:
+            library, allies = build_allies(library, ally_builds)
+        except UnknownBuildError as exc:
+            print(f"錯誤：{exc}", file=sys.stderr)
             return 2
-        library = library_with_builds(library)
-        allies = [*ally_builds, *library.builds.companions][: max(TEAM_SIZE, len(ally_builds))]
     setup = build_setup(
         library,
         map_id,

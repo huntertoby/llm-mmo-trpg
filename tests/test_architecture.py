@@ -6,6 +6,7 @@
    - ``trpg.engine`` 不得匯入 llm、narrative、api、roguelite、sim、skillgen、cli。
    - ``trpg.shared`` 不得匯入任何其他 ``trpg`` 子套件。
    - ``trpg.narrative`` 不得匯入 cli、api、roguelite、sim（Phase 3-1：描述模組給 CLI 與網頁共用）。
+   - ``trpg.api`` 不得匯入 ``trpg.cli``（Phase 3-2：CLI 可以匯入 api 來啟動伺服器，反之不行）。
    - ``trpg.content`` 不得匯入 ``trpg.skillgen``（Phase 2B-2 4.1：驗證器依賴內容資料，不能反過來）。
 2. 確定性：``engine``、``shared``、``content``、``skillgen``、``sim``、``roguelite`` 內
    不得使用 ``random``、``secrets``、``uuid4``／``uuid1``、``os.urandom``、時間函式等。
@@ -34,10 +35,13 @@ CONTENT_FORBIDDEN = ("trpg.skillgen",)
 
 NARRATIVE_FORBIDDEN = ("trpg.cli", "trpg.api", "trpg.roguelite", "trpg.sim")
 
+API_FORBIDDEN = ("trpg.cli",)
+
 FORBIDDEN_BY_SOURCE: dict[str, tuple[str, ...]] = {
     "trpg.engine": ENGINE_FORBIDDEN,
     "trpg.content": CONTENT_FORBIDDEN,
     "trpg.narrative": NARRATIVE_FORBIDDEN,
+    "trpg.api": API_FORBIDDEN,
 }
 
 DETERMINISTIC_PACKAGES = ("engine", "shared", "content", "skillgen", "sim", "roguelite")
@@ -293,6 +297,9 @@ def test_scanner_detects_dependency_violations() -> None:
         ("trpg.narrative.events", False, "from trpg.cli.render import x"),
         ("trpg.narrative.skills", False, "import trpg.sim.matrix"),
         ("trpg.narrative", True, "from ..api import app"),
+        ("trpg.api.app", False, "from trpg.cli.main import main"),
+        ("trpg.api.routes.battles", False, "import trpg.cli.battle"),
+        ("trpg.api", True, "from ..cli import render"),
     ]
     for current, is_package, source in cases:
         found = dependency_violations(ast.parse(source), current, is_package, "<snippet>")
@@ -310,6 +317,9 @@ def test_scanner_allows_legal_dependencies() -> None:
         ("trpg.cli.budget", False, "from trpg.skillgen.validate import validate_skill"),
         ("trpg.narrative.events", False, "from trpg.engine.events import EventBase"),
         ("trpg.narrative.skills", False, "from trpg.content.library import ContentLibrary"),
+        ("trpg.api.sessions", False, "from trpg.sim.lineup import build_allies"),
+        ("trpg.api.app", False, "from trpg.narrative.events import describe_event"),
+        ("trpg.cli.main", False, "from trpg.api.app import create_app"),
     ]
     for current, is_package, source in cases:
         found = dependency_violations(ast.parse(source), current, is_package, "<snippet>")
