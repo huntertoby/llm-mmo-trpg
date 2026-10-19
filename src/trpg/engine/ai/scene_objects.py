@@ -59,7 +59,7 @@ def _value(unit: UnitState, hit: list[UnitState]) -> int:
 def has_fire_follow_up(state: BattleState, unit: UnitState) -> bool:
     """行動者有可以點燃油的火焰技能（裝備的主動技能中，標籤或效果帶火，且不是投擲技能自己）。"""
     rules = state.ruleset
-    for skill_id in sorted(unit.skills):
+    for skill_id in sorted(unit.all_skills):
         skill = rules.skill_def(skill_id)
         if skill.kind != "active" or any(e.type == HURL_OBJECT for e in skill.effects):
             continue

@@ -54,6 +54,7 @@ from trpg.content.skills import (
     DISPEL,
     EXTRA_REACTION,
     GRANT_AP,
+    GRANT_SKILL,
     HURL_OBJECT,
     LEAP,
     REDIRECT_DAMAGE,
@@ -66,6 +67,7 @@ from trpg.content.skills import (
     TIME_BOMB,
     EffectSpec,
     SkillDef,
+    weapon_problem,
 )
 from trpg.engine.actions import (
     Action,
@@ -105,6 +107,7 @@ from trpg.engine.events import (
     ShieldGained,
     SkillActivated,
     SkillCooldownChanged,
+    SkillGranted,
     StacksChanged,
     StatusApplied,
     StatusRemoved,
@@ -113,6 +116,7 @@ from trpg.engine.events import (
     UnitMoved,
     UnitRevived,
 )
+from trpg.engine.grants import granted_remaining
 from trpg.engine.preview import DamageRange, Preview, preview
 from trpg.engine.resources import restorable_cooldowns
 from trpg.engine.rewrites import grant_ap_problem, resettable_cooldowns
@@ -132,6 +136,7 @@ from trpg.engine.rules.geometry import (
 )
 from trpg.engine.rules.movement import is_deadly, is_standable, step_cost
 from trpg.engine.rules.statuses import forced_target_sources, shield_amount, stance_status_ids
+from trpg.engine.skills.conditions import is_flanked
 from trpg.engine.skills.scaling import mastery_duration_bonus
 from trpg.engine.skills.targeting import (
     ResolvedEffect,
@@ -391,6 +396,30 @@ def _scene(
     return _Scene(enemies, _ward(state, unit, orders), orders, focus, walk)
 
 
+def _enemy_terms(state: BattleState, unit: UnitState, w: AiWeights, scene: _Scene) -> int:
+    """位置價值中與敵人有關的部分：接近、威脅、保持距離、掩護、被壓制、夾擊（Phase 3D-8c）。"""
+    xy, enemies = unit.xy, scene.enemies
+    value = -w.approach * _approach_distance(scene, xy)
+    if w.threat:
+        value += w.threat * sum(1 for e in enemies if attack_problem(state, unit, e) is None)
+    if w.keep_distance:
+        # 隱蔽的敵人必須走到 2 格內才打得到（concealed_ranged_max_distance），所以遠程單位為了
+        # 攻擊而進入 2 格內不扣分；否則兩名隱蔽的弓手會互相等待到平手（dark_forest 種子 7）
+        close = sum(
+            1
+            for e in enemies
+            if manhattan(xy, e.xy) <= _KEEP_DISTANCE and not is_concealed(state, e)
+        )
+        value -= w.keep_distance * close
+    if w.cover:
+        value += w.cover * _covered_from(state, xy, enemies)
+    if w.exposed:
+        value -= w.exposed * _outgunned_by(state, unit, enemies)
+    if w.flank:
+        value += w.flank * _flanked_count(state, unit, enemies)
+    return value
+
+
 def _unit_position_value(
     state: BattleState, unit: UnitState, w: AiWeights, scene: _Scene | None = None
 ) -> Fraction:
@@ -403,25 +432,7 @@ def _unit_position_value(
     if scene is None:
         scene = _scene(state, unit)
     xy = unit.xy
-    enemies = scene.enemies
-    value = 0
-    if enemies:
-        value -= w.approach * _approach_distance(scene, xy)
-        if w.threat:
-            value += w.threat * sum(1 for e in enemies if attack_problem(state, unit, e) is None)
-        if w.keep_distance:
-            # 隱蔽的敵人必須走到 2 格內才打得到（concealed_ranged_max_distance），所以遠程單位為了
-            # 攻擊而進入 2 格內不扣分；否則兩名隱蔽的弓手會互相等待到平手（dark_forest 種子 7）
-            close = sum(
-                1
-                for e in enemies
-                if manhattan(xy, e.xy) <= _KEEP_DISTANCE and not is_concealed(state, e)
-            )
-            value -= w.keep_distance * close
-        if w.cover:
-            value += w.cover * _covered_from(state, xy, enemies)
-        if w.exposed:
-            value -= w.exposed * _outgunned_by(state, unit, enemies)
+    value = _enemy_terms(state, unit, w, scene) if scene.enemies else 0
     value += w.height * state.tile(*xy).height
     if w.protect and scene.ward is not None:
         value -= w.protect * manhattan(xy, scene.ward)
@@ -432,6 +443,11 @@ def _unit_position_value(
     if _harmful(state, xy) or (state.zones and hostile_zone_at(state, xy, unit.team)):
         value -= w.hazard  # 有害表面，或敵方會傷害自己的持續區域（Phase 3D-5）
     return Fraction(value)
+
+
+def _flanked_count(state: BattleState, unit: UnitState, enemies: list[UnitState]) -> int:
+    """``unit`` 目前位置緊貼著、而且對面站著友方（夾擊，Phase 3D-8c）的敵人數。"""
+    return sum(1 for e in enemies if manhattan(unit.xy, e.xy) == 1 and is_flanked(state, unit, e))
 
 
 def _order_penalty(orders: OrderContext, xy: XY) -> int:
@@ -515,7 +531,7 @@ def _useful_damage(damage: DamageRange, hit: Fraction, hp: int) -> Fraction:
 def _has_usable_spell(state: BattleState, unit: UnitState) -> bool:
     """單位有法力足夠的法術技（不看冷卻與 AP；沉默只對這樣的單位有價值）。"""
     rules = state.ruleset
-    for sid in sorted(unit.skills):
+    for sid in sorted(unit.all_skills):
         skill = rules.skill_def(sid)
         if skill.is_active and skill.category == "spell" and unit.mana >= skill.cost.mana:
             return True
@@ -1061,6 +1077,7 @@ _REWRITE_SCORED = frozenset(
         REVEAL,
         REVIVE,
         DELAYED_DAMAGE,
+        GRANT_SKILL,
     }
 )
 """預覽事件之外還要另外加分的改寫規則型原語（:func:`_rewrite_gains`）。"""
@@ -1096,9 +1113,11 @@ def _rewrite_gains(
     rules = profile.rewrite
     source = skill.cost.source or 0
     on_kill = any(e.on_kill for e in skill.effects)  # 擊殺時效果（3D-8b）
-    if not types & _REWRITE_SCORED and not source and not on_kill:
+    watch = _watch_statuses(state, skill)  # 進入監視（3D-8c）
+    if not types & _REWRITE_SCORED and not source and not on_kill and not watch:
         return Fraction(0)
     points = Fraction(-rules.source_points * source)
+    points += _overwatch_points(state, actor, watch, rules)
     for e in p.min_events:
         points += _rewrite_event_points(state, actor, e, types, rules)
     points += _bomb_points(state, actor, skill, p, rules)
@@ -1106,6 +1125,31 @@ def _rewrite_gains(
     points += rules.revive_points * revived  # 復活（3D-8b）
     points += _kill_points(actor, skill, p, rules)
     return profile.weights.damage * points
+
+
+def _watch_statuses(state: BattleState, skill: SkillDef) -> set[str]:
+    """技能替施放者施加的「監視」類狀態（內建反應的 ``requires_status``；3D-8c）。"""
+    needed = {d.requires_status for d in state.ruleset.reactions.reactions if d.requires_status}
+    return {
+        e.status
+        for e in skill.effects
+        if e.type == "apply_status" and e.status in needed and (e.affects or "self") == "self"
+    }
+
+
+def _overwatch_points(
+    state: BattleState, actor: UnitState, watch: set[str], rules: RewriteAiRules
+) -> Fraction:
+    """進入監視的收益（3D-8c）：下一次敵人行動時，走得進武器射程（武器射程 ＋ 速度）的敵人數（最多
+    ``overwatch_max_enemies`` 個，已經在射程內的不算——直接攻擊比較划算）× ``overwatch_points``；
+    已經有監視狀態時為 0。"""
+    if not watch or any(actor.has_status(s) for s in watch):
+        return Fraction(0)
+    reach = actor.weapon.range
+    near = sum(
+        1 for e in _enemies(state, actor) if reach < manhattan(actor.xy, e.xy) <= reach + e.speed
+    )
+    return Fraction(rules.overwatch_points * min(near, rules.overwatch_max_enemies))
 
 
 def _kill_points(actor: UnitState, skill: SkillDef, p: Preview, rules: RewriteAiRules) -> Fraction:
@@ -1185,14 +1229,29 @@ def _rewrite_event_points(
         points = Fraction(rules.dispel_points)
     elif isinstance(e, TrapRevealed) or (isinstance(e, StatusRemoved) and e.reason == "revealed"):
         points = Fraction(rules.reveal_points)  # 揭露（3D-8a）：敵方陷阱或敵人失去隱蔽
-    elif isinstance(e, SkillActivated) and e.unit_id == actor.id:  # 常駐類傳說（Phase 3D-6）
-        rounds = (
-            rules.activation_battle_rounds
-            if e.expires_round is None
-            else e.expires_round - state.round
-        )
-        points = Fraction(rules.activation_round_points * rounds)
+    elif isinstance(e, (SkillGranted, SkillActivated)):  # 暫時獲得技能（3D-8c）、常駐類傳說（3D-6）
+        points = _skill_event_points(state, actor, e, rules)
     return points
+
+
+def _skill_event_points(
+    state: BattleState, actor: UnitState, e: SkillGranted | SkillActivated, rules: RewriteAiRules
+) -> Fraction:
+    """``skill_granted``（暫時獲得技能，3D-8c）與 ``skill_activated``（常駐類傳說，3D-6）的加分。
+    給友方或自己的暫時技能 ＝ ``grant_skill_points`` × 每輪預期使用次數 × 持續輪數（只刷新輪數
+    不加分）；傳說只算施放者自己的啟動。"""
+    if isinstance(e, SkillGranted):
+        if e.refreshed or state.units[e.unit_id].team is not actor.team:
+            return Fraction(0)
+        return Fraction(
+            rules.grant_skill_points * rules.grant_skill_uses_permille * e.duration, 1000
+        )
+    if e.unit_id != actor.id:
+        return Fraction(0)
+    rounds = (
+        rules.activation_battle_rounds if e.expires_round is None else e.expires_round - state.round
+    )
+    return Fraction(rules.activation_round_points * rounds)
 
 
 def _order_bonus(
@@ -1485,6 +1544,21 @@ def _restore_supports(
     return bool(restorable_cooldowns(state, target, skill))
 
 
+def _grant_supports(
+    state: BattleState, _caster: UnitState, _skill: SkillDef, spec: EffectSpec, target: UnitState
+) -> bool:
+    """``grant_skill`` 對 ``target`` 有沒有用（Phase 3D-8c）：被給的技能他沒有裝備、拿得動（武器
+    相容），而且還沒有暫時擁有（或只剩最後一輪）。"""
+    assert spec.skill is not None
+    if spec.skill in target.skills:
+        return False
+    granted = state.ruleset.skill_def(spec.skill)
+    if weapon_problem(granted, target.weapon.weapon_class) is not None:
+        return False
+    left = granted_remaining(target, spec.skill)
+    return left is None or left <= 1
+
+
 _SUPPORT_CHECKS: dict[
     str, Callable[[BattleState, UnitState, SkillDef, EffectSpec, UnitState], bool]
 ]
@@ -1501,6 +1575,7 @@ _SUPPORT_CHECKS = {
         bool(target.reactions) and target.extra_reactions == 0
     ),
     RESTORE_RESOURCE: _restore_supports,
+    GRANT_SKILL: _grant_supports,
 }
 
 

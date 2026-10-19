@@ -12,6 +12,9 @@
   友方倒下之後，等效果佇列清空才處理，見 :func:`ally_downed_reactions`）、``enemy_enters_adjacent``
   （敵人主動移動進入相鄰格之後）、``ally_targeted``（相鄰友方被敵人單體技能或普攻瞄準、命中判定
   之前）。
+  Phase 3D-8c 新增內建反應事件 ``enemy_moves_in_range``（監視射擊 ``overwatch_shot``，需要狀態
+  ``overwatch``：敵人主動移動的一步結束後位在持有者的武器射程與視線內，自動普攻一次並移除
+  ``overwatch``，見 :func:`enemy_moves_in_range_reactions`）。
   反應技不花 AP，立刻施放一次技能（:func:`trpg.engine.skills.interpreter.use_reaction_skill`）。
 
 普攻的結算（:func:`perform_unit_attack`）也放在這裡，因為格擋會在命中後、傷害前介入，
@@ -28,7 +31,7 @@ from trpg.content.skills import SkillDef
 from trpg.engine import modifiers
 from trpg.engine.context import Ctx
 from trpg.engine.effects import execute
-from trpg.engine.effects.models import DamageEffect
+from trpg.engine.effects.models import DamageEffect, RemoveStatusEffect
 from trpg.engine.events import (
     AttackIntercepted,
     AttackRolled,
@@ -55,6 +58,7 @@ __all__ = [
     "ally_targeted_reactions",
     "block_multiplier",
     "enemy_enters_adjacent_reactions",
+    "enemy_moves_in_range_reactions",
     "hit_reactions",
     "is_melee_attack",
     "opportunity_attacks",
@@ -87,7 +91,10 @@ def _usable(ctx: Ctx, unit: UnitState, rule: ReactionRule) -> ReactionDef | None
         return None  # 暈眩中不能執行反應
     if _unless(unit, rule):
         return None
-    if unit.stamina < definition.stamina_cost:
+    status = definition.requires_status
+    if unit.stamina < definition.stamina_cost or (
+        status is not None and not unit.has_status(status)
+    ):
         return None
     if definition.requires_melee_weapon and not is_melee_attack(ctx, unit):
         return None
@@ -144,6 +151,7 @@ _TRIGGER_EVENT_MATCHERS: dict[str, Callable[[EventBase, UnitState, UnitState], b
     "ally_targeted": lambda e, _u, t: isinstance(e, AttackRolled) and e.attacker_id == t.id,
     "ally_downed": lambda e, _u, t: isinstance(e, UnitDowned) and e.unit_id == t.id,
     "enemy_enters_adjacent": lambda e, _u, t: isinstance(e, UnitMoved) and e.unit_id == t.id,
+    "enemy_moves_in_range": lambda e, _u, t: isinstance(e, UnitMoved) and e.unit_id == t.id,
 }
 
 
@@ -400,6 +408,29 @@ def enemy_enters_adjacent_reactions(ctx: Ctx, mover: UnitState, from_xy: XY) -> 
         picked = _react(ctx, reactor, ("enemy_enters_adjacent",), mover, skills=True)
         if isinstance(picked, SkillDef):
             _run_skill(ctx, reactor, picked, mover)
+
+
+def enemy_moves_in_range_reactions(ctx: Ctx, mover: UnitState) -> None:
+    """``mover`` 剛主動移動（步行、衝鋒、直線衝撞）完成一步（Phase 3D-8c）：帶有 ``overwatch``
+    的敵人（依 ID 順序）若能以武器攻擊到 ``mover`` 現在的位置（射程、視線、隱蔽、致盲都照一般普攻
+    的規則），就用內建的 ``enemy_moves_in_range`` 反應（監視射擊）普攻一次；佔本輪的反應次數，
+    用掉之後移除該狀態。拒絕（``prompt`` 模式選不用）時狀態保留，下一步再問。強制位移、傳送、
+    跳躍、互換不呼叫這裡。"""
+    for reactor in ctx.state.living_units():
+        if not mover.alive:
+            return
+        if reactor.team is mover.team or reactor.is_summon:
+            continue
+        picked = _react(ctx, reactor, ("enemy_moves_in_range",), mover, effect="basic_attack")
+        if not isinstance(picked, ReactionDef):
+            continue
+        perform_unit_attack(ctx, reactor, mover, primary=False)
+        status_id = picked.requires_status
+        if status_id is not None and reactor.alive and reactor.has_status(status_id):
+            execute(
+                ctx,
+                [RemoveStatusEffect(target_id=reactor.id, status_id=status_id, reason="fired")],
+            )
 
 
 def perform_unit_attack(ctx: Ctx, attacker: UnitState, target: UnitState, *, primary: bool) -> None:

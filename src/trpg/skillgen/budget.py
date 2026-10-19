@@ -378,6 +378,25 @@ def _delayed_damage_points(
     return points, f"{effect.dice} 平均 × 預期 {targets}‰ 個目標（半徑 {effect.radius}）"
 
 
+def _grant_skill_points(
+    _skill: SkillDef, effect: EffectSpec, library: ContentLibrary
+) -> tuple[Fraction, str]:
+    """``grant_skill`` 的點數（3D-8c）：被給技能的總點數 × 預期使用次數（每輪
+    ``grant_skill_expected_uses_per_round_permille``‰ × 持續輪數）。"""
+    if effect.skill is None or effect.duration is None:
+        raise BudgetError("grant_skill 缺少 skill 或 duration，無法計算點數")
+    try:
+        granted = library.ruleset.skill_def(effect.skill)
+    except KeyError:
+        raise BudgetError(f"未知的技能 {effect.skill!r}") from None
+    if any(e.type == "grant_skill" for e in granted.effects):
+        raise BudgetError("grant_skill 不能給出另一個 grant_skill 技能")
+    permille = library.budget.grant_skill_expected_uses_per_round_permille
+    uses = Fraction(permille * effect.duration, _PERMILLE)
+    value = skill_budget(granted, library).total
+    return value * uses, f"{granted.id} {_fmt(value)} × 預期 {_fmt(uses)} 次使用"
+
+
 def _on_kill_budget(
     skill: SkillDef, library: ContentLibrary, index: int, source: EffectSpec
 ) -> EffectBudget | None:
@@ -686,6 +705,7 @@ _SPECIAL_BASES: dict[
     "reveal": _reveal_points,
     "revive": _revive_points,
     "delayed_damage": _delayed_damage_points,
+    "grant_skill": _grant_skill_points,
 }
 """需要整個技能或特殊規則的 ``budget_basis`` → 點數算法。"""
 

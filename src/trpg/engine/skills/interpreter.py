@@ -36,6 +36,7 @@ from trpg.content.skills import (
     EXTRA_REACTION,
     GAMBLE,
     GRANT_AP,
+    GRANT_SKILL,
     HURL_OBJECT,
     INTERCEPT,
     LEAP,
@@ -105,6 +106,7 @@ from trpg.engine.events import (
     UnitDashed,
     UnitDowned,
 )
+from trpg.engine.grants import grant_skill
 from trpg.engine.maneuvers import contest
 from trpg.engine.pierce import NO_PIERCE, PierceTrace, pierce_trace
 from trpg.engine.reactions import (
@@ -112,6 +114,7 @@ from trpg.engine.reactions import (
     ally_targeted_reactions,
     block_multiplier,
     enemy_enters_adjacent_reactions,
+    enemy_moves_in_range_reactions,
     hit_reactions,
     opportunity_attacks,
     spell_hit_reactions,
@@ -199,7 +202,7 @@ def use_skill(ctx: Ctx, caster: UnitState, action: UseSkill) -> None:
     except KeyError:
         raise IllegalActionError(f"找不到技能：{action.skill_id}") from None
     skill = modifiers.shaped_skill(ctx.state, caster, skill)  # 修正規則的變形（3D-3）
-    if skill.id not in caster.skills:
+    if skill.id not in caster.all_skills:
         raise IllegalActionError(f"{caster.name_zh} 沒有裝備技能：{skill.name_zh}")
     problem = skill_problem(ctx.state, caster, skill)
     if problem is not None:
@@ -857,6 +860,7 @@ class _Cast:
             move = MoveUnitEffect(source_id=caster.id, unit_id=caster.id, dest=step, mode="dash")
             execute(ctx, [move])
             enemy_enters_adjacent_reactions(ctx, caster, before)
+            enemy_moves_in_range_reactions(ctx, caster)
             if not self._dash_continues(step):
                 break
         if len(path) > 1 and caster.alive:
@@ -1059,6 +1063,13 @@ class _Cast:
         assert spec.hp_permille is not None
         target = self.ctx.state.units[self.action.target_id]
         revive_unit(self.ctx, self.caster, target, self.skill.id, spec.hp_permille)
+        return []
+
+    def grant_skill(self, effect: ResolvedEffect, spec: EffectSpec) -> list[EffectBase]:
+        """``grant_skill``（Phase 3D-8c）：每個對象暫時獲得 ``spec.skill``（``engine.grants``）。"""
+        assert spec.skill is not None and spec.duration is not None
+        for unit in self.targets(effect.affects, spec.condition):
+            grant_skill(self.ctx, self.caster, unit, spec.skill, spec.duration)
         return []
 
     def delayed_damage(self, effect: ResolvedEffect, spec: EffectSpec) -> list[EffectBase]:
@@ -1696,6 +1707,7 @@ class _Cast:
                 [MoveUnitEffect(source_id=caster.id, unit_id=caster.id, dest=cell, mode="dash")],
             )
             enemy_enters_adjacent_reactions(self.ctx, caster, before)
+            enemy_moves_in_range_reactions(self.ctx, caster)
             moved = True
             if not self._dash_continues(cell):
                 break
@@ -1891,6 +1903,7 @@ _Cast._SIMPLE = {
     REVEAL: _Cast.reveal,
     REVIVE: _Cast.revive,
     DELAYED_DAMAGE: _Cast.delayed_damage,
+    GRANT_SKILL: _Cast.grant_skill,
     HURL_OBJECT: _Cast.hurl_object,
     SUMMON: _Cast.summon,
     ZONE: _Cast.zone,

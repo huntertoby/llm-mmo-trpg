@@ -79,6 +79,8 @@ __all__ = [
     "SkillActivated",
     "SkillCooldownChanged",
     "SkillCopied",
+    "SkillGrantExpired",
+    "SkillGranted",
     "SkillTriggered",
     "SkillUsed",
     "SourceChanged",
@@ -507,8 +509,10 @@ class StatusRemoved(EventBase):
         "stolen",
         "dispelled",
         "revealed",
+        "fired",
     ]
-    """``dispelled``：被 ``dispel`` 驅散；``revealed``：被 ``reveal`` 移除隱蔽（Phase 3D-8a）；
+    """``fired``：監視（``overwatch``）射擊後結束（Phase 3D-8c）；
+    ``dispelled``：被 ``dispel`` 驅散；``revealed``：被 ``reveal`` 移除隱蔽（Phase 3D-8a）；
     ``stolen``：被 ``steal_buff`` 奪走（Phase 3D-1；緊接著對施放者的 ``status_applied``）；
     ``spent``：不死（``undying``）擋下致命傷害後移除（Phase 3C-4a）；
     ``thawed``：受到 ``removed_by_element`` 的元素傷害而解除（冰凍遇火，Phase 2H-1）；
@@ -1250,6 +1254,28 @@ class SkillActivated(EventBase):
     rule: str | None = None
 
 
+class SkillGranted(EventBase):
+    """暫時獲得技能（``grant_skill``，Phase 3D-8c）：``unit_id`` 的技能列多了 ``skill_id``，持續
+    ``duration`` 輪（在 ``unit_id`` 自己的回合結束時倒數）。``source_id`` 是施放者；``refreshed``：
+    目標已經暫時擁有這個技能，只刷新了剩餘輪數。"""
+
+    type: Literal["skill_granted"] = "skill_granted"
+    unit_id: UnitId
+    source_id: UnitId
+    skill_id: str
+    duration: int
+    refreshed: bool = False
+
+
+class SkillGrantExpired(EventBase):
+    """暫時獲得的技能期滿消失（Phase 3D-8c；``unit_id`` 的回合結束時）；該技能的冷卻與使用次數
+    紀錄一併清除。"""
+
+    type: Literal["skill_grant_expired"] = "skill_grant_expired"
+    unit_id: UnitId
+    skill_id: str
+
+
 class GambleRolled(EventBase):
     """賭注擲骰（Phase 3D-7a；命中判定之後、技能效果結算之前）：擲一次 d1000，``roll`` 不超過
     ``chance_permille`` 為成功（結算 ``win``），否則失敗（結算 ``lose``）。"""
@@ -1390,6 +1416,8 @@ type Event = Annotated[
     | ZoneExpired
     | SkillActivated
     | ActivationExpired
+    | SkillGranted
+    | SkillGrantExpired
     | RuleChangeTriggered
     | GambleRolled
     | BacklashTriggered

@@ -196,6 +196,7 @@ class RemoveStatusEffect(EffectBase):
         "dispelled",
         "revealed",
         "downed",
+        "fired",
     ] = "removed"
 
     def sort_target(self) -> str:

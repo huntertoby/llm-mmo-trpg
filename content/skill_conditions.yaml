@@ -74,3 +74,8 @@ conditions:
     min_rarity: rare
     params:
       tag: {type: tag, required: true}
+  - id: flanked
+    name_zh: 夾擊
+    description_zh: 以目標為中心，施放者所在的那一側（上下左右四個方向中，與施放者位置軸向相同、離施放者較近的一側；距離相同時以左右優先）的對面格，站著施放者的存活友方（不含施放者自己）。相鄰攻擊就是目標正對面的那一格；遠程攻擊也看目標背對施放者的那一格。
+    harshness: common
+    min_rarity: rare

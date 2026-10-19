@@ -58,6 +58,9 @@
 # 3D-8a（揭露）：
 #   prevents_concealment  被揭露：帶有者不算隱蔽（連黑暗表面、草叢也不算），也不能獲得 concealed 狀態。只能由 reveal 原語施加
 #                         （無 budget_points）
+# 3D-8c（監視射擊）：
+#   overwatch  監視：持續到持有者下回合開始（expires: own_turn_start）；reactions.yaml 的內建反應 overwatch_shot
+#              （requires_status: overwatch）在敵人於射程與視線內完成一步移動時自動普攻一次，之後移除此狀態
 # control_group 新增 mental（心智：恐懼、沉默）：適用控制遞減，不是 hard，對 Boss 不轉換。
 statuses:
   - id: defending
@@ -105,6 +108,15 @@ statuses:
     expires: turn_end
     stacking: refresh
     prevents_concealment: true
+  - id: overwatch
+    polarity: buff
+    name_zh: 監視
+    description_zh: 持續到自己的下回合開始。期間敵人在武器射程與視線內完成一步移動，就自動普攻一次（佔本輪反應，不花 AP），射擊後監視結束。
+    expires: own_turn_start
+    stacking: refresh
+    beneficial: true
+    budget_points: 6
+    min_rarity: rare
   - id: time_bomb
     polarity: debuff
     name_zh: 定時炸彈

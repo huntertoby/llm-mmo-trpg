@@ -21,7 +21,7 @@ from __future__ import annotations
 
 import re
 from collections import Counter
-from collections.abc import Callable, Collection, Iterable
+from collections.abc import Callable, Collection, Iterable, Mapping
 from dataclasses import dataclass
 from typing import TYPE_CHECKING, Any, Literal
 
@@ -59,10 +59,12 @@ __all__ = [
     "GAMBLE_BRANCH_TYPES",
     "GAMBLE_TAG",
     "GRANT_AP",
+    "GRANT_SKILL",
     "HURL_OBJECT",
     "INTERCEPT",
     "LEAP",
     "LEGACY_REACTION_EVENTS",
+    "MAX_GRANT_DURATION",
     "MAX_LIFESTEAL_PERMILLE",
     "MIN_SKILL_CRIT_RANGE",
     "MODIFIER_CHANGES",
@@ -133,6 +135,7 @@ __all__ = [
     "TriggerSpec",
     "condition_text",
     "default_affects",
+    "granted_skill_problems",
     "legendary_cores",
     "on_hit_carrier",
     "rarity_rank",
@@ -196,8 +199,9 @@ REQUIRED_CONDITIONS: tuple[str, ...] = (
     "target_isolated",
     "first_round",
     "cast_tag_this_turn",
+    "flanked",
 )
-"""引擎實作的 10 種條件（``trpg.engine.skills.conditions``），資料檔必須全部定義。"""
+"""引擎實作的 11 種條件（``trpg.engine.skills.conditions``），資料檔必須全部定義。"""
 
 type Targeting = Literal[
     "self", "unit", "tile", "direction", "none", "object_tile", "unit_tile", "unit_pair"
@@ -438,6 +442,7 @@ class PrimitiveParam(ContentModel):
         "tag",
         "bool",
         "resource",
+        "skill",
         "on_hit",
         "summon",
         "anchor",
@@ -474,6 +479,7 @@ class PrimitiveDef(ContentModel):
       ``gamble`` 成功率 × win 的點數 ＋ 失敗率 × lose 的點數（期望值，3D-7a）、
       ``revive`` 基礎點數 ＋ 回復比例 × 係數（3D-8b）、
       ``delayed_damage`` 骰子平均 × 預期波及人數（3D-8b）、
+      ``grant_skill`` 被給技能的總點數 × 預期使用次數（3D-8c）、
       ``dice_average`` 骰子平均值、``damage`` 法術為骰子平均值而武器為倍率 × 基準武器傷害、
       ``status``／``surface`` 為該狀態或表面的 ``budget_points`` × 持續 ÷ 預設持續。
       ``None`` 表示無法計算預算（驗證器會拒絕）。
@@ -511,6 +517,7 @@ class PrimitiveDef(ContentModel):
             "reveal",
             "revive",
             "delayed_damage",
+            "grant_skill",
         ]
         | None
     ) = None
@@ -622,6 +629,7 @@ _PLAIN_CONDITION_TEXT = {
     "moved_this_turn": "本回合移動過",
     "adjacent_ally": "身旁有友方",
     "target_isolated": "目標身邊沒有友方",
+    "flanked": "夾擊（目標的對面有友方）",
     "first_round": "第一輪",
 }
 """沒有參數的條件的一句話（Phase 3D-1）。"""
@@ -790,6 +798,9 @@ class EffectSpec(ContentModel):
     """``damage`` 專用（Phase 3D-8a，6.18 B）：聖光雙效——必須搭配 ``affects: all``；敵方依一般命中
     判定受到傷害、友方（含施放者）不擲命中而改為治療同樣的骰值（骰一次）。只能用在 ``aura``、
     ``area`` 骨架的法術技。"""
+    skill: str | None = Field(default=None, pattern=SKILL_ID_PATTERN)
+    """``grant_skill`` 專用（Phase 3D-8c，6.20）：暫時給目標的技能 ID（``content/skills/``）；必須是
+    一般的主動技能（不是傳說、不含改寫規則型原語、不是 ``grant_skill`` 技能；跨檔案檢查）。"""
     hp_permille: int | None = Field(default=None, ge=1, le=_PERMILLE)
     """``revive`` 專用（Phase 3D-8b，6.18 C）：被復活的單位站起來時的 HP（最大 HP 的 n‰，至少
     1）。"""
@@ -840,6 +851,7 @@ class EffectSpec(ContentModel):
             "scale",
             "scaling",
             "self_damage_permille_of_hit",
+            "skill",
             "speed",
             "split_heal",
             "splash",
@@ -997,6 +1009,10 @@ STEAL_BUFF = "steal_buff"
 DISPEL = "dispel"
 REVEAL = "reveal"
 """Phase 3D-8a 的原語 ID（6.18 J、I）：驅散敵方增益、揭露隱蔽與陷阱。"""
+GRANT_SKILL = "grant_skill"
+MAX_GRANT_DURATION = 4
+"""Phase 3D-8c 的暫時獲得技能原語 ID（6.20）：目標的技能列暫時多出 ``skill``，``duration`` 輪後
+（在目標自己的回合結束時倒數）消失。持續輪數上限。"""
 REVIVE = "revive"
 DELAYED_DAMAGE = "delayed_damage"
 TIME_BOMB = "time_bomb"
@@ -1469,6 +1485,7 @@ class SkillDef(ContentModel):
         self._check_gamble()
         self._check_revive()
         self._check_delayed_damage()
+        self._check_grant_skill()
         if self.kind == "passive" and self.trigger is None:
             raise ValueError("被動技能（kind: passive）必須有 trigger")
         if self.kind != "passive" and self.trigger is not None:
@@ -1623,6 +1640,27 @@ class SkillDef(ContentModel):
         for effect in self.effects:
             if effect.type != REVIVE and effect.affects != "self":
                 raise ValueError("revive 以外的效果必須明寫 affects: self（只作用在施放者）")
+
+    def _check_grant_skill(self) -> None:
+        """暫時獲得技能（Phase 3D-8c）：只能用在主動技能；每個技能最多一個 ``grant_skill`` 效果，
+        ``skill`` 與 ``duration`` 必填。被給技能本身的限制（一般主動技能、不是傳說、不含改寫規則型
+        原語、不是 ``grant_skill``）是跨檔案檢查（:func:`granted_skill_problems`）。"""
+        grants = [e for e in self.effects if e.type == GRANT_SKILL]
+        if not grants:
+            return
+        if self.kind != "active":
+            raise ValueError(f"grant_skill 只能用在主動技能，收到 kind: {self.kind}")
+        if len(grants) > 1:
+            raise ValueError("一個技能最多一個 grant_skill 效果")
+        grant = grants[0]
+        if grant.skill is None or grant.duration is None:
+            raise ValueError("grant_skill 必須填 skill 與 duration")
+        if grant.skill == self.id:
+            raise ValueError("grant_skill 不能給出自己")
+        if grant.duration > MAX_GRANT_DURATION:
+            raise ValueError(
+                f"grant_skill 的 duration 最多 {MAX_GRANT_DURATION}，收到 {grant.duration}"
+            )
 
     def _check_delayed_damage(self) -> None:
         """定時炸彈（Phase 3D-8b）：只能用在主動的法術技；每個技能最多一個 ``delayed_damage``，
@@ -2468,6 +2506,45 @@ def _trigger_problems(
     if spec.status is not None and spec.status not in status_ids:
         return [f"trigger.status：未知的狀態 {spec.status!r}"]
     return []
+
+
+def granted_skill_problems(
+    skill: SkillDef, skills: Mapping[str, SkillDef], primitives: Mapping[str, PrimitiveDef]
+) -> list[str]:
+    """``grant_skill`` 的跨技能檢查（Phase 3D-8c，6.20）：被給的技能必須存在，而且是一般的主動技能
+    ——不是傳說、不含改寫規則型與規則改變型原語、不是 ``grant_skill`` 技能（不連鎖）、也不是技能
+    自己（空串列為通過）。"""
+    problems: list[str] = []
+    for index, effect in enumerate(skill.effects):
+        if effect.type != GRANT_SKILL or effect.skill is None:
+            continue
+        where = f"effects[{index}].skill"
+        granted = skills.get(effect.skill)
+        if granted is None:
+            problems.append(f"{where}：未知的技能 {effect.skill!r}")
+            continue
+        reasons: list[str] = []
+        if granted.id == skill.id:
+            reasons.append("不能給出自己")
+        if granted.kind != "active":
+            reasons.append(f"必須是主動技能（kind: {granted.kind}）")
+        if granted.rarity == "legendary":
+            reasons.append("不能是傳說技能")
+        rewrite = sorted(
+            {
+                e.type
+                for e in granted.effects
+                if (p := primitives.get(e.type)) is not None
+                and p.category in ("rule_rewrite", "rule_change")
+            }
+        )
+        if rewrite:
+            reasons.append(f"不能含改寫規則型原語（{'、'.join(rewrite)}）")
+        if any(e.type == GRANT_SKILL for e in granted.effects):
+            reasons.append("不能是 grant_skill 技能")
+        if reasons:
+            problems.append(f"{where}：被給的技能 {granted.id} " + "；".join(reasons))
+    return problems
 
 
 def skill_problems(

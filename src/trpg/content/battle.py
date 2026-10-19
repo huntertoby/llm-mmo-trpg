@@ -333,7 +333,8 @@ class StatusTable(ContentModel):
 class ReactionWhen(ContentModel):
     """反應規則的觸發事件。``targeted_by_*`` 是被攻擊命中之後、傷害之前（內建格擋）；
     ``hit_by_*``、``ally_*``、``enemy_enters_adjacent`` 是反應技的事件（Phase 2E-2、3D-3，見
-    ``ReactionSpec``）。"""
+    ``ReactionSpec``）；``enemy_moves_in_range``（Phase 3D-8c）是內建反應「監視射擊」的事件
+    （持有者帶有 ``overwatch`` 狀態時，敵人在武器射程與視線內完成一步移動）。"""
 
     event: Literal[
         "targeted_by_melee",
@@ -346,6 +347,7 @@ class ReactionWhen(ContentModel):
         "ally_downed",
         "enemy_enters_adjacent",
         "ally_targeted",
+        "enemy_moves_in_range",
     ]
 
 

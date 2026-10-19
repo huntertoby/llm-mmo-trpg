@@ -499,3 +499,17 @@ primitives:
       chance_permille: {type: int, required: true, min: 50, max: 950, description_zh: 成功（結算 win）的機率（‰）}
       win: {type: effects, description_zh: 成功時結算的效果（0–2 個）}
       lose: {type: effects, description_zh: 失敗時結算的效果（0–2 個）}
+
+  # --- Phase 3D-8c：暫時獲得技能（docs/design/06-技能.md 6.20；點數為初值，未經模擬）---
+  - id: grant_skill
+    name_zh: 暫時獲得技能
+    description_zh: "目標（施放者自己，或形狀 single 選的友方）的技能列暫時多出 skill 指定的技能，持續 duration 輪：在目標自己的回合結束時倒數，歸零時消失（事件 skill_granted、skill_grant_expired），冷卻與使用次數紀錄一併清除。被給的技能是一般的主動技能（content/skills/），不佔技能欄位；不能是傳說、不含改寫規則型原語、不能是 grant_skill 技能或自己。同一個被給的技能不疊加，重新施放只刷新剩餘輪數；目標原本就裝備了該技能時不結算（effect_fizzled：already_equipped）。被給的技能照它自己的規則施放（AP、法力、冷卻、武器需求）。預算：被給技能的總點數 × 預期使用次數（grant_skill_expected_uses_per_round_permille × duration ÷ 1000）。"
+    category: structural
+    harmful: false
+    min_rarity: rare
+    budget_basis: grant_skill
+    allowed_shapes: [self, single]
+    forbid_affects: [enemies, all]
+    params:
+      skill: {type: skill, required: true, description_zh: 暫時給出的技能 ID（content/skills/）}
+      duration: {type: int, required: true, min: 1, max: 4, description_zh: 持續的輪數（在目標回合結束時倒數）}

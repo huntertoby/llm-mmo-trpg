@@ -509,16 +509,28 @@ class ReactionDef(ContentModel):
 
     - ``reduce_damage``：本次攻擊傷害 × (1 − ``damage_reduction_permille``)，無條件捨去，最低 1。
     - ``basic_attack``：以武器普攻觸發者（不花 AP；需能攻擊到觸發者原本的位置）。
+
+    ``requires_status``（Phase 3D-8c）：持有者必須帶有這個狀態才能反應，反應用掉之後移除該狀態
+    （監視射擊 ``overwatch_shot`` 用 ``overwatch``）。
     """
 
     id: str = Field(pattern=ID_PATTERN)
     name_zh: str = Field(min_length=1)
     description_zh: str = Field(min_length=1)
     effect: Literal["reduce_damage", "basic_attack"]
-    events: tuple[Literal["targeted_by_melee", "targeted_by_attack", "enemy_leaves_adjacent"], ...]
+    events: tuple[
+        Literal[
+            "targeted_by_melee",
+            "targeted_by_attack",
+            "enemy_leaves_adjacent",
+            "enemy_moves_in_range",
+        ],
+        ...,
+    ]
     stamina_cost: int = Field(default=0, ge=0)
     damage_reduction_permille: int = Field(default=0, ge=0, le=1000)
     requires_melee_weapon: bool = False
+    requires_status: str | None = Field(default=None, pattern=ID_PATTERN)
 
 
 class ReactionTable(ContentModel):
@@ -603,6 +615,7 @@ class AiWeights(ContentModel):
     exposed: int = 0
     mana: int = 0
     cooldown: int = 0
+    flank: int = 0
 
 
 class TrapAiRules(ContentModel):
@@ -647,6 +660,11 @@ class RewriteAiRules(ContentModel):
     - ``refund_ap_points``：擊殺時效果每返還 1 點 AP（``on_kill`` 的 ``refund_ap``，Phase 3D-8b）。
     - ``bomb_points_permille``：定時炸彈（``delayed_damage``）的預期傷害折合——炸彈骰子平均 ×
       （半徑內的敵人數 − 友方數，含施放者）× 這個千分比（炸彈可能被淨化或打斷）。
+    - ``overwatch_points``：進入監視（``overwatch`` 狀態，Phase 3D-8c）的價值——一次監視射擊的預期
+      收益；只有走得進武器射程的敵人才算，最多算 ``overwatch_max_enemies`` 個。
+    - ``grant_skill_points`` ／ ``grant_skill_uses_permille``：暫時獲得技能（``grant_skill``，
+      Phase 3D-8c）給自己或友方的價值 ＝ ``grant_skill_points`` × 每輪預期使用次數（‰）× 持續
+      輪數；只是被給技能預估價值的近似。
     - ``activation_round_points``：啟動常駐類傳說（Phase 3D-6）每一輪效果的價值（限時型 × 持續
       輪數、整場型 × ``activation_battle_rounds``），再扣源力成本。
     - ``activation_battle_rounds``：整場型傳說估計還能生效的輪數。
@@ -666,6 +684,10 @@ class RewriteAiRules(ContentModel):
     revive_points: int = Field(default=30, ge=0)
     refund_ap_points: int = Field(default=6, ge=0)
     bomb_points_permille: int = Field(default=700, ge=0, le=2000)
+    overwatch_points: int = Field(default=5, ge=0)
+    overwatch_max_enemies: int = Field(default=2, ge=1)
+    grant_skill_points: int = Field(default=8, ge=0)
+    grant_skill_uses_permille: int = Field(default=800, ge=0, le=3000)
     activation_round_points: int = Field(default=4, ge=0)
     activation_battle_rounds: int = Field(default=4, ge=1)
 

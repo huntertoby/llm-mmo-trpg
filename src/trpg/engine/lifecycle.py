@@ -4,6 +4,7 @@ from __future__ import annotations
 
 from trpg.content.battle import ReactionRule, ReactionWhen, UnitTemplate, WeaponDef
 from trpg.content.library import Ruleset
+from trpg.content.skills import GRANT_SKILL
 from trpg.engine.context import Ctx
 from trpg.engine.events import (
     EventBase,
@@ -174,6 +175,36 @@ def _auto_reaction_rules(
         if skill.kind == "reaction" and skill.reaction is not None and skill_id not in covered:
             auto.append(
                 ReactionRule(reaction=skill_id, when=ReactionWhen(event=skill.reaction.event))
+            )
+    auto += _status_reaction_rules(template, rules, covered)
+    return auto
+
+
+def _applies_status(rules: Ruleset, skill_id: str, status_id: str, depth: int = 0) -> bool:
+    """技能（或它暫時給出的技能）會施加 ``status_id``（內建反應的 ``requires_status``）。"""
+    skill = rules.skill_def(skill_id)
+    for effect in skill.effects:
+        if effect.type == "apply_status" and effect.status == status_id:
+            return True
+        granted = effect.skill if effect.type == GRANT_SKILL and depth < 1 else None
+        if granted is not None and _applies_status(rules, granted, status_id, depth + 1):
+            return True
+    return False
+
+
+def _status_reaction_rules(
+    template: UnitTemplate, rules: Ruleset, covered: set[str]
+) -> list[ReactionRule]:
+    """範本裝備了會施加某狀態的技能，而內建反應需要該狀態（``requires_status``，例如監視射擊
+    ``overwatch_shot`` 需要 ``overwatch``；Phase 3D-8c）時，自動加上一條 ``auto`` 規則。"""
+    auto: list[ReactionRule] = []
+    for definition in rules.reactions.reactions:
+        status_id = definition.requires_status
+        if status_id is None or definition.id in covered:
+            continue
+        if any(_applies_status(rules, sid, status_id) for sid in sorted(template.skills)):
+            auto.append(
+                ReactionRule(reaction=definition.id, when=ReactionWhen(event=definition.events[0]))
             )
     return auto
 

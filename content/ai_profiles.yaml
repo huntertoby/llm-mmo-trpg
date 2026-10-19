@@ -37,6 +37,7 @@
 #   hazard         站在有害表面上（扣分）
 #   cover          在射程內看得到、且從其位置看過來自己受到半掩護的敵人數（偏好有掩護的射擊位置；射程外的
 #                  敵人打不到自己，不算——否則雙方躲在掩護後互相射程外時會永遠不接近，Phase 2C-4）
+#   flank          （3D-8c）夾擊：緊貼著敵人、而且敵人的對面站著自己的友方的敵人數（近戰單位移動時偏好能夾擊的位置；目前只有 flanker 用）
 #   exposed        能打到自己、自己卻打不到的敵人數（射程更長，或自己被遮住；扣分）。互相打得到的對射
 #                  不算，所以不會讓弓手不敢進入射擊位置；煙幕、隱蔽讓敵人打不到自己時降低
 #
@@ -90,6 +91,11 @@ trap:
 #   revive_points     每復活 1 個倒下的友方（revive）
 #   refund_ap_points  擊殺時效果每返還 1 點 AP（on_kill 的 refund_ap）
 #   bomb_points_permille  定時炸彈：骰子平均 ×（半徑內敵人數 − 友方數，含施放者）× 這個千分比
+# Phase 3D-8c（初值，未經模擬）：
+#   overwatch_points / overwatch_max_enemies  進入監視（overwatch 狀態）：每個「走得進武器射程」的敵人 × 這個價值（一次監視射擊的預期
+#                     收益），最多算幾個敵人（已經在射程內的敵人不算：直接攻擊比較划算；已有監視則 0）
+#   grant_skill_points / grant_skill_uses_permille  暫時獲得技能（grant_skill）給自己或友方：每次使用的價值 × 每輪預期使用次數（‰）
+#                     × 持續輪數（被給技能預估價值的近似）；重新施放只刷新輪數時不加分
 rewrite:
   ap_points: 6
   ally_ap_permille: 600
@@ -105,6 +111,10 @@ rewrite:
   revive_points: 30
   refund_ap_points: 6
   bomb_points_permille: 700
+  overwatch_points: 5
+  overwatch_max_enemies: 2
+  grant_skill_points: 8
+  grant_skill_uses_permille: 800
   activation_round_points: 4    # 3D-6：啟動常駐類傳說每一輪效果的價值（限時 × 持續輪數；整場 × activation_battle_rounds）
   activation_battle_rounds: 4
 # summon（Phase 3D-4a 寫在程式裡，3D-4b 搬到這裡；初值未經模擬）：召喚技能的評分，收益 ＝ 召喚物的預估價值
@@ -137,6 +147,10 @@ profiles:
     name_zh: 莽夫
     description_zh: 重視傷害與接近目標。
     weights: {damage: 10, env_damage: 3, kill: 40, env_kill: 40, push: 4, surface: 5, expose: 10, friendly_fire: 4, approach: 6, threat: 4, objective: 8, hazard: 8, defend: 1, heal: 8, shield: 6, support: 3, mana: 1, cooldown: 1}
+  - id: flanker
+    name_zh: 夾擊者
+    description_zh: 同莽夫，但移動時偏好能與友方夾擊敵人的位置（3D-8c；其餘權重與 brute 相同，初值未經模擬）。
+    weights: {damage: 10, env_damage: 3, kill: 40, env_kill: 40, push: 4, surface: 5, expose: 10, friendly_fire: 4, approach: 6, threat: 4, objective: 8, hazard: 8, defend: 1, heal: 8, shield: 6, support: 3, mana: 1, cooldown: 1, flank: 3}
   - id: archer
     name_zh: 弓手
     description_zh: 重視距離、高處與視線。

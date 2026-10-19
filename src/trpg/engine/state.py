@@ -27,6 +27,7 @@ from trpg.shared.types import Attribute, Element, ObjectId, Pos, ResistGroup, Su
 __all__ = [
     "Activation",
     "BattleState",
+    "GrantedSkill",
     "LastCast",
     "ObjectState",
     "PendingResolution",
@@ -196,6 +197,15 @@ class Activation:
 
 
 @dataclass(slots=True, frozen=True)
+class GrantedSkill:
+    """一個暫時獲得的技能（Phase 3D-8c，``grant_skill``）：技能 ID 與剩餘輪數（持有者每個回合
+    結束時 −1，歸零時消失）。不佔技能欄位。"""
+
+    skill_id: str
+    remaining: int
+
+
+@dataclass(slots=True, frozen=True)
 class LastCast:
     """一次以 ``UseSkill`` 施放的主動技能（Phase 3C-4b）：施放者、技能與施放當輪。
     ``copy_skill`` 只複製本輪內的。"""
@@ -304,6 +314,9 @@ class UnitState:
     """生效中的常駐類傳說（Phase 3D-6），依啟動順序。修正型傳說與規則改變只在這裡列出時生效。"""
     revived: bool = False
     """這個單位在本場戰鬥已經被復活過一次（``revive``，Phase 3D-8b）：每單位每場最多被復活 1 次。"""
+    granted_skills: tuple[GrantedSkill, ...] = ()
+    """暫時獲得的技能（``grant_skill``，Phase 3D-8c），依獲得順序；不佔技能欄位，不會與 ``skills``
+    重複。"""
 
     @property
     def alive(self) -> bool:
@@ -318,6 +331,13 @@ class UnitState:
     @property
     def xy(self) -> tuple[int, int]:
         return (self.pos.x, self.pos.y)
+
+    @property
+    def all_skills(self) -> tuple[str, ...]:
+        """可以使用的技能 ID：裝備的技能，加上暫時獲得的技能（Phase 3D-8c；依獲得順序接在後面）。"""
+        if not self.granted_skills:
+            return self.skills
+        return (*self.skills, *(g.skill_id for g in self.granted_skills))
 
     def has_status(self, status_id: str) -> bool:
         return any(s.status_id == status_id for s in self.statuses)
@@ -383,6 +403,7 @@ class UnitState:
             dismissed=self.dismissed,
             activations=self.activations,
             revived=self.revived,
+            granted_skills=self.granted_skills,
         )
 
 

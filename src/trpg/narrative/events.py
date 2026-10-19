@@ -65,6 +65,8 @@ from trpg.engine.events import (
     SkillActivated,
     SkillCooldownChanged,
     SkillCopied,
+    SkillGranted,
+    SkillGrantExpired,
     SkillTriggered,
     SkillUsed,
     SourceChanged,
@@ -170,6 +172,7 @@ _REMOVE_REASONS = {
     "stolen": "被奪走了",
     "dispelled": "被驅散了",
     "revealed": "被揭露而消失了",
+    "fired": "射擊後結束了",
 }
 
 
@@ -693,6 +696,21 @@ def _skill_activated(e: SkillActivated, v: _View) -> str:
         else f"持續到第 {e.expires_round} 輪 {v.name[e.unit_id]} 的回合開始"
     )
     return f"  ✦ {v.name[e.unit_id]} 啟動了傳說「{skill}」（{when}）"
+
+
+@_handles(SkillGranted)
+def _skill_granted(e: SkillGranted, v: _View) -> str:
+    skill = v.state.ruleset.skill_def(e.skill_id).name_zh
+    who = v.name[e.unit_id]
+    if e.refreshed:
+        return f"  ✦ {who} 的暫時技能「{skill}」刷新為 {e.duration} 輪"
+    return f"  ✦ {who} 暫時獲得技能「{skill}」（{e.duration} 輪，在 {who} 的回合結束時倒數）"
+
+
+@_handles(SkillGrantExpired)
+def _skill_grant_expired(e: SkillGrantExpired, v: _View) -> str:
+    skill = v.state.ruleset.skill_def(e.skill_id).name_zh
+    return f"  {v.name[e.unit_id]} 暫時獲得的技能「{skill}」期滿消失了"
 
 
 @_handles(GambleRolled)

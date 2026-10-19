@@ -31,6 +31,7 @@ from trpg.engine.events import (
     TurnSkipped,
     TurnStarted,
 )
+from trpg.engine.grants import expire_granted_skills
 from trpg.engine.objectives import check_battle_end, check_round_end, end_battle
 from trpg.engine.results import ResolveResult
 from trpg.engine.rewrites import ap_cap
@@ -226,6 +227,7 @@ def end_turn(ctx: Ctx) -> None:
     unit.ap_carry = min(unit.ap, ctx.core.ap_carry_max)
     unit.ap = 0
     unit.move_points = 0
+    expire_granted_skills(ctx, unit)  # 暫時獲得的技能倒數（Phase 3D-8c）
     expire_summons(ctx, unit)  # 召喚物到期：在召喚者的回合結束時消失（Phase 3D-4a）
     expire_zones_at_turn_end(ctx, unit)  # 持續區域到期：在施放者的回合結束時消失（Phase 3D-5）
     ctx.emit(TurnEnded, unit_id=unit.id, ap_carried=unit.ap_carry)

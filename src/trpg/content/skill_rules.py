@@ -234,6 +234,9 @@ class BudgetRules(ContentModel):
     """``on_kill`` 各效果的點數 × 這個預估擊殺率（‰；Phase 3D-8b；初值，未經模擬）。"""
     refund_ap_points: int = Field(default=6, ge=0)
     """``on_kill`` 的 ``refund_ap`` 每返還 1 點 AP 折合的預算點數（Phase 3D-8b；初值）。"""
+    grant_skill_expected_uses_per_round_permille: int = Field(default=800, ge=0, le=3000)
+    """``grant_skill`` 的預算點數 ＝ 被給技能的總點數 × 這個值 ÷ 1000 × 持續輪數（預期每輪使用
+    次數；Phase 3D-8c；初值，未經模擬）。"""
     lifesteal_value_permille: int = Field(default=800, ge=0, le=2000)
     """吸血（``lifesteal_permille``，Phase 3D-8a）：回復的 HP 折合傷害點數的比例（‰）。傷害效果的
     點數 × (1 ＋ 吸血‰ × 這個值 ÷ 10⁶)（初值，未經模擬）。"""

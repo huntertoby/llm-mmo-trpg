@@ -523,6 +523,15 @@ def _revive(_lib: ContentLibrary, _skill: SkillDef, spec: EffectSpec) -> str:
     )
 
 
+def _grant_skill(lib: ContentLibrary, _skill: SkillDef, spec: EffectSpec) -> str:
+    assert spec.skill is not None
+    granted = lib.ruleset.skill_def(spec.skill)
+    return (
+        f"讓目標暫時獲得技能「{granted.name_zh}」，持續 {spec.duration} 輪"
+        "（在目標的回合結束時倒數；不佔技能欄位，重新施放只刷新輪數）"
+    )
+
+
 def _delayed_damage(lib: ContentLibrary, skill: SkillDef, spec: EffectSpec) -> str:
     assert spec.dice is not None and spec.element is not None
     where = "，只波及目標自己" if not spec.radius else f"，波及半徑 {spec.radius} 格內的所有單位"
@@ -591,6 +600,7 @@ _EFFECT_TEXT: dict[str, _EffectText] = {
     "reveal": _reveal,
     "revive": _revive,
     "delayed_damage": _delayed_damage,
+    "grant_skill": _grant_skill,
     "hurl_object": _hurl_object,
     "topple": _topple,
     "zone": _zone,

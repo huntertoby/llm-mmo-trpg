@@ -10,6 +10,12 @@
 #   ally_downed（3D-3）              視野內的友方倒下之後；另一方是倒下的友方（反應技形狀必須是 self）
 #   enemy_enters_adjacent（3D-3）    敵人主動移動（步行、衝鋒、直線衝撞）進入相鄰格之後；強制位移不算
 #   ally_targeted（3D-3）            相鄰友方被敵人單體技能或普攻選為目標、命中判定之前；另一方是攻擊者
+# 內建反應的事件（reactions[].events）：
+#   enemy_moves_in_range（3D-8c）    敵人主動移動（步行、衝鋒、直線衝撞）的一步結束後，位置在持有者武器射程與視線內
+#                                    （強制位移、傳送、跳躍、互換不算）。監視射擊 overwatch_shot 用它
+# requires_status（3D-8c）：持有者必須帶有這個狀態才能反應，反應用掉（普攻結算完）之後移除該狀態
+# 監視射擊沒有出現在 default_rules：單位裝備了施加 overwatch 狀態的技能時，由引擎自動加上一條 auto 規則
+# （玩家可用 SetReactionMode 改成 prompt 或 off）。
 # default_rules：單位範本沒有指定 reactions 時使用的預設規則（格式照計畫範例；mode 預設 auto）。
 # 每個單位每輪最多反應 rules/core.yaml 的 reactions_per_round 次（每輪開始時重設）。
 reactions:
@@ -26,6 +32,12 @@ reactions:
     effect: basic_attack
     events: [enemy_leaves_adjacent]
     requires_melee_weapon: true
+  - id: overwatch_shot
+    name_zh: 監視射擊
+    description_zh: 帶有「監視」狀態時，敵人在武器射程與視線內完成一步移動，就自動普攻一次（不花 AP）；射擊後監視結束。
+    effect: basic_attack
+    events: [enemy_moves_in_range]
+    requires_status: overwatch
 default_rules:
   - reaction: block
     when: {event: targeted_by_melee}

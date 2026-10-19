@@ -59,6 +59,7 @@ from trpg.content.skills import (
     ShapeTable,
     SkillDef,
     SkillTable,
+    granted_skill_problems,
     skill_problems,
     skill_slot_problems,
     weapon_problem,
@@ -536,6 +537,7 @@ def _check_skills(root: Path, skills: dict[str, SkillDef], ruleset: Ruleset) -> 
             unsafe_statuses=ruleset.unsafe_backlash_statuses(),
             scale_cap_max=ruleset.core.scale_cap_max_permille,
         )
+        problems += granted_skill_problems(skill, skills, primitive_map)
         if skill.rule_change_id is not None and skill.ap_cost != activation_ap:
             problems.append(
                 f"ap_cost：規則改變型傳說以 core.yaml 的 legendary_activation_ap（{activation_ap}）"

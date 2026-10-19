@@ -59,6 +59,7 @@ from trpg.engine.maneuvers import contest
 from trpg.engine.reactions import (
     PauseForDecision,
     enemy_enters_adjacent_reactions,
+    enemy_moves_in_range_reactions,
     opportunity_attacks,
     perform_unit_attack,
 )
@@ -658,6 +659,7 @@ def _do_move(ctx: Ctx, unit: UnitState, action: Action) -> None:
         before = unit.xy
         execute(ctx, [MoveUnitEffect(unit_id=unit.id, dest=dest, mode="walk", cost=cost)])
         enemy_enters_adjacent_reactions(ctx, unit, before)
+        enemy_moves_in_range_reactions(ctx, unit)
         if unit.xy == dest:
             pass_through(ctx, unit, touched)
         walked.append(unit.xy)
@@ -1053,7 +1055,7 @@ def _legal_actions(
 
 
 def _usable_skills(state: BattleState, unit: UnitState) -> list[SkillDef]:
-    skills = [modifiers.acting_skill(state, unit, sid) for sid in sorted(unit.skills)]
+    skills = [modifiers.acting_skill(state, unit, sid) for sid in sorted(unit.all_skills)]
     return [s for s in skills if s.is_actionable and skill_problem(state, unit, s) is None]
 
 

@@ -5,7 +5,8 @@
 - 單位類條件（``target_hp_below``、``target_has_status``）需要單位，沒有單位時不成立；
 - 格子類條件（``height_advantage``、``target_on_surface``）看格子，單位只是站在上面；
 - ``self_hp_below`` 與 3D-1 的連段條件（``moved_this_turn``、``adjacent_ally``、``first_round``、
-  ``cast_tag_this_turn``）只看施放者，與對象無關；``target_isolated`` 看對象單位的周圍。
+  ``cast_tag_this_turn``）只看施放者，與對象無關；``target_isolated`` 看對象單位的周圍；
+  ``flanked``（Phase 3D-8c）看對象單位與施放者的相對位置：對象的對面有施放者的友方。
 
 技能層級的條件（:func:`skill_condition_met`）決定技能能否使用；效果層級的條件
 （:func:`condition_met`）由解譯器對每個對象分別判斷。
@@ -23,6 +24,8 @@ from trpg.engine.state import BattleState, UnitState
 __all__ = [
     "Subject",
     "condition_met",
+    "flank_xy",
+    "is_flanked",
     "skill_condition_met",
     "skill_condition_problem",
     "subjects_of",
@@ -68,8 +71,33 @@ def _caster_condition_met(state: BattleState, caster: UnitState, condition: Cond
     return condition.tag in caster.turn_cast_tags
 
 
-def _unit_condition_met(state: BattleState, condition: ConditionSpec, unit: UnitState) -> bool:
-    """看對象單位的條件（``target_hp_below``、``target_has_status``、``target_isolated``）。"""
+def flank_xy(caster_xy: XY, target_xy: XY) -> XY | None:
+    """夾擊的「對面格」（Phase 3D-8c）：以目標為中心，施放者位在目標的哪一側（取施放者相對目標
+    位移較大的那一軸，左右與上下距離相同時取左右；施放者與目標同格時沒有），對面格就是目標在
+    另一側的相鄰格。"""
+    dx, dy = caster_xy[0] - target_xy[0], caster_xy[1] - target_xy[1]
+    if dx == 0 and dy == 0:
+        return None
+    if abs(dx) >= abs(dy):
+        return (target_xy[0] - (1 if dx > 0 else -1), target_xy[1])
+    return (target_xy[0], target_xy[1] - (1 if dy > 0 else -1))
+
+
+def is_flanked(state: BattleState, caster: UnitState, target: UnitState) -> bool:
+    """``caster`` 對 ``target`` 夾擊：目標的對面格（:func:`flank_xy`）站著施放者的存活友方
+    （不含施放者自己）。"""
+    xy = flank_xy(caster.xy, target.xy)
+    if xy is None:
+        return False
+    other = state.unit_at(*xy)
+    return other is not None and other.id != caster.id and other.alive and other.team is caster.team
+
+
+def _unit_condition_met(
+    state: BattleState, caster: UnitState, condition: ConditionSpec, unit: UnitState
+) -> bool:
+    """看對象單位的條件（``target_hp_below``、``target_has_status``、``target_isolated``、
+    ``flanked``）。"""
     kind = condition.type
     if kind == "target_hp_below":
         assert condition.permille is not None
@@ -77,11 +105,13 @@ def _unit_condition_met(state: BattleState, condition: ConditionSpec, unit: Unit
     if kind == "target_has_status":
         assert condition.status is not None
         return unit.has_status(condition.status)
+    if kind == "flanked":
+        return is_flanked(state, caster, unit)
     assert kind == "target_isolated"
     return not _has_living_ally_beside(state, unit)
 
 
-_UNIT_CONDITIONS = frozenset({"target_hp_below", "target_has_status", "target_isolated"})
+_UNIT_CONDITIONS = frozenset({"target_hp_below", "target_has_status", "target_isolated", "flanked"})
 
 
 def condition_met(
@@ -94,7 +124,9 @@ def condition_met(
     if kind in CASTER_CONDITIONS:
         return _caster_condition_met(state, caster, condition)
     if kind in _UNIT_CONDITIONS:
-        return subject.unit is not None and _unit_condition_met(state, condition, subject.unit)
+        return subject.unit is not None and _unit_condition_met(
+            state, caster, condition, subject.unit
+        )
     if kind == "height_advantage":
         return state.tile(*caster.xy).height > state.tile(*subject.xy).height
     if kind == "target_on_surface":
