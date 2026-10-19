@@ -30,7 +30,7 @@ from trpg.engine.events import (
     UnitDowned,
     UnitMoved,
 )
-from trpg.engine.state import state_to_json
+from trpg.engine.state import StatusInstance, state_to_json
 from trpg.shared.errors import TrpgError
 from trpg.shared.types import Pos, Team, UnitId
 
@@ -213,6 +213,40 @@ def test_apply_refresh_and_remove_status() -> None:
     assert (
         run_effects(r3.state, [RemoveStatusEffect(target_id=U1, status_id="burning")]).events == []
     )
+
+
+def _reapply(existing: int | None, new: int) -> tuple[StatusApplied, StatusInstance]:
+    """受害者 U1 已有 ``concealed``（來源 U2、剩餘 ``existing``），再由 U3 施加 ``new`` 回合。"""
+    state = _pit_state()
+    state.units[U1].statuses.append(
+        StatusInstance(status_id="concealed", remaining=existing, source_id=U2)
+    )
+    result = run_effects(
+        state,
+        [ApplyStatusEffect(target_id=U1, status_id="concealed", duration=new, source_id=U3)],
+    )
+    applied = next(e for e in result.events if isinstance(e, StatusApplied))
+    status = result.state.units[U1].get_status("concealed")
+    assert status is not None
+    return applied, status
+
+
+def test_reapply_status_keeps_longer_remaining() -> None:
+    applied, status = _reapply(4, 2)
+    assert status.remaining == 4 and status.source_id == U2  # 舊的較長：保留舊來源
+    assert applied.duration == 4 and applied.refreshed  # 事件填生效後的剩餘回合
+
+
+def test_reapply_status_takes_longer_new_duration() -> None:
+    applied, status = _reapply(1, 3)
+    assert status.remaining == 3 and status.source_id == U3
+    assert applied.duration == 3 and applied.refreshed
+
+
+def test_reapply_finite_status_keeps_permanent() -> None:
+    applied, status = _reapply(None, 3)
+    assert status.remaining is None and status.source_id == U2
+    assert applied.duration is None
 
 
 def _end(state: BattleState) -> tuple[BattleState, list[EventBase]]:

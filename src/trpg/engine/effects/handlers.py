@@ -391,7 +391,11 @@ def apply_status(ctx: Ctx, effect: ApplyStatusEffect) -> list[EventBase]:
                 events.append(
                     ctx.emit(StatusRemoved, target_id=unit.id, status_id=old, reason="replaced")
                 )
-    # 目前只有 refresh：重複施加時以新的持續時間取代，不疊加
+    # 重複施加：不疊加，剩餘回合取較長者（None＝永久最長），見 docs/design/06-技能.md 6.6
+    if existing is not None and _outlasts(existing.remaining, duration):
+        instance = StatusInstance(
+            status_id=status_id, remaining=existing.remaining, source_id=existing.source_id
+        )
     others = [s for s in unit.statuses if s.status_id != status_id]
     unit.statuses = sorted([*others, instance], key=lambda s: s.status_id)
     if definition.control_group is not None:  # 控制遞減：同類別在 R + control_dr_rounds 輪結束前
@@ -401,12 +405,19 @@ def apply_status(ctx: Ctx, effect: ApplyStatusEffect) -> list[EventBase]:
             StatusApplied,
             target_id=unit.id,
             status_id=status_id,
-            duration=duration,
+            duration=instance.remaining,
             refreshed=existing is not None,
             source_id=effect.source_id,
         )
     )
     return events
+
+
+def _outlasts(old: int | None, new: int | None) -> bool:
+    """舊狀態的剩餘回合是否嚴格長於新的持續時間（None＝永久）。"""
+    if old is None:
+        return new is not None
+    return new is not None and old > new
 
 
 @register_effect("apply_status")
