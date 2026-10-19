@@ -76,6 +76,7 @@ from trpg.shared.types import Pos, Surface
 
 __all__ = [
     "SILENT_EVENT_TYPES",
+    "battle_started_text",
     "describe_event",
     "object_name",
     "reaction_name",
@@ -199,10 +200,15 @@ def describe_event(e: EventBase, state: BattleState) -> str | None:
 # ---------------------------------------------------------------------------
 
 
+def battle_started_text(state: BattleState, seed: int | None) -> str:
+    """開場的描述；``seed`` 為 ``None`` 時不提種子（網頁 API 不公開種子）。"""
+    text = f"戰鬥開始：{state.map_name_zh}（{state.width}×{state.height}）"
+    return text if seed is None else f"{text}，種子 {seed}"
+
+
 @_handles(BattleStarted)
 def _battle_started(e: BattleStarted, v: _View) -> str:
-    s = v.state
-    return f"戰鬥開始：{s.map_name_zh}（{s.width}×{s.height}），種子 {e.seed}"
+    return battle_started_text(v.state, e.seed)
 
 
 @_handles(InitiativeRolled)

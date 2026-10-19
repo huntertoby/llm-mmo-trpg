@@ -254,7 +254,10 @@ def cost_summary(library: ContentLibrary, skill: SkillDef, *, with_ap: bool = Tr
 
 
 class SkillCard(BaseModel):
-    """一張技能卡片的顯示內容（全部是繁體中文文字，給網頁技能卡片用）。"""
+    """一張技能卡片的顯示內容（繁體中文文字，給網頁技能卡片用）。
+
+    ``*_id`` 與 ``scaling_attrs`` 是對應的英文代碼（Phase 3-2；給前端上色、排序與篩選用）。
+    """
 
     model_config = ConfigDict(frozen=True, extra="forbid")
 
@@ -278,6 +281,13 @@ class SkillCard(BaseModel):
     tags: tuple[str, ...]
     concept: str
     cast_flavor: str
+    rarity_id: str
+    kind_id: str
+    category_id: str
+    weapon_req_id: str
+    scaling_attrs: tuple[str, ...]
+    """縮放屬性的代碼（主屬性在前；雙屬性縮放時兩個）。"""
+    mastery_id: str | None
 
 
 def skill_card(
@@ -306,4 +316,12 @@ def skill_card(
         tags=tuple(skill.tags),
         concept=skill.narrative.concept,
         cast_flavor=skill.narrative.cast_flavor,
+        rarity_id=skill.rarity,
+        kind_id=skill.kind,
+        category_id=skill.category,
+        weapon_req_id=skill.weapon_req,
+        scaling_attrs=tuple(
+            a.value for a in (skill.scaling_attr, skill.secondary_scaling_attr) if a is not None
+        ),
+        mastery_id=skill.mastery,
     )
