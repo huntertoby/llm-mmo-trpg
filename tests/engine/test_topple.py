@@ -20,7 +20,8 @@ from tests.engine.helpers import (
     spawn,
     template,
 )
-from trpg.engine import BattleState, Interact, UseSkill, legal_actions, resolve
+from trpg.content.environment import ObjectDef, ObjectTable
+from trpg.engine import Attack, BattleState, Interact, UseSkill, legal_actions, resolve
 from trpg.engine.actions import STEP_LIST_ADAPTER, Action
 from trpg.engine.ai.simple import choose_action
 from trpg.engine.battle import interact_options
@@ -169,11 +170,56 @@ def test_a_breakable_object_under_the_pillar_takes_the_same_damage(
 
 
 def test_a_non_breakable_object_stops_the_fall() -> None:
-    result = resolve(arena((2, 3), objects=[(4, 3, "rubble")], foes=[(5, 3)]), push())
+    state = arena((2, 3), objects=[(4, 3, "rubble")], foes=[(5, 3)])
+    # 內容裡已經沒有「阻擋移動又不能破壞」的物件（倒塌物 3D-3 起可破壞）：測試把倒塌物換成不可破壞
+    unbreakable = ObjectDef.model_validate(
+        {"id": "rubble", "name_zh": "倒塌物", "glyph": "m", "tags": ["blocks_move", "half_cover"]}
+    )
+    rs = state.ruleset
+    others = tuple(o for o in rs.objects.objects if o.id != "rubble")
+    rs = rs.model_copy(update={"objects": ObjectTable(objects=(*others, unbreakable))})
+    rs.model_post_init(None)
+    state.ruleset = rs
+    result = resolve(state, push())
     event = toppled(result.events)
     assert tiles(event) == [] and event.units == ()  # 停在倒塌物之前，壓不到後面的敵人
     assert event.rubble_pos == Pos(x=3, y=3)
     assert not [d for d in of(result.events, DamageDealt) if d.cause == "topple"]
+
+
+def test_a_toppled_pillar_crushes_old_rubble_because_rubble_is_breakable(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """3D-3：倒塌物可以被打掉，所以倒下的柱子壓得到舊的倒塌物（和木箱一樣受傷）。"""
+    always(monkeypatch)
+    result = resolve(arena((2, 3), objects=[(4, 3, "rubble")], foes=[(5, 3)]), push())
+    event = toppled(result.events)
+    rubble = ObjectId("obj_0002")
+    assert event.objects == (rubble,) and tiles(event) == [(4, 3), (5, 3)]
+    assert event.units == (U2,)
+    assert result.state.objects[rubble].hp == 15 - 8
+
+
+def test_rubble_is_a_breakable_object_with_the_crate_hp_and_can_be_destroyed(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """3D-3：倒塌物加 ``breakable`` 與 HP（同木箱），可以被打掉，不會永久堵死窄路。"""
+    always(monkeypatch, die=6)
+    state = arena((2, 3), pillar=(3, 3))
+    definition = state.ruleset.object_def("rubble")
+    crate = state.ruleset.object_def("crate")
+    assert "breakable" in definition.tags and definition.max_hp == crate.max_hp
+    toppled_state = resolve(state, push()).state
+    (rubble,) = [o for o in toppled_state.objects.values() if o.kind == "rubble"]
+    toppled_state.units[U1].pos = Pos(x=rubble.pos.x - 1, y=rubble.pos.y)  # 走到倒塌物旁
+    toppled_state = give_turn(toppled_state, U1)
+    hits = 0
+    while not rubble.destroyed and hits < 10:
+        attack = Attack(unit_id=U1, target_object_id=rubble.id)
+        toppled_state = give_turn(resolve(toppled_state, attack).state, U1)
+        rubble = toppled_state.objects[rubble.id]
+        hits += 1
+    assert rubble.destroyed and toppled_state.object_at(*rubble.xy) is None
 
 
 def test_tiles_off_the_map_and_walls_are_skipped() -> None:

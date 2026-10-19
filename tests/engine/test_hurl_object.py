@@ -9,6 +9,7 @@ from __future__ import annotations
 
 import io
 from collections.abc import Sequence
+from dataclasses import replace
 from pathlib import Path
 
 import pytest
@@ -27,7 +28,7 @@ from tests.engine.helpers import (
 from trpg.cli.battle import cmd_replay
 from trpg.cli.main import main
 from trpg.content.environment import ObjectDef, ObjectTable
-from trpg.content.skills import SkillDef
+from trpg.content.skills import SkillDef, SkillTable
 from trpg.engine import BattleState, Interact, UseSkill, legal_actions, resolve, start_battle
 from trpg.engine.events import (
     AttackRolled,
@@ -40,7 +41,7 @@ from trpg.engine.events import (
 )
 from trpg.shared.errors import IllegalActionError
 from trpg.shared.rng import Rng
-from trpg.shared.types import ObjectId, Pos, Team, UnitId
+from trpg.shared.types import ObjectId, Pos, Surface, Team, UnitId
 from trpg.skillgen.budget import skill_budget
 
 U1, U2, U3 = UnitId("unit_0001"), UnitId("unit_0002"), UnitId("unit_0003")
@@ -85,7 +86,8 @@ def arena(
     spawns = [spawn(Team.ALLY, HERO, caster_template([skill]))]
     spawns += [spawn(Team.ENEMY, xy, no_reactions(max_hp=200)) for xy in foes]
     spawns += [spawn(Team.ALLY, xy, no_reactions(max_hp=200)) for xy in allies]
-    setup = make_setup(m, spawns, skills=[HURL])
+    extra = [skill] if isinstance(skill, SkillDef) and skill.id != HURL.id else []
+    setup = make_setup(m, spawns, skills=[HURL, *extra])
     rs = setup.ruleset
     rs = rs.model_copy(update={"objects": ObjectTable(objects=(*rs.objects.objects, BOULDER))})
     rs.model_post_init(None)
@@ -150,9 +152,42 @@ def test_an_empty_landing_tile_has_no_roll_and_keeps_the_object(
     assert not state.objects[O1].destroyed
 
 
-def test_a_hurled_oil_barrel_explodes_at_the_landing_tile(monkeypatch: pytest.MonkeyPatch) -> None:
+FIRE_HURL = HURL.model_copy(update={"id": "skill_test_fire_hurl", "tags": ("fire", "spell")})
+"""投擲技能帶火標籤（例：改造型「燃燒投擲」）。"""
+OIL_CROSS = [(3, 3), (3, 2), (4, 3), (3, 4), (2, 3)]
+
+
+def surfaces(state: BattleState, tiles: Sequence[tuple[int, int]]) -> list[str]:
+    return [state.tile(*xy).surface.value for xy in tiles]
+
+
+def test_a_hurled_oil_barrel_spills_oil_and_does_not_explode(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """3D-3（玩法 PM #4）：油桶摔破漏油（落點與上下左右 4 格變成油），不爆炸。"""
     always(monkeypatch)
     result = resolve(arena(objects=[(1, 3, "oil_barrel")], foes=[FOE, (4, 4)]), hurl(FOE))
+    (thrown,) = of(result.events, ObjectHurled)
+    assert thrown.outcome == "shattered"
+    assert not of(result.events, ObjectExploded)
+    assert not [d for d in of(result.events, DamageDealt) if d.cause == "explosion"]
+    (gone,) = of(result.events, ObjectDestroyed)
+    assert (gone.cause, gone.pos) == ("hurled", Pos(x=3, y=3))
+    assert result.state.objects[O1].destroyed and result.state.object_at(1, 3) is None
+    assert surfaces(result.state, OIL_CROSS) == ["oil"] * 5
+    assert result.state.tile(4, 4).surface.value == "none"  # 斜角不會漏到
+    # 落點的單位照樣被砸（物理傷害），旁邊（4, 4）的敵人沒事
+    hurt = {d.target_id for d in of(result.events, DamageDealt)}
+    assert hurt == {U2}
+
+
+def test_a_hurled_oil_barrel_explodes_when_it_lands_on_fire(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    always(monkeypatch)
+    state = arena(objects=[(1, 3, "oil_barrel")], foes=[FOE, (4, 4)])
+    state.set_tile(*FOE, replace(state.tile(*FOE), surface=Surface.FIRE, surface_remaining=2))
+    result = resolve(state, hurl(FOE))
     (thrown,) = of(result.events, ObjectHurled)
     assert thrown.outcome == "exploded"
     (boom,) = of(result.events, ObjectExploded)
@@ -162,6 +197,70 @@ def test_a_hurled_oil_barrel_explodes_at_the_landing_tile(monkeypatch: pytest.Mo
     (gone,) = of(result.events, ObjectDestroyed)
     assert gone.cause == "explosion" and result.state.objects[O1].destroyed
     assert result.state.object_at(1, 3) is None
+
+
+def test_a_fire_element_hurl_makes_the_oil_barrel_explode(monkeypatch: pytest.MonkeyPatch) -> None:
+    always(monkeypatch)
+    state = arena(objects=[(1, 3, "oil_barrel")], foes=[FOE, (4, 4)], skill=FIRE_HURL)
+    result = resolve(state, hurl(FOE, skill=FIRE_HURL.id))
+    (thrown,) = of(result.events, ObjectHurled)
+    assert thrown.outcome == "exploded"
+    blasted = {d.target_id for d in of(result.events, DamageDealt) if d.cause == "explosion"}
+    assert blasted == {U2, U3}
+    assert result.state.objects[O1].destroyed
+
+
+def test_a_fire_damage_effect_in_the_skill_also_counts_as_fire(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    always(monkeypatch)
+    burning = make_skill(
+        "skill_test_burning_hurl",
+        {"type": "object_then_tile", "range": 4},
+        [
+            {"type": "hurl_object", "range": 3, "dice": "2d6"},
+            {"type": "damage", "dice": "1d6", "element": "fire"},
+        ],
+    )
+    state = arena(objects=[(1, 3, "oil_barrel")], skill=burning)
+    result = resolve(state, hurl(FOE, skill=burning.id))
+    assert of(result.events, ObjectHurled)[0].outcome == "exploded"
+
+
+def test_a_modifier_that_turns_damage_to_fire_makes_the_barrel_explode(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    always(monkeypatch)
+    state = arena(objects=[(1, 3, "oil_barrel")], skill=HURL)
+    state.units[U1].skills = (*state.units[U1].skills, "skill_test_fire_hand")
+    hand = SkillDef.model_validate(
+        {
+            "id": "skill_test_fire_hand",
+            "name_zh": "測試火手",
+            "tier": 1,
+            "rarity": "epic",
+            "kind": "modifier",
+            "skeleton": "modifier",
+            "category": "spell",
+            "weapon_req": "any",
+            "scaling_attr": "int",
+            "shape": {"type": "self"},
+            "effects": [],
+            "modifiers": [{"applies_to": {"all_skills": True}, "change": {"add_element": "fire"}}],
+        }
+    )
+    rs = state.ruleset
+    rs = rs.model_copy(update={"skills": SkillTable(skills=(*rs.skills.skills, hand))})
+    rs.model_post_init(None)
+    state.ruleset = rs
+    result = resolve(state, hurl(FOE))
+    assert of(result.events, ObjectHurled)[0].outcome == "exploded"
+
+
+def test_a_crate_still_just_shatters_without_oil(monkeypatch: pytest.MonkeyPatch) -> None:
+    always(monkeypatch)
+    result = resolve(arena(objects=[(1, 3, "crate")]), hurl(FOE))
+    assert surfaces(result.state, OIL_CROSS) == ["none"] * 5
 
 
 def test_an_occupied_landing_tile_puts_the_object_on_the_nearest_free_tile(
@@ -309,12 +408,12 @@ def test_the_demo_skill_budget_discounts_the_dice_and_adds_the_knockdown() -> No
 def test_an_ai_battle_hurls_objects_and_replays(
     tmp_path: Path, capsys: pytest.CaptureFixture[str]
 ) -> None:
-    """build_fire（念力投擲）在 narrow_halls 種子 9：AI 丟出物件，紀錄重播一致。"""
+    """build_fire（念力投擲）在 narrow_halls 種子 2：AI 丟出物件（油桶摔破漏油），紀錄重播一致。"""
     log = tmp_path / "hurl.json"
-    argv = ["battle", "--map", "narrow_halls", "--seed", "9", "--ally-build", "build_fire"]
+    argv = ["battle", "--map", "narrow_halls", "--seed", "2", "--ally-build", "build_fire"]
     assert main([*argv, "--log-json", str(log)]) == 0
     out = capsys.readouterr().out
-    assert "丟向" in out
+    assert "丟向" in out and "出現了油" in out
     assert '"object_hurled"' in log.read_text(encoding="utf-8")
     replayed = io.StringIO()
     assert cmd_replay(log, replayed) == 0

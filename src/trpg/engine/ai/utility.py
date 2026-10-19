@@ -34,7 +34,7 @@
 from __future__ import annotations
 
 from collections import deque
-from collections.abc import Callable
+from collections.abc import Callable, Iterable
 from dataclasses import dataclass
 from fractions import Fraction
 
@@ -52,6 +52,7 @@ from trpg.content.skills import (
     CHEAT_DEATH_STATUS,
     EXTRA_REACTION,
     GRANT_AP,
+    HURL_OBJECT,
     LEAP,
     REDIRECT_DAMAGE,
     REDIRECT_STATUS,
@@ -82,7 +83,7 @@ from trpg.engine.ai.orders import (
     UseEnvironment,
     validate_order,
 )
-from trpg.engine.ai.scene_objects import SCENE_PRIMITIVES, scene_estimate
+from trpg.engine.ai.scene_objects import SCENE_PRIMITIVES, has_fire_follow_up, scene_estimate
 from trpg.engine.battle import legal_actions, legal_actions_with_areas
 from trpg.engine.events import (
     ApGranted,
@@ -771,6 +772,7 @@ def _surface_gains(f: _GainFrame) -> Fraction:
         if u.team is not team and f.counts(u.id) and _harmful(after, u.xy)
     )
     gains = f.w.surface * f.hit * (after_harm - before_harm)
+    gains += _oil_setup_gains(f)
     if isinstance(f.p.action, UseSkill) and f.only is None:  # 讓友方站上有害的新表面（火、毒……）
         gains -= (
             f.w.friendly_fire
@@ -778,6 +780,29 @@ def _surface_gains(f: _GainFrame) -> Fraction:
             * (_harmed_allies(after, actor) - _harmed_allies(state, actor))
         )
     return gains
+
+
+def _oil_setup_gains(f: _GainFrame) -> Fraction:
+    """鋪油再點火的兩步連招（Phase 3D-3，最簡單的近似）：投擲的油桶摔破漏油、不爆炸，行動者有火焰
+    技能時，站在油上的敵人增加的數目 × ``surface`` 的一半（油本身沒有傷害，不算有害表面）。"""
+    action = f.p.action
+    if not isinstance(action, UseSkill) or f.only is not None:
+        return Fraction(0)
+    if not any(e.type == HURL_OBJECT for e in effective_skill(f.state, action).effects):
+        return Fraction(0)
+    if not has_fire_follow_up(f.state, f.actor):
+        return Fraction(0)
+    after = f.p.min_state
+
+    def on_oil(state: BattleState, units: Iterable[UnitState]) -> int:
+        return sum(1 for u in units if state.tile(*u.xy).surface is Surface.OIL)
+
+    before_n = on_oil(f.state, (u for u in _enemies(f.state, f.actor) if f.counts(u.id)))
+    after_n = on_oil(
+        after,
+        (u for u in after.living_units() if u.team is not f.actor.team and f.counts(u.id)),
+    )
+    return f.w.surface * f.hit * (after_n - before_n) / 2
 
 
 def _tile_value(f: _GainFrame, state: BattleState, uid: UnitId, xy: XY) -> Fraction:

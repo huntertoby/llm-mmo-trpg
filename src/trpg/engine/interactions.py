@@ -5,7 +5,7 @@
 - ``damage_dealt``（攻擊或效果造成的元素傷害）→ 元素觸及目標所在的格子。
 - ``object_damaged`` → 元素觸及物件所在的格子；HP ≤ 0 的 ``breakable`` 物件摧毀。
 - ``object_exploded`` → 範圍內的單位受到爆炸傷害，每一格被爆炸的元素觸及。
-- ``object_destroyed``（被傷害打破）→ 物件的 ``spill``：該格與四方向相鄰格產生表面（漏油）。
+- ``object_destroyed``（被傷害打破、投擲摔破）→ 物件的 ``spill``：該格與四方向相鄰格漏出表面。
 - ``element_touched``（``element_touch`` 效果、產生帶元素的表面）→ 元素觸及該格。
 - ``surface_entered``／``check_rolled`` → 表面的進入效果（燃燒、冰面滑倒）。
 
@@ -336,9 +336,10 @@ def _on_object_damaged(ctx: Ctx, event: EventBase, depth: int) -> list[EffectBas
 
 @register_trigger("object_destroyed")
 def _on_object_destroyed(ctx: Ctx, event: EventBase, depth: int) -> list[EffectBase]:
-    """被傷害打破（不是被引爆）的物件若定義了 ``spill``，在該格與四方向相鄰格產生表面（漏油）。"""
+    """被傷害打破或被丟出去摔破（不是被引爆）的物件若定義了 ``spill``，在該格與四方向相鄰格產生
+    表面（漏油）。"""
     assert isinstance(event, ObjectDestroyed)
-    if event.cause != "damage":
+    if event.cause not in ("damage", "hurled"):
         return []
     spill = ctx.rules.object_def(event.kind).spill
     if spill is None:

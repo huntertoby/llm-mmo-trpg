@@ -6,6 +6,8 @@
 
 from __future__ import annotations
 
+from dataclasses import replace
+
 from tests.engine.test_hurl_object import O1, hurl
 from tests.engine.test_hurl_object import arena as hurl_arena
 from tests.engine.test_pierce import ARROW, FIRE_ARROW, U2, U3, aim, line_skill, shoot
@@ -13,7 +15,7 @@ from tests.engine.test_pierce import arena as pierce_arena
 from tests.engine.test_topple import PILLAR, push
 from tests.engine.test_topple import arena as topple_arena
 from trpg.engine import preview
-from trpg.shared.types import ObjectId
+from trpg.shared.types import ObjectId, Surface
 
 
 def test_a_pierce_preview_lists_the_route_and_the_pierced_object() -> None:
@@ -66,7 +68,11 @@ def test_a_hurl_preview_shows_where_the_object_goes_and_what_happens() -> None:
     state = hurl_arena(objects=[(1, 3, "oil_barrel")])
     (info,) = preview(state, hurl((3, 3), O1)).hurls
     assert (info.object_id, info.from_pos, info.to_pos) == (O1, (1, 3), (3, 3))
-    assert info.outcome == "exploded"
+    assert info.outcome == "shattered"  # 3D-3：油桶摔破漏油，不爆炸
+    lit = hurl_arena(objects=[(1, 3, "oil_barrel")])
+    lit.set_tile(3, 3, replace(lit.tile(3, 3), surface=Surface.FIRE, surface_remaining=2))
+    (boom,) = preview(lit, hurl((3, 3), O1)).hurls
+    assert boom.outcome == "exploded"  # 落點本來有火才爆炸
     crate = hurl_arena(objects=[(1, 3, "crate")])
     (shattered,) = preview(crate, hurl((3, 3), O1)).hurls
     assert shattered.outcome == "shattered" and shattered.kind == "crate"

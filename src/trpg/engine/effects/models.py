@@ -249,11 +249,16 @@ class PushEffect(EffectBase):
 
 class HurlObjectEffect(EffectBase):
     """投擲物件（Phase 3C-5a ``hurl_object``）：把 ``object_id`` 丟到 ``dest`` 並依標籤結算落地
-    （爆炸、碎掉、放下或沒有空格而摧毀）。落點單位的傷害由技能另外結算。"""
+    （爆炸、碎掉漏油、放下或沒有空格而摧毀）。落點單位的傷害由技能另外結算。
+
+    爆炸物（油桶）摔破時預設漏油、不爆炸（Phase 3D-3）；只有 ``ignite``（技能帶火元素）或落點
+    本來有火焰表面時才爆炸。"""
 
     kind: Literal["hurl_object"] = "hurl_object"
     object_id: ObjectId
     dest: XY
+    ignite: bool = False
+    """投擲技能帶火元素：爆炸物落地時引爆（落點本來有火也會引爆，由結算判斷）。"""
 
     def sort_target(self) -> str:
         return self.object_id

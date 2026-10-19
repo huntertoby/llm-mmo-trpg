@@ -702,8 +702,9 @@ def hurl_landing(state: BattleState, dest: XY) -> XY | None:
 
 @register_effect("hurl_object")
 def _hurl_object(ctx: Ctx, effect: EffectBase) -> list[EventBase]:
-    """物件從原格舉起、落在 ``dest``：``explosive`` 在落點爆炸、``breakable`` 碎掉、其他放在落點或
-    附近的空格（:func:`hurl_landing`），沒有空格就摧毀。"""
+    """物件從原格舉起、落在 ``dest``：``explosive`` 只有在技能帶火元素或落點有火焰時才爆炸；
+    其他 ``breakable`` 碎掉（有 ``spill`` 的漏出表面，由 ``object_destroyed`` 觸發表處理）、其他放在
+    落點或附近的空格（:func:`hurl_landing`），沒有空格就摧毀。"""
     assert isinstance(effect, HurlObjectEffect)
     state = ctx.state
     obj = _live_object(state, effect.object_id)
@@ -713,7 +714,8 @@ def _hurl_object(ctx: Ctx, effect: EffectBase) -> list[EventBase]:
     start, dest = obj.pos, _pos(effect.dest)
     state.set_tile(*obj.xy, replace(state.tile(*obj.xy), object_id=None))
     landing = None
-    if definition.explosion is not None and "explosive" in definition.tags:
+    lit = effect.ignite or state.tile(*effect.dest).surface is Surface.FIRE
+    if definition.explosion is not None and "explosive" in definition.tags and lit:
         outcome: HurlOutcome = "exploded"
     elif "breakable" in definition.tags:
         outcome = "shattered"

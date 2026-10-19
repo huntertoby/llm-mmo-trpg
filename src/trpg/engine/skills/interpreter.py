@@ -1176,7 +1176,12 @@ class _Cast:
                 execute(self.ctx, prone)
         dest = (action.target_pos.x, action.target_pos.y)
         return [
-            HurlObjectEffect(source_id=self.caster.id, object_id=action.target_object_id, dest=dest)
+            HurlObjectEffect(
+                source_id=self.caster.id,
+                object_id=action.target_object_id,
+                dest=dest,
+                ignite=modifiers.skill_is_fiery(self.ctx.state, self.caster, self.skill),
+            )
         ]
 
     def knock_prone(self, effect: ResolvedEffect, spec: EffectSpec) -> list[EffectBase]:

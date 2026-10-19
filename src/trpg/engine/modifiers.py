@@ -44,6 +44,8 @@ __all__ = [
     "is_attack_skill",
     "on_hit_rules",
     "range_delta",
+    "skill_has_fire",
+    "skill_is_fiery",
     "skill_use",
     "unit_rules",
 ]
@@ -251,3 +253,16 @@ def on_hit_rules(state: BattleState, unit: UnitState, use: Use) -> list[ActiveRu
         for a in rules
         if a.rule.change.on_hit_effects is not None and _matches(state, a.rule, use, tags)
     ]
+
+
+def skill_has_fire(skill: SkillDef) -> bool:
+    """技能本身帶火：標籤有 ``fire``，或有元素為火的效果（不看修正規則）。"""
+    return "fire" in skill.tags or any(e.element is Element.FIRE for e in skill.effects)
+
+
+def skill_is_fiery(state: BattleState, unit: UnitState, skill: SkillDef) -> bool:
+    """``unit`` 施放 ``skill`` 時帶火元素（Phase 3D-3，投擲的爆炸物是否引爆用）：技能本身帶火、
+    修正規則加上 ``fire`` 標籤，或修正規則讓物理傷害變成火元素（``add_element``）。"""
+    if skill_has_fire(skill) or "fire" in effective_tags(state, unit, skill):
+        return True
+    return damage_element(state, unit, skill_use(skill), Element.PHYSICAL) is Element.FIRE

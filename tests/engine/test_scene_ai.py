@@ -9,6 +9,7 @@ from __future__ import annotations
 
 import io
 from collections.abc import Sequence
+from dataclasses import replace
 from pathlib import Path
 
 import pytest
@@ -30,7 +31,7 @@ from trpg.engine.ai.scene_objects import scene_estimate
 from trpg.engine.ai.utility import UtilityAI
 from trpg.engine.battle import legal_actions_with_areas
 from trpg.engine.events import ObjectToppled
-from trpg.shared.types import ObjectId, Team, UnitId
+from trpg.shared.types import ObjectId, Surface, Team, UnitId
 from trpg.sim.batch import map_spec, run_one
 from trpg.sim.lineup import build_allies
 
@@ -71,13 +72,31 @@ def _estimates(state: BattleState, skill_id: str) -> dict[tuple[int, int], objec
 # ---------------------------------------------------------------------------
 
 
-def test_hurl_estimate_counts_the_explosion_not_only_the_landing_tile() -> None:
+def _hurl_scene_with(foes: Sequence[tuple[int, int]], skills: Sequence[str]) -> BattleState:
+    m = make_map(FLAT, ally=[(0, 3)], enemy=list(foes), objects=[(1, 3, "oil_barrel")])
+    spawns = [spawn(Team.ALLY, (0, 3), caster_template([HURL, *skills]))]
+    spawns += [spawn(Team.ENEMY, xy, no_reactions(max_hp=200)) for xy in foes]
+    return give_turn(make_state(m, spawns), U1)
+
+
+def test_hurl_estimate_counts_the_explosion_when_the_barrel_lands_on_fire() -> None:
+    """油桶落在火上才爆炸（3D-3）：空格 (3, 3) 有火焰時，波及 (4, 3) 的敵人。"""
     state = _hurl_scene([(4, 3), (4, 0)])
+    state.set_tile(3, 3, replace(state.tile(3, 3), surface=Surface.FIRE, surface_remaining=2))
     found = _estimates(state, HURL)
     assert found[(4, 3)] is not None  # 落在敵人身上
-    near = found[(3, 3)]  # 空格，但油桶爆炸（半徑 1）波及 (4, 3)
+    near = found[(3, 3)]  # 空格，但落點有火：油桶爆炸（半徑 1）波及 (4, 3)
     assert near is not None and near > 0  # type: ignore[operator]
     assert found[(1, 1)] is None  # 周圍沒有敵人：不納入候選
+
+
+def test_hurl_estimate_counts_oil_only_when_the_caster_has_a_fire_skill() -> None:
+    plain = _estimates(_hurl_scene([(4, 3)]), HURL)
+    assert plain[(3, 3)] is None  # 沒有火：油桶只漏油，空格落點沒有價值
+    with_fire = _estimates(_hurl_scene_with([(4, 3)], ["skill_fire_bolt"]), HURL)
+    oil = with_fire[(3, 3)]  # 有火焰技能：鋪油（含 (4, 3)）是兩步連招的第一步
+    assert oil is not None and oil > 0  # type: ignore[operator]
+    assert with_fire[(1, 1)] is None  # 油鋪不到敵人：不納入
 
 
 def test_a_crate_only_counts_when_it_lands_on_an_enemy() -> None:
@@ -168,8 +187,8 @@ def test_the_ai_sees_the_pierce_hit_chance_behind_cover() -> None:
 
 def test_sim_metrics_count_scene_events() -> None:
     lib, allies = build_allies(library(), ["build_fire"])
-    spec = map_spec(lib, "narrow_halls", [9], allies=allies)
-    outcome = run_one(spec, 9)
+    spec = map_spec(lib, "narrow_halls", [2], allies=allies)
+    outcome = run_one(spec, 2)
     assert outcome.metrics is not None
     assert outcome.metrics.scene_events.get("hurled", 0) >= 1
 
@@ -179,7 +198,7 @@ def test_sim_maps_takes_an_ally_build_and_prints_the_scene_line(
 ) -> None:
     argv = [
         "sim", "maps", "--maps", "narrow_halls", "--ally-build", "build_fire",
-        "--seeds", "1", "--seed-start", "9", "--jobs", "1",
+        "--seeds", "1", "--seed-start", "2", "--jobs", "1",
     ]  # fmt: skip
     assert main(argv) == 0
     out = capsys.readouterr().out

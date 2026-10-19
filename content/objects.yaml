@@ -26,7 +26,7 @@ objects:
       dice: 2d6
       flat: 0
       element: fire
-    spill:               # 非火焰傷害打破時不爆炸，改為漏油（之後可被點燃）
+    spill:               # 非火焰傷害打破、或被投擲摔破（3D-3）時不爆炸，改為漏油（之後可被點燃）
       surface: oil
   - id: thin_ice
     name_zh: 薄冰
@@ -70,4 +70,5 @@ objects:
   - id: rubble
     name_zh: 倒塌物
     glyph: "m"
-    tags: [blocks_move, half_cover]   # 推倒後產生（Phase 3C-5a）；不可破壞
+    max_hp: 15
+    tags: [blocks_move, half_cover, breakable]   # 推倒後產生（3C-5a）；3D-3 起可以被打掉（HP 同木箱），避免永久堵死窄路
