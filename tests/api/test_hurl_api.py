@@ -76,3 +76,15 @@ def test_a_pair_with_only_the_object_is_rejected(client: TestClient) -> None:
     reply = client.post(f"/api/battles/{battle['battle_id']}/actions", json=action)
     assert reply.status_code == 400
     assert "同時指定" in reply.text
+
+
+def test_the_preview_of_a_pair_shows_the_object_and_the_landing(client: TestClient) -> None:
+    """網頁的兩段選取：選好（物件, 落點）後預覽給出物件的去向與落地結果（Phase 3C-5b）。"""
+    battle = _to_hurl_turn(client)
+    action = _hurls(battle)[0]
+    preview = _post(client, battle["battle_id"], "preview", action)
+    (hurl,) = preview["hurls"]
+    assert hurl["object_id"] == action["target_object_id"]
+    assert hurl["to_pos"] == [action["target_pos"]["x"], action["target_pos"]["y"]]
+    assert hurl["outcome"] in {"exploded", "shattered", "placed", "lost"}
+    assert preview["pierce"] is None and preview["topples"] == []

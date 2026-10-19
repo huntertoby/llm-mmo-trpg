@@ -1492,6 +1492,50 @@
         "title": "HoldPosition",
         "description": "守在指定格子附近。"
       },
+      "HurlOut": {
+        "properties": {
+          "object_id": {
+            "type": "string",
+            "title": "Object Id"
+          },
+          "kind": {
+            "type": "string",
+            "title": "Kind"
+          },
+          "from_pos": {
+            "$ref": "#/components/schemas/XY"
+          },
+          "to_pos": {
+            "$ref": "#/components/schemas/XY"
+          },
+          "outcome": {
+            "type": "string",
+            "title": "Outcome"
+          },
+          "placed_pos": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/XY"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "object_id",
+          "kind",
+          "from_pos",
+          "to_pos",
+          "outcome",
+          "placed_pos"
+        ],
+        "title": "HurlOut",
+        "description": "預覽中的物件投擲（Phase 3C-5b）：``outcome`` 為 exploded／shattered／placed／lost。"
+      },
       "IgnoredOrder": {
         "properties": {
           "scope": {
@@ -2061,6 +2105,63 @@
         "title": "PendingView",
         "description": "目前的反應詢問（只有公開欄位；內部的重播資料不外流）。"
       },
+      "PierceObjectOut": {
+        "properties": {
+          "object_id": {
+            "type": "string",
+            "title": "Object Id"
+          },
+          "pos": {
+            "$ref": "#/components/schemas/XY"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "object_id",
+          "pos"
+        ],
+        "title": "PierceObjectOut"
+      },
+      "PierceOut": {
+        "properties": {
+          "route": {
+            "items": {
+              "$ref": "#/components/schemas/XY"
+            },
+            "type": "array",
+            "title": "Route"
+          },
+          "objects": {
+            "items": {
+              "$ref": "#/components/schemas/PierceObjectOut"
+            },
+            "type": "array",
+            "title": "Objects"
+          },
+          "behind": {
+            "items": {
+              "type": "string"
+            },
+            "type": "array",
+            "title": "Behind"
+          },
+          "behind_permille": {
+            "type": "integer",
+            "title": "Behind Permille"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "route",
+          "objects",
+          "behind",
+          "behind_permille"
+        ],
+        "title": "PierceOut",
+        "description": "穿透技能的射線預覽（Phase 3C-5b）：路線、穿過的物件與後方受打折傷害的單位。"
+      },
       "Pos": {
         "properties": {
           "x": {
@@ -2223,6 +2324,32 @@
             },
             "type": "array",
             "title": "Collisions",
+            "default": []
+          },
+          "pierce": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/PierceOut"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "topples": {
+            "items": {
+              "$ref": "#/components/schemas/ToppleOut"
+            },
+            "type": "array",
+            "title": "Topples",
+            "default": []
+          },
+          "hurls": {
+            "items": {
+              "$ref": "#/components/schemas/HurlOut"
+            },
+            "type": "array",
+            "title": "Hurls",
             "default": []
           }
         },
@@ -3117,6 +3244,56 @@
           "surface_creator"
         ],
         "title": "TileView"
+      },
+      "ToppleOut": {
+        "properties": {
+          "object_id": {
+            "type": "string",
+            "title": "Object Id"
+          },
+          "pos": {
+            "$ref": "#/components/schemas/XY"
+          },
+          "direction": {
+            "$ref": "#/components/schemas/XY"
+          },
+          "tiles": {
+            "items": {
+              "$ref": "#/components/schemas/XY"
+            },
+            "type": "array",
+            "title": "Tiles"
+          },
+          "units": {
+            "items": {
+              "type": "string"
+            },
+            "type": "array",
+            "title": "Units"
+          },
+          "rubble": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/XY"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "object_id",
+          "pos",
+          "direction",
+          "tiles",
+          "units",
+          "rubble"
+        ],
+        "title": "ToppleOut",
+        "description": "預覽中的推倒（Phase 3C-5b）：物件、倒下的方向、壓住的格子與單位、倒塌物的位置。"
       },
       "TrapView": {
         "properties": {

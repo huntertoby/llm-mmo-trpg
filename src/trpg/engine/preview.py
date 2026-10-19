@@ -33,8 +33,10 @@ from trpg.engine.events import (
     ObjectDamaged,
     ObjectDestroyed,
     ObjectExploded,
+    ObjectHurled,
     ObjectIgnited,
     ObjectMoved,
+    ObjectToppled,
     ReactionTriggered,
     ShieldGained,
     StacksChanged,
@@ -48,6 +50,7 @@ from trpg.engine.events import (
     UnitFell,
     UnitMoved,
 )
+from trpg.engine.pierce import pierce_trace
 from trpg.engine.rules.combat import (
     PERMILLE,
     PPM,
@@ -65,6 +68,7 @@ from trpg.engine.skills.scaling import skill_scaling_value
 from trpg.engine.skills.targeting import (
     compute_area,
     damage_parameters,
+    pierce_active,
     resolve_effects,
     shape_reach,
     skill_ap_cost,
@@ -76,10 +80,13 @@ from trpg.shared.types import Attribute, ObjectId, UnitId
 
 __all__ = [
     "DamageRange",
+    "HurlInfo",
     "Outcome",
+    "PierceInfo",
     "Preview",
     "StatusChance",
     "TargetPreview",
+    "ToppleInfo",
     "dice_distribution",
     "preview",
 ]
@@ -152,6 +159,47 @@ class TargetPreview:
 
 
 @dataclass(frozen=True, slots=True)
+class PierceInfo:
+    """穿透技能的射線（Phase 3C-5b）。
+
+    ``route``：施放者與目標之間的格子（直線為影響範圍）；``objects``：穿過的 ``penetrable`` 物件
+    ``(物件 ID, 位置)``；``behind``：位於它們後方的單位（只受 ``behind_permille``‰ 傷害）。"""
+
+    route: tuple[XY, ...]
+    objects: tuple[tuple[ObjectId, XY], ...]
+    behind: tuple[UnitId, ...]
+    behind_permille: int
+
+
+@dataclass(frozen=True, slots=True)
+class ToppleInfo:
+    """預覽中發生的推倒（Phase 3C-5b；取自 ``object_toppled`` 事件）：物件、倒下的方向、壓住的
+    格子、壓到的單位與倒塌物的位置。"""
+
+    object_id: ObjectId
+    pos: XY
+    direction: XY
+    tiles: tuple[XY, ...]
+    units: tuple[UnitId, ...]
+    rubble: XY | None
+
+
+@dataclass(frozen=True, slots=True)
+class HurlInfo:
+    """預覽中發生的物件投擲（Phase 3C-5b；取自 ``object_hurled`` 事件）。
+
+    ``outcome`` 為 ``exploded``／``shattered``／``placed``／``lost``，``placed`` 時 ``placed_pos``
+    是物件停下的格子。"""
+
+    object_id: ObjectId
+    kind: str
+    from_pos: XY
+    to_pos: XY
+    outcome: str
+    placed_pos: XY | None
+
+
+@dataclass(frozen=True, slots=True)
 class Preview:
     action: Action
     hit_chance: Fraction | None
@@ -182,6 +230,12 @@ class Preview:
     collisions: tuple[tuple[UnitId, int, int], ...] = ()
     """撞擊傷害（Phase 3C-3a）：``(單位, 最少, 最多)``，含行動者造成的所有撞擊傷害（被推的單位與
     被撞到的單位；最少後果的模擬中推擊失敗時為 0）。"""
+    pierce: PierceInfo | None = None
+    """穿透的射線（Phase 3C-5b）：動作是穿透的技能（含 ``grant_pierce``）時才有。"""
+    topples: tuple[ToppleInfo, ...] = ()
+    """動作會造成的推倒（Phase 3C-5b；最多後果的模擬，依物件 ID）。"""
+    hurls: tuple[HurlInfo, ...] = ()
+    """動作會造成的物件投擲（Phase 3C-5b；最多後果的模擬）。"""
 
 
 # ---------------------------------------------------------------------------
@@ -663,6 +717,49 @@ def _cost_and_reach(
     return None, None
 
 
+def _pierce_info(state: BattleState, actor: UnitState, action: UseSkill) -> PierceInfo | None:
+    """穿透技能的射線（只讀目前狀態）；不是穿透的技能為 ``None``。"""
+    skill = state.ruleset.skill_def(action.skill_id)
+    if not pierce_active(state, actor, skill):
+        return None
+    area = compute_area(state, actor, skill, action)
+    trace = pierce_trace(state, actor, skill.shape.type, area)
+    return PierceInfo(
+        route=trace.route,
+        objects=tuple(zip(trace.objects, trace.object_tiles, strict=True)),
+        behind=trace.behind,
+        behind_permille=state.ruleset.core.pierce_behind_permille,
+    )
+
+
+def _scene_infos(
+    events: list[EventBase],
+) -> tuple[tuple[ToppleInfo, ...], tuple[HurlInfo, ...]]:
+    """模擬事件中的推倒與物件投擲（每個物件只取第一次）。"""
+    topples: dict[ObjectId, ToppleInfo] = {}
+    hurls: dict[ObjectId, HurlInfo] = {}
+    for e in events:
+        if isinstance(e, ObjectToppled) and e.object_id not in topples:
+            topples[e.object_id] = ToppleInfo(
+                object_id=e.object_id,
+                pos=(e.pos.x, e.pos.y),
+                direction=e.direction,
+                tiles=tuple((p.x, p.y) for p in e.tiles),
+                units=e.units,
+                rubble=None if e.rubble_pos is None else (e.rubble_pos.x, e.rubble_pos.y),
+            )
+        elif isinstance(e, ObjectHurled) and e.object_id not in hurls:
+            hurls[e.object_id] = HurlInfo(
+                object_id=e.object_id,
+                kind=e.kind,
+                from_pos=(e.from_pos.x, e.from_pos.y),
+                to_pos=(e.to_pos.x, e.to_pos.y),
+                outcome=e.outcome,
+                placed_pos=None if e.placed_pos is None else (e.placed_pos.x, e.placed_pos.y),
+            )
+    return tuple(topples.values()), tuple(hurls.values())
+
+
 def preview(state: BattleState, action: Action) -> Preview:
     """預覽 ``action`` 的結果（不修改 ``state``、不消耗亂數）。
 
@@ -695,6 +792,8 @@ def preview(state: BattleState, action: Action) -> Preview:
         tiles = tuple(sorted({*tiles, *area.tiles}, key=lambda p: (p[1], p[0])))
         units = tuple(sorted({*units, *area.units}))
     ap_cost, reach = _cost_and_reach(state, actor, action)
+    pierce = _pierce_info(state, actor, action) if isinstance(action, UseSkill) else None
+    topples, hurls = _scene_infos(max_events)
     return Preview(
         action=action,
         hit_chance=hit,
@@ -715,4 +814,7 @@ def preview(state: BattleState, action: Action) -> Preview:
         ap_cost=ap_cost,
         reach=reach,
         collisions=_collision_damage(actor, min_events, max_events),
+        pierce=pierce,
+        topples=topples,
+        hurls=hurls,
     )

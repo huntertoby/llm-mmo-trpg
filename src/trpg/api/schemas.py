@@ -15,7 +15,16 @@ from pydantic import BaseModel, ConfigDict, Field
 
 from trpg.engine.actions import Action, Step, UseSkill
 from trpg.engine.ai.orders import IgnoredOrder, OrderSet
-from trpg.engine.preview import DamageRange, Outcome, Preview, StatusChance, TargetPreview
+from trpg.engine.preview import (
+    DamageRange,
+    HurlInfo,
+    Outcome,
+    PierceInfo,
+    Preview,
+    StatusChance,
+    TargetPreview,
+    ToppleInfo,
+)
 from trpg.engine.results import Pending
 from trpg.engine.view import BattleView
 from trpg.shared.rng import MASK64
@@ -33,15 +42,19 @@ __all__ = [
     "Glossary",
     "GlossaryEntry",
     "HealOut",
+    "HurlOut",
     "InteractOptionOut",
     "MapSummary",
     "OutcomeOut",
+    "PierceObjectOut",
+    "PierceOut",
     "PreviewOut",
     "StatusChanceOut",
     "StepOut",
     "TargetOut",
     "TelegraphChangeOut",
     "TelegraphOut",
+    "ToppleOut",
     "UpcomingEventOut",
     "permille",
     "preview_out",
@@ -302,6 +315,46 @@ class CollisionOut(_ApiModel):
     maximum: int
 
 
+class PierceObjectOut(_ApiModel):
+    object_id: ObjectId
+    pos: XY
+
+
+class PierceOut(_ApiModel):
+    """穿透技能的射線預覽（Phase 3C-5b）：路線、穿過的物件與後方受打折傷害的單位。"""
+
+    route: tuple[XY, ...]
+    """施放者與目標之間的格子（不含兩端；直線為影響範圍）。"""
+    objects: tuple[PierceObjectOut, ...]
+    """穿過的 ``penetrable`` 物件（受全額傷害）。"""
+    behind: tuple[UnitId, ...]
+    """位於這些物件後方的單位。"""
+    behind_permille: int
+    """後方單位受到的傷害（‰）。"""
+
+
+class ToppleOut(_ApiModel):
+    """預覽中的推倒（Phase 3C-5b）：物件、倒下的方向、壓住的格子與單位、倒塌物的位置。"""
+
+    object_id: ObjectId
+    pos: XY
+    direction: XY
+    tiles: tuple[XY, ...]
+    units: tuple[UnitId, ...]
+    rubble: XY | None
+
+
+class HurlOut(_ApiModel):
+    """預覽中的物件投擲（Phase 3C-5b）：``outcome`` 為 exploded／shattered／placed／lost。"""
+
+    object_id: ObjectId
+    kind: str
+    from_pos: XY
+    to_pos: XY
+    outcome: str
+    placed_pos: XY | None
+
+
 class PreviewOut(_ApiModel):
     """:class:`trpg.engine.preview.Preview` 的公開版本：不含模擬後的完整狀態與原始事件。"""
 
@@ -329,6 +382,12 @@ class PreviewOut(_ApiModel):
     """射程（普攻與有射程的技能，含修正規則）；其他動作為 ``None``。"""
     collisions: tuple[CollisionOut, ...] = ()
     """撞擊傷害（Phase 3C-3a）：每個單位的最少與最多。"""
+    pierce: PierceOut | None = None
+    """穿透技能的射線（Phase 3C-5b）；不是穿透的動作為 ``None``。"""
+    topples: tuple[ToppleOut, ...] = ()
+    """動作會造成的推倒（Phase 3C-5b）。"""
+    hurls: tuple[HurlOut, ...] = ()
+    """動作會造成的物件投擲（Phase 3C-5b）。"""
 
 
 def _damage(d: DamageRange | None) -> DamageOut | None:
@@ -369,6 +428,39 @@ def _target(t: TargetPreview) -> TargetOut:
     )
 
 
+def _pierce(p: PierceInfo | None) -> PierceOut | None:
+    if p is None:
+        return None
+    return PierceOut(
+        route=p.route,
+        objects=tuple(PierceObjectOut(object_id=o, pos=xy) for o, xy in p.objects),
+        behind=p.behind,
+        behind_permille=p.behind_permille,
+    )
+
+
+def _topple(t: ToppleInfo) -> ToppleOut:
+    return ToppleOut(
+        object_id=t.object_id,
+        pos=t.pos,
+        direction=t.direction,
+        tiles=t.tiles,
+        units=t.units,
+        rubble=t.rubble,
+    )
+
+
+def _hurl(h: HurlInfo) -> HurlOut:
+    return HurlOut(
+        object_id=h.object_id,
+        kind=h.kind,
+        from_pos=h.from_pos,
+        to_pos=h.to_pos,
+        outcome=h.outcome,
+        placed_pos=h.placed_pos,
+    )
+
+
 def preview_out(
     p: Preview,
     min_events: tuple[dict[str, Any], ...],
@@ -405,4 +497,7 @@ def preview_out(
         collisions=tuple(
             CollisionOut(unit_id=u, minimum=lo, maximum=hi) for u, lo, hi in p.collisions
         ),
+        pierce=_pierce(p.pierce),
+        topples=tuple(_topple(t) for t in p.topples),
+        hurls=tuple(_hurl(h) for h in p.hurls),
     )

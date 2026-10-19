@@ -540,6 +540,21 @@ export interface components {
             radius: number;
         };
         /**
+         * HurlOut
+         * @description 預覽中的物件投擲（Phase 3C-5b）：``outcome`` 為 exploded／shattered／placed／lost。
+         */
+        HurlOut: {
+            /** Object Id */
+            object_id: string;
+            /** Kind */
+            kind: string;
+            from_pos: components["schemas"]["XY"];
+            to_pos: components["schemas"]["XY"];
+            /** Outcome */
+            outcome: string;
+            placed_pos: components["schemas"]["XY"] | null;
+        };
+        /**
          * IgnoredOrder
          * @description 被忽略的指令與原因。``scope`` 為 ``"team"`` 或單位 ID。
          */
@@ -770,6 +785,26 @@ export interface components {
             /** Hp Cost Permille */
             hp_cost_permille: number;
         };
+        /** PierceObjectOut */
+        PierceObjectOut: {
+            /** Object Id */
+            object_id: string;
+            pos: components["schemas"]["XY"];
+        };
+        /**
+         * PierceOut
+         * @description 穿透技能的射線預覽（Phase 3C-5b）：路線、穿過的物件與後方受打折傷害的單位。
+         */
+        PierceOut: {
+            /** Route */
+            route: components["schemas"]["XY"][];
+            /** Objects */
+            objects: components["schemas"]["PierceObjectOut"][];
+            /** Behind */
+            behind: string[];
+            /** Behind Permille */
+            behind_permille: number;
+        };
         /**
          * Pos
          * @description 格子座標（不可變、可雜湊）。
@@ -825,6 +860,17 @@ export interface components {
              * @default []
              */
             collisions: components["schemas"]["CollisionOut"][];
+            pierce?: components["schemas"]["PierceOut"] | null;
+            /**
+             * Topples
+             * @default []
+             */
+            topples: components["schemas"]["ToppleOut"][];
+            /**
+             * Hurls
+             * @default []
+             */
+            hurls: components["schemas"]["HurlOut"][];
         };
         /**
          * Protect
@@ -1105,6 +1151,21 @@ export interface components {
             object_id: string | null;
             /** Surface Creator */
             surface_creator: string | null;
+        };
+        /**
+         * ToppleOut
+         * @description 預覽中的推倒（Phase 3C-5b）：物件、倒下的方向、壓住的格子與單位、倒塌物的位置。
+         */
+        ToppleOut: {
+            /** Object Id */
+            object_id: string;
+            pos: components["schemas"]["XY"];
+            direction: components["schemas"]["XY"];
+            /** Tiles */
+            tiles: components["schemas"]["XY"][];
+            /** Units */
+            units: string[];
+            rubble: components["schemas"]["XY"] | null;
         };
         /** TrapView */
         TrapView: {
