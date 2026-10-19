@@ -23,7 +23,10 @@ export type OverlayKind =
   | "teleport_lethal" // 傳送他人：落在致命地形（成功率極低）
   | "summon_at" // 召喚物出現的格子（Phase 3D-4b）
   | "summon_aura" // 圖騰光環涵蓋的格子
-  | "summon_gone"; // 因超過上限而消失的舊召喚物
+  | "summon_gone" // 因超過上限而消失的舊召喚物
+  | "bomb_blast" // 定時炸彈爆炸時波及的格子（以攜帶者目前的位置展開；Phase 3D-8b）
+  | "bomb_at" // 綁上炸彈的單位（標倒數）
+  | "revive_at"; // 復活的單位站起來的格子
 
 export interface Overlay {
   pos: Pos;
@@ -92,6 +95,12 @@ export function previewOverlays(p: PreviewOut | null, view: BattleView): Overlay
       if (old !== null) out.push({ pos: old, kind: "summon_gone", label: "消" });
     }
   }
+  for (const b of p.bombs ?? []) {
+    for (const t of b.tiles) out.push({ pos: pos(t), kind: "bomb_blast", label: "" });
+    const at = unitPos(view, b.unit_id);
+    if (at !== null) out.push({ pos: at, kind: "bomb_at", label: `炸${b.rounds}` });
+  }
+  for (const r of p.revives ?? []) out.push({ pos: pos(r.pos), kind: "revive_at", label: "復" });
   const lethal = (p.displace_checks ?? []).some((c) => c.lethal);
   for (const m of p.moves ?? []) out.push(...(m.kind === "charge" ? chargeOverlays(m, p, view) : moveOverlays(m, lethal)));
   return out;

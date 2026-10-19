@@ -46,6 +46,35 @@ const dash = { kind: "dash", unit_id: "unit_0001", other_id: "unit_0003", path: 
 const leap = { kind: "leap", unit_id: "unit_0001", other_id: null, path: [[0, 2], [2, 2]] };
 const swap = { kind: "swap", unit_id: "unit_0001", other_id: "unit_0003", path: [[0, 2], [2, 1]] };
 
+describe("bomb and revive overlays (Phase 3D-8b)", () => {
+  it("marks the blast area, the carrier with the countdown and the revive tile", () => {
+    const p = {
+      ...base,
+      bombs: [{ unit_id: "unit_0003", rounds: 2, radius: 1, tiles: [[2, 1], [1, 1], [2, 2]] }],
+      revives: [{ unit_id: "unit_0002", hp: 6, pos: [0, 1], from_pos: [0, 1] }],
+    } as unknown as PreviewOut;
+    const overlays = previewOverlays(p, view);
+    expect(overlays.filter((o) => o.kind === "bomb_blast").map((o) => [o.pos.x, o.pos.y])).toEqual([
+      [2, 1],
+      [1, 1],
+      [2, 2],
+    ]);
+    expect(overlays.find((o) => o.kind === "bomb_at")).toMatchObject({ pos: { x: 2, y: 1 }, label: "炸2" });
+    expect(overlays.find((o) => o.kind === "revive_at")).toMatchObject({ pos: { x: 0, y: 1 }, label: "復" });
+  });
+
+  it("puts the bomb and revive lines into the preview text", () => {
+    const p = {
+      ...base,
+      bombs: [{ unit_id: "unit_0003", rounds: 2, radius: 1, tiles: [[2, 1]] }],
+      revives: [{ unit_id: "unit_0002", hp: 6, pos: [0, 1], from_pos: [0, 1] }],
+    } as unknown as PreviewOut;
+    const lines = previewLines(p, names, view);
+    expect(lines.some((l) => l.includes("定時炸彈") && l.includes("2 次環境回合後"))).toBe(true);
+    expect(lines.some((l) => l.includes("復活") && l.includes("6 HP"))).toBe(true);
+  });
+});
+
 describe("previewOverlays", () => {
   it("is empty without scene data (older servers and plain actions)", () => {
     expect(previewOverlays(null, view)).toEqual([]);

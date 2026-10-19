@@ -3,6 +3,7 @@ import type { BattleView, StatusView, UnitView } from "../api/types";
 import { glossaryName, stackName, statusName, surfaceName } from "../battle/glossary";
 import type { SkillNames } from "../battle/actions";
 import { activationLine } from "../battle/activations";
+import { bombStatusText, TIME_BOMB } from "../battle/bombs";
 import { summonLine, summonsOf } from "../battle/summons";
 import { unitNames } from "../battle/units";
 import { zoneLine, zoneNextText, zonesOf } from "../battle/zones";
@@ -30,6 +31,7 @@ function Bar({ label, value, max, className, extra }: { label: string; value: nu
 }
 
 export function statusLine(s: StatusView): string {
+  if (s.status_id === TIME_BOMB) return bombStatusText(s);
   const left = s.remaining === null ? "" : `（${s.remaining} 回合）`;
   const amount = s.amount === null ? "" : ` ${s.amount}`;
   return `${statusName(s.status_id)}${amount}${left}`;

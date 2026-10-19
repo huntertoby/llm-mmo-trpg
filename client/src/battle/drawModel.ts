@@ -8,6 +8,7 @@ import {
   surfaceName,
   terrainStyle,
 } from "./glossary";
+import { bombCountdown } from "./bombs";
 import { auraTiles, isTotem, remainingRounds } from "./summons";
 import { onField, unitMarkers } from "./units";
 import { zoneDraws, type ZoneDraw } from "./zones";
@@ -61,6 +62,10 @@ export interface UnitDraw {
   totem: boolean;
   /** 召喚物還能行動的輪數（含本輪）；一般單位為 `null`。 */
   remaining: number | null;
+  /** 倒下而且可以被復活（Phase 3D-8b）。 */
+  revivable: boolean;
+  /** 身上定時炸彈還要幾次環境回合爆炸（Phase 3D-8b）；沒有炸彈為 `null`。 */
+  bomb: number | null;
 }
 
 export interface TrapDraw {
@@ -182,6 +187,8 @@ export function buildDrawModel(
       summon: u.owner_id !== null,
       totem: isTotem(u),
       remaining: remainingRounds(view, u),
+      revivable: u.revivable,
+      bomb: bombCountdown(u),
     }))
     .sort((a, b) => Number(b.downed) - Number(a.downed));
   const traps: TrapDraw[] = view.traps.map((t) => ({ x: t.pos.x, y: t.pos.y, color: HIGHLIGHT.trap }));

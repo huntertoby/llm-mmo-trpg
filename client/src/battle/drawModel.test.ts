@@ -44,6 +44,21 @@ describe("buildDrawModel", () => {
     expect(model.units.find((u) => u.id === "unit_0004")?.marker).toBe("b");
   });
 
+  it("marks a downed ally that can still be revived and shows a bomb countdown (Phase 3D-8b)", () => {
+    const view = smallView();
+    const ally = unit("unit_0002", "ally", 0, 1, { hp: 0, downed: true, revivable: true });
+    const used = unit("unit_0006", "ally", 3, 2, { hp: 0, downed: true, revivable: false });
+    const carrier = unit("unit_0003", "enemy", 2, 1, {
+      statuses: [{ status_id: "time_bomb", remaining: 2, source_id: "unit_0001", amount: null, blast_radius: 1 }],
+    });
+    const units = [view.units[0]!, ally, used, carrier];
+    const drawn = buildDrawModel({ ...view, units }, "unit_0001");
+    expect(drawn.units.find((u) => u.id === "unit_0002")).toMatchObject({ downed: true, revivable: true, bomb: null });
+    expect(drawn.units.find((u) => u.id === "unit_0006")).toMatchObject({ downed: true, revivable: false });
+    expect(drawn.units.find((u) => u.id === "unit_0003")).toMatchObject({ downed: false, bomb: 2 });
+    expect(drawn.units.find((u) => u.id === "unit_0001")?.bomb).toBeNull();
+  });
+
   it("draws summons like other units and removes dismissed summons (Phase 3D-4a)", () => {
     const view = smallView();
     const summoned = unit("unit_0006", "ally", 3, 0, { owner_id: "unit_0001", summon_expires_round: 3 });

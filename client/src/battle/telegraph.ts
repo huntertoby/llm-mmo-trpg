@@ -25,6 +25,10 @@ export const MARK_STYLES: Readonly<Record<string, MarkStyle>> = {
   surface: { glyph: "面", color: 0x7fe3ff, priority: 2 },
   zone_moved: { glyph: "域", color: 0xff8a5c, priority: 3 },
   zone_expired: { glyph: "散", color: 0xc0c0c0, priority: 1 },
+  // 定時炸彈（Phase 3D-8b）：爆炸的格子、帶著炸彈的單位（標倒數）、炸彈目前的波及範圍
+  bomb_exploded: { glyph: "炸", color: 0xff3b30, priority: 8 },
+  bomb: { glyph: "炸", color: 0xff7a1a, priority: 9 },
+  bomb_area: { glyph: "炸", color: 0xff7a1a, priority: 1 },
 };
 
 const FALLBACK_STYLE: MarkStyle = { glyph: "?", color: 0xffffff, priority: 0 };
@@ -62,7 +66,27 @@ export function telegraphMarks(t: TelegraphOut, view: BattleView): TelegraphMark
   for (const c of t.changes) {
     for (const pos of changePositions(c, view)) addMark(byTile, c, pos);
   }
+  for (const b of t.bombs ?? []) {
+    for (const pos of b.tiles) addBombMark(byTile, "bomb_area", pos, b.text, "炸");
+    addBombMark(byTile, "bomb", b.pos, b.text, String(b.remaining));
+  }
   return [...byTile.values()].sort((a, b) => a.pos.y - b.pos.y || a.pos.x - b.pos.x);
+}
+
+function addBombMark(byTile: Map<string, TelegraphMark>, kind: string, pos: Pos, text: string, glyph: string): void {
+  const style = markStyle(kind);
+  const key = posKey(pos);
+  const mark = byTile.get(key);
+  if (mark === undefined) {
+    byTile.set(key, { pos, kind, glyph, color: style.color, texts: [text] });
+    return;
+  }
+  if (!mark.texts.includes(text)) mark.texts.push(text);
+  if (style.priority > markStyle(mark.kind).priority) {
+    mark.kind = kind;
+    mark.glyph = glyph;
+    mark.color = style.color;
+  }
 }
 
 function addMark(byTile: Map<string, TelegraphMark>, c: TelegraphChange, pos: Pos): void {
@@ -89,9 +113,14 @@ export function marksTextAt(marks: readonly TelegraphMark[], tile: Pos | null): 
 
 /** 側欄的文字摘要：變化、還在燃燒的物件、下一輪的地圖事件。 */
 export function telegraphLines(t: TelegraphOut): string[] {
-  return [...t.changes.map((c) => c.text), ...t.burning.map((b) => b.text), ...t.upcoming.map((u) => u.text)];
+  return [
+    ...t.changes.map((c) => c.text),
+    ...(t.bombs ?? []).map((b) => b.text),
+    ...t.burning.map((b) => b.text),
+    ...t.upcoming.map((u) => u.text),
+  ];
 }
 
 export function telegraphIsEmpty(t: TelegraphOut): boolean {
-  return t.changes.length === 0 && t.burning.length === 0 && t.upcoming.length === 0;
+  return t.changes.length === 0 && (t.bombs ?? []).length === 0 && t.burning.length === 0 && t.upcoming.length === 0;
 }

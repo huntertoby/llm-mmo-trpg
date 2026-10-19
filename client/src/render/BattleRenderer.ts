@@ -80,6 +80,9 @@ const OVERLAY_COLORS: Readonly<Record<OverlayKind, number>> = {
   summon_at: HIGHLIGHT.summon,
   summon_aura: HIGHLIGHT.summon,
   summon_gone: HIGHLIGHT.banish_lethal,
+  bomb_blast: HIGHLIGHT.bomb,
+  bomb_at: HIGHLIGHT.bomb,
+  revive_at: HIGHLIGHT.revive,
 };
 
 function hpColor(ratio: number): number {
@@ -296,12 +299,44 @@ export class BattleRenderer {
     const marker = label(u.marker, 18, 0xffffff, true);
     marker.anchor.set(0.5);
     c.addChild(marker);
+    if (u.downed) this.addDownedMark(c, u, r);
+    if (u.bomb !== null) this.addBombBadge(c, u.bomb);
     const w = T * 0.8;
     const bar = new Graphics().rect(-w / 2, T * 0.36, w, 5).fill(0x000000);
     bar.rect(-w / 2, T * 0.36, w * u.hpRatio, 5).fill(hpColor(u.hpRatio));
     if (u.shieldRatio > 0) bar.rect(-w / 2, T * 0.36 - 3, w * u.shieldRatio, 2).fill(0x9fd8ff);
     c.addChild(bar);
     return c;
+  }
+
+  /** 倒地標記（Phase 3D-8b）：紅色叉叉加「倒」徽章；可以被復活的另標「可復活」。 */
+  private addDownedMark(c: Container, u: UnitDraw, r: number): void {
+    const cross = new Graphics()
+      .moveTo(-r, -r)
+      .lineTo(r, r)
+      .moveTo(r, -r)
+      .lineTo(-r, r)
+      .stroke({ width: 3, color: HIGHLIGHT.downed, alpha: 0.95 });
+    const badge = new Graphics()
+      .roundRect(-T * 0.46, -T * 0.46, 24, 16, 4)
+      .fill({ color: 0x000000, alpha: 0.75 })
+      .stroke({ width: 1, color: HIGHLIGHT.downed });
+    const text = label(u.revivable ? "倒·復" : "倒", 11, HIGHLIGHT.downed, true);
+    text.anchor.set(0.5);
+    text.position.set(-T * 0.46 + 12, -T * 0.46 + 8);
+    c.addChild(cross, badge, text);
+  }
+
+  /** 帶著定時炸彈的單位：右下角的徽章標還要幾次環境回合爆炸（Phase 3D-8b）。 */
+  private addBombBadge(c: Container, rounds: number): void {
+    const badge = new Graphics()
+      .circle(T * 0.3, T * 0.12, 10)
+      .fill({ color: 0x000000, alpha: 0.8 })
+      .stroke({ width: 2, color: HIGHLIGHT.bomb });
+    const text = label(`炸${rounds}`, 11, HIGHLIGHT.bomb, true);
+    text.anchor.set(0.5);
+    text.position.set(T * 0.3, T * 0.12);
+    c.addChild(badge, text);
   }
 
   setHighlights(h: Highlights): void {
@@ -396,6 +431,7 @@ export class BattleRenderer {
         g.rect(o.x + 2, o.y + 2, T - 4, T - 4).stroke({ width: 3, color });
         break;
       case "summon_aura":
+      case "bomb_blast":
         g.rect(o.x + 2, o.y + 2, T - 4, T - 4).fill({ color, alpha: 0.22 });
         break;
       case "pierced":
@@ -410,6 +446,8 @@ export class BattleRenderer {
       case "teleport_lethal":
       case "summon_at":
       case "summon_gone":
+      case "bomb_at":
+      case "revive_at":
         g.rect(o.x + 3, o.y + 3, T - 6, T - 6)
           .fill({ color, alpha: 0.18 })
           .stroke({ width: 3, color });

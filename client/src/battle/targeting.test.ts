@@ -336,3 +336,27 @@ describe("teleporting and swapping others (two-stage selection, Phase 3D-2b)", (
     expect(hurlPromptText("單位3", 1, 3, "swap")).toContain("第二個單位");
   });
 });
+
+describe("revive targeting (Phase 3D-8b)", () => {
+  const down = unit("unit_0002", "ally", 2, 2, { hp: 0, downed: true, revivable: true });
+  const reviveView = smallView({ units: [hero, down, unit("unit_0003", "enemy", 0, 2)] });
+  const mode = skillMode({
+    skillId: "revive",
+    name: "返魂術",
+    costs: [],
+    cooldown: 0,
+    actions: [skill("revive", { target_id: "unit_0002" })],
+    disabledReason: null,
+  });
+
+  it("lets the player pick the downed ally by its tile", () => {
+    expect(actionAtTile(mode, reviveView, hero, { x: 2, y: 2 })).toMatchObject({ target_id: "unit_0002" });
+    expect(actionAtTile(mode, reviveView, hero, { x: 0, y: 2 })).toBeNull();
+    expect(targetTiles(mode, reviveView, hero).targets).toEqual([{ x: 2, y: 2 }]);
+  });
+
+  it("still finds the downed ally when someone stands on its tile", () => {
+    const crowded = smallView({ units: [hero, down, unit("unit_0003", "enemy", 2, 2)] });
+    expect(actionAtTile(mode, crowded, hero, { x: 2, y: 2 })).toMatchObject({ target_id: "unit_0002" });
+  });
+});

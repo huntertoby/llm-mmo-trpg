@@ -145,7 +145,8 @@
    "tags": [
     "blocks_move",
     "blocks_sight",
-    "breakable"
+    "breakable",
+    "topplable"
    ]
   },
   {
@@ -166,6 +167,7 @@
     "breakable",
     "flammable",
     "half_cover",
+    "penetrable",
     "pushable"
    ]
   },
@@ -197,6 +199,29 @@
     "blocks_move",
     "breakable",
     "flammable",
+    "half_cover",
+    "penetrable"
+   ]
+  },
+  {
+   "id": "dead_tree",
+   "name_zh": "枯樹",
+   "description_zh": null,
+   "tags": [
+    "blocks_move",
+    "blocks_sight",
+    "breakable",
+    "flammable",
+    "topplable"
+   ]
+  },
+  {
+   "id": "rubble",
+   "name_zh": "倒塌物",
+   "description_zh": null,
+   "tags": [
+    "blocks_move",
+    "breakable",
     "half_cover"
    ]
   }
@@ -229,6 +254,18 @@
    "tags": [
     "beneficial"
    ]
+  },
+  {
+   "id": "revealed",
+   "name_zh": "被揭露",
+   "description_zh": "不算隱蔽（黑暗與草叢也一樣），也不能再獲得隱蔽。只能由揭露（reveal）施加。",
+   "tags": []
+  },
+  {
+   "id": "time_bomb",
+   "name_zh": "定時炸彈",
+   "description_zh": "身上綁著定時炸彈，剩餘回合就是倒數（每次環境回合 −1）：歸零時在身體當下的位置爆炸，波及周圍；倒下時也會立即爆炸。可被淨化移除，驅散不移除。只能由定時炸彈（delayed_damage）施加。",
+   "tags": []
   },
   {
    "id": "slow",
@@ -319,6 +356,22 @@
    ]
   },
   {
+   "id": "undying",
+   "name_zh": "不死",
+   "description_zh": "受到致命傷害時 HP 留在 1，然後此狀態消失（墜落與致命地形除外）。",
+   "tags": [
+    "beneficial"
+   ]
+  },
+  {
+   "id": "soul_link",
+   "name_zh": "靈魂連結",
+   "description_zh": "受到的傷害有一部分轉給連結者（施放者）；連結者倒下時消失。",
+   "tags": [
+    "beneficial"
+   ]
+  },
+  {
    "id": "taunted",
    "name_zh": "嘲諷",
    "description_zh": "對嘲諷者以外的目標發動攻擊時有劣勢；嘲諷者倒下時消失。",
@@ -380,6 +433,14 @@
    "description_zh": "疊在被命中的目標身上的印記；碎甲重擊消耗目標身上的全部破甲印，每層提高傷害。3 輪沒有再疊就清空。",
    "tags": [
     "target"
+   ]
+  },
+  {
+   "id": "overload_surge",
+   "name_zh": "過載電流",
+   "description_zh": "累積在施放者自己身上的電流；每層讓你帶「overcurrent」標籤的技能傷害 +20%，累積到 5 層時你立刻被雷擊（2d6 雷電傷害，不致命）並清空全部層數。",
+   "tags": [
+    "self"
    ]
   }
  ],

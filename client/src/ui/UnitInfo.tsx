@@ -1,5 +1,6 @@
 // 單位資訊：滑過或點選單位時顯示（文字即可）。
 import type { BattleView, StatusView, UnitView } from "../api/types";
+import { bombStatusText, TIME_BOMB } from "../battle/bombs";
 import { stackName, statusName } from "../battle/glossary";
 import type { SkillNames } from "../battle/actions";
 import { remainingRounds, summonKind } from "../battle/summons";
@@ -15,6 +16,7 @@ interface Props {
 }
 
 function statusText(s: StatusView): string {
+  if (s.status_id === TIME_BOMB) return bombStatusText(s);
   const left = s.remaining === null ? "" : ` ${s.remaining} 回合`;
   const amount = s.amount === null ? "" : `（${s.amount}）`;
   return `${statusName(s.status_id)}${amount}${left}`;
@@ -26,7 +28,7 @@ export function UnitInfo({ unit, names, heroId, skills, view }: Props) {
   }
   const team = unit.team === "ally" ? "我方" : "敵方";
   const kind = summonKind(unit);
-  const tags = [team, unit.id === heroId ? "主角" : "", kind ?? "", unit.downed ? "倒下" : ""].filter(Boolean);
+  const tags = [team, unit.id === heroId ? "主角" : "", kind ?? "", unit.downed ? (unit.revivable ? "倒下・可復活" : "倒下") : ""].filter(Boolean);
   const stacks = Object.entries(unit.stacks);
   const cooldowns = Object.entries(unit.cooldowns);
   const rows: [string, string][] = [
