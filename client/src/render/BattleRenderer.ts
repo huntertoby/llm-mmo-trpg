@@ -92,6 +92,7 @@ export class BattleRenderer {
   private readonly app = new Application();
   private readonly tiles = new Container();
   private readonly auras = new Container();
+  private readonly zones = new Container();
   private readonly highlights = new Container();
   private readonly objects = new Container();
   private readonly traps = new Container();
@@ -122,7 +123,7 @@ export class BattleRenderer {
     }
     host.appendChild(this.app.canvas);
     const stage = this.app.stage;
-    stage.addChild(this.tiles, this.auras, this.objects, this.highlights, this.traps, this.units, this.hover);
+    stage.addChild(this.tiles, this.auras, this.zones, this.objects, this.highlights, this.traps, this.units, this.hover);
     stage.eventMode = "static";
     stage.on("pointermove", (e: FederatedPointerEvent) => this.callbacks.onTileHover(this.tileOf(e)));
     stage.on("pointerleave", () => this.callbacks.onTileHover(null));
@@ -155,6 +156,7 @@ export class BattleRenderer {
     this.app.stage.hitArea = new Rectangle(0, 0, size.width, size.height);
     clearLayer(this.tiles);
     clearLayer(this.auras);
+    clearLayer(this.zones);
     clearLayer(this.objects);
     clearLayer(this.traps);
     clearLayer(this.units);
@@ -166,6 +168,7 @@ export class BattleRenderer {
       aura.rect(o.x + 2, o.y + 2, T - 4, T - 4).fill({ color: HIGHLIGHT.summon, alpha: 0.14 });
     }
     this.auras.addChild(aura);
+    this.drawZones(model);
     for (const o of model.objects) this.objects.addChild(this.objectSprite(o));
     for (const trap of model.traps) {
       const c = tileCenter(trap);
@@ -178,6 +181,27 @@ export class BattleRenderer {
       const sprite = this.unitSprite(u);
       this.units.addChild(sprite);
       if (!u.downed) this.unitSprites.set(u.id, sprite);
+    }
+  }
+
+  /** 持續區域（Phase 3D-5）：半透明底色加細框；移動型在格子左下角畫方向箭頭。 */
+  private drawZones(model: DrawModel): void {
+    const g = new Graphics();
+    for (const z of model.zones) {
+      const o = tileOrigin(z);
+      g.rect(o.x + 1, o.y + 1, T - 2, T - 2)
+        .fill({ color: z.color, alpha: 0.22 })
+        .stroke({ width: 1, color: z.color, alpha: 0.7 });
+    }
+    this.zones.addChild(g);
+    for (const z of model.zones) {
+      if (z.arrow === null) continue;
+      const o = tileOrigin(z);
+      const arrow = label(z.arrow, 16, z.color, true);
+      arrow.anchor.set(0.5);
+      arrow.position.set(o.x + 11, o.y + T - 11);
+      arrow.style.stroke = { color: 0x000000, width: 3 };
+      this.zones.addChild(arrow);
     }
   }
 

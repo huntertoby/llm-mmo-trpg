@@ -10,6 +10,7 @@ import {
 } from "./glossary";
 import { auraTiles, isTotem, remainingRounds } from "./summons";
 import { onField, unitMarkers } from "./units";
+import { zoneDraws, type ZoneDraw } from "./zones";
 
 export interface TileDraw {
   x: number;
@@ -83,6 +84,8 @@ export interface DrawModel {
   traps: TrapDraw[];
   /** 在場圖騰的光環涵蓋的格子（淡色底，Phase 3D-4b）。 */
   auras: AuraDraw[];
+  /** 持續區域的格子（半透明底色，移動型附方向箭頭；Phase 3D-5）。 */
+  zones: ZoneDraw[];
 }
 
 export const MAX_HEIGHT = 3;
@@ -194,7 +197,8 @@ export function buildDrawModel(
       }
     }
   }
-  return { width: view.width, height: view.height, tiles, objects, units, traps, auras };
+  const zones = zoneDraws(view);
+  return { width: view.width, height: view.height, tiles, objects, units, traps, auras, zones };
 }
 
 export function tileAt(model: DrawModel, p: Pos): TileDraw | undefined {

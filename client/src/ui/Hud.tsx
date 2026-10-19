@@ -3,6 +3,8 @@ import type { BattleView, StatusView, UnitView } from "../api/types";
 import { glossaryName, stackName, statusName, surfaceName } from "../battle/glossary";
 import type { SkillNames } from "../battle/actions";
 import { summonLine, summonsOf } from "../battle/summons";
+import { unitNames } from "../battle/units";
+import { zoneLine, zoneNextText, zonesOf } from "../battle/zones";
 
 interface Props {
   view: BattleView;
@@ -91,6 +93,22 @@ export function Hud({ view, hero, skills }: Props) {
             {summons.map((u) => (
               <li key={u.id}>{summonLine(view, u)}</li>
             ))}
+          </ul>
+        </div>
+      )}
+      {zonesOf(view).length > 0 && (
+        <div className="hud-line hud-zones" aria-label="持續區域">
+          <span className="muted">持續區域：</span>
+          <ul className="hud-summon-list">
+            {zonesOf(view).map((z) => {
+              const next = zoneNextText(z);
+              return (
+                <li key={z.id}>
+                  {zoneLine(view, z, unitNames(view))}
+                  {next === "" ? "" : `；${next}`}
+                </li>
+              );
+            })}
           </ul>
         </div>
       )}

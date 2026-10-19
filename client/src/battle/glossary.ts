@@ -195,4 +195,7 @@ export const HIGHLIGHT = {
   banish_lethal: 0xff3030,
   // 召喚（Phase 3D-4b）：召喚物的外框、預覽的召喚位置與圖騰光環
   summon: 0x5eead4,
+  /** 持續區域（Phase 3D-5）：有害（傷害、減益）與有益的底色。 */
+  zone_harmful: 0xff6a3d,
+  zone_helpful: 0xffd54a,
 } as const;

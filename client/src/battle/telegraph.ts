@@ -23,6 +23,8 @@ export const MARK_STYLES: Readonly<Record<string, MarkStyle>> = {
   unit_spawned: { glyph: "援", color: 0xb06bff, priority: 4 },
   terrain: { glyph: "地", color: 0xd0a060, priority: 3 },
   surface: { glyph: "面", color: 0x7fe3ff, priority: 2 },
+  zone_moved: { glyph: "域", color: 0xff8a5c, priority: 3 },
+  zone_expired: { glyph: "散", color: 0xc0c0c0, priority: 1 },
 };
 
 const FALLBACK_STYLE: MarkStyle = { glyph: "?", color: 0xffffff, priority: 0 };
@@ -41,6 +43,13 @@ export interface TelegraphMark {
   texts: string[];
 }
 
+function changePositions(c: TelegraphChange, view: BattleView): Pos[] {
+  // 持續區域（Phase 3D-5）的預告帶著整個區域的格子：每格都標記
+  if (c.tiles !== undefined && c.tiles.length > 0) return [...c.tiles];
+  const pos = changePos(c, view);
+  return pos === null ? [] : [pos];
+}
+
 function changePos(c: TelegraphChange, view: BattleView): Pos | null {
   if (c.pos != null) return c.pos;
   if (c.unit_id != null) return view.units.find((u) => u.id === c.unit_id)?.pos ?? null;
@@ -51,23 +60,25 @@ function changePos(c: TelegraphChange, view: BattleView): Pos | null {
 export function telegraphMarks(t: TelegraphOut, view: BattleView): TelegraphMark[] {
   const byTile = new Map<string, TelegraphMark>();
   for (const c of t.changes) {
-    const pos = changePos(c, view);
-    if (pos === null) continue;
-    const style = markStyle(c.kind);
-    const key = posKey(pos);
-    const mark = byTile.get(key);
-    if (mark === undefined) {
-      byTile.set(key, { pos, kind: c.kind, glyph: style.glyph, color: style.color, texts: [c.text] });
-      continue;
-    }
-    mark.texts.push(c.text);
-    if (style.priority > markStyle(mark.kind).priority) {
-      mark.kind = c.kind;
-      mark.glyph = style.glyph;
-      mark.color = style.color;
-    }
+    for (const pos of changePositions(c, view)) addMark(byTile, c, pos);
   }
   return [...byTile.values()].sort((a, b) => a.pos.y - b.pos.y || a.pos.x - b.pos.x);
+}
+
+function addMark(byTile: Map<string, TelegraphMark>, c: TelegraphChange, pos: Pos): void {
+  const style = markStyle(c.kind);
+  const key = posKey(pos);
+  const mark = byTile.get(key);
+  if (mark === undefined) {
+    byTile.set(key, { pos, kind: c.kind, glyph: style.glyph, color: style.color, texts: [c.text] });
+    return;
+  }
+  mark.texts.push(c.text);
+  if (style.priority > markStyle(mark.kind).priority) {
+    mark.kind = c.kind;
+    mark.glyph = style.glyph;
+    mark.color = style.color;
+  }
 }
 
 /** 滑過格子時要顯示的預告說明（沒有時空陣列）。 */

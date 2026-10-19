@@ -32,6 +32,7 @@ import {
 } from "../battle/reactions";
 import { previewOverlays } from "../battle/scenePreview";
 import { marksTextAt, telegraphMarks } from "../battle/telegraph";
+import { zoneLinesAt } from "../battle/zones";
 import {
   actionAtTile,
   basicModes,
@@ -608,7 +609,7 @@ export function BattleScreen({ initial, onExit }: Props) {
           <TelegraphPanel
             telegraph={response.telegraph}
             marks={marks}
-            hoverTexts={marksTextAt(marks, hover)}
+            hoverTexts={[...zoneLinesAt(shown, hover, liveNames), ...marksTextAt(marks, hover)]}
           />
           <OrdersPanel
             orders={response.orders}
