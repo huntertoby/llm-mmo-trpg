@@ -1,10 +1,10 @@
 // 操作面板：基本動作（攻擊、推擊、絆倒、推動物件、防禦、結束姿態、起身）、結束回合；
 // 選了技能或基本動作之後的目標說明（方向箭頭、自身、取消）與預覽；備援的「其他動作」清單（收合）。
-import type { Action, BattleView, PreviewOut } from "../api/types";
+import type { Action, BattleView, InteractOption, PreviewOut } from "../api/types";
 import type { LabeledAction } from "../battle/actions";
 import { DIRECTIONS } from "../battle/glossary";
 import { chainLines, previewLines } from "../battle/previewText";
-import { DIRECTION_ARROWS, DIRECTION_ORDER, isSelfOnly, type ActionMode } from "../battle/targeting";
+import { DIRECTION_ARROWS, DIRECTION_ORDER, asideRows, isSelfOnly, type ActionMode } from "../battle/targeting";
 import type { UnitNames } from "../battle/units";
 
 interface Props {
@@ -17,6 +17,8 @@ interface Props {
   attackCount: number;
   preview: PreviewOut | null;
   view: BattleView;
+  /** 主角相鄰可推動物件的互動選項（含不合法與原因；撥開用）。 */
+  interactOptions: readonly InteractOption[];
   names: UnitNames;
   onPickMode(mode: ActionMode): void;
   onCancel(): void;
@@ -25,9 +27,52 @@ interface Props {
   onPreviewAction(action: Action | null): void;
 }
 
-type HelpProps = Pick<Props, "enabled" | "onAction" | "onPreviewAction"> & { mode: ActionMode };
+type HelpProps = Pick<Props, "enabled" | "onAction" | "onPreviewAction" | "interactOptions" | "view"> & {
+  mode: ActionMode;
+};
 
-function ModeHelp({ mode, enabled, onAction, onPreviewAction }: HelpProps) {
+/** 撥開：每個相鄰的可推動物件一列「往左撥／往右撥」；不合法的灰掉並顯示原因。 */
+function AsideHelp({ mode, enabled, interactOptions, view, onAction, onPreviewAction }: HelpProps) {
+  const rows = asideRows(interactOptions, mode.actions, view);
+  return (
+    <div className="mode-help">
+      <div className="section-title">{mode.label}</div>
+      <div className="small muted">選擇要把物件撥向哪一邊（主角不動；左右以「主角 → 物件」方向為前方）。Esc／右鍵取消。</div>
+      {rows.map((row) => (
+        <div key={row.objectId} className="aside-row">
+          <div className="small">{row.name}</div>
+          <div className="dir-buttons">
+            {row.choices.map((c) => (
+              <button
+                key={c.side}
+                type="button"
+                disabled={!enabled || c.action === null}
+                title={c.reason ?? c.label}
+                onMouseEnter={() => onPreviewAction(c.action)}
+                onMouseLeave={() => onPreviewAction(null)}
+                onClick={() => c.action !== null && onAction(c.action)}
+              >
+                {c.label}
+              </button>
+            ))}
+          </div>
+          {row.choices.map(
+            (c) =>
+              c.reason !== null && (
+                <div key={`${c.side}:r`} className="small muted">
+                  {c.label}：{c.reason}
+                </div>
+              ),
+          )}
+        </div>
+      ))}
+    </div>
+  );
+}
+
+function ModeHelp(props: HelpProps) {
+  const { mode, enabled, onAction, onPreviewAction } = props;
+  if (mode.kind === "shove_aside") return <AsideHelp {...props} />;
   const t = mode.targets;
   const pickable = t.units.size + t.objects.size + t.tiles.size;
   const hint = isSelfOnly(t)
@@ -111,6 +156,8 @@ export function ActionPanel(props: Props) {
           <ModeHelp
             mode={mode}
             enabled={enabled}
+            interactOptions={props.interactOptions}
+            view={view}
             onAction={props.onAction}
             onPreviewAction={props.onPreviewAction}
           />

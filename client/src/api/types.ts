@@ -35,6 +35,7 @@ export type Awaiting = BattleResponse["awaiting"];
 export type ReactionRuleView = Schemas["ReactionRuleView"];
 export type ReactionMode = ReactionRuleView["mode"];
 export type SetReactionModeAction = Schemas["SetReactionMode"];
+export type InteractOption = Schemas["InteractOptionOut"];
 export type TelegraphOut = Schemas["TelegraphOut"];
 export type TelegraphChange = Schemas["TelegraphChangeOut"];
 export type OrderSet = Schemas["OrderSet"];

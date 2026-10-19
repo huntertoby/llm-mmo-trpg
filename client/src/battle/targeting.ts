@@ -1,6 +1,11 @@
 // 技能列與目標選取（純函式）：合法動作 → 「模式」（技能、攻擊、推擊……）→ 每個模式的合法目標。
-import type { Action, BattleView, Direction, Pos, SkillCard, UnitView } from "../api/types";
+import type { Action, BattleView, Direction, InteractOption, Pos, SkillCard, UnitView } from "../api/types";
 import { posKey, samePos } from "./geometry";
+import { objectStyle } from "./glossary";
+
+function posText(p: Pos): string {
+  return `(${p.x}, ${p.y})`;
+}
 
 /** 方向 → 格子位移（與引擎相同：北 = y − 1）。 */
 export const DIRECTION_DELTA: Readonly<Record<Direction, { dx: number; dy: number }>> = {
@@ -32,7 +37,7 @@ export interface TargetSet {
   directions: Map<Direction, Action>;
 }
 
-export type ModeKind = "skill" | "attack" | "shove" | "trip" | "interact" | "defend" | "end_stance" | "stand";
+export type ModeKind = "skill" | "attack" | "shove" | "trip" | "interact" | "shove_aside" | "defend" | "end_stance" | "stand";
 
 export interface ActionMode {
   /** 選取用的鍵：技能為 `skill:<id>`，其他為類型。 */
@@ -135,6 +140,7 @@ const BASIC_MODES: readonly { kind: Exclude<ModeKind, "skill">; label: string }[
   { kind: "shove", label: "推擊" },
   { kind: "trip", label: "絆倒" },
   { kind: "interact", label: "推動物件" },
+  { kind: "shove_aside", label: "撥開物件" },
   { kind: "defend", label: "防禦" },
   { kind: "end_stance", label: "結束姿態" },
   { kind: "stand", label: "起身" },
@@ -145,10 +151,11 @@ function modeKindOf(a: Action): ModeKind | null {
     case "attack":
     case "shove":
     case "trip":
-    case "interact":
     case "defend":
     case "end_stance":
       return a.type;
+    case "interact":
+      return a.mode === "shove_aside" ? "shove_aside" : "interact";
     case "move":
       return a.path.length <= 1 ? "stand" : null;
     default:
@@ -161,7 +168,9 @@ export function basicModes(legal: readonly Action[]): ActionMode[] {
   return BASIC_MODES.flatMap(({ kind, label }) => {
     const actions = legal.filter((a) => modeKindOf(a) === kind);
     if (actions.length === 0) return [];
-    return [{ key: kind, kind, label, skillId: null, actions, targets: buildTargets(actions) }];
+    // 撥開要選方向（面板上的按鈕），不能靠點物件，所以沒有可點的目標
+    const targets = kind === "shove_aside" ? emptyTargets() : buildTargets(actions);
+    return [{ key: kind, kind, label, skillId: null, actions, targets }];
   });
 }
 
@@ -174,6 +183,64 @@ export function skillMode(button: SkillButton): ActionMode {
     actions: button.actions,
     targets: buildTargets(button.actions),
   };
+}
+
+// ---- 撥開 -----------------------------------------------------------------
+
+export interface AsideChoice {
+  side: "left" | "right";
+  /** 例：「往左撥 ←」（箭頭是畫面上物件會移動的方向）。 */
+  label: string;
+  /** 合法時的動作；不合法時 `null`。 */
+  action: Action | null;
+  /** 不合法的原因（中文）；合法時 `null`。 */
+  reason: string | null;
+}
+
+export interface AsideRow {
+  objectId: string;
+  name: string;
+  choices: AsideChoice[];
+}
+
+function arrowFor(from: Pos, to: Pos): string {
+  const dx = to.x - from.x;
+  const dy = to.y - from.y;
+  if (Math.abs(dx) >= Math.abs(dy)) return dx >= 0 ? DIRECTION_ARROWS.east : DIRECTION_ARROWS.west;
+  return dy >= 0 ? DIRECTION_ARROWS.south : DIRECTION_ARROWS.north;
+}
+
+/** 撥開面板：每個相鄰的可推動物件一列，左、右兩個選項（不合法的附原因）。 */
+export function asideRows(
+  options: readonly InteractOption[],
+  legal: readonly Action[],
+  view: BattleView,
+): AsideRow[] {
+  const rows = new Map<string, AsideRow>();
+  for (const o of options) {
+    if (o.mode !== "shove_aside" || (o.side !== "left" && o.side !== "right")) continue;
+    const obj = view.objects.find((x) => x.id === o.object_id);
+    if (obj === undefined) continue;
+    let row = rows.get(o.object_id);
+    if (row === undefined) {
+      row = { objectId: o.object_id, name: `${objectStyle(obj.kind).name} ${posText(obj.pos)}`, choices: [] };
+      rows.set(o.object_id, row);
+    }
+    const side = o.side;
+    const action = legal.find(
+      (a) => a.type === "interact" && a.mode === "shove_aside" && a.object_id === o.object_id && a.side === side,
+    );
+    row.choices.push({
+      side,
+      label: `往${side === "left" ? "左" : "右"}撥 ${arrowFor(obj.pos, o.to_pos)}`,
+      action: o.legal && action !== undefined ? action : null,
+      reason: o.legal ? null : (o.reason ?? "不能撥開"),
+    });
+  }
+  return [...rows.values()].map((r) => ({
+    ...r,
+    choices: [...r.choices].sort((a, b) => (a.side === b.side ? 0 : a.side === "left" ? -1 : 1)),
+  }));
 }
 
 /** 備援清單：技能與基本模式都沒涵蓋的動作（正常情況為空；不含移動與結束回合）。 */

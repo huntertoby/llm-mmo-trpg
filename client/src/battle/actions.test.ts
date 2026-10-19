@@ -105,3 +105,13 @@ describe("labels and skill ids", () => {
     expect(skillIdsOf(LEGAL, view)).toEqual(["skill_aoe", "skill_cone", "skill_fire", "skill_self", "skill_z"]);
   });
 });
+
+describe("actionLabel for shoving aside", () => {
+  it("names the object and the side", () => {
+    const view = smallView();
+    const aside = (side: "left" | "right"): Action =>
+      ({ type: "interact", unit_id: H, object_id: "obj_0001", mode: "shove_aside", side }) as Action;
+    expect(actionLabel(aside("left"), view, {})).toBe("撥開：油桶 (2, 2)（往左）");
+    expect(actionLabel(aside("right"), view, {})).toBe("撥開：油桶 (2, 2)（往右）");
+  });
+});

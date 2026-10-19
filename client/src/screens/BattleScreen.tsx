@@ -435,6 +435,7 @@ export function BattleScreen({ initial, onExit }: Props) {
       }
       if (canAct && hero !== null) {
         if (mode !== null) {
+          if (mode.kind === "shove_aside") return; // 撥開要用面板選方向
           const a = actionAtTile(mode, view, hero, tile);
           if (a !== null) act(a);
           return;
@@ -504,6 +505,7 @@ export function BattleScreen({ initial, onExit }: Props) {
               attackCount={classified.attacks.size}
               preview={preview}
               view={view}
+              interactOptions={response.interact_options}
               names={liveNames}
               onPickMode={pickMode}
               onCancel={cancel}

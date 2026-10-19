@@ -1,9 +1,10 @@
 import { describe, expect, it } from "vitest";
-import type { Action, SkillCard } from "../api/types";
+import type { Action, InteractOption, SkillCard } from "../api/types";
 import realFixture from "./fixtures/oil_depot_seed3.json";
 import { smallView, unit } from "./testFixtures";
 import {
   actionAtTile,
+  asideRows,
   basicModes,
   buildTargets,
   fallbackActions,
@@ -127,5 +128,60 @@ describe("a real response", () => {
     expect(fallbackActions(real.legal_actions, h)).toEqual([]);
     const buttons = skillButtons(h, real.legal_actions, {});
     expect(buttons.reduce((n, b) => n + b.actions.length, 0)).toBe(skills.length);
+  });
+});
+
+describe("shove aside", () => {
+  // 主角 (1, 1)；箱子 obj_0002 在 (1, 2)（主角南邊）：往左撥落在 (2, 2)（油桶擋住），往右撥落在 (0, 2)
+  const aside = (side: "left" | "right"): Action =>
+    ({ type: "interact", unit_id: H, object_id: "obj_0002", mode: "shove_aside", side }) as Action;
+  const options: InteractOption[] = [
+    { object_id: "obj_0002", mode: "push", side: null, legal: true, reason: null, to_pos: { x: 1, y: 3 } },
+    {
+      object_id: "obj_0002",
+      mode: "shove_aside",
+      side: "right",
+      legal: true,
+      reason: null,
+      to_pos: { x: 0, y: 2 },
+    },
+    {
+      object_id: "obj_0002",
+      mode: "shove_aside",
+      side: "left",
+      legal: false,
+      reason: "撥不動：箱子另一側被擋住",
+      to_pos: { x: 2, y: 2 },
+    },
+  ];
+  const legal: Action[] = [
+    { type: "interact", unit_id: H, object_id: "obj_0002", mode: "push" } as Action,
+    aside("right"),
+  ];
+
+  it("adds a separate mode for shoving aside and keeps push as its own mode", () => {
+    const kinds = basicModes(legal).map((m) => m.kind);
+    expect(kinds).toEqual(["interact", "shove_aside"]);
+    const push = basicModes(legal).find((m) => m.kind === "interact")!;
+    expect(push.actions).toEqual([legal[0]]);
+    const shove = basicModes(legal).find((m) => m.kind === "shove_aside")!;
+    expect(shove.actions).toEqual([aside("right")]);
+    // 撥開靠面板選方向，不能點物件直接送出
+    expect(actionAtTile(shove, view, hero, { x: 1, y: 2 })).toBeNull();
+    expect(fallbackActions(legal, hero)).toEqual([]);
+  });
+
+  it("lists left and right for each object, greying out the illegal side with its reason", () => {
+    const rows = asideRows(options, legal, view);
+    expect(rows).toHaveLength(1);
+    expect(rows[0]!.name).toContain("(1, 2)");
+    const [left, right] = rows[0]!.choices;
+    expect(left).toMatchObject({ side: "left", label: "往左撥 →", action: null, reason: "撥不動：箱子另一側被擋住" });
+    expect(right).toMatchObject({ side: "right", label: "往右撥 ←", reason: null });
+    expect(right!.action).toBe(legal[1]);
+  });
+
+  it("shows nothing for objects that only have push options", () => {
+    expect(asideRows([options[0]!], legal, view)).toEqual([]);
   });
 });
