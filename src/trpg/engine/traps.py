@@ -61,7 +61,9 @@ def place_trap(ctx: Ctx, caster: UnitState, skill: SkillDef, xy: tuple[int, int]
         pos=Pos(x=xy[0], y=xy[1]),
         skill_id=skill.id,
         remaining=spec.rounds,
-        attributes={attr: effective_attribute(ctx.rules, caster, attr) for attr in Attribute},
+        attributes=tuple(
+            (attr, effective_attribute(ctx.rules, caster, attr)) for attr in Attribute
+        ),
     )
     state.traps = sorted([*state.traps, trap], key=lambda t: (t.pos.y, t.pos.x))
     ctx.emit(

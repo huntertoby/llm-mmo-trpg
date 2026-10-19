@@ -72,7 +72,10 @@ class TrapState:
     - ``owner_id``／``team``：放置者與其陣營（只有這個陣營看得到，見 ``trpg.engine.traps``）。
     - ``skill_id``：陷阱技能（觸發時的效果、觸發方式與範圍都來自它的 ``trap`` 欄位）。
     - ``remaining``：剩餘輪數，放置者每次回合開始 −1，歸零時 ``delay`` 觸發、``enter`` 消失。
-    - ``attributes``：放置時施放者的有效屬性快照（觸發時的傷害與抵抗判定用）。
+    - ``attributes``：放置時施放者的有效屬性快照（觸發時的傷害與抵抗判定用）；不可變的
+      ``(Attribute, value)`` 配對（Phase 2F-1 3.5），確保狀態複製（``clone``）不會共用同一個
+      可變 dict 的參照（舊版是 ``dict[Attribute, int]``，複製 ``traps`` 列表時是淺層複製，
+      同一個 dict 物件在原狀態與複本之間共用）。``dict(trap.attributes)`` 仍能還原成一般 dict。
     """
 
     owner_id: UnitId
@@ -80,7 +83,7 @@ class TrapState:
     pos: Pos
     skill_id: str
     remaining: int
-    attributes: dict[Attribute, int]
+    attributes: tuple[tuple[Attribute, int], ...]
 
     @property
     def xy(self) -> tuple[int, int]:
