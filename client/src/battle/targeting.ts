@@ -1,6 +1,7 @@
 // 技能列與目標選取（純函式）：合法動作 → 「模式」（技能、攻擊、推擊……）→ 每個模式的合法目標。
 import type { Action, BattleView, Direction, InteractOption, Pending, Pos, SkillCard, UnitView } from "../api/types";
 import { posKey, samePos } from "./geometry";
+import { activeReason } from "./activations";
 import { objectStyle } from "./glossary";
 
 function posText(p: Pos): string {
@@ -168,13 +169,20 @@ export function skillButtons(hero: UnitView, legal: readonly Action[], cards: Sk
     const card = cards[skillId];
     const source = card?.source_cost ?? null;
     let disabledReason: string | null = null;
-    if (cooldown > 0) disabledReason = `冷卻中（剩 ${cooldown} 回合）`;
+    const active = activeReason(hero, skillId);
+    if (active !== null) disabledReason = active;
+    else if (cooldown > 0) disabledReason = `冷卻中（剩 ${cooldown} 回合）`;
     else if (source !== null && hero.source < source) disabledReason = `源力不足：需要 ${source}，目前 ${hero.source}`;
     else if (actions.length === 0) disabledReason = "目前沒有合法目標（或資源不足）";
     return {
       skillId,
       name: card?.name_zh ?? skillId,
-      costs: card === undefined ? [] : card.ap_cost === null ? ["被動／反應", ...card.cost] : [...card.cost],
+      costs:
+        card === undefined
+          ? []
+          : card.ap_cost === null
+            ? ["被動／反應", ...card.cost]
+            : [...card.cost, ...((card.activation_id ?? null) === null ? [] : ["傳說啟動"])],
       cooldown,
       actions,
       disabledReason,

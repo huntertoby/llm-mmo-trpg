@@ -215,6 +215,29 @@ export interface components {
     schemas: {
         Action: components["schemas"]["Move"] | components["schemas"]["Attack"] | components["schemas"]["UseSkill-Output"] | components["schemas"]["Defend"] | components["schemas"]["Shove"] | components["schemas"]["Trip"] | components["schemas"]["Interact"] | components["schemas"]["EndStance"] | components["schemas"]["SetReactionMode"] | components["schemas"]["EndTurn"];
         /**
+         * ActivationView
+         * @description 生效中的常駐類傳說（Phase 3D-6；雙方都看得到）。
+         *
+         *     ``expires_round``：限時型在持有者第 ``expires_round`` 輪的回合開始時結束（剩餘輪數 ＝
+         *     ``expires_round − round``）；整場型為 ``None``。``rule_name_zh``：規則改變的名稱（修正型為
+         *     ``None``）。
+         */
+        ActivationView: {
+            /** Skill Id */
+            skill_id: string;
+            /** Name Zh */
+            name_zh: string;
+            /**
+             * Activation
+             * @enum {string}
+             */
+            activation: "timed" | "battle";
+            /** Expires Round */
+            expires_round: number | null;
+            /** Rule Name Zh */
+            rule_name_zh: string | null;
+        };
+        /**
          * Attack
          * @description 以武器普攻單位 ``target_id`` 或物件 ``target_object_id``（恰好給一個）。
          *
@@ -1059,6 +1082,10 @@ export interface components {
             effects: string[];
             /** Modifiers */
             modifiers: string[];
+            /** Activation */
+            activation?: string | null;
+            /** Activation Id */
+            activation_id?: string | null;
             /** Mastery */
             mastery: string | null;
             /** Tags */
@@ -1344,6 +1371,11 @@ export interface components {
             dismissed: boolean;
             /** Totem Radius */
             totem_radius: number | null;
+            /**
+             * Activations
+             * @default []
+             */
+            activations: components["schemas"]["ActivationView"][];
         };
         /** UpcomingEventOut */
         UpcomingEventOut: {

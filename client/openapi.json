@@ -601,6 +601,59 @@
           }
         }
       },
+      "ActivationView": {
+        "properties": {
+          "skill_id": {
+            "type": "string",
+            "title": "Skill Id"
+          },
+          "name_zh": {
+            "type": "string",
+            "title": "Name Zh"
+          },
+          "activation": {
+            "type": "string",
+            "enum": [
+              "timed",
+              "battle"
+            ],
+            "title": "Activation"
+          },
+          "expires_round": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Expires Round"
+          },
+          "rule_name_zh": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Rule Name Zh"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "skill_id",
+          "name_zh",
+          "activation",
+          "expires_round",
+          "rule_name_zh"
+        ],
+        "title": "ActivationView",
+        "description": "生效中的常駐類傳說（Phase 3D-6；雙方都看得到）。\n\n``expires_round``：限時型在持有者第 ``expires_round`` 輪的回合開始時結束（剩餘輪數 ＝\n``expires_round − round``）；整場型為 ``None``。``rule_name_zh``：規則改變的名稱（修正型為\n``None``）。"
+      },
       "Attack": {
         "properties": {
           "unit_id": {
@@ -2762,6 +2815,28 @@
             "type": "array",
             "title": "Modifiers"
           },
+          "activation": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Activation"
+          },
+          "activation_id": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Activation Id"
+          },
           "mastery": {
             "anyOf": [
               {
@@ -3703,6 +3778,14 @@
               }
             ],
             "title": "Totem Radius"
+          },
+          "activations": {
+            "items": {
+              "$ref": "#/components/schemas/ActivationView"
+            },
+            "type": "array",
+            "title": "Activations",
+            "default": []
           }
         },
         "additionalProperties": false,

@@ -51,6 +51,7 @@ export function unit(id: string, team: "ally" | "enemy", x: number, y: number, o
     summon_expires_round: null,
     dismissed: false,
     totem_radius: null,
+    activations: [],
     ...over,
   };
 }

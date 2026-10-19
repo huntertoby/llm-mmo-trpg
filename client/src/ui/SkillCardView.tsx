@@ -14,6 +14,7 @@ export function SkillCardView({ card }: { card: SkillCard }) {
       <div className="small">{card.cost.join("，")}</div>
       <div className="small muted">{card.shape}</div>
       {card.condition !== null && <div className="small">條件：{card.condition}</div>}
+      {(card.activation ?? null) !== null && <div className="small">啟動：{card.activation}（啟動前不生效）</div>}
       <ul className="skill-card-effects">
         {card.effects.map((e, i) => (
           <li key={`${i}:${e}`}>{e}</li>

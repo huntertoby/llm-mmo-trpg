@@ -2,6 +2,7 @@
 import type { BattleView, StatusView, UnitView } from "../api/types";
 import { glossaryName, stackName, statusName, surfaceName } from "../battle/glossary";
 import type { SkillNames } from "../battle/actions";
+import { activationLine } from "../battle/activations";
 import { summonLine, summonsOf } from "../battle/summons";
 import { unitNames } from "../battle/units";
 import { zoneLine, zoneNextText, zonesOf } from "../battle/zones";
@@ -86,6 +87,16 @@ export function Hud({ view, hero, skills }: Props) {
         <span className="muted">狀態：</span>
         {hero.statuses.length === 0 ? "無" : hero.statuses.map(statusLine).join("、")}
       </div>
+      {(hero.activations ?? []).length > 0 && (
+        <div className="hud-line hud-activations" aria-label="生效中的傳說">
+          <span className="muted">傳說：</span>
+          <ul className="hud-summon-list">
+            {(hero.activations ?? []).map((a) => (
+              <li key={a.skill_id}>{activationLine(view, a)}</li>
+            ))}
+          </ul>
+        </div>
+      )}
       {summons.length > 0 && (
         <div className="hud-line hud-summons" aria-label="召喚物">
           <span className="muted">召喚物：</span>
