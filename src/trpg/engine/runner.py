@@ -37,8 +37,14 @@ __all__ = [
     "run_battle",
 ]
 
-LOG_FORMAT = "trpg-battle-log/28"
-"""``/28``（Phase 3D-7b）：高變異——傷害效果的 ``explode``（``DamageEffect.explode_max``、
+LOG_FORMAT = "trpg-battle-log/29"
+"""``/29``（Phase 3D-8a）：吸血與聖光雙效——傷害效果的 ``lifesteal_permille``／``split_heal``、
+``healed.cause``（``lifesteal``）；驅散與揭露——原語 ``dispel``（``count: 1 | all``）／``reveal``、
+``status_removed`` 的新原因 ``dispelled``／``revealed``、狀態 ``revealed``
+（``prevents_concealment``）、陷阱的 ``revealed_to``、新事件 ``trap_revealed``、預算規則
+``dispel_*``／``reveal_*``／``lifesteal_value_permille``；``/28`` 的規則包沒有這些欄位與狀態，
+舊紀錄不能由新版程式重播。
+``/28``（Phase 3D-7b）：高變異——傷害效果的 ``explode``（``DamageEffect.explode_max``、
 ``damage_dealt.exploded``）、技能的 ``crit_range``／``damage_permille``；超載——層數的 ``overload``
 （``stacks.yaml``）、新事件 ``overload_triggered``、``stacks_changed`` 的新原因 ``overload``；依情況
 縮放——傷害效果的 ``scaling``；核心規則 ``explode_max``／``scale_cap_max_permille``、預算規則
