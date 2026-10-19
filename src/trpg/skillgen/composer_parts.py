@@ -17,12 +17,18 @@ from trpg.content.battle import StatusDef
 from trpg.content.composer_rules import ComposerRules, DiceRules, DurationRules, LadderRange
 from trpg.content.library import ContentLibrary
 from trpg.content.skill_rules import SkeletonDef
-from trpg.content.skills import PrimitiveDef, SkillRarity, default_affects, rarity_rank
+from trpg.content.skills import (
+    SKILL_REACTION_EVENTS,
+    PrimitiveDef,
+    SkillRarity,
+    default_affects,
+    rarity_rank,
+)
 from trpg.shared.rng import Rng
 from trpg.shared.types import Element, Surface
 
 __all__ = [
-    "REACTION_EVENTS",
+    "NON_INTERCEPT_EVENTS",
     "Ctx",
     "Knob",
     "Retry",
@@ -613,15 +619,31 @@ def build_cost(ctx: Ctx) -> dict[str, Any]:
 # ---------------------------------------------------------------------------
 
 
-def _passive_options(ctx: Ctx, target: str) -> list[str]:
-    """被動的核心原語：作用在另一方（敵人）是傷害或有害狀態，作用在持有者是治療、護盾或增益。"""
-    names = ["damage", "apply_status"] if target == "other" else ["heal", "shield", "apply_status"]
+def _skeleton_allows(ctx: Ctx, name: str, *, core: bool) -> bool:
+    """原語 ``name`` 是否在骨架資料允許的範圍：核心看 ``core.primitives``，
+    附帶看 ``secondary.primitives``（``None`` 表示不限）。"""
+    if core:
+        return name in ctx.skeleton.core.primitives
+    allowed = ctx.skeleton.secondary.primitives
+    return allowed is None or name in allowed
+
+
+def _usable_primitives(
+    ctx: Ctx, names: tuple[str, ...], *, core: bool, beneficial: bool
+) -> list[str]:
+    """``names`` 中骨架允許、稀有度夠、（``apply_status``）有可用狀態的原語（依原順序）。"""
     return [
         name
         for name in names
-        if rarity_rank(ctx.primitive(name).min_rarity) <= ctx.rank
-        and (name != "apply_status" or _has_status(ctx, target == "self"))
+        if _skeleton_allows(ctx, name, core=core)
+        and rarity_rank(ctx.primitive(name).min_rarity) <= ctx.rank
+        and (name != "apply_status" or _has_status(ctx, beneficial))
     ]
+
+
+def _passive_candidates(target: str) -> tuple[str, ...]:
+    """被動可考慮的原語：作用在另一方（敵人）是傷害或有害狀態，作用在持有者是治療、護盾或增益。"""
+    return ("damage", "apply_status") if target == "other" else ("heal", "shield", "apply_status")
 
 
 def _passive_effect(ctx: Ctx, name: str, target: str, *, core: bool) -> None:
@@ -639,13 +661,19 @@ def build_passive_effects(ctx: Ctx, target: str) -> None:
 
     ``target``：``trigger.target``（``other`` 或 ``self``）；形狀固定為 ``self``。
     """
-    options = _passive_options(ctx, target)
+    names = _passive_candidates(target)
+    beneficial = target == "self"
+    options = _usable_primitives(ctx, names, core=True, beneficial=beneficial)
     if not options:
         raise Retry
     first = ctx.rng.choice(options)
     ctx.core_count = 1
     _passive_effect(ctx, first, target, core=True)
-    rest = [name for name in options if name != first]
+    rest = [
+        name
+        for name in _usable_primitives(ctx, names, core=False, beneficial=beneficial)
+        if name != first
+    ]
     if rest and ctx.chance(ctx.rules.passive.second_effect_permille):
         _passive_effect(ctx, ctx.rng.choice(rest), target, core=False)
 
@@ -664,54 +692,58 @@ def build_passive_cost(ctx: Ctx) -> dict[str, Any]:
 # 反應技與姿態（Phase 2E-2）
 # ---------------------------------------------------------------------------
 
-REACTION_EVENTS = ("hit_by_melee", "hit_by_attack", "enemy_leaves_adjacent")
-"""非擋攻擊的反應事件（擋攻擊的 ``ally_hit_adjacent`` 另外抽）。"""
+NON_INTERCEPT_EVENTS = tuple(e for e in SKILL_REACTION_EVENTS if e != "ally_hit_adjacent")
+"""非擋攻擊的反應事件（``ally_hit_adjacent`` 另外抽）；來源是 ``SKILL_REACTION_EVENTS``。"""
 
 
 def _shield_if_allowed(ctx: Ctx, *, core: bool) -> None:
-    if rarity_rank(ctx.primitive("shield").min_rarity) <= ctx.rank:
+    if (
+        _skeleton_allows(ctx, "shield", core=core)
+        and rarity_rank(ctx.primitive("shield").min_rarity) <= ctx.rank
+    ):
         weight = (
             ctx.rules.structure.knob_weight_core if core else ctx.rules.structure.knob_weight_other
         )
         _heal_effect(ctx, weight, "shield")
 
 
+def _intercept_effects(ctx: Ctx) -> None:
+    """擋攻擊：形狀 self，``intercept`` ＋ 自身護盾（讓高階也有強度旋鈕）。"""
+    if not _skeleton_allows(ctx, "intercept", core=True):
+        raise Retry
+    ctx.shape, ctx.shape_params = "self", {}
+    ctx.core_count = 1
+    ctx.add({"type": "intercept"}, ())
+    _shield_if_allowed(ctx, core=False)
+
+
 def build_reaction_effects(ctx: Ctx, event: str) -> None:
     """反應技的形狀與效果。
 
-    擋攻擊：形狀 self，``intercept`` ＋ 自身護盾（讓高階也有強度旋鈕）；其他事件：自身增益
-    （形狀 self）或對觸發者的傷害、有害狀態、推拉（形狀 single）。
+    擋攻擊：見 :func:`_intercept_effects`；其他事件：自身增益（形狀 self，只用骨架核心允許的原語）
+    或對觸發者的傷害、有害狀態、推拉（形狀 single）。候選原語都由骨架資料篩選。
     """
     rules = ctx.rules.reaction
     if event == "ally_hit_adjacent":
-        ctx.shape, ctx.shape_params = "self", {}
-        ctx.core_count = 1
-        ctx.add({"type": "intercept"}, ())
-        _shield_if_allowed(ctx, core=False)
+        _intercept_effects(ctx)
         return
-    weight = ctx.rules.structure.knob_weight_core
     if ctx.chance(rules.self_permille):
-        options = [
-            n for n in ("heal", "shield") if rarity_rank(ctx.primitive(n).min_rarity) <= ctx.rank
-        ]
-        if _has_status(ctx, True):
-            options.append("apply_status")
-        if not options:
-            raise Retry
-        build_shape(ctx, [], only=("self",))
-        ctx.core_count = 1
-        name = ctx.rng.choice(options)
-        if name == "apply_status":
-            _status_effect(ctx, beneficial=True)
-        else:
-            _heal_effect(ctx, weight, name)
-        return
-    options = [
-        n
-        for n in ("damage", "apply_status", "push", "pull")
-        if rarity_rank(ctx.primitive(n).min_rarity) <= ctx.rank
-        and (n != "apply_status" or _has_status(ctx, False))
-    ]
+        # 沒有骨架允許的自身增益原語時，改走對觸發者的分支。
+        own = _usable_primitives(
+            ctx, ("heal", "shield", "apply_status"), core=True, beneficial=True
+        )
+        if own:
+            build_shape(ctx, [], only=("self",))
+            ctx.core_count = 1
+            name = ctx.rng.choice(own)
+            if name == "apply_status":
+                _status_effect(ctx, beneficial=True)
+            else:
+                _heal_effect(ctx, ctx.rules.structure.knob_weight_core, name)
+            return
+    options = _usable_primitives(
+        ctx, ("damage", "apply_status", "push", "pull"), core=True, beneficial=False
+    )
     if not options:
         raise Retry
     name = ctx.rng.choice(options)

@@ -26,7 +26,7 @@ from trpg.shared.rng import Rng
 from trpg.shared.types import Element
 from trpg.skillgen.budget import BudgetError
 from trpg.skillgen.composer_parts import (
-    REACTION_EVENTS,
+    NON_INTERCEPT_EVENTS,
     Ctx,
     Retry,
     build_condition,
@@ -345,7 +345,7 @@ def _attempt_reaction(
     if rng.chance_permille(rules.reaction.intercept_permille):
         event = "ally_hit_adjacent"
     else:
-        event = rng.choice(REACTION_EVENTS)
+        event = rng.choice(NON_INTERCEPT_EVENTS)
     weapon_req, scaling = _weapon_and_attr(rng, category, rules)
     if category == "spell" or event == "ally_hit_adjacent":
         theme = rng.choice(_SPELL_ELEMENTS)

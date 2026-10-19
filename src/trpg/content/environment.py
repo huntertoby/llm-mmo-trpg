@@ -19,8 +19,8 @@ from trpg.content.skills import SkillDef
 from trpg.shared.types import Attribute, Element, Surface
 
 __all__ = [
+    "ENV_REACTION_EVENTS",
     "OBJECT_TAGS",
-    "REACTION_EVENTS",
     "AiProfile",
     "AiProfileTable",
     "AiWeights",
@@ -67,7 +67,7 @@ OBJECT_TAGS: frozenset[str] = frozenset(
 )
 """引擎認得的物件標籤。新物件只要組合這些標籤，就自動支援所有互動。"""
 
-REACTION_EVENTS = ("targeted_by_melee", "targeted_by_attack", "enemy_leaves_adjacent")
+ENV_REACTION_EVENTS = ("targeted_by_melee", "targeted_by_attack", "enemy_leaves_adjacent")
 
 
 def _unique(ids: list[str], what: str) -> None:
