@@ -39,8 +39,10 @@ from trpg.engine.events import (
     ObjectDamaged,
     ObjectDestroyed,
     ObjectExploded,
+    ObjectHurled,
     ObjectIgnited,
     ObjectMoved,
+    ObjectToppled,
     PushResisted,
     ReactionDeclined,
     ReactionModeSet,
@@ -106,6 +108,7 @@ _CAUSE_NAMES = {
     "conduct": "傳導",
     "surface": "表面",
     "collision": "撞擊",
+    "topple": "壓傷",
 }
 
 _END_REASONS = {
@@ -124,6 +127,8 @@ _DESTROY_CAUSES = {
     "filled": "被填平",
     "fell": "掉落深處",
     "effect": "被摧毀",
+    "hurled": "摔得粉碎",
+    "toppled": "倒下了",
 }
 
 _REMOVE_REASONS = {
@@ -426,7 +431,7 @@ def _damage(e: DamageDealt, v: _View) -> str:
     kind = f"{cause}{element}" if cause and e.cause != "status" else element
     if e.cause in ("fall", "deadly_terrain"):
         kind = cause
-    elif e.cause in ("explosion", "conduct", "surface", "collision"):
+    elif e.cause in ("explosion", "conduct", "surface", "collision", "topple"):
         kind = f"{cause}{element}"
     mod = ""
     if e.element_mod_ppm != _PPM:
@@ -645,6 +650,34 @@ def _object_ignited(e: ObjectIgnited, v: _View) -> str:
 def _object_moved(e: ObjectMoved, v: _View) -> str:
     verb = "撥到" if e.how == "shove_aside" else "推到"
     return f"  {object_name(v.state, e.object_id)} 被{verb} {xy_text(e.to_pos)}"
+
+
+_DIRECTION_NAMES = {(0, -1): "北", (1, 0): "東", (0, 1): "南", (-1, 0): "西"}
+
+
+@_handles(ObjectHurled)
+def _object_hurled(e: ObjectHurled, v: _View) -> str:
+    who = "" if e.source_id is None else f"{v.name[e.source_id]} "
+    name = v.state.ruleset.object_def(e.kind).name_zh
+    text = f"  ✦ {who}把{name} {xy_text(e.from_pos)} 丟向 {xy_text(e.to_pos)}"
+    if e.outcome == "placed" and e.placed_pos is not None:
+        if e.placed_pos != e.to_pos:
+            return f"{text}，彈落到 {xy_text(e.placed_pos)}"
+        return f"{text}，落在那裡"
+    if e.outcome == "lost":
+        return f"{text}，找不到落腳處"
+    return text
+
+
+@_handles(ObjectToppled)
+def _object_toppled(e: ObjectToppled, v: _View) -> str:
+    name = v.state.ruleset.object_def(e.kind).name_zh
+    way = _DIRECTION_NAMES.get(e.direction, "")
+    tiles = "、".join(xy_text(p) for p in e.tiles) or "沒有壓到任何格子"
+    crushed = "、".join(v.name[u] for u in e.units)
+    who = "" if e.source_id is None else f"{v.name[e.source_id]} 推倒了"
+    text = f"  ✦ {who}{name} {xy_text(e.pos)}，往{way}倒下，壓住 {tiles}"
+    return f"{text}（壓到 {crushed}）" if crushed else text
 
 
 @_handles(ObjectCreated)

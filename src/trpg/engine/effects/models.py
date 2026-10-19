@@ -32,6 +32,7 @@ __all__ = [
     "ElementTouchEffect",
     "ExplodeEffect",
     "HealEffect",
+    "HurlObjectEffect",
     "IgniteObjectEffect",
     "LowerTerrainEffect",
     "MoveUnitEffect",
@@ -206,7 +207,8 @@ class PushEffect(EffectBase):
       目的地有其他單位、``blocks_move`` 物件、比目前高、或超出地圖時停止。每一步都可能墜落、
       落入致命地形、進入表面。
     - 物件（需 ``pushable``）：目的地有物件、有單位、比目前高、或超出地圖時停止；推入致命地形時
-      物件掉落並摧毀。
+      物件掉落並摧毀。``topplable`` 物件不移動，往 ``direction`` 倒下（推倒，Phase 3C-5a；
+      ``distance`` 不影響倒下的長度）。
     """
 
     kind: Literal["push"] = "push"
@@ -224,6 +226,21 @@ class PushEffect(EffectBase):
 
     def sort_target(self) -> str:
         return self.target_id or self.object_id or ""
+
+
+class HurlObjectEffect(EffectBase):
+    """投擲物件（Phase 3C-5a ``hurl_object``）：把 ``object_id`` 丟到 ``dest`` 並依標籤結算落地
+    （爆炸、碎掉、放下或沒有空格而摧毀）。落點單位的傷害由技能另外結算。"""
+
+    kind: Literal["hurl_object"] = "hurl_object"
+    object_id: ObjectId
+    dest: XY
+
+    def sort_target(self) -> str:
+        return self.object_id
+
+    def sort_pos(self) -> tuple[int, int]:
+        return (self.dest[1], self.dest[0])
 
 
 class CreateSurfaceEffect(_AtPos):
@@ -363,6 +380,7 @@ type Effect = Annotated[
     | ShieldEffect
     | CleanseEffect
     | PushEffect
+    | HurlObjectEffect
     | CreateSurfaceEffect
     | DamageObjectEffect
     | DestroyObjectEffect

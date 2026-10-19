@@ -38,6 +38,10 @@ objects:
   - {at: [8, 3], kind: oil_barrel}
   - {at: [2, 7], kind: stone_pillar}
   - {at: [9, 7], kind: stone_pillar}
+  # Phase 3C-5a：石柱可推倒；走廊中央加一棵枯樹，兩端各多一個可投擲的木箱（念力流）
+  - {at: [6, 6], kind: dead_tree}
+  - {at: [2, 5], kind: crate}
+  - {at: [9, 6], kind: crate}
 start_zones:
   ally: [[0, 3], [1, 4], [0, 5], [1, 6]]
   enemy: [[11, 3], [10, 4], [11, 5], [10, 6]]

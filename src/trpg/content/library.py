@@ -178,6 +178,9 @@ class Ruleset(ContentModel):
         )
         if bad_status:
             raise ValueError(f"interactions.yaml 引用了未知的狀態：{', '.join(bad_status)}")
+        rubble = self.core.topple_rubble_object
+        if rubble not in {o.id for o in self.objects.objects}:
+            raise ValueError(f"core.yaml 的 topple_rubble_object 引用了未知的物件：{rubble}")
         return self
 
     def object_def(self, kind: str) -> ObjectDef:

@@ -57,6 +57,9 @@ objects:
   - {at: [1, 8], kind: grass}
   - {at: [4, 8], kind: grass}
   - {at: [7, 8], kind: grass}
+  # Phase 3C-5a：兩棵枯樹（topplable、可燃）——推倒壓住林間通道
+  - {at: [3, 4], kind: dead_tree}
+  - {at: [6, 5], kind: dead_tree}
 start_zones:
   ally: [[0, 3], [1, 4], [0, 5], [1, 6]]
   enemy: [[9, 6], [8, 5], [9, 4], [8, 3]]

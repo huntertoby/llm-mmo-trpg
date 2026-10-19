@@ -132,6 +132,8 @@ export const OBJECTS: Readonly<Record<string, ObjectLook>> = {
   earth_wall: { glyph: "土", color: 0x7a5a3a, floor: false },
   low_wall: { glyph: "矮", color: 0x8a8070, floor: false },
   fallen_log: { glyph: "木", color: 0x6a4a2a, floor: false },
+  dead_tree: { glyph: "樹", color: 0x5a4a32, floor: false },
+  rubble: { glyph: "礫", color: 0x7a7468, floor: false },
 };
 
 export function objectStyle(kind: string): ObjectStyle {

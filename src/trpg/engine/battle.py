@@ -125,6 +125,7 @@ __all__ = [
 
 DEFENDING = "defending"
 PRONE = "prone"
+TOPPLABLE = "topplable"
 
 type ActionHandler = Callable[[Ctx, UnitState, Action], None]
 
@@ -545,15 +546,23 @@ def object_move_problem(
         return f"物件已被摧毀：{definition.name_zh}"
     if "pushable" not in definition.tags:
         return f"{definition.name_zh}無法推動"
+    problem = _adjacent_problem(state, unit, obj)
+    if problem is not None:
+        return problem
+    reason = object_push_block(state, obj.xy, (obj.pos.x + direction[0], obj.pos.y + direction[1]))
+    if reason is not None:
+        return f"{verb}不動：{definition.name_zh}{_PUSH_BLOCK_REASONS[reason]}"
+    return None
+
+
+def _adjacent_problem(state: BattleState, unit: UnitState, obj: ObjectState) -> str | None:
+    """互動的物件必須相鄰、高度差不超過 ``interact_height_limit``。"""
     if manhattan(unit.xy, obj.xy) != 1:
-        return f"物件必須相鄰：{definition.name_zh}"
+        return f"物件必須相鄰：{state.object_def(obj).name_zh}"
     limit = state.ruleset.core.interact_height_limit
     diff = abs(state.tile(*unit.xy).height - state.tile(*obj.xy).height)
     if diff > limit:
         return f"高度差過大：相差 {diff} 層（上限 {limit} 層）"
-    reason = object_push_block(state, obj.xy, (obj.pos.x + direction[0], obj.pos.y + direction[1]))
-    if reason is not None:
-        return f"{verb}不動：{definition.name_zh}{_PUSH_BLOCK_REASONS[reason]}"
     return None
 
 
@@ -564,9 +573,17 @@ def interact_problem(
     mode: InteractMode = "push",
     side: Side | None = None,
 ) -> str | None:
-    """互動（推或撥開物件）的問題；合法時回傳 ``None``。撥開的訊息為「撥不動」。"""
+    """互動（推或撥開物件）的問題；合法時回傳 ``None``。撥開的訊息為「撥不動」。
+
+    ``topplable`` 物件（Phase 3C-5a）推了會倒下（推倒），不檢查目標格；不能撥開。
+    """
     if mode == "shove_aside" and side is None:
         return "撥開必須指定方向（左或右）"
+    definition = state.object_def(obj)
+    if TOPPLABLE in definition.tags and not obj.destroyed:
+        if mode == "shove_aside":
+            return f"撥不動：{definition.name_zh}只能推倒，不能撥開"
+        return _adjacent_problem(state, unit, obj)
     direction = interact_direction(unit.xy, obj.xy, mode, side)
     return object_move_problem(state, unit, obj, direction, "推" if mode == "push" else "撥")
 
@@ -574,14 +591,16 @@ def interact_problem(
 def interact_options(
     state: BattleState, unit: UnitState
 ) -> list[tuple[ObjectState, InteractMode, Side | None, str | None]]:
-    """相鄰的可推動物件的所有互動選項 ``(物件, mode, side, 問題)``；合法者的問題為 ``None``。
+    """相鄰的可推動（或可推倒，Phase 3C-5a）物件的所有互動選項 ``(物件, mode, side, 問題)``；
+    合法者的問題為 ``None``。
 
     給介面顯示「不合法的方向與原因」用；AP 不足時每一項的問題都是 AP 不足。
     """
     cost = action_ap_cost(state, unit, modifiers.INTERACT)
     options: list[tuple[ObjectState, InteractMode, Side | None, str | None]] = []
     for obj in state.objects_sorted():
-        if obj.destroyed or "pushable" not in state.object_def(obj).tags:
+        tags = state.object_def(obj).tags
+        if obj.destroyed or ("pushable" not in tags and TOPPLABLE not in tags):
             continue
         if manhattan(unit.xy, obj.xy) != 1:
             continue

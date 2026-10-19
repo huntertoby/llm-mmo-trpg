@@ -49,6 +49,7 @@ __all__ = [
     "COPY_SKILL",
     "EXTRA_REACTION",
     "GRANT_AP",
+    "HURL_OBJECT",
     "INTERCEPT",
     "MODIFIER_CHANGES",
     "ON_HIT_PRIMITIVES",
@@ -64,6 +65,7 @@ __all__ = [
     "SKELETON_IDS",
     "SKILL_ID_PATTERN",
     "SKILL_REACTION_EVENTS",
+    "TOPPLE",
     "WEAPON_CLASSES",
     "Affects",
     "BasicAction",
@@ -134,8 +136,11 @@ REQUIRED_SHAPES: tuple[str, ...] = (
     "ground_tile",
     "chain",
     "allies_in_radius",
+    "object_then_tile",
 )
-"""引擎實作的 10 種形狀（``trpg.engine.skills.shapes``），資料檔必須全部定義。"""
+"""引擎實作的 11 種形狀（``trpg.engine.skills.shapes``），資料檔必須全部定義。
+
+``object_then_tile``（Phase 3C-5a）：投擲物件，先選射程內的物件、再選落點格。"""
 
 REQUIRED_CONDITIONS: tuple[str, ...] = (
     "target_hp_below",
@@ -146,7 +151,7 @@ REQUIRED_CONDITIONS: tuple[str, ...] = (
 )
 """引擎實作的 5 種條件（``trpg.engine.skills.conditions``），資料檔必須全部定義。"""
 
-type Targeting = Literal["self", "unit", "tile", "direction", "none"]
+type Targeting = Literal["self", "unit", "tile", "direction", "none", "object_tile"]
 type Affects = Literal["enemies", "allies", "all", "self", "tiles"]
 type SkillKind = Literal["active", "reaction", "passive", "stance", "modifier"]
 type ReactionEvent = Literal[
@@ -317,6 +322,7 @@ class PrimitiveParam(ContentModel):
         "effects",
         "which",
         "tag",
+        "bool",
     ]
     required: bool = False
     min: int | None = None
@@ -339,6 +345,7 @@ class PrimitiveDef(ContentModel):
       ``per_amount`` ``base_points × amount``（2E-3 的 ``add_stack``）、
       ``consume_status`` ``then`` 的點數 × 期望倍率 × 濺射 × 「需要先有狀態」折扣（3C-3b）、
       ``consume_stack`` 同技能傷害點數 × 期望消耗層數 × ``per_stack_permille``（2E-3）、
+      ``hurl_object`` 骰子平均 × 「需要附近有物件」折扣（＋擊倒點數，3C-5a）、
       ``dice_average`` 骰子平均值、``damage`` 法術為骰子平均值而武器為倍率 × 基準武器傷害、
       ``status``／``surface`` 為該狀態或表面的 ``budget_points`` × 持續 ÷ 預設持續。
       ``None`` 表示無法計算預算（驗證器會拒絕）。
@@ -365,6 +372,7 @@ class PrimitiveDef(ContentModel):
             "surface",
             "consume_stack",
             "consume_status",
+            "hurl_object",
         ]
         | None
     ) = None
@@ -551,6 +559,11 @@ class EffectSpec(ContentModel):
     技能。"""
     tag: str | None = Field(default=None, pattern=ID_PATTERN)
     """``reset_cooldown`` 的 ``which: tag`` 必填：要重置的技能標籤。"""
+    range: int | None = Field(default=None, ge=1)
+    """``hurl_object`` 專用（Phase 3C-5a）：可以舉起的物件與施放者的最遠距離（曼哈頓）。"""
+    knock_prone: bool | None = None
+    """``hurl_object`` 專用（Phase 3C-5a）：命中落點的單位時另外擊倒（對抗判定同
+    ``knock_prone`` 原語）。"""
     condition: ConditionSpec | None = None
 
     def param_values(self) -> dict[str, Any]:
@@ -562,10 +575,12 @@ class EffectSpec(ContentModel):
             "distance",
             "duration",
             "element",
+            "knock_prone",
             "multiplier_permille",
             "object",
             "per_stack_permille",
             "permille",
+            "range",
             "scale",
             "splash",
             "stack",
@@ -702,6 +717,9 @@ REDIRECT_DAMAGE = "redirect_damage"
 COPY_SKILL = "copy_skill"
 EXTRA_REACTION = "extra_reaction"
 """Phase 3C-4b 的改寫規則型原語 ID。"""
+HURL_OBJECT = "hurl_object"
+TOPPLE = "topple"
+"""Phase 3C-5a 的物件原語 ID（6.15）：投擲物件、推倒。"""
 REDIRECT_STATUS = "soul_link"
 """``redirect_damage`` 施加的狀態（``statuses.yaml``，``redirects_damage``）：
 ``StatusInstance.amount`` 存轉移的千分比、``source_id`` 是承受轉移的施放者。"""
@@ -1031,6 +1049,7 @@ class SkillDef(ContentModel):
             raise ValueError(f"只有主動技能可以有 cost.self_status，收到 kind: {self.kind}")
         self._check_legendary()
         self._check_copy_skill()
+        self._check_hurl_object()
         if self.kind == "passive" and self.trigger is None:
             raise ValueError("被動技能（kind: passive）必須有 trigger")
         if self.kind != "passive" and self.trigger is not None:
@@ -1070,6 +1089,19 @@ class SkillDef(ContentModel):
             raise ValueError(f"copy_skill 技能的形狀必須是 self，收到 {self.shape.type}")
         if len(self.effects) != 1:
             raise ValueError("copy_skill 必須是技能唯一的效果")
+
+    def _check_hurl_object(self) -> None:
+        """``hurl_object``（Phase 3C-5a）與形狀 ``object_then_tile`` 必須一起出現：主動技能、
+        恰好一個投擲效果（物件只有一個）。"""
+        hurls = sum(1 for e in self.effects if e.type == HURL_OBJECT)
+        if self.shape.type == "object_then_tile" and hurls != 1:
+            raise ValueError("形狀 object_then_tile 的技能必須恰好有一個 hurl_object 效果")
+        if hurls == 0:
+            return
+        if self.kind != "active":
+            raise ValueError(f"hurl_object 只能用在主動技能，收到 kind: {self.kind}")
+        if self.shape.type != "object_then_tile":
+            raise ValueError(f"hurl_object 的形狀必須是 object_then_tile，收到 {self.shape.type}")
 
     def _check_reaction_and_stance(self) -> None:
         """反應技與姿態的結構（2E-2）：``reaction`` 欄位、形狀、``intercept`` 與 ``teleport``。"""

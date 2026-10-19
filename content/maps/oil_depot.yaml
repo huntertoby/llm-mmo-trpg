@@ -40,6 +40,10 @@ objects:
   - {at: [3, 7], kind: crate}
   - {at: [2, 3], kind: low_wall}
   - {at: [2, 6], kind: low_wall}
+  # Phase 3C-5a：多放幾個可投擲的木箱（念力流）
+  - {at: [4, 1], kind: crate}
+  - {at: [4, 8], kind: crate}
+  - {at: [3, 5], kind: crate}
 surfaces:
   - {at: [6, 3], surface: oil}
   - {at: [7, 3], surface: oil}

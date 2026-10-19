@@ -8,6 +8,7 @@ companions: [sim_companion_fighter, sim_companion_archer]
 # Phase 2G-1：build_tank 加入破甲系（sunder_strike、armor_breaker）、build_assassin 加入狂怒姿態、build_warlock 加入毒雲與標記引爆、
 # build_healer 加入再起（second_wind），讓每個手寫技能都被至少一名英雄或單位裝備（tests/content/test_coverage.py）。
 # Phase 2G-2：新增 12 個示範技能（觸發時機、反應事件、連段、地形原語），分配給主題相符的 build（沒有新增 build，仍為 12 個）。
+# Phase 3C-5a：build_push 加震地推倒（topple）、build_fire 加念力投擲（hurl_object；油桶落地爆炸，3C-6 再整理成念力流）。
 # Phase 3C-3a：build_push 加破城衝撞與裂骨印記（撞擊）、build_fire 加烈焰護身（on_cast_tag）、build_warlock 加蝕心追擊（on_status_applied）。
 # Phase 3C-2：修正技能（kind: modifier，裝在被動欄位，上限 3）——build_push 加重踏、build_fire 加灼傷之痕與餘燼循環、
 # build_tank 加雷之手（單手劍的物理普攻變成雷電，3C-5 再整理）。
@@ -26,7 +27,7 @@ builds:
       resist: {physical: 100}
       tags: [hero, sim]
       max_mana: 20
-      skills: [skill_gale_kick, skill_shield_bash, skill_blink, skill_parting_slash, skill_bloodlust, skill_arcane_blade, skill_heavy_stomp, skill_battering_ram, skill_fracture_mark]
+      skills: [skill_gale_kick, skill_shield_bash, skill_blink, skill_parting_slash, skill_bloodlust, skill_arcane_blade, skill_heavy_stomp, skill_battering_ram, skill_fracture_mark, skill_quake_topple]
 
   - id: build_fire
     name_zh: 火焰流
@@ -43,7 +44,7 @@ builds:
       resist: {elemental: 150}
       tags: [hero, sim]
       max_mana: 40
-      skills: [skill_fire_bolt, skill_cinder_burst, skill_ashen_oath, skill_shatter_blast, skill_detonate_burning, skill_searing_scar, skill_ember_cycle, skill_ember_ward]
+      skills: [skill_fire_bolt, skill_cinder_burst, skill_ashen_oath, skill_shatter_blast, skill_detonate_burning, skill_searing_scar, skill_ember_cycle, skill_ember_ward, skill_telekinetic_hurl]
 
   - id: build_storm
     name_zh: 雷電／水流

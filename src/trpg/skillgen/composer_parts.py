@@ -199,7 +199,8 @@ def build_shape(ctx: Ctx, core: list[str], only: tuple[str, ...] | None = None) 
     allowed = [
         s
         for s in ctx.skeleton.shapes
-        if (only is None or s in only)
+        if s not in _HAND_WRITTEN_SHAPES
+        and (only is None or s in only)
         and rarity_rank(shapes[s].min_rarity) <= ctx.rank
         and all(_accepts(ctx.primitive(p), s) for p in core)
     ]
@@ -646,9 +647,16 @@ def _self_status_cost(ctx: Ctx) -> dict[str, Any] | None:
 # ---------------------------------------------------------------------------
 
 
+_HAND_WRITTEN_PRIMITIVES = frozenset({"hurl_object", "topple"})
+"""只給手寫技能的結構型原語（Phase 3C-5a 的場景物件原語：需要地圖上有對應的物件）。"""
+_HAND_WRITTEN_SHAPES = frozenset({"object_then_tile"})
+"""只給手寫技能的形狀（Phase 3C-5a：投擲物件專用）。"""
+
+
 def _composable(ctx: Ctx, name: str) -> bool:
-    """組合器可以使用的原語：改寫規則型（Phase 3C-4a 的 ``grant_ap`` 等）只給手寫技能。"""
-    return ctx.primitive(name).category != "rule_rewrite"
+    """組合器可以使用的原語：改寫規則型（Phase 3C-4a 的 ``grant_ap`` 等）與場景物件原語
+    （3C-5a）只給手寫技能。"""
+    return ctx.primitive(name).category != "rule_rewrite" and name not in _HAND_WRITTEN_PRIMITIVES
 
 
 def _skeleton_allows(ctx: Ctx, name: str, *, core: bool) -> bool:

@@ -275,3 +275,26 @@ primitives:
     forbid_affects: [enemies, all]
     params:
       amount: {type: int, required: true, min: 1, max: 1, description_zh: 額外的反應次數}
+  # --- Phase 3C-5a：場景物件原語（docs/design/06-技能.md 6.15；點數為初值，未經模擬）---
+  - id: hurl_object
+    name_zh: 投擲物件
+    description_zh: 舉起 range 格內看得到的一個 pushable 物件，丟到落點格（形狀 object_then_tile；飛行路徑不檢查阻擋，落點要在視線內）。命中判定照技能，落點被命中的單位受 dice 物理傷害（不加屬性），knock_prone 為 true 時再以對抗判定擊倒。物件落地後依標籤結算：explosive 在落點爆炸、breakable 碎掉（摧毀）、其他放在落點；落點有單位或物件時放在 hurl_scatter_radius（rules/core.yaml）內最近的空格（同距離依 (y, x)），沒有空格或落點是致命地形就摧毀。預算為骰子平均 × 「需要附近有物件」折扣（skill_budget.yaml 的 hurl_object_discount_permille），擊倒另加 knock_prone 的點數。
+    category: structural
+    harmful: true
+    min_rarity: rare
+    budget_basis: hurl_object
+    allowed_shapes: [object_then_tile]
+    params:
+      range: {type: int, required: true, min: 1, max: 6, description_zh: 可以舉起的物件與施放者的最遠距離}
+      dice: {type: dice, required: true, description_zh: 落點單位受到的物理傷害}
+      knock_prone: {type: bool, description_zh: 命中時另外擊倒（對抗判定）}
+  - id: topple
+    name_zh: 推倒
+    description_zh: 推倒目標（射程內看得到的 topplable 物件，技能只能以物件為目標），往遠離施放者的方向倒下：從下一格起壓住 topple_length 格（rules/core.yaml），壓到的單位受 topple_damage_dice 物理傷害並倒地、壓到的 breakable 物件受同樣傷害，其他物件擋住倒下；原物件移除，最後一格產生倒塌物。互動的推、技能的推擊與風推到 topplable 物件時也一樣會推倒它（通用規則）。
+    category: structural
+    harmful: true
+    min_rarity: rare
+    budget_basis: fixed
+    base_points: 6
+    acts_on: tile
+    allowed_shapes: [single]

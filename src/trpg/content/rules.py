@@ -100,6 +100,15 @@ class CoreRules(ContentModel):
     屬性；技能的 ``collision_dice`` 可取代。舊紀錄沒有此欄位。"""
     consume_status_max_scale: int = Field(default=3, ge=1)
     """``consume_status`` 的 ``scale`` 倍率上限（Phase 3C-3b；舊紀錄沒有此欄位）。"""
+    topple_length: int = Field(default=2, ge=1, le=4)
+    """推倒（Phase 3C-5a）：``topplable`` 物件倒下時，從物件的下一格起壓住的格數。"""
+    topple_damage_dice: Dice = Field(default_factory=lambda: Dice(count=2, sides=6))
+    """推倒壓到的單位（與 ``breakable`` 物件）受到的物理傷害（Phase 3C-5a）。"""
+    topple_rubble_object: str = Field(default="rubble", pattern=r"^[a-z][a-z0-9_]*$")
+    """推倒後產生的物件（``objects.yaml`` 的 ID；Phase 3C-5a）。"""
+    hurl_scatter_radius: int = Field(default=1, ge=0, le=2)
+    """投擲物件（Phase 3C-5a）：落點有單位或物件時，物件放在這個曼哈頓距離內最近的空格；
+    沒有空格就摧毀。"""
     steadfast_push_permille: int = Field(ge=0, le=1000)
     ability_mod_base: int
     ability_mod_divisor: int = Field(ge=1)

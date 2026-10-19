@@ -65,6 +65,8 @@ OBJECT_TAGS: frozenset[str] = frozenset(
         "half_cover",  # 半掩護：遠程攻擊緊鄰其後的目標命中 −2（Phase 1C）
         "over_chasm",  # 架在致命地形上：此格變成可站立、非致命
         "pushable",  # 可被推動
+        "penetrable",  # 可被穿透（木製物件；Phase 3C-5b 的 pierce 使用）
+        "topplable",  # 可推倒：被推時不移動，往推的方向倒下（Phase 3C-5a）
     }
 )
 """引擎認得的物件標籤。新物件只要組合這些標籤，就自動支援所有互動。"""

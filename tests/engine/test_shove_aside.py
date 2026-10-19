@@ -171,10 +171,13 @@ def test_shove_aside_not_adjacent_not_pushable_and_no_ap_are_rejected() -> None:
     far = _state((4, 2))
     with pytest.raises(IllegalActionError, match="物件必須相鄰"):
         resolve(far, _aside("left"))
-    pillar = _state((3, 2), kind="stone_pillar")
+    wall = _state((3, 2), kind="low_wall")  # 3C-5a：石柱可以推倒（但不能撥開），改用矮牆
     with pytest.raises(IllegalActionError, match="無法推動"):
+        resolve(wall, _aside("left"))
+    assert not any(isinstance(a, Interact) for a in legal_actions(wall))
+    pillar = _state((3, 2), kind="stone_pillar")
+    with pytest.raises(IllegalActionError, match="只能推倒，不能撥開"):
         resolve(pillar, _aside("left"))
-    assert not any(isinstance(a, Interact) for a in legal_actions(pillar))
     tired = _state((3, 2))
     tired.units[U1].ap = 0
     with pytest.raises(IllegalActionError, match="AP 不足"):

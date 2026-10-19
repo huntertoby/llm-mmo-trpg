@@ -85,7 +85,15 @@ def test_the_initial_skeleton_structure_matches_the_spec() -> None:
         "lower_terrain",
     }
     assert sk["control"].secondary.max_share_permille == {"damage": 400}
-    assert set(sk["displace"].core.primitives) == {"push", "pull", "teleport", "knock_prone"}
+    # 3C-5a：場景物件原語（只給手寫技能，隨機組合器不使用）
+    assert set(sk["displace"].core.primitives) == {
+        "push",
+        "pull",
+        "teleport",
+        "knock_prone",
+        "hurl_object",
+        "topple",
+    }
     assert sk["displace"].secondary.max_share_permille == {"damage": 500}
     assert sk["displace"].secondary.max_count == 2
     assert set(sk["aura"].shapes) == {

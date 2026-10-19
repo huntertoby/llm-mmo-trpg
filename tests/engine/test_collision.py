@@ -423,9 +423,10 @@ def test_preview_without_a_collision_is_empty() -> None:
 def test_ai_battles_with_collisions_are_deterministic_and_replay(
     tmp_path: Path, capsys: pytest.CaptureFixture[str]
 ) -> None:
-    """build_push 在 oil_depot（種子 3）的戰鬥裡出現撞擊；同種子重跑結果相同、重播一致。"""
+    """build_push 在 oil_depot（種子 1；3C-5a 地圖多了木箱後種子 3 不再撞擊）的戰鬥裡出現撞擊；
+    同種子重跑結果相同、重播一致。"""
     log = tmp_path / "collision.json"
-    argv = ["battle", "--map", "oil_depot", "--seed", "3", "--ally-build", "build_push"]
+    argv = ["battle", "--map", "oil_depot", "--seed", "1", "--ally-build", "build_push"]
     assert main(argv) == 0
     first = capsys.readouterr().out
     assert "次撞擊" in first and "撞擊物理傷害" in first

@@ -37,8 +37,15 @@ __all__ = [
     "run_battle",
 ]
 
-LOG_FORMAT = "trpg-battle-log/15"
-"""``/15``（Phase 3C-4b）：三個改寫規則型原語 ``redirect_damage``（狀態 ``soul_link``，
+LOG_FORMAT = "trpg-battle-log/16"
+"""``/16``（Phase 3C-5a）：場景物件原語——投擲物件 ``hurl_object``（形狀 ``object_then_tile``，
+``UseSkill`` 同時帶 ``target_object_id`` 與 ``target_pos``、效果 ``hurl_object``、事件
+``object_hurled``）與推倒（物件標籤 ``topplable``／``penetrable``、原語 ``topple``、事件
+``object_toppled``、傷害原因 ``topple``、物件摧毀原因 ``hurled``／``toppled``、核心規則
+``topple_length``／``topple_damage_dice``／``topple_rubble_object``／``hurl_scatter_radius``）；
+推石柱、枯樹改為推倒，所以 ``/15`` 的紀錄無法重播。
+
+``/15``（Phase 3C-4b）：三個改寫規則型原語 ``redirect_damage``（狀態 ``soul_link``，
 ``StatusInstance.amount`` 存轉移千分比）、``copy_skill``（戰鬥狀態 ``casts``、
 ``UseSkill.copy_cast``、``Decision.copy_cast``、暫停種類 ``copy_skill``）、
 ``extra_reaction``（單位 ``extra_reactions``）；

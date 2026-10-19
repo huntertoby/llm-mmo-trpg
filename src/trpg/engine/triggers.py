@@ -10,6 +10,8 @@ Phase 1A 的觸發：
   不套用元素修正）。
 - ``collided`` → 撞擊傷害（Phase 3C-3a）：被推的單位、撞到的單位、撞到的 ``breakable`` 物件，
   每少走 1 格各受一次 ``collision_damage_dice``（物理、不加屬性），歸給位移的來源單位。
+- ``object_toppled`` → 推倒（Phase 3C-5a）：壓到的單位各受 ``topple_damage_dice``（物理）並倒地、
+  壓到的 ``breakable`` 物件受同樣傷害，歸給推的人。
 - ``entered_deadly_terrain`` → 一般單位直接死亡；帶 ``elite`` 標籤者受最大 HP ×
   ``deadly_terrain_elite_permille`` 傷害，並傳送到最近的安全格。
 """
@@ -20,18 +22,26 @@ from collections.abc import Callable
 
 from trpg.engine.context import Ctx
 from trpg.engine.effects.models import (
+    ApplyStatusEffect,
     DamageEffect,
     DamageObjectEffect,
     EffectBase,
     MoveUnitEffect,
 )
-from trpg.engine.events import Collided, EnteredDeadlyTerrain, EventBase, UnitFell
+from trpg.engine.events import (
+    Collided,
+    EnteredDeadlyTerrain,
+    EventBase,
+    ObjectToppled,
+    UnitFell,
+)
 from trpg.engine.rules.movement import nearest_safe_tile
 from trpg.shared.types import ObjectId
 
 __all__ = ["ELITE_TAG", "TriggerFn", "effects_for", "register_trigger"]
 
 ELITE_TAG = "elite"
+PRONE = "prone"
 
 type TriggerFn = Callable[[Ctx, EventBase, int], list[EffectBase]]
 
@@ -134,6 +144,36 @@ def _collision_damage(ctx: Ctx, event: EventBase, depth: int) -> list[EffectBase
                     cause="collision",
                 )
             )
+    return effects
+
+
+@register_trigger("object_toppled")
+def _topple_damage(ctx: Ctx, event: EventBase, depth: int) -> list[EffectBase]:
+    assert isinstance(event, ObjectToppled)
+    dice = ctx.core.topple_damage_dice
+    effects: list[EffectBase] = []
+    for victim in event.units:
+        effects.append(
+            DamageEffect(
+                depth=depth,
+                source_id=event.source_id,
+                target_id=victim,
+                cause="topple",
+                dice=dice,
+            )
+        )
+        effects.append(
+            ApplyStatusEffect(
+                depth=depth, source_id=event.source_id, target_id=victim, status_id=PRONE
+            )
+        )
+    effects.extend(
+        DamageObjectEffect(
+            depth=depth, source_id=event.source_id, object_id=oid, dice=dice, cause="topple"
+        )
+        for oid in event.objects
+        if _breakable(ctx, oid)
+    )
     return effects
 
 

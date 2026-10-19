@@ -1,0 +1,24 @@
+# 主動（Phase 3C-5a 示範，數值為初值，未經模擬）：念力舉起附近的木箱或油桶砸向敵人。
+# 油桶落地爆炸、木箱碎掉；念力流在箱子、油桶多的倉庫與油庫有利，空曠平原沒有東西可丟。
+id: skill_telekinetic_hurl
+schema_version: 1
+name_zh: 念力投擲
+tier: 1
+rank: 1
+rarity: rare
+kind: active
+skeleton: displace
+category: spell
+weapon_req: any
+ap_cost: 2
+scaling_attr: int
+shape: {type: object_then_tile, range: 4}
+effects:
+  - {type: hurl_object, range: 4, dice: 3d6, knock_prone: true}
+condition: null
+cost: {mana: 5, cooldown: 2}
+tags: [arcane, spell, telekinesis]
+narrative:
+  concept: 用念力舉起戰場上的箱子與油桶，當成砲彈砸向敵人
+  cast_flavor: 你五指一收，木箱離地而起，在半空中轉了個圈，朝敵人的頭頂直墜而下
+provenance: {origin: builtin, owner_id: null, created_by: null, parents: [], bound: true, tradeable: false}

@@ -17,6 +17,8 @@ from typing import NamedTuple
 from trpg.content.battle import Dice
 from trpg.content.skills import (
     COPY_SKILL,
+    HURL_OBJECT,
+    TOPPLE,
     Affects,
     EffectSpec,
     PrimitiveDef,
@@ -52,6 +54,7 @@ __all__ = [
     "damage_parameters",
     "has_selection",
     "hp_cost",
+    "hurl_object_problem",
     "pay_skill_cost",
     "reaction_problem",
     "reaction_target_problem",
@@ -379,6 +382,10 @@ def _object_target_problem(  # noqa: PLR0917
     definition = state.object_def(obj)
     if obj.destroyed:
         return f"物件已被摧毀：{definition.name_zh}"
+    if any(e.type == TOPPLE for e in effects):  # 推倒技能（Phase 3C-5a）：目標必須能推倒
+        if "topplable" not in definition.tags:
+            return f"{definition.name_zh}無法推倒"
+        return _reach_problem(state, caster, skill, obj.xy, definition.name_zh, reach)
     if "breakable" not in definition.tags or obj.hp is None:
         return f"{definition.name_zh}無法被攻擊"
     if not any(e.type in _TILE_ONLY_DAMAGE_KINDS or e.affects == "tiles" for e in effects):
@@ -426,6 +433,8 @@ def _unit_area(
         target = state.units.get(action.target_id)
         if target is None:
             raise IllegalActionError(f"找不到目標：{action.target_id}")
+        if any(e.type == TOPPLE for e in effects):
+            raise IllegalActionError(f"推倒技能只能以可推倒的物件為目標：{skill.name_zh}")
         problem = _unit_target_problem(state, caster, skill, effects, target, reach)
         if problem is not None:
             raise IllegalActionError(problem)
@@ -476,6 +485,51 @@ def _tile_area(
     return center_tiles(state, skill.shape.type, center), center
 
 
+def hurl_object_problem(
+    state: BattleState, caster: UnitState, skill: SkillDef, obj: ObjectState
+) -> str | None:
+    """投擲物件（Phase 3C-5a）能不能舉起 ``obj``：``pushable``、在 ``hurl_object`` 效果的
+    ``range`` 內、看得到。"""
+    definition = state.object_def(obj)
+    if obj.destroyed:
+        return f"物件已被摧毀：{definition.name_zh}"
+    if "pushable" not in definition.tags:
+        return f"{definition.name_zh}無法投擲（不是可推動的物件）"
+    spec = next(e for e in skill.effects if e.type == HURL_OBJECT)
+    assert spec.range is not None
+    distance = manhattan(caster.xy, obj.xy)
+    if distance > spec.range:
+        return f"物件超出投擲距離：距離 {distance}，上限 {spec.range}"
+    if not has_line_of_sight(state, caster.xy, obj.xy):
+        return f"視線被阻擋：{caster.name_zh} 看不到 {definition.name_zh}"
+    return None
+
+
+def _object_tile_area(
+    state: BattleState, caster: UnitState, skill: SkillDef, action: UseSkill, *, reach: int
+) -> tuple[tuple[XY, ...], XY]:
+    """``targeting: object_tile``（投擲物件，Phase 3C-5a）：被舉起的物件與落點；只影響落點。
+    物件的飛行路徑不檢查阻擋，落點要在射程與視線內、不是牆壁，也不能是物件原本的格子。"""
+    _require_fields(action, ("target_object_id", "target_pos"), "object_tile（物件與落點）")
+    if action.target_object_id is None or action.target_pos is None:
+        raise IllegalActionError(
+            "投擲物件必須同時指定 target_object_id（物件）與 target_pos（落點）"
+        )
+    obj = state.objects.get(action.target_object_id)
+    if obj is None or obj.destroyed:
+        raise IllegalActionError(f"找不到物件：{action.target_object_id}")
+    problem = hurl_object_problem(state, caster, skill, obj)
+    if problem is not None:
+        raise IllegalActionError(problem)
+    center = (action.target_pos.x, action.target_pos.y)
+    if center == obj.xy:
+        raise IllegalActionError("落點不能是物件原本的格子")
+    problem = shapes.center_problem(state, caster.xy, center, reach)
+    if problem is not None:
+        raise IllegalActionError(problem)
+    return (center,), center
+
+
 def _direction_area(
     state: BattleState, caster: UnitState, skill: SkillDef, action: UseSkill
 ) -> tuple[tuple[XY, ...], XY]:
@@ -522,6 +576,8 @@ def compute_area(
         tiles, origin = _tile_area(state, caster, skill, action, effects=effects, reach=reach)
     elif targeting == "direction":
         tiles, direction = _direction_area(state, caster, skill, action)
+    elif targeting == "object_tile":
+        tiles, origin = _object_tile_area(state, caster, skill, action, reach=reach)
     else:
         tiles = _self_area(state, caster, skill, action, targeting)
     if not tiles:
@@ -589,12 +645,31 @@ def _candidates(state: BattleState, caster: UnitState, skill: SkillDef) -> Itera
         reach = shape_reach(state, skill, caster)
         for x, y in shapes.center_candidates(state, caster.xy, reach):
             yield UseSkill(unit_id=uid, skill_id=sid, target_pos=Pos(x=x, y=y))
+    elif shape.targeting == "object_tile":
+        yield from _hurl_candidates(state, caster, skill)
     elif shape.targeting == "direction":
         for name in shapes.DIRECTION_ORDER:
             direction: Direction = name  # type: ignore[assignment]
             yield UseSkill(unit_id=uid, skill_id=sid, direction=direction)
     else:
         yield UseSkill(unit_id=uid, skill_id=sid)
+
+
+def _hurl_candidates(state: BattleState, caster: UnitState, skill: SkillDef) -> Iterator[UseSkill]:
+    """投擲物件的候選：可舉起的物件（依 ID）× 射程內的落點（依 ``(y, x)``）。"""
+    reach = shape_reach(state, skill, caster)
+    tiles = shapes.center_candidates(state, caster.xy, reach)
+    for obj in state.objects_sorted():
+        if hurl_object_problem(state, caster, skill, obj) is not None:
+            continue
+        for x, y in tiles:
+            if (x, y) != obj.xy:
+                yield UseSkill(
+                    unit_id=caster.id,
+                    skill_id=skill.id,
+                    target_object_id=ObjectId(obj.id),
+                    target_pos=Pos(x=x, y=y),
+                )
 
 
 def selections(

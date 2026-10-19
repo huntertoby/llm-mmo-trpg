@@ -93,3 +93,13 @@ shapes:
     budget: {base_permille: 1000, param: radius, per_unit_permille: 400}
     params:
       radius: {min: 1, max: 3}
+  # Phase 3C-5a（docs/design/06-技能.md 6.15）：投擲物件專用。UseSkill 同時給 target_object_id（被舉起的
+  # pushable 物件，距離上限是 hurl_object 效果的 range）與 target_pos（落點，距施放者 ≤ 這裡的 range）。
+  - id: object_then_tile
+    name_zh: 物件與落點
+    description_zh: 先選射程內看得到的一個可推動物件，再選射程內看得到的落點格（不能是牆壁或物件原本的格子）；只影響落點。
+    targeting: object_tile
+    min_rarity: rare
+    budget: {base_permille: 1000}
+    params:
+      range: {min: 1, max: 6}

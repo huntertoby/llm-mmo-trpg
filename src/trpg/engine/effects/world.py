@@ -8,7 +8,8 @@ element_touch、explode、ignite_object、change_tile。
 
 from __future__ import annotations
 
-from dataclasses import replace
+from dataclasses import dataclass, replace
+from typing import Literal
 
 from trpg.content.maps import MAX_HEIGHT
 from trpg.engine.context import Ctx
@@ -22,6 +23,7 @@ from trpg.engine.effects.models import (
     EffectBase,
     ElementTouchEffect,
     ExplodeEffect,
+    HurlObjectEffect,
     IgniteObjectEffect,
     LowerTerrainEffect,
     PushEffect,
@@ -42,8 +44,10 @@ from trpg.engine.events import (
     ObjectDestroyCause,
     ObjectDestroyed,
     ObjectExploded,
+    ObjectHurled,
     ObjectIgnited,
     ObjectMoved,
+    ObjectToppled,
     PushResisted,
     SurfaceChanged,
     TerrainChanged,
@@ -57,16 +61,22 @@ from trpg.engine.state import BattleState, ObjectState, UnitState
 from trpg.shared.types import ObjectId, Pos, Surface, Team, UnitId
 
 __all__ = [
+    "ToppleLine",
     "change_height",
     "creation_result",
+    "hurl_landing",
     "object_push_block",
     "push_distance",
     "remove_object",
     "set_surface",
+    "topple_line",
     "unit_push_block",
 ]
 
 STEADFAST = "steadfast"
+TOPPLABLE = "topplable"
+
+type HurlOutcome = Literal["exploded", "shattered", "placed", "lost"]
 
 type XY = tuple[int, int]
 
@@ -393,13 +403,19 @@ def _create_obstacle(ctx: Ctx, effect: EffectBase) -> list[EventBase]:
         return [_fizzle(ctx, effect.kind, xy, "occupied")]
     if not is_standable(state, xy):
         return [_fizzle(ctx, effect.kind, xy, "not_standable")]
-    definition = ctx.rules.object_def(effect.object_kind)
+    return [_new_object(ctx, xy, effect.object_kind)]
+
+
+def _new_object(ctx: Ctx, xy: XY, kind: str) -> EventBase:
+    """在 ``xy`` 放一個新的 ``kind`` 物件（呼叫端已確認放得下），回傳 ``object_created``。"""
+    state = ctx.state
+    definition = ctx.rules.object_def(kind)
     oid = ObjectId(f"obj_{len(state.objects) + 1:04d}")
     state.objects[oid] = ObjectState(
         id=oid, kind=definition.id, pos=_pos(xy), hp=definition.max_hp, max_hp=definition.max_hp
     )
     state.set_tile(*xy, replace(state.tile(*xy), object_id=oid))
-    return [ctx.emit(ObjectCreated, object_id=oid, kind=definition.id, pos=_pos(xy))]
+    return ctx.emit(ObjectCreated, object_id=oid, kind=definition.id, pos=_pos(xy))
 
 
 # ---------------------------------------------------------------------------
@@ -519,7 +535,12 @@ def unit_push_block(state: BattleState, cur: XY, nxt: XY, unit_id: UnitId) -> st
 def _push_object(ctx: Ctx, effect: PushEffect, object_id: ObjectId) -> list[EventBase]:
     state = ctx.state
     obj = _live_object(state, object_id)
-    if obj is None or "pushable" not in ctx.rules.object_def(obj.kind).tags:
+    if obj is None:
+        return []
+    tags = ctx.rules.object_def(obj.kind).tags
+    if TOPPLABLE in tags:  # 推倒（Phase 3C-5a）：不移動，往推的方向倒下
+        return _topple(ctx, obj, effect.direction, effect.source_id)
+    if "pushable" not in tags:
         return []
     events: list[EventBase] = []
     dx, dy = effect.direction
@@ -557,6 +578,186 @@ def object_push_block(state: BattleState, cur: XY, nxt: XY) -> str | None:
     if state.tile(*nxt).height > state.tile(*cur).height:
         return "too_high"
     return None
+
+
+# ---------------------------------------------------------------------------
+# 推倒（Phase 3C-5a）
+# ---------------------------------------------------------------------------
+
+
+@dataclass(frozen=True, slots=True)
+class ToppleLine:
+    """``topplable`` 物件往某方向倒下時壓住的範圍（:func:`topple_line`）。
+
+    - ``tiles``：壓住的格子（依序；地圖外與不可走的地形已跳過，被非破壞物件擋住時只到它之前）。
+    - ``units``／``objects``：壓到的單位與 ``breakable`` 物件（依壓到的順序）。
+    - ``rubble``：產生倒塌物的格子——原格與 ``tiles`` 中最後一個放得下的（沒有單位與其他物件、
+      可站立）；都放不下時為 ``None``。
+    """
+
+    tiles: tuple[XY, ...]
+    units: tuple[UnitId, ...]
+    objects: tuple[ObjectId, ...]
+    rubble: XY | None
+
+
+def topple_line(state: BattleState, obj: ObjectState, direction: XY) -> ToppleLine:
+    """物件 ``obj`` 往 ``direction`` 倒下時壓住的範圍（只讀狀態；預覽與介面也用這個）。
+
+    從物件的下一格起最多 ``topple_length`` 格：地圖外、牆壁等不可走的地形與致命地形跳過；有
+    ``breakable`` 物件的格子照壓（物件受傷）；不阻擋移動的非破壞物件（草叢）不影響；其他物件
+    （阻擋移動又不能破壞，例如倒塌物）擋住倒下，停在它之前。
+    """
+    dx, dy = direction
+    tiles: list[XY] = []
+    units: list[UnitId] = []
+    objects: list[ObjectId] = []
+    for step in range(1, state.ruleset.core.topple_length + 1):
+        xy = (obj.pos.x + dx * step, obj.pos.y + dy * step)
+        if not state.in_bounds(*xy) or is_deadly(state, xy) or not _walkable(state, xy):
+            continue
+        other = state.object_at(*xy)
+        if other is not None:
+            tags = state.object_def(other).tags
+            if "breakable" in tags:
+                objects.append(other.id)
+            elif "blocks_move" in tags:
+                break
+        unit = state.unit_at(*xy)
+        if unit is not None:
+            units.append(unit.id)
+        tiles.append(xy)
+    rubble = next(
+        (xy for xy in reversed([obj.xy, *tiles]) if _rubble_fits(state, xy, obj)),
+        None,
+    )
+    return ToppleLine(tuple(tiles), tuple(units), tuple(objects), rubble)
+
+
+def _walkable(state: BattleState, xy: XY) -> bool:
+    """地形本身可以進入（不看物件與單位）。"""
+    return state.ruleset.terrain_def(state.tile(*xy).terrain).walkable
+
+
+def _rubble_fits(state: BattleState, xy: XY, toppled: ObjectState) -> bool:
+    """倒塌物放得下：沒有單位、沒有其他物件（被推倒的物件自己的格子算空的）、可站立的地形。"""
+    if state.unit_at(*xy) is not None:
+        return False
+    other = state.object_at(*xy)
+    if other is not None and other.id != toppled.id:
+        return False
+    return _walkable(state, xy) and not is_deadly(state, xy)
+
+
+def _topple(ctx: Ctx, obj: ObjectState, direction: XY, source_id: UnitId | None) -> list[EventBase]:
+    """推倒：發出 ``object_toppled``（傷害與倒地由 :mod:`trpg.engine.triggers` 結算）、移除原物件、
+    在 ``rubble`` 產生倒塌物。"""
+    state = ctx.state
+    line = topple_line(state, obj, direction)
+    events: list[EventBase] = [
+        ctx.emit(
+            ObjectToppled,
+            object_id=obj.id,
+            kind=obj.kind,
+            pos=obj.pos,
+            direction=direction,
+            tiles=tuple(_pos(xy) for xy in line.tiles),
+            units=line.units,
+            objects=line.objects,
+            rubble_pos=None if line.rubble is None else _pos(line.rubble),
+            source_id=source_id,
+        )
+    ]
+    events.extend(remove_object(ctx, obj, "toppled", source_id=source_id))
+    if line.rubble is not None:
+        events.append(_new_object(ctx, line.rubble, ctx.core.topple_rubble_object))
+    return events
+
+
+# ---------------------------------------------------------------------------
+# 投擲物件（Phase 3C-5a）
+# ---------------------------------------------------------------------------
+
+
+def hurl_landing(state: BattleState, dest: XY) -> XY | None:
+    """非破壞物件被丟到 ``dest`` 後停下的格子：``dest`` 本身或 ``hurl_scatter_radius`` 內最近的空格
+    （沒有單位與物件、可站立、非致命；同距離依 ``(y, x)``）；``dest`` 是致命地形或附近沒有空格時
+    為 ``None``（物件摧毀）。"""
+    if is_deadly(state, dest):
+        return None
+    radius = state.ruleset.core.hurl_scatter_radius
+    cells = sorted(
+        (abs(x - dest[0]) + abs(y - dest[1]), y, x)
+        for y in range(dest[1] - radius, dest[1] + radius + 1)
+        for x in range(dest[0] - radius, dest[0] + radius + 1)
+        if abs(x - dest[0]) + abs(y - dest[1]) <= radius and state.in_bounds(x, y)
+    )
+    for _, y, x in cells:
+        xy = (x, y)
+        free = state.tile(*xy).object_id is None and state.unit_at(*xy) is None
+        if free and is_standable(state, xy) and not is_deadly(state, xy):
+            return xy
+    return None
+
+
+@register_effect("hurl_object")
+def _hurl_object(ctx: Ctx, effect: EffectBase) -> list[EventBase]:
+    """物件從原格舉起、落在 ``dest``：``explosive`` 在落點爆炸、``breakable`` 碎掉、其他放在落點或
+    附近的空格（:func:`hurl_landing`），沒有空格就摧毀。"""
+    assert isinstance(effect, HurlObjectEffect)
+    state = ctx.state
+    obj = _live_object(state, effect.object_id)
+    if obj is None:
+        return [_fizzle(ctx, effect.kind, effect.dest, "no_object")]
+    definition = ctx.rules.object_def(obj.kind)
+    start, dest = obj.pos, _pos(effect.dest)
+    state.set_tile(*obj.xy, replace(state.tile(*obj.xy), object_id=None))
+    landing = None
+    if definition.explosion is not None and "explosive" in definition.tags:
+        outcome: HurlOutcome = "exploded"
+    elif "breakable" in definition.tags:
+        outcome = "shattered"
+    else:
+        landing = hurl_landing(state, effect.dest)
+        outcome = "lost" if landing is None else "placed"
+    if landing is not None:
+        obj.pos = _pos(landing)
+        state.set_tile(*landing, replace(state.tile(*landing), object_id=obj.id))
+    else:
+        obj.pos, obj.destroyed = dest, True
+    events: list[EventBase] = [
+        ctx.emit(
+            ObjectHurled,
+            object_id=obj.id,
+            kind=obj.kind,
+            from_pos=start,
+            to_pos=dest,
+            source_id=effect.source_id,
+            outcome=outcome,
+            placed_pos=None if landing is None else obj.pos,
+        )
+    ]
+    if outcome == "exploded":
+        assert definition.explosion is not None
+        events.append(
+            ctx.emit(
+                ObjectExploded,
+                object_id=obj.id,
+                pos=dest,
+                radius=definition.explosion.radius,
+                source_id=effect.source_id,
+            )
+        )
+    if landing is None:
+        cause: ObjectDestroyCause = "hurled"
+        if outcome == "exploded":
+            cause = "explosion"
+        elif is_deadly(state, effect.dest):
+            cause = "fell"
+        events.append(
+            ctx.emit(ObjectDestroyed, object_id=obj.id, kind=obj.kind, pos=dest, cause=cause)
+        )
+    return events
 
 
 # ---------------------------------------------------------------------------

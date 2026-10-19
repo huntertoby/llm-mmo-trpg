@@ -6,6 +6,10 @@
 # half_cover（Phase 1C）：遠程攻擊時，目標四方向相鄰、位於攻擊者那一側的 half_cover 物件提供
 #       半掩護（命中 −2，見 rules/core.yaml 的 half_cover_hit_penalty）；物件本身視為 1 層高。
 # 新物件只要組合既有標籤，就自動支援所有互動規則（interactions.yaml），不需要寫新程式。
+# Phase 3C-5a（docs/design/06-技能.md 6.15）：
+#   penetrable：可被穿透（木製物件；3C-5b 的 pierce 使用）。
+#   topplable：可推倒——被推（互動的推、技能的推擊、風）時不移動，往推的方向倒下，壓住
+#       rules/core.yaml 的 topple_length 格；原物件移除，最後一格產生倒塌物（rubble）。
 objects:
   - id: wooden_bridge
     name_zh: 木橋
@@ -33,7 +37,7 @@ objects:
     name_zh: 石柱
     glyph: "|"
     max_hp: 60
-    tags: [blocks_sight, blocks_move, breakable]
+    tags: [blocks_sight, blocks_move, breakable, topplable]
   - id: grass
     name_zh: 草叢
     glyph: ";"
@@ -42,7 +46,7 @@ objects:
     name_zh: 木箱
     glyph: "["
     max_hp: 15
-    tags: [blocks_move, breakable, pushable, half_cover, flammable]
+    tags: [blocks_move, breakable, pushable, half_cover, flammable, penetrable]
   - id: earth_wall
     name_zh: 土牆
     glyph: "^"
@@ -57,4 +61,13 @@ objects:
     name_zh: 倒木
     glyph: "-"
     max_hp: 20
-    tags: [blocks_move, breakable, half_cover, flammable]
+    tags: [blocks_move, breakable, half_cover, flammable, penetrable]
+  - id: dead_tree
+    name_zh: 枯樹
+    glyph: "Y"
+    max_hp: 20
+    tags: [blocks_move, blocks_sight, breakable, flammable, topplable]
+  - id: rubble
+    name_zh: 倒塌物
+    glyph: "m"
+    tags: [blocks_move, half_cover]   # 推倒後產生（Phase 3C-5a）；不可破壞

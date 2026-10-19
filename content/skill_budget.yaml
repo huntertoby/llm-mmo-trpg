@@ -33,6 +33,9 @@ consume_status_discount_permille: 700
 # 技能層級的條件乘在 total，效果層級的條件只乘該效果。
 # 撞擊強化（Phase 3C-3a）：push／pull 填了 collision_dice 時，每顆骰加這麼多點（初值，未經模擬）。
 collision_die_points: 1
+# 投擲物件（Phase 3C-5a）：點數 ＝ 骰子平均 × 這個折扣（需要附近有可投擲的物件）÷ 1000；knock_prone: true 另加
+# knock_prone 原語的 base_points。形狀倍率照一般效果（object_then_tile 為 1.0）。初值，未經模擬。
+hurl_object_discount_permille: 800
 
 condition_permille: {none: 1000, common: 850, harsh: 600}
 all_target_permille: 800    # affects: all（敵我不分）的對象係數

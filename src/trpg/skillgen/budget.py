@@ -175,6 +175,8 @@ def _base_points(  # noqa: PLR0911
         return _consume_stack_points(skill, effect, library)
     if basis == "consume_status":
         return _consume_status_points(skill, effect, library)
+    if basis == "hurl_object":
+        return _hurl_object_points(effect, library)
     if basis == "dice_average" or (basis == "damage" and skill.category == "spell"):
         if effect.dice is None:
             raise BudgetError(f"效果 {primitive.id} 缺少 dice，無法計算點數")
@@ -186,6 +188,21 @@ def _base_points(  # noqa: PLR0911
     if basis == "status":
         return _status_points(effect, rules.statuses.by_id())
     return _surface_points(effect, library)
+
+
+def _hurl_object_points(effect: EffectSpec, library: ContentLibrary) -> tuple[Fraction, str]:
+    """``hurl_object`` 的點數（3C-5a）：骰子平均 × 「需要附近有物件」折扣；``knock_prone`` 另加
+    擊倒原語的點數。"""
+    if effect.dice is None:
+        raise BudgetError("hurl_object 缺少 dice，無法計算點數")
+    discount = library.budget.hurl_object_discount_permille
+    points = _dice_average(effect.dice) * Fraction(discount, _PERMILLE)
+    note = f"{effect.dice} 平均 × 需有物件 {discount}‰"
+    if effect.knock_prone:
+        prone = library.ruleset.primitives.by_id()["knock_prone"].base_points or 0
+        points += prone
+        note += f" ＋ 擊倒 {prone}"
+    return points, note
 
 
 def _consume_stack_points(

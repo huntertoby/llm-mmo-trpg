@@ -218,6 +218,7 @@ def test_new_object_tags() -> None:
         "blocks_move",
         "half_cover",
         "flammable",
+        "penetrable",  # 3C-5a
     }
     assert {"breakable", "flammable", "explosive", "pushable", "half_cover"} <= set(
         rs.object_def("oil_barrel").tags

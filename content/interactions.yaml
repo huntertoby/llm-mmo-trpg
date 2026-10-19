@@ -117,6 +117,13 @@ rules:
     target: object
     object_tag: pushable
     then: [{op: push}]
+  - id: wind_topples_object
+    description_zh: 風推倒可推倒的物件（石柱、枯樹；往風的方向倒下，Phase 3C-5a）
+    trigger: element
+    element: wind
+    target: object
+    object_tag: topplable
+    then: [{op: push}]
   - id: wind_pushes_unit
     description_zh: 風推動單位（距離由效果決定；steadfast 減半）
     trigger: element

@@ -40,6 +40,9 @@ objects:
   - {at: [3, 6], kind: crate}
   - {at: [1, 1], kind: fallen_log}
   - {at: [6, 6], kind: oil_barrel}
+  # Phase 3C-5a：缺口前的兩根石柱（topplable）——推倒時壓住缺口內側
+  - {at: [4, 2], kind: stone_pillar}
+  - {at: [4, 7], kind: stone_pillar}
 start_zones:
   ally: [[0, 4], [0, 5], [1, 3], [1, 6]]
   enemy: [[8, 2], [6, 4], [7, 5], [8, 7]]

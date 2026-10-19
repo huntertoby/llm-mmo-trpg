@@ -168,7 +168,7 @@ def test_interact_pushes_barrel_into_chasm() -> None:
 def test_interact_rejections() -> None:
     m = make_map(
         "0000\n0000",
-        objects=[(1, 0, "stone_pillar"), (3, 0, "crate")],
+        objects=[(1, 0, "low_wall"), (3, 0, "crate")],  # 3C-5a：石柱可以推倒，改用矮牆
         enemy=[(3, 1)],
     )
     state = give_turn(

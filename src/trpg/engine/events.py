@@ -51,8 +51,10 @@ __all__ = [
     "ObjectDestroyCause",
     "ObjectDestroyed",
     "ObjectExploded",
+    "ObjectHurled",
     "ObjectIgnited",
     "ObjectMoved",
+    "ObjectToppled",
     "PushResisted",
     "ReactionDeclined",
     "ReactionModeSet",
@@ -104,10 +106,15 @@ type DamageCause = Literal[
     "conduct",
     "surface",
     "collision",
+    "topple",
 ]
 """``attack``：普攻與反應攻擊；``explosion``：爆炸；``conduct``：雷電沿水擴散；
-``surface``：站在表面上（毒、聖光）；``collision``：撞擊（Phase 3C-3a）。"""
-type ObjectDestroyCause = Literal["damage", "burned", "explosion", "filled", "fell", "effect"]
+``surface``：站在表面上（毒、聖光）；``collision``：撞擊（Phase 3C-3a）；``topple``：被推倒的物件
+壓到（Phase 3C-5a）。"""
+type ObjectDestroyCause = Literal[
+    "damage", "burned", "explosion", "filled", "fell", "effect", "hurled", "toppled"
+]
+"""``hurled``：被投擲後落地碎掉；``toppled``：被推倒（原物件移除，改由倒塌物取代；Phase 3C-5a）。"""
 type MoveMode = Literal["walk", "forced", "teleport"]
 """``walk``：主動移動的一步；``forced``：強制位移（推擊等）；``teleport``：傳送（不墜落）。"""
 
@@ -521,6 +528,47 @@ class ObjectMoved(EventBase):
     to_pos: Pos
     how: Literal["push", "shove_aside"] = "push"
     """推動的方式（``shove_aside`` 為互動的「撥開」；風、技能的推擊都是 ``push``）。"""
+
+
+class ObjectHurled(EventBase):
+    """物件被投擲（Phase 3C-5a ``hurl_object``）：從 ``from_pos`` 舉起、丟向 ``to_pos``（落點）。
+
+    之後依標籤結算：爆炸（``object_exploded``，在落點）、碎掉（``object_destroyed``，原因
+    ``hurled``）、放在 ``placed_pos``（落點或附近的空格，``object_moved`` 不另外發出），或沒有
+    空格而摧毀（``object_destroyed``，原因 ``hurled``）。``outcome`` 記錄是哪一種。
+    """
+
+    type: Literal["object_hurled"] = "object_hurled"
+    object_id: ObjectId
+    kind: str
+    from_pos: Pos
+    to_pos: Pos
+    source_id: UnitId | None
+    outcome: Literal["exploded", "shattered", "placed", "lost"]
+    placed_pos: Pos | None = None
+
+
+class ObjectToppled(EventBase):
+    """``topplable`` 物件被推倒（Phase 3C-5a）：往 ``direction`` 倒下，壓住 ``tiles``。
+
+    ``tiles`` 依序、已排除地圖外與不可走的格子，被非破壞物件擋住時只到擋住之前。原物件隨後移除
+    （``object_destroyed``，原因 ``toppled``），``rubble_pos`` 產生倒塌物（``object_created``）。
+    格上的單位受推倒傷害並倒地、``breakable`` 物件受同樣傷害（由觸發表結算，歸給
+    ``source_id``）。
+    """
+
+    type: Literal["object_toppled"] = "object_toppled"
+    object_id: ObjectId
+    kind: str
+    pos: Pos
+    direction: tuple[int, int]
+    tiles: tuple[Pos, ...]
+    units: tuple[UnitId, ...]
+    """壓到的單位（依壓到的順序）。"""
+    objects: tuple[ObjectId, ...]
+    """壓到的 ``breakable`` 物件（依壓到的順序）。"""
+    rubble_pos: Pos | None
+    source_id: UnitId | None
 
 
 class ObjectCreated(EventBase):
@@ -947,6 +995,8 @@ type Event = Annotated[
     | ObjectIgnited
     | ObjectExploded
     | ObjectMoved
+    | ObjectHurled
+    | ObjectToppled
     | ObjectCreated
     | SurfaceChanged
     | TerrainChanged

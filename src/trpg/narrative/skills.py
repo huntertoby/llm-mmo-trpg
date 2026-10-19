@@ -239,6 +239,22 @@ def _extra_reaction(_lib: ContentLibrary, _skill: SkillDef, spec: EffectSpec) ->
     return f"本輪反應次數 +{spec.amount or 1}（到下一輪開始）"
 
 
+def _hurl_object(_lib: ContentLibrary, skill: SkillDef, spec: EffectSpec) -> str:
+    assert spec.dice is not None
+    text = f"把 {spec.range} 格內的可推動物件丟到落點，落點單位受 {_dice(spec.dice)} 物理傷害"
+    if spec.knock_prone:
+        text += f"並擊倒（{scaling_label(skill)}對抗）"
+    return text + "；油桶落地爆炸、可破壞的物件碎掉"
+
+
+def _topple(lib: ContentLibrary, _skill: SkillDef, _spec: EffectSpec) -> str:
+    core = lib.ruleset.core
+    return (
+        f"推倒石柱或枯樹，往遠離自己的方向壓住 {core.topple_length} 格"
+        f"（{_dice(core.topple_damage_dice)} 物理傷害並倒地）"
+    )
+
+
 def _terrain(_lib: ContentLibrary, _skill: SkillDef, spec: EffectSpec) -> str:
     verb = "抬高" if spec.type == "raise_terrain" else "降低"
     return f"{verb}地形 {spec.amount or 1} 層"
@@ -267,6 +283,8 @@ _EFFECT_TEXT: dict[str, _EffectText] = {
     "redirect_damage": _redirect_damage,
     "copy_skill": _copy_skill,
     "extra_reaction": _extra_reaction,
+    "hurl_object": _hurl_object,
+    "topple": _topple,
 }
 
 

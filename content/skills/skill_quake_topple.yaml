@@ -1,0 +1,24 @@
+# 主動（Phase 3C-5a 示範，數值為初值，未經模擬）：一掌震倒石柱或枯樹，壓向後方的敵人。
+# 推倒也是通用規則：互動的推、技能的推擊（颶風踢、破城衝撞）與風碰到可推倒的物件一樣會推倒它。
+id: skill_quake_topple
+schema_version: 1
+name_zh: 震地推倒
+tier: 1
+rank: 1
+rarity: rare
+kind: active
+skeleton: displace
+category: weapon
+weapon_req: melee
+ap_cost: 1
+scaling_attr: str
+shape: {type: single, range: 2}
+effects:
+  - {type: topple}
+condition: null
+cost: {mana: 3, cooldown: 2}
+tags: [physical, melee, push]
+narrative:
+  concept: 對著石柱或枯樹的根部一記重擊，讓它朝敵人倒下
+  cast_flavor: 你一肩撞上石柱，裂縫從底部一路竄上，整根柱子轟然倒向對面
+provenance: {origin: builtin, owner_id: null, created_by: null, parents: [], bound: true, tradeable: false}

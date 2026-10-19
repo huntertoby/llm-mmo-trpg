@@ -179,6 +179,8 @@ class BudgetRules(ContentModel):
     """「需要先有狀態」的條件折扣（‰；沿用條件折扣的做法；初值）。"""
     collision_die_points: int = Field(default=1, ge=0)
     """``push``／``pull`` 填了 ``collision_dice`` 時，每顆骰加的預算點數（Phase 3C-3a；初值）。"""
+    hurl_object_discount_permille: int = Field(default=800, ge=1, le=1000)
+    """``hurl_object`` 的「需要附近有可投擲的物件」折扣（Phase 3C-5a；初值，未經模擬）。"""
     condition_permille: dict[Literal["none", "common", "harsh"], int]
     all_target_permille: int = Field(ge=1, le=1000)
     """``affects: all``（敵我不分）的對象係數。"""

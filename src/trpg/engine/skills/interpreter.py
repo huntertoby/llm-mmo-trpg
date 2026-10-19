@@ -17,6 +17,7 @@
 from __future__ import annotations
 
 from collections.abc import Callable
+from typing import ClassVar
 
 from trpg.content.battle import Dice
 from trpg.content.skills import (
@@ -28,11 +29,13 @@ from trpg.content.skills import (
     COPY_SKILL,
     EXTRA_REACTION,
     GRANT_AP,
+    HURL_OBJECT,
     INTERCEPT,
     PLACE_TRAP,
     REDIRECT_DAMAGE,
     REDIRECT_STATUS,
     RESET_COOLDOWN,
+    TOPPLE,
     ConditionSpec,
     EffectSpec,
     SkillDef,
@@ -55,6 +58,7 @@ from trpg.engine.effects.models import (
     EffectBase,
     ElementTouchEffect,
     HealEffect,
+    HurlObjectEffect,
     LowerTerrainEffect,
     MoveUnitEffect,
     PushEffect,
@@ -114,6 +118,7 @@ __all__ = [
 ]
 
 PRONE = "prone"
+TOPPLABLE = "topplable"
 REWRITE_PRIMITIVES = (
     GRANT_AP,
     RESET_COOLDOWN,
@@ -338,6 +343,7 @@ class _Cast:
     """
 
     modified = True
+    _SIMPLE: ClassVar[dict[str, _Builder]]
 
     def __init__(
         self,
@@ -580,21 +586,11 @@ class _Cast:
 
     def build(self, effect: ResolvedEffect, spec: EffectSpec) -> list[EffectBase]:  # noqa: PLR0911
         kind = effect.type
-        if kind == "damage":
-            return self.damage(effect, spec)
-        if kind == "heal":
-            return self.heal(effect, spec)
-        if kind == "shield":
-            return self.shield(effect, spec)
-        if kind == "cleanse":
-            return [
-                CleanseEffect(target_id=unit.id, source_id=self.caster.id)
-                for unit in self.targets(effect.affects, spec.condition)
-            ]
+        simple = self._SIMPLE.get(kind)
+        if simple is not None:
+            return simple(self, effect, spec)
         if kind in ("push", "pull"):
             return self.displace(effect, spec, pull=kind == "pull")
-        if kind == "knock_prone":
-            return self.knock_prone(effect, spec)
         if kind == "teleport":
             return self.teleport(spec)
         if kind in (INTERCEPT, PLACE_TRAP, CONSUME_STACK):
@@ -602,13 +598,17 @@ class _Cast:
         if kind == ADD_STACK:
             self.add_stack(effect, spec)
             return []
-        if kind == "apply_status":
-            return self.apply_status(effect, spec)
-        if kind == CONSUME_STATUS:
-            return self.consume_status(effect, spec)
+        if kind == TOPPLE:
+            return self.topple(spec)
         if kind in REWRITE_PRIMITIVES:
             return self.rewrite(effect, spec)
         return self.tile_effect(effect, spec)
+
+    def cleanse(self, effect: ResolvedEffect, spec: EffectSpec) -> list[EffectBase]:
+        return [
+            CleanseEffect(target_id=unit.id, source_id=self.caster.id)
+            for unit in self.targets(effect.affects, spec.condition)
+        ]
 
     # -- 改寫規則型（Phase 3C-4a）------------------------------------------
 
@@ -914,7 +914,7 @@ class _Cast:
 
     def displace(self, effect: ResolvedEffect, spec: EffectSpec, *, pull: bool) -> list[EffectBase]:
         assert spec.distance is not None
-        batch: list[EffectBase] = []
+        batch: list[EffectBase] = [] if pull else self.topple_in_area(spec)
         for unit in self.targets(effect.affects, spec.condition):
             direction = self._displace_direction(unit, pull=pull)
             if direction is None:
@@ -936,6 +936,72 @@ class _Cast:
                 )
             )
         return batch
+
+    # -- 場景物件（Phase 3C-5a）--------------------------------------------
+
+    def _away_from_caster(self, xy: XY) -> XY | None:
+        """``xy`` 遠離施放者的方向：方向型形狀為形狀的方向，其他為「施放者 → 該格」的主要軸向。"""
+        if self.area.direction is not None:
+            return self.area.direction
+        return _axis_direction(xy[0] - self.caster.pos.x, xy[1] - self.caster.pos.y)
+
+    def _topple_effects(self, xy: XY, condition: ConditionSpec | None) -> list[EffectBase]:
+        """``xy`` 上的 ``topplable`` 物件往遠離施放者的方向推倒（以一格推擊結算，見
+        :mod:`trpg.engine.effects.world`）。"""
+        obj = self.ctx.state.object_at(*xy)
+        if obj is None or TOPPLABLE not in self.ctx.rules.object_def(obj.kind).tags:
+            return []
+        direction = self._away_from_caster(xy)
+        if direction is None or not self.tile_holds(condition, xy):
+            return []
+        return [
+            PushEffect(source_id=self.caster.id, object_id=obj.id, direction=direction, distance=1)
+        ]
+
+    def topple_in_area(self, spec: EffectSpec) -> list[EffectBase]:
+        """技能的推擊（不含拉扯）也會推倒影響範圍內的 ``topplable`` 物件（通用規則）。"""
+        batch: list[EffectBase] = []
+        for xy in self.area.tiles:
+            batch += self._topple_effects(xy, spec.condition)
+        return batch
+
+    def topple(self, spec: EffectSpec) -> list[EffectBase]:
+        """``topple``：推倒目標物件（形狀 ``single``，選取時已確認是 ``topplable``）。"""
+        return self.topple_in_area(spec)
+
+    def hurl_object(self, effect: ResolvedEffect, spec: EffectSpec) -> list[EffectBase]:
+        """``hurl_object``：落點被命中的單位先受 ``dice`` 物理傷害（暴擊、格擋與修正規則照常；
+        ``knock_prone`` 時再以對抗判定擊倒），然後物件落地（:class:`HurlObjectEffect`）。"""
+        action = self.action
+        assert action is not None and action.target_object_id is not None
+        assert action.target_pos is not None and spec.dice is not None
+        batch: list[EffectBase] = []
+        for unit in self.targets(effect.affects, spec.condition):
+            roll = self.hits.get(unit.id)
+            block = self.blocks.get(unit.id, PERMILLE)
+            bonus = self._modifier(modifiers.damage_permille, unit)
+            batch.append(
+                DamageEffect(
+                    target_id=unit.id,
+                    source_id=self.caster.id,
+                    cause="attack",
+                    element=Element.PHYSICAL,
+                    dice=spec.dice,
+                    crit=roll is not None and roll.crit,
+                    min_damage=self.ctx.core.min_damage_on_hit,
+                    multiplier_permille=block * bonus // PERMILLE,
+                )
+            )
+        if batch:
+            execute(self.ctx, batch)
+        if spec.knock_prone:
+            prone = self.knock_prone(effect, spec)
+            if prone:
+                execute(self.ctx, prone)
+        dest = (action.target_pos.x, action.target_pos.y)
+        return [
+            HurlObjectEffect(source_id=self.caster.id, object_id=action.target_object_id, dest=dest)
+        ]
 
     def knock_prone(self, effect: ResolvedEffect, spec: EffectSpec) -> list[EffectBase]:
         batch: list[EffectBase] = []
@@ -1038,6 +1104,20 @@ class _Cast:
             elif effect.type == "lower_terrain":
                 batch.append(LowerTerrainEffect(source_id=source, pos=xy, amount=spec.amount or 1))
         return batch
+
+
+_Builder = Callable[[_Cast, ResolvedEffect, EffectSpec], list[EffectBase]]
+_Cast._SIMPLE = {
+    "damage": _Cast.damage,
+    "heal": _Cast.heal,
+    "shield": _Cast.shield,
+    "cleanse": _Cast.cleanse,
+    "knock_prone": _Cast.knock_prone,
+    "apply_status": _Cast.apply_status,
+    CONSUME_STATUS: _Cast.consume_status,
+    HURL_OBJECT: _Cast.hurl_object,
+}
+"""只需要 ``(effect, spec)`` 的原語 → 展開方法。"""
 
 
 class _TriggeredCast(_Cast):
