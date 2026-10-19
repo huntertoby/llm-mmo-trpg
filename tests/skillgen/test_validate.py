@@ -133,11 +133,11 @@ def test_at_most_one_rule_rewrite_primitive() -> None:
     fake = lib_with_rewrite_primitive()
     two = skill_raw(
         rarity="legendary",
-        effects=(EffectSpec(type="grant_ap"), EffectSpec(type="grant_ap")),
+        effects=(EffectSpec(type="fake_rewrite"), EffectSpec(type="fake_rewrite")),
         cost=skill().cost.model_copy(update={"uses_per_battle": 1}),
     )
     assert "cap.rule_rewrite" in rules_of(two, fake)
-    one = two.model_copy(update={"effects": (EffectSpec(type="grant_ap"),)})
+    one = two.model_copy(update={"effects": (EffectSpec(type="fake_rewrite"),)})
     assert "cap.rule_rewrite" not in rules_of(one, fake)
 
 
@@ -158,7 +158,7 @@ def test_rule_rewrite_needs_once_per_battle_or_a_long_cooldown(
     fake = lib_with_rewrite_primitive()
     s = skill_raw(
         rarity="legendary",
-        effects=(EffectSpec(type="grant_ap"),),
+        effects=(EffectSpec(type="fake_rewrite"),),
         cost=skill().cost.model_copy(update=cost),
     )
     assert ("cap.rule_rewrite_cost" in rules_of(s, fake)) is rejected
@@ -168,7 +168,7 @@ def test_a_fake_rule_rewrite_primitive_needs_legendary() -> None:
     fake = lib_with_rewrite_primitive()
     s = skill_raw(
         rarity="rare",
-        effects=(EffectSpec(type="grant_ap"),),
+        effects=(EffectSpec(type="fake_rewrite"),),
         cost=skill().cost.model_copy(update={"uses_per_battle": 1}),
     )
     assert "rarity.primitive" in rules_of(s, fake)
@@ -425,6 +425,8 @@ def test_beneficial_flags_in_content() -> None:
         # 2E-2
         "stance_fury",
         "stance_bulwark",
+        # 3C-4a
+        "undying",
     }
     assert surfaces == {"holy"}
 
@@ -539,6 +541,9 @@ def test_common_skills_can_use_numeric_primitives_and_simple_shapes() -> None:
 def test_epic_and_legendary_are_at_least_as_permissive_as_rare() -> None:
     root = [{"type": "damage", "multiplier_permille": 2000}, _root()]
     for rarity in ("rare", "epic", "legendary"):
-        assert only(skill(rarity=rarity, effects=root), "rarity") == []
+        # 傳說必須花源力（Phase 3C-4a）；這裡只看稀有度規則
+        cost = {"mana": 4, "cooldown": 2, "source": 1} if rarity == "legendary" else None
+        extra = {"cost": cost} if cost is not None else {}
+        assert only(skill(rarity=rarity, effects=root, **extra), "rarity") == []
     assert lib().budget.rarity["common"].max_effects == 2
     assert lib().budget.rarity["legendary"].max_effects == 4

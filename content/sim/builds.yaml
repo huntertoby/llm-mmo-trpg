@@ -93,7 +93,7 @@ builds:
       weapon: bow
       tags: [hero, sim]
       max_mana: 24
-      skills: [skill_piercing_shot, skill_high_ground_shot, skill_smoke_arrow, skill_raise_perch, skill_lucky_break]
+      skills: [skill_piercing_shot, skill_high_ground_shot, skill_smoke_arrow, skill_raise_perch, skill_lucky_break, skill_time_surge]
 
   - id: build_assassin
     name_zh: 刺殺
@@ -125,7 +125,7 @@ builds:
       resist: {elemental: 150}
       tags: [hero, sim]
       max_mana: 40
-      skills: [skill_war_hymn, skill_tailwind, skill_frost_shackle, skill_reflex_ward, skill_steady_breath]
+      skills: [skill_war_hymn, skill_tailwind, skill_frost_shackle, skill_reflex_ward, skill_steady_breath, skill_rallying_cry]
 
   - id: build_healer
     name_zh: 治療
@@ -142,7 +142,7 @@ builds:
       resist: {elemental: 150}
       tags: [hero, sim]
       max_mana: 40
-      skills: [skill_sanctuary, skill_renewal, skill_purify, skill_guardian_aegis, skill_second_wind]
+      skills: [skill_sanctuary, skill_renewal, skill_purify, skill_guardian_aegis, skill_second_wind, skill_undying_oath]
 
   - id: build_warlock
     name_zh: 術士

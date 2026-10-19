@@ -21,10 +21,14 @@ from collections.abc import Callable
 from trpg.content.battle import Dice
 from trpg.content.skills import (
     ADD_STACK,
+    CHEAT_DEATH,
+    CHEAT_DEATH_STATUS,
     CONSUME_STACK,
     CONSUME_STATUS,
+    GRANT_AP,
     INTERCEPT,
     PLACE_TRAP,
+    RESET_COOLDOWN,
     ConditionSpec,
     EffectSpec,
     SkillDef,
@@ -63,6 +67,7 @@ from trpg.engine.events import (
 )
 from trpg.engine.maneuvers import contest
 from trpg.engine.reactions import block_multiplier, hit_reactions, try_intercept
+from trpg.engine.rewrites import grant_ap, reset_cooldowns
 from trpg.engine.rules.combat import PERMILLE, AttackProfile, AttackRoll, ForcedOutcome, roll_attack
 from trpg.engine.rules.geometry import XY, manhattan
 from trpg.engine.skill_triggers import collect_cast, holding
@@ -81,6 +86,7 @@ from trpg.engine.skills.targeting import (
     skill_problem,
     skill_profile,
 )
+from trpg.engine.source import spend_source
 from trpg.engine.stacks import add_stacks, consume_stacks
 from trpg.engine.state import BattleState, TrapState, UnitState
 from trpg.engine.traps import place_trap
@@ -223,11 +229,13 @@ def _pay_costs(ctx: Ctx, caster: UnitState, skill: SkillDef, area: SkillArea) ->
         hp_spent=paid.hp,
         cooldown=paid.cooldown,
         tiles=tuple(Pos(x=x, y=y) for x, y in area.tiles),
+        source=skill.cost.source or 0,
     )
     if paid.cooldown is not None:
         ctx.emit(
             SkillCooldownChanged, unit_id=caster.id, skill_id=skill.id, remaining=paid.cooldown
         )
+    spend_source(ctx, caster, skill.cost.source or 0, skill.id)  # 傳說技能（Phase 3C-4a）
 
 
 def _apply_self_status(ctx: Ctx, caster: UnitState, skill: SkillDef) -> None:
@@ -537,7 +545,34 @@ class _Cast:
             return self.apply_status(effect, spec)
         if kind == CONSUME_STATUS:
             return self.consume_status(effect, spec)
+        if kind in (GRANT_AP, RESET_COOLDOWN, CHEAT_DEATH):
+            return self.rewrite(effect, spec)
         return self.tile_effect(effect, spec)
+
+    # -- 改寫規則型（Phase 3C-4a）------------------------------------------
+
+    def rewrite(self, effect: ResolvedEffect, spec: EffectSpec) -> list[EffectBase]:
+        """``grant_ap``、``reset_cooldown`` 直接結算（:mod:`trpg.engine.rewrites`）；``cheat_death``
+        對每個對象施加不死狀態（不擲抵抗）。"""
+        targets = self.targets(effect.affects, spec.condition)
+        if effect.type == GRANT_AP:
+            for unit in targets:
+                grant_ap(self.ctx, self.caster, unit, spec.amount or 1)
+            return []
+        if effect.type == RESET_COOLDOWN:
+            done = [reset_cooldowns(self.ctx, self.caster, u, self.skill, spec) for u in targets]
+            if not any(done):
+                self.ctx.emit(EffectFizzled, effect_kind=spec.type, pos=None, reason="no_cooldown")
+            return []
+        return [
+            ApplyStatusEffect(
+                source_id=self.caster.id,
+                target_id=unit.id,
+                status_id=CHEAT_DEATH_STATUS,
+                duration=spec.duration,
+            )
+            for unit in targets
+        ]
 
     # -- 消耗狀態（Phase 3C-3b）------------------------------------------
 

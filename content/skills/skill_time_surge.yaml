@@ -1,0 +1,22 @@
+id: skill_time_surge
+schema_version: 1
+name_zh: 時隙湧流
+tier: 1
+rank: 1
+rarity: legendary
+kind: active
+skeleton: aura
+category: spell
+weapon_req: any
+ap_cost: 1
+scaling_attr: wis
+shape: {type: self}
+effects:
+  - {type: grant_ap, amount: 2, affects: self}
+condition: null
+cost: {mana: 0, cooldown: 2, source: 1}
+tags: [arcane, spell, support, legendary]
+narrative:
+  concept: 燃燒一點源力，從時間的縫隙裡多偷出一口氣
+  cast_flavor: 周遭的聲音忽然變慢，只有你的心跳還照著原本的節奏
+provenance: {origin: builtin, owner_id: null, created_by: null, parents: [], bound: true, tradeable: false}

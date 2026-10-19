@@ -71,6 +71,18 @@ trap:
   near: 3
   shape_factor_permille: {single: 1000, cross: 1500, square3: 2000}
   default_factor_permille: 1000
+# rewrite（Phase 3C-4a）：改寫規則型原語（grant_ap、reset_cooldown、cheat_death）與源力的評分，單位為等值傷害點數
+# （× 行為模式的 damage 權重）。最簡單的近似，初值未經模擬：
+#   ap_points         自己淨多出的每點 AP（獲得 − 這次動作花的 AP）；給友方的 AP × ally_ap_permille
+#   cooldown_points   被重置的每一回合冷卻
+#   undying_points    不死 × 目標已損失 HP 的比例（滿血為 0，所以只在 HP 低時才值得）
+#   source_points     每花一點源力的扣分
+rewrite:
+  ap_points: 4
+  ally_ap_permille: 600
+  cooldown_points: 2
+  undying_points: 20
+  source_points: 3
 # orders（Phase 2C-2）：戰術指令的評分加成，初值未經模擬（2C-4 調整）。指令只改評分，不改合法動作。
 #   focus_permille        集火：對目標的預覽收益（傷害、擊倒、狀態、推擊、表面、離開掩護）×1.5；
 #                         位置價值的 approach 改以「與目標的距離」計算

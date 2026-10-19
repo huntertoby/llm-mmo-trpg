@@ -45,6 +45,9 @@
 # 2H-1（冰凍；數值全是初值，未經模擬，平衡階段再調）：
 #   removed_by_element  元素清單：帶有者受到這些元素的傷害（數值 > 0）時立即移除此狀態
 #                       （StatusRemoved 原因 thawed）。冰凍用 [fire]。引擎不寫死狀態 ID，全由此欄位驅動
+# 3C-4a（改寫規則型原語；初值，未經模擬）：
+#   prevents_death  不死：帶有者受到傷害、HP 會降到 0 時改為 1，並移除此狀態（StatusRemoved 原因 spent，
+#                   事件 death_cheated）。墜落與致命地形照樣生效。只能由 cheat_death 原語施加（無 budget_points）
 # control_group 新增 mental（心智：恐懼、沉默）：適用控制遞減，不是 hard，對 Boss 不轉換。
 statuses:
   - id: defending
@@ -208,6 +211,14 @@ statuses:
     stacking: refresh
     beneficial: true
     absorbs_damage: true
+  - id: undying
+    name_zh: 不死
+    description_zh: 受到致命傷害時 HP 留在 1，然後此狀態消失（墜落與致命地形除外）。
+    duration: 2
+    expires: turn_end
+    stacking: refresh
+    beneficial: true
+    prevents_death: true
   - id: taunted
     name_zh: 嘲諷
     description_zh: 對嘲諷者以外的目標發動攻擊時有劣勢；嘲諷者倒下時消失。

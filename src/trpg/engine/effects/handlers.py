@@ -18,6 +18,7 @@ from trpg.engine.effects.queue import register_effect
 from trpg.engine.events import (
     CheckRolled,
     DamageDealt,
+    DeathCheated,
     EnteredDeadlyTerrain,
     EventBase,
     Healed,
@@ -43,6 +44,7 @@ from trpg.engine.rules.statuses import (
     healing_received_permille,
     stance_status_ids,
 )
+from trpg.engine.source import credit_elite_kill, take_source_well
 from trpg.engine.state import BattleState, StatusInstance, UnitState
 from trpg.engine.traps import queue_trap_entry
 from trpg.shared.types import Element, Pos, Surface, Team, UnitId
@@ -112,6 +114,9 @@ def _damage(ctx: Ctx, effect: EffectBase) -> list[EventBase]:
         absorbed = _absorb(ctx, unit, amount, events)  # 護盾：所有倍率之後、扣 HP 之前
     hp_before = unit.hp
     unit.hp = max(0, unit.hp - (amount - absorbed))
+    cheated = _undying_status(ctx, unit, effect)
+    if cheated is not None:
+        unit.hp = 1
     events += [
         ctx.emit(
             DamageDealt,
@@ -133,11 +138,37 @@ def _damage(ctx: Ctx, effect: EffectBase) -> list[EventBase]:
             absorbed=absorbed,
         )
     ]
+    if cheated is not None:
+        events += _cheat_death(ctx, unit, cheated, amount - absorbed - (hp_before - 1))
     if amount > 0:
         events.extend(_thaw(ctx, unit, effect.element))
     if unit.hp <= 0:
         events.extend(down_unit(ctx, unit))
+        events.extend(credit_elite_kill(ctx, unit, effect.source_id))
     return events
+
+
+_UNPREVENTABLE_CAUSES = ("fall", "deadly_terrain")
+"""不死（``prevents_death``）擋不下的傷害：墜落與致命地形（Phase 3C-4a，保守）。"""
+
+
+def _undying_status(ctx: Ctx, unit: UnitState, effect: DamageEffect) -> str | None:
+    """這次傷害讓 HP 降到 0、且身上有擋得下它的不死狀態時，回傳該狀態 ID（依狀態順序取第一個）。"""
+    if unit.hp > 0 or effect.mode == "lethal" or effect.cause in _UNPREVENTABLE_CAUSES:
+        return None
+    for status in unit.statuses:
+        if ctx.rules.status_def(status.status_id).prevents_death:
+            return status.status_id
+    return None
+
+
+def _cheat_death(ctx: Ctx, unit: UnitState, status_id: str, prevented: int) -> list[EventBase]:
+    """不死擋下致命傷害：發出 ``death_cheated``，移除該狀態（原因 ``spent``）。"""
+    unit.statuses = [s for s in unit.statuses if s.status_id != status_id]
+    return [
+        ctx.emit(DeathCheated, unit_id=unit.id, status_id=status_id, prevented=max(prevented, 0)),
+        ctx.emit(StatusRemoved, target_id=unit.id, status_id=status_id, reason="spent"),
+    ]
 
 
 def _thaw(ctx: Ctx, unit: UnitState, element: Element) -> list[EventBase]:
@@ -287,6 +318,7 @@ def arrive(
     - 落入致命地形：``entered_deadly_terrain``（之後由觸發表處理死亡或精英傳送）。
     - 進入有 ``on_enter`` 的表面：``surface_entered``（套用狀態）；有檢定時擲骰
       （``check_rolled``，失敗的狀態由觸發表套用）。
+    - 我方單位抵達源泉格：+1 源力，源泉消失（``source_changed``，Phase 3C-4a）。
     - 撤離勝利條件下，我方單位抵達出口格即離開戰場（``unit_escaped``）。
     """
     state = ctx.state
@@ -318,6 +350,7 @@ def arrive(
             )
         )
         return events
+    events.extend(take_source_well(ctx, unit))  # 我方進入源泉格（Phase 3C-4a；傳送也算）
     objective = state.objective
     if objective.kind == "escape" and unit.team is Team.ALLY and dest in objective.tiles:
         events.extend(escape_unit(ctx, unit))

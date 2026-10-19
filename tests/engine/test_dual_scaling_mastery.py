@@ -147,8 +147,17 @@ def test_dual_scaling_needs_epic_or_better() -> None:
     rules = lib().ruleset
     assert rules.core.dual_scaling_min_rarity == "epic"
     for rarity, ok in (("common", False), ("rare", False), ("epic", True), ("legendary", True)):
+        # 傳說必須花源力並含改寫規則型原語（Phase 3C-4a），這裡補上讓它只差雙屬性這一項
+        legendary: dict[str, Any] = (
+            {
+                "cost": {"source": 1, "cooldown": 2},
+                "effects": [SPELL, {"type": "grant_ap", "amount": 1, "affects": "self"}],
+            }
+            if rarity == "legendary"
+            else {}
+        )
         problems = skill_problems(
-            _skill(rarity=rarity, **DUAL),
+            _skill(rarity=rarity, **DUAL, **legendary),
             rules.shapes.by_id(),
             rules.primitives.by_id(),
             status_ids={s.id for s in rules.statuses.statuses},

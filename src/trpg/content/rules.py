@@ -147,6 +147,18 @@ class CoreRules(ContentModel):
     stance_ap_cost: int = Field(default=1, ge=0)
     """進入姿態（``kind: stance``）花的 AP；取消姿態（``EndStance``）免費。"""
 
+    # 源力（3C-4a）
+    source_max: int = Field(default=3, ge=0)
+    """單位持有源力的上限（Phase 3C-4a；舊紀錄沒有此欄位）。"""
+    source_min_at_start: int = Field(default=1, ge=0)
+    """我方單位每場戰鬥開場至少有這麼多源力（敵人一律 0）。"""
+
+    @model_validator(mode="after")
+    def _check_source(self) -> CoreRules:
+        if self.source_min_at_start > self.source_max:
+            raise ValueError("source_min_at_start 不可大於 source_max")
+        return self
+
     @model_validator(mode="after")
     def _check_tier_budget(self) -> CoreRules:
         if sorted(self.tier_budget) != [1, 2, 3, 4, 5]:

@@ -84,6 +84,9 @@ class CostAllowance(ContentModel):
     """``hp_percent`` 每 1‰ 的折抵。"""
     hp_cap: int = Field(ge=0)
     self_status: SelfStatusAllowance
+    source_per_point: int = Field(default=250, ge=0)
+    """源力代價（``cost.source``，Phase 3C-4a）每點的折抵（‰；初值，未經模擬）。"""
+    source_cap: int = Field(default=500, ge=0)
     total_cap: int = Field(ge=0)
     """各項先套用自己的上限，加總後再以此截斷（‰）。"""
 
@@ -185,6 +188,9 @@ class BudgetRules(ContentModel):
     """每個技能的改寫規則型原語上限。"""
     rule_rewrite_min_cooldown: int = Field(ge=1)
     """有改寫規則型原語的技能：``uses_per_battle: 1`` 或冷卻至少這麼多回合。"""
+    rule_rewrite_min_cooldown_with_source: int = Field(default=2, ge=1)
+    """花源力（``cost.source``，傳說技能）的改寫規則型技能：改為 ``uses_per_battle: 1`` 或冷卻至少
+    這麼多回合（Phase 3C-4a；初值）。"""
     modifier: ModifierBudget
     """修正技能的預算（Phase 3C-2）。"""
 

@@ -21,8 +21,9 @@ _UNCOVERED: dict[str, dict[str, str]] = {
 }
 
 # 只能由引擎原語間接產生的狀態：使用該原語就算「技能可施加」。
-# prone 由 knock_prone 原語產生、shielded 由 shield 原語產生，不需要 apply_status。
-_STATUS_VIA_PRIMITIVE = {"prone": "knock_prone", "shielded": "shield"}
+# prone 由 knock_prone 原語產生、shielded 由 shield 原語產生、undying 由 cheat_death 原語產生
+# （3C-4a），不需要 apply_status。
+_STATUS_VIA_PRIMITIVE = {"prone": "knock_prone", "shielded": "shield", "undying": "cheat_death"}
 
 
 def _skills() -> list[SkillDef]:

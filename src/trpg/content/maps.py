@@ -190,6 +190,9 @@ class MapDef(ContentModel):
     weather: str = Field(default="clear", pattern=ID_PATTERN)
     encounter: Encounter | None = None
     events: tuple[MapEvent, ...] = ()
+    source_wells: tuple[tuple[int, int], ...] = ()
+    """源泉格（Phase 3C-4a）：我方單位進入時 +1 源力（不超過上限），源泉消失。不可與物件、
+    起始區重疊，不可重複。"""
 
     @property
     def width(self) -> int:
@@ -289,6 +292,21 @@ class MapDef(ContentModel):
         for what, spots in groups:
             dup = sorted({c for c in spots if spots.count(c) > 1})
             problems += [f"{what} 的 {list(c)} 重複（每格最多一個）" for c in dup]
+        return problems + self._well_problems(seen)
+
+    def _well_problems(self, zones: set[XY]) -> list[str]:
+        problems: list[str] = []
+        objects = {o.at for o in self.objects}
+        wells = list(self.source_wells)
+        for cell in wells:
+            if not self.in_bounds(*cell):
+                problems.append(f"source_wells 的 {list(cell)} 超出地圖範圍")
+            elif cell in objects:
+                problems.append(f"source_wells 的 {list(cell)} 與物件重疊")
+            elif cell in zones:
+                problems.append(f"source_wells 的 {list(cell)} 在起始區內")
+        dup = sorted({c for c in wells if wells.count(c) > 1})
+        problems += [f"source_wells 的 {list(c)} 重複" for c in dup]
         return problems
 
     def summary(self) -> str:

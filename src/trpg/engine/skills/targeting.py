@@ -227,7 +227,7 @@ def pay_skill_cost(caster: UnitState, skill: SkillDef, *, ap: int = 0) -> PaidCo
 def resource_problem(  # noqa: PLR0911
     state: BattleState, unit: UnitState, skill: SkillDef
 ) -> str | None:
-    """武器相容、沉默、法力、冷卻、每場次數與 HP 代價（不含 AP）。"""
+    """武器相容、沉默、法力、冷卻、每場次數、HP 代價與源力（Phase 3C-4a）（不含 AP）。"""
     problem = weapon_problem(skill, unit.weapon.weapon_class)
     if problem is not None:
         return problem
@@ -244,6 +244,9 @@ def resource_problem(  # noqa: PLR0911
     cost = hp_cost(unit, skill)
     if cost and unit.hp <= cost:
         return f"HP 不足以支付代價：需要 {cost}，目前 {unit.hp}（支付後不可倒下）"
+    source = skill.cost.source
+    if source is not None and unit.source < source:
+        return f"源力不足：需要 {source}，目前 {unit.source}"
     return stack_problem(state, unit, skill)
 
 

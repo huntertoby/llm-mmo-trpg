@@ -87,3 +87,7 @@ max_trigger_depth: 3          # 技能觸發的連鎖深度上限（動作本身
 
 # --- 姿態（Phase 2E-2，docs/phases/Phase2E計畫.md 4.3）---
 stance_ap_cost: 1             # 進入姿態花的 AP；取消姿態（EndStance）免費、只能在自己的回合
+
+# --- 源力（Phase 3C-4a，docs/design/06-技能.md 6.14.4；初值，未經模擬）---
+source_max: 3                 # 源力上限
+source_min_at_start: 1        # 我方單位每場開場至少 1 點（敵人一律 0）；跨戰鬥保留由 Phase 3-5 處理

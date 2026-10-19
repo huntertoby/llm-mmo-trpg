@@ -237,6 +237,11 @@ class StatusDef(ContentModel):
 
     - ``removed_by_element``：帶有者受到這些元素的傷害（數值 > 0）時立即移除此狀態（原因
       ``thawed``；冰凍受火焰傷害解除）。
+
+    Phase 3C-4a 的欄位：
+
+    - ``prevents_death``：不死——帶有者受到傷害、HP 會降到 0 時改為 1 並移除此狀態（墜落與致命
+      地形照樣生效）。
     """
 
     id: str = Field(pattern=ID_PATTERN)
@@ -256,6 +261,7 @@ class StatusDef(ContentModel):
     grants_advantage_against: bool = False
     stance: bool = False
     removed_by_element: tuple[Element, ...] = ()
+    prevents_death: bool = False
     move_permille: int = Field(default=1000, ge=0, le=10000)
     prevents_move: bool = False
     skip_turn: bool = False

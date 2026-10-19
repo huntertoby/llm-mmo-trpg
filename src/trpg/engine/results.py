@@ -8,9 +8,9 @@ from pydantic import BaseModel, ConfigDict
 
 from trpg.engine.events import EventBase
 from trpg.engine.state import BattleState
-from trpg.shared.types import UnitId
+from trpg.shared.types import Team, UnitId
 
-__all__ = ["Pending", "ResolveResult"]
+__all__ = ["AllyResult", "BattleResult", "Pending", "ResolveResult", "battle_result"]
 
 
 class Pending(BaseModel):
@@ -42,3 +42,61 @@ class ResolveResult(NamedTuple):
     state: BattleState
     events: list[EventBase]
     pending: Pending | None = None
+
+
+class AllyResult(BaseModel):
+    """戰鬥結束時一個我方單位的狀況（Phase 3C-4a；Phase 3-5 把 ``source`` 寫回一輪存檔）。"""
+
+    model_config = ConfigDict(frozen=True, extra="forbid")
+
+    unit_id: UnitId
+    template_id: str
+    hp: int
+    max_hp: int
+    downed: bool
+    escaped: bool
+    source: int
+    """剩餘源力（0～``source_max``）。"""
+
+
+class BattleResult(BaseModel):
+    """一場戰鬥的結果：勝負與每個我方單位的剩餘狀況（依單位 ID 排序）。"""
+
+    model_config = ConfigDict(frozen=True, extra="forbid")
+
+    ended: bool
+    winner: Team | None
+    end_reason: str | None
+    round: int
+    allies: tuple[AllyResult, ...]
+
+    def source_of(self, template_id: str) -> int | None:
+        """範本為 ``template_id`` 的第一個我方單位的剩餘源力（沒有為 ``None``）。"""
+        for ally in self.allies:
+            if ally.template_id == template_id:
+                return ally.source
+        return None
+
+
+def battle_result(state: BattleState) -> BattleResult:
+    """``state`` 的戰鬥結果（戰鬥尚未結束時 ``ended`` 為 ``False``，數值是目前的狀況）。"""
+    allies = tuple(
+        AllyResult(
+            unit_id=u.id,
+            template_id=u.template_id,
+            hp=u.hp,
+            max_hp=u.max_hp,
+            downed=u.downed,
+            escaped=u.escaped,
+            source=u.source,
+        )
+        for u in state.units_sorted()
+        if u.team is Team.ALLY
+    )
+    return BattleResult(
+        ended=state.ended,
+        winner=state.winner,
+        end_reason=state.end_reason,
+        round=state.round,
+        allies=allies,
+    )

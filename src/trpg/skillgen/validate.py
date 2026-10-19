@@ -150,14 +150,20 @@ def _rule_rewrite_violations(skill: SkillDef, library: ContentLibrary) -> list[V
         )
     cost = skill.cost
     once = cost.uses_per_battle == 1
-    slow = (cost.cooldown or 0) >= budget.rule_rewrite_min_cooldown
+    min_cooldown = (
+        budget.rule_rewrite_min_cooldown
+        if cost.source is None
+        else budget.rule_rewrite_min_cooldown_with_source
+    )
+    slow = (cost.cooldown or 0) >= min_cooldown
     if not (once or slow):
+        paid = "（花源力）" if cost.source is not None else ""
         out.append(
             Violation(
                 skill.id,
                 "cap.rule_rewrite_cost",
-                f"有改寫規則型原語（{'、'.join(rewrites)}）的技能必須每場限一次，"
-                f"或冷卻至少 {budget.rule_rewrite_min_cooldown} 回合"
+                f"有改寫規則型原語（{'、'.join(rewrites)}）的技能{paid}必須每場限一次，"
+                f"或冷卻至少 {min_cooldown} 回合"
                 f"（目前：每場 {cost.uses_per_battle or '不限'}、冷卻 {cost.cooldown or 0}）",
             )
         )

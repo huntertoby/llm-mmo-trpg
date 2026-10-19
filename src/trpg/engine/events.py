@@ -17,6 +17,7 @@ __all__ = [
     "EVENT_ADAPTER",
     "EVENT_LIST_ADAPTER",
     "AdvantageState",
+    "ApGranted",
     "AttackIntercepted",
     "AttackRolled",
     "BattleEnded",
@@ -27,6 +28,7 @@ __all__ = [
     "CollisionObstacle",
     "DamageCause",
     "DamageDealt",
+    "DeathCheated",
     "EffectFizzled",
     "ElementTouched",
     "EndReason",
@@ -61,6 +63,8 @@ __all__ = [
     "SkillCooldownChanged",
     "SkillTriggered",
     "SkillUsed",
+    "SourceChanged",
+    "SourceReason",
     "StacksChanged",
     "StatusApplied",
     "StatusConverted",
@@ -431,8 +435,10 @@ class StatusRemoved(EventBase):
         "downed",
         "thawed",
         "consumed",
+        "spent",
     ]
-    """``thawed``：受到 ``removed_by_element`` 的元素傷害而解除（冰凍遇火，Phase 2H-1）；
+    """``spent``：不死（``undying``）擋下致命傷害後移除（Phase 3C-4a）；
+    ``thawed``：受到 ``removed_by_element`` 的元素傷害而解除（冰凍遇火，Phase 2H-1）；
     ``consumed``：被 ``consume_status`` 消耗（Phase 3C-3b）；``replaced``：被新的姿態取代；
     ``stance_ended``：``EndStance`` 取消姿態；``downed``：單位倒下或撤離時移除姿態
     （Phase 2E-2）。"""
@@ -676,6 +682,8 @@ class SkillUsed(EventBase):
     hp_spent: int = 0
     cooldown: int | None = None
     tiles: tuple[Pos, ...]
+    source: int = 0
+    """花費的源力（傳說技能，Phase 3C-4a；之後另有 ``source_changed``）。"""
 
 
 class SkillTriggered(EventBase):
@@ -733,6 +741,55 @@ class StacksChanged(EventBase):
     after: int
     reason: Literal["gained", "consumed", "expired"]
     source_id: UnitId | None = None
+
+
+# ---------------------------------------------------------------------------
+# Phase 3C-4a：源力與改寫規則型原語
+# ---------------------------------------------------------------------------
+
+type SourceReason = Literal["skill", "well", "kill_elite"]
+"""源力改變的原因：``skill`` 施放傳說技能的花費、``well`` 進入源泉格、``kill_elite`` 擊倒精英。"""
+
+
+class SourceChanged(EventBase):
+    """源力改變（Phase 3C-4a）：``before`` → ``after``（已截斷在 0 與上限之間）。
+
+    ``skill_id``：``skill`` 時為花費源力的技能；``pos``：``well`` 時為源泉格（之後消失）；
+    ``other_id``：``kill_elite`` 時為被擊倒的精英。
+    """
+
+    type: Literal["source_changed"] = "source_changed"
+    unit_id: UnitId
+    before: int
+    after: int
+    reason: SourceReason
+    skill_id: str | None = None
+    pos: Pos | None = None
+    other_id: UnitId | None = None
+
+
+class ApGranted(EventBase):
+    """``grant_ap``：``unit_id`` 獲得 ``amount`` AP（已扣掉超過本回合上限的部分）。
+
+    ``deferred``：目標不在自己的回合，AP 在它下次回合開始時才加上（``ap_after`` 為屆時的待加
+    AP）。"""
+
+    type: Literal["ap_granted"] = "ap_granted"
+    unit_id: UnitId
+    source_id: UnitId
+    amount: int
+    ap_after: int
+    deferred: bool = False
+
+
+class DeathCheated(EventBase):
+    """不死（``cheat_death`` 的狀態）擋下致命傷害：HP 留在 1，之後移除該狀態（``spent``）。"""
+
+    type: Literal["death_cheated"] = "death_cheated"
+    unit_id: UnitId
+    status_id: str
+    prevented: int
+    """多擋下的傷害（原本會扣到 0 以下的部分 ＋ 1）。"""
 
 
 # ---------------------------------------------------------------------------
@@ -874,7 +931,10 @@ type Event = Annotated[
     | StacksChanged
     | TrapPlaced
     | TrapTriggered
-    | TrapExpired,
+    | TrapExpired
+    | SourceChanged
+    | ApGranted
+    | DeathCheated,
     Field(discriminator="type"),
 ]
 

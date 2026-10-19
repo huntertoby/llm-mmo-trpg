@@ -61,10 +61,10 @@ def rules_of(s: SkillDef, library_: ContentLibrary | None = None) -> set[str]:
 
 
 def lib_with_rewrite_primitive() -> ContentLibrary:
-    """加入一個假的改寫規則型原語 ``grant_ap``（目前資料裡沒有此類原語）的內容庫。"""
+    """加入一個假的改寫規則型原語 ``fake_rewrite``（最低稀有度傳說）的內容庫。"""
     base = lib()
     fake = PrimitiveDef(
-        id="grant_ap",
+        id="fake_rewrite",
         name_zh="額外行動",
         description_zh="測試用的改寫規則型原語",
         category="rule_rewrite",

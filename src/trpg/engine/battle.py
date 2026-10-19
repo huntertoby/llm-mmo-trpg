@@ -76,7 +76,7 @@ from trpg.engine.rules.statuses import (
     skip_turn_status,
     stance_status_ids,
 )
-from trpg.engine.setup import BattleSetup, BattleSetupError
+from trpg.engine.setup import BattleSetup, BattleSetupError, starting_source
 from trpg.engine.skill_triggers import collect_move, settle
 from trpg.engine.skills.conditions import Subject
 from trpg.engine.skills.interpreter import use_skill
@@ -271,6 +271,8 @@ def begin_battle(setup: BattleSetup, seed: int) -> ResolveResult:
             name=name,
             rules=setup.ruleset,
         )
+        state.units[uid].source = starting_source(spawn, setup.ruleset.core)
+    state.source_wells = tuple(sorted(map_def.source_wells, key=lambda xy: (xy[1], xy[0])))
     ctx = Ctx(state)
     core = ctx.core
     ctx.emit(BattleStarted, map_id=map_def.id, seed=seed)

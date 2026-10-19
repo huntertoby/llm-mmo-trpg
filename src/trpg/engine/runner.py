@@ -36,8 +36,14 @@ __all__ = [
     "run_battle",
 ]
 
-LOG_FORMAT = "trpg-battle-log/13"
-"""``/13``（Phase 3C-3b）：表面歸屬（格子的 ``surface_creator``）、新觸發時機 ``on_enter_surface``、
+LOG_FORMAT = "trpg-battle-log/14"
+"""``/14``（Phase 3C-4a）：源力（單位的 ``source``、``ap_pending``、``ap_granted_round``，
+戰鬥狀態的 ``source_wells``，戰鬥設定 ``UnitSpawn.source``）、新事件 ``source_changed``／
+``ap_granted``／``death_cheated``、``skill_used.source``、``status_removed`` 的新原因 ``spent``、
+三個改寫規則型原語與狀態 ``undying``；擊倒精英會多出 ``source_changed`` 事件，所以 ``/13`` 的
+紀錄用新版程式重跑事件會不同。
+
+``/13``（Phase 3C-3b）：表面歸屬（格子的 ``surface_creator``）、新觸發時機 ``on_enter_surface``、
 ``consume_status`` 原語（``status_removed`` 的新原因 ``consumed``）、基本推擊貼牆也合法並產生撞擊；
 ``/12`` 的紀錄含有舊的推擊合法性與觸發表，無法由新版程式重播。
 

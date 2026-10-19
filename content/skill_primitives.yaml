@@ -204,3 +204,40 @@ primitives:
     base_points: 2
     acts_on: caster
     allowed_shapes: [ground_tile]
+  # --- Phase 3C-4a：改寫規則型原語（docs/design/06-技能.md 6.3、6.6；點數為初值，未經模擬）---
+  # 每個技能最多 1 個（skill_budget.yaml 的 max_rule_rewrite）；必須每場限一次或冷卻至少
+  # rule_rewrite_min_cooldown 回合，花源力（cost.source，傳說技能）時改為冷卻至少 rule_rewrite_min_cooldown_with_source。
+  - id: grant_ap
+    name_zh: 給予行動點
+    description_zh: 目標（自己或友方）立刻獲得 amount AP（1–2），超過本回合上限（ap_per_turn ＋ ap_carry_max）的部分不保留；目標不在自己的回合時，在它下次回合開始時加上。同一單位每輪最多被給一次（之後的給予不結算，effect_fizzled）。
+    category: rule_rewrite
+    harmful: false
+    min_rarity: epic
+    budget_basis: per_amount
+    base_points: 4
+    forbid_affects: [enemies, all]
+    params:
+      amount: {type: int, required: true, min: 1, max: 2, description_zh: 給予的 AP}
+  - id: reset_cooldown
+    name_zh: 重置冷卻
+    description_zh: 目標友方（不含施放者自己）的技能冷卻歸零：which 為 all 時全部技能、tag 時只有帶 tag 標籤的技能；花源力的技能（cost.source）與這個技能本身不會被重置。沒有可重置的冷卻時不結算（effect_fizzled）。
+    category: rule_rewrite
+    harmful: false
+    min_rarity: epic
+    budget_basis: fixed
+    base_points: 7
+    forbid_affects: [enemies, all, self]
+    params:
+      which: {type: which, required: true, description_zh: all 或 tag}
+      tag: {type: tag, description_zh: which 為 tag 時必填：要重置的技能標籤}
+  - id: cheat_death
+    name_zh: 免死
+    description_zh: 目標（自己或友方）獲得狀態「不死」（undying）duration 回合（省略時用狀態的預設持續）：期間 HP 會降到 0 時改為 1 並移除此狀態（墜落與致命地形照樣生效）。
+    category: rule_rewrite
+    harmful: false
+    min_rarity: epic
+    budget_basis: fixed
+    base_points: 8
+    forbid_affects: [enemies, all]
+    params:
+      duration: {type: int, min: 1, max: 2, description_zh: 不死的持續回合}

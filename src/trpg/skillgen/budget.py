@@ -27,6 +27,7 @@ from trpg.content.battle import Dice, StatusDef
 from trpg.content.library import ContentLibrary
 from trpg.content.skill_rules import BudgetRules, ModifierBudget
 from trpg.content.skills import (
+    GRANT_AP,
     ConditionDef,
     EffectSpec,
     ModifierSpec,
@@ -167,7 +168,8 @@ def _base_points(  # noqa: PLR0911
     if basis == "per_amount":
         assert primitive.base_points is not None
         amount = effect.amount or 1
-        return Fraction(primitive.base_points * amount), f"{primitive.base_points}×{amount} 層"
+        unit = "AP" if primitive.id == GRANT_AP else "層"
+        return Fraction(primitive.base_points * amount), f"{primitive.base_points}×{amount} {unit}"
     if basis == "consume_stack":
         return _consume_stack_points(skill, effect, library)
     if basis == "consume_status":
@@ -336,6 +338,13 @@ def _allowance_parts(
         )
     if cost.self_status is not None:
         parts.append(_self_status_allowance(cost.self_status, budget, statuses))
+    if cost.source is not None:
+        parts.append(
+            (
+                f"源力 {cost.source}",
+                min(cost.source * allowance.source_per_point, allowance.source_cap),
+            )
+        )
     return tuple(parts)
 
 

@@ -35,7 +35,8 @@ ENABLED = (
     "builder_finisher",
     "trap",
 )
-RARITIES = ("common", "rare", "epic", "legendary")
+RARITIES = ("common", "rare", "epic")
+"""組合器產生的稀有度：傳說只能手寫（Phase 3C-4a，抽到傳說時降為史詩）。"""
 
 
 def test_same_seed_gives_the_same_skill_field_by_field() -> None:
@@ -85,14 +86,20 @@ def test_dice_use_the_allowed_sides_and_counts() -> None:
 @pytest.mark.parametrize("skeleton", ENABLED)
 def test_every_enabled_skeleton_can_be_composed(skeleton: str) -> None:
     for seed in range(5):
-        skill = compose_random_skill(seed, skeleton=skeleton, rarity="legendary")
-        assert skill.skeleton == skeleton and skill.rarity == "legendary"
+        skill = compose_random_skill(seed, skeleton=skeleton, rarity="epic")
+        assert skill.skeleton == skeleton and skill.rarity == "epic"
 
 
 @pytest.mark.parametrize("rarity", RARITIES)
 def test_every_rarity_can_be_composed(rarity: SkillRarity) -> None:
     for seed in range(8):
         assert compose_random_skill(seed, rarity=rarity).rarity == rarity
+
+
+def test_legendary_is_hand_written_only() -> None:
+    """Phase 3C-4a：組合器不產生傳說（需要源力代價與改寫規則型原語）。"""
+    with pytest.raises(ComposeError, match="傳說"):
+        compose_random_skill(0, rarity="legendary")
 
 
 @pytest.mark.parametrize("tier", [1, 2, 3, 4, 5])

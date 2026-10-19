@@ -622,6 +622,25 @@ class TrapAiRules(ContentModel):
         return Fraction(self.shape_factor_permille.get(shape, self.default_factor_permille), 1000)
 
 
+class RewriteAiRules(ContentModel):
+    """AI 使用改寫規則型原語與源力的數值（Phase 3C-4a；``content/ai_profiles.yaml`` 的
+    ``rewrite:``）。單位都是「等值傷害點數」，收益 ＝ 行為模式的 ``damage`` 權重 × 點數。
+    評分是最簡單的近似（合法地使用即可，不要求用得好），初值未經模擬。
+
+    - ``ap_points``：自己淨多出的每點 AP（獲得的 AP − 這次動作花的 AP）。
+    - ``ally_ap_permille``：給友方的 AP 相對給自己的價值（‰）。
+    - ``cooldown_points``：被重置的每一回合冷卻。
+    - ``undying_points``：不死的價值 × 目標已損失 HP 的比例（滿血 0，HP 越低越值得）。
+    - ``source_points``：每花一點源力的機會成本（扣分）。
+    """
+
+    ap_points: int = Field(default=4, ge=0)
+    ally_ap_permille: int = Field(default=600, ge=0, le=1000)
+    cooldown_points: int = Field(default=2, ge=0)
+    undying_points: int = Field(default=20, ge=0)
+    source_points: int = Field(default=3, ge=0)
+
+
 class AiProfile(ContentModel):
     id: str = Field(pattern=ID_PATTERN)
     name_zh: str = Field(min_length=1)
@@ -638,6 +657,8 @@ class AiProfile(ContentModel):
     的同名欄位填入。"""
     trap: TrapAiRules = Field(default_factory=TrapAiRules)
     """放置陷阱的 AI 數值（Phase 2F-2）；由 :class:`AiProfileTable` 的同名欄位填入。"""
+    rewrite: RewriteAiRules = Field(default_factory=RewriteAiRules)
+    """改寫規則型原語與源力的 AI 數值（Phase 3C-4a）；由 :class:`AiProfileTable` 的同名欄位填入。"""
 
 
 class OrderBonuses(ContentModel):
@@ -684,6 +705,7 @@ class AiProfileTable(ContentModel):
     trap_likelihood_permille: int = Field(default=700, ge=0, le=1000)
     """AI 放置陷阱的收益 ＝ 陷阱效果的價值 × 範圍波及的預期敵人數 × 這個機率（‰；初值未經模擬）。"""
     trap: TrapAiRules = Field(default_factory=TrapAiRules)
+    rewrite: RewriteAiRules = Field(default_factory=RewriteAiRules)
     orders: OrderBonuses = Field(default_factory=OrderBonuses)
 
     @model_validator(mode="before")
@@ -695,7 +717,7 @@ class AiProfileTable(ContentModel):
         shared = data.get("status_values")
         ally_shared = data.get("ally_status_values")
         trap_shared = {
-            key: data[key] for key in ("trap_likelihood_permille", "trap") if key in data
+            key: data[key] for key in ("trap_likelihood_permille", "trap", "rewrite") if key in data
         }
         if not isinstance(shared, dict) and not isinstance(ally_shared, dict) and not trap_shared:
             return data

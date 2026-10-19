@@ -31,6 +31,7 @@ from trpg.engine.events import (
 )
 from trpg.engine.objectives import check_battle_end, check_round_end, end_battle
 from trpg.engine.results import ResolveResult
+from trpg.engine.rewrites import ap_cap
 from trpg.engine.rules.statuses import move_points_for_turn, skip_turn_status
 from trpg.engine.skill_triggers import (
     collect_turn_end,
@@ -59,8 +60,12 @@ def start_turn(ctx: Ctx, unit_id: UnitId) -> None:
     core = ctx.core
     unit = state.units[unit_id]
     state.active_unit = unit.id
-    unit.ap = core.ap_per_turn + min(unit.ap_carry, core.ap_carry_max)
+    unit.ap = min(
+        core.ap_per_turn + min(unit.ap_carry, core.ap_carry_max) + unit.ap_pending,
+        ap_cap(core),
+    )
     unit.ap_carry = 0
+    unit.ap_pending = 0  # grant_ap 給的、等到這個回合才加上的 AP（Phase 3C-4a）
     unit.move_points = move_points_for_turn(ctx.rules, unit)
     ctx.emit(
         TurnStarted,

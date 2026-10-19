@@ -148,6 +148,12 @@ def _choose_rarity_and_skeleton(
             raise ComposeError(f"骨架 {skeleton} 在任何稀有度都做不出技能")
         weights = tuple(library.composer.rarity_weights[r] for r in rarities)
         picked = _weighted(rng, rarities, weights)
+        if picked == "legendary":
+            # 傳說技能必須手寫（Phase 3C-4a：需要源力代價與改寫規則型原語，組合器不產生）；
+            # 抽到傳說時降為史詩，其他種子抽到的結果不變
+            picked = "epic"
+    elif rarity == "legendary":
+        raise ComposeError("傳說技能只能手寫（需要源力代價與改寫規則型原語），組合器不產生")
     else:
         picked = rarity
     if skeleton is not None:

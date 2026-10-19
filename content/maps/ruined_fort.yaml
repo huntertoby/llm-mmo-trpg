@@ -43,6 +43,8 @@ objects:
 start_zones:
   ally: [[0, 4], [0, 5], [1, 3], [1, 6]]
   enemy: [[8, 2], [6, 4], [7, 5], [8, 7]]
+# 源泉格（Phase 3C-4a）：我方單位進入時 +1 源力（上限 3）後消失；兩軍之間、靠近南北兩側，製造搶位。
+source_wells: [[4, 1], [4, 8]]
 encounter:
   allies: [hero_fighter, hero_archer, hero_mage]
   enemies: [bandit_archer, bandit, bandit, bandit_archer]

@@ -17,6 +17,7 @@ from trpg.content.battle import UnitTemplate, WeaponDef
 from trpg.content.environment import WeatherDef
 from trpg.content.library import ContentLibrary, Ruleset
 from trpg.content.maps import MapDef, Objective, SpawnUnitsEvent
+from trpg.content.rules import CoreRules
 from trpg.engine.state import SpawnTemplate
 from trpg.shared.errors import TrpgError
 from trpg.shared.types import Team
@@ -28,6 +29,7 @@ __all__ = [
     "build_setup",
     "deploy_allies",
     "deployment_tiles",
+    "starting_source",
 ]
 
 
@@ -36,7 +38,12 @@ class BattleSetupError(TrpgError):
 
 
 class UnitSpawn(BaseModel):
-    """一個參戰單位。``position`` 為 ``None`` 時依起始區順序自動排列。"""
+    """一個參戰單位。``position`` 為 ``None`` 時依起始區順序自動排列。
+
+    ``source``：開場源力（Phase 3C-4a；Phase 3-5 由一輪存檔帶入）。我方單位的實際開場值 ＝
+    clamp(max(值, ``source_min_at_start``), 0, ``source_max``)，``None`` 等同 0（即保底值）；
+    敵方一律 0。見 :func:`starting_source`。
+    """
 
     model_config = ConfigDict(frozen=True, extra="forbid")
 
@@ -44,6 +51,15 @@ class UnitSpawn(BaseModel):
     weapon: WeaponDef
     team: Team
     position: tuple[int, int] | None = None
+    source: int | None = None
+
+
+def starting_source(spawn: UnitSpawn, core: CoreRules) -> int:
+    """單位的開場源力：敵人 0；我方 clamp(max(``spawn.source``, 保底), 0, 上限)。"""
+    if spawn.team is not Team.ALLY:
+        return 0
+    wanted = spawn.source if spawn.source is not None else core.source_min_at_start
+    return max(0, min(core.source_max, max(wanted, core.source_min_at_start)))
 
 
 class BattleSetup(BaseModel):

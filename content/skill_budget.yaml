@@ -51,6 +51,9 @@ allowance:
   # 有效回合 ＝ duration − 1（狀態在施放當回合結束就 −1，所以 duration 限制為 2–3）；先套用 cap，再和其他折抵一起截斷在 total_cap。
   # 狀態只能是 allowed 之內的自身負面狀態；只有主動技能可以使用。
   self_status: {allowed: [vulnerable, weaken, slow, root], per_point_permille: 40, cap: 250}
+  # 源力代價（cost.source，傳說技能，Phase 3C-4a；初值，未經模擬）：每點折抵 source_per_point，上限 source_cap
+  source_per_point: 250
+  source_cap: 500
   total_cap: 500            # 各項先套用自己的上限，加總後再截斷在這個值（Phase 2C-1）
 
 # 雙屬性縮放（secondary_scaling_attr，Phase 2H-2）與專精加成（mastery）都不計預算：
@@ -88,6 +91,7 @@ modifier:
     add_element: 1000     # 獲得元素（導電、點燃、與表面互動）
     add_tag: 200          # 每個標籤（讓其他修正與 3C-3 的 on_cast_tag 接上）
 
-# 改寫規則型原語（目前沒有此類原語）
+# 改寫規則型原語（Phase 3C-4a 起：grant_ap、reset_cooldown、cheat_death）
 max_rule_rewrite: 1           # 每個技能最多 1 個
 rule_rewrite_min_cooldown: 4  # 必須 uses_per_battle: 1 或冷卻至少這麼多回合
+rule_rewrite_min_cooldown_with_source: 2   # 花源力（傳說，cost.source）時改為冷卻至少 2 回合（初值）

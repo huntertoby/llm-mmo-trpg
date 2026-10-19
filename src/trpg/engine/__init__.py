@@ -46,7 +46,7 @@ from trpg.engine.battle import begin_battle, legal_actions, resolve, resume, sta
 from trpg.engine.environment import Telegraph, telegraph
 from trpg.engine.event_filter import event_visible_to, filter_events
 from trpg.engine.preview import Preview, preview
-from trpg.engine.results import Pending, ResolveResult
+from trpg.engine.results import AllyResult, BattleResult, Pending, ResolveResult, battle_result
 from trpg.engine.setup import (
     BattleSetup,
     BattleSetupError,
@@ -60,7 +60,9 @@ from trpg.engine.view import BattleView, project_for
 
 __all__ = [
     "Action",
+    "AllyResult",
     "Attack",
+    "BattleResult",
     "BattleSetup",
     "BattleSetupError",
     "BattleState",
@@ -81,6 +83,7 @@ __all__ = [
     "Trip",
     "UnitSpawn",
     "UseSkill",
+    "battle_result",
     "begin_battle",
     "build_setup",
     "deploy_allies",

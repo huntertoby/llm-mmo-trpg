@@ -41,9 +41,12 @@ __all__ = [
     "AFFECTS_VALUES",
     "BASIC_ACTIONS",
     "CHANGE_TARGETS",
+    "CHEAT_DEATH",
+    "CHEAT_DEATH_STATUS",
     "CONSUME_STACK",
     "CONSUME_STATUS",
     "CONSUME_THEN_TYPES",
+    "GRANT_AP",
     "INTERCEPT",
     "MODIFIER_CHANGES",
     "ON_HIT_PRIMITIVES",
@@ -51,6 +54,7 @@ __all__ = [
     "RARITY_ORDER",
     "REQUIRED_CONDITIONS",
     "REQUIRED_SHAPES",
+    "RESET_COOLDOWN",
     "SELF_CONDITIONS",
     "SELF_ONLY_CHANGES",
     "SKELETON_IDS",
@@ -298,7 +302,17 @@ class PrimitiveParam(ContentModel):
     """
 
     type: Literal[
-        "dice", "int", "status", "surface", "object", "element", "stack", "scale", "effects"
+        "dice",
+        "int",
+        "status",
+        "surface",
+        "object",
+        "element",
+        "stack",
+        "scale",
+        "effects",
+        "which",
+        "tag",
     ]
     required: bool = False
     min: int | None = None
@@ -526,6 +540,11 @@ class EffectSpec(ContentModel):
     （``stack`` 必填）。"""
     splash: int | None = Field(default=None, ge=1, le=1)
     """``consume_status`` 專用：``then`` 也作用在被消耗者周圍這麼遠（曼哈頓距離）的敵方單位。"""
+    which: Literal["all", "tag"] | None = None
+    """``reset_cooldown`` 專用（Phase 3C-4a）：``all`` 全部技能、``tag`` 只有帶 ``tag`` 標籤的
+    技能。"""
+    tag: str | None = Field(default=None, pattern=ID_PATTERN)
+    """``reset_cooldown`` 的 ``which: tag`` 必填：要重置的技能標籤。"""
     condition: ConditionSpec | None = None
 
     def param_values(self) -> dict[str, Any]:
@@ -545,7 +564,9 @@ class EffectSpec(ContentModel):
             "stack",
             "status",
             "surface",
+            "tag",
             "then",
+            "which",
         )
         return {n: getattr(self, n) for n in names if getattr(self, n) is not None}
 
@@ -574,6 +595,8 @@ class SkillCost(ContentModel):
     不足時不可施放。需求本身不消耗層數（消耗由 ``consume_stack`` 負責）。"""
     self_status: SelfStatusCost | None = None
     """施放後施放者自己獲得的狀態（Phase 2H-1）；只有主動技能可以使用。"""
+    source: int | None = Field(default=None, ge=1, le=2)
+    """花費的源力（Phase 3C-4a，1 或 2）：只有傳說技能可以、而且必須有；源力不足時不能施放。"""
 
 
 class NarrativeDef(ContentModel):
@@ -662,6 +685,12 @@ CONSUME_THEN_TYPES = ("damage", "heal", "shield", "apply_status")
 """``consume_status`` 的 ``then`` 可用的原語（Phase 3C-3b）。"""
 PLACE_TRAP = "place_trap"
 """Phase 2E-3 的原語 ID：累積層數、消耗層數、放置陷阱。"""
+GRANT_AP = "grant_ap"
+RESET_COOLDOWN = "reset_cooldown"
+CHEAT_DEATH = "cheat_death"
+"""Phase 3C-4a 的改寫規則型原語 ID（6.3；規則見 ``content/skill_primitives.yaml``）。"""
+CHEAT_DEATH_STATUS = "undying"
+"""``cheat_death`` 施加的狀態（``statuses.yaml``，``prevents_death``）。"""
 
 
 class ReactionSpec(ContentModel):
@@ -986,6 +1015,7 @@ class SkillDef(ContentModel):
             raise ValueError(f"{self.kind} 技能的 ap_cost 必須為 null（不花 AP）")
         if self.cost.self_status is not None and self.kind != "active":
             raise ValueError(f"只有主動技能可以有 cost.self_status，收到 kind: {self.kind}")
+        self._check_legendary()
         if self.kind == "passive" and self.trigger is None:
             raise ValueError("被動技能（kind: passive）必須有 trigger")
         if self.kind != "passive" and self.trigger is not None:
@@ -1003,6 +1033,16 @@ class SkillDef(ContentModel):
         for index, effect in enumerate(self.effects):
             self._check_effect(index, effect)
         return self
+
+    def _check_legendary(self) -> None:
+        """傳說技能（Phase 3C-4a，6.14.4）必須花源力（``cost.source``），非傳說不能花。必須含改寫
+        規則型原語或修正規則，是跨檔案檢查（:func:`skill_problems`）。"""
+        if self.rarity == "legendary" and self.cost.source is None:
+            raise ValueError("傳說技能必須有 cost.source（花 1 或 2 點源力）")
+        if self.rarity != "legendary" and self.cost.source is not None:
+            raise ValueError(f"只有傳說技能可以有 cost.source，收到稀有度 {self.rarity}")
+        if self.cost.source is not None and self.kind != "active":
+            raise ValueError(f"只有主動技能可以花源力（cost.source），收到 kind: {self.kind}")
 
     def _check_reaction_and_stance(self) -> None:
         """反應技與姿態的結構（2E-2）：``reaction`` 欄位、形狀、``intercept`` 與 ``teleport``。"""
@@ -1116,6 +1156,13 @@ class SkillDef(ContentModel):
     def _check_effect(self, index: int, effect: EffectSpec) -> None:
         where = f"effects[{index}]（{effect.type}）"
         self._check_consume_status(index, effect)
+        if effect.type == RESET_COOLDOWN:
+            if effect.which is None:
+                raise ValueError(f"{where}：reset_cooldown 必須填 which（all 或 tag）")
+            if (effect.which == "tag") != (effect.tag is not None):
+                raise ValueError(f"{where}：which: tag 必須填 tag，which: all 不可填 tag")
+        elif effect.which is not None or effect.tag is not None:
+            raise ValueError(f"{where}：只有 reset_cooldown 使用 which、tag")
         if effect.type in ("push", "pull") and (
             effect.distance is None or not 1 <= effect.distance <= _MAX_DISPLACE
         ):
@@ -1433,7 +1480,22 @@ def skill_problems(
     for index, effect in enumerate(skill.effects):
         problems += _effect_problems(skill, index, effect, refs)
     problems += _modifier_problems(skill, refs)
+    problems += _legendary_problems(skill, primitives)
     return problems
+
+
+def _legendary_problems(skill: SkillDef, primitives: dict[str, PrimitiveDef]) -> list[str]:
+    """傳說技能（Phase 3C-4a，6.14.4）＝ 1 個改寫規則型原語或修正規則 ＋ 源力代價。"""
+    if skill.rarity != "legendary":
+        return []
+    rewrites = [
+        e.type
+        for e in skill.effects
+        if e.type in primitives and primitives[e.type].category == "rule_rewrite"
+    ]
+    if rewrites or skill.modifiers:
+        return []
+    return ["rarity：傳說技能必須含 1 個改寫規則型原語或修正規則（modifiers）"]
 
 
 def _modifier_problems(skill: SkillDef, refs: _Refs) -> list[str]:

@@ -45,7 +45,14 @@ from trpg.content.environment import (
     OrderBonuses,
     TrapAiRules,
 )
-from trpg.content.skills import SkillDef
+from trpg.content.skills import (
+    CHEAT_DEATH,
+    CHEAT_DEATH_STATUS,
+    GRANT_AP,
+    RESET_COOLDOWN,
+    EffectSpec,
+    SkillDef,
+)
 from trpg.engine.actions import (
     Action,
     Attack,
@@ -68,10 +75,12 @@ from trpg.engine.ai.orders import (
 )
 from trpg.engine.battle import legal_actions, legal_actions_with_areas
 from trpg.engine.events import (
+    ApGranted,
     DamageDealt,
     EventBase,
     ObjectDamaged,
     ShieldGained,
+    SkillCooldownChanged,
     StacksChanged,
     StatusApplied,
     StatusRemoved,
@@ -79,6 +88,7 @@ from trpg.engine.events import (
     UnitMoved,
 )
 from trpg.engine.preview import DamageRange, Preview, preview
+from trpg.engine.rewrites import grant_ap_problem, resettable_cooldowns
 from trpg.engine.rules.combat import (
     HALF_COVER,
     attack_problem,
@@ -102,6 +112,7 @@ from trpg.engine.skills.targeting import (
     center_tiles,
     hp_cost,
     resolve_effects,
+    skill_ap_cost,
 )
 from trpg.engine.state import BattleState, UnitState
 from trpg.engine.traps import visible_traps
@@ -908,7 +919,43 @@ def score_action(
         score += _order_bonus(state, actor, p, profile, orders)
     if isinstance(action, UseSkill):
         score -= skill_cost(state, actor, action, w, profile.status_values)
+        score += _rewrite_gains(state, actor, action, p, profile)
     return ActionScore(action, score, p)
+
+
+def _rewrite_gains(
+    state: BattleState, actor: UnitState, action: UseSkill, p: Preview, profile: AiProfile
+) -> Fraction:
+    """改寫規則型原語的收益減去源力成本（Phase 3C-4a；``ai_profiles.yaml`` 的 ``rewrite``，
+    × ``damage`` 權重）。最簡單的近似：
+
+    - ``grant_ap``：自己淨多出的 AP（獲得 − 這次花的 AP）× ``ap_points``；給友方的 AP 再 ×
+      ``ally_ap_permille``（所以優先給自己）；
+    - ``reset_cooldown``：被重置的冷卻回合數 × ``cooldown_points``；
+    - ``cheat_death``：``undying_points`` × 目標已損失 HP 的比例（HP 越低越值得；已帶有則 0）；
+    - 源力：每點扣 ``source_points``。
+    """
+    skill = state.ruleset.skill_def(action.skill_id)
+    types = {e.type for e in skill.effects}
+    rules = profile.rewrite
+    source = skill.cost.source or 0
+    if not types & {GRANT_AP, RESET_COOLDOWN, CHEAT_DEATH} and not source:
+        return Fraction(0)
+    points = Fraction(-rules.source_points * source)
+    if GRANT_AP in types:
+        points -= rules.ap_points * skill_ap_cost(state, skill, actor)
+    for e in p.min_events:
+        if isinstance(e, ApGranted):
+            ally = Fraction(rules.ally_ap_permille, 1000)
+            share = Fraction(1) if e.unit_id == actor.id else ally
+            points += rules.ap_points * e.amount * share
+        elif isinstance(e, SkillCooldownChanged) and RESET_COOLDOWN in types and e.remaining == 0:
+            points += rules.cooldown_points * state.units[e.unit_id].cooldowns.get(e.skill_id, 0)
+        elif isinstance(e, StatusApplied) and e.status_id == CHEAT_DEATH_STATUS:
+            target = state.units[e.target_id]
+            if target.team is actor.team and not target.has_status(CHEAT_DEATH_STATUS):
+                points += rules.undying_points * Fraction(target.max_hp - target.hp, target.max_hp)
+    return profile.weights.damage * points
 
 
 def _order_bonus(
@@ -1098,6 +1145,8 @@ def _supports(
             return True
         if resolved.type == "shield":
             return True
+        if _rewrite_supports(state, caster, skill, spec, target):
+            return True
         if resolved.type == "cleanse" and any(
             not state.ruleset.status_def(s.status_id).beneficial for s in target.statuses
         ):
@@ -1116,6 +1165,20 @@ def _supports(
                 and current.remaining < duration
             ):
                 return True
+    return False
+
+
+def _rewrite_supports(
+    state: BattleState, caster: UnitState, skill: SkillDef, spec: EffectSpec, target: UnitState
+) -> bool:
+    """改寫規則型原語（Phase 3C-4a）對友方 ``target`` 有沒有用：這一輪還沒被給過 AP、有可以重置
+    的冷卻、還沒有不死。"""
+    if spec.type == GRANT_AP:
+        return grant_ap_problem(state, target) is None
+    if spec.type == RESET_COOLDOWN:
+        return bool(resettable_cooldowns(state, caster, target, skill, spec))
+    if spec.type == CHEAT_DEATH:
+        return not target.has_status(CHEAT_DEATH_STATUS)
     return False
 
 

@@ -211,6 +211,12 @@ class UnitState:
     """身上的層數（層數 ID → 層數，只列出 > 0 的；Phase 2E-3，定義在 ``stacks.yaml``）。"""
     stack_expiry: dict[str, int] = field(default_factory=dict)
     """有 ``expires_after_rounds`` 的層數：層數 ID → 在這一輪開始時清空。"""
+    source: int = 0
+    """源力（Phase 3C-4a）：傳說技能的代價，上限 ``core.yaml`` 的 ``source_max``。"""
+    ap_pending: int = 0
+    """``grant_ap`` 給不在自己回合的單位的 AP：下次自己回合開始時加上（不超過本回合上限）。"""
+    ap_granted_round: int = 0
+    """最近一次被 ``grant_ap`` 給 AP 的輪數（0 為從未；同一單位每輪最多被給一次）。"""
 
     @property
     def alive(self) -> bool:
@@ -274,6 +280,9 @@ class UnitState:
             hits_landed=self.hits_landed,
             stacks=dict(self.stacks),
             stack_expiry=dict(self.stack_expiry),
+            source=self.source,
+            ap_pending=self.ap_pending,
+            ap_granted_round=self.ap_granted_round,
         )
 
 
@@ -307,6 +316,8 @@ class BattleState:
     pending: PendingResolution | None = None
     traps: list[TrapState] = field(default_factory=list)
     """戰場上的陷阱（Phase 2E-3），依 ``(y, x)`` 排序；同一格最多一個。"""
+    source_wells: tuple[tuple[int, int], ...] = ()
+    """尚未被取用的源泉格（Phase 3C-4a），依 ``(y, x)`` 排序；我方單位進入時 +1 源力並消失。"""
 
     # ------------------------------------------------------------------
     # 複製
@@ -344,6 +355,7 @@ class BattleState:
             spawn_templates=self.spawn_templates,
             pending=self.pending,
             traps=list(self.traps),
+            source_wells=self.source_wells,
         )
 
     # ------------------------------------------------------------------
