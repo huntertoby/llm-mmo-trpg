@@ -1,0 +1,24 @@
+# 規則改變型傳說（Phase 3D-6 示範技能，數值為初值，未經模擬）：整場——你的火焰打到友方時改為治療。
+id: skill_kindred_flame
+schema_version: 1
+name_zh: 慈焰誓約
+tier: 1
+rank: 1
+rarity: legendary
+kind: active
+skeleton: aura
+category: spell
+weapon_req: any
+ap_cost: 1
+scaling_attr: wis
+shape: {type: self}
+effects:
+  - {type: rule_change, rule: fire_mends_allies, affects: self}
+activation: battle
+condition: null
+cost: {mana: 0, source: 1}
+tags: [fire, support, legendary]
+narrative:
+  concept: 你與火焰立下誓約：它可以吞噬敵人，但永遠不會灼傷你的同伴
+  cast_flavor: 你掌心的火光轉為溫暖的金色，同伴身上的焦痕開始癒合
+provenance: {origin: builtin, owner_id: null, created_by: null, parents: [], bound: true, tradeable: false}

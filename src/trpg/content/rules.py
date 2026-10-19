@@ -179,6 +179,13 @@ class CoreRules(ContentModel):
     zone_limit_per_owner: int = Field(default=2, ge=1, le=6)
     """同一施放者同時存在的區域上限（Phase 3D-5）；超過時最舊的消失。"""
 
+    # 常駐類傳說的啟動（3D-6）
+    legendary_activation_ap: int = Field(default=1, ge=1, le=3)
+    """啟動常駐類傳說（修正型與規則改變型，``activation``）花的 AP（Phase 3D-6）。"""
+    legendary_timed_rounds: int = Field(default=3, ge=1, le=10)
+    """``activation: timed`` 的持續輪數（Phase 3D-6；初值，以模擬調整）：啟動後在持有者第
+    ``N`` 次之後的回合開始時結束（也就是持有者連同啟動的那一回合共有 ``N`` 個回合）。"""
+
     @model_validator(mode="after")
     def _check_source(self) -> CoreRules:
         if self.source_min_at_start > self.source_max:

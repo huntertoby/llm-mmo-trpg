@@ -125,3 +125,10 @@ modifier:
 max_rule_rewrite: 1           # 每個技能最多 1 個
 rule_rewrite_min_cooldown: 4  # 必須 uses_per_battle: 1 或冷卻至少這麼多回合
 rule_rewrite_min_cooldown_with_source: 2   # 花源力（傳說，cost.source）時改為冷卻至少 2 回合（初值）
+
+# 常駐類傳說（Phase 3D-6，docs/design/06-技能.md 6.14.4）：修正型與規則改變型傳說要以 1 AP ＋ 源力啟動（activation）。
+#   係數改用 ap_coefficient_permille 的「啟動 AP」那一欄（rules/core.yaml 的 legendary_activation_ap，目前 1 → 500‰），
+#   不用修正係數：啟動是一次 1 AP 的動作。限時（timed，持續 legendary_timed_rounds 輪）為基準；
+#   整場（battle）的可用預算再 × legendary_battle_budget_permille（使用者決定：整場的效果較弱）。
+#   規則改變（rule_change 原語）每一類的點數在 rule_changes.yaml 的 kinds。初值，以模擬調整。
+legendary_battle_budget_permille: 600

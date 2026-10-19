@@ -42,6 +42,7 @@ def test_the_three_summon_templates_are_loaded_into_the_ruleset() -> None:
         "summon_elemental_spirit",
         "summon_skeleton_warrior",
         "summon_war_totem",
+        "summon_afterimage",  # 3D-6：規則改變「殘影」的分身
     }
     spirit, skeleton = summons["summon_elemental_spirit"], summons["summon_skeleton_warrior"]
     assert spirit.template.summon and skeleton.template.summon

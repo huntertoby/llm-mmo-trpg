@@ -1,0 +1,38 @@
+# 規則改變（Phase 3D-6，docs/design/06-技能.md 6.16 F；docs/phases/Phase3D計畫.md 6）。
+# 傳說的第三種核心：直接改變一條戰鬥規則，只影響持有者自己（「你的……」）。技能以原語 rule_change 引用這裡的一條
+#   effects: [{type: rule_change, rule: <id>, affects: self}]
+# 並以 activation（timed 限時／battle 整場）啟動：1 AP（rules/core.yaml 的 legendary_activation_ap）＋ 技能的源力。
+# 每個單位最多裝 1 個規則改變型傳說，同時最多 1 個生效中的規則改變。
+#
+# kind 是引擎內預先實作的類（新增一條同類規則只要改這個檔案，新增一類要改引擎）：
+#   element_heals_allies  你造成的 element 傷害打到友方（不含自己）時，改為治療傷害 × permille‰（參數 element、permille 100–1000）
+#   push_any_object       你可以推動任何擋路的物件（blocks_move，例如土牆、矮牆、倒木、倒塌物）；可推倒的（石柱、枯樹）照樣倒下；地形不行
+#   pass_through_apply    你步行時，每經過一格就對相鄰的敵人施加 status（duration 回合，照常擲抵抗）；每次移動每個敵人最多一次
+#   on_downed_spawn       你倒下時，在原地留下召喚物 unit（分身），持續 duration 輪（到第 N 輪的環境回合消失）
+#
+# kinds.<kind>.points：該類的預算點數（只給傳說；參數不影響點數）。初值，未經模擬。
+kinds:
+  element_heals_allies: {points: 5}
+  push_any_object: {points: 7}
+  pass_through_apply: {points: 7}
+  on_downed_spawn: {points: 5}
+
+rule_changes:
+  - id: fire_mends_allies
+    name_zh: 慈焰
+    kind: element_heals_allies
+    element: fire
+    permille: 1000
+  - id: move_any_object
+    name_zh: 移山
+    kind: push_any_object
+  - id: bleeding_wake
+    name_zh: 血痕
+    kind: pass_through_apply
+    status: bleed
+    duration: 2
+  - id: afterimage_double
+    name_zh: 殘影
+    kind: on_downed_spawn
+    unit: summon_afterimage
+    duration: 2

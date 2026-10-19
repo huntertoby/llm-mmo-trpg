@@ -364,6 +364,19 @@ def _consume_status_points(
     return total, " ".join(notes)
 
 
+def _rule_change_points(
+    _skill: SkillDef, effect: EffectSpec, library: ContentLibrary
+) -> tuple[Fraction, str]:
+    """``rule_change`` 的點數（3D-6）：該類規則改變的點數（``rule_changes.yaml`` 的 ``kinds``；
+    參數不影響點數）。"""
+    try:
+        rule = library.ruleset.rule_change_def(effect.rule or "")
+    except KeyError:
+        raise BudgetError(f"未知的規則改變 {effect.rule!r}") from None
+    points = library.ruleset.rule_changes.points(rule.kind)
+    return Fraction(points), f"規則改變 {rule.kind} {points} 點"
+
+
 _SPECIAL_BASES: dict[
     str, Callable[[SkillDef, EffectSpec, ContentLibrary], tuple[Fraction, str]]
 ] = {
@@ -374,6 +387,7 @@ _SPECIAL_BASES: dict[
     "summon": _summon_points,
     "zone": _zone_points,
     "restore_resource": _restore_resource_points,
+    "rule_change": _rule_change_points,
 }
 """需要整個技能或特殊規則的 ``budget_basis`` → 點數算法。"""
 
@@ -687,6 +701,23 @@ def _ap_coefficient(skill: SkillDef, budget: BudgetRules) -> Fraction:
     raise BudgetError(f"{skill.kind} 技能尚無預算算法")
 
 
+def _activation_coefficient(skill: SkillDef, library: ContentLibrary) -> tuple[Fraction, str]:
+    """常駐類傳說（3D-6，``activation``）的係數：啟動 AP（``legendary_activation_ap``）的 AP 係數；
+    整場型再 × ``legendary_battle_budget_permille``。"""
+    budget = library.budget
+    ap = library.ruleset.core.legendary_activation_ap
+    coefficient = budget.ap_coefficient_permille.get(ap)
+    if coefficient is None:
+        raise BudgetError(f"沒有 AP {ap} 的預算係數")
+    if skill.activation == "battle":
+        permille = budget.legendary_battle_budget_permille
+        return (
+            Fraction(coefficient * permille, _PERMILLE * _PERMILLE),
+            f"啟動 AP {ap} 係數 × 整場 {permille}‰",
+        )
+    return Fraction(coefficient, _PERMILLE), f"啟動 AP {ap} 係數（限時）"
+
+
 def skill_budget(skill: SkillDef, library: ContentLibrary) -> BudgetReport:
     """計算 ``skill`` 的預算明細；缺少點數資料時拋出 :class:`BudgetError`。"""
     rules, budget = library.ruleset, library.budget
@@ -717,7 +748,9 @@ def skill_budget(skill: SkillDef, library: ContentLibrary) -> BudgetReport:
     tier_budget = rules.core.tier_budget.get(skill.tier)
     if tier_budget is None:
         raise BudgetError(f"沒有階級 {skill.tier} 的預算（tier_budget）")
-    if skill.kind == "passive":
+    if skill.is_activatable:
+        coefficient, label = _activation_coefficient(skill, library)
+    elif skill.kind == "passive":
         coefficient, label = _passive_coefficient(skill, library)
     elif skill.is_modifier:
         coefficient = Fraction(budget.modifier.coefficient_permille, _PERMILLE)

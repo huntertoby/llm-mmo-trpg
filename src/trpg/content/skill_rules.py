@@ -199,6 +199,9 @@ class BudgetRules(ContentModel):
     totem_expected_allies_permille: int = Field(default=1000, ge=0, le=5000)
     """圖騰（Phase 3D-4b）的點數 ＝ 光環狀態的 ``budget_points`` × 預期受惠的友方數（‰）× 持續輪數
     × ``summon_round_value_permille``（初值，未經模擬）。"""
+    legendary_battle_budget_permille: int = Field(default=600, ge=100, le=1000)
+    """常駐類傳說 ``activation: battle``（整場）的可用預算倍率（‰；Phase 3D-6，使用者決定
+    「整場較弱」；初值，以模擬調整）。``timed``（限時）為基準 1000‰。"""
     zone_cell_round_permille: int = Field(default=120, ge=1, le=5000)
     """``zone``（Phase 3D-5）：每格每輪預估的觸發次數（‰；初值，未經模擬）。"""
     zone_both_permille: int = Field(default=1500, ge=1000, le=5000)

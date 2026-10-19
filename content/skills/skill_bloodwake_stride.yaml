@@ -1,0 +1,24 @@
+# 規則改變型傳說（Phase 3D-6 示範技能，數值為初值，未經模擬）：限時——你走過敵人身邊時讓他流血。
+id: skill_bloodwake_stride
+schema_version: 1
+name_zh: 血痕疾行
+tier: 1
+rank: 1
+rarity: legendary
+kind: active
+skeleton: aura
+category: spell
+weapon_req: any
+ap_cost: 1
+scaling_attr: dex
+shape: {type: self}
+effects:
+  - {type: rule_change, rule: bleeding_wake, affects: self}
+activation: timed
+condition: null
+cost: {mana: 0, source: 1}
+tags: [shadow, mobility, legendary]
+narrative:
+  concept: 你化成一道貼地的紅影，掠過之處只留下細長的傷口
+  cast_flavor: 風聲在你身後拉成尖嘯，擦身而過的敵人才發現自己在流血
+provenance: {origin: builtin, owner_id: null, created_by: null, parents: [], bound: true, tradeable: false}

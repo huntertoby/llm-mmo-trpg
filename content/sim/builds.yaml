@@ -19,6 +19,8 @@ companions: [sim_companion_fighter, sim_companion_archer]
 # 回春由單體轉成直線）與自我療癒（allow_self_target）。
 # Phase 3D-4b：新增 build_summoner（召喚師）：召喚元素之靈、喚起骷髏、立起圖騰（build_trapper 仍裝著 3D-4a 的喚起骷髏）。
 # Phase 3C-3a：build_push 加破城衝撞與裂骨印記（撞擊）、build_fire 加烈焰護身（on_cast_tag）、build_warlock 加蝕心追擊（on_status_applied）。
+# Phase 3D-6：常駐類傳說（以 1 AP ＋ 源力啟動）：build_summoner 加慈焰誓約（火牆不再燒到隊友）、build_guardian 加移山之力、
+# build_striker 加血痕疾行、build_trapper 加殘影之誓（規則改變型，每人最多 1 個）；build_charger 加戰神降臨（修正型傳說，被動欄位）。
 # Phase 3C-2：修正技能（kind: modifier，裝在被動欄位，上限 3）——build_push 加重踏、build_fire 加灼傷之痕與餘燼循環、
 # build_tank 加雷之手（單手劍的物理普攻變成雷電，3C-5 再整理）。
 builds:
@@ -187,7 +189,7 @@ builds:
       resist: {physical: 100}
       tags: [hero, sim]
       max_mana: 20
-      skills: [skill_taunting_roar, skill_stand_firm, skill_bulwark_stance, skill_thorn_skin, skill_soul_bond, skill_vigil_call, skill_charging_strike, skill_shoulder_strike]
+      skills: [skill_taunting_roar, skill_stand_firm, skill_bulwark_stance, skill_thorn_skin, skill_soul_bond, skill_vigil_call, skill_charging_strike, skill_shoulder_strike, skill_mountain_mover]
 
   - id: build_striker
     name_zh: 蓄力流
@@ -204,7 +206,7 @@ builds:
       resist: {elemental: 150}
       tags: [hero, sim]
       max_mana: 40
-      skills: [skill_static_palm, skill_thunder_finisher, skill_ember_brand]
+      skills: [skill_static_palm, skill_thunder_finisher, skill_ember_brand, skill_bloodwake_stride]
 
   - id: build_trapper
     name_zh: 陷阱流
@@ -221,7 +223,7 @@ builds:
       resist: {elemental: 150}
       tags: [hero, sim]
       max_mana: 40
-      skills: [skill_cinder_mine, skill_bear_trap, skill_frost_shackle, skill_sinkhole, skill_fleet_foot, skill_raise_skeleton]
+      skills: [skill_cinder_mine, skill_bear_trap, skill_frost_shackle, skill_sinkhole, skill_fleet_foot, skill_raise_skeleton, skill_afterimage_vow]
 
   - id: build_charger
     name_zh: 衝鋒流
@@ -237,7 +239,7 @@ builds:
       resist: {physical: 100}
       tags: [hero, sim]
       max_mana: 24
-      skills: [skill_tiger_charge, skill_vault_leap, skill_decoy_swap, skill_guard_swap, skill_gale_kick, skill_bull_rush]
+      skills: [skill_tiger_charge, skill_vault_leap, skill_decoy_swap, skill_guard_swap, skill_gale_kick, skill_bull_rush, skill_war_avatar]
 
   - id: build_banisher
     name_zh: 放逐流
@@ -271,4 +273,4 @@ builds:
       resist: {elemental: 100}
       tags: [hero, sim]
       max_mana: 40
-      skills: [skill_summon_spirit, skill_raise_skeleton, skill_plant_totem, skill_frost_shackle, skill_fire_wall]
+      skills: [skill_summon_spirit, skill_raise_skeleton, skill_plant_totem, skill_frost_shackle, skill_fire_wall, skill_kindred_flame]

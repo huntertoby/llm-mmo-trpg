@@ -13,6 +13,13 @@ from trpg.skillgen.budget import skill_budget
 from trpg.skillgen.validate import validate_skill
 
 DEMO = ("skill_time_surge", "skill_rallying_cry", "skill_undying_oath", "skill_mirror_cast")
+LASTING = (  # 常駐類傳說（Phase 3D-6，tests/content/test_lasting_legendary_schema.py）
+    "skill_war_avatar",
+    "skill_kindred_flame",
+    "skill_mountain_mover",
+    "skill_bloodwake_stride",
+    "skill_afterimage_vow",
+)
 GRANT = {"type": "grant_ap", "amount": 2, "affects": "self"}
 
 
@@ -72,13 +79,16 @@ def test_source_cost_is_one_or_two(source: int) -> None:
 
 def test_a_legendary_without_a_rule_rewrite_or_modifier_is_rejected() -> None:
     plain = SkillDef.model_validate(_data(effects=[{"type": "heal", "dice": "2d6"}]))
-    assert _problems(plain) == ["rarity：傳說技能必須含 1 個改寫規則型原語或修正規則（modifiers）"]
+    assert _problems(plain) == [
+        "rarity：傳說技能必須恰好有 1 個核心（改寫規則型原語、修正規則 modifiers、規則改變 "
+        "rule_change 三擇一），收到 沒有"
+    ]
     (violation,) = validate_skill(plain, library())
     assert violation.rule == "reference"
 
 
 def test_only_active_skills_can_spend_source() -> None:
-    with pytest.raises(ValidationError, match="只有主動技能可以花源力"):
+    with pytest.raises(ValidationError, match="只有主動技能與修正型傳說可以花源力"):
         SkillDef.model_validate(
             _data(
                 kind="passive",
@@ -118,8 +128,13 @@ def test_a_non_legendary_rule_rewrite_still_needs_cooldown_four() -> None:
 
 
 def test_at_most_one_rule_rewrite_per_skill() -> None:
+    # 傳說「恰好 1 個核心」（Phase 3D-6）已在引用檢查擋下兩個改寫規則型原語，這裡用史詩檢查上限
     two = SkillDef.model_validate(
-        _data(effects=[GRANT, {"type": "cheat_death", "duration": 1, "affects": "self"}])
+        _data(
+            rarity="epic",
+            cost={"cooldown": 4},
+            effects=[GRANT, {"type": "cheat_death", "duration": 1, "affects": "self"}],
+        )
     )
     assert "cap.rule_rewrite" in {v.rule for v in validate_skill(two, library())}
 
@@ -144,4 +159,4 @@ def test_the_demo_legendaries_are_valid_equipped_and_cover_each_primitive() -> N
         primitives |= {e.type for e in skill.effects}
     assert {"grant_ap", "reset_cooldown", "cheat_death", "copy_skill"} <= primitives
     legendaries = sorted(s.id for s in lib.skills.values() if s.rarity == "legendary")
-    assert legendaries == sorted(DEMO)
+    assert legendaries == sorted(DEMO + LASTING)

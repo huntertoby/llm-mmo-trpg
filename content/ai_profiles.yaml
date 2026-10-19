@@ -93,6 +93,8 @@ rewrite:
   reaction_points: 8
   mana_points: 1
   steal_points: 8
+  activation_round_points: 4    # 3D-6：啟動常駐類傳說每一輪效果的價值（限時 × 持續輪數；整場 × activation_battle_rounds）
+  activation_battle_rounds: 4
 # summon（Phase 3D-4a 寫在程式裡，3D-4b 搬到這裡；初值未經模擬）：召喚技能的評分，收益 ＝ 召喚物的預估價值
 # （單位為等值傷害點數）× 行為模式的對應權重：
 #   hit_permille            召喚物預估傷害（武器骰平均 ＋ 固定傷害，每輪一次攻擊）× 持續輪數 × damage 權重

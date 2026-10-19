@@ -1,0 +1,15 @@
+# 召喚物（Phase 3D-6，規則改變「殘影」on_downed_spawn 用；數值為初值，未經模擬）：持有者倒下時留在原地的分身。
+# 不是由 summon 原語召喚，而是由規則改變產生；召喚者已倒下，所以在第 N 輪的環境回合消失（rule_changes.yaml）。
+id: summon_afterimage
+name_zh: 殘影分身
+attributes: {str: 10, dex: 12, con: 10, int: 10, wis: 10, wil: 10}
+max_hp: 14
+speed: 4
+armor_bonus: 2
+weapon: dagger
+ai_profile: brute
+resist: {}
+element_mods: {}
+tags: [summoned, afterimage]
+reactions: []
+summon: true

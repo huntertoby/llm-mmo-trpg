@@ -1,0 +1,27 @@
+# 修正型傳說（Phase 3D-6 示範技能，數值為初值，未經模擬）：裝在被動欄位，花 1 AP ＋ 源力啟動，限時 3 輪：
+# 你的所有攻擊傷害 +18%。啟動前不生效。
+id: skill_war_avatar
+schema_version: 1
+name_zh: 戰神降臨
+tier: 1
+rank: 1
+rarity: legendary
+kind: modifier
+skeleton: modifier
+category: spell
+weapon_req: any
+ap_cost: null
+scaling_attr: str
+shape: {type: self}
+effects: []
+modifiers:
+  - applies_to: {all_attacks: true}
+    change: {damage_permille: 180}
+activation: timed
+condition: null
+cost: {source: 1}
+tags: [martial, modifier, legendary]
+narrative:
+  concept: 燃起一點源力，讓戰意在短時間內壓過一切疲憊與遲疑
+  cast_flavor: 你的眼中燃起金光，每一擊都帶著山崩般的重量
+provenance: {origin: builtin, owner_id: null, created_by: null, parents: [], bound: true, tradeable: false}

@@ -1,0 +1,24 @@
+# 規則改變型傳說（Phase 3D-6 示範技能，數值為初值，未經模擬）：限時——你可以推動任何擋路的物件，包括牆。
+id: skill_mountain_mover
+schema_version: 1
+name_zh: 移山之力
+tier: 1
+rank: 1
+rarity: legendary
+kind: active
+skeleton: aura
+category: spell
+weapon_req: any
+ap_cost: 1
+scaling_attr: str
+shape: {type: self}
+effects:
+  - {type: rule_change, rule: move_any_object, affects: self}
+activation: timed
+condition: null
+cost: {mana: 0, source: 1}
+tags: [earth, displace, legendary]
+narrative:
+  concept: 源力灌進你的雙臂，土牆與倒木在你手下就像空木箱
+  cast_flavor: 你的肌肉發出岩石般的摩擦聲，腳下的地面微微下陷
+provenance: {origin: builtin, owner_id: null, created_by: null, parents: [], bound: true, tradeable: false}

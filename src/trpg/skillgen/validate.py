@@ -96,6 +96,7 @@ def _reference_violations(skill: SkillDef, library: ContentLibrary) -> list[Viol
         stacks=rules.stacks.by_id(),
         dual_min_rarity=rules.core.dual_scaling_min_rarity,
         summon_ids=set(rules.summons.by_id()),
+        rule_change_ids=set(rules.rule_changes.by_id()),
     )
     if skill.skeleton not in library.skeletons:
         problems.append(f"skeleton：沒有骨架資料檔 {skill.skeleton!r}")

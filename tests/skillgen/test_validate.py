@@ -132,8 +132,8 @@ def test_weapon_req_must_be_a_broad_class() -> None:
 
 def test_at_most_one_rule_rewrite_primitive() -> None:
     fake = lib_with_rewrite_primitive()
-    two = skill_raw(
-        rarity="legendary",
+    two = skill_raw(  # 傳說另有「恰好 1 個核心」（Phase 3D-6，引用檢查），這裡用史詩
+        rarity="epic",
         effects=(EffectSpec(type="fake_rewrite"), EffectSpec(type="fake_rewrite")),
         cost=skill().cost.model_copy(update={"uses_per_battle": 1}),
     )

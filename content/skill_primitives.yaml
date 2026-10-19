@@ -416,3 +416,16 @@ primitives:
       effects: {type: effects, required: true, description_zh: 區域結算的效果（1–2 個）}
       speed: {type: int, min: 1, max: 2, description_zh: anchor moving 每次環境回合前進的格數}
       surface: {type: surface, description_zh: 區域新覆蓋的格子留下的表面（省略＝不留）}
+
+  # --- Phase 3D-6：規則改變（docs/design/06-技能.md 6.16 F、6.14.4；點數在 rule_changes.yaml 的 kinds）---
+  - id: rule_change
+    name_zh: 規則改變
+    description_zh: 傳說的第三種核心：引用 rule_changes.yaml 的一條規則改變（只影響施放者自己）。技能必須寫 activation（timed 持續 legendary_timed_rounds 輪、battle 本場剩餘時間），施放＝以 legendary_activation_ap AP ＋ 源力啟動；生效中不能再啟動。每個單位最多裝 1 個、同時最多 1 個生效中的規則改變。必須是主動技能唯一的效果、形狀 self。
+    category: rule_change
+    harmful: false
+    min_rarity: legendary
+    budget_basis: rule_change
+    acts_on: caster
+    allowed_shapes: [self]
+    params:
+      rule: {type: rule_change, required: true, description_zh: rule_changes.yaml 的規則改變 ID}

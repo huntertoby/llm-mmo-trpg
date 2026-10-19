@@ -37,6 +37,7 @@ from trpg.content.environment import (
 )
 from trpg.content.loader import default_content_dir, load_content_file
 from trpg.content.maps import MapDef, SpawnUnitsEvent, check_map
+from trpg.content.rule_changes import RuleChangeDef, RuleChangeTable
 from trpg.content.rules import CoreRules, HitTable
 from trpg.content.schemas import ContentModel, ElementTable
 from trpg.content.sim_builds import BuildTable
@@ -110,7 +111,10 @@ class Ruleset(ContentModel):
     skills: SkillTable = SkillTable()
     summons: SummonTable = SummonTable()
     """召喚物範本（Phase 3D-4a，``content/units/summons/``）：嵌入規則包，重播不依賴資料檔。"""
+    rule_changes: RuleChangeTable = RuleChangeTable()
+    """規則改變（Phase 3D-6，``content/rule_changes.yaml``）：嵌入規則包，重播不依賴資料檔。"""
 
+    _rule_change_index: dict[str, RuleChangeDef] = PrivateAttr(default_factory=dict)
     _summon_index: dict[str, SummonDef] = PrivateAttr(default_factory=dict)
     _skill_index: dict[str, SkillDef] = PrivateAttr(default_factory=dict)
     _shape_index: dict[str, ShapeDef] = PrivateAttr(default_factory=dict)
@@ -135,6 +139,7 @@ class Ruleset(ContentModel):
         self._trigger_index = self.skill_triggers.by_id()
         self._stack_index = self.stacks.by_id()
         self._summon_index = self.summons.by_id()
+        self._rule_change_index = self.rule_changes.by_id()
         self._modifier_ids = frozenset(s.id for s in self.skills.skills if s.is_modifier)
 
     @model_validator(mode="after")
@@ -186,7 +191,19 @@ class Ruleset(ContentModel):
         rubble = self.core.topple_rubble_object
         if rubble not in {o.id for o in self.objects.objects}:
             raise ValueError(f"core.yaml 的 topple_rubble_object 引用了未知的物件：{rubble}")
+        self._check_rule_changes(ids)
         return self
+
+    def _check_rule_changes(self, status_ids: set[str]) -> None:
+        """規則改變（3D-6）引用的狀態與召喚物範本存在。"""
+        summon_ids = set(self.summons.by_id())
+        for rule in self.rule_changes.rule_changes:
+            if rule.status is not None and rule.status not in status_ids:
+                raise ValueError(f"rule_changes.yaml 的 {rule.id} 引用了未知的狀態：{rule.status}")
+            if rule.unit is not None and rule.unit not in summon_ids:
+                raise ValueError(
+                    f"rule_changes.yaml 的 {rule.id} 引用了未知的召喚物範本：{rule.unit}"
+                )
 
     def object_def(self, kind: str) -> ObjectDef:
         return self.objects.get(kind)
@@ -239,6 +256,11 @@ class Ruleset(ContentModel):
         """召喚物範本；找不到時拋出 ``KeyError``。"""
         index: dict[str, SummonDef] = self.__pydantic_private__["_summon_index"]  # type: ignore[index]
         return index[summon_id]
+
+    def rule_change_def(self, rule_id: str) -> RuleChangeDef:
+        """規則改變（Phase 3D-6）；找不到時拋出 ``KeyError``。"""
+        index: dict[str, RuleChangeDef] = self.__pydantic_private__["_rule_change_index"]  # type: ignore[index]
+        return index[rule_id]
 
     def has_modifier(self, skill_ids: Iterable[str]) -> bool:
         """``skill_ids`` 之中是否有修正技能（``kind: modifier``，3C-2；引擎的快速路徑）。"""
@@ -346,6 +368,7 @@ def load_library(  # noqa: PLR0915
     skeletons = _load_dir(root / "skeletons", SkeletonDef, files)
     skills = _load_dir(root / "skills", SkillDef, files)
     summons = _load_summons(root, weapons.by_id(), files)
+    rule_changes = load("rule_changes.yaml", RuleChangeTable)
     try:
         ruleset = Ruleset(
             core=core,
@@ -363,6 +386,7 @@ def load_library(  # noqa: PLR0915
             stacks=stacks,
             skills=SkillTable(skills=tuple(skills[k] for k in sorted(skills))),
             summons=summons,
+            rule_changes=rule_changes,
         )
     except ValueError as exc:
         raise ContentError(root / "rules", str(exc)) from exc
@@ -465,6 +489,8 @@ def _check_skills(root: Path, skills: dict[str, SkillDef], ruleset: Ruleset) -> 
     status_ids = {s.id for s in ruleset.statuses.statuses}
     object_ids = {o.id for o in ruleset.objects.objects}
     summon_ids = set(ruleset.summons.by_id())
+    rule_change_ids = set(ruleset.rule_changes.by_id())
+    activation_ap = ruleset.core.legendary_activation_ap
     for skill_id, skill in skills.items():
         problems = skill_problems(
             skill,
@@ -477,7 +503,13 @@ def _check_skills(root: Path, skills: dict[str, SkillDef], ruleset: Ruleset) -> 
             stacks=stack_map,
             dual_min_rarity=ruleset.core.dual_scaling_min_rarity,
             summon_ids=summon_ids,
+            rule_change_ids=rule_change_ids,
         )
+        if skill.rule_change_id is not None and skill.ap_cost != activation_ap:
+            problems.append(
+                f"ap_cost：規則改變型傳說以 core.yaml 的 legendary_activation_ap（{activation_ap}）"
+                f"啟動，收到 {skill.ap_cost}"
+            )
         if problems:
             raise ContentError(root / "skills" / f"{skill_id}.yaml", "；".join(problems))
 

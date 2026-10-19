@@ -68,6 +68,7 @@ __all__ = [
     "REQUIRED_CONDITIONS",
     "REQUIRED_SHAPES",
     "RESET_COOLDOWN",
+    "RULE_CHANGE",
     "SELF_CONDITIONS",
     "SELF_ONLY_CHANGES",
     "SKELETON_IDS",
@@ -83,6 +84,7 @@ __all__ = [
     "ZONE_CASTER_SHAPES",
     "ZONE_EFFECT_TYPES",
     "ZONE_MOVING_SHAPES",
+    "Activation",
     "Affects",
     "BasicAction",
     "ConditionDef",
@@ -111,6 +113,7 @@ __all__ = [
     "TriggerSpec",
     "condition_text",
     "default_affects",
+    "legendary_cores",
     "on_hit_carrier",
     "rarity_rank",
     "skill_problems",
@@ -419,6 +422,7 @@ class PrimitiveParam(ContentModel):
         "summon",
         "anchor",
         "zone_when",
+        "rule_change",
     ]
     required: bool = False
     min: int | None = None
@@ -453,7 +457,7 @@ class PrimitiveDef(ContentModel):
     id: str = Field(pattern=ID_PATTERN)
     name_zh: str = Field(min_length=1)
     description_zh: str = Field(min_length=1)
-    category: Literal["numeric", "structural", "rule_rewrite"]
+    category: Literal["numeric", "structural", "rule_rewrite", "rule_change"]
     min_rarity: SkillRarity = "common"
     harmful: bool
     acts_on: Literal["unit", "tile", "caster"] = "unit"
@@ -476,6 +480,7 @@ class PrimitiveDef(ContentModel):
             "charge_through",
             "summon",
             "zone",
+            "rule_change",
         ]
         | None
     ) = None
@@ -699,6 +704,8 @@ class EffectSpec(ContentModel):
     ``when``。）"""
     speed: int | None = Field(default=None, ge=1)
     """``zone`` 的 ``anchor: moving`` 專用（Phase 3D-5）：每次環境回合前進的格數。"""
+    rule: str | None = Field(default=None, pattern=ID_PATTERN)
+    """``rule_change`` 專用（Phase 3D-6）：``content/rule_changes.yaml`` 的規則改變 ID。"""
     effects: tuple[EffectSpec, ...] | None = None
     """``zone`` 專用（Phase 3D-5）：區域結算的效果（1–2 個，只能用 :data:`ZONE_EFFECT_TYPES`，
     不可自帶 ``affects``／``condition``；對象由區域的 ``affects`` 決定）。"""
@@ -724,6 +731,7 @@ class EffectSpec(ContentModel):
             "permille",
             "range",
             "resource",
+            "rule",
             "scale",
             "speed",
             "splash",
@@ -888,6 +896,9 @@ CHARGE_THROUGH = "charge_through"
 """Phase 3D-2c 的直線衝撞原語 ID（6.22）：形狀 ``ground_tile`` 選終點格，沿直線衝過去。"""
 SUMMON = "summon"
 """Phase 3D-4a 的召喚原語 ID（6.16 B）：在 ``ground_tile`` 選的空格召喚 ``unit`` 範本。"""
+RULE_CHANGE = "rule_change"
+"""規則改變（Phase 3D-6）：引用 ``content/rule_changes.yaml`` 的一條規則，以 ``activation``
+啟動。"""
 ZONE = "zone"
 """Phase 3D-5 的持續區域原語 ID（6.16 G）：在格子上建立持續 ``duration`` 輪的區域。"""
 ZONE_EFFECT_TYPES: tuple[str, ...] = ("damage", "heal", "shield", "apply_status")
@@ -1196,6 +1207,10 @@ class ModifierSpec(ContentModel):
         return self
 
 
+type Activation = Literal["timed", "battle"]
+"""常駐類傳說的啟動方式（Phase 3D-6，6.14.4）：``timed`` 持續 ``legendary_timed_rounds`` 輪、
+``battle`` 本場剩餘時間有效（預算較低）。"""
+
 type Mastery = Literal["range", "duration"]
 """專精加成的種類（Phase 2H-2）。"""
 
@@ -1238,6 +1253,10 @@ class SkillDef(ContentModel):
     資料檔不必寫。只對有友方效果、形狀不含施放者的技能有意義。"""
     modifiers: tuple[ModifierSpec, ...] = ()
     """修正規則（Phase 3C-2；只有 ``kind: modifier`` 可以有，1～2 條）。"""
+    activation: Activation | None = None
+    """常駐類傳說的啟動方式（Phase 3D-6）：修正型傳說（``kind: modifier``）與規則改變型傳說
+    （``rule_change`` 原語）必填，其他技能不可填。以 ``UseSkill`` 花 ``legendary_activation_ap``
+    AP ＋ 源力啟動；啟動前修正規則與規則改變都不生效。"""
     tags: tuple[str, ...] = ()
     narrative: NarrativeDef = Field(default_factory=NarrativeDef)
     provenance: Provenance = Field(default_factory=Provenance)
@@ -1308,14 +1327,43 @@ class SkillDef(ContentModel):
         return self
 
     def _check_legendary(self) -> None:
-        """傳說技能（Phase 3C-4a，6.14.4）必須花源力（``cost.source``），非傳說不能花。必須含改寫
-        規則型原語或修正規則，是跨檔案檢查（:func:`skill_problems`）。"""
+        """傳說技能（Phase 3C-4a、3D-6，6.14.4）必須花源力（``cost.source``），非傳說不能花。核心
+        三擇一（改寫規則型原語、修正規則、規則改變）是跨檔案檢查（:func:`skill_problems`）。
+
+        常駐類傳說（修正型 ``kind: modifier``、規則改變型 ``rule_change``）必須寫 ``activation``，
+        其他技能不可寫；修正型傳說是唯一可以花源力的非主動技能。
+        """
         if self.rarity == "legendary" and self.cost.source is None:
             raise ValueError("傳說技能必須有 cost.source（花 1 或 2 點源力）")
         if self.rarity != "legendary" and self.cost.source is not None:
             raise ValueError(f"只有傳說技能可以有 cost.source，收到稀有度 {self.rarity}")
-        if self.cost.source is not None and self.kind != "active":
-            raise ValueError(f"只有主動技能可以花源力（cost.source），收到 kind: {self.kind}")
+        if self.cost.source is not None and self.kind not in ("active", "modifier"):
+            raise ValueError(
+                f"只有主動技能與修正型傳說可以花源力（cost.source），收到 kind: {self.kind}"
+            )
+        lasting = self.rarity == "legendary" and (
+            self.kind == "modifier" or any(e.type == RULE_CHANGE for e in self.effects)
+        )
+        if lasting and self.activation is None:
+            raise ValueError("修正型與規則改變型傳說必須寫 activation（timed 限時或 battle 整場）")
+        if not lasting and self.activation is not None:
+            raise ValueError("只有修正型與規則改變型傳說可以寫 activation")
+        self._check_rule_change()
+
+    def _check_rule_change(self) -> None:
+        """``rule_change``（Phase 3D-6）：主動技能、形狀 ``self``、技能唯一的效果、對象 ``self``，
+        而且是傳說（``activation`` 由 :meth:`_check_legendary` 檢查）。"""
+        changes = [e for e in self.effects if e.type == RULE_CHANGE]
+        if not changes:
+            return
+        if self.kind != "active":
+            raise ValueError(f"rule_change 只能用在主動技能，收到 kind: {self.kind}")
+        if self.rarity != "legendary":
+            raise ValueError(f"rule_change 只能用在傳說技能，收到稀有度 {self.rarity}")
+        if self.shape.type != "self":
+            raise ValueError(f"rule_change 技能的形狀必須是 self，收到 {self.shape.type}")
+        if len(self.effects) != 1:
+            raise ValueError("rule_change 必須是技能唯一的效果")
 
     def _check_copy_skill(self) -> None:
         """``copy_skill``（Phase 3C-4b）：主動技能、形狀 ``self``，而且是唯一的效果（複製的技能自己
@@ -1519,8 +1567,17 @@ class SkillDef(ContentModel):
             raise ValueError(f"修正技能的形狀只能是 self，收到 {self.shape.type}")
         if self.condition is not None:
             raise ValueError("修正技能不能有技能層級的 condition（條件寫在每條修正規則）")
-        if self.cost != SkillCost():
-            raise ValueError("修正技能不能有代價（cost 必須為空）")
+        allowed = (
+            SkillCost(source=self.cost.source, cooldown=self.cost.cooldown)
+            if self.rarity == "legendary"
+            else SkillCost()
+        )
+        if self.cost != allowed:
+            raise ValueError(
+                "修正型傳說的代價只能有源力與冷卻（cost.source、cost.cooldown）"
+                if self.rarity == "legendary"
+                else "修正技能不能有代價（cost 必須為空）"
+            )
         if self.mastery is not None:
             raise ValueError("修正技能不能有 mastery")
         for rule_index, rule in enumerate(self.modifiers):
@@ -1641,9 +1698,20 @@ class SkillDef(ContentModel):
         return self.kind == "modifier"
 
     @property
+    def is_activatable(self) -> bool:
+        """常駐類傳說（Phase 3D-6）：以 ``UseSkill`` 啟動，啟動前不生效。"""
+        return self.activation is not None
+
+    @property
+    def rule_change_id(self) -> str | None:
+        """規則改變型傳說引用的規則改變 ID（Phase 3D-6）；其他技能為 ``None``。"""
+        return next((e.rule for e in self.effects if e.type == RULE_CHANGE), None)
+
+    @property
     def is_actionable(self) -> bool:
-        """玩家可以在自己的回合用 ``UseSkill`` 施放：主動技能與姿態（花 AP）。"""
-        return self.kind in ("active", "stance")
+        """玩家可以在自己的回合用 ``UseSkill`` 施放：主動技能與姿態（花 AP），以及修正型傳說的
+        啟動（Phase 3D-6，裝在被動欄位、從技能列啟動）。"""
+        return self.kind in ("active", "stance") or (self.is_modifier and self.is_activatable)
 
 
 class SkillTable(ContentModel):
@@ -1719,6 +1787,7 @@ def _reference_problem(where: str, name: str, kind: str, value: object, refs: _R
         "object": (refs.object_ids, "物件"),
         "stack": (refs.stacks, "層數"),
         "summon": (refs.summon_ids, "召喚物範本"),
+        "rule_change": (refs.rule_change_ids, "規則改變"),
     }
     entry = known.get(kind)
     if entry is None or entry[0] is None or value in entry[0]:
@@ -1736,6 +1805,7 @@ class _Refs:
     conditions: dict[str, ConditionDef]
     stacks: dict[str, StackDef] | None = None
     summon_ids: set[str] | None = None
+    rule_change_ids: set[str] | None = None
 
 
 def _condition_problems(where: str, condition: ConditionSpec, refs: _Refs) -> list[str]:
@@ -1919,12 +1989,14 @@ def skill_problems(
     stacks: dict[str, StackDef] | None = None,
     dual_min_rarity: str | None = None,
     summon_ids: set[str] | None = None,
+    rule_change_ids: set[str] | None = None,
 ) -> list[str]:
     """技能引用的形狀、原語、條件、狀態、物件是否存在、參數是否在範圍內（繁體中文，空串列為通過）。
 
     ``triggers``：觸發時機表（省略時不檢查被動的 ``trigger``）；``stacks``：層數表（省略時不檢查
     層數原語引用的層數）；``dual_min_rarity``：雙屬性縮放的最低稀有度（省略時不檢查）；
-    ``summon_ids``：召喚物範本 ID（省略時不檢查 ``summon`` 的 ``unit``）。
+    ``summon_ids``：召喚物範本 ID（省略時不檢查 ``summon`` 的 ``unit``）；``rule_change_ids``：
+    規則改變 ID（Phase 3D-6，省略時不檢查 ``rule_change`` 的 ``rule``）。
     """
     problems: list[str] = []
     if (
@@ -1944,7 +2016,9 @@ def skill_problems(
     if skill.trap is not None and skill.trap.shape not in shapes:
         known = ", ".join(sorted(shapes))
         problems.append(f"trap.shape：未知的形狀 {skill.trap.shape!r}（可用：{known}）")
-    refs = _Refs(primitives, status_ids, object_ids, conditions, stacks, summon_ids)
+    refs = _Refs(
+        primitives, status_ids, object_ids, conditions, stacks, summon_ids, rule_change_ids
+    )
     if stacks is not None:
         problems += _cost_stack_problems(skill, stacks)
     self_status = skill.cost.self_status
@@ -1961,18 +2035,33 @@ def skill_problems(
     return problems
 
 
-def _legendary_problems(skill: SkillDef, primitives: dict[str, PrimitiveDef]) -> list[str]:
-    """傳說技能（Phase 3C-4a，6.14.4）＝ 1 個改寫規則型原語或修正規則 ＋ 源力代價。"""
-    if skill.rarity != "legendary":
-        return []
-    rewrites = [
-        e.type
+def legendary_cores(skill: SkillDef, primitives: dict[str, PrimitiveDef]) -> list[str]:
+    """傳說的核心（Phase 3D-6，6.14.4 三擇一）：每個改寫規則型原語、修正規則（整組算一個）、
+    每個規則改變各算一個，依出現順序回傳種類（``rule_rewrite``／``modifier``／``rule_change``）。"""
+    cores = [
+        "rule_rewrite"
         for e in skill.effects
         if e.type in primitives and primitives[e.type].category == "rule_rewrite"
     ]
-    if rewrites or skill.modifiers:
+    if skill.modifiers:
+        cores.append("modifier")
+    cores += ["rule_change" for e in skill.effects if e.type == RULE_CHANGE]
+    return cores
+
+
+def _legendary_problems(skill: SkillDef, primitives: dict[str, PrimitiveDef]) -> list[str]:
+    """傳說技能（Phase 3C-4a、3D-6，6.14.4）＝ 恰好 1 個核心（改寫規則型原語、修正規則、規則改變
+    三擇一）＋ 源力代價。"""
+    if skill.rarity != "legendary":
         return []
-    return ["rarity：傳說技能必須含 1 個改寫規則型原語或修正規則（modifiers）"]
+    cores = legendary_cores(skill, primitives)
+    if len(cores) == 1:
+        return []
+    found = "、".join(cores) if cores else "沒有"
+    return [
+        "rarity：傳說技能必須恰好有 1 個核心（改寫規則型原語、修正規則 modifiers、規則改變 "
+        f"rule_change 三擇一），收到 {found}"
+    ]
 
 
 def _modifier_problems(skill: SkillDef, refs: _Refs) -> list[str]:
@@ -2017,7 +2106,9 @@ _REQ_NAMES = {"melee": "近戰武器", "ranged": "遠程武器", "focus": "法�
 
 
 def skill_slot_problems(skills: Iterable[SkillDef], slots: SkillSlots) -> list[str]:
-    """裝備的技能數量超過 ``core.yaml`` 的欄位上限時的原因（依 ``kind``）。"""
+    """裝備的技能數量超過 ``core.yaml`` 的欄位上限時的原因（依 ``kind``），以及規則改變型傳說
+    超過 1 個（Phase 3D-6）。"""
+    skills = tuple(skills)
     # 修正技能（kind: modifier，3C-2）裝在被動欄位，與觸發型被動共用上限
     counts: Counter[str] = Counter("passive" if s.is_modifier else s.kind for s in skills)
     limits = {
@@ -2027,8 +2118,14 @@ def skill_slot_problems(skills: Iterable[SkillDef], slots: SkillSlots) -> list[s
         "stance": slots.stance,
     }
     names = {"active": "主動", "passive": "被動（含修正）", "reaction": "反應", "stance": "姿態"}
-    return [
+    problems = [
         f"{names[kind]}技能超過欄位上限：{counts[kind]} 個（上限 {limits[kind]}）"
         for kind in limits
         if counts[kind] > limits[kind]
     ]
+    changes = sorted(s.name_zh for s in skills if s.rule_change_id is not None)
+    if len(changes) > 1:  # 改變規則型傳說每人最多裝 1 個（Phase 3D-6，使用者決定）
+        problems.append(
+            f"規則改變型傳說每人最多裝 1 個，收到 {len(changes)} 個：{'、'.join(changes)}"
+        )
+    return problems

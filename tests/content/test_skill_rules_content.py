@@ -127,6 +127,7 @@ def test_the_initial_skeleton_structure_matches_the_spec() -> None:
         "extra_reaction",
         "restore_resource",  # 3D-1
         "zone",  # 3D-5（跟隨型光環）
+        "rule_change",  # 3D-6（規則改變型傳說）
     }
     assert (
         set(sk["aura"].forbid_affects) == {"enemies", "all"} and sk["aura"].secondary.max_count == 1
@@ -284,6 +285,8 @@ def test_min_rarity_tables_match_the_spec() -> None:
             if primitive.id in {"damage", "heal", "apply_status", "shield", "cleanse"}
             else "epic"
             if primitive.id in rewrites
+            else "legendary"
+            if primitive.id == "rule_change"  # 3D-6：只給傳說
             else "rare"
         )
         assert primitive.min_rarity == expected, primitive.id

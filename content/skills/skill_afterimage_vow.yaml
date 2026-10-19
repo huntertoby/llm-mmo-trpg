@@ -1,0 +1,24 @@
+# 規則改變型傳說（Phase 3D-6 示範技能，數值為初值，未經模擬）：整場——你倒下時在原地留下持續 2 輪的分身。
+id: skill_afterimage_vow
+schema_version: 1
+name_zh: 殘影之誓
+tier: 1
+rank: 1
+rarity: legendary
+kind: active
+skeleton: aura
+category: spell
+weapon_req: any
+ap_cost: 1
+scaling_attr: int
+shape: {type: self}
+effects:
+  - {type: rule_change, rule: afterimage_double, affects: self}
+activation: battle
+condition: null
+cost: {mana: 0, source: 1}
+tags: [arcane, summon, legendary]
+narrative:
+  concept: 你把一部分的自己存進源力裡，倒下的那一刻，它會替你站著
+  cast_flavor: 你的輪廓短暫地重疊成兩層，又慢慢合而為一
+provenance: {origin: builtin, owner_id: null, created_by: null, parents: [], bound: true, tradeable: false}
