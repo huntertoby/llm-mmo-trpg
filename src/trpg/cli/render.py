@@ -284,6 +284,10 @@ def render_zone_lines(state: BattleState) -> list[str]:
     return lines
 
 
+FACING_TEXT = {"north": "北↑", "east": "東→", "south": "南↓", "west": "西←"}
+"""朝向的顯示文字（Phase 3D-8d）；單位的背後是朝向的反方向那一格。"""
+
+
 def render_unit_table(state: BattleState) -> str:
     markers = unit_markers(state)
     lines = []
@@ -297,7 +301,8 @@ def render_unit_table(state: BattleState) -> str:
             f"  {markers[unit.id]} {team} {unit.name_zh}：HP {unit.hp}/{unit.max_hp}"
             f"{f' 法力 {unit.mana}/{unit.max_mana}' if unit.max_mana else ''}"
             f"{_source_text(state, unit)}"
-            f" 耐力 {unit.stamina} 位置 {xy_text(unit.pos)} 武器 {unit.weapon.name_zh}"
+            f" 耐力 {unit.stamina} 位置 {xy_text(unit.pos)} 面向{FACING_TEXT[unit.facing]}"
+            f" 武器 {unit.weapon.name_zh}"
             f"{_status_text(state, unit)}{_summon_text(state, unit)}"
             f"{_activation_text(state, unit)}{_granted_text(state, unit)}"
         )

@@ -1466,6 +1466,15 @@
         "title": "EndTurn",
         "description": "結束回合。"
       },
+      "Facing": {
+        "type": "string",
+        "enum": [
+          "north",
+          "east",
+          "south",
+          "west"
+        ]
+      },
       "FocusTarget": {
         "properties": {
           "kind": {
@@ -2793,6 +2802,14 @@
             },
             "type": "array",
             "title": "Miss Notes",
+            "default": []
+          },
+          "backstab": {
+            "items": {
+              "type": "string"
+            },
+            "type": "array",
+            "title": "Backstab",
             "default": []
           }
         },
@@ -4123,6 +4140,10 @@
             "type": "array",
             "title": "Granted Skills",
             "default": []
+          },
+          "facing": {
+            "$ref": "#/components/schemas/Facing",
+            "default": "east"
           }
         },
         "additionalProperties": false,

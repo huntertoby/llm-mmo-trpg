@@ -524,6 +524,8 @@ class PreviewOut(_ApiModel):
     賭注以外的效果。"""
     miss_notes: tuple[str, ...] = ()
     """失手反噬 ``cost.on_miss`` 的說明（Phase 3D-7a，例「失手時：你獲得「倒地」」）。"""
+    backstab: tuple[UnitId, ...] = ()
+    """行動者會從背後攻擊的單位（Phase 3D-8d；命中率已含背刺加成，說明在 ``notes``）。"""
 
 
 def _damage(d: DamageRange | None) -> DamageOut | None:
@@ -711,4 +713,5 @@ def preview_out(
         displace_permille=permille(p.displace_chance),
         gamble=_gamble(p),
         miss_notes=p.miss_notes,
+        backstab=p.backstab,
     )

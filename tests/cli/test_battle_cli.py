@@ -27,6 +27,17 @@ def test_map_show(capsys: pytest.CaptureFixture[str]) -> None:
     assert "深淵" in out and "石地" in out
 
 
+def test_the_unit_table_shows_each_units_facing(capsys: pytest.CaptureFixture[str]) -> None:
+    """Phase 3D-8d：單位列有朝向（開場我方面向敵方起始區、敵方面向我方）。"""
+    code, out, _ = _run(["battle", "--map", "open_plain", "--seed", "2"], capsys)
+    assert code == 0
+    first = out.split("=== 第 1 輪 ===")[1].split("— ")[0]
+    rows = [line for line in first.splitlines() if "位置" in line]
+    assert rows and all("面向" in line for line in rows)
+    assert any("我方" in r and "面向東→" in r for r in rows)
+    assert any("敵方" in r and "面向西←" in r for r in rows)
+
+
 def test_map_show_unknown(capsys: pytest.CaptureFixture[str]) -> None:
     code, _, err = _run(["map", "show", "atlantis"], capsys)
     assert code == 1 and "未知的地圖" in err
@@ -59,7 +70,7 @@ def test_battle_log_and_replay(tmp_path: Path, capsys: pytest.CaptureFixture[str
     )
     assert code == 0 and log.is_file() and str(log) in out
     data = json.loads(log.read_text(encoding="utf-8"))
-    assert data["format"] == "trpg-battle-log/31"
+    assert data["format"] == "trpg-battle-log/32"
     assert data["seed"] == 7 and data["actions"] and data["events"]
     assert data["events"][0]["type"] == "battle_started"
 

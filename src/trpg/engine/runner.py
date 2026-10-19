@@ -37,8 +37,14 @@ __all__ = [
     "run_battle",
 ]
 
-LOG_FORMAT = "trpg-battle-log/31"
-"""``/31``（Phase 3D-8c）：監視射擊——狀態 ``overwatch``、內建反應 ``overwatch_shot``（反應事件
+LOG_FORMAT = "trpg-battle-log/32"
+"""``/32``（Phase 3D-8d）：朝向與背刺——單位的 ``facing``（開場面向敵方起始位置；主動移動、攻擊與
+對單位施放技能後更新）、核心規則 ``backstab_hit_bonus``／``backstab_crit_range_bonus``／
+``ambush_hit_bonus``、``attack_rolled`` 的 ``backstab``／``ambush``、``status_removed`` 的新原因
+``ambushed``；條件 ``from_behind``、``self_concealed``；原語 ``shadowstep``
+（``EffectSpec.landing``、移動方式 ``shadowstep``）；AI 權重 ``backstab``、``back_exposed``。
+``/31`` 的狀態沒有朝向，舊紀錄不能由新版程式重播（背刺與 AI 的選擇都依朝向）。
+``/31``（Phase 3D-8c）：監視射擊——狀態 ``overwatch``、內建反應 ``overwatch_shot``（反應事件
 ``enemy_moves_in_range``、反應定義的 ``requires_status``）、``status_removed`` 的新原因 ``fired``，
 有監視技能的單位自動多一條反應規則；夾擊——條件 ``flanked``；暫時獲得技能——原語 ``grant_skill``
 （``EffectSpec.skill``）、單位的 ``granted_skills``、新事件 ``skill_granted``／

@@ -21,6 +21,7 @@ from trpg.engine.skills.revive import revivable
 from trpg.engine.state import (
     Activation,
     BattleState,
+    Facing,
     PendingResolution,
     StatusInstance,
     UnitState,
@@ -189,6 +190,9 @@ class UnitView(_ViewModel):
     granted_skills: tuple[GrantedSkillView, ...] = ()
     """暫時獲得的技能與剩餘輪數（Phase 3D-8c；不佔 ``skills`` 的欄位，依獲得順序；只有自己陣營的
     單位會列出）。"""
+    facing: Facing = "east"
+    """朝向（Phase 3D-8d；north／east／south／west）。背後格 ＝ 位置 ＋ 朝向的反方向；站在那裡的
+    近戰攻擊者有背刺加成。"""
 
 
 class TrapView(_ViewModel):
@@ -389,6 +393,7 @@ def _unit_view(state: BattleState, unit: UnitState, team: Team) -> UnitView:
         dismissed=unit.dismissed,
         totem_radius=None if (totem := totem_of(state, unit)) is None else totem.radius,
         activations=tuple(_activation_view(state, a) for a in unit.activations),
+        facing=unit.facing,
         granted_skills=(
             tuple(
                 GrantedSkillView(

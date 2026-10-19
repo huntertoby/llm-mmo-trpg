@@ -536,6 +536,8 @@ export interface components {
              */
             type: "end_turn";
         };
+        /** @enum {string} */
+        Facing: "north" | "east" | "south" | "west";
         /**
          * FocusTarget
          * @description 集火指定敵人。
@@ -1076,6 +1078,11 @@ export interface components {
              * @default []
              */
             miss_notes: string[];
+            /**
+             * Backstab
+             * @default []
+             */
+            backstab: string[];
         };
         /**
          * Protect
@@ -1534,6 +1541,8 @@ export interface components {
              * @default []
              */
             granted_skills: components["schemas"]["GrantedSkillView"][];
+            /** @default east */
+            facing: components["schemas"]["Facing"];
         };
         /** UpcomingEventOut */
         UpcomingEventOut: {
