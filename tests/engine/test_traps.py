@@ -17,6 +17,7 @@ from tests.engine.skill_helpers import FLAT7, U1, U2, U3, of, script_rolls
 from tests.engine.test_passive_triggers import always
 from trpg.engine import Attack, BattleState, EndTurn, Move, UseSkill, legal_actions, resolve
 from trpg.engine.ai.utility import UtilityAI
+from trpg.engine.context import Ctx
 from trpg.engine.events import (
     DamageDealt,
     StatusApplied,
@@ -26,6 +27,7 @@ from trpg.engine.events import (
     TriggerLimitReached,
     UnitDowned,
 )
+from trpg.engine.lifecycle import down_unit
 from trpg.engine.preview import preview
 from trpg.engine.traps import strip_hidden_traps, visible_traps
 from trpg.shared.errors import IllegalActionError
@@ -165,6 +167,19 @@ def test_the_traps_disappear_when_the_owner_goes_down(monkeypatch: pytest.Monkey
     assert of(result, UnitDowned)
     assert [e.reason for e in of(result, TrapExpired)] == ["source_lost"]
     assert result.state.traps == []
+
+
+def test_down_unit_returns_the_trap_expired_event_without_duplicating_it() -> None:
+    """驗收條件 5：remove_traps_of 的 TrapExpired 出現在 down_unit 的回傳值中，且不重複
+    （ctx.events 裡只有一筆，不是「回傳值裡有、ctx.events 又多寫一次」）。"""
+    state = place(scene(), BEAR, (4, 3))
+    ctx = Ctx(state.clone())
+    owner = ctx.state.units[U1]
+    events = down_unit(ctx, owner)
+    returned = [e for e in events if isinstance(e, TrapExpired)]
+    logged = [e for e in ctx.events if isinstance(e, TrapExpired)]
+    assert len(returned) == 1 and returned[0].reason == "source_lost"
+    assert logged == returned  # 同一筆事件物件，不是重複發出的兩筆
 
 
 def test_a_trap_over_the_trigger_depth_limit_stays_in_place() -> None:

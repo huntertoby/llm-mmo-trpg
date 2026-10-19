@@ -156,6 +156,16 @@ def test_unknown_shape_rejected_at_load(tmp_path: Path) -> None:
     _rejects(tmp_path, "未知的形狀 'spiral'", skill)
 
 
+def test_unknown_trap_shape_rejected_at_load(tmp_path: Path) -> None:
+    """Phase 2F-1 3.2：TrapSpec.shape 不再是 Literal，而是在載入時對照 shapes 內容檢查。"""
+    data: dict[str, Any] = yaml.safe_load(
+        (PROJECT_ROOT / "content/skills/skill_bear_trap.yaml").read_text("utf-8")
+    )
+    data["id"] = "skill_t_trap_shape"
+    data["trap"]["shape"] = "spiral"
+    _rejects(tmp_path, "trap.shape：未知的形狀 'spiral'", data)
+
+
 def test_shape_parameter_out_of_range_rejected_at_load(tmp_path: Path) -> None:
     _rejects(
         tmp_path,
