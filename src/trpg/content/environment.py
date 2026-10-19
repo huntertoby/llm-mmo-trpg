@@ -9,6 +9,7 @@ from __future__ import annotations
 import re
 from collections import Counter
 from collections.abc import Mapping
+from fractions import Fraction
 from typing import Any, Literal
 
 from pydantic import Field, PrivateAttr, field_validator, model_validator
@@ -45,6 +46,7 @@ __all__ = [
     "SurfaceHeal",
     "SurfaceTable",
     "SurfaceTurnStart",
+    "TrapAiRules",
     "WeatherDef",
     "WeatherTable",
 ]
@@ -585,6 +587,27 @@ class AiWeights(ContentModel):
     cooldown: int = 0
 
 
+class TrapAiRules(ContentModel):
+    """AI 放置陷阱的數值（Phase 2F-2；``content/ai_profiles.yaml`` 的 ``trap:``）。
+
+    - ``max_active``：同陣營同時最多放幾個陷阱（不要求聰明，避免一回合鋪滿整張地圖）。
+    - ``near``：只在最近的敵人 1–``near`` 格（曼哈頓）內的格子放陷阱。
+    - ``shape_factor_permille``：陷阱觸發時預期波及的敵人數（相對單體，‰），以形狀 ID 為鍵。
+    - ``default_factor_permille``：沒有列出的形狀使用的係數（‰）。
+    """
+
+    max_active: int = Field(default=2, ge=1)
+    near: int = Field(default=3, ge=1)
+    shape_factor_permille: dict[str, int] = Field(
+        default_factory=lambda: {"single": 1000, "cross": 1500, "square3": 2000}
+    )
+    default_factor_permille: int = Field(default=1000, ge=0)
+
+    def shape_factor(self, shape: str) -> Fraction:
+        """形狀的預期波及敵人數（相對單體）；沒有設定的形狀用預設係數。"""
+        return Fraction(self.shape_factor_permille.get(shape, self.default_factor_permille), 1000)
+
+
 class AiProfile(ContentModel):
     id: str = Field(pattern=ID_PATTERN)
     name_zh: str = Field(min_length=1)
@@ -599,6 +622,8 @@ class AiProfile(ContentModel):
     trap_likelihood_permille: int = Field(default=700, ge=0, le=1000)
     """放置陷阱時，估計陷阱真的會被踩中或波及敵人的機率（‰，Phase 2E-3）；由 :class:`AiProfileTable`
     的同名欄位填入。"""
+    trap: TrapAiRules = Field(default_factory=TrapAiRules)
+    """放置陷阱的 AI 數值（Phase 2F-2）；由 :class:`AiProfileTable` 的同名欄位填入。"""
 
 
 class OrderBonuses(ContentModel):
@@ -644,6 +669,7 @@ class AiProfileTable(ContentModel):
     ally_status_values: dict[str, int] = Field(default_factory=dict)
     trap_likelihood_permille: int = Field(default=700, ge=0, le=1000)
     """AI 放置陷阱的收益 ＝ 陷阱效果的價值 × 範圍波及的預期敵人數 × 這個機率（‰；初值未經模擬）。"""
+    trap: TrapAiRules = Field(default_factory=TrapAiRules)
     orders: OrderBonuses = Field(default_factory=OrderBonuses)
 
     @model_validator(mode="before")
@@ -654,14 +680,12 @@ class AiProfileTable(ContentModel):
             return data
         shared = data.get("status_values")
         ally_shared = data.get("ally_status_values")
-        trap_shared = data.get("trap_likelihood_permille")
-        if (
-            not isinstance(shared, dict)
-            and not isinstance(ally_shared, dict)
-            and trap_shared is None
-        ):
+        trap_shared = {
+            key: data[key] for key in ("trap_likelihood_permille", "trap") if key in data
+        }
+        if not isinstance(shared, dict) and not isinstance(ally_shared, dict) and not trap_shared:
             return data
-        trap_default = {} if trap_shared is None else {"trap_likelihood_permille": trap_shared}
+        trap_default = trap_shared
         profiles = [
             {
                 **trap_default,

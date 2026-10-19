@@ -38,7 +38,13 @@ from collections.abc import Callable
 from dataclasses import dataclass
 from fractions import Fraction
 
-from trpg.content.environment import AiProfile, AiProfileTable, AiWeights, OrderBonuses
+from trpg.content.environment import (
+    AiProfile,
+    AiProfileTable,
+    AiWeights,
+    OrderBonuses,
+    TrapAiRules,
+)
 from trpg.content.skills import SkillDef
 from trpg.engine.actions import (
     Action,
@@ -123,12 +129,6 @@ _ESCAPED_BONUS = 1000
 _ATTACK_CAUSES = ("attack",)
 _PRONE = "prone"
 _SURFACE_HARM = 8
-_TRAP_MAX_ACTIVE = 2
-"""AI 同時最多放幾個陷阱（Phase 2E-3；不要求聰明，避免一回合鋪滿整張地圖）。"""
-_TRAP_NEAR = 3
-"""AI 只在最近的敵人 1–3 格（曼哈頓）內的格子放陷阱。"""
-_TRAP_SHAPE_FACTOR = {"single": Fraction(1), "cross": Fraction(3, 2), "square3": Fraction(2)}
-"""陷阱觸發時預期波及的敵人數（相對單體）。"""
 """讓友方站上有害的新表面的扣分：相當於這麼多點傷害（乘上 ``friendly_fire``）。"""
 
 
@@ -753,7 +753,12 @@ def _trap_gains(state: BattleState, p: Preview, profile: AiProfile) -> Fraction:
             value += Fraction(w.status) if points is None else Fraction(w.damage * points)
         elif spec.type == "create_surface":
             value += w.surface
-    return value * _TRAP_SHAPE_FACTOR[skill.trap.shape] * profile.trap_likelihood_permille / 1000
+    return (
+        value
+        * profile.trap.shape_factor(skill.trap.shape)
+        * profile.trap_likelihood_permille
+        / 1000
+    )
 
 
 def _harmed_allies(state: BattleState, actor: UnitState) -> int:
@@ -915,6 +920,8 @@ def skill_estimate(  # noqa: PLR0917
     scene: _Scene,
     w: AiWeights,
     before: Fraction,
+    *,
+    trap: TrapAiRules,
 ) -> Fraction | None:
     """技能選取（影響範圍為 ``area``）的便宜估計（不跑引擎），用來篩出每個技能最值得完整評分的
     幾個選取；``None`` 表示不納入候選（這是 ``worth_previewing`` 在技能上的對應）。
@@ -932,7 +939,7 @@ def skill_estimate(  # noqa: PLR0917
     if skill.kind == "stance" and stance_status_ids(state.ruleset, unit):
         return None  # 已經有姿態：AI 不主動換姿態（也不主動取消，Phase 2E-2）
     if skill.trap is not None:
-        return _trap_estimate(state, unit, skill, area, scene)
+        return _trap_estimate(state, unit, skill, area, scene, rules=trap)
     if any(e.type == "teleport" for e in skill.effects) and action.target_pos is not None:
         moved = unit.clone()
         moved.pos = action.target_pos
@@ -964,19 +971,25 @@ def skill_estimate(  # noqa: PLR0917
 
 
 def _trap_estimate(
-    state: BattleState, unit: UnitState, skill: SkillDef, area: SkillArea, scene: _Scene
+    state: BattleState,
+    unit: UnitState,
+    skill: SkillDef,
+    area: SkillArea,
+    scene: _Scene,
+    *,
+    rules: TrapAiRules,
 ) -> Fraction | None:
     """陷阱選取的便宜估計：自己陣營的陷阱還沒滿、波及範圍內沒有友方（含自己）、且最近的敵人在
     1–3 格內。分數 ＝ 3 格內敵人數 × 4 − 最近敵人的距離。AI 只讀自己陣營的陷阱（隱藏規則）。"""
     assert skill.trap is not None
-    if len(visible_traps(state, unit.team)) >= _TRAP_MAX_ACTIVE:
+    if len(visible_traps(state, unit.team)) >= rules.max_active:
         return None
     center = area.origin
     blast = center_tiles(state, skill.trap.shape, center)
     if any(u.team is unit.team and u.xy in blast for u in state.living_units()):
         return None
     distances = [manhattan(center, e.xy) for e in scene.enemies]
-    near = [d for d in distances if d <= _TRAP_NEAR]
+    near = [d for d in distances if d <= rules.near]
     if not near:
         return None
     return Fraction(len(near) * 4 - min(near)) - Fraction(manhattan(unit.xy, center), 1000)
@@ -1230,7 +1243,9 @@ class UtilityAI:
                 scored[index] = score_action(
                     state, action, profile, before=before, orders=ctx, walk=walk
                 )
-        for index in self._skill_candidates(state, unit, actions, areas, scene, w, before):
+        for index in self._skill_candidates(
+            state, unit, actions, areas, scene, w, before, profile.trap
+        ):
             scored[index] = score_action(
                 state, actions[index], profile, before=before, orders=ctx, walk=walk
             )
@@ -1256,13 +1271,16 @@ class UtilityAI:
         scene: _Scene,
         w: AiWeights,
         before: Fraction,
+        trap: TrapAiRules,
     ) -> list[int]:
         """每個技能依便宜的估計（:func:`skill_estimate`）只保留前 ``skill_candidates`` 個選取，
         回傳它們在 ``actions`` 的索引（遞增）。"""
         by_skill: dict[str, list[tuple[Fraction, int]]] = {}
         for index, action in enumerate(actions):
             if isinstance(action, UseSkill):
-                est = skill_estimate(state, unit, action, areas[id(action)], scene, w, before)
+                est = skill_estimate(
+                    state, unit, action, areas[id(action)], scene, w, before, trap=trap
+                )
                 if est is not None:
                     by_skill.setdefault(action.skill_id, []).append((est, index))
         chosen: list[int] = []

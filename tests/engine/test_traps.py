@@ -2,6 +2,8 @@
 
 from __future__ import annotations
 
+from fractions import Fraction
+
 import pytest
 
 from tests.engine.helpers import (
@@ -15,6 +17,7 @@ from tests.engine.helpers import (
 )
 from tests.engine.skill_helpers import FLAT7, U1, U2, U3, of, script_rolls
 from tests.engine.test_passive_triggers import always
+from trpg.content.environment import AiProfileTable, TrapAiRules
 from trpg.engine import Attack, BattleState, EndTurn, Move, UseSkill, legal_actions, resolve
 from trpg.engine.ai.utility import UtilityAI
 from trpg.engine.context import Ctx
@@ -270,3 +273,43 @@ def test_traps_and_stacks_survive_a_json_round_trip() -> None:
     dumped = state_to_json(state)
     back = state_from_json(dumped)
     assert back == state and back.traps == state.traps and state_to_json(back) == dumped
+
+
+def test_the_ai_trap_numbers_live_in_the_content_with_their_original_values() -> None:
+    table = library().ai_profiles
+    assert table.trap.max_active == 2 and table.trap.near == 3
+    assert table.trap.shape_factor("single") == 1
+    assert table.trap.shape_factor("cross") == Fraction(3, 2)
+    assert table.trap.shape_factor("square3") == 2
+    assert all(p.trap == table.trap for p in table.profiles)  # 每個行為模式共用表格層級的數值
+
+
+def test_an_unknown_trap_shape_uses_the_default_factor_instead_of_raising() -> None:
+    rules = TrapAiRules(shape_factor_permille={"single": 1000}, default_factor_permille=1250)
+    assert rules.shape_factor("never_heard_of_it") == Fraction(5, 4)
+    # AI 端：把所有形狀係數都清空，十字陷阱走預設係數，rank 不可 KeyError。
+    data = library().ai_profiles.model_dump()
+    for profile in data["profiles"]:
+        del profile["trap"]
+    data["trap"] = {"shape_factor_permille": {}}
+    ai = UtilityAI(AiProfileTable.model_validate(data))
+    state = scene()
+    state.units[U2].pos = Pos(x=5, y=3)
+    assert any(
+        isinstance(s.action, UseSkill) and s.action.skill_id == CINDER for s in ai.rank(state)
+    )
+
+
+def test_changing_the_content_trap_limit_changes_the_ai_candidates() -> None:
+    data = library().ai_profiles.model_dump()
+    for profile in data["profiles"]:
+        del profile["trap"]
+    data["trap"] = {"near": 1}
+    ai = UtilityAI(AiProfileTable.model_validate(data))
+    state = scene()
+    state.units[U2].pos = Pos(x=5, y=3)
+    for s in ai.rank(state):
+        action = s.action
+        if isinstance(action, UseSkill) and action.skill_id in (CINDER, BEAR):
+            assert action.target_pos is not None
+            assert abs(action.target_pos.x - 5) + abs(action.target_pos.y - 3) <= 1
