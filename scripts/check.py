@@ -6,7 +6,8 @@
 
 每個步驟都會執行（方便一次看到全部問題），最後印出各步驟結果摘要；
 任一步失敗時以非零代碼結束。``lint-imports`` 未安裝時只印出警告並略過，不算失敗
-（``tests/test_architecture.py`` 提供等效的依賴方向檢查）。
+（``tests/test_architecture.py`` 提供等效的依賴方向檢查）。前端檢查（``corepack pnpm -C client``
+的 ``install --frozen-lockfile``、``typecheck``、``test``）在找不到 ``corepack`` 時同樣略過。
 
 工具的尋找順序：目前 Python 環境的模組（``sys.executable -m <tool>``）→
 與 ``sys.executable`` 同一資料夾的執行檔 → ``PATH`` 上的執行檔（``shutil.which``）。
@@ -34,12 +35,21 @@ class Step:
     optional: bool = False
 
 
+def _client_step(title: str, *args: str) -> Step:
+    """``corepack pnpm -C client <args>``；找不到 corepack 時略過（不算失敗）。"""
+    return Step(title, None, "corepack", ("pnpm", "-C", "client", *args), optional=True)
+
+
 STEPS: tuple[Step, ...] = (
     Step("ruff check", "ruff", "ruff", ("check", ".")),
     Step("ruff format --check", "ruff", "ruff", ("format", "--check", ".")),
     Step("mypy", "mypy", "mypy", ()),
     Step("lint-imports", None, "lint-imports", (), optional=True),
     Step("pytest", "pytest", "pytest", ("-q", "-n", "auto")),
+    # 前端（Phase 3-3）：找不到 corepack（沒有安裝 Node）時印出警告並略過，不算失敗。
+    _client_step("client install", "install", "--frozen-lockfile"),
+    _client_step("client typecheck", "typecheck"),
+    _client_step("client test", "test"),
 )
 
 
