@@ -5,6 +5,7 @@
 1. 依賴方向（CLAUDE.md 守則 5）：
    - ``trpg.engine`` 不得匯入 llm、narrative、api、roguelite、sim、skillgen、cli。
    - ``trpg.shared`` 不得匯入任何其他 ``trpg`` 子套件。
+   - ``trpg.narrative`` 不得匯入 cli、api、roguelite、sim（Phase 3-1：描述模組給 CLI 與網頁共用）。
    - ``trpg.content`` 不得匯入 ``trpg.skillgen``（Phase 2B-2 4.1：驗證器依賴內容資料，不能反過來）。
 2. 確定性：``engine``、``shared``、``content``、``skillgen``、``sim``、``roguelite`` 內
    不得使用 ``random``、``secrets``、``uuid4``／``uuid1``、``os.urandom``、時間函式等。
@@ -30,6 +31,14 @@ ENGINE_FORBIDDEN = (
 )
 
 CONTENT_FORBIDDEN = ("trpg.skillgen",)
+
+NARRATIVE_FORBIDDEN = ("trpg.cli", "trpg.api", "trpg.roguelite", "trpg.sim")
+
+FORBIDDEN_BY_SOURCE: dict[str, tuple[str, ...]] = {
+    "trpg.engine": ENGINE_FORBIDDEN,
+    "trpg.content": CONTENT_FORBIDDEN,
+    "trpg.narrative": NARRATIVE_FORBIDDEN,
+}
 
 DETERMINISTIC_PACKAGES = ("engine", "shared", "content", "skillgen", "sim", "roguelite")
 
@@ -171,14 +180,13 @@ def dependency_violations(
     )
     for lineno, target in imported_modules(tree, current, is_package):
         where = f"{location}:{lineno}"
-        if _is_within(current, "trpg.engine"):
-            for forbidden in ENGINE_FORBIDDEN:
-                if _is_within(target, forbidden):
-                    out.append(Violation(where, f"trpg.engine 不得匯入 {target}"))
-        if _is_within(current, "trpg.content"):
-            for forbidden in CONTENT_FORBIDDEN:
-                if _is_within(target, forbidden):
-                    out.append(Violation(where, f"trpg.content 不得匯入 {target}"))
+        for source, forbidden_list in FORBIDDEN_BY_SOURCE.items():
+            if _is_within(current, source):
+                out.extend(
+                    Violation(where, f"{source} 不得匯入 {target}")
+                    for forbidden in forbidden_list
+                    if _is_within(target, forbidden)
+                )
         if _is_within(current, "trpg.shared"):
             for sub in subpackages:
                 if sub != "trpg.shared" and _is_within(target, sub):
@@ -282,6 +290,9 @@ def test_scanner_detects_dependency_violations() -> None:
         ("trpg.content.library", False, "from trpg.skillgen.validate import validate_skill"),
         ("trpg.content", True, "import trpg.skillgen"),
         ("trpg.content.skills", False, "from ..skillgen import budget"),
+        ("trpg.narrative.events", False, "from trpg.cli.render import x"),
+        ("trpg.narrative.skills", False, "import trpg.sim.matrix"),
+        ("trpg.narrative", True, "from ..api import app"),
     ]
     for current, is_package, source in cases:
         found = dependency_violations(ast.parse(source), current, is_package, "<snippet>")
@@ -297,6 +308,8 @@ def test_scanner_allows_legal_dependencies() -> None:
         ("trpg.cli.main", False, "from trpg.llm import client"),
         ("trpg.skillgen.validate", False, "from trpg.content.library import ContentLibrary"),
         ("trpg.cli.budget", False, "from trpg.skillgen.validate import validate_skill"),
+        ("trpg.narrative.events", False, "from trpg.engine.events import EventBase"),
+        ("trpg.narrative.skills", False, "from trpg.content.library import ContentLibrary"),
     ]
     for current, is_package, source in cases:
         found = dependency_violations(ast.parse(source), current, is_package, "<snippet>")

@@ -125,6 +125,17 @@ forbidden_modules = [
 ]
 
 [[tool.importlinter.contracts]]
+name = "narrative 不得匯入 cli、api、roguelite、sim"
+type = "forbidden"
+source_modules = ["trpg.narrative"]
+forbidden_modules = [
+    "trpg.cli",
+    "trpg.api",
+    "trpg.roguelite",
+    "trpg.sim",
+]
+
+[[tool.importlinter.contracts]]
 name = "content 不得匯入 skillgen"
 type = "forbidden"
 source_modules = ["trpg.content"]
