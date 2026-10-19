@@ -1,5 +1,5 @@
 """賭博型技能（Phase 3D-7a，``docs/phases/Phase3D計畫.md`` 7.1、7.3）：賭注（成敗兩個分支）、
-失手反噬、反噬上限、預覽的兩個分支、AI 的期望值與低血量保護、重播。"""
+失手反噬、反噬上限、重播。"""
 
 from __future__ import annotations
 
@@ -11,7 +11,7 @@ import pytest
 from tests.engine.helpers import make_skill
 from tests.engine.skill_helpers import SID, U1, U2, battle, cast, of
 from trpg.content.skills import SkillDef
-from trpg.engine import state_from_json, state_to_json
+from trpg.engine import UseSkill, legal_actions, state_from_json, state_to_json
 from trpg.engine.events import (
     AttackRolled,
     BacklashTriggered,
@@ -126,6 +126,14 @@ def test_the_gamble_branches_may_target_the_caster_or_the_enemy(
         (U2, "attack"),
         (U1, "backlash"),
     ]
+
+
+def test_a_gamble_does_not_make_the_caster_a_legal_target() -> None:
+    state = battle(
+        gamble_skill(lose=[{"type": "heal", "dice": "1d4", "affects": "self"}]), [(5, 3)]
+    )
+    actions = [a for a in legal_actions(state) if isinstance(a, UseSkill) and a.skill_id == SID]
+    assert [a.target_id for a in actions] == [U2]
 
 
 def test_a_gamble_roll_is_reproduced_by_the_replay_state(monkeypatch: pytest.MonkeyPatch) -> None:

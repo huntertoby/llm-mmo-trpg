@@ -20,6 +20,7 @@ from trpg.content.skills import (
     CHARGE_THROUGH,
     COPY_SKILL,
     DASH,
+    GAMBLE,
     HURL_OBJECT,
     LEAP,
     PIERCE_SHAPES,
@@ -396,8 +397,12 @@ def _unit_target_problem(  # noqa: PLR0917
     if enemy and not any(e.affects in ("enemies", "all", "tiles") for e in effects):
         return f"此技能無法對敵方使用：{target.name_zh}"
     if not enemy:
-        helps = any(
-            e.affects in ("allies", "all", "tiles") or (e.affects == "self" and target is caster)
+        helps = any(  # 賭注（gamble）的對象是施放者，但不讓技能能選自己當目標（Phase 3D-7a）
+            e.type != GAMBLE
+            and (
+                e.affects in ("allies", "all", "tiles")
+                or (e.affects == "self" and target is caster)
+            )
             for e in effects
         )
         if not helps:
