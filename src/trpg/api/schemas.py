@@ -18,6 +18,7 @@ from trpg.engine.ai.orders import IgnoredOrder, OrderSet
 from trpg.engine.preview import (
     DamageRange,
     GambleOutcome,
+    GrantInfo,
     HurlInfo,
     Outcome,
     PierceInfo,
@@ -46,6 +47,7 @@ __all__ = [
     "DecisionRequest",
     "Glossary",
     "GlossaryEntry",
+    "GrantPreviewOut",
     "HealOut",
     "HurlOut",
     "InteractOptionOut",
@@ -412,6 +414,17 @@ class ReviveOut(_ApiModel):
     from_pos: XY
 
 
+class GrantPreviewOut(_ApiModel):
+    """預覽中暫時獲得的技能（Phase 3D-8c）：``unit_id`` 暫時獲得 ``skill_id``（``name_zh``）
+    ``duration`` 輪；``refreshed``：已經暫時擁有，只刷新輪數。"""
+
+    unit_id: UnitId
+    skill_id: str
+    name_zh: str
+    duration: int
+    refreshed: bool
+
+
 class MoveOut(_ApiModel):
     """預覽中的自身位移（Phase 3D-2）：``kind`` 為 dash（路線，``other_id`` 是衝鋒的目標）／
     leap（起點與落點）／swap（``unit_id`` 與 ``other_id`` 交換，``path`` 是 ``unit_id`` 的起點與
@@ -502,6 +515,8 @@ class PreviewOut(_ApiModel):
     """動作會綁上的定時炸彈：倒數與爆炸範圍（Phase 3D-8b）。"""
     revives: tuple[ReviveOut, ...] = ()
     """動作會復活的單位（Phase 3D-8b）。"""
+    grants: tuple[GrantPreviewOut, ...] = ()
+    """動作會讓誰暫時獲得哪個技能（Phase 3D-8c）。"""
     displace_permille: int | None = None
     """位移成功的總機率（千分比；所有敵方目標都沒抵抗成功）；沒有檢定（全是友方）為 ``None``。"""
     gamble: GambleOut | None = None
@@ -581,6 +596,16 @@ def _summon(s: SummonInfo) -> SummonOut:
         max_hp=s.max_hp,
         totem_radius=s.totem_radius,
         replaces=s.replaces,
+    )
+
+
+def _grant(g: GrantInfo) -> GrantPreviewOut:
+    return GrantPreviewOut(
+        unit_id=g.unit_id,
+        skill_id=g.skill_id,
+        name_zh=g.name_zh,
+        duration=g.duration,
+        refreshed=g.refreshed,
     )
 
 
@@ -669,6 +694,7 @@ def preview_out(
             for b in p.bombs
         ),
         revives=tuple(_revive(r) for r in p.revives),
+        grants=tuple(_grant(g) for g in p.grants),
         moves=tuple(
             MoveOut(kind=m.kind, unit_id=m.unit_id, other_id=m.other_id, path=m.path)
             for m in p.moves

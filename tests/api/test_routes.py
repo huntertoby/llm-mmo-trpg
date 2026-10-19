@@ -311,6 +311,7 @@ def test_preview_returns_the_numbers_and_does_not_change_the_session(client: Tes
         "summons",  # Phase 3D-4b
         "bombs",  # Phase 3D-8b
         "revives",  # Phase 3D-8b
+        "grants",  # Phase 3D-8c
         "gamble",  # Phase 3D-7a
         "miss_notes",  # Phase 3D-7a
     }

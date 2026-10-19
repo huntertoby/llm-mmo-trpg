@@ -37,8 +37,15 @@ __all__ = [
     "run_battle",
 ]
 
-LOG_FORMAT = "trpg-battle-log/30"
-"""``/30``（Phase 3D-8b）：復活——原語 ``revive``（``EffectSpec.hp_permille``）、單位的 ``revived``、
+LOG_FORMAT = "trpg-battle-log/31"
+"""``/31``（Phase 3D-8c）：監視射擊——狀態 ``overwatch``、內建反應 ``overwatch_shot``（反應事件
+``enemy_moves_in_range``、反應定義的 ``requires_status``）、``status_removed`` 的新原因 ``fired``，
+有監視技能的單位自動多一條反應規則；夾擊——條件 ``flanked``；暫時獲得技能——原語 ``grant_skill``
+（``EffectSpec.skill``）、單位的 ``granted_skills``、新事件 ``skill_granted``／
+``skill_grant_expired``、預算規則 ``grant_skill_expected_uses_per_round_permille``；AI 規則
+``flank``、``overwatch_*``、``grant_skill_*``；``/30`` 的規則包沒有這些欄位與狀態，舊紀錄不能由新版
+程式重播。
+``/30``（Phase 3D-8b）：復活——原語 ``revive``（``EffectSpec.hp_permille``）、單位的 ``revived``、
 核心規則 ``revive_landing_radius``、新事件 ``unit_revived``；技能內的擊殺時效果——傷害效果的
 ``on_kill``（專用效果 ``refund_ap``／``refund_cooldown``）、新事件 ``ap_refunded``；定時炸彈——
 原語 ``delayed_damage``（``EffectSpec.rounds``／``radius``）、狀態 ``time_bomb`` 與

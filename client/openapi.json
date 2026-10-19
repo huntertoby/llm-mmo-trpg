@@ -1694,6 +1694,66 @@
         ],
         "title": "GlossaryEntry"
       },
+      "GrantPreviewOut": {
+        "properties": {
+          "unit_id": {
+            "type": "string",
+            "title": "Unit Id"
+          },
+          "skill_id": {
+            "type": "string",
+            "title": "Skill Id"
+          },
+          "name_zh": {
+            "type": "string",
+            "title": "Name Zh"
+          },
+          "duration": {
+            "type": "integer",
+            "title": "Duration"
+          },
+          "refreshed": {
+            "type": "boolean",
+            "title": "Refreshed"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "unit_id",
+          "skill_id",
+          "name_zh",
+          "duration",
+          "refreshed"
+        ],
+        "title": "GrantPreviewOut",
+        "description": "預覽中暫時獲得的技能（Phase 3D-8c）：``unit_id`` 暫時獲得 ``skill_id``（``name_zh``）\n``duration`` 輪；``refreshed``：已經暫時擁有，只刷新輪數。"
+      },
+      "GrantedSkillView": {
+        "properties": {
+          "skill_id": {
+            "type": "string",
+            "title": "Skill Id"
+          },
+          "name_zh": {
+            "type": "string",
+            "title": "Name Zh"
+          },
+          "remaining": {
+            "type": "integer",
+            "title": "Remaining"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "skill_id",
+          "name_zh",
+          "remaining"
+        ],
+        "title": "GrantedSkillView",
+        "description": "暫時獲得的技能（Phase 3D-8c，``grant_skill``）：技能與剩餘輪數（在持有者每個回合結束時 −1，\n歸零消失）。只有自己陣營的單位會列出。"
+      },
       "HTTPValidationError": {
         "properties": {
           "detail": {
@@ -2696,6 +2756,14 @@
             },
             "type": "array",
             "title": "Revives",
+            "default": []
+          },
+          "grants": {
+            "items": {
+              "$ref": "#/components/schemas/GrantPreviewOut"
+            },
+            "type": "array",
+            "title": "Grants",
             "default": []
           },
           "displace_permille": {
@@ -4046,6 +4114,14 @@
             },
             "type": "array",
             "title": "Activations",
+            "default": []
+          },
+          "granted_skills": {
+            "items": {
+              "$ref": "#/components/schemas/GrantedSkillView"
+            },
+            "type": "array",
+            "title": "Granted Skills",
             "default": []
           }
         },

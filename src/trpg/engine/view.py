@@ -35,6 +35,7 @@ __all__ = [
     "REACTION_TRIGGER_TEXT",
     "ActivationView",
     "BattleView",
+    "GrantedSkillView",
     "ObjectView",
     "PendingView",
     "ReactionRuleView",
@@ -91,6 +92,7 @@ REACTION_TRIGGER_TEXT: dict[str, str] = {
     "hit_by_spell": "被法術命中時（傷害之前）",
     "ally_downed": "視野內的友方倒下後",
     "enemy_enters_adjacent": "敵人進入相鄰格後",
+    "enemy_moves_in_range": "敵人在射程與視線內移動一步後",
     "ally_targeted": "相鄰友方被敵人瞄準時（命中之前）",
 }
 """反應規則觸發事件的中文說明（``ReactionWhen.event`` → 文字）。"""
@@ -123,6 +125,15 @@ class ActivationView(_ViewModel):
     activation: Literal["timed", "battle"]
     expires_round: int | None
     rule_name_zh: str | None
+
+
+class GrantedSkillView(_ViewModel):
+    """暫時獲得的技能（Phase 3D-8c，``grant_skill``）：技能與剩餘輪數（在持有者每個回合結束時 −1，
+    歸零消失）。只有自己陣營的單位會列出。"""
+
+    skill_id: str
+    name_zh: str
+    remaining: int
 
 
 class UnitView(_ViewModel):
@@ -175,6 +186,9 @@ class UnitView(_ViewModel):
     """圖騰（Phase 3D-4b）：光環半徑（回合開始時給範圍內友方狀態）；不是圖騰為 ``None``。"""
     activations: tuple[ActivationView, ...] = ()
     """生效中的常駐類傳說（Phase 3D-6），依啟動順序。"""
+    granted_skills: tuple[GrantedSkillView, ...] = ()
+    """暫時獲得的技能與剩餘輪數（Phase 3D-8c；不佔 ``skills`` 的欄位，依獲得順序；只有自己陣營的
+    單位會列出）。"""
 
 
 class TrapView(_ViewModel):
@@ -375,6 +389,18 @@ def _unit_view(state: BattleState, unit: UnitState, team: Team) -> UnitView:
         dismissed=unit.dismissed,
         totem_radius=None if (totem := totem_of(state, unit)) is None else totem.radius,
         activations=tuple(_activation_view(state, a) for a in unit.activations),
+        granted_skills=(
+            tuple(
+                GrantedSkillView(
+                    skill_id=g.skill_id,
+                    name_zh=state.ruleset.skill_def(g.skill_id).name_zh,
+                    remaining=g.remaining,
+                )
+                for g in unit.granted_skills
+            )
+            if unit.team is team
+            else ()
+        ),
     )
 
 

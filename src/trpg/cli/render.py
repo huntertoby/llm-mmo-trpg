@@ -249,6 +249,17 @@ def _activation_text(state: BattleState, unit: UnitState) -> str:
     return f" ［傳說：{'、'.join(parts)}］"
 
 
+def _granted_text(state: BattleState, unit: UnitState) -> str:
+    """暫時獲得的技能與剩餘輪數（Phase 3D-8c），例如「 ［暫時技能：飛行 剩 3 輪］」。"""
+    if not unit.granted_skills:
+        return ""
+    parts = [
+        f"{state.ruleset.skill_def(g.skill_id).name_zh} 剩 {g.remaining} 輪"
+        for g in unit.granted_skills
+    ]
+    return f" ［暫時技能：{'、'.join(parts)}］"
+
+
 def render_zone_lines(state: BattleState) -> list[str]:
     """持續區域（Phase 3D-5）：每個區域一行——名稱、施放者、錨點、消失輪、格子與下一輪的位置。"""
     lines = []
@@ -288,7 +299,7 @@ def render_unit_table(state: BattleState) -> str:
             f"{_source_text(state, unit)}"
             f" 耐力 {unit.stamina} 位置 {xy_text(unit.pos)} 武器 {unit.weapon.name_zh}"
             f"{_status_text(state, unit)}{_summon_text(state, unit)}"
-            f"{_activation_text(state, unit)}"
+            f"{_activation_text(state, unit)}{_granted_text(state, unit)}"
         )
     lines += render_zone_lines(state)
     return "\n".join(lines)

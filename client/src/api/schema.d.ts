@@ -629,6 +629,36 @@ export interface components {
              */
             tags: string[];
         };
+        /**
+         * GrantPreviewOut
+         * @description 預覽中暫時獲得的技能（Phase 3D-8c）：``unit_id`` 暫時獲得 ``skill_id``（``name_zh``）
+         *     ``duration`` 輪；``refreshed``：已經暫時擁有，只刷新輪數。
+         */
+        GrantPreviewOut: {
+            /** Unit Id */
+            unit_id: string;
+            /** Skill Id */
+            skill_id: string;
+            /** Name Zh */
+            name_zh: string;
+            /** Duration */
+            duration: number;
+            /** Refreshed */
+            refreshed: boolean;
+        };
+        /**
+         * GrantedSkillView
+         * @description 暫時獲得的技能（Phase 3D-8c，``grant_skill``）：技能與剩餘輪數（在持有者每個回合結束時 −1，
+         *     歸零消失）。只有自己陣營的單位會列出。
+         */
+        GrantedSkillView: {
+            /** Skill Id */
+            skill_id: string;
+            /** Name Zh */
+            name_zh: string;
+            /** Remaining */
+            remaining: number;
+        };
         /** HTTPValidationError */
         HTTPValidationError: {
             /** Detail */
@@ -1033,6 +1063,11 @@ export interface components {
              * @default []
              */
             revives: components["schemas"]["ReviveOut"][];
+            /**
+             * Grants
+             * @default []
+             */
+            grants: components["schemas"]["GrantPreviewOut"][];
             /** Displace Permille */
             displace_permille?: number | null;
             gamble?: components["schemas"]["GambleOut"] | null;
@@ -1494,6 +1529,11 @@ export interface components {
              * @default []
              */
             activations: components["schemas"]["ActivationView"][];
+            /**
+             * Granted Skills
+             * @default []
+             */
+            granted_skills: components["schemas"]["GrantedSkillView"][];
         };
         /** UpcomingEventOut */
         UpcomingEventOut: {

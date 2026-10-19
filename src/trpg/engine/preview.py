@@ -51,6 +51,7 @@ from trpg.engine.events import (
     ObjectToppled,
     ReactionTriggered,
     ShieldGained,
+    SkillGranted,
     StacksChanged,
     StatusApplied,
     SummonExpired,
@@ -104,6 +105,7 @@ __all__ = [
     "DisplaceCheck",
     "GambleInfo",
     "GambleOutcome",
+    "GrantInfo",
     "HurlInfo",
     "MoveInfo",
     "Outcome",
@@ -251,6 +253,18 @@ class ReviveInfo:
 
 
 @dataclass(frozen=True, slots=True)
+class GrantInfo:
+    """預覽中暫時獲得的技能（Phase 3D-8c；取自 ``skill_granted``）：誰、獲得哪個技能、持續幾輪
+    （``refreshed``：已經暫時擁有，只刷新輪數）。"""
+
+    unit_id: UnitId
+    skill_id: str
+    name_zh: str
+    duration: int
+    refreshed: bool
+
+
+@dataclass(frozen=True, slots=True)
 class HurlInfo:
     """預覽中發生的物件投擲（Phase 3C-5b；取自 ``object_hurled`` 事件）。
 
@@ -369,6 +383,8 @@ class Preview:
     """動作會綁上的定時炸彈（Phase 3D-8b；最多後果的模擬）：倒數與爆炸範圍。"""
     revives: tuple[ReviveInfo, ...] = ()
     """動作會復活的單位（Phase 3D-8b）。"""
+    grants: tuple[GrantInfo, ...] = ()
+    """動作會讓誰暫時獲得哪個技能（Phase 3D-8c）。"""
     gamble: GambleInfo | None = None
     """技能有賭注時（Phase 3D-7a）：成功率與兩個分支各自的預覽。本預覽的其他欄位（傷害範圍、
     確定與可能的連鎖）不含賭注的分支，只算賭注以外的效果。"""
@@ -971,6 +987,21 @@ def _bomb_infos(state: BattleState, events: list[EventBase]) -> tuple[BombInfo, 
     return tuple(infos)
 
 
+def _grant_infos(state: BattleState, events: list[EventBase]) -> tuple[GrantInfo, ...]:
+    """模擬事件中暫時獲得的技能（``state`` 用來查技能名稱）。"""
+    return tuple(
+        GrantInfo(
+            unit_id=e.unit_id,
+            skill_id=e.skill_id,
+            name_zh=state.ruleset.skill_def(e.skill_id).name_zh,
+            duration=e.duration,
+            refreshed=e.refreshed,
+        )
+        for e in events
+        if isinstance(e, SkillGranted)
+    )
+
+
 def _revive_infos(events: list[EventBase]) -> tuple[ReviveInfo, ...]:
     """模擬事件中的復活。"""
     return tuple(
@@ -1253,5 +1284,6 @@ def _build(
         summons=_summon_infos(state, max_events),
         bombs=_bomb_infos(high.state, max_events),
         revives=_revive_infos(max_events),
+        grants=_grant_infos(state, max_events),
         miss_notes=_miss_notes(state, actor, action),
     )
