@@ -45,7 +45,6 @@ from trpg.engine.events import (
     InitiativeTieBroken,
     ObjectAttacked,
     RoundStarted,
-    TrapTriggered,
     TurnOrderSet,
     UnitStoodUp,
 )
@@ -518,21 +517,26 @@ def _do_move(ctx: Ctx, unit: UnitState, action: Action) -> None:
         if not unit.alive:
             break
         unit.move_points -= cost
-        mark, had_traps = len(ctx.events), bool(ctx.state.traps)
         execute(ctx, [MoveUnitEffect(unit_id=unit.id, dest=dest, mode="walk", cost=cost)])
         walked.append(unit.xy)
-        if not unit.alive or unit.has_status(PRONE):
+        if _move_interrupted(ctx, unit, dest):
             break
-        if (
-            had_traps
-            and (is_rooted(ctx.rules, unit) or skip_turn_status(ctx.rules, unit) is not None)
-            and any(isinstance(e, TrapTriggered) for e in ctx.events[mark:])
-        ):
-            break  # 踩到陷阱被定身或暈眩：不能再繼續走（Phase 2E-3）
     _slide_back_if_stacked(ctx, unit, walked)
     if len(walked) > 1 and unit.alive:  # 被動技能 on_move：一次主動移動動作完成後（強制位移不算）
         collect_move(ctx, unit)
         settle(ctx)
+
+
+def _move_interrupted(ctx: Ctx, unit: UnitState, dest: XY) -> bool:
+    """這一步之後要不要中止接下來的移動（Phase 2F-1 3.3）：單位目前的位置不等於這一步的預期格
+    （途中被推離，例如陷阱的推擊效果；``MoveUnitEffect`` 本身不檢查，下一步會把單位硬拉回原
+    路徑），或單位被定身／暈眩／倒地／死亡／逃離——不再依賴「有陷阱且觸發了 ``TrapTriggered``」
+    這種特定事件類型的判斷（取代舊版只在陷阱觸發時才檢查定身／暈眩的做法）。"""
+    if not unit.alive or unit.xy != dest:
+        return True
+    if unit.has_status(PRONE):
+        return True
+    return is_rooted(ctx.rules, unit) or skip_turn_status(ctx.rules, unit) is not None
 
 
 def _slide_back_if_stacked(ctx: Ctx, unit: UnitState, walked: list[XY]) -> None:

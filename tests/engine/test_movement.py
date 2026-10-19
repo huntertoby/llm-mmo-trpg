@@ -8,6 +8,8 @@ import pytest
 
 from tests.engine.helpers import give_turn, make_map, make_state, spawn, template
 from trpg.engine import Attack, BattleState, Move, legal_actions, resolve
+from trpg.engine.battle import _move_interrupted
+from trpg.engine.context import Ctx
 from trpg.engine.effects import ApplyStatusEffect, MoveUnitEffect, run_effects
 from trpg.engine.events import DamageDealt, StatusRemoved, UnitFell, UnitMoved, UnitStoodUp
 from trpg.engine.rules.movement import find_path, reachable_tiles
@@ -192,3 +194,63 @@ def test_prone_stand_up_costs_half_movement() -> None:
     only = resolve(state, stand)
     assert only.state.units[U1].move_points == 2
     assert not any(isinstance(e, UnitMoved) for e in only.events)
+
+
+# ---------------------------------------------------------------------------
+# Phase 2F-1 3.3：_do_move 的通用中斷條件
+# ---------------------------------------------------------------------------
+#
+# 舊版只在「有陷阱、且事件清單裡出現 TrapTriggered」時才檢查定身／暈眩，不管單位這一步結束後
+# 的實際位置是不是真的等於預期格。_move_interrupted 把它換成一個通用條件：位置偏離預期格
+# （途中被推離），或單位定身／暈眩／倒地／死亡／逃離。
+#
+# 待 PM 決定：規格要求的新測試是「陷阱附帶推擊」。但推擊效果的方向是以範圍技能的原點（中心
+# 格型即中心格）往外算（trpg.engine.skills.interpreter._displace_direction）；「enter」陷阱
+# 觸發時，踩中它的單位必定剛好站在陷阱格——也就是推擊的原點本身，位移向量恒為 (0, 0)，不會
+# 產生任何推擊（這是既有、刻意的設計：以中心為準的範圍技能不能把站在中心上的目標推開自己；
+# 也確認過：合法的 Move 不可能走進致命地形讓引擎的「精英傳送到安全格」機制間接產生位移，
+# 因為 plan_move／is_standable 一開始就不允許規劃這種路徑步）。因此沒有辦法用合法的技能組合
+# 讓陷阱推開「踩中它」的單位本身；底下直接測試 _move_interrupted 這段通用條件本身（覆蓋「被
+# 推離預期格」「定身」「暈眩」「死亡」四種中斷原因，以及正常情況不中斷），作為等價的驗證。
+# 是否要新增一個不以中心為原點的陷阱推擊效果，留給 PM 決定。
+
+
+def _move_scene() -> tuple[BattleState, Ctx]:
+    state = _solo("00000\n00000", (0, 0))
+    ctx = Ctx(state.clone())
+    return state, ctx
+
+
+def test_move_interrupted_is_false_when_the_unit_arrived_as_planned() -> None:
+    _, ctx = _move_scene()
+    unit = ctx.state.units[U1]
+    unit.pos = P(1, 0)
+    assert not _move_interrupted(ctx, unit, (1, 0))
+
+
+def test_move_interrupted_is_true_when_pushed_off_the_planned_step() -> None:
+    """位置不等於這一步的預期格（例如被某個效果推離）：中止，不會被下一步拉回原路徑。"""
+    _, ctx = _move_scene()
+    unit = ctx.state.units[U1]
+    unit.pos = P(1, 1)  # 這一步原本預期走到 (1, 0)，但實際位置是 (1, 1)
+    assert _move_interrupted(ctx, unit, (1, 0))
+
+
+def test_move_interrupted_is_true_when_rooted_or_stunned() -> None:
+    state, ctx = _move_scene()
+    unit = ctx.state.units[U1]
+    unit.pos = P(1, 0)
+    rooted = run_effects(
+        state, [ApplyStatusEffect(target_id=U1, status_id="root", duration=1)]
+    ).state
+    ctx.state.units[U1].statuses = rooted.units[U1].statuses
+    assert _move_interrupted(ctx, unit, (1, 0))
+
+
+def test_move_interrupted_is_true_when_downed_or_escaped() -> None:
+    _, ctx = _move_scene()
+    unit = ctx.state.units[U1]
+    unit.pos = P(1, 0)
+    unit.downed = True
+    unit.hp = 0
+    assert _move_interrupted(ctx, unit, (1, 0))
