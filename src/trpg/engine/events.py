@@ -28,6 +28,7 @@ __all__ = [
     "CollisionObstacle",
     "DamageCause",
     "DamageDealt",
+    "DamageRedirected",
     "DeathCheated",
     "EffectFizzled",
     "ElementTouched",
@@ -56,11 +57,13 @@ __all__ = [
     "ReactionDeclined",
     "ReactionModeSet",
     "ReactionTriggered",
+    "ReactionsGranted",
     "RoundEnded",
     "RoundStarted",
     "ShieldAbsorbed",
     "ShieldGained",
     "SkillCooldownChanged",
+    "SkillCopied",
     "SkillTriggered",
     "SkillUsed",
     "SourceChanged",
@@ -331,7 +334,10 @@ class DamageDealt(EventBase):
     × 目標的 ``damage_taken_permille``（易傷、護衛，骰值傷害）。"""
     absorbed: int = 0
     """被護盾吸收的點數（Phase 2D-1）。``amount`` 是所有倍率之後、護盾之前的傷害；實際扣血為
-    ``amount − absorbed``（即 ``hp_before − hp_after``，致命以上的過量不算在內）。"""
+    ``amount − absorbed − redirected``（即 ``hp_before − hp_after``，致命以上的過量不算在內）。"""
+    redirected: int = 0
+    """轉給連結者（``redirect_damage`` 的狀態，Phase 3C-4b）的點數；轉移本身是緊接著的
+    ``damage_redirected`` 事件。"""
 
 
 class Healed(EventBase):
@@ -792,6 +798,41 @@ class DeathCheated(EventBase):
     """多擋下的傷害（原本會扣到 0 以下的部分 ＋ 1）。"""
 
 
+class DamageRedirected(EventBase):
+    """``redirect_damage`` 的連結：``from_id`` 受到的傷害有 ``amount`` 點轉給 ``to_id``（施放者）。
+    ``to_id`` 直接扣 HP（不經護盾、抗性與元素修正）；不死狀態照常生效。"""
+
+    type: Literal["damage_redirected"] = "damage_redirected"
+    from_id: UnitId
+    to_id: UnitId
+    status_id: str
+    amount: int
+    hp_before: int
+    hp_after: int
+
+
+class ReactionsGranted(EventBase):
+    """``extra_reaction``：``unit_id`` 本輪的反應次數上限 +``amount``（共 ``total`` 次額外）。"""
+
+    type: Literal["reactions_granted"] = "reactions_granted"
+    unit_id: UnitId
+    source_id: UnitId
+    amount: int
+    total: int
+
+
+class SkillCopied(EventBase):
+    """``copy_skill``：``unit_id`` 立即複製施放 ``source_id`` 本輪最後施放的 ``skill_id``
+    （不扣法力、不進冷卻、不花源力；後續是一般的施放結算）。"""
+
+    type: Literal["skill_copied"] = "skill_copied"
+    unit_id: UnitId
+    source_id: UnitId
+    skill_id: str
+    name_zh: str
+    tiles: tuple[Pos, ...]
+
+
 # ---------------------------------------------------------------------------
 # Phase 2E-3：陷阱
 # ---------------------------------------------------------------------------
@@ -934,7 +975,10 @@ type Event = Annotated[
     | TrapExpired
     | SourceChanged
     | ApGranted
-    | DeathCheated,
+    | DeathCheated
+    | DamageRedirected
+    | ReactionsGranted
+    | SkillCopied,
     Field(discriminator="type"),
 ]
 

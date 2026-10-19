@@ -104,6 +104,10 @@ def test_the_initial_skeleton_structure_matches_the_spec() -> None:
         "grant_ap",
         "reset_cooldown",
         "cheat_death",
+        # 3C-4b
+        "redirect_damage",
+        "copy_skill",
+        "extra_reaction",
     }
     assert (
         set(sk["aura"].forbid_affects) == {"enemies", "all"} and sk["aura"].secondary.max_count == 1
@@ -247,7 +251,14 @@ def test_min_rarity_tables_match_the_spec() -> None:
     common_shapes = {"self", "single", "line", "cone", "ring", "allies_in_radius"}
     for shape in rules.shapes.shapes:
         assert shape.min_rarity == ("common" if shape.id in common_shapes else "rare"), shape.id
-    rewrites = {"grant_ap", "reset_cooldown", "cheat_death"}  # 3C-4a：改寫規則型為 epic
+    rewrites = {  # 3C-4a、4b：改寫規則型為 epic
+        "grant_ap",
+        "reset_cooldown",
+        "cheat_death",
+        "redirect_damage",
+        "copy_skill",
+        "extra_reaction",
+    }
     for primitive in rules.primitives.primitives:
         expected = (
             "common"

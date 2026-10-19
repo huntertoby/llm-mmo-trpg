@@ -1,0 +1,22 @@
+id: skill_vigil_call
+schema_version: 1
+name_zh: 警戒號令
+tier: 1
+rank: 1
+rarity: epic
+kind: active
+skeleton: aura
+category: spell
+weapon_req: any
+ap_cost: 1
+scaling_attr: wis
+shape: {type: single, range: 4}
+effects:
+  - {type: extra_reaction, amount: 1, affects: allies}
+condition: null
+cost: {mana: 4, cooldown: 4}
+tags: [holy, spell, support, guard]
+narrative:
+  concept: 喝出警戒的號令，讓同伴在這一輪多一次反擊的機會
+  cast_flavor: 號角般的喊聲響起，同伴繃緊了神經，目光掃過每一個方向
+provenance: {origin: builtin, owner_id: null, created_by: null, parents: [], bound: true, tradeable: false}

@@ -131,6 +131,10 @@ class UseSkill(_ActionBase):
 
     是否合法（欄位是否對應形狀、射程、視線、代價）由引擎檢查，不合法時拋出
     :class:`~trpg.shared.errors.IllegalActionError`。
+
+    ``copy_cast``（Phase 3C-4b）：``copy_skill`` 技能複製的技能的選取（``skill_id`` 必須是目前
+    可複製的技能，``unit_id`` 是同一個施放者，目標欄位依該技能的形狀）。玩家省略它時結算暫停，由
+    :class:`Decision` 補上；AI 與戰鬥紀錄直接給出。其他技能不能帶 ``copy_cast``。
     """
 
     type: Literal["use_skill"] = "use_skill"
@@ -139,6 +143,7 @@ class UseSkill(_ActionBase):
     target_object_id: ObjectId | None = None
     target_pos: Pos | None = None
     direction: Direction | None = None
+    copy_cast: UseSkill | None = None
 
 
 class EndStance(_ActionBase):
@@ -185,13 +190,19 @@ ACTION_LIST_ADAPTER: TypeAdapter[list[Action]] = TypeAdapter(list[Action])
 
 
 class Decision(BaseModel):
-    """對 ``prompt`` 反應的回答：``unit_id`` 為被詢問的反應者，``accept`` 是否使用反應。"""
+    """對暫停中的結算的回答：``unit_id`` 為被詢問者。
+
+    - ``prompt`` 反應：``accept`` 是否使用反應；
+    - ``copy_skill``（Phase 3C-4b）：``accept`` 為真時 ``copy_cast`` 必須給出複製技能的選取，為假則
+      放棄施放（不付任何代價）。
+    """
 
     model_config = ConfigDict(frozen=True, extra="forbid")
 
     type: Literal["decision"] = "decision"
     unit_id: UnitId
     accept: bool
+    copy_cast: UseSkill | None = None
 
 
 type Step = Annotated[

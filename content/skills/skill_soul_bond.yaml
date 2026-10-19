@@ -1,0 +1,22 @@
+id: skill_soul_bond
+schema_version: 1
+name_zh: 魂結
+tier: 1
+rank: 1
+rarity: epic
+kind: active
+skeleton: aura
+category: spell
+weapon_req: any
+ap_cost: 1
+scaling_attr: wis
+shape: {type: single, range: 4}
+effects:
+  - {type: redirect_damage, permille: 400, duration: 3, affects: allies}
+condition: null
+cost: {mana: 6, cooldown: 4}
+tags: [holy, spell, support, guard]
+narrative:
+  concept: 以自己的生命線繫住同伴，替他分擔一部分的傷害
+  cast_flavor: 一道看不見的絲線把兩人的心跳連在一起，同伴挨的每一刀都在你身上隱隱作痛
+provenance: {origin: builtin, owner_id: null, created_by: null, parents: [], bound: true, tradeable: false}

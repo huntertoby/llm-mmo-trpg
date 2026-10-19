@@ -48,7 +48,10 @@ from trpg.content.environment import (
 from trpg.content.skills import (
     CHEAT_DEATH,
     CHEAT_DEATH_STATUS,
+    EXTRA_REACTION,
     GRANT_AP,
+    REDIRECT_DAMAGE,
+    REDIRECT_STATUS,
     RESET_COOLDOWN,
     EffectSpec,
     SkillDef,
@@ -79,6 +82,7 @@ from trpg.engine.events import (
     DamageDealt,
     EventBase,
     ObjectDamaged,
+    ReactionsGranted,
     ShieldGained,
     SkillCooldownChanged,
     StacksChanged,
@@ -113,7 +117,7 @@ from trpg.engine.skills.targeting import (
     hp_cost,
     resolve_effects,
 )
-from trpg.engine.state import BattleState, UnitState
+from trpg.engine.state import BattleState, UnitState, reaction_limit
 from trpg.engine.traps import visible_traps
 from trpg.shared.types import ObjectId, Surface, Team, UnitId
 
@@ -922,6 +926,19 @@ def score_action(
     return ActionScore(action, score, p)
 
 
+_REWRITE_SCORED = frozenset(
+    {GRANT_AP, RESET_COOLDOWN, CHEAT_DEATH, REDIRECT_DAMAGE, EXTRA_REACTION}
+)
+"""預覽事件之外還要另外加分的改寫規則型原語（:func:`_rewrite_gains`）。"""
+
+
+def effective_skill(state: BattleState, action: UseSkill) -> SkillDef:
+    """動作實際結算效果的技能：``copy_skill`` 帶著 ``copy_cast`` 時是被複製的技能（Phase 3C-4b），
+    其他是動作自己的技能。"""
+    pick = action.copy_cast
+    return state.ruleset.skill_def(action.skill_id if pick is None else pick.skill_id)
+
+
 def _rewrite_gains(
     state: BattleState, actor: UnitState, action: UseSkill, p: Preview, profile: AiProfile
 ) -> Fraction:
@@ -932,13 +949,17 @@ def _rewrite_gains(
       本身花的 AP）；給友方的 AP 再 × ``ally_ap_permille``（所以優先給自己）；
     - ``reset_cooldown``：被重置的冷卻回合數 × ``cooldown_points``；
     - ``cheat_death``：``undying_points`` × 目標已損失 HP 的比例（HP 越低越值得；已帶有則 0）；
+    - ``redirect_damage``：``redirect_points`` × 目標已損失 HP 的比例（施放者 HP 不到一半為 0）；
+    - ``extra_reaction``：每個額外次數 ``reaction_points``（目標有反應規則時）；
     - 源力：每點扣 ``source_points``。
+
+    ``copy_skill`` 沒有額外收益：預覽已包含複製的技能自己的效果（:func:`effective_skill`）。
     """
     skill = state.ruleset.skill_def(action.skill_id)
     types = {e.type for e in skill.effects}
     rules = profile.rewrite
     source = skill.cost.source or 0
-    if not types & {GRANT_AP, RESET_COOLDOWN, CHEAT_DEATH} and not source:
+    if not types & _REWRITE_SCORED and not source:
         return Fraction(0)
     points = Fraction(-rules.source_points * source)
     for e in p.min_events:
@@ -952,6 +973,12 @@ def _rewrite_gains(
             target = state.units[e.target_id]
             if target.team is actor.team and not target.has_status(CHEAT_DEATH_STATUS):
                 points += rules.undying_points * Fraction(target.max_hp - target.hp, target.max_hp)
+        elif isinstance(e, StatusApplied) and e.status_id == REDIRECT_STATUS:
+            target = state.units[e.target_id]
+            if target.team is actor.team and actor.hp * 2 >= actor.max_hp:
+                points += rules.redirect_points * Fraction(target.max_hp - target.hp, target.max_hp)
+        elif isinstance(e, ReactionsGranted) and state.units[e.unit_id].reactions:
+            points += rules.reaction_points * e.amount
     return profile.weights.damage * points
 
 
@@ -1063,7 +1090,7 @@ def skill_estimate(  # noqa: PLR0917
 
     估計只決定「誰值得完整預覽」；值不值得施放由預覽的收益、位置價值的差與機會成本決定。
     """
-    skill = state.ruleset.skill_def(action.skill_id)
+    skill = effective_skill(state, action)
     if skill.kind == "stance" and stance_status_ids(state.ruleset, unit):
         return None  # 已經有姿態：AI 不主動換姿態（也不主動取消，Phase 2E-2）
     if skill.trap is not None:
@@ -1176,6 +1203,10 @@ def _rewrite_supports(
         return bool(resettable_cooldowns(state, caster, target, skill, spec))
     if spec.type == CHEAT_DEATH:
         return not target.has_status(CHEAT_DEATH_STATUS)
+    if spec.type == REDIRECT_DAMAGE:
+        return target.id != caster.id and not target.has_status(REDIRECT_STATUS)
+    if spec.type == EXTRA_REACTION:
+        return bool(target.reactions) and target.extra_reactions == 0
     return False
 
 
@@ -1223,11 +1254,11 @@ def virtual_move_score(
 def reactive_enemies(state: BattleState, unit: UnitState) -> list[XY]:
     """可能對 ``unit`` 藉機攻擊的敵人位置：存活、本輪反應次數未用完、有「敵人離開相鄰格」的
     反應規則（不檢查耐力與武器，寧可多算）。"""
-    limit = state.ruleset.core.reactions_per_round
+    core = state.ruleset.core
     return [
         e.xy
         for e in _enemies(state, unit)
-        if e.reactions_used < limit
+        if e.reactions_used < reaction_limit(core, e)
         and any(rule.when.event == "enemy_leaves_adjacent" for rule in e.reactions)
     ]
 
@@ -1366,7 +1397,7 @@ class UtilityAI:
         profile = self.profile_for(unit)
         ctx = self.order_context(state, unit)
         w = _order_weights(profile.weights, ctx)
-        actions, areas = legal_actions_with_areas(state)
+        actions, areas = legal_actions_with_areas(state, expand_copy=True)
         if all(isinstance(a, EndStance | EndTurn) for a in actions):
             return []  # 只剩結束回合與取消姿態（AI 不取消姿態）：不需要評分
         scene = _scene(state, unit, ctx)

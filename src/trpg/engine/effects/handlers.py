@@ -18,6 +18,7 @@ from trpg.engine.effects.queue import register_effect
 from trpg.engine.events import (
     CheckRolled,
     DamageDealt,
+    DamageRedirected,
     DeathCheated,
     EnteredDeadlyTerrain,
     EventBase,
@@ -112,8 +113,10 @@ def _damage(ctx: Ctx, effect: EffectBase) -> list[EventBase]:
             raw_permille * weather * dealt // (PERMILLE * PERMILLE * PERMILLE), effect.min_damage
         )
         absorbed = _absorb(ctx, unit, amount, events)  # 護盾：所有倍率之後、扣 HP 之前
+    link = redirect_link(ctx, unit, effect)
+    redirected = 0 if link is None else (amount - absorbed) * (link[0].amount or 0) // PERMILLE
     hp_before = unit.hp
-    unit.hp = max(0, unit.hp - (amount - absorbed))
+    unit.hp = max(0, unit.hp - (amount - absorbed - redirected))
     cheated = _undying_status(ctx, unit, effect)
     if cheated is not None:
         unit.hp = 1
@@ -136,10 +139,12 @@ def _damage(ctx: Ctx, effect: EffectBase) -> list[EventBase]:
             base_amount=base_amount,
             status_ppm=status_ppm,
             absorbed=absorbed,
+            redirected=redirected,
         )
     ]
+    events += _redirect(ctx, unit, link, redirected, effect)
     if cheated is not None:
-        events += _cheat_death(ctx, unit, cheated, amount - absorbed - (hp_before - 1))
+        events += _cheat_death(ctx, unit, cheated, amount - absorbed - redirected - (hp_before - 1))
     if amount > 0:
         events.extend(_thaw(ctx, unit, effect.element))
     if unit.hp <= 0:
@@ -149,7 +154,59 @@ def _damage(ctx: Ctx, effect: EffectBase) -> list[EventBase]:
 
 
 _UNPREVENTABLE_CAUSES = ("fall", "deadly_terrain")
-"""不死（``prevents_death``）擋不下的傷害：墜落與致命地形（Phase 3C-4a，保守）。"""
+"""不死（``prevents_death``）擋不下、靈魂連結（``redirects_damage``）也不轉移的傷害：墜落與致命
+地形（Phase 3C-4a，保守）。"""
+
+
+def redirect_link(
+    ctx: Ctx, unit: UnitState, effect: DamageEffect
+) -> tuple[StatusInstance, UnitState] | None:
+    """``unit`` 受到這次傷害時有效的靈魂連結（Phase 3C-4b）：狀態與承受轉移的連結者。連結者必須
+    仍在場上、不是 ``unit`` 自己；墜落、致命地形與 ``lethal`` 不轉移。"""
+    if effect.mode == "lethal" or effect.cause in _UNPREVENTABLE_CAUSES:
+        return None
+    for status in unit.statuses:
+        if not ctx.rules.status_def(status.status_id).redirects_damage or not status.amount:
+            continue
+        linked = None if status.source_id is None else ctx.state.units.get(status.source_id)
+        if linked is not None and linked.alive and linked.id != unit.id:
+            return status, linked
+    return None
+
+
+def _redirect(
+    ctx: Ctx,
+    unit: UnitState,
+    link: tuple[StatusInstance, UnitState] | None,
+    amount: int,
+    effect: DamageEffect,
+) -> list[EventBase]:
+    """把 ``amount`` 點傷害轉給連結者：直接扣 HP（不經護盾、抗性與元素修正）；連結者的不死照常
+    生效，HP 歸零則倒下（連結者倒下時，連結立即消失）。沒有連結或沒有轉移時什麼都不做。"""
+    if link is None or amount <= 0:
+        return []
+    status, linked = link
+    hp_before = linked.hp
+    linked.hp = max(0, linked.hp - amount)
+    cheated = _undying_status(ctx, linked, effect)
+    if cheated is not None:
+        linked.hp = 1
+    events: list[EventBase] = [
+        ctx.emit(
+            DamageRedirected,
+            from_id=unit.id,
+            to_id=linked.id,
+            status_id=status.status_id,
+            amount=amount,
+            hp_before=hp_before,
+            hp_after=linked.hp,
+        )
+    ]
+    if cheated is not None:
+        events += _cheat_death(ctx, linked, cheated, amount - (hp_before - 1))
+    if linked.hp <= 0:
+        events.extend(down_unit(ctx, linked))
+    return events
 
 
 def _undying_status(ctx: Ctx, unit: UnitState, effect: DamageEffect) -> str | None:
@@ -434,7 +491,9 @@ def apply_status(ctx: Ctx, effect: ApplyStatusEffect) -> list[EventBase]:
         status_id = converted
     definition = ctx.rules.status_def(status_id)
     existing = unit.get_status(status_id)
-    instance = StatusInstance(status_id=status_id, remaining=duration, source_id=effect.source_id)
+    instance = StatusInstance(
+        status_id=status_id, remaining=duration, source_id=effect.source_id, amount=effect.amount
+    )
     if definition.stance:  # 同時只能有一個姿態：先移除其他姿態（2E-2）
         for old in stance_status_ids(ctx.rules, unit):
             if old != status_id:
@@ -443,9 +502,16 @@ def apply_status(ctx: Ctx, effect: ApplyStatusEffect) -> list[EventBase]:
                     ctx.emit(StatusRemoved, target_id=unit.id, status_id=old, reason="replaced")
                 )
     # 重複施加：不疊加，剩餘回合取較長者（None＝永久最長），見 docs/design/06-技能.md 6.6
-    if existing is not None and _outlasts(existing.remaining, duration):
+    if (
+        existing is not None
+        and _outlasts(existing.remaining, duration)
+        and not definition.redirects_damage  # 新的連結一律取代舊的（連結者與比例都可能不同）
+    ):
         instance = StatusInstance(
-            status_id=status_id, remaining=existing.remaining, source_id=existing.source_id
+            status_id=status_id,
+            remaining=existing.remaining,
+            source_id=existing.source_id,
+            amount=existing.amount,
         )
     others = [s for s in unit.statuses if s.status_id != status_id]
     unit.statuses = sorted([*others, instance], key=lambda s: s.status_id)

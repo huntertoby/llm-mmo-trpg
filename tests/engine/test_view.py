@@ -83,6 +83,7 @@ def test_a_paused_state_has_a_view_with_only_the_public_pending_fields() -> None
         "reaction",
         "trigger_unit_id",
         "skill_id",
+        "copy_skill_id",
         "trigger_event_seq",
         "stamina_cost",
         "mana_cost",

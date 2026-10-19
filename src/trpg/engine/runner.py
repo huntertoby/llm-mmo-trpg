@@ -13,6 +13,7 @@ from trpg.engine.ai.commanded import OrderLogging
 from trpg.engine.ai.orders import OrderRecord
 from trpg.engine.ai.simple import choose_action
 from trpg.engine.battle import begin_battle, has_only_end_turn, resolve, resume
+from trpg.engine.copying import copy_selections
 from trpg.engine.events import Event, EventBase
 from trpg.engine.results import Pending, ResolveResult
 from trpg.engine.setup import BattleSetup
@@ -36,8 +37,15 @@ __all__ = [
     "run_battle",
 ]
 
-LOG_FORMAT = "trpg-battle-log/14"
-"""``/14``（Phase 3C-4a）：源力（單位的 ``source``、``ap_pending``、``ap_granted_round``，
+LOG_FORMAT = "trpg-battle-log/15"
+"""``/15``（Phase 3C-4b）：三個改寫規則型原語 ``redirect_damage``（狀態 ``soul_link``，
+``StatusInstance.amount`` 存轉移千分比）、``copy_skill``（戰鬥狀態 ``casts``、
+``UseSkill.copy_cast``、``Decision.copy_cast``、暫停種類 ``copy_skill``）、
+``extra_reaction``（單位 ``extra_reactions``）；
+新事件 ``damage_redirected``／``skill_copied``／``reactions_granted``、``damage_dealt.redirected``；
+``/14`` 的紀錄沒有這些欄位與規則，無法由新版程式重播。
+
+``/14``（Phase 3C-4a）：源力（單位的 ``source``、``ap_pending``、``ap_granted_round``，
 戰鬥狀態的 ``source_wells``，戰鬥設定 ``UnitSpawn.source``）、新事件 ``source_changed``／
 ``ap_granted``／``death_cheated``、``skill_used.source``、``status_removed`` 的新原因 ``spent``、
 三個改寫規則型原語與狀態 ``undying``；擊倒精英會多出 ``source_changed`` 事件，所以 ``/13`` 的
@@ -96,7 +104,13 @@ class StepLimitExceeded(TrpgError):
 
 
 def accept_all(state: BattleState, pending: Pending) -> Decision:
-    """預設：一律使用反應。"""
+    """預設：一律使用反應；``copy_skill`` 的選目標取第一個合法的選取（Phase 3C-4b）。"""
+    if pending.kind == "copy_skill":
+        caster = state.units[pending.unit_id]
+        pick = next(copy_selections(state, caster), None)
+        return Decision(
+            unit_id=pending.unit_id, accept=pick is not None, copy_cast=pick and pick[0]
+        )
     return Decision(unit_id=pending.unit_id, accept=True)
 
 

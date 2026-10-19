@@ -143,6 +143,8 @@ class ApplyStatusEffect(EffectBase):
     target_id: UnitId
     status_id: str
     duration: int | None = Field(default=None, ge=1)
+    amount: int | None = Field(default=None, ge=1)
+    """狀態的數值（``StatusInstance.amount``）；``soul_link`` 的轉移千分比（Phase 3C-4b）。"""
 
     def sort_target(self) -> str:
         return self.target_id

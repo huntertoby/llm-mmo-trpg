@@ -20,6 +20,7 @@ from trpg.engine.events import (
     CheckRolled,
     Collided,
     DamageDealt,
+    DamageRedirected,
     DeathCheated,
     EffectFizzled,
     ElementTouched,
@@ -43,12 +44,14 @@ from trpg.engine.events import (
     PushResisted,
     ReactionDeclined,
     ReactionModeSet,
+    ReactionsGranted,
     ReactionTriggered,
     RoundEnded,
     RoundStarted,
     ShieldAbsorbed,
     ShieldGained,
     SkillCooldownChanged,
+    SkillCopied,
     SkillTriggered,
     SkillUsed,
     SourceChanged,
@@ -435,9 +438,10 @@ def _damage(e: DamageDealt, v: _View) -> str:
     if e.status_ppm != _PPM:
         mod += f"（狀態 ×{e.status_ppm / _PPM:g}）"
     shield = f"（護盾吸收 {e.absorbed}）" if e.absorbed else ""
+    linked = f"（{e.redirected} 點轉給連結者）" if e.redirected else ""
     return (
         f"    {v.name[e.target_id]} 受到 {e.amount} 點{kind}傷害{_rolls_text(e.rolls)}"
-        f"{mod}{shield}，HP {e.hp_before} → {e.hp_after}"
+        f"{mod}{shield}{linked}，HP {e.hp_before} → {e.hp_after}"
     )
 
 
@@ -544,6 +548,27 @@ def _ap_granted(e: ApGranted, v: _View) -> str:
     if e.deferred:
         return f"    {target} 獲得 {e.amount} AP（下次回合開始時加上，共 {e.ap_after}）"
     return f"    {target} 獲得 {e.amount} AP（現在 {e.ap_after} AP）"
+
+
+@_handles(DamageRedirected)
+def _damage_redirected(e: DamageRedirected, v: _View) -> str:
+    return (
+        f"    ✦ {v.name[e.to_id]} 分擔了 {v.name[e.from_id]} 的 {e.amount} 點傷害"
+        f"（{v.statuses[e.status_id]}），HP {e.hp_before} → {e.hp_after}"
+    )
+
+
+@_handles(ReactionsGranted)
+def _reactions_granted(e: ReactionsGranted, v: _View) -> str:
+    return f"    {v.name[e.unit_id]} 本輪的反應次數 +{e.amount}（額外共 {e.total} 次）"
+
+
+@_handles(SkillCopied)
+def _skill_copied(e: SkillCopied, v: _View) -> str:
+    return (
+        f"  ✦ {v.name[e.unit_id]} 複製了 {v.name[e.source_id]} 的「{e.name_zh}」"
+        f"（不扣法力與 AP、不進冷卻）→ 影響 {len(e.tiles)} 格"
+    )
 
 
 @_handles(DeathCheated)

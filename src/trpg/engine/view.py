@@ -15,7 +15,13 @@ from pydantic import BaseModel, ConfigDict
 
 from trpg.content.battle import ReactionRule
 from trpg.content.maps import Objective
-from trpg.engine.state import BattleState, PendingResolution, StatusInstance, UnitState
+from trpg.engine.state import (
+    BattleState,
+    PendingResolution,
+    StatusInstance,
+    UnitState,
+    reaction_limit,
+)
 from trpg.engine.traps import visible_traps
 from trpg.shared.types import Pos, Surface, Team, UnitId
 
@@ -147,6 +153,7 @@ class PendingView(_ViewModel):
     reaction: str
     trigger_unit_id: UnitId | None
     skill_id: str | None
+    copy_skill_id: str | None
     trigger_event_seq: int | None
     stamina_cost: int
     mana_cost: int
@@ -224,7 +231,6 @@ def _rule_view(state: BattleState, unit: UnitState, rule: ReactionRule) -> React
 
 
 def _unit_view(state: BattleState, unit: UnitState, team: Team) -> UnitView:
-    per_round = state.ruleset.core.reactions_per_round
     return UnitView(
         id=unit.id,
         template_id=unit.template_id,
@@ -250,7 +256,7 @@ def _unit_view(state: BattleState, unit: UnitState, team: Team) -> UnitView:
         cooldowns=_visible_cooldowns(state, unit, team),
         reaction_available=unit.alive
         and any(r.mode != "off" for r in unit.reactions)
-        and unit.reactions_used < per_round,
+        and unit.reactions_used < reaction_limit(state.ruleset.core, unit),
         reaction_rules=(
             tuple(_rule_view(state, unit, r) for r in unit.reactions) if unit.team is team else ()
         ),
@@ -269,6 +275,7 @@ def _pending_view(pending: PendingResolution) -> PendingView:
         reaction=pending.reaction,
         trigger_unit_id=pending.trigger_unit_id,
         skill_id=pending.skill_id,
+        copy_skill_id=pending.copy_skill_id,
         trigger_event_seq=pending.trigger_event_seq,
         stamina_cost=pending.stamina_cost,
         mana_cost=pending.mana_cost,

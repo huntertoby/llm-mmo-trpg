@@ -241,3 +241,37 @@ primitives:
     forbid_affects: [enemies, all]
     params:
       duration: {type: int, min: 1, max: 2, description_zh: 不死的持續回合}
+  # --- Phase 3C-4b：另外三個改寫規則型原語（同上：每技能最多 1 個、冷卻或源力規則；點數為初值，未經模擬）---
+  - id: redirect_damage
+    name_zh: 分擔傷害
+    description_zh: 目標友方（不含施放者自己）獲得狀態「靈魂連結」（soul_link）duration 回合：它受到的傷害有 permille‰（≤ 500）轉給施放者，直接扣施放者的 HP。與替隊友擋下整次攻擊（intercept）不同；兩者同時存在時先攔截，傷害落在守護者身上之後才看守護者有沒有連結。施放者倒下或離場時連結消失。
+    category: rule_rewrite
+    harmful: false
+    min_rarity: epic
+    budget_basis: fixed
+    base_points: 7
+    forbid_affects: [enemies, all, self]
+    params:
+      permille: {type: int, required: true, min: 100, max: 500, description_zh: 轉移給施放者的傷害千分比}
+      duration: {type: int, min: 1, max: 3, description_zh: 連結持續的回合（省略時用狀態的預設持續）}
+  - id: copy_skill
+    name_zh: 複製技能
+    description_zh: 立即施放「本輪內最後一個被其他單位施放、且施放者看得到的主動技能」，由自己當施放者重新選目標；不能複製傳說、改寫規則型技能與有層數需求的技能。複製的技能不扣法力與 AP、不進冷卻，不檢查武器需求（傷害與射程照自己的武器算），但射程、視線與目標都要合法。沒有可以複製的技能時不能施放。必須是技能唯一的效果，形狀為 self。
+    category: rule_rewrite
+    harmful: false
+    min_rarity: epic
+    budget_basis: fixed
+    base_points: 9
+    acts_on: caster
+    allowed_shapes: [self]
+  - id: extra_reaction
+    name_zh: 額外反應
+    description_zh: 目標（自己或友方）本輪的反應次數上限 +amount（1），到下一輪開始為止。
+    category: rule_rewrite
+    harmful: false
+    min_rarity: epic
+    budget_basis: per_amount
+    base_points: 7
+    forbid_affects: [enemies, all]
+    params:
+      amount: {type: int, required: true, min: 1, max: 1, description_zh: 額外的反應次數}

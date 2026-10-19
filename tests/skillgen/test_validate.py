@@ -427,6 +427,8 @@ def test_beneficial_flags_in_content() -> None:
         "stance_bulwark",
         # 3C-4a
         "undying",
+        # 3C-4b
+        "soul_link",
     }
     assert surfaces == {"holy"}
 

@@ -161,8 +161,8 @@ def has_attack_disadvantage_status(rules: Ruleset, unit: UnitState) -> bool:
 
 
 def is_removed_with_source(definition: StatusDef) -> bool:
-    """來源倒下或離場時立即移除的狀態（嘲諷、恐懼）。"""
-    return definition.forces_target or definition.fear_source
+    """來源倒下或離場時立即移除的狀態（嘲諷、恐懼、靈魂連結）。"""
+    return definition.forces_target or definition.fear_source or definition.redirects_damage
 
 
 def stance_status_ids(rules: Ruleset, unit: UnitState) -> list[str]:

@@ -16,6 +16,7 @@ from typing import NamedTuple
 
 from trpg.content.battle import Dice
 from trpg.content.skills import (
+    COPY_SKILL,
     Affects,
     EffectSpec,
     PrimitiveDef,
@@ -287,7 +288,13 @@ def skill_problem(state: BattleState, unit: UnitState, skill: SkillDef) -> str |
         for e in skill.effects
     ):
         return f"已經在這個姿態中：{skill.name_zh}"
-    return resource_problem(state, unit, skill)
+    problem = resource_problem(state, unit, skill)
+    if problem is None and any(e.type == COPY_SKILL for e in skill.effects):
+        # 延後匯入：trpg.engine.copying 匯入本模組的 selections
+        from trpg.engine.copying import copy_problem  # noqa: PLC0415
+
+        return copy_problem(state, unit)  # Phase 3C-4b：沒有可複製的技能時不能施放
+    return problem
 
 
 def reaction_problem(state: BattleState, unit: UnitState, skill: SkillDef) -> str | None:

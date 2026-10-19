@@ -229,6 +229,7 @@ def _end_round(ctx: Ctx) -> bool:
     state.round += 1
     for unit in state.units.values():
         unit.reactions_used = 0
+        unit.extra_reactions = 0  # extra_reaction 到下一輪開始為止（Phase 3C-4b）
     reset_round_counts(iter(state.units_sorted()))
     ctx.emit(RoundStarted)
     expire_stacks(ctx)  # 到期的層數在新的一輪開始時清空（Phase 2E-3）

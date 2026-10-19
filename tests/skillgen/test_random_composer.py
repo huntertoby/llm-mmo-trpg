@@ -340,7 +340,14 @@ def test_rule_rewrite_primitives_are_hand_written_only() -> None:
     """Phase 3C-4a：改寫規則型原語（光環骨架的核心之一）不會被組合器選到。"""
     library = lib()
     rewrites = {p.id for p in library.ruleset.primitives.primitives if p.category == "rule_rewrite"}
-    assert rewrites == {"grant_ap", "reset_cooldown", "cheat_death"}
+    assert rewrites == {
+        "grant_ap",
+        "reset_cooldown",
+        "cheat_death",
+        "redirect_damage",
+        "copy_skill",
+        "extra_reaction",
+    }
     for seed in range(60):
         skill = compose_random_skill(seed, rarity="epic", skeleton="aura")
         assert not {e.type for e in skill.effects} & rewrites, seed

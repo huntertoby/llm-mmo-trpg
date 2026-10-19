@@ -40,7 +40,7 @@ from trpg.engine.rules.statuses import effective_attribute, skip_turn_status
 from trpg.engine.skill_triggers import check_trigger_depth, holding, redirect_fired
 from trpg.engine.skills.conditions import Subject, skill_condition_met
 from trpg.engine.skills.targeting import reaction_problem, reaction_target_problem
-from trpg.engine.state import UnitState
+from trpg.engine.state import UnitState, reaction_limit
 from trpg.shared.errors import TrpgError
 
 __all__ = [
@@ -71,7 +71,7 @@ def is_melee_attack(ctx: Ctx, attacker: UnitState) -> bool:
 
 def _usable(ctx: Ctx, unit: UnitState, rule: ReactionRule) -> ReactionDef | None:
     definition = ctx.rules.reaction_def(rule.reaction)
-    if not unit.alive or unit.reactions_used >= ctx.core.reactions_per_round:
+    if not unit.alive or unit.reactions_used >= reaction_limit(ctx.core, unit):
         return None
     if skip_turn_status(ctx.rules, unit) is not None:
         return None  # 暈眩中不能執行反應
@@ -99,7 +99,7 @@ def _skill_usable(
     """反應技目前能不能施放：每輪次數、狀態與代價、目標（射程、致盲）、技能條件，最後才檢查
     觸發深度（超過上限發出 ``trigger_limit_reached``，不付代價、不計次數）。"""
     state = ctx.state
-    if unit.reactions_used >= ctx.core.reactions_per_round or _unless(unit, rule):
+    if unit.reactions_used >= reaction_limit(ctx.core, unit) or _unless(unit, rule):
         return False
     if reaction_problem(state, unit, skill) is not None:
         return False

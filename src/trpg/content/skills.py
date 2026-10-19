@@ -46,12 +46,16 @@ __all__ = [
     "CONSUME_STACK",
     "CONSUME_STATUS",
     "CONSUME_THEN_TYPES",
+    "COPY_SKILL",
+    "EXTRA_REACTION",
     "GRANT_AP",
     "INTERCEPT",
     "MODIFIER_CHANGES",
     "ON_HIT_PRIMITIVES",
     "PLACE_TRAP",
     "RARITY_ORDER",
+    "REDIRECT_DAMAGE",
+    "REDIRECT_STATUS",
     "REQUIRED_CONDITIONS",
     "REQUIRED_SHAPES",
     "RESET_COOLDOWN",
@@ -530,6 +534,8 @@ class EffectSpec(ContentModel):
     surface: Surface | None = None
     object: str | None = Field(default=None, pattern=ID_PATTERN)
     amount: int | None = None
+    permille: int | None = Field(default=None, ge=1, le=_PERMILLE)
+    """``redirect_damage`` 專用（Phase 3C-4b）：轉移給施放者的傷害千分比。"""
     stack: str | None = Field(default=None, pattern=ID_PATTERN)
     per_stack_permille: int | None = Field(default=None, ge=1, le=_PERMILLE)
     then: tuple[EffectSpec, ...] | None = None
@@ -559,6 +565,7 @@ class EffectSpec(ContentModel):
             "multiplier_permille",
             "object",
             "per_stack_permille",
+            "permille",
             "scale",
             "splash",
             "stack",
@@ -691,6 +698,13 @@ CHEAT_DEATH = "cheat_death"
 """Phase 3C-4a 的改寫規則型原語 ID（6.3；規則見 ``content/skill_primitives.yaml``）。"""
 CHEAT_DEATH_STATUS = "undying"
 """``cheat_death`` 施加的狀態（``statuses.yaml``，``prevents_death``）。"""
+REDIRECT_DAMAGE = "redirect_damage"
+COPY_SKILL = "copy_skill"
+EXTRA_REACTION = "extra_reaction"
+"""Phase 3C-4b 的改寫規則型原語 ID。"""
+REDIRECT_STATUS = "soul_link"
+"""``redirect_damage`` 施加的狀態（``statuses.yaml``，``redirects_damage``）：
+``StatusInstance.amount`` 存轉移的千分比、``source_id`` 是承受轉移的施放者。"""
 
 
 class ReactionSpec(ContentModel):
@@ -1016,6 +1030,7 @@ class SkillDef(ContentModel):
         if self.cost.self_status is not None and self.kind != "active":
             raise ValueError(f"只有主動技能可以有 cost.self_status，收到 kind: {self.kind}")
         self._check_legendary()
+        self._check_copy_skill()
         if self.kind == "passive" and self.trigger is None:
             raise ValueError("被動技能（kind: passive）必須有 trigger")
         if self.kind != "passive" and self.trigger is not None:
@@ -1043,6 +1058,18 @@ class SkillDef(ContentModel):
             raise ValueError(f"只有傳說技能可以有 cost.source，收到稀有度 {self.rarity}")
         if self.cost.source is not None and self.kind != "active":
             raise ValueError(f"只有主動技能可以花源力（cost.source），收到 kind: {self.kind}")
+
+    def _check_copy_skill(self) -> None:
+        """``copy_skill``（Phase 3C-4b）：主動技能、形狀 ``self``，而且是唯一的效果（複製的技能自己
+        有目標，由玩家或 AI 在施放時另選）。"""
+        if not any(e.type == COPY_SKILL for e in self.effects):
+            return
+        if self.kind != "active":
+            raise ValueError(f"copy_skill 只能用在主動技能，收到 kind: {self.kind}")
+        if self.shape.type != "self":
+            raise ValueError(f"copy_skill 技能的形狀必須是 self，收到 {self.shape.type}")
+        if len(self.effects) != 1:
+            raise ValueError("copy_skill 必須是技能唯一的效果")
 
     def _check_reaction_and_stance(self) -> None:
         """反應技與姿態的結構（2E-2）：``reaction`` 欄位、形狀、``intercept`` 與 ``teleport``。"""

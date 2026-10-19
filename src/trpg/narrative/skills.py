@@ -15,6 +15,7 @@ from trpg.content.battle import Dice
 from trpg.content.library import ContentLibrary
 from trpg.content.skills import (
     CHEAT_DEATH_STATUS,
+    REDIRECT_STATUS,
     ConditionSpec,
     EffectSpec,
     ModifierSpec,
@@ -220,6 +221,24 @@ def _cheat_death(lib: ContentLibrary, _skill: SkillDef, spec: EffectSpec) -> str
     return f"狀態「{status.name_zh}」{turns} 回合：受到致命傷害時 HP 留在 1（墜落與致命地形除外）"
 
 
+def _redirect_damage(lib: ContentLibrary, _skill: SkillDef, spec: EffectSpec) -> str:
+    status = lib.ruleset.status_def(REDIRECT_STATUS)
+    turns = spec.duration or status.duration
+    share = (spec.permille or 0) / 10
+    return f"狀態「{status.name_zh}」{turns} 回合：目標受到的傷害有 {share:g}% 轉給施放者"
+
+
+def _copy_skill(_lib: ContentLibrary, _skill: SkillDef, _spec: EffectSpec) -> str:
+    return (
+        "立即複製施放本輪最後施放的主動技能（自己選目標，不扣法力與 AP、不進冷卻；"
+        "傳說與改寫規則型除外）"
+    )
+
+
+def _extra_reaction(_lib: ContentLibrary, _skill: SkillDef, spec: EffectSpec) -> str:
+    return f"本輪反應次數 +{spec.amount or 1}（到下一輪開始）"
+
+
 def _terrain(_lib: ContentLibrary, _skill: SkillDef, spec: EffectSpec) -> str:
     verb = "抬高" if spec.type == "raise_terrain" else "降低"
     return f"{verb}地形 {spec.amount or 1} 層"
@@ -245,6 +264,9 @@ _EFFECT_TEXT: dict[str, _EffectText] = {
     "grant_ap": _grant_ap,
     "reset_cooldown": _reset_cooldown,
     "cheat_death": _cheat_death,
+    "redirect_damage": _redirect_damage,
+    "copy_skill": _copy_skill,
+    "extra_reaction": _extra_reaction,
 }
 
 

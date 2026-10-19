@@ -293,6 +293,7 @@ def test_status_and_surface_points_match_the_spec() -> None:
         "stance_fury": 11,
         "stance_bulwark": 11,
         "undying": None,  # 3C-4a：只能由 cheat_death 原語施加
+        "soul_link": None,  # 3C-4b：只能由 redirect_damage 原語施加
     }
     surfaces = {s.id.value: s.budget_points for s in rules.surfaces.surfaces}
     assert surfaces == {

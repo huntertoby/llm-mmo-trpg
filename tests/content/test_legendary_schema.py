@@ -12,7 +12,7 @@ from trpg.content.skills import SkillDef, skill_problems
 from trpg.skillgen.budget import skill_budget
 from trpg.skillgen.validate import validate_skill
 
-DEMO = ("skill_time_surge", "skill_rallying_cry", "skill_undying_oath")
+DEMO = ("skill_time_surge", "skill_rallying_cry", "skill_undying_oath", "skill_mirror_cast")
 GRANT = {"type": "grant_ap", "amount": 2, "affects": "self"}
 
 
@@ -142,6 +142,6 @@ def test_the_demo_legendaries_are_valid_equipped_and_cover_each_primitive() -> N
         assert skill_budget(skill, lib).ok, skill_id
         assert skill_id in equipped, skill_id
         primitives |= {e.type for e in skill.effects}
-    assert {"grant_ap", "reset_cooldown", "cheat_death"} <= primitives
+    assert {"grant_ap", "reset_cooldown", "cheat_death", "copy_skill"} <= primitives
     legendaries = sorted(s.id for s in lib.skills.values() if s.rarity == "legendary")
     assert legendaries == sorted(DEMO)

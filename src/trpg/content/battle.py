@@ -242,6 +242,11 @@ class StatusDef(ContentModel):
 
     - ``prevents_death``：不死——帶有者受到傷害、HP 會降到 0 時改為 1 並移除此狀態（墜落與致命
       地形照樣生效）。
+
+    Phase 3C-4b 的欄位：
+
+    - ``redirects_damage``：靈魂連結——帶有者受到的傷害有 ``StatusInstance.amount``‰ 轉給狀態來源
+      （``source_id``，施放者）；來源倒下或離場時此狀態立即移除。
     """
 
     id: str = Field(pattern=ID_PATTERN)
@@ -262,6 +267,7 @@ class StatusDef(ContentModel):
     stance: bool = False
     removed_by_element: tuple[Element, ...] = ()
     prevents_death: bool = False
+    redirects_damage: bool = False
     move_permille: int = Field(default=1000, ge=0, le=10000)
     prevents_move: bool = False
     skip_turn: bool = False

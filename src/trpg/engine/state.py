@@ -21,10 +21,12 @@ from trpg.content.battle import ReactionRule, UnitTemplate, WeaponDef
 from trpg.content.environment import ObjectDef, WeatherDef
 from trpg.content.library import Ruleset
 from trpg.content.maps import MapEvent, Objective
+from trpg.content.rules import CoreRules
 from trpg.shared.types import Attribute, Element, ObjectId, Pos, ResistGroup, Surface, Team, UnitId
 
 __all__ = [
     "BattleState",
+    "LastCast",
     "ObjectState",
     "PendingResolution",
     "SpawnTemplate",
@@ -32,6 +34,7 @@ __all__ = [
     "Tile",
     "TrapState",
     "UnitState",
+    "reaction_limit",
     "state_from_json",
     "state_to_json",
 ]
@@ -140,6 +143,16 @@ class SpawnTemplate(BaseModel):
 
 
 @dataclass(slots=True, frozen=True)
+class LastCast:
+    """一次以 ``UseSkill`` 施放的主動技能（Phase 3C-4b）：施放者、技能與施放當輪。
+    ``copy_skill`` 只複製本輪內的。"""
+
+    unit_id: UnitId
+    skill_id: str
+    round: int
+
+
+@dataclass(slots=True, frozen=True)
 class PendingResolution:
     """暫停中的結算（``prompt`` 反應等待決定）。
 
@@ -152,11 +165,12 @@ class PendingResolution:
     decisions: tuple[bool, ...]
     base_state_json: str
     events_emitted: int
-    kind: Literal["reaction"]
+    kind: Literal["reaction", "copy_skill"]
     unit_id: UnitId
     reaction: str
     trigger_unit_id: UnitId | None
     skill_id: str | None = None
+    copy_skill_id: str | None = None
     trigger_event_seq: int | None = None
     stamina_cost: int = 0
     mana_cost: int = 0
@@ -217,6 +231,9 @@ class UnitState:
     """``grant_ap`` 給不在自己回合的單位的 AP：下次自己回合開始時加上（不超過本回合上限）。"""
     ap_granted_round: int = 0
     """最近一次被 ``grant_ap`` 給 AP 的輪數（0 為從未；同一單位每輪最多被給一次）。"""
+    extra_reactions: int = 0
+    """``extra_reaction`` 給的額外反應次數（Phase 3C-4b）：本輪反應上限 ＝ ``reactions_per_round``
+    ＋ 此值；每輪開始時歸零。"""
 
     @property
     def alive(self) -> bool:
@@ -283,6 +300,7 @@ class UnitState:
             source=self.source,
             ap_pending=self.ap_pending,
             ap_granted_round=self.ap_granted_round,
+            extra_reactions=self.extra_reactions,
         )
 
 
@@ -318,6 +336,9 @@ class BattleState:
     """戰場上的陷阱（Phase 2E-3），依 ``(y, x)`` 排序；同一格最多一個。"""
     source_wells: tuple[tuple[int, int], ...] = ()
     """尚未被取用的源泉格（Phase 3C-4a），依 ``(y, x)`` 排序；我方單位進入時 +1 源力並消失。"""
+    casts: tuple[LastCast, ...] = ()
+    """本輪以 ``UseSkill`` 施放過的主動技能，依施放順序（Phase 3C-4b；``copy_skill`` 複製其中
+    最後一個別人施放的）。每次記錄時順便丟掉舊輪的。"""
 
     # ------------------------------------------------------------------
     # 複製
@@ -356,6 +377,7 @@ class BattleState:
             pending=self.pending,
             traps=list(self.traps),
             source_wells=self.source_wells,
+            casts=self.casts,
         )
 
     # ------------------------------------------------------------------
@@ -433,6 +455,11 @@ class BattleState:
 
 
 _STATE_ADAPTER: TypeAdapter[BattleState] = TypeAdapter(BattleState)
+
+
+def reaction_limit(core: CoreRules, unit: UnitState) -> int:
+    """單位本輪的反應次數上限：``reactions_per_round`` ＋ ``extra_reaction`` 給的額外次數。"""
+    return core.reactions_per_round + unit.extra_reactions
 
 
 def state_to_json(state: BattleState) -> str:

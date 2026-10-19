@@ -5,7 +5,7 @@ kinds: [active]
 enabled: true
 shapes: [self, single, allies_in_radius, square3]   # 2D-1：single＝單一友方（含自己），視為半徑 0 的光環
 core:
-  primitives: [heal, shield, cleanse, apply_status, create_surface, grant_ap, reset_cooldown, cheat_death]   # 3C-4a：改寫規則型（給 AP、重置冷卻、免死）也是光環的核心
+  primitives: [heal, shield, cleanse, apply_status, create_surface, grant_ap, reset_cooldown, cheat_death, redirect_damage, copy_skill, extra_reaction]   # 3C-4a、4b：改寫規則型也是光環的核心
   affects: [allies, self]
   beneficial_only: true   # 核心的狀態與表面必須 beneficial: true（statuses.yaml、surfaces.yaml）
 secondary: {max_count: 1}

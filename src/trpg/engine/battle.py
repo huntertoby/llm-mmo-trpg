@@ -33,6 +33,7 @@ from trpg.engine.actions import (
     UseSkill,
 )
 from trpg.engine.context import Ctx, PreviewMode
+from trpg.engine.copying import copy_selections, has_copy_effect
 from trpg.engine.effects import execute
 from trpg.engine.effects.models import (
     ApplyStatusEffect,
@@ -865,6 +866,7 @@ def resolve_with(
             reaction=pending.reaction,
             trigger_unit_id=pending.trigger_unit_id,
             skill_id=pending.skill_id,
+            copy_skill_id=pending.copy_skill_id,
             trigger_event_seq=pending.trigger_event_seq,
             stamina_cost=pending.stamina_cost,
             mana_cost=pending.mana_cost,
@@ -909,8 +911,22 @@ def resume(state: BattleState, decision: Decision) -> ResolveResult:
         raise IllegalActionError(f"現在等待的是 {who} 的決定")
     base = state_from_json(pending.base_state_json)
     action = ACTION_ADAPTER.validate_json(pending.action_json)
+    if pending.kind == "copy_skill":
+        return _resume_copy(base, action, decision)
     result = resolve_with(base, action, (*pending.decisions, decision.accept))
     return ResolveResult(result.state, result.events[pending.events_emitted :], result.pending)
+
+
+def _resume_copy(base: BattleState, action: Action, decision: Decision) -> ResolveResult:
+    """回答 ``copy_skill`` 的選目標（Phase 3C-4b）：放棄時回到施放之前（沒有付任何代價）；否則帶
+    著 ``decision.copy_cast`` 重新結算原本的 ``UseSkill``。選取不合法時拋出
+    ``IllegalActionError``，暫停中的狀態不變。"""
+    if not decision.accept:
+        return ResolveResult(base, [], None)
+    assert isinstance(action, UseSkill)
+    if decision.copy_cast is None:
+        raise IllegalActionError("必須指定複製技能的目標（或放棄施放）")
+    return resolve_with(base, action.model_copy(update={"copy_cast": decision.copy_cast}))
 
 
 # ---------------------------------------------------------------------------
@@ -930,20 +946,26 @@ def legal_actions(state: BattleState) -> list[Action]:
     return legal_actions_with_areas(state)[0]
 
 
-def legal_actions_with_areas(state: BattleState) -> tuple[list[Action], dict[int, SkillArea]]:
+def legal_actions_with_areas(
+    state: BattleState, *, expand_copy: bool = False
+) -> tuple[list[Action], dict[int, SkillArea]]:
     """:func:`legal_actions`，另外回傳每個技能動作的影響範圍（以 ``id(action)`` 為鍵）。
 
     AI 評分技能時需要影響範圍；一併取得可以省下重複計算 :func:`compute_area`。
+
+    ``expand_copy``（Phase 3C-4b，AI 用）：``copy_skill`` 技能依複製技能的每個合法選取各列一個
+    完整動作（``UseSkill.copy_cast`` 已填，影響範圍是複製技能的）；預設只列一個沒有
+    ``copy_cast`` 的動作，由玩家在結算暫停時再選目標。
     """
     unit = state.active
     if state.ended or unit is None or state.pending is not None:
         return [], {}
     areas: dict[int, SkillArea] = {}
-    return _legal_actions(state, unit, areas), areas
+    return _legal_actions(state, unit, areas, expand_copy=expand_copy), areas
 
 
 def _legal_actions(
-    state: BattleState, unit: UnitState, areas: dict[int, SkillArea]
+    state: BattleState, unit: UnitState, areas: dict[int, SkillArea], *, expand_copy: bool = False
 ) -> list[Action]:
     core = state.ruleset.core
     actions: list[Action] = []
@@ -972,7 +994,7 @@ def _legal_actions(
             actions.extend(
                 Trip(unit_id=unit.id, target_id=t.id) for t in foes if not t.has_status(PRONE)
             )
-    actions.extend(_skill_actions(state, unit, areas))
+    actions.extend(_skill_actions(state, unit, areas, expand_copy=expand_copy))
     actions.extend(interact_actions(state, unit))
     if unit.ap >= core.defend_ap_cost and not unit.has_status(DEFENDING):
         actions.append(Defend(unit_id=unit.id))
@@ -1001,12 +1023,18 @@ def _usable_skills(state: BattleState, unit: UnitState) -> list[SkillDef]:
 
 
 def _skill_actions(
-    state: BattleState, unit: UnitState, areas: dict[int, SkillArea]
+    state: BattleState, unit: UnitState, areas: dict[int, SkillArea], *, expand_copy: bool
 ) -> list[Action]:
     """可用的技能動作：依技能 ID，再依選取（目標 ID／座標／方向）排序。"""
     actions: list[Action] = []
     for skill in _usable_skills(state, unit):
         for action, area in selections(state, unit, skill):
+            if expand_copy and has_copy_effect(skill):
+                for copy, copy_area in copy_selections(state, unit):
+                    full = action.model_copy(update={"copy_cast": copy})
+                    actions.append(full)
+                    areas[id(full)] = copy_area
+                continue
             actions.append(action)
             areas[id(action)] = area
     return actions

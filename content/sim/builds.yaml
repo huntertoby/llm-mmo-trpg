@@ -125,7 +125,7 @@ builds:
       resist: {elemental: 150}
       tags: [hero, sim]
       max_mana: 40
-      skills: [skill_war_hymn, skill_tailwind, skill_frost_shackle, skill_reflex_ward, skill_steady_breath, skill_rallying_cry]
+      skills: [skill_war_hymn, skill_tailwind, skill_frost_shackle, skill_reflex_ward, skill_steady_breath, skill_rallying_cry, skill_mirror_cast]
 
   - id: build_healer
     name_zh: 治療
@@ -177,7 +177,7 @@ builds:
       resist: {physical: 100}
       tags: [hero, sim]
       max_mana: 20
-      skills: [skill_taunting_roar, skill_stand_firm, skill_bulwark_stance, skill_thorn_skin]
+      skills: [skill_taunting_roar, skill_stand_firm, skill_bulwark_stance, skill_thorn_skin, skill_soul_bond, skill_vigil_call]
 
   - id: build_striker
     name_zh: 蓄力流

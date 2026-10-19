@@ -1,0 +1,22 @@
+id: skill_mirror_cast
+schema_version: 1
+name_zh: 鏡像施法
+tier: 1
+rank: 1
+rarity: legendary
+kind: active
+skeleton: aura
+category: spell
+weapon_req: any
+ap_cost: 1
+scaling_attr: int
+shape: {type: self}
+effects:
+  - {type: copy_skill}
+condition: null
+cost: {mana: 0, cooldown: 2, source: 1}
+tags: [arcane, spell, mimic, legendary]
+narrative:
+  concept: 花一點源力，把本輪眼前剛施放的招式原樣再演一遍，目標由你重新選擇
+  cast_flavor: 空氣像鏡面般映出方才的光影，你伸手一抓，那一招便屬於你
+provenance: {origin: builtin, owner_id: null, created_by: null, parents: [], bound: true, tradeable: false}

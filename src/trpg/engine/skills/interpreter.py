@@ -25,9 +25,13 @@ from trpg.content.skills import (
     CHEAT_DEATH_STATUS,
     CONSUME_STACK,
     CONSUME_STATUS,
+    COPY_SKILL,
+    EXTRA_REACTION,
     GRANT_AP,
     INTERCEPT,
     PLACE_TRAP,
+    REDIRECT_DAMAGE,
+    REDIRECT_STATUS,
     RESET_COOLDOWN,
     ConditionSpec,
     EffectSpec,
@@ -38,6 +42,7 @@ from trpg.engine import modifiers
 from trpg.engine.actions import UseSkill
 from trpg.engine.context import Ctx
 from trpg.engine.control import status_effect
+from trpg.engine.copying import copy_free_problem, copy_source, has_copy_effect
 from trpg.engine.effects import execute
 from trpg.engine.effects.models import (
     ApplyStatusEffect,
@@ -63,11 +68,18 @@ from trpg.engine.events import (
     EffectFizzled,
     ObjectDamaged,
     SkillCooldownChanged,
+    SkillCopied,
     SkillUsed,
 )
 from trpg.engine.maneuvers import contest
-from trpg.engine.reactions import block_multiplier, hit_reactions, try_intercept
-from trpg.engine.rewrites import grant_ap, reset_cooldowns
+from trpg.engine.reactions import (
+    PauseForDecision,
+    block_multiplier,
+    hit_reactions,
+    try_intercept,
+)
+from trpg.engine.results import Pending
+from trpg.engine.rewrites import grant_ap, grant_reactions, reset_cooldowns
 from trpg.engine.rules.combat import PERMILLE, AttackProfile, AttackRoll, ForcedOutcome, roll_attack
 from trpg.engine.rules.geometry import XY, manhattan
 from trpg.engine.skill_triggers import collect_cast, holding
@@ -88,7 +100,7 @@ from trpg.engine.skills.targeting import (
 )
 from trpg.engine.source import spend_source
 from trpg.engine.stacks import add_stacks, consume_stacks
-from trpg.engine.state import BattleState, TrapState, UnitState
+from trpg.engine.state import BattleState, LastCast, TrapState, UnitState
 from trpg.engine.traps import place_trap
 from trpg.shared.errors import IllegalActionError
 from trpg.shared.types import Element, Pos, UnitId
@@ -102,6 +114,15 @@ __all__ = [
 ]
 
 PRONE = "prone"
+REWRITE_PRIMITIVES = (
+    GRANT_AP,
+    RESET_COOLDOWN,
+    CHEAT_DEATH,
+    REDIRECT_DAMAGE,
+    COPY_SKILL,
+    EXTRA_REACTION,
+)
+"""由 :meth:`_Cast.rewrite` 結算的改寫規則型原語。"""
 _TOUCHING_AFFECTS = ("enemies", "all", "tiles")
 
 
@@ -117,6 +138,7 @@ def use_skill(ctx: Ctx, caster: UnitState, action: UseSkill) -> None:
     if problem is not None:
         raise IllegalActionError(problem)
     area = checked_area(ctx.state, caster, skill, action)
+    _check_copy(ctx, caster, skill, action)
     with holding(ctx):  # 被動的觸發等整個技能結算完才處理
         _pay_costs(ctx, caster, skill, area)
         if skill.trap is not None:  # 陷阱技能：施放時只放置陷阱，其餘效果等觸發時結算
@@ -124,8 +146,47 @@ def use_skill(ctx: Ctx, caster: UnitState, action: UseSkill) -> None:
             place_trap(ctx, caster, skill, (action.target_pos.x, action.target_pos.y))
         else:
             _Cast(ctx, caster, skill, action, area).run()
+        if skill.kind == "active":  # copy_skill 的複製對象（Phase 3C-4b）
+            _record_cast(ctx.state, caster, skill)
         _apply_self_status(ctx, caster, skill)
         collect_cast(ctx, caster, skill)  # on_cast_tag：在該技能結算之後
+
+
+def _record_cast(state: BattleState, caster: UnitState, skill: SkillDef) -> None:
+    """記錄這次施放（``copy_skill`` 的複製對象）；舊輪的記錄一併丟掉。"""
+    kept = tuple(c for c in state.casts if c.round == state.round)
+    state.casts = (*kept, LastCast(caster.id, skill.id, state.round))
+
+
+def _check_copy(ctx: Ctx, caster: UnitState, skill: SkillDef, action: UseSkill) -> None:
+    """``UseSkill.copy_cast`` 的檢查（Phase 3C-4b）：只有 ``copy_skill`` 技能可以帶；``copy_skill``
+    沒帶時（正式結算）暫停，等玩家選複製技能的目標；帶了就必須是目前可複製的技能，而且選取合法。"""
+    if not has_copy_effect(skill):
+        if action.copy_cast is not None:
+            raise IllegalActionError(f"只有複製技能的技能可以指定 copy_cast：{skill.name_zh}")
+        return
+    found = copy_source(ctx.state, caster)
+    if isinstance(found, str):
+        raise IllegalActionError(found)
+    copied = found[0]
+    pick = action.copy_cast
+    if pick is None:
+        if ctx.preview is None:
+            raise PauseForDecision(
+                Pending(
+                    kind="copy_skill",
+                    unit_id=caster.id,
+                    skill_id=skill.id,
+                    copy_skill_id=copied.id,
+                )
+            )
+        return  # 預覽：沒有選取就只算到複製之前
+    if pick.unit_id != caster.id or pick.skill_id != copied.id or pick.copy_cast is not None:
+        raise IllegalActionError(f"只能複製「{copied.name_zh}」，由施放者自己選目標")
+    problem = copy_free_problem(ctx.state, caster, copied)
+    if problem is not None:
+        raise IllegalActionError(problem)
+    checked_area(ctx.state, caster, copied, pick)
 
 
 def use_triggered_skill(
@@ -545,34 +606,86 @@ class _Cast:
             return self.apply_status(effect, spec)
         if kind == CONSUME_STATUS:
             return self.consume_status(effect, spec)
-        if kind in (GRANT_AP, RESET_COOLDOWN, CHEAT_DEATH):
+        if kind in REWRITE_PRIMITIVES:
             return self.rewrite(effect, spec)
         return self.tile_effect(effect, spec)
 
     # -- 改寫規則型（Phase 3C-4a）------------------------------------------
 
     def rewrite(self, effect: ResolvedEffect, spec: EffectSpec) -> list[EffectBase]:
-        """``grant_ap``、``reset_cooldown`` 直接結算（:mod:`trpg.engine.rewrites`）；``cheat_death``
-        對每個對象施加不死狀態（不擲抵抗）。"""
+        """改寫規則型原語：``grant_ap``、``reset_cooldown``、``extra_reaction`` 直接結算
+        （:mod:`trpg.engine.rewrites`）；``copy_skill`` 複製施放；``cheat_death`` 與
+        ``redirect_damage`` 對每個對象施加狀態（不擲抵抗）。"""
+        kind = effect.type
+        if kind == COPY_SKILL:
+            self.copy_skill()
+            return []
         targets = self.targets(effect.affects, spec.condition)
-        if effect.type == GRANT_AP:
+        if kind == GRANT_AP:
             for unit in targets:
                 grant_ap(self.ctx, self.caster, unit, spec.amount or 1)
             return []
-        if effect.type == RESET_COOLDOWN:
+        if kind == RESET_COOLDOWN:
             done = [reset_cooldowns(self.ctx, self.caster, u, self.skill, spec) for u in targets]
             if not any(done):
                 self.ctx.emit(EffectFizzled, effect_kind=spec.type, pos=None, reason="no_cooldown")
             return []
+        if kind == EXTRA_REACTION:
+            for unit in targets:
+                grant_reactions(self.ctx, self.caster, unit, spec.amount or 1)
+            return []
+        return self.rewrite_status(kind, spec, targets)
+
+    def rewrite_status(
+        self, kind: str, spec: EffectSpec, targets: list[UnitState]
+    ) -> list[EffectBase]:
+        """``cheat_death``（不死）與 ``redirect_damage``（靈魂連結；對象不含施放者自己）。"""
+        if kind == CHEAT_DEATH:
+            return [
+                ApplyStatusEffect(
+                    source_id=self.caster.id,
+                    target_id=unit.id,
+                    status_id=CHEAT_DEATH_STATUS,
+                    duration=spec.duration,
+                )
+                for unit in targets
+            ]
+        linked = [u for u in targets if u.id != self.caster.id]
+        if not linked:
+            self.ctx.emit(EffectFizzled, effect_kind=spec.type, pos=None, reason="self_link")
         return [
             ApplyStatusEffect(
                 source_id=self.caster.id,
                 target_id=unit.id,
-                status_id=CHEAT_DEATH_STATUS,
+                status_id=REDIRECT_STATUS,
                 duration=spec.duration,
+                amount=spec.permille,
             )
-            for unit in targets
+            for unit in linked
         ]
+
+    def copy_skill(self) -> None:
+        """``copy_skill``：以施放者的身分立即施放本輪最後施放的技能（不扣法力與 AP、不進冷卻、
+        不花源力；``casts`` 在這次施放結束之後才更新，所以這裡看到的仍是被複製的那一次）。
+        預覽沒有選取時不結算。"""
+        pick = None if self.action is None else self.action.copy_cast
+        if pick is None:
+            return
+        state = self.ctx.state
+        found = copy_source(state, self.caster)
+        assert not isinstance(found, str)  # use_skill 開頭已檢查
+        copied, origin = found
+        area = checked_area(state, self.caster, copied, pick)
+        self.ctx.emit(
+            SkillCopied,
+            unit_id=self.caster.id,
+            source_id=origin.id,
+            skill_id=copied.id,
+            name_zh=copied.name_zh,
+            tiles=tuple(Pos(x=x, y=y) for x, y in area.tiles),
+        )
+        _Cast(self.ctx, self.caster, copied, pick, area).run()
+        collect_cast(self.ctx, self.caster, copied)
 
     # -- 消耗狀態（Phase 3C-3b）------------------------------------------
 

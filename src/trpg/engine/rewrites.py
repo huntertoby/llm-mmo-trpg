@@ -7,6 +7,7 @@
 - ``grant_ap``：目標立刻獲得 AP，超過本回合上限（:func:`ap_cap`）的部分不保留；目標不在自己的
   回合時，AP 存進 ``ap_pending``，在它下次回合開始時加上（同樣不超過上限）。同一單位每輪最多被給
   一次，之後的給予發出 ``effect_fizzled``（``already_granted``）。
+- ``extra_reaction``（Phase 3C-4b）：目標本輪的反應次數上限 +``amount``，每輪開始時歸零。
 - ``reset_cooldown``：目標的冷卻歸零（``which: all`` 全部、``tag`` 只有帶該標籤的技能——含修正規則
   加上的標籤）；花源力的技能（``cost.source``）與施放的這個技能本身不重置；施放者自己不受影響。
 """
@@ -17,10 +18,17 @@ from trpg.content.rules import CoreRules
 from trpg.content.skills import EffectSpec, SkillDef
 from trpg.engine import modifiers
 from trpg.engine.context import Ctx
-from trpg.engine.events import ApGranted, EffectFizzled, SkillCooldownChanged
+from trpg.engine.events import ApGranted, EffectFizzled, ReactionsGranted, SkillCooldownChanged
 from trpg.engine.state import BattleState, UnitState
 
-__all__ = ["ap_cap", "grant_ap", "grant_ap_problem", "reset_cooldowns", "resettable_cooldowns"]
+__all__ = [
+    "ap_cap",
+    "grant_ap",
+    "grant_ap_problem",
+    "grant_reactions",
+    "reset_cooldowns",
+    "resettable_cooldowns",
+]
 
 
 def ap_cap(core: CoreRules) -> int:
@@ -93,3 +101,15 @@ def reset_cooldowns(
         del target.cooldowns[skill_id]
         ctx.emit(SkillCooldownChanged, unit_id=target.id, skill_id=skill_id, remaining=0)
     return bool(reset)
+
+
+def grant_reactions(ctx: Ctx, caster: UnitState, target: UnitState, amount: int) -> None:
+    """``extra_reaction`` 對 ``target`` 的結算：本輪反應上限 +``amount``（可疊加，下一輪歸零）。"""
+    target.extra_reactions += amount
+    ctx.emit(
+        ReactionsGranted,
+        unit_id=target.id,
+        source_id=caster.id,
+        amount=amount,
+        total=target.extra_reactions,
+    )

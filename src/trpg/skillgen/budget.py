@@ -27,6 +27,7 @@ from trpg.content.battle import Dice, StatusDef
 from trpg.content.library import ContentLibrary
 from trpg.content.skill_rules import BudgetRules, ModifierBudget
 from trpg.content.skills import (
+    EXTRA_REACTION,
     GRANT_AP,
     ConditionDef,
     EffectSpec,
@@ -168,7 +169,7 @@ def _base_points(  # noqa: PLR0911
     if basis == "per_amount":
         assert primitive.base_points is not None
         amount = effect.amount or 1
-        unit = "AP" if primitive.id == GRANT_AP else "層"
+        unit = {GRANT_AP: "AP", EXTRA_REACTION: "次"}.get(primitive.id, "層")
         return Fraction(primitive.base_points * amount), f"{primitive.base_points}×{amount} {unit}"
     if basis == "consume_stack":
         return _consume_stack_points(skill, effect, library)

@@ -14,19 +14,23 @@ __all__ = ["AllyResult", "BattleResult", "Pending", "ResolveResult", "battle_res
 
 
 class Pending(BaseModel):
-    """結算暫停、等待玩家決定（``prompt`` 反應）。
+    """結算暫停、等待玩家決定（``prompt`` 反應，或 ``copy_skill`` 選目標）。
 
-    以 ``resume(state, Decision(unit_id=..., accept=...))`` 繼續。
+    以 ``resume(state, Decision(unit_id=..., accept=...))`` 繼續；``kind == "copy_skill"`` 時
+    ``Decision.copy_cast`` 給出複製技能的選取（Phase 3C-4b）。
     """
 
     model_config = ConfigDict(frozen=True, extra="forbid")
 
-    kind: Literal["reaction"]
+    kind: Literal["reaction", "copy_skill"]
     unit_id: UnitId
     reaction: str = ""
     trigger_unit_id: UnitId | None = None
     skill_id: str | None = None
-    """以反應技回應時為該技能 ID；一般（內建）反應規則為 ``None``。"""
+    """以反應技回應時為該技能 ID；一般（內建）反應規則為 ``None``；``copy_skill`` 暫停時為施放
+    的 ``copy_skill`` 技能 ID。"""
+    copy_skill_id: str | None = None
+    """``copy_skill`` 暫停時：要複製的技能 ID（玩家要為它選目標）。"""
     trigger_event_seq: int | None = None
     """引發這次詢問的事件 ``seq``（格擋類為擊中判定 ``attack_rolled``、反應技為造成傷害的
     ``damage_dealt`` 或攻擊判定；``enemy_leaves_adjacent`` 的移動事件尚未發出，為 ``None``）。"""
