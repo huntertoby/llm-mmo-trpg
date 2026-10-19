@@ -1,6 +1,6 @@
 # PM 交接文件
 
-> 給接手的 PM（新對話中的 Claude）。最後更新：2026-10-19，**Phase 2 完整性檢查、Phase 2G、Phase 2H 全部完成並驗收**；下一步是 **和使用者確認 Phase 3 拆法**（見 3.1 最後一段與 3.0.1）。
+> 給接手的 PM（新對話中的 Claude）。最後更新：2026-10-19，**Phase 2 已全部完成並驗收**（2A–2H）；下一步是 **和使用者討論 Phase 3**（見 3.0）。
 > 讀完本檔再讀 `CLAUDE.md` 與 `docs/專案計畫.md`（總覽，約 1 萬字元）即可接手；設計細節依需要讀 `docs/design/` 下的主題檔。
 
 ---
@@ -34,7 +34,7 @@
 | Phase 2F 整理（Phase 3 前審查的結論） | ✅ 完成（1395 測試；noqa 19→14；對照戰鬥不變；completion 1800 場異常 0） | `Phase2F計畫.md`／`Phase2F-1、2F-2報告.md` |
 | Phase 2G 完整性檢查的補強 | ✅ 完成（1427 測試；12 個示範技能；覆蓋率測試允許清單為空；待 PM 決定見計畫 0.1、0.2） | `Phase2G計畫.md` |
 | Phase 2H 冰凍、自身狀態代價、雙屬性與專精 | ✅ 完成（1486 測試；`LOG_FORMAT` /11；待 PM 決定見計畫 0.1、0.2；completion 1800 場、matrix 2400 場異常 0） | `Phase2H計畫.md` |
-| **Phase 3 網頁 ＋ roguelite** | 2H 之後 | 規格尚未撰寫（見 3.1） |
+| **Phase 3 網頁 ＋ roguelite** | 下一步：先和使用者討論拆法 | 規格尚未撰寫（見 3.0） |
 
 - 最新 commit 在 GitHub `huntertoby/llm-mmo-trpg`（私人）的 `main`；2026-10-19 起使用者電腦的資料夾就是工作資料夾（見 6.1），push 前確認 `git status` 乾淨即可。
 - 1486 個測試（`slow` 預設不跑；平衡測試 `test_demo_map_win_rate_and_length` 標 `xfail(strict=False)`，目前 2 xfail、2 xpass）。
@@ -52,66 +52,32 @@
 
 ## 3. 下一步
 
-### 3.0 接手後要做的：Phase 2 完整性檢查（2026-10-19 使用者要求）
+### 3.0 接手後要做的：和使用者討論 Phase 3（2026-10-19）
 
-Phase 2（2A–2F）已全部結束。使用者希望在進 Phase 3 前，由新 PM 用新眼光**完整檢查 Phase 2 有沒有遺漏**。這一步只做檢查與回報，**不寫 Phase 3 規格、不自己改程式**。
+**Phase 2 已全部完成**（2A–2H，含完整性檢查與兩個補強子階段）。接手後：
 
-1. **確認環境與基準**：`git status` 乾淨、`git log -1` 為本檔的 commit（或之後）；跑一次 `uv run python scripts/check.py`（本機約 1.5 分鐘）。
-2. **派一個審查 agent 做「設計 vs 實作」比對**（`opus`、背景、只讀，讓大量閱讀不進 PM 對話）。prompt 以 6.5 為基礎，任務改成：
-   - 對照來源：`docs/專案計畫.md` 第 14 節的 Phase 2、2D、2E 段（範圍與驗收條件）、`docs/design/06-技能.md`（模板、原語、骨架、條件、狀態）、`docs/design/05-戰鬥.md` 中 Phase 2 相關的部分、各 `docs/phases/Phase2*計畫.md` 的交付項目與驗收條件。
-   - 逐項判斷：已實作且有測試／已實作但沒測試／部分實作／未實作。未實作的再分成：「已列在本檔 3.1.1、3.3 或 3.0.1」（已知，不用重報）與「**沒有任何地方記錄**」（真正的遺漏，這是重點）。
-   - 另外檢查：各報告「待 PM 決定」是否都有在計畫檔或本檔找到處理結果；文件與程式不一致的地方（例如設計文件寫的欄位名、數值、規則與 `content/` 或引擎不同）；`content/` 中定義了但沒有任何技能或 build 用到的狀態、原語、骨架。
-   - 不跑全量測試或大型模擬。最終回覆用繁體中文，表格分三類：A. Phase 3 前必須補、B. 可排進「補模板 C」或平衡階段、C. 文件需要更新。每點附位置與估計工作量，最多 15 點。
-3. **PM 複核**審查結論（抽查幾點是否屬實，排除已記錄的已知事項），整理成給使用者的精簡表格，**由使用者決定**哪些要補。
-4. 若使用者決定要補：寫一份小的整理子階段規格（例如 `Phase2G計畫.md`，依 6.2，30–45 分鐘），派 agent 實作並驗收；文件類的修正可由 PM 直接改。若沒有要補的，更新本檔後回報。
-5. 完成後**停下**，向使用者回報。Phase 3 仍要等使用者另外安排（先確認拆法，見 3.1 最後一段）。
+1. **確認環境**：`git status` 乾淨、`git log -1` 為本檔的 commit 或之後；跑一次 `uv run python scripts/check.py`（本機約 1 分鐘，1486 測試）。
+2. **和使用者討論 Phase 3**，先不要寫規格。要確認的事：
+   - **拆法**：前任 PM 建議四段，每段約 30–45 分鐘：① FastAPI 本機 API ＋ 戰鬥狀態序列化（含 3.0.1 的預留事項）→ ② 前端格子渲染與操作 → ③ 技能、反應、預覽等戰鬥 UI → ④ roguelite 循環與存檔。使用者尚未回覆。
+   - Phase 3 的範圍與驗收：`docs/專案計畫.md` 第 14 節「Phase 3｜網頁客戶端 ＋ roguelite 循環」（含 🎮 戰鬥手感檢查）；前端技術見 `docs/design/12-技術與結構.md`；roguelite 循環見 `docs/design/07-角色成長.md` 7.1。
+   - 可能要使用者決定的設計問題：試玩時敵人要不要有陷阱、被動、反應（第 5 節、3.3）；roguelite 一輪的長度與升級選項數；存檔格式（屬難以事後修改的設計，實作用 `opus`，見 6.3）。
+3. 使用者同意拆法後，依 6.2 寫 `docs/phases/Phase3計畫.md`（或每段一份），Phase 3-1 開頭放 3.0.1 的預留事項。
 
-**3.0 執行結果（2026-10-19）**：`check.py` 全過（1396 測試，本機 50 秒）。審查 agent 找到 11 點未記錄事項（PM 抽查 #2、#5、#7、#11 屬實），「待 PM 決定」處理齊全，評價可進 Phase 3。使用者決定：
-- C 類文件（#8–#11）：PM 已直接改 `docs/design/06-技能.md`（新增 6.3.1 實作對照、6.6 兩個深度上限、6.12 目前稀有度實作）、`05-戰鬥.md`、本檔 3.1.1。
-- #1 技能卡片描述移出 CLI → 3.0.1；#2 freeze、#3 `self_status`、#4 雙屬性與專精 → **Phase 2H**（3.0.2，使用者決定）。
-- #5 重複施加狀態取較長、#6 示範技能、#7 裝備未用技能 → `Phase2G計畫.md`（2G-1、2G-2）。
-- 2G、2H 已全部完成並 push。**下一步**：和使用者確認 Phase 3 拆法，再寫 Phase 3-1 規格（含 3.0.1 的預留事項）。
+### 3.0.0 前一位 PM 結束時的狀態（2026-10-19）
 
-### 3.0.0 前一位 PM 結束時的狀態
-
-- Phase 2F 已全部完成、驗收並 push。
-- 2F-2 後使用者決定把 `heal`／`shield` 加進反應技骨架（已完成，見下方第 1 點）。
-
-**2F-2 驗收紀錄**：驗收 7 條全通過。PM 自己複驗：3 場對照戰鬥與 2F-1 結束時逐位元相同，`replay` 通過；`check.py` 全過（本機 1 分 33 秒）；`trpg sim completion` 全量 1800 場異常 0（本機 `--jobs 16` 100 秒）；noqa 19→14。反應技 `skeleton.core` 退回 108→0，反應技退回總數 335→254。待 PM 決定的處理：
-1. 反應技骨架要不要加 heal／shield：**使用者決定加入**（2026-10-19）。`content/skeletons/reaction.yaml` 核心加 heal、shield（只出現在自身增益分支，形狀 self）；反應技退回 254→150；fuzz 例外 0；對照戰鬥不變；`check.py` 全過。
-2. `ReactionWhen.event` Literal 意義不同，不併入 `SKILL_REACTION_EVENTS`：接受。
-3. AI 陷阱 `trap:` 放在 `ai_profiles.yaml` 表格層級，可依模式覆寫，未知形狀用預設係數：接受。不在載入時驗證形狀 ID。
-4. `passive.yaml` 新增 `required_category`／`required_weapon_req`：接受。
-5. `skill_estimate` 等加 keyword-only 參數：接受。
-
-### 3.0.2 Phase 2H（2026-10-19 使用者決定：2G 之後、Phase 3 之前）
-
-✅ 已完成（見 `Phase2H-1、2H-2報告.md`）。完整性檢查 #2–#4 從「補模板 C」改歸 **Phase 2H**。使用者已同意 PM 建議的設計（2026-10-19），規格見 `docs/phases/Phase2H計畫.md`。
-
-| 項目 | 內容 | 寫規格前要和使用者確認的設計問題 |
-|---|---|---|
-| 冰凍狀態 `freeze` | 6.3 狀態；6.6 Boss 硬控（stun、freeze）轉為 slow 或 weaken；冰元素打在單位上的特色效果 | 冰凍的效果（跳過回合？不能移動但能攻擊？受火傷解除？受擊碎冰加傷？）；冰元素命中是否機率附加；Boss 轉成 slow 還是 weaken |
-| 代價 `self_status` | 對自己施加狀態當代價（例如施放後自己 `vulnerable` 1 回合），含預算折抵 | 可用哪些狀態、折抵比例（併入現有 +500‰ 總上限） |
-| 雙屬性縮放 | 6.10：史詩以上，例如力量 50％＋智力 50％ | 比例固定 50/50 或可設定；武器技／法術技怎麼算命中 |
-| 專精加成 | 6.10：縮放屬性是自己最高屬性時，範圍 +1 或持續 +1（技能定義） | 平手怎麼算；雙屬性技能怎麼判定；+1 範圍對各形狀的意義 |
-
-建議拆兩段：2H-1 冰凍 ＋ `self_status`（狀態與代價）；2H-2 雙屬性 ＋ 專精（屬性連動）。
+- **Phase 2 完整性檢查**：審查 agent（opus）比對設計與實作，找到 11 點未記錄事項，PM 抽查屬實；「待 PM 決定」處理齊全。使用者決定：文件類由 PM 直接改（`06-技能.md` 新增 6.3.1 實作對照等）；#1 技能卡片描述移出 CLI → 3.0.1；其餘排進 2G、2H。
+- **Phase 2G**（`Phase2G計畫.md`）：重複施加狀態改為剩餘回合取較長；6 個沒人裝備的技能裝上 build；12 個示範技能，讓每個已定義的骨架、觸發時機、反應事件、條件、原語、狀態都有手寫技能使用；`tests/content/test_coverage.py` 防止再出現「定義了沒人用」。
+- **Phase 2H**（`Phase2H計畫.md`，設計由使用者同意）：冰凍 `frozen`（硬控、受火傷解除、冰元素凍住水上單位、Boss 轉緩速）；代價 `self_status`；雙屬性縮放（史詩以上，各 50%）；專精加成（`mastery: range|duration`，以基礎屬性判斷）。`LOG_FORMAT` 升為 /11。
+- 各子階段的「待 PM 決定」都已處理（各計畫檔 0.1、0.2）。PM 驗收：`check.py` 全過；completion 1800 場、matrix 2400 場異常 0；平衡類事項記在 3.3。
 
 ### 3.0.1 Phase 3-1 預留事項（本次不做，留給之後寫規格時用）
 
-- 寫規格前先跟使用者確認 Phase 3 拆法（3.1 最後一段的四段建議，使用者尚未回覆）。Phase 3-1 要包含審查留下的三點：
+- Phase 3-1 要包含 Phase 3 前審查（2F 時）留下的三點，以及完整性檢查 #1：
    - #1 隱藏資訊依陣營過濾：engine 純函式 `project_for(state, team) -> BattleView`（濾掉對方陷阱、`rng_state`、`pending.base_state_json`）；`EventBase.visible_to` ＋ `filter_events(events, team)`；放陷阱的 `SkillUsed.tiles` 不可洩漏位置（`TrapPlaced`／`TrapExpired`／`TriggerLimitReached` 也要依陣營過濾）。
    - #5 `cli/render.py` 的 `describe_event` 移到 `trpg.narrative`（或其他 API 可匯入的模組），改成 `dict[type, Callable]` 註冊表；順便處理 `engine/preview.py` 的 `_outcome` 與 `sim/metrics.py` 的長 isinstance 鏈。
    - 完整性檢查 #1：`cli/skills.py` 的 `shape_summary`、`effect_summary`、`_condition`、`_cost_summary`（技能卡片中文描述）也要和 `describe_event` 一起搬出 CLI，網頁的技能卡片與提示框會用到。
    - #8 `Pending.kind` 改為 Literal；加 `skill_id`、`trigger_event_seq`、代價摘要；加「序列化 → 反序列化 → resume」往返測試。
    - 3.1 列的既有約定（滑倒退回的 teleport 事件、陷阱只對放置者顯示、反應詢問 UI）。
-
-
-**2F-1 驗收紀錄**：全部通過（noqa 19→17、沒有修改既有測試期望值、對照戰鬥只差新增的 `TrapTriggered.tiles`）。待 PM 決定 1 點已處理：現有技能組不出「陷阱推開踩中者」，改直接測 `_move_interrupted`——接受，不新增原語。
-
-
-> ✅ 2026-10-19 已審查，10 點中 #2、3、4、6、7、9、10 排進 Phase 2F；**#1 依陣營過濾隱藏資訊（`project_for`／事件 `visible_to`）、#5 `describe_event` 移出 `trpg.cli`、#8 `Pending` 補 `kind` Literal／`skill_id`／代價與往返測試，放進 Phase 3-1 規格。**
-> 原註：**Phase 3 開始前先做第一次審查**（6.5，`<base>` 用 Phase 2D 開始前的 commit，範圍 2D–2E），結論中要處理的項目排進 Phase 3 第一份規格或一個小的整理子階段。2E-3 時 `src/` 已有 28 個複雜度類 noqa。
 
 ### 3.1 使用者已同意的方向（2026-10-18，已寫入 `docs/專案計畫.md` v0.2.1 第 14 節）
 
