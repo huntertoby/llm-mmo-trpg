@@ -1,0 +1,166 @@
+// 視圖 → 繪製模型（純函式；PixiJS 只負責照著畫）。
+import type { BattleView, Pos } from "../api/types";
+import {
+  HIGHLIGHT,
+  SURFACES,
+  TEAM_COLORS,
+  objectStyle,
+  terrainStyle,
+} from "./glossary";
+import { onField, unitMarkers } from "./units";
+
+export interface TileDraw {
+  x: number;
+  y: number;
+  height: number;
+  /** 地形色 ＋ 表面色 ＋ 高度明暗之後的填色。 */
+  fill: number;
+  /** 角落的高度數字（高度 0 也顯示，方便比較）。 */
+  heightLabel: string;
+  terrain: string;
+  terrainName: string;
+  surfaceName: string | null;
+  blocked: boolean;
+  deadly: boolean;
+  wall: boolean;
+}
+
+export interface ObjectDraw {
+  id: string;
+  x: number;
+  y: number;
+  name: string;
+  glyph: string;
+  fill: number;
+  flammable: boolean;
+  burning: boolean;
+  floor: boolean;
+  /** 0–1；沒有耐久的物件為 `null`。 */
+  hpRatio: number | null;
+}
+
+export interface UnitDraw {
+  id: string;
+  x: number;
+  y: number;
+  marker: string;
+  name: string;
+  team: "ally" | "enemy";
+  fill: number;
+  hpRatio: number;
+  shieldRatio: number;
+  active: boolean;
+  hero: boolean;
+  downed: boolean;
+}
+
+export interface TrapDraw {
+  x: number;
+  y: number;
+  color: number;
+}
+
+export interface DrawModel {
+  width: number;
+  height: number;
+  tiles: TileDraw[];
+  objects: ObjectDraw[];
+  /** 倒下的單位在前（先畫，壓在下面）。 */
+  units: UnitDraw[];
+  traps: TrapDraw[];
+}
+
+export const MAX_HEIGHT = 3;
+
+function channel(color: number, shift: number): number {
+  return (color >> shift) & 0xff;
+}
+
+function rgb(r: number, g: number, b: number): number {
+  const c = (v: number) => Math.max(0, Math.min(255, Math.round(v)));
+  return (c(r) << 16) | (c(g) << 8) | c(b);
+}
+
+/** 把 `over` 以 `alpha` 疊在 `base` 上。 */
+export function blend(base: number, over: number, alpha: number): number {
+  const mix = (s: number) => channel(base, s) * (1 - alpha) + channel(over, s) * alpha;
+  return rgb(mix(16), mix(8), mix(0));
+}
+
+/** 高度明暗：高度 0 稍暗、每高一層更亮（越高越亮）。 */
+export function shadeForHeight(color: number, height: number): number {
+  const h = Math.max(0, Math.min(MAX_HEIGHT, height));
+  const factor = 0.78 + 0.12 * h;
+  return rgb(channel(color, 16) * factor, channel(color, 8) * factor, channel(color, 0) * factor);
+}
+
+export function tileFill(terrain: string, surface: keyof typeof SURFACES, height: number): number {
+  const t = terrainStyle(terrain);
+  const s = SURFACES[surface];
+  const base = s === null ? t.color : blend(t.color, s.color, s.alpha);
+  // 深淵等不可站立的地形不做高度明暗（一眼看得出是洞）。
+  return t.blocked && !t.wall ? base : shadeForHeight(base, height);
+}
+
+function ratio(value: number, max: number): number {
+  return max <= 0 ? 0 : Math.max(0, Math.min(1, value / max));
+}
+
+export function buildDrawModel(view: BattleView, heroId: string): DrawModel {
+  const tiles: TileDraw[] = view.tiles.map((t) => {
+    const style = terrainStyle(t.terrain);
+    const surface = SURFACES[t.surface];
+    return {
+      x: t.x,
+      y: t.y,
+      height: t.height,
+      fill: tileFill(t.terrain, t.surface, t.height),
+      heightLabel: String(t.height),
+      terrain: t.terrain,
+      terrainName: style.name,
+      surfaceName: surface === null ? null : surface.name,
+      blocked: style.blocked,
+      deadly: style.deadly,
+      wall: style.wall,
+    };
+  });
+  const objects: ObjectDraw[] = view.objects.map((o) => {
+    const style = objectStyle(o.kind);
+    return {
+      id: o.id,
+      x: o.pos.x,
+      y: o.pos.y,
+      name: style.name,
+      glyph: style.glyph,
+      fill: style.color,
+      flammable: style.flammable,
+      burning: o.burning !== null && o.burning > 0,
+      floor: style.floor,
+      hpRatio: o.hp === null || o.max_hp === null ? null : ratio(o.hp, o.max_hp),
+    };
+  });
+  const markers = unitMarkers(view.units);
+  const units: UnitDraw[] = view.units
+    .filter(onField)
+    .map((u) => ({
+      id: u.id,
+      x: u.pos.x,
+      y: u.pos.y,
+      marker: markers.get(u.id) ?? "?",
+      name: u.name_zh,
+      team: u.team,
+      fill: TEAM_COLORS[u.team],
+      hpRatio: ratio(u.hp, u.max_hp),
+      shieldRatio: ratio(u.shield, u.max_hp),
+      active: u.id === view.active_unit,
+      hero: u.id === heroId,
+      downed: u.downed,
+    }))
+    .sort((a, b) => Number(b.downed) - Number(a.downed));
+  const traps: TrapDraw[] = view.traps.map((t) => ({ x: t.pos.x, y: t.pos.y, color: HIGHLIGHT.trap }));
+  return { width: view.width, height: view.height, tiles, objects, units, traps };
+}
+
+export function tileAt(model: DrawModel, p: Pos): TileDraw | undefined {
+  return model.tiles[p.y * model.width + p.x];
+}

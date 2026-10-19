@@ -1,0 +1,4259 @@
+{
+ "battle_id": "gH7nSBfbJyQlrOIA",
+ "hero_id": "unit_0001",
+ "awaiting": "action",
+ "view": {
+  "team": "ally",
+  "map_id": "oil_depot",
+  "map_name_zh": "油庫",
+  "width": 10,
+  "height": 10,
+  "tiles": [
+   {
+    "x": 0,
+    "y": 0,
+    "height": 0,
+    "terrain": "stone",
+    "surface": "none",
+    "surface_remaining": null,
+    "surface_team": null,
+    "object_id": null
+   },
+   {
+    "x": 1,
+    "y": 0,
+    "height": 0,
+    "terrain": "stone",
+    "surface": "none",
+    "surface_remaining": null,
+    "surface_team": null,
+    "object_id": null
+   },
+   {
+    "x": 2,
+    "y": 0,
+    "height": 0,
+    "terrain": "stone",
+    "surface": "none",
+    "surface_remaining": null,
+    "surface_team": null,
+    "object_id": null
+   },
+   {
+    "x": 3,
+    "y": 0,
+    "height": 0,
+    "terrain": "stone",
+    "surface": "none",
+    "surface_remaining": null,
+    "surface_team": null,
+    "object_id": null
+   },
+   {
+    "x": 4,
+    "y": 0,
+    "height": 0,
+    "terrain": "stone",
+    "surface": "none",
+    "surface_remaining": null,
+    "surface_team": null,
+    "object_id": null
+   },
+   {
+    "x": 5,
+    "y": 0,
+    "height": 0,
+    "terrain": "stone",
+    "surface": "none",
+    "surface_remaining": null,
+    "surface_team": null,
+    "object_id": null
+   },
+   {
+    "x": 6,
+    "y": 0,
+    "height": 0,
+    "terrain": "stone",
+    "surface": "none",
+    "surface_remaining": null,
+    "surface_team": null,
+    "object_id": null
+   },
+   {
+    "x": 7,
+    "y": 0,
+    "height": 0,
+    "terrain": "stone",
+    "surface": "none",
+    "surface_remaining": null,
+    "surface_team": null,
+    "object_id": null
+   },
+   {
+    "x": 8,
+    "y": 0,
+    "height": 0,
+    "terrain": "stone",
+    "surface": "none",
+    "surface_remaining": null,
+    "surface_team": null,
+    "object_id": null
+   },
+   {
+    "x": 9,
+    "y": 0,
+    "height": 0,
+    "terrain": "stone",
+    "surface": "none",
+    "surface_remaining": null,
+    "surface_team": null,
+    "object_id": null
+   },
+   {
+    "x": 0,
+    "y": 1,
+    "height": 0,
+    "terrain": "stone",
+    "surface": "none",
+    "surface_remaining": null,
+    "surface_team": null,
+    "object_id": null
+   },
+   {
+    "x": 1,
+    "y": 1,
+    "height": 0,
+    "terrain": "stone",
+    "surface": "none",
+    "surface_remaining": null,
+    "surface_team": null,
+    "object_id": null
+   },
+   {
+    "x": 2,
+    "y": 1,
+    "height": 0,
+    "terrain": "stone",
+    "surface": "none",
+    "surface_remaining": null,
+    "surface_team": null,
+    "object_id": null
+   },
+   {
+    "x": 3,
+    "y": 1,
+    "height": 0,
+    "terrain": "stone",
+    "surface": "none",
+    "surface_remaining": null,
+    "surface_team": null,
+    "object_id": "obj_0005"
+   },
+   {
+    "x": 4,
+    "y": 1,
+    "height": 0,
+    "terrain": "stone",
+    "surface": "none",
+    "surface_remaining": null,
+    "surface_team": null,
+    "object_id": null
+   },
+   {
+    "x": 5,
+    "y": 1,
+    "height": 0,
+    "terrain": "stone",
+    "surface": "none",
+    "surface_remaining": null,
+    "surface_team": null,
+    "object_id": null
+   },
+   {
+    "x": 6,
+    "y": 1,
+    "height": 0,
+    "terrain": "stone",
+    "surface": "none",
+    "surface_remaining": null,
+    "surface_team": null,
+    "object_id": null
+   },
+   {
+    "x": 7,
+    "y": 1,
+    "height": 0,
+    "terrain": "stone",
+    "surface": "none",
+    "surface_remaining": null,
+    "surface_team": null,
+    "object_id": null
+   },
+   {
+    "x": 8,
+    "y": 1,
+    "height": 0,
+    "terrain": "stone",
+    "surface": "none",
+    "surface_remaining": null,
+    "surface_team": null,
+    "object_id": null
+   },
+   {
+    "x": 9,
+    "y": 1,
+    "height": 0,
+    "terrain": "stone",
+    "surface": "none",
+    "surface_remaining": null,
+    "surface_team": null,
+    "object_id": null
+   },
+   {
+    "x": 0,
+    "y": 2,
+    "height": 0,
+    "terrain": "stone",
+    "surface": "none",
+    "surface_remaining": null,
+    "surface_team": null,
+    "object_id": null
+   },
+   {
+    "x": 1,
+    "y": 2,
+    "height": 0,
+    "terrain": "stone",
+    "surface": "none",
+    "surface_remaining": null,
+    "surface_team": null,
+    "object_id": null
+   },
+   {
+    "x": 2,
+    "y": 2,
+    "height": 0,
+    "terrain": "stone",
+    "surface": "none",
+    "surface_remaining": null,
+    "surface_team": null,
+    "object_id": null
+   },
+   {
+    "x": 3,
+    "y": 2,
+    "height": 0,
+    "terrain": "stone",
+    "surface": "none",
+    "surface_remaining": null,
+    "surface_team": null,
+    "object_id": null
+   },
+   {
+    "x": 4,
+    "y": 2,
+    "height": 0,
+    "terrain": "stone",
+    "surface": "none",
+    "surface_remaining": null,
+    "surface_team": null,
+    "object_id": null
+   },
+   {
+    "x": 5,
+    "y": 2,
+    "height": 0,
+    "terrain": "stone",
+    "surface": "none",
+    "surface_remaining": null,
+    "surface_team": null,
+    "object_id": null
+   },
+   {
+    "x": 6,
+    "y": 2,
+    "height": 0,
+    "terrain": "stone",
+    "surface": "none",
+    "surface_remaining": null,
+    "surface_team": null,
+    "object_id": null
+   },
+   {
+    "x": 7,
+    "y": 2,
+    "height": 0,
+    "terrain": "stone",
+    "surface": "none",
+    "surface_remaining": null,
+    "surface_team": null,
+    "object_id": null
+   },
+   {
+    "x": 8,
+    "y": 2,
+    "height": 0,
+    "terrain": "stone",
+    "surface": "none",
+    "surface_remaining": null,
+    "surface_team": null,
+    "object_id": null
+   },
+   {
+    "x": 9,
+    "y": 2,
+    "height": 0,
+    "terrain": "wall",
+    "surface": "none",
+    "surface_remaining": null,
+    "surface_team": null,
+    "object_id": null
+   },
+   {
+    "x": 0,
+    "y": 3,
+    "height": 0,
+    "terrain": "stone",
+    "surface": "none",
+    "surface_remaining": null,
+    "surface_team": null,
+    "object_id": null
+   },
+   {
+    "x": 1,
+    "y": 3,
+    "height": 0,
+    "terrain": "stone",
+    "surface": "none",
+    "surface_remaining": null,
+    "surface_team": null,
+    "object_id": null
+   },
+   {
+    "x": 2,
+    "y": 3,
+    "height": 0,
+    "terrain": "stone",
+    "surface": "none",
+    "surface_remaining": null,
+    "surface_team": null,
+    "object_id": "obj_0007"
+   },
+   {
+    "x": 3,
+    "y": 3,
+    "height": 0,
+    "terrain": "stone",
+    "surface": "none",
+    "surface_remaining": null,
+    "surface_team": null,
+    "object_id": null
+   },
+   {
+    "x": 4,
+    "y": 3,
+    "height": 0,
+    "terrain": "stone",
+    "surface": "none",
+    "surface_remaining": null,
+    "surface_team": null,
+    "object_id": null
+   },
+   {
+    "x": 5,
+    "y": 3,
+    "height": 0,
+    "terrain": "stone",
+    "surface": "none",
+    "surface_remaining": null,
+    "surface_team": null,
+    "object_id": "obj_0001"
+   },
+   {
+    "x": 6,
+    "y": 3,
+    "height": 0,
+    "terrain": "stone",
+    "surface": "oil",
+    "surface_remaining": null,
+    "surface_team": null,
+    "object_id": null
+   },
+   {
+    "x": 7,
+    "y": 3,
+    "height": 0,
+    "terrain": "stone",
+    "surface": "oil",
+    "surface_remaining": null,
+    "surface_team": null,
+    "object_id": null
+   },
+   {
+    "x": 8,
+    "y": 3,
+    "height": 0,
+    "terrain": "stone",
+    "surface": "none",
+    "surface_remaining": null,
+    "surface_team": null,
+    "object_id": "obj_0003"
+   },
+   {
+    "x": 9,
+    "y": 3,
+    "height": 0,
+    "terrain": "wall",
+    "surface": "none",
+    "surface_remaining": null,
+    "surface_team": null,
+    "object_id": null
+   },
+   {
+    "x": 0,
+    "y": 4,
+    "height": 0,
+    "terrain": "stone",
+    "surface": "none",
+    "surface_remaining": null,
+    "surface_team": null,
+    "object_id": null
+   },
+   {
+    "x": 1,
+    "y": 4,
+    "height": 0,
+    "terrain": "stone",
+    "surface": "none",
+    "surface_remaining": null,
+    "surface_team": null,
+    "object_id": null
+   },
+   {
+    "x": 2,
+    "y": 4,
+    "height": 0,
+    "terrain": "stone",
+    "surface": "none",
+    "surface_remaining": null,
+    "surface_team": null,
+    "object_id": null
+   },
+   {
+    "x": 3,
+    "y": 4,
+    "height": 0,
+    "terrain": "stone",
+    "surface": "none",
+    "surface_remaining": null,
+    "surface_team": null,
+    "object_id": null
+   },
+   {
+    "x": 4,
+    "y": 4,
+    "height": 0,
+    "terrain": "stone",
+    "surface": "none",
+    "surface_remaining": null,
+    "surface_team": null,
+    "object_id": null
+   },
+   {
+    "x": 5,
+    "y": 4,
+    "height": 0,
+    "terrain": "stone",
+    "surface": "oil",
+    "surface_remaining": null,
+    "surface_team": null,
+    "object_id": null
+   },
+   {
+    "x": 6,
+    "y": 4,
+    "height": 0,
+    "terrain": "stone",
+    "surface": "oil",
+    "surface_remaining": null,
+    "surface_team": null,
+    "object_id": null
+   },
+   {
+    "x": 7,
+    "y": 4,
+    "height": 0,
+    "terrain": "stone",
+    "surface": "oil",
+    "surface_remaining": null,
+    "surface_team": null,
+    "object_id": null
+   },
+   {
+    "x": 8,
+    "y": 4,
+    "height": 0,
+    "terrain": "stone",
+    "surface": "oil",
+    "surface_remaining": null,
+    "surface_team": null,
+    "object_id": null
+   },
+   {
+    "x": 9,
+    "y": 4,
+    "height": 0,
+    "terrain": "stone",
+    "surface": "none",
+    "surface_remaining": null,
+    "surface_team": null,
+    "object_id": null
+   },
+   {
+    "x": 0,
+    "y": 5,
+    "height": 0,
+    "terrain": "stone",
+    "surface": "none",
+    "surface_remaining": null,
+    "surface_team": null,
+    "object_id": null
+   },
+   {
+    "x": 1,
+    "y": 5,
+    "height": 0,
+    "terrain": "stone",
+    "surface": "none",
+    "surface_remaining": null,
+    "surface_team": null,
+    "object_id": null
+   },
+   {
+    "x": 2,
+    "y": 5,
+    "height": 0,
+    "terrain": "stone",
+    "surface": "none",
+    "surface_remaining": null,
+    "surface_team": null,
+    "object_id": null
+   },
+   {
+    "x": 3,
+    "y": 5,
+    "height": 0,
+    "terrain": "stone",
+    "surface": "none",
+    "surface_remaining": null,
+    "surface_team": null,
+    "object_id": null
+   },
+   {
+    "x": 4,
+    "y": 5,
+    "height": 0,
+    "terrain": "stone",
+    "surface": "none",
+    "surface_remaining": null,
+    "surface_team": null,
+    "object_id": null
+   },
+   {
+    "x": 5,
+    "y": 5,
+    "height": 0,
+    "terrain": "stone",
+    "surface": "oil",
+    "surface_remaining": null,
+    "surface_team": null,
+    "object_id": null
+   },
+   {
+    "x": 6,
+    "y": 5,
+    "height": 0,
+    "terrain": "stone",
+    "surface": "oil",
+    "surface_remaining": null,
+    "surface_team": null,
+    "object_id": null
+   },
+   {
+    "x": 7,
+    "y": 5,
+    "height": 0,
+    "terrain": "stone",
+    "surface": "oil",
+    "surface_remaining": null,
+    "surface_team": null,
+    "object_id": null
+   },
+   {
+    "x": 8,
+    "y": 5,
+    "height": 0,
+    "terrain": "stone",
+    "surface": "oil",
+    "surface_remaining": null,
+    "surface_team": null,
+    "object_id": null
+   },
+   {
+    "x": 9,
+    "y": 5,
+    "height": 0,
+    "terrain": "stone",
+    "surface": "none",
+    "surface_remaining": null,
+    "surface_team": null,
+    "object_id": null
+   },
+   {
+    "x": 0,
+    "y": 6,
+    "height": 0,
+    "terrain": "stone",
+    "surface": "none",
+    "surface_remaining": null,
+    "surface_team": null,
+    "object_id": null
+   },
+   {
+    "x": 1,
+    "y": 6,
+    "height": 0,
+    "terrain": "stone",
+    "surface": "none",
+    "surface_remaining": null,
+    "surface_team": null,
+    "object_id": null
+   },
+   {
+    "x": 2,
+    "y": 6,
+    "height": 0,
+    "terrain": "stone",
+    "surface": "none",
+    "surface_remaining": null,
+    "surface_team": null,
+    "object_id": "obj_0008"
+   },
+   {
+    "x": 3,
+    "y": 6,
+    "height": 0,
+    "terrain": "stone",
+    "surface": "none",
+    "surface_remaining": null,
+    "surface_team": null,
+    "object_id": null
+   },
+   {
+    "x": 4,
+    "y": 6,
+    "height": 0,
+    "terrain": "stone",
+    "surface": "none",
+    "surface_remaining": null,
+    "surface_team": null,
+    "object_id": null
+   },
+   {
+    "x": 5,
+    "y": 6,
+    "height": 0,
+    "terrain": "stone",
+    "surface": "none",
+    "surface_remaining": null,
+    "surface_team": null,
+    "object_id": "obj_0002"
+   },
+   {
+    "x": 6,
+    "y": 6,
+    "height": 0,
+    "terrain": "stone",
+    "surface": "oil",
+    "surface_remaining": null,
+    "surface_team": null,
+    "object_id": null
+   },
+   {
+    "x": 7,
+    "y": 6,
+    "height": 0,
+    "terrain": "stone",
+    "surface": "oil",
+    "surface_remaining": null,
+    "surface_team": null,
+    "object_id": null
+   },
+   {
+    "x": 8,
+    "y": 6,
+    "height": 0,
+    "terrain": "stone",
+    "surface": "none",
+    "surface_remaining": null,
+    "surface_team": null,
+    "object_id": "obj_0004"
+   },
+   {
+    "x": 9,
+    "y": 6,
+    "height": 0,
+    "terrain": "wall",
+    "surface": "none",
+    "surface_remaining": null,
+    "surface_team": null,
+    "object_id": null
+   },
+   {
+    "x": 0,
+    "y": 7,
+    "height": 0,
+    "terrain": "stone",
+    "surface": "none",
+    "surface_remaining": null,
+    "surface_team": null,
+    "object_id": null
+   },
+   {
+    "x": 1,
+    "y": 7,
+    "height": 0,
+    "terrain": "stone",
+    "surface": "none",
+    "surface_remaining": null,
+    "surface_team": null,
+    "object_id": null
+   },
+   {
+    "x": 2,
+    "y": 7,
+    "height": 0,
+    "terrain": "stone",
+    "surface": "none",
+    "surface_remaining": null,
+    "surface_team": null,
+    "object_id": null
+   },
+   {
+    "x": 3,
+    "y": 7,
+    "height": 0,
+    "terrain": "stone",
+    "surface": "none",
+    "surface_remaining": null,
+    "surface_team": null,
+    "object_id": "obj_0006"
+   },
+   {
+    "x": 4,
+    "y": 7,
+    "height": 0,
+    "terrain": "stone",
+    "surface": "none",
+    "surface_remaining": null,
+    "surface_team": null,
+    "object_id": null
+   },
+   {
+    "x": 5,
+    "y": 7,
+    "height": 0,
+    "terrain": "stone",
+    "surface": "none",
+    "surface_remaining": null,
+    "surface_team": null,
+    "object_id": null
+   },
+   {
+    "x": 6,
+    "y": 7,
+    "height": 0,
+    "terrain": "stone",
+    "surface": "none",
+    "surface_remaining": null,
+    "surface_team": null,
+    "object_id": null
+   },
+   {
+    "x": 7,
+    "y": 7,
+    "height": 0,
+    "terrain": "stone",
+    "surface": "none",
+    "surface_remaining": null,
+    "surface_team": null,
+    "object_id": null
+   },
+   {
+    "x": 8,
+    "y": 7,
+    "height": 0,
+    "terrain": "stone",
+    "surface": "none",
+    "surface_remaining": null,
+    "surface_team": null,
+    "object_id": null
+   },
+   {
+    "x": 9,
+    "y": 7,
+    "height": 0,
+    "terrain": "wall",
+    "surface": "none",
+    "surface_remaining": null,
+    "surface_team": null,
+    "object_id": null
+   },
+   {
+    "x": 0,
+    "y": 8,
+    "height": 0,
+    "terrain": "stone",
+    "surface": "none",
+    "surface_remaining": null,
+    "surface_team": null,
+    "object_id": null
+   },
+   {
+    "x": 1,
+    "y": 8,
+    "height": 0,
+    "terrain": "stone",
+    "surface": "none",
+    "surface_remaining": null,
+    "surface_team": null,
+    "object_id": null
+   },
+   {
+    "x": 2,
+    "y": 8,
+    "height": 0,
+    "terrain": "stone",
+    "surface": "none",
+    "surface_remaining": null,
+    "surface_team": null,
+    "object_id": null
+   },
+   {
+    "x": 3,
+    "y": 8,
+    "height": 0,
+    "terrain": "stone",
+    "surface": "none",
+    "surface_remaining": null,
+    "surface_team": null,
+    "object_id": null
+   },
+   {
+    "x": 4,
+    "y": 8,
+    "height": 0,
+    "terrain": "stone",
+    "surface": "none",
+    "surface_remaining": null,
+    "surface_team": null,
+    "object_id": null
+   },
+   {
+    "x": 5,
+    "y": 8,
+    "height": 0,
+    "terrain": "stone",
+    "surface": "none",
+    "surface_remaining": null,
+    "surface_team": null,
+    "object_id": null
+   },
+   {
+    "x": 6,
+    "y": 8,
+    "height": 0,
+    "terrain": "stone",
+    "surface": "none",
+    "surface_remaining": null,
+    "surface_team": null,
+    "object_id": null
+   },
+   {
+    "x": 7,
+    "y": 8,
+    "height": 0,
+    "terrain": "stone",
+    "surface": "none",
+    "surface_remaining": null,
+    "surface_team": null,
+    "object_id": null
+   },
+   {
+    "x": 8,
+    "y": 8,
+    "height": 0,
+    "terrain": "stone",
+    "surface": "none",
+    "surface_remaining": null,
+    "surface_team": null,
+    "object_id": null
+   },
+   {
+    "x": 9,
+    "y": 8,
+    "height": 0,
+    "terrain": "stone",
+    "surface": "none",
+    "surface_remaining": null,
+    "surface_team": null,
+    "object_id": null
+   },
+   {
+    "x": 0,
+    "y": 9,
+    "height": 0,
+    "terrain": "stone",
+    "surface": "none",
+    "surface_remaining": null,
+    "surface_team": null,
+    "object_id": null
+   },
+   {
+    "x": 1,
+    "y": 9,
+    "height": 0,
+    "terrain": "stone",
+    "surface": "none",
+    "surface_remaining": null,
+    "surface_team": null,
+    "object_id": null
+   },
+   {
+    "x": 2,
+    "y": 9,
+    "height": 0,
+    "terrain": "stone",
+    "surface": "none",
+    "surface_remaining": null,
+    "surface_team": null,
+    "object_id": null
+   },
+   {
+    "x": 3,
+    "y": 9,
+    "height": 0,
+    "terrain": "stone",
+    "surface": "none",
+    "surface_remaining": null,
+    "surface_team": null,
+    "object_id": null
+   },
+   {
+    "x": 4,
+    "y": 9,
+    "height": 0,
+    "terrain": "stone",
+    "surface": "none",
+    "surface_remaining": null,
+    "surface_team": null,
+    "object_id": null
+   },
+   {
+    "x": 5,
+    "y": 9,
+    "height": 0,
+    "terrain": "stone",
+    "surface": "none",
+    "surface_remaining": null,
+    "surface_team": null,
+    "object_id": null
+   },
+   {
+    "x": 6,
+    "y": 9,
+    "height": 0,
+    "terrain": "stone",
+    "surface": "none",
+    "surface_remaining": null,
+    "surface_team": null,
+    "object_id": null
+   },
+   {
+    "x": 7,
+    "y": 9,
+    "height": 0,
+    "terrain": "stone",
+    "surface": "none",
+    "surface_remaining": null,
+    "surface_team": null,
+    "object_id": null
+   },
+   {
+    "x": 8,
+    "y": 9,
+    "height": 0,
+    "terrain": "stone",
+    "surface": "none",
+    "surface_remaining": null,
+    "surface_team": null,
+    "object_id": null
+   },
+   {
+    "x": 9,
+    "y": 9,
+    "height": 0,
+    "terrain": "stone",
+    "surface": "none",
+    "surface_remaining": null,
+    "surface_team": null,
+    "object_id": null
+   }
+  ],
+  "objects": [
+   {
+    "id": "obj_0001",
+    "kind": "oil_barrel",
+    "pos": {
+     "x": 5,
+     "y": 3
+    },
+    "hp": 8,
+    "max_hp": 8,
+    "burning": null
+   },
+   {
+    "id": "obj_0002",
+    "kind": "oil_barrel",
+    "pos": {
+     "x": 5,
+     "y": 6
+    },
+    "hp": 8,
+    "max_hp": 8,
+    "burning": null
+   },
+   {
+    "id": "obj_0003",
+    "kind": "oil_barrel",
+    "pos": {
+     "x": 8,
+     "y": 3
+    },
+    "hp": 8,
+    "max_hp": 8,
+    "burning": null
+   },
+   {
+    "id": "obj_0004",
+    "kind": "oil_barrel",
+    "pos": {
+     "x": 8,
+     "y": 6
+    },
+    "hp": 8,
+    "max_hp": 8,
+    "burning": null
+   },
+   {
+    "id": "obj_0005",
+    "kind": "crate",
+    "pos": {
+     "x": 3,
+     "y": 1
+    },
+    "hp": 15,
+    "max_hp": 15,
+    "burning": null
+   },
+   {
+    "id": "obj_0006",
+    "kind": "crate",
+    "pos": {
+     "x": 3,
+     "y": 7
+    },
+    "hp": 15,
+    "max_hp": 15,
+    "burning": null
+   },
+   {
+    "id": "obj_0007",
+    "kind": "low_wall",
+    "pos": {
+     "x": 2,
+     "y": 3
+    },
+    "hp": 40,
+    "max_hp": 40,
+    "burning": null
+   },
+   {
+    "id": "obj_0008",
+    "kind": "low_wall",
+    "pos": {
+     "x": 2,
+     "y": 6
+    },
+    "hp": 40,
+    "max_hp": 40,
+    "burning": null
+   }
+  ],
+  "units": [
+   {
+    "id": "unit_0001",
+    "template_id": "build_fire",
+    "name_zh": "火焰流英雄",
+    "team": "ally",
+    "pos": {
+     "x": 0,
+     "y": 4
+    },
+    "hp": 26,
+    "max_hp": 40,
+    "shield": 0,
+    "mana": 40,
+    "max_mana": 40,
+    "stamina": 30,
+    "max_stamina": 30,
+    "ap": 3,
+    "move_points": 5,
+    "speed": 5,
+    "initiative": 2,
+    "weapon_name_zh": "火焰法杖",
+    "tags": [
+     "hero",
+     "sim"
+    ],
+    "skills": [
+     "skill_fire_bolt",
+     "skill_cinder_burst",
+     "skill_ashen_oath",
+     "skill_shatter_blast"
+    ],
+    "statuses": [],
+    "stacks": {},
+    "cooldowns": {},
+    "reaction_available": true,
+    "downed": false,
+    "escaped": false
+   },
+   {
+    "id": "unit_0002",
+    "template_id": "sim_companion_fighter",
+    "name_zh": "標準隊友（戰士）",
+    "team": "ally",
+    "pos": {
+     "x": 3,
+     "y": 3
+    },
+    "hp": 60,
+    "max_hp": 60,
+    "shield": 0,
+    "mana": 0,
+    "max_mana": 0,
+    "stamina": 30,
+    "max_stamina": 30,
+    "ap": 0,
+    "move_points": 0,
+    "speed": 5,
+    "initiative": 19,
+    "weapon_name_zh": "單手劍",
+    "tags": [
+     "sim"
+    ],
+    "skills": [],
+    "statuses": [
+     {
+      "status_id": "defending",
+      "remaining": null,
+      "source_id": "unit_0002",
+      "amount": null
+     }
+    ],
+    "stacks": {},
+    "cooldowns": {},
+    "reaction_available": true,
+    "downed": false,
+    "escaped": false
+   },
+   {
+    "id": "unit_0003",
+    "template_id": "sim_companion_archer",
+    "name_zh": "標準隊友（弓手）",
+    "team": "ally",
+    "pos": {
+     "x": 4,
+     "y": 3
+    },
+    "hp": 9,
+    "max_hp": 46,
+    "shield": 0,
+    "mana": 0,
+    "max_mana": 0,
+    "stamina": 20,
+    "max_stamina": 30,
+    "ap": 0,
+    "move_points": 0,
+    "speed": 5,
+    "initiative": 20,
+    "weapon_name_zh": "弓",
+    "tags": [
+     "sim"
+    ],
+    "skills": [],
+    "statuses": [],
+    "stacks": {},
+    "cooldowns": {},
+    "reaction_available": false,
+    "downed": false,
+    "escaped": false
+   },
+   {
+    "id": "unit_0004",
+    "template_id": "bandit",
+    "name_zh": "盜賊1",
+    "team": "enemy",
+    "pos": {
+     "x": 3,
+     "y": 2
+    },
+    "hp": 22,
+    "max_hp": 30,
+    "shield": 0,
+    "mana": 0,
+    "max_mana": 0,
+    "stamina": 30,
+    "max_stamina": 30,
+    "ap": 0,
+    "move_points": 0,
+    "speed": 5,
+    "initiative": 5,
+    "weapon_name_zh": "匕首",
+    "tags": [
+     "humanoid"
+    ],
+    "skills": [],
+    "statuses": [],
+    "stacks": {},
+    "cooldowns": {},
+    "reaction_available": true,
+    "downed": false,
+    "escaped": false
+   },
+   {
+    "id": "unit_0005",
+    "template_id": "bandit",
+    "name_zh": "盜賊2",
+    "team": "enemy",
+    "pos": {
+     "x": 4,
+     "y": 2
+    },
+    "hp": 30,
+    "max_hp": 30,
+    "shield": 0,
+    "mana": 0,
+    "max_mana": 0,
+    "stamina": 30,
+    "max_stamina": 30,
+    "ap": 0,
+    "move_points": 0,
+    "speed": 5,
+    "initiative": 20,
+    "weapon_name_zh": "匕首",
+    "tags": [
+     "humanoid"
+    ],
+    "skills": [],
+    "statuses": [],
+    "stacks": {},
+    "cooldowns": {},
+    "reaction_available": true,
+    "downed": false,
+    "escaped": false
+   },
+   {
+    "id": "unit_0006",
+    "template_id": "bandit_archer",
+    "name_zh": "盜賊弓手",
+    "team": "enemy",
+    "pos": {
+     "x": 8,
+     "y": 4
+    },
+    "hp": 26,
+    "max_hp": 26,
+    "shield": 0,
+    "mana": 9,
+    "max_mana": 9,
+    "stamina": 30,
+    "max_stamina": 30,
+    "ap": 0,
+    "move_points": 0,
+    "speed": 5,
+    "initiative": 14,
+    "weapon_name_zh": "弓",
+    "tags": [
+     "humanoid"
+    ],
+    "skills": [],
+    "statuses": [],
+    "stacks": {},
+    "cooldowns": {},
+    "reaction_available": true,
+    "downed": false,
+    "escaped": false
+   },
+   {
+    "id": "unit_0007",
+    "template_id": "bandit_boss",
+    "name_zh": "盜賊頭目",
+    "team": "enemy",
+    "pos": {
+     "x": 5,
+     "y": 3
+    },
+    "hp": 80,
+    "max_hp": 80,
+    "shield": 0,
+    "mana": 10,
+    "max_mana": 14,
+    "stamina": 30,
+    "max_stamina": 30,
+    "ap": 0,
+    "move_points": 0,
+    "speed": 5,
+    "initiative": 9,
+    "weapon_name_zh": "雙手劍",
+    "tags": [
+     "boss",
+     "elite",
+     "humanoid",
+     "steadfast"
+    ],
+    "skills": [],
+    "statuses": [],
+    "stacks": {},
+    "cooldowns": {
+     "skill_cleave": 2
+    },
+    "reaction_available": true,
+    "downed": false,
+    "escaped": false
+   }
+  ],
+  "traps": [],
+  "turn_order": [
+   "unit_0003",
+   "unit_0005",
+   "unit_0002",
+   "unit_0006",
+   "unit_0007",
+   "unit_0004",
+   "unit_0001"
+  ],
+  "active_unit": "unit_0001",
+  "round": 1,
+  "max_rounds": 30,
+  "weather_id": "clear",
+  "weather_name_zh": "晴朗",
+  "objective": {
+   "kind": "eliminate",
+   "rounds": null,
+   "tiles": []
+  },
+  "ended": false,
+  "winner": null,
+  "end_reason": null,
+  "pending": null
+ },
+ "legal_actions": [
+  {
+   "unit_id": "unit_0001",
+   "type": "attack",
+   "target_id": "unit_0004",
+   "target_object_id": null
+  },
+  {
+   "unit_id": "unit_0001",
+   "type": "attack",
+   "target_id": null,
+   "target_object_id": "obj_0007"
+  },
+  {
+   "unit_id": "unit_0001",
+   "type": "attack",
+   "target_id": null,
+   "target_object_id": "obj_0008"
+  },
+  {
+   "unit_id": "unit_0001",
+   "type": "use_skill",
+   "skill_id": "skill_ashen_oath",
+   "target_id": null,
+   "target_object_id": null,
+   "target_pos": null,
+   "direction": "north"
+  },
+  {
+   "unit_id": "unit_0001",
+   "type": "use_skill",
+   "skill_id": "skill_ashen_oath",
+   "target_id": null,
+   "target_object_id": null,
+   "target_pos": null,
+   "direction": "east"
+  },
+  {
+   "unit_id": "unit_0001",
+   "type": "use_skill",
+   "skill_id": "skill_ashen_oath",
+   "target_id": null,
+   "target_object_id": null,
+   "target_pos": null,
+   "direction": "south"
+  },
+  {
+   "unit_id": "unit_0001",
+   "type": "use_skill",
+   "skill_id": "skill_cinder_burst",
+   "target_id": "unit_0004",
+   "target_object_id": null,
+   "target_pos": null,
+   "direction": null
+  },
+  {
+   "unit_id": "unit_0001",
+   "type": "use_skill",
+   "skill_id": "skill_cinder_burst",
+   "target_id": null,
+   "target_object_id": "obj_0007",
+   "target_pos": null,
+   "direction": null
+  },
+  {
+   "unit_id": "unit_0001",
+   "type": "use_skill",
+   "skill_id": "skill_cinder_burst",
+   "target_id": null,
+   "target_object_id": "obj_0008",
+   "target_pos": null,
+   "direction": null
+  },
+  {
+   "unit_id": "unit_0001",
+   "type": "use_skill",
+   "skill_id": "skill_fire_bolt",
+   "target_id": "unit_0004",
+   "target_object_id": null,
+   "target_pos": null,
+   "direction": null
+  },
+  {
+   "unit_id": "unit_0001",
+   "type": "use_skill",
+   "skill_id": "skill_fire_bolt",
+   "target_id": null,
+   "target_object_id": "obj_0007",
+   "target_pos": null,
+   "direction": null
+  },
+  {
+   "unit_id": "unit_0001",
+   "type": "use_skill",
+   "skill_id": "skill_fire_bolt",
+   "target_id": null,
+   "target_object_id": "obj_0008",
+   "target_pos": null,
+   "direction": null
+  },
+  {
+   "unit_id": "unit_0001",
+   "type": "use_skill",
+   "skill_id": "skill_shatter_blast",
+   "target_id": null,
+   "target_object_id": null,
+   "target_pos": {
+    "x": 0,
+    "y": 0
+   },
+   "direction": null
+  },
+  {
+   "unit_id": "unit_0001",
+   "type": "use_skill",
+   "skill_id": "skill_shatter_blast",
+   "target_id": null,
+   "target_object_id": null,
+   "target_pos": {
+    "x": 1,
+    "y": 0
+   },
+   "direction": null
+  },
+  {
+   "unit_id": "unit_0001",
+   "type": "use_skill",
+   "skill_id": "skill_shatter_blast",
+   "target_id": null,
+   "target_object_id": null,
+   "target_pos": {
+    "x": 0,
+    "y": 1
+   },
+   "direction": null
+  },
+  {
+   "unit_id": "unit_0001",
+   "type": "use_skill",
+   "skill_id": "skill_shatter_blast",
+   "target_id": null,
+   "target_object_id": null,
+   "target_pos": {
+    "x": 1,
+    "y": 1
+   },
+   "direction": null
+  },
+  {
+   "unit_id": "unit_0001",
+   "type": "use_skill",
+   "skill_id": "skill_shatter_blast",
+   "target_id": null,
+   "target_object_id": null,
+   "target_pos": {
+    "x": 2,
+    "y": 1
+   },
+   "direction": null
+  },
+  {
+   "unit_id": "unit_0001",
+   "type": "use_skill",
+   "skill_id": "skill_shatter_blast",
+   "target_id": null,
+   "target_object_id": null,
+   "target_pos": {
+    "x": 0,
+    "y": 2
+   },
+   "direction": null
+  },
+  {
+   "unit_id": "unit_0001",
+   "type": "use_skill",
+   "skill_id": "skill_shatter_blast",
+   "target_id": null,
+   "target_object_id": null,
+   "target_pos": {
+    "x": 1,
+    "y": 2
+   },
+   "direction": null
+  },
+  {
+   "unit_id": "unit_0001",
+   "type": "use_skill",
+   "skill_id": "skill_shatter_blast",
+   "target_id": null,
+   "target_object_id": null,
+   "target_pos": {
+    "x": 2,
+    "y": 2
+   },
+   "direction": null
+  },
+  {
+   "unit_id": "unit_0001",
+   "type": "use_skill",
+   "skill_id": "skill_shatter_blast",
+   "target_id": null,
+   "target_object_id": null,
+   "target_pos": {
+    "x": 3,
+    "y": 2
+   },
+   "direction": null
+  },
+  {
+   "unit_id": "unit_0001",
+   "type": "use_skill",
+   "skill_id": "skill_shatter_blast",
+   "target_id": null,
+   "target_object_id": null,
+   "target_pos": {
+    "x": 0,
+    "y": 3
+   },
+   "direction": null
+  },
+  {
+   "unit_id": "unit_0001",
+   "type": "use_skill",
+   "skill_id": "skill_shatter_blast",
+   "target_id": null,
+   "target_object_id": null,
+   "target_pos": {
+    "x": 1,
+    "y": 3
+   },
+   "direction": null
+  },
+  {
+   "unit_id": "unit_0001",
+   "type": "use_skill",
+   "skill_id": "skill_shatter_blast",
+   "target_id": null,
+   "target_object_id": null,
+   "target_pos": {
+    "x": 2,
+    "y": 3
+   },
+   "direction": null
+  },
+  {
+   "unit_id": "unit_0001",
+   "type": "use_skill",
+   "skill_id": "skill_shatter_blast",
+   "target_id": null,
+   "target_object_id": null,
+   "target_pos": {
+    "x": 3,
+    "y": 3
+   },
+   "direction": null
+  },
+  {
+   "unit_id": "unit_0001",
+   "type": "use_skill",
+   "skill_id": "skill_shatter_blast",
+   "target_id": null,
+   "target_object_id": null,
+   "target_pos": {
+    "x": 4,
+    "y": 3
+   },
+   "direction": null
+  },
+  {
+   "unit_id": "unit_0001",
+   "type": "use_skill",
+   "skill_id": "skill_shatter_blast",
+   "target_id": null,
+   "target_object_id": null,
+   "target_pos": {
+    "x": 0,
+    "y": 4
+   },
+   "direction": null
+  },
+  {
+   "unit_id": "unit_0001",
+   "type": "use_skill",
+   "skill_id": "skill_shatter_blast",
+   "target_id": null,
+   "target_object_id": null,
+   "target_pos": {
+    "x": 1,
+    "y": 4
+   },
+   "direction": null
+  },
+  {
+   "unit_id": "unit_0001",
+   "type": "use_skill",
+   "skill_id": "skill_shatter_blast",
+   "target_id": null,
+   "target_object_id": null,
+   "target_pos": {
+    "x": 2,
+    "y": 4
+   },
+   "direction": null
+  },
+  {
+   "unit_id": "unit_0001",
+   "type": "use_skill",
+   "skill_id": "skill_shatter_blast",
+   "target_id": null,
+   "target_object_id": null,
+   "target_pos": {
+    "x": 3,
+    "y": 4
+   },
+   "direction": null
+  },
+  {
+   "unit_id": "unit_0001",
+   "type": "use_skill",
+   "skill_id": "skill_shatter_blast",
+   "target_id": null,
+   "target_object_id": null,
+   "target_pos": {
+    "x": 4,
+    "y": 4
+   },
+   "direction": null
+  },
+  {
+   "unit_id": "unit_0001",
+   "type": "use_skill",
+   "skill_id": "skill_shatter_blast",
+   "target_id": null,
+   "target_object_id": null,
+   "target_pos": {
+    "x": 5,
+    "y": 4
+   },
+   "direction": null
+  },
+  {
+   "unit_id": "unit_0001",
+   "type": "use_skill",
+   "skill_id": "skill_shatter_blast",
+   "target_id": null,
+   "target_object_id": null,
+   "target_pos": {
+    "x": 0,
+    "y": 5
+   },
+   "direction": null
+  },
+  {
+   "unit_id": "unit_0001",
+   "type": "use_skill",
+   "skill_id": "skill_shatter_blast",
+   "target_id": null,
+   "target_object_id": null,
+   "target_pos": {
+    "x": 1,
+    "y": 5
+   },
+   "direction": null
+  },
+  {
+   "unit_id": "unit_0001",
+   "type": "use_skill",
+   "skill_id": "skill_shatter_blast",
+   "target_id": null,
+   "target_object_id": null,
+   "target_pos": {
+    "x": 2,
+    "y": 5
+   },
+   "direction": null
+  },
+  {
+   "unit_id": "unit_0001",
+   "type": "use_skill",
+   "skill_id": "skill_shatter_blast",
+   "target_id": null,
+   "target_object_id": null,
+   "target_pos": {
+    "x": 3,
+    "y": 5
+   },
+   "direction": null
+  },
+  {
+   "unit_id": "unit_0001",
+   "type": "use_skill",
+   "skill_id": "skill_shatter_blast",
+   "target_id": null,
+   "target_object_id": null,
+   "target_pos": {
+    "x": 4,
+    "y": 5
+   },
+   "direction": null
+  },
+  {
+   "unit_id": "unit_0001",
+   "type": "use_skill",
+   "skill_id": "skill_shatter_blast",
+   "target_id": null,
+   "target_object_id": null,
+   "target_pos": {
+    "x": 0,
+    "y": 6
+   },
+   "direction": null
+  },
+  {
+   "unit_id": "unit_0001",
+   "type": "use_skill",
+   "skill_id": "skill_shatter_blast",
+   "target_id": null,
+   "target_object_id": null,
+   "target_pos": {
+    "x": 1,
+    "y": 6
+   },
+   "direction": null
+  },
+  {
+   "unit_id": "unit_0001",
+   "type": "use_skill",
+   "skill_id": "skill_shatter_blast",
+   "target_id": null,
+   "target_object_id": null,
+   "target_pos": {
+    "x": 2,
+    "y": 6
+   },
+   "direction": null
+  },
+  {
+   "unit_id": "unit_0001",
+   "type": "use_skill",
+   "skill_id": "skill_shatter_blast",
+   "target_id": null,
+   "target_object_id": null,
+   "target_pos": {
+    "x": 3,
+    "y": 6
+   },
+   "direction": null
+  },
+  {
+   "unit_id": "unit_0001",
+   "type": "use_skill",
+   "skill_id": "skill_shatter_blast",
+   "target_id": null,
+   "target_object_id": null,
+   "target_pos": {
+    "x": 0,
+    "y": 7
+   },
+   "direction": null
+  },
+  {
+   "unit_id": "unit_0001",
+   "type": "use_skill",
+   "skill_id": "skill_shatter_blast",
+   "target_id": null,
+   "target_object_id": null,
+   "target_pos": {
+    "x": 1,
+    "y": 7
+   },
+   "direction": null
+  },
+  {
+   "unit_id": "unit_0001",
+   "type": "use_skill",
+   "skill_id": "skill_shatter_blast",
+   "target_id": null,
+   "target_object_id": null,
+   "target_pos": {
+    "x": 2,
+    "y": 7
+   },
+   "direction": null
+  },
+  {
+   "unit_id": "unit_0001",
+   "type": "use_skill",
+   "skill_id": "skill_shatter_blast",
+   "target_id": null,
+   "target_object_id": null,
+   "target_pos": {
+    "x": 0,
+    "y": 8
+   },
+   "direction": null
+  },
+  {
+   "unit_id": "unit_0001",
+   "type": "use_skill",
+   "skill_id": "skill_shatter_blast",
+   "target_id": null,
+   "target_object_id": null,
+   "target_pos": {
+    "x": 1,
+    "y": 8
+   },
+   "direction": null
+  },
+  {
+   "unit_id": "unit_0001",
+   "type": "use_skill",
+   "skill_id": "skill_shatter_blast",
+   "target_id": null,
+   "target_object_id": null,
+   "target_pos": {
+    "x": 0,
+    "y": 9
+   },
+   "direction": null
+  },
+  {
+   "unit_id": "unit_0001",
+   "type": "defend"
+  },
+  {
+   "unit_id": "unit_0001",
+   "type": "move",
+   "path": [
+    {
+     "x": 0,
+     "y": 4
+    },
+    {
+     "x": 0,
+     "y": 3
+    },
+    {
+     "x": 0,
+     "y": 2
+    },
+    {
+     "x": 0,
+     "y": 1
+    },
+    {
+     "x": 0,
+     "y": 0
+    }
+   ]
+  },
+  {
+   "unit_id": "unit_0001",
+   "type": "move",
+   "path": [
+    {
+     "x": 0,
+     "y": 4
+    },
+    {
+     "x": 0,
+     "y": 3
+    },
+    {
+     "x": 0,
+     "y": 2
+    },
+    {
+     "x": 0,
+     "y": 1
+    },
+    {
+     "x": 0,
+     "y": 0
+    },
+    {
+     "x": 1,
+     "y": 0
+    }
+   ]
+  },
+  {
+   "unit_id": "unit_0001",
+   "type": "move",
+   "path": [
+    {
+     "x": 0,
+     "y": 4
+    },
+    {
+     "x": 0,
+     "y": 3
+    },
+    {
+     "x": 0,
+     "y": 2
+    },
+    {
+     "x": 0,
+     "y": 1
+    }
+   ]
+  },
+  {
+   "unit_id": "unit_0001",
+   "type": "move",
+   "path": [
+    {
+     "x": 0,
+     "y": 4
+    },
+    {
+     "x": 0,
+     "y": 3
+    },
+    {
+     "x": 0,
+     "y": 2
+    },
+    {
+     "x": 0,
+     "y": 1
+    },
+    {
+     "x": 1,
+     "y": 1
+    }
+   ]
+  },
+  {
+   "unit_id": "unit_0001",
+   "type": "move",
+   "path": [
+    {
+     "x": 0,
+     "y": 4
+    },
+    {
+     "x": 0,
+     "y": 3
+    },
+    {
+     "x": 0,
+     "y": 2
+    },
+    {
+     "x": 0,
+     "y": 1
+    },
+    {
+     "x": 1,
+     "y": 1
+    },
+    {
+     "x": 2,
+     "y": 1
+    }
+   ]
+  },
+  {
+   "unit_id": "unit_0001",
+   "type": "move",
+   "path": [
+    {
+     "x": 0,
+     "y": 4
+    },
+    {
+     "x": 0,
+     "y": 3
+    },
+    {
+     "x": 0,
+     "y": 2
+    }
+   ]
+  },
+  {
+   "unit_id": "unit_0001",
+   "type": "move",
+   "path": [
+    {
+     "x": 0,
+     "y": 4
+    },
+    {
+     "x": 0,
+     "y": 3
+    },
+    {
+     "x": 0,
+     "y": 2
+    },
+    {
+     "x": 1,
+     "y": 2
+    }
+   ]
+  },
+  {
+   "unit_id": "unit_0001",
+   "type": "move",
+   "path": [
+    {
+     "x": 0,
+     "y": 4
+    },
+    {
+     "x": 0,
+     "y": 3
+    },
+    {
+     "x": 0,
+     "y": 2
+    },
+    {
+     "x": 1,
+     "y": 2
+    },
+    {
+     "x": 2,
+     "y": 2
+    }
+   ]
+  },
+  {
+   "unit_id": "unit_0001",
+   "type": "move",
+   "path": [
+    {
+     "x": 0,
+     "y": 4
+    },
+    {
+     "x": 0,
+     "y": 3
+    }
+   ]
+  },
+  {
+   "unit_id": "unit_0001",
+   "type": "move",
+   "path": [
+    {
+     "x": 0,
+     "y": 4
+    },
+    {
+     "x": 0,
+     "y": 3
+    },
+    {
+     "x": 1,
+     "y": 3
+    }
+   ]
+  },
+  {
+   "unit_id": "unit_0001",
+   "type": "move",
+   "path": [
+    {
+     "x": 0,
+     "y": 4
+    },
+    {
+     "x": 1,
+     "y": 4
+    }
+   ]
+  },
+  {
+   "unit_id": "unit_0001",
+   "type": "move",
+   "path": [
+    {
+     "x": 0,
+     "y": 4
+    },
+    {
+     "x": 1,
+     "y": 4
+    },
+    {
+     "x": 2,
+     "y": 4
+    }
+   ]
+  },
+  {
+   "unit_id": "unit_0001",
+   "type": "move",
+   "path": [
+    {
+     "x": 0,
+     "y": 4
+    },
+    {
+     "x": 1,
+     "y": 4
+    },
+    {
+     "x": 2,
+     "y": 4
+    },
+    {
+     "x": 3,
+     "y": 4
+    }
+   ]
+  },
+  {
+   "unit_id": "unit_0001",
+   "type": "move",
+   "path": [
+    {
+     "x": 0,
+     "y": 4
+    },
+    {
+     "x": 1,
+     "y": 4
+    },
+    {
+     "x": 2,
+     "y": 4
+    },
+    {
+     "x": 3,
+     "y": 4
+    },
+    {
+     "x": 4,
+     "y": 4
+    }
+   ]
+  },
+  {
+   "unit_id": "unit_0001",
+   "type": "move",
+   "path": [
+    {
+     "x": 0,
+     "y": 4
+    },
+    {
+     "x": 1,
+     "y": 4
+    },
+    {
+     "x": 2,
+     "y": 4
+    },
+    {
+     "x": 3,
+     "y": 4
+    },
+    {
+     "x": 4,
+     "y": 4
+    },
+    {
+     "x": 5,
+     "y": 4
+    }
+   ]
+  },
+  {
+   "unit_id": "unit_0001",
+   "type": "move",
+   "path": [
+    {
+     "x": 0,
+     "y": 4
+    },
+    {
+     "x": 0,
+     "y": 5
+    }
+   ]
+  },
+  {
+   "unit_id": "unit_0001",
+   "type": "move",
+   "path": [
+    {
+     "x": 0,
+     "y": 4
+    },
+    {
+     "x": 1,
+     "y": 4
+    },
+    {
+     "x": 1,
+     "y": 5
+    }
+   ]
+  },
+  {
+   "unit_id": "unit_0001",
+   "type": "move",
+   "path": [
+    {
+     "x": 0,
+     "y": 4
+    },
+    {
+     "x": 1,
+     "y": 4
+    },
+    {
+     "x": 2,
+     "y": 4
+    },
+    {
+     "x": 2,
+     "y": 5
+    }
+   ]
+  },
+  {
+   "unit_id": "unit_0001",
+   "type": "move",
+   "path": [
+    {
+     "x": 0,
+     "y": 4
+    },
+    {
+     "x": 1,
+     "y": 4
+    },
+    {
+     "x": 2,
+     "y": 4
+    },
+    {
+     "x": 3,
+     "y": 4
+    },
+    {
+     "x": 3,
+     "y": 5
+    }
+   ]
+  },
+  {
+   "unit_id": "unit_0001",
+   "type": "move",
+   "path": [
+    {
+     "x": 0,
+     "y": 4
+    },
+    {
+     "x": 1,
+     "y": 4
+    },
+    {
+     "x": 2,
+     "y": 4
+    },
+    {
+     "x": 3,
+     "y": 4
+    },
+    {
+     "x": 4,
+     "y": 4
+    },
+    {
+     "x": 4,
+     "y": 5
+    }
+   ]
+  },
+  {
+   "unit_id": "unit_0001",
+   "type": "move",
+   "path": [
+    {
+     "x": 0,
+     "y": 4
+    },
+    {
+     "x": 0,
+     "y": 5
+    },
+    {
+     "x": 0,
+     "y": 6
+    }
+   ]
+  },
+  {
+   "unit_id": "unit_0001",
+   "type": "move",
+   "path": [
+    {
+     "x": 0,
+     "y": 4
+    },
+    {
+     "x": 1,
+     "y": 4
+    },
+    {
+     "x": 1,
+     "y": 5
+    },
+    {
+     "x": 1,
+     "y": 6
+    }
+   ]
+  },
+  {
+   "unit_id": "unit_0001",
+   "type": "move",
+   "path": [
+    {
+     "x": 0,
+     "y": 4
+    },
+    {
+     "x": 1,
+     "y": 4
+    },
+    {
+     "x": 2,
+     "y": 4
+    },
+    {
+     "x": 3,
+     "y": 4
+    },
+    {
+     "x": 3,
+     "y": 5
+    },
+    {
+     "x": 3,
+     "y": 6
+    }
+   ]
+  },
+  {
+   "unit_id": "unit_0001",
+   "type": "move",
+   "path": [
+    {
+     "x": 0,
+     "y": 4
+    },
+    {
+     "x": 0,
+     "y": 5
+    },
+    {
+     "x": 0,
+     "y": 6
+    },
+    {
+     "x": 0,
+     "y": 7
+    }
+   ]
+  },
+  {
+   "unit_id": "unit_0001",
+   "type": "move",
+   "path": [
+    {
+     "x": 0,
+     "y": 4
+    },
+    {
+     "x": 1,
+     "y": 4
+    },
+    {
+     "x": 1,
+     "y": 5
+    },
+    {
+     "x": 1,
+     "y": 6
+    },
+    {
+     "x": 1,
+     "y": 7
+    }
+   ]
+  },
+  {
+   "unit_id": "unit_0001",
+   "type": "move",
+   "path": [
+    {
+     "x": 0,
+     "y": 4
+    },
+    {
+     "x": 1,
+     "y": 4
+    },
+    {
+     "x": 1,
+     "y": 5
+    },
+    {
+     "x": 1,
+     "y": 6
+    },
+    {
+     "x": 1,
+     "y": 7
+    },
+    {
+     "x": 2,
+     "y": 7
+    }
+   ]
+  },
+  {
+   "unit_id": "unit_0001",
+   "type": "move",
+   "path": [
+    {
+     "x": 0,
+     "y": 4
+    },
+    {
+     "x": 0,
+     "y": 5
+    },
+    {
+     "x": 0,
+     "y": 6
+    },
+    {
+     "x": 0,
+     "y": 7
+    },
+    {
+     "x": 0,
+     "y": 8
+    }
+   ]
+  },
+  {
+   "unit_id": "unit_0001",
+   "type": "move",
+   "path": [
+    {
+     "x": 0,
+     "y": 4
+    },
+    {
+     "x": 1,
+     "y": 4
+    },
+    {
+     "x": 1,
+     "y": 5
+    },
+    {
+     "x": 1,
+     "y": 6
+    },
+    {
+     "x": 1,
+     "y": 7
+    },
+    {
+     "x": 1,
+     "y": 8
+    }
+   ]
+  },
+  {
+   "unit_id": "unit_0001",
+   "type": "move",
+   "path": [
+    {
+     "x": 0,
+     "y": 4
+    },
+    {
+     "x": 0,
+     "y": 5
+    },
+    {
+     "x": 0,
+     "y": 6
+    },
+    {
+     "x": 0,
+     "y": 7
+    },
+    {
+     "x": 0,
+     "y": 8
+    },
+    {
+     "x": 0,
+     "y": 9
+    }
+   ]
+  },
+  {
+   "unit_id": "unit_0001",
+   "type": "end_turn"
+  }
+ ],
+ "pending": null,
+ "orders": {
+  "team_orders": [],
+  "unit_orders": {}
+ },
+ "steps": [
+  {
+   "actor_id": null,
+   "step": null,
+   "events": [
+    {
+     "seq": 0,
+     "round": 1,
+     "type": "battle_started",
+     "map_id": "oil_depot",
+     "text": "戰鬥開始：油庫（10×10）"
+    },
+    {
+     "seq": 1,
+     "round": 1,
+     "type": "initiative_rolled",
+     "unit_id": "unit_0001",
+     "roll": 1,
+     "modifier": 1,
+     "total": 2,
+     "text": "先攻：火焰流英雄 d20=1 +1 = 2"
+    },
+    {
+     "seq": 2,
+     "round": 1,
+     "type": "initiative_rolled",
+     "unit_id": "unit_0002",
+     "roll": 18,
+     "modifier": 1,
+     "total": 19,
+     "text": "先攻：標準隊友（戰士） d20=18 +1 = 19"
+    },
+    {
+     "seq": 3,
+     "round": 1,
+     "type": "initiative_rolled",
+     "unit_id": "unit_0003",
+     "roll": 17,
+     "modifier": 3,
+     "total": 20,
+     "text": "先攻：標準隊友（弓手） d20=17 +3 = 20"
+    },
+    {
+     "seq": 4,
+     "round": 1,
+     "type": "initiative_rolled",
+     "unit_id": "unit_0004",
+     "roll": 3,
+     "modifier": 2,
+     "total": 5,
+     "text": "先攻：盜賊1 d20=3 +2 = 5"
+    },
+    {
+     "seq": 5,
+     "round": 1,
+     "type": "initiative_rolled",
+     "unit_id": "unit_0005",
+     "roll": 18,
+     "modifier": 2,
+     "total": 20,
+     "text": "先攻：盜賊2 d20=18 +2 = 20"
+    },
+    {
+     "seq": 6,
+     "round": 1,
+     "type": "initiative_rolled",
+     "unit_id": "unit_0006",
+     "roll": 12,
+     "modifier": 2,
+     "total": 14,
+     "text": "先攻：盜賊弓手 d20=12 +2 = 14"
+    },
+    {
+     "seq": 7,
+     "round": 1,
+     "type": "initiative_rolled",
+     "unit_id": "unit_0007",
+     "roll": 9,
+     "modifier": 0,
+     "total": 9,
+     "text": "先攻：盜賊頭目 d20=9 +0 = 9"
+    },
+    {
+     "seq": 8,
+     "round": 1,
+     "type": "turn_order_set",
+     "order": [
+      "unit_0003",
+      "unit_0005",
+      "unit_0002",
+      "unit_0006",
+      "unit_0007",
+      "unit_0004",
+      "unit_0001"
+     ],
+     "text": "行動順序：標準隊友（弓手） → 盜賊2 → 標準隊友（戰士） → 盜賊弓手 → 盜賊頭目 → 盜賊1 → 火焰流英雄"
+    },
+    {
+     "seq": 9,
+     "round": 1,
+     "type": "round_started"
+    },
+    {
+     "seq": 10,
+     "round": 1,
+     "type": "turn_started",
+     "unit_id": "unit_0003",
+     "ap": 3,
+     "move_points": 5,
+     "mana": 0,
+     "max_mana": 0,
+     "text": "— 標準隊友（弓手） 的回合（AP 3，移動 5）"
+    }
+   ]
+  },
+  {
+   "actor_id": "unit_0003",
+   "step": {
+    "unit_id": "unit_0003",
+    "type": "attack",
+    "target_id": "unit_0004",
+    "target_object_id": null
+   },
+   "events": [
+    {
+     "seq": 11,
+     "round": 1,
+     "type": "attack_rolled",
+     "attacker_id": "unit_0003",
+     "target_id": "unit_0004",
+     "rolls": [
+      2
+     ],
+     "advantage": "none",
+     "natural": 2,
+     "attack_value": 16,
+     "defense_value_permille": 16000,
+     "hit_modifier": 0,
+     "proficiency": 2,
+     "situational": 0,
+     "total": 4,
+     "target_number": 11,
+     "hit": false,
+     "crit": false,
+     "cover": 0,
+     "cover_object_id": null,
+     "skill_id": null,
+     "text": "  標準隊友（弓手） 攻擊 盜賊1：d20=2 修正 +0 熟練 +2 = 4（目標 11）→ 失手"
+    }
+   ]
+  },
+  {
+   "actor_id": "unit_0003",
+   "step": {
+    "unit_id": "unit_0003",
+    "type": "attack",
+    "target_id": "unit_0004",
+    "target_object_id": null
+   },
+   "events": [
+    {
+     "seq": 12,
+     "round": 1,
+     "type": "attack_rolled",
+     "attacker_id": "unit_0003",
+     "target_id": "unit_0004",
+     "rolls": [
+      5
+     ],
+     "advantage": "none",
+     "natural": 5,
+     "attack_value": 16,
+     "defense_value_permille": 16000,
+     "hit_modifier": 0,
+     "proficiency": 2,
+     "situational": 0,
+     "total": 7,
+     "target_number": 11,
+     "hit": false,
+     "crit": false,
+     "cover": 0,
+     "cover_object_id": null,
+     "skill_id": null,
+     "text": "  標準隊友（弓手） 攻擊 盜賊1：d20=5 修正 +0 熟練 +2 = 7（目標 11）→ 失手"
+    }
+   ]
+  },
+  {
+   "actor_id": "unit_0003",
+   "step": {
+    "unit_id": "unit_0003",
+    "type": "attack",
+    "target_id": "unit_0004",
+    "target_object_id": null
+   },
+   "events": [
+    {
+     "seq": 13,
+     "round": 1,
+     "type": "attack_rolled",
+     "attacker_id": "unit_0003",
+     "target_id": "unit_0004",
+     "rolls": [
+      17
+     ],
+     "advantage": "none",
+     "natural": 17,
+     "attack_value": 16,
+     "defense_value_permille": 16000,
+     "hit_modifier": 0,
+     "proficiency": 2,
+     "situational": 0,
+     "total": 19,
+     "target_number": 11,
+     "hit": true,
+     "crit": false,
+     "cover": 0,
+     "cover_object_id": null,
+     "skill_id": null,
+     "text": "  標準隊友（弓手） 攻擊 盜賊1：d20=17 修正 +0 熟練 +2 = 19（目標 11）→ 命中"
+    },
+    {
+     "seq": 14,
+     "round": 1,
+     "type": "damage_dealt",
+     "target_id": "unit_0004",
+     "source_id": "unit_0003",
+     "cause": "attack",
+     "element": "physical",
+     "rolls": [
+      4
+     ],
+     "crit": false,
+     "element_mod_ppm": 1000000,
+     "amount": 8,
+     "hp_before": 30,
+     "hp_after": 22,
+     "pos": {
+      "x": 6,
+      "y": 4
+     },
+     "weather_permille": 1000,
+     "multiplier_permille": 1000,
+     "base_amount": 8,
+     "status_ppm": 1000000,
+     "absorbed": 0,
+     "text": "    盜賊1 受到 8 點物理傷害［骰 4］，HP 30 → 22"
+    }
+   ]
+  },
+  {
+   "actor_id": "unit_0003",
+   "step": {
+    "unit_id": "unit_0003",
+    "type": "move",
+    "path": [
+     {
+      "x": 1,
+      "y": 3
+     },
+     {
+      "x": 1,
+      "y": 4
+     },
+     {
+      "x": 2,
+      "y": 4
+     },
+     {
+      "x": 3,
+      "y": 4
+     },
+     {
+      "x": 3,
+      "y": 3
+     },
+     {
+      "x": 4,
+      "y": 3
+     }
+    ]
+   },
+   "events": [
+    {
+     "seq": 15,
+     "round": 1,
+     "type": "unit_moved",
+     "unit_id": "unit_0003",
+     "from_pos": {
+      "x": 1,
+      "y": 3
+     },
+     "to_pos": {
+      "x": 1,
+      "y": 4
+     },
+     "mode": "walk",
+     "cost": 1
+    },
+    {
+     "seq": 16,
+     "round": 1,
+     "type": "unit_moved",
+     "unit_id": "unit_0003",
+     "from_pos": {
+      "x": 1,
+      "y": 4
+     },
+     "to_pos": {
+      "x": 2,
+      "y": 4
+     },
+     "mode": "walk",
+     "cost": 1
+    },
+    {
+     "seq": 17,
+     "round": 1,
+     "type": "unit_moved",
+     "unit_id": "unit_0003",
+     "from_pos": {
+      "x": 2,
+      "y": 4
+     },
+     "to_pos": {
+      "x": 3,
+      "y": 4
+     },
+     "mode": "walk",
+     "cost": 1
+    },
+    {
+     "seq": 18,
+     "round": 1,
+     "type": "unit_moved",
+     "unit_id": "unit_0003",
+     "from_pos": {
+      "x": 3,
+      "y": 4
+     },
+     "to_pos": {
+      "x": 3,
+      "y": 3
+     },
+     "mode": "walk",
+     "cost": 1
+    },
+    {
+     "seq": 19,
+     "round": 1,
+     "type": "unit_moved",
+     "unit_id": "unit_0003",
+     "from_pos": {
+      "x": 3,
+      "y": 3
+     },
+     "to_pos": {
+      "x": 4,
+      "y": 3
+     },
+     "mode": "walk",
+     "cost": 1
+    }
+   ]
+  },
+  {
+   "actor_id": "unit_0003",
+   "step": {
+    "unit_id": "unit_0003",
+    "type": "end_turn"
+   },
+   "events": [
+    {
+     "seq": 20,
+     "round": 1,
+     "type": "turn_ended",
+     "unit_id": "unit_0003",
+     "ap_carried": 0,
+     "text": "  標準隊友（弓手） 結束回合"
+    },
+    {
+     "seq": 21,
+     "round": 1,
+     "type": "turn_started",
+     "unit_id": "unit_0005",
+     "ap": 3,
+     "move_points": 5,
+     "mana": 0,
+     "max_mana": 0,
+     "text": "— 盜賊2 的回合（AP 3，移動 5）"
+    }
+   ]
+  },
+  {
+   "actor_id": "unit_0005",
+   "step": {
+    "unit_id": "unit_0005",
+    "type": "move",
+    "path": [
+     {
+      "x": 6,
+      "y": 5
+     },
+     {
+      "x": 6,
+      "y": 4
+     },
+     {
+      "x": 6,
+      "y": 3
+     },
+     {
+      "x": 6,
+      "y": 2
+     },
+     {
+      "x": 5,
+      "y": 2
+     },
+     {
+      "x": 4,
+      "y": 2
+     }
+    ]
+   },
+   "events": [
+    {
+     "seq": 22,
+     "round": 1,
+     "type": "unit_moved",
+     "unit_id": "unit_0005",
+     "from_pos": {
+      "x": 6,
+      "y": 5
+     },
+     "to_pos": {
+      "x": 6,
+      "y": 4
+     },
+     "mode": "walk",
+     "cost": 1
+    },
+    {
+     "seq": 23,
+     "round": 1,
+     "type": "unit_moved",
+     "unit_id": "unit_0005",
+     "from_pos": {
+      "x": 6,
+      "y": 4
+     },
+     "to_pos": {
+      "x": 6,
+      "y": 3
+     },
+     "mode": "walk",
+     "cost": 1
+    },
+    {
+     "seq": 24,
+     "round": 1,
+     "type": "unit_moved",
+     "unit_id": "unit_0005",
+     "from_pos": {
+      "x": 6,
+      "y": 3
+     },
+     "to_pos": {
+      "x": 6,
+      "y": 2
+     },
+     "mode": "walk",
+     "cost": 1
+    },
+    {
+     "seq": 25,
+     "round": 1,
+     "type": "unit_moved",
+     "unit_id": "unit_0005",
+     "from_pos": {
+      "x": 6,
+      "y": 2
+     },
+     "to_pos": {
+      "x": 5,
+      "y": 2
+     },
+     "mode": "walk",
+     "cost": 1
+    },
+    {
+     "seq": 26,
+     "round": 1,
+     "type": "unit_moved",
+     "unit_id": "unit_0005",
+     "from_pos": {
+      "x": 5,
+      "y": 2
+     },
+     "to_pos": {
+      "x": 4,
+      "y": 2
+     },
+     "mode": "walk",
+     "cost": 1
+    }
+   ]
+  },
+  {
+   "actor_id": "unit_0005",
+   "step": {
+    "unit_id": "unit_0005",
+    "type": "attack",
+    "target_id": "unit_0003",
+    "target_object_id": null
+   },
+   "events": [
+    {
+     "seq": 27,
+     "round": 1,
+     "type": "attack_rolled",
+     "attacker_id": "unit_0005",
+     "target_id": "unit_0003",
+     "rolls": [
+      4
+     ],
+     "advantage": "none",
+     "natural": 4,
+     "attack_value": 14,
+     "defense_value_permille": 18000,
+     "hit_modifier": -1,
+     "proficiency": 2,
+     "situational": 0,
+     "total": 5,
+     "target_number": 11,
+     "hit": false,
+     "crit": false,
+     "cover": 0,
+     "cover_object_id": null,
+     "skill_id": null,
+     "text": "  盜賊2 攻擊 標準隊友（弓手）：d20=4 修正 -1 熟練 +2 = 5（目標 11）→ 失手"
+    }
+   ]
+  },
+  {
+   "actor_id": "unit_0005",
+   "step": {
+    "unit_id": "unit_0005",
+    "type": "attack",
+    "target_id": "unit_0003",
+    "target_object_id": null
+   },
+   "events": [
+    {
+     "seq": 28,
+     "round": 1,
+     "type": "attack_rolled",
+     "attacker_id": "unit_0005",
+     "target_id": "unit_0003",
+     "rolls": [
+      17
+     ],
+     "advantage": "none",
+     "natural": 17,
+     "attack_value": 14,
+     "defense_value_permille": 18000,
+     "hit_modifier": -1,
+     "proficiency": 2,
+     "situational": 0,
+     "total": 18,
+     "target_number": 11,
+     "hit": true,
+     "crit": false,
+     "cover": 0,
+     "cover_object_id": null,
+     "skill_id": null,
+     "text": "  盜賊2 攻擊 標準隊友（弓手）：d20=17 修正 -1 熟練 +2 = 18（目標 11）→ 命中"
+    },
+    {
+     "seq": 29,
+     "round": 1,
+     "type": "reaction_triggered",
+     "unit_id": "unit_0003",
+     "reaction": "block",
+     "trigger_unit_id": "unit_0005",
+     "stamina_spent": 10,
+     "text": "  ⟳ 標準隊友（弓手） 反應：格擋（耐力 −10）"
+    },
+    {
+     "seq": 30,
+     "round": 1,
+     "type": "damage_dealt",
+     "target_id": "unit_0003",
+     "source_id": "unit_0005",
+     "cause": "attack",
+     "element": "physical",
+     "rolls": [
+      4
+     ],
+     "crit": false,
+     "element_mod_ppm": 1000000,
+     "amount": 4,
+     "hp_before": 46,
+     "hp_after": 42,
+     "pos": {
+      "x": 4,
+      "y": 3
+     },
+     "weather_permille": 1000,
+     "multiplier_permille": 500,
+     "base_amount": 8,
+     "status_ppm": 1000000,
+     "absorbed": 0,
+     "text": "    標準隊友（弓手） 受到 4 點物理傷害［骰 4］（格擋/加成 ×0.5），HP 46 → 42"
+    }
+   ]
+  },
+  {
+   "actor_id": "unit_0005",
+   "step": {
+    "unit_id": "unit_0005",
+    "type": "attack",
+    "target_id": "unit_0003",
+    "target_object_id": null
+   },
+   "events": [
+    {
+     "seq": 31,
+     "round": 1,
+     "type": "attack_rolled",
+     "attacker_id": "unit_0005",
+     "target_id": "unit_0003",
+     "rolls": [
+      2
+     ],
+     "advantage": "none",
+     "natural": 2,
+     "attack_value": 14,
+     "defense_value_permille": 18000,
+     "hit_modifier": -1,
+     "proficiency": 2,
+     "situational": 0,
+     "total": 3,
+     "target_number": 11,
+     "hit": false,
+     "crit": false,
+     "cover": 0,
+     "cover_object_id": null,
+     "skill_id": null,
+     "text": "  盜賊2 攻擊 標準隊友（弓手）：d20=2 修正 -1 熟練 +2 = 3（目標 11）→ 失手"
+    }
+   ]
+  },
+  {
+   "actor_id": "unit_0005",
+   "step": {
+    "unit_id": "unit_0005",
+    "type": "end_turn"
+   },
+   "events": [
+    {
+     "seq": 32,
+     "round": 1,
+     "type": "turn_ended",
+     "unit_id": "unit_0005",
+     "ap_carried": 0,
+     "text": "  盜賊2 結束回合"
+    },
+    {
+     "seq": 33,
+     "round": 1,
+     "type": "turn_started",
+     "unit_id": "unit_0002",
+     "ap": 3,
+     "move_points": 5,
+     "mana": 0,
+     "max_mana": 0,
+     "text": "— 標準隊友（戰士） 的回合（AP 3，移動 5）"
+    }
+   ]
+  },
+  {
+   "actor_id": "unit_0002",
+   "step": {
+    "unit_id": "unit_0002",
+    "type": "move",
+    "path": [
+     {
+      "x": 0,
+      "y": 5
+     },
+     {
+      "x": 0,
+      "y": 4
+     },
+     {
+      "x": 1,
+      "y": 4
+     },
+     {
+      "x": 2,
+      "y": 4
+     },
+     {
+      "x": 3,
+      "y": 4
+     },
+     {
+      "x": 3,
+      "y": 3
+     }
+    ]
+   },
+   "events": [
+    {
+     "seq": 34,
+     "round": 1,
+     "type": "unit_moved",
+     "unit_id": "unit_0002",
+     "from_pos": {
+      "x": 0,
+      "y": 5
+     },
+     "to_pos": {
+      "x": 0,
+      "y": 4
+     },
+     "mode": "walk",
+     "cost": 1
+    },
+    {
+     "seq": 35,
+     "round": 1,
+     "type": "unit_moved",
+     "unit_id": "unit_0002",
+     "from_pos": {
+      "x": 0,
+      "y": 4
+     },
+     "to_pos": {
+      "x": 1,
+      "y": 4
+     },
+     "mode": "walk",
+     "cost": 1
+    },
+    {
+     "seq": 36,
+     "round": 1,
+     "type": "unit_moved",
+     "unit_id": "unit_0002",
+     "from_pos": {
+      "x": 1,
+      "y": 4
+     },
+     "to_pos": {
+      "x": 2,
+      "y": 4
+     },
+     "mode": "walk",
+     "cost": 1
+    },
+    {
+     "seq": 37,
+     "round": 1,
+     "type": "unit_moved",
+     "unit_id": "unit_0002",
+     "from_pos": {
+      "x": 2,
+      "y": 4
+     },
+     "to_pos": {
+      "x": 3,
+      "y": 4
+     },
+     "mode": "walk",
+     "cost": 1
+    },
+    {
+     "seq": 38,
+     "round": 1,
+     "type": "unit_moved",
+     "unit_id": "unit_0002",
+     "from_pos": {
+      "x": 3,
+      "y": 4
+     },
+     "to_pos": {
+      "x": 3,
+      "y": 3
+     },
+     "mode": "walk",
+     "cost": 1
+    }
+   ]
+  },
+  {
+   "actor_id": "unit_0002",
+   "step": {
+    "unit_id": "unit_0002",
+    "type": "interact",
+    "object_id": "obj_0005",
+    "mode": "push"
+   },
+   "events": [
+    {
+     "seq": 39,
+     "round": 1,
+     "type": "object_moved",
+     "object_id": "obj_0005",
+     "from_pos": {
+      "x": 3,
+      "y": 2
+     },
+     "to_pos": {
+      "x": 3,
+      "y": 1
+     },
+     "text": "  木箱 被推到 (3, 1)"
+    }
+   ]
+  },
+  {
+   "actor_id": "unit_0002",
+   "step": {
+    "unit_id": "unit_0002",
+    "type": "defend"
+   },
+   "events": [
+    {
+     "seq": 40,
+     "round": 1,
+     "type": "status_applied",
+     "target_id": "unit_0002",
+     "status_id": "defending",
+     "duration": null,
+     "refreshed": false,
+     "source_id": "unit_0002",
+     "text": "  標準隊友（戰士） 獲得狀態「防禦」"
+    }
+   ]
+  },
+  {
+   "actor_id": "unit_0002",
+   "step": {
+    "unit_id": "unit_0002",
+    "type": "end_turn"
+   },
+   "events": [
+    {
+     "seq": 41,
+     "round": 1,
+     "type": "turn_ended",
+     "unit_id": "unit_0002",
+     "ap_carried": 1,
+     "text": "  標準隊友（戰士） 結束回合，保留 1 AP"
+    },
+    {
+     "seq": 42,
+     "round": 1,
+     "type": "turn_started",
+     "unit_id": "unit_0006",
+     "ap": 3,
+     "move_points": 5,
+     "mana": 9,
+     "max_mana": 9,
+     "text": "— 盜賊弓手 的回合（AP 3，移動 5，法力 9/9）"
+    }
+   ]
+  },
+  {
+   "actor_id": "unit_0006",
+   "step": {
+    "unit_id": "unit_0006",
+    "type": "attack",
+    "target_id": "unit_0001",
+    "target_object_id": null
+   },
+   "events": [
+    {
+     "seq": 43,
+     "round": 1,
+     "type": "attack_rolled",
+     "attacker_id": "unit_0006",
+     "target_id": "unit_0001",
+     "rolls": [
+      6
+     ],
+     "advantage": "none",
+     "natural": 6,
+     "attack_value": 14,
+     "defense_value_permille": 13000,
+     "hit_modifier": 0,
+     "proficiency": 2,
+     "situational": 0,
+     "total": 8,
+     "target_number": 11,
+     "hit": false,
+     "crit": false,
+     "cover": 0,
+     "cover_object_id": null,
+     "skill_id": null,
+     "text": "  盜賊弓手 攻擊 火焰流英雄：d20=6 修正 +0 熟練 +2 = 8（目標 11）→ 失手"
+    }
+   ]
+  },
+  {
+   "actor_id": "unit_0006",
+   "step": {
+    "unit_id": "unit_0006",
+    "type": "attack",
+    "target_id": "unit_0001",
+    "target_object_id": null
+   },
+   "events": [
+    {
+     "seq": 44,
+     "round": 1,
+     "type": "attack_rolled",
+     "attacker_id": "unit_0006",
+     "target_id": "unit_0001",
+     "rolls": [
+      19
+     ],
+     "advantage": "none",
+     "natural": 19,
+     "attack_value": 14,
+     "defense_value_permille": 13000,
+     "hit_modifier": 0,
+     "proficiency": 2,
+     "situational": 0,
+     "total": 21,
+     "target_number": 11,
+     "hit": true,
+     "crit": false,
+     "cover": 0,
+     "cover_object_id": null,
+     "skill_id": null,
+     "text": "  盜賊弓手 攻擊 火焰流英雄：d20=19 修正 +0 熟練 +2 = 21（目標 11）→ 命中"
+    },
+    {
+     "seq": 45,
+     "round": 1,
+     "type": "damage_dealt",
+     "target_id": "unit_0001",
+     "source_id": "unit_0006",
+     "cause": "attack",
+     "element": "physical",
+     "rolls": [
+      5
+     ],
+     "crit": false,
+     "element_mod_ppm": 1000000,
+     "amount": 9,
+     "hp_before": 40,
+     "hp_after": 31,
+     "pos": {
+      "x": 0,
+      "y": 4
+     },
+     "weather_permille": 1000,
+     "multiplier_permille": 1000,
+     "base_amount": 9,
+     "status_ppm": 1000000,
+     "absorbed": 0,
+     "text": "    火焰流英雄 受到 9 點物理傷害［骰 5］，HP 40 → 31"
+    }
+   ]
+  },
+  {
+   "actor_id": "unit_0006",
+   "step": {
+    "unit_id": "unit_0006",
+    "type": "attack",
+    "target_id": "unit_0001",
+    "target_object_id": null
+   },
+   "events": [
+    {
+     "seq": 46,
+     "round": 1,
+     "type": "attack_rolled",
+     "attacker_id": "unit_0006",
+     "target_id": "unit_0001",
+     "rolls": [
+      11
+     ],
+     "advantage": "none",
+     "natural": 11,
+     "attack_value": 14,
+     "defense_value_permille": 13000,
+     "hit_modifier": 0,
+     "proficiency": 2,
+     "situational": 0,
+     "total": 13,
+     "target_number": 11,
+     "hit": true,
+     "crit": false,
+     "cover": 0,
+     "cover_object_id": null,
+     "skill_id": null,
+     "text": "  盜賊弓手 攻擊 火焰流英雄：d20=11 修正 +0 熟練 +2 = 13（目標 11）→ 命中"
+    },
+    {
+     "seq": 47,
+     "round": 1,
+     "type": "damage_dealt",
+     "target_id": "unit_0001",
+     "source_id": "unit_0006",
+     "cause": "attack",
+     "element": "physical",
+     "rolls": [
+      1
+     ],
+     "crit": false,
+     "element_mod_ppm": 1000000,
+     "amount": 5,
+     "hp_before": 31,
+     "hp_after": 26,
+     "pos": {
+      "x": 0,
+      "y": 4
+     },
+     "weather_permille": 1000,
+     "multiplier_permille": 1000,
+     "base_amount": 5,
+     "status_ppm": 1000000,
+     "absorbed": 0,
+     "text": "    火焰流英雄 受到 5 點物理傷害［骰 1］，HP 31 → 26"
+    }
+   ]
+  },
+  {
+   "actor_id": "unit_0006",
+   "step": {
+    "unit_id": "unit_0006",
+    "type": "move",
+    "path": [
+     {
+      "x": 7,
+      "y": 4
+     },
+     {
+      "x": 8,
+      "y": 4
+     }
+    ]
+   },
+   "events": [
+    {
+     "seq": 48,
+     "round": 1,
+     "type": "unit_moved",
+     "unit_id": "unit_0006",
+     "from_pos": {
+      "x": 7,
+      "y": 4
+     },
+     "to_pos": {
+      "x": 8,
+      "y": 4
+     },
+     "mode": "walk",
+     "cost": 1
+    }
+   ]
+  },
+  {
+   "actor_id": "unit_0006",
+   "step": {
+    "unit_id": "unit_0006",
+    "type": "end_turn"
+   },
+   "events": [
+    {
+     "seq": 49,
+     "round": 1,
+     "type": "turn_ended",
+     "unit_id": "unit_0006",
+     "ap_carried": 0,
+     "text": "  盜賊弓手 結束回合"
+    },
+    {
+     "seq": 50,
+     "round": 1,
+     "type": "turn_started",
+     "unit_id": "unit_0007",
+     "ap": 3,
+     "move_points": 5,
+     "mana": 14,
+     "max_mana": 14,
+     "text": "— 盜賊頭目 的回合（AP 3，移動 5，法力 14/14）"
+    }
+   ]
+  },
+  {
+   "actor_id": "unit_0007",
+   "step": {
+    "unit_id": "unit_0007",
+    "type": "move",
+    "path": [
+     {
+      "x": 7,
+      "y": 5
+     },
+     {
+      "x": 7,
+      "y": 4
+     },
+     {
+      "x": 7,
+      "y": 3
+     },
+     {
+      "x": 6,
+      "y": 3
+     },
+     {
+      "x": 5,
+      "y": 3
+     }
+    ]
+   },
+   "events": [
+    {
+     "seq": 51,
+     "round": 1,
+     "type": "unit_moved",
+     "unit_id": "unit_0007",
+     "from_pos": {
+      "x": 7,
+      "y": 5
+     },
+     "to_pos": {
+      "x": 7,
+      "y": 4
+     },
+     "mode": "walk",
+     "cost": 1
+    },
+    {
+     "seq": 52,
+     "round": 1,
+     "type": "unit_moved",
+     "unit_id": "unit_0007",
+     "from_pos": {
+      "x": 7,
+      "y": 4
+     },
+     "to_pos": {
+      "x": 7,
+      "y": 3
+     },
+     "mode": "walk",
+     "cost": 1
+    },
+    {
+     "seq": 53,
+     "round": 1,
+     "type": "unit_moved",
+     "unit_id": "unit_0007",
+     "from_pos": {
+      "x": 7,
+      "y": 3
+     },
+     "to_pos": {
+      "x": 6,
+      "y": 3
+     },
+     "mode": "walk",
+     "cost": 1
+    },
+    {
+     "seq": 54,
+     "round": 1,
+     "type": "unit_moved",
+     "unit_id": "unit_0007",
+     "from_pos": {
+      "x": 6,
+      "y": 3
+     },
+     "to_pos": {
+      "x": 5,
+      "y": 3
+     },
+     "mode": "walk",
+     "cost": 1
+    }
+   ]
+  },
+  {
+   "actor_id": "unit_0007",
+   "step": {
+    "unit_id": "unit_0007",
+    "type": "use_skill",
+    "skill_id": "skill_cleave",
+    "target_id": null,
+    "target_object_id": null,
+    "target_pos": null,
+    "direction": "west"
+   },
+   "events": [
+    {
+     "seq": 55,
+     "round": 1,
+     "type": "skill_used",
+     "unit_id": "unit_0007",
+     "skill_id": "skill_cleave",
+     "name_zh": "橫掃劈砍",
+     "ap": 2,
+     "mana": 4,
+     "mana_after": 10,
+     "hp_spent": 0,
+     "cooldown": 2,
+     "tiles": [
+      {
+       "x": 3,
+       "y": 2
+      },
+      {
+       "x": 3,
+       "y": 3
+      },
+      {
+       "x": 4,
+       "y": 3
+      },
+      {
+       "x": 3,
+       "y": 4
+      }
+     ],
+     "text": "  盜賊頭目 施放「橫掃劈砍」（AP 2，法力 4，冷卻 2 回合）→ 影響 4 格"
+    },
+    {
+     "seq": 56,
+     "round": 1,
+     "type": "skill_cooldown_changed",
+     "unit_id": "unit_0007",
+     "skill_id": "skill_cleave",
+     "remaining": 2
+    },
+    {
+     "seq": 57,
+     "round": 1,
+     "type": "attack_rolled",
+     "attacker_id": "unit_0007",
+     "target_id": "unit_0002",
+     "rolls": [
+      9
+     ],
+     "advantage": "none",
+     "natural": 9,
+     "attack_value": 16,
+     "defense_value_permille": 20000,
+     "hit_modifier": -1,
+     "proficiency": 2,
+     "situational": 0,
+     "total": 10,
+     "target_number": 11,
+     "hit": false,
+     "crit": false,
+     "cover": 0,
+     "cover_object_id": null,
+     "skill_id": "skill_cleave",
+     "text": "  盜賊頭目 以「橫掃劈砍」攻擊 標準隊友（戰士）：d20=9 修正 -1 熟練 +2 = 10（目標 11）→ 失手"
+    },
+    {
+     "seq": 58,
+     "round": 1,
+     "type": "attack_rolled",
+     "attacker_id": "unit_0007",
+     "target_id": "unit_0003",
+     "rolls": [
+      19
+     ],
+     "advantage": "none",
+     "natural": 19,
+     "attack_value": 16,
+     "defense_value_permille": 18000,
+     "hit_modifier": -1,
+     "proficiency": 2,
+     "situational": 0,
+     "total": 20,
+     "target_number": 11,
+     "hit": true,
+     "crit": false,
+     "cover": 0,
+     "cover_object_id": null,
+     "skill_id": "skill_cleave",
+     "text": "  盜賊頭目 以「橫掃劈砍」攻擊 標準隊友（弓手）：d20=19 修正 -1 熟練 +2 = 20（目標 11）→ 命中"
+    },
+    {
+     "seq": 59,
+     "round": 1,
+     "type": "damage_dealt",
+     "target_id": "unit_0003",
+     "source_id": "unit_0007",
+     "cause": "attack",
+     "element": "physical",
+     "rolls": [
+      6,
+      3
+     ],
+     "crit": false,
+     "element_mod_ppm": 1000000,
+     "amount": 19,
+     "hp_before": 42,
+     "hp_after": 23,
+     "pos": {
+      "x": 4,
+      "y": 3
+     },
+     "weather_permille": 1000,
+     "multiplier_permille": 1400,
+     "base_amount": 13,
+     "status_ppm": 1000000,
+     "absorbed": 0,
+     "text": "    標準隊友（弓手） 受到 19 點物理傷害［骰 6+3］（格擋/加成 ×1.4），HP 42 → 23"
+    }
+   ]
+  },
+  {
+   "actor_id": "unit_0007",
+   "step": {
+    "unit_id": "unit_0007",
+    "type": "attack",
+    "target_id": "unit_0003",
+    "target_object_id": null
+   },
+   "events": [
+    {
+     "seq": 60,
+     "round": 1,
+     "type": "attack_rolled",
+     "attacker_id": "unit_0007",
+     "target_id": "unit_0003",
+     "rolls": [
+      11
+     ],
+     "advantage": "none",
+     "natural": 11,
+     "attack_value": 16,
+     "defense_value_permille": 18000,
+     "hit_modifier": -1,
+     "proficiency": 2,
+     "situational": 0,
+     "total": 12,
+     "target_number": 11,
+     "hit": true,
+     "crit": false,
+     "cover": 0,
+     "cover_object_id": null,
+     "skill_id": null,
+     "text": "  盜賊頭目 攻擊 標準隊友（弓手）：d20=11 修正 -1 熟練 +2 = 12（目標 11）→ 命中"
+    },
+    {
+     "seq": 61,
+     "round": 1,
+     "type": "damage_dealt",
+     "target_id": "unit_0003",
+     "source_id": "unit_0007",
+     "cause": "attack",
+     "element": "physical",
+     "rolls": [
+      5,
+      5
+     ],
+     "crit": false,
+     "element_mod_ppm": 1000000,
+     "amount": 14,
+     "hp_before": 23,
+     "hp_after": 9,
+     "pos": {
+      "x": 4,
+      "y": 3
+     },
+     "weather_permille": 1000,
+     "multiplier_permille": 1000,
+     "base_amount": 14,
+     "status_ppm": 1000000,
+     "absorbed": 0,
+     "text": "    標準隊友（弓手） 受到 14 點物理傷害［骰 5+5］，HP 23 → 9"
+    }
+   ]
+  },
+  {
+   "actor_id": "unit_0007",
+   "step": {
+    "unit_id": "unit_0007",
+    "type": "end_turn"
+   },
+   "events": [
+    {
+     "seq": 62,
+     "round": 1,
+     "type": "turn_ended",
+     "unit_id": "unit_0007",
+     "ap_carried": 0,
+     "text": "  盜賊頭目 結束回合"
+    },
+    {
+     "seq": 63,
+     "round": 1,
+     "type": "turn_started",
+     "unit_id": "unit_0004",
+     "ap": 3,
+     "move_points": 5,
+     "mana": 0,
+     "max_mana": 0,
+     "text": "— 盜賊1 的回合（AP 3，移動 5）"
+    }
+   ]
+  },
+  {
+   "actor_id": "unit_0004",
+   "step": {
+    "unit_id": "unit_0004",
+    "type": "move",
+    "path": [
+     {
+      "x": 6,
+      "y": 4
+     },
+     {
+      "x": 6,
+      "y": 3
+     },
+     {
+      "x": 6,
+      "y": 2
+     },
+     {
+      "x": 5,
+      "y": 2
+     },
+     {
+      "x": 4,
+      "y": 2
+     },
+     {
+      "x": 3,
+      "y": 2
+     }
+    ]
+   },
+   "events": [
+    {
+     "seq": 64,
+     "round": 1,
+     "type": "unit_moved",
+     "unit_id": "unit_0004",
+     "from_pos": {
+      "x": 6,
+      "y": 4
+     },
+     "to_pos": {
+      "x": 6,
+      "y": 3
+     },
+     "mode": "walk",
+     "cost": 1
+    },
+    {
+     "seq": 65,
+     "round": 1,
+     "type": "unit_moved",
+     "unit_id": "unit_0004",
+     "from_pos": {
+      "x": 6,
+      "y": 3
+     },
+     "to_pos": {
+      "x": 6,
+      "y": 2
+     },
+     "mode": "walk",
+     "cost": 1
+    },
+    {
+     "seq": 66,
+     "round": 1,
+     "type": "unit_moved",
+     "unit_id": "unit_0004",
+     "from_pos": {
+      "x": 6,
+      "y": 2
+     },
+     "to_pos": {
+      "x": 5,
+      "y": 2
+     },
+     "mode": "walk",
+     "cost": 1
+    },
+    {
+     "seq": 67,
+     "round": 1,
+     "type": "unit_moved",
+     "unit_id": "unit_0004",
+     "from_pos": {
+      "x": 5,
+      "y": 2
+     },
+     "to_pos": {
+      "x": 4,
+      "y": 2
+     },
+     "mode": "walk",
+     "cost": 1
+    },
+    {
+     "seq": 68,
+     "round": 1,
+     "type": "unit_moved",
+     "unit_id": "unit_0004",
+     "from_pos": {
+      "x": 4,
+      "y": 2
+     },
+     "to_pos": {
+      "x": 3,
+      "y": 2
+     },
+     "mode": "walk",
+     "cost": 1
+    }
+   ]
+  },
+  {
+   "actor_id": "unit_0004",
+   "step": {
+    "unit_id": "unit_0004",
+    "type": "attack",
+    "target_id": "unit_0002",
+    "target_object_id": null
+   },
+   "events": [
+    {
+     "seq": 69,
+     "round": 1,
+     "type": "attack_rolled",
+     "attacker_id": "unit_0004",
+     "target_id": "unit_0002",
+     "rolls": [
+      3
+     ],
+     "advantage": "none",
+     "natural": 3,
+     "attack_value": 14,
+     "defense_value_permille": 20000,
+     "hit_modifier": -2,
+     "proficiency": 2,
+     "situational": 0,
+     "total": 3,
+     "target_number": 11,
+     "hit": false,
+     "crit": false,
+     "cover": 0,
+     "cover_object_id": null,
+     "skill_id": null,
+     "text": "  盜賊1 攻擊 標準隊友（戰士）：d20=3 修正 -2 熟練 +2 = 3（目標 11）→ 失手"
+    }
+   ]
+  },
+  {
+   "actor_id": "unit_0004",
+   "step": {
+    "unit_id": "unit_0004",
+    "type": "attack",
+    "target_id": "unit_0002",
+    "target_object_id": null
+   },
+   "events": [
+    {
+     "seq": 70,
+     "round": 1,
+     "type": "attack_rolled",
+     "attacker_id": "unit_0004",
+     "target_id": "unit_0002",
+     "rolls": [
+      4
+     ],
+     "advantage": "none",
+     "natural": 4,
+     "attack_value": 14,
+     "defense_value_permille": 20000,
+     "hit_modifier": -2,
+     "proficiency": 2,
+     "situational": 0,
+     "total": 4,
+     "target_number": 11,
+     "hit": false,
+     "crit": false,
+     "cover": 0,
+     "cover_object_id": null,
+     "skill_id": null,
+     "text": "  盜賊1 攻擊 標準隊友（戰士）：d20=4 修正 -2 熟練 +2 = 4（目標 11）→ 失手"
+    }
+   ]
+  },
+  {
+   "actor_id": "unit_0004",
+   "step": {
+    "unit_id": "unit_0004",
+    "type": "attack",
+    "target_id": "unit_0002",
+    "target_object_id": null
+   },
+   "events": [
+    {
+     "seq": 71,
+     "round": 1,
+     "type": "attack_rolled",
+     "attacker_id": "unit_0004",
+     "target_id": "unit_0002",
+     "rolls": [
+      5
+     ],
+     "advantage": "none",
+     "natural": 5,
+     "attack_value": 14,
+     "defense_value_permille": 20000,
+     "hit_modifier": -2,
+     "proficiency": 2,
+     "situational": 0,
+     "total": 5,
+     "target_number": 11,
+     "hit": false,
+     "crit": false,
+     "cover": 0,
+     "cover_object_id": null,
+     "skill_id": null,
+     "text": "  盜賊1 攻擊 標準隊友（戰士）：d20=5 修正 -2 熟練 +2 = 5（目標 11）→ 失手"
+    }
+   ]
+  },
+  {
+   "actor_id": "unit_0004",
+   "step": {
+    "unit_id": "unit_0004",
+    "type": "end_turn"
+   },
+   "events": [
+    {
+     "seq": 72,
+     "round": 1,
+     "type": "turn_ended",
+     "unit_id": "unit_0004",
+     "ap_carried": 0,
+     "text": "  盜賊1 結束回合"
+    },
+    {
+     "seq": 73,
+     "round": 1,
+     "type": "turn_started",
+     "unit_id": "unit_0001",
+     "ap": 3,
+     "move_points": 5,
+     "mana": 40,
+     "max_mana": 40,
+     "text": "— 火焰流英雄 的回合（AP 3，移動 5，法力 40/40）"
+    }
+   ]
+  }
+ ],
+ "outcome": null
+}
