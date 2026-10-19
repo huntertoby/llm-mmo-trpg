@@ -29,8 +29,10 @@ from trpg.content.skills import (
     CONSUME_STACK,
     CONSUME_STATUS,
     COPY_SKILL,
+    DAMAGE_MULTIPLIER,
     DASH,
     EXTRA_REACTION,
+    GAMBLE,
     GRANT_AP,
     HURL_OBJECT,
     INTERCEPT,
@@ -40,6 +42,7 @@ from trpg.content.skills import (
     REDIRECT_STATUS,
     RESET_COOLDOWN,
     RESTORE_RESOURCE,
+    SELF_DAMAGE_OF_HIT,
     STEAL_BUFF,
     SUMMON,
     SWAP,
@@ -50,6 +53,7 @@ from trpg.content.skills import (
     ConditionSpec,
     EffectSpec,
     SkillDef,
+    default_affects,
     on_hit_carrier,
 )
 from trpg.engine import modifiers
@@ -81,8 +85,10 @@ from trpg.engine.effects.models import (
 )
 from trpg.engine.events import (
     AttackRolled,
+    BacklashTriggered,
     DamageDealt,
     EffectFizzled,
+    GambleRolled,
     ObjectDamaged,
     ShotPierced,
     SkillCooldownChanged,
@@ -463,6 +469,14 @@ class _Cast:
         self.use = modifiers.skill_use(skill)
         self.cooldown_delta = 0
         """修正規則的命中後冷卻修正（≤ 0；命中判定當下決定，全部效果結算後套用）。"""
+        self.gamble_mult = PERMILLE
+        """賭注成功分支的 ``damage_multiplier``（‰）：本次施放的傷害效果再乘上它（Phase 3D-7a）。"""
+        self.gamble_branch: tuple[EffectSpec, ...] = ()
+        """賭注擲出的分支（``win`` 或 ``lose`` 的效果）；沒有賭注或賭注沒有結算時為空。"""
+        self.cast_start = 0
+        """賭注擲骰時的事件數：``self_damage_of_hit`` 以這之後造成的傷害計算。"""
+        self.pays_miss_cost = True
+        """失手反噬（``cost.on_miss``）是否適用：複製的技能不付代價，所以不適用。"""
 
     # ------------------------------------------------------------------
     # 命中
@@ -627,6 +641,7 @@ class _Cast:
         self.roll_hits()
         self.announce_pierce()
         self.consume_stacks()
+        self.roll_gamble()
         for effect in self.effects:
             spec = self.skill.effects[effect.spec_index]
             start = len(self.ctx.events)
@@ -635,8 +650,111 @@ class _Cast:
                 execute(self.ctx, batch)
             if effect.type == "damage" and effect.affects in _TOUCHING_AFFECTS:
                 self.touch_untouched_tiles(spec, start)
+        self.backlash_on_miss()
         self.react_to_hits()
         self.shorten_cooldown()
+
+    # -- 賭博型（Phase 3D-7a）-----------------------------------------------
+
+    def roll_gamble(self) -> None:
+        """``gamble``：命中判定之後、第一個效果之前擲一次 d1000（``≤ chance_permille`` 成功）。
+        技能有對敵方的效果、卻一個敵人都沒命中時整個賭注不結算（不擲、沒有事件）。成功分支的
+        ``damage_multiplier`` 在這裡決定，之後的傷害效果乘上它；其餘分支效果在 ``gamble`` 效果
+        自己的位置（技能的最後一個）結算。預覽時沿用 ``ctx.gamble`` 指定的分支（沒有指定就不
+        結算），不消耗亂數。"""
+        found = (e for e in self.effects if e.type == GAMBLE)
+        gamble = next(found, None)
+        if gamble is None:
+            return
+        spec = self.skill.effects[gamble.spec_index]
+        assert spec.chance_permille is not None
+        ctx = self.ctx
+        if any(e.hostile for e in self.effects) and not any(self._hit(u) for u in self.enemies):
+            return
+        self.cast_start = len(ctx.events)
+        if ctx.preview is not None:
+            if ctx.gamble is None:
+                return
+            roll = spec.chance_permille if ctx.gamble == "win" else PERMILLE
+        else:
+            roll = ctx.rng.randint(1, PERMILLE)
+        success = roll <= spec.chance_permille
+        ctx.emit(
+            GambleRolled,
+            unit_id=self.caster.id,
+            skill_id=self.skill.id,
+            roll=roll,
+            chance_permille=spec.chance_permille,
+            success=success,
+        )
+        self.gamble_branch = tuple((spec.win if success else spec.lose) or ())
+        for sub in self.gamble_branch:
+            if sub.type == DAMAGE_MULTIPLIER:
+                assert sub.damage_multiplier_permille is not None
+                self.gamble_mult = self.gamble_mult * sub.damage_multiplier_permille // PERMILLE
+
+    def gamble_effect(self, _effect: ResolvedEffect, _spec: EffectSpec) -> list[EffectBase]:
+        """``gamble`` 在效果列表的位置（最後一個）：結算擲出的分支（擲骰見 roll_gamble）。"""
+        self.resolve_branch(self.gamble_branch)
+        return []
+
+    def resolve_branch(self, branch: tuple[EffectSpec, ...]) -> None:
+        """賭注分支或失手反噬的效果：一般效果展開後結算（對象 ``self`` 的傷害是反噬，不致命）；
+        ``damage_multiplier`` 已在擲骰時處理；``self_damage_of_hit`` 依本次造成的傷害結算。"""
+        for sub in branch:
+            if sub.type == DAMAGE_MULTIPLIER:
+                continue
+            if sub.type == SELF_DAMAGE_OF_HIT:
+                self.self_damage_of_hit(sub)
+                continue
+            primitive = self.ctx.rules.primitive_def(sub.type)
+            affects = sub.affects or default_affects(primitive)
+            batch = self.build(ResolvedEffect(-1, sub.type, primitive, affects), sub)
+            if batch:
+                execute(self.ctx, batch)
+
+    def self_damage_of_hit(self, spec: EffectSpec) -> None:
+        """``self_damage_of_hit``：施放者受到「本次施放對敵人造成的傷害（扣掉護盾吸收）」的
+        n‰（無條件捨去，至少 1）；反噬傷害不會讓施放者 HP 低於 1。"""
+        assert spec.self_damage_permille_of_hit is not None
+        caster, state = self.caster, self.ctx.state
+        dealt = sum(
+            e.amount - e.absorbed
+            for e in self.ctx.events[self.cast_start :]
+            if isinstance(e, DamageDealt)
+            and e.source_id == caster.id
+            and e.cause == "attack"
+            and e.target_id in state.units
+            and state.units[e.target_id].team is not caster.team
+        )
+        if dealt <= 0 or not caster.alive:
+            return
+        amount = max(1, dealt * spec.self_damage_permille_of_hit // PERMILLE)
+        execute(
+            self.ctx,
+            [
+                DamageEffect(
+                    target_id=caster.id,
+                    source_id=caster.id,
+                    cause="backlash",
+                    element=Element.PHYSICAL,
+                    flat=amount,
+                    apply_element_mod=False,
+                    apply_weather=False,
+                )
+            ],
+        )
+
+    def backlash_on_miss(self) -> None:
+        """失手反噬（``cost.on_miss``）：攻擊沒命中任何敵人（含自然 1）時，對施放者結算反噬效果
+        （命中則不結算）。被動、陷阱與複製的技能不付代價，不適用。"""
+        branch = self.skill.cost.on_miss
+        if not branch or not self.modified or not self.pays_miss_cost or not self.caster.alive:
+            return
+        if not self.hits or any(roll.hit for roll in self.hits.values()):
+            return
+        self.ctx.emit(BacklashTriggered, unit_id=self.caster.id, skill_id=self.skill.id)
+        self.resolve_branch(tuple(sub.model_copy(update={"affects": "self"}) for sub in branch))
 
     def dash(self) -> bool:
         """``dash``（Phase 3D-2）：施放者沿最短路徑衝到目標的相鄰格，一步一步走（每一步先給相鄰
@@ -930,7 +1048,9 @@ class _Cast:
             name_zh=copied.name_zh,
             tiles=tuple(Pos(x=x, y=y) for x, y in area.tiles),
         )
-        _Cast(self.ctx, self.caster, copied, pick, area).run()
+        cast = _Cast(self.ctx, self.caster, copied, pick, area)
+        cast.pays_miss_cost = False  # 複製的技能不付代價（失手反噬也是代價）
+        cast.run()
         collect_cast(self.ctx, self.caster, copied)
 
     # -- 消耗狀態（Phase 3C-3b）------------------------------------------
@@ -1049,17 +1169,19 @@ class _Cast:
         )
         dice, flat, scaled, multiplier, element = params
         min_damage = self.ctx.core.min_damage_on_hit
+        gamble = self.gamble_mult if effect.spec_index >= 0 else PERMILLE  # 分支自己的傷害不再乘
         batch: list[EffectBase] = []
         for unit in self.targets(effect.affects, spec.condition):
             roll = self.hits.get(unit.id)
             block = self.blocks.get(unit.id, PERMILLE)
             bonus = PERMILLE + self.caster_bonus + self.target_bonus.get(unit.id, 0)
             bonus = bonus * self._modifier(modifiers.damage_permille, unit) // PERMILLE
+            bonus = bonus * gamble // PERMILLE
             batch.append(
                 DamageEffect(
                     target_id=unit.id,
                     source_id=self.caster.id,
-                    cause="attack",
+                    cause="backlash" if effect.affects == "self" else "attack",
                     element=element,
                     dice=dice,
                     flat=flat,
@@ -1094,6 +1216,8 @@ class _Cast:
                         * (PERMILLE + self.caster_bonus)
                         // PERMILLE
                         * self._modifier(modifiers.damage_permille, None, xy)
+                        // PERMILLE
+                        * gamble
                         // PERMILLE,
                     )
                 )
@@ -1576,6 +1700,7 @@ _Cast._SIMPLE = {
     HURL_OBJECT: _Cast.hurl_object,
     SUMMON: _Cast.summon,
     ZONE: _Cast.zone,
+    GAMBLE: _Cast.gamble_effect,
 }
 """只需要 ``(effect, spec)`` 的原語 → 展開方法。"""
 

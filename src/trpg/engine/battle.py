@@ -33,7 +33,7 @@ from trpg.engine.actions import (
     UseSkill,
 )
 from trpg.engine.activations import moves_object
-from trpg.engine.context import Ctx, PreviewMode
+from trpg.engine.context import Ctx, GambleBranch, PreviewMode
 from trpg.engine.copying import copy_selections, has_copy_effect
 from trpg.engine.effects import execute
 from trpg.engine.effects.models import (
@@ -878,9 +878,11 @@ def resolve_with(
     decisions: tuple[bool, ...] = (),
     *,
     preview: PreviewMode | None = None,
+    gamble: GambleBranch | None = None,
 ) -> ResolveResult:
-    """內部 API：以 ``decisions`` 結算 ``action``（``preview`` 不為 ``None`` 時為預覽模擬）。"""
-    ctx = Ctx(base.clone(), decisions=decisions, preview=preview)
+    """內部 API：以 ``decisions`` 結算 ``action``（``preview`` 不為 ``None`` 時為預覽模擬；
+    ``gamble`` 指定預覽時賭注的分支，Phase 3D-7a）。"""
+    ctx = Ctx(base.clone(), decisions=decisions, preview=preview, gamble=gamble)
     actor = ctx.state.units[action.unit_id]
     try:
         ACTION_HANDLERS[action.type](ctx, actor, action)
@@ -908,18 +910,20 @@ def resolve_with(
     return finish_resolution(ctx)
 
 
-def simulate_preview(base: BattleState, action: Action) -> tuple[ResolveResult, ResolveResult]:
+def simulate_preview(
+    base: BattleState, action: Action, gamble: GambleBranch | None = None
+) -> tuple[ResolveResult, ResolveResult]:
     """內部 API：預覽用的「最少後果」與「最多後果」兩次模擬。
 
     ``min`` 模擬沒有經過任何分歧點（擲骰、檢定、反應決定、強制命中結果）時，``max`` 的結果必定
     相同，直接重用而不再模擬一次（例如沒有藉機攻擊、沒有踩上冰面的移動）。
     """
-    low_ctx = Ctx(base.clone(), preview="min")
+    low_ctx = Ctx(base.clone(), preview="min", gamble=gamble)
     ACTION_HANDLERS[action.type](low_ctx, low_ctx.state.units[action.unit_id], action)
     low = finish_resolution(low_ctx)
     if not low_ctx.preview_branched():
         return low, low
-    return low, resolve_with(base, action, preview="max")
+    return low, resolve_with(base, action, preview="max", gamble=gamble)
 
 
 def resolve(state: BattleState, action: Action) -> ResolveResult:

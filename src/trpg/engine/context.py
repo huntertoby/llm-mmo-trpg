@@ -12,11 +12,15 @@ from trpg.engine.state import BattleState
 from trpg.shared.rng import Rng
 from trpg.shared.types import UnitId
 
-__all__ = ["Ctx", "FixedRng", "PreviewMode"]
+__all__ = ["Ctx", "FixedRng", "GambleBranch", "PreviewMode"]
 
 type PreviewMode = Literal["min", "max"]
 """預覽模式：``min`` 為「最少後果」（傷害骰取最小、次要判定對守方有利、prompt 反應不使用），
 ``max`` 為「最多後果」（傷害骰取最大、次要判定對守方不利、prompt 反應使用）。"""
+
+
+type GambleBranch = Literal["win", "lose"]
+"""預覽時強制的賭注分支（Phase 3D-7a）：``win`` 成功、``lose`` 失敗。"""
 
 
 class FixedRng(Rng):
@@ -46,6 +50,7 @@ class Ctx:
 
     - ``decisions``：``prompt`` 反應的決定（依詢問順序消耗，見 :mod:`trpg.engine.reactions`）。
     - ``preview``：預覽模式（``None`` 為正式結算）。
+    - ``gamble``：預覽時強制的賭注分支（Phase 3D-7a）。
     - ``surface_entries``：等待觸發的「表面出現在腳下」進入效果
       （見 :mod:`trpg.engine.effects.queue`）。
     - ``trap_entries``：等待結算的陷阱進入（Phase 2E-3）。
@@ -65,6 +70,7 @@ class Ctx:
         "downed",
         "events",
         "fired",
+        "gamble",
         "passives",
         "preview",
         "rng",
@@ -84,6 +90,7 @@ class Ctx:
         *,
         decisions: tuple[bool, ...] = (),
         preview: PreviewMode | None = None,
+        gamble: GambleBranch | None = None,
     ) -> None:
         self.state = state
         self.rng: Rng = Rng.from_state(state.rng_state) if preview is None else FixedRng(preview)
@@ -92,6 +99,9 @@ class Ctx:
         self.core: CoreRules = state.ruleset.core
         self.decisions = list(decisions)
         self.preview = preview
+        self.gamble = gamble
+        """預覽時強制的賭注分支（Phase 3D-7a）；預覽沒有指定時賭注不結算（``None``）。正式結算
+        不使用（擲 d1000）。"""
         self.branched = False
         """預覽模式下是否經過任何「``min`` 與 ``max`` 會不同」的分歧點（擲骰、檢定、反應決定、
         強制命中結果）。沒有時兩種模式的結果完全相同，``preview`` 只需模擬一次。"""

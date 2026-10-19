@@ -48,6 +48,7 @@ from trpg.engine.rules.statuses import (
     damage_taken_permille,
     effective_attribute,
     healing_received_permille,
+    shield_amount,
     stance_status_ids,
 )
 from trpg.engine.source import credit_elite_kill, take_source_well
@@ -118,6 +119,7 @@ def _damage(ctx: Ctx, effect: EffectBase) -> list[EventBase]:
         mended = _mend_ally(ctx, unit, effect, amount)  # 規則改變「慈焰」（Phase 3D-6）
         if mended is not None:
             return mended
+        amount = _cap_backlash(ctx, unit, effect, amount)
         absorbed = _absorb(ctx, unit, amount, events)  # 護盾：所有倍率之後、扣 HP 之前
     link = redirect_link(ctx, unit, effect)
     redirected = 0 if link is None else (amount - absorbed) * (link[0].amount or 0) // PERMILLE
@@ -157,6 +159,14 @@ def _damage(ctx: Ctx, effect: EffectBase) -> list[EventBase]:
         events.extend(down_unit(ctx, unit))
         events.extend(credit_elite_kill(ctx, unit, effect.source_id))
     return events
+
+
+def _cap_backlash(ctx: Ctx, unit: UnitState, effect: DamageEffect, amount: int) -> int:
+    """反噬（``cause: backlash``，Phase 3D-7a）不會讓單位的 HP 低於 1：護盾先吸收，超過的部分
+    截斷。其他傷害不受影響。"""
+    if effect.cause != "backlash":
+        return amount
+    return min(amount, unit.hp - 1 + shield_amount(ctx.rules, unit))
 
 
 def _dealt_permille(ctx: Ctx, effect: DamageEffect) -> int:

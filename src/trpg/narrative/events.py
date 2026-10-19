@@ -15,6 +15,7 @@ from trpg.engine.events import (
     ApGranted,
     AttackIntercepted,
     AttackRolled,
+    BacklashTriggered,
     BattleEnded,
     BattleStarted,
     ChainLimitReached,
@@ -29,6 +30,7 @@ from trpg.engine.events import (
     EnvironmentEnded,
     EnvironmentStarted,
     EventBase,
+    GambleRolled,
     Healed,
     InitiativeRolled,
     InitiativeTieBroken,
@@ -126,6 +128,7 @@ _CAUSE_NAMES = {
     "surface": "表面",
     "collision": "撞擊",
     "topple": "壓傷",
+    "backlash": "反噬",
 }
 
 _END_REASONS = {
@@ -486,7 +489,7 @@ def _damage(e: DamageDealt, v: _View) -> str:
     kind = f"{cause}{element}" if cause and e.cause != "status" else element
     if e.cause in ("fall", "deadly_terrain"):
         kind = cause
-    elif e.cause in ("explosion", "conduct", "surface", "collision", "topple"):
+    elif e.cause in ("explosion", "conduct", "surface", "collision", "topple", "backlash"):
         kind = f"{cause}{element}"
     mod = ""
     if e.element_mod_ppm != _PPM:
@@ -649,6 +652,22 @@ def _skill_activated(e: SkillActivated, v: _View) -> str:
         else f"持續到第 {e.expires_round} 輪 {v.name[e.unit_id]} 的回合開始"
     )
     return f"  ✦ {v.name[e.unit_id]} 啟動了傳說「{skill}」（{when}）"
+
+
+@_handles(GambleRolled)
+def _gamble_rolled(e: GambleRolled, v: _View) -> str:
+    skill = v.state.ruleset.skill_def(e.skill_id).name_zh
+    result = "成功" if e.success else "失敗"
+    return (
+        f"  ✦ {v.name[e.unit_id]} 賭上了「{skill}」：d1000={e.roll}"
+        f"（成功率 {e.chance_permille / 10:g}%，要 ≤ {e.chance_permille}）→ {result}"
+    )
+
+
+@_handles(BacklashTriggered)
+def _backlash_triggered(e: BacklashTriggered, v: _View) -> str:
+    skill = v.state.ruleset.skill_def(e.skill_id).name_zh
+    return f"  ✦ {v.name[e.unit_id]} 的「{skill}」失手了，遭到反噬"
 
 
 @_handles(ActivationExpired)

@@ -21,6 +21,7 @@ __all__ = [
     "ApGranted",
     "AttackIntercepted",
     "AttackRolled",
+    "BacklashTriggered",
     "BattleEnded",
     "BattleStarted",
     "ChainLimitReached",
@@ -39,6 +40,7 @@ __all__ = [
     "EnvironmentStarted",
     "Event",
     "EventBase",
+    "GambleRolled",
     "Healed",
     "InitiativeRolled",
     "InitiativeTieBroken",
@@ -124,10 +126,12 @@ type DamageCause = Literal[
     "surface",
     "collision",
     "topple",
+    "backlash",
 ]
 """``attack``：普攻與反應攻擊；``explosion``：爆炸；``conduct``：雷電沿水擴散；
 ``surface``：站在表面上（毒、聖光）；``collision``：撞擊（Phase 3C-3a）；``topple``：被推倒的物件
-壓到（Phase 3C-5a）。"""
+壓到（Phase 3C-5a）；``backlash``：賭博型技能的反噬（失敗分支、失手反噬；Phase 3D-7a，不會讓
+受到的單位 HP 低於 1）。"""
 type ObjectDestroyCause = Literal[
     "damage", "burned", "explosion", "filled", "fell", "effect", "hurled", "toppled"
 ]
@@ -1155,6 +1159,26 @@ class SkillActivated(EventBase):
     rule: str | None = None
 
 
+class GambleRolled(EventBase):
+    """賭注擲骰（Phase 3D-7a；命中判定之後、技能效果結算之前）：擲一次 d1000，``roll`` 不超過
+    ``chance_permille`` 為成功（結算 ``win``），否則失敗（結算 ``lose``）。"""
+
+    type: Literal["gamble_rolled"] = "gamble_rolled"
+    unit_id: UnitId
+    skill_id: str
+    roll: int
+    chance_permille: int
+    success: bool
+
+
+class BacklashTriggered(EventBase):
+    """失手反噬（``cost.on_miss``，Phase 3D-7a）：攻擊沒有命中任何敵人，之後是反噬效果的事件。"""
+
+    type: Literal["backlash_triggered"] = "backlash_triggered"
+    unit_id: UnitId
+    skill_id: str
+
+
 class ActivationExpired(EventBase):
     """限時傳說（``activation: timed``）時間到，不再生效（Phase 3D-6；持有者的回合開始時）。"""
 
@@ -1270,7 +1294,9 @@ type Event = Annotated[
     | ZoneExpired
     | SkillActivated
     | ActivationExpired
-    | RuleChangeTriggered,
+    | RuleChangeTriggered
+    | GambleRolled
+    | BacklashTriggered,
     Field(discriminator="type"),
 ]
 
