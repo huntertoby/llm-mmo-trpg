@@ -45,6 +45,7 @@ _HIT_GATED = frozenset(
     {"damage_permille", "cooldown_delta", "push_distance_delta", "add_element", "on_hit_effects"}
 )
 """命中後才生效的修正（使用次數再 × 命中率）。"""
+_ACTION_NAMES = {"attack": "普攻", "shove": "推擊", "trip": "絆倒", "interact": "互動"}
 
 
 class BudgetError(ValueError):
@@ -353,7 +354,7 @@ def _modifier_uses(rule: ModifierSpec, budget: ModifierBudget) -> tuple[int, str
     for action in target.actions:
         if not (action == "attack" and target.all_attacks):
             total += uses[action]
-            parts.append(action)
+            parts.append(_ACTION_NAMES[action])
     if target.skill_tags and not target.all_skills:
         total += uses["skill_tag"] * len(target.skill_tags)
         parts.append(f"標籤 {'／'.join(target.skill_tags)}")
