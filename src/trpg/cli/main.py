@@ -97,7 +97,9 @@ def build_parser() -> argparse.ArgumentParser:  # noqa: PLR0915
     content_commands = content_parser.add_subparsers(
         dest="content_command", metavar="<subcommand>", required=True
     )
-    content_commands.add_parser("check", help="載入並驗證所有已知的內容資料檔")
+    content_commands.add_parser("check", help="載入並驗證所有已知的內容資料檔").set_defaults(
+        func=_run_content_check
+    )
 
     map_parser = commands.add_parser("map", help="地圖工具")
     map_commands = map_parser.add_subparsers(
@@ -105,13 +107,18 @@ def build_parser() -> argparse.ArgumentParser:  # noqa: PLR0915
     )
     show = map_commands.add_parser("show", help="以文字網格印出地圖")
     show.add_argument("map_id", help="地圖 ID（content/maps/<id>.yaml）")
-    map_commands.add_parser("list", help="列出所有地圖的類型、大小與是否有預設遭遇")
+    show.set_defaults(func=_run_map_show)
+    map_commands.add_parser("list", help="列出所有地圖的類型、大小與是否有預設遭遇").set_defaults(
+        func=_run_map_list
+    )
 
     skills_parser = commands.add_parser("skills", help="技能工具")
     skills_commands = skills_parser.add_subparsers(
         dest="skills_command", metavar="<subcommand>", required=True
     )
-    skills_commands.add_parser("list", help="列出所有技能與效果摘要")
+    skills_commands.add_parser("list", help="列出所有技能與效果摘要").set_defaults(
+        func=_run_skills_list
+    )
     skills_show = skills_commands.add_parser("show", help="顯示一個技能的詳細資料")
     skills_show.add_argument("skill_id", help="技能 ID（content/skills/<id>.yaml）")
     skills_budget = skills_commands.add_parser("budget", help="顯示技能的預算明細（或 --all 總表）")
@@ -194,6 +201,13 @@ def build_parser() -> argparse.ArgumentParser:  # noqa: PLR0915
     replay = battle_commands.add_parser("replay", help="重播 --log-json 的輸出並驗證一致")
     replay.add_argument("path", type=Path, help="戰鬥紀錄 JSON")
     _add_sim_report_parsers(sim_commands)
+    rng_parser.set_defaults(func=_run_rng)
+    skills_show.set_defaults(func=_run_skills_show)
+    skills_budget.set_defaults(func=_run_skills_budget)
+    skills_random.set_defaults(func=_run_skills_random)
+    sim_maps.set_defaults(func=_sim_maps)
+    battle.set_defaults(func=_battle)
+    replay.set_defaults(func=_run_replay)
     return parser
 
 
@@ -245,6 +259,9 @@ def _add_sim_report_parsers(
         "--jobs", type=_jobs_arg, default=0, help="平行行程數（預設 0＝CPU 邏輯核心數）"
     )
     skills.add_argument("--json", type=Path, default=None, help="另外寫出完整報表 JSON")
+    matrix.set_defaults(func=_sim_matrix)
+    completion.set_defaults(func=_sim_completion)
+    skills.set_defaults(func=_sim_skills)
 
 
 def _cmd_rng(seed: int, count: int, sides: int | None) -> int:
@@ -365,9 +382,7 @@ def _sim_skills(args: argparse.Namespace) -> int:
     )
 
 
-def _battle(  # noqa: PLR0911
-    parser: argparse.ArgumentParser, args: argparse.Namespace
-) -> int:
+def _battle(args: argparse.Namespace) -> int:  # noqa: PLR0911
     if args.map_id is None or args.seed is None:
         print(
             "錯誤：trpg battle 需要 --map 與 --seed（或使用 trpg battle replay <path>）",
@@ -440,56 +455,66 @@ def _sim_maps(args: argparse.Namespace) -> int:
     )
 
 
-def main(argv: list[str] | None = None) -> int:  # noqa: C901, PLR0911, PLR0912
-    """CLI 主程式；回傳結束代碼（方便測試）。"""
+def _run_rng(args: argparse.Namespace) -> int:
+    return _cmd_rng(args.seed, args.count, args.sides)
+
+
+def _run_content_check(_args: argparse.Namespace) -> int:
+    return _cmd_content_check()
+
+
+def _run_map_list(_args: argparse.Namespace) -> int:
+    return _with_library(lambda lib: cmd_map_list(lib, sys.stdout))
+
+
+def _run_map_show(args: argparse.Namespace) -> int:
+    return _with_library(lambda lib: cmd_map_show(lib, args.map_id, sys.stdout))
+
+
+def _run_skills_list(_args: argparse.Namespace) -> int:
+    return _with_library(lambda lib: cmd_skills_list(lib, sys.stdout))
+
+
+def _run_skills_show(args: argparse.Namespace) -> int:
+    return _with_library(lambda lib: cmd_skills_show(lib, args.skill_id, sys.stdout))
+
+
+def _run_skills_budget(args: argparse.Namespace) -> int:
+    if args.all:
+        return _with_library(lambda lib: cmd_skills_budget_all(lib, sys.stdout))
+    if args.skill_id is None:
+        print("錯誤：請指定技能 ID，或使用 --all", file=sys.stderr)
+        return 2
+    return _with_library(lambda lib: cmd_skills_budget(lib, args.skill_id, sys.stdout))
+
+
+def _run_skills_random(args: argparse.Namespace) -> int:
+    return _with_library(
+        lambda lib: cmd_skills_random(
+            lib,
+            seed=args.seed,
+            count=args.count,
+            tier=args.tier,
+            rarity=args.rarity,
+            skeleton=args.skeleton,
+            out=sys.stdout,
+            err=sys.stderr,
+        )
+    )
+
+
+def _run_replay(args: argparse.Namespace) -> int:
+    return cmd_replay(args.path, sys.stdout)
+
+
+def main(argv: list[str] | None = None) -> int:
+    """CLI 主程式；回傳結束代碼（方便測試）。各子指令的處理函式由 ``set_defaults`` 指定。"""
     parser = build_parser()
     try:
         args = parser.parse_args(argv)
     except SystemExit as exc:  # --version、--help 與參數錯誤
         return exc.code if isinstance(exc.code, int) else (0 if exc.code is None else 1)
-
-    if args.command == "rng":
-        return _cmd_rng(args.seed, args.count, args.sides)
-    if args.command == "content" and args.content_command == "check":
-        return _cmd_content_check()
-    if args.command == "map" and args.map_command == "list":
-        return _with_library(lambda lib: cmd_map_list(lib, sys.stdout))
-    if args.command == "map" and args.map_command == "show":
-        return _with_library(lambda lib: cmd_map_show(lib, args.map_id, sys.stdout))
-    if args.command == "skills":
-        if args.skills_command == "list":
-            return _with_library(lambda lib: cmd_skills_list(lib, sys.stdout))
-        if args.skills_command == "budget":
-            if args.all:
-                return _with_library(lambda lib: cmd_skills_budget_all(lib, sys.stdout))
-            if args.skill_id is None:
-                print("錯誤：請指定技能 ID，或使用 --all", file=sys.stderr)
-                return 2
-            return _with_library(lambda lib: cmd_skills_budget(lib, args.skill_id, sys.stdout))
-        if args.skills_command == "random":
-            return _with_library(
-                lambda lib: cmd_skills_random(
-                    lib,
-                    seed=args.seed,
-                    count=args.count,
-                    tier=args.tier,
-                    rarity=args.rarity,
-                    skeleton=args.skeleton,
-                    out=sys.stdout,
-                    err=sys.stderr,
-                )
-            )
-        return _with_library(lambda lib: cmd_skills_show(lib, args.skill_id, sys.stdout))
-    if args.command == "sim":
-        if args.sim_command == "matrix":
-            return _sim_matrix(args)
-        if args.sim_command == "skills":
-            return _sim_skills(args)
-        if args.sim_command == "completion":
-            return _sim_completion(args)
-        return _sim_maps(args)
-    if args.command == "battle":
-        if args.battle_command == "replay":
-            return cmd_replay(args.path, sys.stdout)
-        return _battle(parser, args)
-    parser.error(f"未知的指令：{args.command}")  # pragma: no cover - argparse 已限制選項
+    handler = getattr(args, "func", None)
+    if handler is None:  # pragma: no cover - 所有子指令都設定了 func
+        parser.error(f"未知的指令：{args.command}")
+    return int(handler(args))
