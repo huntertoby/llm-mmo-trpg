@@ -56,6 +56,21 @@
 - 陷阱只對放置者陣營顯示（CLI 用 `^`）→ 3-1 的視圖與事件過濾。
 - `pending`／`resume` 的反應詢問要有 UI → 3-1 補資料、3-4 做視窗。
 
+### 0.6 3-1 報告「待 PM 決定」的處理（PM 決定，2026-10-19）
+
+| # | 項目 | 決定 |
+|---|---|---|
+| 1 | 藉機攻擊詢問時 `trigger_event_seq` 為 `None`（移動事件尚未發出） | 接受；UI 用 `trigger_unit_id` 顯示即可，不改事件順序 |
+| 2 | 他方單位在視圖中不列技能，冷卻不列陷阱技能 | 接受（保守、不洩漏陷阱）；試玩時若想看敵方技能，再改成只隱藏陷阱技能 |
+| 3 | 敵方法力、耐力、狀態、層數完整給出 | 接受（TRPG 公開資訊） |
+| 4 | `filter_events` 傳最新狀態 | 接受；3-2 API 依此呼叫 |
+| 5 | `TriggerLimitReached` 以技能有 `trap` 欄位判斷 | 接受 |
+| 6 | 不升 `LOG_FORMAT` | 接受 |
+| 7 | 多加 `Pending.hp_cost_permille` | 接受，保留 |
+| 8 | `SkillCard` 欄位為中文字串 | 3-2 視需要加英文代碼欄位（例如 `skeleton_id`、`rarity_id`） |
+| 9 | `cli/skills.py` 不再 re-export | 接受 |
+| 10 | CLI 快照以雜湊儲存，`UPDATE_CLI_SNAPSHOTS=1` 重錄 | 接受 |
+
 ---
 
 ## 1. 範圍外（整個 Phase 3）
