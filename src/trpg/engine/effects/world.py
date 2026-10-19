@@ -468,7 +468,11 @@ def _push_object(ctx: Ctx, effect: PushEffect, object_id: ObjectId) -> list[Even
         state.set_tile(*cur, replace(state.tile(*cur), object_id=None))
         obj.pos = _pos(nxt)
         state.set_tile(*nxt, replace(state.tile(*nxt), object_id=obj.id))
-        events.append(ctx.emit(ObjectMoved, object_id=obj.id, from_pos=_pos(cur), to_pos=obj.pos))
+        events.append(
+            ctx.emit(
+                ObjectMoved, object_id=obj.id, from_pos=_pos(cur), to_pos=obj.pos, how=effect.how
+            )
+        )
         if is_deadly(state, nxt):
             events.extend(remove_object(ctx, obj, "fell", source_id=effect.source_id))
             break

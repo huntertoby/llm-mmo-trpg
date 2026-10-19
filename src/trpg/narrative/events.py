@@ -547,7 +547,8 @@ def _object_ignited(e: ObjectIgnited, v: _View) -> str:
 
 @_handles(ObjectMoved)
 def _object_moved(e: ObjectMoved, v: _View) -> str:
-    return f"  {object_name(v.state, e.object_id)} 被推到 {xy_text(e.to_pos)}"
+    verb = "撥到" if e.how == "shove_aside" else "推到"
+    return f"  {object_name(v.state, e.object_id)} 被{verb} {xy_text(e.to_pos)}"
 
 
 @_handles(ObjectCreated)

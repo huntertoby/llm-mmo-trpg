@@ -95,11 +95,26 @@ class Trip(_ActionBase):
 
 
 class Interact(_ActionBase):
-    """互動：推動相鄰的 ``pushable`` 物件 1 格（沿「行動者 → 物件」方向）。"""
+    """互動：移動相鄰的 ``pushable`` 物件 1 格（只對物件，不能對單位）。
+
+    - ``mode="push"``（預設）：沿「行動者 → 物件」方向推，``side`` 必須為 ``None``；
+    - ``mode="shove_aside"``（撥開，Phase 3C-1）：往垂直於「行動者 → 物件」方向的 ``side``
+      （``left`` 為逆時針 90°、``right`` 為順時針 90°；畫面上 ``north`` 為 ``y − 1``）移動，
+      ``side`` 必填。行動者都不動、花 ``interact_ap_cost``。
+    """
 
     type: Literal["interact"] = "interact"
     object_id: ObjectId
-    mode: Literal["push"] = "push"
+    mode: Literal["push", "shove_aside"] = "push"
+    side: Literal["left", "right"] | None = None
+
+    @model_validator(mode="after")
+    def _check_side(self) -> Interact:
+        if self.mode == "push" and self.side is not None:
+            raise ValueError("推（push）不能指定 side")
+        if self.mode == "shove_aside" and self.side is None:
+            raise ValueError("撥開（shove_aside）必須指定 side（left 或 right）")
+        return self
 
 
 type Direction = Literal["north", "east", "south", "west"]

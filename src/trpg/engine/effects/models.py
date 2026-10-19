@@ -212,6 +212,8 @@ class PushEffect(EffectBase):
     object_id: ObjectId | None = None
     direction: Direction
     distance: int = Field(ge=0)
+    how: Literal["push", "shove_aside"] = "push"
+    """物件被移動的方式（只影響 ``ObjectMoved`` 事件的說明；撥開為 ``shove_aside``）。"""
 
     def sort_target(self) -> str:
         return self.target_id or self.object_id or ""

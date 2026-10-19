@@ -13,6 +13,7 @@ from __future__ import annotations
 
 from collections.abc import Callable
 from dataclasses import dataclass, replace
+from typing import Literal
 
 from trpg.content.skills import SkillDef, skill_slot_problems, weapon_problem
 from trpg.engine.actions import (
@@ -100,9 +101,13 @@ from trpg.shared.types import Attribute, ObjectId, Pos, Team, UnitId
 
 __all__ = [
     "ACTION_HANDLERS",
+    "INTERACT_CHOICES",
     "MovePlan",
     "begin_battle",
     "has_only_end_turn",
+    "interact_actions",
+    "interact_direction",
+    "interact_problem",
     "legal_actions",
     "legal_actions_with_areas",
     "plan_move",
@@ -477,8 +482,36 @@ def shove_problem(state: BattleState, unit: UnitState, target: UnitState) -> str
     return None
 
 
-def interact_problem(state: BattleState, unit: UnitState, obj: ObjectState) -> str | None:
-    """互動（推動物件）的問題：可推動、相鄰、高度差不超過 ``interact_height_limit``、推得動。"""
+type InteractMode = Literal["push", "shove_aside"]
+type Side = Literal["left", "right"]
+
+INTERACT_CHOICES: tuple[tuple[InteractMode, Side | None], ...] = (
+    ("push", None),
+    ("shove_aside", "left"),
+    ("shove_aside", "right"),
+)
+"""互動的所有 ``(mode, side)`` 組合（``legal_actions`` 的列舉順序）。"""
+
+
+def interact_direction(
+    unit_xy: XY, obj_xy: XY, mode: InteractMode = "push", side: Side | None = None
+) -> tuple[int, int]:
+    """物件的移動方向（單位向量）。
+
+    推：沿「行動者 → 物件」；撥開：垂直於它，``left`` 為逆時針 90°、``right`` 為順時針 90°
+    （``y`` 向下，所以朝東（1, 0）的左邊是北（0, −1））。
+    """
+    dx, dy = _direction(unit_xy, obj_xy)
+    if mode == "push":
+        return (dx, dy)
+    return (dy, -dx) if side == "left" else (-dy, dx)
+
+
+def object_move_problem(
+    state: BattleState, unit: UnitState, obj: ObjectState, direction: tuple[int, int], verb: str
+) -> str | None:
+    """物件被行動者移動 1 格（推與撥開共用）的問題：可推動、相鄰、高度差不超過
+    ``interact_height_limit``、目標格放得下。``verb`` 為錯誤訊息的動詞（「推」或「撥」）。"""
     definition = state.object_def(obj)
     if obj.destroyed:
         return f"物件已被摧毀：{definition.name_zh}"
@@ -490,11 +523,36 @@ def interact_problem(state: BattleState, unit: UnitState, obj: ObjectState) -> s
     diff = abs(state.tile(*unit.xy).height - state.tile(*obj.xy).height)
     if diff > limit:
         return f"高度差過大：相差 {diff} 層（上限 {limit} 層）"
-    dx, dy = _direction(unit.xy, obj.xy)
-    reason = object_push_block(state, obj.xy, (obj.pos.x + dx, obj.pos.y + dy))
+    reason = object_push_block(state, obj.xy, (obj.pos.x + direction[0], obj.pos.y + direction[1]))
     if reason is not None:
-        return f"推不動：{definition.name_zh}{_PUSH_BLOCK_REASONS[reason]}"
+        return f"{verb}不動：{definition.name_zh}{_PUSH_BLOCK_REASONS[reason]}"
     return None
+
+
+def interact_problem(
+    state: BattleState,
+    unit: UnitState,
+    obj: ObjectState,
+    mode: InteractMode = "push",
+    side: Side | None = None,
+) -> str | None:
+    """互動（推或撥開物件）的問題；合法時回傳 ``None``。撥開的訊息為「撥不動」。"""
+    if mode == "shove_aside" and side is None:
+        return "撥開必須指定方向（左或右）"
+    direction = interact_direction(unit.xy, obj.xy, mode, side)
+    return object_move_problem(state, unit, obj, direction, "推" if mode == "push" else "撥")
+
+
+def interact_actions(state: BattleState, unit: UnitState) -> list[Interact]:
+    """目前合法的互動（物件依 ID 排序，每個物件依 ``INTERACT_CHOICES`` 順序）。"""
+    if unit.ap < state.ruleset.core.interact_ap_cost:
+        return []
+    return [
+        Interact(unit_id=unit.id, object_id=obj.id, mode=mode, side=side)
+        for obj in state.objects_sorted()
+        for mode, side in INTERACT_CHOICES
+        if interact_problem(state, unit, obj, mode, side) is None
+    ]
 
 
 def _direction(a: XY, b: XY) -> tuple[int, int]:
@@ -647,7 +705,7 @@ def _do_interact(ctx: Ctx, unit: UnitState, action: Action) -> None:
     assert isinstance(action, Interact)
     _require_ap(unit, ctx.core.interact_ap_cost)
     obj = _live_object(ctx.state, action.object_id)
-    problem = interact_problem(ctx.state, unit, obj)
+    problem = interact_problem(ctx.state, unit, obj, action.mode, action.side)
     if problem is not None:
         raise IllegalActionError(problem)
     unit.ap -= ctx.core.interact_ap_cost
@@ -657,8 +715,9 @@ def _do_interact(ctx: Ctx, unit: UnitState, action: Action) -> None:
             PushEffect(
                 source_id=unit.id,
                 object_id=obj.id,
-                direction=_direction(unit.xy, obj.xy),
+                direction=interact_direction(unit.xy, obj.xy, action.mode, action.side),
                 distance=1,
+                how=action.mode,
             )
         ],
     )
@@ -852,12 +911,7 @@ def _legal_actions(
             Trip(unit_id=unit.id, target_id=t.id) for t in foes if not t.has_status(PRONE)
         )
     actions.extend(_skill_actions(state, unit, areas))
-    if unit.ap >= core.interact_ap_cost:
-        actions.extend(
-            Interact(unit_id=unit.id, object_id=obj.id)
-            for obj in state.objects_sorted()
-            if interact_problem(state, unit, obj) is None
-        )
+    actions.extend(interact_actions(state, unit))
     if unit.ap >= core.defend_ap_cost and not unit.has_status(DEFENDING):
         actions.append(Defend(unit_id=unit.id))
     if stance_status_ids(state.ruleset, unit):
@@ -937,9 +991,7 @@ def _has_ap_action(state: BattleState, unit: UnitState) -> bool:
         return True
     if any(has_selection(state, unit, s) for s in _usable_skills(state, unit)):
         return True
-    return unit.ap >= core.interact_ap_cost and any(
-        interact_problem(state, unit, o) is None for o in state.objects_sorted()
-    )
+    return bool(interact_actions(state, unit))
 
 
 def _can_move(state: BattleState, unit: UnitState) -> bool:

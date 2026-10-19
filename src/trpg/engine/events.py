@@ -463,6 +463,8 @@ class ObjectMoved(EventBase):
     object_id: ObjectId
     from_pos: Pos
     to_pos: Pos
+    how: Literal["push", "shove_aside"] = "push"
+    """推動的方式（``shove_aside`` 為互動的「撥開」；風、技能的推擊都是 ``push``）。"""
 
 
 class ObjectCreated(EventBase):
