@@ -5,6 +5,8 @@
 # 主要來自技能；技能的 weapon_req 與武器分類必須相容（載入時檢查），所以部分技能依主題換成同武器
 # 分類的技能（見 docs/phases/Phase2C-3報告.md）。
 companions: [sim_companion_fighter, sim_companion_archer]
+# Phase 2G-1：build_tank 加入破甲系（sunder_strike、armor_breaker）、build_assassin 加入狂怒姿態、build_warlock 加入毒雲與標記引爆、
+# build_healer 加入再起（second_wind），讓每個手寫技能都被至少一名英雄或單位裝備（tests/content/test_coverage.py）。
 builds:
   - id: build_push
     name_zh: 位移流
@@ -71,7 +73,8 @@ builds:
       resist: {physical: 100}
       tags: [hero, sim]
       max_mana: 20
-      skills: [skill_bone_crusher, skill_shield_bash, skill_taunting_roar, skill_guardian_aegis]
+      skills:
+        [skill_bone_crusher, skill_shield_bash, skill_taunting_roar, skill_guardian_aegis, skill_sunder_strike, skill_armor_breaker]
 
   - id: build_ranged
     name_zh: 遠程
@@ -101,7 +104,7 @@ builds:
       weapon: dagger
       tags: [hero, sim]
       max_mana: 20
-      skills: [skill_rending_strike, skill_execute, skill_blink]
+      skills: [skill_rending_strike, skill_execute, skill_blink, skill_fury_stance]
 
   - id: build_support
     name_zh: 輔助
@@ -135,7 +138,7 @@ builds:
       resist: {elemental: 150}
       tags: [hero, sim]
       max_mana: 40
-      skills: [skill_sanctuary, skill_renewal, skill_purify, skill_guardian_aegis]
+      skills: [skill_sanctuary, skill_renewal, skill_purify, skill_guardian_aegis, skill_second_wind]
 
   - id: build_warlock
     name_zh: 術士
@@ -152,7 +155,8 @@ builds:
       resist: {elemental: 150}
       tags: [hero, sim]
       max_mana: 40
-      skills: [skill_hex_bolt, skill_dread_gaze, skill_hush, skill_blinding_dark]
+      skills:
+        [skill_hex_bolt, skill_dread_gaze, skill_hush, skill_blinding_dark, skill_venom_cloud, skill_mark_detonation]
 
   - id: build_guardian
     name_zh: 守護者
