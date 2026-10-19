@@ -168,6 +168,8 @@ class BudgetRules(ContentModel):
     """陷阱技能（Phase 2E-3）：觸發不確定，可用預算再 × 這個值（‰；初值，未經模擬）。"""
     consume_stack_expected_permille: int = Field(default=500, ge=1, le=1000)
     """``consume_stack`` 的預算以「期望消耗層數 ＝ 該層數上限 × 這個值」估算加成點數（‰；初值）。"""
+    collision_die_points: int = Field(default=1, ge=0)
+    """``push``／``pull`` 填了 ``collision_dice`` 時，每顆骰加的預算點數（Phase 3C-3a；初值）。"""
     condition_permille: dict[Literal["none", "common", "harsh"], int]
     all_target_permille: int = Field(ge=1, le=1000)
     """``affects: all``（敵我不分）的對象係數。"""

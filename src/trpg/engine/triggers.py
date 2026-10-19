@@ -8,6 +8,8 @@ Phase 1A 的觸發：
 
 - ``unit_fell`` → 墜落傷害（最大 HP × 每層千分比，上限 ``fall_damage_cap_permille``，
   不套用元素修正）。
+- ``collided`` → 撞擊傷害（Phase 3C-3a）：被推的單位、撞到的單位、撞到的 ``breakable`` 物件，
+  每少走 1 格各受一次 ``collision_damage_dice``（物理、不加屬性），歸給位移的來源單位。
 - ``entered_deadly_terrain`` → 一般單位直接死亡；帶 ``elite`` 標籤者受最大 HP ×
   ``deadly_terrain_elite_permille`` 傷害，並傳送到最近的安全格。
 """
@@ -17,9 +19,15 @@ from __future__ import annotations
 from collections.abc import Callable
 
 from trpg.engine.context import Ctx
-from trpg.engine.effects.models import DamageEffect, EffectBase, MoveUnitEffect
-from trpg.engine.events import EnteredDeadlyTerrain, EventBase, UnitFell
+from trpg.engine.effects.models import (
+    DamageEffect,
+    DamageObjectEffect,
+    EffectBase,
+    MoveUnitEffect,
+)
+from trpg.engine.events import Collided, EnteredDeadlyTerrain, EventBase, UnitFell
 from trpg.engine.rules.movement import nearest_safe_tile
+from trpg.shared.types import ObjectId
 
 __all__ = ["ELITE_TAG", "TriggerFn", "effects_for", "register_trigger"]
 
@@ -97,3 +105,40 @@ def _deadly_terrain(ctx: Ctx, event: EventBase, depth: int) -> list[EffectBase]:
     if safe is not None:
         effects.append(MoveUnitEffect(depth=depth, unit_id=unit.id, dest=safe, mode="teleport"))
     return effects
+
+
+@register_trigger("collided")
+def _collision_damage(ctx: Ctx, event: EventBase, depth: int) -> list[EffectBase]:
+    assert isinstance(event, Collided)
+    dice = event.dice or ctx.core.collision_damage_dice
+    effects: list[EffectBase] = []
+    victims = [event.unit_id] + ([] if event.other_id is None else [event.other_id])
+    for _ in range(event.shortfall):
+        effects.extend(
+            DamageEffect(
+                depth=depth,
+                source_id=event.source_id,
+                target_id=victim,
+                cause="collision",
+                dice=dice,
+            )
+            for victim in victims
+        )
+        if event.object_id is not None and _breakable(ctx, event.object_id):
+            effects.append(
+                DamageObjectEffect(
+                    depth=depth,
+                    source_id=event.source_id,
+                    object_id=event.object_id,
+                    dice=dice,
+                    cause="collision",
+                )
+            )
+    return effects
+
+
+def _breakable(ctx: Ctx, object_id: ObjectId) -> bool:
+    obj = ctx.state.objects.get(object_id)
+    return (
+        obj is not None and not obj.destroyed and "breakable" in ctx.rules.object_def(obj.kind).tags
+    )

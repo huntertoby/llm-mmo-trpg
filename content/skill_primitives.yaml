@@ -56,6 +56,7 @@ primitives:
     base_points: 2
     params:
       distance: {type: int, required: true, min: 1, max: 2}
+      collision_dice: {type: dice, description_zh: 撞擊傷害骰（省略時用核心規則 collision_damage_dice，初值 1d6）；預算每顆骰加 collision_die_points}
   - id: pull
     name_zh: 拉扯
     description_zh: 往施放者（中心格型為中心）的方向拉，規則同推擊。
@@ -66,6 +67,7 @@ primitives:
     base_points: 2
     params:
       distance: {type: int, required: true, min: 1, max: 2}
+      collision_dice: {type: dice, description_zh: 撞擊傷害骰（省略時用核心規則 collision_damage_dice，初值 1d6）；預算每顆骰加 collision_die_points}
   - id: knock_prone
     name_zh: 擊倒
     description_zh: 對抗判定（技能的縮放屬性 vs 目標同屬性），成功才倒地。

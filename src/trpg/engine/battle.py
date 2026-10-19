@@ -481,12 +481,18 @@ def action_ap_cost(state: BattleState, unit: UnitState, use: modifiers.Use) -> i
     return modifiers.ap_cost(state, unit, use, base)
 
 
-def shove_distance(state: BattleState, unit: UnitState, target: UnitState) -> int:
-    """推擊的距離：``shove_distance`` 加上修正規則的 ``push_distance_delta``（截斷在
-    ``max_displace_distance``；steadfast 的減半在結算時另外套用）。"""
+def shove_split(state: BattleState, unit: UnitState, target: UnitState) -> tuple[int, int]:
+    """推擊的 ``(距離, 額外撞擊次數)``：``shove_distance`` 加上修正規則的 ``push_distance_delta``
+    （距離截斷在 ``max_displace_distance``，超過的每 1 格改為一次撞擊傷害；steadfast 的減半在
+    結算時另外套用）。"""
     base = state.ruleset.core.shove_distance
     subject = Subject(target, target.xy)
-    return modifiers.displace_distance(state, unit, modifiers.SHOVE, subject, base)
+    return modifiers.displace_split(state, unit, modifiers.SHOVE, subject, base)
+
+
+def shove_distance(state: BattleState, unit: UnitState, target: UnitState) -> int:
+    """推擊的距離（:func:`shove_split` 的距離部分）。"""
+    return shove_split(state, unit, target)[0]
 
 
 def shove_problem(state: BattleState, unit: UnitState, target: UnitState) -> str | None:
@@ -726,7 +732,7 @@ def _do_shove(ctx: Ctx, unit: UnitState, action: Action) -> None:
     if problem is not None:
         raise IllegalActionError(problem)
     unit.ap -= cost
-    distance = shove_distance(ctx.state, unit, target)
+    distance, extra = shove_split(ctx.state, unit, target)
     if contest(ctx, "shove", unit, target, Attribute.STR):
         execute(
             ctx,
@@ -736,6 +742,7 @@ def _do_shove(ctx: Ctx, unit: UnitState, action: Action) -> None:
                     target_id=target.id,
                     direction=_direction(unit.xy, target.xy),
                     distance=distance,
+                    extra_collisions=extra,
                 )
             ],
         )

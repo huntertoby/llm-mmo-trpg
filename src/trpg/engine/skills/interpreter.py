@@ -61,7 +61,7 @@ from trpg.engine.maneuvers import contest
 from trpg.engine.reactions import block_multiplier, hit_reactions, try_intercept
 from trpg.engine.rules.combat import PERMILLE, AttackProfile, AttackRoll, ForcedOutcome, roll_attack
 from trpg.engine.rules.geometry import XY
-from trpg.engine.skill_triggers import holding
+from trpg.engine.skill_triggers import collect_cast, holding
 from trpg.engine.skills.conditions import Subject, condition_met
 from trpg.engine.skills.scaling import mastery_duration_bonus, skill_scaling_value
 from trpg.engine.skills.targeting import (
@@ -115,6 +115,7 @@ def use_skill(ctx: Ctx, caster: UnitState, action: UseSkill) -> None:
         else:
             _Cast(ctx, caster, skill, action, area).run()
         _apply_self_status(ctx, caster, skill)
+        collect_cast(ctx, caster, skill)  # on_cast_tag：在該技能結算之後
 
 
 def use_triggered_skill(
@@ -199,6 +200,7 @@ def use_reaction_skill(
             if on_paid is not None:
                 on_paid()
             _Cast(ctx, owner, skill, None, area).run()
+            collect_cast(ctx, owner, skill)
     finally:
         ctx.trigger_depth = outer
 
@@ -655,10 +657,10 @@ class _Cast:
             direction = self._displace_direction(unit, pull=pull)
             if direction is None:
                 continue
-            distance = spec.distance
+            distance, extra = spec.distance, 0
             if self.modified:
                 state, subject = self.ctx.state, Subject(unit, unit.xy)
-                distance = modifiers.displace_distance(
+                distance, extra = modifiers.displace_split(
                     state, self.caster, self.use, subject, distance
                 )
             batch.append(
@@ -667,6 +669,8 @@ class _Cast:
                     target_id=unit.id,
                     direction=direction,
                     distance=distance,
+                    collision_dice=spec.collision_dice,
+                    extra_collisions=extra,
                 )
             )
         return batch

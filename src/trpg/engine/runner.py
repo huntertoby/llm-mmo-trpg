@@ -36,8 +36,12 @@ __all__ = [
     "run_battle",
 ]
 
-LOG_FORMAT = "trpg-battle-log/11"
-"""``/11``（Phase 2H-1）：``status_removed`` 的新原因 ``thawed``、規則包的狀態加入
+LOG_FORMAT = "trpg-battle-log/12"
+"""``/12``（Phase 3C-3a）：撞擊——推擊遇到障礙或超過距離上限時新增 ``collided`` 事件與
+``DamageDealt.cause == "collision"``，規則包加入 ``collision_damage_dice`` 與三個新觸發時機；
+``/11`` 的紀錄重播會因撞擊傷害而不同，無法由新版程式重播。
+
+``/11``（Phase 2H-1）：``status_removed`` 的新原因 ``thawed``、規則包的狀態加入
 ``removed_by_element``、互動規則加入 ``apply_status`` 結果與單位所在格表面條件；``/10`` 的紀錄
 無法由新版程式重播。
 

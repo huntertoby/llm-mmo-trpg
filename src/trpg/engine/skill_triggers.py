@@ -36,10 +36,12 @@ from trpg.content.skills import SkillDef
 from trpg.engine import modifiers
 from trpg.engine.events import (
     AttackRolled,
+    Collided,
     DamageDealt,
     EventBase,
     SkillCooldownChanged,
     SkillTriggered,
+    StatusApplied,
     TriggerLimitReached,
 )
 from trpg.engine.rules.combat import NATURAL_HIT
@@ -58,6 +60,7 @@ __all__ = [
     "Fired",
     "PassiveIndex",
     "check_trigger_depth",
+    "collect_cast",
     "collect_move",
     "collect_turn_end",
     "collect_turn_start",
@@ -68,7 +71,7 @@ __all__ = [
     "settle",
 ]
 
-_OBSERVED = frozenset({"attack_rolled", "damage_dealt"})
+_OBSERVED = frozenset({"attack_rolled", "damage_dealt", "status_applied", "collided"})
 
 MODIFIER_ON_HIT = "modifier_on_hit"
 """修正規則命中後效果的 ``SkillTriggered.trigger``（不是 ``skill_triggers.yaml`` 的時機）。"""
@@ -148,6 +151,10 @@ def observe(ctx: Ctx, event: EventBase) -> None:
         _on_attack(ctx, index, event)
     elif isinstance(event, DamageDealt):
         _on_damage(ctx, index, event)
+    elif isinstance(event, StatusApplied):
+        _on_status_applied(ctx, index, event)
+    elif isinstance(event, Collided):
+        _on_collision(ctx, index, event)
 
 
 def _on_attack(ctx: Ctx, index: PassiveIndex, event: AttackRolled) -> None:
@@ -206,6 +213,45 @@ def _on_damage(ctx: Ctx, index: PassiveIndex, event: DamageDealt) -> None:
         for owner, skill in index.owners("on_kill"):
             if owner == event.source_id:
                 _fire(ctx, event.seq, owner, skill, event.target_id)
+
+
+def _on_status_applied(ctx: Ctx, index: PassiveIndex, event: StatusApplied) -> None:
+    """``on_status_applied``：持有者成功對其他單位施加狀態（抵抗成功不會產生 ``StatusApplied``；
+    對自己施加的不算）。"""
+    source = event.source_id
+    if source is None or source == event.target_id:
+        return
+    for owner, skill in index.owners("on_status_applied"):
+        assert skill.trigger is not None
+        if owner == source and skill.trigger.status in (None, event.status_id):
+            _fire(ctx, event.seq, owner, skill, event.target_id)
+
+
+def _on_collision(ctx: Ctx, index: PassiveIndex, event: Collided) -> None:
+    """``on_collision``：持有者造成的撞擊（來源歸給持有者；自己撞到自己不算）。"""
+    source = event.source_id
+    if source is None or source == event.unit_id:
+        return
+    for owner, skill in index.owners("on_collision"):
+        if owner == source:
+            _fire(ctx, event.seq, owner, skill, event.unit_id)
+
+
+def collect_cast(ctx: Ctx, caster: UnitState, skill: SkillDef) -> None:
+    """``on_cast_tag``：持有者施放的技能（含修正規則加上的標籤）帶有 ``trigger.tag``，在該技能
+    結算之後。被動觸發與陷阱觸發的效果不算施放，不會呼叫這裡。"""
+    index = _index(ctx)
+    if not index.any:
+        return
+    owned = index.owners("on_cast_tag")
+    if not any(owner == caster.id for owner, _ in owned):
+        return
+    tags = modifiers.effective_tags(ctx.state, caster, skill)
+    seq = ctx.state.next_event_seq
+    for owner, passive in owned:
+        assert passive.trigger is not None
+        if owner == caster.id and passive.trigger.tag in tags:
+            _fire(ctx, seq, owner, passive, None)
 
 
 def _collect_own(ctx: Ctx, unit: UnitState, event: str) -> None:

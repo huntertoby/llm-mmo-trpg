@@ -22,6 +22,7 @@ from typing import Literal
 
 from pydantic import Field, model_validator
 
+from trpg.content.battle import Dice
 from trpg.content.schemas import ContentModel
 
 __all__ = [
@@ -94,6 +95,9 @@ class CoreRules(ContentModel):
     max_displace_distance: int = Field(default=2, ge=1)
     """推擊與拉扯的距離上限（6.6）：修正規則加長距離時截斷在這裡（Phase 3C-2；舊紀錄沒有
     此欄位）。"""
+    collision_damage_dice: Dice = Field(default_factory=lambda: Dice(count=1, sides=6))
+    """撞擊傷害（Phase 3C-3a）：被強制位移的單位因障礙提前停下時，每少走 1 格受一次，物理、不加
+    屬性；技能的 ``collision_dice`` 可取代。舊紀錄沒有此欄位。"""
     steadfast_push_permille: int = Field(ge=0, le=1000)
     ability_mod_base: int
     ability_mod_divisor: int = Field(ge=1)

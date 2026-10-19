@@ -157,7 +157,13 @@ def _base_points(  # noqa: PLR0911
     if basis == "per_distance":
         assert primitive.base_points is not None
         distance = effect.distance or 1
-        return Fraction(primitive.base_points * distance), f"{primitive.base_points}×{distance} 格"
+        points = Fraction(primitive.base_points * distance)
+        note = f"{primitive.base_points}×{distance} 格"
+        if effect.collision_dice is not None:
+            extra = effect.collision_dice.count * library.budget.collision_die_points
+            points += extra
+            note += f" ＋ 撞擊 {effect.collision_dice}（{extra} 點）"
+        return points, note
     if basis == "per_amount":
         assert primitive.base_points is not None
         amount = effect.amount or 1

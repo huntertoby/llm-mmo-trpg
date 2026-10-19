@@ -17,6 +17,7 @@ from trpg.engine.events import (
     BattleStarted,
     ChainLimitReached,
     CheckRolled,
+    Collided,
     DamageDealt,
     EffectFizzled,
     ElementTouched,
@@ -98,6 +99,7 @@ _CAUSE_NAMES = {
     "explosion": "爆炸",
     "conduct": "傳導",
     "surface": "表面",
+    "collision": "撞擊",
 }
 
 _END_REASONS = {
@@ -277,6 +279,27 @@ def _move_blocked(e: MoveBlocked, v: _View) -> str:
     return f"  {v.name[e.unit_id]} 無法移動到 {xy_text(e.to_pos)}"
 
 
+_OBSTACLE_NAMES = {
+    "wall": "撞上了牆壁",
+    "edge": "撞上了地圖邊緣",
+    "unit": "撞上了",
+    "object": "撞上了",
+}
+
+
+@_handles(Collided)
+def _collided(e: Collided, v: _View) -> str:
+    name = v.name[e.unit_id]
+    if e.obstacle == "excess":
+        return f"  {name} 被推得太猛，受到衝擊（{e.shortfall} 次撞擊）"
+    target = _OBSTACLE_NAMES[e.obstacle]
+    if e.other_id is not None:
+        target += v.name[e.other_id]
+    elif e.object_id is not None:
+        target += object_name(v.state, e.object_id)
+    return f"  {name} {target}！少走 {e.shortfall} 格，受到 {e.shortfall} 次撞擊"
+
+
 @_handles(UnitFell)
 def _unit_fell(e: UnitFell, v: _View) -> str:
     return f"  {v.name[e.unit_id]} 從 {e.drop} 層高處跌落！"
@@ -393,7 +416,7 @@ def _damage(e: DamageDealt, v: _View) -> str:
     kind = f"{cause}{element}" if cause and e.cause != "status" else element
     if e.cause in ("fall", "deadly_terrain"):
         kind = cause
-    elif e.cause in ("explosion", "conduct", "surface"):
+    elif e.cause in ("explosion", "conduct", "surface", "collision"):
         kind = f"{cause}{element}"
     mod = ""
     if e.element_mod_ppm != _PPM:

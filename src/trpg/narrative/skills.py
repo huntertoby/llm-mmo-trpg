@@ -132,7 +132,10 @@ def _heal(_lib: ContentLibrary, skill: SkillDef, spec: EffectSpec) -> str:
 
 
 def _push_pull(_lib: ContentLibrary, _skill: SkillDef, spec: EffectSpec) -> str:
-    return f"{'推開' if spec.type == 'push' else '拉近'} {spec.distance} 格"
+    text = f"{'推開' if spec.type == 'push' else '拉近'} {spec.distance} 格"
+    if spec.collision_dice is not None:
+        text += f"（撞擊傷害 {_dice(spec.collision_dice)}）"
+    return text
 
 
 def _knock_prone(_lib: ContentLibrary, skill: SkillDef, _spec: EffectSpec) -> str:
@@ -274,7 +277,10 @@ def _change_text(library: ContentLibrary, skill: SkillDef, rule: ModifierSpec) -
         return f"傷害 {change.damage_permille / 10:+g}%"
     if change.push_distance_delta is not None:
         cap = library.ruleset.core.max_displace_distance
-        return f"推擊與拉扯距離 +{change.push_distance_delta} 格（最多 {cap} 格）"
+        return (
+            f"推擊與拉扯距離 +{change.push_distance_delta} 格"
+            f"（最多 {cap} 格，超過的每格改為一次撞擊傷害）"
+        )
     if change.add_element is not None:
         return f"物理傷害改為{change.add_element.display_name}（已有元素的不變）"
     if change.add_tags is not None:

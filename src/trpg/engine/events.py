@@ -10,6 +10,7 @@ from typing import Annotated, Literal
 
 from pydantic import BaseModel, ConfigDict, Field, TypeAdapter
 
+from trpg.content.battle import Dice
 from trpg.shared.types import Attribute, Element, ObjectId, Pos, Surface, Team, UnitId
 
 __all__ = [
@@ -22,6 +23,8 @@ __all__ = [
     "BattleStarted",
     "ChainLimitReached",
     "CheckRolled",
+    "Collided",
+    "CollisionObstacle",
     "DamageCause",
     "DamageDealt",
     "EffectFizzled",
@@ -85,10 +88,18 @@ __all__ = [
 
 type AdvantageState = Literal["none", "advantage", "disadvantage"]
 type DamageCause = Literal[
-    "attack", "fall", "deadly_terrain", "status", "effect", "explosion", "conduct", "surface"
+    "attack",
+    "fall",
+    "deadly_terrain",
+    "status",
+    "effect",
+    "explosion",
+    "conduct",
+    "surface",
+    "collision",
 ]
 """``attack``：普攻與反應攻擊；``explosion``：爆炸；``conduct``：雷電沿水擴散；
-``surface``：站在表面上（毒、聖光）。"""
+``surface``：站在表面上（毒、聖光）；``collision``：撞擊（Phase 3C-3a）。"""
 type ObjectDestroyCause = Literal["damage", "burned", "explosion", "filled", "fell", "effect"]
 type MoveMode = Literal["walk", "forced", "teleport"]
 """``walk``：主動移動的一步；``forced``：強制位移（推擊等）；``teleport``：傳送（不墜落）。"""
@@ -203,6 +214,34 @@ class MoveBlocked(EventBase):
     unit_id: UnitId
     to_pos: Pos
     reason: Literal["out_of_bounds", "occupied", "obstacle", "too_high"]
+
+
+type CollisionObstacle = Literal["wall", "edge", "object", "unit", "excess"]
+"""撞到什麼：``wall`` 不可走的地形（含過高的階梯）、``edge`` 地圖邊界、``object`` ``blocks_move``
+物件、``unit`` 其他單位、``excess`` 沒有撞到東西（技能把推擊距離加到超過上限的部分）。"""
+
+
+class Collided(EventBase):
+    """被強制位移的單位因障礙提前停下，或距離超過上限的部分改為撞擊（Phase 3C-3a）。
+
+    ``shortfall`` 為少走的格數（``excess`` 時為超過上限的格數）；每格造成一次撞擊傷害
+    （``DamageDealt.cause == "collision"``，歸給 ``source_id``）。撞到單位時雙方都受傷，撞到
+    ``breakable`` 物件時物件也受傷。``dice`` 為 ``None`` 時用 ``core.collision_damage_dice``。
+    """
+
+    type: Literal["collided"] = "collided"
+    unit_id: UnitId
+    obstacle: CollisionObstacle
+    shortfall: int = Field(ge=1)
+    pos: Pos
+    """被擋住的格子（``excess`` 時為單位目前所在格）。"""
+    source_id: UnitId | None = None
+    """位移的來源單位（推擊者、施放者）；環境造成的位移為 ``None``。"""
+    other_id: UnitId | None = None
+    """撞到的單位。"""
+    object_id: ObjectId | None = None
+    """撞到的物件。"""
+    dice: Dice | None = None
 
 
 class UnitFell(EventBase):
@@ -786,6 +825,7 @@ type Event = Annotated[
     | UnitMoved
     | UnitStoodUp
     | MoveBlocked
+    | Collided
     | UnitFell
     | EnteredDeadlyTerrain
     | AttackRolled

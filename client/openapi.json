@@ -1012,6 +1012,31 @@
         ],
         "title": "BurningOut"
       },
+      "CollisionOut": {
+        "properties": {
+          "unit_id": {
+            "type": "string",
+            "title": "Unit Id"
+          },
+          "minimum": {
+            "type": "integer",
+            "title": "Minimum"
+          },
+          "maximum": {
+            "type": "integer",
+            "title": "Maximum"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "unit_id",
+          "minimum",
+          "maximum"
+        ],
+        "title": "CollisionOut",
+        "description": "撞擊傷害預覽（Phase 3C-3a）：某單位受到的撞擊傷害總和（最少、最多後果）。"
+      },
       "CoverOut": {
         "properties": {
           "penalty": {
@@ -2129,6 +2154,14 @@
               }
             ],
             "title": "Reach"
+          },
+          "collisions": {
+            "items": {
+              "$ref": "#/components/schemas/CollisionOut"
+            },
+            "type": "array",
+            "title": "Collisions",
+            "default": []
           }
         },
         "additionalProperties": false,

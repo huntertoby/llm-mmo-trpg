@@ -60,3 +60,26 @@ triggers:
     has_other: true
     budget_by_n_permille: {2: 500, 3: 600}
     min_rarity: epic
+  # --- Phase 3C-3a：協同管道 3「監聽自己的動作」（docs/design/06-技能.md 6.14.2）。係數為初值，未經模擬。
+  # random_composer: false：帶參數（trigger.tag／status）或需要場上配合的時機，隨機組合器不產生。
+  - id: on_cast_tag
+    name_zh: 施放帶標籤的技能後
+    description_zh: 持有者施放一個帶 trigger.tag 標籤的技能（含修正規則加上的標籤；不含被動觸發與陷阱），在該技能結算之後。沒有另一方，效果作用在持有者。
+    has_other: false
+    budget_coefficient_permille: 350
+    min_rarity: epic
+    random_composer: false
+  - id: on_status_applied
+    name_zh: 施加狀態後
+    description_zh: 持有者成功對其他單位施加狀態（抵抗成功、對自己施加都不算；刷新持續時間算）。trigger.status 省略時任何狀態都算。另一方為被施加的單位。
+    has_other: true
+    budget_coefficient_permille: 400
+    min_rarity: epic
+    random_composer: false
+  - id: on_collision
+    name_zh: 造成撞擊後
+    description_zh: 持有者造成的撞擊（被持有者推、拉、擊退的單位因障礙提前停下，或距離超過上限的撞擊）。另一方為被推的單位。
+    has_other: true
+    budget_coefficient_permille: 300
+    min_rarity: epic
+    random_composer: false

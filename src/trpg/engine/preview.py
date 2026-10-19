@@ -179,6 +179,9 @@ class Preview:
     """這個動作花的 AP（含修正規則的 ``ap_delta``，Phase 3C-2）；不花 AP 的動作為 ``None``。"""
     reach: int | None = None
     """射程（普攻與有射程的技能，含修正規則的 ``range_delta``）；其他動作為 ``None``。"""
+    collisions: tuple[tuple[UnitId, int, int], ...] = ()
+    """撞擊傷害（Phase 3C-3a）：``(單位, 最少, 最多)``，含行動者造成的所有撞擊傷害（被推的單位與
+    被撞到的單位；最少後果的模擬中推擊失敗時為 0）。"""
 
 
 # ---------------------------------------------------------------------------
@@ -627,6 +630,20 @@ def _skill_heals(
     return tuple((uid, low.get(uid, 0), high[uid]) for uid in sorted(high))
 
 
+def _collision_damage(
+    actor: UnitState, min_events: list[EventBase], max_events: list[EventBase]
+) -> tuple[tuple[UnitId, int, int], ...]:
+    def totals(events: list[EventBase]) -> dict[UnitId, int]:
+        out: dict[UnitId, int] = {}
+        for e in events:
+            if isinstance(e, DamageDealt) and e.cause == "collision" and e.source_id == actor.id:
+                out[e.target_id] = out.get(e.target_id, 0) + e.amount - e.absorbed
+        return out
+
+    low, high = totals(min_events), totals(max_events)
+    return tuple((uid, low.get(uid, 0), high[uid]) for uid in sorted(high))
+
+
 def _cost_and_reach(
     state: BattleState, actor: UnitState, action: Action
 ) -> tuple[int | None, int | None]:
@@ -697,4 +714,5 @@ def preview(state: BattleState, action: Action) -> Preview:
         healed=healed,
         ap_cost=ap_cost,
         reach=reach,
+        collisions=_collision_damage(actor, min_events, max_events),
     )

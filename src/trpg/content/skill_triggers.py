@@ -34,6 +34,9 @@ REQUIRED_TRIGGERS: tuple[str, ...] = (
     "on_turn_end",
     "on_move",
     EVERY_N_HITS,
+    "on_cast_tag",
+    "on_status_applied",
+    "on_collision",
 )
 """引擎實作的觸發時機，資料檔必須全部定義、不可多出引擎沒有的。"""
 
@@ -45,6 +48,8 @@ class SkillTriggerDef(ContentModel):
     - ``budget_coefficient_permille``：被動技能的預算係數（取代主動技能的 AP 係數）。
       ``every_n_hits`` 依 ``n`` 查 ``budget_by_n_permille``。
     - ``min_rarity``：使用這個時機的最低稀有度。
+    - ``random_composer``：隨機組合器可以選這個時機（帶參數的時機需要 ``trigger.tag`` 等欄位，
+      組合器不產生，預設 ``True``）。
     """
 
     id: str = Field(pattern=ID_PATTERN)
@@ -54,6 +59,7 @@ class SkillTriggerDef(ContentModel):
     budget_coefficient_permille: int | None = Field(default=None, ge=1)
     budget_by_n_permille: dict[int, int] | None = None
     min_rarity: SkillRarity = "epic"
+    random_composer: bool = True
 
     @model_validator(mode="after")
     def _check(self) -> SkillTriggerDef:

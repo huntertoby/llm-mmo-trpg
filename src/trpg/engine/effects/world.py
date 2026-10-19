@@ -30,6 +30,8 @@ from trpg.engine.effects.models import (
 )
 from trpg.engine.effects.queue import register_effect
 from trpg.engine.events import (
+    Collided,
+    CollisionObstacle,
     EffectFizzled,
     ElementTouched,
     EnteredDeadlyTerrain,
@@ -410,18 +412,64 @@ def _push_unit(ctx: Ctx, effect: PushEffect, unit_id: UnitId) -> list[EventBase]
             ctx.emit(PushResisted, unit_id=unit.id, requested=effect.distance, distance=distance)
         )
     dx, dy = effect.direction
-    for _ in range(distance):
+    for step in range(distance):
         nxt = (unit.pos.x + dx, unit.pos.y + dy)
         reason = unit_push_block(state, unit.xy, nxt, unit.id)
         if reason is not None:
             to_pos = Pos(x=max(nxt[0], 0), y=max(nxt[1], 0))
             events.append(ctx.emit(MoveBlocked, unit_id=unit.id, to_pos=to_pos, reason=reason))
+            events.append(_collide(ctx, effect, unit, nxt, reason, shortfall=distance - step))
             break
         moved = arrive(ctx, unit, nxt, "forced", source_id=effect.source_id)
         events.extend(moved)
         if not unit.alive or any(isinstance(e, EnteredDeadlyTerrain) for e in moved):
-            break
+            return events  # 墜落、致命地形造成的停下不算撞擊（多推的部分也不算）
+    if effect.extra_collisions > 0 and unit.alive:
+        events.append(
+            ctx.emit(
+                Collided,
+                unit_id=unit.id,
+                obstacle="excess",
+                shortfall=effect.extra_collisions,
+                pos=unit.pos,
+                source_id=effect.source_id,
+                dice=effect.collision_dice,
+            )
+        )
     return events
+
+
+_COLLISION_OBSTACLES: dict[str, CollisionObstacle] = {
+    "out_of_bounds": "edge",
+    "occupied": "unit",
+    "too_high": "wall",
+}
+
+
+def _collide(
+    ctx: Ctx, effect: PushEffect, unit: UnitState, blocked: XY, reason: str, *, shortfall: int
+) -> EventBase:
+    """推擊被障礙擋下：少走 ``shortfall`` 格的撞擊（傷害由 :mod:`trpg.engine.triggers` 結算）。"""
+    state = ctx.state
+    obstacle = _COLLISION_OBSTACLES.get(reason)
+    other = state.unit_at(*blocked) if obstacle == "unit" else None
+    object_id: ObjectId | None = None
+    if obstacle is None:  # ``obstacle``：blocks_move 物件，否則是不可走的地形
+        if state.object_has_tag(*blocked, "blocks_move"):
+            obstacle, object_id = "object", state.tile(*blocked).object_id
+        else:
+            obstacle = "wall"
+    return ctx.emit(
+        Collided,
+        unit_id=unit.id,
+        obstacle=obstacle,
+        shortfall=shortfall,
+        pos=Pos(x=max(blocked[0], 0), y=max(blocked[1], 0)),
+        source_id=effect.source_id,
+        other_id=None if other is None else other.id,
+        object_id=object_id,
+        dice=effect.collision_dice,
+    )
 
 
 def push_distance(state: BattleState, unit: UnitState, requested: int) -> int:

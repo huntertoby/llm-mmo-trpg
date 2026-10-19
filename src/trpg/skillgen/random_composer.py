@@ -317,7 +317,7 @@ def _attempt_passive(
     timings = [
         t
         for t in sorted(library.ruleset.skill_triggers.triggers, key=lambda t: t.id)
-        if rarity_rank(t.min_rarity) <= rarity_rank(rarity)
+        if rarity_rank(t.min_rarity) <= rarity_rank(rarity) and t.random_composer
     ]
     timing = rng.choice(timings)
     n = rng.choice((2, 3)) if timing.id == EVERY_N_HITS else None

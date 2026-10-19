@@ -37,6 +37,7 @@ __all__ = [
     "damage_element",
     "damage_permille",
     "displace_distance",
+    "displace_split",
     "effective_tags",
     "hit_bonus",
     "is_attack_skill",
@@ -194,15 +195,25 @@ def damage_element(state: BattleState, unit: UnitState, use: Use, base: Element)
     return base
 
 
+def displace_split(
+    state: BattleState, unit: UnitState, use: Use, subject: Subject, base: int
+) -> tuple[int, int]:
+    """推擊／拉扯的 ``(距離, 額外撞擊次數)``：``base`` 加上 ``push_distance_delta``，距離截斷在
+    ``max_displace_distance``，超過的每 1 格改為一次撞擊傷害（Phase 3C-3a；推完之後結算，就算
+    沒有撞到東西也算）。``base`` 本身已超過上限時距離不變。"""
+    delta = _sum_for(state, unit, use, "push_distance_delta", subject)
+    if delta <= 0:
+        return base, 0
+    total = base + delta
+    distance = max(base, min(total, state.ruleset.core.max_displace_distance))
+    return distance, total - distance
+
+
 def displace_distance(
     state: BattleState, unit: UnitState, use: Use, subject: Subject, base: int
 ) -> int:
-    """推擊／拉扯的距離：``base`` 加上 ``push_distance_delta``，截斷在 ``max_displace_distance``
-    （超過的部分直接捨去，不轉成撞擊傷害——最保守的做法）。``base`` 本身已超過上限時不變。"""
-    delta = _sum_for(state, unit, use, "push_distance_delta", subject)
-    if delta <= 0:
-        return base
-    return max(base, min(base + delta, state.ruleset.core.max_displace_distance))
+    """:func:`displace_split` 的距離部分。"""
+    return displace_split(state, unit, use, subject, base)[0]
 
 
 def cooldown_delta(

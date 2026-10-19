@@ -1,0 +1,24 @@
+# 被動（Phase 3C-3a 示範，數值為初值，未經模擬）：你讓敵人沾上任何狀態時，暗影再蝕一口。
+id: skill_creeping_blight
+schema_version: 1
+name_zh: 蝕心追擊
+tier: 1
+rank: 1
+rarity: epic
+kind: passive
+skeleton: passive
+category: spell
+weapon_req: any
+ap_cost: null
+scaling_attr: int
+shape: {type: self}
+effects:
+  - {type: damage, dice: 1d8, element: shadow, affects: enemies}
+condition: null
+trigger: {event: on_status_applied, target: other, max_per_round: 1}
+cost: {mana: 2}
+tags: [shadow, spell, passive]
+narrative:
+  concept: 每一道落在敵人身上的詛咒，都會順著傷口再啃一口
+  cast_flavor: 詛咒剛剛纏上對手，暗影便沿著它爬進血肉裡
+provenance: {origin: builtin, owner_id: null, created_by: null, parents: [], bound: true, tradeable: false}

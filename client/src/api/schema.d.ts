@@ -333,6 +333,18 @@ export interface components {
             /** Text */
             text: string;
         };
+        /**
+         * CollisionOut
+         * @description 撞擊傷害預覽（Phase 3C-3a）：某單位受到的撞擊傷害總和（最少、最多後果）。
+         */
+        CollisionOut: {
+            /** Unit Id */
+            unit_id: string;
+            /** Minimum */
+            minimum: number;
+            /** Maximum */
+            maximum: number;
+        };
         /** CoverOut */
         CoverOut: {
             /** Penalty */
@@ -793,6 +805,11 @@ export interface components {
             ap_cost?: number | null;
             /** Reach */
             reach?: number | null;
+            /**
+             * Collisions
+             * @default []
+             */
+            collisions: components["schemas"]["CollisionOut"][];
         };
         /**
          * Protect

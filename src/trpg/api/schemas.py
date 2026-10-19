@@ -287,6 +287,14 @@ class HealOut(_ApiModel):
     maximum: int
 
 
+class CollisionOut(_ApiModel):
+    """撞擊傷害預覽（Phase 3C-3a）：某單位受到的撞擊傷害總和（最少、最多後果）。"""
+
+    unit_id: UnitId
+    minimum: int
+    maximum: int
+
+
 class PreviewOut(_ApiModel):
     """:class:`trpg.engine.preview.Preview` 的公開版本：不含模擬後的完整狀態與原始事件。"""
 
@@ -312,6 +320,8 @@ class PreviewOut(_ApiModel):
     """這個動作花的 AP（含修正規則，Phase 3C-2）；不花 AP 的動作為 ``None``。"""
     reach: int | None = None
     """射程（普攻與有射程的技能，含修正規則）；其他動作為 ``None``。"""
+    collisions: tuple[CollisionOut, ...] = ()
+    """撞擊傷害（Phase 3C-3a）：每個單位的最少與最多。"""
 
 
 def _damage(d: DamageRange | None) -> DamageOut | None:
@@ -385,4 +395,7 @@ def preview_out(
         max_events=max_events,
         ap_cost=p.ap_cost,
         reach=p.reach,
+        collisions=tuple(
+            CollisionOut(unit_id=u, minimum=lo, maximum=hi) for u, lo, hi in p.collisions
+        ),
     )

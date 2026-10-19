@@ -502,6 +502,8 @@ class EffectSpec(ContentModel):
     multiplier_permille: int | None = Field(default=None, ge=1, le=_MAX_MULTIPLIER_PERMILLE)
     element: Element | None = None
     distance: int | None = None
+    collision_dice: Dice | None = None
+    """``push``/``pull`` 可省略：撞擊傷害骰，取代核心規則的預設（Phase 3C-3a）。"""
     status: str | None = Field(default=None, pattern=ID_PATTERN)
     duration: int | None = Field(default=None, ge=1)
     surface: Surface | None = None
@@ -515,6 +517,7 @@ class EffectSpec(ContentModel):
         """已填寫的原語參數（不含 ``type``、``affects``、``condition``）。"""
         names = (
             "amount",
+            "collision_dice",
             "dice",
             "distance",
             "duration",
@@ -571,6 +574,12 @@ class Provenance(ContentModel):
     tradeable: bool = False
 
 
+ON_CAST_TAG = "on_cast_tag"
+ON_STATUS_APPLIED = "on_status_applied"
+ON_COLLISION = "on_collision"
+"""帶參數或需要特別處理的觸發時機 ID（Phase 3C-3a；其餘見 ``content/skill_triggers.yaml``）。"""
+
+
 class TriggerSpec(ContentModel):
     """被動技能的觸發設定（``docs/phases/Phase2E計畫.md`` 3.2）。
 
@@ -579,10 +588,14 @@ class TriggerSpec(ContentModel):
     - ``target``：效果作用的單位——``self``（持有者）或 ``other``（該時機的另一方）。
     - ``max_per_round``：每輪最多觸發幾次（每輪開始時重設）。
     - ``max_distance``：``target: other`` 時，另一方與持有者的曼哈頓距離上限。
+    - ``tag``：只有 ``on_cast_tag`` 使用且必填（施放帶這個標籤的技能；Phase 3C-3a）。
+    - ``status``：只有 ``on_status_applied`` 使用，可省略（省略＝任何狀態）。
     """
 
     event: str = Field(pattern=ID_PATTERN)
     n: int | None = None
+    tag: str | None = Field(default=None, pattern=ID_PATTERN)
+    status: str | None = Field(default=None, pattern=ID_PATTERN)
     target: Literal["self", "other"] = "self"
     max_per_round: int = Field(default=1, ge=1, le=3)
     max_distance: int | None = Field(default=None, ge=1)
@@ -596,6 +609,13 @@ class TriggerSpec(ContentModel):
             raise ValueError(f"只有 every_n_hits 使用 n，{self.event} 不可填 n")
         if self.max_distance is not None and self.target != "other":
             raise ValueError("max_distance 只能搭配 target: other")
+        if self.event == ON_CAST_TAG:
+            if self.tag is None:
+                raise ValueError("on_cast_tag 必須填 tag")
+        elif self.tag is not None:
+            raise ValueError(f"只有 on_cast_tag 使用 tag，{self.event} 不可填 tag")
+        if self.status is not None and self.event != ON_STATUS_APPLIED:
+            raise ValueError(f"只有 on_status_applied 使用 status，{self.event} 不可填 status")
         return self
 
 
@@ -1261,8 +1281,10 @@ def _filled_by_category(skill: SkillDef, primitive: PrimitiveDef, name: str) -> 
     return primitive.id == "damage" and name == "dice" and skill.category == "weapon"
 
 
-def _trigger_problems(skill: SkillDef, triggers: dict[str, SkillTriggerDef]) -> list[str]:
-    """被動技能的觸發設定：時機存在、``target: other`` 只用在有另一方的時機。"""
+def _trigger_problems(
+    skill: SkillDef, triggers: dict[str, SkillTriggerDef], status_ids: set[str]
+) -> list[str]:
+    """被動技能的觸發設定：時機存在、``target: other`` 只用在有另一方的時機、``status`` 存在。"""
     spec = skill.trigger
     if spec is None:
         return []
@@ -1275,6 +1297,8 @@ def _trigger_problems(skill: SkillDef, triggers: dict[str, SkillTriggerDef]) -> 
             f"trigger.target：觸發時機 {definition.id}（{definition.name_zh}）沒有另一方，"
             "target 只能是 self"
         ]
+    if spec.status is not None and spec.status not in status_ids:
+        return [f"trigger.status：未知的狀態 {spec.status!r}"]
     return []
 
 
@@ -1320,7 +1344,7 @@ def skill_problems(
     if self_status is not None and self_status.status not in status_ids:
         problems.append(f"cost.self_status：未知的狀態 {self_status.status!r}")
     if triggers is not None:
-        problems += _trigger_problems(skill, triggers)
+        problems += _trigger_problems(skill, triggers, status_ids)
     if skill.condition is not None:
         problems += _condition_problems("condition", skill.condition, refs)
     for index, effect in enumerate(skill.effects):

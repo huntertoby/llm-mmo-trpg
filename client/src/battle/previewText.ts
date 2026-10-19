@@ -90,6 +90,7 @@ export const CHAIN_EVENT_TYPES: ReadonlySet<string> = new Set([
   "surface_changed",
   "terrain_changed",
   "unit_fell",
+  "collided",
   "entered_deadly_terrain",
   "trap_triggered",
 ]);
@@ -166,6 +167,9 @@ export function previewLines(
   }
   for (const h of p.healed) {
     lines.push(`治療 ${names.label(h.unit_id)} ${h.minimum}–${h.maximum}`);
+  }
+  for (const c of p.collisions ?? []) {
+    lines.push(`撞擊傷害 ${names.label(c.unit_id)} 最多 ${c.maximum}`);
   }
   const shown = (o: Outcome) => !skipChain || !CHAIN_OUTCOME_KINDS.has(o.kind);
   for (const o of p.certain.filter(shown)) lines.push(`確定：${outcomeText(o, names, view)}`);

@@ -214,6 +214,11 @@ class PushEffect(EffectBase):
     distance: int = Field(ge=0)
     how: Literal["push", "shove_aside"] = "push"
     """物件被移動的方式（只影響 ``ObjectMoved`` 事件的說明；撥開為 ``shove_aside``）。"""
+    collision_dice: Dice | None = None
+    """單位被推時的撞擊骰（技能的 ``collision_dice``）；``None`` 用核心規則的預設。"""
+    extra_collisions: int = Field(default=0, ge=0)
+    """推完之後額外結算的撞擊次數（修正規則把距離加到超過 ``max_displace_distance`` 的部分，
+    就算沒有撞到東西也算；Phase 3C-3a）。"""
 
     def sort_target(self) -> str:
         return self.target_id or self.object_id or ""

@@ -1,0 +1,24 @@
+# 被動（Phase 3C-3a 示範，數值為初值，未經模擬）：你推動的單位撞到東西時，讓它流血。
+id: skill_fracture_mark
+schema_version: 1
+name_zh: 裂骨印記
+tier: 1
+rank: 1
+rarity: epic
+kind: passive
+skeleton: passive
+category: spell
+weapon_req: any
+ap_cost: null
+scaling_attr: int
+shape: {type: self}
+effects:
+  - {type: apply_status, status: bleed, duration: 3, affects: enemies}
+condition: null
+trigger: {event: on_collision, target: other, max_per_round: 1}
+cost: {mana: 2}
+tags: [physical, passive]
+narrative:
+  concept: 被你推出去的人，撞上的不只是牆
+  cast_flavor: 撞擊的悶響之後，對手的肋下滲出血來
+provenance: {origin: builtin, owner_id: null, created_by: null, parents: [], bound: true, tradeable: false}
