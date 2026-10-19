@@ -7,11 +7,10 @@
 | a0c7e90 | 新增 CLI 輸出快照測試（搬家前先錄下 9 組輸出的 SHA-256） |
 | 1763e7b | `describe_event` 搬到 `trpg.narrative.events`，改為 `dict[type, handler]` 註冊表 |
 | 5c64b73 | 技能卡片描述搬到 `trpg.narrative.skills`、新增 `SkillCard`／`skill_card`；import-linter 與架構測試新增 narrative 合約 |
-| （Pending） | `Pending`／`PendingResolution` 補欄位與往返測試 |
-| （View） | `project_for`（`engine/view.py`）與 `filter_events`（`engine/event_filter.py`） |
-| （本報告） | 報告 |
+| 23e4d10 | `Pending`／`PendingResolution` 補欄位與往返測試 |
+| 0b30d3f | `project_for`（`engine/view.py`）與 `filter_events`（`engine/event_filter.py`） |
+| 781f782 | 本報告 |
 
-（Pending、View、報告三個 commit 的雜湊以 `git log --oneline` 為準。）
 
 ## 2. 驗收條件逐條
 
