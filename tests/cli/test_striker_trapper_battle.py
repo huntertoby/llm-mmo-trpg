@@ -61,12 +61,12 @@ def test_the_grid_shows_only_the_player_teams_traps_and_the_unit_table_shows_sta
     from tests.engine.skill_helpers import U1  # noqa: PLC0415
     from tests.engine.test_traps import BEAR, place, scene  # noqa: PLC0415
     from trpg.cli.render import (  # noqa: PLC0415
-        describe_event,
         render_battle_grid,
         render_legend,
         render_unit_table,
     )
     from trpg.engine.events import StacksChanged, TrapPlaced  # noqa: PLC0415
+    from trpg.narrative.events import describe_event  # noqa: PLC0415
     from trpg.shared.types import Team  # noqa: PLC0415
 
     state = place(scene(), BEAR, (4, 3))

@@ -10,7 +10,6 @@ from pydantic import ValidationError
 
 from trpg.cli.render import (
     BattleStats,
-    describe_event,
     render_battle_grid,
     render_legend,
     render_map,
@@ -38,6 +37,7 @@ from trpg.engine.results import ResolveResult
 from trpg.engine.runner import LOG_FORMAT, BattleLog, replay, run_battle
 from trpg.engine.setup import BattleSetupError, build_setup, deploy_allies
 from trpg.engine.state import BattleState, state_to_json
+from trpg.narrative.events import describe_event
 from trpg.shared.types import Team, UnitId
 from trpg.sim.commanders import build_commanded_ai
 from trpg.sim.matrix import library_with_builds

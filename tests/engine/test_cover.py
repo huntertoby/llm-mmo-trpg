@@ -339,7 +339,7 @@ def test_wall_terrain_definition() -> None:
 
 
 def test_battle_log_shows_cover_source() -> None:
-    from trpg.cli.render import describe_event  # noqa: PLC0415
+    from trpg.narrative.events import describe_event  # noqa: PLC0415
 
     state = _archery((0, 2), (3, 2))
     result = resolve(with_rolls(state, [(20, 15)]), Attack(unit_id=U1, target_id=U2))

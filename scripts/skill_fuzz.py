@@ -15,11 +15,11 @@ import argparse
 import sys
 import time
 
-from trpg.cli.render import describe_event
 from trpg.content.library import load_library
 from trpg.engine.ai.utility import UtilityAI
 from trpg.engine.events import RoundStarted
 from trpg.engine.runner import run_battle
+from trpg.narrative.events import describe_event
 from trpg.sim.skill_fuzz import battle_setup, format_report, run_fuzz
 from trpg.skillgen.random_composer import compose_random_skill
 from trpg.skillgen.skill_yaml import skill_to_yaml

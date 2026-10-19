@@ -519,7 +519,7 @@ def test_library_passives_are_valid_epic_passive_skills() -> None:
 
 
 def test_events_render_in_traditional_chinese(monkeypatch: pytest.MonkeyPatch) -> None:
-    from trpg.cli.render import describe_event  # noqa: PLC0415
+    from trpg.narrative.events import describe_event  # noqa: PLC0415
 
     always(monkeypatch)
     state = scene([passive("skill_text", "on_hit", target="self")])
