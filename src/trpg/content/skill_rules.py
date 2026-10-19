@@ -24,8 +24,10 @@ from trpg.content.skills import (
     RARITY_ORDER,
     SKELETON_IDS,
     Affects,
+    SkillCategory,
     SkillKind,
     SkillRarity,
+    WeaponReq,
 )
 
 __all__ = [
@@ -311,6 +313,10 @@ class SkeletonDef(ContentModel):
     requires_condition: bool = False
     require_any_primitives: tuple[str, ...] = ()
     """技能的效果至少要有其中一個原語（蓄力與終結：add_stack／consume_stack；陷阱：place_trap）。"""
+    required_category: SkillCategory | None = None
+    """使用此骨架的技能必須是這個類別（``None`` ＝ 不限；被動：``spell``）。"""
+    required_weapon_req: WeaponReq | None = None
+    """使用此骨架的技能必須是這個武器需求（``None`` ＝ 不限；被動：``any``）。"""
     min_rarity: SkillRarity = "common"
     """使用此骨架的最低稀有度（2E：被動 epic；之後的反應技、姿態、蓄力／終結、陷阱 rare）。"""
 

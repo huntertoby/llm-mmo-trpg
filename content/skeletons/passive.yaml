@@ -9,5 +9,7 @@ kinds: [passive]
 enabled: true
 min_rarity: epic
 shapes: [self]
+required_category: spell    # 觸發的效果自動命中，不看武器
+required_weapon_req: any
 core: {primitives: [damage, heal, shield, apply_status]}
 secondary: {max_count: 1}

@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+from dataclasses import replace
 from typing import Any
 
 import pytest
@@ -81,3 +82,17 @@ def test_a_self_target_passive_cannot_hurt_enemies() -> None:
 def test_an_over_budget_passive_is_rejected() -> None:
     effects = [{"type": "damage", "dice": "8d12", "element": "fire", "affects": "enemies"}]
     assert any(r.startswith("budget") for r in rules_of(passive(effects=effects)))
+
+
+def test_the_passive_category_rule_is_read_from_the_skeleton_data() -> None:
+    assert lib().skeletons["passive"].required_category == "spell"
+    assert lib().skeletons["passive"].required_weapon_req == "any"
+    weapon_passive = passive(category="weapon", weapon_req="melee")
+    relaxed_skeleton = (
+        lib()
+        .skeletons["passive"]
+        .model_copy(update={"required_category": None, "required_weapon_req": None})
+    )
+    relaxed = replace(lib(), skeletons={**lib().skeletons, "passive": relaxed_skeleton})
+    assert "passive.category" in rules_of(weapon_passive)
+    assert "passive.category" not in rules_of(weapon_passive, relaxed)

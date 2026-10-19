@@ -161,12 +161,15 @@ def _passive_violations(skill: SkillDef, library: ContentLibrary) -> list[Violat
     if skill.kind != "passive" or trigger is None:
         return []
     out: list[Violation] = []
-    if skill.category != "spell" or skill.weapon_req != "any":
+    skeleton = library.skeletons.get(skill.skeleton)
+    if skeleton is not None and _skeleton_category_mismatch(skill, skeleton):
         out.append(
             Violation(
                 skill.id,
                 "passive.category",
-                "被動技能必須是法術技且 weapon_req: any（觸發的效果自動命中，不看武器）",
+                f"骨架 {skeleton.id} 要求 category: {skeleton.required_category or '不限'}、"
+                f"weapon_req: {skeleton.required_weapon_req or '不限'}"
+                f"（收到 {skill.category}、{skill.weapon_req}）",
             )
         )
     if trigger.target == "self":
@@ -182,6 +185,14 @@ def _passive_violations(skill: SkillDef, library: ContentLibrary) -> list[Violat
                     )
                 )
     return out
+
+
+def _skeleton_category_mismatch(skill: SkillDef, skeleton: SkeletonDef) -> bool:
+    wanted_category = skeleton.required_category
+    wanted_weapon = skeleton.required_weapon_req
+    return (wanted_category is not None and skill.category != wanted_category) or (
+        wanted_weapon is not None and skill.weapon_req != wanted_weapon
+    )
 
 
 def _stance_violations(skill: SkillDef, library: ContentLibrary) -> list[Violation]:
