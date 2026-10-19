@@ -39,6 +39,12 @@ describe("previewText", () => {
     expect(costLine({ ...base, ap_cost: 1, reach: null } as PreviewOut)).toBe("AP 1");
   });
 
+  it("lists the possible collision damage per unit", () => {
+    const p = { ...base, collisions: [{ unit_id: "unit_0003", minimum: 0, maximum: 12 }] } as PreviewOut;
+    expect(previewLines(p, names, view)).toContain(`撞擊傷害 ${names.label("unit_0003")} 最多 12`);
+    expect(previewLines(base, names, view).some((l) => l.startsWith("撞擊傷害"))).toBe(false);
+  });
+
   it("summarises hit, crit and damage on the first line", () => {
     expect(previewLines(base, names, view)[0]).toBe("命中 87.5%　暴擊 5%　傷害 3–9（期望 5.3）");
   });

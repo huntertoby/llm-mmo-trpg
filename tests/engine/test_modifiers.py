@@ -230,7 +230,8 @@ def test_heavy_stomp_shoves_two_tiles_for_two_ap() -> None:
 
 
 def test_heavy_stomp_push_distance_is_capped_at_two_tiles() -> None:
-    """颶風踢本來就推 2 格（上限），重踏不會推更遠（截斷，不轉成撞擊傷害），但 AP 仍 +1。"""
+    """颶風踢本來就推 2 格（上限），重踏不會推更遠（多出的 1 格在 3C-3a 起改為一次撞擊傷害，見
+    ``test_collision.py``），AP 仍 +1。"""
     state = arena(["skill_heavy_stomp", "skill_gale_kick"])
     result = resolve(
         with_rolls(state, [(20, 15), (8, 4)]),
