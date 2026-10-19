@@ -21,6 +21,7 @@ from collections.abc import Callable
 from trpg.content.battle import ReactionRule
 from trpg.content.environment import ReactionDef
 from trpg.content.skills import SkillDef
+from trpg.engine import modifiers
 from trpg.engine.context import Ctx
 from trpg.engine.effects import execute
 from trpg.engine.effects.models import DamageEffect
@@ -37,7 +38,7 @@ from trpg.engine.rules.combat import ForcedOutcome, attack_problem, roll_attack
 from trpg.engine.rules.geometry import XY, manhattan
 from trpg.engine.rules.statuses import effective_attribute, skip_turn_status
 from trpg.engine.skill_triggers import check_trigger_depth, holding, redirect_fired
-from trpg.engine.skills.conditions import skill_condition_met
+from trpg.engine.skills.conditions import Subject, skill_condition_met
 from trpg.engine.skills.targeting import reaction_problem, reaction_target_problem
 from trpg.engine.state import UnitState
 from trpg.shared.errors import TrpgError
@@ -342,7 +343,9 @@ def _attack_once(ctx: Ctx, attacker: UnitState, target: UnitState, *, primary: b
             forced = "hit" if ctx.preview == "min" else "crit"
         else:
             forced = "miss" if ctx.preview == "min" else "crit"
-    roll = roll_attack(ctx.state, ctx.rng, attacker, target, forced)
+    state = ctx.state
+    bonus = modifiers.hit_bonus(state, attacker, modifiers.ATTACK, Subject(target, target.xy))
+    roll = roll_attack(state, ctx.rng, attacker, target, forced, bonus=bonus)
     rolled_event = ctx.emit(
         AttackRolled,
         attacker_id=attacker.id,
@@ -361,13 +364,16 @@ def _attack_once(ctx: Ctx, attacker: UnitState, target: UnitState, *, primary: b
         target_number=roll.target_number,
         hit=roll.hit,
         crit=roll.crit,
+        modifier_bonus=roll.modifier_bonus,
     )
     if not roll.hit:
         return
     guardian = try_intercept(ctx, attacker, target, rolled_event.seq)
     if guardian is not None:
         target = guardian  # 替隊友擋攻擊：傷害改作用在守護者身上（不重擲命中）
-    multiplier = block_multiplier(ctx, attacker, target)
+    use = modifiers.ATTACK
+    bonus_permille = modifiers.damage_permille(state, attacker, use, Subject(target, target.xy))
+    multiplier = block_multiplier(ctx, attacker, target) * bonus_permille // PERMILLE
     weapon = attacker.weapon
     execute(
         ctx,
@@ -376,7 +382,7 @@ def _attack_once(ctx: Ctx, attacker: UnitState, target: UnitState, *, primary: b
                 target_id=target.id,
                 source_id=attacker.id,
                 cause="attack",
-                element=weapon.element,
+                element=modifiers.damage_element(state, attacker, use, weapon.element),
                 dice=weapon.dice,
                 flat=weapon.flat,
                 scaled_permille=effective_attribute(ctx.rules, attacker, weapon.scaling_attr)

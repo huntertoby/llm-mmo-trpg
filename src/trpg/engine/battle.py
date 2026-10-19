@@ -16,6 +16,7 @@ from dataclasses import dataclass, replace
 from typing import Literal
 
 from trpg.content.skills import SkillDef, skill_slot_problems, weapon_problem
+from trpg.engine import modifiers
 from trpg.engine.actions import (
     ACTION_ADAPTER,
     Action,
@@ -77,6 +78,7 @@ from trpg.engine.rules.statuses import (
 )
 from trpg.engine.setup import BattleSetup, BattleSetupError
 from trpg.engine.skill_triggers import collect_move, settle
+from trpg.engine.skills.conditions import Subject
 from trpg.engine.skills.interpreter import use_skill
 from trpg.engine.skills.targeting import (
     SkillArea,
@@ -467,12 +469,32 @@ _PUSH_BLOCK_REASONS = {
 }
 
 
+def action_ap_cost(state: BattleState, unit: UnitState, use: modifiers.Use) -> int:
+    """基本動作（普攻、推擊、絆倒、互動）的 AP 成本，含修正規則的 ``ap_delta``（Phase 3C-2）。"""
+    core = state.ruleset.core
+    base = {
+        "attack": core.basic_attack_ap_cost,
+        "shove": core.maneuver_ap_cost,
+        "trip": core.maneuver_ap_cost,
+        "interact": core.interact_ap_cost,
+    }[use.action or ""]
+    return modifiers.ap_cost(state, unit, use, base)
+
+
+def shove_distance(state: BattleState, unit: UnitState, target: UnitState) -> int:
+    """推擊的距離：``shove_distance`` 加上修正規則的 ``push_distance_delta``（截斷在
+    ``max_displace_distance``；steadfast 的減半在結算時另外套用）。"""
+    base = state.ruleset.core.shove_distance
+    subject = Subject(target, target.xy)
+    return modifiers.displace_distance(state, unit, modifiers.SHOVE, subject, base)
+
+
 def shove_problem(state: BattleState, unit: UnitState, target: UnitState) -> str | None:
     """推擊推不動的原因（距離減半後為 0、目標格被擋、出界）；推得動時回傳 ``None``。
 
     只檢查第一格（之後的格子在結算時逐格判斷）。推進致命地形不算被擋。
     """
-    distance = push_distance(state, target, state.ruleset.core.shove_distance)
+    distance = push_distance(state, target, shove_distance(state, unit, target))
     if distance <= 0:
         return f"推不動：{target.name_zh} 不為所動（推擊距離減半後為 0 格）"
     dx, dy = _direction(unit.xy, target.xy)
@@ -551,7 +573,7 @@ def interact_options(
 
     給介面顯示「不合法的方向與原因」用；AP 不足時每一項的問題都是 AP 不足。
     """
-    cost = state.ruleset.core.interact_ap_cost
+    cost = action_ap_cost(state, unit, modifiers.INTERACT)
     options: list[tuple[ObjectState, InteractMode, Side | None, str | None]] = []
     for obj in state.objects_sorted():
         if obj.destroyed or "pushable" not in state.object_def(obj).tags:
@@ -568,7 +590,7 @@ def interact_options(
 
 def interact_actions(state: BattleState, unit: UnitState) -> list[Interact]:
     """目前合法的互動（物件依 ID 排序，每個物件依 ``INTERACT_CHOICES`` 順序）。"""
-    if unit.ap < state.ruleset.core.interact_ap_cost:
+    if unit.ap < action_ap_cost(state, unit, modifiers.INTERACT):
         return []
     return [
         Interact(unit_id=unit.id, object_id=obj.id, mode=mode, side=side)
@@ -638,7 +660,7 @@ def _slide_back_if_stacked(ctx: Ctx, unit: UnitState, walked: list[XY]) -> None:
 
 def _do_attack(ctx: Ctx, unit: UnitState, action: Action) -> None:
     assert isinstance(action, Attack)
-    cost = ctx.core.basic_attack_ap_cost
+    cost = action_ap_cost(ctx.state, unit, modifiers.ATTACK)
     _require_ap(unit, cost)
     if action.target_object_id is not None:
         obj = _live_object(ctx.state, action.target_object_id)
@@ -648,6 +670,7 @@ def _do_attack(ctx: Ctx, unit: UnitState, action: Action) -> None:
         unit.ap -= cost
         ctx.emit(ObjectAttacked, attacker_id=unit.id, object_id=obj.id)
         weapon = unit.weapon
+        state, use = ctx.state, modifiers.ATTACK
         execute(
             ctx,
             [
@@ -655,12 +678,15 @@ def _do_attack(ctx: Ctx, unit: UnitState, action: Action) -> None:
                     object_id=obj.id,
                     source_id=unit.id,
                     cause="attack",
-                    element=weapon.element,
+                    element=modifiers.damage_element(state, unit, use, weapon.element),
                     dice=weapon.dice,
                     flat=weapon.flat,
                     scaled_permille=effective_attribute(ctx.rules, unit, weapon.scaling_attr)
                     * ctx.core.basic_attack_attr_multiplier_permille,
                     min_damage=ctx.core.min_damage_on_hit,
+                    multiplier_permille=modifiers.damage_permille(
+                        state, unit, use, Subject(None, obj.xy)
+                    ),
                 )
             ],
         )
@@ -693,12 +719,14 @@ def _maneuver_target(ctx: Ctx, unit: UnitState, target_id: UnitId) -> UnitState:
 
 def _do_shove(ctx: Ctx, unit: UnitState, action: Action) -> None:
     assert isinstance(action, Shove)
-    _require_ap(unit, ctx.core.maneuver_ap_cost)
+    cost = action_ap_cost(ctx.state, unit, modifiers.SHOVE)
+    _require_ap(unit, cost)
     target = _maneuver_target(ctx, unit, action.target_id)
     problem = shove_problem(ctx.state, unit, target)
     if problem is not None:
         raise IllegalActionError(problem)
-    unit.ap -= ctx.core.maneuver_ap_cost
+    unit.ap -= cost
+    distance = shove_distance(ctx.state, unit, target)
     if contest(ctx, "shove", unit, target, Attribute.STR):
         execute(
             ctx,
@@ -707,7 +735,7 @@ def _do_shove(ctx: Ctx, unit: UnitState, action: Action) -> None:
                     source_id=unit.id,
                     target_id=target.id,
                     direction=_direction(unit.xy, target.xy),
-                    distance=ctx.core.shove_distance,
+                    distance=distance,
                 )
             ],
         )
@@ -715,23 +743,25 @@ def _do_shove(ctx: Ctx, unit: UnitState, action: Action) -> None:
 
 def _do_trip(ctx: Ctx, unit: UnitState, action: Action) -> None:
     assert isinstance(action, Trip)
-    _require_ap(unit, ctx.core.maneuver_ap_cost)
+    cost = action_ap_cost(ctx.state, unit, modifiers.TRIP)
+    _require_ap(unit, cost)
     target = _maneuver_target(ctx, unit, action.target_id)
     if target.has_status(PRONE):
         raise IllegalActionError(f"目標已經倒地：{target.name_zh}")
-    unit.ap -= ctx.core.maneuver_ap_cost
+    unit.ap -= cost
     if contest(ctx, "trip", unit, target, Attribute.DEX):
         execute(ctx, [ApplyStatusEffect(target_id=target.id, status_id=PRONE, source_id=unit.id)])
 
 
 def _do_interact(ctx: Ctx, unit: UnitState, action: Action) -> None:
     assert isinstance(action, Interact)
-    _require_ap(unit, ctx.core.interact_ap_cost)
+    cost = action_ap_cost(ctx.state, unit, modifiers.INTERACT)
+    _require_ap(unit, cost)
     obj = _live_object(ctx.state, action.object_id)
     problem = interact_problem(ctx.state, unit, obj, action.mode, action.side)
     if problem is not None:
         raise IllegalActionError(problem)
-    unit.ap -= ctx.core.interact_ap_cost
+    unit.ap -= cost
     execute(
         ctx,
         [
@@ -912,7 +942,7 @@ def _legal_actions(
 ) -> list[Action]:
     core = state.ruleset.core
     actions: list[Action] = []
-    if unit.ap >= core.basic_attack_ap_cost:
+    if unit.ap >= action_ap_cost(state, unit, modifiers.ATTACK):
         actions.extend(
             Attack(unit_id=unit.id, target_id=target.id)
             for target in state.living_units()
@@ -923,16 +953,20 @@ def _legal_actions(
             for obj in state.objects_sorted()
             if object_attack_problem(state, unit, obj) is None
         )
-    if unit.ap >= core.maneuver_ap_cost:
+    can_shove = unit.ap >= action_ap_cost(state, unit, modifiers.SHOVE)
+    can_trip = unit.ap >= action_ap_cost(state, unit, modifiers.TRIP)
+    if can_shove or can_trip:
         foes = [t for t in state.living_units() if maneuver_problem(state, unit, t) is None]
-        actions.extend(
-            Shove(unit_id=unit.id, target_id=t.id)
-            for t in foes
-            if shove_problem(state, unit, t) is None
-        )
-        actions.extend(
-            Trip(unit_id=unit.id, target_id=t.id) for t in foes if not t.has_status(PRONE)
-        )
+        if can_shove:
+            actions.extend(
+                Shove(unit_id=unit.id, target_id=t.id)
+                for t in foes
+                if shove_problem(state, unit, t) is None
+            )
+        if can_trip:
+            actions.extend(
+                Trip(unit_id=unit.id, target_id=t.id) for t in foes if not t.has_status(PRONE)
+            )
     actions.extend(_skill_actions(state, unit, areas))
     actions.extend(interact_actions(state, unit))
     if unit.ap >= core.defend_ap_cost and not unit.has_status(DEFENDING):
@@ -1001,14 +1035,19 @@ def _has_ap_action(state: BattleState, unit: UnitState) -> bool:
     core = state.ruleset.core
     if unit.ap >= core.defend_ap_cost and not unit.has_status(DEFENDING):
         return True
-    if unit.ap >= core.basic_attack_ap_cost:
+    if unit.ap >= action_ap_cost(state, unit, modifiers.ATTACK):
         if any(attack_problem(state, unit, t) is None for t in state.living_units()):
             return True
         if any(object_attack_problem(state, unit, o) is None for o in state.objects_sorted()):
             return True
-    if unit.ap >= core.maneuver_ap_cost and any(
+    can_shove = unit.ap >= action_ap_cost(state, unit, modifiers.SHOVE)
+    can_trip = unit.ap >= action_ap_cost(state, unit, modifiers.TRIP)
+    if (can_shove or can_trip) and any(
         maneuver_problem(state, unit, t) is None
-        and (not t.has_status(PRONE) or shove_problem(state, unit, t) is None)
+        and (
+            (can_trip and not t.has_status(PRONE))
+            or (can_shove and shove_problem(state, unit, t) is None)
+        )
         for t in state.living_units()
     ):
         return True

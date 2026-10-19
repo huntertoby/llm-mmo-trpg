@@ -72,6 +72,7 @@ from trpg.engine.events import (
     UnitSpawned,
     UnitStoodUp,
 )
+from trpg.engine.skill_triggers import MODIFIER_ON_HIT
 from trpg.engine.state import BattleState
 from trpg.shared.types import Pos, Surface
 
@@ -308,6 +309,8 @@ def _attack(e: AttackRolled, v: _View) -> str:
     parts = [dice, f"修正 {_signed(e.hit_modifier)}", f"熟練 {_signed(e.proficiency)}"]
     if e.situational:
         parts.append(f"高度 {_signed(e.situational)}")
+    if e.modifier_bonus:
+        parts.append(f"修正規則 {_signed(e.modifier_bonus)}")
     cover_note = ""
     if e.cover:
         parts.append(f"半掩護 {_signed(e.cover)}")
@@ -346,6 +349,12 @@ def _skill_used(e: SkillUsed, v: _View) -> str:
 
 @_handles(SkillTriggered)
 def _skill_triggered(e: SkillTriggered, v: _View) -> str:
+    if e.trigger == MODIFIER_ON_HIT:
+        target = f"，對象 {v.name[e.other_id]}" if e.other_id is not None else ""
+        return (
+            f"  ★ {v.name[e.unit_id]} 的修正「{e.name_zh}」命中後效果（深度 {e.trigger_depth}）"
+            f"{target}"
+        )
     timing = v.state.ruleset.trigger_def(e.trigger).name_zh
     costs = []
     if e.mana:

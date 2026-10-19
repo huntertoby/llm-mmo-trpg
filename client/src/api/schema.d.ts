@@ -789,6 +789,10 @@ export interface components {
             max_events: {
                 [key: string]: unknown;
             }[];
+            /** Ap Cost */
+            ap_cost?: number | null;
+            /** Reach */
+            reach?: number | null;
         };
         /**
          * Protect
@@ -920,6 +924,8 @@ export interface components {
             condition: string | null;
             /** Effects */
             effects: string[];
+            /** Modifiers */
+            modifiers: string[];
             /** Mastery */
             mastery: string | null;
             /** Tags */

@@ -293,8 +293,11 @@ def test_preview_returns_the_numbers_and_does_not_change_the_session(client: Tes
         "healed",
         "min_events",
         "max_events",
+        "ap_cost",
+        "reach",
     }
     assert data["action"] == attack
+    assert isinstance(data["ap_cost"], int) and data["ap_cost"] >= 1
     move = next(a for a in actions if a["type"] == "move")
     moved = client.post(_url(battle, "/preview"), json=move)
     assert moved.status_code == 200

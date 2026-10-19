@@ -308,6 +308,10 @@ class PreviewOut(_ApiModel):
     """最少後果的模擬事件（我方視角過濾，附中文 ``text``）；連鎖預覽用。"""
     max_events: tuple[dict[str, Any], ...]
     """最多後果的模擬事件。"""
+    ap_cost: int | None = None
+    """這個動作花的 AP（含修正規則，Phase 3C-2）；不花 AP 的動作為 ``None``。"""
+    reach: int | None = None
+    """射程（普攻與有射程的技能，含修正規則）；其他動作為 ``None``。"""
 
 
 def _damage(d: DamageRange | None) -> DamageOut | None:
@@ -379,4 +383,6 @@ def preview_out(
         healed=tuple(HealOut(unit_id=u, minimum=lo, maximum=hi) for u, lo, hi in p.healed),
         min_events=min_events,
         max_events=max_events,
+        ap_cost=p.ap_cost,
+        reach=p.reach,
     )

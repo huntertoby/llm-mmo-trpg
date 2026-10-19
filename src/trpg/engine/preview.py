@@ -19,8 +19,9 @@ from fractions import Fraction
 from itertools import product
 
 from trpg.content.skills import SkillDef
-from trpg.engine.actions import Action, Attack, Shove, Trip, UseSkill
-from trpg.engine.battle import _actor, simulate_preview
+from trpg.engine import modifiers
+from trpg.engine.actions import Action, Attack, Interact, Shove, Trip, UseSkill
+from trpg.engine.battle import _actor, action_ap_cost, simulate_preview
 from trpg.engine.control import plan_status, status_save_chance
 from trpg.engine.events import (
     AttackIntercepted,
@@ -52,6 +53,7 @@ from trpg.engine.rules.combat import (
     PPM,
     Cover,
     advantage_state,
+    attack_reach,
     half_cover,
     hit_modifier,
     is_hit,
@@ -64,6 +66,8 @@ from trpg.engine.skills.targeting import (
     compute_area,
     damage_parameters,
     resolve_effects,
+    shape_reach,
+    skill_ap_cost,
     skill_profile,
 )
 from trpg.engine.state import BattleState, UnitState
@@ -171,6 +175,10 @@ class Preview:
     """技能：每個需要命中判定的單位（依單位 ID）的命中率、暴擊率與傷害範圍。"""
     healed: tuple[tuple[UnitId, int, int], ...] = ()
     """技能：治療 ``(單位, 最少, 最多)``（含所有治療效果的總和）。"""
+    ap_cost: int | None = None
+    """這個動作花的 AP（含修正規則的 ``ap_delta``，Phase 3C-2）；不花 AP 的動作為 ``None``。"""
+    reach: int | None = None
+    """射程（普攻與有射程的技能，含修正規則的 ``range_delta``）；其他動作為 ``None``。"""
 
 
 # ---------------------------------------------------------------------------
@@ -372,6 +380,7 @@ def _attack_numbers(
             + core.proficiency
             + situational_modifier(state, actor, target)
             - (0 if cover is None else cover.penalty)
+            + modifiers.hit_bonus(state, actor, modifiers.ATTACK, Subject(target, target.xy))
         )
         naturals = _naturals(advantage_state(state, actor, target))
         hit, crit = _chances(naturals, bonus, core.hit_target, weapon.crit_range)
@@ -389,7 +398,11 @@ def _attack_numbers(
         status_ppm = low.status_ppm
         shield = shield_amount(state.ruleset, state.units[low.target_id])
     else:
-        mod, weather, mult = PPM, _object_weather(state, actor), PERMILLE
+        assert action.target_object_id is not None
+        obj = state.objects[action.target_object_id]
+        use = modifiers.ATTACK
+        mod, weather = PPM, _object_weather(state, actor)
+        mult = modifiers.damage_permille(state, actor, use, Subject(None, obj.xy))
     sums = sorted(set(normal_dist) | set(crit_dist))
     table = _amount_table(
         state,
@@ -424,7 +437,8 @@ def _object_weather(state: BattleState, actor: UnitState) -> int:
     weather = state.weather
     if weather is None:
         return PERMILLE
-    return PERMILLE + weather.element_damage_permille.get(actor.weapon.element, 0)
+    element = modifiers.damage_element(state, actor, modifiers.ATTACK, actor.weapon.element)
+    return PERMILLE + weather.element_damage_permille.get(element, 0)
 
 
 def _maneuver_chance(state: BattleState, actor: UnitState, action: Shove | Trip) -> Fraction:
@@ -489,7 +503,7 @@ def _damage_expectation(  # noqa: PLR0917
         state.ruleset, target
     )  # 依序被每個傷害效果吸收（以最少後果估計用掉的量）
     for spec, event in zip(specs, low, strict=True):
-        params = damage_parameters(state, actor, skill, spec)
+        params = damage_parameters(state, actor, skill, spec, modified=True)
         dice = params.dice
         count, sides = (0, 1) if dice is None else (dice.count, dice.sides)
         normal, doubled = dice_distribution(count, sides), dice_distribution(count * 2, sides)
@@ -565,6 +579,7 @@ def _skill_targets(
 ) -> tuple[TargetPreview, ...]:
     skill = state.ruleset.skill_def(action.skill_id)
     profile = skill_profile(state, actor, skill)
+    use = modifiers.skill_use(skill)
     core = state.ruleset.core
     rolled = sorted(
         {e.target_id for e in max_events if isinstance(e, AttackRolled) and e.skill_id == skill.id}
@@ -578,6 +593,7 @@ def _skill_targets(
             + core.proficiency
             + situational_modifier(state, actor, target)
             - (0 if cover is None else cover.penalty)
+            + modifiers.hit_bonus(state, actor, use, Subject(target, target.xy))
         )
         naturals = _naturals(advantage_state(state, actor, target, profile))
         hit, crit = _chances(naturals, bonus, core.hit_target, profile.crit_range)
@@ -611,6 +627,25 @@ def _skill_heals(
     return tuple((uid, low.get(uid, 0), high[uid]) for uid in sorted(high))
 
 
+def _cost_and_reach(
+    state: BattleState, actor: UnitState, action: Action
+) -> tuple[int | None, int | None]:
+    """動作的 AP 與射程（含修正規則）；移動、防禦、結束回合等為 ``(None, None)``。"""
+    if isinstance(action, Attack):
+        return action_ap_cost(state, actor, modifiers.ATTACK), attack_reach(state, actor)
+    if isinstance(action, Shove):
+        return action_ap_cost(state, actor, modifiers.SHOVE), None
+    if isinstance(action, Trip):
+        return action_ap_cost(state, actor, modifiers.TRIP), None
+    if isinstance(action, Interact):
+        return action_ap_cost(state, actor, modifiers.INTERACT), None
+    if isinstance(action, UseSkill):
+        skill = state.ruleset.skill_def(action.skill_id)
+        reach = shape_reach(state, skill, actor) if skill.shape.range is not None else None
+        return skill_ap_cost(state, skill, actor), reach
+    return None, None
+
+
 def preview(state: BattleState, action: Action) -> Preview:
     """預覽 ``action`` 的結果（不修改 ``state``、不消耗亂數）。
 
@@ -642,6 +677,7 @@ def preview(state: BattleState, action: Action) -> Preview:
         area = compute_area(state, actor, state.ruleset.skill_def(action.skill_id), action)
         tiles = tuple(sorted({*tiles, *area.tiles}, key=lambda p: (p[1], p[0])))
         units = tuple(sorted({*units, *area.units}))
+    ap_cost, reach = _cost_and_reach(state, actor, action)
     return Preview(
         action=action,
         hit_chance=hit,
@@ -659,4 +695,6 @@ def preview(state: BattleState, action: Action) -> Preview:
         notes=_cover_notes(cover),
         targets=targets,
         healed=healed,
+        ap_cost=ap_cost,
+        reach=reach,
     )

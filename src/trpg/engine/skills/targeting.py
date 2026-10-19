@@ -23,6 +23,7 @@ from trpg.content.skills import (
     default_affects,
     weapon_problem,
 )
+from trpg.engine import modifiers
 from trpg.engine.actions import Direction, UseSkill
 from trpg.engine.rules.combat import AttackProfile, attack_value, concealment_problem
 from trpg.engine.rules.geometry import XY, has_line_of_sight, manhattan
@@ -115,9 +116,20 @@ class SkillArea:
 # ---------------------------------------------------------------------------
 
 
-def shape_reach(skill: SkillDef, caster: UnitState) -> int:
+def shape_reach(state: BattleState, skill: SkillDef, caster: UnitState) -> int:
     """形狀的射程：``single``／``chain`` 的 ``range``（``"weapon"`` 為武器射程）、中心格型的
-    ``range``；其他形狀為 0。``mastery: range`` 生效時再 +1（Phase 2H-2；不改範圍形狀的大小）。"""
+    ``range``；其他形狀為 0。``mastery: range`` 生效時再 +1（Phase 2H-2；不改範圍形狀的大小），
+    修正規則的 ``range_delta`` 再加上去（Phase 3C-2；結果至少 1）。"""
+    reach = skill.shape.range
+    if reach is None:
+        return 0
+    base = _base_reach(skill, caster)
+    delta = modifiers.range_delta(state, caster, modifiers.skill_use(skill))
+    return max(1, base + delta) if delta else base
+
+
+def _base_reach(skill: SkillDef, caster: UnitState) -> int:
+    """沒有修正規則時的射程（形狀的 ``range`` ＋ 專精）。"""
     reach = skill.shape.range
     if reach is None:
         return 0
@@ -134,7 +146,8 @@ def skill_is_height_limited(state: BattleState, caster: UnitState, skill: SkillD
     limit = state.ruleset.core.melee_height_limit_max_range
     if skill.category == "weapon":
         return caster.weapon.range <= limit
-    return skill.shape.type == "single" and shape_reach(skill, caster) <= limit
+    # 近戰性質看沒有修正的射程：修正規則加長射程不會讓近戰法術變成遠程（3C-2）
+    return skill.shape.type == "single" and _base_reach(skill, caster) <= limit
 
 
 def skill_profile(state: BattleState, caster: UnitState, skill: SkillDef) -> AttackProfile:
@@ -174,12 +187,13 @@ def hp_cost(unit: UnitState, skill: SkillDef) -> int:
     return -(-unit.max_hp * permille // _PERMILLE)
 
 
-def skill_ap_cost(state: BattleState, skill: SkillDef) -> int:
+def skill_ap_cost(state: BattleState, skill: SkillDef, caster: UnitState | None = None) -> int:
     """施放技能花的 AP：主動技能是 ``ap_cost``、姿態是 ``core.yaml`` 的 ``stance_ap_cost``，
-    反應技與被動不花 AP。"""
-    if skill.kind == "stance":
-        return state.ruleset.core.stance_ap_cost
-    return skill.ap_cost or 0
+    反應技與被動不花 AP。給了 ``caster`` 時加上其修正規則的 ``ap_delta``（Phase 3C-2；至少 1）。"""
+    base = state.ruleset.core.stance_ap_cost if skill.kind == "stance" else skill.ap_cost or 0
+    if caster is None:
+        return base
+    return modifiers.ap_cost(state, caster, modifiers.skill_use(skill), base)
 
 
 @dataclass(frozen=True, slots=True)
@@ -262,7 +276,7 @@ def skill_problem(state: BattleState, unit: UnitState, skill: SkillDef) -> str |
     """
     if not skill.is_actionable:
         return f"只有主動技能與姿態可以使用：{skill.name_zh}"
-    ap_cost = skill_ap_cost(state, skill)
+    ap_cost = skill_ap_cost(state, skill, unit)
     if unit.ap < ap_cost:
         return f"AP 不足：需要 {ap_cost}，剩餘 {unit.ap}"
     if skill.kind == "stance" and any(
@@ -290,7 +304,8 @@ def reaction_target_problem(
     if skill.shape.type != "single":
         return None
     effects = resolve_effects(state, skill)
-    return _unit_target_problem(state, unit, skill, effects, trigger, shape_reach(skill, unit))
+    reach = shape_reach(state, skill, unit)
+    return _unit_target_problem(state, unit, skill, effects, trigger, reach)
 
 
 # ---------------------------------------------------------------------------
@@ -487,7 +502,7 @@ def compute_area(
     """驗證 ``action`` 的選取並計算影響範圍；不合法或影響範圍為空時拋出 ``IllegalActionError``。"""
     targeting = state.ruleset.shape_def(skill.shape.type).targeting
     effects = resolve_effects(state, skill)
-    reach = shape_reach(skill, caster)
+    reach = shape_reach(state, skill, caster)
     origin = caster.xy
     direction: XY | None = None
     chain: list[UnitState] | None = None
@@ -550,7 +565,9 @@ def _candidates(state: BattleState, caster: UnitState, skill: SkillDef) -> Itera
     sid = skill.id
     uid = caster.id
     if shape.targeting == "unit":
-        reach = shape_reach(skill, caster)  # 射程外的目標不可能合法，先篩掉（省下例外的成本）
+        reach = shape_reach(
+            state, skill, caster
+        )  # 射程外的目標不可能合法，先篩掉（省下例外的成本）
         for unit in state.living_units():
             if manhattan(caster.xy, unit.xy) <= reach:
                 yield UseSkill(unit_id=uid, skill_id=sid, target_id=unit.id)
@@ -559,7 +576,8 @@ def _candidates(state: BattleState, caster: UnitState, skill: SkillDef) -> Itera
                 if manhattan(caster.xy, obj.xy) <= reach:
                     yield UseSkill(unit_id=uid, skill_id=sid, target_object_id=ObjectId(obj.id))
     elif shape.targeting == "tile":
-        for x, y in shapes.center_candidates(state, caster.xy, shape_reach(skill, caster)):
+        reach = shape_reach(state, skill, caster)
+        for x, y in shapes.center_candidates(state, caster.xy, reach):
             yield UseSkill(unit_id=uid, skill_id=sid, target_pos=Pos(x=x, y=y))
     elif shape.targeting == "direction":
         for name in shapes.DIRECTION_ORDER:
@@ -601,22 +619,35 @@ class DamageParameters(NamedTuple):
 
 
 def damage_parameters(
-    state: BattleState, caster: UnitState, skill: SkillDef, spec: EffectSpec
+    state: BattleState,
+    caster: UnitState,
+    skill: SkillDef,
+    spec: EffectSpec,
+    *,
+    modified: bool = False,
 ) -> DamageParameters:
     """法術技：效果自己的骰子與元素、屬性 × ``spell_attr_multiplier``；武器技：武器的骰子與
-    固定值、屬性 × 普攻倍率、效果的 ``multiplier_permille``，元素省略時繼承武器（元素灌注）。"""
+    固定值、屬性 × 普攻倍率、效果的 ``multiplier_permille``，元素省略時繼承武器（元素灌注）。
+
+    ``modified``：這次施放受修正規則影響（主動、姿態、反應技；被動與陷阱觸發不受影響）時，物理
+    傷害改為修正規則的 ``add_element``（Phase 3C-2）。傷害‰ 的修正依目標而定，由解譯器另外乘上。
+    """
     core = state.ruleset.core
     attr = skill_scaling_value(state.ruleset, caster, skill)
     if skill.category == "spell":
         assert spec.element is not None
-        return DamageParameters(
-            spec.dice, 0, attr * core.spell_attr_multiplier_permille, _PERMILLE, spec.element
+        element = spec.element
+        dice, flat, scaled = spec.dice, 0, attr * core.spell_attr_multiplier_permille
+        multiplier = _PERMILLE
+    else:
+        weapon = caster.weapon
+        element = spec.element or weapon.element
+        dice, flat, scaled = (
+            weapon.dice,
+            weapon.flat,
+            attr * core.basic_attack_attr_multiplier_permille,
         )
-    weapon = caster.weapon
-    return DamageParameters(
-        weapon.dice,
-        weapon.flat,
-        attr * core.basic_attack_attr_multiplier_permille,
-        spec.multiplier_permille or _PERMILLE,
-        spec.element or weapon.element,
-    )
+        multiplier = spec.multiplier_permille or _PERMILLE
+    if modified:
+        element = modifiers.damage_element(state, caster, modifiers.skill_use(skill), element)
+    return DamageParameters(dice, flat, scaled, multiplier, element)

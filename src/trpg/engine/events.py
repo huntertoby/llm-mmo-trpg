@@ -231,9 +231,11 @@ class EnteredDeadlyTerrain(EventBase):
 
 
 class AttackRolled(EventBase):
-    """命中判定：``total = natural + hit_modifier + proficiency + situational + cover``。
+    """命中判定：``total = natural + hit_modifier + proficiency + situational + cover +
+    modifier_bonus``。
 
     ``cover`` 為半掩護的修正（0 或負值），``cover_object_id`` 為提供掩護的物件（Phase 1C）。
+    ``modifier_bonus`` 為修正規則的命中加值（Phase 3C-2；預設 0，舊紀錄不受影響）。
     """
 
     type: Literal["attack_rolled"] = "attack_rolled"
@@ -255,6 +257,7 @@ class AttackRolled(EventBase):
     cover_object_id: ObjectId | None = None
     skill_id: str | None = None
     """技能的命中判定時為技能 ID（Phase 2A）；普攻為 ``None``。"""
+    modifier_bonus: int = 0
 
 
 class DamageDealt(EventBase):
@@ -637,7 +640,8 @@ class SkillUsed(EventBase):
 class SkillTriggered(EventBase):
     """被動技能觸發（Phase 2E-1）。
 
-    ``trigger``：觸發時機 ID（``skill_triggers.yaml``）；
+    ``trigger``：觸發時機 ID（``skill_triggers.yaml``）；修正規則的命中後效果為
+    ``modifier_on_hit``（Phase 3C-2，沒有代價）；
     ``other_id``：該時機的另一方（沒有為 ``None``）；
     ``trigger_depth``：觸發深度（動作本身為 0，由動作直接引起的觸發為 1，觸發產生的觸發再 +1）。
     之後是技能效果原本的事件。

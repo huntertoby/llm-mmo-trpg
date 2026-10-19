@@ -11,6 +11,7 @@ from typing import Literal
 
 from trpg.content.library import Ruleset
 from trpg.engine.events import AdvantageState
+from trpg.engine.modifiers import ATTACK, range_delta
 from trpg.engine.rules.geometry import XY, has_line_of_sight, manhattan
 from trpg.engine.rules.statuses import (
     attack_range_cap,
@@ -31,6 +32,7 @@ __all__ = [
     "advantage_sources",
     "advantage_state",
     "attack_problem",
+    "attack_reach",
     "attack_value",
     "combine_advantage",
     "concealed_max_distance",
@@ -319,6 +321,8 @@ class AttackRoll:
     target_number: int
     hit: bool
     crit: bool
+    modifier_bonus: int = 0
+    """修正規則的命中加值（Phase 3C-2 ``hit_bonus``；已含在 ``total``）。"""
 
 
 type ForcedOutcome = Literal["miss", "hit", "crit"]
@@ -332,13 +336,15 @@ def roll_attack(  # noqa: PLR0917
     target: UnitState,
     forced: ForcedOutcome | None = None,
     profile: AttackProfile | None = None,
+    *,
+    bonus: int = 0,
 ) -> AttackRoll:
     """擲命中骰（有優勢或劣勢時擲 2 顆 d20 取高／低）。暴擊需命中且自然骰 ≥ 武器暴擊範圍。
 
-    ``total = 自然骰 ＋ 命中修正 ＋ 熟練 ＋ 情境（高度） ＋ 掩護（半掩護為負值）``。
+    ``total = 自然骰 ＋ 命中修正 ＋ 熟練 ＋ 情境（高度） ＋ 掩護（半掩護為負值） ＋ bonus``。
 
     ``forced`` 只供預覽使用：不擲骰，直接採用指定結果。``profile`` 為技能的攻擊參數
-    （省略時取自 ``attacker`` 的武器）。
+    （省略時取自 ``attacker`` 的武器）。``bonus`` 為修正規則的命中加值（3C-2，呼叫端計算）。
     """
     rules = state.ruleset
     if profile is None:
@@ -350,8 +356,12 @@ def roll_attack(  # noqa: PLR0917
     cover_mod = 0 if cover is None else -cover.penalty
     proficiency = rules.core.proficiency
     if forced is not None:
-        bonus = modifier + proficiency + situational + cover_mod
-        natural = _forced_natural(forced, bonus, profile.crit_range, rules)
+        natural = _forced_natural(
+            forced,
+            modifier + proficiency + situational + cover_mod + bonus,
+            profile.crit_range,
+            rules,
+        )
         rolls: tuple[int, ...] = (natural,)
     elif adv == "none":
         rolls = (rng.d20(),)
@@ -359,7 +369,7 @@ def roll_attack(  # noqa: PLR0917
     else:
         rolls = (rng.d20(), rng.d20())
         natural = max(rolls) if adv == "advantage" else min(rolls)
-    total = natural + modifier + proficiency + situational + cover_mod
+    total = natural + modifier + proficiency + situational + cover_mod + bonus
     hit = is_hit(natural, total, rules.core.hit_target)
     crit = hit and natural >= profile.crit_range
     if forced is not None:
@@ -379,6 +389,7 @@ def roll_attack(  # noqa: PLR0917
         target_number=rules.core.hit_target,
         hit=hit,
         crit=crit,
+        modifier_bonus=bonus,
     )
 
 
@@ -419,11 +430,18 @@ def melee_height_problem(state: BattleState, attacker: UnitState, target_xy: XY)
     return None
 
 
+def attack_reach(state: BattleState, attacker: UnitState) -> int:
+    """普攻的射程：武器射程加上修正規則的 ``range_delta``（至少 1；Phase 3C-2）。近戰性質
+    （高度差限制、無視半掩護、倒地目標的優勢）仍由武器本身的射程決定。"""
+    return max(1, attacker.weapon.range + range_delta(state, attacker, ATTACK))
+
+
 def reach_problem(state: BattleState, attacker: UnitState, target_xy: XY, what: str) -> str | None:
     """射程、近戰高度差與視線的檢查（目標可以是單位或物件所在的格子）。"""
     distance = manhattan(attacker.xy, target_xy)
-    if distance > attacker.weapon.range:
-        return f"目標超出射程：距離 {distance}，射程 {attacker.weapon.range}"
+    reach = attack_reach(state, attacker)
+    if distance > reach:
+        return f"目標超出射程：距離 {distance}，射程 {reach}"
     height_problem = melee_height_problem(state, attacker, target_xy)
     if height_problem is not None:
         return height_problem

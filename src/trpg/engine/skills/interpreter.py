@@ -26,7 +26,9 @@ from trpg.content.skills import (
     ConditionSpec,
     EffectSpec,
     SkillDef,
+    on_hit_carrier,
 )
+from trpg.engine import modifiers
 from trpg.engine.actions import UseSkill
 from trpg.engine.context import Ctx
 from trpg.engine.control import status_effect
@@ -76,12 +78,18 @@ from trpg.engine.skills.targeting import (
     skill_profile,
 )
 from trpg.engine.stacks import add_stacks, consume_stacks
-from trpg.engine.state import TrapState, UnitState
+from trpg.engine.state import BattleState, TrapState, UnitState
 from trpg.engine.traps import place_trap
 from trpg.shared.errors import IllegalActionError
 from trpg.shared.types import Element, Pos, UnitId
 
-__all__ = ["use_reaction_skill", "use_skill", "use_trap_skill", "use_triggered_skill"]
+__all__ = [
+    "use_modifier_effects",
+    "use_reaction_skill",
+    "use_skill",
+    "use_trap_skill",
+    "use_triggered_skill",
+]
 
 PRONE = "prone"
 _TOUCHING_AFFECTS = ("enemies", "all", "tiles")
@@ -121,6 +129,20 @@ def use_triggered_skill(
     units = (subject.id,) if subject.alive else ()
     area = SkillArea(tiles=(subject.xy,), units=units, origin=owner.xy)
     _TriggeredCast(ctx, owner, skill, area).run()
+
+
+def use_modifier_effects(
+    ctx: Ctx, owner: UnitState, skill: SkillDef, effects: tuple[EffectSpec, ...], target: UnitState
+) -> None:
+    """結算修正規則的命中後效果（Phase 3C-2 ``on_hit_effects``；``skill_triggered`` 已由呼叫端
+    發出）。
+
+    比照被動觸發：作用在被命中的 ``target``（倒下時沒有單位對象，地面效果仍作用在其所在格），
+    自動命中、狀態照常擲抵抗；這些效果本身不再受修正規則影響。
+    """
+    units = (target.id,) if target.alive else ()
+    area = SkillArea(tiles=(target.xy,), units=units, origin=owner.xy)
+    _TriggeredCast(ctx, owner, on_hit_carrier(skill, effects), area).run()
 
 
 def use_trap_skill(ctx: Ctx, trap: TrapState, skill: SkillDef, *, depth: int) -> None:
@@ -182,7 +204,7 @@ def use_reaction_skill(
 
 
 def _pay_costs(ctx: Ctx, caster: UnitState, skill: SkillDef, area: SkillArea) -> None:
-    ap = skill_ap_cost(ctx.state, skill)
+    ap = skill_ap_cost(ctx.state, skill, caster)
     paid: PaidCost = pay_skill_cost(caster, skill, ap=ap)
     ctx.emit(
         SkillUsed,
@@ -235,7 +257,12 @@ def _axis_direction(dx: int, dy: int) -> XY | None:
 
 
 class _Cast:
-    """一次施放的工作狀態（命中結果、格擋倍率與影響範圍）。"""
+    """一次施放的工作狀態（命中結果、格擋倍率與影響範圍）。
+
+    ``modified``：這次施放受施放者的修正規則影響（主動、姿態、反應技；Phase 3C-2）。
+    """
+
+    modified = True
 
     def __init__(
         self,
@@ -261,6 +288,9 @@ class _Cast:
         """消耗施放者層數得到的傷害加成（‰，所有目標共用；``consume_stack`` 的結果）。"""
         self.target_bonus: dict[str, int] = {}
         """消耗目標層數得到的傷害加成（‰），單位 ID → 加成。"""
+        self.use = modifiers.skill_use(skill)
+        self.cooldown_delta = 0
+        """修正規則的命中後冷卻修正（≤ 0；命中判定當下決定，全部效果結算後套用）。"""
 
     # ------------------------------------------------------------------
     # 命中
@@ -285,7 +315,10 @@ class _Cast:
             if ctx.preview is not None:
                 ctx.mark_branch()
                 forced = "hit" if ctx.preview == "min" else "crit"
-            roll = roll_attack(ctx.state, ctx.rng, self.caster, unit, forced, self.profile)
+            bonus = self._modifier(modifiers.hit_bonus, unit)
+            roll = roll_attack(
+                ctx.state, ctx.rng, self.caster, unit, forced, self.profile, bonus=bonus
+            )
             rolled_event = ctx.emit(
                 AttackRolled,
                 attacker_id=self.caster.id,
@@ -305,6 +338,7 @@ class _Cast:
                 hit=roll.hit,
                 crit=roll.crit,
                 skill_id=self.skill.id,
+                modifier_bonus=roll.modifier_bonus,
             )
             self.hits[unit.id] = roll
             if roll.hit and self.skill.shape.type == "single":
@@ -318,6 +352,25 @@ class _Cast:
                 self.blocks[unit.id] = block_multiplier(
                     ctx, self.caster, unit, melee=self.profile.height_limited
                 )
+        if self.modified:
+            hit = [Subject(u, u.xy) for u in self.enemies if self._hit(u)]
+            state = ctx.state
+            self.cooldown_delta = modifiers.cooldown_delta(state, self.caster, self.use, hit)
+
+    def _modifier(
+        self,
+        query: Callable[[BattleState, UnitState, modifiers.Use, Subject], int],
+        unit: UnitState | None,
+        xy: XY | None = None,
+    ) -> int:
+        """修正規則對 ``unit``（或格子 ``xy`` 上的物件）的命中加值或傷害‰；不受修正的施放為
+        中性值（命中 0、傷害 1000）。"""
+        neutral = PERMILLE if query is modifiers.damage_permille else 0
+        if not self.modified:
+            return neutral
+        where = unit.xy if unit is not None else xy
+        assert where is not None
+        return query(self.ctx.state, self.caster, self.use, Subject(unit, where))
 
     def _redirect(self, original: UnitState, guardian: UnitState) -> None:
         """替隊友擋攻擊：這次單體攻擊的所有效果改為作用在守護者身上（沿用原本的命中結果，不重擲；
@@ -386,6 +439,23 @@ class _Cast:
             if effect.type == "damage" and effect.affects in _TOUCHING_AFFECTS:
                 self.touch_untouched_tiles(spec, start)
         self.react_to_hits()
+        self.shorten_cooldown()
+
+    def shorten_cooldown(self) -> None:
+        """修正規則的 ``cooldown_delta``：命中後該技能的剩餘冷卻減少（下限 0）。"""
+        if self.cooldown_delta == 0 or not self.caster.alive:
+            return
+        remaining = self.caster.cooldowns.get(self.skill.id, 0)
+        if remaining <= 0:
+            return
+        after = max(0, remaining + self.cooldown_delta)
+        if after:
+            self.caster.cooldowns[self.skill.id] = after
+        else:
+            del self.caster.cooldowns[self.skill.id]
+        self.ctx.emit(
+            SkillCooldownChanged, unit_id=self.caster.id, skill_id=self.skill.id, remaining=after
+        )
 
     def consume_stacks(self) -> None:
         """``consume_stack``：命中判定之後、第一個效果之前消耗層數，換成同一技能傷害效果的加成。
@@ -464,7 +534,9 @@ class _Cast:
     # -- 數值 ----------------------------------------------------------
 
     def damage(self, effect: ResolvedEffect, spec: EffectSpec) -> list[EffectBase]:
-        params = damage_parameters(self.ctx.state, self.caster, self.skill, spec)
+        params = damage_parameters(
+            self.ctx.state, self.caster, self.skill, spec, modified=self.modified
+        )
         dice, flat, scaled, multiplier, element = params
         min_damage = self.ctx.core.min_damage_on_hit
         batch: list[EffectBase] = []
@@ -472,6 +544,7 @@ class _Cast:
             roll = self.hits.get(unit.id)
             block = self.blocks.get(unit.id, PERMILLE)
             bonus = PERMILLE + self.caster_bonus + self.target_bonus.get(unit.id, 0)
+            bonus = bonus * self._modifier(modifiers.damage_permille, unit) // PERMILLE
             batch.append(
                 DamageEffect(
                     target_id=unit.id,
@@ -503,14 +576,20 @@ class _Cast:
                         flat=flat,
                         scaled_permille=scaled,
                         min_damage=min_damage,
-                        multiplier_permille=multiplier * (PERMILLE + self.caster_bonus) // PERMILLE,
+                        multiplier_permille=multiplier
+                        * (PERMILLE + self.caster_bonus)
+                        // PERMILLE
+                        * self._modifier(modifiers.damage_permille, None, xy)
+                        // PERMILLE,
                     )
                 )
         return batch
 
     def touch_untouched_tiles(self, spec: EffectSpec, start: int) -> None:
         """帶元素的傷害：沒有單位或物件受到傷害的影響格，補上一次元素觸及（每格一次）。"""
-        element = damage_parameters(self.ctx.state, self.caster, self.skill, spec).element
+        element = damage_parameters(
+            self.ctx.state, self.caster, self.skill, spec, modified=self.modified
+        ).element
         if element is Element.PHYSICAL:
             return
         touched: set[XY] = set()
@@ -576,12 +655,18 @@ class _Cast:
             direction = self._displace_direction(unit, pull=pull)
             if direction is None:
                 continue
+            distance = spec.distance
+            if self.modified:
+                state, subject = self.ctx.state, Subject(unit, unit.xy)
+                distance = modifiers.displace_distance(
+                    state, self.caster, self.use, subject, distance
+                )
             batch.append(
                 PushEffect(
                     source_id=self.caster.id,
                     target_id=unit.id,
                     direction=direction,
-                    distance=spec.distance,
+                    distance=distance,
                 )
             )
         return batch
@@ -688,7 +773,10 @@ class _Cast:
 
 
 class _TriggeredCast(_Cast):
-    """被動技能的施放：沒有 ``UseSkill`` 動作，效果自動命中（Phase 2E 決定 F）。"""
+    """被動技能的施放：沒有 ``UseSkill`` 動作，效果自動命中（Phase 2E 決定 F）。被動、陷阱與
+    修正規則的命中後效果都不是持有者的動作，不受修正規則影響（Phase 3C-2）。"""
+
+    modified = False
 
     def __init__(self, ctx: Ctx, caster: UnitState, skill: SkillDef, area: SkillArea) -> None:
         super().__init__(ctx, caster, skill, None, area)

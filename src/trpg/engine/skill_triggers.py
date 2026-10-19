@@ -16,6 +16,11 @@
 另一方倒下（``on_kill``）時，效果的對象清單是空的：傷害與狀態對倒下的單位無效，被動骨架沒有
 以位置為準的效果（2E-1 的保守處理）。
 
+修正規則的命中後效果（Phase 3C-2 ``on_hit_effects``）走同一套收集與延後結算：持有者的攻擊
+（普攻或受修正的技能）命中時記下一筆 ``event`` 為 ``modifier_on_hit:<規則索引>`` 的 :class:`Fired`，
+結算時檢查持有者在場、目標仍存活、規則條件（對目標）與深度，發出 ``skill_triggered``
+（``trigger: modifier_on_hit``，沒有代價與每輪次數），再自動命中地結算效果。
+
 這個模組在載入時不匯入效果佇列與技能解譯器（它們反過來匯入 :mod:`trpg.engine.context`），
 :func:`settle` 在呼叫時才延後匯入。
 """
@@ -28,6 +33,7 @@ from dataclasses import dataclass, replace
 from typing import TYPE_CHECKING
 
 from trpg.content.skills import SkillDef
+from trpg.engine import modifiers
 from trpg.engine.events import (
     AttackRolled,
     DamageDealt,
@@ -39,7 +45,7 @@ from trpg.engine.events import (
 from trpg.engine.rules.combat import NATURAL_HIT
 from trpg.engine.rules.geometry import manhattan
 from trpg.engine.rules.statuses import skip_turn_status
-from trpg.engine.skills.conditions import skill_condition_met
+from trpg.engine.skills.conditions import Subject, condition_met, skill_condition_met
 from trpg.engine.skills.targeting import PaidCost, pay_skill_cost, resource_problem
 from trpg.engine.state import UnitState
 from trpg.shared.types import UnitId
@@ -48,6 +54,7 @@ if TYPE_CHECKING:
     from trpg.engine.context import Ctx
 
 __all__ = [
+    "MODIFIER_ON_HIT",
     "Fired",
     "PassiveIndex",
     "check_trigger_depth",
@@ -63,6 +70,10 @@ __all__ = [
 
 _OBSERVED = frozenset({"attack_rolled", "damage_dealt"})
 
+MODIFIER_ON_HIT = "modifier_on_hit"
+"""修正規則命中後效果的 ``SkillTriggered.trigger``（不是 ``skill_triggers.yaml`` 的時機）。"""
+_MODIFIER_PREFIX = f"{MODIFIER_ON_HIT}:"
+
 
 @dataclass(frozen=True, slots=True)
 class Fired:
@@ -77,22 +88,29 @@ class Fired:
 
 
 class PassiveIndex:
-    """戰鬥中所有單位裝備的被動技能，依觸發時機分組（單位 ID、技能 ID 排序）。"""
+    """戰鬥中所有單位裝備的被動技能，依觸發時機分組（單位 ID、技能 ID 排序）。
 
-    __slots__ = ("any", "by_event", "by_unit")
+    ``on_hit_owners``：有命中後效果修正規則的單位（Phase 3C-2）。
+    """
+
+    __slots__ = ("any", "by_event", "by_unit", "on_hit_owners")
 
     def __init__(self, ctx: Ctx) -> None:
         self.by_event: dict[str, list[tuple[UnitId, SkillDef]]] = {}
         self.by_unit: dict[UnitId, list[SkillDef]] = {}
+        owners: set[UnitId] = set()
         rules = ctx.rules
         for unit in ctx.state.units_sorted():
             for skill_id in sorted(unit.skills):
                 skill = rules.skill_def(skill_id)
+                if any(r.change.on_hit_effects for r in skill.modifiers):
+                    owners.add(unit.id)
                 if skill.trigger is None:
                     continue
                 self.by_event.setdefault(skill.trigger.event, []).append((unit.id, skill))
                 self.by_unit.setdefault(unit.id, []).append(skill)
-        self.any = bool(self.by_event)
+        self.on_hit_owners = frozenset(owners)
+        self.any = bool(self.by_event) or bool(owners)
 
     def owners(self, event: str) -> list[tuple[UnitId, SkillDef]]:
         return self.by_event.get(event, [])
@@ -125,6 +143,8 @@ def observe(ctx: Ctx, event: EventBase) -> None:
     if not index.any:
         return
     if isinstance(event, AttackRolled):
+        if event.hit and event.attacker_id in index.on_hit_owners:
+            _on_modified_hit(ctx, event)
         _on_attack(ctx, index, event)
     elif isinstance(event, DamageDealt):
         _on_damage(ctx, index, event)
@@ -153,6 +173,27 @@ def _on_attack(ctx: Ctx, index: PassiveIndex, event: AttackRolled) -> None:
             assert skill.trigger is not None and skill.trigger.n is not None
             if unit.hits_landed % skill.trigger.n == 0:
                 _fire(ctx, event.seq, owner, skill, event.target_id)
+
+
+def _on_modified_hit(ctx: Ctx, event: AttackRolled) -> None:
+    """持有者的攻擊命中：套用在這次攻擊（普攻或技能）上的命中後效果規則各記一筆。"""
+    state = ctx.state
+    attacker = state.units[event.attacker_id]
+    if event.skill_id is None:
+        use = modifiers.ATTACK
+    else:
+        use = modifiers.skill_use(ctx.rules.skill_def(event.skill_id))
+    for active in modifiers.on_hit_rules(state, attacker, use):
+        ctx.fired.append(
+            Fired(
+                event.seq,
+                attacker.id,
+                active.skill.id,
+                f"{_MODIFIER_PREFIX}{active.index}",
+                event.target_id,
+                ctx.trigger_depth + 1,
+            )
+        )
 
 
 def _on_damage(ctx: Ctx, index: PassiveIndex, event: DamageDealt) -> None:
@@ -233,7 +274,10 @@ def settle(ctx: Ctx) -> None:
             batch = sorted(ctx.fired, key=lambda f: (f.seq, f.owner_id, f.skill_id))
             ctx.fired = []
             for fired in batch:
-                _resolve_one(ctx, fired)
+                if fired.event.startswith(_MODIFIER_PREFIX):
+                    _resolve_on_hit(ctx, fired)
+                else:
+                    _resolve_one(ctx, fired)
     finally:
         ctx.settling = False
         ctx.trigger_depth = 0
@@ -294,6 +338,38 @@ def _resolve_one(ctx: Ctx, fired: Fired) -> None:
     _pay(ctx, owner, skill, fired)
     ctx.trigger_depth = fired.depth
     use_triggered_skill(ctx, owner, skill, other)
+
+
+def _resolve_on_hit(ctx: Ctx, fired: Fired) -> None:
+    """修正規則的命中後效果：持有者在場、目標仍存活、規則條件（對目標）成立、深度未超過上限。
+    沒有代價與每輪次數（預算以「每場使用次數」計算）。"""
+    from trpg.engine.skills.interpreter import use_modifier_effects  # noqa: PLC0415
+
+    state = ctx.state
+    owner = state.units.get(fired.owner_id)
+    other = None if fired.other_id is None else state.units.get(fired.other_id)
+    if state.ended or owner is None or not owner.alive or other is None or not other.alive:
+        return
+    skill = ctx.rules.skill_def(fired.skill_id)
+    rule = skill.modifiers[int(fired.event.removeprefix(_MODIFIER_PREFIX))]
+    effects = rule.change.on_hit_effects
+    assert effects is not None
+    if not condition_met(state, owner, rule.condition, Subject(other, other.xy)):
+        return
+    if not check_trigger_depth(ctx, owner.id, skill.id, fired.depth):
+        return
+    ctx.emit(
+        SkillTriggered,
+        unit_id=owner.id,
+        skill_id=skill.id,
+        name_zh=skill.name_zh,
+        trigger=MODIFIER_ON_HIT,
+        other_id=other.id,
+        trigger_depth=fired.depth,
+        mana_after=owner.mana,
+    )
+    ctx.trigger_depth = fired.depth
+    use_modifier_effects(ctx, owner, skill, effects, other)
 
 
 def _pay(ctx: Ctx, owner: UnitState, skill: SkillDef, fired: Fired) -> None:

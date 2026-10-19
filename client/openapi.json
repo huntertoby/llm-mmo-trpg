@@ -2107,6 +2107,28 @@
             },
             "type": "array",
             "title": "Max Events"
+          },
+          "ap_cost": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Ap Cost"
+          },
+          "reach": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Reach"
           }
         },
         "additionalProperties": false,
@@ -2387,6 +2409,13 @@
             "type": "array",
             "title": "Effects"
           },
+          "modifiers": {
+            "items": {
+              "type": "string"
+            },
+            "type": "array",
+            "title": "Modifiers"
+          },
           "mastery": {
             "anyOf": [
               {
@@ -2466,6 +2495,7 @@
           "shape",
           "condition",
           "effects",
+          "modifiers",
           "mastery",
           "tags",
           "concept",
