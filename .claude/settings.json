@@ -33,7 +33,11 @@
       "Bash(find:*)",
       "Bash(mkdir:*)",
       "Bash(sort:*)",
-      "Bash(echo:*)"
+      "Bash(echo:*)",
+      "Bash(corepack:*)",
+      "Bash(pnpm:*)",
+      "Bash(node:*)",
+      "Bash(curl:*)"
     ],
     "deny": [
       "Bash(git push --force:*)",

@@ -246,7 +246,74 @@
 
 ---
 
-## 5. 報告格式（每段一份：`docs/phases/Phase3-N報告.md`）
+## 5. Phase 3-3｜前端骨架：格子渲染與基本操作
+
+目標：在瀏覽器裡看得到戰場，並能用點選打完一場戰鬥（移動、攻擊、其他動作、結束回合）。技能範圍預覽、HUD、反應設定、快捷指令按鈕等是 3-4。**後端只做 4.3 列的小改動，不改遊戲規則。** 這是前端的骨架，之後 3-4、3-5 都在上面加功能，請以清楚的結構為優先。
+
+### 5.1 工具與專案結構
+
+- `client/`：Vite ＋ React 18 ＋ TypeScript（`strict: true`）＋ PixiJS v8。版本用撰寫時的穩定版並鎖定（`pnpm-lock.yaml` 進 git）。
+- 套件管理用 pnpm，**一律以 `corepack pnpm …` 呼叫**（不需要 `corepack enable`，避免 Windows 權限問題）；`package.json` 的 `packageManager` 欄位鎖定 pnpm 版本。
+- `package.json` scripts 至少有：`dev`、`build`、`typecheck`（`tsc --noEmit`）、`test`（vitest，非 watch 模式）、`gen:api`。
+- 建議結構（可調，報告說明）：`src/api/`（型別與 fetch 包裝）、`src/battle/`（純邏輯：視圖 → 繪製模型、合法動作分類、紀錄彙總）、`src/render/`（PixiJS 繪製）、`src/ui/`（React 元件）、`src/screens/`（開始畫面、戰鬥畫面）。**純邏輯與 PixiJS／React 分開**，純邏輯才能用 vitest 測。
+- `node_modules/`、`client/dist/` 不進 git（檢查 `.gitignore`）。
+
+### 5.2 API 型別
+
+- 以 FastAPI 的 OpenAPI 產生 TypeScript 型別（例如 `openapi-typescript`）：`scripts/export_openapi.py` 把 `create_app().openapi()` 寫到 `client/openapi.json`，`corepack pnpm -C client gen:api` 產生 `client/src/api/schema.d.ts`；兩個檔都進 git。
+- pytest 新增一個測試：目前 app 的 OpenAPI 與 `client/openapi.json` 相同（API 改了而沒重新產生就失敗，訊息提示要跑哪兩個指令）。
+- 若有欄位在 OpenAPI 中型別不夠精確（例如 `step`、`events` 是任意 JSON），可以在 API 端補上更精確的回應模型，或在前端手寫窄化型別；報告說明。
+
+### 5.3 畫面與操作
+
+**開始畫面**：選地圖（`/api/maps`）、主角 build（`/api/builds`）、種子（預設隨機，可輸入）→ `POST /api/battles`。
+
+**戰鬥畫面**：
+- **格子**：俯視角方格。顏色依表面／地形（色塊即可，對照表寫成一個資料物件，之後好換）；高度以明暗加角落數字表示；牆壁、深淵、致命地形要一眼看得出來。
+- **物件**：簡單形狀或文字圖示（例如油桶、木箱），可燃／已點燃有區別。
+- **單位**：圓形，我方與敵方不同顏色；顯示代號（同 CLI 的 A／a）與血條；目前行動者與主角要有外框；倒下的單位淡化或移除。
+- **陷阱**：`view.traps` 中的陷阱（我方看得到的）以 `^` 或圖示顯示。
+- **回合資訊**：輪數、目前行動者、先攻順序列。
+- **單位資訊**：滑過或點選單位時顯示名稱、HP／護盾／法力／耐力、狀態與剩餘回合（文字即可）。
+- **操作**（只在 `awaiting == "action"` 時可用）：
+  - 可移動的格子以 `legal_actions` 中的 `move` 動作計算（目的地＝路徑最後一格；同一格多條路徑取第一條），點選即送出。
+  - 點選敵人：若有對該單位的 `attack` 動作就送出（多個時取第一個，或讓玩家選）。
+  - 「其他動作」清單：列出不屬於上兩類的所有合法動作（技能、推擊、絆倒、防禦、互動、結束姿態……），每個有可讀的中文標籤（類型 ＋ 技能名或目標名；技能名用 `/api/skills/{id}` 或建立戰鬥時一次取得），點選即送出。**這樣 3-3 就能打完整場**，3-4 再換成正式的技能 UI。
+  - 「結束回合」按鈕。
+  - 等待伺服器回應時鎖住操作。
+- **事件播放**：收到回應後依 `steps` 順序播放：`unit_moved` 做逐格移動動畫（`teleport` 直接出現在新位置；`forced` 可用較快的動畫），其他事件先不做動畫，播放完再以 `view` 更新整個畫面（**以 `view` 為準**，動畫只是過場）。可以有「略過動畫」的開關。
+- **戰鬥紀錄**：右側或下方列出事件 `text`，最新在下並自動捲動；同一單位連續的步行（`unit_moved` 沒有 `text`）彙總成一行「X 移動到 (x, y)」。
+- **反應詢問**：`awaiting == "decision"` 時顯示簡單的確認框（接受／拒絕，顯示 `pending` 的反應名與代價），送 `/decision`。正式視窗在 3-4。
+- **結束**：顯示勝負與「再來一場」（回開始畫面）、「下載戰鬥紀錄」（`/log`）。
+- 錯誤（400／409／500）以畫面上的提示顯示 `detail`，不讓畫面卡死。
+
+### 5.4 後端的小改動
+
+- `trpg serve` 在 `client/dist/` 存在時，同時以靜態檔提供前端（`/` 為 `index.html`，`/api/*` 不受影響）；不存在時印出提示（要先 build）。
+- 開發時 Vite 的 dev server 以 proxy 把 `/api` 轉到 `127.0.0.1:8000`。
+- 新增 `scripts/play.py`（給使用者一鍵試玩）：若 `client/dist` 不存在或比 `client/src` 舊就先 `corepack pnpm -C client install` ＋ `build`，然後啟動 `trpg serve` 並開瀏覽器。用 `uv run python scripts/play.py` 執行。
+- `scripts/check.py` 加入前端檢查：`corepack pnpm -C client install --frozen-lockfile`（已安裝時很快）、`typecheck`、`test`；找不到 `corepack` 時印出警告並略過（不算失敗）。
+
+### 5.5 測試
+
+- vitest（純邏輯）：視圖 → 繪製模型（格子顏色、高度、單位位置）、合法動作分類（可移動格、可攻擊目標、其他動作與標籤）、紀錄彙總（連續步行合併、`teleport` 不合併）、座標換算（點擊位置 → 格子）。
+- pytest：OpenAPI 快照測試；`trpg serve` 有 `client/dist` 時 `/` 回 `index.html`、`/api/maps` 仍正常（測試可用暫存資料夾假裝 dist）。
+- 不要求瀏覽器自動化測試；PM 驗收時會在瀏覽器試玩。實作者可以用 `corepack pnpm -C client build` 成功、`trpg serve` 後 `curl /` 拿到 HTML 作為證據。
+
+### 5.6 驗收條件（3-3）
+
+1. `corepack pnpm -C client build`、`typecheck`、`test` 全過。
+2. OpenAPI 快照測試通過；`schema.d.ts` 由腳本產生、進 git。
+3. `uv run python scripts/play.py` 能建置並啟動，瀏覽器開到開始畫面（PM 驗收時確認）。
+4. 在瀏覽器能選地圖、build 開戰，看得到格子、高度、表面、物件、單位、血條，能移動、攻擊、使用「其他動作」、結束回合，並打到戰鬥結束（PM 驗收時確認）。
+5. 移動有逐格動畫，播放完以 `view` 為準；戰鬥紀錄顯示中文並彙總步行。
+6. 網頁打完的戰鬥，下載的紀錄以 `trpg battle replay` 重播通過（PM 驗收時確認）。
+7. `uv run python scripts/check.py` 全過（含前端檢查）；複雜度類 noqa 不增加。
+8. 報告附畫面結構說明（元件與模組列表）與已知限制，供 3-4 接手。
+
+---
+
+## 9. 報告格式（每段一份：`docs/phases/Phase3-N報告.md`）
 
 1. 完成項目與 commit 列表。
 2. 驗收條件逐條：結果 ＋ 證據（測試名稱或指令輸出）。
