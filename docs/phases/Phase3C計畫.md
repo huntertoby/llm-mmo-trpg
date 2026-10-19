@@ -1,0 +1,301 @@
+# Phase 3C 計畫｜補模板 C：撥開、改造、協同、源力與傳說
+
+> 開發 PM 撰寫，2026-10-19。排在 Phase 3-5（roguelite 一輪）之前（使用者要求）。
+> 來源：`docs/玩法PM交接.md` 第 3 節 #1、#2；設計細節 `docs/design/05-戰鬥.md` 5.1「移動 `pushable` 物件的基本動作」、`docs/design/06-技能.md` 6.14（另 6.2、6.3、6.6）。
+> 各段實作者只讀：本檔對應章節、`CLAUDE.md`、上面兩個設計章節、上一段的報告。
+
+## 0. PM 決定
+
+### 0.1 使用者決定（2026-10-19）
+
+| # | 項目 | 決定 |
+|---|---|---|
+| A | 排程 | 撥開與 #2 全部排在 3-5 之前，拆六段（見 0.3） |
+| B | 改寫規則型原語 | **6 個全做**：`grant_ap`、`reset_cooldown`、`cheat_death`、`redirect_damage`、`copy_skill`、`extra_reaction` |
+| C | 新觸發時機 | **4 個**：`on_cast_tag`、`on_status_applied`、`on_collision`、`on_enter_surface` |
+| D | 改造型與修正型被動的欄位 | **與被動共用被動欄位，上限 2 → 3**（`content/rules/core.yaml` 的 `passive`）。3-5 的裝備限制跟著改成主動 ≤ 6、被動 ≤ 3、反應 ≤ 1 |
+
+### 0.2 開發 PM 的技術決定
+
+| # | 項目 | 決定 |
+|---|---|---|
+| 1 | 撥開的 `mode` 名稱 | `Interact.mode: "shove_aside"`，另加 `side: "left" \| "right"`（以「主角 → 物件」方向為前方，逆時針 90° 為左）。`mode: "push"` 時 `side` 必須為 `None` |
+| 2 | 改造型與修正型被動的格式 | **同一套「修正規則」**：技能新增 `modifiers` 欄位（見 4.1）。修正型被動 ＝ 套用對象為「你的所有攻擊」的修正規則；改造型 ＝ 套用對象為特定標籤或動作。技能 `kind` 新增 `modifier`（裝在被動欄位、不消耗 AP、沒有 `trigger`） |
+| 3 | 消耗狀態 | 新原語 `consume_status`（協同管道 1），見 5.2 |
+| 4 | 源力 | 戰鬥設定新增「每個單位開場的源力」；引擎只管戰鬥內，跨戰鬥保留由 3-5 處理（見 0.4）。初值：上限 3、開場至少 1、傳說花 1 或 2 點；源泉格先放 2 張地圖 |
+| 5 | `LOG_FORMAT` | 可以升（預期 3C 會升到 `/12` 以上），每段報告說明；同一段只升一次 |
+| 6 | 預算 | 新類別、新原語、新觸發時機的預算係數都是 **初值、未經模擬**，寫在 `content/` 的 YAML；3C-5 跑 `sim matrix` 看有沒有 build 爆衝，數值調整留到平衡階段 |
+| 7 | AI | AI 要能「合法地」使用新內容（不會卡住、不違規），不要求用得好；評分用現有評分框架的最簡單近似 |
+
+### 0.3 拆段
+
+| 段 | 內容 | 模型 | 估時 |
+|---|---|---|---|
+| 3C-1 | 撥開（引擎、AI、CLI、前端選方向、地圖卡路檢查） | sonnet | 30 分 |
+| 3C-2 | 修正規則：修正型被動 ＋ 改造型技能、被動欄位 3 | opus | 45 分 |
+| 3C-3 | 4 個新觸發時機 ＋ `consume_status` | sonnet | 40 分 |
+| 3C-4a | 源力 ＋ 傳說定位 ＋ `grant_ap`、`reset_cooldown`、`cheat_death` | opus | 45 分 |
+| 3C-4b | `redirect_damage`、`copy_skill`、`extra_reaction` | sonnet | 40 分 |
+| 3C-5 | 示範技能與 build、前端顯示、組合器、`sim matrix`、PM 打法差異檢查 | sonnet | 40 分 |
+
+每段結束由 PM 驗收（`PM交接.md` 6.2）並把「待 PM 決定」處理寫在本節 0.5 之後。
+
+### 0.4 對 Phase 3-5 的要求（寫 3-5 規格時納入）
+
+- 一輪存檔要記錄主角的 **源力**（跨戰鬥保留，上限 3）；每場戰鬥開場的源力 ＝ max(存檔的源力, 1)，戰後把剩餘源力寫回存檔。
+- 戰鬥之間取得源力（戰後獎勵、營火）、擊殺精英 ＋1、Boss 戰前保底，在 3-5 實作（數值放 `content/roguelite.yaml`）。
+- 裝備限制：主動 ≤ 6、被動（含改造、修正型）≤ 3、反應 ≤ 1。
+
+## 1. 範圍外（整個 3C）
+
+- 召喚（`summon`）、連段條件（`moved_this_turn` 等）、增益互動（`steal_buff` 等）、其他零星原語（`PM交接.md` 3.1.1）。
+- 「任何技能花 1 點源力強化」（6.14.4 列為之後的選項）。
+- 平衡調整、LLM、roguelite 一輪流程（3-5）。
+- 敵方單位的被動、改造、傳說（敵人可以照常有源力 0，不用給技能）。
+
+## 2. 工作環境（每段共用）
+
+- 在使用者的 Windows 電腦上執行（Git Bash，Linux 寫法）。pnpm 一律用 `corepack pnpm`（不要 `corepack enable`）。
+- 開發中只跑相關測試檔（`uv run pytest -q tests/<路徑> -x`）；commit 前只跑 `uv run ruff check .`、`uv run ruff format --check .`、`uv run mypy` 與相關測試；**完整的 `uv run python scripts/check.py` 只在子階段最後跑一次**（本機約 1 分鐘）。
+- 每完成一個交付項目就 commit。不要 push。
+- 修改既有測試的期望值時，報告逐一列出原因。CLI 快照要重錄時說明原因。
+- 不跑 `trpg sim completion`／`matrix` 全量（3C-5 例外，見 8）。
+- 每段至少新增一個手寫技能使用該段的新原語／觸發時機／類別（`tests/content/test_coverage.py` 的允許清單維持為空）；新技能要有 build 或單位裝備（可以先加進現有 build，3C-5 再整理）。
+
+---
+
+## 3. Phase 3C-1｜撥開（sonnet）
+
+### 3.1 引擎
+
+- `Interact` 加 `mode: "shove_aside"` 與 `side`（0.2 #1）。物件移到「物件位置 ＋ 左或右的單位向量」那一格；主角不動、1 AP（`interact_ap_cost`）。
+- 合法性與推相同：可推動、相鄰（上下左右）、高度差不超過 `interact_height_limit`、目標格在地圖內、沒有單位或其他物件、物件能放上去。把「推得動」的判斷抽成共用函式，推與撥開都用它；`interact_problem` 依 mode 給出中文錯誤原因。
+- 事件沿用 `ObjectMoved`（必要時加欄位說明是推或撥開），撥開後落點的互動（例如油桶移到火上）與推相同。
+- 撥開的對象只能是物件，不能是單位（現在的 `Interact` 本來就只對物件；加測試確認）。
+
+### 3.2 AI、CLI、API、前端
+
+- AI：目前 AI 若會用互動推物件，撥開以同一套評分加入候選；若 AI 目前完全不用互動，只要確保列舉合法動作時包含撥開、不會出錯即可。
+- CLI：互動指令能指定左／右（語法由實作者定，`--help` 與報告寫明）。
+- API：合法動作列表／預覽包含撥開兩個方向；前端 `schema.d.ts` 重新產生。
+- 前端：選了可推物件後，除了「推」，顯示「撥開 ←／→」（以畫面上相對主角的方向標示，例如物件在上方時顯示「往左撥／往右撥」）；不合法的方向灰掉並顯示原因。vitest 補對應測試。
+
+### 3.3 地圖卡路檢查
+
+- 寫一個腳本或測試（`scripts/` 或 `tests/content/`）：對 10 張正式地圖，列出「可推物件的位置」與「只能推時，有沒有物件擋住從我方起始區到敵方起始區的唯一通路」（BFS，物件視為不可通行，再試著推或撥開一次看是否打通）。輸出摘要表放進報告；不需要改地圖，有問題的列在「待 PM 決定」。
+
+### 3.4 驗收條件（3C-1）
+
+1. 撥開左、右各一個測試（含方向換算：四個「主角 → 物件」方向 × 左右，共 8 種落點）。
+2. 撥開到牆、單位、其他物件、地圖外、高度差過大時被拒，錯誤原因為中文。
+3. 撥開油桶到火表面上，與推過去的結果相同（互動照常結算）。
+4. 對敵人不能撥開（動作不合法）。
+5. 網頁上選物件可以撥開（PM 用瀏覽器驗收）；`check.py` 全過。
+6. 地圖卡路摘要表在報告中。
+7. 同種子同輸入重播一致（`trpg battle --log-json` → `replay`，含一次撥開）。
+
+---
+
+## 4. Phase 3C-2｜修正規則：修正型被動 ＋ 改造型技能（opus）
+
+> 這段的資料格式之後很難改，請先在報告中寫清楚設計理由。範圍是「一套規則 ＋ 其測試」：只做 `modifiers` 的格式、引擎套用點、預算、被動欄位 3，與 3–4 個示範技能。
+
+### 4.1 資料格式（建議，實作者可微調並在報告說明）
+
+```yaml
+kind: modifier          # 新類別：裝在被動欄位、不消耗 AP、沒有 trigger
+modifiers:
+  - applies_to:         # 套用對象（至少一項；多項為「或」）
+      actions: [attack, shove, trip, interact]   # 基本動作：普攻、推擊、絆倒、互動
+      skill_tags: [displace]                     # 帶這些標籤的技能
+      all_attacks: false                         # true：你的所有攻擊（普攻與攻擊技能）＝ 修正型被動
+    condition: {type: target_has_status, status: burning}   # 沿用現有條件（可省略）
+    change:             # 下列「一種」
+      damage_permille: 100          # 傷害 +10%（整數‰）
+      # hit_bonus: 1                # 命中 +1
+      # cooldown_delta: -1          # 命中後該技能冷卻 −1（下限 0）
+      # push_distance_delta: 1      # 位移距離 +1（受 6.6 推擊 ≤ 2 格；超過的部分改為撞擊傷害或直接截斷，實作者選最保守並說明）
+      # ap_delta: 1                 # 被改造的技能 AP 成本 ±
+      # range_delta: 1
+      # add_element: lightning      # 獲得元素（可導電、可與表面互動）
+      # add_tags: [fire]            # 獲得標籤（讓管道 3 的 on_cast_tag 能接上）
+      # on_hit_effects: [...]       # 命中後附加效果（沿用技能效果原語，≤ 2 個）
+```
+
+- 一個技能最多 2 條修正規則；`change` 只能是一種（正交）。
+- 修正規則 **只影響持有者自己的動作**。多個修正疊加的順序固定（依技能 ID 排序，再依規則索引），‰ 加總後套用一次，結果取整數。
+- `add_element` 給沒有元素的普攻時，傷害元素改為該元素；已有元素的技能不覆寫（保守），報告說明。
+
+### 4.2 引擎
+
+- 在普攻、推擊、絆倒、互動、技能施放／結算的對應點套用：AP 成本、射程、命中、傷害、位移距離、元素／標籤、命中後效果、冷卻。
+- 預覽（`preview.py`）要反映修正後的數值（命中率、傷害、AP、射程），網頁的滑過預覽自然跟著正確。
+- 附加效果造成的觸發照常受 `max_trigger_depth` 限制。
+- `content/rules/core.yaml` 的被動欄位 `passive: 2 → 3`；`kind: modifier` 算被動欄位。
+
+### 4.3 預算
+
+- 依 6.14.1：「被改造的動作每場大約用幾次 × 每次增加的價值」。在 `content/skill_budget.yaml`（或新檔）放每種 `change` 的係數與「每種套用對象的預估使用次數」（普攻、所有攻擊次數多，推擊、互動少）；`trpg skills budget` 能顯示修正規則的點數。
+- `min_rarity: epic`（6.14.1）。
+
+### 4.4 示範技能（3–4 個，名稱示意）
+
+| 技能 | 內容 |
+|---|---|
+| 灼傷之痕（修正型被動） | `all_attacks`；目標燃燒中時傷害 +100‰ |
+| 雷之手（改造） | `actions: [attack]`；`add_element: lightning` |
+| 重踏（改造） | `skill_tags: [displace]`、`actions: [shove]`；`push_distance_delta: 1`、或另一條 `ap_delta: 1` |
+| 餘燼循環（改造） | 所有技能；目標燃燒中且命中時 `cooldown_delta: -1` |
+
+### 4.5 CLI、API、前端（最小）
+
+- CLI `trpg skills list／show` 顯示修正規則的中文描述（`trpg.narrative` 的描述模組）。
+- API 的技能資料帶出修正規則描述；前端只需在技能說明裡顯示文字（完整 UI 在 3C-5）。
+
+### 4.6 驗收條件（3C-2）
+
+1. schema 測試：每種 `change`、`applies_to` 的合法與不合法例子（空 `applies_to`、兩種 change、超過 2 條規則……）。
+2. 每種 `change` 至少一個引擎測試（含修正型被動傷害 +10%、推擊距離 +1 的上限處理、普攻獲得雷元素後在水上導電）。
+3. 預覽與實際結算一致（同一個修正的預覽數值等於結算數值的測試）。
+4. 被動欄位 3：裝 3 個被動可以、4 個被拒。
+5. 確定性：疊加順序固定的測試；重播一致。
+6. `check.py` 全過；示範技能有 build 裝備、`test_coverage.py` 通過。
+
+---
+
+## 5. Phase 3C-3｜新觸發時機 ＋ `consume_status`（sonnet）
+
+### 5.1 觸發時機（加進 `content/skill_triggers.yaml`，被動與改造型都可用）
+
+| id | 何時觸發 | 參數 | 另一方 |
+|---|---|---|---|
+| `on_cast_tag` | 持有者施放帶某標籤的技能，在該技能結算 **之後** | `tag` | 無（`has_other: false`）；效果作用在持有者或依形狀 |
+| `on_status_applied` | 持有者成功對單位施加某狀態（抵抗成功不算） | `status`（可省略＝任何狀態） | 被施加的單位 |
+| `on_collision` | 持有者造成的強制位移被牆、物件、單位或地圖邊緣擋下（`MoveBlocked` 且 `mode: forced`，來源歸給持有者） | 無 | 被推的單位 |
+| `on_enter_surface` | 敵方單位進入持有者造出的表面（步行或強制位移；回合開始站在上面不算） | `surface`（可省略） | 進入的單位 |
+
+- `on_enter_surface` 需要追蹤「表面是誰造的」：在格子的表面狀態加 `creator`（單位 ID 或 `None`；蔓延、天氣、地圖初始為 `None`，環境互動產生的表面沿用觸及它的來源）。序列化與視圖跟著改。
+- 觸發的參數放在技能的 `trigger`（例：`trigger: {event: on_cast_tag, tag: fire, max_per_round: 1}`）；schema 檢查參數與時機相符。
+- 預算係數為初值（0.2 #6）；`min_rarity: epic`。
+- 全部受 `max_trigger_depth` 限制；加一個「A 觸發 B、B 又觸發 A」的測試確認停在上限並發出 `TriggerLimitReached`。
+
+### 5.2 `consume_status` 原語
+
+```yaml
+- {type: consume_status, status: burning, then: [...效果...], scale: remaining_rounds}
+```
+
+- 目標有該狀態時移除它，然後結算 `then` 的效果（≤ 2 個，沿用效果原語）；沒有該狀態時整個原語不結算（`EffectFizzled`）。
+- `scale`（可省略）：`remaining_rounds`（效果的傷害骰數 × 剩餘回合，上限由 `content/` 設定）或 `stacks`（目標型層數）。只做這兩種。
+- 預算：依 `then` 的點數，再乘「需要先有狀態」的條件折扣（沿用現有條件折扣的做法）。
+- 示範：「引爆燃燒」（消耗燃燒，造成剩餘回合 × 傷害並濺射相鄰）。
+
+### 5.3 驗收條件（3C-3）
+
+1. 4 個觸發時機各至少一個觸發測試與一個「不該觸發」測試（例如抵抗成功不觸發 `on_status_applied`、友方進入表面不觸發 `on_enter_surface`、主動移動被擋不觸發 `on_collision`）。
+2. 表面 `creator` 的序列化、視圖、重播測試；舊行為（沒有 creator）不變。
+3. `consume_status` 有狀態／無狀態／兩種 scale 的測試。
+4. 互相觸發停在深度上限的測試。
+5. 每個新時機與 `consume_status` 至少一個手寫技能；`check.py` 全過；重播一致。
+
+---
+
+## 6. Phase 3C-4a｜源力 ＋ 傳說 ＋ 三個改寫規則型原語（opus）
+
+### 6.1 源力（引擎內）
+
+- `UnitState` 加 `source`（源力，整數）與上限（`content/rules/core.yaml`：`source_max: 3`、`source_min_at_start: 1`）。
+- `UnitSpawn`（戰鬥設定）加 `source: int | None`；`None` 時用 `source_min_at_start`；實際開場值 ＝ clamp(max(值, 最低), 0, 上限)。**敵人一律 0**（`source_min_at_start` 只套用在我方）。
+- 新事件 `SourceChanged`（單位、增減、原因：`skill`、`well`、`kill_elite`…）。
+- 戰鬥結果（`results.py`）帶出每個我方單位的剩餘源力，讓 3-5 寫回存檔。
+- **源泉格**：地圖資料新增 `source_wells: [[x, y], ...]`（或做成物件，實作者選，報告說明）；我方單位進入該格時 +1 源力（不超過上限），源泉消失。先放進 2 張正式地圖（建議 `ruined_fort`、`dark_forest`，位置在兩軍中間偏側邊，製造搶位）。
+- 擊殺精英 +1：單位範本加 `elite: true`（目前只有 `bandit_boss` 標上）；擊倒精英的我方單位 +1。
+
+### 6.2 傳說定位
+
+- `SkillCost` 加 `source: int | None`（1 或 2）。規則：
+  - `rarity: legendary` 的技能 **必須** 有 `cost.source`，且必須含 1 個改寫規則型原語或修正規則（3C-2）。
+  - 非傳說不能有 `cost.source`。
+  - 有 `cost.source` 時，6.6「改寫規則型必須每場限一次或冷卻 ≥ 4」改為「冷卻 ≥ 2」（初值，放在 `content/`）；沒有源力就不能施放。
+- 預算：源力成本的折抵係數放 `content/skill_budget.yaml`（初值，報告說明）。
+- 每個技能最多 1 個改寫規則型原語（6.6）。
+
+### 6.3 三個改寫規則型原語
+
+| 原語 | 規則 |
+|---|---|
+| `grant_ap` | 目標（自己或友方）立刻獲得 `amount` AP（1–2）；超過本回合上限的部分不保留。同一單位每回合最多被給一次（防止無限行動） |
+| `reset_cooldown` | 目標的技能冷卻歸零：`which: all` 或 `which: tag`（帶某標籤的技能）。不能重置帶 `cost.source` 的技能、不能重置自己 |
+| `cheat_death` | 施加狀態 `undying`（持續 `duration` 回合）：期間 HP 會降到 0 時改為 1 並移除此狀態，發出事件。墜落、致命地形照樣生效（保守，報告說明） |
+
+- 新狀態寫進 `content/statuses.yaml`（`undying`），點數初值。
+- AI：會在「有源力、技能合法」時把傳說技能列為候選；`grant_ap` 優先給自己、`cheat_death` 在 HP 低時加分（最簡單近似）。
+
+### 6.4 CLI、API、前端（最小）
+
+- CLI HUD 顯示源力（例：`源力 2/3`）；技能列表顯示源力成本。
+- API 的單位視圖帶 `source`、`source_max`；技能帶 `cost.source`。前端 HUD 顯示源力數字（完整樣式在 3C-5），技能按鈕在源力不足時不可按並顯示原因。
+
+### 6.5 驗收條件（3C-4a）
+
+1. 源力：開場值（`None`、0、5、敵人）、上限、源泉格取得後消失、擊殺精英 +1、`SourceChanged` 事件、戰鬥結果帶出剩餘源力。
+2. 傳說 schema：缺 `cost.source`、非傳說帶 `cost.source`、沒有改寫或修正規則時被拒。
+3. 三個原語各自的規則與邊界（`grant_ap` 每回合一次、`reset_cooldown` 不重置源力技能、`cheat_death` 擋下致命傷害一次）。
+4. 源力不足時不能施放（引擎與 API 都拒絕，錯誤為中文）。
+5. 至少 2 個手寫傳說技能；`check.py` 全過；重播一致。
+
+---
+
+## 7. Phase 3C-4b｜另外三個改寫規則型原語（sonnet）
+
+| 原語 | 規則 |
+|---|---|
+| `redirect_damage` | 施加狀態（例 `soul_link`）在目標友方身上，持續 `duration` 回合：該友方受到的傷害有 `permille`（≤ 500‰）轉給施放者。與 2E-2 的 `intercept`（整次擋下）不同；兩者同時存在時先 `intercept` |
+| `copy_skill` | 立即施放「本輪內最後一個被友方或敵方施放、且施放者看得到」的主動技能，由自己當施放者重新選目標；不能複製傳說、改寫規則型、`copy_skill` 自己。複製的技能不扣法力、不進冷卻，但要合法（射程、目標）。實作上由 `pending` 讓玩家選目標，AI 直接選 |
+| `extra_reaction` | 目標本輪反應次數 +`amount`（1），直到下一輪開始 |
+
+- `copy_skill` 要記錄「本輪最後施放的技能」到戰鬥狀態（可序列化、可重播）；若之後覺得太複雜，最保守的做法是只複製 **友方** 上一個技能，報告說明。
+- 每個原語至少一個手寫技能（可以是傳說，帶 `cost.source`）。
+
+### 7.1 驗收條件（3C-4b）
+
+1. 三個原語的規則與邊界測試（`redirect_damage` 與 `intercept` 同時、轉移後施放者倒下；`copy_skill` 不能複製的類型、沒有可複製技能時不能施放；`extra_reaction` 到期）。
+2. `copy_skill` 的 pending 在 API 與前端可操作（PM 用瀏覽器驗收），存讀 `pending` 序列化正確。
+3. `check.py` 全過；重播一致；6 個改寫規則型原語都有手寫技能。
+
+---
+
+## 8. Phase 3C-5｜內容、顯示與收尾（sonnet）
+
+### 8.1 內容
+
+- 每條協同管道（6.14.2）至少 2 個示範技能，總計新增技能控制在 10 個以內；補 2 個以協同為主題的 build（例：「推牆焚燒」＝推擊改造 ＋ `on_collision` ＋ 火表面；「狀態引爆」＝施加狀態 ＋ `on_status_applied` ＋ `consume_status`）。
+- 隨機組合器（`content/skill_composer.yaml`）能產生修正規則、新觸發時機、傳說（含源力成本）；`scripts/skill_fuzz.py --count 1000` 全部通過預算與 schema。
+
+### 8.2 顯示
+
+- 前端：HUD 的源力（3 格圖示）、源泉格在地圖上的標示、技能卡片顯示「改造／修正」類別與描述、傳說的源力成本；技能卡片的稀有度顏色區分傳說。
+- 戰鬥紀錄文字（`trpg.narrative`）描述新事件（源力、免死、轉移傷害、複製、觸發）。
+
+### 8.3 模擬（只跑一次）
+
+- `trpg sim matrix --seeds 10` 一次（本機數分鐘），報告列出各 build 的前段類型數與 3C-2 之前（`Phase2H計畫.md` 驗收）比較；有 build 8 種類型全前段或勝率比其他高 15% 以上時列在「待 PM 決定」。不調數值。
+- `trpg sim completion --seeds 5` 一次，異常必須為 0。
+
+### 8.4 打法差異檢查（PM 做，不是實作者）
+
+- PM 試玩 2 個協同 build，對每個新技能回答 6.14.5：「拿到這招後，決策有沒有改變？」打分 0–2（0：只是數值；1：偶爾改變；2：改變站位、順序或搭配）。結果記在 3C-5 報告後的 PM 驗收紀錄。
+
+### 8.5 驗收條件（3C-5）
+
+1. 每條管道 ≥ 2 個示範技能、2 個新 build，`test_coverage.py` 通過。
+2. fuzz 1000 個通過；組合器能產生傳說（含源力成本）。
+3. 前端顯示項目齊全（PM 用瀏覽器驗收）。
+4. matrix 與 completion 的摘要在報告中；completion 異常 0。
+5. `check.py` 全過；重播一致。
+
+---
+
+## 9. 報告格式（每段）
+
+`docs/phases/Phase3C-N報告.md`：commit 列表、交付項目、驗收條件逐條（附測試名稱或指令輸出）、修改既有測試的原因、新增的複雜度 noqa 與理由、`LOG_FORMAT` 是否改變、待 PM 決定（最多 10 點）、一段代表性的 CLI 輸出節錄。
