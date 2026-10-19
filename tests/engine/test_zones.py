@@ -95,7 +95,7 @@ def arena(
     terrain: str | None = None,
     foe_skills: Sequence[SkillDef] = (),
     owner_skills: Sequence[SkillDef] = (),
-    **core: int,
+    max_trigger_depth: int | None = None,
 ) -> BattleState:
     """U1 施放者（我方法師，(0, 3)）；之後依序是 ``foes``（敵人，不反應）、``allies``（友方）。"""
     m = make_map(FLAT, terrain, ally=[(0, 3), *allies], enemy=list(foes))
@@ -106,6 +106,9 @@ def arena(
     for xy in allies:
         spawns.append(spawn(Team.ALLY, xy, no_reactions("hero_fighter", max_hp=200)))
     skills = [skill, *foe_skills, *owner_skills]
+    core: dict[str, Any] = {}
+    if max_trigger_depth is not None:
+        core["max_trigger_depth"] = max_trigger_depth
     return give_turn(make_state(m, spawns, skills=skills, **core), U1)
 
 
