@@ -419,16 +419,29 @@ def _mate_survival(team: Team, values: Sequence[Fraction | None]) -> float | Non
     return _ratio(sum(known, Fraction(0)), len(known))
 
 
+@dataclass(frozen=True)
+class _Instance:
+    """一個單位在一場戰鬥中的數字（彙總成範本列之前的中間資料）。"""
+
+    dpr: Fraction
+    damage_taken: int
+    healing_done: int
+    kills: int
+    downed: bool
+    ap_spent: int
+    turns: int
+    shield_provided: int
+    teammate_alive: Fraction | None
+
+
 def _template_rows(done: Sequence[BattleMetrics]) -> tuple[TemplateRow, ...]:
-    groups: dict[
-        tuple[Team, str], list[tuple[Fraction, int, int, int, bool, int, int, int, Fraction | None]]
-    ] = {}
+    groups: dict[tuple[Team, str], list[_Instance]] = {}
     for m in done:
         for u in m.units:
             mates = [o for o in m.units if o.team is u.team and o.unit_id != u.unit_id]
             alive = Fraction(sum(1 for o in mates if not o.downed), len(mates)) if mates else None
             groups.setdefault((u.team, u.template_id), []).append(
-                (
+                _Instance(
                     u.dpr,
                     u.damage_taken,
                     u.healing_done,
@@ -445,20 +458,20 @@ def _template_rows(done: Sequence[BattleMetrics]) -> tuple[TemplateRow, ...]:
         groups.items(), key=lambda kv: (kv[0][0] is Team.ENEMY, kv[0][1])
     ):
         n = len(items)
-        turns = sum(i[6] for i in items)
+        turns = sum(i.turns for i in items)
         rows.append(
             TemplateRow(
                 template_id=template_id,
                 team=team,
                 instances=n,
-                dpr=_ratio(sum((i[0] for i in items), Fraction(0)), n),
-                damage_taken=_ratio(sum(i[1] for i in items), n),
-                healing=_ratio(sum(i[2] for i in items), n),
-                kills=_ratio(sum(i[3] for i in items), n),
-                survival=_ratio(sum(1 for i in items if not i[4]), n),
-                ap_per_turn=_ratio(sum(i[5] for i in items), turns) if turns else None,
-                shield_provided=_ratio(sum(i[7] for i in items), n),
-                teammate_survival=_mate_survival(team, [i[8] for i in items]),
+                dpr=_ratio(sum((i.dpr for i in items), Fraction(0)), n),
+                damage_taken=_ratio(sum(i.damage_taken for i in items), n),
+                healing=_ratio(sum(i.healing_done for i in items), n),
+                kills=_ratio(sum(i.kills for i in items), n),
+                survival=_ratio(sum(1 for i in items if not i.downed), n),
+                ap_per_turn=_ratio(sum(i.ap_spent for i in items), turns) if turns else None,
+                shield_provided=_ratio(sum(i.shield_provided for i in items), n),
+                teammate_survival=_mate_survival(team, [i.teammate_alive for i in items]),
             )
         )
     return tuple(rows)
