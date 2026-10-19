@@ -7,7 +7,9 @@
 
 from __future__ import annotations
 
+import io
 from collections.abc import Sequence
+from pathlib import Path
 
 import pytest
 
@@ -21,6 +23,7 @@ from tests.engine.helpers import (
     spawn,
     template,
 )
+from trpg.cli.battle import cmd_replay
 from trpg.cli.main import main
 from trpg.engine import Attack, BattleState, UseSkill, preview
 from trpg.engine.ai.scene_objects import scene_estimate
@@ -183,3 +186,31 @@ def test_sim_maps_takes_an_ally_build_and_prints_the_scene_line(
     assert "我方 build：build_fire" in out
     assert "場景物件（整批合計）：投擲物件" in out
     assert main([*argv[:5], "build_nope", *argv[6:]]) == 2
+
+
+def test_an_ai_battle_with_pierce_shots_replays(
+    tmp_path: Path, capsys: pytest.CaptureFixture[str]
+) -> None:
+    """build_ranged 在 dark_forest 種子 0：AI 用穿甲箭穿過倒木，紀錄重播一致（Phase 3C-5b）。"""
+    log = tmp_path / "pierce.json"
+    argv = ["battle", "--map", "dark_forest", "--seed", "0", "--ally-build", "build_ranged"]
+    assert main([*argv, "--log-json", str(log)]) == 0
+    out = capsys.readouterr().out
+    assert "穿過了" in out and "穿甲箭" in out
+    assert '"shot_pierced"' in log.read_text(encoding="utf-8")
+    replayed = io.StringIO()
+    assert cmd_replay(log, replayed) == 0
+    assert "重播驗證通過" in replayed.getvalue()
+
+
+def test_an_ai_battle_with_a_topple_replays(
+    tmp_path: Path, capsys: pytest.CaptureFixture[str]
+) -> None:
+    """build_push 在 lava_crossing 種子 0：AI 推倒石柱，紀錄重播一致。"""
+    log = tmp_path / "topple.json"
+    argv = ["battle", "--map", "lava_crossing", "--seed", "0", "--ally-build", "build_push"]
+    assert main([*argv, "--log-json", str(log)]) == 0
+    assert "倒下，壓住" in capsys.readouterr().out
+    replayed = io.StringIO()
+    assert cmd_replay(log, replayed) == 0
+    assert "重播驗證通過" in replayed.getvalue()
