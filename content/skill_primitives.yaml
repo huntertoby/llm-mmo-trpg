@@ -25,6 +25,7 @@ primitives:
       explode: {type: bool, description_zh: "爆骰（Phase 3D-7b）：擲到最大值再加擲一次，每顆骰最多再擲 core.explode_max 次；只能填 true"}
       scaling: {type: scaling, description_zh: "依情況縮放（Phase 3D-7b）：by／per_step_permille／cap_permille 三個欄位；每一步傷害 +n‰（無條件捨去）、cap_permille 必填且不超過 core.scale_cap_max_permille；by 可為 missing_hp_10pct（施放者每少 10% 最大 HP）、distance（與目標每距 1 格）、enemies_adjacent_target（目標相鄰的敵方數）、enemies_adjacent_self（施放者相鄰的敵方數）"}
       lifesteal_permille: {type: int, min: 1, max: 500, description_zh: "吸血（Phase 3D-8a）：施放者回復這個效果對敵人實際造成的傷害（扣掉護盾吸收，含溢出）× n‰（無條件捨去，不超過最大 HP）；用 heal 事件、原因 lifesteal；只有技能自己的傷害效果可以用；預算：傷害點數 × (1 ＋ n‰ × lifesteal_value_permille)"}
+      on_kill: {type: effects, description_zh: "技能內的擊殺時效果（Phase 3D-8b）：這個傷害效果讓敵人倒下時才結算的 1–2 個效果，對象一律是施放者。可用類型：refund_ap（返還 amount 點 AP，1–2，用專用效果、不受改寫規則限制）、refund_cooldown（本技能冷卻歸零，技能必須有 cost.cooldown）、heal、shield、apply_status（一般原語）。同一個傷害效果讓一個以上的敵人倒下只結算一次；施放者自己在結算中倒下則不結算。只有主動技能自己的傷害效果可以用。預算：on_kill 各效果的點數 × on_kill_expected_permille（預估擊殺率）"}
       split_heal: {type: bool, description_zh: "聖光雙效（Phase 3D-8a）：必須搭配 affects: all、主動法術技、aura 或 area 骨架，不可與 lifesteal、explode、scaling 並用。敵方依一般命中判定受到傷害、友方（含自己）不擲命中而治療同樣的骰值（骰一次，治療量 ＝ 骰值 ＋ 縮放屬性 × 0.5，受治療倍率影響）；預算傷害與治療兩邊都計；只能填 true"}
   - id: heal
     name_zh: 治療
@@ -408,6 +409,33 @@ primitives:
     forbid_affects: [allies, all, self]
     params:
       duration: {type: int, required: true, min: 1, max: 3, description_zh: 被揭露的敵人不能再隱蔽的回合數}
+
+  # --- Phase 3D-8b：復活與定時炸彈 ---
+  - id: revive
+    name_zh: 復活
+    description_zh: "目標必須是射程內倒下的友方（倒下的單位留在戰鬥狀態、保留位置，但不占格子）：目標以 hp_permille‰ 的最大 HP（至少 1）站起來，站回原位置；原格被占用、不能站立或是致命地形時，站到 core.yaml revive_landing_radius 格內最近的空格（距離相同依 (y, x) 順序），範圍內沒有空格就不能施放。每個單位每場最多被復活 1 次；召喚物不能被復活；倒下時已移除的狀態（姿態、以來源為依據的狀態）、陷阱、區域與召喚物不會恢復。事件 unit_revived。技能必須每場限一次（uses_per_battle: 1）或冷卻至少 rule_rewrite_min_cooldown 回合。只能搭配 single 形狀，其餘效果必須是 affects: self。預算：revive_base_points ＋ hp_permille × revive_hp_point_permille ÷ 1000。"
+    category: structural
+    harmful: false
+    min_rarity: rare
+    budget_basis: revive
+    allowed_shapes: [single]
+    forbid_affects: [enemies, all, self]
+    params:
+      hp_permille: {type: int, required: true, min: 100, max: 1000, description_zh: 站起來時的 HP（最大 HP 的 n‰，至少 1）}
+  - id: delayed_damage
+    name_zh: 定時炸彈
+    description_zh: "命中的敵方目標身上附加狀態 time_bomb（不擲抵抗；已有定時炸彈的目標不能再附加，發出 effect_fizzled）：每次環境回合倒數 −1，歸零時在 **目標當下位置** 爆炸——目標與 radius 格（曼哈頓距離）內的所有存活單位（敵我不分，包含施放者）受到 dice ＋ 縮放屬性 × 0.5 的 element 傷害（自動命中、不暴擊、沒有格擋），空格依元素觸及；帶元素的傷害照常與表面、物件互動。目標在倒數中倒下時，立即在倒下的位置爆炸（目標已倒下，不算受傷者）。可被淨化（cleanse）移除；驅散（dispel）不移除（time_bomb 不是增益）。環境預告顯示倒數與爆炸範圍。只能用在主動的法術技。預算：骰子平均 × 預期波及的敵人數（delayed_damage_expected_targets_permille）。"
+    category: structural
+    harmful: true
+    min_rarity: rare
+    budget_basis: delayed_damage
+    allowed_shapes: [single]
+    forbid_affects: [allies, all, self]
+    params:
+      dice: {type: dice, required: true}
+      element: {type: element, required: true}
+      rounds: {type: int, required: true, min: 1, max: 3, description_zh: 倒數的環境回合數}
+      radius: {type: int, required: true, min: 0, max: 2, description_zh: 爆炸半徑（曼哈頓距離，0 只波及目標）}
 
   # --- Phase 3D-4a：召喚（docs/design/06-技能.md 6.16 B；點數為初值，未經模擬）---
   - id: summon

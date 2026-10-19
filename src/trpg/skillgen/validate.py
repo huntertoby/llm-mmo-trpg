@@ -31,6 +31,7 @@ from trpg.content.skill_rules import (
 )
 from trpg.content.skills import (
     ON_MISS_MIN_RARITY,
+    REVIVE,
     SPLIT_SKELETONS,
     EffectSpec,
     SkillDef,
@@ -135,7 +136,27 @@ def _cap_violations(skill: SkillDef, library: ContentLibrary) -> list[Violation]
             f"自身狀態代價只能是 {'、'.join(allowed_self)}，收到 {self_status.status}",
         )
     out += _rule_rewrite_violations(skill, library)
+    out += _revive_violations(skill, library)
     return out
+
+
+def _revive_violations(skill: SkillDef, library: ContentLibrary) -> list[Violation]:
+    """復活（3D-8b）：技能必須每場限一次，或冷卻至少 ``rule_rewrite_min_cooldown`` 回合（與改寫規則
+    型原語同一個門檻）。"""
+    if not any(e.type == REVIVE for e in skill.effects):
+        return []
+    cost = skill.cost
+    min_cooldown = library.budget.rule_rewrite_min_cooldown
+    if cost.uses_per_battle == 1 or (cost.cooldown or 0) >= min_cooldown:
+        return []
+    return [
+        Violation(
+            skill.id,
+            "cap.revive_cost",
+            f"有復活（revive）的技能必須每場限一次，或冷卻至少 {min_cooldown} 回合"
+            f"（目前：每場 {cost.uses_per_battle or '不限'}、冷卻 {cost.cooldown or 0}）",
+        )
+    ]
 
 
 def _rule_rewrite_violations(skill: SkillDef, library: ContentLibrary) -> list[Violation]:

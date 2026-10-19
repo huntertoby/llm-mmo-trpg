@@ -52,6 +52,7 @@ __all__ = [
     "COPY_SKILL",
     "DAMAGE_MULTIPLIER",
     "DASH",
+    "DELAYED_DAMAGE",
     "DISPEL",
     "EXTRA_REACTION",
     "GAMBLE",
@@ -66,6 +67,7 @@ __all__ = [
     "MIN_SKILL_CRIT_RANGE",
     "MODIFIER_CHANGES",
     "ON_HIT_PRIMITIVES",
+    "ON_KILL_TYPES",
     "ON_MISS_MIN_RARITY",
     "PAIR_MOVES",
     "PAIR_SHAPES",
@@ -74,10 +76,13 @@ __all__ = [
     "RARITY_ORDER",
     "REDIRECT_DAMAGE",
     "REDIRECT_STATUS",
+    "REFUND_AP",
+    "REFUND_COOLDOWN",
     "REQUIRED_CONDITIONS",
     "REQUIRED_SHAPES",
     "RESET_COOLDOWN",
     "REVEAL",
+    "REVIVE",
     "RULE_CHANGE",
     "SCALE_BY_VALUES",
     "SELF_CONDITIONS",
@@ -91,6 +96,7 @@ __all__ = [
     "SWAP",
     "SWAP_ANY",
     "TELEPORT_TARGET",
+    "TIME_BOMB",
     "TOPPLE",
     "WEAPON_CLASSES",
     "ZONE",
@@ -466,6 +472,8 @@ class PrimitiveDef(ContentModel):
       ``summon`` 召喚物每輪預估傷害 × 持續輪數 × ``summon_round_value_permille``（3D-4a）、
       ``zone`` 區域效果點數 × 預估觸發次數（格數 × 輪數 × 係數，3D-5）、
       ``gamble`` 成功率 × win 的點數 ＋ 失敗率 × lose 的點數（期望值，3D-7a）、
+      ``revive`` 基礎點數 ＋ 回復比例 × 係數（3D-8b）、
+      ``delayed_damage`` 骰子平均 × 預期波及人數（3D-8b）、
       ``dice_average`` 骰子平均值、``damage`` 法術為骰子平均值而武器為倍率 × 基準武器傷害、
       ``status``／``surface`` 為該狀態或表面的 ``budget_points`` × 持續 ÷ 預設持續。
       ``None`` 表示無法計算預算（驗證器會拒絕）。
@@ -501,6 +509,8 @@ class PrimitiveDef(ContentModel):
             "gamble",
             "dispel",
             "reveal",
+            "revive",
+            "delayed_damage",
         ]
         | None
     ) = None
@@ -780,6 +790,18 @@ class EffectSpec(ContentModel):
     """``damage`` 專用（Phase 3D-8a，6.18 B）：聖光雙效——必須搭配 ``affects: all``；敵方依一般命中
     判定受到傷害、友方（含施放者）不擲命中而改為治療同樣的骰值（骰一次）。只能用在 ``aura``、
     ``area`` 骨架的法術技。"""
+    hp_permille: int | None = Field(default=None, ge=1, le=_PERMILLE)
+    """``revive`` 專用（Phase 3D-8b，6.18 C）：被復活的單位站起來時的 HP（最大 HP 的 n‰，至少
+    1）。"""
+    rounds: int | None = Field(default=None, ge=1, le=3)
+    """``delayed_damage`` 專用（Phase 3D-8b，6.18 H）：定時炸彈的倒數輪數（每次環境回合 −1，歸零時
+    爆炸）。"""
+    radius: int | None = Field(default=None, ge=0, le=2)
+    """``delayed_damage`` 專用：爆炸半徑（曼哈頓距離；0 只波及目標自己）。"""
+    on_kill: tuple[EffectSpec, ...] | None = None
+    """``damage`` 專用（Phase 3D-8b，6.18 F）：這個傷害效果讓敵人倒下時才結算的效果（1–2 個，類型見
+    :data:`ON_KILL_TYPES`，對象一律是施放者）；同一個效果讓一個以上的敵人倒下只結算一次。只有技能
+    自己的傷害效果可以用（不能放進賭注分支、失手反噬、``then``）。"""
     effects: tuple[EffectSpec, ...] | None = None
     """``zone`` 專用（Phase 3D-5）：區域結算的效果（1–2 個，只能用 :data:`ZONE_EFFECT_TYPES`，
     不可自帶 ``affects``／``condition``；對象由區域的 ``affects`` 決定）。"""
@@ -800,16 +822,20 @@ class EffectSpec(ContentModel):
             "effects",
             "element",
             "explode",
+            "hp_permille",
             "knock_prone",
             "lifesteal_permille",
             "lose",
             "multiplier_permille",
             "object",
             "on_hit",
+            "on_kill",
             "per_stack_permille",
             "permille",
+            "radius",
             "range",
             "resource",
+            "rounds",
             "rule",
             "scale",
             "scaling",
@@ -971,6 +997,20 @@ STEAL_BUFF = "steal_buff"
 DISPEL = "dispel"
 REVEAL = "reveal"
 """Phase 3D-8a 的原語 ID（6.18 J、I）：驅散敵方增益、揭露隱蔽與陷阱。"""
+REVIVE = "revive"
+DELAYED_DAMAGE = "delayed_damage"
+TIME_BOMB = "time_bomb"
+"""Phase 3D-8b 的原語 ID（6.18 C、H）：復活倒下的友方、在目標身上附加定時炸彈（狀態 ``time_bomb``，
+``statuses.yaml``；倒數與爆炸見 ``trpg.engine.bombs``）。"""
+REFUND_AP = "refund_ap"
+REFUND_COOLDOWN = "refund_cooldown"
+ON_KILL_TYPES: tuple[str, ...] = (REFUND_AP, REFUND_COOLDOWN, "heal", "shield", "apply_status")
+"""技能內的擊殺時效果（``on_kill``，Phase 3D-8b，6.18 F）可用的效果類型：``refund_ap``（返還 AP）與
+``refund_cooldown``（本技能冷卻歸零）是只能放在 ``on_kill`` 裡的專用效果（不是
+``skill_primitives.yaml`` 的原語，也不屬於改寫規則型）；其餘依一般原語結算，對象一律是施放者。"""
+MAX_ON_KILL_EFFECTS = 2
+MAX_REFUND_AP = 2
+"""``on_kill`` 的效果個數上限，與 ``refund_ap`` 一次最多返還的 AP。"""
 SPLIT_SKELETONS: tuple[str, ...] = ("aura", "area")
 """``split_heal``（聖光雙效）可以使用的骨架。"""
 DASH = "dash"
@@ -1427,6 +1467,8 @@ class SkillDef(ContentModel):
         self._check_summon()
         self._check_zone()
         self._check_gamble()
+        self._check_revive()
+        self._check_delayed_damage()
         if self.kind == "passive" and self.trigger is None:
             raise ValueError("被動技能（kind: passive）必須有 trigger")
         if self.kind != "passive" and self.trigger is not None:
@@ -1562,6 +1604,74 @@ class SkillDef(ContentModel):
         for effect in self.effects:
             if effect.type != SUMMON and effect.affects != "self":
                 raise ValueError("summon 以外的效果必須明寫 affects: self（只作用在施放者）")
+
+    def _check_revive(self) -> None:
+        """復活（Phase 3D-8b）：只能用在主動技能、形狀 ``single``（選一個倒下的友方）；每個技能最多
+        一個 ``revive`` 效果；其餘效果必須明寫 ``affects: self``（被復活的單位不另外結算效果）。
+        「每場限一次或冷卻至少幾回合」是跨檔案檢查（``skillgen.validate``）。"""
+        revives = [e for e in self.effects if e.type == REVIVE]
+        if not revives:
+            return
+        if self.kind != "active":
+            raise ValueError(f"revive 只能用在主動技能，收到 kind: {self.kind}")
+        if len(revives) > 1:
+            raise ValueError("一個技能最多一個 revive 效果")
+        if self.shape.type != "single":
+            raise ValueError(f"revive 的形狀必須是 single，收到 {self.shape.type}")
+        if revives[0].hp_permille is None:
+            raise ValueError("revive 必須填 hp_permille")
+        for effect in self.effects:
+            if effect.type != REVIVE and effect.affects != "self":
+                raise ValueError("revive 以外的效果必須明寫 affects: self（只作用在施放者）")
+
+    def _check_delayed_damage(self) -> None:
+        """定時炸彈（Phase 3D-8b）：只能用在主動的法術技；每個技能最多一個 ``delayed_damage``，
+        ``dice``、``element``、``rounds``、``radius`` 都必填。"""
+        bombs = [e for e in self.effects if e.type == DELAYED_DAMAGE]
+        if not bombs:
+            return
+        if self.kind != "active" or self.category != "spell":
+            raise ValueError("delayed_damage 只能用在主動的法術技")
+        if len(bombs) > 1:
+            raise ValueError("一個技能最多一個 delayed_damage 效果")
+        bomb = bombs[0]
+        if bomb.dice is None or bomb.element is None or bomb.rounds is None or bomb.radius is None:
+            raise ValueError("delayed_damage 必須填 dice、element、rounds、radius")
+
+    def _check_on_kill(self, where: str, effect: EffectSpec, *, top: bool) -> None:
+        """``on_kill``（Phase 3D-8b）：只有主動技能自己的 ``damage`` 效果可以有；內容 1–2 個、類型在
+        :data:`ON_KILL_TYPES`、對象只能是施放者；``refund_ap`` 與 ``refund_cooldown`` 只能出現在
+        ``on_kill`` 裡。"""
+        if effect.type in (REFUND_AP, REFUND_COOLDOWN):
+            raise ValueError(f"{where}：{effect.type} 只能出現在 on_kill 裡")
+        if effect.on_kill is None:
+            return
+        if effect.type != "damage":
+            raise ValueError(f"{where}：只有 damage 使用 on_kill")
+        if not top or self.kind != "active":
+            raise ValueError(f"{where}：on_kill 只能用在主動技能自己的傷害效果")
+        subs = effect.on_kill
+        if not 1 <= len(subs) <= MAX_ON_KILL_EFFECTS:
+            raise ValueError(f"{where}：on_kill 必須有 1 到 {MAX_ON_KILL_EFFECTS} 個效果")
+        for i, sub in enumerate(subs):
+            self._check_on_kill_sub(f"{where}.on_kill[{i}]（{sub.type}）", sub)
+
+    def _check_on_kill_sub(self, at: str, sub: EffectSpec) -> None:
+        """``on_kill`` 的一個效果：類型、對象與各類型自己的欄位。"""
+        if sub.type not in ON_KILL_TYPES:
+            raise ValueError(f"{at}：只能使用 {'、'.join(ON_KILL_TYPES)}")
+        if sub.condition is not None or sub.affects not in (None, "self"):
+            raise ValueError(
+                f"{at}：對象只能是施放者（省略 affects 或寫 self），不可自帶 condition"
+            )
+        if sub.type == REFUND_AP:
+            if sub.amount is None or not 1 <= sub.amount <= MAX_REFUND_AP:
+                raise ValueError(f"{at}：必須填 amount（1–{MAX_REFUND_AP}）")
+        elif sub.type == REFUND_COOLDOWN:
+            if not self.cost.cooldown:
+                raise ValueError(f"{at}：技能沒有冷卻（cost.cooldown），沒有東西可以歸零")
+        else:
+            self._check_effect(0, sub)
 
     def _check_zone(self) -> None:
         """持續區域（Phase 3D-5）：只能用在主動技能，而且是技能唯一的效果；``anchor``、``when``、
@@ -1924,6 +2034,7 @@ class SkillDef(ContentModel):
     def _check_effect(self, index: int, effect: EffectSpec, *, top: bool = False) -> None:
         where = f"effects[{index}]（{effect.type}）"
         self._check_variable_damage(where, effect, top=top)
+        self._check_on_kill(where, effect, top=top)
         self._check_consume_status(index, effect)
         if effect.type == RESET_COOLDOWN:
             if effect.which is None:
@@ -2174,7 +2285,24 @@ def _effect_problems(skill: SkillDef, index: int, effect: EffectSpec, refs: _Ref
     problems += _consume_status_problems(skill, index, effect, refs)
     problems += _zone_problems(skill, index, effect, refs)
     problems += _gamble_problems(skill, index, effect, refs)
+    problems += _on_kill_problems(skill, index, effect, refs)
     problems += _scaling_problems(where, effect, refs)
+    return problems
+
+
+def _on_kill_problems(skill: SkillDef, index: int, effect: EffectSpec, refs: _Refs) -> list[str]:
+    """``on_kill`` 的跨檔案檢查（Phase 3D-8b）：一般原語（治療、護盾、施加狀態）當成同一技能的
+    效果檢查（參數、引用）；``refund_ap``、``refund_cooldown`` 不是原語，已由 schema 檢查。"""
+    problems: list[str] = []
+    for i, sub in enumerate(effect.on_kill or ()):
+        if sub.type in (REFUND_AP, REFUND_COOLDOWN):
+            continue
+        prefix = "effects[0]"
+        carrier = skill.model_copy(update={"effects": (sub,)})
+        problems += [
+            f"effects[{index}].on_kill[{i}]{p.removeprefix(prefix)}"
+            for p in _effect_problems(carrier, 0, sub, refs)
+        ]
     return problems
 
 

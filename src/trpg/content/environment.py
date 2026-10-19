@@ -643,6 +643,10 @@ class RewriteAiRules(ContentModel):
     - ``steal_points``：每奪取 1 個增益（``steal_buff``，Phase 3D-1）。
     - ``dispel_points``：每驅散敵人 1 個增益（``dispel``，Phase 3D-8a）。
     - ``reveal_points``：每讓 1 個敵人失去隱蔽、或每揭露 1 個敵方陷阱（``reveal``，Phase 3D-8a）。
+    - ``revive_points``：每復活 1 個倒下的友方（``revive``，Phase 3D-8b）。
+    - ``refund_ap_points``：擊殺時效果每返還 1 點 AP（``on_kill`` 的 ``refund_ap``，Phase 3D-8b）。
+    - ``bomb_points_permille``：定時炸彈（``delayed_damage``）的預期傷害折合——炸彈骰子平均 ×
+      （半徑內的敵人數 − 友方數，含施放者）× 這個千分比（炸彈可能被淨化或打斷）。
     - ``activation_round_points``：啟動常駐類傳說（Phase 3D-6）每一輪效果的價值（限時型 × 持續
       輪數、整場型 × ``activation_battle_rounds``），再扣源力成本。
     - ``activation_battle_rounds``：整場型傳說估計還能生效的輪數。
@@ -659,6 +663,9 @@ class RewriteAiRules(ContentModel):
     steal_points: int = Field(default=8, ge=0)
     dispel_points: int = Field(default=6, ge=0)
     reveal_points: int = Field(default=6, ge=0)
+    revive_points: int = Field(default=30, ge=0)
+    refund_ap_points: int = Field(default=6, ge=0)
+    bomb_points_permille: int = Field(default=700, ge=0, le=2000)
     activation_round_points: int = Field(default=4, ge=0)
     activation_battle_rounds: int = Field(default=4, ge=1)
 

@@ -88,6 +88,7 @@ def test_the_initial_skeleton_structure_matches_the_spec() -> None:
         "dispel",  # 3D-8a
         "reveal",  # 3D-8a
         "zone",  # 3D-5
+        "delayed_damage",  # 3D-8b
     }
     assert sk["control"].secondary.max_share_permille == {"damage": 400}
     # 3C-5a：場景物件原語（只給手寫技能，隨機組合器不使用）
@@ -130,6 +131,7 @@ def test_the_initial_skeleton_structure_matches_the_spec() -> None:
         "restore_resource",  # 3D-1
         "zone",  # 3D-5（跟隨型光環）
         "rule_change",  # 3D-6（規則改變型傳說）
+        "revive",  # 3D-8b
     }
     assert (
         set(sk["aura"].forbid_affects) == {"enemies", "all"} and sk["aura"].secondary.max_count == 1

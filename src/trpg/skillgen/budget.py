@@ -32,6 +32,8 @@ from trpg.content.skills import (
     DAMAGE_MULTIPLIER,
     EXTRA_REACTION,
     GRANT_AP,
+    REFUND_AP,
+    REFUND_COOLDOWN,
     SELF_DAMAGE_OF_HIT,
     ConditionDef,
     EffectSpec,
@@ -343,6 +345,72 @@ def _reveal_points(
     )
 
 
+def _revive_points(
+    _skill: SkillDef, effect: EffectSpec, library: ContentLibrary
+) -> tuple[Fraction, str]:
+    """``revive`` 的點數（3D-8b）：``revive_base_points`` ＋ ``hp_permille`` ×
+    ``revive_hp_point_permille`` ÷ 1000。"""
+    if effect.hp_permille is None:
+        raise BudgetError("revive 缺少 hp_permille，無法計算點數")
+    rules = library.budget
+    points = rules.revive_base_points + Fraction(
+        effect.hp_permille * rules.revive_hp_point_permille, _PERMILLE
+    )
+    return (
+        points,
+        f"復活 {rules.revive_base_points} ＋ {effect.hp_permille / 10:g}% × "
+        f"{rules.revive_hp_point_permille}‰",
+    )
+
+
+def _delayed_damage_points(
+    _skill: SkillDef, effect: EffectSpec, library: ContentLibrary
+) -> tuple[Fraction, str]:
+    """``delayed_damage`` 的點數（3D-8b）：骰子平均 × 預期波及的人數（基礎 ＋ 半徑 × 每格加成）。"""
+    if effect.dice is None or effect.radius is None:
+        raise BudgetError("delayed_damage 缺少 dice 或 radius，無法計算點數")
+    rules = library.budget
+    targets = (
+        rules.delayed_damage_base_targets_permille
+        + effect.radius * rules.delayed_damage_radius_targets_permille
+    )
+    points = _dice_average(effect.dice) * Fraction(targets, _PERMILLE)
+    return points, f"{effect.dice} 平均 × 預期 {targets}‰ 個目標（半徑 {effect.radius}）"
+
+
+def _on_kill_budget(
+    skill: SkillDef, library: ContentLibrary, index: int, source: EffectSpec
+) -> EffectBudget | None:
+    """``on_kill`` 的一列（3D-8b）：各效果的點數 × 預估擊殺率（``on_kill_expected_permille``）；
+    ``refund_ap`` 每點 AP 折合 ``refund_ap_points``、``refund_cooldown`` ＝ 技能冷卻回合 ×
+    ``restore_cooldown_points``，其餘依一般效果的算法（對象是施放者）。"""
+    if not source.on_kill:
+        return None
+    budget = library.budget
+    value = Fraction(0)
+    for sub in source.on_kill:
+        if sub.type == REFUND_AP:
+            value += budget.refund_ap_points * (sub.amount or 1)
+        elif sub.type == REFUND_COOLDOWN:
+            value += budget.restore_cooldown_points * (skill.cost.cooldown or 0)
+        else:
+            value += _effect_budget(
+                skill, 0, sub.model_copy(update={"affects": "self"}), library
+            ).points
+    rate = Fraction(budget.on_kill_expected_permille, _PERMILLE)
+    points = value * rate
+    return EffectBudget(
+        index=index,
+        type="on_kill",
+        note=f"擊殺時 {_fmt(value)} × 預估擊殺率 {budget.on_kill_expected_permille}‰",
+        base=points,
+        shape=Fraction(1),
+        target=Fraction(1),
+        condition=Fraction(1),
+        points=points,
+    )
+
+
 def _hurl_object_points(
     _skill: SkillDef, effect: EffectSpec, library: ContentLibrary
 ) -> tuple[Fraction, str]:
@@ -616,6 +684,8 @@ _SPECIAL_BASES: dict[
     "gamble": _gamble_points,
     "dispel": _dispel_points,
     "reveal": _reveal_points,
+    "revive": _revive_points,
+    "delayed_damage": _delayed_damage_points,
 }
 """需要整個技能或特殊規則的 ``budget_basis`` → 點數算法。"""
 
@@ -962,16 +1032,26 @@ def _action_coefficient(skill: SkillDef, budget: BudgetRules) -> tuple[Fraction,
     return coefficient, label
 
 
+def _action_budgets(skill: SkillDef, library: ContentLibrary) -> tuple[EffectBudget, ...]:
+    """主動、反應、被動等技能的效果點數：各效果，加上失手反噬（3D-7a）與擊殺時效果（3D-8b）的列。"""
+    effects = tuple(_effect_budget(skill, i, e, library) for i, e in enumerate(skill.effects))
+    miss = _on_miss_budget(skill, library, len(effects))
+    if miss is not None:
+        effects += (miss,)
+    for effect in skill.effects:
+        kill = _on_kill_budget(skill, library, len(effects), effect)
+        if kill is not None:
+            effects += (kill,)
+    return effects
+
+
 def skill_budget(skill: SkillDef, library: ContentLibrary) -> BudgetReport:
     """計算 ``skill`` 的預算明細；缺少點數資料時拋出 :class:`BudgetError`。"""
     rules, budget = library.ruleset, library.budget
     if skill.is_modifier:
         effects = _modifier_budgets(skill, library)
     else:
-        effects = tuple(_effect_budget(skill, i, e, library) for i, e in enumerate(skill.effects))
-        miss = _on_miss_budget(skill, library, len(effects))
-        if miss is not None:
-            effects += (miss,)
+        effects = _action_budgets(skill, library)
     raw = sum((e.points for e in effects), Fraction(0))
     condition_multiplier = Fraction(1)
     if skill.condition is not None:

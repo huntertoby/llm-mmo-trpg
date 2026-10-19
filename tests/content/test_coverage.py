@@ -29,6 +29,7 @@ _STATUS_VIA_PRIMITIVE = {
     "undying": "cheat_death",
     "soul_link": "redirect_damage",  # 3C-4b
     "revealed": "reveal",  # 3D-8a
+    "time_bomb": "delayed_damage",  # 3D-8b
 }
 
 

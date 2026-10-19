@@ -222,6 +222,18 @@ class BudgetRules(ContentModel):
     reveal_round_points: int = Field(default=1, ge=0)
     """``reveal`` 的預算點數 ＝ ``reveal_base_points`` ＋ ``reveal_round_points`` × ``duration``
     （Phase 3D-8a；初值，未經模擬）。"""
+    revive_base_points: int = Field(default=6, ge=0)
+    revive_hp_point_permille: int = Field(default=10, ge=0, le=100)
+    """``revive`` 的預算點數 ＝ ``revive_base_points`` ＋ ``hp_permille`` ×
+    ``revive_hp_point_permille`` ÷ 1000（Phase 3D-8b；初值，未經模擬）。"""
+    delayed_damage_base_targets_permille: int = Field(default=1000, ge=0, le=5000)
+    delayed_damage_radius_targets_permille: int = Field(default=400, ge=0, le=3000)
+    """``delayed_damage`` 的預算點數 ＝ 骰子平均 ×（``delayed_damage_base_targets_permille`` ＋
+    半徑 × ``delayed_damage_radius_targets_permille``）÷ 1000（預期波及的人數；Phase 3D-8b）。"""
+    on_kill_expected_permille: int = Field(default=300, ge=0, le=1000)
+    """``on_kill`` 各效果的點數 × 這個預估擊殺率（‰；Phase 3D-8b；初值，未經模擬）。"""
+    refund_ap_points: int = Field(default=6, ge=0)
+    """``on_kill`` 的 ``refund_ap`` 每返還 1 點 AP 折合的預算點數（Phase 3D-8b；初值）。"""
     lifesteal_value_permille: int = Field(default=800, ge=0, le=2000)
     """吸血（``lifesteal_permille``，Phase 3D-8a）：回復的 HP 折合傷害點數的比例（‰）。傷害效果的
     點數 × (1 ＋ 吸血‰ × 這個值 ÷ 10⁶)（初值，未經模擬）。"""

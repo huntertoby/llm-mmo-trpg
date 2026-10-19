@@ -1,0 +1,25 @@
+# 定時炸彈符（Phase 3D-8b 示範，定時炸彈；docs/design/06-技能.md 6.18 H，數值為初值，未經模擬）：
+# 在敵人身上綁一枚符印炸彈，2 次環境回合後在他當下的位置爆炸，波及半徑 1 格內的所有單位
+# （敵我不分）；目標倒下時立即爆炸，可被淨化。
+id: skill_time_bomb_rune
+schema_version: 1
+name_zh: 定時炸彈符
+tier: 2
+rank: 1
+rarity: rare
+kind: active
+skeleton: control
+category: spell
+weapon_req: focus
+ap_cost: 2
+scaling_attr: int
+shape: {type: single, range: 5}
+effects:
+  - {type: delayed_damage, dice: 3d6, element: fire, rounds: 2, radius: 1}
+condition: null
+cost: {mana: 6, cooldown: 2}
+tags: [fire, spell, bomb]
+narrative:
+  concept: 把一枚燃燒的符印貼在敵人身上，讓他自己帶著炸彈走進人群
+  cast_flavor: 你彈出一張赤紅的符紙，它啪地貼上敵人的背，開始嘶嘶地冒煙
+provenance: {origin: builtin, owner_id: null, created_by: null, parents: [], bound: true, tradeable: false}

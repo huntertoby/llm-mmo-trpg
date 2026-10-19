@@ -122,6 +122,9 @@ class CoreRules(ContentModel):
     """爆骰（``explode: true``，Phase 3D-7b）：每顆骰最多再擲的次數。舊紀錄沒有此欄位。"""
     scale_cap_max_permille: int = Field(default=800, ge=1, le=5000)
     """依情況縮放（``scaling``，Phase 3D-7b）：``cap_permille`` 的上限（‰）。舊紀錄沒有此欄位。"""
+    revive_landing_radius: int = Field(default=2, ge=0, le=6)
+    """復活（``revive``，Phase 3D-8b）：原格被占用或不能站立時，站到這個距離（曼哈頓）內最近的空格；
+    範圍內沒有空格就不能施放。舊紀錄沒有此欄位。"""
     steadfast_push_permille: int = Field(ge=0, le=1000)
     ability_mod_base: int
     ability_mod_divisor: int = Field(ge=1)

@@ -26,6 +26,8 @@ companions: [sim_companion_fighter, sim_companion_archer]
 # Phase 3D-7b：build_gambler 加狂野之刃（高變異）、狂戰士之怒（以血換力）；build_striker 加過載電流（超載）；build_ranged 以遠距狙擊（依距離縮放）換下煙霧箭（主動欄位已滿）；build_tank 以困獸旋斬（依周圍敵人數縮放）換下碎骨重擊（主動欄位已滿）。
 # Phase 3D-8a：build_support 以汲命術（吸血）換下專注湧流、build_healer 以聖光爆發（聖光雙效）換下疾時之潮（兩者主動欄位已滿）；新增 build_seer
 # （偵察破咒流）：破魔（驅散）、照明彈（揭露）搭配竊取祝福、咒印，並接收被換下的專注湧流與疾時之潮（3C-6 再整理）。
+# Phase 3D-8b：build_healer 以返魂術（復活）換下不死誓約（主動欄位已滿）；新增 build_bomber（定時炸彈流）：定時炸彈符、灰燼收割
+# （擊殺時返還 AP 並重置冷卻），並接收被換下的不死誓約（3C-6 再整理）。
 # Phase 3D-7a：新增 build_gambler（賭徒／狂戰士流）：血祭重擊（賭注）、孤注一擲（失手反噬）搭配捨身突刺、狂怒姿態與嗜血（3C-6 再整理）。
 builds:
   - id: build_push
@@ -158,7 +160,7 @@ builds:
       resist: {elemental: 150}
       tags: [hero, sim]
       max_mana: 40
-      skills: [skill_sanctuary, skill_renewal, skill_purify, skill_guardian_aegis, skill_second_wind, skill_undying_oath, skill_beam_of_mercy, skill_self_mending, skill_holy_burst]
+      skills: [skill_sanctuary, skill_renewal, skill_purify, skill_guardian_aegis, skill_second_wind, skill_resurrection, skill_beam_of_mercy, skill_self_mending, skill_holy_burst]
 
   - id: build_warlock
     name_zh: 術士
@@ -311,3 +313,20 @@ builds:
       tags: [hero, sim]
       max_mana: 40
       skills: [skill_dispel_magic, skill_flare_sight, skill_blessing_thief, skill_focus_surge, skill_quicken_tide, skill_hex_bolt]
+
+  - id: build_bomber
+    name_zh: 定時炸彈流
+    theme_zh: 在敵人身上綁定時炸彈，逼他們走進自己人堆裡；爆炸敵我不分，所以要用寒鎖定住目標、用瞬移與不死誓約保住自己。敵人成群、擠在窄路時最有用，被淨化、或炸彈綁在貼著自己人的敵人身上時不利（Phase 3D-8b，初值未經模擬）。
+    hero:
+      id: build_bomber
+      name_zh: 定時炸彈流英雄
+      attributes: {str: 8, dex: 12, con: 10, int: 16, wis: 12, wil: 12}
+      max_hp: 40
+      speed: 5
+      armor_bonus: 1
+      weapon: fire_staff
+      ai_profile: cunning
+      resist: {elemental: 150}
+      tags: [hero, sim]
+      max_mana: 40
+      skills: [skill_time_bomb_rune, skill_ash_harvest, skill_frost_shackle, skill_blink, skill_undying_oath, skill_ember_brand]

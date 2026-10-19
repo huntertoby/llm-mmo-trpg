@@ -1,0 +1,24 @@
+# 返魂術（Phase 3D-8b 示範，復活；docs/design/06-技能.md 6.18 C，數值為初值，未經模擬）：
+# 讓射程內倒下的友方以 30% 最大 HP 站起來；每場只能用一次。
+id: skill_resurrection
+schema_version: 1
+name_zh: 返魂術
+tier: 1
+rank: 1
+rarity: rare
+kind: active
+skeleton: aura
+category: spell
+weapon_req: focus
+ap_cost: 1
+scaling_attr: wis
+shape: {type: single, range: 3}
+effects:
+  - {type: revive, hp_permille: 300}
+condition: null
+cost: {mana: 8, uses_per_battle: 1}
+tags: [holy, spell, revive, support]
+narrative:
+  concept: 把倒下的同伴從死亡邊緣拉回來，讓他再站起來戰鬥一次
+  cast_flavor: 你把手按在同伴的胸口，一縷微弱的光沿著掌心灌進去，他猛地吸進一口氣
+provenance: {origin: builtin, owner_id: null, created_by: null, parents: [], bound: true, tradeable: false}

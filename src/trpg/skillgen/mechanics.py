@@ -63,6 +63,8 @@ def mechanic_tags(skill: SkillDef, rules: Ruleset) -> tuple[str, ...]:
                 found.add("heal")
         elif kind == "heal":
             found.add("heal")
+        elif kind == "delayed_damage":  # 定時炸彈（3D-8b）：延遲的範圍傷害
+            found.add("damage")
         elif kind in _DISPLACE:
             found.add("displace")
         elif kind in _TERRAIN:

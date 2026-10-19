@@ -60,6 +60,16 @@ dispel_one_points: 3
 dispel_all_points: 6
 reveal_base_points: 2
 reveal_round_points: 1
+# 3D-8b 復活與定時炸彈（初值，未經模擬）：復活 ＝ revive_base_points ＋ hp_permille × revive_hp_point_permille ÷ 1000；
+# 定時炸彈 ＝ 骰子平均 ×（base ＋ 半徑 × radius）÷ 1000（預期波及的人數）；
+# 擊殺時效果（on_kill）＝ 各效果點數 × 預估擊殺率（refund_ap 每點 AP 折合 refund_ap_points 點；
+# refund_cooldown ＝ 技能冷卻回合 × restore_cooldown_points）。
+revive_base_points: 6
+revive_hp_point_permille: 10
+delayed_damage_base_targets_permille: 1000
+delayed_damage_radius_targets_permille: 400
+on_kill_expected_permille: 300
+refund_ap_points: 6
 # 3D-8a 吸血：回復的 HP 折合傷害點數的比例（‰）：傷害效果點數 × (1 ＋ lifesteal_permille × 此值 ÷ 10⁶)。聖光雙效
 # （split_heal）的點數 ＝ 傷害點數 ＋ 治療點數（骰子平均），再乘形狀與 affects: all 的對象係數。初值，未經模擬。
 lifesteal_value_permille: 800

@@ -1,0 +1,29 @@
+# 灰燼收割（Phase 3D-8b 示範，技能內的擊殺時效果；docs/design/06-技能.md 6.18 F，數值為初值，
+# 未經模擬）：用火焰灼燒一名敵人；這一招讓目標倒下時返還 1 AP，並讓本技能的冷卻歸零。
+id: skill_ash_harvest
+schema_version: 1
+name_zh: 灰燼收割
+tier: 1
+rank: 1
+rarity: rare
+kind: active
+skeleton: strike
+category: spell
+weapon_req: focus
+ap_cost: 2
+scaling_attr: int
+shape: {type: single, range: 5}
+effects:
+  - type: damage
+    dice: 3d6
+    element: fire
+    on_kill:
+      - {type: refund_ap, amount: 1}
+      - {type: refund_cooldown}
+condition: null
+cost: {mana: 5, cooldown: 2}
+tags: [fire, spell, finisher]
+narrative:
+  concept: 火焰收走一條性命的同時，也把你的力氣還給你
+  cast_flavor: 敵人在火光中倒下，你吸進一口帶著餘燼的空氣，指尖又重新熱了起來
+provenance: {origin: builtin, owner_id: null, created_by: null, parents: [], bound: true, tradeable: false}

@@ -105,6 +105,12 @@ statuses:
     expires: turn_end
     stacking: refresh
     prevents_concealment: true
+  - id: time_bomb
+    polarity: debuff
+    name_zh: 定時炸彈
+    description_zh: 身上綁著定時炸彈，剩餘回合就是倒數（每次環境回合 −1）：歸零時在身體當下的位置爆炸，波及周圍；倒下時也會立即爆炸。可被淨化移除，驅散不移除。只能由定時炸彈（delayed_damage）施加。
+    expires: never
+    stacking: refresh
   - id: slow
     polarity: debuff
     name_zh: 緩速
