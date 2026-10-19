@@ -87,8 +87,8 @@ def arena(
     for index, xy in enumerate(foes):
         foe = template("bandit", max_hp=200) if index in reactive else no_reactions(max_hp=200)
         spawns.append(spawn(Team.ENEMY, xy, foe))
-    extra = [] if isinstance(skill, str) else [skill]
-    return give_turn(make_state(m, spawns, skills=extra), U1)
+    defs = [] if isinstance(skill, str) else [skill]
+    return give_turn(make_state(m, spawns, skills=defs), U1)
 
 
 def use(state: BattleState, skill_id: str, **fields: Any) -> ResolveResult:

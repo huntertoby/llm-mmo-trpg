@@ -305,6 +305,7 @@ def test_preview_returns_the_numbers_and_does_not_change_the_session(client: Tes
         "pierce",
         "topples",
         "hurls",
+        "moves",  # Phase 3D-2
     }
     assert data["action"] == attack
     assert isinstance(data["ap_cost"], int) and data["ap_cost"] >= 1
