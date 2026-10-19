@@ -49,6 +49,7 @@ __all__ = [
     "ObjectMoved",
     "PushResisted",
     "ReactionDeclined",
+    "ReactionModeSet",
     "ReactionTriggered",
     "RoundEnded",
     "RoundStarted",
@@ -589,6 +590,15 @@ class AttackIntercepted(EventBase):
     skill_id: str | None = None
 
 
+class ReactionModeSet(EventBase):
+    """玩家改了自己某條反應規則的模式（``set_reaction_mode``）。"""
+
+    type: Literal["reaction_mode_set"] = "reaction_mode_set"
+    unit_id: UnitId
+    reaction: str
+    mode: Literal["auto", "prompt", "off"]
+
+
 class ReactionDeclined(EventBase):
     """``prompt`` 反應被拒絕。"""
 
@@ -802,6 +812,7 @@ type Event = Annotated[
     | PushResisted
     | ReactionTriggered
     | ReactionDeclined
+    | ReactionModeSet
     | AttackIntercepted
     | EnvironmentStarted
     | EnvironmentEnded

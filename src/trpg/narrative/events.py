@@ -39,6 +39,7 @@ from trpg.engine.events import (
     ObjectMoved,
     PushResisted,
     ReactionDeclined,
+    ReactionModeSet,
     ReactionTriggered,
     RoundEnded,
     RoundStarted,
@@ -638,6 +639,15 @@ def _reaction_triggered(e: ReactionTriggered, v: _View) -> str:
 @_handles(ReactionDeclined)
 def _reaction_declined(e: ReactionDeclined, v: _View) -> str:
     return f"  {v.name[e.unit_id]} 放棄反應：{reaction_name(v.state, e.reaction)}"
+
+
+_MODE_TEXT = {"auto": "自動", "prompt": "每次詢問", "off": "關閉"}
+
+
+@_handles(ReactionModeSet)
+def _reaction_mode_set(e: ReactionModeSet, v: _View) -> str:
+    name = reaction_name(v.state, e.reaction)
+    return f"{v.name[e.unit_id]} 將反應 {name} 設為{_MODE_TEXT[e.mode]}"
 
 
 @_handles(AttackIntercepted)

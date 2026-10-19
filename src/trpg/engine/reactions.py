@@ -235,7 +235,7 @@ def _react(
     """找出 ``unit`` 第一條符合事件、目前可用的規則並詢問；使用時回傳反應定義或反應技
     （已扣次數與耐力、發出 ``reaction_triggered``，由呼叫端執行效果）。"""
     for rule in unit.reactions:
-        if rule.when.event not in events:
+        if rule.mode == "off" or rule.when.event not in events:
             continue
         picked = _candidate(ctx, unit, rule, trigger, effect, skills)
         if picked is None:

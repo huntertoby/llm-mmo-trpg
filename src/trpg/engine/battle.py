@@ -25,6 +25,7 @@ from trpg.engine.actions import (
     EndTurn,
     Interact,
     Move,
+    SetReactionMode,
     Shove,
     Trip,
     UseSkill,
@@ -44,6 +45,7 @@ from trpg.engine.events import (
     InitiativeRolled,
     InitiativeTieBroken,
     ObjectAttacked,
+    ReactionModeSet,
     RoundStarted,
     TurnOrderSet,
     UnitStoodUp,
@@ -676,6 +678,25 @@ def _do_end_stance(ctx: Ctx, unit: UnitState, action: Action) -> None:
     )
 
 
+def reaction_mode_problem(unit: UnitState, reaction: str) -> str | None:
+    """``set_reaction_mode`` 的問題：只能改自己身上已有的反應規則（不在 ``legal_actions``）。"""
+    if all(rule.reaction != reaction for rule in unit.reactions):
+        return f"{unit.name_zh} 沒有反應規則：{reaction}"
+    return None
+
+
+def _do_set_reaction_mode(ctx: Ctx, unit: UnitState, action: Action) -> None:
+    assert isinstance(action, SetReactionMode)
+    problem = reaction_mode_problem(unit, action.reaction)
+    if problem is not None:
+        raise IllegalActionError(problem)
+    unit.reactions = tuple(
+        rule.model_copy(update={"mode": action.mode}) if rule.reaction == action.reaction else rule
+        for rule in unit.reactions
+    )
+    ctx.emit(ReactionModeSet, unit_id=unit.id, reaction=action.reaction, mode=action.mode)
+
+
 def _do_end_turn(ctx: Ctx, unit: UnitState, action: Action) -> None:
     assert isinstance(action, EndTurn)
     end_turn(ctx)
@@ -696,6 +717,7 @@ ACTION_HANDLERS: dict[str, ActionHandler] = {
     "interact": _do_interact,
     "use_skill": _do_use_skill,
     "end_stance": _do_end_stance,
+    "set_reaction_mode": _do_set_reaction_mode,
     "end_turn": _do_end_turn,
 }
 

@@ -28,6 +28,7 @@ __all__ = [
     "EndTurn",
     "Interact",
     "Move",
+    "SetReactionMode",
     "Shove",
     "Step",
     "Trip",
@@ -131,6 +132,19 @@ class EndStance(_ActionBase):
     type: Literal["end_stance"] = "end_stance"
 
 
+class SetReactionMode(_ActionBase):
+    """設定自己身上某條反應規則的模式（Phase 3-4b）：``auto`` 自動、``prompt`` 詢問、``off`` 關閉。
+
+    不花 AP、不結束回合，只能在自己的回合使用，只能改自己身上已有的規則（``reaction`` 為反應 ID
+    或反應技 ID；同一個反應的所有規則一併改）。**不列入** ``legal_actions``（AI 不使用），由
+    :func:`trpg.engine.battle.reaction_mode_problem` 判斷合法。
+    """
+
+    type: Literal["set_reaction_mode"] = "set_reaction_mode"
+    reaction: str
+    mode: Literal["auto", "prompt", "off"]
+
+
 class EndTurn(_ActionBase):
     """結束回合。"""
 
@@ -138,7 +152,16 @@ class EndTurn(_ActionBase):
 
 
 type Action = Annotated[
-    Move | Attack | UseSkill | Defend | Shove | Trip | Interact | EndStance | EndTurn,
+    Move
+    | Attack
+    | UseSkill
+    | Defend
+    | Shove
+    | Trip
+    | Interact
+    | EndStance
+    | SetReactionMode
+    | EndTurn,
     Field(discriminator="type"),
 ]
 
@@ -157,7 +180,17 @@ class Decision(BaseModel):
 
 
 type Step = Annotated[
-    Move | Attack | UseSkill | Defend | Shove | Trip | Interact | EndStance | EndTurn | Decision,
+    Move
+    | Attack
+    | UseSkill
+    | Defend
+    | Shove
+    | Trip
+    | Interact
+    | EndStance
+    | SetReactionMode
+    | EndTurn
+    | Decision,
     Field(discriminator="type"),
 ]
 """戰鬥紀錄中的一步：動作（``resolve``）或決定（``resume``）。"""

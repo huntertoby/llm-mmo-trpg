@@ -9,17 +9,22 @@
 
 from __future__ import annotations
 
+from typing import Literal
+
 from pydantic import BaseModel, ConfigDict
 
+from trpg.content.battle import ReactionRule
 from trpg.content.maps import Objective
 from trpg.engine.state import BattleState, PendingResolution, StatusInstance, UnitState
 from trpg.engine.traps import visible_traps
 from trpg.shared.types import Pos, Surface, Team, UnitId
 
 __all__ = [
+    "REACTION_TRIGGER_TEXT",
     "BattleView",
     "ObjectView",
     "PendingView",
+    "ReactionRuleView",
     "StatusView",
     "TileView",
     "TrapView",
@@ -59,6 +64,32 @@ class StatusView(_ViewModel):
     amount: int | None
 
 
+REACTION_TRIGGER_TEXT: dict[str, str] = {
+    "targeted_by_melee": "被近戰攻擊命中時",
+    "targeted_by_attack": "被攻擊命中時",
+    "enemy_leaves_adjacent": "敵人離開相鄰格時",
+    "hit_by_melee": "被近戰攻擊命中後",
+    "hit_by_attack": "被攻擊命中後",
+    "ally_hit_adjacent": "相鄰友方被攻擊命中時",
+}
+"""反應規則觸發事件的中文說明（``ReactionWhen.event`` → 文字）。"""
+
+
+class ReactionRuleView(_ViewModel):
+    """單位身上的一條反應規則（玩家可以用 ``set_reaction_mode`` 切換 ``mode``）。"""
+
+    reaction: str
+    name_zh: str
+    description_zh: str
+    event: str
+    trigger_zh: str
+    mode: Literal["auto", "prompt", "off"]
+    unless_stamina_below: int | None
+    stamina_cost: int
+    mana_cost: int
+    hp_cost_permille: int
+
+
 class UnitView(_ViewModel):
     id: UnitId
     template_id: str
@@ -86,7 +117,11 @@ class UnitView(_ViewModel):
     cooldowns: dict[str, int]
     """冷卻中的技能；其他陣營單位的陷阱技能冷卻不列出。"""
     reaction_available: bool
-    """還有反應次數，且身上有反應規則。"""
+    """還有反應次數，且身上有（未關閉的）反應規則。"""
+    reaction_rules: tuple[ReactionRuleView, ...]
+    """反應規則與目前模式；只有自己陣營的單位會列出（其他陣營的單位為空）。"""
+    ap_carry: int
+    """結束回合時保留、下回合開始時加上的 AP（自己的回合中為 0，已併入 ``ap``）。"""
     downed: bool
     escaped: bool
 
@@ -157,6 +192,30 @@ def _visible_cooldowns(state: BattleState, unit: UnitState, team: Team) -> dict[
     return dict(cooldowns)
 
 
+def _rule_view(state: BattleState, unit: UnitState, rule: ReactionRule) -> ReactionRuleView:
+    rules = state.ruleset
+    if rule.reaction in unit.skills:  # 反應技：規則的 reaction 是技能 ID
+        skill = rules.skill_def(rule.reaction)
+        name, description = skill.name_zh, skill.narrative.concept
+        stamina, mana, hp = 0, skill.cost.mana, skill.cost.hp_percent or 0
+    else:
+        definition = rules.reaction_def(rule.reaction)
+        name, description = definition.name_zh, definition.description_zh
+        stamina, mana, hp = definition.stamina_cost, 0, 0
+    return ReactionRuleView(
+        reaction=rule.reaction,
+        name_zh=name,
+        description_zh=description,
+        event=rule.when.event,
+        trigger_zh=REACTION_TRIGGER_TEXT[rule.when.event],
+        mode=rule.mode,
+        unless_stamina_below=None if rule.unless is None else rule.unless.self_stamina_below,
+        stamina_cost=stamina,
+        mana_cost=mana,
+        hp_cost_permille=hp,
+    )
+
+
 def _unit_view(state: BattleState, unit: UnitState, team: Team) -> UnitView:
     per_round = state.ruleset.core.reactions_per_round
     return UnitView(
@@ -182,7 +241,13 @@ def _unit_view(state: BattleState, unit: UnitState, team: Team) -> UnitView:
         statuses=tuple(_status_view(s) for s in unit.statuses),
         stacks=dict(sorted(unit.stacks.items())),
         cooldowns=_visible_cooldowns(state, unit, team),
-        reaction_available=unit.alive and bool(unit.reactions) and unit.reactions_used < per_round,
+        reaction_available=unit.alive
+        and any(r.mode != "off" for r in unit.reactions)
+        and unit.reactions_used < per_round,
+        reaction_rules=(
+            tuple(_rule_view(state, unit, r) for r in unit.reactions) if unit.team is team else ()
+        ),
+        ap_carry=unit.ap_carry,
         downed=unit.downed,
         escaped=unit.escaped,
     )

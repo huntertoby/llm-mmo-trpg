@@ -323,13 +323,14 @@ class ReactionRule(ContentModel):
     """玩家（或範本）預先設定的反應規則（``docs/專案計畫.md`` 5.2.1 的格式）。
 
     ``mode``：``auto`` 條件成立時自動執行；``prompt`` 暫停結算並詢問（``resolve`` 回傳
-    ``pending``，以 ``resume`` 繼續）。
+    ``pending``，以 ``resume`` 繼續）；``off`` 不觸發（Phase 3-4b，玩家以 ``SetReactionMode``
+    設定）。
     """
 
     reaction: str = Field(pattern=ID_PATTERN)
     when: ReactionWhen
     unless: ReactionUnless | None = None
-    mode: Literal["auto", "prompt"] = "auto"
+    mode: Literal["auto", "prompt", "off"] = "auto"
 
 
 # ---------------------------------------------------------------------------

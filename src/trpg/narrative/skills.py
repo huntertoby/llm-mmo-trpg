@@ -306,7 +306,7 @@ def skill_card(
         weapon_req=WEAPON_REQ_TEXT[skill.weapon_req],
         scaling=scaling_detail(skill),
         ap_cost=skill.ap_cost,
-        cost=tuple(cost_parts(library, skill)),
+        cost=tuple(cost_parts(library, skill, with_ap=skill.ap_cost is not None)),
         shape=shape_summary(library, skill.shape),
         condition=(
             None if skill.condition is None else condition_summary(library, skill.condition)
