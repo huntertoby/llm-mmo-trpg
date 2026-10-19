@@ -37,8 +37,14 @@ __all__ = [
     "run_battle",
 ]
 
-LOG_FORMAT = "trpg-battle-log/22"
-"""``/22``（Phase 3D-3）：修正規則的技能變形（``area_delta``、``shape_to``、``allow_self_target``；
+LOG_FORMAT = "trpg-battle-log/23"
+"""``/23``（Phase 3D-4a）：召喚——原語 ``summon``（形狀 ``ground_tile``；
+``EffectSpec`` 新欄位 ``unit``、``count``）、規則包的 ``summons``（召喚物範本與武器）、
+核心規則 ``summon_limit_per_owner``、單位範本的 ``summon``、單位狀態的 ``owner_id``／
+``summon_expires_round``／``dismissed``、新事件 ``unit_summoned``／``summon_expired``、
+``effect_fizzled`` 的新原因（``summon_blocked``／``unknown_summon``）；
+``/22`` 的規則包沒有這些欄位，舊紀錄不能由新版程式重播。
+``/22``（Phase 3D-3）：修正規則的技能變形（``area_delta``、``shape_to``、``allow_self_target``；
 ``skill_shapes.yaml`` 的 ``conversions``、``SkillDef.include_caster``）、四個新反應事件
 （``hit_by_spell``、``ally_downed``、``enemy_enters_adjacent``、``ally_targeted``，單位反應規則的
 ``when.event``）、投擲的油桶摔破漏油而不是爆炸（``HurlObjectEffect.ignite``；舊紀錄中投擲的油桶
