@@ -1,0 +1,285 @@
+// PixiJS 繪製：照著 `DrawModel` 畫格子、物件、陷阱、單位與高亮；移動動畫只是過場，
+// 播放完由呼叫端以新的 `view` 重畫（以 `view` 為準）。
+import {
+  Application,
+  Container,
+  Graphics,
+  Rectangle,
+  Text,
+  type FederatedPointerEvent,
+  type Ticker,
+} from "pixi.js";
+import type { Pos } from "../api/types";
+import { lerpPos, type MoveAnim } from "../battle/animation";
+import type { DrawModel, ObjectDraw, TileDraw, UnitDraw } from "../battle/drawModel";
+import { canvasSize, pixelToTile, TILE_SIZE, tileCenter, tileOrigin } from "../battle/geometry";
+import { HIGHLIGHT } from "../battle/glossary";
+
+export interface Highlights {
+  moves: readonly Pos[];
+  attacks: readonly Pos[];
+  hover: Pos | null;
+}
+
+export interface RendererCallbacks {
+  onTileClick(tile: Pos): void;
+  onTileHover(tile: Pos | null): void;
+}
+
+const T = TILE_SIZE;
+const BACKGROUND = 0x15151c;
+const FONT = "system-ui, 'Microsoft JhengHei', 'PingFang TC', sans-serif";
+
+function clearLayer(layer: Container): void {
+  for (const child of layer.removeChildren()) child.destroy({ children: true });
+}
+
+function label(text: string, size: number, fill: number, bold = false): Text {
+  return new Text({
+    text,
+    style: { fontFamily: FONT, fontSize: size, fill, fontWeight: bold ? "700" : "400" },
+  });
+}
+
+function hpColor(ratio: number): number {
+  if (ratio > 0.5) return 0x4cd964;
+  if (ratio > 0.25) return 0xffcc00;
+  return 0xff3b30;
+}
+
+export class BattleRenderer {
+  private readonly app = new Application();
+  private readonly tiles = new Container();
+  private readonly highlights = new Container();
+  private readonly objects = new Container();
+  private readonly traps = new Container();
+  private readonly units = new Container();
+  private readonly hover = new Container();
+  private readonly unitSprites = new Map<string, Container>();
+  private model: DrawModel | null = null;
+  private ready = false;
+  private destroyed = false;
+  private readonly callbacks: RendererCallbacks;
+
+  constructor(callbacks: RendererCallbacks) {
+    this.callbacks = callbacks;
+  }
+
+  async init(host: HTMLElement): Promise<void> {
+    await this.app.init({
+      width: 8 * T,
+      height: 8 * T,
+      background: BACKGROUND,
+      antialias: true,
+      resolution: window.devicePixelRatio || 1,
+      autoDensity: true,
+    });
+    if (this.destroyed) {
+      this.app.destroy(true, { children: true });
+      return;
+    }
+    host.appendChild(this.app.canvas);
+    const stage = this.app.stage;
+    stage.addChild(this.tiles, this.objects, this.highlights, this.traps, this.units, this.hover);
+    stage.eventMode = "static";
+    stage.on("pointermove", (e: FederatedPointerEvent) => this.callbacks.onTileHover(this.tileOf(e)));
+    stage.on("pointerleave", () => this.callbacks.onTileHover(null));
+    stage.on("pointertap", (e: FederatedPointerEvent) => {
+      const tile = this.tileOf(e);
+      if (tile !== null) this.callbacks.onTileClick(tile);
+    });
+    this.ready = true;
+    if (this.model !== null) this.draw(this.model);
+  }
+
+  destroy(): void {
+    this.destroyed = true;
+    if (this.ready) this.app.destroy(true, { children: true });
+    this.ready = false;
+  }
+
+  private tileOf(e: FederatedPointerEvent): Pos | null {
+    if (this.model === null) return null;
+    return pixelToTile(e.global.x, e.global.y, this.model);
+  }
+
+  draw(model: DrawModel): void {
+    this.model = model;
+    if (!this.ready) return;
+    const size = canvasSize(model);
+    if (this.app.screen.width !== size.width || this.app.screen.height !== size.height) {
+      this.app.renderer.resize(size.width, size.height);
+    }
+    this.app.stage.hitArea = new Rectangle(0, 0, size.width, size.height);
+    clearLayer(this.tiles);
+    clearLayer(this.objects);
+    clearLayer(this.traps);
+    clearLayer(this.units);
+    this.unitSprites.clear();
+    for (const t of model.tiles) this.tiles.addChild(this.tileSprite(t));
+    for (const o of model.objects) this.objects.addChild(this.objectSprite(o));
+    for (const trap of model.traps) {
+      const c = tileCenter(trap);
+      const glyph = label("^", 22, trap.color, true);
+      glyph.anchor.set(0.5);
+      glyph.position.set(c.x + T * 0.28, c.y + T * 0.22);
+      this.traps.addChild(glyph);
+    }
+    for (const u of model.units) {
+      const sprite = this.unitSprite(u);
+      this.units.addChild(sprite);
+      if (!u.downed) this.unitSprites.set(u.id, sprite);
+    }
+  }
+
+  private tileSprite(t: TileDraw): Container {
+    const c = new Container();
+    const o = tileOrigin(t);
+    c.position.set(o.x, o.y);
+    const g = new Graphics()
+      .rect(0, 0, T, T)
+      .fill(t.fill)
+      .stroke({ width: 1, color: 0x000000, alpha: 0.35 });
+    if (t.wall) {
+      // 牆：磚紋
+      g.moveTo(0, T / 2).lineTo(T, T / 2);
+      g.moveTo(T / 2, 0).lineTo(T / 2, T / 2);
+      g.moveTo(T / 4, T / 2).lineTo(T / 4, T);
+      g.moveTo((3 * T) / 4, T / 2).lineTo((3 * T) / 4, T);
+      g.stroke({ width: 2, color: 0x2a2522 });
+    }
+    if (t.deadly) {
+      g.rect(3, 3, T - 6, T - 6).stroke({ width: 2, color: HIGHLIGHT.deadly, alpha: 0.8 });
+      g.moveTo(T * 0.3, T * 0.3).lineTo(T * 0.7, T * 0.7);
+      g.moveTo(T * 0.7, T * 0.3).lineTo(T * 0.3, T * 0.7);
+      g.stroke({ width: 2, color: HIGHLIGHT.deadly, alpha: 0.6 });
+    }
+    c.addChild(g);
+    if (!t.blocked || t.wall) {
+      const h = label(t.heightLabel, 11, 0x000000, true);
+      h.alpha = 0.55;
+      h.position.set(3, 1);
+      c.addChild(h);
+    }
+    return c;
+  }
+
+  private objectSprite(o: ObjectDraw): Container {
+    const c = new Container();
+    const origin = tileOrigin(o);
+    c.position.set(origin.x, origin.y);
+    const g = new Graphics();
+    if (o.floor) {
+      g.rect(2, 2, T - 4, T - 4).fill({ color: o.fill, alpha: 0.75 });
+    } else {
+      g.roundRect(T * 0.18, T * 0.18, T * 0.64, T * 0.64, 6).fill(o.fill);
+    }
+    if (o.burning) {
+      g.rect(1, 1, T - 2, T - 2).stroke({ width: 3, color: HIGHLIGHT.burning });
+    } else if (o.flammable) {
+      g.circle(T - 8, 8, 4).fill(HIGHLIGHT.flammable);
+    }
+    c.addChild(g);
+    const glyph = label(o.burning ? `${o.glyph}火` : o.glyph, o.floor ? 12 : 16, 0xffffff, true);
+    glyph.anchor.set(0.5);
+    glyph.position.set(T / 2, o.floor ? T - 10 : T / 2);
+    c.addChild(glyph);
+    if (o.hpRatio !== null && o.hpRatio < 1 && !o.floor) {
+      const bar = new Graphics().rect(T * 0.18, T * 0.84, T * 0.64, 3).fill(0x000000);
+      bar.rect(T * 0.18, T * 0.84, T * 0.64 * o.hpRatio, 3).fill(0xd0d0d0);
+      c.addChild(bar);
+    }
+    return c;
+  }
+
+  private unitSprite(u: UnitDraw): Container {
+    const c = new Container();
+    const center = tileCenter(u);
+    c.position.set(center.x, center.y);
+    c.alpha = u.downed ? 0.35 : 1;
+    const r = T * 0.32;
+    const g = new Graphics().circle(0, 0, r).fill(u.fill);
+    if (u.hero) g.circle(0, 0, r + 2).stroke({ width: 2, color: HIGHLIGHT.hero });
+    if (u.active) g.circle(0, 0, r + 5).stroke({ width: 3, color: HIGHLIGHT.active });
+    c.addChild(g);
+    const marker = label(u.marker, 18, 0xffffff, true);
+    marker.anchor.set(0.5);
+    c.addChild(marker);
+    const w = T * 0.8;
+    const bar = new Graphics().rect(-w / 2, T * 0.36, w, 5).fill(0x000000);
+    bar.rect(-w / 2, T * 0.36, w * u.hpRatio, 5).fill(hpColor(u.hpRatio));
+    if (u.shieldRatio > 0) bar.rect(-w / 2, T * 0.36 - 3, w * u.shieldRatio, 2).fill(0x9fd8ff);
+    c.addChild(bar);
+    return c;
+  }
+
+  setHighlights(h: Highlights): void {
+    if (!this.ready) return;
+    clearLayer(this.highlights);
+    clearLayer(this.hover);
+    const g = new Graphics();
+    for (const p of h.moves) {
+      const o = tileOrigin(p);
+      g.rect(o.x + 2, o.y + 2, T - 4, T - 4).fill({ color: HIGHLIGHT.move, alpha: 0.4 });
+    }
+    for (const p of h.attacks) {
+      const o = tileOrigin(p);
+      g.rect(o.x + 2, o.y + 2, T - 4, T - 4).stroke({ width: 3, color: HIGHLIGHT.attack });
+    }
+    this.highlights.addChild(g);
+    if (h.hover !== null) {
+      const o = tileOrigin(h.hover);
+      const frame = new Graphics()
+        .rect(o.x + 1, o.y + 1, T - 2, T - 2)
+        .stroke({ width: 2, color: 0xffffff, alpha: 0.9 });
+      this.hover.addChild(frame);
+    }
+  }
+
+  /** 依序播放移動動畫；`skip()` 為真時剩下的移動直接跳到終點。 */
+  async animate(plan: readonly MoveAnim[], skip: () => boolean): Promise<void> {
+    if (!this.ready) return;
+    for (const m of plan) {
+      const sprite = this.unitSprites.get(m.unitId);
+      if (sprite === undefined) continue;
+      const to = tileCenter(m.to);
+      if (m.durationMs <= 0 || skip()) {
+        sprite.position.set(to.x, to.y);
+        continue;
+      }
+      await this.tween(sprite, tileCenter(m.from), to, m.durationMs, skip);
+    }
+  }
+
+  private tween(
+    sprite: Container,
+    from: { x: number; y: number },
+    to: { x: number; y: number },
+    durationMs: number,
+    skip: () => boolean,
+  ): Promise<void> {
+    return new Promise((resolve) => {
+      let elapsed = 0;
+      let done = false;
+      const tick = (ticker: Ticker) => {
+        elapsed += ticker.deltaMS;
+        if (sprite.destroyed || skip() || elapsed >= durationMs) {
+          finish();
+          return;
+        }
+        const p = lerpPos(from, to, elapsed / durationMs);
+        sprite.position.set(p.x, p.y);
+      };
+      const finish = () => {
+        if (done) return;
+        done = true;
+        this.app.ticker.remove(tick);
+        if (!sprite.destroyed) sprite.position.set(to.x, to.y);
+        resolve();
+      };
+      this.app.ticker.add(tick);
+      // 分頁在背景時 ticker 會停：保底計時，避免動畫卡住畫面。
+      window.setTimeout(finish, durationMs + 300);
+    });
+  }
+}

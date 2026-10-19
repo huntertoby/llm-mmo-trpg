@@ -22,7 +22,10 @@ export type Surface = Schemas["Surface"];
 export type MapSummary = Schemas["MapSummary"];
 export type BuildSummary = Schemas["BuildSummary"];
 export type SkillCard = Schemas["SkillCard"];
-export type CreateBattleRequest = Schemas["CreateBattleRequest"];
+/** openapi-typescript 把有預設值的欄位標成必填；建立戰鬥時 `max_rounds` 可省略（伺服器預設 30）。 */
+export type CreateBattleRequest = Omit<Schemas["CreateBattleRequest"], "max_rounds"> & {
+  max_rounds?: number;
+};
 export type Awaiting = BattleResponse["awaiting"];
 
 /** 所有事件共有的欄位（`text` 只在有中文描述時存在）。 */
