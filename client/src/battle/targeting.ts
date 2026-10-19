@@ -35,6 +35,8 @@ export interface TargetSet {
   tiles: Map<string, Action>;
   /** 方向 → 動作。 */
   directions: Map<Direction, Action>;
+  /** 投擲物件（兩段選取）：物件 ID → （落點 "x,y" → 動作）。 */
+  hurls: Map<string, Map<string, Action>>;
 }
 
 export type ModeKind = "skill" | "attack" | "shove" | "trip" | "interact" | "shove_aside" | "defend" | "end_stance" | "stand";
@@ -50,19 +52,30 @@ export interface ActionMode {
 }
 
 function emptyTargets(): TargetSet {
-  return { self: null, units: new Map(), objects: new Map(), tiles: new Map(), directions: new Map() };
+  return { self: null, units: new Map(), objects: new Map(), tiles: new Map(), directions: new Map(), hurls: new Map() };
 }
 
 function setOnce<K>(map: Map<K, Action>, key: K, action: Action): void {
   if (!map.has(key)) map.set(key, action);
 }
 
-/** 把一個動作登記到它的目標（單位 > 物件 > 格子 > 方向 > 自身；同一目標取第一個）。 */
+function addHurl(t: TargetSet, objectId: string, landing: Pos, action: Action): void {
+  let landings = t.hurls.get(objectId);
+  if (landings === undefined) {
+    landings = new Map();
+    t.hurls.set(objectId, landings);
+  }
+  setOnce(landings, posKey(landing), action);
+}
+
+/** 把一個動作登記到它的目標（單位 > 投擲（物件＋落點）> 物件 > 格子 > 方向 > 自身；同一目標取第一個）。 */
 function addTarget(t: TargetSet, action: Action): void {
   switch (action.type) {
     case "use_skill":
     case "attack": {
-      if (action.target_id != null) setOnce(t.units, action.target_id, action);
+      if (action.type === "use_skill" && action.target_object_id != null && action.target_pos != null) {
+        addHurl(t, action.target_object_id, action.target_pos, action); // 投擲物件：先選物件、再選落點
+      } else if (action.target_id != null) setOnce(t.units, action.target_id, action);
       else if (action.target_object_id != null) setOnce(t.objects, action.target_object_id, action);
       else if (action.type === "use_skill" && action.target_pos != null)
         setOnce(t.tiles, posKey(action.target_pos), action);
@@ -90,7 +103,7 @@ export function buildTargets(actions: readonly Action[]): TargetSet {
 }
 
 function pickableCount(t: TargetSet): number {
-  return t.units.size + t.objects.size + t.tiles.size + t.directions.size;
+  return t.units.size + t.objects.size + t.tiles.size + t.directions.size + t.hurls.size;
 }
 
 /** 這個模式只有「自身」可選（不需要選目標）。 */
@@ -289,9 +302,55 @@ function unitIdsAt(view: BattleView, tile: Pos): string[] {
   return [...here.filter((u) => !u.downed), ...here.filter((u) => u.downed)].map((u) => u.id);
 }
 
-/** 模式下點選／滑過一格 → 對應的動作（單位 > 物件 > 格子 > 相鄰的方向格）。 */
-export function actionAtTile(mode: ActionMode, view: BattleView, hero: UnitView, tile: Pos): Action | null {
+// ---- 投擲物件的兩段選取 ---------------------------------------------------------
+
+/** 這個模式是投擲物件（先選物件、再選落點）。 */
+export function isHurlMode(mode: ActionMode): boolean {
+  return mode.targets.hurls.size > 0;
+}
+
+/** 第一段：`tile` 上可以舉起的物件 ID（沒有時 `null`）。 */
+export function hurlObjectAt(mode: ActionMode, view: BattleView, tile: Pos): string | null {
+  for (const o of view.objects) {
+    if (samePos(o.pos, tile) && mode.targets.hurls.has(o.id)) return o.id;
+  }
+  return null;
+}
+
+/** 第二段：選了物件 `objectId` 之後，`tile` 這個落點對應的動作（不是合法落點時 `null`）。 */
+export function hurlActionAt(mode: ActionMode, objectId: string | null, tile: Pos): Action | null {
+  if (objectId === null) return null;
+  return mode.targets.hurls.get(objectId)?.get(posKey(tile)) ?? null;
+}
+
+/** 第二段的合法落點（依伺服器列出的順序）。 */
+export function hurlLandings(mode: ActionMode, objectId: string | null): Pos[] {
+  if (objectId === null) return [];
+  return [...(mode.targets.hurls.get(objectId)?.keys() ?? [])].map((key) => {
+    const [x, y] = key.split(",").map(Number);
+    return { x: x as number, y: y as number };
+  });
+}
+
+/** 投擲物件的提示文字（兩段選取）。 */
+export function hurlPromptText(objectName: string | null, landingCount: number, objectCount: number): string {
+  if (objectName === null) return `第 1 段：點選要舉起的物件（紅框 ${objectCount} 個）。Esc／右鍵取消。`;
+  return `第 2 段：已舉起${objectName}，點選落點（紅框 ${landingCount} 個）；再點其他物件可改選，點同一個物件取消。`;
+}
+
+/**
+ * 模式下點選／滑過一格 → 對應的動作（單位 > 物件 > 格子 > 相鄰的方向格）。
+ * 投擲物件的模式要先選物件（`hurlPick`），選好之前沒有動作；選好之後只有合法落點有動作。
+ */
+export function actionAtTile(
+  mode: ActionMode,
+  view: BattleView,
+  hero: UnitView,
+  tile: Pos,
+  hurlPick: string | null = null,
+): Action | null {
   const t = mode.targets;
+  if (t.hurls.size > 0) return hurlActionAt(mode, hurlPick, tile);
   for (const id of unitIdsAt(view, tile)) {
     const hit = t.units.get(id);
     if (hit !== undefined) return hit;
@@ -320,10 +379,23 @@ export interface TargetTiles {
   directions: { pos: Pos; direction: Direction }[];
 }
 
-/** 模式的合法目標所在的格子（高亮用）。 */
-export function targetTiles(mode: ActionMode, view: BattleView, hero: UnitView): TargetTiles {
+/** 模式的合法目標所在的格子（高亮用）；投擲物件第一段是可舉起的物件、第二段是合法落點。 */
+export function targetTiles(
+  mode: ActionMode,
+  view: BattleView,
+  hero: UnitView,
+  hurlPick: string | null = null,
+): TargetTiles {
   const t = mode.targets;
   const targets: Pos[] = [];
+  if (t.hurls.size > 0) {
+    if (hurlPick !== null) return { targets: hurlLandings(mode, hurlPick), directions: [] };
+    for (const id of t.hurls.keys()) {
+      const o = view.objects.find((x) => x.id === id);
+      if (o !== undefined) targets.push(o.pos);
+    }
+    return { targets, directions: [] };
+  }
   for (const id of t.units.keys()) {
     const u = view.units.find((x) => x.id === id);
     if (u !== undefined) targets.push(u.pos);

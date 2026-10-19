@@ -14,6 +14,7 @@ import { lerpPos, type MoveAnim } from "../battle/animation";
 import type { DrawModel, ObjectDraw, TileDraw, UnitDraw } from "../battle/drawModel";
 import { canvasSize, pixelToTile, TILE_SIZE, tileCenter, tileOrigin } from "../battle/geometry";
 import { HIGHLIGHT } from "../battle/glossary";
+import type { Overlay, OverlayKind } from "../battle/scenePreview";
 import type { TelegraphMark } from "../battle/telegraph";
 
 export interface DirectionMark {
@@ -34,6 +35,10 @@ export interface Highlights {
   /** 反應詢問的觸發者所在格（洋紅色雙框）。 */
   focus: Pos | null;
   hover: Pos | null;
+  /** 場景物件的預覽標記：穿透路線與穿過的物件、推倒壓住的範圍、投擲的物件與落點（Phase 3C-5b）。 */
+  overlays: readonly Overlay[];
+  /** 投擲物件第二段選取時，已經選好（舉起）的物件所在格（青色粗框）。 */
+  picked: readonly Pos[];
 }
 
 export interface RendererCallbacks {
@@ -55,6 +60,16 @@ function label(text: string, size: number, fill: number, bold = false): Text {
     style: { fontFamily: FONT, fontSize: size, fill, fontWeight: bold ? "700" : "400" },
   });
 }
+
+const OVERLAY_COLORS: Readonly<Record<OverlayKind, number>> = {
+  route: HIGHLIGHT.route,
+  pierced: HIGHLIGHT.pierced,
+  behind: HIGHLIGHT.behind,
+  crush: HIGHLIGHT.crush,
+  rubble: HIGHLIGHT.rubble,
+  hurl_from: HIGHLIGHT.picked,
+  hurl_to: HIGHLIGHT.landing,
+};
 
 function hpColor(ratio: number): number {
   if (ratio > 0.5) return 0x4cd964;
@@ -252,6 +267,17 @@ export class BattleRenderer {
       glyph.position.set(o.x + T - 11, o.y + 11);
       this.highlights.addChild(badge, glyph);
     }
+    const tags: Text[] = [];
+    for (const o of h.overlays) {
+      const tag = this.drawOverlay(g, o);
+      if (tag !== null) tags.push(tag);
+    }
+    for (const p of h.picked) {
+      const o = tileOrigin(p);
+      g.rect(o.x + 1, o.y + 1, T - 2, T - 2)
+        .fill({ color: HIGHLIGHT.picked, alpha: 0.25 })
+        .stroke({ width: 4, color: HIGHLIGHT.picked });
+    }
     for (const d of h.directions) {
       const o = tileOrigin(d.pos);
       g.rect(o.x + 2, o.y + 2, T - 4, T - 4).fill({ color: HIGHLIGHT.direction, alpha: 0.3 });
@@ -265,6 +291,7 @@ export class BattleRenderer {
       g.rect(o.x + 2, o.y + 2, T - 4, T - 4).stroke({ width: 3, color: HIGHLIGHT.attack });
     }
     this.highlights.addChild(g);
+    for (const tag of tags) this.highlights.addChild(tag); // 文字標記畫在所有色塊之上
     if (h.focus !== null) {
       const o = tileOrigin(h.focus);
       const frame = new Graphics()
@@ -281,6 +308,44 @@ export class BattleRenderer {
         .stroke({ width: 2, color: 0xffffff, alpha: 0.9 });
       this.hover.addChild(frame);
     }
+  }
+
+  /** 場景物件預覽的一個標記（穿透路線、穿過的物件、後方單位、壓住的格子、倒塌物、投擲物件與落點）。 */
+  private drawOverlay(g: Graphics, overlay: Overlay): Text | null {
+    const color = OVERLAY_COLORS[overlay.kind];
+    const o = tileOrigin(overlay.pos);
+    const c = tileCenter(overlay.pos);
+    switch (overlay.kind) {
+      case "route":
+        g.circle(c.x, c.y, 6).fill({ color, alpha: 0.95 }).stroke({ width: 1, color: 0x000000, alpha: 0.6 });
+        return null;
+      case "crush":
+        g.rect(o.x + 1, o.y + 1, T - 2, T - 2).fill({ color, alpha: 0.4 });
+        g.moveTo(o.x + 4, o.y + T - 4).lineTo(o.x + T - 4, o.y + 4);
+        g.moveTo(o.x + 4, o.y + T / 2).lineTo(o.x + T / 2, o.y + 4);
+        g.moveTo(o.x + T / 2, o.y + T - 4).lineTo(o.x + T - 4, o.y + T / 2);
+        g.stroke({ width: 2, color: 0xffffff, alpha: 0.5 });
+        break;
+      case "rubble":
+        g.rect(o.x + 5, o.y + 5, T - 10, T - 10).stroke({ width: 3, color });
+        break;
+      case "behind":
+        g.rect(o.x + 2, o.y + 2, T - 4, T - 4).stroke({ width: 3, color });
+        break;
+      case "pierced":
+      case "hurl_from":
+      case "hurl_to":
+        g.rect(o.x + 3, o.y + 3, T - 6, T - 6)
+          .fill({ color, alpha: 0.18 })
+          .stroke({ width: 3, color });
+        break;
+    }
+    if (overlay.label === "") return null;
+    const text = label(overlay.label, 13, 0xffffff, true);
+    text.anchor.set(0, 1);
+    text.position.set(o.x + 4, o.y + T - 3);
+    text.style.stroke = { color: 0x000000, width: 3 };
+    return text;
   }
 
   /** 依序播放移動動畫；`skip()` 為真時剩下的移動直接跳到終點。 */

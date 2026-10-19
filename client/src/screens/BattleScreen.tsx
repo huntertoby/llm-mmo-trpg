@@ -30,6 +30,7 @@ import {
   setModeAction,
   triggerEventText,
 } from "../battle/reactions";
+import { previewOverlays } from "../battle/scenePreview";
 import { marksTextAt, telegraphMarks } from "../battle/telegraph";
 import {
   actionAtTile,
@@ -37,7 +38,9 @@ import {
   copyMode,
   DIRECTION_ARROWS,
   fallbackActions,
+  hurlObjectAt,
   isCopyPending,
+  isHurlMode,
   isSelfOnly,
   skillButtons,
   skillMode,
@@ -78,6 +81,8 @@ const NO_HIGHLIGHTS: Highlights = {
   telegraph: [],
   focus: null,
   hover: null,
+  overlays: [],
+  picked: [],
 };
 
 function errorText(e: unknown): string {
@@ -107,6 +112,8 @@ export function BattleScreen({ initial, onExit }: Props) {
   const [selected, setSelected] = useState<string | null>(null);
   const [speed, setSpeed] = useState<PlaySpeed>(loadSpeed);
   const [modeKey, setModeKey] = useState<string | null>(null);
+  /** 投擲物件的兩段選取：第一段選好（舉起）的物件 ID；`null` ＝ 還在選物件。 */
+  const [hurlPick, setHurlPick] = useState<string | null>(null);
   const [panelPreview, setPanelPreview] = useState<Action | null>(null);
   /** 正在等玩家在戰場上點目標的隊友指令。 */
   const [orderPick, setOrderPick] = useState<OrderKind | null>(null);
@@ -193,15 +200,20 @@ export function BattleScreen({ initial, onExit }: Props) {
   useEffect(() => {
     setModeKey(null);
     setPanelPreview(null);
+    setHurlPick(null);
   }, [response]);
+  // 換了模式（選了別的技能或取消）就重新從第一段選物件。
+  useEffect(() => {
+    setHurlPick(null);
+  }, [modeKey]);
 
   // ---- 預覽 -----------------------------------------------------------------
   const hoverAction = useMemo<Action | null>(() => {
     if (!canAct || hover === null || hero === null) return null;
-    if (mode !== null) return actionAtTile(mode, view, hero, hover);
+    if (mode !== null) return actionAtTile(mode, view, hero, hover, hurlPick);
     const target = view.units.find((u) => !u.downed && !u.escaped && samePos(u.pos, hover));
     return target === undefined ? null : (classified.attacks.get(target.id) ?? null);
-  }, [canAct, hover, hero, mode, view, classified]);
+  }, [canAct, hover, hero, mode, view, classified, hurlPick]);
   const selfAction = mode !== null && isSelfOnly(mode.targets) ? mode.targets.self : null;
   const preview = usePreview(battleId, response, canAct ? (hoverAction ?? panelPreview ?? selfAction) : null);
 
@@ -213,13 +225,17 @@ export function BattleScreen({ initial, onExit }: Props) {
     }
     if (!(canAct || copying) || hero === null) return { ...NO_HIGHLIGHTS, ...common };
     const previewTiles = (preview?.affected_tiles ?? []).map(([x, y]): Pos => ({ x: x as number, y: y as number }));
+    const overlays = previewOverlays(preview, view);
     if (mode !== null) {
-      const tt = targetTiles(mode, view, hero);
+      const tt = targetTiles(mode, view, hero, hurlPick);
+      const pickedObject = hurlPick === null ? undefined : view.objects.find((o) => o.id === hurlPick);
       return {
         moves: [],
         attacks: tt.targets,
         directions: tt.directions.map((d) => ({ pos: d.pos, arrow: DIRECTION_ARROWS[d.direction] })),
         preview: previewTiles,
+        overlays,
+        picked: pickedObject === undefined ? [] : [pickedObject.pos],
         ...common,
       };
     }
@@ -228,8 +244,23 @@ export function BattleScreen({ initial, onExit }: Props) {
       const u = view.units.find((x) => x.id === id);
       return u === undefined ? [] : [u.pos];
     });
-    return { moves, attacks, directions: [], preview: previewTiles, ...common };
-  }, [canAct, copying, canOrder, hero, heroId, mode, classified, view, preview, hover, marks, focusTile, orderPick]);
+    return { moves, attacks, directions: [], preview: previewTiles, overlays, picked: [], ...common };
+  }, [
+    canAct,
+    copying,
+    canOrder,
+    hero,
+    heroId,
+    mode,
+    classified,
+    view,
+    preview,
+    hover,
+    marks,
+    focusTile,
+    orderPick,
+    hurlPick,
+  ]);
 
   // ---- 播放 -----------------------------------------------------------------
   const sleep = useCallback(
@@ -405,6 +436,7 @@ export function BattleScreen({ initial, onExit }: Props) {
     setModeKey(null);
     setPanelPreview(null);
     setOrderPick(null);
+    setHurlPick(null);
   }, []);
 
   useEffect(() => {
@@ -460,6 +492,18 @@ export function BattleScreen({ initial, onExit }: Props) {
       if ((canAct || copying) && hero !== null) {
         if (mode !== null) {
           if (mode.kind === "shove_aside") return; // 撥開要用面板選方向
+          if (isHurlMode(mode)) {
+            // 投擲物件：第 1 段選物件、第 2 段選落點（落點優先；再點別的物件改選，點同一個取消）
+            const landing = actionAtTile(mode, view, hero, tile, hurlPick);
+            if (landing !== null) {
+              if (copying) decideCopy(landing);
+              else act(landing);
+              return;
+            }
+            const object = hurlObjectAt(mode, view, tile);
+            if (object !== null) setHurlPick(object === hurlPick ? null : object);
+            return;
+          }
           const a = actionAtTile(mode, view, hero, tile);
           if (a !== null) {
             if (copying) decideCopy(a);
@@ -475,7 +519,22 @@ export function BattleScreen({ initial, onExit }: Props) {
       }
       setSelected(unitAt(shown, tile)?.id ?? null);
     },
-    [act, canAct, copying, decideCopy, canOrder, classified, hero, issueOrders, mode, orderPick, response.orders, shown, view],
+    [
+      act,
+      canAct,
+      copying,
+      decideCopy,
+      canOrder,
+      classified,
+      hero,
+      hurlPick,
+      issueOrders,
+      mode,
+      orderPick,
+      response.orders,
+      shown,
+      view,
+    ],
   );
 
   const onTileHover = useCallback((tile: Pos | null) => {
@@ -526,6 +585,8 @@ export function BattleScreen({ initial, onExit }: Props) {
               enabled={canAct}
               basic={basic}
               mode={mode}
+              hurlPick={hurlPick}
+              onHurlReset={() => setHurlPick(null)}
               endTurn={classified.endTurn}
               fallback={fallback}
               moveCount={classified.moves.size}

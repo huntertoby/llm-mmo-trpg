@@ -4,13 +4,27 @@ import type { Action, BattleView, InteractOption, PreviewOut } from "../api/type
 import type { LabeledAction } from "../battle/actions";
 import { DIRECTIONS } from "../battle/glossary";
 import { chainLines, previewLines } from "../battle/previewText";
-import { DIRECTION_ARROWS, DIRECTION_ORDER, asideRows, isSelfOnly, type ActionMode } from "../battle/targeting";
+import { objectStyle } from "../battle/glossary";
+import {
+  DIRECTION_ARROWS,
+  DIRECTION_ORDER,
+  asideRows,
+  hurlLandings,
+  hurlPromptText,
+  isHurlMode,
+  isSelfOnly,
+  type ActionMode,
+} from "../battle/targeting";
 import type { UnitNames } from "../battle/units";
 
 interface Props {
   enabled: boolean;
   basic: readonly ActionMode[];
   mode: ActionMode | null;
+  /** 投擲物件的第一段已選好的物件 ID（還在選物件時 `null`）。 */
+  hurlPick: string | null;
+  /** 投擲物件：放棄已選的物件，回到第一段。 */
+  onHurlReset(): void;
   endTurn: Action | null;
   fallback: readonly LabeledAction[];
   moveCount: number;
@@ -27,9 +41,30 @@ interface Props {
   onPreviewAction(action: Action | null): void;
 }
 
-type HelpProps = Pick<Props, "enabled" | "onAction" | "onPreviewAction" | "interactOptions" | "view"> & {
+type HelpProps = Pick<
+  Props,
+  "enabled" | "onAction" | "onPreviewAction" | "interactOptions" | "view" | "hurlPick" | "onHurlReset"
+> & {
   mode: ActionMode;
 };
+
+/** 投擲物件：兩段選取的提示（第 1 段選物件、第 2 段選落點）與「重選物件」。 */
+function HurlHelp({ mode, view, hurlPick, onHurlReset }: HelpProps) {
+  const picked = hurlPick === null ? undefined : view.objects.find((o) => o.id === hurlPick);
+  const name = picked === undefined ? null : objectStyle(picked.kind).name;
+  const landings = hurlLandings(mode, hurlPick).length;
+  return (
+    <div className="mode-help">
+      <div className="section-title">{mode.label}</div>
+      <div className="small muted">{hurlPromptText(name, landings, mode.targets.hurls.size)}</div>
+      {hurlPick !== null && (
+        <button type="button" className="small-button" onClick={onHurlReset}>
+          重選物件
+        </button>
+      )}
+    </div>
+  );
+}
 
 /** 撥開：每個相鄰的可推動物件一列「往左撥／往右撥」；不合法的灰掉並顯示原因。 */
 function AsideHelp({ mode, enabled, interactOptions, view, onAction, onPreviewAction }: HelpProps) {
@@ -73,6 +108,7 @@ function AsideHelp({ mode, enabled, interactOptions, view, onAction, onPreviewAc
 function ModeHelp(props: HelpProps) {
   const { mode, enabled, onAction, onPreviewAction } = props;
   if (mode.kind === "shove_aside") return <AsideHelp {...props} />;
+  if (isHurlMode(mode)) return <HurlHelp {...props} />;
   const t = mode.targets;
   const pickable = t.units.size + t.objects.size + t.tiles.size;
   const hint = isSelfOnly(t)
@@ -156,6 +192,8 @@ export function ActionPanel(props: Props) {
           <ModeHelp
             mode={mode}
             enabled={enabled}
+            hurlPick={props.hurlPick}
+            onHurlReset={props.onHurlReset}
             interactOptions={props.interactOptions}
             view={view}
             onAction={props.onAction}

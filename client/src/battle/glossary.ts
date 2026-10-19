@@ -178,4 +178,12 @@ export const HIGHLIGHT = {
   flammable: 0xe0a040,
   deadly: 0xff3030,
   trigger: 0xff4fd8,
+  // 場景物件預覽（Phase 3C-5b）：穿透路線與穿過的物件、後方單位、推倒壓住的格子、倒塌物、投擲的物件與落點
+  route: 0xffe14d,
+  pierced: 0x4fd8ff,
+  behind: 0xffa94d,
+  crush: 0xc0392b,
+  rubble: 0xb08a60,
+  picked: 0x4fd8ff,
+  landing: 0x7dff7d,
 } as const;

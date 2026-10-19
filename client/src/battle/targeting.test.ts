@@ -10,7 +10,12 @@ import {
   copyMode,
   copyPromptText,
   fallbackActions,
+  hurlActionAt,
+  hurlLandings,
+  hurlObjectAt,
+  hurlPromptText,
   isCopyPending,
+  isHurlMode,
   isSelfOnly,
   skillButtons,
   skillMode,
@@ -230,5 +235,52 @@ describe("copy_skill second step", () => {
   it("explains what to do, and says so when nothing is legal", () => {
     expect(copyPromptText("橫掃劈砍", 2)).toContain("共 2 個可選");
     expect(copyPromptText("橫掃劈砍", 0)).toContain("沒有");
+  });
+});
+
+describe("hurling an object (two-stage selection, Phase 3C-5b)", () => {
+  // 桶子 obj_0001 (2,2) 與木箱 obj_0002 (1,2) 都能舉起；每個物件各有兩個落點。
+  const hurl = (obj: string, x: number, y: number): Action =>
+    skill("hurl", { target_object_id: obj, target_pos: { x, y } });
+  const options = [
+    hurl("obj_0001", 2, 1),
+    hurl("obj_0001", 3, 2),
+    hurl("obj_0002", 2, 1),
+    hurl("obj_0002", 0, 2),
+  ];
+  const mode = skillMode({ skillId: "hurl", name: "念力投擲", costs: [], cooldown: 0, actions: options, disabledReason: null });
+
+  it("groups the object-and-landing pairs by object instead of taking the first landing", () => {
+    expect(isHurlMode(mode)).toBe(true);
+    expect([...mode.targets.hurls.keys()]).toEqual(["obj_0001", "obj_0002"]);
+    expect(mode.targets.objects.size).toBe(0);
+    expect(mode.targets.tiles.size).toBe(0);
+    expect(isSelfOnly(mode.targets)).toBe(false);
+    expect(hurlLandings(mode, "obj_0001")).toEqual([{ x: 2, y: 1 }, { x: 3, y: 2 }]);
+    expect(hurlLandings(mode, null)).toEqual([]);
+  });
+
+  it("stage 1 highlights the liftable objects and clicking one selects it, not an action", () => {
+    expect(targetTiles(mode, view, hero).targets).toEqual([{ x: 2, y: 2 }, { x: 1, y: 2 }]);
+    expect(hurlObjectAt(mode, view, { x: 2, y: 2 })).toBe("obj_0001");
+    expect(hurlObjectAt(mode, view, { x: 0, y: 0 })).toBeNull();
+    expect(actionAtTile(mode, view, hero, { x: 2, y: 2 })).toBeNull(); // 還沒選物件：沒有動作
+    expect(actionAtTile(mode, view, hero, { x: 2, y: 1 })).toBeNull(); // 落點在第一段也不能直接點
+  });
+
+  it("stage 2 highlights only the landings of the picked object and clicking one gives its action", () => {
+    expect(targetTiles(mode, view, hero, "obj_0002").targets).toEqual([{ x: 2, y: 1 }, { x: 0, y: 2 }]);
+    // 同一個落點 (2,1) 兩個物件都有：選了哪個物件就得到那個物件的動作
+    expect(actionAtTile(mode, view, hero, { x: 2, y: 1 }, "obj_0001")).toBe(options[0]);
+    expect(actionAtTile(mode, view, hero, { x: 2, y: 1 }, "obj_0002")).toBe(options[2]);
+    expect(actionAtTile(mode, view, hero, { x: 3, y: 2 }, "obj_0002")).toBeNull(); // 不是這個物件的落點
+    expect(hurlActionAt(mode, "obj_0001", { x: 3, y: 2 })).toBe(options[1]);
+    expect(hurlActionAt(mode, null, { x: 3, y: 2 })).toBeNull();
+  });
+
+  it("says which stage the player is in", () => {
+    expect(hurlPromptText(null, 0, 2)).toContain("第 1 段");
+    expect(hurlPromptText("油桶", 5, 2)).toContain("第 2 段");
+    expect(hurlPromptText("油桶", 5, 2)).toContain("油桶");
   });
 });

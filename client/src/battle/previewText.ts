@@ -1,6 +1,7 @@
 // 預覽結果 → 顯示文字（純函式）。機率以千分比（‰）、期望傷害以 ×1000 傳來，這裡轉成百分比與小數。
 import { asEvent, type BattleView, type PreviewOut } from "../api/types";
 import { objectName, statusName, surfaceName } from "./glossary";
+import { sceneLines } from "./scenePreview";
 import type { UnitNames } from "./units";
 
 type Outcome = PreviewOut["certain"][number];
@@ -171,6 +172,7 @@ export function previewLines(
   for (const c of p.collisions ?? []) {
     lines.push(`撞擊傷害 ${names.label(c.unit_id)} 最多 ${c.maximum}`);
   }
+  lines.push(...sceneLines(p, names, view)); // 穿透、推倒、投擲（Phase 3C-5b）
   const shown = (o: Outcome) => !skipChain || !CHAIN_OUTCOME_KINDS.has(o.kind);
   for (const o of p.certain.filter(shown)) lines.push(`確定：${outcomeText(o, names, view)}`);
   for (const o of p.possible.filter(shown)) lines.push(`可能：${outcomeText(o, names, view)}`);
