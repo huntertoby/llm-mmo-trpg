@@ -122,6 +122,12 @@ class CoreRules(ContentModel):
     """爆骰（``explode: true``，Phase 3D-7b）：每顆骰最多再擲的次數。舊紀錄沒有此欄位。"""
     scale_cap_max_permille: int = Field(default=800, ge=1, le=5000)
     """依情況縮放（``scaling``，Phase 3D-7b）：``cap_permille`` 的上限（‰）。舊紀錄沒有此欄位。"""
+    backstab_hit_bonus: int = Field(default=2, ge=0, le=10)
+    """背刺（Phase 3D-8d）：近戰攻擊者站在目標的背後格時的命中加值。舊紀錄沒有此欄位。"""
+    backstab_crit_range_bonus: int = Field(default=1, ge=0, le=5)
+    """背刺（Phase 3D-8d）：暴擊範圍擴大的格數（1 ＝ 武器 20 → 19–20）。"""
+    ambush_hit_bonus: int = Field(default=2, ge=0, le=10)
+    """潛行偷襲（Phase 3D-8d）：攻擊者帶 ``concealed`` 狀態時的命中加值（攻擊結算完後移除隱蔽）。"""
     revive_landing_radius: int = Field(default=2, ge=0, le=6)
     """復活（``revive``，Phase 3D-8b）：原格被占用或不能站立時，站到這個距離（曼哈頓）內最近的空格；
     範圍內沒有空格就不能施放。舊紀錄沒有此欄位。"""

@@ -37,6 +37,8 @@
 #   hazard         站在有害表面上（扣分）
 #   cover          在射程內看得到、且從其位置看過來自己受到半掩護的敵人數（偏好有掩護的射擊位置；射程外的
 #                  敵人打不到自己，不算——否則雙方躲在掩護後互相射程外時會永遠不接近，Phase 2C-4）
+#   backstab       （3D-8d）近戰單位緊貼著敵人、而且站在那個敵人的背後格（背刺位置）的敵人數；表格層級 facing: 填入每個模式
+#   back_exposed   （3D-8d）背對相鄰的近戰敵人（扣分）：朝向以「結束移動時面向最近的敵人」近似，背後格站著近戰敵人時扣分；同上
 #   flank          （3D-8c）夾擊：緊貼著敵人、而且敵人的對面站著自己的友方的敵人數（近戰單位移動時偏好能夾擊的位置；目前只有 flanker 用）
 #   exposed        能打到自己、自己卻打不到的敵人數（射程更長，或自己被遮住；扣分）。互相打得到的對射
 #                  不算，所以不會讓弓手不敢進入射擊位置；煙幕、隱蔽讓敵人打不到自己時降低
@@ -142,6 +144,8 @@ gamble: {hp_floor_permille: 300, low_hp_permille: 100}
 #   protect_min           保護：protect 權重至少這麼大，對象固定為指令的友方
 #   environment_permille  利用環境：環境傷害、環境擊倒、推擊、表面、離開掩護的收益 ×2
 orders: {focus_permille: 1500, hold_weight: 20, retreat_weight: 15, protect_min: 12, environment_permille: 2000}
+# facing（Phase 3D-8d；初值未經模擬）：朝向與背刺的位置權重，敵我同一套（填入每個行為模式的 weights，模式自己列出的優先）。
+facing: {backstab: 4, back_exposed: 3}
 profiles:
   - id: brute
     name_zh: 莽夫

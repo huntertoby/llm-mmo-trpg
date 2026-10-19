@@ -221,6 +221,14 @@ def _leap(_lib: ContentLibrary, _skill: SkillDef, _spec: EffectSpec) -> str:
     return "跳到目標格（無視中間的單位與低矮地形；不觸發藉機攻擊）"
 
 
+def _shadowstep(_lib: ContentLibrary, _skill: SkillDef, spec: EffectSpec) -> str:
+    if spec.landing == "behind":
+        where = "瞬間出現在目標背後（背後被占住時改到最近的側面；先結算）"
+    else:
+        where = "瞬間出現在目標身旁自選的一格（先結算）"
+    return where + "，不觸發藉機攻擊，落地後面向目標"
+
+
 def _summon(lib: ContentLibrary, _skill: SkillDef, spec: EffectSpec) -> str:
     try:
         summon = lib.ruleset.summon_def(spec.unit or "")
@@ -573,6 +581,7 @@ _EFFECT_TEXT: dict[str, _EffectText] = {
     "teleport": _teleport,
     "dash": _dash,
     "leap": _leap,
+    "shadowstep": _shadowstep,
     "charge_through": _charge_through,
     "summon": _summon,
     "swap": _swap,

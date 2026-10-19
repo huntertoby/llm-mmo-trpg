@@ -25,6 +25,7 @@ from trpg.content.skills import (
     LEAP,
     PIERCE_SHAPES,
     REVIVE,
+    SHADOWSTEP,
     SUMMON,
     SWAP,
     TOPPLE,
@@ -57,6 +58,9 @@ from trpg.engine.skills.mobility import (
     leap_candidates,
     leap_problem,
     self_move_problem,
+    shadowstep_behind,
+    shadowstep_choices,
+    shadowstep_spot_problem,
     swap_pair_problem,
     swap_problem,
 )
@@ -349,8 +353,8 @@ def skill_problem(state: BattleState, unit: UnitState, skill: SkillDef) -> str |
     if problem is not None:
         return problem
     if any(
-        e.type in (DASH, LEAP, CHARGE_THROUGH) for e in skill.effects
-    ):  # 自身位移（3D-2）：定身、倒地不能衝跳
+        e.type in (DASH, LEAP, CHARGE_THROUGH, SHADOWSTEP) for e in skill.effects
+    ):  # 自身位移（3D-2；瞬步 3D-8d）：定身、倒地不能衝跳
         problem = self_move_problem(state, unit)
         if problem is not None:
             return problem
@@ -453,16 +457,30 @@ def _self_move_target_problem(
     target: UnitState,
     reach: int,
 ) -> str | None:
-    """衝鋒（路徑與射程）與交換位置（兩格都能站）對單位目標的額外限制（Phase 3D-2）。"""
-    if target.id == caster.id and any(e.type in (DASH, SWAP) for e in effects):
-        return "不能以自己為目標（衝鋒與交換位置需要另一個單位）"
+    """衝鋒（路徑與射程）、交換位置（兩格都能站）與瞬步背刺（目標是敵人、身旁有落點）對單位目標的
+    額外限制（Phase 3D-2、3D-8d）。"""
+    if target.id == caster.id and any(e.type in (DASH, SWAP, SHADOWSTEP) for e in effects):
+        return "不能以自己為目標（衝鋒、交換位置與瞬步需要另一個單位）"
     for effect in effects:
+        if effect.type == SHADOWSTEP:
+            return _shadowstep_target_problem(state, caster, target)
         if effect.type == DASH and dash_route(state, caster, target.xy, reach) is None:
             return f"無法衝鋒到 {target.name_zh}：沒有路徑能在射程 {reach} 內抵達相鄰的格子"
         if effect.type == SWAP:
             problem = swap_problem(state, caster, target)
             if problem is not None:
                 return problem
+    return None
+
+
+def _shadowstep_target_problem(
+    state: BattleState, caster: UnitState, target: UnitState
+) -> str | None:
+    """瞬步背刺類（``landing: behind``，Phase 3D-8d）的目標：敵方單位，身旁至少有一個落點。"""
+    if target.team is caster.team:
+        return f"瞬步只能以敵人為目標：{target.name_zh}"
+    if shadowstep_behind(state, caster, target) is None:
+        return f"{target.name_zh} 身旁沒有可以瞬步落腳的空格"
     return None
 
 
@@ -570,8 +588,8 @@ def _unit_area(
     assert action.target_object_id is not None
     if spec.type == "chain":
         raise IllegalActionError("連鎖技能的第一個目標必須是單位")
-    if any(e.type in (DASH, SWAP) for e in effects):
-        raise IllegalActionError(f"衝鋒與交換位置的技能必須以單位為目標：{skill.name_zh}")
+    if any(e.type in (DASH, SWAP, SHADOWSTEP) for e in effects):
+        raise IllegalActionError(f"衝鋒、交換位置與瞬步的技能必須以單位為目標：{skill.name_zh}")
     obj = state.objects.get(action.target_object_id)
     if obj is None or obj.destroyed:
         raise IllegalActionError(f"找不到物件：{action.target_object_id}")
@@ -698,8 +716,10 @@ def _unit_tile_area(
     原位置與落點兩格。落點要在射程與視線內，沒有單位，可站立或是致命地形（Boss 不行）。"""
     _require_fields(action, ("target_id", "target_pos"), "unit_tile（單位與落點）")
     if action.target_id is None or action.target_pos is None:
-        raise IllegalActionError("傳送他人必須同時指定 target_id（單位）與 target_pos（落點）")
+        raise IllegalActionError("必須同時指定 target_id（單位）與 target_pos（落點）")
     target = _pair_unit(state, caster, skill, action.target_id, reach)
+    if any(e.type == SHADOWSTEP for e in skill.effects):
+        return _shadowstep_tile_area(state, caster, target, action.target_pos)
     if target.id == caster.id:
         raise IllegalActionError("不能傳送自己（傳送他人要選另一個單位）")
     dest = (action.target_pos.x, action.target_pos.y)
@@ -709,6 +729,20 @@ def _unit_tile_area(
     if problem is not None:
         raise IllegalActionError(problem)
     return _sorted_tiles(target.xy, dest), dest
+
+
+def _shadowstep_tile_area(
+    state: BattleState, caster: UnitState, target: UnitState, pos: Pos
+) -> tuple[tuple[XY, ...], XY]:
+    """一般瞬步（``landing: choose``，Phase 3D-8d）：第 1 段是敵人、第 2 段是他相鄰的落點；影響
+    範圍只有目標所在的格子（之後的效果作用在目標身上），原點是落點。"""
+    if target.team is caster.team:
+        raise IllegalActionError(f"瞬步只能以敵人為目標：{target.name_zh}")
+    dest = (pos.x, pos.y)
+    problem = shadowstep_spot_problem(state, caster, target, dest)
+    if problem is not None:
+        raise IllegalActionError(problem)
+    return (target.xy,), dest
 
 
 def _unit_pair_area(
@@ -947,7 +981,11 @@ def _reachable_units(state: BattleState, caster: UnitState, skill: SkillDef) -> 
 def _teleport_candidates(
     state: BattleState, caster: UnitState, skill: SkillDef
 ) -> Iterator[UseSkill]:
-    """傳送他人的候選：可選的單位（依 ID，不含自己）× 合法的落點（依 ``(y, x)``）。"""
+    """傳送他人的候選：可選的單位（依 ID，不含自己）× 合法的落點（依 ``(y, x)``）。一般瞬步
+    （Phase 3D-8d）：可選的敵人 × 他相鄰的落點（上、右、下、左）。"""
+    if any(e.type == SHADOWSTEP for e in skill.effects):
+        yield from _shadowstep_candidates(state, caster, skill)
+        return
     tiles = shapes.center_candidates(state, caster.xy, shape_reach(state, skill, caster))
     for unit in _reachable_units(state, caster, skill):
         if unit.id == caster.id:
@@ -960,6 +998,18 @@ def _teleport_candidates(
                     target_id=unit.id,
                     target_pos=Pos(x=x, y=y),
                 )
+
+
+def _shadowstep_candidates(
+    state: BattleState, caster: UnitState, skill: SkillDef
+) -> Iterator[UseSkill]:
+    for unit in _reachable_units(state, caster, skill):
+        if unit.team is caster.team:
+            continue
+        for x, y in shadowstep_choices(state, caster, unit):
+            yield UseSkill(
+                unit_id=caster.id, skill_id=skill.id, target_id=unit.id, target_pos=Pos(x=x, y=y)
+            )
 
 
 def _pair_candidates(state: BattleState, caster: UnitState, skill: SkillDef) -> Iterator[UseSkill]:

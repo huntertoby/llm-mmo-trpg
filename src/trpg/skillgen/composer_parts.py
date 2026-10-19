@@ -680,6 +680,7 @@ _HAND_WRITTEN_PRIMITIVES = frozenset(
         "gamble",
         "revive",
         "delayed_damage",
+        "shadowstep",
     }
 )
 """只給手寫技能的結構型原語（Phase 3C-5a 的場景物件原語：需要地圖上有對應的物件；3D-2 的

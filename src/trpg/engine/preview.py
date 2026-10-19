@@ -80,7 +80,9 @@ from trpg.engine.rules.combat import (
     half_cover,
     hit_modifier,
     is_hit,
+    positional_bonus,
     situational_modifier,
+    weapon_profile,
 )
 from trpg.engine.rules.movement import is_deadly
 from trpg.engine.rules.statuses import BOSS_TAG, effective_attribute, shield_amount
@@ -287,7 +289,8 @@ class MoveInfo:
     ``kind``：``dash``（``path`` 為衝鋒的路線，含起點與終點，``other_id`` 是衝鋒的目標）、
     ``charge``（Phase 3D-2c 直線衝撞：``path`` 是依序經過的格子，含起點、含有單位的格子與停下的
     格子；沿途的敵人在 ``Preview.targets``）、
-    ``leap``（``path`` 是起點與落點）、``swap``（``unit_id`` 與 ``other_id`` 交換，``path`` 是
+    ``leap``（``path`` 是起點與落點）、``shadowstep``（Phase 3D-8d 瞬步：``path`` 是起點與落點）、
+    ``swap``（``unit_id`` 與 ``other_id`` 交換，``path`` 是
     ``unit_id`` 的起點與終點）。"""
 
     kind: str
@@ -391,6 +394,9 @@ class Preview:
     miss_notes: tuple[str, ...] = ()
     """技能有失手反噬 ``cost.on_miss`` 時（Phase 3D-7a）：反噬的說明（「失手時：你獲得倒地」）；
     預覽模擬只算命中的情形，所以反噬不在其他欄位裡。"""
+    backstab: tuple[UnitId, ...] = ()
+    """行動者會從背後攻擊的單位（Phase 3D-8d；最多後果的模擬中命中判定帶背刺加成的目標，依 ID）。
+    命中率與暴擊率已包含背刺與潛行偷襲的加成；說明在 ``notes``。"""
 
 
 # ---------------------------------------------------------------------------
@@ -611,8 +617,11 @@ def _attack_numbers(
             - (0 if cover is None else cover.penalty)
             + modifiers.hit_bonus(state, actor, modifiers.ATTACK, Subject(target, target.xy))
         )
+        positional = positional_bonus(state, actor, target, weapon_profile(state, actor))
         naturals = _naturals(advantage_state(state, actor, target))
-        hit, crit = _chances(naturals, bonus, core.hit_target, weapon.crit_range)
+        hit, crit = _chances(
+            naturals, bonus + positional.hit, core.hit_target, positional.crit_range
+        )
         crit_dist = dice_distribution(weapon.dice.count * 2, weapon.dice.sides)
         target_key = action.target_id
     low = _primary_damage(min_events, actor.id, target_key)
@@ -857,8 +866,11 @@ def _skill_targets(
             - (0 if cover is None else cover.penalty)
             + modifiers.hit_bonus(state, actor, use, Subject(target, target.xy))
         )
+        positional = positional_bonus(state, shooter, target, profile)  # 背刺：以出手的位置判斷
         naturals = _naturals(advantage_state(state, shooter, target, profile))
-        hit, crit = _chances(naturals, bonus, core.hit_target, profile.crit_range)
+        hit, crit = _chances(
+            naturals, bonus + positional.hit, core.hit_target, positional.crit_range
+        )
         damage = _damage_expectation(state, actor, action, uid, hit, crit, min_events, max_events)
         knock = _knock_chance(state, actor, skill, target)
         result.append(
@@ -1098,9 +1110,9 @@ def _move_infos(events: list[EventBase]) -> tuple[MoveInfo, ...]:
             infos.append(MoveInfo("dash", e.unit_id, e.target_id, path))
         elif isinstance(e, UnitCharged):
             infos.append(MoveInfo("charge", e.unit_id, None, tuple((p.x, p.y) for p in e.path)))
-        elif isinstance(e, UnitMoved) and e.mode == "leap":
+        elif isinstance(e, UnitMoved) and e.mode in ("leap", "shadowstep"):
             path = ((e.from_pos.x, e.from_pos.y), (e.to_pos.x, e.to_pos.y))
-            infos.append(MoveInfo("leap", e.unit_id, None, path))
+            infos.append(MoveInfo(e.mode, e.unit_id, None, path))
         elif isinstance(e, UnitMoved) and e.mode == "teleported":
             path = ((e.from_pos.x, e.from_pos.y), (e.to_pos.x, e.to_pos.y))
             infos.append(MoveInfo("teleport", e.unit_id, None, path))
@@ -1188,6 +1200,34 @@ def _miss_notes(state: BattleState, actor: UnitState, action: Action) -> tuple[s
     return tuple(lines)
 
 
+def _backstab_targets(actor: UnitState, events: list[EventBase]) -> tuple[UnitId, ...]:
+    """行動者的命中判定中帶背刺加成的目標（Phase 3D-8d，依 ID）。"""
+    return tuple(
+        sorted(
+            {
+                e.target_id
+                for e in events
+                if isinstance(e, AttackRolled) and e.attacker_id == actor.id and e.backstab
+            }
+        )
+    )
+
+
+def _positional_notes(
+    state: BattleState, actor: UnitState, events: list[EventBase], backstab: tuple[UnitId, ...]
+) -> tuple[str, ...]:
+    """背刺與潛行偷襲的說明（Phase 3D-8d），例如「背刺 盜賊1：命中 +2、暴擊範圍 +1」。"""
+    core = state.ruleset.core
+    lines = [
+        f"背刺 {state.units[uid].name_zh}：命中 +{core.backstab_hit_bonus}、"
+        f"暴擊範圍 +{core.backstab_crit_range_bonus}（從背後近戰攻擊）"
+        for uid in backstab
+    ]
+    if any(isinstance(e, AttackRolled) and e.attacker_id == actor.id and e.ambush for e in events):
+        lines.append(f"潛行偷襲：隱蔽中出手，命中 +{core.ambush_hit_bonus}（攻擊結算完後脫離隱蔽）")
+    return tuple(lines)
+
+
 def preview(state: BattleState, action: Action) -> Preview:
     """預覽 ``action`` 的結果（不修改 ``state``、不消耗亂數）。
 
@@ -1245,6 +1285,8 @@ def _build(
     topples, hurls = _scene_infos(max_events)
     checks: tuple[DisplaceCheck, ...] = ()
     notes = _cover_notes(cover)
+    backstab = _backstab_targets(actor, max_events)
+    notes += _positional_notes(state, actor, max_events, backstab)
     if isinstance(action, UseSkill):
         checks = _displace_checks(state, actor, action)
         notes += _displace_notes(
@@ -1286,4 +1328,5 @@ def _build(
         revives=_revive_infos(max_events),
         grants=_grant_infos(state, max_events),
         miss_notes=_miss_notes(state, actor, action),
+        backstab=backstab,
     )

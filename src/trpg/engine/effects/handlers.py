@@ -41,6 +41,8 @@ from trpg.engine.events import (
 )
 from trpg.engine.lifecycle import down_unit, escape_unit
 from trpg.engine.rules.combat import CONCEALED, PERMILLE, PPM, element_modifier_ppm
+from trpg.engine.rules.facing import facing_between
+from trpg.engine.rules.geometry import XY
 from trpg.engine.rules.movement import is_deadly, is_standable
 from trpg.engine.rules.statuses import (
     boss_converted_status,
@@ -460,6 +462,16 @@ def _cleanse(ctx: Ctx, effect: EffectBase) -> list[EventBase]:
     ]
 
 
+_ACTIVE_MOVES: frozenset[str] = frozenset({"walk", "dash", "leap"})
+"""改變朝向的移動方式（Phase 3D-8d）：步行、衝鋒與直線衝撞的每一步、跳躍。"""
+
+
+def _face_move(unit: UnitState, start: XY, dest: XY) -> None:
+    facing = facing_between(start, dest)
+    if facing is not None:
+        unit.facing = facing
+
+
 def arrive(
     ctx: Ctx,
     unit: UnitState,
@@ -485,6 +497,8 @@ def arrive(
     unit.pos = Pos(x=dest[0], y=dest[1])
     if mode in ("walk", "dash"):
         unit.moved_this_turn = True  # 連段條件 moved_this_turn（Phase 3D-1；衝鋒算，3D-2）
+    if mode in _ACTIVE_MOVES:  # 主動移動：面向移動方向（Phase 3D-8d；瞬步由呼叫端面向目標）
+        _face_move(unit, (from_pos.x, from_pos.y), dest)
     events: list[EventBase] = [
         ctx.emit(
             UnitMoved, unit_id=unit.id, from_pos=from_pos, to_pos=unit.pos, mode=mode, cost=cost
@@ -494,7 +508,7 @@ def arrive(
         queue_trap_entry(ctx, unit, dest)  # 進入敵方陷阱格（主動或強制移動；傳送不算）
     note_unit_moved(ctx, unit, (from_pos.x, from_pos.y), dest)  # 持續區域（Phase 3D-5）
     min_drop = ctx.core.fall_damage_min_drop
-    if mode not in ("teleport", "teleported") and drop >= min_drop:
+    if mode not in ("teleport", "teleported", "shadowstep") and drop >= min_drop:
         levels = drop - (min_drop - 1)
         events.append(
             ctx.emit(UnitFell, unit_id=unit.id, drop=drop, levels=levels, source_id=source_id)

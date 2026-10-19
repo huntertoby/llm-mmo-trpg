@@ -12,6 +12,7 @@ from typing import Literal
 from trpg.content.library import Ruleset
 from trpg.engine.events import AdvantageState
 from trpg.engine.modifiers import ATTACK, range_delta
+from trpg.engine.rules.facing import is_behind
 from trpg.engine.rules.geometry import XY, has_line_of_sight, manhattan
 from trpg.engine.rules.statuses import (
     attack_range_cap,
@@ -30,6 +31,7 @@ __all__ = [
     "AttackProfile",
     "AttackRoll",
     "Cover",
+    "PositionalBonus",
     "advantage_sources",
     "advantage_state",
     "attack_problem",
@@ -48,6 +50,7 @@ __all__ = [
     "is_height_limited",
     "is_hit",
     "melee_height_problem",
+    "positional_bonus",
     "reach_problem",
     "roll_attack",
     "situational_modifier",
@@ -329,6 +332,41 @@ class AttackRoll:
     crit: bool
     modifier_bonus: int = 0
     """修正規則的命中加值（Phase 3C-2 ``hit_bonus``；已含在 ``total``）。"""
+    backstab: int = 0
+    """背刺的命中加值（Phase 3D-8d；0 為不是背刺；已含在 ``total``，暴擊範圍另外擴大）。"""
+    ambush: int = 0
+    """潛行偷襲的命中加值（Phase 3D-8d；0 為沒有隱蔽；已含在 ``total``）。"""
+
+
+@dataclass(frozen=True, slots=True)
+class PositionalBonus:
+    """背刺與潛行偷襲（Phase 3D-8d）：命中加值與擴大後的暴擊範圍。"""
+
+    backstab: int
+    ambush: int
+    crit_range: int
+
+    @property
+    def hit(self) -> int:
+        return self.backstab + self.ambush
+
+
+def positional_bonus(
+    state: BattleState, attacker: UnitState, target: UnitState, profile: AttackProfile
+) -> PositionalBonus:
+    """一次命中判定的背刺與潛行偷襲加成。
+
+    - 背刺：近戰攻擊（``profile.melee``）且攻擊者站在目標的背後格（目標朝向的反方向相鄰格）——
+      命中 ``+backstab_hit_bonus``、暴擊範圍擴大 ``backstab_crit_range_bonus``。Boss 照常適用。
+    - 潛行偷襲：攻擊者帶 ``concealed`` 狀態——命中 ``+ambush_hit_bonus``（攻擊結算完後由呼叫端
+      移除隱蔽）。站在黑暗或草叢裡的隱蔽不算（只看狀態）。
+    """
+    core = state.ruleset.core
+    behind = profile.melee and is_behind(attacker.xy, target)
+    backstab = core.backstab_hit_bonus if behind else 0
+    ambush = core.ambush_hit_bonus if attacker.has_status(CONCEALED) else 0
+    crit_range = profile.crit_range - (core.backstab_crit_range_bonus if behind else 0)
+    return PositionalBonus(backstab, ambush, max(crit_range, 2))
 
 
 type ForcedOutcome = Literal["miss", "hit", "crit"]
@@ -347,7 +385,8 @@ def roll_attack(  # noqa: PLR0917
 ) -> AttackRoll:
     """擲命中骰（有優勢或劣勢時擲 2 顆 d20 取高／低）。暴擊需命中且自然骰 ≥ 武器暴擊範圍。
 
-    ``total = 自然骰 ＋ 命中修正 ＋ 熟練 ＋ 情境（高度） ＋ 掩護（半掩護為負值） ＋ bonus``。
+    ``total = 自然骰 ＋ 命中修正 ＋ 熟練 ＋ 情境（高度） ＋ 掩護（半掩護為負值） ＋ bonus ＋ 背刺 ＋
+    潛行偷襲``（:func:`positional_bonus`，Phase 3D-8d；背刺另外擴大暴擊範圍）。
 
     ``forced`` 只供預覽使用：不擲骰，直接採用指定結果。``profile`` 為技能的攻擊參數
     （省略時取自 ``attacker`` 的武器）。``bonus`` 為修正規則的命中加值（3C-2，呼叫端計算）。
@@ -361,11 +400,13 @@ def roll_attack(  # noqa: PLR0917
     cover = half_cover(state, attacker, target, profile)
     cover_mod = 0 if cover is None else -cover.penalty
     proficiency = rules.core.proficiency
+    positional = positional_bonus(state, attacker, target, profile)
+    bonus += positional.hit
     if forced is not None:
         natural = _forced_natural(
             forced,
             modifier + proficiency + situational + cover_mod + bonus,
-            profile.crit_range,
+            positional.crit_range,
             rules,
         )
         rolls: tuple[int, ...] = (natural,)
@@ -377,7 +418,7 @@ def roll_attack(  # noqa: PLR0917
         natural = max(rolls) if adv == "advantage" else min(rolls)
     total = natural + modifier + proficiency + situational + cover_mod + bonus
     hit = is_hit(natural, total, rules.core.hit_target)
-    crit = hit and natural >= profile.crit_range
+    crit = hit and natural >= positional.crit_range
     if forced is not None:
         hit, crit = forced != "miss", forced == "crit"
     return AttackRoll(
@@ -395,7 +436,9 @@ def roll_attack(  # noqa: PLR0917
         target_number=rules.core.hit_target,
         hit=hit,
         crit=crit,
-        modifier_bonus=bonus,
+        modifier_bonus=bonus - positional.hit,
+        backstab=positional.backstab,
+        ambush=positional.ambush,
     )
 
 

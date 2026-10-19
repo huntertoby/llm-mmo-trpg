@@ -88,6 +88,7 @@ def summon_unit(  # noqa: PLR0917
         pos=Pos(x=xy[0], y=xy[1]),
         name=f"{summon.template.name_zh}{same + 1}",
         rules=state.ruleset,
+        facing=owner.facing,  # 召喚物與召喚者同向（Phase 3D-8d）
     )
     unit.owner_id = owner.id
     unit.summon_expires_round = state.round + duration

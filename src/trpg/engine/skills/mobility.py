@@ -1,5 +1,5 @@
 """自身位移（Phase 3D-2，``docs/design/06-技能.md`` 6.16 A）的選取檢查：``dash``（衝鋒）、
-``leap``（跳躍）、``swap``（交換位置）。
+``leap``（跳躍）、``swap``（交換位置），以及 ``shadowstep``（瞬步，Phase 3D-8d）的落點。
 
 只讀取狀態，不修改；實際的移動由解譯器（``_Cast``）與效果處理器結算。
 """
@@ -8,7 +8,8 @@ from __future__ import annotations
 
 from dataclasses import dataclass
 
-from trpg.engine.rules.geometry import XY, bresenham, manhattan
+from trpg.engine.rules.facing import back_xy
+from trpg.engine.rules.geometry import XY, bresenham, chebyshev, manhattan
 from trpg.engine.rules.movement import is_deadly, is_standable, path_map, step_cost
 from trpg.engine.rules.statuses import is_rooted
 from trpg.engine.skills.shapes import is_wall
@@ -22,6 +23,9 @@ __all__ = [
     "leap_candidates",
     "leap_problem",
     "self_move_problem",
+    "shadowstep_behind",
+    "shadowstep_choices",
+    "shadowstep_spot_problem",
     "swap_pair_problem",
     "swap_problem",
 ]
@@ -34,9 +38,9 @@ LEAP_MAX_HEIGHT_DIFF = 1
 def self_move_problem(state: BattleState, caster: UnitState) -> str | None:
     """衝鋒與跳躍的施放者不能行動的原因：定身（腳被困住）或倒地（要先站起來）。"""
     if is_rooted(state.ruleset, caster):
-        return f"{caster.name_zh} 被定身，不能衝鋒或跳躍"
+        return f"{caster.name_zh} 被定身，不能衝鋒、跳躍或瞬步"
     if caster.has_status(PRONE):
-        return f"{caster.name_zh} 倒地中，不能衝鋒或跳躍"
+        return f"{caster.name_zh} 倒地中，不能衝鋒、跳躍或瞬步"
     return None
 
 
@@ -216,3 +220,53 @@ def swap_problem(state: BattleState, caster: UnitState, target: UnitState) -> st
         if not is_standable(state, other.xy):
             return f"{unit.name_zh} 無法站上 {other.xy}：不能交換位置"
     return None
+
+
+# ---------------------------------------------------------------------------
+# 瞬步（Phase 3D-8d，6.21）
+# ---------------------------------------------------------------------------
+
+
+def shadowstep_spot_problem(
+    state: BattleState, caster: UnitState, target: UnitState, xy: XY
+) -> str | None:
+    """瞬步落在 ``xy`` 不合法的原因：要與目標相鄰、在地圖內、可站立、不是致命地形、沒有其他單位
+    （施放者自己所在的格子可以），與目標的高度差不超過近戰上限（落地後要打得到）。"""
+    if manhattan(xy, target.xy) != 1:
+        return f"瞬步的落點必須在 {target.name_zh} 的相鄰格：{xy}"
+    if not state.in_bounds(*xy):
+        return f"超出地圖範圍：{xy}"
+    if not is_standable(state, xy) or is_deadly(state, xy):
+        return f"無法瞬步到不可站立的格子：{xy}"
+    other = state.unit_at(*xy)
+    if other is not None and other.id != caster.id:
+        return f"無法瞬步到已有單位的格子：{xy}（{other.name_zh}）"
+    limit = state.ruleset.core.melee_height_limit
+    diff = abs(state.tile(*xy).height - state.tile(*target.xy).height)
+    if diff > limit:
+        return f"高度差過大，無法瞬步到 {xy}：與目標相差 {diff} 層（上限 {limit} 層）"
+    return None
+
+
+def _adjacent(target: UnitState) -> list[XY]:
+    """目標的相鄰格，固定順序：上、右、下、左。"""
+    x, y = target.xy
+    return [(x, y - 1), (x + 1, y), (x, y + 1), (x - 1, y)]
+
+
+def shadowstep_choices(state: BattleState, caster: UnitState, target: UnitState) -> list[XY]:
+    """一般瞬步（``landing: choose``）可選的落點：目標相鄰的合法格（上、右、下、左的順序）。"""
+    return [
+        xy for xy in _adjacent(target) if shadowstep_spot_problem(state, caster, target, xy) is None
+    ]
+
+
+def shadowstep_behind(state: BattleState, caster: UnitState, target: UnitState) -> XY | None:
+    """瞬步背刺類（``landing: behind``）的落點：目標的背後格；被占住或不可站立時改為目標相鄰的
+    其他合法格中離背後格最近的（左右兩側先於正面；同距離依上、右、下、左的順序）；都沒有時為
+    ``None``（不能施放）。"""
+    back = back_xy(target)
+    spots = shadowstep_choices(state, caster, target)
+    if not spots:
+        return None
+    return min(spots, key=lambda xy: (chebyshev(xy, back), _adjacent(target).index(xy)))

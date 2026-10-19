@@ -90,6 +90,7 @@ __all__ = [
     "SELF_CONDITIONS",
     "SELF_DAMAGE_OF_HIT",
     "SELF_ONLY_CHANGES",
+    "SHADOWSTEP",
     "SKELETON_IDS",
     "SKILL_ID_PATTERN",
     "SKILL_REACTION_EVENTS",
@@ -200,8 +201,10 @@ REQUIRED_CONDITIONS: tuple[str, ...] = (
     "first_round",
     "cast_tag_this_turn",
     "flanked",
+    "from_behind",
+    "self_concealed",
 )
-"""引擎實作的 11 種條件（``trpg.engine.skills.conditions``），資料檔必須全部定義。"""
+"""引擎實作的 13 種條件（``trpg.engine.skills.conditions``），資料檔必須全部定義。"""
 
 type Targeting = Literal[
     "self", "unit", "tile", "direction", "none", "object_tile", "unit_tile", "unit_pair"
@@ -450,6 +453,7 @@ class PrimitiveParam(ContentModel):
         "rule_change",
         "scaling",
         "count",
+        "landing",
     ]
     required: bool = False
     min: int | None = None
@@ -630,6 +634,8 @@ _PLAIN_CONDITION_TEXT = {
     "adjacent_ally": "身旁有友方",
     "target_isolated": "目標身邊沒有友方",
     "flanked": "夾擊（目標的對面有友方）",
+    "from_behind": "背刺（站在目標背後）",
+    "self_concealed": "潛行偷襲（自身隱蔽中）",
     "first_round": "第一輪",
 }
 """沒有參數的條件的一句話（Phase 3D-1）。"""
@@ -758,6 +764,9 @@ class EffectSpec(ContentModel):
     on_hit: Literal["knock_prone", "push_aside"] | None = None
     """``charge_through`` 專用（Phase 3D-2c）：被撞到的敵人除了傷害之外的效果——``knock_prone``
     擊倒（對抗判定）或 ``push_aside`` 推到路徑旁一格。"""
+    landing: Literal["choose", "behind"] | None = None
+    """``shadowstep`` 專用（Phase 3D-8d）：``choose`` 一般瞬步（形狀 ``unit_then_tile``，玩家自選
+    目標相鄰的空格）；``behind`` 瞬步背刺類（形狀 ``single``，固定落在目標的背後格）。"""
     unit: str | None = Field(default=None, pattern=ID_PATTERN)
     """``summon`` 專用（Phase 3D-4a）：召喚物範本 ID（``content/units/summons/``）。"""
     count: int | Literal["all"] | None = Field(default=None)
@@ -835,6 +844,7 @@ class EffectSpec(ContentModel):
             "explode",
             "hp_permille",
             "knock_prone",
+            "landing",
             "lifesteal_permille",
             "lose",
             "multiplier_permille",
@@ -1033,6 +1043,10 @@ DASH = "dash"
 LEAP = "leap"
 SWAP = "swap"
 """Phase 3D-2 的自身位移原語 ID（6.16 A）。"""
+SHADOWSTEP = "shadowstep"
+"""Phase 3D-8d 的瞬步原語 ID（6.21）：以敵方單位為目標，瞬間出現在他相鄰的格子；``landing:
+choose`` 搭配形狀 ``unit_then_tile``、``landing: behind`` 搭配形狀 ``single``。"""
+SHADOWSTEP_SHAPES: dict[str, str] = {"choose": "unit_then_tile", "behind": "single"}
 TELEPORT_TARGET = "teleport_target"
 SWAP_ANY = "swap_any"
 """Phase 3D-2b 的位移他人原語 ID（6.19）：傳送他人（形狀 ``unit_then_tile``）、任意兩者互換
@@ -1077,7 +1091,7 @@ BACKLASH_TYPES: tuple[str, ...] = ("damage", "apply_status")
 _MAX_BRANCH_EFFECTS = 2
 _GAMBLE_ONLY_FIELDS = ("chance_permille", "win", "lose")
 _MAX_ZONE_EFFECTS = 2
-SELF_MOVES: tuple[str, ...] = (DASH, LEAP, SWAP, CHARGE_THROUGH, "teleport")
+SELF_MOVES: tuple[str, ...] = (DASH, LEAP, SWAP, CHARGE_THROUGH, SHADOWSTEP, "teleport")
 """改變施放者位置的原語；一個技能最多一個。"""
 _MAX_COOLDOWN_RESTORE = 2
 """``restore_resource`` 的 ``resource: cooldown`` 一次最多縮短的回合（Phase 3D-1）。"""
@@ -1184,7 +1198,14 @@ SELF_ONLY_CHANGES: frozenset[str] = frozenset(
 
 SELF_CONDITIONS: frozenset[str] = frozenset({"self_hp_below"})
 CASTER_CONDITIONS: frozenset[str] = frozenset(
-    {"self_hp_below", "moved_this_turn", "adjacent_ally", "first_round", "cast_tag_this_turn"}
+    {
+        "self_hp_below",
+        "moved_this_turn",
+        "adjacent_ally",
+        "first_round",
+        "cast_tag_this_turn",
+        "self_concealed",
+    }
 )
 """只看施放者的條件（Phase 3D-1）：技能層級的判斷不需要影響範圍內有對象。選目標之前就要決定的
 修正規則改變（:data:`SELF_ONLY_CHANGES`）仍只允許 :data:`SELF_CONDITIONS`（``self_hp_below``）。"""
@@ -1581,7 +1602,7 @@ class SkillDef(ContentModel):
         效果。"""
         types = [e.type for e in self.effects]
         moves = [t for t in types if t in SELF_MOVES]
-        if not any(t in (DASH, LEAP, SWAP, CHARGE_THROUGH) for t in moves):
+        if not any(t in (DASH, LEAP, SWAP, CHARGE_THROUGH, SHADOWSTEP) for t in moves):
             return
         if self.kind != "active":
             raise ValueError(f"{'、'.join(moves)} 只能用在主動技能，收到 kind: {self.kind}")
@@ -1591,6 +1612,22 @@ class SkillDef(ContentModel):
             raise ValueError("dash 必須是技能的第一個效果（衝鋒一律最先結算）")
         if CHARGE_THROUGH in types:
             self._check_charge_through(types)
+        if SHADOWSTEP in types:
+            self._check_shadowstep(types)
+
+    def _check_shadowstep(self, types: list[str]) -> None:
+        """``shadowstep``（Phase 3D-8d）：第一個效果、``landing`` 必填，``choose`` 搭配形狀
+        ``unit_then_tile``、``behind`` 搭配形狀 ``single``。"""
+        if types[0] != SHADOWSTEP:
+            raise ValueError("shadowstep 必須是技能的第一個效果（瞬步一律最先結算）")
+        landing = self.effects[0].landing
+        if landing is None:
+            raise ValueError("shadowstep 必須填 landing（choose 或 behind）")
+        shape = SHADOWSTEP_SHAPES[landing]
+        if self.shape.type != shape:
+            raise ValueError(
+                f"shadowstep 的 landing: {landing} 必須搭配形狀 {shape}，收到 {self.shape.type}"
+            )
 
     def _check_charge_through(self, types: list[str]) -> None:
         """``charge_through``（Phase 3D-2c）：形狀 ``ground_tile``、第一個效果；其餘效果只能作用在
@@ -1862,8 +1899,13 @@ class SkillDef(ContentModel):
         形狀 ``unit_pair`` 必須一起出現；主動技能、是技能唯一的效果（選取的單位與落點就是它的
         參數，不另外結算命中與其他效果）。"""
         needed = {t for t in PAIR_SHAPES.values()}
-        if self.shape.type in needed and not any(
-            e.type in PAIR_MOVES and PAIR_SHAPES[e.type] == self.shape.type for e in self.effects
+        if (
+            self.shape.type in needed
+            and not any(
+                e.type in PAIR_MOVES and PAIR_SHAPES[e.type] == self.shape.type
+                for e in self.effects
+            )
+            and not self._chooses_shadowstep_landing()
         ):
             raise ValueError(f"形狀 {self.shape.type} 的技能必須有對應的位移他人效果")
         for effect in self.effects:
@@ -1877,6 +1919,11 @@ class SkillDef(ContentModel):
                 )
             if len(self.effects) != 1:
                 raise ValueError(f"{effect.type} 必須是技能唯一的效果")
+
+    def _chooses_shadowstep_landing(self) -> bool:
+        """一般瞬步（``shadowstep`` 的 ``landing: choose``，Phase 3D-8d）也用形狀
+        ``unit_then_tile``：第 1 段選敵人、第 2 段選他相鄰的落點。"""
+        return any(e.type == SHADOWSTEP and e.landing == "choose" for e in self.effects)
 
     def _check_pierce(self) -> None:
         """``pierce``（Phase 3C-5b）：主動技能或反應技、遠程武器或法術、形狀是單體（射程大於 1）或

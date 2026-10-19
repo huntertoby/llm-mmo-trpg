@@ -59,6 +59,7 @@ from trpg.engine.events import (
 )
 from trpg.engine.lifecycle import make_unit
 from trpg.engine.rules.combat import PERMILLE
+from trpg.engine.rules.facing import facing_toward_enemies
 from trpg.engine.rules.movement import is_deadly, is_standable
 from trpg.engine.state import BattleState, ObjectState, UnitState
 from trpg.shared.types import ObjectId, Pos, Surface, Team, UnitId
@@ -924,6 +925,7 @@ def _spawn_unit(ctx: Ctx, effect: EffectBase) -> list[EventBase]:
         pos=_pos(xy),
         name=name,
         rules=ctx.rules,
+        facing=facing_toward_enemies(state, xy, effect.team),  # 援軍面向敵人（Phase 3D-8d）
     )
     state.units[uid] = unit
     state.turn_order.append(uid)

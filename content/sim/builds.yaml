@@ -32,6 +32,8 @@ companions: [sim_companion_fighter, sim_companion_archer]
 # Phase 3D-8c：build_ranged 以監視射擊（overwatch）換下升高平台（主動欄位已滿；升高平台改由 build_winged 接收）、build_assassin 以前後夾擊
 # （flanked）換下魯莽突刺（魯莽突刺仍在 build_gambler）；新增 build_winged（飛翼流）：展翼、賜予羽翼（grant_skill，暫時獲得「飛行」），
 # 搭配升高平台、穿透射擊、居高射擊與狙擊，並接收被換下的升高平台（3C-6 再整理）。
+# Phase 3D-8d：build_assassin 以瞬步背刺（shadowstep landing: behind）換下先發制人、以暗影突襲（shadowstep landing: choose ＋
+# self_concealed）換下撕裂打擊（主動欄位已滿；撕裂打擊仍在 hero_fighter）；先發制人改由 build_gambler 的空欄位接收（3C-6 再整理）。
 builds:
   - id: build_push
     name_zh: 位移流
@@ -130,7 +132,7 @@ builds:
       ai_profile: flanker   # 3D-8c：移動時偏好夾擊位置
       tags: [hero, sim]
       max_mana: 20
-      skills: [skill_rending_strike, skill_execute, skill_blink, skill_fury_stance, skill_crippling_crit, skill_pincer_strike, skill_pick_off, skill_first_strike, skill_ambush_stab]
+      skills: [skill_shadow_ambush, skill_execute, skill_blink, skill_fury_stance, skill_crippling_crit, skill_pincer_strike, skill_pick_off, skill_shadow_backstab, skill_ambush_stab]
 
   - id: build_support
     name_zh: 輔助
@@ -299,7 +301,7 @@ builds:
       resist: {physical: 100}
       tags: [hero, sim]
       max_mana: 24
-      skills: [skill_blood_sacrifice, skill_all_in, skill_wild_blade, skill_berserker_rage, skill_reckless_lunge, skill_fury_stance, skill_bloodlust, skill_grief_rage]
+      skills: [skill_blood_sacrifice, skill_all_in, skill_wild_blade, skill_berserker_rage, skill_reckless_lunge, skill_fury_stance, skill_bloodlust, skill_grief_rage, skill_first_strike]
 
   - id: build_seer
     name_zh: 偵察破咒流

@@ -318,6 +318,8 @@ class BatchReport(_Model):
     anomalies: tuple[Anomaly, ...]
     scene_events: dict[str, int] = {}
     """場景物件事件的總次數（Phase 3C-5b）：``hurled`` 投擲、``toppled`` 推倒、``pierced`` 穿透。"""
+    positional_events: dict[str, int] = {}
+    """背刺與潛行偷襲的總次數（Phase 3D-8d）：``backstab:ally`` 等（攻擊者的陣營）。"""
 
     def anomaly(self, kind: str) -> Anomaly | None:
         return next((a for a in self.anomalies if a.kind == kind), None)
@@ -535,10 +537,28 @@ def _skill_rows(done: Sequence[BattleMetrics]) -> tuple[SkillRow, ...]:
     return tuple(sorted(rows, key=lambda r: (-r.uses_per_battle, r.skill_id)))
 
 
+def _positional_text(counts: dict[str, int]) -> str:
+    """「我方背刺 3 次、敵方背刺 2 次、我方偷襲 1 次」（Phase 3D-8d）。"""
+    kinds = {"backstab": "背刺", "ambush": "偷襲"}
+    return "、".join(
+        f"{_TEAM_LABEL[team]}{label} {counts[key]} 次"
+        for kind, label in kinds.items()
+        for team in ("ally", "enemy")
+        if (key := f"{kind}:{team}") in counts
+    )
+
+
 def _scene_events(done: Sequence[BattleMetrics]) -> dict[str, int]:
     total: Counter[str] = Counter()
     for m in done:
         total.update(m.scene_events)
+    return dict(sorted(total.items()))
+
+
+def _positional_events(done: Sequence[BattleMetrics]) -> dict[str, int]:
+    total: Counter[str] = Counter()
+    for m in done:
+        total.update(m.positional_events)
     return dict(sorted(total.items()))
 
 
@@ -580,6 +600,7 @@ def build_report(
         unused_skills=tuple(sorted(set(equipped) - used)),
         anomalies=_anomalies(ordered),
         scene_events=_scene_events(done),
+        positional_events=_positional_events(done),
     )
 
 
@@ -711,6 +732,8 @@ def format_report(report: BatchReport) -> str:
         labels = {"hurled": "投擲物件", "toppled": "推倒", "pierced": "穿透"}
         counts = "、".join(f"{labels[k]} {v} 次" for k, v in r.scene_events.items())
         out.append(f"場景物件（整批合計）：{counts}")
+    if r.positional_events:
+        out.append(f"背刺與偷襲（整批合計）：{_positional_text(r.positional_events)}")
     out.append("")
     if not r.anomalies:
         out.append("異常：無")

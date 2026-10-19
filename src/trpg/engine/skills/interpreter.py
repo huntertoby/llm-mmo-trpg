@@ -50,6 +50,7 @@ from trpg.content.skills import (
     REVEAL,
     REVIVE,
     SELF_DAMAGE_OF_HIT,
+    SHADOWSTEP,
     STEAL_BUFF,
     SUMMON,
     SWAP,
@@ -111,6 +112,7 @@ from trpg.engine.maneuvers import contest
 from trpg.engine.pierce import NO_PIERCE, PierceTrace, pierce_trace
 from trpg.engine.reactions import (
     PauseForDecision,
+    after_attack,
     ally_targeted_reactions,
     block_multiplier,
     enemy_enters_adjacent_reactions,
@@ -130,13 +132,14 @@ from trpg.engine.resources import (
 from trpg.engine.results import Pending
 from trpg.engine.rewrites import grant_ap, grant_reactions, reset_cooldowns
 from trpg.engine.rules.combat import PERMILLE, AttackProfile, AttackRoll, ForcedOutcome, roll_attack
+from trpg.engine.rules.facing import face_toward
 from trpg.engine.rules.geometry import XY, axis_direction, manhattan
 from trpg.engine.rules.movement import is_deadly
 from trpg.engine.rules.statuses import is_rooted, skip_turn_status
 from trpg.engine.skill_triggers import collect_cast, collect_move, holding
 from trpg.engine.skills.charge import aside_direction
 from trpg.engine.skills.conditions import Subject, condition_met
-from trpg.engine.skills.mobility import ChargeRoute, charge_route, dash_route
+from trpg.engine.skills.mobility import ChargeRoute, charge_route, dash_route, shadowstep_behind
 from trpg.engine.skills.revive import revive_unit
 from trpg.engine.skills.scaling import mastery_duration_bonus, skill_scaling_value
 from trpg.engine.skills.targeting import (
@@ -217,12 +220,27 @@ def use_skill(ctx: Ctx, caster: UnitState, action: UseSkill) -> None:
             assert action.target_pos is not None
             place_trap(ctx, caster, skill, (action.target_pos.x, action.target_pos.y))
         else:
-            _Cast(ctx, caster, skill, action, area).run()
+            cast = _Cast(ctx, caster, skill, action, area)
+            face = _primary_xy(ctx.state, caster, action)
+            cast.run()
+            after_attack(ctx, caster, face, ambushed=cast.ambushed)
         if skill.kind == "active":  # copy_skill 的複製對象（Phase 3C-4b）
             _record_cast(ctx.state, caster, skill)
         _apply_self_status(ctx, caster, skill)
         collect_cast(ctx, caster, skill)  # on_cast_tag：在該技能結算之後
         _record_turn_tags(ctx.state, caster, skill)
+
+
+def _primary_xy(state: BattleState, caster: UnitState, action: UseSkill) -> XY | None:
+    """施放時主要目標的位置（Phase 3D-8d：施放後面向它）：選取的單位（不是自己）或物件；沒有時
+    為 ``None``。"""
+    if action.target_id is not None and action.target_id != caster.id:
+        unit = state.units.get(action.target_id)
+        return None if unit is None else unit.xy
+    if action.target_object_id is not None:
+        obj = state.objects.get(action.target_object_id)
+        return None if obj is None else obj.xy
+    return None
 
 
 def _record_turn_tags(state: BattleState, caster: UnitState, skill: SkillDef) -> None:
@@ -400,7 +418,11 @@ def use_reaction_skill(
             _pay_costs(ctx, owner, skill, area)
             if on_paid is not None:
                 on_paid()
-            _Cast(ctx, owner, skill, None, area).run()
+            cast = _Cast(ctx, owner, skill, None, area)
+            single = skill.shape.type == "single" and trigger is not None and trigger is not owner
+            face = trigger.xy if single and trigger is not None else None
+            cast.run()
+            after_attack(ctx, owner, face, ambushed=cast.ambushed)
             collect_cast(ctx, owner, skill)
     finally:
         ctx.trigger_depth = outer
@@ -505,6 +527,11 @@ class _Cast:
     # 命中
     # ------------------------------------------------------------------
 
+    @property
+    def ambushed(self) -> bool:
+        """這次施放在隱蔽中擲過命中（潛行偷襲，Phase 3D-8d）：結算完要移除隱蔽。"""
+        return any(roll.ambush > 0 for roll in self.hits.values())
+
     def _affected_by_damage(self, unit: UnitState) -> bool:
         enemy = unit.team is not self.caster.team
         return any(
@@ -573,6 +600,8 @@ class _Cast:
             crit=roll.crit,
             skill_id=self.skill.id,
             modifier_bonus=roll.modifier_bonus,
+            backstab=roll.backstab,
+            ambush=roll.ambush,
         )
         self.hits[unit.id] = roll
         if roll.hit and self.skill.shape.type == "single":
@@ -662,6 +691,8 @@ class _Cast:
 
     def run(self) -> None:
         if not self.dash():  # 衝鋒一律最先結算；被擋下時其餘效果不結算
+            return
+        if not self.shadowstep():  # 瞬步一律最先結算（Phase 3D-8d）
             return
         if not self.react_to_targeting():
             return
@@ -849,6 +880,38 @@ class _Cast:
         self.area = replace(self.area, origin=caster.xy)
         return True
 
+    def shadowstep(self) -> bool:
+        """``shadowstep``（Phase 3D-8d）：施放者瞬間出現在目標相鄰的格子（``landing: choose`` 用選取
+        的落點、``behind`` 用目標的背後格或最近的替代格），不觸發藉機攻擊；落點的陷阱與表面照常
+        結算，落地後面向目標，影響範圍的原點改為落點。回傳其餘效果是否繼續結算：沒有落點、目標
+        已不在場，或施放者倒下時為 ``False``。"""
+        action, caster, ctx = self.action, self.caster, self.ctx
+        spec = self.skill.effects[0] if self.skill.effects else None
+        if spec is None or spec.type != SHADOWSTEP or action is None or action.target_id is None:
+            return True
+        if not self.holds(spec.condition, Subject(caster, caster.xy)):
+            return True
+        target = ctx.state.units[action.target_id]
+        dest: XY | None
+        if spec.landing == "choose":
+            assert action.target_pos is not None
+            dest = (action.target_pos.x, action.target_pos.y)
+        else:
+            dest = shadowstep_behind(ctx.state, caster, target)
+        if dest is None or not target.alive:
+            ctx.emit(EffectFizzled, effect_kind=SHADOWSTEP, pos=None, reason="shadowstep_blocked")
+            return False
+        if dest != caster.xy:
+            move = MoveUnitEffect(
+                source_id=caster.id, unit_id=caster.id, dest=dest, mode="shadowstep"
+            )
+            execute(ctx, [move])
+        if not caster.alive or caster.xy != dest:
+            return False
+        face_toward(caster, target.xy)
+        self.area = replace(self.area, origin=caster.xy)
+        return True
+
     def _dash_walk(self, path: list[XY]) -> bool:
         """沿 ``path`` 一步一步衝（每步先給藉機攻擊的機會）；施放者倒下時回傳 ``False``。"""
         caster, ctx = self.caster, self.ctx
@@ -982,8 +1045,9 @@ class _Cast:
             return self.teleport_target()
         if kind == SWAP_ANY:
             return self.swap_any()
-        if kind in (INTERCEPT, PLACE_TRAP, CONSUME_STACK, DASH):
-            return []  # 攔截：反應機制；陷阱：use_skill；消耗層數：consume_stacks；衝鋒：dash
+        if kind in (INTERCEPT, PLACE_TRAP, CONSUME_STACK, DASH, SHADOWSTEP):
+            # 攔截：反應機制；陷阱：use_skill；消耗層數：consume_stacks；衝鋒、瞬步：先結算
+            return []
         if kind == ADD_STACK:
             self.add_stack(effect, spec)
             return []

@@ -182,6 +182,9 @@ class BattleMetrics(_Model):
     scene_events: dict[str, int] = {}
     """場景物件事件的次數（Phase 3C-5b）：``hurled``（投擲物件）、``toppled``（推倒）、
     ``pierced``（穿透的射線穿過 ``penetrable`` 物件）；沒有發生的不列出。"""
+    positional_events: dict[str, int] = {}
+    """背刺與潛行偷襲的命中判定次數（Phase 3D-8d）：``backstab:ally``、``backstab:enemy``、
+    ``ambush:ally``、``ambush:enemy``（攻擊者的陣營）；沒有發生的不列出。"""
 
     def team_damage(self, team: Team, *, direct: bool | None = None) -> int:
         """陣營造成的傷害；``direct`` 為 ``None`` 時直接＋間接。"""
@@ -349,6 +352,7 @@ def metrics_from_events(  # noqa: C901, PLR0912, PLR0915 - 單一事件迴圈，
     chain_limit = 0
     trigger_limit = 0
     scene: dict[str, int] = {}
+    positional: dict[str, int] = {}
     boss_round_one_down = False
     one_shots = 0
     boss_burst_hits: list[str] = []
@@ -438,6 +442,7 @@ def metrics_from_events(  # noqa: C901, PLR0912, PLR0915 - 單一事件迴圈，
             skill_users.setdefault(current, set()).add(info[event.unit_id].team.value)
         elif isinstance(event, AttackRolled):
             current, caster = event.skill_id, event.attacker_id
+            _count_positional(positional, info[event.attacker_id].team, event)
             if current is not None:
                 entry = skills.setdefault(current, [0, 0, 0, 0, 0])
                 entry[_ROLLS] += 1
@@ -527,7 +532,16 @@ def metrics_from_events(  # noqa: C901, PLR0912, PLR0915 - 單一事件迴圈，
         one_shot_count=one_shots,
         trigger_limit_count=trigger_limit,
         scene_events=dict(sorted(scene.items())),
+        positional_events=dict(sorted(positional.items())),
     )
+
+
+def _count_positional(counts: dict[str, int], team: Team, event: AttackRolled) -> None:
+    """背刺與潛行偷襲的命中判定次數（Phase 3D-8d），鍵為 ``backstab:ally`` 這種形式。"""
+    for kind, bonus in (("backstab", event.backstab), ("ambush", event.ambush)):
+        if bonus:
+            key = f"{kind}:{team.value}"
+            counts[key] = counts.get(key, 0) + 1
 
 
 def battle_metrics(run: BattleRun) -> BattleMetrics:

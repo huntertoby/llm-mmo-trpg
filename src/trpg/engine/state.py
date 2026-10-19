@@ -27,6 +27,7 @@ from trpg.shared.types import Attribute, Element, ObjectId, Pos, ResistGroup, Su
 __all__ = [
     "Activation",
     "BattleState",
+    "Facing",
     "GrantedSkill",
     "LastCast",
     "ObjectState",
@@ -41,6 +42,10 @@ __all__ = [
     "state_from_json",
     "state_to_json",
 ]
+
+
+type Facing = Literal["north", "east", "south", "west"]
+"""單位的朝向（Phase 3D-8d，四方向；北 ＝ y − 1）。背後格 ＝ 位置 ＋ 朝向的反方向。"""
 
 
 @dataclass(slots=True, frozen=True)
@@ -317,6 +322,9 @@ class UnitState:
     granted_skills: tuple[GrantedSkill, ...] = ()
     """暫時獲得的技能（``grant_skill``，Phase 3D-8c），依獲得順序；不佔技能欄位，不會與 ``skills``
     重複。"""
+    facing: Facing = "east"
+    """朝向（Phase 3D-8d）：主動移動（步行、衝鋒、跳躍、直線衝撞、瞬步）後面向移動方向，攻擊或對
+    單位施放技能後面向目標；強制位移、傳送、交換不改。只影響背刺（``from_behind``）的判斷。"""
 
     @property
     def alive(self) -> bool:
@@ -404,6 +412,7 @@ class UnitState:
             activations=self.activations,
             revived=self.revived,
             granted_skills=self.granted_skills,
+            facing=self.facing,
         )
 
 

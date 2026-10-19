@@ -63,6 +63,7 @@ from trpg.content.skills import (
     RESTORE_RESOURCE,
     REVEAL,
     REVIVE,
+    SHADOWSTEP,
     STEAL_BUFF,
     TIME_BOMB,
     EffectSpec,
@@ -126,6 +127,7 @@ from trpg.engine.rules.combat import (
     cover_object_between,
     is_concealed,
 )
+from trpg.engine.rules.facing import FACING_VECTORS, facing_between, is_behind
 from trpg.engine.rules.geometry import (
     XY,
     bresenham,
@@ -137,6 +139,7 @@ from trpg.engine.rules.geometry import (
 from trpg.engine.rules.movement import is_deadly, is_standable, step_cost
 from trpg.engine.rules.statuses import forced_target_sources, shield_amount, stance_status_ids
 from trpg.engine.skills.conditions import is_flanked
+from trpg.engine.skills.mobility import shadowstep_behind
 from trpg.engine.skills.scaling import mastery_duration_bonus
 from trpg.engine.skills.targeting import (
     ResolvedEffect,
@@ -417,6 +420,28 @@ def _enemy_terms(state: BattleState, unit: UnitState, w: AiWeights, scene: _Scen
         value -= w.exposed * _outgunned_by(state, unit, enemies)
     if w.flank:
         value += w.flank * _flanked_count(state, unit, enemies)
+    return value + _facing_terms(state, unit, w, enemies)
+
+
+def _facing_terms(
+    state: BattleState, unit: UnitState, w: AiWeights, enemies: list[UnitState]
+) -> int:
+    """位置價值中與朝向有關的部分（Phase 3D-8d，敵我同一套）：近戰單位站在相鄰敵人的背後格
+    （背刺位置）加分；背對相鄰的近戰敵人扣分——結束移動時的朝向以「面向最近的敵人」近似
+    （同距離取 ID 較小者），背後格站著近戰敵人時扣 ``back_exposed``。"""
+    value = 0
+    if w.backstab and unit.weapon.is_melee:
+        value += w.backstab * sum(
+            1 for e in enemies if manhattan(unit.xy, e.xy) == 1 and is_behind(unit.xy, e)
+        )
+    if w.back_exposed:
+        nearest = min(enemies, key=lambda e: (manhattan(unit.xy, e.xy), e.id))
+        facing = facing_between(unit.xy, nearest.xy)
+        if facing is not None:
+            dx, dy = FACING_VECTORS[facing]
+            back = state.unit_at(unit.xy[0] - dx, unit.xy[1] - dy)
+            if back is not None and back.team is not unit.team and back.weapon.is_melee:
+                value -= w.back_exposed
     return value
 
 
@@ -1452,11 +1477,9 @@ def _special_estimate(  # noqa: PLR0917
     位移他人（Phase 3D-2b）；其他技能回傳 ``_UNHANDLED``。"""
     effect_types = {e.type for e in skill.effects}
     if CHARGE_THROUGH in effect_types:  # 直線衝撞（3D-2c）：路徑上的敵人數 ＋ 終點的位置價值變化
-        if not area.units:
-            return None
-        moved = unit.clone()
-        moved.pos = Pos(x=area.origin[0], y=area.origin[1])
-        return 3 * len(area.units) + _unit_position_value(state, moved, w, scene) - before
+        return _charge_estimate(state, unit, area, scene, w, before)
+    if SHADOWSTEP in effect_types and action.target_id is not None:
+        return _shadowstep_estimate(state, unit, action, scene, w, before)
     if effect_types & {"teleport", LEAP} and action.target_pos is not None:
         moved = unit.clone()
         moved.pos = action.target_pos
@@ -1466,6 +1489,45 @@ def _special_estimate(  # noqa: PLR0917
     if effect_types & set(DISPLACE_PRIMITIVES):
         return displace_estimate(state, unit, skill, action, _harmful)
     return _UNHANDLED
+
+
+def _charge_estimate(  # noqa: PLR0917
+    state: BattleState,
+    unit: UnitState,
+    area: SkillArea,
+    scene: _Scene,
+    w: AiWeights,
+    before: Fraction,
+) -> Fraction | None:
+    if not area.units:
+        return None
+    moved = unit.clone()
+    moved.pos = Pos(x=area.origin[0], y=area.origin[1])
+    return 3 * len(area.units) + _unit_position_value(state, moved, w, scene) - before
+
+
+def _shadowstep_estimate(  # noqa: PLR0917
+    state: BattleState,
+    unit: UnitState,
+    action: UseSkill,
+    scene: _Scene,
+    w: AiWeights,
+    before: Fraction,
+) -> Fraction | None:
+    """瞬步（Phase 3D-8d）的估計：目標 3 分、落在目標背後再加 2 分，加上落點（面向目標）的位置
+    價值變化；找不到落點時不納入。"""
+    assert action.target_id is not None
+    target = state.units[action.target_id]
+    if action.target_pos is not None:
+        dest: XY | None = (action.target_pos.x, action.target_pos.y)
+    else:
+        dest = shadowstep_behind(state, unit, target)
+    if dest is None:
+        return None
+    moved = unit.clone()
+    moved.pos = Pos(x=dest[0], y=dest[1])
+    behind = 2 if is_behind(dest, target) else 0
+    return 3 + behind + _unit_position_value(state, moved, w, scene) - before
 
 
 def _trap_estimate(

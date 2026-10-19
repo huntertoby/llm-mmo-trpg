@@ -114,6 +114,19 @@ primitives:
     params:
       dice: {type: dice, required: true, description_zh: 每個被撞到的敵人受到的物理傷害}
       on_hit: {type: on_hit, required: true, description_zh: 命中後的額外效果（knock_prone 擊倒、push_aside 推到路徑旁）}
+  # --- Phase 3D-8d：朝向與背刺（docs/design/06-技能.md 6.21；點數為初值，未經模擬）---
+  - id: shadowstep
+    name_zh: 瞬步
+    description_zh: 以射程內看得到的一個敵方單位為目標，施放者瞬間出現在他相鄰的格子（不經過中間的格子、不觸發藉機攻擊，也不觸發「敵人走進相鄰格」與監視射擊；不墜落），落地後面向目標。landing：choose 一般瞬步（形狀 unit_then_tile，兩段選取：敵人 → 他相鄰的空格，玩家自選）；behind 瞬步背刺類（形狀 single，固定落在目標的背後格；被占住或不可站立時改為目標相鄰的其他空格——先左右兩側、再正面，同距離依上、右、下、左的順序；都沒有就不能施放）。落點須可站立、沒有單位、不是致命地形，與目標的高度差不超過近戰上限。落點的陷阱與表面照常結算。之後的效果以落點結算，所以接在後面的近戰傷害會吃到背刺加成。不算「本回合移動過」，不觸發 on_move 被動。必須是技能的第一個效果；定身或倒地時不能施放。
+    category: structural
+    harmful: true
+    min_rarity: rare
+    budget_basis: fixed
+    base_points: 4
+    acts_on: caster
+    allowed_shapes: [single, unit_then_tile]
+    params:
+      landing: {type: landing, required: true, description_zh: choose 玩家自選目標相鄰的空格；behind 固定落在目標的背後格}
   - id: leap
     name_zh: 跳躍
     description_zh: 施放者跳到射程內的指定空格：無視中間的單位與低矮（落差不超過 1 層）的地形，不能越過同時擋住行動與視線的物件（石柱）與牆；落點須可站立、沒有單位、與起點的高度差不超過 1 層。不觸發藉機攻擊，不算「本回合移動過」，也不觸發 on_move 被動；落點的陷阱與表面照常結算。定身或倒地時不能跳。

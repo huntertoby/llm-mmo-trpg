@@ -145,10 +145,13 @@ type ObjectDestroyCause = Literal[
     "damage", "burned", "explosion", "filled", "fell", "effect", "hurled", "toppled"
 ]
 """``hurled``：被投擲後落地碎掉；``toppled``：被推倒（原物件移除，改由倒塌物取代；Phase 3C-5a）。"""
-type MoveMode = Literal["walk", "forced", "teleport", "teleported", "dash", "leap", "swap"]
+type MoveMode = Literal[
+    "walk", "forced", "teleport", "teleported", "dash", "leap", "swap", "shadowstep"
+]
 """``walk``：主動移動的一步；``forced``：強制位移（推擊等）；``teleport``：傳送（不墜落）；
 ``dash``：衝鋒的一步（同步行，會墜落與觸發陷阱）；``leap``：跳躍的落點；``swap``：與另一個單位
-交換位置（Phase 3D-2）。"""
+交換位置（Phase 3D-2）；``shadowstep``：瞬步到敵人身旁（Phase 3D-8d；不墜落，落點的陷阱、表面
+照常結算）。"""
 
 
 class EventBase(BaseModel):
@@ -338,7 +341,7 @@ class EnteredDeadlyTerrain(EventBase):
 
 class AttackRolled(EventBase):
     """命中判定：``total = natural + hit_modifier + proficiency + situational + cover +
-    modifier_bonus``。
+    modifier_bonus + backstab + ambush``。
 
     ``cover`` 為半掩護的修正（0 或負值），``cover_object_id`` 為提供掩護的物件（Phase 1C）。
     ``modifier_bonus`` 為修正規則的命中加值（Phase 3C-2；預設 0，舊紀錄不受影響）。
@@ -364,6 +367,11 @@ class AttackRolled(EventBase):
     skill_id: str | None = None
     """技能的命中判定時為技能 ID（Phase 2A）；普攻為 ``None``。"""
     modifier_bonus: int = 0
+    backstab: int = 0
+    """背刺的命中加值（Phase 3D-8d；0 為不是背刺；暴擊範圍另外擴大
+    ``backstab_crit_range_bonus``）。"""
+    ambush: int = 0
+    """潛行偷襲的命中加值（Phase 3D-8d；攻擊者帶 ``concealed`` 狀態；0 為沒有）。"""
 
 
 class DamageDealt(EventBase):
@@ -510,8 +518,10 @@ class StatusRemoved(EventBase):
         "dispelled",
         "revealed",
         "fired",
+        "ambushed",
     ]
-    """``fired``：監視（``overwatch``）射擊後結束（Phase 3D-8c）；
+    """``ambushed``：隱蔽中發動攻擊（潛行偷襲）後脫離隱蔽（Phase 3D-8d）；
+    ``fired``：監視（``overwatch``）射擊後結束（Phase 3D-8c）；
     ``dispelled``：被 ``dispel`` 驅散；``revealed``：被 ``reveal`` 移除隱蔽（Phase 3D-8a）；
     ``stolen``：被 ``steal_buff`` 奪走（Phase 3D-1；緊接著對施放者的 ``status_applied``）；
     ``spent``：不死（``undying``）擋下致命傷害後移除（Phase 3C-4a）；

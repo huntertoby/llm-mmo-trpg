@@ -63,7 +63,7 @@ def test_all_fourteen_skeletons_have_a_data_file() -> None:
 
 def test_the_initial_skeleton_structure_matches_the_spec() -> None:
     sk = library().skeletons
-    assert sk["strike"].shapes == ("single",)
+    assert sk["strike"].shapes == ("single", "unit_then_tile")  # 3D-8d：一般瞬步（手寫技能）
     assert (sk["strike"].core.primitives, sk["strike"].core.min_share_permille) == (
         ("damage",),
         600,
@@ -104,6 +104,7 @@ def test_the_initial_skeleton_structure_matches_the_spec() -> None:
         "teleport_target",  # 3D-2b
         "swap_any",  # 3D-2b
         "charge_through",  # 3D-2c
+        "shadowstep",  # 3D-8d
     }
     assert set(sk["displace"].secondary.primitives or ()) >= {"dash"}
     assert sk["displace"].secondary.max_share_permille == {"damage": 500}

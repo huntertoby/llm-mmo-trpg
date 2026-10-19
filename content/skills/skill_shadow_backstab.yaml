@@ -1,0 +1,28 @@
+# 主動（Phase 3D-8d 示範，數值為初值，未經模擬）：瞬步背刺——瞬間出現在敵人背後（背後被占住時改到最近的側面），接著一刀；從背後下手吃到背刺加成（命中 +2、暴擊 19–20），而且真的在背後時（from_behind）再多 50% 傷害。
+id: skill_shadow_backstab
+schema_version: 1
+name_zh: 瞬步背刺
+tier: 1
+rank: 1
+rarity: rare
+kind: active
+skeleton: strike
+category: weapon
+weapon_req: melee
+ap_cost: 2
+scaling_attr: dex
+shape: {type: single, range: 4}
+effects:
+  - {type: shadowstep, landing: behind}
+  - {type: damage, multiplier_permille: 1000}
+  # 3D-8d 背刺條件：真的落在目標背後（背後被占住、改落在側面時不加）
+  - type: damage
+    multiplier_permille: 500
+    condition: {type: from_behind}
+condition: null
+cost: {mana: 5, cooldown: 3}
+tags: [physical, melee, mobility, stealth]
+narrative:
+  concept: 影子一閃，人已經在敵人背後，刀鋒比他回頭還快
+  cast_flavor: 你的身形化成一道黑影，下一刻已貼在對手背後，匕首送進他毫無防備的後心
+provenance: {origin: builtin, owner_id: null, created_by: null, parents: [], bound: true, tradeable: false}

@@ -14,8 +14,9 @@ from trpg.engine.events import (
     UnitDowned,
     UnitEscaped,
 )
+from trpg.engine.rules.facing import default_facing
 from trpg.engine.rules.statuses import is_removed_with_source, stance_status_ids
-from trpg.engine.state import UnitState
+from trpg.engine.state import Facing, UnitState
 from trpg.engine.traps import remove_traps_of
 from trpg.engine.zones import remove_caster_zones_of
 from trpg.shared.types import Pos, Team, UnitId
@@ -218,8 +219,10 @@ def make_unit(
     pos: Pos,
     name: str,
     rules: Ruleset,
+    facing: Facing | None = None,
 ) -> UnitState:
-    """由範本建立戰鬥中的單位（開場與戰鬥中產生的單位共用）。"""
+    """由範本建立戰鬥中的單位（開場與戰鬥中產生的單位共用）。``facing`` 省略時我方朝東、敵方
+    朝西（Phase 3D-8d）。"""
     stamina = template.stamina if template.stamina is not None else rules.core.default_stamina
     reactions = (
         template.reactions if template.reactions is not None else rules.reactions.default_rules
@@ -247,4 +250,5 @@ def make_unit(
         mana=template.max_mana,
         max_mana=template.max_mana,
         skills=template.skills,
+        facing=default_facing(team) if facing is None else facing,
     )

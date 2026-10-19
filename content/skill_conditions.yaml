@@ -79,3 +79,14 @@ conditions:
     description_zh: 以目標為中心，施放者所在的那一側（上下左右四個方向中，與施放者位置軸向相同、離施放者較近的一側；距離相同時以左右優先）的對面格，站著施放者的存活友方（不含施放者自己）。相鄰攻擊就是目標正對面的那一格；遠程攻擊也看目標背對施放者的那一格。
     harshness: common
     min_rarity: rare
+  # 3D-8d（朝向與背刺；harshness 為初值，未經模擬）
+  - id: from_behind
+    name_zh: 背刺
+    description_zh: 施放者站在目標的背後格（目標朝向的反方向相鄰格；只算相鄰）。單位的朝向由引擎自動更新：主動移動後面向移動方向，攻擊或對單位施放技能後面向目標。
+    harshness: common
+    min_rarity: rare
+  - id: self_concealed
+    name_zh: 潛行偷襲
+    description_zh: 施放者帶有「隱蔽」狀態（concealed；站在黑暗或草叢中不算）。隱蔽中發動攻擊另有通用的命中加成，攻擊結算完後脫離隱蔽。
+    harshness: harsh
+    min_rarity: rare

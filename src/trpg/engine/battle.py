@@ -66,6 +66,7 @@ from trpg.engine.reactions import (
 from trpg.engine.results import ResolveResult
 from trpg.engine.rule_changes import pass_through
 from trpg.engine.rules.combat import attack_problem, reach_problem
+from trpg.engine.rules.facing import face_toward, opening_facing
 from trpg.engine.rules.geometry import XY, manhattan
 from trpg.engine.rules.movement import (
     available_move_budget,
@@ -97,6 +98,7 @@ from trpg.engine.skills.targeting import (
 )
 from trpg.engine.state import (
     BattleState,
+    Facing,
     ObjectState,
     PendingResolution,
     Tile,
@@ -270,6 +272,7 @@ def begin_battle(setup: BattleSetup, seed: int) -> ResolveResult:
     positions = _place_units(setup, state)
     names = _unit_names(setup)
     ids = IdAllocator("unit")
+    facings = _opening_facings(setup, positions)
     for spawn, (x, y), name in zip(setup.units, positions, names, strict=True):
         uid = UnitId(ids.next())
         state.units[uid] = make_unit(
@@ -280,6 +283,7 @@ def begin_battle(setup: BattleSetup, seed: int) -> ResolveResult:
             pos=Pos(x=x, y=y),
             name=name,
             rules=setup.ruleset,
+            facing=facings[spawn.team],
         )
         state.units[uid].source = starting_source(spawn, setup.ruleset.core)
     state.source_wells = tuple(sorted(map_def.source_wells, key=lambda xy: (xy[1], xy[0])))
@@ -300,6 +304,21 @@ def begin_battle(setup: BattleSetup, seed: int) -> ResolveResult:
     ctx.emit(RoundStarted)
     start_turn(ctx, state.turn_order[0])
     return finish_resolution(ctx)
+
+
+def _opening_facings(setup: BattleSetup, positions: list[XY]) -> dict[Team, Facing]:
+    """開場朝向（Phase 3D-8d）：每個陣營面向敵方起始位置（重心）的方向。"""
+    by_team: dict[Team, list[XY]] = {team: [] for team in Team}
+    for spawn, xy in zip(setup.units, positions, strict=True):
+        by_team[spawn.team].append(xy)
+    return {
+        team: opening_facing(
+            team,
+            by_team[team],
+            [xy for other in Team if other is not team for xy in by_team[other]],
+        )
+        for team in Team
+    }
 
 
 def _initiative_order(ctx: Ctx) -> list[UnitId]:
@@ -708,6 +727,7 @@ def _do_attack(ctx: Ctx, unit: UnitState, action: Action) -> None:
             raise IllegalActionError(problem)
         unit.ap -= cost
         ctx.emit(ObjectAttacked, attacker_id=unit.id, object_id=obj.id)
+        face_toward(unit, obj.xy)  # 攻擊後面向目標（Phase 3D-8d）
         weapon = unit.weapon
         state, use = ctx.state, modifiers.ATTACK
         execute(

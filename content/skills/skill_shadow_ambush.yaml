@@ -1,0 +1,28 @@
+# 主動（Phase 3D-8d 示範，數值為初值，未經模擬）：暗影突襲——一般瞬步（自己選落在敵人身旁哪一格）後出手；隱蔽中發動（潛行偷襲 self_concealed）時再補一刀。
+id: skill_shadow_ambush
+schema_version: 1
+name_zh: 暗影突襲
+tier: 1
+rank: 1
+rarity: rare
+kind: active
+skeleton: strike
+category: weapon
+weapon_req: melee
+ap_cost: 2
+scaling_attr: dex
+shape: {type: unit_then_tile, range: 4}
+effects:
+  - {type: shadowstep, landing: choose}
+  - {type: damage, multiplier_permille: 800}
+  # 3D-8d 潛行偷襲：施放者帶有隱蔽狀態
+  - type: damage
+    multiplier_permille: 800
+    condition: {type: self_concealed}
+condition: null
+cost: {mana: 6, cooldown: 3}
+tags: [physical, melee, mobility, stealth]
+narrative:
+  concept: 從陰影裡踏出來，挑一個最刁鑽的角度下手；藏得越好，這一刀越狠
+  cast_flavor: 你從暗處一步踏出，落在對手看不見的那一側，刀光一閃又沒入陰影
+provenance: {origin: builtin, owner_id: null, created_by: null, parents: [], bound: true, tradeable: false}

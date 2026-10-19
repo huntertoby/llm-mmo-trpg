@@ -6,7 +6,9 @@
 - 格子類條件（``height_advantage``、``target_on_surface``）看格子，單位只是站在上面；
 - ``self_hp_below`` 與 3D-1 的連段條件（``moved_this_turn``、``adjacent_ally``、``first_round``、
   ``cast_tag_this_turn``）只看施放者，與對象無關；``target_isolated`` 看對象單位的周圍；
-  ``flanked``（Phase 3D-8c）看對象單位與施放者的相對位置：對象的對面有施放者的友方。
+  ``flanked``（Phase 3D-8c）看對象單位與施放者的相對位置：對象的對面有施放者的友方；
+  ``from_behind``（Phase 3D-8d）：施放者站在對象的背後格；``self_concealed``（3D-8d）只看施放者
+  有沒有 ``concealed`` 狀態。
 
 技能層級的條件（:func:`skill_condition_met`）決定技能能否使用；效果層級的條件
 （:func:`condition_met`）由解譯器對每個對象分別判斷。
@@ -18,6 +20,7 @@ from collections.abc import Iterable
 from typing import NamedTuple
 
 from trpg.content.skills import CASTER_CONDITIONS, ConditionSpec, SkillDef, condition_text
+from trpg.engine.rules.facing import is_behind
 from trpg.engine.rules.geometry import XY
 from trpg.engine.state import BattleState, UnitState
 
@@ -32,6 +35,7 @@ __all__ = [
 ]
 
 _PERMILLE = 1000
+CONCEALED_STATUS = "concealed"
 
 
 class Subject(NamedTuple):
@@ -67,6 +71,8 @@ def _caster_condition_met(state: BattleState, caster: UnitState, condition: Cond
         return _has_living_ally_beside(state, caster)
     if kind == "first_round":
         return state.round == 1
+    if kind == "self_concealed":
+        return caster.has_status(CONCEALED_STATUS)
     assert kind == "cast_tag_this_turn" and condition.tag is not None
     return condition.tag in caster.turn_cast_tags
 
@@ -107,11 +113,15 @@ def _unit_condition_met(
         return unit.has_status(condition.status)
     if kind == "flanked":
         return is_flanked(state, caster, unit)
+    if kind == "from_behind":
+        return is_behind(caster.xy, unit)
     assert kind == "target_isolated"
     return not _has_living_ally_beside(state, unit)
 
 
-_UNIT_CONDITIONS = frozenset({"target_hp_below", "target_has_status", "target_isolated", "flanked"})
+_UNIT_CONDITIONS = frozenset(
+    {"target_hp_below", "target_has_status", "target_isolated", "flanked", "from_behind"}
+)
 
 
 def condition_met(

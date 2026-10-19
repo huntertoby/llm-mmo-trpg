@@ -173,6 +173,7 @@ _REMOVE_REASONS = {
     "dispelled": "被驅散了",
     "revealed": "被揭露而消失了",
     "fired": "射擊後結束了",
+    "ambushed": "在偷襲之後解除了",
 }
 
 
@@ -318,12 +319,14 @@ _MOVE_VERBS = {
     "teleported": "被傳送到",
     "leap": "跳躍到",
     "swap": "交換位置，換到",
+    "shadowstep": "瞬步到",
 }
 
 
 _FIZZLE_TEXT = {
     "dash_blocked": "  衝鋒被擋下，沒有抵達目標身旁：其餘效果不結算",
     "dash_no_path": "  衝鋒找不到路：其餘效果不結算",
+    "shadowstep_blocked": "  瞬步找不到落腳處：其餘效果不結算",
     "charge_no_path": "  衝撞被擋住，停不下來",
     "swap_blocked": "  無法交換位置（有一方站不上對方的格子）",
     "summon_blocked": "  召喚位置被占據，召喚失敗",
@@ -403,6 +406,20 @@ def _unit_downed(e: UnitDowned, v: _View) -> str:
 # ---------------------------------------------------------------------------
 
 
+def _bonus_parts(e: AttackRolled) -> list[str]:
+    """命中判定的情境加值：高度、修正規則、背刺與潛行偷襲（Phase 3D-8d）。"""
+    parts: list[str] = []
+    if e.situational:
+        parts.append(f"高度 {_signed(e.situational)}")
+    if e.modifier_bonus:
+        parts.append(f"修正規則 {_signed(e.modifier_bonus)}")
+    if e.backstab:
+        parts.append(f"背刺 {_signed(e.backstab)}")
+    if e.ambush:
+        parts.append(f"偷襲 {_signed(e.ambush)}")
+    return parts
+
+
 @_handles(AttackRolled)
 def _attack(e: AttackRolled, v: _View) -> str:
     state = v.state
@@ -412,10 +429,7 @@ def _attack(e: AttackRolled, v: _View) -> str:
         label = "優勢" if e.advantage == "advantage" else "劣勢"
         dice = f"d20（{label} {e.rolls[0]}、{e.rolls[1]}）={e.natural}"
     parts = [dice, f"修正 {_signed(e.hit_modifier)}", f"熟練 {_signed(e.proficiency)}"]
-    if e.situational:
-        parts.append(f"高度 {_signed(e.situational)}")
-    if e.modifier_bonus:
-        parts.append(f"修正規則 {_signed(e.modifier_bonus)}")
+    parts += _bonus_parts(e)
     cover_note = ""
     if e.cover:
         parts.append(f"半掩護 {_signed(e.cover)}")
@@ -432,6 +446,8 @@ def _attack(e: AttackRolled, v: _View) -> str:
     verb = "攻擊"
     if e.skill_id is not None:
         verb = f"以「{state.ruleset.skill_def(e.skill_id).name_zh}」攻擊"
+    if e.backstab:
+        verb = f"從背後{verb}"
     return (
         f"  {v.name[e.attacker_id]} {verb} {v.name[e.target_id]}：{' '.join(parts)} = {e.total}"
         f"（目標 {e.target_number}）→ {verdict}{cover_note}"

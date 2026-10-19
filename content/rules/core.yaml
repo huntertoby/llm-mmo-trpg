@@ -15,6 +15,10 @@ hit_slope: 4                  # 命中修正斜率
 hit_mod_cap: 8                # 命中修正上下限 ±8
 proficiency: 2                # 熟練加值
 height_hit_bonus: 2           # 高打低 +2、低打高 −2
+# 3D-8d：朝向與背刺（docs/design/06-技能.md 6.21；初值，未經模擬）。近戰攻擊者站在目標的背後格（目標朝向的反方向相鄰格）時自動套用；Boss 照常適用
+backstab_hit_bonus: 2         # 背刺：命中 +2
+backstab_crit_range_bonus: 1  # 背刺：暴擊範圍 +1（武器 20 → 19–20）
+ambush_hit_bonus: 2           # 潛行偷襲：帶 concealed 狀態時發動攻擊命中 +2，攻擊結算完後移除 concealed
 melee_height_limit: 1         # 近戰（射程 <= melee_height_limit_max_range）攻擊的高度差上限
 melee_height_limit_max_range: 2   # 射程不超過此值的武器（近戰、長柄）受高度差限制
 initiative_attr_base: 10      # 先攻：d20 + (敏捷 − 10) // 2

@@ -616,6 +616,10 @@ class AiWeights(ContentModel):
     mana: int = 0
     cooldown: int = 0
     flank: int = 0
+    backstab: int = 0
+    """（Phase 3D-8d）近戰單位站在敵人背後格的每個敵人（位置價值加分）。"""
+    back_exposed: int = 0
+    """（Phase 3D-8d）背對相鄰的近戰敵人（位置價值扣分；朝向以「面向最近的敵人」近似）。"""
 
 
 class TrapAiRules(ContentModel):
@@ -779,6 +783,13 @@ class OrderBonuses(ContentModel):
     environment_permille: int = Field(default=2000, ge=1000)
 
 
+def _with_facing(weights: Any, facing: Any) -> Any:
+    """把表格層級的朝向權重（Phase 3D-8d）填入行為模式的 ``weights``（行為模式自己列出的優先）。"""
+    if not isinstance(weights, dict) or not isinstance(facing, dict):
+        return weights
+    return {**facing, **weights}
+
+
 class AiProfileTable(ContentModel):
     """``content/ai_profiles.yaml``：至少包含 brute、archer、cunning、guard。
 
@@ -809,6 +820,9 @@ class AiProfileTable(ContentModel):
     zone: ZoneAiRules = Field(default_factory=ZoneAiRules)
     gamble: GambleAiRules = Field(default_factory=GambleAiRules)
     orders: OrderBonuses = Field(default_factory=OrderBonuses)
+    facing: dict[str, int] = Field(default_factory=dict)
+    """朝向與背刺的位置權重（Phase 3D-8d；``backstab``、``back_exposed``）：敵我同一套，填入每個行為
+    模式的 ``weights``（行為模式自己列出的優先）。"""
 
     @model_validator(mode="before")
     @classmethod
@@ -823,7 +837,13 @@ class AiProfileTable(ContentModel):
             for key in ("trap_likelihood_permille", "trap", "rewrite", "summon", "zone", "gamble")
             if key in data
         }
-        if not isinstance(shared, dict) and not isinstance(ally_shared, dict) and not trap_shared:
+        facing = data.get("facing")
+        if (
+            not isinstance(shared, dict)
+            and not isinstance(ally_shared, dict)
+            and not trap_shared
+            and not isinstance(facing, dict)
+        ):
             return data
         trap_default = trap_shared
         profiles = [
@@ -832,6 +852,7 @@ class AiProfileTable(ContentModel):
                 **p,
                 "status_values": {**(shared or {}), **p.get("status_values", {})},
                 "ally_status_values": {**(ally_shared or {}), **p.get("ally_status_values", {})},
+                "weights": _with_facing(p.get("weights"), facing),
             }
             if isinstance(p, dict)
             else p

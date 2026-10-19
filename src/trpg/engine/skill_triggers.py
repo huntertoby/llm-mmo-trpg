@@ -249,7 +249,7 @@ def _on_collision(ctx: Ctx, index: PassiveIndex, event: Collided) -> None:
 def _on_enter_surface(ctx: Ctx, index: PassiveIndex, event: UnitMoved) -> None:
     """``on_enter_surface``：敵方單位步行或被強制位移進入持有者造出的表面（傳送不算；回合開始
     站在表面上、表面出現在腳下都不是「進入」，不會產生 ``UnitMoved``）。"""
-    if event.mode in ("teleport", "teleported"):
+    if event.mode in ("teleport", "teleported", "shadowstep"):
         return
     state = ctx.state
     tile = state.tile(event.to_pos.x, event.to_pos.y)

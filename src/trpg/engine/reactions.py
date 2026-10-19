@@ -43,7 +43,8 @@ from trpg.engine.events import (
     UnitMoved,
 )
 from trpg.engine.results import Pending
-from trpg.engine.rules.combat import ForcedOutcome, attack_problem, roll_attack
+from trpg.engine.rules.combat import CONCEALED, ForcedOutcome, attack_problem, roll_attack
+from trpg.engine.rules.facing import face_toward
 from trpg.engine.rules.geometry import XY, has_line_of_sight, manhattan
 from trpg.engine.rules.statuses import effective_attribute, skip_turn_status
 from trpg.engine.skill_triggers import check_trigger_depth, holding, redirect_fired
@@ -54,6 +55,7 @@ from trpg.shared.errors import TrpgError
 
 __all__ = [
     "PauseForDecision",
+    "after_attack",
     "ally_downed_reactions",
     "ally_targeted_reactions",
     "block_multiplier",
@@ -440,13 +442,31 @@ def perform_unit_attack(ctx: Ctx, attacker: UnitState, target: UnitState, *, pri
     ``min`` 模式視為失手、``max`` 模式視為暴擊）。被動技能的觸發等傷害結算完才處理。
     """
     with holding(ctx):
-        _attack_once(ctx, attacker, target, primary=primary)
+        target_xy = target.xy
+        ambushed = _attack_once(ctx, attacker, target, primary=primary)
+        after_attack(ctx, attacker, target_xy, ambushed=ambushed)
 
 
-def _attack_once(ctx: Ctx, attacker: UnitState, target: UnitState, *, primary: bool) -> None:
+def after_attack(ctx: Ctx, attacker: UnitState, target_xy: XY | None, *, ambushed: bool) -> None:
+    """一次攻擊（普攻）或施放（主動技能、反應技）結算完（Phase 3D-8d）：面向主要目標
+    （``target_xy``；``None`` 為沒有單位或物件目標，朝向不變）；隱蔽中擲過命中（潛行偷襲）時移除
+    攻擊者的 ``concealed``（原因 ``ambushed``）。"""
+    if not attacker.alive:
+        return
+    if target_xy is not None:
+        face_toward(attacker, target_xy)
+    if ambushed and attacker.has_status(CONCEALED):
+        execute(
+            ctx,
+            [RemoveStatusEffect(target_id=attacker.id, status_id=CONCEALED, reason="ambushed")],
+        )
+
+
+def _attack_once(ctx: Ctx, attacker: UnitState, target: UnitState, *, primary: bool) -> bool:
+    """回傳這次攻擊是不是在隱蔽中發動（潛行偷襲，結算完要移除隱蔽）。"""
     ally_targeted_reactions(ctx, attacker, target)  # 相鄰友方被瞄準：命中判定之前（3D-3）
     if not attacker.alive or not target.alive:
-        return
+        return False
     forced: ForcedOutcome | None = None
     if ctx.preview is not None:
         ctx.mark_branch()
@@ -476,9 +496,11 @@ def _attack_once(ctx: Ctx, attacker: UnitState, target: UnitState, *, primary: b
         hit=roll.hit,
         crit=roll.crit,
         modifier_bonus=roll.modifier_bonus,
+        backstab=roll.backstab,
+        ambush=roll.ambush,
     )
     if not roll.hit:
-        return
+        return roll.ambush > 0
     guardian = try_intercept(ctx, attacker, target, rolled_event.seq)
     if guardian is not None:
         target = guardian  # 替隊友擋攻擊：傷害改作用在守護者身上（不重擲命中）
@@ -505,6 +527,7 @@ def _attack_once(ctx: Ctx, attacker: UnitState, target: UnitState, *, primary: b
         ],
     )
     hit_reactions(ctx, attacker, target, melee=is_melee_attack(ctx, attacker))
+    return roll.ambush > 0
 
 
 def opportunity_attacks(ctx: Ctx, mover: UnitState, from_xy: XY, to_xy: XY) -> None:
