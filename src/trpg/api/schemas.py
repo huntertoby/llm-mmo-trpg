@@ -33,6 +33,7 @@ __all__ = [
     "Glossary",
     "GlossaryEntry",
     "HealOut",
+    "InteractOptionOut",
     "MapSummary",
     "OutcomeOut",
     "PreviewOut",
@@ -171,6 +172,20 @@ class TelegraphOut(_ApiModel):
     """再下一輪結束時的地圖事件（提前一輪預告）。"""
 
 
+class InteractOptionOut(_ApiModel):
+    """主角相鄰的可推動物件的一種互動（推、往左撥、往右撥）及其是否合法（Phase 3C-1）。
+    ``legal_actions`` 只列合法的；這裡連不合法的也列出，讓介面灰掉並顯示原因。"""
+
+    object_id: ObjectId
+    mode: Literal["push", "shove_aside"]
+    side: Literal["left", "right"] | None
+    legal: bool
+    reason: str | None
+    """不合法的原因（繁體中文）；合法時 ``None``。"""
+    to_pos: Pos
+    """物件會移到的格子（即使不合法也給出；可能在地圖外）。"""
+
+
 class BattleOutcome(_ApiModel):
     winner: Team | None
     """``None`` 為平手。"""
@@ -190,6 +205,8 @@ class BattleResponse(_ApiModel):
     view: BattleView
     legal_actions: tuple[Action, ...]
     """輪到主角（``awaiting == "action"``）時的合法動作（含 ``end_turn``）；其他時候為空。"""
+    interact_options: tuple[InteractOptionOut, ...]
+    """輪到主角時，相鄰可推動物件的互動選項（含不合法與原因）；其他時候為空。"""
     pending: Pending | None
     """主角的反應詢問（只有公開欄位）。"""
     orders: OrderSet

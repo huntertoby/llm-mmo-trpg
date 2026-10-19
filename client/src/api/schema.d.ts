@@ -259,6 +259,8 @@ export interface components {
             view: components["schemas"]["BattleView"];
             /** Legal Actions */
             legal_actions: components["schemas"]["Action"][];
+            /** Interact Options */
+            interact_options: components["schemas"]["InteractOptionOut"][];
             pending: components["schemas"]["Pending"] | null;
             orders: components["schemas"]["OrderSet"];
             /** Orders Ignored */
@@ -528,7 +530,12 @@ export interface components {
         };
         /**
          * Interact
-         * @description 互動：推動相鄰的 ``pushable`` 物件 1 格（沿「行動者 → 物件」方向）。
+         * @description 互動：移動相鄰的 ``pushable`` 物件 1 格（只對物件，不能對單位）。
+         *
+         *     - ``mode="push"``（預設）：沿「行動者 → 物件」方向推，``side`` 必須為 ``None``；
+         *     - ``mode="shove_aside"``（撥開，Phase 3C-1）：往垂直於「行動者 → 物件」方向的 ``side``
+         *       （``left`` 為逆時針 90°、``right`` 為順時針 90°；畫面上 ``north`` 為 ``y − 1``）移動，
+         *       ``side`` 必填。行動者都不動、花 ``interact_ap_cost``。
          */
         Interact: {
             /** Unit Id */
@@ -543,9 +550,32 @@ export interface components {
             /**
              * Mode
              * @default push
-             * @constant
+             * @enum {string}
              */
-            mode: "push";
+            mode: "push" | "shove_aside";
+            /** Side */
+            side?: ("left" | "right") | null;
+        };
+        /**
+         * InteractOptionOut
+         * @description 主角相鄰的可推動物件的一種互動（推、往左撥、往右撥）及其是否合法（Phase 3C-1）。
+         *     ``legal_actions`` 只列合法的；這裡連不合法的也列出，讓介面灰掉並顯示原因。
+         */
+        InteractOptionOut: {
+            /** Object Id */
+            object_id: string;
+            /**
+             * Mode
+             * @enum {string}
+             */
+            mode: "push" | "shove_aside";
+            /** Side */
+            side: ("left" | "right") | null;
+            /** Legal */
+            legal: boolean;
+            /** Reason */
+            reason: string | null;
+            to_pos: components["schemas"]["Pos"];
         };
         /** MapSummary */
         MapSummary: {

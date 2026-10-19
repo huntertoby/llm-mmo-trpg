@@ -107,6 +107,7 @@ __all__ = [
     "has_only_end_turn",
     "interact_actions",
     "interact_direction",
+    "interact_options",
     "interact_problem",
     "legal_actions",
     "legal_actions_with_areas",
@@ -541,6 +542,28 @@ def interact_problem(
         return "撥開必須指定方向（左或右）"
     direction = interact_direction(unit.xy, obj.xy, mode, side)
     return object_move_problem(state, unit, obj, direction, "推" if mode == "push" else "撥")
+
+
+def interact_options(
+    state: BattleState, unit: UnitState
+) -> list[tuple[ObjectState, InteractMode, Side | None, str | None]]:
+    """相鄰的可推動物件的所有互動選項 ``(物件, mode, side, 問題)``；合法者的問題為 ``None``。
+
+    給介面顯示「不合法的方向與原因」用；AP 不足時每一項的問題都是 AP 不足。
+    """
+    cost = state.ruleset.core.interact_ap_cost
+    options: list[tuple[ObjectState, InteractMode, Side | None, str | None]] = []
+    for obj in state.objects_sorted():
+        if obj.destroyed or "pushable" not in state.object_def(obj).tags:
+            continue
+        if manhattan(unit.xy, obj.xy) != 1:
+            continue
+        for mode, side in INTERACT_CHOICES:
+            problem = interact_problem(state, unit, obj, mode, side)
+            if problem is None and unit.ap < cost:
+                problem = f"AP 不足：需要 {cost}，目前 {unit.ap}"
+            options.append((obj, mode, side, problem))
+    return options
 
 
 def interact_actions(state: BattleState, unit: UnitState) -> list[Interact]:

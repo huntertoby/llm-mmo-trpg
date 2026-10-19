@@ -12,19 +12,26 @@ from __future__ import annotations
 
 from typing import Any
 
-from trpg.api.schemas import BattleOutcome, BattleResponse, PreviewOut, StepOut, preview_out
+from trpg.api.schemas import (
+    BattleOutcome,
+    BattleResponse,
+    InteractOptionOut,
+    PreviewOut,
+    StepOut,
+    preview_out,
+)
 from trpg.api.sessions import BattleSession, StepRecord
 from trpg.api.telegraph import telegraph_out
 from trpg.engine.actions import Step, UseSkill
 from trpg.engine.ai.commanded import ignored_orders
-from trpg.engine.battle import legal_actions
+from trpg.engine.battle import interact_direction, interact_options, legal_actions
 from trpg.engine.event_filter import filter_events
 from trpg.engine.events import BattleStarted, EventBase
 from trpg.engine.preview import Preview
 from trpg.engine.state import BattleState
 from trpg.engine.view import project_for
 from trpg.narrative.events import battle_started_text, describe_event
-from trpg.shared.types import Team
+from trpg.shared.types import Pos, Team, UnitId
 
 __all__ = [
     "VIEW_TEAM",
@@ -88,6 +95,26 @@ def preview_response(p: Preview) -> PreviewOut:
     )
 
 
+def interact_options_out(state: BattleState, hero_id: UnitId) -> tuple[InteractOptionOut, ...]:
+    """主角相鄰可推動物件的互動選項（含不合法的方向與原因）。"""
+    hero = state.units[hero_id]
+    return tuple(
+        InteractOptionOut(
+            object_id=obj.id,
+            mode=mode,
+            side=side,
+            legal=problem is None,
+            reason=problem,
+            to_pos=_offset(obj.pos, interact_direction(hero.xy, obj.xy, mode, side)),
+        )
+        for obj, mode, side, problem in interact_options(state, hero)
+    )
+
+
+def _offset(pos: Pos, direction: tuple[int, int]) -> Pos:
+    return Pos(x=pos.x + direction[0], y=pos.y + direction[1])
+
+
 def battle_response(
     session: BattleSession,
     records: list[StepRecord],
@@ -112,6 +139,9 @@ def battle_response(
         initial_view=project_for(before, VIEW_TEAM),
         view=project_for(state, VIEW_TEAM),
         legal_actions=tuple(legal_actions(state)) if awaiting == "action" else (),
+        interact_options=interact_options_out(state, session.hero_id)
+        if awaiting == "action"
+        else (),
         pending=pending,
         orders=session.orders,
         orders_ignored=ignored_orders(state, VIEW_TEAM, session.orders),

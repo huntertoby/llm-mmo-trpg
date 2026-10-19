@@ -714,6 +714,13 @@
             "type": "array",
             "title": "Legal Actions"
           },
+          "interact_options": {
+            "items": {
+              "$ref": "#/components/schemas/InteractOptionOut"
+            },
+            "type": "array",
+            "title": "Interact Options"
+          },
           "pending": {
             "anyOf": [
               {
@@ -764,6 +771,7 @@
           "initial_view",
           "view",
           "legal_actions",
+          "interact_options",
           "pending",
           "orders",
           "orders_ignored",
@@ -1465,9 +1473,27 @@
           },
           "mode": {
             "type": "string",
-            "const": "push",
+            "enum": [
+              "push",
+              "shove_aside"
+            ],
             "title": "Mode",
             "default": "push"
+          },
+          "side": {
+            "anyOf": [
+              {
+                "type": "string",
+                "enum": [
+                  "left",
+                  "right"
+                ]
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Side"
           }
         },
         "additionalProperties": false,
@@ -1477,7 +1503,68 @@
           "object_id"
         ],
         "title": "Interact",
-        "description": "互動：推動相鄰的 ``pushable`` 物件 1 格（沿「行動者 → 物件」方向）。"
+        "description": "互動：移動相鄰的 ``pushable`` 物件 1 格（只對物件，不能對單位）。\n\n- ``mode=\"push\"``（預設）：沿「行動者 → 物件」方向推，``side`` 必須為 ``None``；\n- ``mode=\"shove_aside\"``（撥開，Phase 3C-1）：往垂直於「行動者 → 物件」方向的 ``side``\n  （``left`` 為逆時針 90°、``right`` 為順時針 90°；畫面上 ``north`` 為 ``y − 1``）移動，\n  ``side`` 必填。行動者都不動、花 ``interact_ap_cost``。"
+      },
+      "InteractOptionOut": {
+        "properties": {
+          "object_id": {
+            "type": "string",
+            "title": "Object Id"
+          },
+          "mode": {
+            "type": "string",
+            "enum": [
+              "push",
+              "shove_aside"
+            ],
+            "title": "Mode"
+          },
+          "side": {
+            "anyOf": [
+              {
+                "type": "string",
+                "enum": [
+                  "left",
+                  "right"
+                ]
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Side"
+          },
+          "legal": {
+            "type": "boolean",
+            "title": "Legal"
+          },
+          "reason": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Reason"
+          },
+          "to_pos": {
+            "$ref": "#/components/schemas/Pos"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "object_id",
+          "mode",
+          "side",
+          "legal",
+          "reason",
+          "to_pos"
+        ],
+        "title": "InteractOptionOut",
+        "description": "主角相鄰的可推動物件的一種互動（推、往左撥、往右撥）及其是否合法（Phase 3C-1）。\n``legal_actions`` 只列合法的；這裡連不合法的也列出，讓介面灰掉並顯示原因。"
       },
       "MapSummary": {
         "properties": {
