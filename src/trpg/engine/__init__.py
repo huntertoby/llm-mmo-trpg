@@ -9,6 +9,8 @@
       resume(state, decision) -> ResolveResult          # prompt 反應的暫停點
       preview(state, action) -> Preview                 # 預覽（dry run）
       telegraph(state) -> Telegraph                     # 環境下一輪預告
+      project_for(state, team) -> BattleView            # 依陣營過濾的戰場視圖（Phase 3-1）
+      filter_events(events, state, team) -> list        # 依陣營過濾事件（Phase 3-1）
 
   亂數狀態存放在 ``BattleState.rng_state``；``初始狀態 ＋ 動作列表`` 即可完整重播。
 - 依賴限制：不得匯入 ``trpg.llm``、``trpg.narrative``、``trpg.api``、``trpg.roguelite``、
@@ -41,6 +43,7 @@ from trpg.engine.actions import (
 )
 from trpg.engine.battle import begin_battle, legal_actions, resolve, resume, start_battle
 from trpg.engine.environment import Telegraph, telegraph
+from trpg.engine.event_filter import event_visible_to, filter_events
 from trpg.engine.preview import Preview, preview
 from trpg.engine.results import Pending, ResolveResult
 from trpg.engine.setup import (
@@ -52,6 +55,7 @@ from trpg.engine.setup import (
     deployment_tiles,
 )
 from trpg.engine.state import BattleState, state_from_json, state_to_json
+from trpg.engine.view import BattleView, project_for
 
 __all__ = [
     "Action",
@@ -59,6 +63,7 @@ __all__ = [
     "BattleSetup",
     "BattleSetupError",
     "BattleState",
+    "BattleView",
     "Decision",
     "Defend",
     "EndStance",
@@ -78,8 +83,11 @@ __all__ = [
     "build_setup",
     "deploy_allies",
     "deployment_tiles",
+    "event_visible_to",
+    "filter_events",
     "legal_actions",
     "preview",
+    "project_for",
     "resolve",
     "resume",
     "start_battle",
