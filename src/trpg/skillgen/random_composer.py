@@ -283,8 +283,29 @@ def _attempt(
         ctx.ap_cost = ap
         base = {**base, "ap_cost": ap, "cost": build_cost(ctx)}
         if tune(rng, library, base, ctx.effects, ctx.knobs):
-            return _finish(library, seed, base, ctx)
+            return _finish(library, seed, _with_scaling_extras(rng, library, base, ctx), ctx)
     raise Retry
+
+
+def _with_scaling_extras(
+    rng: Rng, library: ContentLibrary, base: dict[str, Any], ctx: Ctx
+) -> dict[str, Any]:
+    """雙屬性縮放與專精加成（Phase 2H-2）：兩者預算都不計，所以強度調整之後才抽，只在合法時給。"""
+    rules = library.composer.scaling
+    primary = base["scaling_attr"]
+    if rarity_rank(base["rarity"]) >= rarity_rank(
+        library.ruleset.core.dual_scaling_min_rarity
+    ) and rng.chance_permille(rules.dual_permille):
+        others = sorted(a for a in rules.dual_attrs if a != primary)
+        return {**base, "secondary_scaling_attr": rng.choice(others)}
+    options = []
+    if ctx.shape_params.get("range") is not None:
+        options.append("range")
+    if any(effect["type"] == "apply_status" for effect in ctx.effects):
+        options.append("duration")
+    if options and rng.chance_permille(rules.mastery_permille):
+        return {**base, "mastery": rng.choice(options)}
+    return base
 
 
 def _attempt_passive(

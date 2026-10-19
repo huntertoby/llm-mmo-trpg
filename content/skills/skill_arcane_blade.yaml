@@ -1,0 +1,25 @@
+# Phase 2H-2：雙屬性縮放示範（力量 50% ＋ 智力 50%，兩個有效屬性取平均、無條件捨去；預算不變）。
+# 傷害骰與屬性加成的數值是初值，未經模擬。
+id: skill_arcane_blade
+schema_version: 1
+name_zh: 魔劍斬
+tier: 2
+rank: 1
+rarity: epic
+kind: active
+skeleton: strike
+category: spell
+weapon_req: any
+ap_cost: 2
+scaling_attr: str
+secondary_scaling_attr: int
+shape: {type: single, range: 2}
+effects:
+  - {type: damage, dice: 4d8, element: lightning}
+condition: null
+cost: {mana: 6, cooldown: 2}
+tags: [lightning, spell, melee]
+narrative:
+  concept: 把魔力灌進劍身，以劍勢與咒力各出一半的力量斬出雷光
+  cast_flavor: 劍鋒掠過空氣，雷光順著刃口炸開，斬擊與咒力同時落在目標身上
+provenance: {origin: builtin, owner_id: null, created_by: null, parents: [], bound: true, tradeable: false}

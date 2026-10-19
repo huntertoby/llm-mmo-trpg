@@ -59,9 +59,9 @@ from trpg.engine.maneuvers import contest
 from trpg.engine.reactions import block_multiplier, hit_reactions, try_intercept
 from trpg.engine.rules.combat import PERMILLE, AttackProfile, AttackRoll, ForcedOutcome, roll_attack
 from trpg.engine.rules.geometry import XY
-from trpg.engine.rules.statuses import effective_attribute
 from trpg.engine.skill_triggers import holding
 from trpg.engine.skills.conditions import Subject, condition_met
+from trpg.engine.skills.scaling import mastery_duration_bonus, skill_scaling_value
 from trpg.engine.skills.targeting import (
     PaidCost,
     ResolvedEffect,
@@ -530,7 +530,7 @@ class _Cast:
 
     def _spell_scaled(self) -> int:
         """治療與護盾的屬性加成（‰）：有效縮放屬性 × ``spell_attr_multiplier_permille``。"""
-        attr = effective_attribute(self.ctx.rules, self.caster, self.skill.scaling_attr)
+        attr = skill_scaling_value(self.ctx.rules, self.caster, self.skill)
         return attr * self.ctx.core.spell_attr_multiplier_permille
 
     def heal(self, effect: ResolvedEffect, spec: EffectSpec) -> list[EffectBase]:
@@ -599,6 +599,7 @@ class _Cast:
                 self.skill.scaling_attr,
                 skill_id=self.skill.id,
                 primary=False,
+                attack_value=skill_scaling_value(self.ctx.rules, self.caster, self.skill),
             ):
                 batch.append(
                     ApplyStatusEffect(source_id=self.caster.id, target_id=unit.id, status_id=PRONE)
@@ -620,6 +621,18 @@ class _Cast:
             )
         ]
 
+    def status_duration(self, spec: EffectSpec) -> int | None:
+        """此技能施加狀態的持續回合：``mastery: duration`` 生效時在（效果指定的或狀態預設的）
+        持續上加 1；永久狀態（沒有持續回合）不變。"""
+        bonus = mastery_duration_bonus(self.caster, self.skill)
+        if bonus == 0:
+            return spec.duration
+        assert spec.status is not None
+        base = spec.duration
+        if base is None:
+            base = self.ctx.rules.status_def(spec.status).duration
+        return None if base is None else base + bonus
+
     def apply_status(self, effect: ResolvedEffect, spec: EffectSpec) -> list[EffectBase]:
         """施加狀態：對敵方先轉換（Boss）、再擲抵抗判定（:mod:`trpg.engine.control`）；
         對友方與自己不擲。"""
@@ -631,8 +644,9 @@ class _Cast:
                 caster=self.caster,
                 target=unit,
                 status_id=spec.status,
-                duration=spec.duration,
+                duration=self.status_duration(spec),
                 attack_attr=self.skill.scaling_attr,
+                attack_value=skill_scaling_value(self.ctx.rules, self.caster, self.skill),
                 skill_id=self.skill.id,
             )
             if planned is not None:

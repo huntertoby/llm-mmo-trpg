@@ -54,6 +54,7 @@ __all__ = [
     "ConditionSpec",
     "ConditionTable",
     "EffectSpec",
+    "Mastery",
     "NarrativeDef",
     "ParamDef",
     "PrimitiveDef",
@@ -631,6 +632,10 @@ class TrapSpec(ContentModel):
     shape: str = Field(default="single", pattern=ID_PATTERN)
 
 
+type Mastery = Literal["range", "duration"]
+"""專精加成的種類（Phase 2H-2）。"""
+
+
 class SkillDef(ContentModel):
     """一個技能（``content/skills/<id>.yaml``）。"""
 
@@ -647,6 +652,12 @@ class SkillDef(ContentModel):
     weapon_req: WeaponReq
     ap_cost: int | None = None
     scaling_attr: Attribute
+    secondary_scaling_attr: Attribute | None = None
+    """第二縮放屬性（Phase 2H-2）：與 ``scaling_attr`` 各占 50%（取平均，無條件捨去）。
+    最低稀有度由 ``core.yaml`` 的 ``dual_scaling_min_rarity`` 決定（跨檔案檢查）。"""
+    mastery: Mastery | None = None
+    """專精加成（Phase 2H-2）：施放者的 ``scaling_attr`` 基礎屬性是自己所有屬性中最高（含並列）
+    時生效——``range`` 施放距離 +1、``duration`` 此技能施加的狀態持續 +1。雙屬性技能不可設定。"""
     shape: ShapeSpec
     effects: tuple[EffectSpec, ...]
     condition: ConditionSpec | None = None
@@ -699,6 +710,7 @@ class SkillDef(ContentModel):
             raise ValueError(f"只有被動技能可以有 trigger，收到 kind: {self.kind}")
         self._check_reaction_and_stance()
         self._check_trap_and_stacks()
+        self._check_scaling_and_mastery()
         allowed = ("melee", "ranged") if self.category == "weapon" else ("focus", "any")
         if self.weapon_req not in allowed:
             name = "武器技" if self.category == "weapon" else "法術技"
@@ -735,6 +747,19 @@ class SkillDef(ContentModel):
                 raise ValueError("ally_hit_adjacent 的反應技形狀必須是 self")
         elif INTERCEPT in types:
             raise ValueError("intercept 只能用在反應技")
+
+    def _check_scaling_and_mastery(self) -> None:
+        """雙屬性縮放與專精加成的結構（2H-2；稀有度門檻是跨檔案檢查）。"""
+        if self.secondary_scaling_attr == self.scaling_attr:
+            raise ValueError("secondary_scaling_attr 不可和 scaling_attr 相同")
+        if self.mastery is None:
+            return
+        if self.secondary_scaling_attr is not None:
+            raise ValueError("雙屬性技能不享專精加成（mastery 與 secondary_scaling_attr 不可並用）")
+        if self.mastery == "range" and self.shape.range is None:
+            raise ValueError("mastery: range 只能用在有施放距離（shape.range）的技能")
+        if self.mastery == "duration" and not any(e.type == "apply_status" for e in self.effects):
+            raise ValueError("mastery: duration 只能用在有 apply_status 效果的技能")
 
     def _check_trap_and_stacks(self) -> None:
         """陷阱與層數的結構（2E-3）：``trap`` 與 ``place_trap`` 成對；陷阱技能是形狀
@@ -1001,13 +1026,22 @@ def skill_problems(
     conditions: dict[str, ConditionDef],
     triggers: dict[str, SkillTriggerDef] | None = None,
     stacks: dict[str, StackDef] | None = None,
+    dual_min_rarity: str | None = None,
 ) -> list[str]:
     """技能引用的形狀、原語、條件、狀態、物件是否存在、參數是否在範圍內（繁體中文，空串列為通過）。
 
     ``triggers``：觸發時機表（省略時不檢查被動的 ``trigger``）；``stacks``：層數表（省略時不檢查
-    層數原語引用的層數）。
+    層數原語引用的層數）；``dual_min_rarity``：雙屬性縮放的最低稀有度（省略時不檢查）。
     """
     problems: list[str] = []
+    if (
+        dual_min_rarity is not None
+        and skill.secondary_scaling_attr is not None
+        and rarity_rank(skill.rarity) < rarity_rank(dual_min_rarity)
+    ):
+        problems.append(
+            f"secondary_scaling_attr：雙屬性縮放最低稀有度為 {dual_min_rarity}，收到 {skill.rarity}"
+        )
     shape = shapes.get(skill.shape.type)
     if shape is None:
         known = ", ".join(sorted(shapes))

@@ -10,6 +10,7 @@ category: spell
 weapon_req: focus
 ap_cost: 1
 scaling_attr: int
+mastery: duration   # Phase 2H-2：智力是最高屬性時恐懼持續 +1 回合
 shape: {type: single, range: 4}
 effects:
   - {type: apply_status, status: feared, duration: 2}

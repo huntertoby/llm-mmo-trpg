@@ -59,6 +59,7 @@ from trpg.engine.rules.combat import (
 )
 from trpg.engine.rules.statuses import effective_attribute, shield_amount
 from trpg.engine.skills.conditions import Subject, condition_met
+from trpg.engine.skills.scaling import skill_scaling_value
 from trpg.engine.skills.targeting import (
     compute_area,
     damage_parameters,
@@ -523,7 +524,7 @@ def _knock_chance(
     attr = skill.scaling_attr
     rules = state.ruleset
     modifier = rules.hit_table.modifier(
-        effective_attribute(rules, actor, attr), max(1, effective_attribute(rules, target, attr))
+        skill_scaling_value(rules, actor, skill), max(1, effective_attribute(rules, target, attr))
     )
     hit, _ = _chances(
         _naturals("none"), modifier + rules.core.proficiency, rules.core.hit_target, 21
@@ -548,7 +549,7 @@ def _status_chances(
         plan = plan_status(state, target, spec.status)
         if plan.save_attr is None:
             continue
-        chance = status_save_chance(state, actor, skill.scaling_attr, plan)
+        chance = status_save_chance(state, skill_scaling_value(state.ruleset, actor, skill), plan)
         chances[plan.status_id] = StatusChance(
             plan.status_id, plan.original_id, chance, plan.diminished
         )

@@ -306,3 +306,24 @@ def test_random_reactions_and_stances_appear_without_changing_common_seeds() -> 
         assert skill.cost.self_status is not None
         assert skill.cost.self_status.status in allowed
         assert skill.cost.self_status.duration in (2, 3)
+
+
+def test_the_composer_sometimes_adds_a_valid_dual_attribute_or_mastery() -> None:
+    """Phase 2H-2：400 個種子中有雙屬性（史詩以上）與專精的技能，且組合都合法、兩者不並存。"""
+    library = lib()
+    rules = library.ruleset
+    found = [compose_random_skill(seed, library=library) for seed in range(400)]
+    dual = [s for s in found if s.secondary_scaling_attr is not None]
+    mastered = [s for s in found if s.mastery is not None]
+    assert dual and {m.mastery for m in mastered} == {"range", "duration"}
+    for skill in dual:
+        assert skill.rarity in ("epic", "legendary")
+        assert skill.secondary_scaling_attr != skill.scaling_attr
+        assert skill.mastery is None
+    for skill in mastered:
+        assert skill.secondary_scaling_attr is None
+        if skill.mastery == "range":
+            assert skill.shape.range is not None
+        else:
+            assert any(e.type == "apply_status" for e in skill.effects)
+    assert rules.core.dual_scaling_min_rarity == "epic"

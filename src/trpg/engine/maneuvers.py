@@ -21,15 +21,19 @@ def contest(
     *,
     skill_id: str | None = None,
     primary: bool = True,
+    attack_value: int | None = None,
 ) -> bool:
     """對抗判定：``d20 + 比例修正（攻方屬性 vs 守方屬性）+ 熟練 ≥ hit_target``。
 
     預覽：``primary``（動作本身的技巧動作，推擊、絆倒）視為成功（成功率另以 ``preview`` 計算）；
     次要的對抗（技能附帶的擊倒）是分歧點——``min`` 視為失敗、``max`` 視為成功。
+    ``attack_value``：攻方的屬性值（省略時為 ``attr`` 的有效屬性；雙屬性技能傳入兩屬性的平均）。
     """
     rules = ctx.rules
+    if attack_value is None:
+        attack_value = effective_attribute(rules, unit, attr)
     modifier = rules.hit_table.modifier(
-        effective_attribute(rules, unit, attr), max(1, effective_attribute(rules, target, attr))
+        attack_value, max(1, effective_attribute(rules, target, attr))
     )
     proficiency = rules.core.proficiency
     if ctx.preview is None:

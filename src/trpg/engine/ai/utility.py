@@ -95,6 +95,7 @@ from trpg.engine.rules.geometry import (
 )
 from trpg.engine.rules.movement import is_standable, step_cost
 from trpg.engine.rules.statuses import forced_target_sources, shield_amount, stance_status_ids
+from trpg.engine.skills.scaling import mastery_duration_bonus
 from trpg.engine.skills.targeting import (
     ResolvedEffect,
     SkillArea,
@@ -1107,6 +1108,8 @@ def _supports(
                 continue
             current = target.get_status(spec.status)
             duration = spec.duration or definition.duration
+            if duration is not None:
+                duration += mastery_duration_bonus(caster, skill)
             if current is None or (
                 duration is not None
                 and current.remaining is not None

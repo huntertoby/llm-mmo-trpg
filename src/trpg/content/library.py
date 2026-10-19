@@ -416,6 +416,7 @@ def _check_skills(root: Path, skills: dict[str, SkillDef], ruleset: Ruleset) -> 
             conditions=condition_map,
             triggers=trigger_map,
             stacks=stack_map,
+            dual_min_rarity=ruleset.core.dual_scaling_min_rarity,
         )
         if problems:
             raise ContentError(root / "skills" / f"{skill_id}.yaml", "；".join(problems))

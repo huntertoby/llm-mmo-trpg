@@ -44,6 +44,12 @@ allowance:
   self_status: {allowed: [vulnerable, weaken, slow, root], per_point_permille: 40, cap: 250}
   total_cap: 500            # 各項先套用自己的上限，加總後再截斷在這個值（Phase 2C-1）
 
+# 雙屬性縮放（secondary_scaling_attr，Phase 2H-2）與專精加成（mastery）都不計預算：
+# - 雙屬性：兩屬性各 50%（取平均），只是改變「靠哪些屬性變強」，預算不變（6.12：稀有度不增加強度）。
+#   最低稀有度在 rules/core.yaml 的 dual_scaling_min_rarity。
+# - 專精：縮放屬性的基礎屬性是自己所有屬性中最高（含並列）時，range 施放距離 +1 或 duration 狀態持續 +1。
+#   屬於 build 條件的小加成，預算以沒有加成的版本計算；雙屬性技能不可設定專精。
+
 # 稀有度的結構上限（其餘限制由各資料檔的 min_rarity 決定）
 rarity:
   common: {max_effects: 2}

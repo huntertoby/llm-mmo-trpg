@@ -9,8 +9,12 @@ from tests.engine.helpers import PROJECT_ROOT
 
 ENGINE = PROJECT_ROOT / "src" / "trpg" / "engine"
 STATUSES = ENGINE / "rules" / "statuses.py"
-BASE_USERS = {ENGINE / "battle.py": {"begin_battle", "_initiative_order"}}
-"""先攻（戰鬥開始時擲，用基礎屬性）是唯一可以用 ``base_attribute`` 的地方。"""
+BASE_USERS = {
+    ENGINE / "battle.py": {"begin_battle", "_initiative_order"},
+    ENGINE / "skills" / "scaling.py": {"mastery_active"},
+}
+"""先攻（戰鬥開始時擲，用基礎屬性）與專精加成（Phase 2H-2：配點決定專精，不受戰鬥中增益影響）
+是可以用 ``base_attribute`` 的地方。"""
 
 
 def _functions_with_attribute_reads(path: Path) -> list[tuple[str, int]]:

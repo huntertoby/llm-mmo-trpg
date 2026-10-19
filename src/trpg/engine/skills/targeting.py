@@ -30,11 +30,11 @@ from trpg.engine.rules.movement import is_deadly, is_standable
 from trpg.engine.rules.statuses import (
     attack_range_cap,
     blocks_spells,
-    effective_attribute,
     skip_turn_status,
 )
 from trpg.engine.skills import shapes
 from trpg.engine.skills.conditions import skill_condition_problem
+from trpg.engine.skills.scaling import mastery_reach_bonus, skill_scaling_value
 from trpg.engine.state import BattleState, ObjectState, UnitState
 from trpg.shared.errors import IllegalActionError
 from trpg.shared.types import Element, ObjectId, Pos, UnitId
@@ -117,11 +117,12 @@ class SkillArea:
 
 def shape_reach(skill: SkillDef, caster: UnitState) -> int:
     """形狀的射程：``single``／``chain`` 的 ``range``（``"weapon"`` 為武器射程）、中心格型的
-    ``range``；其他形狀為 0。"""
+    ``range``；其他形狀為 0。``mastery: range`` 生效時再 +1（Phase 2H-2；不改範圍形狀的大小）。"""
     reach = skill.shape.range
     if reach is None:
         return 0
-    return caster.weapon.range if reach == "weapon" else reach
+    base = caster.weapon.range if reach == "weapon" else reach
+    return base + mastery_reach_bonus(caster, skill)
 
 
 def skill_is_height_limited(state: BattleState, caster: UnitState, skill: SkillDef) -> bool:
@@ -153,7 +154,7 @@ def skill_profile(state: BattleState, caster: UnitState, skill: SkillDef) -> Att
         )
     bonus = caster.weapon.attack_bonus if caster.weapon.weapon_class == "focus" else 0
     return AttackProfile(
-        attack_value=effective_attribute(state.ruleset, caster, skill.scaling_attr) + bonus,
+        attack_value=skill_scaling_value(state.ruleset, caster, skill) + bonus,
         melee=False,
         height_limited=height_limited,
         crit_range=20,
@@ -605,7 +606,7 @@ def damage_parameters(
     """法術技：效果自己的骰子與元素、屬性 × ``spell_attr_multiplier``；武器技：武器的骰子與
     固定值、屬性 × 普攻倍率、效果的 ``multiplier_permille``，元素省略時繼承武器（元素灌注）。"""
     core = state.ruleset.core
-    attr = effective_attribute(state.ruleset, caster, skill.scaling_attr)
+    attr = skill_scaling_value(state.ruleset, caster, skill)
     if skill.category == "spell":
         assert spec.element is not None
         return DamageParameters(

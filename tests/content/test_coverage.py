@@ -105,3 +105,11 @@ def test_self_status_cost_is_used_by_a_handwritten_skill() -> None:
     skills = _skills()
     assert any(s.cost.self_status for s in skills)
     assert "frozen" in _used()["status"]
+
+
+def test_dual_scaling_and_both_masteries_are_used_by_handwritten_skills() -> None:
+    """Phase 2H-2：雙屬性縮放、mastery: range、mastery: duration 各至少一個手寫技能使用。"""
+    skills = _skills()
+    assert any(s.secondary_scaling_attr for s in skills)
+    assert any(s.mastery == "range" for s in skills)
+    assert any(s.mastery == "duration" for s in skills)

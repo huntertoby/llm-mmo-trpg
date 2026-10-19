@@ -121,6 +121,9 @@ def build_parser() -> argparse.ArgumentParser:  # noqa: PLR0915
     )
     skills_show = skills_commands.add_parser("show", help="顯示一個技能的詳細資料")
     skills_show.add_argument("skill_id", help="技能 ID（content/skills/<id>.yaml）")
+    skills_show.add_argument(
+        "--unit", help="單位範本 ID（content/units/<id>.yaml）；用來標示專精加成目前是否生效"
+    )
     skills_budget = skills_commands.add_parser("budget", help="顯示技能的預算明細（或 --all 總表）")
     skills_budget.add_argument("skill_id", nargs="?", help="技能 ID；省略時需加 --all")
     skills_budget.add_argument("--all", action="store_true", help="列出所有技能的預算總表")
@@ -476,7 +479,9 @@ def _run_skills_list(_args: argparse.Namespace) -> int:
 
 
 def _run_skills_show(args: argparse.Namespace) -> int:
-    return _with_library(lambda lib: cmd_skills_show(lib, args.skill_id, sys.stdout))
+    return _with_library(
+        lambda lib: cmd_skills_show(lib, args.skill_id, sys.stdout, unit_id=args.unit)
+    )
 
 
 def _run_skills_budget(args: argparse.Namespace) -> int:

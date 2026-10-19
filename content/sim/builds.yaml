@@ -23,7 +23,7 @@ builds:
       resist: {physical: 100}
       tags: [hero, sim]
       max_mana: 20
-      skills: [skill_gale_kick, skill_shield_bash, skill_blink, skill_parting_slash, skill_bloodlust]
+      skills: [skill_gale_kick, skill_shield_bash, skill_blink, skill_parting_slash, skill_bloodlust, skill_arcane_blade]
 
   - id: build_fire
     name_zh: 火焰流

@@ -120,3 +120,11 @@ tuning:
   target_margin_permille: 20
   target_steps: 100
   jump_share_permille: 600            # 依缺口一次跳多格時實際跳的比例
+
+# 雙屬性縮放與專精加成（Phase 2H-2，初值，未經模擬）：主動技能強度調整成功之後才抽（不影響既有結構的抽選）。
+# dual_permille：稀有度達 core.yaml 的 dual_scaling_min_rarity 時加第二縮放屬性的機率（各 50%），第二屬性從 dual_attrs
+# 抽一個和主屬性不同的；mastery_permille：沒有第二屬性、且有合法專精（range 需要施放距離、duration 需要施加狀態）時給 mastery 的機率。
+scaling:
+  dual_permille: 250
+  dual_attrs: [str, dex, int, wis, wil]
+  mastery_permille: 300

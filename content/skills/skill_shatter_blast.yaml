@@ -11,6 +11,7 @@ category: spell
 weapon_req: focus
 ap_cost: 2
 scaling_attr: int
+mastery: range   # Phase 2H-2：智力是最高屬性時施放距離 +1（範圍大小不變）
 shape: {type: square3, range: 4}
 effects:
   - {type: damage, dice: 2d4, element: fire}

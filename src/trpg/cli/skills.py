@@ -14,6 +14,7 @@ from trpg.content.skills import (
     condition_text,
     default_affects,
 )
+from trpg.shared.types import Attribute
 
 __all__ = ["cmd_skills_list", "cmd_skills_show", "effect_summary", "pad", "shape_summary"]
 
@@ -51,24 +52,49 @@ def shape_summary(library: ContentLibrary, shape: ShapeSpec) -> str:
     return f"{name}（{'，'.join(parts)}）" if parts else name
 
 
+def scaling_label(skill: SkillDef) -> str:
+    """縮放屬性的簡稱：單屬性為「智力」，雙屬性為「力量／智力」（Phase 2H-2）。"""
+    names = [skill.scaling_attr.display_name]
+    if skill.secondary_scaling_attr is not None:
+        names.append(skill.secondary_scaling_attr.display_name)
+    return "／".join(names)
+
+
+def scaling_detail(skill: SkillDef) -> str:
+    """縮放屬性的完整說明：雙屬性為「力量 50%＋智力 50%」。"""
+    if skill.secondary_scaling_attr is None:
+        return skill.scaling_attr.display_name
+    return f"{skill.scaling_attr.display_name} 50%＋{skill.secondary_scaling_attr.display_name} 50%"
+
+
+def mastery_text(skill: SkillDef, *, active: bool | None = None) -> str:
+    """專精加成的說明；``active`` 為 ``None`` 表示不知道單位（只顯示加成內容）。"""
+    effect = "施放距離 +1" if skill.mastery == "range" else "施加的狀態持續 +1 回合"
+    attr = skill.scaling_attr.display_name
+    note = f"（{attr}為最高屬性時生效）"
+    if active is not None:
+        note = f"（{attr}為最高屬性，生效中）" if active else f"（{attr}不是最高屬性，未生效）"
+    return effect + note
+
+
 def _effect_core(library: ContentLibrary, skill: SkillDef, spec: EffectSpec) -> str:  # noqa: PLR0911, PLR0912
     rules = library.ruleset
     kind = spec.type
     if kind == "damage":
         if skill.category == "spell":
             assert spec.dice is not None and spec.element is not None
-            attr, element = skill.scaling_attr.display_name, spec.element.display_name
+            attr, element = scaling_label(skill), spec.element.display_name
             return f"{_dice(spec.dice)}＋{attr}加成的{element}傷害"
         permille = spec.multiplier_permille or 1000
         element = f"（{spec.element.display_name}）" if spec.element is not None else ""
         return f"武器傷害 ×{permille / 1000:g}{element}"
     if kind == "heal":
         assert spec.dice is not None
-        return f"治療 {_dice(spec.dice)}＋{skill.scaling_attr.display_name}加成"
+        return f"治療 {_dice(spec.dice)}＋{scaling_label(skill)}加成"
     if kind in ("push", "pull"):
         return f"{'推開' if kind == 'push' else '拉近'} {spec.distance} 格"
     if kind == "knock_prone":
-        return f"擊倒（{skill.scaling_attr.display_name}對抗）"
+        return f"擊倒（{scaling_label(skill)}對抗）"
     if kind == "teleport":
         return "傳送到目標格"
     if kind == "apply_status":
@@ -181,10 +207,35 @@ def cmd_skills_list(library: ContentLibrary, out: TextIO) -> int:
     return 0
 
 
-def cmd_skills_show(library: ContentLibrary, skill_id: str, out: TextIO) -> int:
+def _unit_attributes(library: ContentLibrary, unit_id: str) -> dict[Attribute, int]:
+    """單位範本或 build 英雄的屬性。"""
+    template = library.units.get(unit_id)
+    if template is not None:
+        return dict(template.attributes)
+    for build in library.builds.builds:
+        if unit_id in (build.id, build.hero.id):
+            return dict(build.hero.attributes)
+    raise KeyError(f"找不到單位或 build：{unit_id}")
+
+
+def _mastery_active_for(
+    library: ContentLibrary, skill: SkillDef, unit_id: str | None
+) -> bool | None:
+    """單位範本的 ``scaling_attr`` 屬性是否為最高（含並列）；沒指定單位時為 ``None``。"""
+    if unit_id is None:
+        return None
+    attributes = _unit_attributes(library, unit_id)
+    mine = attributes[skill.scaling_attr]
+    return all(mine >= value for value in attributes.values())
+
+
+def cmd_skills_show(
+    library: ContentLibrary, skill_id: str, out: TextIO, *, unit_id: str | None = None
+) -> int:
     skill = library.skills.get(skill_id)
     if skill is None:
         raise KeyError(f"找不到技能：{skill_id}")
+    active = _mastery_active_for(library, skill, unit_id)
     print(f"{skill.name_zh}（{skill.id}）", file=out)
     print(
         f"  階級 T{skill.tier}（等第 {skill.rank}）  稀有度 {_RARITY[skill.rarity]}"
@@ -193,9 +244,11 @@ def cmd_skills_show(library: ContentLibrary, skill_id: str, out: TextIO) -> int:
     )
     print(
         f"  分類 {_CATEGORY[skill.category]}  武器需求 {_WEAPON_REQ[skill.weapon_req]}"
-        f"  縮放屬性 {skill.scaling_attr.display_name}",
+        f"  縮放屬性 {scaling_detail(skill)}",
         file=out,
     )
+    if skill.mastery is not None:
+        print(f"  專精加成 {mastery_text(skill, active=active)}", file=out)
     print(f"  代價 {_cost_summary(library, skill)}", file=out)
     print(f"  形狀 {shape_summary(library, skill.shape)}", file=out)
     if skill.condition is not None:

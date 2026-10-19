@@ -104,3 +104,18 @@ def test_skills_random_reports_impossible_parameters(
     captured = capsys.readouterr()
     assert code == 1 and "錯誤" in captured.err and "displace" in captured.err
     assert main(["skills", "random", "--seed", "1", "--tier", "9"]) == 2
+
+
+def test_skills_show_displays_dual_scaling_and_mastery(
+    capsys: pytest.CaptureFixture[str],
+) -> None:
+    """Phase 2H-2：雙屬性顯示各 50%；專精顯示加成內容，指定單位時標示是否生效。"""
+    _, out, _ = _run(["skills", "show", "skill_arcane_blade"], capsys)
+    assert "縮放屬性 力量 50%＋智力 50%" in out
+    assert "4d8＋力量／智力加成的雷電傷害" in out
+    _, out, _ = _run(["skills", "show", "skill_shatter_blast"], capsys)
+    assert "專精加成 施放距離 +1（智力為最高屬性時生效）" in out
+    _, out, _ = _run(["skills", "show", "skill_dread_gaze", "--unit", "build_warlock"], capsys)
+    assert "專精加成 施加的狀態持續 +1 回合（智力為最高屬性，生效中）" in out
+    _, out, _ = _run(["skills", "show", "skill_dread_gaze", "--unit", "build_healer"], capsys)
+    assert "智力不是最高屬性，未生效" in out

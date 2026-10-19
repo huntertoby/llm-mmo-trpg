@@ -5,7 +5,8 @@
 
 1. Boss 轉換：帶 ``boss`` 標籤的單位被施加 ``control_group: hard`` 的狀態時，改為施加
    ``boss_control_conversion`` 中對照的狀態（持續時間沿用原效果），發出 ``status_converted``。
-2. 抵抗判定：攻方用技能的 ``scaling_attr``、守方用（轉換後）狀態的 ``save_attr``，沿用
+2. 抵抗判定：攻方用技能的縮放值（``scaling_attr``，雙屬性為兩屬性平均）、守方用（轉換後）
+   狀態的 ``save_attr``，沿用
    ``maneuvers.contest`` 的比例公式（``d20 + 比例修正 + 熟練 ≥ hit_target``）；守方正處於該控制類別
    的遞減期間時，守方屬性值 ×``control_dr_resist_permille``（無條件捨去）。失敗則不施加，
    發出 ``status_resisted``。
@@ -72,23 +73,17 @@ def plan_status(state: BattleState, target: UnitState, status_id: str) -> Status
     return StatusPlan(status_id, final, attr, max(1, value), diminished)
 
 
-def _modifier(
-    state: BattleState, caster: UnitState, attack_attr: Attribute, plan: StatusPlan
-) -> int:
-    return state.ruleset.hit_table.modifier(
-        effective_attribute(state.ruleset, caster, attack_attr), plan.defense_value
-    )
+def _modifier(state: BattleState, attack_value: int, plan: StatusPlan) -> int:
+    return state.ruleset.hit_table.modifier(attack_value, plan.defense_value)
 
 
-def status_save_chance(
-    state: BattleState, caster: UnitState, attack_attr: Attribute, plan: StatusPlan
-) -> Fraction:
+def status_save_chance(state: BattleState, attack_value: int, plan: StatusPlan) -> Fraction:
     """攻方成功（狀態會被施加）的機率：窮舉 d20（自然 1 失敗、自然 20 成功）。
-    沒有 ``save_attr`` 的狀態為 1。"""
+    沒有 ``save_attr`` 的狀態為 1。``attack_value`` 是攻方的技能縮放值（雙屬性為平均）。"""
     if plan.save_attr is None:
         return Fraction(1)
     core = state.ruleset.core
-    bonus = _modifier(state, caster, attack_attr, plan) + core.proficiency
+    bonus = _modifier(state, attack_value, plan) + core.proficiency
     wins = sum(1 for n in range(1, 21) if is_hit(n, n + bonus, core.hit_target))
     return Fraction(wins, 20)
 
@@ -101,6 +96,7 @@ def status_effect(
     status_id: str,
     duration: int | None,
     attack_attr: Attribute,
+    attack_value: int,
     skill_id: str | None = None,
 ) -> ApplyStatusEffect | None:
     """技能對 ``target`` 施加狀態：轉換、抵抗判定，回傳要入列的效果（被抵抗時為 ``None``）。
@@ -125,7 +121,7 @@ def status_effect(
     if plan.save_attr is None or target.team is caster.team:
         return effect
     core = ctx.core
-    modifier = _modifier(state, caster, attack_attr, plan)
+    modifier = _modifier(state, attack_value, plan)
     if ctx.preview is None:
         natural = ctx.rng.d20()
     else:
@@ -139,7 +135,7 @@ def status_effect(
         target_id=target.id,
         status_id=plan.status_id,
         attack_attr=attack_attr,
-        attack_value=effective_attribute(ctx.rules, caster, attack_attr),
+        attack_value=attack_value,
         save_attr=plan.save_attr,
         defense_value=plan.defense_value,
         diminished=plan.diminished,

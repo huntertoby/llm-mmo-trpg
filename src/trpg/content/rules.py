@@ -18,6 +18,7 @@ from __future__ import annotations
 
 import itertools
 from decimal import ROUND_CEILING, Decimal, localcontext
+from typing import Literal
 
 from pydantic import Field, model_validator
 
@@ -110,6 +111,8 @@ class CoreRules(ContentModel):
 
     # 技能（2A）
     spell_attr_multiplier_permille: int = Field(ge=0)
+    dual_scaling_min_rarity: Literal["common", "rare", "epic", "legendary"] = "epic"
+    """雙屬性縮放（``secondary_scaling_attr``，Phase 2H-2）的最低技能稀有度。"""
     skill_slots: SkillSlots
 
     # 狀態與控制（2B-1）
