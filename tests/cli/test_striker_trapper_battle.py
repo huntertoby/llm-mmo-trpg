@@ -52,8 +52,8 @@ def test_the_new_builds_have_the_specified_skills() -> None:
     striker = builds["build_striker"].hero.skills
     assert {"skill_static_palm", "skill_thunder_finisher"} <= set(striker)
     assert (
-        any(lib.skills[s].kind == "passive" for s in striker) and len(striker) == 4
-    )  # 3D-6 加血痕疾行
+        any(lib.skills[s].kind == "passive" for s in striker) and len(striker) == 5
+    )  # 3D-6 加血痕疾行、3D-7b 加過載電流
     trapper = builds["build_trapper"].hero.skills
     assert {"skill_cinder_mine", "skill_bear_trap"} <= set(trapper)
     assert (

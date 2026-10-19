@@ -37,8 +37,14 @@ __all__ = [
     "run_battle",
 ]
 
-LOG_FORMAT = "trpg-battle-log/27"
-"""``/27``（Phase 3D-7a）：賭博型技能——原語 ``gamble``（``EffectSpec`` 新欄位
+LOG_FORMAT = "trpg-battle-log/28"
+"""``/28``（Phase 3D-7b）：高變異——傷害效果的 ``explode``（``DamageEffect.explode_max``、
+``damage_dealt.exploded``）、技能的 ``crit_range``／``damage_permille``；超載——層數的 ``overload``
+（``stacks.yaml``）、新事件 ``overload_triggered``、``stacks_changed`` 的新原因 ``overload``；依情況
+縮放——傷害效果的 ``scaling``；核心規則 ``explode_max``／``scale_cap_max_permille``、預算規則
+``variance_*``／``scale_expected_steps_milli``／``overload_expected_permille``；``/27`` 的規則包沒有
+這些欄位，舊紀錄不能由新版程式重播。
+``/27``（Phase 3D-7a）：賭博型技能——原語 ``gamble``（``EffectSpec`` 新欄位
 ``chance_permille``／``win``／``lose``，分支內的 ``damage_multiplier``／``self_damage_of_hit``）、
 失手反噬 ``cost.on_miss``、``damage_dealt.cause`` 的新值 ``backlash``（不會讓受到的單位 HP 低於
 1）、新事件 ``gamble_rolled``／``backlash_triggered``、預算規則 ``gamble_*``；``/26`` 的規則包
