@@ -205,6 +205,23 @@
 | 9 | AI 第 1 輪就啟動；不會為移山推牆、不會等 HP 低才開殘影 | 平衡階段 |
 | 10 | 慈焰誓約源力 2 → 1 | 接受 |
 
+### 0.13 3D-7a 驗收與「待 PM 決定」的處理（2026-10-20）
+
+- 驗收：`check.py` 全過（pytest 2525、vitest 131）；瀏覽器 `open_plain` 種子 2、`build_gambler`：主角移到 (3, 3)，「血祭重擊」對盜賊2 預覽「賭注（命中後擲 d1000）：60%：傷害 ×2（目標 6–24）｜40%：你受 1–6 傷害」並分列兩個分支；施放「賭上了『血祭重擊』：d1000=7 → 成功」。`LOG_FORMAT` 升為 `/27`；新 build `build_gambler`（第 16 個）。
+
+| # | 項目 | 決定 |
+|---|---|---|
+| 1 | 變異加成乘在可用預算上 | 接受 |
+| 2 | 預算初值 | 3C-6 matrix 後平衡階段調 |
+| 3 | 分支專用效果只能出現在 `gamble` 內 | 接受 |
+| 4 | 自傷基準取對敵實際傷害（含溢出）；範圍技能合計 | 接受 |
+| 5 | 「失手」＝本次施放沒命中任何敵人；只開放主動技能 | 接受 |
+| 6 | `cost.on_miss` 沒有最低稀有度 | **3D-7b 補：最低 rare**（設計 6.17 建議 A、C 稀有以上） |
+| 7 | AI 低血量時賭博技能分數 ×100‰ | 接受 |
+| 8 | 賭注結果放 `gamble.branches`，網頁另列一行 | 接受 |
+| 9 | `gamble` 在 `strike` 骨架標 `harmful: true`；組合器不產生 | 接受；3C-6 讓組合器產生賭博型 |
+| 10 | 既有問題：單體武器技在 `legal_actions` 多一筆 `target_id: null`、只扣代價 | **3C-6 修正**（或證明無害並記錄） |
+
 ---
 
 ## 1. Phase 3D-1｜連段條件 ＋ 資源互動（sonnet）
@@ -471,6 +488,7 @@
 | D 超載 | 沿用層數系統（`content/stacks.yaml`）：新層數類型帶 `overload: {threshold: 5, per_stack_damage_permille: 200, backlash: [...]}` | 每層讓持有者的帶標籤技能傷害 +n‰；層數到門檻時立刻對自己結算 `backlash`（受反噬上限限制）並清空 |
 | E 以血換力 ＋ #7 G 依情況縮放 | 傷害效果加通用的 `scale: {by: <依據>, per_step_permille: n, cap_permille: m}`；`by` 先做：`missing_hp_10pct`（施放者每少 10% 最大 HP）、`distance`（與目標每距 1 格）、`enemies_adjacent_target`（目標相鄰的敵方〔對施放者而言的敵人〕數）、`enemies_adjacent_self`（施放者相鄰的敵人數） | 每一步傷害 +n‰，無條件捨去；`cap_permille` 必填且 ≤ `scale_cap_max_permille`（初值 800）。以血換力即 `by: missing_hp_10pct, per_step_permille: 80` |
 
+- 3D-7a 留下的：`cost.on_miss` 最低稀有度 rare（0.13 #6）。
 - 示範：狂野之刃（B）、過載電流（D）、狂戰士之怒（E），另至少 1 個以 `distance` 或周圍敵人數縮放的技能（#7 G，例：狙擊越遠越痛、橫掃越多人越強）。
 
 ### 7.3 驗收條件
