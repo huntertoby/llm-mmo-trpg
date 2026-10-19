@@ -33,6 +33,8 @@ __all__ = [
 ]
 
 TRAP_GLYPH = "^"
+WELL_GLYPH = "$"
+"""源泉格（Phase 3C-4a）的顯示字元。"""
 """網格上我方陷阱的字元（只顯示放置者陣營看得到的陷阱）。"""
 
 _LABEL_WIDTH = 14
@@ -59,6 +61,7 @@ def render_map(map_def: MapDef, ruleset: Ruleset) -> str:
     zones = {cell: "a" for cell in map_def.start_zones[Team.ALLY]}
     zones.update({cell: "e" for cell in map_def.start_zones[Team.ENEMY]})
     placed = {o.at: objects[o.kind].glyph for o in map_def.objects}
+    placed.update({at: WELL_GLYPH for at in map_def.source_wells})
     surf_glyph = _surface_glyphs(ruleset)
     surfaces = {s.at: surf_glyph[s.surface] for s in map_def.surfaces}
     grid = map_def.grid()
@@ -82,6 +85,8 @@ def render_map(map_def: MapDef, ruleset: Ruleset) -> str:
         lines.append(
             "物件：" + "、".join(f"{objects[k].glyph} {objects[k].name_zh}" for k in kinds)
         )
+    if map_def.source_wells:
+        lines.append(f"源泉格：{WELL_GLYPH}（我方單位進入時 +1 源力，之後消失）")
     used_surfaces = sorted({s.surface for s in map_def.surfaces})
     if used_surfaces:
         lines.append(
@@ -143,6 +148,8 @@ def render_battle_grid(state: BattleState) -> str:
                 mark = state.object_def(obj).glyph
             elif (x, y) in my_traps:
                 mark = TRAP_GLYPH
+            elif (x, y) in state.source_wells:
+                mark = WELL_GLYPH
             else:
                 mark = state.ruleset.terrain_def(tile.terrain).glyph
             surface = surf_glyph[tile.surface] if tile.surface is not Surface.NONE else " "
@@ -167,6 +174,8 @@ def render_legend(state: BattleState) -> str:
     ]
     if visible_traps(state, Team.ALLY):
         parts.append(f"{TRAP_GLYPH} 我方陷阱")
+    if state.source_wells:
+        parts.append(f"{WELL_GLYPH} 源泉")
     return ("  圖例：" + "、".join(parts)) if parts else ""
 
 
@@ -182,6 +191,13 @@ def _status_text(state: BattleState, unit: UnitState) -> str:
     return ("［" + "、".join(parts) + "］") if parts else ""
 
 
+def _source_text(state: BattleState, unit: UnitState) -> str:
+    """我方單位的源力（Phase 3C-4a），例如「 源力 2/3」；敵方不顯示（一律 0）。"""
+    if unit.team is not Team.ALLY:
+        return ""
+    return f" 源力 {unit.source}/{state.ruleset.core.source_max}"
+
+
 def render_unit_table(state: BattleState) -> str:
     markers = unit_markers(state)
     lines = []
@@ -194,6 +210,7 @@ def render_unit_table(state: BattleState) -> str:
         lines.append(
             f"  {markers[unit.id]} {team} {unit.name_zh}：HP {unit.hp}/{unit.max_hp}"
             f"{f' 法力 {unit.mana}/{unit.max_mana}' if unit.max_mana else ''}"
+            f"{_source_text(state, unit)}"
             f" 耐力 {unit.stamina} 位置 {xy_text(unit.pos)} 武器 {unit.weapon.name_zh}"
             f"{_status_text(state, unit)}"
         )

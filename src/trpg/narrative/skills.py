@@ -14,6 +14,7 @@ from pydantic import BaseModel, ConfigDict
 from trpg.content.battle import Dice
 from trpg.content.library import ContentLibrary
 from trpg.content.skills import (
+    CHEAT_DEATH_STATUS,
     ConditionSpec,
     EffectSpec,
     ModifierSpec,
@@ -204,6 +205,21 @@ def _place_trap(_lib: ContentLibrary, skill: SkillDef, _spec: EffectSpec) -> str
     return f"放置隱藏陷阱：{trigger}，以{shape}結算其餘效果"
 
 
+def _grant_ap(_lib: ContentLibrary, _skill: SkillDef, spec: EffectSpec) -> str:
+    return f"立刻獲得 {spec.amount or 1} AP（不超過本回合上限，每輪限一次）"
+
+
+def _reset_cooldown(_lib: ContentLibrary, _skill: SkillDef, spec: EffectSpec) -> str:
+    which = "全部技能" if spec.which == "all" else f"帶「{spec.tag}」標籤的技能"
+    return f"{which}的冷卻歸零（花源力的技能除外）"
+
+
+def _cheat_death(lib: ContentLibrary, _skill: SkillDef, spec: EffectSpec) -> str:
+    status = lib.ruleset.status_def(CHEAT_DEATH_STATUS)
+    turns = spec.duration or status.duration
+    return f"狀態「{status.name_zh}」{turns} 回合：受到致命傷害時 HP 留在 1（墜落與致命地形除外）"
+
+
 def _terrain(_lib: ContentLibrary, _skill: SkillDef, spec: EffectSpec) -> str:
     verb = "抬高" if spec.type == "raise_terrain" else "降低"
     return f"{verb}地形 {spec.amount or 1} 層"
@@ -226,6 +242,9 @@ _EFFECT_TEXT: dict[str, _EffectText] = {
     "place_trap": _place_trap,
     "raise_terrain": _terrain,
     "lower_terrain": _terrain,
+    "grant_ap": _grant_ap,
+    "reset_cooldown": _reset_cooldown,
+    "cheat_death": _cheat_death,
 }
 
 
@@ -331,6 +350,8 @@ def cost_parts(library: ContentLibrary, skill: SkillDef, *, with_ap: bool = True
         parts.append(f"冷卻 {cost.cooldown} 回合")
     if cost.uses_per_battle:
         parts.append(f"每場 {cost.uses_per_battle} 次")
+    if cost.source:
+        parts.append(f"源力 {cost.source}")
     return parts
 
 

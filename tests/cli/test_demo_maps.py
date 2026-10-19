@@ -110,7 +110,7 @@ def test_simple_ai_weather_and_deploy_options(capsys: pytest.CaptureFixture[str]
         capsys,
     )
     assert code == 0 and "勝方：" in out
-    assert "戰士：HP 60/60 法力 20/20 耐力 30 位置 (1, 5)" in out
+    assert "戰士：HP 60/60 法力 20/20 源力 1/3 耐力 30 位置 (1, 5)" in out
     code, _, err = _run(
         ["battle", "--map", "test_flat_6x6", "--seed", "1", "--deploy", "5,5"], capsys
     )

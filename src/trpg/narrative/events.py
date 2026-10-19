@@ -11,6 +11,7 @@ from dataclasses import dataclass
 from typing import Any
 
 from trpg.engine.events import (
+    ApGranted,
     AttackIntercepted,
     AttackRolled,
     BattleEnded,
@@ -19,6 +20,7 @@ from trpg.engine.events import (
     CheckRolled,
     Collided,
     DamageDealt,
+    DeathCheated,
     EffectFizzled,
     ElementTouched,
     EnteredDeadlyTerrain,
@@ -49,6 +51,7 @@ from trpg.engine.events import (
     SkillCooldownChanged,
     SkillTriggered,
     SkillUsed,
+    SourceChanged,
     StacksChanged,
     StatusApplied,
     StatusConverted,
@@ -129,6 +132,7 @@ _REMOVE_REASONS = {
     "downed": "解除了（倒下）",
     "thawed": "解除了（受到傷害）",
     "consumed": "被消耗了",
+    "spent": "擋下致命傷害後消失了",
 }
 
 
@@ -366,6 +370,8 @@ def _skill_used(e: SkillUsed, v: _View) -> str:
         costs.append(f"HP {e.hp_spent}")
     if e.cooldown:
         costs.append(f"冷卻 {e.cooldown} 回合")
+    if e.source:
+        costs.append(f"源力 {e.source}")
     return (
         f"  {v.name[e.unit_id]} 施放「{e.name_zh}」（{'，'.join(costs)}）→ 影響 {len(e.tiles)} 格"
     )
@@ -511,6 +517,38 @@ def _stacks(e: StacksChanged, v: _View) -> str:
     stack = v.state.ruleset.stack_def(e.stack_id).name_zh
     verb = {"gained": "累積", "consumed": "消耗", "expired": "過期清空"}[e.reason]
     return f"    {v.name[e.unit_id]} 的「{stack}」{verb}：{e.before} → {e.after} 層"
+
+
+# ---------------------------------------------------------------------------
+# 源力與改寫規則型原語（Phase 3C-4a）
+# ---------------------------------------------------------------------------
+
+
+@_handles(SourceChanged)
+def _source_changed(e: SourceChanged, v: _View) -> str | None:
+    name = v.name[e.unit_id]
+    change = f"源力 {e.before} → {e.after}"
+    if e.reason == "skill":
+        return f"    ✦ {name} 花費源力：{change}"
+    if e.reason == "well":
+        where = "" if e.pos is None else f" {xy_text(e.pos)}"
+        full = "（已達上限）" if e.after == e.before else ""
+        return f"  ✦ {name} 汲取了源泉{where}：{change}{full}，源泉消失了"
+    other = "精英" if e.other_id is None else v.name[e.other_id]
+    return f"  ✦ {name} 擊倒了 {other}，獲得源力：{change}"
+
+
+@_handles(ApGranted)
+def _ap_granted(e: ApGranted, v: _View) -> str:
+    target = v.name[e.unit_id]
+    if e.deferred:
+        return f"    {target} 獲得 {e.amount} AP（下次回合開始時加上，共 {e.ap_after}）"
+    return f"    {target} 獲得 {e.amount} AP（現在 {e.ap_after} AP）"
+
+
+@_handles(DeathCheated)
+def _death_cheated(e: DeathCheated, v: _View) -> str:
+    return f"  ✦ {v.name[e.unit_id]} 的「{v.statuses[e.status_id]}」擋下了致命傷害，HP 留在 1"
 
 
 @_handles(TrapPlaced)
