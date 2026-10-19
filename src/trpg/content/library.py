@@ -192,7 +192,27 @@ class Ruleset(ContentModel):
         if rubble not in {o.id for o in self.objects.objects}:
             raise ValueError(f"core.yaml 的 topple_rubble_object 引用了未知的物件：{rubble}")
         self._check_rule_changes(ids)
+        self._check_overloads(ids)
         return self
+
+    def _check_overloads(self, status_ids: set[str]) -> None:
+        """超載（3D-7b）的反噬：狀態存在、不能是硬控、跳過回合或持續傷害（不讓持有者跳過回合）。"""
+        unsafe = self.unsafe_backlash_statuses()
+        for stack in self.stacks.stacks:
+            if stack.overload is None:
+                continue
+            for sub in stack.overload.backlash:
+                if sub.type != "apply_status":
+                    continue
+                if sub.status not in status_ids:
+                    raise ValueError(
+                        f"stacks.yaml 的 {stack.id} 反噬引用了未知的狀態：{sub.status}"
+                    )
+                if sub.status in unsafe:
+                    raise ValueError(
+                        f"stacks.yaml 的 {stack.id} 反噬不能使用硬控、跳過回合或持續傷害的狀態"
+                        f"（{sub.status}）"
+                    )
 
     def _check_rule_changes(self, status_ids: set[str]) -> None:
         """規則改變（3D-6）引用的狀態與召喚物範本存在。"""
@@ -514,6 +534,7 @@ def _check_skills(root: Path, skills: dict[str, SkillDef], ruleset: Ruleset) -> 
             summon_ids=summon_ids,
             rule_change_ids=rule_change_ids,
             unsafe_statuses=ruleset.unsafe_backlash_statuses(),
+            scale_cap_max=ruleset.core.scale_cap_max_permille,
         )
         if skill.rule_change_id is not None and skill.ap_cost != activation_ap:
             problems.append(

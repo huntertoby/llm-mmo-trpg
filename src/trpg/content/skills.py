@@ -61,8 +61,10 @@ __all__ = [
     "INTERCEPT",
     "LEAP",
     "LEGACY_REACTION_EVENTS",
+    "MIN_SKILL_CRIT_RANGE",
     "MODIFIER_CHANGES",
     "ON_HIT_PRIMITIVES",
+    "ON_MISS_MIN_RARITY",
     "PAIR_MOVES",
     "PAIR_SHAPES",
     "PIERCE_SHAPES",
@@ -74,6 +76,7 @@ __all__ = [
     "REQUIRED_SHAPES",
     "RESET_COOLDOWN",
     "RULE_CHANGE",
+    "SCALE_BY_VALUES",
     "SELF_CONDITIONS",
     "SELF_DAMAGE_OF_HIT",
     "SELF_ONLY_CHANGES",
@@ -108,6 +111,7 @@ __all__ = [
     "PrimitiveTable",
     "Provenance",
     "ReactionSpec",
+    "ScaleSpec",
     "ShapeBudget",
     "ShapeDef",
     "ShapeSpec",
@@ -429,6 +433,7 @@ class PrimitiveParam(ContentModel):
         "anchor",
         "zone_when",
         "rule_change",
+        "scaling",
     ]
     required: bool = False
     min: int | None = None
@@ -652,6 +657,33 @@ class ShapeSpec(ContentModel):
         return dict(sorted(values.items()))
 
 
+type ScaleBy = Literal[
+    "missing_hp_10pct", "distance", "enemies_adjacent_target", "enemies_adjacent_self"
+]
+SCALE_BY_VALUES: tuple[str, ...] = (
+    "missing_hp_10pct",
+    "distance",
+    "enemies_adjacent_target",
+    "enemies_adjacent_self",
+)
+"""依情況縮放（Phase 3D-7b，6.17 E、6.18 G）的依據：施放者每少 10% 最大 HP、與目標的距離（格）、
+目標相鄰的敵方數、施放者相鄰的敵方數。"""
+MIN_SKILL_CRIT_RANGE = 15
+"""技能 ``crit_range`` 的下限（Phase 3D-7b，6.17 B）。"""
+ON_MISS_MIN_RARITY = "rare"
+"""``cost.on_miss`` 失手反噬的最低稀有度（Phase 3D-7b，3D-7a 驗收決定）。"""
+
+
+class ScaleSpec(ContentModel):
+    """傷害效果的 ``scaling``（Phase 3D-7b）：每一步傷害 ``+per_step_permille`` ‰（無條件捨去），
+    總加成不超過 ``cap_permille``（必填；上限見 ``core.yaml`` 的 ``scale_cap_max_permille``）。
+    （欄位名不叫 ``scale``：那是 ``consume_status`` 的欄位。）"""
+
+    by: ScaleBy
+    per_step_permille: int = Field(ge=1, le=_PERMILLE)
+    cap_permille: int = Field(ge=1, le=_MAX_MULTIPLIER_PERMILLE)
+
+
 class EffectSpec(ContentModel):
     """技能的一個效果原語（flat 結構；哪些參數合法由原語定義決定）。
 
@@ -726,6 +758,11 @@ class EffectSpec(ContentModel):
     """``damage_multiplier`` 專用：本次施放的傷害效果 × 這個倍率（‰；2000 ＝ 加倍）。"""
     self_damage_permille_of_hit: int | None = Field(default=None, ge=1, le=_PERMILLE)
     """``self_damage_of_hit`` 專用：施放者受到「本次施放對敵人造成的傷害」的 n‰（反噬，不致命）。"""
+    explode: bool | None = None
+    """``damage`` 專用（Phase 3D-7b，6.17 B）：爆骰——擲到最大值再加擲一次，每顆骰最多再擲
+    ``core.explode_max`` 次。只有主技能效果（不含賭注分支與 ``then``）可以用。"""
+    scaling: ScaleSpec | None = None
+    """``damage`` 專用（Phase 3D-7b，6.17 E、6.18 G）：依情況縮放傷害。"""
     effects: tuple[EffectSpec, ...] | None = None
     """``zone`` 專用（Phase 3D-5）：區域結算的效果（1–2 個，只能用 :data:`ZONE_EFFECT_TYPES`，
     不可自帶 ``affects``／``condition``；對象由區域的 ``affects`` 決定）。"""
@@ -745,6 +782,7 @@ class EffectSpec(ContentModel):
             "duration",
             "effects",
             "element",
+            "explode",
             "knock_prone",
             "lose",
             "multiplier_permille",
@@ -756,6 +794,7 @@ class EffectSpec(ContentModel):
             "resource",
             "rule",
             "scale",
+            "scaling",
             "self_damage_permille_of_hit",
             "speed",
             "splash",
@@ -1293,6 +1332,12 @@ class SkillDef(ContentModel):
     reaction: ReactionSpec | None = None
     trap: TrapSpec | None = None
     cost: SkillCost = Field(default_factory=SkillCost)
+    crit_range: int | None = Field(default=None, ge=MIN_SKILL_CRIT_RANGE, le=19)
+    """擴大暴擊範圍（Phase 3D-7b，6.17 B）：自然骰不小於它就暴擊（17 ＝ 17–20）；取技能與武器
+    （法術技為 20）中較寬的。需要有傷害效果。"""
+    damage_permille: int | None = Field(default=None, ge=100, le=_PERMILLE - 1)
+    """基礎傷害折扣（Phase 3D-7b，6.17 B）：技能的每個傷害效果再 × 它（‰；750 ＝ −25%），
+    例如高變異技能用較低的基礎傷害換取暴擊與爆骰。需要有傷害效果。"""
     pierce: bool = False
     """穿透（Phase 3C-5b，6.15）：無視半掩護，並穿過 ``penetrable`` 物件（物件受全額傷害，後方目標
     受 ``core.pierce_behind_permille``）。只能用在遠程的單體或直線形狀。"""
@@ -1373,7 +1418,8 @@ class SkillDef(ContentModel):
                 f"{'、'.join(allowed)}，收到 {self.weapon_req}"
             )
         for index, effect in enumerate(self.effects):
-            self._check_effect(index, effect)
+            self._check_effect(index, effect, top=True)
+        self._check_variance()
         self._add_gamble_tag()
         return self
 
@@ -1805,8 +1851,30 @@ class SkillDef(ContentModel):
         if effect.resource == "cooldown" and (effect.amount or 1) > _MAX_COOLDOWN_RESTORE:
             raise ValueError(f"{where}：冷卻最多縮短 {_MAX_COOLDOWN_RESTORE} 回合")
 
-    def _check_effect(self, index: int, effect: EffectSpec) -> None:
+    def _check_variable_damage(self, where: str, effect: EffectSpec, *, top: bool) -> None:
+        """``explode`` 與 ``scaling``（Phase 3D-7b）：只有技能自己的 ``damage`` 效果可以用（不能在
+        賭注分支、失手反噬、``then`` 裡）；``scaling.cap_permille`` 的上限是跨檔案檢查。"""
+        if effect.explode is None and effect.scaling is None:
+            return
+        if effect.type != "damage":
+            raise ValueError(f"{where}：只有 damage 使用 explode、scaling")
+        if not top:
+            raise ValueError(f"{where}：explode、scaling 只能用在技能自己的傷害效果")
+        if effect.explode is False:
+            raise ValueError(f"{where}：explode 只能填 true（不爆骰就省略）")
+
+    def _check_variance(self) -> None:
+        """``crit_range``、``damage_permille`` 需要有傷害效果、只能用在主動技能。"""
+        if self.crit_range is None and self.damage_permille is None:
+            return
+        if self.kind != "active":
+            raise ValueError(f"只有主動技能可以有 crit_range、damage_permille，收到 {self.kind}")
+        if not any(e.type == "damage" for e in self.effects):
+            raise ValueError("crit_range、damage_permille 需要技能有傷害效果")
+
+    def _check_effect(self, index: int, effect: EffectSpec, *, top: bool = False) -> None:
         where = f"effects[{index}]（{effect.type}）"
+        self._check_variable_damage(where, effect, top=top)
         self._check_consume_status(index, effect)
         if effect.type == RESET_COOLDOWN:
             if effect.which is None:
@@ -1842,8 +1910,19 @@ class SkillDef(ContentModel):
 
     @property
     def is_gamble(self) -> bool:
-        """帶賭博機制（Phase 3D-7a）：有 ``gamble`` 效果或失手反噬 ``cost.on_miss``。"""
-        return bool(self.cost.on_miss) or any(e.type == GAMBLE for e in self.effects)
+        """帶賭博機制（Phase 3D-7a、7b）：有 ``gamble`` 效果、失手反噬 ``cost.on_miss``、高變異
+        （``explode``、``crit_range``）或以血換力（``scaling`` 依 ``missing_hp_10pct``）。
+        超載是層數的規則（見 ``StackDef``），由帶標籤的技能在預算上反映。"""
+        return (
+            bool(self.cost.on_miss)
+            or self.crit_range is not None
+            or any(
+                e.type == GAMBLE
+                or e.explode
+                or (e.scaling is not None and e.scaling.by == "missing_hp_10pct")
+                for e in self.effects
+            )
+        )
 
     @property
     def is_active(self) -> bool:
@@ -1965,6 +2044,9 @@ class _Refs:
     rule_change_ids: set[str] | None = None
     unsafe_statuses: frozenset[str] | None = None
     """不能當反噬的狀態（硬控、跳過回合、持續傷害；Phase 3D-7a）；``None`` 不檢查。"""
+    scale_cap_max: int | None = None
+    """``scaling.cap_permille`` 的上限（``core.yaml`` 的 ``scale_cap_max_permille``；Phase 3D-7b）；
+    ``None`` 不檢查。"""
 
 
 def _condition_problems(where: str, condition: ConditionSpec, refs: _Refs) -> list[str]:
@@ -2030,7 +2112,19 @@ def _effect_problems(skill: SkillDef, index: int, effect: EffectSpec, refs: _Ref
     problems += _consume_status_problems(skill, index, effect, refs)
     problems += _zone_problems(skill, index, effect, refs)
     problems += _gamble_problems(skill, index, effect, refs)
+    problems += _scaling_problems(where, effect, refs)
     return problems
+
+
+def _scaling_problems(where: str, effect: EffectSpec, refs: _Refs) -> list[str]:
+    """``scaling.cap_permille`` 不超過 ``core.scale_cap_max_permille``（Phase 3D-7b）。"""
+    scaling = effect.scaling
+    if scaling is None or refs.scale_cap_max is None or scaling.cap_permille <= refs.scale_cap_max:
+        return []
+    return [
+        f"{where}.scaling.cap_permille：{scaling.cap_permille} 超過上限 {refs.scale_cap_max}"
+        "（core.yaml 的 scale_cap_max_permille）"
+    ]
 
 
 def _branch_problems(
@@ -2200,6 +2294,7 @@ def skill_problems(
     summon_ids: set[str] | None = None,
     rule_change_ids: set[str] | None = None,
     unsafe_statuses: frozenset[str] | None = None,
+    scale_cap_max: int | None = None,
 ) -> list[str]:
     """技能引用的形狀、原語、條件、狀態、物件是否存在、參數是否在範圍內（繁體中文，空串列為通過）。
 
@@ -2207,7 +2302,8 @@ def skill_problems(
     層數原語引用的層數）；``dual_min_rarity``：雙屬性縮放的最低稀有度（省略時不檢查）；
     ``summon_ids``：召喚物範本 ID（省略時不檢查 ``summon`` 的 ``unit``）；``rule_change_ids``：
     規則改變 ID（Phase 3D-6，省略時不檢查 ``rule_change`` 的 ``rule``）；``unsafe_statuses``：
-    不能當反噬的狀態 ID（Phase 3D-7a，省略時不檢查）。
+    不能當反噬的狀態 ID（Phase 3D-7a，省略時不檢查）；``scale_cap_max``：``scaling`` 的
+    ``cap_permille`` 上限（Phase 3D-7b，省略時不檢查）。
     """
     problems: list[str] = []
     if (
@@ -2236,6 +2332,7 @@ def skill_problems(
         summon_ids,
         rule_change_ids,
         unsafe_statuses,
+        scale_cap_max,
     )
     if stacks is not None:
         problems += _cost_stack_problems(skill, stacks)

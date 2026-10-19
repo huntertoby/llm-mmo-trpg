@@ -1,0 +1,26 @@
+# 狂戰士之怒（Phase 3D-7b 示範，以血換力；docs/design/06-技能.md 6.17 E，數值為初值，未經模擬）：
+# 你每少 10% 最大 HP，這一擊的傷害 +8%（最多 +80%）。
+id: skill_berserker_rage
+schema_version: 1
+name_zh: 狂戰士之怒
+tier: 1
+rank: 1
+rarity: rare
+kind: active
+skeleton: strike
+category: weapon
+weapon_req: melee
+ap_cost: 2
+scaling_attr: str
+shape: {type: single, range: weapon}
+effects:
+  - type: damage
+    multiplier_permille: 1600
+    scaling: {by: missing_hp_10pct, per_step_permille: 80, cap_permille: 800}
+condition: null
+cost: {mana: 4, cooldown: 1}
+tags: [physical, melee]
+narrative:
+  concept: 傷得越重，砍得越狠
+  cast_flavor: 鮮血從傷口淌下，你的眼底卻燒起越來越亮的紅光
+provenance: {origin: builtin, owner_id: null, created_by: null, parents: [], bound: true, tradeable: false}

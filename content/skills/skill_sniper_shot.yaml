@@ -1,0 +1,26 @@
+# 遠距狙擊（Phase 3D-7b 示範，依距離縮放；docs/design/06-技能.md 6.18 G，數值為初值，未經模擬）：
+# 與目標每距 1 格，傷害 +8%（最多 +40%）。
+id: skill_sniper_shot
+schema_version: 1
+name_zh: 遠距狙擊
+tier: 1
+rank: 1
+rarity: common
+kind: active
+skeleton: strike
+category: weapon
+weapon_req: ranged
+ap_cost: 2
+scaling_attr: dex
+shape: {type: single, range: weapon}
+effects:
+  - type: damage
+    multiplier_permille: 1400
+    scaling: {by: distance, per_step_permille: 80, cap_permille: 400}
+condition: null
+cost: {mana: 4, cooldown: 2}
+tags: [physical, ranged]
+narrative:
+  concept: 拉開距離才是狙擊手的本錢，越遠，那一箭越痛
+  cast_flavor: 你屏息凝神，把弓拉到極限，等風停的那一瞬間才鬆手
+provenance: {origin: builtin, owner_id: null, created_by: null, parents: [], bound: true, tradeable: false}

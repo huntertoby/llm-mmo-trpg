@@ -22,6 +22,8 @@ primitives:
       dice: {type: dice, required: true, description_zh: 法術技必填；武器技不可填（用武器骰）}
       multiplier_permille: {type: int, min: 1, max: 10000, description_zh: 武器技的倍率（‰），預設 1000}
       element: {type: element, description_zh: 法術技必填；武器技省略時繼承武器元素}
+      explode: {type: bool, description_zh: "爆骰（Phase 3D-7b）：擲到最大值再加擲一次，每顆骰最多再擲 core.explode_max 次；只能填 true"}
+      scaling: {type: scaling, description_zh: "依情況縮放（Phase 3D-7b）：by／per_step_permille／cap_permille 三個欄位；每一步傷害 +n‰（無條件捨去）、cap_permille 必填且不超過 core.scale_cap_max_permille；by 可為 missing_hp_10pct（施放者每少 10% 最大 HP）、distance（與目標每距 1 格）、enemies_adjacent_target（目標相鄰的敵方數）、enemies_adjacent_self（施放者相鄰的敵方數）"}
   - id: heal
     name_zh: 治療
     description_zh: 治療量＝骰值＋縮放屬性×0.5，不超過最大 HP。

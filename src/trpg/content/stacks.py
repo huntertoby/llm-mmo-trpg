@@ -17,8 +17,43 @@ from pydantic import Field, model_validator
 
 from trpg.content.battle import ID_PATTERN
 from trpg.content.schemas import ContentModel
+from trpg.content.skills import EffectSpec
 
-__all__ = ["StackDef", "StackTable"]
+__all__ = ["OverloadSpec", "StackDef", "StackTable"]
+
+_MAX_BACKLASH = 2
+
+
+class OverloadSpec(ContentModel):
+    """超載（Phase 3D-7b，6.17 D）：層數越疊越強，到門檻時對自己觸發懲罰並清空。
+
+    - ``tag``：持有者帶這個標籤的技能，每層傷害 ``+per_stack_damage_permille`` ‰。
+    - ``threshold``：累積到這個層數時，立刻對持有者結算 ``backlash`` 並清空（不超過 ``max``）。
+    - ``backlash``：1–2 個效果，只能是 ``damage``（法術式，``dice`` ＋ ``element``，反噬傷害不會
+      讓持有者低於 1 HP）或 ``apply_status``（不能是硬控、跳過回合或持續傷害，跨檔案檢查）。
+    """
+
+    tag: str = Field(pattern=ID_PATTERN)
+    threshold: int = Field(ge=2, le=9)
+    per_stack_damage_permille: int = Field(ge=1, le=1000)
+    backlash: tuple[EffectSpec, ...]
+
+    @model_validator(mode="after")
+    def _check(self) -> OverloadSpec:
+        if not 1 <= len(self.backlash) <= _MAX_BACKLASH:
+            raise ValueError(
+                f"backlash 必須有 1 到 {_MAX_BACKLASH} 個效果，收到 {len(self.backlash)}"
+            )
+        for sub in self.backlash:
+            if sub.type not in ("damage", "apply_status"):
+                raise ValueError(f"backlash 只能使用 damage、apply_status，收到 {sub.type}")
+            if sub.affects not in (None, "self") or sub.condition is not None:
+                raise ValueError("backlash 的對象固定是持有者，不可自帶 affects 或 condition")
+            if sub.type == "damage" and (sub.dice is None or sub.element is None):
+                raise ValueError("backlash 的 damage 必須指定 dice 與 element")
+            if sub.type == "apply_status" and sub.status is None:
+                raise ValueError("backlash 的 apply_status 必須指定 status")
+        return self
 
 
 class StackDef(ContentModel):
@@ -38,6 +73,17 @@ class StackDef(ContentModel):
     max: int = Field(ge=1, le=9)
     expires_after_rounds: int | None = Field(default=None, ge=1)
     ai_value: int = Field(default=0, ge=0)
+    overload: OverloadSpec | None = None
+    """超載（Phase 3D-7b）：只有 ``owner: self`` 的層數可以。"""
+
+    @model_validator(mode="after")
+    def _check(self) -> StackDef:
+        if self.overload is not None:
+            if self.owner != "self":
+                raise ValueError("超載（overload）只能用在 owner: self 的層數")
+            if self.overload.threshold > self.max:
+                raise ValueError(f"overload.threshold 不可超過 max（{self.max}）")
+        return self
 
     def summary(self) -> str:
         return self.name_zh

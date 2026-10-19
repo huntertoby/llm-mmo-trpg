@@ -370,14 +370,31 @@ def _chances(
     return Fraction(hit, total), Fraction(crit, total)
 
 
-def dice_distribution(count: int, sides: int) -> Counter[int]:
-    """``count`` 顆 ``sides`` 面骰總和的分布（次數）。``count == 0`` 時為 ``{0: 1}``。"""
+def _exploding_die(sides: int, rerolls: int) -> Counter[int]:
+    """一顆會爆骰的 ``sides`` 面骰的總和分布（次數）：擲到最大值再加擲一次，最多再擲 ``rerolls``
+    次。分母為 ``sides ** (rerolls + 1)``。"""
+    if rerolls <= 0 or sides <= 1:
+        return Counter(range(1, sides + 1))
+    again = _exploding_die(sides, rerolls - 1)
+    total = sum(again.values())
+    dist: Counter[int] = Counter({face: total for face in range(1, sides)})
+    for value, n in again.items():
+        dist[sides + value] += n
+    return dist
+
+
+def dice_distribution(count: int, sides: int, explode_max: int = 0) -> Counter[int]:
+    """``count`` 顆 ``sides`` 面骰總和的分布（次數）。``count == 0`` 時為 ``{0: 1}``。
+
+    ``explode_max > 0``：每顆骰會爆骰（Phase 3D-7b，每顆最多再擲 ``explode_max`` 次）。
+    """
+    die = _exploding_die(sides, explode_max)
     dist: Counter[int] = Counter({0: 1})
     for _ in range(count):
         nxt: Counter[int] = Counter()
         for value, n in dist.items():
-            for face in range(1, sides + 1):
-                nxt[value + face] += n
+            for face, weight in die.items():
+                nxt[value + face] += n * weight
         dist = nxt
     return dist
 
@@ -671,7 +688,9 @@ def _damage_expectation(  # noqa: PLR0917
         params = damage_parameters(state, actor, skill, spec, modified=True)
         dice = params.dice
         count, sides = (0, 1) if dice is None else (dice.count, dice.sides)
-        normal, doubled = dice_distribution(count, sides), dice_distribution(count * 2, sides)
+        explode = core.explode_max if spec.explode else 0
+        normal = dice_distribution(count, sides, explode)
+        doubled = dice_distribution(count * 2, sides, explode)
         table: dict[int, int] = {}
         for value in sorted(set(normal) | set(doubled)):
             raw = (value + params.flat) * PERMILLE + params.scaled_permille

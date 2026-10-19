@@ -30,6 +30,7 @@ from trpg.content.skill_rules import (
     SkillMatch,
 )
 from trpg.content.skills import (
+    ON_MISS_MIN_RARITY,
     EffectSpec,
     SkillDef,
     rarity_rank,
@@ -98,6 +99,7 @@ def _reference_violations(skill: SkillDef, library: ContentLibrary) -> list[Viol
         summon_ids=set(rules.summons.by_id()),
         rule_change_ids=set(rules.rule_changes.by_id()),
         unsafe_statuses=rules.unsafe_backlash_statuses(),
+        scale_cap_max=rules.core.scale_cap_max_permille,
     )
     if skill.skeleton not in library.skeletons:
         problems.append(f"skeleton：沒有骨架資料檔 {skill.skeleton!r}")
@@ -601,6 +603,8 @@ def _rarity_violations(skill: SkillDef, library: ContentLibrary) -> list[Violati
         rules.statuses.by_id(),
         rules.conditions.by_id(),
     )
+    if skill.cost.on_miss:  # 失手反噬至少 rare（3D-7a 驗收決定、設計 6.17）
+        needs.append(("on_miss", "失手反噬 cost.on_miss", ON_MISS_MIN_RARITY))
     cond_specs = [skill.condition] if skill.condition else []
     cond_specs += [r.condition for r in skill.modifiers if r.condition is not None]
     on_hit = [e for r in skill.modifiers for e in r.change.on_hit_effects or ()]

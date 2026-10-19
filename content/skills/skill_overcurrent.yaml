@@ -1,0 +1,25 @@
+# 過載電流（Phase 3D-7b 示範，超載 overload；docs/design/06-技能.md 6.17 D，數值為初值，未經模擬）：
+# 命中後累積 1 層「過載電流」；每層讓帶 overcurrent 標籤的技能（含它自己）傷害 +20%，累積到 5 層時你被雷擊並清空。
+id: skill_overcurrent
+schema_version: 1
+name_zh: 過載電流
+tier: 1
+rank: 1
+rarity: rare
+kind: active
+skeleton: builder_finisher
+category: spell
+weapon_req: any
+ap_cost: 1
+scaling_attr: int
+shape: {type: single, range: 3}
+effects:
+  - {type: damage, dice: 1d8, element: lightning}
+  - {type: add_stack, stack: overload_surge, amount: 1, affects: self}
+condition: null
+cost: {mana: 3}
+tags: [lightning, spell, builder, overcurrent, gamble]
+narrative:
+  concept: 把電流越灌越滿，威力一層比一層猛，直到自己也扛不住
+  cast_flavor: 你把掌心的電弧又壓緊了一分，劈啪聲幾乎蓋過心跳
+provenance: {origin: builtin, owner_id: null, created_by: null, parents: [], bound: true, tradeable: false}

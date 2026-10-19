@@ -51,6 +51,9 @@ teleport_enemy_resist_bonus: 2   # 傳送敵人（Phase 3D-2b）：目標的抵�
 teleport_lethal_resist_bonus: 8  # 傳送到致命地形時目標再加的抵抗加成（總 +10，同級成功率 10%；初值）
 hurl_scatter_radius: 1        # 投擲物件（Phase 3C-5a）：落點被占用時，放在這個距離內最近的空格（同距離依 (y, x)），沒有就摧毀
 pierce_behind_permille: 700   # 穿透（Phase 3C-5b）：穿過 penetrable 物件後，後方目標受到的傷害‰（物件本身受全額；初值，未經模擬）
+# 3D-7b：爆骰（explode: true）每顆骰最多再擲 explode_max 次；依情況縮放（scaling）的 cap_permille 上限（初值，未經模擬）
+explode_max: 2
+scale_cap_max_permille: 800
 ability_mod_base: 10          # 檢定的屬性修正：(屬性 − 10) // 2
 ability_mod_divisor: 2
 

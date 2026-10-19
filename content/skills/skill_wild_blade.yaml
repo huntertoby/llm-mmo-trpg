@@ -1,0 +1,26 @@
+# 狂野之刃（Phase 3D-7b 示範，高變異；docs/design/06-技能.md 6.17 B，數值為初值，未經模擬）：
+# 基礎傷害 −25%，換來暴擊範圍 17–20 與爆骰（傷害骰擲到最大值再擲一次，每顆最多再擲 2 次）。
+id: skill_wild_blade
+schema_version: 1
+name_zh: 狂野之刃
+tier: 1
+rank: 1
+rarity: rare
+kind: active
+skeleton: strike
+category: weapon
+weapon_req: melee
+ap_cost: 2
+scaling_attr: str
+shape: {type: single, range: weapon}
+effects:
+  - {type: damage, multiplier_permille: 2000, explode: true}
+condition: null
+crit_range: 17
+damage_permille: 750
+cost: {mana: 4, cooldown: 1}
+tags: [physical, melee]
+narrative:
+  concept: 不講章法的亂砍，砍歪了就算了，砍中了就是一場風暴
+  cast_flavor: 你的劍路忽左忽右，毫無章法，卻帶著一股要把空氣劈碎的蠻勁
+provenance: {origin: builtin, owner_id: null, created_by: null, parents: [], bound: true, tradeable: false}

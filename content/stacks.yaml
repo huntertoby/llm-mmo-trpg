@@ -18,3 +18,17 @@ stacks:
     max: 3
     expires_after_rounds: 3
     ai_value: 3
+  # 超載（Phase 3D-7b，docs/design/06-技能.md 6.17 D；數值為初值，未經模擬）：持有者帶 overcurrent 標籤的技能每層傷害 +20%；
+  # 累積到 5 層時立刻承受 2d6 雷電反噬（不致命，最多留 1 HP）並清空。
+  - id: overload_surge
+    name_zh: 過載電流
+    description_zh: 累積在施放者自己身上的電流；每層讓你帶「overcurrent」標籤的技能傷害 +20%，累積到 5 層時你立刻被雷擊（2d6 雷電傷害，不致命）並清空全部層數。
+    owner: self
+    max: 5
+    ai_value: 2
+    overload:
+      tag: overcurrent
+      threshold: 5
+      per_stack_damage_permille: 200
+      backlash:
+        - {type: damage, dice: 2d6, element: lightning}

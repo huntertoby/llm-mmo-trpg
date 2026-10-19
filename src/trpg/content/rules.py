@@ -118,6 +118,10 @@ class CoreRules(ContentModel):
     pierce_behind_permille: int = Field(default=700, ge=1, le=1000)
     """穿透（Phase 3C-5b）：穿過 ``penetrable`` 物件之後，後方目標受到的傷害（‰；物件本身受全額
     傷害）。舊紀錄沒有此欄位。"""
+    explode_max: int = Field(default=2, ge=1, le=5)
+    """爆骰（``explode: true``，Phase 3D-7b）：每顆骰最多再擲的次數。舊紀錄沒有此欄位。"""
+    scale_cap_max_permille: int = Field(default=800, ge=1, le=5000)
+    """依情況縮放（``scaling``，Phase 3D-7b）：``cap_permille`` 的上限（‰）。舊紀錄沒有此欄位。"""
     steadfast_push_permille: int = Field(ge=0, le=1000)
     ability_mod_base: int
     ability_mod_divisor: int = Field(ge=1)

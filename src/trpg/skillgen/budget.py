@@ -28,6 +28,7 @@ from trpg.content.battle import Dice, StatusDef
 from trpg.content.library import ContentLibrary
 from trpg.content.skill_rules import BudgetRules, ModifierBudget
 from trpg.content.skills import (
+    ADD_STACK,
     DAMAGE_MULTIPLIER,
     EXTRA_REACTION,
     GRANT_AP,
@@ -152,7 +153,107 @@ def _fmt(value: Fraction) -> str:
     return f"{float(value):g}"
 
 
-def _base_points(  # noqa: PLR0911
+def _base_points(
+    skill: SkillDef, effect: EffectSpec, primitive: PrimitiveDef, library: ContentLibrary
+) -> tuple[Fraction, str]:
+    """基礎點數（含強度）與一句說明；傷害效果再乘高變異、縮放與超載的期望值係數（3D-7b）。"""
+    points, note = _plain_base_points(skill, effect, primitive, library)
+    if effect.type != "damage":
+        return points, note
+    factor, extra = _variance_factor(skill, effect, library)
+    return (points * factor, f"{note}{extra}") if extra else (points, note)
+
+
+def _explode_ratio(sides: int, rerolls: int) -> Fraction:
+    """爆骰的期望值倍率：每顆骰平均 ``E_k = (s+1)/2 + E_(k-1)/s`` 除以 ``E_0``（k 為再擲上限）。"""
+    base = Fraction(sides + 1, 2)
+    value = base
+    for _ in range(rerolls):
+        value = base + value / sides
+    return value / base
+
+
+def _variance_factor(
+    skill: SkillDef, effect: EffectSpec, library: ContentLibrary
+) -> tuple[Fraction, str]:
+    """傷害效果的期望值係數（3D-7b；爆骰、暴擊範圍、基礎傷害折扣、縮放、超載）與說明（沒有時為空）。
+
+    係數相乘；爆骰與暴擊範圍只影響傷害中「骰子」的部分（法術技整個傷害都是骰子；武器技見
+    ``variance_dice_share_permille``）。
+    """
+    budget, core = library.budget, library.ruleset.core
+    share = (
+        Fraction(1)
+        if skill.category == "spell"
+        else Fraction(budget.variance_dice_share_permille, _PERMILLE)
+    )
+    factor, notes = Fraction(1), []
+    if effect.explode:
+        sides = effect.dice.sides if effect.dice is not None else budget.explode_weapon_sides
+        ratio = 1 + (_explode_ratio(sides, core.explode_max) - 1) * share
+        factor *= ratio
+        notes.append(f"爆骰 ×{_fmt(ratio)}")
+    if skill.crit_range is not None:
+        extra_crit = Fraction(20 - skill.crit_range, 20)
+        ratio = 1 + extra_crit * share
+        factor *= ratio
+        notes.append(f"暴擊 {skill.crit_range}–20 ×{_fmt(ratio)}")
+    if skill.damage_permille is not None:
+        factor *= Fraction(skill.damage_permille, _PERMILLE)
+        notes.append(f"基礎傷害 ×{skill.damage_permille / _PERMILLE:g}")
+    if effect.scaling is not None:
+        steps = Fraction(budget.scale_expected_steps_milli[effect.scaling.by], _PERMILLE)
+        bonus = min(steps * effect.scaling.per_step_permille, Fraction(effect.scaling.cap_permille))
+        ratio = 1 + bonus / _PERMILLE
+        factor *= ratio
+        notes.append(f"縮放（預估 {_fmt(steps)} 步）×{_fmt(ratio)}")
+    overload = _overload_ratio(skill, library)
+    if overload != 1:
+        factor *= overload
+        notes.append(f"超載 ×{_fmt(overload)}")
+    return factor, "".join(f"，{n}" for n in notes)
+
+
+def _overload_ratio(skill: SkillDef, library: ContentLibrary) -> Fraction:
+    """帶超載標籤的技能，傷害的期望值倍率：每個超載層數 ＝ 平均層數 ×（‰ 加成）× 估計比例。"""
+    bonus = Fraction(0)
+    for stack in library.ruleset.stacks.stacks:
+        overload = stack.overload
+        if overload is None or overload.tag not in skill.tags:
+            continue
+        average = Fraction(overload.threshold - 1, 2)
+        bonus += (
+            average * overload.per_stack_damage_permille * library.budget.overload_expected_permille
+        )
+    return 1 + bonus / (_PERMILLE * _PERMILLE)
+
+
+def _overload_stack_cost(
+    effect: EffectSpec, library: ContentLibrary
+) -> tuple[Fraction, str] | None:
+    """累積超載層數的代價（負點數）：反噬點數 × 自傷折合 × 層數 ÷ 門檻；不是超載層數為 ``None``。"""
+    stack = library.ruleset.stack_def(effect.stack) if effect.stack else None
+    if stack is None or stack.overload is None:
+        return None
+    rules = library.ruleset
+    backlash = Fraction(0)
+    for sub in stack.overload.backlash:
+        if sub.type == "damage":
+            assert sub.dice is not None
+            backlash += _dice_average(sub.dice)
+        else:
+            backlash += _status_points(sub, rules.statuses.by_id())[0]
+    harm = Fraction(library.budget.gamble_self_harm_permille, _PERMILLE)
+    amount = effect.amount or 1
+    cost = backlash * harm * amount / stack.overload.threshold
+    return (
+        -cost,
+        f"超載反噬 {_fmt(backlash)} × 自傷折合 {_fmt(harm)} × {amount} 層"
+        f" ÷ 門檻 {stack.overload.threshold}",
+    )
+
+
+def _plain_base_points(  # noqa: PLR0911
     skill: SkillDef, effect: EffectSpec, primitive: PrimitiveDef, library: ContentLibrary
 ) -> tuple[Fraction, str]:
     """基礎點數（含強度）與一句說明。"""
@@ -542,6 +643,8 @@ def _effect_budget(
     if primitive is None:
         raise BudgetError(f"未知的效果原語 {effect.type!r}")
     base, note = _base_points(skill, effect, primitive, library)
+    if effect.type == ADD_STACK and (overload_cost := _overload_stack_cost(effect, library)):
+        base, note = overload_cost  # 超載層數沒有「消耗」的技能，累積它只有反噬的代價（3D-7b）
     affects = resolved_affects(rules, effect)
     # consume_stack 的加成點數已含傷害效果的形狀倍率
     shape = (

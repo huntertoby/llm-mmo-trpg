@@ -224,6 +224,24 @@ class BudgetRules(ContentModel):
     （‰）後從總點數扣除（Phase 3D-7a；初值）。"""
     gamble_on_miss_rate_permille: int = Field(default=300, ge=0, le=1000)
     """失手反噬 ``cost.on_miss`` 的預估觸發率（‰；Phase 3D-7a；約等於未命中的比例，初值）。"""
+    variance_dice_share_permille: int = Field(default=700, ge=0, le=1000)
+    """高變異（Phase 3D-7b）：武器技的傷害裡「骰子」所占的比例（‰；其餘是固定值與屬性加成）。
+    爆骰與擴大暴擊範圍只增加骰子的部分（初值，未經模擬）。"""
+    explode_weapon_sides: int = Field(default=8, ge=2, le=20)
+    """武器技的 ``explode`` 以幾面骰估計期望值（法術技用自己的骰子面數；Phase 3D-7b；初值）。"""
+    scale_expected_steps_milli: dict[str, int] = Field(
+        default_factory=lambda: {
+            "missing_hp_10pct": 2000,
+            "distance": 3000,
+            "enemies_adjacent_target": 1500,
+            "enemies_adjacent_self": 1500,
+        }
+    )
+    """依情況縮放（Phase 3D-7b）：每種依據預估的平均步數（千分之一步）。"""
+    overload_expected_permille: int = Field(default=1000, ge=0, le=3000)
+    """超載（Phase 3D-7b）：帶標籤技能的傷害加成以「平均層數 ＝ (門檻 − 1) ÷ 2」×
+    這個比例（‰）估計；累積層數的技能另外扣「反噬點數 × 自傷折合 ÷ 門檻 × 累積層數」
+    （初值，未經模擬）。"""
     condition_permille: dict[Literal["none", "common", "harsh"], int]
     all_target_permille: int = Field(ge=1, le=1000)
     """``affects: all``（敵我不分）的對象係數。"""
