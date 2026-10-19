@@ -1,0 +1,24 @@
+# 汲命術（Phase 3D-8a 示範，吸血；docs/design/06-技能.md 6.18 A，數值為初值，未經模擬）：
+# 對單一敵人造成暗影傷害，並回復造成傷害的 40%（扣掉護盾吸收之後）。
+id: skill_life_drain
+schema_version: 1
+name_zh: 汲命術
+tier: 1
+rank: 1
+rarity: rare
+kind: active
+skeleton: strike
+category: spell
+weapon_req: focus
+ap_cost: 1
+scaling_attr: wis
+shape: {type: single, range: 4}
+effects:
+  - {type: damage, dice: 1d10, element: shadow, lifesteal_permille: 400}
+condition: null
+cost: {mana: 6, cooldown: 2}
+tags: [shadow, spell, drain]
+narrative:
+  concept: 把敵人的生命力一口一口吸過來，補給自己
+  cast_flavor: 一縷暗紅的細線從敵人胸口牽到你掌心，他的力氣順著線流進你的身體
+provenance: {origin: builtin, owner_id: null, created_by: null, parents: [], bound: true, tradeable: false}

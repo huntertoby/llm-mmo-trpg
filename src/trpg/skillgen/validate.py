@@ -31,6 +31,7 @@ from trpg.content.skill_rules import (
 )
 from trpg.content.skills import (
     ON_MISS_MIN_RARITY,
+    SPLIT_SKELETONS,
     EffectSpec,
     SkillDef,
     rarity_rank,
@@ -432,6 +433,8 @@ def _skeleton_violations(
         add("required_primitive", f"效果至少要有 {'、'.join(needed)} 其中之一")
     forbidden = set(skeleton.forbid_affects)
     for index, effect in enumerate(skill.effects):
+        if effect.split_heal and skeleton.id in SPLIT_SKELETONS:
+            continue  # 聖光雙效（3D-8a）：對敵傷害、對友治療是同一個效果，光環骨架也允許
         actual = affect_set(resolved_affects(library.ruleset, effect))
         if actual & forbidden:
             add(
@@ -447,6 +450,8 @@ def _has_condition(skill: SkillDef) -> bool:
 
 
 def _is_core(library: ContentLibrary, skeleton: SkeletonDef, effect: EffectSpec) -> bool:
+    if effect.split_heal and skeleton.id in SPLIT_SKELETONS:
+        return True  # 聖光雙效（3D-8a）是光環與範圍骨架的核心
     if effect.type not in skeleton.core.primitives:
         return False
     if skeleton.core.affects is None:

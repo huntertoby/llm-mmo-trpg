@@ -55,6 +55,9 @@
 #   polarity  分類：buff 增益（steal_buff 可奪取、dispel 可驅散）／debuff 減益／neutral 中性（姿態、隱蔽、不死、
 #             靈魂連結等帶有來源或唯一性語意的狀態，不能被奪取或驅散）。每個狀態都必須填；buff 必須 beneficial: true、
 #             debuff 不可 beneficial。
+# 3D-8a（揭露）：
+#   prevents_concealment  被揭露：帶有者不算隱蔽（連黑暗表面、草叢也不算），也不能獲得 concealed 狀態。只能由 reveal 原語施加
+#                         （無 budget_points）
 # control_group 新增 mental（心智：恐懼、沉默）：適用控制遞減，不是 hard，對 Boss 不轉換。
 statuses:
   - id: defending
@@ -94,6 +97,14 @@ statuses:
     budget_points: 3
     min_rarity: rare
     beneficial: true
+  - id: revealed
+    polarity: debuff
+    name_zh: 被揭露
+    description_zh: 不算隱蔽（黑暗與草叢也一樣），也不能再獲得隱蔽。只能由揭露（reveal）施加。
+    duration: 2
+    expires: turn_end
+    stacking: refresh
+    prevents_concealment: true
   - id: slow
     polarity: debuff
     name_zh: 緩速

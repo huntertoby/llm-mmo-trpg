@@ -249,6 +249,11 @@ class StatusDef(ContentModel):
     - ``polarity``：增益／減益／中性分類（必填）。``steal_buff`` 只能奪取 ``buff``；``neutral``
       （姿態、隱蔽、不死、靈魂連結）帶有來源或唯一性語意，不能被奪取。
 
+    Phase 3D-8a 的欄位：
+
+    - ``prevents_concealment``：被揭露（``reveal``）——帶有者不算隱蔽（連黑暗表面與草叢也不算），
+      也不能獲得 ``concealed`` 狀態。
+
     Phase 3C-4b 的欄位：
 
     - ``redirects_damage``：靈魂連結——帶有者受到的傷害有 ``StatusInstance.amount``‰ 轉給狀態來源
@@ -274,6 +279,7 @@ class StatusDef(ContentModel):
     removed_by_element: tuple[Element, ...] = ()
     prevents_death: bool = False
     redirects_damage: bool = False
+    prevents_concealment: bool = False
     move_permille: int = Field(default=1000, ge=0, le=10000)
     prevents_move: bool = False
     skip_turn: bool = False

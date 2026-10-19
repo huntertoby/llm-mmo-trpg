@@ -161,6 +161,9 @@ def _base_points(
     if effect.type != "damage":
         return points, note
     factor, extra = _variance_factor(skill, effect, library)
+    if effect.split_heal and effect.dice is not None:  # 聖光雙效（3D-8a）：傷害與治療兩邊都計
+        heal = _dice_average(effect.dice)
+        return points * factor + heal, f"{note}{extra}＋ 友方治療 {_fmt(heal)}"
     return (points * factor, f"{note}{extra}") if extra else (points, note)
 
 
@@ -207,6 +210,11 @@ def _variance_factor(
         ratio = 1 + bonus / _PERMILLE
         factor *= ratio
         notes.append(f"縮放（預估 {_fmt(steps)} 步）×{_fmt(ratio)}")
+    if effect.lifesteal_permille is not None:  # 吸血（3D-8a）：回復的 HP 折合傷害點數
+        value = library.budget.lifesteal_value_permille
+        ratio = 1 + Fraction(effect.lifesteal_permille * value, _PERMILLE * _PERMILLE)
+        factor *= ratio
+        notes.append(f"吸血 {effect.lifesteal_permille / 10:g}% ×{_fmt(ratio)}")
     overload = _overload_ratio(skill, library)
     if overload != 1:
         factor *= overload
@@ -309,6 +317,30 @@ def _restore_resource_points(
         )
     permille = rules.restore_mana_point_permille
     return Fraction(permille * amount, _PERMILLE), f"法力 {amount} × {permille}‰"
+
+
+def _dispel_points(
+    _skill: SkillDef, effect: EffectSpec, library: ContentLibrary
+) -> tuple[Fraction, str]:
+    """``dispel`` 的點數（3D-8a）：驅散 1 個 ``dispel_one_points``、全部 ``dispel_all_points``。"""
+    rules = library.budget
+    if effect.count == "all":
+        return Fraction(rules.dispel_all_points), "驅散全部增益"
+    return Fraction(rules.dispel_one_points), "驅散 1 個增益"
+
+
+def _reveal_points(
+    _skill: SkillDef, effect: EffectSpec, library: ContentLibrary
+) -> tuple[Fraction, str]:
+    """``reveal`` 的點數（3D-8a）：``reveal_base_points`` ＋ ``reveal_round_points`` × 回合數。"""
+    if effect.duration is None:
+        raise BudgetError("reveal 缺少 duration，無法計算點數")
+    rules = library.budget
+    points = rules.reveal_base_points + rules.reveal_round_points * effect.duration
+    return (
+        Fraction(points),
+        f"揭露 {rules.reveal_base_points} ＋ {rules.reveal_round_points}×{effect.duration} 回合",
+    )
 
 
 def _hurl_object_points(
@@ -582,6 +614,8 @@ _SPECIAL_BASES: dict[
     "restore_resource": _restore_resource_points,
     "rule_change": _rule_change_points,
     "gamble": _gamble_points,
+    "dispel": _dispel_points,
+    "reveal": _reveal_points,
 }
 """需要整個技能或特殊規則的 ``budget_basis`` → 點數算法。"""
 

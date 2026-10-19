@@ -1,0 +1,25 @@
+# 破魔（Phase 3D-8a 示範，驅散；docs/design/06-技能.md 6.18 J，數值為初值，未經模擬）：
+# 驅散敵人身上的全部增益，並附帶一點暗影傷害。
+id: skill_dispel_magic
+schema_version: 1
+name_zh: 破魔
+tier: 1
+rank: 1
+rarity: rare
+kind: active
+skeleton: control
+category: spell
+weapon_req: focus
+ap_cost: 1
+scaling_attr: int
+shape: {type: single, range: 4}
+effects:
+  - {type: dispel, count: all, affects: enemies}
+  - {type: damage, dice: 1d3, element: shadow}
+condition: null
+cost: {mana: 5, cooldown: 3}
+tags: [shadow, spell, dispel]
+narrative:
+  concept: 把敵人身上的祝福與護符一把全撕下來
+  cast_flavor: 你的指尖劃過空氣，敵人身上閃爍的光像紙片一樣剝落
+provenance: {origin: builtin, owner_id: null, created_by: null, parents: [], bound: true, tradeable: false}

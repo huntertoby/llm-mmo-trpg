@@ -55,6 +55,14 @@ zone_surface_permille: 300
 # 3D-1：restore_resource 的點數（初值，未經模擬）：法力每點 700‰ 點、冷卻每回合 3 點
 restore_mana_point_permille: 700
 restore_cooldown_points: 3
+# 3D-8a：驅散與揭露的點數（初值，未經模擬）：驅散 1 個增益 3 點、全部 6 點；揭露 ＝ 2 ＋ 1 × duration 點。
+dispel_one_points: 3
+dispel_all_points: 6
+reveal_base_points: 2
+reveal_round_points: 1
+# 3D-8a 吸血：回復的 HP 折合傷害點數的比例（‰）：傷害效果點數 × (1 ＋ lifesteal_permille × 此值 ÷ 10⁶)。聖光雙效
+# （split_heal）的點數 ＝ 傷害點數 ＋ 治療點數（骰子平均），再乘形狀與 affects: all 的對象係數。初值，未經模擬。
+lifesteal_value_permille: 800
 # 穿透（Phase 3C-5b）：技能有 pierce: true 時，總點數 ×（1000 ＋ 這個值）÷ 1000（無視半掩護、穿過木製物件；
 # 後方目標只受 core.yaml 的 pierce_behind_permille 傷害，所以只加一點）。初值，未經模擬。
 pierce_bonus_permille: 150

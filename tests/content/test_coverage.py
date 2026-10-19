@@ -28,6 +28,7 @@ _STATUS_VIA_PRIMITIVE = {
     "shielded": "shield",
     "undying": "cheat_death",
     "soul_link": "redirect_damage",  # 3C-4b
+    "revealed": "reveal",  # 3D-8a
 }
 
 

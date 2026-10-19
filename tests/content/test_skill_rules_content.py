@@ -85,6 +85,8 @@ def test_the_initial_skeleton_structure_matches_the_spec() -> None:
         "raise_terrain",
         "lower_terrain",
         "steal_buff",  # 3D-1
+        "dispel",  # 3D-8a
+        "reveal",  # 3D-8a
         "zone",  # 3D-5
     }
     assert sk["control"].secondary.max_share_permille == {"damage": 400}

@@ -52,6 +52,7 @@ __all__ = [
     "COPY_SKILL",
     "DAMAGE_MULTIPLIER",
     "DASH",
+    "DISPEL",
     "EXTRA_REACTION",
     "GAMBLE",
     "GAMBLE_BRANCH_TYPES",
@@ -61,6 +62,7 @@ __all__ = [
     "INTERCEPT",
     "LEAP",
     "LEGACY_REACTION_EVENTS",
+    "MAX_LIFESTEAL_PERMILLE",
     "MIN_SKILL_CRIT_RANGE",
     "MODIFIER_CHANGES",
     "ON_HIT_PRIMITIVES",
@@ -75,6 +77,7 @@ __all__ = [
     "REQUIRED_CONDITIONS",
     "REQUIRED_SHAPES",
     "RESET_COOLDOWN",
+    "REVEAL",
     "RULE_CHANGE",
     "SCALE_BY_VALUES",
     "SELF_CONDITIONS",
@@ -83,6 +86,7 @@ __all__ = [
     "SKELETON_IDS",
     "SKILL_ID_PATTERN",
     "SKILL_REACTION_EVENTS",
+    "SPLIT_SKELETONS",
     "SUMMON",
     "SWAP",
     "SWAP_ANY",
@@ -434,6 +438,7 @@ class PrimitiveParam(ContentModel):
         "zone_when",
         "rule_change",
         "scaling",
+        "count",
     ]
     required: bool = False
     min: int | None = None
@@ -494,6 +499,8 @@ class PrimitiveDef(ContentModel):
             "zone",
             "rule_change",
             "gamble",
+            "dispel",
+            "reveal",
         ]
         | None
     ) = None
@@ -668,6 +675,8 @@ SCALE_BY_VALUES: tuple[str, ...] = (
 )
 """依情況縮放（Phase 3D-7b，6.17 E、6.18 G）的依據：施放者每少 10% 最大 HP、與目標的距離（格）、
 目標相鄰的敵方數、施放者相鄰的敵方數。"""
+MAX_LIFESTEAL_PERMILLE = 500
+"""吸血（``lifesteal_permille``，Phase 3D-8a）的上限（‰）。"""
 MIN_SKILL_CRIT_RANGE = 15
 """技能 ``crit_range`` 的下限（Phase 3D-7b，6.17 B）。"""
 ON_MISS_MIN_RARITY = "rare"
@@ -733,8 +742,9 @@ class EffectSpec(ContentModel):
     擊倒（對抗判定）或 ``push_aside`` 推到路徑旁一格。"""
     unit: str | None = Field(default=None, pattern=ID_PATTERN)
     """``summon`` 專用（Phase 3D-4a）：召喚物範本 ID（``content/units/summons/``）。"""
-    count: int | None = Field(default=None, ge=1)
-    """``summon`` 專用（Phase 3D-4a）：一次召喚的數量（目前只能是 1）。"""
+    count: int | Literal["all"] | None = Field(default=None)
+    """``summon`` 專用（Phase 3D-4a）：一次召喚的數量（目前只能是 1）。``dispel`` 專用
+    （Phase 3D-8a）：驅散的增益個數（1）或 ``all``（全部）。"""
     anchor: Literal["tile", "caster", "moving"] | None = None
     """``zone`` 專用（Phase 3D-5）：``tile`` 固定在施放時的格子、``caster`` 跟隨施放者、``moving``
     每次環境回合沿施放方向前進 ``speed`` 格。"""
@@ -763,6 +773,13 @@ class EffectSpec(ContentModel):
     ``core.explode_max`` 次。只有主技能效果（不含賭注分支與 ``then``）可以用。"""
     scaling: ScaleSpec | None = None
     """``damage`` 專用（Phase 3D-7b，6.17 E、6.18 G）：依情況縮放傷害。"""
+    lifesteal_permille: int | None = Field(default=None, ge=1, le=MAX_LIFESTEAL_PERMILLE)
+    """``damage`` 專用（Phase 3D-8a，6.18 A）：吸血——施放者回復「這個效果實際造成的傷害（扣掉護盾
+    吸收）」的 n‰（無條件捨去，不超過最大 HP）。只有技能自己的傷害效果可以用。"""
+    split_heal: bool | None = None
+    """``damage`` 專用（Phase 3D-8a，6.18 B）：聖光雙效——必須搭配 ``affects: all``；敵方依一般命中
+    判定受到傷害、友方（含施放者）不擲命中而改為治療同樣的骰值（骰一次）。只能用在 ``aura``、
+    ``area`` 骨架的法術技。"""
     effects: tuple[EffectSpec, ...] | None = None
     """``zone`` 專用（Phase 3D-5）：區域結算的效果（1–2 個，只能用 :data:`ZONE_EFFECT_TYPES`，
     不可自帶 ``affects``／``condition``；對象由區域的 ``affects`` 決定）。"""
@@ -784,6 +801,7 @@ class EffectSpec(ContentModel):
             "element",
             "explode",
             "knock_prone",
+            "lifesteal_permille",
             "lose",
             "multiplier_permille",
             "object",
@@ -797,6 +815,7 @@ class EffectSpec(ContentModel):
             "scaling",
             "self_damage_permille_of_hit",
             "speed",
+            "split_heal",
             "splash",
             "stack",
             "status",
@@ -949,6 +968,11 @@ EXTRA_REACTION = "extra_reaction"
 RESTORE_RESOURCE = "restore_resource"
 STEAL_BUFF = "steal_buff"
 """Phase 3D-1 的資源互動原語 ID（6.16 H）。"""
+DISPEL = "dispel"
+REVEAL = "reveal"
+"""Phase 3D-8a 的原語 ID（6.18 J、I）：驅散敵方增益、揭露隱蔽與陷阱。"""
+SPLIT_SKELETONS: tuple[str, ...] = ("aura", "area")
+"""``split_heal``（聖光雙效）可以使用的骨架。"""
 DASH = "dash"
 LEAP = "leap"
 SWAP = "swap"
@@ -1852,16 +1876,41 @@ class SkillDef(ContentModel):
             raise ValueError(f"{where}：冷卻最多縮短 {_MAX_COOLDOWN_RESTORE} 回合")
 
     def _check_variable_damage(self, where: str, effect: EffectSpec, *, top: bool) -> None:
-        """``explode`` 與 ``scaling``（Phase 3D-7b）：只有技能自己的 ``damage`` 效果可以用（不能在
-        賭注分支、失手反噬、``then`` 裡）；``scaling.cap_permille`` 的上限是跨檔案檢查。"""
-        if effect.explode is None and effect.scaling is None:
+        """``explode``、``scaling``（Phase 3D-7b）與 ``lifesteal_permille``、``split_heal``
+        （Phase 3D-8a）：只有技能自己的 ``damage`` 效果可以用（不能在賭注分支、失手反噬、``then``
+        裡）；``scaling.cap_permille`` 的上限是跨檔案檢查。"""
+        if (
+            effect.explode is None
+            and effect.scaling is None
+            and effect.lifesteal_permille is None
+            and effect.split_heal is None
+        ):
             return
         if effect.type != "damage":
-            raise ValueError(f"{where}：只有 damage 使用 explode、scaling")
+            raise ValueError(f"{where}：只有 damage 使用 explode、scaling、lifesteal、split_heal")
         if not top:
-            raise ValueError(f"{where}：explode、scaling 只能用在技能自己的傷害效果")
+            raise ValueError(
+                f"{where}：explode、scaling、lifesteal、split_heal 只能用在技能自己的傷害效果"
+            )
         if effect.explode is False:
             raise ValueError(f"{where}：explode 只能填 true（不爆骰就省略）")
+        if effect.split_heal is not None:
+            self._check_split_heal(where, effect)
+
+    def _check_split_heal(self, where: str, effect: EffectSpec) -> None:
+        """``split_heal``（聖光雙效）：只能填 true、``affects: all``、法術技、``aura``／``area``
+        骨架、主動技能，不可與吸血、爆骰、縮放並用（治療與傷害要用同一個骰值）。"""
+        if effect.split_heal is False:
+            raise ValueError(f"{where}：split_heal 只能填 true（不分流就省略）")
+        if effect.affects != "all":
+            raise ValueError(f"{where}：split_heal 必須搭配 affects: all")
+        if self.category != "spell" or self.kind != "active":
+            raise ValueError(f"{where}：split_heal 只能用在主動的法術技")
+        if self.skeleton not in SPLIT_SKELETONS:
+            allowed = "、".join(SPLIT_SKELETONS)
+            raise ValueError(f"{where}：split_heal 只能用在 {allowed} 骨架，收到 {self.skeleton}")
+        if effect.lifesteal_permille is not None or effect.explode or effect.scaling is not None:
+            raise ValueError(f"{where}：split_heal 不能與 lifesteal、explode、scaling 並用")
 
     def _check_variance(self) -> None:
         """``crit_range``、``damage_permille`` 需要有傷害效果、只能用在主動技能。"""
@@ -1995,11 +2044,24 @@ def _int_param_problems(where: str, values: dict[str, int | str], shape: ShapeDe
     return problems
 
 
+def _count_problem(where: str, primitive: PrimitiveDef, name: str, value: object) -> str | None:
+    """``count`` 型參數（Phase 3D-8a）：``all`` 或 ``min``–``max`` 的整數。"""
+    spec = primitive.params[name]
+    if value == "all":
+        return None
+    low, high = spec.min or 1, spec.max
+    if isinstance(value, int) and low <= value and (high is None or value <= high):
+        return None
+    return f"{where}.{name}：{primitive.id} 的 {name} 必須在 {low}–{high} 或 all，收到 {value!r}"
+
+
 def _value_problem(
     where: str, primitive: PrimitiveDef, name: str, value: object, refs: _Refs
 ) -> str | None:
     """單一原語參數值的問題（範圍或引用不存在）。"""
     spec = primitive.params[name]
+    if spec.type == "count":
+        return _count_problem(where, primitive, name, value)
     if spec.type == "int":
         assert isinstance(value, int)
         below = spec.min is not None and value < spec.min

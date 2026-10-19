@@ -1,0 +1,24 @@
+# 照明彈（Phase 3D-8a 示範，揭露；docs/design/06-技能.md 6.18 I，數值為初值，未經模擬）：
+# 在 3×3 範圍內升起強光：範圍內的敵人失去隱蔽、2 回合內不能再隱蔽，範圍內的敵方陷阱對我方顯示。
+id: skill_flare_sight
+schema_version: 1
+name_zh: 照明彈
+tier: 1
+rank: 1
+rarity: rare
+kind: active
+skeleton: control
+category: spell
+weapon_req: focus
+ap_cost: 1
+scaling_attr: int
+shape: {type: square3, range: 6}
+effects:
+  - {type: reveal, duration: 2}
+condition: null
+cost: {mana: 4, cooldown: 3}
+tags: [light, spell, scout, reveal]
+narrative:
+  concept: 把藏在暗處的人與機關全部照出來
+  cast_flavor: 你把一團白光拋上半空，在空中炸開，連最深的影子都無處可躲
+provenance: {origin: builtin, owner_id: null, created_by: null, parents: [], bound: true, tradeable: false}

@@ -1,0 +1,24 @@
+# 聖光爆發（Phase 3D-8a 示範，聖光雙效；docs/design/06-技能.md 6.18 B，數值為初值，未經模擬）：
+# 在選定的中心格炸開一團聖光，3×3 範圍內的友方被治療、敵方被灼傷，同一個骰值（敵方依命中判定、友方不擲命中）。
+id: skill_holy_burst
+schema_version: 1
+name_zh: 聖光爆發
+tier: 2
+rank: 1
+rarity: rare
+kind: active
+skeleton: area
+category: spell
+weapon_req: focus
+ap_cost: 2
+scaling_attr: wis
+shape: {type: square3, range: 4}
+effects:
+  - {type: damage, dice: 1d12, element: holy, affects: all, split_heal: true}
+condition: null
+cost: {mana: 10, cooldown: 3}
+tags: [holy, spell, heal, area]
+narrative:
+  concept: 同一束光，對同伴是溫暖，對敵人是灼燒
+  cast_flavor: 聖光在你指定的地方轟然綻放，同伴沐浴其中，敵人卻睜不開眼
+provenance: {origin: builtin, owner_id: null, created_by: null, parents: [], bound: true, tradeable: false}

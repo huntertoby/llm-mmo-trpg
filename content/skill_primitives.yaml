@@ -24,6 +24,8 @@ primitives:
       element: {type: element, description_zh: 法術技必填；武器技省略時繼承武器元素}
       explode: {type: bool, description_zh: "爆骰（Phase 3D-7b）：擲到最大值再加擲一次，每顆骰最多再擲 core.explode_max 次；只能填 true"}
       scaling: {type: scaling, description_zh: "依情況縮放（Phase 3D-7b）：by／per_step_permille／cap_permille 三個欄位；每一步傷害 +n‰（無條件捨去）、cap_permille 必填且不超過 core.scale_cap_max_permille；by 可為 missing_hp_10pct（施放者每少 10% 最大 HP）、distance（與目標每距 1 格）、enemies_adjacent_target（目標相鄰的敵方數）、enemies_adjacent_self（施放者相鄰的敵方數）"}
+      lifesteal_permille: {type: int, min: 1, max: 500, description_zh: "吸血（Phase 3D-8a）：施放者回復這個效果對敵人實際造成的傷害（扣掉護盾吸收，含溢出）× n‰（無條件捨去，不超過最大 HP）；用 heal 事件、原因 lifesteal；只有技能自己的傷害效果可以用；預算：傷害點數 × (1 ＋ n‰ × lifesteal_value_permille)"}
+      split_heal: {type: bool, description_zh: "聖光雙效（Phase 3D-8a）：必須搭配 affects: all、主動法術技、aura 或 area 骨架，不可與 lifesteal、explode、scaling 並用。敵方依一般命中判定受到傷害、友方（含自己）不擲命中而治療同樣的骰值（骰一次，治療量 ＝ 骰值 ＋ 縮放屬性 × 0.5，受治療倍率影響）；預算傷害與治療兩邊都計；只能填 true"}
   - id: heal
     name_zh: 治療
     description_zh: 治療量＝骰值＋縮放屬性×0.5，不超過最大 HP。
@@ -385,6 +387,27 @@ primitives:
     budget_basis: fixed
     base_points: 4
     forbid_affects: [allies, all, self]
+
+  - id: dispel
+    name_zh: 驅散
+    description_zh: 移除敵方目標身上的 count 個增益（statuses.yaml 中 polarity 為 buff；依剩餘回合最長者先，永久最長，同長依狀態 ID 排序；all 為全部）。中性狀態（姿態、隱蔽、不死、靈魂連結）與減益不是增益，不會被驅散。目標沒有增益時發出 effect_fizzled（no_buff）。預算：1 個 dispel_one_points 點、全部 dispel_all_points 點（skill_budget.yaml）。
+    category: structural
+    harmful: true
+    min_rarity: rare
+    budget_basis: dispel
+    forbid_affects: [allies, all, self]
+    params:
+      count: {type: count, required: true, min: 1, max: 1, description_zh: 驅散的增益個數（1）或 all（全部）}
+  - id: reveal
+    name_zh: 揭露
+    description_zh: 揭露技能範圍內的敵人與陷阱（自動命中，不擲命中判定）：敵人失去 concealed 狀態（原因 revealed），並獲得 revealed 狀態 duration 回合——期間不算隱蔽（黑暗表面與草叢也不算）、不能再獲得 concealed；範圍內的敵方陷阱對施放者的陣營顯示（事件 trap_revealed，只給施放者的陣營）。範圍內沒有敵人也沒有敵方陷阱時發出 effect_fizzled（nothing_hidden）。預算：reveal_base_points ＋ reveal_round_points × duration。
+    category: structural
+    harmful: true
+    min_rarity: rare
+    budget_basis: reveal
+    forbid_affects: [allies, all, self]
+    params:
+      duration: {type: int, required: true, min: 1, max: 3, description_zh: 被揭露的敵人不能再隱蔽的回合數}
 
   # --- Phase 3D-4a：召喚（docs/design/06-技能.md 6.16 B；點數為初值，未經模擬）---
   - id: summon

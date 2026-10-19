@@ -214,6 +214,17 @@ class BudgetRules(ContentModel):
     """``restore_resource`` 回復法力：每點法力折合的預算點數（‰；Phase 3D-1；初值）。"""
     restore_cooldown_points: int = Field(default=3, ge=0)
     """``restore_resource`` 縮短冷卻：每回合折合的預算點數（Phase 3D-1；初值）。"""
+    dispel_one_points: int = Field(default=3, ge=0)
+    """``dispel`` 驅散 1 個增益的預算點數（Phase 3D-8a；初值，未經模擬）。"""
+    dispel_all_points: int = Field(default=6, ge=0)
+    """``dispel`` 驅散全部增益的預算點數（Phase 3D-8a；初值）。"""
+    reveal_base_points: int = Field(default=2, ge=0)
+    reveal_round_points: int = Field(default=1, ge=0)
+    """``reveal`` 的預算點數 ＝ ``reveal_base_points`` ＋ ``reveal_round_points`` × ``duration``
+    （Phase 3D-8a；初值，未經模擬）。"""
+    lifesteal_value_permille: int = Field(default=800, ge=0, le=2000)
+    """吸血（``lifesteal_permille``，Phase 3D-8a）：回復的 HP 折合傷害點數的比例（‰）。傷害效果的
+    點數 × (1 ＋ 吸血‰ × 這個值 ÷ 10⁶)（初值，未經模擬）。"""
     pierce_bonus_permille: int = Field(default=150, ge=0, le=1000)
     """有 ``pierce`` 的技能，總點數再加這個比例（‰；Phase 3C-5b；初值，未經模擬）。"""
     gamble_variance_bonus_permille: int = Field(default=1100, ge=1000, le=2000)

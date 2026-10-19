@@ -59,6 +59,8 @@ def mechanic_tags(skill: SkillDef, rules: Ruleset) -> tuple[str, ...]:
         kind = effect.type
         if kind == "damage":
             found.add("damage")
+            if effect.split_heal:  # 聖光雙效（3D-8a）：友方改為治療
+                found.add("heal")
         elif kind == "heal":
             found.add("heal")
         elif kind in _DISPLACE:

@@ -24,6 +24,8 @@ companions: [sim_companion_fighter, sim_companion_archer]
 # Phase 3C-2：修正技能（kind: modifier，裝在被動欄位，上限 3）——build_push 加重踏、build_fire 加灼傷之痕與餘燼循環、
 # build_tank 加雷之手（單手劍的物理普攻變成雷電，3C-5 再整理）。
 # Phase 3D-7b：build_gambler 加狂野之刃（高變異）、狂戰士之怒（以血換力）；build_striker 加過載電流（超載）；build_ranged 以遠距狙擊（依距離縮放）換下煙霧箭（主動欄位已滿）；build_tank 以困獸旋斬（依周圍敵人數縮放）換下碎骨重擊（主動欄位已滿）。
+# Phase 3D-8a：build_support 以汲命術（吸血）換下專注湧流、build_healer 以聖光爆發（聖光雙效）換下疾時之潮（兩者主動欄位已滿）；新增 build_seer
+# （偵察破咒流）：破魔（驅散）、照明彈（揭露）搭配竊取祝福、咒印，並接收被換下的專注湧流與疾時之潮（3C-6 再整理）。
 # Phase 3D-7a：新增 build_gambler（賭徒／狂戰士流）：血祭重擊（賭注）、孤注一擲（失手反噬）搭配捨身突刺、狂怒姿態與嗜血（3C-6 再整理）。
 builds:
   - id: build_push
@@ -139,7 +141,7 @@ builds:
       resist: {elemental: 150}
       tags: [hero, sim]
       max_mana: 40
-      skills: [skill_war_hymn, skill_tailwind, skill_frost_shackle, skill_reflex_ward, skill_steady_breath, skill_rallying_cry, skill_mirror_cast, skill_focus_surge]
+      skills: [skill_war_hymn, skill_tailwind, skill_frost_shackle, skill_reflex_ward, skill_steady_breath, skill_rallying_cry, skill_mirror_cast, skill_life_drain]
 
   - id: build_healer
     name_zh: 治療
@@ -156,7 +158,7 @@ builds:
       resist: {elemental: 150}
       tags: [hero, sim]
       max_mana: 40
-      skills: [skill_sanctuary, skill_renewal, skill_purify, skill_guardian_aegis, skill_second_wind, skill_undying_oath, skill_quicken_tide, skill_beam_of_mercy, skill_self_mending]
+      skills: [skill_sanctuary, skill_renewal, skill_purify, skill_guardian_aegis, skill_second_wind, skill_undying_oath, skill_beam_of_mercy, skill_self_mending, skill_holy_burst]
 
   - id: build_warlock
     name_zh: 術士
@@ -292,3 +294,20 @@ builds:
       tags: [hero, sim]
       max_mana: 24
       skills: [skill_blood_sacrifice, skill_all_in, skill_wild_blade, skill_berserker_rage, skill_reckless_lunge, skill_fury_stance, skill_bloodlust, skill_grief_rage]
+
+  - id: build_seer
+    name_zh: 偵察破咒流
+    theme_zh: 照明彈照出藏在暗處的敵人與陷阱、破魔剝光敵人身上的增益、竊取祝福把好處據為己有，專注湧流與疾時之潮替自己與隊友加速，再以咒印收尾。對方有隱蔽、增益與陷阱的地圖（黑暗、草叢、有祭司的敵人）最有用，在只有赤裸裸硬碰硬的戰鬥裡輸出偏低（Phase 3D-8a，初值未經模擬）。
+    hero:
+      id: build_seer
+      name_zh: 偵察破咒流英雄
+      attributes: {str: 8, dex: 12, con: 10, int: 16, wis: 12, wil: 12}
+      max_hp: 40
+      speed: 5
+      armor_bonus: 1
+      weapon: fire_staff
+      ai_profile: cunning
+      resist: {elemental: 150}
+      tags: [hero, sim]
+      max_mana: 40
+      skills: [skill_dispel_magic, skill_flare_sight, skill_blessing_thief, skill_focus_surge, skill_quicken_tide, skill_hex_bolt]
