@@ -606,13 +606,15 @@ class TrapSpec(ContentModel):
 
     - ``trigger``：``enter`` 為敵人進入陷阱格時觸發、``rounds`` 輪（放置者的回合開始時倒數）後
       未觸發就消失；``delay`` 為 ``rounds`` 輪後（放置者回合開始時）觸發。
-    - ``shape``：觸發時以陷阱格為中心的影響範圍（``single``、``cross``、``square3``）。
+    - ``shape``：觸發時以陷阱格為中心的影響範圍；形狀 ID（``single``、``cross``、``square3``）須
+      存在於 ``content/skill_shapes.yaml``（跨檔案檢查，見 :func:`skill_problems`；Phase 2F-1
+      3.2——取代原本的 ``Literal``，讓引擎的形狀展開能涵蓋資料檔新增的形狀而不必改程式）。
     - 技能其餘的效果就是陷阱觸發時的效果（自動命中；狀態照常擲抵抗）。
     """
 
     trigger: Literal["enter", "delay"]
     rounds: int = Field(default=2, ge=1, le=6)
-    shape: Literal["single", "cross", "square3"] = "single"
+    shape: str = Field(default="single", pattern=ID_PATTERN)
 
 
 class SkillDef(ContentModel):
@@ -996,6 +998,9 @@ def skill_problems(
         problems.append(f"shape.type：未知的形狀 {skill.shape.type!r}（可用：{known}）")
     else:
         problems += _int_param_problems("shape", skill.shape.param_values(), shape)
+    if skill.trap is not None and skill.trap.shape not in shapes:
+        known = ", ".join(sorted(shapes))
+        problems.append(f"trap.shape：未知的形狀 {skill.trap.shape!r}（可用：{known}）")
     refs = _Refs(primitives, status_ids, object_ids, conditions, stacks)
     if stacks is not None:
         problems += _cost_stack_problems(skill, stacks)

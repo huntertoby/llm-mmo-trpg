@@ -61,14 +61,15 @@ from trpg.engine.rules.combat import PERMILLE, AttackProfile, AttackRoll, Forced
 from trpg.engine.rules.geometry import XY
 from trpg.engine.rules.statuses import effective_attribute
 from trpg.engine.skill_triggers import holding
-from trpg.engine.skills import shapes
 from trpg.engine.skills.conditions import Subject, condition_met
 from trpg.engine.skills.targeting import (
+    PaidCost,
     ResolvedEffect,
     SkillArea,
+    center_tiles,
     checked_area,
     damage_parameters,
-    hp_cost,
+    pay_skill_cost,
     resolve_effects,
     skill_ap_cost,
     skill_problem,
@@ -134,12 +135,7 @@ def use_trap_skill(ctx: Ctx, trap: TrapState, skill: SkillDef, *, depth: int) ->
     caster.attributes = dict(trap.attributes)
     caster.statuses = []
     center = trap.xy
-    if skill.trap.shape == "cross":
-        tiles = shapes.cross_tiles(state, center)
-    elif skill.trap.shape == "square3":
-        tiles = shapes.square3_tiles(state, center)
-    else:
-        tiles = (center,)
+    tiles = center_tiles(state, skill.trap.shape, center)
     units = tuple(sorted(u.id for xy in tiles if (u := state.unit_at(*xy)) is not None))
     area = SkillArea(tiles=tiles, units=units, origin=center)
     outer = ctx.trigger_depth
@@ -186,29 +182,23 @@ def use_reaction_skill(
 
 def _pay_costs(ctx: Ctx, caster: UnitState, skill: SkillDef, area: SkillArea) -> None:
     ap = skill_ap_cost(ctx.state, skill)
-    hp = hp_cost(caster, skill)
-    caster.ap -= ap
-    caster.mana -= skill.cost.mana
-    caster.hp -= hp
-    if skill.cost.uses_per_battle is not None:
-        caster.skill_uses[skill.id] = caster.skill_uses.get(skill.id, 0) + 1
-    cooldown = skill.cost.cooldown
-    if cooldown is not None:
-        caster.cooldowns[skill.id] = cooldown
+    paid: PaidCost = pay_skill_cost(caster, skill, ap=ap)
     ctx.emit(
         SkillUsed,
         unit_id=caster.id,
         skill_id=skill.id,
         name_zh=skill.name_zh,
-        ap=ap,
+        ap=paid.ap,
         mana=skill.cost.mana,
         mana_after=caster.mana,
-        hp_spent=hp,
-        cooldown=cooldown,
+        hp_spent=paid.hp,
+        cooldown=paid.cooldown,
         tiles=tuple(Pos(x=x, y=y) for x, y in area.tiles),
     )
-    if cooldown is not None:
-        ctx.emit(SkillCooldownChanged, unit_id=caster.id, skill_id=skill.id, remaining=cooldown)
+    if paid.cooldown is not None:
+        ctx.emit(
+            SkillCooldownChanged, unit_id=caster.id, skill_id=skill.id, remaining=paid.cooldown
+        )
 
 
 def _axis_direction(dx: int, dy: int) -> XY | None:

@@ -16,7 +16,6 @@ from typing import NamedTuple
 
 from trpg.content.battle import Dice
 from trpg.content.skills import (
-    CONSUME_STACK,
     Affects,
     EffectSpec,
     PrimitiveDef,
@@ -42,16 +41,20 @@ from trpg.shared.types import Element, ObjectId, Pos, UnitId
 
 __all__ = [
     "DamageParameters",
+    "PaidCost",
     "ResolvedEffect",
     "SkillArea",
+    "center_tiles",
     "checked_area",
     "compute_area",
     "damage_parameters",
     "has_selection",
     "hp_cost",
+    "pay_skill_cost",
     "reaction_problem",
     "reaction_target_problem",
     "resolve_effects",
+    "resource_problem",
     "selections",
     "skill_ap_cost",
     "skill_is_height_limited",
@@ -178,7 +181,35 @@ def skill_ap_cost(state: BattleState, skill: SkillDef) -> int:
     return skill.ap_cost or 0
 
 
-def _resource_problem(  # noqa: PLR0911
+@dataclass(frozen=True, slots=True)
+class PaidCost:
+    """:func:`pay_skill_cost` 支付後的結果，供呼叫端發出事件（``ap``／``hp``／``cooldown``）。"""
+
+    ap: int
+    hp: int
+    cooldown: int | None
+
+
+def pay_skill_cost(caster: UnitState, skill: SkillDef, *, ap: int = 0) -> PaidCost:
+    """支付技能代價（AP、法力、HP、冷卻、每場次數）；主動技能、反應技與被動觸發共用
+    （Phase 2F-1 3.1，取代 ``skill_triggers._pay`` 與 ``interpreter._pay_costs`` 的重複邏輯）。
+
+    不發出事件——呼叫端的事件型別不同（``SkillUsed``／``SkillTriggered``），且發出順序
+    （主事件先、``SkillCooldownChanged`` 後）要維持不變，由呼叫端自己處理。
+    """
+    hp = hp_cost(caster, skill)
+    caster.ap -= ap
+    caster.mana -= skill.cost.mana
+    caster.hp -= hp
+    if skill.cost.uses_per_battle is not None:
+        caster.skill_uses[skill.id] = caster.skill_uses.get(skill.id, 0) + 1
+    cooldown = skill.cost.cooldown
+    if cooldown is not None:
+        caster.cooldowns[skill.id] = cooldown
+    return PaidCost(ap=ap, hp=hp, cooldown=cooldown)
+
+
+def resource_problem(  # noqa: PLR0911
     state: BattleState, unit: UnitState, skill: SkillDef
 ) -> str | None:
     """武器相容、沉默、法力、冷卻、每場次數與 HP 代價（不含 AP）。"""
@@ -202,18 +233,24 @@ def _resource_problem(  # noqa: PLR0911
 
 
 def stack_problem(state: BattleState, unit: UnitState, skill: SkillDef) -> str | None:
-    """層數需求（``cost.stacks``）不足的原因；沒有需求或足夠時為 ``None``。"""
+    """層數需求（``cost.stacks``）不足的原因；沒有需求或足夠時為 ``None``。
+
+    對應的層數定義與 :func:`trpg.engine.stacks.required_stack` 共用同一份「找第一個
+    ``owner: self`` 的 ``consume_stack``」（Phase 2F-1 3.1）。
+    """
+    # 延後匯入：trpg.engine.stacks 匯入 context（context 匯入 skill_triggers，skill_triggers
+    # 又匯入本模組），模組層級匯入會造成循環匯入。
+    from trpg.engine.stacks import required_stack  # noqa: PLC0415
+
     need = skill.cost.stacks
     if need is None:
         return None
-    for effect in skill.effects:
-        if effect.type == CONSUME_STACK and effect.stack is not None:
-            definition = state.ruleset.stack_def(effect.stack)
-            if definition.owner == "self":
-                have = unit.stacks.get(definition.id, 0)
-                if have < need:
-                    return f"層數不足：需要「{definition.name_zh}」{need} 層，目前 {have} 層"
-                return None
+    definition = required_stack(state, skill)
+    if definition is None:
+        return None
+    have = unit.stacks.get(definition.id, 0)
+    if have < need:
+        return f"層數不足：需要「{definition.name_zh}」{need} 層，目前 {have} 層"
     return None
 
 
@@ -232,7 +269,7 @@ def skill_problem(state: BattleState, unit: UnitState, skill: SkillDef) -> str |
         for e in skill.effects
     ):
         return f"已經在這個姿態中：{skill.name_zh}"
-    return _resource_problem(state, unit, skill)
+    return resource_problem(state, unit, skill)
 
 
 def reaction_problem(state: BattleState, unit: UnitState, skill: SkillDef) -> str | None:
@@ -241,7 +278,7 @@ def reaction_problem(state: BattleState, unit: UnitState, skill: SkillDef) -> st
         return f"{unit.name_zh} 已不在戰場上"
     if skip_turn_status(state.ruleset, unit) is not None:
         return f"{unit.name_zh} 暈眩中，不能執行反應"
-    return _resource_problem(state, unit, skill)
+    return resource_problem(state, unit, skill)
 
 
 def reaction_target_problem(
@@ -406,7 +443,7 @@ def compute_area(  # noqa: C901, PLR0912, PLR0915
             if problem is not None:
                 raise IllegalActionError(problem)
         origin = center
-        tiles = _center_tiles(state, spec.type, center)
+        tiles = center_tiles(state, spec.type, center)
     elif targeting == "direction":
         _require_fields(action, ("direction",), "direction（方向）")
         if action.direction is None:
@@ -459,7 +496,7 @@ def checked_area(
     return area
 
 
-def _center_tiles(state: BattleState, shape_type: str, center: XY) -> tuple[XY, ...]:
+def center_tiles(state: BattleState, shape_type: str, center: XY) -> tuple[XY, ...]:
     if shape_type == "cross":
         return shapes.cross_tiles(state, center)
     if shape_type == "square3":

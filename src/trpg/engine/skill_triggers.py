@@ -36,10 +36,11 @@ from trpg.engine.events import (
     SkillTriggered,
     TriggerLimitReached,
 )
+from trpg.engine.rules.combat import NATURAL_HIT
 from trpg.engine.rules.geometry import manhattan
-from trpg.engine.rules.statuses import blocks_spells, skip_turn_status
+from trpg.engine.rules.statuses import skip_turn_status
 from trpg.engine.skills.conditions import skill_condition_met
-from trpg.engine.skills.targeting import hp_cost, stack_problem
+from trpg.engine.skills.targeting import PaidCost, pay_skill_cost, resource_problem
 from trpg.engine.state import UnitState
 from trpg.shared.types import UnitId
 
@@ -49,6 +50,7 @@ if TYPE_CHECKING:
 __all__ = [
     "Fired",
     "PassiveIndex",
+    "check_trigger_depth",
     "collect_move",
     "collect_turn_end",
     "collect_turn_start",
@@ -115,9 +117,6 @@ def _fire(ctx: Ctx, seq: int, owner_id: UnitId, skill: SkillDef, other_id: UnitI
     )
 
 
-_NATURAL_MAX = 20
-
-
 def observe(ctx: Ctx, event: EventBase) -> None:
     """``Ctx.emit`` 的掛鉤：看出需要觸發被動的事件。"""
     if getattr(event, "type", None) not in _OBSERVED:
@@ -133,7 +132,7 @@ def observe(ctx: Ctx, event: EventBase) -> None:
 
 def _on_attack(ctx: Ctx, index: PassiveIndex, event: AttackRolled) -> None:
     attacker = event.attacker_id
-    if event.natural == _NATURAL_MAX:
+    if event.natural == NATURAL_HIT:
         for owner, skill in index.owners("on_natural_20"):
             if owner == attacker:
                 _fire(ctx, event.seq, owner, skill, event.target_id)
@@ -240,27 +239,28 @@ def settle(ctx: Ctx) -> None:
         ctx.trigger_depth = 0
 
 
-def _usable(  # noqa: PLR0911
-    ctx: Ctx, owner: UnitState, skill: SkillDef
-) -> bool:
-    """持有者目前能不能觸發這個被動（狀態、每輪次數與代價）。"""
-    assert skill.trigger is not None
-    rules = ctx.rules
-    if not owner.alive or skip_turn_status(rules, owner) is not None:
+def check_trigger_depth(ctx: Ctx, unit_id: UnitId, skill_id: str, depth: int) -> bool:
+    """觸發深度是否在 ``max_trigger_depth`` 內；超過時發出 ``trigger_limit_reached`` 並回傳
+    ``False``（不付代價、不計次數）。被動觸發、反應技與陷阱觸發共用（Phase 2F-1 3.1，取代
+    ``reactions._skill_usable``、``skill_triggers._resolve_one``、``traps._trigger`` 三處重複）。
+    """
+    if depth > ctx.core.max_trigger_depth:
+        ctx.emit(TriggerLimitReached, unit_id=unit_id, skill_id=skill_id, depth=depth)
         return False
-    if skill.category == "spell" and blocks_spells(rules, owner):
+    return True
+
+
+def _usable(ctx: Ctx, owner: UnitState, skill: SkillDef) -> bool:
+    """持有者目前能不能觸發這個被動：被動專屬條件（存活、沒有 skip_turn、每輪次數）之外的
+    資源檢查（沉默、法力、冷卻、每場次數、HP、層數）與 :func:`~.targeting.skill_problem`、
+    :func:`~.targeting.reaction_problem` 共用 :func:`~.targeting.resource_problem`
+    （Phase 2F-1 3.1）。"""
+    assert skill.trigger is not None
+    if not owner.alive or skip_turn_status(ctx.rules, owner) is not None:
         return False
     if owner.trigger_counts.get(skill.id, 0) >= skill.trigger.max_per_round:
         return False
-    if owner.mana < skill.cost.mana or owner.cooldowns.get(skill.id, 0) > 0:
-        return False
-    limit = skill.cost.uses_per_battle
-    if limit is not None and owner.skill_uses.get(skill.id, 0) >= limit:
-        return False
-    cost = hp_cost(owner, skill)
-    if cost and owner.hp <= cost:
-        return False
-    return stack_problem(ctx.state, owner, skill) is None
+    return resource_problem(ctx.state, owner, skill) is None
 
 
 def _resolve_one(ctx: Ctx, fired: Fired) -> None:
@@ -289,8 +289,7 @@ def _resolve_one(ctx: Ctx, fired: Fired) -> None:
     subject = owner if other is None else other
     if not skill_condition_met(state, owner, skill, [subject.xy]):
         return
-    if fired.depth > ctx.core.max_trigger_depth:
-        ctx.emit(TriggerLimitReached, unit_id=owner.id, skill_id=skill.id, depth=fired.depth)
+    if not check_trigger_depth(ctx, owner.id, skill.id, fired.depth):
         return
     _pay(ctx, owner, skill, fired)
     ctx.trigger_depth = fired.depth
@@ -298,15 +297,8 @@ def _resolve_one(ctx: Ctx, fired: Fired) -> None:
 
 
 def _pay(ctx: Ctx, owner: UnitState, skill: SkillDef, fired: Fired) -> None:
-    hp = hp_cost(owner, skill)
-    owner.mana -= skill.cost.mana
-    owner.hp -= hp
+    paid: PaidCost = pay_skill_cost(owner, skill)
     owner.trigger_counts[skill.id] = owner.trigger_counts.get(skill.id, 0) + 1
-    if skill.cost.uses_per_battle is not None:
-        owner.skill_uses[skill.id] = owner.skill_uses.get(skill.id, 0) + 1
-    cooldown = skill.cost.cooldown
-    if cooldown is not None:
-        owner.cooldowns[skill.id] = cooldown
     ctx.emit(
         SkillTriggered,
         unit_id=owner.id,
@@ -317,8 +309,8 @@ def _pay(ctx: Ctx, owner: UnitState, skill: SkillDef, fired: Fired) -> None:
         trigger_depth=fired.depth,
         mana=skill.cost.mana,
         mana_after=owner.mana,
-        hp_spent=hp,
-        cooldown=cooldown,
+        hp_spent=paid.hp,
+        cooldown=paid.cooldown,
     )
-    if cooldown is not None:
-        ctx.emit(SkillCooldownChanged, unit_id=owner.id, skill_id=skill.id, remaining=cooldown)
+    if paid.cooldown is not None:
+        ctx.emit(SkillCooldownChanged, unit_id=owner.id, skill_id=skill.id, remaining=paid.cooldown)

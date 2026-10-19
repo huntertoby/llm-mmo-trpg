@@ -89,8 +89,13 @@ from trpg.engine.rules.geometry import (
 )
 from trpg.engine.rules.movement import is_standable, step_cost
 from trpg.engine.rules.statuses import forced_target_sources, shield_amount, stance_status_ids
-from trpg.engine.skills import shapes
-from trpg.engine.skills.targeting import ResolvedEffect, SkillArea, hp_cost, resolve_effects
+from trpg.engine.skills.targeting import (
+    ResolvedEffect,
+    SkillArea,
+    center_tiles,
+    hp_cost,
+    resolve_effects,
+)
 from trpg.engine.state import BattleState, UnitState
 from trpg.engine.traps import visible_traps
 from trpg.shared.types import ObjectId, Surface, Team, UnitId
@@ -967,12 +972,7 @@ def _trap_estimate(
     if len(visible_traps(state, unit.team)) >= _TRAP_MAX_ACTIVE:
         return None
     center = area.origin
-    if skill.trap.shape == "cross":
-        blast = shapes.cross_tiles(state, center)
-    elif skill.trap.shape == "square3":
-        blast = shapes.square3_tiles(state, center)
-    else:
-        blast = (center,)
+    blast = center_tiles(state, skill.trap.shape, center)
     if any(u.team is unit.team and u.xy in blast for u in state.living_units()):
         return None
     distances = [manhattan(center, e.xy) for e in scene.enemies]
