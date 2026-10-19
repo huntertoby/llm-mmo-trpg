@@ -1,0 +1,26 @@
+id: skill_shoulder_strike
+schema_version: 1
+name_zh: 並肩斬
+tier: 1
+rank: 1
+rarity: rare
+kind: active
+skeleton: strike
+category: weapon
+weapon_req: melee
+ap_cost: 2
+scaling_attr: str
+shape: {type: single, range: weapon}
+effects:
+  - {type: damage, multiplier_permille: 1000}
+  # 3D-1 連段條件：身旁有友方
+  - type: damage
+    multiplier_permille: 800
+    condition: {type: adjacent_ally}
+condition: null
+cost: {mana: 5, cooldown: 2}
+tags: [physical, melee, formation]
+narrative:
+  concept: 與同伴並肩作戰時才發揮的陣型斬擊
+  cast_flavor: 你與同伴肩並肩，兩人的呼吸合為一拍，刀鋒趁勢劈下
+provenance: {origin: builtin, owner_id: null, created_by: null, parents: [], bound: true, tradeable: false}

@@ -40,6 +40,7 @@ __all__ = [
     "ADD_STACK",
     "AFFECTS_VALUES",
     "BASIC_ACTIONS",
+    "CASTER_CONDITIONS",
     "CHANGE_TARGETS",
     "CHEAT_DEATH",
     "CHEAT_DEATH_STATUS",
@@ -149,8 +150,13 @@ REQUIRED_CONDITIONS: tuple[str, ...] = (
     "height_advantage",
     "target_on_surface",
     "target_has_status",
+    "moved_this_turn",
+    "adjacent_ally",
+    "target_isolated",
+    "first_round",
+    "cast_tag_this_turn",
 )
-"""引擎實作的 5 種條件（``trpg.engine.skills.conditions``），資料檔必須全部定義。"""
+"""引擎實作的 10 種條件（``trpg.engine.skills.conditions``），資料檔必須全部定義。"""
 
 type Targeting = Literal["self", "unit", "tile", "direction", "none", "object_tile"]
 type Affects = Literal["enemies", "allies", "all", "self", "tiles"]
@@ -324,6 +330,7 @@ class PrimitiveParam(ContentModel):
         "which",
         "tag",
         "bool",
+        "resource",
     ]
     required: bool = False
     min: int | None = None
@@ -374,6 +381,7 @@ class PrimitiveDef(ContentModel):
             "consume_stack",
             "consume_status",
             "hurl_object",
+            "restore_resource",
         ]
         | None
     ) = None
@@ -472,11 +480,22 @@ class ConditionSpec(ContentModel):
     permille: int | None = None
     surface: Surface | None = None
     status: str | None = Field(default=None, pattern=ID_PATTERN)
+    tag: str | None = Field(default=None, pattern=ID_PATTERN)
+    """``cast_tag_this_turn`` 專用（Phase 3D-1）：本回合施放過的技能標籤。"""
 
     def param_values(self) -> dict[str, Any]:
         """已填寫的參數（依名稱排序）。"""
-        names = ("permille", "status", "surface")
+        names = ("permille", "status", "surface", "tag")
         return {n: getattr(self, n) for n in names if getattr(self, n) is not None}
+
+
+_PLAIN_CONDITION_TEXT = {
+    "moved_this_turn": "本回合移動過",
+    "adjacent_ally": "身旁有友方",
+    "target_isolated": "目標身邊沒有友方",
+    "first_round": "第一輪",
+}
+"""沒有參數的條件的一句話（Phase 3D-1）。"""
 
 
 def condition_text(
@@ -496,7 +515,9 @@ def condition_text(
         return f"目標站在「{surface_name(condition.surface)}」表面上"
     if kind == "target_has_status" and condition.status is not None:
         return f"目標帶有狀態「{status_name(condition.status)}」"
-    return kind
+    if kind == "cast_tag_this_turn" and condition.tag is not None:
+        return f"本回合已施放過「{condition.tag}」類技能"
+    return _PLAIN_CONDITION_TEXT.get(kind, kind)
 
 
 # ---------------------------------------------------------------------------
@@ -565,6 +586,9 @@ class EffectSpec(ContentModel):
     knock_prone: bool | None = None
     """``hurl_object`` 專用（Phase 3C-5a）：命中落點的單位時另外擊倒（對抗判定同
     ``knock_prone`` 原語）。"""
+    resource: Literal["mana", "cooldown"] | None = None
+    """``restore_resource`` 專用（Phase 3D-1）：``mana`` 回復法力 ``amount``；``cooldown`` 讓目標
+    所有技能（不含花源力的技能與施放中的這個技能）冷卻 −``amount``。"""
     condition: ConditionSpec | None = None
 
     def param_values(self) -> dict[str, Any]:
@@ -582,6 +606,7 @@ class EffectSpec(ContentModel):
             "per_stack_permille",
             "permille",
             "range",
+            "resource",
             "scale",
             "splash",
             "stack",
@@ -718,6 +743,11 @@ REDIRECT_DAMAGE = "redirect_damage"
 COPY_SKILL = "copy_skill"
 EXTRA_REACTION = "extra_reaction"
 """Phase 3C-4b 的改寫規則型原語 ID。"""
+RESTORE_RESOURCE = "restore_resource"
+STEAL_BUFF = "steal_buff"
+"""Phase 3D-1 的資源互動原語 ID（6.16 H）。"""
+_MAX_COOLDOWN_RESTORE = 2
+"""``restore_resource`` 的 ``resource: cooldown`` 一次最多縮短的回合（Phase 3D-1）。"""
 HURL_OBJECT = "hurl_object"
 TOPPLE = "topple"
 """Phase 3C-5a 的物件原語 ID（6.15）：投擲物件、推倒。"""
@@ -803,6 +833,11 @@ SELF_ONLY_CHANGES: frozenset[str] = frozenset(
 """在選目標之前就要決定的修正：條件只能看持有者自己（``self_hp_below``）或省略。"""
 
 SELF_CONDITIONS: frozenset[str] = frozenset({"self_hp_below"})
+CASTER_CONDITIONS: frozenset[str] = frozenset(
+    {"self_hp_below", "moved_this_turn", "adjacent_ally", "first_round", "cast_tag_this_turn"}
+)
+"""只看施放者的條件（Phase 3D-1）：技能層級的判斷不需要影響範圍內有對象。選目標之前就要決定的
+修正規則改變（:data:`SELF_ONLY_CHANGES`）仍只允許 :data:`SELF_CONDITIONS`（``self_hp_below``）。"""
 
 ON_HIT_PRIMITIVES: tuple[str, ...] = (
     "damage",
@@ -1244,6 +1279,13 @@ class SkillDef(ContentModel):
                 )
             self._check_effect(index, sub)
 
+    def _check_restore_resource(self, where: str, effect: EffectSpec) -> None:
+        """``restore_resource`` 的結構（3D-1）：必須填 ``resource``；冷卻最多 −2。"""
+        if effect.resource is None:
+            raise ValueError(f"{where}：restore_resource 必須填 resource（mana 或 cooldown）")
+        if effect.resource == "cooldown" and (effect.amount or 1) > _MAX_COOLDOWN_RESTORE:
+            raise ValueError(f"{where}：冷卻最多縮短 {_MAX_COOLDOWN_RESTORE} 回合")
+
     def _check_effect(self, index: int, effect: EffectSpec) -> None:
         where = f"effects[{index}]（{effect.type}）"
         self._check_consume_status(index, effect)
@@ -1254,6 +1296,10 @@ class SkillDef(ContentModel):
                 raise ValueError(f"{where}：which: tag 必須填 tag，which: all 不可填 tag")
         elif effect.which is not None or effect.tag is not None:
             raise ValueError(f"{where}：只有 reset_cooldown 使用 which、tag")
+        if effect.type == RESTORE_RESOURCE:
+            self._check_restore_resource(where, effect)
+        elif effect.resource is not None:
+            raise ValueError(f"{where}：只有 restore_resource 使用 resource")
         if effect.type in ("push", "pull") and (
             effect.distance is None or not 1 <= effect.distance <= _MAX_DISPLACE
         ):

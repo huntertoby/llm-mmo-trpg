@@ -181,7 +181,13 @@ def test_weapon_validation() -> None:
 def test_status_turn_end_requires_duration() -> None:
     with pytest.raises(ValidationError, match="duration"):
         StatusDef.model_validate(
-            {"id": "x", "name_zh": "x", "description_zh": "x", "expires": "turn_end"}
+            {
+                "id": "x",
+                "name_zh": "x",
+                "description_zh": "x",
+                "expires": "turn_end",
+                "polarity": "neutral",
+            }
         )
 
 

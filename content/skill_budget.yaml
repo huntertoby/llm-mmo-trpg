@@ -36,6 +36,9 @@ collision_die_points: 1
 # 投擲物件（Phase 3C-5a）：點數 ＝ 骰子平均 × 這個折扣（需要附近有可投擲的物件）÷ 1000；knock_prone: true 另加
 # knock_prone 原語的 base_points。形狀倍率照一般效果（object_then_tile 為 1.0）。初值，未經模擬。
 hurl_object_discount_permille: 800
+# 3D-1：restore_resource 的點數（初值，未經模擬）：法力每點 700‰ 點、冷卻每回合 3 點
+restore_mana_point_permille: 700
+restore_cooldown_points: 3
 # 穿透（Phase 3C-5b）：技能有 pierce: true 時，總點數 ×（1000 ＋ 這個值）÷ 1000（無視半掩護、穿過木製物件；
 # 後方目標只受 core.yaml 的 pierce_behind_permille 傷害，所以只加一點）。初值，未經模擬。
 pierce_bonus_permille: 150

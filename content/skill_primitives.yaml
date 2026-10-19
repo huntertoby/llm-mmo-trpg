@@ -298,3 +298,25 @@ primitives:
     base_points: 6
     acts_on: tile
     allowed_shapes: [single]
+  # --- Phase 3D-1：資源互動（docs/design/06-技能.md 6.16 H；點數為初值，未經模擬）---
+  - id: restore_resource
+    name_zh: 回復資源
+    description_zh: resource 為 mana：目標（自己或友方）回復 amount 點法力，不超過法力上限；為 cooldown：目標所有技能的冷卻 −amount（最多 2，下限 0）。冷卻不影響花源力的技能（cost.source），也不影響施放中的這個技能。目標沒有法力空間或沒有冷卻中的技能時發出 effect_fizzled。預算：法力每點 restore_mana_point_permille‰、冷卻每回合 restore_cooldown_points 點（skill_budget.yaml）。
+    category: structural
+    harmful: false
+    min_rarity: rare
+    budget_basis: restore_resource
+    forbid_affects: [enemies, all]
+    params:
+      resource: {type: resource, required: true, description_zh: mana 回復法力、cooldown 縮短冷卻}
+      amount: {type: int, required: true, min: 1, max: 10, description_zh: 回復的法力點數，或縮短的冷卻回合（最多 2）}
+  - id: steal_buff
+    name_zh: 奪取增益
+    description_zh: 移除目標身上一個增益狀態（statuses.yaml 中 polarity 為 buff；有多個時取剩餘回合最長、同長依狀態 ID 排序），並以相同的剩餘回合與數值施加到施放者身上（已有同狀態時取較長者）。目標沒有增益時發出 effect_fizzled（no_buff）。
+    category: structural
+    harmful: true
+    min_rarity: rare
+    budget_basis: fixed
+    base_points: 4
+    forbid_affects: [allies, all, self]
+

@@ -1,0 +1,22 @@
+id: skill_quicken_tide
+schema_version: 1
+name_zh: 疾時之潮
+tier: 1
+rank: 1
+rarity: rare
+kind: active
+skeleton: aura
+category: spell
+weapon_req: focus
+ap_cost: 1
+scaling_attr: wis
+shape: {type: single, range: 4}
+effects:
+  - {type: restore_resource, resource: cooldown, amount: 2, affects: allies}
+condition: null
+cost: {mana: 4, cooldown: 3}
+tags: [holy, spell, support, tempo]
+narrative:
+  concept: 讓同伴的招式更快回到手上（花源力的傳說技能除外）
+  cast_flavor: 時間在你的掌下輕輕一顫，同伴的招式像被撥快了指針
+provenance: {origin: builtin, owner_id: null, created_by: null, parents: [], bound: true, tradeable: false}

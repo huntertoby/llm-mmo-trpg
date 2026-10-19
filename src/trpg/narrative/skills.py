@@ -246,6 +246,17 @@ def _extra_reaction(_lib: ContentLibrary, _skill: SkillDef, spec: EffectSpec) ->
     return f"本輪反應次數 +{spec.amount or 1}（到下一輪開始）"
 
 
+def _restore_resource(_lib: ContentLibrary, _skill: SkillDef, spec: EffectSpec) -> str:
+    amount = spec.amount or 1
+    if spec.resource == "cooldown":
+        return f"目標所有技能的冷卻 −{amount}（花源力的技能除外）"
+    return f"回復 {amount} 點法力（不超過上限）"
+
+
+def _steal_buff(_lib: ContentLibrary, _skill: SkillDef, _spec: EffectSpec) -> str:
+    return "奪取目標身上一個增益（剩餘回合最長者），以相同的剩餘回合施加到自己身上"
+
+
 def _hurl_object(_lib: ContentLibrary, skill: SkillDef, spec: EffectSpec) -> str:
     assert spec.dice is not None
     text = f"把 {spec.range} 格內的可推動物件丟到落點，落點單位受 {_dice(spec.dice)} 物理傷害"
@@ -290,6 +301,8 @@ _EFFECT_TEXT: dict[str, _EffectText] = {
     "redirect_damage": _redirect_damage,
     "copy_skill": _copy_skill,
     "extra_reaction": _extra_reaction,
+    "restore_resource": _restore_resource,
+    "steal_buff": _steal_buff,
     "hurl_object": _hurl_object,
     "topple": _topple,
 }

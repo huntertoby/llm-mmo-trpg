@@ -234,6 +234,12 @@ class UnitState:
     extra_reactions: int = 0
     """``extra_reaction`` 給的額外反應次數（Phase 3C-4b）：本輪反應上限 ＝ ``reactions_per_round``
     ＋ 此值；每輪開始時歸零。"""
+    moved_this_turn: bool = False
+    """本回合做過主動移動（步行；傳送與強制位移不算；``moved_this_turn`` 條件，Phase 3D-1）；
+    自己回合開始時清除。"""
+    turn_cast_tags: tuple[str, ...] = ()
+    """本回合已施放的主動技能的標籤（依施放順序、含重複；``cast_tag_this_turn`` 條件，Phase 3D-1）；
+    自己回合開始時清除。"""
 
     @property
     def alive(self) -> bool:
@@ -301,6 +307,8 @@ class UnitState:
             ap_pending=self.ap_pending,
             ap_granted_round=self.ap_granted_round,
             extra_reactions=self.extra_reactions,
+            moved_this_turn=self.moved_this_turn,
+            turn_cast_tags=self.turn_cast_tags,
         )
 
 

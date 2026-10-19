@@ -1,0 +1,26 @@
+id: skill_charging_strike
+schema_version: 1
+name_zh: 衝勢劈砍
+tier: 1
+rank: 1
+rarity: rare
+kind: active
+skeleton: strike
+category: weapon
+weapon_req: melee
+ap_cost: 2
+scaling_attr: str
+shape: {type: single, range: weapon}
+effects:
+  - {type: damage, multiplier_permille: 1000}
+  # 3D-1 連段條件：本回合移動過
+  - type: damage
+    multiplier_permille: 800
+    condition: {type: moved_this_turn}
+condition: null
+cost: {mana: 5, cooldown: 2}
+tags: [physical, melee, momentum]
+narrative:
+  concept: 把助跑的衝勢全壓進這一刀
+  cast_flavor: 你踏著奔跑的餘勢揮出重劈，力道遠勝站定時的一擊
+provenance: {origin: builtin, owner_id: null, created_by: null, parents: [], bound: true, tradeable: false}

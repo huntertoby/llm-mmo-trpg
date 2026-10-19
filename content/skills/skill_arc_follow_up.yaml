@@ -1,0 +1,27 @@
+id: skill_arc_follow_up
+schema_version: 1
+name_zh: 連段雷光
+tier: 1
+rank: 1
+rarity: rare
+kind: active
+skeleton: strike
+category: spell
+weapon_req: focus
+ap_cost: 1
+scaling_attr: int
+shape: {type: single, range: 5}
+effects:
+  - {type: damage, dice: 1d8, element: lightning}
+  # 3D-1 連段條件：本回合已施放過雷電類技能才補上第二道電光
+  - type: damage
+    dice: 1d6
+    element: lightning
+    condition: {type: cast_tag_this_turn, tag: lightning}
+condition: null
+cost: {mana: 6, cooldown: 1}
+tags: [lightning, spell, combo]
+narrative:
+  concept: 接在另一道雷電之後，電光互相呼應
+  cast_flavor: 前一道電弧還在空氣裡閃爍，你再彈出一道電光，兩道雷光纏成一束
+provenance: {origin: builtin, owner_id: null, created_by: null, parents: [], bound: true, tradeable: false}

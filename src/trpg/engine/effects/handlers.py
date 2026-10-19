@@ -382,6 +382,8 @@ def arrive(
     from_pos = unit.pos
     drop = state.tile(from_pos.x, from_pos.y).height - state.tile(*dest).height
     unit.pos = Pos(x=dest[0], y=dest[1])
+    if mode == "walk":
+        unit.moved_this_turn = True  # 連段條件 moved_this_turn（Phase 3D-1）
     events: list[EventBase] = [
         ctx.emit(
             UnitMoved, unit_id=unit.id, from_pos=from_pos, to_pos=unit.pos, mode=mode, cost=cost

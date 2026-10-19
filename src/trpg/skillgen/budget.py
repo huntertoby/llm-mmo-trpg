@@ -20,6 +20,7 @@
 
 from __future__ import annotations
 
+from collections.abc import Callable
 from dataclasses import dataclass
 from fractions import Fraction
 
@@ -171,12 +172,9 @@ def _base_points(  # noqa: PLR0911
         amount = effect.amount or 1
         unit = {GRANT_AP: "AP", EXTRA_REACTION: "次"}.get(primitive.id, "層")
         return Fraction(primitive.base_points * amount), f"{primitive.base_points}×{amount} {unit}"
-    if basis == "consume_stack":
-        return _consume_stack_points(skill, effect, library)
-    if basis == "consume_status":
-        return _consume_status_points(skill, effect, library)
-    if basis == "hurl_object":
-        return _hurl_object_points(effect, library)
+    special = _SPECIAL_BASES.get(basis)
+    if special is not None:
+        return special(skill, effect, library)
     if basis == "dice_average" or (basis == "damage" and skill.category == "spell"):
         if effect.dice is None:
             raise BudgetError(f"效果 {primitive.id} 缺少 dice，無法計算點數")
@@ -190,7 +188,25 @@ def _base_points(  # noqa: PLR0911
     return _surface_points(effect, library)
 
 
-def _hurl_object_points(effect: EffectSpec, library: ContentLibrary) -> tuple[Fraction, str]:
+def _restore_resource_points(
+    _skill: SkillDef, effect: EffectSpec, library: ContentLibrary
+) -> tuple[Fraction, str]:
+    """``restore_resource`` 的點數（3D-1）：法力 ＝ 點數 × ``restore_mana_point_permille``‰；
+    冷卻 ＝ 回合數 × ``restore_cooldown_points``。"""
+    amount = effect.amount or 1
+    rules = library.budget
+    if effect.resource == "cooldown":
+        return (
+            Fraction(rules.restore_cooldown_points * amount),
+            f"冷卻 −{amount} × {rules.restore_cooldown_points} 點",
+        )
+    permille = rules.restore_mana_point_permille
+    return Fraction(permille * amount, _PERMILLE), f"法力 {amount} × {permille}‰"
+
+
+def _hurl_object_points(
+    _skill: SkillDef, effect: EffectSpec, library: ContentLibrary
+) -> tuple[Fraction, str]:
     """``hurl_object`` 的點數（3C-5a）：骰子平均 × 「需要附近有物件」折扣；``knock_prone`` 另加
     擊倒原語的點數。"""
     if effect.dice is None:
@@ -247,6 +263,17 @@ def _consume_status_points(
     total *= Fraction(rules.consume_status_discount_permille, _PERMILLE)
     notes.append(f"× 需先有狀態 {rules.consume_status_discount_permille}‰")
     return total, " ".join(notes)
+
+
+_SPECIAL_BASES: dict[
+    str, Callable[[SkillDef, EffectSpec, ContentLibrary], tuple[Fraction, str]]
+] = {
+    "consume_stack": _consume_stack_points,
+    "consume_status": _consume_status_points,
+    "hurl_object": _hurl_object_points,
+    "restore_resource": _restore_resource_points,
+}
+"""需要整個技能或特殊規則的 ``budget_basis`` → 點數算法。"""
 
 
 def _shape_multiplier(

@@ -51,9 +51,14 @@
 # 3C-4b（redirect_damage；初值，未經模擬）：
 #   redirects_damage  靈魂連結：帶有者受到的傷害有 StatusInstance.amount‰ 轉給狀態來源（施放者，直接扣 HP），
 #                     來源倒下或離場時立即移除。只能由 redirect_damage 原語施加（無 budget_points）
+# 3D-1（資源互動）：
+#   polarity  分類：buff 增益（steal_buff 可奪取、dispel 可驅散）／debuff 減益／neutral 中性（姿態、隱蔽、不死、
+#             靈魂連結等帶有來源或唯一性語意的狀態，不能被奪取或驅散）。每個狀態都必須填；buff 必須 beneficial: true、
+#             debuff 不可 beneficial。
 # control_group 新增 mental（心智：恐懼、沉默）：適用控制遞減，不是 hard，對 Boss 不轉換。
 statuses:
   - id: defending
+    polarity: buff
     name_zh: 防禦
     description_zh: 防禦值 +25%，持續到自己的下回合開始。
     expires: own_turn_start
@@ -61,6 +66,7 @@ statuses:
     beneficial: true
     budget_points: 2
   - id: prone
+    polarity: debuff
     name_zh: 倒地
     description_zh: 移動前要先站起來（消耗一半移動點數）；近戰攻擊倒地者有優勢，遠程攻擊有劣勢。
     expires: never
@@ -68,6 +74,7 @@ statuses:
     budget_points: 3
     min_rarity: rare
   - id: burning
+    polarity: debuff
     name_zh: 燃燒
     description_zh: 回合開始時受到 1d6 火焰傷害，持續 2 回合；重複施加時刷新持續時間。
     duration: 2
@@ -78,6 +85,7 @@ statuses:
       dice: 1d6
       element: fire
   - id: concealed
+    polarity: neutral
     name_zh: 隱蔽
     description_zh: 對其攻擊有劣勢；超過 2 格的遠程攻擊無法選為目標。站在黑暗表面或草叢中的單位也視為隱蔽。
     duration: 2
@@ -87,6 +95,7 @@ statuses:
     min_rarity: rare
     beneficial: true
   - id: slow
+    polarity: debuff
     name_zh: 緩速
     description_zh: 回合開始時的移動點數減半（無條件捨去）。
     duration: 2
@@ -97,6 +106,7 @@ statuses:
     save_attr: dex
     control_group: movement
   - id: root
+    polarity: debuff
     name_zh: 定身
     description_zh: 不能主動移動（仍可被推擊、拉扯等強制位移）。
     duration: 1
@@ -108,6 +118,7 @@ statuses:
     save_attr: str
     control_group: movement
   - id: stun
+    polarity: debuff
     name_zh: 暈眩
     description_zh: 跳過整個回合：沒有 AP、移動點數與反應。
     duration: 1
@@ -119,6 +130,7 @@ statuses:
     save_attr: con
     control_group: hard
   - id: frozen
+    polarity: debuff
     name_zh: 冰凍
     description_zh: 跳過整個回合（同暈眩，與暈眩共用硬控的控制遞減）；受到火焰傷害時立即解除。
     duration: 1
@@ -131,6 +143,7 @@ statuses:
     control_group: hard
     removed_by_element: [fire]
   - id: weaken
+    polarity: debuff
     name_zh: 虛弱
     description_zh: 自己造成的攻擊傷害 ×75%。
     duration: 2
@@ -140,6 +153,7 @@ statuses:
     damage_dealt_permille: 750
     save_attr: con
   - id: vulnerable
+    polarity: debuff
     name_zh: 易傷
     description_zh: 受到的骰值傷害 ×125%（不含墜落、致命地形等百分比傷害）。
     duration: 2
@@ -149,6 +163,7 @@ statuses:
     damage_taken_permille: 1250
     save_attr: wil
   - id: bleed
+    polarity: debuff
     name_zh: 流血
     description_zh: 回合開始時受到 1d4 物理傷害，持續 3 回合。
     duration: 3
@@ -159,6 +174,7 @@ statuses:
       dice: 1d4
       element: physical
   - id: poison
+    polarity: debuff
     name_zh: 中毒
     description_zh: 回合開始時受到 1d4 毒素傷害，持續 3 回合；受到的治療減半。
     duration: 3
@@ -170,6 +186,7 @@ statuses:
       dice: 1d4
       element: poison
   - id: guarded
+    polarity: buff
     name_zh: 護衛
     description_zh: 受到的骰值傷害 ×70%（不含墜落、致命地形等百分比傷害）。
     duration: 2
@@ -179,6 +196,7 @@ statuses:
     budget_points: 4
     damage_taken_permille: 700
   - id: empowered
+    polarity: buff
     name_zh: 激昂
     description_zh: 六個屬性各 +2（命中、抵抗、傷害與治療的縮放都用加值後的屬性；先攻不變）。
     duration: 2
@@ -188,6 +206,7 @@ statuses:
     budget_points: 4
     attr_bonus: {str: 2, dex: 2, con: 2, int: 2, wis: 2, wil: 2}
   - id: hasted
+    polarity: buff
     name_zh: 加速
     description_zh: 回合開始時的移動點數 ×150%（無條件捨去）。
     duration: 2
@@ -197,6 +216,7 @@ statuses:
     budget_points: 3
     move_permille: 1500
   - id: regenerating
+    polarity: buff
     name_zh: 再生
     description_zh: 回合開始時恢復 1d4 HP，持續 3 回合。
     duration: 3
@@ -207,6 +227,7 @@ statuses:
     on_turn_start_heal:
       dice: 1d4
   - id: shielded
+    polarity: buff
     name_zh: 護盾
     description_zh: 帶有吸收量；受到的骰值傷害先扣護盾，吸收量歸零時消失。
     duration: 2
@@ -215,6 +236,7 @@ statuses:
     beneficial: true
     absorbs_damage: true
   - id: undying
+    polarity: neutral
     name_zh: 不死
     description_zh: 受到致命傷害時 HP 留在 1，然後此狀態消失（墜落與致命地形除外）。
     duration: 2
@@ -223,6 +245,7 @@ statuses:
     beneficial: true
     prevents_death: true
   - id: soul_link
+    polarity: neutral
     name_zh: 靈魂連結
     description_zh: 受到的傷害有一部分轉給連結者（施放者）；連結者倒下時消失。
     duration: 3
@@ -231,6 +254,7 @@ statuses:
     beneficial: true
     redirects_damage: true
   - id: taunted
+    polarity: debuff
     name_zh: 嘲諷
     description_zh: 對嘲諷者以外的目標發動攻擊時有劣勢；嘲諷者倒下時消失。
     duration: 2
@@ -240,6 +264,7 @@ statuses:
     save_attr: wil
     forces_target: true
   - id: feared
+    polarity: debuff
     name_zh: 恐懼
     description_zh: 主動移動時不能靠近恐懼的來源；攻擊有劣勢。來源倒下時消失。
     duration: 2
@@ -251,6 +276,7 @@ statuses:
     control_group: mental
     fear_source: true
   - id: silenced
+    polarity: debuff
     name_zh: 沉默
     description_zh: 不能使用法術技（武器技與基本攻擊照常）。
     duration: 1
@@ -262,6 +288,7 @@ statuses:
     control_group: mental
     blocks_spells: true
   - id: blinded
+    polarity: debuff
     name_zh: 致盲
     description_zh: 攻擊與以單位為目標的技能只能選擇 2 格以內的單位；攻擊有劣勢。
     duration: 1
@@ -272,6 +299,7 @@ statuses:
     save_attr: wis
     attack_range_cap: 2
   - id: marked
+    polarity: debuff
     name_zh: 被標記
     description_zh: 對其攻擊有優勢；隱蔽也無法讓它免於被選為目標。
     duration: 2
@@ -281,6 +309,7 @@ statuses:
     save_attr: wis
     grants_advantage_against: true
   - id: stance_fury
+    polarity: neutral
     name_zh: 狂怒姿態
     description_zh: 力量 +2，但受到的骰值傷害 ×120%；持續到取消。
     expires: never
@@ -292,6 +321,7 @@ statuses:
     attr_bonus: {str: 2}
     damage_taken_permille: 1200
   - id: stance_bulwark
+    polarity: neutral
     name_zh: 堅壁姿態
     description_zh: 受到的骰值傷害 ×75%，但回合開始時的移動點數減半；持續到取消。
     expires: never

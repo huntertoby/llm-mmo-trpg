@@ -60,6 +60,7 @@ __all__ = [
     "ReactionModeSet",
     "ReactionTriggered",
     "ReactionsGranted",
+    "ResourceRestored",
     "RoundEnded",
     "RoundStarted",
     "ShieldAbsorbed",
@@ -450,8 +451,10 @@ class StatusRemoved(EventBase):
         "thawed",
         "consumed",
         "spent",
+        "stolen",
     ]
-    """``spent``：不死（``undying``）擋下致命傷害後移除（Phase 3C-4a）；
+    """``stolen``：被 ``steal_buff`` 奪走（Phase 3D-1；緊接著對施放者的 ``status_applied``）；
+    ``spent``：不死（``undying``）擋下致命傷害後移除（Phase 3C-4a）；
     ``thawed``：受到 ``removed_by_element`` 的元素傷害而解除（冰凍遇火，Phase 2H-1）；
     ``consumed``：被 ``consume_status`` 消耗（Phase 3C-3b）；``replaced``：被新的姿態取代；
     ``stance_ended``：``EndStance`` 取消姿態；``downed``：單位倒下或撤離時移除姿態
@@ -885,6 +888,20 @@ class ReactionsGranted(EventBase):
     total: int
 
 
+class ResourceRestored(EventBase):
+    """``restore_resource``（Phase 3D-1）：``unit_id`` 的 ``resource`` 回復了。``mana``：法力
+    +``amount``（實際回復量），``mana_after`` 為回復後的法力；``cooldown``：``skill_ids`` 的冷卻各
+    −``amount``（每個技能另有 ``skill_cooldown_changed``）。"""
+
+    type: Literal["resource_restored"] = "resource_restored"
+    unit_id: UnitId
+    source_id: UnitId
+    resource: Literal["mana", "cooldown"]
+    amount: int
+    mana_after: int | None
+    skill_ids: tuple[str, ...]
+
+
 class SkillCopied(EventBase):
     """``copy_skill``：``unit_id`` 立即複製施放 ``source_id`` 本輪最後施放的 ``skill_id``
     （不扣法力、不進冷卻、不花源力；後續是一般的施放結算）。"""
@@ -1045,6 +1062,7 @@ type Event = Annotated[
     | DeathCheated
     | DamageRedirected
     | ReactionsGranted
+    | ResourceRestored
     | SkillCopied,
     Field(discriminator="type"),
 ]

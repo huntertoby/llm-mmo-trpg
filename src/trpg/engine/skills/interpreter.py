@@ -35,6 +35,8 @@ from trpg.content.skills import (
     REDIRECT_DAMAGE,
     REDIRECT_STATUS,
     RESET_COOLDOWN,
+    RESTORE_RESOURCE,
+    STEAL_BUFF,
     TOPPLE,
     ConditionSpec,
     EffectSpec,
@@ -84,6 +86,7 @@ from trpg.engine.reactions import (
     hit_reactions,
     try_intercept,
 )
+from trpg.engine.resources import pick_stolen_buff, restore_cooldowns, restore_mana
 from trpg.engine.results import Pending
 from trpg.engine.rewrites import grant_ap, grant_reactions, reset_cooldowns
 from trpg.engine.rules.combat import PERMILLE, AttackProfile, AttackRoll, ForcedOutcome, roll_attack
@@ -157,6 +160,13 @@ def use_skill(ctx: Ctx, caster: UnitState, action: UseSkill) -> None:
             _record_cast(ctx.state, caster, skill)
         _apply_self_status(ctx, caster, skill)
         collect_cast(ctx, caster, skill)  # on_cast_tag：在該技能結算之後
+        _record_turn_tags(ctx.state, caster, skill)
+
+
+def _record_turn_tags(state: BattleState, caster: UnitState, skill: SkillDef) -> None:
+    """記錄這回合施放過的標籤（``cast_tag_this_turn`` 條件）；在技能結算完之後才記，所以條件
+    不含這次施放。"""
+    caster.turn_cast_tags += modifiers.effective_tags(state, caster, skill)
 
 
 def _record_cast(state: BattleState, caster: UnitState, skill: SkillDef) -> None:
@@ -629,6 +639,46 @@ class _Cast:
             CleanseEffect(target_id=unit.id, source_id=self.caster.id)
             for unit in self.targets(effect.affects, spec.condition)
         ]
+
+    # -- 資源互動（Phase 3D-1）------------------------------------------
+
+    def restore_resource(self, effect: ResolvedEffect, spec: EffectSpec) -> list[EffectBase]:
+        """``restore_resource``：對每個對象直接結算（:mod:`trpg.engine.resources`）。"""
+        for unit in self.targets(effect.affects, spec.condition):
+            if spec.resource == "mana":
+                restore_mana(self.ctx, self.caster, unit, spec.amount or 1)
+            else:
+                restore_cooldowns(self.ctx, self.caster, unit, self.skill, spec)
+        return []
+
+    def steal_buff(self, effect: ResolvedEffect, spec: EffectSpec) -> list[EffectBase]:
+        """``steal_buff``：每個有增益的對象先失去一個增益（原因 ``stolen``），再把同一個狀態以相同
+        的剩餘回合與數值施加到施放者身上。沒有任何對象有增益時發出 ``effect_fizzled``。"""
+        batch: list[EffectBase] = []
+        for unit in self.targets(effect.affects, spec.condition):
+            buff = pick_stolen_buff(self.ctx, unit)
+            if buff is None:
+                continue
+            batch.append(
+                RemoveStatusEffect(
+                    source_id=self.caster.id,
+                    target_id=unit.id,
+                    status_id=buff.status_id,
+                    reason="stolen",
+                )
+            )
+            batch.append(
+                ApplyStatusEffect(
+                    source_id=self.caster.id,
+                    target_id=self.caster.id,
+                    status_id=buff.status_id,
+                    duration=buff.remaining,
+                    amount=buff.amount,
+                )
+            )
+        if not batch:
+            self.ctx.emit(EffectFizzled, effect_kind=spec.type, pos=None, reason="no_buff")
+        return batch
 
     # -- 改寫規則型（Phase 3C-4a）------------------------------------------
 
@@ -1143,6 +1193,8 @@ _Cast._SIMPLE = {
     "knock_prone": _Cast.knock_prone,
     "apply_status": _Cast.apply_status,
     CONSUME_STATUS: _Cast.consume_status,
+    RESTORE_RESOURCE: _Cast.restore_resource,
+    STEAL_BUFF: _Cast.steal_buff,
     HURL_OBJECT: _Cast.hurl_object,
 }
 """只需要 ``(effect, spec)`` 的原語 → 展開方法。"""

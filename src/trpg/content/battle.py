@@ -243,6 +243,11 @@ class StatusDef(ContentModel):
     - ``prevents_death``：不死——帶有者受到傷害、HP 會降到 0 時改為 1 並移除此狀態（墜落與致命
       地形照樣生效）。
 
+    Phase 3D-1 的欄位：
+
+    - ``polarity``：增益／減益／中性分類（必填）。``steal_buff`` 只能奪取 ``buff``；``neutral``
+      （姿態、隱蔽、不死、靈魂連結）帶有來源或唯一性語意，不能被奪取。
+
     Phase 3C-4b 的欄位：
 
     - ``redirects_damage``：靈魂連結——帶有者受到的傷害有 ``StatusInstance.amount``‰ 轉給狀態來源
@@ -279,9 +284,14 @@ class StatusDef(ContentModel):
     budget_points: int | None = Field(default=None, ge=0)
     min_rarity: Literal["common", "rare", "epic", "legendary"] = "common"
     beneficial: bool = False
+    polarity: Literal["buff", "debuff", "neutral"]
 
     @model_validator(mode="after")
     def _check(self) -> StatusDef:
+        if self.polarity == "buff" and not self.beneficial:
+            raise ValueError(f"狀態 {self.id}：polarity: buff 必須 beneficial: true")
+        if self.polarity == "debuff" and self.beneficial:
+            raise ValueError(f"狀態 {self.id}：polarity: debuff 不可 beneficial: true")
         if self.stance and (self.expires != "never" or self.duration is not None):
             raise ValueError(f"狀態 {self.id}：姿態（stance）必須 expires: never 且不設 duration")
         if self.control_group is not None and self.save_attr is None:

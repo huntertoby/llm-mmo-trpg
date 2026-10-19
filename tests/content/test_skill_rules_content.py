@@ -83,6 +83,7 @@ def test_the_initial_skeleton_structure_matches_the_spec() -> None:
         "create_obstacle",
         "raise_terrain",
         "lower_terrain",
+        "steal_buff",  # 3D-1
     }
     assert sk["control"].secondary.max_share_permille == {"damage": 400}
     # 3C-5a：場景物件原語（只給手寫技能，隨機組合器不使用）
@@ -116,6 +117,7 @@ def test_the_initial_skeleton_structure_matches_the_spec() -> None:
         "redirect_damage",
         "copy_skill",
         "extra_reaction",
+        "restore_resource",  # 3D-1
     }
     assert (
         set(sk["aura"].forbid_affects) == {"enemies", "all"} and sk["aura"].secondary.max_count == 1

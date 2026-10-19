@@ -647,7 +647,7 @@ def _self_status_cost(ctx: Ctx) -> dict[str, Any] | None:
 # ---------------------------------------------------------------------------
 
 
-_HAND_WRITTEN_PRIMITIVES = frozenset({"hurl_object", "topple"})
+_HAND_WRITTEN_PRIMITIVES = frozenset({"hurl_object", "topple", "restore_resource", "steal_buff"})
 """只給手寫技能的結構型原語（Phase 3C-5a 的場景物件原語：需要地圖上有對應的物件）。"""
 _HAND_WRITTEN_SHAPES = frozenset({"object_then_tile"})
 """只給手寫技能的形狀（Phase 3C-5a：投擲物件專用）。"""

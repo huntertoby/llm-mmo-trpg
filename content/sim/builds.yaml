@@ -9,6 +9,7 @@ companions: [sim_companion_fighter, sim_companion_archer]
 # build_healer 加入再起（second_wind），讓每個手寫技能都被至少一名英雄或單位裝備（tests/content/test_coverage.py）。
 # Phase 2G-2：新增 12 個示範技能（觸發時機、反應事件、連段、地形原語），分配給主題相符的 build（沒有新增 build，仍為 12 個）。
 # Phase 3C-5a：build_push 加震地推倒（topple）、build_fire 加念力投擲（hurl_object；油桶落地爆炸，3C-6 再整理成念力流）。
+# Phase 3D-1：連段條件與資源互動的示範技能（衝勢劈砍、並肩斬、獵殺落單、先發制人、連段雷光、專注湧流、疾時之潮、竊取祝福）。
 # Phase 3C-3a：build_push 加破城衝撞與裂骨印記（撞擊）、build_fire 加烈焰護身（on_cast_tag）、build_warlock 加蝕心追擊（on_status_applied）。
 # Phase 3C-2：修正技能（kind: modifier，裝在被動欄位，上限 3）——build_push 加重踏、build_fire 加灼傷之痕與餘燼循環、
 # build_tank 加雷之手（單手劍的物理普攻變成雷電，3C-5 再整理）。
@@ -61,7 +62,7 @@ builds:
       resist: {elemental: 150}
       tags: [hero, sim]
       max_mana: 40
-      skills: [skill_chain_lightning, skill_summon_tide, skill_frost_shackle, skill_conductive_strike, skill_twin_strike, skill_deep_freeze, skill_tide_snare]
+      skills: [skill_chain_lightning, skill_summon_tide, skill_frost_shackle, skill_conductive_strike, skill_twin_strike, skill_deep_freeze, skill_tide_snare, skill_arc_follow_up]
 
   - id: build_tank
     name_zh: 坦克
@@ -109,7 +110,7 @@ builds:
       weapon: dagger
       tags: [hero, sim]
       max_mana: 20
-      skills: [skill_rending_strike, skill_execute, skill_blink, skill_fury_stance, skill_crippling_crit, skill_reckless_lunge]
+      skills: [skill_rending_strike, skill_execute, skill_blink, skill_fury_stance, skill_crippling_crit, skill_reckless_lunge, skill_pick_off, skill_first_strike]
 
   - id: build_support
     name_zh: 輔助
@@ -126,7 +127,7 @@ builds:
       resist: {elemental: 150}
       tags: [hero, sim]
       max_mana: 40
-      skills: [skill_war_hymn, skill_tailwind, skill_frost_shackle, skill_reflex_ward, skill_steady_breath, skill_rallying_cry, skill_mirror_cast]
+      skills: [skill_war_hymn, skill_tailwind, skill_frost_shackle, skill_reflex_ward, skill_steady_breath, skill_rallying_cry, skill_mirror_cast, skill_focus_surge]
 
   - id: build_healer
     name_zh: 治療
@@ -143,7 +144,7 @@ builds:
       resist: {elemental: 150}
       tags: [hero, sim]
       max_mana: 40
-      skills: [skill_sanctuary, skill_renewal, skill_purify, skill_guardian_aegis, skill_second_wind, skill_undying_oath]
+      skills: [skill_sanctuary, skill_renewal, skill_purify, skill_guardian_aegis, skill_second_wind, skill_undying_oath, skill_quicken_tide]
 
   - id: build_warlock
     name_zh: 術士
@@ -161,7 +162,7 @@ builds:
       tags: [hero, sim]
       max_mana: 40
       skills:
-        [skill_hex_bolt, skill_dread_gaze, skill_hush, skill_blinding_dark, skill_venom_cloud, skill_mark_detonation, skill_creeping_blight]
+        [skill_hex_bolt, skill_dread_gaze, skill_hush, skill_blinding_dark, skill_venom_cloud, skill_mark_detonation, skill_creeping_blight, skill_blessing_thief]
 
   - id: build_guardian
     name_zh: 守護者
@@ -178,7 +179,7 @@ builds:
       resist: {physical: 100}
       tags: [hero, sim]
       max_mana: 20
-      skills: [skill_taunting_roar, skill_stand_firm, skill_bulwark_stance, skill_thorn_skin, skill_soul_bond, skill_vigil_call]
+      skills: [skill_taunting_roar, skill_stand_firm, skill_bulwark_stance, skill_thorn_skin, skill_soul_bond, skill_vigil_call, skill_charging_strike, skill_shoulder_strike]
 
   - id: build_striker
     name_zh: 蓄力流

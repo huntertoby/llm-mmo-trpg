@@ -37,8 +37,14 @@ __all__ = [
     "run_battle",
 ]
 
-LOG_FORMAT = "trpg-battle-log/17"
-"""``/17``（Phase 3C-5b）：穿透——技能欄位 ``pierce``、修正規則 ``grant_pierce``、核心規則
+LOG_FORMAT = "trpg-battle-log/18"
+"""``/18``（Phase 3D-1）：連段條件（單位的 ``moved_this_turn``、``turn_cast_tags``；條件
+``moved_this_turn``／``adjacent_ally``／``target_isolated``／``first_round``／``cast_tag_this_turn``）、
+資源互動原語 ``restore_resource``（事件 ``resource_restored``）與 ``steal_buff``
+（``status_removed`` 的新原因 ``stolen``）、狀態分類 ``polarity``；``/17`` 的紀錄沒有這些欄位與
+規則（狀態表多了必填的 ``polarity``），無法由新版程式重播。
+
+``/17``（Phase 3C-5b）：穿透——技能欄位 ``pierce``、修正規則 ``grant_pierce``、核心規則
 ``pierce_behind_permille``、事件 ``shot_pierced``；穿透技能無視半掩護，傷害與命中因此和 ``/16``
 的規則不同（``/16`` 的紀錄沒有穿透技能，內容與事件逐字不變，但規則包與事件種類多了新欄位）。
 

@@ -1,4 +1,4 @@
-# 技能與效果的條件（docs/phases/Phase2A計畫.md 6.1）。引擎實作 5 種，資料檔必須全部定義。
+# 技能與效果的條件（docs/phases/Phase2A計畫.md 6.1）。引擎實作 10 種，資料檔必須全部定義。
 #
 # 技能層級的 condition：決定技能能否使用（不成立時不在 legal_actions）。
 #   自身條件（self_hp_below）看施放者；其他條件要求影響範圍內（不含施放者所在格）至少有一個
@@ -8,7 +8,11 @@
 #
 # harshness：common 常見／harsh 嚴苛，決定預算的條件倍率（2B-2：0.85／0.6）
 # min_rarity：使用此條件的最低稀有度（2B-2：條件從 rare 起才能使用）
-# params：沿用原語參數的格式（type：int／status／surface）
+# params：沿用原語參數的格式（type：int／status／surface／tag）
+#
+# 3D-1（連段條件；harshness 為初值，未經模擬）：施放者條件（self_hp_below、moved_this_turn、adjacent_ally、
+# first_round、cast_tag_this_turn）只看施放者，技能層級的條件不需要影響範圍內有對象；
+# 單位條件（target_isolated）要求影響範圍內至少有一個符合的單位。
 conditions:
   - id: target_hp_below
     name_zh: 目標血量低於
@@ -43,3 +47,30 @@ conditions:
     min_rarity: rare
     params:
       status: {type: status, required: true}
+  - id: moved_this_turn
+    name_zh: 本回合移動過
+    description_zh: 施放者本回合做過主動移動（步行；傳送與被強制位移不算）。
+    harshness: common
+    min_rarity: rare
+  - id: adjacent_ally
+    name_zh: 身旁有友方
+    description_zh: 施放者相鄰（上下左右）有存活的友方。
+    harshness: common
+    min_rarity: rare
+  - id: target_isolated
+    name_zh: 目標落單
+    description_zh: 目標相鄰（上下左右）沒有它的存活友方。
+    harshness: common
+    min_rarity: rare
+  - id: first_round
+    name_zh: 第一輪
+    description_zh: 目前是戰鬥的第 1 輪。
+    harshness: harsh
+    min_rarity: rare
+  - id: cast_tag_this_turn
+    name_zh: 本回合施放過同類技能
+    description_zh: 施放者本回合已經施放過帶指定標籤的技能（不含這次施放）。
+    harshness: common
+    min_rarity: rare
+    params:
+      tag: {type: tag, required: true}

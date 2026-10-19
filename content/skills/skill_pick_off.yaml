@@ -1,0 +1,26 @@
+id: skill_pick_off
+schema_version: 1
+name_zh: 獵殺落單
+tier: 1
+rank: 1
+rarity: rare
+kind: active
+skeleton: strike
+category: weapon
+weapon_req: melee
+ap_cost: 2
+scaling_attr: dex
+shape: {type: single, range: weapon}
+effects:
+  - {type: damage, multiplier_permille: 1000}
+  # 3D-1 連段條件：目標落單
+  - type: damage
+    multiplier_permille: 800
+    condition: {type: target_isolated}
+condition: null
+cost: {mana: 5, cooldown: 2}
+tags: [physical, melee, hunter]
+narrative:
+  concept: 專挑離群的獵物下手
+  cast_flavor: 你盯上孤身一人的目標，悄無聲息地貼近，一刀補在它沒有同伴的那一側
+provenance: {origin: builtin, owner_id: null, created_by: null, parents: [], bound: true, tradeable: false}

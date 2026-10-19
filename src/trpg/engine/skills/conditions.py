@@ -4,7 +4,8 @@
 
 - 單位類條件（``target_hp_below``、``target_has_status``）需要單位，沒有單位時不成立；
 - 格子類條件（``height_advantage``、``target_on_surface``）看格子，單位只是站在上面；
-- ``self_hp_below`` 只看施放者，與對象無關。
+- ``self_hp_below`` 與 3D-1 的連段條件（``moved_this_turn``、``adjacent_ally``、``first_round``、
+  ``cast_tag_this_turn``）只看施放者，與對象無關；``target_isolated`` 看對象單位的周圍。
 
 技能層級的條件（:func:`skill_condition_met`）決定技能能否使用；效果層級的條件
 （:func:`condition_met`）由解譯器對每個對象分別判斷。
@@ -15,7 +16,7 @@ from __future__ import annotations
 from collections.abc import Iterable
 from typing import NamedTuple
 
-from trpg.content.skills import ConditionSpec, SkillDef, condition_text
+from trpg.content.skills import CASTER_CONDITIONS, ConditionSpec, SkillDef, condition_text
 from trpg.engine.rules.geometry import XY
 from trpg.engine.state import BattleState, UnitState
 
@@ -41,6 +42,48 @@ def _hp_below(unit: UnitState, permille: int) -> bool:
     return unit.hp * _PERMILLE < permille * unit.max_hp
 
 
+def _has_living_ally_beside(state: BattleState, unit: UnitState) -> bool:
+    """``unit`` 相鄰（上下左右）有它的存活友方（不含自己）。"""
+    x, y = unit.xy
+    for xy in ((x, y - 1), (x - 1, y), (x + 1, y), (x, y + 1)):
+        other = state.unit_at(*xy)
+        if other is not None and other.id != unit.id and other.alive and other.team is unit.team:
+            return True
+    return False
+
+
+def _caster_condition_met(state: BattleState, caster: UnitState, condition: ConditionSpec) -> bool:
+    """只看施放者的條件（:data:`CASTER_CONDITIONS`）。"""
+    kind = condition.type
+    if kind == "self_hp_below":
+        assert condition.permille is not None
+        return _hp_below(caster, condition.permille)
+    if kind == "moved_this_turn":
+        return caster.moved_this_turn
+    if kind == "adjacent_ally":
+        return _has_living_ally_beside(state, caster)
+    if kind == "first_round":
+        return state.round == 1
+    assert kind == "cast_tag_this_turn" and condition.tag is not None
+    return condition.tag in caster.turn_cast_tags
+
+
+def _unit_condition_met(state: BattleState, condition: ConditionSpec, unit: UnitState) -> bool:
+    """看對象單位的條件（``target_hp_below``、``target_has_status``、``target_isolated``）。"""
+    kind = condition.type
+    if kind == "target_hp_below":
+        assert condition.permille is not None
+        return _hp_below(unit, condition.permille)
+    if kind == "target_has_status":
+        assert condition.status is not None
+        return unit.has_status(condition.status)
+    assert kind == "target_isolated"
+    return not _has_living_ally_beside(state, unit)
+
+
+_UNIT_CONDITIONS = frozenset({"target_hp_below", "target_has_status", "target_isolated"})
+
+
 def condition_met(
     state: BattleState, caster: UnitState, condition: ConditionSpec | None, subject: Subject
 ) -> bool:
@@ -48,16 +91,10 @@ def condition_met(
     if condition is None:
         return True
     kind = condition.type
-    unit = subject.unit
-    if kind == "self_hp_below":
-        assert condition.permille is not None
-        return _hp_below(caster, condition.permille)
-    if kind == "target_hp_below":
-        assert condition.permille is not None
-        return unit is not None and _hp_below(unit, condition.permille)
-    if kind == "target_has_status":
-        assert condition.status is not None
-        return unit is not None and unit.has_status(condition.status)
+    if kind in CASTER_CONDITIONS:
+        return _caster_condition_met(state, caster, condition)
+    if kind in _UNIT_CONDITIONS:
+        return subject.unit is not None and _unit_condition_met(state, condition, subject.unit)
     if kind == "height_advantage":
         return state.tile(*caster.xy).height > state.tile(*subject.xy).height
     if kind == "target_on_surface":
@@ -74,11 +111,11 @@ def subjects_of(state: BattleState, caster: UnitState, tiles: Iterable[XY]) -> l
 def skill_condition_met(
     state: BattleState, caster: UnitState, skill: SkillDef, tiles: Iterable[XY]
 ) -> bool:
-    """技能層級的條件：``self_hp_below`` 看施放者；其他條件要求影響範圍內至少有一個對象成立。"""
+    """技能層級的條件：施放者條件（:data:`CASTER_CONDITIONS`）看施放者；其他條件要求影響範圍內至少有一個對象成立。"""
     condition = skill.condition
     if condition is None:
         return True
-    if condition.type == "self_hp_below":
+    if condition.type in CASTER_CONDITIONS:
         return condition_met(state, caster, condition, Subject(caster, caster.xy))
     return any(
         condition_met(state, caster, condition, subject)

@@ -69,6 +69,7 @@ def test_a_control_status_needs_a_save_attribute() -> None:
             duration=1,
             expires="turn_end",
             control_group="hard",
+            polarity="debuff",
         )
 
 

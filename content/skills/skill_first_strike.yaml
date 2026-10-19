@@ -1,0 +1,26 @@
+id: skill_first_strike
+schema_version: 1
+name_zh: 先發制人
+tier: 1
+rank: 1
+rarity: rare
+kind: active
+skeleton: strike
+category: weapon
+weapon_req: melee
+ap_cost: 2
+scaling_attr: dex
+shape: {type: single, range: weapon}
+effects:
+  - {type: damage, multiplier_permille: 1000}
+  # 3D-1 連段條件：第一輪
+  - type: damage
+    multiplier_permille: 1200
+    condition: {type: first_round}
+condition: null
+cost: {mana: 5, cooldown: 2}
+tags: [physical, melee, opening]
+narrative:
+  concept: 搶在敵人反應過來之前的第一輪突襲
+  cast_flavor: 戰鬥才剛開始，你已欺到敵人面前，一刀搶在他拔出武器之前劈下
+provenance: {origin: builtin, owner_id: null, created_by: null, parents: [], bound: true, tradeable: false}

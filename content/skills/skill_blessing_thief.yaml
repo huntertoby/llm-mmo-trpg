@@ -1,0 +1,23 @@
+id: skill_blessing_thief
+schema_version: 1
+name_zh: 竊取祝福
+tier: 1
+rank: 1
+rarity: rare
+kind: active
+skeleton: control
+category: spell
+weapon_req: focus
+ap_cost: 1
+scaling_attr: int
+shape: {type: single, range: 4}
+effects:
+  - {type: steal_buff, affects: enemies}
+  - {type: damage, dice: 1d4, element: shadow}
+condition: null
+cost: {mana: 5, cooldown: 2}
+tags: [shadow, spell, steal]
+narrative:
+  concept: 把敵人身上的增益據為己有，從他手中奪走優勢
+  cast_flavor: 你的指尖勾住敵人身上閃爍的光，像扯下一件披風般把它拉到自己肩上
+provenance: {origin: builtin, owner_id: null, created_by: null, parents: [], bound: true, tradeable: false}

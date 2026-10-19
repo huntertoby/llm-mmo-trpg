@@ -48,6 +48,7 @@ from trpg.engine.events import (
     ReactionModeSet,
     ReactionsGranted,
     ReactionTriggered,
+    ResourceRestored,
     RoundEnded,
     RoundStarted,
     ShieldAbsorbed,
@@ -142,6 +143,7 @@ _REMOVE_REASONS = {
     "thawed": "解除了（受到傷害）",
     "consumed": "被消耗了",
     "spent": "擋下致命傷害後消失了",
+    "stolen": "被奪走了",
 }
 
 
@@ -567,6 +569,15 @@ def _damage_redirected(e: DamageRedirected, v: _View) -> str:
 @_handles(ReactionsGranted)
 def _reactions_granted(e: ReactionsGranted, v: _View) -> str:
     return f"    {v.name[e.unit_id]} 本輪的反應次數 +{e.amount}（額外共 {e.total} 次）"
+
+
+@_handles(ResourceRestored)
+def _resource_restored(e: ResourceRestored, v: _View) -> str:
+    who = v.name[e.unit_id]
+    if e.resource == "mana":
+        return f"    {who} 回復了 {e.amount} 點法力（現在 {e.mana_after}）"
+    names = "、".join(f"「{v.state.ruleset.skill_def(s).name_zh}」" for s in e.skill_ids)
+    return f"    {who} 的 {names} 冷卻 −{e.amount}"
 
 
 @_handles(SkillCopied)
