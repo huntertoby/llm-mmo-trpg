@@ -13,6 +13,7 @@
 | A | 排程 | 撥開與 #2 全部排在 3-5 之前，拆六段（見 0.3） |
 | B | 改寫規則型原語 | **6 個全做**：`grant_ap`、`reset_cooldown`、`cheat_death`、`redirect_damage`、`copy_skill`、`extra_reaction` |
 | C | 新觸發時機 | **4 個**：`on_cast_tag`、`on_status_applied`、`on_collision`、`on_enter_surface` |
+| E | 場景物件原語（玩法 PM #4，2026-10-19 追加） | **撞擊、投擲物件、穿透、推倒四項都在 3-5 之前做**（使用者原話「四個都要在 3-5 之前做」）。規則預設見 `docs/玩法PM交接.md` #4，細節與數值由開發 PM 定 |
 | D | 改造型與修正型被動的欄位 | **與被動共用被動欄位，上限 2 → 3**（`content/rules/core.yaml` 的 `passive`）。3-5 的裝備限制跟著改成主動 ≤ 6、被動 ≤ 3、反應 ≤ 1 |
 
 ### 0.2 開發 PM 的技術決定
@@ -24,19 +25,22 @@
 | 3 | 消耗狀態 | 新原語 `consume_status`（協同管道 1），見 5.2 |
 | 4 | 源力 | 戰鬥設定新增「每個單位開場的源力」；引擎只管戰鬥內，跨戰鬥保留由 3-5 處理（見 0.4）。初值：上限 3、開場至少 1、傳說花 1 或 2 點；源泉格先放 2 張地圖 |
 | 5 | `LOG_FORMAT` | 可以升（預期 3C 會升到 `/12` 以上），每段報告說明；同一段只升一次 |
-| 6 | 預算 | 新類別、新原語、新觸發時機的預算係數都是 **初值、未經模擬**，寫在 `content/` 的 YAML；3C-5 跑 `sim matrix` 看有沒有 build 爆衝，數值調整留到平衡階段 |
+| 6 | 預算 | 新類別、新原語、新觸發時機的預算係數都是 **初值、未經模擬**，寫在 `content/` 的 YAML；3C-6 跑 `sim matrix` 看有沒有 build 爆衝，數值調整留到平衡階段 |
 | 7 | AI | AI 要能「合法地」使用新內容（不會卡住、不違規），不要求用得好；評分用現有評分框架的最簡單近似 |
 
-### 0.3 拆段
+### 0.3 拆段（2026-10-19 追加 #4 後改為九段）
 
 | 段 | 內容 | 模型 | 估時 |
 |---|---|---|---|
 | 3C-1 | 撥開（引擎、AI、CLI、前端選方向、地圖卡路檢查） | sonnet | 30 分 |
 | 3C-2 | 修正規則：修正型被動 ＋ 改造型技能、被動欄位 3 | opus | 45 分 |
-| 3C-3 | 4 個新觸發時機 ＋ `consume_status` | sonnet | 40 分 |
+| 3C-3a | 撞擊規則 ＋ `on_collision`、`on_cast_tag`、`on_status_applied` | sonnet | 40 分 |
+| 3C-3b | 表面歸屬 ＋ `on_enter_surface` ＋ `consume_status` | sonnet | 35 分 |
 | 3C-4a | 源力 ＋ 傳說定位 ＋ `grant_ap`、`reset_cooldown`、`cheat_death` | opus | 45 分 |
 | 3C-4b | `redirect_damage`、`copy_skill`、`extra_reaction` | sonnet | 40 分 |
-| 3C-5 | 示範技能與 build、前端顯示、組合器、`sim matrix`、PM 打法差異檢查 | sonnet | 40 分 |
+| 3C-5a | 物件原語：投擲物件 `hurl_object`、推倒 `topple`（含物件標籤、地圖擺放） | opus | 45 分 |
+| 3C-5b | 物件原語：穿透 `pierce` ＋ 三種物件原語的 AI 與網頁預覽 | sonnet | 40 分 |
+| 3C-6 | 示範技能與 build、前端顯示、組合器、`sim matrix`、PM 打法差異檢查 | sonnet | 40 分 |
 
 每段結束由 PM 驗收（`PM交接.md` 6.2）並把「待 PM 決定」處理寫在本節 0.5 之後。
 
@@ -54,7 +58,7 @@
 |---|---|---|
 | 1 | 驗收 3「油桶撥到火上」前提不成立（沒有「物件進入火表面即點燃」的規則） | 接受；是規格寫錯，不補規則。要不要加這條互動屬玩法問題，有需要再交給玩法 PM |
 | 2 | 不合法的撥開不列在 `legal_actions`，改由 `interact_options` 帶原因 | 接受 |
-| 3、4 | 撥開是獨立的模式按鈕、在面板選方向，不是點物件後彈出箭頭 | 接受；3C-5 有餘裕時可改成點物件後在旁邊顯示箭頭（非必要） |
+| 3、4 | 撥開是獨立的模式按鈕、在面板選方向，不是點物件後彈出箭頭 | 接受；3C-6 有餘裕時可改成點物件後在旁邊顯示箭頭（非必要） |
 | 5 | 按鈕文字「往左撥／往右撥」＋畫面方向箭頭 | 接受 |
 | 6 | 沒有玩家互動的 CLI，不加語法 | 接受 |
 | 7 | 卡路檢查把所有物件視為不可通行（偏保守） | 接受 |
@@ -74,8 +78,8 @@
 - 開發中只跑相關測試檔（`uv run pytest -q tests/<路徑> -x`）；commit 前只跑 `uv run ruff check .`、`uv run ruff format --check .`、`uv run mypy` 與相關測試；**完整的 `uv run python scripts/check.py` 只在子階段最後跑一次**（本機約 1 分鐘）。
 - 每完成一個交付項目就 commit。不要 push。
 - 修改既有測試的期望值時，報告逐一列出原因。CLI 快照要重錄時說明原因。
-- 不跑 `trpg sim completion`／`matrix` 全量（3C-5 例外，見 8）。
-- 每段至少新增一個手寫技能使用該段的新原語／觸發時機／類別（`tests/content/test_coverage.py` 的允許清單維持為空）；新技能要有 build 或單位裝備（可以先加進現有 build，3C-5 再整理）。
+- 不跑 `trpg sim completion`／`matrix` 全量（3C-6 例外，見 8）。
+- 每段至少新增一個手寫技能使用該段的新原語／觸發時機／類別（`tests/content/test_coverage.py` 的允許清單維持為空）；新技能要有 build 或單位裝備（可以先加進現有 build，3C-6 再整理）。
 
 ---
 
@@ -165,7 +169,7 @@ modifiers:
 ### 4.5 CLI、API、前端（最小）
 
 - CLI `trpg skills list／show` 顯示修正規則的中文描述（`trpg.narrative` 的描述模組）。
-- API 的技能資料帶出修正規則描述；前端只需在技能說明裡顯示文字（完整 UI 在 3C-5）。
+- API 的技能資料帶出修正規則描述；前端只需在技能說明裡顯示文字（完整 UI 在 3C-6）。
 
 ### 4.6 驗收條件（3C-2）
 
@@ -178,7 +182,19 @@ modifiers:
 
 ---
 
-## 5. Phase 3C-3｜新觸發時機 ＋ `consume_status`（sonnet）
+## 5. Phase 3C-3｜撞擊、新觸發時機 ＋ `consume_status`（拆兩段，sonnet）
+
+> **3C-3a**：5.0 撞擊規則、5.1 的 `on_collision`、`on_cast_tag`、`on_status_applied`。**3C-3b**：5.1 的 `on_enter_surface`（含表面 `creator`）、5.2 `consume_status`。驗收條件 5.3 依各自範圍套用。
+
+### 5.0 撞擊規則（3C-3a；玩法 PM #4）
+
+- 被強制位移（推、拉、擊退、風、基本動作推擊）的 **單位** 因障礙提前停下時（`blocks_move` 物件、不可走地形、其他單位、地圖邊界），**每少走 1 格** 造成一次撞擊傷害：物理、`collision_damage_dice`（初值 `1d6`，放 `content/rules/core.yaml`），不加屬性。墜落或進入致命地形而停下的不算撞擊。
+- 撞到單位：雙方都受一次撞擊傷害。撞到 `breakable` 物件：物件也受同樣傷害。
+- 新事件 `Collided`（被推單位、撞到什麼〔`wall`／`edge`／`object`／`unit`〕、少走的格數、位移來源）；傷害以 `DamageDealt` 表示，`cause` 新增 `collision`，傷害歸給位移的來源單位。
+- 撞擊傷害的觸發照常受 `max_trigger_depth` 限制。
+- 3C-2 的 `push_distance_delta` 超過 6.6 上限（2 格）的部分：改為 **每 1 格加一次撞擊傷害**（在推完之後結算，就算沒撞到東西也算），取代 3C-2 的捨去處理。
+- 預覽（`preview.py`）顯示可能的撞擊傷害；AI 的位移評分加上撞擊傷害（最簡單近似：把預期撞擊傷害加進傷害分）。
+- 颶風踢等原本描述「撞牆額外傷害」的技能，確認現在確實會造成撞擊傷害；技能本身的數值不改。
 
 ### 5.1 觸發時機（加進 `content/skill_triggers.yaml`，被動與改造型都可用）
 
@@ -186,7 +202,7 @@ modifiers:
 |---|---|---|---|
 | `on_cast_tag` | 持有者施放帶某標籤的技能，在該技能結算 **之後** | `tag` | 無（`has_other: false`）；效果作用在持有者或依形狀 |
 | `on_status_applied` | 持有者成功對單位施加某狀態（抵抗成功不算） | `status`（可省略＝任何狀態） | 被施加的單位 |
-| `on_collision` | 持有者造成的強制位移被牆、物件、單位或地圖邊緣擋下（`MoveBlocked` 且 `mode: forced`，來源歸給持有者） | 無 | 被推的單位 |
+| `on_collision` | 持有者造成的撞擊（5.0 的 `Collided`，來源歸給持有者） | 無 | 被推的單位 |
 | `on_enter_surface` | 敵方單位進入持有者造出的表面（步行或強制位移；回合開始站在上面不算） | `surface`（可省略） | 進入的單位 |
 
 - `on_enter_surface` 需要追蹤「表面是誰造的」：在格子的表面狀態加 `creator`（單位 ID 或 `None`；蔓延、天氣、地圖初始為 `None`，環境互動產生的表面沿用觸及它的來源）。序列化與視圖跟著改。
@@ -207,6 +223,7 @@ modifiers:
 
 ### 5.3 驗收條件（3C-3）
 
+1. （3C-3a）撞擊：撞牆、撞地圖邊緣、撞單位（雙方受傷）、撞可破壞物件（物件受傷）、少走 2 格受兩次、墜落不算撞擊、`push_distance_delta` 超過上限改為撞擊傷害、預覽顯示撞擊傷害。
 1. 4 個觸發時機各至少一個觸發測試與一個「不該觸發」測試（例如抵抗成功不觸發 `on_status_applied`、友方進入表面不觸發 `on_enter_surface`、主動移動被擋不觸發 `on_collision`）。
 2. 表面 `creator` 的序列化、視圖、重播測試；舊行為（沒有 creator）不變。
 3. `consume_status` 有狀態／無狀態／兩種 scale 的測試。
@@ -249,7 +266,7 @@ modifiers:
 ### 6.4 CLI、API、前端（最小）
 
 - CLI HUD 顯示源力（例：`源力 2/3`）；技能列表顯示源力成本。
-- API 的單位視圖帶 `source`、`source_max`；技能帶 `cost.source`。前端 HUD 顯示源力數字（完整樣式在 3C-5），技能按鈕在源力不足時不可按並顯示原因。
+- API 的單位視圖帶 `source`、`source_max`；技能帶 `cost.source`。前端 HUD 顯示源力數字（完整樣式在 3C-6），技能按鈕在源力不足時不可按並顯示原因。
 
 ### 6.5 驗收條件（3C-4a）
 
@@ -280,11 +297,69 @@ modifiers:
 
 ---
 
-## 8. Phase 3C-5｜內容、顯示與收尾（sonnet）
+## 7A. Phase 3C-5｜場景物件原語（玩法 PM #4；拆兩段）
+
+> 來源：`docs/玩法PM交接.md` 第 3 節 #4（設計文件尚未寫入，以該節為準）。撞擊已在 3C-3a。
+
+### 7A.1 物件標籤與地圖（3C-5a）
+
+- `content/objects.yaml` 新增標籤：`penetrable`（可被穿透：木箱、倒木、木牆）、`topplable`（可推倒：石柱、枯樹）。新增物件「枯樹」（`topplable`、`blocks_move`、`blocks_sight`、`breakable`、`flammable`）與「倒塌物」（推倒後產生：`blocks_move`、半掩護）。石柱加 `topplable`。
+- 地圖：至少 3 張正式地圖加入可推倒物件（建議 `ruined_fort`、`dark_forest`、`narrow_halls`），至少 2 張有較多可投擲物件（`pushable`，建議 `oil_depot`、`open_plain`）。改完重跑 3C-1 的 `scripts/map_push_check.py`，確認沒有封死通路。
+
+### 7A.2 投擲物件 `hurl_object`（3C-5a）
+
+```yaml
+- {type: hurl_object, range: 4, dice: 2d6, knock_prone: false}
+```
+
+- 只有技能能用（基本動作不行）。技能需要兩個目標：射程內的一個 `pushable` 物件，與落點格（距施放者 ≤ 技能射程）。目標選擇沿用現有「選格子」流程的最簡單延伸（例如 `shape: {type: object_then_tile}`，實作者定名），pending／API 能表達兩段選取。
+- 命中判定照技能；落點有單位時受 `dice` 物理傷害（可附 `knock_prone`）。
+- 物件落地後依標籤結算：`explosive` 爆炸（沿用爆炸規則）、`breakable` 碎掉（摧毀）、其他放在落點；落點有單位或物件時放在最近的空格（距離相同依固定順序），沒有空格就摧毀。
+- 物件的飛行路徑不檢查阻擋（拋物線），但落點要在視線內（沿用技能的視線規則）。
+- 預算：比照同骰數的單體傷害，再加「需要附近有物件」的條件折扣（初值）。
+
+### 7A.3 推倒 `topple`（3C-5a）
+
+- `topplable` 物件被推（基本動作推、撥開以外的互動推、技能推、風）時不移動，而是往 **推的方向** 倒下：從物件的下一格起壓住 `topple_length` 格（初值 2，`content/rules/core.yaml`）。
+- 原物件移除，原格與被壓的格中，**最後一格** 產生「倒塌物」（其餘格不留物件；保守、避免封路，報告說明）。被壓的單位受 `topple_damage_dice`（初值 `2d6`）物理傷害並 `prone`；傷害歸給推的人。
+- 壓到地圖外或不可走地形的格子跳過；壓到其他物件時，`breakable` 物件受同樣傷害，其他物件擋住倒下（停在前一格）。
+- 撥開不會推倒（撥開是側移，`topplable` 物件不能撥開，`interact_options` 給原因）。
+- 新事件 `ObjectToppled`（物件、方向、壓到的格子）。
+
+### 7A.4 穿透 `pierce`（3C-5b）
+
+- 技能屬性（不是效果原語）：技能定義加 `pierce: true`，只能用在遠程單體或直線形狀。
+  - 無視 **半掩護**（全掩護與視線規則不變）。
+  - 直線或射線上遇到 `penetrable` 物件時不停下：物件受全額傷害，後方目標受 `pierce_behind_permille`（初值 700‰）的傷害。石柱、土牆等非 `penetrable` 物件照樣擋住。
+- 改造型（3C-2 的 `modifiers`）的 `change` 新增 `grant_pierce: true`（例：「你的弓箭技能能穿透木製物件」）。
+- 預算：`pierce` 的加成係數放 `content/skill_budget.yaml`（初值）。
+
+### 7A.5 AI 與網頁（3C-5b）
+
+- AI 會評估投擲（物件 × 落點的組合取前幾名，限制列舉數量避免太慢）、推倒（推的方向上壓到的敵人）、穿透（掩護後的敵人）。不要求用得好，但 `sim` 中要有使用紀錄。
+- 網頁技能預覽：投擲顯示「選物件 → 選落點」兩段選取、物件與落點標示；穿透顯示路線與穿過的物件；推倒（推擊與推的技能對 `topplable` 物件）顯示壓住的範圍。
+
+### 7A.6 驗收條件
+
+3C-5a：
+1. 投擲：落點有單位／空格、`explosive` 爆炸、`breakable` 碎掉、落點被占用時放最近空格、沒有空格時摧毀、不在視線內被拒、基本動作不能投擲。
+2. 推倒：四個方向、壓到單位（傷害＋倒地）、壓到 `breakable` 物件、被非破壞物件擋住、壓到地圖外、倒塌物位置、撥開被拒。
+3. 地圖改動後 `map_push_check.py` 仍無封死通路；至少一個手寫技能各用到 `hurl_object`、推倒（推倒可用現有推的技能示範）。
+4. `check.py` 全過；重播一致。
+
+3C-5b：
+1. 穿透：無視半掩護、穿過 `penetrable` 物件（物件與後方目標都受傷、後方打折）、被石柱擋住、`grant_pierce` 改造有效。
+2. AI 在 `trpg sim maps --seeds 5`（指定有物件的地圖）中有使用投擲、推倒、穿透的紀錄（報告列次數）。
+3. 網頁預覽三種都能顯示（PM 用瀏覽器驗收）；vitest 補測試。
+4. `check.py` 全過；重播一致。
+
+---
+
+## 8. Phase 3C-6｜內容、顯示與收尾（sonnet）
 
 ### 8.1 內容
 
-- 每條協同管道（6.14.2）至少 2 個示範技能，總計新增技能控制在 10 個以內；補 2 個以協同為主題的 build（例：「推牆焚燒」＝推擊改造 ＋ `on_collision` ＋ 火表面；「狀態引爆」＝施加狀態 ＋ `on_status_applied` ＋ `consume_status`）。
+- 每條協同管道（6.14.2）至少 2 個示範技能，總計新增技能控制在 10 個以內；補 4 個 build：2 個以協同為主題（例：「推牆焚燒」＝推擊改造 ＋ `on_collision` ＋ 火表面；「狀態引爆」＝施加狀態 ＋ `on_status_applied` ＋ `consume_status`），2 個以物件為主題（念力流＝投擲 ＋ 推倒；撞擊流＝推擊改造 ＋ 撞擊 ＋ `on_collision`）。matrix 要看念力流在物件多的地圖、撞擊流在狹窄與牆多的地圖較強，且不是全地圖最強。
 - 隨機組合器（`content/skill_composer.yaml`）能產生修正規則、新觸發時機、傳說（含源力成本）；`scripts/skill_fuzz.py --count 1000` 全部通過預算與 schema。
 
 ### 8.2 顯示
@@ -299,11 +374,11 @@ modifiers:
 
 ### 8.4 打法差異檢查（PM 做，不是實作者）
 
-- PM 試玩 2 個協同 build，對每個新技能回答 6.14.5：「拿到這招後，決策有沒有改變？」打分 0–2（0：只是數值；1：偶爾改變；2：改變站位、順序或搭配）。結果記在 3C-5 報告後的 PM 驗收紀錄。
+- PM 試玩 2 個協同 build，對每個新技能回答 6.14.5：「拿到這招後，決策有沒有改變？」打分 0–2（0：只是數值；1：偶爾改變；2：改變站位、順序或搭配）。結果記在 3C-6 報告後的 PM 驗收紀錄。
 
-### 8.5 驗收條件（3C-5）
+### 8.5 驗收條件（3C-6）
 
-1. 每條管道 ≥ 2 個示範技能、2 個新 build，`test_coverage.py` 通過。
+1. 每條管道 ≥ 2 個示範技能、4 個新 build，`test_coverage.py` 通過。
 2. fuzz 1000 個通過；組合器能產生傳說（含源力成本）。
 3. 前端顯示項目齊全（PM 用瀏覽器驗收）。
 4. matrix 與 completion 的摘要在報告中；completion 異常 0。
