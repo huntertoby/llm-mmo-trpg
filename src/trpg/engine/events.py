@@ -694,7 +694,11 @@ class TrapPlaced(EventBase):
 
 
 class TrapTriggered(EventBase):
-    """陷阱觸發並移除；之後是陷阱效果的事件。``unit_id`` 是踩到的敵人（``delay`` 為 ``None``）。"""
+    """陷阱觸發並移除；之後是陷阱效果的事件。``unit_id`` 是踩到的敵人（``delay`` 為 ``None``）。
+
+    ``tiles``：觸發時實際受影響的格子（以陷阱格為中心展開 ``trap.shape``，依 (y, x) 排序固定；
+    Phase 2F-1 3.4）。省略時為空，向下相容舊紀錄（不須升版 ``LOG_FORMAT``）。
+    """
 
     type: Literal["trap_triggered"] = "trap_triggered"
     owner_id: UnitId
@@ -703,6 +707,7 @@ class TrapTriggered(EventBase):
     cause: Literal["enter", "delay"]
     unit_id: UnitId | None = None
     trigger_depth: int = 0
+    tiles: tuple[Pos, ...] = ()
 
 
 class TrapExpired(EventBase):

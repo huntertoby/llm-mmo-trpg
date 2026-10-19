@@ -64,8 +64,8 @@ def down_unit(ctx: Ctx, unit: UnitState) -> list[EventBase]:
         ctx.emit(UnitDowned, unit_id=unit.id),
         *_drop_stances(ctx, unit),
         *_release_forced_targets(ctx, unit),
+        *remove_traps_of(ctx, unit.id),  # 放置者離場，陷阱消失（Phase 2E-3）
     ]
-    remove_traps_of(ctx, unit.id)  # 放置者離場，陷阱消失（Phase 2E-3）
     return events
 
 
@@ -91,8 +91,8 @@ def escape_unit(ctx: Ctx, unit: UnitState) -> list[EventBase]:
         ctx.emit(UnitEscaped, unit_id=unit.id, pos=unit.pos),
         *_drop_stances(ctx, unit),
         *_release_forced_targets(ctx, unit),
+        *remove_traps_of(ctx, unit.id),
     ]
-    remove_traps_of(ctx, unit.id)
     return events
 
 

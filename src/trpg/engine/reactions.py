@@ -29,13 +29,12 @@ from trpg.engine.events import (
     AttackRolled,
     ReactionDeclined,
     ReactionTriggered,
-    TriggerLimitReached,
 )
 from trpg.engine.results import Pending
 from trpg.engine.rules.combat import ForcedOutcome, attack_problem, roll_attack
 from trpg.engine.rules.geometry import XY, manhattan
 from trpg.engine.rules.statuses import effective_attribute, skip_turn_status
-from trpg.engine.skill_triggers import holding, redirect_fired
+from trpg.engine.skill_triggers import check_trigger_depth, holding, redirect_fired
 from trpg.engine.skills.conditions import skill_condition_met
 from trpg.engine.skills.targeting import reaction_problem, reaction_target_problem
 from trpg.engine.state import UnitState
@@ -91,7 +90,7 @@ def _unless(unit: UnitState, rule: ReactionRule) -> bool:
     )
 
 
-def _skill_usable(  # noqa: PLR0911
+def _skill_usable(
     ctx: Ctx, unit: UnitState, skill: SkillDef, rule: ReactionRule, trigger: UnitState
 ) -> bool:
     """反應技目前能不能施放：每輪次數、狀態與代價、目標（射程、致盲）、技能條件，最後才檢查
@@ -109,10 +108,7 @@ def _skill_usable(  # noqa: PLR0911
     if not skill_condition_met(state, unit, skill, [subject.xy]):
         return False
     depth = ctx.trigger_depth + 1
-    if depth > ctx.core.max_trigger_depth:
-        ctx.emit(TriggerLimitReached, unit_id=unit.id, skill_id=skill.id, depth=depth)
-        return False
-    return True
+    return check_trigger_depth(ctx, unit.id, skill.id, depth)
 
 
 def _decide(ctx: Ctx, unit: UnitState, rule: ReactionRule, trigger: UnitState) -> bool:

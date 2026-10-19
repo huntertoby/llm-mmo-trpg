@@ -16,8 +16,10 @@ from dataclasses import replace
 
 from trpg.content.skills import SkillDef
 from trpg.engine.context import Ctx
-from trpg.engine.events import TrapExpired, TrapPlaced, TrapTriggered, TriggerLimitReached
+from trpg.engine.events import EventBase, TrapExpired, TrapPlaced, TrapTriggered
 from trpg.engine.rules.statuses import effective_attribute
+from trpg.engine.skill_triggers import check_trigger_depth
+from trpg.engine.skills.targeting import center_tiles
 from trpg.engine.state import BattleState, TrapState, UnitState
 from trpg.shared.types import Attribute, Pos, Team, UnitId
 
@@ -109,8 +111,7 @@ def _trigger(ctx: Ctx, trap: TrapState, skill: SkillDef, unit: UnitState | None)
 
     assert skill.trap is not None
     depth = ctx.trigger_depth + 1
-    if depth > ctx.core.max_trigger_depth:
-        ctx.emit(TriggerLimitReached, unit_id=trap.owner_id, skill_id=skill.id, depth=depth)
+    if not check_trigger_depth(ctx, trap.owner_id, skill.id, depth):
         return
     _remove(ctx.state, trap)
     ctx.emit(
@@ -121,6 +122,7 @@ def _trigger(ctx: Ctx, trap: TrapState, skill: SkillDef, unit: UnitState | None)
         cause=skill.trap.trigger,
         unit_id=None if unit is None else unit.id,
         trigger_depth=depth,
+        tiles=tuple(Pos(x=x, y=y) for x, y in center_tiles(ctx.state, skill.trap.shape, trap.xy)),
     )
     use_trap_skill(ctx, trap, skill, depth=depth)
 
@@ -150,14 +152,18 @@ def tick_traps(ctx: Ctx, owner: UnitState) -> None:
             )
 
 
-def remove_traps_of(ctx: Ctx, owner_id: UnitId) -> None:
+def remove_traps_of(ctx: Ctx, owner_id: UnitId) -> list[EventBase]:
     """放置者離場（倒下、撤離）：他的陷阱全部消失（``source_lost``）。"""
+    events: list[EventBase] = []
     for trap in [t for t in ctx.state.traps if t.owner_id == owner_id]:
         _remove(ctx.state, trap)
-        ctx.emit(
-            TrapExpired,
-            owner_id=trap.owner_id,
-            pos=trap.pos,
-            skill_id=trap.skill_id,
-            reason="source_lost",
+        events.append(
+            ctx.emit(
+                TrapExpired,
+                owner_id=trap.owner_id,
+                pos=trap.pos,
+                skill_id=trap.skill_id,
+                reason="source_lost",
+            )
         )
+    return events
