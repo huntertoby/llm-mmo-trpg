@@ -1,8 +1,8 @@
 """名詞對照表（Phase 3-4a 6.2）：地形、表面、物件、狀態、層數、反應、元素、屬性的 ID → 中文名。
 
 由內容庫產生，前端不再手寫中文名；只保留色塊等純顯示用的對照。``tags`` 是前端判斷外觀需要的
-簡短旗標（層數：``self``／``target`` 為累積在誰身上）（地形：``blocked``／``deadly``／``blocks_sight``；表面：``flammable``／``beneficial``……；
-物件：``objects.yaml`` 的標籤）。
+簡短旗標：地形為 ``blocked``／``deadly``／``blocks_sight``，表面為 ``flammable``／``beneficial``
+等，物件為 ``objects.yaml`` 的標籤，層數為 ``self``／``target``（累積在誰身上）。
 """
 
 from __future__ import annotations
