@@ -150,6 +150,87 @@
 
 ---
 
+## 4. Phase 3-2｜FastAPI 本機 API
+
+目標：讓瀏覽器（3-3 起）能透過 HTTP 打完一場戰鬥：玩家操控 1 名主角，其餘單位由效用 AI 自動行動。**不新增遊戲規則，不做前端。** 架構與 API 格式之後不易改，請以清楚、可擴充為優先。
+
+### 4.1 套件與啟動
+
+- `uv add fastapi uvicorn`，測試用 `httpx`（dev 相依）。
+- 程式放 `src/trpg/api/`（例如 `app.py` 建立 `FastAPI`、`sessions.py` 戰鬥工作階段、`schemas.py` 請求／回應模型、`routes/`）。
+- CLI 新增 `trpg serve [--host 127.0.0.1] [--port 8000]`，以 uvicorn 啟動；預設只綁 `127.0.0.1`。
+- import-linter 新增合約：`trpg.api` 不得匯入 `trpg.cli`；`tests/test_architecture.py` 同步。`trpg.cli` 可以匯入 `trpg.api`（只為了 `serve`）。
+- 若 CLI 與 API 都需要的組裝邏輯（例如 `default_lineup`、`--ally-build` 補隊友的寫法、`build_commanded_ai`）目前在 `trpg.cli`，搬到 `trpg.api` 與 `trpg.cli` 都能匯入的地方（例如 `trpg.sim` 或新的小模組），CLI 行為不變（3-1 的 CLI 快照測試要過）。
+
+### 4.2 戰鬥工作階段 `BattleSession`
+
+- 記憶體內的工作階段表（`dict[str, BattleSession]`），ID 由伺服器產生（伺服器層可以用 `uuid4`／`secrets`；**引擎內仍禁止**）。重啟伺服器後工作階段消失（存檔是 3-5）。
+- 工作階段保存：`setup`、`seed`、**步驟列表**（動作與決定，與 `BattleLog.actions` 同格式）、目前狀態、目前的 `Pending`、玩家下過的戰術指令紀錄、主角單位 ID。**目前狀態必須可由 `setup ＋ seed ＋ 步驟列表` 以 `trpg.engine.runner.replay` 重現**（3-5 的存檔就存這些）。
+- 每個工作階段一把 `threading.Lock`：同一場戰鬥的請求依序處理。
+- **主角**：我方第一個單位（`hero_build` 指定的那個）。其餘我方單位與敵方單位由效用 AI 控制。
+- **自動推進**：玩家送出動作或決定後，伺服器持續結算，直到 (a) 輪到主角且主角有 `EndTurn` 以外的合法動作，(b) 出現主角的 `Pending`，或 (c) 戰鬥結束。與 `run_battle` 相同：只剩 `EndTurn` 時自動結束回合；非主角的 `Pending` 用 `accept_all`。建立戰鬥時也先推進到第一次輪到主角。
+- 自動推進要有上限（例如沿用 `DEFAULT_MAX_ACTIONS`），超過時回 500 並保留工作階段。
+- 推進迴圈請與 `run_battle` 共用邏輯或至少共用判斷函式，不要複製一份會漂移的版本。
+
+### 4.3 隊友快捷指令
+
+- 玩家可對我方 AI 隊友下達戰術指令（`trpg.engine.ai.orders` 的 `OrderSet`：集火、守位、撤退、保護、利用環境）。
+- 做法：我方使用 `CommandedAI`，指揮官是一個「回傳玩家目前指令」的物件；玩家更新指令後下一次我方 AI 決策即生效。敵方指揮官設定沿用 CLI 預設（無）。
+- 指令以 `validate_order` 驗證，無效回 422 並附中文原因。
+- 指令紀錄存在工作階段（含下達時的輪數）；`BattleLog.orders` 匯出時帶上。
+- 重播只重播動作（與現在相同），所以指令不影響重播一致性。
+
+### 4.4 端點（JSON；路徑可微調，報告列出最終版本）
+
+| 方法 | 路徑 | 內容 |
+|---|---|---|
+| GET | `/api/maps` | 地圖列表（ID、中文名、類型、尺寸） |
+| GET | `/api/builds` | build 列表（ID、中文名） |
+| GET | `/api/skills/{skill_id}` | 技能卡片（3-1 的 `SkillCard`；依 0.6 #8 加英文代碼欄位） |
+| POST | `/api/battles` | 建立戰鬥：`map_id`、`seed`、`hero_build`、`ally_builds`（可省略，省略時同 CLI 預設補隊友）、`max_rounds`（可省略） |
+| GET | `/api/battles/{id}` | 目前狀態（見下方「戰鬥回應」） |
+| POST | `/api/battles/{id}/actions` | 送出主角的動作（`Action` JSON） |
+| POST | `/api/battles/{id}/decision` | 回答主角的反應詢問：`accept: bool` |
+| POST | `/api/battles/{id}/preview` | 預覽主角的動作（`trpg.engine.preview.preview` 的結果） |
+| PUT | `/api/battles/{id}/orders` | 設定我方隊友的戰術指令（`OrderSet`；空集合＝取消） |
+| GET | `/api/battles/{id}/log` | 匯出 `BattleLog`（與 `trpg battle --log-json` 同格式，可用 `trpg battle replay` 重播） |
+
+**戰鬥回應**（建立、讀取、動作、決定共用）：
+- `view`：`project_for(state, Team.ALLY)`。
+- `hero_id`；`awaiting`：`"action"`／`"decision"`／`"ended"`。
+- `legal_actions`：輪到主角時的合法動作（`legal_actions` 的結果，含 `EndTurn`）；其他時候為空。若數量很大，報告記下典型數量，不必在本段最佳化。
+- `pending`：主角的反應詢問（3-1 的公開欄位）或 `null`。
+- `steps`：本次請求推進的每一步，依序：`{actor_id, step, events}`；`events` 經 `filter_events(…, Team.ALLY)` 過濾，每個事件附 `text`（`describe_event` 的中文，`None` 時省略）。前端用來播放動畫與寫戰鬥紀錄。建立戰鬥時包含開場事件。
+- 勝負與結束原因（戰鬥結束時）。
+
+**錯誤**：不存在的戰鬥 404；不合法的動作 400（附引擎的中文訊息）；不是主角的回合、不是在等決定、戰鬥已結束 409；輸入格式錯誤 422。動作的 `unit_id` 必須是主角。
+
+**不可洩漏**：任何回應都不得含 `rng_state`、`seed` 以外的隨機內部狀態（`seed` 只在 `/log` 匯出）、`PendingResolution` 內部欄位、敵方隱藏陷阱。預覽要用已過濾隱藏陷阱的狀態（`preview` 目前已用 `strip_hidden_traps`，確認並以測試固定）。
+
+### 4.5 測試（`tests/api/`，用 FastAPI `TestClient`，不需網路）
+
+- 每個端點的正常與錯誤情況（404／400／409／422）。
+- **整場戰鬥**：以腳本客戶端透過 API 打完一場（主角每次用 `UtilityAI` 對回傳的狀態選動作，或固定選第一個非 `EndTurn` 的合法動作；遇到詢問時交替接受與拒絕），至少 2 張地圖；結束後 `/log` 匯出的紀錄以 `trpg.engine.runner.replay` 重播，最終狀態 JSON 完全一致。
+- **網頁與 CLI 一致**：同一份匯出紀錄用 `trpg battle replay` 驗證通過（呼叫 CLI 函式即可）。
+- **確定性**：相同 `map_id／seed／builds ＋ 相同動作序列` 建立兩個工作階段，每一步的回應（去掉戰鬥 ID）完全相同。
+- **不洩漏**：放了陷阱（`build_trapper` 當主角放陷阱後，以敵方視角檢查工作階段內部的過濾函式；以及我方回應中不含敵方陷阱——可用測試專用的狀態讓敵人帶陷阱）；所有回應 JSON 不含 `rng_state`、`base_state_json`。
+- 戰術指令：設定集火後，紀錄的 `orders` 含該指令；無效指令 422。
+- 預覽：回傳結構正確，且不改變工作階段狀態。
+
+### 4.6 驗收條件（3-2）
+
+1. `trpg serve` 可啟動，`GET /api/maps` 回 10 張地圖（報告附 `curl` 或 `TestClient` 輸出節錄）。
+2. 4.4 的端點都存在，錯誤碼符合規定（測試名稱為證）。
+3. 透過 API 打完至少 2 張地圖的整場戰鬥；匯出紀錄以 `replay` 與 `trpg battle replay` 重播一致。
+4. 確定性測試通過。
+5. 不洩漏測試通過。
+6. 自動推進與 `run_battle` 共用邏輯（報告說明共用方式）；CLI 輸出不變（3-1 快照測試通過）。
+7. import-linter 新合約生效。
+8. `uv run python scripts/check.py` 全過；複雜度類 noqa 不增加（報告列出前後數字）。
+9. 報告附 API 端點表（最終路徑、請求與回應的主要欄位），供 3-3 的前端使用。
+
+---
+
 ## 5. 報告格式（每段一份：`docs/phases/Phase3-N報告.md`）
 
 1. 完成項目與 commit 列表。
