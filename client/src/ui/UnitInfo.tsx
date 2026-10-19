@@ -1,6 +1,7 @@
 // 單位資訊：滑過或點選單位時顯示（文字即可）。
 import type { BattleView, StatusView, UnitView } from "../api/types";
 import { bombStatusText, TIME_BOMB } from "../battle/bombs";
+import { facingText } from "../battle/facing";
 import { stackName, statusName } from "../battle/glossary";
 import type { SkillNames } from "../battle/actions";
 import { remainingRounds, summonKind } from "../battle/summons";
@@ -38,6 +39,7 @@ export function UnitInfo({ unit, names, heroId, skills, view }: Props) {
     ["AP／移動", `${unit.ap}／${unit.move_points}（速度 ${unit.speed}）`],
     ["武器", unit.weapon_name_zh],
     ["位置", `(${unit.pos.x}, ${unit.pos.y})`],
+    ["朝向", facingText(unit)],
   ];
   if (unit.owner_id !== null) {
     const left = view === undefined ? null : remainingRounds(view, unit);

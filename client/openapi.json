@@ -3218,6 +3218,14 @@
               }
             ],
             "title": "Mastery Id"
+          },
+          "effect_ids": {
+            "items": {
+              "type": "string"
+            },
+            "type": "array",
+            "title": "Effect Ids",
+            "default": []
           }
         },
         "additionalProperties": false,

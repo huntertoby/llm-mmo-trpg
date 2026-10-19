@@ -134,6 +134,7 @@ function moveOverlays(m: MoveOut, lethal: boolean): Overlay[] {
     return path.length > 1 ? [...route, { pos: pos(last), kind: "dash_end", label: "衝" }] : [];
   }
   if (m.kind === "leap") return [{ pos: pos(last), kind: "leap_to", label: "躍" }];
+  if (m.kind === "shadowstep") return [{ pos: pos(last), kind: "leap_to", label: "瞬" }]; // 瞬步（Phase 3D-8d）
   const first = path[0];
   if (m.kind === "teleport") {
     return first === undefined
@@ -169,6 +170,9 @@ function moveLine(m: MoveOut, names: UnitNames): string {
     return `衝鋒：${who} 沿 ${path.map((xy) => posText(xy)).join("→")} 衝到 ${other} 身旁（途中會被藉機攻擊、踩到陷阱）`;
   }
   if (m.kind === "leap") return `跳躍：${who} 越過中間的單位與低矮地形，落在 ${last === undefined ? "?" : posText(last)}（不會被藉機攻擊）`;
+  if (m.kind === "shadowstep") {
+    return `瞬步：${who} 瞬間出現在 ${last === undefined ? "?" : posText(last)}，落地後面向目標（不會被藉機攻擊）`;
+  }
   if (m.kind === "teleport") {
     return `傳送：${who} ${first === undefined ? "?" : posText(first)} → ${last === undefined ? "?" : posText(last)}（落點的陷阱與表面照常結算，不會被藉機攻擊）`;
   }

@@ -812,6 +812,9 @@ class SkillCard(BaseModel):
     scaling_attrs: tuple[str, ...]
     """縮放屬性的代碼（主屬性在前；雙屬性縮放時兩個）。"""
     mastery_id: str | None
+    effect_ids: tuple[str, ...] = ()
+    """效果原語的代碼，依技能內的順序（Phase 3D-8d：網頁用來分辨兩段選取的種類，例如一般瞬步
+    ``shadowstep`` 與傳送他人 ``teleport_target`` 都是「單位 → 落點」）。"""
 
 
 def skill_card(
@@ -852,4 +855,5 @@ def skill_card(
             a.value for a in (skill.scaling_attr, skill.secondary_scaling_attr) if a is not None
         ),
         mastery_id=skill.mastery,
+        effect_ids=tuple(e.type for e in skill.effects),
     )

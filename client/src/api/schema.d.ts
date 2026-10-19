@@ -1254,6 +1254,11 @@ export interface components {
             scaling_attrs: string[];
             /** Mastery Id */
             mastery_id: string | null;
+            /**
+             * Effect Ids
+             * @default []
+             */
+            effect_ids: string[];
         };
         /** StatusChanceOut */
         StatusChanceOut: {

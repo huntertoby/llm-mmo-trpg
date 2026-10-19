@@ -1,5 +1,5 @@
 // 視圖 → 繪製模型（純函式；PixiJS 只負責照著畫）。
-import type { BattleView, Pos } from "../api/types";
+import type { BattleView, Facing, Pos } from "../api/types";
 import {
   HIGHLIGHT,
   SURFACES,
@@ -66,6 +66,8 @@ export interface UnitDraw {
   revivable: boolean;
   /** 身上定時炸彈還要幾次環境回合爆炸（Phase 3D-8b）；沒有炸彈為 `null`。 */
   bomb: number | null;
+  /** 朝向（Phase 3D-8d）：圖示外緣畫小箭頭；背後格站著近戰敵人時會被背刺。 */
+  facing: Facing;
 }
 
 export interface TrapDraw {
@@ -189,6 +191,7 @@ export function buildDrawModel(
       remaining: remainingRounds(view, u),
       revivable: u.revivable,
       bomb: bombCountdown(u),
+      facing: u.facing,
     }))
     .sort((a, b) => Number(b.downed) - Number(a.downed));
   const traps: TrapDraw[] = view.traps.map((t) => ({ x: t.pos.x, y: t.pos.y, color: HIGHLIGHT.trap }));

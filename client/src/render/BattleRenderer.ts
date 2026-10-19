@@ -12,6 +12,7 @@ import {
 import type { Pos } from "../api/types";
 import { lerpPos, type MoveAnim } from "../battle/animation";
 import type { DrawModel, ObjectDraw, TileDraw, UnitDraw } from "../battle/drawModel";
+import { facingArrow } from "../battle/facing";
 import { canvasSize, pixelToTile, TILE_SIZE, tileCenter, tileOrigin } from "../battle/geometry";
 import { HIGHLIGHT } from "../battle/glossary";
 import type { Overlay, OverlayKind } from "../battle/scenePreview";
@@ -287,6 +288,11 @@ export class BattleRenderer {
       if (u.active) g.circle(0, 0, r + 5).stroke({ width: 3, color: HIGHLIGHT.active });
     }
     c.addChild(g);
+    if (!u.downed) {
+      // 朝向（Phase 3D-8d）：外緣的小三角形箭頭，尖端指向單位面對的方向
+      const arrow = new Graphics().poly(facingArrow(u.facing, u.summon ? r * 1.25 : r)).fill(0xffffff).stroke({ width: 1, color: 0x000000 });
+      c.addChild(arrow);
+    }
     if (u.summon) {
       // 右上角小徽章：圖騰標「圖」，其他標剩餘輪數
       const badgeText = u.totem ? "圖" : String(u.remaining ?? "");

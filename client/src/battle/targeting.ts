@@ -46,7 +46,7 @@ export interface TargetSet {
   pairKind: PairKind | null;
 }
 
-export type PairKind = "hurl" | "teleport" | "swap";
+export type PairKind = "hurl" | "teleport" | "swap" | "shadowstep";
 
 export type ModeKind = "skill" | "attack" | "shove" | "trip" | "interact" | "shove_aside" | "defend" | "end_stance" | "stand";
 
@@ -161,6 +161,8 @@ export interface SkillButton {
   disabledReason: string | null;
   /** 暫時獲得的技能（Phase 3D-8c）：剩餘輪數；裝備的技能為 `null`。 */
   grantedRemaining?: number | null;
+  /** 效果原語的代碼（Phase 3D-8d；分辨一般瞬步與傳送他人）；卡片還沒取得時為空。 */
+  effectIds?: readonly string[];
 }
 
 export type SkillCards = Readonly<Record<string, SkillCard | undefined>>;
@@ -191,6 +193,7 @@ export function skillButtons(hero: UnitView, legal: readonly Action[], cards: Sk
       actions,
       disabledReason,
       grantedRemaining: grantedRemaining(hero, skillId),
+      effectIds: card?.effect_ids ?? [],
     };
   });
 }
@@ -237,13 +240,18 @@ export function basicModes(legal: readonly Action[]): ActionMode[] {
 }
 
 export function skillMode(button: SkillButton): ActionMode {
+  const targets = buildTargets(button.actions);
+  // 一般瞬步（Phase 3D-8d）和傳送他人一樣是「單位 → 落點」，只是第 1 段是敵人、第 2 段是他身旁的格子
+  if (targets.pairKind === "teleport" && (button.effectIds ?? []).includes("shadowstep")) {
+    targets.pairKind = "shadowstep";
+  }
   return {
     key: `skill:${button.skillId}`,
     kind: "skill",
     label: button.name,
     skillId: button.skillId,
     actions: button.actions,
-    targets: buildTargets(button.actions),
+    targets,
   };
 }
 
@@ -407,9 +415,19 @@ export function hurlPromptText(
   firstCount: number,
   kind: PairKind = "hurl",
 ): string {
-  const first = { hurl: "要舉起的物件", teleport: "要傳送的單位", swap: "要互換的第一個單位" }[kind];
-  const second = { hurl: "落點", teleport: "落點（致命地形的成功率極低，Boss 不能選）", swap: "第二個單位" }[kind];
-  const verb = { hurl: "已舉起", teleport: "已選定", swap: "已選定" }[kind];
+  const first = {
+    hurl: "要舉起的物件",
+    teleport: "要傳送的單位",
+    swap: "要互換的第一個單位",
+    shadowstep: "要瞬步過去的敵人",
+  }[kind];
+  const second = {
+    hurl: "落點",
+    teleport: "落點（致命地形的成功率極低，Boss 不能選）",
+    swap: "第二個單位",
+    shadowstep: "要落在他身旁哪一格（落在他背後可以背刺）",
+  }[kind];
+  const verb = { hurl: "已舉起", teleport: "已選定", swap: "已選定", shadowstep: "已鎖定" }[kind];
   if (pickName === null) return `第 1 段：點選${first}（紅框 ${firstCount} 個）。Esc／右鍵取消。`;
   const redo = kind === "swap" ? "點同一個單位或按「重選單位」可以改選" : "再點其他目標可改選，點同一個取消";
   return `第 2 段：${verb}${pickName}，點選${second}（紅框 ${secondCount} 個）；${redo}。`;
