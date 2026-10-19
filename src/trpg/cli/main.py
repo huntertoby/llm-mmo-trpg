@@ -24,6 +24,7 @@
   （腳本指揮官，見 ``trpg.sim.commanders``）。
 - ``trpg battle --ally-build <build_id>[,…]``：我方用 build 英雄（不足 3 人以標準隊友補齊）。
 - ``trpg battle replay <path>``：讀取 ``--log-json`` 的輸出，重播並驗證最終狀態一致。
+- ``trpg serve [--host 127.0.0.1] [--port 8000]``：以 uvicorn 啟動本機 API（``trpg.api``）。
 """
 
 from __future__ import annotations
@@ -37,6 +38,7 @@ from pathlib import Path
 from trpg import __version__
 from trpg.cli.battle import cmd_battle, cmd_map_list, cmd_map_show, cmd_replay
 from trpg.cli.budget import cmd_skills_budget, cmd_skills_budget_all, library_violations
+from trpg.cli.serve import DEFAULT_HOST, DEFAULT_PORT, cmd_serve
 from trpg.cli.sim import cmd_sim_maps
 from trpg.cli.sim_completion import cmd_sim_completion
 from trpg.cli.sim_matrix import cmd_sim_matrix, cmd_sim_skills
@@ -204,6 +206,7 @@ def build_parser() -> argparse.ArgumentParser:  # noqa: PLR0915
     replay = battle_commands.add_parser("replay", help="重播 --log-json 的輸出並驗證一致")
     replay.add_argument("path", type=Path, help="戰鬥紀錄 JSON")
     _add_sim_report_parsers(sim_commands)
+    _add_serve_parser(commands)
     rng_parser.set_defaults(func=_run_rng)
     skills_show.set_defaults(func=_run_skills_show)
     skills_budget.set_defaults(func=_run_skills_budget)
@@ -301,6 +304,28 @@ def _cmd_content_check() -> int:
         f"{len(library.skills)} 個技能通過預算與結構驗證。"
     )
     return 0
+
+
+def _add_serve_parser(commands: argparse._SubParsersAction[argparse.ArgumentParser]) -> None:
+    serve = commands.add_parser("serve", help="啟動本機 API 伺服器（FastAPI ＋ uvicorn）")
+    serve.add_argument(
+        "--host", default=DEFAULT_HOST, help=f"綁定的位址（預設 {DEFAULT_HOST}，只限本機）"
+    )
+    serve.add_argument(
+        "--port", type=_port, default=DEFAULT_PORT, help=f"埠號（預設 {DEFAULT_PORT}）"
+    )
+    serve.set_defaults(func=_run_serve)
+
+
+def _port(text: str) -> int:
+    value = int(text)
+    if not 0 < value < 65536:  # noqa: PLR2004
+        raise argparse.ArgumentTypeError(f"埠號必須介於 1 與 65535，收到 {value}")
+    return value
+
+
+def _run_serve(args: argparse.Namespace) -> int:
+    return cmd_serve(args.host, args.port, sys.stdout)
 
 
 def _with_library(fn: Callable[[ContentLibrary], int]) -> int:
