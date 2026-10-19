@@ -136,8 +136,12 @@ def fear_blocks_step(origins: tuple[XY, ...], cur: XY, nxt: XY) -> bool:
     return any(manhattan(nxt, o) < manhattan(cur, o) for o in origins)
 
 
-def path_map(state: BattleState, unit: UnitState, budget: int | None) -> PathMap:
-    """從 ``unit`` 目前位置出發的 Dijkstra；``budget`` 為 ``None`` 表示不限成本。"""
+def path_map(
+    state: BattleState, unit: UnitState, budget: int | None, *, through_allies: bool = True
+) -> PathMap:
+    """從 ``unit`` 目前位置出發的 Dijkstra；``budget`` 為 ``None`` 表示不限成本。
+
+    ``through_allies=False`` 時友方單位也擋路（衝鋒不經過任何單位，Phase 3D-2）。"""
     start = unit.xy
     occupied = {xy: u for xy, u in state.occupancy().items() if u.id != unit.id}
     fear = fear_origins(state, unit)
@@ -151,7 +155,7 @@ def path_map(state: BattleState, unit: UnitState, budget: int | None) -> PathMap
             continue
         for nxt in neighbors4(state, cur):
             other = occupied.get(nxt)
-            if other is not None and other.team is not unit.team:
+            if other is not None and (other.team is not unit.team or not through_allies):
                 continue
             c = step_cost(state, cur, nxt)
             if c is None or (fear and fear_blocks_step(fear, cur, nxt)):

@@ -1,0 +1,24 @@
+# 主動（Phase 3D-2 示範，數值為初值，未經模擬）：跳到射程內的空格（無視中間的單位與低矮地形，不觸發藉機攻擊），落地後蓄勢。
+id: skill_vault_leap
+schema_version: 1
+name_zh: 騰躍
+tier: 1
+rank: 1
+rarity: rare
+kind: active
+skeleton: displace
+category: weapon
+weapon_req: melee
+ap_cost: 1
+scaling_attr: str
+shape: {type: ground_tile, range: 3}
+effects:
+  - {type: leap}
+  - {type: apply_status, status: empowered, duration: 2, affects: self}
+condition: null
+cost: {mana: 3, cooldown: 3}
+tags: [physical, leap, mobility]
+narrative:
+  concept: 一躍越過人群與障礙，落地時氣勢更盛
+  cast_flavor: 你腳下一蹬，整個人從敵人與雜物的頭頂飛躍而過
+provenance: {origin: builtin, owner_id: null, created_by: null, parents: [], bound: true, tradeable: false}

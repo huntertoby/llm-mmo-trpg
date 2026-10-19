@@ -116,6 +116,8 @@ class MoveUnitEffect(EffectBase):
     - ``walk``：主動移動的一步（合法性已由 ``Move`` 動作檢查；可暫時穿過友方）。
     - ``forced``：強制位移；目的地有其他單位或超出地圖時不移動（``move_blocked``）。
     - ``teleport``：傳送；不觸發墜落。
+    - ``dash``／``leap``：衝鋒的一步／跳躍的落點（Phase 3D-2）；同步行，會墜落、觸發陷阱與
+      表面（``leap`` 的高度差限制在 1 層以內，不會墜落）。
 
     ``walk`` 與 ``forced`` 往下落差達門檻時觸發墜落；進入致命地形時觸發致命地形規則。
     """
@@ -135,6 +137,19 @@ class MoveUnitEffect(EffectBase):
     @property
     def dest_pos(self) -> Pos:
         return Pos(x=self.dest[0], y=self.dest[1])
+
+
+class SwapUnitsEffect(EffectBase):
+    """兩個單位交換位置（``swap``，Phase 3D-2）：``unit_id`` 到 ``other_id`` 的格子、反過來亦然，
+    各自結算抵達的後果（事件 ``unit_moved`` 的 ``mode`` 為 ``swap``）。任一方不在場或任一格不能站
+    立時不交換（``effect_fizzled``）。"""
+
+    kind: Literal["swap_units"] = "swap_units"
+    unit_id: UnitId
+    other_id: UnitId
+
+    def sort_target(self) -> str:
+        return self.unit_id
 
 
 class ApplyStatusEffect(EffectBase):
@@ -377,6 +392,7 @@ type Effect = Annotated[
     DamageEffect
     | HealEffect
     | MoveUnitEffect
+    | SwapUnitsEffect
     | ApplyStatusEffect
     | RemoveStatusEffect
     | ShieldEffect

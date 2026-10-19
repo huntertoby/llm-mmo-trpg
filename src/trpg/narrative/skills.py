@@ -155,6 +155,18 @@ def _teleport(_lib: ContentLibrary, _skill: SkillDef, _spec: EffectSpec) -> str:
     return "傳送到目標格"
 
 
+def _dash(_lib: ContentLibrary, _skill: SkillDef, _spec: EffectSpec) -> str:
+    return "衝鋒到目標身旁（先結算，不消耗移動點數；途中會被藉機攻擊與陷阱攔下）"
+
+
+def _leap(_lib: ContentLibrary, _skill: SkillDef, _spec: EffectSpec) -> str:
+    return "跳到目標格（無視中間的單位與低矮地形；不觸發藉機攻擊）"
+
+
+def _swap(_lib: ContentLibrary, _skill: SkillDef, spec: EffectSpec) -> str:
+    return "與目標交換位置" + ("（需命中）" if spec.affects == "enemies" else "")
+
+
 def _apply_status(lib: ContentLibrary, _skill: SkillDef, spec: EffectSpec) -> str:
     assert spec.status is not None
     turns = f" {spec.duration} 回合" if spec.duration else ""
@@ -285,6 +297,9 @@ _EFFECT_TEXT: dict[str, _EffectText] = {
     "pull": _push_pull,
     "knock_prone": _knock_prone,
     "teleport": _teleport,
+    "dash": _dash,
+    "leap": _leap,
+    "swap": _swap,
     "apply_status": _apply_status,
     "create_surface": _create_surface,
     "create_obstacle": _create_obstacle,

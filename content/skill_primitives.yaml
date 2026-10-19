@@ -86,6 +86,37 @@ primitives:
     base_points: 4
     acts_on: caster
     allowed_shapes: [ground_tile]
+  # --- Phase 3D-2：自身位移（docs/design/06-技能.md 6.16 A；點數為初值，未經模擬）---
+  - id: dash
+    name_zh: 衝鋒
+    description_zh: 施放者沿最短可走路徑（步行規則；不經過任何單位）移到目標單位的相鄰格（路徑成本不超過技能射程；不消耗移動點數），再結算同技能的其餘效果。一律最先結算，必須是技能的第一個效果。途中會觸發藉機攻擊與陷阱；被擋下（定身、倒地、倒下）或停下時目標不在相鄰格，其餘效果不結算。算「本回合移動過」，也觸發 on_move 被動。只能搭配形狀 single（目標單位）。
+    category: structural
+    harmful: true
+    min_rarity: rare
+    budget_basis: fixed
+    base_points: 3
+    acts_on: caster
+    allowed_shapes: [single]
+  - id: leap
+    name_zh: 跳躍
+    description_zh: 施放者跳到射程內的指定空格：無視中間的單位與低矮（落差不超過 1 層）的地形，不能越過同時擋住行動與視線的物件（石柱）與牆；落點須可站立、沒有單位、與起點的高度差不超過 1 層。不觸發藉機攻擊，不算「本回合移動過」，也不觸發 on_move 被動；落點的陷阱與表面照常結算。定身或倒地時不能跳。
+    category: structural
+    harmful: false
+    min_rarity: rare
+    budget_basis: fixed
+    base_points: 3
+    acts_on: caster
+    allowed_shapes: [ground_tile]
+  - id: swap
+    name_zh: 交換位置
+    description_zh: 施放者與目標單位（敵我皆可）交換位置。對敵人（affects 為 enemies）要命中判定，失手則不交換；對友方（affects 為 allies）自動成功。不能和自己交換。交換後雙方的落點互動（表面、陷阱、致命地形、墜落）照常結算。不算「本回合移動過」，不觸發 on_move 被動。
+    category: structural
+    harmful: false
+    min_rarity: rare
+    budget_basis: fixed
+    base_points: 4
+    forbid_affects: [self, all, tiles]
+    allowed_shapes: [single]
   - id: apply_status
     name_zh: 施加狀態
     description_zh: 施加 statuses.yaml 中的狀態，重複施加時刷新持續時間。

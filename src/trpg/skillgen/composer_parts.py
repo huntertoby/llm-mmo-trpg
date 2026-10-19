@@ -493,8 +493,24 @@ def build_effects(ctx: Ctx, core: list[str]) -> None:
     for _ in range(_secondary_count(ctx)):
         pool = _secondary_pool(ctx)
         if not pool:
-            return
+            break
         _make_effect(ctx, ctx.rng.choice(pool), core=False, beneficial_only=False)
+    _dash_first(ctx)
+
+
+def _dash_first(ctx: Ctx) -> None:
+    """衝鋒（``dash``，Phase 3D-2）一律最先結算，必須是技能的第一個效果：把它移到最前面，旋鈕
+    與核心數量的索引跟著位移。"""
+    types = [e["type"] for e in ctx.effects]
+    if "dash" not in types or types[0] == "dash":
+        return
+    at = types.index("dash")
+    ctx.effects.insert(0, ctx.effects.pop(at))
+    for knob in ctx.knobs:
+        if knob.index < at:
+            knob.index += 1
+        elif knob.index == at:
+            knob.index = 0
 
 
 # ---------------------------------------------------------------------------
@@ -647,8 +663,11 @@ def _self_status_cost(ctx: Ctx) -> dict[str, Any] | None:
 # ---------------------------------------------------------------------------
 
 
-_HAND_WRITTEN_PRIMITIVES = frozenset({"hurl_object", "topple", "restore_resource", "steal_buff"})
-"""只給手寫技能的結構型原語（Phase 3C-5a 的場景物件原語：需要地圖上有對應的物件）。"""
+_HAND_WRITTEN_PRIMITIVES = frozenset(
+    {"hurl_object", "topple", "restore_resource", "steal_buff", "leap", "swap"}
+)
+"""只給手寫技能的結構型原語（Phase 3C-5a 的場景物件原語：需要地圖上有對應的物件；3D-2 的
+``leap`` 與 ``swap``：落點與交換對象的條件要另外設計，隨機組合器只使用 ``dash``）。"""
 _HAND_WRITTEN_SHAPES = frozenset({"object_then_tile"})
 """只給手寫技能的形狀（Phase 3C-5a：投擲物件專用）。"""
 

@@ -40,6 +40,7 @@ from trpg.engine.effects.models import (
     RemoveStatusEffect,
     ShieldEffect,
     SpawnUnitEffect,
+    SwapUnitsEffect,
 )
 from trpg.engine.effects.queue import execute, register_effect
 from trpg.engine.results import ResolveResult
@@ -68,6 +69,7 @@ __all__ = [
     "RemoveStatusEffect",
     "ShieldEffect",
     "SpawnUnitEffect",
+    "SwapUnitsEffect",
     "execute",
     "register_effect",
     "run_effects",

@@ -1,0 +1,25 @@
+# 主動（Phase 3D-2 示範，數值為初值，未經模擬）：衝鋒到敵人面前，造成傷害，再把他擊退 2 格（撞牆觸發撞擊）。
+id: skill_tiger_charge
+schema_version: 1
+name_zh: 猛虎衝撞
+tier: 1
+rank: 1
+rarity: rare
+kind: active
+skeleton: displace
+category: weapon
+weapon_req: melee
+ap_cost: 2
+scaling_attr: str
+shape: {type: single, range: 4}
+effects:
+  - {type: dash}
+  - {type: damage, multiplier_permille: 800}
+  - {type: push, distance: 2}
+condition: null
+cost: {mana: 5, cooldown: 3}
+tags: [physical, melee, push, mobility]
+narrative:
+  concept: 一個箭步衝到敵人面前，借著衝勢把他撞飛出去
+  cast_flavor: 你低吼一聲飛奔而出，肩頭重重撞上對手，把他整個人頂向後方
+provenance: {origin: builtin, owner_id: null, created_by: null, parents: [], bound: true, tradeable: false}

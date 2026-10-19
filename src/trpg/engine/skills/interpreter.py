@@ -17,6 +17,7 @@
 from __future__ import annotations
 
 from collections.abc import Callable
+from dataclasses import replace
 from typing import ClassVar
 
 from trpg.content.battle import Dice
@@ -27,16 +28,19 @@ from trpg.content.skills import (
     CONSUME_STACK,
     CONSUME_STATUS,
     COPY_SKILL,
+    DASH,
     EXTRA_REACTION,
     GRANT_AP,
     HURL_OBJECT,
     INTERCEPT,
+    LEAP,
     PLACE_TRAP,
     REDIRECT_DAMAGE,
     REDIRECT_STATUS,
     RESET_COOLDOWN,
     RESTORE_RESOURCE,
     STEAL_BUFF,
+    SWAP,
     TOPPLE,
     ConditionSpec,
     EffectSpec,
@@ -67,6 +71,7 @@ from trpg.engine.effects.models import (
     RaiseTerrainEffect,
     RemoveStatusEffect,
     ShieldEffect,
+    SwapUnitsEffect,
 )
 from trpg.engine.events import (
     AttackRolled,
@@ -77,6 +82,7 @@ from trpg.engine.events import (
     SkillCooldownChanged,
     SkillCopied,
     SkillUsed,
+    UnitDashed,
 )
 from trpg.engine.maneuvers import contest
 from trpg.engine.pierce import NO_PIERCE, PierceTrace, pierce_trace
@@ -84,6 +90,7 @@ from trpg.engine.reactions import (
     PauseForDecision,
     block_multiplier,
     hit_reactions,
+    opportunity_attacks,
     try_intercept,
 )
 from trpg.engine.resources import pick_stolen_buff, restore_cooldowns, restore_mana
@@ -91,8 +98,10 @@ from trpg.engine.results import Pending
 from trpg.engine.rewrites import grant_ap, grant_reactions, reset_cooldowns
 from trpg.engine.rules.combat import PERMILLE, AttackProfile, AttackRoll, ForcedOutcome, roll_attack
 from trpg.engine.rules.geometry import XY, axis_direction, manhattan
-from trpg.engine.skill_triggers import collect_cast, holding
+from trpg.engine.rules.statuses import is_rooted, skip_turn_status
+from trpg.engine.skill_triggers import collect_cast, collect_move, holding
 from trpg.engine.skills.conditions import Subject, condition_met
+from trpg.engine.skills.mobility import dash_route
 from trpg.engine.skills.scaling import mastery_duration_bonus, skill_scaling_value
 from trpg.engine.skills.targeting import (
     PaidCost,
@@ -103,6 +112,7 @@ from trpg.engine.skills.targeting import (
     damage_parameters,
     pay_skill_cost,
     resolve_effects,
+    shape_reach,
     skill_ap_cost,
     skill_problem,
     skill_profile,
@@ -516,6 +526,8 @@ class _Cast:
     # ------------------------------------------------------------------
 
     def run(self) -> None:
+        if not self.dash():  # 衝鋒一律最先結算；被擋下時其餘效果不結算
+            return
         self.roll_hits()
         self.announce_pierce()
         self.consume_stacks()
@@ -529,6 +541,61 @@ class _Cast:
                 self.touch_untouched_tiles(spec, start)
         self.react_to_hits()
         self.shorten_cooldown()
+
+    def dash(self) -> bool:
+        """``dash``（Phase 3D-2）：施放者沿最短路徑衝到目標的相鄰格，一步一步走（每一步先給相鄰
+        的敵人藉機攻擊的機會；陷阱與墜落照常結算，被定身、倒地或倒下就停下）。衝完之後影響範圍的
+        原點改為施放者的新位置（推擊由這裡往外推）。回傳其餘效果是否繼續結算：施放者倒下，或
+        目標已不在相鄰格（被擋下）時為 ``False``（發出 ``effect_fizzled``）。"""
+        action, caster, ctx = self.action, self.caster, self.ctx
+        spec = self.skill.effects[0] if self.skill.effects else None
+        if spec is None or spec.type != DASH or action is None or action.target_id is None:
+            return True
+        if not self.holds(spec.condition, Subject(caster, caster.xy)):
+            return True
+        target = ctx.state.units[action.target_id]
+        reach = shape_reach(ctx.state, self.skill, caster)
+        path = dash_route(ctx.state, caster, target.xy, reach)
+        if path is None:
+            return self._dash_failed("no_path")
+        ctx.emit(
+            UnitDashed,
+            unit_id=caster.id,
+            target_id=target.id,
+            path=tuple(Pos(x=x, y=y) for x, y in path),
+        )
+        if not self._dash_walk(path):
+            return False
+        if not target.alive or manhattan(caster.xy, target.xy) != 1:
+            return self._dash_failed("blocked")
+        self.area = replace(self.area, origin=caster.xy)
+        return True
+
+    def _dash_walk(self, path: list[XY]) -> bool:
+        """沿 ``path`` 一步一步衝（每步先給藉機攻擊的機會）；施放者倒下時回傳 ``False``。"""
+        caster, ctx = self.caster, self.ctx
+        for step in path[1:]:
+            opportunity_attacks(ctx, caster, caster.xy, step)
+            if not caster.alive:
+                return False
+            move = MoveUnitEffect(source_id=caster.id, unit_id=caster.id, dest=step, mode="dash")
+            execute(ctx, [move])
+            if not self._dash_continues(step):
+                break
+        if len(path) > 1 and caster.alive:
+            collect_move(ctx, caster)  # on_move 被動：衝鋒算主動移動
+        return caster.alive
+
+    def _dash_continues(self, step: XY) -> bool:
+        """衝鋒走完這一步之後能不能繼續：還在預期的格子上，沒有被定身、擊倒、暈眩。"""
+        caster, rules = self.caster, self.ctx.rules
+        if not caster.alive or caster.xy != step or caster.has_status(PRONE):
+            return False
+        return not is_rooted(rules, caster) and skip_turn_status(rules, caster) is None
+
+    def _dash_failed(self, reason: str) -> bool:
+        self.ctx.emit(EffectFizzled, effect_kind=DASH, pos=None, reason=f"dash_{reason}")
+        return False
 
     def announce_pierce(self) -> None:
         """穿透的射線穿過了物件：發出 ``shot_pierced``（Phase 3C-5b）。"""
@@ -623,8 +690,12 @@ class _Cast:
             return self.displace(effect, spec, pull=kind == "pull")
         if kind == "teleport":
             return self.teleport(spec)
-        if kind in (INTERCEPT, PLACE_TRAP, CONSUME_STACK):
-            return []  # 攔截由反應機制處理；陷阱在 use_skill 放置；消耗層數在 consume_stacks
+        if kind == LEAP:
+            return self.leap(spec)
+        if kind == SWAP:
+            return self.swap(effect, spec)
+        if kind in (INTERCEPT, PLACE_TRAP, CONSUME_STACK, DASH):
+            return []  # 攔截：反應機制；陷阱：use_skill；消耗層數：consume_stacks；衝鋒：dash
         if kind == ADD_STACK:
             self.add_stack(effect, spec)
             return []
@@ -1114,6 +1185,30 @@ class _Cast:
                 dest=(pos.x, pos.y),
                 mode="teleport",
             )
+        ]
+
+    def leap(self, spec: EffectSpec) -> list[EffectBase]:
+        """``leap``（Phase 3D-2）：跳到指定的空格（選取時已檢查落點與路徑）；不觸發藉機攻擊。"""
+        assert self.action is not None
+        pos = self.action.target_pos
+        assert pos is not None
+        if not self.holds(spec.condition, Subject(self.caster, self.caster.xy)):
+            return []
+        return [
+            MoveUnitEffect(
+                source_id=self.caster.id,
+                unit_id=self.caster.id,
+                dest=(pos.x, pos.y),
+                mode="leap",
+            )
+        ]
+
+    def swap(self, effect: ResolvedEffect, spec: EffectSpec) -> list[EffectBase]:
+        """``swap``（Phase 3D-2）：與目標單位交換位置；對敵人需要命中（失手就不交換）。"""
+        return [
+            SwapUnitsEffect(source_id=self.caster.id, unit_id=self.caster.id, other_id=unit.id)
+            for unit in self.targets(effect.affects, spec.condition)
+            if unit.id != self.caster.id
         ]
 
     def status_duration(self, spec: EffectSpec) -> int | None:

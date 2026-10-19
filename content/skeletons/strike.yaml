@@ -10,4 +10,4 @@ kinds: [active]
 enabled: true
 shapes: [single]
 core: {primitives: [damage], min_share_permille: 600}
-secondary: {harmful_only: true, max_count: 1}
+secondary: {primitives: [apply_status, push, pull, knock_prone, dash], harmful_only: true, max_count: 1}   # dash：突進打擊（3D-2）

@@ -17,8 +17,11 @@ from typing import NamedTuple
 from trpg.content.battle import Dice
 from trpg.content.skills import (
     COPY_SKILL,
+    DASH,
     HURL_OBJECT,
+    LEAP,
     PIERCE_SHAPES,
+    SWAP,
     TOPPLE,
     Affects,
     EffectSpec,
@@ -39,6 +42,13 @@ from trpg.engine.rules.statuses import (
 )
 from trpg.engine.skills import shapes
 from trpg.engine.skills.conditions import skill_condition_problem
+from trpg.engine.skills.mobility import (
+    dash_route,
+    leap_candidates,
+    leap_problem,
+    self_move_problem,
+    swap_problem,
+)
 from trpg.engine.skills.scaling import mastery_reach_bonus, skill_scaling_value
 from trpg.engine.state import BattleState, ObjectState, UnitState
 from trpg.shared.errors import IllegalActionError
@@ -304,6 +314,10 @@ def skill_problem(state: BattleState, unit: UnitState, skill: SkillDef) -> str |
         for e in skill.effects
     ):
         return f"已經在這個姿態中：{skill.name_zh}"
+    if any(e.type in (DASH, LEAP) for e in skill.effects):  # 自身位移（3D-2）：定身、倒地不能衝跳
+        problem = self_move_problem(state, unit)
+        if problem is not None:
+            return problem
     problem = resource_problem(state, unit, skill)
     if problem is None and any(e.type == COPY_SKILL for e in skill.effects):
         # 延後匯入：trpg.engine.copying 匯入本模組的 selections
@@ -384,6 +398,26 @@ def _reach_problem(  # noqa: PLR0917
     return None
 
 
+def _self_move_target_problem(
+    state: BattleState,
+    caster: UnitState,
+    effects: tuple[ResolvedEffect, ...],
+    target: UnitState,
+    reach: int,
+) -> str | None:
+    """衝鋒（路徑與射程）與交換位置（兩格都能站）對單位目標的額外限制（Phase 3D-2）。"""
+    if target.id == caster.id and any(e.type in (DASH, SWAP) for e in effects):
+        return "不能以自己為目標（衝鋒與交換位置需要另一個單位）"
+    for effect in effects:
+        if effect.type == DASH and dash_route(state, caster, target.xy, reach) is None:
+            return f"無法衝鋒到 {target.name_zh}：沒有路徑能在射程 {reach} 內抵達相鄰的格子"
+        if effect.type == SWAP:
+            problem = swap_problem(state, caster, target)
+            if problem is not None:
+                return problem
+    return None
+
+
 def _object_target_problem(  # noqa: PLR0917
     state: BattleState,
     caster: UnitState,
@@ -449,6 +483,8 @@ def _unit_area(
         if any(e.type == TOPPLE for e in effects):
             raise IllegalActionError(f"推倒技能只能以可推倒的物件為目標：{skill.name_zh}")
         problem = _unit_target_problem(state, caster, skill, effects, target, reach)
+        if problem is None:
+            problem = _self_move_target_problem(state, caster, effects, target, reach)
         if problem is not None:
             raise IllegalActionError(problem)
         if spec.type != "chain":
@@ -459,6 +495,8 @@ def _unit_area(
     assert action.target_object_id is not None
     if spec.type == "chain":
         raise IllegalActionError("連鎖技能的第一個目標必須是單位")
+    if any(e.type in (DASH, SWAP) for e in effects):
+        raise IllegalActionError(f"衝鋒與交換位置的技能必須以單位為目標：{skill.name_zh}")
     obj = state.objects.get(action.target_object_id)
     if obj is None or obj.destroyed:
         raise IllegalActionError(f"找不到物件：{action.target_object_id}")
@@ -482,6 +520,11 @@ def _tile_area(
     if action.target_pos is None:
         raise IllegalActionError("此技能必須指定 target_pos（目標格）")
     center = (action.target_pos.x, action.target_pos.y)
+    if any(e.type == LEAP for e in effects):  # 跳躍：無視視線與中間的單位，另有自己的落點規則
+        problem = leap_problem(state, caster, center, reach)
+        if problem is not None:
+            raise IllegalActionError(problem)
+        return center_tiles(state, skill.shape.type, center), center
     problem = shapes.center_problem(state, caster.xy, center, reach)
     if problem is not None:
         raise IllegalActionError(problem)
@@ -655,8 +698,7 @@ def _candidates(state: BattleState, caster: UnitState, skill: SkillDef) -> Itera
                 if manhattan(caster.xy, obj.xy) <= reach:
                     yield UseSkill(unit_id=uid, skill_id=sid, target_object_id=ObjectId(obj.id))
     elif shape.targeting == "tile":
-        reach = shape_reach(state, skill, caster)
-        for x, y in shapes.center_candidates(state, caster.xy, reach):
+        for x, y in _tile_candidates(state, caster, skill):
             yield UseSkill(unit_id=uid, skill_id=sid, target_pos=Pos(x=x, y=y))
     elif shape.targeting == "object_tile":
         yield from _hurl_candidates(state, caster, skill)
@@ -666,6 +708,14 @@ def _candidates(state: BattleState, caster: UnitState, skill: SkillDef) -> Itera
             yield UseSkill(unit_id=uid, skill_id=sid, direction=direction)
     else:
         yield UseSkill(unit_id=uid, skill_id=sid)
+
+
+def _tile_candidates(state: BattleState, caster: UnitState, skill: SkillDef) -> list[XY]:
+    """中心格型的候選格：射程內看得到的格子；跳躍無視視線，另有自己的落點規則。"""
+    reach = shape_reach(state, skill, caster)
+    if any(e.type == LEAP for e in skill.effects):
+        return leap_candidates(state, caster, reach)
+    return shapes.center_candidates(state, caster.xy, reach)
 
 
 def _hurl_candidates(state: BattleState, caster: UnitState, skill: SkillDef) -> Iterator[UseSkill]:

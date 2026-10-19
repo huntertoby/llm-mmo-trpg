@@ -1,0 +1,24 @@
+# 主動（Phase 3D-2 示範，數值為初值，未經模擬）：與敵人交換位置（需命中，失手則不換），並順勢給他一擊——把敵人換到自己原本站的（危險）位置。
+id: skill_decoy_swap
+schema_version: 1
+name_zh: 調虎離山
+tier: 1
+rank: 1
+rarity: rare
+kind: active
+skeleton: displace
+category: weapon
+weapon_req: melee
+ap_cost: 1
+scaling_attr: str
+shape: {type: single, range: 3}
+effects:
+  - {type: swap, affects: enemies}
+  - {type: damage, multiplier_permille: 400}
+condition: null
+cost: {mana: 3, cooldown: 3}
+tags: [physical, swap, mobility]
+narrative:
+  concept: 抓住敵人的衣領，轉身把他甩到自己原本的位置
+  cast_flavor: 你一把扯住對手，兩人的位置在一瞬間對調
+provenance: {origin: builtin, owner_id: null, created_by: null, parents: [], bound: true, tradeable: false}

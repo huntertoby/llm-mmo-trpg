@@ -15,7 +15,7 @@ from trpg.content.skills import Affects, EffectSpec, SkillDef, default_affects
 __all__ = ["affect_set", "mechanic_tags", "resolved_affects"]
 
 _NEUTRAL = 1000  # 千分比倍率 ×1
-_DISPLACE = frozenset({"push", "pull", "teleport", "knock_prone"})
+_DISPLACE = frozenset({"push", "pull", "teleport", "knock_prone", "dash", "leap", "swap"})
 _TERRAIN = frozenset({"create_obstacle", "destroy_object", "raise_terrain", "lower_terrain"})
 _SINGLE_TARGET_SHAPES = frozenset({"self", "single", "ground_tile"})
 

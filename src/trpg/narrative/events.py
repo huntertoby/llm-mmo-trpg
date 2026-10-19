@@ -76,6 +76,7 @@ from trpg.engine.events import (
     TurnOrderSet,
     TurnSkipped,
     TurnStarted,
+    UnitDashed,
     UnitDowned,
     UnitEscaped,
     UnitFell,
@@ -200,7 +201,6 @@ SILENT_EVENT_TYPES: tuple[type[EventBase], ...] = (
     EnvironmentEnded,
     ElementTouched,
     SurfaceEntered,
-    EffectFizzled,
 )
 """明確不顯示的事件類型（沒有處理器，:func:`describe_event` 回傳 ``None``）。"""
 
@@ -279,10 +279,33 @@ def _battle_ended(e: BattleEnded, _v: _View) -> str:
 
 @_handles(UnitMoved)
 def _unit_moved(e: UnitMoved, v: _View) -> str | None:
-    if e.mode == "walk":
-        return None  # 由 Move 動作整段顯示（見 CLI）
-    verb = "被傳送到" if e.mode == "teleport" else "被推到"
+    if e.mode in ("walk", "dash"):
+        return None  # 由 Move 動作整段顯示（見 CLI）；衝鋒由 unit_dashed 整段顯示
+    verb = _MOVE_VERBS.get(e.mode, "被推到")
     return f"  {v.name[e.unit_id]} {verb} {xy_text(e.to_pos)}"
+
+
+_MOVE_VERBS = {"teleport": "被傳送到", "leap": "跳躍到", "swap": "交換位置，換到"}
+
+
+_FIZZLE_TEXT = {
+    "dash_blocked": "  衝鋒被擋下，沒有抵達目標身旁：其餘效果不結算",
+    "dash_no_path": "  衝鋒找不到路：其餘效果不結算",
+    "swap_blocked": "  無法交換位置（有一方站不上對方的格子）",
+}
+
+
+@_handles(EffectFizzled)
+def _effect_fizzled(e: EffectFizzled, _v: _View) -> str | None:
+    return _FIZZLE_TEXT.get(e.reason)  # 其他原因（沒有對象、沒有增益……）不顯示
+
+
+@_handles(UnitDashed)
+def _unit_dashed(e: UnitDashed, v: _View) -> str:
+    route = "→".join(xy_text(p) for p in e.path)
+    if len(e.path) == 1:
+        return f"  ➤ {v.name[e.unit_id]} 衝向 {v.name[e.target_id]}（已在身旁）"
+    return f"  ➤ {v.name[e.unit_id]} 衝向 {v.name[e.target_id]}：{route}"
 
 
 @_handles(UnitStoodUp)

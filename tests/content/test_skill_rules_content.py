@@ -94,7 +94,10 @@ def test_the_initial_skeleton_structure_matches_the_spec() -> None:
         "knock_prone",
         "hurl_object",
         "topple",
+        "leap",  # 3D-2
+        "swap",  # 3D-2
     }
+    assert set(sk["displace"].secondary.primitives or ()) >= {"dash"}
     assert sk["displace"].secondary.max_share_permille == {"damage": 500}
     assert sk["displace"].secondary.max_count == 2
     assert set(sk["aura"].shapes) == {

@@ -10,6 +10,7 @@ companions: [sim_companion_fighter, sim_companion_archer]
 # Phase 2G-2：新增 12 個示範技能（觸發時機、反應事件、連段、地形原語），分配給主題相符的 build（沒有新增 build，仍為 12 個）。
 # Phase 3C-5a：build_push 加震地推倒（topple）、build_fire 加念力投擲（hurl_object；油桶落地爆炸，3C-6 再整理成念力流）。
 # Phase 3D-1：連段條件與資源互動的示範技能（衝勢劈砍、並肩斬、獵殺落單、先發制人、連段雷光、專注湧流、疾時之潮、竊取祝福）。
+# Phase 3D-2：新增 build_charger（衝鋒流）：猛虎衝撞（dash）、騰躍（leap）、調虎離山與護衛換位（swap）。
 # Phase 3C-3a：build_push 加破城衝撞與裂骨印記（撞擊）、build_fire 加烈焰護身（on_cast_tag）、build_warlock 加蝕心追擊（on_status_applied）。
 # Phase 3C-2：修正技能（kind: modifier，裝在被動欄位，上限 3）——build_push 加重踏、build_fire 加灼傷之痕與餘燼循環、
 # build_tank 加雷之手（單手劍的物理普攻變成雷電，3C-5 再整理）。
@@ -214,3 +215,19 @@ builds:
       tags: [hero, sim]
       max_mana: 40
       skills: [skill_cinder_mine, skill_bear_trap, skill_frost_shackle, skill_sinkhole, skill_fleet_foot]
+
+  - id: build_charger
+    name_zh: 衝鋒流
+    theme_zh: 猛虎衝撞一個箭步衝到敵人面前、打完再把他推飛撞牆；騰躍越過人群與障礙脫離包圍，調虎離山與護衛換位把敵人換進險地或把隊友換出險境。地形越開闊越能衝，被定身或四面被圍死（沒有相鄰空格可衝）時不利（Phase 3D-2，初值未經模擬）。
+    hero:
+      id: build_charger
+      name_zh: 衝鋒流英雄
+      attributes: {str: 16, dex: 12, con: 14, int: 10, wis: 10, wil: 10}
+      max_hp: 60
+      speed: 5
+      armor_bonus: 4
+      weapon: one_handed_sword
+      resist: {physical: 100}
+      tags: [hero, sim]
+      max_mana: 24
+      skills: [skill_tiger_charge, skill_vault_leap, skill_decoy_swap, skill_guard_swap, skill_gale_kick, skill_shield_bash]

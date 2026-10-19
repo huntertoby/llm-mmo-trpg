@@ -1,0 +1,24 @@
+# 主動（Phase 3D-2 示範，數值為初值，未經模擬）：與友方交換位置（自動成功），讓對方得到庇護——把友方換出險境、自己頂上去。
+id: skill_guard_swap
+schema_version: 1
+name_zh: 護衛換位
+tier: 1
+rank: 1
+rarity: rare
+kind: active
+skeleton: displace
+category: weapon
+weapon_req: melee
+ap_cost: 1
+scaling_attr: str
+shape: {type: single, range: 4}
+effects:
+  - {type: swap, affects: allies}
+  - {type: apply_status, status: guarded, duration: 2, affects: allies}
+condition: null
+cost: {mana: 3, cooldown: 3}
+tags: [physical, swap, mobility, support]
+narrative:
+  concept: 在隊友倒下之前把他拉到身後，自己站上前線
+  cast_flavor: 你大喊一聲，一把把隊友拽到背後，自己頂了上去
+provenance: {origin: builtin, owner_id: null, created_by: null, parents: [], bound: true, tradeable: false}

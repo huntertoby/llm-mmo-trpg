@@ -14,6 +14,9 @@ export const MOVE_DURATION_MS: Readonly<Record<MoveMode, number>> = {
   walk: 140,
   forced: 70,
   teleport: 0,
+  dash: 60, // 衝鋒每一步：比步行快
+  leap: 220, // 跳躍：一次跳到落點
+  swap: 180, // 交換位置：兩個單位同時換格
 };
 
 export function movePlan(steps: readonly StepOut[]): MoveAnim[] {

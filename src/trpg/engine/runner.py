@@ -37,8 +37,13 @@ __all__ = [
     "run_battle",
 ]
 
-LOG_FORMAT = "trpg-battle-log/18"
-"""``/18``（Phase 3D-1）：連段條件（單位的 ``moved_this_turn``、``turn_cast_tags``；條件
+LOG_FORMAT = "trpg-battle-log/19"
+"""``/19``（Phase 3D-2）：自身位移原語 ``dash``（衝鋒）、``leap``（跳躍）、``swap``（交換位置）、
+事件 ``unit_dashed``、``unit_moved`` 的新 ``mode``（``dash``／``leap``／``swap``）、戰鬥紀錄中
+新的 ``effect_fizzled`` 原因（``dash_blocked``／``dash_no_path``／``swap_blocked``）；``/18`` 的
+規則集沒有這些原語，舊紀錄的事件與規則包不能由新版程式重播。
+
+``/18``（Phase 3D-1）：連段條件（單位的 ``moved_this_turn``、``turn_cast_tags``；條件
 ``moved_this_turn``／``adjacent_ally``／``target_isolated``／``first_round``／``cast_tag_this_turn``）、
 資源互動原語 ``restore_resource``（事件 ``resource_restored``）與 ``steal_buff``
 （``status_removed`` 的新原因 ``stolen``）、狀態分類 ``polarity``；``/17`` 的紀錄沒有這些欄位與

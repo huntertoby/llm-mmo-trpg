@@ -48,10 +48,12 @@ __all__ = [
     "CONSUME_STATUS",
     "CONSUME_THEN_TYPES",
     "COPY_SKILL",
+    "DASH",
     "EXTRA_REACTION",
     "GRANT_AP",
     "HURL_OBJECT",
     "INTERCEPT",
+    "LEAP",
     "MODIFIER_CHANGES",
     "ON_HIT_PRIMITIVES",
     "PIERCE_SHAPES",
@@ -67,6 +69,7 @@ __all__ = [
     "SKELETON_IDS",
     "SKILL_ID_PATTERN",
     "SKILL_REACTION_EVENTS",
+    "SWAP",
     "TOPPLE",
     "WEAPON_CLASSES",
     "Affects",
@@ -746,6 +749,12 @@ EXTRA_REACTION = "extra_reaction"
 RESTORE_RESOURCE = "restore_resource"
 STEAL_BUFF = "steal_buff"
 """Phase 3D-1 的資源互動原語 ID（6.16 H）。"""
+DASH = "dash"
+LEAP = "leap"
+SWAP = "swap"
+"""Phase 3D-2 的自身位移原語 ID（6.16 A）。"""
+SELF_MOVES: tuple[str, ...] = (DASH, LEAP, SWAP, "teleport")
+"""改變施放者位置的原語；一個技能最多一個。"""
 _MAX_COOLDOWN_RESTORE = 2
 """``restore_resource`` 的 ``resource: cooldown`` 一次最多縮短的回合（Phase 3D-1）。"""
 HURL_OBJECT = "hurl_object"
@@ -1099,6 +1108,7 @@ class SkillDef(ContentModel):
         self._check_copy_skill()
         self._check_hurl_object()
         self._check_pierce()
+        self._check_self_moves()
         if self.kind == "passive" and self.trigger is None:
             raise ValueError("被動技能（kind: passive）必須有 trigger")
         if self.kind != "passive" and self.trigger is not None:
@@ -1151,6 +1161,21 @@ class SkillDef(ContentModel):
             raise ValueError(f"hurl_object 只能用在主動技能，收到 kind: {self.kind}")
         if self.shape.type != "object_then_tile":
             raise ValueError(f"hurl_object 的形狀必須是 object_then_tile，收到 {self.shape.type}")
+
+    def _check_self_moves(self) -> None:
+        """自身位移（Phase 3D-2）：``dash``、``leap``、``swap`` 只能用在主動技能（反應技、姿態、
+        被動與陷阱沒有可選的目標或落點）；位移原語最多一個；``dash`` 一律最先結算，必須是第一個
+        效果。"""
+        types = [e.type for e in self.effects]
+        moves = [t for t in types if t in SELF_MOVES]
+        if not any(t in (DASH, LEAP, SWAP) for t in moves):
+            return
+        if self.kind != "active":
+            raise ValueError(f"{'、'.join(moves)} 只能用在主動技能，收到 kind: {self.kind}")
+        if len(moves) > 1:
+            raise ValueError(f"一個技能最多一個改變自身位置的原語，收到 {'、'.join(moves)}")
+        if DASH in types and types[0] != DASH:
+            raise ValueError("dash 必須是技能的第一個效果（衝鋒一律最先結算）")
 
     def _check_pierce(self) -> None:
         """``pierce``（Phase 3C-5b）：主動技能或反應技、遠程武器或法術、形狀是單體（射程大於 1）或
@@ -1248,7 +1273,7 @@ class SkillDef(ContentModel):
             raise ValueError("陷阱技能只能有一個 place_trap")
         if self.kind != "active" or self.shape.type != "ground_tile":
             raise ValueError("陷阱技能必須是形狀 ground_tile 的主動技能")
-        banned = [t for t in types if t in ("teleport", ADD_STACK, CONSUME_STACK)]
+        banned = [t for t in types if t in (*SELF_MOVES, ADD_STACK, CONSUME_STACK)]
         if banned:
             raise ValueError(f"陷阱技能不能有 {'、'.join(banned)}（陷阱觸發時才結算其餘效果）")
 

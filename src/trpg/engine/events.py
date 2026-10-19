@@ -89,6 +89,7 @@ __all__ = [
     "TurnOrderSet",
     "TurnSkipped",
     "TurnStarted",
+    "UnitDashed",
     "UnitDowned",
     "UnitEscaped",
     "UnitFell",
@@ -117,8 +118,10 @@ type ObjectDestroyCause = Literal[
     "damage", "burned", "explosion", "filled", "fell", "effect", "hurled", "toppled"
 ]
 """``hurled``：被投擲後落地碎掉；``toppled``：被推倒（原物件移除，改由倒塌物取代；Phase 3C-5a）。"""
-type MoveMode = Literal["walk", "forced", "teleport"]
-"""``walk``：主動移動的一步；``forced``：強制位移（推擊等）；``teleport``：傳送（不墜落）。"""
+type MoveMode = Literal["walk", "forced", "teleport", "dash", "leap", "swap"]
+"""``walk``：主動移動的一步；``forced``：強制位移（推擊等）；``teleport``：傳送（不墜落）；
+``dash``：衝鋒的一步（同步行，會墜落與觸發陷阱）；``leap``：跳躍的落點；``swap``：與另一個單位
+交換位置（Phase 3D-2）。"""
 
 
 class EventBase(BaseModel):
@@ -217,6 +220,16 @@ class UnitMoved(EventBase):
     to_pos: Pos
     mode: MoveMode
     cost: int
+
+
+class UnitDashed(EventBase):
+    """衝鋒（``dash``，Phase 3D-2）開始：``unit_id`` 朝 ``target_id`` 沿 ``path``（含起點與終點，
+    相鄰目標時只有起點）前進；每一步另有 ``unit_moved``（``mode: dash``），被擋下時不會走完。"""
+
+    type: Literal["unit_dashed"] = "unit_dashed"
+    unit_id: UnitId
+    target_id: UnitId
+    path: tuple[Pos, ...]
 
 
 class UnitStoodUp(EventBase):
@@ -1063,6 +1076,7 @@ type Event = Annotated[
     | DamageRedirected
     | ReactionsGranted
     | ResourceRestored
+    | UnitDashed
     | SkillCopied,
     Field(discriminator="type"),
 ]

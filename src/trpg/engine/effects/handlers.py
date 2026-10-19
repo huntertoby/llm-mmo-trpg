@@ -13,6 +13,7 @@ from trpg.engine.effects.models import (
     MoveUnitEffect,
     RemoveStatusEffect,
     ShieldEffect,
+    SwapUnitsEffect,
 )
 from trpg.engine.effects.queue import register_effect
 from trpg.engine.events import (
@@ -20,6 +21,7 @@ from trpg.engine.events import (
     DamageDealt,
     DamageRedirected,
     DeathCheated,
+    EffectFizzled,
     EnteredDeadlyTerrain,
     EventBase,
     Healed,
@@ -36,7 +38,7 @@ from trpg.engine.events import (
 )
 from trpg.engine.lifecycle import down_unit, escape_unit
 from trpg.engine.rules.combat import PERMILLE, PPM, element_modifier_ppm
-from trpg.engine.rules.movement import is_deadly
+from trpg.engine.rules.movement import is_deadly, is_standable
 from trpg.engine.rules.statuses import (
     boss_converted_status,
     damage_dealt_permille,
@@ -382,8 +384,8 @@ def arrive(
     from_pos = unit.pos
     drop = state.tile(from_pos.x, from_pos.y).height - state.tile(*dest).height
     unit.pos = Pos(x=dest[0], y=dest[1])
-    if mode == "walk":
-        unit.moved_this_turn = True  # 連段條件 moved_this_turn（Phase 3D-1）
+    if mode in ("walk", "dash"):
+        unit.moved_this_turn = True  # 連段條件 moved_this_turn（Phase 3D-1；衝鋒算，3D-2）
     events: list[EventBase] = [
         ctx.emit(
             UnitMoved, unit_id=unit.id, from_pos=from_pos, to_pos=unit.pos, mode=mode, cost=cost
@@ -555,3 +557,20 @@ def _remove_status(ctx: Ctx, effect: EffectBase) -> list[EventBase]:
     return [
         ctx.emit(StatusRemoved, target_id=unit.id, status_id=effect.status_id, reason=effect.reason)
     ]
+
+
+@register_effect("swap_units")
+def _swap_units(ctx: Ctx, effect: EffectBase) -> list[EventBase]:
+    """交換兩個單位的位置（Phase 3D-2）：兩格都要能讓對方站上去；各自結算抵達的後果。"""
+    assert isinstance(effect, SwapUnitsEffect)
+    state = ctx.state
+    first = state.units.get(effect.unit_id)
+    second = state.units.get(effect.other_id)
+    if first is None or second is None or not first.alive or not second.alive:
+        return []
+    a_xy, b_xy = first.xy, second.xy
+    if not (is_standable(state, a_xy) and is_standable(state, b_xy)):
+        return [ctx.emit(EffectFizzled, effect_kind="swap", pos=None, reason="swap_blocked")]
+    events = arrive(ctx, first, b_xy, "swap", source_id=effect.source_id)
+    events += arrive(ctx, second, a_xy, "swap", source_id=effect.source_id)
+    return events

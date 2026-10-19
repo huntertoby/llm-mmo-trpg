@@ -51,6 +51,7 @@ from trpg.content.skills import (
     CHEAT_DEATH_STATUS,
     EXTRA_REACTION,
     GRANT_AP,
+    LEAP,
     REDIRECT_DAMAGE,
     REDIRECT_STATUS,
     RESET_COOLDOWN,
@@ -1115,7 +1116,8 @@ def skill_estimate(  # noqa: PLR0917
     """技能選取（影響範圍為 ``area``）的便宜估計（不跑引擎），用來篩出每個技能最值得完整評分的
     幾個選取；``None`` 表示不納入候選（這是 ``worth_previewing`` 在技能上的對應）。
 
-    - 含 ``teleport``：把行動者放到目標格後的位置價值變化（同 :func:`virtual_move_score`）；
+    - 含 ``teleport`` 或 ``leap``：把行動者放到目標格後的位置價值變化（同
+      :func:`virtual_move_score`；跳躍用來脫離或上高處，Phase 3D-2）；
     - 含 ``hurl_object`` 或 ``topple``：落點與爆炸範圍內、或倒下壓住的敵人數
       （:func:`~trpg.engine.ai.scene_objects.scene_estimate`）；
     - 影響範圍內有敵方單位、可破壞物件，或（有治療的技能）受傷的友方：分數 ＝ 敵人數 × 3 ＋
@@ -1131,7 +1133,7 @@ def skill_estimate(  # noqa: PLR0917
         return None  # 已經有姿態：AI 不主動換姿態（也不主動取消，Phase 2E-2）
     if skill.trap is not None:
         return _trap_estimate(state, unit, skill, area, scene, rules=trap)
-    if any(e.type == "teleport" for e in skill.effects) and action.target_pos is not None:
+    if any(e.type in ("teleport", LEAP) for e in skill.effects) and action.target_pos is not None:
         moved = unit.clone()
         moved.pos = action.target_pos
         return _unit_position_value(state, moved, w, scene) - before
