@@ -29,6 +29,7 @@ from trpg.engine.effects import (
 from trpg.engine.environment import telegraph
 from trpg.engine.events import (
     CheckRolled,
+    Collided,
     DamageDealt,
     EnvironmentStarted,
     EventBase,
@@ -104,31 +105,35 @@ def test_skill_push_of_zero_tiles_just_does_not_move() -> None:
 
 
 @pytest.mark.parametrize(
-    ("heights", "terrain", "objects", "extra_enemy", "fragment"),
+    ("heights", "terrain", "objects", "extra_enemy", "obstacle"),
     [
-        ("000", None, [(2, 0, "crate")], None, "另一側被擋住"),
-        ("000", "..#", [], None, "另一側被擋住"),
-        ("001", None, [], None, "另一側比較高"),
-        ("000", None, [], (2, 0), "另一側有單位"),
-        ("00", None, [], None, "會被推出地圖"),
+        ("000", None, [(2, 0, "crate")], None, "object"),
+        ("000", "..#", [], None, "wall"),
+        ("001", None, [], None, "wall"),
+        ("000", None, [], (2, 0), "unit"),
+        ("00", None, [], None, "edge"),
     ],
 )
-def test_blocked_shove_is_illegal(
+def test_blocked_shove_is_legal_and_collides(
     heights: str,
     terrain: str | None,
     objects: list[tuple[int, int, str]],
     extra_enemy: tuple[int, int] | None,
-    fragment: str,
+    obstacle: str,
 ) -> None:
+    """Phase 3C-3b 5.4（取代 Phase 1C #10 的「推不動不合法」）：目標身後第一格被擋時推擊仍合法，
+    對抗成功則目標不移動、撞擊 1 次。"""
     m = make_map(heights, terrain, objects=objects, enemy=[(1, 0)])
     spawns = [spawn(Team.ALLY, (0, 0), "hero_fighter"), spawn(Team.ENEMY, (1, 0))]
     if extra_enemy is not None:
         spawns.append(spawn(Team.ENEMY, extra_enemy))
     state = give_turn(make_state(m, spawns), U1)
     shove = Shove(unit_id=U1, target_id=U2)
-    assert shove not in legal_actions(state)
-    with pytest.raises(IllegalActionError, match=fragment):
-        resolve(state, shove)
+    assert shove in legal_actions(state)
+    result = resolve(with_rolls(state, [(20, 20)]), shove)
+    (hit,) = [e for e in result.events if isinstance(e, Collided)]
+    assert (hit.obstacle, hit.shortfall) == (obstacle, 1)
+    assert result.state.units[U2].pos == P(1, 0)
 
 
 def test_shove_into_chasm_is_still_legal() -> None:

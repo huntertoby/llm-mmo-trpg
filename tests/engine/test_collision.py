@@ -5,6 +5,7 @@ from __future__ import annotations
 import io
 from collections.abc import Sequence
 from pathlib import Path
+from typing import Any
 
 import pytest
 
@@ -21,7 +22,7 @@ from tests.engine.helpers import (
 from trpg.cli.battle import cmd_replay
 from trpg.cli.main import main
 from trpg.content.battle import Dice
-from trpg.engine import BattleState, Shove, UseSkill, preview, resolve
+from trpg.engine import BattleState, Shove, UseSkill, legal_actions, preview, resolve
 from trpg.engine import modifiers as mods
 from trpg.engine.effects import PushEffect, run_effects
 from trpg.engine.events import (
@@ -248,14 +249,120 @@ def test_basic_shove_collides_too() -> None:
     assert len(collisions(result.events)) == 1
 
 
-def test_shove_into_a_wall_next_to_the_target_stays_illegal() -> None:
-    """第一格就被擋的推擊仍然不合法（3C-3a 不改合法性）。"""
-    m = make_map(FLAT, terrain_with("#", 3), ally=[(1, 3)], enemy=[FOE])
+# ---------------------------------------------------------------------------
+# 基本推擊貼牆撞擊（Phase 3C-3b 5.4）
+# ---------------------------------------------------------------------------
+
+SHOVER = (1, 3)
+PUSHED = (2, 3)
+
+
+def shove_scene(
+    *,
+    terrain: str | None = None,
+    objects: Sequence[tuple[int, int, str]] = (),
+    second: tuple[int, int] | None = None,
+    shover: tuple[int, int] = SHOVER,
+    foe: tuple[int, int] = PUSHED,
+) -> BattleState:
+    """U1 我方戰士在 ``shover`` 推 U2（不反應、HP 200）；``second`` 為 U3（擋在身後）。"""
+    enemies = [foe] + ([] if second is None else [second])
+    m = make_map(FLAT, terrain, ally=[shover], enemy=enemies, objects=objects)
+    spawns = [spawn(Team.ALLY, shover, "hero_fighter")]
+    spawns += [spawn(Team.ENEMY, xy, no_reactions(max_hp=200)) for xy in enemies]
+    return give_turn(make_state(m, spawns), U1)
+
+
+WIN = [(20, 20)]  # 對抗：推擊者大成功
+LOSE = [(20, 1), (20, 20)]  # 推擊者擲 1、目標擲 20
+
+
+def shove(state: BattleState, rolls: list[tuple[int, int]] = WIN) -> Any:
+    return resolve(with_rolls(state, rolls), Shove(unit_id=U1, target_id=U2))
+
+
+def test_shove_against_a_wall_is_legal_and_the_target_takes_one_collision() -> None:
+    state = shove_scene(terrain=terrain_with("#", 3))
+    assert Shove(unit_id=U1, target_id=U2) in legal_actions(state)
+    result = shove(state)
+    assert result.state.units[U2].xy == PUSHED  # 不移動
+    (hit,) = of(result.events, Collided)
+    assert (hit.obstacle, hit.shortfall, hit.unit_id, hit.source_id) == ("wall", 1, U2, U1)
+    (damage,) = collisions(result.events)
+    assert damage.target_id == U2 and damage.source_id == U1
+    assert of(result.events, UnitMoved) == []
+
+
+def test_shove_against_a_unit_hurts_both() -> None:
+    result = shove(shove_scene(second=(3, 3)))
+    (hit,) = of(result.events, Collided)
+    assert (hit.obstacle, hit.shortfall, hit.other_id) == ("unit", 1, U3)
+    assert sorted(d.target_id for d in collisions(result.events)) == [U2, U3]
+    assert result.state.units[U2].xy == PUSHED
+
+
+def test_shove_against_an_object_and_a_breakable_object() -> None:
+    wall = shove(shove_scene(objects=[(3, 3, "earth_wall")]))
+    (hit,) = of(wall.events, Collided)
+    assert (hit.obstacle, hit.shortfall) == ("object", 1)
+    assert len(collisions(wall.events)) == 1
+    pillar = shove(shove_scene(objects=[(3, 3, "stone_pillar")]))
+    assert [d.target_id for d in collisions(pillar.events)] == [U2]
+    assert [o.cause for o in of(pillar.events, ObjectDamaged)] == ["collision"]
+
+
+def test_shove_at_the_map_edge() -> None:
+    state = shove_scene(shover=(5, 3), foe=(6, 3))
+    assert Shove(unit_id=U1, target_id=U2) in legal_actions(state)
+    result = shove(state)
+    (hit,) = of(result.events, Collided)
+    assert (hit.obstacle, hit.shortfall) == ("edge", 1)
+    assert result.state.units[U2].xy == (6, 3)
+    assert len(collisions(result.events)) == 1
+
+
+def test_a_failed_contest_does_not_collide() -> None:
+    result = shove(shove_scene(terrain=terrain_with("#", 3)), LOSE)
+    assert of(result.events, Collided) == [] and collisions(result.events) == []
+    assert result.state.units[U2].xy == PUSHED
+
+
+def test_a_halved_distance_of_zero_is_still_illegal() -> None:
+    """其他不合法原因不變：steadfast 把 1 格減半成 0 格仍然「推不動」。"""
+    steady = no_reactions(max_hp=200, tags=["steadfast"])
+    m = make_map(FLAT, terrain_with("#", 3), ally=[SHOVER], enemy=[PUSHED])
     state = give_turn(
-        make_state(m, [spawn(Team.ALLY, (1, 3), "hero_fighter"), spawn(Team.ENEMY, FOE)]), U1
+        make_state(
+            m, [spawn(Team.ALLY, SHOVER, "hero_fighter"), spawn(Team.ENEMY, PUSHED, steady)]
+        ),
+        U1,
     )
+    assert Shove(unit_id=U1, target_id=U2) not in legal_actions(state)
     with pytest.raises(IllegalActionError, match="推不動"):
         resolve(state, Shove(unit_id=U1, target_id=U2))
+
+
+def test_the_shove_preview_shows_the_collision_damage() -> None:
+    p = preview(shove_scene(terrain=terrain_with("#", 3)), Shove(unit_id=U1, target_id=U2))
+    ((unit, low, high),) = p.collisions
+    assert unit == U2 and 1 <= low <= high <= 6
+
+
+def test_the_shove_preview_against_a_unit_lists_both_victims() -> None:
+    p = preview(shove_scene(second=(3, 3)), Shove(unit_id=U1, target_id=U2))
+    assert sorted(unit for unit, _, _ in p.collisions) == [U2, U3]
+
+
+def test_the_ai_scores_a_wall_shove_higher_than_a_shove_in_the_open() -> None:
+    """貼牆推擊的預覽有撞擊傷害，AI 的評分比空地推擊高。"""
+    from trpg.engine.ai.utility import UtilityAI, score_action  # noqa: PLC0415
+
+    def shove_score(terrain: str | None) -> object:
+        state = shove_scene(terrain=terrain)
+        profile = UtilityAI(library().ai_profiles).profile_for(state.units[U1])
+        return score_action(state, Shove(unit_id=U1, target_id=U2), profile).score
+
+    assert shove_score(terrain_with("#", 3)) > shove_score(None)  # type: ignore[operator]
 
 
 def test_gale_kick_into_a_wall_deals_collision_damage(monkeypatch: pytest.MonkeyPatch) -> None:

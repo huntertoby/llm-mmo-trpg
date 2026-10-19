@@ -275,6 +275,7 @@ def test_each_enabled_skeleton_has_a_valid_example() -> None:
         "builder_finisher": variant("skill_static_palm"),
         "trap": variant("skill_cinder_mine"),
         "modifier": variant("skill_searing_scar"),
+        "consume_status": variant("skill_detonate_burning"),
     }
     assert set(examples) == {s.id for s in lib().skeletons.values() if s.enabled}
     for skeleton_id, example in examples.items():
