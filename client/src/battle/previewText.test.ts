@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 import type { PreviewOut } from "../api/types";
-import { chainLines, damageText, outcomeText, percent, previewLines } from "./previewText";
+import { chainLines, costLine, damageText, outcomeText, percent, previewLines } from "./previewText";
 import { smallView } from "./testFixtures";
 import { unitNames } from "./units";
 
@@ -29,6 +29,14 @@ describe("previewText", () => {
     expect(percent(500)).toBe("50%");
     expect(percent(null)).toBe("—");
     expect(damageText(base.damage!)).toBe("3–9（期望 5.3）");
+  });
+
+  it("shows the (modified) AP cost and reach on the last line when the server sends them", () => {
+    expect(costLine(base)).toBeNull();
+    const p = { ...base, ap_cost: 2, reach: 3 } as PreviewOut;
+    expect(costLine(p)).toBe("AP 2　射程 3");
+    expect(previewLines(p, names, view).at(-1)).toBe("AP 2　射程 3");
+    expect(costLine({ ...base, ap_cost: 1, reach: null } as PreviewOut)).toBe("AP 1");
   });
 
   it("summarises hit, crit and damage on the first line", () => {

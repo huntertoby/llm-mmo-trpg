@@ -171,5 +171,13 @@ export function previewLines(
   for (const o of p.certain.filter(shown)) lines.push(`確定：${outcomeText(o, names, view)}`);
   for (const o of p.possible.filter(shown)) lines.push(`可能：${outcomeText(o, names, view)}`);
   for (const n of p.notes) lines.push(n);
+  const cost = costLine(p);
+  if (cost !== null) lines.push(cost);
   return lines;
+}
+
+/** 動作的 AP 與射程（含修正規則，Phase 3C-2）；伺服器沒有給時為 null。 */
+export function costLine(p: PreviewOut): string | null {
+  if (p.ap_cost == null) return null;
+  return p.reach == null ? `AP ${p.ap_cost}` : `AP ${p.ap_cost}　射程 ${p.reach}`;
 }

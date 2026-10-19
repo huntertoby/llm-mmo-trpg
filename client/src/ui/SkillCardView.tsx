@@ -18,6 +18,9 @@ export function SkillCardView({ card }: { card: SkillCard }) {
         {card.effects.map((e, i) => (
           <li key={`${i}:${e}`}>{e}</li>
         ))}
+        {card.modifiers.map((m, i) => (
+          <li key={`modifier:${i}:${m}`}>修正：{m}</li>
+        ))}
       </ul>
       <div className="small muted">縮放：{card.scaling}</div>
       {card.mastery !== null && <div className="small">專精：{card.mastery}</div>}
