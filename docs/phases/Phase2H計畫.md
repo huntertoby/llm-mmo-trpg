@@ -32,6 +32,20 @@
 | 9 | AI 自身狀態成本公式 | 平衡階段 |
 | 10 | 預覽不特別標示自身狀態代價 | 接受；Phase 3 技能卡片 UI 再顯示 |
 
+### 0.2 2H-2 報告「待 PM 決定」的處理
+
+| # | 項目 | 決定 |
+|---|---|---|
+| 1 | 擊倒對抗的守方仍用主屬性的同名屬性 | 接受 |
+| 2 | 事件沒有第二屬性欄位，CLI 顯示主屬性名配平均值 | 接受；Phase 3 技能卡片 UI 再處理顯示 |
+| 3 | `dual_scaling_min_rarity` 放在 `core.yaml` | 接受 |
+| 4 | `mastery: duration` 套用到技能所有 `apply_status`（含自身增益） | 接受 |
+| 5 | `mastery: range` 對武器射程、中心格型、反應技也 +1 | 接受 |
+| 6 | 組合器在強度調整後才抽雙屬性與專精；第二屬性不含體質；專精只給主動 | 接受 |
+| 7 | `skill_arcane_blade` 裝在智力 10 的 build_push | 平衡階段 |
+| 8 | build_fire、build_warlock 因加專精微幅改變 | 接受（PM 驗收時 matrix 異常 0） |
+| 9 | 新增 `trpg skills show <id> --unit` | 接受 |
+
 ## 1. 範圍外
 
 - 其他未做的模板（`summon`、改寫規則型、修正型被動等，見 `docs/PM交接.md` 3.1.1）。

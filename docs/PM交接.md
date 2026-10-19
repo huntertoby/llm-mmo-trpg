@@ -1,6 +1,6 @@
 # PM 交接文件
 
-> 給接手的 PM（新對話中的 Claude）。最後更新：2026-10-19，**Phase 2 完整性檢查完成**（見 3.0），使用者決定補 **Phase 2G**（進行中），之後才是 Phase 3。
+> 給接手的 PM（新對話中的 Claude）。最後更新：2026-10-19，**Phase 2 完整性檢查、Phase 2G、Phase 2H 全部完成並驗收**；下一步是 **和使用者確認 Phase 3 拆法**（見 3.1 最後一段與 3.0.1）。
 > 讀完本檔再讀 `CLAUDE.md` 與 `docs/專案計畫.md`（總覽，約 1 萬字元）即可接手；設計細節依需要讀 `docs/design/` 下的主題檔。
 
 ---
@@ -33,11 +33,11 @@
 | Phase 2E-3 層數、陷阱與收尾 | ✅ 完成（1341 測試；2E 驗收全 ✅；待 PM 決定已處理於 3.2） | `Phase2E計畫.md` 第 5 節／`Phase2E-3報告.md`（5.4 為 2E 驗收總表） |
 | Phase 2F 整理（Phase 3 前審查的結論） | ✅ 完成（1395 測試；noqa 19→14；對照戰鬥不變；completion 1800 場異常 0） | `Phase2F計畫.md`／`Phase2F-1、2F-2報告.md` |
 | Phase 2G 完整性檢查的補強 | ✅ 完成（1427 測試；12 個示範技能；覆蓋率測試允許清單為空；待 PM 決定見計畫 0.1、0.2） | `Phase2G計畫.md` |
-| Phase 2H 冰凍、自身狀態代價、雙屬性與專精 | 🔄 2H-1 ✅（1463 測試；`LOG_FORMAT` /11；待 PM 決定見計畫 0.1）；2H-2 進行中 | `Phase2H計畫.md` |
+| Phase 2H 冰凍、自身狀態代價、雙屬性與專精 | ✅ 完成（1486 測試；`LOG_FORMAT` /11；待 PM 決定見計畫 0.1、0.2；completion 1800 場、matrix 2400 場異常 0） | `Phase2H計畫.md` |
 | **Phase 3 網頁 ＋ roguelite** | 2H 之後 | 規格尚未撰寫（見 3.1） |
 
 - 最新 commit 在 GitHub `huntertoby/llm-mmo-trpg`（私人）的 `main`；2026-10-19 起使用者電腦的資料夾就是工作資料夾（見 6.1），push 前確認 `git status` 乾淨即可。
-- 1463 個測試（`slow` 預設不跑；平衡測試 `test_demo_map_win_rate_and_length` 標 `xfail(strict=False)`，目前 2 xfail、2 xpass）。
+- 1486 個測試（`slow` 預設不跑；平衡測試 `test_demo_map_win_rate_and_length` 標 `xfail(strict=False)`，目前 2 xfail、2 xpass）。
 - 主要指令：
   - `trpg battle --map <id> --seed <n> [--ally-build build_a,build_b] [--ally-commander id] [--enemy-commander id] [--log-json f]`、`trpg battle replay f`
   - `trpg map list`（10 張正式地圖，8 種類型都有）
@@ -47,8 +47,8 @@
   - `trpg sim completion [--maps a,b] [--seeds 20] [--jobs N]`：9 種指揮官設定 × 地圖的完成度檢查（exception／max_actions／draw 必須為 0；全量在雲端 `--jobs 2` 約 14 分鐘；`--jobs` 預設用全部核心）
   - `trpg skills list／budget --all／random --seed N`；`scripts/skill_fuzz.py --count 1000`
 - 腳本指揮官（`trpg.sim.commanders`）：`focus_lowest_hp`、`protect_weakest`、`hold_start`、`use_env`。
-- 12 個 build（`content/sim/builds.yaml`）：push、fire、storm、tank、ranged、assassin、support、healer、warlock、guardian、striker、trapper。59 個手寫技能（2G 後每個已定義的骨架、觸發時機、反應事件、條件、原語、狀態、層數都至少有一個手寫技能使用，且每個手寫技能都有 build 或單位裝備，由 `tests/content/test_coverage.py` 檢查）。
-- 技能系統（2E 後）：12 個骨架中 11 個可用（只有 `summon` 停用）；觸發時機 `content/skill_triggers.yaml`；層數 `content/stacks.yaml`；技能觸發深度上限 `max_trigger_depth: 3`。`LOG_FORMAT` 為 `trpg-battle-log/9` 以後（舊紀錄不能重播）。
+- 12 個 build（`content/sim/builds.yaml`）：push、fire、storm、tank、ranged、assassin、support、healer、warlock、guardian、striker、trapper。62 個手寫技能（2G、2H 後每個已定義的骨架、觸發時機、反應事件、條件、原語、狀態、層數都至少有一個手寫技能使用，且每個手寫技能都有 build 或單位裝備，由 `tests/content/test_coverage.py` 檢查）。
+- 技能系統（2E 後）：12 個骨架中 11 個可用（只有 `summon` 停用）；觸發時機 `content/skill_triggers.yaml`；層數 `content/stacks.yaml`；技能觸發深度上限 `max_trigger_depth: 3`。`LOG_FORMAT` 為 `trpg-battle-log/11`（2H-1 起；舊紀錄不能重播）。
 
 ## 3. 下一步
 
@@ -70,7 +70,7 @@ Phase 2（2A–2F）已全部結束。使用者希望在進 Phase 3 前，由新
 - C 類文件（#8–#11）：PM 已直接改 `docs/design/06-技能.md`（新增 6.3.1 實作對照、6.6 兩個深度上限、6.12 目前稀有度實作）、`05-戰鬥.md`、本檔 3.1.1。
 - #1 技能卡片描述移出 CLI → 3.0.1；#2 freeze、#3 `self_status`、#4 雙屬性與專精 → **Phase 2H**（3.0.2，使用者決定）。
 - #5 重複施加狀態取較長、#6 示範技能、#7 裝備未用技能 → `Phase2G計畫.md`（2G-1、2G-2）。
-- **下一步**：2G-2 驗收（PM 背景跑 completion 全量）→ push → 和使用者確認 2H 的設計問題（3.0.2）→ 寫 2H 規格並實作 → 再談 Phase 3 拆法。
+- 2G、2H 已全部完成並 push。**下一步**：和使用者確認 Phase 3 拆法，再寫 Phase 3-1 規格（含 3.0.1 的預留事項）。
 
 ### 3.0.0 前一位 PM 結束時的狀態
 
@@ -86,7 +86,7 @@ Phase 2（2A–2F）已全部結束。使用者希望在進 Phase 3 前，由新
 
 ### 3.0.2 Phase 2H（2026-10-19 使用者決定：2G 之後、Phase 3 之前）
 
-完整性檢查 #2–#4 從「補模板 C」改歸 **Phase 2H**。使用者已同意 PM 建議的設計（2026-10-19），規格見 `docs/phases/Phase2H計畫.md`。
+✅ 已完成（見 `Phase2H-1、2H-2報告.md`）。完整性檢查 #2–#4 從「補模板 C」改歸 **Phase 2H**。使用者已同意 PM 建議的設計（2026-10-19），規格見 `docs/phases/Phase2H計畫.md`。
 
 | 項目 | 內容 | 寫規格前要和使用者確認的設計問題 |
 |---|---|---|
@@ -181,6 +181,7 @@ PM 建議（已跟使用者說過）：不擋 Phase 3；召喚與連段條件是
 - **2D 後新增**：`build_tank` 改版（嘲諷＋護盾、`guard` 行為模式）後前段類型 2 → 0、英雄 DPR 5–8 → 1–2.5（疑似 `guard` 的 damage 權重 3 讓坦克太被動）；`build_healer` 也 0 次前段。保護矩陣有數字但沒轉成勝率——要決定保護型 build 的評估指標（標準 2 是否改看保護矩陣）或調 AI／數值。
 - **2E-2 後新增**：`build_guardian`（攔截＋姿態）小樣本 8 張地圖 4 張第 1，可能偏強；姿態狀態 11 點只合階級 1，高階由組合器加護盾湊預算；反應技在 fuzz 中很少觸發（7/70）。
 - **2E-3 後新增**：build 矩陣（12 個 build、2400 場、異常 0）6.8 標準 1 通過、標準 2 不通過：`build_tank`、`build_striker` 沒有任何前段類型；`build_trapper` 的 AI 陷阱擺位差（常放角落）。
+- **2H 後新增**：新數值（`frozen` 點數 8、`self_status` 折抵 40‰／點、AI 自身狀態成本、組合器雙屬性 250‰、專精 300‰）都未經模擬；`skill_arcane_blade` 裝在智力 10 的 build_push。2H 驗收時 matrix 標準結果與 2G 相同（標準 1 `build_storm`；標準 2 `build_tank`、`build_assassin`、`build_healer`）。
 - **2G 驗收時（PM 本機跑）**：completion 全量 1800 場異常 0（90 秒）；build 矩陣 2400 場異常 0、平手 1（103 秒）。6.8 標準 1 不通過（`build_storm` 8 類型全前段）；標準 2 不通過：`build_tank`、`build_assassin`、`build_healer`。`build_tank` 英雄 DPR 約 1–2.5。
 - **2G-2 後新增**：12 個示範技能的數值只為通過預算（致命破綻、天賜好運靠冷卻湊預算；天賜好運護盾 1d4 太小）；AI 把「築高台」當攻擊技、升高敵人腳下的格子；敵方單位沒有被動、反應、姿態。
 - **2G-1 後新增**：`build_tank` 主動技能 6 個（加了破甲擊、碎甲重擊）但法力只有 20。
