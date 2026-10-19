@@ -33,7 +33,8 @@
 | Phase 2E-3 層數、陷阱與收尾 | ✅ 完成（1341 測試；2E 驗收全 ✅；待 PM 決定已處理於 3.2） | `Phase2E計畫.md` 第 5 節／`Phase2E-3報告.md`（5.4 為 2E 驗收總表） |
 | Phase 2F 整理（Phase 3 前審查的結論） | ✅ 完成（1395 測試；noqa 19→14；對照戰鬥不變；completion 1800 場異常 0） | `Phase2F計畫.md`／`Phase2F-1、2F-2報告.md` |
 | Phase 2G 完整性檢查的補強 | 🔄 2G-1 ✅（1403 測試；待 PM 決定見計畫 0.1）；2G-2 示範技能進行中 | `Phase2G計畫.md` |
-| **Phase 3 網頁 ＋ roguelite** | 2G 之後 | 規格尚未撰寫（見 3.1） |
+| Phase 2H 冰凍、自身狀態代價、雙屬性與專精 | 2G 之後（規格未寫，見 3.0.2） | — |
+| **Phase 3 網頁 ＋ roguelite** | 2H 之後 | 規格尚未撰寫（見 3.1） |
 
 - 最新 commit 在 GitHub `huntertoby/llm-mmo-trpg`（私人）的 `main`；2026-10-19 起使用者電腦的資料夾就是工作資料夾（見 6.1），push 前確認 `git status` 乾淨即可。
 - 1395 個測試（`slow` 預設不跑；平衡測試 `test_demo_map_win_rate_and_length` 標 `xfail(strict=False)`，目前 2 xfail、2 xpass）。
@@ -67,9 +68,9 @@ Phase 2（2A–2F）已全部結束。使用者希望在進 Phase 3 前，由新
 
 **3.0 執行結果（2026-10-19）**：`check.py` 全過（1396 測試，本機 50 秒）。審查 agent 找到 11 點未記錄事項（PM 抽查 #2、#5、#7、#11 屬實），「待 PM 決定」處理齊全，評價可進 Phase 3。使用者決定：
 - C 類文件（#8–#11）：PM 已直接改 `docs/design/06-技能.md`（新增 6.3.1 實作對照、6.6 兩個深度上限、6.12 目前稀有度實作）、`05-戰鬥.md`、本檔 3.1.1。
-- #1 技能卡片描述移出 CLI → 3.0.1；#2 freeze、#3 `self_status`、#4 雙屬性與專精 → 3.1.1。
+- #1 技能卡片描述移出 CLI → 3.0.1；#2 freeze、#3 `self_status`、#4 雙屬性與專精 → **Phase 2H**（3.0.2，使用者決定）。
 - #5 重複施加狀態取較長、#6 示範技能、#7 裝備未用技能 → `Phase2G計畫.md`（2G-1、2G-2）。
-- **下一步**：2G-1 驗收 → 派 2G-2 → 驗收（PM 背景跑 completion 全量）→ push → 回報使用者，再談 Phase 3 拆法。
+- **下一步**：2G-2 驗收（PM 背景跑 completion 全量）→ push → 和使用者確認 2H 的設計問題（3.0.2）→ 寫 2H 規格並實作 → 再談 Phase 3 拆法。
 
 ### 3.0.0 前一位 PM 結束時的狀態
 
@@ -82,6 +83,19 @@ Phase 2（2A–2F）已全部結束。使用者希望在進 Phase 3 前，由新
 3. AI 陷阱 `trap:` 放在 `ai_profiles.yaml` 表格層級，可依模式覆寫，未知形狀用預設係數：接受。不在載入時驗證形狀 ID。
 4. `passive.yaml` 新增 `required_category`／`required_weapon_req`：接受。
 5. `skill_estimate` 等加 keyword-only 參數：接受。
+
+### 3.0.2 Phase 2H（2026-10-19 使用者決定：2G 之後、Phase 3 之前）
+
+完整性檢查 #2–#4 從「補模板 C」改歸 **Phase 2H**，規格尚未撰寫。
+
+| 項目 | 內容 | 寫規格前要和使用者確認的設計問題 |
+|---|---|---|
+| 冰凍狀態 `freeze` | 6.3 狀態；6.6 Boss 硬控（stun、freeze）轉為 slow 或 weaken；冰元素打在單位上的特色效果 | 冰凍的效果（跳過回合？不能移動但能攻擊？受火傷解除？受擊碎冰加傷？）；冰元素命中是否機率附加；Boss 轉成 slow 還是 weaken |
+| 代價 `self_status` | 對自己施加狀態當代價（例如施放後自己 `vulnerable` 1 回合），含預算折抵 | 可用哪些狀態、折抵比例（併入現有 +500‰ 總上限） |
+| 雙屬性縮放 | 6.10：史詩以上，例如力量 50％＋智力 50％ | 比例固定 50/50 或可設定；武器技／法術技怎麼算命中 |
+| 專精加成 | 6.10：縮放屬性是自己最高屬性時，範圍 +1 或持續 +1（技能定義） | 平手怎麼算；雙屬性技能怎麼判定；+1 範圍對各形狀的意義 |
+
+建議拆兩段：2H-1 冰凍 ＋ `self_status`（狀態與代價）；2H-2 雙屬性 ＋ 專精（屬性連動）。
 
 ### 3.0.1 Phase 3-1 預留事項（本次不做，留給之後寫規格時用）
 
@@ -127,9 +141,6 @@ Phase 2（2A–2F）已全部結束。使用者希望在進 Phase 3 前，由新
 | 增益互動 | `steal_buff`、驅散敵方增益、`restore_resource` | — |
 | 零星原語 | `delayed_damage`、`execute_bonus`、`swap`、`leap`、`grant_advantage_next`、`ignite_tile`（`conceal` 已有，是狀態 `concealed`） | 部分可用現有原語近似 |
 | 條件 | `moved_this_turn`、`adjacent_ally`、`target_isolated`、`first_round`（現有 5 種） | 連段骨架的「本回合做過某事」做不出來 |
-| 冰凍狀態 | `freeze`（6.3 狀態、6.6 Boss 硬控轉換對象）；目前冰元素打在單位上沒有特色效果 | 冰系 build 缺特色（完整性檢查 #2） |
-| 代價 | `self_status`（對自己施加狀態當代價，含預算折抵） | 完整性檢查 #3 |
-| 屬性連動 | 雙屬性縮放（6.10，史詩以上）、專精加成（縮放屬性為最高屬性時 +1 範圍或持續） | 混搭 build 做不出來；專精加成和 Phase 3 roguelite 配點取捨相關，可考慮排進 Phase 3（完整性檢查 #4） |
 
 PM 建議（已跟使用者說過）：不擋 Phase 3；召喚與連段條件是整類 build 的缺口，Phase 3 試玩後看需要再排「補模板 C」。
 
