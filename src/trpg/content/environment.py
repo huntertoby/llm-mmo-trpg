@@ -637,6 +637,8 @@ class RewriteAiRules(ContentModel):
     - ``redirect_points``：靈魂連結的價值 × 目標已損失 HP 的比例（施放者 HP 不到一半時為 0）
       （Phase 3C-4b）。
     - ``reaction_points``：每個額外反應次數（目標有反應規則時才有價值）。
+    - ``mana_points``：友方每回復 1 點法力（``restore_resource``，Phase 3D-1）。
+    - ``steal_points``：每奪取 1 個增益（``steal_buff``，Phase 3D-1）。
     """
 
     ap_points: int = Field(default=6, ge=0)
@@ -646,6 +648,8 @@ class RewriteAiRules(ContentModel):
     source_points: int = Field(default=3, ge=0)
     redirect_points: int = Field(default=24, ge=0)
     reaction_points: int = Field(default=8, ge=0)
+    mana_points: int = Field(default=1, ge=0)
+    steal_points: int = Field(default=8, ge=0)
 
 
 class AiProfile(ContentModel):

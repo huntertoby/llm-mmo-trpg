@@ -43,6 +43,7 @@ from trpg.content.environment import (
     AiProfileTable,
     AiWeights,
     OrderBonuses,
+    RewriteAiRules,
     TrapAiRules,
 )
 from trpg.content.skills import (
@@ -53,6 +54,8 @@ from trpg.content.skills import (
     REDIRECT_DAMAGE,
     REDIRECT_STATUS,
     RESET_COOLDOWN,
+    RESTORE_RESOURCE,
+    STEAL_BUFF,
     EffectSpec,
     SkillDef,
 )
@@ -84,6 +87,7 @@ from trpg.engine.events import (
     EventBase,
     ObjectDamaged,
     ReactionsGranted,
+    ResourceRestored,
     ShieldGained,
     SkillCooldownChanged,
     StacksChanged,
@@ -93,6 +97,7 @@ from trpg.engine.events import (
     UnitMoved,
 )
 from trpg.engine.preview import DamageRange, Preview, preview
+from trpg.engine.resources import restorable_cooldowns
 from trpg.engine.rewrites import grant_ap_problem, resettable_cooldowns
 from trpg.engine.rules.combat import (
     HALF_COVER,
@@ -928,7 +933,15 @@ def score_action(
 
 
 _REWRITE_SCORED = frozenset(
-    {GRANT_AP, RESET_COOLDOWN, CHEAT_DEATH, REDIRECT_DAMAGE, EXTRA_REACTION}
+    {
+        GRANT_AP,
+        RESET_COOLDOWN,
+        CHEAT_DEATH,
+        REDIRECT_DAMAGE,
+        EXTRA_REACTION,
+        RESTORE_RESOURCE,
+        STEAL_BUFF,
+    }
 )
 """預覽事件之外還要另外加分的改寫規則型原語（:func:`_rewrite_gains`）。"""
 
@@ -964,23 +977,43 @@ def _rewrite_gains(
         return Fraction(0)
     points = Fraction(-rules.source_points * source)
     for e in p.min_events:
-        if isinstance(e, ApGranted):
-            ally = Fraction(rules.ally_ap_permille, 1000)
-            share = Fraction(1) if e.unit_id == actor.id else ally
-            points += rules.ap_points * e.amount * share
-        elif isinstance(e, SkillCooldownChanged) and RESET_COOLDOWN in types and e.remaining == 0:
-            points += rules.cooldown_points * state.units[e.unit_id].cooldowns.get(e.skill_id, 0)
-        elif isinstance(e, StatusApplied) and e.status_id == CHEAT_DEATH_STATUS:
-            target = state.units[e.target_id]
-            if target.team is actor.team and not target.has_status(CHEAT_DEATH_STATUS):
-                points += rules.undying_points * Fraction(target.max_hp - target.hp, target.max_hp)
-        elif isinstance(e, StatusApplied) and e.status_id == REDIRECT_STATUS:
-            target = state.units[e.target_id]
-            if target.team is actor.team and actor.hp * 2 >= actor.max_hp:
-                points += rules.redirect_points * Fraction(target.max_hp - target.hp, target.max_hp)
-        elif isinstance(e, ReactionsGranted) and state.units[e.unit_id].reactions:
-            points += rules.reaction_points * e.amount
+        points += _rewrite_event_points(state, actor, e, types, rules)
     return profile.weights.damage * points
+
+
+def _rewrite_event_points(
+    state: BattleState, actor: UnitState, e: EventBase, types: set[str], rules: RewriteAiRules
+) -> Fraction:
+    """預覽事件在 :func:`_rewrite_gains` 的加分（數值見 ``ai_profiles.yaml`` 的 ``rewrite``）。"""
+    points = Fraction(0)
+    if isinstance(e, ApGranted):
+        ally = Fraction(rules.ally_ap_permille, 1000)
+        points = rules.ap_points * e.amount * (Fraction(1) if e.unit_id == actor.id else ally)
+    elif isinstance(e, SkillCooldownChanged) and RESET_COOLDOWN in types and e.remaining == 0:
+        points = Fraction(
+            rules.cooldown_points * state.units[e.unit_id].cooldowns.get(e.skill_id, 0)
+        )
+    elif isinstance(e, StatusApplied) and e.status_id in (CHEAT_DEATH_STATUS, REDIRECT_STATUS):
+        target = state.units[e.target_id]
+        lost = Fraction(target.max_hp - target.hp, target.max_hp)
+        if target.team is not actor.team:
+            pass
+        elif e.status_id == CHEAT_DEATH_STATUS:
+            points = (
+                Fraction(0)
+                if target.has_status(CHEAT_DEATH_STATUS)
+                else rules.undying_points * lost
+            )
+        elif actor.hp * 2 >= actor.max_hp:
+            points = rules.redirect_points * lost
+    elif isinstance(e, ReactionsGranted) and state.units[e.unit_id].reactions:
+        points = Fraction(rules.reaction_points * e.amount)
+    elif isinstance(e, ResourceRestored) and state.units[e.unit_id].team is actor.team:
+        per_point = rules.mana_points if e.resource == "mana" else rules.cooldown_points
+        points = Fraction(per_point * e.amount * (1 if e.resource == "mana" else len(e.skill_ids)))
+    elif isinstance(e, StatusRemoved) and e.reason == "stolen":
+        points = Fraction(rules.steal_points)
+    return points
 
 
 def _order_bonus(
@@ -1197,22 +1230,41 @@ def _supports(
     return False
 
 
+def _restore_supports(
+    state: BattleState, _caster: UnitState, skill: SkillDef, spec: EffectSpec, target: UnitState
+) -> bool:
+    """``restore_resource`` 對 ``target`` 有沒有用：法力有空間或有可縮短的冷卻。"""
+    if spec.resource == "mana":
+        return target.max_mana - target.mana >= (spec.amount or 1) // 2 + 1
+    return bool(restorable_cooldowns(state, target, skill))
+
+
+_SUPPORT_CHECKS: dict[
+    str, Callable[[BattleState, UnitState, SkillDef, EffectSpec, UnitState], bool]
+]
+_SUPPORT_CHECKS = {
+    GRANT_AP: lambda state, _c, _s, _spec, target: grant_ap_problem(state, target) is None,
+    RESET_COOLDOWN: lambda state, caster, skill, spec, target: bool(
+        resettable_cooldowns(state, caster, target, skill, spec)
+    ),
+    CHEAT_DEATH: lambda _st, _c, _s, _spec, target: not target.has_status(CHEAT_DEATH_STATUS),
+    REDIRECT_DAMAGE: lambda _st, caster, _s, _spec, target: (
+        target.id != caster.id and not target.has_status(REDIRECT_STATUS)
+    ),
+    EXTRA_REACTION: lambda _st, _c, _s, _spec, target: (
+        bool(target.reactions) and target.extra_reactions == 0
+    ),
+    RESTORE_RESOURCE: _restore_supports,
+}
+
+
 def _rewrite_supports(
     state: BattleState, caster: UnitState, skill: SkillDef, spec: EffectSpec, target: UnitState
 ) -> bool:
-    """改寫規則型原語（Phase 3C-4a）對友方 ``target`` 有沒有用：這一輪還沒被給過 AP、有可以重置
-    的冷卻、還沒有不死。"""
-    if spec.type == GRANT_AP:
-        return grant_ap_problem(state, target) is None
-    if spec.type == RESET_COOLDOWN:
-        return bool(resettable_cooldowns(state, caster, target, skill, spec))
-    if spec.type == CHEAT_DEATH:
-        return not target.has_status(CHEAT_DEATH_STATUS)
-    if spec.type == REDIRECT_DAMAGE:
-        return target.id != caster.id and not target.has_status(REDIRECT_STATUS)
-    if spec.type == EXTRA_REACTION:
-        return bool(target.reactions) and target.extra_reactions == 0
-    return False
+    """改寫規則型與資源原語（Phase 3C-4a、3D-1）對友方 ``target`` 有沒有用：這一輪還沒被給過 AP、
+    有可以重置或縮短的冷卻、還沒有不死、法力有空間……。"""
+    check = _SUPPORT_CHECKS.get(spec.type)
+    return check is not None and check(state, caster, skill, spec, target)
 
 
 def _is_field_skill(effects: tuple[ResolvedEffect, ...]) -> bool:
