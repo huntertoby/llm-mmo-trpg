@@ -366,6 +366,16 @@ class MoveOut(_ApiModel):
     path: tuple[XY, ...]
 
 
+class DisplaceCheckOut(_ApiModel):
+    """預覽中的位移抵抗判定（Phase 3D-2b）：敵方 ``unit_id`` 被移動的成功率（千分比）；
+    ``resist_bonus`` 是目標的抵抗加成，``lethal`` 為落點是致命地形。"""
+
+    unit_id: UnitId
+    success_permille: int
+    resist_bonus: int
+    lethal: bool
+
+
 class PreviewOut(_ApiModel):
     """:class:`trpg.engine.preview.Preview` 的公開版本：不含模擬後的完整狀態與原始事件。"""
 
@@ -400,7 +410,12 @@ class PreviewOut(_ApiModel):
     hurls: tuple[HurlOut, ...] = ()
     """動作會造成的物件投擲（Phase 3C-5b）。"""
     moves: tuple[MoveOut, ...] = ()
-    """動作的自身位移：衝鋒路線、跳躍落點、交換位置（Phase 3D-2）。"""
+    """動作的自身位移：衝鋒路線、跳躍落點、交換位置（Phase 3D-2）；位移他人另有 ``teleport``
+    （``unit_id`` 被傳送到 ``path`` 的終點，Phase 3D-2b）。"""
+    displace_checks: tuple[DisplaceCheckOut, ...] = ()
+    """位移的抵抗判定（Phase 3D-2b：``swap``、``swap_any``、``teleport_target`` 的敵方目標）。"""
+    displace_permille: int | None = None
+    """位移成功的總機率（千分比；所有敵方目標都沒抵抗成功）；沒有檢定（全是友方）為 ``None``。"""
 
 
 def _damage(d: DamageRange | None) -> DamageOut | None:
@@ -517,4 +532,14 @@ def preview_out(
             MoveOut(kind=m.kind, unit_id=m.unit_id, other_id=m.other_id, path=m.path)
             for m in p.moves
         ),
+        displace_checks=tuple(
+            DisplaceCheckOut(
+                unit_id=c.unit_id,
+                success_permille=_milli(c.chance),
+                resist_bonus=c.resist_bonus,
+                lethal=c.lethal,
+            )
+            for c in p.displace_checks
+        ),
+        displace_permille=permille(p.displace_chance),
     )

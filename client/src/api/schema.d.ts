@@ -434,6 +434,21 @@ export interface components {
         /** @enum {string} */
         Direction: "north" | "east" | "south" | "west";
         /**
+         * DisplaceCheckOut
+         * @description 預覽中的位移抵抗判定（Phase 3D-2b）：敵方 ``unit_id`` 被移動的成功率（千分比）；
+         *     ``resist_bonus`` 是目標的抵抗加成，``lethal`` 為落點是致命地形。
+         */
+        DisplaceCheckOut: {
+            /** Unit Id */
+            unit_id: string;
+            /** Success Permille */
+            success_permille: number;
+            /** Resist Bonus */
+            resist_bonus: number;
+            /** Lethal */
+            lethal: boolean;
+        };
+        /**
          * EndStance
          * @description 取消目前的姿態（Phase 2E-2）：只能在自己的回合，免費（不花 AP）。
          */
@@ -892,6 +907,13 @@ export interface components {
              * @default []
              */
             moves: components["schemas"]["MoveOut"][];
+            /**
+             * Displace Checks
+             * @default []
+             */
+            displace_checks: components["schemas"]["DisplaceCheckOut"][];
+            /** Displace Permille */
+            displace_permille?: number | null;
         };
         /**
          * Protect
@@ -1306,6 +1328,11 @@ export interface components {
          *     - ``unit``（單體、連鎖）：``target_id`` 或 ``target_object_id`` 恰好一個；
          *     - ``tile``（十字、方陣、指定格）：``target_pos``；
          *     - ``direction``（直線、錐形）：``direction``；
+         *     - ``object_tile``（投擲物件）：``target_object_id`` 與 ``target_pos``；
+         *     - ``unit_tile``（傳送他人，Phase 3D-2b）：``target_id``（被傳送的單位）與 ``target_pos``
+         *       （落點）；
+         *     - ``unit_pair``（任意兩者互換，Phase 3D-2b）：``target_id`` 與 ``second_target_id``（兩個不同的
+         *       單位，順序不拘）；
          *     - ``self``／``none``（自身、環形、範圍光環）：都不給。
          *
          *     是否合法（欄位是否對應形狀、射程、視線、代價）由引擎檢查，不合法時拋出
@@ -1331,6 +1358,8 @@ export interface components {
             target_object_id?: string | null;
             target_pos?: components["schemas"]["Pos"] | null;
             direction?: components["schemas"]["Direction"] | null;
+            /** Second Target Id */
+            second_target_id?: string | null;
             copy_cast?: components["schemas"]["UseSkill-Input"] | null;
         };
         /**
@@ -1340,6 +1369,11 @@ export interface components {
          *     - ``unit``（單體、連鎖）：``target_id`` 或 ``target_object_id`` 恰好一個；
          *     - ``tile``（十字、方陣、指定格）：``target_pos``；
          *     - ``direction``（直線、錐形）：``direction``；
+         *     - ``object_tile``（投擲物件）：``target_object_id`` 與 ``target_pos``；
+         *     - ``unit_tile``（傳送他人，Phase 3D-2b）：``target_id``（被傳送的單位）與 ``target_pos``
+         *       （落點）；
+         *     - ``unit_pair``（任意兩者互換，Phase 3D-2b）：``target_id`` 與 ``second_target_id``（兩個不同的
+         *       單位，順序不拘）；
          *     - ``self``／``none``（自身、環形、範圍光環）：都不給。
          *
          *     是否合法（欄位是否對應形狀、射程、視線、代價）由引擎檢查，不合法時拋出
@@ -1365,6 +1399,8 @@ export interface components {
             target_object_id?: string | null;
             target_pos?: components["schemas"]["Pos"] | null;
             direction?: components["schemas"]["Direction"] | null;
+            /** Second Target Id */
+            second_target_id?: string | null;
             copy_cast?: components["schemas"]["UseSkill-Output"] | null;
         };
         /** ValidationError */
