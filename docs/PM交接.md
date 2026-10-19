@@ -35,7 +35,7 @@
 | Phase 2G 完整性檢查的補強 | ✅ 完成（1427 測試；12 個示範技能；覆蓋率測試允許清單為空；待 PM 決定見計畫 0.1、0.2） | `Phase2G計畫.md` |
 | Phase 2H 冰凍、自身狀態代價、雙屬性與專精 | ✅ 完成（1486 測試；`LOG_FORMAT` /11；待 PM 決定見計畫 0.1、0.2；completion 1800 場、matrix 2400 場異常 0） | `Phase2H計畫.md` |
 | **Phase 3 網頁 ＋ roguelite** | 3-1 ✅（1516 測試；noqa 23→20）；3-2 ✅（1577 測試；noqa 20）；3-3 ✅（1587 測試＋前端 30；`uv run python scripts/play.py` 可試玩）；3-4a ✅（開場逐步播放、HUD、技能 UI）；3-4b ✅（反應設定與詢問視窗、環境預告、快捷指令）；**下一步 3-5、3-6（見 3.0）** | `Phase3計畫.md`（0 節為決定與各段驗收紀錄；3–6 節為 3-1～3-4b 規格）／`Phase3-1～3-4b報告.md` |
-| **Phase 3C 補模板 C**（撥開、改造、協同、源力、傳說、場景物件原語；排在 3-5 前） | 3C-1 ✅（撥開，vitest 73）；3C-2 ✅（修正規則，pytest 1704、vitest 74）；其餘進行中，進度見規格 0 節 | `Phase3C計畫.md`／`Phase3C-N報告.md` |
+| **Phase 3C 補模板 C**（撥開、改造、協同、源力、傳說、場景物件原語；排在 3-5 前） | 3C-1 ✅（撥開，vitest 73）；3C-2 ✅（修正規則，pytest 1704、vitest 74）；3C-3a ✅（撞擊與 3 個觸發時機，pytest 1750；`LOG_FORMAT` /12）；其餘進行中，進度見規格 0 節 | `Phase3C計畫.md`／`Phase3C-N報告.md` |
 
 - 最新 commit 在 GitHub `huntertoby/llm-mmo-trpg`（私人）的 `main`；2026-10-19 起使用者電腦的資料夾就是工作資料夾（見 6.1），push 前確認 `git status` 乾淨即可。
 - 1614 個 pytest ＋ 69 個前端 vitest（`check.py` 一併跑，本機約 1 分鐘）；`slow` 預設不跑；平衡測試 `test_demo_map_win_rate_and_length` 標 `xfail(strict=False)`，目前 2 xfail、2 xpass）。
