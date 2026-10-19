@@ -43,6 +43,8 @@ export function unit(id: string, team: "ally" | "enemy", x: number, y: number, o
     reaction_available: true,
     reaction_rules: [],
     ap_carry: 0,
+    source: 1,
+    source_max: 3,
     downed: false,
     escaped: false,
     ...over,
@@ -93,6 +95,7 @@ export function smallView(over: Partial<BattleView> = {}): BattleView {
     winner: null,
     end_reason: null,
     pending: null,
+    source_wells: [],
     ...over,
   };
 }

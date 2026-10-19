@@ -311,6 +311,8 @@ export interface components {
             /** End Reason */
             end_reason: string | null;
             pending: components["schemas"]["PendingView"] | null;
+            /** Source Wells */
+            source_wells: components["schemas"]["Pos"][];
         };
         /** BuildSummary */
         BuildSummary: {
@@ -935,6 +937,8 @@ export interface components {
             ap_cost: number | null;
             /** Cost */
             cost: string[];
+            /** Source Cost */
+            source_cost: number | null;
             /** Shape */
             shape: string;
             /** Condition */
@@ -1169,6 +1173,10 @@ export interface components {
             reaction_rules: components["schemas"]["ReactionRuleView"][];
             /** Ap Carry */
             ap_carry: number;
+            /** Source */
+            source: number;
+            /** Source Max */
+            source_max: number;
             /** Downed */
             downed: boolean;
             /** Escaped */

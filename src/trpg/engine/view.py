@@ -123,6 +123,10 @@ class UnitView(_ViewModel):
     """反應規則與目前模式；只有自己陣營的單位會列出（其他陣營的單位為空）。"""
     ap_carry: int
     """結束回合時保留、下回合開始時加上的 AP（自己的回合中為 0，已併入 ``ap``）。"""
+    source: int
+    """源力（Phase 3C-4a；傳說技能的代價，敵人一律 0）。"""
+    source_max: int
+    """源力上限（``core.yaml`` 的 ``source_max``）。"""
     downed: bool
     escaped: bool
 
@@ -174,6 +178,8 @@ class BattleView(_ViewModel):
     winner: Team | None
     end_reason: str | None
     pending: PendingView | None
+    source_wells: tuple[Pos, ...]
+    """尚未被取用的源泉格（Phase 3C-4a；我方單位進入時 +1 源力，之後消失；雙方都看得到）。"""
 
 
 def _status_view(status: StatusInstance) -> StatusView:
@@ -249,6 +255,8 @@ def _unit_view(state: BattleState, unit: UnitState, team: Team) -> UnitView:
             tuple(_rule_view(state, unit, r) for r in unit.reactions) if unit.team is team else ()
         ),
         ap_carry=unit.ap_carry,
+        source=unit.source,
+        source_max=state.ruleset.core.source_max,
         downed=unit.downed,
         escaped=unit.escaped,
     )
@@ -319,4 +327,5 @@ def project_for(state: BattleState, team: Team) -> BattleView:
         winner=state.winner,
         end_reason=state.end_reason,
         pending=None if state.pending is None else _pending_view(state.pending),
+        source_wells=tuple(Pos(x=x, y=y) for x, y in state.source_wells),
     )

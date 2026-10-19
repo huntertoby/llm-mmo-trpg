@@ -69,6 +69,16 @@ describe("skillButtons", () => {
     expect(buttons[1]!.disabledReason).toContain("沒有合法目標");
     expect(buttons[3]!.disabledReason).not.toBeNull();
   });
+
+  it("disables a legendary when the hero lacks source and says how much is needed", () => {
+    const legend = { ...card("surge", "時隙湧流", ["AP 1", "源力 2"]), source_cost: 2 } as SkillCard;
+    const poor = unit(H, "ally", 1, 1, { skills: ["surge"], source: 1 });
+    const legalSurge: Action[] = [skill("surge")];
+    const [blocked] = skillButtons(poor, legalSurge, { surge: legend });
+    expect(blocked!.disabledReason).toBe("源力不足：需要 2，目前 1");
+    const rich = unit(H, "ally", 1, 1, { skills: ["surge"], source: 2 });
+    expect(skillButtons(rich, legalSurge, { surge: legend })[0]!.disabledReason).toBeNull();
+  });
 });
 
 describe("modes and clicks", () => {

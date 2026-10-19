@@ -118,10 +118,12 @@ export function skillButtons(hero: UnitView, legal: readonly Action[], cards: Sk
   return hero.skills.map((skillId) => {
     const actions = legal.filter((a) => a.type === "use_skill" && a.skill_id === skillId);
     const cooldown = hero.cooldowns[skillId] ?? 0;
+    const card = cards[skillId];
+    const source = card?.source_cost ?? null;
     let disabledReason: string | null = null;
     if (cooldown > 0) disabledReason = `冷卻中（剩 ${cooldown} 回合）`;
+    else if (source !== null && hero.source < source) disabledReason = `源力不足：需要 ${source}，目前 ${hero.source}`;
     else if (actions.length === 0) disabledReason = "目前沒有合法目標（或資源不足）";
-    const card = cards[skillId];
     return {
       skillId,
       name: card?.name_zh ?? skillId,

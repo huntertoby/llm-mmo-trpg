@@ -63,6 +63,9 @@ export function Hud({ view, hero, skills }: Props) {
         <span className="hud-chip" title="剩餘移動點數">
           移動 <b>{hero.move_points}</b>
         </span>
+        <span className="hud-chip" title="源力：傳說技能的代價（跨戰鬥保留，每場至少 1 點）">
+          源力 <b>{hero.source}</b>/{hero.source_max}
+        </span>
         <span className={`hud-chip ${hero.reaction_available ? "on" : "off"}`} title="本輪還能反應嗎">
           反應 <b>{hero.reaction_available ? "可用" : "已用"}</b>
         </span>

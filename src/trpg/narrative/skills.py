@@ -386,6 +386,8 @@ class SkillCard(BaseModel):
     ap_cost: int | None
     cost: tuple[str, ...]
     """代價各段文字（含 AP）。"""
+    source_cost: int | None
+    """花費的源力（``cost.source``，傳說技能，Phase 3C-4a）；沒有為 ``None``。"""
     shape: str
     condition: str | None
     effects: tuple[str, ...]
@@ -421,6 +423,7 @@ def skill_card(
         scaling=scaling_detail(skill),
         ap_cost=skill.ap_cost,
         cost=tuple(cost_parts(library, skill, with_ap=skill.ap_cost is not None)),
+        source_cost=skill.cost.source,
         shape=shape_summary(library, skill.shape),
         condition=(
             None if skill.condition is None else condition_summary(library, skill.condition)

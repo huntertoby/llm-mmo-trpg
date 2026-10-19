@@ -923,6 +923,13 @@
                 "type": "null"
               }
             ]
+          },
+          "source_wells": {
+            "items": {
+              "$ref": "#/components/schemas/Pos"
+            },
+            "type": "array",
+            "title": "Source Wells"
           }
         },
         "additionalProperties": false,
@@ -947,7 +954,8 @@
           "ended",
           "winner",
           "end_reason",
-          "pending"
+          "pending",
+          "source_wells"
         ],
         "title": "BattleView",
         "description": "``team`` 視角的戰場。"
@@ -2420,6 +2428,17 @@
             "type": "array",
             "title": "Cost"
           },
+          "source_cost": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Source Cost"
+          },
           "shape": {
             "type": "string",
             "title": "Shape"
@@ -2525,6 +2544,7 @@
           "scaling",
           "ap_cost",
           "cost",
+          "source_cost",
           "shape",
           "condition",
           "effects",
@@ -3220,6 +3240,14 @@
             "type": "integer",
             "title": "Ap Carry"
           },
+          "source": {
+            "type": "integer",
+            "title": "Source"
+          },
+          "source_max": {
+            "type": "integer",
+            "title": "Source Max"
+          },
           "downed": {
             "type": "boolean",
             "title": "Downed"
@@ -3257,6 +3285,8 @@
           "reaction_available",
           "reaction_rules",
           "ap_carry",
+          "source",
+          "source_max",
           "downed",
           "escaped"
         ],
