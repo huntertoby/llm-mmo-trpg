@@ -1,6 +1,6 @@
 # PM 交接文件
 
-> 給接手的 PM（新對話中的 Claude）。最後更新：2026-10-19，**Phase 2 已全部完成並驗收**（2A–2H）；下一步是 **和使用者討論 Phase 3**（見 3.0）。
+> 給接手的 PM（新對話中的 Claude）。最後更新：2026-10-19，**Phase 3 的 3-1～3-4b 已完成並驗收**（網頁戰鬥可玩）；下一步是 **3-5 roguelite 循環與存檔**，再 **3-6 收尾與試玩**（見 3.0）。
 > 讀完本檔再讀 `CLAUDE.md` 與 `docs/專案計畫.md`（總覽，約 1 萬字元）即可接手；設計細節依需要讀 `docs/design/` 下的主題檔。
 
 ---
@@ -34,10 +34,10 @@
 | Phase 2F 整理（Phase 3 前審查的結論） | ✅ 完成（1395 測試；noqa 19→14；對照戰鬥不變；completion 1800 場異常 0） | `Phase2F計畫.md`／`Phase2F-1、2F-2報告.md` |
 | Phase 2G 完整性檢查的補強 | ✅ 完成（1427 測試；12 個示範技能；覆蓋率測試允許清單為空；待 PM 決定見計畫 0.1、0.2） | `Phase2G計畫.md` |
 | Phase 2H 冰凍、自身狀態代價、雙屬性與專精 | ✅ 完成（1486 測試；`LOG_FORMAT` /11；待 PM 決定見計畫 0.1、0.2；completion 1800 場、matrix 2400 場異常 0） | `Phase2H計畫.md` |
-| **Phase 3 網頁 ＋ roguelite** | 3-1 ✅（1516 測試；noqa 23→20）；3-2 ✅（1577 測試；noqa 20）；3-3 ✅（1587 測試＋前端 30；`uv run python scripts/play.py` 可試玩）；3-4a ✅（開場逐步播放、HUD、技能 UI）；3-4b ✅（反應設定與詢問視窗、環境預告、快捷指令）；下一步寫 3-5（roguelite 循環與存檔，opus） | `Phase3計畫.md`（0 節為決定、3 節為 3-1 規格） |
+| **Phase 3 網頁 ＋ roguelite** | 3-1 ✅（1516 測試；noqa 23→20）；3-2 ✅（1577 測試；noqa 20）；3-3 ✅（1587 測試＋前端 30；`uv run python scripts/play.py` 可試玩）；3-4a ✅（開場逐步播放、HUD、技能 UI）；3-4b ✅（反應設定與詢問視窗、環境預告、快捷指令）；**下一步 3-5、3-6（見 3.0）** | `Phase3計畫.md`（0 節為決定與各段驗收紀錄；3–6 節為 3-1～3-4b 規格）／`Phase3-1～3-4b報告.md` |
 
 - 最新 commit 在 GitHub `huntertoby/llm-mmo-trpg`（私人）的 `main`；2026-10-19 起使用者電腦的資料夾就是工作資料夾（見 6.1），push 前確認 `git status` 乾淨即可。
-- 1486 個測試（`slow` 預設不跑；平衡測試 `test_demo_map_win_rate_and_length` 標 `xfail(strict=False)`，目前 2 xfail、2 xpass）。
+- 1614 個 pytest ＋ 69 個前端 vitest（`check.py` 一併跑，本機約 1 分鐘）；`slow` 預設不跑；平衡測試 `test_demo_map_win_rate_and_length` 標 `xfail(strict=False)`，目前 2 xfail、2 xpass）。
 - 主要指令：
   - `trpg battle --map <id> --seed <n> [--ally-build build_a,build_b] [--ally-commander id] [--enemy-commander id] [--log-json f]`、`trpg battle replay f`
   - `trpg map list`（10 張正式地圖，8 種類型都有）
@@ -54,32 +54,47 @@
 
 > 2026-10-19 起另有 **玩法 PM**（`docs/玩法PM交接.md`）：和使用者討論玩法問題，決定記在該檔第 3 節。狀態為「已決定，待排入」的項目由你排進階段規格。
 
-### 3.0 接手後要做的：和使用者討論 Phase 3（2026-10-19）
+### 3.0 接手後要做的：Phase 3-5 與 3-6（2026-10-19）
 
-**Phase 2 已全部完成**（2A–2H，含完整性檢查與兩個補強子階段）。接手後：
+**現況**：網頁戰鬥已可玩：`uv run python scripts/play.py`（自動建置前端、啟動 `trpg serve`、開瀏覽器）。玩家操控 1 名主角，2 名隊友與敵人由 AI 控制。已有：
+- 開場與 AI 行動逐步播放（正常／快／略過）。
+- HUD、技能列（選目標、滑過預覽、連鎖預覽）。
+- 反應設定（自動／詢問／關閉）與詢問視窗。
+- 環境預告、隊友快捷指令。
+- 戰鬥紀錄可下載並用 `trpg battle replay` 重播。
 
-1. **確認環境**：`git status` 乾淨、`git log -1` 為本檔的 commit 或之後；跑一次 `uv run python scripts/check.py`（本機約 1 分鐘，1486 測試）。
-2. **和使用者討論 Phase 3**，先不要寫規格。要確認的事：
-   - **拆法**：前任 PM 建議四段，每段約 30–45 分鐘：① FastAPI 本機 API ＋ 戰鬥狀態序列化（含 3.0.1 的預留事項）→ ② 前端格子渲染與操作 → ③ 技能、反應、預覽等戰鬥 UI → ④ roguelite 循環與存檔。使用者尚未回覆。
-   - Phase 3 的範圍與驗收：`docs/專案計畫.md` 第 14 節「Phase 3｜網頁客戶端 ＋ roguelite 循環」（含 🎮 戰鬥手感檢查）；前端技術見 `docs/design/12-技術與結構.md`；roguelite 循環見 `docs/design/07-角色成長.md` 7.1。
-   - 可能要使用者決定的設計問題：試玩時敵人要不要有陷阱、被動、反應（第 5 節、3.3）；roguelite 一輪的長度與升級選項數；存檔格式（屬難以事後修改的設計，實作用 `opus`，見 6.3）。
-3. 使用者同意拆法後，依 6.2 寫 `docs/phases/Phase3計畫.md`（或每段一份），Phase 3-1 開頭放 3.0.1 的預留事項。
+Phase 3 的設計決定都在 `Phase3計畫.md` 第 0 節（0.2 的 A–F 是使用者同意的），**不用再問**。
+
+1. **確認環境**：`git status` 乾淨；`uv run python scripts/check.py` 全過（含前端 install／typecheck／vitest；pnpm 一律用 `corepack pnpm`，不要 `corepack enable`）。
+2. **寫 3-5 規格**（加在 `Phase3計畫.md` 第 7 節；上一段的「待 PM 決定」已處理在 0.10）。建議拆兩段：
+   - **3-5a（opus，難改的設計）**：`trpg.roguelite` 套件，純函式、確定性，亂數由「一輪的種子」衍生，不用 `random`。
+     - 參數放 `content/roguelite.yaml`：場數 5 ＋ Boss、地圖類型抽選不重複、遭遇與敵人隨場數成長、經驗與升級、每級 +2 屬性點、開局 4 點自由分配、重骰次數。
+     - 主角成長狀態：屬性、技能、裝備限制（主動 ≤ 6、被動 ≤ 2、反應 ≤ 1）。
+     - 升級候選：用隨機組合器產生 3 個、可跳過，其中 1 個「偏離路線」（決定 C）；重骰在中段與 Boss 前各一次（決定 F）。
+     - **存檔格式**（決定 E）：JSON，帶 `format` 版本。內容有一輪的種子、主角狀態、歷程、進行中戰鬥的 `setup ＋ seed ＋ steps ＋ orders`；讀檔以重播還原。存在本機資料夾，不進 git。
+     - API `/api/runs…`，測試含「存檔 → 讀檔 → 繼續」與重播一致。
+     - 順手修 0.10 #1：CLI 被動技「AP None」，重錄 CLI 快照。
+   - **3-5b（sonnet）**：前端畫面，包括開新一輪（選 build、分配屬性點）、進度畫面（第幾場、下一場地圖）、戰後獎勵與升級三選一（用技能卡片）、重骰、讀檔續玩、一輪結束摘要。
+3. **寫 3-5 規格前要問使用者的設計問題**（0.2 沒涵蓋到的）：
+   - 戰鬥之間 HP、法力是否回滿，或部分回復？
+   - 隊友整輪固定還是每場換？隊友會不會跟著升級？
+   - 經驗怎麼給：每場固定，或依表現（設計文件 7.1 寫「依表現」）？
+   - Boss 戰用哪張地圖、哪些敵人？目前敵人只有盜賊系列（`bandit`、`bandit_archer`、`bandit_shieldbearer`、`bandit_boss`），4 張地圖的預設遭遇有 `bandit_boss`。
+   - 整理成表格、附建議，讓使用者一次回答。
+4. **3-6 收尾**（sonnet）：
+   - 網頁與 CLI 同種子同輸入同結果（以 API 打完一輪、匯出各場紀錄重播）。
+   - PM 在瀏覽器完整打一輪。
+   - 請使用者做 `docs/專案計畫.md` 第 14 節的 🎮 戰鬥手感檢查；問題記到 `docs/玩法PM交接.md`，或排成 3-7 修正。
+5. **Phase 3 結束時派審查 agent**（6.5），範圍 `a8ca74c..HEAD`，把結論排進下一份規格。之後是 Phase 4（LLM 技能生成），開始前要定 #5 世界觀與美術風格。
 
 ### 3.0.0 前一位 PM 結束時的狀態（2026-10-19）
 
-- **Phase 2 完整性檢查**：審查 agent（opus）比對設計與實作，找到 11 點未記錄事項，PM 抽查屬實；「待 PM 決定」處理齊全。使用者決定：文件類由 PM 直接改（`06-技能.md` 新增 6.3.1 實作對照等）；#1 技能卡片描述移出 CLI → 3.0.1；其餘排進 2G、2H。
-- **Phase 2G**（`Phase2G計畫.md`）：重複施加狀態改為剩餘回合取較長；6 個沒人裝備的技能裝上 build；12 個示範技能，讓每個已定義的骨架、觸發時機、反應事件、條件、原語、狀態都有手寫技能使用；`tests/content/test_coverage.py` 防止再出現「定義了沒人用」。
-- **Phase 2H**（`Phase2H計畫.md`，設計由使用者同意）：冰凍 `frozen`（硬控、受火傷解除、冰元素凍住水上單位、Boss 轉緩速）；代價 `self_status`；雙屬性縮放（史詩以上，各 50%）；專精加成（`mastery: range|duration`，以基礎屬性判斷）。`LOG_FORMAT` 升為 /11。
-- 各子階段的「待 PM 決定」都已處理（各計畫檔 0.1、0.2）。PM 驗收：`check.py` 全過；completion 1800 場、matrix 2400 場異常 0；平衡類事項記在 3.3。
-
-### 3.0.1 Phase 3-1 預留事項（本次不做，留給之後寫規格時用）
-
-- Phase 3-1 要包含 Phase 3 前審查（2F 時）留下的三點，以及完整性檢查 #1：
-   - #1 隱藏資訊依陣營過濾：engine 純函式 `project_for(state, team) -> BattleView`（濾掉對方陷阱、`rng_state`、`pending.base_state_json`）；`EventBase.visible_to` ＋ `filter_events(events, team)`；放陷阱的 `SkillUsed.tiles` 不可洩漏位置（`TrapPlaced`／`TrapExpired`／`TriggerLimitReached` 也要依陣營過濾）。
-   - #5 `cli/render.py` 的 `describe_event` 移到 `trpg.narrative`（或其他 API 可匯入的模組），改成 `dict[type, Callable]` 註冊表；順便處理 `engine/preview.py` 的 `_outcome` 與 `sim/metrics.py` 的長 isinstance 鏈。
-   - 完整性檢查 #1：`cli/skills.py` 的 `shape_summary`、`effect_summary`、`_condition`、`_cost_summary`（技能卡片中文描述）也要和 `describe_event` 一起搬出 CLI，網頁的技能卡片與提示框會用到。
-   - #8 `Pending.kind` 改為 Literal；加 `skill_id`、`trigger_event_seq`、代價摘要；加「序列化 → 反序列化 → resume」往返測試。
-   - 3.1 列的既有約定（滑倒退回的 teleport 事件、陷阱只對放置者顯示、反應詢問 UI）。
+- 3-1～3-4b 每段都由 PM 自己驗收：跑 `check.py`；用內建瀏覽器（`.claude/launch.json` 的 `trpg-serve`，以 `preview_start` 啟動）實際操作；下載紀錄後用 `trpg battle replay` 重播。各段驗收紀錄與「待 PM 決定」的處理在 `Phase3計畫.md` 0.6～0.10。
+- 內建瀏覽器的座標點擊在小視窗會偏移。用 `find` 拿 ref 再點最穩；`resize_window` 設成 1400×900 可能讓畫面縮得很小，用 desktop 預設即可。
+- 使用者試玩回饋：
+  - 開場直接看到結果 → 已在 3-4a 修好。
+  - 箱子只能推不能拉 → 屬玩法問題，交給 **玩法 PM**（`docs/玩法PM交接.md` 第 3 節 #1）。玩法 PM 決定後標「已決定，待排入」，由你排進規格。
+- `.claude/settings.json` 免確認清單已加 `corepack`、`pnpm`、`node`、`curl`。
 
 ### 3.1 使用者已同意的方向（2026-10-18，已寫入 `docs/專案計畫.md` v0.2.1 第 14 節）
 
