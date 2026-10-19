@@ -344,6 +344,40 @@ export interface components {
              */
             zones: components["schemas"]["ZoneView"][];
         };
+        /**
+         * BombOut
+         * @description 帶著定時炸彈的單位（Phase 3D-8b）：倒數、爆炸半徑與波及的格子。
+         */
+        BombOut: {
+            /** Unit Id */
+            unit_id: string;
+            pos: components["schemas"]["Pos"];
+            /** Remaining */
+            remaining: number;
+            /** Radius */
+            radius: number;
+            /** Tiles */
+            tiles: components["schemas"]["Pos"][];
+            /** Explodes */
+            explodes: boolean;
+            /** Text */
+            text: string;
+        };
+        /**
+         * BombPreviewOut
+         * @description 預覽中會綁上的定時炸彈（Phase 3D-8b）：``rounds`` 次環境回合後爆炸，``tiles`` 是以攜帶者
+         *     目前位置展開的波及格子。
+         */
+        BombPreviewOut: {
+            /** Unit Id */
+            unit_id: string;
+            /** Rounds */
+            rounds: number;
+            /** Radius */
+            radius: number;
+            /** Tiles */
+            tiles: components["schemas"]["XY"][];
+        };
         /** BuildSummary */
         BuildSummary: {
             /** Id */
@@ -989,6 +1023,16 @@ export interface components {
              * @default []
              */
             summons: components["schemas"]["SummonOut"][];
+            /**
+             * Bombs
+             * @default []
+             */
+            bombs: components["schemas"]["BombPreviewOut"][];
+            /**
+             * Revives
+             * @default []
+             */
+            revives: components["schemas"]["ReviveOut"][];
             /** Displace Permille */
             displace_permille?: number | null;
             gamble?: components["schemas"]["GambleOut"] | null;
@@ -1051,6 +1095,18 @@ export interface components {
              */
             kind: "retreat_to";
             at: components["schemas"]["XY"];
+        };
+        /**
+         * ReviveOut
+         * @description 預覽中的復活（Phase 3D-8b）：站起來的單位、HP 與站的格子（``from_pos`` 是倒下的位置）。
+         */
+        ReviveOut: {
+            /** Unit Id */
+            unit_id: string;
+            /** Hp */
+            hp: number;
+            pos: components["schemas"]["XY"];
+            from_pos: components["schemas"]["XY"];
         };
         /**
          * SetReactionMode
@@ -1178,6 +1234,8 @@ export interface components {
             source_id: string | null;
             /** Amount */
             amount: number | null;
+            /** Blast Radius */
+            blast_radius?: number | null;
         };
         Step: components["schemas"]["Move"] | components["schemas"]["Attack"] | components["schemas"]["UseSkill-Output"] | components["schemas"]["Defend"] | components["schemas"]["Shove"] | components["schemas"]["Trip"] | components["schemas"]["Interact"] | components["schemas"]["EndStance"] | components["schemas"]["SetReactionMode"] | components["schemas"]["EndTurn"] | components["schemas"]["Decision"];
         /**
@@ -1290,6 +1348,11 @@ export interface components {
             burning: components["schemas"]["BurningOut"][];
             /** Upcoming */
             upcoming: components["schemas"]["UpcomingEventOut"][];
+            /**
+             * Bombs
+             * @default []
+             */
+            bombs: components["schemas"]["BombOut"][];
         };
         /** TileView */
         TileView: {
@@ -1411,6 +1474,11 @@ export interface components {
             source_max: number;
             /** Downed */
             downed: boolean;
+            /**
+             * Revivable
+             * @default false
+             */
+            revivable: boolean;
             /** Escaped */
             escaped: boolean;
             /** Owner Id */

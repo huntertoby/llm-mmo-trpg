@@ -26,12 +26,14 @@ from trpg.content.skills import (
     SWAP,
     SWAP_ANY,
     TELEPORT_TARGET,
+    TIME_BOMB,
     EffectSpec,
     SkillDef,
 )
 from trpg.engine import modifiers
 from trpg.engine.actions import Action, Attack, Interact, Shove, Trip, UseSkill
 from trpg.engine.battle import _actor, action_ap_cost, simulate_preview
+from trpg.engine.bombs import blast_tiles, bomb_spec
 from trpg.engine.control import plan_status, status_save_chance
 from trpg.engine.events import (
     AttackIntercepted,
@@ -62,6 +64,7 @@ from trpg.engine.events import (
     UnitEscaped,
     UnitFell,
     UnitMoved,
+    UnitRevived,
     UnitSummoned,
 )
 from trpg.engine.maneuvers import contest_chance
@@ -96,6 +99,7 @@ from trpg.engine.traps import strip_hidden_traps
 from trpg.shared.types import Attribute, ObjectId, UnitId
 
 __all__ = [
+    "BombInfo",
     "DamageRange",
     "DisplaceCheck",
     "GambleInfo",
@@ -105,6 +109,7 @@ __all__ = [
     "Outcome",
     "PierceInfo",
     "Preview",
+    "ReviveInfo",
     "StatusChance",
     "SummonInfo",
     "TargetPreview",
@@ -224,6 +229,28 @@ class SummonInfo:
 
 
 @dataclass(frozen=True, slots=True)
+class BombInfo:
+    """預覽中會綁上的定時炸彈（Phase 3D-8b；取自 ``status_applied`` 的 ``time_bomb``）：攜帶者、倒數
+    的環境回合數、爆炸半徑，以及以攜帶者 **目前位置** 展開的波及格子（它會移動，所以只是參考）。"""
+
+    unit_id: UnitId
+    rounds: int
+    radius: int
+    tiles: tuple[XY, ...]
+
+
+@dataclass(frozen=True, slots=True)
+class ReviveInfo:
+    """預覽中的復活（Phase 3D-8b；取自 ``unit_revived``）：站起來的單位、HP 與站的格子（原位置被
+    占用時為最近的空格，``from_pos`` 是倒下的位置）。"""
+
+    unit_id: UnitId
+    hp: int
+    pos: XY
+    from_pos: XY
+
+
+@dataclass(frozen=True, slots=True)
 class HurlInfo:
     """預覽中發生的物件投擲（Phase 3C-5b；取自 ``object_hurled`` 事件）。
 
@@ -338,6 +365,10 @@ class Preview:
     """位移他人成功的總機率（所有敵方目標都沒抵抗成功）；沒有檢定（全是友方）為 ``None``。"""
     summons: tuple[SummonInfo, ...] = ()
     """動作會召喚的單位（Phase 3D-4b；召喚位置、持續與被擠掉的舊召喚物）。"""
+    bombs: tuple[BombInfo, ...] = ()
+    """動作會綁上的定時炸彈（Phase 3D-8b；最多後果的模擬）：倒數與爆炸範圍。"""
+    revives: tuple[ReviveInfo, ...] = ()
+    """動作會復活的單位（Phase 3D-8b）。"""
     gamble: GambleInfo | None = None
     """技能有賭注時（Phase 3D-7a）：成功率與兩個分支各自的預覽。本預覽的其他欄位（傷害範圍、
     確定與可能的連鎖）不含賭注的分支，只算賭注以外的效果。"""
@@ -918,6 +949,42 @@ def _scene_infos(
     return tuple(topples.values()), tuple(hurls.values())
 
 
+def _bomb_infos(state: BattleState, events: list[EventBase]) -> tuple[BombInfo, ...]:
+    """模擬事件中綁上的定時炸彈（``state`` 為模擬後的狀態，用來查炸彈的技能與半徑）。"""
+    infos: list[BombInfo] = []
+    for e in events:
+        if not (isinstance(e, StatusApplied) and e.status_id == TIME_BOMB):
+            continue
+        carrier = state.units.get(e.target_id)
+        status = None if carrier is None else carrier.get_status(TIME_BOMB)
+        if carrier is None or status is None or status.skill_id is None:
+            continue
+        radius = bomb_spec(state, status.skill_id).radius or 0
+        infos.append(
+            BombInfo(
+                unit_id=carrier.id,
+                rounds=status.remaining or 0,
+                radius=radius,
+                tiles=blast_tiles(state, carrier.pos, radius),
+            )
+        )
+    return tuple(infos)
+
+
+def _revive_infos(events: list[EventBase]) -> tuple[ReviveInfo, ...]:
+    """模擬事件中的復活。"""
+    return tuple(
+        ReviveInfo(
+            unit_id=e.unit_id,
+            hp=e.hp,
+            pos=(e.pos.x, e.pos.y),
+            from_pos=(e.from_pos.x, e.from_pos.y),
+        )
+        for e in events
+        if isinstance(e, UnitRevived)
+    )
+
+
 def _summon_infos(state: BattleState, events: list[EventBase]) -> tuple[SummonInfo, ...]:
     """模擬事件中的召喚（``state`` 為動作前的狀態，用來查範本；``limit`` 消失的舊召喚物並入
     新召喚物的 ``replaces``）。"""
@@ -1184,5 +1251,7 @@ def _build(
         displace_checks=checks,
         displace_chance=chance,
         summons=_summon_infos(state, max_events),
+        bombs=_bomb_infos(high.state, max_events),
+        revives=_revive_infos(max_events),
         miss_notes=_miss_notes(state, actor, action),
     )

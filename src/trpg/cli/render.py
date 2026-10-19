@@ -31,7 +31,7 @@ from trpg.narrative.events import (
     xy_text,
     zone_anchor_text,
 )
-from trpg.narrative.telegraph import change_text
+from trpg.narrative.telegraph import bomb_text, change_text
 from trpg.shared.types import Pos, Surface, Team
 
 __all__ = [
@@ -299,7 +299,11 @@ def render_telegraph(state: BattleState, forecast: Telegraph) -> str:
     lines: list[str] = []
     name = {uid: u.name_zh for uid, u in state.units.items()}
     exploded = {c.object_id for c in forecast.changes if c.kind == "object_exploded"}
-    zone_kinds = ("zone_moved", "zone_expired")  # 持續區域（3D-5）：沿用網頁的預告文字
+    zone_kinds = (
+        "zone_moved",
+        "zone_expired",
+        "bomb_exploded",
+    )  # 區域（3D-5）、炸彈（3D-8b）：沿用網頁的預告文字
     for c in (c for c in forecast.changes if c.kind not in zone_kinds):
         if c.kind == "object_destroyed" and c.object_id in exploded:
             continue
@@ -321,6 +325,7 @@ def render_telegraph(state: BattleState, forecast: Telegraph) -> str:
         elif c.kind == "unit_downed" and c.unit_id is not None:
             lines.append(f"{name.get(c.unit_id, c.unit_id)} 將會倒下")
     lines += [change_text(state, c) for c in forecast.changes if c.kind in zone_kinds]
+    lines += [bomb_text(state, b) for b in forecast.bombs]
     for oid, rounds in forecast.burning:
         lines.append(f"{object_name(state, oid)}還能撐 {rounds} 次環境回合")
     for event in forecast.upcoming:

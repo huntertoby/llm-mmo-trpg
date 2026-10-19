@@ -37,8 +37,15 @@ __all__ = [
     "run_battle",
 ]
 
-LOG_FORMAT = "trpg-battle-log/29"
-"""``/29``（Phase 3D-8a）：吸血與聖光雙效——傷害效果的 ``lifesteal_permille``／``split_heal``、
+LOG_FORMAT = "trpg-battle-log/30"
+"""``/30``（Phase 3D-8b）：復活——原語 ``revive``（``EffectSpec.hp_permille``）、單位的 ``revived``、
+核心規則 ``revive_landing_radius``、新事件 ``unit_revived``；技能內的擊殺時效果——傷害效果的
+``on_kill``（專用效果 ``refund_ap``／``refund_cooldown``）、新事件 ``ap_refunded``；定時炸彈——
+原語 ``delayed_damage``（``EffectSpec.rounds``／``radius``）、狀態 ``time_bomb`` 與
+``StatusInstance.skill_id``、效果 ``bomb_blast``、新事件 ``bomb_ticked``／``bomb_exploded``、
+環境回合的炸彈倒數、預算規則 ``revive_*``／``delayed_damage_*``／``on_kill_*``／
+``refund_ap_points``；``/29`` 的規則包沒有這些欄位與狀態，舊紀錄不能由新版程式重播。
+``/29``（Phase 3D-8a）：吸血與聖光雙效——傷害效果的 ``lifesteal_permille``／``split_heal``、
 ``healed.cause``（``lifesteal``）；驅散與揭露——原語 ``dispel``（``count: 1 | all``）／``reveal``、
 ``status_removed`` 的新原因 ``dispelled``／``revealed``、狀態 ``revealed``
 （``prevents_concealment``）、陷阱的 ``revealed_to``、新事件 ``trap_revealed``、預算規則

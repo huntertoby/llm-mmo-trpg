@@ -1029,6 +1029,86 @@
         "title": "BattleView",
         "description": "``team`` 視角的戰場。"
       },
+      "BombOut": {
+        "properties": {
+          "unit_id": {
+            "type": "string",
+            "title": "Unit Id"
+          },
+          "pos": {
+            "$ref": "#/components/schemas/Pos"
+          },
+          "remaining": {
+            "type": "integer",
+            "title": "Remaining"
+          },
+          "radius": {
+            "type": "integer",
+            "title": "Radius"
+          },
+          "tiles": {
+            "items": {
+              "$ref": "#/components/schemas/Pos"
+            },
+            "type": "array",
+            "title": "Tiles"
+          },
+          "explodes": {
+            "type": "boolean",
+            "title": "Explodes"
+          },
+          "text": {
+            "type": "string",
+            "title": "Text"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "unit_id",
+          "pos",
+          "remaining",
+          "radius",
+          "tiles",
+          "explodes",
+          "text"
+        ],
+        "title": "BombOut",
+        "description": "帶著定時炸彈的單位（Phase 3D-8b）：倒數、爆炸半徑與波及的格子。"
+      },
+      "BombPreviewOut": {
+        "properties": {
+          "unit_id": {
+            "type": "string",
+            "title": "Unit Id"
+          },
+          "rounds": {
+            "type": "integer",
+            "title": "Rounds"
+          },
+          "radius": {
+            "type": "integer",
+            "title": "Radius"
+          },
+          "tiles": {
+            "items": {
+              "$ref": "#/components/schemas/XY"
+            },
+            "type": "array",
+            "title": "Tiles"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "unit_id",
+          "rounds",
+          "radius",
+          "tiles"
+        ],
+        "title": "BombPreviewOut",
+        "description": "預覽中會綁上的定時炸彈（Phase 3D-8b）：``rounds`` 次環境回合後爆炸，``tiles`` 是以攜帶者\n目前位置展開的波及格子。"
+      },
       "BuildSummary": {
         "properties": {
           "id": {
@@ -2602,6 +2682,22 @@
             "title": "Summons",
             "default": []
           },
+          "bombs": {
+            "items": {
+              "$ref": "#/components/schemas/BombPreviewOut"
+            },
+            "type": "array",
+            "title": "Bombs",
+            "default": []
+          },
+          "revives": {
+            "items": {
+              "$ref": "#/components/schemas/ReviveOut"
+            },
+            "type": "array",
+            "title": "Revives",
+            "default": []
+          },
           "displace_permille": {
             "anyOf": [
               {
@@ -2765,6 +2861,34 @@
         ],
         "title": "RetreatTo",
         "description": "撤往指定格子。"
+      },
+      "ReviveOut": {
+        "properties": {
+          "unit_id": {
+            "type": "string",
+            "title": "Unit Id"
+          },
+          "hp": {
+            "type": "integer",
+            "title": "Hp"
+          },
+          "pos": {
+            "$ref": "#/components/schemas/XY"
+          },
+          "from_pos": {
+            "$ref": "#/components/schemas/XY"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "unit_id",
+          "hp",
+          "pos",
+          "from_pos"
+        ],
+        "title": "ReviveOut",
+        "description": "預覽中的復活（Phase 3D-8b）：站起來的單位、HP 與站的格子（``from_pos`` 是倒下的位置）。"
       },
       "SetReactionMode": {
         "properties": {
@@ -3112,6 +3236,17 @@
               }
             ],
             "title": "Amount"
+          },
+          "blast_radius": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Blast Radius"
           }
         },
         "additionalProperties": false,
@@ -3520,6 +3655,14 @@
             },
             "type": "array",
             "title": "Upcoming"
+          },
+          "bombs": {
+            "items": {
+              "$ref": "#/components/schemas/BombOut"
+            },
+            "type": "array",
+            "title": "Bombs",
+            "default": []
           }
         },
         "additionalProperties": false,
@@ -3850,6 +3993,11 @@
           "downed": {
             "type": "boolean",
             "title": "Downed"
+          },
+          "revivable": {
+            "type": "boolean",
+            "title": "Revivable",
+            "default": false
           },
           "escaped": {
             "type": "boolean",

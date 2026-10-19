@@ -22,6 +22,7 @@ from trpg.engine.preview import (
     Outcome,
     PierceInfo,
     Preview,
+    ReviveInfo,
     StatusChance,
     SummonInfo,
     TargetPreview,
@@ -36,6 +37,8 @@ __all__ = [
     "Awaiting",
     "BattleOutcome",
     "BattleResponse",
+    "BombOut",
+    "BombPreviewOut",
     "BuildSummary",
     "CoverOut",
     "CreateBattleRequest",
@@ -51,6 +54,7 @@ __all__ = [
     "PierceObjectOut",
     "PierceOut",
     "PreviewOut",
+    "ReviveOut",
     "StatusChanceOut",
     "StepOut",
     "TargetOut",
@@ -175,6 +179,19 @@ class BurningOut(_ApiModel):
     text: str
 
 
+class BombOut(_ApiModel):
+    """帶著定時炸彈的單位（Phase 3D-8b）：倒數、爆炸半徑與波及的格子。"""
+
+    unit_id: UnitId
+    pos: Pos
+    remaining: int
+    """還要幾次環境回合爆炸（1 ＝ 下一次環境回合爆炸）。"""
+    radius: int
+    tiles: tuple[Pos, ...]
+    explodes: bool
+    text: str
+
+
 class UpcomingEventOut(_ApiModel):
     round: int
     kind: str
@@ -191,6 +208,8 @@ class TelegraphOut(_ApiModel):
     burning: tuple[BurningOut, ...]
     upcoming: tuple[UpcomingEventOut, ...]
     """再下一輪結束時的地圖事件（提前一輪預告）。"""
+    bombs: tuple[BombOut, ...] = ()
+    """目前帶著定時炸彈的單位與倒數（Phase 3D-8b）。"""
 
 
 class InteractOptionOut(_ApiModel):
@@ -374,6 +393,25 @@ class SummonOut(_ApiModel):
     replaces: tuple[UnitId, ...]
 
 
+class BombPreviewOut(_ApiModel):
+    """預覽中會綁上的定時炸彈（Phase 3D-8b）：``rounds`` 次環境回合後爆炸，``tiles`` 是以攜帶者
+    目前位置展開的波及格子。"""
+
+    unit_id: UnitId
+    rounds: int
+    radius: int
+    tiles: tuple[XY, ...]
+
+
+class ReviveOut(_ApiModel):
+    """預覽中的復活（Phase 3D-8b）：站起來的單位、HP 與站的格子（``from_pos`` 是倒下的位置）。"""
+
+    unit_id: UnitId
+    hp: int
+    pos: XY
+    from_pos: XY
+
+
 class MoveOut(_ApiModel):
     """預覽中的自身位移（Phase 3D-2）：``kind`` 為 dash（路線，``other_id`` 是衝鋒的目標）／
     leap（起點與落點）／swap（``unit_id`` 與 ``other_id`` 交換，``path`` 是 ``unit_id`` 的起點與
@@ -460,6 +498,10 @@ class PreviewOut(_ApiModel):
     """位移的抵抗判定（Phase 3D-2b：``swap``、``swap_any``、``teleport_target`` 的敵方目標）。"""
     summons: tuple[SummonOut, ...] = ()
     """動作會召喚的單位（Phase 3D-4b）。"""
+    bombs: tuple[BombPreviewOut, ...] = ()
+    """動作會綁上的定時炸彈：倒數與爆炸範圍（Phase 3D-8b）。"""
+    revives: tuple[ReviveOut, ...] = ()
+    """動作會復活的單位（Phase 3D-8b）。"""
     displace_permille: int | None = None
     """位移成功的總機率（千分比；所有敵方目標都沒抵抗成功）；沒有檢定（全是友方）為 ``None``。"""
     gamble: GambleOut | None = None
@@ -542,6 +584,10 @@ def _summon(s: SummonInfo) -> SummonOut:
     )
 
 
+def _revive(r: ReviveInfo) -> ReviveOut:
+    return ReviveOut(unit_id=r.unit_id, hp=r.hp, pos=r.pos, from_pos=r.from_pos)
+
+
 def _hurl(h: HurlInfo) -> HurlOut:
     return HurlOut(
         object_id=h.object_id,
@@ -618,6 +664,11 @@ def preview_out(
         topples=tuple(_topple(t) for t in p.topples),
         hurls=tuple(_hurl(h) for h in p.hurls),
         summons=tuple(_summon(x) for x in p.summons),
+        bombs=tuple(
+            BombPreviewOut(unit_id=b.unit_id, rounds=b.rounds, radius=b.radius, tiles=b.tiles)
+            for b in p.bombs
+        ),
+        revives=tuple(_revive(r) for r in p.revives),
         moves=tuple(
             MoveOut(kind=m.kind, unit_id=m.unit_id, other_id=m.other_id, path=m.path)
             for m in p.moves
