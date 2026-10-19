@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 import type { StepOut } from "../api/types";
-import { movePlan } from "./animation";
+import { MOVE_DURATION_MS, movePlan } from "./animation";
 import { logLines } from "./log";
 import { smallView } from "./testFixtures";
 import { unitNames } from "./units";
@@ -81,5 +81,21 @@ describe("movePlan", () => {
       ["unit_0004", "teleport", false],
     ]);
     expect(plan[0]!.durationMs).toBeGreaterThan(plan[1]!.durationMs);
+  });
+
+  it("animates a dash step faster than a walk, and leaps and swaps as one move each", () => {
+    const plan = movePlan([
+      step(
+        { ...walk("unit_0001", 0, 0, 1, 0), mode: "dash" },
+        { ...walk("unit_0001", 3, 0, 5, 0), mode: "leap" },
+        { ...walk("unit_0002", 4, 0, 1, 1), mode: "swap" },
+      ),
+    ]);
+    expect(plan.map((m) => [m.mode, m.durationMs > 0])).toEqual([
+      ["dash", true],
+      ["leap", true],
+      ["swap", true],
+    ]);
+    expect(plan[0]!.durationMs).toBeLessThan(MOVE_DURATION_MS.walk);
   });
 });

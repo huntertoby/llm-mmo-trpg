@@ -45,6 +45,7 @@ from trpg.engine.events import (
     TerrainChanged,
     TrapPlaced,
     TrapTriggered,
+    UnitDashed,
     UnitDowned,
     UnitEscaped,
     UnitFell,
@@ -81,6 +82,7 @@ from trpg.shared.types import Attribute, ObjectId, UnitId
 __all__ = [
     "DamageRange",
     "HurlInfo",
+    "MoveInfo",
     "Outcome",
     "PierceInfo",
     "Preview",
@@ -200,6 +202,21 @@ class HurlInfo:
 
 
 @dataclass(frozen=True, slots=True)
+class MoveInfo:
+    """預覽中發生的自身位移（Phase 3D-2；取自 ``unit_dashed``、``unit_moved`` 的 ``leap``／
+    ``swap``）。
+
+    ``kind``：``dash``（``path`` 為衝鋒的路線，含起點與終點，``other_id`` 是衝鋒的目標）、
+    ``leap``（``path`` 是起點與落點）、``swap``（``unit_id`` 與 ``other_id`` 交換，``path`` 是
+    ``unit_id`` 的起點與終點）。"""
+
+    kind: str
+    unit_id: UnitId
+    other_id: UnitId | None
+    path: tuple[XY, ...]
+
+
+@dataclass(frozen=True, slots=True)
 class Preview:
     action: Action
     hit_chance: Fraction | None
@@ -236,6 +253,8 @@ class Preview:
     """動作會造成的推倒（Phase 3C-5b；最多後果的模擬，依物件 ID）。"""
     hurls: tuple[HurlInfo, ...] = ()
     """動作會造成的物件投擲（Phase 3C-5b；最多後果的模擬）。"""
+    moves: tuple[MoveInfo, ...] = ()
+    """動作的自身位移（衝鋒的路線、跳躍的落點、交換位置的兩格；Phase 3D-2；最多後果的模擬）。"""
 
 
 # ---------------------------------------------------------------------------
@@ -296,7 +315,7 @@ def _outcome(e: EventBase) -> Outcome | None:  # noqa: C901, PLR0911, PLR0912
         return Outcome("shield", unit_id=e.unit_id)
     if isinstance(e, UnitDowned):
         return Outcome("downed", unit_id=e.unit_id)
-    if isinstance(e, UnitMoved) and e.mode != "walk":
+    if isinstance(e, UnitMoved) and e.mode not in ("walk", "dash"):  # 衝鋒每一步由 MoveInfo 顯示
         return Outcome("moved", unit_id=e.unit_id, pos=_xy(e.to_pos), detail=e.mode)
     if isinstance(e, UnitFell):
         return Outcome("fell", unit_id=e.unit_id)
@@ -760,6 +779,33 @@ def _scene_infos(
     return tuple(topples.values()), tuple(hurls.values())
 
 
+def _move_infos(events: list[EventBase]) -> tuple[MoveInfo, ...]:
+    """模擬事件中的自身位移：衝鋒（路線）、跳躍（落點）、交換位置（兩個單位換格）。"""
+    infos: list[MoveInfo] = []
+    swapped: dict[UnitId, UnitMoved] = {}
+    for e in events:
+        if isinstance(e, UnitDashed):
+            path = tuple((p.x, p.y) for p in e.path)
+            infos.append(MoveInfo("dash", e.unit_id, e.target_id, path))
+        elif isinstance(e, UnitMoved) and e.mode == "leap":
+            path = ((e.from_pos.x, e.from_pos.y), (e.to_pos.x, e.to_pos.y))
+            infos.append(MoveInfo("leap", e.unit_id, None, path))
+        elif isinstance(e, UnitMoved) and e.mode == "swap":
+            swapped[e.unit_id] = e
+    ids = list(swapped)
+    for first, second in zip(ids[::2], ids[1::2], strict=False):
+        a = swapped[first]
+        infos.append(
+            MoveInfo(
+                "swap",
+                first,
+                second,
+                ((a.from_pos.x, a.from_pos.y), (a.to_pos.x, a.to_pos.y)),
+            )
+        )
+    return tuple(infos)
+
+
 def preview(state: BattleState, action: Action) -> Preview:
     """預覽 ``action`` 的結果（不修改 ``state``、不消耗亂數）。
 
@@ -817,4 +863,5 @@ def preview(state: BattleState, action: Action) -> Preview:
         pierce=pierce,
         topples=topples,
         hurls=hurls,
+        moves=_move_infos(max_events),
     )

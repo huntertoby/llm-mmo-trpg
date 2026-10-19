@@ -645,6 +645,22 @@ export interface components {
             /** Path */
             path: components["schemas"]["Pos"][];
         };
+        /**
+         * MoveOut
+         * @description 預覽中的自身位移（Phase 3D-2）：``kind`` 為 dash（路線，``other_id`` 是衝鋒的目標）／
+         *     leap（起點與落點）／swap（``unit_id`` 與 ``other_id`` 交換，``path`` 是 ``unit_id`` 的起點與
+         *     終點）。
+         */
+        MoveOut: {
+            /** Kind */
+            kind: string;
+            /** Unit Id */
+            unit_id: string;
+            /** Other Id */
+            other_id: string | null;
+            /** Path */
+            path: components["schemas"]["XY"][];
+        };
         /** ObjectView */
         ObjectView: {
             /** Id */
@@ -871,6 +887,11 @@ export interface components {
              * @default []
              */
             hurls: components["schemas"]["HurlOut"][];
+            /**
+             * Moves
+             * @default []
+             */
+            moves: components["schemas"]["MoveOut"][];
         };
         /**
          * Protect

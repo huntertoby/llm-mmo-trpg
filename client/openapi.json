@@ -1735,6 +1735,46 @@
         "title": "Move",
         "description": "沿 ``path`` 移動（不花 AP）。``path[0]`` 必須是目前位置，之後每一步都相鄰。\n\n倒地的單位移動前會先站起（消耗一半移動點數）；倒地時 ``path`` 可以只有起點，表示只站起來。\n途中滑倒（冰面）、倒下或撤離時停止。"
       },
+      "MoveOut": {
+        "properties": {
+          "kind": {
+            "type": "string",
+            "title": "Kind"
+          },
+          "unit_id": {
+            "type": "string",
+            "title": "Unit Id"
+          },
+          "other_id": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Other Id"
+          },
+          "path": {
+            "items": {
+              "$ref": "#/components/schemas/XY"
+            },
+            "type": "array",
+            "title": "Path"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "kind",
+          "unit_id",
+          "other_id",
+          "path"
+        ],
+        "title": "MoveOut",
+        "description": "預覽中的自身位移（Phase 3D-2）：``kind`` 為 dash（路線，``other_id`` 是衝鋒的目標）／\nleap（起點與落點）／swap（``unit_id`` 與 ``other_id`` 交換，``path`` 是 ``unit_id`` 的起點與\n終點）。"
+      },
       "ObjectView": {
         "properties": {
           "id": {
@@ -2350,6 +2390,14 @@
             },
             "type": "array",
             "title": "Hurls",
+            "default": []
+          },
+          "moves": {
+            "items": {
+              "$ref": "#/components/schemas/MoveOut"
+            },
+            "type": "array",
+            "title": "Moves",
             "default": []
           }
         },

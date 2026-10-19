@@ -69,6 +69,7 @@ def arena(
     surfaces: Sequence[tuple[int, int, str]] = (),
     reactive: Sequence[int] = (),
     base: str = "hero_fighter",
+    extra: Sequence[str] = (),
 ) -> BattleState:
     """U1 是施放者（我方戰士，裝備 ``skill``）；之後依序是 ``allies``、``foes``（預設不反應、
     HP 200；``reactive`` 列出的敵人保留反應規則）。"""
@@ -81,7 +82,7 @@ def arena(
         objects=objects,
         surfaces=surfaces,
     )
-    spawns = [spawn(Team.ALLY, caster, caster_template([sid], base=base))]
+    spawns = [spawn(Team.ALLY, caster, caster_template([sid, *extra], base=base))]
     spawns += [spawn(Team.ALLY, xy, no_reactions("hero_archer")) for xy in allies]
     for index, xy in enumerate(foes):
         foe = template("bandit", max_hp=200) if index in reactive else no_reactions(max_hp=200)
@@ -604,3 +605,152 @@ def test_swap_effects_after_it_apply_to_the_swapped_target(
     result = use(state, SID, target_id=U2)
     assert result.state.units[U2].xy == (0, 3)
     assert [d.target_id for d in of(result, DamageDealt)] == [U2]
+
+
+# ---------------------------------------------------------------------------
+# 與其他系統的交互：連段條件、on_move 被動、預覽、AI、重播
+# ---------------------------------------------------------------------------
+
+MOVED: dict[str, Any] = {"type": "moved_this_turn"}
+
+
+def _damage_with_condition(condition: dict[str, Any]) -> dict[str, Any]:
+    return {"type": "damage", "multiplier_permille": 500, "condition": condition}
+
+
+def test_a_dash_satisfies_moved_this_turn_but_standing_still_does_not(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    always(monkeypatch)
+    follow = _damage_with_condition(MOVED)
+    dashing = arena(charge_skill(DASH, follow))
+    assert [d.cause for d in of(use(dashing, SID, target_id=U2), DamageDealt)] == ["attack"]
+    standing = arena(charge_skill(DASH, follow), foes=[(1, 3)])  # 已經相鄰：沒有移動
+    assert not of(use(standing, SID, target_id=U2), DamageDealt)
+
+
+def test_dash_triggers_on_move_passives_but_leap_and_swap_do_not(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    always(monkeypatch)
+    dash = arena(charge_skill(DASH, HIT), extra=["skill_fleet_foot"])
+    hasted = [s for s in of(use(dash, SID, target_id=U2), StatusApplied) if s.status_id == "hasted"]
+    assert [s.target_id for s in hasted] == [U1]
+    leap = arena(_leap_skill(), foes=[(6, 6)], extra=["skill_fleet_foot"])
+    assert not of(use(leap, SID, target_pos=Pos(x=3, y=3)), StatusApplied)
+    swap = arena(_swap_skill("allies"), allies=[(3, 3)], foes=[(6, 6)], extra=["skill_fleet_foot"])
+    assert not of(use(swap, SID, target_id=U2), StatusApplied)
+
+
+def test_the_preview_shows_the_charge_route_the_landing_and_the_collision_damage() -> None:
+    from trpg.engine import preview  # noqa: PLC0415
+
+    wall = row(7, {5: "#"})
+    terrain = "\n".join([".......", ".......", ".......", wall, ".......", ".......", "......."])
+    state = arena(CHARGE, caster=(0, 3), foes=[(4, 3)], terrain=terrain)
+    p = preview(state, UseSkill(unit_id=U1, skill_id=CHARGE, target_id=U2))
+    (move,) = p.moves
+    assert (move.kind, move.unit_id, move.other_id) == ("dash", U1, U2)
+    assert move.path == ((0, 3), (1, 3), (2, 3), (3, 3))
+    assert p.targets[0].damage is not None and p.targets[0].damage.maximum > 0
+    assert [u for u, _, high in p.collisions if u == U2 and high > 0]  # 撞牆的撞擊傷害
+    # 衝鋒的每一步不重複列成「移動」
+    assert not [o for o in p.certain + p.possible if o.kind == "moved" and o.unit_id == U1]
+    assert state.units[U1].xy == (0, 3)  # 預覽沒有改動原本的戰場
+
+
+def test_the_api_preview_carries_the_moves() -> None:
+    from trpg.api.schemas import preview_out  # noqa: PLC0415
+    from trpg.engine import preview  # noqa: PLC0415
+
+    state = arena(_leap_skill(), caster=(0, 3), foes=[(6, 6)])
+    p = preview(state, UseSkill(unit_id=U1, skill_id=SID, target_pos=Pos(x=3, y=3)))
+    out = preview_out(p, (), ())
+    assert [(m.kind, m.unit_id, m.path) for m in out.moves] == [("leap", U1, ((0, 3), (3, 3)))]
+    swap = arena(_swap_skill("allies"), allies=[(3, 3)], foes=[(6, 6)])
+    q = preview_out(preview(swap, UseSkill(unit_id=U1, skill_id=SID, target_id=U2)), (), ())
+    assert [(m.kind, m.unit_id, m.other_id) for m in q.moves] == [("swap", U1, U2)]
+
+
+def test_the_narrative_describes_dashes_leaps_and_swaps() -> None:
+    from trpg.narrative.events import describe_event  # noqa: PLC0415
+
+    state = arena(_leap_skill(), caster=(0, 3), foes=[(6, 6)])
+    leaped = use(state, SID, target_pos=Pos(x=3, y=3))
+    texts = [describe_event(e, leaped.state) for e in leaped.events]
+    assert any(t and "跳躍到 (3, 3)" in t for t in texts)
+    charge = use(arena(CHARGE), CHARGE, target_id=U2)
+    lines = [t for e in charge.events if (t := describe_event(e, charge.state))]
+    assert any("衝向" in t and "(0, 3)→(1, 3)→(2, 3)→(3, 3)" in t for t in lines)
+    assert not any("移動到" in t and "(1, 3)" in t for t in lines)  # 衝鋒的每一步不逐步顯示
+    swap = use(arena(_swap_skill("allies"), allies=[(3, 3)], foes=[(6, 6)]), SID, target_id=U2)
+    swapped = (describe_event(e, swap.state) for e in swap.events)
+    assert any(t and "交換位置，換到" in t for t in swapped)
+
+
+def test_a_blocked_charge_is_explained_in_the_log(monkeypatch: pytest.MonkeyPatch) -> None:
+    from trpg.narrative.events import describe_event  # noqa: PLC0415
+
+    always(monkeypatch)
+
+    state = arena(CHARGE)
+    state.traps = [
+        TrapState(
+            owner_id=U2,
+            team=Team.ENEMY,
+            pos=Pos(x=1, y=3),
+            skill_id="skill_bear_trap",
+            remaining=3,
+            attributes=tuple(state.units[U2].attributes.items()),
+        )
+    ]
+    result = use(state, CHARGE, target_id=U2)
+    texts = [t for e in result.events if (t := describe_event(e, result.state))]
+    assert any("衝鋒被擋下" in t for t in texts)
+
+
+def test_the_composer_can_draw_displace_with_dash_and_dash_is_always_first() -> None:
+    from trpg.skillgen.random_composer import compose_with_stats  # noqa: PLC0415
+
+    found = []
+    for seed in range(500):  # 454、476 是已知的 dash＋push＋damage
+        composed = compose_with_stats(seed, library=library(), skeleton="displace", rarity="epic")
+        if any(e.type == "dash" for e in composed.skill.effects):
+            found.append(composed.skill)
+    assert found
+    assert all(s.effects[0].type == "dash" and s.shape.type == "single" for s in found)
+    assert any({"damage", "push"} <= {e.type for e in s.effects} for s in found)
+    assert not any(e.type in ("leap", "swap") for s in found for e in s.effects)  # 手寫專用
+
+
+def _charger_run(map_id: str, seed: int) -> Any:
+    from trpg.engine.ai.utility import UtilityAI  # noqa: PLC0415
+    from trpg.engine.runner import run_battle  # noqa: PLC0415
+    from trpg.engine.setup import build_setup  # noqa: PLC0415
+    from trpg.sim.lineup import build_allies, default_lineup  # noqa: PLC0415
+
+    lib, allies = build_allies(library(), ["build_charger"])
+    _, enemies = default_lineup(lib, map_id)
+    setup = build_setup(lib, map_id, allies, enemies, max_rounds=30)
+    return setup, run_battle(setup, seed, UtilityAI(lib.ai_profiles))
+
+
+@pytest.mark.parametrize(
+    ("map_id", "seed"), [("open_plain", 2), ("ruined_fort", 1), ("narrow_halls", 3)]
+)
+def test_charger_battles_replay_exactly(map_id: str, seed: int) -> None:
+    from trpg.engine import state_to_json  # noqa: PLC0415
+    from trpg.engine.runner import replay  # noqa: PLC0415
+
+    setup, run = _charger_run(map_id, seed)
+    again = replay(setup, seed, run.actions)
+    assert state_to_json(again.state) == state_to_json(run.state)
+    assert [e.model_dump() for e in again.events] == [e.model_dump() for e in run.events]
+
+
+def test_the_ai_uses_every_self_move_somewhere() -> None:
+    modes: set[str] = set()
+    for map_id, seed in [("open_plain", 2), ("ruined_fort", 1)]:
+        _, run = _charger_run(map_id, seed)
+        modes |= {e.mode for e in run.events if isinstance(e, UnitMoved)}
+    assert {"dash", "leap", "swap"} <= modes

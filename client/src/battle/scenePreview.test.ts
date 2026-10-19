@@ -41,6 +41,11 @@ const topple = {
 };
 const hurl = { object_id: "obj_0001", kind: "oil_barrel", from_pos: [2, 2], to_pos: [3, 2], outcome: "exploded", placed_pos: null };
 
+// 自身位移（Phase 3D-2）：衝鋒的路線、跳躍的落點、交換的兩格
+const dash = { kind: "dash", unit_id: "unit_0001", other_id: "unit_0003", path: [[0, 2], [1, 2], [1, 1]] };
+const leap = { kind: "leap", unit_id: "unit_0001", other_id: null, path: [[0, 2], [2, 2]] };
+const swap = { kind: "swap", unit_id: "unit_0001", other_id: "unit_0003", path: [[0, 2], [2, 1]] };
+
 describe("previewOverlays", () => {
   it("is empty without scene data (older servers and plain actions)", () => {
     expect(previewOverlays(null, view)).toEqual([]);
@@ -68,6 +73,42 @@ describe("previewOverlays", () => {
       { pos: { x: 2, y: 2 }, kind: "hurl_from", label: "舉" },
       { pos: { x: 3, y: 2 }, kind: "hurl_to", label: "落" },
     ]);
+  });
+});
+
+describe("self-movement previews", () => {
+  it("marks the dash route and its end tile", () => {
+    const marks = previewOverlays({ ...base, moves: [dash] } as unknown as PreviewOut, view);
+    expect(marks).toEqual([
+      { pos: { x: 1, y: 2 }, kind: "dash_path", label: "" },
+      { pos: { x: 1, y: 1 }, kind: "dash_end", label: "衝" },
+    ]);
+  });
+
+  it("marks nothing for a dash that does not move, the landing for a leap and both tiles of a swap", () => {
+    const still = { ...dash, path: [[0, 2]] };
+    expect(previewOverlays({ ...base, moves: [still] } as unknown as PreviewOut, view)).toEqual([]);
+    expect(previewOverlays({ ...base, moves: [leap] } as unknown as PreviewOut, view)).toEqual([
+      { pos: { x: 2, y: 2 }, kind: "leap_to", label: "躍" },
+    ]);
+    expect(previewOverlays({ ...base, moves: [swap] } as unknown as PreviewOut, view)).toEqual([
+      { pos: { x: 0, y: 2 }, kind: "swap", label: "換" },
+      { pos: { x: 2, y: 1 }, kind: "swap", label: "換" },
+    ]);
+  });
+
+  it("explains the dash route, the leap and the swap in the preview lines", () => {
+    const [d] = sceneLines({ ...base, moves: [dash] } as unknown as PreviewOut, names, view);
+    expect(d).toContain("衝鋒");
+    expect(d).toContain("(0, 2)→(1, 2)→(1, 1)");
+    expect(d).toContain(names.label("unit_0003"));
+    const [l] = sceneLines({ ...base, moves: [leap] } as unknown as PreviewOut, names, view);
+    expect(l).toContain("落在 (2, 2)");
+    const [s] = sceneLines({ ...base, moves: [swap] } as unknown as PreviewOut, names, view);
+    expect(s).toContain("(0, 2)");
+    expect(s).toContain("(2, 1)");
+    const p = { ...base, moves: [dash] } as unknown as PreviewOut;
+    expect(previewLines(p, names, view).some((line) => line.startsWith("衝鋒："))).toBe(true);
   });
 });
 

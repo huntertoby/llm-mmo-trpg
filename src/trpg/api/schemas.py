@@ -355,6 +355,17 @@ class HurlOut(_ApiModel):
     placed_pos: XY | None
 
 
+class MoveOut(_ApiModel):
+    """預覽中的自身位移（Phase 3D-2）：``kind`` 為 dash（路線，``other_id`` 是衝鋒的目標）／
+    leap（起點與落點）／swap（``unit_id`` 與 ``other_id`` 交換，``path`` 是 ``unit_id`` 的起點與
+    終點）。"""
+
+    kind: str
+    unit_id: UnitId
+    other_id: UnitId | None
+    path: tuple[XY, ...]
+
+
 class PreviewOut(_ApiModel):
     """:class:`trpg.engine.preview.Preview` 的公開版本：不含模擬後的完整狀態與原始事件。"""
 
@@ -388,6 +399,8 @@ class PreviewOut(_ApiModel):
     """動作會造成的推倒（Phase 3C-5b）。"""
     hurls: tuple[HurlOut, ...] = ()
     """動作會造成的物件投擲（Phase 3C-5b）。"""
+    moves: tuple[MoveOut, ...] = ()
+    """動作的自身位移：衝鋒路線、跳躍落點、交換位置（Phase 3D-2）。"""
 
 
 def _damage(d: DamageRange | None) -> DamageOut | None:
@@ -500,4 +513,8 @@ def preview_out(
         pierce=_pierce(p.pierce),
         topples=tuple(_topple(t) for t in p.topples),
         hurls=tuple(_hurl(h) for h in p.hurls),
+        moves=tuple(
+            MoveOut(kind=m.kind, unit_id=m.unit_id, other_id=m.other_id, path=m.path)
+            for m in p.moves
+        ),
     )

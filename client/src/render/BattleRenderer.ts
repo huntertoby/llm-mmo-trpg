@@ -69,6 +69,10 @@ const OVERLAY_COLORS: Readonly<Record<OverlayKind, number>> = {
   rubble: HIGHLIGHT.rubble,
   hurl_from: HIGHLIGHT.picked,
   hurl_to: HIGHLIGHT.landing,
+  dash_path: HIGHLIGHT.dash,
+  dash_end: HIGHLIGHT.dash,
+  leap_to: HIGHLIGHT.leap,
+  swap: HIGHLIGHT.swap,
 };
 
 function hpColor(ratio: number): number {
@@ -310,13 +314,15 @@ export class BattleRenderer {
     }
   }
 
-  /** 場景物件預覽的一個標記（穿透路線、穿過的物件、後方單位、壓住的格子、倒塌物、投擲物件與落點）。 */
+  /** 場景物件與自身位移預覽的一個標記（穿透路線、穿過的物件、後方單位、壓住的格子、倒塌物、投擲物件與
+ * 落點，以及衝鋒路線、跳躍落點、交換位置的兩格）。 */
   private drawOverlay(g: Graphics, overlay: Overlay): Text | null {
     const color = OVERLAY_COLORS[overlay.kind];
     const o = tileOrigin(overlay.pos);
     const c = tileCenter(overlay.pos);
     switch (overlay.kind) {
       case "route":
+      case "dash_path":
         g.circle(c.x, c.y, 6).fill({ color, alpha: 0.95 }).stroke({ width: 1, color: 0x000000, alpha: 0.6 });
         return null;
       case "crush":
@@ -335,6 +341,9 @@ export class BattleRenderer {
       case "pierced":
       case "hurl_from":
       case "hurl_to":
+      case "dash_end":
+      case "leap_to":
+      case "swap":
         g.rect(o.x + 3, o.y + 3, T - 6, T - 6)
           .fill({ color, alpha: 0.18 })
           .stroke({ width: 3, color });

@@ -11,7 +11,11 @@ export type OverlayKind =
   | "crush" // 推倒壓住的格子
   | "rubble" // 倒塌物的位置
   | "hurl_from" // 被舉起的物件
-  | "hurl_to"; // 物件的落點
+  | "hurl_to" // 物件的落點
+  | "dash_path" // 衝鋒經過的格子（Phase 3D-2）
+  | "dash_end" // 衝鋒的終點（目標身旁）
+  | "leap_to" // 跳躍的落點
+  | "swap"; // 交換位置的兩格
 
 export interface Overlay {
   pos: Pos;
@@ -69,7 +73,29 @@ export function previewOverlays(p: PreviewOut | null, view: BattleView): Overlay
     out.push({ pos: pos(h.from_pos), kind: "hurl_from", label: "舉" });
     out.push({ pos: pos(h.to_pos), kind: "hurl_to", label: "落" });
   }
+  for (const m of p.moves ?? []) out.push(...moveOverlays(m));
   return out;
+}
+
+type MoveOut = NonNullable<PreviewOut["moves"]>[number];
+
+/** 自身位移（衝鋒、跳躍、交換位置）的標記：衝鋒畫路線與終點、跳躍畫落點、交換位置畫兩格。 */
+function moveOverlays(m: MoveOut): Overlay[] {
+  const path = m.path;
+  const last = path[path.length - 1];
+  if (last === undefined) return [];
+  if (m.kind === "dash") {
+    const route: Overlay[] = path.slice(1, -1).map((xy) => ({ pos: pos(xy), kind: "dash_path", label: "" }));
+    return path.length > 1 ? [...route, { pos: pos(last), kind: "dash_end", label: "衝" }] : [];
+  }
+  if (m.kind === "leap") return [{ pos: pos(last), kind: "leap_to", label: "躍" }];
+  const first = path[0];
+  return first === undefined
+    ? []
+    : [
+        { pos: pos(first), kind: "swap", label: "換" },
+        { pos: pos(last), kind: "swap", label: "換" },
+      ];
 }
 
 const HURL_OUTCOME: Readonly<Record<string, string>> = {
@@ -79,7 +105,21 @@ const HURL_OUTCOME: Readonly<Record<string, string>> = {
   lost: "找不到落腳處而摧毀",
 };
 
-/** 預覽文字中場景物件的幾行（穿透、推倒、投擲）。 */
+function moveLine(m: MoveOut, names: UnitNames): string {
+  const path = m.path;
+  const who = names.label(m.unit_id);
+  const other = m.other_id == null ? "" : names.label(m.other_id);
+  const last = path[path.length - 1];
+  const first = path[0];
+  if (m.kind === "dash") {
+    if (path.length <= 1) return `衝鋒：${who} 已在 ${other} 身旁，不需要移動`;
+    return `衝鋒：${who} 沿 ${path.map((xy) => posText(xy)).join("→")} 衝到 ${other} 身旁（途中會被藉機攻擊、踩到陷阱）`;
+  }
+  if (m.kind === "leap") return `跳躍：${who} 越過中間的單位與低矮地形，落在 ${last === undefined ? "?" : posText(last)}（不會被藉機攻擊）`;
+  return `交換：${who} ${first === undefined ? "?" : posText(first)} ⇄ ${other} ${last === undefined ? "?" : posText(last)}`;
+}
+
+/** 預覽文字中場景物件與自身位移的幾行（穿透、推倒、投擲、衝鋒、跳躍、交換）。 */
 export function sceneLines(p: PreviewOut, names: UnitNames, view: BattleView): string[] {
   const lines: string[] = [];
   const pierce = p.pierce ?? null;
@@ -106,5 +146,6 @@ export function sceneLines(p: PreviewOut, names: UnitNames, view: BattleView): s
     const name = objectName(h.kind);
     lines.push(`投擲：${name}${posText(h.from_pos)} → ${posText(h.to_pos)}，${HURL_OUTCOME[h.outcome] ?? h.outcome}`);
   }
+  for (const m of p.moves ?? []) lines.push(moveLine(m, names));
   return lines;
 }

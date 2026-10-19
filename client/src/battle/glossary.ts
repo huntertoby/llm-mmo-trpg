@@ -186,4 +186,8 @@ export const HIGHLIGHT = {
   rubble: 0xb08a60,
   picked: 0x4fd8ff,
   landing: 0x7dff7d,
+  // 自身位移預覽（Phase 3D-2）：衝鋒的路線與終點、跳躍的落點、交換的兩格
+  dash: 0xff8c42,
+  leap: 0x7dd3ff,
+  swap: 0xd88cff,
 } as const;
