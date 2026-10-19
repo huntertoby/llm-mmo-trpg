@@ -1,15 +1,18 @@
 """FastAPI 應用（Phase 3-2：本機 API；多人 WebSocket 於 Phase 6）。
 
 ``create_app()`` 載入內容庫、建立工作階段表並掛上路由。``trpg serve`` 以 uvicorn 啟動，預設只綁
-``127.0.0.1``。
+``127.0.0.1``。給了 ``static_dir``（建置好的前端，``client/dist``）時，``/`` 以靜態檔提供前端
+（Phase 3-3），``/api/*`` 不受影響。
 """
 
 from __future__ import annotations
 
 from collections.abc import Awaitable, Callable
+from pathlib import Path
 
 from fastapi import FastAPI, Request
 from fastapi.responses import JSONResponse
+from fastapi.staticfiles import StaticFiles
 
 from trpg import __version__
 from trpg.api.routes import battles, content
@@ -49,11 +52,16 @@ def _error_handler(status: int) -> Callable[[Request, Exception], Awaitable[JSON
 
 
 def create_app(
-    library: ContentLibrary | None = None, *, max_auto_steps: int = DEFAULT_MAX_ACTIONS
+    library: ContentLibrary | None = None,
+    *,
+    max_auto_steps: int = DEFAULT_MAX_ACTIONS,
+    static_dir: Path | None = None,
 ) -> FastAPI:
     """建立應用。``library`` 省略時載入 ``content/``。
 
     ``max_auto_steps`` 是每次請求自動推進的步數上限（超過時 500，工作階段保留）。
+    ``static_dir`` 是建置好的前端資料夾（含 ``index.html``）；給了就掛在 ``/``（在 API 路由之後，
+    所以 ``/api/*`` 優先）。
     """
     app = FastAPI(title="LLM-MMO-TRPG 本機 API", version=__version__)
     app.state.store = SessionStore(
@@ -63,4 +71,6 @@ def create_app(
         app.add_exception_handler(exc_type, _error_handler(status))
     app.include_router(content.router)
     app.include_router(battles.router)
+    if static_dir is not None:
+        app.mount("/", StaticFiles(directory=static_dir, html=True), name="client")
     return app
