@@ -1,6 +1,6 @@
 # PM 交接文件
 
-> 給接手的 PM（新對話中的 Claude）。最後更新：2026-10-19，**Phase 2F 全部完成並驗收**；下一步是 **Phase 2 完整性檢查**（見 3.0），之後才是 Phase 3。
+> 給接手的 PM（新對話中的 Claude）。最後更新：2026-10-19，**Phase 2 完整性檢查完成**（見 3.0），使用者決定補 **Phase 2G**（進行中），之後才是 Phase 3。
 > 讀完本檔再讀 `CLAUDE.md` 與 `docs/專案計畫.md`（總覽，約 1 萬字元）即可接手；設計細節依需要讀 `docs/design/` 下的主題檔。
 
 ---
@@ -32,7 +32,8 @@
 | Phase 2E-2 反應技、擋攻擊、姿態 | ✅ 完成（1286 測試） | `Phase2E計畫.md` 第 4 節／`Phase2E-2報告.md` |
 | Phase 2E-3 層數、陷阱與收尾 | ✅ 完成（1341 測試；2E 驗收全 ✅；待 PM 決定已處理於 3.2） | `Phase2E計畫.md` 第 5 節／`Phase2E-3報告.md`（5.4 為 2E 驗收總表） |
 | Phase 2F 整理（Phase 3 前審查的結論） | ✅ 完成（1395 測試；noqa 19→14；對照戰鬥不變；completion 1800 場異常 0） | `Phase2F計畫.md`／`Phase2F-1、2F-2報告.md` |
-| **Phase 3 網頁 ＋ roguelite** | 2F 之後 | 規格尚未撰寫（見 3.1） |
+| Phase 2G 完整性檢查的補強 | 🔄 2G-1 進行中（狀態取較長、裝備未用技能、覆蓋率測試）；2G-2 示範技能 | `Phase2G計畫.md` |
+| **Phase 3 網頁 ＋ roguelite** | 2G 之後 | 規格尚未撰寫（見 3.1） |
 
 - 最新 commit 在 GitHub `huntertoby/llm-mmo-trpg`（私人）的 `main`；2026-10-19 起使用者電腦的資料夾就是工作資料夾（見 6.1），push 前確認 `git status` 乾淨即可。
 - 1395 個測試（`slow` 預設不跑；平衡測試 `test_demo_map_win_rate_and_length` 標 `xfail(strict=False)`，目前 2 xfail、2 xpass）。
@@ -64,6 +65,12 @@ Phase 2（2A–2F）已全部結束。使用者希望在進 Phase 3 前，由新
 4. 若使用者決定要補：寫一份小的整理子階段規格（例如 `Phase2G計畫.md`，依 6.2，30–45 分鐘），派 agent 實作並驗收；文件類的修正可由 PM 直接改。若沒有要補的，更新本檔後回報。
 5. 完成後**停下**，向使用者回報。Phase 3 仍要等使用者另外安排（先確認拆法，見 3.1 最後一段）。
 
+**3.0 執行結果（2026-10-19）**：`check.py` 全過（1396 測試，本機 50 秒）。審查 agent 找到 11 點未記錄事項（PM 抽查 #2、#5、#7、#11 屬實），「待 PM 決定」處理齊全，評價可進 Phase 3。使用者決定：
+- C 類文件（#8–#11）：PM 已直接改 `docs/design/06-技能.md`（新增 6.3.1 實作對照、6.6 兩個深度上限、6.12 目前稀有度實作）、`05-戰鬥.md`、本檔 3.1.1。
+- #1 技能卡片描述移出 CLI → 3.0.1；#2 freeze、#3 `self_status`、#4 雙屬性與專精 → 3.1.1。
+- #5 重複施加狀態取較長、#6 示範技能、#7 裝備未用技能 → `Phase2G計畫.md`（2G-1、2G-2）。
+- **下一步**：2G-1 驗收 → 派 2G-2 → 驗收（PM 背景跑 completion 全量）→ push → 回報使用者，再談 Phase 3 拆法。
+
 ### 3.0.0 前一位 PM 結束時的狀態
 
 - Phase 2F 已全部完成、驗收並 push。
@@ -81,6 +88,7 @@ Phase 2（2A–2F）已全部結束。使用者希望在進 Phase 3 前，由新
 - 寫規格前先跟使用者確認 Phase 3 拆法（3.1 最後一段的四段建議，使用者尚未回覆）。Phase 3-1 要包含審查留下的三點：
    - #1 隱藏資訊依陣營過濾：engine 純函式 `project_for(state, team) -> BattleView`（濾掉對方陷阱、`rng_state`、`pending.base_state_json`）；`EventBase.visible_to` ＋ `filter_events(events, team)`；放陷阱的 `SkillUsed.tiles` 不可洩漏位置（`TrapPlaced`／`TrapExpired`／`TriggerLimitReached` 也要依陣營過濾）。
    - #5 `cli/render.py` 的 `describe_event` 移到 `trpg.narrative`（或其他 API 可匯入的模組），改成 `dict[type, Callable]` 註冊表；順便處理 `engine/preview.py` 的 `_outcome` 與 `sim/metrics.py` 的長 isinstance 鏈。
+   - 完整性檢查 #1：`cli/skills.py` 的 `shape_summary`、`effect_summary`、`_condition`、`_cost_summary`（技能卡片中文描述）也要和 `describe_event` 一起搬出 CLI，網頁的技能卡片與提示框會用到。
    - #8 `Pending.kind` 改為 Literal；加 `skill_id`、`trigger_event_seq`、代價摘要；加「序列化 → 反序列化 → resume」往返測試。
    - 3.1 列的既有約定（滑倒退回的 teleport 事件、陷阱只對放置者顯示、反應詢問 UI）。
 
@@ -117,8 +125,11 @@ Phase 2（2A–2F）已全部結束。使用者希望在進 Phase 3 前，由新
 | 改寫規則型（傳說） | `grant_ap`、`reset_cooldown`、`cheat_death`、`copy_skill`、`redirect_damage`、`extra_reaction` | 傳說稀有度沒有專屬內容 |
 | 修正型被動 | 「燃燒中的敵人受到傷害 +10%」這類常駐加成（2E 只做觸發型，決定 E） | — |
 | 增益互動 | `steal_buff`、驅散敵方增益、`restore_resource` | — |
-| 零星原語 | `delayed_damage`、`execute_bonus`、`swap`、`leap`、`conceal`、`grant_advantage_next`、`ignite_tile` | 部分可用現有原語近似 |
+| 零星原語 | `delayed_damage`、`execute_bonus`、`swap`、`leap`、`grant_advantage_next`、`ignite_tile`（`conceal` 已有，是狀態 `concealed`） | 部分可用現有原語近似 |
 | 條件 | `moved_this_turn`、`adjacent_ally`、`target_isolated`、`first_round`（現有 5 種） | 連段骨架的「本回合做過某事」做不出來 |
+| 冰凍狀態 | `freeze`（6.3 狀態、6.6 Boss 硬控轉換對象）；目前冰元素打在單位上沒有特色效果 | 冰系 build 缺特色（完整性檢查 #2） |
+| 代價 | `self_status`（對自己施加狀態當代價，含預算折抵） | 完整性檢查 #3 |
+| 屬性連動 | 雙屬性縮放（6.10，史詩以上）、專精加成（縮放屬性為最高屬性時 +1 範圍或持續） | 混搭 build 做不出來；專精加成和 Phase 3 roguelite 配點取捨相關，可考慮排進 Phase 3（完整性檢查 #4） |
 
 PM 建議（已跟使用者說過）：不擋 Phase 3；召喚與連段條件是整類 build 的缺口，Phase 3 試玩後看需要再排「補模板 C」。
 
