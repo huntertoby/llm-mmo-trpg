@@ -71,6 +71,7 @@ const OVERLAY_COLORS: Readonly<Record<OverlayKind, number>> = {
   hurl_to: HIGHLIGHT.landing,
   dash_path: HIGHLIGHT.dash,
   dash_end: HIGHLIGHT.dash,
+  charge_hit: HIGHLIGHT.dash,
   leap_to: HIGHLIGHT.leap,
   swap: HIGHLIGHT.swap,
   teleport_from: HIGHLIGHT.banish,
@@ -345,6 +346,7 @@ export class BattleRenderer {
       case "hurl_from":
       case "hurl_to":
       case "dash_end":
+      case "charge_hit":
       case "leap_to":
       case "swap":
       case "teleport_from":

@@ -112,6 +112,48 @@ describe("self-movement previews", () => {
   });
 });
 
+// 直線衝撞（Phase 3D-2c）：路線 (0,1)→(3,1)，經過敵人 unit_0003 (2,1)，終點 (3,1)
+const charge = { kind: "charge", unit_id: "unit_0001", other_id: null, path: [[0, 1], [1, 1], [2, 1], [3, 1]] };
+const foe = { unit_id: "unit_0003", hit_permille: 550, crit_permille: 0, damage: null, ally: false, knock_permille: 600, status_chances: [] };
+
+describe("charge-through previews", () => {
+  const withCharge = (extra: object = {}) =>
+    ({ ...base, action: { type: "use_skill", unit_id: "unit_0001", skill_id: "skill_bull_rush", target_pos: { x: 3, y: 1 } }, moves: [charge], targets: [foe], ...extra }) as unknown as PreviewOut;
+
+  it("marks the route, the enemies it runs through with their hit chance, and the end tile", () => {
+    expect(previewOverlays(withCharge(), view)).toEqual([
+      { pos: { x: 1, y: 1 }, kind: "dash_path", label: "" },
+      { pos: { x: 2, y: 1 }, kind: "charge_hit", label: "55%" },
+      { pos: { x: 3, y: 1 }, kind: "dash_end", label: "衝" },
+    ]);
+  });
+
+  it("does not mark allies as hit and marks nothing for a charge that does not move", () => {
+    const ally = { ...foe, ally: true };
+    expect(previewOverlays(withCharge({ targets: [ally] }), view).some((m) => m.kind === "charge_hit")).toBe(false);
+    expect(previewOverlays(withCharge({ moves: [{ ...charge, path: [[0, 1]] }] }), view)).toEqual([]);
+  });
+
+  it("explains the route, the enemies hit with their chance and the knock down", () => {
+    const [line] = sceneLines(withCharge(), names, view);
+    expect(line).toContain("衝撞");
+    expect(line).toContain("(0, 1)→(1, 1)→(2, 1)→(3, 1)");
+    expect(line).toContain(`${names.label("unit_0003")}（命中 55%）`);
+    expect(line).toContain("撞倒");
+    expect(line).not.toContain("被擋住");
+    expect(previewLines(withCharge(), names, view).some((l) => l.startsWith("衝撞："))).toBe(true);
+  });
+
+  it("says push-aside when there is no knock down, nobody on the way, and when the end was blocked", () => {
+    const aside = { ...foe, knock_permille: null };
+    expect(sceneLines(withCharge({ targets: [aside] }), names, view)[0]).toContain("推到路徑旁");
+    expect(sceneLines(withCharge({ targets: [] }), names, view)[0]).toContain("沿途沒有敵人");
+    const blocked = withCharge({ moves: [{ ...charge, path: [[0, 1], [1, 1]] }] });
+    const text = sceneLines(blocked, names, view)[0];
+    expect(text).toContain("被擋住：選的終點是 (3, 1)，實際停在 (1, 1)");
+  });
+});
+
 describe("sceneLines", () => {
   it("explains a pierce through an object, with the discounted target behind it", () => {
     const lines = sceneLines({ ...base, pierce } as unknown as PreviewOut, names, view);
