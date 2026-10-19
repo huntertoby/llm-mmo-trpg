@@ -137,6 +137,7 @@ export function BattleScreen({ initial, onExit }: Props) {
   const hero = useMemo(() => view.units.find((u) => u.id === heroId) ?? null, [view, heroId]);
   const skillIds = useMemo(() => {
     const ids = new Set<string>(hero?.skills ?? []);
+    for (const g of hero?.granted_skills ?? []) ids.add(g.skill_id); // 暫時獲得的技能（Phase 3D-8c）
     for (const a of response.legal_actions) if (a.type === "use_skill") ids.add(a.skill_id);
     for (const id of Object.keys(hero?.cooldowns ?? {})) ids.add(id);
     const copied = response.pending?.copy_skill_id; // 複製技能暫停時，被複製的技能（要顯示名稱）

@@ -3,6 +3,7 @@ import type { BattleView, StatusView, UnitView } from "../api/types";
 import { glossaryName, stackName, statusName, surfaceName } from "../battle/glossary";
 import type { SkillNames } from "../battle/actions";
 import { activationLine } from "../battle/activations";
+import { grantedLine } from "../battle/granted";
 import { bombStatusText, TIME_BOMB } from "../battle/bombs";
 import { summonLine, summonsOf } from "../battle/summons";
 import { unitNames } from "../battle/units";
@@ -97,6 +98,12 @@ export function Hud({ view, hero, skills }: Props) {
               <li key={a.skill_id}>{activationLine(view, a)}</li>
             ))}
           </ul>
+        </div>
+      )}
+      {(hero.granted_skills ?? []).length > 0 && (
+        <div className="hud-line hud-granted" aria-label="暫時技能">
+          <span className="muted">暫時技能：</span>
+          {(hero.granted_skills ?? []).map(grantedLine).join("、")}
         </div>
       )}
       {summons.length > 0 && (

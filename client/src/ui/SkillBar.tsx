@@ -2,6 +2,7 @@
 import { useState } from "react";
 import type { SkillCard } from "../api/types";
 import type { SkillButton } from "../battle/targeting";
+import { grantedBadge } from "../battle/granted";
 import { SkillCardView } from "./SkillCardView";
 
 interface Props {
@@ -34,11 +35,16 @@ export function SkillBar({ buttons, cards, selectedKey, enabled, onSelect }: Pro
             >
               <button
                 type="button"
-                className={`skill-button${selected ? " selected" : ""}`}
+                className={`skill-button${selected ? " selected" : ""}${b.grantedRemaining != null ? " granted" : ""}`}
                 disabled={blocked}
                 onClick={() => onSelect(b.skillId)}
               >
                 <span className="skill-name">{b.name}</span>
+                {b.grantedRemaining != null && (
+                  <span className="skill-granted" aria-label="暫時技能">
+                    {grantedBadge(b.grantedRemaining)}
+                  </span>
+                )}
                 <span className="skill-cost">{cost}</span>
               </button>
             </div>

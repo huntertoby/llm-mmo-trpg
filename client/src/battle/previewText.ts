@@ -1,6 +1,7 @@
 // 預覽結果 → 顯示文字（純函式）。機率以千分比（‰）、期望傷害以 ×1000 傳來，這裡轉成百分比與小數。
 import { asEvent, type BattleView, type PreviewOut } from "../api/types";
 import { bombLines, reviveLines } from "./bombs";
+import { grantLines } from "./granted";
 import { gambleLines } from "./gamble";
 import { objectName, statusName, surfaceName } from "./glossary";
 import { sceneLines } from "./scenePreview";
@@ -183,6 +184,7 @@ export function previewLines(
   lines.push(...zonePreviewLines(p.min_events)); // 建立的持續區域（Phase 3D-5）
   lines.push(...bombLines(p, names)); // 綁上的定時炸彈：倒數與爆炸範圍（Phase 3D-8b）
   lines.push(...reviveLines(p, names)); // 復活：站起來的單位與位置（Phase 3D-8b）
+  lines.push(...grantLines(p, names)); // 暫時獲得技能（Phase 3D-8c）
   const shown = (o: Outcome) => !skipChain || !CHAIN_OUTCOME_KINDS.has(o.kind);
   for (const o of p.certain.filter(shown)) lines.push(`確定：${outcomeText(o, names, view)}`);
   for (const o of p.possible.filter(shown)) lines.push(`可能：${outcomeText(o, names, view)}`);

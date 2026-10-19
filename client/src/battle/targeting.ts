@@ -2,6 +2,7 @@
 import type { Action, BattleView, Direction, InteractOption, Pending, Pos, SkillCard, UnitView } from "../api/types";
 import { posKey, samePos } from "./geometry";
 import { activeReason } from "./activations";
+import { grantedRemaining } from "./granted";
 import { objectStyle } from "./glossary";
 
 function posText(p: Pos): string {
@@ -158,12 +159,15 @@ export interface SkillButton {
   actions: Action[];
   /** 停用原因（中文）；可用時 `null`。 */
   disabledReason: string | null;
+  /** 暫時獲得的技能（Phase 3D-8c）：剩餘輪數；裝備的技能為 `null`。 */
+  grantedRemaining?: number | null;
 }
 
 export type SkillCards = Readonly<Record<string, SkillCard | undefined>>;
 
 export function skillButtons(hero: UnitView, legal: readonly Action[], cards: SkillCards): SkillButton[] {
-  return hero.skills.map((skillId) => {
+  const granted = (hero.granted_skills ?? []).map((g) => g.skill_id).filter((id) => !hero.skills.includes(id));
+  return [...hero.skills, ...granted].map((skillId) => {
     const actions = legal.filter((a) => a.type === "use_skill" && a.skill_id === skillId);
     const cooldown = hero.cooldowns[skillId] ?? 0;
     const card = cards[skillId];
@@ -186,6 +190,7 @@ export function skillButtons(hero: UnitView, legal: readonly Action[], cards: Sk
       cooldown,
       actions,
       disabledReason,
+      grantedRemaining: grantedRemaining(hero, skillId),
     };
   });
 }

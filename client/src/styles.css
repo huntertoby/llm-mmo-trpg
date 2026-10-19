@@ -407,6 +407,17 @@ button.selected {
   color: var(--muted);
 }
 
+/* 暫時獲得的技能（Phase 3D-8c）：藍青色邊框與「暫時・剩 N 輪」標記 */
+.skill-button.granted {
+  border-color: #5fb7d6;
+  box-shadow: inset 0 0 0 1px #5fb7d6;
+}
+
+.skill-granted {
+  font-size: 12px;
+  color: #8fd8f0;
+}
+
 .skill-card {
   margin-top: 8px;
   padding: 8px;
