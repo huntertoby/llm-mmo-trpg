@@ -382,88 +382,122 @@ def _tiles_to_units(
     return tuple(sorted(u.id for u in units))
 
 
-def compute_area(  # noqa: C901, PLR0912, PLR0915
+def _unit_area(
+    state: BattleState,
+    caster: UnitState,
+    skill: SkillDef,
+    action: UseSkill,
+    *,
+    effects: tuple[ResolvedEffect, ...],
+    reach: int,
+) -> tuple[tuple[XY, ...], list[UnitState] | None]:
+    """``targeting: unit``：單位或物件目標；連鎖回傳依序跳到的單位。"""
+    spec = skill.shape
+    _require_fields(action, ("target_id", "target_object_id"), "unit（單位或物件）")
+    if (action.target_id is None) == (action.target_object_id is None):
+        raise IllegalActionError("此技能必須恰好指定 target_id 或 target_object_id 其中之一")
+    if action.target_id is not None:
+        target = state.units.get(action.target_id)
+        if target is None:
+            raise IllegalActionError(f"找不到目標：{action.target_id}")
+        problem = _unit_target_problem(state, caster, skill, effects, target, reach)
+        if problem is not None:
+            raise IllegalActionError(problem)
+        if spec.type != "chain":
+            return (target.xy,), None
+        assert spec.jumps is not None and spec.jump_range is not None
+        chain = shapes.chain_units(state, caster, target, spec.jumps, spec.jump_range)
+        return tuple(sorted({u.xy for u in chain}, key=lambda p: (p[1], p[0]))), chain
+    assert action.target_object_id is not None
+    if spec.type == "chain":
+        raise IllegalActionError("連鎖技能的第一個目標必須是單位")
+    obj = state.objects.get(action.target_object_id)
+    if obj is None or obj.destroyed:
+        raise IllegalActionError(f"找不到物件：{action.target_object_id}")
+    problem = _object_target_problem(state, caster, skill, effects, obj, reach)
+    if problem is not None:
+        raise IllegalActionError(problem)
+    return (obj.xy,), None
+
+
+def _tile_area(
+    state: BattleState,
+    caster: UnitState,
+    skill: SkillDef,
+    action: UseSkill,
+    *,
+    effects: tuple[ResolvedEffect, ...],
+    reach: int,
+) -> tuple[tuple[XY, ...], XY]:
+    """``targeting: tile``：目標格（傳送與陷阱另有落點限制）；回傳影響格與中心格。"""
+    _require_fields(action, ("target_pos",), "tile（格子）")
+    if action.target_pos is None:
+        raise IllegalActionError("此技能必須指定 target_pos（目標格）")
+    center = (action.target_pos.x, action.target_pos.y)
+    problem = shapes.center_problem(state, caster.xy, center, reach)
+    if problem is not None:
+        raise IllegalActionError(problem)
+    if any(e.type == "teleport" for e in effects):
+        if not is_standable(state, center) or is_deadly(state, center):
+            raise IllegalActionError(f"無法傳送到不可站立的格子：{center}")
+        other = state.unit_at(*center)
+        if other is not None and other.id != caster.id:
+            raise IllegalActionError(f"無法傳送到已有單位的格子：{center}（{other.name_zh}）")
+    if skill.trap is not None:
+        problem = _trap_site_problem(state, center)
+        if problem is not None:
+            raise IllegalActionError(problem)
+    return center_tiles(state, skill.shape.type, center), center
+
+
+def _direction_area(
+    state: BattleState, caster: UnitState, skill: SkillDef, action: UseSkill
+) -> tuple[tuple[XY, ...], XY]:
+    """``targeting: direction``：直線或錐形；回傳影響格與方向向量。"""
+    _require_fields(action, ("direction",), "direction（方向）")
+    if action.direction is None:
+        raise IllegalActionError("此技能必須指定 direction（north／east／south／west）")
+    spec = skill.shape
+    assert spec.size is not None
+    if spec.type == "line":
+        tiles = shapes.line_tiles(state, caster.xy, action.direction, spec.size)
+    else:
+        tiles = shapes.cone_tiles(state, caster.xy, action.direction, spec.size)
+    return tiles, shapes.DIRECTIONS[action.direction]
+
+
+def _self_area(
+    state: BattleState, caster: UnitState, skill: SkillDef, action: UseSkill, targeting: str
+) -> tuple[XY, ...]:
+    """不需要選取的形狀（自身、環、半徑）。"""
+    _require_fields(action, (), targeting)
+    spec = skill.shape
+    if spec.type == "self":
+        return (caster.xy,)
+    assert spec.radius is not None
+    if spec.type == "ring":
+        return shapes.ring_tiles(state, caster.xy, spec.radius)
+    return shapes.radius_tiles(state, caster.xy, spec.radius)
+
+
+def compute_area(
     state: BattleState, caster: UnitState, skill: SkillDef, action: UseSkill
 ) -> SkillArea:
     """驗證 ``action`` 的選取並計算影響範圍；不合法或影響範圍為空時拋出 ``IllegalActionError``。"""
-    rules = state.ruleset
-    shape = rules.shape_def(skill.shape.type)
-    spec = skill.shape
+    targeting = state.ruleset.shape_def(skill.shape.type).targeting
     effects = resolve_effects(state, skill)
     reach = shape_reach(skill, caster)
     origin = caster.xy
     direction: XY | None = None
     chain: list[UnitState] | None = None
-    tiles: tuple[XY, ...]
-    targeting = shape.targeting
-
     if targeting == "unit":
-        _require_fields(action, ("target_id", "target_object_id"), "unit（單位或物件）")
-        if (action.target_id is None) == (action.target_object_id is None):
-            raise IllegalActionError("此技能必須恰好指定 target_id 或 target_object_id 其中之一")
-        if action.target_id is not None:
-            target = state.units.get(action.target_id)
-            if target is None:
-                raise IllegalActionError(f"找不到目標：{action.target_id}")
-            problem = _unit_target_problem(state, caster, skill, effects, target, reach)
-            if problem is not None:
-                raise IllegalActionError(problem)
-            tiles = (target.xy,)
-            if spec.type == "chain":
-                assert spec.jumps is not None and spec.jump_range is not None
-                chain = shapes.chain_units(state, caster, target, spec.jumps, spec.jump_range)
-                tiles = tuple(sorted({u.xy for u in chain}, key=lambda p: (p[1], p[0])))
-        else:
-            assert action.target_object_id is not None
-            if spec.type == "chain":
-                raise IllegalActionError("連鎖技能的第一個目標必須是單位")
-            obj = state.objects.get(action.target_object_id)
-            if obj is None or obj.destroyed:
-                raise IllegalActionError(f"找不到物件：{action.target_object_id}")
-            problem = _object_target_problem(state, caster, skill, effects, obj, reach)
-            if problem is not None:
-                raise IllegalActionError(problem)
-            tiles = (obj.xy,)
+        tiles, chain = _unit_area(state, caster, skill, action, effects=effects, reach=reach)
     elif targeting == "tile":
-        _require_fields(action, ("target_pos",), "tile（格子）")
-        if action.target_pos is None:
-            raise IllegalActionError("此技能必須指定 target_pos（目標格）")
-        center = (action.target_pos.x, action.target_pos.y)
-        problem = shapes.center_problem(state, caster.xy, center, reach)
-        if problem is not None:
-            raise IllegalActionError(problem)
-        if any(e.type == "teleport" for e in effects):
-            if not is_standable(state, center) or is_deadly(state, center):
-                raise IllegalActionError(f"無法傳送到不可站立的格子：{center}")
-            other = state.unit_at(*center)
-            if other is not None and other.id != caster.id:
-                raise IllegalActionError(f"無法傳送到已有單位的格子：{center}（{other.name_zh}）")
-        if skill.trap is not None:
-            problem = _trap_site_problem(state, center)
-            if problem is not None:
-                raise IllegalActionError(problem)
-        origin = center
-        tiles = center_tiles(state, spec.type, center)
+        tiles, origin = _tile_area(state, caster, skill, action, effects=effects, reach=reach)
     elif targeting == "direction":
-        _require_fields(action, ("direction",), "direction（方向）")
-        if action.direction is None:
-            raise IllegalActionError("此技能必須指定 direction（north／east／south／west）")
-        direction = shapes.DIRECTIONS[action.direction]
-        assert spec.size is not None
-        if spec.type == "line":
-            tiles = shapes.line_tiles(state, caster.xy, action.direction, spec.size)
-        else:
-            tiles = shapes.cone_tiles(state, caster.xy, action.direction, spec.size)
+        tiles, direction = _direction_area(state, caster, skill, action)
     else:
-        _require_fields(action, (), targeting)
-        if spec.type == "self":
-            tiles = (caster.xy,)
-        elif spec.type == "ring":
-            assert spec.radius is not None
-            tiles = shapes.ring_tiles(state, caster.xy, spec.radius)
-        else:
-            assert spec.radius is not None
-            tiles = shapes.radius_tiles(state, caster.xy, spec.radius)
+        tiles = _self_area(state, caster, skill, action, targeting)
     if not tiles:
         raise IllegalActionError("影響範圍為空：沒有任何格子會受到影響")
     return SkillArea(
