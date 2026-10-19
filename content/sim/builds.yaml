@@ -220,7 +220,7 @@ builds:
       resist: {elemental: 150}
       tags: [hero, sim]
       max_mana: 40
-      skills: [skill_cinder_mine, skill_bear_trap, skill_frost_shackle, skill_sinkhole, skill_fleet_foot]
+      skills: [skill_cinder_mine, skill_bear_trap, skill_frost_shackle, skill_sinkhole, skill_fleet_foot, skill_raise_skeleton]
 
   - id: build_charger
     name_zh: 衝鋒流

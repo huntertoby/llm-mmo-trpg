@@ -252,6 +252,9 @@ def order_problems(state: BattleState, orders: OrderSet, hero_id: UnitId) -> lis
         if uid == hero_id:
             problems.append(f"主角 {unit.name_zh} 由玩家操控，不能下戰術指令")
             continue
+        if unit.is_summon:  # Phase 3D-4a：召喚物只聽全隊指令
+            problems.append(f"召喚物 {unit.name_zh} 由 AI 控制，不能下個別戰術指令")
+            continue
         problems.extend(
             reason
             for order in orders.unit_orders[uid]

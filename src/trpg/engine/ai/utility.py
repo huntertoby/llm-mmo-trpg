@@ -84,6 +84,7 @@ from trpg.engine.ai.orders import (
     validate_order,
 )
 from trpg.engine.ai.scene_objects import SCENE_PRIMITIVES, has_fire_follow_up, scene_estimate
+from trpg.engine.ai.summon import has_summon, summon_estimate, summon_gains
 from trpg.engine.battle import legal_actions, legal_actions_with_areas
 from trpg.engine.events import (
     ApGranted,
@@ -713,6 +714,7 @@ def _ally_gains(f: _GainFrame) -> Fraction:
         gains += _support_gains(state, p, f.profile)
         gains += _stack_gains(state, f.actor, p, f.profile, f.hit)
         gains += _trap_gains(state, p, f.profile)
+        gains += summon_gains(state, f.actor, p.min_events, f.w)  # 召喚（Phase 3D-4a）
     return gains
 
 
@@ -1182,6 +1184,8 @@ def skill_estimate(  # noqa: PLR0917
     """技能選取（影響範圍為 ``area``）的便宜估計（不跑引擎），用來篩出每個技能最值得完整評分的
     幾個選取；``None`` 表示不納入候選（這是 ``worth_previewing`` 在技能上的對應）。
 
+    - 含 ``summon``（Phase 3D-4a）：召喚位置越靠近最近的敵人越高
+      （:func:`~trpg.engine.ai.summon.summon_estimate`）；
     - 含 ``charge_through``：沿途的敵人數 × 3 ＋ 終點的位置價值變化（沒有敵人就不納入）；
     - 含 ``teleport`` 或 ``leap``：把行動者放到目標格後的位置價值變化（同
       :func:`virtual_move_score`；跳躍用來脫離或上高處，Phase 3D-2）；
@@ -1200,6 +1204,8 @@ def skill_estimate(  # noqa: PLR0917
         return None  # 已經有姿態：AI 不主動換姿態（也不主動取消，Phase 2E-2）
     if skill.trap is not None:
         return _trap_estimate(state, unit, skill, area, scene, rules=trap)
+    if has_summon(skill):  # 召喚（3D-4a）：召喚位置越靠近敵人越好
+        return summon_estimate(state, unit, area.origin)
     special = _special_estimate(state, unit, skill, action, area, scene, w, before)
     if not isinstance(special, _Unhandled):
         return special
