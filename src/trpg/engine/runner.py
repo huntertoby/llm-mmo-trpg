@@ -37,8 +37,13 @@ __all__ = [
     "run_battle",
 ]
 
-LOG_FORMAT = "trpg-battle-log/26"
-"""``/25``（Phase 3D-5）：持續區域——原語 ``zone``（``EffectSpec`` 新欄位 ``anchor``／``when``／
+LOG_FORMAT = "trpg-battle-log/27"
+"""``/27``（Phase 3D-7a）：賭博型技能——原語 ``gamble``（``EffectSpec`` 新欄位
+``chance_permille``／``win``／``lose``，分支內的 ``damage_multiplier``／``self_damage_of_hit``）、
+失手反噬 ``cost.on_miss``、``damage_dealt.cause`` 的新值 ``backlash``（不會讓受到的單位 HP 低於
+1）、新事件 ``gamble_rolled``／``backlash_triggered``、預算規則 ``gamble_*``；``/26`` 的規則包
+沒有這些欄位，舊紀錄不能由新版程式重播。
+``/25``（Phase 3D-5）：持續區域——原語 ``zone``（``EffectSpec`` 新欄位 ``anchor``／``when``／
 ``speed``／``effects``）、核心規則 ``zone_limit_per_owner``、預算規則 ``zone_*``、戰鬥狀態的
 ``zones``／``next_zone_id``、新事件 ``zone_created``／``zone_moved``／``zone_triggered``／
 ``zone_expired``；示範技能「戰歌」改寫成跟隨型區域。``/24`` 的規則包沒有這些欄位，舊紀錄不能由
