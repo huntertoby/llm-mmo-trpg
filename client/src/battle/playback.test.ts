@@ -35,7 +35,11 @@ describe("playbackPlan", () => {
   it("pauses 500 ms after an AI action, 150 ms when fast, none for end_turn steps", () => {
     const normal = playbackPlan(response, hero, "normal");
     const fast = playbackPlan(response, hero, "fast");
-    const idx = response.steps.findIndex((s) => s.actor_id !== null && s.step?.type !== "end_turn");
+    const idx = response.steps.findIndex(
+      (s) => s.actor_id !== null && s.actor_id !== hero && !["end_turn", "move"].includes(s.step?.type ?? ""),
+    );
+    const moveIdx = response.steps.findIndex((s) => s.actor_id !== null && s.actor_id !== hero && s.step?.type === "move");
+    expect(normal.frames[moveIdx]!.pauseMs).toBe(150);
     expect(normal.frames[idx]!.pauseMs).toBe(500);
     expect(fast.frames[idx]!.pauseMs).toBe(150);
     const endIdx = response.steps.findIndex((s) => s.step?.type === "end_turn");

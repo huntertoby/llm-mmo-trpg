@@ -120,7 +120,7 @@ export function skillButtons(hero: UnitView, legal: readonly Action[], cards: Sk
     return {
       skillId,
       name: card?.name_zh ?? skillId,
-      costs: card === undefined ? [] : [...card.cost],
+      costs: card === undefined ? [] : card.cost.map((c) => (c === "AP None" ? "被動／反應" : c)),
       cooldown,
       actions,
       disabledReason,

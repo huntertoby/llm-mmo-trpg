@@ -12,6 +12,8 @@ export const PLAY_SPEEDS: readonly PlaySpeed[] = ["normal", "fast", "skip"];
 
 /** 每個 AI 動作之後的停頓（毫秒）。 */
 export const AI_PAUSE_MS: Readonly<Record<PlaySpeed, number>> = { normal: 500, fast: 150, skip: 0 };
+/** AI 純移動之後的停頓（動畫本身已佔時間）。 */
+export const MOVE_PAUSE_MS: Readonly<Record<PlaySpeed, number>> = { normal: 150, fast: 0, skip: 0 };
 /** 主角自己的動作之後的停頓（短）。 */
 export const HERO_PAUSE_MS: Readonly<Record<PlaySpeed, number>> = { normal: 150, fast: 0, skip: 0 };
 
@@ -39,7 +41,9 @@ export type PlayOp =
 
 function pauseFor(stepType: string | undefined, actorId: string | null, heroId: string, speed: PlaySpeed): number {
   if (actorId === null || stepType === "end_turn") return 0;
-  return actorId === heroId ? HERO_PAUSE_MS[speed] : AI_PAUSE_MS[speed];
+  if (actorId === heroId) return HERO_PAUSE_MS[speed];
+  // 純移動的步驟已有移動動畫的時間，停頓縮短（一個單位常有「移動、攻擊、移動」好幾步）。
+  return stepType === "move" ? MOVE_PAUSE_MS[speed] : AI_PAUSE_MS[speed];
 }
 
 export function playbackPlan(res: BattleResponse, heroId: string, speed: PlaySpeed): PlaybackPlan {
