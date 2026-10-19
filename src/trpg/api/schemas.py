@@ -88,6 +88,7 @@ class Glossary(_ApiModel):
     surfaces: tuple[GlossaryEntry, ...]
     objects: tuple[GlossaryEntry, ...]
     statuses: tuple[GlossaryEntry, ...]
+    stacks: tuple[GlossaryEntry, ...]
     reactions: tuple[GlossaryEntry, ...]
     elements: tuple[GlossaryEntry, ...]
     attributes: tuple[GlossaryEntry, ...]

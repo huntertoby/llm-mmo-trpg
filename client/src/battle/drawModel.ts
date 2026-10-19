@@ -5,6 +5,7 @@ import {
   SURFACES,
   TEAM_COLORS,
   objectStyle,
+  surfaceName,
   terrainStyle,
 } from "./glossary";
 import { onField, unitMarkers } from "./units";
@@ -106,7 +107,13 @@ function ratio(value: number, max: number): number {
   return max <= 0 ? 0 : Math.max(0, Math.min(1, value / max));
 }
 
-export function buildDrawModel(view: BattleView, heroId: string): DrawModel {
+/** `activeId` 省略時以 `view.active_unit` 為行動中的單位；逐步播放時由播放器指定。 */
+export function buildDrawModel(
+  view: BattleView,
+  heroId: string,
+  activeId: string | null | undefined = undefined,
+): DrawModel {
+  const acting = activeId === undefined ? view.active_unit : activeId;
   const tiles: TileDraw[] = view.tiles.map((t) => {
     const style = terrainStyle(t.terrain);
     const surface = SURFACES[t.surface];
@@ -118,7 +125,7 @@ export function buildDrawModel(view: BattleView, heroId: string): DrawModel {
       heightLabel: String(t.height),
       terrain: t.terrain,
       terrainName: style.name,
-      surfaceName: surface === null ? null : surface.name,
+      surfaceName: surface === null ? null : surfaceName(t.surface),
       blocked: style.blocked,
       deadly: style.deadly,
       wall: style.wall,
@@ -152,7 +159,7 @@ export function buildDrawModel(view: BattleView, heroId: string): DrawModel {
       fill: TEAM_COLORS[u.team],
       hpRatio: ratio(u.hp, u.max_hp),
       shieldRatio: ratio(u.shield, u.max_hp),
-      active: u.id === view.active_unit,
+      active: u.id === acting,
       hero: u.id === heroId,
       downed: u.downed,
     }))

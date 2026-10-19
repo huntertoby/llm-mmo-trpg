@@ -26,6 +26,11 @@ export type SkillCard = Schemas["SkillCard"];
 export type CreateBattleRequest = Omit<Schemas["CreateBattleRequest"], "max_rounds"> & {
   max_rounds?: number;
 };
+export type Glossary = Schemas["Glossary"];
+export type GlossaryEntry = Schemas["GlossaryEntry"];
+export type PreviewOut = Schemas["PreviewOut"];
+export type UseSkill = Schemas["UseSkill"];
+export type Direction = Schemas["Direction"];
 export type Awaiting = BattleResponse["awaiting"];
 
 /** 所有事件共有的欄位（`text` 只在有中文描述時存在）。 */

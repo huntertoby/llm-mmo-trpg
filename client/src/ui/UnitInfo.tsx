@@ -1,6 +1,6 @@
 // 單位資訊：滑過或點選單位時顯示（文字即可）。
 import type { StatusView, UnitView } from "../api/types";
-import { statusName } from "../battle/glossary";
+import { stackName, statusName } from "../battle/glossary";
 import type { SkillNames } from "../battle/actions";
 import type { UnitNames } from "../battle/units";
 
@@ -54,7 +54,7 @@ export function UnitInfo({ unit, names, heroId, skills }: Props) {
         狀態：{unit.statuses.length === 0 ? "無" : unit.statuses.map(statusText).join("、")}
       </div>
       {stacks.length > 0 && (
-        <div className="unit-line">層數：{stacks.map(([k, v]) => `${k} ×${v}`).join("、")}</div>
+        <div className="unit-line">層數：{stacks.map(([k, v]) => `${stackName(k)} ×${v}`).join("、")}</div>
       )}
       {cooldowns.length > 0 && (
         <div className="unit-line">冷卻：{cooldowns.map(([k, v]) => `${skills[k] ?? k} ${v}`).join("、")}</div>

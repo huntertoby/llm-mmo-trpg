@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 import { buildDrawModel, shadeForHeight, tileAt, tileFill } from "./drawModel";
-import { SURFACES, TERRAIN, TEAM_COLORS } from "./glossary";
+import { surfaceName, TERRAIN, TEAM_COLORS } from "./glossary";
 import { smallView } from "./testFixtures";
 
 describe("buildDrawModel", () => {
@@ -21,7 +21,7 @@ describe("buildDrawModel", () => {
     expect(high.heightLabel).toBe("2");
     const oil = tileAt(model, { x: 0, y: 2 })!;
     expect(oil.fill).not.toBe(flat.fill);
-    expect(oil.surfaceName).toBe(SURFACES.oil!.name);
+    expect(oil.surfaceName).toBe(surfaceName("oil"));
   });
 
   it("marks walls, chasms and deadly terrain", () => {

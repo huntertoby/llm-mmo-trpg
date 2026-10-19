@@ -4,7 +4,9 @@ import type {
   BattleResponse,
   BuildSummary,
   CreateBattleRequest,
+  Glossary,
   MapSummary,
+  PreviewOut,
   SkillCard,
 } from "./types";
 
@@ -61,9 +63,12 @@ export const api = {
   maps: () => request<MapSummary[]>("GET", "/maps"),
   builds: () => request<BuildSummary[]>("GET", "/builds"),
   skill: (id: string) => request<SkillCard>("GET", `/skills/${encodeURIComponent(id)}`),
+  glossary: () => request<Glossary>("GET", "/glossary"),
   createBattle: (body: CreateBattleRequest) => request<BattleResponse>("POST", "/battles", body),
   battle: (id: string) => request<BattleResponse>("GET", `/battles/${id}`),
   act: (id: string, action: Action) => request<BattleResponse>("POST", `/battles/${id}/actions`, action),
+  preview: (id: string, action: Action) =>
+    request<PreviewOut>("POST", `/battles/${id}/preview`, action),
   decide: (id: string, accept: boolean) =>
     request<BattleResponse>("POST", `/battles/${id}/decision`, { accept }),
 };

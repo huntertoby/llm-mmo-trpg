@@ -1225,6 +1225,13 @@
             "type": "array",
             "title": "Statuses"
           },
+          "stacks": {
+            "items": {
+              "$ref": "#/components/schemas/GlossaryEntry"
+            },
+            "type": "array",
+            "title": "Stacks"
+          },
           "reactions": {
             "items": {
               "$ref": "#/components/schemas/GlossaryEntry"
@@ -1254,6 +1261,7 @@
           "surfaces",
           "objects",
           "statuses",
+          "stacks",
           "reactions",
           "elements",
           "attributes"

@@ -448,6 +448,8 @@ export interface components {
             objects: components["schemas"]["GlossaryEntry"][];
             /** Statuses */
             statuses: components["schemas"]["GlossaryEntry"][];
+            /** Stacks */
+            stacks: components["schemas"]["GlossaryEntry"][];
             /** Reactions */
             reactions: components["schemas"]["GlossaryEntry"][];
             /** Elements */

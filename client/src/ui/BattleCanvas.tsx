@@ -1,5 +1,5 @@
 // React 包裝：建立／銷毀 PixiJS 繪製器，模型或高亮改變時重畫。
-import { useEffect, useRef, type MutableRefObject } from "react";
+import { useEffect, useLayoutEffect, useRef, type MutableRefObject } from "react";
 import type { Pos } from "../api/types";
 import type { DrawModel } from "../battle/drawModel";
 import { BattleRenderer, type Highlights } from "../render/BattleRenderer";
@@ -9,11 +9,13 @@ interface Props {
   highlights: Highlights;
   onTileClick(tile: Pos): void;
   onTileHover(tile: Pos | null): void;
+  /** 右鍵（取消選取）。 */
+  onCancel(): void;
   /** 給戰鬥畫面播放動畫用。 */
   rendererRef: MutableRefObject<BattleRenderer | null>;
 }
 
-export function BattleCanvas({ model, highlights, onTileClick, onTileHover, rendererRef }: Props) {
+export function BattleCanvas({ model, highlights, onTileClick, onTileHover, onCancel, rendererRef }: Props) {
   const hostRef = useRef<HTMLDivElement>(null);
   const callbacks = useRef({ onTileClick, onTileHover });
   callbacks.current = { onTileClick, onTileHover };
@@ -40,14 +42,24 @@ export function BattleCanvas({ model, highlights, onTileClick, onTileHover, rend
     };
   }, [rendererRef]);
 
-  useEffect(() => {
+  // 版面效果：逐步播放時用 flushSync 換畫面，需要同步重畫（動畫才找得到單位）。
+  useLayoutEffect(() => {
     rendererRef.current?.draw(model);
     rendererRef.current?.setHighlights(latest.current.highlights);
   }, [model, rendererRef]);
 
-  useEffect(() => {
+  useLayoutEffect(() => {
     rendererRef.current?.setHighlights(highlights);
   }, [highlights, rendererRef]);
 
-  return <div className="battle-canvas" ref={hostRef} />;
+  return (
+    <div
+      className="battle-canvas"
+      ref={hostRef}
+      onContextMenu={(e) => {
+        e.preventDefault();
+        onCancel();
+      }}
+    />
+  );
 }

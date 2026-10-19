@@ -81,6 +81,7 @@ def test_glossary_covers_every_content_id(client: TestClient) -> None:
     assert ids("surfaces") == {s.value for s in Surface if s is not Surface.NONE}
     assert ids("objects") == {o.id for o in rules.objects.objects}
     assert ids("statuses") == {s.id for s in rules.statuses.statuses}
+    assert ids("stacks") == {k.id for k in rules.stacks.stacks}
     assert ids("reactions") == {r.id for r in rules.reactions.reactions}
     assert ids("elements") == {e.value for e in Element}
     assert ids("attributes") == {a.value for a in Attribute}

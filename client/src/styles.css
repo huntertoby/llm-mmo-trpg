@@ -138,14 +138,30 @@ button.primary {
 }
 
 .turn-chip {
-  width: 24px;
-  height: 24px;
-  border-radius: 50%;
+  min-width: 30px;
+  padding: 2px 3px 3px;
+  border-radius: 6px;
   display: flex;
+  flex-direction: column;
   align-items: center;
-  justify-content: center;
+  gap: 2px;
   font-weight: 700;
   font-size: 12px;
+}
+
+.turn-chip-hp {
+  display: block;
+  width: 24px;
+  height: 4px;
+  background: #000;
+  border-radius: 2px;
+  overflow: hidden;
+}
+
+.turn-chip-hp > span {
+  display: block;
+  height: 100%;
+  background: #4cd964;
 }
 
 .turn-chip.ally {
@@ -175,6 +191,28 @@ button.primary {
   flex: 1;
   overflow: auto;
   min-width: 0;
+  position: relative;
+}
+
+.battle-banner {
+  position: absolute;
+  left: 0;
+  right: 0;
+  top: 38%;
+  text-align: center;
+  font-size: 44px;
+  font-weight: 800;
+  letter-spacing: 8px;
+  color: var(--accent);
+  text-shadow: 0 2px 12px #000;
+  background: linear-gradient(90deg, transparent, rgba(0, 0, 0, 0.7), transparent);
+  padding: 14px 0;
+  pointer-events: none;
+}
+
+.loading {
+  padding: 40px;
+  color: var(--muted);
 }
 
 .battle-canvas canvas {
@@ -182,11 +220,12 @@ button.primary {
 }
 
 .battle-side {
-  width: 360px;
+  width: 380px;
   display: flex;
   flex-direction: column;
   gap: 8px;
   min-height: 0;
+  overflow-y: auto;
 }
 
 .unit-title {
@@ -244,6 +283,163 @@ button.primary {
 .action-list button {
   width: 100%;
   text-align: left;
+}
+
+button.selected {
+  background: #3d5a99;
+  border-color: var(--accent);
+}
+
+.hud-title {
+  font-weight: 700;
+  margin-bottom: 6px;
+}
+
+.hud-bar {
+  display: grid;
+  grid-template-columns: 38px 1fr auto;
+  align-items: center;
+  gap: 6px;
+  margin: 3px 0;
+}
+
+.hud-bar-track {
+  height: 10px;
+  background: #000;
+  border-radius: 5px;
+  overflow: hidden;
+}
+
+.hud-bar-fill {
+  height: 100%;
+}
+
+.hud-bar-fill.hp {
+  background: #4cd964;
+}
+
+.hud-bar-fill.mana {
+  background: #4aa3ff;
+}
+
+.hud-bar-fill.stamina {
+  background: #f0b340;
+}
+
+.hud-bar-value {
+  font-size: 12px;
+  color: var(--muted);
+}
+
+.hud-row {
+  display: flex;
+  gap: 6px;
+  margin: 6px 0;
+}
+
+.hud-chip {
+  background: #2a2a38;
+  border-radius: 4px;
+  padding: 2px 8px;
+}
+
+.hud-chip.off {
+  opacity: 0.55;
+}
+
+.hud-line {
+  margin-top: 3px;
+}
+
+.skill-bar {
+  background: var(--panel);
+  border: 1px solid var(--panel-border);
+  border-radius: 6px;
+  padding: 8px 10px;
+}
+
+.skill-buttons {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 6px;
+}
+
+.skill-button {
+  width: 100%;
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  text-align: left;
+}
+
+.skill-name {
+  font-weight: 700;
+}
+
+.skill-cost {
+  font-size: 12px;
+  color: var(--muted);
+}
+
+.skill-card {
+  margin-top: 8px;
+  padding: 8px;
+  background: #14141c;
+  border: 1px solid var(--panel-border);
+  border-radius: 4px;
+}
+
+.skill-card-title {
+  font-weight: 700;
+}
+
+.skill-card-effects {
+  margin: 4px 0;
+  padding-left: 18px;
+}
+
+.mode-buttons {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  margin: 8px 0;
+}
+
+.mode-help {
+  margin-top: 6px;
+}
+
+.dir-buttons {
+  display: flex;
+  gap: 6px;
+  margin: 6px 0;
+}
+
+.dir-buttons button {
+  width: 36px;
+  font-size: 18px;
+}
+
+.preview-box {
+  margin-top: 8px;
+  padding: 6px 8px;
+  background: #14141c;
+  border-radius: 4px;
+}
+
+.preview-box ul {
+  margin: 0;
+  padding-left: 18px;
+}
+
+.fallback {
+  margin-top: 8px;
+}
+
+.speed-control {
+  display: flex;
+  align-items: center;
+  gap: 6px;
 }
 
 .action-footer {

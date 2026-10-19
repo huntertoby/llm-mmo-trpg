@@ -1,7 +1,7 @@
-"""名詞對照表（Phase 3-4a 6.2）：地形、表面、物件、狀態、反應、元素、屬性的 ID → 中文名。
+"""名詞對照表（Phase 3-4a 6.2）：地形、表面、物件、狀態、層數、反應、元素、屬性的 ID → 中文名。
 
 由內容庫產生，前端不再手寫中文名；只保留色塊等純顯示用的對照。``tags`` 是前端判斷外觀需要的
-簡短旗標（地形：``blocked``／``deadly``／``blocks_sight``；表面：``flammable``／``beneficial``……；
+簡短旗標（層數：``self``／``target`` 為累積在誰身上）（地形：``blocked``／``deadly``／``blocks_sight``；表面：``flammable``／``beneficial``……；
 物件：``objects.yaml`` 的標籤）。
 """
 
@@ -70,6 +70,9 @@ def build_glossary(library: ContentLibrary) -> Glossary:
         ),
         reactions=tuple(
             _entry(r.id, r.name_zh, r.description_zh) for r in rules.reactions.reactions
+        ),
+        stacks=tuple(
+            _entry(k.id, k.name_zh, k.description_zh, (k.owner,)) for k in rules.stacks.stacks
         ),
         elements=tuple(
             _entry(e.id.value, e.name_zh, e.description_zh) for e in library.elements.elements

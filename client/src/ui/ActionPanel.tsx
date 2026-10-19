@@ -1,61 +1,145 @@
-// 操作面板：其他動作清單、結束回合、略過動畫開關（技能 UI 在 3-4 取代）。
-import type { Action } from "../api/types";
-import type { ClassifiedActions } from "../battle/actions";
+// 操作面板：基本動作（攻擊、推擊、絆倒、推動物件、防禦、結束姿態、起身）、結束回合；
+// 選了技能或基本動作之後的目標說明（方向箭頭、自身、取消）與預覽；備援的「其他動作」清單（收合）。
+import type { Action, BattleView, PreviewOut } from "../api/types";
+import type { LabeledAction } from "../battle/actions";
+import { DIRECTIONS } from "../battle/glossary";
+import { previewLines } from "../battle/previewText";
+import { DIRECTION_ARROWS, DIRECTION_ORDER, isSelfOnly, type ActionMode } from "../battle/targeting";
+import type { UnitNames } from "../battle/units";
 
 interface Props {
-  classified: ClassifiedActions;
   enabled: boolean;
-  skipAnimation: boolean;
-  onSkipAnimation(value: boolean): void;
+  basic: readonly ActionMode[];
+  mode: ActionMode | null;
+  endTurn: Action | null;
+  fallback: readonly LabeledAction[];
+  moveCount: number;
+  attackCount: number;
+  preview: PreviewOut | null;
+  view: BattleView;
+  names: UnitNames;
+  onPickMode(mode: ActionMode): void;
+  onCancel(): void;
   onAction(action: Action): void;
+  /** 滑過面板上的按鈕時預覽那個動作（離開時 `null`）。 */
+  onPreviewAction(action: Action | null): void;
 }
 
-export function ActionPanel({
-  classified,
-  enabled,
-  skipAnimation,
-  onSkipAnimation,
-  onAction,
-}: Props) {
-  const { moves, attacks, others, endTurn } = classified;
+type HelpProps = Pick<Props, "enabled" | "onAction" | "onPreviewAction"> & { mode: ActionMode };
+
+function ModeHelp({ mode, enabled, onAction, onPreviewAction }: HelpProps) {
+  const t = mode.targets;
+  const pickable = t.units.size + t.objects.size + t.tiles.size;
+  const hint = isSelfOnly(t)
+    ? "對自身施放。"
+    : `點選格子上的目標（紅框 ${pickable} 個${t.directions.size > 0 ? "，或選擇方向" : ""}）。Esc／右鍵取消。`;
+  return (
+    <div className="mode-help">
+      <div className="section-title">{mode.label}</div>
+      <div className="small muted">{hint}</div>
+      {t.directions.size > 0 && (
+        <div className="dir-buttons">
+          {DIRECTION_ORDER.map((dir) => {
+            const action = t.directions.get(dir);
+            return (
+              <button
+                key={dir}
+                type="button"
+                disabled={!enabled || action === undefined}
+                title={`向${DIRECTIONS[dir] ?? dir}`}
+                onMouseEnter={() => onPreviewAction(action ?? null)}
+                onMouseLeave={() => onPreviewAction(null)}
+                onClick={() => action !== undefined && onAction(action)}
+              >
+                {DIRECTION_ARROWS[dir]}
+              </button>
+            );
+          })}
+        </div>
+      )}
+      {t.self !== null && (
+        <button
+          type="button"
+          className="primary"
+          disabled={!enabled}
+          onMouseEnter={() => onPreviewAction(t.self)}
+          onMouseLeave={() => onPreviewAction(null)}
+          onClick={() => t.self !== null && onAction(t.self)}
+        >
+          {isSelfOnly(t) ? "施放" : "施放於自身"}
+        </button>
+      )}
+    </div>
+  );
+}
+
+export function ActionPanel(props: Props) {
+  const { enabled, basic, mode, endTurn, fallback, preview, view, names } = props;
+  const lines = preview === null ? [] : previewLines(preview, names, view);
   return (
     <div className="panel action-panel">
       <div className="action-hint">
         {enabled
-          ? `點選藍色格子移動（${moves.size} 格），點選紅框敵人攻擊（${attacks.size} 個）。`
+          ? `點選藍色格子移動（${props.moveCount} 格），點選紅框敵人攻擊（${props.attackCount} 個）。`
           : "等待中……"}
       </div>
-      <div className="section-title">其他動作</div>
-      <ul className="action-list">
-        {others.length === 0 && <li className="muted">（無）</li>}
-        {others.map((o, i) => (
-          <li key={`${i}:${o.label}`}>
-            <button type="button" disabled={!enabled} onClick={() => onAction(o.action)}>
-              {o.label}
-            </button>
-          </li>
+      <div className="mode-buttons">
+        {basic.map((m) => (
+          <button
+            key={m.key}
+            type="button"
+            className={mode?.key === m.key ? "selected" : ""}
+            disabled={!enabled}
+            onClick={() => props.onPickMode(m)}
+          >
+            {m.label}
+          </button>
         ))}
-      </ul>
-      <div className="action-footer">
         <button
           type="button"
           className="primary"
           disabled={!enabled || endTurn === null}
-          onClick={() => {
-            if (endTurn !== null) onAction(endTurn);
-          }}
+          onClick={() => endTurn !== null && props.onAction(endTurn)}
         >
           結束回合
         </button>
-        <label className="skip-toggle">
-          <input
-            type="checkbox"
-            checked={skipAnimation}
-            onChange={(e) => onSkipAnimation(e.target.checked)}
-          />
-          略過動畫
-        </label>
       </div>
+      {mode !== null && (
+        <>
+          <ModeHelp
+            mode={mode}
+            enabled={enabled}
+            onAction={props.onAction}
+            onPreviewAction={props.onPreviewAction}
+          />
+          <button type="button" className="small-button" onClick={props.onCancel}>
+            取消選取
+          </button>
+        </>
+      )}
+      {lines.length > 0 && (
+        <div className="preview-box" aria-label="預覽">
+          <div className="section-title">預覽</div>
+          <ul>
+            {lines.map((l, i) => (
+              <li key={`${i}:${l}`}>{l}</li>
+            ))}
+          </ul>
+        </div>
+      )}
+      <details className="fallback">
+        <summary>其他動作（備援，{fallback.length}）</summary>
+        <ul className="action-list">
+          {fallback.length === 0 && <li className="muted">（無）</li>}
+          {fallback.map((o, i) => (
+            <li key={`${i}:${o.label}`}>
+              <button type="button" disabled={!enabled} onClick={() => props.onAction(o.action)}>
+                {o.label}
+              </button>
+            </li>
+          ))}
+        </ul>
+      </details>
     </div>
   );
 }

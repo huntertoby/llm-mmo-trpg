@@ -15,9 +15,19 @@ import type { DrawModel, ObjectDraw, TileDraw, UnitDraw } from "../battle/drawMo
 import { canvasSize, pixelToTile, TILE_SIZE, tileCenter, tileOrigin } from "../battle/geometry";
 import { HIGHLIGHT } from "../battle/glossary";
 
+export interface DirectionMark {
+  pos: Pos;
+  arrow: string;
+}
+
 export interface Highlights {
   moves: readonly Pos[];
+  /** 可攻擊或可選為技能目標的格子（紅框）。 */
   attacks: readonly Pos[];
+  /** 方向型技能：相鄰的方向格（黃色，附箭頭）。 */
+  directions: readonly DirectionMark[];
+  /** 預覽的影響範圍（橘色）。 */
+  preview: readonly Pos[];
   hover: Pos | null;
 }
 
@@ -221,6 +231,18 @@ export class BattleRenderer {
     for (const p of h.moves) {
       const o = tileOrigin(p);
       g.rect(o.x + 2, o.y + 2, T - 4, T - 4).fill({ color: HIGHLIGHT.move, alpha: 0.4 });
+    }
+    for (const p of h.preview) {
+      const o = tileOrigin(p);
+      g.rect(o.x + 1, o.y + 1, T - 2, T - 2).fill({ color: HIGHLIGHT.preview, alpha: 0.38 });
+    }
+    for (const d of h.directions) {
+      const o = tileOrigin(d.pos);
+      g.rect(o.x + 2, o.y + 2, T - 4, T - 4).fill({ color: HIGHLIGHT.direction, alpha: 0.3 });
+      const arrow = label(d.arrow, 26, HIGHLIGHT.direction, true);
+      arrow.anchor.set(0.5);
+      arrow.position.set(o.x + T / 2, o.y + T / 2);
+      this.highlights.addChild(arrow);
     }
     for (const p of h.attacks) {
       const o = tileOrigin(p);

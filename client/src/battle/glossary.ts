@@ -1,8 +1,60 @@
-// 顯示用對照表（色塊、名稱、圖示）。之後換美術只改這個檔。
-// 名稱與標籤抄自 content/terrain.yaml、surfaces.yaml、objects.yaml、statuses.yaml、reactions.yaml；
+// 顯示用對照表（色塊、圖示）。之後換美術只改這個檔。
+// 中文名與旗標（可燃、致命、不可通行……）不手寫：啟動時讀 /api/glossary（由 content 產生）。
 // 內容新增種類時找不到的鍵會退回預設值（顯示 ID），不會壞掉。
 
-import type { Surface } from "../api/types";
+import type { Glossary, GlossaryEntry, Surface } from "../api/types";
+
+// ---- 名詞對照（由 /api/glossary 提供；啟動時載入）-------------------------------------------
+
+export type GlossaryCategory =
+  | "terrain"
+  | "surfaces"
+  | "objects"
+  | "statuses"
+  | "stacks"
+  | "reactions"
+  | "elements"
+  | "attributes";
+
+const index = new Map<GlossaryCategory, Map<string, GlossaryEntry>>();
+
+/** 載入（或在測試中設定）名詞對照表。 */
+export function setGlossary(g: Glossary): void {
+  index.clear();
+  const categories: GlossaryCategory[] = [
+    "terrain",
+    "surfaces",
+    "objects",
+    "statuses",
+    "stacks",
+    "reactions",
+    "elements",
+    "attributes",
+  ];
+  for (const c of categories) index.set(c, new Map(g[c].map((e) => [e.id, e])));
+}
+
+export function glossaryEntry(category: GlossaryCategory, id: string): GlossaryEntry | undefined {
+  return index.get(category)?.get(id);
+}
+
+/** 中文名；對照表沒有時顯示 ID。 */
+export function glossaryName(category: GlossaryCategory, id: string): string {
+  return glossaryEntry(category, id)?.name_zh ?? id;
+}
+
+export function glossaryHasTag(category: GlossaryCategory, id: string, tag: string): boolean {
+  return glossaryEntry(category, id)?.tags.includes(tag) ?? false;
+}
+
+export const statusName = (id: string): string => glossaryName("statuses", id);
+export const stackName = (id: string): string => glossaryName("stacks", id);
+export const reactionName = (id: string): string => glossaryName("reactions", id);
+export const surfaceName = (id: string): string => glossaryName("surfaces", id);
+export const objectName = (id: string): string => glossaryName("objects", id);
+export const elementName = (id: string): string => glossaryName("elements", id);
+
+// ---- 顯示用對照（色塊、圖示；中文名與旗標來自上面的對照表）--------------------------------------
 
 export interface TerrainStyle {
   name: string;
@@ -15,26 +67,29 @@ export interface TerrainStyle {
   wall: boolean;
 }
 
-export const TERRAIN: Readonly<Record<string, TerrainStyle>> = {
-  stone: { name: "石地", color: 0x9a968c, blocked: false, deadly: false, wall: false },
-  grass: { name: "草地", color: 0x6f9a52, blocked: false, deadly: false, wall: false },
-  dirt: { name: "泥土", color: 0x9b7a55, blocked: false, deadly: false, wall: false },
-  chasm: { name: "深淵", color: 0x111118, blocked: true, deadly: true, wall: false },
-  lava: { name: "岩漿", color: 0xd8471c, blocked: true, deadly: true, wall: false },
-  ice_hole: { name: "冰窟", color: 0x17345c, blocked: true, deadly: true, wall: false },
-  wall: { name: "牆壁", color: 0x4a4440, blocked: true, deadly: false, wall: true },
+export const TERRAIN: Readonly<Record<string, { color: number }>> = {
+  stone: { color: 0x9a968c },
+  grass: { color: 0x6f9a52 },
+  dirt: { color: 0x9b7a55 },
+  chasm: { color: 0x111118 },
+  lava: { color: 0xd8471c },
+  ice_hole: { color: 0x17345c },
+  wall: { color: 0x4a4440 },
 };
 
-export const UNKNOWN_TERRAIN: TerrainStyle = {
-  name: "未知地形",
-  color: 0xff00ff,
-  blocked: false,
-  deadly: false,
-  wall: false,
-};
+const UNKNOWN_TERRAIN_COLOR = 0xff00ff;
+
+export function terrainStyle(terrain: string): TerrainStyle {
+  return {
+    name: glossaryName("terrain", terrain),
+    color: TERRAIN[terrain]?.color ?? UNKNOWN_TERRAIN_COLOR,
+    blocked: glossaryHasTag("terrain", terrain, "blocked"),
+    deadly: glossaryHasTag("terrain", terrain, "deadly"),
+    wall: glossaryHasTag("terrain", terrain, "blocks_sight") && glossaryHasTag("terrain", terrain, "blocked"),
+  };
+}
 
 export interface SurfaceStyle {
-  name: string;
   color: number;
   /** 疊在地形色上的比例（0–1）。 */
   alpha: number;
@@ -42,13 +97,13 @@ export interface SurfaceStyle {
 
 export const SURFACES: Readonly<Record<Surface, SurfaceStyle | null>> = {
   none: null,
-  oil: { name: "油", color: 0x2b2416, alpha: 0.6 },
-  water: { name: "水", color: 0x3a7bd5, alpha: 0.55 },
-  fire: { name: "火焰", color: 0xff7a1a, alpha: 0.7 },
-  ice: { name: "冰", color: 0xc8ecff, alpha: 0.7 },
-  poison: { name: "毒", color: 0x7bc043, alpha: 0.6 },
-  holy: { name: "聖光", color: 0xfff1a8, alpha: 0.6 },
-  darkness: { name: "黑暗", color: 0x3b1f4f, alpha: 0.65 },
+  oil: { color: 0x2b2416, alpha: 0.6 },
+  water: { color: 0x3a7bd5, alpha: 0.55 },
+  fire: { color: 0xff7a1a, alpha: 0.7 },
+  ice: { color: 0xc8ecff, alpha: 0.7 },
+  poison: { color: 0x7bc043, alpha: 0.6 },
+  holy: { color: 0xfff1a8, alpha: 0.6 },
+  darkness: { color: 0x3b1f4f, alpha: 0.65 },
 };
 
 export interface ObjectStyle {
@@ -61,57 +116,32 @@ export interface ObjectStyle {
   floor: boolean;
 }
 
-export const OBJECTS: Readonly<Record<string, ObjectStyle>> = {
-  wooden_bridge: { name: "木橋", glyph: "橋", color: 0x8a5a2b, flammable: true, floor: true },
-  oil_barrel: { name: "油桶", glyph: "油", color: 0x5a3a1a, flammable: true, floor: false },
-  thin_ice: { name: "薄冰", glyph: "冰", color: 0xaad8f0, flammable: false, floor: true },
-  stone_pillar: { name: "石柱", glyph: "柱", color: 0x6b6b6b, flammable: false, floor: false },
-  grass: { name: "草叢", glyph: "草", color: 0x3f7a2a, flammable: true, floor: true },
-  crate: { name: "木箱", glyph: "箱", color: 0xb07a3a, flammable: true, floor: false },
-  earth_wall: { name: "土牆", glyph: "土", color: 0x7a5a3a, flammable: false, floor: false },
-  low_wall: { name: "矮牆", glyph: "矮", color: 0x8a8070, flammable: false, floor: false },
-  fallen_log: { name: "倒木", glyph: "木", color: 0x6a4a2a, flammable: true, floor: false },
+interface ObjectLook {
+  glyph: string;
+  color: number;
+  floor: boolean;
+}
+
+export const OBJECTS: Readonly<Record<string, ObjectLook>> = {
+  wooden_bridge: { glyph: "橋", color: 0x8a5a2b, floor: true },
+  oil_barrel: { glyph: "油", color: 0x5a3a1a, floor: false },
+  thin_ice: { glyph: "冰", color: 0xaad8f0, floor: true },
+  stone_pillar: { glyph: "柱", color: 0x6b6b6b, floor: false },
+  grass: { glyph: "草", color: 0x3f7a2a, floor: true },
+  crate: { glyph: "箱", color: 0xb07a3a, floor: false },
+  earth_wall: { glyph: "土", color: 0x7a5a3a, floor: false },
+  low_wall: { glyph: "矮", color: 0x8a8070, floor: false },
+  fallen_log: { glyph: "木", color: 0x6a4a2a, floor: false },
 };
 
 export function objectStyle(kind: string): ObjectStyle {
-  return OBJECTS[kind] ?? { name: kind, glyph: "?", color: 0x888888, flammable: false, floor: false };
+  const look = OBJECTS[kind] ?? { glyph: "?", color: 0x888888, floor: false };
+  return {
+    ...look,
+    name: glossaryName("objects", kind),
+    flammable: glossaryHasTag("objects", kind, "flammable"),
+  };
 }
-
-export function terrainStyle(terrain: string): TerrainStyle {
-  return TERRAIN[terrain] ?? { ...UNKNOWN_TERRAIN, name: terrain };
-}
-
-export const STATUS_NAMES: Readonly<Record<string, string>> = {
-  defending: "防禦",
-  prone: "倒地",
-  burning: "燃燒",
-  concealed: "隱蔽",
-  slow: "緩速",
-  root: "定身",
-  stun: "暈眩",
-  frozen: "冰凍",
-  weaken: "虛弱",
-  vulnerable: "易傷",
-  bleed: "流血",
-  poison: "中毒",
-  guarded: "護衛",
-  empowered: "激昂",
-  hasted: "加速",
-  regenerating: "再生",
-  shielded: "護盾",
-  taunted: "嘲諷",
-  feared: "恐懼",
-  silenced: "沉默",
-  blinded: "致盲",
-  marked: "被標記",
-  stance_fury: "狂怒姿態",
-  stance_bulwark: "堅壁姿態",
-};
-
-export const REACTION_NAMES: Readonly<Record<string, string>> = {
-  block: "格擋",
-  opportunity_attack: "藉機攻擊",
-};
 
 export const END_REASONS: Readonly<Record<string, string>> = {
   eliminate: "全滅",
@@ -137,6 +167,8 @@ export const TEAM_COLORS: Readonly<Record<"ally" | "enemy", number>> = {
 export const HIGHLIGHT = {
   move: 0x7fe3ff,
   attack: 0xff4040,
+  preview: 0xff9a2e,
+  direction: 0xffe14d,
   active: 0xffe14d,
   hero: 0xffffff,
   trap: 0xffd23f,
@@ -144,11 +176,3 @@ export const HIGHLIGHT = {
   flammable: 0xe0a040,
   deadly: 0xff3030,
 } as const;
-
-export function statusName(id: string): string {
-  return STATUS_NAMES[id] ?? id;
-}
-
-export function reactionName(id: string): string {
-  return REACTION_NAMES[id] ?? id;
-}

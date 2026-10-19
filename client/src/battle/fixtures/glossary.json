@@ -1,0 +1,494 @@
+{
+ "terrain": [
+  {
+   "id": "stone",
+   "name_zh": "石地",
+   "description_zh": null,
+   "tags": []
+  },
+  {
+   "id": "grass",
+   "name_zh": "草地",
+   "description_zh": null,
+   "tags": []
+  },
+  {
+   "id": "dirt",
+   "name_zh": "泥土",
+   "description_zh": null,
+   "tags": []
+  },
+  {
+   "id": "chasm",
+   "name_zh": "深淵",
+   "description_zh": null,
+   "tags": [
+    "blocked",
+    "deadly"
+   ]
+  },
+  {
+   "id": "lava",
+   "name_zh": "岩漿",
+   "description_zh": null,
+   "tags": [
+    "blocked",
+    "deadly"
+   ]
+  },
+  {
+   "id": "ice_hole",
+   "name_zh": "冰窟",
+   "description_zh": null,
+   "tags": [
+    "blocked",
+    "deadly"
+   ]
+  },
+  {
+   "id": "wall",
+   "name_zh": "牆壁",
+   "description_zh": null,
+   "tags": [
+    "blocked",
+    "blocks_sight"
+   ]
+  }
+ ],
+ "surfaces": [
+  {
+   "id": "oil",
+   "name_zh": "油",
+   "description_zh": null,
+   "tags": [
+    "flammable"
+   ]
+  },
+  {
+   "id": "water",
+   "name_zh": "水",
+   "description_zh": null,
+   "tags": []
+  },
+  {
+   "id": "fire",
+   "name_zh": "火焰",
+   "description_zh": null,
+   "tags": []
+  },
+  {
+   "id": "ice",
+   "name_zh": "冰",
+   "description_zh": null,
+   "tags": []
+  },
+  {
+   "id": "poison",
+   "name_zh": "毒",
+   "description_zh": null,
+   "tags": []
+  },
+  {
+   "id": "holy",
+   "name_zh": "聖光",
+   "description_zh": null,
+   "tags": [
+    "beneficial"
+   ]
+  },
+  {
+   "id": "darkness",
+   "name_zh": "黑暗",
+   "description_zh": null,
+   "tags": [
+    "blocks_sight",
+    "conceal"
+   ]
+  }
+ ],
+ "objects": [
+  {
+   "id": "wooden_bridge",
+   "name_zh": "木橋",
+   "description_zh": null,
+   "tags": [
+    "breakable",
+    "flammable",
+    "over_chasm"
+   ]
+  },
+  {
+   "id": "oil_barrel",
+   "name_zh": "油桶",
+   "description_zh": null,
+   "tags": [
+    "breakable",
+    "explosive",
+    "flammable",
+    "half_cover",
+    "pushable"
+   ]
+  },
+  {
+   "id": "thin_ice",
+   "name_zh": "薄冰",
+   "description_zh": null,
+   "tags": [
+    "breakable",
+    "over_chasm"
+   ]
+  },
+  {
+   "id": "stone_pillar",
+   "name_zh": "石柱",
+   "description_zh": null,
+   "tags": [
+    "blocks_move",
+    "blocks_sight",
+    "breakable"
+   ]
+  },
+  {
+   "id": "grass",
+   "name_zh": "草叢",
+   "description_zh": null,
+   "tags": [
+    "conceal",
+    "flammable"
+   ]
+  },
+  {
+   "id": "crate",
+   "name_zh": "木箱",
+   "description_zh": null,
+   "tags": [
+    "blocks_move",
+    "breakable",
+    "flammable",
+    "half_cover",
+    "pushable"
+   ]
+  },
+  {
+   "id": "earth_wall",
+   "name_zh": "土牆",
+   "description_zh": null,
+   "tags": [
+    "blocks_move",
+    "blocks_sight",
+    "breakable"
+   ]
+  },
+  {
+   "id": "low_wall",
+   "name_zh": "矮牆",
+   "description_zh": null,
+   "tags": [
+    "blocks_move",
+    "breakable",
+    "half_cover"
+   ]
+  },
+  {
+   "id": "fallen_log",
+   "name_zh": "倒木",
+   "description_zh": null,
+   "tags": [
+    "blocks_move",
+    "breakable",
+    "flammable",
+    "half_cover"
+   ]
+  }
+ ],
+ "statuses": [
+  {
+   "id": "defending",
+   "name_zh": "防禦",
+   "description_zh": "防禦值 +25%，持續到自己的下回合開始。",
+   "tags": [
+    "beneficial"
+   ]
+  },
+  {
+   "id": "prone",
+   "name_zh": "倒地",
+   "description_zh": "移動前要先站起來（消耗一半移動點數）；近戰攻擊倒地者有優勢，遠程攻擊有劣勢。",
+   "tags": []
+  },
+  {
+   "id": "burning",
+   "name_zh": "燃燒",
+   "description_zh": "回合開始時受到 1d6 火焰傷害，持續 2 回合；重複施加時刷新持續時間。",
+   "tags": []
+  },
+  {
+   "id": "concealed",
+   "name_zh": "隱蔽",
+   "description_zh": "對其攻擊有劣勢；超過 2 格的遠程攻擊無法選為目標。站在黑暗表面或草叢中的單位也視為隱蔽。",
+   "tags": [
+    "beneficial"
+   ]
+  },
+  {
+   "id": "slow",
+   "name_zh": "緩速",
+   "description_zh": "回合開始時的移動點數減半（無條件捨去）。",
+   "tags": []
+  },
+  {
+   "id": "root",
+   "name_zh": "定身",
+   "description_zh": "不能主動移動（仍可被推擊、拉扯等強制位移）。",
+   "tags": []
+  },
+  {
+   "id": "stun",
+   "name_zh": "暈眩",
+   "description_zh": "跳過整個回合：沒有 AP、移動點數與反應。",
+   "tags": []
+  },
+  {
+   "id": "frozen",
+   "name_zh": "冰凍",
+   "description_zh": "跳過整個回合（同暈眩，與暈眩共用硬控的控制遞減）；受到火焰傷害時立即解除。",
+   "tags": []
+  },
+  {
+   "id": "weaken",
+   "name_zh": "虛弱",
+   "description_zh": "自己造成的攻擊傷害 ×75%。",
+   "tags": []
+  },
+  {
+   "id": "vulnerable",
+   "name_zh": "易傷",
+   "description_zh": "受到的骰值傷害 ×125%（不含墜落、致命地形等百分比傷害）。",
+   "tags": []
+  },
+  {
+   "id": "bleed",
+   "name_zh": "流血",
+   "description_zh": "回合開始時受到 1d4 物理傷害，持續 3 回合。",
+   "tags": []
+  },
+  {
+   "id": "poison",
+   "name_zh": "中毒",
+   "description_zh": "回合開始時受到 1d4 毒素傷害，持續 3 回合；受到的治療減半。",
+   "tags": []
+  },
+  {
+   "id": "guarded",
+   "name_zh": "護衛",
+   "description_zh": "受到的骰值傷害 ×70%（不含墜落、致命地形等百分比傷害）。",
+   "tags": [
+    "beneficial"
+   ]
+  },
+  {
+   "id": "empowered",
+   "name_zh": "激昂",
+   "description_zh": "六個屬性各 +2（命中、抵抗、傷害與治療的縮放都用加值後的屬性；先攻不變）。",
+   "tags": [
+    "beneficial"
+   ]
+  },
+  {
+   "id": "hasted",
+   "name_zh": "加速",
+   "description_zh": "回合開始時的移動點數 ×150%（無條件捨去）。",
+   "tags": [
+    "beneficial"
+   ]
+  },
+  {
+   "id": "regenerating",
+   "name_zh": "再生",
+   "description_zh": "回合開始時恢復 1d4 HP，持續 3 回合。",
+   "tags": [
+    "beneficial"
+   ]
+  },
+  {
+   "id": "shielded",
+   "name_zh": "護盾",
+   "description_zh": "帶有吸收量；受到的骰值傷害先扣護盾，吸收量歸零時消失。",
+   "tags": [
+    "beneficial"
+   ]
+  },
+  {
+   "id": "taunted",
+   "name_zh": "嘲諷",
+   "description_zh": "對嘲諷者以外的目標發動攻擊時有劣勢；嘲諷者倒下時消失。",
+   "tags": []
+  },
+  {
+   "id": "feared",
+   "name_zh": "恐懼",
+   "description_zh": "主動移動時不能靠近恐懼的來源；攻擊有劣勢。來源倒下時消失。",
+   "tags": []
+  },
+  {
+   "id": "silenced",
+   "name_zh": "沉默",
+   "description_zh": "不能使用法術技（武器技與基本攻擊照常）。",
+   "tags": []
+  },
+  {
+   "id": "blinded",
+   "name_zh": "致盲",
+   "description_zh": "攻擊與以單位為目標的技能只能選擇 2 格以內的單位；攻擊有劣勢。",
+   "tags": []
+  },
+  {
+   "id": "marked",
+   "name_zh": "被標記",
+   "description_zh": "對其攻擊有優勢；隱蔽也無法讓它免於被選為目標。",
+   "tags": []
+  },
+  {
+   "id": "stance_fury",
+   "name_zh": "狂怒姿態",
+   "description_zh": "力量 +2，但受到的骰值傷害 ×120%；持續到取消。",
+   "tags": [
+    "beneficial"
+   ]
+  },
+  {
+   "id": "stance_bulwark",
+   "name_zh": "堅壁姿態",
+   "description_zh": "受到的骰值傷害 ×75%，但回合開始時的移動點數減半；持續到取消。",
+   "tags": [
+    "beneficial"
+   ]
+  }
+ ],
+ "stacks": [
+  {
+   "id": "static_charge",
+   "name_zh": "靜電",
+   "description_zh": "累積在施放者自己身上的蓄能；雷霆終結消耗全部靜電，每層提高傷害。",
+   "tags": [
+    "self"
+   ]
+  },
+  {
+   "id": "sunder",
+   "name_zh": "破甲印",
+   "description_zh": "疊在被命中的目標身上的印記；碎甲重擊消耗目標身上的全部破甲印，每層提高傷害。3 輪沒有再疊就清空。",
+   "tags": [
+    "target"
+   ]
+  }
+ ],
+ "reactions": [
+  {
+   "id": "block",
+   "name_zh": "格擋",
+   "description_zh": "被近戰攻擊命中後，傷害減半，消耗 10 耐力。",
+   "tags": []
+  },
+  {
+   "id": "opportunity_attack",
+   "name_zh": "藉機攻擊",
+   "description_zh": "敵人離開相鄰格時，以近戰武器攻擊一次（不花 AP）。",
+   "tags": []
+  }
+ ],
+ "elements": [
+  {
+   "id": "physical",
+   "name_zh": "物理",
+   "description_zh": "刀劍、拳腳、鈍器與墜落等不帶元素的傷害，擅長破壞物件。",
+   "tags": []
+  },
+  {
+   "id": "fire",
+   "name_zh": "火焰",
+   "description_zh": "點燃易燃物與油表面，引爆爆炸物，造成持續燃燒；遇水熄滅。",
+   "tags": []
+  },
+  {
+   "id": "ice",
+   "name_zh": "冰霜",
+   "description_zh": "把水凍成冰表面，冰上的單位可能滑倒。",
+   "tags": []
+  },
+  {
+   "id": "lightning",
+   "name_zh": "雷電",
+   "description_zh": "沿著導電物與相連的水面擴散、連鎖。",
+   "tags": []
+  },
+  {
+   "id": "poison",
+   "name_zh": "毒素",
+   "description_zh": "造成持續傷害，可形成毒表面或毒霧。",
+   "tags": []
+  },
+  {
+   "id": "wind",
+   "name_zh": "風",
+   "description_zh": "推擊單位與物件，讓火勢蔓延、吹散毒霧。",
+   "tags": []
+  },
+  {
+   "id": "earth",
+   "name_zh": "大地",
+   "description_zh": "產生障礙物，讓地形隆起或下陷而改變高度。",
+   "tags": []
+  },
+  {
+   "id": "holy",
+   "name_zh": "神聖",
+   "description_zh": "淨化與治癒之力，可形成聖光表面治療友方、傷害不死者。",
+   "tags": []
+  },
+  {
+   "id": "shadow",
+   "name_zh": "暗影",
+   "description_zh": "侵蝕心智與視線，可形成阻擋視線的黑暗表面，擅長隱匿與恐懼。",
+   "tags": []
+  }
+ ],
+ "attributes": [
+  {
+   "id": "str",
+   "name_zh": "力量",
+   "description_zh": null,
+   "tags": []
+  },
+  {
+   "id": "dex",
+   "name_zh": "敏捷",
+   "description_zh": null,
+   "tags": []
+  },
+  {
+   "id": "con",
+   "name_zh": "體質",
+   "description_zh": null,
+   "tags": []
+  },
+  {
+   "id": "int",
+   "name_zh": "智力",
+   "description_zh": null,
+   "tags": []
+  },
+  {
+   "id": "wis",
+   "name_zh": "感知",
+   "description_zh": null,
+   "tags": []
+  },
+  {
+   "id": "wil",
+   "name_zh": "意志",
+   "description_zh": null,
+   "tags": []
+  }
+ ]
+}

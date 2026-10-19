@@ -18,7 +18,12 @@ const walk = (unit: string, fx: number, fy: number, tx: number, ty: number) => (
   cost: 1,
 });
 const said = (text: string) => ({ seq: seq++, round: 1, type: "something", text });
-const step = (...events: Record<string, unknown>[]): StepOut => ({ actor_id: null, step: null, events });
+const step = (...events: Record<string, unknown>[]): StepOut => ({
+  actor_id: null,
+  step: null,
+  events,
+  view: smallView(),
+});
 
 describe("logLines", () => {
   it("merges consecutive walking steps of one unit into one line", () => {

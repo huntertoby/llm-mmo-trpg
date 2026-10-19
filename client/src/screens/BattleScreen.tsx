@@ -1,13 +1,32 @@
-// 戰鬥畫面：格子（PixiJS）＋ 回合資訊 ＋ 單位資訊 ＋ 操作 ＋ 戰鬥紀錄。
-// 每次送出動作或決定：鎖住操作 → 收到回應 → 寫紀錄、播放移動動畫 → 以回應的 `view` 重畫。
+// 戰鬥畫面：格子（PixiJS）＋ 回合列 ＋ HUD ＋ 技能列 ＋ 操作 ＋ 戰鬥紀錄。
+// 每次送出動作或決定：鎖住操作 → 收到回應 → 先畫 `initial_view`，再依 `steps` 一步一步播放
+// （標示行動者 → 移動動畫 → 該步的 `view` → 紀錄 → 停頓）→ 最後以 `res.view` 為準。
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { flushSync } from "react-dom";
 import { api, ApiError } from "../api/client";
 import type { Action, BattleResponse, BattleView, Pos } from "../api/types";
-import { actionForClick, classifyActions, skillIdsOf } from "../battle/actions";
-import { movePlan } from "../battle/animation";
+import { actionForClick, actionLabel, classifyActions, type LabeledAction } from "../battle/actions";
 import { buildDrawModel } from "../battle/drawModel";
 import { posKey, samePos } from "../battle/geometry";
-import { logLines, type LogLine } from "../battle/log";
+import type { LogLine } from "../battle/log";
+import {
+  frameOps,
+  playbackPlan,
+  remainingLines,
+  type PlayOp,
+  type PlaySpeed,
+} from "../battle/playback";
+import {
+  actionAtTile,
+  basicModes,
+  DIRECTION_ARROWS,
+  fallbackActions,
+  isSelfOnly,
+  skillButtons,
+  skillMode,
+  targetTiles,
+  type ActionMode,
+} from "../battle/targeting";
 import { unitNames } from "../battle/units";
 import type { BattleRenderer, Highlights } from "../render/BattleRenderer";
 import { ActionPanel } from "../ui/ActionPanel";
@@ -16,32 +35,21 @@ import { BattleLog } from "../ui/BattleLog";
 import { DecisionDialog } from "../ui/DecisionDialog";
 import { EndPanel } from "../ui/EndPanel";
 import { ErrorBanner } from "../ui/ErrorBanner";
+import { Hud } from "../ui/Hud";
+import { SkillBar } from "../ui/SkillBar";
+import { loadSpeed, saveSpeed, SpeedControl } from "../ui/SpeedControl";
 import { TurnBar } from "../ui/TurnBar";
 import { UnitInfo } from "../ui/UnitInfo";
-import { useSkillNames } from "../ui/useSkillNames";
+import { useSkillCards, useSkillNames } from "../ui/useSkillCards";
+import { usePreview } from "../ui/usePreview";
 
 interface Props {
   initial: BattleResponse;
   onExit(): void;
 }
 
-const SKIP_KEY = "trpg.skipAnimation";
-
-function loadSkip(): boolean {
-  try {
-    return window.localStorage.getItem(SKIP_KEY) === "1";
-  } catch {
-    return false;
-  }
-}
-
-function saveSkip(value: boolean): void {
-  try {
-    window.localStorage.setItem(SKIP_KEY, value ? "1" : "0");
-  } catch {
-    // 無法存取 localStorage（私密視窗等）時只在本次有效。
-  }
-}
+const BANNER_MS = 1000;
+const NO_HIGHLIGHTS: Highlights = { moves: [], attacks: [], directions: [], preview: [], hover: null };
 
 function errorText(e: unknown): string {
   if (e instanceof ApiError) return e.message;
@@ -58,49 +66,206 @@ export function BattleScreen({ initial, onExit }: Props) {
   const battleId = initial.battle_id;
   const heroId = initial.hero_id;
   const [response, setResponse] = useState(initial);
-  const [shown, setShown] = useState<BattleView>(initial.view);
-  const [lines, setLines] = useState<LogLine[]>(() =>
-    logLines(initial.steps, unitNames(initial.view)),
-  );
-  const [busy, setBusy] = useState(false);
+  const [shown, setShown] = useState<BattleView>(initial.initial_view);
+  /** 逐步播放時指定的行動者；`undefined` ＝ 用視圖的 `active_unit`。 */
+  const [acting, setActing] = useState<string | undefined>(undefined);
+  const [lines, setLines] = useState<LogLine[]>([]);
+  const [busy, setBusy] = useState(true);
+  const [playing, setPlaying] = useState(false);
+  const [banner, setBanner] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [hover, setHover] = useState<Pos | null>(null);
   const [selected, setSelected] = useState<string | null>(null);
-  const [skipAnimation, setSkipAnimation] = useState(loadSkip);
-  const busyRef = useRef(false);
-  const skipRef = useRef(skipAnimation);
+  const [speed, setSpeed] = useState<PlaySpeed>(loadSpeed);
+  const [modeKey, setModeKey] = useState<string | null>(null);
+  const [panelPreview, setPanelPreview] = useState<Action | null>(null);
+  const busyRef = useRef(true);
+  const speedRef = useRef(speed);
+  const skipRef = useRef(false);
+  const wakeRef = useRef<(() => void) | null>(null);
+  const startedRef = useRef(false);
   const rendererRef = useRef<BattleRenderer | null>(null);
 
   useEffect(() => {
-    skipRef.current = skipAnimation;
-    saveSkip(skipAnimation);
-  }, [skipAnimation]);
+    speedRef.current = speed;
+    saveSpeed(speed);
+  }, [speed]);
 
+  // ---- 派生資料 --------------------------------------------------------------
+  const view = response.view;
+  const hero = useMemo(() => view.units.find((u) => u.id === heroId) ?? null, [view, heroId]);
+  const skillIds = useMemo(() => {
+    const ids = new Set<string>(hero?.skills ?? []);
+    for (const a of response.legal_actions) if (a.type === "use_skill") ids.add(a.skill_id);
+    for (const id of Object.keys(hero?.cooldowns ?? {})) ids.add(id);
+    return [...ids].sort();
+  }, [hero, response.legal_actions]);
+  const cards = useSkillCards(skillIds);
+  const skillNames = useSkillNames(cards);
   const names = useMemo(() => unitNames(shown), [shown]);
-  const skillNames = useSkillNames(skillIdsOf(response.legal_actions, response.view));
+  const liveNames = useMemo(() => unitNames(view), [view]);
   const canAct = response.awaiting === "action" && !busy;
   const classified = useMemo(
-    () => classifyActions(response.legal_actions, response.view, skillNames),
-    [response, skillNames],
+    () => classifyActions(response.legal_actions, view, skillNames),
+    [response, view, skillNames],
   );
-  const model = useMemo(() => buildDrawModel(shown, heroId), [shown, heroId]);
+  const buttons = useMemo(
+    () => (hero === null ? [] : skillButtons(hero, response.legal_actions, cards)),
+    [hero, response.legal_actions, cards],
+  );
+  const basic = useMemo(() => basicModes(response.legal_actions), [response.legal_actions]);
+  const modes = useMemo(() => {
+    const map = new Map<string, ActionMode>();
+    for (const m of basic) map.set(m.key, m);
+    for (const b of buttons) if (b.disabledReason === null) map.set(`skill:${b.skillId}`, skillMode(b));
+    return map;
+  }, [basic, buttons]);
+  const mode = canAct && modeKey !== null ? (modes.get(modeKey) ?? null) : null;
+  const fallback = useMemo<LabeledAction[]>(
+    () =>
+      hero === null
+        ? []
+        : fallbackActions(response.legal_actions, hero).map((action) => ({
+            action,
+            label: actionLabel(action, view, skillNames, liveNames),
+          })),
+    [hero, response.legal_actions, view, skillNames, liveNames],
+  );
+  const model = useMemo(() => buildDrawModel(shown, heroId, acting), [shown, heroId, acting]);
 
+  // 回應換了（動作送出、狀態改變）就取消選取。
+  useEffect(() => {
+    setModeKey(null);
+    setPanelPreview(null);
+  }, [response]);
+
+  // ---- 預覽 -----------------------------------------------------------------
+  const hoverAction = useMemo<Action | null>(() => {
+    if (!canAct || hover === null || hero === null) return null;
+    if (mode !== null) return actionAtTile(mode, view, hero, hover);
+    const target = view.units.find((u) => !u.downed && !u.escaped && samePos(u.pos, hover));
+    return target === undefined ? null : (classified.attacks.get(target.id) ?? null);
+  }, [canAct, hover, hero, mode, view, classified]);
+  const selfAction = mode !== null && isSelfOnly(mode.targets) ? mode.targets.self : null;
+  const preview = usePreview(battleId, response, canAct ? (hoverAction ?? panelPreview ?? selfAction) : null);
+
+  // ---- 高亮 -----------------------------------------------------------------
   const highlights = useMemo<Highlights>(() => {
-    if (!canAct) return { moves: [], attacks: [], hover };
+    if (!canAct || hero === null) return { ...NO_HIGHLIGHTS, hover };
+    const previewTiles = (preview?.affected_tiles ?? []).map(([x, y]): Pos => ({ x: x as number, y: y as number }));
+    if (mode !== null) {
+      const tt = targetTiles(mode, view, hero);
+      return {
+        moves: [],
+        attacks: tt.targets,
+        directions: tt.directions.map((d) => ({ pos: d.pos, arrow: DIRECTION_ARROWS[d.direction] })),
+        preview: previewTiles,
+        hover,
+      };
+    }
     const moves = [...classified.moves.values()].map((m) => m.path[m.path.length - 1] as Pos);
     const attacks = [...classified.attacks.keys()].flatMap((id) => {
-      const u = response.view.units.find((x) => x.id === id);
+      const u = view.units.find((x) => x.id === id);
       return u === undefined ? [] : [u.pos];
     });
-    return { moves, attacks, hover };
-  }, [canAct, classified, hover, response]);
+    return { moves, attacks, directions: [], preview: previewTiles, hover };
+  }, [canAct, hero, mode, classified, view, preview, hover]);
 
-  const play = useCallback(async (res: BattleResponse) => {
-    setLines((prev) => [...prev, ...logLines(res.steps, unitNames(res.view))]);
-    await rendererRef.current?.animate(movePlan(res.steps), () => skipRef.current);
-    setResponse(res);
-    setShown(res.view);
+  // ---- 播放 -----------------------------------------------------------------
+  const sleep = useCallback(
+    (ms: number) =>
+      new Promise<void>((resolve) => {
+        const timer = window.setTimeout(done, ms);
+        function done() {
+          window.clearTimeout(timer);
+          wakeRef.current = null;
+          resolve();
+        }
+        wakeRef.current = done;
+      }),
+    [],
+  );
+
+  const skipNow = useCallback(() => {
+    skipRef.current = true;
+    wakeRef.current?.();
   }, []);
+
+  const runOp = useCallback(
+    async (op: PlayOp) => {
+      const skip = () => skipRef.current || speedRef.current === "skip";
+      switch (op.op) {
+        case "mark":
+          flushSync(() => setActing(op.unitId ?? undefined));
+          break;
+        case "move":
+          await rendererRef.current?.animate([op.anim], skip);
+          break;
+        case "view":
+          flushSync(() => setShown(op.view));
+          break;
+        case "log":
+          setLines((prev) => [...prev, ...op.lines]);
+          break;
+        case "pause":
+          if (!skip()) await sleep(op.ms);
+          break;
+      }
+    },
+    [sleep],
+  );
+
+  const play = useCallback(
+    async (res: BattleResponse, withBanner: boolean) => {
+      skipRef.current = false;
+      setPlaying(true);
+      try {
+        const plan = playbackPlan(res, heroId, speedRef.current);
+        flushSync(() => {
+          setActing(undefined);
+          setShown(plan.initialView);
+        });
+        if (withBanner) {
+          setBanner(true);
+          if (speedRef.current !== "skip") await sleep(BANNER_MS);
+          setBanner(false);
+        }
+        let done = 0;
+        for (const frame of plan.frames) {
+          if (skipRef.current) break;
+          for (const op of frameOps(frame)) await runOp(op);
+          done += 1;
+        }
+        if (done < plan.frames.length) setLines((prev) => [...prev, ...remainingLines(plan, done)]);
+      } finally {
+        setBanner(false);
+        flushSync(() => {
+          setActing(undefined);
+          setResponse(res);
+          setShown(res.view);
+        });
+        setPlaying(false);
+      }
+    },
+    [heroId, runOp, sleep],
+  );
+
+  // 建立戰鬥後的第一次播放：「戰鬥開始」橫幅 ＋ 開場到主角回合之間的 AI 行動。
+  useEffect(() => {
+    if (startedRef.current) return;
+    startedRef.current = true;
+    void (async () => {
+      try {
+        await play(initial, true);
+      } catch (e) {
+        setError(errorText(e));
+        setShown(initial.view);
+      } finally {
+        busyRef.current = false;
+        setBusy(false);
+      }
+    })();
+  }, [initial, play]);
 
   const run = useCallback(
     async (call: () => Promise<BattleResponse>) => {
@@ -108,8 +273,10 @@ export function BattleScreen({ initial, onExit }: Props) {
       busyRef.current = true;
       setBusy(true);
       setError(null);
+      setModeKey(null);
+      setPanelPreview(null);
       try {
-        await play(await call());
+        await play(await call(), false);
       } catch (e) {
         setError(errorText(e));
         // 以伺服器目前的狀態為準，避免畫面與伺服器不一致而卡住。
@@ -134,16 +301,58 @@ export function BattleScreen({ initial, onExit }: Props) {
     [battleId, run],
   );
 
+  // ---- 選取與點選 -------------------------------------------------------------
+  const cancel = useCallback(() => {
+    setModeKey(null);
+    setPanelPreview(null);
+  }, []);
+
+  useEffect(() => {
+    const onKey = (e: KeyboardEvent) => {
+      if (e.key === "Escape") cancel();
+    };
+    window.addEventListener("keydown", onKey);
+    return () => window.removeEventListener("keydown", onKey);
+  }, [cancel]);
+
+  const pickMode = useCallback(
+    (m: ActionMode) => {
+      const instant = m.kind !== "skill" && isSelfOnly(m.targets) && m.targets.self !== null;
+      if (instant && m.targets.self !== null) {
+        act(m.targets.self);
+        return;
+      }
+      setPanelPreview(null);
+      setModeKey((cur) => (cur === m.key ? null : m.key));
+    },
+    [act],
+  );
+
+  const pickSkill = useCallback(
+    (skillId: string) => {
+      const m = modes.get(`skill:${skillId}`);
+      if (m !== undefined) pickMode(m);
+    },
+    [modes, pickMode],
+  );
+
   const onTileClick = useCallback(
     (tile: Pos) => {
-      const action = canAct ? actionForClick(classified, response.view, tile) : null;
-      if (action !== null) {
-        act(action);
-        return;
+      if (canAct && hero !== null) {
+        if (mode !== null) {
+          const a = actionAtTile(mode, view, hero, tile);
+          if (a !== null) act(a);
+          return;
+        }
+        const action = actionForClick(classified, view, tile);
+        if (action !== null) {
+          act(action);
+          return;
+        }
       }
       setSelected(unitAt(shown, tile)?.id ?? null);
     },
-    [act, canAct, classified, response, shown],
+    [act, canAct, classified, hero, mode, shown, view],
   );
 
   const onTileHover = useCallback((tile: Pos | null) => {
@@ -158,11 +367,12 @@ export function BattleScreen({ initial, onExit }: Props) {
     shown.units.find((u) => u.id === selected) ??
     shown.units.find((u) => u.id === heroId) ??
     null;
-  const ended = response.awaiting === "ended" || response.awaiting === "stalled";
+  const shownHero = shown.units.find((u) => u.id === heroId) ?? null;
+  const ended = (response.awaiting === "ended" || response.awaiting === "stalled") && !busy;
 
   return (
     <div className="battle-screen">
-      <TurnBar view={shown} names={names} />
+      <TurnBar view={shown} names={names} acting={acting} />
       <ErrorBanner message={error} onClose={() => setError(null)} />
       <div className="battle-main">
         <div className="battle-board">
@@ -171,27 +381,47 @@ export function BattleScreen({ initial, onExit }: Props) {
             highlights={highlights}
             onTileClick={onTileClick}
             onTileHover={onTileHover}
+            onCancel={cancel}
             rendererRef={rendererRef}
           />
+          {banner && <div className="battle-banner">戰鬥開始</div>}
         </div>
         <div className="battle-side">
-          <UnitInfo unit={infoUnit} names={names} heroId={heroId} skills={skillNames} />
-          {ended && !busy ? (
+          <Hud view={shown} hero={shownHero} skills={skillNames} />
+          <SkillBar
+            buttons={buttons}
+            cards={cards}
+            selectedKey={mode?.key ?? null}
+            enabled={canAct}
+            onSelect={pickSkill}
+          />
+          {ended ? (
             <EndPanel response={response} onRestart={onExit} />
           ) : (
             <ActionPanel
-              classified={classified}
               enabled={canAct}
-              skipAnimation={skipAnimation}
-              onSkipAnimation={setSkipAnimation}
+              basic={basic}
+              mode={mode}
+              endTurn={classified.endTurn}
+              fallback={fallback}
+              moveCount={classified.moves.size}
+              attackCount={classified.attacks.size}
+              preview={preview}
+              view={view}
+              names={liveNames}
+              onPickMode={pickMode}
+              onCancel={cancel}
               onAction={act}
+              onPreviewAction={setPanelPreview}
             />
           )}
+          <SpeedControl speed={speed} playing={playing} onSpeed={setSpeed} onSkipNow={skipNow} />
+          <UnitInfo unit={infoUnit} names={names} heroId={heroId} skills={skillNames} />
           <BattleLog lines={lines} />
         </div>
       </div>
       {response.awaiting === "decision" && response.pending !== null && !busy && (
-        <DecisionDialog pending={response.pending} names={names} enabled={!busy} onDecide={decide} />
+        <DecisionDialog pending={response.pending} names={liveNames} enabled={!busy} onDecide={decide} />
       )}
     </div>
   );
