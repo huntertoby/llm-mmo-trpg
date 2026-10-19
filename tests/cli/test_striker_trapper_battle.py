@@ -51,10 +51,14 @@ def test_the_new_builds_have_the_specified_skills() -> None:
     builds = lib.builds.by_id()
     striker = builds["build_striker"].hero.skills
     assert {"skill_static_palm", "skill_thunder_finisher"} <= set(striker)
-    assert any(lib.skills[s].kind == "passive" for s in striker) and len(striker) == 3
+    assert (
+        any(lib.skills[s].kind == "passive" for s in striker) and len(striker) == 4
+    )  # 3D-6 加血痕疾行
     trapper = builds["build_trapper"].hero.skills
     assert {"skill_cinder_mine", "skill_bear_trap"} <= set(trapper)
-    assert any(lib.skills[s].skeleton == "control" for s in trapper) and len(trapper) == 6
+    assert (
+        any(lib.skills[s].skeleton == "control" for s in trapper) and len(trapper) == 7
+    )  # 3D-6 加殘影之誓
     assert "skill_raise_skeleton" in trapper  # 3D-4a 的示範召喚技能（3D-4b 再整理到召喚師 build）
 
 

@@ -37,7 +37,7 @@ __all__ = [
     "run_battle",
 ]
 
-LOG_FORMAT = "trpg-battle-log/25"
+LOG_FORMAT = "trpg-battle-log/26"
 """``/25``（Phase 3D-5）：持續區域——原語 ``zone``（``EffectSpec`` 新欄位 ``anchor``／``when``／
 ``speed``／``effects``）、核心規則 ``zone_limit_per_owner``、預算規則 ``zone_*``、戰鬥狀態的
 ``zones``／``next_zone_id``、新事件 ``zone_created``／``zone_moved``／``zone_triggered``／

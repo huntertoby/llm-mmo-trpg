@@ -33,15 +33,18 @@ __all__ = [
     "RARITY_TEXT",
     "WEAPON_REQ_TEXT",
     "SkillCard",
+    "activation_text",
     "condition_summary",
     "cost_parts",
     "cost_summary",
     "effect_summary",
     "mastery_text",
     "modifier_summary",
+    "rule_change_text",
     "scaling_detail",
     "scaling_label",
     "shape_summary",
+    "skill_ap",
     "skill_card",
     "skill_shape_text",
 ]
@@ -180,6 +183,53 @@ def _summon(lib: ContentLibrary, _skill: SkillDef, spec: EffectSpec) -> str:
             )
         name = f"{template.name_zh}（HP {template.max_hp}，{weapon.name_zh}）"
     return f"在目標空格召喚{name}，持續 {spec.duration} 輪（緊接在你之後行動，由 AI 控制）"
+
+
+def rule_change_text(library: ContentLibrary, rule_id: str) -> str:
+    """規則改變（Phase 3D-6）的一句話，例如「規則改變「移山」：你可以推動……」。"""
+    rules = library.ruleset
+    try:
+        rule = rules.rule_change_def(rule_id)
+    except KeyError:
+        return f"規則改變 {rule_id}"
+    if rule.kind == "element_heals_allies":
+        assert rule.element is not None and rule.permille is not None
+        text = (
+            f"你造成的{rule.element.display_name}傷害打到友方（不含自己）時，改為治療"
+            f"（原本傷害的 {rule.permille / 10:g}%）"
+        )
+    elif rule.kind == "push_any_object":
+        text = "你可以推動任何擋路的物件（例如土牆、矮牆、倒木），可推倒的照樣倒下；地形與橋面不行"
+    elif rule.kind == "pass_through_apply":
+        assert rule.status is not None
+        status = rules.status_def(rule.status).name_zh
+        text = (
+            f"你步行經過敵人的相鄰格時，對他施加「{status}」{rule.duration} 回合"
+            "（每次移動每個敵人一次）"
+        )
+    else:
+        assert rule.unit is not None
+        try:
+            name = rules.summon_def(rule.unit).template.name_zh
+        except KeyError:
+            name = rule.unit
+        text = f"你倒下時，在原地留下{name}（接替你的行動順序），持續 {rule.duration} 輪"
+    return f"規則改變「{rule.name_zh}」：{text}"
+
+
+def _rule_change(lib: ContentLibrary, _skill: SkillDef, spec: EffectSpec) -> str:
+    return rule_change_text(lib, spec.rule or "")
+
+
+def activation_text(library: ContentLibrary, skill: SkillDef) -> str | None:
+    """常駐類傳說的啟動方式（Phase 3D-6）；其他技能為 ``None``。"""
+    if skill.activation is None:
+        return None
+    core = library.ruleset.core
+    head = f"花 AP {core.legendary_activation_ap} ＋ 源力 {skill.cost.source} 啟動"
+    if skill.activation == "battle":
+        return f"整場：{head}，本場剩餘時間有效"
+    return f"限時：{head}，持續 {core.legendary_timed_rounds} 輪"
 
 
 def _charge_through(_lib: ContentLibrary, skill: SkillDef, spec: EffectSpec) -> str:
@@ -392,6 +442,7 @@ _EFFECT_TEXT: dict[str, _EffectText] = {
     "hurl_object": _hurl_object,
     "topple": _topple,
     "zone": _zone,
+    "rule_change": _rule_change,
 }
 
 
@@ -407,7 +458,7 @@ def effect_summary(library: ContentLibrary, skill: SkillDef, spec: EffectSpec) -
     primitive = library.ruleset.primitive_def(spec.type)
     affects = spec.affects or default_affects(primitive)
     text = _effect_core(library, skill, spec)
-    if spec.type not in ("summon", "zone"):  # 召喚的空格、區域的對象已寫在句中（3D-4b、3D-5）
+    if spec.type not in ("summon", "zone", "rule_change"):  # 對象已寫在句中（3D-4b、3D-5、3D-6）
         text += f"（{_AFFECTS[affects]}）"
     if spec.condition is not None:
         text += f"，若{condition_summary(library, spec.condition)}"
@@ -505,7 +556,8 @@ def modifier_summary(library: ContentLibrary, skill: SkillDef, rule: ModifierSpe
 def cost_parts(library: ContentLibrary, skill: SkillDef, *, with_ap: bool = True) -> list[str]:
     """代價的各段文字（AP、法力、HP、施放後狀態、冷卻、每場次數）。"""
     cost = skill.cost
-    parts = [f"AP {skill.ap_cost}"] if with_ap else []
+    ap = skill_ap(library, skill)
+    parts = [f"AP {ap}"] if with_ap and ap is not None else []
     if cost.mana:
         parts.append(f"法力 {cost.mana}")
     if cost.hp_percent:
@@ -520,6 +572,16 @@ def cost_parts(library: ContentLibrary, skill: SkillDef, *, with_ap: bool = True
     if cost.source:
         parts.append(f"源力 {cost.source}")
     return parts
+
+
+def skill_ap(library: ContentLibrary, skill: SkillDef) -> int | None:
+    """技能列顯示的 AP：主動技能的 ``ap_cost``、修正型傳說的啟動 AP（Phase 3D-6）；被動等為
+    ``None``。"""
+    if skill.ap_cost is not None:
+        return skill.ap_cost
+    if skill.is_activatable:
+        return library.ruleset.core.legendary_activation_ap
+    return None
 
 
 def cost_summary(library: ContentLibrary, skill: SkillDef, *, with_ap: bool = True) -> str:
@@ -560,6 +622,10 @@ class SkillCard(BaseModel):
     effects: tuple[str, ...]
     modifiers: tuple[str, ...]
     """修正規則的中文描述（Phase 3C-2；只有修正技能有）。"""
+    activation: str | None = None
+    """常駐類傳說的啟動方式（Phase 3D-6），例如「限時：花 AP 1 ＋ 源力 1 啟動，持續 3 輪」。"""
+    activation_id: str | None = None
+    """``timed``／``battle``（Phase 3D-6）；其他技能為 ``None``。"""
     mastery: str | None
     tags: tuple[str, ...]
     concept: str
@@ -588,8 +654,8 @@ def skill_card(
         category=CATEGORY_TEXT[skill.category],
         weapon_req=WEAPON_REQ_TEXT[skill.weapon_req],
         scaling=scaling_detail(skill),
-        ap_cost=skill.ap_cost,
-        cost=tuple(cost_parts(library, skill, with_ap=skill.ap_cost is not None)),
+        ap_cost=skill_ap(library, skill),
+        cost=tuple(cost_parts(library, skill, with_ap=skill_ap(library, skill) is not None)),
         source_cost=skill.cost.source,
         shape=skill_shape_text(library, skill),
         condition=(
@@ -597,6 +663,8 @@ def skill_card(
         ),
         effects=tuple(effect_summary(library, skill, e) for e in skill.effects),
         modifiers=tuple(modifier_summary(library, skill, r) for r in skill.modifiers),
+        activation=activation_text(library, skill),
+        activation_id=skill.activation,
         mastery=(None if skill.mastery is None else mastery_text(skill, active=mastery_active)),
         tags=tuple(skill.tags),
         concept=skill.narrative.concept,

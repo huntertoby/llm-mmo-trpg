@@ -3,6 +3,8 @@
 
 from __future__ import annotations
 
+from trpg.content.rule_changes import ELEMENT_HEALS_ALLIES
+from trpg.engine.activations import active_rule_change
 from trpg.engine.context import Ctx
 from trpg.engine.effects.models import (
     ApplyStatusEffect,
@@ -27,6 +29,7 @@ from trpg.engine.events import (
     Healed,
     MoveBlocked,
     MoveMode,
+    RuleChangeTriggered,
     ShieldAbsorbed,
     ShieldGained,
     StatusApplied,
@@ -98,10 +101,7 @@ def _damage(ctx: Ctx, effect: EffectBase) -> list[EventBase]:
             mod_ppm = element_modifier_ppm(unit, effect.element, ctx.rules)
         if effect.apply_weather:
             weather = weather_permille(ctx.state, effect.element)
-        dealt = PERMILLE
-        source = None if effect.source_id is None else ctx.state.units.get(effect.source_id)
-        if effect.cause == "attack" and source is not None:
-            dealt = damage_dealt_permille(ctx.rules, source)  # 虛弱
+        dealt = _dealt_permille(ctx, effect)  # 虛弱
         status_ppm = dealt * damage_taken_permille(ctx.rules, unit)  # 易傷；千分比 × 千分比
         amount = max(
             raw_permille
@@ -115,6 +115,9 @@ def _damage(ctx: Ctx, effect: EffectBase) -> list[EventBase]:
         base_amount = max(
             raw_permille * weather * dealt // (PERMILLE * PERMILLE * PERMILLE), effect.min_damage
         )
+        mended = _mend_ally(ctx, unit, effect, amount)  # 規則改變「慈焰」（Phase 3D-6）
+        if mended is not None:
+            return mended
         absorbed = _absorb(ctx, unit, amount, events)  # 護盾：所有倍率之後、扣 HP 之前
     link = redirect_link(ctx, unit, effect)
     redirected = 0 if link is None else (amount - absorbed) * (link[0].amount or 0) // PERMILLE
@@ -154,6 +157,56 @@ def _damage(ctx: Ctx, effect: EffectBase) -> list[EventBase]:
         events.extend(down_unit(ctx, unit))
         events.extend(credit_elite_kill(ctx, unit, effect.source_id))
     return events
+
+
+def _dealt_permille(ctx: Ctx, effect: DamageEffect) -> int:
+    """攻擊者造成傷害的狀態倍率（‰，虛弱）；不是攻擊或沒有來源時 1000。"""
+    source = None if effect.source_id is None else ctx.state.units.get(effect.source_id)
+    if effect.cause == "attack" and source is not None:
+        return damage_dealt_permille(ctx.rules, source)
+    return PERMILLE
+
+
+def _mend_ally(
+    ctx: Ctx, unit: UnitState, effect: DamageEffect, amount: int
+) -> list[EventBase] | None:
+    """規則改變 ``element_heals_allies``（Phase 3D-6）：來源單位生效中的規則改變元素與這次傷害相同、
+    受傷者是它的友方（不含自己）時，傷害改為治療 ``amount × permille‰``（再套用受到治療的倍率，
+    例如中毒）。不扣護盾、不發 ``damage_dealt``。不適用時回傳 ``None``。"""
+    if effect.source_id is None or effect.source_id == unit.id:
+        return None
+    source = ctx.state.units.get(effect.source_id)
+    if source is None or source.team is not unit.team:
+        return None
+    change = active_rule_change(ctx.state, source, ELEMENT_HEALS_ALLIES)
+    if change is None or change.rule.element is not effect.element:
+        return None
+    permille = change.rule.permille or PERMILLE
+    received = healing_received_permille(ctx.rules, unit)
+    heal = amount * permille * received // (PERMILLE * PERMILLE)
+    hp_before = unit.hp
+    unit.hp = min(unit.max_hp, unit.hp + heal)
+    return [
+        ctx.emit(
+            RuleChangeTriggered,
+            unit_id=source.id,
+            skill_id=change.skill.id,
+            rule=change.rule.id,
+            kind=ELEMENT_HEALS_ALLIES,
+            other_id=unit.id,
+            amount=amount,
+        ),
+        ctx.emit(
+            Healed,
+            target_id=unit.id,
+            source_id=source.id,
+            rolls=(),
+            amount=unit.hp - hp_before,
+            hp_before=hp_before,
+            hp_after=unit.hp,
+            received_permille=received,
+        ),
+    ]
 
 
 _UNPREVENTABLE_CAUSES = ("fall", "deadly_terrain")

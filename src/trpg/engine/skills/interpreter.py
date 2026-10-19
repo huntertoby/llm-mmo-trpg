@@ -54,6 +54,7 @@ from trpg.content.skills import (
 )
 from trpg.engine import modifiers
 from trpg.engine.actions import UseSkill
+from trpg.engine.activations import activate
 from trpg.engine.context import Ctx
 from trpg.engine.control import status_effect
 from trpg.engine.copying import copy_free_problem, copy_source, has_copy_effect
@@ -181,7 +182,9 @@ def use_skill(ctx: Ctx, caster: UnitState, action: UseSkill) -> None:
     _check_copy(ctx, caster, skill, action)
     with holding(ctx):  # 被動的觸發等整個技能結算完才處理
         _pay_costs(ctx, caster, skill, area)
-        if skill.trap is not None:  # 陷阱技能：施放時只放置陷阱，其餘效果等觸發時結算
+        if skill.is_activatable:  # 常駐類傳說（Phase 3D-6）：施放＝啟動，沒有立即的效果
+            activate(ctx, caster, skill)
+        elif skill.trap is not None:  # 陷阱技能：施放時只放置陷阱，其餘效果等觸發時結算
             assert action.target_pos is not None
             place_trap(ctx, caster, skill, (action.target_pos.x, action.target_pos.y))
         else:
@@ -262,6 +265,32 @@ def use_modifier_effects(
     units = (target.id,) if target.alive else ()
     area = SkillArea(tiles=(target.xy,), units=units, origin=owner.xy)
     _TriggeredCast(ctx, owner, on_hit_carrier(skill, effects), area).run()
+
+
+def use_rule_change_effects(
+    ctx: Ctx,
+    owner: UnitState,
+    skill: SkillDef,
+    effects: tuple[EffectSpec, ...],
+    target: UnitState,
+    *,
+    depth: int,
+) -> None:
+    """結算規則改變對 ``target`` 的效果（Phase 3D-6 ``pass_through_apply``；
+    ``rule_change_triggered`` 已由呼叫端發出）。
+
+    比照被動觸發：施放者是持有者本人，對象只有 ``target``，自動命中、狀態照常擲抵抗；這些效果不受
+    修正規則影響；期間引起的被動觸發與反應的深度從 ``depth`` 起算。
+    """
+    area = SkillArea(tiles=(target.xy,), units=(target.id,), origin=owner.xy)
+    carrier = skill.model_copy(update={"effects": effects})
+    outer = ctx.trigger_depth
+    ctx.trigger_depth = depth
+    try:
+        with holding(ctx):
+            _TriggeredCast(ctx, owner, carrier, area).run()
+    finally:
+        ctx.trigger_depth = outer
 
 
 def use_trap_skill(ctx: Ctx, trap: TrapState, skill: SkillDef, *, depth: int) -> None:

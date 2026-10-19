@@ -12,6 +12,8 @@ from dataclasses import dataclass, replace
 from typing import Literal
 
 from trpg.content.maps import MAX_HEIGHT
+from trpg.content.rule_changes import PUSH_ANY_OBJECT
+from trpg.engine.activations import moves_object
 from trpg.engine.context import Ctx
 from trpg.engine.effects.handlers import arrive, weather_permille
 from trpg.engine.effects.models import (
@@ -49,6 +51,7 @@ from trpg.engine.events import (
     ObjectMoved,
     ObjectToppled,
     PushResisted,
+    RuleChangeTriggered,
     SurfaceChanged,
     TerrainChanged,
     UnitFell,
@@ -540,9 +543,22 @@ def _push_object(ctx: Ctx, effect: PushEffect, object_id: ObjectId) -> list[Even
     tags = ctx.rules.object_def(obj.kind).tags
     if TOPPLABLE in tags:  # 推倒（Phase 3C-5a）：不移動，往推的方向倒下
         return _topple(ctx, obj, effect.direction, effect.source_id)
-    if "pushable" not in tags:
-        return []
     events: list[EventBase] = []
+    if "pushable" not in tags:
+        change = moves_object(state, effect.source_id, tags)  # 規則改變「移山」（Phase 3D-6）
+        if change is None:
+            return []
+        assert effect.source_id is not None
+        events.append(
+            ctx.emit(
+                RuleChangeTriggered,
+                unit_id=effect.source_id,
+                skill_id=change.skill.id,
+                rule=change.rule.id,
+                kind=PUSH_ANY_OBJECT,
+                object_id=obj.id,
+            )
+        )
     dx, dy = effect.direction
     for _ in range(effect.distance):
         cur = obj.xy

@@ -51,6 +51,7 @@ from trpg.engine.events import (
     ZoneExpired,
     ZoneMoved,
 )
+from trpg.engine.rule_changes import expire_orphan_summons
 from trpg.engine.rules.geometry import XY, neighbors4
 from trpg.engine.rules.movement import is_deadly, is_standable
 from trpg.engine.state import BattleState
@@ -102,6 +103,7 @@ def run_environment(ctx: Ctx) -> None:
         _tick_surfaces(ctx, tiles)
         _spread_fire(ctx, fires)
         move_zones(ctx)  # 持續區域：到期與移動型的前進（Phase 3D-5）
+        expire_orphan_summons(ctx)  # 召喚者不在場的分身到期（Phase 3D-6）
         _weather(ctx, tiles)
         _map_events(ctx)
         ctx.emit(EnvironmentEnded)

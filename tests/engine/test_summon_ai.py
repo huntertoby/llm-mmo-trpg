@@ -99,8 +99,11 @@ def _trapper_run(map_id: str, seed: int) -> Any:
 
 
 def test_the_ai_casts_the_summon_and_the_summon_acts() -> None:
-    _, run = _trapper_run("swamp", 1)
-    [summoned] = [e for e in run.events if isinstance(e, UnitSummoned)]
+    _, run = _trapper_run("dark_forest", 0)
+    # 3D-6：build_trapper 另有殘影之誓（倒下時的分身，orphan），這裡只看喚起骷髏；
+    # 原本的 swamp 種子 1
+    # 改為啟動殘影之誓後不再召喚，換成 dark_forest 種子 0
+    [summoned] = [e for e in run.events if isinstance(e, UnitSummoned) and not e.orphan]
     assert summoned.skill_id == "skill_raise_skeleton"
     turns = [e for e in run.events if isinstance(e, TurnStarted) and e.unit_id == summoned.unit_id]
     attacks = [
@@ -121,7 +124,7 @@ def test_the_ai_casts_the_summon_and_the_summon_acts() -> None:
 def test_a_summoning_battle_replays_exactly() -> None:
     from trpg.engine.runner import replay  # noqa: PLC0415
 
-    setup, run = _trapper_run("swamp", 1)
-    again = replay(setup, 1, run.actions)
+    setup, run = _trapper_run("dark_forest", 0)
+    again = replay(setup, 0, run.actions)
     assert state_to_json(again.state) == state_to_json(run.state)
     assert [e.model_dump() for e in again.events] == [e.model_dump() for e in run.events]

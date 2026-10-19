@@ -13,7 +13,9 @@ def test_every_skill_has_a_card_with_one_line_per_effect() -> None:
         assert card.id == skill.id and card.name_zh == skill.name_zh
         assert len(card.effects) == len(skill.effects)
         assert card.effects == tuple(effect_summary(lib, skill, e) for e in skill.effects)
-        if skill.ap_cost is None:  # 被動／反應技沒有 AP 代價（3-4b：不再出現「AP None」）
+        if skill.is_activatable and skill.ap_cost is None:  # 修正型傳說：啟動 AP（3D-6）
+            assert card.cost[0] == f"AP {lib.ruleset.core.legendary_activation_ap}"
+        elif skill.ap_cost is None:  # 被動／反應技沒有 AP 代價（3-4b：不再出現「AP None」）
             assert not any(part.startswith("AP") for part in card.cost)
         else:
             assert card.cost[0] == f"AP {skill.ap_cost}"

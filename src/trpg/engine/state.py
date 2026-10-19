@@ -25,6 +25,7 @@ from trpg.content.rules import CoreRules
 from trpg.shared.types import Attribute, Element, ObjectId, Pos, ResistGroup, Surface, Team, UnitId
 
 __all__ = [
+    "Activation",
     "BattleState",
     "LastCast",
     "ObjectState",
@@ -178,6 +179,18 @@ class SpawnTemplate(BaseModel):
 
 
 @dataclass(slots=True, frozen=True)
+class Activation:
+    """一個生效中的常駐類傳說（Phase 3D-6，``activation``）：技能與結束的輪數。
+
+    ``expires_round``：``timed`` 為啟動輪 ＋ ``legendary_timed_rounds``，持有者在這一輪（或之後）的
+    回合開始時結束；``battle`` 為 ``None``（本場剩餘時間有效）。
+    """
+
+    skill_id: str
+    expires_round: int | None = None
+
+
+@dataclass(slots=True, frozen=True)
 class LastCast:
     """一次以 ``UseSkill`` 施放的主動技能（Phase 3C-4b）：施放者、技能與施放當輪。
     ``copy_skill`` 只複製本輪內的。"""
@@ -282,6 +295,8 @@ class UnitState:
     dismissed: bool = False
     """召喚物已消失（到期、召喚者離場或超過上限；Phase 3D-4a）。保留在 ``units`` 中（事件仍引用
     它），但不在戰場上。"""
+    activations: tuple[Activation, ...] = ()
+    """生效中的常駐類傳說（Phase 3D-6），依啟動順序。修正型傳說與規則改變只在這裡列出時生效。"""
 
     @property
     def alive(self) -> bool:
@@ -359,6 +374,7 @@ class UnitState:
             owner_id=self.owner_id,
             summon_expires_round=self.summon_expires_round,
             dismissed=self.dismissed,
+            activations=self.activations,
         )
 
 

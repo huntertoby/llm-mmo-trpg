@@ -16,6 +16,7 @@ from pydantic import BaseModel, ConfigDict
 from trpg.content.battle import ReactionRule
 from trpg.content.maps import Objective
 from trpg.engine.state import (
+    Activation,
     BattleState,
     PendingResolution,
     StatusInstance,
@@ -29,6 +30,7 @@ from trpg.shared.types import Pos, Surface, Team, UnitId
 
 __all__ = [
     "REACTION_TRIGGER_TEXT",
+    "ActivationView",
     "BattleView",
     "ObjectView",
     "PendingView",
@@ -104,6 +106,20 @@ class ReactionRuleView(_ViewModel):
     hp_cost_permille: int
 
 
+class ActivationView(_ViewModel):
+    """生效中的常駐類傳說（Phase 3D-6；雙方都看得到）。
+
+    ``expires_round``：限時型在持有者第 ``expires_round`` 輪的回合開始時結束（剩餘輪數 ＝
+    ``expires_round − round``）；整場型為 ``None``。``rule_name_zh``：規則改變的名稱（修正型為
+    ``None``）。"""
+
+    skill_id: str
+    name_zh: str
+    activation: Literal["timed", "battle"]
+    expires_round: int | None
+    rule_name_zh: str | None
+
+
 class UnitView(_ViewModel):
     id: UnitId
     template_id: str
@@ -150,6 +166,8 @@ class UnitView(_ViewModel):
     """召喚物已消失（Phase 3D-4a）：不在戰場上，保留在清單中讓紀錄能查名字。"""
     totem_radius: int | None
     """圖騰（Phase 3D-4b）：光環半徑（回合開始時給範圍內友方狀態）；不是圖騰為 ``None``。"""
+    activations: tuple[ActivationView, ...] = ()
+    """生效中的常駐類傳說（Phase 3D-6），依啟動順序。"""
 
 
 class TrapView(_ViewModel):
@@ -344,6 +362,19 @@ def _unit_view(state: BattleState, unit: UnitState, team: Team) -> UnitView:
         summon_expires_round=unit.summon_expires_round,
         dismissed=unit.dismissed,
         totem_radius=None if (totem := totem_of(state, unit)) is None else totem.radius,
+        activations=tuple(_activation_view(state, a) for a in unit.activations),
+    )
+
+
+def _activation_view(state: BattleState, activation: Activation) -> ActivationView:
+    skill = state.ruleset.skill_def(activation.skill_id)
+    rule_id = skill.rule_change_id
+    return ActivationView(
+        skill_id=skill.id,
+        name_zh=skill.name_zh,
+        activation=skill.activation or "battle",
+        expires_round=activation.expires_round,
+        rule_name_zh=None if rule_id is None else state.ruleset.rule_change_def(rule_id).name_zh,
     )
 
 

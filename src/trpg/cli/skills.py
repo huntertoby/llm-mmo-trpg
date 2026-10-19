@@ -13,6 +13,7 @@ from trpg.narrative.skills import (
     KIND_TEXT,
     RARITY_TEXT,
     WEAPON_REQ_TEXT,
+    activation_text,
     condition_summary,
     cost_summary,
     effect_summary,
@@ -48,6 +49,8 @@ def cmd_skills_list(library: ContentLibrary, out: TextIO) -> int:
         if skill.is_modifier:
             effects = "；".join(modifier_summary(library, skill, r) for r in skill.modifiers)
         ap = "修正" if skill.is_modifier else str(skill.ap_cost)
+        if skill.is_activatable:  # 常駐類傳說（Phase 3D-6）
+            effects += f"［{activation_text(library, skill)}］"
         print(
             f"  {pad(skill.id, 24)}{pad(skill.name_zh, 12)}{pad(skill.skeleton, 10)}"
             f"{pad(ap, 4)}{cost or '無'}",
@@ -80,6 +83,21 @@ def _mastery_active_for(
     return all(mine >= value for value in attributes.values())
 
 
+def _print_body(library: ContentLibrary, skill: SkillDef, out: TextIO) -> None:
+    """啟動方式（常駐類傳說，Phase 3D-6）與修正規則或效果的列表。"""
+    if skill.is_activatable:
+        print(f"  啟動 {activation_text(library, skill)}（啟動前不生效）", file=out)
+    if skill.is_modifier:
+        where = "裝在被動欄位，啟動後生效" if skill.is_activatable else "裝在被動欄位，持續生效"
+        print(f"  修正規則（{where}）：", file=out)
+        for i, rule in enumerate(skill.modifiers, start=1):
+            print(f"    {i}. {modifier_summary(library, skill, rule)}", file=out)
+        return
+    print("  效果：", file=out)
+    for i, spec in enumerate(skill.effects, start=1):
+        print(f"    {i}. {effect_summary(library, skill, spec)}", file=out)
+
+
 def cmd_skills_show(
     library: ContentLibrary, skill_id: str, out: TextIO, *, unit_id: str | None = None
 ) -> int:
@@ -100,21 +118,14 @@ def cmd_skills_show(
     )
     if skill.mastery is not None:
         print(f"  專精加成 {mastery_text(skill, active=active)}", file=out)
-    if skill.is_modifier:
+    if skill.is_modifier and not skill.is_activatable:
         print("  代價 無（裝在被動欄位、不花 AP）", file=out)
     else:
         print(f"  代價 {cost_summary(library, skill)}", file=out)
     print(f"  形狀 {skill_shape_text(library, skill)}", file=out)
     if skill.condition is not None:
         print(f"  使用條件 {condition_summary(library, skill.condition)}", file=out)
-    if skill.is_modifier:
-        print("  修正規則（裝在被動欄位，持續生效）：", file=out)
-        for i, rule in enumerate(skill.modifiers, start=1):
-            print(f"    {i}. {modifier_summary(library, skill, rule)}", file=out)
-    else:
-        print("  效果：", file=out)
-        for i, spec in enumerate(skill.effects, start=1):
-            print(f"    {i}. {effect_summary(library, skill, spec)}", file=out)
+    _print_body(library, skill, out)
     if skill.tags:
         print(f"  標籤 {'、'.join(skill.tags)}", file=out)
     if skill.narrative.concept:

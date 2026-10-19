@@ -16,6 +16,7 @@ from trpg.shared.types import Attribute, Element, ObjectId, Pos, Surface, Team, 
 __all__ = [
     "EVENT_ADAPTER",
     "EVENT_LIST_ADAPTER",
+    "ActivationExpired",
     "AdvantageState",
     "ApGranted",
     "AttackIntercepted",
@@ -63,9 +64,12 @@ __all__ = [
     "ResourceRestored",
     "RoundEnded",
     "RoundStarted",
+    "RuleChangeKindName",
+    "RuleChangeTriggered",
     "ShieldAbsorbed",
     "ShieldGained",
     "ShotPierced",
+    "SkillActivated",
     "SkillCooldownChanged",
     "SkillCopied",
     "SkillTriggered",
@@ -1043,6 +1047,9 @@ class UnitSummoned(EventBase):
     skill_id: str
     expires_round: int
     order_index: int
+    orphan: bool = False
+    """召喚者已不在場（Phase 3D-6，規則改變 ``on_downed_spawn`` 的分身）：在第 ``expires_round``
+    輪的環境回合消失。"""
 
 
 type SummonExpiryReason = Literal["expired", "owner_gone", "limit"]
@@ -1133,6 +1140,54 @@ class ZoneExpired(EventBase):
     """消失前的格子（跟隨型為施放者當時位置展開的格子，施放者已倒下時為空）。"""
 
 
+class SkillActivated(EventBase):
+    """常駐類傳說啟動（Phase 3D-6；緊接在 ``skill_used`` 與 ``source_changed`` 之後）。
+
+    ``activation``：``timed`` 限時（``expires_round`` 那一輪持有者的回合開始時結束）或 ``battle``
+    整場（``expires_round`` 為 ``None``）。``rule``：規則改變型傳說引用的規則改變 ID，修正型為
+    ``None``。"""
+
+    type: Literal["skill_activated"] = "skill_activated"
+    unit_id: UnitId
+    skill_id: str
+    activation: Literal["timed", "battle"]
+    expires_round: int | None = None
+    rule: str | None = None
+
+
+class ActivationExpired(EventBase):
+    """限時傳說（``activation: timed``）時間到，不再生效（Phase 3D-6；持有者的回合開始時）。"""
+
+    type: Literal["activation_expired"] = "activation_expired"
+    unit_id: UnitId
+    skill_id: str
+
+
+type RuleChangeKindName = Literal[
+    "element_heals_allies", "push_any_object", "pass_through_apply", "on_downed_spawn"
+]
+
+
+class RuleChangeTriggered(EventBase):
+    """規則改變生效了一次（Phase 3D-6；之後是實際的後果事件）。
+
+    - ``element_heals_allies``：``other_id`` 是原本要受傷的友方（之後是 ``healed``）；
+    - ``push_any_object``：``object_id`` 是原本推不動的物件（之後是 ``object_moved``）；
+    - ``pass_through_apply``：``other_id`` 是經過的敵人（之後是狀態的抵抗與 ``status_applied``）；
+    - ``on_downed_spawn``：持有者倒下（之後是 ``unit_summoned`` 或 ``effect_fizzled``）。
+    """
+
+    type: Literal["rule_change_triggered"] = "rule_change_triggered"
+    unit_id: UnitId
+    skill_id: str
+    rule: str
+    kind: RuleChangeKindName
+    other_id: UnitId | None = None
+    object_id: ObjectId | None = None
+    amount: int = 0
+    """``element_heals_allies``：被轉為治療的原本傷害。"""
+
+
 type Event = Annotated[
     BattleStarted
     | InitiativeRolled
@@ -1212,7 +1267,10 @@ type Event = Annotated[
     | ZoneCreated
     | ZoneMoved
     | ZoneTriggered
-    | ZoneExpired,
+    | ZoneExpired
+    | SkillActivated
+    | ActivationExpired
+    | RuleChangeTriggered,
     Field(discriminator="type"),
 ]
 

@@ -32,6 +32,7 @@ from trpg.engine.actions import (
     Trip,
     UseSkill,
 )
+from trpg.engine.activations import moves_object
 from trpg.engine.context import Ctx, PreviewMode
 from trpg.engine.copying import copy_selections, has_copy_effect
 from trpg.engine.effects import execute
@@ -62,6 +63,7 @@ from trpg.engine.reactions import (
     perform_unit_attack,
 )
 from trpg.engine.results import ResolveResult
+from trpg.engine.rule_changes import pass_through
 from trpg.engine.rules.combat import attack_problem, reach_problem
 from trpg.engine.rules.geometry import XY, manhattan
 from trpg.engine.rules.movement import (
@@ -549,7 +551,7 @@ def object_move_problem(
     definition = state.object_def(obj)
     if obj.destroyed:
         return f"物件已被摧毀：{definition.name_zh}"
-    if "pushable" not in definition.tags:
+    if "pushable" not in definition.tags and moves_object(state, unit.id, definition.tags) is None:
         return f"{definition.name_zh}無法推動"
     problem = _adjacent_problem(state, unit, obj)
     if problem is not None:
@@ -605,7 +607,8 @@ def interact_options(
     options: list[tuple[ObjectState, InteractMode, Side | None, str | None]] = []
     for obj in state.objects_sorted():
         tags = state.object_def(obj).tags
-        if obj.destroyed or ("pushable" not in tags and TOPPLABLE not in tags):
+        movable = "pushable" in tags or moves_object(state, unit.id, tags) is not None
+        if obj.destroyed or (not movable and TOPPLABLE not in tags):
             continue
         if manhattan(unit.xy, obj.xy) != 1:
             continue
@@ -646,6 +649,7 @@ def _do_move(ctx: Ctx, unit: UnitState, action: Action) -> None:
         execute(ctx, [RemoveStatusEffect(target_id=unit.id, status_id=PRONE, reason="stood_up")])
         ctx.emit(UnitStoodUp, unit_id=unit.id, cost=plan.stand_up)
     walked: list[XY] = [unit.xy]
+    touched: set[UnitId] = set()  # 規則改變 pass_through_apply 這次移動碰過的敵人（3D-6）
     for dest, cost in plan.steps:
         opportunity_attacks(ctx, unit, unit.xy, dest)
         if not unit.alive:
@@ -654,6 +658,8 @@ def _do_move(ctx: Ctx, unit: UnitState, action: Action) -> None:
         before = unit.xy
         execute(ctx, [MoveUnitEffect(unit_id=unit.id, dest=dest, mode="walk", cost=cost)])
         enemy_enters_adjacent_reactions(ctx, unit, before)
+        if unit.xy == dest:
+            pass_through(ctx, unit, touched)
         walked.append(unit.xy)
         if _move_interrupted(ctx, unit, dest):
             break

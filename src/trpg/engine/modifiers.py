@@ -28,6 +28,7 @@ from trpg.content.skills import (
     SkillDef,
     default_affects,
 )
+from trpg.engine.activations import is_active
 from trpg.engine.skills.conditions import Subject, condition_met
 from trpg.engine.state import BattleState, UnitState
 from trpg.shared.types import Element
@@ -91,14 +92,15 @@ class ActiveRule:
 
 
 def unit_rules(state: BattleState, unit: UnitState) -> tuple[ActiveRule, ...]:
-    """``unit`` 的全部修正規則（依技能 ID、再依規則索引）。"""
+    """``unit`` 的全部修正規則（依技能 ID、再依規則索引）。修正型傳說（Phase 3D-6，
+    ``activation``）只在啟動後生效。"""
     rules = state.ruleset
     if not rules.has_modifier(unit.skills):
         return ()
     found: list[ActiveRule] = []
     for skill_id in sorted(unit.skills):
         skill = rules.skill_def(skill_id)
-        if skill.is_modifier:
+        if skill.is_modifier and (not skill.is_activatable or is_active(unit, skill_id)):
             found.extend(ActiveRule(skill, i, rule) for i, rule in enumerate(skill.modifiers))
     return tuple(found)
 

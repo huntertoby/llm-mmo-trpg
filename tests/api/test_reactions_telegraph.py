@@ -332,7 +332,7 @@ def test_preview_lists_filtered_chain_events_with_text(client: TestClient) -> No
 
 
 def test_skill_cards_never_say_ap_none(client: TestClient, library: ContentLibrary) -> None:
-    passives = [s for s in library.skills.values() if s.ap_cost is None]
+    passives = [s for s in library.skills.values() if s.ap_cost is None and not s.is_activatable]
     assert passives
     for skill in passives:
         card = client.get(f"/api/skills/{skill.id}").json()

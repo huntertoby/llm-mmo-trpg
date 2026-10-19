@@ -70,11 +70,13 @@ def _release_forced_targets(ctx: Ctx, source: UnitState) -> list[EventBase]:
 
 def down_unit(ctx: Ctx, unit: UnitState) -> list[EventBase]:
     """單位倒下（HP ≤ 0）：標記倒下、立即移出先攻順序，產生 ``unit_downed``；
-    以它為來源的嘲諷立即解除。"""
+    以它為來源的嘲諷立即解除。生效中的規則改變 ``on_downed_spawn`` 在原地留下分身（3D-6）。"""
     if unit.downed:
         return []
     unit.downed = True
     unit.hp = 0
+    order = ctx.state.turn_order
+    order_index = order.index(unit.id) if unit.id in order else None
     _remove_from_order(ctx, unit)
     events: list[EventBase] = [
         ctx.emit(UnitDowned, unit_id=unit.id),
@@ -84,6 +86,11 @@ def down_unit(ctx: Ctx, unit: UnitState) -> list[EventBase]:
         *remove_caster_zones_of(ctx, unit.id),  # 施放者離場，跟隨型區域消失（Phase 3D-5）
         *dismiss_summons_of(ctx, unit, "owner_gone"),  # 召喚者倒下：召喚物一併消失（3D-4a）
     ]
+    if unit.activations:  # 規則改變「殘影」：倒下時留下分身（Phase 3D-6）
+        # 延後匯入：規則改變模組匯入召喚（召喚匯入本模組）
+        from trpg.engine.rule_changes import spawn_on_downed  # noqa: PLC0415
+
+        events += spawn_on_downed(ctx, unit, order_index)
     return events
 
 

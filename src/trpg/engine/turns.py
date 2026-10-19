@@ -11,6 +11,7 @@
 
 from __future__ import annotations
 
+from trpg.engine.activations import expire_activations
 from trpg.engine.context import Ctx
 from trpg.engine.effects import execute
 from trpg.engine.effects.models import (
@@ -83,6 +84,7 @@ def start_turn(ctx: Ctx, unit_id: UnitId) -> None:
         max_mana=unit.max_mana,
     )
     _tick_cooldowns(ctx, unit)
+    expire_activations(ctx, unit)  # 限時傳說到期（Phase 3D-6）
 
     expiring: list[EffectBase] = []
     ticking: list[EffectBase] = []

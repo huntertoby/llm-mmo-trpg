@@ -35,6 +35,7 @@ from trpg.content.skills import (
 )
 from trpg.engine import modifiers
 from trpg.engine.actions import Direction, UseSkill
+from trpg.engine.activations import activation_problem
 from trpg.engine.rules.combat import AttackProfile, attack_value, concealment_problem
 from trpg.engine.rules.geometry import XY, has_line_of_sight, manhattan
 from trpg.engine.rules.movement import is_deadly, is_standable
@@ -225,9 +226,16 @@ def hp_cost(unit: UnitState, skill: SkillDef) -> int:
 
 
 def skill_ap_cost(state: BattleState, skill: SkillDef, caster: UnitState | None = None) -> int:
-    """施放技能花的 AP：主動技能是 ``ap_cost``、姿態是 ``core.yaml`` 的 ``stance_ap_cost``，
-    反應技與被動不花 AP。給了 ``caster`` 時加上其修正規則的 ``ap_delta``（Phase 3C-2；至少 1）。"""
-    base = state.ruleset.core.stance_ap_cost if skill.kind == "stance" else skill.ap_cost or 0
+    """施放技能花的 AP：主動技能是 ``ap_cost``、姿態是 ``core.yaml`` 的 ``stance_ap_cost``、修正型
+    傳說的啟動是 ``legendary_activation_ap``（Phase 3D-6），反應技與被動不花 AP。給了 ``caster``
+    時加上其修正規則的 ``ap_delta``（Phase 3C-2；至少 1）。"""
+    core = state.ruleset.core
+    if skill.kind == "stance":
+        base = core.stance_ap_cost
+    elif skill.is_modifier and skill.is_activatable:  # 修正型傳說的啟動（Phase 3D-6）
+        base = core.legendary_activation_ap
+    else:
+        base = skill.ap_cost or 0
     if caster is None:
         return base
     return modifiers.ap_cost(state, caster, modifiers.skill_use(skill), base)
@@ -309,21 +317,30 @@ def stack_problem(state: BattleState, unit: UnitState, skill: SkillDef) -> str |
     return None
 
 
+def _already_problem(state: BattleState, unit: UnitState, skill: SkillDef) -> str | None:
+    """已經生效、不能重複使用：已經在這個姿態（Phase 2E-2），或常駐類傳說已經啟動、已有別的規則
+    改變生效中（Phase 3D-6）。"""
+    if skill.kind == "stance" and any(
+        e.type == "apply_status" and e.status is not None and unit.has_status(e.status)
+        for e in skill.effects
+    ):
+        return f"已經在這個姿態中：{skill.name_zh}"
+    return activation_problem(state, unit, skill)
+
+
 def skill_problem(state: BattleState, unit: UnitState, skill: SkillDef) -> str | None:
     """技能目前不能使用的原因（繁體中文）；可以使用時回傳 ``None``（不檢查選取）。
 
     主動技能與姿態可以用 ``UseSkill`` 施放；姿態另外檢查「已經在這個姿態」（Phase 2E-2）。
     """
     if not skill.is_actionable:
-        return f"只有主動技能與姿態可以使用：{skill.name_zh}"
+        return f"只有主動技能、姿態與修正型傳說的啟動可以使用：{skill.name_zh}"
     ap_cost = skill_ap_cost(state, skill, unit)
     if unit.ap < ap_cost:
         return f"AP 不足：需要 {ap_cost}，剩餘 {unit.ap}"
-    if skill.kind == "stance" and any(
-        e.type == "apply_status" and e.status is not None and unit.has_status(e.status)
-        for e in skill.effects
-    ):
-        return f"已經在這個姿態中：{skill.name_zh}"
+    problem = _already_problem(state, unit, skill)
+    if problem is not None:
+        return problem
     if any(
         e.type in (DASH, LEAP, CHARGE_THROUGH) for e in skill.effects
     ):  # 自身位移（3D-2）：定身、倒地不能衝跳

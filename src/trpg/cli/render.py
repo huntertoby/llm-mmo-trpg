@@ -10,6 +10,7 @@ from dataclasses import dataclass, field
 
 from trpg.content.library import Ruleset
 from trpg.content.maps import MapDef, SpawnUnitsEvent
+from trpg.engine.activations import remaining_rounds
 from trpg.engine.environment import Telegraph
 from trpg.engine.events import (
     AttackRolled,
@@ -228,9 +229,24 @@ def _summon_text(state: BattleState, unit: UnitState) -> str:
     """召喚物的標註（Phase 3D-4b）：召喚者與到期輪，圖騰另註明；一般單位為空字串。"""
     if not unit.is_summon or unit.owner_id is None or unit.summon_expires_round is None:
         return ""
-    owner = state.units[unit.owner_id].name_zh
+    owner_unit = state.units[unit.owner_id]
+    owner = owner_unit.name_zh
+    if not owner_unit.alive:  # 規則改變「殘影」的分身（Phase 3D-6）：召喚者已倒下
+        return f" ［召喚物：{owner}留下，第 {unit.summon_expires_round} 輪的環境回合消失］"
     kind = "圖騰" if totem_of(state, unit) is not None else "召喚物"
     return f" ［{kind}：{owner}召喚，第 {unit.summon_expires_round} 輪結束時消失］"
+
+
+def _activation_text(state: BattleState, unit: UnitState) -> str:
+    """生效中的常駐類傳說（Phase 3D-6），例如「 ［傳說：戰神降臨 剩 3 輪］」。"""
+    if not unit.activations:
+        return ""
+    parts = []
+    for activation in unit.activations:
+        name = state.ruleset.skill_def(activation.skill_id).name_zh
+        left = remaining_rounds(state, activation)
+        parts.append(f"{name} {'整場' if left is None else f'剩 {left} 輪'}")
+    return f" ［傳說：{'、'.join(parts)}］"
 
 
 def render_zone_lines(state: BattleState) -> list[str]:
@@ -272,6 +288,7 @@ def render_unit_table(state: BattleState) -> str:
             f"{_source_text(state, unit)}"
             f" 耐力 {unit.stamina} 位置 {xy_text(unit.pos)} 武器 {unit.weapon.name_zh}"
             f"{_status_text(state, unit)}{_summon_text(state, unit)}"
+            f"{_activation_text(state, unit)}"
         )
     lines += render_zone_lines(state)
     return "\n".join(lines)

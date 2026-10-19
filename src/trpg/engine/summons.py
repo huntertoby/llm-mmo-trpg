@@ -49,10 +49,21 @@ def _insert_in_order(state: BattleState, uid: UnitId, index: int) -> None:
 
 
 def summon_unit(  # noqa: PLR0917
-    ctx: Ctx, owner: UnitState, template_id: str, xy: XY, duration: int, skill_id: str
+    ctx: Ctx,
+    owner: UnitState,
+    template_id: str,
+    xy: XY,
+    duration: int,
+    skill_id: str,
+    *,
+    order_index: int | None = None,
+    orphan: bool = False,
 ) -> list[EventBase]:
     """``owner`` 在 ``xy`` 召喚 ``template_id``，持續 ``duration`` 輪。位置不合法或範本不存在時
-    發出 ``effect_fizzled``；超過上限時先讓最舊的召喚物消失。"""
+    發出 ``effect_fizzled``；超過上限時先讓最舊的召喚物消失。
+
+    ``order_index``／``orphan``（Phase 3D-6，``on_downed_spawn``）：召喚者已倒下，分身排在指定的
+    先攻位置，``unit_summoned`` 標記 ``orphan``（到期改在環境回合處理）。"""
     state = ctx.state
     try:
         summon = state.ruleset.summon_def(template_id)
@@ -82,7 +93,7 @@ def summon_unit(  # noqa: PLR0917
     unit.summon_expires_round = state.round + duration
     unit.initiative = owner.initiative  # 不擲先攻：顯示用，順序由插入位置決定
     state.units[uid] = unit
-    index = _order_index(state, owner.id)
+    index = _order_index(state, owner.id) if order_index is None else order_index
     _insert_in_order(state, uid, index)
     events.append(
         ctx.emit(
@@ -95,6 +106,7 @@ def summon_unit(  # noqa: PLR0917
             skill_id=skill_id,
             expires_round=unit.summon_expires_round,
             order_index=index,
+            orphan=orphan,
         )
     )
     return events

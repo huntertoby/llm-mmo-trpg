@@ -95,6 +95,7 @@ from trpg.engine.events import (
     ReactionsGranted,
     ResourceRestored,
     ShieldGained,
+    SkillActivated,
     SkillCooldownChanged,
     StacksChanged,
     StatusApplied,
@@ -1036,6 +1037,8 @@ def _rewrite_gains(
     - ``cheat_death``：``undying_points`` × 目標已損失 HP 的比例（HP 越低越值得；已帶有則 0）；
     - ``redirect_damage``：``redirect_points`` × 目標已損失 HP 的比例（施放者 HP 不到一半為 0）；
     - ``extra_reaction``：每個額外次數 ``reaction_points``（目標有反應規則時）；
+    - 常駐類傳說的啟動（Phase 3D-6）：``activation_round_points`` × 生效輪數（限時為持續輪數、
+      整場為 ``activation_battle_rounds``）；
     - 源力：每點扣 ``source_points``。
 
     ``copy_skill`` 沒有額外收益：預覽已包含複製的技能自己的效果（:func:`effective_skill`）。
@@ -1084,6 +1087,13 @@ def _rewrite_event_points(
         points = Fraction(per_point * e.amount * (1 if e.resource == "mana" else len(e.skill_ids)))
     elif isinstance(e, StatusRemoved) and e.reason == "stolen":
         points = Fraction(rules.steal_points)
+    elif isinstance(e, SkillActivated) and e.unit_id == actor.id:  # 常駐類傳說（Phase 3D-6）
+        rounds = (
+            rules.activation_battle_rounds
+            if e.expires_round is None
+            else e.expires_round - state.round
+        )
+        points = Fraction(rules.activation_round_points * rounds)
     return points
 
 
@@ -1255,7 +1265,9 @@ def _placement_estimate(
     trap: TrapAiRules,
 ) -> Fraction | _Unhandled | None:
     """放置類技能的估計：陷阱、召喚（3D-4a：位置越靠近敵人越好）、持續區域（3D-5：格內與移動
-    路徑上的對象數）；其他技能回傳 ``_UNHANDLED``。"""
+    路徑上的對象數）、常駐類傳說的啟動（3D-6：有敵人就是候選）；其他技能回傳 ``_UNHANDLED``。"""
+    if skill.is_activatable:  # 常駐類傳說（Phase 3D-6）：場上還有敵人時才考慮啟動
+        return Fraction(1) if scene.enemies else None
     if skill.trap is not None:
         return _trap_estimate(state, unit, skill, area, scene, rules=trap)
     if has_summon(skill):

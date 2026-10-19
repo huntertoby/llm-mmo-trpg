@@ -11,6 +11,7 @@ from dataclasses import dataclass
 from typing import Any
 
 from trpg.engine.events import (
+    ActivationExpired,
     ApGranted,
     AttackIntercepted,
     AttackRolled,
@@ -51,9 +52,11 @@ from trpg.engine.events import (
     ResourceRestored,
     RoundEnded,
     RoundStarted,
+    RuleChangeTriggered,
     ShieldAbsorbed,
     ShieldGained,
     ShotPierced,
+    SkillActivated,
     SkillCooldownChanged,
     SkillCopied,
     SkillTriggered,
@@ -637,6 +640,38 @@ def _skill_copied(e: SkillCopied, v: _View) -> str:
     )
 
 
+@_handles(SkillActivated)
+def _skill_activated(e: SkillActivated, v: _View) -> str:
+    skill = v.state.ruleset.skill_def(e.skill_id).name_zh
+    when = (
+        "本場剩餘時間有效"
+        if e.expires_round is None
+        else f"持續到第 {e.expires_round} 輪 {v.name[e.unit_id]} 的回合開始"
+    )
+    return f"  ✦ {v.name[e.unit_id]} 啟動了傳說「{skill}」（{when}）"
+
+
+@_handles(ActivationExpired)
+def _activation_expired(e: ActivationExpired, v: _View) -> str:
+    skill = v.state.ruleset.skill_def(e.skill_id).name_zh
+    return f"  {v.name[e.unit_id]} 的傳說「{skill}」時間到了，不再生效"
+
+
+@_handles(RuleChangeTriggered)
+def _rule_change_triggered(e: RuleChangeTriggered, v: _View) -> str:
+    skill = v.state.ruleset.skill_def(e.skill_id).name_zh
+    who = v.name[e.unit_id]
+    if e.kind == "element_heals_allies":
+        return f"    ✦ {who} 的「{skill}」：{e.amount} 點傷害改為治療 {v.name[e.other_id or '']}"
+    if e.kind == "push_any_object":
+        obj = v.state.objects.get(e.object_id) if e.object_id is not None else None
+        name = "物件" if obj is None else v.state.ruleset.object_def(obj.kind).name_zh
+        return f"    ✦ {who} 的「{skill}」：推動了本來推不動的{name}"
+    if e.kind == "pass_through_apply":
+        return f"    ✦ {who} 的「{skill}」：掠過 {v.name[e.other_id or '']} 身邊"
+    return f"  ✦ {who} 的「{skill}」：倒下的地方留下了分身"
+
+
 @_handles(DeathCheated)
 def _death_cheated(e: DeathCheated, v: _View) -> str:
     return f"  ✦ {v.name[e.unit_id]} 的「{v.statuses[e.status_id]}」擋下了致命傷害，HP 留在 1"
@@ -801,6 +836,11 @@ def _unit_escaped(e: UnitEscaped, v: _View) -> str:
 def _unit_summoned(e: UnitSummoned, v: _View) -> str:
     owner = v.name.get(e.owner_id, e.owner_id)
     summon = v.name.get(e.unit_id, e.unit_id)
+    if e.orphan:  # 規則改變「殘影」的分身（Phase 3D-6）：召喚者已倒下
+        return (
+            f"  {owner} 的原地留下了 {summon}（{xy_text(e.pos)}，接替 {owner} 的行動順序，"
+            f"第 {e.expires_round} 輪的環境回合消失）"
+        )
     return (
         f"  {owner} 召喚了 {summon}，出現在 {xy_text(e.pos)}"
         f"（緊接在 {owner} 之後行動，第 {e.expires_round} 輪 {owner} 的回合結束時消失）"
