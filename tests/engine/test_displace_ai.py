@@ -174,3 +174,16 @@ def test_an_ai_battle_with_banishments_replays(
     replayed = io.StringIO()
     assert cmd_replay(log, replayed) == 0
     assert "重播驗證通過" in replayed.getvalue()
+
+
+def test_an_ai_battle_with_a_void_swap_replays(
+    tmp_path: Path, capsys: pytest.CaptureFixture[str]
+) -> None:
+    """open_plain 種子 0：快倒下的主角與隊友弓手互換位置（沒有敵人，不檢定），紀錄重播一致。"""
+    log = tmp_path / "void_swap.json"
+    argv = ["battle", "--map", "open_plain", "--seed", "0", "--ally-build", "build_banisher"]
+    assert main([*argv, "--log-json", str(log)]) == 0
+    assert "施放「虛空互換」" in capsys.readouterr().out
+    replayed = io.StringIO()
+    assert cmd_replay(log, replayed) == 0
+    assert "重播驗證通過" in replayed.getvalue()
