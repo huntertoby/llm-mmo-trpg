@@ -2,7 +2,19 @@ name: CI
 
 on:
   push:
+    branches: [main]
+    paths-ignore:
+      - "docs/**"
+      - "**.md"
   pull_request:
+    paths-ignore:
+      - "docs/**"
+      - "**.md"
+
+# 同一分支／PR 有新的 run 時取消舊的，節省 Actions 用量
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
 
 permissions:
   contents: read
@@ -16,6 +28,10 @@ jobs:
       matrix:
         os: [ubuntu-latest, windows-latest]
         python-version: ["3.12", "3.13"]
+        # Windows 以 2 倍計時，只跑最低支援版本
+        exclude:
+          - os: windows-latest
+            python-version: "3.13"
     env:
       # 讓 Windows 上的子程序（pytest、mypy）以 UTF-8 輸出繁體中文訊息
       PYTHONUTF8: "1"
