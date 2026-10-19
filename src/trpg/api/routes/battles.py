@@ -8,13 +8,12 @@ from __future__ import annotations
 
 from fastapi import APIRouter, Request, Response
 
-from trpg.api.presenter import battle_response
+from trpg.api.presenter import battle_response, preview_response
 from trpg.api.schemas import (
     BattleResponse,
     CreateBattleRequest,
     DecisionRequest,
     PreviewOut,
-    preview_out,
 )
 from trpg.api.state import store_of
 from trpg.engine.actions import Action
@@ -62,7 +61,7 @@ def post_decision(battle_id: str, body: DecisionRequest, request: Request) -> Ba
 def post_preview(battle_id: str, action: Action, request: Request) -> PreviewOut:
     session = store_of(request).get(battle_id)
     with session.lock:
-        return preview_out(session.preview(action))
+        return preview_response(session.preview(action))
 
 
 @router.put("/{battle_id}/orders")

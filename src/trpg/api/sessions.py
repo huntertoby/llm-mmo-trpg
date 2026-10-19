@@ -98,6 +98,7 @@ class BattleSession:
         max_auto_steps: int = DEFAULT_MAX_ACTIONS,
     ) -> None:
         self.battle_id = battle_id
+        self.library = library
         self.setup = setup
         self.seed = seed
         self.max_auto_steps = max_auto_steps

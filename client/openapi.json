@@ -254,6 +254,9 @@
                     "$ref": "#/components/schemas/EndStance"
                   },
                   {
+                    "$ref": "#/components/schemas/SetReactionMode"
+                  },
+                  {
                     "$ref": "#/components/schemas/EndTurn"
                   }
                 ],
@@ -268,6 +271,7 @@
                     "trip": "#/components/schemas/Trip",
                     "interact": "#/components/schemas/Interact",
                     "end_stance": "#/components/schemas/EndStance",
+                    "set_reaction_mode": "#/components/schemas/SetReactionMode",
                     "end_turn": "#/components/schemas/EndTurn"
                   }
                 },
@@ -401,6 +405,9 @@
                     "$ref": "#/components/schemas/EndStance"
                   },
                   {
+                    "$ref": "#/components/schemas/SetReactionMode"
+                  },
+                  {
                     "$ref": "#/components/schemas/EndTurn"
                   }
                 ],
@@ -415,6 +422,7 @@
                     "trip": "#/components/schemas/Trip",
                     "interact": "#/components/schemas/Interact",
                     "end_stance": "#/components/schemas/EndStance",
+                    "set_reaction_mode": "#/components/schemas/SetReactionMode",
                     "end_turn": "#/components/schemas/EndTurn"
                   }
                 },
@@ -571,6 +579,9 @@
             "$ref": "#/components/schemas/EndStance"
           },
           {
+            "$ref": "#/components/schemas/SetReactionMode"
+          },
+          {
             "$ref": "#/components/schemas/EndTurn"
           }
         ],
@@ -583,6 +594,7 @@
             "end_turn": "#/components/schemas/EndTurn",
             "interact": "#/components/schemas/Interact",
             "move": "#/components/schemas/Move",
+            "set_reaction_mode": "#/components/schemas/SetReactionMode",
             "shove": "#/components/schemas/Shove",
             "trip": "#/components/schemas/Trip",
             "use_skill": "#/components/schemas/UseSkill"
@@ -715,6 +727,16 @@
           "orders": {
             "$ref": "#/components/schemas/OrderSet"
           },
+          "orders_ignored": {
+            "items": {
+              "$ref": "#/components/schemas/IgnoredOrder"
+            },
+            "type": "array",
+            "title": "Orders Ignored"
+          },
+          "telegraph": {
+            "$ref": "#/components/schemas/TelegraphOut"
+          },
           "steps": {
             "items": {
               "$ref": "#/components/schemas/StepOut"
@@ -744,6 +766,8 @@
           "legal_actions",
           "pending",
           "orders",
+          "orders_ignored",
+          "telegraph",
           "steps",
           "outcome"
         ],
@@ -951,6 +975,34 @@
           "skills"
         ],
         "title": "BuildSummary"
+      },
+      "BurningOut": {
+        "properties": {
+          "object_id": {
+            "type": "string",
+            "title": "Object Id"
+          },
+          "pos": {
+            "$ref": "#/components/schemas/Pos"
+          },
+          "remaining": {
+            "type": "integer",
+            "title": "Remaining"
+          },
+          "text": {
+            "type": "string",
+            "title": "Text"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "object_id",
+          "pos",
+          "remaining",
+          "text"
+        ],
+        "title": "BurningOut"
       },
       "CoverOut": {
         "properties": {
@@ -1370,6 +1422,30 @@
         ],
         "title": "HoldPosition",
         "description": "守在指定格子附近。"
+      },
+      "IgnoredOrder": {
+        "properties": {
+          "scope": {
+            "type": "string",
+            "title": "Scope"
+          },
+          "order": {
+            "$ref": "#/components/schemas/TacticalOrder"
+          },
+          "reason": {
+            "type": "string",
+            "title": "Reason"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "scope",
+          "order",
+          "reason"
+        ],
+        "title": "IgnoredOrder",
+        "description": "被忽略的指令與原因。``scope`` 為 ``\"team\"`` 或單位 ID。"
       },
       "Interact": {
         "properties": {
@@ -1928,6 +2004,22 @@
             },
             "type": "array",
             "title": "Healed"
+          },
+          "min_events": {
+            "items": {
+              "additionalProperties": true,
+              "type": "object"
+            },
+            "type": "array",
+            "title": "Min Events"
+          },
+          "max_events": {
+            "items": {
+              "additionalProperties": true,
+              "type": "object"
+            },
+            "type": "array",
+            "title": "Max Events"
           }
         },
         "additionalProperties": false,
@@ -1944,7 +2036,9 @@
           "cover",
           "notes",
           "targets",
-          "healed"
+          "healed",
+          "min_events",
+          "max_events"
         ],
         "title": "PreviewOut",
         "description": ":class:`trpg.engine.preview.Preview` 的公開版本：不含模擬後的完整狀態與原始事件。"
@@ -1970,6 +2064,78 @@
         "title": "Protect",
         "description": "保護指定友方。"
       },
+      "ReactionRuleView": {
+        "properties": {
+          "reaction": {
+            "type": "string",
+            "title": "Reaction"
+          },
+          "name_zh": {
+            "type": "string",
+            "title": "Name Zh"
+          },
+          "description_zh": {
+            "type": "string",
+            "title": "Description Zh"
+          },
+          "event": {
+            "type": "string",
+            "title": "Event"
+          },
+          "trigger_zh": {
+            "type": "string",
+            "title": "Trigger Zh"
+          },
+          "mode": {
+            "type": "string",
+            "enum": [
+              "auto",
+              "prompt",
+              "off"
+            ],
+            "title": "Mode"
+          },
+          "unless_stamina_below": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Unless Stamina Below"
+          },
+          "stamina_cost": {
+            "type": "integer",
+            "title": "Stamina Cost"
+          },
+          "mana_cost": {
+            "type": "integer",
+            "title": "Mana Cost"
+          },
+          "hp_cost_permille": {
+            "type": "integer",
+            "title": "Hp Cost Permille"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "reaction",
+          "name_zh",
+          "description_zh",
+          "event",
+          "trigger_zh",
+          "mode",
+          "unless_stamina_below",
+          "stamina_cost",
+          "mana_cost",
+          "hp_cost_permille"
+        ],
+        "title": "ReactionRuleView",
+        "description": "單位身上的一條反應規則（玩家可以用 ``set_reaction_mode`` 切換 ``mode``）。"
+      },
       "RetreatTo": {
         "properties": {
           "kind": {
@@ -1989,6 +2155,42 @@
         ],
         "title": "RetreatTo",
         "description": "撤往指定格子。"
+      },
+      "SetReactionMode": {
+        "properties": {
+          "unit_id": {
+            "type": "string",
+            "title": "Unit Id"
+          },
+          "type": {
+            "type": "string",
+            "const": "set_reaction_mode",
+            "title": "Type",
+            "default": "set_reaction_mode"
+          },
+          "reaction": {
+            "type": "string",
+            "title": "Reaction"
+          },
+          "mode": {
+            "type": "string",
+            "enum": [
+              "auto",
+              "prompt",
+              "off"
+            ],
+            "title": "Mode"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "unit_id",
+          "reaction",
+          "mode"
+        ],
+        "title": "SetReactionMode",
+        "description": "設定自己身上某條反應規則的模式（Phase 3-4b）：``auto`` 自動、``prompt`` 詢問、``off`` 關閉。\n\n不花 AP、不結束回合，只能在自己的回合使用，只能改自己身上已有的規則（``reaction`` 為反應 ID\n或反應技 ID；同一個反應的所有規則一併改）。**不列入** ``legal_actions``（AI 不使用），由\n:func:`trpg.engine.battle.reaction_mode_problem` 判斷合法。"
       },
       "Shove": {
         "properties": {
@@ -2297,6 +2499,9 @@
             "$ref": "#/components/schemas/EndStance"
           },
           {
+            "$ref": "#/components/schemas/SetReactionMode"
+          },
+          {
             "$ref": "#/components/schemas/EndTurn"
           },
           {
@@ -2313,6 +2518,7 @@
             "end_turn": "#/components/schemas/EndTurn",
             "interact": "#/components/schemas/Interact",
             "move": "#/components/schemas/Move",
+            "set_reaction_mode": "#/components/schemas/SetReactionMode",
             "shove": "#/components/schemas/Shove",
             "trip": "#/components/schemas/Trip",
             "use_skill": "#/components/schemas/UseSkill"
@@ -2477,6 +2683,136 @@
         ],
         "title": "Team",
         "description": "戰鬥中的陣營。地圖起始區以此為鍵。"
+      },
+      "TelegraphChangeOut": {
+        "properties": {
+          "kind": {
+            "type": "string",
+            "title": "Kind"
+          },
+          "pos": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/Pos"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "before": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Before"
+          },
+          "after": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "After"
+          },
+          "object_id": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Object Id"
+          },
+          "unit_id": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Unit Id"
+          },
+          "amount": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Amount"
+          },
+          "text": {
+            "type": "string",
+            "title": "Text"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "kind",
+          "pos",
+          "before",
+          "after",
+          "object_id",
+          "unit_id",
+          "amount",
+          "text"
+        ],
+        "title": "TelegraphChangeOut",
+        "description": "預告的一項變化（:class:`trpg.engine.environment.TelegraphChange` ＋ 中文 ``text``）。"
+      },
+      "TelegraphOut": {
+        "properties": {
+          "round": {
+            "type": "integer",
+            "title": "Round"
+          },
+          "changes": {
+            "items": {
+              "$ref": "#/components/schemas/TelegraphChangeOut"
+            },
+            "type": "array",
+            "title": "Changes"
+          },
+          "burning": {
+            "items": {
+              "$ref": "#/components/schemas/BurningOut"
+            },
+            "type": "array",
+            "title": "Burning"
+          },
+          "upcoming": {
+            "items": {
+              "$ref": "#/components/schemas/UpcomingEventOut"
+            },
+            "type": "array",
+            "title": "Upcoming"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "round",
+          "changes",
+          "burning",
+          "upcoming"
+        ],
+        "title": "TelegraphOut",
+        "description": "下一次環境回合（本輪結束時）將發生的變化（Phase 3-4b）。以我方看得見的狀態模擬，\n不含隱藏陷阱與亂數狀態。"
       },
       "TileView": {
         "properties": {
@@ -2711,6 +3047,17 @@
             "type": "boolean",
             "title": "Reaction Available"
           },
+          "reaction_rules": {
+            "items": {
+              "$ref": "#/components/schemas/ReactionRuleView"
+            },
+            "type": "array",
+            "title": "Reaction Rules"
+          },
+          "ap_carry": {
+            "type": "integer",
+            "title": "Ap Carry"
+          },
           "downed": {
             "type": "boolean",
             "title": "Downed"
@@ -2746,10 +3093,44 @@
           "stacks",
           "cooldowns",
           "reaction_available",
+          "reaction_rules",
+          "ap_carry",
           "downed",
           "escaped"
         ],
         "title": "UnitView"
+      },
+      "UpcomingEventOut": {
+        "properties": {
+          "round": {
+            "type": "integer",
+            "title": "Round"
+          },
+          "kind": {
+            "type": "string",
+            "title": "Kind"
+          },
+          "tiles": {
+            "items": {
+              "$ref": "#/components/schemas/XY"
+            },
+            "type": "array",
+            "title": "Tiles"
+          },
+          "text": {
+            "type": "string",
+            "title": "Text"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "round",
+          "kind",
+          "tiles",
+          "text"
+        ],
+        "title": "UpcomingEventOut"
       },
       "UseEnvironment": {
         "properties": {

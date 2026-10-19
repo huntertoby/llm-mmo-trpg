@@ -291,6 +291,8 @@ def test_preview_returns_the_numbers_and_does_not_change_the_session(client: Tes
         "notes",
         "targets",
         "healed",
+        "min_events",
+        "max_events",
     }
     assert data["action"] == attack
     move = next(a for a in actions if a["type"] == "move")

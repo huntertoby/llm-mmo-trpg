@@ -213,7 +213,7 @@ export interface paths {
 export type webhooks = Record<string, never>;
 export interface components {
     schemas: {
-        Action: components["schemas"]["Move"] | components["schemas"]["Attack"] | components["schemas"]["UseSkill"] | components["schemas"]["Defend"] | components["schemas"]["Shove"] | components["schemas"]["Trip"] | components["schemas"]["Interact"] | components["schemas"]["EndStance"] | components["schemas"]["EndTurn"];
+        Action: components["schemas"]["Move"] | components["schemas"]["Attack"] | components["schemas"]["UseSkill"] | components["schemas"]["Defend"] | components["schemas"]["Shove"] | components["schemas"]["Trip"] | components["schemas"]["Interact"] | components["schemas"]["EndStance"] | components["schemas"]["SetReactionMode"] | components["schemas"]["EndTurn"];
         /**
          * Attack
          * @description 以武器普攻單位 ``target_id`` 或物件 ``target_object_id``（恰好給一個）。
@@ -261,6 +261,9 @@ export interface components {
             legal_actions: components["schemas"]["Action"][];
             pending: components["schemas"]["Pending"] | null;
             orders: components["schemas"]["OrderSet"];
+            /** Orders Ignored */
+            orders_ignored: components["schemas"]["IgnoredOrder"][];
+            telegraph: components["schemas"]["TelegraphOut"];
             /** Steps */
             steps: components["schemas"]["StepOut"][];
             outcome: components["schemas"]["BattleOutcome"] | null;
@@ -317,6 +320,16 @@ export interface components {
             theme_zh: string;
             /** Skills */
             skills: string[];
+        };
+        /** BurningOut */
+        BurningOut: {
+            /** Object Id */
+            object_id: string;
+            pos: components["schemas"]["Pos"];
+            /** Remaining */
+            remaining: number;
+            /** Text */
+            text: string;
         };
         /** CoverOut */
         CoverOut: {
@@ -501,6 +514,17 @@ export interface components {
              * @default 1
              */
             radius: number;
+        };
+        /**
+         * IgnoredOrder
+         * @description 被忽略的指令與原因。``scope`` 為 ``"team"`` 或單位 ID。
+         */
+        IgnoredOrder: {
+            /** Scope */
+            scope: string;
+            order: components["schemas"]["TacticalOrder"];
+            /** Reason */
+            reason: string;
         };
         /**
          * Interact
@@ -727,6 +751,14 @@ export interface components {
             targets: components["schemas"]["TargetOut"][];
             /** Healed */
             healed: components["schemas"]["HealOut"][];
+            /** Min Events */
+            min_events: {
+                [key: string]: unknown;
+            }[];
+            /** Max Events */
+            max_events: {
+                [key: string]: unknown;
+            }[];
         };
         /**
          * Protect
@@ -742,6 +774,35 @@ export interface components {
             ward: string;
         };
         /**
+         * ReactionRuleView
+         * @description 單位身上的一條反應規則（玩家可以用 ``set_reaction_mode`` 切換 ``mode``）。
+         */
+        ReactionRuleView: {
+            /** Reaction */
+            reaction: string;
+            /** Name Zh */
+            name_zh: string;
+            /** Description Zh */
+            description_zh: string;
+            /** Event */
+            event: string;
+            /** Trigger Zh */
+            trigger_zh: string;
+            /**
+             * Mode
+             * @enum {string}
+             */
+            mode: "auto" | "prompt" | "off";
+            /** Unless Stamina Below */
+            unless_stamina_below: number | null;
+            /** Stamina Cost */
+            stamina_cost: number;
+            /** Mana Cost */
+            mana_cost: number;
+            /** Hp Cost Permille */
+            hp_cost_permille: number;
+        };
+        /**
          * RetreatTo
          * @description 撤往指定格子。
          */
@@ -752,6 +813,30 @@ export interface components {
              */
             kind: "retreat_to";
             at: components["schemas"]["XY"];
+        };
+        /**
+         * SetReactionMode
+         * @description 設定自己身上某條反應規則的模式（Phase 3-4b）：``auto`` 自動、``prompt`` 詢問、``off`` 關閉。
+         *
+         *     不花 AP、不結束回合，只能在自己的回合使用，只能改自己身上已有的規則（``reaction`` 為反應 ID
+         *     或反應技 ID；同一個反應的所有規則一併改）。**不列入** ``legal_actions``（AI 不使用），由
+         *     :func:`trpg.engine.battle.reaction_mode_problem` 判斷合法。
+         */
+        SetReactionMode: {
+            /** Unit Id */
+            unit_id: string;
+            /**
+             * @description discriminator enum property added by openapi-typescript
+             * @enum {string}
+             */
+            type: "set_reaction_mode";
+            /** Reaction */
+            reaction: string;
+            /**
+             * Mode
+             * @enum {string}
+             */
+            mode: "auto" | "prompt" | "off";
         };
         /**
          * Shove
@@ -848,7 +933,7 @@ export interface components {
             /** Amount */
             amount: number | null;
         };
-        Step: components["schemas"]["Move"] | components["schemas"]["Attack"] | components["schemas"]["UseSkill"] | components["schemas"]["Defend"] | components["schemas"]["Shove"] | components["schemas"]["Trip"] | components["schemas"]["Interact"] | components["schemas"]["EndStance"] | components["schemas"]["EndTurn"] | components["schemas"]["Decision"];
+        Step: components["schemas"]["Move"] | components["schemas"]["Attack"] | components["schemas"]["UseSkill"] | components["schemas"]["Defend"] | components["schemas"]["Shove"] | components["schemas"]["Trip"] | components["schemas"]["Interact"] | components["schemas"]["EndStance"] | components["schemas"]["SetReactionMode"] | components["schemas"]["EndTurn"] | components["schemas"]["Decision"];
         /**
          * StepOut
          * @description 自動推進中結算的一步。``actor_id`` 與 ``step`` 在開場時為 ``None``。
@@ -896,6 +981,42 @@ export interface components {
          * @enum {string}
          */
         Team: "ally" | "enemy";
+        /**
+         * TelegraphChangeOut
+         * @description 預告的一項變化（:class:`trpg.engine.environment.TelegraphChange` ＋ 中文 ``text``）。
+         */
+        TelegraphChangeOut: {
+            /** Kind */
+            kind: string;
+            pos: components["schemas"]["Pos"] | null;
+            /** Before */
+            before: string | null;
+            /** After */
+            after: string | null;
+            /** Object Id */
+            object_id: string | null;
+            /** Unit Id */
+            unit_id: string | null;
+            /** Amount */
+            amount: number | null;
+            /** Text */
+            text: string;
+        };
+        /**
+         * TelegraphOut
+         * @description 下一次環境回合（本輪結束時）將發生的變化（Phase 3-4b）。以我方看得見的狀態模擬，
+         *     不含隱藏陷阱與亂數狀態。
+         */
+        TelegraphOut: {
+            /** Round */
+            round: number;
+            /** Changes */
+            changes: components["schemas"]["TelegraphChangeOut"][];
+            /** Burning */
+            burning: components["schemas"]["BurningOut"][];
+            /** Upcoming */
+            upcoming: components["schemas"]["UpcomingEventOut"][];
+        };
         /** TileView */
         TileView: {
             /** X */
@@ -989,10 +1110,25 @@ export interface components {
             };
             /** Reaction Available */
             reaction_available: boolean;
+            /** Reaction Rules */
+            reaction_rules: components["schemas"]["ReactionRuleView"][];
+            /** Ap Carry */
+            ap_carry: number;
             /** Downed */
             downed: boolean;
             /** Escaped */
             escaped: boolean;
+        };
+        /** UpcomingEventOut */
+        UpcomingEventOut: {
+            /** Round */
+            round: number;
+            /** Kind */
+            kind: string;
+            /** Tiles */
+            tiles: components["schemas"]["XY"][];
+            /** Text */
+            text: string;
         };
         /**
          * UseEnvironment
@@ -1226,7 +1362,7 @@ export interface operations {
         };
         requestBody: {
             content: {
-                "application/json": components["schemas"]["Move"] | components["schemas"]["Attack"] | components["schemas"]["UseSkill"] | components["schemas"]["Defend"] | components["schemas"]["Shove"] | components["schemas"]["Trip"] | components["schemas"]["Interact"] | components["schemas"]["EndStance"] | components["schemas"]["EndTurn"];
+                "application/json": components["schemas"]["Move"] | components["schemas"]["Attack"] | components["schemas"]["UseSkill"] | components["schemas"]["Defend"] | components["schemas"]["Shove"] | components["schemas"]["Trip"] | components["schemas"]["Interact"] | components["schemas"]["EndStance"] | components["schemas"]["SetReactionMode"] | components["schemas"]["EndTurn"];
             };
         };
         responses: {
@@ -1296,7 +1432,7 @@ export interface operations {
         };
         requestBody: {
             content: {
-                "application/json": components["schemas"]["Move"] | components["schemas"]["Attack"] | components["schemas"]["UseSkill"] | components["schemas"]["Defend"] | components["schemas"]["Shove"] | components["schemas"]["Trip"] | components["schemas"]["Interact"] | components["schemas"]["EndStance"] | components["schemas"]["EndTurn"];
+                "application/json": components["schemas"]["Move"] | components["schemas"]["Attack"] | components["schemas"]["UseSkill"] | components["schemas"]["Defend"] | components["schemas"]["Shove"] | components["schemas"]["Trip"] | components["schemas"]["Interact"] | components["schemas"]["EndStance"] | components["schemas"]["SetReactionMode"] | components["schemas"]["EndTurn"];
             };
         };
         responses: {

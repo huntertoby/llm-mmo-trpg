@@ -12,18 +12,28 @@ from __future__ import annotations
 
 from typing import Any
 
-from trpg.api.schemas import BattleOutcome, BattleResponse, StepOut
+from trpg.api.schemas import BattleOutcome, BattleResponse, PreviewOut, StepOut, preview_out
 from trpg.api.sessions import BattleSession, StepRecord
+from trpg.api.telegraph import telegraph_out
 from trpg.engine.actions import Step, UseSkill
+from trpg.engine.ai.commanded import ignored_orders
 from trpg.engine.battle import legal_actions
 from trpg.engine.event_filter import filter_events
 from trpg.engine.events import BattleStarted, EventBase
+from trpg.engine.preview import Preview
 from trpg.engine.state import BattleState
 from trpg.engine.view import project_for
 from trpg.narrative.events import battle_started_text, describe_event
 from trpg.shared.types import Team
 
-__all__ = ["VIEW_TEAM", "battle_response", "event_out", "step_out", "step_view"]
+__all__ = [
+    "VIEW_TEAM",
+    "battle_response",
+    "event_out",
+    "preview_response",
+    "step_out",
+    "step_view",
+]
 
 VIEW_TEAM = Team.ALLY
 """網頁玩家的陣營。"""
@@ -67,6 +77,17 @@ def step_out(record: StepRecord, team: Team = VIEW_TEAM) -> StepOut:
     )
 
 
+def preview_response(p: Preview) -> PreviewOut:
+    """預覽的公開版本，另附過濾後的模擬事件（``min``／``max``，各附中文 ``text``）。"""
+    low = filter_events(p.min_events, p.min_state, VIEW_TEAM)
+    high = filter_events(p.max_events, p.max_state, VIEW_TEAM)
+    return preview_out(
+        p,
+        tuple(event_out(e, p.min_state) for e in low),
+        tuple(event_out(e, p.max_state) for e in high),
+    )
+
+
 def battle_response(
     session: BattleSession,
     records: list[StepRecord],
@@ -93,6 +114,8 @@ def battle_response(
         legal_actions=tuple(legal_actions(state)) if awaiting == "action" else (),
         pending=pending,
         orders=session.orders,
+        orders_ignored=ignored_orders(state, VIEW_TEAM, session.orders),
+        telegraph=telegraph_out(state, session.library, VIEW_TEAM),
         steps=tuple(step_out(r) for r in records),
         outcome=outcome,
     )

@@ -16,7 +16,7 @@ from trpg.engine.ai.utility import UtilityAI
 from trpg.engine.state import BattleState
 from trpg.shared.types import Team, UnitId
 
-__all__ = ["CommandedAI", "Commander", "OrderLogging", "OrderObserver"]
+__all__ = ["CommandedAI", "Commander", "OrderLogging", "OrderObserver", "ignored_orders"]
 
 type Commander = Callable[[BattleState, Team], OrderSet | None]
 """指揮官：回傳 ``None`` 表示沿用上一個指令。"""
@@ -104,6 +104,11 @@ class CommandedAI:
             raise ValueError("目前沒有行動中的單位")
         self._consult(state, unit.team)
         return self.ai(state)
+
+
+def ignored_orders(state: BattleState, team: Team, orders: OrderSet) -> tuple[IgnoredOrder, ...]:
+    """``orders`` 在 ``state`` 中無法執行的指令與原因（AI 會略過；網頁側欄顯示用）。"""
+    return _ignored(state, team, orders)
 
 
 def _ignored(state: BattleState, team: Team, orders: OrderSet) -> tuple[IgnoredOrder, ...]:

@@ -14,12 +14,12 @@ from typing import Any, Literal
 from pydantic import BaseModel, ConfigDict, Field
 
 from trpg.engine.actions import Action, Step
-from trpg.engine.ai.orders import OrderSet
+from trpg.engine.ai.orders import IgnoredOrder, OrderSet
 from trpg.engine.preview import DamageRange, Outcome, Preview, StatusChance, TargetPreview
 from trpg.engine.results import Pending
 from trpg.engine.view import BattleView
 from trpg.shared.rng import MASK64
-from trpg.shared.types import ObjectId, Team, UnitId
+from trpg.shared.types import ObjectId, Pos, Team, UnitId
 
 __all__ = [
     "Awaiting",
@@ -39,6 +39,9 @@ __all__ = [
     "StatusChanceOut",
     "StepOut",
     "TargetOut",
+    "TelegraphChangeOut",
+    "TelegraphOut",
+    "UpcomingEventOut",
     "permille",
     "preview_out",
 ]
@@ -129,6 +132,45 @@ class StepOut(_ApiModel):
     """這一步結算後的戰場（我方視角）；前端逐步播放時用。"""
 
 
+class TelegraphChangeOut(_ApiModel):
+    """預告的一項變化（:class:`trpg.engine.environment.TelegraphChange` ＋ 中文 ``text``）。"""
+
+    kind: str
+    pos: Pos | None
+    before: str | None
+    after: str | None
+    object_id: ObjectId | None
+    unit_id: UnitId | None
+    amount: int | None
+    text: str
+
+
+class BurningOut(_ApiModel):
+    object_id: ObjectId
+    pos: Pos
+    remaining: int
+    """還能撐幾次環境回合。"""
+    text: str
+
+
+class UpcomingEventOut(_ApiModel):
+    round: int
+    kind: str
+    tiles: tuple[XY, ...]
+    text: str
+
+
+class TelegraphOut(_ApiModel):
+    """下一次環境回合（本輪結束時）將發生的變化（Phase 3-4b）。以我方看得見的狀態模擬，
+    不含隱藏陷阱與亂數狀態。"""
+
+    round: int
+    changes: tuple[TelegraphChangeOut, ...]
+    burning: tuple[BurningOut, ...]
+    upcoming: tuple[UpcomingEventOut, ...]
+    """再下一輪結束時的地圖事件（提前一輪預告）。"""
+
+
 class BattleOutcome(_ApiModel):
     winner: Team | None
     """``None`` 為平手。"""
@@ -152,6 +194,10 @@ class BattleResponse(_ApiModel):
     """主角的反應詢問（只有公開欄位）。"""
     orders: OrderSet
     """我方隊友目前的戰術指令。"""
+    orders_ignored: tuple[IgnoredOrder, ...]
+    """目前指令中已經無法執行的（例如集火的目標已倒下）與原因；AI 會略過它們。"""
+    telegraph: TelegraphOut
+    """下一次環境回合的預告。"""
     steps: tuple[StepOut, ...]
     """這次請求推進的每一步（依序）。"""
     outcome: BattleOutcome | None
@@ -241,6 +287,10 @@ class PreviewOut(_ApiModel):
     notes: tuple[str, ...]
     targets: tuple[TargetOut, ...]
     healed: tuple[HealOut, ...]
+    min_events: tuple[dict[str, Any], ...]
+    """最少後果的模擬事件（我方視角過濾，附中文 ``text``）；連鎖預覽用。"""
+    max_events: tuple[dict[str, Any], ...]
+    """最多後果的模擬事件。"""
 
 
 def _damage(d: DamageRange | None) -> DamageOut | None:
@@ -281,7 +331,11 @@ def _target(t: TargetPreview) -> TargetOut:
     )
 
 
-def preview_out(p: Preview) -> PreviewOut:
+def preview_out(
+    p: Preview,
+    min_events: tuple[dict[str, Any], ...],
+    max_events: tuple[dict[str, Any], ...],
+) -> PreviewOut:
     cover = p.cover
     return PreviewOut(
         action=p.action,
@@ -306,4 +360,6 @@ def preview_out(p: Preview) -> PreviewOut:
         notes=p.notes,
         targets=tuple(_target(t) for t in p.targets),
         healed=tuple(HealOut(unit_id=u, minimum=lo, maximum=hi) for u, lo, hi in p.healed),
+        min_events=min_events,
+        max_events=max_events,
     )
