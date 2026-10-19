@@ -15,7 +15,9 @@ from trpg.content.battle import Dice
 from trpg.content.library import ContentLibrary
 from trpg.content.skills import (
     CHEAT_DEATH_STATUS,
+    DAMAGE_MULTIPLIER,
     REDIRECT_STATUS,
+    SELF_DAMAGE_OF_HIT,
     ConditionSpec,
     EffectSpec,
     ModifierSpec,
@@ -34,11 +36,13 @@ __all__ = [
     "WEAPON_REQ_TEXT",
     "SkillCard",
     "activation_text",
+    "branch_text",
     "condition_summary",
     "cost_parts",
     "cost_summary",
     "effect_summary",
     "mastery_text",
+    "miss_text",
     "modifier_summary",
     "rule_change_text",
     "scaling_detail",
@@ -230,6 +234,48 @@ def activation_text(library: ContentLibrary, skill: SkillDef) -> str | None:
     if skill.activation == "battle":
         return f"整場：{head}，本場剩餘時間有效"
     return f"限時：{head}，持續 {core.legendary_timed_rounds} 輪"
+
+
+def _branch_effect_text(lib: ContentLibrary, skill: SkillDef, sub: EffectSpec) -> str:
+    """賭注分支或失手反噬的一個效果（Phase 3D-7a）：倍率、自傷與一般效果（含對象）。"""
+    if sub.type == DAMAGE_MULTIPLIER:
+        assert sub.damage_multiplier_permille is not None
+        return f"本次傷害 ×{sub.damage_multiplier_permille / 1000:g}"
+    if sub.type == SELF_DAMAGE_OF_HIT:
+        assert sub.self_damage_permille_of_hit is not None
+        return f"你受到本次傷害的 {sub.self_damage_permille_of_hit / 10:g}%（不致命）"
+    return effect_summary(lib, skill, sub)
+
+
+def branch_text(
+    lib: ContentLibrary, skill: SkillDef, effects: tuple[EffectSpec, ...] | None
+) -> str:
+    """賭注一個分支的一句話；沒有效果為「沒有額外效果」。"""
+    if not effects:
+        return "沒有額外效果"
+    return "、".join(_branch_effect_text(lib, skill, sub) for sub in effects)
+
+
+def _gamble(lib: ContentLibrary, skill: SkillDef, spec: EffectSpec) -> str:
+    assert spec.chance_permille is not None
+    win = f"{spec.chance_permille / 10:g}%：{branch_text(lib, skill, spec.win)}"
+    lose = f"{(1000 - spec.chance_permille) / 10:g}%：{branch_text(lib, skill, spec.lose)}"
+    return f"賭注（命中後擲 d1000）——{win}｜{lose}"
+
+
+def miss_text(lib: ContentLibrary, skill: SkillDef) -> str | None:
+    """失手反噬（``cost.on_miss``，Phase 3D-7a）的一句話；沒有為 ``None``。"""
+    if not skill.cost.on_miss:
+        return None
+    parts: list[str] = []
+    for sub in skill.cost.on_miss:
+        if sub.type == "apply_status" and sub.status is not None:
+            name = lib.ruleset.status_def(sub.status).name_zh
+            turns = f" {sub.duration} 回合" if sub.duration else ""
+            parts.append(f"你獲得「{name}」{turns}")
+        else:
+            parts.append(f"{_damage(lib, skill, sub)}（對自己，不致命）")
+    return "失手（含自然 1）時：" + "、".join(parts)
 
 
 def _charge_through(_lib: ContentLibrary, skill: SkillDef, spec: EffectSpec) -> str:
@@ -443,6 +489,7 @@ _EFFECT_TEXT: dict[str, _EffectText] = {
     "topple": _topple,
     "zone": _zone,
     "rule_change": _rule_change,
+    "gamble": _gamble,
 }
 
 
@@ -458,7 +505,7 @@ def effect_summary(library: ContentLibrary, skill: SkillDef, spec: EffectSpec) -
     primitive = library.ruleset.primitive_def(spec.type)
     affects = spec.affects or default_affects(primitive)
     text = _effect_core(library, skill, spec)
-    if spec.type not in ("summon", "zone", "rule_change"):  # 對象已寫在句中（3D-4b、3D-5、3D-6）
+    if spec.type not in ("summon", "zone", "rule_change", "gamble"):  # 對象已寫在句中
         text += f"（{_AFFECTS[affects]}）"
     if spec.condition is not None:
         text += f"，若{condition_summary(library, spec.condition)}"
@@ -571,6 +618,9 @@ def cost_parts(library: ContentLibrary, skill: SkillDef, *, with_ap: bool = True
         parts.append(f"每場 {cost.uses_per_battle} 次")
     if cost.source:
         parts.append(f"源力 {cost.source}")
+    miss = miss_text(library, skill)
+    if miss is not None:
+        parts.append(miss)
     return parts
 
 
