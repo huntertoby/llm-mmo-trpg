@@ -65,6 +65,23 @@
 | 8 | `ObjectMoved.how` 只分推與撥開 | 接受 |
 | 9 | 前端 fixture 沒重錄 | 接受；之後改到 fixture 相關測試時再重錄 |
 
+### 0.6 3C-2 驗收與「待 PM 決定」的處理（2026-10-19）
+
+- 驗收：`check.py` 全過（pytest 1704、vitest 74）；`oil_depot` 種子 11（`build_fire,build_push`）`--log-json` → `replay` 一致；`modifiers.py` 無浮點與 `random`。`LOG_FORMAT` 仍 `/11`。
+
+| # | 項目 | 決定 |
+|---|---|---|
+| 1 | 修正只影響持有者的動作，不影響被動與陷阱觸發 | 接受 |
+| 2 | 新增 `all_skills`；`all_attacks`＝普攻 ＋ 有對敵傷害的技能 | 接受 |
+| 3 | `push_distance_delta` 超過上限捨去（`max_displace_distance: 2`） | 3C-3a 改為撞擊傷害（規格 5.0） |
+| 4 | `add_element` 只改物理傷害 | 接受 |
+| 5 | `add_tags` 只一層；現有技能沒有 `displace` 標籤，用 `push` | 接受；之後規格中的 `displace` 一律指 `push` 標籤 |
+| 6 | 條件判斷時間點 | 接受 |
+| 7 | 命中後效果無代價、無次數上限，原語限 6 種 | 接受；平衡階段觀察 |
+| 8 | 預算初值（係數 0.3 等） | 3C-6 matrix 後再看，平衡階段調 |
+| 9 | 雷之手在水裡電到自己與隊友（自傷 12 > 對目標 6） | 屬玩法問題，轉給玩法 PM（導電對施放者自己的傷害是否偏痛） |
+| 10 | 冷卻縮短沒有紀錄文字；組合器不產生修正技能 | 併入 3C-6（8.1 組合器、8.2 紀錄文字） |
+
 ## 1. 範圍外（整個 3C）
 
 - 召喚（`summon`）、連段條件（`moved_this_turn` 等）、增益互動（`steal_buff` 等）、其他零星原語（`PM交接.md` 3.1.1）。
