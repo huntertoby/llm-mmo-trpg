@@ -20,7 +20,7 @@ from trpg.engine.actions import UseSkill
 from trpg.engine.rules.geometry import XY, chebyshev, manhattan
 from trpg.engine.rules.movement import is_deadly
 from trpg.engine.state import BattleState, UnitState
-from trpg.engine.traps import visible_traps
+from trpg.engine.traps import own_traps
 from trpg.shared.types import Team
 
 __all__ = ["DISPLACE_PRIMITIVES", "displace_estimate", "exposure", "is_hurt", "tile_harm"]
@@ -44,7 +44,7 @@ def tile_harm(state: BattleState, xy: XY, trap_team: Team, harmful: Harmful) -> 
         return _DEADLY_HARM
     if harmful(state, xy):
         return _SURFACE_HARM
-    traps = visible_traps(state, trap_team)
+    traps = own_traps(state, trap_team)
     return _TRAP_HARM if any(t.xy == xy for t in traps) else 0
 
 

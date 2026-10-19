@@ -31,6 +31,7 @@ from trpg.content.skills import (
     COPY_SKILL,
     DAMAGE_MULTIPLIER,
     DASH,
+    DISPEL,
     EXTRA_REACTION,
     GAMBLE,
     GRANT_AP,
@@ -42,6 +43,7 @@ from trpg.content.skills import (
     REDIRECT_STATUS,
     RESET_COOLDOWN,
     RESTORE_RESOURCE,
+    REVEAL,
     SELF_DAMAGE_OF_HIT,
     STEAL_BUFF,
     SUMMON,
@@ -109,7 +111,12 @@ from trpg.engine.reactions import (
     spell_hit_reactions,
     try_intercept,
 )
-from trpg.engine.resources import pick_stolen_buff, restore_cooldowns, restore_mana
+from trpg.engine.resources import (
+    dispelled_buffs,
+    pick_stolen_buff,
+    restore_cooldowns,
+    restore_mana,
+)
 from trpg.engine.results import Pending
 from trpg.engine.rewrites import grant_ap, grant_reactions, reset_cooldowns
 from trpg.engine.rules.combat import PERMILLE, AttackProfile, AttackRoll, ForcedOutcome, roll_attack
@@ -140,7 +147,7 @@ from trpg.engine.source import spend_source
 from trpg.engine.stacks import add_stacks, consume_stacks
 from trpg.engine.state import BattleState, LastCast, TrapState, UnitState, ZoneState
 from trpg.engine.summons import summon_unit
-from trpg.engine.traps import place_trap
+from trpg.engine.traps import place_trap, reveal_traps
 from trpg.engine.zones import create_zone, zone_spec
 from trpg.shared.errors import IllegalActionError
 from trpg.shared.types import Element, Pos, UnitId
@@ -165,8 +172,12 @@ REWRITE_PRIMITIVES = (
 )
 """由 :meth:`_Cast.rewrite` 結算的改寫規則型原語。"""
 _TOUCHING_AFFECTS = ("enemies", "all", "tiles")
-_OWN_CHECK = (SWAP, SWAP_ANY, TELEPORT_TARGET, ZONE)
-"""位移類原語自己擲抵抗判定（Phase 3D-2b），不另外擲命中。"""
+_OWN_CHECK = (SWAP, SWAP_ANY, TELEPORT_TARGET, ZONE, REVEAL)
+"""位移類原語自己擲抵抗判定（Phase 3D-2b），不另外擲命中；揭露（Phase 3D-8a）自動命中範圍內的
+敵人。"""
+REVEALED = "revealed"
+"""``reveal`` 施加的狀態（``statuses.yaml``，``prevents_concealment``）。"""
+CONCEALED = "concealed"
 
 
 def _unit_id(unit: UnitState) -> str:
@@ -505,12 +516,16 @@ class _Cast:
         rolling = [e for e in self.effects if e.type not in _OWN_CHECK]  # 位移他人自己擲抵抗
         if any(e.affects in ("enemies", "all") for e in rolling):
             rolled += self.enemies
-        if any(e.affects == "all" for e in rolling):
+        if any(e.affects == "all" and not self._splits(e) for e in rolling):
             rolled += [u for u in self.allies if u is not self.caster]  # 敵我不分也不打到自己
         for unit in sorted(rolled, key=lambda u: u.id):
             self._roll_one(unit)
         if self.modified:
             self._update_cooldown_delta()
+
+    def _splits(self, effect: ResolvedEffect) -> bool:
+        """這個效果是聖光雙效（``split_heal``，Phase 3D-8a）：友方改為治療、不擲命中。"""
+        return effect.spec_index >= 0 and bool(self.skill.effects[effect.spec_index].split_heal)
 
     def _update_cooldown_delta(self) -> None:
         """修正規則的命中後冷卻修正：以目前已命中的敵人計算（命中判定之後呼叫）。"""
@@ -649,8 +664,11 @@ class _Cast:
             batch = self.build(effect, spec)
             if batch:
                 execute(self.ctx, batch)
-            if effect.type == "damage" and effect.affects in _TOUCHING_AFFECTS:
-                self.touch_untouched_tiles(spec, start)
+            if effect.type == "damage":
+                if effect.affects in _TOUCHING_AFFECTS:
+                    self.touch_untouched_tiles(spec, start)
+                if spec.lifesteal_permille is not None:
+                    self.lifesteal(spec.lifesteal_permille, start)
         self.backlash_on_miss()
         self.react_to_hits()
         self.shorten_cooldown()
@@ -946,6 +964,53 @@ class _Cast:
                 restore_cooldowns(self.ctx, self.caster, unit, self.skill, spec)
         return []
 
+    def dispel(self, effect: ResolvedEffect, spec: EffectSpec) -> list[EffectBase]:
+        """``dispel``（Phase 3D-8a）：每個對象失去 ``count`` 個增益（剩餘回合最長者先，永久最長；
+        ``all`` 為全部；原因 ``dispelled``）。沒有任何對象有增益時發出 ``effect_fizzled``。"""
+        batch: list[EffectBase] = [
+            RemoveStatusEffect(
+                source_id=self.caster.id,
+                target_id=unit.id,
+                status_id=buff.status_id,
+                reason="dispelled",
+            )
+            for unit in self.targets(effect.affects, spec.condition)
+            for buff in dispelled_buffs(self.ctx, unit, spec.count or 1)
+        ]
+        if not batch:
+            self.ctx.emit(EffectFizzled, effect_kind=spec.type, pos=None, reason="no_buff")
+        return batch
+
+    def reveal(self, _effect: ResolvedEffect, spec: EffectSpec) -> list[EffectBase]:
+        """``reveal``（Phase 3D-8a）：範圍內的敵人不擲命中就失去 ``concealed`` 狀態（原因
+        ``revealed``）並獲得 ``revealed`` 狀態 ``duration`` 回合（期間不算隱蔽、不能再隱蔽）；
+        範圍內的敵方陷阱對施放者的陣營顯示。範圍內沒有敵人也沒有敵方陷阱時發出
+        ``effect_fizzled``。"""
+        batch: list[EffectBase] = []
+        for unit in sorted((u for u in self.enemies if u.alive), key=lambda u: u.id):
+            if unit.has_status(CONCEALED):
+                batch.append(
+                    RemoveStatusEffect(
+                        source_id=self.caster.id,
+                        target_id=unit.id,
+                        status_id=CONCEALED,
+                        reason="revealed",
+                    )
+                )
+            batch.append(
+                ApplyStatusEffect(
+                    source_id=self.caster.id,
+                    target_id=unit.id,
+                    status_id=REVEALED,
+                    duration=spec.duration,
+                )
+            )
+        before = len(self.ctx.events)
+        reveal_traps(self.ctx, self.caster, self.area.tiles)
+        if not batch and len(self.ctx.events) == before:
+            self.ctx.emit(EffectFizzled, effect_kind=spec.type, pos=None, reason="nothing_hidden")
+        return batch
+
     def steal_buff(self, effect: ResolvedEffect, spec: EffectSpec) -> list[EffectBase]:
         """``steal_buff``：每個有增益的對象先失去一個增益（原因 ``stolen``），再把同一個狀態以相同
         的剩餘回合與數值施加到施放者身上。沒有任何對象有增益時發出 ``effect_fizzled``。"""
@@ -1174,7 +1239,10 @@ class _Cast:
         overload = overload_bonus(self.ctx.state, self.caster, self.skill)  # 超載層數（3D-7b）
         explode_max = self.ctx.core.explode_max if spec.explode else 0
         batch: list[EffectBase] = []
-        for unit in self.targets(effect.affects, spec.condition):
+        units = self.targets(effect.affects, spec.condition)
+        healed = self.split_healed(spec)  # 聖光雙效：友方改為治療，與敵方的傷害共用同一次擲骰
+        preset = self.split_rolls(spec, bool(units or healed))
+        for unit in units:
             roll = self.hits.get(unit.id)
             block = self.blocks.get(unit.id, PERMILLE)
             bonus = PERMILLE + self.caster_bonus + self.target_bonus.get(unit.id, 0)
@@ -1193,6 +1261,7 @@ class _Cast:
                     crit=roll is not None and roll.crit,
                     min_damage=min_damage,
                     explode_max=explode_max,
+                    preset_rolls=preset,
                     multiplier_permille=multiplier
                     * block
                     * bonus
@@ -1200,6 +1269,16 @@ class _Cast:
                     // (PERMILLE * PERMILLE * PERMILLE),
                 )
             )
+        batch += [
+            HealEffect(
+                target_id=unit.id,
+                source_id=self.caster.id,
+                dice=spec.dice,
+                scaled_permille=self._spell_scaled(),
+                preset_rolls=preset,
+            )
+            for unit in healed
+        ]
         if effect.affects in _TOUCHING_AFFECTS:
             for xy in (*self.area.tiles, *self.pierced_tiles()):
                 obj = self.ctx.state.object_at(*xy)
@@ -1227,6 +1306,41 @@ class _Cast:
                     )
                 )
         return batch
+
+    def split_healed(self, spec: EffectSpec) -> list[UnitState]:
+        """聖光雙效（``split_heal``，Phase 3D-8a）受治療的友方（含自己，依單位 ID 排序）；不是聖光
+        雙效為空。"""
+        if not spec.split_heal:
+            return []
+        alive = (u for u in self.allies if u.alive and self.holds(spec.condition, Subject(u, u.xy)))
+        return sorted(alive, key=lambda u: u.id)
+
+    def split_rolls(self, spec: EffectSpec, anyone: bool) -> tuple[int, ...] | None:
+        """聖光雙效的骰值：傷害與治療共用的一次擲骰（沒有對象時不擲）；不是聖光雙效為 ``None``。"""
+        if not spec.split_heal or spec.dice is None or not anyone:
+            return None
+        return tuple(self.ctx.rng.roll(spec.dice.sides) for _ in range(spec.dice.count))
+
+    def lifesteal(self, permille: int, start: int) -> None:
+        """吸血（Phase 3D-8a）：施放者回復這個傷害效果對敵人實際造成的傷害（扣掉護盾吸收，含溢出）
+        × ``permille``‰（無條件捨去）；已滿血或施放者倒下時沒有效果。"""
+        caster, state = self.caster, self.ctx.state
+        dealt = sum(
+            e.amount - e.absorbed
+            for e in self.ctx.events[start:]
+            if isinstance(e, DamageDealt)
+            and e.source_id == caster.id
+            and e.cause == "attack"
+            and e.target_id in state.units
+            and state.units[e.target_id].team is not caster.team
+        )
+        amount = dealt * permille // PERMILLE
+        if amount <= 0 or not caster.alive or caster.hp >= caster.max_hp:
+            return
+        execute(
+            self.ctx,
+            [HealEffect(target_id=caster.id, source_id=caster.id, flat=amount, cause="lifesteal")],
+        )
 
     def pierced_tiles(self) -> list[XY]:
         """穿透的單體射線穿過、但不在影響範圍內的 ``penetrable`` 物件所在格（物件受全額傷害）。"""
@@ -1702,6 +1816,8 @@ _Cast._SIMPLE = {
     CONSUME_STATUS: _Cast.consume_status,
     RESTORE_RESOURCE: _Cast.restore_resource,
     STEAL_BUFF: _Cast.steal_buff,
+    DISPEL: _Cast.dispel,
+    REVEAL: _Cast.reveal,
     HURL_OBJECT: _Cast.hurl_object,
     SUMMON: _Cast.summon,
     ZONE: _Cast.zone,

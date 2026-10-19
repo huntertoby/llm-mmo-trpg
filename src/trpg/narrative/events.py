@@ -78,6 +78,7 @@ from trpg.engine.events import (
     TotemPulsed,
     TrapExpired,
     TrapPlaced,
+    TrapRevealed,
     TrapTriggered,
     TriggerLimitReached,
     TurnEnded,
@@ -163,6 +164,8 @@ _REMOVE_REASONS = {
     "consumed": "被消耗了",
     "spent": "擋下致命傷害後消失了",
     "stolen": "被奪走了",
+    "dispelled": "被驅散了",
+    "revealed": "被揭露而消失了",
 }
 
 
@@ -515,7 +518,9 @@ def _healed(e: Healed, v: _View) -> str:
     half = (
         f"（治療 ×{e.received_permille / _PERMILLE:g}）" if e.received_permille != _PERMILLE else ""
     )
-    return f"    {v.name[e.target_id]} 回復 {e.amount} HP{half}，HP {e.hp_before} → {e.hp_after}"
+    steal = "（吸血）" if e.cause == "lifesteal" else ""
+    name, hp = v.name[e.target_id], f"HP {e.hp_before} → {e.hp_after}"
+    return f"    {name} 回復 {e.amount} HP{steal}{half}，{hp}"
 
 
 @_handles(ChainLimitReached)
@@ -722,6 +727,12 @@ def _trap_triggered(e: TrapTriggered, v: _View) -> str:
     skill = v.state.ruleset.skill_def(e.skill_id).name_zh
     who = f"{v.name[e.unit_id]} 踩中了" if e.unit_id is not None else "引爆了"
     return f"  ！{who} {xy_text(e.pos)} 的陷阱「{skill}」（{v.name[e.owner_id]} 設置）"
+
+
+@_handles(TrapRevealed)
+def _trap_revealed(e: TrapRevealed, v: _View) -> str:
+    skill = v.state.ruleset.skill_def(e.skill_id).name_zh
+    return f"  {v.name[e.unit_id]} 揭露了 {xy_text(e.pos)} 的敵方陷阱「{skill}」"
 
 
 @_handles(TrapExpired)

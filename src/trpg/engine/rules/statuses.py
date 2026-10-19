@@ -30,6 +30,7 @@ __all__ = [
     "is_removed_with_source",
     "is_rooted",
     "move_points_for_turn",
+    "prevents_concealment",
     "shield_amount",
     "skip_turn_status",
     "stance_status_ids",
@@ -150,6 +151,11 @@ def attack_range_cap(rules: Ruleset, unit: UnitState) -> int | None:
 def grants_advantage_against(rules: Ruleset, unit: UnitState) -> bool:
     """對 ``unit`` 的攻擊有優勢，且 ``unit`` 不受隱蔽的選取限制（被標記）。"""
     return any(rules.status_def(s.status_id).grants_advantage_against for s in unit.statuses)
+
+
+def prevents_concealment(rules: Ruleset, unit: UnitState) -> bool:
+    """是否帶有 ``prevents_concealment`` 的狀態（被揭露，Phase 3D-8a）：不算隱蔽、不能再隱蔽。"""
+    return any(rules.status_def(s.status_id).prevents_concealment for s in unit.statuses)
 
 
 def has_attack_disadvantage_status(rules: Ruleset, unit: UnitState) -> bool:

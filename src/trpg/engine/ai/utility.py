@@ -50,6 +50,7 @@ from trpg.content.skills import (
     CHARGE_THROUGH,
     CHEAT_DEATH,
     CHEAT_DEATH_STATUS,
+    DISPEL,
     EXTRA_REACTION,
     GRANT_AP,
     HURL_OBJECT,
@@ -58,6 +59,7 @@ from trpg.content.skills import (
     REDIRECT_STATUS,
     RESET_COOLDOWN,
     RESTORE_RESOURCE,
+    REVEAL,
     STEAL_BUFF,
     EffectSpec,
     SkillDef,
@@ -101,6 +103,7 @@ from trpg.engine.events import (
     StacksChanged,
     StatusApplied,
     StatusRemoved,
+    TrapRevealed,
     UnitDowned,
     UnitMoved,
 )
@@ -132,7 +135,7 @@ from trpg.engine.skills.targeting import (
     resolve_effects,
 )
 from trpg.engine.state import BattleState, UnitState, reaction_limit
-from trpg.engine.traps import visible_traps
+from trpg.engine.traps import own_traps
 from trpg.shared.types import ObjectId, Pos, Surface, Team, UnitId
 
 __all__ = [
@@ -1048,6 +1051,8 @@ _REWRITE_SCORED = frozenset(
         EXTRA_REACTION,
         RESTORE_RESOURCE,
         STEAL_BUFF,
+        DISPEL,
+        REVEAL,
     }
 )
 """預覽事件之外還要另外加分的改寫規則型原語（:func:`_rewrite_gains`）。"""
@@ -1122,6 +1127,10 @@ def _rewrite_event_points(
         points = Fraction(per_point * e.amount * (1 if e.resource == "mana" else len(e.skill_ids)))
     elif isinstance(e, StatusRemoved) and e.reason == "stolen":
         points = Fraction(rules.steal_points)
+    elif isinstance(e, StatusRemoved) and e.reason == "dispelled":  # 驅散敵方增益（3D-8a）
+        points = Fraction(rules.dispel_points)
+    elif isinstance(e, TrapRevealed) or (isinstance(e, StatusRemoved) and e.reason == "revealed"):
+        points = Fraction(rules.reveal_points)  # 揭露（3D-8a）：敵方陷阱或敵人失去隱蔽
     elif isinstance(e, SkillActivated) and e.unit_id == actor.id:  # 常駐類傳說（Phase 3D-6）
         rounds = (
             rules.activation_battle_rounds
@@ -1356,7 +1365,7 @@ def _trap_estimate(
     """陷阱選取的便宜估計：自己陣營的陷阱還沒滿、波及範圍內沒有友方（含自己）、且最近的敵人在
     1–3 格內。分數 ＝ 3 格內敵人數 × 4 − 最近敵人的距離。AI 只讀自己陣營的陷阱（隱藏規則）。"""
     assert skill.trap is not None
-    if len(visible_traps(state, unit.team)) >= rules.max_active:
+    if len(own_traps(state, unit.team)) >= rules.max_active:
         return None
     center = area.origin
     blast = center_tiles(state, skill.trap.shape, center)

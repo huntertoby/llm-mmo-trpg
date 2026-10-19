@@ -93,6 +93,8 @@ class TrapState:
     skill_id: str
     remaining: int
     attributes: tuple[tuple[Attribute, int], ...]
+    revealed_to: tuple[Team, ...] = ()
+    """被 ``reveal`` 揭露而看得到這個陷阱的其他陣營（Phase 3D-8a；放置者陣營本來就看得到）。"""
 
     @property
     def xy(self) -> tuple[int, int]:

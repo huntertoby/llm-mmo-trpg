@@ -6,17 +6,25 @@
 - 觸發：``enter`` ——敵方單位在主動或強制移動中 **進入** 陷阱格（``arrive`` 記錄進入，效果佇列清空時
   結算，見 :func:`flush_trap_entries`）；``delay`` ——放置者的回合開始時倒數（:func:`tick_traps`），
   歸零時觸發；``enter`` 倒數歸零時消失。傳送不算進入。放置者離場（倒下、撤離）時陷阱消失。
-- 隱藏：陷阱只有放置者陣營看得到。敵方的路徑規劃、AI 評分與預覽一律經過 :func:`visible_traps`
+- 隱藏：陷阱只有放置者陣營看得到（``reveal`` 揭露後，揭露者的陣營也看得到：
+  ``revealed_to``）。敵方的路徑規劃、AI 評分與預覽一律經過 :func:`visible_traps`
   （預覽用 :func:`strip_hidden_traps`），不得讀取對方陣營的陷阱；事件紀錄是全知的。
 """
 
 from __future__ import annotations
 
+from collections.abc import Iterable
 from dataclasses import replace
 
 from trpg.content.skills import SkillDef
 from trpg.engine.context import Ctx
-from trpg.engine.events import EventBase, TrapExpired, TrapPlaced, TrapTriggered
+from trpg.engine.events import (
+    EventBase,
+    TrapExpired,
+    TrapPlaced,
+    TrapRevealed,
+    TrapTriggered,
+)
 from trpg.engine.rules.statuses import effective_attribute
 from trpg.engine.skill_triggers import check_trigger_depth
 from trpg.engine.skills.targeting import center_tiles
@@ -25,9 +33,11 @@ from trpg.shared.types import Attribute, Pos, Team, UnitId
 
 __all__ = [
     "flush_trap_entries",
+    "own_traps",
     "place_trap",
     "queue_trap_entry",
     "remove_traps_of",
+    "reveal_traps",
     "strip_hidden_traps",
     "tick_traps",
     "visible_traps",
@@ -35,8 +45,33 @@ __all__ = [
 
 
 def visible_traps(state: BattleState, team: Team) -> list[TrapState]:
-    """``team`` 看得到的陷阱：只有自己陣營放置的。AI 與預覽讀取陷阱時一律經過這裡。"""
+    """``team`` 看得到的陷阱：自己陣營放置的，加上被 ``reveal`` 揭露給 ``team`` 的（Phase 3D-8a）。
+    畫面與預覽讀取陷阱時一律經過這裡。"""
+    return [t for t in state.traps if t.team is team or team in t.revealed_to]
+
+
+def own_traps(state: BattleState, team: Team) -> list[TrapState]:
+    """``team`` 自己放置的陷阱（AI 的上限與「推到自己的陷阱上」只算這些，不含被揭露的敵方陷阱）。"""
     return [t for t in state.traps if t.team is team]
+
+
+def reveal_traps(ctx: Ctx, caster: UnitState, tiles: Iterable[tuple[int, int]]) -> None:
+    """``reveal``：``tiles`` 內施放者敵方陣營的陷阱對施放者的陣營顯示（尚未被揭露的才發出
+    ``trap_revealed``；依 ``(y, x)`` 排序固定）。"""
+    state = ctx.state
+    for xy in sorted(set(tiles), key=lambda p: (p[1], p[0])):
+        trap = state.trap_at(*xy)
+        if trap is None or trap.team is caster.team or caster.team in trap.revealed_to:
+            continue
+        revealed = replace(trap, revealed_to=(*trap.revealed_to, caster.team))
+        state.traps = [revealed if t is trap else t for t in state.traps]
+        ctx.emit(
+            TrapRevealed,
+            unit_id=caster.id,
+            team=caster.team,
+            pos=trap.pos,
+            skill_id=trap.skill_id,
+        )
 
 
 def strip_hidden_traps(state: BattleState, team: Team) -> BattleState:

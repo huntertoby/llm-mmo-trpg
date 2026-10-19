@@ -83,6 +83,9 @@ trap:
 # Phase 3D-1（初值，未經模擬）：
 #   mana_points       友方每回復 1 點法力（restore_resource；冷卻縮短沿用 cooldown_points）
 #   steal_points      每奪取 1 個增益（steal_buff）
+# Phase 3D-8a（初值，未經模擬）：
+#   dispel_points     每驅散敵人 1 個增益（dispel）
+#   reveal_points     每讓 1 個敵人失去隱蔽、或每揭露 1 個敵方陷阱（reveal）
 rewrite:
   ap_points: 6
   ally_ap_permille: 600
@@ -93,6 +96,8 @@ rewrite:
   reaction_points: 8
   mana_points: 1
   steal_points: 8
+  dispel_points: 6
+  reveal_points: 6
   activation_round_points: 4    # 3D-6：啟動常駐類傳說每一輪效果的價值（限時 × 持續輪數；整場 × activation_battle_rounds）
   activation_battle_rounds: 4
 # summon（Phase 3D-4a 寫在程式裡，3D-4b 搬到這裡；初值未經模擬）：召喚技能的評分，收益 ＝ 召喚物的預估價值

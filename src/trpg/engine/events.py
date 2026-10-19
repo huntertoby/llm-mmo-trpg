@@ -93,6 +93,7 @@ __all__ = [
     "TotemPulsed",
     "TrapExpired",
     "TrapPlaced",
+    "TrapRevealed",
     "TrapTriggered",
     "TriggerLimitReached",
     "TurnEnded",
@@ -404,6 +405,8 @@ class Healed(EventBase):
     hp_after: int
     received_permille: int = 1000
     """目標的狀態治療倍率（‰，中毒 500）。"""
+    cause: Literal["heal", "lifesteal"] = "heal"
+    """``lifesteal``：吸血（Phase 3D-8a），施放者回復自己造成傷害的一部分。"""
 
 
 class ShieldGained(EventBase):
@@ -497,8 +500,11 @@ class StatusRemoved(EventBase):
         "consumed",
         "spent",
         "stolen",
+        "dispelled",
+        "revealed",
     ]
-    """``stolen``：被 ``steal_buff`` 奪走（Phase 3D-1；緊接著對施放者的 ``status_applied``）；
+    """``dispelled``：被 ``dispel`` 驅散；``revealed``：被 ``reveal`` 移除隱蔽（Phase 3D-8a）；
+    ``stolen``：被 ``steal_buff`` 奪走（Phase 3D-1；緊接著對施放者的 ``status_applied``）；
     ``spent``：不死（``undying``）擋下致命傷害後移除（Phase 3C-4a）；
     ``thawed``：受到 ``removed_by_element`` 的元素傷害而解除（冰凍遇火，Phase 2H-1）；
     ``consumed``：被 ``consume_status`` 消耗（Phase 3C-3b）；``replaced``：被新的姿態取代；
@@ -1007,6 +1013,17 @@ class TrapTriggered(EventBase):
     tiles: tuple[Pos, ...] = ()
 
 
+class TrapRevealed(EventBase):
+    """``reveal`` 揭露了敵方陷阱（Phase 3D-8a）：``team`` 的玩家之後看得到它。只給揭露者的陣營
+    （見 ``event_filter``）；``unit_id`` 是施放者。"""
+
+    type: Literal["trap_revealed"] = "trap_revealed"
+    unit_id: UnitId
+    team: Team
+    pos: Pos
+    skill_id: str
+
+
 class TrapExpired(EventBase):
     """陷阱消失而沒有觸發：``timeout`` 為 ``enter`` 陷阱輪數到了，``source_lost`` 為放置者離場。"""
 
@@ -1291,6 +1308,7 @@ type Event = Annotated[
     | TriggerLimitReached
     | StacksChanged
     | TrapPlaced
+    | TrapRevealed
     | TrapTriggered
     | TrapExpired
     | SourceChanged

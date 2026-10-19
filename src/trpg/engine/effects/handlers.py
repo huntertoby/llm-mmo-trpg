@@ -40,7 +40,7 @@ from trpg.engine.events import (
     UnitMoved,
 )
 from trpg.engine.lifecycle import down_unit, escape_unit
-from trpg.engine.rules.combat import PERMILLE, PPM, element_modifier_ppm
+from trpg.engine.rules.combat import CONCEALED, PERMILLE, PPM, element_modifier_ppm
 from trpg.engine.rules.movement import is_deadly, is_standable
 from trpg.engine.rules.statuses import (
     boss_converted_status,
@@ -48,6 +48,7 @@ from trpg.engine.rules.statuses import (
     damage_taken_permille,
     effective_attribute,
     healing_received_permille,
+    prevents_concealment,
     shield_amount,
     stance_status_ids,
 )
@@ -95,9 +96,7 @@ def _damage(ctx: Ctx, effect: EffectBase) -> list[EventBase]:
     elif effect.mode == "percent_max_hp":
         amount = max(unit.max_hp * effect.permille // PERMILLE, effect.min_damage)
     else:
-        if effect.dice is not None:
-            count = effect.dice.count * (2 if effect.crit else 1)
-            rolls, exploded = _roll_damage_dice(ctx, effect.dice.sides, count, effect.explode_max)
+        rolls, exploded = _damage_rolls(ctx, effect)
         raw_permille = (sum(rolls) + effect.flat) * PERMILLE + effect.scaled_permille
         if effect.apply_element_mod:
             mod_ppm = element_modifier_ppm(unit, effect.element, ctx.rules)
@@ -161,6 +160,18 @@ def _damage(ctx: Ctx, effect: EffectBase) -> list[EventBase]:
         events.extend(down_unit(ctx, unit))
         events.extend(credit_elite_kill(ctx, unit, effect.source_id))
     return events
+
+
+def _damage_rolls(ctx: Ctx, effect: DamageEffect) -> tuple[tuple[int, ...], int]:
+    """傷害的骰值（與爆骰多擲的顆數）：暴擊時骰數加倍；聖光雙效（Phase 3D-8a）沿用已擲好的骰值，
+    暴擊的額外骰子另擲。"""
+    if effect.dice is None:
+        return (), 0
+    count = effect.dice.count * (2 if effect.crit else 1)
+    if effect.preset_rolls is None:
+        return _roll_damage_dice(ctx, effect.dice.sides, count, effect.explode_max)
+    extra = tuple(ctx.rng.roll(effect.dice.sides) for _ in range(count - len(effect.preset_rolls)))
+    return effect.preset_rolls + extra, 0
 
 
 def _roll_damage_dice(
@@ -372,7 +383,9 @@ def _heal(ctx: Ctx, effect: EffectBase) -> list[EventBase]:
     if unit is None or not unit.alive:
         return []
     rolls: tuple[int, ...] = ()
-    if effect.dice is not None:
+    if effect.preset_rolls is not None:
+        rolls = effect.preset_rolls
+    elif effect.dice is not None:
         rolls = tuple(ctx.rng.roll(effect.dice.sides) for _ in range(effect.dice.count))
     received = healing_received_permille(ctx.rules, unit)  # 中毒
     amount = max(
@@ -393,6 +406,7 @@ def _heal(ctx: Ctx, effect: EffectBase) -> list[EventBase]:
             hp_before=hp_before,
             hp_after=unit.hp,
             received_permille=received,
+            cause=effect.cause,
         )
     ]
 
@@ -572,6 +586,10 @@ def apply_status(ctx: Ctx, effect: ApplyStatusEffect) -> list[EventBase]:
     duration = effect.duration
     if duration is None:
         duration = ctx.rules.status_def(status_id).duration  # 轉換後持續時間沿用原效果
+    if status_id == CONCEALED and prevents_concealment(ctx.rules, unit):  # 被揭露：不能再隱蔽
+        return [
+            ctx.emit(EffectFizzled, effect_kind="apply_status", pos=unit.pos, reason="revealed")
+        ]
     converted = boss_converted_status(ctx.rules, unit, status_id)
     if converted != status_id:  # Boss 硬控轉換：所有來源一致（技能路徑已先轉換，這裡不會再轉）
         events.append(

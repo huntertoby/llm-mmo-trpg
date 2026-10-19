@@ -19,6 +19,7 @@ from trpg.engine.rules.statuses import (
     forced_target_sources,
     grants_advantage_against,
     has_attack_disadvantage_status,
+    prevents_concealment,
 )
 from trpg.engine.state import BattleState, UnitState
 from trpg.shared.rng import Rng
@@ -220,7 +221,10 @@ def cover_modifier(state: BattleState, attacker: UnitState, target: UnitState) -
 
 
 def is_concealed(state: BattleState, unit: UnitState) -> bool:
-    """隱蔽：帶 ``concealed`` 狀態，或站在 ``conceal`` 表面（黑暗）／``conceal`` 物件（草叢）上。"""
+    """隱蔽：帶 ``concealed`` 狀態，或站在 ``conceal`` 表面（黑暗）／``conceal`` 物件（草叢）上；
+    被揭露（``prevents_concealment``，Phase 3D-8a）的單位一律不算。"""
+    if prevents_concealment(state.ruleset, unit):
+        return False
     if unit.has_status(CONCEALED):
         return True
     tile = state.tile(*unit.xy)

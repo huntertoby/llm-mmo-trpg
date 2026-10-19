@@ -167,6 +167,10 @@ def _damage(lib: ContentLibrary, skill: SkillDef, spec: EffectSpec) -> str:
         element = f"（{spec.element.display_name}）" if spec.element is not None else ""
         text = f"武器傷害 ×{permille / 1000:g}{element}"
     extras: list[str] = []
+    if spec.split_heal:
+        extras.append("友方（含自己）改為治療同樣的骰值（不擲命中，只骰一次）")
+    if spec.lifesteal_permille is not None:
+        extras.append(f"吸血：你回復造成傷害的 {spec.lifesteal_permille / 10:g}%")
     if spec.explode:
         extras.append(f"爆骰（擲到最大值再擲一次，每顆最多再擲 {lib.ruleset.core.explode_max} 次）")
     if skill.crit_range is not None:
@@ -487,6 +491,19 @@ def _steal_buff(_lib: ContentLibrary, _skill: SkillDef, _spec: EffectSpec) -> st
     return "奪取目標身上一個增益（剩餘回合最長者），以相同的剩餘回合施加到自己身上"
 
 
+def _dispel(_lib: ContentLibrary, _skill: SkillDef, spec: EffectSpec) -> str:
+    if spec.count == "all":
+        return "驅散目標身上的全部增益"
+    return "驅散目標身上一個增益（剩餘回合最長者）"
+
+
+def _reveal(_lib: ContentLibrary, _skill: SkillDef, spec: EffectSpec) -> str:
+    return (
+        f"揭露範圍內的敵人：移除隱蔽，{spec.duration} 回合內不能再隱蔽；範圍內的敵方陷阱對你的"
+        "陣營顯示（不擲命中）"
+    )
+
+
 def _hurl_object(_lib: ContentLibrary, skill: SkillDef, spec: EffectSpec) -> str:
     assert spec.dice is not None
     text = f"把 {spec.range} 格內的可推動物件丟到落點，落點單位受 {_dice(spec.dice)} 物理傷害"
@@ -540,6 +557,8 @@ _EFFECT_TEXT: dict[str, _EffectText] = {
     "extra_reaction": _extra_reaction,
     "restore_resource": _restore_resource,
     "steal_buff": _steal_buff,
+    "dispel": _dispel,
+    "reveal": _reveal,
     "hurl_object": _hurl_object,
     "topple": _topple,
     "zone": _zone,

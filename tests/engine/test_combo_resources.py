@@ -524,9 +524,9 @@ def test_demo_battles_replay_exactly(build: str, map_id: str, seed: int) -> None
 @pytest.mark.parametrize(
     ("build", "seed", "check"),
     [
-        ("build_support", 0, lambda e: isinstance(e, ResourceRestored) and e.resource == "mana"),
+        ("build_seer", 0, lambda e: isinstance(e, ResourceRestored) and e.resource == "mana"),
         (
-            "build_healer",
+            "build_seer",
             0,
             lambda e: isinstance(e, ResourceRestored) and e.resource == "cooldown",
         ),

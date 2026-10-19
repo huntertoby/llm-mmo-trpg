@@ -2,7 +2,7 @@
 
 規則（以小函式註冊在 ``_RULES``，沒有註冊的事件類型所有人可見）：
 
-- ``TrapPlaced``、``TrapExpired``：只給放置者陣營。
+- ``TrapPlaced``、``TrapExpired``：只給放置者陣營；``TrapRevealed``（Phase 3D-8a）：只給揭露者陣營。
 - 放置陷阱技能的 ``SkillUsed``：其他陣營看到的版本 ``tiles`` 為空（回傳替換後的複本），
   「誰用了哪個技能」照樣看得到。
 - 由隱藏陷阱引起的 ``TriggerLimitReached``（陷阱超過觸發深度上限而留在原地）：只給放置者陣營。
@@ -22,6 +22,7 @@ from trpg.engine.events import (
     SkillUsed,
     TrapExpired,
     TrapPlaced,
+    TrapRevealed,
     TriggerLimitReached,
 )
 from trpg.engine.state import BattleState
@@ -38,6 +39,10 @@ def _team_of(state: BattleState, unit_id: UnitId) -> Team:
 
 
 def _owner_only_by_team(event: TrapPlaced, _state: BattleState, team: Team) -> EventBase | None:
+    return event if event.team is team else None
+
+
+def _revealer_only(event: TrapRevealed, _state: BattleState, team: Team) -> EventBase | None:
     return event if event.team is team else None
 
 
@@ -65,6 +70,7 @@ def _trigger_limit(event: TriggerLimitReached, state: BattleState, team: Team) -
 _RULES: dict[type[EventBase], _Rule] = {
     TrapPlaced: _owner_only_by_team,
     TrapExpired: _owner_only_by_unit,
+    TrapRevealed: _revealer_only,
     SkillUsed: _trap_skill_used,
     TriggerLimitReached: _trigger_limit,
 }

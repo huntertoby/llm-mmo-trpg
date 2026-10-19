@@ -15,18 +15,35 @@ from trpg.engine.context import Ctx
 from trpg.engine.events import EffectFizzled, ResourceRestored, SkillCooldownChanged
 from trpg.engine.state import BattleState, StatusInstance, UnitState
 
-__all__ = ["pick_stolen_buff", "restorable_cooldowns", "restore_cooldowns", "restore_mana"]
+__all__ = [
+    "dispelled_buffs",
+    "pick_stolen_buff",
+    "restorable_cooldowns",
+    "restore_cooldowns",
+    "restore_mana",
+]
+
+
+def _buffs_in_order(ctx: Ctx, target: UnitState) -> list[StatusInstance]:
+    """``target`` 身上的增益（``polarity: buff``），依「永久最先、剩餘回合長者先、同長依狀態 ID」
+    排序。"""
+    buffs = [s for s in target.statuses if ctx.rules.status_def(s.status_id).polarity == "buff"]
+    return sorted(
+        buffs, key=lambda s: (0 if s.remaining is None else 1, -(s.remaining or 0), s.status_id)
+    )
 
 
 def pick_stolen_buff(ctx: Ctx, target: UnitState) -> StatusInstance | None:
     """``target`` 身上會被奪取（或驅散）的增益；沒有增益時為 ``None``。"""
-    buffs = [s for s in target.statuses if ctx.rules.status_def(s.status_id).polarity == "buff"]
-    if not buffs:
-        return None
-    return min(
-        buffs,
-        key=lambda s: (0 if s.remaining is None else 1, -(s.remaining or 0), s.status_id),
-    )
+    buffs = _buffs_in_order(ctx, target)
+    return buffs[0] if buffs else None
+
+
+def dispelled_buffs(ctx: Ctx, target: UnitState, count: int | str) -> list[StatusInstance]:
+    """``dispel`` 驅散的增益（Phase 3D-8a）：``count`` 個（取 :func:`pick_stolen_buff` 的順序）或
+    ``"all"`` 全部；中性狀態（姿態、隱蔽……）不是增益，不會被驅散。"""
+    buffs = _buffs_in_order(ctx, target)
+    return buffs if count == "all" else buffs[: int(count)]
 
 
 def restore_mana(ctx: Ctx, caster: UnitState, target: UnitState, amount: int) -> None:

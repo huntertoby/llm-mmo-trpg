@@ -641,6 +641,8 @@ class RewriteAiRules(ContentModel):
     - ``reaction_points``：每個額外反應次數（目標有反應規則時才有價值）。
     - ``mana_points``：友方每回復 1 點法力（``restore_resource``，Phase 3D-1）。
     - ``steal_points``：每奪取 1 個增益（``steal_buff``，Phase 3D-1）。
+    - ``dispel_points``：每驅散敵人 1 個增益（``dispel``，Phase 3D-8a）。
+    - ``reveal_points``：每讓 1 個敵人失去隱蔽、或每揭露 1 個敵方陷阱（``reveal``，Phase 3D-8a）。
     - ``activation_round_points``：啟動常駐類傳說（Phase 3D-6）每一輪效果的價值（限時型 × 持續
       輪數、整場型 × ``activation_battle_rounds``），再扣源力成本。
     - ``activation_battle_rounds``：整場型傳說估計還能生效的輪數。
@@ -655,6 +657,8 @@ class RewriteAiRules(ContentModel):
     reaction_points: int = Field(default=8, ge=0)
     mana_points: int = Field(default=1, ge=0)
     steal_points: int = Field(default=8, ge=0)
+    dispel_points: int = Field(default=6, ge=0)
+    reveal_points: int = Field(default=6, ge=0)
     activation_round_points: int = Field(default=4, ge=0)
     activation_battle_rounds: int = Field(default=4, ge=1)
 

@@ -93,6 +93,9 @@ class DamageEffect(EffectBase):
     multiplier_permille: int = Field(default=1000, ge=0)
     explode_max: int = Field(default=0, ge=0)
     """爆骰（Phase 3D-7b）：傷害骰擲到最大值時再加擲一次，每顆骰最多再擲這麼多次（0 為不爆骰）。"""
+    preset_rolls: tuple[int, ...] | None = None
+    """已經擲好的骰值（Phase 3D-8a 聖光雙效：敵方的傷害與友方的治療共用同一次擲骰）。暴擊的額外骰子
+    另外擲。"""
 
     def sort_target(self) -> str:
         return self.target_id
@@ -107,6 +110,10 @@ class HealEffect(EffectBase):
     dice: Dice | None = None
     flat: int = 0
     scaled_permille: int = 0
+    preset_rolls: tuple[int, ...] | None = None
+    """已經擲好的骰值（Phase 3D-8a 聖光雙效）；省略時依 ``dice`` 擲骰。"""
+    cause: Literal["heal", "lifesteal"] = "heal"
+    """``lifesteal``：吸血（Phase 3D-8a；``flat`` 為回復量）。"""
 
     def sort_target(self) -> str:
         return self.target_id
@@ -176,9 +183,16 @@ class RemoveStatusEffect(EffectBase):
     kind: Literal["remove_status"] = "remove_status"
     target_id: UnitId
     status_id: str
-    reason: Literal["expired", "removed", "stood_up", "stance_ended", "consumed", "stolen"] = (
-        "removed"
-    )
+    reason: Literal[
+        "expired",
+        "removed",
+        "stood_up",
+        "stance_ended",
+        "consumed",
+        "stolen",
+        "dispelled",
+        "revealed",
+    ] = "removed"
 
     def sort_target(self) -> str:
         return self.target_id
