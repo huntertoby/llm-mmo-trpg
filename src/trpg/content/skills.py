@@ -42,6 +42,8 @@ __all__ = [
     "BASIC_ACTIONS",
     "CHANGE_TARGETS",
     "CONSUME_STACK",
+    "CONSUME_STATUS",
+    "CONSUME_THEN_TYPES",
     "INTERCEPT",
     "MODIFIER_CHANGES",
     "ON_HIT_PRIMITIVES",
@@ -106,9 +108,10 @@ SKELETON_IDS: tuple[str, ...] = (
     "stance",
     "passive",
     "modifier",
+    "consume_status",
 )
 """``docs/design/06-技能.md`` 6.9 的 12 種骨架，加上 Phase 3C-2 的 ``modifier``（修正規則：改造型與
-修正型被動，6.14.1）。結構驗證在 Phase 2B 才實作，這裡只檢查 ID。"""
+修正型被動，6.14.1）與 3C-3b 的 ``consume_status``（6.14.2 管道 1）。結構驗證見 ``skillgen``。"""
 
 WEAPON_CLASSES: tuple[str, ...] = ("melee", "ranged", "focus")
 
@@ -294,7 +297,9 @@ class PrimitiveParam(ContentModel):
     ``object``／``stack``（引用其他資料檔的 ID）、``element``。
     """
 
-    type: Literal["dice", "int", "status", "surface", "object", "element", "stack"]
+    type: Literal[
+        "dice", "int", "status", "surface", "object", "element", "stack", "scale", "effects"
+    ]
     required: bool = False
     min: int | None = None
     max: int | None = None
@@ -314,6 +319,7 @@ class PrimitiveDef(ContentModel):
     - ``budget_basis``／``base_points``：預算點數的算法（``docs/phases/Phase2B計畫.md`` 4.2）：
       ``fixed`` 固定 ``base_points``、``per_distance`` ``base_points × distance``、
       ``per_amount`` ``base_points × amount``（2E-3 的 ``add_stack``）、
+      ``consume_status`` ``then`` 的點數 × 期望倍率 × 濺射 × 「需要先有狀態」折扣（3C-3b）、
       ``consume_stack`` 同技能傷害點數 × 期望消耗層數 × ``per_stack_permille``（2E-3）、
       ``dice_average`` 骰子平均值、``damage`` 法術為骰子平均值而武器為倍率 × 基準武器傷害、
       ``status``／``surface`` 為該狀態或表面的 ``budget_points`` × 持續 ÷ 預設持續。
@@ -340,6 +346,7 @@ class PrimitiveDef(ContentModel):
             "status",
             "surface",
             "consume_stack",
+            "consume_status",
         ]
         | None
     ) = None
@@ -511,6 +518,14 @@ class EffectSpec(ContentModel):
     amount: int | None = None
     stack: str | None = Field(default=None, pattern=ID_PATTERN)
     per_stack_permille: int | None = Field(default=None, ge=1, le=_PERMILLE)
+    then: tuple[EffectSpec, ...] | None = None
+    """``consume_status`` 專用：移除狀態之後結算的效果（1–2 個；Phase 3C-3b）。"""
+    scale: Literal["remaining_rounds", "stacks"] | None = None
+    """``consume_status`` 專用：``then`` 的骰數倍率（Phase 3C-3b）。``remaining_rounds``＝被消耗
+    狀態的剩餘回合（永久狀態為 1）；``stacks``＝同時消耗目標身上 ``stack`` 的層數
+    （``stack`` 必填）。"""
+    splash: int | None = Field(default=None, ge=1, le=1)
+    """``consume_status`` 專用：``then`` 也作用在被消耗者周圍這麼遠（曼哈頓距離）的敵方單位。"""
     condition: ConditionSpec | None = None
 
     def param_values(self) -> dict[str, Any]:
@@ -525,9 +540,12 @@ class EffectSpec(ContentModel):
             "multiplier_permille",
             "object",
             "per_stack_permille",
+            "scale",
+            "splash",
             "stack",
             "status",
             "surface",
+            "then",
         )
         return {n: getattr(self, n) for n in names if getattr(self, n) is not None}
 
@@ -577,6 +595,7 @@ class Provenance(ContentModel):
 ON_CAST_TAG = "on_cast_tag"
 ON_STATUS_APPLIED = "on_status_applied"
 ON_COLLISION = "on_collision"
+ON_ENTER_SURFACE = "on_enter_surface"
 """帶參數或需要特別處理的觸發時機 ID（Phase 3C-3a；其餘見 ``content/skill_triggers.yaml``）。"""
 
 
@@ -590,12 +609,14 @@ class TriggerSpec(ContentModel):
     - ``max_distance``：``target: other`` 時，另一方與持有者的曼哈頓距離上限。
     - ``tag``：只有 ``on_cast_tag`` 使用且必填（施放帶這個標籤的技能；Phase 3C-3a）。
     - ``status``：只有 ``on_status_applied`` 使用，可省略（省略＝任何狀態）。
+    - ``surface``：只有 ``on_enter_surface`` 使用，可省略（省略＝任何表面；Phase 3C-3b）。
     """
 
     event: str = Field(pattern=ID_PATTERN)
     n: int | None = None
     tag: str | None = Field(default=None, pattern=ID_PATTERN)
     status: str | None = Field(default=None, pattern=ID_PATTERN)
+    surface: Surface | None = None
     target: Literal["self", "other"] = "self"
     max_per_round: int = Field(default=1, ge=1, le=3)
     max_distance: int | None = Field(default=None, ge=1)
@@ -616,6 +637,10 @@ class TriggerSpec(ContentModel):
             raise ValueError(f"只有 on_cast_tag 使用 tag，{self.event} 不可填 tag")
         if self.status is not None and self.event != ON_STATUS_APPLIED:
             raise ValueError(f"只有 on_status_applied 使用 status，{self.event} 不可填 status")
+        if self.surface is not None and self.event != ON_ENTER_SURFACE:
+            raise ValueError(f"只有 on_enter_surface 使用 surface，{self.event} 不可填 surface")
+        if self.surface is Surface.NONE:
+            raise ValueError("trigger.surface 不可為 none")
         return self
 
 
@@ -632,6 +657,9 @@ INTERCEPT = "intercept"
 
 ADD_STACK = "add_stack"
 CONSUME_STACK = "consume_stack"
+CONSUME_STATUS = "consume_status"
+CONSUME_THEN_TYPES = ("damage", "heal", "shield", "apply_status")
+"""``consume_status`` 的 ``then`` 可用的原語（Phase 3C-3b）。"""
 PLACE_TRAP = "place_trap"
 """Phase 2E-3 的原語 ID：累積層數、消耗層數、放置陷阱。"""
 
@@ -721,6 +749,7 @@ ON_HIT_PRIMITIVES: tuple[str, ...] = (
 """``on_hit_effects`` 可用的原語（作用在被命中的目標或其所在格，自動命中）。"""
 
 _MAX_MODIFIERS = 2
+_MAX_CONSUME_THEN = 2
 _MAX_ON_HIT_EFFECTS = 2
 
 
@@ -1057,8 +1086,36 @@ class SkillDef(ContentModel):
         if banned:
             raise ValueError(f"陷阱技能不能有 {'、'.join(banned)}（陷阱觸發時才結算其餘效果）")
 
+    def _check_consume_status(self, index: int, effect: EffectSpec) -> None:
+        """``consume_status`` 的結構（3C-3b）：``then`` 1–2 個、只能用 :data:`CONSUME_THEN_TYPES`、
+        不自帶對象；``scale``、``splash``、``then`` 只屬於 ``consume_status``。"""
+        where = f"effects[{index}]（{effect.type}）"
+        if effect.type != CONSUME_STATUS:
+            if effect.then is not None or effect.scale is not None or effect.splash is not None:
+                raise ValueError(f"{where}：只有 consume_status 使用 then、scale、splash")
+            return
+        then = effect.then or ()
+        if not 1 <= len(then) <= _MAX_CONSUME_THEN:
+            raise ValueError(
+                f"{where}：then 必須有 1 到 {_MAX_CONSUME_THEN} 個效果，收到 {len(then)}"
+            )
+        if effect.scale == "stacks" and effect.stack is None:
+            raise ValueError(f"{where}：scale: stacks 必須填 stack（目標型層數）")
+        if effect.scale != "stacks" and effect.stack is not None:
+            raise ValueError(f"{where}：只有 scale: stacks 使用 stack")
+        for sub_index, sub in enumerate(then):
+            if sub.type not in CONSUME_THEN_TYPES:
+                allowed = "、".join(CONSUME_THEN_TYPES)
+                raise ValueError(f"{where}.then[{sub_index}]：只能使用 {allowed}，收到 {sub.type}")
+            if sub.affects is not None or sub.condition is not None:
+                raise ValueError(
+                    f"{where}.then[{sub_index}]：then 的效果不可自帶 affects 或 condition"
+                )
+            self._check_effect(index, sub)
+
     def _check_effect(self, index: int, effect: EffectSpec) -> None:
         where = f"effects[{index}]（{effect.type}）"
+        self._check_consume_status(index, effect)
         if effect.type in ("push", "pull") and (
             effect.distance is None or not 1 <= effect.distance <= _MAX_DISPLACE
         ):
@@ -1236,6 +1293,32 @@ def _effect_problems(skill: SkillDef, index: int, effect: EffectSpec, refs: _Ref
         allowed = "、".join(primitive.allowed_shapes)
         problems.append(f"{where}：{primitive.id} 只能搭配形狀 {allowed}，收到 {skill.shape.type}")
     problems += _stack_effect_problems(where, effect, affects, refs)
+    problems += _consume_status_problems(skill, index, effect, refs)
+    return problems
+
+
+def _consume_status_problems(
+    skill: SkillDef, index: int, effect: EffectSpec, refs: _Refs
+) -> list[str]:
+    """``consume_status`` 的跨檔案檢查：``then`` 的效果當成同一技能的效果檢查（原語、參數、引用），
+    ``scale: stacks`` 的層數必須存在且是目標型。"""
+    if effect.type != CONSUME_STATUS:
+        return []
+    problems: list[str] = []
+    carrier = skill.model_copy(update={"effects": effect.then or ()})
+    for sub_index, sub in enumerate(effect.then or ()):
+        problems += [
+            f"effects[{index}].then{p.removeprefix('effects')}"
+            for p in _effect_problems(carrier, sub_index, sub, refs)
+        ]
+    if effect.scale == "stacks" and refs.stacks is not None and effect.stack is not None:
+        stack = refs.stacks.get(effect.stack)
+        if stack is None:
+            problems.append(f"effects[{index}].stack：未知的層數 {effect.stack!r}")
+        elif stack.owner != "target":
+            problems.append(
+                f"effects[{index}].stack：scale: stacks 需要目標型層數（owner: target）"
+            )
     return problems
 
 

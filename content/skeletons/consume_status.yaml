@@ -1,0 +1,13 @@
+# 消耗狀態（Phase 3C-3b，docs/design/06-技能.md 6.14.2 管道 1「狀態當燃料」）：消耗目標身上的狀態，
+# 換取 then 的效果（引爆）。核心效果是 consume_status（then 內含傷害／治療／護盾／施加狀態），可再附帶 0–1 個有害效果。
+# 預算：consume_status 的點數見 skill_budget.yaml（then 點數 × 期望倍率 × 濺射 × 需先有狀態折扣）。
+# 隨機組合器不產生（random_composer.py 的 _HAND_WRITTEN_ONLY），只有手寫技能使用。
+id: consume_status
+name_zh: 消耗狀態
+description_zh: 消耗目標身上的狀態，換取更強的效果。
+kinds: [active]
+enabled: true
+min_rarity: rare
+shapes: [single, cone, cross, square3]
+core: {primitives: [consume_status], min_share_permille: 700}
+secondary: {harmful_only: true, max_count: 1}

@@ -37,6 +37,7 @@ REQUIRED_TRIGGERS: tuple[str, ...] = (
     "on_cast_tag",
     "on_status_applied",
     "on_collision",
+    "on_enter_surface",
 )
 """引擎實作的觸發時機，資料檔必須全部定義、不可多出引擎沒有的。"""
 

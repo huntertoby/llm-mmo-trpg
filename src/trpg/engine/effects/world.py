@@ -88,6 +88,7 @@ def set_surface(
     cause: str,
     duration: int | None = None,
     team: Team | None = None,
+    creator: UnitId | None = None,
     use_default_duration: bool = True,
     depth: int = 0,
 ) -> list[EventBase]:
@@ -104,6 +105,7 @@ def set_surface(
     if surface is Surface.NONE:
         remaining = None
         team = None
+        creator = None
     elif duration is not None:
         remaining = duration
     else:
@@ -112,11 +114,19 @@ def set_surface(
         tile.surface is surface
         and tile.surface_remaining == remaining
         and tile.surface_team == team
+        and tile.surface_creator == creator
     ):
         return []
     before = tile.surface
     state.set_tile(
-        *xy, replace(tile, surface=surface, surface_remaining=remaining, surface_team=team)
+        *xy,
+        replace(
+            tile,
+            surface=surface,
+            surface_remaining=remaining,
+            surface_team=team,
+            surface_creator=creator,
+        ),
     )
     if before is surface:
         return []  # 只刷新持續時間
@@ -184,7 +194,14 @@ def _create_surface(ctx: Ctx, effect: EffectBase) -> list[EventBase]:
         return []
     duration = effect.duration if final is effect.surface else None
     events = set_surface(
-        ctx, xy, final, cause=cause, duration=duration, team=effect.team, depth=effect.depth
+        ctx,
+        xy,
+        final,
+        cause=cause,
+        duration=duration,
+        team=effect.team,
+        creator=effect.source_id,
+        depth=effect.depth,
     )
     element = ctx.rules.surface_def(final).element if final is not Surface.NONE else None
     if (

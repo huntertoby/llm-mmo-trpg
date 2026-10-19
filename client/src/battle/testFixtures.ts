@@ -10,6 +10,7 @@ export function tile(x: number, y: number, over: Partial<TileView> = {}): TileVi
     surface: "none",
     surface_remaining: null,
     surface_team: null,
+    surface_creator: null,
     object_id: null,
     ...over,
   };

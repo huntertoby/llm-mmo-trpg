@@ -128,6 +128,7 @@ _REMOVE_REASONS = {
     "stance_ended": "取消了姿態",
     "downed": "解除了（倒下）",
     "thawed": "解除了（受到傷害）",
+    "consumed": "被消耗了",
 }
 
 

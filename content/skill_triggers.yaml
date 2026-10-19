@@ -83,3 +83,11 @@ triggers:
     budget_coefficient_permille: 300
     min_rarity: epic
     random_composer: false
+  # --- Phase 3C-3b：on_enter_surface（需要表面 creator，見 Tile.surface_creator）。
+  - id: on_enter_surface
+    name_zh: 敵人進入你的表面時
+    description_zh: 敵方單位步行或被強制位移（傳送不算）進入持有者造出的表面；回合開始站在上面、表面出現在腳下都不算。trigger.surface 省略時任何表面都算。另一方為進入的單位。
+    has_other: true
+    budget_coefficient_permille: 350
+    min_rarity: epic
+    random_composer: false

@@ -41,7 +41,7 @@ from trpg.engine.effects.models import (
     PushEffect,
     RemoveStatusEffect,
 )
-from trpg.engine.effects.world import object_push_block, push_distance, unit_push_block
+from trpg.engine.effects.world import object_push_block, push_distance
 from trpg.engine.events import (
     BattleStarted,
     InitiativeRolled,
@@ -496,18 +496,14 @@ def shove_distance(state: BattleState, unit: UnitState, target: UnitState) -> in
 
 
 def shove_problem(state: BattleState, unit: UnitState, target: UnitState) -> str | None:
-    """推擊推不動的原因（距離減半後為 0、目標格被擋、出界）；推得動時回傳 ``None``。
+    """推擊推不動的原因（距離減半後為 0）；推得動時回傳 ``None``。
 
-    只檢查第一格（之後的格子在結算時逐格判斷）。推進致命地形不算被擋。
+    目標身後第一格被擋（牆、不可走地形、較高格、物件、單位、地圖邊緣）時推擊仍然合法：對抗成功
+    則目標不移動、受 1 次撞擊（Phase 3C-3b，``docs/phases/Phase3C計畫.md`` 5.4）。
     """
     distance = push_distance(state, target, shove_distance(state, unit, target))
     if distance <= 0:
         return f"推不動：{target.name_zh} 不為所動（推擊距離減半後為 0 格）"
-    dx, dy = _direction(unit.xy, target.xy)
-    nxt = (target.pos.x + dx, target.pos.y + dy)
-    reason = unit_push_block(state, target.xy, nxt, target.id)
-    if reason is not None:
-        return f"推不動：{target.name_zh} {_PUSH_BLOCK_REASONS[reason]}"
     return None
 
 

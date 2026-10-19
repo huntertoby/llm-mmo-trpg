@@ -238,6 +238,7 @@ def _prepare(state: BattleState, skill: SkillDef) -> None:
                     tile.surface_remaining,
                     tile.surface_team,
                     tile.object_id,
+                    tile.surface_creator,
                 ),
             )
 

@@ -18,9 +18,11 @@ from __future__ import annotations
 
 from collections.abc import Callable
 
+from trpg.content.battle import Dice
 from trpg.content.skills import (
     ADD_STACK,
     CONSUME_STACK,
+    CONSUME_STATUS,
     INTERCEPT,
     PLACE_TRAP,
     ConditionSpec,
@@ -48,11 +50,13 @@ from trpg.engine.effects.models import (
     MoveUnitEffect,
     PushEffect,
     RaiseTerrainEffect,
+    RemoveStatusEffect,
     ShieldEffect,
 )
 from trpg.engine.events import (
     AttackRolled,
     DamageDealt,
+    EffectFizzled,
     ObjectDamaged,
     SkillCooldownChanged,
     SkillUsed,
@@ -60,7 +64,7 @@ from trpg.engine.events import (
 from trpg.engine.maneuvers import contest
 from trpg.engine.reactions import block_multiplier, hit_reactions, try_intercept
 from trpg.engine.rules.combat import PERMILLE, AttackProfile, AttackRoll, ForcedOutcome, roll_attack
-from trpg.engine.rules.geometry import XY
+from trpg.engine.rules.geometry import XY, manhattan
 from trpg.engine.skill_triggers import collect_cast, holding
 from trpg.engine.skills.conditions import Subject, condition_met
 from trpg.engine.skills.scaling import mastery_duration_bonus, skill_scaling_value
@@ -531,7 +535,117 @@ class _Cast:
             return []
         if kind == "apply_status":
             return self.apply_status(effect, spec)
+        if kind == CONSUME_STATUS:
+            return self.consume_status(effect, spec)
         return self.tile_effect(effect, spec)
+
+    # -- 消耗狀態（Phase 3C-3b）------------------------------------------
+
+    def consume_status(self, effect: ResolvedEffect, spec: EffectSpec) -> list[EffectBase]:
+        """``consume_status``：每個有該狀態的對象先移除狀態（立刻結算），再對它（與 ``splash``
+        範圍內的敵方單位）結算 ``then``。沒有任何對象有該狀態時發出 ``effect_fizzled``。"""
+        assert spec.status is not None and spec.then
+        ctx = self.ctx
+        batch: list[EffectBase] = []
+        consumed = False
+        for unit in self.targets(effect.affects, spec.condition):
+            instance = unit.get_status(spec.status)
+            if instance is None:
+                continue
+            consumed = True
+            scale = self._consume_scale(unit, spec, instance.remaining)
+            execute(
+                ctx,
+                [
+                    RemoveStatusEffect(
+                        source_id=self.caster.id,
+                        target_id=unit.id,
+                        status_id=spec.status,
+                        reason="consumed",
+                    )
+                ],
+            )
+            batch += self._consume_then(unit, spec, scale)
+        if not consumed:
+            ctx.emit(EffectFizzled, effect_kind=spec.type, pos=None, reason="no_status")
+        return batch
+
+    def _consume_scale(self, unit: UnitState, spec: EffectSpec, remaining: int | None) -> int:
+        """``then`` 的骰數倍率：``remaining_rounds``（永久狀態為 1）或同時消耗的目標型層數；
+        至少 1、至多 ``consume_status_max_scale``。"""
+        cap = self.ctx.core.consume_status_max_scale
+        if spec.scale == "remaining_rounds":
+            return max(1, min(cap, remaining or 1))
+        if spec.scale == "stacks":
+            assert spec.stack is not None
+            spent = consume_stacks(self.ctx, unit, spec.stack, source_id=self.caster.id)
+            return max(1, min(cap, spent))
+        return 1
+
+    def _consume_then(self, unit: UnitState, spec: EffectSpec, scale: int) -> list[EffectBase]:
+        recipients = [unit]
+        if spec.splash is not None:
+            near = [
+                u
+                for u in self.ctx.state.units_sorted()
+                if u.alive
+                and u.id != unit.id
+                and u.team is not self.caster.team
+                and manhattan(u.xy, unit.xy) <= spec.splash
+            ]
+            recipients += near
+        batch: list[EffectBase] = []
+        for sub in spec.then or ():
+            scaled = sub
+            if sub.dice is not None and scale > 1:
+                dice = sub.dice
+                scaled = sub.model_copy(
+                    update={"dice": Dice(count=dice.count * scale, sides=dice.sides)}
+                )
+            for target in recipients:
+                batch += self._then_effect(scaled, target)
+        return batch
+
+    def _then_effect(self, spec: EffectSpec, target: UnitState) -> list[EffectBase]:
+        """``then`` 的一個效果對 ``target`` 的結算（自動命中、不暴擊、沒有格擋）。"""
+        caster = self.caster
+        if spec.type == "damage":
+            dice, flat, scaled, multiplier, element = damage_parameters(
+                self.ctx.state, caster, self.skill, spec, modified=self.modified
+            )
+            bonus = self._modifier(modifiers.damage_permille, target)
+            return [
+                DamageEffect(
+                    target_id=target.id,
+                    source_id=caster.id,
+                    cause="attack",
+                    element=element,
+                    dice=dice,
+                    flat=flat,
+                    scaled_permille=scaled,
+                    min_damage=self.ctx.core.min_damage_on_hit,
+                    multiplier_permille=multiplier * bonus // PERMILLE,
+                )
+            ]
+        if spec.type == "heal":
+            return [
+                HealEffect(
+                    target_id=target.id,
+                    source_id=caster.id,
+                    dice=spec.dice,
+                    scaled_permille=self._spell_scaled(),
+                )
+            ]
+        if spec.type == "shield":
+            return [
+                ShieldEffect(
+                    target_id=target.id,
+                    source_id=caster.id,
+                    dice=spec.dice,
+                    scaled_permille=self._spell_scaled(),
+                )
+            ]
+        return self._status_effects(spec, target)
 
     # -- 數值 ----------------------------------------------------------
 
@@ -725,22 +839,24 @@ class _Cast:
     def apply_status(self, effect: ResolvedEffect, spec: EffectSpec) -> list[EffectBase]:
         """施加狀態：對敵方先轉換（Boss）、再擲抵抗判定（:mod:`trpg.engine.control`）；
         對友方與自己不擲。"""
-        assert spec.status is not None
         batch: list[EffectBase] = []
         for unit in self.targets(effect.affects, spec.condition):
-            planned = status_effect(
-                self.ctx,
-                caster=self.caster,
-                target=unit,
-                status_id=spec.status,
-                duration=self.status_duration(spec),
-                attack_attr=self.skill.scaling_attr,
-                attack_value=skill_scaling_value(self.ctx.rules, self.caster, self.skill),
-                skill_id=self.skill.id,
-            )
-            if planned is not None:
-                batch.append(planned)
+            batch += self._status_effects(spec, unit)
         return batch
+
+    def _status_effects(self, spec: EffectSpec, unit: UnitState) -> list[EffectBase]:
+        assert spec.status is not None
+        planned = status_effect(
+            self.ctx,
+            caster=self.caster,
+            target=unit,
+            status_id=spec.status,
+            duration=self.status_duration(spec),
+            attack_attr=self.skill.scaling_attr,
+            attack_value=skill_scaling_value(self.ctx.rules, self.caster, self.skill),
+            skill_id=self.skill.id,
+        )
+        return [] if planned is None else [planned]
 
     # -- 地形 ----------------------------------------------------------
 

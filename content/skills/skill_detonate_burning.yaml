@@ -1,0 +1,29 @@
+# 消耗狀態（Phase 3C-3b 示範，數值為初值，未經模擬）：引爆目標身上的燃燒，造成「燃燒剩餘回合 × 2d6」火焰傷害，
+# 並波及目標周圍 1 格內的敵人；目標沒有燃燒時不生效。
+id: skill_detonate_burning
+schema_version: 1
+name_zh: 引爆燃燒
+tier: 2
+rank: 1
+rarity: rare
+kind: active
+skeleton: consume_status
+category: spell
+weapon_req: focus
+ap_cost: 2
+scaling_attr: int
+shape: {type: single, range: 4}
+effects:
+  - type: consume_status
+    status: burning
+    scale: remaining_rounds
+    splash: 1
+    then:
+      - {type: damage, dice: 2d6, element: fire}
+condition: null
+cost: {mana: 6, cooldown: 2}
+tags: [fire, spell, detonate]
+narrative:
+  concept: 把還在目標身上燃燒的火焰一口氣引爆
+  cast_flavor: 你握緊拳頭，附著在對手身上的火焰猛然收縮，隨後轟然炸開
+provenance: {origin: builtin, owner_id: null, created_by: null, parents: [], bound: true, tradeable: false}

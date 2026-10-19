@@ -36,8 +36,12 @@ __all__ = [
     "run_battle",
 ]
 
-LOG_FORMAT = "trpg-battle-log/12"
-"""``/12``（Phase 3C-3a）：撞擊——推擊遇到障礙或超過距離上限時新增 ``collided`` 事件與
+LOG_FORMAT = "trpg-battle-log/13"
+"""``/13``（Phase 3C-3b）：表面歸屬（格子的 ``surface_creator``）、新觸發時機 ``on_enter_surface``、
+``consume_status`` 原語（``status_removed`` 的新原因 ``consumed``）、基本推擊貼牆也合法並產生撞擊；
+``/12`` 的紀錄含有舊的推擊合法性與觸發表，無法由新版程式重播。
+
+``/12``（Phase 3C-3a）：撞擊——推擊遇到障礙或超過距離上限時新增 ``collided`` 事件與
 ``DamageDealt.cause == "collision"``，規則包加入 ``collision_damage_dice`` 與三個新觸發時機；
 ``/11`` 的紀錄重播會因撞擊傷害而不同，無法由新版程式重播。
 

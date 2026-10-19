@@ -170,6 +170,8 @@ def _base_points(  # noqa: PLR0911
         return Fraction(primitive.base_points * amount), f"{primitive.base_points}×{amount} 層"
     if basis == "consume_stack":
         return _consume_stack_points(skill, effect, library)
+    if basis == "consume_status":
+        return _consume_status_points(skill, effect, library)
     if basis == "dice_average" or (basis == "damage" and skill.category == "spell"):
         if effect.dice is None:
             raise BudgetError(f"效果 {primitive.id} 缺少 dice，無法計算點數")
@@ -202,6 +204,29 @@ def _consume_stack_points(
             damage += base * _shape_multiplier(skill, other, primitives["damage"], library)
     bonus = damage * expected * Fraction(effect.per_stack_permille, _PERMILLE)
     return bonus, f"傷害 {_fmt(damage)} × 期望 {_fmt(expected)} 層 × {effect.per_stack_permille}‰"
+
+
+def _consume_status_points(
+    skill: SkillDef, effect: EffectSpec, library: ContentLibrary
+) -> tuple[Fraction, str]:
+    """``consume_status`` 的點數（3C-3b）：``then`` 各效果的基礎點數合計 × 期望倍率（有 ``scale``）
+    × 濺射加成 × 「需要先有狀態」折扣。"""
+    budget = library.ruleset.primitives.by_id()
+    rules = library.budget
+    total = Fraction(0)
+    for sub in effect.then or ():
+        points, _ = _base_points(skill, sub, budget[sub.type], library)
+        total += points
+    notes = [f"then {_fmt(total)}"]
+    if effect.scale is not None:
+        total *= rules.consume_status_scale_expected
+        notes.append(f"× 倍率 {rules.consume_status_scale_expected}")
+    if effect.splash is not None:
+        total *= Fraction(_PERMILLE + rules.consume_status_splash_permille, _PERMILLE)
+        notes.append(f"× 濺射 {rules.consume_status_splash_permille}‰")
+    total *= Fraction(rules.consume_status_discount_permille, _PERMILLE)
+    notes.append(f"× 需先有狀態 {rules.consume_status_discount_permille}‰")
+    return total, " ".join(notes)
 
 
 def _shape_multiplier(

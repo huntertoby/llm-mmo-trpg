@@ -1086,6 +1086,8 @@ export interface components {
             surface_team: components["schemas"]["Team"] | null;
             /** Object Id */
             object_id: string | null;
+            /** Surface Creator */
+            surface_creator: string | null;
         };
         /** TrapView */
         TrapView: {

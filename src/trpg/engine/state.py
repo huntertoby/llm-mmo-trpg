@@ -55,6 +55,8 @@ class Tile:
 
     - ``surface_remaining``：表面剩餘的環境回合數（``None`` 為永久）。
     - ``surface_team``：產生表面者的陣營（聖光表面只治療同陣營；地圖原有的表面為 ``None``）。
+    - ``surface_creator``：產生表面的單位 ID（Phase 3C-3b；``on_enter_surface`` 用）。蔓延、天氣、
+      地圖原有的表面為 ``None``；環境互動產生的表面沿用觸及它的來源。
     - ``object_id``：格上的物件（最多一個；摧毀後清除）。
     """
 
@@ -64,6 +66,7 @@ class Tile:
     surface_remaining: int | None = None
     surface_team: Team | None = None
     object_id: ObjectId | None = None
+    surface_creator: UnitId | None = None
 
 
 @dataclass(slots=True, frozen=True)

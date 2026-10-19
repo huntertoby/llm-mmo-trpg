@@ -180,6 +180,20 @@ primitives:
     params:
       stack: {type: stack, required: true, description_zh: 層數 ID（stacks.yaml）}
       per_stack_permille: {type: int, required: true, min: 50, max: 500, description_zh: 每層的傷害加成（‰）}
+  # --- Phase 3C-3b：狀態當燃料（docs/design/06-技能.md 6.14.2 管道 1；點數為初值，未經模擬）---
+  - id: consume_status
+    name_zh: 消耗狀態
+    description_zh: 目標（affects，預設敵方，需命中）身上有 status 時先移除它，再對同一個單位結算 then 的效果（1–2 個，只能是 damage／heal／shield／apply_status，自動命中；施加狀態照常擲抵抗）。沒有該狀態的單位不受影響，全部都沒有時整個效果不結算（effect_fizzled）。scale 把 then 的傷害、治療、護盾骰數乘上倍率（上限見 rules/core.yaml 的 consume_status_max_scale）：remaining_rounds＝被消耗狀態的剩餘回合（永久狀態為 1）、stacks＝同時消耗目標身上 stack 的層數。splash 設為 1 時 then 也作用在被消耗者周圍 1 格內的敵方單位。
+    category: structural
+    harmful: true
+    min_rarity: rare
+    budget_basis: consume_status
+    params:
+      status: {type: status, required: true, description_zh: 要消耗的狀態}
+      then: {type: effects, required: true, description_zh: 移除狀態後結算的效果（1–2 個）}
+      scale: {type: scale, description_zh: remaining_rounds 或 stacks（省略＝不倍增）}
+      stack: {type: stack, description_zh: scale 為 stacks 時消耗的目標型層數}
+      splash: {type: int, min: 1, max: 1, description_zh: then 也作用在被消耗者周圍這麼遠的敵方單位}
   - id: place_trap
     name_zh: 放置陷阱
     description_zh: 在目標格放一個對放置者陣營以外隱藏的陷阱，同一格只能有一個。陷阱帶著同一技能其餘的效果（自動命中，狀態照常擲抵抗；施放者的屬性在放置時快照），敵人進入（trap.trigger enter）或延遲回合數到了（delay）時，以陷阱格為中心依 trap.shape 結算。需要技能的 trap 欄位。

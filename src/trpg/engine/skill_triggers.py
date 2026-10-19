@@ -43,6 +43,7 @@ from trpg.engine.events import (
     SkillTriggered,
     StatusApplied,
     TriggerLimitReached,
+    UnitMoved,
 )
 from trpg.engine.rules.combat import NATURAL_HIT
 from trpg.engine.rules.geometry import manhattan
@@ -71,7 +72,7 @@ __all__ = [
     "settle",
 ]
 
-_OBSERVED = frozenset({"attack_rolled", "damage_dealt", "status_applied", "collided"})
+_OBSERVED = frozenset({"attack_rolled", "damage_dealt", "status_applied", "collided", "unit_moved"})
 
 MODIFIER_ON_HIT = "modifier_on_hit"
 """修正規則命中後效果的 ``SkillTriggered.trigger``（不是 ``skill_triggers.yaml`` 的時機）。"""
@@ -155,6 +156,8 @@ def observe(ctx: Ctx, event: EventBase) -> None:
         _on_status_applied(ctx, index, event)
     elif isinstance(event, Collided):
         _on_collision(ctx, index, event)
+    elif isinstance(event, UnitMoved):
+        _on_enter_surface(ctx, index, event)
 
 
 def _on_attack(ctx: Ctx, index: PassiveIndex, event: AttackRolled) -> None:
@@ -235,6 +238,27 @@ def _on_collision(ctx: Ctx, index: PassiveIndex, event: Collided) -> None:
     for owner, skill in index.owners("on_collision"):
         if owner == source:
             _fire(ctx, event.seq, owner, skill, event.unit_id)
+
+
+def _on_enter_surface(ctx: Ctx, index: PassiveIndex, event: UnitMoved) -> None:
+    """``on_enter_surface``：敵方單位步行或被強制位移進入持有者造出的表面（傳送不算；回合開始
+    站在表面上、表面出現在腳下都不是「進入」，不會產生 ``UnitMoved``）。"""
+    if event.mode == "teleport":
+        return
+    state = ctx.state
+    tile = state.tile(event.to_pos.x, event.to_pos.y)
+    creator_id = tile.surface_creator
+    owners = index.owners("on_enter_surface")
+    if creator_id is None or not owners:
+        return
+    creator = state.units.get(creator_id)
+    mover = state.units.get(event.unit_id)
+    if creator is None or mover is None or creator.team is mover.team:
+        return
+    for owner, skill in owners:
+        assert skill.trigger is not None
+        if owner == creator_id and skill.trigger.surface in (None, tile.surface):
+            _fire(ctx, event.seq, owner, skill, mover.id)
 
 
 def collect_cast(ctx: Ctx, caster: UnitState, skill: SkillDef) -> None:

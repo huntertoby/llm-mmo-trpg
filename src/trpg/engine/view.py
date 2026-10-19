@@ -46,6 +46,7 @@ class TileView(_ViewModel):
     surface_remaining: int | None
     surface_team: Team | None
     object_id: str | None
+    surface_creator: UnitId | None
 
 
 class ObjectView(_ViewModel):
@@ -279,6 +280,7 @@ def project_for(state: BattleState, team: Team) -> BattleView:
             surface_remaining=t.surface_remaining,
             surface_team=t.surface_team,
             object_id=t.object_id,
+            surface_creator=t.surface_creator,
         )
         for y in range(state.height)
         for x in range(state.width)

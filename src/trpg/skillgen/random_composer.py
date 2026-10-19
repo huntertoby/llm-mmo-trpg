@@ -99,6 +99,8 @@ def _skeleton_feasible(
     rank = rarity_rank(rarity)
     if not skeleton.enabled or rank < rarity_rank(skeleton.min_rarity):
         return False
+    if skeleton.id in _HAND_WRITTEN_ONLY:
+        return False
     if skeleton.id in _EXPLICIT_ONLY_ACTIVE:
         return explicit and _active_feasible(skeleton, rank, library)
     if "active" not in skeleton.kinds:
@@ -116,6 +118,9 @@ def _active_feasible(skeleton: SkeletonDef, rank: int, library: ContentLibrary) 
         return any(rarity_rank(c.min_rarity) <= rank for c in conditions)
     return True
 
+
+_HAND_WRITTEN_ONLY = frozenset({"consume_status"})
+"""隨機組合器不產生的骨架（3C-3b：``consume_status`` 的 ``then`` 要手寫，組合器不支援巢狀效果）。"""
 
 _EXPLICIT_ONLY_ACTIVE = frozenset({"builder_finisher", "trap"})
 """主動骨架中，只在明確指定或由 :func:`_wants_special` 決定時使用的（2E-3；不影響其他種子）。"""

@@ -41,6 +41,7 @@ interact_ap_cost: 1           # 互動（推動物件）
 interact_height_limit: 1      # 互動：行動者與物件所在格的高度差上限（Phase 1C）
 shove_distance: 1             # 推擊距離
 max_displace_distance: 2      # 推擊與拉扯的距離上限（6.6；修正規則的 push_distance_delta 超過時截斷，Phase 3C-2）
+consume_status_max_scale: 3   # consume_status 的 scale 倍率上限（then 的骰數 ×1～3；Phase 3C-3b）
 steadfast_push_permille: 500  # steadfast 標籤：推擊距離 ×50%（無條件捨去）
 collision_damage_dice: 1d6    # 撞擊傷害：被強制位移的單位因障礙每少走 1 格受一次，物理、不加屬性（Phase 3C-3a）
 ability_mod_base: 10          # 檢定的屬性修正：(屬性 − 10) // 2

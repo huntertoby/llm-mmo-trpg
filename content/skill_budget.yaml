@@ -23,6 +23,12 @@ trap_coefficient_permille: 800
 # 期望消耗層數 ＝ 該層數上限 × 這個值 ÷ 1000（500＝上限的一半；玩家不一定每次都累積滿）。初值，未經模擬。
 consume_stack_expected_permille: 500
 
+# consume_status（Phase 3C-3b；初值，未經模擬）：點數 ＝ then 各效果點數合計 × 期望倍率（scale 時）
+# × (1000 ＋ splash 加成) ÷ 1000 × 「需要先有狀態」折扣；形狀與對象倍率照一般效果計算。
+consume_status_scale_expected: 2
+consume_status_splash_permille: 500
+consume_status_discount_permille: 700
+
 # 條件倍率：none 無條件、common／harsh 依 skill_conditions.yaml 的 harshness。
 # 技能層級的條件乘在 total，效果層級的條件只乘該效果。
 # 撞擊強化（Phase 3C-3a）：push／pull 填了 collision_dice 時，每顆骰加這麼多點（初值，未經模擬）。

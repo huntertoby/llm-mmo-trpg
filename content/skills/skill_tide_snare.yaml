@@ -1,0 +1,24 @@
+# 被動（Phase 3C-3b 示範，數值為初值，未經模擬）：敵人踏進你造出的水裡時，腳步被拖慢。
+id: skill_tide_snare
+schema_version: 1
+name_zh: 潮汐絆腳
+tier: 1
+rank: 1
+rarity: epic
+kind: passive
+skeleton: passive
+category: spell
+weapon_req: any
+ap_cost: null
+scaling_attr: int
+shape: {type: self}
+effects:
+  - {type: apply_status, status: slow, duration: 2, affects: enemies}
+condition: null
+trigger: {event: on_enter_surface, surface: water, target: other, max_per_round: 2}
+cost: {mana: 2}
+tags: [water, spell, passive]
+narrative:
+  concept: 你召來的潮水會纏住每一個闖進來的敵人
+  cast_flavor: 潮水像無數隻手抓住了對手的腳踝
+provenance: {origin: builtin, owner_id: null, created_by: null, parents: [], bound: true, tradeable: false}

@@ -98,6 +98,8 @@ class CoreRules(ContentModel):
     collision_damage_dice: Dice = Field(default_factory=lambda: Dice(count=1, sides=6))
     """撞擊傷害（Phase 3C-3a）：被強制位移的單位因障礙提前停下時，每少走 1 格受一次，物理、不加
     屬性；技能的 ``collision_dice`` 可取代。舊紀錄沒有此欄位。"""
+    consume_status_max_scale: int = Field(default=3, ge=1)
+    """``consume_status`` 的 ``scale`` 倍率上限（Phase 3C-3b；舊紀錄沒有此欄位）。"""
     steadfast_push_permille: int = Field(ge=0, le=1000)
     ability_mod_base: int
     ability_mod_divisor: int = Field(ge=1)

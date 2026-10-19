@@ -177,6 +177,21 @@ def _stack(lib: ContentLibrary, skill: SkillDef, spec: EffectSpec) -> str:
     return f"消耗全部「{stack.name_zh}」，每層使本技能傷害 +{spec.per_stack_permille / 10:g}%{need}"
 
 
+def _consume_status(lib: ContentLibrary, skill: SkillDef, spec: EffectSpec) -> str:
+    assert spec.status is not None and spec.then
+    name = lib.ruleset.status_def(spec.status).name_zh
+    then = "、".join(_effect_core(lib, skill, sub) for sub in spec.then)
+    text = f"消耗目標身上的「{name}」，然後{then}"
+    if spec.scale == "remaining_rounds":
+        text += "（骰數 × 剩餘回合）"
+    elif spec.scale == "stacks":
+        assert spec.stack is not None
+        text += f"（骰數 × 同時消耗的「{lib.ruleset.stack_def(spec.stack).name_zh}」層數）"
+    if spec.splash is not None:
+        text += f"，並波及周圍 {spec.splash} 格內的敵人"
+    return text + "；目標沒有該狀態則不生效"
+
+
 def _place_trap(_lib: ContentLibrary, skill: SkillDef, _spec: EffectSpec) -> str:
     trap = skill.trap
     assert trap is not None
@@ -207,6 +222,7 @@ _EFFECT_TEXT: dict[str, _EffectText] = {
     "destroy_object": _destroy_object,
     "add_stack": _stack,
     "consume_stack": _stack,
+    "consume_status": _consume_status,
     "place_trap": _place_trap,
     "raise_terrain": _terrain,
     "lower_terrain": _terrain,

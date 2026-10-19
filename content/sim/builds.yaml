@@ -43,7 +43,7 @@ builds:
       resist: {elemental: 150}
       tags: [hero, sim]
       max_mana: 40
-      skills: [skill_fire_bolt, skill_cinder_burst, skill_ashen_oath, skill_shatter_blast, skill_searing_scar, skill_ember_cycle, skill_ember_ward]
+      skills: [skill_fire_bolt, skill_cinder_burst, skill_ashen_oath, skill_shatter_blast, skill_detonate_burning, skill_searing_scar, skill_ember_cycle, skill_ember_ward]
 
   - id: build_storm
     name_zh: 雷電／水流
@@ -60,7 +60,7 @@ builds:
       resist: {elemental: 150}
       tags: [hero, sim]
       max_mana: 40
-      skills: [skill_chain_lightning, skill_summon_tide, skill_frost_shackle, skill_conductive_strike, skill_twin_strike, skill_deep_freeze]
+      skills: [skill_chain_lightning, skill_summon_tide, skill_frost_shackle, skill_conductive_strike, skill_twin_strike, skill_deep_freeze, skill_tide_snare]
 
   - id: build_tank
     name_zh: 坦克
