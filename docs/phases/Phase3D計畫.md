@@ -120,6 +120,23 @@
 | 9 | 朝向尚未實作，衝撞後面向衝撞方向沒做 | 3D-8d 補（已寫在 9.1：`charge_through` 視為主動移動） |
 | 10 | 順手修正 `narrative/events.py` 預覽強制單骰時的 `IndexError` | 保留 |
 
+### 0.8 3D-3 驗收與「待 PM 決定」的處理（2026-10-20）
+
+- 驗收：`check.py` 全過（pytest 2303、vitest 110）；`oil_depot` 種子 5（`build_fire,build_guardian`）重播一致；`trpg sim completion --seeds 3` 異常 0；`map_push_check.py` 全通。`LOG_FORMAT` 升為 `/22`。實作者的紀錄節錄確認「投擲油桶摔破漏油 → 火焰攻擊點燃」兩步連招成立。
+
+| # | 項目 | 決定 |
+|---|---|---|
+| 1 | 念力投擲預算沒調（原本沒算爆炸）；AI 以「有火焰技能」近似連招 | 接受；平衡階段 |
+| 2 | `allow_self_target` 定義為「範圍形狀把施放者也算進來」（單體治療本來就能選自己） | 接受 |
+| 3 | `area_delta` 只作用在直線、錐形、環形、光環 | 接受 |
+| 4 | 形狀轉換表在 `skill_shapes.yaml`；轉換後不重新計價 | 接受 |
+| 5 | 變形預算初值 | 平衡階段 |
+| 6 | 只有主動技能會變形 | 接受 |
+| 7 | `enemy_enters_adjacent` 只算步行、衝鋒、直線衝撞 | 接受 |
+| 8 | `ally_downed` 在整個動作結算完才反應 | 接受 |
+| 9 | `ally_targeted` 只算單體敵對技能與普攻 | 接受 |
+| 10 | 技能卡片沒有反應時機一行；`hit_by_spell` 在現有遭遇幾乎不觸發 | 3C-6 補卡片；敵方法術屬敵人種類問題（玩法 PM 清單已有） |
+
 ---
 
 ## 1. Phase 3D-1｜連段條件 ＋ 資源互動（sonnet）
