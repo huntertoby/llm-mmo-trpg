@@ -83,6 +83,7 @@ __all__ = [
     "SurfaceChanged",
     "SurfaceEntered",
     "TerrainChanged",
+    "TotemPulsed",
     "TrapExpired",
     "TrapPlaced",
     "TrapTriggered",
@@ -1054,6 +1055,18 @@ class SummonExpired(EventBase):
     pos: Pos
 
 
+class TotemPulsed(EventBase):
+    """圖騰的光環（Phase 3D-4b）：圖騰 ``unit_id`` 在自己的回合開始時，讓 ``targets`` 內的友方
+    獲得 ``status_id``（接著是各目標的 ``status_applied``）。"""
+
+    type: Literal["totem_pulsed"] = "totem_pulsed"
+    unit_id: UnitId
+    status_id: str
+    duration: int
+    radius: int
+    targets: list[UnitId]
+
+
 type Event = Annotated[
     BattleStarted
     | InitiativeRolled
@@ -1112,6 +1125,7 @@ type Event = Annotated[
     | UnitEscaped
     | UnitSummoned
     | SummonExpired
+    | TotemPulsed
     | SkillUsed
     | SkillCooldownChanged
     | SkillTriggered

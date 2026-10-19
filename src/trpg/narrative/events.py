@@ -69,6 +69,7 @@ from trpg.engine.events import (
     SurfaceChanged,
     SurfaceEntered,
     TerrainChanged,
+    TotemPulsed,
     TrapExpired,
     TrapPlaced,
     TrapTriggered,
@@ -810,6 +811,14 @@ _SUMMON_EXPIRY_TEXT = {
 def _summon_expired(e: SummonExpired, v: _View) -> str:
     why = _SUMMON_EXPIRY_TEXT[e.reason]
     return f"  {why}：{v.name.get(e.unit_id, e.unit_id)} 消失了"
+
+
+@_handles(TotemPulsed)
+def _totem_pulsed(e: TotemPulsed, v: _View) -> str:
+    names = "、".join(v.name.get(t, t) for t in e.targets)
+    status = v.statuses[e.status_id]
+    totem = v.name.get(e.unit_id, e.unit_id)
+    return f"  {totem} 散發光環（{e.radius} 格內）：{names} 獲得「{status}」"
 
 
 # ---------------------------------------------------------------------------

@@ -10,7 +10,7 @@ from tests.engine.helpers import library
 from tests.engine.test_summons import SID, U1, arena, cast, summon_skill
 from trpg.content.summons import summon_dpr
 from trpg.engine import UseSkill, preview, state_to_json
-from trpg.engine.ai.summon import SUMMON_HIT, summon_estimate, summon_gains
+from trpg.engine.ai.summon import summon_estimate, summon_gains
 from trpg.engine.ai.utility import UtilityAI
 from trpg.engine.events import AttackRolled, SummonExpired, TurnStarted, UnitSummoned
 from trpg.engine.rules.geometry import manhattan
@@ -30,10 +30,12 @@ def test_summon_gains_are_dpr_times_rounds_minus_distance() -> None:
     state = arena(summon_skill(duration=2), foes=((6, 3),))
     action = UseSkill(unit_id=U1, skill_id=SID, target_pos=Pos(x=2, y=3))
     p = preview(state, action)
-    w = library().ai_profiles.by_id()["cunning"].weights
+    profile = library().ai_profiles.by_id()["cunning"]
     dpr = summon_dpr(state.ruleset.summon_def("summon_skeleton_warrior"))
-    expected = w.damage * dpr * 2 * SUMMON_HIT - Fraction(4, 10)
-    assert summon_gains(state, state.units[U1], p.min_events, w) == expected
+    hit = Fraction(profile.summon.hit_permille, 1000)
+    cost = Fraction(profile.summon.distance_cost_permille, 1000)
+    expected = profile.weights.damage * dpr * 2 * hit - cost * 4
+    assert summon_gains(state, state.units[U1], p.min_events, profile) == expected
 
 
 def test_replacing_the_oldest_summon_costs_its_remaining_value() -> None:
@@ -43,11 +45,11 @@ def test_replacing_the_oldest_summon_costs_its_remaining_value() -> None:
     ready = _ready(state)
     p = preview(ready, action)
     assert any(isinstance(e, SummonExpired) and e.reason == "limit" for e in p.min_events)
-    w = library().ai_profiles.by_id()["cunning"].weights
+    profile = library().ai_profiles.by_id()["cunning"]
     fresh = summon_gains(
-        ready, ready.units[U1], [e for e in p.min_events if isinstance(e, UnitSummoned)], w
+        ready, ready.units[U1], [e for e in p.min_events if isinstance(e, UnitSummoned)], profile
     )
-    assert summon_gains(ready, ready.units[U1], p.min_events, w) < fresh
+    assert summon_gains(ready, ready.units[U1], p.min_events, profile) < fresh
 
 
 def _ready(state: Any) -> Any:

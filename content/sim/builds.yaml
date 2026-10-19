@@ -17,6 +17,7 @@ companions: [sim_companion_fighter, sim_companion_archer]
 # build_assassin 加迎頭痛擊（enemy_enters_adjacent）、build_ranged 加掩護射擊（ally_targeted）。
 # Phase 3D-3：技能變形的示範修正技能：build_tank 加震懾餘波（area_delta：嘲諷怒吼的環形 +1）、build_healer 加慈悲光束（shape_to：
 # 回春由單體轉成直線）與自我療癒（allow_self_target）。
+# Phase 3D-4b：新增 build_summoner（召喚師）：召喚元素之靈、喚起骷髏、立起圖騰（build_trapper 仍裝著 3D-4a 的喚起骷髏）。
 # Phase 3C-3a：build_push 加破城衝撞與裂骨印記（撞擊）、build_fire 加烈焰護身（on_cast_tag）、build_warlock 加蝕心追擊（on_status_applied）。
 # Phase 3C-2：修正技能（kind: modifier，裝在被動欄位，上限 3）——build_push 加重踏、build_fire 加灼傷之痕與餘燼循環、
 # build_tank 加雷之手（單手劍的物理普攻變成雷電，3C-5 再整理）。
@@ -254,3 +255,20 @@ builds:
       tags: [hero, sim]
       max_mana: 40
       skills: [skill_banish, skill_void_swap, skill_fire_bolt, skill_hex_bolt, skill_shatter_blast, skill_blink, skill_counterspell]
+
+  - id: build_summoner
+    name_zh: 召喚師
+    theme_zh: 召喚元素之靈與骷髏替自己打前線，立起戰意圖騰強化身邊的同伴；召喚物不佔勝負條件，敵人必須先處理它們；召喚物活得久（敵人分心、地形窄）時發光，被範圍傷害或快速集火時不利（Phase 3D-4b，初值未經模擬）。
+    hero:
+      id: build_summoner
+      name_zh: 召喚師英雄
+      attributes: {str: 8, dex: 12, con: 12, int: 16, wis: 14, wil: 12}
+      max_hp: 42
+      speed: 5
+      armor_bonus: 1
+      weapon: fire_staff
+      ai_profile: archer
+      resist: {elemental: 100}
+      tags: [hero, sim]
+      max_mana: 40
+      skills: [skill_summon_spirit, skill_raise_skeleton, skill_plant_totem, skill_frost_shackle]

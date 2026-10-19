@@ -19,6 +19,7 @@ from trpg.engine.events import (
 )
 from trpg.engine.rules.combat import is_concealed
 from trpg.engine.state import BattleState, UnitState
+from trpg.engine.summons import totem_of
 from trpg.engine.traps import visible_traps
 from trpg.narrative.events import object_name, surface_name, xy_text
 from trpg.shared.types import Surface, Team
@@ -118,11 +119,17 @@ def _objective_text(map_def: MapDef) -> str:
 
 
 def unit_markers(state: BattleState) -> dict[str, str]:
-    """單位在網格上的代號：我方 A、B、C……，敵方 a、b、c……（依單位 ID）。"""
+    """單位在網格上的代號：我方 A、B、C……，敵方 a、b、c……（依單位 ID）；召喚物（Phase 3D-4b）
+    不分陣營，一律用數字 1–9（依單位 ID，超過 9 個後循環），單位表標明召喚者與到期輪。"""
     markers: dict[str, str] = {}
     counters = {Team.ALLY: 0, Team.ENEMY: 0}
     letters = {Team.ALLY: string.ascii_uppercase, Team.ENEMY: string.ascii_lowercase}
+    summons = 0
     for unit in state.units_sorted():
+        if unit.is_summon:
+            markers[unit.id] = str(summons % 9 + 1)
+            summons += 1
+            continue
         i = counters[unit.team]
         counters[unit.team] += 1
         markers[unit.id] = letters[unit.team][i % 26]
@@ -172,6 +179,8 @@ def render_legend(state: BattleState) -> str:
         f"{state.ruleset.surface_def(s).glyph} {state.ruleset.surface_def(s).name_zh}（表面）"
         for s in surfaces
     ]
+    if any(u.is_summon and u.alive for u in state.units.values()):
+        parts.append("1–9 召喚物（單位表有召喚者與到期輪）")
     if visible_traps(state, Team.ALLY):
         parts.append(f"{TRAP_GLYPH} 我方陷阱")
     if state.source_wells:
@@ -196,6 +205,15 @@ def _source_text(state: BattleState, unit: UnitState) -> str:
     if unit.team is not Team.ALLY or unit.is_summon:  # 召喚物沒有源力（Phase 3D-4a）
         return ""
     return f" 源力 {unit.source}/{state.ruleset.core.source_max}"
+
+
+def _summon_text(state: BattleState, unit: UnitState) -> str:
+    """召喚物的標註（Phase 3D-4b）：召喚者與到期輪，圖騰另註明；一般單位為空字串。"""
+    if not unit.is_summon or unit.owner_id is None or unit.summon_expires_round is None:
+        return ""
+    owner = state.units[unit.owner_id].name_zh
+    kind = "圖騰" if totem_of(state, unit) is not None else "召喚物"
+    return f" ［{kind}：{owner}召喚，第 {unit.summon_expires_round} 輪結束時消失］"
 
 
 def render_unit_table(state: BattleState) -> str:

@@ -1,0 +1,24 @@
+# 主動（Phase 3D-4b 示範，數值為初值，未經模擬）：在射程內的空格立起戰意圖騰，持續 2 輪；
+# 圖騰不移動、不攻擊，每輪回合開始時讓 2 格內的友方獲得「激昂」。
+id: skill_plant_totem
+schema_version: 1
+name_zh: 立起圖騰
+tier: 1
+rank: 1
+rarity: rare
+kind: active
+skeleton: summon
+category: spell
+weapon_req: any
+ap_cost: 1
+scaling_attr: wis
+shape: {type: ground_tile, range: 3}
+effects:
+  - {type: summon, unit: summon_war_totem, duration: 2}
+condition: null
+cost: {mana: 8, cooldown: 4}
+tags: [spirit, spell, summon, support]
+narrative:
+  concept: 在腳邊立起一根刻滿戰紋的圖騰，讓並肩作戰的同伴鬥志高昂
+  cast_flavor: 你將木樁重重插入泥土，戰紋亮起微光，周遭的空氣熱了起來
+provenance: {origin: builtin, owner_id: null, created_by: null, parents: [], bound: true, tradeable: false}

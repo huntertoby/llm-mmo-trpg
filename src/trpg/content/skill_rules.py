@@ -196,6 +196,9 @@ class BudgetRules(ContentModel):
     summon_round_value_permille: int = Field(default=800, ge=1, le=5000)
     """``summon`` 的點數 ＝ 召喚物每輪預估傷害 × 持續輪數 × 這個值（‰；Phase 3D-4a；命中率與
     吸引火力的折合，初值，未經模擬）。"""
+    totem_expected_allies_permille: int = Field(default=1000, ge=0, le=5000)
+    """圖騰（Phase 3D-4b）的點數 ＝ 光環狀態的 ``budget_points`` × 預期受惠的友方數（‰）× 持續輪數
+    × ``summon_round_value_permille``（初值，未經模擬）。"""
     restore_mana_point_permille: int = Field(default=700, ge=0, le=5000)
     """``restore_resource`` 回復法力：每點法力折合的預算點數（‰；Phase 3D-1；初值）。"""
     restore_cooldown_points: int = Field(default=3, ge=0)

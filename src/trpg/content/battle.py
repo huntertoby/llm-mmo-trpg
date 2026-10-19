@@ -27,6 +27,7 @@ __all__ = [
     "StatusTickHeal",
     "TerrainDef",
     "TerrainTable",
+    "TotemSpec",
     "UnitTemplate",
     "WeaponDef",
     "WeaponTable",
@@ -368,6 +369,18 @@ _MAX_ATTR = 999
 _PERMILLE = 1000
 
 
+class TotemSpec(ContentModel):
+    """圖騰（Phase 3D-4b）：不移動、不攻擊的召喚物，只提供光環。
+
+    圖騰自己的回合開始時，曼哈頓距離 ``radius`` 以內（含自己格）的友方（不含其他圖騰）獲得
+    ``status`` ``duration`` 回合（已有則刷新）；其餘時間沒有任何動作（AP 為 0）。
+    """
+
+    radius: int = Field(ge=1, le=4)
+    status: str = Field(pattern=ID_PATTERN)
+    duration: int = Field(default=2, ge=1, le=4)
+
+
 class UnitTemplate(ContentModel):
     """``content/units/<id>.yaml``：一個單位範本（Phase 1 直接給定屬性與武器）。
 
@@ -384,6 +397,7 @@ class UnitTemplate(ContentModel):
     - ``max_mana``：法力上限（戰鬥開始時為滿，Phase 2A 不回復）。
     - ``summon``：召喚物範本（Phase 3D-4a；放在 ``content/units/summons/``，只能由 ``summon``
       原語產生，不能直接參戰）。
+    - ``totem``：圖騰（Phase 3D-4b；不移動、不攻擊，只提供光環）。
     - 元素修正 ＝ (1 − 分組抗性) × (1 + 個別弱點 − 個別抗性)，
       下限見 ``element_mod_floor_permille``。
     """
@@ -404,6 +418,14 @@ class UnitTemplate(ContentModel):
     skills: tuple[str, ...] = Field(default=(), max_length=32)
     max_mana: int = Field(default=0, ge=0)
     summon: bool = False
+    totem: TotemSpec | None = None
+    """圖騰（Phase 3D-4b）：必須是召喚物、速度 0；沒有行動，只在自己的回合開始時給光環。"""
+
+    @model_validator(mode="after")
+    def _check_totem(self) -> UnitTemplate:
+        if self.totem is not None and not (self.summon and self.speed == 0):
+            raise ValueError("圖騰必須是召喚物（summon: true）且 speed 為 0")
+        return self
 
     @field_validator("skills")
     @classmethod

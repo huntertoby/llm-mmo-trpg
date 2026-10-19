@@ -9,20 +9,25 @@
   倒數）。召喚者倒下或撤離時一併消失（:mod:`trpg.engine.lifecycle`）。
 - **上限**：同一召喚者同時存在的召喚物超過 ``summon_limit_per_owner`` 時，最舊的先消失。
 - 召喚物沒有源力、不取用源泉、不計入勝負條件、不能撤離（各自的規則模組檢查 ``is_summon``）。
+- **圖騰**（Phase 3D-4b，範本的 ``totem``）：沒有 AP（不移動、不攻擊），自己的回合開始時讓範圍內的
+  友方獲得狀態（:func:`pulse_totem`）。
 - 消失的召喚物保留在 ``units`` 中（``dismissed``），事件與紀錄仍可引用它的名字。
 """
 
 from __future__ import annotations
 
+from trpg.content.battle import TotemSpec
 from trpg.engine.context import Ctx
-from trpg.engine.events import EffectFizzled, EventBase, UnitSummoned
+from trpg.engine.effects import execute
+from trpg.engine.effects.models import ApplyStatusEffect
+from trpg.engine.events import EffectFizzled, EventBase, TotemPulsed, UnitSummoned
 from trpg.engine.lifecycle import dismiss_summon, make_unit, summons_of
-from trpg.engine.rules.geometry import XY
+from trpg.engine.rules.geometry import XY, manhattan
 from trpg.engine.skills.targeting import summon_site_problem
 from trpg.engine.state import BattleState, UnitState
 from trpg.shared.types import Pos, UnitId
 
-__all__ = ["expire_summons", "summon_unit"]
+__all__ = ["expire_summons", "pulse_totem", "summon_unit", "totem_of"]
 
 
 def _order_index(state: BattleState, owner_id: UnitId) -> int:
@@ -103,3 +108,53 @@ def expire_summons(ctx: Ctx, owner: UnitState) -> list[EventBase]:
         if expires is not None and expires <= ctx.state.round:
             events += dismiss_summon(ctx, summon, "expired")
     return events
+
+
+def totem_of(state: BattleState, unit: UnitState) -> TotemSpec | None:
+    """``unit`` 是圖騰時回傳它的光環規格，否則 ``None``。"""
+    if not unit.is_summon:
+        return None
+    try:
+        return state.ruleset.summon_def(unit.template_id).template.totem
+    except KeyError:
+        return None
+
+
+def totem_targets(state: BattleState, totem: UnitState, spec: TotemSpec) -> list[UnitState]:
+    """光環範圍內的友方（含圖騰所在格的距離 0；不含圖騰自己與其他圖騰），依單位 ID 排序。"""
+    return [
+        u
+        for u in state.units_sorted()
+        if u.alive
+        and u.team is totem.team
+        and u.id != totem.id
+        and totem_of(state, u) is None
+        and manhattan(u.xy, totem.xy) <= spec.radius
+    ]
+
+
+def pulse_totem(ctx: Ctx, totem: UnitState) -> None:
+    """圖騰的回合開始：範圍內的友方獲得（或刷新）光環狀態；範圍內沒有友方時不發事件。"""
+    spec = totem_of(ctx.state, totem)
+    if spec is None:
+        return
+    targets = totem_targets(ctx.state, totem, spec)
+    if not targets:
+        return
+    ctx.emit(
+        TotemPulsed,
+        unit_id=totem.id,
+        status_id=spec.status,
+        duration=spec.duration,
+        radius=spec.radius,
+        targets=[u.id for u in targets],
+    )
+    execute(
+        ctx,
+        [
+            ApplyStatusEffect(
+                target_id=u.id, status_id=spec.status, duration=spec.duration, source_id=totem.id
+            )
+            for u in targets
+        ],
+    )

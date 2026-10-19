@@ -35,10 +35,14 @@ def _problems(skill: SkillDef, *, summon_ids: set[str] | None = None) -> list[st
     )
 
 
-def test_the_two_summon_templates_are_loaded_into_the_ruleset() -> None:
+def test_the_three_summon_templates_are_loaded_into_the_ruleset() -> None:
     lib = library()
     summons = lib.ruleset.summons.by_id()
-    assert set(summons) == {"summon_elemental_spirit", "summon_skeleton_warrior"}
+    assert set(summons) == {
+        "summon_elemental_spirit",
+        "summon_skeleton_warrior",
+        "summon_war_totem",
+    }
     spirit, skeleton = summons["summon_elemental_spirit"], summons["summon_skeleton_warrior"]
     assert spirit.template.summon and skeleton.template.summon
     assert spirit.template.speed > 0 and not spirit.weapon.is_melee  # 可移動、會攻擊（遠程）

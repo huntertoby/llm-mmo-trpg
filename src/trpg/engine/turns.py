@@ -41,7 +41,7 @@ from trpg.engine.skill_triggers import (
 )
 from trpg.engine.stacks import expire_stacks
 from trpg.engine.state import StatusInstance, UnitState
-from trpg.engine.summons import expire_summons
+from trpg.engine.summons import expire_summons, pulse_totem, totem_of
 from trpg.engine.traps import tick_traps
 from trpg.shared.types import Surface, UnitId
 
@@ -70,6 +70,8 @@ def start_turn(ctx: Ctx, unit_id: UnitId) -> None:
     unit.turn_cast_tags = ()
     unit.ap_pending = 0  # grant_ap 給的、等到這個回合才加上的 AP（Phase 3C-4a）
     unit.move_points = move_points_for_turn(ctx.rules, unit)
+    if totem_of(state, unit) is not None:
+        unit.ap = 0  # 圖騰（Phase 3D-4b）：不攻擊、不施放，只有回合開始的光環
     ctx.emit(
         TurnStarted,
         unit_id=unit.id,
@@ -117,6 +119,8 @@ def start_turn(ctx: Ctx, unit_id: UnitId) -> None:
         execute(ctx, surface_effects)
     if unit.alive and state.traps:  # 放置者的陷阱倒數（Phase 2E-3）：delay 到期觸發、enter 到期消失
         tick_traps(ctx, unit)
+    if unit.alive and unit.is_summon:  # 圖騰的光環（Phase 3D-4b）
+        pulse_totem(ctx, unit)
     if unit.alive:  # 被動技能 on_turn_start：在狀態與表面的回合開始效果之後
         collect_turn_start(ctx, unit)
         settle(ctx)

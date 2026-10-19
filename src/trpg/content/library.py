@@ -547,6 +547,12 @@ def _check_units(
             raise ContentError(path, f"未知的武器：{template.weapon}")
         if template.ai_profile is not None and template.ai_profile not in ai_profiles.by_id():
             raise ContentError(path, f"未知的行為模式：{template.ai_profile}")
+        if template.totem is not None:
+            status = next(
+                (d for d in ruleset.statuses.statuses if d.id == template.totem.status), None
+            )
+            if status is None or not status.beneficial:
+                raise ContentError(path, f"圖騰的狀態必須是有益的既有狀態：{template.totem.status}")
         for rule in template.reactions or ():
             try:
                 check_rule(rule, reaction_index, skills)

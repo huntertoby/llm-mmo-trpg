@@ -652,6 +652,22 @@ class RewriteAiRules(ContentModel):
     steal_points: int = Field(default=8, ge=0)
 
 
+class SummonAiRules(ContentModel):
+    """召喚者 AI 的數值（Phase 3D-4a 寫在程式裡，3D-4b 搬進 ``content/ai_profiles.yaml`` 的
+    ``summon:``；初值未經模擬）。
+
+    - ``hit_permille``：召喚物預估傷害的命中與走位折合（‰）。
+    - ``distance_cost_permille``：召喚位置與最近敵人每差一格扣的分數（‰；只用來在同一技能的位置之間
+      排序）。
+    - ``totem_ally_points``：圖騰光環的價值：每個範圍內友方 × 狀態在 ``ally_status_values`` 的價值
+      （沒列出的用這個值）× 持續輪數 × ``support`` 權重 × 折合（沿用 ``hit_permille``）。
+    """
+
+    hit_permille: int = Field(default=500, ge=0, le=1000)
+    distance_cost_permille: int = Field(default=100, ge=0)
+    totem_ally_points: int = Field(default=3, ge=0)
+
+
 class AiProfile(ContentModel):
     id: str = Field(pattern=ID_PATTERN)
     name_zh: str = Field(min_length=1)
@@ -670,6 +686,8 @@ class AiProfile(ContentModel):
     """放置陷阱的 AI 數值（Phase 2F-2）；由 :class:`AiProfileTable` 的同名欄位填入。"""
     rewrite: RewriteAiRules = Field(default_factory=RewriteAiRules)
     """改寫規則型原語與源力的 AI 數值（Phase 3C-4a）；由 :class:`AiProfileTable` 的同名欄位填入。"""
+    summon: SummonAiRules = Field(default_factory=SummonAiRules)
+    """召喚的 AI 數值（Phase 3D-4b）；由 :class:`AiProfileTable` 的同名欄位填入。"""
 
 
 class OrderBonuses(ContentModel):
@@ -717,6 +735,7 @@ class AiProfileTable(ContentModel):
     """AI 放置陷阱的收益 ＝ 陷阱效果的價值 × 範圍波及的預期敵人數 × 這個機率（‰；初值未經模擬）。"""
     trap: TrapAiRules = Field(default_factory=TrapAiRules)
     rewrite: RewriteAiRules = Field(default_factory=RewriteAiRules)
+    summon: SummonAiRules = Field(default_factory=SummonAiRules)
     orders: OrderBonuses = Field(default_factory=OrderBonuses)
 
     @model_validator(mode="before")
@@ -728,7 +747,9 @@ class AiProfileTable(ContentModel):
         shared = data.get("status_values")
         ally_shared = data.get("ally_status_values")
         trap_shared = {
-            key: data[key] for key in ("trap_likelihood_permille", "trap", "rewrite") if key in data
+            key: data[key]
+            for key in ("trap_likelihood_permille", "trap", "rewrite", "summon")
+            if key in data
         }
         if not isinstance(shared, dict) and not isinstance(ally_shared, dict) and not trap_shared:
             return data

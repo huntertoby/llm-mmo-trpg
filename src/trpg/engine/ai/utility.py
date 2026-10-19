@@ -84,7 +84,7 @@ from trpg.engine.ai.orders import (
     validate_order,
 )
 from trpg.engine.ai.scene_objects import SCENE_PRIMITIVES, has_fire_follow_up, scene_estimate
-from trpg.engine.ai.summon import has_summon, summon_estimate, summon_gains
+from trpg.engine.ai.summon import has_summon, summon_estimate, summon_gains, summon_template
 from trpg.engine.battle import legal_actions, legal_actions_with_areas
 from trpg.engine.events import (
     ApGranted,
@@ -714,7 +714,7 @@ def _ally_gains(f: _GainFrame) -> Fraction:
         gains += _support_gains(state, p, f.profile)
         gains += _stack_gains(state, f.actor, p, f.profile, f.hit)
         gains += _trap_gains(state, p, f.profile)
-        gains += summon_gains(state, f.actor, p.min_events, f.w)  # 召喚（Phase 3D-4a）
+        gains += summon_gains(state, f.actor, p.min_events, f.profile)  # 召喚（Phase 3D-4a）
     return gains
 
 
@@ -1205,7 +1205,7 @@ def skill_estimate(  # noqa: PLR0917
     if skill.trap is not None:
         return _trap_estimate(state, unit, skill, area, scene, rules=trap)
     if has_summon(skill):  # 召喚（3D-4a）：召喚位置越靠近敵人越好
-        return summon_estimate(state, unit, area.origin)
+        return summon_estimate(state, unit, area.origin, summon_template(skill))
     special = _special_estimate(state, unit, skill, action, area, scene, w, before)
     if not isinstance(special, _Unhandled):
         return special

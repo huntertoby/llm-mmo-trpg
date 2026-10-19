@@ -37,8 +37,11 @@ __all__ = [
     "run_battle",
 ]
 
-LOG_FORMAT = "trpg-battle-log/23"
-"""``/23``（Phase 3D-4a）：召喚——原語 ``summon``（形狀 ``ground_tile``；
+LOG_FORMAT = "trpg-battle-log/24"
+"""``/24``（Phase 3D-4b）：圖騰——單位範本的 ``totem``（``radius``／``status``／``duration``）、
+新事件 ``totem_pulsed``、圖騰的回合沒有 AP、預算規則 ``totem_expected_allies_permille``；
+``/23`` 的規則包沒有 ``totem`` 欄位，舊紀錄不能由新版程式重播。
+``/23``（Phase 3D-4a）：召喚——原語 ``summon``（形狀 ``ground_tile``；
 ``EffectSpec`` 新欄位 ``unit``、``count``）、規則包的 ``summons``（召喚物範本與武器）、
 核心規則 ``summon_limit_per_owner``、單位範本的 ``summon``、單位狀態的 ``owner_id``／
 ``summon_expires_round``／``dismissed``、新事件 ``unit_summoned``／``summon_expired``、

@@ -1,0 +1,24 @@
+# 主動（Phase 3D-4b 示範，數值為初值，未經模擬）：在射程內的空格召喚元素之靈，持續 3 輪；
+# 元素之靈會移動、以火焰法杖遠距離攻擊，由效用 AI 控制。
+id: skill_summon_spirit
+schema_version: 1
+name_zh: 召喚元素之靈
+tier: 1
+rank: 1
+rarity: rare
+kind: active
+skeleton: summon
+category: spell
+weapon_req: any
+ap_cost: 1
+scaling_attr: int
+shape: {type: ground_tile, range: 4}
+effects:
+  - {type: summon, unit: summon_elemental_spirit, duration: 3}
+condition: null
+cost: {mana: 10, cooldown: 4}
+tags: [fire, spell, summon]
+narrative:
+  concept: 呼喚一縷聽命的元素之靈，替你在遠處噴吐火焰
+  cast_flavor: 你的法杖敲向地面，一團火光從空中凝聚成人形
+provenance: {origin: builtin, owner_id: null, created_by: null, parents: [], bound: true, tradeable: false}

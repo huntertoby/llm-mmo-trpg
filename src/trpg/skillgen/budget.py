@@ -245,15 +245,25 @@ def _summon_points(
     _skill: SkillDef, effect: EffectSpec, library: ContentLibrary
 ) -> tuple[Fraction, str]:
     """``summon`` 的點數（3D-4a）：召喚物每輪預估傷害 × 持續輪數 ×
-    ``summon_round_value_permille``。"""
+    ``summon_round_value_permille``；圖騰（3D-4b）改用光環狀態的點數 × 預期受惠的友方數。"""
     if effect.unit is None or effect.duration is None:
         raise BudgetError("summon 缺少 unit 或 duration，無法計算點數")
     try:
         summon = library.ruleset.summon_def(effect.unit)
     except KeyError:
         raise BudgetError(f"未知的召喚物範本：{effect.unit}") from None
-    dpr = summon_dpr(summon)
     permille = library.budget.summon_round_value_permille
+    totem = summon.template.totem
+    if totem is not None:  # 圖騰（3D-4b）：光環狀態的點數 × 預期受惠的友方數 × 持續輪數
+        status = library.ruleset.status_def(totem.status)
+        allies = library.budget.totem_expected_allies_permille
+        value = Fraction(status.budget_points or 0) * Fraction(allies, _PERMILLE)
+        points = value * effect.duration * Fraction(permille, _PERMILLE)
+        return points, (
+            f"{status.id} {status.budget_points} × 預期 {allies}‰ 個友方 × {effect.duration} 輪"
+            f" × {permille}‰"
+        )
+    dpr = summon_dpr(summon)
     points = dpr * effect.duration * Fraction(permille, _PERMILLE)
     return points, f"每輪 {_fmt(dpr)} × {effect.duration} 輪 × {permille}‰"
 

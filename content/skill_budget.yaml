@@ -42,6 +42,8 @@ charge_through_expected_targets_permille: 1500
 # 召喚（Phase 3D-4a）：點數 ＝ 召喚物每輪預估傷害（武器骰平均 ＋ 固定傷害）× duration × 這個值 ÷ 1000
 # （命中率與吸引火力的折合）。初值，未經模擬。
 summon_round_value_permille: 800
+# 3D-4b 圖騰：點數 ＝ 光環狀態的 budget_points × 預期受惠的友方數 × duration × summon_round_value_permille ÷ 1000²。初值，未經模擬。
+totem_expected_allies_permille: 1000
 # 3D-1：restore_resource 的點數（初值，未經模擬）：法力每點 700‰ 點、冷卻每回合 3 點
 restore_mana_point_permille: 700
 restore_cooldown_points: 3
