@@ -64,6 +64,7 @@ __all__ = [
     "RoundStarted",
     "ShieldAbsorbed",
     "ShieldGained",
+    "ShotPierced",
     "SkillCooldownChanged",
     "SkillCopied",
     "SkillTriggered",
@@ -571,6 +572,21 @@ class ObjectToppled(EventBase):
     source_id: UnitId | None
 
 
+class ShotPierced(EventBase):
+    """穿透技能（``pierce``，Phase 3C-5b）的射線穿過了 ``penetrable`` 物件：``objects``（依路線
+    順序）受全額傷害，``behind`` 的單位只受 ``behind_permille``‰ 的傷害。``route`` 是施放者與
+    目標之間的路線（不含兩端；直線為影響範圍）。沒有穿過任何物件時不發出。"""
+
+    type: Literal["shot_pierced"] = "shot_pierced"
+    unit_id: UnitId
+    skill_id: str
+    objects: tuple[ObjectId, ...]
+    object_tiles: tuple[Pos, ...]
+    behind: tuple[UnitId, ...]
+    behind_permille: int
+    route: tuple[Pos, ...]
+
+
 class ObjectCreated(EventBase):
     type: Literal["object_created"] = "object_created"
     object_id: ObjectId
@@ -997,6 +1013,7 @@ type Event = Annotated[
     | ObjectMoved
     | ObjectHurled
     | ObjectToppled
+    | ShotPierced
     | ObjectCreated
     | SurfaceChanged
     | TerrainChanged

@@ -109,6 +109,9 @@ class CoreRules(ContentModel):
     hurl_scatter_radius: int = Field(default=1, ge=0, le=2)
     """投擲物件（Phase 3C-5a）：落點有單位或物件時，物件放在這個曼哈頓距離內最近的空格；
     沒有空格就摧毀。"""
+    pierce_behind_permille: int = Field(default=700, ge=1, le=1000)
+    """穿透（Phase 3C-5b）：穿過 ``penetrable`` 物件之後，後方目標受到的傷害（‰；物件本身受全額
+    傷害）。舊紀錄沒有此欄位。"""
     steadfast_push_permille: int = Field(ge=0, le=1000)
     ability_mod_base: int
     ability_mod_divisor: int = Field(ge=1)

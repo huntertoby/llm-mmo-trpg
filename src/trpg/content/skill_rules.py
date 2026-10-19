@@ -124,6 +124,8 @@ class ModifierPoints(ContentModel):
     add_element: int = Field(ge=0)
     add_tag: int = Field(ge=0)
     """每個加上的標籤。"""
+    grant_pierce: int = Field(default=0, ge=0)
+    """技能獲得穿透（Phase 3C-5b；每次使用的價值）。"""
 
 
 class ModifierBudget(ContentModel):
@@ -181,6 +183,8 @@ class BudgetRules(ContentModel):
     """``push``／``pull`` 填了 ``collision_dice`` 時，每顆骰加的預算點數（Phase 3C-3a；初值）。"""
     hurl_object_discount_permille: int = Field(default=800, ge=1, le=1000)
     """``hurl_object`` 的「需要附近有可投擲的物件」折扣（Phase 3C-5a；初值，未經模擬）。"""
+    pierce_bonus_permille: int = Field(default=150, ge=0, le=1000)
+    """有 ``pierce`` 的技能，總點數再加這個比例（‰；Phase 3C-5b；初值，未經模擬）。"""
     condition_permille: dict[Literal["none", "common", "harsh"], int]
     all_target_permille: int = Field(ge=1, le=1000)
     """``affects: all``（敵我不分）的對象係數。"""

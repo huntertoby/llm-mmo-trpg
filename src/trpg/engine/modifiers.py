@@ -39,6 +39,7 @@ __all__ = [
     "displace_distance",
     "displace_split",
     "effective_tags",
+    "grants_pierce",
     "hit_bonus",
     "is_attack_skill",
     "on_hit_rules",
@@ -193,6 +194,14 @@ def damage_element(state: BattleState, unit: UnitState, use: Use, base: Element)
             assert rule.change.add_element is not None
             return rule.change.add_element
     return base
+
+
+def grants_pierce(state: BattleState, unit: UnitState, use: Use) -> bool:
+    """有沒有成立的 ``grant_pierce`` 規則讓這個技能獲得穿透（Phase 3C-5b；是否真的有效由
+    :func:`trpg.engine.skills.targeting.pierce_active` 依形狀與武器判斷）。"""
+    return any(
+        _self_holds(state, unit, rule) for rule in _applicable(state, unit, use, "grant_pierce")
+    )
 
 
 def displace_split(

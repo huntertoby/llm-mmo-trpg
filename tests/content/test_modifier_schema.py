@@ -57,6 +57,7 @@ VALID_CHANGES: dict[str, dict[str, Any]] = {
     "on_hit_effects": rule(
         ATTACKS, {"on_hit_effects": [{"type": "apply_status", "status": "burning", "duration": 2}]}
     ),
+    "grant_pierce": rule({"skill_tags": ["ranged"]}, {"grant_pierce": True}),
 }
 
 

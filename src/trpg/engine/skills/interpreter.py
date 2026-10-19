@@ -71,11 +71,13 @@ from trpg.engine.events import (
     DamageDealt,
     EffectFizzled,
     ObjectDamaged,
+    ShotPierced,
     SkillCooldownChanged,
     SkillCopied,
     SkillUsed,
 )
 from trpg.engine.maneuvers import contest
+from trpg.engine.pierce import NO_PIERCE, PierceTrace, pierce_trace
 from trpg.engine.reactions import (
     PauseForDecision,
     block_multiplier,
@@ -360,6 +362,10 @@ class _Cast:
         self.area = area
         self.effects: tuple[ResolvedEffect, ...] = resolve_effects(ctx.state, skill)
         self.profile: AttackProfile = skill_profile(ctx.state, caster, skill)
+        self.trace: PierceTrace = NO_PIERCE
+        """穿透的射線（Phase 3C-5b；沒有穿透或被動、陷阱的施放為 ``NO_PIERCE``）。"""
+        if self.modified and self.profile.pierce:
+            self.trace = pierce_trace(ctx.state, caster, skill.shape.type, area)
         units = [ctx.state.units[uid] for uid in area.units]
         self.enemies = [u for u in units if u.team is not caster.team]
         self.allies = [u for u in units if u.team is caster.team]
@@ -510,6 +516,7 @@ class _Cast:
 
     def run(self) -> None:
         self.roll_hits()
+        self.announce_pierce()
         self.consume_stacks()
         for effect in self.effects:
             spec = self.skill.effects[effect.spec_index]
@@ -521,6 +528,28 @@ class _Cast:
                 self.touch_untouched_tiles(spec, start)
         self.react_to_hits()
         self.shorten_cooldown()
+
+    def announce_pierce(self) -> None:
+        """穿透的射線穿過了物件：發出 ``shot_pierced``（Phase 3C-5b）。"""
+        trace = self.trace
+        if not trace.objects:
+            return
+        self.ctx.emit(
+            ShotPierced,
+            unit_id=self.caster.id,
+            skill_id=self.skill.id,
+            objects=trace.objects,
+            object_tiles=tuple(Pos(x=x, y=y) for x, y in trace.object_tiles),
+            behind=trace.behind,
+            behind_permille=self.ctx.core.pierce_behind_permille,
+            route=tuple(Pos(x=x, y=y) for x, y in trace.route),
+        )
+
+    def behind_permille(self, unit: UnitState) -> int:
+        """穿透：位於 ``penetrable`` 物件後方的單位只受這個千分比的傷害。"""
+        if unit.id in self.trace.behind:
+            return self.ctx.core.pierce_behind_permille
+        return PERMILLE
 
     def shorten_cooldown(self) -> None:
         """修正規則的 ``cooldown_delta``：命中後該技能的剩餘冷卻減少（下限 0）。"""
@@ -820,11 +849,15 @@ class _Cast:
                     scaled_permille=scaled,
                     crit=roll is not None and roll.crit,
                     min_damage=min_damage,
-                    multiplier_permille=multiplier * block * bonus // (PERMILLE * PERMILLE),
+                    multiplier_permille=multiplier
+                    * block
+                    * bonus
+                    * self.behind_permille(unit)
+                    // (PERMILLE * PERMILLE * PERMILLE),
                 )
             )
         if effect.affects in _TOUCHING_AFFECTS:
-            for xy in self.area.tiles:
+            for xy in (*self.area.tiles, *self.pierced_tiles()):
                 obj = self.ctx.state.object_at(*xy)
                 if obj is None or obj.hp is None or not self.tile_holds(spec.condition, xy):
                     continue
@@ -848,6 +881,10 @@ class _Cast:
                     )
                 )
         return batch
+
+    def pierced_tiles(self) -> list[XY]:
+        """穿透的單體射線穿過、但不在影響範圍內的 ``penetrable`` 物件所在格（物件受全額傷害）。"""
+        return [xy for xy in self.trace.object_tiles if xy not in self.area.tiles]
 
     def touch_untouched_tiles(self, spec: EffectSpec, start: int) -> None:
         """帶元素的傷害：沒有單位或物件受到傷害的影響格，補上一次元素觸及（每格一次）。"""

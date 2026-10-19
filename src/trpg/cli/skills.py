@@ -19,7 +19,7 @@ from trpg.narrative.skills import (
     mastery_text,
     modifier_summary,
     scaling_detail,
-    shape_summary,
+    skill_shape_text,
 )
 from trpg.shared.types import Attribute
 
@@ -54,7 +54,7 @@ def cmd_skills_list(library: ContentLibrary, out: TextIO) -> int:
             file=out,
         )
         when = f"［條件：{condition_summary(library, skill.condition)}］" if skill.condition else ""
-        print(f"    {shape_summary(library, skill.shape)}{when}：{effects}", file=out)
+        print(f"    {skill_shape_text(library, skill)}{when}：{effects}", file=out)
     return 0
 
 
@@ -104,7 +104,7 @@ def cmd_skills_show(
         print("  代價 無（裝在被動欄位、不花 AP）", file=out)
     else:
         print(f"  代價 {cost_summary(library, skill)}", file=out)
-    print(f"  形狀 {shape_summary(library, skill.shape)}", file=out)
+    print(f"  形狀 {skill_shape_text(library, skill)}", file=out)
     if skill.condition is not None:
         print(f"  使用條件 {condition_summary(library, skill.condition)}", file=out)
     if skill.is_modifier:

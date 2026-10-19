@@ -1,0 +1,25 @@
+# 改造型被動（Phase 3C-5b 示範，數值為初值，未經模擬）：你的弓箭技能能穿透木製物件。
+# 帶 ranged 標籤的遠程單體與直線技能獲得穿透：無視半掩護、穿過木箱與倒木。
+id: skill_timber_piercer
+schema_version: 1
+name_zh: 穿木箭術
+tier: 1
+rank: 1
+rarity: epic
+kind: modifier
+skeleton: modifier
+category: weapon
+weapon_req: ranged
+ap_cost: null
+scaling_attr: dex
+shape: {type: self}
+effects: []
+modifiers:
+  - applies_to: {skill_tags: [ranged]}
+    change: {grant_pierce: true}
+condition: null
+tags: [ranged, passive, modifier]
+narrative:
+  concept: 木頭擋不住你的箭
+  cast_flavor: 箭矢劈開木板，木屑四濺，箭頭卻沒有慢下來
+provenance: {origin: builtin, owner_id: null, created_by: null, parents: [], bound: true, tradeable: false}

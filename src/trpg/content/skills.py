@@ -53,6 +53,7 @@ __all__ = [
     "INTERCEPT",
     "MODIFIER_CHANGES",
     "ON_HIT_PRIMITIVES",
+    "PIERCE_SHAPES",
     "PLACE_TRAP",
     "RARITY_ORDER",
     "REDIRECT_DAMAGE",
@@ -720,6 +721,8 @@ EXTRA_REACTION = "extra_reaction"
 HURL_OBJECT = "hurl_object"
 TOPPLE = "topple"
 """Phase 3C-5a 的物件原語 ID（6.15）：投擲物件、推倒。"""
+PIERCE_SHAPES: tuple[str, ...] = ("single", "line")
+"""可以穿透（``pierce``，Phase 3C-5b）的形狀：遠程單體與直線。"""
 REDIRECT_STATUS = "soul_link"
 """``redirect_damage`` 施加的狀態（``statuses.yaml``，``redirects_damage``）：
 ``StatusInstance.amount`` 存轉移的千分比、``source_id`` 是承受轉移的施放者。"""
@@ -773,6 +776,7 @@ MODIFIER_CHANGES: tuple[str, ...] = (
     "add_element",
     "add_tags",
     "on_hit_effects",
+    "grant_pierce",
 )
 """``change`` 的種類（每條規則恰好一種）。"""
 
@@ -788,12 +792,13 @@ CHANGE_TARGETS: dict[str, frozenset[str]] = {
     "add_element": _ATTACK_TARGETS,
     "add_tags": _SKILL_TARGETS,
     "on_hit_effects": _ATTACK_TARGETS,
+    "grant_pierce": _SKILL_TARGETS,
 }
 """每種 ``change`` 可以套用的對象（``applies_to`` 的每一項都必須在內）：推擊、絆倒、互動沒有傷害與
 命中骰，基本動作沒有冷卻與標籤。"""
 
 SELF_ONLY_CHANGES: frozenset[str] = frozenset(
-    {"ap_delta", "range_delta", "add_element", "add_tags"}
+    {"ap_delta", "range_delta", "add_element", "add_tags", "grant_pierce"}
 )
 """在選目標之前就要決定的修正：條件只能看持有者自己（``self_hp_below``）或省略。"""
 
@@ -869,6 +874,8 @@ class ModifierChange(ContentModel):
     - ``add_element``：傷害獲得元素（只改物理傷害，已有元素的不覆寫）。
     - ``add_tags``：技能獲得標籤（1～3 個）。
     - ``on_hit_effects``：命中後附加效果（1～2 個，原語見 :data:`ON_HIT_PRIMITIVES`）。
+    - ``grant_pierce``：技能獲得穿透（只能是 ``true``；只對遠程單體與直線的技能有效，
+      Phase 3C-5b）。
     """
 
     damage_permille: int | None = Field(default=None, ge=-500, le=1000)
@@ -880,6 +887,7 @@ class ModifierChange(ContentModel):
     add_element: Element | None = None
     add_tags: tuple[str, ...] | None = None
     on_hit_effects: tuple[EffectSpec, ...] | None = None
+    grant_pierce: bool | None = None
 
     @model_validator(mode="after")
     def _check(self) -> ModifierChange:
@@ -893,6 +901,8 @@ class ModifierChange(ContentModel):
             raise ValueError(f"change.{kind} 不可為 0")
         if kind == "add_element" and value is Element.PHYSICAL:
             raise ValueError("change.add_element 不可是物理（physical）")
+        if kind == "grant_pierce" and value is not True:
+            raise ValueError("change.grant_pierce 只能是 true")
         if kind == "add_tags":
             self._check_tags(value)
         if kind == "on_hit_effects":
@@ -1002,6 +1012,9 @@ class SkillDef(ContentModel):
     reaction: ReactionSpec | None = None
     trap: TrapSpec | None = None
     cost: SkillCost = Field(default_factory=SkillCost)
+    pierce: bool = False
+    """穿透（Phase 3C-5b，6.15）：無視半掩護，並穿過 ``penetrable`` 物件（物件受全額傷害，後方目標
+    受 ``core.pierce_behind_permille``）。只能用在遠程的單體或直線形狀。"""
     modifiers: tuple[ModifierSpec, ...] = ()
     """修正規則（Phase 3C-2；只有 ``kind: modifier`` 可以有，1～2 條）。"""
     tags: tuple[str, ...] = ()
@@ -1050,6 +1063,7 @@ class SkillDef(ContentModel):
         self._check_legendary()
         self._check_copy_skill()
         self._check_hurl_object()
+        self._check_pierce()
         if self.kind == "passive" and self.trigger is None:
             raise ValueError("被動技能（kind: passive）必須有 trigger")
         if self.kind != "passive" and self.trigger is not None:
@@ -1102,6 +1116,24 @@ class SkillDef(ContentModel):
             raise ValueError(f"hurl_object 只能用在主動技能，收到 kind: {self.kind}")
         if self.shape.type != "object_then_tile":
             raise ValueError(f"hurl_object 的形狀必須是 object_then_tile，收到 {self.shape.type}")
+
+    def _check_pierce(self) -> None:
+        """``pierce``（Phase 3C-5b）：主動技能或反應技、遠程武器或法術、形狀是單體（射程大於 1）或
+        直線，而且要有對敵方的傷害效果。射程是否算「遠程」另由引擎依武器判斷。"""
+        if not self.pierce:
+            return
+        if self.kind not in ("active", "reaction"):
+            raise ValueError(f"pierce 只能用在主動技能與反應技，收到 kind: {self.kind}")
+        if self.shape.type not in PIERCE_SHAPES:
+            raise ValueError(
+                f"pierce 的形狀必須是 {'、'.join(PIERCE_SHAPES)}，收到 {self.shape.type}"
+            )
+        if self.weapon_req == "melee":
+            raise ValueError("pierce 不能用在近戰武器技")
+        if self.shape.type == "single" and self.shape.range == 1:
+            raise ValueError("pierce 的單體形狀射程必須大於 1")
+        if not any(e.type == "damage" for e in self.effects):
+            raise ValueError("pierce 的技能必須有傷害效果")
 
     def _check_reaction_and_stance(self) -> None:
         """反應技與姿態的結構（2E-2）：``reaction`` 欄位、形狀、``intercept`` 與 ``teleport``。"""

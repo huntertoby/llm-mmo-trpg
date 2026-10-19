@@ -451,12 +451,14 @@ def _modifier_value(
     if kind == "add_tags":
         assert change.add_tags is not None
         return points.add_tag * len(change.add_tags) * milli, f"標籤 +{len(change.add_tags)}"
-    magnitude = abs(int(getattr(change, kind) or 0)) if kind != "add_element" else 1
+    flags = ("add_element", "grant_pierce")  # 沒有數值的改變：每次使用算 1 份
+    magnitude = abs(int(getattr(change, kind) or 0)) if kind not in flags else 1
     per = {
         "hit_bonus": points.hit_bonus,
         "cooldown_delta": points.cooldown_delta,
         "range_delta": points.range_delta,
         "add_element": points.add_element,
+        "grant_pierce": points.grant_pierce,
     }[kind]
     sign = -1 if kind == "hit_bonus" and (change.hit_bonus or 0) < 0 else 1
     sign = -1 if kind == "range_delta" and (change.range_delta or 0) < 0 else sign
@@ -525,6 +527,11 @@ def skill_budget(skill: SkillDef, library: ContentLibrary) -> BudgetReport:
         if set(rule.tags) <= set(tags)
     )
     total = raw * condition_multiplier
+    if skill.pierce:  # 穿透加成（3C-5b）：列成一個「pierce」協同
+        synergies = (
+            *synergies,
+            (("pierce",), Fraction(_PERMILLE + budget.pierce_bonus_permille, _PERMILLE)),
+        )
     for _, coefficient in synergies:
         total *= coefficient
     tier_budget = rules.core.tier_budget.get(skill.tier)

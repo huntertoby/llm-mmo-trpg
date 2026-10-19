@@ -18,6 +18,7 @@ from trpg.content.battle import Dice
 from trpg.content.skills import (
     COPY_SKILL,
     HURL_OBJECT,
+    PIERCE_SHAPES,
     TOPPLE,
     Affects,
     EffectSpec,
@@ -56,6 +57,7 @@ __all__ = [
     "hp_cost",
     "hurl_object_problem",
     "pay_skill_cost",
+    "pierce_active",
     "reaction_problem",
     "reaction_target_problem",
     "resolve_effects",
@@ -154,6 +156,14 @@ def skill_is_height_limited(state: BattleState, caster: UnitState, skill: SkillD
     return skill.shape.type == "single" and _base_reach(skill, caster) <= limit
 
 
+def pierce_active(state: BattleState, caster: UnitState, skill: SkillDef) -> bool:
+    """這次施放有穿透（Phase 3C-5b）：技能本身的 ``pierce`` 或修正規則的 ``grant_pierce``，而且
+    形狀是單體或直線、不是近戰性質（只有技能能穿透，基本動作不行）。"""
+    if skill.shape.type not in PIERCE_SHAPES or skill_is_height_limited(state, caster, skill):
+        return False
+    return skill.pierce or modifiers.grants_pierce(state, caster, modifiers.skill_use(skill))
+
+
 def skill_profile(state: BattleState, caster: UnitState, skill: SkillDef) -> AttackProfile:
     """技能命中判定的攻擊參數。
 
@@ -162,12 +172,14 @@ def skill_profile(state: BattleState, caster: UnitState, skill: SkillDef) -> Att
     - 暴擊：武器技使用武器的 ``crit_range``（Phase 2A-2 決定 #3）；法術技只有自然 20。
     """
     height_limited = skill_is_height_limited(state, caster, skill)
+    pierce = pierce_active(state, caster, skill)
     if skill.category == "weapon":
         return AttackProfile(
             attack_value=attack_value(caster, state.ruleset),
             melee=caster.weapon.is_melee,
             height_limited=height_limited,
             crit_range=caster.weapon.crit_range,
+            pierce=pierce,
         )
     bonus = caster.weapon.attack_bonus if caster.weapon.weapon_class == "focus" else 0
     return AttackProfile(
@@ -175,6 +187,7 @@ def skill_profile(state: BattleState, caster: UnitState, skill: SkillDef) -> Att
         melee=False,
         height_limited=height_limited,
         crit_range=20,
+        pierce=pierce,
     )
 
 

@@ -37,8 +37,12 @@ __all__ = [
     "run_battle",
 ]
 
-LOG_FORMAT = "trpg-battle-log/16"
-"""``/16``（Phase 3C-5a）：場景物件原語——投擲物件 ``hurl_object``（形狀 ``object_then_tile``，
+LOG_FORMAT = "trpg-battle-log/17"
+"""``/17``（Phase 3C-5b）：穿透——技能欄位 ``pierce``、修正規則 ``grant_pierce``、核心規則
+``pierce_behind_permille``、事件 ``shot_pierced``；穿透技能無視半掩護，傷害與命中因此和 ``/16``
+的規則不同（``/16`` 的紀錄沒有穿透技能，內容與事件逐字不變，但規則包與事件種類多了新欄位）。
+
+``/16``（Phase 3C-5a）：場景物件原語——投擲物件 ``hurl_object``（形狀 ``object_then_tile``，
 ``UseSkill`` 同時帶 ``target_object_id`` 與 ``target_pos``、效果 ``hurl_object``、事件
 ``object_hurled``）與推倒（物件標籤 ``topplable``／``penetrable``、原語 ``topple``、事件
 ``object_toppled``、傷害原因 ``topple``、物件摧毀原因 ``hurled``／``toppled``、核心規則

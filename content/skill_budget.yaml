@@ -36,6 +36,9 @@ collision_die_points: 1
 # 投擲物件（Phase 3C-5a）：點數 ＝ 骰子平均 × 這個折扣（需要附近有可投擲的物件）÷ 1000；knock_prone: true 另加
 # knock_prone 原語的 base_points。形狀倍率照一般效果（object_then_tile 為 1.0）。初值，未經模擬。
 hurl_object_discount_permille: 800
+# 穿透（Phase 3C-5b）：技能有 pierce: true 時，總點數 ×（1000 ＋ 這個值）÷ 1000（無視半掩護、穿過木製物件；
+# 後方目標只受 core.yaml 的 pierce_behind_permille 傷害，所以只加一點）。初值，未經模擬。
+pierce_bonus_permille: 150
 
 condition_permille: {none: 1000, common: 850, harsh: 600}
 all_target_permille: 800    # affects: all（敵我不分）的對象係數
@@ -93,6 +96,7 @@ modifier:
     range_delta: 500      # 射程 ±1
     add_element: 1000     # 獲得元素（導電、點燃、與表面互動）
     add_tag: 200          # 每個標籤（讓其他修正與 3C-3 的 on_cast_tag 接上）
+    grant_pierce: 1200    # 技能獲得穿透（3C-5b；命中前就生效；每次使用的價值，3 次 ≈ 3.6 點）
 
 # 改寫規則型原語（Phase 3C-4a 起：grant_ap、reset_cooldown、cheat_death）
 max_rule_rewrite: 1           # 每個技能最多 1 個

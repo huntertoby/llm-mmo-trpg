@@ -48,6 +48,7 @@ topple_length: 2              # 推倒（Phase 3C-5a）：topplable 物件往推
 topple_damage_dice: 2d6       # 推倒壓到的單位受到的物理傷害（並倒地）；壓到的 breakable 物件受同樣傷害（初值）
 topple_rubble_object: rubble  # 推倒後在最後一格產生的物件（objects.yaml）
 hurl_scatter_radius: 1        # 投擲物件（Phase 3C-5a）：落點被占用時，放在這個距離內最近的空格（同距離依 (y, x)），沒有就摧毀
+pierce_behind_permille: 700   # 穿透（Phase 3C-5b）：穿過 penetrable 物件後，後方目標受到的傷害‰（物件本身受全額；初值，未經模擬）
 ability_mod_base: 10          # 檢定的屬性修正：(屬性 − 10) // 2
 ability_mod_divisor: 2
 

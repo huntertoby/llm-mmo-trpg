@@ -94,7 +94,7 @@ builds:
       weapon: bow
       tags: [hero, sim]
       max_mana: 24
-      skills: [skill_piercing_shot, skill_high_ground_shot, skill_smoke_arrow, skill_raise_perch, skill_lucky_break, skill_time_surge]
+      skills: [skill_piercing_shot, skill_high_ground_shot, skill_smoke_arrow, skill_raise_perch, skill_lucky_break, skill_time_surge, skill_armor_piercing_arrow, skill_timber_piercer]
 
   - id: build_assassin
     name_zh: 刺殺

@@ -1,0 +1,25 @@
+# 主動（Phase 3C-5b 示範，數值為初值，未經模擬）：穿透——無視半掩護，穿過木箱與倒木。
+# 射線上的木製物件受全額傷害，後方的目標受 core.yaml 的 pierce_behind_permille（700‰）；石柱、土牆照樣擋住。
+id: skill_armor_piercing_arrow
+schema_version: 1
+name_zh: 穿甲箭
+tier: 1
+rank: 1
+rarity: rare
+kind: active
+skeleton: strike
+category: weapon
+weapon_req: ranged
+ap_cost: 2
+scaling_attr: dex
+shape: {type: single, range: weapon}
+pierce: true
+effects:
+  - {type: damage, multiplier_permille: 1400}
+condition: null
+cost: {mana: 5, cooldown: 2}
+tags: [physical, ranged, pierce]
+narrative:
+  concept: 箭頭細長帶倒鉤，躲在木箱、倒木後面也不安全
+  cast_flavor: 你拉滿弓，一支窄頭長箭撕開木板，直直釘向後面的目標
+provenance: {origin: builtin, owner_id: null, created_by: null, parents: [], bound: true, tradeable: false}

@@ -43,6 +43,7 @@ __all__ = [
     "scaling_label",
     "shape_summary",
     "skill_card",
+    "skill_shape_text",
 ]
 
 _AFFECTS = {
@@ -84,6 +85,12 @@ def shape_summary(library: ContentLibrary, shape: ShapeSpec) -> str:
         text = "武器射程" if value == "weapon" else str(value)
         parts.append(f"{labels[key]} {text}")
     return f"{name}（{'，'.join(parts)}）" if parts else name
+
+
+def skill_shape_text(library: ContentLibrary, skill: SkillDef) -> str:
+    """技能的形狀一句話；穿透的技能（Phase 3C-5b）加上「穿透」。"""
+    text = shape_summary(library, skill.shape)
+    return f"{text}・穿透" if skill.pierce else text
 
 
 def scaling_label(skill: SkillDef) -> str:
@@ -338,6 +345,7 @@ _SIMPLE_CHANGE_TEXT = {
     "cooldown_delta": "命中後該技能的冷卻 {value:+d} 回合（最少 0）",
     "ap_delta": "AP {value:+d}（最少 1）",
     "range_delta": "射程 {value:+d}",
+    "grant_pierce": "遠程單體與直線技能獲得穿透（無視半掩護，穿過木製物件）",
 }
 """只有一個整數的改變：格式字串（``value`` 為改變的數值）。"""
 
@@ -464,7 +472,7 @@ def skill_card(
         ap_cost=skill.ap_cost,
         cost=tuple(cost_parts(library, skill, with_ap=skill.ap_cost is not None)),
         source_cost=skill.cost.source,
-        shape=shape_summary(library, skill.shape),
+        shape=skill_shape_text(library, skill),
         condition=(
             None if skill.condition is None else condition_summary(library, skill.condition)
         ),

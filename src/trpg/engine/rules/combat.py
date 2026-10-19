@@ -79,12 +79,14 @@ class AttackProfile:
     - ``melee``：近戰（射程 1）——倒地目標有優勢／遠程有劣勢、濃霧的遠程劣勢。
     - ``height_limited``：近戰與長柄（射程 ≤ ``melee_height_limit_max_range``）——無視半掩護。
     - ``crit_range``：暴擊的最低自然骰值。
+    - ``pierce``：穿透（Phase 3C-5b）——無視半掩護。
     """
 
     attack_value: int
     melee: bool
     height_limited: bool
     crit_range: int
+    pierce: bool = False
 
 
 def weapon_profile(state: BattleState, attacker: UnitState) -> AttackProfile:
@@ -188,11 +190,11 @@ def half_cover(
     5. 目標所在格的高度不高於「C 的地形高度 ＋ 1」（Phase 2A 決定 #1：站在高台上的目標不再被
        旁邊地面的掩護物掩護）。
 
-    近戰（含長柄）無視半掩護；單位不提供掩護。多個掩護物同時符合時只計一次，來源取上、右、下、
+    近戰（含長柄）與穿透技能（``profile.pierce``）無視半掩護；單位不提供掩護。多個掩護物同時符合時只計一次，來源取上、右、下、
     左順序中的第一個（確定性）。懲罰為 ``half_cover_hit_penalty``（為 0 時視為沒有掩護）。
     """
     limited = is_height_limited(state, attacker) if profile is None else profile.height_limited
-    if limited:
+    if limited or (profile is not None and profile.pierce):
         return None
     penalty = state.ruleset.core.half_cover_hit_penalty
     if penalty <= 0:

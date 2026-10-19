@@ -52,6 +52,7 @@ from trpg.engine.events import (
     RoundStarted,
     ShieldAbsorbed,
     ShieldGained,
+    ShotPierced,
     SkillCooldownChanged,
     SkillCopied,
     SkillTriggered,
@@ -678,6 +679,19 @@ def _object_toppled(e: ObjectToppled, v: _View) -> str:
     who = "" if e.source_id is None else f"{v.name[e.source_id]} 推倒了"
     text = f"  ✦ {who}{name} {xy_text(e.pos)}，往{way}倒下，壓住 {tiles}"
     return f"{text}（壓到 {crushed}）" if crushed else text
+
+
+@_handles(ShotPierced)
+def _shot_pierced(e: ShotPierced, v: _View) -> str:
+    objects = "、".join(
+        f"{object_name(v.state, oid)} {xy_text(p)}"
+        for oid, p in zip(e.objects, e.object_tiles, strict=True)
+    )
+    text = f"  ➤ 「{v.state.ruleset.skill_def(e.skill_id).name_zh}」穿過了 {objects}"
+    if e.behind:
+        names = "、".join(v.name[u] for u in e.behind)
+        text += f"，後方 {names} 只受 {e.behind_permille // 10}% 傷害"
+    return text
 
 
 @_handles(ObjectCreated)
