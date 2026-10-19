@@ -239,3 +239,18 @@ def test_other_damage_is_not_capped_by_the_backlash_rule(monkeypatch: pytest.Mon
 
 def result_alive(result: Any, uid: str) -> bool:
     return bool(result.state.units[uid].alive)
+
+
+def test_an_ai_battle_with_the_gambler_build_bets_and_replays_exactly() -> None:
+    """build_gambler 在 open_plain 種子 5：賭注失敗一次、失手反噬一次；紀錄重播的狀態與事件一致。"""
+    from tests.engine.test_zone_ai import _run  # noqa: PLC0415
+    from trpg.engine.runner import replay  # noqa: PLC0415
+
+    setup, run = _run("build_gambler", "open_plain", 5)
+    rolled = of(run, GambleRolled)
+    assert [e.success for e in rolled] == [False]
+    assert of(run, BacklashTriggered)
+    assert any(e.cause == "backlash" for e in of(run, DamageDealt))
+    again = replay(setup, 5, run.actions)
+    assert state_to_json(again.state) == state_to_json(run.state)
+    assert [e.model_dump() for e in again.events] == [e.model_dump() for e in run.events]

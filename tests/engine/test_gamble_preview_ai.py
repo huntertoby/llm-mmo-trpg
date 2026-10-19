@@ -7,12 +7,23 @@ from fractions import Fraction
 
 import pytest
 
-from tests.engine.helpers import library, make_skill
-from tests.engine.skill_helpers import SID, U1, U2, battle
+from tests.engine.helpers import (
+    caster_template,
+    give_turn,
+    library,
+    make_map,
+    make_skill,
+    make_state,
+    no_reactions,
+    spawn,
+)
+from tests.engine.skill_helpers import FLAT7, SID, U1, U2, battle
 from tests.engine.test_gamble import DOUBLE, FIRE, SINGLE5, gamble_skill, miss_skill
-from trpg.engine import UseSkill, preview, resolve, state_to_json
+from trpg.content.skills import SkillDef
+from trpg.engine import BattleState, UseSkill, preview, resolve, state_to_json
 from trpg.engine.ai.gamble import can_hurt_caster
 from trpg.engine.ai.utility import UtilityAI, score_action
+from trpg.shared.types import Team
 
 # ---------------------------------------------------------------------------
 # 預覽
@@ -126,3 +137,25 @@ def test_resolving_an_ai_chosen_gamble_replays(monkeypatch: pytest.MonkeyPatch) 
     action = UseSkill(unit_id=U1, skill_id=SID, target_id=U2)
     first, second = resolve(state, action), resolve(state, action)
     assert state_to_json(first.state) == state_to_json(second.state)
+
+
+def _two_skill_state(risky: SkillDef, safe: SkillDef) -> BattleState:
+    m = make_map(FLAT7, ally=[(3, 3)], enemy=[(5, 3)])
+    spawns = [
+        spawn(Team.ALLY, (3, 3), caster_template([risky, safe])),
+        spawn(Team.ENEMY, (5, 3), no_reactions()),
+    ]
+    return give_turn(make_state(m, spawns, skills=[risky, safe]), U1)
+
+
+def test_the_ai_gambles_when_healthy_but_picks_the_safe_skill_when_nearly_dead() -> None:
+    risky = gamble_skill()
+    safe = make_skill(
+        "skill_t_safe", SINGLE5, [{"type": "damage", "dice": "2d6", "element": "fire"}]
+    )
+    state = _two_skill_state(risky, safe)
+    action = _ai()(state)
+    assert isinstance(action, UseSkill) and action.skill_id == SID  # 期望值較高的賭注
+    state.units[U1].hp = state.units[U1].max_hp * 20 // 100  # 低於 300‰
+    action = _ai()(state)
+    assert isinstance(action, UseSkill) and action.skill_id == "skill_t_safe"
