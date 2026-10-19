@@ -16,7 +16,7 @@ __all__ = ["cmd_skills_budget", "cmd_skills_budget_all", "library_violations", "
 _RARITY = {"common": "普通", "rare": "稀有", "epic": "史詩", "legendary": "傳說"}
 
 
-_AP_LABEL = {"passive": "被動", "reaction": "反應", "stance": "姿態"}
+_AP_LABEL = {"passive": "被動", "reaction": "反應", "stance": "姿態", "modifier": "修正"}
 
 
 def _num(value: Fraction) -> str:
@@ -42,6 +42,8 @@ def library_violations(library: ContentLibrary) -> list[Violation]:
 def _cost_label(skill: SkillDef) -> str:
     if skill.trigger is not None:
         return f"觸發 {skill.trigger.event}"
+    if skill.is_modifier:
+        return "修正（被動欄位，不花 AP）"
     return f"AP {skill.ap_cost}"
 
 
@@ -51,8 +53,11 @@ def _verdict(report: BudgetReport) -> str:
     return "過弱" if report.too_weak else "合格"
 
 
-def _print_effects(report: BudgetReport, out: TextIO) -> None:
-    print("  效果點數 ＝ 基礎點數 × 形狀 × 對象 × 效果條件：", file=out)
+def _print_effects(report: BudgetReport, out: TextIO, *, modifier: bool = False) -> None:
+    if modifier:
+        print("  規則點數 ＝ 使用次數（× 命中率）× 每次價值 × 規則條件：", file=out)
+    else:
+        print("  效果點數 ＝ 基礎點數 × 形狀 × 對象 × 效果條件：", file=out)
     for eb in report.effects:
         print(
             f"    {eb.index + 1}. {pad(eb.type, 16)}{pad(eb.note, 20)}"
@@ -84,7 +89,7 @@ def print_skill_budget(library: ContentLibrary, skill: SkillDef, out: TextIO) ->
     except BudgetError as exc:
         print(f"  無法計算預算：{exc}", file=out)
     else:
-        _print_effects(report, out)
+        _print_effects(report, out, modifier=skill.is_modifier)
         _print_totals(report, out)
     if violations:
         print(f"  違規（{len(violations)} 項）：", file=out)

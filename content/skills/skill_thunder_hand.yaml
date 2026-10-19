@@ -1,0 +1,24 @@
+# 改造型（Phase 3C-2 示範技能，數值為初值，未經模擬）：你的普攻帶雷元素（站在水上的目標會導電）。
+id: skill_thunder_hand
+schema_version: 1
+name_zh: 雷之手
+tier: 1
+rank: 1
+rarity: epic
+kind: modifier
+skeleton: modifier
+category: spell
+weapon_req: any
+ap_cost: null
+scaling_attr: int
+shape: {type: self}
+effects: []
+modifiers:
+  - applies_to: {actions: [attack]}
+    change: {add_element: lightning}
+condition: null
+tags: [lightning, passive, modifier]
+narrative:
+  concept: 雷電纏在你的手臂上，每一次揮擊都帶著電光
+  cast_flavor: 武器落下的瞬間劈啪作響，電弧沿著水面竄開
+provenance: {origin: builtin, owner_id: null, created_by: null, parents: [], bound: true, tradeable: false}

@@ -40,6 +40,7 @@ maneuver_ap_cost: 1           # 推擊（Shove）、絆倒（Trip）
 interact_ap_cost: 1           # 互動（推動物件）
 interact_height_limit: 1      # 互動：行動者與物件所在格的高度差上限（Phase 1C）
 shove_distance: 1             # 推擊距離
+max_displace_distance: 2      # 推擊與拉扯的距離上限（6.6；修正規則的 push_distance_delta 超過時截斷，Phase 3C-2）
 steadfast_push_permille: 500  # steadfast 標籤：推擊距離 ×50%（無條件捨去）
 ability_mod_base: 10          # 檢定的屬性修正：(屬性 − 10) // 2
 ability_mod_divisor: 2
@@ -63,7 +64,7 @@ spell_attr_multiplier_permille: 500   # 法術技與治療：縮放屬性 × 0.5
 dual_scaling_min_rarity: epic         # 雙屬性縮放（各 50%）的最低稀有度（Phase 2H-2，初值，未經模擬）
 skill_slots:                          # 戰鬥時可裝備的技能數量上限（依 kind）
   active: 6
-  passive: 2
+  passive: 3                          # 含修正技能（kind: modifier，Phase 3C-2 由 2 → 3）
   reaction: 1
   stance: 1
 

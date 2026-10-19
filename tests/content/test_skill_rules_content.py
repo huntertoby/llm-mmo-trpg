@@ -29,6 +29,7 @@ ENABLED = {
     "stance",
     "builder_finisher",
     "trap",
+    "modifier",
 }
 
 
@@ -49,9 +50,10 @@ def _edit(path: Path, change: Any) -> None:
 # ---------------------------------------------------------------------------
 
 
-def test_all_twelve_skeletons_have_a_data_file() -> None:
+def test_all_thirteen_skeletons_have_a_data_file() -> None:
+    # 6.9 的 12 種骨架 ＋ Phase 3C-2 的 modifier（修正技能）
     lib = library()
-    assert set(lib.skeletons) == set(SKELETON_IDS) and len(lib.skeletons) == 12
+    assert set(lib.skeletons) == set(SKELETON_IDS) and len(lib.skeletons) == 13
     assert {i for i, s in lib.skeletons.items() if s.enabled} == ENABLED
     for skeleton_id in SKELETON_IDS:
         assert (PROJECT_ROOT / "content" / "skeletons" / f"{skeleton_id}.yaml").is_file()

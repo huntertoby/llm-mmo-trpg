@@ -1,6 +1,7 @@
 """技能的繁體中文描述（原在 ``trpg.cli.skills``，Phase 3-1 搬出，讓 CLI 與網頁技能卡片共用）。
 
 - 形狀、縮放、專精、代價、條件與每個效果的一句話描述。
+- 修正規則（Phase 3C-2，``kind: modifier``）的一句話描述（:func:`modifier_summary`）。
 - :func:`skill_card` 把一個技能整理成 :class:`SkillCard`（pydantic，可直接當 API 回應）。
 """
 
@@ -15,10 +16,13 @@ from trpg.content.library import ContentLibrary
 from trpg.content.skills import (
     ConditionSpec,
     EffectSpec,
+    ModifierSpec,
+    ModifierTarget,
     ShapeSpec,
     SkillDef,
     condition_text,
     default_affects,
+    on_hit_carrier,
 )
 
 __all__ = [
@@ -32,6 +36,7 @@ __all__ = [
     "cost_summary",
     "effect_summary",
     "mastery_text",
+    "modifier_summary",
     "scaling_detail",
     "scaling_label",
     "shape_summary",
@@ -48,7 +53,14 @@ _AFFECTS = {
 RARITY_TEXT = {"common": "普通", "rare": "稀有", "epic": "史詩", "legendary": "傳說"}
 CATEGORY_TEXT = {"weapon": "武器技", "spell": "法術技"}
 WEAPON_REQ_TEXT = {"melee": "近戰武器", "ranged": "遠程武器", "focus": "法器", "any": "任何武器"}
-KIND_TEXT = {"active": "主動", "reaction": "反應", "passive": "被動", "stance": "姿態"}
+KIND_TEXT = {
+    "active": "主動",
+    "reaction": "反應",
+    "passive": "被動",
+    "stance": "姿態",
+    "modifier": "修正",
+}
+_ACTION_TEXT = {"attack": "普攻", "shove": "推擊", "trip": "絆倒", "interact": "互動"}
 
 
 def _dice(dice: Dice) -> str:
@@ -225,6 +237,63 @@ def condition_summary(library: ContentLibrary, condition: ConditionSpec) -> str:
     )
 
 
+# ---------------------------------------------------------------------------
+# 修正規則（Phase 3C-2）
+# ---------------------------------------------------------------------------
+
+
+def _targets_text(target: ModifierTarget) -> str:
+    """套用對象，例如「你的所有攻擊」「推擊、帶標籤 push 的技能」。"""
+    parts: list[str] = []
+    if target.all_attacks:
+        parts.append("你的所有攻擊（普攻與攻擊技能）")
+    if target.all_skills:
+        parts.append("你施放的所有技能")
+    parts += [_ACTION_TEXT[a] for a in target.actions if not (a == "attack" and target.all_attacks)]
+    if target.skill_tags and not target.all_skills:
+        parts.append(f"帶標籤 {'／'.join(target.skill_tags)} 的技能")
+    return "、".join(parts)
+
+
+_SIMPLE_CHANGE_TEXT = {
+    "hit_bonus": "命中 {value:+d}",
+    "cooldown_delta": "命中後該技能的冷卻 {value:+d} 回合（最少 0）",
+    "ap_delta": "AP {value:+d}（最少 1）",
+    "range_delta": "射程 {value:+d}",
+}
+"""只有一個整數的改變：格式字串（``value`` 為改變的數值）。"""
+
+
+def _change_text(library: ContentLibrary, skill: SkillDef, rule: ModifierSpec) -> str:
+    change = rule.change
+    kind = change.kind
+    simple = _SIMPLE_CHANGE_TEXT.get(kind)
+    if simple is not None:
+        return simple.format(value=getattr(change, kind))
+    if change.damage_permille is not None:
+        return f"傷害 {change.damage_permille / 10:+g}%"
+    if change.push_distance_delta is not None:
+        cap = library.ruleset.core.max_displace_distance
+        return f"推擊與拉扯距離 +{change.push_distance_delta} 格（最多 {cap} 格）"
+    if change.add_element is not None:
+        return f"物理傷害改為{change.add_element.display_name}（已有元素的不變）"
+    if change.add_tags is not None:
+        return f"獲得標籤 {'、'.join(change.add_tags)}"
+    assert change.on_hit_effects is not None
+    carrier = on_hit_carrier(skill, change.on_hit_effects)
+    effects = "；".join(effect_summary(library, carrier, e) for e in carrier.effects)
+    return f"命中後：{effects}"
+
+
+def modifier_summary(library: ContentLibrary, skill: SkillDef, rule: ModifierSpec) -> str:
+    """一條修正規則的一句話，例如「你的所有攻擊（普攻與攻擊技能）：傷害 +10%，若目標帶有狀態
+    「燃燒」」。"""
+    text = f"{_targets_text(rule.applies_to)}：{_change_text(library, skill, rule)}"
+    if rule.condition is not None:
+        text += f"，若{condition_summary(library, rule.condition)}"
+    return text
+
+
 def cost_parts(library: ContentLibrary, skill: SkillDef, *, with_ap: bool = True) -> list[str]:
     """代價的各段文字（AP、法力、HP、施放後狀態、冷卻、每場次數）。"""
     cost = skill.cost
@@ -277,6 +346,8 @@ class SkillCard(BaseModel):
     shape: str
     condition: str | None
     effects: tuple[str, ...]
+    modifiers: tuple[str, ...]
+    """修正規則的中文描述（Phase 3C-2；只有修正技能有）。"""
     mastery: str | None
     tags: tuple[str, ...]
     concept: str
@@ -312,6 +383,7 @@ def skill_card(
             None if skill.condition is None else condition_summary(library, skill.condition)
         ),
         effects=tuple(effect_summary(library, skill, e) for e in skill.effects),
+        modifiers=tuple(modifier_summary(library, skill, r) for r in skill.modifiers),
         mastery=(None if skill.mastery is None else mastery_text(skill, active=mastery_active)),
         tags=tuple(skill.tags),
         concept=skill.narrative.concept,

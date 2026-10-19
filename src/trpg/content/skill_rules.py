@@ -6,7 +6,8 @@
   稀有度上限）。階級預算 ``tier_budget`` 與武器基準傷害在 ``rules/core.yaml``。
 - ``content/skill_synergies.yaml``：:class:`SynergyTable`（機制標籤 → 協同係數）。
 - ``content/skill_exclusions.yaml``：:class:`ExclusionTable`（互斥規則，以資料表達）。
-- ``content/skeletons/<id>.yaml``：:class:`SkeletonDef`（12 種骨架的結構）。
+- ``content/skeletons/<id>.yaml``：:class:`SkeletonDef`（12 種骨架的結構，加上 3C-2 的
+  ``modifier``）。
 
 這裡只定義 **資料 schema**；預算計算與驗證邏輯在 ``trpg.skillgen``（``trpg.content`` 不得匯入它）。
 """
@@ -31,11 +32,14 @@ from trpg.content.skills import (
 )
 
 __all__ = [
+    "MODIFIER_USE_KEYS",
     "BudgetRules",
     "CostAllowance",
     "EffectPattern",
     "ExclusionRule",
     "ExclusionTable",
+    "ModifierBudget",
+    "ModifierPoints",
     "RarityLimit",
     "SecondaryRules",
     "ShapePattern",
@@ -84,6 +88,65 @@ class CostAllowance(ContentModel):
     """各項先套用自己的上限，加總後再以此截斷（‰）。"""
 
 
+MODIFIER_USE_KEYS: tuple[str, ...] = (
+    "attack",
+    "shove",
+    "trip",
+    "interact",
+    "all_attacks",
+    "all_skills",
+    "skill_tag",
+)
+"""``modifier.uses`` 的鍵：基本動作、所有攻擊、所有技能，與「每個符合的技能標籤」。"""
+
+
+class ModifierPoints(ContentModel):
+    """修正規則每次使用增加的價值（千分之一點；初值，未經模擬）。
+
+    ``damage_permille`` 與 ``push_distance_delta`` 沒有列在這裡：前者以基準武器傷害
+    （``core.yaml`` 的 ``budget_reference_weapon_damage``）× ‰ 計算，後者沿用 ``push`` 原語的
+    ``base_points``（每格）；``on_hit_effects`` 以效果本身的預算點數計算。
+    """
+
+    hit_bonus: int = Field(ge=0)
+    """命中每 ±1。"""
+    cooldown_delta: int = Field(ge=0)
+    """剩餘冷卻每 −1。"""
+    ap_decrease: int = Field(ge=0)
+    """AP 成本 −1。"""
+    ap_increase: int = Field(le=0)
+    """AP 成本 +1（代價，負值）。"""
+    range_delta: int = Field(ge=0)
+    """射程每 ±1。"""
+    add_element: int = Field(ge=0)
+    add_tag: int = Field(ge=0)
+    """每個加上的標籤。"""
+
+
+class ModifierBudget(ContentModel):
+    """修正技能（``kind: modifier``，Phase 3C-2，6.14.1）的預算：
+
+    ``規則點數 ＝ 每場預估使用次數 ×（命中後才生效的再 × 命中率）× 每次的價值 × 條件倍率``，
+    ``可用預算 ＝ tier_budget × coefficient_permille ÷ 1000``。
+    使用次數 ＝ ``applies_to`` 各項的 ``uses`` 加總（``all_attacks`` 涵蓋 ``attack``、``all_skills``
+    涵蓋 ``skill_tags``；標籤每個各算一次），上限 ``uses_cap``。全部為初值、未經模擬。
+    """
+
+    coefficient_permille: int = Field(ge=1)
+    hit_rate_permille: int = Field(ge=1, le=1000)
+    uses: dict[str, int]
+    uses_cap: int = Field(ge=1)
+    points_milli: ModifierPoints
+
+    @model_validator(mode="after")
+    def _check(self) -> ModifierBudget:
+        if sorted(self.uses) != sorted(MODIFIER_USE_KEYS):
+            raise ValueError(f"modifier.uses 必須剛好有 {', '.join(MODIFIER_USE_KEYS)}")
+        if any(v < 0 for v in self.uses.values()):
+            raise ValueError("modifier.uses 的次數不可為負")
+        return self
+
+
 class RarityLimit(ContentModel):
     """各稀有度的結構上限。"""
 
@@ -114,6 +177,8 @@ class BudgetRules(ContentModel):
     """每個技能的改寫規則型原語上限。"""
     rule_rewrite_min_cooldown: int = Field(ge=1)
     """有改寫規則型原語的技能：``uses_per_battle: 1`` 或冷卻至少這麼多回合。"""
+    modifier: ModifierBudget
+    """修正技能的預算（Phase 3C-2）。"""
 
     @model_validator(mode="after")
     def _check(self) -> BudgetRules:
@@ -337,8 +402,8 @@ class SkeletonDef(ContentModel):
     def _check(self) -> SkeletonDef:
         if self.id not in SKELETON_IDS:
             raise ValueError(f"未知的骨架 {self.id!r}（可用：{', '.join(SKELETON_IDS)}）")
-        if self.enabled and not self.core.primitives:
-            raise ValueError(f"骨架 {self.id}：啟用的骨架必須有核心原語")
+        if self.enabled and not self.core.primitives and self.kinds != ("modifier",):
+            raise ValueError(f"骨架 {self.id}：啟用的骨架必須有核心原語（修正技能的骨架除外）")
         return self
 
     def summary(self) -> str:

@@ -1,0 +1,16 @@
+# 修正（Phase 3C-2 啟用，docs/design/06-技能.md 6.14.1、6.14.3）：改造型技能與修正型被動共用的「修正規則」。
+# 不是新的一招，而是持續改變持有者自己的普攻、推擊、絆倒、互動或技能（以標籤或動作類型指定）。
+# 裝在被動欄位（rules/core.yaml 的 skill_slots.passive）、不花 AP、沒有觸發；效果寫在 modifiers（每技能 1～2 條），
+# effects 必須為空，所以沒有核心效果。命中後效果（on_hit_effects）可用的原語由引擎限定（damage、apply_status、
+# push、pull、knock_prone、create_surface）。
+# 預算：Σ 每條規則（套用對象每場的預估使用次數 × 每次增加的價值 × 條件倍率），
+#       可用預算 ＝ tier_budget × modifier.coefficient_permille（skill_budget.yaml）。
+# min_rarity: epic（6.14.1：改造型最低史詩）。隨機組合器不產生修正技能。
+id: modifier
+name_zh: 修正
+description_zh: 改變持有者自己的其他技能或基本動作（改造型），或持續改變攻擊的數值（修正型被動）。
+kinds: [modifier]
+enabled: true
+min_rarity: epic
+shapes: [self]
+core: {primitives: []}

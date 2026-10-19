@@ -1,0 +1,25 @@
+# 改造型（Phase 3C-2 示範技能，數值為初值，未經模擬）：你的技能命中燃燒中的敵人時，該技能的冷卻 −1。
+id: skill_ember_cycle
+schema_version: 1
+name_zh: 餘燼循環
+tier: 1
+rank: 1
+rarity: epic
+kind: modifier
+skeleton: modifier
+category: spell
+weapon_req: any
+ap_cost: null
+scaling_attr: int
+shape: {type: self}
+effects: []
+modifiers:
+  - applies_to: {all_skills: true}
+    condition: {type: target_has_status, status: burning}
+    change: {cooldown_delta: -1}
+condition: null
+tags: [fire, passive, modifier]
+narrative:
+  concept: 燃燒的敵人是最好的柴薪，每一次命中都讓你的火焰更快重燃
+  cast_flavor: 火星從對手身上跳回你的掌心，咒文的餘溫還沒散去
+provenance: {origin: builtin, owner_id: null, created_by: null, parents: [], bound: true, tradeable: false}

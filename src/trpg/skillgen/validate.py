@@ -11,6 +11,9 @@
 5. ``rarity.*``：稀有度限制（4.6）。
 6. ``budget.*``：預算區間（4.2）。
 
+修正技能（``kind: modifier``，Phase 3C-2）沒有效果原語，只檢查引用、骨架（啟用、kind、形狀）、
+稀有度（骨架、規則條件與命中後效果的原語、狀態）與預算（見 :func:`_modifier_violations`）。
+
 訊息為繁體中文，指出技能、規則與數值。
 """
 
@@ -63,6 +66,8 @@ def validate_skill(skill: SkillDef, library: ContentLibrary) -> list[Violation]:
     reference = _reference_violations(skill, library)
     if reference:
         return reference
+    if skill.is_modifier:
+        return _modifier_violations(skill, library)
     out = _cap_violations(skill, library)
     out += _passive_violations(skill, library)
     out += _stance_violations(skill, library)
@@ -354,6 +359,37 @@ def _exclusion_violations(skill: SkillDef, library: ContentLibrary) -> list[Viol
 # ---------------------------------------------------------------------------
 
 
+def _modifier_violations(skill: SkillDef, library: ContentLibrary) -> list[Violation]:
+    """修正技能：骨架（啟用、kind、形狀）、稀有度與預算；效果數量、互斥與骨架的核心效果規則
+    不適用（沒有效果原語）。"""
+    skeleton = library.skeletons[skill.skeleton]
+    out: list[Violation] = []
+    if not skeleton.enabled:
+        out.append(
+            Violation(skill.id, "skeleton.disabled", f"骨架 {skeleton.id} 尚未啟用，不能使用")
+        )
+    if skill.kind not in skeleton.kinds:
+        out.append(
+            Violation(
+                skill.id,
+                "skeleton.kind",
+                f"骨架 {skeleton.id}：只適用 {'、'.join(skeleton.kinds)} 技能，收到 {skill.kind}",
+            )
+        )
+    if skill.shape.type not in skeleton.shapes:
+        out.append(
+            Violation(
+                skill.id,
+                "skeleton.shape",
+                f"骨架 {skeleton.id}：形狀只能是 {'、'.join(skeleton.shapes)}，"
+                f"收到 {skill.shape.type}",
+            )
+        )
+    out += _rarity_violations(skill, library)
+    _, budget_out = _budget_violations(skill, library)
+    return out + budget_out
+
+
 def _skeleton_violations(
     skill: SkillDef, library: ContentLibrary, report: BudgetReport | None
 ) -> list[Violation]:
@@ -557,7 +593,9 @@ def _rarity_violations(skill: SkillDef, library: ContentLibrary) -> list[Violati
         rules.conditions.by_id(),
     )
     cond_specs = [skill.condition] if skill.condition else []
-    for effect in skill.effects:
+    cond_specs += [r.condition for r in skill.modifiers if r.condition is not None]
+    on_hit = [e for r in skill.modifiers for e in r.change.on_hit_effects or ()]
+    for effect in (*skill.effects, *on_hit):
         needs.append(("primitive", f"原語 {effect.type}", primitives[effect.type].min_rarity))
         if effect.type == "apply_status" and effect.status in statuses:
             needs.append(("status", f"狀態 {effect.status}", statuses[effect.status].min_rarity))

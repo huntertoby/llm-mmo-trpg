@@ -39,22 +39,32 @@ if TYPE_CHECKING:
 __all__ = [
     "ADD_STACK",
     "AFFECTS_VALUES",
+    "BASIC_ACTIONS",
+    "CHANGE_TARGETS",
     "CONSUME_STACK",
     "INTERCEPT",
+    "MODIFIER_CHANGES",
+    "ON_HIT_PRIMITIVES",
     "PLACE_TRAP",
     "RARITY_ORDER",
     "REQUIRED_CONDITIONS",
     "REQUIRED_SHAPES",
+    "SELF_CONDITIONS",
+    "SELF_ONLY_CHANGES",
     "SKELETON_IDS",
     "SKILL_ID_PATTERN",
     "SKILL_REACTION_EVENTS",
     "WEAPON_CLASSES",
     "Affects",
+    "BasicAction",
     "ConditionDef",
     "ConditionSpec",
     "ConditionTable",
     "EffectSpec",
     "Mastery",
+    "ModifierChange",
+    "ModifierSpec",
+    "ModifierTarget",
     "NarrativeDef",
     "ParamDef",
     "PrimitiveDef",
@@ -73,6 +83,7 @@ __all__ = [
     "TriggerSpec",
     "condition_text",
     "default_affects",
+    "on_hit_carrier",
     "rarity_rank",
     "skill_problems",
     "skill_slot_problems",
@@ -94,8 +105,10 @@ SKELETON_IDS: tuple[str, ...] = (
     "reaction",
     "stance",
     "passive",
+    "modifier",
 )
-"""``docs/design/06-技能.md`` 6.9 的 12 種骨架（結構驗證在 Phase 2B 才實作，這裡只檢查 ID）。"""
+"""``docs/design/06-技能.md`` 6.9 的 12 種骨架，加上 Phase 3C-2 的 ``modifier``（修正規則：改造型與
+修正型被動，6.14.1）。結構驗證在 Phase 2B 才實作，這裡只檢查 ID。"""
 
 WEAPON_CLASSES: tuple[str, ...] = ("melee", "ranged", "focus")
 
@@ -124,7 +137,7 @@ REQUIRED_CONDITIONS: tuple[str, ...] = (
 
 type Targeting = Literal["self", "unit", "tile", "direction", "none"]
 type Affects = Literal["enemies", "allies", "all", "self", "tiles"]
-type SkillKind = Literal["active", "reaction", "passive", "stance"]
+type SkillKind = Literal["active", "reaction", "passive", "stance", "modifier"]
 type ReactionEvent = Literal[
     "hit_by_melee", "hit_by_attack", "ally_hit_adjacent", "enemy_leaves_adjacent"
 ]
@@ -632,6 +645,220 @@ class TrapSpec(ContentModel):
     shape: str = Field(default="single", pattern=ID_PATTERN)
 
 
+# ---------------------------------------------------------------------------
+# 修正規則（Phase 3C-2：修正型被動與改造型技能，``docs/design/06-技能.md`` 6.14.1、6.14.3）
+# ---------------------------------------------------------------------------
+
+type BasicAction = Literal["attack", "shove", "trip", "interact"]
+"""可以被修正的基本動作：普攻（含藉機攻擊）、推擊、絆倒、互動（推或撥開物件）。"""
+
+BASIC_ACTIONS: tuple[str, ...] = ("attack", "shove", "trip", "interact")
+
+MODIFIER_CHANGES: tuple[str, ...] = (
+    "damage_permille",
+    "hit_bonus",
+    "cooldown_delta",
+    "push_distance_delta",
+    "ap_delta",
+    "range_delta",
+    "add_element",
+    "add_tags",
+    "on_hit_effects",
+)
+"""``change`` 的種類（每條規則恰好一種）。"""
+
+_ATTACK_TARGETS = frozenset({"attack", "all_attacks", "all_skills", "skill_tags"})
+_SKILL_TARGETS = frozenset({"all_skills", "skill_tags"})
+CHANGE_TARGETS: dict[str, frozenset[str]] = {
+    "damage_permille": _ATTACK_TARGETS,
+    "hit_bonus": _ATTACK_TARGETS,
+    "cooldown_delta": _SKILL_TARGETS,
+    "push_distance_delta": frozenset({"shove", "all_skills", "skill_tags"}),
+    "ap_delta": frozenset({*BASIC_ACTIONS, "all_attacks", "all_skills", "skill_tags"}),
+    "range_delta": _ATTACK_TARGETS,
+    "add_element": _ATTACK_TARGETS,
+    "add_tags": _SKILL_TARGETS,
+    "on_hit_effects": _ATTACK_TARGETS,
+}
+"""每種 ``change`` 可以套用的對象（``applies_to`` 的每一項都必須在內）：推擊、絆倒、互動沒有傷害與
+命中骰，基本動作沒有冷卻與標籤。"""
+
+SELF_ONLY_CHANGES: frozenset[str] = frozenset(
+    {"ap_delta", "range_delta", "add_element", "add_tags"}
+)
+"""在選目標之前就要決定的修正：條件只能看持有者自己（``self_hp_below``）或省略。"""
+
+SELF_CONDITIONS: frozenset[str] = frozenset({"self_hp_below"})
+
+ON_HIT_PRIMITIVES: tuple[str, ...] = (
+    "damage",
+    "apply_status",
+    "push",
+    "pull",
+    "knock_prone",
+    "create_surface",
+)
+"""``on_hit_effects`` 可用的原語（作用在被命中的目標或其所在格，自動命中）。"""
+
+_MAX_MODIFIERS = 2
+_MAX_ON_HIT_EFFECTS = 2
+
+
+class ModifierTarget(ContentModel):
+    """修正規則的套用對象（``applies_to``；至少一項，多項為「或」）。
+
+    - ``actions``：基本動作（``attack`` 普攻、``shove`` 推擊、``trip`` 絆倒、``interact`` 互動）。
+    - ``skill_tags``：帶這些標籤（含其他修正規則用 ``add_tags`` 加上的）的技能。
+    - ``all_attacks``：你的所有攻擊——普攻與「有對敵方傷害效果」的技能（修正型被動）。
+    - ``all_skills``：你施放的所有技能（主動、姿態與反應技）。
+
+    被動觸發與陷阱觸發的效果不是「你的動作」，不受修正規則影響。
+    """
+
+    actions: tuple[BasicAction, ...] = ()
+    skill_tags: tuple[str, ...] = ()
+    all_attacks: bool = False
+    all_skills: bool = False
+
+    @model_validator(mode="after")
+    def _check(self) -> ModifierTarget:
+        if not (self.actions or self.skill_tags or self.all_attacks or self.all_skills):
+            raise ValueError(
+                "applies_to 至少要有一項（actions、skill_tags、all_attacks、all_skills）"
+            )
+        if len(set(self.actions)) != len(self.actions):
+            raise ValueError("applies_to.actions 不可重複")
+        bad = [t for t in self.skill_tags if re.match(ID_PATTERN, t) is None]
+        if bad:
+            raise ValueError(f"applies_to.skill_tags 必須是小寫 snake_case：{', '.join(bad)}")
+        if len(set(self.skill_tags)) != len(self.skill_tags):
+            raise ValueError("applies_to.skill_tags 不可重複")
+        return self
+
+    def keys(self) -> frozenset[str]:
+        """對象的代碼集合：基本動作、``all_attacks``、``all_skills``、``skill_tags``。"""
+        keys: set[str] = set(self.actions)
+        if self.all_attacks:
+            keys.add("all_attacks")
+        if self.all_skills:
+            keys.add("all_skills")
+        if self.skill_tags:
+            keys.add("skill_tags")
+        return frozenset(keys)
+
+
+class ModifierChange(ContentModel):
+    """修正規則的改變（恰好一種，正交；``docs/phases/Phase3C計畫.md`` 4.1）。
+
+    - ``damage_permille``：傷害 ±‰（−500～＋1000，不可為 0；多條規則加總後套用一次）。
+    - ``hit_bonus``：命中 ±（−3～＋3）。
+    - ``cooldown_delta``：命中後該技能剩餘冷卻 −1 或 −2（下限 0）。
+    - ``push_distance_delta``：推擊與拉扯距離 +1 或 +2（結果截斷在 ``max_displace_distance``）。
+    - ``ap_delta``：AP 成本 ±1（結果至少 1）。
+    - ``range_delta``：射程 −1～＋2（不可為 0；結果至少 1；只改有射程的形狀與普攻）。
+    - ``add_element``：傷害獲得元素（只改物理傷害，已有元素的不覆寫）。
+    - ``add_tags``：技能獲得標籤（1～3 個）。
+    - ``on_hit_effects``：命中後附加效果（1～2 個，原語見 :data:`ON_HIT_PRIMITIVES`）。
+    """
+
+    damage_permille: int | None = Field(default=None, ge=-500, le=1000)
+    hit_bonus: int | None = Field(default=None, ge=-3, le=3)
+    cooldown_delta: int | None = Field(default=None, ge=-2, le=-1)
+    push_distance_delta: int | None = Field(default=None, ge=1, le=2)
+    ap_delta: int | None = Field(default=None, ge=-1, le=1)
+    range_delta: int | None = Field(default=None, ge=-1, le=2)
+    add_element: Element | None = None
+    add_tags: tuple[str, ...] | None = None
+    on_hit_effects: tuple[EffectSpec, ...] | None = None
+
+    @model_validator(mode="after")
+    def _check(self) -> ModifierChange:
+        given = [name for name in MODIFIER_CHANGES if getattr(self, name) is not None]
+        if len(given) != 1:
+            got = "、".join(given) if given else "沒有"
+            raise ValueError(f"change 必須恰好一種（{'、'.join(MODIFIER_CHANGES)}），收到 {got}")
+        kind = given[0]
+        value = getattr(self, kind)
+        if kind in ("damage_permille", "hit_bonus", "ap_delta", "range_delta") and value == 0:
+            raise ValueError(f"change.{kind} 不可為 0")
+        if kind == "add_element" and value is Element.PHYSICAL:
+            raise ValueError("change.add_element 不可是物理（physical）")
+        if kind == "add_tags":
+            self._check_tags(value)
+        if kind == "on_hit_effects":
+            self._check_on_hit(value)
+        return self
+
+    @staticmethod
+    def _check_tags(tags: tuple[str, ...]) -> None:
+        if not 1 <= len(tags) <= 3:  # noqa: PLR2004 - 規格的 1～3 個
+            raise ValueError(f"change.add_tags 必須有 1 到 3 個標籤，收到 {len(tags)} 個")
+        bad = [t for t in tags if re.match(ID_PATTERN, t) is None]
+        if bad:
+            raise ValueError(f"change.add_tags 必須是小寫 snake_case：{', '.join(bad)}")
+        if len(set(tags)) != len(tags):
+            raise ValueError("change.add_tags 不可重複")
+
+    @staticmethod
+    def _check_on_hit(effects: tuple[EffectSpec, ...]) -> None:
+        if not 1 <= len(effects) <= _MAX_ON_HIT_EFFECTS:
+            raise ValueError(
+                f"change.on_hit_effects 必須有 1 到 {_MAX_ON_HIT_EFFECTS} 個效果，"
+                f"收到 {len(effects)} 個"
+            )
+        for index, effect in enumerate(effects):
+            if effect.type not in ON_HIT_PRIMITIVES:
+                raise ValueError(
+                    f"change.on_hit_effects[{index}]：{effect.type} 不能當命中後效果"
+                    f"（可用：{'、'.join(ON_HIT_PRIMITIVES)}）"
+                )
+            if effect.type in ("push", "pull") and (
+                effect.distance is None or not 1 <= effect.distance <= _MAX_DISPLACE
+            ):
+                raise ValueError(
+                    f"change.on_hit_effects[{index}]：推擊與拉扯的距離必須是 1 到 "
+                    f"{_MAX_DISPLACE} 格，收到 {effect.distance}"
+                )
+
+    @property
+    def kind(self) -> str:
+        """這條改變的種類（:data:`MODIFIER_CHANGES` 之一）。"""
+        return next(name for name in MODIFIER_CHANGES if getattr(self, name) is not None)
+
+
+class ModifierSpec(ContentModel):
+    """一條修正規則：套用對象、條件（可省略，沿用 ``skill_conditions.yaml``）與改變。
+
+    條件的判斷對象：``self_hp_below`` 看持有者；其他條件看這次動作的目標（傷害、命中、推擊距離
+    看該目標；冷卻看「被命中的敵人中至少一個」；命中後效果看被命中的目標）。:data:`SELF_ONLY_CHANGES`
+    在選目標之前就要決定，所以條件只能是 ``self_hp_below``。
+    """
+
+    applies_to: ModifierTarget
+    condition: ConditionSpec | None = None
+    change: ModifierChange
+
+    @model_validator(mode="after")
+    def _check(self) -> ModifierSpec:
+        kind = self.change.kind
+        allowed = CHANGE_TARGETS[kind]
+        extra = sorted(self.applies_to.keys() - allowed)
+        if extra:
+            raise ValueError(
+                f"change.{kind} 不能套用在 {'、'.join(extra)}（可用：{'、'.join(sorted(allowed))}）"
+            )
+        condition = self.condition
+        if (
+            kind in SELF_ONLY_CHANGES
+            and condition is not None
+            and condition.type not in SELF_CONDITIONS
+        ):
+            raise ValueError(
+                f"change.{kind} 在選目標之前就決定，條件只能是 self_hp_below，收到 {condition.type}"
+            )
+        return self
+
+
 type Mastery = Literal["range", "duration"]
 """專精加成的種類（Phase 2H-2）。"""
 
@@ -665,6 +892,8 @@ class SkillDef(ContentModel):
     reaction: ReactionSpec | None = None
     trap: TrapSpec | None = None
     cost: SkillCost = Field(default_factory=SkillCost)
+    modifiers: tuple[ModifierSpec, ...] = ()
+    """修正規則（Phase 3C-2；只有 ``kind: modifier`` 可以有，1～2 條）。"""
     tags: tuple[str, ...] = ()
     narrative: NarrativeDef = Field(default_factory=NarrativeDef)
     provenance: Provenance = Field(default_factory=Provenance)
@@ -686,15 +915,19 @@ class SkillDef(ContentModel):
             raise ValueError("標籤不可重複")
         return value
 
-    @field_validator("effects")
-    @classmethod
-    def _effect_count(cls, value: tuple[EffectSpec, ...]) -> tuple[EffectSpec, ...]:
-        if not 1 <= len(value) <= _MAX_EFFECTS:
-            raise ValueError(f"效果原語必須有 1 到 {_MAX_EFFECTS} 個，收到 {len(value)} 個")
-        return value
-
     @model_validator(mode="after")
     def _check(self) -> SkillDef:
+        if self.kind == "modifier":
+            self._check_modifier()
+        else:
+            if not 1 <= len(self.effects) <= _MAX_EFFECTS:
+                raise ValueError(
+                    f"效果原語必須有 1 到 {_MAX_EFFECTS} 個，收到 {len(self.effects)} 個"
+                )
+            if self.modifiers:
+                raise ValueError(
+                    f"只有修正技能（kind: modifier）可以有 modifiers，收到 {self.kind}"
+                )
         if self.kind == "active":
             if self.ap_cost is None or not 1 <= self.ap_cost <= _MAX_AP_COST:
                 raise ValueError(
@@ -747,6 +980,30 @@ class SkillDef(ContentModel):
                 raise ValueError("ally_hit_adjacent 的反應技形狀必須是 self")
         elif INTERCEPT in types:
             raise ValueError("intercept 只能用在反應技")
+
+    def _check_modifier(self) -> None:
+        """修正技能（3C-2）：裝在被動欄位、不花 AP、沒有觸發；效果都寫在 ``modifiers`` 裡。"""
+        if not 1 <= len(self.modifiers) <= _MAX_MODIFIERS:
+            count = len(self.modifiers)
+            raise ValueError(
+                f"修正技能的 modifiers 必須有 1 到 {_MAX_MODIFIERS} 條，收到 {count} 條"
+            )
+        if self.effects:
+            raise ValueError("修正技能（kind: modifier）的 effects 必須為空（效果寫在 modifiers）")
+        if self.shape.type != "self":
+            raise ValueError(f"修正技能的形狀只能是 self，收到 {self.shape.type}")
+        if self.condition is not None:
+            raise ValueError("修正技能不能有技能層級的 condition（條件寫在每條修正規則）")
+        if self.cost != SkillCost():
+            raise ValueError("修正技能不能有代價（cost 必須為空）")
+        if self.mastery is not None:
+            raise ValueError("修正技能不能有 mastery")
+        for rule_index, rule in enumerate(self.modifiers):
+            for index, effect in enumerate(rule.change.on_hit_effects or ()):
+                try:
+                    self._check_effect(index, effect)
+                except ValueError as exc:
+                    raise ValueError(f"modifiers[{rule_index}].change.on_hit_{exc}") from None
 
     def _check_scaling_and_mastery(self) -> None:
         """雙屬性縮放與專精加成的結構（2H-2；稀有度門檻是跨檔案檢查）。"""
@@ -806,6 +1063,11 @@ class SkillDef(ContentModel):
     @property
     def is_active(self) -> bool:
         return self.kind == "active"
+
+    @property
+    def is_modifier(self) -> bool:
+        """修正技能（改造型與修正型被動，3C-2）：不能施放，持續改變持有者自己的動作。"""
+        return self.kind == "modifier"
 
     @property
     def is_actionable(self) -> bool:
@@ -1063,7 +1325,33 @@ def skill_problems(
         problems += _condition_problems("condition", skill.condition, refs)
     for index, effect in enumerate(skill.effects):
         problems += _effect_problems(skill, index, effect, refs)
+    problems += _modifier_problems(skill, refs)
     return problems
+
+
+def _modifier_problems(skill: SkillDef, refs: _Refs) -> list[str]:
+    """修正規則的跨檔案檢查：條件存在且參數合法、命中後效果的原語與引用（當成以 ``self`` 形狀
+    施放的效果檢查）。"""
+    problems: list[str] = []
+    for rule_index, rule in enumerate(skill.modifiers):
+        where = f"modifiers[{rule_index}]"
+        if rule.condition is not None:
+            problems += _condition_problems(f"{where}.condition", rule.condition, refs)
+        effects = rule.change.on_hit_effects
+        if not effects:
+            continue
+        carrier = on_hit_carrier(skill, effects)
+        for index, effect in enumerate(effects):
+            problems += [
+                f"{where}.change.on_hit_{p}" for p in _effect_problems(carrier, index, effect, refs)
+            ]
+    return problems
+
+
+def on_hit_carrier(skill: SkillDef, effects: tuple[EffectSpec, ...]) -> SkillDef:
+    """把修正規則的命中後效果包成一個「技能」（同一個修正技能的複本，``effects`` 換成命中後
+    效果），讓驗證、預算與引擎的自動命中施放沿用一般技能的程式。不經過 schema 驗證。"""
+    return skill.model_copy(update={"effects": effects})
 
 
 # ---------------------------------------------------------------------------
@@ -1084,14 +1372,15 @@ _REQ_NAMES = {"melee": "近戰武器", "ranged": "遠程武器", "focus": "法�
 
 def skill_slot_problems(skills: Iterable[SkillDef], slots: SkillSlots) -> list[str]:
     """裝備的技能數量超過 ``core.yaml`` 的欄位上限時的原因（依 ``kind``）。"""
-    counts: Counter[str] = Counter(s.kind for s in skills)
+    # 修正技能（kind: modifier，3C-2）裝在被動欄位，與觸發型被動共用上限
+    counts: Counter[str] = Counter("passive" if s.is_modifier else s.kind for s in skills)
     limits = {
         "active": slots.active,
         "passive": slots.passive,
         "reaction": slots.reaction,
         "stance": slots.stance,
     }
-    names = {"active": "主動", "passive": "被動", "reaction": "反應", "stance": "姿態"}
+    names = {"active": "主動", "passive": "被動（含修正）", "reaction": "反應", "stance": "姿態"}
     return [
         f"{names[kind]}技能超過欄位上限：{counts[kind]} 個（上限 {limits[kind]}）"
         for kind in limits

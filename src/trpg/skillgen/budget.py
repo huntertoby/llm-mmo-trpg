@@ -7,6 +7,10 @@
     total     ＝ raw × 技能條件倍率 × Π 協同係數
     可用預算  ＝ tier_budget[tier] × AP係數 × (1000 ＋ 代價折抵‰) ÷ 1000
                （被動技能以觸發時機的係數取代 AP 係數，見 :func:`_passive_coefficient`）
+
+修正技能（``kind: modifier``，Phase 3C-2）沒有效果原語，改以每條修正規則為一列「效果點數」：
+``每場預估使用次數 ×（命中後才生效的再 × 命中率）× 每次的價值 × 條件倍率``，可用預算的係數為
+``skill_budget.yaml`` 的 ``modifier.coefficient_permille``（見 :func:`_modifier_budgets`）。
     合格      ＝ 0.7 × 可用預算 ≤ total ≤ 1.0 × 可用預算
 
 「強度係數」已併入各原語的點數算法（骰子平均值、武器倍率、距離、持續 ÷ 預設持續，見
@@ -21,14 +25,26 @@ from fractions import Fraction
 
 from trpg.content.battle import Dice, StatusDef
 from trpg.content.library import ContentLibrary
-from trpg.content.skill_rules import BudgetRules
-from trpg.content.skills import ConditionDef, EffectSpec, PrimitiveDef, SelfStatusCost, SkillDef
+from trpg.content.skill_rules import BudgetRules, ModifierBudget
+from trpg.content.skills import (
+    ConditionDef,
+    EffectSpec,
+    ModifierSpec,
+    PrimitiveDef,
+    SelfStatusCost,
+    SkillDef,
+    on_hit_carrier,
+)
 from trpg.skillgen.mechanics import mechanic_tags, resolved_affects
 
 __all__ = ["BudgetError", "BudgetReport", "EffectBudget", "skill_budget"]
 
 _PERMILLE = 1000
 _SHAPED_AFFECTS = frozenset({"enemies", "allies", "all", "tiles"})
+_HIT_GATED = frozenset(
+    {"damage_permille", "cooldown_delta", "push_distance_delta", "add_element", "on_hit_effects"}
+)
+"""命中後才生效的修正（使用次數再 × 命中率）。"""
 
 
 class BudgetError(ValueError):
@@ -323,6 +339,100 @@ def _passive_coefficient(skill: SkillDef, library: ContentLibrary) -> tuple[Frac
     return coefficient, f"觸發係數（{definition.id}）"
 
 
+def _modifier_uses(rule: ModifierSpec, budget: ModifierBudget) -> tuple[int, str]:
+    """一條修正規則每場的預估使用次數（``applies_to`` 各項加總，上限 ``uses_cap``）與說明。"""
+    target, uses = rule.applies_to, budget.uses
+    total = 0
+    parts: list[str] = []
+    if target.all_attacks:
+        total += uses["all_attacks"]
+        parts.append("所有攻擊")
+    if target.all_skills:
+        total += uses["all_skills"]
+        parts.append("所有技能")
+    for action in target.actions:
+        if not (action == "attack" and target.all_attacks):
+            total += uses[action]
+            parts.append(action)
+    if target.skill_tags and not target.all_skills:
+        total += uses["skill_tag"] * len(target.skill_tags)
+        parts.append(f"標籤 {'／'.join(target.skill_tags)}")
+    return min(total, budget.uses_cap), "＋".join(parts)
+
+
+def _modifier_value(
+    skill: SkillDef, rule: ModifierSpec, library: ContentLibrary
+) -> tuple[Fraction, str]:
+    """一條修正規則每次使用增加的價值（點數）與說明。"""
+    change = rule.change
+    points = library.budget.modifier.points_milli
+    core = library.ruleset.core
+    kind = change.kind
+    milli = Fraction(1, _PERMILLE)
+    if kind == "damage_permille":
+        assert change.damage_permille is not None
+        value = Fraction(core.budget_reference_weapon_damage * change.damage_permille, _PERMILLE)
+        return value, f"傷害 {change.damage_permille:+d}‰"
+    if kind == "push_distance_delta":
+        assert change.push_distance_delta is not None
+        base = library.ruleset.primitive_def("push").base_points or 0
+        return Fraction(base * change.push_distance_delta), f"推擊 +{change.push_distance_delta} 格"
+    if kind == "on_hit_effects":
+        assert change.on_hit_effects is not None
+        carrier = on_hit_carrier(skill, change.on_hit_effects)
+        value = sum(
+            (_effect_budget(carrier, i, e, library).points for i, e in enumerate(carrier.effects)),
+            Fraction(0),
+        )
+        return value, f"命中後 {len(carrier.effects)} 個效果"
+    if kind == "ap_delta":
+        assert change.ap_delta is not None
+        per = points.ap_decrease if change.ap_delta < 0 else points.ap_increase
+        return per * milli, f"AP {change.ap_delta:+d}"
+    if kind == "add_tags":
+        assert change.add_tags is not None
+        return points.add_tag * len(change.add_tags) * milli, f"標籤 +{len(change.add_tags)}"
+    magnitude = abs(int(getattr(change, kind) or 0)) if kind != "add_element" else 1
+    per = {
+        "hit_bonus": points.hit_bonus,
+        "cooldown_delta": points.cooldown_delta,
+        "range_delta": points.range_delta,
+        "add_element": points.add_element,
+    }[kind]
+    sign = -1 if kind == "hit_bonus" and (change.hit_bonus or 0) < 0 else 1
+    sign = -1 if kind == "range_delta" and (change.range_delta or 0) < 0 else sign
+    return sign * per * magnitude * milli, kind
+
+
+def _modifier_budgets(skill: SkillDef, library: ContentLibrary) -> tuple[EffectBudget, ...]:
+    """修正技能每條規則的點數（當成 :class:`EffectBudget` 的一列；形狀與對象倍率為 1）。"""
+    rules, budget = library.ruleset, library.budget
+    out: list[EffectBudget] = []
+    for index, rule in enumerate(skill.modifiers):
+        uses, where = _modifier_uses(rule, budget.modifier)
+        value, what = _modifier_value(skill, rule, library)
+        count = Fraction(uses)
+        if rule.change.kind in _HIT_GATED:
+            count *= Fraction(budget.modifier.hit_rate_permille, _PERMILLE)
+        condition = Fraction(1)
+        if rule.condition is not None:
+            condition = _condition_multiplier(rule.condition.type, rules.conditions.by_id(), budget)
+        base = count * value
+        out.append(
+            EffectBudget(
+                index=index,
+                type=f"modifier.{rule.change.kind}",
+                note=f"{where} {uses} 次 × {what}",
+                base=base,
+                shape=Fraction(1),
+                target=Fraction(1),
+                condition=condition,
+                points=base * condition,
+            )
+        )
+    return tuple(out)
+
+
 def _ap_coefficient(skill: SkillDef, budget: BudgetRules) -> Fraction:
     if skill.kind == "reaction":
         return Fraction(budget.reaction_coefficient_permille, _PERMILLE)
@@ -339,7 +449,10 @@ def _ap_coefficient(skill: SkillDef, budget: BudgetRules) -> Fraction:
 def skill_budget(skill: SkillDef, library: ContentLibrary) -> BudgetReport:
     """計算 ``skill`` 的預算明細；缺少點數資料時拋出 :class:`BudgetError`。"""
     rules, budget = library.ruleset, library.budget
-    effects = tuple(_effect_budget(skill, i, e, library) for i, e in enumerate(skill.effects))
+    if skill.is_modifier:
+        effects = _modifier_budgets(skill, library)
+    else:
+        effects = tuple(_effect_budget(skill, i, e, library) for i, e in enumerate(skill.effects))
     raw = sum((e.points for e in effects), Fraction(0))
     condition_multiplier = Fraction(1)
     if skill.condition is not None:
@@ -360,6 +473,9 @@ def skill_budget(skill: SkillDef, library: ContentLibrary) -> BudgetReport:
         raise BudgetError(f"沒有階級 {skill.tier} 的預算（tier_budget）")
     if skill.kind == "passive":
         coefficient, label = _passive_coefficient(skill, library)
+    elif skill.is_modifier:
+        coefficient = Fraction(budget.modifier.coefficient_permille, _PERMILLE)
+        label = "修正係數"
     else:
         coefficient = _ap_coefficient(skill, budget)
         label = {"reaction": "反應係數", "stance": "姿態係數"}.get(skill.kind, "AP 係數")

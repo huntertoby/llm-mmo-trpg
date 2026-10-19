@@ -6,6 +6,7 @@
 
 from __future__ import annotations
 
+from collections.abc import Iterable
 from dataclasses import dataclass, field
 from pathlib import Path
 
@@ -116,6 +117,7 @@ class Ruleset(ContentModel):
     _terrain_index: dict[str, TerrainDef] = PrivateAttr(default_factory=dict)
     _status_index: dict[str, StatusDef] = PrivateAttr(default_factory=dict)
     _reaction_index: dict[str, ReactionDef] = PrivateAttr(default_factory=dict)
+    _modifier_ids: frozenset[str] = PrivateAttr(default_factory=frozenset)
 
     def model_post_init(self, context: object, /) -> None:
         # 查表索引（不屬於資料本身，不參與序列化與相等比較）
@@ -128,6 +130,7 @@ class Ruleset(ContentModel):
         self._condition_index = self.conditions.by_id()
         self._trigger_index = self.skill_triggers.by_id()
         self._stack_index = self.stacks.by_id()
+        self._modifier_ids = frozenset(s.id for s in self.skills.skills if s.is_modifier)
 
     @model_validator(mode="after")
     def _check(self) -> Ruleset:
@@ -223,6 +226,11 @@ class Ruleset(ContentModel):
         """技能定義；找不到時拋出 ``KeyError``。"""
         index: dict[str, SkillDef] = self.__pydantic_private__["_skill_index"]  # type: ignore[index]
         return index[skill_id]
+
+    def has_modifier(self, skill_ids: Iterable[str]) -> bool:
+        """``skill_ids`` 之中是否有修正技能（``kind: modifier``，3C-2；引擎的快速路徑）。"""
+        ids: frozenset[str] = self.__pydantic_private__["_modifier_ids"]  # type: ignore[index]
+        return any(skill_id in ids for skill_id in skill_ids)
 
 
 @dataclass(frozen=True)

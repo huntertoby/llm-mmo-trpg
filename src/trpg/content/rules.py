@@ -91,6 +91,9 @@ class CoreRules(ContentModel):
     interact_ap_cost: int = Field(ge=0)
     interact_height_limit: int = Field(ge=0)
     shove_distance: int = Field(ge=0)
+    max_displace_distance: int = Field(default=2, ge=1)
+    """推擊與拉扯的距離上限（6.6）：修正規則加長距離時截斷在這裡（Phase 3C-2；舊紀錄沒有
+    此欄位）。"""
     steadfast_push_permille: int = Field(ge=0, le=1000)
     ability_mod_base: int
     ability_mod_divisor: int = Field(ge=1)

@@ -57,6 +57,28 @@ rarity:
   epic: {max_effects: 4}
   legendary: {max_effects: 4}
 
+# 修正技能（kind: modifier，Phase 3C-2；docs/design/06-技能.md 6.14.1）。全部為初值，未經模擬（3C-5 的 sim matrix 再看）。
+#   規則點數 ＝ 每場預估使用次數 ×（命中後才生效的再 × hit_rate）× 每次的價值 × 條件倍率（condition_permille）
+#   total    ＝ Σ 規則點數 × 協同係數（修正技能沒有效果，機制標籤通常為空）
+#   可用預算 ＝ tier_budget × coefficient_permille ÷ 1000（修正技能沒有代價，不折抵）
+# 使用次數：applies_to 各項加總，all_attacks 涵蓋 attack、all_skills 涵蓋 skill_tags；skill_tag 為「每個標籤」，上限 uses_cap。
+# 命中後才生效：damage_permille、cooldown_delta、push_distance_delta、add_element、on_hit_effects（命中前就生效：hit_bonus、ap_delta、range_delta、add_tags）。
+# 每次的價值：damage_permille ＝ budget_reference_weapon_damage × ‰；push_distance_delta ＝ push 原語 base_points × 格數；
+#   on_hit_effects ＝ 效果本身的點數（同一般技能的效果點數，形狀倍率以 self 計）；其他見 points_milli（千分之一點）。
+modifier:
+  coefficient_permille: 300
+  hit_rate_permille: 600
+  uses: {attack: 6, shove: 2, trip: 2, interact: 1, all_attacks: 10, all_skills: 6, skill_tag: 3}
+  uses_cap: 12
+  points_milli:
+    hit_bonus: 350        # 命中 +1 ≈ 命中率 +5% × 基準傷害 7
+    cooldown_delta: 1200  # 冷卻 −1
+    ap_decrease: 3000     # AP −1（省下的 AP 約等於半次普攻以上）
+    ap_increase: -500     # AP +1 是代價（負值）
+    range_delta: 500      # 射程 ±1
+    add_element: 1000     # 獲得元素（導電、點燃、與表面互動）
+    add_tag: 200          # 每個標籤（讓其他修正與 3C-3 的 on_cast_tag 接上）
+
 # 改寫規則型原語（目前沒有此類原語）
 max_rule_rewrite: 1           # 每個技能最多 1 個
 rule_rewrite_min_cooldown: 4  # 必須 uses_per_battle: 1 或冷卻至少這麼多回合

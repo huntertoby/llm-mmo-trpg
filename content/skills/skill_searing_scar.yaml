@@ -1,0 +1,25 @@
+# 修正型被動（Phase 3C-2 示範技能，數值為初值，未經模擬）：你的所有攻擊對燃燒中的敵人傷害 +10%。
+id: skill_searing_scar
+schema_version: 1
+name_zh: 灼傷之痕
+tier: 1
+rank: 1
+rarity: epic
+kind: modifier
+skeleton: modifier
+category: spell
+weapon_req: any
+ap_cost: null
+scaling_attr: int
+shape: {type: self}
+effects: []
+modifiers:
+  - applies_to: {all_attacks: true}
+    condition: {type: target_has_status, status: burning}
+    change: {damage_permille: 100}
+condition: null
+tags: [fire, passive, modifier]
+narrative:
+  concept: 火焰留下的傷口永遠是最脆弱的地方，你知道該往哪裡打
+  cast_flavor: 你的攻擊順著焦黑的傷口落下，對手痛得蜷起身子
+provenance: {origin: builtin, owner_id: null, created_by: null, parents: [], bound: true, tradeable: false}

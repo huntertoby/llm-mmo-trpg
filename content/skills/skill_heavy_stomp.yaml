@@ -1,0 +1,26 @@
+# 改造型（Phase 3C-2 示範技能，數值為初值，未經模擬）：推擊與帶 push 標籤的技能推遠 1 格（上限 2 格），但 AP +1。
+id: skill_heavy_stomp
+schema_version: 1
+name_zh: 重踏
+tier: 1
+rank: 1
+rarity: epic
+kind: modifier
+skeleton: modifier
+category: weapon
+weapon_req: melee
+ap_cost: null
+scaling_attr: str
+shape: {type: self}
+effects: []
+modifiers:
+  - applies_to: {actions: [shove], skill_tags: [push]}
+    change: {push_distance_delta: 1}
+  - applies_to: {actions: [shove], skill_tags: [push]}
+    change: {ap_delta: 1}
+condition: null
+tags: [physical, passive, modifier]
+narrative:
+  concept: 每一次推擊都先重重踏地，把全身的重量壓進去
+  cast_flavor: 你一腳踏碎地面，順勢把對手撞得倒退好幾步
+provenance: {origin: builtin, owner_id: null, created_by: null, parents: [], bound: true, tradeable: false}
