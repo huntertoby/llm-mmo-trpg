@@ -55,6 +55,7 @@ __all__ = [
     "HURL_OBJECT",
     "INTERCEPT",
     "LEAP",
+    "LEGACY_REACTION_EVENTS",
     "MODIFIER_CHANGES",
     "ON_HIT_PRIMITIVES",
     "PAIR_MOVES",
@@ -176,7 +177,14 @@ type Targeting = Literal[
 type Affects = Literal["enemies", "allies", "all", "self", "tiles"]
 type SkillKind = Literal["active", "reaction", "passive", "stance", "modifier"]
 type ReactionEvent = Literal[
-    "hit_by_melee", "hit_by_attack", "ally_hit_adjacent", "enemy_leaves_adjacent"
+    "hit_by_melee",
+    "hit_by_attack",
+    "ally_hit_adjacent",
+    "enemy_leaves_adjacent",
+    "hit_by_spell",
+    "ally_downed",
+    "enemy_enters_adjacent",
+    "ally_targeted",
 ]
 type SkillRarity = Literal["common", "rare", "epic", "legendary"]
 type SkillCategory = Literal["weapon", "spell"]
@@ -741,8 +749,16 @@ SKILL_REACTION_EVENTS: tuple[str, ...] = (
     "hit_by_attack",
     "ally_hit_adjacent",
     "enemy_leaves_adjacent",
+    "hit_by_spell",
+    "ally_downed",
+    "enemy_enters_adjacent",
+    "ally_targeted",
 )
-"""反應技（``kind: reaction``）的觸發事件（Phase 2E-2 4.1）。"""
+"""反應技（``kind: reaction``）的觸發事件（Phase 2E-2 4.1；後四個是 Phase 3D-3 新增）。"""
+
+LEGACY_REACTION_EVENTS: tuple[str, ...] = SKILL_REACTION_EVENTS[:4]
+"""Phase 2E-2 的四個觸發事件。隨機組合器只從這些抽（3D-3 的新事件只給手寫技能，組合器的亂數
+串流與既有種子的結果因此不變）。"""
 
 INTERCEPT = "intercept"
 """替隊友擋攻擊的原語 ID（只能出現在 ``event: ally_hit_adjacent`` 的反應技）。"""
@@ -801,6 +817,13 @@ class ReactionSpec(ContentModel):
     - ``ally_hit_adjacent``：與持有者相鄰（曼哈頓距離 1）的友方被攻擊命中、**傷害結算之前**
       （只給 ``intercept`` 使用）。
     - ``enemy_leaves_adjacent``：敵人離開相鄰格時（同藉機攻擊）。
+    - ``hit_by_spell``（3D-3）：被法術技（``category: spell``）命中、**傷害之前**；另一方是施放者。
+    - ``ally_downed``（3D-3）：持有者視野內的友方倒下之後；另一方是倒下的友方（已倒下，所以形狀
+      必須是 ``self``）。
+    - ``enemy_enters_adjacent``（3D-3）：敵方單位 **主動移動**（步行、衝鋒、直線衝撞）進入持有者
+      相鄰格之後（強制位移、傳送、跳躍、互換不算；本來就相鄰的移動不算「進入」）。
+    - ``ally_targeted``（3D-3）：與持有者相鄰的友方被敵方單體技能或普攻選為目標、**命中判定之前**；
+      另一方是攻擊者。
     """
 
     event: ReactionEvent
@@ -1281,6 +1304,8 @@ class SkillDef(ContentModel):
                 raise ValueError("intercept 只能用在 event: ally_hit_adjacent 的反應技")
             if guarding and self.shape.type != "self":
                 raise ValueError("ally_hit_adjacent 的反應技形狀必須是 self")
+            if self.reaction.event == "ally_downed" and self.shape.type != "self":
+                raise ValueError("ally_downed 的反應技形狀必須是 self（另一方已經倒下）")
         elif INTERCEPT in types:
             raise ValueError("intercept 只能用在反應技")
 

@@ -8,6 +8,10 @@
 - 反應技（Phase 2E-2，``kind: reaction``）：規則的 ``reaction`` 是持有者裝備的技能 ID；事件
   ``hit_by_melee``／``hit_by_attack``（被命中、傷害之後）、``enemy_leaves_adjacent``、
   ``ally_hit_adjacent``（相鄰友方被單體攻擊命中、傷害之前；配 ``intercept`` 原語替他擋下）。
+  Phase 3D-3 新增四個事件：``hit_by_spell``（被法術技命中、傷害之前）、``ally_downed``（視野內的
+  友方倒下之後，等效果佇列清空才處理，見 :func:`ally_downed_reactions`）、``enemy_enters_adjacent``
+  （敵人主動移動進入相鄰格之後）、``ally_targeted``（相鄰友方被敵人單體技能或普攻瞄準、命中判定
+  之前）。
   反應技不花 AP，立刻施放一次技能（:func:`trpg.engine.skills.interpreter.use_reaction_skill`）。
 
 普攻的結算（:func:`perform_unit_attack`）也放在這裡，因為格擋會在命中後、傷害前介入，
@@ -32,10 +36,12 @@ from trpg.engine.events import (
     EventBase,
     ReactionDeclined,
     ReactionTriggered,
+    UnitDowned,
+    UnitMoved,
 )
 from trpg.engine.results import Pending
 from trpg.engine.rules.combat import ForcedOutcome, attack_problem, roll_attack
-from trpg.engine.rules.geometry import XY, manhattan
+from trpg.engine.rules.geometry import XY, has_line_of_sight, manhattan
 from trpg.engine.rules.statuses import effective_attribute, skip_turn_status
 from trpg.engine.skill_triggers import check_trigger_depth, holding, redirect_fired
 from trpg.engine.skills.conditions import Subject, skill_condition_met
@@ -45,11 +51,15 @@ from trpg.shared.errors import TrpgError
 
 __all__ = [
     "PauseForDecision",
+    "ally_downed_reactions",
+    "ally_targeted_reactions",
     "block_multiplier",
+    "enemy_enters_adjacent_reactions",
     "hit_reactions",
     "is_melee_attack",
     "opportunity_attacks",
     "perform_unit_attack",
+    "spell_hit_reactions",
     "try_intercept",
 ]
 
@@ -128,6 +138,12 @@ _TRIGGER_EVENT_MATCHERS: dict[str, Callable[[EventBase, UnitState, UnitState], b
         isinstance(e, DamageDealt) and e.target_id == u.id and e.source_id == t.id
     ),
     "ally_hit_adjacent": lambda e, _u, t: isinstance(e, AttackRolled) and e.attacker_id == t.id,
+    "hit_by_spell": lambda e, u, t: (
+        isinstance(e, AttackRolled) and e.target_id == u.id and e.attacker_id == t.id
+    ),
+    "ally_targeted": lambda e, _u, t: isinstance(e, AttackRolled) and e.attacker_id == t.id,
+    "ally_downed": lambda e, _u, t: isinstance(e, UnitDowned) and e.unit_id == t.id,
+    "enemy_enters_adjacent": lambda e, _u, t: isinstance(e, UnitMoved) and e.unit_id == t.id,
 }
 
 
@@ -325,6 +341,67 @@ def try_intercept(
     return None
 
 
+def spell_hit_reactions(ctx: Ctx, caster: UnitState, target: UnitState) -> None:
+    """``caster`` 的法術技命中 ``target``、傷害結算之前（Phase 3D-3）：``target`` 的
+    ``hit_by_spell`` 反應技（例如法術反射、護符）。"""
+    if not target.alive or not caster.alive:
+        return
+    picked = _react(ctx, target, ("hit_by_spell",), caster, skills=True)
+    if isinstance(picked, SkillDef):
+        _run_skill(ctx, target, picked, caster)
+
+
+def ally_targeted_reactions(ctx: Ctx, attacker: UnitState, target: UnitState) -> None:
+    """``attacker`` 選了 ``target`` 當單體攻擊的目標、命中判定之前（Phase 3D-3）：與 ``target``
+    相鄰的友方（依單位 ID）各自可以用 ``ally_targeted`` 反應技反應（例如對攻擊者還擊、替隊友
+    加護盾）。攻擊者或目標倒下就停止。"""
+    if attacker.team is target.team:
+        return
+    for reactor in ctx.state.units_sorted():
+        if not attacker.alive or not target.alive:
+            return
+        if reactor.id == target.id or reactor.team is not target.team or not reactor.alive:
+            continue
+        if manhattan(reactor.xy, target.xy) != 1:
+            continue
+        picked = _react(ctx, reactor, ("ally_targeted",), attacker, skills=True)
+        if isinstance(picked, SkillDef):
+            _run_skill(ctx, reactor, picked, attacker)
+
+
+def ally_downed_reactions(ctx: Ctx, downed: UnitState) -> None:
+    """``downed`` 倒下之後（Phase 3D-3）：視野內的友方（依單位 ID）可以用 ``ally_downed`` 反應技
+    反應；另一方是倒下的友方（形狀固定為 ``self``）。"""
+    state = ctx.state
+    for reactor in state.units_sorted():
+        if state.ended:
+            return
+        if reactor.id == downed.id or reactor.team is not downed.team or not reactor.alive:
+            continue
+        if not has_line_of_sight(state, reactor.xy, downed.xy):
+            continue
+        picked = _react(ctx, reactor, ("ally_downed",), downed, skills=True)
+        if isinstance(picked, SkillDef):
+            _run_skill(ctx, reactor, picked, downed)
+
+
+def enemy_enters_adjacent_reactions(ctx: Ctx, mover: UnitState, from_xy: XY) -> None:
+    """``mover`` 剛主動移動（步行、衝鋒、直線衝撞）離開 ``from_xy``、到了現在的位置（Phase 3D-3）：
+    因此進入相鄰格（原本不相鄰）的敵人（依 ID 順序）可以用 ``enemy_enters_adjacent`` 反應技反應。
+    強制位移不呼叫這裡。"""
+    state = ctx.state
+    for reactor in state.living_units():
+        if not mover.alive:
+            return
+        if reactor.team is mover.team or manhattan(reactor.xy, mover.xy) != 1:
+            continue
+        if manhattan(reactor.xy, from_xy) == 1:
+            continue
+        picked = _react(ctx, reactor, ("enemy_enters_adjacent",), mover, skills=True)
+        if isinstance(picked, SkillDef):
+            _run_skill(ctx, reactor, picked, mover)
+
+
 def perform_unit_attack(ctx: Ctx, attacker: UnitState, target: UnitState, *, primary: bool) -> None:
     """一次普攻：命中判定 → （命中時）格擋反應 → 傷害。
 
@@ -336,6 +413,9 @@ def perform_unit_attack(ctx: Ctx, attacker: UnitState, target: UnitState, *, pri
 
 
 def _attack_once(ctx: Ctx, attacker: UnitState, target: UnitState, *, primary: bool) -> None:
+    ally_targeted_reactions(ctx, attacker, target)  # 相鄰友方被瞄準：命中判定之前（3D-3）
+    if not attacker.alive or not target.alive:
+        return
     forced: ForcedOutcome | None = None
     if ctx.preview is not None:
         ctx.mark_branch()

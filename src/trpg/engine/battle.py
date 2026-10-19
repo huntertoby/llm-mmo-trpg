@@ -55,7 +55,12 @@ from trpg.engine.events import (
 )
 from trpg.engine.lifecycle import make_unit
 from trpg.engine.maneuvers import contest
-from trpg.engine.reactions import PauseForDecision, opportunity_attacks, perform_unit_attack
+from trpg.engine.reactions import (
+    PauseForDecision,
+    enemy_enters_adjacent_reactions,
+    opportunity_attacks,
+    perform_unit_attack,
+)
 from trpg.engine.results import ResolveResult
 from trpg.engine.rules.combat import attack_problem, reach_problem
 from trpg.engine.rules.geometry import XY, manhattan
@@ -646,7 +651,9 @@ def _do_move(ctx: Ctx, unit: UnitState, action: Action) -> None:
         if not unit.alive:
             break
         unit.move_points -= cost
+        before = unit.xy
         execute(ctx, [MoveUnitEffect(unit_id=unit.id, dest=dest, mode="walk", cost=cost)])
+        enemy_enters_adjacent_reactions(ctx, unit, before)
         walked.append(unit.xy)
         if _move_interrupted(ctx, unit, dest):
             break

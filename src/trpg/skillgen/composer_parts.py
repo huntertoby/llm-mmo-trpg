@@ -18,7 +18,7 @@ from trpg.content.composer_rules import ComposerRules, DiceRules, DurationRules,
 from trpg.content.library import ContentLibrary
 from trpg.content.skill_rules import SkeletonDef
 from trpg.content.skills import (
-    SKILL_REACTION_EVENTS,
+    LEGACY_REACTION_EVENTS,
     PrimitiveDef,
     SkillRarity,
     default_affects,
@@ -762,8 +762,9 @@ def build_passive_cost(ctx: Ctx) -> dict[str, Any]:
 # 反應技與姿態（Phase 2E-2）
 # ---------------------------------------------------------------------------
 
-NON_INTERCEPT_EVENTS = tuple(e for e in SKILL_REACTION_EVENTS if e != "ally_hit_adjacent")
-"""非擋攻擊的反應事件（``ally_hit_adjacent`` 另外抽）；來源是 ``SKILL_REACTION_EVENTS``。"""
+NON_INTERCEPT_EVENTS = tuple(e for e in LEGACY_REACTION_EVENTS if e != "ally_hit_adjacent")
+"""非擋攻擊的反應事件（``ally_hit_adjacent`` 另外抽）；只從 2E-2 的四個事件抽（3D-3 的新事件只給
+手寫技能，既有種子的組合結果不變）。"""
 
 
 def _shield_if_allowed(ctx: Ctx, *, core: bool) -> None:

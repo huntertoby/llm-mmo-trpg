@@ -6,7 +6,7 @@ import pytest
 
 from tests.skillgen.helpers import lib
 from trpg.content.skill_rules import SecondaryRules, SkeletonCore, SkeletonDef
-from trpg.content.skills import SKILL_REACTION_EVENTS
+from trpg.content.skills import LEGACY_REACTION_EVENTS, SKILL_REACTION_EVENTS
 from trpg.shared.rng import Rng
 from trpg.shared.types import Element
 from trpg.skillgen.composer_parts import (
@@ -93,4 +93,7 @@ def test_intercept_needs_the_skeleton_to_allow_it() -> None:
 
 
 def test_reaction_events_have_a_single_source() -> None:
-    assert set(NON_INTERCEPT_EVENTS) | {"ally_hit_adjacent"} == set(SKILL_REACTION_EVENTS)
+    """組合器只從 2E-2 的四個事件抽（3D-3 的新事件只給手寫技能，既有種子的結果不變）。"""
+    assert set(NON_INTERCEPT_EVENTS) | {"ally_hit_adjacent"} == set(LEGACY_REACTION_EVENTS)
+    assert set(LEGACY_REACTION_EVENTS) < set(SKILL_REACTION_EVENTS)
+    assert len(SKILL_REACTION_EVENTS) == 8

@@ -78,6 +78,10 @@ REACTION_TRIGGER_TEXT: dict[str, str] = {
     "hit_by_melee": "被近戰攻擊命中後",
     "hit_by_attack": "被攻擊命中後",
     "ally_hit_adjacent": "相鄰友方被攻擊命中時",
+    "hit_by_spell": "被法術命中時（傷害之前）",
+    "ally_downed": "視野內的友方倒下後",
+    "enemy_enters_adjacent": "敵人進入相鄰格後",
+    "ally_targeted": "相鄰友方被敵人瞄準時（命中之前）",
 }
 """反應規則觸發事件的中文說明（``ReactionWhen.event`` → 文字）。"""
 

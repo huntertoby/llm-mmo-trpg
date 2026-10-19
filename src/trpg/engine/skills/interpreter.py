@@ -92,9 +92,12 @@ from trpg.engine.maneuvers import contest
 from trpg.engine.pierce import NO_PIERCE, PierceTrace, pierce_trace
 from trpg.engine.reactions import (
     PauseForDecision,
+    ally_targeted_reactions,
     block_multiplier,
+    enemy_enters_adjacent_reactions,
     hit_reactions,
     opportunity_attacks,
+    spell_hit_reactions,
     try_intercept,
 )
 from trpg.engine.resources import pick_stolen_buff, restore_cooldowns, restore_mana
@@ -413,6 +416,16 @@ class _Cast:
             for e in self.effects
         )
 
+    def react_to_targeting(self) -> bool:
+        """單體的敵對技能選定目標、命中判定之前：目標的相鄰友方可以用 ``ally_targeted`` 反應技反應
+        （Phase 3D-3；被動觸發、陷阱不是施放者的動作，不呼叫）。回傳這次施放是否繼續：反應讓施放者
+        或目標倒下時為 ``False``（發出的反應事件保留，其餘效果不結算）。"""
+        if not self.modified or self.skill.shape.type != "single" or len(self.enemies) != 1:
+            return True
+        if any(e.hostile for e in self.effects):
+            ally_targeted_reactions(self.ctx, self.caster, self.enemies[0])
+        return self.caster.alive and self.enemies[0].alive
+
     def roll_hits(self) -> None:
         rolled: list[UnitState] = []
         rolling = [e for e in self.effects if e.type not in _OWN_CHECK]  # 位移他人自己擲抵抗
@@ -469,6 +482,8 @@ class _Cast:
             if guardian is not None:
                 self._redirect(unit, guardian)
                 unit = guardian
+        if roll.hit and self.skill.category == "spell" and unit.team is not self.caster.team:
+            spell_hit_reactions(ctx, self.caster, unit)  # 被法術命中、傷害之前（3D-3）
         if roll.hit and (force_block or self._affected_by_damage(unit)):
             self.blocks[unit.id] = block_multiplier(
                 ctx, self.caster, unit, melee=self.profile.height_limited
@@ -548,6 +563,8 @@ class _Cast:
     def run(self) -> None:
         if not self.dash():  # 衝鋒一律最先結算；被擋下時其餘效果不結算
             return
+        if not self.react_to_targeting():
+            return
         self.roll_hits()
         self.announce_pierce()
         self.consume_stacks()
@@ -598,8 +615,10 @@ class _Cast:
             opportunity_attacks(ctx, caster, caster.xy, step)
             if not caster.alive:
                 return False
+            before = caster.xy
             move = MoveUnitEffect(source_id=caster.id, unit_id=caster.id, dest=step, mode="dash")
             execute(ctx, [move])
+            enemy_enters_adjacent_reactions(ctx, caster, before)
             if not self._dash_continues(step):
                 break
         if len(path) > 1 and caster.alive:
@@ -1279,10 +1298,12 @@ class _Cast:
                     self._charge_hit(spec, occupant, travel)
                 if state.unit_at(*cell) is not None:
                     continue  # 還站在那裡：穿過去；倒下或被推開了就走進這一格
+            before = caster.xy
             execute(
                 self.ctx,
                 [MoveUnitEffect(source_id=caster.id, unit_id=caster.id, dest=cell, mode="dash")],
             )
+            enemy_enters_adjacent_reactions(self.ctx, caster, before)
             moved = True
             if not self._dash_continues(cell):
                 break

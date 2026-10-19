@@ -1,0 +1,25 @@
+# 反應技（Phase 3D-3，數值為初值，未經模擬）：被法術命中、傷害結算之前，對施放者反咒一擊（法術傷害）。
+id: skill_counterspell
+schema_version: 1
+name_zh: 反咒
+tier: 1
+rank: 1
+rarity: rare
+kind: reaction
+skeleton: reaction
+category: spell
+weapon_req: focus
+ap_cost: null
+scaling_attr: int
+shape: {type: single, range: 6}
+effects:
+  - {type: damage, dice: 2d6, element: shadow}
+condition: null
+trigger: null
+reaction: {event: hit_by_spell}
+cost: {mana: 4, cooldown: 1}
+tags: [counter, reaction, spell, shadow]
+narrative:
+  concept: 對方的咒語還沒落到身上，你已經循著魔力的來路把它反彈了回去
+  cast_flavor: 咒語擦過指尖的瞬間，你反手一撥，一道暗影循著魔力的軌跡射向施法者
+provenance: {origin: builtin, owner_id: null, created_by: null, parents: [], bound: true, tradeable: false}

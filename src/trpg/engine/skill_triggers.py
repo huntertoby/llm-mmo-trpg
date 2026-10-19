@@ -43,6 +43,7 @@ from trpg.engine.events import (
     SkillTriggered,
     StatusApplied,
     TriggerLimitReached,
+    UnitDowned,
     UnitMoved,
 )
 from trpg.engine.rules.combat import NATURAL_HIT
@@ -72,7 +73,9 @@ __all__ = [
     "settle",
 ]
 
-_OBSERVED = frozenset({"attack_rolled", "damage_dealt", "status_applied", "collided", "unit_moved"})
+_OBSERVED = frozenset(
+    {"attack_rolled", "damage_dealt", "status_applied", "collided", "unit_moved", "unit_downed"}
+)
 
 MODIFIER_ON_HIT = "modifier_on_hit"
 """修正規則命中後效果的 ``SkillTriggered.trigger``（不是 ``skill_triggers.yaml`` 的時機）。"""
@@ -142,6 +145,9 @@ def _fire(ctx: Ctx, seq: int, owner_id: UnitId, skill: SkillDef, other_id: UnitI
 def observe(ctx: Ctx, event: EventBase) -> None:
     """``Ctx.emit`` 的掛鉤：看出需要觸發被動的事件。"""
     if getattr(event, "type", None) not in _OBSERVED:
+        return
+    if isinstance(event, UnitDowned):
+        ctx.downed.append(event.unit_id)  # ally_downed 反應：等效果佇列清空後（settle）才處理
         return
     index = _index(ctx)
     if not index.any:
@@ -336,11 +342,12 @@ def holding(ctx: Ctx) -> Iterator[None]:
 
 def settle(ctx: Ctx) -> None:
     """結算收集到的觸發（括號內或已在結算中時不做事）。"""
-    if ctx.settling or ctx.trigger_hold or not ctx.fired:
+    if ctx.settling or ctx.trigger_hold or not (ctx.fired or ctx.downed):
         return
     ctx.settling = True
     try:
-        while ctx.fired:
+        while ctx.fired or ctx.downed:
+            _settle_downed(ctx)
             batch = sorted(ctx.fired, key=lambda f: (f.seq, f.owner_id, f.skill_id))
             ctx.fired = []
             for fired in batch:
@@ -351,6 +358,17 @@ def settle(ctx: Ctx) -> None:
     finally:
         ctx.settling = False
         ctx.trigger_depth = 0
+
+
+def _settle_downed(ctx: Ctx) -> None:
+    """剛倒下的單位（依發生順序）：視野內的友方可以用 ``ally_downed`` 反應技反應。"""
+    # 延後匯入：反應模組匯入本模組（check_trigger_depth、holding……）。
+    from trpg.engine.reactions import ally_downed_reactions  # noqa: PLC0415
+
+    while ctx.downed:
+        downed = ctx.state.units.get(ctx.downed.pop(0))
+        if downed is not None and not ctx.state.ended:
+            ally_downed_reactions(ctx, downed)
 
 
 def check_trigger_depth(ctx: Ctx, unit_id: UnitId, skill_id: str, depth: int) -> bool:

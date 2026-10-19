@@ -1,0 +1,26 @@
+# 反應技（Phase 3D-3，數值為初值，未經模擬）：相鄰友方被敵人瞄準時，在對方出手之前先射他一箭（遠程武器傷害）。
+id: skill_covering_fire
+schema_version: 1
+name_zh: 掩護射擊
+tier: 1
+rank: 1
+rarity: rare
+kind: reaction
+skeleton: reaction
+category: weapon
+weapon_req: ranged
+ap_cost: null
+scaling_attr: dex
+shape: {type: single, range: 5}
+effects:
+  - {type: damage, multiplier_permille: 800}
+  - {type: apply_status, status: slow, duration: 1}
+condition: null
+trigger: null
+reaction: {event: ally_targeted}
+cost: {mana: 0, cooldown: 1}
+tags: [physical, reaction, ranged]
+narrative:
+  concept: 同伴剛被盯上，你的箭已經先到了攻擊者的腳邊
+  cast_flavor: 你看見敵人的視線鎖向身旁的同伴，弓弦一響，箭矢搶在他動手之前釘進他的腳前
+provenance: {origin: builtin, owner_id: null, created_by: null, parents: [], bound: true, tradeable: false}

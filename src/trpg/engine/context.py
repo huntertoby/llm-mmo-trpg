@@ -53,12 +53,15 @@ class Ctx:
       ``trigger_depth`` 是目前正在結算的觸發深度（動作本身為 0）；``trigger_hold`` 大於 0 時暫不
       結算（施放技能、一次普攻的期間）；``settling`` 表示正在結算觸發（不重入）；
       ``passives`` 是被動技能的索引（第一次需要時建立）。
+    - ``downed``：剛倒下、尚未讓友方反應（``ally_downed``，Phase 3D-3）的單位；與觸發一起在
+      :func:`~trpg.engine.skill_triggers.settle` 處理。
     """
 
     __slots__ = (
         "branched",
         "core",
         "decisions",
+        "downed",
         "events",
         "fired",
         "passives",
@@ -91,6 +94,7 @@ class Ctx:
         """預覽模式下是否經過任何「``min`` 與 ``max`` 會不同」的分歧點（擲骰、檢定、反應決定、
         強制命中結果）。沒有時兩種模式的結果完全相同，``preview`` 只需模擬一次。"""
         self.fired: list[Fired] = []
+        self.downed: list[UnitId] = []
         self.trigger_depth = 0
         self.trigger_hold = 0
         self.settling = False

@@ -325,7 +325,8 @@ class StatusTable(ContentModel):
 
 class ReactionWhen(ContentModel):
     """反應規則的觸發事件。``targeted_by_*`` 是被攻擊命中之後、傷害之前（內建格擋）；
-    ``hit_by_*``、``ally_hit_adjacent`` 是反應技的事件（Phase 2E-2，見 ``ReactionSpec``）。"""
+    ``hit_by_*``、``ally_*``、``enemy_enters_adjacent`` 是反應技的事件（Phase 2E-2、3D-3，見
+    ``ReactionSpec``）。"""
 
     event: Literal[
         "targeted_by_melee",
@@ -334,6 +335,10 @@ class ReactionWhen(ContentModel):
         "hit_by_melee",
         "hit_by_attack",
         "ally_hit_adjacent",
+        "hit_by_spell",
+        "ally_downed",
+        "enemy_enters_adjacent",
+        "ally_targeted",
     ]
 
 
