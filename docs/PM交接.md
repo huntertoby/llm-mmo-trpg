@@ -1,6 +1,6 @@
 # PM 交接文件
 
-> 給接手的 PM（新對話中的 Claude）。最後更新：2026-10-19，**Phase 2E 全部完成**、下一步 Phase 3。
+> 給接手的 PM（新對話中的 Claude）。最後更新：2026-10-19，**Phase 2F-1 完成並驗收**、下一步派 Phase 2F-2（見 3.0，只做 2F-2）。
 > 讀完本檔再讀 `CLAUDE.md` 與 `docs/專案計畫.md`（總覽，約 1 萬字元）即可接手；設計細節依需要讀 `docs/design/` 下的主題檔。
 
 ---
@@ -31,7 +31,7 @@
 | Phase 2E-1 觸發核心 ＋ 被動 | ✅ 完成（1230 測試；Phase 2 ⚠️ #1、#11 已補） | `Phase2E計畫.md` 第 3 節／`Phase2E-1報告.md` |
 | Phase 2E-2 反應技、擋攻擊、姿態 | ✅ 完成（1286 測試） | `Phase2E計畫.md` 第 4 節／`Phase2E-2報告.md` |
 | Phase 2E-3 層數、陷阱與收尾 | ✅ 完成（1341 測試；2E 驗收全 ✅；待 PM 決定已處理於 3.2） | `Phase2E計畫.md` 第 5 節／`Phase2E-3報告.md`（5.4 為 2E 驗收總表） |
-| Phase 2F 整理（Phase 3 前審查的結論） | ⏭️ 進行中（2F-1 引擎、2F-2 組合器與 AI） | `Phase2F計畫.md` |
+| Phase 2F 整理（Phase 3 前審查的結論） | 2F-1 ✅（noqa 19→17；待 PM 決定 1 點：陷阱推擊中斷改測 `_move_interrupted`，接受，不新增原語）；2F-2 ⏭️ | `Phase2F計畫.md`／`Phase2F-1報告.md` |
 | **Phase 3 網頁 ＋ roguelite** | 2F 之後 | 規格尚未撰寫（見 3.1） |
 
 - 最新 commit 在 GitHub `huntertoby/llm-mmo-trpg`（私人）的 `main`；2026-10-19 起使用者電腦的資料夾就是工作資料夾（見 6.1），push 前確認 `git status` 乾淨即可。
@@ -49,6 +49,29 @@
 - 技能系統（2E 後）：12 個骨架中 11 個可用（只有 `summon` 停用）；觸發時機 `content/skill_triggers.yaml`；層數 `content/stacks.yaml`；技能觸發深度上限 `max_trigger_depth: 3`。`LOG_FORMAT` 為 `trpg-battle-log/9` 以後（舊紀錄不能重播）。
 
 ## 3. 下一步
+
+### 3.0 接手後馬上要做的（2026-10-19 前任 PM 留）
+
+1. **commit 並 push**：工作區有本檔的未 commit 修改（訊息：`Accept Phase 2F-1`）；2F-1 的實作 commit（`6c43476`..`fff545e`）也還沒 push，一起 push。
+2. **派 Phase 2F-2 實作 agent**（`sonnet`，背景執行）。規格是 `docs/phases/Phase2F計畫.md` 第 0–2、4、5 節；用 6.4 範本，另外交代：
+   - 先讀 `docs/phases/Phase2F-1報告.md` 了解 2F-1 改了什麼。
+   - 開工前用目前 HEAD 存 3 場對照戰鬥 JSON（同 2F-1 報告的指令），並先跑一次組合器退回統計。
+   - 最後各跑一次 `scripts/skill_fuzz.py --count 1000` 與完整的 `scripts/check.py`。
+   - 最終回覆要有：退回統計前後對照表、對照戰鬥比對結論、noqa 前後數量（2F-1 結束時為 17；驗收要求 2F 結束時比 2F 開始前的 19 少至少 4 個，即 ≤ 15）。
+3. **驗收 2F-2**（6.2 第 5 步）：重點看 (a) 3 場對照戰鬥與 2F-1 結束時相同（AI 行為不能變）；(b) 反應技 `skeleton.core` 退回明顯下降；(c) 若報告問「要不要把 heal／shield 加進反應技骨架」，這是設計問題，**要問使用者**。2F 結束後在背景跑一次 `trpg sim completion`（異常必須為 0）。
+4. **2F-2 驗收、push、更新本檔進度後就停下**，向使用者回報結果。**不要開始 Phase 3**（不寫規格、不問拆法），使用者會另外安排。
+
+### 3.0.1 Phase 3-1 預留事項（本次不做，留給之後寫規格時用）
+
+- 寫規格前先跟使用者確認 Phase 3 拆法（3.1 最後一段的四段建議，使用者尚未回覆）。Phase 3-1 要包含審查留下的三點：
+   - #1 隱藏資訊依陣營過濾：engine 純函式 `project_for(state, team) -> BattleView`（濾掉對方陷阱、`rng_state`、`pending.base_state_json`）；`EventBase.visible_to` ＋ `filter_events(events, team)`；放陷阱的 `SkillUsed.tiles` 不可洩漏位置（`TrapPlaced`／`TrapExpired`／`TriggerLimitReached` 也要依陣營過濾）。
+   - #5 `cli/render.py` 的 `describe_event` 移到 `trpg.narrative`（或其他 API 可匯入的模組），改成 `dict[type, Callable]` 註冊表；順便處理 `engine/preview.py` 的 `_outcome` 與 `sim/metrics.py` 的長 isinstance 鏈。
+   - #8 `Pending.kind` 改為 Literal；加 `skill_id`、`trigger_event_seq`、代價摘要；加「序列化 → 反序列化 → resume」往返測試。
+   - 3.1 列的既有約定（滑倒退回的 teleport 事件、陷阱只對放置者顯示、反應詢問 UI）。
+
+
+**2F-1 驗收紀錄**：全部通過（noqa 19→17、沒有修改既有測試期望值、對照戰鬥只差新增的 `TrapTriggered.tiles`）。待 PM 決定 1 點已處理：現有技能組不出「陷阱推開踩中者」，改直接測 `_move_interrupted`——接受，不新增原語。
+
 
 > ✅ 2026-10-19 已審查，10 點中 #2、3、4、6、7、9、10 排進 Phase 2F；**#1 依陣營過濾隱藏資訊（`project_for`／事件 `visible_to`）、#5 `describe_event` 移出 `trpg.cli`、#8 `Pending` 補 `kind` Literal／`skill_id`／代價與往返測試，放進 Phase 3-1 規格。**
 > 原註：**Phase 3 開始前先做第一次審查**（6.5，`<base>` 用 Phase 2D 開始前的 commit，範圍 2D–2E），結論中要處理的項目排進 Phase 3 第一份規格或一個小的整理子階段。2E-3 時 `src/` 已有 28 個複雜度類 noqa。
