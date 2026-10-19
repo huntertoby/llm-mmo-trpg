@@ -103,6 +103,10 @@ warn_required_dynamic_aliases = true
 testpaths = ["tests"]
 addopts = "-ra -m 'not slow'"
 pythonpath = ["src"]
+# starlette 1.9 建議改用 httpx2；規格（Phase 3-2 4.1）指定 httpx，功能相同，只略過這則提示。
+filterwarnings = [
+    "ignore:Using `httpx` with `starlette.testclient` is deprecated",
+]
 markers = [
     "slow: 耗時的批次模擬（平衡檢查）；預設不跑，用 `-m slow` 執行，勝率報表改由 scripts/sim_demo_maps.py 檢查",
 ]
