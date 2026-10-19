@@ -11,26 +11,12 @@ from trpg.content.skills import SKILL_REACTION_EVENTS, SkillDef
 
 # 尚未被手寫技能使用的 ID。分類 -> {ID: 原因}
 _UNCOVERED: dict[str, dict[str, str]] = {
-    "skeleton": {"combo": "2G-2 補示範技能（連擊骨架）"},
-    "trigger": {
-        "on_crit": "2G-2 補示範被動",
-        "on_natural_20": "2G-2 補示範被動",
-        "on_kill": "2G-2 補示範被動",
-        "on_turn_end": "2G-2 補示範被動",
-        "on_move": "2G-2 補示範被動",
-        "every_n_hits": "2G-2 補示範被動",
-    },
-    "reaction_event": {
-        "hit_by_attack": "2G-2 補示範反應技",
-        "enemy_leaves_adjacent": "2G-2 補示範反應技",
-    },
-    "condition": {"target_on_surface": "2G-2 補示範（搭配 combo 技能）"},
-    "primitive": {
-        "destroy_object": "2G-2 補示範技能",
-        "raise_terrain": "2G-2 補示範技能",
-        "lower_terrain": "2G-2 補示範技能",
-    },
-    "status": {"weaken": "2G-2 補示範技能"},
+    "skeleton": {},
+    "trigger": {},
+    "reaction_event": {},
+    "condition": {},
+    "primitive": {},
+    "status": {},
     "stack": {},
 }
 

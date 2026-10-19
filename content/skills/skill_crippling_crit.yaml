@@ -1,0 +1,24 @@
+# 被動（Phase 2G-2 示範技能，數值為初值，未經模擬）：暴擊時讓目標虛弱。
+id: skill_crippling_crit
+schema_version: 1
+name_zh: 致命破綻
+tier: 1
+rank: 1
+rarity: epic
+kind: passive
+skeleton: passive
+category: spell
+weapon_req: any
+ap_cost: null
+scaling_attr: dex
+shape: {type: self}
+effects:
+  - {type: apply_status, status: weaken, duration: 2, affects: enemies}
+condition: null
+trigger: {event: on_crit, target: other, max_per_round: 1}
+cost: {mana: 2, cooldown: 3}
+tags: [physical, spell, passive, crit, debuff]
+narrative:
+  concept: 暴擊打在要害上，讓對手手臂發軟、使不上力
+  cast_flavor: 你的刃尖劃過關節，對手的手臂猛然一沉
+provenance: {origin: builtin, owner_id: null, created_by: null, parents: [], bound: true, tradeable: false}

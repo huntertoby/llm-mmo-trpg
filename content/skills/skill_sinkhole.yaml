@@ -1,0 +1,24 @@
+# 控場（Phase 2G-2 示範技能，數值為初值，未經模擬）：讓十字範圍的地面下陷一階。
+id: skill_sinkhole
+schema_version: 1
+name_zh: 陷地術
+tier: 1
+rank: 1
+rarity: rare
+kind: active
+skeleton: control
+category: spell
+weapon_req: focus
+ap_cost: 1
+scaling_attr: int
+shape: {type: cross, range: 4}
+effects:
+  - {type: lower_terrain}
+  - {type: apply_status, status: slow, duration: 1, affects: enemies}
+condition: null
+cost: {mana: 4, cooldown: 2}
+tags: [earth, spell, terrain]
+narrative:
+  concept: 腳下的土地忽然塌陷，讓站得高的人失去優勢
+  cast_flavor: 你的手往下一按，地面悶響著陷了下去，敵人一腳踩空、步伐踉蹌
+provenance: {origin: builtin, owner_id: null, created_by: null, parents: [], bound: true, tradeable: false}

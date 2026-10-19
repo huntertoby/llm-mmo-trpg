@@ -1,0 +1,24 @@
+# 被動（Phase 2G-2 示範技能，數值為初值，未經模擬）：主動移動後獲得加速。
+id: skill_fleet_foot
+schema_version: 1
+name_zh: 疾行
+tier: 1
+rank: 1
+rarity: epic
+kind: passive
+skeleton: passive
+category: spell
+weapon_req: any
+ap_cost: null
+scaling_attr: dex
+shape: {type: self}
+effects:
+  - {type: apply_status, status: hasted, duration: 2, affects: self}
+condition: null
+trigger: {event: on_move, target: self, max_per_round: 1}
+cost: {mana: 2}
+tags: [wind, spell, passive, mobility]
+narrative:
+  concept: 腳步一旦踏出，風就推著你繼續往前
+  cast_flavor: 腳下捲起一陣風，你的步伐輕快了起來
+provenance: {origin: builtin, owner_id: null, created_by: null, parents: [], bound: true, tradeable: false}

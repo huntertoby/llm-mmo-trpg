@@ -1,0 +1,24 @@
+# 範圍（Phase 2G-2 示範技能，數值為初值，未經模擬）：爆炸傷害範圍內的單位，並摧毀範圍內的可破壞物件。
+id: skill_shatter_blast
+schema_version: 1
+name_zh: 碎障爆破
+tier: 1
+rank: 1
+rarity: rare
+kind: active
+skeleton: area
+category: spell
+weapon_req: focus
+ap_cost: 2
+scaling_attr: int
+shape: {type: square3, range: 4}
+effects:
+  - {type: damage, dice: 2d4, element: fire}
+  - {type: destroy_object}
+condition: null
+cost: {mana: 6, cooldown: 2}
+tags: [fire, spell, area, terrain]
+narrative:
+  concept: 一發爆破轟開擋路的箱桶與矮牆，順便把站在旁邊的人炸飛
+  cast_flavor: 轟然一聲，木屑與碎石四散，擋路的東西化為齏粉
+provenance: {origin: builtin, owner_id: null, created_by: null, parents: [], bound: true, tradeable: false}

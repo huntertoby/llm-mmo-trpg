@@ -54,7 +54,7 @@ def test_the_new_builds_have_the_specified_skills() -> None:
     assert any(lib.skills[s].kind == "passive" for s in striker) and len(striker) == 3
     trapper = builds["build_trapper"].hero.skills
     assert {"skill_cinder_mine", "skill_bear_trap"} <= set(trapper)
-    assert any(lib.skills[s].skeleton == "control" for s in trapper) and len(trapper) == 3
+    assert any(lib.skills[s].skeleton == "control" for s in trapper) and len(trapper) == 5
 
 
 def test_the_grid_shows_only_the_player_teams_traps_and_the_unit_table_shows_stacks() -> None:

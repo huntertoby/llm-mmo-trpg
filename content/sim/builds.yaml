@@ -7,6 +7,7 @@
 companions: [sim_companion_fighter, sim_companion_archer]
 # Phase 2G-1：build_tank 加入破甲系（sunder_strike、armor_breaker）、build_assassin 加入狂怒姿態、build_warlock 加入毒雲與標記引爆、
 # build_healer 加入再起（second_wind），讓每個手寫技能都被至少一名英雄或單位裝備（tests/content/test_coverage.py）。
+# Phase 2G-2：新增 12 個示範技能（觸發時機、反應事件、連段、地形原語），分配給主題相符的 build（沒有新增 build，仍為 12 個）。
 builds:
   - id: build_push
     name_zh: 位移流
@@ -22,7 +23,7 @@ builds:
       resist: {physical: 100}
       tags: [hero, sim]
       max_mana: 20
-      skills: [skill_gale_kick, skill_shield_bash, skill_blink]
+      skills: [skill_gale_kick, skill_shield_bash, skill_blink, skill_parting_slash, skill_bloodlust]
 
   - id: build_fire
     name_zh: 火焰流
@@ -39,7 +40,7 @@ builds:
       resist: {elemental: 150}
       tags: [hero, sim]
       max_mana: 40
-      skills: [skill_fire_bolt, skill_cinder_burst, skill_ashen_oath]
+      skills: [skill_fire_bolt, skill_cinder_burst, skill_ashen_oath, skill_shatter_blast]
 
   - id: build_storm
     name_zh: 雷電／水流
@@ -56,7 +57,7 @@ builds:
       resist: {elemental: 150}
       tags: [hero, sim]
       max_mana: 40
-      skills: [skill_chain_lightning, skill_summon_tide, skill_frost_shackle]
+      skills: [skill_chain_lightning, skill_summon_tide, skill_frost_shackle, skill_conductive_strike, skill_twin_strike]
 
   - id: build_tank
     name_zh: 坦克
@@ -89,7 +90,7 @@ builds:
       weapon: bow
       tags: [hero, sim]
       max_mana: 24
-      skills: [skill_piercing_shot, skill_high_ground_shot, skill_smoke_arrow]
+      skills: [skill_piercing_shot, skill_high_ground_shot, skill_smoke_arrow, skill_raise_perch, skill_lucky_break]
 
   - id: build_assassin
     name_zh: 刺殺
@@ -104,7 +105,7 @@ builds:
       weapon: dagger
       tags: [hero, sim]
       max_mana: 20
-      skills: [skill_rending_strike, skill_execute, skill_blink, skill_fury_stance]
+      skills: [skill_rending_strike, skill_execute, skill_blink, skill_fury_stance, skill_crippling_crit]
 
   - id: build_support
     name_zh: 輔助
@@ -121,7 +122,7 @@ builds:
       resist: {elemental: 150}
       tags: [hero, sim]
       max_mana: 40
-      skills: [skill_war_hymn, skill_tailwind, skill_frost_shackle]
+      skills: [skill_war_hymn, skill_tailwind, skill_frost_shackle, skill_reflex_ward, skill_steady_breath]
 
   - id: build_healer
     name_zh: 治療
@@ -207,4 +208,4 @@ builds:
       resist: {elemental: 150}
       tags: [hero, sim]
       max_mana: 40
-      skills: [skill_cinder_mine, skill_bear_trap, skill_frost_shackle]
+      skills: [skill_cinder_mine, skill_bear_trap, skill_frost_shackle, skill_sinkhole, skill_fleet_foot]

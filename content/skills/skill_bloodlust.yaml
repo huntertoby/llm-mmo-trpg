@@ -1,0 +1,24 @@
+# 被動（Phase 2G-2 示範技能，數值為初值，未經模擬）：擊倒敵人時治療自己。
+id: skill_bloodlust
+schema_version: 1
+name_zh: 嗜血
+tier: 1
+rank: 1
+rarity: epic
+kind: passive
+skeleton: passive
+category: spell
+weapon_req: any
+ap_cost: null
+scaling_attr: str
+shape: {type: self}
+effects:
+  - {type: heal, dice: 1d6, affects: self}
+condition: null
+trigger: {event: on_kill, target: self, max_per_round: 1}
+cost: {mana: 2}
+tags: [physical, spell, passive, heal, kill]
+narrative:
+  concept: 每一次擊倒敵人，都讓血液重新沸騰、傷口癒合
+  cast_flavor: 倒下的敵人還沒落地，你的傷口已經止住了血
+provenance: {origin: builtin, owner_id: null, created_by: null, parents: [], bound: true, tradeable: false}

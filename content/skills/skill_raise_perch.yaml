@@ -1,0 +1,24 @@
+# 控場（Phase 2G-2 示範技能，數值為初值，未經模擬）：把一格地面升高一階，替自己或隊友架出高台。
+id: skill_raise_perch
+schema_version: 1
+name_zh: 築高台
+tier: 1
+rank: 1
+rarity: rare
+kind: active
+skeleton: control
+category: weapon
+weapon_req: ranged
+ap_cost: 1
+scaling_attr: dex
+shape: {type: cross, range: 4}
+effects:
+  - {type: raise_terrain}
+  - {type: apply_status, status: slow, duration: 1, affects: enemies}
+condition: null
+cost: {mana: 4, cooldown: 2}
+tags: [earth, ranged, terrain, height]
+narrative:
+  concept: 一箭釘進地面，掀起一塊土台，讓射手站得更高
+  cast_flavor: 箭矢沒入地面，泥土轟然隆起堆成一座矮台，飛揚的塵土絆住了附近的敵人
+provenance: {origin: builtin, owner_id: null, created_by: null, parents: [], bound: true, tradeable: false}

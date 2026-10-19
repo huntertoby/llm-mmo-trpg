@@ -1,0 +1,25 @@
+# 反應技（Phase 2G-2 示範技能，數值為初值，未經模擬）：被任何攻擊命中（含遠程）後，立刻為自己張開護盾。
+id: skill_reflex_ward
+schema_version: 1
+name_zh: 反射護幕
+tier: 1
+rank: 1
+rarity: rare
+kind: reaction
+skeleton: reaction
+category: spell
+weapon_req: any
+ap_cost: null
+scaling_attr: wis
+shape: {type: self}
+effects:
+  - {type: shield, dice: 2d6, affects: self}
+condition: null
+trigger: null
+reaction: {event: hit_by_attack}
+cost: {mana: 3, cooldown: 1}
+tags: [holy, reaction, shield]
+narrative:
+  concept: 挨了一擊的同一瞬間，在身前撐開一層護幕
+  cast_flavor: 痛楚還沒傳到腦中，一層微光已經在你身前亮起
+provenance: {origin: builtin, owner_id: null, created_by: null, parents: [], bound: true, tradeable: false}

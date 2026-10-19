@@ -58,7 +58,12 @@ def test_a_build_with_an_incompatible_skill_is_rejected(tmp_path: Path) -> None:
     path = content / "sim" / "builds.yaml"
     text = path.read_text(encoding="utf-8")
     # 位移流是近戰武器，換入遠程技能就違反 weapon_req
-    path.write_text(text.replace("skill_blink]", "skill_grapple_arrow]", 1), encoding="utf-8")
+    path.write_text(
+        text.replace(
+            "skill_blink, skill_parting_slash", "skill_grapple_arrow, skill_parting_slash", 1
+        ),
+        encoding="utf-8",
+    )
     with pytest.raises(ContentError, match=r"grapple|遠程"):
         load_library(content)
 

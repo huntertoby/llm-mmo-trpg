@@ -1,0 +1,25 @@
+# 反應技（Phase 2G-2 示範技能，數值為初值，未經模擬）：敵人從相鄰格離開時，對離開的敵人補上一擊。
+id: skill_parting_slash
+schema_version: 1
+name_zh: 斷後斬
+tier: 1
+rank: 1
+rarity: rare
+kind: reaction
+skeleton: reaction
+category: weapon
+weapon_req: melee
+ap_cost: null
+scaling_attr: str
+shape: {type: single, range: 3}
+effects:
+  - {type: damage, multiplier_permille: 1000}
+condition: null
+trigger: null
+reaction: {event: enemy_leaves_adjacent}
+cost: {mana: 0}
+tags: [physical, reaction, melee]
+narrative:
+  concept: 想從貼身的距離抽身，就得背對著刀鋒
+  cast_flavor: 對手剛轉身，你的劍已經劃過他的背
+provenance: {origin: builtin, owner_id: null, created_by: null, parents: [], bound: true, tradeable: false}
