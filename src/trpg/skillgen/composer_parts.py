@@ -664,12 +664,21 @@ def _self_status_cost(ctx: Ctx) -> dict[str, Any] | None:
 
 
 _HAND_WRITTEN_PRIMITIVES = frozenset(
-    {"hurl_object", "topple", "restore_resource", "steal_buff", "leap", "swap"}
+    {
+        "hurl_object",
+        "topple",
+        "restore_resource",
+        "steal_buff",
+        "leap",
+        "swap",
+        "teleport_target",
+        "swap_any",
+    }
 )
 """只給手寫技能的結構型原語（Phase 3C-5a 的場景物件原語：需要地圖上有對應的物件；3D-2 的
 ``leap`` 與 ``swap``：落點與交換對象的條件要另外設計，隨機組合器只使用 ``dash``）。"""
-_HAND_WRITTEN_SHAPES = frozenset({"object_then_tile"})
-"""只給手寫技能的形狀（Phase 3C-5a：投擲物件專用）。"""
+_HAND_WRITTEN_SHAPES = frozenset({"object_then_tile", "unit_then_tile", "unit_pair"})
+"""只給手寫技能的形狀（Phase 3C-5a：投擲物件專用；3D-2b：位移他人專用）。"""
 
 
 def _composable(ctx: Ctx, name: str) -> bool:

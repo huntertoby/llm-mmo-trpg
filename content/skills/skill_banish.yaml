@@ -1,0 +1,23 @@
+# 主動（Phase 3D-2b 示範，數值為初值，未經模擬）：把射程內的一個單位傳送到另一格。友方必定成功；敵方要過抵抗，落在深淵、岩漿等致命地形時成功率極低（Boss 免疫）。
+id: skill_banish
+schema_version: 1
+name_zh: 放逐
+tier: 1
+rank: 1
+rarity: rare
+kind: active
+skeleton: displace
+category: spell
+weapon_req: focus
+ap_cost: 2
+scaling_attr: int
+shape: {type: unit_then_tile, range: 5}
+effects:
+  - {type: teleport_target}
+condition: null
+cost: {mana: 6, cooldown: 3}
+tags: [arcane, spell, teleport, mobility]
+narrative:
+  concept: 在空間上撕開一道縫，把目標丟到另一個地方；丟進深淵與岩漿的機會很小，但值得一試
+  cast_flavor: 你的手指在空中劃出一道裂縫，目標的身影被吸進去，下一刻出現在你指定的地方
+provenance: {origin: builtin, owner_id: null, created_by: null, parents: [], bound: true, tradeable: false}

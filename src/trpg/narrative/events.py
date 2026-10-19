@@ -285,7 +285,12 @@ def _unit_moved(e: UnitMoved, v: _View) -> str | None:
     return f"  {v.name[e.unit_id]} {verb} {xy_text(e.to_pos)}"
 
 
-_MOVE_VERBS = {"teleport": "被傳送到", "leap": "跳躍到", "swap": "交換位置，換到"}
+_MOVE_VERBS = {
+    "teleport": "被傳送到",
+    "teleported": "被傳送到",
+    "leap": "跳躍到",
+    "swap": "交換位置，換到",
+}
 
 
 _FIZZLE_TEXT = {
@@ -787,11 +792,18 @@ def _check_rolled(e: CheckRolled, v: _View) -> str:
 
 @_handles(ManeuverRolled)
 def _maneuver(e: ManeuverRolled, v: _View) -> str:
-    kind = {"shove": "推擊", "trip": "絆倒", "knock_prone": "擊倒"}[e.maneuver]
+    kind = {
+        "shove": "推擊",
+        "trip": "絆倒",
+        "knock_prone": "擊倒",
+        "teleport": "傳送",
+        "swap": "交換位置",
+    }[e.maneuver]
     verdict = "成功" if e.success else "失敗"
+    resist = f" 抵抗 {_signed(-e.resist_bonus)}" if e.resist_bonus else ""
     return (
         f"  {v.name[e.attacker_id]} 對 {v.name[e.target_id]} 使出{kind}：d20={e.natural} "
-        f"修正 {_signed(e.modifier)} 熟練 {_signed(e.proficiency)} = {e.total}"
+        f"修正 {_signed(e.modifier)} 熟練 {_signed(e.proficiency)}{resist} = {e.total}"
         f"（目標 {e.target_number}）→ {verdict}"
     )
 

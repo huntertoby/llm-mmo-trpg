@@ -37,8 +37,15 @@ __all__ = [
     "run_battle",
 ]
 
-LOG_FORMAT = "trpg-battle-log/19"
-"""``/19``（Phase 3D-2）：自身位移原語 ``dash``（衝鋒）、``leap``（跳躍）、``swap``（交換位置）、
+LOG_FORMAT = "trpg-battle-log/20"
+"""``/20``（Phase 3D-2b）：位移他人原語 ``teleport_target``（形狀 ``unit_then_tile``，``UseSkill`` 帶
+``target_id`` 與 ``target_pos``）、``swap_any``（形狀 ``unit_pair``，帶 ``target_id`` 與新欄位
+``second_target_id``）、``unit_moved`` 的新 ``mode``（``teleported``）、``maneuver_rolled`` 的新
+``maneuver``（``teleport``／``swap``）與新欄位 ``resist_bonus``、核心規則
+``teleport_enemy_resist_bonus``／``teleport_lethal_resist_bonus``；``swap`` 對敵人改用位移檢定
+（不再擲命中）。``/19`` 的紀錄重播 ``swap`` 時結果不同，不能由新版程式重播。
+
+``/19``（Phase 3D-2）：自身位移原語 ``dash``（衝鋒）、``leap``（跳躍）、``swap``（交換位置）、
 事件 ``unit_dashed``、``unit_moved`` 的新 ``mode``（``dash``／``leap``／``swap``）、戰鬥紀錄中
 新的 ``effect_fizzled`` 原因（``dash_blocked``／``dash_no_path``／``swap_blocked``）；``/18`` 的
 規則集沒有這些原語，舊紀錄的事件與規則包不能由新版程式重播。

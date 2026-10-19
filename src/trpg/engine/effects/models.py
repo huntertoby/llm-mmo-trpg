@@ -116,6 +116,8 @@ class MoveUnitEffect(EffectBase):
     - ``walk``：主動移動的一步（合法性已由 ``Move`` 動作檢查；可暫時穿過友方）。
     - ``forced``：強制位移；目的地有其他單位或超出地圖時不移動（``move_blocked``）。
     - ``teleport``：傳送；不觸發墜落。
+    - ``teleported``：被別人傳送（Phase 3D-2b ``teleport_target``）；不觸發墜落，但落點的陷阱、
+      表面與致命地形照常結算。
     - ``dash``／``leap``：衝鋒的一步／跳躍的落點（Phase 3D-2）；同步行，會墜落、觸發陷阱與
       表面（``leap`` 的高度差限制在 1 層以內，不會墜落）。
 

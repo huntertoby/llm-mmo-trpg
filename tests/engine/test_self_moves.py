@@ -22,10 +22,12 @@ from tests.engine.helpers import (
 from trpg.content.skills import SkillDef, skill_problems
 from trpg.engine import BattleState, ResolveResult, UseSkill, legal_actions, resolve
 from trpg.engine.events import (
+    AttackRolled,
     Collided,
     DamageDealt,
     EffectFizzled,
     EventBase,
+    ManeuverRolled,
     ReactionTriggered,
     StatusApplied,
     TrapTriggered,
@@ -520,14 +522,25 @@ def test_swap_with_an_ally_always_succeeds_and_does_not_count_as_moving() -> Non
     assert not result.state.units[U1].moved_this_turn
 
 
-def test_swap_with_an_enemy_needs_a_hit(monkeypatch: pytest.MonkeyPatch) -> None:
+def test_swap_with_an_enemy_needs_the_displace_check(monkeypatch: pytest.MonkeyPatch) -> None:
+    """Phase 3D-2b：對敵人的 ``swap`` 與 ``teleport_target``、``swap_any`` 同一套位移檢定（對抗
+    判定，``maneuver: swap``），不再另外擲命中。"""
     state = arena(_swap_skill("enemies"), caster=(0, 3), foes=[(3, 3)])
-    monkeypatch.setattr(Rng, "roll", lambda self, sides: 1)  # 自然 1：失手
+    monkeypatch.setattr(Rng, "roll", lambda self, sides: 1)  # 自然 1：對抗失敗
     missed = use(state, SID, target_id=U2)
     assert not of(missed, UnitMoved) and missed.state.units[U1].xy == (0, 3)
+    (roll,) = of(missed, ManeuverRolled)
+    assert (roll.maneuver, roll.attacker_id, roll.target_id, roll.success) == (
+        "swap",
+        U1,
+        U2,
+        False,
+    )
+    assert not of(missed, AttackRolled)
     always(monkeypatch)
-    hit = use(state, SID, target_id=U2)
-    assert hit.state.units[U1].xy == (3, 3) and hit.state.units[U2].xy == (0, 3)
+    won = use(state, SID, target_id=U2)
+    assert won.state.units[U1].xy == (3, 3) and won.state.units[U2].xy == (0, 3)
+    assert not of(won, AttackRolled) and of(won, ManeuverRolled)[0].success
 
 
 def test_swap_cannot_target_yourself_and_respects_affects() -> None:

@@ -17,6 +17,7 @@ __all__ = [
     "leap_candidates",
     "leap_problem",
     "self_move_problem",
+    "swap_pair_problem",
     "swap_problem",
 ]
 
@@ -112,6 +113,14 @@ def leap_candidates(state: BattleState, caster: UnitState, reach: int) -> list[X
         if leap_problem(state, caster, (x, y), reach) is None
     ]
     return cells
+
+
+def swap_pair_problem(state: BattleState, first: UnitState, second: UnitState) -> str | None:
+    """任意兩者互換（Phase 3D-2b）：``first`` 與 ``second`` 互換位置，兩格都要能讓對方站上去。"""
+    for unit, other in ((first, second), (second, first)):
+        if not is_standable(state, other.xy):
+            return f"{unit.name_zh} 無法站上 {other.xy}：不能交換位置"
+    return None
 
 
 def swap_problem(state: BattleState, caster: UnitState, target: UnitState) -> str | None:

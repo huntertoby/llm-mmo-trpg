@@ -109,6 +109,12 @@ class CoreRules(ContentModel):
     hurl_scatter_radius: int = Field(default=1, ge=0, le=2)
     """投擲物件（Phase 3C-5a）：落點有單位或物件時，物件放在這個曼哈頓距離內最近的空格；
     沒有空格就摧毀。"""
+    teleport_enemy_resist_bonus: int = Field(default=2, ge=0, le=10)
+    """傳送他人（Phase 3D-2b ``teleport_target``）：敵方目標的抵抗加成（從對抗判定的 d20 總和扣除；
+    同級時成功率 60% → 50%）。"""
+    teleport_lethal_resist_bonus: int = Field(default=8, ge=0, le=20)
+    """傳送到致命地形時，目標再加的抵抗加成（與 ``teleport_enemy_resist_bonus`` 相加；同級時
+    總 +10，d20 自然 19 與 20 才成功，成功率 10%）。"""
     pierce_behind_permille: int = Field(default=700, ge=1, le=1000)
     """穿透（Phase 3C-5b）：穿過 ``penetrable`` 物件之後，後方目標受到的傷害（‰；物件本身受全額
     傷害）。舊紀錄沒有此欄位。"""

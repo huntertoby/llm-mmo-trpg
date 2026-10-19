@@ -103,3 +103,22 @@ shapes:
     budget: {base_permille: 1000}
     params:
       range: {min: 1, max: 6}
+  # Phase 3D-2b（docs/design/06-技能.md 6.19）：傳送他人。UseSkill 同時給 target_id（被傳送的單位）與
+  # target_pos（落點）；兩者都必須在施放者的射程與視線內。
+  - id: unit_then_tile
+    name_zh: 單位與落點
+    description_zh: 先選射程內看得到的一個單位（不能是自己），再選射程內看得到的落點格；影響原位置與落點兩格。
+    targeting: unit_tile
+    min_rarity: rare
+    budget: {base_permille: 1000}
+    params:
+      range: {min: 1, max: 6}
+  # 任意兩者互換：UseSkill 給 target_id 與 second_target_id（兩個不同的單位，順序不拘）。
+  - id: unit_pair
+    name_zh: 兩個單位
+    description_zh: 選射程內看得到的兩個不同單位（敵我皆可，不必包含自己）；影響這兩格。
+    targeting: unit_pair
+    min_rarity: rare
+    budget: {base_permille: 1000}
+    params:
+      range: {min: 1, max: 6}

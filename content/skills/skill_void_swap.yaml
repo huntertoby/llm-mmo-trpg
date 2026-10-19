@@ -1,0 +1,23 @@
+# 主動（Phase 3D-2b 示範，數值為初值，未經模擬）：讓射程內任意兩個單位互換位置（敵我皆可，不必包含自己）。含敵人時每個敵人各自抵抗，全是友方時必定成功。
+id: skill_void_swap
+schema_version: 1
+name_zh: 虛空互換
+tier: 1
+rank: 1
+rarity: rare
+kind: active
+skeleton: displace
+category: spell
+weapon_req: focus
+ap_cost: 2
+scaling_attr: int
+shape: {type: unit_pair, range: 5}
+effects:
+  - {type: swap_any}
+condition: null
+cost: {mana: 5, cooldown: 3}
+tags: [arcane, spell, swap, mobility]
+narrative:
+  concept: 讓戰場上的兩個身影在虛空中對調，把敵人換進包圍圈，把隊友換出險境
+  cast_flavor: 你雙手一合，兩個身影同時被虛空吞沒，又在對方的位置上出現
+provenance: {origin: builtin, owner_id: null, created_by: null, parents: [], bound: true, tradeable: false}

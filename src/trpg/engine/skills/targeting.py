@@ -10,8 +10,9 @@
 
 from __future__ import annotations
 
-from collections.abc import Iterator
+from collections.abc import Callable, Iterator
 from dataclasses import dataclass
+from itertools import combinations
 from typing import NamedTuple
 
 from trpg.content.battle import Dice
@@ -36,6 +37,7 @@ from trpg.engine.rules.combat import AttackProfile, attack_value, concealment_pr
 from trpg.engine.rules.geometry import XY, has_line_of_sight, manhattan
 from trpg.engine.rules.movement import is_deadly, is_standable
 from trpg.engine.rules.statuses import (
+    BOSS_TAG,
     attack_range_cap,
     blocks_spells,
     skip_turn_status,
@@ -47,6 +49,7 @@ from trpg.engine.skills.mobility import (
     leap_candidates,
     leap_problem,
     self_move_problem,
+    swap_pair_problem,
     swap_problem,
 )
 from trpg.engine.skills.scaling import mastery_reach_bonus, skill_scaling_value
@@ -78,6 +81,7 @@ __all__ = [
     "skill_problem",
     "skill_profile",
     "stack_problem",
+    "teleport_landing_problem",
 ]
 
 _PERMILLE = 1000
@@ -373,12 +377,20 @@ def _unit_target_problem(  # noqa: PLR0917
         )
         if not helps:
             return f"此技能無法對友方使用：{target.name_zh}"
+    return _visible_problem(state, caster, skill, target, reach)
+
+
+def _visible_problem(
+    state: BattleState, caster: UnitState, skill: SkillDef, target: UnitState, reach: int
+) -> str | None:
+    """單位目標看得到嗎：射程、高度、視線，致盲的距離上限，對敵人的隱蔽限制。"""
     problem = _reach_problem(state, caster, skill, target.xy, target.name_zh, reach)
     if problem is not None:
         return problem
     cap = attack_range_cap(state.ruleset, caster)  # 致盲：以單位為目標的技能只能選近處的單位
     if cap is not None and manhattan(caster.xy, target.xy) > cap:
         return f"致盲中：只能選擇 {cap} 格內的單位（距離 {manhattan(caster.xy, target.xy)}）"
+    enemy = target.team is not caster.team
     return concealment_problem(state, caster, target) if enemy else None
 
 
@@ -447,6 +459,7 @@ def _require_fields(action: UseSkill, allowed: tuple[str, ...], targeting: str) 
         "target_object_id": action.target_object_id,
         "target_pos": action.target_pos,
         "direction": action.direction,
+        "second_target_id": action.second_target_id,
     }
     extra = [name for name, value in given.items() if value is not None and name not in allowed]
     if extra:
@@ -561,6 +574,82 @@ def hurl_object_problem(
     return None
 
 
+def teleport_landing_problem(state: BattleState, target: UnitState, dest: XY) -> str | None:
+    """傳送他人（Phase 3D-2b）的落點能不能放 ``target``：沒有單位；可站立，或是致命地形（深淵、
+    岩漿；Boss 對致命地形免疫，不能選）。地圖範圍、射程與視線由呼叫端檢查。"""
+    other = state.unit_at(*dest)
+    if other is not None:
+        return f"無法傳送到已有單位的格子：{dest}（{other.name_zh}）"
+    if is_deadly(state, dest):
+        if target.has_tag(BOSS_TAG):
+            return f"{target.name_zh} 是 Boss，對傳送到致命地形免疫：{dest}"
+        return None
+    if not is_standable(state, dest):
+        return f"無法傳送到不可站立的格子：{dest}"
+    return None
+
+
+def _sorted_tiles(*cells: XY) -> tuple[XY, ...]:
+    return tuple(sorted(set(cells), key=lambda p: (p[1], p[0])))
+
+
+def _pair_unit(
+    state: BattleState,
+    caster: UnitState,
+    skill: SkillDef,
+    unit_id: UnitId | None,
+    reach: int,
+) -> UnitState:
+    """位移他人要選的單位：存在、存活、射程與視線內（含致盲與隱蔽限制）。"""
+    unit = None if unit_id is None else state.units.get(unit_id)
+    if unit is None:
+        raise IllegalActionError(f"找不到目標：{unit_id}")
+    if not unit.alive:
+        raise IllegalActionError(f"目標已不在戰場上：{unit.name_zh}")
+    problem = _visible_problem(state, caster, skill, unit, reach)
+    if problem is not None:
+        raise IllegalActionError(problem)
+    return unit
+
+
+def _unit_tile_area(
+    state: BattleState, caster: UnitState, skill: SkillDef, action: UseSkill, *, reach: int
+) -> tuple[tuple[XY, ...], XY]:
+    """``targeting: unit_tile``（傳送他人，Phase 3D-2b）：被傳送的單位（不能是自己）與落點；影響
+    原位置與落點兩格。落點要在射程與視線內，沒有單位，可站立或是致命地形（Boss 不行）。"""
+    _require_fields(action, ("target_id", "target_pos"), "unit_tile（單位與落點）")
+    if action.target_id is None or action.target_pos is None:
+        raise IllegalActionError("傳送他人必須同時指定 target_id（單位）與 target_pos（落點）")
+    target = _pair_unit(state, caster, skill, action.target_id, reach)
+    if target.id == caster.id:
+        raise IllegalActionError("不能傳送自己（傳送他人要選另一個單位）")
+    dest = (action.target_pos.x, action.target_pos.y)
+    problem = shapes.center_problem(state, caster.xy, dest, reach)
+    if problem is None:
+        problem = teleport_landing_problem(state, target, dest)
+    if problem is not None:
+        raise IllegalActionError(problem)
+    return _sorted_tiles(target.xy, dest), dest
+
+
+def _unit_pair_area(
+    state: BattleState, caster: UnitState, skill: SkillDef, action: UseSkill, *, reach: int
+) -> tuple[tuple[XY, ...], XY]:
+    """``targeting: unit_pair``（任意兩者互換，Phase 3D-2b）：兩個不同的單位（順序不拘），都在射程
+    與視線內，兩格都要能讓對方站上去；影響這兩格。"""
+    _require_fields(action, ("target_id", "second_target_id"), "unit_pair（兩個單位）")
+    if action.target_id is None or action.second_target_id is None:
+        raise IllegalActionError("任意兩者互換必須同時指定 target_id 與 second_target_id")
+    if action.target_id == action.second_target_id:
+        raise IllegalActionError("要互換的兩個單位必須不同")
+    first = _pair_unit(state, caster, skill, action.target_id, reach)
+    second = _pair_unit(state, caster, skill, action.second_target_id, reach)
+    problem = swap_pair_problem(state, first, second)
+    if problem is not None:
+        raise IllegalActionError(problem)
+    return _sorted_tiles(first.xy, second.xy), caster.xy
+
+
 def _object_tile_area(
     state: BattleState, caster: UnitState, skill: SkillDef, action: UseSkill, *, reach: int
 ) -> tuple[tuple[XY, ...], XY]:
@@ -634,6 +723,10 @@ def compute_area(
         tiles, direction = _direction_area(state, caster, skill, action)
     elif targeting == "object_tile":
         tiles, origin = _object_tile_area(state, caster, skill, action, reach=reach)
+    elif targeting == "unit_tile":
+        tiles, origin = _unit_tile_area(state, caster, skill, action, reach=reach)
+    elif targeting == "unit_pair":
+        tiles, origin = _unit_pair_area(state, caster, skill, action, reach=reach)
     else:
         tiles = _self_area(state, caster, skill, action, targeting)
     if not tiles:
@@ -700,8 +793,8 @@ def _candidates(state: BattleState, caster: UnitState, skill: SkillDef) -> Itera
     elif shape.targeting == "tile":
         for x, y in _tile_candidates(state, caster, skill):
             yield UseSkill(unit_id=uid, skill_id=sid, target_pos=Pos(x=x, y=y))
-    elif shape.targeting == "object_tile":
-        yield from _hurl_candidates(state, caster, skill)
+    elif shape.targeting in _TWO_STAGE:
+        yield from _TWO_STAGE[shape.targeting](state, caster, skill)
     elif shape.targeting == "direction":
         for name in shapes.DIRECTION_ORDER:
             direction: Direction = name  # type: ignore[assignment]
@@ -733,6 +826,51 @@ def _hurl_candidates(state: BattleState, caster: UnitState, skill: SkillDef) -> 
                     target_object_id=ObjectId(obj.id),
                     target_pos=Pos(x=x, y=y),
                 )
+
+
+def _reachable_units(state: BattleState, caster: UnitState, skill: SkillDef) -> list[UnitState]:
+    """位移他人可以選的單位（依 ID；射程、視線與隱蔽限制已檢查）。"""
+    reach = shape_reach(state, skill, caster)
+    return [
+        unit
+        for unit in sorted(state.living_units(), key=lambda u: u.id)
+        if manhattan(caster.xy, unit.xy) <= reach
+        and _visible_problem(state, caster, skill, unit, reach) is None
+    ]
+
+
+def _teleport_candidates(
+    state: BattleState, caster: UnitState, skill: SkillDef
+) -> Iterator[UseSkill]:
+    """傳送他人的候選：可選的單位（依 ID，不含自己）× 合法的落點（依 ``(y, x)``）。"""
+    tiles = shapes.center_candidates(state, caster.xy, shape_reach(state, skill, caster))
+    for unit in _reachable_units(state, caster, skill):
+        if unit.id == caster.id:
+            continue
+        for x, y in tiles:
+            if teleport_landing_problem(state, unit, (x, y)) is None:
+                yield UseSkill(
+                    unit_id=caster.id,
+                    skill_id=skill.id,
+                    target_id=unit.id,
+                    target_pos=Pos(x=x, y=y),
+                )
+
+
+def _pair_candidates(state: BattleState, caster: UnitState, skill: SkillDef) -> Iterator[UseSkill]:
+    """任意兩者互換的候選：可選的單位兩兩組合（每組只列一次，依單位 ID 排序）。"""
+    for first, second in combinations(_reachable_units(state, caster, skill), 2):
+        yield UseSkill(
+            unit_id=caster.id, skill_id=skill.id, target_id=first.id, second_target_id=second.id
+        )
+
+
+_TWO_STAGE: dict[str, Callable[[BattleState, UnitState, SkillDef], Iterator[UseSkill]]] = {
+    "object_tile": _hurl_candidates,
+    "unit_tile": _teleport_candidates,
+    "unit_pair": _pair_candidates,
+}
+"""兩段選取的形狀（投擲物件、傳送他人、任意兩者互換）的候選列舉。"""
 
 
 def selections(

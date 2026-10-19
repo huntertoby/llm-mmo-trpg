@@ -18,7 +18,7 @@ from __future__ import annotations
 
 from collections.abc import Callable
 from dataclasses import replace
-from typing import ClassVar
+from typing import ClassVar, Literal
 
 from trpg.content.battle import Dice
 from trpg.content.skills import (
@@ -41,6 +41,8 @@ from trpg.content.skills import (
     RESTORE_RESOURCE,
     STEAL_BUFF,
     SWAP,
+    SWAP_ANY,
+    TELEPORT_TARGET,
     TOPPLE,
     ConditionSpec,
     EffectSpec,
@@ -98,6 +100,7 @@ from trpg.engine.results import Pending
 from trpg.engine.rewrites import grant_ap, grant_reactions, reset_cooldowns
 from trpg.engine.rules.combat import PERMILLE, AttackProfile, AttackRoll, ForcedOutcome, roll_attack
 from trpg.engine.rules.geometry import XY, axis_direction, manhattan
+from trpg.engine.rules.movement import is_deadly
 from trpg.engine.rules.statuses import is_rooted, skip_turn_status
 from trpg.engine.skill_triggers import collect_cast, collect_move, holding
 from trpg.engine.skills.conditions import Subject, condition_met
@@ -144,6 +147,12 @@ REWRITE_PRIMITIVES = (
 )
 """由 :meth:`_Cast.rewrite` 結算的改寫規則型原語。"""
 _TOUCHING_AFFECTS = ("enemies", "all", "tiles")
+_OWN_CHECK = (SWAP, SWAP_ANY, TELEPORT_TARGET)
+"""位移類原語自己擲抵抗判定（Phase 3D-2b），不另外擲命中。"""
+
+
+def _unit_id(unit: UnitState) -> str:
+    return unit.id
 
 
 def use_skill(ctx: Ctx, caster: UnitState, action: UseSkill) -> None:
@@ -404,9 +413,10 @@ class _Cast:
     def roll_hits(self) -> None:
         ctx = self.ctx
         rolled: list[UnitState] = []
-        if any(e.affects in ("enemies", "all") for e in self.effects):
+        rolling = [e for e in self.effects if e.type not in _OWN_CHECK]  # 位移他人自己擲抵抗
+        if any(e.affects in ("enemies", "all") for e in rolling):
             rolled += self.enemies
-        if any(e.affects == "all" for e in self.effects):
+        if any(e.affects == "all" for e in rolling):
             rolled += [u for u in self.allies if u is not self.caster]  # 敵我不分也不打到自己
         for unit in sorted(rolled, key=lambda u: u.id):
             forced: ForcedOutcome | None = None
@@ -694,6 +704,10 @@ class _Cast:
             return self.leap(spec)
         if kind == SWAP:
             return self.swap(effect, spec)
+        if kind == TELEPORT_TARGET:
+            return self.teleport_target()
+        if kind == SWAP_ANY:
+            return self.swap_any()
         if kind in (INTERCEPT, PLACE_TRAP, CONSUME_STACK, DASH):
             return []  # 攔截：反應機制；陷阱：use_skill；消耗層數：consume_stacks；衝鋒：dash
         if kind == ADD_STACK:
@@ -1203,13 +1217,74 @@ class _Cast:
             )
         ]
 
+    def displace_check(
+        self, kind: Literal["teleport", "swap"], target: UnitState, bonus: int
+    ) -> bool:
+        """位移的抵抗判定（Phase 3D-2b，``swap``、``swap_any``、``teleport_target`` 共用）：敵方
+        目標擲對抗判定（技能的縮放屬性 vs 目標同屬性，目標加 ``bonus``，沿用技巧動作的
+        :func:`~trpg.engine.maneuvers.contest`），攻方勝出才位移；友方不檢定。預覽：抵抗判定是
+        分歧點（``min`` 視為抵抗成功、``max`` 視為失敗）。"""
+        if target.team is self.caster.team:
+            return True
+        return contest(
+            self.ctx,
+            kind,
+            self.caster,
+            target,
+            self.skill.scaling_attr,
+            skill_id=self.skill.id,
+            primary=False,
+            attack_value=skill_scaling_value(self.ctx.rules, self.caster, self.skill),
+            resist_bonus=bonus,
+        )
+
     def swap(self, effect: ResolvedEffect, spec: EffectSpec) -> list[EffectBase]:
-        """``swap``（Phase 3D-2）：與目標單位交換位置；對敵人需要命中（失手就不交換）。"""
+        """``swap``（Phase 3D-2）：與目標單位交換位置；對敵人要過一般位移檢定（3D-2b 起，
+        不再用命中判定），抵抗成功就不交換。"""
+        pool = self.enemies if effect.affects == "enemies" else self.allies
+        units = sorted((u for u in pool if u.alive and u.id != self.caster.id), key=lambda u: u.id)
         return [
             SwapUnitsEffect(source_id=self.caster.id, unit_id=self.caster.id, other_id=unit.id)
-            for unit in self.targets(effect.affects, spec.condition)
-            if unit.id != self.caster.id
+            for unit in units
+            if self.holds(spec.condition, Subject(unit, unit.xy))
+            and self.displace_check("swap", unit, 0)
         ]
+
+    def teleport_target(self) -> list[EffectBase]:
+        """``teleport_target``（Phase 3D-2b）：把選取的單位傳送到落點（選取時已檢查）。友方一定
+        成功；敵方抵抗加成 ``teleport_enemy_resist_bonus``，落點是致命地形時再加
+        ``teleport_lethal_resist_bonus``；失敗時目標不移動。"""
+        action = self.action
+        assert action is not None and action.target_id is not None and action.target_pos is not None
+        state, core = self.ctx.state, self.ctx.core
+        target = state.units[action.target_id]
+        dest = (action.target_pos.x, action.target_pos.y)
+        bonus = core.teleport_enemy_resist_bonus
+        if is_deadly(state, dest):
+            bonus += core.teleport_lethal_resist_bonus
+        if not target.alive or not self.displace_check("teleport", target, bonus):
+            return []
+        return [
+            MoveUnitEffect(
+                source_id=self.caster.id, unit_id=target.id, dest=dest, mode="teleported"
+            )
+        ]
+
+    def swap_any(self) -> list[EffectBase]:
+        """``swap_any``（Phase 3D-2b）：選取的兩個單位互換位置。每個敵方各自過一般位移檢定
+        （依單位 ID 全部擲出），任一個抵抗成功則整個互換失敗；全是友方時不檢定。"""
+        action = self.action
+        assert action is not None and action.target_id is not None
+        assert action.second_target_id is not None
+        units = self.ctx.state.units
+        first, second = units[action.target_id], units[action.second_target_id]
+        if not (first.alive and second.alive):
+            return []
+        foes = sorted((u for u in (first, second) if u.team is not self.caster.team), key=_unit_id)
+        passed = [self.displace_check("swap", unit, 0) for unit in foes]
+        if not all(passed):
+            return []
+        return [SwapUnitsEffect(source_id=self.caster.id, unit_id=first.id, other_id=second.id)]
 
     def status_duration(self, spec: EffectSpec) -> int | None:
         """此技能施加狀態的持續回合：``mastery: duration`` 生效時在（效果指定的或狀態預設的）

@@ -18,7 +18,7 @@ from dataclasses import dataclass
 from fractions import Fraction
 from itertools import product
 
-from trpg.content.skills import SkillDef
+from trpg.content.skills import SWAP, SWAP_ANY, TELEPORT_TARGET, SkillDef
 from trpg.engine import modifiers
 from trpg.engine.actions import Action, Attack, Interact, Shove, Trip, UseSkill
 from trpg.engine.battle import _actor, action_ap_cost, simulate_preview
@@ -51,6 +51,7 @@ from trpg.engine.events import (
     UnitFell,
     UnitMoved,
 )
+from trpg.engine.maneuvers import contest_chance
 from trpg.engine.pierce import pierce_trace
 from trpg.engine.rules.combat import (
     PERMILLE,
@@ -63,7 +64,8 @@ from trpg.engine.rules.combat import (
     is_hit,
     situational_modifier,
 )
-from trpg.engine.rules.statuses import effective_attribute, shield_amount
+from trpg.engine.rules.movement import is_deadly
+from trpg.engine.rules.statuses import BOSS_TAG, effective_attribute, shield_amount
 from trpg.engine.skills.conditions import Subject, condition_met
 from trpg.engine.skills.scaling import skill_scaling_value
 from trpg.engine.skills.targeting import (
@@ -81,6 +83,7 @@ from trpg.shared.types import Attribute, ObjectId, UnitId
 
 __all__ = [
     "DamageRange",
+    "DisplaceCheck",
     "HurlInfo",
     "MoveInfo",
     "Outcome",
@@ -217,6 +220,18 @@ class MoveInfo:
 
 
 @dataclass(frozen=True, slots=True)
+class DisplaceCheck:
+    """位移他人的抵抗判定預覽（Phase 3D-2b）：敵方單位 ``unit_id`` 被移動的成功率 ``chance``
+    （攻方勝出；精確機率，窮舉 d20），``resist_bonus`` 是它的抵抗加成（傳送敵人、致命地形），
+    ``lethal`` 為落點是致命地形。友方不檢定，不列入。"""
+
+    unit_id: UnitId
+    chance: Fraction
+    resist_bonus: int
+    lethal: bool
+
+
+@dataclass(frozen=True, slots=True)
 class Preview:
     action: Action
     hit_chance: Fraction | None
@@ -254,7 +269,12 @@ class Preview:
     hurls: tuple[HurlInfo, ...] = ()
     """動作會造成的物件投擲（Phase 3C-5b；最多後果的模擬）。"""
     moves: tuple[MoveInfo, ...] = ()
-    """動作的自身位移（衝鋒的路線、跳躍的落點、交換位置的兩格；Phase 3D-2；最多後果的模擬）。"""
+    """動作的自身位移（衝鋒的路線、跳躍的落點、交換位置的兩格；Phase 3D-2；最多後果的模擬）。
+    位移他人（Phase 3D-2b）：``teleport``（``unit_id`` 被傳到 ``path`` 的終點）與 ``swap``。"""
+    displace_checks: tuple[DisplaceCheck, ...] = ()
+    """技能的位移抵抗判定（Phase 3D-2b：``swap``、``swap_any``、``teleport_target`` 的敵方）。"""
+    displace_chance: Fraction | None = None
+    """位移他人成功的總機率（所有敵方目標都沒抵抗成功）；沒有檢定（全是友方）為 ``None``。"""
 
 
 # ---------------------------------------------------------------------------
@@ -779,6 +799,49 @@ def _scene_infos(
     return tuple(topples.values()), tuple(hurls.values())
 
 
+def _displace_checks(
+    state: BattleState, actor: UnitState, action: UseSkill
+) -> tuple[DisplaceCheck, ...]:
+    """位移類技能的抵抗判定：每個敵方被移動的單位（依單位 ID）的精確成功率。"""
+    skill = state.ruleset.skill_def(action.skill_id)
+    kinds = {e.type for e in skill.effects}
+    if not kinds & {SWAP, SWAP_ANY, TELEPORT_TARGET}:
+        return ()
+    core = state.ruleset.core
+    bonus, lethal = 0, False
+    ids = [action.target_id, action.second_target_id]
+    if TELEPORT_TARGET in kinds and action.target_pos is not None:
+        lethal = is_deadly(state, (action.target_pos.x, action.target_pos.y))
+        bonus = core.teleport_enemy_resist_bonus + (
+            core.teleport_lethal_resist_bonus if lethal else 0
+        )
+        ids = [action.target_id]
+    attack = skill_scaling_value(state.ruleset, actor, skill)
+    checks = [
+        DisplaceCheck(
+            unit_id=unit.id,
+            chance=contest_chance(state, unit, skill.scaling_attr, attack, bonus),
+            resist_bonus=bonus,
+            lethal=lethal,
+        )
+        for unit in sorted((state.units[i] for i in ids if i is not None), key=lambda u: u.id)
+        if unit.team is not actor.team
+    ]
+    return tuple(checks)
+
+
+def _displace_notes(
+    state: BattleState, actor: UnitState, action: UseSkill, skill: SkillDef
+) -> tuple[str, ...]:
+    """傳送他人的說明：Boss 對傳送到致命地形免疫（致命地形不會出現在可選的落點）。"""
+    if not any(e.type == TELEPORT_TARGET for e in skill.effects) or action.target_id is None:
+        return ()
+    target = state.units[action.target_id]
+    if target.team is actor.team or not target.has_tag(BOSS_TAG):
+        return ()
+    return (f"{target.name_zh} 是 Boss：對傳送到致命地形免疫，致命地形不能選為落點",)
+
+
 def _move_infos(events: list[EventBase]) -> tuple[MoveInfo, ...]:
     """模擬事件中的自身位移：衝鋒（路線）、跳躍（落點）、交換位置（兩個單位換格）。"""
     infos: list[MoveInfo] = []
@@ -790,6 +853,9 @@ def _move_infos(events: list[EventBase]) -> tuple[MoveInfo, ...]:
         elif isinstance(e, UnitMoved) and e.mode == "leap":
             path = ((e.from_pos.x, e.from_pos.y), (e.to_pos.x, e.to_pos.y))
             infos.append(MoveInfo("leap", e.unit_id, None, path))
+        elif isinstance(e, UnitMoved) and e.mode == "teleported":
+            path = ((e.from_pos.x, e.from_pos.y), (e.to_pos.x, e.to_pos.y))
+            infos.append(MoveInfo("teleport", e.unit_id, None, path))
         elif isinstance(e, UnitMoved) and e.mode == "swap":
             swapped[e.unit_id] = e
     ids = list(swapped)
@@ -840,6 +906,16 @@ def preview(state: BattleState, action: Action) -> Preview:
     ap_cost, reach = _cost_and_reach(state, actor, action)
     pierce = _pierce_info(state, actor, action) if isinstance(action, UseSkill) else None
     topples, hurls = _scene_infos(max_events)
+    checks: tuple[DisplaceCheck, ...] = ()
+    notes = _cover_notes(cover)
+    if isinstance(action, UseSkill):
+        checks = _displace_checks(state, actor, action)
+        notes += _displace_notes(state, actor, action, state.ruleset.skill_def(action.skill_id))
+    chance: Fraction | None = None
+    if checks:
+        chance = Fraction(1)
+        for check in checks:
+            chance *= check.chance
     return Preview(
         action=action,
         hit_chance=hit,
@@ -854,7 +930,7 @@ def preview(state: BattleState, action: Action) -> Preview:
         min_state=low.state,
         max_state=high.state,
         cover=cover,
-        notes=_cover_notes(cover),
+        notes=notes,
         targets=targets,
         healed=healed,
         ap_cost=ap_cost,
@@ -864,4 +940,6 @@ def preview(state: BattleState, action: Action) -> Preview:
         topples=topples,
         hurls=hurls,
         moves=_move_infos(max_events),
+        displace_checks=checks,
+        displace_chance=chance,
     )

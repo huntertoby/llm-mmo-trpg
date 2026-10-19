@@ -127,6 +127,11 @@ class UseSkill(_ActionBase):
     - ``unit``（單體、連鎖）：``target_id`` 或 ``target_object_id`` 恰好一個；
     - ``tile``（十字、方陣、指定格）：``target_pos``；
     - ``direction``（直線、錐形）：``direction``；
+    - ``object_tile``（投擲物件）：``target_object_id`` 與 ``target_pos``；
+    - ``unit_tile``（傳送他人，Phase 3D-2b）：``target_id``（被傳送的單位）與 ``target_pos``
+      （落點）；
+    - ``unit_pair``（任意兩者互換，Phase 3D-2b）：``target_id`` 與 ``second_target_id``（兩個不同的
+      單位，順序不拘）；
     - ``self``／``none``（自身、環形、範圍光環）：都不給。
 
     是否合法（欄位是否對應形狀、射程、視線、代價）由引擎檢查，不合法時拋出
@@ -143,6 +148,7 @@ class UseSkill(_ActionBase):
     target_object_id: ObjectId | None = None
     target_pos: Pos | None = None
     direction: Direction | None = None
+    second_target_id: UnitId | None = None
     copy_cast: UseSkill | None = None
 
 

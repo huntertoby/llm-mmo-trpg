@@ -163,8 +163,22 @@ def _leap(_lib: ContentLibrary, _skill: SkillDef, _spec: EffectSpec) -> str:
     return "跳到目標格（無視中間的單位與低矮地形；不觸發藉機攻擊）"
 
 
-def _swap(_lib: ContentLibrary, _skill: SkillDef, spec: EffectSpec) -> str:
-    return "與目標交換位置" + ("（需命中）" if spec.affects == "enemies" else "")
+def _swap(_lib: ContentLibrary, skill: SkillDef, spec: EffectSpec) -> str:
+    check = f"（{scaling_label(skill)}對抗）" if spec.affects == "enemies" else ""
+    return "與目標交換位置" + check
+
+
+def _teleport_target(lib: ContentLibrary, skill: SkillDef, _spec: EffectSpec) -> str:
+    core = lib.ruleset.core
+    lethal = core.teleport_enemy_resist_bonus + core.teleport_lethal_resist_bonus
+    return (
+        f"把一個單位傳送到落點（友方必定成功；敵方{scaling_label(skill)}對抗，目標抵抗 "
+        f"+{core.teleport_enemy_resist_bonus}；落點是致命地形時抵抗 +{lethal}，Boss 免疫）"
+    )
+
+
+def _swap_any(_lib: ContentLibrary, skill: SkillDef, _spec: EffectSpec) -> str:
+    return f"讓射程內的兩個單位互換位置（含敵人時每個敵人各過{scaling_label(skill)}對抗）"
 
 
 def _apply_status(lib: ContentLibrary, _skill: SkillDef, spec: EffectSpec) -> str:
@@ -300,6 +314,8 @@ _EFFECT_TEXT: dict[str, _EffectText] = {
     "dash": _dash,
     "leap": _leap,
     "swap": _swap,
+    "teleport_target": _teleport_target,
+    "swap_any": _swap_any,
     "apply_status": _apply_status,
     "create_surface": _create_surface,
     "create_obstacle": _create_obstacle,

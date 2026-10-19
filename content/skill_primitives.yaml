@@ -109,7 +109,7 @@ primitives:
     allowed_shapes: [ground_tile]
   - id: swap
     name_zh: 交換位置
-    description_zh: 施放者與目標單位（敵我皆可）交換位置。對敵人（affects 為 enemies）要命中判定，失手則不交換；對友方（affects 為 allies）自動成功。不能和自己交換。交換後雙方的落點互動（表面、陷阱、致命地形、墜落）照常結算。不算「本回合移動過」，不觸發 on_move 被動。
+    description_zh: 施放者與目標單位（敵我皆可）交換位置。對敵人（affects 為 enemies）要過一般位移檢定（對抗判定：技能的縮放屬性 vs 目標同屬性；抵抗成功則不交換），不再另外擲命中；對友方（affects 為 allies）自動成功。不能和自己交換。交換後雙方的落點互動（表面、陷阱、致命地形、墜落）照常結算。不算「本回合移動過」，不觸發 on_move 被動。
     category: structural
     harmful: false
     min_rarity: rare
@@ -117,6 +117,27 @@ primitives:
     base_points: 4
     forbid_affects: [self, all, tiles]
     allowed_shapes: [single]
+  # --- Phase 3D-2b：位移他人（docs/design/06-技能.md 6.19；點數為初值，未經模擬）---
+  - id: teleport_target
+    name_zh: 傳送他人
+    description_zh: 兩段選取：射程內的一個單位（不能是自己）→ 射程內的落點（可站立、沒有單位的格子，或致命地形）。友方不檢定、一定成功；敵方要過抵抗（對抗判定：技能的縮放屬性 vs 目標同屬性，目標再加 teleport_enemy_resist_bonus）；落點是致命地形（深淵、岩漿）時目標再加 teleport_lethal_resist_bonus，成功率極低，失敗時目標不移動。Boss 對傳送到致命地形免疫（不能選）；傳送到一般格照常檢定。落點的陷阱、表面與致命地形照常結算，不觸發離開相鄰格的反應。必須搭配形狀 unit_then_tile，而且是技能唯一的效果。
+    category: structural
+    harmful: false
+    min_rarity: rare
+    budget_basis: fixed
+    base_points: 11
+    acts_on: caster
+    allowed_shapes: [unit_then_tile]
+  - id: swap_any
+    name_zh: 任意兩者互換
+    description_zh: 選射程內的兩個單位（敵我皆可，不必包含施放者），互換位置；兩格都要能讓對方站上去。含敵人時每個敵方各自過一般位移檢定（對抗判定：技能的縮放屬性 vs 目標同屬性），任一個抵抗成功則整個互換失敗；全是友方時不檢定。落點的陷阱、表面與墜落照常結算。必須搭配形狀 unit_pair，而且是技能唯一的效果。
+    category: structural
+    harmful: false
+    min_rarity: rare
+    budget_basis: fixed
+    base_points: 12
+    acts_on: caster
+    allowed_shapes: [unit_pair]
   - id: apply_status
     name_zh: 施加狀態
     description_zh: 施加 statuses.yaml 中的狀態，重複施加時刷新持續時間。

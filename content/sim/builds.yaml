@@ -11,6 +11,7 @@ companions: [sim_companion_fighter, sim_companion_archer]
 # Phase 3C-5a：build_push 加震地推倒（topple）、build_fire 加念力投擲（hurl_object；油桶落地爆炸，3C-6 再整理成念力流）。
 # Phase 3D-1：連段條件與資源互動的示範技能（衝勢劈砍、並肩斬、獵殺落單、先發制人、連段雷光、專注湧流、疾時之潮、竊取祝福）。
 # Phase 3D-2：新增 build_charger（衝鋒流）：猛虎衝撞（dash）、騰躍（leap）、調虎離山與護衛換位（swap）。
+# Phase 3D-2b：新增 build_banisher（放逐流）：放逐（teleport_target）、虛空互換（swap_any）。
 # Phase 3C-3a：build_push 加破城衝撞與裂骨印記（撞擊）、build_fire 加烈焰護身（on_cast_tag）、build_warlock 加蝕心追擊（on_status_applied）。
 # Phase 3C-2：修正技能（kind: modifier，裝在被動欄位，上限 3）——build_push 加重踏、build_fire 加灼傷之痕與餘燼循環、
 # build_tank 加雷之手（單手劍的物理普攻變成雷電，3C-5 再整理）。
@@ -231,3 +232,20 @@ builds:
       tags: [hero, sim]
       max_mana: 24
       skills: [skill_tiger_charge, skill_vault_leap, skill_decoy_swap, skill_guard_swap, skill_gale_kick, skill_shield_bash]
+
+  - id: build_banisher
+    name_zh: 放逐流
+    theme_zh: 放逐把敵人傳送到別處（運氣好時是深淵與岩漿），虛空互換把敵人換進包圍圈、把隊友換出險境。有深淵、岩漿與高低差的地圖最有用；火焰箭、咒印與裂地衝擊補足輸出（Phase 3D-2b，初值未經模擬）。
+    hero:
+      id: build_banisher
+      name_zh: 放逐流英雄
+      attributes: {str: 8, dex: 12, con: 10, int: 16, wis: 12, wil: 12}
+      max_hp: 40
+      speed: 5
+      armor_bonus: 1
+      weapon: fire_staff
+      ai_profile: cunning
+      resist: {elemental: 150}
+      tags: [hero, sim]
+      max_mana: 40
+      skills: [skill_banish, skill_void_swap, skill_fire_bolt, skill_hex_bolt, skill_shatter_blast, skill_blink]

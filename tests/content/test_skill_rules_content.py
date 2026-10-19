@@ -96,6 +96,8 @@ def test_the_initial_skeleton_structure_matches_the_spec() -> None:
         "topple",
         "leap",  # 3D-2
         "swap",  # 3D-2
+        "teleport_target",  # 3D-2b
+        "swap_any",  # 3D-2b
     }
     assert set(sk["displace"].secondary.primitives or ()) >= {"dash"}
     assert sk["displace"].secondary.max_share_permille == {"damage": 500}

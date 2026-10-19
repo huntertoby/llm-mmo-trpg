@@ -56,6 +56,8 @@ __all__ = [
     "LEAP",
     "MODIFIER_CHANGES",
     "ON_HIT_PRIMITIVES",
+    "PAIR_MOVES",
+    "PAIR_SHAPES",
     "PIERCE_SHAPES",
     "PLACE_TRAP",
     "RARITY_ORDER",
@@ -70,6 +72,8 @@ __all__ = [
     "SKILL_ID_PATTERN",
     "SKILL_REACTION_EVENTS",
     "SWAP",
+    "SWAP_ANY",
+    "TELEPORT_TARGET",
     "TOPPLE",
     "WEAPON_CLASSES",
     "Affects",
@@ -142,10 +146,14 @@ REQUIRED_SHAPES: tuple[str, ...] = (
     "chain",
     "allies_in_radius",
     "object_then_tile",
+    "unit_then_tile",
+    "unit_pair",
 )
-"""引擎實作的 11 種形狀（``trpg.engine.skills.shapes``），資料檔必須全部定義。
+"""引擎實作的 13 種形狀（``trpg.engine.skills.shapes``），資料檔必須全部定義。
 
-``object_then_tile``（Phase 3C-5a）：投擲物件，先選射程內的物件、再選落點格。"""
+``object_then_tile``（Phase 3C-5a）：投擲物件，先選射程內的物件、再選落點格。
+``unit_then_tile``（Phase 3D-2b）：傳送他人，先選射程內的單位、再選落點格。
+``unit_pair``（Phase 3D-2b）：任意兩者互換，選射程內的兩個單位。"""
 
 REQUIRED_CONDITIONS: tuple[str, ...] = (
     "target_hp_below",
@@ -161,7 +169,9 @@ REQUIRED_CONDITIONS: tuple[str, ...] = (
 )
 """引擎實作的 10 種條件（``trpg.engine.skills.conditions``），資料檔必須全部定義。"""
 
-type Targeting = Literal["self", "unit", "tile", "direction", "none", "object_tile"]
+type Targeting = Literal[
+    "self", "unit", "tile", "direction", "none", "object_tile", "unit_tile", "unit_pair"
+]
 type Affects = Literal["enemies", "allies", "all", "self", "tiles"]
 type SkillKind = Literal["active", "reaction", "passive", "stance", "modifier"]
 type ReactionEvent = Literal[
@@ -753,6 +763,12 @@ DASH = "dash"
 LEAP = "leap"
 SWAP = "swap"
 """Phase 3D-2 的自身位移原語 ID（6.16 A）。"""
+TELEPORT_TARGET = "teleport_target"
+SWAP_ANY = "swap_any"
+"""Phase 3D-2b 的位移他人原語 ID（6.19）：傳送他人（形狀 ``unit_then_tile``）、任意兩者互換
+（形狀 ``unit_pair``）。"""
+PAIR_MOVES: tuple[str, ...] = (TELEPORT_TARGET, SWAP_ANY)
+PAIR_SHAPES: dict[str, str] = {TELEPORT_TARGET: "unit_then_tile", SWAP_ANY: "unit_pair"}
 SELF_MOVES: tuple[str, ...] = (DASH, LEAP, SWAP, "teleport")
 """改變施放者位置的原語；一個技能最多一個。"""
 _MAX_COOLDOWN_RESTORE = 2
@@ -1109,6 +1125,7 @@ class SkillDef(ContentModel):
         self._check_hurl_object()
         self._check_pierce()
         self._check_self_moves()
+        self._check_pair_moves()
         if self.kind == "passive" and self.trigger is None:
             raise ValueError("被動技能（kind: passive）必須有 trigger")
         if self.kind != "passive" and self.trigger is not None:
@@ -1176,6 +1193,27 @@ class SkillDef(ContentModel):
             raise ValueError(f"一個技能最多一個改變自身位置的原語，收到 {'、'.join(moves)}")
         if DASH in types and types[0] != DASH:
             raise ValueError("dash 必須是技能的第一個效果（衝鋒一律最先結算）")
+
+    def _check_pair_moves(self) -> None:
+        """位移他人（Phase 3D-2b）：``teleport_target`` 與形狀 ``unit_then_tile``、``swap_any`` 與
+        形狀 ``unit_pair`` 必須一起出現；主動技能、是技能唯一的效果（選取的單位與落點就是它的
+        參數，不另外結算命中與其他效果）。"""
+        needed = {t for t in PAIR_SHAPES.values()}
+        if self.shape.type in needed and not any(
+            e.type in PAIR_MOVES and PAIR_SHAPES[e.type] == self.shape.type for e in self.effects
+        ):
+            raise ValueError(f"形狀 {self.shape.type} 的技能必須有對應的位移他人效果")
+        for effect in self.effects:
+            if effect.type not in PAIR_MOVES:
+                continue
+            if self.kind != "active":
+                raise ValueError(f"{effect.type} 只能用在主動技能，收到 kind: {self.kind}")
+            if self.shape.type != PAIR_SHAPES[effect.type]:
+                raise ValueError(
+                    f"{effect.type} 的形狀必須是 {PAIR_SHAPES[effect.type]}，收到 {self.shape.type}"
+                )
+            if len(self.effects) != 1:
+                raise ValueError(f"{effect.type} 必須是技能唯一的效果")
 
     def _check_pierce(self) -> None:
         """``pierce``（Phase 3C-5b）：主動技能或反應技、遠程武器或法術、形狀是單體（射程大於 1）或
@@ -1273,7 +1311,7 @@ class SkillDef(ContentModel):
             raise ValueError("陷阱技能只能有一個 place_trap")
         if self.kind != "active" or self.shape.type != "ground_tile":
             raise ValueError("陷阱技能必須是形狀 ground_tile 的主動技能")
-        banned = [t for t in types if t in (*SELF_MOVES, ADD_STACK, CONSUME_STACK)]
+        banned = [t for t in types if t in (*SELF_MOVES, *PAIR_MOVES, ADD_STACK, CONSUME_STACK)]
         if banned:
             raise ValueError(f"陷阱技能不能有 {'、'.join(banned)}（陷阱觸發時才結算其餘效果）")
 

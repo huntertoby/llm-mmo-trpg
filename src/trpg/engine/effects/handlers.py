@@ -394,7 +394,7 @@ def arrive(
     if mode != "teleport":
         queue_trap_entry(ctx, unit, dest)  # 進入敵方陷阱格（主動或強制移動；傳送不算）
     min_drop = ctx.core.fall_damage_min_drop
-    if mode != "teleport" and drop >= min_drop:
+    if mode not in ("teleport", "teleported") and drop >= min_drop:
         levels = drop - (min_drop - 1)
         events.append(
             ctx.emit(UnitFell, unit_id=unit.id, drop=drop, levels=levels, source_id=source_id)

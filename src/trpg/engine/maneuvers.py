@@ -2,14 +2,16 @@
 
 from __future__ import annotations
 
+from fractions import Fraction
+
 from trpg.engine.context import Ctx
 from trpg.engine.events import ManeuverRolled
 from trpg.engine.rules.combat import is_hit
 from trpg.engine.rules.statuses import effective_attribute
-from trpg.engine.state import UnitState
+from trpg.engine.state import BattleState, UnitState
 from trpg.shared.types import Attribute
 
-__all__ = ["contest"]
+__all__ = ["contest", "contest_chance"]
 
 
 def contest(
@@ -22,12 +24,14 @@ def contest(
     skill_id: str | None = None,
     primary: bool = True,
     attack_value: int | None = None,
+    resist_bonus: int = 0,
 ) -> bool:
     """對抗判定：``d20 + 比例修正（攻方屬性 vs 守方屬性）+ 熟練 ≥ hit_target``。
 
     預覽：``primary``（動作本身的技巧動作，推擊、絆倒）視為成功（成功率另以 ``preview`` 計算）；
     次要的對抗（技能附帶的擊倒）是分歧點——``min`` 視為失敗、``max`` 視為成功。
     ``attack_value``：攻方的屬性值（省略時為 ``attr`` 的有效屬性；雙屬性技能傳入兩屬性的平均）。
+    ``resist_bonus``：守方的抵抗加成（Phase 3D-2b，傳送他人用），從總和扣除。
     """
     rules = ctx.rules
     if attack_value is None:
@@ -43,7 +47,7 @@ def contest(
     else:
         ctx.mark_branch()
         natural = 20 if ctx.preview == "max" else 1
-    total = natural + modifier + proficiency
+    total = natural + modifier + proficiency - resist_bonus
     success = is_hit(natural, total, rules.core.hit_target)
     ctx.emit(
         ManeuverRolled,
@@ -57,5 +61,23 @@ def contest(
         target_number=rules.core.hit_target,
         success=success,
         skill_id=skill_id,
+        resist_bonus=resist_bonus,
     )
     return success
+
+
+def contest_chance(
+    state: BattleState,
+    target: UnitState,
+    attr: Attribute,
+    attack_value: int,
+    resist_bonus: int = 0,
+) -> Fraction:
+    """:func:`contest` 攻方成功的精確機率（窮舉 d20；自然 1 失敗、自然 20 成功）。"""
+    rules = state.ruleset
+    modifier = rules.hit_table.modifier(
+        attack_value, max(1, effective_attribute(rules, target, attr))
+    )
+    bonus = modifier + rules.core.proficiency - resist_bonus
+    wins = sum(1 for n in range(1, 21) if is_hit(n, n + bonus, rules.core.hit_target))
+    return Fraction(wins, 20)

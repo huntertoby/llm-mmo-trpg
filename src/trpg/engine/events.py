@@ -118,7 +118,7 @@ type ObjectDestroyCause = Literal[
     "damage", "burned", "explosion", "filled", "fell", "effect", "hurled", "toppled"
 ]
 """``hurled``：被投擲後落地碎掉；``toppled``：被推倒（原物件移除，改由倒塌物取代；Phase 3C-5a）。"""
-type MoveMode = Literal["walk", "forced", "teleport", "dash", "leap", "swap"]
+type MoveMode = Literal["walk", "forced", "teleport", "teleported", "dash", "leap", "swap"]
 """``walk``：主動移動的一步；``forced``：強制位移（推擊等）；``teleport``：傳送（不墜落）；
 ``dash``：衝鋒的一步（同步行，會墜落與觸發陷阱）；``leap``：跳躍的落點；``swap``：與另一個單位
 交換位置（Phase 3D-2）。"""
@@ -686,7 +686,7 @@ class ManeuverRolled(EventBase):
     """技巧動作的對抗判定（推擊：力量 vs 力量；絆倒：敏捷 vs 敏捷）。"""
 
     type: Literal["maneuver_rolled"] = "maneuver_rolled"
-    maneuver: Literal["shove", "trip", "knock_prone"]
+    maneuver: Literal["shove", "trip", "knock_prone", "teleport", "swap"]
     attacker_id: UnitId
     target_id: UnitId
     natural: int
@@ -697,6 +697,9 @@ class ManeuverRolled(EventBase):
     success: bool
     skill_id: str | None = None
     """技能的擊倒對抗判定時為技能 ID。"""
+    resist_bonus: int = 0
+    """目標的抵抗加成（Phase 3D-2b：傳送敵人、傳送到致命地形）；已從 ``total`` 扣除（``modifier``
+    不含它）。其他對抗判定為 0。"""
 
 
 class PushResisted(EventBase):
