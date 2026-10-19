@@ -74,6 +74,7 @@ from trpg.engine.actions import (
     UseSkill,
 )
 from trpg.engine.ai.displace import DISPLACE_PRIMITIVES, displace_estimate, exposure, is_hurt
+from trpg.engine.ai.gamble import cautious, on_miss_cost
 from trpg.engine.ai.orders import (
     FocusTarget,
     HoldPosition,
@@ -992,6 +993,40 @@ def score_action(
         walk = _scene(state, actor, orders).walk
     if before is None:
         before = position_value(state, actor.id, w, orders, walk=walk)
+    if p.gamble is None:
+        score = _preview_score(state, action, p, profile, before=before, orders=orders, walk=walk)
+    else:  # 賭注（Phase 3D-7a）：每個分支各自評分，依機率加權
+        score = sum(
+            (
+                b.chance
+                * _preview_score(
+                    state, action, b.preview, profile, before=before, orders=orders, walk=walk
+                )
+                for b in p.gamble.branches
+            ),
+            Fraction(0),
+        )
+    if isinstance(action, UseSkill):
+        skill = state.ruleset.skill_def(action.skill_id)
+        score -= on_miss_cost(actor, skill, p, profile)  # 失手反噬（Phase 3D-7a）
+        score = cautious(actor, skill, score, profile)
+    return ActionScore(action, score, p)
+
+
+def _preview_score(
+    state: BattleState,
+    action: Action,
+    p: Preview,
+    profile: AiProfile,
+    *,
+    before: Fraction,
+    orders: OrderContext | None,
+    walk: _Walk | None,
+) -> Fraction:
+    """一個預覽的分數：預覽收益 ＋ 命中率 × 位置價值的變化，扣技能的機會成本（賭注的每個分支各算
+    一次，結果再依機率加權）。"""
+    w = profile.weights
+    actor = state.units[action.unit_id]
     after = position_value(p.min_state, actor.id, w, orders, walk=walk)
     # 位置變化只在動作成功時發生（攻擊、技巧動作乘上命中率／成功率）
     hit = p.hit_chance if p.hit_chance is not None else Fraction(1)
@@ -1001,7 +1036,7 @@ def score_action(
     if isinstance(action, UseSkill):
         score -= skill_cost(state, actor, action, w, profile.status_values)
         score += _rewrite_gains(state, actor, action, p, profile)
-    return ActionScore(action, score, p)
+    return score
 
 
 _REWRITE_SCORED = frozenset(

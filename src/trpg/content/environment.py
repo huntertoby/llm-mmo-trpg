@@ -27,6 +27,7 @@ __all__ = [
     "AiWeights",
     "ElementCapability",
     "ExplosionDef",
+    "GambleAiRules",
     "InteractionOutcome",
     "InteractionRule",
     "InteractionTable",
@@ -658,6 +659,19 @@ class RewriteAiRules(ContentModel):
     activation_battle_rounds: int = Field(default=4, ge=1)
 
 
+class GambleAiRules(ContentModel):
+    """賭博型技能的 AI 數值（Phase 3D-7a；``content/ai_profiles.yaml`` 的 ``gamble:``；初值未經
+    模擬）。AI 以期望值評分（每個分支的分數 × 該分支的機率）。
+
+    - ``hp_floor_permille``：施放者的 HP 低於最大 HP 的這個千分比時，反噬可能造成傷害的賭博技能
+      （賭注失敗分支或失手反噬有自傷）不在快死時亂賭。
+    - ``low_hp_permille``：上述情形下，技能的正分乘上這個千分比（大幅降低）；負分不變。
+    """
+
+    hp_floor_permille: int = Field(default=300, ge=0, le=1000)
+    low_hp_permille: int = Field(default=100, ge=0, le=1000)
+
+
 class SummonAiRules(ContentModel):
     """召喚者 AI 的數值（Phase 3D-4a 寫在程式裡，3D-4b 搬進 ``content/ai_profiles.yaml`` 的
     ``summon:``；初值未經模擬）。
@@ -709,6 +723,8 @@ class AiProfile(ContentModel):
     """召喚的 AI 數值（Phase 3D-4b）；由 :class:`AiProfileTable` 的同名欄位填入。"""
     zone: ZoneAiRules = Field(default_factory=ZoneAiRules)
     """持續區域的 AI 數值（Phase 3D-5）；由 :class:`AiProfileTable` 的同名欄位填入。"""
+    gamble: GambleAiRules = Field(default_factory=GambleAiRules)
+    """賭博型技能的 AI 數值（Phase 3D-7a）；由 :class:`AiProfileTable` 的同名欄位填入。"""
 
 
 class OrderBonuses(ContentModel):
@@ -758,6 +774,7 @@ class AiProfileTable(ContentModel):
     rewrite: RewriteAiRules = Field(default_factory=RewriteAiRules)
     summon: SummonAiRules = Field(default_factory=SummonAiRules)
     zone: ZoneAiRules = Field(default_factory=ZoneAiRules)
+    gamble: GambleAiRules = Field(default_factory=GambleAiRules)
     orders: OrderBonuses = Field(default_factory=OrderBonuses)
 
     @model_validator(mode="before")
@@ -770,7 +787,7 @@ class AiProfileTable(ContentModel):
         ally_shared = data.get("ally_status_values")
         trap_shared = {
             key: data[key]
-            for key in ("trap_likelihood_permille", "trap", "rewrite", "summon", "zone")
+            for key in ("trap_likelihood_permille", "trap", "rewrite", "summon", "zone", "gamble")
             if key in data
         }
         if not isinstance(shared, dict) and not isinstance(ally_shared, dict) and not trap_shared:

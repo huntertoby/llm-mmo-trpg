@@ -14,11 +14,21 @@
 from __future__ import annotations
 
 from collections import Counter
-from dataclasses import dataclass
+from dataclasses import dataclass, replace
 from fractions import Fraction
 from itertools import product
+from typing import Literal
 
-from trpg.content.skills import CHARGE_THROUGH, SWAP, SWAP_ANY, TELEPORT_TARGET, SkillDef
+from trpg.content.skills import (
+    CHARGE_THROUGH,
+    DAMAGE_MULTIPLIER,
+    GAMBLE,
+    SWAP,
+    SWAP_ANY,
+    TELEPORT_TARGET,
+    EffectSpec,
+    SkillDef,
+)
 from trpg.engine import modifiers
 from trpg.engine.actions import Action, Attack, Interact, Shove, Trip, UseSkill
 from trpg.engine.battle import _actor, action_ap_cost, simulate_preview
@@ -56,6 +66,7 @@ from trpg.engine.events import (
 )
 from trpg.engine.maneuvers import contest_chance
 from trpg.engine.pierce import pierce_trace
+from trpg.engine.results import ResolveResult
 from trpg.engine.rules.combat import (
     PERMILLE,
     PPM,
@@ -87,6 +98,8 @@ from trpg.shared.types import Attribute, ObjectId, UnitId
 __all__ = [
     "DamageRange",
     "DisplaceCheck",
+    "GambleInfo",
+    "GambleOutcome",
     "HurlInfo",
     "MoveInfo",
     "Outcome",
@@ -255,6 +268,31 @@ class DisplaceCheck:
 
 
 @dataclass(frozen=True, slots=True)
+class GambleOutcome:
+    """賭注的一個分支的預覽（Phase 3D-7a）：``kind`` 為 ``win``／``lose``，``chance`` 是這個分支發生
+    的機率（命中之後）。``preview`` 是強制這個分支時的完整預覽（AI 以它評分；目標的傷害範圍已含
+    ``damage_multiplier``）。其餘為顯示用的摘要：``multiplier_permille`` 本次傷害的倍率（沒有
+    ``damage_multiplier`` 為 1000）、``self_damage`` 施放者自己受到的傷害（最少與最多，含失敗
+    分支的反噬）、``self_statuses`` 施放者獲得的狀態、``self_healed`` 施放者回復的 HP。"""
+
+    kind: Literal["win", "lose"]
+    chance: Fraction
+    multiplier_permille: int
+    self_damage: tuple[int, int]
+    self_statuses: tuple[str, ...]
+    self_healed: tuple[int, int]
+    preview: Preview
+
+
+@dataclass(frozen=True, slots=True)
+class GambleInfo:
+    """賭注技能的預覽（Phase 3D-7a）：成功率與兩個分支（依序 ``win``、``lose``）。"""
+
+    chance_permille: int
+    branches: tuple[GambleOutcome, GambleOutcome]
+
+
+@dataclass(frozen=True, slots=True)
 class Preview:
     action: Action
     hit_chance: Fraction | None
@@ -300,6 +338,12 @@ class Preview:
     """位移他人成功的總機率（所有敵方目標都沒抵抗成功）；沒有檢定（全是友方）為 ``None``。"""
     summons: tuple[SummonInfo, ...] = ()
     """動作會召喚的單位（Phase 3D-4b；召喚位置、持續與被擠掉的舊召喚物）。"""
+    gamble: GambleInfo | None = None
+    """技能有賭注時（Phase 3D-7a）：成功率與兩個分支各自的預覽。本預覽的其他欄位（傷害範圍、
+    確定與可能的連鎖）不含賭注的分支，只算賭注以外的效果。"""
+    miss_notes: tuple[str, ...] = ()
+    """技能有失手反噬 ``cost.on_miss`` 時（Phase 3D-7a）：反噬的說明（「失手時：你獲得倒地」）；
+    預覽模擬只算命中的情形，所以反噬不在其他欄位裡。"""
 
 
 # ---------------------------------------------------------------------------
@@ -959,13 +1003,100 @@ def _move_infos(events: list[EventBase]) -> tuple[MoveInfo, ...]:
     return tuple(infos)
 
 
+def _gamble_spec(state: BattleState, actor: UnitState, action: Action) -> EffectSpec | None:
+    """動作是帶賭注的技能時，它的 ``gamble`` 效果；否則 ``None``。"""
+    if not isinstance(action, UseSkill):
+        return None
+    skill = modifiers.acting_skill(state, actor, action.skill_id)
+    return next((e for e in skill.effects if e.type == GAMBLE), None)
+
+
+def _self_totals(actor: UnitState, events: list[EventBase]) -> tuple[int, tuple[str, ...], int]:
+    """模擬事件中施放者自己受到的傷害（扣掉護盾）、獲得的狀態與回復的 HP。"""
+    damage, healed = 0, 0
+    statuses: list[str] = []
+    for e in events:
+        if isinstance(e, DamageDealt) and e.target_id == actor.id and e.source_id == actor.id:
+            damage += e.amount - e.absorbed
+        elif isinstance(e, StatusApplied) and e.target_id == actor.id and e.source_id == actor.id:
+            if e.status_id not in statuses:
+                statuses.append(e.status_id)
+        elif isinstance(e, Healed) and e.target_id == actor.id:
+            healed += e.amount
+    return damage, tuple(statuses), healed
+
+
+def _gamble_outcome(
+    state: BattleState,
+    action: Action,
+    stripped: BattleState,
+    spec: EffectSpec,
+    kind: Literal["win", "lose"],
+) -> GambleOutcome:
+    """強制賭注走 ``kind`` 分支的預覽（最少後果與最多後果各模擬一次）。"""
+    assert spec.chance_permille is not None
+    actor = _actor(state, action)
+    low, high = simulate_preview(stripped, action, kind)
+    branch = _build(state, action, actor, low, high)
+    effects = (spec.win if kind == "win" else spec.lose) or ()
+    multiplier = PERMILLE
+    for sub in effects:
+        if sub.type == DAMAGE_MULTIPLIER and sub.damage_multiplier_permille is not None:
+            multiplier = multiplier * sub.damage_multiplier_permille // PERMILLE
+    low_damage, _, low_heal = _self_totals(actor, list(low.events))
+    high_damage, statuses, high_heal = _self_totals(actor, list(high.events))
+    permille = spec.chance_permille if kind == "win" else PERMILLE - spec.chance_permille
+    return GambleOutcome(
+        kind=kind,
+        chance=Fraction(permille, PERMILLE),
+        multiplier_permille=multiplier,
+        self_damage=(min(low_damage, high_damage), max(low_damage, high_damage)),
+        self_statuses=statuses,
+        self_healed=(min(low_heal, high_heal), max(low_heal, high_heal)),
+        preview=branch,
+    )
+
+
+def _miss_notes(state: BattleState, actor: UnitState, action: Action) -> tuple[str, ...]:
+    """失手反噬的說明（Phase 3D-7a）：每個反噬效果一行。"""
+    if not isinstance(action, UseSkill):
+        return ()
+    skill = modifiers.acting_skill(state, actor, action.skill_id)
+    lines: list[str] = []
+    for sub in skill.cost.on_miss:
+        if sub.type == "apply_status" and sub.status is not None:
+            lines.append(f"失手時：你獲得「{state.ruleset.status_def(sub.status).name_zh}」")
+        elif sub.type == "damage":
+            lines.append("失手時：你受到反噬傷害（不會讓你的 HP 低於 1）")
+    return tuple(lines)
+
+
 def preview(state: BattleState, action: Action) -> Preview:
     """預覽 ``action`` 的結果（不修改 ``state``、不消耗亂數）。
 
-    不合法時拋出 ``IllegalActionError``。
+    不合法時拋出 ``IllegalActionError``。技能有賭注（Phase 3D-7a）時，``gamble`` 另外附上兩個
+    分支各自的完整預覽；其餘欄位只算賭注以外的效果。
     """
     actor = _actor(state, action)
-    low, high = simulate_preview(strip_hidden_traps(state, actor.team), action)
+    stripped = strip_hidden_traps(state, actor.team)
+    low, high = simulate_preview(stripped, action)
+    base = _build(state, action, actor, low, high)
+    spec = _gamble_spec(state, actor, action)
+    if spec is None or spec.chance_permille is None:
+        return base
+    win = _gamble_outcome(state, action, stripped, spec, "win")
+    lose = _gamble_outcome(state, action, stripped, spec, "lose")
+    return replace(base, gamble=GambleInfo(spec.chance_permille, (win, lose)))
+
+
+def _build(
+    state: BattleState,
+    action: Action,
+    actor: UnitState,
+    low: ResolveResult,
+    high: ResolveResult,
+) -> Preview:
+    """由兩次模擬（最少與最多後果）整理成 :class:`Preview`（不含賭注的分支）。"""
     min_events, max_events = list(low.events), list(high.events)
     hit: Fraction | None = None
     crit: Fraction | None = None
@@ -1034,4 +1165,5 @@ def preview(state: BattleState, action: Action) -> Preview:
         displace_checks=checks,
         displace_chance=chance,
         summons=_summon_infos(state, max_events),
+        miss_notes=_miss_notes(state, actor, action),
     )
