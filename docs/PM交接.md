@@ -53,10 +53,10 @@
 ### 3.0 目前狀態（2026-10-19）
 
 - Phase 2F 已全部完成、驗收並 push。**不要自行開始 Phase 3**，等使用者安排；使用者回來後先確認 Phase 3 拆法（3.1 最後一段）。
-- **待使用者決定**：反應技骨架要不要加入 `heal`／`shield`（見下方 2F-2 驗收紀錄第 1 點）。
+- 2F-2 後使用者決定把 `heal`／`shield` 加進反應技骨架（已完成，見下方第 1 點）。
 
 **2F-2 驗收紀錄**：驗收 7 條全通過。PM 自己複驗：3 場對照戰鬥與 2F-1 結束時逐位元相同，`replay` 通過；`check.py` 全過（本機 1 分 33 秒）；`trpg sim completion` 全量 1800 場異常 0（本機 `--jobs 16` 100 秒）；noqa 19→14。反應技 `skeleton.core` 退回 108→0，反應技退回總數 335→254。待 PM 決定的處理：
-1. 反應技骨架要不要加 heal／shield：**設計問題，已問使用者，尚未回覆**。目前「自身增益」分支只剩有益狀態（`apply_status`）。
+1. 反應技骨架要不要加 heal／shield：**使用者決定加入**（2026-10-19）。`content/skeletons/reaction.yaml` 核心加 heal、shield（只出現在自身增益分支，形狀 self）；反應技退回 254→150；fuzz 例外 0；對照戰鬥不變；`check.py` 全過。
 2. `ReactionWhen.event` Literal 意義不同，不併入 `SKILL_REACTION_EVENTS`：接受。
 3. AI 陷阱 `trap:` 放在 `ai_profiles.yaml` 表格層級，可依模式覆寫，未知形狀用預設係數：接受。不在載入時驗證形狀 ID。
 4. `passive.yaml` 新增 `required_category`／`required_weapon_req`：接受。

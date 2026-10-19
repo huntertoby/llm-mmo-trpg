@@ -58,16 +58,32 @@ def test_reaction_candidates_follow_the_skeleton(seed: int) -> None:
     assert ctx.effects[0]["type"] == "push"
 
 
-def test_reaction_self_branch_only_uses_skeleton_primitives() -> None:
-    # 預設反應技骨架的核心沒有 heal／shield：自身增益分支不可能出現 heal／shield。
-    default = lib().skeletons["reaction"]
+def _reaction_first_effects(skeleton: SkeletonDef) -> list[tuple[str, str]]:
+    found = []
     for seed in range(200):
-        ctx = _ctx(default, seed)
+        ctx = _ctx(skeleton, seed)
         try:
             build_reaction_effects(ctx, "hit_by_attack")
         except Retry:
             continue
-        assert not {"heal", "shield"} & {e["type"] for e in ctx.effects[:1]}
+        found.append((ctx.effects[0]["type"], ctx.shape))
+    return found
+
+
+def test_reaction_self_branch_uses_heal_and_shield_from_the_skeleton() -> None:
+    # 預設反應技骨架的核心有 heal／shield（2F-2 後使用者決定）：
+    # 自身增益分支會出現，且形狀一定是 self。
+    found = _reaction_first_effects(lib().skeletons["reaction"])
+    types = {t for t, _ in found}
+    assert {"heal", "shield"} <= types
+    assert all(shape == "self" for t, shape in found if t in ("heal", "shield"))
+
+
+def test_reaction_self_branch_only_uses_skeleton_primitives() -> None:
+    skeleton = _with("reaction", core=("damage", "apply_status", "push", "pull", "intercept"))
+    found = _reaction_first_effects(skeleton)
+    assert found
+    assert not {"heal", "shield"} & {t for t, _ in found}
 
 
 def test_intercept_needs_the_skeleton_to_allow_it() -> None:
