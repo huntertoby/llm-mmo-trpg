@@ -354,8 +354,47 @@ def test_library_surface_status_reference(tmp_path: Path) -> None:
     root = _copy_content(tmp_path)
     path = root / "surfaces.yaml"
     path.write_text(
-        path.read_text(encoding="utf-8").replace("fail_status: prone", "fail_status: frozen"),
+        path.read_text(encoding="utf-8").replace("fail_status: prone", "fail_status: petrified"),
         encoding="utf-8",
     )
     with pytest.raises(ContentError, match="未知的狀態"):
+        load_library(root)
+
+
+def test_interaction_apply_status_outcome_and_unit_surface_validation(
+    library: ContentLibrary, tmp_path: Path
+) -> None:
+    rule = next(
+        r for r in library.ruleset.interactions.rules if r.id == "ice_freezes_unit_in_water"
+    )
+    assert (rule.target, rule.unit_surface) == ("unit", Surface.WATER)
+    assert (rule.then[0].op, rule.then[0].status, rule.then[0].duration) == (
+        "apply_status",
+        "frozen",
+        1,
+    )
+    base = {
+        "id": "bad_rule",
+        "description_zh": "x",
+        "trigger": "element",
+        "element": "ice",
+        "target": "unit",
+        "then": [{"op": "apply_status", "status": "frozen"}],
+    }
+    InteractionRule.model_validate(base)
+    with pytest.raises(ValidationError, match="apply_status 需要 status"):
+        InteractionRule.model_validate({**base, "then": [{"op": "apply_status"}]})
+    with pytest.raises(ValidationError, match="只有 apply_status"):
+        InteractionRule.model_validate({**base, "then": [{"op": "keep", "status": "frozen"}]})
+    with pytest.raises(ValidationError, match=r"unit_surface 只能用於 target: unit"):
+        InteractionRule.model_validate(
+            {**base, "target": "surface", "surface": "water", "unit_surface": "water"}
+        )
+    root = _copy_content(tmp_path)
+    path = root / "interactions.yaml"
+    path.write_text(
+        path.read_text(encoding="utf-8").replace("status: frozen", "status: petrified"),
+        encoding="utf-8",
+    )
+    with pytest.raises(ContentError, match=r"interactions.yaml 引用了未知的狀態"):
         load_library(root)

@@ -42,6 +42,9 @@
 #            （StatusRemoved 原因 replaced）；倒下或撤離時移除；淨化（cleanse）不移除；EndStance 免費取消。
 #            姿態技能（kind: stance）進入時花 core.yaml 的 stance_ap_cost。budget_points 是姿態技能的點數（可用預算 ＝
 #            tier_budget × skill_budget.yaml 的 stance_coefficient_permille）
+# 2H-1（冰凍；數值全是初值，未經模擬，平衡階段再調）：
+#   removed_by_element  元素清單：帶有者受到這些元素的傷害（數值 > 0）時立即移除此狀態
+#                       （StatusRemoved 原因 thawed）。冰凍用 [fire]。引擎不寫死狀態 ID，全由此欄位驅動
 # control_group 新增 mental（心智：恐懼、沉默）：適用控制遞減，不是 hard，對 Boss 不轉換。
 statuses:
   - id: defending
@@ -109,6 +112,18 @@ statuses:
     skip_turn: true
     save_attr: con
     control_group: hard
+  - id: frozen
+    name_zh: 冰凍
+    description_zh: 跳過整個回合（同暈眩，與暈眩共用硬控的控制遞減）；受到火焰傷害時立即解除。
+    duration: 1
+    expires: turn_end
+    stacking: refresh
+    budget_points: 8
+    min_rarity: rare
+    skip_turn: true
+    save_attr: con
+    control_group: hard
+    removed_by_element: [fire]
   - id: weaken
     name_zh: 虛弱
     description_zh: 自己造成的攻擊傷害 ×75%。

@@ -253,7 +253,7 @@ def test_aggregates_rates_rounds_templates_control_and_skills() -> None:
     control = {c.source: c.turns for c in report.control}
     assert control["enemy"]["slow"] == pytest.approx(1 / 3)  # 敵方單位施加的緩速
     assert control["environment"]["stun"] == pytest.approx(2 / 3)
-    assert control["ally"] == {"stun": 0.0, "root": 0.0, "slow": 0.0}
+    assert control["ally"] == {"stun": 0.0, "frozen": 0.0, "root": 0.0, "slow": 0.0}
     skill = report.skills[0]
     assert skill.skill_id == "skill_a" and skill.teams == ("ally",)
     assert skill.uses_per_battle == pytest.approx(1.0)

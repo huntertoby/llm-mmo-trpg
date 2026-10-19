@@ -189,8 +189,8 @@ def test_primitive_parameter_problems_rejected_at_load(tmp_path: Path) -> None:
     )
     _rejects(
         tmp_path,
-        "未知的狀態 'frozen'",
-        _skill(id="skill_t_p2", effects=[{"type": "apply_status", "status": "frozen"}]),
+        "未知的狀態 'petrified'",
+        _skill(id="skill_t_p2", effects=[{"type": "apply_status", "status": "petrified"}]),
     )
     _rejects(
         tmp_path,

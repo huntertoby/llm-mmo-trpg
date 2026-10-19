@@ -316,6 +316,7 @@ type OutcomeOp = Literal[
     "spread_surface",
     "fill_chasm",
     "destroy_object",
+    "apply_status",
     "keep",
 ]
 
@@ -334,12 +335,16 @@ class InteractionOutcome(ContentModel):
     - ``spread_surface``：沿觸及的方向，在下一格產生 ``surface``。
     - ``fill_chasm``：移除物件，該格地形改為 ``terrain``。
     - ``destroy_object``：摧毀物件。
+    - ``apply_status``：對該格的單位施加 ``status``（``duration`` 省略時用狀態的預設持續時間）；
+      環境造成的狀態不擲抵抗，Boss 的硬控照常轉換（Phase 2H-1）。
     - ``keep``：什麼都不做（用於 ``surface_created``：阻止新表面取代原表面）。
     """
 
     op: OutcomeOp
     surface: Surface | None = None
     terrain: str | None = Field(default=None, pattern=ID_PATTERN)
+    status: str | None = Field(default=None, pattern=ID_PATTERN)
+    duration: int | None = Field(default=None, ge=1)
     damage_permille: int = Field(default=1000, ge=0)
     min_damage: int = Field(default=1, ge=0)
 
@@ -349,6 +354,10 @@ class InteractionOutcome(ContentModel):
             raise ValueError(f"{self.op} 需要 surface")
         if self.op == "fill_chasm" and self.terrain is None:
             raise ValueError("fill_chasm 需要 terrain")
+        if self.op == "apply_status" and self.status is None:
+            raise ValueError("apply_status 需要 status")
+        if self.op != "apply_status" and (self.status is not None or self.duration is not None):
+            raise ValueError("只有 apply_status 可以設定 status、duration")
         return self
 
 
@@ -362,7 +371,9 @@ class InteractionRule(ContentModel):
       （預設：新表面取代原表面）。
 
     對象（``target``）：``surface``（該格目前的表面 = ``surface``）、``object``（該格的物件帶
-    ``object_tag``）、``unit``（該格有存活單位；``unit_tag`` 不為空時需帶該標籤）。
+    ``object_tag``）、``unit``（該格有存活單位；``unit_tag`` 不為空時需帶該標籤；
+    ``unit_surface`` 不為空時，該單位所在格的表面必須是它——判斷用的是 **觸及前** 的表面，
+    所以冰霜同時把水變成冰也能凍住站在水上的單位，Phase 2H-1）。
 
     同一次觸及中，每一類對象只套用 **第一條** 符合的規則（依檔案順序）。
     """
@@ -376,6 +387,7 @@ class InteractionRule(ContentModel):
     surface: Surface | None = None
     object_tag: str | None = None
     unit_tag: str | None = Field(default=None, pattern=ID_PATTERN)
+    unit_surface: Surface | None = None
     then: tuple[InteractionOutcome, ...] = Field(min_length=1)
 
     @model_validator(mode="after")
@@ -397,6 +409,8 @@ class InteractionRule(ContentModel):
             problems.append(f"未知的物件標籤：{self.object_tag}")
         if self.target == "unit" and (self.surface is not None or self.object_tag is not None):
             problems.append("target 為 unit 時不可設定 surface 或 object_tag")
+        if self.unit_surface is not None and self.target != "unit":
+            problems.append("unit_surface 只能用於 target: unit")
         if problems:
             raise ValueError(f"互動規則 {self.id}：" + "；".join(problems))
         return self

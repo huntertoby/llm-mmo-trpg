@@ -95,6 +95,7 @@ def matching_rules(
                 category == "unit"
                 and unit is not None
                 and (rule.unit_tag is None or unit.has_tag(rule.unit_tag))
+                and (rule.unit_surface is None or rule.unit_surface is tile.surface)
             ):
                 chosen.append(rule)
                 break
@@ -256,6 +257,18 @@ def _outcome_effects(  # noqa: PLR0911
                     distance=push_distance,
                 )
             ]
+    if op == "apply_status" and outcome.status is not None:
+        unit = state.unit_at(*xy)
+        if rule.target == "unit" and unit is not None:
+            return [
+                ApplyStatusEffect(
+                    depth=depth,
+                    source_id=source_id,
+                    target_id=unit.id,
+                    status_id=outcome.status,
+                    duration=outcome.duration,
+                )
+            ]
     if op == "spread_surface" and direction is not None:
         assert outcome.surface is not None
         nxt = (xy[0] + direction[0], xy[1] + direction[1])
@@ -284,7 +297,9 @@ def _on_damage(ctx: Ctx, event: EventBase, depth: int) -> list[EffectBase]:
         (event.pos.x, event.pos.y),
         depth,
         source_id=event.source_id,
-        categories=TILE_CATEGORIES,
+        # 單位類規則（冰霜凍住水上的單位，2H-1）也要看；風推單位需要方向與距離，
+        # 傷害事件沒有，不會觸發
+        categories=ALL_CATEGORIES,
         # 雷電擴散的基準：主要目標套用自身抗性與格擋之前的傷害（Phase 1C 決定 #3）
         damage=event.amount if event.base_amount is None else event.base_amount,
         exclude_unit=event.target_id,

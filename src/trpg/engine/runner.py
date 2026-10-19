@@ -30,8 +30,12 @@ __all__ = [
     "run_battle",
 ]
 
-LOG_FORMAT = "trpg-battle-log/10"
-"""``/10``（Phase 2E-3）：層數（單位狀態加入 ``stacks``／``stack_expiry``、``stacks_changed``、
+LOG_FORMAT = "trpg-battle-log/11"
+"""``/11``（Phase 2H-1）：``status_removed`` 的新原因 ``thawed``、規則包的狀態加入
+``removed_by_element``、互動規則加入 ``apply_status`` 結果與單位所在格表面條件；``/10`` 的紀錄
+無法由新版程式重播。
+
+``/10``（Phase 2E-3）：層數（單位狀態加入 ``stacks``／``stack_expiry``、``stacks_changed``、
 規則包的 ``stacks``）、陷阱（戰鬥狀態加入 ``traps``、``trap_placed``／``trap_triggered``／
 ``trap_expired``）、傷害加成（``damage_dealt`` 的倍率含層數加成）；``/9`` 的紀錄無法重播。
 

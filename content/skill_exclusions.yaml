@@ -18,8 +18,8 @@ rules:
         - {type: cone, size: 4}
   - id: stun_single_long_cooldown
     name_zh: 暈眩的限制
-    message_zh: 施加 stun 的技能形狀只能是 single，且冷卻至少 4 回合
-    when: {statuses: [stun]}
+    message_zh: 施加 stun 或 frozen（硬控）的技能形狀只能是 single，且冷卻至少 4 回合
+    when: {statuses: [stun, frozen]}
     require:
       shapes: [{type: single}]
       min_cooldown: 4

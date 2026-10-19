@@ -57,7 +57,7 @@ builds:
       resist: {elemental: 150}
       tags: [hero, sim]
       max_mana: 40
-      skills: [skill_chain_lightning, skill_summon_tide, skill_frost_shackle, skill_conductive_strike, skill_twin_strike]
+      skills: [skill_chain_lightning, skill_summon_tide, skill_frost_shackle, skill_conductive_strike, skill_twin_strike, skill_deep_freeze]
 
   - id: build_tank
     name_zh: 坦克

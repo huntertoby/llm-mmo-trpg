@@ -386,8 +386,10 @@ class StatusRemoved(EventBase):
         "replaced",
         "stance_ended",
         "downed",
+        "thawed",
     ]
-    """``replaced``：被新的姿態取代；``stance_ended``：``EndStance`` 取消姿態；``downed``：
+    """``thawed``：受到 ``removed_by_element`` 的元素傷害而解除（冰凍遇火，Phase 2H-1）；
+    ``replaced``：被新的姿態取代；``stance_ended``：``EndStance`` 取消姿態；``downed``：
     單位倒下或撤離時移除姿態（Phase 2E-2）。"""
 
 

@@ -19,6 +19,7 @@ EXPECTED = {
     "slow": (2, Attribute.DEX, "movement"),
     "root": (1, Attribute.STR, "movement"),
     "stun": (1, Attribute.CON, "hard"),
+    "frozen": (1, Attribute.CON, "hard"),
     "weaken": (2, Attribute.CON, None),
     "vulnerable": (2, Attribute.WIL, None),
     "bleed": (3, None, None),
@@ -56,7 +57,7 @@ def test_core_rules_define_diminishing_returns_and_boss_conversion() -> None:
     core = library().ruleset.core
     assert core.control_dr_rounds == 2
     assert core.control_dr_resist_permille == 1500
-    assert core.boss_control_conversion == {"stun": "slow"}
+    assert core.boss_control_conversion == {"stun": "slow", "frozen": "slow"}
 
 
 def test_a_control_status_needs_a_save_attribute() -> None:

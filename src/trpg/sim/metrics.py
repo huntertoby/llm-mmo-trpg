@@ -11,8 +11,8 @@
   能追溯 ``source_id`` 的歸給來源單位；追溯不到的歸「環境」（依受害陣營記在
   ``environment_damage``）。打到自己陣營的傷害不計入直接／間接，另記在 ``damage_friendly``。
 - **DPR** ＝ 單位造成的（直接＋間接）傷害 ÷ 該單位存活的輪數（該輪開始時仍在場；``max(1, …)``）。
-- **控制回合** ＝ 單位在 *自己回合開始時*（``turn_started`` 當下）帶有 stun／root／slow 的次數，
-  歸給該狀態最後一次施加者（``status_applied.source_id``）；追溯不到歸環境。
+- **控制回合** ＝ 單位在 *自己回合開始時*（``turn_started`` 當下）帶有 stun／frozen／root／slow
+  的次數，  歸給該狀態最後一次施加者（``status_applied.source_id``）；追溯不到歸環境。
 - **墜落與致命地形** 的傷害在引擎裡沒有 ``source_id``，所以在同一個動作內追溯：
   該單位被 *強制位移*（``unit_moved`` 的 ``mode == "forced"``：推、拉、擊退）→ 歸這個動作的行動者；
   或它腳下的物件（木橋）在這個動作內被摧毀而掉進致命地形 → 歸最後打到那個物件的單位。
@@ -79,7 +79,7 @@ __all__ = [
     "run_tracked",
 ]
 
-CONTROL_STATUSES: tuple[str, ...] = ("stun", "root", "slow")
+CONTROL_STATUSES: tuple[str, ...] = ("stun", "frozen", "root", "slow")
 """計入「控制回合」的狀態。"""
 
 BOSS_TAG = "boss"

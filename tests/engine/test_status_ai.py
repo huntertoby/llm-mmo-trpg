@@ -138,6 +138,7 @@ def test_status_values_are_defined_for_every_new_status() -> None:
     values = library().ai_profiles.status_values
     assert set(values) == {
         "stun",
+        "frozen",  # 2H-1
         "root",
         "slow",
         "weaken",

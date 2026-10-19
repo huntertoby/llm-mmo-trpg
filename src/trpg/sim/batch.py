@@ -272,7 +272,7 @@ class ControlRow(_Model):
 
     source: str
     turns: dict[str, float]
-    """狀態（stun／root／slow）→ 每場平均。"""
+    """狀態（stun／frozen／root／slow）→ 每場平均。"""
 
 
 class SkillRow(_Model):

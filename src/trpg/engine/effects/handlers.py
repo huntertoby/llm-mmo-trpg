@@ -133,9 +133,27 @@ def _damage(ctx: Ctx, effect: EffectBase) -> list[EventBase]:
             absorbed=absorbed,
         )
     ]
+    if amount > 0:
+        events.extend(_thaw(ctx, unit, effect.element))
     if unit.hp <= 0:
         events.extend(down_unit(ctx, unit))
     return events
+
+
+def _thaw(ctx: Ctx, unit: UnitState, element: Element) -> list[EventBase]:
+    """受到 ``removed_by_element`` 含此元素的傷害時，移除對應狀態（冰凍遇火，Phase 2H-1）。"""
+    thawed = [
+        s.status_id
+        for s in unit.statuses
+        if element in ctx.rules.status_def(s.status_id).removed_by_element
+    ]
+    if not thawed:
+        return []
+    unit.statuses = [s for s in unit.statuses if s.status_id not in thawed]
+    return [
+        ctx.emit(StatusRemoved, target_id=unit.id, status_id=status_id, reason="thawed")
+        for status_id in sorted(thawed)
+    ]
 
 
 def _absorb(ctx: Ctx, unit: UnitState, amount: int, events: list[EventBase]) -> int:

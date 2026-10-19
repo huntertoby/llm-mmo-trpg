@@ -52,7 +52,7 @@ move_candidates: 6
 # 2D-1：加上 taunted（嘲諷，約半個回合的行動被迫集中在施放者身上）。
 # 2D-2：加上 feared（恐懼，約一回合的走位加攻擊劣勢）、silenced（沉默，約半回合的法術輸出；目標沒有可用的
 # 法術技時價值為 0）、blinded（致盲，攻擊劣勢加射程縮短）、marked（被標記，友方對它的命中提高）。初值未經模擬。
-status_values: {stun: 12, root: 6, slow: 4, weaken: 5, vulnerable: 6, bleed: 6, poison: 6, taunted: 5, feared: 6, silenced: 5, blinded: 5, marked: 4}
+status_values: {stun: 12, frozen: 12, root: 6, slow: 4, weaken: 5, vulnerable: 6, bleed: 6, poison: 6, taunted: 5, feared: 6, silenced: 5, blinded: 5, marked: 4}
 # ally_status_values（Phase 2D-1）：對友方（含自己）施加各增益的價值，同樣是「等值的傷害點數」，收益 =
 # 行為模式的 support 權重 × 價值 × 新增的持續比例。初值未經模擬（平衡階段再調）：再生約 1d4 × 3 回合的
 # 治療，護衛約 30% 的減傷、激昂與加速約一回合的額外輸出或走位。

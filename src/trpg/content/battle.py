@@ -232,6 +232,11 @@ class StatusDef(ContentModel):
 
     - ``stance``：姿態——持續到取消（``expires: never``），帶有者同時最多一個姿態狀態，施加新的會先
       移除舊的（原因 ``replaced``）；倒下／撤離時移除；淨化不移除。
+
+    Phase 2H-1 的欄位：
+
+    - ``removed_by_element``：帶有者受到這些元素的傷害（數值 > 0）時立即移除此狀態（原因
+      ``thawed``；冰凍受火焰傷害解除）。
     """
 
     id: str = Field(pattern=ID_PATTERN)
@@ -250,6 +255,7 @@ class StatusDef(ContentModel):
     attack_range_cap: int | None = Field(default=None, ge=1)
     grants_advantage_against: bool = False
     stance: bool = False
+    removed_by_element: tuple[Element, ...] = ()
     move_permille: int = Field(default=1000, ge=0, le=10000)
     prevents_move: bool = False
     skip_turn: bool = False

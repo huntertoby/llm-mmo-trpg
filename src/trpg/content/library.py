@@ -165,6 +165,16 @@ class Ruleset(ContentModel):
         )
         if bad_terrain:
             raise ValueError(f"interactions.yaml 引用了未知的地形：{', '.join(bad_terrain)}")
+        bad_status = sorted(
+            {
+                o.status
+                for rule in self.interactions.rules
+                for o in rule.then
+                if o.status is not None and o.status not in ids
+            }
+        )
+        if bad_status:
+            raise ValueError(f"interactions.yaml 引用了未知的狀態：{', '.join(bad_status)}")
         return self
 
     def object_def(self, kind: str) -> ObjectDef:

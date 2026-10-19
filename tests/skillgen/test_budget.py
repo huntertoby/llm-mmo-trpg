@@ -272,6 +272,7 @@ def test_status_and_surface_points_match_the_spec() -> None:
         "slow": 3,
         "root": 4,
         "stun": 8,
+        "frozen": 8,
         "weaken": 4,
         "vulnerable": 4,
         "bleed": 3,

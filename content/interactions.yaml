@@ -3,6 +3,7 @@
 # trigger：
 #   element          元素觸及一格（攻擊或效果造成的元素傷害、爆炸、技能直接指定格子、風吹……）
 #   surface_created  效果要在一格產生 surface_created 表面；符合的規則取代預設行為（新表面取代舊表面）
+# unit_surface：只用於 target: unit，該單位所在格的表面（觸及前）必須是它。
 # target：surface（該格目前的表面）、object（該格物件帶 object_tag）、unit（該格有存活單位）
 # 同一次觸及中，每一類 target 只套用第一條符合的規則（依檔案順序）。
 # then 的 op 見 src/trpg/content/environment.py 的 InteractionOutcome。
@@ -72,6 +73,13 @@ rules:
     target: object
     object_tag: freezable
     then: [{op: set_surface, surface: ice}]
+  - id: ice_freezes_unit_in_water
+    description_zh: 冰霜觸及站在水中的單位，使其冰凍 1 回合（環境狀態不擲抵抗；水同時結冰，判斷用觸及前的表面）
+    trigger: element
+    element: ice
+    target: unit
+    unit_surface: water
+    then: [{op: apply_status, status: frozen, duration: 1}]
   # --- 神聖 ---
   - id: holy_purifies_poison
     description_zh: 神聖淨化毒

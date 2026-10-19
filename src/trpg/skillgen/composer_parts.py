@@ -254,7 +254,7 @@ def _status_candidates(ctx: Ctx, beneficial: bool) -> list[StatusDef]:
             continue
         if rarity_rank(status.min_rarity) > ctx.rank or status.stance:
             continue  # 姿態狀態只有姿態技能（build_stance_effects）會施加
-        if status.id == "stun" and ctx.shape != "single":
+        if status.control_group == "hard" and ctx.shape != "single":
             continue
         if status.control_group is not None and status.control_group in ctx.control_groups:
             continue
@@ -285,7 +285,7 @@ def _status_effect(ctx: Ctx, *, beneficial: bool) -> None:
         spec["affects"] = _beneficial_affects(ctx)
     if status.control_group is not None:
         ctx.control_groups.append(status.control_group)
-    if status.id == "stun":
+    if status.control_group == "hard":
         ctx.min_cooldown = max(ctx.min_cooldown, ctx.rules.structure.stun_min_cooldown)
     values = _duration_values(status.duration, status.control_group, ctx.rules.duration)
     weight = ctx.rules.duration.status_weight

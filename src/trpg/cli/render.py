@@ -367,6 +367,7 @@ _REMOVE_REASONS = {
     "replaced": "被新的姿態取代了",
     "stance_ended": "取消了姿態",
     "downed": "解除了（倒下）",
+    "thawed": "解除了（受到傷害）",
 }
 
 
