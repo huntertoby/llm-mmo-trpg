@@ -31,7 +31,8 @@
 | Phase 2E-1 觸發核心 ＋ 被動 | ✅ 完成（1230 測試；Phase 2 ⚠️ #1、#11 已補） | `Phase2E計畫.md` 第 3 節／`Phase2E-1報告.md` |
 | Phase 2E-2 反應技、擋攻擊、姿態 | ✅ 完成（1286 測試） | `Phase2E計畫.md` 第 4 節／`Phase2E-2報告.md` |
 | Phase 2E-3 層數、陷阱與收尾 | ✅ 完成（1341 測試；2E 驗收全 ✅；待 PM 決定已處理於 3.2） | `Phase2E計畫.md` 第 5 節／`Phase2E-3報告.md`（5.4 為 2E 驗收總表） |
-| **Phase 3 網頁 ＋ roguelite** | ⏭️ 下一步 | 規格尚未撰寫（見 3.1） |
+| Phase 2F 整理（Phase 3 前審查的結論） | ⏭️ 進行中（2F-1 引擎、2F-2 組合器與 AI） | `Phase2F計畫.md` |
+| **Phase 3 網頁 ＋ roguelite** | 2F 之後 | 規格尚未撰寫（見 3.1） |
 
 - 最新 commit 在 GitHub `huntertoby/llm-mmo-trpg`（私人）的 `main`；2026-10-19 起使用者電腦的資料夾就是工作資料夾（見 6.1），push 前確認 `git status` 乾淨即可。
 - 1341 個測試（`slow` 預設不跑；平衡測試 `test_demo_map_win_rate_and_length` 標 `xfail(strict=False)`，目前 2 xfail、2 xpass）。
@@ -49,7 +50,8 @@
 
 ## 3. 下一步
 
-> **Phase 3 開始前先做第一次審查**（6.5，`<base>` 用 Phase 2D 開始前的 commit，範圍 2D–2E），結論中要處理的項目排進 Phase 3 第一份規格或一個小的整理子階段。2E-3 時 `src/` 已有 28 個複雜度類 noqa。
+> ✅ 2026-10-19 已審查，10 點中 #2、3、4、6、7、9、10 排進 Phase 2F；**#1 依陣營過濾隱藏資訊（`project_for`／事件 `visible_to`）、#5 `describe_event` 移出 `trpg.cli`、#8 `Pending` 補 `kind` Literal／`skill_id`／代價與往返測試，放進 Phase 3-1 規格。**
+> 原註：**Phase 3 開始前先做第一次審查**（6.5，`<base>` 用 Phase 2D 開始前的 commit，範圍 2D–2E），結論中要處理的項目排進 Phase 3 第一份規格或一個小的整理子階段。2E-3 時 `src/` 已有 28 個複雜度類 noqa。
 
 ### 3.1 使用者已同意的方向（2026-10-18，已寫入 `docs/專案計畫.md` v0.2.1 第 14 節）
 
