@@ -37,8 +37,14 @@ __all__ = [
     "run_battle",
 ]
 
-LOG_FORMAT = "trpg-battle-log/21"
-"""``/21``（Phase 3D-2c）：直線衝撞原語 ``charge_through``（形狀 ``ground_tile``，``UseSkill`` 帶
+LOG_FORMAT = "trpg-battle-log/22"
+"""``/22``（Phase 3D-3）：修正規則的技能變形（``area_delta``、``shape_to``、``allow_self_target``；
+``skill_shapes.yaml`` 的 ``conversions``、``SkillDef.include_caster``）、四個新反應事件
+（``hit_by_spell``、``ally_downed``、``enemy_enters_adjacent``、``ally_targeted``，單位反應規則的
+``when.event``）、投擲的油桶摔破漏油而不是爆炸（``HurlObjectEffect.ignite``；舊紀錄中投擲的油桶
+重播會得到不同結果）、倒塌物可破壞；
+舊紀錄的規則包與投擲結算不能由新版程式重播。
+``/21``（Phase 3D-2c）：直線衝撞原語 ``charge_through``（形狀 ``ground_tile``，``UseSkill`` 帶
 ``target_pos`` ＝終點格；``dice``、新欄位 ``on_hit``）、事件 ``unit_charged``、戰鬥紀錄中新的
 ``effect_fizzled`` 原因 ``charge_no_path``；``/20`` 的規則集沒有這個原語，舊紀錄的規則包不能由新版
 程式重播。

@@ -716,6 +716,10 @@ def _self_area(
     return shapes.radius_tiles(state, caster.xy, spec.radius)
 
 
+_AREA_TARGETING = frozenset({"direction", "tile", "none"})
+"""``include_caster`` 會把施放者加進影響範圍的選取方式（範圍型形狀）。"""
+
+
 def compute_area(
     state: BattleState, caster: UnitState, skill: SkillDef, action: UseSkill
 ) -> SkillArea:
@@ -742,6 +746,8 @@ def compute_area(
         tiles = _self_area(state, caster, skill, action, targeting)
     if not tiles:
         raise IllegalActionError("影響範圍為空：沒有任何格子會受到影響")
+    if skill.include_caster and caster.xy not in tiles and targeting in _AREA_TARGETING:
+        tiles = _sorted_tiles(*tiles, caster.xy)  # allow_self_target（3D-3）：施放者自己也算在內
     units = _tiles_to_units(state, tiles, chain)
     if any(e.type == CHARGE_THROUGH for e in effects):  # 隊友讓路：只有沿途的敵人會被撞
         units = tuple(u for u in units if state.units[u].team is not caster.team)

@@ -1,0 +1,26 @@
+# 修正型被動（Phase 3D-3，數值為初值，未經模擬）：你的療癒技能（標籤 heal）的影響範圍也
+# 包含自己——單體技能本來就能選自己，直線、錐形等範圍形狀（例如慈悲光束轉成的直線）原本不含施放者。
+id: skill_self_mending
+schema_version: 1
+name_zh: 自我療癒
+tier: 1
+rank: 1
+rarity: epic
+kind: modifier
+skeleton: modifier
+category: spell
+weapon_req: any
+ap_cost: null
+scaling_attr: wis
+shape: {type: self}
+effects: []
+modifiers:
+  - applies_to: {skill_tags: [heal]}
+    change: {allow_self_target: true}
+condition: null
+cost: {mana: 0}
+tags: [modifier, heal]
+narrative:
+  concept: 施放療癒的人自己也站在微光裡
+  cast_flavor: 光芒擴散的時候，你也沒有被留在光的外面
+provenance: {origin: builtin, owner_id: null, created_by: null, parents: [], bound: true, tradeable: false}

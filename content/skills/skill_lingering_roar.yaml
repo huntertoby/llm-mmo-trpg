@@ -1,0 +1,26 @@
+# 修正型被動（Phase 3D-3，數值為初值，未經模擬）：你的吼叫與範圍技能範圍 +1（環形與光環的半徑、直線與
+# 錐形的長度；不超過形狀的上限）。嘲諷怒吼的環形半徑 1 → 2，一吼把兩格內的敵人都拉過來。
+id: skill_lingering_roar
+schema_version: 1
+name_zh: 震懾餘波
+tier: 1
+rank: 1
+rarity: epic
+kind: modifier
+skeleton: modifier
+category: spell
+weapon_req: any
+ap_cost: null
+scaling_attr: str
+shape: {type: self}
+effects: []
+modifiers:
+  - applies_to: {skill_tags: [shout, area]}
+    change: {area_delta: 1}
+condition: null
+cost: {mana: 0}
+tags: [modifier, area]
+narrative:
+  concept: 吼聲的餘波往外多滾出一圈，連原本喊不到的人也被震住
+  cast_flavor: 你的吼聲在戰場上多滾出了一圈，原本喊不到的人也被震得耳鳴
+provenance: {origin: builtin, owner_id: null, created_by: null, parents: [], bound: true, tradeable: false}

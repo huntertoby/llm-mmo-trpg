@@ -122,3 +122,12 @@ shapes:
     budget: {base_permille: 1000}
     params:
       range: {min: 1, max: 6}
+
+# Phase 3D-3（docs/phases/Phase3D計畫.md 3.1）：修正規則的形狀轉換（change.shape_to）。只有表列的組合能轉換；
+# 技能的效果原語必須允許新形狀（skill_primitives.yaml 的 allowed_shapes），否則不轉。
+#   from_shape  原形狀；to  新形狀（line／chain／cone）
+#   params      轉換後固定的參數；keep  從原形狀帶過來的參數（超出新形狀的範圍時截斷；"weapon" 取武器射程）
+conversions:
+  - {from_shape: single, to: line, params: {size: 3}}
+  - {from_shape: single, to: chain, params: {jumps: 1, jump_range: 2}, keep: [range]}
+  - {from_shape: line, to: cone, keep: [size]}

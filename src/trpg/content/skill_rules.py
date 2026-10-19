@@ -126,6 +126,11 @@ class ModifierPoints(ContentModel):
     """每個加上的標籤。"""
     grant_pierce: int = Field(default=0, ge=0)
     """技能獲得穿透（Phase 3C-5b；每次使用的價值）。"""
+    area_delta: int = Field(default=0, ge=0)
+    """範圍型形狀大小 +1（Phase 3D-3；每次使用的價值，約為基準傷害 × 直線每格的形狀倍率加成）。"""
+    allow_self_target: int = Field(default=0, ge=0)
+    """治療、護盾、增益類技能也包含自己（Phase 3D-3；每次使用的價值）。``shape_to`` 沒有列在這裡：
+    依 ``skill_shapes.yaml`` 的形狀倍率差 × 基準武器傷害計算。"""
 
 
 class ModifierBudget(ContentModel):
@@ -139,6 +144,9 @@ class ModifierBudget(ContentModel):
 
     coefficient_permille: int = Field(ge=1)
     hit_rate_permille: int = Field(ge=1, le=1000)
+    shape_benefit_permille: int = Field(default=1000, ge=1, le=1000)
+    """技能變形（``area_delta``、``shape_to``、``allow_self_target``，Phase 3D-3）的使用次數再乘上
+    的比例：變形只有在目標的站位剛好受益時才有價值（類似命中率之於命中後效果）。"""
     uses: dict[str, int]
     uses_cap: int = Field(ge=1)
     points_milli: ModifierPoints

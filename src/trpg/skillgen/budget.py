@@ -32,6 +32,7 @@ from trpg.content.skills import (
     GRANT_AP,
     ConditionDef,
     EffectSpec,
+    ModifierChange,
     ModifierSpec,
     PrimitiveDef,
     SelfStatusCost,
@@ -48,6 +49,8 @@ _HIT_GATED = frozenset(
     {"damage_permille", "cooldown_delta", "push_distance_delta", "add_element", "on_hit_effects"}
 )
 """命中後才生效的修正（使用次數再 × 命中率）。"""
+_SHAPE_GATED = frozenset({"area_delta", "shape_to", "allow_self_target"})
+"""技能變形（3D-3）：使用次數再 × ``shape_benefit_permille``（站位剛好受益的比例）。"""
 _ACTION_NAMES = {"attack": "普攻", "shove": "推擊", "trip": "絆倒", "interact": "互動"}
 
 
@@ -463,31 +466,40 @@ def _modifier_uses(rule: ModifierSpec, budget: ModifierBudget) -> tuple[int, str
     return min(total, budget.uses_cap), "＋".join(parts)
 
 
-def _modifier_value(
-    skill: SkillDef, rule: ModifierSpec, library: ContentLibrary
-) -> tuple[Fraction, str]:
-    """一條修正規則每次使用增加的價值（點數）與說明。"""
-    change = rule.change
-    points = library.budget.modifier.points_milli
+def _structured_value(
+    skill: SkillDef, change: ModifierChange, library: ContentLibrary
+) -> tuple[Fraction, str] | None:
+    """價值由其他資料算出的改變（傷害‰、推擊距離、命中後效果、形狀轉換）；其他為 ``None``。"""
     core = library.ruleset.core
-    kind = change.kind
-    milli = Fraction(1, _PERMILLE)
-    if kind == "damage_permille":
-        assert change.damage_permille is not None
+    if change.damage_permille is not None:
         value = Fraction(core.budget_reference_weapon_damage * change.damage_permille, _PERMILLE)
         return value, f"傷害 {change.damage_permille:+d}‰"
-    if kind == "push_distance_delta":
-        assert change.push_distance_delta is not None
+    if change.push_distance_delta is not None:
         base = library.ruleset.primitive_def("push").base_points or 0
         return Fraction(base * change.push_distance_delta), f"推擊 +{change.push_distance_delta} 格"
-    if kind == "on_hit_effects":
-        assert change.on_hit_effects is not None
+    if change.on_hit_effects is not None:
         carrier = on_hit_carrier(skill, change.on_hit_effects)
         value = sum(
             (_effect_budget(carrier, i, e, library).points for i, e in enumerate(carrier.effects)),
             Fraction(0),
         )
         return value, f"命中後 {len(carrier.effects)} 個效果"
+    if change.shape_to is not None:
+        return _shape_to_value(library, change.shape_to)
+    return None
+
+
+def _modifier_value(
+    skill: SkillDef, rule: ModifierSpec, library: ContentLibrary
+) -> tuple[Fraction, str]:
+    """一條修正規則每次使用增加的價值（點數）與說明。"""
+    change = rule.change
+    points = library.budget.modifier.points_milli
+    kind = change.kind
+    milli = Fraction(1, _PERMILLE)
+    structured = _structured_value(skill, change, library)
+    if structured is not None:
+        return structured
     if kind == "ap_delta":
         assert change.ap_delta is not None
         per = points.ap_decrease if change.ap_delta < 0 else points.ap_increase
@@ -495,7 +507,12 @@ def _modifier_value(
     if kind == "add_tags":
         assert change.add_tags is not None
         return points.add_tag * len(change.add_tags) * milli, f"標籤 +{len(change.add_tags)}"
-    flags = ("add_element", "grant_pierce")  # 沒有數值的改變：每次使用算 1 份
+    flags = (
+        "add_element",
+        "grant_pierce",
+        "area_delta",
+        "allow_self_target",
+    )  # 沒有數值：每次 1 份
     magnitude = abs(int(getattr(change, kind) or 0)) if kind not in flags else 1
     per = {
         "hit_bonus": points.hit_bonus,
@@ -503,10 +520,43 @@ def _modifier_value(
         "range_delta": points.range_delta,
         "add_element": points.add_element,
         "grant_pierce": points.grant_pierce,
+        "area_delta": points.area_delta,
+        "allow_self_target": points.allow_self_target,
     }[kind]
     sign = -1 if kind == "hit_bonus" and (change.hit_bonus or 0) < 0 else 1
     sign = -1 if kind == "range_delta" and (change.range_delta or 0) < 0 else sign
     return sign * per * magnitude * milli, kind
+
+
+_REFERENCE_PARAM = 3
+"""``shape_to`` 預算計算時，保留自原形狀的大小參數（``keep``）取的代表值。"""
+
+
+def _shape_to_value(library: ContentLibrary, target: str) -> tuple[Fraction, str]:
+    """``shape_to`` 每次使用的價值（3D-3）：基準武器傷害 ×（轉換後的形狀倍率 − 轉換前的形狀倍率），
+    倍率取自 ``skill_shapes.yaml``（6.5）；保留自原形狀的大小參數以 :data:`_REFERENCE_PARAM` 計。"""
+    shapes = library.ruleset.shapes
+    by_id = shapes.by_id()
+    gains: list[tuple[Fraction, str]] = []
+    for conv in shapes.conversions:
+        if conv.to != target:
+            continue
+        before_params: dict[str, int | str] = {
+            name: _REFERENCE_PARAM for name in conv.keep if name in ("size", "radius")
+        }
+        after_params: dict[str, int | str] = {**conv.params, **before_params}
+        before = by_id[conv.from_shape].budget.permille_for(before_params)
+        after = by_id[conv.to].budget.permille_for(after_params)
+        damage = library.ruleset.core.budget_reference_weapon_damage
+        gains.append(
+            (
+                Fraction(damage * (after - before), _PERMILLE),
+                f"形狀 {conv.from_shape}→{conv.to} 倍率 {before}‰→{after}‰",
+            )
+        )
+    if not gains:
+        raise BudgetError(f"shape_to {target!r} 不在 skill_shapes.yaml 的轉換表")
+    return max(gains, key=lambda g: g[0])
 
 
 def _modifier_budgets(skill: SkillDef, library: ContentLibrary) -> tuple[EffectBudget, ...]:
@@ -519,6 +569,8 @@ def _modifier_budgets(skill: SkillDef, library: ContentLibrary) -> tuple[EffectB
         count = Fraction(uses)
         if rule.change.kind in _HIT_GATED:
             count *= Fraction(budget.modifier.hit_rate_permille, _PERMILLE)
+        if rule.change.kind in _SHAPE_GATED:
+            count *= Fraction(budget.modifier.shape_benefit_permille, _PERMILLE)
         condition = Fraction(1)
         if rule.condition is not None:
             condition = _condition_multiplier(rule.condition.type, rules.conditions.by_id(), budget)

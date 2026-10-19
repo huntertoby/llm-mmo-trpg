@@ -167,6 +167,7 @@ def use_skill(ctx: Ctx, caster: UnitState, action: UseSkill) -> None:
         skill = ctx.rules.skill_def(action.skill_id)
     except KeyError:
         raise IllegalActionError(f"找不到技能：{action.skill_id}") from None
+    skill = modifiers.shaped_skill(ctx.state, caster, skill)  # 修正規則的變形（3D-3）
     if skill.id not in caster.skills:
         raise IllegalActionError(f"{caster.name_zh} 沒有裝備技能：{skill.name_zh}")
     problem = skill_problem(ctx.state, caster, skill)

@@ -303,10 +303,30 @@ class ShapeDef(ContentModel):
         return self.name_zh
 
 
+SHAPE_TO_VALUES: tuple[str, ...] = ("line", "chain", "cone")
+"""修正規則 ``shape_to`` 可以轉成的形狀（Phase 3D-3；組合見 ``skill_shapes.yaml``）。"""
+
+
+class ShapeConversion(ContentModel):
+    """一種允許的形狀轉換（修正規則的 ``shape_to``，Phase 3D-3）：``from_shape`` 的技能轉成 ``to``。
+
+    ``params``：轉換後固定的參數（例：直線 ``size: 3``）；``keep``：從原形狀帶過來的參數名稱
+    （例：單體 → 連鎖保留 ``range``，直線 → 錐形保留 ``size``），超出新形狀的參數範圍時截斷到範圍內
+    （原形狀的 ``range`` 為 ``"weapon"`` 時取施放者的武器射程）。只有表列的組合能轉換，其餘不轉。
+    """
+
+    from_shape: str = Field(pattern=ID_PATTERN)
+    to: str = Field(pattern=ID_PATTERN)
+    params: dict[str, int] = Field(default_factory=dict)
+    keep: tuple[str, ...] = ()
+
+
 class ShapeTable(ContentModel):
     """``content/skill_shapes.yaml``。"""
 
     shapes: tuple[ShapeDef, ...] = Field(min_length=1)
+    conversions: tuple[ShapeConversion, ...] = ()
+    """允許的形狀轉換（Phase 3D-3）。"""
 
     @model_validator(mode="after")
     def _check(self) -> ShapeTable:
@@ -318,7 +338,43 @@ class ShapeTable(ContentModel):
         unknown = sorted(ids - set(REQUIRED_SHAPES))
         if unknown:
             raise ValueError(f"引擎尚未實作的形狀：{', '.join(unknown)}")
+        self._check_conversions()
         return self
+
+    def _check_conversions(self) -> None:
+        by_id = self.by_id()
+        seen: set[tuple[str, str]] = set()
+        for conv in self.conversions:
+            where = f"conversions {conv.from_shape}→{conv.to}"
+            source, target = by_id.get(conv.from_shape), by_id.get(conv.to)
+            if source is None or target is None:
+                raise ValueError(f"{where}：形狀不存在")
+            if conv.to not in SHAPE_TO_VALUES:
+                raise ValueError(f"{where}：目標形狀必須是 {'、'.join(SHAPE_TO_VALUES)}")
+            if (conv.from_shape, conv.to) in seen:
+                raise ValueError(f"{where}：重複的轉換")
+            seen.add((conv.from_shape, conv.to))
+            if set(conv.params) & set(conv.keep):
+                raise ValueError(f"{where}：params 與 keep 不可有相同的參數")
+            for name in conv.keep:
+                if name not in source.params:
+                    raise ValueError(f"{where}：keep {name} 不是 {conv.from_shape} 的參數")
+            for name, value in conv.params.items():
+                spec = target.params.get(name)
+                if spec is None or not spec.min <= value <= spec.max:
+                    raise ValueError(f"{where}：params {name}={value} 超出 {conv.to} 的範圍")
+            given = {*conv.params, *conv.keep}
+            required = {n for n, spec in target.params.items() if spec.required}
+            if not required <= given:
+                missing_params = "、".join(sorted(required - given))
+                raise ValueError(f"{where}：缺少 {conv.to} 的必要參數 {missing_params}")
+            if not given <= set(target.params):
+                raise ValueError(f"{where}：{conv.to} 沒有這些參數")
+        missing_targets = [
+            v for v in SHAPE_TO_VALUES if not any(c.to == v for c in self.conversions)
+        ]
+        if self.conversions and missing_targets:
+            raise ValueError(f"conversions 缺少目標形狀：{'、'.join(missing_targets)}")
 
     def by_id(self) -> dict[str, ShapeDef]:
         return {s.id: s for s in self.shapes}
@@ -865,8 +921,15 @@ MODIFIER_CHANGES: tuple[str, ...] = (
     "add_tags",
     "on_hit_effects",
     "grant_pierce",
+    "area_delta",
+    "shape_to",
+    "allow_self_target",
 )
 """``change`` 的種類（每條規則恰好一種）。"""
+
+SHAPE_CHANGES: frozenset[str] = frozenset({"area_delta", "shape_to", "allow_self_target"})
+"""讓技能變形的修正（Phase 3D-3）：選目標之前就決定，只套用在主動技能；引擎以
+:func:`trpg.engine.modifiers.shaped_skill` 產生變形後的技能。"""
 
 _ATTACK_TARGETS = frozenset({"attack", "all_attacks", "all_skills", "skill_tags"})
 _SKILL_TARGETS = frozenset({"all_skills", "skill_tags"})
@@ -881,12 +944,15 @@ CHANGE_TARGETS: dict[str, frozenset[str]] = {
     "add_tags": _SKILL_TARGETS,
     "on_hit_effects": _ATTACK_TARGETS,
     "grant_pierce": _SKILL_TARGETS,
+    "area_delta": frozenset({"all_attacks", "all_skills", "skill_tags"}),
+    "shape_to": frozenset({"all_attacks", "all_skills", "skill_tags"}),
+    "allow_self_target": _SKILL_TARGETS,
 }
 """每種 ``change`` 可以套用的對象（``applies_to`` 的每一項都必須在內）：推擊、絆倒、互動沒有傷害與
 命中骰，基本動作沒有冷卻與標籤。"""
 
 SELF_ONLY_CHANGES: frozenset[str] = frozenset(
-    {"ap_delta", "range_delta", "add_element", "add_tags", "grant_pierce"}
+    {"ap_delta", "range_delta", "add_element", "add_tags", "grant_pierce", *SHAPE_CHANGES}
 )
 """在選目標之前就要決定的修正：條件只能看持有者自己（``self_hp_below``）或省略。"""
 
@@ -969,6 +1035,14 @@ class ModifierChange(ContentModel):
     - ``on_hit_effects``：命中後附加效果（1～2 個，原語見 :data:`ON_HIT_PRIMITIVES`）。
     - ``grant_pierce``：技能獲得穿透（只能是 ``true``；只對遠程單體與直線的技能有效，
       Phase 3C-5b）。
+    - ``area_delta``（3D-3）：範圍型形狀大小 +1（直線與錐形的 ``size``、環形與範圍光環的
+      ``radius``；不超過 ``skill_shapes.yaml`` 的最大值，``cross``、``square3`` 的大小固定）。
+    - ``shape_to``（3D-3）：形狀轉換，只有 ``skill_shapes.yaml`` 的 ``conversions`` 表列的組合：
+      ``single → line``、``single → chain``、``line → cone``；技能的效果原語必須允許新形狀，
+      否則不轉。
+    - ``allow_self_target``（3D-3，只能是 ``true``）：治療、護盾、增益類技能（有對友方生效的效果）
+      的影響範圍也包含施放者自己（單體形狀本來就能選自己；直線、錐形等形狀的範圍不含施放者，
+      這條規則把他算進去）。
     """
 
     damage_permille: int | None = Field(default=None, ge=-500, le=1000)
@@ -981,6 +1055,9 @@ class ModifierChange(ContentModel):
     add_tags: tuple[str, ...] | None = None
     on_hit_effects: tuple[EffectSpec, ...] | None = None
     grant_pierce: bool | None = None
+    area_delta: int | None = Field(default=None, ge=1, le=1)
+    shape_to: Literal["line", "chain", "cone"] | None = None
+    allow_self_target: bool | None = None
 
     @model_validator(mode="after")
     def _check(self) -> ModifierChange:
@@ -994,8 +1071,8 @@ class ModifierChange(ContentModel):
             raise ValueError(f"change.{kind} 不可為 0")
         if kind == "add_element" and value is Element.PHYSICAL:
             raise ValueError("change.add_element 不可是物理（physical）")
-        if kind == "grant_pierce" and value is not True:
-            raise ValueError("change.grant_pierce 只能是 true")
+        if kind in ("grant_pierce", "allow_self_target") and value is not True:
+            raise ValueError(f"change.{kind} 只能是 true")
         if kind == "add_tags":
             self._check_tags(value)
         if kind == "on_hit_effects":
@@ -1108,6 +1185,10 @@ class SkillDef(ContentModel):
     pierce: bool = False
     """穿透（Phase 3C-5b，6.15）：無視半掩護，並穿過 ``penetrable`` 物件（物件受全額傷害，後方目標
     受 ``core.pierce_behind_permille``）。只能用在遠程的單體或直線形狀。"""
+    include_caster: bool = False
+    """影響範圍也包含施放者自己（Phase 3D-3）：修正規則 ``allow_self_target`` 套用後的技能才會是
+    ``true``（引擎在施放前複製出變形後的技能，見 :func:`trpg.engine.modifiers.shaped_skill`），
+    資料檔不必寫。只對有友方效果、形狀不含施放者的技能有意義。"""
     modifiers: tuple[ModifierSpec, ...] = ()
     """修正規則（Phase 3C-2；只有 ``kind: modifier`` 可以有，1～2 條）。"""
     tags: tuple[str, ...] = ()

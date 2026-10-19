@@ -1,0 +1,26 @@
+# 修正型被動（Phase 3D-3，數值為初值，未經模擬）：你的療癒技能（標籤 heal）由單體轉成直線（長度 3），
+# 一道光束掃過直線上的所有人；搭配「自我療癒」（allow_self_target）讓施放者自己也在光束中。
+id: skill_beam_of_mercy
+schema_version: 1
+name_zh: 慈悲光束
+tier: 1
+rank: 1
+rarity: epic
+kind: modifier
+skeleton: modifier
+category: spell
+weapon_req: any
+ap_cost: null
+scaling_attr: wis
+shape: {type: self}
+effects: []
+modifiers:
+  - applies_to: {skill_tags: [heal]}
+    change: {shape_to: line}
+condition: null
+cost: {mana: 0}
+tags: [modifier, heal]
+narrative:
+  concept: 療癒不再只落在一個人身上，而是一道掃過整排隊友的光
+  cast_flavor: 你掌心的微光拉長成一道光束，沿著隊伍一路掃過去
+provenance: {origin: builtin, owner_id: null, created_by: null, parents: [], bound: true, tradeable: false}

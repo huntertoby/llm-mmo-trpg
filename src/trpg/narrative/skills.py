@@ -399,8 +399,18 @@ _SIMPLE_CHANGE_TEXT = {
     "ap_delta": "AP {value:+d}（最少 1）",
     "range_delta": "射程 {value:+d}",
     "grant_pierce": "遠程單體與直線技能獲得穿透（無視半掩護，穿過木製物件）",
+    "area_delta": "範圍型形狀的大小 +{value}（直線與錐形的長度、環形與光環的半徑，有上限）",
+    "allow_self_target": "治療、護盾、增益類技能的影響範圍也包含自己",
 }
 """只有一個整數的改變：格式字串（``value`` 為改變的數值）。"""
+
+
+def _shape_to_text(library: ContentLibrary, target: str) -> str:
+    """``shape_to`` 的說明：列出 ``skill_shapes.yaml`` 的轉換表中轉成 ``target`` 的原形狀。"""
+    shapes = library.ruleset.shapes.by_id()
+    sources = [c for c in library.ruleset.shapes.conversions if c.to == target]
+    names = "、".join(shapes[c.from_shape].name_zh for c in sources)
+    return f"{names}形狀的技能轉為{shapes[target].name_zh}（效果原語不支援新形狀的技能不轉）"
 
 
 def _change_text(library: ContentLibrary, skill: SkillDef, rule: ModifierSpec) -> str:
@@ -417,10 +427,17 @@ def _change_text(library: ContentLibrary, skill: SkillDef, rule: ModifierSpec) -
             f"推擊與拉扯距離 +{change.push_distance_delta} 格"
             f"（最多 {cap} 格，超過的每格改為一次撞擊傷害）"
         )
+    return _other_change_text(library, skill, rule)
+
+
+def _other_change_text(library: ContentLibrary, skill: SkillDef, rule: ModifierSpec) -> str:
+    change = rule.change
     if change.add_element is not None:
         return f"物理傷害改為{change.add_element.display_name}（已有元素的不變）"
     if change.add_tags is not None:
         return f"獲得標籤 {'、'.join(change.add_tags)}"
+    if change.shape_to is not None:
+        return _shape_to_text(library, change.shape_to)
     assert change.on_hit_effects is not None
     carrier = on_hit_carrier(skill, change.on_hit_effects)
     effects = "；".join(effect_summary(library, carrier, e) for e in carrier.effects)

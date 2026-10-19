@@ -1043,8 +1043,7 @@ def _legal_actions(
 
 
 def _usable_skills(state: BattleState, unit: UnitState) -> list[SkillDef]:
-    rules = state.ruleset
-    skills = [rules.skill_def(sid) for sid in sorted(unit.skills)]
+    skills = [modifiers.acting_skill(state, unit, sid) for sid in sorted(unit.skills)]
     return [s for s in skills if s.is_actionable and skill_problem(state, unit, s) is None]
 
 

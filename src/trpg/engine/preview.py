@@ -565,7 +565,7 @@ def _damage_expectation(  # noqa: PLR0917
 ) -> DamageRange | None:
     """技能對 ``target_id`` 的傷害範圍：最少／最多取自模擬事件，期望值依效果的骰子分布精確計算
     （事件與效果數量對不上時退回最少與最多的平均）。"""
-    skill = state.ruleset.skill_def(action.skill_id)
+    skill = modifiers.acting_skill(state, actor, action.skill_id)
 
     def direct(events: list[EventBase]) -> list[DamageDealt]:
         return [
@@ -705,7 +705,7 @@ def _skill_targets(
     min_events: list[EventBase],
     max_events: list[EventBase],
 ) -> tuple[TargetPreview, ...]:
-    skill = state.ruleset.skill_def(action.skill_id)
+    skill = modifiers.acting_skill(state, actor, action.skill_id)
     profile = skill_profile(state, actor, skill)
     use = modifiers.skill_use(skill)
     core = state.ruleset.core
@@ -784,7 +784,7 @@ def _cost_and_reach(
     if isinstance(action, Interact):
         return action_ap_cost(state, actor, modifiers.INTERACT), None
     if isinstance(action, UseSkill):
-        skill = state.ruleset.skill_def(action.skill_id)
+        skill = modifiers.acting_skill(state, actor, action.skill_id)
         reach = shape_reach(state, skill, actor) if skill.shape.range is not None else None
         return skill_ap_cost(state, skill, actor), reach
     return None, None
@@ -792,7 +792,7 @@ def _cost_and_reach(
 
 def _pierce_info(state: BattleState, actor: UnitState, action: UseSkill) -> PierceInfo | None:
     """穿透技能的射線（只讀目前狀態）；不是穿透的技能為 ``None``。"""
-    skill = state.ruleset.skill_def(action.skill_id)
+    skill = modifiers.acting_skill(state, actor, action.skill_id)
     if not pierce_active(state, actor, skill):
         return None
     area = compute_area(state, actor, skill, action)
@@ -837,7 +837,7 @@ def _displace_checks(
     state: BattleState, actor: UnitState, action: UseSkill
 ) -> tuple[DisplaceCheck, ...]:
     """位移類技能的抵抗判定：每個敵方被移動的單位（依單位 ID）的精確成功率。"""
-    skill = state.ruleset.skill_def(action.skill_id)
+    skill = modifiers.acting_skill(state, actor, action.skill_id)
     kinds = {e.type for e in skill.effects}
     if not kinds & {SWAP, SWAP_ANY, TELEPORT_TARGET}:
         return ()
@@ -936,7 +936,9 @@ def preview(state: BattleState, action: Action) -> Preview:
     possible = [o for o in outcomes(max_events) if o not in certain_set]
     tiles, units = _affected(high.state, max_events)
     if isinstance(action, UseSkill):
-        area = compute_area(state, actor, state.ruleset.skill_def(action.skill_id), action)
+        area = compute_area(
+            state, actor, modifiers.acting_skill(state, actor, action.skill_id), action
+        )
         tiles = tuple(sorted({*tiles, *area.tiles}, key=lambda p: (p[1], p[0])))
         units = tuple(sorted({*units, *area.units}))
     ap_cost, reach = _cost_and_reach(state, actor, action)
@@ -946,7 +948,9 @@ def preview(state: BattleState, action: Action) -> Preview:
     notes = _cover_notes(cover)
     if isinstance(action, UseSkill):
         checks = _displace_checks(state, actor, action)
-        notes += _displace_notes(state, actor, action, state.ruleset.skill_def(action.skill_id))
+        notes += _displace_notes(
+            state, actor, action, modifiers.acting_skill(state, actor, action.skill_id)
+        )
     chance: Fraction | None = None
     if checks:
         chance = Fraction(1)

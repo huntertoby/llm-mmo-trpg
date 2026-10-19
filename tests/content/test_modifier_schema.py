@@ -58,6 +58,9 @@ VALID_CHANGES: dict[str, dict[str, Any]] = {
         ATTACKS, {"on_hit_effects": [{"type": "apply_status", "status": "burning", "duration": 2}]}
     ),
     "grant_pierce": rule({"skill_tags": ["ranged"]}, {"grant_pierce": True}),
+    "area_delta": rule({"skill_tags": ["fire"]}, {"area_delta": 1}),
+    "shape_to": rule({"skill_tags": ["fire"]}, {"shape_to": "line"}),
+    "allow_self_target": rule({"skill_tags": ["heal"]}, {"allow_self_target": True}),
 }
 
 
@@ -111,6 +114,27 @@ def test_every_change_kind_has_a_valid_example() -> None:
             [rule(ATTACKS, {"on_hit_effects": [{"type": "damage", "dice": "1d4"}]})],
             {},
             "法術技的傷害必須指定 dice 與 element",
+        ),
+        # 3D-3：技能變形（area_delta、shape_to、allow_self_target）
+        ([rule(SKILLS, {"area_delta": 2})], {}, "less than or equal"),
+        ([rule(SKILLS, {"area_delta": 0})], {}, "greater than or equal"),
+        ([rule({"actions": ["attack"]}, {"area_delta": 1})], {}, "不能套用在 attack"),
+        ([rule({"actions": ["shove"]}, {"shape_to": "line"})], {}, "不能套用在 shove"),
+        ([rule(ATTACKS, {"allow_self_target": True})], {}, "不能套用在 all_attacks"),
+        ([rule(SKILLS, {"allow_self_target": False})], {}, "只能是 true"),
+        ([rule(SKILLS, {"shape_to": "ring"})], {}, "shape_to"),  # 不允許的形狀轉換
+        ([rule(SKILLS, {"shape_to": "single"})], {}, "shape_to"),
+        ([rule(SKILLS, {"area_delta": 1, "shape_to": "line"})], {}, "恰好一種"),
+        (
+            [
+                rule(
+                    SKILLS,
+                    {"area_delta": 1},
+                    condition={"type": "target_has_status", "status": "burning"},
+                )
+            ],
+            {},
+            "條件只能是 self_hp_below",
         ),
         ([], {}, "1 到 2 條"),
         ([VALID_CHANGES["hit_bonus"]] * 3, {}, "1 到 2 條"),

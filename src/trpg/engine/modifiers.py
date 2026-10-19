@@ -20,7 +20,14 @@ from __future__ import annotations
 from collections.abc import Iterable, Iterator
 from dataclasses import dataclass
 
-from trpg.content.skills import BasicAction, ModifierSpec, SkillDef, default_affects
+from trpg.content.skills import (
+    SHAPE_CHANGES,
+    BasicAction,
+    ModifierSpec,
+    ShapeSpec,
+    SkillDef,
+    default_affects,
+)
 from trpg.engine.skills.conditions import Subject, condition_met
 from trpg.engine.state import BattleState, UnitState
 from trpg.shared.types import Element
@@ -32,6 +39,7 @@ __all__ = [
     "TRIP",
     "ActiveRule",
     "Use",
+    "acting_skill",
     "ap_cost",
     "cooldown_delta",
     "damage_element",
@@ -44,6 +52,7 @@ __all__ = [
     "is_attack_skill",
     "on_hit_rules",
     "range_delta",
+    "shaped_skill",
     "skill_has_fire",
     "skill_is_fiery",
     "skill_use",
@@ -266,3 +275,105 @@ def skill_is_fiery(state: BattleState, unit: UnitState, skill: SkillDef) -> bool
     if skill_has_fire(skill) or "fire" in effective_tags(state, unit, skill):
         return True
     return damage_element(state, unit, skill_use(skill), Element.PHYSICAL) is Element.FIRE
+
+
+# ---------------------------------------------------------------------------
+# 技能變形（Phase 3D-3）：範圍 +1、形狀轉換、施放者也算在內
+# ---------------------------------------------------------------------------
+
+_GROWABLE = ("size", "radius")
+"""``area_delta`` 能加 1 的形狀參數（``cross``、``square3`` 只有 ``range``，大小固定）。"""
+
+
+def acting_skill(state: BattleState, unit: UnitState, skill_id: str) -> SkillDef:
+    """``unit`` 施放 ``skill_id`` 時實際使用的技能（變形後；:func:`shaped_skill`）。"""
+    return shaped_skill(state, unit, state.ruleset.skill_def(skill_id))
+
+
+def shaped_skill(state: BattleState, unit: UnitState, skill: SkillDef) -> SkillDef:
+    """套用持有者的變形規則（``shape_to``、``area_delta``、``allow_self_target``）後的技能。
+
+    變形在選目標之前決定（條件只能是 ``self_hp_below``），所以合法動作（``legal_actions``）、預覽、
+    網頁的目標選取與實際結算都用這個技能，彼此一致。只有主動技能會變形；沒有成立的規則時回傳原技能
+    （同一個物件）。技能的 ID、標籤、效果與代價不變，所以其他修正規則照常套用。
+
+    順序：先依技能 ID、規則索引依序套用 ``shape_to``（每條至多轉一次，可以接續轉，例如
+    單體 → 直線 → 錐形），再把每條 ``area_delta`` 的 +1 加上去，最後看 ``allow_self_target``。
+    """
+    if skill.kind != "active" or not state.ruleset.has_modifier(unit.skills):
+        return skill
+    rules = _shape_rules(state, unit, skill)
+    if not rules:
+        return skill
+    shape = skill.shape
+    for rule in rules:
+        if rule.change.shape_to is not None:
+            shape = _convert(state, unit, skill, shape, rule.change.shape_to)
+    for rule in rules:
+        if rule.change.area_delta is not None:
+            shape = _grow(state, shape, rule.change.area_delta)
+    include = skill.include_caster or (
+        any(r.change.allow_self_target for r in rules) and _helps_allies(state, skill)
+    )
+    if shape == skill.shape and include == skill.include_caster:
+        return skill
+    return skill.model_copy(update={"shape": shape, "include_caster": include})
+
+
+def _shape_rules(state: BattleState, unit: UnitState, skill: SkillDef) -> list[ModifierSpec]:
+    use = skill_use(skill)
+    tags = effective_tags(state, unit, skill)
+    return [
+        active.rule
+        for active in unit_rules(state, unit)
+        if active.rule.change.kind in SHAPE_CHANGES
+        and _matches(state, active.rule, use, tags)
+        and _self_holds(state, unit, active.rule)
+    ]
+
+
+def _convert(
+    state: BattleState, unit: UnitState, skill: SkillDef, shape: ShapeSpec, target: str
+) -> ShapeSpec:
+    """``shape`` 轉成 ``target``：不在轉換表、效果原語不支援新形狀（或有陷阱）時維持原樣。"""
+    rules = state.ruleset
+    conversion = next(
+        (c for c in rules.shapes.conversions if c.from_shape == shape.type and c.to == target),
+        None,
+    )
+    if conversion is None or skill.trap is not None:
+        return shape
+    for effect in skill.effects:
+        allowed = rules.primitive_def(effect.type).allowed_shapes
+        if allowed is not None and target not in allowed:
+            return shape
+    params = rules.shape_def(target).params
+    values: dict[str, int] = dict(conversion.params)
+    for name in conversion.keep:
+        raw = getattr(shape, name)
+        if raw == "weapon":
+            raw = unit.weapon.range
+        if not isinstance(raw, int):
+            return shape
+        spec = params[name]
+        values[name] = max(spec.min, min(spec.max, raw))
+    return ShapeSpec(type=target, **values)
+
+
+def _grow(state: BattleState, shape: ShapeSpec, delta: int) -> ShapeSpec:
+    """``shape`` 的第一個可增加的大小參數（``size``、``radius``）加 ``delta``（不超過最大值）。"""
+    params = state.ruleset.shape_def(shape.type).params
+    for name in _GROWABLE:
+        value = getattr(shape, name)
+        if name in params and isinstance(value, int):
+            return shape.model_copy(update={name: min(value + delta, params[name].max)})
+    return shape
+
+
+def _helps_allies(state: BattleState, skill: SkillDef) -> bool:
+    """技能有對友方生效的效果（治療、護盾、增益），``allow_self_target`` 才有意義。"""
+    rules = state.ruleset
+    return any(
+        (e.affects or default_affects(rules.primitive_def(e.type))) == "allies"
+        for e in skill.effects
+    )
