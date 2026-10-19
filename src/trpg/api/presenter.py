@@ -25,9 +25,11 @@ from trpg.api.telegraph import telegraph_out
 from trpg.engine.actions import Step, UseSkill
 from trpg.engine.ai.commanded import ignored_orders
 from trpg.engine.battle import interact_direction, interact_options, legal_actions
+from trpg.engine.copying import copy_selections
 from trpg.engine.event_filter import filter_events
 from trpg.engine.events import BattleStarted, EventBase
 from trpg.engine.preview import Preview
+from trpg.engine.results import Pending
 from trpg.engine.state import BattleState
 from trpg.engine.view import project_for
 from trpg.narrative.events import battle_started_text, describe_event
@@ -115,6 +117,14 @@ def _offset(pos: Pos, direction: tuple[int, int]) -> Pos:
     return Pos(x=pos.x + direction[0], y=pos.y + direction[1])
 
 
+def copy_options_out(state: BattleState, pending: Pending | None) -> tuple[UseSkill, ...]:
+    """``copy_skill`` 暫停時，複製技能目前所有合法的選取（Phase 3C-4b）；其他時候為空。"""
+    if pending is None or pending.kind != "copy_skill":
+        return ()
+    caster = state.units[pending.unit_id]
+    return tuple(action for action, _ in copy_selections(state, caster))
+
+
 def battle_response(
     session: BattleSession,
     records: list[StepRecord],
@@ -143,6 +153,7 @@ def battle_response(
         if awaiting == "action"
         else (),
         pending=pending,
+        copy_options=copy_options_out(state, pending),
         orders=session.orders,
         orders_ignored=ignored_orders(state, VIEW_TEAM, session.orders),
         telegraph=telegraph_out(state, session.library, VIEW_TEAM),

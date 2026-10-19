@@ -53,7 +53,7 @@ def post_decision(battle_id: str, body: DecisionRequest, request: Request) -> Ba
     session = store_of(request).get(battle_id)
     with session.lock:
         before = session.state
-        records = session.decide(body.accept)
+        records = session.decide(body.accept, body.copy_cast)
         return battle_response(session, records, before)
 
 

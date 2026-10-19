@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import type { Action, InteractOption, SkillCard } from "../api/types";
+import type { Action, InteractOption, Pending, SkillCard } from "../api/types";
 import realFixture from "./fixtures/oil_depot_seed3.json";
 import { smallView, unit } from "./testFixtures";
 import {
@@ -7,7 +7,10 @@ import {
   asideRows,
   basicModes,
   buildTargets,
+  copyMode,
+  copyPromptText,
   fallbackActions,
+  isCopyPending,
   isSelfOnly,
   skillButtons,
   skillMode,
@@ -193,5 +196,39 @@ describe("shove aside", () => {
 
   it("shows nothing for objects that only have push options", () => {
     expect(asideRows([options[0]!], legal, view)).toEqual([]);
+  });
+});
+
+describe("copy_skill second step", () => {
+  const pending = {
+    kind: "copy_skill",
+    unit_id: H,
+    reaction: "",
+    trigger_unit_id: null,
+    skill_id: "mirror",
+    copy_skill_id: "slash",
+    trigger_event_seq: null,
+    stamina_cost: 0,
+    mana_cost: 0,
+    hp_cost_permille: 0,
+  } as Pending;
+  const options = [skill("slash", { target_id: "unit_0003" }), skill("slash", { target_pos: { x: 3, y: 3 } })];
+
+  it("recognises the copy pause and turns the options into a clickable mode", () => {
+    expect(isCopyPending(pending)).toBe(true);
+    expect(isCopyPending({ ...pending, kind: "reaction" })).toBe(false);
+    expect(isCopyPending(null)).toBe(false);
+    const mode = copyMode(pending, options, "橫掃劈砍");
+    expect(mode).toMatchObject({ key: "copy:slash", skillId: "slash", label: "橫掃劈砍" });
+    // 點敵人 → 以該選取回覆（第二段選取送出的就是這個動作）
+    expect(actionAtTile(mode, view, hero, { x: 2, y: 1 })).toBe(options[0]);
+    expect(actionAtTile(mode, view, hero, { x: 3, y: 3 })).toBe(options[1]);
+    expect(actionAtTile(mode, view, hero, { x: 0, y: 0 })).toBeNull();
+    expect(targetTiles(mode, view, hero).targets).toEqual([{ x: 2, y: 1 }, { x: 3, y: 3 }]);
+  });
+
+  it("explains what to do, and says so when nothing is legal", () => {
+    expect(copyPromptText("橫掃劈砍", 2)).toContain("共 2 個可選");
+    expect(copyPromptText("橫掃劈砍", 0)).toContain("沒有");
   });
 });

@@ -13,7 +13,7 @@ from typing import Any, Literal
 
 from pydantic import BaseModel, ConfigDict, Field
 
-from trpg.engine.actions import Action, Step
+from trpg.engine.actions import Action, Step, UseSkill
 from trpg.engine.ai.orders import IgnoredOrder, OrderSet
 from trpg.engine.preview import DamageRange, Outcome, Preview, StatusChance, TargetPreview
 from trpg.engine.results import Pending
@@ -116,6 +116,10 @@ class CreateBattleRequest(_ApiModel):
 
 class DecisionRequest(_ApiModel):
     accept: bool
+    """反應詢問：是否使用反應；``copy_skill`` 選目標：``false`` 為放棄施放（不付代價）。"""
+    copy_cast: UseSkill | None = None
+    """``copy_skill`` 選目標（``pending.kind == "copy_skill"``）時，複製技能的選取（從回應的
+    ``copy_options`` 挑一個）；反應詢問不使用。"""
 
 
 class StepOut(_ApiModel):
@@ -208,6 +212,9 @@ class BattleResponse(_ApiModel):
     interact_options: tuple[InteractOptionOut, ...]
     """輪到主角時，相鄰可推動物件的互動選項（含不合法與原因）；其他時候為空。"""
     pending: Pending | None
+    copy_options: tuple[UseSkill, ...]
+    """``pending.kind == "copy_skill"`` 時，複製技能（``pending.copy_skill_id``）目前所有合法的
+    選取（``DecisionRequest.copy_cast`` 從中挑一個）；其他時候為空。"""
     """主角的反應詢問（只有公開欄位）。"""
     orders: OrderSet
     """我方隊友目前的戰術指令。"""

@@ -236,7 +236,7 @@
                     "$ref": "#/components/schemas/Attack"
                   },
                   {
-                    "$ref": "#/components/schemas/UseSkill"
+                    "$ref": "#/components/schemas/UseSkill-Input"
                   },
                   {
                     "$ref": "#/components/schemas/Defend"
@@ -265,7 +265,7 @@
                   "mapping": {
                     "move": "#/components/schemas/Move",
                     "attack": "#/components/schemas/Attack",
-                    "use_skill": "#/components/schemas/UseSkill",
+                    "use_skill": "#/components/schemas/UseSkill-Input",
                     "defend": "#/components/schemas/Defend",
                     "shove": "#/components/schemas/Shove",
                     "trip": "#/components/schemas/Trip",
@@ -387,7 +387,7 @@
                     "$ref": "#/components/schemas/Attack"
                   },
                   {
-                    "$ref": "#/components/schemas/UseSkill"
+                    "$ref": "#/components/schemas/UseSkill-Input"
                   },
                   {
                     "$ref": "#/components/schemas/Defend"
@@ -416,7 +416,7 @@
                   "mapping": {
                     "move": "#/components/schemas/Move",
                     "attack": "#/components/schemas/Attack",
-                    "use_skill": "#/components/schemas/UseSkill",
+                    "use_skill": "#/components/schemas/UseSkill-Input",
                     "defend": "#/components/schemas/Defend",
                     "shove": "#/components/schemas/Shove",
                     "trip": "#/components/schemas/Trip",
@@ -561,7 +561,7 @@
             "$ref": "#/components/schemas/Attack"
           },
           {
-            "$ref": "#/components/schemas/UseSkill"
+            "$ref": "#/components/schemas/UseSkill-Output"
           },
           {
             "$ref": "#/components/schemas/Defend"
@@ -597,7 +597,7 @@
             "set_reaction_mode": "#/components/schemas/SetReactionMode",
             "shove": "#/components/schemas/Shove",
             "trip": "#/components/schemas/Trip",
-            "use_skill": "#/components/schemas/UseSkill"
+            "use_skill": "#/components/schemas/UseSkill-Output"
           }
         }
       },
@@ -731,6 +731,13 @@
               }
             ]
           },
+          "copy_options": {
+            "items": {
+              "$ref": "#/components/schemas/UseSkill-Output"
+            },
+            "type": "array",
+            "title": "Copy Options"
+          },
           "orders": {
             "$ref": "#/components/schemas/OrderSet"
           },
@@ -773,6 +780,7 @@
           "legal_actions",
           "interact_options",
           "pending",
+          "copy_options",
           "orders",
           "orders_ignored",
           "telegraph",
@@ -1170,6 +1178,16 @@
           "accept": {
             "type": "boolean",
             "title": "Accept"
+          },
+          "copy_cast": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/UseSkill-Output"
+              },
+              {
+                "type": "null"
+              }
+            ]
           }
         },
         "additionalProperties": false,
@@ -1179,13 +1197,23 @@
           "accept"
         ],
         "title": "Decision",
-        "description": "對 ``prompt`` 反應的回答：``unit_id`` 為被詢問的反應者，``accept`` 是否使用反應。"
+        "description": "對暫停中的結算的回答：``unit_id`` 為被詢問者。\n\n- ``prompt`` 反應：``accept`` 是否使用反應；\n- ``copy_skill``（Phase 3C-4b）：``accept`` 為真時 ``copy_cast`` 必須給出複製技能的選取，為假則\n  放棄施放（不付任何代價）。"
       },
       "DecisionRequest": {
         "properties": {
           "accept": {
             "type": "boolean",
             "title": "Accept"
+          },
+          "copy_cast": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/UseSkill-Input"
+              },
+              {
+                "type": "null"
+              }
+            ]
           }
         },
         "additionalProperties": false,
@@ -1861,7 +1889,10 @@
         "properties": {
           "kind": {
             "type": "string",
-            "const": "reaction",
+            "enum": [
+              "reaction",
+              "copy_skill"
+            ],
             "title": "Kind"
           },
           "unit_id": {
@@ -1894,6 +1925,17 @@
               }
             ],
             "title": "Skill Id"
+          },
+          "copy_skill_id": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Copy Skill Id"
           },
           "trigger_event_seq": {
             "anyOf": [
@@ -1929,7 +1971,7 @@
           "unit_id"
         ],
         "title": "Pending",
-        "description": "結算暫停、等待玩家決定（``prompt`` 反應）。\n\n以 ``resume(state, Decision(unit_id=..., accept=...))`` 繼續。"
+        "description": "結算暫停、等待玩家決定（``prompt`` 反應，或 ``copy_skill`` 選目標）。\n\n以 ``resume(state, Decision(unit_id=..., accept=...))`` 繼續；``kind == \"copy_skill\"`` 時\n``Decision.copy_cast`` 給出複製技能的選取（Phase 3C-4b）。"
       },
       "PendingView": {
         "properties": {
@@ -1967,6 +2009,17 @@
             ],
             "title": "Skill Id"
           },
+          "copy_skill_id": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Copy Skill Id"
+          },
           "trigger_event_seq": {
             "anyOf": [
               {
@@ -1999,6 +2052,7 @@
           "reaction",
           "trigger_unit_id",
           "skill_id",
+          "copy_skill_id",
           "trigger_event_seq",
           "stamina_cost",
           "mana_cost",
@@ -2651,7 +2705,7 @@
             "$ref": "#/components/schemas/Attack"
           },
           {
-            "$ref": "#/components/schemas/UseSkill"
+            "$ref": "#/components/schemas/UseSkill-Output"
           },
           {
             "$ref": "#/components/schemas/Defend"
@@ -2691,7 +2745,7 @@
             "set_reaction_mode": "#/components/schemas/SetReactionMode",
             "shove": "#/components/schemas/Shove",
             "trip": "#/components/schemas/Trip",
-            "use_skill": "#/components/schemas/UseSkill"
+            "use_skill": "#/components/schemas/UseSkill-Output"
           }
         }
       },
@@ -3338,7 +3392,7 @@
         "title": "UseEnvironment",
         "description": "優先利用環境（爆炸、推落、表面）。"
       },
-      "UseSkill": {
+      "UseSkill-Input": {
         "properties": {
           "unit_id": {
             "type": "string",
@@ -3395,6 +3449,16 @@
                 "type": "null"
               }
             ]
+          },
+          "copy_cast": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/UseSkill-Input"
+              },
+              {
+                "type": "null"
+              }
+            ]
           }
         },
         "additionalProperties": false,
@@ -3404,7 +3468,85 @@
           "skill_id"
         ],
         "title": "UseSkill",
-        "description": "使用技能（Phase 2A）。依形狀的 ``targeting`` 只允許對應的欄位：\n\n- ``unit``（單體、連鎖）：``target_id`` 或 ``target_object_id`` 恰好一個；\n- ``tile``（十字、方陣、指定格）：``target_pos``；\n- ``direction``（直線、錐形）：``direction``；\n- ``self``／``none``（自身、環形、範圍光環）：都不給。\n\n是否合法（欄位是否對應形狀、射程、視線、代價）由引擎檢查，不合法時拋出\n:class:`~trpg.shared.errors.IllegalActionError`。"
+        "description": "使用技能（Phase 2A）。依形狀的 ``targeting`` 只允許對應的欄位：\n\n- ``unit``（單體、連鎖）：``target_id`` 或 ``target_object_id`` 恰好一個；\n- ``tile``（十字、方陣、指定格）：``target_pos``；\n- ``direction``（直線、錐形）：``direction``；\n- ``self``／``none``（自身、環形、範圍光環）：都不給。\n\n是否合法（欄位是否對應形狀、射程、視線、代價）由引擎檢查，不合法時拋出\n:class:`~trpg.shared.errors.IllegalActionError`。\n\n``copy_cast``（Phase 3C-4b）：``copy_skill`` 技能複製的技能的選取（``skill_id`` 必須是目前\n可複製的技能，``unit_id`` 是同一個施放者，目標欄位依該技能的形狀）。玩家省略它時結算暫停，由\n:class:`Decision` 補上；AI 與戰鬥紀錄直接給出。其他技能不能帶 ``copy_cast``。"
+      },
+      "UseSkill-Output": {
+        "properties": {
+          "unit_id": {
+            "type": "string",
+            "title": "Unit Id"
+          },
+          "type": {
+            "type": "string",
+            "const": "use_skill",
+            "title": "Type",
+            "default": "use_skill"
+          },
+          "skill_id": {
+            "type": "string",
+            "title": "Skill Id"
+          },
+          "target_id": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Target Id"
+          },
+          "target_object_id": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Target Object Id"
+          },
+          "target_pos": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/Pos"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "direction": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/Direction"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "copy_cast": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/UseSkill-Output"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "unit_id",
+          "skill_id"
+        ],
+        "title": "UseSkill",
+        "description": "使用技能（Phase 2A）。依形狀的 ``targeting`` 只允許對應的欄位：\n\n- ``unit``（單體、連鎖）：``target_id`` 或 ``target_object_id`` 恰好一個；\n- ``tile``（十字、方陣、指定格）：``target_pos``；\n- ``direction``（直線、錐形）：``direction``；\n- ``self``／``none``（自身、環形、範圍光環）：都不給。\n\n是否合法（欄位是否對應形狀、射程、視線、代價）由引擎檢查，不合法時拋出\n:class:`~trpg.shared.errors.IllegalActionError`。\n\n``copy_cast``（Phase 3C-4b）：``copy_skill`` 技能複製的技能的選取（``skill_id`` 必須是目前\n可複製的技能，``unit_id`` 是同一個施放者，目標欄位依該技能的形狀）。玩家省略它時結算暫停，由\n:class:`Decision` 補上；AI 與戰鬥紀錄直接給出。其他技能不能帶 ``copy_cast``。"
       },
       "ValidationError": {
         "properties": {

@@ -34,8 +34,10 @@ import { marksTextAt, telegraphMarks } from "../battle/telegraph";
 import {
   actionAtTile,
   basicModes,
+  copyMode,
   DIRECTION_ARROWS,
   fallbackActions,
+  isCopyPending,
   isSelfOnly,
   skillButtons,
   skillMode,
@@ -47,6 +49,7 @@ import type { BattleRenderer, Highlights } from "../render/BattleRenderer";
 import { ActionPanel } from "../ui/ActionPanel";
 import { BattleCanvas } from "../ui/BattleCanvas";
 import { BattleLog } from "../ui/BattleLog";
+import { CopyDialog } from "../ui/CopyDialog";
 import { DecisionDialog } from "../ui/DecisionDialog";
 import { EndPanel } from "../ui/EndPanel";
 import { ErrorBanner } from "../ui/ErrorBanner";
@@ -128,8 +131,10 @@ export function BattleScreen({ initial, onExit }: Props) {
     const ids = new Set<string>(hero?.skills ?? []);
     for (const a of response.legal_actions) if (a.type === "use_skill") ids.add(a.skill_id);
     for (const id of Object.keys(hero?.cooldowns ?? {})) ids.add(id);
+    const copied = response.pending?.copy_skill_id; // 複製技能暫停時，被複製的技能（要顯示名稱）
+    if (copied != null) ids.add(copied);
     return [...ids].sort();
-  }, [hero, response.legal_actions]);
+  }, [hero, response.legal_actions, response.pending]);
   const cards = useSkillCards(skillIds);
   const skillNames = useSkillNames(cards);
   const names = useMemo(() => unitNames(shown), [shown]);
@@ -150,7 +155,18 @@ export function BattleScreen({ initial, onExit }: Props) {
     for (const b of buttons) if (b.disabledReason === null) map.set(`skill:${b.skillId}`, skillMode(b));
     return map;
   }, [basic, buttons]);
-  const mode = canAct && modeKey !== null ? (modes.get(modeKey) ?? null) : null;
+  // 複製技能（copy_skill）暫停：第二段選取，伺服器給的 copy_options 當成一個模式（點目標即送出）。
+  const copying = response.awaiting === "decision" && isCopyPending(response.pending) && !busy;
+  const copyName =
+    response.pending?.copy_skill_id == null
+      ? ""
+      : (skillNames[response.pending.copy_skill_id] ?? response.pending.copy_skill_id);
+  const copyPick = useMemo(
+    () =>
+      copying && response.pending !== null ? copyMode(response.pending, response.copy_options, copyName) : null,
+    [copying, response.pending, response.copy_options, copyName],
+  );
+  const mode = copying ? copyPick : canAct && modeKey !== null ? (modes.get(modeKey) ?? null) : null;
   const fallback = useMemo<LabeledAction[]>(
     () =>
       hero === null
@@ -195,7 +211,7 @@ export function BattleScreen({ initial, onExit }: Props) {
     if (orderPick !== null && canOrder) {
       return { ...NO_HIGHLIGHTS, ...common, attacks: orderTargetTiles(orderPick, view, heroId) };
     }
-    if (!canAct || hero === null) return { ...NO_HIGHLIGHTS, ...common };
+    if (!(canAct || copying) || hero === null) return { ...NO_HIGHLIGHTS, ...common };
     const previewTiles = (preview?.affected_tiles ?? []).map(([x, y]): Pos => ({ x: x as number, y: y as number }));
     if (mode !== null) {
       const tt = targetTiles(mode, view, hero);
@@ -213,7 +229,7 @@ export function BattleScreen({ initial, onExit }: Props) {
       return u === undefined ? [] : [u.pos];
     });
     return { moves, attacks, directions: [], preview: previewTiles, ...common };
-  }, [canAct, canOrder, hero, heroId, mode, classified, view, preview, hover, marks, focusTile, orderPick]);
+  }, [canAct, copying, canOrder, hero, heroId, mode, classified, view, preview, hover, marks, focusTile, orderPick]);
 
   // ---- 播放 -----------------------------------------------------------------
   const sleep = useCallback(
@@ -344,6 +360,14 @@ export function BattleScreen({ initial, onExit }: Props) {
     (accept: boolean) => void run(() => api.decide(battleId, accept)),
     [battleId, run],
   );
+  /** 複製技能的選目標：`null` ＝ 放棄施放（不付代價）。 */
+  const decideCopy = useCallback(
+    (pick: Action | null) => {
+      if (pick !== null && pick.type !== "use_skill") return;
+      void run(() => api.decide(battleId, pick !== null, pick));
+    },
+    [battleId, run],
+  );
   const decideWith = useCallback(
     (accept: boolean, always: boolean) => {
       const reaction = response.pending?.reaction;
@@ -433,11 +457,14 @@ export function BattleScreen({ initial, onExit }: Props) {
         if (order !== null) issueOrders(withOrder(response.orders, order));
         return;
       }
-      if (canAct && hero !== null) {
+      if ((canAct || copying) && hero !== null) {
         if (mode !== null) {
           if (mode.kind === "shove_aside") return; // 撥開要用面板選方向
           const a = actionAtTile(mode, view, hero, tile);
-          if (a !== null) act(a);
+          if (a !== null) {
+            if (copying) decideCopy(a);
+            else act(a);
+          }
           return;
         }
         const action = actionForClick(classified, view, tile);
@@ -448,7 +475,7 @@ export function BattleScreen({ initial, onExit }: Props) {
       }
       setSelected(unitAt(shown, tile)?.id ?? null);
     },
-    [act, canAct, canOrder, classified, hero, issueOrders, mode, orderPick, response.orders, shown, view],
+    [act, canAct, copying, decideCopy, canOrder, classified, hero, issueOrders, mode, orderPick, response.orders, shown, view],
   );
 
   const onTileHover = useCallback((tile: Pos | null) => {
@@ -534,7 +561,16 @@ export function BattleScreen({ initial, onExit }: Props) {
           <BattleLog lines={lines} />
         </div>
       </div>
-      {response.awaiting === "decision" && response.pending !== null && !busy && (
+      {copying && response.pending !== null && (
+        <CopyDialog
+          pending={response.pending}
+          skillName={copyName}
+          optionCount={response.copy_options.length}
+          enabled={!busy}
+          onCancel={() => decideCopy(null)}
+        />
+      )}
+      {response.awaiting === "decision" && response.pending !== null && !busy && !copying && (
         <DecisionDialog
           pending={response.pending}
           rule={ruleOfPending(hero, response.pending)}

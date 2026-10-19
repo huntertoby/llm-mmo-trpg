@@ -24,7 +24,7 @@ from dataclasses import dataclass
 
 from trpg.api.schemas import Awaiting, CreateBattleRequest
 from trpg.content.library import ContentLibrary
-from trpg.engine.actions import Action, Decision, Step
+from trpg.engine.actions import Action, Decision, Step, UseSkill
 from trpg.engine.ai.orders import OrderRecord, OrderSet, validate_order
 from trpg.engine.battle import begin_battle, has_only_end_turn, resolve, resume
 from trpg.engine.events import EventBase
@@ -198,10 +198,11 @@ class BattleSession:
         result = resolve(self.state, action)
         return [self._commit(action, result), *self._advance()]
 
-    def decide(self, accept: bool) -> list[StepRecord]:
-        """回答主角的反應詢問，再自動推進。"""
+    def decide(self, accept: bool, copy_cast: UseSkill | None = None) -> list[StepRecord]:
+        """回答主角的反應詢問（或 ``copy_skill`` 的選目標，``copy_cast`` 為複製技能的選取），再
+        自動推進。不合法時拋出 ``IllegalActionError``，狀態不變。"""
         self._require("decision")
-        decision = Decision(unit_id=self.hero_id, accept=accept)
+        decision = Decision(unit_id=self.hero_id, accept=accept, copy_cast=copy_cast)
         result = resume(self.state, decision)
         return [self._commit(decision, result), *self._advance()]
 

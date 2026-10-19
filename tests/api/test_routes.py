@@ -250,6 +250,7 @@ def test_waiting_for_a_decision_rejects_actions_with_409(prompt_client: TestClie
         "reaction",
         "trigger_unit_id",
         "skill_id",
+        "copy_skill_id",
         "trigger_event_seq",
         "stamina_cost",
         "mana_cost",
@@ -261,7 +262,12 @@ def test_waiting_for_a_decision_rejects_actions_with_409(prompt_client: TestClie
     answered = prompt_client.post(_url(battle, "/decision"), json={"accept": False})
     assert answered.status_code == 200
     first = answered.json()["steps"][0]
-    assert first["step"] == {"type": "decision", "unit_id": battle["hero_id"], "accept": False}
+    assert first["step"] == {
+        "type": "decision",
+        "unit_id": battle["hero_id"],
+        "accept": False,
+        "copy_cast": None,
+    }
 
 
 # ---------------------------------------------------------------------------

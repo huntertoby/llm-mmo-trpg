@@ -213,7 +213,7 @@ export interface paths {
 export type webhooks = Record<string, never>;
 export interface components {
     schemas: {
-        Action: components["schemas"]["Move"] | components["schemas"]["Attack"] | components["schemas"]["UseSkill"] | components["schemas"]["Defend"] | components["schemas"]["Shove"] | components["schemas"]["Trip"] | components["schemas"]["Interact"] | components["schemas"]["EndStance"] | components["schemas"]["SetReactionMode"] | components["schemas"]["EndTurn"];
+        Action: components["schemas"]["Move"] | components["schemas"]["Attack"] | components["schemas"]["UseSkill-Output"] | components["schemas"]["Defend"] | components["schemas"]["Shove"] | components["schemas"]["Trip"] | components["schemas"]["Interact"] | components["schemas"]["EndStance"] | components["schemas"]["SetReactionMode"] | components["schemas"]["EndTurn"];
         /**
          * Attack
          * @description 以武器普攻單位 ``target_id`` 或物件 ``target_object_id``（恰好給一個）。
@@ -262,6 +262,8 @@ export interface components {
             /** Interact Options */
             interact_options: components["schemas"]["InteractOptionOut"][];
             pending: components["schemas"]["Pending"] | null;
+            /** Copy Options */
+            copy_options: components["schemas"]["UseSkill-Output"][];
             orders: components["schemas"]["OrderSet"];
             /** Orders Ignored */
             orders_ignored: components["schemas"]["IgnoredOrder"][];
@@ -392,7 +394,11 @@ export interface components {
         };
         /**
          * Decision
-         * @description 對 ``prompt`` 反應的回答：``unit_id`` 為被詢問的反應者，``accept`` 是否使用反應。
+         * @description 對暫停中的結算的回答：``unit_id`` 為被詢問者。
+         *
+         *     - ``prompt`` 反應：``accept`` 是否使用反應；
+         *     - ``copy_skill``（Phase 3C-4b）：``accept`` 為真時 ``copy_cast`` 必須給出複製技能的選取，為假則
+         *       放棄施放（不付任何代價）。
          */
         Decision: {
             /**
@@ -404,11 +410,13 @@ export interface components {
             unit_id: string;
             /** Accept */
             accept: boolean;
+            copy_cast?: components["schemas"]["UseSkill-Output"] | null;
         };
         /** DecisionRequest */
         DecisionRequest: {
             /** Accept */
             accept: boolean;
+            copy_cast?: components["schemas"]["UseSkill-Input"] | null;
         };
         /**
          * Defend
@@ -694,16 +702,17 @@ export interface components {
         };
         /**
          * Pending
-         * @description 結算暫停、等待玩家決定（``prompt`` 反應）。
+         * @description 結算暫停、等待玩家決定（``prompt`` 反應，或 ``copy_skill`` 選目標）。
          *
-         *     以 ``resume(state, Decision(unit_id=..., accept=...))`` 繼續。
+         *     以 ``resume(state, Decision(unit_id=..., accept=...))`` 繼續；``kind == "copy_skill"`` 時
+         *     ``Decision.copy_cast`` 給出複製技能的選取（Phase 3C-4b）。
          */
         Pending: {
             /**
              * Kind
-             * @constant
+             * @enum {string}
              */
-            kind: "reaction";
+            kind: "reaction" | "copy_skill";
             /** Unit Id */
             unit_id: string;
             /**
@@ -715,6 +724,8 @@ export interface components {
             trigger_unit_id?: string | null;
             /** Skill Id */
             skill_id?: string | null;
+            /** Copy Skill Id */
+            copy_skill_id?: string | null;
             /** Trigger Event Seq */
             trigger_event_seq?: number | null;
             /**
@@ -748,6 +759,8 @@ export interface components {
             trigger_unit_id: string | null;
             /** Skill Id */
             skill_id: string | null;
+            /** Copy Skill Id */
+            copy_skill_id: string | null;
             /** Trigger Event Seq */
             trigger_event_seq: number | null;
             /** Stamina Cost */
@@ -990,7 +1003,7 @@ export interface components {
             /** Amount */
             amount: number | null;
         };
-        Step: components["schemas"]["Move"] | components["schemas"]["Attack"] | components["schemas"]["UseSkill"] | components["schemas"]["Defend"] | components["schemas"]["Shove"] | components["schemas"]["Trip"] | components["schemas"]["Interact"] | components["schemas"]["EndStance"] | components["schemas"]["SetReactionMode"] | components["schemas"]["EndTurn"] | components["schemas"]["Decision"];
+        Step: components["schemas"]["Move"] | components["schemas"]["Attack"] | components["schemas"]["UseSkill-Output"] | components["schemas"]["Defend"] | components["schemas"]["Shove"] | components["schemas"]["Trip"] | components["schemas"]["Interact"] | components["schemas"]["EndStance"] | components["schemas"]["SetReactionMode"] | components["schemas"]["EndTurn"] | components["schemas"]["Decision"];
         /**
          * StepOut
          * @description 自動推進中結算的一步。``actor_id`` 與 ``step`` 在開場時為 ``None``。
@@ -1215,8 +1228,12 @@ export interface components {
          *
          *     是否合法（欄位是否對應形狀、射程、視線、代價）由引擎檢查，不合法時拋出
          *     :class:`~trpg.shared.errors.IllegalActionError`。
+         *
+         *     ``copy_cast``（Phase 3C-4b）：``copy_skill`` 技能複製的技能的選取（``skill_id`` 必須是目前
+         *     可複製的技能，``unit_id`` 是同一個施放者，目標欄位依該技能的形狀）。玩家省略它時結算暫停，由
+         *     :class:`Decision` 補上；AI 與戰鬥紀錄直接給出。其他技能不能帶 ``copy_cast``。
          */
-        UseSkill: {
+        "UseSkill-Input": {
             /** Unit Id */
             unit_id: string;
             /**
@@ -1232,6 +1249,41 @@ export interface components {
             target_object_id?: string | null;
             target_pos?: components["schemas"]["Pos"] | null;
             direction?: components["schemas"]["Direction"] | null;
+            copy_cast?: components["schemas"]["UseSkill-Input"] | null;
+        };
+        /**
+         * UseSkill
+         * @description 使用技能（Phase 2A）。依形狀的 ``targeting`` 只允許對應的欄位：
+         *
+         *     - ``unit``（單體、連鎖）：``target_id`` 或 ``target_object_id`` 恰好一個；
+         *     - ``tile``（十字、方陣、指定格）：``target_pos``；
+         *     - ``direction``（直線、錐形）：``direction``；
+         *     - ``self``／``none``（自身、環形、範圍光環）：都不給。
+         *
+         *     是否合法（欄位是否對應形狀、射程、視線、代價）由引擎檢查，不合法時拋出
+         *     :class:`~trpg.shared.errors.IllegalActionError`。
+         *
+         *     ``copy_cast``（Phase 3C-4b）：``copy_skill`` 技能複製的技能的選取（``skill_id`` 必須是目前
+         *     可複製的技能，``unit_id`` 是同一個施放者，目標欄位依該技能的形狀）。玩家省略它時結算暫停，由
+         *     :class:`Decision` 補上；AI 與戰鬥紀錄直接給出。其他技能不能帶 ``copy_cast``。
+         */
+        "UseSkill-Output": {
+            /** Unit Id */
+            unit_id: string;
+            /**
+             * @description discriminator enum property added by openapi-typescript
+             * @enum {string}
+             */
+            type: "use_skill";
+            /** Skill Id */
+            skill_id: string;
+            /** Target Id */
+            target_id?: string | null;
+            /** Target Object Id */
+            target_object_id?: string | null;
+            target_pos?: components["schemas"]["Pos"] | null;
+            direction?: components["schemas"]["Direction"] | null;
+            copy_cast?: components["schemas"]["UseSkill-Output"] | null;
         };
         /** ValidationError */
         ValidationError: {
@@ -1425,7 +1477,7 @@ export interface operations {
         };
         requestBody: {
             content: {
-                "application/json": components["schemas"]["Move"] | components["schemas"]["Attack"] | components["schemas"]["UseSkill"] | components["schemas"]["Defend"] | components["schemas"]["Shove"] | components["schemas"]["Trip"] | components["schemas"]["Interact"] | components["schemas"]["EndStance"] | components["schemas"]["SetReactionMode"] | components["schemas"]["EndTurn"];
+                "application/json": components["schemas"]["Move"] | components["schemas"]["Attack"] | components["schemas"]["UseSkill-Input"] | components["schemas"]["Defend"] | components["schemas"]["Shove"] | components["schemas"]["Trip"] | components["schemas"]["Interact"] | components["schemas"]["EndStance"] | components["schemas"]["SetReactionMode"] | components["schemas"]["EndTurn"];
             };
         };
         responses: {
@@ -1495,7 +1547,7 @@ export interface operations {
         };
         requestBody: {
             content: {
-                "application/json": components["schemas"]["Move"] | components["schemas"]["Attack"] | components["schemas"]["UseSkill"] | components["schemas"]["Defend"] | components["schemas"]["Shove"] | components["schemas"]["Trip"] | components["schemas"]["Interact"] | components["schemas"]["EndStance"] | components["schemas"]["SetReactionMode"] | components["schemas"]["EndTurn"];
+                "application/json": components["schemas"]["Move"] | components["schemas"]["Attack"] | components["schemas"]["UseSkill-Input"] | components["schemas"]["Defend"] | components["schemas"]["Shove"] | components["schemas"]["Trip"] | components["schemas"]["Interact"] | components["schemas"]["EndStance"] | components["schemas"]["SetReactionMode"] | components["schemas"]["EndTurn"];
             };
         };
         responses: {

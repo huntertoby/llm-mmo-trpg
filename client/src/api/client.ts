@@ -9,6 +9,7 @@ import type {
   OrderSet,
   PreviewOut,
   SkillCard,
+  UseSkill,
 } from "./types";
 
 export class ApiError extends Error {
@@ -73,8 +74,9 @@ export const api = {
   /** 設定我方隊友的戰術指令（空集合 ＝ 取消）；不推進戰鬥，`steps` 為空。 */
   setOrders: (id: string, orders: OrderSet) =>
     request<BattleResponse>("PUT", `/battles/${id}/orders`, orders),
-  decide: (id: string, accept: boolean) =>
-    request<BattleResponse>("POST", `/battles/${id}/decision`, { accept }),
+  /** 回答暫停中的結算：反應詢問（`accept`），或複製技能的選目標（`copyCast` 為選取，`accept: false` 放棄）。 */
+  decide: (id: string, accept: boolean, copyCast: UseSkill | null = null) =>
+    request<BattleResponse>("POST", `/battles/${id}/decision`, { accept, copy_cast: copyCast }),
 };
 
 /** 戰鬥紀錄的下載網址（`trpg battle --log-json` 同格式，可用 `trpg battle replay` 重播）。 */

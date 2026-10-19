@@ -1,5 +1,5 @@
 // 技能列與目標選取（純函式）：合法動作 → 「模式」（技能、攻擊、推擊……）→ 每個模式的合法目標。
-import type { Action, BattleView, Direction, InteractOption, Pos, SkillCard, UnitView } from "../api/types";
+import type { Action, BattleView, Direction, InteractOption, Pending, Pos, SkillCard, UnitView } from "../api/types";
 import { posKey, samePos } from "./geometry";
 import { objectStyle } from "./glossary";
 
@@ -185,6 +185,34 @@ export function skillMode(button: SkillButton): ActionMode {
     actions: button.actions,
     targets: buildTargets(button.actions),
   };
+}
+
+// ---- 複製技能的第二段選取 ----------------------------------------------------
+
+/** 這個詢問是不是複製技能（`copy_skill`）的選目標。 */
+export function isCopyPending(pending: Pending | null): pending is Pending {
+  return pending !== null && pending.kind === "copy_skill";
+}
+
+/**
+ * 複製技能暫停時的第二段選取：伺服器給的 `copy_options`（複製技能目前所有合法的選取）當成一個
+ * 模式，點到目標就把那個選取連同「接受」送回 `/decision`。
+ */
+export function copyMode(pending: Pending, options: readonly Action[], skillName: string): ActionMode {
+  return {
+    key: `copy:${pending.copy_skill_id ?? ""}`,
+    kind: "skill",
+    label: skillName,
+    skillId: pending.copy_skill_id ?? null,
+    actions: [...options],
+    targets: buildTargets(options),
+  };
+}
+
+/** 第二段選取的提示文字。 */
+export function copyPromptText(skillName: string, optionCount: number): string {
+  if (optionCount === 0) return `目前沒有「${skillName}」的合法目標，請放棄這次施放。`;
+  return `要複製「${skillName}」：在戰場上點選高亮的目標（共 ${optionCount} 個可選），或放棄施放。`;
 }
 
 // ---- 撥開 -----------------------------------------------------------------
