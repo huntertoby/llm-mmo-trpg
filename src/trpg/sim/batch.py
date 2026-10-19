@@ -115,15 +115,20 @@ def map_spec(
     max_rounds: int = DEFAULT_MAX_ROUNDS,
     ally_commander: str | None = None,
     enemy_commander: str | None = None,
+    allies: Sequence[str] | None = None,
 ) -> BatchSpec:
     """地圖預設陣容（``encounter``）、效用 AI 的 :class:`BatchSpec`。
 
-    指定 ``ally_commander``／``enemy_commander``（:data:`~trpg.sim.commanders.COMMANDER_IDS`）時，
-    該陣營由腳本指揮官下戰術指令（Phase 2C-2）。"""
+    ``allies`` 給定時取代 ``encounter`` 的我方（``trpg sim maps --ally-build``；範本須已在
+    ``library`` 內，見 :func:`trpg.sim.lineup.build_allies`）。
+
+    指定 ``ally_commander``／``enemy_commander``（:data:`~trpg.sim.commanders.COMMANDER_IDS`）
+    時，該陣營由腳本指揮官下戰術指令（Phase 2C-2）。"""
     encounter = library.map(map_id).encounter
     if encounter is None:
         raise ValueError(f"{map_id} 沒有預設陣容（encounter）")
-    setup = build_setup(library, map_id, encounter.allies, encounter.enemies, max_rounds=max_rounds)
+    team = encounter.allies if allies is None else list(allies)
+    setup = build_setup(library, map_id, team, encounter.enemies, max_rounds=max_rounds)
     factory: Callable[[], Policy] = UtilityPolicyFactory(library.ai_profiles)
     if ally_commander is not None or enemy_commander is not None:
         factory = CommandedPolicyFactory(library.ai_profiles, ally_commander, enemy_commander)
@@ -311,6 +316,8 @@ class BatchReport(_Model):
     unused_skills: tuple[str, ...]
     """裝備在某個單位身上、但整批戰鬥從未被使用的技能。"""
     anomalies: tuple[Anomaly, ...]
+    scene_events: dict[str, int] = {}
+    """場景物件事件的總次數（Phase 3C-5b）：``hurled`` 投擲、``toppled`` 推倒、``pierced`` 穿透。"""
 
     def anomaly(self, kind: str) -> Anomaly | None:
         return next((a for a in self.anomalies if a.kind == kind), None)
@@ -528,6 +535,13 @@ def _skill_rows(done: Sequence[BattleMetrics]) -> tuple[SkillRow, ...]:
     return tuple(sorted(rows, key=lambda r: (-r.uses_per_battle, r.skill_id)))
 
 
+def _scene_events(done: Sequence[BattleMetrics]) -> dict[str, int]:
+    total: Counter[str] = Counter()
+    for m in done:
+        total.update(m.scene_events)
+    return dict(sorted(total.items()))
+
+
 def build_report(
     name: str,
     outcomes: Sequence[BattleOutcome],
@@ -565,6 +579,7 @@ def build_report(
         skills=skills,
         unused_skills=tuple(sorted(set(equipped) - used)),
         anomalies=_anomalies(ordered),
+        scene_events=_scene_events(done),
     )
 
 
@@ -692,6 +707,10 @@ def format_report(report: BatchReport) -> str:
         out.append("（沒有技能被使用）")
     out.append("")
     out.append("從未使用的技能：" + ("、".join(r.unused_skills) if r.unused_skills else "無"))
+    if r.scene_events:
+        labels = {"hurled": "投擲物件", "toppled": "推倒", "pierced": "穿透"}
+        counts = "、".join(f"{labels[k]} {v} 次" for k, v in r.scene_events.items())
+        out.append(f"場景物件（整批合計）：{counts}")
     out.append("")
     if not r.anomalies:
         out.append("異常：無")

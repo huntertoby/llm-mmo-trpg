@@ -7,6 +7,7 @@ from trpg.shared.types import Surface
 
 __all__ = [
     "XY",
+    "axis_direction",
     "blocks_sight_at",
     "bresenham",
     "chebyshev",
@@ -20,6 +21,15 @@ type XY = tuple[int, int]
 
 # 固定方向順序：上、右、下、左（與 Pos.neighbors4 一致）
 _DIRECTIONS: tuple[XY, ...] = ((0, -1), (1, 0), (0, 1), (-1, 0))
+
+
+def axis_direction(dx: int, dy: int) -> XY | None:
+    """向量的主要軸向（四方向）；兩軸相同時取水平；零向量為 ``None``。"""
+    if dx == 0 and dy == 0:
+        return None
+    if abs(dx) >= abs(dy):
+        return (1 if dx > 0 else -1, 0)
+    return (0, 1 if dy > 0 else -1)
 
 
 def manhattan(a: XY, b: XY) -> int:

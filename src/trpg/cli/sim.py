@@ -19,6 +19,7 @@ from trpg.sim.batch import (
     run_batches,
 )
 from trpg.sim.commanders import describe_commander
+from trpg.sim.lineup import build_allies
 
 __all__ = ["cmd_sim_maps", "default_sim_maps"]
 
@@ -46,10 +47,14 @@ def cmd_sim_maps(
     err: TextIO,
     ally_commander: str | None = None,
     enemy_commander: str | None = None,
+    ally_builds: list[str] | None = None,
 ) -> int:
     map_ids = default_sim_maps(library) if maps is None else maps
     seed_list = tuple(range(seed_start, seed_start + seeds))
     try:
+        allies: list[str] | None = None
+        if ally_builds:  # 我方改用 build 英雄（Phase 3C-5b；不足 3 人以標準隊友補齊）
+            library, allies = build_allies(library, ally_builds)
         specs = [
             map_spec(
                 library,
@@ -57,6 +62,7 @@ def cmd_sim_maps(
                 seed_list,
                 ally_commander=ally_commander,
                 enemy_commander=enemy_commander,
+                allies=allies,
             )
             for map_id in map_ids
         ]
@@ -71,6 +77,8 @@ def cmd_sim_maps(
         f"max_rounds={DEFAULT_MAX_ROUNDS}",
         file=out,
     )
+    if ally_builds:
+        print(f"我方 build：{'、'.join(ally_builds)}（不足 3 人以標準隊友補齊）", file=out)
     for label, commander_id in (("我方", ally_commander), ("敵方", enemy_commander)):
         if commander_id is not None:
             print(f"{label}指揮官：{commander_id}（{describe_commander(commander_id)}）", file=out)

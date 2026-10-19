@@ -87,7 +87,7 @@ from trpg.engine.reactions import (
 from trpg.engine.results import Pending
 from trpg.engine.rewrites import grant_ap, grant_reactions, reset_cooldowns
 from trpg.engine.rules.combat import PERMILLE, AttackProfile, AttackRoll, ForcedOutcome, roll_attack
-from trpg.engine.rules.geometry import XY, manhattan
+from trpg.engine.rules.geometry import XY, axis_direction, manhattan
 from trpg.engine.skill_triggers import collect_cast, holding
 from trpg.engine.skills.conditions import Subject, condition_met
 from trpg.engine.skills.scaling import mastery_duration_bonus, skill_scaling_value
@@ -327,15 +327,6 @@ def _apply_self_status(ctx: Ctx, caster: UnitState, skill: SkillDef) -> None:
             )
         ],
     )
-
-
-def _axis_direction(dx: int, dy: int) -> XY | None:
-    """向量的主要軸向（四方向）；兩軸相同時取水平；零向量為 ``None``。"""
-    if dx == 0 and dy == 0:
-        return None
-    if abs(dx) >= abs(dy):
-        return (1 if dx > 0 else -1, 0)
-    return (0, 1 if dy > 0 else -1)
 
 
 class _Cast:
@@ -944,7 +935,7 @@ class _Cast:
         if area.direction is not None:
             dx, dy = area.direction
             return (-dx, -dy) if pull else (dx, dy)
-        direction = _axis_direction(unit.pos.x - area.origin[0], unit.pos.y - area.origin[1])
+        direction = axis_direction(unit.pos.x - area.origin[0], unit.pos.y - area.origin[1])
         if direction is None:
             return None
         return (-direction[0], -direction[1]) if pull else direction
@@ -980,7 +971,7 @@ class _Cast:
         """``xy`` 遠離施放者的方向：方向型形狀為形狀的方向，其他為「施放者 → 該格」的主要軸向。"""
         if self.area.direction is not None:
             return self.area.direction
-        return _axis_direction(xy[0] - self.caster.pos.x, xy[1] - self.caster.pos.y)
+        return axis_direction(xy[0] - self.caster.pos.x, xy[1] - self.caster.pos.y)
 
     def _topple_effects(self, xy: XY, condition: ConditionSpec | None) -> list[EffectBase]:
         """``xy`` 上的 ``topplable`` 物件往遠離施放者的方向推倒（以一格推擊結算，見

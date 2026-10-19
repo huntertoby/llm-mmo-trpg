@@ -76,6 +76,7 @@ from trpg.engine.ai.orders import (
     UseEnvironment,
     validate_order,
 )
+from trpg.engine.ai.scene_objects import SCENE_PRIMITIVES, scene_estimate
 from trpg.engine.battle import legal_actions, legal_actions_with_areas
 from trpg.engine.events import (
     ApGranted,
@@ -1082,6 +1083,8 @@ def skill_estimate(  # noqa: PLR0917
     幾個選取；``None`` 表示不納入候選（這是 ``worth_previewing`` 在技能上的對應）。
 
     - 含 ``teleport``：把行動者放到目標格後的位置價值變化（同 :func:`virtual_move_score`）；
+    - 含 ``hurl_object`` 或 ``topple``：落點與爆炸範圍內、或倒下壓住的敵人數
+      （:func:`~trpg.engine.ai.scene_objects.scene_estimate`）；
     - 影響範圍內有敵方單位、可破壞物件，或（有治療的技能）受傷的友方：分數 ＝ 敵人數 × 3 ＋
       受傷友方 × 2 − 其他友方 × 3 ＋ 可破壞物件數；
     - 場地型技能（效果只作用在格子或自己身上：煙幕、石牆、隱匿……）沒有上述對象時，看它是否
@@ -1099,6 +1102,8 @@ def skill_estimate(  # noqa: PLR0917
         moved = unit.clone()
         moved.pos = action.target_pos
         return _unit_position_value(state, moved, w, scene) - before
+    if any(e.type in SCENE_PRIMITIVES for e in skill.effects):  # 投擲物件、推倒（Phase 3C-5b）
+        return scene_estimate(state, unit, skill, action, area)
     effects = resolve_effects(state, skill)
     score = Fraction(0)
     useful = False

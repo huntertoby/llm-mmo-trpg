@@ -16,8 +16,9 @@
 - ``trpg sim matrix [--builds a,b] [--maps a,b] [--seeds 20] [--jobs N] [--json out.json]``：
   build × 地圖矩陣（勝率、英雄 DPR、存活率、排名、6.8 標準檢查）。
 - ``trpg sim skills [--demo] [--random N] [--seeds 10] [--jobs N]``：技能報表（DPR 分佈、離群）。
-- ``trpg sim maps [--maps a,b] [--seeds 20] [--seed-start 0] [--jobs N] [--json out.json]``：
-  每張地圖以預設陣容批次模擬，印出勝率、輪數、DPR、控制回合、技能使用與異常。
+- ``trpg sim maps [--maps a,b] [--seeds 20] [--seed-start 0] [--jobs N] [--json out.json]
+  [--ally-build a,b]``：每張地圖以預設陣容（或指定的 build）批次模擬，印出勝率、輪數、DPR、
+  控制回合、技能使用與異常。
 - ``trpg sim completion [--maps a,b] [--seeds 20] [--seed-start 0] [--jobs N]``：完成度檢查
   （9 種指揮官設定 × 地圖 × 種子；exception、max_actions、draw 必須為 0，否則結束碼 1）。
 - ``trpg battle`` 與 ``trpg sim maps`` 都可加 ``--ally-commander``／``--enemy-commander <id>``
@@ -161,6 +162,11 @@ def build_parser() -> argparse.ArgumentParser:  # noqa: PLR0915
         "--jobs", type=_jobs_arg, default=0, help="平行行程數（預設 0＝CPU 邏輯核心數）"
     )
     sim_maps.add_argument("--json", type=Path, default=None, help="另外寫出完整報表 JSON")
+    sim_maps.add_argument(
+        "--ally-build",
+        default=None,
+        help="我方改用 build 英雄，以逗號分隔（不足 3 人以標準隊友補齊；預設：地圖的預設陣容）",
+    )
     _add_commander_args(sim_maps)
 
     battle = commands.add_parser(
@@ -467,9 +473,14 @@ def _sim_maps(args: argparse.Namespace) -> int:
     if maps == []:
         print("錯誤：--maps 至少要有一張地圖", file=sys.stderr)
         return 2
+    builds = None if args.ally_build is None else _split(args.ally_build)
+    if builds == []:
+        print("錯誤：--ally-build 至少要指定一個 build", file=sys.stderr)
+        return 2
     return _with_library(
         lambda lib: cmd_sim_maps(
             lib,
+            ally_builds=builds,
             maps=maps,
             seeds=args.seeds,
             seed_start=args.seed_start,

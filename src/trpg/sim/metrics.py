@@ -40,9 +40,12 @@ from trpg.engine.events import (
     DamageDealt,
     EventBase,
     Healed,
+    ObjectHurled,
+    ObjectToppled,
     RoundStarted,
     ShieldAbsorbed,
     ShieldGained,
+    ShotPierced,
     SkillTriggered,
     SkillUsed,
     StatusApplied,
@@ -174,6 +177,9 @@ class BattleMetrics(_Model):
     one_shot_count: int
     trigger_limit_count: int = 0
     """被動因觸發深度上限而沒有結算的次數（``TriggerLimitReached``；Phase 2E-1）。"""
+    scene_events: dict[str, int] = {}
+    """場景物件事件的次數（Phase 3C-5b）：``hurled``（投擲物件）、``toppled``（推倒）、
+    ``pierced``（穿透的射線穿過 ``penetrable`` 物件）；沒有發生的不列出。"""
 
     def team_damage(self, team: Team, *, direct: bool | None = None) -> int:
         """陣營造成的傷害；``direct`` 為 ``None`` 時直接＋間接。"""
@@ -340,6 +346,7 @@ def metrics_from_events(  # noqa: C901, PLR0912, PLR0915 - 單一事件迴圈，
     skill_users: dict[str, set[str]] = {}
     chain_limit = 0
     trigger_limit = 0
+    scene: dict[str, int] = {}
     boss_round_one_down = False
     one_shots = 0
     boss_burst_hits: list[str] = []
@@ -409,6 +416,11 @@ def metrics_from_events(  # noqa: C901, PLR0912, PLR0915 - 單一事件迴圈，
                 acc[killer].kills += 1
             if info[event.unit_id].boss and event.round == 1:
                 boss_round_one_down = True
+        elif isinstance(event, ObjectHurled | ObjectToppled | ShotPierced):
+            kind = {"object_hurled": "hurled", "object_toppled": "toppled"}.get(
+                event.type, "pierced"
+            )
+            scene[kind] = scene.get(kind, 0) + 1
         elif isinstance(event, ChainLimitReached):
             chain_limit += 1
         elif isinstance(event, TriggerLimitReached):
@@ -512,6 +524,7 @@ def metrics_from_events(  # noqa: C901, PLR0912, PLR0915 - 單一事件迴圈，
         boss_burst=boss_burst,
         one_shot_count=one_shots,
         trigger_limit_count=trigger_limit,
+        scene_events=dict(sorted(scene.items())),
     )
 
 
