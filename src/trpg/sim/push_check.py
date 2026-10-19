@@ -6,6 +6,9 @@
 2. 以 BFS 檢查「物件視為不可通行」時，我方起始區能否走到敵方起始區（只看地形與高度，
    不看單位與移動點數）。
 3. 若走不到：對每個擋路的可推動物件試著推（四個方向）或撥開，列出能單獨打通路的移動。
+4. 可推倒（``topplable``，Phase 3C-5b）物件：模擬往四個方向各推倒一次（原物件移除、倒塌物永久
+   擋在最後一格，見 :func:`trpg.engine.effects.world.topple_line`），列出會把通路封死的推倒；
+   原本不通的地圖也列出推倒後能打通的方向。
 
 只讀不改地圖；有問題的地圖（原本就不通、需要先移動物件才通）列在摘要表的「狀態」欄。
 """
@@ -19,7 +22,7 @@ from dataclasses import dataclass, field
 from trpg.content.library import ContentLibrary
 from trpg.content.maps import standable
 from trpg.engine.battle import start_battle
-from trpg.engine.effects.world import object_push_block
+from trpg.engine.effects.world import object_push_block, topple_line
 from trpg.engine.rules.geometry import XY
 from trpg.engine.setup import build_setup
 from trpg.engine.state import BattleState, ObjectState
@@ -44,6 +47,20 @@ class Unblock:
         return f"{self.object_id} {self.from_xy}→{self.to_xy}（往{_DIRECTION_NAMES[(dx, dy)]}）"
 
 
+@dataclass(frozen=True)
+class ToppleCase:
+    """單次推倒的結果：``rubble_xy`` 是倒塌物落下的格子（放不下時為 ``None``，物件直接消失）。"""
+
+    object_id: str
+    from_xy: XY
+    direction: XY
+    rubble_xy: XY | None
+
+    def text(self) -> str:
+        where = "無處可放" if self.rubble_xy is None else f"倒塌物 {self.rubble_xy}"
+        return f"{self.object_id} {self.from_xy}（往{_DIRECTION_NAMES[self.direction]}倒，{where}）"
+
+
 @dataclass
 class MapPushReport:
     map_id: str
@@ -59,13 +76,19 @@ class MapPushReport:
     """原本通的地圖：單次推或撥開就把通路封死的移動（空表示沒有）。"""
     sole_blockers: list[str] = field(default_factory=list)
     """通路被它們擋住（把它從地圖拿掉就通）的可推動物件 ID。"""
+    topplable: list[tuple[str, str, XY]] = field(default_factory=list)
+    """可推倒物件 ``(物件 ID, 種類, 位置)``（Phase 3C-5b）。"""
+    topple_seals: list[ToppleCase] = field(default_factory=list)
+    """原本通的地圖：單次推倒就把通路封死（倒塌物擋在窄道）的推倒。"""
+    topple_unblocks: list[ToppleCase] = field(default_factory=list)
+    """不通的地圖：單次推倒就能打通路的推倒。"""
 
     @property
     def status(self) -> str:
         if self.connected:
             return "通"
-        if self.unblocks:
-            return "需移動物件（可撥開／推開）"
+        if self.unblocks or self.topple_unblocks:
+            return "需移動物件（可撥開／推開／推倒）"
         return "不通（移動一次也打不通）"
 
 
@@ -146,6 +169,7 @@ def check_state(
             report.blockers.append((obj.id, obj.xy))
     base = _blocked_tiles(state)
     report.connected = _linked(state, allies, enemies, base)
+    _find_topples(state, report, allies, enemies, base)
     if report.connected:
         _find_seals(state, report, allies, enemies, base)
         return report
@@ -160,6 +184,27 @@ def check_state(
     return report
 
 
+def _find_topples(
+    state: BattleState, report: MapPushReport, allies: list[XY], enemies: list[XY], base: set[XY]
+) -> None:
+    """模擬每個可推倒物件往四個方向倒下（單次）：原格空出、倒塌物擋在 ``rubble`` 格。"""
+    for obj in state.objects_sorted():
+        if obj.destroyed or "topplable" not in state.object_def(obj).tags:
+            continue
+        report.topplable.append((obj.id, obj.kind, obj.xy))
+        for direction in _DIRECTIONS:
+            rubble = topple_line(state, obj, direction).rubble
+            blocked = base - {obj.xy}
+            if rubble is not None:
+                blocked = blocked | {rubble}
+            case = ToppleCase(obj.id, obj.xy, direction, rubble)
+            linked = _linked(state, allies, enemies, blocked)
+            if report.connected and not linked:
+                report.topple_seals.append(case)
+            elif not report.connected and linked:
+                report.topple_unblocks.append(case)
+
+
 def _find_seals(
     state: BattleState, report: MapPushReport, allies: list[XY], enemies: list[XY], base: set[XY]
 ) -> None:
@@ -172,15 +217,21 @@ def _find_seals(
 
 def render_report(reports: list[MapPushReport]) -> str:
     lines = [
-        "| 地圖 | 可推動物件 | 擋路的可推物件 | 狀態 | 單次移動可打通 | 單次移動會封路 |",
-        "|---|---|---|---|---|---|",
+        "| 地圖 | 可推動物件 | 擋路的可推物件 | 狀態 | 單次移動可打通 | 單次移動會封路 "
+        "| 可推倒物件 | 單次推倒會封路 |",
+        "|---|---|---|---|---|---|---|---|",
     ]
     for r in reports:
         pushable = "、".join(f"{kind}{xy}" for _, kind, xy in r.pushable) or "—"
         blockers = "、".join(f"{oid}{xy}" for oid, xy in r.blockers) or "—"
-        unblocks = "；".join(u.text() for u in r.unblocks) or "—"
+        unblocks = "；".join(
+            [*(u.text() for u in r.unblocks), *(f"推倒 {t.text()}" for t in r.topple_unblocks)]
+        )
         seals = "；".join(u.text() for u in r.seals) or "—"
+        topplable = "、".join(f"{kind}{xy}" for _, kind, xy in r.topplable) or "—"
+        topple_seals = "；".join(t.text() for t in r.topple_seals) or "—"
         lines.append(
-            f"| {r.map_id} | {pushable} | {blockers} | {r.status} | {unblocks} | {seals} |"
+            f"| {r.map_id} | {pushable} | {blockers} | {r.status} | {unblocks or '—'} | {seals} "
+            f"| {topplable} | {topple_seals} |"
         )
     return "\n".join(lines)
