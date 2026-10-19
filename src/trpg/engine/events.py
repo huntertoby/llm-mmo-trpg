@@ -58,6 +58,7 @@ __all__ = [
     "ObjectIgnited",
     "ObjectMoved",
     "ObjectToppled",
+    "OverloadTriggered",
     "PushResisted",
     "ReactionDeclined",
     "ReactionModeSet",
@@ -389,6 +390,8 @@ class DamageDealt(EventBase):
     redirected: int = 0
     """轉給連結者（``redirect_damage`` 的狀態，Phase 3C-4b）的點數；轉移本身是緊接著的
     ``damage_redirected`` 事件。"""
+    exploded: int = 0
+    """爆骰（Phase 3D-7b）多擲的骰子數（``rolls`` 已包含它們）。"""
 
 
 class Healed(EventBase):
@@ -849,7 +852,7 @@ class StacksChanged(EventBase):
     """層數改變（Phase 2E-3）：``before`` → ``after``。
 
     ``reason``：``gained``（``add_stack``）、``consumed``（``consume_stack``）、``expired``
-    （``expires_after_rounds`` 到期）。
+    （``expires_after_rounds`` 到期）、``overload``（超載到達門檻而清空，Phase 3D-7b）。
     """
 
     type: Literal["stacks_changed"] = "stacks_changed"
@@ -857,8 +860,19 @@ class StacksChanged(EventBase):
     stack_id: str
     before: int
     after: int
-    reason: Literal["gained", "consumed", "expired"]
+    reason: Literal["gained", "consumed", "expired", "overload"]
     source_id: UnitId | None = None
+
+
+class OverloadTriggered(EventBase):
+    """超載（Phase 3D-7b）：層數累積到 ``threshold``，持有者立刻承受反噬（緊接著的傷害與狀態事件）
+    並清空層數（``stacks_changed``，原因 ``overload``）。"""
+
+    type: Literal["overload_triggered"] = "overload_triggered"
+    unit_id: UnitId
+    stack_id: str
+    stacks: int
+    threshold: int
 
 
 # ---------------------------------------------------------------------------
@@ -1296,7 +1310,8 @@ type Event = Annotated[
     | ActivationExpired
     | RuleChangeTriggered
     | GambleRolled
-    | BacklashTriggered,
+    | BacklashTriggered
+    | OverloadTriggered,
     Field(discriminator="type"),
 ]
 

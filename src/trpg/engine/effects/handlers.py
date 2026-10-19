@@ -83,6 +83,7 @@ def _damage(ctx: Ctx, effect: EffectBase) -> list[EventBase]:
     if unit is None or not unit.alive:
         return []
     rolls: tuple[int, ...] = ()
+    exploded = 0
     mod_ppm = PPM
     weather = PERMILLE
     base_amount: int | None = None
@@ -96,7 +97,7 @@ def _damage(ctx: Ctx, effect: EffectBase) -> list[EventBase]:
     else:
         if effect.dice is not None:
             count = effect.dice.count * (2 if effect.crit else 1)
-            rolls = tuple(ctx.rng.roll(effect.dice.sides) for _ in range(count))
+            rolls, exploded = _roll_damage_dice(ctx, effect.dice.sides, count, effect.explode_max)
         raw_permille = (sum(rolls) + effect.flat) * PERMILLE + effect.scaled_permille
         if effect.apply_element_mod:
             mod_ppm = element_modifier_ppm(unit, effect.element, ctx.rules)
@@ -148,6 +149,7 @@ def _damage(ctx: Ctx, effect: EffectBase) -> list[EventBase]:
             status_ppm=status_ppm,
             absorbed=absorbed,
             redirected=redirected,
+            exploded=exploded,
         )
     ]
     events += _redirect(ctx, unit, link, redirected, effect)
@@ -159,6 +161,25 @@ def _damage(ctx: Ctx, effect: EffectBase) -> list[EventBase]:
         events.extend(down_unit(ctx, unit))
         events.extend(credit_elite_kill(ctx, unit, effect.source_id))
     return events
+
+
+def _roll_damage_dice(
+    ctx: Ctx, sides: int, count: int, explode_max: int
+) -> tuple[tuple[int, ...], int]:
+    """擲 ``count`` 顆傷害骰；爆骰（Phase 3D-7b）：一顆骰擲到最大值就再擲一顆，每顆原本的骰子最多
+    再擲 ``explode_max`` 次。回傳（全部擲出的值，依擲骰順序；多擲的顆數）。"""
+    rolls: list[int] = []
+    extra = 0
+    for _ in range(count):
+        value = ctx.rng.roll(sides)
+        rolls.append(value)
+        again = 0
+        while sides > 1 and value == sides and again < explode_max:
+            value = ctx.rng.roll(sides)
+            rolls.append(value)
+            again += 1
+            extra += 1
+    return tuple(rolls), extra
 
 
 def _cap_backlash(ctx: Ctx, unit: UnitState, effect: DamageEffect, amount: int) -> int:

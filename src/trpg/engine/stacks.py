@@ -15,7 +15,9 @@ from __future__ import annotations
 from trpg.content.skills import CONSUME_STACK, SkillDef
 from trpg.content.stacks import StackDef
 from trpg.engine.context import Ctx
-from trpg.engine.events import StacksChanged
+from trpg.engine.effects import execute
+from trpg.engine.effects.models import ApplyStatusEffect, DamageEffect, EffectBase
+from trpg.engine.events import OverloadTriggered, StacksChanged
 from trpg.engine.state import BattleState, UnitState
 from trpg.shared.types import UnitId
 
@@ -43,6 +45,56 @@ def add_stacks(
         reason="gained",
         source_id=source_id,
     )
+    _overload(ctx, unit, definition, after)
+
+
+def _overload(ctx: Ctx, unit: UnitState, definition: StackDef, stacks: int) -> None:
+    """超載（Phase 3D-7b）：層數累積到門檻時，立刻對持有者結算反噬（傷害不會讓他低於 1 HP，
+    狀態不是硬控）並清空層數。"""
+    overload = definition.overload
+    if overload is None or stacks < overload.threshold:
+        return
+    ctx.emit(
+        OverloadTriggered,
+        unit_id=unit.id,
+        stack_id=definition.id,
+        stacks=stacks,
+        threshold=overload.threshold,
+    )
+    unit.stacks.pop(definition.id, None)
+    unit.stack_expiry.pop(definition.id, None)
+    ctx.emit(
+        StacksChanged,
+        unit_id=unit.id,
+        stack_id=definition.id,
+        before=stacks,
+        after=0,
+        reason="overload",
+    )
+    batch: list[EffectBase] = []
+    for sub in overload.backlash:
+        if sub.type == "damage":
+            assert sub.element is not None
+            batch.append(
+                DamageEffect(
+                    target_id=unit.id,
+                    source_id=unit.id,
+                    cause="backlash",
+                    element=sub.element,
+                    dice=sub.dice,
+                )
+            )
+        else:
+            assert sub.status is not None
+            batch.append(
+                ApplyStatusEffect(
+                    source_id=unit.id,
+                    target_id=unit.id,
+                    status_id=sub.status,
+                    duration=sub.duration,
+                )
+            )
+    execute(ctx, batch)
 
 
 def consume_stacks(ctx: Ctx, unit: UnitState, stack_id: str, *, source_id: UnitId | None) -> int:

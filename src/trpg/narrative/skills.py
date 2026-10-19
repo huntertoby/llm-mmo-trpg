@@ -28,6 +28,7 @@ from trpg.content.skills import (
     default_affects,
     on_hit_carrier,
 )
+from trpg.content.stacks import StackDef
 
 __all__ = [
     "CATEGORY_TEXT",
@@ -47,6 +48,7 @@ __all__ = [
     "rule_change_text",
     "scaling_detail",
     "scaling_label",
+    "scaling_text",
     "shape_summary",
     "skill_ap",
     "skill_card",
@@ -132,14 +134,47 @@ def mastery_text(skill: SkillDef, *, active: bool | None = None) -> str:
 type _EffectText = Callable[[ContentLibrary, SkillDef, EffectSpec], str]
 
 
-def _damage(_lib: ContentLibrary, skill: SkillDef, spec: EffectSpec) -> str:
+_SCALE_TEXT = {
+    "missing_hp_10pct": "你每少 10% 最大 HP",
+    "distance": "與目標每距 1 格",
+    "enemies_adjacent_target": "目標每有 1 名相鄰的敵人",
+    "enemies_adjacent_self": "你每有 1 名相鄰的敵人",
+}
+"""依情況縮放的依據（Phase 3D-7b）。"""
+
+
+def scaling_text(spec: EffectSpec) -> str | None:
+    """傷害的縮放一句話（Phase 3D-7b），例如「你每少 10% 最大 HP，傷害 +8%（最多 +80%）」。"""
+    scaling = spec.scaling
+    if scaling is None:
+        return None
+    return (
+        f"{_SCALE_TEXT[scaling.by]}，傷害 +{scaling.per_step_permille / 10:g}%"
+        f"（最多 +{scaling.cap_permille / 10:g}%）"
+    )
+
+
+def _damage(lib: ContentLibrary, skill: SkillDef, spec: EffectSpec) -> str:
+    discount = skill.damage_permille or 1000
     if skill.category == "spell":
         assert spec.dice is not None and spec.element is not None
         attr, element = scaling_label(skill), spec.element.display_name
-        return f"{_dice(spec.dice)}＋{attr}加成的{element}傷害"
-    permille = spec.multiplier_permille or 1000
-    element = f"（{spec.element.display_name}）" if spec.element is not None else ""
-    return f"武器傷害 ×{permille / 1000:g}{element}"
+        text = f"{_dice(spec.dice)}＋{attr}加成的{element}傷害"
+        if skill.damage_permille is not None:
+            text += f"（基礎傷害 ×{discount / 1000:g}）"
+    else:
+        permille = (spec.multiplier_permille or 1000) * discount // 1000
+        element = f"（{spec.element.display_name}）" if spec.element is not None else ""
+        text = f"武器傷害 ×{permille / 1000:g}{element}"
+    extras: list[str] = []
+    if spec.explode:
+        extras.append(f"爆骰（擲到最大值再擲一次，每顆最多再擲 {lib.ruleset.core.explode_max} 次）")
+    if skill.crit_range is not None:
+        extras.append(f"暴擊範圍 {skill.crit_range}–20")
+    scale = scaling_text(spec)
+    if scale is not None:
+        extras.append(scale)
+    return text + "".join(f"，{e}" for e in extras)
 
 
 def _heal(_lib: ContentLibrary, skill: SkillDef, spec: EffectSpec) -> str:
@@ -325,11 +360,31 @@ def _destroy_object(_lib: ContentLibrary, _skill: SkillDef, _spec: EffectSpec) -
     return "摧毀可破壞的物件"
 
 
+def _overload_text(lib: ContentLibrary, stack: StackDef) -> str:
+    """超載層數（Phase 3D-7b）的說明：每層加成與到門檻時的反噬。"""
+    overload = stack.overload
+    assert overload is not None
+    backlash: list[str] = []
+    for sub in overload.backlash:
+        if sub.type == "damage":
+            assert sub.dice is not None and sub.element is not None
+            backlash.append(f"受到 {_dice(sub.dice)} {sub.element.display_name}傷害（不致命）")
+        else:
+            assert sub.status is not None
+            backlash.append(f"獲得「{lib.ruleset.status_def(sub.status).name_zh}」")
+    return (
+        f"。超載：你帶「{overload.tag}」標籤的技能每層傷害"
+        f" +{overload.per_stack_damage_permille / 10:g}%；"
+        f"累積到 {overload.threshold} 層時，你{'、'.join(backlash)}並清空層數"
+    )
+
+
 def _stack(lib: ContentLibrary, skill: SkillDef, spec: EffectSpec) -> str:
     assert spec.stack is not None
     stack = lib.ruleset.stack_def(spec.stack)
     if spec.type == "add_stack":
-        return f"累積 {spec.amount or 1} 層「{stack.name_zh}」（上限 {stack.max}）"
+        text = f"累積 {spec.amount or 1} 層「{stack.name_zh}」（上限 {stack.max}）"
+        return text + (_overload_text(lib, stack) if stack.overload is not None else "")
     assert spec.per_stack_permille is not None
     need = f"（至少 {skill.cost.stacks} 層才能施放）" if skill.cost.stacks else ""
     return f"消耗全部「{stack.name_zh}」，每層使本技能傷害 +{spec.per_stack_permille / 10:g}%{need}"

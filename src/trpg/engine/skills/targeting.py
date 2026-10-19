@@ -11,7 +11,7 @@
 from __future__ import annotations
 
 from collections.abc import Callable, Iterator
-from dataclasses import dataclass
+from dataclasses import dataclass, replace
 from itertools import combinations
 from typing import NamedTuple
 
@@ -196,21 +196,25 @@ def skill_profile(state: BattleState, caster: UnitState, skill: SkillDef) -> Att
     height_limited = skill_is_height_limited(state, caster, skill)
     pierce = pierce_active(state, caster, skill)
     if skill.category == "weapon":
-        return AttackProfile(
+        profile = AttackProfile(
             attack_value=attack_value(caster, state.ruleset),
             melee=caster.weapon.is_melee,
             height_limited=height_limited,
             crit_range=caster.weapon.crit_range,
             pierce=pierce,
         )
-    bonus = caster.weapon.attack_bonus if caster.weapon.weapon_class == "focus" else 0
-    return AttackProfile(
-        attack_value=skill_scaling_value(state.ruleset, caster, skill) + bonus,
-        melee=False,
-        height_limited=height_limited,
-        crit_range=20,
-        pierce=pierce,
-    )
+    else:
+        bonus = caster.weapon.attack_bonus if caster.weapon.weapon_class == "focus" else 0
+        profile = AttackProfile(
+            attack_value=skill_scaling_value(state.ruleset, caster, skill) + bonus,
+            melee=False,
+            height_limited=height_limited,
+            crit_range=20,
+            pierce=pierce,
+        )
+    if skill.crit_range is not None and skill.crit_range < profile.crit_range:
+        profile = replace(profile, crit_range=skill.crit_range)  # 高變異（3D-7b）：取較寬的
+    return profile
 
 
 # ---------------------------------------------------------------------------
@@ -1006,6 +1010,8 @@ def damage_parameters(
             attr * core.basic_attack_attr_multiplier_permille,
         )
         multiplier = spec.multiplier_permille or _PERMILLE
+    if skill.damage_permille is not None:  # 高變異（3D-7b）：基礎傷害折扣
+        multiplier = multiplier * skill.damage_permille // _PERMILLE
     if modified:
         element = modifiers.damage_element(state, caster, modifiers.skill_use(skill), element)
     return DamageParameters(dice, flat, scaled, multiplier, element)

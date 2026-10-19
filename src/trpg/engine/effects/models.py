@@ -91,6 +91,8 @@ class DamageEffect(EffectBase):
     apply_weather: bool = True
     min_damage: int = Field(default=1, ge=0)
     multiplier_permille: int = Field(default=1000, ge=0)
+    explode_max: int = Field(default=0, ge=0)
+    """爆骰（Phase 3D-7b）：傷害骰擲到最大值時再加擲一次，每顆骰最多再擲這麼多次（0 為不爆骰）。"""
 
     def sort_target(self) -> str:
         return self.target_id

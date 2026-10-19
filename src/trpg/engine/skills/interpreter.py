@@ -135,6 +135,7 @@ from trpg.engine.skills.targeting import (
     skill_problem,
     skill_profile,
 )
+from trpg.engine.skills.variance import overload_bonus, scale_bonus
 from trpg.engine.source import spend_source
 from trpg.engine.stacks import add_stacks, consume_stacks
 from trpg.engine.state import BattleState, LastCast, TrapState, UnitState, ZoneState
@@ -1170,11 +1171,14 @@ class _Cast:
         dice, flat, scaled, multiplier, element = params
         min_damage = self.ctx.core.min_damage_on_hit
         gamble = self.gamble_mult if effect.spec_index >= 0 else PERMILLE  # 分支自己的傷害不再乘
+        overload = overload_bonus(self.ctx.state, self.caster, self.skill)  # 超載層數（3D-7b）
+        explode_max = self.ctx.core.explode_max if spec.explode else 0
         batch: list[EffectBase] = []
         for unit in self.targets(effect.affects, spec.condition):
             roll = self.hits.get(unit.id)
             block = self.blocks.get(unit.id, PERMILLE)
             bonus = PERMILLE + self.caster_bonus + self.target_bonus.get(unit.id, 0)
+            bonus += overload + scale_bonus(self.ctx.state, self.caster, unit, spec.scaling)
             bonus = bonus * self._modifier(modifiers.damage_permille, unit) // PERMILLE
             bonus = bonus * gamble // PERMILLE
             batch.append(
@@ -1188,6 +1192,7 @@ class _Cast:
                     scaled_permille=scaled,
                     crit=roll is not None and roll.crit,
                     min_damage=min_damage,
+                    explode_max=explode_max,
                     multiplier_permille=multiplier
                     * block
                     * bonus

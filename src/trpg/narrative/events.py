@@ -46,6 +46,7 @@ from trpg.engine.events import (
     ObjectIgnited,
     ObjectMoved,
     ObjectToppled,
+    OverloadTriggered,
     PushResisted,
     ReactionDeclined,
     ReactionModeSet,
@@ -502,8 +503,9 @@ def _damage(e: DamageDealt, v: _View) -> str:
         mod += f"（狀態 ×{e.status_ppm / _PPM:g}）"
     shield = f"（護盾吸收 {e.absorbed}）" if e.absorbed else ""
     linked = f"（{e.redirected} 點轉給連結者）" if e.redirected else ""
+    burst = f"（爆骰 ×{e.exploded}）" if e.exploded else ""
     return (
-        f"    {v.name[e.target_id]} 受到 {e.amount} 點{kind}傷害{_rolls_text(e.rolls)}"
+        f"    {v.name[e.target_id]} 受到 {e.amount} 點{kind}傷害{_rolls_text(e.rolls)}{burst}"
         f"{mod}{shield}{linked}，HP {e.hp_before} → {e.hp_after}"
     )
 
@@ -582,7 +584,9 @@ def _status_converted(e: StatusConverted, v: _View) -> str:
 @_handles(StacksChanged)
 def _stacks(e: StacksChanged, v: _View) -> str:
     stack = v.state.ruleset.stack_def(e.stack_id).name_zh
-    verb = {"gained": "累積", "consumed": "消耗", "expired": "過期清空"}[e.reason]
+    verb = {"gained": "累積", "consumed": "消耗", "expired": "過期清空", "overload": "超載清空"}[
+        e.reason
+    ]
     return f"    {v.name[e.unit_id]} 的「{stack}」{verb}：{e.before} → {e.after} 層"
 
 
@@ -668,6 +672,14 @@ def _gamble_rolled(e: GambleRolled, v: _View) -> str:
 def _backlash_triggered(e: BacklashTriggered, v: _View) -> str:
     skill = v.state.ruleset.skill_def(e.skill_id).name_zh
     return f"  ✦ {v.name[e.unit_id]} 的「{skill}」失手了，遭到反噬"
+
+
+@_handles(OverloadTriggered)
+def _overload_triggered(e: OverloadTriggered, v: _View) -> str:
+    stack = v.state.ruleset.stack_def(e.stack_id).name_zh
+    return (
+        f"  ✦ {v.name[e.unit_id]} 的「{stack}」累積到 {e.stacks} 層（門檻 {e.threshold}），超載了！"
+    )
 
 
 @_handles(ActivationExpired)
