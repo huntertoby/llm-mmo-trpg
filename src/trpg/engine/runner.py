@@ -37,8 +37,13 @@ __all__ = [
     "run_battle",
 ]
 
-LOG_FORMAT = "trpg-battle-log/24"
-"""``/24``（Phase 3D-4b）：圖騰——單位範本的 ``totem``（``radius``／``status``／``duration``）、
+LOG_FORMAT = "trpg-battle-log/25"
+"""``/25``（Phase 3D-5）：持續區域——原語 ``zone``（``EffectSpec`` 新欄位 ``anchor``／``when``／
+``speed``／``effects``）、核心規則 ``zone_limit_per_owner``、預算規則 ``zone_*``、戰鬥狀態的
+``zones``／``next_zone_id``、新事件 ``zone_created``／``zone_moved``／``zone_triggered``／
+``zone_expired``；示範技能「戰歌」改寫成跟隨型區域。``/24`` 的規則包沒有這些欄位，舊紀錄不能由
+新版程式重播。
+``/24``（Phase 3D-4b）：圖騰——單位範本的 ``totem``（``radius``／``status``／``duration``）、
 新事件 ``totem_pulsed``、圖騰的回合沒有 AP、預算規則 ``totem_expected_allies_permille``；
 ``/23`` 的規則包沒有 ``totem`` 欄位，舊紀錄不能由新版程式重播。
 ``/23``（Phase 3D-4a）：召喚——原語 ``summon``（形狀 ``ground_tile``；
