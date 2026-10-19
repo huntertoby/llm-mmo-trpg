@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 from collections.abc import Sequence
+from fractions import Fraction
 from typing import Any
 
 import pytest
@@ -33,7 +34,10 @@ from trpg.engine.events import (
     UnitCharged,
     UnitMoved,
 )
+from trpg.engine.preview import preview
 from trpg.engine.state import StatusInstance, TrapState
+from trpg.narrative.events import describe_event
+from trpg.narrative.skills import effect_summary
 from trpg.shared.errors import IllegalActionError
 from trpg.shared.rng import Rng
 from trpg.shared.types import Pos, Team, UnitId
@@ -466,3 +470,74 @@ def test_bull_rush_runs_through_two_enemies_and_knocks_them_down(
     assert [r.target_id for r in of(result, AttackRolled)] == [U2, U3]
     assert result.state.units[U2].has_status("prone") and result.state.units[U3].has_status("prone")
     assert result.state.units[U1].xy == (4, 3)
+
+
+# ---------------------------------------------------------------------------
+# 預覽
+# ---------------------------------------------------------------------------
+
+
+def test_the_preview_lists_the_route_and_each_enemy_with_the_hit_chance_at_that_spot() -> None:
+    state = arena(skill(PRONE_HIT), foes=[(4, 3), (2, 3)])
+    result = preview(state, UseSkill(unit_id=U1, skill_id=SID, target_pos=Pos(x=6, y=3)))
+    (move,) = result.moves
+    assert move.kind == "charge" and move.other_id is None
+    assert move.path == ((0, 3), (1, 3), (2, 3), (3, 3), (4, 3), (5, 3), (6, 3))
+    assert [t.unit_id for t in result.targets] == [U2, U3]
+    assert all(t.hit_chance == Fraction(3, 5) for t in result.targets)
+    assert all(t.knock_chance is not None for t in result.targets)
+
+
+def test_the_preview_hit_chance_uses_the_tile_the_caster_passes_from() -> None:
+    """敵人站在高台上，施放者沿坡爬上去、與敵人同高時出手：預覽的命中率要用那一格計算（從起點算
+    會有高度差的懲罰，與實際擲骰的位置不符）。"""
+    heights = "\n".join(["0012200"] * 7)
+    state = arena(skill(PRONE_HIT), foes=[(4, 3)], heights=heights)
+    flat = arena(skill(PRONE_HIT), foes=[(4, 3)])
+    spot = UseSkill(unit_id=U1, skill_id=SID, target_pos=Pos(x=6, y=3))
+    assert preview(state, spot).targets[0].hit_chance == preview(flat, spot).targets[0].hit_chance
+
+
+def test_previewing_a_prone_target_describes_the_single_forced_roll(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """倒地的目標讓攻擊有優勢，預覽事件卻只有一顆強制骰：紀錄文字不能因此出錯（3D-2c 修正）。"""
+    d20s(monkeypatch)
+    state = arena(skill(PRONE_HIT), foes=[(2, 3)])
+    state.units[U2].statuses = [StatusInstance(status_id="prone", remaining=2, source_id=None)]
+    result = preview(state, UseSkill(unit_id=U1, skill_id=SID, target_pos=Pos(x=4, y=3)))
+    rolled = [e for e in result.max_events if isinstance(e, AttackRolled)]
+    assert rolled and rolled[0].advantage == "advantage" and len(rolled[0].rolls) == 1
+    assert "d20=" in (describe_event(rolled[0], result.max_state) or "")
+
+
+# ---------------------------------------------------------------------------
+# 紀錄文字與組合器
+# ---------------------------------------------------------------------------
+
+
+def test_the_log_describes_the_charge_and_a_blocked_end(monkeypatch: pytest.MonkeyPatch) -> None:
+    d20s(monkeypatch)
+    state = arena(skill(PRONE_HIT), terrain=terrain_of({(3, 3): "#"}))
+    result = go(state, SID, (5, 3))
+    (charged,) = of(result, UnitCharged)
+    text = describe_event(charged, result.state) or ""
+    assert "直線衝撞：(0, 3)→(1, 3)→(2, 3)" in text and "被擋住，停在 (2, 3)" in text
+    clear = go(arena(skill(PRONE_HIT)), SID, (3, 3))
+    assert "被擋住" not in (describe_event(of(clear, UnitCharged)[0], state) or "")
+
+
+def test_the_skill_text_explains_both_on_hit_effects() -> None:
+    lib = library()
+    sk_prone, sk_aside = skill(PRONE_HIT), skill(ASIDE_HIT)
+    prone = effect_summary(lib, sk_prone, sk_prone.effects[0])
+    aside = effect_summary(lib, sk_aside, sk_aside.effects[0])
+    assert "擊倒" in prone and "沿途每個敵人各擲命中" in prone and "2d6" in prone
+    assert "推到路徑旁" in aside
+
+
+def test_the_random_composer_never_draws_charge_through() -> None:
+    """只給手寫技能：組合器用的原語清單不含 ``charge_through``。"""
+    from trpg.skillgen.composer_parts import _HAND_WRITTEN_PRIMITIVES  # noqa: PLC0415
+
+    assert "charge_through" in _HAND_WRITTEN_PRIMITIVES

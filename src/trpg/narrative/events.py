@@ -377,7 +377,7 @@ def _unit_downed(e: UnitDowned, v: _View) -> str:
 @_handles(AttackRolled)
 def _attack(e: AttackRolled, v: _View) -> str:
     state = v.state
-    if e.advantage == "none":
+    if e.advantage == "none" or len(e.rolls) == 1:  # 預覽的強制結果只有一顆骰
         dice = f"d20={e.natural}"
     else:
         label = "優勢" if e.advantage == "advantage" else "劣勢"
