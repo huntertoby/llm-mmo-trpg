@@ -6,7 +6,7 @@
 
 from __future__ import annotations
 
-from collections.abc import Iterable
+from collections.abc import Iterable, Mapping
 from dataclasses import dataclass, field
 from pathlib import Path
 
@@ -74,6 +74,7 @@ __all__ = [
     "ContentLibrary",
     "Ruleset",
     "load_library",
+    "skill_reference_problems",
     "unit_skill_problems",
 ]
 
@@ -509,40 +510,43 @@ def _load_summons(
     return SummonTable(summons=tuple(defs))
 
 
+def skill_reference_problems(
+    skill: SkillDef, ruleset: Ruleset, skills: Mapping[str, SkillDef]
+) -> list[str]:
+    """技能的全部跨檔案引用檢查（內容庫與技能驗證器共用）：形狀、原語、條件、狀態、物件、層數、召喚物、
+    規則改變、``grant_skill`` 指向的技能，以及規則改變型傳說的 ``ap_cost``（空串列為通過）。
+
+    ``skills`` 是 ``grant_skill`` 查找的技能表；所有引用表一律帶齊（不省略任何一項）。
+    """
+    problems = skill_problems(
+        skill,
+        ruleset.shapes.by_id(),
+        ruleset.primitives.by_id(),
+        status_ids={s.id for s in ruleset.statuses.statuses},
+        object_ids={o.id for o in ruleset.objects.objects},
+        conditions=ruleset.conditions.by_id(),
+        triggers=ruleset.skill_triggers.by_id(),
+        stacks=ruleset.stacks.by_id(),
+        dual_min_rarity=ruleset.core.dual_scaling_min_rarity,
+        summon_ids=set(ruleset.summons.by_id()),
+        rule_change_ids=set(ruleset.rule_changes.by_id()),
+        unsafe_statuses=ruleset.unsafe_backlash_statuses(),
+        scale_cap_max=ruleset.core.scale_cap_max_permille,
+    )
+    problems += granted_skill_problems(skill, skills, ruleset.primitives.by_id())
+    activation_ap = ruleset.core.legendary_activation_ap
+    if skill.rule_change_id is not None and skill.ap_cost != activation_ap:
+        problems.append(
+            f"ap_cost：規則改變型傳說以 core.yaml 的 legendary_activation_ap（{activation_ap}）"
+            f"啟動，收到 {skill.ap_cost}"
+        )
+    return problems
+
+
 def _check_skills(root: Path, skills: dict[str, SkillDef], ruleset: Ruleset) -> None:
     """技能引用的形狀、原語、狀態、物件都存在，參數在範圍內。"""
-    shape_map = ruleset.shapes.by_id()
-    primitive_map = ruleset.primitives.by_id()
-    condition_map = ruleset.conditions.by_id()
-    trigger_map = ruleset.skill_triggers.by_id()
-    stack_map = ruleset.stacks.by_id()
-    status_ids = {s.id for s in ruleset.statuses.statuses}
-    object_ids = {o.id for o in ruleset.objects.objects}
-    summon_ids = set(ruleset.summons.by_id())
-    rule_change_ids = set(ruleset.rule_changes.by_id())
-    activation_ap = ruleset.core.legendary_activation_ap
     for skill_id, skill in skills.items():
-        problems = skill_problems(
-            skill,
-            shape_map,
-            primitive_map,
-            status_ids=status_ids,
-            object_ids=object_ids,
-            conditions=condition_map,
-            triggers=trigger_map,
-            stacks=stack_map,
-            dual_min_rarity=ruleset.core.dual_scaling_min_rarity,
-            summon_ids=summon_ids,
-            rule_change_ids=rule_change_ids,
-            unsafe_statuses=ruleset.unsafe_backlash_statuses(),
-            scale_cap_max=ruleset.core.scale_cap_max_permille,
-        )
-        problems += granted_skill_problems(skill, skills, primitive_map)
-        if skill.rule_change_id is not None and skill.ap_cost != activation_ap:
-            problems.append(
-                f"ap_cost：規則改變型傳說以 core.yaml 的 legendary_activation_ap（{activation_ap}）"
-                f"啟動，收到 {skill.ap_cost}"
-            )
+        problems = skill_reference_problems(skill, ruleset, skills)
         if problems:
             raise ContentError(root / "skills" / f"{skill_id}.yaml", "；".join(problems))
 

@@ -3,7 +3,7 @@
 :func:`validate_skill` 依序檢查，回傳 **全部** 違規（空串列為通過）：
 
 1. ``reference``：引用的形狀、原語、條件、狀態、物件存在、參數在範圍內（沿用
-   :func:`trpg.content.skills.skill_problems`）。有這類問題時不再往下檢查。
+   :func:`trpg.content.library.skill_reference_problems`，與內容庫載入共用）。有這類問題時不再往下檢查。
 2. ``cap.*``：硬性上限（4.3：效果數量、改寫規則型原語、``weapon_req`` 大類；推擊與拉扯的 2 格上限
    已由第 1 項的參數範圍檢查涵蓋）。
 3. ``exclusion.<id>``：互斥規則（4.4，規則在 ``skill_exclusions.yaml``，通用處理）。
@@ -22,7 +22,7 @@ from __future__ import annotations
 from dataclasses import dataclass
 from fractions import Fraction
 
-from trpg.content.library import ContentLibrary
+from trpg.content.library import ContentLibrary, skill_reference_problems
 from trpg.content.skill_rules import (
     EffectPattern,
     ShapePattern,
@@ -36,7 +36,6 @@ from trpg.content.skills import (
     EffectSpec,
     SkillDef,
     rarity_rank,
-    skill_problems,
 )
 from trpg.skillgen.budget import BudgetError, BudgetReport, skill_budget
 from trpg.skillgen.mechanics import affect_set, resolved_affects
@@ -87,22 +86,7 @@ def validate_skill(skill: SkillDef, library: ContentLibrary) -> list[Violation]:
 
 
 def _reference_violations(skill: SkillDef, library: ContentLibrary) -> list[Violation]:
-    rules = library.ruleset
-    problems = skill_problems(
-        skill,
-        rules.shapes.by_id(),
-        rules.primitives.by_id(),
-        status_ids={s.id for s in rules.statuses.statuses},
-        object_ids={o.id for o in rules.objects.objects},
-        conditions=rules.conditions.by_id(),
-        triggers=rules.skill_triggers.by_id(),
-        stacks=rules.stacks.by_id(),
-        dual_min_rarity=rules.core.dual_scaling_min_rarity,
-        summon_ids=set(rules.summons.by_id()),
-        rule_change_ids=set(rules.rule_changes.by_id()),
-        unsafe_statuses=rules.unsafe_backlash_statuses(),
-        scale_cap_max=rules.core.scale_cap_max_permille,
-    )
+    problems = skill_reference_problems(skill, library.ruleset, library.skills)
     if skill.skeleton not in library.skeletons:
         problems.append(f"skeleton：沒有骨架資料檔 {skill.skeleton!r}")
     return [Violation(skill.id, "reference", p) for p in problems]
