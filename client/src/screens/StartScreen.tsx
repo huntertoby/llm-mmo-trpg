@@ -1,13 +1,21 @@
 // 開始畫面：選地圖、主角 build、種子 → 建立戰鬥。
 import { useEffect, useState, type FormEvent } from "react";
 import { api, ApiError } from "../api/client";
-import type { BattleResponse, BuildSummary, MapSummary } from "../api/types";
+import type { BattleResponse, BuildSummary, MapSummary, RunResponse, RunSaveSummary } from "../api/types";
+import { saveLabel } from "../run/flow";
 import { ErrorBanner } from "../ui/ErrorBanner";
 
 interface Props {
   onStart(response: BattleResponse): void;
   /** 進入技能工坊（Phase 3F）。 */
   onWorkshop(): void;
+  /** 開新一輪（roguelite，Phase 3-5c-1）。 */
+  onNewRun(): void;
+  /** 讀取存檔後進入該輪。 */
+  onLoadRun(run: RunResponse): void;
+  /** 首頁頂端的提示（例如上次的一輪無法讀回的原因）。 */
+  notice?: string | null;
+  onCloseNotice?(): void;
 }
 
 /** 隨機種子（只用於開新戰鬥；引擎的亂數由種子決定，這裡不影響重播）。 */
@@ -23,7 +31,7 @@ export function parseSeed(text: string): number | null {
   return Number.isSafeInteger(n) ? n : null;
 }
 
-export function StartScreen({ onStart, onWorkshop }: Props) {
+export function StartScreen({ onStart, onWorkshop, onNewRun, onLoadRun, notice = null, onCloseNotice }: Props) {
   const [maps, setMaps] = useState<MapSummary[]>([]);
   const [builds, setBuilds] = useState<BuildSummary[]>([]);
   const [mapId, setMapId] = useState("");
@@ -31,6 +39,31 @@ export function StartScreen({ onStart, onWorkshop }: Props) {
   const [seedText, setSeedText] = useState(() => String(randomSeed()));
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [saves, setSaves] = useState<RunSaveSummary[]>([]);
+
+  useEffect(() => {
+    let cancelled = false;
+    api
+      .runSaves()
+      .then((s) => {
+        if (!cancelled) setSaves(s);
+      })
+      .catch(() => {
+        // 存檔列表失敗不影響其他功能。
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, []);
+
+  async function loadSave(runId: string) {
+    setError(null);
+    try {
+      onLoadRun(await api.loadRun(runId));
+    } catch (err) {
+      setError(err instanceof Error ? err.message : String(err));
+    }
+  }
 
   useEffect(() => {
     let cancelled = false;
@@ -70,7 +103,31 @@ export function StartScreen({ onStart, onWorkshop }: Props) {
   return (
     <div className="start-screen">
       <h1>LLM-MMO-TRPG 戰鬥原型</h1>
+      <ErrorBanner message={notice} onClose={() => onCloseNotice?.()} />
       <ErrorBanner message={error} onClose={() => setError(null)} />
+      <div className="panel start-run">
+        <div className="section-title">roguelite 一輪</div>
+        <div className="muted small">5 場戰鬥加 Boss：打贏升級、營火回滿，一路帶著同一個主角。</div>
+        <button type="button" className="primary" onClick={onNewRun}>
+          開新一輪
+        </button>
+        {saves.length > 0 && (
+          <div className="run-saves">
+            <div className="section-title">繼續一輪</div>
+            {saves.map((s) => (
+              <div key={s.run_id} className="run-save-row">
+                <span>
+                  {s.build_id}・種子 {s.seed}
+                  <span className="muted small">　{saveLabel(s)}</span>
+                </span>
+                <button type="button" disabled={s.node === "ended"} onClick={() => void loadSave(s.run_id)}>
+                  讀取
+                </button>
+              </div>
+            ))}
+          </div>
+        )}
+      </div>
       <form className="panel start-form" onSubmit={(e) => void submit(e)}>
         <label>
           地圖

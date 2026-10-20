@@ -1113,3 +1113,253 @@ button.selected {
     position: static;
   }
 }
+
+/* roguelite 一輪（Phase 3-5c-1） */
+.start-run {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  margin-bottom: 12px;
+}
+
+.run-save-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 8px;
+  padding: 4px 0;
+}
+
+.run-screen {
+  max-width: 1180px;
+  margin: 0 auto;
+  padding: 12px 16px 48px;
+}
+
+.run-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.run-header h1 {
+  margin: 8px 0;
+  font-size: 22px;
+}
+
+.run-header-buttons,
+.run-actions {
+  display: flex;
+  gap: 8px;
+  align-items: center;
+  flex-wrap: wrap;
+  margin-top: 10px;
+}
+
+.run-notice {
+  margin: 4px 0 8px;
+  color: #7ddc9a;
+}
+
+.run-layout {
+  display: grid;
+  grid-template-columns: 320px 1fr;
+  gap: 12px;
+  align-items: start;
+}
+
+.run-main {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.run-bar {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin: 4px 0;
+}
+
+.run-bar-label {
+  width: 36px;
+  color: var(--muted);
+}
+
+.run-bar-track {
+  flex: 1;
+  height: 10px;
+  background: #14141c;
+  border: 1px solid var(--panel-border);
+  border-radius: 5px;
+  overflow: hidden;
+}
+
+.run-bar-fill {
+  display: block;
+  height: 100%;
+}
+
+.run-bar-hp {
+  background: #d24b4b;
+}
+
+.run-bar-mana {
+  background: #4b7fd2;
+}
+
+.run-bar-num {
+  min-width: 70px;
+  text-align: right;
+  font-size: 12px;
+}
+
+.run-source {
+  color: var(--accent);
+  letter-spacing: 2px;
+}
+
+.run-attrs {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px 12px;
+  margin: 6px 0 8px;
+}
+
+.run-skill-list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+}
+
+.run-skill-list summary {
+  cursor: pointer;
+  padding: 2px 0;
+}
+
+.run-plan-list {
+  margin: 0;
+  padding-left: 22px;
+}
+
+.run-plan-list li.done {
+  color: var(--muted);
+}
+
+.run-plan-list li.current {
+  color: var(--accent);
+}
+
+.run-alloc-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
+  gap: 6px 16px;
+  margin: 6px 0;
+}
+
+.run-alloc-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.run-alloc-name {
+  width: 40px;
+}
+
+.run-alloc-value {
+  min-width: 56px;
+  text-align: center;
+}
+
+.run-alloc-add {
+  color: #7ddc9a;
+  font-weight: 700;
+}
+
+.run-offer-cards {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
+  gap: 10px;
+  margin: 8px 0;
+}
+
+.run-offer-card {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  padding: 6px;
+  border: 2px solid transparent;
+  border-radius: 6px;
+}
+
+.run-offer-card.selected {
+  border-color: var(--accent);
+}
+
+.run-offer-card.off-route {
+  border-style: dashed;
+  border-color: #c58cff;
+}
+
+.run-offer-card.off-route.selected {
+  border-color: var(--accent);
+}
+
+.off-route-tag {
+  color: #c58cff;
+}
+
+.run-replace-list {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  margin-top: 6px;
+}
+
+.run-result.victory h2 {
+  color: #7ddc9a;
+}
+
+.run-result.defeat h2 {
+  color: var(--danger);
+}
+
+.run-history {
+  width: 100%;
+  border-collapse: collapse;
+}
+
+.run-history th,
+.run-history td {
+  text-align: left;
+  padding: 4px 8px;
+  border-bottom: 1px solid var(--panel-border);
+}
+
+.run-ended {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.battle-bar {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.hero-downed-notice {
+  align-self: flex-start;
+  padding: 4px 12px;
+  color: #fff;
+  background: #7a2a2a;
+  border: 1px solid var(--danger);
+  border-radius: 4px;
+}
+
+@media (max-width: 900px) {
+  .run-layout {
+    grid-template-columns: 1fr;
+  }
+}
