@@ -11,7 +11,8 @@ from trpg.content.battle import UnitTemplate
 from trpg.content.library import ContentLibrary, load_library
 from trpg.content.maps import MapDef
 from trpg.content.skills import SkillDef, SkillTable
-from trpg.engine import BattleSetup, BattleState, UnitSpawn, start_battle
+from trpg.engine import BattleSetup, BattleState, ResolveResult, UnitSpawn, resume, start_battle
+from trpg.engine.runner import accept_all
 from trpg.engine.state import SpawnTemplate
 from trpg.shared.rng import Rng, RngState
 from trpg.shared.types import Attribute, Team, UnitId
@@ -234,3 +235,12 @@ def caster_template(
     """施放者範本：沒有反應規則、法力 99、裝備 ``skills``。"""
     ids = [s if isinstance(s, str) else s.id for s in skills]
     return template(base, reactions=[], max_mana=99, skills=ids, **overrides)
+
+
+def answered(result: ResolveResult) -> ResolveResult:
+    """結算暫停時（反應詢問、``copy_skill``／複合技能第二段的選目標）以預設決策（:func:`accept_all`）
+    回答到不再暫停；回傳最後一次的結果。亂數走訪 ``legal_actions`` 的測試用（Phase 3F-4a：「動作 →
+    位移」「擊殺 → 接下一段」的技能列出的動作沒有帶第二段，結算到第二段會暫停）。"""
+    while result.pending is not None:
+        result = resume(result.state, accept_all(result.state, result.pending))
+    return result

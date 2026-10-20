@@ -233,7 +233,7 @@ class PendingResolution:
     decisions: tuple[bool, ...]
     base_state_json: str
     events_emitted: int
-    kind: Literal["reaction", "copy_skill"]
+    kind: Literal["reaction", "copy_skill", "followup"]
     unit_id: UnitId
     reaction: str
     trigger_unit_id: UnitId | None

@@ -1,0 +1,31 @@
+# 複合技能（Phase 3F-4a，docs/design/06-技能.md 6.23「命中 → 加碼段」示範；數值為初值，未經模擬）：
+# 帶電的一掌打碎護甲（易傷）；命中的話，雷勁朝同一個方向炸成錐形震波，連目標身後的敵人一起打。
+id: skill_armor_break_combo
+schema_version: 1
+name_zh: 破甲連擊
+tier: 1
+rank: 1
+rarity: rare
+kind: active
+skeleton: strike
+category: spell
+weapon_req: any
+ap_cost: 2
+scaling_attr: int
+shape: {type: single, range: 1}
+effects:
+  - {type: damage, dice: 1d8, element: lightning}
+  - {type: apply_status, status: vulnerable, duration: 1}
+followup:
+  when: on_hit
+  skeleton: area
+  shape: {type: cone, size: 2}
+  effects:
+    - {type: damage, dice: 1d6, element: lightning}
+condition: null
+cost: {mana: 5, cooldown: 2}
+tags: [lightning, spell, aoe, debuff]
+narrative:
+  concept: 第一掌震碎護甲，第二掌的雷勁沿著裂縫貫穿過去
+  cast_flavor: 你的掌心拍上對手胸甲，甲片應聲碎裂，緊接著一道雷光從裂口向後炸開
+provenance: {origin: builtin, owner_id: null, created_by: null, parents: [], bound: true, tradeable: false}

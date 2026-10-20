@@ -1,0 +1,31 @@
+# 複合技能（Phase 3F-4a，docs/design/06-技能.md 6.23「擊殺 → 接下一段」示範；數值為初值，未經模擬）：
+# 以火焰灼燒近身的敵人；打倒他的話，衝到 3 格內另一名敵人身邊再燒一次（目標由施放者選）。
+id: skill_death_spiral
+schema_version: 1
+name_zh: 死亡迴旋
+tier: 1
+rank: 1
+rarity: rare
+kind: active
+skeleton: strike
+category: spell
+weapon_req: any
+ap_cost: 2
+scaling_attr: int
+shape: {type: single, range: 2}
+effects:
+  - {type: damage, dice: 2d6, element: fire}
+followup:
+  when: on_kill
+  skeleton: strike
+  shape: {type: single, range: 3}
+  effects:
+    - {type: dash}
+    - {type: damage, dice: 3d6, element: fire}
+condition: null
+cost: {mana: 5, cooldown: 3}
+tags: [fire, spell, finisher, mobility]
+narrative:
+  concept: 一個倒下，下一個就在火圈的盡頭——收割者不會停下腳步
+  cast_flavor: 火焰吞沒眼前的敵人，你踏著餘燼旋身撲向下一個
+provenance: {origin: builtin, owner_id: null, created_by: null, parents: [], bound: true, tradeable: false}

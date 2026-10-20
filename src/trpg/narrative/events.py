@@ -333,7 +333,10 @@ _FIZZLE_TEXT = {
     "summon_blocked": "  召喚位置被占據，召喚失敗",
     "unknown_summon": "  召喚失敗（未知的召喚物）",
     "followup_blocked": "  位移被擋下，沒有抵達落點：第二段不結算",
-    "followup_no_target": "  第二段的目標已不在範圍內：第二段不結算",
+    "followup_caster_down": "  施放者倒下了：第二段不結算",
+    "followup_no_target": "  第二段沒有合法的目標：第二段不結算",
+    "followup_not_triggered": "  沒有達成條件（擊殺或命中）：第二段不結算",
+    "followup_declined": "  放棄了第二段",
 }
 
 
@@ -711,10 +714,20 @@ def _skill_copied(e: SkillCopied, v: _View) -> str:
     )
 
 
+_FOLLOWUP_LEAD = {
+    "after_gather": "以聚集點",
+    "on_kill": "擊倒目標後，在",
+    "on_hit": "命中後，在",
+}
+"""複合技能第二段的開頭（Phase 3F-4a）；其他種類為「在」。"""
+
+
 @_handles(SkillFollowup)
 def _skill_followup(e: SkillFollowup, v: _View) -> str:
+    lead = _FOLLOWUP_LEAD.get(e.when, "在")
+    where = f"{xy_text(e.origin)} 為中心" if e.when == "after_gather" else xy_text(e.origin)
     return (
-        f"  ✦ {v.name[e.unit_id]} 在 {xy_text(e.origin)} 接著施展「{e.name_zh}」的第二段"
+        f"  ✦ {v.name[e.unit_id]} {lead} {where} 接著施展「{e.name_zh}」的第二段"
         f"→ 影響 {len(e.tiles)} 格"
     )
 

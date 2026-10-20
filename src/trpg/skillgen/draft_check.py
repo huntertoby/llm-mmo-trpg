@@ -78,6 +78,8 @@ class SegmentLine(_Model):
     condition_multiplier: float
     synergies: tuple[str, ...]
     total: float
+    chance_permille: int = 1000
+    """有條件的第二段（擊殺後、命中後，Phase 3F-4a）的觸發機率（‰）；其他段為 1000。"""
 
 
 class BudgetSummary(_Model):
@@ -106,6 +108,9 @@ class BudgetSummary(_Model):
     """複合技能：兩段各自的明細（``total`` ＝ 兩段加總 ×（1000 ＋ ``composite_tax_permille``）
     ÷ 1000）；一般技能為空。"""
     composite_tax_permille: int = 0
+    self_combo_permille: int = 0
+    """兩段之間有元素／表面連鎖時的加價（‰，Phase 3F-4a）；沒有時為 0。"""
+    self_combo_reasons: tuple[str, ...] = ()
 
 
 class DraftCheck(_Model):
@@ -161,6 +166,7 @@ def _segment_line(segment: SegmentBudget) -> SegmentLine:
         condition_multiplier=_f(segment.condition_multiplier),
         synergies=_synergy_text(segment.synergies),
         total=_f(segment.total),
+        chance_permille=segment.chance_permille,
     )
 
 
@@ -186,6 +192,8 @@ def budget_summary(report: BudgetReport) -> BudgetSummary:
         verdict_zh=verdict_zh,
         segments=tuple(_segment_line(s) for s in report.segments),
         composite_tax_permille=report.composite_tax_permille,
+        self_combo_permille=report.self_combo_permille,
+        self_combo_reasons=report.self_combo_reasons,
     )
 
 

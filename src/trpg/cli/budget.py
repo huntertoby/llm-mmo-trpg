@@ -11,6 +11,8 @@ from trpg.content.skills import SkillDef
 from trpg.skillgen.budget import BudgetError, BudgetReport, skill_budget
 from trpg.skillgen.validate import Violation, validate_skill
 
+_PERMILLE = 1000
+
 __all__ = ["cmd_skills_budget", "cmd_skills_budget_all", "library_violations", "print_skill_budget"]
 
 _RARITY = {"common": "普通", "rare": "稀有", "epic": "史詩", "legendary": "傳說"}
@@ -93,11 +95,18 @@ def _print_segments(report: BudgetReport, out: TextIO) -> None:
         )
     first, second = report.segments
     tax = report.composite_tax_permille
+    second_text = _num(second.total)
+    if second.chance_permille != _PERMILLE:  # 有條件的第二段（3F-4a）：× 觸發機率
+        second_text = f"{second_text} × 觸發機率 {second.chance_permille}‰"
+    combo = report.self_combo_permille
+    combo_text = f" × (1000 + 連鎖加價 {combo}) ÷ 1000" if combo else ""
     print(
-        f"  複合加成 +{tax}‰：（{_num(first.total)} ＋ {_num(second.total)}）"
-        f"× (1000 + {tax}) ÷ 1000 ＝ {_num(report.total)}",
+        f"  複合加成 +{tax}‰：（{_num(first.total)} ＋ {second_text}）"
+        f"× (1000 + {tax}) ÷ 1000{combo_text} ＝ {_num(report.total)}",
         file=out,
     )
+    for reason in report.self_combo_reasons:
+        print(f"    連鎖：{reason}", file=out)
 
 
 def cmd_skills_budget(library: ContentLibrary, skill_id: str, out: TextIO) -> int:

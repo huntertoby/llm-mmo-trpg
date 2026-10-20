@@ -267,6 +267,7 @@ def test_waiting_for_a_decision_rejects_actions_with_409(prompt_client: TestClie
         "unit_id": battle["hero_id"],
         "accept": False,
         "copy_cast": None,
+        "followup_target": None,
     }
 
 

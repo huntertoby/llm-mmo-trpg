@@ -30,6 +30,9 @@ from trpg.content.skill_rules import (
     SkillMatch,
 )
 from trpg.content.skills import (
+    COMPOSITE_KIND_ZH,
+    COMPOSITE_MOVES,
+    GATHER_SHAPES,
     ON_MISS_MIN_RARITY,
     REVIVE,
     SPLIT_SKELETONS,
@@ -106,40 +109,63 @@ def effect_count(skill: SkillDef) -> int:
 
 
 def _composite_violations(skill: SkillDef, library: ContentLibrary) -> list[Violation]:
-    """複合技能：位移段（技能本身）與動作段（:meth:`SkillDef.followup_skill`）各自照自己骨架的
-    規則檢查；稀有度與效果數以兩段合計；預算以兩段加總 × 複合加成計算。"""
+    """複合技能：兩段（技能本身與 :meth:`SkillDef.followup_skill`）各自照自己骨架的規則檢查——
+    只有一個自身位移原語的段（位移段）與聚集段只檢查骨架與形狀（:func:`_move_segment_violations`），
+    其他段完整檢查骨架；稀有度與效果數以兩段合計；預算以兩段加總 × 複合加成計算。"""
     follow = skill.followup_skill()
-    assert follow is not None
+    assert follow is not None and skill.followup is not None
+    when = skill.followup.when
     out = _cap_violations(skill, library)
-    out += _move_segment_violations(skill, library)
-    out += _exclusion_violations(skill.move_segment(), library)
-    try:
-        follow_report: BudgetReport | None = skill_budget(follow, library)
-    except BudgetError:
-        follow_report = None
-    second = _rule_rewrite_violations(follow, library)
-    second += _revive_violations(follow, library)
-    second += _exclusion_violations(follow, library)
-    second += _skeleton_violations(follow, library, follow_report)
-    out += [Violation(v.skill_id, f"followup.{v.rule}", f"動作段：{v.message}") for v in second]
+    out += _segment_violations(skill.move_segment(), library, lone=when in _LONE_FIRST)
+    second = _segment_violations(follow, library, lone=_is_lone_move(follow))
+    label = "動作段" if when == "after_move" else "第二段"
+    out += [Violation(v.skill_id, f"followup.{v.rule}", f"{label}：{v.message}") for v in second]
     out += _rarity_violations(skill, library)
     _, budget_out = _budget_violations(skill, library)
     return out + budget_out
 
 
+_LONE_FIRST = ("after_move", "after_gather")
+"""第一段只有一個原語、不跑核心與占比檢查的種類：位移段（一個自身位移）、聚集段（一個
+``pull``）。"""
+
+
+def _is_lone_move(segment: SkillDef) -> bool:
+    return len(segment.effects) == 1 and segment.effects[0].type in COMPOSITE_MOVES
+
+
+def _segment_violations(
+    segment: SkillDef, library: ContentLibrary, *, lone: bool
+) -> list[Violation]:
+    """複合技能的一段：只有一個位移（或聚集）原語的段只檢查骨架、形狀與互斥；其他段照自己的骨架
+    完整檢查（改寫型原語、復活、互斥、骨架的核心、附帶效果與占比）。"""
+    if lone:
+        return _move_segment_violations(segment, library) + _exclusion_violations(segment, library)
+    try:
+        report: BudgetReport | None = skill_budget(segment, library)
+    except BudgetError:
+        report = None
+    out = _rule_rewrite_violations(segment, library)
+    out += _revive_violations(segment, library)
+    out += _exclusion_violations(segment, library)
+    return out + _skeleton_violations(segment, library, report)
+
+
 def _move_segment_violations(skill: SkillDef, library: ContentLibrary) -> list[Violation]:
-    """位移段：骨架 ``displace``（啟用、主動）、形狀在骨架允許的形狀內。效果只能是一個施放者自身
-    位移原語（schema 已檢查），所以不另外檢查核心與占比。"""
+    """位移段（或聚集段）：骨架 ``displace``（啟用、主動）、形狀在骨架允許的形狀內（聚集段的形狀由
+    schema 限定在 :data:`~trpg.content.skills.GATHER_SHAPES`，不另外檢查）。效果只能是一個原語
+    （schema 已檢查），所以不另外檢查核心與占比。"""
     if skill.skeleton != COMPOSITE_SKELETON:
         return [
             Violation(
                 skill.id,
                 "composite.skeleton",
-                f"複合技能的位移段骨架必須是 {COMPOSITE_SKELETON}，收到 {skill.skeleton}",
+                f"複合技能的位移段與聚集段骨架必須是 {COMPOSITE_SKELETON}，收到 {skill.skeleton}",
             )
         ]
     skeleton = library.skeletons[skill.skeleton]
-    if skill.shape.type not in skeleton.shapes:
+    gather = skill.effects[0].type == "pull" and skill.shape.type in GATHER_SHAPES
+    if skill.shape.type not in skeleton.shapes and not gather:
         return [
             Violation(
                 skill.id,
@@ -717,10 +743,15 @@ def rarity_requirements(skill: SkillDef, library: ContentLibrary) -> list[Rarity
         RarityNeed("condition", f"條件 {c.type}", conditions[c.type].min_rarity) for c in cond_specs
     ]
     follow = skill.followup_skill()
-    if follow is not None:  # 複合技能（3F-3a）：至少稀有，且不低於動作段的需求
-        needs.append(RarityNeed("composite", "複合技能（位移 → 動作）", COMPOSITE_MIN_RARITY))
+    if (
+        follow is not None and skill.followup is not None
+    ):  # 複合技能：至少稀有，且不低於第二段的需求
+        when = skill.followup.when
+        kind = COMPOSITE_KIND_ZH[when]
+        needs.append(RarityNeed("composite", f"複合技能（{kind}）", COMPOSITE_MIN_RARITY))
+        label = "動作段" if when == "after_move" else "第二段"
         needs += [
-            replace(n, what=f"動作段的{n.what}") for n in rarity_requirements(follow, library)
+            replace(n, what=f"{label}的{n.what}") for n in rarity_requirements(follow, library)
         ]
     return needs
 

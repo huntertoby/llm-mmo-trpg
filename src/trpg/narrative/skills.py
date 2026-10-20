@@ -107,11 +107,22 @@ def followup_text(library: ContentLibrary, skill: SkillDef) -> str | None:
     """複合技能（Phase 3F-3a）第二段的一句話，例如「到達落點後，以落點為原點：錐形（大小 2）：
     傷害…」；不是複合技能時為 ``None``。"""
     follow = skill.followup_skill()
-    if follow is None:
+    if follow is None or skill.followup is None:
         return None
     effects = "；".join(effect_summary(library, follow, e) for e in follow.effects)
     when = f"［條件：{condition_summary(library, follow.condition)}］" if follow.condition else ""
-    return f"到達落點後，以落點為原點：{shape_summary(library, follow.shape)}{when}：{effects}"
+    lead = _FOLLOWUP_LEADS[skill.followup.when]
+    return f"{lead}：{shape_summary(library, follow.shape)}{when}：{effects}"
+
+
+_FOLLOWUP_LEADS = {
+    "after_move": "到達落點後，以落點為原點",
+    "after_action": "結算後，從自己的位置（自選落點）",
+    "after_gather": "聚集後，以聚集點為中心",
+    "on_kill": "擊倒敵人的話，從自己的位置（自選目標）",
+    "on_hit": "命中的話，對同一個目標",
+}
+"""複合技能第二段一句話的開頭（依 ``followup.when``；Phase 3F-4a）。"""
 
 
 def scaling_label(skill: SkillDef) -> str:

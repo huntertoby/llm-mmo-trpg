@@ -90,6 +90,7 @@ from trpg.engine.rules.statuses import (
 from trpg.engine.setup import BattleSetup, BattleSetupError, starting_source
 from trpg.engine.skill_triggers import collect_move, settle
 from trpg.engine.skills.conditions import Subject
+from trpg.engine.skills.followups import second_problem
 from trpg.engine.skills.interpreter import use_skill
 from trpg.engine.skills.targeting import (
     SkillArea,
@@ -974,6 +975,8 @@ def resume(state: BattleState, decision: Decision) -> ResolveResult:
     action = ACTION_ADAPTER.validate_json(pending.action_json)
     if pending.kind == "copy_skill":
         return _resume_copy(base, action, decision)
+    if pending.kind == "followup" and decision.accept:
+        return _resume_followup(state, pending, action, decision)
     result = resolve_with(base, action, (*pending.decisions, decision.accept))
     return ResolveResult(result.state, result.events[pending.events_emitted :], result.pending)
 
@@ -988,6 +991,29 @@ def _resume_copy(base: BattleState, action: Action, decision: Decision) -> Resol
     if decision.copy_cast is None:
         raise IllegalActionError("必須指定複製技能的目標（或放棄施放）")
     return resolve_with(base, action.model_copy(update={"copy_cast": decision.copy_cast}))
+
+
+def _resume_followup(
+    state: BattleState, pending: PendingResolution, action: Action, decision: Decision
+) -> ResolveResult:
+    """接受複合技能第二段的選目標（Phase 3F-4a）：先在暫停的狀態（第一段已結算）檢查
+    ``decision.followup_target``，不合法時拋出 ``IllegalActionError``、暫停不變；合法就帶著它
+    重新結算原本的 ``UseSkill``（第一段的結果相同），只回傳暫停之後的事件。放棄（``accept=False``）
+    走一般的決定流程：重新結算時第二段取用這個決定，發出 ``followup_declined``。"""
+    assert isinstance(action, UseSkill)
+    pick = decision.followup_target
+    if pick is None:
+        raise IllegalActionError("必須指定第二段的目標（或放棄第二段）")
+    caster = state.units[pending.unit_id]
+    skill = modifiers.acting_skill(state, caster, action.skill_id)
+    problem = second_problem(state, caster, skill, pick)
+    if problem is not None:
+        raise IllegalActionError(problem)
+    base = state_from_json(pending.base_state_json)
+    result = resolve_with(
+        base, action.model_copy(update={"followup_target": pick}), pending.decisions
+    )
+    return ResolveResult(result.state, result.events[pending.events_emitted :], result.pending)
 
 
 # ---------------------------------------------------------------------------

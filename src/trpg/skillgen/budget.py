@@ -45,6 +45,7 @@ from trpg.content.skills import (
     on_hit_carrier,
 )
 from trpg.content.summons import summon_dpr
+from trpg.skillgen.combo import self_combo_reasons
 from trpg.skillgen.mechanics import mechanic_tags, resolved_affects
 
 __all__ = ["BudgetError", "BudgetReport", "EffectBudget", "SegmentBudget", "skill_budget"]
@@ -83,7 +84,8 @@ class SegmentBudget:
     """複合技能（Phase 3F-3a）一段的預算：該段依自己的骨架與形狀倍率計算的效果點數、條件與協同。"""
 
     label: str
-    """``位移段`` 或 ``動作段``。"""
+    """段名：``位移段``／``動作段``（位移 → 動作）、``動作段``／``位移段``（動作 → 位移）、
+    ``聚集段``／``打擊段``、``第一段``／``擊殺後的第二段``、``第一段``／``命中後的第二段``。"""
     skeleton: str
     shape: str
     effects: tuple[EffectBudget, ...]
@@ -91,6 +93,9 @@ class SegmentBudget:
     condition_multiplier: Fraction
     synergies: tuple[tuple[tuple[str, ...], Fraction], ...]
     total: Fraction
+    chance_permille: int = 1000
+    """有條件的第二段（``on_kill``／``on_hit``，Phase 3F-4a）的觸發機率（‰）：加總時這段點數 ×
+    它；其他段為 1000。"""
 
 
 @dataclass(frozen=True, slots=True)
@@ -117,7 +122,13 @@ class BudgetReport:
     segments: tuple[SegmentBudget, ...] = ()
     """複合技能（Phase 3F-3a）：位移段與動作段各自的明細（依序）；一般技能為空。"""
     composite_tax_permille: int = 0
-    """複合技能的加成（‰）：``total`` ＝ 兩段 ``total`` 加總 ×（1000 ＋ 它）÷ 1000。"""
+    """複合技能的加成（‰）：``total`` ＝（第一段 ＋ 第二段 × 觸發機率）×（1000 ＋ 它）÷ 1000
+    ×（1000 ＋ ``self_combo_permille``）÷ 1000。"""
+    self_combo_permille: int = 0
+    """複合技能兩段之間有元素／表面連鎖（Phase 3F-4a，:mod:`trpg.skillgen.combo`）時的加價（‰）；
+    沒有連鎖時為 0。"""
+    self_combo_reasons: tuple[str, ...] = ()
+    """連鎖的說明（:func:`~trpg.skillgen.combo.self_combo_reasons`）。"""
 
     @property
     def allowance_raw_permille(self) -> int:
@@ -1096,20 +1107,50 @@ def _segment(label: str, report: BudgetReport, skill: SkillDef, offset: int) -> 
     )
 
 
+_SEGMENT_LABELS: dict[str, tuple[str, str]] = {
+    "after_move": ("位移段", "動作段"),
+    "after_action": ("動作段", "位移段"),
+    "after_gather": ("聚集段", "打擊段"),
+    "on_kill": ("第一段", "擊殺後的第二段"),
+    "on_hit": ("第一段", "命中後的第二段"),
+}
+
+
+def followup_chance_permille(skill: SkillDef, library: ContentLibrary) -> int:
+    """複合技能第二段的觸發機率（‰，Phase 3F-4a）：``on_kill`` 用預估擊殺率
+    （``on_kill_expected_permille``）、``on_hit`` 用預估命中率（``modifier.hit_rate_permille``）；
+    其他種類一定結算（1000）。"""
+    assert skill.followup is not None
+    budget = library.budget
+    if skill.followup.when == "on_kill":
+        return budget.on_kill_expected_permille
+    if skill.followup.when == "on_hit":
+        return budget.modifier.hit_rate_permille
+    return _PERMILLE
+
+
 def _composite_budget(skill: SkillDef, library: ContentLibrary) -> BudgetReport:
-    """複合技能（Phase 3F-3a，6.23）：（位移段點數 ＋ 動作段點數）×（1000 ＋ 複合加成）÷ 1000。
-    兩段各自依自己的骨架與形狀計算（和一般技能相同）；可用預算照技能本身的 AP 與代價。"""
+    """複合技能（Phase 3F-3a／3F-4a，6.23）：（第一段點數 ＋ 第二段點數 × 觸發機率）×（1000 ＋
+    複合加成）÷ 1000；兩段之間有元素／表面連鎖時再 ×（1000 ＋ ``composite_self_combo_permille``）
+    ÷ 1000。兩段各自依自己的骨架與形狀計算（和一般技能相同）；可用預算照技能本身的 AP 與代價。"""
     follow = skill.followup_skill()
-    assert follow is not None
+    assert follow is not None and skill.followup is not None
     move = skill.move_segment()
     first = skill_budget(move, library)
     second = skill_budget(follow, library)
     tax = library.budget.composite_tax_permille
+    chance = followup_chance_permille(skill, library)
+    reasons = self_combo_reasons(skill, library)
+    combo = library.budget.composite_self_combo_permille if reasons else 0
+    first_label, second_label = _SEGMENT_LABELS[skill.followup.when]
     segments = (
-        _segment("位移段", first, move, 0),
-        _segment("動作段", second, follow, len(first.effects)),
+        _segment(first_label, first, move, 0),
+        replace(_segment(second_label, second, follow, len(first.effects)), chance_permille=chance),
     )
-    total = (first.total + second.total) * Fraction(_PERMILLE + tax, _PERMILLE)
+    total = (first.total + second.total * Fraction(chance, _PERMILLE)) * Fraction(
+        _PERMILLE + tax, _PERMILLE
+    )
+    total *= Fraction(_PERMILLE + combo, _PERMILLE)
     return replace(
         first,
         skill_id=skill.id,
@@ -1121,6 +1162,8 @@ def _composite_budget(skill: SkillDef, library: ContentLibrary) -> BudgetReport:
         total=total,
         segments=segments,
         composite_tax_permille=tax,
+        self_combo_permille=combo,
+        self_combo_reasons=reasons,
     )
 
 

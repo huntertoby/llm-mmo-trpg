@@ -51,6 +51,7 @@ from trpg.engine.events import (
     ObjectToppled,
     ReactionTriggered,
     ShieldGained,
+    SkillFollowup,
     SkillGranted,
     StacksChanged,
     StatusApplied,
@@ -401,9 +402,10 @@ class Preview:
     """行動者會從背後攻擊的單位（Phase 3D-8d；最多後果的模擬中命中判定帶背刺加成的目標，依 ID）。
     命中率與暴擊率已包含背刺與潛行偷襲的加成；說明在 ``notes``。"""
     landing: XY | None = None
-    """複合技能（Phase 3F-3a）：位移段的落點＝動作段的原點；其他動作為 ``None``。"""
+    """複合技能（Phase 3F-3a）：第二段的原點（「位移 → 動作」為位移段的落點；3F-4a 的其他種類為
+    最多後果的模擬裡第二段的原點，第二段沒有結算時為 ``None``）；其他動作為 ``None``。"""
     followup_tiles: tuple[XY, ...] = ()
-    """複合技能：動作段的影響格（以落點為原點；``affected_tiles`` 已含兩段）。"""
+    """複合技能：第二段的影響格（``affected_tiles`` 已含兩段）。"""
 
 
 # ---------------------------------------------------------------------------
@@ -710,14 +712,22 @@ def _preview_skill(state: BattleState, actor: UnitState, skill_id: str) -> Skill
 
 
 def _followup_info(
-    state: BattleState, actor: UnitState, action: Action
+    state: BattleState, actor: UnitState, action: Action, max_events: list[EventBase]
 ) -> tuple[XY | None, tuple[XY, ...], tuple[UnitId, ...]]:
-    """複合技能的動作段：原點（落點）、影響格與單位（假設施放者已在落點）；不是複合技能時為空。"""
+    """複合技能的第二段：原點（「位移 → 動作」為落點）、影響格與單位；不是複合技能時為空。
+
+    「位移 → 動作」以施放前的狀態推算（假設施放者已在落點）；其他種類（Phase 3F-4a）取最多後果的
+    模擬裡第二段的 ``skill_followup`` 事件（第二段沒有結算——沒有觸發、或還沒選目標——時為空）。"""
     if not isinstance(action, UseSkill):
         return None, (), ()
     skill = modifiers.acting_skill(state, actor, action.skill_id)
     if skill.followup is None:
         return None, (), ()
+    if skill.followup.when != "after_move":
+        found = next((e for e in max_events if isinstance(e, SkillFollowup)), None)
+        if found is None:
+            return None, (), ()
+        return (found.origin.x, found.origin.y), tuple((p.x, p.y) for p in found.tiles), ()
     origin = followup_origin(state, actor, skill, action)
     if origin is None:
         return None, (), ()
@@ -1307,7 +1317,7 @@ def _build(
     certain_set = set(certain)
     possible = [o for o in outcomes(max_events) if o not in certain_set]
     tiles, units = _affected(high.state, max_events)
-    landing, follow_tiles, follow_units = _followup_info(state, actor, action)
+    landing, follow_tiles, follow_units = _followup_info(state, actor, action, max_events)
     if isinstance(action, UseSkill):
         area = compute_area(
             state, actor, modifiers.acting_skill(state, actor, action.skill_id), action

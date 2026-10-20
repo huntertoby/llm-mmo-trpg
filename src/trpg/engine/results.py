@@ -14,15 +14,17 @@ __all__ = ["AllyResult", "BattleResult", "Pending", "ResolveResult", "battle_res
 
 
 class Pending(BaseModel):
-    """結算暫停、等待玩家決定（``prompt`` 反應，或 ``copy_skill`` 選目標）。
+    """結算暫停、等待玩家決定（``prompt`` 反應、``copy_skill`` 選目標，或複合技能的第二段選目標）。
 
     以 ``resume(state, Decision(unit_id=..., accept=...))`` 繼續；``kind == "copy_skill"`` 時
-    ``Decision.copy_cast`` 給出複製技能的選取（Phase 3C-4b）。
+    ``Decision.copy_cast`` 給出複製技能的選取（Phase 3C-4b）；``kind == "followup"``（Phase 3F-4a，
+    「動作 → 位移」「擊殺 → 接下一段」）時 ``Decision.followup_target`` 給出第二段的選取
+    （``skill_id`` 是施放的複合技能；第一段已經結算，``accept=False`` 只放棄第二段）。
     """
 
     model_config = ConfigDict(frozen=True, extra="forbid")
 
-    kind: Literal["reaction", "copy_skill"]
+    kind: Literal["reaction", "copy_skill", "followup"]
     unit_id: UnitId
     reaction: str = ""
     trigger_unit_id: UnitId | None = None

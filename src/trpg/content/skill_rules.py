@@ -245,6 +245,10 @@ class BudgetRules(ContentModel):
     composite_tax_permille: int = Field(default=150, ge=0, le=1000)
     """複合技能（Phase 3F-3a，6.23）的加成：總點數 ＝（位移段點數 ＋ 動作段點數）×（1000 ＋ 這個值）
     ÷ 1000（省下一次行動的代價；初值，之後以模擬調整）。"""
+    composite_self_combo_permille: int = Field(default=1000, ge=0, le=5000)
+    """複合技能兩段之間形成元素／表面連鎖（第一段造表面或施加狀態、第二段的元素引爆或與之互動；
+    Phase 3F-4a，6.23「同一招不能自己造環境又引爆它」）時，總點數再 ×（1000 ＋ 這個值）÷ 1000
+    （初值 1000‰，即點數翻倍）。"""
     gamble_variance_bonus_permille: int = Field(default=1100, ge=1000, le=2000)
     """帶賭博機制的技能（Phase 3D-7a，6.17）：預算以期望值計，可用預算再 × 這個「變異加成」（‰；
     平均強度略高於同級穩定技能，作為冒險的補償；初值，未經模擬）。"""

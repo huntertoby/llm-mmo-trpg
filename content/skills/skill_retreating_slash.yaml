@@ -1,0 +1,30 @@
+# 複合技能（Phase 3F-4a，docs/design/06-技能.md 6.23「動作 → 位移」打帶跑示範；數值為初值，未經模擬）：
+# 向前方錐形斬擊，斬完立刻跳開（落點由施放者選，2 格內）。
+id: skill_retreating_slash
+schema_version: 1
+name_zh: 回馬斬
+tier: 1
+rank: 1
+rarity: rare
+kind: active
+skeleton: area
+category: weapon
+weapon_req: melee
+ap_cost: 2
+scaling_attr: str
+shape: {type: cone, size: 2}
+effects:
+  - {type: damage, multiplier_permille: 800}
+followup:
+  when: after_action
+  skeleton: displace
+  shape: {type: ground_tile, range: 2}
+  effects:
+    - {type: leap}
+condition: null
+cost: {mana: 5, cooldown: 3}
+tags: [physical, melee, aoe, leap, mobility]
+narrative:
+  concept: 一刀橫掃逼退眼前的敵人，順勢向後躍開，不給對手還手的機會
+  cast_flavor: 你旋身斬出一道弧光，刀勢未收便蹬地後躍
+provenance: {origin: builtin, owner_id: null, created_by: null, parents: [], bound: true, tradeable: false}

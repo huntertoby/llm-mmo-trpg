@@ -40,6 +40,9 @@ companions: [sim_companion_fighter, sim_companion_archer]
 # 就是既有的 build_push（重踏、破城衝撞、裂骨印記、震地推倒），不另加；衝鋒流 build_charger 是位移（dash／leap／swap）主題。
 # Phase 3F-3b：複合技能（AI 會用）——build_charger 以瞬影旋斬（傳送 → 錐形）換下颶風踢（颶風踢仍在 build_push 等）；build_push 以躍擊震地
 # （跳躍 → 十字震地擊倒）換下盾擊（盾擊仍由敵方盾兵使用）。
+# Phase 3F-4a：四種即時第二段的示範技能（AI 3F-4b 才會用，先裝在主動欄位有空位的地方，不改變既有戰鬥）——build_fire 加引力爆
+# （聚集 → 範圍打擊）、build_striker 加破甲連擊（命中 → 加碼段）、build_bomber 加死亡迴旋（擊殺 → 接下一段）；回馬斬（動作 → 位移）
+# 裝在單位範本 hero_fighter（近戰 build 的主動欄位都已滿）。
 builds:
   - id: build_push
     name_zh: 位移流
@@ -72,7 +75,7 @@ builds:
       resist: {elemental: 150}
       tags: [hero, sim]
       max_mana: 40
-      skills: [skill_fire_bolt, skill_cinder_burst, skill_ashen_oath, skill_shatter_blast, skill_detonate_burning, skill_searing_scar, skill_ember_cycle, skill_ember_ward]
+      skills: [skill_fire_bolt, skill_cinder_burst, skill_ashen_oath, skill_shatter_blast, skill_detonate_burning, skill_searing_scar, skill_ember_cycle, skill_ember_ward, skill_gravity_burst]
 
   - id: build_storm
     name_zh: 雷電／水流
@@ -224,7 +227,7 @@ builds:
       resist: {elemental: 150}
       tags: [hero, sim]
       max_mana: 40
-      skills: [skill_static_palm, skill_thunder_finisher, skill_overcurrent, skill_ember_brand, skill_cluster_bolt, skill_bloodwake_stride]
+      skills: [skill_static_palm, skill_thunder_finisher, skill_overcurrent, skill_ember_brand, skill_cluster_bolt, skill_bloodwake_stride, skill_armor_break_combo]
 
   - id: build_trapper
     name_zh: 陷阱流
@@ -341,7 +344,7 @@ builds:
       resist: {elemental: 150}
       tags: [hero, sim]
       max_mana: 40
-      skills: [skill_time_bomb_rune, skill_ash_harvest, skill_frost_shackle, skill_blink, skill_undying_oath, skill_ember_brand]
+      skills: [skill_time_bomb_rune, skill_ash_harvest, skill_frost_shackle, skill_blink, skill_undying_oath, skill_ember_brand, skill_death_spiral]
 
   - id: build_winged
     name_zh: 飛翼流

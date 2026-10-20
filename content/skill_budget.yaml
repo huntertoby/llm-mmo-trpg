@@ -82,6 +82,11 @@ pierce_bonus_permille: 150
 # 複合技能（Phase 3F-3a，docs/design/06-技能.md 6.23「位移 → 動作」）：總點數 ＝（位移段點數 ＋ 動作段點數）
 # ×（1000 ＋ 這個值）÷ 1000；兩段各自依自己的骨架與形狀計算。省下一次行動的代價；初值，之後以模擬調整。
 composite_tax_permille: 150
+# 3F-4a：擊殺 → 接下一段（on_kill）與命中 → 加碼段（on_hit）的第二段點數再 × 觸發機率（on_kill_expected_permille、
+# modifier.hit_rate_permille）。兩段之間形成元素／表面連鎖（第一段造表面或施加狀態、第二段的元素引爆或與之互動，依
+# interactions.yaml 與狀態的 removed_by_element；第二段消耗第一段的狀態也算）時，總點數再 ×（1000 ＋ 這個值）÷ 1000。
+# 初值 1000（點數翻倍），未經模擬。
+composite_self_combo_permille: 1000
 
 condition_permille: {none: 1000, common: 850, harsh: 600}
 all_target_permille: 800    # affects: all（敵我不分）的對象係數

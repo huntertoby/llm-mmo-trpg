@@ -141,6 +141,13 @@ from trpg.engine.rules.statuses import is_rooted, skip_turn_status
 from trpg.engine.skill_triggers import collect_cast, collect_move, holding
 from trpg.engine.skills.charge import aside_direction
 from trpg.engine.skills.conditions import Subject, condition_met
+from trpg.engine.skills.followups import (
+    followup_options,
+    hit_pick,
+    hit_unit,
+    killed_enemy,
+    second_pick,
+)
 from trpg.engine.skills.mobility import ChargeRoute, charge_route, dash_route, shadowstep_behind
 from trpg.engine.skills.revive import revive_unit
 from trpg.engine.skills.scaling import mastery_duration_bonus, skill_scaling_value
@@ -154,6 +161,8 @@ from trpg.engine.skills.targeting import (
     damage_parameters,
     followup_origin,
     followup_selection,
+    gather_pick,
+    gather_point,
     pay_skill_cost,
     resolve_effects,
     shape_reach,
@@ -228,14 +237,18 @@ def use_skill(ctx: Ctx, caster: UnitState, action: UseSkill) -> None:
         else:
             cast = _Cast(ctx, caster, skill, action, area)
             face = _primary_xy(ctx.state, caster, action)
+            start = len(ctx.events)
             cast.run()
             ambushed, victims = cast.ambushed, cast.melee_victims
+            second: _Cast | None = None
             if origin is not None:  # 複合技能（Phase 3F-3a）：到達落點才結算動作段
                 second = _run_followup(ctx, caster, skill, action, origin)
-                if second is not None:
-                    ambushed = ambushed or second.ambushed
-                    victims = [*victims, *second.melee_victims]
-                    face = _primary_xy(ctx.state, caster, second.action) or face
+            elif skill.followup is not None:  # 其他四種即時的第二段（Phase 3F-4a）
+                second = _run_second(ctx, caster, skill, action, cast, start)
+            if second is not None:
+                ambushed = ambushed or second.ambushed
+                victims = [*victims, *second.melee_victims]
+                face = _primary_xy(ctx.state, caster, second.action) or face
             after_attack(ctx, caster, face, ambushed=ambushed, turns=victims)
         if skill.kind == "active":  # copy_skill 的複製對象（Phase 3C-4b）
             _record_cast(ctx.state, caster, skill)
@@ -249,7 +262,7 @@ def _planned_followup(
 ) -> XY | None:
     """複合技能（Phase 3F-3a）動作段的預定原點；不是複合技能時為 ``None``。算不出原點時（位移段
     的選取已經合法，理論上不會發生）拋出 ``IllegalActionError``。"""
-    if skill.followup is None:
+    if skill.followup is None or skill.followup.when != "after_move":
         return None
     origin = followup_origin(state, caster, skill, action)
     if origin is None:
@@ -286,6 +299,97 @@ def _run_followup(
     cast = _Cast(ctx, caster, follow, pick, area)
     cast.run()
     return cast
+
+
+def _run_second(  # noqa: PLR0917
+    ctx: Ctx, caster: UnitState, skill: SkillDef, action: UseSkill, first: _Cast, start: int
+) -> _Cast | None:
+    """結算「動作 → 位移」「聚集 → 範圍打擊」「擊殺 → 接下一段」「命中 → 加碼段」的第二段
+    （Phase 3F-4a）：施放者還站著、而且觸發條件成立（擊殺：``start`` 之後的第一段事件裡有敵人倒下；
+    命中：第一段命中了敵人）時，決定第二段的選取並結算；否則發出 ``effect_fizzled``
+    （``followup_caster_down``：施放者倒下；``followup_not_triggered``：沒有擊殺或沒有命中）。"""
+    assert skill.followup is not None
+    when = skill.followup.when
+    pos = Pos(x=caster.xy[0], y=caster.xy[1])
+    if not caster.alive:
+        ctx.emit(EffectFizzled, effect_kind="followup", pos=pos, reason="followup_caster_down")
+        return None
+    hit = hit_unit(ctx.state, caster, first.hits) if when == "on_hit" else None
+    if (when == "on_hit" and hit is None) or (
+        when == "on_kill" and not killed_enemy(ctx.state, caster, ctx.events[start:])
+    ):
+        ctx.emit(EffectFizzled, effect_kind="followup", pos=pos, reason="followup_not_triggered")
+        return None
+    pick = _second_selection(ctx, caster, skill, action, hit)
+    if pick is None:
+        return None
+    follow = skill.followup_skill()
+    assert follow is not None
+    try:
+        area = checked_area(ctx.state, caster, follow, pick)
+    except IllegalActionError:
+        ctx.emit(EffectFizzled, effect_kind="followup", pos=pos, reason="followup_no_target")
+        return None
+    origin = gather_point(caster, skill, action) if when == "after_gather" else caster.xy
+    ctx.emit(
+        SkillFollowup,
+        unit_id=caster.id,
+        skill_id=skill.id,
+        name_zh=skill.name_zh,
+        when=when,
+        origin=Pos(x=origin[0], y=origin[1]),
+        tiles=tuple(Pos(x=x, y=y) for x, y in area.tiles),
+    )
+    cast = _Cast(ctx, caster, follow, pick, area)
+    cast.run()
+    return cast
+
+
+def _second_selection(
+    ctx: Ctx, caster: UnitState, skill: SkillDef, action: UseSkill, hit: UnitState | None
+) -> UseSkill | None:
+    """第二段的選取（Phase 3F-4a）：聚集點、命中的同一個目標，或施放者自己選的
+    （``followup_target``；沒帶時見 :func:`_ask_second`）。沒有選取時發出 ``effect_fizzled`` 並
+    回傳 ``None``。"""
+    assert skill.followup is not None
+    when = skill.followup.when
+    pos = Pos(x=caster.xy[0], y=caster.xy[1])
+    if when == "after_gather":
+        return gather_pick(caster, skill, action)
+    if when == "on_hit":
+        assert hit is not None
+        pick = hit_pick(ctx.state, caster, skill, hit)
+        if pick is None:
+            ctx.emit(EffectFizzled, effect_kind="followup", pos=pos, reason="followup_no_target")
+        return pick
+    if action.followup_target is not None:
+        try:
+            return second_pick(caster, skill, action.followup_target)
+        except IllegalActionError:
+            ctx.emit(EffectFizzled, effect_kind="followup", pos=pos, reason="followup_no_target")
+            return None
+    _ask_second(ctx, caster, skill)
+    return None
+
+
+def _ask_second(ctx: Ctx, caster: UnitState, skill: SkillDef) -> None:
+    """``after_action``／``on_kill`` 沒有帶 ``followup_target``：沒有合法選取時第二段不結算
+    （``followup_no_target``）；預覽時只算到第二段之前；重新結算時依序取用 ``Decision``（放棄時
+    ``followup_declined``）；正式結算則暫停（``Pending.kind == "followup"``），等玩家選第二段的
+    目標。
+    接受時 :func:`trpg.engine.battle.resume` 會帶著選取重新結算，不會再走到這裡。"""
+    pos = Pos(x=caster.xy[0], y=caster.xy[1])
+    if not followup_options(ctx.state, caster, skill):
+        ctx.emit(EffectFizzled, effect_kind="followup", pos=pos, reason="followup_no_target")
+        return
+    if ctx.preview is not None:
+        return
+    if ctx.decisions:
+        if ctx.decisions.pop(0):
+            raise IllegalActionError("必須指定第二段的目標（或放棄第二段）")
+        ctx.emit(EffectFizzled, effect_kind="followup", pos=pos, reason="followup_declined")
+        return
+    raise PauseForDecision(Pending(kind="followup", unit_id=caster.id, skill_id=skill.id))
 
 
 def _primary_xy(state: BattleState, caster: UnitState, action: UseSkill | None) -> XY | None:

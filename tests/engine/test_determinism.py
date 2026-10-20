@@ -8,7 +8,7 @@ import pytest
 from hypothesis import HealthCheck, given, settings
 from hypothesis import strategies as st
 
-from tests.engine.helpers import DEMO_ALLIES, DEMO_ENEMIES, library
+from tests.engine.helpers import DEMO_ALLIES, DEMO_ENEMIES, answered, library
 from trpg.engine import (
     Action,
     Attack,
@@ -108,7 +108,10 @@ def test_resolve_does_not_modify_input_state() -> None:
         result = resolve(state, action)
         assert state_to_json(state) == before
         assert result.state is not state
-        assert result.pending is None
+        if result.pending is not None:  # 3F-4a：複合技能的第二段選目標
+            assert result.pending.kind == "followup"
+            result = answered(result)
+            assert state_to_json(state) == before
         state = result.state
 
 
@@ -175,7 +178,7 @@ def _random_walk(setup: BattleSetup, seed: int, steps: int) -> list[BattleState]
         # 偏向攻擊，讓戰鬥有進展
         attacks = [a for a in actions if isinstance(a, Attack)]
         pool = attacks if attacks and rng.chance_permille(600) else actions
-        state = resolve(state, rng.choice(pool)).state
+        state = answered(resolve(state, rng.choice(pool))).state
         states.append(state)
     return states
 

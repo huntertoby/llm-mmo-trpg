@@ -17,6 +17,7 @@ from trpg.engine.copying import copy_selections
 from trpg.engine.events import Event, EventBase
 from trpg.engine.results import Pending, ResolveResult
 from trpg.engine.setup import BattleSetup
+from trpg.engine.skills.followups import followup_options
 from trpg.engine.state import BattleState
 from trpg.shared.errors import TrpgError
 from trpg.shared.types import Team, UnitId
@@ -203,7 +204,15 @@ class StepLimitExceeded(TrpgError):
 
 
 def accept_all(state: BattleState, pending: Pending) -> Decision:
-    """預設：一律使用反應；``copy_skill`` 的選目標取第一個合法的選取（Phase 3C-4b）。"""
+    """預設：一律使用反應；``copy_skill`` 的選目標取第一個合法的選取（Phase 3C-4b）；複合技能的
+    第二段（Phase 3F-4a）取第一個合法的選取（沒有時放棄第二段）。"""
+    if pending.kind == "followup":
+        caster = state.units[pending.unit_id]
+        assert pending.skill_id is not None
+        skill = state.ruleset.skill_def(pending.skill_id)
+        options = followup_options(state, caster, skill)
+        target = options[0][0] if options else None
+        return Decision(unit_id=pending.unit_id, accept=target is not None, followup_target=target)
     if pending.kind == "copy_skill":
         caster = state.units[pending.unit_id]
         pick = next(copy_selections(state, caster), None)

@@ -46,6 +46,7 @@ __all__ = [
     "CHARGE_THROUGH",
     "CHEAT_DEATH",
     "CHEAT_DEATH_STATUS",
+    "COMPOSITE_KIND_ZH",
     "COMPOSITE_MOVES",
     "CONSUME_STACK",
     "CONSUME_STATUS",
@@ -58,12 +59,15 @@ __all__ = [
     "EFFECT_NON_PARAM_FIELDS",
     "EFFECT_PARAM_FIELDS",
     "EXTRA_REACTION",
+    "FOLLOWUP_AUTO_WHENS",
+    "FOLLOWUP_CHOICE_WHENS",
     "FOLLOWUP_FORBIDDEN",
     "FOLLOWUP_SHAPES",
     "FOLLOWUP_WHEN_VALUES",
     "GAMBLE",
     "GAMBLE_BRANCH_TYPES",
     "GAMBLE_TAG",
+    "GATHER_SHAPES",
     "GRANT_AP",
     "GRANT_SKILL",
     "HURL_OBJECT",
@@ -929,8 +933,13 @@ class SkillCost(ContentModel):
 
 class FollowupSpec(ContentModel):
     """複合技能的第二段（Phase 3F-3a，``docs/design/06-技能.md`` 6.23）：自己的骨架、形狀、效果與
-    條件，照該骨架的規則檢查。``when`` 決定第二段何時、以哪裡為原點結算；本段只有 ``after_move``：
-    施放者真的移動到位移段的落點時，以落點為原點結算。"""
+    條件，照該骨架的規則檢查。``when`` 決定第二段何時、以哪裡為原點結算（:data:`FollowupWhen`）：
+
+    - ``after_move``：施放者真的移動到位移段的落點時，以落點為原點結算；
+    - ``after_action``（3F-4a）：第一段結算完、施放者還站著就結算（自身位移，從目前位置選落點）；
+    - ``after_gather``（3F-4a）：第一段把敵人拉向聚集點，第二段以聚集點為中心結算；
+    - ``on_kill``（3F-4a）：第一段讓敵人倒下才結算（從施放者的位置選目標）；
+    - ``on_hit``（3F-4a）：第一段命中敵人才結算（自動對命中的同一個目標）。"""
 
     when: FollowupWhen = "after_move"
     skeleton: str
@@ -1150,12 +1159,140 @@ FOLLOWUP_FORBIDDEN: tuple[str, ...] = (
 )
 """動作段不能用的原語（Phase 3F-3a）：位移（不套娃）、召喚、持續區域、陷阱，以及需要另外選取或改變
 整個施放流程的原語（複製技能、規則改變、賭注、投擲物件；保守做法）。"""
-type FollowupWhen = Literal["after_move"]
-"""動作段的時機（6.23）：本段只有 ``after_move``（位移 → 動作）；之後（3F-4）再加
-``after_action``、``on_kill``、``on_hit``、``delayed`` 等。"""
-FOLLOWUP_WHEN_VALUES: tuple[str, ...] = ("after_move",)
+type FollowupWhen = Literal["after_move", "after_action", "after_gather", "on_kill", "on_hit"]
+"""第二段的時機（6.23）：``after_move`` 位移 → 動作（3F-3a）；``after_action`` 動作 → 位移
+（打帶跑）、``after_gather`` 聚集 → 範圍打擊、``on_kill`` 擊殺 → 接下一段、``on_hit`` 命中 →
+加碼段（3F-4a）。``delayed`` 延遲段留給 3F-4b。"""
+FOLLOWUP_WHEN_VALUES: tuple[str, ...] = (
+    "after_move",
+    "after_action",
+    "after_gather",
+    "on_kill",
+    "on_hit",
+)
+FOLLOWUP_CHOICE_WHENS: tuple[str, ...] = ("after_action", "on_kill")
+"""第二段要施放者自己選目標的種類（3F-4a）：結算到第二段時以 ``pending``（``kind: followup``）
+詢問；AI 與重播直接在 ``UseSkill.followup_target`` 帶選取。"""
+FOLLOWUP_AUTO_WHENS: tuple[str, ...] = ("after_gather", "on_hit")
+"""第二段的選取由引擎決定的種類（3F-4a）：聚集點、命中的同一個目標；不能帶 ``followup_target``。"""
+COMPOSITE_KIND_ZH: dict[str, str] = {
+    "after_move": "位移 → 動作",
+    "after_action": "動作 → 位移",
+    "after_gather": "聚集 → 範圍打擊",
+    "on_kill": "擊殺 → 接下一段",
+    "on_hit": "命中 → 加碼段",
+}
+"""複合技能種類的中文名稱（6.23）。"""
+GATHER_SHAPES: tuple[str, ...] = ("cross", "square3", "ring")
+"""聚集段（``after_gather`` 的第一段）的形狀：十字、方陣以選的中心格為聚集點，環形以施放者
+為聚集點。"""
+ON_KILL_SECOND_SHAPES: tuple[str, ...] = (*FOLLOWUP_SHAPES, "ground_tile")
+"""``on_kill`` 第二段的形狀：動作段的形狀，加上跳躍、傳送用的指定格。"""
 _FOLLOWUP_CACHE: dict[int, tuple[Any, Any]] = {}
 _FOLLOWUP_CACHE_LIMIT = 4096
+
+
+def _types(effects: tuple[EffectSpec, ...]) -> str:
+    return "、".join(e.type for e in effects)
+
+
+def _lone_move(effects: tuple[EffectSpec, ...], where: str) -> None:
+    """``where`` 只能是一個施放者自身位移原語（:data:`COMPOSITE_MOVES`）。"""
+    if len(effects) != 1 or effects[0].type not in COMPOSITE_MOVES:
+        raise ValueError(
+            f"複合技能的{where}只能有一個施放者自身位移原語（{'、'.join(COMPOSITE_MOVES)}），"
+            f"收到 {_types(effects)}"
+        )
+
+
+def _no_forbidden(
+    effects: tuple[EffectSpec, ...], where: str, allowed: tuple[str, ...] = ()
+) -> None:
+    bad = [e.type for e in effects if e.type in FOLLOWUP_FORBIDDEN and e.type not in allowed]
+    if bad:
+        raise ValueError(
+            f"複合技能的{where}不能有位移、召喚、區域、陷阱等原語（不能套娃），"
+            f"收到 {'、'.join(bad)}"
+        )
+
+
+def _second_shape(follow: FollowupSpec, shapes: tuple[str, ...]) -> None:
+    """第二段的形狀在 ``shapes`` 內；以原點為中心的 ``cross``、``square3`` 必須 ``range: 0``。"""
+    if follow.shape.type not in shapes:
+        raise ValueError(f"followup 的形狀只能是 {'、'.join(shapes)}，收到 {follow.shape.type}")
+    if follow.shape.type in FOLLOWUP_CENTERED and follow.shape.range != 0:
+        raise ValueError(
+            f"followup 的形狀 {follow.shape.type} 以第二段的原點為中心，range 必須是 0，"
+            f"收到 {follow.shape.range}"
+        )
+
+
+def _needs_damage(effects: tuple[EffectSpec, ...], what: str) -> None:
+    if not any(e.type == "damage" for e in effects):
+        raise ValueError(f"「{what}」的第一段必須有傷害效果（damage），收到 {_types(effects)}")
+
+
+def _check_after_move(effects: tuple[EffectSpec, ...], _shape: ShapeSpec, f: FollowupSpec) -> None:
+    """位移 → 動作（3F-3a）：第一段是一個自身位移；第二段是以落點為原點的動作。"""
+    _lone_move(effects, "位移段")
+    _second_shape(f, FOLLOWUP_SHAPES)
+    _no_forbidden(f.effects, "動作段")
+
+
+def _check_after_action(
+    effects: tuple[EffectSpec, ...], _shape: ShapeSpec, f: FollowupSpec
+) -> None:
+    """動作 → 位移（打帶跑，3F-4a）：第一段是動作；第二段是一個自身位移（形狀照該原語）。"""
+    _no_forbidden(effects, "第一段")
+    _lone_move(f.effects, "第二段（位移）")
+
+
+def _check_after_gather(effects: tuple[EffectSpec, ...], shape: ShapeSpec, f: FollowupSpec) -> None:
+    """聚集 → 範圍打擊（3F-4a）：第一段只有一個 ``pull``（朝聚集點拉），形狀在
+    :data:`GATHER_SHAPES`；第二段以聚集點為中心（``cross``／``square3``，射程與第一段相同，環形為
+    0）。"""
+    if len(effects) != 1 or effects[0].type != "pull":
+        raise ValueError(f"聚集段只能有一個拉扯原語（pull），收到 {_types(effects)}")
+    if shape.type not in GATHER_SHAPES:
+        raise ValueError(f"聚集段的形狀只能是 {'、'.join(GATHER_SHAPES)}，收到 {shape.type}")
+    if f.shape.type not in FOLLOWUP_CENTERED:
+        raise ValueError(
+            f"聚集後的打擊以聚集點為中心，形狀只能是 {'、'.join(FOLLOWUP_CENTERED)}，"
+            f"收到 {f.shape.type}"
+        )
+    reach = shape.range if shape.type in FOLLOWUP_CENTERED else 0
+    if f.shape.range != reach:
+        raise ValueError(
+            f"聚集後的打擊以聚集點為中心，range 必須與聚集段相同（{reach}），收到 {f.shape.range}"
+        )
+    _no_forbidden(f.effects, "第二段")
+
+
+def _check_on_kill(effects: tuple[EffectSpec, ...], _shape: ShapeSpec, f: FollowupSpec) -> None:
+    """擊殺 → 接下一段（3F-4a）：第一段是有傷害的動作；第二段是動作或位移（可以先位移再動作，
+    例如衝鋒接傷害），從施放者的位置選目標。"""
+    _no_forbidden(effects, "第一段")
+    _needs_damage(effects, COMPOSITE_KIND_ZH["on_kill"])
+    _second_shape(f, ON_KILL_SECOND_SHAPES)
+    _no_forbidden(f.effects, "第二段", allowed=COMPOSITE_MOVES)
+
+
+def _check_on_hit(effects: tuple[EffectSpec, ...], _shape: ShapeSpec, f: FollowupSpec) -> None:
+    """命中 → 加碼段（3F-4a）：第一段是有傷害的動作；第二段是動作，自動對命中的同一個目標。"""
+    _no_forbidden(effects, "第一段")
+    _needs_damage(effects, COMPOSITE_KIND_ZH["on_hit"])
+    _second_shape(f, FOLLOWUP_SHAPES)
+    _no_forbidden(f.effects, "第二段")
+
+
+_FOLLOWUP_CHECKS: dict[str, Callable[[tuple[EffectSpec, ...], ShapeSpec, FollowupSpec], None]] = {
+    "after_move": _check_after_move,
+    "after_action": _check_after_action,
+    "after_gather": _check_after_gather,
+    "on_kill": _check_on_kill,
+    "on_hit": _check_on_hit,
+}
+"""``followup.when`` → 兩段的結構檢查（schema 層級；骨架規則由驗證器檢查）。"""
 _MAX_COOLDOWN_RESTORE = 2
 """``restore_resource`` 的 ``resource: cooldown`` 一次最多縮短的回合（Phase 3D-1）。"""
 HURL_OBJECT = "hurl_object"
@@ -1521,8 +1658,8 @@ class SkillDef(ContentModel):
     narrative: NarrativeDef = Field(default_factory=NarrativeDef)
     provenance: Provenance = Field(default_factory=Provenance)
     followup: FollowupSpec | None = None
-    """複合技能的第二段（Phase 3F-3a，6.23）：有它的技能本身是位移段（一個施放者自身位移原語），
-    施放者到達落點後再以落點為原點結算第二段。見 :meth:`followup_skill`。"""
+    """複合技能的第二段（Phase 3F-3a，6.23）：有它的技能本身是第一段，``followup.when`` 決定第二段
+    何時、以哪裡為原點結算（見 :class:`FollowupSpec`、:meth:`followup_skill`）。"""
 
     @field_validator("skeleton")
     @classmethod
@@ -1597,9 +1734,8 @@ class SkillDef(ContentModel):
         return self
 
     def _check_followup(self) -> None:
-        """複合技能（Phase 3F-3a，6.23 基本型）：主動技能；位移段（技能本身）恰好一個
-        :data:`COMPOSITE_MOVES` 原語；動作段形狀在 :data:`FOLLOWUP_SHAPES`（``cross``、``square3``
-        必須 ``range: 0``）、不含 :data:`FOLLOWUP_FORBIDDEN`；兩段合計最多 4 個效果；動作段本身也要
+        """複合技能（Phase 3F-3a／3F-4a，6.23）：主動技能、不是陷阱、沒有失手反噬；兩段的結構依
+        ``followup.when`` 檢查（:data:`_FOLLOWUP_CHECKS`）；兩段合計最多 4 個效果；第二段本身也要
         是合法的技能（:meth:`followup_skill` 以同一套 schema 檢查）。"""
         follow = self.followup
         if follow is None:
@@ -1608,26 +1744,7 @@ class SkillDef(ContentModel):
             raise ValueError(f"只有主動技能可以有 followup（複合技能），收到 kind: {self.kind}")
         if self.trap is not None or self.cost.on_miss:
             raise ValueError("複合技能不能是陷阱，也不能有失手反噬 cost.on_miss")
-        if len(self.effects) != 1 or self.effects[0].type not in COMPOSITE_MOVES:
-            got = "、".join(e.type for e in self.effects)
-            raise ValueError(
-                f"複合技能的位移段只能有一個施放者自身位移原語（{'、'.join(COMPOSITE_MOVES)}），"
-                f"收到 {got}"
-            )
-        if follow.shape.type not in FOLLOWUP_SHAPES:
-            raise ValueError(
-                f"followup 的形狀只能是 {'、'.join(FOLLOWUP_SHAPES)}，收到 {follow.shape.type}"
-            )
-        if follow.shape.type in FOLLOWUP_CENTERED and follow.shape.range != 0:
-            raise ValueError(
-                f"followup 的形狀 {follow.shape.type} 以落點為中心，range 必須是 0，"
-                f"收到 {follow.shape.range}"
-            )
-        bad = [e.type for e in follow.effects if e.type in FOLLOWUP_FORBIDDEN]
-        if bad:
-            raise ValueError(
-                f"followup 不能有位移、召喚、區域、陷阱等原語（不能套娃），收到 {'、'.join(bad)}"
-            )
+        _FOLLOWUP_CHECKS[follow.when](self.effects, self.shape, follow)
         total = len(self.effects) + len(follow.effects)
         if total > _MAX_EFFECTS:
             raise ValueError(f"複合技能兩段合計最多 {_MAX_EFFECTS} 個效果，收到 {total} 個")
@@ -1666,7 +1783,8 @@ class SkillDef(ContentModel):
         return derived
 
     def move_segment(self) -> SkillDef:
-        """複合技能的位移段（去掉 ``followup`` 的本技能）；不是複合技能時回傳自己。"""
+        """複合技能的第一段（去掉 ``followup`` 的本技能；「位移 → 動作」為位移段）；不是複合技能時
+        回傳自己。"""
         if self.followup is None:
             return self
         return self.model_copy(update={"followup": None})

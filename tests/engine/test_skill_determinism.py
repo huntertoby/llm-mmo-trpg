@@ -6,7 +6,7 @@ import pytest
 from hypothesis import HealthCheck, given, settings
 from hypothesis import strategies as st
 
-from tests.engine.helpers import DEMO_ALLIES, library
+from tests.engine.helpers import DEMO_ALLIES, answered, library
 from trpg.engine import (
     Action,
     UseSkill,
@@ -87,7 +87,7 @@ def test_property_random_legal_actions_with_skills_never_raise(
         pool = skills if skills and rng.chance_permille(skill_bias) else actions
         action = rng.choice(pool)
         before = state_to_json(state)
-        result = resolve(state, action)
+        result = answered(resolve(state, action))
         assert state_to_json(state) == before
         state = result.state
         for unit in state.units.values():
@@ -113,7 +113,7 @@ def test_property_every_listed_skill_action_resolves_and_replays(seed: int, map_
                 assert state_to_json(first.state) == state_to_json(second.state)
                 assert _events_json(first.events) == _events_json(second.events)
         skills = [a for a in actions if isinstance(a, UseSkill)]
-        state = resolve(state, rng.choice(skills or actions)).state
+        state = answered(resolve(state, rng.choice(skills or actions))).state
 
 
 def test_illegal_use_skill_leaves_the_state_untouched() -> None:

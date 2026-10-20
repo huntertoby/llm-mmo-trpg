@@ -20,6 +20,8 @@ from trpg.content.skills import (
     CHARGE_THROUGH,
     COPY_SKILL,
     DASH,
+    FOLLOWUP_AUTO_WHENS,
+    FOLLOWUP_CENTERED,
     GAMBLE,
     HURL_OBJECT,
     LEAP,
@@ -83,6 +85,8 @@ __all__ = [
     "damage_parameters",
     "followup_origin",
     "followup_selection",
+    "gather_pick",
+    "gather_point",
     "has_selection",
     "hp_cost",
     "hurl_object_problem",
@@ -407,7 +411,8 @@ def _unit_target_problem(  # noqa: PLR0917
 ) -> str | None:
     if not target.alive:
         return f"目標已不在戰場上：{target.name_zh}"
-    if skill.followup is not None:  # 複合技能（3F-3a）的位移段：目標只是位移的參照，敵我都可以
+    if skill.followup is not None and skill.followup.when == "after_move":
+        # 複合技能（3F-3a）的位移段：目標只是位移的參照，敵我都可以
         return _visible_problem(state, caster, skill, target, reach)
     enemy = target.team is not caster.team
     if enemy and not any(e.affects in ("enemies", "all", "tiles") for e in effects):
@@ -834,6 +839,10 @@ def compute_area(
     """驗證 ``action`` 的選取並計算影響範圍；不合法或影響範圍為空時拋出 ``IllegalActionError``。"""
     if action.followup_target is not None and skill.followup is None:
         raise IllegalActionError(f"只有複合技能可以指定 followup_target：{skill.name_zh}")
+    if action.followup_target is not None and _auto_followup(skill):
+        raise IllegalActionError(
+            f"{skill.name_zh} 的第二段由引擎決定目標，不能指定 followup_target"
+        )
     targeting = state.ruleset.shape_def(skill.shape.type).targeting
     effects = resolve_effects(state, skill)
     reach = shape_reach(state, skill, caster)
@@ -1045,8 +1054,12 @@ def selections(
     方向型：東南西北（影響範圍為空的不列）。複合技能（Phase 3F-3a）：位移段的每個選取 × 動作段
     在落點的每個選取（:func:`_composite_selections`）。
     """
-    if skill.followup is not None:
+    when = None if skill.followup is None else skill.followup.when
+    if when == "after_move":
         yield from _composite_selections(state, caster, skill)
+        return
+    if when == "after_gather":
+        yield from _gather_selections(state, caster, skill)
         return
     for action in _candidates(state, caster, skill):
         try:
@@ -1180,6 +1193,45 @@ def _composite_selections(
                 update={"followup_target": _followup_pick(ghost, follow, pick)}
             )
             yield full, composite_area(first, second)
+
+
+def _auto_followup(skill: SkillDef) -> bool:
+    """第二段的選取由引擎決定（聚集點、命中的同一個目標；Phase 3F-4a）。"""
+    return skill.followup is not None and skill.followup.when in FOLLOWUP_AUTO_WHENS
+
+
+def gather_point(caster: UnitState, skill: SkillDef, action: UseSkill) -> XY:
+    """「聚集 → 範圍打擊」（Phase 3F-4a）的聚集點：十字、方陣是選的中心格（``pull`` 朝它拉），
+    環形是施放者自己。"""
+    if skill.shape.type in FOLLOWUP_CENTERED and action.target_pos is not None:
+        return (action.target_pos.x, action.target_pos.y)
+    return caster.xy
+
+
+def gather_pick(caster: UnitState, skill: SkillDef, action: UseSkill) -> UseSkill:
+    """聚集後打擊段的選取：以聚集點為中心（打擊段的射程與聚集段相同，schema 已檢查）。"""
+    x, y = gather_point(caster, skill, action)
+    return UseSkill(unit_id=caster.id, skill_id=skill.id, target_pos=Pos(x=x, y=y))
+
+
+def _gather_selections(
+    state: BattleState, caster: UnitState, skill: SkillDef
+) -> Iterator[tuple[UseSkill, SkillArea]]:
+    """「聚集 → 範圍打擊」的選取：聚集段的每個合法選取；影響範圍是聚集段與「以聚集點為中心的打擊段」
+    （以施放前的位置推算）的聯集。不用 ``followup_target``。"""
+    follow = skill.followup_skill()
+    assert follow is not None
+    for action in _candidates(state, caster, skill):
+        try:
+            first = checked_area(state, caster, skill, action)
+        except IllegalActionError:
+            continue
+        try:
+            second = checked_area(state, caster, follow, gather_pick(caster, skill, action))
+        except IllegalActionError:
+            yield action, first
+            continue
+        yield action, composite_area(first, second)
 
 
 def has_selection(state: BattleState, caster: UnitState, skill: SkillDef) -> bool:

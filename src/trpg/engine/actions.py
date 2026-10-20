@@ -167,7 +167,10 @@ class UseSkill(_ActionBase):
     second_target_id: UnitId | None = None
     copy_cast: UseSkill | None = None
     followup_target: FollowupTarget | None = None
-    """複合技能（Phase 3F-3a）動作段的選取（以位移段的落點為原點）；其他技能不能帶。"""
+    """複合技能第二段的選取：「位移 → 動作」（Phase 3F-3a）以位移段的落點為原點；「動作 → 位移」
+    「擊殺 → 接下一段」（Phase 3F-4a）從施放者第一段結算後的位置選（玩家省略時結算到第二段暫停，由
+    :class:`Decision` 補上）；「聚集 → 範圍打擊」「命中 → 加碼段」由引擎決定，不能帶。其他技能
+    不能帶。"""
 
 
 class EndStance(_ActionBase):
@@ -218,7 +221,9 @@ class Decision(BaseModel):
 
     - ``prompt`` 反應：``accept`` 是否使用反應；
     - ``copy_skill``（Phase 3C-4b）：``accept`` 為真時 ``copy_cast`` 必須給出複製技能的選取，為假則
-      放棄施放（不付任何代價）。
+      放棄施放（不付任何代價）；
+    - ``followup``（Phase 3F-4a）：``accept`` 為真時 ``followup_target`` 必須給出複合技能第二段的
+      選取，為假則放棄第二段（第一段已經結算）。
     """
 
     model_config = ConfigDict(frozen=True, extra="forbid")
@@ -227,6 +232,7 @@ class Decision(BaseModel):
     unit_id: UnitId
     accept: bool
     copy_cast: UseSkill | None = None
+    followup_target: FollowupTarget | None = None
 
 
 type Step = Annotated[

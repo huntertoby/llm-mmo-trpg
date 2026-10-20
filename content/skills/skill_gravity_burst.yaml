@@ -1,0 +1,30 @@
+# 複合技能（Phase 3F-4a，docs/design/06-技能.md 6.23「聚集 → 範圍打擊」示範；數值為初值，未經模擬）：
+# 把身邊 2 格外的敵人拉近 1 格，再以自己為中心炸開一圈火焰（3×3）。
+id: skill_gravity_burst
+schema_version: 1
+name_zh: 引力爆
+tier: 2
+rank: 2
+rarity: rare
+kind: active
+skeleton: displace
+category: spell
+weapon_req: any
+ap_cost: 2
+scaling_attr: int
+shape: {type: ring, radius: 2}
+effects:
+  - {type: pull, distance: 1}
+followup:
+  when: after_gather
+  skeleton: area
+  shape: {type: square3, range: 0}
+  effects:
+    - {type: damage, dice: 1d12, element: fire}
+condition: null
+cost: {mana: 7, cooldown: 3}
+tags: [fire, spell, pull, aoe]
+narrative:
+  concept: 在身邊撕開一道引力的漩渦，把周圍的敵人拖進來，再一口氣引爆
+  cast_flavor: 空氣向你的掌心塌陷，敵人踉蹌著被拖近，下一瞬火光自你腳下炸開
+provenance: {origin: builtin, owner_id: null, created_by: null, parents: [], bound: true, tradeable: false}

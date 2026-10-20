@@ -11,6 +11,7 @@ from __future__ import annotations
 
 from fractions import Fraction
 
+from trpg.content.skills import SkillDef
 from trpg.engine.rules.geometry import manhattan
 from trpg.engine.skills.targeting import SkillArea
 from trpg.engine.state import BattleState, UnitState
@@ -18,8 +19,15 @@ from trpg.engine.state import BattleState, UnitState
 __all__ = ["composite_estimate"]
 
 
-def composite_estimate(state: BattleState, unit: UnitState, area: SkillArea) -> Fraction | None:
-    """複合技能一個選取的估計；影響範圍內沒有敵方單位時為 ``None``（不納入候選）。"""
+def composite_estimate(
+    state: BattleState, unit: UnitState, skill: SkillDef, area: SkillArea
+) -> Fraction | None:
+    """複合技能一個選取的估計；影響範圍內沒有敵方單位時為 ``None``（不納入候選）。
+
+    Phase 3F-4a 的四種即時第二段（動作 → 位移、聚集、擊殺、命中）AI 先不使用（一律 ``None``；
+    3F-4b 再評估）。"""
+    if skill.followup is not None and skill.followup.when != "after_move":
+        return None
     enemies = 0
     allies = 0
     for uid in area.units:

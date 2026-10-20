@@ -1400,7 +1400,7 @@ def skill_estimate(  # noqa: PLR0917
     if skill.kind == "stance" and stance_status_ids(state.ruleset, unit):
         return None  # 已經有姿態：AI 不主動換姿態（也不主動取消，Phase 2E-2）
     if skill.followup is not None:
-        return composite_estimate(state, unit, area)
+        return composite_estimate(state, unit, skill, area)
     placed = _placement_estimate(state, unit, skill, area, scene, trap=trap)
     if not isinstance(placed, _Unhandled):
         return placed

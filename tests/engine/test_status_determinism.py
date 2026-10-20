@@ -8,7 +8,7 @@ from typing import cast
 from hypothesis import HealthCheck, given, settings
 from hypothesis import strategies as st
 
-from tests.engine.helpers import library, make_map, make_setup, spawn, template
+from tests.engine.helpers import answered, library, make_map, make_setup, spawn, template
 from trpg.engine import (
     BattleSetup,
     begin_battle,
@@ -95,7 +95,7 @@ def test_property_random_legal_actions_with_the_new_statuses(seed: int) -> None:
         assert state_to_json(state) == before  # 純函式：不修改輸入
         assert state_to_json(first.state) == state_to_json(second.state)
         assert _json(first.events) == _json(second.events)
-        state = first.state
+        state = answered(first).state
         for unit in state.units.values():
             assert 0 <= unit.hp <= unit.max_hp
             assert all(v > 0 for v in unit.cooldowns.values())
