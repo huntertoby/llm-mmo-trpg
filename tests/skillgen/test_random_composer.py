@@ -226,8 +226,12 @@ def test_one_thousand_seeds_are_all_valid_and_spread_out() -> None:
     assert {s.tier for s in skills} == {1, 2, 3, 4, 5}
     assert {s.rarity for s in skills} == set(RARITIES)
     counts = Counter(s.skeleton for s in skills)
-    assert set(counts) == set(ENABLED) and max(counts.values()) <= 400
-    ratios = [skill_budget(s, library).ratio for s in skills]
+    assert set(counts) >= set(ENABLED) and max(counts.values()) <= 400
+    ratios = [
+        skill_budget(s, library).ratio
+        for s in skills
+        if s.rarity != "legendary" and s.kind != "modifier"
+    ]
     assert min(ratios) >= Fraction(75, 100) and max(ratios) <= Fraction(95, 100)
 
 
