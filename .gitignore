@@ -55,3 +55,6 @@ desktop.ini
 
 # 前端（client/dist 已由上面的 dist/ 涵蓋）
 node_modules/
+
+# roguelite 存檔（Phase 3-5a；trpg run、網頁 /api/runs）
+saves/

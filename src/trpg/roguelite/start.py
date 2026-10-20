@@ -26,6 +26,7 @@ from trpg.shared.types import Attribute
 __all__ = [
     "allocation_problems",
     "apply_allocation",
+    "default_build",
     "make_plan",
     "new_run",
     "primary_attribute",
@@ -60,6 +61,11 @@ def allocation_problems(allocation: Mapping[Attribute, int], points: int) -> lis
 def apply_allocation(hero: UnitTemplate, allocation: Mapping[Attribute, int]) -> UnitTemplate:
     attributes = {a: hero.attributes[a] + allocation.get(a, 0) for a in Attribute}
     return hero.model_copy(update={"attributes": attributes})
+
+
+def default_build(library: ContentLibrary, seed: int) -> str:
+    """沒有指定 build 時（``trpg run auto``）：以 ``Rng(seed).fork("build")`` 從 build 中抽一個。"""
+    return Rng(seed).fork("build").choice(sorted(library.builds.by_id()))
 
 
 def make_plan(library: ContentLibrary, seed: int) -> tuple[BattlePlan, ...]:

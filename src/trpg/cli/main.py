@@ -26,6 +26,7 @@
 - ``trpg battle --ally-build <build_id>[,…]``：我方用 build 英雄（不足 3 人以標準隊友補齊）。
 - ``trpg battle replay <path>``：讀取 ``--log-json`` 的輸出，重播並驗證最終狀態一致。
 - ``trpg serve [--host 127.0.0.1] [--port 8000]``：以 uvicorn 啟動本機 API（``trpg.api``）。
+- ``trpg run new|auto|show``：roguelite 一輪（``trpg.cli.run``，Phase 3-5a）。
 """
 
 from __future__ import annotations
@@ -39,6 +40,7 @@ from pathlib import Path
 from trpg import __version__
 from trpg.cli.battle import cmd_battle, cmd_map_list, cmd_map_show, cmd_replay
 from trpg.cli.budget import cmd_skills_budget, cmd_skills_budget_all, library_violations
+from trpg.cli.run import add_run_parser
 from trpg.cli.serve import DEFAULT_HOST, DEFAULT_PORT, cmd_serve
 from trpg.cli.sim import cmd_sim_maps
 from trpg.cli.sim_completion import cmd_sim_completion
@@ -213,6 +215,7 @@ def build_parser() -> argparse.ArgumentParser:  # noqa: PLR0915
     replay.add_argument("path", type=Path, help="戰鬥紀錄 JSON")
     _add_sim_report_parsers(sim_commands)
     _add_serve_parser(commands)
+    add_run_parser(commands, _with_library)
     rng_parser.set_defaults(func=_run_rng)
     skills_show.set_defaults(func=_run_skills_show)
     skills_budget.set_defaults(func=_run_skills_budget)

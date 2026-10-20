@@ -18,6 +18,7 @@
 from __future__ import annotations
 
 import json
+import os
 import re
 from pathlib import Path
 
@@ -31,8 +32,10 @@ from trpg.roguelite.state import BattleNode, RunState
 
 __all__ = [
     "RUN_ID_PATTERN",
+    "SAVE_DIR_ENV",
     "SAVE_FORMAT",
     "RunSave",
+    "default_save_dir",
     "dumps_save",
     "load_save",
     "loads_save",
@@ -43,6 +46,16 @@ __all__ = [
 
 SAVE_FORMAT = "trpg-run/1"
 RUN_ID_PATTERN = r"^[A-Za-z0-9_-]{1,64}$"
+SAVE_DIR_ENV = "TRPG_SAVE_DIR"
+"""可覆寫存檔資料夾的環境變數。"""
+
+
+def default_save_dir() -> Path:
+    """存檔資料夾：環境變數 ``TRPG_SAVE_DIR``，否則專案根目錄的 ``saves/``（在 .gitignore 內）。"""
+    override = os.environ.get(SAVE_DIR_ENV)
+    if override:
+        return Path(override)
+    return Path(__file__).resolve().parents[3] / "saves"
 
 
 class RunSave(BaseModel):
