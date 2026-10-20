@@ -1113,19 +1113,22 @@ _SEGMENT_LABELS: dict[str, tuple[str, str]] = {
     "after_gather": ("聚集段", "打擊段"),
     "on_kill": ("第一段", "擊殺後的第二段"),
     "on_hit": ("第一段", "命中後的第二段"),
+    "delayed": ("第一段", "延遲段"),
 }
 
 
 def followup_chance_permille(skill: SkillDef, library: ContentLibrary) -> int:
     """複合技能第二段的觸發機率（‰，Phase 3F-4a）：``on_kill`` 用預估擊殺率
     （``on_kill_expected_permille``）、``on_hit`` 用預估命中率（``modifier.hit_rate_permille``）；
-    其他種類一定結算（1000）。"""
+    延遲段（3F-4b）用折扣 ``composite_delayed_discount_permille``；其他種類一定結算（1000）。"""
     assert skill.followup is not None
     budget = library.budget
     if skill.followup.when == "on_kill":
         return budget.on_kill_expected_permille
     if skill.followup.when == "on_hit":
         return budget.modifier.hit_rate_permille
+    if skill.followup.when == "delayed":
+        return budget.composite_delayed_discount_permille
     return _PERMILLE
 
 

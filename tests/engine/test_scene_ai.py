@@ -225,9 +225,9 @@ def test_an_ai_battle_with_pierce_shots_replays(
 def test_an_ai_battle_with_a_topple_replays(
     tmp_path: Path, capsys: pytest.CaptureFixture[str]
 ) -> None:
-    """build_push 在 lava_crossing 種子 0：AI 推倒石柱，紀錄重播一致。"""
+    """build_push 在 lava_crossing 種子 1：AI 推倒石柱，重播一致（3F-4b 換技能後種子 0→1）。"""
     log = tmp_path / "topple.json"
-    argv = ["battle", "--map", "lava_crossing", "--seed", "0", "--ally-build", "build_push"]
+    argv = ["battle", "--map", "lava_crossing", "--seed", "1", "--ally-build", "build_push"]
     assert main([*argv, "--log-json", str(log)]) == 0
     assert "倒下，壓住" in capsys.readouterr().out
     replayed = io.StringIO()

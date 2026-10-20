@@ -44,6 +44,8 @@ __all__ = [
     "EnvironmentStarted",
     "Event",
     "EventBase",
+    "FollowupCancelled",
+    "FollowupCharged",
     "GambleRolled",
     "Healed",
     "InitiativeRolled",
@@ -851,6 +853,32 @@ class SkillFollowup(EventBase):
     tiles: tuple[Pos, ...]
 
 
+class FollowupCharged(EventBase):
+    """延遲段（Phase 3F-4b，6.23 #5）開始等待：施放者身上帶著 ``charging``。``release`` 是釋放時機
+    （``next_turn``／``attacked``），``pos``／``tiles`` 是以施放者目前位置推算的預計範圍（施放者
+    移動時範圍跟著移動）。"""
+
+    type: Literal["followup_charged"] = "followup_charged"
+    unit_id: UnitId
+    skill_id: str
+    name_zh: str
+    release: str
+    pos: Pos
+    tiles: tuple[Pos, ...]
+
+
+class FollowupCancelled(EventBase):
+    """延遲段（Phase 3F-4b）取消：``downed`` 施放者倒下、``controlled`` 被暈眩或冰凍
+    （``skip_turn`` 的狀態）、``expired`` 被攻擊才釋放的延遲段到下回合開始都沒被攻擊、
+    ``replaced`` 施放了另一個延遲段。"""
+
+    type: Literal["followup_cancelled"] = "followup_cancelled"
+    unit_id: UnitId
+    skill_id: str
+    name_zh: str
+    reason: Literal["downed", "controlled", "expired", "replaced"]
+
+
 class SkillTriggered(EventBase):
     """被動技能觸發（Phase 2E-1）。
 
@@ -1440,6 +1468,8 @@ type Event = Annotated[
     | UnitCharged
     | SkillCopied
     | SkillFollowup
+    | FollowupCharged
+    | FollowupCancelled
     | ZoneCreated
     | ZoneMoved
     | ZoneTriggered

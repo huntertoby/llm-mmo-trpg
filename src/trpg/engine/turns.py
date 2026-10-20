@@ -11,8 +11,10 @@
 
 from __future__ import annotations
 
+from trpg.content.skills import CHARGING
 from trpg.engine.activations import expire_activations
 from trpg.engine.context import Ctx
+from trpg.engine.delayed import release_at_turn_start
 from trpg.engine.effects import execute
 from trpg.engine.effects.models import (
     ApplyStatusEffect,
@@ -122,12 +124,21 @@ def start_turn(ctx: Ctx, unit_id: UnitId) -> None:
     surface_effects = _surface_turn_start(ctx, unit)
     if surface_effects and unit.alive:
         execute(ctx, surface_effects)
+    _turn_start_hooks(ctx, unit)
+
+
+def _turn_start_hooks(ctx: Ctx, unit: UnitState) -> None:
+    """回合開始、狀態與表面效果之後：持續區域、陷阱倒數、圖騰、延遲段，最後是被動的
+    ``on_turn_start``（每一步之前都確認行動者還站著）。"""
+    state = ctx.state
     if unit.alive and state.zones:  # 站在持續區域內的回合開始效果（Phase 3D-5）
         zones_turn_start(ctx, unit)
     if unit.alive and state.traps:  # 放置者的陷阱倒數（Phase 2E-3）：delay 到期觸發、enter 到期消失
         tick_traps(ctx, unit)
     if unit.alive and unit.is_summon:  # 圖騰的光環（Phase 3D-4b）
         pulse_totem(ctx, unit)
+    if unit.alive and unit.has_status(CHARGING):  # 延遲段（Phase 3F-4b）：釋放或失效
+        release_at_turn_start(ctx, unit)
     if unit.alive:  # 被動技能 on_turn_start：在狀態與表面的回合開始效果之後
         collect_turn_start(ctx, unit)
         settle(ctx)

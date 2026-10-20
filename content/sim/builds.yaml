@@ -43,6 +43,9 @@ companions: [sim_companion_fighter, sim_companion_archer]
 # Phase 3F-4a：四種即時第二段的示範技能（AI 3F-4b 才會用，先裝在主動欄位有空位的地方，不改變既有戰鬥）——build_fire 加引力爆
 # （聚集 → 範圍打擊）、build_striker 加破甲連擊（命中 → 加碼段）、build_bomber 加死亡迴旋（擊殺 → 接下一段）；回馬斬（動作 → 位移）
 # 裝在單位範本 hero_fighter（近戰 build 的主動欄位都已滿）。
+# Phase 3F-4b：AI 會用複合技能的五種第二段——回馬斬由 hero_fighter 搬到 build_assassin（換下處決，處決仍在 hero_fighter）；
+# 延遲段示範：build_push 以蓄力斬（下回合開始釋放方陣斬）換下閃現（閃現仍在 build_assassin 等）、build_tank 以格擋反擊
+# （被攻擊時十字反擊，搭配嘲諷）換下盾擊（盾擊仍在 build_wallburn 與敵方盾兵）。
 builds:
   - id: build_push
     name_zh: 位移流
@@ -58,7 +61,7 @@ builds:
       resist: {physical: 100}
       tags: [hero, sim]
       max_mana: 20
-      skills: [skill_gale_kick, skill_leap_slam, skill_blink, skill_parting_slash, skill_bloodlust, skill_arcane_blade, skill_heavy_stomp, skill_battering_ram, skill_fracture_mark, skill_quake_topple]
+      skills: [skill_gale_kick, skill_leap_slam, skill_charged_cleave, skill_parting_slash, skill_bloodlust, skill_arcane_blade, skill_heavy_stomp, skill_battering_ram, skill_fracture_mark, skill_quake_topple]
 
   - id: build_fire
     name_zh: 火焰流
@@ -110,7 +113,7 @@ builds:
       tags: [hero, sim]
       max_mana: 20
       skills:
-        [skill_encircled_sweep, skill_shield_bash, skill_taunting_roar, skill_guardian_aegis, skill_sunder_strike, skill_armor_breaker, skill_thunder_hand, skill_grief_rage, skill_lingering_roar]
+        [skill_encircled_sweep, skill_parry_riposte, skill_taunting_roar, skill_guardian_aegis, skill_sunder_strike, skill_armor_breaker, skill_thunder_hand, skill_grief_rage, skill_lingering_roar]
 
   - id: build_ranged
     name_zh: 遠程
@@ -141,7 +144,7 @@ builds:
       ai_profile: flanker   # 3D-8c：移動時偏好夾擊位置
       tags: [hero, sim]
       max_mana: 20
-      skills: [skill_shadow_ambush, skill_execute, skill_blink, skill_fury_stance, skill_crippling_crit, skill_pincer_strike, skill_pick_off, skill_shadow_backstab, skill_ambush_stab]
+      skills: [skill_shadow_ambush, skill_retreating_slash, skill_blink, skill_fury_stance, skill_crippling_crit, skill_pincer_strike, skill_pick_off, skill_shadow_backstab, skill_ambush_stab]
 
   - id: build_support
     name_zh: 輔助

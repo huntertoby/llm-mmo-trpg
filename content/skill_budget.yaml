@@ -87,6 +87,9 @@ composite_tax_permille: 150
 # interactions.yaml 與狀態的 removed_by_element；第二段消耗第一段的狀態也算）時，總點數再 ×（1000 ＋ 這個值）÷ 1000。
 # 初值 1000（點數翻倍），未經模擬。
 composite_self_combo_permille: 1000
+# 3F-4b：延遲段（when: delayed）的第二段點數 × 這個折扣（敵人看得到、能反應；被攻擊才釋放的也用同一個值），
+# 再乘複合加成。初值，未經模擬。
+composite_delayed_discount_permille: 800
 
 condition_permille: {none: 1000, common: 850, harsh: 600}
 all_target_permille: 800    # affects: all（敵我不分）的對象係數

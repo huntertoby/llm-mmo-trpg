@@ -432,6 +432,8 @@ def test_beneficial_flags_in_content() -> None:
         "stance_bulwark",
         # 3C-4a
         "undying",
+        # 3F-4b：延遲段的等待狀態（有益，不被淨化）
+        "charging",
         # 3C-4b
         "soul_link",
         # 3D-8c

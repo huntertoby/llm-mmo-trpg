@@ -149,6 +149,8 @@ def observe(ctx: Ctx, event: EventBase) -> None:
     if isinstance(event, UnitDowned):
         ctx.downed.append(event.unit_id)  # ally_downed 反應：等效果佇列清空後（settle）才處理
         return
+    if isinstance(event, AttackRolled):
+        _on_attacked_charge(ctx, event)
     index = _index(ctx)
     if not index.any:
         return
@@ -164,6 +166,24 @@ def observe(ctx: Ctx, event: EventBase) -> None:
         _on_collision(ctx, index, event)
     elif isinstance(event, UnitMoved):
         _on_enter_surface(ctx, index, event)
+
+
+def _on_attacked_charge(ctx: Ctx, event: AttackRolled) -> None:
+    """被攻擊才釋放的延遲段（Phase 3F-4b）：記一筆，等這次攻擊結算完才釋放。"""
+    from trpg.engine.delayed import DELAYED_RELEASE, attacked_release  # noqa: PLC0415
+
+    skill = attacked_release(ctx.state, event)
+    if skill is not None:
+        ctx.fired.append(
+            Fired(
+                event.seq,
+                event.target_id,
+                skill.id,
+                DELAYED_RELEASE,
+                event.attacker_id,
+                ctx.trigger_depth + 1,
+            )
+        )
 
 
 def _on_attack(ctx: Ctx, index: PassiveIndex, event: AttackRolled) -> None:
@@ -353,6 +373,8 @@ def settle(ctx: Ctx) -> None:
             for fired in batch:
                 if fired.event.startswith(_MODIFIER_PREFIX):
                     _resolve_on_hit(ctx, fired)
+                elif fired.event == _DELAYED_RELEASE:
+                    _resolve_delayed(ctx, fired)
                 else:
                     _resolve_one(ctx, fired)
     finally:
@@ -426,6 +448,23 @@ def _resolve_one(ctx: Ctx, fired: Fired) -> None:
     _pay(ctx, owner, skill, fired)
     ctx.trigger_depth = fired.depth
     use_triggered_skill(ctx, owner, skill, other)
+
+
+_DELAYED_RELEASE = "delayed_release"
+"""與 :data:`trpg.engine.delayed.DELAYED_RELEASE` 相同（本模組載入時不匯入它）。"""
+
+
+def _resolve_delayed(ctx: Ctx, fired: Fired) -> None:
+    """被攻擊才釋放的延遲段（Phase 3F-4b）：觸發深度在上限內才釋放。"""
+    from trpg.engine.delayed import resolve_attacked_release  # noqa: PLC0415
+
+    owner = ctx.state.units.get(fired.owner_id)
+    if ctx.state.ended or owner is None:
+        return
+    if not check_trigger_depth(ctx, owner.id, fired.skill_id, fired.depth):
+        return
+    ctx.trigger_depth = fired.depth
+    resolve_attacked_release(ctx, owner, fired.skill_id)
 
 
 def _resolve_on_hit(ctx: Ctx, fired: Fired) -> None:

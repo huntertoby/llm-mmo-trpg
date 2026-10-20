@@ -44,6 +44,7 @@ __all__ = [
     "CASTER_CONDITIONS",
     "CHANGE_TARGETS",
     "CHARGE_THROUGH",
+    "CHARGING",
     "CHEAT_DEATH",
     "CHEAT_DEATH_STATUS",
     "COMPOSITE_KIND_ZH",
@@ -55,6 +56,8 @@ __all__ = [
     "DAMAGE_MULTIPLIER",
     "DASH",
     "DELAYED_DAMAGE",
+    "DELAYED_RELEASE_VALUES",
+    "DELAYED_SHAPES",
     "DISPEL",
     "EFFECT_NON_PARAM_FIELDS",
     "EFFECT_PARAM_FIELDS",
@@ -939,13 +942,18 @@ class FollowupSpec(ContentModel):
     - ``after_action``（3F-4a）：第一段結算完、施放者還站著就結算（自身位移，從目前位置選落點）；
     - ``after_gather``（3F-4a）：第一段把敵人拉向聚集點，第二段以聚集點為中心結算；
     - ``on_kill``（3F-4a）：第一段讓敵人倒下才結算（從施放者的位置選目標）；
-    - ``on_hit``（3F-4a）：第一段命中敵人才結算（自動對命中的同一個目標）。"""
+    - ``on_hit``（3F-4a）：第一段命中敵人才結算（自動對命中的同一個目標）；
+    - ``delayed``（3F-4b）：延遲段——施放後施放者身上帶著「蓄力」狀態，``release`` 成立時以施放者
+      當下的位置為中心結算（``next_turn``：施放者下回合開始時；``attacked``：到施放者下回合開始
+      之前被敵人攻擊時）。"""
 
     when: FollowupWhen = "after_move"
     skeleton: str
     shape: ShapeSpec
     effects: tuple[EffectSpec, ...] = Field(min_length=1)
     condition: ConditionSpec | None = None
+    release: DelayedRelease | None = None
+    """延遲段（``when: delayed``，Phase 3F-4b）何時釋放；其他種類必須省略。"""
 
     @field_validator("skeleton")
     @classmethod
@@ -1159,17 +1167,29 @@ FOLLOWUP_FORBIDDEN: tuple[str, ...] = (
 )
 """動作段不能用的原語（Phase 3F-3a）：位移（不套娃）、召喚、持續區域、陷阱，以及需要另外選取或改變
 整個施放流程的原語（複製技能、規則改變、賭注、投擲物件；保守做法）。"""
-type FollowupWhen = Literal["after_move", "after_action", "after_gather", "on_kill", "on_hit"]
+type FollowupWhen = Literal[
+    "after_move", "after_action", "after_gather", "on_kill", "on_hit", "delayed"
+]
 """第二段的時機（6.23）：``after_move`` 位移 → 動作（3F-3a）；``after_action`` 動作 → 位移
 （打帶跑）、``after_gather`` 聚集 → 範圍打擊、``on_kill`` 擊殺 → 接下一段、``on_hit`` 命中 →
-加碼段（3F-4a）。``delayed`` 延遲段留給 3F-4b。"""
+加碼段（3F-4a）；``delayed`` 延遲段（3F-4b）。"""
+type DelayedRelease = Literal["next_turn", "attacked"]
+"""延遲段的釋放時機（Phase 3F-4b）：``next_turn`` 施放者下回合開始時；``attacked`` 到施放者下回合
+開始之前被敵人攻擊（擲命中，不論是否命中）時——沒被攻擊就在下回合開始時失效。"""
 FOLLOWUP_WHEN_VALUES: tuple[str, ...] = (
     "after_move",
     "after_action",
     "after_gather",
     "on_kill",
     "on_hit",
+    "delayed",
 )
+DELAYED_RELEASE_VALUES: tuple[str, ...] = ("next_turn", "attacked")
+DELAYED_SHAPES: tuple[str, ...] = ("cross", "square3", "ring")
+"""延遲段的形狀（Phase 3F-4b）：以施放者釋放當下的位置為中心（十字、方陣 ``range: 0``）。"""
+CHARGING = "charging"
+"""延遲段等待期間施放者身上的狀態（Phase 3F-4b；``StatusInstance.skill_id`` 是技能、
+``remaining`` 是還要幾回合釋放）。"""
 FOLLOWUP_CHOICE_WHENS: tuple[str, ...] = ("after_action", "on_kill")
 """第二段要施放者自己選目標的種類（3F-4a）：結算到第二段時以 ``pending``（``kind: followup``）
 詢問；AI 與重播直接在 ``UseSkill.followup_target`` 帶選取。"""
@@ -1181,6 +1201,7 @@ COMPOSITE_KIND_ZH: dict[str, str] = {
     "after_gather": "聚集 → 範圍打擊",
     "on_kill": "擊殺 → 接下一段",
     "on_hit": "命中 → 加碼段",
+    "delayed": "延遲段",
 }
 """複合技能種類的中文名稱（6.23）。"""
 GATHER_SHAPES: tuple[str, ...] = ("cross", "square3", "ring")
@@ -1285,12 +1306,25 @@ def _check_on_hit(effects: tuple[EffectSpec, ...], _shape: ShapeSpec, f: Followu
     _no_forbidden(f.effects, "第二段")
 
 
+def _check_delayed(effects: tuple[EffectSpec, ...], _shape: ShapeSpec, f: FollowupSpec) -> None:
+    """延遲段（3F-4b）：第一段任何動作（可以有一個自身位移）；第二段是以施放者為中心的動作
+    （:data:`DELAYED_SHAPES`），必須指定 ``release``。"""
+    if f.release is None:
+        raise ValueError(
+            f"延遲段必須指定 release（{'、'.join(DELAYED_RELEASE_VALUES)}）：何時釋放第二段"
+        )
+    _no_forbidden(effects, "第一段", allowed=COMPOSITE_MOVES)
+    _second_shape(f, DELAYED_SHAPES)
+    _no_forbidden(f.effects, "延遲段")
+
+
 _FOLLOWUP_CHECKS: dict[str, Callable[[tuple[EffectSpec, ...], ShapeSpec, FollowupSpec], None]] = {
     "after_move": _check_after_move,
     "after_action": _check_after_action,
     "after_gather": _check_after_gather,
     "on_kill": _check_on_kill,
     "on_hit": _check_on_hit,
+    "delayed": _check_delayed,
 }
 """``followup.when`` → 兩段的結構檢查（schema 層級；骨架規則由驗證器檢查）。"""
 _MAX_COOLDOWN_RESTORE = 2
@@ -1744,6 +1778,10 @@ class SkillDef(ContentModel):
             raise ValueError(f"只有主動技能可以有 followup（複合技能），收到 kind: {self.kind}")
         if self.trap is not None or self.cost.on_miss:
             raise ValueError("複合技能不能是陷阱，也不能有失手反噬 cost.on_miss")
+        if follow.release is not None and follow.when != "delayed":
+            raise ValueError(
+                f"只有延遲段（when: delayed）可以指定 release，收到 when: {follow.when}"
+            )
         _FOLLOWUP_CHECKS[follow.when](self.effects, self.shape, follow)
         total = len(self.effects) + len(follow.effects)
         if total > _MAX_EFFECTS:

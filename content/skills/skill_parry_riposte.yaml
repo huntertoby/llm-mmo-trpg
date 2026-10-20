@@ -1,0 +1,31 @@
+# 複合技能（Phase 3F-4b，docs/design/06-技能.md 6.23 #5「延遲段」示範；數值為初值，未經模擬）：
+# 架起格擋（得到一層護盾）；到下回合開始之前被敵人攻擊，就以自己為中心的十字反擊。
+id: skill_parry_riposte
+schema_version: 1
+name_zh: 格擋反擊
+tier: 1
+rank: 1
+rarity: rare
+kind: active
+skeleton: aura
+category: weapon
+weapon_req: melee
+ap_cost: 2
+scaling_attr: str
+shape: {type: self}
+effects:
+  - {type: shield, dice: 1d4, affects: self}
+followup:
+  when: delayed
+  release: attacked
+  skeleton: area
+  shape: {type: cross, range: 0}
+  effects:
+    - {type: damage, multiplier_permille: 900}
+condition: null
+cost: {mana: 4, cooldown: 2}
+tags: [physical, melee, aoe]
+narrative:
+  concept: 以刀身架住來勢，借對手的力道翻腕反斬，掃向身周的每一個敵人
+  cast_flavor: 你橫刀當胸，眼睛盯著每一個逼近的身影
+provenance: {origin: builtin, owner_id: null, created_by: null, parents: [], bound: true, tradeable: false}

@@ -21,6 +21,7 @@ __all__ = [
     "EFFECT_LIST_ADAPTER",
     "ApplyStatusEffect",
     "BombBlastEffect",
+    "CancelChargeEffect",
     "ChangeTileEffect",
     "CleanseEffect",
     "CreateObstacleEffect",
@@ -215,6 +216,18 @@ class BombBlastEffect(EffectBase):
     unit_id: UnitId
     skill_id: str
     cause: Literal["timer", "downed"]
+
+    def sort_target(self) -> str:
+        return self.unit_id
+
+
+class CancelChargeEffect(EffectBase):
+    """取消延遲段（Phase 3F-4b，:mod:`trpg.engine.delayed`）：移除 ``unit_id`` 身上的 ``charging``
+    並發出 ``followup_cancelled``（``reason``：倒下、被控制）。已經沒有蓄力時不做事。"""
+
+    kind: Literal["cancel_charge"] = "cancel_charge"
+    unit_id: UnitId
+    reason: Literal["downed", "controlled"]
 
     def sort_target(self) -> str:
         return self.unit_id
@@ -440,6 +453,7 @@ type Effect = Annotated[
     | SwapUnitsEffect
     | ApplyStatusEffect
     | BombBlastEffect
+    | CancelChargeEffect
     | RemoveStatusEffect
     | ShieldEffect
     | CleanseEffect

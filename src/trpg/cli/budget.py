@@ -97,7 +97,8 @@ def _print_segments(report: BudgetReport, out: TextIO) -> None:
     tax = report.composite_tax_permille
     second_text = _num(second.total)
     if second.chance_permille != _PERMILLE:  # 有條件的第二段（3F-4a）：× 觸發機率
-        second_text = f"{second_text} × 觸發機率 {second.chance_permille}‰"
+        what = "延遲折扣" if second.label == "延遲段" else "觸發機率"  # 延遲段（3F-4b）
+        second_text = f"{second_text} × {what} {second.chance_permille}‰"
     combo = report.self_combo_permille
     combo_text = f" × (1000 + 連鎖加價 {combo}) ÷ 1000" if combo else ""
     print(

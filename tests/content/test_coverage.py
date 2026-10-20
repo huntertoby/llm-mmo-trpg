@@ -65,6 +65,8 @@ def _used() -> dict[str, set[str]]:
         statuses |= {c.status for c in [s.condition] if c and c.status}
         statuses |= {e.condition.status for e in s.effects if e.condition and e.condition.status}
     statuses |= {st for st, prim in _STATUS_VIA_PRIMITIVE.items() if prim in primitives}
+    if any(s.followup is not None and s.followup.when == "delayed" for s in skills):
+        statuses.add("charging")  # 延遲段（3F-4b）等待期間的狀態，由 followup.when: delayed 產生
     return {
         "skeleton": {s.skeleton for s in skills},
         "trigger": {s.trigger.event for s in skills if s.trigger},

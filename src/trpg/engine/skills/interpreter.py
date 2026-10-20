@@ -71,6 +71,7 @@ from trpg.engine.activations import activate
 from trpg.engine.context import Ctx
 from trpg.engine.control import status_effect
 from trpg.engine.copying import copy_free_problem, copy_source, has_copy_effect
+from trpg.engine.delayed import charge
 from trpg.engine.effects import execute
 from trpg.engine.effects.models import (
     ApplyStatusEffect,
@@ -181,6 +182,7 @@ from trpg.shared.errors import IllegalActionError
 from trpg.shared.types import Element, Pos, UnitId
 
 __all__ = [
+    "run_delayed",
     "use_modifier_effects",
     "use_reaction_skill",
     "use_skill",
@@ -243,6 +245,8 @@ def use_skill(ctx: Ctx, caster: UnitState, action: UseSkill) -> None:
             second: _Cast | None = None
             if origin is not None:  # 複合技能（Phase 3F-3a）：到達落點才結算動作段
                 second = _run_followup(ctx, caster, skill, action, origin)
+            elif skill.followup is not None and skill.followup.when == "delayed":
+                charge(ctx, caster, skill)  # 延遲段（Phase 3F-4b）：開始蓄力，之後才結算
             elif skill.followup is not None:  # 其他四種即時的第二段（Phase 3F-4a）
                 second = _run_second(ctx, caster, skill, action, cast, start)
             if second is not None:
@@ -343,6 +347,29 @@ def _run_second(  # noqa: PLR0917
     cast = _Cast(ctx, caster, follow, pick, area)
     cast.run()
     return cast
+
+
+def run_delayed(
+    ctx: Ctx, caster: UnitState, skill: SkillDef, pick: UseSkill, area: SkillArea
+) -> None:
+    """結算延遲段（Phase 3F-4b，:mod:`trpg.engine.delayed`）：``skill_followup``
+    （``when: delayed``，原點是施放者當下的位置）之後是第二段的事件；不付代價（施放時已付）。
+    被動觸發等第二段結算完才處理。"""
+    follow = skill.followup_skill()
+    assert follow is not None
+    with holding(ctx):
+        ctx.emit(
+            SkillFollowup,
+            unit_id=caster.id,
+            skill_id=skill.id,
+            name_zh=skill.name_zh,
+            when="delayed",
+            origin=Pos(x=caster.xy[0], y=caster.xy[1]),
+            tiles=tuple(Pos(x=x, y=y) for x, y in area.tiles),
+        )
+        cast = _Cast(ctx, caster, follow, pick, area)
+        cast.run()
+        after_attack(ctx, caster, None, ambushed=cast.ambushed, turns=cast.melee_victims)
 
 
 def _second_selection(

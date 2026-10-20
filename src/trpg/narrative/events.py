@@ -33,6 +33,8 @@ from trpg.engine.events import (
     EnvironmentEnded,
     EnvironmentStarted,
     EventBase,
+    FollowupCancelled,
+    FollowupCharged,
     GambleRolled,
     Healed,
     InitiativeRolled,
@@ -718,6 +720,7 @@ _FOLLOWUP_LEAD = {
     "after_gather": "以聚集點",
     "on_kill": "擊倒目標後，在",
     "on_hit": "命中後，在",
+    "delayed": "釋放蓄力，以",
 }
 """複合技能第二段的開頭（Phase 3F-4a）；其他種類為「在」。"""
 
@@ -725,11 +728,36 @@ _FOLLOWUP_LEAD = {
 @_handles(SkillFollowup)
 def _skill_followup(e: SkillFollowup, v: _View) -> str:
     lead = _FOLLOWUP_LEAD.get(e.when, "在")
-    where = f"{xy_text(e.origin)} 為中心" if e.when == "after_gather" else xy_text(e.origin)
+    centered = e.when in ("after_gather", "delayed")
+    where = f"{xy_text(e.origin)} 為中心" if centered else xy_text(e.origin)
     return (
         f"  ✦ {v.name[e.unit_id]} {lead} {where} 接著施展「{e.name_zh}」的第二段"
         f"→ 影響 {len(e.tiles)} 格"
     )
+
+
+_RELEASE_TEXT = {"next_turn": "下回合開始時釋放", "attacked": "下回合開始前被敵人攻擊就釋放"}
+"""延遲段的釋放時機（Phase 3F-4b）。"""
+_CANCEL_TEXT = {
+    "downed": "倒下了",
+    "controlled": "被控制（暈眩或冰凍）",
+    "expired": "到下回合開始都沒被攻擊",
+    "replaced": "改為蓄力另一招",
+}
+
+
+@_handles(FollowupCharged)
+def _followup_charged(e: FollowupCharged, v: _View) -> str:
+    release = _RELEASE_TEXT.get(e.release, e.release)
+    return (
+        f"  ◷ {v.name[e.unit_id]} 開始蓄力「{e.name_zh}」：{release}"
+        f"（以自己為中心，目前預計影響 {len(e.tiles)} 格）"
+    )
+
+
+@_handles(FollowupCancelled)
+def _followup_cancelled(e: FollowupCancelled, v: _View) -> str:
+    return f"  ✕ {v.name[e.unit_id]} 的蓄力「{e.name_zh}」取消了（{_CANCEL_TEXT[e.reason]}）"
 
 
 @_handles(SkillActivated)

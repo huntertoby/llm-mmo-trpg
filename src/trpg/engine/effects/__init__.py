@@ -14,6 +14,7 @@ from __future__ import annotations
 from collections.abc import Sequence
 
 from trpg.engine import bombs as _bombs
+from trpg.engine import delayed as _delayed
 from trpg.engine import interactions as _interactions
 from trpg.engine.context import Ctx
 from trpg.engine.effects import handlers as _handlers
@@ -21,6 +22,7 @@ from trpg.engine.effects import world as _world
 from trpg.engine.effects.models import (
     ApplyStatusEffect,
     BombBlastEffect,
+    CancelChargeEffect,
     ChangeTileEffect,
     CleanseEffect,
     CreateObstacleEffect,
@@ -51,6 +53,7 @@ from trpg.engine.state import BattleState
 __all__ = [
     "ApplyStatusEffect",
     "BombBlastEffect",
+    "CancelChargeEffect",
     "ChangeTileEffect",
     "CleanseEffect",
     "CreateObstacleEffect",
@@ -78,7 +81,7 @@ __all__ = [
     "run_effects",
 ]
 
-del _bombs, _handlers, _interactions, _world  # 只為了註冊處理器與觸發函式
+del _bombs, _delayed, _handlers, _interactions, _world  # 只為了註冊處理器與觸發函式
 
 
 def run_effects(state: BattleState, effects: Sequence[EffectBase]) -> ResolveResult:

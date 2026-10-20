@@ -17,6 +17,7 @@
 
 from __future__ import annotations
 
+import dataclasses
 from dataclasses import replace
 from typing import Literal
 
@@ -25,6 +26,7 @@ from pydantic import BaseModel, ConfigDict
 from trpg.content.maps import MapEvent, SpawnUnitsEvent
 from trpg.engine.bombs import blast_tiles, bomb_carriers, bomb_spec, tick_bombs
 from trpg.engine.context import Ctx
+from trpg.engine.delayed import charge_infos
 from trpg.engine.effects import execute
 from trpg.engine.effects.models import (
     ChangeTileEffect,
@@ -65,6 +67,7 @@ __all__ = [
     "Telegraph",
     "TelegraphBomb",
     "TelegraphChange",
+    "TelegraphCharge",
     "environment_rng",
     "run_environment",
     "telegraph",
@@ -256,6 +259,22 @@ class TelegraphBomb(BaseModel):
     explodes: bool
 
 
+class TelegraphCharge(BaseModel):
+    """等待中的延遲段（Phase 3F-4b）：施放者、技能、釋放時機（``next_turn``／``attacked``）、還要
+    幾回合（1 ＝ 施放者下回合開始）與以施放者目前位置推算的預計範圍。延遲段在施放者的回合開始時
+    結算，不在環境回合，所以不影響 ``events``／``changes``。"""
+
+    model_config = ConfigDict(frozen=True, extra="forbid")
+
+    unit_id: UnitId
+    skill_id: str
+    name_zh: str
+    release: str
+    remaining: int
+    pos: Pos
+    tiles: tuple[Pos, ...]
+
+
 class Telegraph(BaseModel):
     """下一次環境回合將發生的所有變化。
 
@@ -275,6 +294,8 @@ class Telegraph(BaseModel):
     burning: tuple[tuple[ObjectId, int], ...]
     upcoming: tuple[MapEvent, ...]
     bombs: tuple[TelegraphBomb, ...] = ()
+    charges: tuple[TelegraphCharge, ...] = ()
+    """等待中的延遲段（Phase 3F-4b）。"""
 
 
 def _changes(events: list[EventBase]) -> list[TelegraphChange]:
@@ -381,4 +402,5 @@ def telegraph(state: BattleState) -> Telegraph:
         burning=burning,
         upcoming=upcoming,
         bombs=_bombs(state),
+        charges=tuple(TelegraphCharge(**dataclasses.asdict(c)) for c in charge_infos(state)),
     )

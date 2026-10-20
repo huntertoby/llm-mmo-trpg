@@ -249,6 +249,9 @@ class BudgetRules(ContentModel):
     """複合技能兩段之間形成元素／表面連鎖（第一段造表面或施加狀態、第二段的元素引爆或與之互動；
     Phase 3F-4a，6.23「同一招不能自己造環境又引爆它」）時，總點數再 ×（1000 ＋ 這個值）÷ 1000
     （初值 1000‰，即點數翻倍）。"""
+    composite_delayed_discount_permille: int = Field(default=800, ge=0, le=1000)
+    """延遲段（Phase 3F-4b，6.23 #5）的折扣：第二段點數 × 這個值 ÷ 1000 再乘複合加成（敵人看得到
+    倒數與範圍、能反應；初值，未經模擬）。"""
     gamble_variance_bonus_permille: int = Field(default=1100, ge=1000, le=2000)
     """帶賭博機制的技能（Phase 3D-7a，6.17）：預算以期望值計，可用預算再 × 這個「變異加成」（‰；
     平均強度略高於同級穩定技能，作為冒險的補償；初值，未經模擬）。"""

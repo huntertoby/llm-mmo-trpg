@@ -111,7 +111,10 @@ def followup_text(library: ContentLibrary, skill: SkillDef) -> str | None:
         return None
     effects = "；".join(effect_summary(library, follow, e) for e in follow.effects)
     when = f"［條件：{condition_summary(library, follow.condition)}］" if follow.condition else ""
-    lead = _FOLLOWUP_LEADS[skill.followup.when]
+    if skill.followup.release is not None:  # 延遲段（Phase 3F-4b）
+        lead = _DELAYED_LEADS[skill.followup.release]
+    else:
+        lead = _FOLLOWUP_LEADS[skill.followup.when]
     return f"{lead}：{shape_summary(library, follow.shape)}{when}：{effects}"
 
 
@@ -122,6 +125,11 @@ _FOLLOWUP_LEADS = {
     "on_kill": "擊倒敵人的話，從自己的位置（自選目標）",
     "on_hit": "命中的話，對同一個目標",
 }
+_DELAYED_LEADS = {
+    "next_turn": "蓄力，下回合開始時以自己為中心釋放",
+    "attacked": "蓄力，下回合開始前被敵人攻擊時以自己為中心釋放（沒被攻擊就失效）",
+}
+"""延遲段（Phase 3F-4b）第二段一句話的開頭（依 ``followup.release``）。"""
 """複合技能第二段一句話的開頭（依 ``followup.when``；Phase 3F-4a）。"""
 
 

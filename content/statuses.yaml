@@ -123,6 +123,13 @@ statuses:
     description_zh: 身上綁著定時炸彈，剩餘回合就是倒數（每次環境回合 −1）：歸零時在身體當下的位置爆炸，波及周圍；倒下時也會立即爆炸。可被淨化移除，驅散不移除。只能由定時炸彈（delayed_damage）施加。
     expires: never
     stacking: refresh
+  - id: charging
+    polarity: neutral
+    name_zh: 蓄力
+    description_zh: 延遲段（複合技能）等待釋放中：下回合開始時、或被攻擊時（依技能）以自己為中心釋放第二段。倒下、暈眩或冰凍時取消。不能被淨化、驅散或奪取。只能由延遲段施加。
+    expires: never
+    stacking: refresh
+    beneficial: true
   - id: slow
     polarity: debuff
     name_zh: 緩速

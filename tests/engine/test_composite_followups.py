@@ -62,7 +62,7 @@ GATHER = "skill_gravity_burst"
 SPIRAL = "skill_death_spiral"
 COMBO = "skill_armor_break_combo"
 DEMOS = {
-    SLASH: ("after_action", "hero_fighter"),
+    SLASH: ("after_action", "build_assassin"),
     GATHER: ("after_gather", "build_fire"),
     SPIRAL: ("on_kill", "build_bomber"),
     COMBO: ("on_hit", "build_striker"),
@@ -486,7 +486,7 @@ def _slash_first(state: BattleState) -> Any:
     """主角第一次能用「回馬斬」打到敵人時用（不帶第二段，結算時暫停），其餘交給 AI。"""
     unit = state.active
     assert unit is not None
-    if unit.template_id == "hero_fighter" and unit.cooldowns.get(SLASH) is None:
+    if unit.template_id == "build_assassin" and unit.cooldowns.get(SLASH) is None:
         for action in legal_actions(state):
             if (
                 isinstance(action, UseSkill)
@@ -501,7 +501,7 @@ def test_a_battle_with_a_paused_followup_replays_exactly() -> None:
     setup = build_setup(
         library_with_builds(library()),
         "test_flat_6x6",
-        ["hero_fighter"],
+        ["build_assassin"],
         ["bandit", "bandit"],
         max_rounds=10,
     )

@@ -41,6 +41,7 @@ from trpg.engine.events import (
     DamageDealt,
     EnteredDeadlyTerrain,
     EventBase,
+    FollowupCharged,
     Healed,
     ObjectDamaged,
     ObjectDestroyed,
@@ -711,6 +712,19 @@ def _preview_skill(state: BattleState, actor: UnitState, skill_id: str) -> Skill
     return skill.model_copy(update={"effects": (*skill.effects, *follow.effects), "followup": None})
 
 
+def _simulated_second(
+    max_events: list[EventBase],
+) -> tuple[XY | None, tuple[XY, ...], tuple[UnitId, ...]]:
+    """模擬裡的第二段：即時的第二段取 ``skill_followup``；延遲段（3F-4b）取 ``followup_charged``
+    （蓄力時以施放者位置推算的預計範圍）。都沒有時為空。"""
+    for e in max_events:
+        if isinstance(e, SkillFollowup):
+            return (e.origin.x, e.origin.y), tuple((p.x, p.y) for p in e.tiles), ()
+        if isinstance(e, FollowupCharged):
+            return (e.pos.x, e.pos.y), tuple((p.x, p.y) for p in e.tiles), ()
+    return None, (), ()
+
+
 def _followup_info(
     state: BattleState, actor: UnitState, action: Action, max_events: list[EventBase]
 ) -> tuple[XY | None, tuple[XY, ...], tuple[UnitId, ...]]:
@@ -724,10 +738,7 @@ def _followup_info(
     if skill.followup is None:
         return None, (), ()
     if skill.followup.when != "after_move":
-        found = next((e for e in max_events if isinstance(e, SkillFollowup)), None)
-        if found is None:
-            return None, (), ()
-        return (found.origin.x, found.origin.y), tuple((p.x, p.y) for p in found.tiles), ()
+        return _simulated_second(max_events)
     origin = followup_origin(state, actor, skill, action)
     if origin is None:
         return None, (), ()

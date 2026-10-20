@@ -70,7 +70,9 @@ def test_a_build_with_an_incompatible_skill_is_rejected(tmp_path: Path) -> None:
     # 位移流是近戰武器，換入遠程技能就違反 weapon_req
     path.write_text(
         text.replace(
-            "skill_blink, skill_parting_slash", "skill_grapple_arrow, skill_parting_slash", 1
+            "skill_charged_cleave, skill_parting_slash",
+            "skill_grapple_arrow, skill_parting_slash",
+            1,
         ),
         encoding="utf-8",
     )

@@ -15,8 +15,9 @@ from pydantic import BaseModel, ConfigDict
 
 from trpg.content.battle import ReactionRule
 from trpg.content.maps import Objective
-from trpg.content.skills import TIME_BOMB
+from trpg.content.skills import CHARGING, TIME_BOMB
 from trpg.engine.bombs import bomb_spec
+from trpg.engine.delayed import charge_infos
 from trpg.engine.skills.revive import revivable
 from trpg.engine.state import (
     Activation,
@@ -81,6 +82,12 @@ class StatusView(_ViewModel):
     amount: int | None
     blast_radius: int | None = None
     """定時炸彈（``time_bomb``，Phase 3D-8b）的爆炸半徑（曼哈頓距離）；其他狀態為 ``None``。"""
+    skill_id: str | None = None
+    """延遲段（``charging``，Phase 3F-4b）的技能；其他狀態為 ``None``。"""
+    release: str | None = None
+    """延遲段的釋放時機（``next_turn``／``attacked``）；其他狀態為 ``None``。"""
+    charge_tiles: tuple[Pos, ...] = ()
+    """延遲段以帶有者目前位置推算的預計範圍；其他狀態為空。"""
 
 
 REACTION_TRIGGER_TEXT: dict[str, str] = {
@@ -307,16 +314,22 @@ def _zone_views(state: BattleState) -> tuple[ZoneView, ...]:
     return tuple(views)
 
 
-def _status_view(state: BattleState, status: StatusInstance) -> StatusView:
+def _status_view(state: BattleState, unit: UnitState, status: StatusInstance) -> StatusView:
     radius = None
     if status.status_id == TIME_BOMB and status.skill_id is not None:
         radius = bomb_spec(state, status.skill_id).radius
+    charge = None
+    if status.status_id == CHARGING:
+        charge = next((c for c in charge_infos(state) if c.unit_id == unit.id), None)
     return StatusView(
         status_id=status.status_id,
         remaining=status.remaining,
         source_id=status.source_id,
         amount=status.amount,
         blast_radius=radius,
+        skill_id=None if charge is None else charge.skill_id,
+        release=None if charge is None else charge.release,
+        charge_tiles=() if charge is None else charge.tiles,
     )
 
 
@@ -373,7 +386,7 @@ def _unit_view(state: BattleState, unit: UnitState, team: Team) -> UnitView:
         weapon_name_zh=unit.weapon.name_zh,
         tags=unit.tags,
         skills=unit.skills if unit.team is team else (),
-        statuses=tuple(_status_view(state, s) for s in unit.statuses),
+        statuses=tuple(_status_view(state, unit, s) for s in unit.statuses),
         stacks=dict(sorted(unit.stacks.items())),
         cooldowns=_visible_cooldowns(state, unit, team),
         reaction_available=unit.alive

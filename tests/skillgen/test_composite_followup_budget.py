@@ -27,6 +27,9 @@ LABELS = {
     "skill_gravity_burst": ("聚集段", "打擊段", 1000),
     "skill_death_spiral": ("第一段", "擊殺後的第二段", 300),
     "skill_armor_break_combo": ("第一段", "命中後的第二段", 600),
+    # 3F-4b：延遲段的第二段 × 延遲折扣 composite_delayed_discount_permille
+    "skill_charged_cleave": ("第一段", "延遲段", 800),
+    "skill_parry_riposte": ("第一段", "延遲段", 800),
 }
 
 
@@ -58,6 +61,13 @@ def test_the_chances_come_from_the_existing_coefficients() -> None:
     assert budget.on_kill_expected_permille == LABELS["skill_death_spiral"][2]
     assert budget.modifier.hit_rate_permille == LABELS["skill_armor_break_combo"][2]
     assert budget.composite_self_combo_permille == 1000
+    assert budget.composite_delayed_discount_permille == LABELS["skill_charged_cleave"][2]
+
+
+def test_the_cli_budget_names_the_delayed_discount() -> None:
+    out = io.StringIO()
+    print_skill_budget(library(), library().skills["skill_charged_cleave"], out)
+    assert "× 延遲折扣 800‰" in out.getvalue() and "【延遲段】" in out.getvalue()
 
 
 def _oil_then(element: str, *, status: str | None = None) -> SkillDef:

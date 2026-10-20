@@ -266,6 +266,7 @@ def test_status_and_surface_points_match_the_spec() -> None:
     statuses = {s.id: s.budget_points for s in rules.statuses.statuses}
     assert statuses == {
         "defending": 2,  # 2D-1：技能可以施加防禦
+        "charging": None,  # 3F-4b：延遲段的等待狀態，不能由效果施加
         "prone": 3,
         "burning": 3,
         "concealed": 3,
