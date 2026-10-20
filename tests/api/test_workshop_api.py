@@ -224,12 +224,13 @@ def test_the_workshop_builds_teleport_then_cone_through_the_api(client: TestClie
     body = client.post("/api/workshop/options", json={"skill": partial}).json()
     assert body["next_step"] is None or body["next_step"] == "rarity"
     step = next(s for s in body["steps"] if s["id"] == "followup")
-    assert step["name_zh"] == "動作段" and step["complete"] is True  # 可省略
-    assert [f["field"] for f in step["fields"]] == ["followup.skeleton"]
+    assert step["name_zh"] == "第二段" and step["complete"] is True  # 可省略（3F-4b 改名）
+    assert [f["field"] for f in step["fields"]] == ["followup.when"]
     started = {**partial, "followup": {"skeleton": "area"}}
     body = client.post("/api/workshop/options", json={"skill": started}).json()
     assert body["next_step"] == "followup"
     assert [f["field"] for f in body["steps"][-1]["fields"]] == [
+        "followup.when",  # 3F-4b：沒有 when 的舊草稿視為「位移 → 動作」
         "followup.skeleton",
         "followup.shape",
     ]

@@ -165,14 +165,9 @@ def _fits(lib: ContentLibrary, data: dict[str, Any]) -> tuple[str | None, tuple[
 
 
 def test_every_shipped_skill_fits_the_options() -> None:
-    """選項不會漏掉合法的技能：內容庫的每個技能，每個欄位都在選項之內。
-
-    3F-4a 的四種即時第二段（動作 → 位移、聚集、擊殺、命中）工坊還不能組（3F-4b 才加進選項推導），
-    先略過。"""
+    """選項不會漏掉合法的技能：內容庫的每個技能（含六種複合技能，3F-4b），每個欄位都在選項之內。"""
     lib = library()
     for skill_id, skill in sorted(lib.skills.items()):
-        if skill.followup is not None and skill.followup.when != "after_move":
-            continue
         data = skill.model_dump(mode="json", exclude_none=True)
         assert _fits(lib, data) == (None, ()), skill_id
 

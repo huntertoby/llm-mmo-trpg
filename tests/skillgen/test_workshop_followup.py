@@ -39,13 +39,17 @@ def _teleport_draft() -> dict[str, Any]:
     }
 
 
-def test_the_followup_step_only_appears_for_a_lone_self_move() -> None:
+def test_the_followup_step_lists_the_kinds_the_first_part_allows() -> None:
+    """3F-4b：「位移 → 動作」只給一個自身位移的位移技能；其他種類看第一段（見
+    ``tests/skillgen/test_workshop_kinds.py``）。還沒有效果的技能沒有這一步。"""
     lib = library()
     ids = [s.id for s in draft_options(_teleport_draft(), lib).steps]
     assert ids.index("followup") == ids.index("effects") + 1
-    # 沒有位移效果、或不是位移骨架：沒有這一步
+    when = _step(draft_options(_teleport_draft(), lib), "followup").fields[0]
+    assert "after_move" in {c.value for c in when.choices}
     plain = {**_teleport_draft(), "effects": [{"type": "push", "distance": 1}]}
-    assert "followup" not in [s.id for s in draft_options(plain, lib).steps]
+    when = _step(draft_options(plain, lib), "followup").fields[0]
+    assert "after_move" not in {c.value for c in when.choices}
     strike = {"skeleton": "strike", "kind": "active", "ap_cost": 1}
     assert "followup" not in [s.id for s in draft_options(strike, lib).steps]
 
@@ -63,11 +67,14 @@ def test_the_followup_fields_unfold_skeleton_then_shape_then_effects() -> None:
     lib = library()
     draft = _teleport_draft()
     step = _step(draft_options(draft, lib), "followup")
-    assert [f.field for f in step.fields] == ["followup.skeleton"]
-    assert {"area", "strike"} <= {c.value for c in step.fields[0].choices}
-    draft["followup"] = {"skeleton": "area"}
+    assert [f.field for f in step.fields] == ["followup.when"]
+    draft["followup"] = {"when": "after_move"}
     step = _step(draft_options(draft, lib), "followup")
-    shape = step.fields[1]
+    assert [f.field for f in step.fields] == ["followup.when", "followup.skeleton"]
+    assert {"area", "strike"} <= {c.value for c in step.fields[1].choices}
+    draft["followup"] = {"when": "after_move", "skeleton": "area"}
+    step = _step(draft_options(draft, lib), "followup")
+    shape = step.fields[2]
     assert shape.field == "followup.shape"
     offered = {c.value for c in shape.choices}
     assert "cone" in offered and offered <= set(FOLLOWUP_SHAPES)
@@ -77,8 +84,9 @@ def test_the_followup_fields_unfold_skeleton_then_shape_then_effects() -> None:
     options = draft_options(draft, lib)
     step = _step(options, "followup")
     assert not step.complete and options.next_step == "followup"
-    effects = step.fields[2]
+    effects = step.fields[3]
     assert effects.field == "followup.effects"
+    assert step.fields[4].field == "followup.condition"  # 3F-4b：第二段也可以有條件
     types = {c.value for c in effects.choices}
     assert "damage" in types and not types & set(FOLLOWUP_FORBIDDEN)
     assert effects.max_count == 3  # 兩段合計最多 4 個，位移段已經用掉 1 個

@@ -68,3 +68,34 @@ def test_the_paused_second_part_can_be_previewed(client: TestClient) -> None:
     )
     assert bad.status_code == 400 and "第二段的預覽" in bad.text
     assert client.get(f"/api/battles/{battle_id}").json()["awaiting"] == "decision"
+
+
+def _workshop(skill_id: str, new_id: str) -> dict[str, Any]:
+    from tests.engine.helpers import library  # noqa: PLC0415
+
+    data = library().skills[skill_id].model_dump(mode="json", exclude_none=True)
+    return {**data, "id": new_id, "provenance": {"origin": "workshop"}}
+
+
+def test_a_workshop_delayed_skill_can_be_tried_out_and_charged(client: TestClient) -> None:
+    """工坊的延遲段技能裝上試玩（靶場、木樁）：施放後開始蓄力，環境預告列出倒數。"""
+    custom = _workshop("skill_parry_riposte", "skill_ws_parry")
+    reply = client.post(
+        "/api/battles",
+        json={
+            "map_id": "training_range",
+            "seed": 3,
+            "hero_build": "build_charger",
+            "ally_builds": [],
+            "custom_skills": [custom],
+            "replace_skills": ["skill_bull_rush"],
+        },
+    )
+    assert reply.status_code == 201, reply.text
+    body = reply.json()
+    hero = body["hero_id"]
+    action = {"type": "use_skill", "unit_id": hero, "skill_id": "skill_ws_parry"}
+    data = client.post(f"/api/battles/{body['battle_id']}/actions", json=action).json()
+    [charge] = data["telegraph"]["charges"]
+    assert charge["skill_id"] == "skill_ws_parry" and charge["release"] == "attacked"
+    assert "被敵人攻擊就釋放" in charge["text"]

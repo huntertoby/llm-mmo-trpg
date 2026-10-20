@@ -28,6 +28,7 @@ from trpg.content.skills import (
     AFFECTS_VALUES,
     BASIC_ACTIONS,
     CHANGE_TARGETS,
+    GATHER_SHAPES,
     INTERCEPT,
     MAX_MODIFIERS,
     MODIFIER_CHANGES,
@@ -51,6 +52,7 @@ from trpg.skillgen.draft import Draft, DraftError, build_skill, draft_skeleton, 
 from trpg.skillgen.option_conform import field_problems
 from trpg.skillgen.option_fill import variants
 from trpg.skillgen.option_followup import (
+    FOLLOWUP_SKELETON,
     followup_fields,
     followup_notes,
     followup_visible,
@@ -111,8 +113,9 @@ STEP_TEXT: dict[StepId, tuple[str, str]] = {
     "shape": ("形狀", "技能打到哪些格子：單體、直線、錐形……與射程、大小"),
     "effects": ("效果", "核心效果與附帶效果（修正技能則是修正規則）"),
     "followup": (
-        "動作段",
-        "位移技能可以接第二段：位移到落點後，以落點為原點再做一次動作（可省略）",
+        "第二段",
+        "複合技能：接一個有自己骨架與形狀的第二段——位移 → 動作、動作 → 位移、聚集 → 打擊、"
+        "擊殺 → 接續、命中 → 加碼、延遲段（可省略）",
     ),
     "condition": ("條件", "技能要在什麼情況下才生效（可省略）"),
     "cost": ("代價", "法力、冷卻、每場次數、生命、自身狀態、源力；代價越重，可用預算越多"),
@@ -397,9 +400,24 @@ def _shape_step(draft: Draft, library: ContentLibrary, skeleton: SkeletonDef) ->
     shapes = library.ruleset.shapes.by_id()
     cores = _core_primitives(skeleton, library)
     choices: list[Choice] = []
-    for shape_id in skeleton.shapes:
+    gather = [g for g in GATHER_SHAPES if g not in skeleton.shapes]
+    if skeleton.id != FOLLOWUP_SKELETON:
+        gather = []
+    for shape_id in (*skeleton.shapes, *gather):
         shape = shapes.get(shape_id)
         if shape is None:
+            continue
+        if shape_id in gather:  # 聚集段（3F-4b）：環形拉向自己，只能接「聚集 → 範圍打擊」
+            choices.append(
+                Choice(
+                    value=shape_id,
+                    name_zh=shape.name_zh,
+                    description_zh=f"{shape.description_zh}（只能當聚集段：效果只有一個拉扯，"
+                    "並在第二段選「聚集 → 範圍打擊」）",
+                    params=shape_param_fields(shape),
+                    info={"min_rarity": shape.min_rarity, "targeting": shape.targeting},
+                )
+            )
             continue
         if skeleton.kinds != ("modifier",) and not any(_fits_shape(p, shape_id) for p in cores):
             continue  # 沒有任何核心原語能搭配這個形狀
@@ -790,7 +808,7 @@ def _modifier_step(draft: Draft, library: ContentLibrary) -> StepOptions:
 
 
 def _followup_step(draft: Draft, library: ContentLibrary) -> StepOptions:
-    fields = followup_fields(draft, library, _effect_choices)
+    fields = followup_fields(draft, library, _effect_choices, condition_choice)
     return _step("followup", draft, library, fields, followup_notes(library))
 
 

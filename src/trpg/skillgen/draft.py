@@ -145,6 +145,8 @@ def _followup_complete(draft: Draft, library: ContentLibrary) -> bool:
     definition = library.ruleset.shapes.by_id().get(str(shape.get("type")))
     if follow.get("skeleton") is None or definition is None or not follow.get("effects"):
         return False
+    if follow.get("when") == "delayed" and follow.get("release") is None:
+        return False  # 延遲段（3F-4b）要選何時釋放
     return all(shape.get(n) is not None for n, p in definition.params.items() if p.required)
 
 
