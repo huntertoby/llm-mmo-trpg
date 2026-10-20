@@ -1,61 +1,146 @@
-// 技能列：主角的技能按鈕（名稱、AP／法力、冷卻、停用原因）；滑過顯示技能卡片。
+// 底部技能列（Phase 3-8）：基本動作（攻擊、推擊……）＋主動技能排成一排（超出寬度換成兩排，不捲動）；
+// 被動、反應、姿態、修正以小圖示放在同一列最右側，點開看卡片（可施放的姿態點了照樣選取）。
+// 灰掉原因、滑過看卡片、選取提示照舊；卡片浮在技能列上方。
 import { useState } from "react";
 import type { SkillCard } from "../api/types";
-import type { SkillButton } from "../battle/targeting";
+import { minorGlyph, splitSkills } from "../battle/skillTray";
+import type { ActionMode, SkillButton } from "../battle/targeting";
 import { grantedBadge } from "../battle/granted";
 import { SkillCardView } from "./SkillCardView";
 
 interface Props {
+  /** 基本動作的模式（防禦除外，防禦在右下角）。 */
+  basic: readonly ActionMode[];
   buttons: readonly SkillButton[];
   cards: Readonly<Record<string, SkillCard | undefined>>;
   selectedKey: string | null;
   enabled: boolean;
+  /** 技能列上方的一行提示（可移動格數、攻擊目標數、等待中……）。 */
+  hint: string;
+  onPickMode(mode: ActionMode): void;
   onSelect(skillId: string): void;
   /** 點到灰掉、有原因的技能：把原因交給畫面的訊息列（Phase 3-5c-2）。 */
   onBlocked?(button: SkillButton): void;
 }
 
-export function SkillBar({ buttons, cards, selectedKey, enabled, onSelect, onBlocked }: Props) {
-  const [hovered, setHovered] = useState<string | null>(null);
-  const card = hovered === null ? undefined : cards[hovered];
+function costText(b: SkillButton): string {
+  if (b.cooldown > 0) return `冷卻 ${b.cooldown}`;
+  return b.costs.length > 0 ? b.costs.join("・") : "…";
+}
+
+function SkillSlot({
+  b,
+  selected,
+  enabled,
+  onSelect,
+  onBlocked,
+  onHover,
+}: {
+  b: SkillButton;
+  selected: boolean;
+  enabled: boolean;
+  onSelect(id: string): void;
+  onBlocked?(b: SkillButton): void;
+  onHover(id: string | null): void;
+}) {
+  const blocked = !enabled || b.disabledReason !== null;
+  const reasoned = b.disabledReason !== null;
   return (
-    <div className="skill-bar">
-      <div className="section-title">技能</div>
-      <div className="skill-buttons">
-        {buttons.length === 0 && <span className="muted">（沒有技能）</span>}
-        {buttons.map((b) => {
-          const blocked = !enabled || b.disabledReason !== null;
-          const reasoned = b.disabledReason !== null;
-          const selected = selectedKey === `skill:${b.skillId}`;
-          const cost = b.cooldown > 0 ? `冷卻 ${b.cooldown}` : b.costs.length > 0 ? b.costs.join("・") : "…";
-          return (
-            <div
-              key={b.skillId}
-              className="skill-slot"
-              title={b.disabledReason ?? undefined}
-              onMouseEnter={() => setHovered(b.skillId)}
-              onMouseLeave={() => setHovered((h) => (h === b.skillId ? null : h))}
+    <div
+      className="skill-slot"
+      title={b.disabledReason ?? undefined}
+      onMouseEnter={() => onHover(b.skillId)}
+      onMouseLeave={() => onHover(null)}
+    >
+      <button
+        type="button"
+        className={`skill-button${selected ? " selected" : ""}${b.grantedRemaining != null ? " granted" : ""}${reasoned ? " blocked" : ""}`}
+        disabled={blocked && !reasoned}
+        aria-disabled={blocked}
+        onClick={() => (blocked ? onBlocked?.(b) : onSelect(b.skillId))}
+      >
+        <span className="skill-name">{b.name}</span>
+        {b.grantedRemaining != null && (
+          <span className="skill-granted" aria-label="暫時技能">
+            {grantedBadge(b.grantedRemaining)}
+          </span>
+        )}
+        <span className="skill-cost">{costText(b)}</span>
+      </button>
+    </div>
+  );
+}
+
+export function SkillBar(props: Props) {
+  const { basic, buttons, cards, selectedKey, enabled, hint } = props;
+  const [hovered, setHovered] = useState<string | null>(null);
+  /** 點開的小圖示（被動、反應、姿態）：卡片固定顯示，再點一次收起。 */
+  const [pinned, setPinned] = useState<string | null>(null);
+  const { main, minor } = splitSkills(buttons, cards);
+  const shownId = hovered ?? pinned;
+  const card = shownId === null ? undefined : cards[shownId];
+  const leave = (id: string) => setHovered((h) => (h === id ? null : h));
+  return (
+    <div className="skill-bar" aria-label="技能列">
+      <div className="skill-hint small muted">{hint}</div>
+      <div className="skill-row">
+        <div className="skill-buttons">
+          {basic.map((m) => (
+            <button
+              key={m.key}
+              type="button"
+              className={`basic-button${selectedKey === m.key ? " selected" : ""}`}
+              disabled={!enabled}
+              onClick={() => props.onPickMode(m)}
             >
-              <button
-                type="button"
-                className={`skill-button${selected ? " selected" : ""}${b.grantedRemaining != null ? " granted" : ""}${reasoned ? " blocked" : ""}`}
-                disabled={blocked && !reasoned}
-                aria-disabled={blocked}
-                onClick={() => (blocked ? onBlocked?.(b) : onSelect(b.skillId))}
-              >
-                <span className="skill-name">{b.name}</span>
-                {b.grantedRemaining != null && (
-                  <span className="skill-granted" aria-label="暫時技能">
-                    {grantedBadge(b.grantedRemaining)}
-                  </span>
-                )}
-                <span className="skill-cost">{cost}</span>
-              </button>
-            </div>
-          );
-        })}
+              {m.label}
+            </button>
+          ))}
+          {main.map((b) => (
+            <SkillSlot
+              key={b.skillId}
+              b={b}
+              selected={selectedKey === `skill:${b.skillId}`}
+              enabled={enabled}
+              onSelect={props.onSelect}
+              onBlocked={props.onBlocked}
+              onHover={(id) => (id === null ? leave(b.skillId) : setHovered(id))}
+            />
+          ))}
+          {basic.length === 0 && main.length === 0 && <span className="muted small">（沒有可用的動作）</span>}
+        </div>
+        {minor.length > 0 && (
+          <div className="skill-minor" aria-label="被動、反應與姿態">
+            {minor.map((b) => {
+              const usable = enabled && b.disabledReason === null && b.actions.length > 0;
+              const selected = selectedKey === `skill:${b.skillId}` || pinned === b.skillId;
+              return (
+                <button
+                  key={b.skillId}
+                  type="button"
+                  className={`skill-mini${selected ? " selected" : ""}`}
+                  title={`${b.name}（${costText(b)}）`}
+                  aria-label={b.name}
+                  aria-pressed={pinned === b.skillId}
+                  onMouseEnter={() => setHovered(b.skillId)}
+                  onMouseLeave={() => leave(b.skillId)}
+                  onClick={() => {
+                    if (usable) props.onSelect(b.skillId);
+                    else setPinned((p) => (p === b.skillId ? null : b.skillId));
+                  }}
+                >
+                  {minorGlyph(b.name)}
+                </button>
+              );
+            })}
+          </div>
+        )}
       </div>
-      {card !== undefined && <SkillCardView card={card} />}
+      {card !== undefined && (
+        <div className="skill-card-float">
+          <SkillCardView card={card} />
+        </div>
+      )}
     </div>
   );
 }

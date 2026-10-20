@@ -1,4 +1,5 @@
-// 戰鬥畫面：格子（PixiJS）＋ 回合列 ＋ HUD ＋ 技能列 ＋ 操作 ＋ 戰鬥紀錄。
+// 戰鬥畫面（Phase 3-8 版面）：頂端列（回合、行動順序、反應設定／隊友指令／圖例的彈出面板）、
+// 中央放大的戰場（滑過單位顯示浮動資訊卡）、右側可收合的紀錄與預告、左下主角狀態、底部技能列、右下回合操作。
 // 每次送出動作或決定：鎖住操作 → 收到回應 → 先畫 `initial_view`，再依 `steps` 一步一步播放
 // （標示行動者 → 移動動畫 → 該步的 `view` → 紀錄 → 停頓）→ 最後以 `res.view` 為準。
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
@@ -51,7 +52,21 @@ import {
 } from "../battle/targeting";
 import { unitNames } from "../battle/units";
 import type { BattleRenderer, Highlights } from "../render/BattleRenderer";
-import { ActionPanel } from "../ui/ActionPanel";
+import { ModePanel } from "../ui/ActionPanel";
+import { BattleTopBar } from "../ui/BattleTopBar";
+import { SidePanel } from "../ui/SidePanel";
+import { TurnControls } from "../ui/TurnControls";
+import { useElementSize, useNarrow } from "../ui/useLayout";
+import {
+  actionHintText,
+  loadSidePref,
+  saveSideCollapsed,
+  sideCollapsed,
+  togglePopup,
+  type TopPopup,
+} from "../battle/skillTray";
+import { cardPlacement, dialogStartsLow, fitScale } from "../battle/stageLayout";
+import { hasOrders, orderButton } from "../battle/orders";
 import { BattleCanvas } from "../ui/BattleCanvas";
 import { BattleLog } from "../ui/BattleLog";
 import { CopyDialog } from "../ui/CopyDialog";
@@ -133,7 +148,13 @@ export function BattleScreen({ initial, onExit, exitLabel, runMode }: Props) {
   const closeHint = useCallback(() => setHint(null), []);
   const [saveNote, setSaveNote] = useState<string | null>(null);
   const [hover, setHover] = useState<Pos | null>(null);
-  const [selected, setSelected] = useState<string | null>(null);
+  /** 頂端列開著的彈出面板（同時只開一個）。 */
+  const [popup, setPopup] = useState<TopPopup | null>(null);
+  const narrow = useNarrow();
+  /** 玩家記下的右側窄欄收合狀態（沒有記錄時 `null`，依視窗寬度決定）。 */
+  const [sidePref, setSidePref] = useState<boolean | null>(loadSidePref);
+  const boardRef = useRef<HTMLDivElement>(null);
+  const boardSize = useElementSize(boardRef);
   const [speed, setSpeed] = useState<PlaySpeed>(loadSpeed);
   const [modeKey, setModeKey] = useState<string | null>(null);
   /** 投擲物件的兩段選取：第一段選好（舉起）的物件 ID；`null` ＝ 還在選物件。 */
@@ -499,12 +520,18 @@ export function BattleScreen({ initial, onExit, exitLabel, runMode }: Props) {
   useEffect(() => {
     const onKey = (e: KeyboardEvent) => {
       if (e.key !== "Escape") return;
+      if (popup !== null) {
+        // 開著彈出面板時 Esc 先關面板（並取消隊友指令的選目標），不放棄複製技能的施放
+        setPopup(null);
+        if (!copying) cancel();
+        return;
+      }
       if (copying) decideCopy(null); // 複製技能暫停時，Esc ＝ 放棄施放（不付任何代價）
       else cancel();
     };
     window.addEventListener("keydown", onKey);
     return () => window.removeEventListener("keydown", onKey);
-  }, [cancel, copying, decideCopy]);
+  }, [cancel, copying, decideCopy, popup]);
 
   const pickMode = useCallback(
     (m: ActionMode) => {
@@ -573,10 +600,8 @@ export function BattleScreen({ initial, onExit, exitLabel, runMode }: Props) {
         const action = actionForClick(classified, view, tile);
         if (action !== null) {
           act(action);
-          return;
         }
       }
-      setSelected(unitAt(shown, tile)?.id ?? null);
     },
     [
       act,
@@ -591,7 +616,6 @@ export function BattleScreen({ initial, onExit, exitLabel, runMode }: Props) {
       mode,
       orderPick,
       response.orders,
-      shown,
       view,
     ],
   );
@@ -603,11 +627,8 @@ export function BattleScreen({ initial, onExit, exitLabel, runMode }: Props) {
     });
   }, []);
 
-  const infoUnit =
-    unitAt(shown, hover) ??
-    shown.units.find((u) => u.id === selected) ??
-    shown.units.find((u) => u.id === heroId) ??
-    null;
+  /** 浮動資訊卡：只在滑過單位時出現（取代固定的單位資訊欄，Phase 3-8）。 */
+  const hoverUnit = unitAt(shown, hover) ?? null;
   const shownHero = shown.units.find((u) => u.id === heroId) ?? null;
   const ended = (response.awaiting === "ended" || response.awaiting === "stalled") && !busy;
 
@@ -621,98 +642,150 @@ export function BattleScreen({ initial, onExit, exitLabel, runMode }: Props) {
     }
   }
 
+  const scale = boardSize === null ? 1 : fitScale({ width: boardSize.width - 16, height: boardSize.height - 16 }, model);
+  const hoverTexts = [...zoneLinesAt(shown, hover, liveNames), ...marksTextAt(marks, hover)];
+  const defendMode = basic.find((m) => m.kind === "defend") ?? null;
+  const collapsed = sideCollapsed(sidePref, narrow);
+  const toggleSide = () => {
+    saveSideCollapsed(!collapsed);
+    setSidePref(!collapsed);
+  };
+  const tools = [
+    {
+      id: "reactions" as const,
+      label: "反應設定",
+      content: <ReactionPanel hero={hero} enabled={canAct} queued={autoQueue} onSet={setReaction} />,
+    },
+    {
+      id: "orders" as const,
+      label: "隊友指令",
+      badge: hasOrders(response.orders) ? "●" : "",
+      content: (
+        <OrdersPanel
+          orders={response.orders}
+          ignored={response.orders_ignored}
+          names={liveNames}
+          enabled={canOrder}
+          picking={orderPick}
+          onPick={pickOrder}
+          onProtectHero={() => issueOrders(withOrder(response.orders, { kind: "protect", ward: heroId }))}
+          onCancelPick={() => setOrderPick(null)}
+          onClear={() => issueOrders(EMPTY_ORDERS)}
+        />
+      ),
+    },
+    { id: "legend" as const, label: "圖例", content: <Legend entries={legend} /> },
+  ];
+
   return (
-    <div className="battle-screen">
-      <TurnBar view={shown} names={names} acting={acting} />
-      {(exitLabel !== undefined || runMode !== undefined) && !ended && (
-        <div className="battle-bar">
-          {exitLabel !== undefined && (
-            <button type="button" className="battle-leave" onClick={onExit}>
-              ← {exitLabel}
-            </button>
+    <div className={`battle-screen${collapsed ? " side-collapsed" : ""}${narrow ? " narrow" : ""}`}>
+      <BattleTopBar
+        turnBar={<TurnBar view={shown} names={names} acting={acting} />}
+        tools={tools}
+        open={popup}
+        onToggle={(id) => setPopup((cur) => togglePopup(cur, id))}
+        exit={exitLabel !== undefined && !ended ? { label: exitLabel, onExit } : null}
+        save={runMode !== undefined && !ended ? { busy, note: saveNote, onSave: () => void saveRun() } : null}
+      />
+      <div className="battle-board" ref={boardRef}>
+        <BattleCanvas
+          model={model}
+          highlights={highlights}
+          scale={scale}
+          onTileClick={onTileClick}
+          onTileHover={onTileHover}
+          onCancel={cancel}
+          rendererRef={rendererRef}
+        >
+          {hover !== null && (hoverUnit !== null || hoverTexts.length > 0) && (
+            <div className="unit-float" style={cardPlacement(hover, model, scale)}>
+              {hoverUnit !== null && (
+                <UnitInfo unit={hoverUnit} names={names} heroId={heroId} skills={skillNames} view={view} />
+              )}
+              {hoverTexts.length > 0 && (
+                <ul className="panel telegraph-hover">
+                  {hoverTexts.map((t, i) => (
+                    <li key={`${i}:${t}`}>{t}</li>
+                  ))}
+                </ul>
+              )}
+            </div>
           )}
-          {runMode !== undefined && (
-            <button type="button" disabled={busy} onClick={() => void saveRun()}>
-              存檔
-            </button>
+        </BattleCanvas>
+        {banner && <div className="battle-banner">戰鬥開始</div>}
+        <div className="board-toasts">
+          <ErrorBanner message={error} onClose={() => setError(null)} />
+          <NoticeBanner message={hint} onClose={closeHint} />
+          {runMode !== undefined && shownHero?.downed === true && (
+            <div className="hero-downed-notice" role="status">
+              主角倒下，隊友繼續作戰
+            </div>
           )}
-          {saveNote !== null && <span className="muted small">{saveNote}</span>}
         </div>
-      )}
-      {runMode !== undefined && shownHero?.downed === true && (
-        <div className="hero-downed-notice" role="status">
-          主角倒下，隊友繼續作戰
+        <ModePanel
+          enabled={canAct || copying}
+          mode={mode}
+          hurlPick={hurlPick}
+          onHurlReset={() => setHurlPick(null)}
+          preview={preview}
+          view={view}
+          interactOptions={response.interact_options}
+          names={liveNames}
+          legend={legend}
+          orderHint={orderPick !== null && canOrder ? orderButton(orderPick).hint : null}
+          onProtectHero={
+            orderPick === "protect" && canOrder
+              ? () => issueOrders(withOrder(response.orders, { kind: "protect", ward: heroId }))
+              : null
+          }
+          cancellable={!copying}
+          onCancel={cancel}
+          onAction={copying ? decideCopy : act}
+          onPreviewAction={setPanelPreview}
+        />
+      </div>
+      <SidePanel
+        collapsed={collapsed}
+        onToggle={toggleSide}
+        telegraph={<TelegraphPanel telegraph={response.telegraph} marks={marks} hoverTexts={hoverTexts} />}
+        log={<BattleLog lines={lines} />}
+      />
+      <div className="battle-bottom">
+        <div className="battle-hero">
+          <Hud view={shown} hero={shownHero} skills={skillNames} compact={narrow} />
         </div>
-      )}
-      <ErrorBanner message={error} onClose={() => setError(null)} />
-      <NoticeBanner message={hint} onClose={closeHint} />
-      <div className="battle-main">
-        <div className="battle-board">
-          <BattleCanvas
-            model={model}
-            highlights={highlights}
-            onTileClick={onTileClick}
-            onTileHover={onTileHover}
-            onCancel={cancel}
-            rendererRef={rendererRef}
-          />
-          {banner && <div className="battle-banner">戰鬥開始</div>}
-          <Legend entries={legend} />
-        </div>
-        <div className="battle-side">
-          <Hud view={shown} hero={shownHero} skills={skillNames} />
-          <ReactionPanel hero={hero} enabled={canAct} queued={autoQueue} onSet={setReaction} />
-          <SkillBar
-            buttons={buttons}
-            cards={cards}
-            selectedKey={mode?.key ?? null}
-            enabled={canAct}
-            onSelect={pickSkill}
-            onBlocked={(b) => setHint(blockedMessage(b))}
-          />
+        <SkillBar
+          basic={basic.filter((m) => m.kind !== "defend")}
+          buttons={buttons}
+          cards={cards}
+          selectedKey={mode?.key ?? null}
+          enabled={canAct}
+          hint={actionHintText({
+            copying,
+            canAct,
+            ended,
+            moveCount: classified.moves.size,
+            attackCount: classified.attacks.size,
+          })}
+          onPickMode={pickMode}
+          onSelect={pickSkill}
+          onBlocked={(b) => setHint(blockedMessage(b))}
+        />
+        <div className="battle-turn">
           {ended ? (
             <EndPanel response={response} onRestart={onExit} restartLabel={exitLabel} />
           ) : (
-            <ActionPanel
-              enabled={canAct || copying}
-              copying={copying}
-              basic={copying ? [] : basic}
-              mode={mode}
-              hurlPick={hurlPick}
-              onHurlReset={() => setHurlPick(null)}
+            <TurnControls
+              enabled={canAct}
               endTurn={copying ? null : classified.endTurn}
+              defend={copying ? null : defendMode}
+              selectedKey={mode?.key ?? null}
               fallback={copying ? [] : fallback}
-              moveCount={classified.moves.size}
-              attackCount={classified.attacks.size}
-              preview={preview}
-              view={view}
-              interactOptions={response.interact_options}
-              names={liveNames}
               onPickMode={pickMode}
-              onCancel={cancel}
-              onAction={copying ? decideCopy : act}
-              onPreviewAction={setPanelPreview}
+              onAction={act}
+              speed={<SpeedControl speed={speed} playing={playing} onSpeed={setSpeed} onSkipNow={skipNow} />}
             />
           )}
-          <SpeedControl speed={speed} playing={playing} onSpeed={setSpeed} onSkipNow={skipNow} />
-          <TelegraphPanel
-            telegraph={response.telegraph}
-            marks={marks}
-            hoverTexts={[...zoneLinesAt(shown, hover, liveNames), ...marksTextAt(marks, hover)]}
-          />
-          <OrdersPanel
-            orders={response.orders}
-            ignored={response.orders_ignored}
-            names={liveNames}
-            enabled={canOrder}
-            picking={orderPick}
-            onPick={pickOrder}
-            onProtectHero={() => issueOrders(withOrder(response.orders, { kind: "protect", ward: heroId }))}
-            onCancelPick={() => setOrderPick(null)}
-            onClear={() => issueOrders(EMPTY_ORDERS)}
-          />
-          <UnitInfo unit={infoUnit} names={names} heroId={heroId} skills={skillNames} view={view} />
-          <BattleLog lines={lines} />
         </div>
       </div>
       {followPaused && response.pending !== null && (
@@ -734,6 +807,8 @@ export function BattleScreen({ initial, onExit, exitLabel, runMode }: Props) {
       )}
       {response.awaiting === "decision" && response.pending !== null && !busy && !copying && (
         <DecisionDialog
+          key={`${response.pending.reaction ?? ""}:${response.pending.trigger_unit_id ?? ""}`}
+          startLow={dialogStartsLow(focusTile, model)}
           pending={response.pending}
           rule={ruleOfPending(hero, response.pending)}
           names={liveNames}

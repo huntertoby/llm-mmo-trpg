@@ -1,37 +1,45 @@
-// React 包裝：建立／銷毀 PixiJS 繪製器，模型或高亮改變時重畫。
-import { useEffect, useLayoutEffect, useRef, type MutableRefObject } from "react";
+// React 包裝：建立／銷毀 PixiJS 繪製器，模型、高亮或縮放改變時重畫。
+// 滑鼠事件（Phase 3-8）：在 DOM 上接，以畫布實際的矩形把 client 座標換算成格子（`clientToTile`），
+// 不論畫布被縮放多少都對得上。`children` 是疊在畫布上、以畫布左上角為原點的浮動元素（浮動資訊卡等）。
+import { useEffect, useLayoutEffect, useRef, type MouseEvent, type MutableRefObject, type ReactNode } from "react";
 import type { Pos } from "../api/types";
 import type { DrawModel } from "../battle/drawModel";
+import { clientToTile, scaledSize } from "../battle/stageLayout";
 import { BattleRenderer, type Highlights } from "../render/BattleRenderer";
 
 interface Props {
   model: DrawModel;
   highlights: Highlights;
+  /** 畫面上的縮放比例（`fitScale` 算出）。 */
+  scale: number;
   onTileClick(tile: Pos): void;
   onTileHover(tile: Pos | null): void;
   /** 右鍵（取消選取）。 */
   onCancel(): void;
   /** 給戰鬥畫面播放動畫用。 */
   rendererRef: MutableRefObject<BattleRenderer | null>;
+  children?: ReactNode;
 }
 
-export function BattleCanvas({ model, highlights, onTileClick, onTileHover, onCancel, rendererRef }: Props) {
+function tileFromEvent(e: MouseEvent<HTMLDivElement>, model: DrawModel) {
+  const canvas = e.currentTarget.querySelector("canvas");
+  if (canvas === null) return null;
+  return clientToTile(e.clientX, e.clientY, canvas.getBoundingClientRect(), model);
+}
+
+export function BattleCanvas({ model, highlights, scale, onTileClick, onTileHover, onCancel, rendererRef, children }: Props) {
   const hostRef = useRef<HTMLDivElement>(null);
-  const callbacks = useRef({ onTileClick, onTileHover });
-  callbacks.current = { onTileClick, onTileHover };
-  const latest = useRef({ model, highlights });
-  latest.current = { model, highlights };
+  const latest = useRef({ model, highlights, scale });
+  latest.current = { model, highlights, scale };
 
   useEffect(() => {
     const host = hostRef.current;
     if (host === null) return undefined;
-    const renderer = new BattleRenderer({
-      onTileClick: (t) => callbacks.current.onTileClick(t),
-      onTileHover: (t) => callbacks.current.onTileHover(t),
-    });
+    const renderer = new BattleRenderer();
     rendererRef.current = renderer;
     void renderer.init(host).then(() => {
       if (rendererRef.current !== renderer) return;
+      renderer.setScale(latest.current.scale);
       renderer.draw(latest.current.model);
       renderer.setHighlights(latest.current.highlights);
     });
@@ -52,14 +60,29 @@ export function BattleCanvas({ model, highlights, onTileClick, onTileHover, onCa
     rendererRef.current?.setHighlights(highlights);
   }, [highlights, rendererRef]);
 
+  useLayoutEffect(() => {
+    rendererRef.current?.setScale(scale);
+  }, [scale, rendererRef]);
+
+  // 畫布還沒建立前先用同樣大小佔位，避免版面跳動。
+  const size = scaledSize(model, scale);
   return (
     <div
       className="battle-canvas"
-      ref={hostRef}
+      style={{ width: size.width, height: size.height }}
+      onPointerMove={(e) => onTileHover(tileFromEvent(e, model))}
+      onPointerLeave={() => onTileHover(null)}
+      onClick={(e) => {
+        const tile = tileFromEvent(e, model);
+        if (tile !== null) onTileClick(tile);
+      }}
       onContextMenu={(e) => {
         e.preventDefault();
         onCancel();
       }}
-    />
+    >
+      <div className="battle-canvas-host" ref={hostRef} />
+      {children}
+    </div>
   );
 }

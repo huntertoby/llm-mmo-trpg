@@ -15,7 +15,7 @@ interface Props {
 export function ReactionPanel({ hero, enabled, queued, onSet }: Props) {
   if (hero === null) return null;
   const rules = uniqueRules(hero);
-  if (rules.length === 0) return null;
+  if (rules.length === 0) return <div className="panel reaction-panel muted">主角沒有可設定的反應。</div>;
   return (
     <div className="panel reaction-panel" aria-label="反應設定">
       <div className="section-title">反應設定</div>
