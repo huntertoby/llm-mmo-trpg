@@ -40,11 +40,12 @@ def top_attribute(attributes: Mapping[Attribute, int]) -> Attribute:
     return next(a for a in Attribute if attributes[a] == best)
 
 
-def primary_attribute(skills: Iterable[SkillDef]) -> Attribute:
-    """技能最常用的縮放屬性（自動配點用；並列時取六屬性順序的第一個；沒有技能時為力量）。"""
+def primary_attribute(skills: Iterable[SkillDef], fallback: Attribute = Attribute.STR) -> Attribute:
+    """技能最常用的縮放屬性（自動配點用；並列時取六屬性順序的第一個）。沒有技能時（白板主角）用
+    ``fallback``，呼叫端傳武器的縮放屬性（法杖 → 智力）。"""
     counts = Counter(s.scaling_attr for s in skills)
     if not counts:
-        return Attribute.STR
+        return fallback
     best = max(counts.values())
     return next(a for a in Attribute if counts[a] == best)
 
@@ -65,7 +66,7 @@ def apply_allocation(hero: UnitTemplate, allocation: Mapping[Attribute, int]) ->
 
 def default_build(library: ContentLibrary, seed: int) -> str:
     """沒有指定 build 時（``trpg run auto``）：以 ``Rng(seed).fork("build")`` 從 build 中抽一個。"""
-    return Rng(seed).fork("build").choice(sorted(library.builds.by_id()))
+    return Rng(seed).fork("build").choice(sorted(b.id for b in library.builds.sim_builds()))
 
 
 def make_plan(library: ContentLibrary, seed: int) -> tuple[BattlePlan, ...]:
@@ -122,7 +123,8 @@ def new_run(
     rules = library.roguelite
     if allocation is None:
         skills = [library.skills[s] for s in build.hero.skills]
-        allocation = {primary_attribute(skills): rules.start_free_points}
+        weapon_attr = library.weapons[build.hero.weapon].scaling_attr
+        allocation = {primary_attribute(skills, weapon_attr): rules.start_free_points}
     problems = allocation_problems(allocation, rules.start_free_points)
     if problems:
         raise ChoiceError("；".join(problems))

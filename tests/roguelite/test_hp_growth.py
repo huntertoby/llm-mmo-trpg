@@ -138,3 +138,12 @@ def test_save_and_load_keep_max_and_current_hp() -> None:
     assert loaded == run
     assert loaded.max_hp_in(core) == run.max_hp_in(core)
     assert loaded.hp == run.hp
+
+
+def test_blank_mage_auto_allocation_follows_the_staff() -> None:
+    """白板法師沒有技能：自動配點依武器（火焰法杖 → 智力），不是預設的力量。"""
+    lib = library()
+    mage = new_run(lib, "build_blank_mage", 1)
+    warrior = new_run(lib, "build_blank_warrior", 1)
+    assert mage.hero.attributes[Attribute.INT] == 14 and mage.hero.skills == ()
+    assert warrior.hero.attributes[Attribute.STR] == 14

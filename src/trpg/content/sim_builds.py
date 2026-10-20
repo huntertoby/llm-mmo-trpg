@@ -28,12 +28,15 @@ class BuildDef(ContentModel):
     """主題與設計意圖（哪種地圖有利、哪種不利）。"""
     hero: UnitTemplate
     """英雄範本；``hero.id`` 必須等於 build 的 ``id``。"""
+    blank: bool = False
+    """白板主角（沒有任何技能，一輪中從升級長出技能）：允許空技能清單，不列入 build 矩陣與
+    ``trpg run auto`` 的隨機抽選。"""
 
     @model_validator(mode="after")
     def _check(self) -> BuildDef:
         if self.hero.id != self.id:
             raise ValueError(f"build {self.id} 的 hero.id 必須相同（收到 {self.hero.id}）")
-        if not self.hero.skills:
+        if not self.hero.skills and not self.blank:
             raise ValueError(f"build {self.id} 沒有技能")
         return self
 
@@ -54,6 +57,10 @@ class BuildTable(ContentModel):
 
     def by_id(self) -> dict[str, BuildDef]:
         return {b.id: b for b in self.builds}
+
+    def sim_builds(self) -> tuple[BuildDef, ...]:
+        """模擬用的 build（排除白板主角）。"""
+        return tuple(b for b in self.builds if not b.blank)
 
     def summary(self) -> str:
         return f"{len(self.builds)} 個 build，隊友 {', '.join(self.companions)}"

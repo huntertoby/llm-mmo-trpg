@@ -42,7 +42,7 @@ BUILD_IDS = (
 
 def test_builds_file_loads_with_twenty_two_builds_and_two_companions() -> None:
     lib = library()
-    assert tuple(b.id for b in lib.builds.builds) == BUILD_IDS
+    assert tuple(b.id for b in lib.builds.sim_builds()) == BUILD_IDS
     assert lib.builds.companions == ("sim_companion_fighter", "sim_companion_archer")
     for companion in lib.builds.companions:
         template = lib.unit(companion)
@@ -116,3 +116,16 @@ def test_standard_enemies_follow_the_tier_budget_hp_formula() -> None:
         62,
         77,
     ]
+
+
+def test_blank_builds_have_no_skills_and_stay_out_of_simulations() -> None:
+    """白板主角（使用者要求，2026-10-20）：戰士拿單手劍、法師拿火焰法杖，沒有任何技能；不列入模擬。"""
+    lib = library()
+    builds = lib.builds.by_id()
+    warrior, mage = builds["build_blank_warrior"], builds["build_blank_mage"]
+    assert warrior.blank and mage.blank
+    assert warrior.hero.skills == () and mage.hero.skills == ()
+    assert (warrior.hero.weapon, mage.hero.weapon) == ("one_handed_sword", "fire_staff")
+    assert all(v == 10 for v in warrior.hero.attributes.values())
+    sim_ids = {b.id for b in lib.builds.sim_builds()}
+    assert "build_blank_warrior" not in sim_ids and "build_blank_mage" not in sim_ids

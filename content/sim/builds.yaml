@@ -413,3 +413,39 @@ builds:
       tags: [hero, sim]
       max_mana: 40
       skills: [skill_fire_bolt, skill_venom_cloud, skill_hex_bolt, skill_detonate_burning, skill_toxin_burst, skill_dread_gaze, skill_creeping_blight, skill_mark_detonation, skill_ember_brand]
+
+  # 使用者要求（2026-10-20）：沒有任何技能的白板主角，從一輪的升級裡長出技能。屬性全 10（一輪開局再配 4 點）。
+  # HP、法力比照戰士型（位移流）與法師型（火焰流）英雄的最終值。
+  - id: build_blank_warrior
+    name_zh: 白板戰士
+    blank: true
+    theme_zh: 沒有任何技能、只拿單手劍的戰士。適合開一輪，從升級三選一開始長出自己的 build。
+    hero:
+      id: build_blank_warrior
+      name_zh: 白板戰士
+      attributes: {str: 10, dex: 10, con: 10, int: 10, wis: 10, wil: 10}
+      max_hp: 60
+      speed: 5
+      armor_bonus: 4
+      weapon: one_handed_sword
+      resist: {physical: 100}
+      tags: [hero, sim]
+      max_mana: 20
+      skills: []
+
+  - id: build_blank_mage
+    name_zh: 白板法師
+    blank: true
+    theme_zh: 沒有任何技能、只拿火焰法杖的法師。適合開一輪，從升級三選一開始長出自己的 build。
+    hero:
+      id: build_blank_mage
+      name_zh: 白板法師
+      attributes: {str: 10, dex: 10, con: 10, int: 10, wis: 10, wil: 10}
+      max_hp: 40
+      speed: 5
+      armor_bonus: 1
+      weapon: fire_staff
+      resist: {elemental: 150}
+      tags: [hero, sim]
+      max_mana: 40
+      skills: []

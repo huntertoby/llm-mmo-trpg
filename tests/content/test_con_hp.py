@@ -65,7 +65,7 @@ def _final_hp() -> dict[str, int]:
     rows.update(
         {s.template.id: core.template_max_hp(s.template) for s in lib.ruleset.summons.summons}
     )
-    rows.update({"build:" + b.id: core.template_max_hp(b.hero) for b in lib.builds.builds})
+    rows.update({"build:" + b.id: core.template_max_hp(b.hero) for b in lib.builds.sim_builds()})
     return rows
 
 

@@ -75,7 +75,8 @@ def auto_choice(library: ContentLibrary, run: RunState) -> Choice:
     """升級或營火節點的自動選擇。"""
     node = run.node
     if isinstance(node, LevelUpNode):
-        attr = primary_attribute(skill_defs(library, run, run.hero.skills))
+        weapon_attr = library.weapons[run.hero.weapon].scaling_attr
+        attr = primary_attribute(skill_defs(library, run, run.hero.skills), weapon_attr)
         pick, replace = _auto_pick(library, run, node.offer)
         return LevelUpChoice(attributes={attr: node.points}, pick=pick, replace=replace)
     if isinstance(node, CampfireNode):

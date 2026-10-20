@@ -38,7 +38,7 @@ def cmd_sim_matrix(
     out: TextIO,
     err: TextIO,
 ) -> int:
-    build_ids = [b.id for b in library.builds.builds] if builds is None else builds
+    build_ids = [b.id for b in library.builds.sim_builds()] if builds is None else builds
     map_ids = default_sim_maps(library) if maps is None else maps
     seed_list = tuple(range(seed_start, seed_start + seeds))
     started = time.perf_counter()
