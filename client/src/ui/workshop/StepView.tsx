@@ -13,14 +13,16 @@ interface Props {
   onNext(): void;
 }
 
-const ALL_STEPS: readonly StepId[] = ["skeleton", "basics", "shape", "effects", "condition", "cost", "rarity"];
+const ALL_STEPS: readonly StepId[] = ["skeleton", "basics", "shape", "effects", "followup", "condition", "cost", "rarity"];
 
 function StepBar({ state, onGoto }: { state: EditorState; onGoto(step: StepId): void }) {
   const open = availableSteps(state.options);
   const cur = currentStep(state);
+  // 「動作段」只有位移技能（或草稿已經有動作段）才會出現；其他技能的步驟列不顯示它。
+  const shown = ALL_STEPS.filter((id) => id !== "followup" || open.includes(id));
   return (
     <ol className="ws-steps">
-      {ALL_STEPS.map((id, i) => {
+      {shown.map((id, i) => {
         const info = state.options?.steps.find((s) => s.id === id);
         const enabled = open.includes(id);
         const cls = ["ws-step", id === cur ? "current" : "", info?.complete === true ? "done" : "", enabled ? "" : "locked"].join(" ");
@@ -31,7 +33,7 @@ function StepBar({ state, onGoto }: { state: EditorState; onGoto(step: StepId): 
               className={cls}
               disabled={!enabled}
               aria-current={id === cur ? "step" : undefined}
-              title={enabled ? "" : "先完成前面的步驟"}
+              title={enabled ? (id === "followup" ? "可省略：不接動作段就是普通的位移技能" : "") : "先完成前面的步驟"}
               onClick={() => onGoto(id)}
             >
               <span className="ws-step-no">{info?.complete === true ? "✓" : i + 1}</span>

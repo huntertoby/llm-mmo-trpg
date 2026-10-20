@@ -161,7 +161,7 @@ export interface KeyValueStore {
   setItem(key: string, value: string): void;
 }
 
-const STEP_IDS: readonly string[] = ["skeleton", "basics", "shape", "effects", "condition", "cost", "rarity"];
+const STEP_IDS: readonly string[] = ["skeleton", "basics", "shape", "effects", "followup", "condition", "cost", "rarity"];
 
 function stringField(obj: Json, key: string): string | undefined {
   const v = obj[key];
@@ -224,6 +224,7 @@ export const STEP_NAMES: Readonly<Record<StepId, string>> = {
   basics: "基本設定",
   shape: "形狀",
   effects: "效果",
+  followup: "動作段",
   condition: "條件",
   cost: "代價",
   rarity: "稀有度",

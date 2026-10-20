@@ -84,6 +84,7 @@ const OVERLAY_COLORS: Readonly<Record<OverlayKind, number>> = {
   bomb_blast: HIGHLIGHT.bomb,
   bomb_at: HIGHLIGHT.bomb,
   revive_at: HIGHLIGHT.revive,
+  followup_area: HIGHLIGHT.followup,
 };
 
 function hpColor(ratio: number): number {
@@ -460,6 +461,7 @@ export class BattleRenderer {
         break;
       case "summon_aura":
       case "bomb_blast":
+      case "followup_area":
         g.rect(o.x + 2, o.y + 2, T - 4, T - 4).fill({ color, alpha: 0.22 });
         break;
       case "pierced":

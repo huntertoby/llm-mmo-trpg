@@ -3,12 +3,14 @@
 import type { Action, BattleView, InteractOption, PreviewOut } from "../api/types";
 import type { LabeledAction } from "../battle/actions";
 import { DIRECTIONS } from "../battle/glossary";
+import { secondChoices } from "../battle/composite";
 import { chainLines, previewLines } from "../battle/previewText";
 import { objectStyle } from "../battle/glossary";
 import {
   DIRECTION_ARROWS,
   DIRECTION_ORDER,
   asideRows,
+  compositePromptFor,
   hurlLandings,
   hurlPromptText,
   isHurlMode,
@@ -49,6 +51,39 @@ type HelpProps = Pick<
 > & {
   mode: ActionMode;
 };
+
+/** 複合技能（位移 → 動作）：第 1 段選落點或目標，第 2 段選方向或目標（也可以用這裡的按鈕）。 */
+function CompositeHelp({ mode, enabled, view, hurlPick, onHurlReset, onAction, onPreviewAction }: HelpProps) {
+  const first = hurlPick === null ? undefined : mode.targets.composite?.get(hurlPick);
+  const choices = first === undefined ? [] : secondChoices(first, view);
+  return (
+    <div className="mode-help">
+      <div className="section-title">{mode.label}</div>
+      <div className="small muted">{compositePromptFor(mode, hurlPick)}</div>
+      {choices.length > 0 && (
+        <div className="dir-buttons" aria-label="第二段">
+          {choices.map(({ second, label }) => (
+            <button
+              key={second.key}
+              type="button"
+              disabled={!enabled}
+              onMouseEnter={() => onPreviewAction(second.action)}
+              onMouseLeave={() => onPreviewAction(null)}
+              onClick={() => onAction(second.action)}
+            >
+              {label}
+            </button>
+          ))}
+        </div>
+      )}
+      {hurlPick !== null && (
+        <button type="button" className="small-button" onClick={onHurlReset}>
+          重選落點
+        </button>
+      )}
+    </div>
+  );
+}
 
 /** 兩段選取（投擲物件、傳送他人、任意兩者互換）的提示與「重選」。 */
 function HurlHelp({ mode, view, hurlPick, onHurlReset }: HelpProps) {
@@ -112,6 +147,7 @@ function AsideHelp({ mode, enabled, interactOptions, view, onAction, onPreviewAc
 function ModeHelp(props: HelpProps) {
   const { mode, enabled, onAction, onPreviewAction } = props;
   if (mode.kind === "shove_aside") return <AsideHelp {...props} />;
+  if (mode.targets.composite !== null) return <CompositeHelp {...props} />;
   if (isHurlMode(mode)) return <HurlHelp {...props} />;
   const t = mode.targets;
   const pickable = t.units.size + t.objects.size + t.tiles.size;

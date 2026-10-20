@@ -206,4 +206,6 @@ export const HIGHLIGHT = {
   bomb: 0xff7a1a,
   downed: 0xff3b30,
   revive: 0x7dff7d,
+  /** 複合技能（Phase 3F-3b）：動作段的範圍（紫色）。 */
+  followup: 0xc77dff,
 } as const;

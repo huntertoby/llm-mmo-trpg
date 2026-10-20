@@ -40,6 +40,7 @@ import {
   DIRECTION_ARROWS,
   fallbackActions,
   hurlObjectAt,
+  hurlPickPos,
   isCopyPending,
   isHurlMode,
   isSelfOnly,
@@ -237,10 +238,7 @@ export function BattleScreen({ initial, onExit, exitLabel }: Props) {
     const overlays = previewOverlays(preview, view);
     if (mode !== null) {
       const tt = targetTiles(mode, view, hero, hurlPick);
-      const pickedAt =
-        hurlPick === null
-          ? undefined
-          : (view.objects.find((o) => o.id === hurlPick)?.pos ?? view.units.find((u) => u.id === hurlPick)?.pos);
+      const pickedAt = hurlPickPos(mode, view, hurlPick);
       return {
         moves: [],
         attacks: tt.targets,

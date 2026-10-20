@@ -8,6 +8,11 @@ export type Json = Record<string, unknown>;
 /** 值是物件（`{type: ...}`）的單選欄位：形狀與條件（效果列表的每一項另外處理）。 */
 const OBJECT_CHOICE_FIELDS: ReadonlySet<string> = new Set(["shape", "condition"]);
 
+/** 複合技能的動作段（Phase 3F-3b）：欄位路徑都在 `followup.` 底下。 */
+export const FOLLOWUP_SKELETON = "followup.skeleton";
+const FOLLOWUP_SHAPE = "followup.shape";
+const FOLLOWUP_EFFECTS = "followup.effects";
+
 export function isJson(value: unknown): value is Json {
   return value !== null && typeof value === "object" && !Array.isArray(value);
 }
@@ -121,6 +126,12 @@ function prefillOne(container: Json, spec: FieldSpec, base: string): Json {
  * `base` 是這個欄位所在物件的路徑（效果列表項目、巢狀物件內的欄位用）。 */
 export function selectChoice(container: Json, spec: FieldSpec, choice: Choice, base = ""): Json {
   const path = joinPath(base, spec.field);
+  if (path === FOLLOWUP_SKELETON && getPath(container, path) !== choice.value) {
+    // 換動作段的骨架：已選的形狀與效果不一定適用新骨架，清掉重選。
+    let reset = setPath(container, FOLLOWUP_SHAPE, undefined);
+    reset = setPath(reset, FOLLOWUP_EFFECTS, undefined);
+    return setPath(reset, path, choice.value);
+  }
   if (isObjectChoice(spec)) {
     const next = setPath(container, path, { type: choice.value });
     return prefill(next, choice.params, path);
@@ -143,6 +154,7 @@ export function selectChoice(container: Json, spec: FieldSpec, choice: Choice, b
 /** 清除單選欄位（含它專屬的參數）。 */
 export function clearChoice(container: Json, spec: FieldSpec, base = ""): Json {
   const path = joinPath(base, spec.field);
+  if (path === FOLLOWUP_SKELETON) return setPath(container, "followup", undefined); // 不接動作段
   const level = parentPath(path);
   let next = container;
   for (const c of spec.choices) {

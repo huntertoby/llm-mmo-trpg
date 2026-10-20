@@ -26,7 +26,8 @@ export type OverlayKind =
   | "summon_gone" // 因超過上限而消失的舊召喚物
   | "bomb_blast" // 定時炸彈爆炸時波及的格子（以攜帶者目前的位置展開；Phase 3D-8b）
   | "bomb_at" // 綁上炸彈的單位（標倒數）
-  | "revive_at"; // 復活的單位站起來的格子
+  | "revive_at" // 復活的單位站起來的格子
+  | "followup_area"; // 複合技能動作段的範圍（Phase 3F-3b）
 
 export interface Overlay {
   pos: Pos;
@@ -101,6 +102,7 @@ export function previewOverlays(p: PreviewOut | null, view: BattleView): Overlay
     if (at !== null) out.push({ pos: at, kind: "bomb_at", label: `炸${b.rounds}` });
   }
   for (const r of p.revives ?? []) out.push({ pos: pos(r.pos), kind: "revive_at", label: "復" });
+  for (const xy of p.followup_tiles ?? []) out.push({ pos: pos(xy), kind: "followup_area", label: "" });
   const lethal = (p.displace_checks ?? []).some((c) => c.lethal);
   for (const m of p.moves ?? []) out.push(...(m.kind === "charge" ? chargeOverlays(m, p, view) : moveOverlays(m, lethal)));
   return out;
@@ -253,6 +255,12 @@ export function sceneLines(p: PreviewOut, names: UnitNames, view: BattleView): s
     lines.push(`投擲：${name}${posText(h.from_pos)} → ${posText(h.to_pos)}，${HURL_OUTCOME[h.outcome] ?? h.outcome}`);
   }
   for (const m of p.moves ?? []) lines.push(m.kind === "charge" ? chargeLine(m, p, names) : moveLine(m, names));
+  const landing = p.landing ?? null;
+  if (landing !== null && (p.followup_tiles ?? []).length > 0) {
+    lines.push(
+      `第二段：位移到 ${posText(landing)} 後，以落點為原點影響 ${p.followup_tiles.length} 格（紫色）；位移被擋下或沒到落點時不結算`,
+    );
+  }
   lines.push(...displaceLines(p, names));
   return lines;
 }

@@ -1,7 +1,38 @@
 // 即時檢查面板：預算條、違反的規則、最低稀有度、技能卡片預覽。
-import type { WorkshopCheck } from "../../api/types";
+import type { BudgetLine, WorkshopCheck } from "../../api/types";
 import { budgetView, checkHeadline, missingStepNames, rarityName } from "../../workshop/state";
 import { SkillCardView } from "../SkillCardView";
+
+function LinesTable({ lines }: { lines: BudgetLine[] }) {
+  return (
+    <table className="ws-table">
+      <thead>
+        <tr>
+          <th>效果</th>
+          <th>說明</th>
+          <th>基礎</th>
+          <th>形狀×</th>
+          <th>對象×</th>
+          <th>條件×</th>
+          <th>點數</th>
+        </tr>
+      </thead>
+      <tbody>
+        {lines.map((l) => (
+          <tr key={l.index}>
+            <td>{l.type}</td>
+            <td>{l.note}</td>
+            <td>{l.base}</td>
+            <td>{l.shape}</td>
+            <td>{l.target}</td>
+            <td>{l.condition}</td>
+            <td>{l.points}</td>
+          </tr>
+        ))}
+      </tbody>
+    </table>
+  );
+}
 
 function BudgetBar({ check }: { check: WorkshopCheck }) {
   if (check.budget === null) return null;
@@ -32,32 +63,28 @@ function BudgetBar({ check }: { check: WorkshopCheck }) {
       <div className="muted small">{v.hint}</div>
       <details className="ws-details">
         <summary>點數明細</summary>
-        <table className="ws-table">
-          <thead>
-            <tr>
-              <th>效果</th>
-              <th>說明</th>
-              <th>基礎</th>
-              <th>形狀×</th>
-              <th>對象×</th>
-              <th>條件×</th>
-              <th>點數</th>
-            </tr>
-          </thead>
-          <tbody>
-            {b.lines.map((l) => (
-              <tr key={l.index}>
-                <td>{l.type}</td>
-                <td>{l.note}</td>
-                <td>{l.base}</td>
-                <td>{l.shape}</td>
-                <td>{l.target}</td>
-                <td>{l.condition}</td>
-                <td>{l.points}</td>
-              </tr>
+        {b.segments.length > 0 ? (
+          <>
+            {b.segments.map((seg) => (
+              <div key={seg.label}>
+                <div className="small">
+                  <strong>{seg.label}</strong>（骨架 {seg.skeleton}，形狀 {seg.shape}）
+                </div>
+                <LinesTable lines={seg.lines} />
+                <div className="small">
+                  原始點數 {seg.raw}，條件倍率 ×{seg.condition_multiplier}，該段點數 {seg.total}
+                  {seg.synergies.length > 0 ? `，協同：${seg.synergies.join("、")}` : ""}
+                </div>
+              </div>
             ))}
-          </tbody>
-        </table>
+            <div className="small">
+              複合技能：兩段點數加總 {b.segments.map((seg) => seg.total).join(" ＋ ")} × (1000 ＋ {b.composite_tax_permille}‰) ÷ 1000 ＝{" "}
+              {b.total}（加成 +{b.composite_tax_permille / 10}%，省下一次行動的代價）。
+            </div>
+          </>
+        ) : (
+          <LinesTable lines={b.lines} />
+        )}
         <div className="small">
           原始點數 {b.raw}，條件倍率 ×{b.condition_multiplier}，合計 {b.total}。階級預算 {b.tier_budget} × {b.coefficient_label}{" "}
           {b.coefficient}

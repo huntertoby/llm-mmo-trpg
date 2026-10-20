@@ -1,5 +1,6 @@
 // 技能列與目標選取（純函式）：合法動作 → 「模式」（技能、攻擊、推擊……）→ 每個模式的合法目標。
 import type { Action, BattleView, Direction, InteractOption, Pending, Pos, SkillCard, UnitView } from "../api/types";
+import { buildComposite, compositePrompt, firstKeyAt, firstPos, secondAt, secondTiles, soleCenter, type CompositeSet } from "./composite";
 import { posKey, samePos } from "./geometry";
 import { activeReason } from "./activations";
 import { grantedRemaining } from "./granted";
@@ -44,9 +45,11 @@ export interface TargetSet {
   hurls: Map<string, Map<string, Action>>;
   /** 兩段選取的種類（沒有兩段選取時 `null`）。 */
   pairKind: PairKind | null;
+  /** 複合技能（位移 → 動作，Phase 3F-3b）的兩段選取；`hurls` 以同樣的鍵登記，讓「兩段選取」的流程共用。 */
+  composite: CompositeSet | null;
 }
 
-export type PairKind = "hurl" | "teleport" | "swap" | "shadowstep";
+export type PairKind = "hurl" | "teleport" | "swap" | "shadowstep" | "composite";
 
 export type ModeKind = "skill" | "attack" | "shove" | "trip" | "interact" | "shove_aside" | "defend" | "end_stance" | "stand";
 
@@ -69,6 +72,7 @@ function emptyTargets(): TargetSet {
     directions: new Map(),
     hurls: new Map(),
     pairKind: null,
+    composite: null,
   };
 }
 
@@ -163,6 +167,8 @@ export interface SkillButton {
   grantedRemaining?: number | null;
   /** 效果原語的代碼（Phase 3D-8d；分辨一般瞬步與傳送他人）；卡片還沒取得時為空。 */
   effectIds?: readonly string[];
+  /** 複合技能（位移 → 動作，Phase 3F-3b）：有第二段。 */
+  composite?: boolean;
 }
 
 export type SkillCards = Readonly<Record<string, SkillCard | undefined>>;
@@ -194,6 +200,7 @@ export function skillButtons(hero: UnitView, legal: readonly Action[], cards: Sk
       disabledReason,
       grantedRemaining: grantedRemaining(hero, skillId),
       effectIds: card?.effect_ids ?? [],
+      composite: (card?.followup ?? null) !== null,
     };
   });
 }
@@ -239,7 +246,29 @@ export function basicModes(legal: readonly Action[]): ActionMode[] {
   });
 }
 
+/** 複合技能：位移段選取（落點格或目標單位）→ 動作段選取（方向、目標、或以落點為中心）。 */
+function compositeTargets(actions: readonly Action[]): TargetSet {
+  const t = emptyTargets();
+  const set = buildComposite(actions);
+  t.pairKind = "composite";
+  t.composite = set;
+  for (const [key, first] of set) {
+    t.hurls.set(key, new Map(first.seconds.map((s) => [s.key, s.action])));
+  }
+  return t;
+}
+
 export function skillMode(button: SkillButton): ActionMode {
+  if (button.composite === true) {
+    return {
+      key: `skill:${button.skillId}`,
+      kind: "skill",
+      label: button.name,
+      skillId: button.skillId,
+      actions: button.actions,
+      targets: compositeTargets(button.actions),
+    };
+  }
   const targets = buildTargets(button.actions);
   // 一般瞬步（Phase 3D-8d）和傳送他人一樣是「單位 → 落點」，只是第 1 段是敵人、第 2 段是他身旁的格子
   if (targets.pairKind === "teleport" && (button.effectIds ?? []).includes("shadowstep")) {
@@ -366,6 +395,12 @@ export function isHurlMode(mode: ActionMode): boolean {
 
 /** 第一段：`tile` 上可以選的物件或單位 ID（沒有時 `null`）。 */
 export function hurlObjectAt(mode: ActionMode, view: BattleView, tile: Pos): string | null {
+  const set = mode.targets.composite;
+  if (set !== null) {
+    const key = firstKeyAt(set, view, tile);
+    const first = key === null ? undefined : set.get(key);
+    return first !== undefined && soleCenter(first) === null ? first.key : null; // 只有「以落點為中心」的直接施放，不用選
+  }
   for (const o of view.objects) {
     if (samePos(o.pos, tile) && mode.targets.hurls.has(o.id)) return o.id;
   }
@@ -380,6 +415,18 @@ export function hurlObjectAt(mode: ActionMode, view: BattleView, tile: Pos): str
  * 互換的第二段是另一個單位，要用 `view` 找出 `tile` 上的單位。
  */
 export function hurlActionAt(mode: ActionMode, pick: string | null, tile: Pos, view?: BattleView): Action | null {
+  const set = mode.targets.composite;
+  if (set !== null) {
+    if (pick === null) {
+      // 只有「以落點為中心」的複合技能：滑過／點落點就是施放（view 用來找目標單位）
+      const key = view === undefined ? null : firstKeyAt(set, view, tile);
+      const only = key === null ? undefined : set.get(key);
+      return (only === undefined ? null : soleCenter(only))?.action ?? null;
+    }
+    const first = set.get(pick);
+    if (first === undefined || view === undefined) return null;
+    return secondAt(first, view, tile)?.action ?? null;
+  }
   if (pick === null) return null;
   const seconds = mode.targets.hurls.get(pick);
   if (seconds === undefined) return null;
@@ -395,6 +442,13 @@ export function hurlActionAt(mode: ActionMode, pick: string | null, tile: Pos, v
 /** 第二段的合法格子（依伺服器列出的順序）；互換是另一個單位所在的格子。 */
 export function hurlLandings(mode: ActionMode, pick: string | null, view?: BattleView): Pos[] {
   if (pick === null) return [];
+  const set = mode.targets.composite;
+  if (set !== null) {
+    const first = set.get(pick);
+    if (first === undefined || view === undefined) return [];
+    const tiles = secondTiles(first, view);
+    return [...tiles.targets, ...tiles.directions.map((d) => d.pos)];
+  }
   const keys = [...(mode.targets.hurls.get(pick)?.keys() ?? [])];
   if (mode.targets.pairKind === "swap") {
     return keys.flatMap((id) => {
@@ -420,14 +474,16 @@ export function hurlPromptText(
     teleport: "要傳送的單位",
     swap: "要互換的第一個單位",
     shadowstep: "要瞬步過去的敵人",
+    composite: "位移的落點或目標",
   }[kind];
   const second = {
     hurl: "落點",
     teleport: "落點（致命地形的成功率極低，Boss 不能選）",
     swap: "第二個單位",
     shadowstep: "要落在他身旁哪一格（落在他背後可以背刺）",
+    composite: "動作段的方向或目標",
   }[kind];
-  const verb = { hurl: "已舉起", teleport: "已選定", swap: "已選定", shadowstep: "已鎖定" }[kind];
+  const verb = { hurl: "已舉起", teleport: "已選定", swap: "已選定", shadowstep: "已鎖定", composite: "已選定" }[kind];
   if (pickName === null) return `第 1 段：點選${first}（紅框 ${firstCount} 個）。Esc／右鍵取消。`;
   const redo = kind === "swap" ? "點同一個單位或按「重選單位」可以改選" : "再點其他目標可改選，點同一個取消";
   return `第 2 段：${verb}${pickName}，點選${second}（紅框 ${secondCount} 個）；${redo}。`;
@@ -484,6 +540,15 @@ export function targetTiles(
   const t = mode.targets;
   const targets: Pos[] = [];
   if (t.hurls.size > 0) {
+    if (t.composite !== null) {
+      const picked = hurlPick === null ? undefined : t.composite.get(hurlPick);
+      if (picked !== undefined) return secondTiles(picked, view);
+      for (const first of t.composite.values()) {
+        const at = firstPos(first, view);
+        if (at !== null) targets.push(at);
+      }
+      return { targets, directions: [] };
+    }
     if (hurlPick !== null) return { targets: hurlLandings(mode, hurlPick, view), directions: [] };
     for (const id of t.hurls.keys()) {
       const at = view.objects.find((x) => x.id === id)?.pos ?? view.units.find((x) => x.id === id)?.pos;
@@ -508,4 +573,18 @@ export function targetTiles(
     return { pos: { x: hero.pos.x + d.dx, y: hero.pos.y + d.dy }, direction };
   });
   return { targets, directions };
+}
+
+/** 兩段選取第一段已選好的物件或單位（或複合技能的落點）所在格（青色粗框）。 */
+export function hurlPickPos(mode: ActionMode, view: BattleView, pick: string | null): Pos | undefined {
+  if (pick === null) return undefined;
+  const first = mode.targets.composite?.get(pick);
+  if (first !== undefined) return firstPos(first, view) ?? undefined;
+  return view.objects.find((o) => o.id === pick)?.pos ?? view.units.find((u) => u.id === pick)?.pos;
+}
+
+/** 複合技能兩段選取的提示（第 1 段：選落點或目標；第 2 段：選方向或目標）。 */
+export function compositePromptFor(mode: ActionMode, pick: string | null): string {
+  const set = mode.targets.composite;
+  return compositePrompt(pick === null ? null : (set?.get(pick) ?? null), set?.size ?? 0);
 }

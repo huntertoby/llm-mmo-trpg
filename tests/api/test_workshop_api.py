@@ -194,3 +194,78 @@ def test_training_range_opponents(client: TestClient) -> None:
         },
     )
     assert elsewhere.status_code == 422 and "只有靶場" in elsewhere.json()["detail"]
+
+
+TELEPORT_CONE: dict[str, Any] = {
+    "skeleton": "displace",
+    "name_zh": "瞬移斬",
+    "kind": "active",
+    "ap_cost": 2,
+    "category": "weapon",
+    "weapon_req": "melee",
+    "scaling_attr": "str",
+    "tier": 1,
+    "shape": {"type": "ground_tile", "range": 4},
+    "effects": [{"type": "teleport"}],
+    "followup": {
+        "skeleton": "area",
+        "shape": {"type": "cone", "size": 2},
+        "effects": [{"type": "damage", "multiplier_permille": 900}],
+    },
+    "cost": {"mana": 6, "cooldown": 3},
+    "rarity": "rare",
+}
+"""瞬移 → 錐形打擊（3F-3b 驗收 2）。"""
+
+
+def test_the_workshop_builds_teleport_then_cone_through_the_api(client: TestClient) -> None:
+    # 選項：位移技能出現「動作段」步驟，一步步展開
+    partial = {k: v for k, v in TELEPORT_CONE.items() if k not in ("followup", "cost", "rarity")}
+    body = client.post("/api/workshop/options", json={"skill": partial}).json()
+    assert body["next_step"] is None or body["next_step"] == "rarity"
+    step = next(s for s in body["steps"] if s["id"] == "followup")
+    assert step["name_zh"] == "動作段" and step["complete"] is True  # 可省略
+    assert [f["field"] for f in step["fields"]] == ["followup.skeleton"]
+    started = {**partial, "followup": {"skeleton": "area"}}
+    body = client.post("/api/workshop/options", json={"skill": started}).json()
+    assert body["next_step"] == "followup"
+    assert [f["field"] for f in body["steps"][-1]["fields"]] == [
+        "followup.skeleton",
+        "followup.shape",
+    ]
+    # 檢查：兩段明細與稀有度
+    check = client.post("/api/workshop/check", json={"skill": TELEPORT_CONE}).json()
+    assert check["legal"] is True and check["problems"] == []
+    assert [s["label"] for s in check["budget"]["segments"]] == ["位移段", "動作段"]
+    assert check["budget"]["composite_tax_permille"] == 150
+    assert check["card"]["followup"] and check["minimum_rarity"] == "rare"
+    common = client.post(
+        "/api/workshop/check", json={"skill": {**TELEPORT_CONE, "rarity": "common"}}
+    ).json()
+    assert common["legal"] is False
+
+
+def test_try_out_teleport_then_cone_and_cast_it(client: TestClient) -> None:
+    response = _create(client, custom_skills=[TELEPORT_CONE], replace_skills=["skill_decoy_swap"])
+    assert response.status_code == 201, response.text
+    body = response.json()
+    battle_id = body["battle_id"]
+    custom_id = build_skill(TELEPORT_CONE).id
+    moves = [a for a in body["legal_actions"] if a["type"] == "move"]
+    move = min(moves, key=lambda a: abs(a["path"][-1]["x"] - 6) + abs(a["path"][-1]["y"] - 4))
+    body = client.post(f"/api/battles/{battle_id}/actions", json=move).json()
+    combos = [
+        a
+        for a in body["legal_actions"]
+        if a["type"] == "use_skill" and a["skill_id"] == custom_id and a.get("followup_target")
+    ]
+    assert combos
+    best = max(
+        combos,
+        key=lambda a: len(
+            client.post(f"/api/battles/{battle_id}/preview", json=a).json()["targets"]
+        ),
+    )
+    body = client.post(f"/api/battles/{battle_id}/actions", json=best).json()
+    events = [e for step in body["steps"] for e in step["events"]]
+    assert any(e["type"] == "skill_followup" for e in events)
