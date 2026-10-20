@@ -198,8 +198,9 @@ def _skill_name(library: ContentLibrary, run: RunState, skill_id: str) -> str:
 
 
 def _resources(library: ContentLibrary, run: RunState) -> str:
+    max_hp = run.max_hp_in(library.ruleset.core)
     return (
-        f"HP {run.hp}/{run.max_hp_in(library.ruleset.core)} 法力 {run.mana}/{run.max_mana} 源力 {run.source}"
+        f"HP {run.hp}/{max_hp} 法力 {run.mana}/{run.max_mana} 源力 {run.source}"
         f" 等級 {run.level} 經驗 {run.xp}"
     )
 
