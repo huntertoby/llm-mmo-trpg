@@ -283,7 +283,12 @@ def begin_battle(setup: BattleSetup, seed: int) -> ResolveResult:
             rules=setup.ruleset,
             facing=facings[spawn.team],
         )
-        state.units[uid].source = starting_source(spawn, setup.ruleset.core)
+        unit = state.units[uid]
+        unit.source = starting_source(spawn, setup.ruleset.core)
+        if spawn.hp is not None:  # 開場 HP／法力（Phase 3-5a：一輪存檔帶入；None ＝ 滿）
+            unit.hp = min(spawn.hp, unit.max_hp)
+        if spawn.mana is not None:
+            unit.mana = min(spawn.mana, unit.max_mana)
     state.source_wells = tuple(sorted(map_def.source_wells, key=lambda xy: (xy[1], xy[0])))
     ctx = Ctx(state)
     core = ctx.core

@@ -43,6 +43,9 @@ class UnitSpawn(BaseModel):
     ``source``：開場源力（Phase 3C-4a；Phase 3-5 由一輪存檔帶入）。我方單位的實際開場值 ＝
     clamp(max(值, ``source_min_at_start``), 0, ``source_max``)，``None`` 等同 0（即保底值）；
     敵方一律 0。見 :func:`starting_source`。
+
+    ``hp``／``mana``：開場 HP／法力（Phase 3-5a：一輪中戰鬥之間不回復，由存檔帶入）。``None`` 為
+    滿；超過上限時以上限計。
     """
 
     model_config = ConfigDict(frozen=True, extra="forbid")
@@ -52,6 +55,8 @@ class UnitSpawn(BaseModel):
     team: Team
     position: tuple[int, int] | None = None
     source: int | None = None
+    hp: int | None = Field(default=None, ge=1)
+    mana: int | None = Field(default=None, ge=0)
 
 
 def starting_source(spawn: UnitSpawn, core: CoreRules) -> int:

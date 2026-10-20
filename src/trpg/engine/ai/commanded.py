@@ -94,6 +94,15 @@ class CommandedAI:
             self.on_order(record, state)
         return record
 
+    def restore_orders(self, records: list[OrderRecord]) -> None:
+        """讀檔（Phase 3-5a）：以存下的指令紀錄還原 ``order_log`` 與各陣營目前的指令（每個陣營
+        最後一筆）。不呼叫 ``on_order``，也不重新驗證（``ignored`` 照存檔）。效用 AI 本身沒有其他
+        跨決策的狀態，所以還原後的決策與沒有中斷時相同。"""
+        self.order_log = list(records)
+        self._current = {}
+        for record in records:
+            self._current[record.team] = record.orders
+
     def current_orders(self, team: Team) -> OrderSet:
         """``team`` 目前的指令（沒有時為空的 :class:`OrderSet`）。"""
         return self._current.get(team, OrderSet())
