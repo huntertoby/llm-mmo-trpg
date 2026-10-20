@@ -71,6 +71,8 @@ import { usePreview } from "../ui/usePreview";
 interface Props {
   initial: BattleResponse;
   onExit(): void;
+  /** 有值時顯示「離開」按鈕（可隨時離開），結束面板的主按鈕也用這個文字；省略為一般戰鬥。 */
+  exitLabel?: string;
 }
 
 const BANNER_MS = 1000;
@@ -97,7 +99,7 @@ function unitAt(view: BattleView, tile: Pos | null) {
   return here.find((u) => !u.downed) ?? here[0];
 }
 
-export function BattleScreen({ initial, onExit }: Props) {
+export function BattleScreen({ initial, onExit, exitLabel }: Props) {
   const battleId = initial.battle_id;
   const heroId = initial.hero_id;
   const [response, setResponse] = useState(initial);
@@ -567,6 +569,11 @@ export function BattleScreen({ initial, onExit }: Props) {
   return (
     <div className="battle-screen">
       <TurnBar view={shown} names={names} acting={acting} />
+      {exitLabel !== undefined && !ended && (
+        <button type="button" className="battle-leave" onClick={onExit}>
+          ← {exitLabel}
+        </button>
+      )}
       <ErrorBanner message={error} onClose={() => setError(null)} />
       <div className="battle-main">
         <div className="battle-board">
@@ -591,7 +598,7 @@ export function BattleScreen({ initial, onExit }: Props) {
             onSelect={pickSkill}
           />
           {ended ? (
-            <EndPanel response={response} onRestart={onExit} />
+            <EndPanel response={response} onRestart={onExit} restartLabel={exitLabel} />
           ) : (
             <ActionPanel
               enabled={canAct || copying}

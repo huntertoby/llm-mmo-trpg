@@ -45,3 +45,8 @@ export function skillNamesOf(cards: Readonly<Record<string, SkillCard | undefine
 export function useSkillNames(cards: Readonly<Record<string, SkillCard | undefined>>): SkillNames {
   return useMemo(() => skillNamesOf(cards), [cards]);
 }
+
+/** 先把已知的卡片放進快取：工坊的自訂技能不在 `/api/skills`，戰鬥畫面要靠這裡才認得出名稱。 */
+export function primeSkillCard(card: SkillCard): void {
+  cache.set(card.id, card);
+}

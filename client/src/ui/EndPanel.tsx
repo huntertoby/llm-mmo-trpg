@@ -6,6 +6,8 @@ import { END_REASONS } from "../battle/glossary";
 interface Props {
   response: BattleResponse;
   onRestart(): void;
+  /** 主按鈕文字；省略為「再來一場」。 */
+  restartLabel?: string;
 }
 
 export function outcomeText(response: BattleResponse): string {
@@ -19,13 +21,13 @@ export function outcomeText(response: BattleResponse): string {
   return `${head}${reason}・第 ${o.round} 輪`;
 }
 
-export function EndPanel({ response, onRestart }: Props) {
+export function EndPanel({ response, onRestart, restartLabel = "再來一場" }: Props) {
   return (
     <div className="panel end-panel">
       <div className="end-title">{outcomeText(response)}</div>
       <div className="end-buttons">
         <button type="button" className="primary" onClick={onRestart}>
-          再來一場
+          {restartLabel}
         </button>
         <a
           className="button"

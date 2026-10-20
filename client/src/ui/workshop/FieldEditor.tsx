@@ -1,0 +1,464 @@
+// 技能工坊的欄位編輯器：依後端回傳的 FieldSpec 畫出對應的輸入元件（單選卡片、數字、勾選、效果列表……）。
+// 這裡不寫任何規則；選項、範圍、說明全部來自 `/api/workshop/options`。
+import type { Choice, FieldSpec } from "../../api/types";
+import {
+  addEffect,
+  addModifier,
+  clearChoice,
+  findChoice,
+  getPath,
+  isJson,
+  isObjectChoice,
+  joinPath,
+  listOf,
+  moveItem,
+  parentPath,
+  removeItem,
+  replaceItem,
+  selectChoice,
+  setPath,
+  type Json,
+} from "../../workshop/draft";
+import { rarityName } from "../../workshop/state";
+
+interface FieldProps {
+  spec: FieldSpec;
+  container: Json;
+  /** 欄位路徑的起點（巢狀物件、效果列表項目內的欄位用）。 */
+  base: string;
+  onChange(next: Json): void;
+}
+
+interface ListProps {
+  fields: readonly FieldSpec[];
+  container: Json;
+  base: string;
+  onChange(next: Json): void;
+}
+
+/** 這些欄位的選項用「卡片」顯示（附說明）；其他單選用小按鈕或下拉。 */
+const CARD_FIELDS: ReadonlySet<string> = new Set(["skeleton", "kind", "category", "shape", "condition", "event", "target"]);
+const COMPACT_MAX = 8;
+
+function lastSegment(path: string): string {
+  return path.split(".").at(-1) ?? path;
+}
+
+export function FieldList({ fields, container, base, onChange }: ListProps) {
+  return (
+    <>
+      {fields.map((spec) => (
+        <FieldEditor key={`${base}|${spec.field}`} spec={spec} container={container} base={base} onChange={onChange} />
+      ))}
+    </>
+  );
+}
+
+function rangeHint(spec: FieldSpec): string {
+  if (spec.type === "dice") {
+    const sides = spec.dice_sides.length > 0 ? `，面數 ${spec.dice_sides.join("／")}` : "";
+    return `格式 NdM（例 2d6）${sides}`;
+  }
+  if (spec.min != null && spec.max != null) return `範圍 ${spec.min}–${spec.max}`;
+  if (spec.min != null) return `至少 ${spec.min}`;
+  if (spec.max != null) return `最多 ${spec.max}`;
+  return "";
+}
+
+function Label({ spec }: { spec: FieldSpec }) {
+  const hint = rangeHint(spec);
+  return (
+    <div className="ws-label">
+      <span className="ws-label-name">
+        {spec.name_zh}
+        {spec.required && (
+          <span className="ws-required" title="必填">
+            *
+          </span>
+        )}
+      </span>
+      {hint !== "" && <span className="muted small"> {hint}</span>}
+      {spec.description_zh !== "" && <div className="muted small">{spec.description_zh}</div>}
+    </div>
+  );
+}
+
+export function FieldEditor(props: FieldProps) {
+  const { spec } = props;
+  switch (spec.type) {
+    case "choice":
+      return <ChoiceField {...props} />;
+    case "multi_choice":
+      return <MultiChoiceField {...props} />;
+    case "int":
+    case "count":
+      return <NumberField {...props} />;
+    case "dice":
+    case "text":
+    case "tags":
+      return <TextField {...props} />;
+    case "bool":
+      return <BoolField {...props} />;
+    case "effects":
+      return <EffectsField {...props} />;
+    case "object":
+      return <ObjectField {...props} />;
+    case "modifiers":
+      return <ModifiersField {...props} />;
+  }
+}
+
+// ---------- 單選 ----------
+
+function badges(spec: FieldSpec, choice: Choice): string[] {
+  const out: string[] = [];
+  const info = choice.info;
+  if (info["core"] === true) out.push("核心");
+  else if (info["secondary"] === true) out.push("附帶");
+  const min = info["min_rarity"];
+  if (typeof min === "string" && min !== "common") out.push(`${rarityName(min)}以上`);
+  if (spec.field === "skeleton") {
+    const kinds = info["kinds"];
+    if (Array.isArray(kinds) && kinds.length > 0 && !kinds.includes("active")) out.push("非主動技");
+  }
+  return out;
+}
+
+function ChoiceField({ spec, container, base, onChange }: FieldProps) {
+  const path = joinPath(base, spec.field);
+  const raw = getPath(container, path);
+  const chosen = findChoice(spec, raw);
+  const objectChoice = isObjectChoice(spec);
+  // 選項專屬的參數：物件選項（形狀、條件）寫在該物件裡，其他寫在同一層。
+  const paramBase = objectChoice ? path : parentPath(path);
+  const pick = (c: Choice) => onChange(selectChoice(container, spec, c, base));
+  const card = CARD_FIELDS.has(lastSegment(spec.field));
+  return (
+    <div className="ws-field">
+      <Label spec={spec} />
+      {card && spec.choices.length <= 24 ? (
+        <div className="ws-cards">
+          {spec.choices.map((c) => (
+            <button
+              type="button"
+              key={String(c.value)}
+              className={`ws-card${chosen?.value === c.value ? " selected" : ""}`}
+              aria-pressed={chosen?.value === c.value}
+              onClick={() => pick(c)}
+            >
+              <span className="ws-card-title">{c.name_zh}</span>
+              {badges(spec, c).map((b) => (
+                <span key={b} className="ws-badge">
+                  {b}
+                </span>
+              ))}
+              {c.description_zh !== "" && <span className="ws-card-desc">{c.description_zh}</span>}
+            </button>
+          ))}
+        </div>
+      ) : spec.choices.length <= COMPACT_MAX ? (
+        <div className="ws-chips">
+          {spec.choices.map((c) => (
+            <button
+              type="button"
+              key={String(c.value)}
+              className={`ws-chip${chosen?.value === c.value ? " selected" : ""}`}
+              aria-pressed={chosen?.value === c.value}
+              title={c.description_zh}
+              onClick={() => pick(c)}
+            >
+              {c.name_zh}
+            </button>
+          ))}
+        </div>
+      ) : (
+        <select
+          value={chosen === undefined ? "" : String(chosen.value)}
+          onChange={(e) => {
+            const c = spec.choices.find((x) => String(x.value) === e.target.value);
+            if (c !== undefined) pick(c);
+          }}
+        >
+          <option value="" disabled>
+            請選擇……
+          </option>
+          {spec.choices.map((c) => (
+            <option key={String(c.value)} value={String(c.value)}>
+              {c.name_zh}
+            </option>
+          ))}
+        </select>
+      )}
+      {!card && chosen !== undefined && chosen.description_zh !== "" && (
+        <div className="muted small">{chosen.description_zh}</div>
+      )}
+      {!spec.required && raw !== undefined && (
+        <button type="button" className="ws-link" onClick={() => onChange(clearChoice(container, spec, base))}>
+          不使用「{spec.name_zh}」
+        </button>
+      )}
+      {chosen !== undefined && chosen.params.length > 0 && (
+        <div className="ws-nested">
+          <FieldList fields={chosen.params} container={container} base={paramBase} onChange={onChange} />
+        </div>
+      )}
+    </div>
+  );
+}
+
+function MultiChoiceField({ spec, container, base, onChange }: FieldProps) {
+  const path = joinPath(base, spec.field);
+  const raw = getPath(container, path);
+  const value = Array.isArray(raw) ? raw.map(String) : [];
+  const toggle = (v: string) => {
+    const next = value.includes(v) ? value.filter((x) => x !== v) : [...value, v];
+    onChange(setPath(container, path, next.length === 0 ? undefined : next));
+  };
+  return (
+    <div className="ws-field">
+      <Label spec={spec} />
+      <div className="ws-chips">
+        {spec.choices.map((c) => (
+          <label key={String(c.value)} className={`ws-chip${value.includes(String(c.value)) ? " selected" : ""}`} title={c.description_zh}>
+            <input type="checkbox" checked={value.includes(String(c.value))} onChange={() => toggle(String(c.value))} />
+            {c.name_zh}
+          </label>
+        ))}
+      </div>
+    </div>
+  );
+}
+
+// ---------- 數字、文字、勾選 ----------
+
+function NumberField({ spec, container, base, onChange }: FieldProps) {
+  const path = joinPath(base, spec.field);
+  const raw = getPath(container, path);
+  const special = spec.allow_weapon ? "weapon" : spec.type === "count" ? "all" : null;
+  const specialLabel = spec.allow_weapon ? "用武器骰" : "全部";
+  const isSpecial = special !== null && raw === special;
+  return (
+    <div className="ws-field">
+      <Label spec={spec} />
+      <div className="ws-row">
+        <input
+          type="number"
+          inputMode="numeric"
+          min={spec.min ?? undefined}
+          max={spec.max ?? undefined}
+          disabled={isSpecial}
+          value={typeof raw === "number" ? raw : ""}
+          onChange={(e) => {
+            const text = e.target.value.trim();
+            const n = Number(text);
+            onChange(setPath(container, path, text === "" || !Number.isFinite(n) ? undefined : Math.trunc(n)));
+          }}
+        />
+        {special !== null && (
+          <label className="ws-inline">
+            <input
+              type="checkbox"
+              checked={isSpecial}
+              onChange={(e) => onChange(setPath(container, path, e.target.checked ? special : undefined))}
+            />
+            {specialLabel}
+          </label>
+        )}
+      </div>
+    </div>
+  );
+}
+
+function TextField({ spec, container, base, onChange }: FieldProps) {
+  const path = joinPath(base, spec.field);
+  const raw = getPath(container, path);
+  const text = Array.isArray(raw) ? raw.join(", ") : typeof raw === "string" ? raw : "";
+  const listId = `ws-dice-${base}-${spec.field}`;
+  const diceHints =
+    spec.type === "dice"
+      ? spec.dice_sides.flatMap((s) =>
+          Array.from({ length: Math.max(1, spec.max ?? 1) }, (_, i) => `${i + (spec.min ?? 1)}d${s}`),
+        )
+      : [];
+  const placeholder =
+    spec.type === "dice" ? "例：1d6" : spec.type === "tags" ? "用逗號分隔，例：fire, burst" : spec.default != null ? String(spec.default) : "";
+  return (
+    <div className="ws-field">
+      <Label spec={spec} />
+      <input
+        type="text"
+        value={text}
+        placeholder={placeholder}
+        list={diceHints.length > 0 ? listId : undefined}
+        onChange={(e) => {
+          const v = e.target.value;
+          if (spec.type === "tags") {
+            const tags = v
+              .split(/[,，\s]+/)
+              .map((t) => t.trim())
+              .filter((t) => t !== "");
+            onChange(setPath(container, path, tags.length === 0 ? undefined : tags));
+          } else {
+            onChange(setPath(container, path, v === "" ? undefined : v));
+          }
+        }}
+      />
+      {diceHints.length > 0 && (
+        <datalist id={listId}>
+          {diceHints.map((h) => (
+            <option key={h} value={h} />
+          ))}
+        </datalist>
+      )}
+    </div>
+  );
+}
+
+function BoolField({ spec, container, base, onChange }: FieldProps) {
+  const path = joinPath(base, spec.field);
+  const on = getPath(container, path) === true;
+  return (
+    <div className="ws-field">
+      <label className="ws-inline">
+        <input type="checkbox" checked={on} onChange={(e) => onChange(setPath(container, path, e.target.checked ? true : undefined))} />
+        <span className="ws-label-name">{spec.name_zh}</span>
+      </label>
+      {spec.description_zh !== "" && <div className="muted small">{spec.description_zh}</div>}
+    </div>
+  );
+}
+
+// ---------- 物件、效果、修正規則 ----------
+
+function ObjectField({ spec, container, base, onChange }: FieldProps) {
+  const path = joinPath(base, spec.field);
+  const value = getPath(container, path);
+  const used = isJson(value);
+  return (
+    <fieldset className="ws-group">
+      <legend>
+        {spec.name_zh}
+        {spec.required && <span className="ws-required">*</span>}
+      </legend>
+      {spec.description_zh !== "" && <div className="muted small">{spec.description_zh}</div>}
+      {!spec.required && (
+        <label className="ws-inline">
+          <input
+            type="checkbox"
+            checked={used}
+            onChange={(e) => onChange(setPath(container, path, e.target.checked ? {} : undefined))}
+          />
+          使用
+        </label>
+      )}
+      {used && <FieldList fields={spec.fields} container={container} base={path} onChange={onChange} />}
+    </fieldset>
+  );
+}
+
+function EffectsField({ spec, container, base, onChange }: FieldProps) {
+  const path = joinPath(base, spec.field);
+  const list = listOf(container, path);
+  if (spec.choices.length === 0) {
+    return (
+      <div className="ws-field">
+        <Label spec={spec} />
+        <div className="ws-note">
+          這一層的巢狀效果在這裡不展開，請用頁面最下方的「進階：直接編輯 YAML」。
+          {list.length > 0 && <code className="ws-json">{JSON.stringify(list)}</code>}
+        </div>
+      </div>
+    );
+  }
+  const full = spec.max_count != null && list.length >= spec.max_count;
+  const count = `${list.length}${spec.max_count != null ? ` / ${spec.max_count}` : ""}`;
+  return (
+    <div className="ws-field">
+      <Label spec={spec} />
+      <div className="muted small">
+        已選 {count} 個
+        {spec.min_count != null && spec.min_count > 0 ? `（至少 ${spec.min_count} 個）` : ""}
+      </div>
+      {list.map((item, index) => {
+        const choice = spec.choices.find((c) => c.value === item["type"]);
+        return (
+          <div className="ws-item" key={`${index}:${String(item["type"])}`}>
+            <div className="ws-item-head">
+              <strong>
+                {index + 1}. {choice?.name_zh ?? String(item["type"])}
+              </strong>
+              <span className="ws-item-tools">
+                <button type="button" disabled={index === 0} onClick={() => onChange(moveItem(container, spec, index, -1, base))} aria-label="上移">
+                  ↑
+                </button>
+                <button type="button" disabled={index === list.length - 1} onClick={() => onChange(moveItem(container, spec, index, 1, base))} aria-label="下移">
+                  ↓
+                </button>
+                <button type="button" onClick={() => onChange(removeItem(container, spec, index, base))}>
+                  移除
+                </button>
+              </span>
+            </div>
+            {choice !== undefined && choice.description_zh !== "" && <div className="muted small">{choice.description_zh}</div>}
+            {choice === undefined ? (
+              <div className="error-text small">這個效果不在目前的選項內，請移除或用進階 YAML 修改。</div>
+            ) : (
+              <FieldList
+                fields={choice.params}
+                container={item}
+                base=""
+                onChange={(next) => onChange(replaceItem(container, spec, index, next, base))}
+              />
+            )}
+          </div>
+        );
+      })}
+      <div className="ws-add">{full ? "已達效果數量上限。" : "新增一個效果："}</div>
+      {!full && (
+        <div className="ws-cards">
+          {spec.choices.map((c) => (
+            <button type="button" key={String(c.value)} className="ws-card" onClick={() => onChange(addEffect(container, spec, c, base))}>
+              <span className="ws-card-title">{c.name_zh}</span>
+              {badges(spec, c).map((b) => (
+                <span key={b} className="ws-badge">
+                  {b}
+                </span>
+              ))}
+              {c.description_zh !== "" && <span className="ws-card-desc">{c.description_zh}</span>}
+            </button>
+          ))}
+        </div>
+      )}
+    </div>
+  );
+}
+
+function ModifiersField({ spec, container, base, onChange }: FieldProps) {
+  const path = joinPath(base, spec.field);
+  const list = listOf(container, path);
+  const full = spec.max_count != null && list.length >= spec.max_count;
+  return (
+    <div className="ws-field">
+      <Label spec={spec} />
+      {list.map((item, index) => (
+        <div className="ws-item" key={index}>
+          <div className="ws-item-head">
+            <strong>修正規則 {index + 1}</strong>
+            <button type="button" onClick={() => onChange(removeItem(container, spec, index, base))}>
+              移除
+            </button>
+          </div>
+          <FieldList
+            fields={spec.fields}
+            container={item}
+            base=""
+            onChange={(next) => onChange(replaceItem(container, spec, index, next, base))}
+          />
+        </div>
+      ))}
+      <button type="button" disabled={full} onClick={() => onChange(addModifier(container, spec, base))}>
+        新增一條修正規則
+      </button>
+    </div>
+  );
+}

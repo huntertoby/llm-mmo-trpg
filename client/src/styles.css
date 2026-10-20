@@ -718,3 +718,398 @@ button.selected {
   gap: 4px;
   margin-top: 6px;
 }
+
+/* 開始畫面的技能工坊入口、戰鬥中的離開按鈕 */
+.start-workshop {
+  margin-top: 16px;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.battle-leave {
+  align-self: flex-start;
+}
+
+/* 技能工坊（Phase 3F-2） */
+.workshop-screen {
+  max-width: 1280px;
+  margin: 0 auto;
+  padding: 12px 16px 48px;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.ws-header {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  gap: 12px;
+}
+
+.ws-header h1 {
+  margin: 0;
+  font-size: 20px;
+}
+
+.ws-header-tools {
+  margin-left: auto;
+  display: flex;
+  gap: 8px;
+}
+
+.ws-layout {
+  display: grid;
+  grid-template-columns: minmax(0, 3fr) minmax(0, 2fr);
+  gap: 12px;
+  align-items: start;
+}
+
+@media (max-width: 900px) {
+  .ws-layout {
+    grid-template-columns: minmax(0, 1fr);
+  }
+}
+
+.ws-col {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  min-width: 0;
+}
+
+.ws-panel {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.ws-steps {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px;
+}
+
+.ws-step {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.ws-step.current {
+  border-color: var(--accent);
+  color: var(--accent);
+}
+
+.ws-step.done .ws-step-no {
+  color: #6fd08c;
+}
+
+.ws-step-no {
+  font-weight: 700;
+  min-width: 1em;
+  text-align: center;
+}
+
+.ws-step-body h3 {
+  margin: 4px 0;
+}
+
+.ws-field {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  margin-top: 10px;
+}
+
+.ws-label-name {
+  font-weight: 700;
+}
+
+.ws-required {
+  color: var(--danger);
+  margin-left: 2px;
+}
+
+.ws-cards {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(150px, 1fr));
+  gap: 6px;
+}
+
+.ws-card {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 2px;
+  text-align: left;
+  padding: 6px 8px;
+}
+
+.ws-card.selected,
+.ws-chip.selected {
+  border-color: var(--accent);
+  background: #3a3a2a;
+}
+
+.ws-card-title {
+  font-weight: 700;
+}
+
+.ws-card-desc {
+  font-size: 12px;
+  color: var(--muted);
+}
+
+.ws-badge {
+  font-size: 11px;
+  color: #101016;
+  background: #a9b3d9;
+  border-radius: 3px;
+  padding: 0 4px;
+}
+
+.ws-chips {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px;
+}
+
+.ws-chip {
+  cursor: pointer;
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 4px 10px;
+  border: 1px solid #44445a;
+  border-radius: 4px;
+  background: #2a2a38;
+}
+
+.ws-chip input[type="checkbox"] {
+  margin: 0;
+}
+
+.ws-nested {
+  margin-left: 12px;
+  padding-left: 10px;
+  border-left: 2px solid var(--panel-border);
+}
+
+.ws-group {
+  border: 1px solid var(--panel-border);
+  border-radius: 4px;
+  margin: 10px 0 0;
+  padding: 4px 10px 8px;
+}
+
+.ws-item {
+  border: 1px solid var(--panel-border);
+  border-radius: 4px;
+  padding: 6px 10px 10px;
+  background: #20202c;
+}
+
+.ws-item-head,
+.ws-nav,
+.ws-row,
+.ws-budget-head {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px;
+}
+
+.ws-item-head,
+.ws-budget-head {
+  justify-content: space-between;
+}
+
+.ws-item-tools {
+  display: flex;
+  gap: 4px;
+}
+
+.ws-nav {
+  justify-content: space-between;
+  margin-top: 8px;
+}
+
+.ws-inline {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+}
+
+.ws-link {
+  align-self: flex-start;
+  background: none;
+  border: none;
+  color: var(--muted);
+  text-decoration: underline;
+  padding: 0;
+}
+
+.ws-notes,
+.ws-problems ul,
+.ws-rarity ul {
+  margin: 4px 0;
+  padding-left: 20px;
+}
+
+.ws-notes {
+  color: var(--muted);
+  font-size: 12px;
+}
+
+.ws-problems {
+  background: #3a2020;
+  border: 1px solid #7a3030;
+  border-radius: 4px;
+  padding: 6px 10px;
+}
+
+.ws-rule {
+  font-family: monospace;
+  font-size: 11px;
+  color: var(--muted);
+}
+
+.ws-note,
+.ws-warning {
+  background: #2e2a1a;
+  border: 1px solid #6a5a20;
+  border-radius: 4px;
+  padding: 6px 10px;
+  font-size: 13px;
+}
+
+.ws-warning {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.ws-json {
+  display: block;
+  word-break: break-all;
+  margin-top: 4px;
+}
+
+.ws-headline {
+  font-weight: 700;
+  padding: 4px 8px;
+  border-radius: 4px;
+  background: #2a2a38;
+}
+
+.ws-headline.ok {
+  background: #1c3a26;
+  color: #8fe0a8;
+}
+
+.ws-headline.bad {
+  background: #3a2020;
+  color: #ff9a9a;
+}
+
+.ws-verdict {
+  font-weight: 700;
+  font-size: 16px;
+}
+
+.ws-verdict.ok {
+  color: #6fd08c;
+}
+
+.ws-verdict.weak {
+  color: #e8c24a;
+}
+
+.ws-verdict.over {
+  color: #ff6a6a;
+}
+
+.ws-bar {
+  position: relative;
+  height: 14px;
+  background: #2a2a38;
+  border-radius: 7px;
+  overflow: hidden;
+}
+
+.ws-bar-fill {
+  height: 100%;
+}
+
+.ws-bar-fill.ok {
+  background: #3fae62;
+}
+
+.ws-bar-fill.weak {
+  background: #c9a530;
+}
+
+.ws-bar-fill.over {
+  background: #d24a4a;
+}
+
+.ws-bar-mark {
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  width: 2px;
+  background: #e8e6e3;
+  opacity: 0.8;
+}
+
+.ws-table {
+  border-collapse: collapse;
+  width: 100%;
+  font-size: 12px;
+}
+
+.ws-table th,
+.ws-table td {
+  border-bottom: 1px solid var(--panel-border);
+  padding: 2px 6px;
+  text-align: left;
+}
+
+.ws-tryout-form {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.ws-tryout-form label {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.ws-yaml {
+  width: 100%;
+  font-family: ui-monospace, Consolas, monospace;
+  font-size: 12px;
+  color: var(--text);
+  background: #14141c;
+  border: 1px solid #44445a;
+  border-radius: 4px;
+  padding: 6px;
+}
+
+.ws-col-side {
+  position: sticky;
+  top: 8px;
+}
+
+@media (max-width: 900px) {
+  .ws-col-side {
+    position: static;
+  }
+}

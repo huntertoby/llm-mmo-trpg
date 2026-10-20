@@ -6,6 +6,8 @@ import { ErrorBanner } from "../ui/ErrorBanner";
 
 interface Props {
   onStart(response: BattleResponse): void;
+  /** 進入技能工坊（Phase 3F）。 */
+  onWorkshop(): void;
 }
 
 /** 隨機種子（只用於開新戰鬥；引擎的亂數由種子決定，這裡不影響重播）。 */
@@ -21,7 +23,7 @@ export function parseSeed(text: string): number | null {
   return Number.isSafeInteger(n) ? n : null;
 }
 
-export function StartScreen({ onStart }: Props) {
+export function StartScreen({ onStart, onWorkshop }: Props) {
   const [maps, setMaps] = useState<MapSummary[]>([]);
   const [builds, setBuilds] = useState<BuildSummary[]>([]);
   const [mapId, setMapId] = useState("");
@@ -111,6 +113,13 @@ export function StartScreen({ onStart }: Props) {
         </button>
         <div className="muted small">隊友由 AI 控制（標準隊友補到 3 人）；你操控主角。</div>
       </form>
+      <div className="panel start-workshop">
+        <div className="section-title">技能工坊</div>
+        <div className="muted small">自己一步步組技能、看強度檢查，再裝到主角身上試玩，也能匯出成 YAML。</div>
+        <button type="button" onClick={onWorkshop}>
+          進入技能工坊
+        </button>
+      </div>
     </div>
   );
 }

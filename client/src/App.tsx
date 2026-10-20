@@ -5,10 +5,13 @@ import type { BattleResponse } from "./api/types";
 import { setGlossary } from "./battle/glossary";
 import { BattleScreen } from "./screens/BattleScreen";
 import { StartScreen } from "./screens/StartScreen";
+import { WorkshopScreen } from "./screens/WorkshopScreen";
 import { ErrorBanner } from "./ui/ErrorBanner";
 
 export function App() {
   const [battle, setBattle] = useState<BattleResponse | null>(null);
+  // 戰鬥結束或離開後回到哪裡：從技能工坊進來的戰鬥回到工坊（草稿存在瀏覽器，不會遺失）。
+  const [screen, setScreen] = useState<"start" | "workshop">("start");
   const [ready, setReady] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
@@ -37,6 +40,18 @@ export function App() {
       </div>
     );
   }
-  if (battle === null) return <StartScreen onStart={setBattle} />;
-  return <BattleScreen key={battle.battle_id} initial={battle} onExit={() => setBattle(null)} />;
+  if (battle === null) {
+    if (screen === "workshop") {
+      return <WorkshopScreen onHome={() => setScreen("start")} onStartBattle={setBattle} />;
+    }
+    return <StartScreen onStart={setBattle} onWorkshop={() => setScreen("workshop")} />;
+  }
+  return (
+    <BattleScreen
+      key={battle.battle_id}
+      initial={battle}
+      onExit={() => setBattle(null)}
+      exitLabel={screen === "workshop" ? "回到技能工坊" : undefined}
+    />
+  );
 }
