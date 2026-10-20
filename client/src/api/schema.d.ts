@@ -1254,6 +1254,8 @@ export interface components {
             scaling_attrs: string[];
             /** Mastery Id */
             mastery_id: string | null;
+            /** Timing */
+            timing?: string | null;
             /**
              * Effect Ids
              * @default []

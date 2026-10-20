@@ -1059,7 +1059,7 @@ def score_action(
     if isinstance(action, UseSkill):
         skill = state.ruleset.skill_def(action.skill_id)
         score -= on_miss_cost(actor, skill, p, profile)  # 失手反噬（Phase 3D-7a）
-        score = cautious(actor, skill, score, profile)
+        score = cautious(state, actor, skill, score, profile)
     return ActionScore(action, score, p)
 
 

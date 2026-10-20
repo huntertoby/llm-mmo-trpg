@@ -92,6 +92,8 @@ class DamageEffect(EffectBase):
     apply_weather: bool = True
     min_damage: int = Field(default=1, ge=0)
     multiplier_permille: int = Field(default=1000, ge=0)
+    pierce_permille: int = Field(default=1000, ge=0)
+    """穿透後方折扣（Phase 3C-6a，僅供紀錄顯示）：已包含在 ``multiplier_permille`` 裡，不再乘。"""
     explode_max: int = Field(default=0, ge=0)
     """爆骰（Phase 3D-7b）：傷害骰擲到最大值時再加擲一次，每顆骰最多再擲這麼多次（0 為不爆骰）。"""
     preset_rolls: tuple[int, ...] | None = None

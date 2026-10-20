@@ -3219,6 +3219,17 @@
             ],
             "title": "Mastery Id"
           },
+          "timing": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Timing"
+          },
           "effect_ids": {
             "items": {
               "type": "string"

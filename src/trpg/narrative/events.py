@@ -360,7 +360,9 @@ def _stood_up(e: UnitStoodUp, v: _View) -> str:
 
 
 @_handles(MoveBlocked)
-def _move_blocked(e: MoveBlocked, v: _View) -> str:
+def _move_blocked(e: MoveBlocked, v: _View) -> str | None:
+    if e.forced:
+        return None  # 被推擊擋下：以接著的「撞上了…」為主（Phase 3C-6a）
     return f"  {v.name[e.unit_id]} 無法移動到 {xy_text(e.to_pos)}"
 
 
@@ -523,8 +525,11 @@ def _damage(e: DamageDealt, v: _View) -> str:
         mod = f"（元素修正 ×{e.element_mod_ppm / _PPM:g}）"
     if e.weather_permille != _PERMILLE:
         mod += f"（天氣 ×{e.weather_permille / _PERMILLE:g}）"
-    if e.multiplier_permille != _PERMILLE:
-        mod += f"（格擋/加成 ×{e.multiplier_permille / _PERMILLE:g}）"
+    rest = e.multiplier_permille * _PERMILLE // e.pierce_permille  # 扣掉穿透折扣後的格擋／加成
+    if rest != _PERMILLE:
+        mod += f"（格擋/加成 ×{rest / _PERMILLE:g}）"
+    if e.pierce_permille != _PERMILLE:
+        mod += f"（穿透後方 ×{e.pierce_permille / _PERMILLE:g}）"
     if e.status_ppm != _PPM:
         mod += f"（狀態 ×{e.status_ppm / _PPM:g}）"
     shield = f"（護盾吸收 {e.absorbed}）" if e.absorbed else ""

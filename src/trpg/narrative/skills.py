@@ -769,6 +769,29 @@ def cost_summary(library: ContentLibrary, skill: SkillDef, *, with_ap: bool = Tr
 # ---------------------------------------------------------------------------
 
 
+REACTION_TIMING_TEXT: dict[str, str] = {
+    "hit_by_melee": "被近戰攻擊命中時",
+    "hit_by_attack": "被攻擊命中時",
+    "ally_hit_adjacent": "相鄰的友方被攻擊命中時",
+    "enemy_leaves_adjacent": "相鄰的敵人離開時",
+    "hit_by_spell": "被法術命中時（傷害結算之前）",
+    "ally_downed": "友方倒下時",
+    "enemy_enters_adjacent": "敵人走進相鄰格時",
+    "ally_targeted": "相鄰的友方被敵人瞄準時（命中判定之前）",
+}
+"""反應技觸發事件的中文說明（Phase 3C-6a：技能卡片的「反應時機」一行）。"""
+
+
+def timing_text(library: ContentLibrary, skill: SkillDef) -> str | None:
+    """技能卡片的時機一行：反應技為「反應時機：…」、被動為「觸發時機：…」；其他技能為 ``None``。"""
+    if skill.reaction is not None:
+        event = skill.reaction.event
+        return f"反應時機：{REACTION_TIMING_TEXT.get(event, event)}"
+    if skill.trigger is not None:
+        return f"觸發時機：{library.ruleset.trigger_def(skill.trigger.event).name_zh}"
+    return None
+
+
 class SkillCard(BaseModel):
     """一張技能卡片的顯示內容（繁體中文文字，給網頁技能卡片用）。
 
@@ -812,6 +835,8 @@ class SkillCard(BaseModel):
     scaling_attrs: tuple[str, ...]
     """縮放屬性的代碼（主屬性在前；雙屬性縮放時兩個）。"""
     mastery_id: str | None
+    timing: str | None = None
+    """反應技的反應時機、被動的觸發時機一行（Phase 3C-6a）；其他技能為 ``None``。"""
     effect_ids: tuple[str, ...] = ()
     """效果原語的代碼，依技能內的順序（Phase 3D-8d：網頁用來分辨兩段選取的種類，例如一般瞬步
     ``shadowstep`` 與傳送他人 ``teleport_target`` 都是「單位 → 落點」）。"""
@@ -855,5 +880,6 @@ def skill_card(
             a.value for a in (skill.scaling_attr, skill.secondary_scaling_attr) if a is not None
         ),
         mastery_id=skill.mastery,
+        timing=timing_text(library, skill),
         effect_ids=tuple(e.type for e in skill.effects),
     )

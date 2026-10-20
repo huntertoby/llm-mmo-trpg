@@ -24,6 +24,7 @@ companions: [sim_companion_fighter, sim_companion_archer]
 # Phase 3C-2：修正技能（kind: modifier，裝在被動欄位，上限 3）——build_push 加重踏、build_fire 加灼傷之痕與餘燼循環、
 # build_tank 加雷之手（單手劍的物理普攻變成雷電，3C-5 再整理）。
 # Phase 3D-7b：build_gambler 加狂野之刃（高變異）、狂戰士之怒（以血換力）；build_striker 加過載電流（超載）；build_ranged 以遠距狙擊（依距離縮放）換下煙霧箭（主動欄位已滿）；build_tank 以困獸旋斬（依周圍敵人數縮放）換下碎骨重擊（主動欄位已滿）。
+# Phase 3C-6a：build_striker 加聚雷（依目標相鄰的敵方數縮放 enemies_adjacent_target）。
 # Phase 3D-8a：build_support 以汲命術（吸血）換下專注湧流、build_healer 以聖光爆發（聖光雙效）換下疾時之潮（兩者主動欄位已滿）；新增 build_seer
 # （偵察破咒流）：破魔（驅散）、照明彈（揭露）搭配竊取祝福、咒印，並接收被換下的專注湧流與疾時之潮（3C-6 再整理）。
 # Phase 3D-8b：build_healer 以返魂術（復活）換下不死誓約（主動欄位已滿）；新增 build_bomber（定時炸彈流）：定時炸彈符、灰燼收割
@@ -218,7 +219,7 @@ builds:
       resist: {elemental: 150}
       tags: [hero, sim]
       max_mana: 40
-      skills: [skill_static_palm, skill_thunder_finisher, skill_overcurrent, skill_ember_brand, skill_bloodwake_stride]
+      skills: [skill_static_palm, skill_thunder_finisher, skill_overcurrent, skill_ember_brand, skill_cluster_bolt, skill_bloodwake_stride]
 
   - id: build_trapper
     name_zh: 陷阱流

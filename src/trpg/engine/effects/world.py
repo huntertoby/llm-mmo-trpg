@@ -454,7 +454,9 @@ def _push_unit(ctx: Ctx, effect: PushEffect, unit_id: UnitId) -> list[EventBase]
         reason = unit_push_block(state, unit.xy, nxt, unit.id)
         if reason is not None:
             to_pos = Pos(x=max(nxt[0], 0), y=max(nxt[1], 0))
-            events.append(ctx.emit(MoveBlocked, unit_id=unit.id, to_pos=to_pos, reason=reason))
+            events.append(
+                ctx.emit(MoveBlocked, unit_id=unit.id, to_pos=to_pos, reason=reason, forced=True)
+            )
             events.append(_collide(ctx, effect, unit, nxt, reason, shortfall=distance - step))
             break
         moved = arrive(ctx, unit, nxt, "forced", source_id=effect.source_id)

@@ -320,6 +320,8 @@ class BatchReport(_Model):
     """場景物件事件的總次數（Phase 3C-5b）：``hurled`` 投擲、``toppled`` 推倒、``pierced`` 穿透。"""
     positional_events: dict[str, int] = {}
     """背刺與潛行偷襲的總次數（Phase 3D-8d）：``backstab:ally`` 等（攻擊者的陣營）。"""
+    summon_events: dict[str, int] = {}
+    """召喚物出現的總次數（Phase 3C-6a）：``ally``、``enemy``（召喚物的陣營）。"""
 
     def anomaly(self, kind: str) -> Anomaly | None:
         return next((a for a in self.anomalies if a.kind == kind), None)
@@ -562,6 +564,13 @@ def _positional_events(done: Sequence[BattleMetrics]) -> dict[str, int]:
     return dict(sorted(total.items()))
 
 
+def _summon_events(done: Sequence[BattleMetrics]) -> dict[str, int]:
+    total: Counter[str] = Counter()
+    for m in done:
+        total.update(m.summon_events)
+    return dict(sorted(total.items()))
+
+
 def build_report(
     name: str,
     outcomes: Sequence[BattleOutcome],
@@ -601,6 +610,7 @@ def build_report(
         anomalies=_anomalies(ordered),
         scene_events=_scene_events(done),
         positional_events=_positional_events(done),
+        summon_events=_summon_events(done),
     )
 
 
@@ -734,6 +744,13 @@ def format_report(report: BatchReport) -> str:
         out.append(f"場景物件（整批合計）：{counts}")
     if r.positional_events:
         out.append(f"背刺與偷襲（整批合計）：{_positional_text(r.positional_events)}")
+    if r.summon_events:
+        summoned = "、".join(
+            f"{_TEAM_LABEL[team]}召喚 {r.summon_events[team]} 次"
+            for team in ("ally", "enemy")
+            if team in r.summon_events
+        )
+        out.append(f"召喚物（整批合計）：{summoned}")
     out.append("")
     if not r.anomalies:
         out.append("異常：無")

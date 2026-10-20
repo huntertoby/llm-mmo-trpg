@@ -284,6 +284,8 @@ class MoveBlocked(EventBase):
     unit_id: UnitId
     to_pos: Pos
     reason: Literal["out_of_bounds", "occupied", "obstacle", "too_high"]
+    forced: bool = False
+    """強制位移（推擊）被擋下（Phase 3C-6a）：緊接著的 ``collided`` 事件才是紀錄的主角。"""
 
 
 type CollisionObstacle = Literal["wall", "edge", "object", "unit", "excess"]
@@ -391,7 +393,9 @@ class DamageDealt(EventBase):
     weather_permille: int = 1000
     """天氣的元素傷害倍率（‰）。"""
     multiplier_permille: int = 1000
-    """其他倍率（格擋 500）。"""
+    """其他倍率（格擋 500）；穿透後方折扣也包含在內。"""
+    pierce_permille: int = 1000
+    """穿透後方折扣（‰，已包含在 ``multiplier_permille`` 裡；Phase 3C-6a 供紀錄分開顯示）。"""
     base_amount: int | None = None
     """套用目標自身的元素修正與格擋等倍率 **之前** 的傷害（已含暴擊骰與天氣）。
 

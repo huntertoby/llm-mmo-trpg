@@ -14,9 +14,9 @@ from fractions import Fraction
 from trpg.content.environment import AiProfile
 from trpg.content.skills import SELF_DAMAGE_OF_HIT, EffectSpec, SkillDef
 from trpg.engine.preview import Preview
-from trpg.engine.state import UnitState
+from trpg.engine.state import BattleState, UnitState
 
-__all__ = ["can_hurt_caster", "cautious", "on_miss_cost"]
+__all__ = ["can_hurt_caster", "cautious", "on_miss_cost", "overloads"]
 
 _PERMILLE = 1000
 
@@ -33,10 +33,27 @@ def can_hurt_caster(skill: SkillDef) -> bool:
     return False
 
 
-def cautious(actor: UnitState, skill: SkillDef, score: Fraction, profile: AiProfile) -> Fraction:
-    """施放者 HP 太低時，降低會自傷的賭博技能的分數（正分乘 ``low_hp_permille``；負分不變）。"""
+def overloads(state: BattleState, actor: UnitState, skill: SkillDef) -> bool:
+    """這次施放會把超載層數（``content/stacks.yaml`` 的 ``overload``）累積到門檻，使施放者吃到會
+    造成傷害的反噬（Phase 3C-6a：低血量規則也套用到會超載的技能）。"""
+    for effect in skill.effects:
+        if effect.type != "add_stack" or effect.stack is None:
+            continue
+        overload = state.ruleset.stack_def(effect.stack).overload
+        if overload is None or not any(sub.type == "damage" for sub in overload.backlash):
+            continue
+        if actor.stacks.get(effect.stack, 0) + (effect.amount or 1) >= overload.threshold:
+            return True
+    return False
+
+
+def cautious(
+    state: BattleState, actor: UnitState, skill: SkillDef, score: Fraction, profile: AiProfile
+) -> Fraction:
+    """施放者 HP 太低時，降低會自傷的賭博技能（含這次會超載的技能）的分數（正分乘
+    ``low_hp_permille``；負分不變）。"""
     rules = profile.gamble
-    if not can_hurt_caster(skill) or score <= 0:
+    if not (can_hurt_caster(skill) or overloads(state, actor, skill)) or score <= 0:
         return score
     if actor.hp * _PERMILLE >= actor.max_hp * rules.hp_floor_permille:
         return score

@@ -146,6 +146,7 @@ def _damage(ctx: Ctx, effect: EffectBase) -> list[EventBase]:
             pos=unit.pos,
             weather_permille=weather,
             multiplier_permille=effect.multiplier_permille,
+            pierce_permille=effect.pierce_permille,
             base_amount=base_amount,
             status_ppm=status_ppm,
             absorbed=absorbed,

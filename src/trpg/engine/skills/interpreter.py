@@ -946,17 +946,19 @@ class _Cast:
         return False
 
     def announce_pierce(self) -> None:
-        """穿透的射線穿過了物件：發出 ``shot_pierced``（Phase 3C-5b）。"""
+        """穿透的射線穿過了物件：發出 ``shot_pierced``（Phase 3C-5b）。``behind`` 只列「命中」的
+        後方單位（失手時沒有人受傷，紀錄不該說「後方只受 70%」；Phase 3C-6a）。"""
         trace = self.trace
         if not trace.objects:
             return
+        hit_behind = tuple(uid for uid in trace.behind if (r := self.hits.get(uid)) and r.hit)
         self.ctx.emit(
             ShotPierced,
             unit_id=self.caster.id,
             skill_id=self.skill.id,
             objects=trace.objects,
             object_tiles=tuple(Pos(x=x, y=y) for x, y in trace.object_tiles),
-            behind=trace.behind,
+            behind=hit_behind,
             behind_permille=self.ctx.core.pierce_behind_permille,
             route=tuple(Pos(x=x, y=y) for x, y in trace.route),
         )
@@ -1164,12 +1166,13 @@ class _Cast:
     def steal_buff(self, effect: ResolvedEffect, spec: EffectSpec) -> list[EffectBase]:
         """``steal_buff``：每個有增益的對象先失去一個增益（原因 ``stolen``），再把同一個狀態以相同
         的剩餘回合與數值施加到施放者身上。沒有任何對象有增益時發出 ``effect_fizzled``。"""
+        removals: list[EffectBase] = []
         batch: list[EffectBase] = []
         for unit in self.targets(effect.affects, spec.condition):
             buff = pick_stolen_buff(self.ctx, unit)
             if buff is None:
                 continue
-            batch.append(
+            removals.append(
                 RemoveStatusEffect(
                     source_id=self.caster.id,
                     target_id=unit.id,
@@ -1188,6 +1191,7 @@ class _Cast:
             )
         if not batch:
             self.ctx.emit(EffectFizzled, effect_kind=spec.type, pos=None, reason="no_buff")
+        execute(self.ctx, removals)  # 先「被奪走」再「獲得」（效果排序會把施加排在移除之前；3C-6a）
         return batch
 
     # -- 改寫規則型（Phase 3C-4a）------------------------------------------
@@ -1417,6 +1421,7 @@ class _Cast:
                     * bonus
                     * self.behind_permille(unit)
                     // (PERMILLE * PERMILLE * PERMILLE),
+                    pierce_permille=self.behind_permille(unit),
                 )
             )
         batch += [

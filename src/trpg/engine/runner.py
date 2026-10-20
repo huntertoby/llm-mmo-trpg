@@ -37,8 +37,14 @@ __all__ = [
     "run_battle",
 ]
 
-LOG_FORMAT = "trpg-battle-log/32"
-"""``/32``（Phase 3D-8d）：朝向與背刺——單位的 ``facing``（開場面向敵方起始位置；主動移動、攻擊與
+LOG_FORMAT = "trpg-battle-log/33"
+"""``/33``（Phase 3C-6a）：被近戰攻擊後轉身——近戰攻擊（普攻與近戰武器技，不論命中與否）結算完，
+目標轉向攻擊者（遠程不轉、強制位移不轉；背刺仍以擲骰當下的朝向為準），AI 的走位與背刺次數因此
+改變；``damage_dealt.pierce_permille``（穿透折扣與格擋分開記錄）、``move_blocked.forced``（推擊
+被擋下，紀錄以接著的 ``collided`` 為主）、``shot_pierced.behind`` 只列命中的後方單位；
+``steal_buff`` 的事件順序改為先 ``status_removed`` 再 ``status_applied``。舊紀錄的 AI 選擇與事件
+順序不同，不能由新版程式重播。
+``/32``（Phase 3D-8d）：朝向與背刺——單位的 ``facing``（開場面向敵方起始位置；主動移動、攻擊與
 對單位施放技能後更新）、核心規則 ``backstab_hit_bonus``／``backstab_crit_range_bonus``／
 ``ambush_hit_bonus``、``attack_rolled`` 的 ``backstab``／``ambush``、``status_removed`` 的新原因
 ``ambushed``；條件 ``from_behind``、``self_concealed``；原語 ``shadowstep``

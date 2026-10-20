@@ -141,3 +141,33 @@ def test_a_complete_copy_action_works_in_one_request(client: TestClient) -> None
     )
     done = _post(client, battle["battle_id"], "actions", {**bare, "copy_cast": pick})
     assert any(e["type"] == "skill_copied" for step in done["steps"] for e in step["events"])
+
+
+def test_the_preview_during_the_pause_matches_the_real_cast(client: TestClient) -> None:
+    """Phase 3C-6a：複製暫停中 ``/preview`` 收被複製技能的選取，預覽整個施放；預覽不改變暫停狀態，
+    且與之後 ``/decision`` 的實際傷害範圍一致。"""
+    battle = _to_copyable_turn(client)
+    paused = _cast_copy(client, battle)
+    pick = paused["copy_options"][0]
+    preview = _post(client, battle["battle_id"], "preview", pick)
+    assert preview["action"]["skill_id"] == COPY and preview["action"]["copy_cast"] == pick
+    again = client.get(f"/api/battles/{battle['battle_id']}").json()
+    assert again["awaiting"] == "decision" and again["copy_options"] == paused["copy_options"]
+    done = _post(client, battle["battle_id"], "decision", {"accept": True, "copy_cast": pick})
+    hit = [
+        e
+        for step in done["steps"]
+        for e in step["events"]
+        if e["type"] == "damage_dealt" and e["source_id"] == battle["hero_id"]
+    ]
+    if hit and preview["damage"] is not None:
+        low, high = preview["damage"]["min"], preview["damage"]["max"]
+        assert low <= sum(e["amount"] for e in hit) <= high * max(1, len(hit))
+
+
+def test_a_non_skill_preview_during_the_pause_is_rejected(client: TestClient) -> None:
+    battle = _to_copyable_turn(client)
+    paused = _cast_copy(client, battle)
+    assert paused["awaiting"] == "decision"
+    reply = client.post(f"/api/battles/{battle['battle_id']}/preview", json=_end_turn(battle))
+    assert reply.status_code == 400

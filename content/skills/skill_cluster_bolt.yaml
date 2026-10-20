@@ -1,0 +1,27 @@
+# 聚雷（Phase 3C-6a 示範，依目標相鄰的敵方數縮放；docs/design/06-技能.md 6.18 G，數值為初值，未經模擬）：
+# 目標身邊每有 1 名（對你而言的）敵人，這道雷的傷害 +15%（最多 +45%）——專打扎堆的敵人。
+id: skill_cluster_bolt
+schema_version: 1
+name_zh: 聚雷
+tier: 1
+rank: 1
+rarity: common
+kind: active
+skeleton: strike
+category: spell
+weapon_req: any
+ap_cost: 2
+scaling_attr: int
+shape: {type: single, range: 4}
+effects:
+  - type: damage
+    dice: 3d6
+    element: lightning
+    scaling: {by: enemies_adjacent_target, per_step_permille: 150, cap_permille: 450}
+condition: null
+cost: {mana: 5, cooldown: 2}
+tags: [lightning, spell]
+narrative:
+  concept: 敵人擠得越緊，電流越愛在他們之間來回竄跳
+  cast_flavor: 你朝人堆中央丟出一團電光，周圍的人都被劈啪作響的電弧纏住
+provenance: {origin: builtin, owner_id: null, created_by: null, parents: [], bound: true, tradeable: false}

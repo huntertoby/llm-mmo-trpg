@@ -24,7 +24,7 @@ from dataclasses import dataclass
 
 from trpg.api.schemas import Awaiting, CreateBattleRequest
 from trpg.content.library import ContentLibrary
-from trpg.engine.actions import Action, Decision, Step, UseSkill
+from trpg.engine.actions import ACTION_ADAPTER, Action, Decision, Step, UseSkill
 from trpg.engine.ai.orders import OrderRecord, OrderSet, validate_order
 from trpg.engine.battle import begin_battle, has_only_end_turn, resolve, resume
 from trpg.engine.events import EventBase
@@ -38,7 +38,7 @@ from trpg.engine.runner import (
     advance,
 )
 from trpg.engine.setup import BattleSetup, BattleSetupError, build_setup
-from trpg.engine.state import BattleState
+from trpg.engine.state import BattleState, PendingResolution, state_from_json
 from trpg.shared.errors import IllegalActionError, TrpgError
 from trpg.shared.types import Team, UnitId
 from trpg.sim.commanders import build_commanded_ai
@@ -208,9 +208,23 @@ class BattleSession:
 
     def preview(self, action: Action) -> Preview:
         """預覽主角的動作（不改變工作階段；引擎的 ``preview`` 已濾掉對方的隱藏陷阱）。"""
+        pending = self.state.pending
+        if self.awaiting == "decision" and pending is not None and pending.kind == "copy_skill":
+            return self._preview_copy(pending, action)
         self._require("action")
         self._require_hero(action)
         return preview(self.state, action)
+
+    def _preview_copy(self, pending: PendingResolution, pick: Action) -> Preview:
+        """``copy_skill`` 暫停中（Phase 3C-6a）：``pick`` 是被複製技能的選取（``copy_options``
+        之一）；預覽「暫停前的狀態帶著這個選取重新結算原本的施放」，與 ``decide`` 的結果一致。"""
+        self._require_hero(pick)
+        if not isinstance(pick, UseSkill):
+            raise IllegalActionError("複製技能的預覽必須是被複製技能的選取（use_skill）")
+        original = ACTION_ADAPTER.validate_json(pending.action_json)
+        assert isinstance(original, UseSkill)
+        base = state_from_json(pending.base_state_json)
+        return preview(base, original.model_copy(update={"copy_cast": pick}))
 
     def set_orders(self, orders: OrderSet) -> OrderRecord:
         """設定我方隊友的戰術指令（空集合 ＝ 取消）。無效時拋出 ``InvalidRequestError``。"""

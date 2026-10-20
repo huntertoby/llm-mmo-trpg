@@ -185,6 +185,8 @@ class BattleMetrics(_Model):
     positional_events: dict[str, int] = {}
     """背刺與潛行偷襲的命中判定次數（Phase 3D-8d）：``backstab:ally``、``backstab:enemy``、
     ``ambush:ally``、``ambush:enemy``（攻擊者的陣營）；沒有發生的不列出。"""
+    summon_events: dict[str, int] = {}
+    """召喚物出現的次數（Phase 3C-6a）：``ally``、``enemy``（召喚物的陣營）；沒有發生的不列出。"""
 
     def team_damage(self, team: Team, *, direct: bool | None = None) -> int:
         """陣營造成的傷害；``direct`` 為 ``None`` 時直接＋間接。"""
@@ -353,6 +355,7 @@ def metrics_from_events(  # noqa: C901, PLR0912, PLR0915 - 單一事件迴圈，
     trigger_limit = 0
     scene: dict[str, int] = {}
     positional: dict[str, int] = {}
+    summons: dict[str, int] = {}
     boss_round_one_down = False
     one_shots = 0
     boss_burst_hits: list[str] = []
@@ -389,6 +392,8 @@ def metrics_from_events(  # noqa: C901, PLR0912, PLR0915 - 單一事件迴圈，
                 acc[unit_id].alive_rounds += 1
         elif isinstance(event, UnitSpawned | UnitSummoned):
             present.add(event.unit_id)
+            if isinstance(event, UnitSummoned):
+                summons[event.team.value] = summons.get(event.team.value, 0) + 1
         elif isinstance(event, UnitEscaped | SummonExpired):
             present.discard(event.unit_id)
         elif isinstance(event, TurnStarted):
@@ -533,6 +538,7 @@ def metrics_from_events(  # noqa: C901, PLR0912, PLR0915 - 單一事件迴圈，
         trigger_limit_count=trigger_limit,
         scene_events=dict(sorted(scene.items())),
         positional_events=dict(sorted(positional.items())),
+        summon_events=dict(sorted(summons.items())),
     )
 
 

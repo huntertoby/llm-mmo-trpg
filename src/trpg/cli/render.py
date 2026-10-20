@@ -47,6 +47,8 @@ __all__ = [
 TRAP_GLYPH = "^"
 WELL_GLYPH = "$"
 ZONE_GLYPH = "!"
+REVEALED_TRAP_GLYPH = "x"
+"""被揭露的敵方陷阱（Phase 3C-6a；3D-8a 的 ``reveal``）：與我方陷阱 ``^`` 區分。"""
 """持續區域（Phase 3D-5）涵蓋的空格的顯示字元（單位、物件、陷阱、源泉優先）。"""
 """源泉格（Phase 3C-4a）的顯示字元。"""
 """網格上我方陷阱的字元（只顯示放置者陣營看得到的陷阱）。"""
@@ -154,7 +156,9 @@ def render_battle_grid(state: BattleState) -> str:
     markers = unit_markers(state)
     occupancy = state.occupancy()
     surf_glyph = _surface_glyphs(state.ruleset)
-    my_traps = {t.xy for t in visible_traps(state, Team.ALLY)}  # 只顯示我方（玩家陣營）的陷阱
+    seen_traps = visible_traps(state, Team.ALLY)  # 我方的，加上被揭露的敵方陷阱
+    my_traps = {t.xy for t in seen_traps if t.team is Team.ALLY}
+    revealed_traps = {t.xy for t in seen_traps if t.team is not Team.ALLY}
     zoned = {xy for zone in state.zones for xy in zone_cells(state, zone)}  # 持續區域（3D-5）
     lines = [_header(state.width)]
     for y in range(state.height):
@@ -169,6 +173,8 @@ def render_battle_grid(state: BattleState) -> str:
                 mark = state.object_def(obj).glyph
             elif (x, y) in my_traps:
                 mark = TRAP_GLYPH
+            elif (x, y) in revealed_traps:
+                mark = REVEALED_TRAP_GLYPH
             elif (x, y) in state.source_wells:
                 mark = WELL_GLYPH
             elif (x, y) in zoned:
@@ -197,8 +203,11 @@ def render_legend(state: BattleState) -> str:
     ]
     if any(u.is_summon and u.alive for u in state.units.values()):
         parts.append("1–9 召喚物（單位表有召喚者與到期輪）")
-    if visible_traps(state, Team.ALLY):
+    seen = visible_traps(state, Team.ALLY)
+    if any(t.team is Team.ALLY for t in seen):
         parts.append(f"{TRAP_GLYPH} 我方陷阱")
+    if any(t.team is not Team.ALLY for t in seen):
+        parts.append(f"{REVEALED_TRAP_GLYPH} 被揭露的敵方陷阱")
     if state.source_wells:
         parts.append(f"{WELL_GLYPH} 源泉")
     if state.zones:
@@ -341,7 +350,10 @@ def render_telegraph(state: BattleState, forecast: Telegraph) -> str:
         elif c.kind == "unit_downed" and c.unit_id is not None:
             lines.append(f"{name.get(c.unit_id, c.unit_id)} 將會倒下")
     lines += [change_text(state, c) for c in forecast.changes if c.kind in zone_kinds]
-    lines += [bomb_text(state, b) for b in forecast.bombs]
+    announced = {c.unit_id for c in forecast.changes if c.kind == "bomb_exploded"}
+    lines += [  # 下一次就爆炸的炸彈已有上面「爆炸」那一行（3C-6a），不重複
+        bomb_text(state, b) for b in forecast.bombs if not (b.explodes and b.unit_id in announced)
+    ]
     for oid, rounds in forecast.burning:
         lines.append(f"{object_name(state, oid)}還能撐 {rounds} 次環境回合")
     for event in forecast.upcoming:
