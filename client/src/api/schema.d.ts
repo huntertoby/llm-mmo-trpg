@@ -773,6 +773,27 @@ export interface components {
             text: string;
         };
         /**
+         * ChargeOut
+         * @description 等待中的延遲段（Phase 3F-4b）：施放者、技能、釋放時機與以施放者目前位置推算的預計範圍。
+         */
+        ChargeOut: {
+            /** Unit Id */
+            unit_id: string;
+            /** Skill Id */
+            skill_id: string;
+            /** Name Zh */
+            name_zh: string;
+            /** Release */
+            release: string;
+            /** Remaining */
+            remaining: number;
+            pos: components["schemas"]["Pos"];
+            /** Tiles */
+            tiles: components["schemas"]["Pos"][];
+            /** Text */
+            text: string;
+        };
+        /**
          * Choice
          * @description 一個可選值。``params``：選了它之後要填的欄位（``field`` 相對於被選的那個物件，例如形狀
          *     ``single`` 的 ``range`` 就是 ``shape.range``）；``info``：給畫面顯示的補充資料（例：骨架的
@@ -2057,6 +2078,15 @@ export interface components {
             amount: number | null;
             /** Blast Radius */
             blast_radius?: number | null;
+            /** Skill Id */
+            skill_id?: string | null;
+            /** Release */
+            release?: string | null;
+            /**
+             * Charge Tiles
+             * @default []
+             */
+            charge_tiles: components["schemas"]["Pos"][];
         };
         Step: components["schemas"]["Move"] | components["schemas"]["Attack"] | components["schemas"]["UseSkill-Output"] | components["schemas"]["Defend"] | components["schemas"]["Shove"] | components["schemas"]["Trip"] | components["schemas"]["Interact"] | components["schemas"]["EndStance"] | components["schemas"]["SetReactionMode"] | components["schemas"]["EndTurn"] | components["schemas"]["Decision"];
         /** @enum {string} */
@@ -2197,6 +2227,11 @@ export interface components {
              * @default []
              */
             bombs: components["schemas"]["BombOut"][];
+            /**
+             * Charges
+             * @default []
+             */
+            charges: components["schemas"]["ChargeOut"][];
         };
         /** TileView */
         TileView: {

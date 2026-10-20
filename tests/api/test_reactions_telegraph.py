@@ -254,7 +254,14 @@ _KIND = {
 
 def test_telegraph_burning_and_text_and_no_leaks(client: TestClient) -> None:
     battle = _create(client)
-    assert set(battle["telegraph"]) == {"round", "changes", "burning", "upcoming", "bombs"}
+    assert set(battle["telegraph"]) == {
+        "round",
+        "changes",
+        "burning",
+        "upcoming",
+        "bombs",
+        "charges",
+    }
     text = json.dumps(battle["telegraph"], ensure_ascii=False)
     assert "rng_state" not in text and "seed" not in text
 

@@ -41,6 +41,7 @@ __all__ = [
     "BombOut",
     "BombPreviewOut",
     "BuildSummary",
+    "ChargeOut",
     "CoverOut",
     "CreateBattleRequest",
     "DamageOut",
@@ -207,6 +208,21 @@ class BombOut(_ApiModel):
     text: str
 
 
+class ChargeOut(_ApiModel):
+    """等待中的延遲段（Phase 3F-4b）：施放者、技能、釋放時機與以施放者目前位置推算的預計範圍。"""
+
+    unit_id: UnitId
+    skill_id: str
+    name_zh: str
+    release: str
+    """``next_turn``（施放者下回合開始時釋放）或 ``attacked``（下回合開始前被敵人攻擊就釋放）。"""
+    remaining: int
+    """還要幾回合（1 ＝ 施放者下回合開始）。"""
+    pos: Pos
+    tiles: tuple[Pos, ...]
+    text: str
+
+
 class UpcomingEventOut(_ApiModel):
     round: int
     kind: str
@@ -225,6 +241,8 @@ class TelegraphOut(_ApiModel):
     """再下一輪結束時的地圖事件（提前一輪預告）。"""
     bombs: tuple[BombOut, ...] = ()
     """目前帶著定時炸彈的單位與倒數（Phase 3D-8b）。"""
+    charges: tuple[ChargeOut, ...] = ()
+    """等待中的延遲段（Phase 3F-4b；在施放者的回合開始時結算，不在環境回合）。"""
 
 
 class InteractOptionOut(_ApiModel):

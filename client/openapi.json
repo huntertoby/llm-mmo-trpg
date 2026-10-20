@@ -2020,6 +2020,58 @@
         ],
         "title": "BurningOut"
       },
+      "ChargeOut": {
+        "properties": {
+          "unit_id": {
+            "type": "string",
+            "title": "Unit Id"
+          },
+          "skill_id": {
+            "type": "string",
+            "title": "Skill Id"
+          },
+          "name_zh": {
+            "type": "string",
+            "title": "Name Zh"
+          },
+          "release": {
+            "type": "string",
+            "title": "Release"
+          },
+          "remaining": {
+            "type": "integer",
+            "title": "Remaining"
+          },
+          "pos": {
+            "$ref": "#/components/schemas/Pos"
+          },
+          "tiles": {
+            "items": {
+              "$ref": "#/components/schemas/Pos"
+            },
+            "type": "array",
+            "title": "Tiles"
+          },
+          "text": {
+            "type": "string",
+            "title": "Text"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "unit_id",
+          "skill_id",
+          "name_zh",
+          "release",
+          "remaining",
+          "pos",
+          "tiles",
+          "text"
+        ],
+        "title": "ChargeOut",
+        "description": "等待中的延遲段（Phase 3F-4b）：施放者、技能、釋放時機與以施放者目前位置推算的預計範圍。"
+      },
       "Choice": {
         "properties": {
           "value": {
@@ -5239,6 +5291,36 @@
               }
             ],
             "title": "Blast Radius"
+          },
+          "skill_id": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Skill Id"
+          },
+          "release": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Release"
+          },
+          "charge_tiles": {
+            "items": {
+              "$ref": "#/components/schemas/Pos"
+            },
+            "type": "array",
+            "title": "Charge Tiles",
+            "default": []
           }
         },
         "additionalProperties": false,
@@ -5712,6 +5794,14 @@
             },
             "type": "array",
             "title": "Bombs",
+            "default": []
+          },
+          "charges": {
+            "items": {
+              "$ref": "#/components/schemas/ChargeOut"
+            },
+            "type": "array",
+            "title": "Charges",
             "default": []
           }
         },

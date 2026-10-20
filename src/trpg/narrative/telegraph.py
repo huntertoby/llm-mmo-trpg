@@ -6,12 +6,12 @@ from __future__ import annotations
 from collections.abc import Callable
 
 from trpg.content.maps import MapEvent, SpawnUnitsEvent
-from trpg.engine.environment import TelegraphBomb, TelegraphChange
+from trpg.engine.environment import TelegraphBomb, TelegraphChange, TelegraphCharge
 from trpg.engine.state import BattleState
 from trpg.narrative.events import DIRECTION_TEXT, cells_text, xy_text
 from trpg.shared.types import Pos, Surface
 
-__all__ = ["bomb_text", "change_text", "upcoming_text"]
+__all__ = ["bomb_text", "change_text", "charge_text", "upcoming_text"]
 
 
 def _surface_name(value: str | None) -> str:
@@ -131,6 +131,18 @@ def bomb_text(state: BattleState, bomb: TelegraphBomb) -> str:
     name = bomb.unit_id if unit is None else unit.name_zh
     when = "下一次環境回合就會爆炸" if bomb.explodes else f"還要 {bomb.remaining} 次環境回合爆炸"
     return f"{name} 身上的定時炸彈{when}（半徑 {bomb.radius} 格）"
+
+
+def charge_text(state: BattleState, charge: TelegraphCharge) -> str:
+    """等待中的延遲段的一行文字（倒數與預計範圍；Phase 3F-4b）。"""
+    unit = state.units.get(charge.unit_id)
+    name = charge.unit_id if unit is None else unit.name_zh
+    when = (
+        "下回合開始時釋放"
+        if charge.release == "next_turn"
+        else "下回合開始前被敵人攻擊就釋放（沒被攻擊就失效）"
+    )
+    return f"{name} 正在蓄力「{charge.name_zh}」：{when}，以自己為中心影響 {len(charge.tiles)} 格"
 
 
 def upcoming_text(event: MapEvent, template_name: Callable[[str], str] = str) -> str:

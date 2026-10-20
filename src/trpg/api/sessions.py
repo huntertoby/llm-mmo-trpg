@@ -225,6 +225,8 @@ class BattleSession:
         pending = self.state.pending
         if self.awaiting == "decision" and pending is not None and pending.kind == "copy_skill":
             return self._preview_copy(pending, action)
+        if self.awaiting == "decision" and pending is not None and pending.kind == "followup":
+            return self._preview_followup(pending, action)
         self._require("action")
         self._require_hero(action)
         return preview(self.state, action)
@@ -239,6 +241,24 @@ class BattleSession:
         assert isinstance(original, UseSkill)
         base = state_from_json(pending.base_state_json)
         return preview(base, original.model_copy(update={"copy_cast": pick}))
+
+    def _preview_followup(self, pending: PendingResolution, pick: Action) -> Preview:
+        """複合技能第二段的暫停中（Phase 3F-4b）：``pick`` 是原本的施放帶上 ``followup_target``
+        （``followup_options`` 之一）；預覽「暫停前的狀態帶著這個選取重新結算原本的施放」，與
+        ``decide`` 的結果一致（第一段已結算的部分也在預覽裡）。"""
+        self._require_hero(pick)
+        original = ACTION_ADAPTER.validate_json(pending.action_json)
+        assert isinstance(original, UseSkill)
+        if (
+            not isinstance(pick, UseSkill)
+            or pick.skill_id != original.skill_id
+            or pick.followup_target is None
+        ):
+            raise IllegalActionError(
+                f"第二段的預覽必須是「{original.skill_id}」帶上 followup_target 的 use_skill"
+            )
+        base = state_from_json(pending.base_state_json)
+        return preview(base, original.model_copy(update={"followup_target": pick.followup_target}))
 
     def restore(self, steps: list[Step], orders: list[OrderRecord]) -> None:
         """讀檔（Phase 3-5a）：依序重播存檔的步驟（不自動推進），再還原隊友指令紀錄。重播失敗時

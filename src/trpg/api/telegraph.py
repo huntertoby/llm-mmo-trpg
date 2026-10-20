@@ -9,6 +9,7 @@ from __future__ import annotations
 from trpg.api.schemas import (
     BombOut,
     BurningOut,
+    ChargeOut,
     TelegraphChangeOut,
     TelegraphOut,
     UpcomingEventOut,
@@ -18,7 +19,7 @@ from trpg.engine.environment import telegraph
 from trpg.engine.state import BattleState
 from trpg.engine.traps import strip_hidden_traps
 from trpg.narrative.events import xy_text
-from trpg.narrative.telegraph import bomb_text, change_text, upcoming_text
+from trpg.narrative.telegraph import bomb_text, change_text, charge_text, upcoming_text
 from trpg.shared.types import Team
 
 __all__ = ["telegraph_out"]
@@ -50,6 +51,9 @@ def telegraph_out(state: BattleState, library: ContentLibrary, team: Team) -> Te
         ),
         burning=tuple(burning),
         bombs=tuple(BombOut(**b.model_dump(), text=bomb_text(state, b)) for b in forecast.bombs),
+        charges=tuple(
+            ChargeOut(**c.model_dump(), text=charge_text(state, c)) for c in forecast.charges
+        ),
         upcoming=tuple(
             UpcomingEventOut(
                 round=e.round,
