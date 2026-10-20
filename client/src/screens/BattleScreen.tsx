@@ -50,7 +50,7 @@ import {
   targetTiles,
   type ActionMode,
 } from "../battle/targeting";
-import { unitNames } from "../battle/units";
+import { onField, unitNames } from "../battle/units";
 import type { BattleRenderer, Highlights } from "../render/BattleRenderer";
 import { ModePanel } from "../ui/ActionPanel";
 import { BattleTopBar } from "../ui/BattleTopBar";
@@ -68,7 +68,7 @@ import {
 import { cardPlacement, dialogStartsLow, fitScale } from "../battle/stageLayout";
 import { hasOrders, orderButton } from "../battle/orders";
 import { BattleCanvas } from "../ui/BattleCanvas";
-import { BattleLog } from "../ui/BattleLog";
+import { BattleLog, type LogHover } from "../ui/BattleLog";
 import { CopyDialog } from "../ui/CopyDialog";
 import { FollowupDialog } from "../ui/FollowupDialog";
 import { followupMode, followupTargetOf, isFollowupPending } from "../battle/followup";
@@ -139,6 +139,7 @@ export function BattleScreen({ initial, onExit, exitLabel, runMode }: Props) {
   /** 逐步播放時指定的行動者；`undefined` ＝ 用視圖的 `active_unit`。 */
   const [acting, setActing] = useState<string | undefined>(undefined);
   const [lines, setLines] = useState<LogLine[]>([]);
+  const [logHover, setLogHover] = useState<LogHover | null>(null);
   const [busy, setBusy] = useState(true);
   const [playing, setPlaying] = useState(false);
   const [banner, setBanner] = useState(false);
@@ -272,7 +273,7 @@ export function BattleScreen({ initial, onExit, exitLabel, runMode }: Props) {
   );
 
   // ---- 高亮 -----------------------------------------------------------------
-  const highlights = useMemo<Highlights>(() => {
+  const baseHighlights = useMemo<Highlights>(() => {
     const common = { telegraph: marks, focus: focusTile, hover };
     if (orderPick !== null && canOrder) {
       return { ...NO_HIGHLIGHTS, ...common, attacks: orderTargetTiles(orderPick, view, heroId) };
@@ -315,6 +316,13 @@ export function BattleScreen({ initial, onExit, exitLabel, runMode }: Props) {
     orderPick,
     hurlPick,
   ]);
+
+  // 滑過戰鬥紀錄的一組：高亮相關單位目前所在的格子與事件指出的格子（疊在預覽範圍的橘色上）。
+  const highlights = useMemo<Highlights>(() => {
+    if (logHover === null) return baseHighlights;
+    const unitTiles = shown.units.filter((u) => logHover.unitIds.includes(u.id) && onField(u)).map((u) => u.pos);
+    return { ...baseHighlights, preview: [...baseHighlights.preview, ...unitTiles, ...logHover.tiles] };
+  }, [baseHighlights, logHover, shown]);
 
   const legend = useMemo(() => legendEntries(highlights.overlays, mode), [highlights.overlays, mode]);
 
@@ -748,7 +756,7 @@ export function BattleScreen({ initial, onExit, exitLabel, runMode }: Props) {
         collapsed={collapsed}
         onToggle={toggleSide}
         telegraph={<TelegraphPanel telegraph={response.telegraph} marks={marks} hoverTexts={hoverTexts} />}
-        log={<BattleLog lines={lines} />}
+        log={<BattleLog lines={lines} onHover={setLogHover} />}
       />
       <div className="battle-bottom">
         <div className="battle-hero">

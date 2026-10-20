@@ -1,6 +1,6 @@
 // 單位的代號與名稱（同 CLI：我方 A、B、C……，敵方 a、b、c……，依單位 ID 排序；召喚物不分陣營，
 // 一律用數字 1–9，超過 9 個後循環）。
-import type { BattleView, UnitView } from "../api/types";
+import type { BattleView, Team, UnitView } from "../api/types";
 
 const UPPER = "ABCDEFGHIJKLMNOPQRSTUVWXYZ";
 const LOWER = "abcdefghijklmnopqrstuvwxyz";
@@ -28,6 +28,8 @@ export interface UnitNames {
   name(id: string): string;
   /** 「代號 名稱」，例如「A 火焰英雄」。找不到時回傳 ID。 */
   label(id: string): string;
+  /** 單位的陣營；不在名單內（例如重新整理後才出現的召喚物）時為 `undefined`。 */
+  team(id: string): Team | undefined;
 }
 
 export function unitNames(view: BattleView): UnitNames {
@@ -40,6 +42,7 @@ export function unitNames(view: BattleView): UnitNames {
       const u = byId.get(id);
       return u === undefined ? id : `${markers.get(id) ?? "?"} ${u.name_zh}`;
     },
+    team: (id) => byId.get(id)?.team,
   };
 }
 
