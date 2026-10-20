@@ -2,7 +2,7 @@
 // 中央放大的戰場（滑過單位顯示浮動資訊卡）、右側可收合的紀錄與預告、左下主角狀態、底部技能列、右下回合操作。
 // 每次送出動作或決定：鎖住操作 → 收到回應 → 先畫 `initial_view`，再依 `steps` 一步一步播放
 // （標示行動者 → 移動動畫 → 該步的 `view` → 紀錄 → 停頓）→ 最後以 `res.view` 為準。
-import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState, type CSSProperties } from "react";
 import { flushSync } from "react-dom";
 import { api, ApiError } from "../api/client";
 import type { Action, BattleResponse, BattleView, OrderSet, Pos, ReactionMode } from "../api/types";
@@ -57,7 +57,21 @@ import { ModePanel } from "../ui/ActionPanel";
 import { BattleTopBar } from "../ui/BattleTopBar";
 import { SidePanel } from "../ui/SidePanel";
 import { TurnControls } from "../ui/TurnControls";
-import { useElementSize, useNarrow } from "../ui/useLayout";
+import { useElementSize, useNarrow, useViewportSize } from "../ui/useLayout";
+import { LayoutPanel } from "../ui/LayoutPanel";
+import { ResizeHandle } from "../ui/ResizeHandle";
+import {
+  clampLayout,
+  clampZoom,
+  DEFAULT_LAYOUT,
+  layoutLimits,
+  loadLayout,
+  saveLayout,
+  zoomBy,
+  zoomPercent,
+  ZOOM_STEP,
+  type LayoutPrefs,
+} from "../battle/layoutPrefs";
 import {
   actionHintText,
   loadSidePref,
@@ -155,8 +169,18 @@ export function BattleScreen({ initial, onExit, exitLabel, runMode }: Props) {
   const narrow = useNarrow();
   /** 玩家記下的右側窄欄收合狀態（沒有記錄時 `null`，依視窗寬度決定）。 */
   const [sidePref, setSidePref] = useState<boolean | null>(loadSidePref);
-  const boardRef = useRef<HTMLDivElement>(null);
-  const boardSize = useElementSize(boardRef);
+  const scrollRef = useRef<HTMLDivElement>(null);
+  const boardSize = useElementSize(scrollRef);
+  const viewport = useViewportSize();
+  const [layoutPref, setLayoutPref] = useState<LayoutPrefs>(loadLayout);
+  const layout = useMemo(() => clampLayout(layoutPref, viewport), [layoutPref, viewport]);
+  const limits = useMemo(() => layoutLimits(viewport), [viewport]);
+  const patchLayout = useCallback((patch: Partial<LayoutPrefs>) => setLayoutPref((p) => ({ ...p, ...patch })), []);
+  useEffect(() => saveLayout(layoutPref), [layoutPref]);
+  const [panning, setPanning] = useState(false);
+  const panRef = useRef<{ x: number; y: number; left: number; top: number } | null>(null);
+  /** 縮放前記下捲動區中心的相對位置，縮放後還原，讓畫面不跳。 */
+  const anchorRef = useRef<{ fx: number; fy: number } | null>(null);
   const [speed, setSpeed] = useState<PlaySpeed>(loadSpeed);
   const [modeKey, setModeKey] = useState<string | null>(null);
   /** 投擲物件的兩段選取：第一段選好（舉起）的物件 ID；`null` ＝ 還在選物件。 */
@@ -660,7 +684,44 @@ export function BattleScreen({ initial, onExit, exitLabel, runMode }: Props) {
     }
   }
 
-  const scale = boardSize === null ? 1 : fitScale({ width: boardSize.width - 16, height: boardSize.height - 16 }, model);
+  const fit = boardSize === null ? 1 : fitScale({ width: boardSize.width - 16, height: boardSize.height - 16 }, model);
+  const scale = layout.zoom ?? fit;
+  const scaleRef = useRef(scale);
+  scaleRef.current = scale;
+  const zoomTo = useCallback(
+    (next: number) => {
+      const el = scrollRef.current;
+      if (el !== null && el.scrollWidth > 0 && el.scrollHeight > 0) {
+        anchorRef.current = {
+          fx: (el.scrollLeft + el.clientWidth / 2) / el.scrollWidth,
+          fy: (el.scrollTop + el.clientHeight / 2) / el.scrollHeight,
+        };
+      }
+      patchLayout({ zoom: clampZoom(next) });
+    },
+    [patchLayout],
+  );
+  const zoomStep = useCallback((factor: number) => zoomTo(zoomBy(scaleRef.current, factor)), [zoomTo]);
+  useLayoutEffect(() => {
+    const el = scrollRef.current;
+    const a = anchorRef.current;
+    if (el === null || a === null) return;
+    anchorRef.current = null;
+    el.scrollLeft = a.fx * el.scrollWidth - el.clientWidth / 2;
+    el.scrollTop = a.fy * el.scrollHeight - el.clientHeight / 2;
+  }, [scale]);
+  // Ctrl＋滾輪縮放地圖（要擋掉瀏覽器自己的縮放，所以用非被動的原生監聽）
+  useEffect(() => {
+    const el = scrollRef.current;
+    if (el === null) return undefined;
+    const onWheel = (e: WheelEvent) => {
+      if (!e.ctrlKey) return;
+      e.preventDefault();
+      zoomStep(e.deltaY < 0 ? ZOOM_STEP : 1 / ZOOM_STEP);
+    };
+    el.addEventListener("wheel", onWheel, { passive: false });
+    return () => el.removeEventListener("wheel", onWheel);
+  }, [zoomStep]);
   const hoverTexts = [...zoneLinesAt(shown, hover, liveNames), ...marksTextAt(marks, hover)];
   const defendMode = basic.find((m) => m.kind === "defend") ?? null;
   const collapsed = sideCollapsed(sidePref, narrow);
@@ -693,10 +754,29 @@ export function BattleScreen({ initial, onExit, exitLabel, runMode }: Props) {
       ),
     },
     { id: "legend" as const, label: "圖例", content: <Legend entries={legend} /> },
+    {
+      id: "layout" as const,
+      label: "版面",
+      content: (
+        <LayoutPanel
+          prefs={layout}
+          limits={limits}
+          scale={scale}
+          narrow={narrow}
+          onChange={patchLayout}
+          onReset={() => setLayoutPref(DEFAULT_LAYOUT)}
+        />
+      ),
+    },
   ];
+  const layoutStyle = {
+    "--side-w": `${layout.sideWidth}px`,
+    "--bottom-h": `${layout.bottomHeight}px`,
+    "--hero-w": `${layout.heroWidth}px`,
+  } as CSSProperties;
 
   return (
-    <div className={`battle-screen${collapsed ? " side-collapsed" : ""}${narrow ? " narrow" : ""}`}>
+    <div className={`battle-screen${collapsed ? " side-collapsed" : ""}${narrow ? " narrow" : ""}`} style={layoutStyle}>
       <BattleTopBar
         turnBar={<TurnBar view={shown} names={names} acting={acting} />}
         tools={tools}
@@ -705,7 +785,34 @@ export function BattleScreen({ initial, onExit, exitLabel, runMode }: Props) {
         exit={exitLabel !== undefined && !ended ? { label: exitLabel, onExit } : null}
         save={runMode !== undefined && !ended ? { busy, note: saveNote, onSave: () => void saveRun() } : null}
       />
-      <div className="battle-board" ref={boardRef}>
+      <div className="battle-board">
+        <div
+          className={`board-scroll${panning ? " panning" : ""}`}
+          ref={scrollRef}
+          onPointerDown={(e) => {
+            const el = scrollRef.current;
+            if (e.button !== 1 || el === null) return;
+            e.preventDefault();
+            el.setPointerCapture(e.pointerId);
+            panRef.current = { x: e.clientX, y: e.clientY, left: el.scrollLeft, top: el.scrollTop };
+            setPanning(true);
+          }}
+          onPointerMove={(e) => {
+            const el = scrollRef.current;
+            const p = panRef.current;
+            if (el === null || p === null) return;
+            el.scrollLeft = p.left - (e.clientX - p.x);
+            el.scrollTop = p.top - (e.clientY - p.y);
+          }}
+          onPointerUp={() => {
+            panRef.current = null;
+            setPanning(false);
+          }}
+          onPointerCancel={() => {
+            panRef.current = null;
+            setPanning(false);
+          }}
+        >
         <BattleCanvas
           model={model}
           highlights={highlights}
@@ -730,6 +837,43 @@ export function BattleScreen({ initial, onExit, exitLabel, runMode }: Props) {
             </div>
           )}
         </BattleCanvas>
+        </div>
+        <div className="zoom-controls" aria-label="地圖縮放">
+          <button type="button" aria-label="縮小" title="縮小（Ctrl＋滾輪）" onClick={() => zoomStep(1 / ZOOM_STEP)}>
+            －
+          </button>
+          <span className="zoom-percent" title={layout.zoom === null ? "自動填滿" : "手動縮放"}>
+            {layout.zoom === null ? `自動 ${zoomPercent(scale)}` : zoomPercent(scale)}
+          </span>
+          <button type="button" aria-label="放大" title="放大（Ctrl＋滾輪）" onClick={() => zoomStep(ZOOM_STEP)}>
+            ＋
+          </button>
+          <button type="button" disabled={layout.zoom === null} title="自動填滿可用空間" onClick={() => patchLayout({ zoom: null })}>
+            填滿
+          </button>
+        </div>
+        {!collapsed && !narrow && (
+          <ResizeHandle
+            orientation="vertical"
+            direction={-1}
+            value={layout.sideWidth}
+            range={limits.side}
+            label="調整右側窄欄寬度"
+            onChange={(v) => patchLayout({ sideWidth: v })}
+            onReset={() => patchLayout({ sideWidth: DEFAULT_LAYOUT.sideWidth })}
+          />
+        )}
+        {!narrow && (
+          <ResizeHandle
+            orientation="horizontal"
+            direction={-1}
+            value={layout.bottomHeight}
+            range={limits.bottom}
+            label="調整底部列高度"
+            onChange={(v) => patchLayout({ bottomHeight: v })}
+            onReset={() => patchLayout({ bottomHeight: DEFAULT_LAYOUT.bottomHeight })}
+          />
+        )}
         {banner && <div className="battle-banner">戰鬥開始</div>}
         <div className="board-toasts">
           <ErrorBanner message={error} onClose={() => setError(null)} />
@@ -771,6 +915,17 @@ export function BattleScreen({ initial, onExit, exitLabel, runMode }: Props) {
       <div className="battle-bottom">
         <div className="battle-hero">
           <Hud view={shown} hero={shownHero} skills={skillNames} compact={narrow} />
+          {!narrow && (
+            <ResizeHandle
+              orientation="vertical"
+              direction={1}
+              value={layout.heroWidth}
+              range={limits.hero}
+              label="調整主角狀態卡寬度"
+              onChange={(v) => patchLayout({ heroWidth: v })}
+              onReset={() => patchLayout({ heroWidth: DEFAULT_LAYOUT.heroWidth })}
+            />
+          )}
         </div>
         <SkillBar
           basic={basic.filter((m) => m.kind !== "defend")}

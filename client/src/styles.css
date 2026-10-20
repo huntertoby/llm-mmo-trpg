@@ -113,7 +113,7 @@ button.primary {
 /* Phase 3-8 版面：頂端列／中央戰場＋右側窄欄／底部（主角狀態、技能列、回合操作）；整頁不捲動。 */
 .battle-screen {
   display: grid;
-  grid-template-columns: minmax(0, 1fr) 300px;
+  grid-template-columns: minmax(0, 1fr) var(--side-w, 300px);
   grid-template-rows: auto minmax(0, 1fr) auto;
   grid-template-areas:
     "top top"
@@ -257,6 +257,115 @@ button.primary {
 .battle-canvas {
   position: relative;
   flex: none;
+  /* 在捲動區內置中；放大超過可用區域時從左上開始捲動（Phase 3-10） */
+  margin: auto;
+}
+
+/* 地圖捲動區（Phase 3-10）：右、下各留 8px 給分隔線；放大後可捲動或用滑鼠中鍵拖曳平移 */
+.board-scroll {
+  position: absolute;
+  inset: 0 8px 8px 0;
+  display: flex;
+  overflow: auto;
+}
+
+.board-scroll.panning {
+  cursor: grabbing;
+}
+
+.zoom-controls {
+  position: absolute;
+  right: 24px;
+  bottom: 22px;
+  z-index: 14;
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  padding: 3px 6px;
+  border-radius: 6px;
+  background: rgb(28 28 38 / 88%);
+  box-shadow: 0 2px 10px rgb(0 0 0 / 45%);
+}
+
+.zoom-controls button {
+  padding: 0 8px;
+  min-width: 26px;
+  font-size: 14px;
+}
+
+.zoom-controls .zoom-percent {
+  min-width: 52px;
+  text-align: center;
+  font-size: 12px;
+}
+
+/* 拖曳分隔線（Phase 3-10） */
+.resize-handle {
+  position: absolute;
+  z-index: 20;
+  background: transparent;
+  touch-action: none;
+}
+
+.resize-handle:hover,
+.resize-handle:focus-visible,
+.resize-handle:active {
+  background: var(--accent);
+  opacity: 0.55;
+  outline: none;
+}
+
+.resize-handle.vertical {
+  top: 0;
+  bottom: 0;
+  width: 8px;
+  cursor: col-resize;
+}
+
+.resize-handle.horizontal {
+  left: 0;
+  right: 0;
+  height: 8px;
+  cursor: row-resize;
+}
+
+.battle-board > .resize-handle.vertical {
+  right: 0;
+}
+
+.battle-board > .resize-handle.horizontal {
+  bottom: 0;
+}
+
+.battle-hero > .resize-handle.vertical {
+  right: -7px;
+}
+
+.layout-panel {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  padding: 10px 12px;
+}
+
+.layout-row {
+  display: grid;
+  grid-template-columns: 96px minmax(0, 1fr) 70px;
+  align-items: center;
+  gap: 8px;
+  font-size: 13px;
+}
+
+.layout-value {
+  text-align: right;
+  font-size: 12px;
+  color: var(--muted);
+}
+
+.layout-actions {
+  display: flex;
+  gap: 8px;
+  margin-top: 4px;
 }
 
 .battle-canvas canvas {
@@ -1617,12 +1726,12 @@ button.selected {
 .battle-bottom {
   grid-area: bottom;
   display: grid;
-  grid-template-columns: 300px minmax(0, 1fr) 250px;
+  grid-template-columns: var(--hero-w, 300px) minmax(0, 1fr) 250px;
   align-items: end;
   gap: 6px;
   min-width: 0;
   /* 固定高度：技能數、狀態行數改變時戰場不會跟著縮放跳動 */
-  height: 166px;
+  height: var(--bottom-h, 166px);
 }
 
 .battle-bottom > * {
@@ -1631,6 +1740,7 @@ button.selected {
 }
 
 .battle-hero {
+  position: relative;
   align-self: stretch;
 }
 

@@ -42,7 +42,7 @@ export function actionHintText(state: {
 }
 
 /** 頂端列的彈出面板（同時只開一個）。 */
-export type TopPopup = "reactions" | "orders" | "legend";
+export type TopPopup = "reactions" | "orders" | "legend" | "layout";
 
 /** 點了某個頂端按鈕：再點同一個關閉，點別的換成別的。 */
 export function togglePopup(current: TopPopup | null, clicked: TopPopup): TopPopup | null {
