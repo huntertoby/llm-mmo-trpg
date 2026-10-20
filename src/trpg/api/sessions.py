@@ -267,6 +267,16 @@ class BattleSession:
             self._commit(step, apply_step(self.state, step))
         self.policy.restore_orders(orders)
 
+    def history(self) -> list[StepRecord]:
+        """到目前為止每一步的結算（含開場事件；重播得到，所以重新整理、讀檔後也能還原戰鬥紀錄）。"""
+        records = [StepRecord(None, self._opening)]
+        state = self._opening.state
+        for step in self.steps:
+            result = apply_step(state, step)
+            records.append(StepRecord(step, result))
+            state = result.state
+        return records
+
     def set_orders(self, orders: OrderSet) -> OrderRecord:
         """設定我方隊友的戰術指令（空集合 ＝ 取消）。無效時拋出 ``InvalidRequestError``。"""
         if self.state.ended:

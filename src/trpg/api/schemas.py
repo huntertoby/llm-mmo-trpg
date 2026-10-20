@@ -36,6 +36,7 @@ from trpg.shared.types import ObjectId, Pos, Team, UnitId
 
 __all__ = [
     "Awaiting",
+    "BattleHistory",
     "BattleOutcome",
     "BattleResponse",
     "BombOut",
@@ -50,6 +51,7 @@ __all__ = [
     "GlossaryEntry",
     "GrantPreviewOut",
     "HealOut",
+    "HistoryStepOut",
     "HurlOut",
     "InteractOptionOut",
     "MapSummary",
@@ -101,6 +103,11 @@ class BuildSummary(_ApiModel):
     skills: tuple[str, ...]
     max_mana: int = 0
     """主角（未分配屬性點前）的法力上限；工坊試玩比對技能法力需求用。"""
+    max_hp: int = 0
+    """主角（未分配屬性點前）的 HP 上限（開新一輪畫面用）。"""
+    weapon: str = ""
+    weapon_name_zh: str = ""
+    """主角的武器（ID 與中文名）。"""
 
 
 class SkillReasons(_ApiModel):
@@ -282,6 +289,18 @@ class BattleOutcome(_ApiModel):
     """``None`` 為平手。"""
     end_reason: str | None
     round: int
+
+
+class HistoryStepOut(_ApiModel):
+    """戰鬥紀錄的一步：只有事件（含中文 ``text``），不含戰場視圖。"""
+
+    events: tuple[dict[str, Any], ...]
+
+
+class BattleHistory(_ApiModel):
+    """到目前為止戰鬥發生過的事件（依序；重新整理或讀檔後還原戰鬥紀錄用）。"""
+
+    steps: tuple[HistoryStepOut, ...]
 
 
 class BattleResponse(_ApiModel):

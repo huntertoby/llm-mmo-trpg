@@ -11,6 +11,7 @@
 
 from __future__ import annotations
 
+import logging
 import secrets
 import threading
 from collections.abc import Callable
@@ -40,6 +41,8 @@ from trpg.shared.types import Attribute
 
 __all__ = ["RunNotFoundError", "RunSession", "RunStore"]
 
+_LOG = logging.getLogger(__name__)
+
 
 class RunNotFoundError(TrpgError):
     """不存在的一輪或存檔（404）。"""
@@ -53,16 +56,17 @@ class RunSession:
         self.battle: BattleSession | None = None
         self.lock = threading.Lock()
 
-    def sync(self) -> None:
-        """目前的戰鬥結束了就結算（寫回主角、前進到下一個節點）。"""
+    def sync(self) -> bool:
+        """目前的戰鬥結束了就結算（寫回主角、前進到下一個節點）；有結算時回傳 ``True``。"""
         battle = self.battle
         if battle is None:
-            return
+            return False
         with battle.lock:
             if not battle.state.ended:
-                return
+                return False
             self.run = finish_battle(self.library, self.run, battle.state, len(battle.steps))
         self.battle = None
+        return True
 
     def to_save(self) -> RunSave:
         saved = None
@@ -125,7 +129,9 @@ class RunStore:
             run_id = self._new_id()
             while run_id in self._runs:  # pragma: no cover - 機率極低
                 run_id = self._new_id()
-        return self._register(RunSession(run_id, self.library, run))
+        session = self._register(RunSession(run_id, self.library, run))
+        self.autosave(session)
+        return session
 
     def get(self, run_id: str) -> RunSession:
         with self._lock:
@@ -136,7 +142,7 @@ class RunStore:
 
     def battle(self, session: RunSession) -> tuple[BattleSession, list[StepRecord]]:
         """開始本場戰鬥，或接續進行中的戰鬥（呼叫者持有一輪的鎖）。"""
-        session.sync()
+        self.sync(session)
         if session.battle is not None:
             return session.battle, []
         if not isinstance(session.run.node, BattleNode):
@@ -145,11 +151,38 @@ class RunStore:
         seed = session.run.plan_of(session.battle_index()).seed
         battle, records = self.battles.open(setup, seed)
         session.battle = battle
+        self.autosave(session)
         return battle, records
 
     def choose(self, session: RunSession, choice: Choice) -> None:
-        session.sync()
+        self.sync(session)
         session.run = apply_choice(self.library, session.run, choice)
+        self.autosave(session)
+
+    def sync(self, session: RunSession) -> None:
+        """結算已結束的戰鬥；有結算（節點改變）就自動存檔（呼叫者持有一輪的鎖）。"""
+        if session.sync():
+            self.autosave(session)
+
+    def autosave(self, session: RunSession) -> None:
+        """自動存檔（Phase 3-6）：覆寫同一個檔案。寫不進去時只記錄警告，不讓遊戲動作失敗。"""
+        try:
+            self.save(session)
+        except OSError as exc:
+            _LOG.warning("自動存檔失敗（%s）：%s", session.run_id, exc)
+
+    def autosave_battle(self, battle_id: str) -> None:
+        """戰鬥端點處理完一個動作或決定後呼叫：找出擁有這場戰鬥的一輪並自動存檔（沒有就略過，
+        例如單獨開的戰鬥）。必須在釋放戰鬥的鎖之後呼叫（鎖的順序：一輪 → 戰鬥）。"""
+        with self._lock:
+            sessions = list(self._runs.values())
+        for session in sessions:
+            battle = session.battle
+            if battle is not None and battle.battle_id == battle_id:
+                with session.lock:
+                    if session.battle is battle:
+                        self.autosave(session)  # 戰鬥結束時 save 會先結算
+                return
 
     def ruleset_hash(self) -> str:
         """目前內容庫的雜湊（第一次用到時才算，之後快取）。"""
@@ -158,7 +191,7 @@ class RunStore:
         return self._ruleset_hash
 
     def save(self, session: RunSession) -> tuple[Path, RunSave]:
-        session.sync()
+        session.sync()  # 呼叫者持有一輪的鎖；結算後直接寫入最新狀態
         save = session.to_save().model_copy(update={"ruleset_hash": self.ruleset_hash()})
         return write_save(self.save_dir, save), save
 

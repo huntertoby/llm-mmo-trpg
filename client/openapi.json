@@ -222,6 +222,49 @@
         }
       }
     },
+    "/api/battles/{battle_id}/history": {
+      "get": {
+        "tags": [
+          "battles"
+        ],
+        "summary": "Get History",
+        "description": "到目前為止發生過的事件（還原戰鬥紀錄用：重新整理或讀檔回到戰鬥時）。",
+        "operationId": "get_history_api_battles__battle_id__history_get",
+        "parameters": [
+          {
+            "name": "battle_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Battle Id"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/BattleHistory"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
     "/api/battles/{battle_id}/actions": {
       "post": {
         "tags": [
@@ -643,6 +686,28 @@
               "application/json": {
                 "schema": {
                   "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/runs/rules": {
+      "get": {
+        "tags": [
+          "runs"
+        ],
+        "summary": "Get Rules",
+        "description": "開局規則（來自 ``content/roguelite.yaml``）：前端不寫死配點數。",
+        "operationId": "get_rules_api_runs_rules_get",
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/RunRules"
                 }
               }
             }
@@ -1299,6 +1364,24 @@
         ],
         "title": "Attribute",
         "description": "角色的六屬性（成員名稱用大寫縮寫，避開 ``str``、``int`` 等內建名稱）。"
+      },
+      "BattleHistory": {
+        "properties": {
+          "steps": {
+            "items": {
+              "$ref": "#/components/schemas/HistoryStepOut"
+            },
+            "type": "array",
+            "title": "Steps"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "steps"
+        ],
+        "title": "BattleHistory",
+        "description": "到目前為止戰鬥發生過的事件（依序；重新整理或讀檔後還原戰鬥紀錄用）。"
       },
       "BattleOutcome": {
         "properties": {
@@ -2044,6 +2127,21 @@
             "type": "integer",
             "title": "Max Mana",
             "default": 0
+          },
+          "max_hp": {
+            "type": "integer",
+            "title": "Max Hp",
+            "default": 0
+          },
+          "weapon": {
+            "type": "string",
+            "title": "Weapon",
+            "default": ""
+          },
+          "weapon_name_zh": {
+            "type": "string",
+            "title": "Weapon Name Zh",
+            "default": ""
           }
         },
         "additionalProperties": false,
@@ -3246,6 +3344,25 @@
           "skills"
         ],
         "title": "HeroOut"
+      },
+      "HistoryStepOut": {
+        "properties": {
+          "events": {
+            "items": {
+              "additionalProperties": true,
+              "type": "object"
+            },
+            "type": "array",
+            "title": "Events"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "events"
+        ],
+        "title": "HistoryStepOut",
+        "description": "戰鬥紀錄的一步：只有事件（含中文 ``text``），不含戰場視圖。"
       },
       "HoldPosition": {
         "properties": {
@@ -4825,6 +4942,26 @@
         ],
         "title": "RunResponse"
       },
+      "RunRules": {
+        "properties": {
+          "start_points": {
+            "type": "integer",
+            "title": "Start Points"
+          },
+          "base_attribute": {
+            "type": "integer",
+            "title": "Base Attribute"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "start_points",
+          "base_attribute"
+        ],
+        "title": "RunRules",
+        "description": "開局規則（``content/roguelite.yaml``）。"
+      },
       "SaveOut": {
         "properties": {
           "run_id": {
@@ -4864,6 +5001,10 @@
             "type": "string",
             "title": "Build Id"
           },
+          "build_name_zh": {
+            "type": "string",
+            "title": "Build Name Zh"
+          },
           "seed": {
             "type": "integer",
             "title": "Seed"
@@ -4893,6 +5034,17 @@
           "in_battle": {
             "type": "boolean",
             "title": "In Battle"
+          },
+          "victory": {
+            "anyOf": [
+              {
+                "type": "boolean"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Victory"
           }
         },
         "additionalProperties": false,
@@ -4900,6 +5052,7 @@
         "required": [
           "run_id",
           "build_id",
+          "build_name_zh",
           "seed",
           "level",
           "battles_done",

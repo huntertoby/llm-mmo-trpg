@@ -13,9 +13,11 @@ from __future__ import annotations
 from typing import Any
 
 from trpg.api.schemas import (
+    BattleHistory,
     BattleOutcome,
     BattleResponse,
     FollowupOptionOut,
+    HistoryStepOut,
     InteractOptionOut,
     PreviewOut,
     StepOut,
@@ -41,6 +43,7 @@ __all__ = [
     "VIEW_TEAM",
     "battle_response",
     "event_out",
+    "history_response",
     "preview_response",
     "step_out",
     "step_view",
@@ -86,6 +89,16 @@ def step_out(record: StepRecord, team: Team = VIEW_TEAM) -> StepOut:
         events=tuple(event_out(e, state) for e in events),
         view=project_for(state, team),
     )
+
+
+def history_response(session: BattleSession) -> BattleHistory:
+    """到目前為止每一步的事件（我方視角；重播得到）。"""
+    steps = []
+    for record in session.history():
+        state = record.result.state
+        events = filter_events(record.result.events, state, VIEW_TEAM)
+        steps.append(HistoryStepOut(events=tuple(event_out(e, state) for e in events)))
+    return BattleHistory(steps=tuple(steps))
 
 
 def preview_response(p: Preview) -> PreviewOut:

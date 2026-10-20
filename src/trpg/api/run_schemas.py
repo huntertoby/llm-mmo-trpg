@@ -22,6 +22,7 @@ __all__ = [
     "OfferOut",
     "RunBattleResponse",
     "RunResponse",
+    "RunRules",
     "SaveOut",
     "SaveSummary",
 ]
@@ -41,6 +42,15 @@ class CreateRunRequest(_ApiModel):
 
 class LoadRunRequest(_ApiModel):
     run_id: str = Field(pattern=RUN_ID_PATTERN)
+
+
+class RunRules(_ApiModel):
+    """開局規則（``content/roguelite.yaml``）。"""
+
+    start_points: int
+    """開局的自由配點數。"""
+    base_attribute: int
+    """開局六項屬性的基礎值。"""
 
 
 class HeroOut(_ApiModel):
@@ -124,9 +134,12 @@ class SaveOut(_ApiModel):
 class SaveSummary(_ApiModel):
     run_id: str
     build_id: str
+    build_name_zh: str
     seed: int
     level: int
     battles_done: int
     battles_total: int
     node: Literal["battle", "level_up", "campfire", "ended"]
     in_battle: bool
+    victory: bool | None = None
+    """已結束的一輪是否勝利；未結束為 ``None``。"""

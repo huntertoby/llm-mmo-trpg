@@ -185,8 +185,10 @@ def test_save_mid_battle_load_and_continue_matches(
     listed: list[dict[str, Any]] = runs_client.get("/api/runs/saves").json()
     assert [s["run_id"] for s in listed] == [run["run_id"]]
     assert listed[0]["in_battle"]
-    # 原本的一輪打完
+    snapshot = (save_dir / saved["file"]).read_bytes()
+    # 原本的一輪打完（自動存檔會覆寫存檔，所以先留一份存檔當下的檔案）
     original = _play_battle(runs_client, library, battle)
+    (save_dir / saved["file"]).write_bytes(snapshot)
     # 讀檔：重播到存檔當下，戰場與存檔時相同
     loaded = _ok(runs_client.post("/api/runs/load", json={"run_id": run["run_id"]}))
     assert loaded["battle_id"] not in (None, battle["battle_id"])

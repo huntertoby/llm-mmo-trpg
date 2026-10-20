@@ -8,8 +8,9 @@ from __future__ import annotations
 
 from fastapi import APIRouter, Request, Response
 
-from trpg.api.presenter import battle_response, preview_response
+from trpg.api.presenter import battle_response, history_response, preview_response
 from trpg.api.schemas import (
+    BattleHistory,
     BattleResponse,
     CreateBattleRequest,
     DecisionRequest,
@@ -17,7 +18,7 @@ from trpg.api.schemas import (
     SkillReasons,
 )
 from trpg.api.skill_reasons import skill_reasons
-from trpg.api.state import store_of
+from trpg.api.state import runs_of, store_of
 from trpg.engine.actions import Action
 from trpg.engine.ai.orders import OrderSet
 
@@ -41,13 +42,23 @@ def get_battle(battle_id: str, request: Request) -> BattleResponse:
         return battle_response(session, [])
 
 
+@router.get("/{battle_id}/history")
+def get_history(battle_id: str, request: Request) -> BattleHistory:
+    """到目前為止發生過的事件（還原戰鬥紀錄用：重新整理或讀檔回到戰鬥時）。"""
+    session = store_of(request).get(battle_id)
+    with session.lock:
+        return history_response(session)
+
+
 @router.post("/{battle_id}/actions")
 def post_action(battle_id: str, action: Action, request: Request) -> BattleResponse:
     session = store_of(request).get(battle_id)
     with session.lock:
         before = session.state
         records = session.act(action)
-        return battle_response(session, records, before)
+        out = battle_response(session, records, before)
+    runs_of(request).autosave_battle(battle_id)  # 一輪的戰鬥：自動存檔（Phase 3-6）
+    return out
 
 
 @router.post("/{battle_id}/decision")
@@ -56,7 +67,9 @@ def post_decision(battle_id: str, body: DecisionRequest, request: Request) -> Ba
     with session.lock:
         before = session.state
         records = session.decide(body.accept, body.copy_cast, body.followup_target)
-        return battle_response(session, records, before)
+        out = battle_response(session, records, before)
+    runs_of(request).autosave_battle(battle_id)
+    return out
 
 
 @router.post("/{battle_id}/preview")
@@ -80,7 +93,9 @@ def put_orders(battle_id: str, orders: OrderSet, request: Request) -> BattleResp
     session = store_of(request).get(battle_id)
     with session.lock:
         session.set_orders(orders)
-        return battle_response(session, [])
+        out = battle_response(session, [])
+    runs_of(request).autosave_battle(battle_id)
+    return out
 
 
 @router.get("/{battle_id}/log")

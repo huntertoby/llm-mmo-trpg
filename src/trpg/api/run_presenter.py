@@ -116,15 +116,18 @@ def run_response(session: RunSession) -> RunResponse:
     )
 
 
-def save_summary(save: RunSave) -> SaveSummary:
+def save_summary(library: ContentLibrary, save: RunSave) -> SaveSummary:
     run = save.run
+    build_name = next((b.name_zh for b in library.builds.builds if b.id == run.build_id), None)
     return SaveSummary(
         run_id=save.run_id,
         build_id=run.build_id,
+        build_name_zh=build_name or run.build_id,
         seed=run.seed,
         level=run.level,
         battles_done=run.battles_done,
         battles_total=len(run.plan),
         node=run.node.kind,
         in_battle=save.battle is not None,
+        victory=run.node.victory if isinstance(run.node, EndedNode) else None,
     )

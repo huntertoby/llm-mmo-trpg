@@ -122,6 +122,26 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/battles/{battle_id}/history": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Get History
+         * @description 到目前為止發生過的事件（還原戰鬥紀錄用：重新整理或讀檔回到戰鬥時）。
+         */
+        get: operations["get_history_api_battles__battle_id__history_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/battles/{battle_id}/actions": {
         parameters: {
             query?: never;
@@ -244,6 +264,26 @@ export interface paths {
         put?: never;
         /** Create Run */
         post: operations["create_run_api_runs_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/runs/rules": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Get Rules
+         * @description 開局規則（來自 ``content/roguelite.yaml``）：前端不寫死配點數。
+         */
+        get: operations["get_rules_api_runs_rules_get"];
+        put?: never;
+        post?: never;
         delete?: never;
         options?: never;
         head?: never;
@@ -517,6 +557,14 @@ export interface components {
          * @enum {string}
          */
         Attribute: "str" | "dex" | "con" | "int" | "wis" | "wil";
+        /**
+         * BattleHistory
+         * @description 到目前為止戰鬥發生過的事件（依序；重新整理或讀檔後還原戰鬥紀錄用）。
+         */
+        BattleHistory: {
+            /** Steps */
+            steps: components["schemas"]["HistoryStepOut"][];
+        };
         /** BattleOutcome */
         BattleOutcome: {
             winner: components["schemas"]["Team"] | null;
@@ -787,6 +835,21 @@ export interface components {
              * @default 0
              */
             max_mana: number;
+            /**
+             * Max Hp
+             * @default 0
+             */
+            max_hp: number;
+            /**
+             * Weapon
+             * @default
+             */
+            weapon: string;
+            /**
+             * Weapon Name Zh
+             * @default
+             */
+            weapon_name_zh: string;
         };
         /** BurningOut */
         BurningOut: {
@@ -1282,6 +1345,16 @@ export interface components {
             weapon: string;
             /** Skills */
             skills: components["schemas"]["SkillCard"][];
+        };
+        /**
+         * HistoryStepOut
+         * @description 戰鬥紀錄的一步：只有事件（含中文 ``text``），不含戰場視圖。
+         */
+        HistoryStepOut: {
+            /** Events */
+            events: {
+                [key: string]: unknown;
+            }[];
         };
         /**
          * HoldPosition
@@ -1906,6 +1979,16 @@ export interface components {
             /** Battle Id */
             battle_id: string | null;
         };
+        /**
+         * RunRules
+         * @description 開局規則（``content/roguelite.yaml``）。
+         */
+        RunRules: {
+            /** Start Points */
+            start_points: number;
+            /** Base Attribute */
+            base_attribute: number;
+        };
         /** SaveOut */
         SaveOut: {
             /** Run Id */
@@ -1923,6 +2006,8 @@ export interface components {
             run_id: string;
             /** Build Id */
             build_id: string;
+            /** Build Name Zh */
+            build_name_zh: string;
             /** Seed */
             seed: number;
             /** Level */
@@ -1938,6 +2023,8 @@ export interface components {
             node: "battle" | "level_up" | "campfire" | "ended";
             /** In Battle */
             in_battle: boolean;
+            /** Victory */
+            victory?: boolean | null;
         };
         /**
          * SegmentLine
@@ -2842,6 +2929,37 @@ export interface operations {
             };
         };
     };
+    get_history_api_battles__battle_id__history_get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                battle_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["BattleHistory"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
     post_action_api_battles__battle_id__actions_post: {
         parameters: {
             query?: never;
@@ -3073,6 +3191,26 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    get_rules_api_runs_rules_get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["RunRules"];
                 };
             };
         };
