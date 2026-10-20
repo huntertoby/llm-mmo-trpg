@@ -1,0 +1,22 @@
+# 主動（Phase 3C-6b 示範，數值為初值，未經模擬）：念力推倒石柱或枯樹，法術版的震地推倒（射程 4，不用貼身）。
+id: skill_psychic_topple
+name_zh: 念力傾倒
+tier: 1
+rank: 1
+rarity: rare
+kind: active
+skeleton: displace
+category: spell
+weapon_req: any
+ap_cost: 1
+scaling_attr: int
+shape: {type: single, range: 4}
+effects:
+  - {type: topple}
+condition: null
+cost: {mana: 4, cooldown: 2}
+tags: [arcane, spell, telekinesis]
+narrative:
+  concept: 隔空推倒戰場上的石柱與枯樹，壓向躲在後面的敵人
+  cast_flavor: 你的手掌虛按向前，遠處的石柱發出刺耳的摩擦聲，緩緩傾倒
+provenance: {origin: builtin, owner_id: null, created_by: null, parents: [], bound: true, tradeable: false}

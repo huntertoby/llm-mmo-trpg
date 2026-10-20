@@ -1,0 +1,25 @@
+# 主動（Phase 3C-6b 示範，管道 2 環境當中介，數值為初值，未經模擬）：砸出一瓶燈油，在目標周圍鋪出一灘油，
+# 之後任何火（灼熱推擊、火焰技能）都能點燃；不帶火元素，本身只有一點砸擊傷害。
+id: skill_oil_flask
+schema_version: 1
+name_zh: 燈油瓶
+tier: 1
+rank: 1
+rarity: rare
+kind: active
+skeleton: area
+category: spell
+weapon_req: any
+ap_cost: 1
+scaling_attr: int
+shape: {type: cross, range: 3}
+effects:
+  - {type: damage, dice: 1d4, element: earth}
+  - {type: create_surface, surface: oil, duration: 3}
+condition: null
+cost: {mana: 4, cooldown: 3}
+tags: [earth, area, oil]
+narrative:
+  concept: 隨身帶的燈油瓶，砸在地上就是一灘等著被點燃的油
+  cast_flavor: 陶瓶在敵人腳邊碎裂，濃稠的燈油在石板上迅速漫開
+provenance: {origin: builtin, owner_id: null, created_by: null, parents: [], bound: true, tradeable: false}

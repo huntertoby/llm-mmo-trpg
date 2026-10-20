@@ -1,0 +1,29 @@
+# 消耗狀態（Phase 3C-6b 示範，管道 1 狀態當燃料，數值為初值，未經模擬）：引爆目標身上的中毒，造成「中毒剩餘回合 × 2d6」
+# 毒素傷害並波及周圍 1 格內的敵人；目標沒有中毒時不生效。與毒雲、咒印飛彈之類先施加狀態的技能搭配。
+id: skill_toxin_burst
+schema_version: 1
+name_zh: 毒血迸發
+tier: 2
+rank: 1
+rarity: rare
+kind: active
+skeleton: consume_status
+category: spell
+weapon_req: focus
+ap_cost: 2
+scaling_attr: int
+shape: {type: single, range: 4}
+effects:
+  - type: consume_status
+    status: poison
+    scale: remaining_rounds
+    splash: 1
+    then:
+      - {type: damage, dice: 2d6, element: poison}
+condition: null
+cost: {mana: 6, cooldown: 2}
+tags: [poison, spell, detonate]
+narrative:
+  concept: 把還在目標血管裡流動的毒一口氣催到沸騰
+  cast_flavor: 你五指猛然一握，對手血管裡的毒液同時沸騰，從傷口噴濺開來
+provenance: {origin: builtin, owner_id: null, created_by: null, parents: [], bound: true, tradeable: false}

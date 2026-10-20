@@ -1,0 +1,24 @@
+# 主動（Phase 3C-6b 示範，管道 2 環境當中介，數值為初值，未經模擬）：念力舉起物件，裹著火丟出去——技能帶火，
+# 所以丟出去的油桶落地就爆炸（不用先鋪油再點火的兩步）；代價是丟的物件更少（射程 3）、冷卻較長。
+id: skill_blazing_hurl
+schema_version: 1
+name_zh: 烈焰投擲
+tier: 2
+rank: 1
+rarity: rare
+kind: active
+skeleton: displace
+category: spell
+weapon_req: any
+ap_cost: 2
+scaling_attr: int
+shape: {type: object_then_tile, range: 3}
+effects:
+  - {type: hurl_object, range: 3, dice: 5d6, knock_prone: true}
+condition: null
+cost: {mana: 6, cooldown: 3}
+tags: [fire, spell, telekinesis]
+narrative:
+  concept: 把念力舉起的物件先點著，再朝敵人砸過去
+  cast_flavor: 木桶在半空中被火舌裹住，落地的瞬間整個炸開
+provenance: {origin: builtin, owner_id: null, created_by: null, parents: [], bound: true, tradeable: false}

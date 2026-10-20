@@ -35,6 +35,9 @@ companions: [sim_companion_fighter, sim_companion_archer]
 # 搭配升高平台、穿透射擊、居高射擊與狙擊，並接收被換下的升高平台（3C-6 再整理）。
 # Phase 3D-8d：build_assassin 以瞬步背刺（shadowstep landing: behind）換下先發制人、以暗影突襲（shadowstep landing: choose ＋
 # self_concealed）換下撕裂打擊（主動欄位已滿；撕裂打擊仍在 hero_fighter）；先發制人改由 build_gambler 的空欄位接收（3C-6 再整理）。
+# Phase 3C-6b（整理）：念力投擲由 build_fire 搬到新的 build_telekinesis（念力流）；新增 build_wallburn（推牆焚燒：推擊改造 ＋ on_collision
+# ＋ 油與火）與 build_detonator（狀態引爆：施加狀態 ＋ on_status_applied ＋ consume_status）。撞擊流（推擊改造 ＋ 撞擊 ＋ on_collision）
+# 就是既有的 build_push（重踏、破城衝撞、裂骨印記、震地推倒），不另加；衝鋒流 build_charger 是位移（dash／leap／swap）主題。
 builds:
   - id: build_push
     name_zh: 位移流
@@ -67,7 +70,7 @@ builds:
       resist: {elemental: 150}
       tags: [hero, sim]
       max_mana: 40
-      skills: [skill_fire_bolt, skill_cinder_burst, skill_ashen_oath, skill_shatter_blast, skill_detonate_burning, skill_searing_scar, skill_ember_cycle, skill_ember_ward, skill_telekinetic_hurl]
+      skills: [skill_fire_bolt, skill_cinder_burst, skill_ashen_oath, skill_shatter_blast, skill_detonate_burning, skill_searing_scar, skill_ember_cycle, skill_ember_ward]
 
   - id: build_storm
     name_zh: 雷電／水流
@@ -352,3 +355,53 @@ builds:
       tags: [hero, sim]
       max_mana: 30
       skills: [skill_wing_spread, skill_wing_gift, skill_raise_perch, skill_piercing_shot, skill_high_ground_shot, skill_sniper_shot]
+
+  - id: build_telekinesis
+    name_zh: 念力流
+    theme_zh: 用念力把箱子與油桶當砲彈丟出去（烈焰投擲連油桶都能直接引爆）、隔空推倒石柱與枯樹壓住敵人，碎裂衝擊打破掩護，寒鎖與瞬移拉開距離。箱子、油桶、石柱多的倉庫與油庫最強，空曠沒有東西可丟的平原不利（Phase 3C-6b，初值未經模擬）。
+    hero:
+      id: build_telekinesis
+      name_zh: 念力流英雄
+      attributes: {str: 8, dex: 12, con: 10, int: 16, wis: 12, wil: 12}
+      max_hp: 40
+      speed: 5
+      armor_bonus: 1
+      weapon: fire_staff
+      ai_profile: cunning
+      resist: {elemental: 150}
+      tags: [hero, sim]
+      max_mana: 40
+      skills: [skill_telekinetic_hurl, skill_blazing_hurl, skill_psychic_topple, skill_shatter_blast, skill_frost_shackle, skill_blink, skill_ember_ward]
+
+  - id: build_wallburn
+    name_zh: 推牆焚燒
+    theme_zh: 先砸燈油鋪地，再用灼熱推擊把人推進油裡與牆邊——撞擊讓敵人流血（裂骨印記），撕裂傷口把剩下的血放乾。窄路、牆多、有油的地方最強，開闊乾燥的地面推不出撞擊也點不著火（Phase 3C-6b，初值未經模擬）。
+    hero:
+      id: build_wallburn
+      name_zh: 推牆焚燒英雄
+      attributes: {str: 16, dex: 12, con: 14, int: 10, wis: 10, wil: 10}
+      max_hp: 60
+      speed: 5
+      armor_bonus: 4
+      weapon: one_handed_sword
+      resist: {physical: 100}
+      tags: [hero, sim]
+      max_mana: 24
+      skills: [skill_gale_kick, skill_battering_ram, skill_shield_bash, skill_oil_flask, skill_rupture, skill_blink, skill_heavy_stomp, skill_burning_shove, skill_fracture_mark, skill_parting_slash]
+
+  - id: build_detonator
+    name_zh: 狀態引爆
+    theme_zh: 火焰箭點燃、毒雲下毒、咒印標記，每一道落在敵人身上的狀態都會觸發蝕心追擊，再用引爆燃燒與毒血迸發把狀態一口氣換成範圍傷害。目標活得夠久、狀態有時間累積的戰鬥最強，一開場就被集火或敵人帶淨化時不利（Phase 3C-6b，初值未經模擬）。
+    hero:
+      id: build_detonator
+      name_zh: 狀態引爆英雄
+      attributes: {str: 8, dex: 12, con: 10, int: 16, wis: 12, wil: 12}
+      max_hp: 40
+      speed: 5
+      armor_bonus: 1
+      weapon: fire_staff
+      ai_profile: cunning
+      resist: {elemental: 150}
+      tags: [hero, sim]
+      max_mana: 40
+      skills: [skill_fire_bolt, skill_venom_cloud, skill_hex_bolt, skill_detonate_burning, skill_toxin_burst, skill_dread_gaze, skill_creeping_blight, skill_mark_detonation, skill_ember_brand]

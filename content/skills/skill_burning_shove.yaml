@@ -1,0 +1,25 @@
+# 改造型（Phase 3C-6b 示範，管道 4 標籤改寫，數值為初值，未經模擬）：你的推擊類技能（帶 push 或 control 標籤）帶火元素——把人推進油裡、
+# 草叢或炸藥桶旁就會著火（add_element 只改物理傷害）。
+id: skill_burning_shove
+schema_version: 1
+name_zh: 灼熱推擊
+tier: 1
+rank: 1
+rarity: epic
+kind: modifier
+skeleton: modifier
+category: weapon
+weapon_req: melee
+ap_cost: null
+scaling_attr: str
+shape: {type: self}
+effects: []
+modifiers:
+  - applies_to: {skill_tags: [push, control]}
+    change: {add_element: fire}
+condition: null
+tags: [fire, passive, modifier]
+narrative:
+  concept: 手掌發燙，每一次推擊都在對手胸口烙下一個焦黑的掌印
+  cast_flavor: 你推出去的那一掌帶著火星，落在油漬上的瞬間轟地燒了起來
+provenance: {origin: builtin, owner_id: null, created_by: null, parents: [], bound: true, tradeable: false}
