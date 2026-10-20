@@ -5,10 +5,15 @@
 
 from __future__ import annotations
 
+import pytest
+
 from tests.engine.helpers import give_turn, with_rolls
-from tests.engine.skill_helpers import U1, U2, U3
+from tests.engine.skill_helpers import U1, U2, U3, of
 from tests.engine.test_facing_backstab import BACKSTAB, duel, rolled
+from tests.engine.test_intercept import scene
+from tests.engine.test_passive_triggers import always
 from trpg.engine import Attack, Shove, UseSkill, resolve
+from trpg.engine.events import AttackIntercepted
 from trpg.shared.types import Team
 
 
@@ -76,3 +81,32 @@ def test_a_backstab_cast_keeps_its_bonus_damage_then_the_target_turns() -> None:
     result = resolve(with_rolls(state, [(20, 20)] * 4), action)
     assert [r.backstab for r in rolled(result)] == [2]
     assert result.state.units[U1].xy == (4, 3) and result.state.units[U2].facing == "east"
+
+
+def test_the_guardian_who_takes_a_melee_attack_turns_not_the_original_target(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    # 3C-6b（3C 規格 0.13 #3）：守護者替隊友擋下近戰，轉身的是守護者，原本被瞄準的人朝向不變
+    always(monkeypatch)
+    state = scene()
+    state.units[U2].facing = "north"
+    state.units[U3].facing = "south"
+    result = resolve(state, Attack(unit_id=U1, target_id=U2))
+    assert of(result, AttackIntercepted)
+    assert result.state.units[U2].facing == "north"
+    assert result.state.units[U3].facing in ("west", "north")  # 面向 (3, 3) 的攻擊者
+
+
+def test_the_guardian_turns_when_a_melee_skill_is_intercepted(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    always(monkeypatch)
+    state = scene(attacker_skills=("skill_shield_bash",))
+    state.units[U1].mana = 99
+    state.units[U2].facing = "north"
+    state.units[U3].facing = "south"
+    action = UseSkill(unit_id=U1, skill_id="skill_shield_bash", target_id=U2)
+    result = resolve(state, action)
+    assert of(result, AttackIntercepted)
+    assert result.state.units[U2].facing == "north"
+    assert result.state.units[U3].facing in ("west", "north")

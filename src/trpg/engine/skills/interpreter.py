@@ -614,6 +614,9 @@ class _Cast:
             )
             if guardian is not None:
                 self._redirect(unit, guardian)
+                if self.profile.melee and self.melee_victims:
+                    # 3C-6b：守護者擋下近戰，轉身的是守護者（不是原本被瞄準的人）
+                    self.melee_victims[-1] = (guardian, self.caster.xy)
                 unit = guardian
         if roll.hit and self.skill.category == "spell" and unit.team is not self.caster.team:
             spell_hit_reactions(ctx, self.caster, unit)  # 被法術命中、傷害之前（3D-3）

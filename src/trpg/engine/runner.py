@@ -37,8 +37,10 @@ __all__ = [
     "run_battle",
 ]
 
-LOG_FORMAT = "trpg-battle-log/33"
-"""``/33``（Phase 3C-6a）：被近戰攻擊後轉身——近戰攻擊（普攻與近戰武器技，不論命中與否）結算完，
+LOG_FORMAT = "trpg-battle-log/34"
+"""``/34``（Phase 3C-6b）：守護者替隊友擋下近戰攻擊時，轉身面向攻擊者的是守護者（不是原本被瞄準
+的人），AI 的走位與背刺因此改變；舊紀錄不能由新版程式重播。
+``/33``（Phase 3C-6a）：被近戰攻擊後轉身——近戰攻擊（普攻與近戰武器技，不論命中與否）結算完，
 目標轉向攻擊者（遠程不轉、強制位移不轉；背刺仍以擲骰當下的朝向為準），AI 的走位與背刺次數因此
 改變；``damage_dealt.pierce_permille``（穿透折扣與格擋分開記錄）、``move_blocked.forced``（推擊
 被擋下，紀錄以接著的 ``collided`` 為主）、``shot_pierced.behind`` 只列命中的後方單位；

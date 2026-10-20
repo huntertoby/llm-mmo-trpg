@@ -443,8 +443,8 @@ def perform_unit_attack(ctx: Ctx, attacker: UnitState, target: UnitState, *, pri
     """
     with holding(ctx):
         target_xy, attacker_xy = target.xy, attacker.xy
-        ambushed, rolled = _attack_once(ctx, attacker, target, primary=primary)
-        turns = [(target, attacker_xy)] if rolled and attacker.weapon.is_melee else []
+        ambushed, rolled, victim = _attack_once(ctx, attacker, target, primary=primary)
+        turns = [(victim, attacker_xy)] if rolled and attacker.weapon.is_melee else []
         after_attack(ctx, attacker, target_xy, ambushed=ambushed, turns=turns)
 
 
@@ -479,11 +479,12 @@ def after_attack(
 
 def _attack_once(
     ctx: Ctx, attacker: UnitState, target: UnitState, *, primary: bool
-) -> tuple[bool, bool]:
-    """回傳（這次攻擊是不是在隱蔽中發動——潛行偷襲，結算完要移除隱蔽；有沒有擲命中）。"""
+) -> tuple[bool, bool, UnitState]:
+    """回傳（這次攻擊是不是在隱蔽中發動——潛行偷襲，結算完要移除隱蔽；有沒有擲命中；承受這次
+    攻擊的單位——被守護者擋下時是守護者，3C-6b：轉身的是它）。"""
     ally_targeted_reactions(ctx, attacker, target)  # 相鄰友方被瞄準：命中判定之前（3D-3）
     if not attacker.alive or not target.alive:
-        return False, False
+        return False, False, target
     forced: ForcedOutcome | None = None
     if ctx.preview is not None:
         ctx.mark_branch()
@@ -517,7 +518,7 @@ def _attack_once(
         ambush=roll.ambush,
     )
     if not roll.hit:
-        return roll.ambush > 0, True
+        return roll.ambush > 0, True, target
     guardian = try_intercept(ctx, attacker, target, rolled_event.seq)
     if guardian is not None:
         target = guardian  # 替隊友擋攻擊：傷害改作用在守護者身上（不重擲命中）
@@ -544,7 +545,7 @@ def _attack_once(
         ],
     )
     hit_reactions(ctx, attacker, target, melee=is_melee_attack(ctx, attacker))
-    return roll.ambush > 0, True
+    return roll.ambush > 0, True, target
 
 
 def opportunity_attacks(ctx: Ctx, mover: UnitState, from_xy: XY, to_xy: XY) -> None:
