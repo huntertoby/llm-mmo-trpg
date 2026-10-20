@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 import type { BattleResponse } from "../api/types";
-import { frameOps, playbackPlan, remainingLines } from "./playback";
+import { FEEDBACK_MS, frameOps, playbackPlan, remainingLines } from "./playback";
 import fixture from "./fixtures/oil_depot_seed3.json";
 
 const response = fixture as unknown as BattleResponse;
@@ -68,5 +68,27 @@ describe("playbackPlan", () => {
   it("has no frames when nothing advanced", () => {
     const idle = { ...response, steps: [], initial_view: response.view };
     expect(playbackPlan(idle, hero, "normal").frames).toEqual([]);
+  });
+
+  it("gives feedback for the steps: full time normally, half when fast, none when skipping", () => {
+    const normal = playbackPlan(response, hero, "normal");
+    const fast = playbackPlan(response, hero, "fast");
+    const skip = playbackPlan(response, hero, "skip");
+    const withItems = normal.frames.filter((f) => f.feedback.length > 0);
+    expect(withItems.length).toBeGreaterThan(0);
+    expect(withItems.every((f) => f.feedbackMs === FEEDBACK_MS)).toBe(true);
+    expect(fast.frames.filter((f) => f.feedback.length > 0).every((f) => f.feedbackMs === FEEDBACK_MS / 2)).toBe(true);
+    expect(skip.frames.every((f) => f.feedback.length === 0 && f.feedbackMs === 0)).toBe(true);
+    const ops = frameOps(withItems[0]!).map((o) => o.op);
+    expect(ops.indexOf("feedback")).toBe(ops.indexOf("view") + 1);
+  });
+
+  it("shortens move animations by speed (fast about half, skip none)", () => {
+    const moves = (speed: "normal" | "fast" | "skip") =>
+      playbackPlan(response, hero, speed).frames.flatMap((f) => f.moves);
+    const total = (speed: "normal" | "fast" | "skip") => moves(speed).reduce((a, m) => a + m.durationMs, 0);
+    expect(total("normal")).toBeGreaterThan(0);
+    expect(Math.abs(total("fast") - total("normal") / 2)).toBeLessThanOrEqual(moves("normal").length / 2);
+    expect(total("skip")).toBe(0);
   });
 });
