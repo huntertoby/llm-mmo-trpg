@@ -5242,6 +5242,7 @@
           "basics",
           "shape",
           "effects",
+          "followup",
           "condition",
           "cost",
           "rarity"

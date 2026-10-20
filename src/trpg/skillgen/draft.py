@@ -137,6 +137,17 @@ def _condition_complete(draft: Draft, skeleton: SkeletonDef) -> bool:
     )
 
 
+def _followup_complete(draft: Draft, library: ContentLibrary) -> bool:
+    follow = _mapping(draft.get("followup"))
+    if not follow:
+        return True  # 動作段可省略
+    shape = _mapping(follow.get("shape"))
+    definition = library.ruleset.shapes.by_id().get(str(shape.get("type")))
+    if follow.get("skeleton") is None or definition is None or not follow.get("effects"):
+        return False
+    return all(shape.get(n) is not None for n, p in definition.params.items() if p.required)
+
+
 def step_complete(step: StepId, draft: Draft, library: ContentLibrary) -> bool:
     """草稿是否已經填好 ``step`` 的必要欄位（不檢查前面的步驟）。"""
     skeleton = draft_skeleton(draft, library)
@@ -146,6 +157,7 @@ def step_complete(step: StepId, draft: Draft, library: ContentLibrary) -> bool:
         "basics": lambda: _basics_complete(draft, skeleton),
         "shape": lambda: _shape_complete(draft, library),
         "effects": lambda: _effects_complete(draft),
+        "followup": lambda: _followup_complete(draft, library),
         "condition": lambda: _condition_complete(draft, skeleton),
         "cost": lambda: True,  # 代價全部可省略
         "rarity": lambda: draft.get("rarity") is not None,

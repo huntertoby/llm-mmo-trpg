@@ -50,6 +50,11 @@ from trpg.shared.types import Attribute
 from trpg.skillgen.draft import Draft, DraftError, build_skill, draft_skeleton, step_complete
 from trpg.skillgen.option_conform import field_problems
 from trpg.skillgen.option_fill import variants
+from trpg.skillgen.option_followup import (
+    followup_fields,
+    followup_notes,
+    followup_visible,
+)
 from trpg.skillgen.option_models import (
     STEP_IDS,
     Choice,
@@ -105,6 +110,10 @@ STEP_TEXT: dict[StepId, tuple[str, str]] = {
     ),
     "shape": ("形狀", "技能打到哪些格子：單體、直線、錐形……與射程、大小"),
     "effects": ("效果", "核心效果與附帶效果（修正技能則是修正規則）"),
+    "followup": (
+        "動作段",
+        "位移技能可以接第二段：位移到落點後，以落點為原點再做一次動作（可省略）",
+    ),
     "condition": ("條件", "技能要在什麼情況下才生效（可省略）"),
     "cost": ("代價", "法力、冷卻、每場次數、生命、自身狀態、源力；代價越重，可用預算越多"),
     "rarity": ("稀有度", "由用到的形狀、原語、狀態、條件推導出最低稀有度"),
@@ -780,6 +789,11 @@ def _modifier_step(draft: Draft, library: ContentLibrary) -> StepOptions:
     return _step("effects", draft, library, (rule,), notes)
 
 
+def _followup_step(draft: Draft, library: ContentLibrary) -> StepOptions:
+    fields = followup_fields(draft, library, _effect_choices)
+    return _step("followup", draft, library, fields, followup_notes(library))
+
+
 # ---------------------------------------------------------------------------
 # 5. 條件
 # ---------------------------------------------------------------------------
@@ -1008,6 +1022,7 @@ def _build_step(
         "basics": lambda: _basics_step(draft, library, skeleton),
         "shape": lambda: _shape_step(draft, library, skeleton),
         "effects": lambda: _effects_step(draft, library, skeleton),
+        "followup": lambda: _followup_step(draft, library),
         "condition": lambda: _condition_step(draft, library, skeleton),
         "cost": lambda: _cost_step(draft, library),
         "rarity": lambda: _rarity_step(draft, library),
@@ -1022,6 +1037,8 @@ def draft_options(draft: Draft, library: ContentLibrary) -> DraftOptions:
     problems: list[str] = []
     next_step: StepId | None = None
     for step_id in STEP_IDS:
+        if step_id == "followup" and not followup_visible(draft):
+            continue  # 只有位移技能能接動作段
         step = _build_step(step_id, draft, library, skeleton)
         steps.append(step)
         problems += field_problems(step.fields, draft)

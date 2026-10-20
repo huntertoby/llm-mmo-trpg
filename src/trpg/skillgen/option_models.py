@@ -37,18 +37,22 @@ __all__ = [
     "StepOptions",
 ]
 
-type StepId = Literal["skeleton", "basics", "shape", "effects", "condition", "cost", "rarity"]
+type StepId = Literal[
+    "skeleton", "basics", "shape", "effects", "followup", "condition", "cost", "rarity"
+]
 STEP_IDS: tuple[StepId, ...] = (
     "skeleton",
     "basics",
     "shape",
     "effects",
+    "followup",
     "condition",
     "cost",
     "rarity",
 )
 """組技能的步驟，依序：骨架 → 基本設定（種類、類別、縮放屬性、階級、AP、觸發）→ 形狀 → 效果 →
-條件 → 代價 → 稀有度。每一步的選項只取決於前面的步驟。"""
+動作段（只有位移技能可以接，可省略；Phase 3F-3b）→ 條件 → 代價 → 稀有度。每一步的選項只取決於
+前面的步驟；動作段步驟在不能接動作段的技能不會出現。"""
 
 type FieldType = Literal[
     "choice",

@@ -25,6 +25,7 @@ from trpg.skillgen.budget import (
     skill_budget,
 )
 from trpg.skillgen.draft import Draft, DraftError, build_skill
+from trpg.skillgen.option_followup import followup_visible
 from trpg.skillgen.option_models import STEP_IDS, StepId
 from trpg.skillgen.options import draft_options, minimum_rarity
 from trpg.skillgen.validate import validate_skill
@@ -213,7 +214,11 @@ def check_draft(draft: Draft, library: ContentLibrary) -> DraftCheck:
     """檢查草稿（純函式）。"""
     options = draft_options(draft, library)
     if options.next_step is not None:
-        missing = STEP_IDS[STEP_IDS.index(options.next_step) :]
+        missing = tuple(
+            s
+            for s in STEP_IDS[STEP_IDS.index(options.next_step) :]
+            if s != "followup" or followup_visible(draft)
+        )
         problems = tuple(Problem(rule="draft", message_zh=p) for p in options.problems)
         return DraftCheck(
             complete=False,
