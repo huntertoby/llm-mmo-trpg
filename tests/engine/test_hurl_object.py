@@ -408,9 +408,9 @@ def test_the_demo_skill_budget_discounts_the_dice_and_adds_the_knockdown() -> No
 def test_an_ai_battle_hurls_objects_and_replays(
     tmp_path: Path, capsys: pytest.CaptureFixture[str]
 ) -> None:
-    """build_fire（念力投擲）在 narrow_halls 種子 2：AI 丟出物件（油桶摔破漏油），紀錄重播一致。"""
+    """build_telekinesis 在 narrow_halls 種子 5：AI 丟出物件（油桶摔破漏油），紀錄重播一致。"""
     log = tmp_path / "hurl.json"
-    argv = ["battle", "--map", "narrow_halls", "--seed", "2", "--ally-build", "build_fire"]
+    argv = ["battle", "--map", "narrow_halls", "--seed", "5", "--ally-build", "build_telekinesis"]
     assert main([*argv, "--log-json", str(log)]) == 0
     out = capsys.readouterr().out
     assert "丟向" in out and "出現了油" in out

@@ -10,7 +10,7 @@ import pytest
 from fastapi.testclient import TestClient
 
 HURL = "skill_telekinetic_hurl"
-BODY = {"map_id": "narrow_halls", "seed": 9, "hero_build": "build_fire"}
+BODY = {"map_id": "narrow_halls", "seed": 9, "hero_build": "build_telekinesis"}
 
 
 def _post(client: TestClient, battle_id: str, suffix: str, body: dict[str, Any]) -> dict[str, Any]:

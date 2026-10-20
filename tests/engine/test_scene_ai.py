@@ -186,7 +186,7 @@ def test_the_ai_sees_the_pierce_hit_chance_behind_cover() -> None:
 
 
 def test_sim_metrics_count_scene_events() -> None:
-    lib, allies = build_allies(library(), ["build_fire"])
+    lib, allies = build_allies(library(), ["build_telekinesis"])
     spec = map_spec(lib, "narrow_halls", [2], allies=allies)
     outcome = run_one(spec, 2)
     assert outcome.metrics is not None
@@ -197,12 +197,12 @@ def test_sim_maps_takes_an_ally_build_and_prints_the_scene_line(
     capsys: pytest.CaptureFixture[str],
 ) -> None:
     argv = [
-        "sim", "maps", "--maps", "narrow_halls", "--ally-build", "build_fire",
+        "sim", "maps", "--maps", "narrow_halls", "--ally-build", "build_telekinesis",
         "--seeds", "1", "--seed-start", "2", "--jobs", "1",
     ]  # fmt: skip
     assert main(argv) == 0
     out = capsys.readouterr().out
-    assert "我方 build：build_fire" in out
+    assert "我方 build：build_telekinesis" in out
     assert "場景物件（整批合計）：投擲物件" in out
     assert main([*argv[:5], "build_nope", *argv[6:]]) == 2
 
