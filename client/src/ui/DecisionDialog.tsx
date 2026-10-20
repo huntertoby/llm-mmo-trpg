@@ -1,7 +1,8 @@
 // 反應詢問視窗：觸發者（格子上以洋紅色雙框標示）、反應名稱與說明、代價、接受／拒絕。
-// 不遮住戰場（戰場上要看得到觸發者）。「之後都自動」只在接受時有意義：詢問期間伺服器不收
+// 不遮住戰場（戰場上要看得到觸發者；視窗靠上，可切到下方）。「之後都自動」只在接受時有意義：詢問期間伺服器不收
 // 動作，所以由呼叫端記在本地，輪到主角時再送 `set_reaction_mode`。
 import { useState } from "react";
+import { DialogFrame } from "./DialogFrame";
 import type { Pending, ReactionRuleView } from "../api/types";
 import { glossaryEntry, reactionName } from "../battle/glossary";
 import { costText } from "../battle/reactions";
@@ -23,8 +24,7 @@ export function DecisionDialog({ pending, rule, names, eventText, enabled, onDec
   const description = rule?.description_zh ?? glossaryEntry("reactions", pending.reaction)?.description_zh ?? null;
   const trigger = pending.trigger_unit_id == null ? null : names.label(pending.trigger_unit_id);
   return (
-    <div className="decision-card" role="dialog" aria-label="反應詢問">
-      <div className="modal-title">反應詢問：{reaction}</div>
+    <DialogFrame label="反應詢問" title={`反應詢問：${reaction}`}>
       {eventText !== null && <p className="small muted">{eventText}</p>}
       <p>
         {names.label(pending.unit_id)} 可以使用「{reaction}」
@@ -51,6 +51,6 @@ export function DecisionDialog({ pending, rule, names, eventText, enabled, onDec
           拒絕
         </button>
       </div>
-    </div>
+    </DialogFrame>
   );
 }

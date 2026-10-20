@@ -1,7 +1,7 @@
-// 操作面板：基本動作（攻擊、推擊、絆倒、推動物件、防禦、結束姿態、起身）、結束回合；
-// 選了技能或基本動作之後的目標說明（方向箭頭、自身、取消）與預覽；備援的「其他動作」清單（收合）。
+// 選取面板（Phase 3-8 起浮在戰場左上角）：選了技能或基本動作之後的目標說明（方向箭頭、自身、取消）
+// 與預覽、連鎖。基本動作與技能在底部技能列，結束回合、防禦、備援在右下角（`TurnControls`）。
 import type { Action, BattleView, InteractOption, PreviewOut } from "../api/types";
-import type { LabeledAction } from "../battle/actions";
+import { cssColor, type LegendEntry } from "../battle/legend";
 import { DIRECTIONS } from "../battle/glossary";
 import { secondChoices } from "../battle/composite";
 import { chainLines, previewLines } from "../battle/previewText";
@@ -21,24 +21,24 @@ import type { UnitNames } from "../battle/units";
 
 interface Props {
   enabled: boolean;
-  /** 複製技能暫停中（Phase 3C-6a）：面板只剩被複製技能的方向按鈕，提示改為選目標或放棄。 */
-  copying?: boolean;
-  basic: readonly ActionMode[];
   mode: ActionMode | null;
   /** 投擲物件的第一段已選好的物件 ID（還在選物件時 `null`）。 */
   hurlPick: string | null;
   /** 投擲物件：放棄已選的物件，回到第一段。 */
   onHurlReset(): void;
-  endTurn: Action | null;
-  fallback: readonly LabeledAction[];
-  moveCount: number;
-  attackCount: number;
   preview: PreviewOut | null;
   view: BattleView;
   /** 主角相鄰可推動物件的互動選項（含不合法與原因；撥開用）。 */
   interactOptions: readonly InteractOption[];
   names: UnitNames;
-  onPickMode(mode: ActionMode): void;
+  /** 目前畫面上需要說明的顏色（複合技能）。 */
+  legend: readonly LegendEntry[];
+  /** 隊友指令等玩家點目標時的提示（沒有時 `null`）。 */
+  orderHint: string | null;
+  /** 隊友指令「保護」選取中：可直接保護主角。 */
+  onProtectHero: (() => void) | null;
+  /** 可以取消選取（技能、基本動作或隊友指令）；複製技能暫停時沒有取消鈕（用對話框的放棄）。 */
+  cancellable: boolean;
   onCancel(): void;
   onAction(action: Action): void;
   /** 滑過面板上的按鈕時預覽那個動作（離開時 `null`）。 */
@@ -194,98 +194,96 @@ function ModeHelp(props: HelpProps) {
   );
 }
 
-export function ActionPanel(props: Props) {
-  const { enabled, basic, mode, endTurn, fallback, preview, view, names } = props;
+interface PreviewContent {
+  lines: string[];
+  chain: ReturnType<typeof chainLines> | null;
+  hasChain: boolean;
+}
+
+function previewContent({ preview, view, names }: Pick<Props, "preview" | "view" | "names">): PreviewContent | null {
   const chain = preview === null ? null : chainLines(preview);
   const hasChain = chain !== null && (chain.certain.length > 0 || chain.possible.length > 0);
   const lines = preview === null ? [] : previewLines(preview, names, view, hasChain);
+  return lines.length === 0 && !hasChain ? null : { lines, chain, hasChain };
+}
+
+function PreviewBox({ content }: { content: PreviewContent }) {
+  const { lines, chain, hasChain } = content;
   return (
-    <div className="panel action-panel">
-      <div className="action-hint">
-        {props.copying === true
-          ? "請為複製的技能或複合技能的第二段選擇目標（點高亮格子或下方方向鈕），或按 Esc 放棄。"
-          : enabled
-          ? `點選藍色格子移動（${props.moveCount} 格），點選紅框敵人攻擊（${props.attackCount} 個）。`
-          : "等待中……"}
-      </div>
-      <div className="mode-buttons">
-        {basic.map((m) => (
-          <button
-            key={m.key}
-            type="button"
-            className={mode?.key === m.key ? "selected" : ""}
-            disabled={!enabled}
-            onClick={() => props.onPickMode(m)}
-          >
-            {m.label}
-          </button>
+    <div className="preview-box" aria-label="預覽">
+      <div className="section-title">預覽</div>
+      <ul>
+        {lines.map((l, i) => (
+          <li key={`${i}:${l}`}>{l}</li>
         ))}
-        <button
-          type="button"
-          className="primary"
-          disabled={!enabled || endTurn === null}
-          onClick={() => endTurn !== null && props.onAction(endTurn)}
-        >
-          結束回合
-        </button>
-      </div>
-      {mode !== null && (
-        <>
-          <ModeHelp
-            mode={mode}
-            enabled={enabled}
-            hurlPick={props.hurlPick}
-            onHurlReset={props.onHurlReset}
-            interactOptions={props.interactOptions}
-            view={view}
-            onAction={props.onAction}
-            onPreviewAction={props.onPreviewAction}
-          />
-          <button type="button" className="small-button" onClick={props.onCancel}>
-            取消選取
-          </button>
-        </>
-      )}
-      {(lines.length > 0 || hasChain) && (
-        <div className="preview-box" aria-label="預覽">
-          <div className="section-title">預覽</div>
+      </ul>
+      {chain !== null && hasChain && (
+        <div className="chain-box" aria-label="可能發生的連鎖">
+          <div className="section-title">可能發生的連鎖</div>
           <ul>
-            {lines.map((l, i) => (
-              <li key={`${i}:${l}`}>{l}</li>
+            {chain.certain.map((t) => (
+              <li key={`c:${t}`}>
+                <b>確定</b>　{t}
+              </li>
+            ))}
+            {chain.possible.map((t) => (
+              <li key={`p:${t}`}>
+                <span className="muted">可能</span>　{t}
+              </li>
             ))}
           </ul>
-          {chain !== null && hasChain && (
-            <div className="chain-box" aria-label="可能發生的連鎖">
-              <div className="section-title">可能發生的連鎖</div>
-              <ul>
-                {chain.certain.map((t) => (
-                  <li key={`c:${t}`}>
-                    <b>確定</b>　{t}
-                  </li>
-                ))}
-                {chain.possible.map((t) => (
-                  <li key={`p:${t}`}>
-                    <span className="muted">可能</span>　{t}
-                  </li>
-                ))}
-              </ul>
-            </div>
+        </div>
+      )}
+    </div>
+  );
+}
+
+/** 浮在戰場左上角的選取面板；沒有選取、沒有預覽時不顯示。 */
+export function ModePanel(props: Props) {
+  const { enabled, mode, preview, view, names, legend, orderHint } = props;
+  const content = previewContent({ preview, view, names });
+  if (mode === null && orderHint === null && content === null && legend.length === 0) return null;
+  return (
+    <div className="panel mode-panel" aria-label="選取">
+      {orderHint !== null && (
+        <div className="mode-help">
+          <div className="section-title">隊友指令</div>
+          <div className="small muted">{orderHint} Esc／右鍵取消。</div>
+          {props.onProtectHero !== null && (
+            <button type="button" onClick={props.onProtectHero}>
+              保護主角
+            </button>
           )}
         </div>
       )}
-      <details className="fallback">
-        <summary>其他動作（備援，{fallback.length}）</summary>
-        <ul className="action-list">
-          {fallback.length === 0 && <li className="muted">（無）</li>}
-          {fallback.map((o, i) => (
-            <li key={`${i}:${o.label}`}>
-              <button type="button" disabled={!enabled} onClick={() => props.onAction(o.action)}>
-                {o.label}
-              </button>
-            </li>
+      {mode !== null && (
+        <ModeHelp
+          mode={mode}
+          enabled={enabled}
+          hurlPick={props.hurlPick}
+          onHurlReset={props.onHurlReset}
+          interactOptions={props.interactOptions}
+          view={view}
+          onAction={props.onAction}
+          onPreviewAction={props.onPreviewAction}
+        />
+      )}
+      {props.cancellable && (mode !== null || orderHint !== null) && (
+        <button type="button" className="small-button" onClick={props.onCancel}>
+          取消選取
+        </button>
+      )}
+      {legend.length > 0 && (
+        <div className="mode-legend" aria-label="顏色圖例">
+          {legend.map((e) => (
+            <span key={e.label} className="legend-item">
+              <span className="legend-swatch" style={{ background: cssColor(e.color) }} />
+              {e.label}
+            </span>
           ))}
-        </ul>
-      </details>
+        </div>
+      )}
+      {content !== null && <PreviewBox content={content} />}
     </div>
   );
 }

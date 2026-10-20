@@ -15,6 +15,8 @@ interface Props {
   view: BattleView;
   hero: UnitView | null;
   skills: SkillNames;
+  /** 縮成一行（窄螢幕，Phase 3-8）。 */
+  compact?: boolean;
 }
 
 function Bar({ label, value, max, className, extra }: { label: string; value: number; max: number; className: string; extra?: string }) {
@@ -49,8 +51,34 @@ export function surfaceUnder(view: BattleView, hero: UnitView): string {
   return `${surfaceName(tile.surface)}${left}`;
 }
 
-export function Hud({ view, hero, skills }: Props) {
+/** 一行版的主角狀態（窄螢幕，Phase 3-8）。 */
+export function compactHudText(view: BattleView, hero: UnitView): string {
+  const stacks = Object.entries(hero.stacks).filter(([, n]) => n > 0);
+  const parts = [
+    `HP ${hero.hp}/${hero.max_hp}${hero.shield > 0 ? `（盾 ${hero.shield}）` : ""}`,
+    `法力 ${hero.mana}/${hero.max_mana}`,
+    `耐力 ${hero.stamina}/${hero.max_stamina}`,
+    `AP ${hero.ap}`,
+    `移動 ${hero.move_points}`,
+    `反應${hero.reaction_available ? "可用" : "已用"}`,
+    `源力 ${hero.source}/${hero.source_max}`,
+    `狀態 ${hero.statuses.length === 0 ? "無" : hero.statuses.map(statusLine).join("、")}`,
+    `腳下 ${surfaceUnder(view, hero)}`,
+  ];
+  if (stacks.length > 0) parts.push(`層數 ${stacks.map(([k, n]) => `${stackName(k)}×${n}`).join("、")}`);
+  return parts.join("｜");
+}
+
+export function Hud({ view, hero, skills, compact = false }: Props) {
   if (hero === null) return null;
+  if (compact) {
+    const text = compactHudText(view, hero);
+    return (
+      <div className="panel hud hud-compact" aria-label="主角狀態" title={text}>
+        <b>{hero.name_zh}</b>　{text}
+      </div>
+    );
+  }
   const stacks = Object.entries(hero.stacks).filter(([, n]) => n > 0);
   const cooldowns = Object.entries(hero.cooldowns).filter(([, n]) => n > 0);
   const summons = summonsOf(view, hero.id);

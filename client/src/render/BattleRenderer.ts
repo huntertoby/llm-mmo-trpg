@@ -1,19 +1,21 @@
 // PixiJS 繪製：照著 `DrawModel` 畫格子、物件、陷阱、單位與高亮；移動動畫只是過場，
 // 播放完由呼叫端以新的 `view` 重畫（以 `view` 為準）。
+// 縮放（Phase 3-8）：場景一律以「模型像素」（每格 TILE_SIZE）繪製；放大縮小只改畫布的解析度
+// （devicePixelRatio × 縮放）與 CSS 大小，文字與線條因此保持清晰。滑鼠事件不經過 Pixi，
+// 由 `BattleCanvas` 以 DOM 座標換算（`battle/stageLayout.ts` 的 `clientToTile`）。
 import {
   Application,
   Container,
   Graphics,
-  Rectangle,
   Text,
-  type FederatedPointerEvent,
   type Ticker,
 } from "pixi.js";
 import type { Pos } from "../api/types";
 import { lerpPos, type MoveAnim } from "../battle/animation";
 import type { DrawModel, ObjectDraw, TileDraw, UnitDraw } from "../battle/drawModel";
 import { facingArrow } from "../battle/facing";
-import { canvasSize, pixelToTile, TILE_SIZE, tileCenter, tileOrigin } from "../battle/geometry";
+import { canvasSize, TILE_SIZE, tileCenter, tileOrigin } from "../battle/geometry";
+import { scaledSize } from "../battle/stageLayout";
 import { HIGHLIGHT } from "../battle/glossary";
 import type { Overlay, OverlayKind } from "../battle/scenePreview";
 import type { TelegraphMark } from "../battle/telegraph";
@@ -40,11 +42,6 @@ export interface Highlights {
   overlays: readonly Overlay[];
   /** 投擲物件第二段選取時，已經選好（舉起）的物件所在格（青色粗框）。 */
   picked: readonly Pos[];
-}
-
-export interface RendererCallbacks {
-  onTileClick(tile: Pos): void;
-  onTileHover(tile: Pos | null): void;
 }
 
 const T = TILE_SIZE;
@@ -107,11 +104,8 @@ export class BattleRenderer {
   private model: DrawModel | null = null;
   private ready = false;
   private destroyed = false;
-  private readonly callbacks: RendererCallbacks;
-
-  constructor(callbacks: RendererCallbacks) {
-    this.callbacks = callbacks;
-  }
+  /** 畫面上的縮放比例（1 ＝ 每格 TILE_SIZE 個 CSS 像素）。 */
+  private scale = 1;
 
   async init(host: HTMLElement): Promise<void> {
     await this.app.init({
@@ -120,7 +114,7 @@ export class BattleRenderer {
       background: BACKGROUND,
       antialias: true,
       resolution: window.devicePixelRatio || 1,
-      autoDensity: true,
+      autoDensity: false,
     });
     if (this.destroyed) {
       this.app.destroy(true, { children: true });
@@ -129,13 +123,8 @@ export class BattleRenderer {
     host.appendChild(this.app.canvas);
     const stage = this.app.stage;
     stage.addChild(this.tiles, this.auras, this.zones, this.objects, this.highlights, this.traps, this.units, this.hover);
-    stage.eventMode = "static";
-    stage.on("pointermove", (e: FederatedPointerEvent) => this.callbacks.onTileHover(this.tileOf(e)));
-    stage.on("pointerleave", () => this.callbacks.onTileHover(null));
-    stage.on("pointertap", (e: FederatedPointerEvent) => {
-      const tile = this.tileOf(e);
-      if (tile !== null) this.callbacks.onTileClick(tile);
-    });
+    stage.eventMode = "none";
+    this.app.canvas.style.display = "block";
     this.ready = true;
     if (this.model !== null) this.draw(this.model);
   }
@@ -146,19 +135,31 @@ export class BattleRenderer {
     this.ready = false;
   }
 
-  private tileOf(e: FederatedPointerEvent): Pos | null {
-    if (this.model === null) return null;
-    return pixelToTile(e.global.x, e.global.y, this.model);
+  /** 設定畫面上的縮放比例（由可用空間算出）；畫布大小與解析度立即更新，場景不必重畫。 */
+  setScale(scale: number): void {
+    if (!(scale > 0)) return;
+    this.scale = scale;
+    if (this.ready && this.model !== null) this.applySize(this.model);
+  }
+
+  /** 畫布的繪製尺寸 ＝ 模型像素；解析度 ＝ 裝置像素比 × 縮放；CSS 大小 ＝ 模型像素 × 縮放。 */
+  private applySize(model: DrawModel): void {
+    const size = canvasSize(model);
+    const resolution = (window.devicePixelRatio || 1) * this.scale;
+    const r = this.app.renderer;
+    if (r.screen.width !== size.width || r.screen.height !== size.height || r.resolution !== resolution) {
+      r.resize(size.width, size.height, resolution);
+    }
+    const shown = scaledSize(model, this.scale);
+    const style = this.app.canvas.style;
+    style.width = `${shown.width}px`;
+    style.height = `${shown.height}px`;
   }
 
   draw(model: DrawModel): void {
     this.model = model;
     if (!this.ready) return;
-    const size = canvasSize(model);
-    if (this.app.screen.width !== size.width || this.app.screen.height !== size.height) {
-      this.app.renderer.resize(size.width, size.height);
-    }
-    this.app.stage.hitArea = new Rectangle(0, 0, size.width, size.height);
+    this.applySize(model);
     clearLayer(this.tiles);
     clearLayer(this.auras);
     clearLayer(this.zones);
