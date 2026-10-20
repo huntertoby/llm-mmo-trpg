@@ -1,0 +1,14 @@
+# 盜賊頭目加強版（Phase 3-5b）：roguelite 一輪的 Boss 戰頭目，盤踞在專屬地圖 bandit_lair。
+# 數值為初值，未經平衡。
+id: bandit_warlord
+name_zh: 盜賊首領
+attributes: {str: 18, dex: 10, con: 18, int: 10, wis: 10, wil: 14}
+max_hp: 110
+speed: 5
+armor_bonus: 5
+weapon: greatsword
+resist: {physical: 150}
+element_mods: {}
+tags: [boss, elite, humanoid, steadfast]
+max_mana: 14
+skills: [skill_cleave, skill_gale_kick]

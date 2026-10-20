@@ -6,7 +6,14 @@ import pytest
 
 from tests.engine.helpers import library
 from trpg.cli.main import main
-from trpg.content.maps import ARCHETYPES, TEST_ARCHETYPE, TRAINING_ARCHETYPE, MapDef, check_map
+from trpg.content.maps import (
+    ARCHETYPES,
+    BOSS_ARCHETYPE,
+    TEST_ARCHETYPE,
+    TRAINING_ARCHETYPE,
+    MapDef,
+    check_map,
+)
 from trpg.shared.types import Team
 from trpg.sim.batch import map_spec, run_batches
 
@@ -26,7 +33,7 @@ def _real_maps() -> dict[str, MapDef]:
     return {
         k: v
         for k, v in library().maps.items()
-        if v.archetype not in (TEST_ARCHETYPE, TRAINING_ARCHETYPE)
+        if v.archetype not in (TEST_ARCHETYPE, TRAINING_ARCHETYPE, BOSS_ARCHETYPE)
     }
 
 
@@ -45,7 +52,11 @@ def test_test_maps_are_tagged_test_and_everything_else_is_not() -> None:
     assert {k for k, v in maps.items() if v.archetype == TEST_ARCHETYPE} == {
         k for k in maps if k.startswith("test_")
     }
-    assert set(ARCHETYPES) == EXPECTED_TYPES | {TEST_ARCHETYPE, TRAINING_ARCHETYPE}
+    assert set(ARCHETYPES) == EXPECTED_TYPES | {
+        TEST_ARCHETYPE,
+        TRAINING_ARCHETYPE,
+        BOSS_ARCHETYPE,
+    }
 
 
 def test_there_are_ten_real_maps_covering_all_eight_archetypes() -> None:

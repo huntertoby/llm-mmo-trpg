@@ -25,7 +25,7 @@ from dataclasses import dataclass
 from trpg.api.schemas import Awaiting, CreateBattleRequest
 from trpg.api.workshop import custom_skill_defs, equip_custom_skills
 from trpg.content.library import ContentLibrary
-from trpg.content.maps import TRAINING_ARCHETYPE
+from trpg.content.maps import BOSS_ARCHETYPE, TRAINING_ARCHETYPE
 from trpg.engine.actions import ACTION_ADAPTER, Action, Decision, Step, UseSkill
 from trpg.engine.ai.orders import OrderRecord, OrderSet, validate_order
 from trpg.engine.battle import begin_battle, has_only_end_turn, resolve, resume
@@ -293,7 +293,9 @@ def playable_maps(library: ContentLibrary, *, include_training: bool = False) ->
     return sorted(
         m
         for m, d in library.maps.items()
-        if d.encounter is not None and (include_training or d.archetype != TRAINING_ARCHETYPE)
+        if d.encounter is not None
+        and d.archetype != BOSS_ARCHETYPE
+        and (include_training or d.archetype != TRAINING_ARCHETYPE)
     )
 
 

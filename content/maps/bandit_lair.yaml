@@ -1,0 +1,66 @@
+# Boss 地圖：盜賊巢穴（Phase 3-5b）。只給 roguelite 一輪的 Boss 戰，不進一般抽選、`sim matrix`
+# 與網頁的一般地圖列表（地圖類型 boss）。12×10，我方從西側攻入，盜賊首領坐鎮東側高台。
+#
+# - 高低差：東側 x 9–11、y 3–6 是高 2 的高台（首領與弓手居高臨下），經由 x 8 的高 1 台階（y 3–6）
+#   爬上；西南角 (1–2, 8–9) 有高 1 的矮坡。
+# - 致命地形：北側中央與南側偏東各一個 2×2 的岩漿池（x 4–5、y 2–3；x 6–7、y 6–7）。把人推進去
+#   就死（首領與精英只受 30% 最大 HP）。
+# - 源泉格：兩個，在兩個岩漿池之間的中場 (5, 5) 與 (6, 4)，要往前搶。
+# - 可推倒的石柱：(3, 3)、(3, 6)；往東推倒會壓向岩漿與中場，可以架出通路或擋住射線。
+# - 可投擲／可推的物件：木箱（北、南各兩個）、台階前的兩個油桶（火焰會引爆，波及台階上的人）。
+# - 援軍：第 3 輪結束時兩名盜賊從北、南兩側緣出現（提前一輪預告）。
+id: bandit_lair
+name_zh: 盜賊巢穴
+archetype: boss
+size: [12, 10]
+heights: |
+  000000000000
+  000000000000
+  000000000000
+  000000000222
+  000000000222
+  000000000222
+  000000000222
+  000000000000
+  011000000000
+  011000000000
+terrain: |
+  ............
+  ............
+  ....vv......
+  ....vv......
+  ............
+  ............
+  ......vv....
+  ......vv....
+  ............
+  ............
+legend:
+  ".": stone
+  "v": lava
+objects:
+  - {at: [3, 3], kind: stone_pillar}
+  - {at: [3, 6], kind: stone_pillar}
+  - {at: [2, 1], kind: crate}
+  - {at: [7, 1], kind: crate}
+  - {at: [2, 8], kind: crate}
+  - {at: [8, 8], kind: crate}
+  - {at: [8, 2], kind: low_wall}
+  - {at: [8, 7], kind: low_wall}
+  - {at: [7, 4], kind: oil_barrel}
+  - {at: [7, 5], kind: oil_barrel}
+  - {at: [10, 2], kind: fallen_log}
+  - {at: [10, 7], kind: fallen_log}
+start_zones:
+  ally: [[0, 3], [0, 4], [0, 5], [0, 6]]
+  enemy: [[10, 4], [9, 3], [9, 6], [8, 4], [8, 5]]
+source_wells: [[5, 5], [6, 4]]
+encounter:
+  allies: [hero_fighter, hero_archer, hero_mage]
+  enemies: [bandit_warlord, bandit, bandit_archer, bandit_shieldbearer]
+events:
+  - kind: spawn_units
+    round: 3
+    units:
+      - {template: bandit, at: [11, 0], team: enemy}
+      - {template: bandit, at: [11, 9], team: enemy}
