@@ -1618,7 +1618,7 @@ button.selected {
 }
 
 .battle-hero .hud {
-  max-height: 210px;
+  max-height: 190px;
   overflow-y: auto;
   padding: 6px 10px;
 }
@@ -1632,9 +1632,16 @@ button.selected {
   margin: 4px 0;
 }
 
+/* 腳下表面、層數、狀態等短行並排，減少狀態卡高度 */
 .battle-hero .hud-line {
-  margin-top: 1px;
+  display: inline-block;
+  margin: 1px 12px 0 0;
   font-size: 13px;
+  vertical-align: top;
+}
+
+.battle-hero .hud-bar {
+  margin: 2px 0;
 }
 
 .hud-compact {
@@ -1750,7 +1757,7 @@ button.selected {
 /* 詢問視窗：水平置中、靠上；「移到下方」時靠下（在技能列上方） */
 .decision-card.low {
   top: auto;
-  bottom: 140px;
+  bottom: 12px;
 }
 
 .decision-head {

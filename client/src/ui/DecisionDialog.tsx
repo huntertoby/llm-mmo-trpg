@@ -16,15 +16,17 @@ interface Props {
   eventText: string | null;
   enabled: boolean;
   onDecide(accept: boolean, always: boolean): void;
+  /** 一開始放在畫面下方（觸發者在戰場上半部時）。 */
+  startLow?: boolean;
 }
 
-export function DecisionDialog({ pending, rule, names, eventText, enabled, onDecide }: Props) {
+export function DecisionDialog({ pending, rule, names, eventText, enabled, onDecide, startLow = false }: Props) {
   const [always, setAlways] = useState(false);
   const reaction = rule?.name_zh ?? reactionName(pending.reaction);
   const description = rule?.description_zh ?? glossaryEntry("reactions", pending.reaction)?.description_zh ?? null;
   const trigger = pending.trigger_unit_id == null ? null : names.label(pending.trigger_unit_id);
   return (
-    <DialogFrame label="反應詢問" title={`反應詢問：${reaction}`}>
+    <DialogFrame label="反應詢問" title={`反應詢問：${reaction}`} startLow={startLow}>
       {eventText !== null && <p className="small muted">{eventText}</p>}
       <p>
         {names.label(pending.unit_id)} 可以使用「{reaction}」

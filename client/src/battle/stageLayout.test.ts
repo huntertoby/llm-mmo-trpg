@@ -1,6 +1,15 @@
 import { describe, expect, it } from "vitest";
 import { TILE_SIZE, tileCenter } from "./geometry";
-import { CARD_GAP, cardPlacement, clientToTile, fitScale, MAX_SCALE, MIN_SCALE, scaledSize } from "./stageLayout";
+import {
+  CARD_GAP,
+  cardPlacement,
+  clientToTile,
+  dialogStartsLow,
+  fitScale,
+  MAX_SCALE,
+  MIN_SCALE,
+  scaledSize,
+} from "./stageLayout";
 
 const T = TILE_SIZE;
 
@@ -94,5 +103,15 @@ describe("cardPlacement", () => {
     const s = 1;
     expect(cardPlacement({ x: 0, y: 9 }, grid, s)).toEqual({ left: T + CARD_GAP, bottom: 0 });
     expect(cardPlacement({ x: 9, y: 6 }, grid, s)).toEqual({ right: T + CARD_GAP, bottom: 3 * T });
+  });
+});
+
+describe("dialogStartsLow", () => {
+  const grid = { width: 10, height: 10 };
+  it("moves the reaction dialog down when the trigger is in the upper half", () => {
+    expect(dialogStartsLow({ x: 3, y: 2 }, grid)).toBe(true);
+    expect(dialogStartsLow({ x: 3, y: 4 }, grid)).toBe(true);
+    expect(dialogStartsLow({ x: 3, y: 5 }, grid)).toBe(false);
+    expect(dialogStartsLow(null, grid)).toBe(false);
   });
 });

@@ -61,6 +61,11 @@ export function clientToTile(
   return pixelToTile(px, py, grid, tile);
 }
 
+/** 反應詢問視窗一開始是否放在下方：觸發者在戰場上半部時放下方，免得視窗蓋住它（沒有觸發者時放上方）。 */
+export function dialogStartsLow(focus: Pos | null, grid: GridSize): boolean {
+  return focus !== null && focus.y + 0.5 <= grid.height / 2;
+}
+
 /** 浮動資訊卡相對於畫布左上角的位置（CSS 像素）；只有一邊的水平、一邊的垂直會有值。 */
 export interface CardPlacement {
   left?: number;

@@ -64,7 +64,7 @@ import {
   togglePopup,
   type TopPopup,
 } from "../battle/skillTray";
-import { cardPlacement, fitScale } from "../battle/stageLayout";
+import { cardPlacement, dialogStartsLow, fitScale } from "../battle/stageLayout";
 import { hasOrders, orderButton } from "../battle/orders";
 import { BattleCanvas } from "../ui/BattleCanvas";
 import { BattleLog } from "../ui/BattleLog";
@@ -805,6 +805,8 @@ export function BattleScreen({ initial, onExit, exitLabel, runMode }: Props) {
       )}
       {response.awaiting === "decision" && response.pending !== null && !busy && !copying && (
         <DecisionDialog
+          key={`${response.pending.reaction ?? ""}:${response.pending.trigger_unit_id ?? ""}`}
+          startLow={dialogStartsLow(focusTile, model)}
           pending={response.pending}
           rule={ruleOfPending(hero, response.pending)}
           names={liveNames}
