@@ -19,6 +19,8 @@ import type { UnitNames } from "../battle/units";
 
 interface Props {
   enabled: boolean;
+  /** 複製技能暫停中（Phase 3C-6a）：面板只剩被複製技能的方向按鈕，提示改為選目標或放棄。 */
+  copying?: boolean;
   basic: readonly ActionMode[];
   mode: ActionMode | null;
   /** 投擲物件的第一段已選好的物件 ID（還在選物件時 `null`）。 */
@@ -164,7 +166,9 @@ export function ActionPanel(props: Props) {
   return (
     <div className="panel action-panel">
       <div className="action-hint">
-        {enabled
+        {props.copying === true
+          ? "請為複製的技能選擇目標（點高亮格子或下方方向鈕），或按 Esc／「放棄施放」放棄。"
+          : enabled
           ? `點選藍色格子移動（${props.moveCount} 格），點選紅框敵人攻擊（${props.attackCount} 個）。`
           : "等待中……"}
       </div>

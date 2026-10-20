@@ -10,7 +10,20 @@ export type SummonOut = NonNullable<PreviewOut["summons"]>[number];
  */
 export function remainingRounds(view: BattleView, u: UnitView): number | null {
   if (u.owner_id === null || u.summon_expires_round === null) return null;
-  return Math.max(0, u.summon_expires_round - view.round + 1);
+  const left = u.summon_expires_round - view.round + 1 - (orphanSlotPassed(view, u) ? 1 : 0);
+  return Math.max(0, left);
+}
+
+/**
+ * 召喚者已倒下留下的分身（規則改變「殘影」）：本輪它在先攻順序的位置已經過了，這一輪就不會再行動，
+ * 剩餘輪數不該把本輪算進去（3C-6a）。一般召喚物回傳 `false`。
+ */
+function orphanSlotPassed(view: BattleView, u: UnitView): boolean {
+  const owner = view.units.find((o) => o.id === u.owner_id);
+  if (owner === undefined || isAlive(owner) || view.active_unit === null) return false;
+  const mine = view.turn_order.indexOf(u.id);
+  const current = view.turn_order.indexOf(view.active_unit);
+  return mine >= 0 && current >= 0 && mine < current;
 }
 
 export function isSummon(u: UnitView): boolean {

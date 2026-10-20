@@ -18,7 +18,7 @@ export function CopyDialog({ pending, skillName, optionCount, enabled, onCancel 
     <div className="decision-card" role="dialog" aria-label="複製技能選目標">
       <div className="modal-title">複製技能：選擇目標</div>
       <p>{copyPromptText(skillName, optionCount)}</p>
-      <p className="small muted">複製的技能不扣法力與 AP、不進冷卻；放棄施放不會付出任何代價。（{pending.skill_id ?? ""}）</p>
+      <p className="small muted">複製的技能不扣法力與 AP、不進冷卻；放棄施放（按 Esc 也可以）不會付出任何代價；滑過目標會預覽整個施放。（{pending.skill_id ?? ""}）</p>
       <div className="modal-buttons">
         <button type="button" disabled={!enabled} onClick={onCancel}>
           放棄施放

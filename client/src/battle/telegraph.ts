@@ -4,6 +4,8 @@
 import type { BattleView, Pos, TelegraphChange, TelegraphOut } from "../api/types";
 import { posKey } from "./geometry";
 
+type BombOut = NonNullable<TelegraphOut["bombs"]>[number];
+
 export type MarkKind = TelegraphChange["kind"];
 
 export interface MarkStyle {
@@ -67,8 +69,9 @@ export function telegraphMarks(t: TelegraphOut, view: BattleView): TelegraphMark
     for (const pos of changePositions(c, view)) addMark(byTile, c, pos);
   }
   for (const b of t.bombs ?? []) {
-    for (const pos of b.tiles) addBombMark(byTile, "bomb_area", pos, b.text, "炸");
-    addBombMark(byTile, "bomb", b.pos, b.text, String(b.remaining));
+    const text = bombChange(t, b)?.text ?? b.text; // 下一次就爆炸的炸彈已有變化那一行，不重複
+    for (const pos of b.tiles) addBombMark(byTile, "bomb_area", pos, text, "炸");
+    addBombMark(byTile, "bomb", b.pos, text, String(b.remaining));
   }
   return [...byTile.values()].sort((a, b) => a.pos.y - b.pos.y || a.pos.x - b.pos.x);
 }
@@ -111,11 +114,17 @@ export function marksTextAt(marks: readonly TelegraphMark[], tile: Pos | null): 
   return marks.find((m) => m.pos.x === tile.x && m.pos.y === tile.y)?.texts ?? [];
 }
 
+/** 下一次環境回合就會爆炸的炸彈，預告的「變化」裡已經有一行（同一個攜帶者）。 */
+function bombChange(t: TelegraphOut, b: BombOut): TelegraphChange | undefined {
+  if (!b.explodes) return undefined;
+  return t.changes.find((c) => c.kind === "bomb_exploded" && c.unit_id === b.unit_id);
+}
+
 /** 側欄的文字摘要：變化、還在燃燒的物件、下一輪的地圖事件。 */
 export function telegraphLines(t: TelegraphOut): string[] {
   return [
     ...t.changes.map((c) => c.text),
-    ...(t.bombs ?? []).map((b) => b.text),
+    ...(t.bombs ?? []).filter((b) => bombChange(t, b) === undefined).map((b) => b.text),
     ...t.burning.map((b) => b.text),
     ...t.upcoming.map((u) => u.text),
   ];

@@ -211,13 +211,18 @@ export function BattleScreen({ initial, onExit }: Props) {
 
   // ---- 預覽 -----------------------------------------------------------------
   const hoverAction = useMemo<Action | null>(() => {
-    if (!canAct || hover === null || hero === null) return null;
+    if (!(canAct || copying) || hover === null || hero === null) return null;
     if (mode !== null) return actionAtTile(mode, view, hero, hover, hurlPick);
     const target = view.units.find((u) => !u.downed && !u.escaped && !u.dismissed && samePos(u.pos, hover));
     return target === undefined ? null : (classified.attacks.get(target.id) ?? null);
-  }, [canAct, hover, hero, mode, view, classified, hurlPick]);
+  }, [canAct, copying, hover, hero, mode, view, classified, hurlPick]);
   const selfAction = mode !== null && isSelfOnly(mode.targets) ? mode.targets.self : null;
-  const preview = usePreview(battleId, response, canAct ? (hoverAction ?? panelPreview ?? selfAction) : null);
+  // 複製技能暫停時也能預覽：伺服器把滑過的選取當成「被複製技能的目標」，預覽整個施放（3C-6a）。
+  const preview = usePreview(
+    battleId,
+    response,
+    canAct || copying ? (hoverAction ?? panelPreview ?? selfAction) : null,
+  );
 
   // ---- 高亮 -----------------------------------------------------------------
   const highlights = useMemo<Highlights>(() => {
@@ -446,11 +451,13 @@ export function BattleScreen({ initial, onExit }: Props) {
 
   useEffect(() => {
     const onKey = (e: KeyboardEvent) => {
-      if (e.key === "Escape") cancel();
+      if (e.key !== "Escape") return;
+      if (copying) decideCopy(null); // 複製技能暫停時，Esc ＝ 放棄施放（不付任何代價）
+      else cancel();
     };
     window.addEventListener("keydown", onKey);
     return () => window.removeEventListener("keydown", onKey);
-  }, [cancel]);
+  }, [cancel, copying, decideCopy]);
 
   const pickMode = useCallback(
     (m: ActionMode) => {
@@ -587,13 +594,14 @@ export function BattleScreen({ initial, onExit }: Props) {
             <EndPanel response={response} onRestart={onExit} />
           ) : (
             <ActionPanel
-              enabled={canAct}
-              basic={basic}
+              enabled={canAct || copying}
+              copying={copying}
+              basic={copying ? [] : basic}
               mode={mode}
               hurlPick={hurlPick}
               onHurlReset={() => setHurlPick(null)}
-              endTurn={classified.endTurn}
-              fallback={fallback}
+              endTurn={copying ? null : classified.endTurn}
+              fallback={copying ? [] : fallback}
               moveCount={classified.moves.size}
               attackCount={classified.attacks.size}
               preview={preview}
@@ -602,7 +610,7 @@ export function BattleScreen({ initial, onExit }: Props) {
               names={liveNames}
               onPickMode={pickMode}
               onCancel={cancel}
-              onAction={act}
+              onAction={copying ? decideCopy : act}
               onPreviewAction={setPanelPreview}
             />
           )}

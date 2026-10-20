@@ -430,6 +430,48 @@ button.selected {
   font-weight: 700;
 }
 
+/* 稀有度顏色（Phase 3C-6a）：傳說用金色邊框與標題，史詩紫、稀有藍。 */
+.skill-card.rarity-rare .skill-card-rarity {
+  color: #6fb4ff;
+}
+
+.skill-card.rarity-epic .skill-card-rarity {
+  color: #c58cff;
+}
+
+.skill-card.rarity-legendary {
+  border-color: #ffb938;
+  box-shadow: 0 0 6px rgba(255, 185, 56, 0.45);
+}
+
+.skill-card.rarity-legendary .skill-card-title,
+.skill-card.rarity-legendary .skill-card-rarity {
+  color: #ffb938;
+}
+
+.skill-card-source {
+  color: #ffb938;
+}
+
+/* HUD 的源力：三格菱形圖示（亮的是目前的源力）。 */
+.source-pips {
+  display: inline-flex;
+  gap: 4px;
+  vertical-align: middle;
+}
+
+.source-pip {
+  width: 10px;
+  height: 10px;
+  transform: rotate(45deg);
+  border: 1px solid #b98cff;
+  background: transparent;
+}
+
+.source-pip.filled {
+  background: #b98cff;
+}
+
 .skill-card-effects {
   margin: 4px 0;
   padding-left: 18px;

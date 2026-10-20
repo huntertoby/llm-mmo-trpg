@@ -74,6 +74,14 @@ export interface TrapDraw {
   x: number;
   y: number;
   color: number;
+  /** 被揭露的敵方陷阱（Phase 3C-6a；和我方陷阱用不同記號與顏色）。 */
+  revealed: boolean;
+}
+
+/** 尚未被取用的源泉格（Phase 3C-4a；3C-6a 畫在地圖上）。 */
+export interface WellDraw {
+  x: number;
+  y: number;
 }
 
 export interface AuraDraw {
@@ -93,6 +101,8 @@ export interface DrawModel {
   auras: AuraDraw[];
   /** 持續區域的格子（半透明底色，移動型附方向箭頭；Phase 3D-5）。 */
   zones: ZoneDraw[];
+  /** 尚未被取用的源泉格（我方單位進入時 +1 源力）。 */
+  wells: WellDraw[];
 }
 
 export const MAX_HEIGHT = 3;
@@ -194,7 +204,11 @@ export function buildDrawModel(
       facing: u.facing,
     }))
     .sort((a, b) => Number(b.downed) - Number(a.downed));
-  const traps: TrapDraw[] = view.traps.map((t) => ({ x: t.pos.x, y: t.pos.y, color: HIGHLIGHT.trap }));
+  const traps: TrapDraw[] = view.traps.map((t) => {
+    const revealed = t.team !== view.team;
+    return { x: t.pos.x, y: t.pos.y, color: revealed ? HIGHLIGHT.trap_revealed : HIGHLIGHT.trap, revealed };
+  });
+  const wells: WellDraw[] = (view.source_wells ?? []).map((p) => ({ x: p.x, y: p.y }));
   const seen = new Set<string>();
   const auras: AuraDraw[] = [];
   for (const u of view.units) {
@@ -208,7 +222,7 @@ export function buildDrawModel(
     }
   }
   const zones = zoneDraws(view);
-  return { width: view.width, height: view.height, tiles, objects, units, traps, auras, zones };
+  return { width: view.width, height: view.height, tiles, objects, units, traps, auras, zones, wells };
 }
 
 export function tileAt(model: DrawModel, p: Pos): TileDraw | undefined {

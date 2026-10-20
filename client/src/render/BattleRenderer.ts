@@ -173,10 +173,11 @@ export class BattleRenderer {
     }
     this.auras.addChild(aura);
     this.drawZones(model);
+    this.drawWells(model);
     for (const o of model.objects) this.objects.addChild(this.objectSprite(o));
     for (const trap of model.traps) {
       const c = tileCenter(trap);
-      const glyph = label("^", 22, trap.color, true);
+      const glyph = label(trap.revealed ? "×" : "^", 22, trap.color, true);
       glyph.anchor.set(0.5);
       glyph.position.set(c.x + T * 0.28, c.y + T * 0.22);
       this.traps.addChild(glyph);
@@ -185,6 +186,27 @@ export class BattleRenderer {
       const sprite = this.unitSprite(u);
       this.units.addChild(sprite);
       if (!u.downed) this.unitSprites.set(u.id, sprite);
+    }
+  }
+
+  /** 源泉格（Phase 3C-6a）：格子中央一顆紫色菱形，標「源」；單位站上去時才會被取用。 */
+  private drawWells(model: DrawModel): void {
+    const g = new Graphics();
+    for (const w of model.wells) {
+      const c = tileCenter(w);
+      const r = T * 0.26;
+      g.poly([c.x, c.y - r, c.x + r, c.y, c.x, c.y + r, c.x - r, c.y])
+        .fill({ color: HIGHLIGHT.well, alpha: 0.35 })
+        .stroke({ width: 2, color: HIGHLIGHT.well, alpha: 0.95 });
+    }
+    this.auras.addChild(g);
+    for (const w of model.wells) {
+      const c = tileCenter(w);
+      const mark = label("源", 14, HIGHLIGHT.well, true);
+      mark.anchor.set(0.5);
+      mark.position.set(c.x, c.y);
+      mark.style.stroke = { color: 0x000000, width: 3 };
+      this.auras.addChild(mark);
     }
   }
 

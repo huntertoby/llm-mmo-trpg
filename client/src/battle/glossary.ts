@@ -174,6 +174,10 @@ export const HIGHLIGHT = {
   active: 0xffe14d,
   hero: 0xffffff,
   trap: 0xffd23f,
+  /** 被揭露的敵方陷阱（Phase 3C-6a）。 */
+  trap_revealed: 0xff5a5a,
+  /** 源泉格（Phase 3C-6a）。 */
+  well: 0xb98cff,
   burning: 0xff5a00,
   flammable: 0xe0a040,
   deadly: 0xff3030,
