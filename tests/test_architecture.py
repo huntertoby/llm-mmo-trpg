@@ -8,6 +8,8 @@
    - ``trpg.narrative`` 不得匯入 cli、api、roguelite、sim（Phase 3-1：描述模組給 CLI 與網頁共用）。
    - ``trpg.api`` 不得匯入 ``trpg.cli``（Phase 3-2：CLI 可以匯入 api 來啟動伺服器，反之不行）。
    - ``trpg.content`` 不得匯入 ``trpg.skillgen``（Phase 2B-2 4.1：驗證器依賴內容資料，不能反過來）。
+   - ``trpg.roguelite`` 不得匯入 api、cli、sim、llm、narrative（Phase 3-5a：只用 engine、content、
+     skillgen）。
 2. 確定性：``engine``、``shared``、``content``、``skillgen``、``sim``、``roguelite`` 內
    不得使用 ``random``、``secrets``、``uuid4``／``uuid1``、``os.urandom``、時間函式等。
 """
@@ -37,11 +39,14 @@ NARRATIVE_FORBIDDEN = ("trpg.cli", "trpg.api", "trpg.roguelite", "trpg.sim")
 
 API_FORBIDDEN = ("trpg.cli",)
 
+ROGUELITE_FORBIDDEN = ("trpg.api", "trpg.cli", "trpg.sim", "trpg.llm", "trpg.narrative")
+
 FORBIDDEN_BY_SOURCE: dict[str, tuple[str, ...]] = {
     "trpg.engine": ENGINE_FORBIDDEN,
     "trpg.content": CONTENT_FORBIDDEN,
     "trpg.narrative": NARRATIVE_FORBIDDEN,
     "trpg.api": API_FORBIDDEN,
+    "trpg.roguelite": ROGUELITE_FORBIDDEN,
 }
 
 DETERMINISTIC_PACKAGES = ("engine", "shared", "content", "skillgen", "sim", "roguelite")

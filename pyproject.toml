@@ -143,6 +143,18 @@ forbidden_modules = [
 ]
 
 [[tool.importlinter.contracts]]
+name = "roguelite 不得匯入 api、cli、sim、llm、narrative"
+type = "forbidden"
+source_modules = ["trpg.roguelite"]
+forbidden_modules = [
+    "trpg.api",
+    "trpg.cli",
+    "trpg.sim",
+    "trpg.llm",
+    "trpg.narrative",
+]
+
+[[tool.importlinter.contracts]]
 name = "api 不得匯入 cli"
 type = "forbidden"
 source_modules = ["trpg.api"]
