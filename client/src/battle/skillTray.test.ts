@@ -3,9 +3,10 @@ import type { SkillCard } from "../api/types";
 import {
   actionHintText,
   isMinorSkill,
-  loadSideCollapsed,
+  loadSidePref,
   minorGlyph,
   saveSideCollapsed,
+  sideCollapsed,
   splitSkills,
   togglePopup,
 } from "./skillTray";
@@ -87,18 +88,18 @@ describe("side panel preference", () => {
   it("defaults to collapsed only on a narrow window, then follows the saved choice", () => {
     const store = new Map<string, string>();
     stubStorage(store);
-    expect(loadSideCollapsed(false)).toBe(false);
-    expect(loadSideCollapsed(true)).toBe(true);
+    expect(sideCollapsed(loadSidePref(), false)).toBe(false);
+    expect(sideCollapsed(loadSidePref(), true)).toBe(true);
     saveSideCollapsed(true);
-    expect(loadSideCollapsed(false)).toBe(true);
+    expect(sideCollapsed(loadSidePref(), false)).toBe(true);
     saveSideCollapsed(false);
-    expect(loadSideCollapsed(true)).toBe(false);
+    expect(sideCollapsed(loadSidePref(), true)).toBe(false);
   });
 
   it("survives a blocked localStorage", () => {
     stubStorage(new Map(), true);
     expect(() => saveSideCollapsed(true)).not.toThrow();
-    expect(loadSideCollapsed(true)).toBe(true);
-    expect(loadSideCollapsed(false)).toBe(false);
+    expect(sideCollapsed(loadSidePref(), true)).toBe(true);
+    expect(sideCollapsed(loadSidePref(), false)).toBe(false);
   });
 });

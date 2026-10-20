@@ -54,8 +54,8 @@ export const NARROW_WIDTH = 1100;
 
 const SIDE_KEY = "trpg.battleSideCollapsed";
 
-/** 右側窄欄是否收合：有記錄時照記錄，沒有時窄螢幕預設收合。localStorage 不能用時只看寬度。 */
-export function loadSideCollapsed(narrow: boolean): boolean {
+/** 玩家記下的右側窄欄收合狀態；沒有記錄（或 localStorage 不能用）時 `null`。 */
+export function loadSidePref(): boolean | null {
   try {
     const v = window.localStorage.getItem(SIDE_KEY);
     if (v === "1") return true;
@@ -63,7 +63,12 @@ export function loadSideCollapsed(narrow: boolean): boolean {
   } catch {
     // 私密視窗等：沒有記錄
   }
-  return narrow;
+  return null;
+}
+
+/** 右側窄欄是否收合：有記錄時照記錄，沒有時窄螢幕（隨視窗寬度即時變化）預設收合。 */
+export function sideCollapsed(pref: boolean | null, narrow: boolean): boolean {
+  return pref ?? narrow;
 }
 
 export function saveSideCollapsed(collapsed: boolean): void {

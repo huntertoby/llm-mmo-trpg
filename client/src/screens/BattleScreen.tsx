@@ -59,8 +59,9 @@ import { TurnControls } from "../ui/TurnControls";
 import { useElementSize, useNarrow } from "../ui/useLayout";
 import {
   actionHintText,
-  loadSideCollapsed,
+  loadSidePref,
   saveSideCollapsed,
+  sideCollapsed,
   togglePopup,
   type TopPopup,
 } from "../battle/skillTray";
@@ -150,7 +151,8 @@ export function BattleScreen({ initial, onExit, exitLabel, runMode }: Props) {
   /** 頂端列開著的彈出面板（同時只開一個）。 */
   const [popup, setPopup] = useState<TopPopup | null>(null);
   const narrow = useNarrow();
-  const [sideCollapsed, setSideCollapsed] = useState(() => loadSideCollapsed(narrow));
+  /** 玩家記下的右側窄欄收合狀態（沒有記錄時 `null`，依視窗寬度決定）。 */
+  const [sidePref, setSidePref] = useState<boolean | null>(loadSidePref);
   const boardRef = useRef<HTMLDivElement>(null);
   const boardSize = useElementSize(boardRef);
   const [speed, setSpeed] = useState<PlaySpeed>(loadSpeed);
@@ -643,11 +645,11 @@ export function BattleScreen({ initial, onExit, exitLabel, runMode }: Props) {
   const scale = boardSize === null ? 1 : fitScale({ width: boardSize.width - 16, height: boardSize.height - 16 }, model);
   const hoverTexts = [...zoneLinesAt(shown, hover, liveNames), ...marksTextAt(marks, hover)];
   const defendMode = basic.find((m) => m.kind === "defend") ?? null;
-  const toggleSide = () =>
-    setSideCollapsed((c) => {
-      saveSideCollapsed(!c);
-      return !c;
-    });
+  const collapsed = sideCollapsed(sidePref, narrow);
+  const toggleSide = () => {
+    saveSideCollapsed(!collapsed);
+    setSidePref(!collapsed);
+  };
   const tools = [
     {
       id: "reactions" as const,
@@ -676,7 +678,7 @@ export function BattleScreen({ initial, onExit, exitLabel, runMode }: Props) {
   ];
 
   return (
-    <div className={`battle-screen${sideCollapsed ? " side-collapsed" : ""}${narrow ? " narrow" : ""}`}>
+    <div className={`battle-screen${collapsed ? " side-collapsed" : ""}${narrow ? " narrow" : ""}`}>
       <BattleTopBar
         turnBar={<TurnBar view={shown} names={names} acting={acting} />}
         tools={tools}
@@ -743,7 +745,7 @@ export function BattleScreen({ initial, onExit, exitLabel, runMode }: Props) {
         />
       </div>
       <SidePanel
-        collapsed={sideCollapsed}
+        collapsed={collapsed}
         onToggle={toggleSide}
         telegraph={<TelegraphPanel telegraph={response.telegraph} marks={marks} hoverTexts={hoverTexts} />}
         log={<BattleLog lines={lines} />}
@@ -753,8 +755,8 @@ export function BattleScreen({ initial, onExit, exitLabel, runMode }: Props) {
           <Hud view={shown} hero={shownHero} skills={skillNames} compact={narrow} />
         </div>
         <SkillBar
-          basic={copying ? [] : basic.filter((m) => m.kind !== "defend")}
-          buttons={copying ? [] : buttons}
+          basic={basic.filter((m) => m.kind !== "defend")}
+          buttons={buttons}
           cards={cards}
           selectedKey={mode?.key ?? null}
           enabled={canAct}

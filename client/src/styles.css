@@ -1615,10 +1615,21 @@ button.selected {
   align-items: end;
   gap: 6px;
   min-width: 0;
+  /* 固定高度：技能數、狀態行數改變時戰場不會跟著縮放跳動 */
+  height: 166px;
+}
+
+.battle-bottom > * {
+  max-height: 100%;
+  min-height: 0;
+}
+
+.battle-hero {
+  align-self: stretch;
 }
 
 .battle-hero .hud {
-  max-height: 190px;
+  height: 100%;
   overflow-y: auto;
   padding: 6px 10px;
 }
@@ -1779,6 +1790,12 @@ button.selected {
   grid-template-areas:
     "hero hero"
     "skills turn";
+  grid-template-rows: auto minmax(0, 1fr);
+  height: 196px;
+}
+
+.battle-screen.narrow .battle-hero .hud {
+  height: auto;
 }
 
 .battle-screen.narrow .battle-hero {
