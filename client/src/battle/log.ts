@@ -27,7 +27,10 @@ function walkText(run: WalkRun, names: UnitNames): string {
   );
 }
 
-export function logLines(steps: readonly StepOut[], names: UnitNames): LogLine[] {
+/** 戰鬥紀錄只需要每一步的事件（`/history` 沒有戰場視圖）。 */
+export type LogStep = Pick<StepOut, "events">;
+
+export function logLines(steps: readonly LogStep[], names: UnitNames): LogLine[] {
   const lines: LogLine[] = [];
   const pending: { walk: WalkRun | null } = { walk: null };
   const flush = () => {

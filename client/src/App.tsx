@@ -6,19 +6,19 @@ import { setGlossary } from "./battle/glossary";
 import { BattleScreen } from "./screens/BattleScreen";
 import { StartScreen } from "./screens/StartScreen";
 import { WorkshopScreen } from "./screens/WorkshopScreen";
-import { readCurrentRun, writeCurrentRun } from "./run/flow";
+import { isNotFoundStatus, readCurrentRun, resumeRun, writeCurrentRun } from "./run/flow";
 import { RunNewScreen } from "./screens/RunNewScreen";
 import { RunScreen } from "./screens/RunScreen";
 import { ErrorBanner } from "./ui/ErrorBanner";
 
-/** 重新整理後回到上次的一輪：先讀存檔；沒有存檔（還沒存過）時看伺服器記憶體裡有沒有。 */
-async function resumeRun(runId: string): Promise<RunResponse> {
-  try {
-    return await api.loadRun(runId);
-  } catch (e) {
-    if (e instanceof ApiError && e.status === 404) return api.run(runId);
-    throw e;
-  }
+/** 重新整理後回到上次的一輪：先問伺服器（記憶體裡的一輪不丟步驟）；伺服器沒有（重啟過）才讀存檔。 */
+function resume(runId: string): Promise<RunResponse> {
+  return resumeRun(
+    runId,
+    (id) => api.run(id),
+    (id) => api.loadRun(id),
+    (e) => e instanceof ApiError && isNotFoundStatus(e.status),
+  );
 }
 
 export function App() {
@@ -41,7 +41,7 @@ export function App() {
         setGlossary(g);
         const saved = readCurrentRun();
         if (saved === null) return undefined;
-        return resumeRun(saved).then(
+        return resume(saved).then(
           (data) => {
             if (!cancelled) setRun({ data, auto: true });
           },

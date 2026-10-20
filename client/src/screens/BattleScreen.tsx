@@ -60,6 +60,9 @@ import { followupMode, followupTargetOf, isFollowupPending } from "../battle/fol
 import { DecisionDialog } from "../ui/DecisionDialog";
 import { EndPanel } from "../ui/EndPanel";
 import { ErrorBanner } from "../ui/ErrorBanner";
+import { NoticeBanner } from "../ui/NoticeBanner";
+import { needsLogRestore } from "../run/flow";
+import { logLines } from "../battle/log";
 import { Hud } from "../ui/Hud";
 import { OrdersPanel } from "../ui/OrdersPanel";
 import { ReactionPanel } from "../ui/ReactionPanel";
@@ -125,6 +128,9 @@ export function BattleScreen({ initial, onExit, exitLabel, runMode }: Props) {
   const [playing, setPlaying] = useState(false);
   const [banner, setBanner] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  /** 中性提示（例如灰掉技能的原因），幾秒後自動消失。 */
+  const [hint, setHint] = useState<string | null>(null);
+  const closeHint = useCallback(() => setHint(null), []);
   const [saveNote, setSaveNote] = useState<string | null>(null);
   const [hover, setHover] = useState<Pos | null>(null);
   const [selected, setSelected] = useState<string | null>(null);
@@ -369,6 +375,23 @@ export function BattleScreen({ initial, onExit, exitLabel, runMode }: Props) {
     },
     [heroId, runOp, sleep],
   );
+
+  // 接續進行中的戰鬥或讀檔回來：開場的步驟不在回應裡，向伺服器取回已發生的事件還原戰鬥紀錄（Phase 3-6）。
+  useEffect(() => {
+    if (!needsLogRestore(initial)) return undefined;
+    let cancelled = false;
+    api
+      .battleHistory(initial.battle_id)
+      .then((h) => {
+        if (cancelled) return;
+        const restored = logLines(h.steps, unitNames(initial.view));
+        setLines((prev) => [...restored, ...prev]);
+      })
+      .catch(() => undefined); // 取不到時紀錄從這裡開始，不影響操作
+    return () => {
+      cancelled = true;
+    };
+  }, [initial]);
 
   // 建立戰鬥後的第一次播放：「戰鬥開始」橫幅 ＋ 開場到主角回合之間的 AI 行動。
   useEffect(() => {
@@ -622,6 +645,7 @@ export function BattleScreen({ initial, onExit, exitLabel, runMode }: Props) {
         </div>
       )}
       <ErrorBanner message={error} onClose={() => setError(null)} />
+      <NoticeBanner message={hint} onClose={closeHint} />
       <div className="battle-main">
         <div className="battle-board">
           <BattleCanvas
@@ -644,7 +668,7 @@ export function BattleScreen({ initial, onExit, exitLabel, runMode }: Props) {
             selectedKey={mode?.key ?? null}
             enabled={canAct}
             onSelect={pickSkill}
-            onBlocked={(b) => setError(blockedMessage(b))}
+            onBlocked={(b) => setHint(blockedMessage(b))}
           />
           {ended ? (
             <EndPanel response={response} onRestart={onExit} restartLabel={exitLabel} />

@@ -13,12 +13,14 @@ export const ATTRIBUTES: readonly { id: AttributeId; label: string }[] = [
   { id: "wil", label: "意志" },
 ];
 
+/** 開局六項屬性都是同一個基礎值（`content/roguelite.yaml` 的 `base_attribute`，由 API 提供）。 */
+export function baseAttributes(value: number): Record<AttributeId, number> {
+  return Object.fromEntries(ATTRIBUTES.map((a) => [a.id, value])) as Record<AttributeId, number>;
+}
+
 export function attributeLabel(id: string): string {
   return ATTRIBUTES.find((a) => a.id === id)?.label ?? id;
 }
-
-/** 開局的自由配點（`content/roguelite.yaml` 的 `start_free_points`；API 沒有提供，這裡照設計文件 7.2 寫死）。 */
-export const START_POINTS = 4;
 
 /** 技能欄位上限（`content/rules/core.yaml` 的 `skill_slots`）。 */
 export const SLOT_LIMITS = { active: 6, passive: 3, reaction: 1, stance: 1 } as const;
@@ -76,7 +78,8 @@ export function runView(run: RunResponse): RunView {
     mapName: plan?.map_name_zh ?? "",
     enemies: plan?.enemies ?? [],
     resume,
-    buttonLabel: resume ? `繼續${base}` : `開始${base}`,
+    // 「Boss 戰」是英文開頭，前面要空格；「第 3 場」是中文，不用。
+    buttonLabel: resume ? `繼續${boss ? " " : ""}${base}` : `開始${boss ? " " : ""}${base}`,
   };
 }
 
@@ -255,12 +258,14 @@ export function saveLabel(s: {
   battles_total: number;
   in_battle: boolean;
   level: number;
+  victory?: boolean | null;
 }): string {
+  const ended = s.victory === true ? "已結束（勝利）" : s.victory === false ? "已結束（失敗）" : "已結束";
   const where: Record<string, string> = {
     battle: s.in_battle ? "戰鬥中" : "戰鬥之間",
     level_up: "升級",
     campfire: "營火",
-    ended: "已結束",
+    ended,
   };
   return `${s.battles_done}/${s.battles_total} 場・Lv${s.level}・${where[s.node] ?? s.node}`;
 }
@@ -296,4 +301,36 @@ function defaultStorage(): Storage | null {
   } catch {
     return null;
   }
+}
+
+// ---- 重新整理後回到一輪（Phase 3-6） ----------------------------------------------------------
+
+/** 伺服器沒有這一輪（重啟過）時的 HTTP 狀態碼。 */
+const NOT_FOUND = 404;
+
+/**
+ * 重新整理後回到上次的一輪：先問伺服器（記憶體裡的一輪不會丟步驟，伺服器已自動存檔）；伺服器說
+ * 沒有這一輪（404，例如重啟過）才讀存檔。其他錯誤照樣丟出去。
+ */
+export async function resumeRun<T>(
+  runId: string,
+  fetchRun: (runId: string) => Promise<T>,
+  loadRun: (runId: string) => Promise<T>,
+  isNotFound: (e: unknown) => boolean,
+): Promise<T> {
+  try {
+    return await fetchRun(runId);
+  } catch (e) {
+    if (isNotFound(e)) return loadRun(runId);
+    throw e;
+  }
+}
+
+export function isNotFoundStatus(status: number): boolean {
+  return status === NOT_FOUND;
+}
+
+/** 進入戰鬥時沒有任何步驟（接續進行中的戰鬥或讀檔）→ 要向伺服器取回戰鬥紀錄；新戰鬥已經帶著開場的步驟。 */
+export function needsLogRestore(res: { steps: readonly unknown[] }): boolean {
+  return res.steps.length === 0;
 }

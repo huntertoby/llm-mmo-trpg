@@ -1,9 +1,9 @@
 // 開新一輪：選 build（起始技能組）、配 4 點屬性、種子。
 import { useEffect, useState, type FormEvent } from "react";
 import { api } from "../api/client";
-import type { BuildSummary, RunResponse } from "../api/types";
+import type { BuildSummary, RunResponse, RunRules } from "../api/types";
 import { AttributeAllocator } from "../run/AttributeAllocator";
-import { allocationComplete, cleanAllocation, START_POINTS, type Allocation } from "../run/flow";
+import { allocationComplete, baseAttributes, cleanAllocation, type Allocation } from "../run/flow";
 import { useSkillCards, useSkillNames } from "../ui/useSkillCards";
 import { ErrorBanner } from "../ui/ErrorBanner";
 import { parseSeed, randomSeed } from "./StartScreen";
@@ -15,6 +15,8 @@ interface Props {
 
 export function RunNewScreen({ onCreated, onHome }: Props) {
   const [builds, setBuilds] = useState<BuildSummary[]>([]);
+  /** 開局規則（配點數）由伺服器提供，載入前為 `null`。 */
+  const [rules, setRules] = useState<RunRules | null>(null);
   const [buildId, setBuildId] = useState("");
   const [alloc, setAlloc] = useState<Allocation>({});
   const [seedText, setSeedText] = useState(() => String(randomSeed()));
@@ -23,6 +25,14 @@ export function RunNewScreen({ onCreated, onHome }: Props) {
 
   useEffect(() => {
     let cancelled = false;
+    api
+      .runRules()
+      .then((r) => {
+        if (!cancelled) setRules(r);
+      })
+      .catch((e: unknown) => {
+        if (!cancelled) setError(e instanceof Error ? e.message : String(e));
+      });
     api
       .builds()
       .then((b) => {
@@ -41,7 +51,8 @@ export function RunNewScreen({ onCreated, onHome }: Props) {
   const build = builds.find((b) => b.id === buildId);
   const names = useSkillNames(useSkillCards(build?.skills ?? []));
   const seed = parseSeed(seedText);
-  const complete = allocationComplete(alloc, START_POINTS);
+  const points = rules?.start_points ?? 0;
+  const complete = rules !== null && allocationComplete(alloc, points);
 
   async function create(auto: boolean) {
     if (buildId === "" || seed === null || (!auto && !complete)) return;
@@ -80,11 +91,19 @@ export function RunNewScreen({ onCreated, onHome }: Props) {
           <div className="muted small">
             {build.theme_zh}
             <br />
+            主角：HP {build.max_hp}・法力 {build.max_mana}・武器 {build.weapon_name_zh}
+            <br />
             起始技能：{build.skills.map((id) => names[id] ?? id).join("、")}
           </div>
         )}
-        <div className="muted small">六項屬性起始都是 10；另有 {START_POINTS} 點自由分配。</div>
-        <AttributeAllocator base={{}} points={START_POINTS} alloc={alloc} onChange={setAlloc} disabled={busy} />
+        {rules !== null && (
+          <>
+            <div className="muted small">
+              六項屬性起始都是 {rules.base_attribute}；另有 {rules.start_points} 點自由分配。
+            </div>
+            <AttributeAllocator base={baseAttributes(rules.base_attribute)} points={points} alloc={alloc} onChange={setAlloc} disabled={busy} />
+          </>
+        )}
         <label>
           種子
           <span className="seed-row">
@@ -104,7 +123,7 @@ export function RunNewScreen({ onCreated, onHome }: Props) {
           <button type="submit" className="primary" disabled={busy || buildId === "" || seed === null || !complete}>
             {busy ? "建立中……" : "開始這一輪"}
           </button>
-          <button type="button" disabled={busy || buildId === "" || seed === null} onClick={() => void create(true)}>
+          <button type="button" disabled={busy || rules === null || buildId === "" || seed === null} onClick={() => void create(true)}>
             自動配點並開始
           </button>
           <button type="button" onClick={onHome}>

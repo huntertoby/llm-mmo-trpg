@@ -3,6 +3,10 @@ import type { RunHero, RunNode, RunOffer, RunResponse, SkillCard } from "../api/
 import {
   adjustAllocation,
   allocationComplete,
+  baseAttributes,
+  isNotFoundStatus,
+  needsLogRestore,
+  resumeRun,
   allocationTotal,
   battleName,
   cleanAllocation,
@@ -76,12 +80,17 @@ describe("runView：每種節點", () => {
 
   it("battle：Boss 戰", () => {
     const v = runView(run({ kind: "battle", battle_index: 6, boss: true }));
-    expect(v).toMatchObject({ screen: "progress", boss: true, buttonLabel: "開始Boss 戰", mapName: "巢穴" });
+    expect(v).toMatchObject({ screen: "progress", boss: true, buttonLabel: "開始 Boss 戰", mapName: "巢穴" });
   });
 
   it("讀檔回來在戰鬥中：按鈕是繼續（有 battle_id）", () => {
     const v = runView(run({ kind: "battle", battle_index: 2, boss: false }, { battle_id: "b1" }));
     expect(v).toMatchObject({ screen: "progress", resume: true, buttonLabel: "繼續第 2 場" });
+  });
+
+  it("Boss 戰讀檔回來：「繼續 Boss 戰」有空格", () => {
+    const v = runView(run({ kind: "battle", battle_index: 6, boss: true }, { battle_id: "b1" }));
+    expect(v).toMatchObject({ buttonLabel: "繼續 Boss 戰" });
   });
 
   it("level_up：等級、點數、候選", () => {
@@ -243,6 +252,17 @@ describe("存檔列表與目前的一輪", () => {
     expect(saveLabel({ ...base, in_battle: false, node: "campfire" })).toBe("2/6 場・Lv3・營火");
   });
 
+  it("saveLabel：已結束標勝利或失敗", () => {
+    const ended = { node: "ended", battles_done: 6, battles_total: 6, in_battle: false, level: 5 };
+    expect(saveLabel({ ...ended, victory: true })).toBe("6/6 場・Lv5・已結束（勝利）");
+    expect(saveLabel({ ...ended, victory: false })).toBe("6/6 場・Lv5・已結束（失敗）");
+    expect(saveLabel(ended)).toBe("6/6 場・Lv5・已結束");
+  });
+
+  it("baseAttributes：六項都是基礎值（由 API 提供）", () => {
+    expect(baseAttributes(10)).toEqual({ str: 10, dex: 10, con: 10, int: 10, wis: 10, wil: 10 });
+  });
+
   it("localStorage 讀寫；壞掉或不能用時不丟錯", () => {
     const data = new Map<string, string>();
     const storage = {
@@ -272,5 +292,58 @@ describe("存檔列表與目前的一輪", () => {
     expect(readCurrentRun(broken)).toBeNull();
     expect(() => writeCurrentRun("x", broken)).not.toThrow();
     expect(() => writeCurrentRun(null, broken)).not.toThrow();
+  });
+});
+
+describe("重新整理後回到一輪（Phase 3-6）", () => {
+  const notFound = (e: unknown) => e instanceof Error && e.message === "404";
+
+  it("伺服器有這一輪就直接用，不讀存檔（不丟步驟）", async () => {
+    const calls: string[] = [];
+    const got = await resumeRun(
+      "r1",
+      async (id) => (calls.push(`get:${id}`), "memory"),
+      async (id) => (calls.push(`load:${id}`), "save"),
+      notFound,
+    );
+    expect(got).toBe("memory");
+    expect(calls).toEqual(["get:r1"]);
+  });
+
+  it("404 才讀存檔", async () => {
+    const calls: string[] = [];
+    const got = await resumeRun(
+      "r1",
+      async (id) => {
+        calls.push(`get:${id}`);
+        throw new Error("404");
+      },
+      async (id) => (calls.push(`load:${id}`), "save"),
+      notFound,
+    );
+    expect(got).toBe("save");
+    expect(calls).toEqual(["get:r1", "load:r1"]);
+  });
+
+  it("其他錯誤照樣丟出去，不讀存檔", async () => {
+    let loaded = false;
+    await expect(
+      resumeRun(
+        "r1",
+        async () => {
+          throw new Error("500");
+        },
+        async () => ((loaded = true), "save"),
+        notFound,
+      ),
+    ).rejects.toThrow("500");
+    expect(loaded).toBe(false);
+  });
+
+  it("狀態碼判斷與戰鬥紀錄還原條件", () => {
+    expect(isNotFoundStatus(404)).toBe(true);
+    expect(isNotFoundStatus(422)).toBe(false);
+    expect(needsLogRestore({ steps: [] })).toBe(true); // 接續或讀檔：回應沒有步驟 → 取回紀錄
+    expect(needsLogRestore({ steps: [{}] })).toBe(false); // 新戰鬥：開場的步驟已在回應裡
   });
 });

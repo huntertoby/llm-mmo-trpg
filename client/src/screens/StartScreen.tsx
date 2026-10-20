@@ -117,7 +117,7 @@ export function StartScreen({ onStart, onWorkshop, onNewRun, onLoadRun, notice =
             {saves.map((s) => (
               <div key={s.run_id} className="run-save-row">
                 <span>
-                  {s.build_id}・種子 {s.seed}
+                  {s.build_name_zh}・種子 {s.seed}
                   <span className="muted small">　{saveLabel(s)}</span>
                 </span>
                 <button type="button" disabled={s.node === "ended"} onClick={() => void loadSave(s.run_id)}>

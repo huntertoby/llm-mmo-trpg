@@ -1,6 +1,7 @@
 // fetch 包裝：所有請求走相對路徑 /api（開發時由 Vite proxy 轉到 127.0.0.1:8000）。
 import type {
   Action,
+  BattleHistory,
   BattleResponse,
   BuildSummary,
   CreateBattleRequest,
@@ -15,6 +16,7 @@ import type {
   RunChoice,
   RunResponse,
   RunSaveOut,
+  RunRules,
   RunSaveSummary,
   SkillReasons,
   SkillCard,
@@ -89,6 +91,8 @@ export const api = {
   glossary: () => request<Glossary>("GET", "/glossary"),
   createBattle: (body: CreateBattleRequest) => request<BattleResponse>("POST", "/battles", body),
   battle: (id: string) => request<BattleResponse>("GET", `/battles/${id}`),
+  /** 到目前為止戰鬥發生過的事件（重新整理或讀檔回到戰鬥時還原戰鬥紀錄；Phase 3-6）。 */
+  battleHistory: (id: string) => request<BattleHistory>("GET", `/battles/${id}/history`),
   act: (id: string, action: Action) => request<BattleResponse>("POST", `/battles/${id}/actions`, action),
   preview: (id: string, action: Action) =>
     request<PreviewOut>("POST", `/battles/${id}/preview`, action),
@@ -108,6 +112,8 @@ export const api = {
     request<WorkshopExport>("POST", "/workshop/export", { skill }),
   /** roguelite 一輪（Phase 3-5c-1）。 */
   createRun: (body: CreateRunRequest) => request<RunResponse>("POST", "/runs", body),
+  /** 開局規則（配點數）；Phase 3-6。 */
+  runRules: () => request<RunRules>("GET", "/runs/rules"),
   runSaves: () => request<RunSaveSummary[]>("GET", "/runs/saves"),
   loadRun: (runId: string) => request<RunResponse>("POST", "/runs/load", { run_id: runId }),
   run: (runId: string) => request<RunResponse>("GET", `/runs/${encodeURIComponent(runId)}`),

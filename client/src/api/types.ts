@@ -111,6 +111,8 @@ export type RunPlan = Schemas["BattlePlanOut"];
 export type RunRecord = Schemas["BattleRecord"];
 export type RunSaveOut = Schemas["SaveOut"];
 export type RunSaveSummary = Schemas["SaveSummary"];
+export type RunRules = Schemas["RunRules"];
+export type BattleHistory = Schemas["BattleHistory"];
 export type AttributeId = Schemas["Attribute"];
 /** `POST /api/runs/{id}/choice` 的請求（工坊另有同名的 `Choice`，所以加前綴）。 */
 export type RunChoice =

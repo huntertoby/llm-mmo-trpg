@@ -585,6 +585,18 @@ button.selected {
   padding: 6px 10px;
 }
 
+.notice-banner {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 8px;
+  background: #1f2a38;
+  border: 1px solid #4b6a8f;
+  color: #cfe0f5;
+  border-radius: 4px;
+  padding: 6px 10px;
+}
+
 .modal-backdrop {
   position: fixed;
   inset: 0;
