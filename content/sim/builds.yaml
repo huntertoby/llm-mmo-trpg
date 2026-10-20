@@ -255,7 +255,7 @@ builds:
       resist: {physical: 100}
       tags: [hero, sim]
       max_mana: 24
-      skills: [skill_tiger_charge, skill_vault_leap, skill_decoy_swap, skill_guard_swap, skill_gale_kick, skill_bull_rush, skill_war_avatar]
+      skills: [skill_tiger_charge, skill_leap_slam, skill_decoy_swap, skill_shadow_whirl, skill_gale_kick, skill_bull_rush, skill_war_avatar]
 
   - id: build_banisher
     name_zh: 放逐流

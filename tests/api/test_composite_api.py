@@ -1,5 +1,5 @@
 """複合技能（Phase 3F-3a）的 API：合法動作帶 ``followup_target``、預覽回傳落點與動作段範圍、施放後
-事件有 ``skill_followup``，戰鬥紀錄可以重播。以「裝上試玩」把示範技能「瞬影旋斬」換進衝鋒流。"""
+事件有 ``skill_followup``，戰鬥紀錄可以重播。示範技能「瞬影旋斬」已裝進衝鋒流（Phase 3F-3b）。"""
 
 from __future__ import annotations
 
@@ -9,16 +9,7 @@ from typing import Any
 
 from fastapi.testclient import TestClient
 
-from tests.engine.helpers import library
 from trpg.cli.battle import cmd_replay
-
-DEMO = "skill_shadow_whirl"
-
-
-def _demo() -> dict[str, Any]:
-    data = library().skills[DEMO].model_dump(mode="json", exclude_none=True)
-    data.pop("id")
-    return data
 
 
 def _post(client: TestClient, path: str, body: dict[str, Any]) -> dict[str, Any]:
@@ -36,8 +27,6 @@ def test_cast_a_composite_through_the_api_and_replay_it(client: TestClient, tmp_
             "seed": 3,
             "hero_build": "build_charger",
             "ally_builds": [],
-            "custom_skills": [_demo()],
-            "replace_skills": ["skill_guard_swap"],
         },
     )
     assert reply.status_code == 201, reply.text

@@ -50,6 +50,7 @@ from trpg.narrative.events import describe_event
 from trpg.shared.errors import IllegalActionError
 from trpg.shared.rng import Rng
 from trpg.shared.types import Pos, Team, UnitId
+from trpg.sim.matrix import library_with_builds
 from trpg.skillgen.validate import validate_skill
 
 U1, U2, U3, U4 = (UnitId(f"unit_000{i}") for i in range(1, 5))
@@ -230,7 +231,9 @@ def test_the_demo_skill_is_valid_and_equipped() -> None:
     skill = lib.skills[DEMO]
     assert skill.followup is not None and skill.followup.when == "after_move"
     assert validate_skill(skill, lib) == []
-    assert DEMO in lib.units["hero_fighter"].skills
+    charger = lib.builds.by_id()["build_charger"].hero.skills
+    assert DEMO in charger and "skill_leap_slam" in charger
+    assert validate_skill(lib.skills["skill_leap_slam"], lib) == []
 
 
 # ---------------------------------------------------------------------------
@@ -394,13 +397,6 @@ def test_single_followups_list_only_targets_in_reach_of_the_landing() -> None:
     assert all(f != U3 for _, f in picks)  # (6, 6) 離落點太遠
 
 
-def test_the_ai_does_not_pick_composites_and_does_not_crash() -> None:
-    skill = combo("teleport", CONE)
-    state = arena(skill, foes=[(4, 3)])
-    action = UtilityAI(library().ai_profiles)(state)
-    assert not (isinstance(action, UseSkill) and action.skill_id == SID)
-
-
 # ---------------------------------------------------------------------------
 # 預覽與重播（驗收 4）
 # ---------------------------------------------------------------------------
@@ -441,7 +437,7 @@ def _combo_first(state: BattleState) -> Any:
     unit = state.active
     assert unit is not None
     if (
-        unit.template_id == "hero_fighter"
+        unit.template_id == "build_charger"
         and DEMO in unit.skills
         and unit.cooldowns.get(DEMO) is None
     ):
@@ -455,9 +451,9 @@ def _combo_first(state: BattleState) -> Any:
 
 def test_a_battle_with_a_composite_cast_replays_exactly() -> None:
     setup = build_setup(
-        library(),
+        library_with_builds(library()),
         "test_flat_6x6",
-        ["hero_fighter", "hero_archer"],
+        ["build_charger", "hero_archer"],
         ["bandit", "bandit", "bandit_archer"],
         max_rounds=12,
     )

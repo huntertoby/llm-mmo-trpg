@@ -81,6 +81,7 @@ from trpg.engine.actions import (
     Trip,
     UseSkill,
 )
+from trpg.engine.ai.composite import composite_estimate
 from trpg.engine.ai.displace import DISPLACE_PRIMITIVES, displace_estimate, exposure, is_hurt
 from trpg.engine.ai.gamble import cautious, on_miss_cost
 from trpg.engine.ai.orders import (
@@ -1398,6 +1399,8 @@ def skill_estimate(  # noqa: PLR0917
     skill = effective_skill(state, action)
     if skill.kind == "stance" and stance_status_ids(state.ruleset, unit):
         return None  # 已經有姿態：AI 不主動換姿態（也不主動取消，Phase 2E-2）
+    if skill.followup is not None:
+        return composite_estimate(state, unit, area)
     placed = _placement_estimate(state, unit, skill, area, scene, trap=trap)
     if not isinstance(placed, _Unhandled):
         return placed
@@ -1897,8 +1900,6 @@ class UtilityAI:
         for index, action in enumerate(actions):
             if not isinstance(action, UseSkill):
                 continue
-            if state.ruleset.skill_def(action.skill_id).followup is not None:
-                continue  # 複合技能（Phase 3F-3a）：AI 先不使用，評估留給 3F-3b
             est = skill_estimate(
                 state, unit, action, areas[id(action)], scene, w, before, trap=trap
             )
