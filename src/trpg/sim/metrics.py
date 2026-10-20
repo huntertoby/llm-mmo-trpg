@@ -59,6 +59,7 @@ from trpg.engine.events import (
     UnitSpawned,
     UnitSummoned,
 )
+from trpg.engine.ids import BOSS_TAG
 from trpg.engine.results import ResolveResult
 from trpg.engine.runner import DEFAULT_MAX_ACTIONS, BattleRun, run_battle
 from trpg.engine.setup import BattleSetup
@@ -87,7 +88,6 @@ __all__ = [
 CONTROL_STATUSES: tuple[str, ...] = ("stun", "frozen", "root", "slow")
 """計入「控制回合」的狀態。"""
 
-BOSS_TAG = "boss"
 BOSS_BURST_FRACTION_PERMILLE = 600
 """``boss_burst``：單一動作對 Boss 造成 ≥ 最大 HP 的這個千分比。"""
 LONG_BATTLE_ROUNDS = 10

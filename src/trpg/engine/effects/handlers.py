@@ -39,8 +39,9 @@ from trpg.engine.events import (
     UnitFell,
     UnitMoved,
 )
+from trpg.engine.ids import CONCEALED, SHIELDED
 from trpg.engine.lifecycle import down_unit, escape_unit
-from trpg.engine.rules.combat import CONCEALED, PERMILLE, PPM, element_modifier_ppm
+from trpg.engine.rules.combat import PERMILLE, PPM, element_modifier_ppm
 from trpg.engine.rules.facing import facing_between
 from trpg.engine.rules.geometry import XY
 from trpg.engine.rules.movement import is_deadly, is_standable
@@ -59,9 +60,6 @@ from trpg.engine.state import BattleState, StatusInstance, UnitState
 from trpg.engine.traps import queue_trap_entry
 from trpg.engine.zones import note_unit_moved
 from trpg.shared.types import Element, Pos, Surface, Team, UnitId
-
-SHIELD_STATUS = "shielded"
-"""``shield`` 原語施加的狀態 ID（``absorbs_damage``）。"""
 
 __all__ = ["ability_modifier", "apply_status", "arrive", "enter_surface", "weather_permille"]
 
@@ -424,7 +422,7 @@ def _shield(ctx: Ctx, effect: EffectBase) -> list[EventBase]:
     if effect.dice is not None:
         rolls = tuple(ctx.rng.roll(effect.dice.sides) for _ in range(effect.dice.count))
     amount = max(0, ((sum(rolls) + effect.flat) * PERMILLE + effect.scaled_permille) // PERMILLE)
-    status_id = SHIELD_STATUS
+    status_id = SHIELDED
     current = unit.get_status(status_id)
     total = max(amount, 0 if current is None or current.amount is None else current.amount)
     duration = ctx.rules.status_def(status_id).duration

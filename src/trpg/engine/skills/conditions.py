@@ -20,6 +20,7 @@ from collections.abc import Iterable
 from typing import NamedTuple
 
 from trpg.content.skills import CASTER_CONDITIONS, ConditionSpec, SkillDef, condition_text
+from trpg.engine.ids import CONCEALED
 from trpg.engine.rules.facing import is_behind
 from trpg.engine.rules.geometry import XY
 from trpg.engine.state import BattleState, UnitState
@@ -35,7 +36,6 @@ __all__ = [
 ]
 
 _PERMILLE = 1000
-CONCEALED_STATUS = "concealed"
 
 
 class Subject(NamedTuple):
@@ -72,7 +72,7 @@ def _caster_condition_met(state: BattleState, caster: UnitState, condition: Cond
     if kind == "first_round":
         return state.round == 1
     if kind == "self_concealed":
-        return caster.has_status(CONCEALED_STATUS)
+        return caster.has_status(CONCEALED)
     assert kind == "cast_tag_this_turn" and condition.tag is not None
     return condition.tag in caster.turn_cast_tags
 

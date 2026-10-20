@@ -57,6 +57,7 @@ from trpg.engine.events import (
     UnitFell,
     UnitSpawned,
 )
+from trpg.engine.ids import STEADFAST, TOPPLABLE, next_unit_id
 from trpg.engine.lifecycle import make_unit
 from trpg.engine.rules.combat import PERMILLE
 from trpg.engine.rules.facing import facing_toward_enemies
@@ -77,8 +78,6 @@ __all__ = [
     "unit_push_block",
 ]
 
-STEADFAST = "steadfast"
-TOPPLABLE = "topplable"
 
 type HurlOutcome = Literal["exploded", "shattered", "placed", "lost"]
 
@@ -916,7 +915,7 @@ def _spawn_unit(ctx: Ctx, effect: EffectBase) -> list[EventBase]:
         xy = _free_tile(state, origin)
     if xy is None:
         return [_fizzle(ctx, effect.kind, effect.pos, "no_space")]
-    uid = UnitId(f"unit_{len(state.units) + 1:04d}")
+    uid = next_unit_id(state)
     same = sum(1 for u in state.units.values() if u.template_id == spawn.template.id)
     name = spawn.template.name_zh + str(same + 1)
     unit = make_unit(

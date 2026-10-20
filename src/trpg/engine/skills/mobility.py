@@ -8,6 +8,7 @@ from __future__ import annotations
 
 from dataclasses import dataclass
 
+from trpg.engine.ids import PRONE
 from trpg.engine.rules.facing import back_xy
 from trpg.engine.rules.geometry import XY, bresenham, chebyshev, manhattan
 from trpg.engine.rules.movement import is_deadly, is_standable, path_map, step_cost
@@ -30,7 +31,6 @@ __all__ = [
     "swap_problem",
 ]
 
-PRONE = "prone"
 LEAP_MAX_HEIGHT_DIFF = 1
 """跳躍落點與起點的最大高度差（層）；同時也是「可以無視的低矮地形」的高度。"""
 

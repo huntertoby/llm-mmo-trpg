@@ -118,6 +118,7 @@ from trpg.engine.events import (
     UnitRevived,
 )
 from trpg.engine.grants import granted_remaining
+from trpg.engine.ids import PRONE
 from trpg.engine.preview import DamageRange, Preview, preview
 from trpg.engine.resources import restorable_cooldowns
 from trpg.engine.rewrites import grant_ap_problem, resettable_cooldowns
@@ -173,7 +174,6 @@ _POSSIBLE_KILL_DIVISOR = 4
 _DOWNED_PENALTY = 1000
 _ESCAPED_BONUS = 1000
 _ATTACK_CAUSES = ("attack",)
-_PRONE = "prone"
 _SURFACE_HARM = 8
 """讓友方站上有害的新表面的扣分：相當於這麼多點傷害（乘上 ``friendly_fire``）。"""
 
@@ -811,7 +811,7 @@ def _push_gains(f: _GainFrame) -> Fraction:
             t.knock_chance is not None
             and not t.ally
             and f.counts(t.unit_id)
-            and not f.state.units[t.unit_id].has_status(_PRONE)
+            and not f.state.units[t.unit_id].has_status(PRONE)
         ):
             gains += w.status * t.hit_chance * t.knock_chance
     return gains
@@ -1714,7 +1714,7 @@ def is_risky_move(
     - 往下的落差達到墜落門檻；
     - 撤離勝利條件下，我方走上出口格。
     """
-    if unit.has_status(_PRONE):
+    if unit.has_status(PRONE):
         return True
     if enemies is None:
         enemies = reactive_enemies(state, unit)

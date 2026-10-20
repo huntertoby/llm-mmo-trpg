@@ -15,13 +15,11 @@ from __future__ import annotations
 
 from trpg.engine.context import Ctx
 from trpg.engine.events import EventBase, SourceChanged, SourceReason
+from trpg.engine.ids import ELITE_TAG
 from trpg.engine.state import UnitState
 from trpg.shared.types import Pos, Team, UnitId
 
 __all__ = ["ELITE_TAG", "change_source", "credit_elite_kill", "spend_source", "take_source_well"]
-
-ELITE_TAG = "elite"
-"""精英單位的標籤（單位範本的 ``tags``；落入致命地形的規則也用它）。"""
 
 
 def change_source(

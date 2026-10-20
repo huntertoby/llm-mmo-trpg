@@ -108,6 +108,7 @@ from trpg.engine.events import (
     UnitDowned,
 )
 from trpg.engine.grants import grant_skill
+from trpg.engine.ids import CONCEALED, PRONE, REVEALED, TOPPLABLE
 from trpg.engine.maneuvers import contest
 from trpg.engine.pierce import NO_PIERCE, PierceTrace, pierce_trace
 from trpg.engine.reactions import (
@@ -174,8 +175,6 @@ __all__ = [
     "use_triggered_skill",
 ]
 
-PRONE = "prone"
-TOPPLABLE = "topplable"
 REWRITE_PRIMITIVES = (
     GRANT_AP,
     RESET_COOLDOWN,
@@ -189,9 +188,6 @@ _TOUCHING_AFFECTS = ("enemies", "all", "tiles")
 _OWN_CHECK = (SWAP, SWAP_ANY, TELEPORT_TARGET, ZONE, REVEAL)
 """位移類原語自己擲抵抗判定（Phase 3D-2b），不另外擲命中；揭露（Phase 3D-8a）自動命中範圍內的
 敵人。"""
-REVEALED = "revealed"
-"""``reveal`` 施加的狀態（``statuses.yaml``，``prevents_concealment``）。"""
-CONCEALED = "concealed"
 
 
 def _unit_id(unit: UnitState) -> str:

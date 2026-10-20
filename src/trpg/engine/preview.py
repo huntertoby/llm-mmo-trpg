@@ -68,6 +68,7 @@ from trpg.engine.events import (
     UnitRevived,
     UnitSummoned,
 )
+from trpg.engine.ids import BOSS_TAG
 from trpg.engine.maneuvers import contest_chance
 from trpg.engine.pierce import pierce_trace
 from trpg.engine.results import ResolveResult
@@ -85,7 +86,7 @@ from trpg.engine.rules.combat import (
     weapon_profile,
 )
 from trpg.engine.rules.movement import is_deadly
-from trpg.engine.rules.statuses import BOSS_TAG, effective_attribute, shield_amount
+from trpg.engine.rules.statuses import effective_attribute, shield_amount
 from trpg.engine.skills.conditions import Subject, condition_met
 from trpg.engine.skills.scaling import skill_scaling_value
 from trpg.engine.skills.targeting import (

@@ -39,11 +39,11 @@ from trpg.content.skills import (
 from trpg.engine import modifiers
 from trpg.engine.actions import Direction, UseSkill
 from trpg.engine.activations import activation_problem
+from trpg.engine.ids import BOSS_TAG
 from trpg.engine.rules.combat import AttackProfile, attack_value, concealment_problem
 from trpg.engine.rules.geometry import XY, has_line_of_sight, manhattan
 from trpg.engine.rules.movement import is_deadly, is_standable
 from trpg.engine.rules.statuses import (
-    BOSS_TAG,
     attack_range_cap,
     blocks_spells,
     skip_turn_status,

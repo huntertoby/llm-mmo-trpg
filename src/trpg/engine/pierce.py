@@ -15,14 +15,13 @@ from __future__ import annotations
 
 from dataclasses import dataclass
 
+from trpg.engine.ids import PENETRABLE
 from trpg.engine.rules.geometry import XY, bresenham, manhattan
 from trpg.engine.skills.targeting import SkillArea
 from trpg.engine.state import BattleState, UnitState
 from trpg.shared.types import ObjectId, UnitId
 
 __all__ = ["NO_PIERCE", "PierceTrace", "pierce_trace"]
-
-PENETRABLE = "penetrable"
 
 
 @dataclass(frozen=True, slots=True)

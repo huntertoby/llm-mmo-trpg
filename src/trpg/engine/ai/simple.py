@@ -14,6 +14,7 @@
 from __future__ import annotations
 
 from trpg.engine.actions import Action, Attack, Defend, EndTurn, Move
+from trpg.engine.ids import DEFENDING
 from trpg.engine.rules.combat import attack_problem, is_height_limited
 from trpg.engine.rules.geometry import XY, has_line_of_sight, manhattan
 from trpg.engine.rules.movement import PathMap, available_move_budget, path_map
@@ -21,8 +22,6 @@ from trpg.engine.state import BattleState, UnitState
 from trpg.shared.types import Pos
 
 __all__ = ["choose_action"]
-
-DEFENDING = "defending"
 
 
 def _enemies(state: BattleState, unit: UnitState) -> list[UnitState]:

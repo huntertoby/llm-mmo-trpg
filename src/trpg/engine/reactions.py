@@ -42,8 +42,9 @@ from trpg.engine.events import (
     UnitDowned,
     UnitMoved,
 )
+from trpg.engine.ids import CONCEALED
 from trpg.engine.results import Pending
-from trpg.engine.rules.combat import CONCEALED, ForcedOutcome, attack_problem, roll_attack
+from trpg.engine.rules.combat import ForcedOutcome, attack_problem, roll_attack
 from trpg.engine.rules.facing import face_toward
 from trpg.engine.rules.geometry import XY, has_line_of_sight, manhattan
 from trpg.engine.rules.statuses import effective_attribute, skip_turn_status

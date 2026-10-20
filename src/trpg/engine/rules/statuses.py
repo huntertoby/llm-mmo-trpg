@@ -11,6 +11,7 @@ from collections.abc import Callable
 
 from trpg.content.battle import StatusDef
 from trpg.content.library import Ruleset
+from trpg.engine.ids import BOSS_TAG
 from trpg.engine.state import UnitState
 from trpg.shared.types import Attribute, UnitId
 
@@ -37,7 +38,6 @@ __all__ = [
 ]
 
 PERMILLE = 1000
-BOSS_TAG = "boss"
 
 
 def boss_converted_status(rules: Ruleset, unit: UnitState, status_id: str) -> str:

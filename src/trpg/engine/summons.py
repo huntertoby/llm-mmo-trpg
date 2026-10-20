@@ -21,6 +21,7 @@ from trpg.engine.context import Ctx
 from trpg.engine.effects import execute
 from trpg.engine.effects.models import ApplyStatusEffect
 from trpg.engine.events import EffectFizzled, EventBase, TotemPulsed, UnitSummoned
+from trpg.engine.ids import next_unit_id
 from trpg.engine.lifecycle import dismiss_summon, make_unit, summons_of
 from trpg.engine.rules.geometry import XY, manhattan
 from trpg.engine.skills.targeting import summon_site_problem
@@ -78,7 +79,7 @@ def summon_unit(  # noqa: PLR0917
     limit = ctx.core.summon_limit_per_owner
     while len(existing) >= limit:
         events += dismiss_summon(ctx, existing.pop(0), "limit")
-    uid = UnitId(f"unit_{len(state.units) + 1:04d}")
+    uid = next_unit_id(state)
     same = sum(1 for u in state.units.values() if u.template_id == template_id)
     unit = make_unit(
         uid,

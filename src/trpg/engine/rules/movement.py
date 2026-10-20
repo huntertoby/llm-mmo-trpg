@@ -11,6 +11,7 @@ from __future__ import annotations
 import heapq
 
 from trpg.content.maps import standable
+from trpg.engine.ids import PRONE
 from trpg.engine.rules.geometry import XY, manhattan, neighbors4
 from trpg.engine.rules.statuses import fear_sources, is_rooted
 from trpg.engine.state import BattleState, UnitState
@@ -31,8 +32,6 @@ __all__ = [
     "stand_up_cost",
     "step_cost",
 ]
-
-PRONE = "prone"
 
 
 def is_standable(state: BattleState, xy: XY) -> bool:

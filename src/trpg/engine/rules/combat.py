@@ -11,6 +11,7 @@ from typing import Literal
 
 from trpg.content.library import Ruleset
 from trpg.engine.events import AdvantageState
+from trpg.engine.ids import CONCEALED, DEFENDING, PRONE
 from trpg.engine.modifiers import ATTACK, range_delta
 from trpg.engine.rules.facing import is_behind
 from trpg.engine.rules.geometry import XY, has_line_of_sight, manhattan
@@ -61,9 +62,6 @@ PPM = 1_000_000
 PERMILLE = 1000
 NATURAL_MISS = 1
 NATURAL_HIT = 20
-DEFENDING = "defending"
-PRONE = "prone"
-CONCEALED = "concealed"
 HALF_COVER = "half_cover"
 
 # 掩護物的搜尋順序：目標的上、右、下、左（與 geometry.neighbors4 一致）

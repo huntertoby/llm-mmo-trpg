@@ -35,13 +35,12 @@ from trpg.engine.events import (
     ObjectToppled,
     UnitFell,
 )
+from trpg.engine.ids import ELITE_TAG, PRONE
 from trpg.engine.rules.movement import nearest_safe_tile
 from trpg.shared.types import ObjectId
 
 __all__ = ["ELITE_TAG", "TriggerFn", "effects_for", "register_trigger"]
 
-ELITE_TAG = "elite"
-PRONE = "prone"
 
 type TriggerFn = Callable[[Ctx, EventBase, int], list[EffectBase]]
 

@@ -54,6 +54,7 @@ from trpg.engine.events import (
     TurnOrderSet,
     UnitStoodUp,
 )
+from trpg.engine.ids import DEFENDING, PRONE, TOPPLABLE
 from trpg.engine.lifecycle import make_unit
 from trpg.engine.maneuvers import contest
 from trpg.engine.reactions import (
@@ -133,9 +134,6 @@ __all__ = [
     "start_battle",
 ]
 
-DEFENDING = "defending"
-PRONE = "prone"
-TOPPLABLE = "topplable"
 
 type ActionHandler = Callable[[Ctx, UnitState, Action], None]
 
