@@ -472,7 +472,7 @@ PM 驗收：`check.py` 全過；在內建瀏覽器把坦克的格擋與藉機攻
 
 ## 7. Phase 3-5｜roguelite 一輪（拆三段）
 
-> 前置：Phase 3C、3D 已完成（`Phase3C計畫.md`、`Phase3D計畫.md`）。設計：`docs/design/07-角色成長.md`（只讀 7.1 一輪流程相關）、`docs/design/06-技能.md` 6.14.4（源力）。
+> 前置：Phase 3C、3D、**3E-1**（`Phase3E計畫.md`）已完成（`Phase3C計畫.md`、`Phase3D計畫.md`）。設計：`docs/design/07-角色成長.md`（只讀 7.1 一輪流程相關）、`docs/design/06-技能.md` 6.14.4（源力）。
 
 | 段 | 內容 | 模型 |
 |---|---|---|
@@ -491,7 +491,7 @@ PM 驗收：`check.py` 全過；在內建瀏覽器把坦克的格擋與藉機攻
   - 戰後：用 `trpg.engine.battle_result(state)` 寫回主角 HP、法力、源力；HP 為 0（主角倒下）→ 一輪失敗。戰鬥中倒下但我方勝利時，主角以 1 HP 繼續（保守，報告說明）。
 - **升級**：每場固定經驗；升級時給 ＋2 屬性點，並提供 3 個技能候選（隨機組合器，依主角目前的階級），其中 1 個「偏離路線」（0.2 C），可跳過；技能欄滿時要選擇替換或放棄。
 - **營火**（中段與 Boss 前）：HP、法力回滿；源力依 `roguelite.yaml` ＋1（不超過上限）；同時提供重骰（0.2 F）。
-- **存檔格式**（0.2 E）：JSON，帶 `format` 版本（例如 `trpg-run/1`）。內容：一輪的種子、`RunState`、目前節點（戰鬥／升級／營火／結束）、進行中戰鬥的 `setup ＋ seed ＋ steps ＋ orders`（讀檔以重播還原）。存在本機資料夾（例如 `saves/`，加進 `.gitignore`），檔名含 run id。
+- **存檔格式**（0.2 E）：JSON，帶 `format` 版本（例如 `trpg-run/1`）。內容：一輪的種子、`RunState`、目前節點（戰鬥／升級／營火／結束）、進行中戰鬥的 `setup ＋ seed ＋ steps ＋ orders`（讀檔以重播還原），以及 **升級得到的生成技能定義**（讀檔時用 `Ruleset.with_skills` 加回規則包，Phase 3E-1）。戰後讀回 HP、法力、源力用 `BattleResult` 以 `unit_id` 為鍵的查詢（3E-1）。存在本機資料夾（例如 `saves/`，加進 `.gitignore`），檔名含 run id。
 - **API**：`/api/runs`（建立：選 build 作為起始技能組、分配開局 4 點）、`/api/runs/{id}`（狀態）、`/api/runs/{id}/battle`（開始或接續本場戰鬥，沿用既有戰鬥 API）、`/api/runs/{id}/choice`（升級選擇、營火、重骰）、`/api/runs/{id}/save`、`/api/runs/load`。路徑可微調，報告列出最終版本。
 - **CLI**：`trpg run new --seed N --build X`、`trpg run auto --seed N`（AI 代打整輪，用於測試與模擬）、`trpg run show <存檔>`。
 - 順手修 0.10 #1：`skills show` 被動技「AP None」，重錄 CLI 快照。
