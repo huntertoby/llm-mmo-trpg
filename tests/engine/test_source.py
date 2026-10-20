@@ -19,6 +19,7 @@ from tests.engine.helpers import (
 )
 from tests.engine.skill_helpers import FLAT7, U1, U2
 from tests.engine.test_passive_triggers import always
+from trpg.content.maps import TRAINING_ARCHETYPE
 from trpg.content.skills import SkillDef
 from trpg.engine import (
     Attack,
@@ -211,8 +212,11 @@ def test_battle_result_template_lookup_rejects_two_units_of_one_template() -> No
 
 def test_shipped_maps_with_source_wells() -> None:
     lib = library()
-    with_wells = sorted(m.id for m in lib.maps.values() if m.source_wells)
+    with_wells = sorted(
+        m.id for m in lib.maps.values() if m.source_wells and m.archetype != TRAINING_ARCHETYPE
+    )
     assert with_wells == ["dark_forest", "ruined_fort"]
+    assert len(lib.map("training_range").source_wells) == 1  # Phase 3F-1 靶場：1 個源泉
     terrain = lib.ruleset.terrain.by_id()
     for map_id in with_wells:
         m = lib.map(map_id)

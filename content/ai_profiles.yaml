@@ -173,9 +173,9 @@ profiles:
     name_zh: 支援
     description_zh: 重視治療、護盾、增益，並保持距離（2D-1；權重初值未經模擬）。
     weights: {damage: 4, env_damage: 1, kill: 20, env_kill: 15, push: 3, surface: 3, expose: 5, friendly_fire: 10, approach: 1, threat: 2, keep_distance: 20, protect: 15, objective: 10, hazard: 10, defend: 2, heal: 12, shield: 10, support: 12, status: 3, mana: 1, cooldown: 1}
-  # Phase 3F-1：靶場的木樁（training_dummy）。所有權重為 0（含 facing 的背刺權重），沒有正分的動作，
-  # 所以每回合直接結束：不移動、不攻擊、不防禦。
+  # Phase 3F-1：靶場的木樁（training_dummy）。所有權重為 0（含 facing 的背刺權重；木樁沒有技能，衝撞與
+  # 瞬步的固定加分用不到），沒有正分的動作，所以每回合直接結束：不移動、不攻擊、不防禦。
   - id: idle
     name_zh: 原地不動
     description_zh: 什麼都不做（靶場的木樁）。
-    weights: {backstab: 0, back_exposed: 0, charge_per_enemy: 0, shadowstep: 0, shadowstep_behind: 0}
+    weights: {backstab: 0, back_exposed: 0}
