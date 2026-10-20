@@ -11,7 +11,8 @@ import {
   type Ticker,
 } from "pixi.js";
 import type { Pos } from "../api/types";
-import { lerpPos, type MoveAnim } from "../battle/animation";
+import type { FeedbackItem, FloatTone } from "../battle/feedback";
+import { lerpPos, type MoveAnim, type MoveStyle } from "../battle/animation";
 import type { DrawModel, ObjectDraw, TileDraw, UnitDraw } from "../battle/drawModel";
 import { facingArrow } from "../battle/facing";
 import { canvasSize, TILE_SIZE, tileCenter, tileOrigin } from "../battle/geometry";
@@ -84,6 +85,25 @@ const OVERLAY_COLORS: Readonly<Record<OverlayKind, number>> = {
   followup_area: HIGHLIGHT.followup,
 };
 
+const FLOAT_COLORS: Readonly<Record<FloatTone, number>> = {
+  damage: 0xff4d4d,
+  heal: 0x4cd964,
+  shield: 0x9fd8ff,
+  text: 0xffffff,
+  bad: 0xff9f43,
+  good: 0xffe066,
+};
+const LINE_COLOR = 0xfff1a8;
+const STATUS_COLOR = 0xd9a0ff;
+
+/** 地圖回饋的一個動態效果：`update(t)` 傳入 0–1 的進度；結束時移除。 */
+interface Effect {
+  node: Container;
+  startMs: number;
+  endMs: number;
+  update(t: number): void;
+}
+
 function hpColor(ratio: number): number {
   if (ratio > 0.5) return 0x4cd964;
   if (ratio > 0.25) return 0xffcc00;
@@ -100,6 +120,10 @@ export class BattleRenderer {
   private readonly traps = new Container();
   private readonly units = new Container();
   private readonly hover = new Container();
+  private readonly effects = new Container();
+  private effectList: Effect[] = [];
+  private effectClock = 0;
+  private effectTick: ((ticker: Ticker) => void) | null = null;
   private readonly unitSprites = new Map<string, Container>();
   private model: DrawModel | null = null;
   private ready = false;
@@ -122,7 +146,7 @@ export class BattleRenderer {
     }
     host.appendChild(this.app.canvas);
     const stage = this.app.stage;
-    stage.addChild(this.tiles, this.auras, this.zones, this.objects, this.highlights, this.traps, this.units, this.hover);
+    stage.addChild(this.tiles, this.auras, this.zones, this.objects, this.highlights, this.traps, this.units, this.hover, this.effects);
     stage.eventMode = "none";
     this.app.canvas.style.display = "block";
     this.ready = true;
@@ -131,6 +155,7 @@ export class BattleRenderer {
 
   destroy(): void {
     this.destroyed = true;
+    this.effectList = [];
     if (this.ready) this.app.destroy(true, { children: true });
     this.ready = false;
   }
@@ -516,7 +541,7 @@ export class BattleRenderer {
         sprite.position.set(to.x, to.y);
         continue;
       }
-      await this.tween(sprite, tileCenter(m.from), to, m.durationMs, skip);
+      await this.tween(sprite, tileCenter(m.from), to, m.durationMs, skip, m.style);
     }
   }
 
@@ -526,6 +551,7 @@ export class BattleRenderer {
     to: { x: number; y: number },
     durationMs: number,
     skip: () => boolean,
+    style: MoveStyle,
   ): Promise<void> {
     return new Promise((resolve) => {
       let elapsed = 0;
@@ -536,19 +562,132 @@ export class BattleRenderer {
           finish();
           return;
         }
-        const p = lerpPos(from, to, elapsed / durationMs);
+        const t = elapsed / durationMs;
+        if (style === "fade") {
+          // 前半在原地淡出，後半在新位置淡入
+          sprite.position.set(t < 0.5 ? from.x : to.x, t < 0.5 ? from.y : to.y);
+          sprite.alpha = Math.abs(t - 0.5) * 2;
+          return;
+        }
+        const p = lerpPos(from, to, t);
         sprite.position.set(p.x, p.y);
       };
       const finish = () => {
         if (done) return;
         done = true;
         this.app.ticker.remove(tick);
-        if (!sprite.destroyed) sprite.position.set(to.x, to.y);
+        if (!sprite.destroyed) {
+          sprite.position.set(to.x, to.y);
+          sprite.alpha = 1;
+        }
         resolve();
       };
       this.app.ticker.add(tick);
       // 分頁在背景時 ticker 會停：保底計時，避免動畫卡住畫面。
       window.setTimeout(finish, durationMs + 300);
     });
+  }
+
+  /**
+   * 播放一步的地圖回饋（浮動數字、字樣、行動連線、狀態彈出）；不等待結束，效果畫在獨立的圖層，
+   * 場景重畫不會清掉。`durationMs` 是整組回饋的時間（已依播放速度縮放）。
+   */
+  playFeedback(items: readonly FeedbackItem[], durationMs: number): void {
+    if (!this.ready || durationMs <= 0) return;
+    const now = this.effectClock;
+    for (const item of items) {
+      const effect = this.makeEffect(item, now, durationMs);
+      this.effects.addChild(effect.node);
+      this.effectList.push(effect);
+    }
+    this.ensureEffectTick();
+  }
+
+  private makeEffect(item: FeedbackItem, now: number, durationMs: number): Effect {
+    if (item.kind === "line") return this.lineEffect(item.from, item.to, now, durationMs);
+    const c = tileCenter(item.pos);
+    const delay = item.slot * durationMs * 0.12;
+    const isStatus = item.kind === "status";
+    const text = isStatus ? `＋${item.text}` : item.text;
+    const color = isStatus ? STATUS_COLOR : FLOAT_COLORS[item.tone];
+    const big = item.kind === "float" && item.big;
+    const node = new Container();
+    const t = label(text, big ? 30 : 20, color, true);
+    t.anchor.set(0.5);
+    t.style.stroke = { color: 0x000000, width: 4 };
+    node.addChild(t);
+    const baseY = c.y - T * 0.3 - item.slot * 14;
+    node.position.set(c.x + (isStatus ? T * 0.12 : 0), baseY);
+    node.alpha = 0;
+    if (isStatus) {
+      // 狀態：格子先閃一圈光環
+      const ring = new Graphics().circle(0, T * 0.3, T * 0.4).stroke({ width: 3, color: STATUS_COLOR });
+      node.addChildAt(ring, 0);
+    }
+    return {
+      node,
+      startMs: now + delay,
+      endMs: now + durationMs,
+      update: (p) => {
+        node.alpha = p < 0.7 ? 1 : 1 - (p - 0.7) / 0.3;
+        node.position.y = baseY - Math.min(1, p * 1.5) * (big ? 22 : 16);
+        const pop = big ? 1 + 0.35 * Math.max(0, 1 - p * 5) : 1;
+        node.scale.set(pop);
+      },
+    };
+  }
+
+  private lineEffect(from: Pos, to: Pos, now: number, durationMs: number): Effect {
+    const a = tileCenter(from);
+    const b = tileCenter(to);
+    const angle = Math.atan2(b.y - a.y, b.x - a.x);
+    const head = 10;
+    const g = new Graphics()
+      .moveTo(a.x, a.y)
+      .lineTo(b.x, b.y)
+      .stroke({ width: 3, color: LINE_COLOR })
+      .poly([
+        b.x,
+        b.y,
+        b.x - head * Math.cos(angle - 0.45),
+        b.y - head * Math.sin(angle - 0.45),
+        b.x - head * Math.cos(angle + 0.45),
+        b.y - head * Math.sin(angle + 0.45),
+      ])
+      .fill(LINE_COLOR);
+    const node = new Container();
+    node.addChild(g);
+    node.alpha = 0;
+    return {
+      node,
+      startMs: now,
+      endMs: now + durationMs * 0.5,
+      update: (p) => {
+        node.alpha = 0.9 * (1 - p);
+      },
+    };
+  }
+
+  private ensureEffectTick(): void {
+    if (this.effectTick !== null) return;
+    const tick = (ticker: Ticker) => {
+      this.effectClock += ticker.deltaMS;
+      const alive: Effect[] = [];
+      for (const e of this.effectList) {
+        if (this.effectClock >= e.endMs) {
+          e.node.destroy({ children: true });
+          continue;
+        }
+        if (this.effectClock >= e.startMs) e.update((this.effectClock - e.startMs) / (e.endMs - e.startMs));
+        alive.push(e);
+      }
+      this.effectList = alive;
+      if (alive.length === 0) {
+        this.app.ticker.remove(tick);
+        this.effectTick = null;
+      }
+    };
+    this.effectTick = tick;
+    this.app.ticker.add(tick);
   }
 }
