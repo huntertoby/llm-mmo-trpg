@@ -873,6 +873,9 @@ class SkillCard(BaseModel):
     ``shadowstep`` 與傳送他人 ``teleport_target`` 都是「單位 → 落點」）。"""
     followup: str | None = None
     """複合技能（Phase 3F-3a）第二段的一句話（:func:`followup_text`）；其他技能為 ``None``。"""
+    followup_when: str | None = None
+    """複合技能第二段的種類（``followup.when``，Phase 3F-4b；網頁只有「位移 → 動作」用兩段選取，
+    其他種類照第一段選取）；其他技能為 ``None``。"""
 
 
 def skill_card(
@@ -916,4 +919,5 @@ def skill_card(
         timing=timing_text(library, skill),
         effect_ids=tuple(e.type for e in skill.effects),
         followup=followup_text(library, skill),
+        followup_when=None if skill.followup is None else skill.followup.when,
     )

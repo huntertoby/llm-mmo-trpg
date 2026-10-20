@@ -147,5 +147,10 @@ describe("skillButtons", () => {
     expect(b?.composite).toBe(true);
     const [plain] = skillButtons(hero, teleportCone, { shadow: { ...cards.shadow, followup: null } as unknown as SkillCard });
     expect(plain?.composite).toBe(false);
+    // 3F-4b：其他種類（動作 → 位移、延遲段……）照第一段選取，不用兩段選取
+    const delayed = { shadow: { ...cards.shadow, followup_when: "delayed" } as unknown as SkillCard };
+    expect(skillButtons(hero, teleportCone, delayed)[0]?.composite).toBe(false);
+    const move = { shadow: { ...cards.shadow, followup_when: "after_move" } as unknown as SkillCard };
+    expect(skillButtons(hero, teleportCone, move)[0]?.composite).toBe(true);
   });
 });

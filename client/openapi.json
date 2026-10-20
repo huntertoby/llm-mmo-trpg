@@ -5179,6 +5179,17 @@
               }
             ],
             "title": "Followup"
+          },
+          "followup_when": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Followup When"
           }
         },
         "additionalProperties": false,

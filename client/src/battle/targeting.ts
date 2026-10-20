@@ -200,7 +200,9 @@ export function skillButtons(hero: UnitView, legal: readonly Action[], cards: Sk
       disabledReason,
       grantedRemaining: grantedRemaining(hero, skillId),
       effectIds: card?.effect_ids ?? [],
-      composite: (card?.followup ?? null) !== null,
+      // 只有「位移 → 動作」用兩段選取（Phase 3F-3b）；其他種類（3F-4a／4b）照第一段選取，
+      // 第二段在結算時暫停詢問或自動結算（延遲段：之後才釋放）
+      composite: (card?.followup ?? null) !== null && (card?.followup_when ?? "after_move") === "after_move",
     };
   });
 }

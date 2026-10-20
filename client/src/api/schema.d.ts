@@ -2054,6 +2054,8 @@ export interface components {
             effect_ids: string[];
             /** Followup */
             followup?: string | null;
+            /** Followup When */
+            followup_when?: string | null;
         };
         /** @enum {string} */
         SkillRarity: "common" | "rare" | "epic" | "legendary";
