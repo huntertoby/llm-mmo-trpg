@@ -359,6 +359,9 @@ export function BattleScreen({ initial, onExit, exitLabel, runMode }: Props) {
         case "view":
           flushSync(() => setShown(op.view));
           break;
+        case "feedback":
+          rendererRef.current?.playFeedback(op.items, op.durationMs);
+          break;
         case "log":
           setLines((prev) => [...prev, ...op.lines]);
           break;

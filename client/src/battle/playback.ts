@@ -3,12 +3,18 @@
 // 最後一定以 `res.view` 為準（播放只是過場）。
 import type { BattleResponse, BattleView } from "../api/types";
 import { movePlan, type MoveAnim } from "./animation";
+import { feedbackFor, type FeedbackItem } from "./feedback";
 import { logLines, type LogLine } from "./log";
 import { unitNames } from "./units";
 
 export type PlaySpeed = "normal" | "fast" | "skip";
 
 export const PLAY_SPEEDS: readonly PlaySpeed[] = ["normal", "fast", "skip"];
+
+/** 動畫時間的倍率：快 ＝ 一半；略過不播動畫。 */
+export const SPEED_SCALE: Readonly<Record<PlaySpeed, number>> = { normal: 1, fast: 0.5, skip: 0 };
+/** 地圖回饋（浮動數字、連線）的基準時間（毫秒），乘上 `SPEED_SCALE`。 */
+export const FEEDBACK_MS = 1000;
 
 /** 每個 AI 動作之後的停頓（毫秒）。 */
 export const AI_PAUSE_MS: Readonly<Record<PlaySpeed, number>> = { normal: 500, fast: 150, skip: 0 };
@@ -21,6 +27,10 @@ export interface Frame {
   /** 行動中的單位；開場那一步為 `null`。 */
   actorId: string | null;
   moves: MoveAnim[];
+  /** 地圖上的回饋項目（略過時為空）。 */
+  feedback: FeedbackItem[];
+  /** 回饋項目顯示的時間（毫秒，已依速度縮放）。 */
+  feedbackMs: number;
   view: BattleView;
   lines: LogLine[];
   pauseMs: number;
@@ -36,6 +46,7 @@ export type PlayOp =
   | { op: "mark"; unitId: string | null }
   | { op: "move"; anim: MoveAnim }
   | { op: "view"; view: BattleView }
+  | { op: "feedback"; items: FeedbackItem[]; durationMs: number }
   | { op: "log"; lines: LogLine[] }
   | { op: "pause"; ms: number };
 
@@ -52,12 +63,14 @@ export function playbackPlan(res: BattleResponse, heroId: string, speed: PlaySpe
     const frames: Frame[] =
       res.steps.length === 0
         ? []
-        : [{ actorId: null, moves: [], view: res.view, lines, pauseMs: 0 }];
+        : [{ actorId: null, moves: [], feedback: [], feedbackMs: 0, view: res.view, lines, pauseMs: 0 }];
     return { initialView: res.initial_view, frames, finalView: res.view };
   }
   const frames = res.steps.map<Frame>((step) => ({
     actorId: step.actor_id,
-    moves: movePlan([step]),
+    moves: movePlan([step], SPEED_SCALE[speed]),
+    feedback: feedbackFor(step.events, step.view),
+    feedbackMs: Math.round(FEEDBACK_MS * SPEED_SCALE[speed]),
     view: step.view,
     lines: logLines([step], unitNames(step.view)),
     pauseMs: pauseFor(step.step?.type, step.actor_id, heroId, speed),
@@ -70,6 +83,7 @@ export function frameOps(frame: Frame): PlayOp[] {
   const ops: PlayOp[] = [{ op: "mark", unitId: frame.actorId }];
   for (const anim of frame.moves) ops.push({ op: "move", anim });
   ops.push({ op: "view", view: frame.view });
+  if (frame.feedback.length > 0) ops.push({ op: "feedback", items: frame.feedback, durationMs: frame.feedbackMs });
   if (frame.lines.length > 0) ops.push({ op: "log", lines: frame.lines });
   if (frame.pauseMs > 0) ops.push({ op: "pause", ms: frame.pauseMs });
   return ops;

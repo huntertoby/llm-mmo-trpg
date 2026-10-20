@@ -75,10 +75,10 @@ describe("movePlan", () => {
         { ...walk("unit_0004", 2, 0, 0, 2), mode: "teleport" },
       ),
     ]);
-    expect(plan.map((m) => [m.unitId, m.mode, m.durationMs > 0])).toEqual([
-      ["unit_0001", "walk", true],
-      ["unit_0003", "forced", true],
-      ["unit_0004", "teleport", false],
+    expect(plan.map((m) => [m.unitId, m.mode, m.style, m.durationMs > 0])).toEqual([
+      ["unit_0001", "walk", "slide", true],
+      ["unit_0003", "forced", "slide", true],
+      ["unit_0004", "teleport", "fade", true],
     ]);
     expect(plan[0]!.durationMs).toBeGreaterThan(plan[1]!.durationMs);
   });
@@ -91,11 +91,18 @@ describe("movePlan", () => {
         { ...walk("unit_0002", 4, 0, 1, 1), mode: "swap" },
       ),
     ]);
-    expect(plan.map((m) => [m.mode, m.durationMs > 0])).toEqual([
-      ["dash", true],
-      ["leap", true],
-      ["swap", true],
+    expect(plan.map((m) => [m.mode, m.style])).toEqual([
+      ["dash", "slide"],
+      ["leap", "slide"],
+      ["swap", "fade"],
     ]);
     expect(plan[0]!.durationMs).toBeLessThan(MOVE_DURATION_MS.walk);
+  });
+
+  it("scales every duration by the speed factor (fast halves it, 0 plays nothing)", () => {
+    const steps = [step(walk("unit_0001", 0, 0, 1, 0), { ...walk("unit_0004", 2, 0, 0, 2), mode: "teleport" })];
+    const normal = movePlan(steps, 1);
+    expect(movePlan(steps, 0.5).map((m) => m.durationMs)).toEqual(normal.map((m) => m.durationMs / 2));
+    expect(movePlan(steps, 0).every((m) => m.durationMs === 0)).toBe(true);
   });
 });
