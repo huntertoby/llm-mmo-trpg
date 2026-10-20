@@ -12,7 +12,11 @@ function snapshot(): Record<string, SkillCard | undefined> {
   return out;
 }
 
-export function useSkillCards(ids: readonly string[]): Readonly<Record<string, SkillCard | undefined>> {
+/** `battleId`：戰鬥內的自訂技能（工坊試玩、一輪生成技能）要靠它查；重新整理後快取是空的。 */
+export function useSkillCards(
+  ids: readonly string[],
+  battleId?: string,
+): Readonly<Record<string, SkillCard | undefined>> {
   const [cards, setCards] = useState(snapshot);
   const key = ids.join(",");
   useEffect(() => {
@@ -22,7 +26,7 @@ export function useSkillCards(ids: readonly string[]): Readonly<Record<string, S
     void Promise.all(
       missing.map(async (id) => {
         try {
-          cache.set(id, await api.skill(id));
+          cache.set(id, await api.skill(id, battleId));
         } catch {
           cache.set(id, null);
         }
@@ -33,7 +37,7 @@ export function useSkillCards(ids: readonly string[]): Readonly<Record<string, S
     return () => {
       cancelled = true;
     };
-  }, [key]);
+  }, [key, battleId]);
   return cards;
 }
 

@@ -173,6 +173,9 @@ export interface SkillButton {
 
 export type SkillCards = Readonly<Record<string, SkillCard | undefined>>;
 
+/** 本地端猜不出原因時的通用說明；伺服器的 `skill-reasons` 有原因時會取代它（Phase 3-5c-2）。 */
+export const GENERIC_REASON = "目前沒有合法目標（或資源不足）";
+
 export function skillButtons(hero: UnitView, legal: readonly Action[], cards: SkillCards): SkillButton[] {
   const granted = (hero.granted_skills ?? []).map((g) => g.skill_id).filter((id) => !hero.skills.includes(id));
   return [...hero.skills, ...granted].map((skillId) => {
@@ -185,7 +188,7 @@ export function skillButtons(hero: UnitView, legal: readonly Action[], cards: Sk
     if (active !== null) disabledReason = active;
     else if (cooldown > 0) disabledReason = `冷卻中（剩 ${cooldown} 回合）`;
     else if (source !== null && hero.source < source) disabledReason = `源力不足：需要 ${source}，目前 ${hero.source}`;
-    else if (actions.length === 0) disabledReason = "目前沒有合法目標（或資源不足）";
+    else if (actions.length === 0) disabledReason = GENERIC_REASON;
     return {
       skillId,
       name: card?.name_zh ?? skillId,

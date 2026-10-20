@@ -61,8 +61,13 @@ export function manaWarning(check: WorkshopCheck, response: BattleResponse): str
   return `主角的法力上限只有 ${hero.max_mana}，這個技能需要 ${need} 點法力：進了戰鬥也放不出來。可以改選法力較多的 build、把技能的法力代價調低，或仍然進入（只能試其他部分）。`;
 }
 
-/** 試玩前就能提醒的一句話（還不知道主角法力時，只說明技能要多少）。 */
-export function manaNote(check: WorkshopCheck | null): string | null {
+/** 試玩前就能提醒的一句話。知道所選 build 的法力上限（`/api/builds` 的 `max_mana`）時直接比對：
+ * 不夠就明說「法力上限 X，技能需要 Y」；不知道時只說明技能要多少。 */
+export function manaNote(check: WorkshopCheck | null, maxMana?: number): string | null {
   const need = skillMana(check);
-  return need > 0 ? `這個技能每次施放要 ${need} 點法力；主角的法力上限依 build 而定，進入戰鬥前會再確認。` : null;
+  if (need <= 0) return null;
+  if (maxMana === undefined) return `這個技能每次施放要 ${need} 點法力；主角的法力上限依 build 而定，進入戰鬥前會再確認。`;
+  return maxMana >= need
+    ? `法力上限 ${maxMana}，技能需要 ${need}：夠用。`
+    : `法力上限 ${maxMana}，技能需要 ${need}：這個 build 放不出來（進入戰鬥也施放不了）。`;
 }

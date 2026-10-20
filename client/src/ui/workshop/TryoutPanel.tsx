@@ -76,7 +76,7 @@ export function TryoutPanel({ check, pending, prefs, onPrefs, onStart }: Props) 
     }
   }
 
-  const note = manaNote(check);
+  const note = manaNote(check, build?.max_mana);
   return (
     <div className="panel ws-panel">
       <div className="section-title">裝上試玩</div>
@@ -111,6 +111,7 @@ export function TryoutPanel({ check, pending, prefs, onPrefs, onStart }: Props) 
               <option key={m.id} value={m.id}>
                 {m.name_zh}
                 {m.archetype === "training" ? "（試玩專用，預設）" : ""}
+                {m.archetype === "boss" ? "（Boss 地圖）" : ""}
               </option>
             ))}
           </select>

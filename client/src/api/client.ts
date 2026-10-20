@@ -10,6 +10,7 @@ import type {
   MapSummary,
   OrderSet,
   PreviewOut,
+  SkillReasons,
   SkillCard,
   UseSkill,
   WorkshopArena,
@@ -71,7 +72,14 @@ async function request<T>(method: string, path: string, body?: unknown): Promise
 export const api = {
   maps: () => request<MapSummary[]>("GET", "/maps"),
   builds: () => request<BuildSummary[]>("GET", "/builds"),
-  skill: (id: string) => request<SkillCard>("GET", `/skills/${encodeURIComponent(id)}`),
+  /** 技能卡片；帶 `battleId` 時也查該場戰鬥內的自訂技能（工坊試玩、一輪生成技能）。 */
+  skill: (id: string, battleId?: string) =>
+    request<SkillCard>(
+      "GET",
+      `/skills/${encodeURIComponent(id)}${battleId === undefined ? "" : `?battle_id=${encodeURIComponent(battleId)}`}`,
+    ),
+  /** 主角灰掉的技能 → 引擎的拒絕理由（Phase 3-5c-2）。 */
+  skillReasons: (battleId: string) => request<SkillReasons>("GET", `/battles/${battleId}/skill-reasons`),
   glossary: () => request<Glossary>("GET", "/glossary"),
   createBattle: (body: CreateBattleRequest) => request<BattleResponse>("POST", "/battles", body),
   battle: (id: string) => request<BattleResponse>("GET", `/battles/${id}`),

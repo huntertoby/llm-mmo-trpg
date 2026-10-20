@@ -63,7 +63,11 @@ import { ErrorBanner } from "../ui/ErrorBanner";
 import { Hud } from "../ui/Hud";
 import { OrdersPanel } from "../ui/OrdersPanel";
 import { ReactionPanel } from "../ui/ReactionPanel";
+import { Legend } from "../ui/Legend";
+import { legendEntries } from "../battle/legend";
 import { SkillBar } from "../ui/SkillBar";
+import { useSkillReasons } from "../ui/useSkillReasons";
+import { blockedMessage, withReasons } from "../battle/skillReasons";
 import { loadSpeed, saveSpeed, SpeedControl } from "../ui/SpeedControl";
 import { TelegraphPanel } from "../ui/TelegraphPanel";
 import { TurnBar } from "../ui/TurnBar";
@@ -149,7 +153,7 @@ export function BattleScreen({ initial, onExit, exitLabel }: Props) {
     if (copied != null) ids.add(copied);
     return [...ids].sort();
   }, [hero, response.legal_actions, response.pending]);
-  const cards = useSkillCards(skillIds);
+  const cards = useSkillCards(skillIds, battleId);
   const skillNames = useSkillNames(cards);
   const names = useMemo(() => unitNames(shown), [shown]);
   const liveNames = useMemo(() => unitNames(view), [view]);
@@ -158,9 +162,10 @@ export function BattleScreen({ initial, onExit, exitLabel }: Props) {
     () => classifyActions(response.legal_actions, view, skillNames),
     [response, view, skillNames],
   );
+  const skillReasons = useSkillReasons(battleId, response);
   const buttons = useMemo(
-    () => (hero === null ? [] : skillButtons(hero, response.legal_actions, cards)),
-    [hero, response.legal_actions, cards],
+    () => (hero === null ? [] : withReasons(skillButtons(hero, response.legal_actions, cards), skillReasons)),
+    [hero, response.legal_actions, cards, skillReasons],
   );
   const basic = useMemo(() => basicModes(response.legal_actions), [response.legal_actions]);
   const modes = useMemo(() => {
@@ -275,6 +280,8 @@ export function BattleScreen({ initial, onExit, exitLabel }: Props) {
     orderPick,
     hurlPick,
   ]);
+
+  const legend = useMemo(() => legendEntries(highlights.overlays, mode), [highlights.overlays, mode]);
 
   // ---- 播放 -----------------------------------------------------------------
   const sleep = useCallback(
@@ -593,6 +600,7 @@ export function BattleScreen({ initial, onExit, exitLabel }: Props) {
             rendererRef={rendererRef}
           />
           {banner && <div className="battle-banner">戰鬥開始</div>}
+          <Legend entries={legend} />
         </div>
         <div className="battle-side">
           <Hud view={shown} hero={shownHero} skills={skillNames} />
@@ -603,6 +611,7 @@ export function BattleScreen({ initial, onExit, exitLabel }: Props) {
             selectedKey={mode?.key ?? null}
             enabled={canAct}
             onSelect={pickSkill}
+            onBlocked={(b) => setError(blockedMessage(b))}
           />
           {ended ? (
             <EndPanel response={response} onRestart={onExit} restartLabel={exitLabel} />

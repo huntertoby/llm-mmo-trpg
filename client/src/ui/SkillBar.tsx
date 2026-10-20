@@ -11,9 +11,11 @@ interface Props {
   selectedKey: string | null;
   enabled: boolean;
   onSelect(skillId: string): void;
+  /** 點到灰掉、有原因的技能：把原因交給畫面的訊息列（Phase 3-5c-2）。 */
+  onBlocked?(button: SkillButton): void;
 }
 
-export function SkillBar({ buttons, cards, selectedKey, enabled, onSelect }: Props) {
+export function SkillBar({ buttons, cards, selectedKey, enabled, onSelect, onBlocked }: Props) {
   const [hovered, setHovered] = useState<string | null>(null);
   const card = hovered === null ? undefined : cards[hovered];
   return (
@@ -23,6 +25,7 @@ export function SkillBar({ buttons, cards, selectedKey, enabled, onSelect }: Pro
         {buttons.length === 0 && <span className="muted">（沒有技能）</span>}
         {buttons.map((b) => {
           const blocked = !enabled || b.disabledReason !== null;
+          const reasoned = b.disabledReason !== null;
           const selected = selectedKey === `skill:${b.skillId}`;
           const cost = b.cooldown > 0 ? `冷卻 ${b.cooldown}` : b.costs.length > 0 ? b.costs.join("・") : "…";
           return (
@@ -35,9 +38,10 @@ export function SkillBar({ buttons, cards, selectedKey, enabled, onSelect }: Pro
             >
               <button
                 type="button"
-                className={`skill-button${selected ? " selected" : ""}${b.grantedRemaining != null ? " granted" : ""}`}
-                disabled={blocked}
-                onClick={() => onSelect(b.skillId)}
+                className={`skill-button${selected ? " selected" : ""}${b.grantedRemaining != null ? " granted" : ""}${reasoned ? " blocked" : ""}`}
+                disabled={blocked && !reasoned}
+                aria-disabled={blocked}
+                onClick={() => (blocked ? onBlocked?.(b) : onSelect(b.skillId))}
               >
                 <span className="skill-name">{b.name}</span>
                 {b.grantedRemaining != null && (
