@@ -68,6 +68,7 @@ __all__ = [
     "LEGACY_REACTION_EVENTS",
     "MAX_GRANT_DURATION",
     "MAX_LIFESTEAL_PERMILLE",
+    "MAX_MODIFIERS",
     "MIN_SKILL_CRIT_RANGE",
     "MODIFIER_CHANGES",
     "ON_HIT_PRIMITIVES",
@@ -227,7 +228,8 @@ type ReactionEvent = Literal[
 type SkillRarity = Literal["common", "rare", "epic", "legendary"]
 type SkillCategory = Literal["weapon", "spell"]
 type WeaponReq = Literal["melee", "ranged", "focus", "any"]
-type Origin = Literal["builtin", "level_up", "drop", "crafted", "taught", "tome"]
+type Origin = Literal["builtin", "level_up", "drop", "crafted", "taught", "tome", "workshop"]
+"""技能的來源；``workshop``：技能工坊（Phase 3F-1，開發工具）做的技能。"""
 
 AFFECTS_VALUES: tuple[str, ...] = ("enemies", "allies", "all", "self", "tiles")
 
@@ -1232,6 +1234,8 @@ ON_HIT_PRIMITIVES: tuple[str, ...] = (
 """``on_hit_effects`` 可用的原語（作用在被命中的目標或其所在格，自動命中）。"""
 
 _MAX_MODIFIERS = 2
+MAX_MODIFIERS = _MAX_MODIFIERS
+"""修正技能的修正規則條數上限（Phase 3F-1 公開給技能工坊的選項推導）。"""
 _MAX_CONSUME_THEN = 2
 _MAX_ON_HIT_EFFECTS = 2
 

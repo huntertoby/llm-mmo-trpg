@@ -40,7 +40,7 @@ from trpg.content.skills import (
 from trpg.skillgen.budget import BudgetError, BudgetReport, skill_budget
 from trpg.skillgen.mechanics import affect_set, resolved_affects
 
-__all__ = ["Violation", "share_violations", "validate_skill"]
+__all__ = ["RarityNeed", "Violation", "rarity_requirements", "share_violations", "validate_skill"]
 
 _PERMILLE = 1000
 _MAX_EFFECTS = 4
@@ -594,40 +594,65 @@ def _share_violations(
 # ---------------------------------------------------------------------------
 
 
-def _rarity_violations(skill: SkillDef, library: ContentLibrary) -> list[Violation]:
+@dataclass(frozen=True, slots=True)
+class RarityNeed:
+    """一項稀有度需求：``rule`` 規則代碼（``shape``、``primitive``……）、``what`` 中文說明、
+    ``minimum`` 最低稀有度。"""
+
+    rule: str
+    what: str
+    minimum: str
+
+
+def rarity_requirements(skill: SkillDef, library: ContentLibrary) -> list[RarityNeed]:
+    """技能用到的每個形狀、骨架、觸發時機、原語、狀態、條件與失手反噬的最低稀有度（依出現順序，
+    不去重）。驗證器的 ``rarity.*`` 與技能工坊的「最低稀有度」共用（Phase 3F-1）。"""
     rules = library.ruleset
-    have = rarity_rank(skill.rarity)
-    needs: list[tuple[str, str, str]] = []  # (規則代碼, 說明, 最低稀有度)
+    needs: list[RarityNeed] = []
     needs.append(
-        ("shape", f"形狀 {skill.shape.type}", rules.shapes.by_id()[skill.shape.type].min_rarity)
+        RarityNeed(
+            "shape", f"形狀 {skill.shape.type}", rules.shapes.by_id()[skill.shape.type].min_rarity
+        )
     )
     skeleton = library.skeletons.get(skill.skeleton)
     if skeleton is not None:
-        needs.append(("skeleton", f"骨架 {skeleton.id}", skeleton.min_rarity))
+        needs.append(RarityNeed("skeleton", f"骨架 {skeleton.id}", skeleton.min_rarity))
     if skill.trigger is not None:
         timing = rules.skill_triggers.by_id().get(skill.trigger.event)
         if timing is not None:
-            needs.append(("trigger", f"觸發時機 {timing.id}", timing.min_rarity))
+            needs.append(RarityNeed("trigger", f"觸發時機 {timing.id}", timing.min_rarity))
     primitives, statuses, conditions = (
         rules.primitives.by_id(),
         rules.statuses.by_id(),
         rules.conditions.by_id(),
     )
     if skill.cost.on_miss:  # 失手反噬至少 rare（3D-7a 驗收決定、設計 6.17）
-        needs.append(("on_miss", "失手反噬 cost.on_miss", ON_MISS_MIN_RARITY))
+        needs.append(RarityNeed("on_miss", "失手反噬 cost.on_miss", ON_MISS_MIN_RARITY))
     cond_specs = [skill.condition] if skill.condition else []
     cond_specs += [r.condition for r in skill.modifiers if r.condition is not None]
     on_hit = [e for r in skill.modifiers for e in r.change.on_hit_effects or ()]
     for effect in (*skill.effects, *on_hit):
-        needs.append(("primitive", f"原語 {effect.type}", primitives[effect.type].min_rarity))
+        needs.append(
+            RarityNeed("primitive", f"原語 {effect.type}", primitives[effect.type].min_rarity)
+        )
         if effect.type == "apply_status" and effect.status in statuses:
-            needs.append(("status", f"狀態 {effect.status}", statuses[effect.status].min_rarity))
+            needs.append(
+                RarityNeed("status", f"狀態 {effect.status}", statuses[effect.status].min_rarity)
+            )
         if effect.condition is not None:
             cond_specs.append(effect.condition)
-    needs += [("condition", f"條件 {c.type}", conditions[c.type].min_rarity) for c in cond_specs]
+    needs += [
+        RarityNeed("condition", f"條件 {c.type}", conditions[c.type].min_rarity) for c in cond_specs
+    ]
+    return needs
+
+
+def _rarity_violations(skill: SkillDef, library: ContentLibrary) -> list[Violation]:
+    have = rarity_rank(skill.rarity)
     out: list[Violation] = []
     seen: set[tuple[str, str]] = set()
-    for rule, what, minimum in needs:
+    for need in rarity_requirements(skill, library):
+        rule, what, minimum = need.rule, need.what, need.minimum
         if rarity_rank(minimum) > have and (rule, what) not in seen:
             seen.add((rule, what))
             out.append(
