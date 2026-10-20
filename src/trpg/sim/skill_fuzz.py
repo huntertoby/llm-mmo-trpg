@@ -23,7 +23,7 @@ from fractions import Fraction
 
 from trpg.content.battle import UnitTemplate
 from trpg.content.library import ContentLibrary, Ruleset
-from trpg.content.skills import SkillDef, SkillTable
+from trpg.content.skills import SkillDef
 from trpg.engine import (
     BattleSetup,
     BattleState,
@@ -125,11 +125,7 @@ def _unit_template(
 def _ruleset_with(library: ContentLibrary, skill: SkillDef) -> Ruleset:
     if skill.id in library.skills:  # 內容庫裡的技能（示範技能）已在規則包內
         return library.ruleset
-    rules = library.ruleset.model_copy(
-        update={"skills": SkillTable(skills=(*library.ruleset.skills.skills, skill))}
-    )
-    rules.model_post_init(None)
-    return rules
+    return library.ruleset.with_skills([skill])
 
 
 def _spawn(

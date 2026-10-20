@@ -227,6 +227,37 @@ class Ruleset(ContentModel):
                     f"rule_changes.yaml 的 {rule.id} 引用了未知的召喚物範本：{rule.unit}"
                 )
 
+    def with_skills(self, skills: Iterable[SkillDef]) -> Ruleset:
+        """加入 ``skills``（例如 LLM 或組合器生成的技能）的新規則包：每個技能都走
+        :func:`skill_reference_problems`（與內容庫載入、技能驗證器同一份檢查），通過才加入並重建
+        查表索引；原規則包不變。
+
+        技能 ID 與既有技能重複時拋出 :class:`ValueError`（內容完全相同的重複視為已加入而略過）；
+        有任何引用問題也拋出 :class:`ValueError`（訊息列出全部技能的問題）。
+        """
+        known = self.skills.by_id()
+        added: dict[str, SkillDef] = {}
+        for skill in skills:
+            existing = known.get(skill.id) or added.get(skill.id)
+            if existing is None:
+                added[skill.id] = skill
+            elif existing != skill:
+                raise ValueError(f"技能 ID {skill.id} 已存在，且內容不同")
+        if not added:
+            return self
+        combined = {**known, **added}
+        problems = [
+            f"{skill.id}：{p}"
+            for skill in added.values()
+            for p in skill_reference_problems(skill, self, combined)
+        ]
+        if problems:
+            raise ValueError("；".join(problems))
+        merged = SkillTable(skills=(*self.skills.skills, *added.values()))
+        rules = self.model_copy(update={"skills": merged})
+        rules.model_post_init(None)
+        return rules
+
     def unsafe_backlash_statuses(self) -> frozenset[str]:
         """不能當反噬的狀態 ID（Phase 3D-7a）：硬控類、會讓持有者跳過回合、回合開始時持續傷害
         （反噬不會讓施放者跳過回合，也不會讓他的 HP 低於 1）。"""

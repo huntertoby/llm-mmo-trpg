@@ -191,8 +191,22 @@ def test_battle_result_reports_remaining_source_for_allies() -> None:
     after = resolve(state, UseSkill(unit_id=U1, skill_id=LEGEND_ID)).state
     result = battle_result(after)
     assert [(a.unit_id, a.source) for a in result.allies] == [(U1, 2)]
-    assert result.source_of(after.units[U1].template_id) == 2
+    assert result.source_of(U1) == 2
     assert result.source_of("nobody") is None
+    assert result.hp_of(U1) == after.units[U1].hp
+    assert result.mana_of(U1) == after.units[U1].mana
+    assert result.source_of_template(after.units[U1].template_id) == 2
+    assert result.source_of_template("nobody") is None
+
+
+def test_battle_result_template_lookup_rejects_two_units_of_one_template() -> None:
+    state = _legend_state(3)
+    result = battle_result(state)
+    twin = result.allies[0].model_copy(update={"unit_id": "unit_0099"})
+    doubled = result.model_copy(update={"allies": (*result.allies, twin)})
+    with pytest.raises(ValueError, match="請以單位 ID 查詢"):
+        doubled.source_of_template(twin.template_id)
+    assert doubled.source_of("unit_0099") == twin.source  # 以單位 ID 查沒有歧義
 
 
 def test_shipped_maps_with_source_wells() -> None:

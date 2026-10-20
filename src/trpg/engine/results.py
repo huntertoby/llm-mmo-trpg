@@ -61,6 +61,8 @@ class AllyResult(BaseModel):
     escaped: bool
     source: int
     """剩餘源力（0～``source_max``）。"""
+    mana: int
+    max_mana: int
 
 
 class BattleResult(BaseModel):
@@ -74,12 +76,46 @@ class BattleResult(BaseModel):
     round: int
     allies: tuple[AllyResult, ...]
 
-    def source_of(self, template_id: str) -> int | None:
-        """範本為 ``template_id`` 的第一個我方單位的剩餘源力（沒有為 ``None``）。"""
+    def ally(self, unit_id: str) -> AllyResult | None:
+        """單位 ID 為 ``unit_id`` 的我方單位的結果（沒有為 ``None``）。"""
         for ally in self.allies:
-            if ally.template_id == template_id:
-                return ally.source
+            if ally.unit_id == unit_id:
+                return ally
         return None
+
+    def source_of(self, unit_id: str) -> int | None:
+        """單位 ``unit_id`` 的剩餘源力（不是我方單位為 ``None``）。"""
+        found = self.ally(unit_id)
+        return None if found is None else found.source
+
+    def hp_of(self, unit_id: str) -> int | None:
+        """單位 ``unit_id`` 的剩餘 HP（不是我方單位為 ``None``）。"""
+        found = self.ally(unit_id)
+        return None if found is None else found.hp
+
+    def mana_of(self, unit_id: str) -> int | None:
+        """單位 ``unit_id`` 的剩餘法力（不是我方單位為 ``None``）。"""
+        found = self.ally(unit_id)
+        return None if found is None else found.mana
+
+    def ally_of_template(self, template_id: str) -> AllyResult | None:
+        """範本為 ``template_id`` 的我方單位的結果（便利函式；沒有為 ``None``）。
+
+        同一範本有兩個以上的我方單位時拋出 :class:`ValueError`（請改用單位 ID 查）。
+        """
+        found = [a for a in self.allies if a.template_id == template_id]
+        if len(found) > 1:
+            ids = "、".join(a.unit_id for a in found)
+            raise ValueError(
+                f"範本 {template_id} 有 {len(found)} 個我方單位（{ids}），請以單位 ID 查詢"
+            )
+        return found[0] if found else None
+
+    def source_of_template(self, template_id: str) -> int | None:
+        """範本為 ``template_id`` 的唯一我方單位的剩餘源力（沒有為 ``None``；兩個以上拋出
+        :class:`ValueError`）。"""
+        found = self.ally_of_template(template_id)
+        return None if found is None else found.source
 
 
 def battle_result(state: BattleState) -> BattleResult:
@@ -93,6 +129,8 @@ def battle_result(state: BattleState) -> BattleResult:
             downed=u.downed,
             escaped=u.escaped,
             source=u.source,
+            mana=u.mana,
+            max_mana=u.max_mana,
         )
         for u in state.units_sorted()
         if u.team is Team.ALLY and not u.is_summon  # 召喚物不帶出戰鬥（Phase 3D-4a）
