@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import dataclasses
 import json
 from pathlib import Path
 
@@ -23,6 +24,7 @@ from trpg.roguelite import (
     loads_save,
     new_run,
     restore_battle,
+    ruleset_hash,
     save_path,
     write_save,
 )
@@ -162,3 +164,11 @@ def test_a_save_whose_battle_does_not_match_the_run_is_rejected() -> None:
     saved = battle.to_saved().model_copy(update={"seed": battle.seed + 1})
     with pytest.raises(SaveFormatError, match="不符"):
         ActiveBattle.restore(lib, run, saved)
+
+
+def test_ruleset_hash_is_stable_and_follows_content() -> None:
+    lib = library()
+    first = ruleset_hash(lib)
+    assert first == ruleset_hash(lib)
+    assert len(first) == 64
+    assert ruleset_hash(dataclasses.replace(lib, files=lib.files[1:])) != first

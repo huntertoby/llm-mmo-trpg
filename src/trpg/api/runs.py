@@ -29,6 +29,7 @@ from trpg.roguelite import (
     finish_battle,
     load_save,
     new_run,
+    ruleset_hash,
     save_path,
     write_save,
 )
@@ -110,6 +111,7 @@ class RunStore:
         self.save_dir = save_dir
         self._new_id = new_id
         self._runs: dict[str, RunSession] = {}
+        self._ruleset_hash: str | None = None
         self._lock = threading.Lock()
 
     def _register(self, session: RunSession) -> RunSession:
@@ -149,9 +151,15 @@ class RunStore:
         session.sync()
         session.run = apply_choice(self.library, session.run, choice)
 
+    def ruleset_hash(self) -> str:
+        """目前內容庫的雜湊（第一次用到時才算，之後快取）。"""
+        if self._ruleset_hash is None:
+            self._ruleset_hash = ruleset_hash(self.library)
+        return self._ruleset_hash
+
     def save(self, session: RunSession) -> tuple[Path, RunSave]:
         session.sync()
-        save = session.to_save()
+        save = session.to_save().model_copy(update={"ruleset_hash": self.ruleset_hash()})
         return write_save(self.save_dir, save), save
 
     def load(self, run_id: str) -> RunSession:
@@ -162,6 +170,8 @@ class RunStore:
         save = load_save(path)
         session = RunSession(save.run_id, self.library, save.run)
         if save.battle is not None:
+            if save.ruleset_hash != self.ruleset_hash():
+                raise SaveFormatError("內容檔已變更，無法重播戰鬥中的存檔；可讀取戰鬥之間的存檔")
             node = save.run.node
             assert isinstance(node, BattleNode)
             if save.battle.seed != save.run.plan_of(node.index).seed:

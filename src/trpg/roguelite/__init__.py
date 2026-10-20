@@ -26,6 +26,7 @@ from trpg.roguelite.save import (
     load_save,
     loads_save,
     restore_battle,
+    ruleset_hash,
     save_path,
     write_save,
 )
@@ -53,6 +54,7 @@ __all__ = [
     "new_run",
     "next_node",
     "restore_battle",
+    "ruleset_hash",
     "save_path",
     "write_save",
 ]

@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import json
 from collections.abc import Iterator
 from pathlib import Path
 from typing import Any
@@ -223,3 +224,57 @@ def test_campfire_choices_over_the_api(runs_client: TestClient) -> None:
     assert runs_client.post(f"{url}/choice", json={"kind": "reroll"}).status_code == 409
     left = _ok(runs_client.post(f"{url}/choice", json={"kind": "pick", "pick": None}))
     assert left["node"] == {**left["node"], "kind": "battle", "battle_index": 4}
+
+
+def _rewrite_save(save_dir: Path, run_id: str, **fields: Any) -> None:
+    """改寫存檔的頂層欄位（值為 ``None`` 表示移除該欄位）。"""
+    path = save_dir / f"run-{run_id}.json"
+    data = json.loads(path.read_text(encoding="utf-8"))
+    for key, value in fields.items():
+        if value is None:
+            data.pop(key, None)
+        else:
+            data[key] = value
+    path.write_text(json.dumps(data), encoding="utf-8")
+
+
+def _save_mid_battle(client: TestClient, library: ContentLibrary) -> str:
+    run = _create(client)
+    url = f"/api/runs/{run['run_id']}"
+    battle = _ok(client.post(f"{url}/battle"))["battle"]
+    _play_battle(client, library, battle, limit=2)
+    _ok(client.post(f"{url}/save"))
+    return str(run["run_id"])
+
+
+def test_mid_battle_load_rejects_a_changed_ruleset_hash(
+    runs_client: TestClient, library: ContentLibrary, save_dir: Path
+) -> None:
+    run_id = _save_mid_battle(runs_client, library)
+    assert json.loads((save_dir / f"run-{run_id}.json").read_text(encoding="utf-8"))["ruleset_hash"]
+    _rewrite_save(save_dir, run_id, ruleset_hash="0" * 64)
+    reply = runs_client.post("/api/runs/load", json={"run_id": run_id})
+    assert reply.status_code == 422
+    assert "內容檔已變更" in reply.json()["detail"]
+    assert "戰鬥之間的存檔" in reply.json()["detail"]
+
+
+def test_old_mid_battle_save_without_hash_is_rejected(
+    runs_client: TestClient, library: ContentLibrary, save_dir: Path
+) -> None:
+    run_id = _save_mid_battle(runs_client, library)
+    _rewrite_save(save_dir, run_id, ruleset_hash=None)
+    reply = runs_client.post("/api/runs/load", json={"run_id": run_id})
+    assert reply.status_code == 422
+    assert "內容檔已變更" in reply.json()["detail"]
+
+
+def test_between_battles_save_ignores_the_hash(runs_client: TestClient, save_dir: Path) -> None:
+    run = _create(runs_client)
+    saved = _ok(runs_client.post(f"/api/runs/{run['run_id']}/save"))
+    assert saved["in_battle"] is False
+    _rewrite_save(save_dir, run["run_id"], ruleset_hash="f" * 64)
+    assert runs_client.post("/api/runs/load", json={"run_id": run["run_id"]}).status_code == 200
+    _rewrite_save(save_dir, run["run_id"], ruleset_hash=None)  # 舊存檔沒有此欄位
+    loaded = _ok(runs_client.post("/api/runs/load", json={"run_id": run["run_id"]}))
+    assert loaded["node"]["kind"] == "battle"

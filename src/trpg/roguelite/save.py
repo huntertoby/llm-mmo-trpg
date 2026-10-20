@@ -8,6 +8,8 @@
 - ``run_id``：一輪的 ID（檔名 ``run-<run_id>.json``）。
 - ``run``：:class:`~trpg.roguelite.state.RunState`（主角、進度、生成技能定義、每一場的安排、歷程、
   目前節點與候選）。
+- ``ruleset_hash``：寫入時內容庫的穩定雜湊（:func:`ruleset_hash`，Phase 3-5c-1）。可省略（舊存檔）；
+  戰鬥中的存檔讀檔時要與目前的內容庫相同（沒有此欄位視為不符），戰鬥之間的存檔不檢查。
 - ``battle``：進行中的戰鬥（:class:`~trpg.roguelite.battle.SavedBattle`：種子、步驟、指令），
   沒有時為 ``null``。
 
@@ -17,6 +19,7 @@
 
 from __future__ import annotations
 
+import hashlib
 import json
 import os
 import re
@@ -40,6 +43,7 @@ __all__ = [
     "load_save",
     "loads_save",
     "restore_battle",
+    "ruleset_hash",
     "save_path",
     "write_save",
 ]
@@ -68,6 +72,19 @@ class RunSave(BaseModel):
     run_id: str
     run: RunState
     battle: SavedBattle | None = None
+    ruleset_hash: str | None = None
+
+
+def ruleset_hash(library: ContentLibrary) -> str:
+    """內容庫的穩定 SHA-256（全部內容檔的相對路徑與排序鍵 JSON；不用內建 ``hash()``）。"""
+    items = [
+        [path.relative_to(library.root).as_posix(), model.model_dump(mode="json")]
+        for path, model in sorted(
+            library.files, key=lambda f: f[0].relative_to(library.root).as_posix()
+        )
+    ]
+    text = json.dumps(items, sort_keys=True, ensure_ascii=False, separators=(",", ":"))
+    return hashlib.sha256(text.encode("utf-8")).hexdigest()
 
 
 def dumps_save(save: RunSave) -> str:

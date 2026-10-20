@@ -80,6 +80,13 @@ interface Props {
   onExit(): void;
   /** 有值時顯示「離開」按鈕（可隨時離開），結束面板的主按鈕也用這個文字；省略為一般戰鬥。 */
   exitLabel?: string;
+  /** 從一輪（roguelite）進入時：顯示「存檔」按鈕與主角倒下提示（Phase 3-5c-1）。 */
+  runMode?: RunMode;
+}
+
+export interface RunMode {
+  /** 存檔，回傳要顯示的訊息。 */
+  onSave(): Promise<string>;
 }
 
 const BANNER_MS = 1000;
@@ -106,7 +113,7 @@ function unitAt(view: BattleView, tile: Pos | null) {
   return here.find((u) => !u.downed) ?? here[0];
 }
 
-export function BattleScreen({ initial, onExit, exitLabel }: Props) {
+export function BattleScreen({ initial, onExit, exitLabel, runMode }: Props) {
   const battleId = initial.battle_id;
   const heroId = initial.hero_id;
   const [response, setResponse] = useState(initial);
@@ -118,6 +125,7 @@ export function BattleScreen({ initial, onExit, exitLabel }: Props) {
   const [playing, setPlaying] = useState(false);
   const [banner, setBanner] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [saveNote, setSaveNote] = useState<string | null>(null);
   const [hover, setHover] = useState<Pos | null>(null);
   const [selected, setSelected] = useState<string | null>(null);
   const [speed, setSpeed] = useState<PlaySpeed>(loadSpeed);
@@ -580,13 +588,38 @@ export function BattleScreen({ initial, onExit, exitLabel }: Props) {
   const shownHero = shown.units.find((u) => u.id === heroId) ?? null;
   const ended = (response.awaiting === "ended" || response.awaiting === "stalled") && !busy;
 
+  async function saveRun() {
+    if (runMode === undefined) return;
+    try {
+      setSaveNote(await runMode.onSave());
+    } catch (e) {
+      setSaveNote(null);
+      setError(errorText(e));
+    }
+  }
+
   return (
     <div className="battle-screen">
       <TurnBar view={shown} names={names} acting={acting} />
-      {exitLabel !== undefined && !ended && (
-        <button type="button" className="battle-leave" onClick={onExit}>
-          ← {exitLabel}
-        </button>
+      {(exitLabel !== undefined || runMode !== undefined) && !ended && (
+        <div className="battle-bar">
+          {exitLabel !== undefined && (
+            <button type="button" className="battle-leave" onClick={onExit}>
+              ← {exitLabel}
+            </button>
+          )}
+          {runMode !== undefined && (
+            <button type="button" disabled={busy} onClick={() => void saveRun()}>
+              存檔
+            </button>
+          )}
+          {saveNote !== null && <span className="muted small">{saveNote}</span>}
+        </div>
+      )}
+      {runMode !== undefined && shownHero?.downed === true && (
+        <div className="hero-downed-notice" role="status">
+          主角倒下，隊友繼續作戰
+        </div>
       )}
       <ErrorBanner message={error} onClose={() => setError(null)} />
       <div className="battle-main">
