@@ -133,6 +133,15 @@ class CreateBattleRequest(_ApiModel):
     hero_build: str
     ally_builds: tuple[str, ...] | None = None
     max_rounds: int = Field(default=30, ge=1, le=200)
+    custom_skills: tuple[dict[str, Any], ...] = ()
+    """技能工坊「裝上試玩」（Phase 3F-1）：自訂技能定義（技能定義的 JSON，與
+    ``/api/workshop/check`` 的 ``skill`` 同格式）。每個都必須通過驗證，以 ``Ruleset.with_skills``
+    加入規則包、裝到主角身上（裝備上限照常檢查）；不合法時 422 並列出中文原因。"""
+    replace_skills: tuple[str, ...] = ()
+    """要從主角身上拿掉的技能 ID；自訂技能依序放進被拿掉的位置，多出來的接在最後（空欄位）。"""
+    opponents: str | None = None
+    """靶場（地圖類型 ``training``）的對手：``content/workshop.yaml`` 的 ``opponents`` 之一
+    （``dummy`` 木樁、``fighting`` 會反擊），省略為第一個。其他地圖不可填。"""
 
 
 class DecisionRequest(_ApiModel):

@@ -25,9 +25,15 @@ export type Surface = Schemas["Surface"];
 export type MapSummary = Schemas["MapSummary"];
 export type BuildSummary = Schemas["BuildSummary"];
 export type SkillCard = Schemas["SkillCard"];
-/** openapi-typescript 把有預設值的欄位標成必填；建立戰鬥時 `max_rounds` 可省略（伺服器預設 30）。 */
-export type CreateBattleRequest = Omit<Schemas["CreateBattleRequest"], "max_rounds"> & {
+/** openapi-typescript 把有預設值的欄位標成必填；建立戰鬥時 `max_rounds` 可省略（伺服器預設 30），
+ * 技能工坊的 `custom_skills`、`replace_skills` 也可省略（預設空串列，Phase 3F-1）。 */
+export type CreateBattleRequest = Omit<
+  Schemas["CreateBattleRequest"],
+  "max_rounds" | "custom_skills" | "replace_skills"
+> & {
   max_rounds?: number;
+  custom_skills?: Record<string, unknown>[];
+  replace_skills?: string[];
 };
 export type Glossary = Schemas["Glossary"];
 export type GlossaryEntry = Schemas["GlossaryEntry"];

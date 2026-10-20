@@ -857,6 +857,196 @@
           }
         }
       }
+    },
+    "/api/workshop/arena": {
+      "get": {
+        "tags": [
+          "workshop"
+        ],
+        "summary": "Get Arena",
+        "description": "裝上試玩的選單：靶場（預設）、其他地圖、靶場的對手。",
+        "operationId": "get_arena_api_workshop_arena_get",
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/WorkshopArena"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/workshop/options": {
+      "post": {
+        "tags": [
+          "workshop"
+        ],
+        "summary": "Post Options",
+        "description": "下一步的合法選項：前置步驟都完成的每一步的欄位與選項，以及第一個未完成的步驟。",
+        "operationId": "post_options_api_workshop_options_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/WorkshopSkillRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/DraftOptions"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/workshop/check": {
+      "post": {
+        "tags": [
+          "workshop"
+        ],
+        "summary": "Post Check",
+        "description": "是否合法、違反的規則、預算明細、最低稀有度與技能卡片。",
+        "operationId": "post_check_api_workshop_check_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/WorkshopSkillRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/WorkshopCheck"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/workshop/random": {
+      "post": {
+        "tags": [
+          "workshop"
+        ],
+        "summary": "Post Random",
+        "description": "以隨機組合器產生一個技能（同種子同參數結果一致）；組不出來時 422。",
+        "operationId": "post_random_api_workshop_random_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/WorkshopRandomRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/WorkshopRandom"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/workshop/export": {
+      "post": {
+        "tags": [
+          "workshop"
+        ],
+        "summary": "Post Export",
+        "description": "匯出 YAML（``provenance.origin: workshop``）。技能必須能通過 schema（否則 422）；規則上不合法\n的技能也可以匯出，``legal`` 與 ``problems`` 標示問題。",
+        "operationId": "post_export_api_workshop_export_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/WorkshopSkillRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/WorkshopExport"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
     }
   },
   "components": {
@@ -962,6 +1152,38 @@
         ],
         "title": "ActivationView",
         "description": "生效中的常駐類傳說（Phase 3D-6；雙方都看得到）。\n\n``expires_round``：限時型在持有者第 ``expires_round`` 輪的回合開始時結束（剩餘輪數 ＝\n``expires_round − round``）；整場型為 ``None``。``rule_name_zh``：規則改變的名稱（修正型為\n``None``）。"
+      },
+      "ArenaOpponents": {
+        "properties": {
+          "id": {
+            "type": "string",
+            "title": "Id"
+          },
+          "name_zh": {
+            "type": "string",
+            "title": "Name Zh"
+          },
+          "description_zh": {
+            "type": "string",
+            "title": "Description Zh"
+          },
+          "enemies": {
+            "items": {
+              "type": "string"
+            },
+            "type": "array",
+            "title": "Enemies"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "id",
+          "name_zh",
+          "description_zh",
+          "enemies"
+        ],
+        "title": "ArenaOpponents"
       },
       "Attack": {
         "properties": {
@@ -1550,6 +1772,160 @@
         "title": "BombPreviewOut",
         "description": "預覽中會綁上的定時炸彈（Phase 3D-8b）：``rounds`` 次環境回合後爆炸，``tiles`` 是以攜帶者\n目前位置展開的波及格子。"
       },
+      "BudgetLine": {
+        "properties": {
+          "index": {
+            "type": "integer",
+            "title": "Index"
+          },
+          "type": {
+            "type": "string",
+            "title": "Type"
+          },
+          "note": {
+            "type": "string",
+            "title": "Note"
+          },
+          "base": {
+            "type": "number",
+            "title": "Base"
+          },
+          "shape": {
+            "type": "number",
+            "title": "Shape"
+          },
+          "target": {
+            "type": "number",
+            "title": "Target"
+          },
+          "condition": {
+            "type": "number",
+            "title": "Condition"
+          },
+          "points": {
+            "type": "number",
+            "title": "Points"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "index",
+          "type",
+          "note",
+          "base",
+          "shape",
+          "target",
+          "condition",
+          "points"
+        ],
+        "title": "BudgetLine",
+        "description": "一個效果（或修正規則）的點數：基礎點數 × 形狀 × 對象 × 條件。"
+      },
+      "BudgetSummary": {
+        "properties": {
+          "lines": {
+            "items": {
+              "$ref": "#/components/schemas/BudgetLine"
+            },
+            "type": "array",
+            "title": "Lines"
+          },
+          "raw": {
+            "type": "number",
+            "title": "Raw"
+          },
+          "condition_multiplier": {
+            "type": "number",
+            "title": "Condition Multiplier"
+          },
+          "synergies": {
+            "items": {
+              "type": "string"
+            },
+            "type": "array",
+            "title": "Synergies"
+          },
+          "total": {
+            "type": "number",
+            "title": "Total"
+          },
+          "tier_budget": {
+            "type": "integer",
+            "title": "Tier Budget"
+          },
+          "coefficient_label": {
+            "type": "string",
+            "title": "Coefficient Label"
+          },
+          "coefficient": {
+            "type": "number",
+            "title": "Coefficient"
+          },
+          "allowance_permille": {
+            "type": "integer",
+            "title": "Allowance Permille"
+          },
+          "allowance_parts": {
+            "items": {
+              "type": "string"
+            },
+            "type": "array",
+            "title": "Allowance Parts"
+          },
+          "usable": {
+            "type": "number",
+            "title": "Usable"
+          },
+          "ratio": {
+            "type": "number",
+            "title": "Ratio"
+          },
+          "ratio_text": {
+            "type": "string",
+            "title": "Ratio Text"
+          },
+          "min_ratio": {
+            "type": "number",
+            "title": "Min Ratio"
+          },
+          "max_ratio": {
+            "type": "number",
+            "title": "Max Ratio"
+          },
+          "verdict": {
+            "type": "string",
+            "title": "Verdict"
+          },
+          "verdict_zh": {
+            "type": "string",
+            "title": "Verdict Zh"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "lines",
+          "raw",
+          "condition_multiplier",
+          "synergies",
+          "total",
+          "tier_budget",
+          "coefficient_label",
+          "coefficient",
+          "allowance_permille",
+          "allowance_parts",
+          "usable",
+          "ratio",
+          "ratio_text",
+          "min_ratio",
+          "max_ratio",
+          "verdict",
+          "verdict_zh"
+        ],
+        "title": "BudgetSummary",
+        "description": "預算（與 ``trpg skills budget`` 的數字相同；``ratio_text`` 也是同樣的格式，\n例 ``85.3%``）。"
+      },
       "BuildSummary": {
         "properties": {
           "id": {
@@ -1609,6 +1985,55 @@
           "text"
         ],
         "title": "BurningOut"
+      },
+      "Choice": {
+        "properties": {
+          "value": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "integer"
+              },
+              {
+                "type": "boolean"
+              }
+            ],
+            "title": "Value"
+          },
+          "name_zh": {
+            "type": "string",
+            "title": "Name Zh"
+          },
+          "description_zh": {
+            "type": "string",
+            "title": "Description Zh",
+            "default": ""
+          },
+          "params": {
+            "items": {
+              "$ref": "#/components/schemas/FieldSpec"
+            },
+            "type": "array",
+            "title": "Params",
+            "default": []
+          },
+          "info": {
+            "additionalProperties": true,
+            "type": "object",
+            "title": "Info",
+            "default": {}
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "value",
+          "name_zh"
+        ],
+        "title": "Choice",
+        "description": "一個可選值。``params``：選了它之後要填的欄位（``field`` 相對於被選的那個物件，例如形狀\n``single`` 的 ``range`` 就是 ``shape.range``）；``info``：給畫面顯示的補充資料（例：骨架的\n最低稀有度、附帶效果上限）。"
       },
       "CollisionOut": {
         "properties": {
@@ -1704,6 +2129,34 @@
             "minimum": 1.0,
             "title": "Max Rounds",
             "default": 30
+          },
+          "custom_skills": {
+            "items": {
+              "additionalProperties": true,
+              "type": "object"
+            },
+            "type": "array",
+            "title": "Custom Skills",
+            "default": []
+          },
+          "replace_skills": {
+            "items": {
+              "type": "string"
+            },
+            "type": "array",
+            "title": "Replace Skills",
+            "default": []
+          },
+          "opponents": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Opponents"
           }
         },
         "additionalProperties": false,
@@ -1904,6 +2357,43 @@
         "title": "DisplaceCheckOut",
         "description": "預覽中的位移抵抗判定（Phase 3D-2b）：敵方 ``unit_id`` 被移動的成功率（千分比）；\n``resist_bonus`` 是目標的抵抗加成，``lethal`` 為落點是致命地形。"
       },
+      "DraftOptions": {
+        "properties": {
+          "steps": {
+            "items": {
+              "$ref": "#/components/schemas/StepOptions"
+            },
+            "type": "array",
+            "title": "Steps"
+          },
+          "next_step": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/StepId"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "problems": {
+            "items": {
+              "type": "string"
+            },
+            "type": "array",
+            "title": "Problems",
+            "default": []
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "steps",
+          "next_step"
+        ],
+        "title": "DraftOptions",
+        "description": ":func:`~trpg.skillgen.options.draft_options` 的結果：前置步驟都完成的步驟（依序），以及\n第一個還沒完成的步驟 ``next_step``（全部完成時為 ``None``）。"
+      },
       "EndStance": {
         "properties": {
           "unit_id": {
@@ -1953,6 +2443,146 @@
           "east",
           "south",
           "west"
+        ]
+      },
+      "FieldSpec": {
+        "properties": {
+          "field": {
+            "type": "string",
+            "title": "Field"
+          },
+          "name_zh": {
+            "type": "string",
+            "title": "Name Zh"
+          },
+          "description_zh": {
+            "type": "string",
+            "title": "Description Zh",
+            "default": ""
+          },
+          "type": {
+            "$ref": "#/components/schemas/FieldType"
+          },
+          "required": {
+            "type": "boolean",
+            "title": "Required",
+            "default": false
+          },
+          "min": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Min"
+          },
+          "max": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Max"
+          },
+          "allow_weapon": {
+            "type": "boolean",
+            "title": "Allow Weapon",
+            "default": false
+          },
+          "dice_sides": {
+            "items": {
+              "type": "integer"
+            },
+            "type": "array",
+            "title": "Dice Sides",
+            "default": []
+          },
+          "choices": {
+            "items": {
+              "$ref": "#/components/schemas/Choice"
+            },
+            "type": "array",
+            "title": "Choices",
+            "default": []
+          },
+          "fields": {
+            "items": {
+              "$ref": "#/components/schemas/FieldSpec"
+            },
+            "type": "array",
+            "title": "Fields",
+            "default": []
+          },
+          "min_count": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Min Count"
+          },
+          "max_count": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Max Count"
+          },
+          "default": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "integer"
+              },
+              {
+                "type": "boolean"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Default"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "field",
+          "name_zh",
+          "type"
+        ],
+        "title": "FieldSpec",
+        "description": "一個欄位。``field`` 是相對於上一層的路徑（頂層為技能定義的欄位名，例 ``shape``、\n``cost.cooldown``）。"
+      },
+      "FieldType": {
+        "type": "string",
+        "enum": [
+          "choice",
+          "multi_choice",
+          "int",
+          "count",
+          "dice",
+          "bool",
+          "text",
+          "tags",
+          "effects",
+          "object",
+          "modifiers"
         ]
       },
       "FocusTarget": {
@@ -3671,6 +4301,26 @@
         "title": "PreviewOut",
         "description": ":class:`trpg.engine.preview.Preview` 的公開版本：不含模擬後的完整狀態與原始事件。"
       },
+      "Problem": {
+        "properties": {
+          "rule": {
+            "type": "string",
+            "title": "Rule"
+          },
+          "message_zh": {
+            "type": "string",
+            "title": "Message Zh"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "rule",
+          "message_zh"
+        ],
+        "title": "Problem",
+        "description": "一項問題：``rule`` 規則代碼（``skeleton.shape``、``exclusion.<id>``、``rarity.*``、\n``budget.*``、``schema``、``draft``……），``message_zh`` 中文說明。"
+      },
       "Protect": {
         "properties": {
           "kind": {
@@ -4285,6 +4935,15 @@
         "title": "SkillCard",
         "description": "一張技能卡片的顯示內容（繁體中文文字，給網頁技能卡片用）。\n\n``*_id`` 與 ``scaling_attrs`` 是對應的英文代碼（Phase 3-2；給前端上色、排序與篩選用）。"
       },
+      "SkillRarity": {
+        "type": "string",
+        "enum": [
+          "common",
+          "rare",
+          "epic",
+          "legendary"
+        ]
+      },
       "StatusChanceOut": {
         "properties": {
           "status_id": {
@@ -4427,6 +5086,63 @@
             "use_skill": "#/components/schemas/UseSkill-Output"
           }
         }
+      },
+      "StepId": {
+        "type": "string",
+        "enum": [
+          "skeleton",
+          "basics",
+          "shape",
+          "effects",
+          "condition",
+          "cost",
+          "rarity"
+        ]
+      },
+      "StepOptions": {
+        "properties": {
+          "id": {
+            "$ref": "#/components/schemas/StepId"
+          },
+          "name_zh": {
+            "type": "string",
+            "title": "Name Zh"
+          },
+          "description_zh": {
+            "type": "string",
+            "title": "Description Zh"
+          },
+          "complete": {
+            "type": "boolean",
+            "title": "Complete"
+          },
+          "fields": {
+            "items": {
+              "$ref": "#/components/schemas/FieldSpec"
+            },
+            "type": "array",
+            "title": "Fields"
+          },
+          "notes_zh": {
+            "items": {
+              "type": "string"
+            },
+            "type": "array",
+            "title": "Notes Zh",
+            "default": []
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "id",
+          "name_zh",
+          "description_zh",
+          "complete",
+          "fields"
+        ],
+        "title": "StepOptions",
+        "description": "一個步驟：``complete`` 表示目前的技能已經填好這一步；``fields`` 是這一步的欄位與合法選項；\n``notes_zh`` 是這一步的限制說明（例如「附帶效果最多 1 個」）。"
       },
       "StepOut": {
         "properties": {
@@ -5479,6 +6195,247 @@
           "type"
         ],
         "title": "ValidationError"
+      },
+      "WorkshopArena": {
+        "properties": {
+          "default_map": {
+            "type": "string",
+            "title": "Default Map"
+          },
+          "max_rounds": {
+            "type": "integer",
+            "title": "Max Rounds"
+          },
+          "maps": {
+            "items": {
+              "$ref": "#/components/schemas/MapSummary"
+            },
+            "type": "array",
+            "title": "Maps"
+          },
+          "opponents": {
+            "items": {
+              "$ref": "#/components/schemas/ArenaOpponents"
+            },
+            "type": "array",
+            "title": "Opponents"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "default_map",
+          "max_rounds",
+          "maps",
+          "opponents"
+        ],
+        "title": "WorkshopArena",
+        "description": "裝上試玩的選單：預設地圖（靶場）與可選的地圖、對手。"
+      },
+      "WorkshopCheck": {
+        "properties": {
+          "complete": {
+            "type": "boolean",
+            "title": "Complete"
+          },
+          "missing_steps": {
+            "items": {
+              "$ref": "#/components/schemas/StepId"
+            },
+            "type": "array",
+            "title": "Missing Steps"
+          },
+          "legal": {
+            "type": "boolean",
+            "title": "Legal"
+          },
+          "problems": {
+            "items": {
+              "$ref": "#/components/schemas/Problem"
+            },
+            "type": "array",
+            "title": "Problems"
+          },
+          "budget": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/BudgetSummary"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "minimum_rarity": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Minimum Rarity"
+          },
+          "rarity_reasons": {
+            "items": {
+              "type": "string"
+            },
+            "type": "array",
+            "title": "Rarity Reasons"
+          },
+          "skill": {
+            "anyOf": [
+              {
+                "additionalProperties": true,
+                "type": "object"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Skill"
+          },
+          "card": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/SkillCard"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "complete",
+          "missing_steps",
+          "legal",
+          "problems",
+          "budget",
+          "minimum_rarity",
+          "rarity_reasons",
+          "skill"
+        ],
+        "title": "WorkshopCheck",
+        "description": ":class:`~trpg.skillgen.draft_check.DraftCheck` ＋ 技能卡片（完整且通過 schema 時才有）。"
+      },
+      "WorkshopExport": {
+        "properties": {
+          "yaml": {
+            "type": "string",
+            "title": "Yaml"
+          },
+          "filename": {
+            "type": "string",
+            "title": "Filename"
+          },
+          "legal": {
+            "type": "boolean",
+            "title": "Legal"
+          },
+          "problems": {
+            "items": {
+              "type": "string"
+            },
+            "type": "array",
+            "title": "Problems"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "yaml",
+          "filename",
+          "legal",
+          "problems"
+        ],
+        "title": "WorkshopExport"
+      },
+      "WorkshopRandom": {
+        "properties": {
+          "skill": {
+            "additionalProperties": true,
+            "type": "object",
+            "title": "Skill"
+          },
+          "check": {
+            "$ref": "#/components/schemas/WorkshopCheck"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "skill",
+          "check"
+        ],
+        "title": "WorkshopRandom"
+      },
+      "WorkshopRandomRequest": {
+        "properties": {
+          "seed": {
+            "type": "integer",
+            "maximum": 1.8446744073709552e+19,
+            "minimum": 0.0,
+            "title": "Seed"
+          },
+          "tier": {
+            "anyOf": [
+              {
+                "type": "integer",
+                "maximum": 5.0,
+                "minimum": 1.0
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Tier"
+          },
+          "rarity": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/SkillRarity"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "skeleton": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Skeleton"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "seed"
+        ],
+        "title": "WorkshopRandomRequest",
+        "description": "隨機組合器（``trpg skills random`` 同一個函式）：同種子同參數結果一致。"
+      },
+      "WorkshopSkillRequest": {
+        "properties": {
+          "skill": {
+            "additionalProperties": true,
+            "type": "object",
+            "title": "Skill"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "title": "WorkshopSkillRequest",
+        "description": "組到一半（或完整）的技能。"
       },
       "XY": {
         "prefixItems": [

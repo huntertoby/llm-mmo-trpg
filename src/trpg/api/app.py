@@ -15,7 +15,7 @@ from fastapi.responses import JSONResponse
 from fastapi.staticfiles import StaticFiles
 
 from trpg import __version__
-from trpg.api.routes import battles, content, runs
+from trpg.api.routes import battles, content, runs, workshop
 from trpg.api.runs import RunNotFoundError, RunStore
 from trpg.api.sessions import (
     AutoAdvanceLimitError,
@@ -24,11 +24,14 @@ from trpg.api.sessions import (
     SessionConflictError,
     SessionStore,
 )
+from trpg.api.workshop import WorkshopRequestError
 from trpg.content.library import ContentLibrary, load_library
 from trpg.engine.runner import DEFAULT_MAX_ACTIONS
 from trpg.roguelite.errors import ChoiceError, NodeConflictError, SaveFormatError
 from trpg.roguelite.save import default_save_dir
 from trpg.shared.errors import IllegalActionError
+from trpg.skillgen.draft import DraftError
+from trpg.skillgen.random_composer import ComposeError
 
 __all__ = ["ERROR_STATUS", "create_app"]
 
@@ -42,6 +45,9 @@ ERROR_STATUS: dict[type[Exception], int] = {
     NodeConflictError: 409,
     ChoiceError: 422,
     SaveFormatError: 422,
+    WorkshopRequestError: 422,
+    ComposeError: 422,
+    DraftError: 422,
 }
 """引擎與工作階段的錯誤 → HTTP 狀態碼（回應為 ``{"detail": "<中文訊息>"}``）。
 
@@ -83,6 +89,7 @@ def create_app(
     app.include_router(content.router)
     app.include_router(battles.router)
     app.include_router(runs.router)
+    app.include_router(workshop.router)
     if static_dir is not None:
         app.mount("/", StaticFiles(directory=static_dir, html=True), name="client")
     return app

@@ -331,6 +331,107 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/workshop/arena": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Get Arena
+         * @description 裝上試玩的選單：靶場（預設）、其他地圖、靶場的對手。
+         */
+        get: operations["get_arena_api_workshop_arena_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/workshop/options": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Post Options
+         * @description 下一步的合法選項：前置步驟都完成的每一步的欄位與選項，以及第一個未完成的步驟。
+         */
+        post: operations["post_options_api_workshop_options_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/workshop/check": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Post Check
+         * @description 是否合法、違反的規則、預算明細、最低稀有度與技能卡片。
+         */
+        post: operations["post_check_api_workshop_check_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/workshop/random": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Post Random
+         * @description 以隨機組合器產生一個技能（同種子同參數結果一致）；組不出來時 422。
+         */
+        post: operations["post_random_api_workshop_random_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/workshop/export": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Post Export
+         * @description 匯出 YAML（``provenance.origin: workshop``）。技能必須能通過 schema（否則 422）；規則上不合法
+         *     的技能也可以匯出，``legal`` 與 ``problems`` 標示問題。
+         */
+        post: operations["post_export_api_workshop_export_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
 }
 export type webhooks = Record<string, never>;
 export interface components {
@@ -358,6 +459,17 @@ export interface components {
             expires_round: number | null;
             /** Rule Name Zh */
             rule_name_zh: string | null;
+        };
+        /** ArenaOpponents */
+        ArenaOpponents: {
+            /** Id */
+            id: string;
+            /** Name Zh */
+            name_zh: string;
+            /** Description Zh */
+            description_zh: string;
+            /** Enemies */
+            enemies: string[];
         };
         /**
          * Attack
@@ -551,6 +663,69 @@ export interface components {
             /** Tiles */
             tiles: components["schemas"]["XY"][];
         };
+        /**
+         * BudgetLine
+         * @description 一個效果（或修正規則）的點數：基礎點數 × 形狀 × 對象 × 條件。
+         */
+        BudgetLine: {
+            /** Index */
+            index: number;
+            /** Type */
+            type: string;
+            /** Note */
+            note: string;
+            /** Base */
+            base: number;
+            /** Shape */
+            shape: number;
+            /** Target */
+            target: number;
+            /** Condition */
+            condition: number;
+            /** Points */
+            points: number;
+        };
+        /**
+         * BudgetSummary
+         * @description 預算（與 ``trpg skills budget`` 的數字相同；``ratio_text`` 也是同樣的格式，
+         *     例 ``85.3%``）。
+         */
+        BudgetSummary: {
+            /** Lines */
+            lines: components["schemas"]["BudgetLine"][];
+            /** Raw */
+            raw: number;
+            /** Condition Multiplier */
+            condition_multiplier: number;
+            /** Synergies */
+            synergies: string[];
+            /** Total */
+            total: number;
+            /** Tier Budget */
+            tier_budget: number;
+            /** Coefficient Label */
+            coefficient_label: string;
+            /** Coefficient */
+            coefficient: number;
+            /** Allowance Permille */
+            allowance_permille: number;
+            /** Allowance Parts */
+            allowance_parts: string[];
+            /** Usable */
+            usable: number;
+            /** Ratio */
+            ratio: number;
+            /** Ratio Text */
+            ratio_text: string;
+            /** Min Ratio */
+            min_ratio: number;
+            /** Max Ratio */
+            max_ratio: number;
+            /** Verdict */
+            verdict: string;
+            /** Verdict Zh */
+            verdict_zh: string;
+        };
         /** BuildSummary */
         BuildSummary: {
             /** Id */
@@ -571,6 +746,35 @@ export interface components {
             remaining: number;
             /** Text */
             text: string;
+        };
+        /**
+         * Choice
+         * @description 一個可選值。``params``：選了它之後要填的欄位（``field`` 相對於被選的那個物件，例如形狀
+         *     ``single`` 的 ``range`` 就是 ``shape.range``）；``info``：給畫面顯示的補充資料（例：骨架的
+         *     最低稀有度、附帶效果上限）。
+         */
+        Choice: {
+            /** Value */
+            value: string | number | boolean;
+            /** Name Zh */
+            name_zh: string;
+            /**
+             * Description Zh
+             * @default
+             */
+            description_zh: string;
+            /**
+             * Params
+             * @default []
+             */
+            params: components["schemas"]["FieldSpec"][];
+            /**
+             * Info
+             * @default {}
+             */
+            info: {
+                [key: string]: unknown;
+            };
         };
         /**
          * CollisionOut
@@ -615,6 +819,20 @@ export interface components {
              * @default 30
              */
             max_rounds: number;
+            /**
+             * Custom Skills
+             * @default []
+             */
+            custom_skills: {
+                [key: string]: unknown;
+            }[];
+            /**
+             * Replace Skills
+             * @default []
+             */
+            replace_skills: string[];
+            /** Opponents */
+            opponents?: string | null;
         };
         /**
          * CreateRunRequest
@@ -698,6 +916,21 @@ export interface components {
             lethal: boolean;
         };
         /**
+         * DraftOptions
+         * @description :func:`~trpg.skillgen.options.draft_options` 的結果：前置步驟都完成的步驟（依序），以及
+         *     第一個還沒完成的步驟 ``next_step``（全部完成時為 ``None``）。
+         */
+        DraftOptions: {
+            /** Steps */
+            steps: components["schemas"]["StepOptions"][];
+            next_step: components["schemas"]["StepId"] | null;
+            /**
+             * Problems
+             * @default []
+             */
+            problems: string[];
+        };
+        /**
          * EndStance
          * @description 取消目前的姿態（Phase 2E-2）：只能在自己的回合，免費（不花 AP）。
          */
@@ -725,6 +958,60 @@ export interface components {
         };
         /** @enum {string} */
         Facing: "north" | "east" | "south" | "west";
+        /**
+         * FieldSpec
+         * @description 一個欄位。``field`` 是相對於上一層的路徑（頂層為技能定義的欄位名，例 ``shape``、
+         *     ``cost.cooldown``）。
+         */
+        FieldSpec: {
+            /** Field */
+            field: string;
+            /** Name Zh */
+            name_zh: string;
+            /**
+             * Description Zh
+             * @default
+             */
+            description_zh: string;
+            type: components["schemas"]["FieldType"];
+            /**
+             * Required
+             * @default false
+             */
+            required: boolean;
+            /** Min */
+            min?: number | null;
+            /** Max */
+            max?: number | null;
+            /**
+             * Allow Weapon
+             * @default false
+             */
+            allow_weapon: boolean;
+            /**
+             * Dice Sides
+             * @default []
+             */
+            dice_sides: number[];
+            /**
+             * Choices
+             * @default []
+             */
+            choices: components["schemas"]["Choice"][];
+            /**
+             * Fields
+             * @default []
+             */
+            fields: components["schemas"]["FieldSpec"][];
+            /** Min Count */
+            min_count?: number | null;
+            /** Max Count */
+            max_count?: number | null;
+            /** Default */
+            default?: string | number | boolean | null;
+        };
+        /** @enum {string} */
+        FieldType: "choice" | "multi_choice" | "int" | "count" | "dice" | "bool" | "text" | "tags" | "effects" | "object" | "modifiers";
         /**
          * FocusTarget
          * @description 集火指定敵人。
@@ -1399,6 +1686,17 @@ export interface components {
             backstab: string[];
         };
         /**
+         * Problem
+         * @description 一項問題：``rule`` 規則代碼（``skeleton.shape``、``exclusion.<id>``、``rarity.*``、
+         *     ``budget.*``、``schema``、``draft``……），``message_zh`` 中文說明。
+         */
+        Problem: {
+            /** Rule */
+            rule: string;
+            /** Message Zh */
+            message_zh: string;
+        };
+        /**
          * Protect
          * @description 保護指定友方。
          */
@@ -1642,6 +1940,8 @@ export interface components {
              */
             effect_ids: string[];
         };
+        /** @enum {string} */
+        SkillRarity: "common" | "rare" | "epic" | "legendary";
         /** StatusChanceOut */
         StatusChanceOut: {
             /** Status Id */
@@ -1667,6 +1967,29 @@ export interface components {
             blast_radius?: number | null;
         };
         Step: components["schemas"]["Move"] | components["schemas"]["Attack"] | components["schemas"]["UseSkill-Output"] | components["schemas"]["Defend"] | components["schemas"]["Shove"] | components["schemas"]["Trip"] | components["schemas"]["Interact"] | components["schemas"]["EndStance"] | components["schemas"]["SetReactionMode"] | components["schemas"]["EndTurn"] | components["schemas"]["Decision"];
+        /** @enum {string} */
+        StepId: "skeleton" | "basics" | "shape" | "effects" | "condition" | "cost" | "rarity";
+        /**
+         * StepOptions
+         * @description 一個步驟：``complete`` 表示目前的技能已經填好這一步；``fields`` 是這一步的欄位與合法選項；
+         *     ``notes_zh`` 是這一步的限制說明（例如「附帶效果最多 1 個」）。
+         */
+        StepOptions: {
+            id: components["schemas"]["StepId"];
+            /** Name Zh */
+            name_zh: string;
+            /** Description Zh */
+            description_zh: string;
+            /** Complete */
+            complete: boolean;
+            /** Fields */
+            fields: components["schemas"]["FieldSpec"][];
+            /**
+             * Notes Zh
+             * @default []
+             */
+            notes_zh: string[];
+        };
         /**
          * StepOut
          * @description 自動推進中結算的一步。``actor_id`` 與 ``step`` 在開場時為 ``None``。
@@ -2047,6 +2370,86 @@ export interface components {
             input?: unknown;
             /** Context */
             ctx?: Record<string, never>;
+        };
+        /**
+         * WorkshopArena
+         * @description 裝上試玩的選單：預設地圖（靶場）與可選的地圖、對手。
+         */
+        WorkshopArena: {
+            /** Default Map */
+            default_map: string;
+            /** Max Rounds */
+            max_rounds: number;
+            /** Maps */
+            maps: components["schemas"]["MapSummary"][];
+            /** Opponents */
+            opponents: components["schemas"]["ArenaOpponents"][];
+        };
+        /**
+         * WorkshopCheck
+         * @description :class:`~trpg.skillgen.draft_check.DraftCheck` ＋ 技能卡片（完整且通過 schema 時才有）。
+         */
+        WorkshopCheck: {
+            /** Complete */
+            complete: boolean;
+            /** Missing Steps */
+            missing_steps: components["schemas"]["StepId"][];
+            /** Legal */
+            legal: boolean;
+            /** Problems */
+            problems: components["schemas"]["Problem"][];
+            budget: components["schemas"]["BudgetSummary"] | null;
+            /** Minimum Rarity */
+            minimum_rarity: string | null;
+            /** Rarity Reasons */
+            rarity_reasons: string[];
+            /** Skill */
+            skill: {
+                [key: string]: unknown;
+            } | null;
+            card?: components["schemas"]["SkillCard"] | null;
+        };
+        /** WorkshopExport */
+        WorkshopExport: {
+            /** Yaml */
+            yaml: string;
+            /** Filename */
+            filename: string;
+            /** Legal */
+            legal: boolean;
+            /** Problems */
+            problems: string[];
+        };
+        /** WorkshopRandom */
+        WorkshopRandom: {
+            /** Skill */
+            skill: {
+                [key: string]: unknown;
+            };
+            check: components["schemas"]["WorkshopCheck"];
+        };
+        /**
+         * WorkshopRandomRequest
+         * @description 隨機組合器（``trpg skills random`` 同一個函式）：同種子同參數結果一致。
+         */
+        WorkshopRandomRequest: {
+            /** Seed */
+            seed: number;
+            /** Tier */
+            tier?: number | null;
+            rarity?: components["schemas"]["SkillRarity"] | null;
+            /** Skeleton */
+            skeleton?: string | null;
+        };
+        /**
+         * WorkshopSkillRequest
+         * @description 組到一半（或完整）的技能。
+         */
+        WorkshopSkillRequest: {
+            /** Skill */
+            skill?: {
+                [key: string]: unknown;
+            };
         };
         XY: [
             number,
@@ -2636,6 +3039,158 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["SaveOut"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    get_arena_api_workshop_arena_get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["WorkshopArena"];
+                };
+            };
+        };
+    };
+    post_options_api_workshop_options_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["WorkshopSkillRequest"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["DraftOptions"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    post_check_api_workshop_check_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["WorkshopSkillRequest"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["WorkshopCheck"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    post_random_api_workshop_random_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["WorkshopRandomRequest"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["WorkshopRandom"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    post_export_api_workshop_export_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["WorkshopSkillRequest"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["WorkshopExport"];
                 };
             };
             /** @description Validation Error */

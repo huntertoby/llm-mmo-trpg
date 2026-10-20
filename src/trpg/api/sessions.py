@@ -23,7 +23,9 @@ from collections.abc import Callable
 from dataclasses import dataclass
 
 from trpg.api.schemas import Awaiting, CreateBattleRequest
+from trpg.api.workshop import custom_skill_defs, equip_custom_skills
 from trpg.content.library import ContentLibrary
+from trpg.content.maps import TRAINING_ARCHETYPE
 from trpg.engine.actions import ACTION_ADAPTER, Action, Decision, Step, UseSkill
 from trpg.engine.ai.orders import OrderRecord, OrderSet, validate_order
 from trpg.engine.battle import begin_battle, has_only_end_turn, resolve, resume
@@ -285,9 +287,14 @@ def order_problems(state: BattleState, orders: OrderSet, hero_id: UnitId) -> lis
     return problems
 
 
-def playable_maps(library: ContentLibrary) -> list[str]:
-    """可以在網頁上開戰的地圖：有預設遭遇（``encounter``）的地圖，依 ID 排序。"""
-    return sorted(m for m, d in library.maps.items() if d.encounter is not None)
+def playable_maps(library: ContentLibrary, *, include_training: bool = False) -> list[str]:
+    """可以在網頁上開戰的地圖：有預設遭遇（``encounter``）的地圖，依 ID 排序。技能工坊的靶場（地圖
+    類型 ``training``，Phase 3F-1）只有 ``include_training`` 時才列入（一般地圖列表不列）。"""
+    return sorted(
+        m
+        for m, d in library.maps.items()
+        if d.encounter is not None and (include_training or d.archetype != TRAINING_ARCHETYPE)
+    )
 
 
 def _new_battle_id() -> str:
@@ -311,18 +318,35 @@ class SessionStore:
         self._lock = threading.Lock()
 
     def _setup(self, request: CreateBattleRequest) -> BattleSetup:
-        if request.map_id not in playable_maps(self.library):
-            raise InvalidRequestError(
-                f"未知的地圖：{request.map_id}（可用：{', '.join(playable_maps(self.library))}）"
-            )
+        maps = playable_maps(self.library, include_training=True)
+        if request.map_id not in maps:
+            raise InvalidRequestError(f"未知的地圖：{request.map_id}（可用：{', '.join(maps)}）")
         fill = request.ally_builds is None
         builds = (request.hero_build, *(request.ally_builds or ()))
         try:
             library, allies = build_allies(self.library, builds, fill=fill)
         except UnknownBuildError as exc:
             raise InvalidRequestError(str(exc)) from exc
+        enemies = self._enemies(request)
+        setup = build_setup(library, request.map_id, allies, enemies, max_rounds=request.max_rounds)
+        if not request.custom_skills and not request.replace_skills:
+            return setup
+        custom = custom_skill_defs(self.library, request.custom_skills)
+        return equip_custom_skills(setup, custom, request.replace_skills)
+
+    def _enemies(self, request: CreateBattleRequest) -> list[str]:
+        """地圖的預設敵人；靶場改用 ``workshop.yaml`` 的對手（Phase 3F-1）。"""
         _default_allies, enemies = default_lineup(self.library, request.map_id)
-        return build_setup(library, request.map_id, allies, enemies, max_rounds=request.max_rounds)
+        if self.library.map(request.map_id).archetype != TRAINING_ARCHETYPE:
+            if request.opponents is not None:
+                raise InvalidRequestError("只有靶場可以選對手（opponents）")
+            return enemies
+        rules = self.library.workshop
+        chosen = rules.opponent(request.opponents)
+        if chosen is None:
+            known = "、".join(o.id for o in rules.opponents)
+            raise InvalidRequestError(f"未知的對手：{request.opponents}（可用：{known}）")
+        return list(chosen.enemies)
 
     def create(self, request: CreateBattleRequest) -> tuple[BattleSession, list[StepRecord]]:
         """建立戰鬥並推進到第一次輪到主角。工作階段在推進前就登記（推進失敗時仍保留）。"""
