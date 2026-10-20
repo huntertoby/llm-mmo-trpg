@@ -7,7 +7,7 @@ from fastapi import APIRouter, HTTPException, Request
 from trpg.api.glossary import build_glossary
 from trpg.api.schemas import BuildSummary, Glossary, MapSummary
 from trpg.api.sessions import playable_maps
-from trpg.api.state import store_of
+from trpg.api.state import runs_of, store_of
 from trpg.narrative.skills import SkillCard, skill_card
 
 __all__ = ["router"]
@@ -39,8 +39,9 @@ def list_builds(request: Request) -> list[BuildSummary]:
 
 @router.get("/skills/{skill_id}")
 def get_skill(skill_id: str, request: Request) -> SkillCard:
+    """技能卡片：內容庫的技能，或進行中各輪的生成技能與候選（Phase 3-5a）。"""
     library = store_of(request).library
-    skill = library.skills.get(skill_id)
+    skill = library.skills.get(skill_id) or runs_of(request).find_skill(skill_id)
     if skill is None:
         raise HTTPException(status_code=404, detail=f"找不到技能 {skill_id}")
     return skill_card(library, skill)

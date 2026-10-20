@@ -36,6 +36,7 @@ from trpg.engine.runner import (
     BattleRun,
     StepLimitExceeded,
     advance,
+    apply_step,
 )
 from trpg.engine.setup import BattleSetup, BattleSetupError, build_setup
 from trpg.engine.state import BattleState, PendingResolution, state_from_json
@@ -226,6 +227,13 @@ class BattleSession:
         base = state_from_json(pending.base_state_json)
         return preview(base, original.model_copy(update={"copy_cast": pick}))
 
+    def restore(self, steps: list[Step], orders: list[OrderRecord]) -> None:
+        """讀檔（Phase 3-5a）：依序重播存檔的步驟（不自動推進），再還原隊友指令紀錄。重播失敗時
+        拋出引擎的錯誤（呼叫者轉成存檔錯誤）。"""
+        for step in steps:
+            self._commit(step, apply_step(self.state, step))
+        self.policy.restore_orders(orders)
+
     def set_orders(self, orders: OrderSet) -> OrderRecord:
         """設定我方隊友的戰術指令（空集合 ＝ 取消）。無效時拋出 ``InvalidRequestError``。"""
         if self.state.ended:
@@ -337,6 +345,29 @@ class SessionStore:
             with self._lock:
                 self._sessions[battle_id] = session
             return session, session.begin()
+
+    def open(
+        self,
+        setup: BattleSetup,
+        seed: int,
+        restore: tuple[list[Step], list[OrderRecord]] | None = None,
+    ) -> tuple[BattleSession, list[StepRecord]]:
+        """以現成的設定開一場戰鬥並登記（roguelite 一輪的戰鬥，Phase 3-5a）。``restore`` 為存檔
+        的 ``(步驟, 指令)`` 時重播到存檔當下、不推進（回傳空的紀錄）；否則與 :meth:`create` 相同，
+        推進到第一次輪到主角。"""
+        with self._lock:
+            battle_id = self._new_id()
+            while battle_id in self._sessions:  # pragma: no cover - 機率極低
+                battle_id = self._new_id()
+        session = BattleSession(
+            battle_id, self.library, setup, seed, max_auto_steps=self.max_auto_steps
+        )
+        if restore is not None:  # 重播成功才登記
+            session.restore(*restore)
+        with session.lock:
+            with self._lock:
+                self._sessions[battle_id] = session
+            return session, ([] if restore is not None else session.begin())
 
     def get(self, battle_id: str) -> BattleSession:
         with self._lock:

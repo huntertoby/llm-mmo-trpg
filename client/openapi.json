@@ -63,6 +63,7 @@
           "content"
         ],
         "summary": "Get Skill",
+        "description": "技能卡片：內容庫的技能，或進行中各輪的生成技能與候選（Phase 3-5a）。",
         "operationId": "get_skill_api_skills__skill_id__get",
         "parameters": [
           {
@@ -548,6 +549,314 @@
           }
         }
       }
+    },
+    "/api/runs": {
+      "post": {
+        "tags": [
+          "runs"
+        ],
+        "summary": "Create Run",
+        "operationId": "create_run_api_runs_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/CreateRunRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "201": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/RunResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/runs/saves": {
+      "get": {
+        "tags": [
+          "runs"
+        ],
+        "summary": "List Saves",
+        "operationId": "list_saves_api_runs_saves_get",
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "items": {
+                    "$ref": "#/components/schemas/SaveSummary"
+                  },
+                  "type": "array",
+                  "title": "Response List Saves Api Runs Saves Get"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/runs/load": {
+      "post": {
+        "tags": [
+          "runs"
+        ],
+        "summary": "Load Run",
+        "operationId": "load_run_api_runs_load_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/LoadRunRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/RunResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/runs/{run_id}": {
+      "get": {
+        "tags": [
+          "runs"
+        ],
+        "summary": "Get Run",
+        "operationId": "get_run_api_runs__run_id__get",
+        "parameters": [
+          {
+            "name": "run_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Run Id"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/RunResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/runs/{run_id}/battle": {
+      "post": {
+        "tags": [
+          "runs"
+        ],
+        "summary": "Run Battle",
+        "operationId": "run_battle_api_runs__run_id__battle_post",
+        "parameters": [
+          {
+            "name": "run_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Run Id"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/RunBattleResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/runs/{run_id}/choice": {
+      "post": {
+        "tags": [
+          "runs"
+        ],
+        "summary": "Post Choice",
+        "operationId": "post_choice_api_runs__run_id__choice_post",
+        "parameters": [
+          {
+            "name": "run_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Run Id"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "oneOf": [
+                  {
+                    "$ref": "#/components/schemas/LevelUpChoice"
+                  },
+                  {
+                    "$ref": "#/components/schemas/RerollChoice"
+                  },
+                  {
+                    "$ref": "#/components/schemas/PickChoice"
+                  },
+                  {
+                    "$ref": "#/components/schemas/LeaveChoice"
+                  }
+                ],
+                "discriminator": {
+                  "propertyName": "kind",
+                  "mapping": {
+                    "level_up": "#/components/schemas/LevelUpChoice",
+                    "reroll": "#/components/schemas/RerollChoice",
+                    "pick": "#/components/schemas/PickChoice",
+                    "leave": "#/components/schemas/LeaveChoice"
+                  }
+                },
+                "title": "Choice"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/RunResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/runs/{run_id}/save": {
+      "post": {
+        "tags": [
+          "runs"
+        ],
+        "summary": "Save Run",
+        "operationId": "save_run_api_runs__run_id__save_post",
+        "parameters": [
+          {
+            "name": "run_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Run Id"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SaveOut"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
     }
   },
   "components": {
@@ -697,6 +1006,19 @@
         "title": "Attack",
         "description": "以武器普攻單位 ``target_id`` 或物件 ``target_object_id``（恰好給一個）。\n\n攻擊物件一律命中（不擲命中骰、不暴擊），物件必須帶 ``breakable``。"
       },
+      "Attribute": {
+        "type": "string",
+        "enum": [
+          "str",
+          "dex",
+          "con",
+          "int",
+          "wis",
+          "wil"
+        ],
+        "title": "Attribute",
+        "description": "角色的六屬性（成員名稱用大寫縮寫，避開 ``str``、``int`` 等內建名稱）。"
+      },
       "BattleOutcome": {
         "properties": {
           "winner": {
@@ -733,6 +1055,125 @@
           "round"
         ],
         "title": "BattleOutcome"
+      },
+      "BattlePlanOut": {
+        "properties": {
+          "index": {
+            "type": "integer",
+            "title": "Index"
+          },
+          "map_id": {
+            "type": "string",
+            "title": "Map Id"
+          },
+          "map_name_zh": {
+            "type": "string",
+            "title": "Map Name Zh"
+          },
+          "boss": {
+            "type": "boolean",
+            "title": "Boss"
+          },
+          "enemies": {
+            "items": {
+              "type": "string"
+            },
+            "type": "array",
+            "title": "Enemies"
+          },
+          "done": {
+            "type": "boolean",
+            "title": "Done"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "index",
+          "map_id",
+          "map_name_zh",
+          "boss",
+          "enemies",
+          "done"
+        ],
+        "title": "BattlePlanOut"
+      },
+      "BattleRecord": {
+        "properties": {
+          "index": {
+            "type": "integer",
+            "title": "Index"
+          },
+          "map_id": {
+            "type": "string",
+            "title": "Map Id"
+          },
+          "boss": {
+            "type": "boolean",
+            "title": "Boss"
+          },
+          "won": {
+            "type": "boolean",
+            "title": "Won"
+          },
+          "end_reason": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "End Reason"
+          },
+          "rounds": {
+            "type": "integer",
+            "title": "Rounds"
+          },
+          "steps": {
+            "type": "integer",
+            "title": "Steps"
+          },
+          "hp": {
+            "type": "integer",
+            "title": "Hp"
+          },
+          "mana": {
+            "type": "integer",
+            "title": "Mana"
+          },
+          "source": {
+            "type": "integer",
+            "title": "Source"
+          },
+          "hero_downed": {
+            "type": "boolean",
+            "title": "Hero Downed"
+          },
+          "state_digest": {
+            "type": "string",
+            "title": "State Digest"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "index",
+          "map_id",
+          "boss",
+          "won",
+          "end_reason",
+          "rounds",
+          "steps",
+          "hp",
+          "mana",
+          "source",
+          "hero_downed",
+          "state_digest"
+        ],
+        "title": "BattleRecord",
+        "description": "一場戰鬥的結果（歷程）。``state_digest`` 是戰鬥最終狀態 JSON 的 SHA-256（驗證重播一致）。"
       },
       "BattleResponse": {
         "properties": {
@@ -1275,6 +1716,45 @@
         "title": "CreateBattleRequest",
         "description": "建立戰鬥。``ally_builds`` 省略時與 ``trpg battle --ally-build <hero_build>`` 相同，以標準\n隊友補齊到 3 人；給了（可以是空串列）就只用 ``hero_build`` ＋ 這些 build。"
       },
+      "CreateRunRequest": {
+        "properties": {
+          "build": {
+            "type": "string",
+            "title": "Build"
+          },
+          "seed": {
+            "type": "integer",
+            "maximum": 1.8446744073709552e+19,
+            "minimum": 0.0,
+            "title": "Seed"
+          },
+          "attributes": {
+            "anyOf": [
+              {
+                "additionalProperties": {
+                  "type": "integer"
+                },
+                "propertyNames": {
+                  "$ref": "#/components/schemas/Attribute"
+                },
+                "type": "object"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Attributes"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "build",
+          "seed"
+        ],
+        "title": "CreateRunRequest",
+        "description": "開新一輪：起始 build、種子、開局配點（省略時全部點在技能最常用的縮放屬性）。"
+      },
       "DamageOut": {
         "properties": {
           "minimum": {
@@ -1800,6 +2280,101 @@
         ],
         "title": "HealOut"
       },
+      "HeroOut": {
+        "properties": {
+          "build_id": {
+            "type": "string",
+            "title": "Build Id"
+          },
+          "name_zh": {
+            "type": "string",
+            "title": "Name Zh"
+          },
+          "level": {
+            "type": "integer",
+            "title": "Level"
+          },
+          "xp": {
+            "type": "integer",
+            "title": "Xp"
+          },
+          "xp_next": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Xp Next"
+          },
+          "attributes": {
+            "additionalProperties": {
+              "type": "integer"
+            },
+            "propertyNames": {
+              "$ref": "#/components/schemas/Attribute"
+            },
+            "type": "object",
+            "title": "Attributes"
+          },
+          "hp": {
+            "type": "integer",
+            "title": "Hp"
+          },
+          "max_hp": {
+            "type": "integer",
+            "title": "Max Hp"
+          },
+          "mana": {
+            "type": "integer",
+            "title": "Mana"
+          },
+          "max_mana": {
+            "type": "integer",
+            "title": "Max Mana"
+          },
+          "source": {
+            "type": "integer",
+            "title": "Source"
+          },
+          "source_max": {
+            "type": "integer",
+            "title": "Source Max"
+          },
+          "weapon": {
+            "type": "string",
+            "title": "Weapon"
+          },
+          "skills": {
+            "items": {
+              "$ref": "#/components/schemas/SkillCard"
+            },
+            "type": "array",
+            "title": "Skills"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "build_id",
+          "name_zh",
+          "level",
+          "xp",
+          "xp_next",
+          "attributes",
+          "hp",
+          "max_hp",
+          "mana",
+          "max_mana",
+          "source",
+          "source_max",
+          "weapon",
+          "skills"
+        ],
+        "title": "HeroOut"
+      },
       "HoldPosition": {
         "properties": {
           "kind": {
@@ -2006,6 +2581,81 @@
         "title": "InteractOptionOut",
         "description": "主角相鄰的可推動物件的一種互動（推、往左撥、往右撥）及其是否合法（Phase 3C-1）。\n``legal_actions`` 只列合法的；這裡連不合法的也列出，讓介面灰掉並顯示原因。"
       },
+      "LeaveChoice": {
+        "properties": {
+          "kind": {
+            "type": "string",
+            "const": "leave",
+            "title": "Kind",
+            "default": "leave"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "title": "LeaveChoice",
+        "description": "離開營火（有候選沒選時視為放棄）。"
+      },
+      "LevelUpChoice": {
+        "properties": {
+          "kind": {
+            "type": "string",
+            "const": "level_up",
+            "title": "Kind",
+            "default": "level_up"
+          },
+          "attributes": {
+            "additionalProperties": {
+              "type": "integer"
+            },
+            "propertyNames": {
+              "$ref": "#/components/schemas/Attribute"
+            },
+            "type": "object",
+            "title": "Attributes"
+          },
+          "pick": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Pick"
+          },
+          "replace": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Replace"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "title": "LevelUpChoice",
+        "description": "升級的選擇：``attributes`` 分配全部屬性點；``pick`` 為候選索引（``None`` ＝ 跳過）；\n欄位滿時 ``replace`` 指定要換掉的技能 ID。"
+      },
+      "LoadRunRequest": {
+        "properties": {
+          "run_id": {
+            "type": "string",
+            "pattern": "^[A-Za-z0-9_-]{1,64}$",
+            "title": "Run Id"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "run_id"
+        ],
+        "title": "LoadRunRequest"
+      },
       "MapSummary": {
         "properties": {
           "id": {
@@ -2109,6 +2759,114 @@
         ],
         "title": "MoveOut",
         "description": "預覽中的自身位移（Phase 3D-2）：``kind`` 為 dash（路線，``other_id`` 是衝鋒的目標）／\nleap（起點與落點）／swap（``unit_id`` 與 ``other_id`` 交換，``path`` 是 ``unit_id`` 的起點與\n終點）。"
+      },
+      "NodeOut": {
+        "properties": {
+          "kind": {
+            "type": "string",
+            "enum": [
+              "battle",
+              "level_up",
+              "campfire",
+              "ended"
+            ],
+            "title": "Kind"
+          },
+          "battle_index": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Battle Index"
+          },
+          "boss": {
+            "anyOf": [
+              {
+                "type": "boolean"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Boss"
+          },
+          "level": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Level"
+          },
+          "points": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Points"
+          },
+          "after_battle": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "After Battle"
+          },
+          "rerolls_left": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Rerolls Left"
+          },
+          "offer": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/OfferOut"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "victory": {
+            "anyOf": [
+              {
+                "type": "boolean"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Victory"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "kind"
+        ],
+        "title": "NodeOut",
+        "description": "目前節點：``battle``（``battle_index``）、``level_up``（``level``、``points``、\n``offer``）、``campfire``（``after_battle``、``rerolls_left``、重骰後的 ``offer``）、\n``ended``（``victory``）。"
       },
       "ObjectView": {
         "properties": {
@@ -2216,6 +2974,49 @@
         "type": "object",
         "title": "Objective",
         "description": "勝利條件（``docs/專案計畫.md`` 5.8）。\n\n- ``eliminate``：擊倒所有敵人。\n- ``escape``：我方存活單位在 ``rounds`` 輪內全部抵達 ``tiles``（出口格）即勝；抵達者離開戰場。\n  第 ``rounds`` 輪結束時仍未全部撤離即敗。\n- ``defend``：守住 ``tiles``（守點格）``rounds`` 輪；某輪結束時有敵方單位站在守點格上即敗。\n\n任何模式下，我方全滅即敗；敵方全滅即勝。"
+      },
+      "OfferOut": {
+        "properties": {
+          "reason": {
+            "type": "string",
+            "enum": [
+              "level_up",
+              "reroll"
+            ],
+            "title": "Reason"
+          },
+          "tier": {
+            "type": "integer",
+            "title": "Tier"
+          },
+          "top_attribute": {
+            "$ref": "#/components/schemas/Attribute"
+          },
+          "candidates": {
+            "items": {
+              "$ref": "#/components/schemas/SkillCard"
+            },
+            "type": "array",
+            "title": "Candidates"
+          },
+          "off_route": {
+            "items": {
+              "type": "integer"
+            },
+            "type": "array",
+            "title": "Off Route"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "reason",
+          "tier",
+          "top_attribute",
+          "candidates",
+          "off_route"
+        ],
+        "title": "OfferOut"
       },
       "OrderSet": {
         "properties": {
@@ -2479,6 +3280,42 @@
         ],
         "title": "PendingView",
         "description": "目前的反應詢問（只有公開欄位；內部的重播資料不外流）。"
+      },
+      "PickChoice": {
+        "properties": {
+          "kind": {
+            "type": "string",
+            "const": "pick",
+            "title": "Kind",
+            "default": "pick"
+          },
+          "pick": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Pick"
+          },
+          "replace": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Replace"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "title": "PickChoice",
+        "description": "營火重骰後：選 1 個候選（``None`` ＝ 放棄），之後離開營火。"
       },
       "PierceObjectOut": {
         "properties": {
@@ -2927,6 +3764,20 @@
         "title": "ReactionRuleView",
         "description": "單位身上的一條反應規則（玩家可以用 ``set_reaction_mode`` 切換 ``mode``）。"
       },
+      "RerollChoice": {
+        "properties": {
+          "kind": {
+            "type": "string",
+            "const": "reroll",
+            "title": "Kind",
+            "default": "reroll"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "title": "RerollChoice",
+        "description": "營火：重骰（產生一組新的候選）。"
+      },
       "RetreatTo": {
         "properties": {
           "kind": {
@@ -2974,6 +3825,167 @@
         ],
         "title": "ReviveOut",
         "description": "預覽中的復活（Phase 3D-8b）：站起來的單位、HP 與站的格子（``from_pos`` 是倒下的位置）。"
+      },
+      "RunBattleResponse": {
+        "properties": {
+          "run": {
+            "$ref": "#/components/schemas/RunResponse"
+          },
+          "battle": {
+            "$ref": "#/components/schemas/BattleResponse"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "run",
+          "battle"
+        ],
+        "title": "RunBattleResponse"
+      },
+      "RunResponse": {
+        "properties": {
+          "run_id": {
+            "type": "string",
+            "title": "Run Id"
+          },
+          "seed": {
+            "type": "integer",
+            "title": "Seed"
+          },
+          "node": {
+            "$ref": "#/components/schemas/NodeOut"
+          },
+          "hero": {
+            "$ref": "#/components/schemas/HeroOut"
+          },
+          "battles_done": {
+            "type": "integer",
+            "title": "Battles Done"
+          },
+          "plan": {
+            "items": {
+              "$ref": "#/components/schemas/BattlePlanOut"
+            },
+            "type": "array",
+            "title": "Plan"
+          },
+          "history": {
+            "items": {
+              "$ref": "#/components/schemas/BattleRecord"
+            },
+            "type": "array",
+            "title": "History"
+          },
+          "battle_id": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Battle Id"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "run_id",
+          "seed",
+          "node",
+          "hero",
+          "battles_done",
+          "plan",
+          "history",
+          "battle_id"
+        ],
+        "title": "RunResponse"
+      },
+      "SaveOut": {
+        "properties": {
+          "run_id": {
+            "type": "string",
+            "title": "Run Id"
+          },
+          "file": {
+            "type": "string",
+            "title": "File"
+          },
+          "format": {
+            "type": "string",
+            "title": "Format"
+          },
+          "in_battle": {
+            "type": "boolean",
+            "title": "In Battle"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "run_id",
+          "file",
+          "format",
+          "in_battle"
+        ],
+        "title": "SaveOut"
+      },
+      "SaveSummary": {
+        "properties": {
+          "run_id": {
+            "type": "string",
+            "title": "Run Id"
+          },
+          "build_id": {
+            "type": "string",
+            "title": "Build Id"
+          },
+          "seed": {
+            "type": "integer",
+            "title": "Seed"
+          },
+          "level": {
+            "type": "integer",
+            "title": "Level"
+          },
+          "battles_done": {
+            "type": "integer",
+            "title": "Battles Done"
+          },
+          "battles_total": {
+            "type": "integer",
+            "title": "Battles Total"
+          },
+          "node": {
+            "type": "string",
+            "enum": [
+              "battle",
+              "level_up",
+              "campfire",
+              "ended"
+            ],
+            "title": "Node"
+          },
+          "in_battle": {
+            "type": "boolean",
+            "title": "In Battle"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "run_id",
+          "build_id",
+          "seed",
+          "level",
+          "battles_done",
+          "battles_total",
+          "node",
+          "in_battle"
+        ],
+        "title": "SaveSummary"
       },
       "SetReactionMode": {
         "properties": {

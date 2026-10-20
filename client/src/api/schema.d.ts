@@ -51,7 +51,10 @@ export interface paths {
             path?: never;
             cookie?: never;
         };
-        /** Get Skill */
+        /**
+         * Get Skill
+         * @description 技能卡片：內容庫的技能，或進行中各輪的生成技能與候選（Phase 3-5a）。
+         */
         get: operations["get_skill_api_skills__skill_id__get"];
         put?: never;
         post?: never;
@@ -209,6 +212,125 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/runs": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Create Run */
+        post: operations["create_run_api_runs_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/runs/saves": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** List Saves */
+        get: operations["list_saves_api_runs_saves_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/runs/load": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Load Run */
+        post: operations["load_run_api_runs_load_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/runs/{run_id}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Get Run */
+        get: operations["get_run_api_runs__run_id__get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/runs/{run_id}/battle": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Run Battle */
+        post: operations["run_battle_api_runs__run_id__battle_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/runs/{run_id}/choice": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Post Choice */
+        post: operations["post_choice_api_runs__run_id__choice_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/runs/{run_id}/save": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Save Run */
+        post: operations["save_run_api_runs__run_id__save_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
 }
 export type webhooks = Record<string, never>;
 export interface components {
@@ -256,6 +378,12 @@ export interface components {
             /** Target Object Id */
             target_object_id?: string | null;
         };
+        /**
+         * Attribute
+         * @description 角色的六屬性（成員名稱用大寫縮寫，避開 ``str``、``int`` 等內建名稱）。
+         * @enum {string}
+         */
+        Attribute: "str" | "dex" | "con" | "int" | "wis" | "wil";
         /** BattleOutcome */
         BattleOutcome: {
             winner: components["schemas"]["Team"] | null;
@@ -263,6 +391,51 @@ export interface components {
             end_reason: string | null;
             /** Round */
             round: number;
+        };
+        /** BattlePlanOut */
+        BattlePlanOut: {
+            /** Index */
+            index: number;
+            /** Map Id */
+            map_id: string;
+            /** Map Name Zh */
+            map_name_zh: string;
+            /** Boss */
+            boss: boolean;
+            /** Enemies */
+            enemies: string[];
+            /** Done */
+            done: boolean;
+        };
+        /**
+         * BattleRecord
+         * @description 一場戰鬥的結果（歷程）。``state_digest`` 是戰鬥最終狀態 JSON 的 SHA-256（驗證重播一致）。
+         */
+        BattleRecord: {
+            /** Index */
+            index: number;
+            /** Map Id */
+            map_id: string;
+            /** Boss */
+            boss: boolean;
+            /** Won */
+            won: boolean;
+            /** End Reason */
+            end_reason: string | null;
+            /** Rounds */
+            rounds: number;
+            /** Steps */
+            steps: number;
+            /** Hp */
+            hp: number;
+            /** Mana */
+            mana: number;
+            /** Source */
+            source: number;
+            /** Hero Downed */
+            hero_downed: boolean;
+            /** State Digest */
+            state_digest: string;
         };
         /**
          * BattleResponse
@@ -442,6 +615,20 @@ export interface components {
              * @default 30
              */
             max_rounds: number;
+        };
+        /**
+         * CreateRunRequest
+         * @description 開新一輪：起始 build、種子、開局配點（省略時全部點在技能最常用的縮放屬性）。
+         */
+        CreateRunRequest: {
+            /** Build */
+            build: string;
+            /** Seed */
+            seed: number;
+            /** Attributes */
+            attributes?: {
+                [key: string]: number;
+            } | null;
         };
         /** DamageOut */
         DamageOut: {
@@ -675,6 +862,39 @@ export interface components {
             /** Maximum */
             maximum: number;
         };
+        /** HeroOut */
+        HeroOut: {
+            /** Build Id */
+            build_id: string;
+            /** Name Zh */
+            name_zh: string;
+            /** Level */
+            level: number;
+            /** Xp */
+            xp: number;
+            /** Xp Next */
+            xp_next: number | null;
+            /** Attributes */
+            attributes: {
+                [key: string]: number;
+            };
+            /** Hp */
+            hp: number;
+            /** Max Hp */
+            max_hp: number;
+            /** Mana */
+            mana: number;
+            /** Max Mana */
+            max_mana: number;
+            /** Source */
+            source: number;
+            /** Source Max */
+            source_max: number;
+            /** Weapon */
+            weapon: string;
+            /** Skills */
+            skills: components["schemas"]["SkillCard"][];
+        };
         /**
          * HoldPosition
          * @description 守在指定格子附近。
@@ -767,6 +987,42 @@ export interface components {
             reason: string | null;
             to_pos: components["schemas"]["Pos"];
         };
+        /**
+         * LeaveChoice
+         * @description 離開營火（有候選沒選時視為放棄）。
+         */
+        LeaveChoice: {
+            /**
+             * @description discriminator enum property added by openapi-typescript
+             * @enum {string}
+             */
+            kind: "leave";
+        };
+        /**
+         * LevelUpChoice
+         * @description 升級的選擇：``attributes`` 分配全部屬性點；``pick`` 為候選索引（``None`` ＝ 跳過）；
+         *     欄位滿時 ``replace`` 指定要換掉的技能 ID。
+         */
+        LevelUpChoice: {
+            /**
+             * @description discriminator enum property added by openapi-typescript
+             * @enum {string}
+             */
+            kind: "level_up";
+            /** Attributes */
+            attributes?: {
+                [key: string]: number;
+            };
+            /** Pick */
+            pick?: number | null;
+            /** Replace */
+            replace?: string | null;
+        };
+        /** LoadRunRequest */
+        LoadRunRequest: {
+            /** Run Id */
+            run_id: string;
+        };
         /** MapSummary */
         MapSummary: {
             /** Id */
@@ -814,6 +1070,34 @@ export interface components {
             /** Path */
             path: components["schemas"]["XY"][];
         };
+        /**
+         * NodeOut
+         * @description 目前節點：``battle``（``battle_index``）、``level_up``（``level``、``points``、
+         *     ``offer``）、``campfire``（``after_battle``、``rerolls_left``、重骰後的 ``offer``）、
+         *     ``ended``（``victory``）。
+         */
+        NodeOut: {
+            /**
+             * Kind
+             * @enum {string}
+             */
+            kind: "battle" | "level_up" | "campfire" | "ended";
+            /** Battle Index */
+            battle_index?: number | null;
+            /** Boss */
+            boss?: boolean | null;
+            /** Level */
+            level?: number | null;
+            /** Points */
+            points?: number | null;
+            /** After Battle */
+            after_battle?: number | null;
+            /** Rerolls Left */
+            rerolls_left?: number | null;
+            offer?: components["schemas"]["OfferOut"] | null;
+            /** Victory */
+            victory?: boolean | null;
+        };
         /** ObjectView */
         ObjectView: {
             /** Id */
@@ -856,6 +1140,21 @@ export interface components {
                 number,
                 number
             ][];
+        };
+        /** OfferOut */
+        OfferOut: {
+            /**
+             * Reason
+             * @enum {string}
+             */
+            reason: "level_up" | "reroll";
+            /** Tier */
+            tier: number;
+            top_attribute: components["schemas"]["Attribute"];
+            /** Candidates */
+            candidates: components["schemas"]["SkillCard"][];
+            /** Off Route */
+            off_route: number[];
         };
         /**
          * OrderSet
@@ -953,6 +1252,21 @@ export interface components {
             mana_cost: number;
             /** Hp Cost Permille */
             hp_cost_permille: number;
+        };
+        /**
+         * PickChoice
+         * @description 營火重骰後：選 1 個候選（``None`` ＝ 放棄），之後離開營火。
+         */
+        PickChoice: {
+            /**
+             * @description discriminator enum property added by openapi-typescript
+             * @enum {string}
+             */
+            kind: "pick";
+            /** Pick */
+            pick?: number | null;
+            /** Replace */
+            replace?: string | null;
         };
         /** PierceObjectOut */
         PierceObjectOut: {
@@ -1127,6 +1441,17 @@ export interface components {
             hp_cost_permille: number;
         };
         /**
+         * RerollChoice
+         * @description 營火：重骰（產生一組新的候選）。
+         */
+        RerollChoice: {
+            /**
+             * @description discriminator enum property added by openapi-typescript
+             * @enum {string}
+             */
+            kind: "reroll";
+        };
+        /**
          * RetreatTo
          * @description 撤往指定格子。
          */
@@ -1149,6 +1474,61 @@ export interface components {
             hp: number;
             pos: components["schemas"]["XY"];
             from_pos: components["schemas"]["XY"];
+        };
+        /** RunBattleResponse */
+        RunBattleResponse: {
+            run: components["schemas"]["RunResponse"];
+            battle: components["schemas"]["BattleResponse"];
+        };
+        /** RunResponse */
+        RunResponse: {
+            /** Run Id */
+            run_id: string;
+            /** Seed */
+            seed: number;
+            node: components["schemas"]["NodeOut"];
+            hero: components["schemas"]["HeroOut"];
+            /** Battles Done */
+            battles_done: number;
+            /** Plan */
+            plan: components["schemas"]["BattlePlanOut"][];
+            /** History */
+            history: components["schemas"]["BattleRecord"][];
+            /** Battle Id */
+            battle_id: string | null;
+        };
+        /** SaveOut */
+        SaveOut: {
+            /** Run Id */
+            run_id: string;
+            /** File */
+            file: string;
+            /** Format */
+            format: string;
+            /** In Battle */
+            in_battle: boolean;
+        };
+        /** SaveSummary */
+        SaveSummary: {
+            /** Run Id */
+            run_id: string;
+            /** Build Id */
+            build_id: string;
+            /** Seed */
+            seed: number;
+            /** Level */
+            level: number;
+            /** Battles Done */
+            battles_done: number;
+            /** Battles Total */
+            battles_total: number;
+            /**
+             * Node
+             * @enum {string}
+             */
+            node: "battle" | "level_up" | "campfire" | "ended";
+            /** In Battle */
+            in_battle: boolean;
         };
         /**
          * SetReactionMode
@@ -2042,6 +2422,220 @@ export interface operations {
                 };
                 content: {
                     "application/json": unknown;
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    create_run_api_runs_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["CreateRunRequest"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["RunResponse"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    list_saves_api_runs_saves_get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["SaveSummary"][];
+                };
+            };
+        };
+    };
+    load_run_api_runs_load_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["LoadRunRequest"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["RunResponse"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    get_run_api_runs__run_id__get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                run_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["RunResponse"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    run_battle_api_runs__run_id__battle_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                run_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["RunBattleResponse"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    post_choice_api_runs__run_id__choice_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                run_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["LevelUpChoice"] | components["schemas"]["RerollChoice"] | components["schemas"]["PickChoice"] | components["schemas"]["LeaveChoice"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["RunResponse"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    save_run_api_runs__run_id__save_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                run_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["SaveOut"];
                 };
             };
             /** @description Validation Error */

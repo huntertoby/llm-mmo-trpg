@@ -15,7 +15,8 @@ from fastapi.responses import JSONResponse
 from fastapi.staticfiles import StaticFiles
 
 from trpg import __version__
-from trpg.api.routes import battles, content
+from trpg.api.routes import battles, content, runs
+from trpg.api.runs import RunNotFoundError, RunStore
 from trpg.api.sessions import (
     AutoAdvanceLimitError,
     BattleNotFoundError,
@@ -25,6 +26,8 @@ from trpg.api.sessions import (
 )
 from trpg.content.library import ContentLibrary, load_library
 from trpg.engine.runner import DEFAULT_MAX_ACTIONS
+from trpg.roguelite.errors import ChoiceError, NodeConflictError, SaveFormatError
+from trpg.roguelite.save import default_save_dir
 from trpg.shared.errors import IllegalActionError
 
 __all__ = ["ERROR_STATUS", "create_app"]
@@ -35,6 +38,10 @@ ERROR_STATUS: dict[type[Exception], int] = {
     SessionConflictError: 409,
     InvalidRequestError: 422,
     AutoAdvanceLimitError: 500,
+    RunNotFoundError: 404,
+    NodeConflictError: 409,
+    ChoiceError: 422,
+    SaveFormatError: 422,
 }
 """引擎與工作階段的錯誤 → HTTP 狀態碼（回應為 ``{"detail": "<中文訊息>"}``）。
 
@@ -56,21 +63,26 @@ def create_app(
     *,
     max_auto_steps: int = DEFAULT_MAX_ACTIONS,
     static_dir: Path | None = None,
+    save_dir: Path | None = None,
 ) -> FastAPI:
     """建立應用。``library`` 省略時載入 ``content/``。
 
     ``max_auto_steps`` 是每次請求自動推進的步數上限（超過時 500，工作階段保留）。
+    ``save_dir`` 是一輪的存檔資料夾（省略時 :func:`~trpg.roguelite.save.default_save_dir`）。
     ``static_dir`` 是建置好的前端資料夾（含 ``index.html``）；給了就掛在 ``/``（在 API 路由之後，
     所以 ``/api/*`` 優先）。
     """
     app = FastAPI(title="LLM-MMO-TRPG 本機 API", version=__version__)
-    app.state.store = SessionStore(
-        library if library is not None else load_library(), max_auto_steps=max_auto_steps
+    lib = library if library is not None else load_library()
+    app.state.store = SessionStore(lib, max_auto_steps=max_auto_steps)
+    app.state.runs = RunStore(
+        lib, app.state.store, save_dir if save_dir is not None else default_save_dir()
     )
     for exc_type, status in ERROR_STATUS.items():
         app.add_exception_handler(exc_type, _error_handler(status))
     app.include_router(content.router)
     app.include_router(battles.router)
+    app.include_router(runs.router)
     if static_dir is not None:
         app.mount("/", StaticFiles(directory=static_dir, html=True), name="client")
     return app
