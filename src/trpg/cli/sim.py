@@ -11,6 +11,7 @@ from pathlib import Path
 from typing import TextIO
 
 from trpg.content.library import ContentLibrary
+from trpg.content.maps import TRAINING_ARCHETYPE
 from trpg.sim.batch import (
     DEFAULT_MAX_ROUNDS,
     REPORT_LIST_ADAPTER,
@@ -27,11 +28,14 @@ TEST_MAP_PREFIX = "test_"
 
 
 def default_sim_maps(library: ContentLibrary) -> list[str]:
-    """預設要模擬的地圖：有 ``encounter`` 的地圖，測試地圖（``test_*``）除外，依 ID 排序。"""
+    """預設要模擬的地圖：有 ``encounter`` 的地圖，測試地圖（``test_*``）與技能工坊的靶場（地圖類型
+    ``training``，Phase 3F-1）除外，依 ID 排序。"""
     return sorted(
         map_id
         for map_id, map_def in library.maps.items()
-        if map_def.encounter is not None and not map_id.startswith(TEST_MAP_PREFIX)
+        if map_def.encounter is not None
+        and not map_id.startswith(TEST_MAP_PREFIX)
+        and map_def.archetype != TRAINING_ARCHETYPE
     )
 
 

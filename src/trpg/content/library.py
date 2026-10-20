@@ -67,6 +67,7 @@ from trpg.content.skills import (
 )
 from trpg.content.stacks import StackDef, StackTable
 from trpg.content.summons import SummonDef, SummonTable
+from trpg.content.workshop import WorkshopRules, workshop_problems
 from trpg.shared.errors import ContentError
 from trpg.shared.types import Surface
 
@@ -352,6 +353,8 @@ class ContentLibrary:
     skeletons: dict[str, SkeletonDef]
     roguelite: RunRules
     """roguelite 一輪的參數（``roguelite.yaml``，Phase 3-5a）。"""
+    workshop: WorkshopRules
+    """技能工坊「裝上試玩」的設定（``workshop.yaml``，Phase 3F-1）。"""
     files: list[tuple[Path, ContentModel]] = field(default_factory=list)
 
     def unit(self, template_id: str) -> UnitTemplate:
@@ -435,6 +438,7 @@ def load_library(  # noqa: PLR0915
     summons = _load_summons(root, weapons.by_id(), files)
     rule_changes = load("rule_changes.yaml", RuleChangeTable)
     roguelite = load("roguelite.yaml", RunRules)
+    workshop = load("workshop.yaml", WorkshopRules)
     try:
         ruleset = Ruleset(
             core=core,
@@ -505,6 +509,9 @@ def load_library(  # noqa: PLR0915
     problems = roguelite_problems(roguelite, maps, units, core.tier_budget)
     if problems:
         raise ContentError(root / "roguelite.yaml", "；".join(problems))
+    problems = workshop_problems(workshop, maps, units)
+    if problems:
+        raise ContentError(root / "workshop.yaml", "；".join(problems))
 
     return ContentLibrary(
         root=root,
@@ -523,6 +530,7 @@ def load_library(  # noqa: PLR0915
         exclusions=exclusions,
         skeletons=skeletons,
         roguelite=roguelite,
+        workshop=workshop,
         files=files,
     )
 

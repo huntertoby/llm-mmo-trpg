@@ -11,7 +11,7 @@ from collections.abc import Mapping
 from pydantic import Field, model_validator
 
 from trpg.content.battle import ID_PATTERN, UnitTemplate
-from trpg.content.maps import MapDef
+from trpg.content.maps import TRAINING_ARCHETYPE, MapDef
 from trpg.content.schemas import ContentModel
 from trpg.shared.types import Team
 
@@ -123,6 +123,9 @@ def roguelite_problems(
     unknown_units = sorted(t for t in templates if t not in units)
     if unknown_units:
         problems.append(f"未知的單位範本：{', '.join(unknown_units)}")
+    training = sorted(m for m in rules.map_pool if maps[m].archetype == TRAINING_ARCHETYPE)
+    if training:
+        problems.append(f"技能工坊的靶場不能進地圖池：{', '.join(training)}")
     archetypes = {maps[m].archetype for m in rules.map_pool}
     if len(archetypes) < rules.battles:
         problems.append(f"地圖池只有 {len(archetypes)} 種地圖類型，不夠 {rules.battles} 場不重複")

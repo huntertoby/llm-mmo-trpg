@@ -1,0 +1,62 @@
+# 靶場（Phase 3F-1，地圖類型 training）：只給技能工坊「裝上試玩」用，不進 roguelite 抽選、
+# `sim matrix`／`sim maps` 的預設地圖與一般地圖列表（GET /api/maps）。對手（木樁或會反擊的盜賊）
+# 由 content/workshop.yaml 決定；這裡的 encounter 是預設（木樁）。
+#
+# 分區（x 往右、y 往下；12×10）：
+# - 西側（x 0–2）：我方起始區。北邊窄道入口有一個源泉格（1, 1），讓傳說技能可以多開一次。
+# - 窄道與牆邊（y 1）：北牆（y 0）與南牆（y 2，x 3–5、7–9）夾出一條 1 格寬的窄道，盡頭是牆（11, 1）；
+#   木樁站在 (9, 1)——往東推會撞牆，試推擊、撞擊、衝鋒與直線衝撞。
+# - 開闊區（中央）：木樁站在 (6, 4)，旁邊有一根可推倒的石柱 (5, 4)，試傷害與範圍形狀、推倒。
+# - 物件區（西南）：木箱、油桶、枯樹，試投擲、撥開、穿透與火焰。
+# - 地形區（東南）：木樁站在岩漿邊 (8, 6)（往南推會掉進岩漿）、水窪、草叢（隱蔽），東南角是
+#   高 2 的高台（經由高 1 的台階爬上），試元素互動、隱蔽、高度、傳送他人與墜落。
+id: training_range
+name_zh: 靶場
+archetype: training
+size: [12, 10]
+heights: |
+  000000000000
+  000000000000
+  000000000000
+  000000000000
+  000000000000
+  000000000000
+  000000000000
+  000000000000
+  000000000012
+  000000000012
+terrain: |
+  ...#########
+  ...........#
+  ...###.###.#
+  ............
+  ............
+  ............
+  ............
+  ........LL..
+  ............
+  ............
+legend:
+  ".": stone
+  "#": wall
+  "L": lava
+objects:
+  - {at: [5, 4], kind: stone_pillar}
+  - {at: [3, 5], kind: dead_tree}
+  - {at: [2, 6], kind: crate}
+  - {at: [4, 7], kind: oil_barrel}
+  - {at: [3, 8], kind: crate}
+  - {at: [8, 9], kind: grass}
+  - {at: [9, 9], kind: grass}
+  - {at: [9, 8], kind: grass}
+surfaces:
+  - {at: [6, 8], surface: water}
+  - {at: [7, 8], surface: water}
+  - {at: [6, 9], surface: water}
+start_zones:
+  ally: [[0, 3], [0, 4], [0, 5], [0, 6]]
+  enemy: [[6, 4], [9, 1], [8, 6], [10, 4], [10, 5]]
+encounter:
+  allies: [hero_fighter]
+  enemies: [training_dummy, training_dummy, training_dummy]
+source_wells: [[1, 1]]

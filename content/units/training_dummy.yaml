@@ -1,0 +1,16 @@
+# 木樁（Phase 3F-1）：靶場專用的敵方單位，讓玩家在技能工坊安心反覆施放、看每一下的數字。
+# HP 很高、速度 0（不移動）、沒有反應（不格擋、不藉機攻擊）、行為模式 idle（所有權重為 0，
+# 沒有正分的動作，所以每回合直接結束）。護甲 0、抗性 0，傷害數字就是技能本身的數字。
+id: training_dummy
+name_zh: 木樁
+attributes: {str: 10, dex: 10, con: 10, int: 10, wis: 10, wil: 10}
+max_hp: 300
+speed: 0
+armor_bonus: 0
+weapon: dagger
+stamina: 0
+ai_profile: idle
+reactions: []
+resist: {}
+element_mods: {}
+tags: [training_dummy]

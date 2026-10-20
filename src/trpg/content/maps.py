@@ -21,6 +21,7 @@ __all__ = [
     "ARCHETYPES",
     "MAX_HEIGHT",
     "TEST_ARCHETYPE",
+    "TRAINING_ARCHETYPE",
     "Archetype",
     "Encounter",
     "MapDef",
@@ -54,8 +55,10 @@ type Archetype = Literal[
     "open_plain",
     "frozen_lake",
     "test",
+    "training",
 ]
-"""地圖類型（``docs/design/05-戰鬥.md`` 5.1 的 8 種類型，另加測試地圖用的 ``test``）。"""
+"""地圖類型（``docs/design/05-戰鬥.md`` 5.1 的 8 種類型，另加測試地圖用的 ``test`` 與技能工坊
+靶場用的 ``training``，Phase 3F-1）。"""
 
 ARCHETYPES: tuple[str, ...] = (
     "bridge_chasm",
@@ -67,8 +70,11 @@ ARCHETYPES: tuple[str, ...] = (
     "open_plain",
     "frozen_lake",
     "test",
+    "training",
 )
 TEST_ARCHETYPE = "test"
+TRAINING_ARCHETYPE = "training"
+"""技能工坊靶場的地圖類型（Phase 3F-1）：不進 roguelite 抽選、模擬的預設地圖與一般地圖列表。"""
 
 
 class MapObjectPlacement(ContentModel):

@@ -1,0 +1,14 @@
+# 技能工坊（Phase 3F-1，開發工具）的「裝上試玩」設定。
+# map：預設地圖（靶場）；max_rounds：每場輪數上限（調高方便慢慢試）；
+# opponents：可選的對手，第一個是預設。敵人依地圖起始區的順序擺放（靶場：中央、窄道、岩漿邊、東側 ×2）。
+map: training_range
+max_rounds: 30
+opponents:
+  - id: dummy
+    name_zh: 木樁
+    description_zh: 三個不移動、不攻擊、沒有反應的木樁（HP 300），可以安心反覆施放、看每一下的數字。
+    enemies: [training_dummy, training_dummy, training_dummy]
+  - id: fighting
+    name_zh: 會反擊
+    description_zh: 三個木樁之外，東側再加兩名會移動、會攻擊的盜賊。
+    enemies: [training_dummy, training_dummy, training_dummy, bandit, bandit]
