@@ -476,12 +476,6 @@ def test_choice_kinds_list_one_bare_action_per_first_selection() -> None:
     assert all(a.followup_target is None for a in actions)
 
 
-def test_the_ai_does_not_use_the_new_kinds_yet() -> None:
-    state = arena(SLASH, foes=((4, 3),))
-    action = UtilityAI(library().ai_profiles)(state)
-    assert not (isinstance(action, UseSkill) and action.skill_id == SLASH)
-
-
 def _slash_first(state: BattleState) -> Any:
     """主角第一次能用「回馬斬」打到敵人時用（不帶第二段，結算時暫停），其餘交給 AI。"""
     unit = state.active

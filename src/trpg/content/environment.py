@@ -678,6 +678,9 @@ class RewriteAiRules(ContentModel):
     - ``activation_round_points``：啟動常駐類傳說（Phase 3D-6）每一輪效果的價值（限時型 × 持續
       輪數、整場型 × ``activation_battle_rounds``），再扣源力成本。
     - ``activation_battle_rounds``：整場型傳說估計還能生效的輪數。
+    - ``delayed_enemy_points``：延遲段（Phase 3F-4b）預計範圍內（以施放者目前的位置推算）每個
+      敵人的價值（範圍內的友方扣同樣的分數）；``delayed_attacked_permille``：被攻擊才釋放的延遲段
+      再乘這個千分比（可能沒人來打）。
     """
 
     ap_points: int = Field(default=6, ge=0)
@@ -700,6 +703,8 @@ class RewriteAiRules(ContentModel):
     grant_skill_uses_permille: int = Field(default=800, ge=0, le=3000)
     activation_round_points: int = Field(default=4, ge=0)
     activation_battle_rounds: int = Field(default=4, ge=1)
+    delayed_enemy_points: int = Field(default=5, ge=0)
+    delayed_attacked_permille: int = Field(default=600, ge=0, le=1000)
 
 
 class GambleAiRules(ContentModel):

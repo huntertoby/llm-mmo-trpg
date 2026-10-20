@@ -103,6 +103,7 @@ from trpg.engine.events import (
     ApRefunded,
     DamageDealt,
     EventBase,
+    FollowupCharged,
     ObjectDamaged,
     ReactionsGranted,
     ResourceRestored,
@@ -1140,13 +1141,15 @@ def _rewrite_gains(
     source = skill.cost.source or 0
     on_kill = any(e.on_kill for e in skill.effects)  # 擊殺時效果（3D-8b）
     watch = _watch_statuses(state, skill)  # 進入監視（3D-8c）
-    if not types & _REWRITE_SCORED and not source and not on_kill and not watch:
+    delayed = skill.followup is not None and skill.followup.when == "delayed"  # 延遲段（3F-4b）
+    if not types & _REWRITE_SCORED and not (source or on_kill or watch or delayed):
         return Fraction(0)
     points = Fraction(-rules.source_points * source)
     points += _overwatch_points(state, actor, watch, rules)
     for e in p.min_events:
         points += _rewrite_event_points(state, actor, e, types, rules)
     points += _bomb_points(state, actor, skill, p, rules)
+    points += _delayed_points(state, actor, p, rules)
     revived = sum(1 for e in p.min_events if isinstance(e, UnitRevived) and e.source_id == actor.id)
     points += rules.revive_points * revived  # 復活（3D-8b）
     points += _kill_points(actor, skill, p, rules)
@@ -1217,6 +1220,25 @@ def _bomb_points(
         friends = len(near) - enemies
         total += average * (enemies - friends) * rules.bomb_points_permille / 1000
     return total
+
+
+def _delayed_points(
+    state: BattleState, actor: UnitState, p: Preview, rules: RewriteAiRules
+) -> Fraction:
+    """延遲段（3F-4b）的收益：預覽中開始蓄力（``followup_charged``）時，預計範圍內的（敵人數 −
+    友方數）× ``delayed_enemy_points``；被攻擊才釋放的再 × ``delayed_attacked_permille``。範圍以
+    目前的位置推算（敵人會移動，所以只是近似）。"""
+    for e in p.min_events:
+        if not (isinstance(e, FollowupCharged) and e.unit_id == actor.id):
+            continue
+        tiles = {(t.x, t.y) for t in e.tiles}
+        near = [u for u in state.living_units() if u.xy in tiles and u.id != actor.id]
+        enemies = sum(1 for u in near if u.team is not actor.team)
+        points = Fraction((2 * enemies - len(near)) * rules.delayed_enemy_points)
+        if e.release == "attacked":
+            points = points * rules.delayed_attacked_permille / 1000
+        return points
+    return Fraction(0)
 
 
 def _rewrite_event_points(
