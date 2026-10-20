@@ -31,6 +31,7 @@ import {
   setModeAction,
   triggerEventText,
 } from "../battle/reactions";
+import { blockedPushAt, withPushReasons } from "../battle/pushReasons";
 import { previewOverlays } from "../battle/scenePreview";
 import { marksTextAt, telegraphMarks } from "../battle/telegraph";
 import { zoneLinesAt } from "../battle/zones";
@@ -203,10 +204,13 @@ export function BattleScreen({ initial, onExit, exitLabel, runMode }: Props) {
     () => (hero === null ? [] : withReasons(skillButtons(hero, response.legal_actions, cards), skillReasons)),
     [hero, response.legal_actions, cards, skillReasons],
   );
-  const basic = useMemo(() => basicModes(response.legal_actions), [response.legal_actions]);
+  const basic = useMemo(
+    () => withPushReasons(basicModes(response.legal_actions), response.interact_options, view),
+    [response.legal_actions, response.interact_options, view],
+  );
   const modes = useMemo(() => {
     const map = new Map<string, ActionMode>();
-    for (const m of basic) map.set(m.key, m);
+    for (const m of basic) if (m.blockedReason === undefined) map.set(m.key, m);
     for (const b of buttons) if (b.disabledReason === null) map.set(`skill:${b.skillId}`, skillMode(b));
     return map;
   }, [basic, buttons]);
@@ -605,7 +609,10 @@ export function BattleScreen({ initial, onExit, exitLabel, runMode }: Props) {
           if (a !== null) {
             if (copying) decideCopy(a);
             else act(a);
+            return;
           }
+          const why = blockedPushAt(mode, view, tile);
+          if (why !== null) setHint(why);
           return;
         }
         const action = actionForClick(classified, view, tile);
@@ -781,6 +788,7 @@ export function BattleScreen({ initial, onExit, exitLabel, runMode }: Props) {
           onPickMode={pickMode}
           onSelect={pickSkill}
           onBlocked={(b) => setHint(blockedMessage(b))}
+          onBlockedMode={setHint}
         />
         <div className="battle-turn">
           {ended ? (

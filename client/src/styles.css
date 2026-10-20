@@ -451,7 +451,8 @@ button.selected {
 }
 
 /* 灰掉但可以點（點了在訊息列顯示原因，Phase 3-5c-2） */
-.skill-button.blocked {
+.skill-button.blocked,
+.basic-button.blocked {
   opacity: 0.45;
   cursor: help;
 }

@@ -61,9 +61,16 @@ export interface ActionMode {
   skillId: string | null;
   actions: Action[];
   targets: TargetSet;
+  /**
+   * 推動物件（Phase 3-10）：相鄰物件推不動的原因（物件 ID → 完整說明）；選取模式中點到時顯示。
+   * 沒有不合法的物件時省略。
+   */
+  blockedObjects?: ReadonlyMap<string, string>;
+  /** 全部都不合法時的原因：按鈕灰色，滑過或點擊顯示（有值 ＝ 不能選取）。 */
+  blockedReason?: string;
 }
 
-function emptyTargets(): TargetSet {
+export function emptyTargets(): TargetSet {
   return {
     self: null,
     units: new Map(),
@@ -212,7 +219,7 @@ export function skillButtons(hero: UnitView, legal: readonly Action[], cards: Sk
 
 // ---- 動作模式 -------------------------------------------------------------
 
-const BASIC_MODES: readonly { kind: Exclude<ModeKind, "skill">; label: string }[] = [
+export const BASIC_MODES: readonly { kind: Exclude<ModeKind, "skill">; label: string }[] = [
   { kind: "attack", label: "攻擊" },
   { kind: "shove", label: "推擊" },
   { kind: "trip", label: "絆倒" },

@@ -21,6 +21,8 @@ interface Props {
   onSelect(skillId: string): void;
   /** 點到灰掉、有原因的技能：把原因交給畫面的訊息列（Phase 3-5c-2）。 */
   onBlocked?(button: SkillButton): void;
+  /** 點到灰色的基本動作（例如推不動的「推動物件」）：把原因交給訊息列。 */
+  onBlockedMode?(reason: string): void;
 }
 
 function costText(b: SkillButton): string {
@@ -89,9 +91,11 @@ export function SkillBar(props: Props) {
             <button
               key={m.key}
               type="button"
-              className={`basic-button${selectedKey === m.key ? " selected" : ""}`}
+              className={`basic-button${selectedKey === m.key ? " selected" : ""}${m.blockedReason !== undefined ? " blocked" : ""}`}
               disabled={!enabled}
-              onClick={() => props.onPickMode(m)}
+              aria-disabled={m.blockedReason !== undefined ? true : undefined}
+              title={m.blockedReason}
+              onClick={() => (m.blockedReason === undefined ? props.onPickMode(m) : props.onBlockedMode?.(m.blockedReason))}
             >
               {m.label}
             </button>
