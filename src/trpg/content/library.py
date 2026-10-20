@@ -37,6 +37,7 @@ from trpg.content.environment import (
 )
 from trpg.content.loader import default_content_dir, load_content_file
 from trpg.content.maps import MapDef, SpawnUnitsEvent, check_map
+from trpg.content.roguelite import RunRules, roguelite_problems
 from trpg.content.rule_changes import RuleChangeDef, RuleChangeTable
 from trpg.content.rules import CoreRules, HitTable
 from trpg.content.schemas import ContentModel, ElementTable
@@ -349,6 +350,8 @@ class ContentLibrary:
     synergies: SynergyTable
     exclusions: ExclusionTable
     skeletons: dict[str, SkeletonDef]
+    roguelite: RunRules
+    """roguelite 一輪的參數（``roguelite.yaml``，Phase 3-5a）。"""
     files: list[tuple[Path, ContentModel]] = field(default_factory=list)
 
     def unit(self, template_id: str) -> UnitTemplate:
@@ -431,6 +434,7 @@ def load_library(  # noqa: PLR0915
     skills = _load_dir(root / "skills", SkillDef, files)
     summons = _load_summons(root, weapons.by_id(), files)
     rule_changes = load("rule_changes.yaml", RuleChangeTable)
+    roguelite = load("roguelite.yaml", RunRules)
     try:
         ruleset = Ruleset(
             core=core,
@@ -498,6 +502,10 @@ def load_library(  # noqa: PLR0915
         if problems:
             raise ContentError(root / "maps" / f"{map_id}.yaml", "；".join(problems))
 
+    problems = roguelite_problems(roguelite, maps, units, core.tier_budget)
+    if problems:
+        raise ContentError(root / "roguelite.yaml", "；".join(problems))
+
     return ContentLibrary(
         root=root,
         elements=elements,
@@ -514,6 +522,7 @@ def load_library(  # noqa: PLR0915
         synergies=synergies,
         exclusions=exclusions,
         skeletons=skeletons,
+        roguelite=roguelite,
         files=files,
     )
 

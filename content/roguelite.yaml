@@ -1,0 +1,57 @@
+# roguelite 一輪的參數（Phase 3-5a；docs/phases/Phase3計畫.md 0.2、0.11、7.1）。數值都是初值，未經模擬。
+# 所有亂數（地圖、遭遇、每場戰鬥的種子、升級候選、重骰）由「一輪的種子」以固定方式衍生。
+
+battles: 5                    # 一般戰鬥的場數，之後 1 場 Boss（設計文件 7.1 的目標是 8–10 場）
+
+# 一般戰鬥的地圖池：每場先抽一個地圖類型（同一輪不重複），再抽該類型的一張地圖。Boss 地圖不在池內。
+map_pool: [bridge_chasm, cliff_outpost, dark_forest, frozen_lake, lava_crossing, narrow_halls, oil_depot, open_plain, swamp]
+
+# 第 1 場起每場的敵人（先用現有盜賊系列；隨場數增加人數與種類），每場從 options 抽一組。
+# 起始區每方 4 格，所以最多 4 名敵人。
+encounters:
+  - options:
+      - [bandit, bandit]
+      - [bandit, bandit_archer]
+  - options:
+      - [bandit, bandit, bandit_archer]
+      - [bandit, bandit_archer, bandit_shieldbearer]
+  - options:
+      - [bandit, bandit, bandit_archer, bandit_shieldbearer]
+      - [bandit, bandit_archer, bandit_archer, bandit_shieldbearer]
+  - options:
+      - [bandit, bandit, bandit_archer, bandit_archer]
+      - [bandit, bandit_shieldbearer, bandit_archer, bandit_archer]
+  - options:
+      - [bandit_shieldbearer, bandit, bandit_archer, bandit_archer]
+      - [bandit_shieldbearer, bandit_shieldbearer, bandit_archer, bandit_archer]
+
+# Boss 戰：先用現有地圖與 bandit_boss（3-5b 換成專屬地圖 bandit_lair 與加強版頭目，只要改這裡）。
+boss:
+  map: ruined_fort
+  enemies: [bandit_boss, bandit, bandit_archer, bandit_shieldbearer]
+
+companions: [sim_companion_fighter, sim_companion_archer]   # 每場 2 名標準隊友（0.11 H）
+max_rounds: 30                # 每場輪數上限；超過算沒有打贏（一輪失敗）
+
+# 經驗與升級（0.11 I：每場固定）
+xp_per_battle: 100
+level_thresholds: [100, 200, 350, 500, 700]   # 升到第 2、3、4、5、6 級的累計經驗
+attribute_points_per_level: 2
+base_attribute: 10            # 開局六項屬性皆為 10（設計文件 7.2）
+start_free_points: 4          # 另有 4 點自由分配
+
+# 升級與重骰的技能候選（隨機組合器）
+offer_size: 3
+off_route_per_offer: 1        # 其中 1 個「偏離路線」：縮放屬性與主角目前最高屬性不同（0.2 C）
+offer_tier_by_level: [1, 1, 2, 2, 3, 3]       # 主角等級 → 候選的階級
+offer_max_attempts: 200       # 湊齊候選最多試幾個組合器種子
+
+# 營火（0.11 G）：HP、法力回滿，源力 +campfire，並提供重骰（0.2 F）。中段（第 3 場後）與 Boss 前（第 5 場後）。
+campfire_after: [3, 5]
+rerolls_per_campfire: 1
+
+# 源力（0.11 K；上限 3、每場開場至少 1 在 rules/core.yaml）
+source:
+  after_battle: 1             # 打贏一場 +1（擊殺精英的 +1 在戰鬥中由引擎處理）
+  campfire: 1
+  boss_floor: 2               # 進入 Boss 戰前至少 2 點

@@ -20,6 +20,7 @@ from trpg.content.environment import (
     WeatherTable,
 )
 from trpg.content.loader import default_content_dir, load_content_file
+from trpg.content.roguelite import RunRules
 from trpg.content.rules import CoreRules, HitTable
 from trpg.content.schemas import ContentModel, ElementTable
 from trpg.content.sim_builds import BuildTable
@@ -62,6 +63,7 @@ KNOWN_CONTENT_FILES: tuple[ContentFile, ...] = (
     ContentFile("sim/builds.yaml", BuildTable),
     ContentFile("skill_synergies.yaml", SynergyTable),
     ContentFile("skill_exclusions.yaml", ExclusionTable),
+    ContentFile("roguelite.yaml", RunRules),
 )
 """單一資料檔。資料夾（``units/``、``maps/``、``skills/``）與跨檔案檢查由
 :func:`trpg.content.library.load_library` 負責。"""
