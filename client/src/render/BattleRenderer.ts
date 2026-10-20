@@ -606,7 +606,7 @@ export class BattleRenderer {
   private makeEffect(item: FeedbackItem, now: number, durationMs: number): Effect {
     if (item.kind === "line") return this.lineEffect(item.from, item.to, now, durationMs);
     const c = tileCenter(item.pos);
-    const delay = item.slot * durationMs * 0.12;
+    const delay = item.slot * durationMs * 0.15;
     const isStatus = item.kind === "status";
     const text = isStatus ? `＋${item.text}` : item.text;
     const color = isStatus ? STATUS_COLOR : FLOAT_COLORS[item.tone];
@@ -616,7 +616,7 @@ export class BattleRenderer {
     t.anchor.set(0.5);
     t.style.stroke = { color: 0x000000, width: 4 };
     node.addChild(t);
-    const baseY = c.y - T * 0.3 - item.slot * 14;
+    const baseY = c.y - T * 0.3 - item.slot * 22;
     node.position.set(c.x + (isStatus ? T * 0.12 : 0), baseY);
     node.alpha = 0;
     if (isStatus) {
@@ -645,7 +645,7 @@ export class BattleRenderer {
     const g = new Graphics()
       .moveTo(a.x, a.y)
       .lineTo(b.x, b.y)
-      .stroke({ width: 3, color: LINE_COLOR })
+      .stroke({ width: 4, color: LINE_COLOR })
       .poly([
         b.x,
         b.y,
@@ -661,9 +661,9 @@ export class BattleRenderer {
     return {
       node,
       startMs: now,
-      endMs: now + durationMs * 0.5,
+      endMs: now + durationMs * 0.6,
       update: (p) => {
-        node.alpha = 0.9 * (1 - p);
+        node.alpha = p < 0.4 ? 0.95 : 0.95 * (1 - (p - 0.4) / 0.6);
       },
     };
   }
