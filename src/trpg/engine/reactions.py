@@ -23,7 +23,7 @@
 
 from __future__ import annotations
 
-from collections.abc import Callable
+from collections.abc import Callable, Iterable
 
 from trpg.content.battle import ReactionRule
 from trpg.content.environment import ReactionDef
@@ -442,15 +442,30 @@ def perform_unit_attack(ctx: Ctx, attacker: UnitState, target: UnitState, *, pri
     ``min`` 模式視為失手、``max`` 模式視為暴擊）。被動技能的觸發等傷害結算完才處理。
     """
     with holding(ctx):
-        target_xy = target.xy
-        ambushed = _attack_once(ctx, attacker, target, primary=primary)
-        after_attack(ctx, attacker, target_xy, ambushed=ambushed)
+        target_xy, attacker_xy = target.xy, attacker.xy
+        ambushed, rolled = _attack_once(ctx, attacker, target, primary=primary)
+        turns = [(target, attacker_xy)] if rolled and attacker.weapon.is_melee else []
+        after_attack(ctx, attacker, target_xy, ambushed=ambushed, turns=turns)
 
 
-def after_attack(ctx: Ctx, attacker: UnitState, target_xy: XY | None, *, ambushed: bool) -> None:
+def after_attack(
+    ctx: Ctx,
+    attacker: UnitState,
+    target_xy: XY | None,
+    *,
+    ambushed: bool,
+    turns: Iterable[tuple[UnitState, XY]] = (),
+) -> None:
     """一次攻擊（普攻）或施放（主動技能、反應技）結算完（Phase 3D-8d）：面向主要目標
     （``target_xy``；``None`` 為沒有單位或物件目標，朝向不變）；隱蔽中擲過命中（潛行偷襲）時移除
-    攻擊者的 ``concealed``（原因 ``ambushed``）。"""
+    攻擊者的 ``concealed``（原因 ``ambushed``）。
+
+    ``turns``（Phase 3C-6a，``05-戰鬥.md`` 5.1）：被近戰攻擊（不論命中與否）的單位與當時攻擊者的
+    位置——結算完才轉身面向攻擊者（所以同一次攻擊裡的背刺判定與 ``from_behind`` 效果仍以擲骰當下
+    的朝向為準）；倒下的單位不轉。"""
+    for victim, from_xy in turns:
+        if victim.alive:
+            face_toward(victim, from_xy)
     if not attacker.alive:
         return
     if target_xy is not None:
@@ -462,11 +477,13 @@ def after_attack(ctx: Ctx, attacker: UnitState, target_xy: XY | None, *, ambushe
         )
 
 
-def _attack_once(ctx: Ctx, attacker: UnitState, target: UnitState, *, primary: bool) -> bool:
-    """回傳這次攻擊是不是在隱蔽中發動（潛行偷襲，結算完要移除隱蔽）。"""
+def _attack_once(
+    ctx: Ctx, attacker: UnitState, target: UnitState, *, primary: bool
+) -> tuple[bool, bool]:
+    """回傳（這次攻擊是不是在隱蔽中發動——潛行偷襲，結算完要移除隱蔽；有沒有擲命中）。"""
     ally_targeted_reactions(ctx, attacker, target)  # 相鄰友方被瞄準：命中判定之前（3D-3）
     if not attacker.alive or not target.alive:
-        return False
+        return False, False
     forced: ForcedOutcome | None = None
     if ctx.preview is not None:
         ctx.mark_branch()
@@ -500,7 +517,7 @@ def _attack_once(ctx: Ctx, attacker: UnitState, target: UnitState, *, primary: b
         ambush=roll.ambush,
     )
     if not roll.hit:
-        return roll.ambush > 0
+        return roll.ambush > 0, True
     guardian = try_intercept(ctx, attacker, target, rolled_event.seq)
     if guardian is not None:
         target = guardian  # 替隊友擋攻擊：傷害改作用在守護者身上（不重擲命中）
@@ -527,7 +544,7 @@ def _attack_once(ctx: Ctx, attacker: UnitState, target: UnitState, *, primary: b
         ],
     )
     hit_reactions(ctx, attacker, target, melee=is_melee_attack(ctx, attacker))
-    return roll.ambush > 0
+    return roll.ambush > 0, True
 
 
 def opportunity_attacks(ctx: Ctx, mover: UnitState, from_xy: XY, to_xy: XY) -> None:

@@ -167,7 +167,7 @@ def test_attacking_and_casting_on_a_unit_face_the_target() -> None:
     state.units[U1].facing = "east"
     after = resolve(with_rolls(state, [(20, 2)]), Attack(unit_id=U1, target_id=U2)).state
     assert after.units[U1].facing == "south"
-    assert after.units[U2].facing == "west"  # 被攻擊的一方不轉身
+    assert after.units[U2].facing == "north"  # 被近戰攻擊後轉身面向攻擊者（3C-6a）
     skill = duel((3, 4), (3, 3), skills=("skill_pincer_strike",))
     action = UseSkill(unit_id=U1, skill_id="skill_pincer_strike", target_id=U2)
     assert resolve(with_rolls(skill, [(20, 2)]), action).state.units[U1].facing == "north"

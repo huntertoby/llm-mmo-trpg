@@ -223,7 +223,7 @@ def use_skill(ctx: Ctx, caster: UnitState, action: UseSkill) -> None:
             cast = _Cast(ctx, caster, skill, action, area)
             face = _primary_xy(ctx.state, caster, action)
             cast.run()
-            after_attack(ctx, caster, face, ambushed=cast.ambushed)
+            after_attack(ctx, caster, face, ambushed=cast.ambushed, turns=cast.melee_victims)
         if skill.kind == "active":  # copy_skill 的複製對象（Phase 3C-4b）
             _record_cast(ctx.state, caster, skill)
         _apply_self_status(ctx, caster, skill)
@@ -422,7 +422,7 @@ def use_reaction_skill(
             single = skill.shape.type == "single" and trigger is not None and trigger is not owner
             face = trigger.xy if single and trigger is not None else None
             cast.run()
-            after_attack(ctx, owner, face, ambushed=cast.ambushed)
+            after_attack(ctx, owner, face, ambushed=cast.ambushed, turns=cast.melee_victims)
             collect_cast(ctx, owner, skill)
     finally:
         ctx.trigger_depth = outer
@@ -522,6 +522,8 @@ class _Cast:
         """賭注擲骰時的事件數：``self_damage_of_hit`` 以這之後造成的傷害計算。"""
         self.pays_miss_cost = True
         """失手反噬（``cost.on_miss``）是否適用：複製的技能不付代價，所以不適用。"""
+        self.melee_victims: list[tuple[UnitState, XY]] = []
+        """被這次施放的近戰命中判定打到的單位與當時施放者的位置：結算完轉身（Phase 3C-6a）。"""
 
     # ------------------------------------------------------------------
     # 命中
@@ -604,6 +606,8 @@ class _Cast:
             ambush=roll.ambush,
         )
         self.hits[unit.id] = roll
+        if self.profile.melee and unit is not self.caster:
+            self.melee_victims.append((unit, self.caster.xy))
         if roll.hit and self.skill.shape.type == "single":
             guardian = try_intercept(
                 ctx, self.caster, unit, rolled_event.seq, skill_id=self.skill.id
