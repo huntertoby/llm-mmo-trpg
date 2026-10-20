@@ -54,6 +54,8 @@ __all__ = [
     "DASH",
     "DELAYED_DAMAGE",
     "DISPEL",
+    "EFFECT_NON_PARAM_FIELDS",
+    "EFFECT_PARAM_FIELDS",
     "EXTRA_REACTION",
     "GAMBLE",
     "GAMBLE_BRANCH_TYPES",
@@ -828,54 +830,16 @@ class EffectSpec(ContentModel):
     condition: ConditionSpec | None = None
 
     def param_values(self) -> dict[str, Any]:
-        """已填寫的原語參數（不含 ``type``、``affects``、``condition``）。"""
-        names = (
-            "amount",
-            "anchor",
-            "chance_permille",
-            "collision_dice",
-            "count",
-            "damage_multiplier_permille",
-            "dice",
-            "distance",
-            "duration",
-            "effects",
-            "element",
-            "explode",
-            "hp_permille",
-            "knock_prone",
-            "landing",
-            "lifesteal_permille",
-            "lose",
-            "multiplier_permille",
-            "object",
-            "on_hit",
-            "on_kill",
-            "per_stack_permille",
-            "permille",
-            "radius",
-            "range",
-            "resource",
-            "rounds",
-            "rule",
-            "scale",
-            "scaling",
-            "self_damage_permille_of_hit",
-            "skill",
-            "speed",
-            "split_heal",
-            "splash",
-            "stack",
-            "status",
-            "surface",
-            "tag",
-            "then",
-            "unit",
-            "when",
-            "which",
-            "win",
-        )
-        return {n: getattr(self, n) for n in names if getattr(self, n) is not None}
+        """已填寫的原語參數（不含 ``type``、``affects``、``condition``；欄位清單由
+        :data:`EFFECT_PARAM_FIELDS` 從 model 推導，依名稱排序）。"""
+        return {n: getattr(self, n) for n in EFFECT_PARAM_FIELDS if getattr(self, n) is not None}
+
+
+EFFECT_NON_PARAM_FIELDS = frozenset({"type", "affects", "condition"})
+"""``EffectSpec`` 中不是原語參數的欄位（其餘欄位一律視為參數，新增欄位不必另外登記）。"""
+
+EFFECT_PARAM_FIELDS = tuple(sorted(set(EffectSpec.model_fields) - EFFECT_NON_PARAM_FIELDS))
+"""``EffectSpec`` 的原語參數欄位名稱（從 ``model_fields`` 推導）。"""
 
 
 class SelfStatusCost(ContentModel):
