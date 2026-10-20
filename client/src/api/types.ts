@@ -100,3 +100,24 @@ export function asEvent(raw: Record<string, unknown>): EventBase {
 export function isUnitMoved(e: EventBase): e is UnitMovedEvent {
   return e.type === "unit_moved";
 }
+// roguelite 一輪（Phase 3-5c-1）
+export type RunResponse = Schemas["RunResponse"];
+export type RunBattleResponse = Schemas["RunBattleResponse"];
+export type RunHero = Schemas["HeroOut"];
+export type RunNode = Schemas["NodeOut"];
+export type RunOffer = Schemas["OfferOut"];
+export type RunPlan = Schemas["BattlePlanOut"];
+export type RunRecord = Schemas["BattleRecord"];
+export type RunSaveOut = Schemas["SaveOut"];
+export type RunSaveSummary = Schemas["SaveSummary"];
+export type AttributeId = Schemas["Attribute"];
+/** `POST /api/runs/{id}/choice` 的請求（工坊另有同名的 `Choice`，所以加前綴）。 */
+export type RunChoice =
+  | Schemas["LevelUpChoice"]
+  | Schemas["RerollChoice"]
+  | Schemas["PickChoice"]
+  | Schemas["LeaveChoice"];
+/** 開新一輪；`attributes` 省略時伺服器把開局點數全部點在技能最常用的縮放屬性。 */
+export type CreateRunRequest = Omit<Schemas["CreateRunRequest"], "attributes"> & {
+  attributes?: Partial<Record<AttributeId, number>>;
+};

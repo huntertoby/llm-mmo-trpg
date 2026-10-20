@@ -6,10 +6,16 @@ import type {
   CreateBattleRequest,
   DraftOptions,
   FollowupTarget,
+  CreateRunRequest,
   Glossary,
   MapSummary,
   OrderSet,
   PreviewOut,
+  RunBattleResponse,
+  RunChoice,
+  RunResponse,
+  RunSaveOut,
+  RunSaveSummary,
   SkillCard,
   UseSkill,
   WorkshopArena,
@@ -92,6 +98,17 @@ export const api = {
     request<WorkshopRandom>("POST", "/workshop/random", body),
   workshopExport: (skill: Record<string, unknown>) =>
     request<WorkshopExport>("POST", "/workshop/export", { skill }),
+  /** roguelite 一輪（Phase 3-5c-1）。 */
+  createRun: (body: CreateRunRequest) => request<RunResponse>("POST", "/runs", body),
+  runSaves: () => request<RunSaveSummary[]>("GET", "/runs/saves"),
+  loadRun: (runId: string) => request<RunResponse>("POST", "/runs/load", { run_id: runId }),
+  run: (runId: string) => request<RunResponse>("GET", `/runs/${encodeURIComponent(runId)}`),
+  runBattle: (runId: string) =>
+    request<RunBattleResponse>("POST", `/runs/${encodeURIComponent(runId)}/battle`),
+  runChoice: (runId: string, choice: RunChoice) =>
+    request<RunResponse>("POST", `/runs/${encodeURIComponent(runId)}/choice`, choice),
+  saveRun: (runId: string) =>
+    request<RunSaveOut>("POST", `/runs/${encodeURIComponent(runId)}/save`),
   decide: (
     id: string,
     accept: boolean,
