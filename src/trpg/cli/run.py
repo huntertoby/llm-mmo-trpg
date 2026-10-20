@@ -160,7 +160,7 @@ def cmd_run_auto(
     except RunError as exc:
         print(f"錯誤：{exc}", file=sys.stderr)
         return 1
-    _print_result(final, out)
+    _print_result(library, final, out)
     if save_dir is not None:
         print(f"已存檔：{write_save(save_dir, RunSave(run_id=run_id, run=final))}", file=out)
     return 0
@@ -197,9 +197,10 @@ def _skill_name(library: ContentLibrary, run: RunState, skill_id: str) -> str:
     return f"{skill.name_zh}（{skill_id}）"
 
 
-def _resources(run: RunState) -> str:
+def _resources(library: ContentLibrary, run: RunState) -> str:
+    max_hp = run.max_hp_in(library.ruleset.core)
     return (
-        f"HP {run.hp}/{run.max_hp} 法力 {run.mana}/{run.max_mana} 源力 {run.source}"
+        f"HP {run.hp}/{max_hp} 法力 {run.mana}/{run.max_mana} 源力 {run.source}"
         f" 等級 {run.level} 經驗 {run.xp}"
     )
 
@@ -211,7 +212,7 @@ def _print_header(library: ContentLibrary, run: RunState, out: TextIO) -> None:
 
 def _print_summary(library: ContentLibrary, run: RunState, out: TextIO) -> None:
     _print_header(library, run, out)
-    print(f"  {_resources(run)}；目前：{_NODE_TEXT[run.node.kind]}", file=out)
+    print(f"  {_resources(library, run)}；目前：{_NODE_TEXT[run.node.kind]}", file=out)
     print("  技能：" + "、".join(_skill_name(library, run, s) for s in run.hero.skills), file=out)
     for plan in run.plan:
         enemies = "、".join(library.unit(t).name_zh for t in plan.enemies)
@@ -272,8 +273,8 @@ def _skill_change(library: ContentLibrary, before: RunState, after: RunState) ->
     return text
 
 
-def _print_result(run: RunState, out: TextIO) -> None:
+def _print_result(library: ContentLibrary, run: RunState, out: TextIO) -> None:
     victory = getattr(run.node, "victory", False)
     won = sum(1 for r in run.history if r.won)
     result = "勝利" if victory else "失敗"
-    print(f"結果：{result}（{won}/{len(run.plan)} 場），{_resources(run)}", file=out)
+    print(f"結果：{result}（{won}/{len(run.plan)} 場），{_resources(library, run)}", file=out)

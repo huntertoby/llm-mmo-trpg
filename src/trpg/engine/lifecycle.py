@@ -228,14 +228,15 @@ def make_unit(
         template.reactions if template.reactions is not None else rules.reactions.default_rules
     )
     reactions = (*_auto_reaction_rules(template, rules, reactions), *reactions)
+    max_hp = rules.core.template_max_hp(template)
     return UnitState(
         id=uid,
         template_id=template.id,
         name_zh=name,
         team=team,
         pos=pos,
-        hp=template.max_hp,
-        max_hp=template.max_hp,
+        hp=max_hp,
+        max_hp=max_hp,
         attributes=dict(template.attributes),
         speed=template.speed,
         armor_bonus=template.armor_bonus,

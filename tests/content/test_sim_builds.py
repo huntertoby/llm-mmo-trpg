@@ -95,12 +95,13 @@ def test_a_build_hero_id_must_match_and_ids_must_be_unique() -> None:
 
 def test_standard_enemies_follow_the_tier_budget_hp_formula() -> None:
     lib = library()
-    budget = lib.ruleset.core.tier_budget
+    core = lib.ruleset.core
+    budget = core.tier_budget
     bandit = lib.unit("bandit")
     for tier in range(1, 6):
         enemy = lib.unit(f"std_enemy_t{tier}")
         expected = (30 * budget[tier] * 2 + budget[1]) // (2 * budget[1])  # 四捨五入
-        assert enemy.max_hp == expected, tier
+        assert core.template_max_hp(enemy) == expected, tier
         assert enemy.skills == () and enemy.ai_profile == "brute" and "sim" in enemy.tags
         assert enemy.attributes == bandit.attributes
         assert (enemy.armor_bonus, enemy.weapon, enemy.resist) == (
@@ -108,4 +109,10 @@ def test_standard_enemies_follow_the_tier_budget_hp_formula() -> None:
             bandit.weapon,
             bandit.resist,
         )
-    assert [lib.unit(f"std_enemy_t{t}").max_hp for t in range(1, 6)] == [30, 39, 49, 62, 77]
+    assert [core.template_max_hp(lib.unit(f"std_enemy_t{t}")) for t in range(1, 6)] == [
+        30,
+        39,
+        49,
+        62,
+        77,
+    ]

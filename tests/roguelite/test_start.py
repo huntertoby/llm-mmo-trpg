@@ -20,7 +20,13 @@ def test_new_run_uses_the_build_hero_with_base_attributes_and_four_free_points()
     assert run.hero.attributes[Attribute.STR] == 13
     assert run.hero.attributes[Attribute.CON] == 11
     assert sum(run.hero.attributes.values()) == 6 * 10 + 4
-    assert (run.hp, run.mana) == (build.max_hp, build.max_mana)
+    # 體質加 1 點：起始 HP ＝ build 英雄原本的 HP ＋ 1 × 每點體質的 HP（Phase 3-7）
+    core = lib.ruleset.core
+    assert (run.hp, run.mana) == (
+        core.template_max_hp(build) + core.hp_per_con_point,
+        build.max_mana,
+    )
+    assert run.hp == run.max_hp_in(core)
     assert run.source == lib.ruleset.core.source_min_at_start
     assert (run.level, run.xp) == (1, 0)
     assert run.node == BattleNode(index=1)

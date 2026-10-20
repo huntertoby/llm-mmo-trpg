@@ -1355,6 +1355,11 @@ button.selected {
   font-weight: 700;
 }
 
+.run-alloc-hp {
+  color: #7ddc9a;
+  white-space: nowrap;
+}
+
 .run-offer-cards {
   display: grid;
   grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));

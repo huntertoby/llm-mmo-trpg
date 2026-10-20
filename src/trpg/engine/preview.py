@@ -1112,7 +1112,7 @@ def _summon_infos(state: BattleState, events: list[EventBase]) -> tuple[SummonIn
                     name_zh=template.name_zh,
                     pos=(e.pos.x, e.pos.y),
                     expires_round=e.expires_round,
-                    max_hp=template.max_hp,
+                    max_hp=state.ruleset.core.template_max_hp(template),
                     totem_radius=None if template.totem is None else template.totem.radius,
                     replaces=tuple(replaced),
                 )

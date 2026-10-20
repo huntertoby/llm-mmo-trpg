@@ -158,6 +158,22 @@ export function allocationTotal(alloc: Allocation): number {
   return ATTRIBUTES.reduce((sum, a) => sum + (alloc[a.id] ?? 0), 0);
 }
 
+/** 體質配點帶來的最大 HP 增量（每點 `hpPerCon`；Phase 3-7）。 */
+export function conHpGain(alloc: Allocation, hpPerCon: number): number {
+  return (alloc.con ?? 0) * hpPerCon;
+}
+
+/** 體質高於（低於）基準 `conBase` 帶來的最大 HP 加成（主角面板用）。 */
+export function conHpBonus(con: number, conBase: number, hpPerCon: number): number {
+  return (con - conBase) * hpPerCon;
+}
+
+/** 「＋6 HP」「−3 HP」；0 時為空字串。 */
+export function hpDeltaText(delta: number): string {
+  if (delta === 0) return "";
+  return `${delta > 0 ? "＋" : "−"}${Math.abs(delta)} HP`;
+}
+
 /** 加減一點（不會小於 0；已配滿 `points` 時不能再加）。 */
 export function adjustAllocation(alloc: Allocation, id: AttributeId, delta: 1 | -1, points: number): Allocation {
   const now = alloc[id] ?? 0;

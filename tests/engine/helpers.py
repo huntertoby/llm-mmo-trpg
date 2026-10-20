@@ -84,7 +84,16 @@ def template(base: str = "bandit", **overrides: object) -> UnitTemplate:
         attrs = dict(t.attributes)
         attrs.update({Attribute(k): v for k, v in overrides["attributes"].items()})
         overrides["attributes"] = attrs
-    return UnitTemplate.model_validate({**t.model_dump(), **overrides})
+    merged = {**t.model_dump(), **overrides}
+    if "max_hp" in overrides:  # 測試寫的 max_hp 是「最終 HP」：扣掉體質加成（Phase 3-7）
+        core = library().ruleset.core
+        wanted = int(overrides["max_hp"])  # type: ignore[call-overload]
+        bonus = (merged["attributes"][Attribute.CON] - core.hp_con_base) * core.hp_per_con_point
+        if wanted - bonus < 1:  # 基礎 HP 至少 1：體質加成扣不掉時，改用中性體質
+            merged["attributes"] = {**merged["attributes"], Attribute.CON: core.hp_con_base}
+            bonus = 0
+        merged["max_hp"] = wanted - bonus
+    return UnitTemplate.model_validate(merged)
 
 
 def spawn(

@@ -127,15 +127,21 @@ def new_run(
     if problems:
         raise ChoiceError("；".join(problems))
     base = {a: rules.base_attribute for a in Attribute}
-    hero = apply_allocation(build.hero.model_copy(update={"attributes": base}), allocation)
     core = library.ruleset.core
+    # 範本的基礎 HP ＝ build 英雄在「體質 10」時的 HP（亦即 build 英雄以自己的體質算出的最終 HP），
+    # 開局配點加體質之後才額外增加（Phase 3-7）
+    authored_hp = core.template_max_hp(build.hero)
+    hero = apply_allocation(
+        build.hero.model_copy(update={"attributes": base, "max_hp": authored_hp}), allocation
+    )
+    start_hp = core.run_max_hp(hero.max_hp, hero.attributes[Attribute.CON], 1)
     return RunState(
         seed=seed,
         build_id=build_id,
         hero=hero,
         level=1,
         xp=0,
-        hp=hero.max_hp,
+        hp=start_hp,
         mana=hero.max_mana,
         source=core.source_min_at_start,
         plan=make_plan(library, seed),

@@ -3,7 +3,7 @@
 id: bandit_shieldbearer
 name_zh: 盜賊盾衛
 attributes: {str: 13, dex: 10, con: 14, int: 8, wis: 10, wil: 10}
-max_hp: 32
+max_hp: 20
 speed: 4
 armor_bonus: 6
 weapon: one_handed_sword

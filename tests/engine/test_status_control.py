@@ -110,11 +110,28 @@ def test_the_status_needs_a_hit_before_the_save(monkeypatch: pytest.MonkeyPatch)
 
 
 def test_statuses_without_save_attr_apply_on_hit(monkeypatch: pytest.MonkeyPatch) -> None:
-    state = battle(_status_skill("bleed"), [(5, 3)])
+    state = battle(_status_skill("burning"), [(5, 3)])
     script_rolls(monkeypatch, [HIT])
     result = cast(state, target_id=U2)
     assert not of(result, StatusSaveRolled)
-    assert result.state.units[U2].has_status("bleed")
+    assert result.state.units[U2].has_status("burning")
+
+
+@pytest.mark.parametrize("status", ["bleed", "poison"])
+def test_bleed_and_poison_are_resisted_with_constitution(
+    monkeypatch: pytest.MonkeyPatch, status: str
+) -> None:
+    """Phase 3-7：中毒、流血的抵抗屬性是體質（守方）。"""
+    state = battle(_status_skill(status), [(5, 3)])
+    script_rolls(monkeypatch, [HIT, FAIL])
+    result = cast(state, target_id=U2)
+    (save,) = of(result, StatusSaveRolled)
+    assert save.save_attr is Attribute.CON
+    assert save.defense_value == state.units[U2].attributes[Attribute.CON]
+    assert not save.applied and not result.state.units[U2].has_status(status)
+    script_rolls(monkeypatch, [HIT, WIN])
+    applied = cast(state, target_id=U2)
+    assert applied.state.units[U2].has_status(status)
 
 
 def test_no_save_is_rolled_against_allies_or_self() -> None:
@@ -337,7 +354,7 @@ def test_preview_reports_the_converted_status_for_a_boss() -> None:
 
 
 def test_preview_omits_statuses_without_a_save() -> None:
-    state = battle(_status_skill("bleed"), [(5, 3)])
+    state = battle(_status_skill("burning"), [(5, 3)])
     assert preview(state, _preview_action()).targets[0].status_chances == ()
 
 

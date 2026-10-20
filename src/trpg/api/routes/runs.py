@@ -55,8 +55,13 @@ def create_run(body: CreateRunRequest, request: Request) -> RunResponse:
 @router.get("/rules")
 def get_rules(request: Request) -> RunRules:
     """開局規則（來自 ``content/roguelite.yaml``）：前端不寫死配點數。"""
-    rules = runs_of(request).library.roguelite
-    return RunRules(start_points=rules.start_free_points, base_attribute=rules.base_attribute)
+    library = runs_of(request).library
+    rules = library.roguelite
+    return RunRules(
+        start_points=rules.start_free_points,
+        base_attribute=rules.base_attribute,
+        hp_per_con_point=library.ruleset.core.hp_per_con_point,
+    )
 
 
 @router.get("/saves")

@@ -144,7 +144,10 @@ def test_finished_battle_writes_back_and_levels_up(
     hero_view = _unit(final, final["hero_id"])
     after = _ok(runs_client.get(url))
     assert after["battle_id"] is None
-    assert after["hero"]["hp"] == max(hero_view["hp"], 1)
+    level_gain = library.ruleset.core.level_hp_bonus(  # 升到 2 級，目前 HP 同步增加
+        library.builds.by_id()[BUILD].hero.max_hp, 2
+    )
+    assert after["hero"]["hp"] == max(hero_view["hp"], 1) + level_gain
     assert after["history"][0]["won"] and after["history"][0]["index"] == 1
     node = after["node"]
     assert node["kind"] == "level_up" and node["points"] == 2
@@ -280,3 +283,17 @@ def test_between_battles_save_ignores_the_hash(runs_client: TestClient, save_dir
     _rewrite_save(save_dir, run["run_id"], ruleset_hash=None)  # 舊存檔沒有此欄位
     loaded = _ok(runs_client.post("/api/runs/load", json={"run_id": run["run_id"]}))
     assert loaded["node"]["kind"] == "battle"
+
+
+def test_rules_and_hero_expose_the_hp_per_constitution_point(
+    runs_client: TestClient, library: ContentLibrary
+) -> None:
+    """Phase 3-7：前端的「＋N HP」預覽用的係數來自 core.yaml。"""
+    core = library.ruleset.core
+    assert runs_client.get("/api/runs/rules").json()["hp_per_con_point"] == core.hp_per_con_point
+    hero = _create(runs_client)["hero"]
+    assert (hero["hp_per_con_point"], hero["hp_con_base"]) == (
+        core.hp_per_con_point,
+        core.hp_con_base,
+    )
+    assert hero["max_hp"] == hero["hp"]

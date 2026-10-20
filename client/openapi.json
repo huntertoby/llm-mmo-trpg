@@ -3297,6 +3297,14 @@
             "type": "integer",
             "title": "Max Hp"
           },
+          "hp_per_con_point": {
+            "type": "integer",
+            "title": "Hp Per Con Point"
+          },
+          "hp_con_base": {
+            "type": "integer",
+            "title": "Hp Con Base"
+          },
           "mana": {
             "type": "integer",
             "title": "Mana"
@@ -3336,6 +3344,8 @@
           "attributes",
           "hp",
           "max_hp",
+          "hp_per_con_point",
+          "hp_con_base",
           "mana",
           "max_mana",
           "source",
@@ -4951,13 +4961,18 @@
           "base_attribute": {
             "type": "integer",
             "title": "Base Attribute"
+          },
+          "hp_per_con_point": {
+            "type": "integer",
+            "title": "Hp Per Con Point"
           }
         },
         "additionalProperties": false,
         "type": "object",
         "required": [
           "start_points",
-          "base_attribute"
+          "base_attribute",
+          "hp_per_con_point"
         ],
         "title": "RunRules",
         "description": "開局規則（``content/roguelite.yaml``）。"

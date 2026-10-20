@@ -61,8 +61,13 @@ def battle_setup(library: ContentLibrary, run: RunState) -> BattleSetup:
     base = build_setup(
         library, plan.map_id, rules.companions, plan.enemies, max_rounds=rules.max_rounds
     )
+    core = library.ruleset.core
+    # 等級加成併入範本的基礎 HP，體質的部分由引擎加（與 RunState.max_hp_in 同一個式子）
+    leveled = run.hero.model_copy(
+        update={"max_hp": run.hero.max_hp + core.level_hp_bonus(run.hero.max_hp, run.level)}
+    )
     hero = UnitSpawn(
-        template=run.hero,
+        template=leveled,
         weapon=library.weapons[run.hero.weapon],
         team=Team.ALLY,
         source=run.source,
@@ -71,6 +76,16 @@ def battle_setup(library: ContentLibrary, run: RunState) -> BattleSetup:
     )
     ruleset = library.ruleset.with_skills(run.generated_skills)
     return base.model_copy(update={"units": (hero, *base.units), "ruleset": ruleset})
+
+
+def with_hp_change(library: ContentLibrary, before: RunState, after: RunState) -> RunState:
+    """``after`` 的最大 HP 與 ``before`` 不同時（升級、配點加體質），目前 HP 同步增加（或減少，
+    不低於 1）相同的量。"""
+    core = library.ruleset.core
+    delta = after.max_hp_in(core) - before.max_hp_in(core)
+    if delta == 0:
+        return after
+    return after.model_copy(update={"hp": max(1, after.hp + delta)})
 
 
 def hero_unit_id(state: BattleState) -> UnitId:
@@ -144,8 +159,12 @@ def next_node(library: ContentLibrary, run: RunState) -> RunState:
     rules = library.roguelite
     core = library.ruleset.core
     if run.levels_pending > 0:
-        leveled = run.model_copy(
-            update={"level": run.level + 1, "levels_pending": run.levels_pending - 1}
+        leveled = with_hp_change(
+            library,
+            run,
+            run.model_copy(
+                update={"level": run.level + 1, "levels_pending": run.levels_pending - 1}
+            ),
         )
         offer = make_offer(library, leveled, "level_up")
         node = LevelUpNode(
@@ -158,7 +177,7 @@ def next_node(library: ContentLibrary, run: RunState) -> RunState:
     if done in rules.campfire_after and done not in run.campfires_done:
         return run.model_copy(
             update={
-                "hp": run.max_hp,
+                "hp": run.max_hp_in(core),
                 "mana": run.max_mana,
                 "source": min(core.source_max, run.source + rules.source.campfire),
                 "campfires_done": (*run.campfires_done, done),
@@ -182,9 +201,8 @@ def apply_choice(library: ContentLibrary, run: RunState, choice: Choice) -> RunS
         if problems:
             raise ChoiceError("；".join(problems))
         hero = apply_allocation(run.hero, choice.attributes)
-        taken = take_candidate(
-            library, run.model_copy(update={"hero": hero}), node.offer, choice.pick, choice.replace
-        )
+        allocated = with_hp_change(library, run, run.model_copy(update={"hero": hero}))
+        taken = take_candidate(library, allocated, node.offer, choice.pick, choice.replace)
         return next_node(library, taken)
     if isinstance(node, CampfireNode):
         return _campfire(library, run, node, choice)

@@ -94,10 +94,11 @@ def scene(
     m = make_map(FLAT7, ally=[owner_xy], enemy=[foe_xy])
     fighter = caster_template(owner, base=owner_base, max_hp=owner_hp or 60)
     enemy = no_reactions(
-        foe_base, max_mana=99, skills=[s if isinstance(s, str) else s.id for s in foe]
+        foe_base,
+        max_mana=99,
+        skills=[s if isinstance(s, str) else s.id for s in foe],
+        **({} if foe_hp is None else {"max_hp": foe_hp}),
     )
-    if foe_hp is not None:
-        enemy = enemy.model_copy(update={"max_hp": foe_hp})
     state = make_state(
         m, [spawn(Team.ALLY, owner_xy, fighter), spawn(Team.ENEMY, foe_xy, enemy)], skills=defs
     )

@@ -24,6 +24,11 @@ melee_height_limit_max_range: 2   # 射程不超過此值的武器（近戰、�
 initiative_attr_base: 10      # 先攻：d20 + (敏捷 − 10) // 2
 initiative_attr_divisor: 2
 
+# --- 衍生數值（Phase 3-7；初值）---
+hp_con_base: 10                # 體質 10 為基準：最大 HP ＝ 範本基礎 HP ＋（體質 − 10）× hp_per_con_point（至少 1）
+hp_per_con_point: 3           # 每點體質 +3 最大 HP（敵我同一公式）
+level_hp_permille: 50          # roguelite 每升一級：最大 HP + 基礎 HP × 5%（向下取整）
+
 # --- 傷害 ---
 basic_attack_attr_multiplier_permille: 300   # 普攻的屬性倍率（0.3）
 element_mod_floor_permille: 250              # 元素修正下限（總減傷上限 75%）
