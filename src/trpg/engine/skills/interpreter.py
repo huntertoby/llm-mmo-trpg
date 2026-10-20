@@ -1044,7 +1044,9 @@ class _Cast:
         if kind == "teleport":
             return self.teleport(spec)
         if kind == CHARGE_THROUGH:
-            self.charge(spec)  # 自己一步一步結算（移動、命中、傷害、擊倒或推開交錯）
+            self.charge(
+                spec, self._gamble_for(effect)
+            )  # 自己一步一步結算（移動、命中、傷害、擊倒或推開交錯）
             return []
         if kind == LEAP:
             return self.leap(spec)
@@ -1386,45 +1388,88 @@ class _Cast:
 
     # -- 數值 ----------------------------------------------------------
 
+    def _gamble_for(self, effect: ResolvedEffect) -> int:
+        """賭注成功分支的傷害倍率（‰）；賭注分支自己的傷害（``spec_index < 0``）不再乘。"""
+        return self.gamble_mult if effect.spec_index >= 0 else PERMILLE
+
+    def _attack_damage(
+        self,
+        unit: UnitState,
+        spec: EffectSpec,
+        *,
+        dice: Dice | None,
+        flat: int = 0,
+        scaled: int = 0,
+        multiplier: int = PERMILLE,
+        element: Element,
+        gamble: int,
+        cause: Literal["attack", "backlash"] = "attack",
+        explode_max: int = 0,
+        preset: tuple[int, ...] | None = None,
+    ) -> DamageEffect:
+        """對 ``unit`` 的一次攻擊傷害（``damage``、``hurl_object``、``charge_through`` 共用）：
+        命中的暴擊與格擋倍率、消耗層數的加成（``consume_stack``）、超載、``scaling``、修正規則的傷害‰、
+        賭注倍率與穿透後方的折扣。元素由呼叫端決定（已含修正規則的 ``add_element``）。"""
+        roll = self.hits.get(unit.id)
+        block = self.blocks.get(unit.id, PERMILLE)
+        bonus = PERMILLE + self.caster_bonus + self.target_bonus.get(unit.id, 0)
+        bonus += overload_bonus(self.ctx.state, self.caster, self.skill)  # 超載層數（3D-7b）
+        bonus += scale_bonus(self.ctx.state, self.caster, unit, spec.scaling)
+        bonus = bonus * self._modifier(modifiers.damage_permille, unit) // PERMILLE
+        bonus = bonus * gamble // PERMILLE
+        behind = self.behind_permille(unit)
+        return DamageEffect(
+            target_id=unit.id,
+            source_id=self.caster.id,
+            cause=cause,
+            element=element,
+            dice=dice,
+            flat=flat,
+            scaled_permille=scaled,
+            crit=roll is not None and roll.crit,
+            min_damage=self.ctx.core.min_damage_on_hit,
+            explode_max=explode_max,
+            preset_rolls=preset,
+            multiplier_permille=multiplier
+            * block
+            * bonus
+            * behind
+            // (PERMILLE * PERMILLE * PERMILLE),
+            pierce_permille=behind,
+        )
+
+    def _physical_element(self) -> Element:
+        """沒有自己元素的傷害（投擲、衝撞）：物理，受修正規則的 ``add_element`` 影響。"""
+        if not self.modified:
+            return Element.PHYSICAL
+        return modifiers.damage_element(self.ctx.state, self.caster, self.use, Element.PHYSICAL)
+
     def damage(self, effect: ResolvedEffect, spec: EffectSpec) -> list[EffectBase]:
         params = damage_parameters(
             self.ctx.state, self.caster, self.skill, spec, modified=self.modified
         )
         dice, flat, scaled, multiplier, element = params
         min_damage = self.ctx.core.min_damage_on_hit
-        gamble = self.gamble_mult if effect.spec_index >= 0 else PERMILLE  # 分支自己的傷害不再乘
-        overload = overload_bonus(self.ctx.state, self.caster, self.skill)  # 超載層數（3D-7b）
+        gamble = self._gamble_for(effect)
         explode_max = self.ctx.core.explode_max if spec.explode else 0
         batch: list[EffectBase] = []
         units = self.targets(effect.affects, spec.condition)
         healed = self.split_healed(spec)  # 聖光雙效：友方改為治療，與敵方的傷害共用同一次擲骰
         preset = self.split_rolls(spec, bool(units or healed))
         for unit in units:
-            roll = self.hits.get(unit.id)
-            block = self.blocks.get(unit.id, PERMILLE)
-            bonus = PERMILLE + self.caster_bonus + self.target_bonus.get(unit.id, 0)
-            bonus += overload + scale_bonus(self.ctx.state, self.caster, unit, spec.scaling)
-            bonus = bonus * self._modifier(modifiers.damage_permille, unit) // PERMILLE
-            bonus = bonus * gamble // PERMILLE
             batch.append(
-                DamageEffect(
-                    target_id=unit.id,
-                    source_id=self.caster.id,
-                    cause="backlash" if effect.affects == "self" else "attack",
-                    element=element,
+                self._attack_damage(
+                    unit,
+                    spec,
                     dice=dice,
                     flat=flat,
-                    scaled_permille=scaled,
-                    crit=roll is not None and roll.crit,
-                    min_damage=min_damage,
+                    scaled=scaled,
+                    multiplier=multiplier,
+                    element=element,
+                    gamble=gamble,
+                    cause="backlash" if effect.affects == "self" else "attack",
                     explode_max=explode_max,
-                    preset_rolls=preset,
-                    multiplier_permille=multiplier
-                    * block
-                    * bonus
-                    * self.behind_permille(unit)
-                    // (PERMILLE * PERMILLE * PERMILLE),
-                    pierce_permille=self.behind_permille(unit),
+                    preset=preset,
                 )
             )
         batch += [
@@ -1631,21 +1676,10 @@ class _Cast:
         assert action is not None and action.target_object_id is not None
         assert action.target_pos is not None and spec.dice is not None
         batch: list[EffectBase] = []
+        gamble, element = self._gamble_for(effect), self._physical_element()
         for unit in self.targets(effect.affects, spec.condition):
-            roll = self.hits.get(unit.id)
-            block = self.blocks.get(unit.id, PERMILLE)
-            bonus = self._modifier(modifiers.damage_permille, unit)
             batch.append(
-                DamageEffect(
-                    target_id=unit.id,
-                    source_id=self.caster.id,
-                    cause="attack",
-                    element=Element.PHYSICAL,
-                    dice=spec.dice,
-                    crit=roll is not None and roll.crit,
-                    min_damage=self.ctx.core.min_damage_on_hit,
-                    multiplier_permille=block * bonus // PERMILLE,
-                )
+                self._attack_damage(unit, spec, dice=spec.dice, element=element, gamble=gamble)
             )
         if batch:
             execute(self.ctx, batch)
@@ -1736,7 +1770,7 @@ class _Cast:
             )
         ]
 
-    def charge(self, spec: EffectSpec) -> None:
+    def charge(self, spec: EffectSpec, gamble: int) -> None:
         """``charge_through``（Phase 3D-2c）：沿直線衝向選取的終點。一格一格走：空格移動
         （``mode: dash``，陷阱、表面與墜落照常結算，被定身、倒地或倒下就停下；不給藉機攻擊的機會）；
         有單位的格子穿過去，敵人在被穿過時各擲一次命中（依路徑順序）。隊友不受影響。"""
@@ -1756,13 +1790,13 @@ class _Cast:
             target=action.target_pos,
             path=tuple(Pos(x=x, y=y) for x, y in (start, *route.cells)),
         )
-        moved = self._charge_walk(spec, route, start)
+        moved = self._charge_walk(spec, route, start, gamble)
         if moved and caster.alive:
             collect_move(ctx, caster)  # on_move 被動：衝撞算主動移動
         if self.modified:
             self._update_cooldown_delta()
 
-    def _charge_walk(self, spec: EffectSpec, route: ChargeRoute, start: XY) -> bool:
+    def _charge_walk(self, spec: EffectSpec, route: ChargeRoute, start: XY, gamble: int) -> bool:
         """衝撞沿路線前進；回傳施放者有沒有移動過。"""
         caster, state = self.caster, self.ctx.state
         first = route.cells[0]
@@ -1774,7 +1808,7 @@ class _Cast:
             occupant = state.unit_at(*cell)
             if occupant is not None and occupant.id != caster.id:
                 if occupant.team is not caster.team:
-                    self._charge_hit(spec, occupant, travel)
+                    self._charge_hit(spec, occupant, travel, gamble)
                 if state.unit_at(*cell) is not None:
                     continue  # 還站在那裡：穿過去；倒下或被推開了就走進這一格
             before = caster.xy
@@ -1789,30 +1823,17 @@ class _Cast:
                 break
         return moved
 
-    def _charge_hit(self, spec: EffectSpec, unit: UnitState, travel: XY) -> None:
+    def _charge_hit(self, spec: EffectSpec, unit: UnitState, travel: XY, gamble: int) -> None:
         """衝撞穿過敵人 ``unit``：擲命中；命中受 ``dice`` 物理傷害（暴擊、格擋與修正規則照常），
         還活著時依 ``on_hit`` 擊倒或推到路徑旁。"""
         assert spec.dice is not None
         roll = self._roll_one(unit, force_block=True)
         if not roll.hit:
             return
-        block = self.blocks.get(unit.id, PERMILLE)
-        bonus = self._modifier(modifiers.damage_permille, unit)
-        execute(
-            self.ctx,
-            [
-                DamageEffect(
-                    target_id=unit.id,
-                    source_id=self.caster.id,
-                    cause="attack",
-                    element=Element.PHYSICAL,
-                    dice=spec.dice,
-                    crit=roll.crit,
-                    min_damage=self.ctx.core.min_damage_on_hit,
-                    multiplier_permille=block * bonus // PERMILLE,
-                )
-            ],
+        damage = self._attack_damage(
+            unit, spec, dice=spec.dice, element=self._physical_element(), gamble=gamble
         )
+        execute(self.ctx, [damage])
         if not unit.alive:
             return
         if spec.on_hit == "knock_prone":
