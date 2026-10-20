@@ -48,7 +48,10 @@ def cmd_skills_list(library: ContentLibrary, out: TextIO) -> int:
         effects = "；".join(effect_summary(library, skill, e) for e in skill.effects)
         if skill.is_modifier:
             effects = "；".join(modifier_summary(library, skill, r) for r in skill.modifiers)
-        ap = "修正" if skill.is_modifier else str(skill.ap_cost)
+        # 不花 AP 的技能（被動、反應、姿態）顯示種類，不再顯示「None」（Phase 3-5a，0.10 #1）
+        ap = KIND_TEXT[skill.kind] if skill.ap_cost is None else str(skill.ap_cost)
+        if skill.is_modifier:
+            ap = "修正"
         if skill.is_activatable:  # 常駐類傳說（Phase 3D-6）
             effects += f"［{activation_text(library, skill)}］"
         print(
