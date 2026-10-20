@@ -81,7 +81,7 @@ def _hero(library: ContentLibrary, run: RunState) -> HeroOut:
         xp_next=thresholds[run.level - 1] if run.level - 1 < len(thresholds) else None,
         attributes=dict(run.hero.attributes),
         hp=run.hp,
-        max_hp=run.max_hp,
+        max_hp=run.max_hp_in(library.ruleset.core),
         mana=run.mana,
         max_mana=run.max_mana,
         source=run.source,

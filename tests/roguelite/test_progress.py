@@ -72,7 +72,10 @@ def test_won_battle_writes_back_hp_mana_and_source_plus_reward() -> None:
     hero = result.ally(battle.hero_id)
     assert hero is not None
     after = finish_battle(lib, run, battle.state, len(battle.steps))
-    assert after.hp == max(hero.hp, 1)
+    # 贏了之後升到 2 級：目前 HP 同步增加等級帶來的最大 HP（Phase 3-7）
+    level_gain = lib.ruleset.core.level_hp_bonus(run.hero.max_hp, after.level)
+    assert after.level == 2 and level_gain > 0
+    assert after.hp == max(hero.hp, 1) + level_gain
     assert after.mana == hero.mana
     assert after.source == min(3, hero.source + lib.roguelite.source.after_battle)
     assert after.xp == lib.roguelite.xp_per_battle
@@ -102,7 +105,8 @@ def test_hero_downed_in_a_won_battle_continues_with_one_hp() -> None:
     run, battle = _first_battle()
     downed = _edited(battle.state, hp=0, downed=True)
     after = finish_battle(library(), run, downed, len(battle.steps))
-    assert after.hp == 1
+    level_gain = library().ruleset.core.level_hp_bonus(run.hero.max_hp, after.level)
+    assert after.hp == 1 + level_gain  # 以 1 HP 繼續，再加上升級的最大 HP 增量
     assert after.history[-1].hero_downed
     assert not after.ended
 
@@ -143,7 +147,11 @@ def test_campfire_mid_run_restores_hp_and_mana_and_adds_source() -> None:
     run = new_run(library(), "build_push", 2)
     camp = _after(run, 3, hp=5, mana=0, source=1)
     assert camp.node == CampfireNode(after_battle=3, rerolls_left=1)
-    assert (camp.hp, camp.mana, camp.source) == (run.max_hp, run.max_mana, 2)
+    assert (camp.hp, camp.mana, camp.source) == (
+        run.max_hp_in(library().ruleset.core),
+        run.max_mana,
+        2,
+    )
     capped = _after(run, 3, source=3)
     assert capped.source == 3
     left = apply_choice(library(), camp, LeaveChoice())

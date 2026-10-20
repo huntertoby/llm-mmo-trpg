@@ -144,7 +144,10 @@ def test_finished_battle_writes_back_and_levels_up(
     hero_view = _unit(final, final["hero_id"])
     after = _ok(runs_client.get(url))
     assert after["battle_id"] is None
-    assert after["hero"]["hp"] == max(hero_view["hp"], 1)
+    level_gain = library.ruleset.core.level_hp_bonus(  # 升到 2 級，目前 HP 同步增加
+        library.builds.by_id()[BUILD].hero.max_hp, 2
+    )
+    assert after["hero"]["hp"] == max(hero_view["hp"], 1) + level_gain
     assert after["history"][0]["won"] and after["history"][0]["index"] == 1
     node = after["node"]
     assert node["kind"] == "level_up" and node["points"] == 2

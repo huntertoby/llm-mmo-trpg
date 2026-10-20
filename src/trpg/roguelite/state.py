@@ -20,6 +20,7 @@ from typing import Annotated, Literal
 from pydantic import BaseModel, ConfigDict, Field
 
 from trpg.content.battle import UnitTemplate
+from trpg.content.rules import CoreRules
 from trpg.content.skills import SkillDef
 from trpg.shared.types import Attribute
 
@@ -176,9 +177,10 @@ class RunState(_Model):
     history: tuple[BattleRecord, ...] = ()
     node: Node
 
-    @property
-    def max_hp(self) -> int:
-        return self.hero.max_hp
+    def max_hp_in(self, core: CoreRules) -> int:
+        """最大 HP ＝ 基礎 ＋（體質 − 10）× 3 ＋ 基礎 × 50‰ ×（等級 − 1）（係數在 ``core.yaml``；
+        基礎是 ``hero.max_hp``，不隨升級與配點改變）。"""
+        return core.run_max_hp(self.hero.max_hp, self.hero.attributes[Attribute.CON], self.level)
 
     @property
     def max_mana(self) -> int:

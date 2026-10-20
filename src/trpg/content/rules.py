@@ -229,6 +229,11 @@ class CoreRules(ContentModel):
         """範本建立出的單位的最大 HP（引擎對敵我所有單位用同一公式）。"""
         return self.max_hp_for(template.max_hp, template.attributes[Attribute.CON])
 
+    def run_max_hp(self, base_hp: int, con: int, level: int) -> int:
+        """roguelite 主角的最大 HP：``max_hp_for(基礎 HP ＋ 等級加成, 體質)``。戰鬥中的主角單位
+        用同一個式子（等級加成併入範本的基礎 HP，再由引擎加體質），所以兩邊永遠一致。"""
+        return self.max_hp_for(base_hp + self.level_hp_bonus(base_hp, level), con)
+
     def level_hp_bonus(self, base_hp: int, level: int) -> int:
         """roguelite 升級的最大 HP 加成：基礎 HP × ``level_hp_permille``‰ ×（等級−1），向下取整。"""
         return base_hp * self.level_hp_permille * max(0, level - 1) // 1000
