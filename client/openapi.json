@@ -5036,6 +5036,17 @@
             "type": "array",
             "title": "Effect Ids",
             "default": []
+          },
+          "followup": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Followup"
           }
         },
         "additionalProperties": false,

@@ -20,6 +20,7 @@ def test_every_skill_has_a_card_with_one_line_per_effect() -> None:
         else:
             assert card.cost[0] == f"AP {skill.ap_cost}"
         assert (card.mastery is None) == (skill.mastery is None)
+        assert (card.followup is None) == (skill.followup is None)  # 複合技能（3F-3a）
         # 卡片是 pydantic：JSON 往返
         assert SkillCard.model_validate_json(card.model_dump_json()) == card
 

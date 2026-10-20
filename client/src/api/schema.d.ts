@@ -1992,6 +1992,8 @@ export interface components {
              * @default []
              */
             effect_ids: string[];
+            /** Followup */
+            followup?: string | null;
         };
         /** @enum {string} */
         SkillRarity: "common" | "rare" | "epic" | "legendary";

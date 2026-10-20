@@ -852,13 +852,8 @@ class SkillCard(BaseModel):
     effect_ids: tuple[str, ...] = ()
     """效果原語的代碼，依技能內的順序（Phase 3D-8d：網頁用來分辨兩段選取的種類，例如一般瞬步
     ``shadowstep`` 與傳送他人 ``teleport_target`` 都是「單位 → 落點」）。"""
-
-
-def _card_effects(library: ContentLibrary, skill: SkillDef) -> tuple[str, ...]:
-    """卡片的效果列；複合技能最後再加一行第二段（「→ 第二段：…」）。"""
-    lines = tuple(effect_summary(library, skill, e) for e in skill.effects)
-    second = followup_text(library, skill)
-    return lines if second is None else (*lines, f"→ 第二段：{second}")
+    followup: str | None = None
+    """複合技能（Phase 3F-3a）第二段的一句話（:func:`followup_text`）；其他技能為 ``None``。"""
 
 
 def skill_card(
@@ -883,7 +878,7 @@ def skill_card(
         condition=(
             None if skill.condition is None else condition_summary(library, skill.condition)
         ),
-        effects=_card_effects(library, skill),
+        effects=tuple(effect_summary(library, skill, e) for e in skill.effects),
         modifiers=tuple(modifier_summary(library, skill, r) for r in skill.modifiers),
         activation=activation_text(library, skill),
         activation_id=skill.activation,
@@ -901,4 +896,5 @@ def skill_card(
         mastery_id=skill.mastery,
         timing=timing_text(library, skill),
         effect_ids=tuple(e.type for e in skill.effects),
+        followup=followup_text(library, skill),
     )
