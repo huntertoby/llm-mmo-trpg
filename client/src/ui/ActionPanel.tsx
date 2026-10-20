@@ -203,7 +203,7 @@ export function ActionPanel(props: Props) {
     <div className="panel action-panel">
       <div className="action-hint">
         {props.copying === true
-          ? "請為複製的技能選擇目標（點高亮格子或下方方向鈕），或按 Esc／「放棄施放」放棄。"
+          ? "請為複製的技能或複合技能的第二段選擇目標（點高亮格子或下方方向鈕），或按 Esc 放棄。"
           : enabled
           ? `點選藍色格子移動（${props.moveCount} 格），點選紅框敵人攻擊（${props.attackCount} 個）。`
           : "等待中……"}
