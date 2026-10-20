@@ -535,6 +535,10 @@ class PreviewOut(_ApiModel):
     """失手反噬 ``cost.on_miss`` 的說明（Phase 3D-7a，例「失手時：你獲得「倒地」」）。"""
     backstab: tuple[UnitId, ...] = ()
     """行動者會從背後攻擊的單位（Phase 3D-8d；命中率已含背刺加成，說明在 ``notes``）。"""
+    landing: XY | None = None
+    """複合技能（Phase 3F-3a）：位移段的落點＝動作段的原點；其他動作為 ``None``。"""
+    followup_tiles: tuple[XY, ...] = ()
+    """複合技能：動作段的影響格（``affected_tiles`` 已含兩段的範圍）。"""
 
 
 def _damage(d: DamageRange | None) -> DamageOut | None:
@@ -723,4 +727,6 @@ def preview_out(
         gamble=_gamble(p),
         miss_notes=p.miss_notes,
         backstab=p.backstab,
+        landing=p.landing,
+        followup_tiles=p.followup_tiles,
     )

@@ -725,6 +725,16 @@ export interface components {
             verdict: string;
             /** Verdict Zh */
             verdict_zh: string;
+            /**
+             * Segments
+             * @default []
+             */
+            segments: components["schemas"]["SegmentLine"][];
+            /**
+             * Composite Tax Permille
+             * @default 0
+             */
+            composite_tax_permille: number;
         };
         /** BuildSummary */
         BuildSummary: {
@@ -1024,6 +1034,20 @@ export interface components {
             kind: "focus_target";
             /** Target */
             target: string;
+        };
+        /**
+         * FollowupTarget
+         * @description 複合技能動作段的選取（Phase 3F-3a）：依動作段形狀的 ``targeting`` 給對應欄位——
+         *     ``direction``（直線、錐形）、``target_id``／``target_object_id``（單體）；以落點為中心的形狀
+         *     （十字、方陣、環）都不給（``target_pos`` 省略時為落點，給了也必須是落點）。
+         */
+        FollowupTarget: {
+            /** Target Id */
+            target_id?: string | null;
+            /** Target Object Id */
+            target_object_id?: string | null;
+            target_pos?: components["schemas"]["Pos"] | null;
+            direction?: components["schemas"]["Direction"] | null;
         };
         /**
          * GambleBranchOut
@@ -1684,6 +1708,12 @@ export interface components {
              * @default []
              */
             backstab: string[];
+            landing?: components["schemas"]["XY"] | null;
+            /**
+             * Followup Tiles
+             * @default []
+             */
+            followup_tiles: components["schemas"]["XY"][];
         };
         /**
          * Problem
@@ -1827,6 +1857,29 @@ export interface components {
             node: "battle" | "level_up" | "campfire" | "ended";
             /** In Battle */
             in_battle: boolean;
+        };
+        /**
+         * SegmentLine
+         * @description 複合技能（Phase 3F-3a）一段的預算：``label`` 位移段／動作段，該段自己的效果點數、條件
+         *     與協同。
+         */
+        SegmentLine: {
+            /** Label */
+            label: string;
+            /** Skeleton */
+            skeleton: string;
+            /** Shape */
+            shape: string;
+            /** Lines */
+            lines: components["schemas"]["BudgetLine"][];
+            /** Raw */
+            raw: number;
+            /** Condition Multiplier */
+            condition_multiplier: number;
+            /** Synergies */
+            synergies: string[];
+            /** Total */
+            total: number;
         };
         /**
          * SetReactionMode
@@ -2290,6 +2343,8 @@ export interface components {
          *       單位，順序不拘）；
          *     - ``self``／``none``（自身、環形、範圍光環）：都不給。
          *
+         *     複合技能（Phase 3F-3a）：上面的欄位是位移段的選取，``followup_target`` 是動作段的選取。
+         *
          *     是否合法（欄位是否對應形狀、射程、視線、代價）由引擎檢查，不合法時拋出
          *     :class:`~trpg.shared.errors.IllegalActionError`。
          *
@@ -2316,6 +2371,7 @@ export interface components {
             /** Second Target Id */
             second_target_id?: string | null;
             copy_cast?: components["schemas"]["UseSkill-Input"] | null;
+            followup_target?: components["schemas"]["FollowupTarget"] | null;
         };
         /**
          * UseSkill
@@ -2330,6 +2386,8 @@ export interface components {
          *     - ``unit_pair``（任意兩者互換，Phase 3D-2b）：``target_id`` 與 ``second_target_id``（兩個不同的
          *       單位，順序不拘）；
          *     - ``self``／``none``（自身、環形、範圍光環）：都不給。
+         *
+         *     複合技能（Phase 3F-3a）：上面的欄位是位移段的選取，``followup_target`` 是動作段的選取。
          *
          *     是否合法（欄位是否對應形狀、射程、視線、代價）由引擎檢查，不合法時拋出
          *     :class:`~trpg.shared.errors.IllegalActionError`。
@@ -2357,6 +2415,7 @@ export interface components {
             /** Second Target Id */
             second_target_id?: string | null;
             copy_cast?: components["schemas"]["UseSkill-Output"] | null;
+            followup_target?: components["schemas"]["FollowupTarget"] | null;
         };
         /** ValidationError */
         ValidationError: {
