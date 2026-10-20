@@ -5,6 +5,7 @@ import type {
   BuildSummary,
   CreateBattleRequest,
   DraftOptions,
+  FollowupTarget,
   Glossary,
   MapSummary,
   OrderSet,
@@ -91,8 +92,17 @@ export const api = {
     request<WorkshopRandom>("POST", "/workshop/random", body),
   workshopExport: (skill: Record<string, unknown>) =>
     request<WorkshopExport>("POST", "/workshop/export", { skill }),
-  decide: (id: string, accept: boolean, copyCast: UseSkill | null = null) =>
-    request<BattleResponse>("POST", `/battles/${id}/decision`, { accept, copy_cast: copyCast }),
+  decide: (
+    id: string,
+    accept: boolean,
+    copyCast: UseSkill | null = null,
+    followupTarget: FollowupTarget | null = null,
+  ) =>
+    request<BattleResponse>("POST", `/battles/${id}/decision`, {
+      accept,
+      copy_cast: copyCast,
+      followup_target: followupTarget,
+    }),
 };
 
 /** 戰鬥紀錄的下載網址（`trpg battle --log-json` 同格式，可用 `trpg battle replay` 重播）。 */

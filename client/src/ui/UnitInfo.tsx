@@ -1,6 +1,7 @@
 // 單位資訊：滑過或點選單位時顯示（文字即可）。
 import type { BattleView, StatusView, UnitView } from "../api/types";
 import { bombStatusText, TIME_BOMB } from "../battle/bombs";
+import { CHARGING, chargeStatusText } from "../battle/followup";
 import { facingText } from "../battle/facing";
 import { stackName, statusName } from "../battle/glossary";
 import type { SkillNames } from "../battle/actions";
@@ -16,8 +17,9 @@ interface Props {
   view?: BattleView;
 }
 
-function statusText(s: StatusView): string {
+function statusText(s: StatusView, skills?: SkillNames): string {
   if (s.status_id === TIME_BOMB) return bombStatusText(s);
+  if (s.status_id === CHARGING) return chargeStatusText(s, skills);
   const left = s.remaining === null ? "" : ` ${s.remaining} 回合`;
   const amount = s.amount === null ? "" : `（${s.amount}）`;
   return `${statusName(s.status_id)}${amount}${left}`;
@@ -67,7 +69,7 @@ export function UnitInfo({ unit, names, heroId, skills, view }: Props) {
         </tbody>
       </table>
       <div className="unit-line">
-        狀態：{unit.statuses.length === 0 ? "無" : unit.statuses.map(statusText).join("、")}
+        狀態：{unit.statuses.length === 0 ? "無" : unit.statuses.map((s) => statusText(s, skills)).join("、")}
       </div>
       {stacks.length > 0 && (
         <div className="unit-line">層數：{stacks.map(([k, v]) => `${stackName(k)} ×${v}`).join("、")}</div>

@@ -224,7 +224,7 @@ export const STEP_NAMES: Readonly<Record<StepId, string>> = {
   basics: "基本設定",
   shape: "形狀",
   effects: "效果",
-  followup: "動作段",
+  followup: "第二段",
   condition: "條件",
   cost: "代價",
   rarity: "稀有度",

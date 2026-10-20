@@ -76,7 +76,7 @@ describe("the follow-up (second segment) fields", () => {
   });
 
   it("has a step name for the follow-up step", () => {
-    expect(STEP_NAMES.followup).toBe("動作段");
+    expect(STEP_NAMES.followup).toBe("第二段"); // 3F-4b：六種第二段，不只「動作段」
   });
 });
 
@@ -92,5 +92,24 @@ describe("previewing a composite skill", () => {
     ]);
     const lines = sceneLines(base, unitNames(view), view);
     expect(lines.some((l) => l.includes("第二段") && l.includes("(2, 1)") && l.includes("2 格"))).toBe(true);
+  });
+});
+
+describe("the kind of second part (Phase 3F-4b)", () => {
+  const when: FieldSpec = { ...skeleton, field: "followup.when", choices: [choice("after_move"), choice("delayed")] };
+
+  it("picking another kind starts the second part over", () => {
+    const draft: Json = { followup: { when: "after_move", skeleton: "area", shape: { type: "cone", size: 2 } } };
+    expect(selectChoice(draft, when, when.choices[0] as Choice)["followup"]).toEqual(draft["followup"]);
+    expect(selectChoice(draft, when, when.choices[1] as Choice)["followup"]).toEqual({ when: "delayed" });
+  });
+
+  it("clearing the kind removes the second part; clearing the skeleton keeps the kind", () => {
+    const draft: Json = {
+      skeleton: "aura",
+      followup: { when: "delayed", release: "next_turn", skeleton: "area", shape: { type: "cross", range: 0 } },
+    };
+    expect(clearChoice(draft, when)).toEqual({ skeleton: "aura" });
+    expect(clearChoice(draft, skeleton)["followup"]).toEqual({ when: "delayed", release: "next_turn" });
   });
 });

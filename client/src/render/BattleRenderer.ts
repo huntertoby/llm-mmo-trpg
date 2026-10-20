@@ -330,6 +330,7 @@ export class BattleRenderer {
     c.addChild(marker);
     if (u.downed) this.addDownedMark(c, u, r);
     if (u.bomb !== null) this.addBombBadge(c, u.bomb);
+    if (u.charge != null) this.addChargeBadge(c, u.charge);
     const w = T * 0.8;
     const bar = new Graphics().rect(-w / 2, T * 0.36, w, 5).fill(0x000000);
     bar.rect(-w / 2, T * 0.36, w * u.hpRatio, 5).fill(hpColor(u.hpRatio));
@@ -365,6 +366,18 @@ export class BattleRenderer {
     const text = label(`炸${rounds}`, 11, HIGHLIGHT.bomb, true);
     text.anchor.set(0.5);
     text.position.set(T * 0.3, T * 0.12);
+    c.addChild(badge, text);
+  }
+
+  /** 蓄力中的單位（延遲段，Phase 3F-4b）：左下角的徽章標還要幾回合釋放。 */
+  private addChargeBadge(c: Container, rounds: number): void {
+    const badge = new Graphics()
+      .circle(-T * 0.3, T * 0.12, 10)
+      .fill({ color: 0x000000, alpha: 0.8 })
+      .stroke({ width: 2, color: HIGHLIGHT.followup });
+    const text = label(`蓄${rounds}`, 11, HIGHLIGHT.followup, true);
+    text.anchor.set(0.5);
+    text.position.set(-T * 0.3, T * 0.12);
     c.addChild(badge, text);
   }
 

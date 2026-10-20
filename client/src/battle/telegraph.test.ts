@@ -18,7 +18,7 @@ function change(kind: string, text: string, over: Partial<TelegraphChange> = {})
 }
 
 function telegraph(changes: TelegraphChange[], rest: Partial<TelegraphOut> = {}): TelegraphOut {
-  return { round: 1, changes, burning: [], upcoming: [], bombs: [], ...rest };
+  return { round: 1, changes, burning: [], upcoming: [], bombs: [], charges: [], ...rest };
 }
 
 const view = smallView();

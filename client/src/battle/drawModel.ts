@@ -9,6 +9,7 @@ import {
   terrainStyle,
 } from "./glossary";
 import { bombCountdown } from "./bombs";
+import { chargeCountdown } from "./followup";
 import { auraTiles, isTotem, remainingRounds } from "./summons";
 import { onField, unitMarkers } from "./units";
 import { zoneDraws, type ZoneDraw } from "./zones";
@@ -66,6 +67,8 @@ export interface UnitDraw {
   revivable: boolean;
   /** 身上定時炸彈還要幾次環境回合爆炸（Phase 3D-8b）；沒有炸彈為 `null`。 */
   bomb: number | null;
+  /** 延遲段（蓄力，Phase 3F-4b）還要幾回合釋放；沒有蓄力為 `null`。 */
+  charge?: number | null;
   /** 朝向（Phase 3D-8d）：圖示外緣畫小箭頭；背後格站著近戰敵人時會被背刺。 */
   facing: Facing;
 }
@@ -201,6 +204,7 @@ export function buildDrawModel(
       remaining: remainingRounds(view, u),
       revivable: u.revivable,
       bomb: bombCountdown(u),
+      charge: chargeCountdown(u.statuses),
       facing: u.facing,
     }))
     .sort((a, b) => Number(b.downed) - Number(a.downed));

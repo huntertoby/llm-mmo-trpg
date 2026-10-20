@@ -257,10 +257,26 @@ export function sceneLines(p: PreviewOut, names: UnitNames, view: BattleView): s
   for (const m of p.moves ?? []) lines.push(m.kind === "charge" ? chargeLine(m, p, names) : moveLine(m, names));
   const landing = p.landing ?? null;
   if (landing !== null && (p.followup_tiles ?? []).length > 0) {
-    lines.push(
-      `第二段：位移到 ${posText(landing)} 後，以落點為原點影響 ${p.followup_tiles.length} 格（紫色）；位移被擋下或沒到落點時不結算`,
-    );
+    lines.push(followupLine(p.followup_when ?? null, posText(landing), p.followup_tiles.length));
   }
   lines.push(...displaceLines(p, names));
   return lines;
+}
+
+/** 預覽的第二段說明（依種類，Phase 3F-4b）。 */
+export function followupLine(when: string | null, at: string, count: number): string {
+  switch (when) {
+    case "after_action":
+      return `第二段：從 ${at} 位移到選的落點（紫色）`;
+    case "after_gather":
+      return `第二段：以聚集點 ${at} 為中心影響 ${count} 格（紫色）`;
+    case "on_kill":
+      return `第二段（打倒敵人才有）：從 ${at} 起算，影響 ${count} 格（紫色）`;
+    case "on_hit":
+      return `第二段（命中才有）：從 ${at} 對同一個目標，影響 ${count} 格（紫色）`;
+    case "delayed":
+      return `延遲段：施放後開始蓄力，之後以自己當下的位置為中心釋放；目前預計影響 ${count} 格（紫色），倒下、暈眩或冰凍會取消`;
+    default:
+      return `第二段：位移到 ${at} 後，以落點為原點影響 ${count} 格（紫色）；位移被擋下或沒到落點時不結算`;
+  }
 }

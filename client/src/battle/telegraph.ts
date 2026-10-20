@@ -31,6 +31,10 @@ export const MARK_STYLES: Readonly<Record<string, MarkStyle>> = {
   bomb_exploded: { glyph: "炸", color: 0xff3b30, priority: 8 },
   bomb: { glyph: "炸", color: 0xff7a1a, priority: 9 },
   bomb_area: { glyph: "炸", color: 0xff7a1a, priority: 1 },
+  // 延遲段（蓄力，Phase 3F-4b）：蓄力中的單位（標還要幾回合）與預計範圍（在施放者的回合開始時結算，
+  // 不在環境回合，但一起預告）
+  charge: { glyph: "蓄", color: 0xb06bff, priority: 9 },
+  charge_area: { glyph: "蓄", color: 0xb06bff, priority: 1 },
 };
 
 const FALLBACK_STYLE: MarkStyle = { glyph: "?", color: 0xffffff, priority: 0 };
@@ -72,6 +76,10 @@ export function telegraphMarks(t: TelegraphOut, view: BattleView): TelegraphMark
     const text = bombChange(t, b)?.text ?? b.text; // 下一次就爆炸的炸彈已有變化那一行，不重複
     for (const pos of b.tiles) addBombMark(byTile, "bomb_area", pos, text, "炸");
     addBombMark(byTile, "bomb", b.pos, text, String(b.remaining));
+  }
+  for (const c of t.charges ?? []) {
+    for (const pos of c.tiles) addBombMark(byTile, "charge_area", pos, c.text, "蓄");
+    addBombMark(byTile, "charge", c.pos, c.text, `蓄${c.remaining}`);
   }
   return [...byTile.values()].sort((a, b) => a.pos.y - b.pos.y || a.pos.x - b.pos.x);
 }
@@ -127,9 +135,16 @@ export function telegraphLines(t: TelegraphOut): string[] {
     ...(t.bombs ?? []).filter((b) => bombChange(t, b) === undefined).map((b) => b.text),
     ...t.burning.map((b) => b.text),
     ...t.upcoming.map((u) => u.text),
+    ...(t.charges ?? []).map((c) => c.text),
   ];
 }
 
 export function telegraphIsEmpty(t: TelegraphOut): boolean {
-  return t.changes.length === 0 && (t.bombs ?? []).length === 0 && t.burning.length === 0 && t.upcoming.length === 0;
+  return (
+    t.changes.length === 0 &&
+    (t.bombs ?? []).length === 0 &&
+    (t.charges ?? []).length === 0 &&
+    t.burning.length === 0 &&
+    t.upcoming.length === 0
+  );
 }

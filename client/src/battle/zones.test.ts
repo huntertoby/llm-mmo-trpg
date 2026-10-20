@@ -129,7 +129,7 @@ describe("zones", () => {
       ],
       text: "「火牆」區域將向東前進到 (2, 1)、(2, 2)",
     } as TelegraphChange;
-    const t: TelegraphOut = { round: 2, changes: [moved], burning: [], upcoming: [], bombs: [] };
+    const t: TelegraphOut = { round: 2, changes: [moved], burning: [], upcoming: [], bombs: [], charges: [] };
     const marks = telegraphMarks(t, zoneView());
     expect(marks.map((m) => [m.pos.x, m.pos.y, m.glyph])).toEqual([
       [2, 1, "域"],

@@ -98,6 +98,7 @@ describe("telegraph bombs", () => {
     burning: [],
     upcoming: [],
     bombs: [bomb(explodes)],
+    charges: [],
   });
 
   it("lists a bomb that explodes next round once", () => {

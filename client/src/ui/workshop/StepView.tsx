@@ -33,7 +33,7 @@ function StepBar({ state, onGoto }: { state: EditorState; onGoto(step: StepId): 
               className={cls}
               disabled={!enabled}
               aria-current={id === cur ? "step" : undefined}
-              title={enabled ? (id === "followup" ? "可省略：不接動作段就是普通的位移技能" : "") : "先完成前面的步驟"}
+              title={enabled ? (id === "followup" ? "可省略：不接第二段就是普通技能" : "") : "先完成前面的步驟"}
               onClick={() => onGoto(id)}
             >
               <span className="ws-step-no">{info?.complete === true ? "✓" : i + 1}</span>

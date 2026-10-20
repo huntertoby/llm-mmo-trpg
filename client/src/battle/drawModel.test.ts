@@ -49,7 +49,7 @@ describe("buildDrawModel", () => {
     const ally = unit("unit_0002", "ally", 0, 1, { hp: 0, downed: true, revivable: true });
     const used = unit("unit_0006", "ally", 3, 2, { hp: 0, downed: true, revivable: false });
     const carrier = unit("unit_0003", "enemy", 2, 1, {
-      statuses: [{ status_id: "time_bomb", remaining: 2, source_id: "unit_0001", amount: null, blast_radius: 1 }],
+      statuses: [{ status_id: "time_bomb", remaining: 2, source_id: "unit_0001", amount: null, blast_radius: 1, charge_tiles: [] }],
     });
     const units = [view.units[0]!, ally, used, carrier];
     const drawn = buildDrawModel({ ...view, units }, "unit_0001");

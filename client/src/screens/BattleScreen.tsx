@@ -55,6 +55,8 @@ import { ActionPanel } from "../ui/ActionPanel";
 import { BattleCanvas } from "../ui/BattleCanvas";
 import { BattleLog } from "../ui/BattleLog";
 import { CopyDialog } from "../ui/CopyDialog";
+import { FollowupDialog } from "../ui/FollowupDialog";
+import { followupMode, followupTargetOf, isFollowupPending } from "../battle/followup";
 import { DecisionDialog } from "../ui/DecisionDialog";
 import { EndPanel } from "../ui/EndPanel";
 import { ErrorBanner } from "../ui/ErrorBanner";
@@ -168,16 +170,18 @@ export function BattleScreen({ initial, onExit, exitLabel }: Props) {
     return map;
   }, [basic, buttons]);
   // 複製技能（copy_skill）暫停：第二段選取，伺服器給的 copy_options 當成一個模式（點目標即送出）。
-  const copying = response.awaiting === "decision" && isCopyPending(response.pending) && !busy;
-  const copyName =
-    response.pending?.copy_skill_id == null
-      ? ""
-      : (skillNames[response.pending.copy_skill_id] ?? response.pending.copy_skill_id);
-  const copyPick = useMemo(
-    () =>
-      copying && response.pending !== null ? copyMode(response.pending, response.copy_options, copyName) : null,
-    [copying, response.pending, response.copy_options, copyName],
-  );
+  // 複合技能第二段（「動作 → 位移」「擊殺 → 接下一段」，Phase 3F-4b）的暫停也走同一套：伺服器給的
+  // followup_options 當成模式，滑過預覽、點目標送出；下面的 `copying` 代表「暫停中為第二段選目標」。
+  const copyPaused = response.awaiting === "decision" && isCopyPending(response.pending) && !busy;
+  const followPaused = response.awaiting === "decision" && isFollowupPending(response.pending) && !busy;
+  const copying = copyPaused || followPaused;
+  const pausedSkill = followPaused ? response.pending?.skill_id : response.pending?.copy_skill_id;
+  const copyName = pausedSkill == null ? "" : (skillNames[pausedSkill] ?? pausedSkill);
+  const copyPick = useMemo(() => {
+    if (!copying || response.pending === null) return null;
+    if (followPaused) return followupMode(response.pending, response.followup_options ?? [], copyName);
+    return copyMode(response.pending, response.copy_options, copyName);
+  }, [copying, followPaused, response.pending, response.copy_options, response.followup_options, copyName]);
   const mode = copying ? copyPick : canAct && modeKey !== null ? (modes.get(modeKey) ?? null) : null;
   const fallback = useMemo<LabeledAction[]>(
     () =>
@@ -401,13 +405,18 @@ export function BattleScreen({ initial, onExit, exitLabel }: Props) {
     (accept: boolean) => void run(() => api.decide(battleId, accept)),
     [battleId, run],
   );
-  /** 複製技能的選目標：`null` ＝ 放棄施放（不付代價）。 */
+  /** 複製技能的選目標：`null` ＝ 放棄施放（不付代價）；複合技能第二段的選目標：`null` ＝ 放棄第二段。 */
   const decideCopy = useCallback(
     (pick: Action | null) => {
       if (pick !== null && pick.type !== "use_skill") return;
+      if (followPaused) {
+        const target = followupTargetOf(pick);
+        void run(() => api.decide(battleId, target !== null, null, target));
+        return;
+      }
       void run(() => api.decide(battleId, pick !== null, pick));
     },
-    [battleId, run],
+    [battleId, run, followPaused],
   );
   const decideWith = useCallback(
     (accept: boolean, always: boolean) => {
@@ -640,7 +649,15 @@ export function BattleScreen({ initial, onExit, exitLabel }: Props) {
           <BattleLog lines={lines} />
         </div>
       </div>
-      {copying && response.pending !== null && (
+      {followPaused && response.pending !== null && (
+        <FollowupDialog
+          skillName={copyName}
+          optionCount={(response.followup_options ?? []).length}
+          enabled={!busy}
+          onCancel={() => decideCopy(null)}
+        />
+      )}
+      {copyPaused && response.pending !== null && (
         <CopyDialog
           pending={response.pending}
           skillName={copyName}

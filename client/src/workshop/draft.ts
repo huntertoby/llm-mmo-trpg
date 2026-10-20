@@ -8,7 +8,8 @@ export type Json = Record<string, unknown>;
 /** 值是物件（`{type: ...}`）的單選欄位：形狀與條件（效果列表的每一項另外處理）。 */
 const OBJECT_CHOICE_FIELDS: ReadonlySet<string> = new Set(["shape", "condition"]);
 
-/** 複合技能的動作段（Phase 3F-3b）：欄位路徑都在 `followup.` 底下。 */
+/** 複合技能的第二段（Phase 3F-3b；3F-4b 起先選種類 `followup.when`）：欄位路徑都在 `followup.` 底下。 */
+export const FOLLOWUP_WHEN = "followup.when";
 export const FOLLOWUP_SKELETON = "followup.skeleton";
 const FOLLOWUP_SHAPE = "followup.shape";
 const FOLLOWUP_EFFECTS = "followup.effects";
@@ -126,6 +127,10 @@ function prefillOne(container: Json, spec: FieldSpec, base: string): Json {
  * `base` 是這個欄位所在物件的路徑（效果列表項目、巢狀物件內的欄位用）。 */
 export function selectChoice(container: Json, spec: FieldSpec, choice: Choice, base = ""): Json {
   const path = joinPath(base, spec.field);
+  if (path === FOLLOWUP_WHEN && getPath(container, path) !== choice.value) {
+    // 換第二段的種類：骨架、形狀、效果、條件、釋放時機的限制都不同，整個第二段從頭選。
+    return setPath(container, "followup", { when: choice.value });
+  }
   if (path === FOLLOWUP_SKELETON && getPath(container, path) !== choice.value) {
     // 換動作段的骨架：已選的形狀與效果不一定適用新骨架，清掉重選。
     let reset = setPath(container, FOLLOWUP_SHAPE, undefined);
@@ -154,7 +159,17 @@ export function selectChoice(container: Json, spec: FieldSpec, choice: Choice, b
 /** 清除單選欄位（含它專屬的參數）。 */
 export function clearChoice(container: Json, spec: FieldSpec, base = ""): Json {
   const path = joinPath(base, spec.field);
-  if (path === FOLLOWUP_SKELETON) return setPath(container, "followup", undefined); // 不接動作段
+  if (path === FOLLOWUP_WHEN) return setPath(container, "followup", undefined); // 不接第二段
+  if (path === FOLLOWUP_SKELETON && getPath(container, FOLLOWUP_WHEN) === undefined) {
+    return setPath(container, "followup", undefined); // 3F-3b 的舊草稿（沒有種類）：不接動作段
+  }
+  if (path === FOLLOWUP_SKELETON) {
+    // 有種類時只清骨架與它的形狀、效果、條件（種類與釋放時機保留）
+    let next = setPath(container, FOLLOWUP_SHAPE, undefined);
+    next = setPath(next, FOLLOWUP_EFFECTS, undefined);
+    next = setPath(next, "followup.condition", undefined);
+    return setPath(next, path, undefined);
+  }
   const level = parentPath(path);
   let next = container;
   for (const c of spec.choices) {

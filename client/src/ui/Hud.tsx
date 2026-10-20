@@ -6,6 +6,7 @@ import type { SkillNames } from "../battle/actions";
 import { activationLine } from "../battle/activations";
 import { grantedLine } from "../battle/granted";
 import { bombStatusText, TIME_BOMB } from "../battle/bombs";
+import { CHARGING, chargeStatusText } from "../battle/followup";
 import { summonLine, summonsOf } from "../battle/summons";
 import { unitNames } from "../battle/units";
 import { zoneLine, zoneNextText, zonesOf } from "../battle/zones";
@@ -34,6 +35,7 @@ function Bar({ label, value, max, className, extra }: { label: string; value: nu
 
 export function statusLine(s: StatusView): string {
   if (s.status_id === TIME_BOMB) return bombStatusText(s);
+  if (s.status_id === CHARGING) return chargeStatusText(s);
   const left = s.remaining === null ? "" : `（${s.remaining} 回合）`;
   const amount = s.amount === null ? "" : ` ${s.amount}`;
   return `${statusName(s.status_id)}${amount}${left}`;
