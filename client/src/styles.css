@@ -1791,6 +1791,7 @@ button.selected {
     "hero hero"
     "skills turn";
   grid-template-rows: auto minmax(0, 1fr);
+  align-items: start;
   height: 196px;
 }
 
