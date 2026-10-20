@@ -128,6 +128,7 @@ __all__ = [
     "ReactionSpec",
     "ScaleSpec",
     "ShapeBudget",
+    "ShapeCells",
     "ShapeDef",
     "ShapeSpec",
     "ShapeTable",
@@ -304,6 +305,36 @@ class ShapeBudget(ContentModel):
         return self.base_permille + self.per_unit_permille * value
 
 
+class ShapeCells(ContentModel):
+    """形狀影響的格子數（純幾何，不看地圖上的牆壁；區域預算 ``zone`` 用，Phase 3E-1）。
+
+    ``param`` 為 ``None`` 時固定 ``base`` 格；否則依參數值查 ``by_value``（涵蓋參數的整個範圍）。
+    數字必須與 ``trpg.engine.skills.shapes`` 的幾何一致（``tests/engine/test_shape_cell_counts.py``
+    在空地圖上逐一比對）。
+    """
+
+    base: int = Field(default=1, ge=1)
+    param: str | None = None
+    by_value: dict[int, int] | None = None
+
+    @model_validator(mode="after")
+    def _check(self) -> ShapeCells:
+        if (self.param is None) != (self.by_value is None):
+            raise ValueError("cell_count 的 param 與 by_value 必須一起指定")
+        if self.by_value is not None and any(v < 1 for v in self.by_value.values()):
+            raise ValueError("cell_count 的 by_value 格數必須 ≥ 1")
+        return self
+
+    def count_for(self, values: dict[str, int | str]) -> int:
+        """``values`` 是技能形狀已填的參數；參數缺少或表格沒有該值時拋出 :class:`ValueError`。"""
+        if self.param is None or self.by_value is None:
+            return self.base
+        raw = values.get(self.param)
+        if not isinstance(raw, int) or raw not in self.by_value:
+            raise ValueError(f"cell_count 沒有參數 {self.param} = {raw!r} 的格數")
+        return self.by_value[raw]
+
+
 class ShapeDef(ContentModel):
     """一種目標形狀。``targeting`` 決定 ``UseSkill`` 需要哪個欄位：
 
@@ -320,6 +351,22 @@ class ShapeDef(ContentModel):
     params: dict[str, ParamDef] = Field(default_factory=dict)
     min_rarity: SkillRarity = "common"
     budget: ShapeBudget = Field(default_factory=ShapeBudget)
+    cell_count: ShapeCells | None = None
+    """影響的格子數（沒有固定格數的形狀，例如連鎖，為 ``None``）。"""
+
+    @model_validator(mode="after")
+    def _check_cells(self) -> ShapeDef:
+        cells = self.cell_count
+        if cells is None or cells.param is None:
+            return self
+        spec = self.params.get(cells.param)
+        if spec is None:
+            raise ValueError(f"形狀 {self.id}：cell_count.param {cells.param!r} 不是這個形狀的參數")
+        assert cells.by_value is not None
+        missing = [v for v in range(spec.min, spec.max + 1) if v not in cells.by_value]
+        if missing:
+            raise ValueError(f"形狀 {self.id}：cell_count.by_value 缺少參數值 {missing}")
+        return self
 
     @model_validator(mode="after")
     def _check_budget(self) -> ShapeDef:

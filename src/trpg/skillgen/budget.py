@@ -490,20 +490,19 @@ def _summon_points(
     return points, f"每輪 {_fmt(dpr)} × {effect.duration} 輪 × {permille}‰"
 
 
-def zone_cell_count(skill: SkillDef) -> int:
-    """持續區域（3D-5）的形狀格數（純幾何，不看地圖上的牆壁）。"""
-    shape = skill.shape
-    size = shape.size or 1
-    radius = shape.radius or 1
-    counts = {
-        "cross": 5,
-        "square3": 9,
-        "line": size,
-        "cone": size * size,
-        "ring": 8 * radius,
-        "allies_in_radius": 2 * radius * radius + 2 * radius + 1,
-    }
-    return counts.get(shape.type, 1)
+def zone_cell_count(skill: SkillDef, library: ContentLibrary) -> int:
+    """持續區域（3D-5）的形狀格數（純幾何，不看地圖上的牆壁）；資料在 ``skill_shapes.yaml`` 的
+    ``cell_count``，形狀沒有格數（例如連鎖）或參數不在表內時拋出 :class:`BudgetError`。"""
+    shape_id = skill.shape.type
+    shape = library.ruleset.shapes.by_id().get(shape_id)
+    if shape is None:
+        raise BudgetError(f"未知的形狀：{shape_id}")
+    if shape.cell_count is None:
+        raise BudgetError(f"形狀 {shape_id} 沒有 cell_count，無法計算區域格數")
+    try:
+        return shape.cell_count.count_for(skill.shape.param_values())
+    except ValueError as error:
+        raise BudgetError(str(error)) from None
 
 
 def _zone_points(
@@ -519,7 +518,7 @@ def _zone_points(
     for sub in effect.effects or ():
         points, _ = _base_points(skill, sub, primitives[sub.type], library)
         per_trigger += points
-    cells = zone_cell_count(skill)
+    cells = zone_cell_count(skill, library)
     rate = rules.zone_cell_round_permille
     total = per_trigger * cells * effect.duration * Fraction(rate, _PERMILLE)
     notes = [f"每次 {_fmt(per_trigger)} × {cells} 格 × {effect.duration} 輪 × {rate}‰"]

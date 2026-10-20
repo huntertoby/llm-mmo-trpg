@@ -9,6 +9,9 @@
 # params：形狀的整數參數與範圍（min～max）；allow_weapon 表示可寫 "weapon"（武器射程）。
 # 「射程」一律為曼哈頓距離；被選中的格子或單位必須在施放者的視線內。
 # min_rarity：使用此形狀的最低稀有度（2B-2）。
+# cell_count：形狀影響的格子數（純幾何；區域 zone 的預算用，3E-1）。base 為固定格數；param ＋ by_value 為依參數值查表
+#   （必須涵蓋參數的整個範圍）。沒有固定格數的形狀（連鎖）不寫，用在 zone 會報錯。數字由 tests/engine/test_shape_cell_counts.py
+#   對照引擎的形狀幾何。
 # budget：預算的形狀倍率（‰）。base_permille 為基礎值；param ＋ per_unit_permille 為每單位參數加成；
 #   by_value_permille 為依參數值查表（優先於前兩者，必須涵蓋參數的整個範圍）。
 #   只套用在對象為 enemies／allies／all／tiles 的效果（affects: self 與 teleport 一律 1.0）。
@@ -19,12 +22,14 @@ shapes:
     targeting: self
     min_rarity: common
     budget: {base_permille: 1000}
+    cell_count: {base: 1}
   - id: single
     name_zh: 單體
     description_zh: 選取射程內看得到的一個單位或可被攻擊的物件。
     targeting: unit
     min_rarity: common
     budget: {base_permille: 1000}
+    cell_count: {base: 1}
     params:
       range: {min: 1, max: 10, allow_weapon: true}
   - id: line
@@ -33,6 +38,7 @@ shapes:
     targeting: direction
     min_rarity: common
     budget: {base_permille: 800, param: size, per_unit_permille: 200}
+    cell_count: {param: size, by_value: {2: 2, 3: 3, 4: 4, 5: 5, 6: 6}}
     params:
       size: {min: 2, max: 6}
   - id: cone
@@ -41,6 +47,7 @@ shapes:
     targeting: direction
     min_rarity: common
     budget: {param: size, by_value_permille: {2: 1300, 3: 1600, 4: 2000}}
+    cell_count: {param: size, by_value: {2: 4, 3: 9, 4: 16}}
     params:
       size: {min: 2, max: 4}
   - id: cross
@@ -49,6 +56,7 @@ shapes:
     targeting: tile
     min_rarity: rare
     budget: {base_permille: 1800}
+    cell_count: {base: 5}
     params:
       range: {min: 0, max: 6}
   - id: square3
@@ -57,6 +65,7 @@ shapes:
     targeting: tile
     min_rarity: rare
     budget: {base_permille: 2000}
+    cell_count: {base: 9}
     params:
       range: {min: 0, max: 6}
   - id: ring
@@ -65,6 +74,7 @@ shapes:
     targeting: none
     min_rarity: common
     budget: {param: radius, by_value_permille: {1: 1800, 2: 2200}}
+    cell_count: {param: radius, by_value: {1: 8, 2: 16}}
     params:
       radius: {min: 1, max: 2}
   - id: ground_tile
@@ -73,6 +83,7 @@ shapes:
     targeting: tile
     min_rarity: rare
     budget: {base_permille: 1000}
+    cell_count: {base: 1}
     params:
       range: {min: 1, max: 6}
   - id: chain
@@ -91,6 +102,7 @@ shapes:
     targeting: none
     min_rarity: common
     budget: {base_permille: 1000, param: radius, per_unit_permille: 400}
+    cell_count: {param: radius, by_value: {1: 5, 2: 13, 3: 25}}
     params:
       radius: {min: 1, max: 3}
   # Phase 3C-5a（docs/design/06-技能.md 6.15）：投擲物件專用。UseSkill 同時給 target_object_id（被舉起的
@@ -101,6 +113,7 @@ shapes:
     targeting: object_tile
     min_rarity: rare
     budget: {base_permille: 1000}
+    cell_count: {base: 1}
     params:
       range: {min: 1, max: 6}
   # Phase 3D-2b（docs/design/06-技能.md 6.19）：傳送他人。UseSkill 同時給 target_id（被傳送的單位）與
@@ -111,6 +124,7 @@ shapes:
     targeting: unit_tile
     min_rarity: rare
     budget: {base_permille: 1000}
+    cell_count: {base: 2}
     params:
       range: {min: 1, max: 6}
   # 任意兩者互換：UseSkill 給 target_id 與 second_target_id（兩個不同的單位，順序不拘）。
@@ -120,6 +134,7 @@ shapes:
     targeting: unit_pair
     min_rarity: rare
     budget: {base_permille: 1000}
+    cell_count: {base: 2}
     params:
       range: {min: 1, max: 6}
 
