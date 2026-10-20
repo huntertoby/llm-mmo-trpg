@@ -2,8 +2,6 @@
 
 from __future__ import annotations
 
-from trpg.sim.metrics import run_tracked
-
 from tests.engine.helpers import library
 from trpg.api.sessions import playable_maps
 from trpg.cli.sim import default_sim_maps
@@ -12,6 +10,7 @@ from trpg.content.roguelite import roguelite_problems
 from trpg.engine.events import UnitSpawned
 from trpg.roguelite.start import new_run
 from trpg.sim.batch import map_spec
+from trpg.sim.metrics import run_tracked
 
 LAIR = "bandit_lair"
 
