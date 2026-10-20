@@ -155,9 +155,9 @@ def test_downing_a_normal_enemy_gives_nothing(monkeypatch: pytest.MonkeyPatch) -
     assert not [e for e in result.events if isinstance(e, SourceChanged)]
 
 
-def test_only_bandit_boss_is_an_elite_in_content() -> None:
+def test_only_the_boss_units_are_elites_in_content() -> None:
     elites = sorted(u.id for u in library().units.values() if "elite" in u.tags)
-    assert elites == ["bandit_boss"]
+    assert elites == ["bandit_boss", "bandit_warlord"]  # 3-5b 加入 Boss 戰頭目
 
 
 def _legend_state(source: int | None, skill: SkillDef | None = None) -> BattleState:
@@ -215,7 +215,7 @@ def test_shipped_maps_with_source_wells() -> None:
     with_wells = sorted(
         m.id for m in lib.maps.values() if m.source_wells and m.archetype != TRAINING_ARCHETYPE
     )
-    assert with_wells == ["dark_forest", "ruined_fort"]
+    assert with_wells == ["bandit_lair", "dark_forest", "ruined_fort"]  # 含 3-5b 的 Boss 地圖
     assert len(lib.map("training_range").source_wells) == 1  # Phase 3F-1 靶場：1 個源泉
     terrain = lib.ruleset.terrain.by_id()
     for map_id in with_wells:
