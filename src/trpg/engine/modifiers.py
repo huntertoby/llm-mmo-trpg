@@ -304,6 +304,8 @@ def shaped_skill(state: BattleState, unit: UnitState, skill: SkillDef) -> SkillD
     """
     if skill.kind != "active" or not state.ruleset.has_modifier(unit.skills):
         return skill
+    if skill.followup is not None:  # 複合技能（Phase 3F-3a）的兩段形狀不變形（保守做法）
+        return skill
     rules = _shape_rules(state, unit, skill)
     if not rules:
         return skill

@@ -79,6 +79,7 @@ __all__ = [
     "SkillActivated",
     "SkillCooldownChanged",
     "SkillCopied",
+    "SkillFollowup",
     "SkillGrantExpired",
     "SkillGranted",
     "SkillTriggered",
@@ -836,6 +837,20 @@ class SkillUsed(EventBase):
     """花費的源力（傳說技能，Phase 3C-4a；之後另有 ``source_changed``）。"""
 
 
+class SkillFollowup(EventBase):
+    """複合技能（Phase 3F-3a，6.23）的第二段開始結算：``origin`` 是第二段的原點（「位移 → 動作」為
+    位移段的落點），``tiles`` 是第二段影響的格子（依 (y, x) 排序）。之後是第二段的命中、傷害等
+    事件；位移被擋下時沒有這個事件，改為 ``effect_fizzled``（``effect_kind: followup``）。"""
+
+    type: Literal["skill_followup"] = "skill_followup"
+    unit_id: UnitId
+    skill_id: str
+    name_zh: str
+    when: str
+    origin: Pos
+    tiles: tuple[Pos, ...]
+
+
 class SkillTriggered(EventBase):
     """被動技能觸發（Phase 2E-1）。
 
@@ -1424,6 +1439,7 @@ type Event = Annotated[
     | UnitDashed
     | UnitCharged
     | SkillCopied
+    | SkillFollowup
     | ZoneCreated
     | ZoneMoved
     | ZoneTriggered

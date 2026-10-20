@@ -1895,12 +1895,15 @@ class UtilityAI:
         回傳它們在 ``actions`` 的索引（遞增）。"""
         by_skill: dict[str, list[tuple[Fraction, int]]] = {}
         for index, action in enumerate(actions):
-            if isinstance(action, UseSkill):
-                est = skill_estimate(
-                    state, unit, action, areas[id(action)], scene, w, before, trap=trap
-                )
-                if est is not None:
-                    by_skill.setdefault(action.skill_id, []).append((est, index))
+            if not isinstance(action, UseSkill):
+                continue
+            if state.ruleset.skill_def(action.skill_id).followup is not None:
+                continue  # 複合技能（Phase 3F-3a）：AI 先不使用，評估留給 3F-3b
+            est = skill_estimate(
+                state, unit, action, areas[id(action)], scene, w, before, trap=trap
+            )
+            if est is not None:
+                by_skill.setdefault(action.skill_id, []).append((est, index))
         chosen: list[int] = []
         for options in by_skill.values():
             options.sort(key=lambda item: (-item[0], item[1]))

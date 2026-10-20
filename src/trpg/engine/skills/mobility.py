@@ -8,6 +8,7 @@ from __future__ import annotations
 
 from dataclasses import dataclass
 
+from trpg.content.skills import CHARGE_THROUGH, DASH, LEAP, SHADOWSTEP, EffectSpec
 from trpg.engine.ids import PRONE
 from trpg.engine.rules.facing import back_xy
 from trpg.engine.rules.geometry import XY, bresenham, chebyshev, manhattan
@@ -23,6 +24,7 @@ __all__ = [
     "dash_route",
     "leap_candidates",
     "leap_problem",
+    "self_move_landing",
     "self_move_problem",
     "shadowstep_behind",
     "shadowstep_choices",
@@ -270,3 +272,29 @@ def shadowstep_behind(state: BattleState, caster: UnitState, target: UnitState) 
     if not spots:
         return None
     return min(spots, key=lambda xy: (chebyshev(xy, back), _adjacent(target).index(xy)))
+
+
+def self_move_landing(  # noqa: PLR0917
+    state: BattleState,
+    caster: UnitState,
+    effect: EffectSpec,
+    target: UnitState | None,
+    pos: XY | None,
+    reach: int,
+) -> XY | None:
+    """施放者自身位移預定的落點（複合技能 Phase 3F-3a 的動作段原點；以目前狀態推算）：傳送與跳躍
+    是選的格子；衝鋒是路徑的終點（目標的相鄰格）；直線衝撞是路線停下的格子；瞬步是選的落點
+    （``choose``）或背後格（``behind``）。``target`` 是選取的單位、``pos`` 是選取的格子；算不出來
+    時為 ``None``。"""
+    kind = effect.type
+    if kind in ("teleport", LEAP):
+        return pos
+    if kind == CHARGE_THROUGH:
+        route = None if pos is None else charge_route(state, caster, pos, reach)
+        return route.stop if isinstance(route, ChargeRoute) else None
+    if target is None or kind not in (DASH, SHADOWSTEP):
+        return None
+    if kind == DASH:
+        path = dash_route(state, caster, target.xy, reach)
+        return None if path is None else path[-1]
+    return pos if effect.landing == "choose" else shadowstep_behind(state, caster, target)

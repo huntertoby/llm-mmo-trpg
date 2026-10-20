@@ -37,7 +37,7 @@ from trpg.content.skills import (
     weapon_problem,
 )
 from trpg.engine import modifiers
-from trpg.engine.actions import Direction, UseSkill
+from trpg.engine.actions import Direction, FollowupTarget, UseSkill
 from trpg.engine.activations import activation_problem
 from trpg.engine.ids import BOSS_TAG
 from trpg.engine.rules.combat import AttackProfile, attack_value, concealment_problem
@@ -57,6 +57,7 @@ from trpg.engine.skills.mobility import (
     dash_route,
     leap_candidates,
     leap_problem,
+    self_move_landing,
     self_move_problem,
     shadowstep_behind,
     shadowstep_choices,
@@ -77,8 +78,11 @@ __all__ = [
     "SkillArea",
     "center_tiles",
     "checked_area",
+    "composite_area",
     "compute_area",
     "damage_parameters",
+    "followup_origin",
+    "followup_selection",
     "has_selection",
     "hp_cost",
     "hurl_object_problem",
@@ -403,6 +407,8 @@ def _unit_target_problem(  # noqa: PLR0917
 ) -> str | None:
     if not target.alive:
         return f"目標已不在戰場上：{target.name_zh}"
+    if skill.followup is not None:  # 複合技能（3F-3a）的位移段：目標只是位移的參照，敵我都可以
+        return _visible_problem(state, caster, skill, target, reach)
     enemy = target.team is not caster.team
     if enemy and not any(e.affects in ("enemies", "all", "tiles") for e in effects):
         return f"此技能無法對敵方使用：{target.name_zh}"
@@ -826,6 +832,8 @@ def compute_area(
     state: BattleState, caster: UnitState, skill: SkillDef, action: UseSkill
 ) -> SkillArea:
     """驗證 ``action`` 的選取並計算影響範圍；不合法或影響範圍為空時拋出 ``IllegalActionError``。"""
+    if action.followup_target is not None and skill.followup is None:
+        raise IllegalActionError(f"只有複合技能可以指定 followup_target：{skill.name_zh}")
     targeting = state.ruleset.shape_def(skill.shape.type).targeting
     effects = resolve_effects(state, skill)
     reach = shape_reach(state, skill, caster)
@@ -1034,14 +1042,144 @@ def selections(
     """技能目前所有合法的選取與其影響範圍（確定性順序）。不檢查代價（:func:`skill_problem`）。
 
     單體與連鎖：先單位（依 ID）再物件（依 ID）；中心格型：射程內每個合法格（依 ``(y, x)``）；
-    方向型：東南西北（影響範圍為空的不列）。
+    方向型：東南西北（影響範圍為空的不列）。複合技能（Phase 3F-3a）：位移段的每個選取 × 動作段
+    在落點的每個選取（:func:`_composite_selections`）。
     """
+    if skill.followup is not None:
+        yield from _composite_selections(state, caster, skill)
+        return
     for action in _candidates(state, caster, skill):
         try:
             area = checked_area(state, caster, skill, action)
         except IllegalActionError:
             continue
         yield action, area
+
+
+# ---------------------------------------------------------------------------
+# 複合技能（Phase 3F-3a，docs/design/06-技能.md 6.23）
+# ---------------------------------------------------------------------------
+
+
+def _after_move_origin(
+    state: BattleState, caster: UnitState, skill: SkillDef, action: UseSkill
+) -> XY | None:
+    """「位移 → 動作」：位移段預定的落點。"""
+    target = None if action.target_id is None else state.units.get(action.target_id)
+    pos = None if action.target_pos is None else (action.target_pos.x, action.target_pos.y)
+    reach = shape_reach(state, skill, caster)
+    return self_move_landing(state, caster, skill.effects[0], target, pos, reach)
+
+
+_FOLLOWUP_ORIGINS: dict[str, Callable[[BattleState, UnitState, SkillDef, UseSkill], XY | None]] = {
+    "after_move": _after_move_origin,
+}
+"""動作段的原點，依 ``followup.when`` 分派（之後的 ``after_action``、``on_kill`` 等加在這裡）。"""
+
+
+def followup_origin(
+    state: BattleState, caster: UnitState, skill: SkillDef, action: UseSkill
+) -> XY | None:
+    """複合技能動作段的原點（以施放前的狀態推算；算不出來時為 ``None``）。"""
+    assert skill.followup is not None
+    return _FOLLOWUP_ORIGINS[skill.followup.when](state, caster, skill, action)
+
+
+def _at(state: BattleState, caster: UnitState, origin: XY) -> tuple[BattleState, UnitState]:
+    """假設施放者已站在 ``origin`` 的狀態（已經在時就是原狀態；否則是複本）。"""
+    if caster.xy == origin:
+        return state, caster
+    ghost = state.clone()
+    mover = ghost.units[caster.id]
+    mover.pos = Pos(x=origin[0], y=origin[1])
+    return ghost, mover
+
+
+def _followup_action(
+    state: BattleState, caster: UnitState, skill: SkillDef, action: UseSkill, origin: XY
+) -> UseSkill:
+    """``action.followup_target`` 展開成動作段的 ``UseSkill``；以落點為中心的形狀補上落點。"""
+    follow = skill.followup_skill()
+    assert follow is not None
+    pick = action.followup_target or FollowupTarget()
+    pos = pick.target_pos
+    if state.ruleset.shape_def(follow.shape.type).targeting == "tile":
+        if pos is not None and (pos.x, pos.y) != origin:
+            raise IllegalActionError(
+                f"動作段以落點 {origin} 為中心：followup_target 不用指定 target_pos"
+            )
+        pos = Pos(x=origin[0], y=origin[1])
+    return UseSkill(
+        unit_id=caster.id,
+        skill_id=skill.id,
+        target_id=pick.target_id,
+        target_object_id=pick.target_object_id,
+        target_pos=pos,
+        direction=pick.direction,
+    )
+
+
+def followup_selection(
+    state: BattleState, caster: UnitState, skill: SkillDef, action: UseSkill, origin: XY
+) -> tuple[UseSkill, SkillArea]:
+    """以 ``origin`` 為施放者位置驗證動作段的選取（``action.followup_target``），回傳動作段的
+    ``UseSkill`` 與影響範圍；不合法時拋出 ``IllegalActionError``（「動作段：…」）。"""
+    follow = skill.followup_skill()
+    assert follow is not None
+    here, mover = _at(state, caster, origin)
+    try:
+        pick = _followup_action(here, mover, skill, action, origin)
+        return pick, checked_area(here, mover, follow, pick)
+    except IllegalActionError as exc:
+        raise IllegalActionError(f"動作段：{exc}") from None
+
+
+def composite_area(first: SkillArea, second: SkillArea) -> SkillArea:
+    """兩段合起來的影響範圍（格子與單位取聯集；原點與方向取動作段的）。"""
+    return SkillArea(
+        tiles=_sorted_tiles(*first.tiles, *second.tiles),
+        units=tuple(sorted({*first.units, *second.units})),
+        origin=second.origin,
+        direction=second.direction,
+    )
+
+
+def _followup_pick(state: BattleState, follow: SkillDef, pick: UseSkill) -> FollowupTarget | None:
+    """動作段的候選 → ``followup_target``（以落點為中心或不用選取的形狀為 ``None``）。"""
+    if state.ruleset.shape_def(follow.shape.type).targeting in ("tile", "none", "self"):
+        return None
+    return FollowupTarget(
+        target_id=pick.target_id, target_object_id=pick.target_object_id, direction=pick.direction
+    )
+
+
+def _composite_selections(
+    state: BattleState, caster: UnitState, skill: SkillDef
+) -> Iterator[tuple[UseSkill, SkillArea]]:
+    """複合技能的選取：位移段的每個合法選取 × 動作段在預定落點的每個合法選取。組合數有上限：
+    方向型動作段只有東南西北 4 個；單體只列落點射程內的目標；以落點為中心的形狀只有 1 個。"""
+    follow = skill.followup_skill()
+    assert follow is not None
+    ghost = state.clone()
+    mover = ghost.units[caster.id]
+    for action in _candidates(state, caster, skill):
+        try:
+            first = checked_area(state, caster, skill, action)
+        except IllegalActionError:
+            continue
+        origin = followup_origin(state, caster, skill, action)
+        if origin is None:
+            continue
+        mover.pos = Pos(x=origin[0], y=origin[1])
+        for pick in _candidates(ghost, mover, follow):
+            try:
+                second = checked_area(ghost, mover, follow, pick)
+            except IllegalActionError:
+                continue
+            full = action.model_copy(
+                update={"followup_target": _followup_pick(ghost, follow, pick)}
+            )
+            yield full, composite_area(first, second)
 
 
 def has_selection(state: BattleState, caster: UnitState, skill: SkillDef) -> bool:

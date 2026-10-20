@@ -92,6 +92,8 @@ from trpg.engine.skills.scaling import skill_scaling_value
 from trpg.engine.skills.targeting import (
     compute_area,
     damage_parameters,
+    followup_origin,
+    followup_selection,
     pierce_active,
     resolve_effects,
     shape_reach,
@@ -398,6 +400,10 @@ class Preview:
     backstab: tuple[UnitId, ...] = ()
     """行動者會從背後攻擊的單位（Phase 3D-8d；最多後果的模擬中命中判定帶背刺加成的目標，依 ID）。
     命中率與暴擊率已包含背刺與潛行偷襲的加成；說明在 ``notes``。"""
+    landing: XY | None = None
+    """複合技能（Phase 3F-3a）：位移段的落點＝動作段的原點；其他動作為 ``None``。"""
+    followup_tiles: tuple[XY, ...] = ()
+    """複合技能：動作段的影響格（以落點為原點；``affected_tiles`` 已含兩段）。"""
 
 
 # ---------------------------------------------------------------------------
@@ -693,6 +699,32 @@ def _maneuver_chance(state: BattleState, actor: UnitState, action: Shove | Trip)
     return hit
 
 
+def _preview_skill(state: BattleState, actor: UnitState, skill_id: str) -> SkillDef:
+    """命中與傷害估計用的技能：複合技能（Phase 3F-3a）把兩段的效果接在一起（位移段、動作段的命中
+    判定都以同一個技能 ID 記錄）；其他技能就是施放時的技能。"""
+    skill = modifiers.acting_skill(state, actor, skill_id)
+    follow = skill.followup_skill()
+    if follow is None:
+        return skill
+    return skill.model_copy(update={"effects": (*skill.effects, *follow.effects), "followup": None})
+
+
+def _followup_info(
+    state: BattleState, actor: UnitState, action: Action
+) -> tuple[XY | None, tuple[XY, ...], tuple[UnitId, ...]]:
+    """複合技能的動作段：原點（落點）、影響格與單位（假設施放者已在落點）；不是複合技能時為空。"""
+    if not isinstance(action, UseSkill):
+        return None, (), ()
+    skill = modifiers.acting_skill(state, actor, action.skill_id)
+    if skill.followup is None:
+        return None, (), ()
+    origin = followup_origin(state, actor, skill, action)
+    if origin is None:
+        return None, (), ()
+    _, area = followup_selection(state, actor, skill, action, origin)
+    return origin, area.tiles, area.units
+
+
 def _damage_expectation(  # noqa: PLR0917
     state: BattleState,
     actor: UnitState,
@@ -705,7 +737,7 @@ def _damage_expectation(  # noqa: PLR0917
 ) -> DamageRange | None:
     """技能對 ``target_id`` 的傷害範圍：最少／最多取自模擬事件，期望值依效果的骰子分布精確計算
     （事件與效果數量對不上時退回最少與最多的平均）。"""
-    skill = modifiers.acting_skill(state, actor, action.skill_id)
+    skill = _preview_skill(state, actor, action.skill_id)
 
     def direct(events: list[EventBase]) -> list[DamageDealt]:
         return [
@@ -847,7 +879,7 @@ def _skill_targets(
     min_events: list[EventBase],
     max_events: list[EventBase],
 ) -> tuple[TargetPreview, ...]:
-    skill = modifiers.acting_skill(state, actor, action.skill_id)
+    skill = _preview_skill(state, actor, action.skill_id)
     profile = skill_profile(state, actor, skill)
     use = modifiers.skill_use(skill)
     core = state.ruleset.core
@@ -1275,12 +1307,13 @@ def _build(
     certain_set = set(certain)
     possible = [o for o in outcomes(max_events) if o not in certain_set]
     tiles, units = _affected(high.state, max_events)
+    landing, follow_tiles, follow_units = _followup_info(state, actor, action)
     if isinstance(action, UseSkill):
         area = compute_area(
             state, actor, modifiers.acting_skill(state, actor, action.skill_id), action
         )
-        tiles = tuple(sorted({*tiles, *area.tiles}, key=lambda p: (p[1], p[0])))
-        units = tuple(sorted({*units, *area.units}))
+        tiles = tuple(sorted({*tiles, *area.tiles, *follow_tiles}, key=lambda p: (p[1], p[0])))
+        units = tuple(sorted({*units, *area.units, *follow_units}))
     ap_cost, reach = _cost_and_reach(state, actor, action)
     pierce = _pierce_info(state, actor, action) if isinstance(action, UseSkill) else None
     topples, hurls = _scene_infos(max_events)
@@ -1330,4 +1363,6 @@ def _build(
         grants=_grant_infos(state, max_events),
         miss_notes=_miss_notes(state, actor, action),
         backstab=backstab,
+        landing=landing,
+        followup_tiles=follow_tiles,
     )

@@ -102,6 +102,7 @@ from trpg.engine.events import (
     ShotPierced,
     SkillCooldownChanged,
     SkillCopied,
+    SkillFollowup,
     SkillUsed,
     UnitCharged,
     UnitDashed,
@@ -149,7 +150,10 @@ from trpg.engine.skills.targeting import (
     SkillArea,
     center_tiles,
     checked_area,
+    composite_area,
     damage_parameters,
+    followup_origin,
+    followup_selection,
     pay_skill_cost,
     resolve_effects,
     shape_reach,
@@ -207,9 +211,15 @@ def use_skill(ctx: Ctx, caster: UnitState, action: UseSkill) -> None:
     if problem is not None:
         raise IllegalActionError(problem)
     area = checked_area(ctx.state, caster, skill, action)
+    origin = _planned_followup(ctx.state, caster, skill, action)
+    paid_area = area
+    if origin is not None:
+        paid_area = composite_area(
+            area, followup_selection(ctx.state, caster, skill, action, origin)[1]
+        )
     _check_copy(ctx, caster, skill, action)
     with holding(ctx):  # 被動的觸發等整個技能結算完才處理
-        _pay_costs(ctx, caster, skill, area)
+        _pay_costs(ctx, caster, skill, paid_area)
         if skill.is_activatable:  # 常駐類傳說（Phase 3D-6）：施放＝啟動，沒有立即的效果
             activate(ctx, caster, skill)
         elif skill.trap is not None:  # 陷阱技能：施放時只放置陷阱，其餘效果等觸發時結算
@@ -219,7 +229,14 @@ def use_skill(ctx: Ctx, caster: UnitState, action: UseSkill) -> None:
             cast = _Cast(ctx, caster, skill, action, area)
             face = _primary_xy(ctx.state, caster, action)
             cast.run()
-            after_attack(ctx, caster, face, ambushed=cast.ambushed, turns=cast.melee_victims)
+            ambushed, victims = cast.ambushed, cast.melee_victims
+            if origin is not None:  # 複合技能（Phase 3F-3a）：到達落點才結算動作段
+                second = _run_followup(ctx, caster, skill, action, origin)
+                if second is not None:
+                    ambushed = ambushed or second.ambushed
+                    victims = [*victims, *second.melee_victims]
+                    face = _primary_xy(ctx.state, caster, second.action) or face
+            after_attack(ctx, caster, face, ambushed=ambushed, turns=victims)
         if skill.kind == "active":  # copy_skill 的複製對象（Phase 3C-4b）
             _record_cast(ctx.state, caster, skill)
         _apply_self_status(ctx, caster, skill)
@@ -227,9 +244,55 @@ def use_skill(ctx: Ctx, caster: UnitState, action: UseSkill) -> None:
         _record_turn_tags(ctx.state, caster, skill)
 
 
-def _primary_xy(state: BattleState, caster: UnitState, action: UseSkill) -> XY | None:
+def _planned_followup(
+    state: BattleState, caster: UnitState, skill: SkillDef, action: UseSkill
+) -> XY | None:
+    """複合技能（Phase 3F-3a）動作段的預定原點；不是複合技能時為 ``None``。算不出原點時（位移段
+    的選取已經合法，理論上不會發生）拋出 ``IllegalActionError``。"""
+    if skill.followup is None:
+        return None
+    origin = followup_origin(state, caster, skill, action)
+    if origin is None:
+        raise IllegalActionError(f"算不出 {skill.name_zh} 的落點")
+    return origin
+
+
+def _run_followup(
+    ctx: Ctx, caster: UnitState, skill: SkillDef, action: UseSkill, origin: XY
+) -> _Cast | None:
+    """結算複合技能的動作段：施放者還站著、而且真的到了預定的落點（沒被擋下、沒倒下）時，以落點
+    為原點重新檢查動作段的選取並結算（``skill_followup`` 之後是動作段的事件）；否則發出
+    ``effect_fizzled``（``followup_blocked``；選取在位移後不再合法時為 ``followup_no_target``）。"""
+    pos = Pos(x=origin[0], y=origin[1])
+    if not caster.alive or caster.xy != origin:
+        ctx.emit(EffectFizzled, effect_kind="followup", pos=pos, reason="followup_blocked")
+        return None
+    try:
+        pick, area = followup_selection(ctx.state, caster, skill, action, origin)
+    except IllegalActionError:
+        ctx.emit(EffectFizzled, effect_kind="followup", pos=pos, reason="followup_no_target")
+        return None
+    follow = skill.followup_skill()
+    assert follow is not None and skill.followup is not None
+    ctx.emit(
+        SkillFollowup,
+        unit_id=caster.id,
+        skill_id=skill.id,
+        name_zh=skill.name_zh,
+        when=skill.followup.when,
+        origin=pos,
+        tiles=tuple(Pos(x=x, y=y) for x, y in area.tiles),
+    )
+    cast = _Cast(ctx, caster, follow, pick, area)
+    cast.run()
+    return cast
+
+
+def _primary_xy(state: BattleState, caster: UnitState, action: UseSkill | None) -> XY | None:
     """施放時主要目標的位置（Phase 3D-8d：施放後面向它）：選取的單位（不是自己）或物件；沒有時
     為 ``None``。"""
+    if action is None:
+        return None
     if action.target_id is not None and action.target_id != caster.id:
         unit = state.units.get(action.target_id)
         return None if unit is None else unit.xy

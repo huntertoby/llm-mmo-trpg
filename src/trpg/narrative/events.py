@@ -65,6 +65,7 @@ from trpg.engine.events import (
     SkillActivated,
     SkillCooldownChanged,
     SkillCopied,
+    SkillFollowup,
     SkillGranted,
     SkillGrantExpired,
     SkillTriggered,
@@ -331,6 +332,8 @@ _FIZZLE_TEXT = {
     "swap_blocked": "  無法交換位置（有一方站不上對方的格子）",
     "summon_blocked": "  召喚位置被占據，召喚失敗",
     "unknown_summon": "  召喚失敗（未知的召喚物）",
+    "followup_blocked": "  位移被擋下，沒有抵達落點：第二段不結算",
+    "followup_no_target": "  第二段的目標已不在範圍內：第二段不結算",
 }
 
 
@@ -705,6 +708,14 @@ def _skill_copied(e: SkillCopied, v: _View) -> str:
     return (
         f"  ✦ {v.name[e.unit_id]} 複製了 {v.name[e.source_id]} 的「{e.name_zh}」"
         f"（不扣法力與 AP、不進冷卻）→ 影響 {len(e.tiles)} 格"
+    )
+
+
+@_handles(SkillFollowup)
+def _skill_followup(e: SkillFollowup, v: _View) -> str:
+    return (
+        f"  ✦ {v.name[e.unit_id]} 在 {xy_text(e.origin)} 接著施展「{e.name_zh}」的第二段"
+        f"→ 影響 {len(e.tiles)} 格"
     )
 
 
