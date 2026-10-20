@@ -407,6 +407,9 @@ class Preview:
     最多後果的模擬裡第二段的原點，第二段沒有結算時為 ``None``）；其他動作為 ``None``。"""
     followup_tiles: tuple[XY, ...] = ()
     """複合技能：第二段的影響格（``affected_tiles`` 已含兩段）。"""
+    followup_when: str | None = None
+    """複合技能第二段的種類（``followup.when``，Phase 3F-4b；網頁依此寫說明）；其他動作為 ``None``。
+    延遲段的 ``landing``／``followup_tiles`` 是施放後以施放者位置推算的預計範圍。"""
 
 
 # ---------------------------------------------------------------------------
@@ -710,6 +713,13 @@ def _preview_skill(state: BattleState, actor: UnitState, skill_id: str) -> Skill
     if follow is None:
         return skill
     return skill.model_copy(update={"effects": (*skill.effects, *follow.effects), "followup": None})
+
+
+def _followup_when(state: BattleState, actor: UnitState, action: Action) -> str | None:
+    if not isinstance(action, UseSkill):
+        return None
+    skill = modifiers.acting_skill(state, actor, action.skill_id)
+    return None if skill.followup is None else skill.followup.when
 
 
 def _simulated_second(
@@ -1386,4 +1396,5 @@ def _build(
         backstab=backstab,
         landing=landing,
         followup_tiles=follow_tiles,
+        followup_when=_followup_when(state, actor, action),
     )

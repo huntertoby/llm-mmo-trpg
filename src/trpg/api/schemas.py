@@ -573,6 +573,8 @@ class PreviewOut(_ApiModel):
     """複合技能（Phase 3F-3a）：位移段的落點＝動作段的原點；其他動作為 ``None``。"""
     followup_tiles: tuple[XY, ...] = ()
     """複合技能：動作段的影響格（``affected_tiles`` 已含兩段的範圍）。"""
+    followup_when: str | None = None
+    """複合技能第二段的種類（``followup.when``，Phase 3F-4b）；其他動作為 ``None``。"""
 
 
 def _damage(d: DamageRange | None) -> DamageOut | None:
@@ -763,4 +765,5 @@ def preview_out(
         backstab=p.backstab,
         landing=p.landing,
         followup_tiles=p.followup_tiles,
+        followup_when=p.followup_when,
     )

@@ -1767,6 +1767,8 @@ export interface components {
              * @default []
              */
             followup_tiles: components["schemas"]["XY"][];
+            /** Followup When */
+            followup_when?: string | null;
         };
         /**
          * Problem
