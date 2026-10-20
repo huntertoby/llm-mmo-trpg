@@ -18,6 +18,22 @@ export function useNarrow(): boolean {
   return narrow;
 }
 
+/** 視窗（可用區域）的大小，隨視窗縮放更新。 */
+export function useViewportSize(): Size {
+  const read = (): Size => ({ width: window.innerWidth, height: window.innerHeight });
+  const [size, setSize] = useState<Size>(read);
+  useEffect(() => {
+    const onResize = () =>
+      setSize((prev) => {
+        const next = read();
+        return prev.width === next.width && prev.height === next.height ? prev : next;
+      });
+    window.addEventListener("resize", onResize);
+    return () => window.removeEventListener("resize", onResize);
+  }, []);
+  return size;
+}
+
 /** 元素內容區的大小（ResizeObserver）；還沒量到時為 `null`。 */
 export function useElementSize(ref: RefObject<HTMLElement>): Size | null {
   const [size, setSize] = useState<Size | null>(null);

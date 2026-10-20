@@ -61,9 +61,16 @@ export interface ActionMode {
   skillId: string | null;
   actions: Action[];
   targets: TargetSet;
+  /**
+   * 推動物件（Phase 3-10）：相鄰物件推不動的原因（物件 ID → 完整說明）；選取模式中點到時顯示。
+   * 沒有不合法的物件時省略。
+   */
+  blockedObjects?: ReadonlyMap<string, string>;
+  /** 全部都不合法時的原因：按鈕灰色，滑過或點擊顯示（有值 ＝ 不能選取）。 */
+  blockedReason?: string;
 }
 
-function emptyTargets(): TargetSet {
+export function emptyTargets(): TargetSet {
   return {
     self: null,
     units: new Map(),
@@ -212,7 +219,7 @@ export function skillButtons(hero: UnitView, legal: readonly Action[], cards: Sk
 
 // ---- 動作模式 -------------------------------------------------------------
 
-const BASIC_MODES: readonly { kind: Exclude<ModeKind, "skill">; label: string }[] = [
+export const BASIC_MODES: readonly { kind: Exclude<ModeKind, "skill">; label: string }[] = [
   { kind: "attack", label: "攻擊" },
   { kind: "shove", label: "推擊" },
   { kind: "trip", label: "絆倒" },
@@ -335,7 +342,9 @@ export interface AsideRow {
   choices: AsideChoice[];
 }
 
-function arrowFor(from: Pos, to: Pos): string {
+/** 物件會移動的方向箭頭；會被推出地圖邊緣（沒有目的格）時依「主角 → 物件」方向以外無從得知，回傳空字串。 */
+function arrowFor(from: Pos, to: Pos | null): string {
+  if (to === null) return "";
   const dx = to.x - from.x;
   const dy = to.y - from.y;
   if (Math.abs(dx) >= Math.abs(dy)) return dx >= 0 ? DIRECTION_ARROWS.east : DIRECTION_ARROWS.west;
@@ -364,7 +373,7 @@ export function asideRows(
     );
     row.choices.push({
       side,
-      label: `往${side === "left" ? "左" : "右"}撥 ${arrowFor(obj.pos, o.to_pos)}`,
+      label: `往${side === "left" ? "左" : "右"}撥 ${arrowFor(obj.pos, o.to_pos)}`.trimEnd(),
       action: o.legal && action !== undefined ? action : null,
       reason: o.legal ? null : (o.reason ?? "不能撥開"),
     });

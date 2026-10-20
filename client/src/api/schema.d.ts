@@ -1450,7 +1450,7 @@ export interface components {
             legal: boolean;
             /** Reason */
             reason: string | null;
-            to_pos: components["schemas"]["Pos"];
+            to_pos: components["schemas"]["Pos"] | null;
         };
         /**
          * LeaveChoice

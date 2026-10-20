@@ -7,21 +7,25 @@ import { feedbackFor, type FeedbackItem } from "./feedback";
 import { logLines, type LogLine } from "./log";
 import { unitNames } from "./units";
 
-export type PlaySpeed = "normal" | "fast" | "skip";
+export type PlaySpeed = "slow" | "normal" | "fast" | "skip";
 
-export const PLAY_SPEEDS: readonly PlaySpeed[] = ["normal", "fast", "skip"];
+/** 顯示順序：慢、正常、快、略過。 */
+export const PLAY_SPEEDS: readonly PlaySpeed[] = ["slow", "normal", "fast", "skip"];
 
-/** 動畫時間的倍率：快 ＝ 一半；略過不播動畫。 */
-export const SPEED_SCALE: Readonly<Record<PlaySpeed, number>> = { normal: 1, fast: 0.5, skip: 0 };
+/** 慢速的時間倍率（正常的 2 倍時間；動畫、地圖回饋與停頓都用它）。 */
+export const SLOW_FACTOR = 2;
+
+/** 動畫時間的倍率：慢 ＝ 2 倍；快 ＝ 一半；略過不播動畫。 */
+export const SPEED_SCALE: Readonly<Record<PlaySpeed, number>> = { slow: SLOW_FACTOR, normal: 1, fast: 0.5, skip: 0 };
 /** 地圖回饋（浮動數字、連線）的基準時間（毫秒），乘上 `SPEED_SCALE`。 */
 export const FEEDBACK_MS = 1000;
 
 /** 每個 AI 動作之後的停頓（毫秒）。 */
-export const AI_PAUSE_MS: Readonly<Record<PlaySpeed, number>> = { normal: 500, fast: 150, skip: 0 };
+export const AI_PAUSE_MS: Readonly<Record<PlaySpeed, number>> = { slow: 500 * SLOW_FACTOR, normal: 500, fast: 150, skip: 0 };
 /** AI 純移動之後的停頓（動畫本身已佔時間）。 */
-export const MOVE_PAUSE_MS: Readonly<Record<PlaySpeed, number>> = { normal: 150, fast: 0, skip: 0 };
+export const MOVE_PAUSE_MS: Readonly<Record<PlaySpeed, number>> = { slow: 150 * SLOW_FACTOR, normal: 150, fast: 0, skip: 0 };
 /** 主角自己的動作之後的停頓（短）。 */
-export const HERO_PAUSE_MS: Readonly<Record<PlaySpeed, number>> = { normal: 150, fast: 0, skip: 0 };
+export const HERO_PAUSE_MS: Readonly<Record<PlaySpeed, number>> = { slow: 150 * SLOW_FACTOR, normal: 150, fast: 0, skip: 0 };
 
 export interface Frame {
   /** 行動中的單位；開場那一步為 `null`。 */

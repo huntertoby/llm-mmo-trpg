@@ -128,8 +128,10 @@ def interact_options_out(state: BattleState, hero_id: UnitId) -> tuple[InteractO
     )
 
 
-def _offset(pos: Pos, direction: tuple[int, int]) -> Pos:
-    return Pos(x=pos.x + direction[0], y=pos.y + direction[1])
+def _offset(pos: Pos, direction: tuple[int, int]) -> Pos | None:
+    """位移後的格子；落在地圖左／上緣之外（座標為負）時 ``None``（``Pos`` 不允許負座標）。"""
+    x, y = pos.x + direction[0], pos.y + direction[1]
+    return None if x < 0 or y < 0 else Pos(x=x, y=y)
 
 
 def copy_options_out(state: BattleState, pending: Pending | None) -> tuple[UseSkill, ...]:
