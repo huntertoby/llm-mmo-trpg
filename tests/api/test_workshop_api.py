@@ -106,14 +106,14 @@ def _create(client: TestClient, **extra: Any) -> Any:
 def test_try_out_a_custom_skill_cast_it_and_replay_the_log(
     client: TestClient, tmp_path: Path
 ) -> None:
-    response = _create(client, custom_skills=[CHARGE], replace_skills=["skill_gale_kick"])
+    response = _create(client, custom_skills=[CHARGE], replace_skills=["skill_bull_rush"])
     assert response.status_code == 201, response.text
     body = response.json()
     battle_id = body["battle_id"]
     session = store_of(client).get(battle_id)
     custom_id = build_skill(CHARGE).id
     hero = session.state.units[session.hero_id]
-    assert custom_id in hero.skills and "skill_gale_kick" not in hero.skills
+    assert custom_id in hero.skills and "skill_bull_rush" not in hero.skills
     dummy = next(
         u
         for u in session.state.units.values()
@@ -144,11 +144,11 @@ def test_try_out_a_custom_skill_cast_it_and_replay_the_log(
 
 def test_illegal_custom_skills_are_rejected_in_chinese(client: TestClient) -> None:
     weak = {**CHARGE, "cost": {"cooldown": 6, "mana": 20}}
-    response = _create(client, custom_skills=[weak], replace_skills=["skill_gale_kick"])
+    response = _create(client, custom_skills=[weak], replace_skills=["skill_bull_rush"])
     assert response.status_code == 422
     assert "不合法" in response.json()["detail"] and "過弱" in response.json()["detail"]
     broken = {**CHARGE, "effects": [{"type": "damage", "dice": "2d6"}]}
-    response = _create(client, custom_skills=[broken], replace_skills=["skill_gale_kick"])
+    response = _create(client, custom_skills=[broken], replace_skills=["skill_bull_rush"])
     assert response.status_code == 422
     assert "武器技的傷害骰來自武器" in response.json()["detail"]
 
@@ -165,7 +165,7 @@ def test_equipment_limits_are_checked(client: TestClient) -> None:
         {"type": "damage", "dice": "2d6", "element": "fire"},
         {"type": "push", "distance": 2},
     ]
-    wrong_weapon = _create(client, custom_skills=[spell], replace_skills=["skill_gale_kick"])
+    wrong_weapon = _create(client, custom_skills=[spell], replace_skills=["skill_bull_rush"])
     assert wrong_weapon.status_code == 422
     assert "需要法器" in wrong_weapon.json()["detail"]
 
