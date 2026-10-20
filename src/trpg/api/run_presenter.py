@@ -82,6 +82,8 @@ def _hero(library: ContentLibrary, run: RunState) -> HeroOut:
         attributes=dict(run.hero.attributes),
         hp=run.hp,
         max_hp=run.max_hp_in(library.ruleset.core),
+        hp_per_con_point=library.ruleset.core.hp_per_con_point,
+        hp_con_base=library.ruleset.core.hp_con_base,
         mana=run.mana,
         max_mana=run.max_mana,
         source=run.source,

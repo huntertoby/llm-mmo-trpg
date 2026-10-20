@@ -283,3 +283,17 @@ def test_between_battles_save_ignores_the_hash(runs_client: TestClient, save_dir
     _rewrite_save(save_dir, run["run_id"], ruleset_hash=None)  # 舊存檔沒有此欄位
     loaded = _ok(runs_client.post("/api/runs/load", json={"run_id": run["run_id"]}))
     assert loaded["node"]["kind"] == "battle"
+
+
+def test_rules_and_hero_expose_the_hp_per_constitution_point(
+    runs_client: TestClient, library: ContentLibrary
+) -> None:
+    """Phase 3-7：前端的「＋N HP」預覽用的係數來自 core.yaml。"""
+    core = library.ruleset.core
+    assert runs_client.get("/api/runs/rules").json()["hp_per_con_point"] == core.hp_per_con_point
+    hero = _create(runs_client)["hero"]
+    assert (hero["hp_per_con_point"], hero["hp_con_base"]) == (
+        core.hp_per_con_point,
+        core.hp_con_base,
+    )
+    assert hero["max_hp"] == hero["hp"]

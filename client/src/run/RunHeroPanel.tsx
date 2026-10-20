@@ -1,7 +1,7 @@
 // 主角的一輪狀態：等級與經驗、HP／法力／源力、屬性、技能（點開看卡片）。
 import type { RunHero } from "../api/types";
 import { SkillCardView } from "../ui/SkillCardView";
-import { ATTRIBUTES, SLOT_LABELS, SLOT_LIMITS, slotUsage, type SlotKind } from "./flow";
+import { ATTRIBUTES, conHpBonus, hpDeltaText, SLOT_LABELS, SLOT_LIMITS, slotUsage, type SlotKind } from "./flow";
 
 function Bar({ label, value, max, kind }: { label: string; value: number; max: number; kind: string }) {
   const pct = max <= 0 ? 0 : Math.max(0, Math.min(100, Math.round((value / max) * 100)));
@@ -43,6 +43,12 @@ export function RunHeroPanel({ hero }: { hero: RunHero }) {
         {ATTRIBUTES.map((a) => (
           <span key={a.id}>
             {a.label} <b>{hero.attributes[a.id]}</b>
+            {a.id === "con" && (
+              <span className="muted" data-testid="con-hp-bonus">
+                {" "}
+                {hpDeltaText(conHpBonus(hero.attributes.con ?? hero.hp_con_base, hero.hp_con_base, hero.hp_per_con_point))}
+              </span>
+            )}
           </span>
         ))}
       </div>

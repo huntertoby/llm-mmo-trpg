@@ -51,6 +51,8 @@ class RunRules(_ApiModel):
     """開局的自由配點數。"""
     base_attribute: int
     """開局六項屬性的基礎值。"""
+    hp_per_con_point: int
+    """每點體質的最大 HP（``core.yaml``；配點預覽用）。"""
 
 
 class HeroOut(_ApiModel):
@@ -63,6 +65,10 @@ class HeroOut(_ApiModel):
     attributes: dict[Attribute, int]
     hp: int
     max_hp: int
+    hp_per_con_point: int
+    """每點體質的最大 HP（``core.yaml``；前端的「＋N HP」預覽用）。"""
+    hp_con_base: int
+    """體質的基準值（高於它才有 HP 加成）。"""
     mana: int
     max_mana: int
     source: int

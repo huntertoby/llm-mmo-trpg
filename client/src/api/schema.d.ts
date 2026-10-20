@@ -1333,6 +1333,10 @@ export interface components {
             hp: number;
             /** Max Hp */
             max_hp: number;
+            /** Hp Per Con Point */
+            hp_per_con_point: number;
+            /** Hp Con Base */
+            hp_con_base: number;
             /** Mana */
             mana: number;
             /** Max Mana */
@@ -1988,6 +1992,8 @@ export interface components {
             start_points: number;
             /** Base Attribute */
             base_attribute: number;
+            /** Hp Per Con Point */
+            hp_per_con_point: number;
         };
         /** SaveOut */
         SaveOut: {

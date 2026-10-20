@@ -3,7 +3,7 @@ import { useEffect, useState, type FormEvent } from "react";
 import { api } from "../api/client";
 import type { BuildSummary, RunResponse, RunRules } from "../api/types";
 import { AttributeAllocator } from "../run/AttributeAllocator";
-import { allocationComplete, baseAttributes, cleanAllocation, type Allocation } from "../run/flow";
+import { allocationComplete, baseAttributes, cleanAllocation, conHpGain, type Allocation } from "../run/flow";
 import { useSkillCards, useSkillNames } from "../ui/useSkillCards";
 import { ErrorBanner } from "../ui/ErrorBanner";
 import { parseSeed, randomSeed } from "./StartScreen";
@@ -91,7 +91,7 @@ export function RunNewScreen({ onCreated, onHome }: Props) {
           <div className="muted small">
             {build.theme_zh}
             <br />
-            主角：HP {build.max_hp}・法力 {build.max_mana}・武器 {build.weapon_name_zh}
+            主角：HP {build.max_hp + (rules === null ? 0 : conHpGain(alloc, rules.hp_per_con_point))}・法力 {build.max_mana}・武器 {build.weapon_name_zh}
             <br />
             起始技能：{build.skills.map((id) => names[id] ?? id).join("、")}
           </div>
@@ -101,7 +101,7 @@ export function RunNewScreen({ onCreated, onHome }: Props) {
             <div className="muted small">
               六項屬性起始都是 {rules.base_attribute}；另有 {rules.start_points} 點自由分配。
             </div>
-            <AttributeAllocator base={baseAttributes(rules.base_attribute)} points={points} alloc={alloc} onChange={setAlloc} disabled={busy} />
+            <AttributeAllocator base={baseAttributes(rules.base_attribute)} points={points} alloc={alloc} onChange={setAlloc} disabled={busy} hpPerCon={rules.hp_per_con_point} />
           </>
         )}
         <label>

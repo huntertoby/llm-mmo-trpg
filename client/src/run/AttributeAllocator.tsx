@@ -1,6 +1,6 @@
 // 屬性配點：每項可加減，總點數固定（開局 4 點、每級 2 點；可全部點在同一項）。
 import type { AttributeId } from "../api/types";
-import { adjustAllocation, allocationTotal, ATTRIBUTES, type Allocation } from "./flow";
+import { adjustAllocation, allocationTotal, ATTRIBUTES, conHpGain, hpDeltaText, type Allocation } from "./flow";
 
 interface Props {
   /** 目前的屬性值（配點前）。 */
@@ -9,9 +9,11 @@ interface Props {
   alloc: Allocation;
   onChange(next: Allocation): void;
   disabled?: boolean;
+  /** 每點體質的最大 HP（有值時，體質旁即時顯示配點帶來的「＋N HP」）。 */
+  hpPerCon?: number;
 }
 
-export function AttributeAllocator({ base, points, alloc, onChange, disabled = false }: Props) {
+export function AttributeAllocator({ base, points, alloc, onChange, disabled = false, hpPerCon }: Props) {
   const left = points - allocationTotal(alloc);
   return (
     <div className="run-alloc">
@@ -39,6 +41,11 @@ export function AttributeAllocator({ base, points, alloc, onChange, disabled = f
                 {base[a.id] ?? 10}
                 {add > 0 && <span className="run-alloc-add"> +{add}</span>}
               </span>
+              {a.id === "con" && hpPerCon !== undefined && add > 0 && (
+                <span className="run-alloc-hp small" data-testid="con-hp-preview">
+                  最大 HP {hpDeltaText(conHpGain(alloc, hpPerCon))}
+                </span>
+              )}
               <button
                 type="button"
                 aria-label={`${a.label} 加一點`}

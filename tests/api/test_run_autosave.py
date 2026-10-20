@@ -225,6 +225,7 @@ def test_rules_endpoint_gives_start_points(
     assert rules == {
         "start_points": library.roguelite.start_free_points,
         "base_attribute": library.roguelite.base_attribute,
+        "hp_per_con_point": library.ruleset.core.hp_per_con_point,
     }
 
 

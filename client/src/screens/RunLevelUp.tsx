@@ -35,6 +35,7 @@ export function RunLevelUp({ run, view, busy, onChoose }: Props) {
         alloc={alloc}
         onChange={setAlloc}
         disabled={busy}
+        hpPerCon={run.hero.hp_per_con_point}
       />
       <div className="section-title">選一張新技能（可跳過）</div>
       <OfferPicker
