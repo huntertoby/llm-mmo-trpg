@@ -38,6 +38,8 @@ companions: [sim_companion_fighter, sim_companion_archer]
 # Phase 3C-6b（整理）：念力投擲由 build_fire 搬到新的 build_telekinesis（念力流）；新增 build_wallburn（推牆焚燒：推擊改造 ＋ on_collision
 # ＋ 油與火）與 build_detonator（狀態引爆：施加狀態 ＋ on_status_applied ＋ consume_status）。撞擊流（推擊改造 ＋ 撞擊 ＋ on_collision）
 # 就是既有的 build_push（重踏、破城衝撞、裂骨印記、震地推倒），不另加；衝鋒流 build_charger 是位移（dash／leap／swap）主題。
+# Phase 3F-3b：複合技能（AI 會用）——build_charger 以瞬影旋斬（傳送 → 錐形）換下颶風踢（颶風踢仍在 build_push 等）；build_push 以躍擊震地
+# （跳躍 → 十字震地擊倒）換下盾擊（盾擊仍由敵方盾兵使用）。
 builds:
   - id: build_push
     name_zh: 位移流
@@ -53,7 +55,7 @@ builds:
       resist: {physical: 100}
       tags: [hero, sim]
       max_mana: 20
-      skills: [skill_gale_kick, skill_shield_bash, skill_blink, skill_parting_slash, skill_bloodlust, skill_arcane_blade, skill_heavy_stomp, skill_battering_ram, skill_fracture_mark, skill_quake_topple]
+      skills: [skill_gale_kick, skill_leap_slam, skill_blink, skill_parting_slash, skill_bloodlust, skill_arcane_blade, skill_heavy_stomp, skill_battering_ram, skill_fracture_mark, skill_quake_topple]
 
   - id: build_fire
     name_zh: 火焰流
@@ -255,7 +257,7 @@ builds:
       resist: {physical: 100}
       tags: [hero, sim]
       max_mana: 24
-      skills: [skill_tiger_charge, skill_leap_slam, skill_decoy_swap, skill_shadow_whirl, skill_gale_kick, skill_bull_rush, skill_war_avatar]
+      skills: [skill_tiger_charge, skill_vault_leap, skill_decoy_swap, skill_guard_swap, skill_shadow_whirl, skill_bull_rush, skill_war_avatar]
 
   - id: build_banisher
     name_zh: 放逐流

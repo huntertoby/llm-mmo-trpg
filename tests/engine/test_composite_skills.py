@@ -231,8 +231,9 @@ def test_the_demo_skill_is_valid_and_equipped() -> None:
     skill = lib.skills[DEMO]
     assert skill.followup is not None and skill.followup.when == "after_move"
     assert validate_skill(skill, lib) == []
-    charger = lib.builds.by_id()["build_charger"].hero.skills
-    assert DEMO in charger and "skill_leap_slam" in charger
+    builds = lib.builds.by_id()
+    assert DEMO in builds["build_charger"].hero.skills
+    assert "skill_leap_slam" in builds["build_push"].hero.skills
     assert validate_skill(lib.skills["skill_leap_slam"], lib) == []
 
 

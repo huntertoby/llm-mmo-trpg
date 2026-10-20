@@ -176,7 +176,7 @@ def test_specs_put_the_build_hero_first_then_the_companions_against_the_encounte
     encounter = lib.map("open_plain").encounter
     assert encounter is not None and enemy == list(encounter.enemies)
     hero = spec.setup.units[0].template
-    assert hero.skills[:3] == ("skill_gale_kick", "skill_shield_bash", "skill_blink")
+    assert hero.skills[:3] == ("skill_gale_kick", "skill_leap_slam", "skill_blink")
     with pytest.raises(ValueError, match="未知的 build"):
         matrix_specs(lib, ["nope"], ["open_plain"], [0])
 
