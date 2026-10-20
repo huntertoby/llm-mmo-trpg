@@ -15,6 +15,7 @@ from trpg.api.app import create_app
 from trpg.api.runs import RunStore
 from trpg.content.library import ContentLibrary
 from trpg.engine.ai.utility import UtilityAI
+from trpg.roguelite import next_node
 
 BUILD, SEED = "build_fire", 0
 
@@ -210,8 +211,6 @@ def test_campfire_choices_over_the_api(runs_client: TestClient) -> None:
     run = _create(runs_client)
     runs = _runs(runs_client)
     session = runs.get(run["run_id"])
-    from trpg.roguelite import next_node  # noqa: PLC0415
-
     session.run = next_node(
         runs.library, session.run.model_copy(update={"battles_done": 3, "hp": 1})
     )
