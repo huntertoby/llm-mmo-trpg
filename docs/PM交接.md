@@ -1,6 +1,6 @@
 # PM 交接文件
 
-> 給接手的 PM（新對話中的 Claude）。最後更新：2026-10-19，**Phase 3 的 3-1～3-4b 已完成並驗收**（網頁戰鬥可玩）；下一步是 **Phase 3C 補模板 C**（撥開、改造、協同、源力、傳說；`docs/phases/Phase3C計畫.md`，使用者要求排在 3-5 之前），再 **3-5 roguelite 循環與存檔**、**3-6 收尾與試玩**（見 3.0）。
+> 給接手的開發 PM（新對話中的 Claude）。最後更新：2026-10-20。**Phase 3C、3D、3E-1、3F 與 3-5a、3-5b 已完成並驗收**；下一步是 **3-5c（一輪的網頁畫面）**，再 **3-6（使用者在網頁試玩一整輪）**。接手後先讀第 3.0 節。
 > 讀完本檔再讀 `CLAUDE.md` 與 `docs/專案計畫.md`（總覽，約 1 萬字元）即可接手；設計細節依需要讀 `docs/design/` 下的主題檔。
 
 ---
@@ -34,12 +34,14 @@
 | Phase 2F 整理（Phase 3 前審查的結論） | ✅ 完成（1395 測試；noqa 19→14；對照戰鬥不變；completion 1800 場異常 0） | `Phase2F計畫.md`／`Phase2F-1、2F-2報告.md` |
 | Phase 2G 完整性檢查的補強 | ✅ 完成（1427 測試；12 個示範技能；覆蓋率測試允許清單為空；待 PM 決定見計畫 0.1、0.2） | `Phase2G計畫.md` |
 | Phase 2H 冰凍、自身狀態代價、雙屬性與專精 | ✅ 完成（1486 測試；`LOG_FORMAT` /11；待 PM 決定見計畫 0.1、0.2；completion 1800 場、matrix 2400 場異常 0） | `Phase2H計畫.md` |
-| **Phase 3D 補模板 D**（玩法 #5 八項缺口、#6 賭博型技能、#7 常見技能、#8 傳送他人、#10 暫時獲得技能、#11 背刺與朝向、#12 直線衝撞；3C-5 之後、3-5 之前；3C-6 收尾移到 3D 之後） | 3D-1 ✅（連段條件、資源互動；/18）；3D-2 ✅（衝鋒、跳躍、交換；/19）；3D-2b ✅（傳送他人、任意互換；/20）；3D-2c ✅（直線衝撞；/21）；3D-3 ✅（修正變形、新反應、油桶漏油；/22）；3D-4a ✅（召喚引擎；/23）；3D-4b ✅（圖騰、召喚師、網頁；/24）；3D-5 ✅（持續區域；/25）；3D-6 ✅（改變規則型傳說、啟動；/26）；3D-7a ✅（賭注、失手反噬；/27）；3D-7b ✅（高變異、超載、縮放；/28）；3D-8a ✅（吸血、聖光、驅散、揭露；/29）；3D-8b ✅（復活、擊殺時效果、定時炸彈；/30）；3D-8c ✅（監視、夾擊、暫時獲得技能；/31）；3D-8d ✅（朝向與背刺；/32）；3C-6a ✅（收尾小修正、被近戰攻擊後轉身；/33）；3C-6b ✅（build 整理、組合器、matrix 2200 場異常 0；/34）；**3C、3D 全部完成**；3-5 規格已寫（`Phase3計畫.md` 0.11、第 7 節，三段 3-5a／b／c）；審查後的 3E-1 小整理 ✅（`Phase3E計畫.md`）；3-5a ✅（一輪核心、存檔 `trpg-run/1`、API、CLI `trpg run`）；3F-1 ✅（工坊後端、靶場 `training_range`）；3F-2 ✅（工坊網頁；首頁「進入技能工坊」）；3-5b ✅（Boss 地圖 `bandit_lair`）；3F-3a ✅（複合技能「位移 → 動作」規則）；3F-3b ✅（複合技能 AI、工坊、網頁兩段選取）；3F-4a ✅（打帶跑、聚集、擊殺接續、命中加碼）；**下一步** → 3F-4b（玩法 #15）→ 3-5c；**技能工坊 Phase 3F**（玩法 #14，`Phase3F計畫.md`）排在 3-5a 之後、3-5b 之前；3E-2、3E-3 排在 Phase 4 之前；打法差異檢查見 `Phase3C計畫.md` 0.14；其餘見規格 0 節 | `Phase3D計畫.md` |
-| **Phase 3 網頁 ＋ roguelite** | 3-1 ✅（1516 測試；noqa 23→20）；3-2 ✅（1577 測試；noqa 20）；3-3 ✅（1587 測試＋前端 30；`uv run python scripts/play.py` 可試玩）；3-4a ✅（開場逐步播放、HUD、技能 UI）；3-4b ✅（反應設定與詢問視窗、環境預告、快捷指令）；**下一步 3-5、3-6（見 3.0）** | `Phase3計畫.md`（0 節為決定與各段驗收紀錄；3–6 節為 3-1～3-4b 規格）／`Phase3-1～3-4b報告.md` |
-| **Phase 3C 補模板 C**（撥開、改造、協同、源力、傳說、場景物件原語；排在 3-5 前） | 3C-1 ✅（撥開，vitest 73）；3C-2 ✅（修正規則，pytest 1704、vitest 74）；3C-3a ✅（撞擊與 3 個觸發時機，pytest 1750；`LOG_FORMAT` /12）；3C-3b ✅（表面歸屬、消耗狀態、貼牆推擊，pytest 1804；/13）；3C-4a ✅（源力、傳說、3 個改寫規則，pytest 1865；/14）；3C-4b ✅（轉移傷害、複製、額外反應，pytest 1918、vitest 78；/15）；3C-5a ✅（投擲、推倒，pytest 1952；/16）；3C-5b ✅（穿透、物件 AI 與預覽，pytest 1993、vitest 92；/17）；其餘進行中，進度見規格 0 節 | `Phase3C計畫.md`／`Phase3C-N報告.md` |
+| Phase 3D 補模板 D（玩法 #5～#12：位移、召喚、區域、改變規則型傳說、賭博型、常見技能、背刺與朝向……） | ✅ 全部完成（3D-1～3D-8d；驗收紀錄在計畫 0.4～0.18） | `Phase3D計畫.md`／`Phase3D-*報告.md` |
+| Phase 3E 審查後整理 | 3E-1 ✅；**3E-2、3E-3 排在 Phase 4 之前**（未做） | `Phase3E計畫.md`／`Phase3E-1報告.md` |
+| Phase 3F 技能工坊、靶場、複合技能（玩法 #14、#15） | ✅ 全部完成（3F-1～3F-4b；驗收紀錄在計畫 0.1～0.6） | `Phase3F計畫.md`／`Phase3F-*報告.md` |
+| **Phase 3 網頁 ＋ roguelite** | 3-1～3-4b ✅（網頁單場戰鬥）；3-5a ✅（一輪核心、存檔 `trpg-run/1`、API、CLI `trpg run`）；3-5b ✅（Boss 地圖 `bandit_lair`）；**3-5c、3-6 未做** | `Phase3計畫.md`（0 節為決定與驗收紀錄，0.11 為 3-5 的使用者決定；第 7 節為 3-5 規格）／`Phase3-*報告.md` |
+| Phase 3C 補模板 C（撥開、修正規則、撞擊與觸發、源力與傳說、改寫規則、場景物件原語、收尾） | ✅ 全部完成（3C-1～3C-6b；驗收紀錄與打法差異檢查在計畫 0.5～0.14） | `Phase3C計畫.md`／`Phase3C-*報告.md` |
 
 - 最新 commit 在 GitHub `huntertoby/llm-mmo-trpg`（私人）的 `main`；2026-10-19 起使用者電腦的資料夾就是工作資料夾（見 6.1），push 前確認 `git status` 乾淨即可。
-- 1614 個 pytest ＋ 69 個前端 vitest（`check.py` 一併跑，本機約 1 分鐘）；`slow` 預設不跑；平衡測試 `test_demo_map_win_rate_and_length` 標 `xfail(strict=False)`，目前 2 xfail、2 xpass）。
+- **3200 個 pytest ＋ 216 個前端 vitest**（`check.py` 一併跑，本機約 1–2 分鐘）；`LOG_FORMAT` 為 `trpg-battle-log/34`；`slow` 預設不跑；平衡測試 `test_demo_map_win_rate_and_length` 標 `xfail(strict=False)`，目前 2 xfail、2 xpass）。
 - 主要指令：
   - `trpg battle --map <id> --seed <n> [--ally-build build_a,build_b] [--ally-commander id] [--enemy-commander id] [--log-json f]`、`trpg battle replay f`
   - `trpg map list`（10 張正式地圖，8 種類型都有）
@@ -49,60 +51,47 @@
   - `trpg sim completion [--maps a,b] [--seeds 20] [--jobs N]`：9 種指揮官設定 × 地圖的完成度檢查（exception／max_actions／draw 必須為 0；全量在雲端 `--jobs 2` 約 14 分鐘；`--jobs` 預設用全部核心）
   - `trpg skills list／budget --all／random --seed N`；`scripts/skill_fuzz.py --count 1000`
 - 腳本指揮官（`trpg.sim.commanders`）：`focus_lowest_hp`、`protect_weakest`、`hold_start`、`use_env`。
-- 12 個 build（`content/sim/builds.yaml`）：push、fire、storm、tank、ranged、assassin、support、healer、warlock、guardian、striker、trapper。62 個手寫技能（2G、2H 後每個已定義的骨架、觸發時機、反應事件、條件、原語、狀態、層數都至少有一個手寫技能使用，且每個手寫技能都有 build 或單位裝備，由 `tests/content/test_coverage.py` 檢查）。
+- **22 個 build**（`content/sim/builds.yaml`；3C、3D 新增 charger、banisher、summoner、gambler、seer、bomber、winged、telekinesis、wallburn、detonator 等；手寫技能約 150 個）。另有 `trpg run new|auto|show`（roguelite 一輪）、`trpg map list`（正式地圖 10 張 ＋ 靶場 `training_range` ＋ Boss 地圖 `bandit_lair`）。以下為 Phase 2 時的舊描述：62 個手寫技能（2G、2H 後每個已定義的骨架、觸發時機、反應事件、條件、原語、狀態、層數都至少有一個手寫技能使用，且每個手寫技能都有 build 或單位裝備，由 `tests/content/test_coverage.py` 檢查）。
 - 技能系統（2E 後）：12 個骨架中 11 個可用（只有 `summon` 停用）；觸發時機 `content/skill_triggers.yaml`；層數 `content/stacks.yaml`；技能觸發深度上限 `max_trigger_depth: 3`。`LOG_FORMAT` 為 `trpg-battle-log/11`（2H-1 起；舊紀錄不能重播）。
 
 ## 3. 下一步
 
-> 2026-10-19 起另有 **玩法 PM**（`docs/玩法PM交接.md`）：和使用者討論玩法問題，決定記在該檔第 3 節。狀態為「已決定，待排入」的項目由你排進階段規格。
+> 另有 **玩法 PM**（`docs/玩法PM交接.md`）：和使用者討論玩法，決定記在該檔第 3 節（#1～#15，目前全部「已排入」或已完成）。新決定標「已決定，待排入」時由你排進規格，排入後把狀態改成「已排入（階段 X）」。玩法 PM 只改該檔與 `docs/design/`；你改 `docs/phases/`、本檔與程式。玩法 PM 會用 `SendMessage` 傳話給你，你回覆的內容會轉給他。
 
-### 3.0.A 先做 Phase 3C（2026-10-19 排入）
+### 3.0 接手後要做的（2026-10-20）
 
-- 玩法 PM 的 #1（撥開）、#2（build 個性層）由使用者要求排在 3-5 之前，規格 `docs/phases/Phase3C計畫.md`（九段：3C-1 撥開、3C-2 修正規則、3C-3a 撞擊與觸發、3C-3b 表面歸屬與消耗狀態、3C-4a 源力＋傳說、3C-4b 其餘改寫規則、3C-5a 投擲與推倒、3C-5b 穿透與 AI／預覽、3C-6 收尾；3C-3a、3C-5 來自玩法 PM #4 場景物件原語）。
-- 2026-10-19 追加玩法 #5（八項缺口）→ **Phase 3D**（`docs/phases/Phase3D計畫.md`），順序：3C-4b → 3C-5a／5b → 3D-1、3D-2、3D-2b（#8）、3D-2c（#12）、3D-3～3D-6 → 3D-7a／7b（#6 賭博型）→ 3D-8a／8b／8c（#7）→ 3D-8d（#11）→ 3C-6 收尾 → 3-5。
-- **寫 3-5 規格時要納入 `Phase3C計畫.md` 0.4**：存檔記錄源力（跨戰鬥保留，上限 3、每場至少 1）、戰鬥之間取得源力、被動欄位上限 3。
+1. **確認環境**：`git status` 乾淨；`uv run python scripts/check.py` 全過（約 1–2 分鐘）。注意 8000 埠常被使用者自己開的 `scripts/play.py` 佔用（舊版程式）：**不要關使用者的程序**，用 `preview_start` 時會自動改用 8001。
+2. **3-5c（一輪的網頁畫面，sonnet）**：規格在 `Phase3計畫.md` 7.3，另有累積的小修（同節最後一條清單）：
+   - 0.12 #5 主角倒下後提示「隊友繼續作戰」；#7 偏離路線候選明確標示；#8 存檔加規則包雜湊。
+   - 0.13 #7 工坊「裝上試玩」可選 Boss 地圖。
+   - 3F 0.2：灰掉的技能按鈕顯示原因（例：視線被擋）；工坊說明文字去掉開發術語（「Phase 3D-8b」「refund_ap」）；`/api/builds` 回傳法力上限；`/api/skills/{id}` 查得到戰鬥內的自訂技能。
+   - 3F 0.4 #8：紫色（第二段範圍）補圖例。
+3. **3-6 收尾與試玩**（`Phase3計畫.md` 0.1）：PM 先在瀏覽器打完一輪；再請使用者試玩一整輪並做 `docs/專案計畫.md` 第 14 節的 🎮 戰鬥手感檢查。順便請使用者在工坊與靶場試 3F-4b 的延遲段與 `on_kill` 第二段（PM 未在瀏覽器實測，步驟在 `Phase3F-4b報告.md`）。試玩回饋：規則與玩法交給玩法 PM，介面問題排成 3-7。
+4. **Phase 3 結束時派審查 agent**（6.5），範圍 `2c42268..HEAD`（上一次審查涵蓋到 3C／3D 結束；之後是 3E-1、3-5、3F）。結論排進 3E-2／3E-3 或新的整理段。
+5. **Phase 4（LLM 技能生成）之前**：做 3E-2（數值上下限以 YAML 為唯一來源、落點函式合併）、3E-3（interpreter 拆成原語 handler 註冊表）；並定 #5 世界觀與美術風格。工坊的選項推導（`trpg.skillgen` 的 `draft_options`）可直接拿來約束 LLM。
 
-### 3.0 接手後要做的：Phase 3-5 與 3-6（2026-10-19）
+### 3.0.1 使用者已做的決定在哪裡
 
-**現況**：網頁戰鬥已可玩：`uv run python scripts/play.py`（自動建置前端、啟動 `trpg serve`、開瀏覽器）。玩家操控 1 名主角，2 名隊友與敵人由 AI 控制。已有：
-- 開場與 AI 行動逐步播放（正常／快／略過）。
-- HUD、技能列（選目標、滑過預覽、連鎖預覽）。
-- 反應設定（自動／詢問／關閉）與詢問視窗。
-- 環境預告、隊友快捷指令。
-- 戰鬥紀錄可下載並用 `trpg battle replay` 重播。
+| 主題 | 位置 |
+|---|---|
+| Phase 3 網頁與 roguelite（含 3-5：戰鬥間不回復只在營火回滿、隊友維持標準兩名、每場固定經驗、專屬 Boss 地圖） | `Phase3計畫.md` 0.2、0.11 |
+| 3C（撥開、改寫規則 6 個全做、觸發 4 個、被動欄位 3、源力、場景物件） | `Phase3C計畫.md` 0.1 |
+| 3D（傳說三擇一、常駐傳說限時／整場、致命地形傳送保留屬性影響、被近戰攻擊後轉身等） | `Phase3D計畫.md` 0.1、0.6；`Phase3C計畫.md` 8.2B |
+| 技能工坊、靶場、複合技能與排程 | `Phase3F計畫.md` 0 節、第 3、4 節開頭 |
+| CI 只手動觸發 | 本檔 6.1 |
+| 玩法決定 #1～#15 原文 | `docs/玩法PM交接.md` 第 3 節；設計細節 `docs/design/06-技能.md` 6.14～6.23、`05-戰鬥.md` 5.1 |
 
-Phase 3 的設計決定都在 `Phase3計畫.md` 第 0 節（0.2 的 A–F 是使用者同意的），**不用再問**。
+### 3.0.2 各段「待 PM 決定」的處理狀態
 
-1. **確認環境**：`git status` 乾淨；`uv run python scripts/check.py` 全過（含前端 install／typecheck／vitest；pnpm 一律用 `corepack pnpm`，不要 `corepack enable`）。
-2. **寫 3-5 規格**（加在 `Phase3計畫.md` 第 7 節；上一段的「待 PM 決定」已處理在 0.10）。建議拆兩段：
-   - **3-5a（opus，難改的設計）**：`trpg.roguelite` 套件，純函式、確定性，亂數由「一輪的種子」衍生，不用 `random`。
-     - 參數放 `content/roguelite.yaml`：場數 5 ＋ Boss、地圖類型抽選不重複、遭遇與敵人隨場數成長、經驗與升級、每級 +2 屬性點、開局 4 點自由分配、重骰次數。
-     - 主角成長狀態：屬性、技能、裝備限制（主動 ≤ 6、被動 ≤ 3〔3C-2 起〕、反應 ≤ 1）、**源力**（見 `Phase3C計畫.md` 0.4）。
-     - 升級候選：用隨機組合器產生 3 個、可跳過，其中 1 個「偏離路線」（決定 C）；重骰在中段與 Boss 前各一次（決定 F）。
-     - **存檔格式**（決定 E）：JSON，帶 `format` 版本。內容有一輪的種子、主角狀態、歷程、進行中戰鬥的 `setup ＋ seed ＋ steps ＋ orders`；讀檔以重播還原。存在本機資料夾，不進 git。
-     - API `/api/runs…`，測試含「存檔 → 讀檔 → 繼續」與重播一致。
-     - 順手修 0.10 #1：CLI 被動技「AP None」，重錄 CLI 快照。
-   - **3-5b（sonnet）**：前端畫面，包括開新一輪（選 build、分配屬性點）、進度畫面（第幾場、下一場地圖）、戰後獎勵與升級三選一（用技能卡片）、重骰、讀檔續玩、一輪結束摘要。
-3. **寫 3-5 規格前要問使用者的設計問題**（0.2 沒涵蓋到的）：
-   - 戰鬥之間 HP、法力是否回滿，或部分回復？
-   - 隊友整輪固定還是每場換？隊友會不會跟著升級？
-   - 經驗怎麼給：每場固定，或依表現（設計文件 7.1 寫「依表現」）？
-   - Boss 戰用哪張地圖、哪些敵人？目前敵人只有盜賊系列（`bandit`、`bandit_archer`、`bandit_shieldbearer`、`bandit_boss`），4 張地圖的預設遭遇有 `bandit_boss`。
-   - 整理成表格、附建議，讓使用者一次回答。
-4. **3-6 收尾**（sonnet）：
-   - 網頁與 CLI 同種子同輸入同結果（以 API 打完一輪、匯出各場紀錄重播）。
-   - PM 在瀏覽器完整打一輪。
-   - 請使用者做 `docs/專案計畫.md` 第 14 節的 🎮 戰鬥手感檢查；問題記到 `docs/玩法PM交接.md`，或排成 3-7 修正。
-5. **Phase 3 結束時派審查 agent**（6.5），範圍 `a8ca74c..HEAD`，把結論排進下一份規格。之後是 Phase 4（LLM 技能生成），開始前要定 #5 世界觀與美術風格。
+- 3C、3D、3E-1、3F、3-5a、3-5b 各段報告的「待 PM 決定」都已逐條處理，寫在各計畫檔第 0 節的驗收表（「接受」「平衡階段」「排進某段」）。
+- **仍未落地、已排定的**：上面 3.0 第 2 點（3-5c 小修）、第 5 點（3E-2、3E-3）。
+- **標「平衡階段」的**：見 3.3 末尾「3C／3D／3F 後新增」。
 
-### 3.0.0 前一位 PM 結束時的狀態（2026-10-19）
+### 3.0.3 前一位 PM 的備註
 
-- 3-1～3-4b 每段都由 PM 自己驗收：跑 `check.py`；用內建瀏覽器（`.claude/launch.json` 的 `trpg-serve`，以 `preview_start` 啟動）實際操作；下載紀錄後用 `trpg battle replay` 重播。各段驗收紀錄與「待 PM 決定」的處理在 `Phase3計畫.md` 0.6～0.10。
-- 內建瀏覽器的座標點擊在小視窗會偏移。用 `find` 拿 ref 再點最穩；`resize_window` 設成 1400×900 可能讓畫面縮得很小，用 desktop 預設即可。
-- 使用者試玩回饋：
-  - 開場直接看到結果 → 已在 3-4a 修好。
-  - 箱子只能推不能拉 → 屬玩法問題，交給 **玩法 PM**（`docs/玩法PM交接.md` 第 3 節 #1）。玩法 PM 決定後標「已決定，待排入」，由你排進規格。
-- `.claude/settings.json` 免確認清單已加 `corepack`、`pnpm`、`node`、`curl`。
+- 瀏覽器驗收技巧：用 `javascript_tool` 設定選單（原生 setter ＋ `change` 事件）與點按鈕；地圖格子用 `computer` 點擊前先 `screenshot` 看當下座標框架（框架會在 800×600 與其他大小間變動，點錯格時多半是用了舊截圖的座標）。用 API 查合法動作或錯誤原因很快（`/api/battles/{id}`、`/preview`）。
+- 實作 agent 偶爾把多段的戰鬥紀錄拼成一段回報；驗收時自己跑一場 `trpg battle ... --log-json` ＋ `replay` 確認。
+- PM 對話很長時用量高；一個大階段結束就更新本檔並交接。
 
 ### 3.1 使用者已同意的方向（2026-10-18，已寫入 `docs/專案計畫.md` v0.2.1 第 14 節）
 
@@ -177,6 +166,13 @@ PM 建議（已跟使用者說過）：不擋 Phase 3；召喚與連段條件是
 - **2G-2 後新增**：12 個示範技能的數值只為通過預算（致命破綻、天賜好運靠冷卻湊預算；天賜好運護盾 1d4 太小）；AI 把「築高台」當攻擊技、升高敵人腳下的格子；敵方單位沒有被動、反應、姿態。
 - **2G-1 後新增**：`build_tank` 主動技能 6 個（加了破甲擊、碎甲重擊）但法力只有 20。
 - 控制回合統計（`CONTROL_STATUSES`）只算 stun、root、slow，未含 feared、silenced、blinded、taunted。
+- **3C／3D／3F 後新增（2026-10-20）**：
+  - matrix（22 build × 10 地圖、2200 場、異常 0）：偏強 `build_storm`（92.5%）、`build_detonator`（89.4%）、`build_fire`（90.0%）；偏弱 `build_assassin`（56.9%）、`build_winged`、`build_gambler`、`build_tank`；前段 0 次的 7 個 build（`Phase3C-6b報告.md`）。撞擊流（push、wallburn）不如預期，先查 AI 推擊評估。建議合併 wallburn→push、detonator→warlock、tank→guardian（未決定）。
+  - roguelite：`trpg run auto` 10 種子只贏 3 輪（戰鬥間不回復累積）；Boss 地圖標準陣容勝率 30%、平均 7.9 輪；開局屬性六項 10 ＋ 4 點比 build 英雄弱。等 3-6 試玩再決定（多營火、調 Boss、調開局）。
+  - 所有 3C／3D／3F 新原語、觸發、條件、複合技能的預算係數與 AI 權重都是初值，未經模擬（各計畫檔 0 節標「平衡階段」的項目）。
+  - 背刺：被近戰攻擊後轉身後，刺殺 build 每場約 1.8 次背刺；AI 權重 `backstab` 4、`back_exposed` 3。
+  - 召喚物很快被打倒；AI 隊友會走進我方火牆留下的火；定時炸彈不分敵我會炸到隊友。
+  - 純數值的修正型被動「打法差異」只有 0–1 分（`Phase3C計畫.md` 0.14），Phase 4 生成時要避免大量產生。
 - `skill_dread_gaze`、`skill_hush` 貼著預算下限 70.4%；`skill_hex_bolt` 的 `marked` 只有 1 回合；AI 會對已被標記的目標重複施放咒印飛彈。
 
 ### 3.4 已接受的技術細節（不用再問）
