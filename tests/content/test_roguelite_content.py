@@ -41,7 +41,7 @@ def test_offer_tier_uses_the_last_entry_beyond_the_table() -> None:
         ({"level_thresholds": [100, 100]}, "嚴格遞增"),
         ({"campfire_after": [0]}, "campfire_after"),
         ({"off_route_per_offer": 4}, "off_route_per_offer"),
-        ({"map_pool": ["ruined_fort", "open_plain"]}, "不可在一般地圖池內"),
+        ({"map_pool": ["bandit_lair", "open_plain"]}, "不可在一般地圖池內"),
     ],
 )
 def test_schema_rejects_bad_values(over: dict[str, Any], message: str) -> None:
@@ -59,6 +59,6 @@ def test_cross_checks_report_unknown_units_and_too_few_archetypes() -> None:
 
 def test_cross_checks_report_crowded_start_zones() -> None:
     lib = library()
-    rules = RunRules.model_validate(_data(boss={"map": "ruined_fort", "enemies": ["bandit"] * 5}))
+    rules = RunRules.model_validate(_data(boss={"map": "bandit_lair", "enemies": ["bandit"] * 6}))
     problems = roguelite_problems(rules, lib.maps, lib.units, lib.ruleset.core.tier_budget)
     assert any("起始區放不下" in p for p in problems)
