@@ -15,6 +15,7 @@ from typing import Any
 from trpg.api.schemas import (
     BattleOutcome,
     BattleResponse,
+    FollowupOptionOut,
     InteractOptionOut,
     PreviewOut,
     StepOut,
@@ -30,6 +31,7 @@ from trpg.engine.event_filter import filter_events
 from trpg.engine.events import BattleStarted, EventBase
 from trpg.engine.preview import Preview
 from trpg.engine.results import Pending
+from trpg.engine.skills.followups import followup_options
 from trpg.engine.state import BattleState
 from trpg.engine.view import project_for
 from trpg.narrative.events import battle_started_text, describe_event
@@ -125,6 +127,21 @@ def copy_options_out(state: BattleState, pending: Pending | None) -> tuple[UseSk
     return tuple(action for action, _ in copy_selections(state, caster))
 
 
+def followup_options_out(
+    state: BattleState, pending: Pending | None
+) -> tuple[FollowupOptionOut, ...]:
+    """複合技能第二段選目標暫停時（Phase 3F-4a），第二段目前所有合法的選取；其他時候為空。"""
+    if pending is None or pending.kind != "followup":
+        return ()
+    assert pending.skill_id is not None
+    caster = state.units[pending.unit_id]
+    skill = state.ruleset.skill_def(pending.skill_id)
+    return tuple(
+        FollowupOptionOut(followup_target=target, tiles=area.tiles)
+        for target, area in followup_options(state, caster, skill)
+    )
+
+
 def battle_response(
     session: BattleSession,
     records: list[StepRecord],
@@ -154,6 +171,7 @@ def battle_response(
         else (),
         pending=pending,
         copy_options=copy_options_out(state, pending),
+        followup_options=followup_options_out(state, pending),
         orders=session.orders,
         orders_ignored=ignored_orders(state, VIEW_TEAM, session.orders),
         telegraph=telegraph_out(state, session.library, VIEW_TEAM),

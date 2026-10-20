@@ -13,7 +13,7 @@ from typing import Any, Literal
 
 from pydantic import BaseModel, ConfigDict, Field
 
-from trpg.engine.actions import Action, Step, UseSkill
+from trpg.engine.actions import Action, FollowupTarget, Step, UseSkill
 from trpg.engine.ai.orders import IgnoredOrder, OrderSet
 from trpg.engine.preview import (
     DamageRange,
@@ -150,6 +150,10 @@ class DecisionRequest(_ApiModel):
     copy_cast: UseSkill | None = None
     """``copy_skill`` 選目標（``pending.kind == "copy_skill"``）時，複製技能的選取（從回應的
     ``copy_options`` 挑一個）；反應詢問不使用。"""
+    followup_target: FollowupTarget | None = None
+    """複合技能第二段選目標（``pending.kind == "followup"``，Phase 3F-4a）時，第二段的選取（從
+    回應的 ``followup_options`` 挑一個的 ``followup_target``）；``accept: false`` 為放棄第二段
+    （第一段已經結算）。"""
 
 
 class StepOut(_ApiModel):
@@ -237,6 +241,15 @@ class InteractOptionOut(_ApiModel):
     """物件會移到的格子（即使不合法也給出；可能在地圖外）。"""
 
 
+class FollowupOptionOut(_ApiModel):
+    """複合技能第二段的一個合法選取（Phase 3F-4a，``pending.kind == "followup"`` 時）：
+    ``followup_target`` 原樣放進 ``DecisionRequest``；``tiles`` 是這個選取影響的格子
+    （依 (y, x)）。"""
+
+    followup_target: FollowupTarget
+    tiles: tuple[XY, ...]
+
+
 class BattleOutcome(_ApiModel):
     winner: Team | None
     """``None`` 為平手。"""
@@ -262,6 +275,9 @@ class BattleResponse(_ApiModel):
     copy_options: tuple[UseSkill, ...]
     """``pending.kind == "copy_skill"`` 時，複製技能（``pending.copy_skill_id``）目前所有合法的
     選取（``DecisionRequest.copy_cast`` 從中挑一個）；其他時候為空。"""
+    followup_options: tuple[FollowupOptionOut, ...] = ()
+    """``pending.kind == "followup"``（Phase 3F-4a）時，複合技能（``pending.skill_id``）第二段
+    從施放者目前位置所有合法的選取；其他時候為空。"""
     """主角的反應詢問（只有公開欄位）。"""
     orders: OrderSet
     """我方隊友目前的戰術指令。"""

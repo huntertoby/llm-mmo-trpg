@@ -26,7 +26,7 @@ from trpg.api.schemas import Awaiting, CreateBattleRequest
 from trpg.api.workshop import custom_skill_defs, equip_custom_skills
 from trpg.content.library import ContentLibrary
 from trpg.content.maps import BOSS_ARCHETYPE, TRAINING_ARCHETYPE
-from trpg.engine.actions import ACTION_ADAPTER, Action, Decision, Step, UseSkill
+from trpg.engine.actions import ACTION_ADAPTER, Action, Decision, FollowupTarget, Step, UseSkill
 from trpg.engine.ai.orders import OrderRecord, OrderSet, validate_order
 from trpg.engine.battle import begin_battle, has_only_end_turn, resolve, resume
 from trpg.engine.events import EventBase
@@ -201,11 +201,22 @@ class BattleSession:
         result = resolve(self.state, action)
         return [self._commit(action, result), *self._advance()]
 
-    def decide(self, accept: bool, copy_cast: UseSkill | None = None) -> list[StepRecord]:
-        """回答主角的反應詢問（或 ``copy_skill`` 的選目標，``copy_cast`` 為複製技能的選取），再
-        自動推進。不合法時拋出 ``IllegalActionError``，狀態不變。"""
+    def decide(
+        self,
+        accept: bool,
+        copy_cast: UseSkill | None = None,
+        followup_target: FollowupTarget | None = None,
+    ) -> list[StepRecord]:
+        """回答主角的反應詢問（或 ``copy_skill`` 的選目標，``copy_cast`` 為複製技能的選取；或複合
+        技能第二段的選目標，``followup_target`` 為第二段的選取，Phase 3F-4a），再自動推進。不合法
+        時拋出 ``IllegalActionError``，狀態不變。"""
         self._require("decision")
-        decision = Decision(unit_id=self.hero_id, accept=accept, copy_cast=copy_cast)
+        decision = Decision(
+            unit_id=self.hero_id,
+            accept=accept,
+            copy_cast=copy_cast,
+            followup_target=followup_target,
+        )
         result = resume(self.state, decision)
         return [self._commit(decision, result), *self._advance()]
 

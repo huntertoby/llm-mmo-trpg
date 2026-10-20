@@ -572,6 +572,11 @@ export interface components {
             pending: components["schemas"]["Pending"] | null;
             /** Copy Options */
             copy_options: components["schemas"]["UseSkill-Output"][];
+            /**
+             * Followup Options
+             * @default []
+             */
+            followup_options: components["schemas"]["FollowupOptionOut"][];
             orders: components["schemas"]["OrderSet"];
             /** Orders Ignored */
             orders_ignored: components["schemas"]["IgnoredOrder"][];
@@ -735,6 +740,16 @@ export interface components {
              * @default 0
              */
             composite_tax_permille: number;
+            /**
+             * Self Combo Permille
+             * @default 0
+             */
+            self_combo_permille: number;
+            /**
+             * Self Combo Reasons
+             * @default []
+             */
+            self_combo_reasons: string[];
         };
         /** BuildSummary */
         BuildSummary: {
@@ -875,7 +890,9 @@ export interface components {
          *
          *     - ``prompt`` 反應：``accept`` 是否使用反應；
          *     - ``copy_skill``（Phase 3C-4b）：``accept`` 為真時 ``copy_cast`` 必須給出複製技能的選取，為假則
-         *       放棄施放（不付任何代價）。
+         *       放棄施放（不付任何代價）；
+         *     - ``followup``（Phase 3F-4a）：``accept`` 為真時 ``followup_target`` 必須給出複合技能第二段的
+         *       選取，為假則放棄第二段（第一段已經結算）。
          */
         Decision: {
             /**
@@ -888,12 +905,14 @@ export interface components {
             /** Accept */
             accept: boolean;
             copy_cast?: components["schemas"]["UseSkill-Output"] | null;
+            followup_target?: components["schemas"]["FollowupTarget"] | null;
         };
         /** DecisionRequest */
         DecisionRequest: {
             /** Accept */
             accept: boolean;
             copy_cast?: components["schemas"]["UseSkill-Input"] | null;
+            followup_target?: components["schemas"]["FollowupTarget"] | null;
         };
         /**
          * Defend
@@ -1034,6 +1053,17 @@ export interface components {
             kind: "focus_target";
             /** Target */
             target: string;
+        };
+        /**
+         * FollowupOptionOut
+         * @description 複合技能第二段的一個合法選取（Phase 3F-4a，``pending.kind == "followup"`` 時）：
+         *     ``followup_target`` 原樣放進 ``DecisionRequest``；``tiles`` 是這個選取影響的格子
+         *     （依 (y, x)）。
+         */
+        FollowupOptionOut: {
+            followup_target: components["schemas"]["FollowupTarget"];
+            /** Tiles */
+            tiles: components["schemas"]["XY"][];
         };
         /**
          * FollowupTarget
@@ -1496,17 +1526,19 @@ export interface components {
         };
         /**
          * Pending
-         * @description 結算暫停、等待玩家決定（``prompt`` 反應，或 ``copy_skill`` 選目標）。
+         * @description 結算暫停、等待玩家決定（``prompt`` 反應、``copy_skill`` 選目標，或複合技能的第二段選目標）。
          *
          *     以 ``resume(state, Decision(unit_id=..., accept=...))`` 繼續；``kind == "copy_skill"`` 時
-         *     ``Decision.copy_cast`` 給出複製技能的選取（Phase 3C-4b）。
+         *     ``Decision.copy_cast`` 給出複製技能的選取（Phase 3C-4b）；``kind == "followup"``（Phase 3F-4a，
+         *     「動作 → 位移」「擊殺 → 接下一段」）時 ``Decision.followup_target`` 給出第二段的選取
+         *     （``skill_id`` 是施放的複合技能；第一段已經結算，``accept=False`` 只放棄第二段）。
          */
         Pending: {
             /**
              * Kind
              * @enum {string}
              */
-            kind: "reaction" | "copy_skill";
+            kind: "reaction" | "copy_skill" | "followup";
             /** Unit Id */
             unit_id: string;
             /**
@@ -1880,6 +1912,11 @@ export interface components {
             synergies: string[];
             /** Total */
             total: number;
+            /**
+             * Chance Permille
+             * @default 1000
+             */
+            chance_permille: number;
         };
         /**
          * SetReactionMode

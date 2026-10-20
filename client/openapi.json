@@ -1454,6 +1454,14 @@
             "type": "array",
             "title": "Copy Options"
           },
+          "followup_options": {
+            "items": {
+              "$ref": "#/components/schemas/FollowupOptionOut"
+            },
+            "type": "array",
+            "title": "Followup Options",
+            "default": []
+          },
           "orders": {
             "$ref": "#/components/schemas/OrderSet"
           },
@@ -1913,6 +1921,19 @@
             "type": "integer",
             "title": "Composite Tax Permille",
             "default": 0
+          },
+          "self_combo_permille": {
+            "type": "integer",
+            "title": "Self Combo Permille",
+            "default": 0
+          },
+          "self_combo_reasons": {
+            "items": {
+              "type": "string"
+            },
+            "type": "array",
+            "title": "Self Combo Reasons",
+            "default": []
           }
         },
         "additionalProperties": false,
@@ -2275,6 +2296,16 @@
                 "type": "null"
               }
             ]
+          },
+          "followup_target": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/FollowupTarget"
+              },
+              {
+                "type": "null"
+              }
+            ]
           }
         },
         "additionalProperties": false,
@@ -2284,7 +2315,7 @@
           "accept"
         ],
         "title": "Decision",
-        "description": "對暫停中的結算的回答：``unit_id`` 為被詢問者。\n\n- ``prompt`` 反應：``accept`` 是否使用反應；\n- ``copy_skill``（Phase 3C-4b）：``accept`` 為真時 ``copy_cast`` 必須給出複製技能的選取，為假則\n  放棄施放（不付任何代價）。"
+        "description": "對暫停中的結算的回答：``unit_id`` 為被詢問者。\n\n- ``prompt`` 反應：``accept`` 是否使用反應；\n- ``copy_skill``（Phase 3C-4b）：``accept`` 為真時 ``copy_cast`` 必須給出複製技能的選取，為假則\n  放棄施放（不付任何代價）；\n- ``followup``（Phase 3F-4a）：``accept`` 為真時 ``followup_target`` 必須給出複合技能第二段的\n  選取，為假則放棄第二段（第一段已經結算）。"
       },
       "DecisionRequest": {
         "properties": {
@@ -2296,6 +2327,16 @@
             "anyOf": [
               {
                 "$ref": "#/components/schemas/UseSkill-Input"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "followup_target": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/FollowupTarget"
               },
               {
                 "type": "null"
@@ -2618,6 +2659,28 @@
         ],
         "title": "FocusTarget",
         "description": "集火指定敵人。"
+      },
+      "FollowupOptionOut": {
+        "properties": {
+          "followup_target": {
+            "$ref": "#/components/schemas/FollowupTarget"
+          },
+          "tiles": {
+            "items": {
+              "$ref": "#/components/schemas/XY"
+            },
+            "type": "array",
+            "title": "Tiles"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "followup_target",
+          "tiles"
+        ],
+        "title": "FollowupOptionOut",
+        "description": "複合技能第二段的一個合法選取（Phase 3F-4a，``pending.kind == \"followup\"`` 時）：\n``followup_target`` 原樣放進 ``DecisionRequest``；``tiles`` 是這個選取影響的格子\n（依 (y, x)）。"
       },
       "FollowupTarget": {
         "properties": {
@@ -3804,7 +3867,8 @@
             "type": "string",
             "enum": [
               "reaction",
-              "copy_skill"
+              "copy_skill",
+              "followup"
             ],
             "title": "Kind"
           },
@@ -3884,7 +3948,7 @@
           "unit_id"
         ],
         "title": "Pending",
-        "description": "結算暫停、等待玩家決定（``prompt`` 反應，或 ``copy_skill`` 選目標）。\n\n以 ``resume(state, Decision(unit_id=..., accept=...))`` 繼續；``kind == \"copy_skill\"`` 時\n``Decision.copy_cast`` 給出複製技能的選取（Phase 3C-4b）。"
+        "description": "結算暫停、等待玩家決定（``prompt`` 反應、``copy_skill`` 選目標，或複合技能的第二段選目標）。\n\n以 ``resume(state, Decision(unit_id=..., accept=...))`` 繼續；``kind == \"copy_skill\"`` 時\n``Decision.copy_cast`` 給出複製技能的選取（Phase 3C-4b）；``kind == \"followup\"``（Phase 3F-4a，\n「動作 → 位移」「擊殺 → 接下一段」）時 ``Decision.followup_target`` 給出第二段的選取\n（``skill_id`` 是施放的複合技能；第一段已經結算，``accept=False`` 只放棄第二段）。"
       },
       "PendingView": {
         "properties": {
@@ -4757,6 +4821,11 @@
           "total": {
             "type": "number",
             "title": "Total"
+          },
+          "chance_permille": {
+            "type": "integer",
+            "title": "Chance Permille",
+            "default": 1000
           }
         },
         "additionalProperties": false,
