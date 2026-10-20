@@ -22,7 +22,6 @@ from trpg.content.skills import SkillDef
 from trpg.shared.rng import Rng
 from trpg.shared.types import Element
 from trpg.skillgen.budget import BudgetError, skill_budget
-from trpg.skillgen.composer_tuning import tuning_bounds
 from trpg.skillgen.validate import validate_skill
 
 __all__ = ["compose_legendary", "compose_modifier"]
@@ -86,8 +85,10 @@ def _data(seed: int, label: str, rarity: str, theme: str, extra: dict[str, Any])
 
 
 def _pick(rng: Rng, library: ContentLibrary, candidates: list[dict[str, Any]]) -> SkillDef | None:
-    """候選中預算比例落在調整區間、且通過驗證的，隨機挑一個。"""
-    low, high = tuning_bounds(library)
+    """候選中預算合格（比例落在驗證器的合格區間）、且通過驗證的，隨機挑一個。
+
+    固定點數的結構（規則改變、改寫規則型原語）沒有旋鈕可以調進組合器收窄的 0.75–0.95 區間，
+    所以這裡用完整的合格區間（0.70–1.00），與手寫的傳說一致。"""
     fits: list[SkillDef] = []
     for data in candidates:
         try:
@@ -95,7 +96,7 @@ def _pick(rng: Rng, library: ContentLibrary, candidates: list[dict[str, Any]]) -
             report = skill_budget(skill, library)
         except (ValidationError, BudgetError):
             continue
-        if low <= report.ratio <= high:
+        if report.ok:
             fits.append(skill)
     for skill in rng.shuffled(fits):
         if not validate_skill(skill, library):
