@@ -1,6 +1,14 @@
 import { describe, expect, it } from "vitest";
 import type { BattleResponse } from "../api/types";
-import { FEEDBACK_MS, frameOps, playbackPlan, remainingLines } from "./playback";
+import {
+  FEEDBACK_MS,
+  frameOps,
+  PLAY_SPEEDS,
+  playbackPlan,
+  remainingLines,
+  type Frame,
+  type PlaySpeed,
+} from "./playback";
 import fixture from "./fixtures/oil_depot_seed3.json";
 
 const response = fixture as unknown as BattleResponse;
@@ -84,11 +92,23 @@ describe("playbackPlan", () => {
   });
 
   it("shortens move animations by speed (fast about half, skip none)", () => {
-    const moves = (speed: "normal" | "fast" | "skip") =>
+    const moves = (speed: PlaySpeed) =>
       playbackPlan(response, hero, speed).frames.flatMap((f) => f.moves);
-    const total = (speed: "normal" | "fast" | "skip") => moves(speed).reduce((a, m) => a + m.durationMs, 0);
+    const total = (speed: PlaySpeed) => moves(speed).reduce((a, m) => a + m.durationMs, 0);
     expect(total("normal")).toBeGreaterThan(0);
     expect(Math.abs(total("fast") - total("normal") / 2)).toBeLessThanOrEqual(moves("normal").length / 2);
     expect(total("skip")).toBe(0);
+  });
+
+  it("has four speeds in order, and slow takes twice the normal time", () => {
+    expect(PLAY_SPEEDS).toEqual(["slow", "normal", "fast", "skip"]);
+    const frames = (speed: PlaySpeed) => playbackPlan(response, hero, speed).frames;
+    const sum = (speed: PlaySpeed, pick: (f: Frame) => number) => frames(speed).reduce((a, f) => a + pick(f), 0);
+    const moveMs = (f: Frame) => f.moves.reduce((a, m) => a + m.durationMs, 0);
+    expect(sum("normal", moveMs)).toBeGreaterThan(0);
+    expect(Math.abs(sum("slow", moveMs) - 2 * sum("normal", moveMs))).toBeLessThanOrEqual(frames("normal").length);
+    expect(sum("normal", (f) => f.pauseMs)).toBeGreaterThan(0);
+    expect(sum("slow", (f) => f.pauseMs)).toBe(2 * sum("normal", (f) => f.pauseMs));
+    expect(frames("slow").every((f) => f.feedbackMs === FEEDBACK_MS * 2)).toBe(true);
   });
 });

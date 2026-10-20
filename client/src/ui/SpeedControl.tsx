@@ -1,7 +1,8 @@
-// 播放速度（正常／快／略過）與播放中的「跳到結尾」按鈕。
+// 播放速度（慢／正常／快／略過）與播放中的「跳到結尾」按鈕。
 import { PLAY_SPEEDS, type PlaySpeed } from "../battle/playback";
 
 const LABELS: Readonly<Record<PlaySpeed, string>> = {
+  slow: "慢",
   normal: "正常",
   fast: "快",
   skip: "略過",
