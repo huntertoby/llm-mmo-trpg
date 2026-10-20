@@ -68,8 +68,11 @@ def test_every_fast_seed_composes_a_valid_skill_in_the_budget_window() -> None:
         assert skill.kind == expected.get(skill.skeleton, "active")
         assert (skill.cost.source is not None) == (skill.rarity == "legendary")
         assert skill.narrative.concept
-        ratio = skill_budget(skill, library).ratio
-        assert low <= ratio <= high, (seed, float(ratio))
+        report = skill_budget(skill, library)
+        if skill.rarity == "legendary" or skill.kind == "modifier":
+            assert report.ok, (seed, float(report.ratio))  # 固定點數的結構：完整的合格區間
+        else:
+            assert low <= report.ratio <= high, (seed, float(report.ratio))
 
 
 def test_category_matches_weapon_req_and_tags_start_with_the_theme() -> None:
