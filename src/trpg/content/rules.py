@@ -22,8 +22,9 @@ from typing import Literal
 
 from pydantic import Field, model_validator
 
-from trpg.content.battle import Dice
+from trpg.content.battle import Dice, UnitTemplate
 from trpg.content.schemas import ContentModel
+from trpg.shared.types import Attribute
 
 __all__ = [
     "HIT_TABLE_SCALE",
@@ -71,6 +72,12 @@ class CoreRules(ContentModel):
     melee_height_limit_max_range: int = Field(ge=1)
     initiative_attr_base: int
     initiative_attr_divisor: int = Field(ge=1)
+
+    # 衍生數值：最大 HP ＝ 範本基礎 HP ＋（體質 − hp_con_base）× hp_per_con_point（至少 1）；
+    # roguelite 每升一級再加 基礎 HP × level_hp_permille ‰（Phase 3-7，初值）
+    hp_con_base: int = Field(ge=0)
+    hp_per_con_point: int = Field(ge=0)
+    level_hp_permille: int = Field(ge=0)
 
     # 傷害
     basic_attack_attr_multiplier_permille: int = Field(ge=0)
@@ -213,6 +220,18 @@ class CoreRules(ContentModel):
         if any(a >= b for a, b in itertools.pairwise(values)) or values[0] < 1:
             raise ValueError(f"tier_budget 必須是隨階級嚴格遞增的正整數，收到 {values}")
         return self
+
+    def max_hp_for(self, base_hp: int, con: int) -> int:
+        """最大 HP ＝ 基礎 HP ＋（體質 − ``hp_con_base``）× ``hp_per_con_point``（至少 1）。"""
+        return max(1, base_hp + (con - self.hp_con_base) * self.hp_per_con_point)
+
+    def template_max_hp(self, template: UnitTemplate) -> int:
+        """範本建立出的單位的最大 HP（引擎對敵我所有單位用同一公式）。"""
+        return self.max_hp_for(template.max_hp, template.attributes[Attribute.CON])
+
+    def level_hp_bonus(self, base_hp: int, level: int) -> int:
+        """roguelite 升級的最大 HP 加成：基礎 HP × ``level_hp_permille``‰ ×（等級−1），向下取整。"""
+        return base_hp * self.level_hp_permille * max(0, level - 1) // 1000
 
     def summary(self) -> str:
         return f"每回合 {self.ap_per_turn} AP、命中門檻 {self.hit_target}"

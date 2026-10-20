@@ -54,7 +54,7 @@ builds:
       id: build_push
       name_zh: 位移流英雄
       attributes: {str: 16, dex: 12, con: 14, int: 10, wis: 10, wil: 10}
-      max_hp: 60
+      max_hp: 48
       speed: 5
       armor_bonus: 4
       weapon: one_handed_sword
@@ -104,7 +104,7 @@ builds:
       id: build_tank
       name_zh: 坦克英雄
       attributes: {str: 16, dex: 12, con: 14, int: 10, wis: 10, wil: 10}
-      max_hp: 60
+      max_hp: 48
       speed: 5
       armor_bonus: 4
       weapon: one_handed_sword
@@ -122,7 +122,7 @@ builds:
       id: build_ranged
       name_zh: 遠程英雄
       attributes: {str: 10, dex: 16, con: 12, int: 10, wis: 12, wil: 10}
-      max_hp: 46
+      max_hp: 40
       speed: 5
       armor_bonus: 2
       weapon: bow
@@ -137,7 +137,7 @@ builds:
       id: build_assassin
       name_zh: 刺殺英雄
       attributes: {str: 14, dex: 16, con: 12, int: 10, wis: 10, wil: 10}   # 匕首吃敏捷、技能吃力量
-      max_hp: 50
+      max_hp: 44
       speed: 5
       armor_bonus: 2
       weapon: dagger
@@ -205,7 +205,7 @@ builds:
       id: build_guardian
       name_zh: 守護者英雄
       attributes: {str: 16, dex: 12, con: 14, int: 10, wis: 10, wil: 10}
-      max_hp: 60
+      max_hp: 48
       speed: 5
       armor_bonus: 4
       weapon: one_handed_sword
@@ -256,7 +256,7 @@ builds:
       id: build_charger
       name_zh: 衝鋒流英雄
       attributes: {str: 16, dex: 12, con: 14, int: 10, wis: 10, wil: 10}
-      max_hp: 60
+      max_hp: 48
       speed: 5
       armor_bonus: 4
       weapon: one_handed_sword
@@ -289,7 +289,7 @@ builds:
       id: build_summoner
       name_zh: 召喚師英雄
       attributes: {str: 8, dex: 12, con: 12, int: 16, wis: 14, wil: 12}
-      max_hp: 42
+      max_hp: 36
       speed: 5
       armor_bonus: 1
       weapon: fire_staff
@@ -306,7 +306,7 @@ builds:
       id: build_gambler
       name_zh: 賭徒英雄
       attributes: {str: 16, dex: 12, con: 14, int: 10, wis: 10, wil: 10}
-      max_hp: 56
+      max_hp: 44
       speed: 5
       armor_bonus: 3
       weapon: one_handed_sword
@@ -356,7 +356,7 @@ builds:
       id: build_winged
       name_zh: 飛翼流英雄
       attributes: {str: 10, dex: 16, con: 12, int: 10, wis: 14, wil: 10}
-      max_hp: 44
+      max_hp: 38
       speed: 5
       armor_bonus: 2
       weapon: bow
@@ -388,7 +388,7 @@ builds:
       id: build_wallburn
       name_zh: 推牆焚燒英雄
       attributes: {str: 16, dex: 12, con: 14, int: 10, wis: 10, wil: 10}
-      max_hp: 60
+      max_hp: 48
       speed: 5
       armor_bonus: 4
       weapon: one_handed_sword

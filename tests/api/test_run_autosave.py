@@ -233,7 +233,7 @@ def test_builds_give_hp_mana_and_weapon(runs_client: TestClient, library: Conten
     assert len(builds) == len(library.builds.builds)
     for out, b in zip(builds, library.builds.builds, strict=True):
         weapon = library.weapons[b.hero.weapon]
-        assert out["max_hp"] == b.hero.max_hp > 0
+        assert out["max_hp"] == library.ruleset.core.template_max_hp(b.hero) > 0
         assert out["max_mana"] == b.hero.max_mana
         assert out["weapon"] == b.hero.weapon and out["weapon_name_zh"] == weapon.name_zh
 

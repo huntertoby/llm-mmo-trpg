@@ -4,7 +4,7 @@
 id: summon_war_totem
 name_zh: 戰意圖騰
 attributes: {str: 6, dex: 6, con: 12, int: 6, wis: 6, wil: 6}
-max_hp: 18
+max_hp: 12
 speed: 0
 armor_bonus: 0
 weapon: one_handed_sword

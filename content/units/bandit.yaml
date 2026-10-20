@@ -1,7 +1,7 @@
 id: bandit
 name_zh: 盜賊
 attributes: {str: 12, dex: 14, con: 12, int: 8, wis: 10, wil: 8}
-max_hp: 30
+max_hp: 24
 speed: 5
 armor_bonus: 2
 weapon: dagger

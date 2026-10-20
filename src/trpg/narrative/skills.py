@@ -267,15 +267,16 @@ def _summon(lib: ContentLibrary, _skill: SkillDef, spec: EffectSpec) -> str:
         name = spec.unit or "召喚物"
     else:
         template, weapon = summon.template, summon.weapon
+        hp = lib.ruleset.core.template_max_hp(template)
         totem = template.totem
         if totem is not None:  # 圖騰（3D-4b）
             status = lib.ruleset.status_def(totem.status).name_zh
             return (
-                f"在目標空格立起{template.name_zh}（HP {template.max_hp}），持續 {spec.duration} 輪"
+                f"在目標空格立起{template.name_zh}（HP {hp}），持續 {spec.duration} 輪"
                 f"（緊接在你之後行動；不移動、不攻擊，每次行動開始時讓 {totem.radius} 格內的"
                 f"友方獲得「{status}」{totem.duration} 回合）"
             )
-        name = f"{template.name_zh}（HP {template.max_hp}，{weapon.name_zh}）"
+        name = f"{template.name_zh}（HP {hp}，{weapon.name_zh}）"
     return f"在目標空格召喚{name}，持續 {spec.duration} 輪（緊接在你之後行動，由 AI 控制）"
 
 

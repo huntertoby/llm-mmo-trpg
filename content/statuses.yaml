@@ -200,6 +200,7 @@ statuses:
     save_attr: wil
   - id: bleed
     polarity: debuff
+    save_attr: con
     name_zh: 流血
     description_zh: 回合開始時受到 1d4 物理傷害，持續 3 回合。
     duration: 3
@@ -211,6 +212,7 @@ statuses:
       element: physical
   - id: poison
     polarity: debuff
+    save_attr: con
     name_zh: 中毒
     description_zh: 回合開始時受到 1d4 毒素傷害，持續 3 回合；受到的治療減半。
     duration: 3

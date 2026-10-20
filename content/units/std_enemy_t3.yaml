@@ -3,7 +3,7 @@
 id: std_enemy_t3
 name_zh: 標準敵人（3 階）
 attributes: {str: 12, dex: 14, con: 12, int: 8, wis: 10, wil: 8}
-max_hp: 49
+max_hp: 43
 speed: 5
 armor_bonus: 2
 weapon: dagger
