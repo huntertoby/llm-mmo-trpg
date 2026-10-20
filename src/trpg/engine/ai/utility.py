@@ -1503,7 +1503,8 @@ def _charge_estimate(  # noqa: PLR0917
         return None
     moved = unit.clone()
     moved.pos = Pos(x=area.origin[0], y=area.origin[1])
-    return 3 * len(area.units) + _unit_position_value(state, moved, w, scene) - before
+    gain = w.charge_per_enemy * len(area.units)
+    return gain + _unit_position_value(state, moved, w, scene) - before
 
 
 def _shadowstep_estimate(  # noqa: PLR0917
@@ -1514,8 +1515,8 @@ def _shadowstep_estimate(  # noqa: PLR0917
     w: AiWeights,
     before: Fraction,
 ) -> Fraction | None:
-    """瞬步（Phase 3D-8d）的估計：目標 3 分、落在目標背後再加 2 分，加上落點（面向目標）的位置
-    價值變化；找不到落點時不納入。"""
+    """瞬步（Phase 3D-8d）的估計：目標 ``shadowstep`` 分、落在目標背後再加 ``shadowstep_behind``
+    分（權重，預設 3 與 2），加上落點（面向目標）的位置價值變化；找不到落點時不納入。"""
     assert action.target_id is not None
     target = state.units[action.target_id]
     if action.target_pos is not None:
@@ -1526,8 +1527,8 @@ def _shadowstep_estimate(  # noqa: PLR0917
         return None
     moved = unit.clone()
     moved.pos = Pos(x=dest[0], y=dest[1])
-    behind = 2 if is_behind(dest, target) else 0
-    return 3 + behind + _unit_position_value(state, moved, w, scene) - before
+    behind = w.shadowstep_behind if is_behind(dest, target) else 0
+    return w.shadowstep + behind + _unit_position_value(state, moved, w, scene) - before
 
 
 def _trap_estimate(

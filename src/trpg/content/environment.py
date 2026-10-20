@@ -620,6 +620,12 @@ class AiWeights(ContentModel):
     """（Phase 3D-8d）近戰單位站在敵人背後格的每個敵人（位置價值加分）。"""
     back_exposed: int = 0
     """（Phase 3D-8d）背對相鄰的近戰敵人（位置價值扣分；朝向以「面向最近的敵人」近似）。"""
+    charge_per_enemy: int = 3
+    """（Phase 3E-1）直線衝撞（``charge_through``）每個會被穿過的敵人的固定加分；預設 3，不是 0。"""
+    shadowstep: int = 3
+    """（Phase 3E-1）瞬步（``shadowstep``）的固定加分；預設 3，不是 0。"""
+    shadowstep_behind: int = 2
+    """（Phase 3E-1）瞬步落在目標背後時再加的分數；預設 2，不是 0。"""
 
 
 class TrapAiRules(ContentModel):
