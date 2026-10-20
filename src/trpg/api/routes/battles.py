@@ -14,7 +14,9 @@ from trpg.api.schemas import (
     CreateBattleRequest,
     DecisionRequest,
     PreviewOut,
+    SkillReasons,
 )
+from trpg.api.skill_reasons import skill_reasons
 from trpg.api.state import store_of
 from trpg.engine.actions import Action
 from trpg.engine.ai.orders import OrderSet
@@ -62,6 +64,14 @@ def post_preview(battle_id: str, action: Action, request: Request) -> PreviewOut
     session = store_of(request).get(battle_id)
     with session.lock:
         return preview_response(session.preview(action))
+
+
+@router.get("/{battle_id}/skill-reasons")
+def get_skill_reasons(battle_id: str, request: Request) -> SkillReasons:
+    """主角灰掉的技能的原因（引擎的拒絕理由）。不改變狀態、不推進戰鬥。"""
+    session = store_of(request).get(battle_id)
+    with session.lock:
+        return skill_reasons(session.state, session.hero_id)
 
 
 @router.put("/{battle_id}/orders")

@@ -32,16 +32,27 @@ def list_builds(request: Request) -> list[BuildSummary]:
     """主角可選的 build（內容檔順序）。"""
     library = store_of(request).library
     return [
-        BuildSummary(id=b.id, name_zh=b.name_zh, theme_zh=b.theme_zh, skills=tuple(b.hero.skills))
+        BuildSummary(
+            id=b.id,
+            name_zh=b.name_zh,
+            theme_zh=b.theme_zh,
+            skills=tuple(b.hero.skills),
+            max_mana=b.hero.max_mana,
+        )
         for b in library.builds.builds
     ]
 
 
 @router.get("/skills/{skill_id}")
-def get_skill(skill_id: str, request: Request) -> SkillCard:
-    """技能卡片：內容庫的技能，或進行中各輪的生成技能與候選（Phase 3-5a）。"""
-    library = store_of(request).library
-    skill = library.skills.get(skill_id) or runs_of(request).find_skill(skill_id)
+def get_skill(skill_id: str, request: Request, battle_id: str | None = None) -> SkillCard:
+    """技能卡片：內容庫的技能，或進行中各輪的生成技能與候選（Phase 3-5a）；帶 ``battle_id`` 時
+    也查該場戰鬥規則包內的技能（工坊試玩的自訂技能、一輪生成技能，Phase 3-5c-2）。"""
+    store = store_of(request)
+    library = store.library
+    skill = library.skills.get(skill_id)
+    if skill is None and battle_id is not None:
+        skill = store.get(battle_id).setup.ruleset.skills.by_id().get(skill_id)
+    skill = skill or runs_of(request).find_skill(skill_id)
     if skill is None:
         raise HTTPException(status_code=404, detail=f"找不到技能 {skill_id}")
     return skill_card(library, skill)

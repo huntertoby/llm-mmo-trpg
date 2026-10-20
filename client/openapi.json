@@ -63,7 +63,7 @@
           "content"
         ],
         "summary": "Get Skill",
-        "description": "技能卡片：內容庫的技能，或進行中各輪的生成技能與候選（Phase 3-5a）。",
+        "description": "技能卡片：內容庫的技能，或進行中各輪的生成技能與候選（Phase 3-5a）；帶 ``battle_id`` 時\n也查該場戰鬥規則包內的技能（工坊試玩的自訂技能、一輪生成技能，Phase 3-5c-2）。",
         "operationId": "get_skill_api_skills__skill_id__get",
         "parameters": [
           {
@@ -73,6 +73,22 @@
             "schema": {
               "type": "string",
               "title": "Skill Id"
+            }
+          },
+          {
+            "name": "battle_id",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Battle Id"
             }
           }
         ],
@@ -439,6 +455,49 @@
               "application/json": {
                 "schema": {
                   "$ref": "#/components/schemas/PreviewOut"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/battles/{battle_id}/skill-reasons": {
+      "get": {
+        "tags": [
+          "battles"
+        ],
+        "summary": "Get Skill Reasons",
+        "description": "主角灰掉的技能的原因（引擎的拒絕理由）。不改變狀態、不推進戰鬥。",
+        "operationId": "get_skill_reasons_api_battles__battle_id__skill_reasons_get",
+        "parameters": [
+          {
+            "name": "battle_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Battle Id"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SkillReasons"
                 }
               }
             }
@@ -1980,6 +2039,11 @@
             },
             "type": "array",
             "title": "Skills"
+          },
+          "max_mana": {
+            "type": "integer",
+            "title": "Max Mana",
+            "default": 0
           }
         },
         "additionalProperties": false,
@@ -5234,6 +5298,24 @@
           "epic",
           "legendary"
         ]
+      },
+      "SkillReasons": {
+        "properties": {
+          "reasons": {
+            "additionalProperties": {
+              "type": "string"
+            },
+            "type": "object",
+            "title": "Reasons"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "reasons"
+        ],
+        "title": "SkillReasons",
+        "description": "主角灰掉的技能 → 引擎的拒絕理由（繁體中文）；可以用的技能不在表內（Phase 3-5c-2）。"
       },
       "StatusChanceOut": {
         "properties": {

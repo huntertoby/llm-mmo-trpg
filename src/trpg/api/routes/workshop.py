@@ -13,6 +13,7 @@ from typing import Any
 
 from fastapi import APIRouter, Request
 
+from trpg.api.player_text import player_options
 from trpg.api.schemas import MapSummary
 from trpg.api.sessions import playable_maps
 from trpg.api.state import store_of
@@ -52,7 +53,9 @@ def get_arena(request: Request) -> WorkshopArena:
     """裝上試玩的選單：靶場（預設）、其他地圖、靶場的對手。"""
     library = store_of(request).library
     rules = library.workshop
-    ids = [rules.map, *(m for m in playable_maps(library) if m != rules.map)]
+    boss = playable_maps(library, include_boss=True)  # Boss 地圖排在一般地圖之後（3-5c-2）
+    general = playable_maps(library)
+    ids = [rules.map, *general, *(m for m in boss if m not in general and m != rules.map)]
     maps = tuple(
         MapSummary(
             id=m.id, name_zh=m.name_zh, archetype=m.archetype, width=m.width, height=m.height
@@ -76,7 +79,8 @@ def get_arena(request: Request) -> WorkshopArena:
 @router.post("/options")
 def post_options(body: WorkshopSkillRequest, request: Request) -> DraftOptions:
     """下一步的合法選項：前置步驟都完成的每一步的欄位與選項，以及第一個未完成的步驟。"""
-    return draft_options(body.skill, store_of(request).library)
+    library = store_of(request).library
+    return player_options(draft_options(body.skill, library), library)
 
 
 @router.post("/check")

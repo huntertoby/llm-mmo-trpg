@@ -318,14 +318,17 @@ def order_problems(state: BattleState, orders: OrderSet, hero_id: UnitId) -> lis
     return problems
 
 
-def playable_maps(library: ContentLibrary, *, include_training: bool = False) -> list[str]:
+def playable_maps(
+    library: ContentLibrary, *, include_training: bool = False, include_boss: bool = False
+) -> list[str]:
     """可以在網頁上開戰的地圖：有預設遭遇（``encounter``）的地圖，依 ID 排序。技能工坊的靶場（地圖
-    類型 ``training``，Phase 3F-1）只有 ``include_training`` 時才列入（一般地圖列表不列）。"""
+    類型 ``training``，Phase 3F-1）只有 ``include_training`` 時才列入、Boss 地圖（``boss``，
+    Phase 3-5b）只有 ``include_boss`` 時才列入（一般地圖列表都不列）。"""
     return sorted(
         m
         for m, d in library.maps.items()
         if d.encounter is not None
-        and d.archetype != BOSS_ARCHETYPE
+        and (include_boss or d.archetype != BOSS_ARCHETYPE)
         and (include_training or d.archetype != TRAINING_ARCHETYPE)
     )
 
@@ -351,7 +354,10 @@ class SessionStore:
         self._lock = threading.Lock()
 
     def _setup(self, request: CreateBattleRequest) -> BattleSetup:
-        maps = playable_maps(self.library, include_training=True)
+        # 工坊試玩（帶自訂技能）可以選 Boss 地圖；一般開戰不行（Phase 3-5c-2）
+        maps = playable_maps(
+            self.library, include_training=True, include_boss=bool(request.custom_skills)
+        )
         if request.map_id not in maps:
             raise InvalidRequestError(f"未知的地圖：{request.map_id}（可用：{', '.join(maps)}）")
         fill = request.ally_builds is None

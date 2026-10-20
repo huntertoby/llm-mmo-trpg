@@ -53,7 +53,8 @@ export interface paths {
         };
         /**
          * Get Skill
-         * @description 技能卡片：內容庫的技能，或進行中各輪的生成技能與候選（Phase 3-5a）。
+         * @description 技能卡片：內容庫的技能，或進行中各輪的生成技能與候選（Phase 3-5a）；帶 ``battle_id`` 時
+         *     也查該場戰鬥規則包內的技能（工坊試玩的自訂技能、一輪生成技能，Phase 3-5c-2）。
          */
         get: operations["get_skill_api_skills__skill_id__get"];
         put?: never;
@@ -166,6 +167,26 @@ export interface paths {
         put?: never;
         /** Post Preview */
         post: operations["post_preview_api_battles__battle_id__preview_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/battles/{battle_id}/skill-reasons": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Get Skill Reasons
+         * @description 主角灰掉的技能的原因（引擎的拒絕理由）。不改變狀態、不推進戰鬥。
+         */
+        get: operations["get_skill_reasons_api_battles__battle_id__skill_reasons_get"];
+        put?: never;
+        post?: never;
         delete?: never;
         options?: never;
         head?: never;
@@ -761,6 +782,11 @@ export interface components {
             theme_zh: string;
             /** Skills */
             skills: string[];
+            /**
+             * Max Mana
+             * @default 0
+             */
+            max_mana: number;
         };
         /** BurningOut */
         BurningOut: {
@@ -2059,6 +2085,16 @@ export interface components {
         };
         /** @enum {string} */
         SkillRarity: "common" | "rare" | "epic" | "legendary";
+        /**
+         * SkillReasons
+         * @description 主角灰掉的技能 → 引擎的拒絕理由（繁體中文）；可以用的技能不在表內（Phase 3-5c-2）。
+         */
+        SkillReasons: {
+            /** Reasons */
+            reasons: {
+                [key: string]: string;
+            };
+        };
         /** StatusChanceOut */
         StatusChanceOut: {
             /** Status Id */
@@ -2691,7 +2727,9 @@ export interface operations {
     };
     get_skill_api_skills__skill_id__get: {
         parameters: {
-            query?: never;
+            query?: {
+                battle_id?: string | null;
+            };
             header?: never;
             path: {
                 skill_id: string;
@@ -2896,6 +2934,37 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["PreviewOut"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    get_skill_reasons_api_battles__battle_id__skill_reasons_get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                battle_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["SkillReasons"];
                 };
             };
             /** @description Validation Error */

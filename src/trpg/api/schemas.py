@@ -58,6 +58,7 @@ __all__ = [
     "PierceOut",
     "PreviewOut",
     "ReviveOut",
+    "SkillReasons",
     "StatusChanceOut",
     "StepOut",
     "TargetOut",
@@ -98,6 +99,14 @@ class BuildSummary(_ApiModel):
     name_zh: str
     theme_zh: str
     skills: tuple[str, ...]
+    max_mana: int = 0
+    """主角（未分配屬性點前）的法力上限；工坊試玩比對技能法力需求用。"""
+
+
+class SkillReasons(_ApiModel):
+    """主角灰掉的技能 → 引擎的拒絕理由（繁體中文）；可以用的技能不在表內（Phase 3-5c-2）。"""
+
+    reasons: dict[str, str]
 
 
 class GlossaryEntry(_ApiModel):
