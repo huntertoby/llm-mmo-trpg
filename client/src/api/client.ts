@@ -4,12 +4,18 @@ import type {
   BattleResponse,
   BuildSummary,
   CreateBattleRequest,
+  DraftOptions,
   Glossary,
   MapSummary,
   OrderSet,
   PreviewOut,
   SkillCard,
   UseSkill,
+  WorkshopArena,
+  WorkshopCheck,
+  WorkshopExport,
+  WorkshopRandom,
+  WorkshopRandomRequest,
 } from "./types";
 
 export class ApiError extends Error {
@@ -75,6 +81,16 @@ export const api = {
   setOrders: (id: string, orders: OrderSet) =>
     request<BattleResponse>("PUT", `/battles/${id}/orders`, orders),
   /** 回答暫停中的結算：反應詢問（`accept`），或複製技能的選目標（`copyCast` 為選取，`accept: false` 放棄）。 */
+  /** 技能工坊（Phase 3F-1）：skill 是組到一半（或完整）的技能定義。 */
+  workshopArena: () => request<WorkshopArena>("GET", "/workshop/arena"),
+  workshopOptions: (skill: Record<string, unknown>) =>
+    request<DraftOptions>("POST", "/workshop/options", { skill }),
+  workshopCheck: (skill: Record<string, unknown>) =>
+    request<WorkshopCheck>("POST", "/workshop/check", { skill }),
+  workshopRandom: (body: WorkshopRandomRequest) =>
+    request<WorkshopRandom>("POST", "/workshop/random", body),
+  workshopExport: (skill: Record<string, unknown>) =>
+    request<WorkshopExport>("POST", "/workshop/export", { skill }),
   decide: (id: string, accept: boolean, copyCast: UseSkill | null = null) =>
     request<BattleResponse>("POST", `/battles/${id}/decision`, { accept, copy_cast: copyCast }),
 };

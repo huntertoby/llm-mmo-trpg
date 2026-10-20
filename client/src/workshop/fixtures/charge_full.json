@@ -1,0 +1,31 @@
+{
+ "skeleton": "displace",
+ "name_zh": "衝鋒擊退",
+ "kind": "active",
+ "ap_cost": 2,
+ "category": "weapon",
+ "weapon_req": "melee",
+ "scaling_attr": "str",
+ "tier": 2,
+ "shape": {
+  "type": "single",
+  "range": 4
+ },
+ "effects": [
+  {
+   "type": "dash"
+  },
+  {
+   "type": "damage",
+   "multiplier_permille": 1000
+  },
+  {
+   "type": "push",
+   "distance": 2
+  }
+ ],
+ "cost": {
+  "cooldown": 2
+ },
+ "rarity": "rare"
+}

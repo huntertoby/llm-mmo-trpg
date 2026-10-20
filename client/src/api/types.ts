@@ -35,6 +35,23 @@ export type CreateBattleRequest = Omit<
   custom_skills?: Record<string, unknown>[];
   replace_skills?: string[];
 };
+// 技能工坊（Phase 3F）
+export type StepId = Schemas["StepId"];
+export type FieldSpec = Schemas["FieldSpec"];
+export type FieldType = Schemas["FieldType"];
+export type Choice = Schemas["Choice"];
+export type StepOptions = Schemas["StepOptions"];
+export type DraftOptions = Schemas["DraftOptions"];
+export type WorkshopCheck = Schemas["WorkshopCheck"];
+export type WorkshopProblem = Schemas["Problem"];
+export type BudgetSummary = Schemas["BudgetSummary"];
+export type BudgetLine = Schemas["BudgetLine"];
+export type WorkshopArena = Schemas["WorkshopArena"];
+export type ArenaOpponents = Schemas["ArenaOpponents"];
+export type WorkshopRandom = Schemas["WorkshopRandom"];
+export type WorkshopRandomRequest = Schemas["WorkshopRandomRequest"];
+export type WorkshopExport = Schemas["WorkshopExport"];
+export type SkillRarity = Schemas["SkillRarity"];
 export type Glossary = Schemas["Glossary"];
 export type GlossaryEntry = Schemas["GlossaryEntry"];
 export type PreviewOut = Schemas["PreviewOut"];
