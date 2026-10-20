@@ -22,6 +22,19 @@
 
 順序：3E-1 → Phase 3-5（3-5a／b／c）→ 3-6 → 3E-2、3E-3 → Phase 4。
 
+### 0.1 3E-1 驗收與「待 PM 決定」的處理（2026-10-20）
+
+- 驗收：`check.py` 全過；`narrow_halls` 種子 4（`build_telekinesis,build_charger`）重播一致；CLI 戰鬥快照全部不變；實作者的 `skill_fuzz --count 1000` 全過。`LOG_FORMAT` 維持 `/34`。投擲與衝撞改用共用傷害後，現有內容只影響「戰神降臨」開啟時的蠻牛衝陣（＋18%）。
+
+| # | 項目 | 決定 |
+|---|---|---|
+| 1 | `skill_problems` 可選引用表保留，正式路徑走 `skill_reference_problems` | 接受 |
+| 2 | `AllyResult` 加 `mana`、`max_mana` | 接受；3-5a 需要再加 |
+| 3 | 範本查詢改名 `*_of_template`，同範本兩個時報錯 | 接受 |
+| 4 | `Ruleset.with_skills` 同 ID 不同內容報錯 | 接受（3-5 不需要覆蓋） |
+| 5 | `chain` 沒有 `cell_count`，用在 `zone` 會報錯 | 接受（目前不會產生） |
+| 6–8 | `ids.py` 範圍、AI 預設值、3E-2 一併檢查 `cell_count` | 接受 |
+
 ## 1. Phase 3E-1｜小整理（sonnet，約 40 分）
 
 1. **技能驗證共用**（#1）：在 `trpg.content` 新增 `skill_reference_problems(skill, ruleset, skills)`，內容庫 `_check_skills` 與 `skillgen/validate.py` 都改呼叫它；正式路徑必須帶齊所有引用表（`_Refs` 欄位不可為 `None`，或改成必填）。補測試：`validate_skill` 拒絕 `grant_skill` 指向傳說／改寫規則型／不存在的技能、規則改變型傳說 `ap_cost` 不等於 `legendary_activation_ap`。
