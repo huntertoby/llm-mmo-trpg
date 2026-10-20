@@ -3564,7 +3564,14 @@
             "title": "Reason"
           },
           "to_pos": {
-            "$ref": "#/components/schemas/Pos"
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/Pos"
+              },
+              {
+                "type": "null"
+              }
+            ]
           }
         },
         "additionalProperties": false,

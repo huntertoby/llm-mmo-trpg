@@ -271,8 +271,8 @@ class InteractOptionOut(_ApiModel):
     legal: bool
     reason: str | None
     """不合法的原因（繁體中文）；合法時 ``None``。"""
-    to_pos: Pos
-    """物件會移到的格子（即使不合法也給出；可能在地圖外）。"""
+    to_pos: Pos | None
+    """物件會移到的格子（即使不合法也給出）；會被推出地圖左／上緣時 ``None``。"""
 
 
 class FollowupOptionOut(_ApiModel):

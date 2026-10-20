@@ -342,7 +342,9 @@ export interface AsideRow {
   choices: AsideChoice[];
 }
 
-function arrowFor(from: Pos, to: Pos): string {
+/** 物件會移動的方向箭頭；會被推出地圖邊緣（沒有目的格）時依「主角 → 物件」方向以外無從得知，回傳空字串。 */
+function arrowFor(from: Pos, to: Pos | null): string {
+  if (to === null) return "";
   const dx = to.x - from.x;
   const dy = to.y - from.y;
   if (Math.abs(dx) >= Math.abs(dy)) return dx >= 0 ? DIRECTION_ARROWS.east : DIRECTION_ARROWS.west;
@@ -371,7 +373,7 @@ export function asideRows(
     );
     row.choices.push({
       side,
-      label: `往${side === "left" ? "左" : "右"}撥 ${arrowFor(obj.pos, o.to_pos)}`,
+      label: `往${side === "left" ? "左" : "右"}撥 ${arrowFor(obj.pos, o.to_pos)}`.trimEnd(),
       action: o.legal && action !== undefined ? action : null,
       reason: o.legal ? null : (o.reason ?? "不能撥開"),
     });

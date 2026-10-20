@@ -97,3 +97,29 @@ def test_posting_an_illegal_shove_aside_is_rejected_in_chinese(client: TestClien
     reply = client.post(url, json=body)
     assert reply.status_code in (400, 409, 422)
     assert "撥不動" in reply.text
+
+
+def test_options_for_an_object_at_the_map_edge_do_not_crash(client: TestClient) -> None:
+    """箱子貼著左緣、主角在它右邊：往左推會出界，選項仍要回得來（``to_pos`` 為 ``None``）。"""
+    battle = _inject(client)
+    m = make_map(
+        "00000\n00000\n00000\n00000\n00000",
+        ".....\n.....\n.....\n.....\n.....",
+        objects=[(0, 2, "crate")],
+        ally=[(1, 2)],
+        enemy=[(4, 4)],
+    )
+    state = make_state(
+        m,
+        [
+            spawn(Team.ALLY, (1, 2), no_reactions("hero_fighter", max_hp=500)),
+            spawn(Team.ENEMY, (4, 4), no_reactions("bandit", max_hp=500)),
+        ],
+    )
+    session = store_of(client).get(battle["battle_id"])
+    session.state = give_turn(state, "unit_0001")
+    reply = client.get(f"/api/battles/{battle['battle_id']}")
+    assert reply.status_code == 200, reply.text
+    push = [o for o in reply.json()["interact_options"] if o["mode"] == "push"]
+    assert len(push) == 1
+    assert push[0]["legal"] is False and "推不動" in push[0]["reason"] and push[0]["to_pos"] is None
