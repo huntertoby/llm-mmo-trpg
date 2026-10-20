@@ -42,6 +42,7 @@ __all__ = [
     "cost_parts",
     "cost_summary",
     "effect_summary",
+    "followup_text",
     "mastery_text",
     "miss_text",
     "modifier_summary",
@@ -100,6 +101,17 @@ def skill_shape_text(library: ContentLibrary, skill: SkillDef) -> str:
     """技能的形狀一句話；穿透的技能（Phase 3C-5b）加上「穿透」。"""
     text = shape_summary(library, skill.shape)
     return f"{text}・穿透" if skill.pierce else text
+
+
+def followup_text(library: ContentLibrary, skill: SkillDef) -> str | None:
+    """複合技能（Phase 3F-3a）第二段的一句話，例如「到達落點後，以落點為原點：錐形（大小 2）：
+    傷害…」；不是複合技能時為 ``None``。"""
+    follow = skill.followup_skill()
+    if follow is None:
+        return None
+    effects = "；".join(effect_summary(library, follow, e) for e in follow.effects)
+    when = f"［條件：{condition_summary(library, follow.condition)}］" if follow.condition else ""
+    return f"到達落點後，以落點為原點：{shape_summary(library, follow.shape)}{when}：{effects}"
 
 
 def scaling_label(skill: SkillDef) -> str:
@@ -842,6 +854,13 @@ class SkillCard(BaseModel):
     ``shadowstep`` 與傳送他人 ``teleport_target`` 都是「單位 → 落點」）。"""
 
 
+def _card_effects(library: ContentLibrary, skill: SkillDef) -> tuple[str, ...]:
+    """卡片的效果列；複合技能最後再加一行第二段（「→ 第二段：…」）。"""
+    lines = tuple(effect_summary(library, skill, e) for e in skill.effects)
+    second = followup_text(library, skill)
+    return lines if second is None else (*lines, f"→ 第二段：{second}")
+
+
 def skill_card(
     library: ContentLibrary, skill: SkillDef, *, mastery_active: bool | None = None
 ) -> SkillCard:
@@ -864,7 +883,7 @@ def skill_card(
         condition=(
             None if skill.condition is None else condition_summary(library, skill.condition)
         ),
-        effects=tuple(effect_summary(library, skill, e) for e in skill.effects),
+        effects=_card_effects(library, skill),
         modifiers=tuple(modifier_summary(library, skill, r) for r in skill.modifiers),
         activation=activation_text(library, skill),
         activation_id=skill.activation,

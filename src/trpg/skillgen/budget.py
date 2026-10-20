@@ -21,7 +21,7 @@
 from __future__ import annotations
 
 from collections.abc import Callable
-from dataclasses import dataclass
+from dataclasses import dataclass, replace
 from fractions import Fraction
 
 from trpg.content.battle import Dice, StatusDef
@@ -47,7 +47,7 @@ from trpg.content.skills import (
 from trpg.content.summons import summon_dpr
 from trpg.skillgen.mechanics import mechanic_tags, resolved_affects
 
-__all__ = ["BudgetError", "BudgetReport", "EffectBudget", "skill_budget"]
+__all__ = ["BudgetError", "BudgetReport", "EffectBudget", "SegmentBudget", "skill_budget"]
 
 _PERMILLE = 1000
 _SHAPED_AFFECTS = frozenset({"enemies", "allies", "all", "tiles"})
@@ -79,6 +79,21 @@ class EffectBudget:
 
 
 @dataclass(frozen=True, slots=True)
+class SegmentBudget:
+    """複合技能（Phase 3F-3a）一段的預算：該段依自己的骨架與形狀倍率計算的效果點數、條件與協同。"""
+
+    label: str
+    """``位移段`` 或 ``動作段``。"""
+    skeleton: str
+    shape: str
+    effects: tuple[EffectBudget, ...]
+    raw: Fraction
+    condition_multiplier: Fraction
+    synergies: tuple[tuple[tuple[str, ...], Fraction], ...]
+    total: Fraction
+
+
+@dataclass(frozen=True, slots=True)
 class BudgetReport:
     """:func:`skill_budget` 的結果：全部中間值，供 CLI 與驗證器使用。"""
 
@@ -99,6 +114,10 @@ class BudgetReport:
     max_ratio: Fraction
     coefficient_label: str = "AP 係數"
     """可用預算公式中係數的名稱：主動技能為 AP 係數、被動為觸發係數（2E-1）。"""
+    segments: tuple[SegmentBudget, ...] = ()
+    """複合技能（Phase 3F-3a）：位移段與動作段各自的明細（依序）；一般技能為空。"""
+    composite_tax_permille: int = 0
+    """複合技能的加成（‰）：``total`` ＝ 兩段 ``total`` 加總 ×（1000 ＋ 它）÷ 1000。"""
 
     @property
     def allowance_raw_permille(self) -> int:
@@ -1064,8 +1083,51 @@ def _action_budgets(skill: SkillDef, library: ContentLibrary) -> tuple[EffectBud
     return effects
 
 
+def _segment(label: str, report: BudgetReport, skill: SkillDef, offset: int) -> SegmentBudget:
+    return SegmentBudget(
+        label=label,
+        skeleton=skill.skeleton,
+        shape=skill.shape.type,
+        effects=tuple(replace(e, index=e.index + offset) for e in report.effects),
+        raw=report.raw,
+        condition_multiplier=report.condition_multiplier,
+        synergies=report.synergies,
+        total=report.total,
+    )
+
+
+def _composite_budget(skill: SkillDef, library: ContentLibrary) -> BudgetReport:
+    """複合技能（Phase 3F-3a，6.23）：（位移段點數 ＋ 動作段點數）×（1000 ＋ 複合加成）÷ 1000。
+    兩段各自依自己的骨架與形狀計算（和一般技能相同）；可用預算照技能本身的 AP 與代價。"""
+    follow = skill.followup_skill()
+    assert follow is not None
+    move = skill.move_segment()
+    first = skill_budget(move, library)
+    second = skill_budget(follow, library)
+    tax = library.budget.composite_tax_permille
+    segments = (
+        _segment("位移段", first, move, 0),
+        _segment("動作段", second, follow, len(first.effects)),
+    )
+    total = (first.total + second.total) * Fraction(_PERMILLE + tax, _PERMILLE)
+    return replace(
+        first,
+        skill_id=skill.id,
+        effects=segments[0].effects + segments[1].effects,
+        raw=first.raw + second.raw,
+        condition_multiplier=Fraction(1),
+        tags=tuple(sorted({*first.tags, *second.tags})),
+        synergies=(),
+        total=total,
+        segments=segments,
+        composite_tax_permille=tax,
+    )
+
+
 def skill_budget(skill: SkillDef, library: ContentLibrary) -> BudgetReport:
     """計算 ``skill`` 的預算明細；缺少點數資料時拋出 :class:`BudgetError`。"""
+    if skill.followup is not None:
+        return _composite_budget(skill, library)
     rules, budget = library.ruleset, library.budget
     if skill.is_modifier:
         effects = _modifier_budgets(skill, library)

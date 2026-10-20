@@ -1,0 +1,30 @@
+# 複合技能（Phase 3F-3a，docs/design/06-技能.md 6.23「位移 → 動作」示範；數值為初值，未經模擬）：
+# 瞬間傳送到 4 格內的空格，落地後朝一個方向揮出錐形斬擊。
+id: skill_shadow_whirl
+schema_version: 1
+name_zh: 瞬影旋斬
+tier: 1
+rank: 1
+rarity: rare
+kind: active
+skeleton: displace
+category: weapon
+weapon_req: melee
+ap_cost: 2
+scaling_attr: str
+shape: {type: ground_tile, range: 4}
+effects:
+  - {type: teleport}
+followup:
+  when: after_move
+  skeleton: area
+  shape: {type: cone, size: 2}
+  effects:
+    - {type: damage, multiplier_permille: 900}
+condition: null
+cost: {mana: 6, cooldown: 3}
+tags: [physical, melee, mobility, aoe]
+narrative:
+  concept: 身影一閃出現在敵陣邊緣，順勢一記扇形斬擊
+  cast_flavor: 你的身影化作殘影消失，下一瞬已在敵人身旁，刀光扇形掃出
+provenance: {origin: builtin, owner_id: null, created_by: null, parents: [], bound: true, tradeable: false}

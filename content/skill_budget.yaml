@@ -79,6 +79,9 @@ lifesteal_value_permille: 800
 # 穿透（Phase 3C-5b）：技能有 pierce: true 時，總點數 ×（1000 ＋ 這個值）÷ 1000（無視半掩護、穿過木製物件；
 # 後方目標只受 core.yaml 的 pierce_behind_permille 傷害，所以只加一點）。初值，未經模擬。
 pierce_bonus_permille: 150
+# 複合技能（Phase 3F-3a，docs/design/06-技能.md 6.23「位移 → 動作」）：總點數 ＝（位移段點數 ＋ 動作段點數）
+# ×（1000 ＋ 這個值）÷ 1000；兩段各自依自己的骨架與形狀計算。省下一次行動的代價；初值，之後以模擬調整。
+composite_tax_permille: 150
 
 condition_permille: {none: 1000, common: 850, harsh: 600}
 all_target_permille: 800    # affects: all（敵我不分）的對象係數

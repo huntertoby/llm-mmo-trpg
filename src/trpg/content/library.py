@@ -582,6 +582,9 @@ def skill_reference_problems(
         scale_cap_max=ruleset.core.scale_cap_max_permille,
     )
     problems += granted_skill_problems(skill, skills, ruleset.primitives.by_id())
+    follow = skill.followup_skill()  # 複合技能的動作段（Phase 3F-3a）：同一套引用檢查
+    if follow is not None:
+        problems += [f"followup.{p}" for p in skill_reference_problems(follow, ruleset, skills)]
     activation_ap = ruleset.core.legendary_activation_ap
     if skill.rule_change_id is not None and skill.ap_cost != activation_ap:
         problems.append(

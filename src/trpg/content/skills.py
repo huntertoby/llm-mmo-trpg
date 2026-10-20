@@ -25,7 +25,7 @@ from collections.abc import Callable, Collection, Iterable, Mapping
 from dataclasses import dataclass
 from typing import TYPE_CHECKING, Any, Literal
 
-from pydantic import Field, field_validator, model_validator
+from pydantic import Field, ValidationError, field_validator, model_validator
 
 from trpg.content.battle import ID_PATTERN, Dice
 from trpg.content.rules import SkillSlots
@@ -46,6 +46,7 @@ __all__ = [
     "CHARGE_THROUGH",
     "CHEAT_DEATH",
     "CHEAT_DEATH_STATUS",
+    "COMPOSITE_MOVES",
     "CONSUME_STACK",
     "CONSUME_STATUS",
     "CONSUME_THEN_TYPES",
@@ -57,6 +58,9 @@ __all__ = [
     "EFFECT_NON_PARAM_FIELDS",
     "EFFECT_PARAM_FIELDS",
     "EXTRA_REACTION",
+    "FOLLOWUP_FORBIDDEN",
+    "FOLLOWUP_SHAPES",
+    "FOLLOWUP_WHEN_VALUES",
     "GAMBLE",
     "GAMBLE_BRANCH_TYPES",
     "GAMBLE_TAG",
@@ -116,6 +120,7 @@ __all__ = [
     "ConditionSpec",
     "ConditionTable",
     "EffectSpec",
+    "FollowupSpec",
     "Mastery",
     "ModifierChange",
     "ModifierSpec",
@@ -922,6 +927,25 @@ class SkillCost(ContentModel):
     類型見 :data:`BACKLASH_TYPES`，對象只能是施放者自己）；命中則不結算。"""
 
 
+class FollowupSpec(ContentModel):
+    """複合技能的第二段（Phase 3F-3a，``docs/design/06-技能.md`` 6.23）：自己的骨架、形狀、效果與
+    條件，照該骨架的規則檢查。``when`` 決定第二段何時、以哪裡為原點結算；本段只有 ``after_move``：
+    施放者真的移動到位移段的落點時，以落點為原點結算。"""
+
+    when: FollowupWhen = "after_move"
+    skeleton: str
+    shape: ShapeSpec
+    effects: tuple[EffectSpec, ...] = Field(min_length=1)
+    condition: ConditionSpec | None = None
+
+    @field_validator("skeleton")
+    @classmethod
+    def _skeleton(cls, value: str) -> str:
+        if value not in SKELETON_IDS:
+            raise ValueError(f"未知的骨架 {value!r}（可用：{', '.join(SKELETON_IDS)}）")
+        return value
+
+
 class NarrativeDef(ContentModel):
     concept: str = ""
     cast_flavor: str = ""
@@ -1106,6 +1130,32 @@ _GAMBLE_ONLY_FIELDS = ("chance_permille", "win", "lose")
 _MAX_ZONE_EFFECTS = 2
 SELF_MOVES: tuple[str, ...] = (DASH, LEAP, SWAP, CHARGE_THROUGH, SHADOWSTEP, "teleport")
 """改變施放者位置的原語；一個技能最多一個。"""
+COMPOSITE_MOVES: tuple[str, ...] = ("teleport", LEAP, DASH, CHARGE_THROUGH, SHADOWSTEP)
+"""複合技能（Phase 3F-3a，6.23 基本型「位移 → 動作」）的位移段可用的施放者自身位移原語。"""
+FOLLOWUP_SHAPES: tuple[str, ...] = ("single", "line", "cone", "cross", "square3", "ring")
+"""複合技能動作段可用的形狀（Phase 3F-3a）：以落點為原點；``cross``、``square3`` 必須 ``range: 0``
+（以落點為中心）。"""
+FOLLOWUP_CENTERED: tuple[str, ...] = ("cross", "square3")
+FOLLOWUP_FORBIDDEN: tuple[str, ...] = (
+    *SELF_MOVES,
+    TELEPORT_TARGET,
+    SWAP_ANY,
+    SUMMON,
+    ZONE,
+    PLACE_TRAP,
+    COPY_SKILL,
+    RULE_CHANGE,
+    GAMBLE,
+    "hurl_object",
+)
+"""動作段不能用的原語（Phase 3F-3a）：位移（不套娃）、召喚、持續區域、陷阱，以及需要另外選取或改變
+整個施放流程的原語（複製技能、規則改變、賭注、投擲物件；保守做法）。"""
+type FollowupWhen = Literal["after_move"]
+"""動作段的時機（6.23）：本段只有 ``after_move``（位移 → 動作）；之後（3F-4）再加
+``after_action``、``on_kill``、``on_hit``、``delayed`` 等。"""
+FOLLOWUP_WHEN_VALUES: tuple[str, ...] = ("after_move",)
+_FOLLOWUP_CACHE: dict[int, tuple[Any, Any]] = {}
+_FOLLOWUP_CACHE_LIMIT = 4096
 _MAX_COOLDOWN_RESTORE = 2
 """``restore_resource`` 的 ``resource: cooldown`` 一次最多縮短的回合（Phase 3D-1）。"""
 HURL_OBJECT = "hurl_object"
@@ -1470,6 +1520,9 @@ class SkillDef(ContentModel):
     tags: tuple[str, ...] = ()
     narrative: NarrativeDef = Field(default_factory=NarrativeDef)
     provenance: Provenance = Field(default_factory=Provenance)
+    followup: FollowupSpec | None = None
+    """複合技能的第二段（Phase 3F-3a，6.23）：有它的技能本身是位移段（一個施放者自身位移原語），
+    施放者到達落點後再以落點為原點結算第二段。見 :meth:`followup_skill`。"""
 
     @field_validator("skeleton")
     @classmethod
@@ -1540,7 +1593,83 @@ class SkillDef(ContentModel):
             self._check_effect(index, effect, top=True)
         self._check_variance()
         self._add_gamble_tag()
+        self._check_followup()
         return self
+
+    def _check_followup(self) -> None:
+        """複合技能（Phase 3F-3a，6.23 基本型）：主動技能；位移段（技能本身）恰好一個
+        :data:`COMPOSITE_MOVES` 原語；動作段形狀在 :data:`FOLLOWUP_SHAPES`（``cross``、``square3``
+        必須 ``range: 0``）、不含 :data:`FOLLOWUP_FORBIDDEN`；兩段合計最多 4 個效果；動作段本身也要
+        是合法的技能（:meth:`followup_skill` 以同一套 schema 檢查）。"""
+        follow = self.followup
+        if follow is None:
+            return
+        if self.kind != "active":
+            raise ValueError(f"只有主動技能可以有 followup（複合技能），收到 kind: {self.kind}")
+        if self.trap is not None or self.cost.on_miss:
+            raise ValueError("複合技能不能是陷阱，也不能有失手反噬 cost.on_miss")
+        if len(self.effects) != 1 or self.effects[0].type not in COMPOSITE_MOVES:
+            got = "、".join(e.type for e in self.effects)
+            raise ValueError(
+                f"複合技能的位移段只能有一個施放者自身位移原語（{'、'.join(COMPOSITE_MOVES)}），"
+                f"收到 {got}"
+            )
+        if follow.shape.type not in FOLLOWUP_SHAPES:
+            raise ValueError(
+                f"followup 的形狀只能是 {'、'.join(FOLLOWUP_SHAPES)}，收到 {follow.shape.type}"
+            )
+        if follow.shape.type in FOLLOWUP_CENTERED and follow.shape.range != 0:
+            raise ValueError(
+                f"followup 的形狀 {follow.shape.type} 以落點為中心，range 必須是 0，"
+                f"收到 {follow.shape.range}"
+            )
+        bad = [e.type for e in follow.effects if e.type in FOLLOWUP_FORBIDDEN]
+        if bad:
+            raise ValueError(
+                f"followup 不能有位移、召喚、區域、陷阱等原語（不能套娃），收到 {'、'.join(bad)}"
+            )
+        total = len(self.effects) + len(follow.effects)
+        if total > _MAX_EFFECTS:
+            raise ValueError(f"複合技能兩段合計最多 {_MAX_EFFECTS} 個效果，收到 {total} 個")
+        try:
+            self.followup_skill()
+        except ValueError as exc:
+            raise ValueError(f"followup：{exc}") from None
+
+    def followup_skill(self) -> SkillDef | None:
+        """複合技能的動作段，展開成一個獨立的技能（Phase 3F-3a）：沿用本技能的 ID、名稱、類別、
+        武器需求、縮放屬性、階級、稀有度與代價，骨架、形狀、效果與條件換成 ``followup`` 的。引擎以
+        它結算動作段（命中、傷害照常），驗證器與預算以它檢查動作段；沒有 ``followup`` 時為
+        ``None``。"""
+        if self.followup is None:
+            return None
+        cached = _FOLLOWUP_CACHE.get(id(self))
+        if cached is not None and cached[0] is self:
+            derived: SkillDef = cached[1]
+            return derived
+        follow = self.followup
+        data = {name: getattr(self, name) for name in type(self).model_fields if name != "followup"}
+        data.update(
+            skeleton=follow.skeleton,
+            shape=follow.shape,
+            effects=follow.effects,
+            condition=follow.condition,
+        )
+        try:
+            derived = SkillDef.model_validate(data)
+        except ValidationError as exc:
+            messages = "；".join(str(e["msg"]).removeprefix("Value error, ") for e in exc.errors())
+            raise ValueError(messages) from None
+        if len(_FOLLOWUP_CACHE) >= _FOLLOWUP_CACHE_LIMIT:
+            _FOLLOWUP_CACHE.clear()
+        _FOLLOWUP_CACHE[id(self)] = (self, derived)
+        return derived
+
+    def move_segment(self) -> SkillDef:
+        """複合技能的位移段（去掉 ``followup`` 的本技能）；不是複合技能時回傳自己。"""
+        if self.followup is None:
+            return self
+        return self.model_copy(update={"followup": None})
 
     def _add_gamble_tag(self) -> None:
         """帶賭博機制的技能自動加標籤 ``gamble``（傾向向量與「用法決定進化」用；Phase 3D-7a）。"""

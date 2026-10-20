@@ -17,6 +17,7 @@ from trpg.narrative.skills import (
     condition_summary,
     cost_summary,
     effect_summary,
+    followup_text,
     mastery_text,
     modifier_summary,
     scaling_detail,
@@ -54,6 +55,9 @@ def cmd_skills_list(library: ContentLibrary, out: TextIO) -> int:
             ap = "修正"
         if skill.is_activatable:  # 常駐類傳說（Phase 3D-6）
             effects += f"［{activation_text(library, skill)}］"
+        second = followup_text(library, skill)
+        if second is not None:  # 複合技能（Phase 3F-3a）
+            effects += f" → 第二段：{second}"
         print(
             f"  {pad(skill.id, 24)}{pad(skill.name_zh, 12)}{pad(skill.skeleton, 10)}"
             f"{pad(ap, 4)}{cost or '無'}",
@@ -99,6 +103,11 @@ def _print_body(library: ContentLibrary, skill: SkillDef, out: TextIO) -> None:
     print("  效果：", file=out)
     for i, spec in enumerate(skill.effects, start=1):
         print(f"    {i}. {effect_summary(library, skill, spec)}", file=out)
+    second = followup_text(library, skill)
+    if second is not None:  # 複合技能（Phase 3F-3a）
+        follow = skill.followup_skill()
+        assert follow is not None
+        print(f"  第二段（骨架 {follow.skeleton}）：{second}", file=out)
 
 
 def cmd_skills_show(

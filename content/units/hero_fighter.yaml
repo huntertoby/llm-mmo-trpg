@@ -13,4 +13,4 @@ resist: {physical: 100}
 element_mods: {}
 tags: [hero]
 max_mana: 20
-skills: [skill_bone_crusher, skill_whirlwind, skill_gale_kick, skill_execute, skill_rending_strike]
+skills: [skill_bone_crusher, skill_whirlwind, skill_gale_kick, skill_execute, skill_rending_strike, skill_shadow_whirl]

@@ -69,6 +69,37 @@ def _print_effects(report: BudgetReport, out: TextIO, *, modifier: bool = False)
     print(f"  raw ＝ {_num(report.raw)}", file=out)
 
 
+def _print_segments(report: BudgetReport, out: TextIO) -> None:
+    """複合技能（Phase 3F-3a）：兩段各自的效果點數、條件與協同，再加複合加成。"""
+    for segment in report.segments:
+        print(
+            f"  【{segment.label}】骨架 {segment.skeleton}  形狀 {segment.shape}",
+            file=out,
+        )
+        for eb in segment.effects:
+            print(
+                f"    {eb.index + 1}. {pad(eb.type, 16)}{pad(eb.note, 20)}"
+                f"形狀 {pad(_mult(eb.shape), 7)}對象 {pad(_mult(eb.target), 6)}"
+                f"條件 {pad(_mult(eb.condition), 7)}＝ {_num(eb.points)}"
+                f"（基礎 {_num(eb.base)}）",
+                file=out,
+            )
+        cond = "無" if segment.condition_multiplier == 1 else _mult(segment.condition_multiplier)
+        synergies = "、".join(f"{'+'.join(t)} {_mult(c)}" for t, c in segment.synergies) or "無"
+        print(
+            f"    raw {_num(segment.raw)} × 條件 {cond} × 協同 {synergies}"
+            f" ＝ {segment.label}點數 {_num(segment.total)}",
+            file=out,
+        )
+    first, second = report.segments
+    tax = report.composite_tax_permille
+    print(
+        f"  複合加成 +{tax}‰：（{_num(first.total)} ＋ {_num(second.total)}）"
+        f"× (1000 + {tax}) ÷ 1000 ＝ {_num(report.total)}",
+        file=out,
+    )
+
+
 def cmd_skills_budget(library: ContentLibrary, skill_id: str, out: TextIO) -> int:
     skill = library.skills.get(skill_id)
     if skill is None:
@@ -89,7 +120,10 @@ def print_skill_budget(library: ContentLibrary, skill: SkillDef, out: TextIO) ->
     except BudgetError as exc:
         print(f"  無法計算預算：{exc}", file=out)
     else:
-        _print_effects(report, out, modifier=skill.is_modifier)
+        if report.segments:
+            _print_segments(report, out)
+        else:
+            _print_effects(report, out, modifier=skill.is_modifier)
         _print_totals(report, out)
     if violations:
         print(f"  違規（{len(violations)} 項）：", file=out)
@@ -109,7 +143,10 @@ def _print_totals(report: BudgetReport, out: TextIO) -> None:
         print(f"  協同係數 {parts}", file=out)
     else:
         print("  協同係數 無", file=out)
-    print(f"  total ＝ raw × 條件 × 協同 ＝ {_num(report.total)}", file=out)
+    if report.segments:
+        print(f"  total ＝ 兩段點數加總 × 複合加成 ＝ {_num(report.total)}", file=out)
+    else:
+        print(f"  total ＝ raw × 條件 × 協同 ＝ {_num(report.total)}", file=out)
     parts = "、".join(f"{label} +{value}‰" for label, value in report.allowance_parts) or "無"
     print(
         f"  可用預算 ＝ tier_budget {report.tier_budget}"

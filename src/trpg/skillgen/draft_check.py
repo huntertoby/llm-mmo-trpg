@@ -17,13 +17,27 @@ from pydantic import BaseModel, ConfigDict
 
 from trpg.content.library import ContentLibrary
 from trpg.content.skills import SkillDef
-from trpg.skillgen.budget import BudgetError, BudgetReport, skill_budget
+from trpg.skillgen.budget import (
+    BudgetError,
+    BudgetReport,
+    EffectBudget,
+    SegmentBudget,
+    skill_budget,
+)
 from trpg.skillgen.draft import Draft, DraftError, build_skill
 from trpg.skillgen.option_models import STEP_IDS, StepId
 from trpg.skillgen.options import draft_options, minimum_rarity
 from trpg.skillgen.validate import validate_skill
 
-__all__ = ["BudgetLine", "BudgetSummary", "DraftCheck", "Problem", "budget_summary", "check_draft"]
+__all__ = [
+    "BudgetLine",
+    "BudgetSummary",
+    "DraftCheck",
+    "Problem",
+    "SegmentLine",
+    "budget_summary",
+    "check_draft",
+]
 
 
 class _Model(BaseModel):
@@ -51,6 +65,20 @@ class BudgetLine(_Model):
     points: float
 
 
+class SegmentLine(_Model):
+    """複合技能（Phase 3F-3a）一段的預算：``label`` 位移段／動作段，該段自己的效果點數、條件
+    與協同。"""
+
+    label: str
+    skeleton: str
+    shape: str
+    lines: tuple[BudgetLine, ...]
+    raw: float
+    condition_multiplier: float
+    synergies: tuple[str, ...]
+    total: float
+
+
 class BudgetSummary(_Model):
     """預算（與 ``trpg skills budget`` 的數字相同；``ratio_text`` 也是同樣的格式，
     例 ``85.3%``）。"""
@@ -73,6 +101,10 @@ class BudgetSummary(_Model):
     verdict: str
     """``ok``（合格）、``weak``（過弱）、``over``（超出預算）。"""
     verdict_zh: str
+    segments: tuple[SegmentLine, ...] = ()
+    """複合技能：兩段各自的明細（``total`` ＝ 兩段加總 ×（1000 ＋ ``composite_tax_permille``）
+    ÷ 1000）；一般技能為空。"""
+    composite_tax_permille: int = 0
 
 
 class DraftCheck(_Model):
@@ -101,25 +133,43 @@ def _verdict(report: BudgetReport) -> tuple[str, str]:
     return "ok", "合格"
 
 
+def _line(e: EffectBudget) -> BudgetLine:
+    return BudgetLine(
+        index=e.index,
+        type=e.type,
+        note=e.note,
+        base=_f(e.base),
+        shape=_f(e.shape),
+        target=_f(e.target),
+        condition=_f(e.condition),
+        points=_f(e.points),
+    )
+
+
+def _synergy_text(synergies: tuple[tuple[tuple[str, ...], Fraction], ...]) -> tuple[str, ...]:
+    return tuple(f"{'+'.join(tags)} ×{float(c):g}" for tags, c in synergies)
+
+
+def _segment_line(segment: SegmentBudget) -> SegmentLine:
+    return SegmentLine(
+        label=segment.label,
+        skeleton=segment.skeleton,
+        shape=segment.shape,
+        lines=tuple(_line(e) for e in segment.effects),
+        raw=_f(segment.raw),
+        condition_multiplier=_f(segment.condition_multiplier),
+        synergies=_synergy_text(segment.synergies),
+        total=_f(segment.total),
+    )
+
+
 def budget_summary(report: BudgetReport) -> BudgetSummary:
     verdict, verdict_zh = _verdict(report)
     return BudgetSummary(
-        lines=tuple(
-            BudgetLine(
-                index=e.index,
-                type=e.type,
-                note=e.note,
-                base=_f(e.base),
-                shape=_f(e.shape),
-                target=_f(e.target),
-                condition=_f(e.condition),
-                points=_f(e.points),
-            )
-            for e in report.effects
-        ),
+        lines=tuple(_line(e) for e in report.effects),
         raw=_f(report.raw),
         condition_multiplier=_f(report.condition_multiplier),
-        synergies=tuple(f"{'+'.join(tags)} ×{float(c):g}" for tags, c in report.synergies),
+        synergies=_synergy_text(report.synergies),
         total=_f(report.total),
         tier_budget=report.tier_budget,
         coefficient_label=report.coefficient_label,
@@ -133,6 +183,8 @@ def budget_summary(report: BudgetReport) -> BudgetSummary:
         max_ratio=_f(report.max_ratio),
         verdict=verdict,
         verdict_zh=verdict_zh,
+        segments=tuple(_segment_line(s) for s in report.segments),
+        composite_tax_permille=report.composite_tax_permille,
     )
 
 

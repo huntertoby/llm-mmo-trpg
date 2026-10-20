@@ -19,7 +19,7 @@
 
 from __future__ import annotations
 
-from dataclasses import dataclass
+from dataclasses import dataclass, replace
 from fractions import Fraction
 
 from trpg.content.library import ContentLibrary, skill_reference_problems
@@ -40,7 +40,14 @@ from trpg.content.skills import (
 from trpg.skillgen.budget import BudgetError, BudgetReport, skill_budget
 from trpg.skillgen.mechanics import affect_set, resolved_affects
 
-__all__ = ["RarityNeed", "Violation", "rarity_requirements", "share_violations", "validate_skill"]
+__all__ = [
+    "RarityNeed",
+    "Violation",
+    "effect_count",
+    "rarity_requirements",
+    "share_violations",
+    "validate_skill",
+]
 
 _PERMILLE = 1000
 _MAX_EFFECTS = 4
@@ -70,6 +77,8 @@ def validate_skill(skill: SkillDef, library: ContentLibrary) -> list[Violation]:
         return reference
     if skill.is_modifier:
         return _modifier_violations(skill, library)
+    if skill.followup is not None:
+        return _composite_violations(skill, library)
     out = _cap_violations(skill, library)
     out += _passive_violations(skill, library)
     out += _stance_violations(skill, library)
@@ -78,6 +87,68 @@ def validate_skill(skill: SkillDef, library: ContentLibrary) -> list[Violation]:
     out += _skeleton_violations(skill, library, report)
     out += _rarity_violations(skill, library)
     return out + budget_out
+
+
+# ---------------------------------------------------------------------------
+# 複合技能（Phase 3F-3a，6.23）
+# ---------------------------------------------------------------------------
+
+COMPOSITE_SKELETON = "displace"
+"""複合技能的位移段（技能本身）使用的骨架。"""
+COMPOSITE_MIN_RARITY = "rare"
+"""複合技能的最低稀有度（6.23）。"""
+
+
+def effect_count(skill: SkillDef) -> int:
+    """技能的效果原語數（複合技能兩段合計，6.6）。"""
+    extra = 0 if skill.followup is None else len(skill.followup.effects)
+    return len(skill.effects) + extra
+
+
+def _composite_violations(skill: SkillDef, library: ContentLibrary) -> list[Violation]:
+    """複合技能：位移段（技能本身）與動作段（:meth:`SkillDef.followup_skill`）各自照自己骨架的
+    規則檢查；稀有度與效果數以兩段合計；預算以兩段加總 × 複合加成計算。"""
+    follow = skill.followup_skill()
+    assert follow is not None
+    out = _cap_violations(skill, library)
+    out += _move_segment_violations(skill, library)
+    out += _exclusion_violations(skill.move_segment(), library)
+    try:
+        follow_report: BudgetReport | None = skill_budget(follow, library)
+    except BudgetError:
+        follow_report = None
+    second = _rule_rewrite_violations(follow, library)
+    second += _revive_violations(follow, library)
+    second += _exclusion_violations(follow, library)
+    second += _skeleton_violations(follow, library, follow_report)
+    out += [Violation(v.skill_id, f"followup.{v.rule}", f"動作段：{v.message}") for v in second]
+    out += _rarity_violations(skill, library)
+    _, budget_out = _budget_violations(skill, library)
+    return out + budget_out
+
+
+def _move_segment_violations(skill: SkillDef, library: ContentLibrary) -> list[Violation]:
+    """位移段：骨架 ``displace``（啟用、主動）、形狀在骨架允許的形狀內。效果只能是一個施放者自身
+    位移原語（schema 已檢查），所以不另外檢查核心與占比。"""
+    if skill.skeleton != COMPOSITE_SKELETON:
+        return [
+            Violation(
+                skill.id,
+                "composite.skeleton",
+                f"複合技能的位移段骨架必須是 {COMPOSITE_SKELETON}，收到 {skill.skeleton}",
+            )
+        ]
+    skeleton = library.skeletons[skill.skeleton]
+    if skill.shape.type not in skeleton.shapes:
+        return [
+            Violation(
+                skill.id,
+                "skeleton.shape",
+                f"骨架 {skeleton.id}：形狀只能是 {'、'.join(skeleton.shapes)}，"
+                f"收到 {skill.shape.type}",
+            )
+        ]
+    return []
 
 
 # ---------------------------------------------------------------------------
@@ -103,8 +174,9 @@ def _cap_violations(skill: SkillDef, library: ContentLibrary) -> list[Violation]
     def add(rule: str, message: str) -> None:
         out.append(Violation(skill.id, rule, message))
 
-    if not 1 <= len(skill.effects) <= _MAX_EFFECTS:
-        add("cap.effects", f"效果原語必須有 1 到 {_MAX_EFFECTS} 個，收到 {len(skill.effects)} 個")
+    count = effect_count(skill)
+    if not 1 <= count <= _MAX_EFFECTS:
+        add("cap.effects", f"效果原語必須有 1 到 {_MAX_EFFECTS} 個，收到 {count} 個")
     allowed = _WEAPON_REQ[skill.category]
     if skill.weapon_req not in allowed:
         add(
@@ -644,6 +716,12 @@ def rarity_requirements(skill: SkillDef, library: ContentLibrary) -> list[Rarity
     needs += [
         RarityNeed("condition", f"條件 {c.type}", conditions[c.type].min_rarity) for c in cond_specs
     ]
+    follow = skill.followup_skill()
+    if follow is not None:  # 複合技能（3F-3a）：至少稀有，且不低於動作段的需求
+        needs.append(RarityNeed("composite", "複合技能（位移 → 動作）", COMPOSITE_MIN_RARITY))
+        needs += [
+            replace(n, what=f"動作段的{n.what}") for n in rarity_requirements(follow, library)
+        ]
     return needs
 
 
@@ -663,12 +741,13 @@ def _rarity_violations(skill: SkillDef, library: ContentLibrary) -> list[Violati
                 )
             )
     limit = library.budget.rarity[skill.rarity].max_effects
-    if len(skill.effects) > limit:
+    count = effect_count(skill)
+    if count > limit:
         out.append(
             Violation(
                 skill.id,
                 "rarity.max_effects",
-                f"稀有度 {skill.rarity} 的技能最多 {limit} 個效果，收到 {len(skill.effects)} 個",
+                f"稀有度 {skill.rarity} 的技能最多 {limit} 個效果，收到 {count} 個",
             )
         )
     return out
