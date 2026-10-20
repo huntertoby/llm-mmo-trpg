@@ -48,7 +48,10 @@ structure:
 condition:
   skill_permille: 300                 # 稀有（含）以上有條件
   effect_level_permille: 500          # 有條件時掛在單一效果上
-  target_conditions: [target_hp_below, height_advantage, target_on_surface, target_has_status]
+  target_conditions: [target_hp_below, height_advantage, target_on_surface, target_has_status, target_isolated]
+  # 施放者條件（3C-6b）：技能層級的條件不需要影響範圍內有對象。flanked、from_behind、cast_tag_this_turn、
+  # self_concealed 需要特定站位或前一個動作，隨機組合器不產生（驗收的測試場面無法穩定成立）。
+  self_conditions: [self_hp_below, moved_this_turn, adjacent_ally, first_round]
   target_hp_below: {min: 200, max: 600}   # ‰
   self_hp_below: {min: 300, max: 700}
 
@@ -128,3 +131,9 @@ scaling:
   dual_permille: 250
   dual_attrs: [str, dex, int, wis, wil]
   mastery_permille: 300
+
+# 修正技能與傳說（Phase 3C-6b，初值，未經模擬）：composer_special.py 以「列舉候選 → 預算比例在 tuning 區間內 → 亂數挑一個」組合。
+# modifier_permille：稀有度史詩以上、未指定骨架時改組修正技能（kind: modifier）的機率（獨立的亂數串流）。
+# 傳說（rarity_weights.legendary）一律走 composer_special：核心三擇一（修正規則、規則改變、改寫規則型原語）＋ 1–2 點源力。
+special:
+  modifier_permille: 100

@@ -349,7 +349,55 @@ def _fixed_effect(ctx: Ctx, primitive_id: str) -> None:
         spec["object"] = ctx.rng.choice(objects)
     elif primitive_id in ("raise_terrain", "lower_terrain"):
         spec["amount"] = 1
+    elif primitive_id == "dispel":
+        spec["count"] = 1
+    elif primitive_id == "reveal":
+        ctx.add(spec, (("duration", (1, 2, 3), ctx.rules.structure.knob_weight_other),))
+        return
+    elif primitive_id == "restore_resource":  # 3C-6b：回復法力（冷卻版另有每回合點數，不組合）
+        spec["resource"] = "mana"
+        ctx.add(spec, (("amount", tuple(range(1, 11)), ctx.rules.structure.knob_weight_other),))
+        return
+    elif primitive_id == "delayed_damage":  # 3C-6b：定時炸彈只能用在法術技
+        if ctx.category != "spell":
+            raise Retry
+        spec["element"] = ctx.theme.value
+        spec["rounds"] = ctx.rng.randint(1, 3)
+        spec["radius"] = ctx.rng.randint(0, 2)
+        ctx.add(
+            spec, (("dice", dice_ladder(ctx.rules.dice), ctx.rules.structure.knob_weight_other),)
+        )
+        return
+    elif primitive_id == "gamble":
+        _gamble_effect(ctx, spec)
+        return
     ctx.add(spec, ())
+
+
+_GAMBLE_WIN = (1500, 2000, 2500, 3000)
+_GAMBLE_BACKLASH = (250, 500, 750)
+
+
+def _gamble_effect(ctx: Ctx, spec: dict[str, Any]) -> None:
+    """賭注（Phase 3D-7a，3C-6b 組合器也能產生）：必須有傷害效果；成功時傷害加倍之類、失敗時反噬
+    施放者本次傷害的一部分（或沒有反噬）；成功率是強度旋鈕（越高越強）。"""
+    if not any(e["type"] == "damage" for e in ctx.effects):
+        raise Retry
+    spec["win"] = [
+        {"type": "damage_multiplier", "damage_multiplier_permille": ctx.rng.choice(_GAMBLE_WIN)}
+    ]
+    spec["lose"] = (
+        [
+            {
+                "type": "self_damage_of_hit",
+                "self_damage_permille_of_hit": ctx.rng.choice(_GAMBLE_BACKLASH),
+            }
+        ]
+        if ctx.chance(700)
+        else []
+    )
+    chances = tuple(range(300, 951, 50))
+    ctx.add(spec, (("chance_permille", chances, ctx.rules.structure.knob_weight_other),))
 
 
 def _make_effect(ctx: Ctx, primitive_id: str, *, core: bool, beneficial_only: bool) -> None:
@@ -496,6 +544,7 @@ def build_effects(ctx: Ctx, core: list[str]) -> None:
             break
         _make_effect(ctx, ctx.rng.choice(pool), core=False, beneficial_only=False)
     _dash_first(ctx)
+    _gamble_last(ctx)
 
 
 def _dash_first(ctx: Ctx) -> None:
@@ -511,6 +560,21 @@ def _dash_first(ctx: Ctx) -> None:
             knob.index += 1
         elif knob.index == at:
             knob.index = 0
+
+
+def _gamble_last(ctx: Ctx) -> None:
+    """賭注（``gamble``，3D-7a）必須是主動技能的最後一個效果：移到最後面，旋鈕的索引跟著位移。"""
+    types = [e["type"] for e in ctx.effects]
+    if "gamble" not in types or types[-1] == "gamble":
+        return
+    at = types.index("gamble")
+    ctx.effects.append(ctx.effects.pop(at))
+    last = len(ctx.effects) - 1
+    for knob in ctx.knobs:
+        if knob.index == at:
+            knob.index = last
+        elif knob.index > at:
+            knob.index -= 1
 
 
 # ---------------------------------------------------------------------------
@@ -547,12 +611,13 @@ def _condition_kinds(ctx: Ctx, enemy_effects: list[int]) -> list[str]:
         for c in ctx.library.ruleset.conditions.conditions
         if rarity_rank(c.min_rarity) <= ctx.rank
     }
+    own = list(ctx.rules.condition.self_conditions)
     if ctx.skeleton.id == "aura":
-        kinds = ["self_hp_below"] + (["target_hp_below"] if ctx.shape != "self" else [])
+        kinds = own + (["target_hp_below"] if ctx.shape != "self" else [])
     elif ctx.shape == "self" or not enemy_effects:
-        kinds = ["self_hp_below"]
+        kinds = own
     else:
-        kinds = ["self_hp_below", *ctx.rules.condition.target_conditions]
+        kinds = [*own, *ctx.rules.condition.target_conditions]
     return [k for k in kinds if k in available]
 
 
@@ -667,8 +732,6 @@ _HAND_WRITTEN_PRIMITIVES = frozenset(
     {
         "hurl_object",
         "topple",
-        "restore_resource",
-        "steal_buff",
         "leap",
         "swap",
         "teleport_target",
@@ -677,10 +740,9 @@ _HAND_WRITTEN_PRIMITIVES = frozenset(
         "summon",
         "zone",
         "rule_change",
-        "gamble",
         "revive",
-        "delayed_damage",
         "shadowstep",
+        "grant_skill",
     }
 )
 """只給手寫技能的結構型原語（Phase 3C-5a 的場景物件原語：需要地圖上有對應的物件；3D-2 的

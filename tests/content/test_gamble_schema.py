@@ -238,7 +238,13 @@ def test_miss_backlash_is_a_discounted_negative_cost_row() -> None:
     assert report.raw == skill_budget(skill(), lib()).raw + row.points
 
 
-def test_the_gamble_primitive_is_never_composed_randomly() -> None:
-    for seed in range(40):
-        composed = compose_random_skill(seed, tier=2, rarity="epic", skeleton="strike")
-        assert not composed.is_gamble
+def test_the_gamble_primitive_is_composed_randomly_with_a_valid_structure() -> None:
+    # 3C-6b：組合器能產生賭博型（成功率是強度旋鈕；gamble 一定是最後一個效果）
+    composed = [
+        compose_random_skill(seed, tier=2, rarity="epic", skeleton="strike") for seed in range(120)
+    ]
+    gambles = [s for s in composed if s.is_gamble]
+    assert gambles
+    for gamble in gambles:
+        assert gamble.effects[-1].type == "gamble"
+        assert any(e.type == "damage" for e in gamble.effects)

@@ -37,8 +37,8 @@ from trpg.engine import (
 from trpg.engine.ai.utility import UtilityAI
 from trpg.engine.events import ReactionTriggered, SkillTriggered, TrapTriggered
 from trpg.engine.runner import run_battle
-from trpg.engine.state import StatusInstance, Tile
-from trpg.shared.types import Surface, Team, UnitId
+from trpg.engine.state import StatusInstance, Tile, UnitState
+from trpg.shared.types import Pos, Surface, Team, UnitId
 from trpg.skillgen.budget import skill_budget
 from trpg.skillgen.random_composer import compose_with_stats
 from trpg.skillgen.skill_yaml import skill_to_yaml
@@ -145,6 +145,7 @@ def _enemy_positions(distance: int) -> list[tuple[int, int]]:
 
 
 _MAX_X = 5
+_FAR_FOE = (3, 0)
 
 
 def _arena_state(library: ContentLibrary, skill: SkillDef, distance: int) -> BattleState:
@@ -205,6 +206,7 @@ def _conditions(skill: SkillDef) -> list[tuple[str, int | None, str | None]]:
 def _prepare(state: BattleState, skill: SkillDef) -> None:
     """把場面布置成技能的條件成立（直接修改 ``state``）。"""
     caster = state.units[UnitId("unit_0001")]
+    caster.source = state.ruleset.core.source_max  # 傳說技能（3C-6b）的源力代價
     others = [u for u in state.units.values() if u.id != caster.id]
     for effect in skill.effects:  # 消耗層數的技能：施放者與目標都先備好滿層數（Phase 2E-3）
         if effect.type != "consume_stack" or effect.stack is None:
@@ -213,18 +215,10 @@ def _prepare(state: BattleState, skill: SkillDef) -> None:
         for unit in [caster] if stack.owner == "self" else others:
             unit.stacks[stack.id] = stack.max
     for kind, _, name in _conditions(skill):
-        if kind == "target_hp_below":
-            for unit in others:
-                unit.hp = 1
-        elif kind == "self_hp_below":
-            caster.hp = 1
-        elif kind == "target_has_status" and name is not None:
-            for unit in others:
-                unit.statuses.append(StatusInstance(name, _STATUS_TURNS))
-        elif kind == "target_on_surface" and name is not None:
-            for unit in others:
-                x, y = unit.xy
-                state.set_tile(x, y, _with_surface(state.tile(x, y), Surface(name)))
+        if kind in _SELF_PREPARE:
+            _prepare_self(caster, others, kind)
+        elif kind in ("target_hp_below", "target_has_status", "target_on_surface"):
+            _prepare_targets(state, others, kind, name)
         elif kind == "height_advantage":
             x, y = caster.xy
             tile = state.tile(x, y)
@@ -241,6 +235,32 @@ def _prepare(state: BattleState, skill: SkillDef) -> None:
                     tile.surface_creator,
                 ),
             )
+
+
+_SELF_PREPARE = ("moved_this_turn", "target_isolated", "self_hp_below")
+
+
+def _prepare_self(caster: UnitState, others: list[UnitState], kind: str) -> None:
+    """施放者條件與落單條件。``adjacent_ally``（友方在施放者隔壁）與 ``first_round`` 開場就成立。"""
+    if kind == "moved_this_turn":
+        caster.moved_this_turn = True
+    elif kind == "target_isolated":  # 第二名敵人移到遠處，第一名敵人身旁沒有友方
+        others[-1].pos = Pos(x=_FAR_FOE[0], y=_FAR_FOE[1])
+    else:
+        caster.hp = 1
+
+
+def _prepare_targets(
+    state: BattleState, others: list[UnitState], kind: str, name: str | None
+) -> None:
+    for unit in others:
+        if kind == "target_hp_below":
+            unit.hp = 1
+        elif kind == "target_has_status" and name is not None:
+            unit.statuses.append(StatusInstance(name, _STATUS_TURNS))
+        elif kind == "target_on_surface" and name is not None:
+            x, y = unit.xy
+            state.set_tile(x, y, _with_surface(state.tile(x, y), Surface(name)))
 
 
 def _with_surface(tile: Tile, surface: Surface) -> Tile:
@@ -334,7 +354,11 @@ def check_skill(
     outcome = SkillOutcome(seed=seed, skill=skill, attempts=attempts)
     outcome.violations = len(validate_skill(skill, library))
     outcome.ratio = skill_budget(skill, library).ratio
-    passive = skill.kind in ("passive", "reaction")
+    # 修正技能（3C-6b）沒有合法選取可施放，與被動一樣打一場戰鬥；常駐類傳說（有 activation）要花 AP
+    # 與源力啟動，照主動技能試施放
+    passive = skill.kind in ("passive", "reaction") or (
+        skill.kind == "modifier" and skill.activation is None
+    )
     # 被動與反應技沒有合法選取可施放：改成各打一場，數它實際觸發了幾次（2E-1、2E-2）
     outcome.castable = passive
     steps: list[Callable[[ContentLibrary, SkillOutcome], None]] = [] if passive else [_try_cast]
@@ -458,6 +482,7 @@ def format_report(report: FuzzReport) -> str:
         f"陷阱 {len(traps)} 個（每個打一場戰鬥）：實際觸發過"
         f" {sum(1 for o in traps if o.triggers > 0)} 個，共觸發 {sum(o.triggers for o in traps)} 次"
     )
+    lines += _special_lines(outcomes)
     lines.append(f"  例外 {len(errors) + len(report.compose_errors)} 個")
     attempts = [o.attempts for o in outcomes]
     mean = Fraction(sum(attempts), len(attempts)) if attempts else Fraction(0)
@@ -487,6 +512,38 @@ def format_report(report: FuzzReport) -> str:
     lines += _histogram([o.ratio for o in outcomes])
     lines += _problem_lines(report, errors)
     return "\n".join(lines) + "\n"
+
+
+def _special_lines(outcomes: list[SkillOutcome]) -> list[str]:
+    """傳說（含源力成本）、修正技能、被動的觸發時機與條件的出現次數（Phase 3C-6b）。"""
+    legendary = [o.skill for o in outcomes if o.skill.rarity == "legendary"]
+    cores = Counter(
+        "修正規則"
+        if s.modifiers
+        else "規則改變"
+        if any(e.type == "rule_change" for e in s.effects)
+        else "改寫規則"
+        for s in legendary
+    )
+    sources = Counter(s.cost.source for s in legendary)
+    epic_modifiers = sum(
+        1 for o in outcomes if o.skill.kind == "modifier" and o.skill.rarity == "epic"
+    )
+    lines = [
+        f"  傳說 {len(legendary)} 個（修正規則 {cores['修正規則']}、規則改變 {cores['規則改變']}、"
+        f"改寫規則 {cores['改寫規則']}；源力 1 點 {sources[1]} 個、2 點 {sources[2]} 個）",
+        f"  修正技能（史詩）{epic_modifiers} 個",
+    ]
+    events = Counter(o.skill.trigger.event for o in outcomes if o.skill.trigger is not None)
+    lines.append("  被動觸發時機：" + "、".join(f"{k} {v}" for k, v in sorted(events.items())))
+    conditions: Counter[str] = Counter()
+    for o in outcomes:
+        found = [o.skill.condition] if o.skill.condition is not None else []
+        found += [e.condition for e in o.skill.effects if e.condition is not None]
+        found += [r.condition for r in o.skill.modifiers if r.condition is not None]
+        conditions.update(c.type for c in found)
+    lines.append("  條件：" + "、".join(f"{k} {v}" for k, v in sorted(conditions.items())))
+    return lines
 
 
 def _problem_lines(report: FuzzReport, errors: list[SkillOutcome]) -> list[str]:

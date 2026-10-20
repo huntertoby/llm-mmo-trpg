@@ -66,17 +66,20 @@ def test_demo_skills_use_the_new_triggers_and_pass_validation_and_budget() -> No
     assert library().skills["skill_ember_ward"].trigger.tag == "fire"  # type: ignore[union-attr]
 
 
-def test_new_triggers_need_epic_and_are_not_picked_by_the_random_composer() -> None:
+def test_new_triggers_need_epic_and_the_random_composer_picks_them() -> None:
+    # 3C-6b：三個新時機（以及 on_enter_surface）都由組合器產生；on_cast_tag 一定帶 tag
     rules = library().ruleset
     for event in DEMOS.values():
         definition = rules.trigger_def(event)
-        assert definition.min_rarity == "epic" and definition.random_composer is False
-    seen = {
-        s.trigger.event
-        for seed in range(60)
+        assert definition.min_rarity == "epic" and definition.random_composer is True
+    composed = [
+        s
+        for seed in range(150)
         if (s := compose_random_skill(seed, tier=1, rarity="epic", skeleton="passive")).trigger
-    }
-    assert seen and seen.isdisjoint(DEMOS.values())
+    ]
+    assert set(DEMOS.values()) <= {s.trigger.event for s in composed}  # type: ignore[union-attr]
+    tags = [s.trigger.tag for s in composed if s.trigger.event == "on_cast_tag"]  # type: ignore[union-attr]
+    assert tags and all(tags)
 
 
 def test_collision_dice_is_a_push_pull_parameter_and_costs_budget_points() -> None:

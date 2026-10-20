@@ -11,6 +11,7 @@ from types import ModuleType
 import pytest
 
 from tests.skillgen.helpers import lib, skill
+from trpg.content.skills import SkillDef
 from trpg.sim import skill_fuzz
 from trpg.sim.skill_fuzz import FuzzReport, check_skill, format_report, run_fuzz
 
@@ -26,6 +27,13 @@ def _load_script() -> ModuleType:
     return module
 
 
+def _battle_only(skill: SkillDef) -> bool:
+    """沒有合法選取可施放的技能：被動、反應技、不需啟動的修正技能（3C-6b）。"""
+    return skill.kind in ("passive", "reaction") or (
+        skill.kind == "modifier" and skill.activation is None
+    )
+
+
 def test_one_hundred_seeds_pass_validation_cast_and_run_without_exceptions() -> None:
     report = run_fuzz(lib(), count=100)
     assert report.compose_errors == []
@@ -37,18 +45,21 @@ def test_one_hundred_seeds_pass_validation_cast_and_run_without_exceptions() -> 
     expected = {
         o.seed
         for o in report.outcomes
-        if o.seed % 10 == 0 or o.skill.kind in ("passive", "reaction") or o.skill.skeleton == "trap"
+        if o.seed % 10 == 0
+        or o.skill.kind in ("passive", "reaction")
+        or o.skill.skeleton == "trap"
+        or (o.skill.kind == "modifier" and o.skill.activation is None)  # 3C-6b：修正技能
     }
     assert {o.seed for o in report.outcomes if o.battle_ran} == expected
     passives = [o for o in report.outcomes if o.skill.kind == "passive"]
     assert passives and sum(o.triggers for o in passives) > 0
-    kinds = ("passive", "reaction")
     assert all(
         o.triggers == 0
         for o in report.outcomes
-        if o.skill.kind not in kinds and o.skill.skeleton != "trap"
+        if not _battle_only(o.skill) and o.skill.skeleton != "trap"
     )
-    assert all(o.selections >= 1 for o in report.outcomes if o.skill.kind not in kinds)
+    battle_only = {o.seed for o in report.outcomes if _battle_only(o.skill)}
+    assert all(o.selections >= 1 for o in report.outcomes if o.seed not in battle_only)
 
 
 def test_the_summary_is_identical_between_two_runs_and_lists_the_distributions() -> None:

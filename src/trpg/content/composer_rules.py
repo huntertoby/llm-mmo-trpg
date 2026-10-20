@@ -28,6 +28,7 @@ __all__ = [
     "PassiveRules",
     "ReactionRules",
     "ScalingRules",
+    "SpecialRules",
     "StanceRules",
     "StructureRules",
     "TuningRules",
@@ -124,6 +125,8 @@ class ConditionRules(ContentModel):
     """有條件時，條件掛在單一效果（而非整個技能）的機率。"""
     target_conditions: tuple[str, ...]
     """目標型條件（需要影響範圍內有敵人）。"""
+    self_conditions: tuple[str, ...] = ("self_hp_below",)
+    """施放者條件（只看施放者，Phase 3C-6b 加入連段條件）；技能層級的條件不需要影響範圍內有對象。"""
     target_hp_below: IntRange
     self_hp_below: IntRange
 
@@ -268,6 +271,13 @@ class ScalingRules(ContentModel):
     mastery_permille: int = _PERMILLE
 
 
+class SpecialRules(ContentModel):
+    """修正技能與傳說（Phase 3C-6b；:mod:`trpg.skillgen.composer_special`）。"""
+
+    modifier_permille: int = _PERMILLE
+    """稀有度史詩以上、未指定骨架時改組修正技能（``kind: modifier``）的機率（獨立的亂數串流）。"""
+
+
 class ComposerRules(ContentModel):
     """``content/skill_composer.yaml``。"""
 
@@ -298,6 +308,7 @@ class ComposerRules(ContentModel):
     builder: BuilderRules
     trap: TrapRules
     scaling: ScalingRules
+    special: SpecialRules
 
     @model_validator(mode="after")
     def _check(self) -> ComposerRules:

@@ -40,6 +40,7 @@ from trpg.skillgen.composer_parts import (
     build_stance_effects,
     choose_core,
 )
+from trpg.skillgen.composer_special import compose_legendary, compose_modifier
 from trpg.skillgen.composer_tuning import tune
 from trpg.skillgen.mechanics import mechanic_tags
 from trpg.skillgen.validate import validate_skill
@@ -104,7 +105,12 @@ def _skeleton_feasible(
     if skeleton.id in _EXPLICIT_ONLY_ACTIVE:
         return explicit and _active_feasible(skeleton, rank, library)
     if "active" not in skeleton.kinds:
-        return explicit and skeleton.kinds in (("passive",), ("reaction",), ("stance",))
+        return explicit and skeleton.kinds in (
+            ("passive",),
+            ("reaction",),
+            ("stance",),
+            ("modifier",),
+        )
     return _active_feasible(skeleton, rank, library)
 
 
@@ -122,6 +128,9 @@ def _active_feasible(skeleton: SkeletonDef, rank: int, library: ContentLibrary) 
 _HAND_WRITTEN_ONLY = frozenset({"consume_status", "summon"})
 """隨機組合器不產生的骨架（3C-3b：``consume_status`` 的 ``then`` 要手寫，組合器不支援巢狀效果；
 3D-4a：``summon`` 只給手寫技能，召喚物範本與持續輪數另外設計）。"""
+
+_LEGENDARY_SKELETONS = frozenset({"modifier", "aura"})
+"""傳說技能的骨架（3C-6b）：修正規則用 ``modifier``，規則改變與改寫規則型原語用 ``aura``。"""
 
 _EXPLICIT_ONLY_ACTIVE = frozenset({"builder_finisher", "trap"})
 """主動骨架中，只在明確指定或由 :func:`_wants_special` 決定時使用的（2E-3；不影響其他種子）。"""
@@ -143,20 +152,23 @@ def _choose_rarity_and_skeleton(
             r
             for r in _RARITIES
             if skeleton is None
-            or _skeleton_feasible(_known(library, skeleton), r, library, explicit=True)
+            or (r == "legendary" and skeleton in _LEGENDARY_SKELETONS)
+            or (
+                r != "legendary"
+                and _skeleton_feasible(_known(library, skeleton), r, library, explicit=True)
+            )
         )
         if not rarities:
             raise ComposeError(f"骨架 {skeleton} 在任何稀有度都做不出技能")
         weights = tuple(library.composer.rarity_weights[r] for r in rarities)
         picked = _weighted(rng, rarities, weights)
-        if picked == "legendary":
-            # 傳說技能必須手寫（Phase 3C-4a：需要源力代價與改寫規則型原語，組合器不產生）；
-            # 抽到傳說時降為史詩，其他種子抽到的結果不變
-            picked = "epic"
-    elif rarity == "legendary":
-        raise ComposeError("傳說技能只能手寫（需要源力代價與改寫規則型原語），組合器不產生")
     else:
         picked = rarity
+    if picked == "legendary":
+        # 傳說（Phase 3C-6b）：由 composer_special 組合（核心三擇一 ＋ 源力），不走一般的骨架流程
+        if skeleton is not None and skeleton not in _LEGENDARY_SKELETONS:
+            raise ComposeError(f"骨架 {skeleton} 不能產生傳說技能（可用：modifier、aura）")
+        return picked, _known(library, skeleton or "aura")
     if skeleton is not None:
         chosen = _known(library, skeleton)
         if not _skeleton_feasible(chosen, picked, library, explicit=True):
@@ -193,6 +205,7 @@ def _wants_special(seed: int, rarity: SkillRarity, library: ContentLibrary) -> s
         ("stance", library.composer.stance.skeleton_permille),
         ("builder_finisher", library.composer.builder.skeleton_permille),
         ("trap", library.composer.trap.skeleton_permille),
+        ("modifier", library.composer.special.modifier_permille),
     ):
         skeleton = library.skeletons.get(name)
         if (
@@ -347,6 +360,7 @@ def _attempt_passive(
     trigger: dict[str, Any] = {"event": timing.id, "target": target, "max_per_round": 1}
     if n is not None:
         trigger["n"] = n
+    trigger.update(_trigger_params(rng, library, timing.id))
     base: dict[str, Any] = {
         "id": f"skill_rand_{seed}",
         "name_zh": "暫定",
@@ -367,6 +381,27 @@ def _attempt_passive(
     if tune(rng, library, base, ctx.effects, ctx.knobs):
         return _finish(library, seed, base, ctx)
     raise Retry
+
+
+_PARAM_PERMILLE = 500
+"""``on_status_applied`` 指定狀態、``on_enter_surface`` 指定表面的機率（其餘為任何狀態或表面）。"""
+_SURFACES = ("darkness", "fire", "holy", "ice", "oil", "poison", "water")
+
+
+def _trigger_params(rng: Rng, library: ContentLibrary, event: str) -> dict[str, Any]:
+    """新觸發時機（Phase 3C-6b）的參數：``on_cast_tag`` 必填 ``tag``（元素標籤）；
+    ``on_status_applied`` 與 ``on_enter_surface`` 以一半的機率指定狀態或表面。其他時機沒有參數
+    （不消耗亂數）。"""
+    if event == "on_cast_tag":
+        return {"tag": rng.choice([e.value for e in _SPELL_ELEMENTS])}
+    if event == "on_status_applied" and rng.chance_permille(_PARAM_PERMILLE):
+        statuses = sorted(
+            s.id for s in library.ruleset.statuses.statuses if not s.beneficial and not s.stance
+        )
+        return {"status": rng.choice(statuses)}
+    if event == "on_enter_surface" and rng.chance_permille(_PARAM_PERMILLE):
+        return {"surface": rng.choice(_SURFACES)}
+    return {}
 
 
 def _attempt_reaction(
@@ -472,6 +507,9 @@ def _compose_special(
 ) -> ComposeResult | None:
     """反應技、姿態、蓄力與終結、陷阱：用獨立的亂數串流重抽；做不出合格技能回傳 ``None``。"""
     rng = Rng(seed).fork(f"composer.{kind}.build")
+    if kind == "modifier":
+        found = compose_modifier(seed, lib)
+        return None if found is None else ComposeResult(found, 1)
     chosen = category
     if kind in ("reaction", "builder_finisher", "trap") and chosen is None:
         chosen = _choose_category(rng, lib.skeletons[kind], None, lib.composer)
@@ -493,6 +531,31 @@ def _compose_special(
     return None
 
 
+def _check_passive_args(passive: bool, ap_cost: int | None, category: str | None) -> None:
+    if passive and (ap_cost is not None or category not in (None, "spell")):
+        raise ComposeError("被動技能是法術技、不花 AP：不能指定 ap_cost 或武器技")
+
+
+def _compose_legendary_result(
+    seed: int, lib: ContentLibrary, tier: int | None, skeleton: str | None, ap_cost: int | None
+) -> ComposeResult:
+    """傳說技能（Phase 3C-6b）：``composer_special.compose_legendary``；``skeleton`` 為 ``modifier``
+    時核心只能是修正規則，``aura`` 時只能是規則改變或改寫規則型原語。"""
+    if ap_cost is not None and ap_cost != lib.ruleset.core.legendary_activation_ap:
+        raise ComposeError("傳說技能的 AP 固定為啟動 AP，不能指定 ap_cost")
+    only = (
+        None
+        if skeleton is None
+        else ("modifier",)
+        if skeleton == "modifier"
+        else ("rule_change", "rule_rewrite")
+    )
+    skill = compose_legendary(seed, lib, tier=tier, cores=only)
+    if skill is None:
+        raise ComposeError(f"種子 {seed}：做不出合格的傳說技能（階級 {tier}、骨架 {skeleton}）")
+    return ComposeResult(skill, 1)
+
+
 def compose_with_stats(
     seed: int,
     *,
@@ -510,6 +573,8 @@ def compose_with_stats(
     if tier_value not in lib.ruleset.core.tier_budget:
         raise ComposeError(f"沒有階級 {tier_value} 的預算")
     rarity_value, skeleton_def = _choose_rarity_and_skeleton(rng, rarity, skeleton, lib)
+    if rarity_value == "legendary":
+        return _compose_legendary_result(seed, lib, tier, skeleton, ap_cost)
     passive = skeleton_def.kinds == ("passive",) or (
         skeleton is None and _wants_passive(seed, rarity_value, lib)
     )
@@ -540,8 +605,7 @@ def compose_with_stats(
                 f"種子 {seed}：{MAX_ATTEMPTS} 次重抽都做不出合格的{special}"
                 f"（階級 {tier_value}、{rarity_value}）"
             )
-    if passive and (ap_cost is not None or category not in (None, "spell")):
-        raise ComposeError("被動技能是法術技、不花 AP：不能指定 ap_cost 或武器技")
+    _check_passive_args(passive, ap_cost, category)
     category_value = (
         "spell" if passive else _choose_category(rng, skeleton_def, category, lib.composer)
     )

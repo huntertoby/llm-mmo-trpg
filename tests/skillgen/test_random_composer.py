@@ -8,7 +8,7 @@ from fractions import Fraction
 import pytest
 
 from tests.skillgen.helpers import lib
-from trpg.content.skills import SkillDef, SkillRarity
+from trpg.content.skills import SkillDef, SkillRarity, legendary_cores
 from trpg.skillgen.budget import skill_budget
 from trpg.skillgen.composer_parts import dice_ladder
 from trpg.skillgen.composer_tuning import tuning_bounds
@@ -35,8 +35,8 @@ ENABLED = (
     "builder_finisher",
     "trap",
 )
-RARITIES = ("common", "rare", "epic")
-"""組合器產生的稀有度：傳說只能手寫（Phase 3C-4a，抽到傳說時降為史詩）。"""
+RARITIES = ("common", "rare", "epic", "legendary")
+"""組合器產生的稀有度（Phase 3C-6b 起含傳說：核心三擇一 ＋ 源力代價）。"""
 
 
 def test_same_seed_gives_the_same_skill_field_by_field() -> None:
@@ -59,8 +59,14 @@ def test_every_fast_seed_composes_a_valid_skill_in_the_budget_window() -> None:
         assert validate_skill(skill, library) == []
         assert skill.id == f"skill_rand_{seed}" and skill.name_zh.endswith(f"#{seed}")
         assert skill.provenance.origin == "level_up"
-        expected = {"passive": "passive", "reaction": "reaction", "stance": "stance"}
+        expected = {
+            "passive": "passive",
+            "reaction": "reaction",
+            "stance": "stance",
+            "modifier": "modifier",
+        }
         assert skill.kind == expected.get(skill.skeleton, "active")
+        assert (skill.cost.source is not None) == (skill.rarity == "legendary")
         assert skill.narrative.concept
         ratio = skill_budget(skill, library).ratio
         assert low <= ratio <= high, (seed, float(ratio))
@@ -71,7 +77,9 @@ def test_category_matches_weapon_req_and_tags_start_with_the_theme() -> None:
         skill = compose_random_skill(seed)
         allowed = ("melee", "ranged") if skill.category == "weapon" else ("focus", "any")
         assert skill.weapon_req in allowed
-        assert skill.tags[1] == skill.skeleton and len(set(skill.tags)) == len(skill.tags)
+        assert len(set(skill.tags)) == len(skill.tags)
+        if skill.rarity != "legendary" and skill.skeleton != "modifier":
+            assert skill.tags[1] == skill.skeleton
 
 
 def test_dice_use_the_allowed_sides_and_counts() -> None:
@@ -96,10 +104,34 @@ def test_every_rarity_can_be_composed(rarity: SkillRarity) -> None:
         assert compose_random_skill(seed, rarity=rarity).rarity == rarity
 
 
-def test_legendary_is_hand_written_only() -> None:
-    """Phase 3C-4a：組合器不產生傳說（需要源力代價與改寫規則型原語）。"""
+def test_legendary_is_composed_with_one_core_and_a_source_cost() -> None:
+    """Phase 3C-6b：傳說 ＝ 核心三擇一（修正規則、規則改變、改寫規則型原語）＋ 1–2 點源力。"""
+    library = lib()
+    primitives = library.ruleset.primitives.by_id()
+    seen: set[str] = set()
+    for seed in range(40):
+        skill = compose_random_skill(seed, rarity="legendary")
+        assert skill.rarity == "legendary" and skill.cost.source in (1, 2)
+        cores = legendary_cores(skill, primitives)
+        assert len(cores) == 1
+        seen.update(cores)
+        assert validate_skill(skill, library) == []
+        assert (skill.activation is not None) == (cores[0] != "rule_rewrite")
+    assert seen == {"modifier", "rule_change", "rule_rewrite"}
+
+
+def test_a_legendary_with_the_wrong_skeleton_is_rejected() -> None:
     with pytest.raises(ComposeError, match="傳說"):
-        compose_random_skill(0, rarity="legendary")
+        compose_random_skill(0, rarity="legendary", skeleton="strike")
+
+
+def test_the_modifier_skeleton_composes_epic_modifiers_and_legendary_modifier_rules() -> None:
+    library = lib()
+    epic = compose_random_skill(3, skeleton="modifier", rarity="epic")
+    assert epic.kind == "modifier" and epic.cost.source is None and epic.modifiers
+    legendary = compose_random_skill(3, skeleton="modifier", rarity="legendary")
+    assert legendary.modifiers and legendary.cost.source in (1, 2) and legendary.activation
+    assert validate_skill(epic, library) == [] and validate_skill(legendary, library) == []
 
 
 @pytest.mark.parametrize("tier", [1, 2, 3, 4, 5])
@@ -179,7 +211,7 @@ def test_distribution_over_the_fast_seeds_has_every_group() -> None:
     skills = [compose_random_skill(seed) for seed in FAST_SEEDS]
     assert {s.tier for s in skills} == {1, 2, 3, 4, 5}
     assert {s.rarity for s in skills} == set(RARITIES)
-    assert {s.skeleton for s in skills} == set(ENABLED)
+    assert {s.skeleton for s in skills} >= set(ENABLED)
     assert max(Counter(s.skeleton for s in skills).values()) <= 40
 
 

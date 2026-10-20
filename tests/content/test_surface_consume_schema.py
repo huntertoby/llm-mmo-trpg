@@ -23,20 +23,20 @@ def test_surface_param_only_belongs_to_on_enter_surface() -> None:
         TriggerSpec(event="on_enter_surface", surface=Surface.NONE)
 
 
-def test_the_trigger_definition_is_epic_and_never_composed_randomly() -> None:
+def test_the_trigger_definition_is_epic_and_composed_randomly() -> None:
     lib = library()
     definition = lib.ruleset.trigger_def("on_enter_surface")
     assert (definition.min_rarity, definition.random_composer, definition.has_other) == (
         "epic",
-        False,
+        True,
         True,
     )
     seen = {
         s.trigger.event
-        for seed in range(60)
+        for seed in range(150)
         if (s := compose_random_skill(seed, tier=1, rarity="epic", skeleton="passive")).trigger
     }
-    assert "on_enter_surface" not in seen
+    assert "on_enter_surface" in seen
 
 
 def test_the_consume_status_skeleton_is_never_picked_by_the_random_composer() -> None:
