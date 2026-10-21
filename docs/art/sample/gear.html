@@ -1,0 +1,159 @@
+<!doctype html>
+<html lang="zh-Hant">
+<head>
+<meta charset="utf-8">
+<title>組裝式裝備樣張</title>
+<style>
+  body { margin: 0; padding: 18px 22px; background: #1b1e24; color: #e8e8ea; font-family: "Noto Sans TC", "Microsoft JhengHei", sans-serif; }
+  h1 { font-size: 20px; margin: 0 0 4px; }
+  .sub { color: #a0a4ad; font-size: 13px; margin-bottom: 10px; }
+  .wrap { display: flex; gap: 22px; align-items: flex-start; }
+  table { border-collapse: collapse; }
+  td, th { padding: 3px 5px; text-align: center; font-size: 11px; color: #a0a4ad; font-weight: 400; }
+  th.r { text-align: right; color: #c8cad0; }
+  .name { font-size: 10px; color: #e0e2e6; margin-top: 2px; width: 70px; }
+  .box { background: #262a32; border-radius: 10px; padding: 10px; }
+  .box h2 { font-size: 14px; margin: 0 0 6px; color: #e8e8ea; }
+  .dolls { display: flex; gap: 6px; }
+  .dolls div { text-align: center; font-size: 11px; color: #c8cad0; }
+</style>
+</head>
+<body>
+<h1>組裝式裝備：造型 × 形制 × 材質 × 關鍵字 × 稀有度（全部由資料決定，零手繪）</h1>
+<div class="sub">名稱由 LLM 自由取；外觀欄位從清單選，引擎驗證，不認得就用預設。</div>
+<div class="wrap">
+<div class="box"><h2>① 同一把「劍」：形制 × 關鍵字（稀有度＝外框）</h2><table id="t1"></table></div>
+<div class="box"><h2>② 其他部位</h2><table id="t2"></table></div>
+<div class="box"><h2>③ 穿上後紙娃娃同步</h2><div class="dolls" id="dolls"></div></div>
+</div>
+<script src="paperdoll.js"></script>
+<script>
+const TAU = Math.PI * 2;
+const MAT = { iron: ["#8d969f", "#5a6169"], steel: ["#c3ccd6", "#7d8794"], gold: ["#e8bb48", "#9c7420"], wood: ["#a06a36", "#6a4420"], leather: ["#8a5a32", "#5e3b1f"], bone: ["#e9e3cf", "#a8a08a"] };
+const KW = { none: null, ignite: { c: "#ff6a1a", zh: "點燃" }, freeze: { c: "#8fe3ff", zh: "冰凍" }, shock: { c: "#fff36b", zh: "帶電" }, poison: { c: "#7ddc3a", zh: "中毒" } };
+const RAR = { common: ["#6a6f7a", "普通"], rare: ["#4f9dff", "稀有"], epic: ["#b06cff", "史詩"], legendary: ["#ffbf3a", "傳說"] };
+function mix(a, b, t) { const pa = parseInt(a.slice(1), 16), pb = parseInt(b.slice(1), 16); const m = (s) => Math.round(((pa >> s) & 255) * (1 - t) + ((pb >> s) & 255) * t); return `#${((m(16) << 16) | (m(8) << 8) | m(0)).toString(16).padStart(6, "0")}`; }
+function colors(it) { let [a, d] = MAT[it.material] ?? MAT.iron; const k = KW[it.kw]; if (k) { a = mix(a, k.c, 0.4); d = mix(d, k.c, 0.25); } return [a, d]; }
+
+// ---- 關鍵字小圖樣（畫在刃上／器物周圍）----
+function motif(ctx, kw, pts) {
+  const k = KW[kw]; if (!k) return;
+  ctx.save(); ctx.fillStyle = k.c; ctx.strokeStyle = k.c; ctx.lineWidth = 1.6;
+  for (const [x, y] of pts) {
+    if (kw === "ignite") { ctx.beginPath(); ctx.moveTo(x, y - 6); ctx.quadraticCurveTo(x + 4, y, x, y + 3); ctx.quadraticCurveTo(x - 4, y, x, y - 6); ctx.fill(); }
+    else if (kw === "freeze") { ctx.beginPath(); for (let i = 0; i < 3; i++) { const a = (i * Math.PI) / 3; ctx.moveTo(x - Math.cos(a) * 4, y - Math.sin(a) * 4); ctx.lineTo(x + Math.cos(a) * 4, y + Math.sin(a) * 4); } ctx.stroke(); }
+    else if (kw === "shock") { ctx.beginPath(); ctx.moveTo(x - 3, y - 5); ctx.lineTo(x + 1, y - 1); ctx.lineTo(x - 1, y + 1); ctx.lineTo(x + 3, y + 5); ctx.stroke(); }
+    else if (kw === "poison") { ctx.beginPath(); ctx.arc(x, y, 2.2, 0, TAU); ctx.fill(); ctx.beginPath(); ctx.arc(x + 3, y - 4, 1.4, 0, TAU); ctx.fill(); }
+  }
+  ctx.restore();
+}
+// ---- 造型 ----
+const SWORD_FORM = {
+  straight: { zh: "直劍", blade: (c) => { c.moveTo(-3.5, 10); c.lineTo(-3.5, -24); c.lineTo(0, -30); c.lineTo(3.5, -24); c.lineTo(3.5, 10); } },
+  curved: { zh: "彎刀", blade: (c) => { c.moveTo(-3, 10); c.quadraticCurveTo(-6, -12, 6, -30); c.quadraticCurveTo(4, -10, 4, 10); } },
+  broad: { zh: "闊劍", blade: (c) => { c.moveTo(-6, 10); c.lineTo(-6, -20); c.lineTo(0, -30); c.lineTo(6, -20); c.lineTo(6, 10); } },
+};
+function sword(ctx, it) {
+  const [a, d] = colors(it); const f = SWORD_FORM[it.form] ?? SWORD_FORM.straight;
+  ctx.save(); ctx.translate(32, 36); ctx.rotate(Math.PI / 4);
+  ctx.beginPath(); f.blade(ctx); ctx.closePath(); ctx.fillStyle = a; ctx.fill(); ctx.lineWidth = 2; ctx.strokeStyle = "#16181d"; ctx.stroke();
+  ctx.strokeStyle = d; ctx.lineWidth = 1.2; ctx.beginPath(); ctx.moveTo(0, 8); ctx.lineTo(0, -22); ctx.stroke();
+  ctx.fillStyle = it.rarity === "legendary" || it.rarity === "epic" ? "#e8bb48" : "#6a4420"; ctx.strokeStyle = "#16181d"; ctx.lineWidth = 1.5;
+  ctx.beginPath(); ctx.roundRect(-10, 10, 20, 4, 2); ctx.fill(); ctx.stroke();
+  ctx.fillStyle = "#5e3b1f"; ctx.beginPath(); ctx.roundRect(-2.5, 14, 5, 10, 1); ctx.fill(); ctx.stroke();
+  if (it.rarity === "legendary") { ctx.fillStyle = "#ff4060"; ctx.beginPath(); ctx.arc(0, 12, 2.4, 0, TAU); ctx.fill(); }
+  motif(ctx, it.kw, [[0, -12], [0, -2]]);
+  ctx.restore();
+}
+function shield(ctx, it) {
+  const [a, d] = colors(it);
+  ctx.beginPath(); ctx.moveTo(14, 12); ctx.lineTo(50, 12); ctx.lineTo(50, 32); ctx.quadraticCurveTo(48, 50, 32, 56); ctx.quadraticCurveTo(16, 50, 14, 32); ctx.closePath();
+  ctx.fillStyle = a; ctx.fill(); ctx.lineWidth = 2.5; ctx.strokeStyle = "#16181d"; ctx.stroke();
+  ctx.strokeStyle = d; ctx.lineWidth = 3; ctx.beginPath(); ctx.moveTo(32, 16); ctx.lineTo(32, 51); ctx.moveTo(18, 28); ctx.lineTo(46, 28); ctx.stroke();
+  motif(ctx, it.kw, [[23, 21], [41, 40]]);
+}
+function staff(ctx, it) {
+  const [a] = colors({ material: "wood" }); const orb = KW[it.kw]?.c ?? "#9ad0ff";
+  ctx.save(); ctx.translate(32, 34); ctx.rotate(Math.PI / 5);
+  ctx.fillStyle = a; ctx.strokeStyle = "#16181d"; ctx.lineWidth = 1.5; ctx.beginPath(); ctx.roundRect(-2.5, -16, 5, 40, 2); ctx.fill(); ctx.stroke();
+  ctx.fillStyle = orb; ctx.beginPath(); ctx.arc(0, -20, 7, 0, TAU); ctx.fill(); ctx.stroke();
+  ctx.fillStyle = "rgba(255,255,255,0.6)"; ctx.beginPath(); ctx.arc(-2, -22, 2, 0, TAU); ctx.fill();
+  ctx.restore();
+}
+function body(ctx, it) {
+  const [a, d] = colors(it);
+  ctx.beginPath(); ctx.moveTo(18, 14); ctx.lineTo(26, 10); ctx.quadraticCurveTo(32, 16, 38, 10); ctx.lineTo(46, 14); ctx.lineTo(52, 28); ctx.lineTo(45, 31); ctx.lineTo(44, 54); ctx.lineTo(20, 54); ctx.lineTo(19, 31); ctx.lineTo(12, 28); ctx.closePath();
+  ctx.fillStyle = a; ctx.fill(); ctx.lineWidth = 2.5; ctx.strokeStyle = "#16181d"; ctx.stroke();
+  ctx.strokeStyle = d; ctx.lineWidth = 1.2; for (let y = 22; y < 52; y += 6) { ctx.beginPath(); ctx.moveTo(21, y); ctx.lineTo(43, y); ctx.stroke(); }
+  motif(ctx, it.kw, [[25, 36], [39, 44]]);
+}
+function ring(ctx, it) {
+  const [a, d] = colors({ material: "gold" }); const gem = KW[it.kw]?.c ?? "#e04060";
+  ctx.lineWidth = 6; ctx.strokeStyle = "#16181d"; ctx.beginPath(); ctx.arc(32, 38, 14, 0, TAU); ctx.stroke();
+  ctx.lineWidth = 4; ctx.strokeStyle = a; ctx.stroke();
+  ctx.fillStyle = gem; ctx.strokeStyle = "#16181d"; ctx.lineWidth = 2; ctx.beginPath(); ctx.moveTo(32, 14); ctx.lineTo(40, 22); ctx.lineTo(32, 30); ctx.lineTo(24, 22); ctx.closePath(); ctx.fill(); ctx.stroke();
+}
+function amulet(ctx, it) {
+  const gem = KW[it.kw]?.c ?? "#e04060";
+  ctx.strokeStyle = "#9c7420"; ctx.lineWidth = 2; ctx.beginPath(); ctx.arc(32, 18, 16, 0.1 * Math.PI, 0.9 * Math.PI, true); ctx.stroke();
+  ctx.fillStyle = "#e8bb48"; ctx.strokeStyle = "#16181d"; ctx.beginPath(); ctx.arc(32, 40, 11, 0, TAU); ctx.fill(); ctx.stroke();
+  ctx.fillStyle = gem; ctx.beginPath(); ctx.arc(32, 40, 6, 0, TAU); ctx.fill(); ctx.stroke();
+}
+const DRAW = { sword, shield, staff, body, ring, amulet };
+
+function frame(ctx, rarity) {
+  const [c] = RAR[rarity];
+  ctx.fillStyle = "#23262d"; ctx.beginPath(); ctx.roundRect(2, 2, 60, 60, 9); ctx.fill();
+  if (rarity === "epic" || rarity === "legendary") { const g = ctx.createRadialGradient(32, 32, 4, 32, 32, 32); g.addColorStop(0, c + "55"); g.addColorStop(1, c + "00"); ctx.fillStyle = g; ctx.fill(); }
+  ctx.lineWidth = rarity === "legendary" ? 3.5 : 2.5; ctx.strokeStyle = c; ctx.beginPath(); ctx.roundRect(2, 2, 60, 60, 9); ctx.stroke();
+  if (rarity !== "common") { ctx.fillStyle = c; ctx.beginPath(); ctx.moveTo(52, 4); ctx.lineTo(60, 4); ctx.lineTo(60, 12); ctx.closePath(); ctx.fill(); }
+}
+function icon(it, px = 64) {
+  const cv = document.createElement("canvas"); cv.width = px * 2; cv.height = px * 2; cv.style.width = cv.style.height = `${px}px`;
+  const ctx = cv.getContext("2d"); ctx.scale((px * 2) / 64, (px * 2) / 64);
+  frame(ctx, it.rarity); DRAW[it.kind](ctx, it);
+  return cv;
+}
+function cell(it, name) { const td = document.createElement("td"); td.appendChild(icon(it)); if (name) td.insertAdjacentHTML("beforeend", `<div class="name">${name}</div>`); return td; }
+
+// ① 劍：形制 × 關鍵字
+const t1 = document.getElementById("t1");
+const KWS = ["none", "ignite", "freeze", "shock"];
+const RARS = ["common", "rare", "epic", "legendary"];
+t1.insertAdjacentHTML("beforeend", `<tr><th></th>${KWS.map((k) => `<th>${KW[k]?.zh ?? "無關鍵字"}</th>`).join("")}</tr>`);
+const NAMES = { straight: ["鐵劍", "餘燼長劍", "霜脊劍", "雷紋劍"], curved: ["彎刀", "焚風彎刀", "寒月刀", "電弧刀"], broad: ["闊劍", "熔心闊劍", "冰川巨刃", "雷霆闊劍"] };
+for (const form of ["straight", "curved", "broad"]) {
+  const tr = document.createElement("tr"); tr.insertAdjacentHTML("beforeend", `<th class="r">${SWORD_FORM[form].zh}</th>`);
+  KWS.forEach((kw, i) => tr.appendChild(cell({ kind: "sword", form, material: form === "broad" ? "steel" : "iron", kw, rarity: RARS[i] }, NAMES[form][i])));
+  t1.appendChild(tr);
+}
+t1.insertAdjacentHTML("beforeend", `<tr><td></td>${RARS.map((r) => `<td style="color:${RAR[r][0]}">${RAR[r][1]}</td>`).join("")}</tr>`);
+// ② 其他部位
+const t2 = document.getElementById("t2");
+const ROWS = [
+  ["副手", [{ kind: "shield", material: "iron", kw: "none", rarity: "common" }, "圓盾"], [{ kind: "shield", material: "steel", kw: "freeze", rarity: "epic" }, "霜壁盾"]],
+  ["主手", [{ kind: "staff", kw: "none", rarity: "common" }, "木杖"], [{ kind: "staff", kw: "ignite", rarity: "rare" }, "灼心杖"]],
+  ["身體", [{ kind: "body", material: "leather", kw: "none", rarity: "common" }, "皮甲"], [{ kind: "body", material: "iron", kw: "shock", rarity: "legendary" }, "引雷鎖甲"]],
+  ["飾品", [{ kind: "ring", kw: "poison", rarity: "rare" }, "蛇牙戒"], [{ kind: "amulet", kw: "freeze", rarity: "epic" }, "冬眠墜飾"]],
+];
+for (const [slot, ...items] of ROWS) {
+  const tr = document.createElement("tr"); tr.insertAdjacentHTML("beforeend", `<th class="r">${slot}</th>`);
+  for (const [it, n] of items) tr.appendChild(cell(it, n)); t2.appendChild(tr);
+}
+// ③ 紙娃娃
+const D = window.PaperDoll;
+const look = D.TEMPLATES.hero_fighter.look;
+const outfits = [
+  ["鐵劍＋圓盾＋皮甲", ["leather_vest", "boots", "sword", "round_shield"]],
+  ["霜脊劍＋霜壁盾", ["frost_mail", "boots", "sword", "holy_shield"]],
+  ["熔心闊劍（傳說）", ["plate_armor", "greaves", "flame_greatsword", "red_cape"], "legendary"],
+];
+const dolls = document.getElementById("dolls");
+for (const [n, ids, r] of outfits) {
+  const d = document.createElement("div"); const cv = document.createElement("canvas"); cv.width = 180; cv.height = 220; cv.style.width = "90px"; cv.style.height = "110px";
+  const ctx = cv.getContext("2d"); ctx.scale(2, 2); D.stamp(ctx, D.build(look, ids, r), "south", 45, 100, 1.5);
+  d.appendChild(cv); d.insertAdjacentHTML("beforeend", `<div>${n}</div>`); dolls.appendChild(d);
+}
+</script>
+</body>
+</html>
