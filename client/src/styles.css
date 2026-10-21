@@ -2183,13 +2183,12 @@ button.selected {
 
 .ws-preview {
   display: flex;
-  gap: 10px;
-  align-items: flex-start;
+  gap: 12px;
+  align-items: flex-end;
 }
 
 .ws-preview-sizes {
   display: flex;
-  gap: 6px;
+  gap: 8px;
   align-items: center;
-  margin-top: 6px;
 }

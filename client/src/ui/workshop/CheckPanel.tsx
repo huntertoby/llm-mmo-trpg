@@ -111,15 +111,13 @@ export function CheckPanel({ check, pending }: { check: WorkshopCheck | null; pe
         <div className="ws-icon-preview">
           <div className="section-title">技能圖示（每完成一步，多一個部件）</div>
           <div className="ws-preview">
-            <div>
-              <SkillIconView icon={check.icon} size={96} />
-              <div className="ws-preview-sizes">
-                <SkillIconView icon={check.icon} size={40} />
-                <SkillIconView icon={check.icon} size={28} />
-              </div>
+            <SkillIconView icon={check.icon} size={96} />
+            <div className="ws-preview-sizes">
+              <SkillIconView icon={check.icon} size={40} title="技能列的大小（40px）" />
+              <SkillIconView icon={check.icon} size={28} title="被動、反應等小圖示（28px）" />
             </div>
-            <AssemblyRow icon={check.icon} />
           </div>
+          <AssemblyRow icon={check.icon} />
         </div>
       )}
       <div className={`ws-headline ${head.tone}`}>{head.text}</div>
