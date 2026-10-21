@@ -98,6 +98,7 @@ from trpg.engine.ai.orders import (
     UseEnvironment,
     validate_order,
 )
+from trpg.engine.ai.rune import is_inscribe_skill, read_gains, rune_estimate, rune_gains
 from trpg.engine.ai.scene_objects import SCENE_PRIMITIVES, has_fire_follow_up, scene_estimate
 from trpg.engine.ai.summon import has_summon, summon_estimate, summon_gains, summon_template
 from trpg.engine.ai.zone import hostile_zone_at, is_zone_skill, zone_estimate, zone_gains
@@ -783,6 +784,8 @@ def _ally_gains(f: _GainFrame) -> Fraction:
         gains += _trap_gains(state, p, f.profile)
         gains += summon_gains(state, f.actor, p.min_events, f.profile)  # 召喚（Phase 3D-4a）
         gains += zone_gains(state, f.actor, p.min_events, f.profile)  # 持續區域（Phase 3D-5）
+        gains += rune_gains(state, f.actor, p.min_events, f.profile)  # 先刻（Phase 3-23）
+        gains += _rune_read_gains(state, f.actor, p, f.profile)  # 再引（Phase 3-23）
     return gains
 
 
@@ -1502,6 +1505,16 @@ def skill_estimate(  # noqa: PLR0917
     return score - Fraction(manhattan(unit.xy, area.origin), 1000)
 
 
+def _rune_read_gains(
+    state: BattleState, actor: UnitState, p: Preview, profile: AiProfile
+) -> Fraction:
+    """讀取技能打到站在自己符文上的敵人的額外加分（Phase 3-23）。"""
+    action = p.action
+    if not isinstance(action, UseSkill):
+        return Fraction(0)
+    return read_gains(state, actor, effective_skill(state, action), p, profile)
+
+
 class _Unhandled:
     """:func:`_special_estimate` 沒有處理這個技能（交給一般估計）。"""
 
@@ -1528,10 +1541,20 @@ def _placement_estimate(
         return _trap_estimate(state, unit, skill, area, scene, rules=trap)
     if has_summon(skill):
         return summon_estimate(state, unit, area.origin, summon_template(skill))
+    return _field_placement_estimate(state, unit, skill, area)
+
+
+def _field_placement_estimate(
+    state: BattleState, unit: UnitState, skill: SkillDef, area: SkillArea
+) -> Fraction | _Unhandled | None:
+    """持續區域（3D-5：格內與移動路徑上的對象數）與刻印（3-23：有讀取技能時，敵人會停留的格子
+    越多越好）的估計；其他技能回傳 ``_UNHANDLED``。"""
     if is_zone_skill(skill):
         return zone_estimate(
             state, unit, skill, tiles=area.tiles, direction=area.direction, origin=area.origin
         )
+    if is_inscribe_skill(skill):
+        return rune_estimate(state, unit, skill, area.tiles, area.origin)
     return _UNHANDLED
 
 
