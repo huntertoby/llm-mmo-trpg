@@ -197,7 +197,8 @@ def test_ai_battle_with_backstabs_replays(
     tmp_path: Path, capsys: pytest.CaptureFixture[str]
 ) -> None:
     log = tmp_path / "assassin.json"
-    argv = ["battle", "--map", "dark_forest", "--seed", "3", "--ally-build", "build_assassin"]
+    # 3-24a1：弓有拋射，AI 軌跡改變，種子 3 → 0
+    argv = ["battle", "--map", "dark_forest", "--seed", "0", "--ally-build", "build_assassin"]
     assert main([*argv, "--log-json", str(log)]) == 0
     text = capsys.readouterr().out
     assert "從背後以「瞬步背刺」攻擊" in text and "背刺 +2" in text

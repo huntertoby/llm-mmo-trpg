@@ -13,6 +13,7 @@ if TYPE_CHECKING:
     from trpg.engine.state import BattleState
 
 __all__ = [
+    "ARMOR_BROKEN",
     "BOSS_TAG",
     "CONCEALED",
     "DEFENDING",
@@ -28,6 +29,8 @@ __all__ = [
 
 # -- 狀態 ID（``statuses.yaml``）----------------------------------------------
 
+ARMOR_BROKEN = "armor_broken"
+"""武器 ``armor_break`` 施加的狀態（``defense_break``，Phase 3-24a1）。"""
 CONCEALED = "concealed"
 """隱匿。"""
 DEFENDING = "defending"

@@ -100,7 +100,7 @@ from trpg.engine.rules.combat import (
     weapon_profile,
 )
 from trpg.engine.rules.movement import available_move_budget, is_deadly, path_map
-from trpg.engine.rules.statuses import effective_attribute, shield_amount
+from trpg.engine.rules.statuses import effective_attribute, shield_amount, weapon_attribute
 from trpg.engine.skills.conditions import Subject, condition_met
 from trpg.engine.skills.scaling import skill_scaling_value
 from trpg.engine.skills.targeting import (
@@ -116,6 +116,7 @@ from trpg.engine.skills.targeting import (
 )
 from trpg.engine.state import BattleState, UnitState
 from trpg.engine.traps import strip_hidden_traps
+from trpg.engine.weapon_traits import attack_dice
 from trpg.shared.types import Attribute, ObjectId, UnitId
 
 __all__ = [
@@ -593,10 +594,7 @@ def _amount_table(
 ) -> dict[int, int]:
     weapon = unit.weapon
     core = state.ruleset.core
-    scaled = (
-        effective_attribute(state.ruleset, unit, weapon.scaling_attr)
-        * core.basic_attack_attr_multiplier_permille
-    )
+    scaled = weapon_attribute(state.ruleset, unit) * core.basic_attack_attr_multiplier_permille
     table: dict[int, int] = {}
     for s in sums:
         raw = (s + weapon.flat) * PERMILLE + scaled
@@ -628,7 +626,6 @@ def _attack_numbers(
     max_events: list[EventBase],
 ) -> tuple[Fraction, Fraction, DamageRange | None]:
     core = state.ruleset.core
-    weapon = actor.weapon
     if action.target_object_id is not None:
         hit, crit = Fraction(1), Fraction(0)
         crit_dist: Counter[int] = Counter()
@@ -649,13 +646,15 @@ def _attack_numbers(
         hit, crit = _chances(
             naturals, bonus + positional.hit, core.hit_target, positional.crit_range
         )
-        crit_dist = dice_distribution(weapon.dice.count * 2, weapon.dice.sides)
+        dice = attack_dice(state, actor)
+        crit_dist = dice_distribution(dice.count * 2, dice.sides)
         target_key = action.target_id
     low = _primary_damage(min_events, actor.id, target_key)
     high = _primary_damage(max_events, actor.id, target_key)
     if low is None or high is None:
         return hit, crit, None
-    normal_dist = dice_distribution(weapon.dice.count, weapon.dice.sides)
+    dice = attack_dice(state, actor)
+    normal_dist = dice_distribution(dice.count, dice.sides)
     status_ppm = PPM
     shield = 0
     if isinstance(low, DamageDealt):
@@ -1392,6 +1391,8 @@ def _build(
     topples, hurls = _scene_infos(max_events)
     checks: tuple[DisplaceCheck, ...] = ()
     notes = _cover_notes(cover)
+    if isinstance(action, Attack) and action.target_id is not None:  # 武器命中特性（3-24a1）
+        notes += actor.weapon.trait_lines_zh(on_hit_only=True)
     backstab = _backstab_targets(actor, max_events)
     notes += _positional_notes(state, actor, max_events, backstab)
     if isinstance(action, UseSkill):

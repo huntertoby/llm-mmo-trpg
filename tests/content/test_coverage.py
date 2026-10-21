@@ -16,7 +16,7 @@ _UNCOVERED: dict[str, dict[str, str]] = {
     "reaction_event": {},
     "condition": {},
     "primitive": {},
-    "status": {},
+    "status": {"armor_broken": "只由斧的 armor_break 武器參數施加（3-24a1），沒有技能施加"},
     "stack": {},
 }
 

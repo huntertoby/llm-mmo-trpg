@@ -623,6 +623,12 @@ class AiWeights(ContentModel):
     """（Phase 3D-8d）近戰單位站在敵人背後格的每個敵人（位置價值加分）。"""
     back_exposed: int = 0
     """（Phase 3D-8d）背對相鄰的近戰敵人（位置價值扣分；朝向以「面向最近的敵人」近似）。"""
+    reach_spacing: int = 0
+    """（Phase 3-24a1）長柄近戰武器（射程 > 1，矛）：站在 2 格到射程內且打得到的每個敵人加分、緊貼的
+    每個敵人扣同樣的分數（位置價值；偏好在觸及距離出手）。"""
+    knock_angle: int = 0
+    """（Phase 3-24a1）帶震退的武器（錘）：緊貼著、而且推開後會撞到東西（單位、障礙、牆、邊緣）
+    或掉進致命地形的每個敵人加分（位置價值；低權重，偏好能撞擊的角度）。"""
     charge_per_enemy: int = 3
     """（Phase 3E-1）直線衝撞（``charge_through``）每個會被穿過的敵人的固定加分；預設 3，不是 0。"""
     shadowstep: int = 3

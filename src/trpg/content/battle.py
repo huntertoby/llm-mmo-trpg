@@ -17,6 +17,8 @@ from trpg.shared.types import Attribute, Element, ResistGroup
 
 __all__ = [
     "ID_PATTERN",
+    "ArmorBreak",
+    "Blessing",
     "Dice",
     "ReactionRule",
     "ReactionUnless",
@@ -125,6 +127,28 @@ class TerrainTable(ContentModel):
 # ---------------------------------------------------------------------------
 
 
+class ArmorBreak(ContentModel):
+    """武器特性「破甲」（Phase 3-24a1）：普攻命中後，目標的防禦值變化 ``defense_permille``（‰，
+    負值為降低，例如 ``-100`` ＝ 防禦 −10%），持續 ``rounds`` 回合（狀態 ``armor_broken``）。"""
+
+    defense_permille: int = Field(le=-1, ge=-1000)
+    rounds: int = Field(ge=1, le=5)
+
+
+class Blessing(ContentModel):
+    """武器特性「祝禱」（Phase 3-24a1）：普攻命中時，最近的隊友（不含自己與召喚物）回復
+    ``dice`` ＋ ``flat`` 點 HP；沒有可回復的隊友時不發動。"""
+
+    flat: int = Field(default=0, ge=0)
+    dice: Dice | None = None
+
+    @model_validator(mode="after")
+    def _check(self) -> Blessing:
+        if self.flat == 0 and self.dice is None:
+            raise ValueError("祝禱的回復量不可為 0（flat 與 dice 至少填一個）")
+        return self
+
+
 class WeaponDef(ContentModel):
     """一把武器。
 
@@ -132,6 +156,18 @@ class WeaponDef(ContentModel):
     - ``crit_range``：暴擊的最低自然骰值，``20`` 表示只有自然 20，``19`` 表示 19–20。
     - ``weapon_class``：武器大類（Phase 2A）：``melee`` 近戰、``ranged`` 遠程、``focus`` 法器；
       技能的 ``weapon_req`` 與之對照。法器的攻擊加值也計入法術技的命中。
+
+    武器小特性（Phase 3-24a1）一律是下列參數，引擎只讀參數、不寫死數值（之後的「武器特性強化」
+    詞條改這些參數即可）：
+
+    - ``secondary_scaling_attr``：第二縮放屬性；有值時攻擊值與傷害用兩屬性的平均（無條件捨去）。
+    - ``armor_break``：破甲，見 :class:`ArmorBreak`。
+    - ``knockback``：震退——普攻命中後把目標沿攻擊方向推這麼多格（沿用推擊與撞擊規則）。
+    - ``reach``：觸及——藉機攻擊的範圍（目標從 ``reach`` 格內走到 ``reach`` 格外時可以反應）；
+      不可超過 ``range``。
+    - ``blessing``：祝禱，見 :class:`Blessing`。
+    - ``summon_dice_bonus``：統御——持有者召喚物的普攻多加這麼多顆傷害骰。
+    - ``lob``：拋射——視線可以越過這麼多層高的障礙（物件、地形高差；牆壁與黑暗不行）。
     """
 
     id: str = Field(pattern=ID_PATTERN)
@@ -142,13 +178,53 @@ class WeaponDef(ContentModel):
     flat: int = 0
     attack_bonus: int = 0
     scaling_attr: Attribute
+    secondary_scaling_attr: Attribute | None = None
     element: Element = Element.PHYSICAL
     crit_range: int = Field(default=20, ge=2, le=20)
     two_handed: bool = False
+    armor_break: ArmorBreak | None = None
+    knockback: int = Field(default=0, ge=0, le=3)
+    reach: int = Field(default=1, ge=1)
+    blessing: Blessing | None = None
+    summon_dice_bonus: int = Field(default=0, ge=0, le=3)
+    lob: int = Field(default=0, ge=0, le=2)
+
+    @model_validator(mode="after")
+    def _check(self) -> WeaponDef:
+        if self.secondary_scaling_attr == self.scaling_attr:
+            raise ValueError(f"武器 {self.id}：secondary_scaling_attr 不可和 scaling_attr 相同")
+        if self.reach > self.range:
+            raise ValueError(f"武器 {self.id}：reach（{self.reach}）不可超過 range（{self.range}）")
+        return self
 
     @property
     def is_melee(self) -> bool:
-        return self.range == 1
+        """近戰類武器（含長柄）：看大類，不看射程（矛的射程是 2，仍是近戰）。"""
+        return self.weapon_class == "melee"
+
+    def trait_lines_zh(self, *, on_hit_only: bool = False) -> tuple[str, ...]:
+        """武器小特性的說明（每個特性一行；資料欄位的數值直接帶入，改參數說明跟著變）。
+        ``on_hit_only``：只列普攻命中時發動的特性（預覽用：破甲、震退、祝禱）。"""
+        lines: list[str] = []
+        if self.armor_break is not None:
+            pct = -self.armor_break.defense_permille / 10
+            lines.append(f"破甲：命中後目標防禦 −{pct:g}%，{self.armor_break.rounds} 回合")
+        if self.knockback:
+            lines.append(f"震退：普攻命中推 {self.knockback} 格（會撞擊）")
+        if self.reach > 1 and not on_hit_only:
+            lines.append(f"觸及 {self.reach} 格：{self.reach} 格內的藉機攻擊")
+        if self.blessing is not None:
+            amount = f"{self.blessing.dice}" if self.blessing.dice is not None else ""
+            if self.blessing.flat:
+                amount += f"{'+' if amount else ''}{self.blessing.flat}"
+            lines.append(f"祝禱：普攻命中時，最近的隊友回復 {amount} HP")
+        if on_hit_only:
+            return tuple(lines)
+        if self.summon_dice_bonus:
+            lines.append(f"統御：你的召喚物攻擊 +{self.summon_dice_bonus} 顆傷害骰")
+        if self.lob:
+            lines.append(f"拋射：可越過 {self.lob} 格高的障礙射擊")
+        return tuple(lines)
 
 
 class WeaponTable(ContentModel):
@@ -258,6 +334,11 @@ class StatusDef(ContentModel):
 
     - ``redirects_damage``：靈魂連結——帶有者受到的傷害有 ``StatusInstance.amount``‰ 轉給狀態來源
       （``source_id``，施放者）；來源倒下或離場時此狀態立即移除。
+
+    Phase 3-24a1 的欄位：
+
+    - ``defense_break``：破甲——帶有者的防禦值降低 ``StatusInstance.amount``‰（武器的
+      ``armor_break`` 施加時帶入；``amount`` 省略時為 100‰）；多個破甲取最大的一個，不疊加。
     """
 
     id: str = Field(pattern=ID_PATTERN)
@@ -280,6 +361,7 @@ class StatusDef(ContentModel):
     prevents_death: bool = False
     redirects_damage: bool = False
     prevents_concealment: bool = False
+    defense_break: bool = False
     move_permille: int = Field(default=1000, ge=0, le=10000)
     prevents_move: bool = False
     skip_turn: bool = False

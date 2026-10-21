@@ -47,6 +47,8 @@ def _crossroads() -> BattleState:
     )
     state = give_turn(state, "unit_0001")
     state.units[U2].hp = 10
+    # 3-24a1：弓有拋射，會越過高台射遠處的盜賊；場景意圖不變，改用無拋射的弓
+    state.units[U1].weapon = state.units[U1].weapon.model_copy(update={"lob": 0})
     return state
 
 

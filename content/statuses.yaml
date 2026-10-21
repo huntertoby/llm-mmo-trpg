@@ -61,6 +61,8 @@
 # 3D-8c（監視射擊）：
 #   overwatch  監視：持續到持有者下回合開始（expires: own_turn_start）；reactions.yaml 的內建反應 overwatch_shot
 #              （requires_status: overwatch）在敵人於射程與視線內完成一步移動時自動普攻一次，之後移除此狀態
+# 3-24a1（武器擴充）：
+#   defense_break  破甲：帶有者的防禦值降低 StatusInstance.amount ‰（斧的普攻命中帶入；沒有 budget_points，只能由武器施加）
 # control_group 新增 mental（心智：恐懼、沉默）：適用控制遞減，不是 hard，對 Boss 不轉換。
 statuses:
   - id: defending
@@ -198,6 +200,14 @@ statuses:
     budget_points: 4
     damage_taken_permille: 1250
     save_attr: wil
+  - id: armor_broken
+    polarity: debuff
+    name_zh: 破甲
+    description_zh: 防禦值降低（幅度由武器決定，斧為 10%）。
+    duration: 1
+    expires: turn_end
+    stacking: refresh
+    defense_break: true
   - id: bleed
     polarity: debuff
     save_attr: con

@@ -48,11 +48,12 @@ from trpg.engine.results import Pending
 from trpg.engine.rules.combat import ForcedOutcome, attack_problem, roll_attack
 from trpg.engine.rules.facing import face_toward
 from trpg.engine.rules.geometry import XY, has_line_of_sight, manhattan
-from trpg.engine.rules.statuses import effective_attribute, skip_turn_status
+from trpg.engine.rules.statuses import skip_turn_status, weapon_attribute
 from trpg.engine.skill_triggers import check_trigger_depth, holding, redirect_fired
 from trpg.engine.skills.conditions import Subject, skill_condition_met
 from trpg.engine.skills.targeting import reaction_problem, reaction_target_problem
 from trpg.engine.state import UnitState, reaction_limit
+from trpg.engine.weapon_traits import apply_hit_traits, attack_dice
 from trpg.shared.errors import TrpgError
 
 __all__ = [
@@ -564,9 +565,9 @@ def _attack_once(
                 source_id=attacker.id,
                 cause="attack",
                 element=modifiers.damage_element(state, attacker, use, weapon.element),
-                dice=weapon.dice,
+                dice=attack_dice(state, attacker),
                 flat=weapon.flat,
-                scaled_permille=effective_attribute(ctx.rules, attacker, weapon.scaling_attr)
+                scaled_permille=weapon_attribute(ctx.rules, attacker)
                 * ctx.core.basic_attack_attr_multiplier_permille,
                 crit=roll.crit,
                 min_damage=ctx.core.min_damage_on_hit,
@@ -574,23 +575,36 @@ def _attack_once(
             )
         ],
     )
+    apply_hit_traits(ctx, attacker, target)  # 武器小特性：破甲、震退、祝禱（3-24a1）
     hit_reactions(ctx, attacker, target, melee=is_melee_attack(ctx, attacker))
     return roll.ambush > 0, True, target
 
 
 def opportunity_attacks(ctx: Ctx, mover: UnitState, from_xy: XY, to_xy: XY) -> None:
     """``mover`` 即將從 ``from_xy`` 走到 ``to_xy``：離開相鄰格的敵人可以反應（依 ID 順序）——
-    藉機攻擊，或 ``enemy_leaves_adjacent`` 的反應技。"""
+    藉機攻擊，或 ``enemy_leaves_adjacent`` 的反應技。
+
+    藉機攻擊的範圍是武器的 ``reach``（Phase 3-24a1，矛為 2）：``mover`` 從 ``reach`` 格內走到
+    ``reach`` 格外時才觸發（``reach`` 為 1 時就是離開相鄰格）；反應技仍然只看相鄰。"""
     state = ctx.state
     for reactor in state.living_units():
         if not mover.alive:
             return
         if reactor.team is mover.team:
             continue
-        if manhattan(reactor.xy, from_xy) != 1 or manhattan(reactor.xy, to_xy) == 1:
+        before, after = manhattan(reactor.xy, from_xy), manhattan(reactor.xy, to_xy)
+        reach = reactor.weapon.reach
+        leaves_reach = before <= reach < after
+        leaves_adjacent = before == 1 and after != 1
+        if not (leaves_reach or leaves_adjacent):
             continue
         picked = _react(
-            ctx, reactor, ("enemy_leaves_adjacent",), mover, effect="basic_attack", skills=True
+            ctx,
+            reactor,
+            ("enemy_leaves_adjacent",),
+            mover,
+            effect="basic_attack" if leaves_reach else None,
+            skills=leaves_adjacent,
         )
         if isinstance(picked, SkillDef):
             _run_skill(ctx, reactor, picked, mover)

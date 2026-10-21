@@ -86,14 +86,28 @@ def blocks_sight_at(state: BattleState, xy: XY) -> bool:
     return tile.surface is not Surface.NONE and state.ruleset.surface_def(tile.surface).blocks_sight
 
 
-def _line_clear(state: BattleState, a: XY, b: XY, limit: int) -> bool:
-    for cell in bresenham(a, b)[1:-1]:
-        if state.tile(*cell).height >= limit or blocks_sight_at(state, cell):
-            return False
-    return True
+def _blocks_line(state: BattleState, cell: XY, limit: int, lob: int) -> bool:
+    """``cell`` 是否擋住視線。``lob``（拋射，Phase 3-24a1）> 0 時：高度差不超過 ``lob`` 層的地形
+    高度與物件（物件視為 1 層高）可以越過；牆壁（地形 ``blocks_sight``）與黑暗表面照擋。"""
+    tile = state.tile(*cell)
+    if tile.height >= limit + lob:
+        return True
+    if lob <= 0:
+        return state.tile(*cell).height >= limit or blocks_sight_at(state, cell)
+    if state.ruleset.terrain_def(tile.terrain).blocks_sight:
+        return True
+    if tile.surface is not Surface.NONE and state.ruleset.surface_def(tile.surface).blocks_sight:
+        return True
+    if tile.object_id is not None and state.object_has_tag(*cell, "blocks_sight"):
+        return tile.height + 1 > limit - 1 + lob  # 物件頂端高過（兩端最高 ＋ lob）才擋
+    return False
 
 
-def has_line_of_sight(state: BattleState, a: XY, b: XY) -> bool:
+def _line_clear(state: BattleState, a: XY, b: XY, limit: int, lob: int = 0) -> bool:
+    return not any(_blocks_line(state, cell, limit, lob) for cell in bresenham(a, b)[1:-1])
+
+
+def has_line_of_sight(state: BattleState, a: XY, b: XY, *, lob: int = 0) -> bool:
     """``a`` 與 ``b`` 之間的視線（對稱：``has_line_of_sight(a, b) == has_line_of_sight(b, a)``）。
 
     - 距離超過 :func:`sight_range`（濃霧）時看不到。
@@ -101,8 +115,12 @@ def has_line_of_sight(state: BattleState, a: XY, b: XY) -> bool:
       （不含兩端）都沒有阻擋才算可見。
     - 阻擋條件：格子高度 ``≥ max(兩端高度) + 1``、地形 ``blocks_sight``（牆壁，不論高度）、
       物件帶 ``blocks_sight``、表面 ``blocks_sight``（黑暗）。
+    - ``lob``（拋射，Phase 3-24a1，弓）：可越過這麼多層高的障礙（高度差與物件；牆壁與黑暗不行）。
+      有 ``lob`` 時不再對稱——只看攻擊方向（``a`` 是射擊者）。
     """
     if manhattan(a, b) > sight_range(state):
         return False
     limit = max(state.tile(*a).height, state.tile(*b).height) + 1
+    if lob > 0:
+        return _line_clear(state, a, b, limit, lob)
     return _line_clear(state, a, b, limit) and _line_clear(state, b, a, limit)

@@ -22,6 +22,7 @@ __all__ = [
     "boss_converted_status",
     "damage_dealt_permille",
     "damage_taken_permille",
+    "defense_break_permille",
     "effective_attribute",
     "fear_sources",
     "forced_target_sources",
@@ -35,9 +36,12 @@ __all__ = [
     "shield_amount",
     "skip_turn_status",
     "stance_status_ids",
+    "weapon_attribute",
 ]
 
 PERMILLE = 1000
+DEFAULT_DEFENSE_BREAK = 100
+"""破甲狀態沒有帶數值時的防禦降幅（‰）。"""
 
 
 def boss_converted_status(rules: Ruleset, unit: UnitState, status_id: str) -> str:
@@ -99,6 +103,24 @@ def effective_attribute(rules: Ruleset, unit: UnitState, attr: Attribute) -> int
     for status in unit.statuses:
         value += rules.status_def(status.status_id).attr_bonus.get(attr, 0)
     return value
+
+
+def weapon_attribute(rules: Ruleset, unit: UnitState) -> int:
+    """武器的縮放屬性值（有效屬性）：有第二縮放屬性（錘：力量／體質）時取兩者平均（無條件捨去）。"""
+    weapon = unit.weapon
+    value = effective_attribute(rules, unit, weapon.scaling_attr)
+    if weapon.secondary_scaling_attr is None:
+        return value
+    return (value + effective_attribute(rules, unit, weapon.secondary_scaling_attr)) // 2
+
+
+def defense_break_permille(rules: Ruleset, unit: UnitState) -> int:
+    """破甲（``defense_break`` 狀態）造成的防禦值降幅（‰；多個取最大，沒有時為 0）。"""
+    best = 0
+    for status in unit.statuses:
+        if rules.status_def(status.status_id).defense_break:
+            best = max(best, status.amount if status.amount is not None else DEFAULT_DEFENSE_BREAK)
+    return best
 
 
 def base_attribute(unit: UnitState, attr: Attribute) -> int:

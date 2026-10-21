@@ -17,11 +17,13 @@ from trpg.engine.rules.facing import is_behind
 from trpg.engine.rules.geometry import XY, has_line_of_sight, manhattan
 from trpg.engine.rules.statuses import (
     attack_range_cap,
+    defense_break_permille,
     effective_attribute,
     forced_target_sources,
     grants_advantage_against,
     has_attack_disadvantage_status,
     prevents_concealment,
+    weapon_attribute,
 )
 from trpg.engine.state import BattleState, UnitState
 from trpg.shared.rng import Rng
@@ -70,7 +72,7 @@ _COVER_DIRECTIONS: tuple[XY, ...] = ((0, -1), (1, 0), (0, 1), (-1, 0))
 
 def attack_value(unit: UnitState, rules: Ruleset) -> int:
     """攻擊值 ＝ 縮放屬性值（有效屬性） ＋ 武器攻擊加值。"""
-    return effective_attribute(rules, unit, unit.weapon.scaling_attr) + unit.weapon.attack_bonus
+    return weapon_attribute(rules, unit) + unit.weapon.attack_bonus
 
 
 @dataclass(frozen=True, slots=True)
@@ -103,10 +105,12 @@ def weapon_profile(state: BattleState, attacker: UnitState) -> AttackProfile:
 
 
 def defense_value_permille(unit: UnitState, rules: Ruleset) -> int:
-    """防禦值（×1000）＝ (敏捷 ＋ 護甲) × (1 ＋ 防禦姿態加成)。基礎防禦值最低視為 1。"""
+    """防禦值（×1000）＝ (敏捷 ＋ 護甲) × (1 ＋ 防禦姿態加成 − 破甲)。基礎防禦值最低視為 1，
+    防禦值至少 1（Phase 3-24a1：破甲 ``defense_break`` 狀態與防禦姿態的加成直接相加）。"""
     base = max(1, effective_attribute(rules, unit, Attribute.DEX) + unit.armor_bonus)
     bonus = rules.core.defend_defense_bonus_permille if unit.has_status(DEFENDING) else 0
-    return base * (PERMILLE + bonus)
+    bonus -= defense_break_permille(rules, unit)
+    return max(1, base * (PERMILLE + bonus))
 
 
 def hit_modifier(
@@ -492,7 +496,7 @@ def reach_problem(state: BattleState, attacker: UnitState, target_xy: XY, what: 
     height_problem = melee_height_problem(state, attacker, target_xy)
     if height_problem is not None:
         return height_problem
-    if not has_line_of_sight(state, attacker.xy, target_xy):
+    if not has_line_of_sight(state, attacker.xy, target_xy, lob=attacker.weapon.lob):
         return f"視線被阻擋：{attacker.name_zh} 看不到 {what}"
     return None
 

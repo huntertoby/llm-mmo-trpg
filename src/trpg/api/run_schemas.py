@@ -78,6 +78,8 @@ class HeroOut(_ApiModel):
     """武器中文名（Phase 3-18b，一輪中英雄面板顯示）。"""
     weapon_class: str = ""
     """武器大類（melee、ranged、focus）；前端不認得 ``weapon`` 時依此退回武器小圖示。"""
+    weapon_traits_zh: tuple[str, ...] = ()
+    """武器小特性的說明，每個特性一行（Phase 3-24a1）。"""
     skills: tuple[SkillCard, ...]
 
 

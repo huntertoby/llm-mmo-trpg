@@ -28,7 +28,9 @@ def _replays(tmp_path: Path, capsys: pytest.CaptureFixture[str]) -> None:
 def test_open_plain_battle_uses_guard_swap_and_aim_and_replays(
     tmp_path: Path, capsys: pytest.CaptureFixture[str]
 ) -> None:
-    data, out = _log("open_plain", 3, tmp_path, capsys)
+    data, out = _log(
+        "open_plain", 98, tmp_path, capsys
+    )  # 3-24a1：弓有拋射，AI 軌跡改變，種子 3 → 98
     assert data["format"] == "trpg-battle-log/37"
     kinds = {a["type"] for a in data["actions"]}
     assert {"swap", "aim"} <= kinds
