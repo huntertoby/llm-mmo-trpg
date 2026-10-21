@@ -497,7 +497,7 @@ export interface paths {
 export type webhooks = Record<string, never>;
 export interface components {
     schemas: {
-        Action: components["schemas"]["Move"] | components["schemas"]["Attack"] | components["schemas"]["UseSkill-Output"] | components["schemas"]["Defend"] | components["schemas"]["Run"] | components["schemas"]["Swap"] | components["schemas"]["Aim"] | components["schemas"]["Shove"] | components["schemas"]["Trip"] | components["schemas"]["Interact"] | components["schemas"]["EndStance"] | components["schemas"]["SetReactionMode"] | components["schemas"]["EndTurn"];
+        Action: components["schemas"]["Move"] | components["schemas"]["Attack"] | components["schemas"]["UseSkill-Output"] | components["schemas"]["Defend"] | components["schemas"]["Run"] | components["schemas"]["Swap"] | components["schemas"]["Aim"] | components["schemas"]["Vault"] | components["schemas"]["Shove"] | components["schemas"]["Trip"] | components["schemas"]["Interact"] | components["schemas"]["EndStance"] | components["schemas"]["SetReactionMode"] | components["schemas"]["EndTurn"];
         /**
          * ActivationView
          * @description 生效中的常駐類傳說（Phase 3D-6；雙方都看得到）。
@@ -2396,7 +2396,7 @@ export interface components {
              */
             charge_tiles: components["schemas"]["Pos"][];
         };
-        Step: components["schemas"]["Move"] | components["schemas"]["Attack"] | components["schemas"]["UseSkill-Output"] | components["schemas"]["Defend"] | components["schemas"]["Run"] | components["schemas"]["Swap"] | components["schemas"]["Aim"] | components["schemas"]["Shove"] | components["schemas"]["Trip"] | components["schemas"]["Interact"] | components["schemas"]["EndStance"] | components["schemas"]["SetReactionMode"] | components["schemas"]["EndTurn"] | components["schemas"]["Decision"];
+        Step: components["schemas"]["Move"] | components["schemas"]["Attack"] | components["schemas"]["UseSkill-Output"] | components["schemas"]["Defend"] | components["schemas"]["Run"] | components["schemas"]["Swap"] | components["schemas"]["Aim"] | components["schemas"]["Vault"] | components["schemas"]["Shove"] | components["schemas"]["Trip"] | components["schemas"]["Interact"] | components["schemas"]["EndStance"] | components["schemas"]["SetReactionMode"] | components["schemas"]["EndTurn"] | components["schemas"]["Decision"];
         /** @enum {string} */
         StepId: "skeleton" | "basics" | "shape" | "effects" | "followup" | "condition" | "cost" | "rarity";
         /**
@@ -2838,6 +2838,23 @@ export interface components {
             ctx?: Record<string, never>;
         };
         /**
+         * Vault
+         * @description 攀跳（Phase 3-21b，玩法 #24）：花 ``vault_ap_cost`` AP 與 ``vault_move_cost`` 點移動點數。
+         *
+         *     ``dest`` 是落點：相鄰且比現在高 2 層的格子＝**攀爬**；正前方隔著 1 格寬不可站立格（深淵、
+         *     岩漿、斷橋缺口）的下一格＝**跳躍**。落點能分辨是哪一種，所以不另外帶 ``mode``。
+         */
+        Vault: {
+            /** Unit Id */
+            unit_id: string;
+            /**
+             * @description discriminator enum property added by openapi-typescript
+             * @enum {string}
+             */
+            type: "vault";
+            dest: components["schemas"]["Pos"];
+        };
+        /**
          * WorkshopArena
          * @description 裝上試玩的選單：預設地圖（靶場）與可選的地圖、對手。
          */
@@ -3178,7 +3195,7 @@ export interface operations {
         };
         requestBody: {
             content: {
-                "application/json": components["schemas"]["Move"] | components["schemas"]["Attack"] | components["schemas"]["UseSkill-Input"] | components["schemas"]["Defend"] | components["schemas"]["Run"] | components["schemas"]["Swap"] | components["schemas"]["Aim"] | components["schemas"]["Shove"] | components["schemas"]["Trip"] | components["schemas"]["Interact"] | components["schemas"]["EndStance"] | components["schemas"]["SetReactionMode"] | components["schemas"]["EndTurn"];
+                "application/json": components["schemas"]["Move"] | components["schemas"]["Attack"] | components["schemas"]["UseSkill-Input"] | components["schemas"]["Defend"] | components["schemas"]["Run"] | components["schemas"]["Swap"] | components["schemas"]["Aim"] | components["schemas"]["Vault"] | components["schemas"]["Shove"] | components["schemas"]["Trip"] | components["schemas"]["Interact"] | components["schemas"]["EndStance"] | components["schemas"]["SetReactionMode"] | components["schemas"]["EndTurn"];
             };
         };
         responses: {
@@ -3248,7 +3265,7 @@ export interface operations {
         };
         requestBody: {
             content: {
-                "application/json": components["schemas"]["Move"] | components["schemas"]["Attack"] | components["schemas"]["UseSkill-Input"] | components["schemas"]["Defend"] | components["schemas"]["Run"] | components["schemas"]["Swap"] | components["schemas"]["Aim"] | components["schemas"]["Shove"] | components["schemas"]["Trip"] | components["schemas"]["Interact"] | components["schemas"]["EndStance"] | components["schemas"]["SetReactionMode"] | components["schemas"]["EndTurn"];
+                "application/json": components["schemas"]["Move"] | components["schemas"]["Attack"] | components["schemas"]["UseSkill-Input"] | components["schemas"]["Defend"] | components["schemas"]["Run"] | components["schemas"]["Swap"] | components["schemas"]["Aim"] | components["schemas"]["Vault"] | components["schemas"]["Shove"] | components["schemas"]["Trip"] | components["schemas"]["Interact"] | components["schemas"]["EndStance"] | components["schemas"]["SetReactionMode"] | components["schemas"]["EndTurn"];
             };
         };
         responses: {

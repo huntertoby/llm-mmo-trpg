@@ -123,6 +123,7 @@ __all__ = [
     "UnitSpawned",
     "UnitStoodUp",
     "UnitSummoned",
+    "UnitVaulted",
     "ZoneCreated",
     "ZoneExpired",
     "ZoneExpiryReason",
@@ -293,6 +294,17 @@ class UnitRan(EventBase):
     unit_id: UnitId
     bonus: int
     move_points: int
+
+
+class UnitVaulted(EventBase):
+    """攀跳（Phase 3-21b）：``kind`` 為 ``climb``（攀爬上高台）或 ``jump``（跳過缺口）；之後另有一個
+    ``unit_moved``（``mode: walk``，``cost`` 為消耗的移動點數）。"""
+
+    type: Literal["unit_vaulted"] = "unit_vaulted"
+    unit_id: UnitId
+    kind: Literal["climb", "jump"]
+    from_pos: Pos
+    to_pos: Pos
 
 
 class GuardSet(EventBase):
@@ -1439,6 +1451,7 @@ type Event = Annotated[
     | UnitMoved
     | UnitStoodUp
     | UnitRan
+    | UnitVaulted
     | GuardSet
     | UnitAimed
     | MoveBlocked

@@ -189,5 +189,6 @@ run: {pursue_points: 6, retreat_points: 6, retreat_hp_permille: 350, retreat_ene
 # basic（Phase 3-21a，玩法 #24；初值未經模擬，平衡階段再調）：守護隊友、換位、瞄準，條件不成立一律 0 分（不會用）：
 #   guard_points          守護相鄰隊友：隊友 HP 低於 guard_ally_hp_permille‰、guard_threat_radius 格內有敵人、自己 HP ≥ guard_self_hp_permille‰ → 在「守護自己」的分數上加這個分數
 #   swap_points           換位：隊友比自己更靠近最近的敵人（在前線）、其 swap_threat_radius 格內有敵人，且（隊友 HP < swap_rescue_hp_permille‰，或自己最大 HP ≥ 隊友的 swap_tank_ratio_permille‰ 倍），自己 HP ≥ swap_self_hp_permille‰
+#   vault_points          攀跳：攀爬或跳躍後走到最近敵人的步數比現在少至少 vault_min_saving 步（現在走不到、攀跳後走得到也算）→ 這個分數（低權重；平衡階段初值）
 #   aim_points            瞄準：AP 剛好夠「瞄準 + 一個 AP ≥ aim_min_attack_ap 的攻擊」，該攻擊命中率 < aim_hit_permille‰ 且有收益 → 該攻擊的分數 + 這個分數
-basic: {guard_points: 3, guard_ally_hp_permille: 500, guard_self_hp_permille: 500, guard_threat_radius: 6, swap_points: 6, swap_rescue_hp_permille: 350, swap_tank_ratio_permille: 1500, swap_self_hp_permille: 500, swap_threat_radius: 3, aim_points: 2, aim_hit_permille: 500, aim_min_attack_ap: 2}
+basic: {guard_points: 3, guard_ally_hp_permille: 500, guard_self_hp_permille: 500, guard_threat_radius: 6, swap_points: 6, swap_rescue_hp_permille: 350, swap_tank_ratio_permille: 1500, swap_self_hp_permille: 500, swap_threat_radius: 3, aim_points: 2, aim_hit_permille: 500, aim_min_attack_ap: 2, vault_points: 4, vault_min_saving: 4}

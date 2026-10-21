@@ -38,8 +38,12 @@ __all__ = [
     "run_battle",
 ]
 
-LOG_FORMAT = "trpg-battle-log/36"
-"""``/36``（Phase 3-21a）：基本動作守護（``defend`` 加 ``target_id``、事件 ``guard_set``、
+LOG_FORMAT = "trpg-battle-log/37"
+"""``/37``（Phase 3-21b）：基本動作攀跳（動作 ``vault``、事件 ``unit_vaulted``）、核心規則
+``vault_ap_cost``／``vault_move_cost``／``vault_climb_height``／``vault_jump_width``、AI 規則
+``basic`` 的 ``vault_*``；AI 會選擇攀跳，同種子的 AI 對戰結果與 ``/36`` 可能不同，且 ``format`` 不符
+的紀錄由 ``trpg battle replay`` 拒絕。
+``/36``（Phase 3-21a）：基本動作守護（``defend`` 加 ``target_id``、事件 ``guard_set``、
 ``attack_intercepted.guard``、單位的 ``guarding_id``／``guard_transfers``）、換位（``swap``）、瞄準
 （``aim``、事件 ``unit_aimed``、單位的 ``aimed``）、核心規則 ``swap_ap_cost``／``aim_ap_cost``／
 ``aim_hit_bonus``／``guard_transfers_per_round``，AI 規則 ``guard``／``swap``／``aim``；

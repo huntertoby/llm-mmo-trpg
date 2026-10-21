@@ -311,6 +311,9 @@
                     "$ref": "#/components/schemas/Aim"
                   },
                   {
+                    "$ref": "#/components/schemas/Vault"
+                  },
+                  {
                     "$ref": "#/components/schemas/Shove"
                   },
                   {
@@ -339,6 +342,7 @@
                     "run": "#/components/schemas/Run",
                     "swap": "#/components/schemas/Swap",
                     "aim": "#/components/schemas/Aim",
+                    "vault": "#/components/schemas/Vault",
                     "shove": "#/components/schemas/Shove",
                     "trip": "#/components/schemas/Trip",
                     "interact": "#/components/schemas/Interact",
@@ -474,6 +478,9 @@
                     "$ref": "#/components/schemas/Aim"
                   },
                   {
+                    "$ref": "#/components/schemas/Vault"
+                  },
+                  {
                     "$ref": "#/components/schemas/Shove"
                   },
                   {
@@ -502,6 +509,7 @@
                     "run": "#/components/schemas/Run",
                     "swap": "#/components/schemas/Swap",
                     "aim": "#/components/schemas/Aim",
+                    "vault": "#/components/schemas/Vault",
                     "shove": "#/components/schemas/Shove",
                     "trip": "#/components/schemas/Trip",
                     "interact": "#/components/schemas/Interact",
@@ -1223,6 +1231,9 @@
             "$ref": "#/components/schemas/Aim"
           },
           {
+            "$ref": "#/components/schemas/Vault"
+          },
+          {
             "$ref": "#/components/schemas/Shove"
           },
           {
@@ -1256,7 +1267,8 @@
             "shove": "#/components/schemas/Shove",
             "swap": "#/components/schemas/Swap",
             "trip": "#/components/schemas/Trip",
-            "use_skill": "#/components/schemas/UseSkill-Output"
+            "use_skill": "#/components/schemas/UseSkill-Output",
+            "vault": "#/components/schemas/Vault"
           }
         }
       },
@@ -6118,6 +6130,9 @@
             "$ref": "#/components/schemas/Aim"
           },
           {
+            "$ref": "#/components/schemas/Vault"
+          },
+          {
             "$ref": "#/components/schemas/Shove"
           },
           {
@@ -6155,7 +6170,8 @@
             "shove": "#/components/schemas/Shove",
             "swap": "#/components/schemas/Swap",
             "trip": "#/components/schemas/Trip",
-            "use_skill": "#/components/schemas/UseSkill-Output"
+            "use_skill": "#/components/schemas/UseSkill-Output",
+            "vault": "#/components/schemas/Vault"
           }
         }
       },
@@ -7333,6 +7349,31 @@
           "type"
         ],
         "title": "ValidationError"
+      },
+      "Vault": {
+        "properties": {
+          "unit_id": {
+            "type": "string",
+            "title": "Unit Id"
+          },
+          "type": {
+            "type": "string",
+            "const": "vault",
+            "title": "Type",
+            "default": "vault"
+          },
+          "dest": {
+            "$ref": "#/components/schemas/Pos"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "unit_id",
+          "dest"
+        ],
+        "title": "Vault",
+        "description": "攀跳（Phase 3-21b，玩法 #24）：花 ``vault_ap_cost`` AP 與 ``vault_move_cost`` 點移動點數。\n\n``dest`` 是落點：相鄰且比現在高 2 層的格子＝**攀爬**；正前方隔著 1 格寬不可站立格（深淵、\n岩漿、斷橋缺口）的下一格＝**跳躍**。落點能分辨是哪一種，所以不另外帶 ``mode``。"
       },
       "WorkshopArena": {
         "properties": {

@@ -42,6 +42,7 @@ from trpg.content.environment import (
     AiProfile,
     AiProfileTable,
     AiWeights,
+    BasicActionAiRules,
     OrderBonuses,
     RewriteAiRules,
     RunAiRules,
@@ -84,6 +85,7 @@ from trpg.engine.actions import (
     Swap,
     Trip,
     UseSkill,
+    Vault,
 )
 from trpg.engine.ai.basics import aim_bonus, guard_bonus, swap_score
 from trpg.engine.ai.composite import composite_estimate
@@ -1411,6 +1413,21 @@ def run_score(state: BattleState, unit: UnitState, rules: RunAiRules) -> Fractio
     return Fraction(rules.pursue_points if not can_hit(now) and can_hit(after) else 0)
 
 
+def vault_score(unit: UnitState, dest: XY, scene: _Scene, rules: BasicActionAiRules) -> Fraction:
+    """攀跳的分數（Phase 3-21b）：落點走到最近敵人的步數（走路規則，不含攀跳）比現在少至少
+    ``vault_min_saving`` 步才給 ``vault_points``；現在走不到、落點走得到也算；其餘 0 分。"""
+    walk = scene.walk
+    if walk is None or not scene.enemies:
+        return Fraction(0)
+    before = [d for e in scene.enemies if (d := walk.to(e, unit.xy)) is not None]
+    after = [d for e in scene.enemies if (d := walk.to(e, dest)) is not None]
+    if not after:
+        return Fraction(0)
+    if before and min(before) - min(after) < rules.vault_min_saving:
+        return Fraction(0)
+    return Fraction(rules.vault_points)
+
+
 _ALWAYS_PREVIEW_TAGS = ("explosive", "conductive", "blocks_sight")
 _OBJECT_NEAR_ENEMY = 2
 
@@ -1925,8 +1942,10 @@ class UtilityAI:
                 estimates.append(
                     (virtual_move_score(state, unit, action, w, before, scene=scene), index)
                 )
-            elif isinstance(action, Defend | Run | Swap):  # 不移動、不跑 preview：直接計算
-                scored[index] = ActionScore(action, self._cheap_score(state, unit, w, action), None)
+            elif isinstance(action, Defend | Run | Swap | Vault):  # 不跑 preview：直接計算
+                scored[index] = ActionScore(
+                    action, self._cheap_score(state, unit, w, action, scene=scene), None
+                )
             elif isinstance(action, Attack) and not worth_previewing(state, scene, action):
                 continue
             elif isinstance(action, UseSkill | EndStance | Aim):
@@ -1976,9 +1995,17 @@ class UtilityAI:
         )
 
     def _cheap_score(
-        self, state: BattleState, unit: UnitState, w: AiWeights, action: Defend | Run | Swap
+        self,
+        state: BattleState,
+        unit: UnitState,
+        w: AiWeights,
+        action: Defend | Run | Swap | Vault,
+        *,
+        scene: _Scene,
     ) -> Fraction:
-        """守護／跑步／換位的分數（不跑 preview）。守護隊友 ＝ 守護自己的分數 ＋ 隊友的加分。"""
+        """守護／跑步／換位／攀跳的分數（不跑 preview）；守護隊友 ＝ 守護自己 ＋ 隊友的加分。"""
+        if isinstance(action, Vault):
+            return vault_score(unit, (action.dest.x, action.dest.y), scene, self._basic)
         if isinstance(action, Run):
             return run_score(state, unit, self._run)
         if isinstance(action, Swap):

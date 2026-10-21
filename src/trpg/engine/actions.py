@@ -37,6 +37,7 @@ __all__ = [
     "Swap",
     "Trip",
     "UseSkill",
+    "Vault",
 ]
 
 
@@ -108,6 +109,17 @@ class Aim(_ActionBase):
     不疊加，回合結束或用掉即失效。"""
 
     type: Literal["aim"] = "aim"
+
+
+class Vault(_ActionBase):
+    """攀跳（Phase 3-21b，玩法 #24）：花 ``vault_ap_cost`` AP 與 ``vault_move_cost`` 點移動點數。
+
+    ``dest`` 是落點：相鄰且比現在高 2 層的格子＝**攀爬**；正前方隔著 1 格寬不可站立格（深淵、
+    岩漿、斷橋缺口）的下一格＝**跳躍**。落點能分辨是哪一種，所以不另外帶 ``mode``。
+    """
+
+    type: Literal["vault"] = "vault"
+    dest: Pos
 
 
 class Shove(_ActionBase):
@@ -235,6 +247,7 @@ type Action = Annotated[
     | Run
     | Swap
     | Aim
+    | Vault
     | Shove
     | Trip
     | Interact
@@ -275,6 +288,7 @@ type Step = Annotated[
     | Run
     | Swap
     | Aim
+    | Vault
     | Shove
     | Trip
     | Interact

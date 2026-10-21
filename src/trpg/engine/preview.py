@@ -42,6 +42,7 @@ from trpg.engine.actions import (
     Swap,
     Trip,
     UseSkill,
+    Vault,
 )
 from trpg.engine.battle import _actor, action_ap_cost, simulate_preview
 from trpg.engine.bombs import blast_tiles, bomb_spec
@@ -1334,6 +1335,22 @@ def preview(state: BattleState, action: Action) -> Preview:
     return replace(base, gamble=GambleInfo(spec.chance_permille, (win, lose)))
 
 
+def _basic_ap_cost(state: BattleState, action: Action, default: int | None) -> int | None:
+    """基本動作（跑步、守護、換位、瞄準、攀跳）的 AP 花費；其他動作沿用 ``default``。"""
+    core = state.ruleset.core
+    if isinstance(action, Run):
+        return core.run_ap_cost
+    if isinstance(action, Defend):
+        return core.defend_ap_cost
+    if isinstance(action, Swap):
+        return core.swap_ap_cost
+    if isinstance(action, Aim):
+        return core.aim_ap_cost
+    if isinstance(action, Vault):
+        return core.vault_ap_cost
+    return default
+
+
 def _build(
     state: BattleState,
     action: Action,
@@ -1370,15 +1387,7 @@ def _build(
         tiles = tuple(sorted({*tiles, *area.tiles, *follow_tiles}, key=lambda p: (p[1], p[0])))
         units = tuple(sorted({*units, *area.units, *follow_units}))
     ap_cost, reach = _cost_and_reach(state, actor, action)
-    core = state.ruleset.core
-    if isinstance(action, Run):
-        ap_cost = core.run_ap_cost
-    elif isinstance(action, Defend):
-        ap_cost = core.defend_ap_cost
-    elif isinstance(action, Swap):
-        ap_cost = core.swap_ap_cost
-    elif isinstance(action, Aim):
-        ap_cost = core.aim_ap_cost
+    ap_cost = _basic_ap_cost(state, action, ap_cost)
     pierce = _pierce_info(state, actor, action) if isinstance(action, UseSkill) else None
     topples, hurls = _scene_infos(max_events)
     checks: tuple[DisplaceCheck, ...] = ()

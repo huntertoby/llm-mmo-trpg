@@ -10,19 +10,24 @@
 
 from __future__ import annotations
 
-from trpg.engine.actions import Action, Aim, Defend, Swap
+from dataclasses import dataclass
+from typing import Literal
+
+from trpg.engine.actions import Action, Aim, Defend, Swap, Vault
 from trpg.engine.context import Ctx
 from trpg.engine.effects import execute
 from trpg.engine.effects.models import ApplyStatusEffect, SwapUnitsEffect
 from trpg.engine.events import GuardSet, UnitAimed
-from trpg.engine.ids import DEFENDING
-from trpg.engine.rules.geometry import manhattan
+from trpg.engine.ids import DEFENDING, PRONE
+from trpg.engine.rules.geometry import XY, manhattan
+from trpg.engine.rules.movement import fear_blocks_step, fear_origins, is_standable
 from trpg.engine.rules.statuses import is_rooted, skip_turn_status
 from trpg.engine.state import BattleState, UnitState
 from trpg.shared.errors import IllegalActionError
-from trpg.shared.types import UnitId
+from trpg.shared.types import Pos, UnitId
 
 __all__ = [
+    "VaultPlan",
     "adjacent_allies",
     "aim_problem",
     "do_aim",
@@ -30,6 +35,10 @@ __all__ = [
     "do_swap",
     "guard_problem",
     "swap_problem",
+    "vault_action",
+    "vault_destinations",
+    "vault_plan",
+    "vault_problem",
 ]
 
 
@@ -146,3 +155,150 @@ def do_aim(ctx: Ctx, unit: UnitState, action: Action) -> None:
     unit.ap -= ctx.core.aim_ap_cost
     unit.aimed = True
     ctx.emit(UnitAimed, unit_id=unit.id, bonus=ctx.core.aim_hit_bonus)
+
+
+# ---------------------------------------------------------------------------
+# 攀跳（Phase 3-21b）
+# ---------------------------------------------------------------------------
+
+
+@dataclass(frozen=True, slots=True)
+class VaultPlan:
+    """驗證通過的攀跳：``kind`` 為攀爬或跳躍，``over`` 是跳躍越過的格子（攀爬為空）。"""
+
+    kind: Literal["climb", "jump"]
+    dest: XY
+    over: tuple[XY, ...]
+
+
+def _unit_on(state: BattleState, xy: XY) -> UnitState | None:
+    return next((u for u in state.units_sorted() if u.alive and u.xy == xy), None)
+
+
+def _landing_problem(state: BattleState, unit: UnitState, dest: XY) -> str | None:
+    if not state.in_bounds(*dest):
+        return f"超出地圖範圍：{dest}"
+    if not is_standable(state, dest):
+        return "落點不能站立"
+    other = _unit_on(state, dest)
+    if other is not None and other.id != unit.id:
+        return f"落點已有單位：{other.name_zh}"
+    return None
+
+
+def _climb_problem(state: BattleState, unit: UnitState, dest: XY) -> str | None:
+    core = state.ruleset.core
+    problem = _landing_problem(state, unit, dest)
+    if problem is not None:
+        return problem
+    rise = state.tile(*dest).height - state.tile(*unit.xy).height
+    if rise <= core.max_climb_height:
+        return "這一格可以直接走上去，不需要攀爬"
+    if rise > core.vault_climb_height:
+        return f"太高了：高 {rise} 層（攀爬最多 {core.vault_climb_height} 層）"
+    return None
+
+
+def _gap_problem(state: BattleState, xy: XY) -> str | None:
+    """跳躍越過的一格：必須是不可站立的缺口（深淵、岩漿），不能有單位或擋路物件。"""
+    if not state.in_bounds(*xy):
+        return f"超出地圖範圍：{xy}"
+    tile = state.tile(*xy)
+    if state.object_has_tag(*xy, "blocks_move"):
+        return "中間有擋路的物件，跳不過去"
+    if _unit_on(state, xy) is not None:
+        return "中間有單位，跳不過去"
+    if is_standable(state, xy):
+        return "中間可以直接走過去，不需要跳躍"
+    if not state.ruleset.terrain_def(tile.terrain).deadly:
+        return "中間不是缺口（深淵、岩漿），跳不過去"
+    return None
+
+
+def _jump_problem(
+    state: BattleState, unit: UnitState, dest: XY, over: tuple[XY, ...]
+) -> str | None:
+    core = state.ruleset.core
+    for gap in over:
+        problem = _gap_problem(state, gap)
+        if problem is not None:
+            return problem
+    problem = _landing_problem(state, unit, dest)
+    if problem is not None:
+        return problem
+    rise = state.tile(*dest).height - state.tile(*unit.xy).height
+    if rise > core.max_climb_height:
+        return "落點太高，跳不上去"
+    if -rise >= core.fall_damage_min_drop:
+        return "落點太低，跳下去會摔傷"
+    return None
+
+
+def _vault_state_problem(state: BattleState, unit: UnitState) -> str | None:
+    """攀跳的先決條件：不被定身、沒倒地、能移動、AP 與移動點數夠。"""
+    core = state.ruleset.core
+    if is_rooted(state.ruleset, unit):
+        return "被定身，不能攀跳"
+    if unit.has_status(PRONE):
+        return "倒地中，不能攀跳（先站起來）"
+    if unit.speed == 0:
+        return "不能移動，不能攀跳"
+    if unit.ap < core.vault_ap_cost:
+        return f"AP 不足：需要 {core.vault_ap_cost}，剩餘 {unit.ap}"
+    if unit.move_points < core.vault_move_cost:
+        return f"移動點數不足：需要 {core.vault_move_cost}，剩餘 {unit.move_points}"
+    return None
+
+
+def vault_plan(state: BattleState, unit: UnitState, dest: XY) -> VaultPlan | str:
+    """``unit`` 攀跳到 ``dest`` 的計畫；不合法時回傳中文原因。順序：狀態、AP 與移動點數、落點
+    形式（相鄰＝攀爬；正前方隔 1～``vault_jump_width`` 格缺口＝跳躍）、細節。"""
+    problem = _vault_state_problem(state, unit)
+    if problem is not None:
+        return problem
+    dx, dy = dest[0] - unit.xy[0], dest[1] - unit.xy[1]
+    dist = abs(dx) + abs(dy)
+    if dist == 0 or (dx != 0 and dy != 0):
+        return "攀跳的落點必須是相鄰格，或正前方隔著缺口的格子"
+    if dist > state.ruleset.core.vault_jump_width + 1:
+        return "距離太遠，跳不過去"
+    origins = fear_origins(state, unit)
+    if origins and fear_blocks_step(origins, unit.xy, dest):
+        return f"{unit.name_zh} 正在恐懼中，不能靠近恐懼的來源"
+    if dist == 1:
+        problem = _climb_problem(state, unit, dest)
+        return problem if problem is not None else VaultPlan("climb", dest, ())
+    step = ((dx > 0) - (dx < 0), (dy > 0) - (dy < 0))
+    over = tuple((unit.xy[0] + step[0] * i, unit.xy[1] + step[1] * i) for i in range(1, dist))
+    problem = _jump_problem(state, unit, dest, over)
+    return problem if problem is not None else VaultPlan("jump", dest, over)
+
+
+def vault_problem(state: BattleState, unit: UnitState, dest: XY) -> str | None:
+    """:func:`vault_plan` 的錯誤原因；合法時 ``None``。"""
+    plan = vault_plan(state, unit, dest)
+    return plan if isinstance(plan, str) else None
+
+
+_DIRECTIONS: tuple[XY, ...] = ((0, -1), (1, 0), (0, 1), (-1, 0))
+
+
+def vault_destinations(state: BattleState, unit: UnitState) -> list[VaultPlan]:
+    """目前合法的攀跳（依落點 ``(y, x)`` 排序）：四個方向各看攀爬與每種跳躍寬度。"""
+    core = state.ruleset.core
+    if _vault_state_problem(state, unit) is not None:
+        return []
+    plans: list[VaultPlan] = []
+    for dx, dy in _DIRECTIONS:
+        for dist in range(1, core.vault_jump_width + 2):
+            dest = (unit.xy[0] + dx * dist, unit.xy[1] + dy * dist)
+            if not state.in_bounds(*dest):
+                break
+            plan = vault_plan(state, unit, dest)
+            if not isinstance(plan, str):
+                plans.append(plan)
+    return sorted(plans, key=lambda p: (p.dest[1], p.dest[0]))
+
+
+def vault_action(unit: UnitState, plan: VaultPlan) -> Vault:
+    return Vault(unit_id=unit.id, dest=Pos(x=plan.dest[0], y=plan.dest[1]))
