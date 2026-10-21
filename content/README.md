@@ -27,6 +27,7 @@
 | `skill_budget.yaml` | 技能預算規則：AP 係數、條件倍率、代價折抵、合格區間、各稀有度的效果數上限（階級預算 `tier_budget` 在 `rules/core.yaml`） | Phase 2B-2 |
 | `skill_composer.yaml` | 隨機技能組合器的調參：稀有度與 AP 權重、法術占比、骰子與倍率階梯、條件與代價的機率與範圍、強度調整區間（數值即「種子 → 技能」的對應） | Phase 2C-1 |
 | `skill_synergies.yaml` | 協同係數（依驗證器推導的機制標籤查表） | Phase 2B-2 |
+| `skill_keywords.yaml` | 關鍵字推導表（10 個關鍵字；由原語、條件、觸發自動推導技能「製造」與「利用」哪些關鍵字，技能池依此自動歸池；遊戲不定義流派） | Phase 3-24b1 |
 | `skill_exclusions.yaml` | 技能互斥規則表（以資料表達的 when／forbid／require） | Phase 2B-2 |
 | `stacks.yaml` | 層數（`static_charge` 靜電、`sunder` 破甲印）：owner、上限、到期輪數、AI 估值；原語 `add_stack`／`consume_stack` 引用 | Phase 2E-3 |
 | `sim/builds.yaml` | 代表性 build（12 個英雄範本與主題說明；2E-3 加入蓄力流、陷阱流）與標準隊友；`trpg sim matrix` 的我方隊伍＝build 英雄＋隊友 | Phase 2C-3 |

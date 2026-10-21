@@ -279,6 +279,19 @@ describe("拆解：核心效果與組裝順序", () => {
     expect(modifierChangePart("on_hit_effects", [{ type: "damage" }]).label).toBe("命中後：傷害");
   });
 
+  it("治療量與召喚物數值（Phase 3-24b1）有專屬部件", () => {
+    const heal = modifierChangePart("heal_permille", 150);
+    const hp = modifierChangePart("summon_hp_permille", 200);
+    const dice = modifierChangePart("summon_attack_dice", 1);
+    expect([heal.label, hp.label, dice.label]).toEqual(["治療量 +15%", "召喚物 HP +20%", "召喚物攻擊 +1 骰"]);
+    expect(modifierChangePart("heal_permille", -300).label).toBe("治療量 -30%");
+    const { ctx } = fakeCtx();
+    for (const p of [heal, hp, dice]) {
+      expect(p.cat).toBe("change");
+      expect(() => p.draw(ctx)).not.toThrow();
+    }
+  });
+
   it("代價名稱帶數值", () => {
     expect(costPart("source", 2).label).toBe("源力 2");
     expect(costPart("delay", 1).label).toBe("延遲 1 回合");

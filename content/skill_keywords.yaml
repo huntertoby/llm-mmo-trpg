@@ -1,0 +1,186 @@
+# 關鍵字推導表（Phase 3-24b1，docs/design/06-技能.md 6.27.1）。
+#
+# 關鍵字是唯一的組織方式：技能「製造」或「利用」關鍵字，任何兩招製造與利用同一個關鍵字的技能都能互相
+# 觸發。遊戲不定義流派——這裡只有關鍵字，沒有主題分類。製造與利用由原語、條件、觸發 **自動推導**
+# （trpg.skillgen.keywords.derive_keywords），不由人填寫；新增內容不需要改程式。
+#
+# 一條規則恰好指定一種來源，再用參數縮小範圍（參數必須等於來源上同名的欄位）：
+#   effect     效果原語（含 then／賭注分支／擊殺時效果／區域效果／修正規則的命中後效果）
+#   condition  技能、效果或修正規則上的條件
+#   trigger    被動技能的觸發時機
+#   shape      技能形狀
+#   change     修正規則的改變種類（add_element 以 element 比對）
+# 參數：status、surface、element、object、stack、rule、on_hit、tag、skill
+#
+# 規則分三種：專屬（原語、條件本身就對應該關鍵字）、通用（沒有專屬機制的技能類型，依既有引擎規則歸類，註解寫「通用」）、
+# 暫定（沒有真實機制可接、為了「每招技能至少一個關鍵字」先歸類，註解寫「暫定」；之後應換成真實內容）。
+#
+# 技能池（trpg.skillgen.keywords.keyword_pools）：技能製造或利用某關鍵字就歸入該池，一招可在多個池。
+keywords:
+  - id: ignite
+    name_zh: 點燃
+    description_zh: 火焰讓目標燃燒；燃燒中的目標會受到更重的傷害，或被引爆。
+    makes:
+      - {effect: apply_status, status: burning}
+      - {effect: damage, element: fire}
+      - {effect: create_surface, surface: fire}
+      - {effect: create_surface, surface: oil}
+      - {effect: zone, surface: fire}
+      - {effect: delayed_damage, element: fire}
+      - {effect: inscribe, element: fire}
+      - {effect: hurl_object, element: fire}
+      - {change: add_element, element: fire}
+    uses:
+      - {condition: target_has_status, status: burning}
+      - {condition: target_on_surface, surface: fire}
+      - {condition: target_on_surface, surface: oil}
+      - {effect: consume_status, status: burning}
+      - {trigger: on_status_applied, status: burning}
+      - {condition: cast_tag_this_turn, tag: fire}
+      - {trigger: on_cast_tag, tag: fire}
+      - {effect: rule_change, rule: fire_mends_allies}
+  - id: wet
+    name_zh: 潮濕
+    description_zh: 水讓目標與地面變得潮濕；潮濕的目標容易導電與凍結。
+    makes:
+      - {effect: create_surface, surface: water}
+      - {effect: zone, surface: water}
+    uses:
+      - {condition: target_on_surface, surface: water}
+      - {trigger: on_enter_surface, surface: water}
+      - {condition: cast_tag_this_turn, tag: water}
+      - {effect: heal}   # 通用：潮濕表面治療（08 8.21.4.2）——治療、護盾、淨化類技能利用潮濕
+      - {effect: shield}
+      - {effect: cleanse}
+      - {effect: damage, element: holy}   # 通用：神聖傷害（聖水、雙效治療）
+      - {change: allow_self_target}   # 通用：治療類修正（套用在治療技能上）
+      - {change: shape_to}
+      - {change: heal_permille}
+  - id: charged
+    name_zh: 帶電
+    description_zh: 雷電讓目標帶電；帶電的目標會被連鎖、被雷擊得更重。
+    makes:
+      - {effect: damage, element: lightning}
+      - {effect: delayed_damage, element: lightning}
+      - {effect: inscribe, element: lightning}
+      - {change: add_element, element: lightning}
+      - {effect: add_stack, stack: static_charge}
+      - {effect: add_stack, stack: overload_surge}
+    uses:
+      - {shape: chain}
+      - {effect: consume_stack, stack: static_charge}
+      - {condition: on_own_rune, element: lightning}
+      - {condition: cast_tag_this_turn, tag: lightning}
+  - id: frozen
+    name_zh: 冰凍
+    description_zh: 寒冰凍結目標或水面；冰凍的目標可以被擊碎，冰面讓人滑倒。
+    makes:
+      - {effect: apply_status, status: frozen}
+      - {effect: damage, element: ice}
+      - {effect: create_surface, surface: ice}
+      - {effect: create_obstacle, object: ice_wall}
+      - {effect: inscribe, element: ice}
+    uses:
+      - {condition: target_has_status, status: frozen}
+      - {condition: target_on_surface, surface: ice}
+      - {effect: consume_status, status: frozen}
+  - id: prone
+    name_zh: 倒地
+    description_zh: 絆倒、撞擊、推倒讓目標倒地；倒地的目標更容易被背刺與處決。
+    makes:
+      - {effect: knock_prone}
+      - {effect: topple}
+      - {effect: charge_through, on_hit: knock_prone}
+      - {effect: apply_status, status: prone}
+    uses:
+      - {condition: target_has_status, status: prone}
+      - {effect: consume_status, status: prone}
+      - {effect: damage, weapon_req: melee, category: weapon}   # 通用：近戰攻擊倒地者有優勢（statuses.yaml prone）
+      - {trigger: on_crit}   # 暫定：暴擊類（08 8.21.4.2「對倒地暴擊」），之後換成真實條件
+      - {effect: apply_status, status: stance_fury}   # 暫定：同上
+  - id: collision
+    name_zh: 撞擊
+    description_zh: 推擊把人撞上牆或同伴，造成撞擊傷害；撞擊時可以觸發更多效果。
+    makes:
+      - {effect: push}
+      - {effect: pull}
+      - {effect: dash}
+      - {effect: charge_through}
+      - {change: push_distance_delta}
+      - {effect: create_obstacle}   # 通用：障礙物是讓人撞上的牆
+      - {effect: hurl_object}   # 通用：投擲物件（08 8.21.4.2：撞擊、投擲）
+      - {effect: rule_change, rule: move_any_object}
+    uses:
+      - {trigger: on_collision}
+      - {trigger: on_damaged}   # 暫定：受傷（含撞擊傷害）時反擊
+      - {effect: apply_status, status: stance_bulwark}   # 暫定：堅壁姿態站穩腳步、不怕被推
+  - id: marked
+    name_zh: 標記
+    description_zh: 咒印與揭露標記目標；標記可以被引爆，被標記者會被追擊。
+    makes:
+      - {effect: apply_status, status: marked}
+      - {effect: inscribe}
+      - {effect: reveal}
+      - {effect: apply_status, status: overwatch}
+      - {effect: apply_status, status: silenced}   # 暫定：控制型的標記（被盯上的目標）：沉默、恐懼、嘲諷、中毒
+      - {effect: apply_status, status: feared}   # 暫定
+      - {effect: apply_status, status: taunted}   # 暫定
+      - {effect: apply_status, status: poison}   # 暫定
+      - {effect: rule_change, rule: bleeding_wake}   # 暫定：血痕標記路徑上的敵人
+      - {effect: copy_skill}   # 暫定
+      - {change: area_delta}   # 暫定：吼叫（嘲諷）範圍 +1
+      - {change: damage_permille, applies_to: all_attacks, unconditional: true}   # 暫定：無條件的全攻擊傷害修正
+    uses:
+      - {condition: target_has_status, status: marked}
+      - {effect: detonate_runes}
+      - {condition: on_own_rune}
+      - {effect: consume_status}   # 通用：引爆任何狀態
+  - id: high_ground
+    name_zh: 高處
+    description_zh: 升高平台、飛行與攀跳讓你站得更高；居高臨下命中更準。
+    makes:
+      - {effect: raise_terrain}
+      - {effect: lower_terrain}
+      - {effect: leap}
+      - {effect: grant_skill, skill: skill_flight}
+      - {effect: teleport_target}   # 暫定：把人調到別的位置（高低差）
+      - {effect: swap_any}   # 暫定
+      - {trigger: on_move}   # 暫定
+      - {effect: grant_ap}   # 暫定
+    uses:
+      - {condition: height_advantage}
+      - {effect: damage, weapon_req: ranged, category: weapon}   # 通用：遠程攻擊吃高低差命中加成（core.yaml height_hit_bonus）
+      - {change: grant_pierce}   # 通用：遠程修正
+  - id: concealed
+    name_zh: 隱蔽
+    description_zh: 煙霧、黑暗與暗影讓你隱蔽；隱蔽中的偷襲與伏擊更致命。
+    makes:
+      - {effect: apply_status, status: concealed}
+      - {effect: create_surface, surface: smoke}
+      - {effect: create_surface, surface: darkness}
+      - {effect: damage, element: shadow}
+      - {effect: place_trap}   # 通用：陷阱藏在落葉底下
+    uses:
+      - {condition: self_concealed}
+      - {condition: from_behind}
+  - id: summon
+    name_zh: 召喚物
+    description_zh: 召喚與圖騰讓場上多出幫手；召喚物也能被獻祭或當作施放的原點。
+    makes:
+      - {effect: summon}
+      - {effect: rule_change, rule: afterimage_double}
+    uses:
+      - {condition: adjacent_ally}   # 通用：召喚物也是友方；以下是對友方生效的效果（召喚物也算友方）
+      - {effect: apply_status, affects: allies}   # 通用
+      - {effect: restore_resource, affects: allies}   # 通用
+      - {effect: reset_cooldown, affects: allies}   # 通用
+      - {effect: grant_skill, affects: allies}   # 通用
+      - {effect: redirect_damage}   # 通用
+      - {effect: extra_reaction, affects: allies}   # 通用
+      - {effect: cheat_death, affects: allies}   # 通用
+      - {effect: zone, affects: allies}   # 通用
+      - {effect: swap, affects: allies}   # 通用
+      - {effect: revive}   # 通用
+      - {change: summon_hp_permille}
+      - {change: summon_attack_dice}
+      - {effect: intercept}   # 通用

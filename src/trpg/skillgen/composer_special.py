@@ -255,8 +255,8 @@ def _lasting_candidates(
 # 進入點
 # ---------------------------------------------------------------------------
 
-_ATTEMPTS = 20
-_CORE_TRIES = 8
+_ATTEMPTS = 60  # 3-24b1：關鍵字檢查會多淘汰一些候選，重抽次數從 20 提高
+_CORE_TRIES = 16
 
 
 def compose_modifier(

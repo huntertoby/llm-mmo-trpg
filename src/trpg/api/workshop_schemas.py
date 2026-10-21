@@ -13,7 +13,7 @@ from pydantic import BaseModel, ConfigDict, Field
 from trpg.api.schemas import MapSummary
 from trpg.content.skills import SkillRarity
 from trpg.narrative.skill_icon import SkillIcon
-from trpg.narrative.skills import SkillCard
+from trpg.narrative.skills import SkillCard, SkillCardKeywords
 from trpg.shared.rng import MASK64
 from trpg.skillgen.draft_check import DraftCheck
 
@@ -44,6 +44,8 @@ class WorkshopCheck(DraftCheck):
     card: SkillCard | None = None
     icon: SkillIcon
     """組裝式圖示（Phase 3-17）：草稿組到哪一步就有哪些部件（沒完成也有，``partial`` 為真）。"""
+    keywords: SkillCardKeywords = SkillCardKeywords()
+    """目前製造與利用的關鍵字（Phase 3-24b1；草稿每多一步就多顯示一點，沒完成也有）。"""
 
 
 class WorkshopRandomRequest(_ApiModel):

@@ -29,6 +29,9 @@ export type SkillCard = Schemas["SkillCard"];
 /** 組裝式技能圖示的資料（Phase 3-17；`SkillCard.icon`、`WorkshopCheck.icon`）。 */
 export type SkillIconData = Schemas["SkillIcon"];
 export type IconSegment = Schemas["IconSegment"];
+/** 技能製造與利用的關鍵字（Phase 3-24b1；`SkillCard.keywords`、`WorkshopCheck.keywords`）。 */
+export type SkillKeywords = Schemas["SkillCardKeywords"];
+export type KeywordRef = Schemas["KeywordRef"];
 export type SkillReasons = Schemas["SkillReasons"];
 /** openapi-typescript 把有預設值的欄位標成必填；建立戰鬥時 `max_rounds` 可省略（伺服器預設 30），
  * 技能工坊的 `custom_skills`、`replace_skills` 也可省略（預設空串列，Phase 3F-1）。 */

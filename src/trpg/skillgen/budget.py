@@ -968,6 +968,9 @@ def _structured_value(
     if change.damage_permille is not None:
         value = Fraction(core.budget_reference_weapon_damage * change.damage_permille, _PERMILLE)
         return value, f"傷害 {change.damage_permille:+d}‰"
+    if change.heal_permille is not None:
+        value = Fraction(core.budget_reference_weapon_damage * change.heal_permille, _PERMILLE)
+        return value, f"治療量 {change.heal_permille:+d}‰"
     if change.push_distance_delta is not None:
         base = library.ruleset.primitive_def("push").base_points or 0
         return Fraction(base * change.push_distance_delta), f"推擊 +{change.push_distance_delta} 格"
@@ -1007,7 +1010,9 @@ def _modifier_value(
         "area_delta",
         "allow_self_target",
     )  # 沒有數值：每次 1 份
-    magnitude = abs(int(getattr(change, kind) or 0)) if kind not in flags else 1
+    magnitude = Fraction(abs(int(getattr(change, kind) or 0))) if kind not in flags else Fraction(1)
+    if kind == "summon_hp_permille":
+        magnitude /= 100  # 每 +100‰ 一份
     per = {
         "hit_bonus": points.hit_bonus,
         "cooldown_delta": points.cooldown_delta,
@@ -1016,6 +1021,8 @@ def _modifier_value(
         "grant_pierce": points.grant_pierce,
         "area_delta": points.area_delta,
         "allow_self_target": points.allow_self_target,
+        "summon_hp_permille": points.summon_hp_per_100,
+        "summon_attack_dice": points.summon_attack_die,
     }[kind]
     sign = -1 if kind == "hit_bonus" and (change.hit_bonus or 0) < 0 else 1
     sign = -1 if kind == "range_delta" and (change.range_delta or 0) < 0 else sign

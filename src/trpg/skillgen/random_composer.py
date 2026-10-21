@@ -42,6 +42,7 @@ from trpg.skillgen.composer_parts import (
 )
 from trpg.skillgen.composer_special import compose_legendary, compose_modifier
 from trpg.skillgen.composer_tuning import tune
+from trpg.skillgen.keywords import derive_keywords
 from trpg.skillgen.mechanics import mechanic_tags
 from trpg.skillgen.validate import validate_skill
 
@@ -557,6 +558,49 @@ def _compose_legendary_result(
     return ComposeResult(skill, 1)
 
 
+KEYWORD_TRIES = 300
+"""指定關鍵字時最多嘗試的種子變體數（Phase 3-24b1）。"""
+_VARIANT_STEP = 1_000_003
+
+
+def _relabel(skill: SkillDef, variant: int, seed: int) -> SkillDef:
+    """把變體種子組出的技能改回使用者給的種子（ID、名稱與暫定敘事文字）。"""
+    swaps = ((f"skill_rand_{variant}", f"skill_rand_{seed}"), (f"#{variant}", f"#{seed}"))
+
+    def fix(text: str) -> str:
+        for old, new in swaps:
+            text = text.replace(old, new)
+        return text.replace(f"種子 {variant}", f"種子 {seed}")
+
+    narrative = skill.narrative.model_copy(
+        update={
+            "concept": fix(skill.narrative.concept),
+            "cast_flavor": fix(skill.narrative.cast_flavor),
+        }
+    )
+    return skill.model_copy(
+        update={"id": fix(skill.id), "name_zh": fix(skill.name_zh), "narrative": narrative}
+    )
+
+
+def _compose_with_keyword(
+    seed: int, keyword: str, lib: ContentLibrary, **kwargs: Any
+) -> ComposeResult:
+    """依種子變體重抽，直到技能製造或利用 ``keyword``（確定性：同樣的參數必得同樣的技能）。"""
+    if keyword not in lib.keywords.ids():
+        raise ComposeError(f"未知的關鍵字 {keyword!r}（可用：{'、'.join(lib.keywords.ids())}）")
+    for index in range(KEYWORD_TRIES):
+        variant = seed + index * _VARIANT_STEP
+        try:
+            found = compose_with_stats(variant, library=lib, **kwargs)
+        except ComposeError:
+            continue
+        if keyword in derive_keywords(found.skill, lib.keywords).all():
+            skill = found.skill if index == 0 else _relabel(found.skill, variant, seed)
+            return ComposeResult(skill, found.attempts)
+    raise ComposeError(f"種子 {seed}：{KEYWORD_TRIES} 次嘗試都做不出帶有關鍵字 {keyword} 的技能")
+
+
 def compose_with_stats(
     seed: int,
     *,
@@ -566,9 +610,32 @@ def compose_with_stats(
     category: str | None = None,
     ap_cost: int | None = None,
     library: ContentLibrary | None = None,
+    keyword: str | None = None,
 ) -> ComposeResult:
     """:func:`compose_random_skill`，另外回傳重抽次數。"""
     lib = library if library is not None else default_library()
+    fixed: dict[str, Any] = {
+        "tier": tier,
+        "rarity": rarity,
+        "skeleton": skeleton,
+        "category": category,
+        "ap_cost": ap_cost,
+    }
+    if keyword is not None:
+        return _compose_with_keyword(seed, keyword, lib, **fixed)
+    return _compose_plain(seed, lib, **fixed)
+
+
+def _compose_plain(
+    seed: int,
+    lib: ContentLibrary,
+    *,
+    tier: int | None,
+    rarity: SkillRarity | None,
+    skeleton: str | None,
+    category: str | None,
+    ap_cost: int | None,
+) -> ComposeResult:
     rng = Rng(seed)
     tier_value = tier if tier is not None else rng.randint(1, 5)
     if tier_value not in lib.ruleset.core.tier_budget:
@@ -637,8 +704,12 @@ def compose_random_skill(
     category: str | None = None,
     ap_cost: int | None = None,
     library: ContentLibrary | None = None,
+    keyword: str | None = None,
 ) -> SkillDef:
-    """依種子組出一個合格的隨機技能（``id`` 為 ``skill_rand_<seed>``）。"""
+    """依種子組出一個合格的隨機技能（``id`` 為 ``skill_rand_<seed>``）。
+
+    ``keyword``（Phase 3-24b1，6.27.4）：技能必須製造或利用這個關鍵字；沒有指定時結果與以往
+    完全相同（亂數串流不變）。"""
     return compose_with_stats(
         seed,
         tier=tier,
@@ -647,4 +718,5 @@ def compose_random_skill(
         category=category,
         ap_cost=ap_cost,
         library=library,
+        keyword=keyword,
     ).skill

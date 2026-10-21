@@ -81,7 +81,11 @@ MODIFIER: Walk = [
         "effects",
         {
             "modifiers": [
-                {"applies_to": {"actions": ["attack"]}, "change": {"damage_permille": 200}}
+                {
+                    "applies_to": {"actions": ["attack"]},
+                    "condition": {"type": "target_has_status", "status": "burning"},
+                    "change": {"damage_permille": 200},
+                }
             ]
         },
     ),

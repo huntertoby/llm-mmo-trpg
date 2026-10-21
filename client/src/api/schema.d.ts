@@ -1611,6 +1611,18 @@ export interface components {
         };
         JsonValue: unknown;
         /**
+         * KeywordRef
+         * @description 技能卡上的一個關鍵字（Phase 3-24b1）：代碼、顯示名稱與一句話說明（給部件說明框）。
+         */
+        KeywordRef: {
+            /** Id */
+            id: string;
+            /** Name Zh */
+            name_zh: string;
+            /** Description Zh */
+            description_zh: string;
+        };
+        /**
          * LeaveChoice
          * @description 離開營火（有候選沒選時視為放棄）。
          */
@@ -2405,6 +2417,30 @@ export interface components {
             /** Followup When */
             followup_when?: string | null;
             icon: components["schemas"]["SkillIcon"];
+            /**
+             * @default {
+             *       "makes": [],
+             *       "uses": []
+             *     }
+             */
+            keywords: components["schemas"]["SkillCardKeywords"];
+        };
+        /**
+         * SkillCardKeywords
+         * @description 技能製造與利用的關鍵字（Phase 3-24b1，``docs/design/06-技能.md`` 6.27.1；由原語、條件、觸發
+         *     自動推導）。技能卡顯示「製造：點燃｜利用：倒地」。
+         */
+        SkillCardKeywords: {
+            /**
+             * Makes
+             * @default []
+             */
+            makes: components["schemas"]["KeywordRef"][];
+            /**
+             * Uses
+             * @default []
+             */
+            uses: components["schemas"]["KeywordRef"][];
         };
         /**
          * SkillIcon
@@ -3007,6 +3043,13 @@ export interface components {
             } | null;
             card?: components["schemas"]["SkillCard"] | null;
             icon: components["schemas"]["SkillIcon"];
+            /**
+             * @default {
+             *       "makes": [],
+             *       "uses": []
+             *     }
+             */
+            keywords: components["schemas"]["SkillCardKeywords"];
         };
         /** WorkshopExport */
         WorkshopExport: {

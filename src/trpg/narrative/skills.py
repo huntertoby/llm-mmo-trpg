@@ -7,7 +7,8 @@
 
 from __future__ import annotations
 
-from collections.abc import Callable
+from collections.abc import Callable, Mapping
+from typing import Any
 
 from pydantic import BaseModel, ConfigDict
 
@@ -31,20 +32,25 @@ from trpg.content.skills import (
 from trpg.content.stacks import StackDef
 from trpg.narrative.skill_icon import SkillIcon, skill_icon
 from trpg.shared.types import rune_name
+from trpg.skillgen.keywords import SkillKeywords, derive_draft_keywords, derive_keywords
 
 __all__ = [
     "CATEGORY_TEXT",
     "KIND_TEXT",
     "RARITY_TEXT",
     "WEAPON_REQ_TEXT",
+    "KeywordRef",
     "SkillCard",
+    "SkillCardKeywords",
     "activation_text",
     "branch_text",
     "condition_summary",
     "cost_parts",
     "cost_summary",
+    "draft_card_keywords",
     "effect_summary",
     "followup_text",
+    "keywords_card",
     "mastery_text",
     "miss_text",
     "modifier_summary",
@@ -727,6 +733,7 @@ _SIMPLE_CHANGE_TEXT = {
     "grant_pierce": "遠程單體與直線技能獲得穿透（無視半掩護，穿過木製物件）",
     "area_delta": "範圍型形狀的大小 +{value}（直線與錐形的長度、環形與光環的半徑，有上限）",
     "allow_self_target": "治療、護盾、增益類技能的影響範圍也包含自己",
+    "summon_attack_dice": "召喚物的攻擊傷害骰 +{value} 顆",
 }
 """只有一個整數的改變：格式字串（``value`` 為改變的數值）。"""
 
@@ -747,6 +754,10 @@ def _change_text(library: ContentLibrary, skill: SkillDef, rule: ModifierSpec) -
         return simple.format(value=getattr(change, kind))
     if change.damage_permille is not None:
         return f"傷害 {change.damage_permille / 10:+g}%"
+    if change.heal_permille is not None:
+        return f"你的治療量 {change.heal_permille / 10:+g}%"
+    if change.summon_hp_permille is not None:
+        return f"你召喚的召喚物最大 HP +{change.summon_hp_permille / 10:g}%"
     if change.push_distance_delta is not None:
         cap = library.ruleset.core.max_displace_distance
         return (
@@ -846,6 +857,49 @@ def timing_text(library: ContentLibrary, skill: SkillDef) -> str | None:
     return None
 
 
+class KeywordRef(BaseModel):
+    """技能卡上的一個關鍵字（Phase 3-24b1）：代碼、顯示名稱與一句話說明（給部件說明框）。"""
+
+    model_config = ConfigDict(frozen=True, extra="forbid")
+
+    id: str
+    name_zh: str
+    description_zh: str
+
+
+class SkillCardKeywords(BaseModel):
+    """技能製造與利用的關鍵字（Phase 3-24b1，``docs/design/06-技能.md`` 6.27.1；由原語、條件、觸發
+    自動推導）。技能卡顯示「製造：點燃｜利用：倒地」。"""
+
+    model_config = ConfigDict(frozen=True, extra="forbid")
+
+    makes: tuple[KeywordRef, ...] = ()
+    uses: tuple[KeywordRef, ...] = ()
+
+
+def keywords_card(library: ContentLibrary, found: SkillKeywords) -> SkillCardKeywords:
+    """推導結果（關鍵字 ID）附上顯示名稱。"""
+    defs = library.keywords.by_id()
+
+    def ref(keyword_id: str) -> KeywordRef:
+        d = defs[keyword_id]
+        return KeywordRef(id=d.id, name_zh=d.name_zh, description_zh=d.description_zh)
+
+    return SkillCardKeywords(
+        makes=tuple(ref(k) for k in found.makes), uses=tuple(ref(k) for k in found.uses)
+    )
+
+
+def skill_card_keywords(library: ContentLibrary, skill: SkillDef) -> SkillCardKeywords:
+    """``skill`` 的製造與利用關鍵字（附顯示名稱）。"""
+    return keywords_card(library, derive_keywords(skill, library.keywords))
+
+
+def draft_card_keywords(library: ContentLibrary, draft: Mapping[str, Any]) -> SkillCardKeywords:
+    """組到一半的技能草稿（技能工坊）目前製造與利用的關鍵字。"""
+    return keywords_card(library, derive_draft_keywords(draft, library.keywords))
+
+
 class SkillCard(BaseModel):
     """一張技能卡片的顯示內容（繁體中文文字，給網頁技能卡片用）。
 
@@ -901,6 +955,8 @@ class SkillCard(BaseModel):
     其他種類照第一段選取）；其他技能為 ``None``。"""
     icon: SkillIcon
     """組裝式技能圖示的資料（Phase 3-17，:func:`trpg.narrative.skill_icon.skill_icon`）。"""
+    keywords: SkillCardKeywords = SkillCardKeywords()
+    """製造與利用的關鍵字（Phase 3-24b1，:func:`skill_card_keywords`）。"""
 
 
 def skill_card(
@@ -946,4 +1002,5 @@ def skill_card(
         followup=followup_text(library, skill),
         followup_when=None if skill.followup is None else skill.followup.when,
         icon=skill_icon(skill),
+        keywords=skill_card_keywords(library, skill),
     )

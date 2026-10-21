@@ -2488,3 +2488,19 @@ button.selected {
   margin-left: 6px;
   color: #e5736f;
 }
+
+/* 關鍵字一行（Phase 3-24b1）：製造｜利用 */
+.keyword-line {
+  margin: 4px 0;
+}
+
+.keyword-chip {
+  color: #8fd0ff;
+  border-bottom: 1px dotted currentColor;
+  cursor: help;
+}
+
+.keyword-sep {
+  margin: 0 6px;
+  color: var(--muted);
+}

@@ -2,6 +2,7 @@
 // Phase 3-18a：大圖示用小圖模式；部件區是「組裝算式」，每個部件都能滑過或點一下看說明。
 import type { SkillCard } from "../api/types";
 import { kindLabel, sourceCostText } from "../battle/source";
+import { KeywordLine } from "./KeywordLine";
 import { AssemblyFormula, SkillIconView } from "./SkillIconView";
 
 /** 源力上限（`content/rules/core.yaml` 的 `source_max`）；HUD 與卡片都用 3 格圖示。 */
@@ -33,6 +34,7 @@ export function SkillCardView({ card, compact = false }: Props) {
         </div>
       </div>
       <AssemblyFormula icon={card.icon} />
+      <KeywordLine keywords={card.keywords} />
       {card.condition !== null && <div className="small">條件：{card.condition}</div>}
       {(card.timing ?? null) !== null && <div className="small">{card.timing}</div>}
       {(card.activation ?? null) !== null && <div className="small">啟動：{card.activation}（啟動前不生效）</div>}

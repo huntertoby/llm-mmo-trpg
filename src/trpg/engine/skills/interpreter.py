@@ -1677,6 +1677,7 @@ class _Cast:
                 dice=spec.dice,
                 scaled_permille=self._spell_scaled(),
                 preset_rolls=preset,
+                multiplier_permille=self._heal_multiplier(),
             )
             for unit in healed
         ]
@@ -1804,14 +1805,22 @@ class _Cast:
             )
         return batch
 
+    def _heal_multiplier(self) -> int:
+        """施放者的治療量倍率（‰；修正規則 ``heal_permille``，Phase 3-24b1）。"""
+        if not self.modified:
+            return PERMILLE
+        return modifiers.heal_permille(self.ctx.state, self.caster, self.use)
+
     def heal(self, effect: ResolvedEffect, spec: EffectSpec) -> list[EffectBase]:
         scaled = self._spell_scaled()
+        multiplier = self._heal_multiplier()
         return [
             HealEffect(
                 target_id=unit.id,
                 source_id=self.caster.id,
                 dice=spec.dice,
                 scaled_permille=scaled,
+                multiplier_permille=multiplier,
             )
             for unit in self.targets(effect.affects, spec.condition)
         ]
