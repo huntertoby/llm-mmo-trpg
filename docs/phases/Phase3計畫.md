@@ -974,3 +974,25 @@ PM 驗收後請使用者試玩一整輪（`docs/專案計畫.md` 第 14 節 🎮
 
 - PM 合併、`check.py` 全過、`pnpm build` 成功；看過截圖（`docs/phases/img/3-14-*.png`）。高台南緣側面（每層 6 px、上限 18 px）、東側投影、高度差 ≥ 2 的懸崖線、高處單位底座陰影；格子 48 px、最近鄰縮放；岩漿、深淵、冰窟改程式紋理。`clientToTile` 換算不變（vitest）。
 - 待 PM 決定：全部接受；#2 只畫南緣側面、#3 側面蓋住低格頂部、#7 深淵旁沒有側面 → 3-16a 改程式繪製時一併檢查；#1 Boss 地圖未拍 → 使用者試玩時看；#5 格子大小 → 試玩後看。
+
+---
+
+## 18. Phase 3-17｜組裝式技能圖示（玩法 #21；使用者：「組裝式技能圖示採用，請開發 PM 排段」，2026-10-22）
+
+> 需求：`docs/art/移植需求.md` 5.3（5.2 的形狀主圖與退回規則沿用；取代 5.1 的三個欄位）；樣張 `docs/art/sample/assembled.html`、截圖 `docs/art/skill-icons-assembled.png`、推導邏輯參考 `docs/art/sample/tools/export_skills.py`。
+> 排程（PM 決定）：與 3-16a 平行（3-16a 只動地形、表面、物件繪圖；本段動技能卡、技能列、工坊、升級候選、`vfx.ts` 與後端技能卡），3-16b（紙娃娃）在 3-16a 之後。
+
+### 18.1 交付
+
+1. **後端**：純函式（放 `trpg.narrative` 或 `trpg.api`，依依賴方向）由 `SkillDef` 推導 `SkillCard.icon`（結構見 5.3：`kind`、`rarity`、`elements`、`weapon_req`、`segments`（每段 `skeleton`、`shape_id`、`range`、效果含 `status`／`surface`／`condition`）、`link`（`followup.when`）、`condition`、`costs`（只列特殊代價）、`trigger`、`modifier`）。只新增欄位，不改引擎。pytest：所有內容庫技能（含 Phase 2–3F 手寫技能、隨機組合器 50 個種子、工坊示範）都推導成功且符合 schema；複合技能有兩段。
+2. **前端部件庫** `render/skillParts.ts`（5.3 的部件圖示；與狀態列、表面說明、工坊選項共用），不認得的部件有預設圖。
+3. **組裝**：技能列按鈕、技能卡（含「組裝列」）、工坊逐步組裝（每完成一步，圖示多一個部件）、升級與營火候選卡都用組裝式圖示；快取鍵照 5.3。
+4. **技能特效**：`vfx.ts` 改讀 `icon.segments[0].shape_id`（第二段讀 `segments[1]`），中文形狀名對照移除或只當最後退回。
+5. 重產 `openapi.json` 與 `schema.d.ts`。
+
+### 18.2 驗收條件（3-17）
+
+1. 後端推導 pytest（如上）；未知效果原語、狀態、表面、條件給預設部件（測試）。
+2. vitest：部件庫退回、組裝順序、快取鍵、`vfx.ts` 讀 `shape_id`。
+3. 截圖 `docs/phases/img/3-17-*.png`：技能列、技能卡組裝列、工坊組到一半與完成、升級候選、一個複合技能的兩段斜切。
+4. `check.py` 全過、`pnpm build` 成功。
