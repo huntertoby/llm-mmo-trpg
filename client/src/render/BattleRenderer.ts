@@ -3,20 +3,33 @@
 // 縮放（Phase 3-8）：場景一律以「模型像素」（每格 TILE_SIZE）繪製；放大縮小只改畫布的解析度
 // （devicePixelRatio × 縮放）與 CSS 大小，文字與線條因此保持清晰。滑鼠事件不經過 Pixi，
 // 由 `BattleCanvas` 以 DOM 座標換算（`battle/stageLayout.ts` 的 `clientToTile`）。
+// 高度「整格抬高」（Phase 3-19）：場景放在 `world`（往下移畫布上方預留的高度），由北到南一排一排畫
+// （`RowStack`），格子上的所有東西都依 `tileLift` 往上移；位移只從 `battle/elevation.ts` 來。
 import { Application, Container, Graphics, Sprite, Text, type Ticker } from "pixi.js";
 import type { Pos } from "../api/types";
 import type { FeedbackItem, FloatTone } from "../battle/feedback";
 import { lerpPos, type MoveAnim, type MoveStyle } from "../battle/animation";
 import type { DrawModel, ObjectDraw, TileDraw, UnitDraw } from "../battle/drawModel";
 import { ringArrow } from "../battle/facing";
-import { canvasSize, TILE_SIZE, tileCenter, tileOrigin } from "../battle/geometry";
+import { TILE_SIZE } from "../battle/geometry";
 import { scaledSize } from "../battle/stageLayout";
+import {
+  edgeMarks,
+  heightAt,
+  liftedCenter,
+  liftedOrigin,
+  occluded,
+  stagePixels,
+  tileLift,
+  topReserve,
+  type HeightShift,
+} from "../battle/elevation";
 import { HIGHLIGHT } from "../battle/glossary";
 import type { Overlay, OverlayKind } from "../battle/scenePreview";
 import type { TelegraphMark } from "../battle/telegraph";
 import { VFX_TIMING, type StepVfx } from "../battle/vfx";
 import { tileAt } from "../battle/drawModel";
-import { heightDecor, pedestalScale } from "../battle/heightModel";
+import { pedestalScale } from "../battle/heightModel";
 import { RING } from "./artPalette";
 import { ArtTextures } from "./artTextures";
 import { resolveDoll } from "./appearance";
@@ -24,6 +37,8 @@ import { DOLL_FOOT_Y, DOLL_H, DOLL_W } from "./paperdoll";
 import { heightBadgeText, objectArtSpec, objectKinds, tileArtSpec } from "./artSpecs";
 import { hasObjectArt } from "./objectArt";
 import { castEffects, hitEffects, shakeEffect, type Effect } from "./vfxEffects";
+import { drawCliff, drawEdges, liftEffects, silhouette } from "./heightArt";
+import { RowStack } from "./rowLayers";
 
 export interface DirectionMark {
   pos: Pos;
@@ -106,19 +121,23 @@ function hpColor(ratio: number): number {
   return 0xff3b30;
 }
 
+/** 一格進行中的升降動畫。 */
+interface LiftState {
+  pos: Pos;
+  /** 目前補間到的高度。 */
+  h: number;
+  to: number;
+}
+
 export class BattleRenderer {
   private readonly app = new Application();
-  private readonly tiles = new Container();
-  /** 高度裝飾（側面、懸崖線、投影），畫在地形之上、其他圖層之下。 */
-  private readonly cliffs = new Container();
-  private readonly auras = new Container();
-  private readonly zones = new Container();
-  private readonly highlights = new Container();
-  private readonly objects = new Container();
-  /** 高度徽章「▲N」，畫在物件之上。 */
-  private readonly badges = new Container();
-  private readonly traps = new Container();
-  private readonly units = new Container();
+  /** 整個場景（世界座標）；y ＝ 畫布上方預留的高度。震動只動 `stage`，不影響這個位移。 */
+  private readonly world = new Container();
+  /** 由北到南的每一排：地形與崖面、表面裝飾、物件、高度徽章、高亮、陷阱、單位。 */
+  private readonly rows = new RowStack();
+  /** 被南邊高格擋住的單位的虛線剪影（最上層）。 */
+  private readonly silhouettes = new Container();
+  private readonly silhouetteOf = new Map<string, Graphics>();
   private readonly hover = new Container();
   private readonly effects = new Container();
   private effectList: Effect[] = [];
@@ -128,6 +147,11 @@ export class BattleRenderer {
   /** 程式繪製的地形、物件貼圖快取（Phase 3-16a）。 */
   private readonly art = new ArtTextures();
   private model: DrawModel | null = null;
+  /**
+   * 進行中的升降動畫：格子 → 目前補間到的高度與目標。播放結束時常會再重畫一次（同樣的結果），
+   * 目標高度沒變的動畫在重畫後接著播；目標變了（又有新的地形變化）就以新畫面為準。
+   */
+  private readonly lifting = new Map<string, LiftState>();
   private ready = false;
   private destroyed = false;
   /** 畫面上的縮放比例（1 ＝ 每格 TILE_SIZE 個 CSS 像素）。 */
@@ -148,7 +172,8 @@ export class BattleRenderer {
     }
     host.appendChild(this.app.canvas);
     const stage = this.app.stage;
-    stage.addChild(this.tiles, this.cliffs, this.auras, this.zones, this.objects, this.badges, this.highlights, this.traps, this.units, this.hover, this.effects);
+    stage.addChild(this.world);
+    this.world.addChild(this.rows.root, this.silhouettes, this.hover, this.effects);
     stage.eventMode = "none";
     this.app.canvas.style.display = "block";
     this.ready = true;
@@ -171,9 +196,10 @@ export class BattleRenderer {
     if (this.ready && this.model !== null) this.applySize(this.model);
   }
 
-  /** 畫布的繪製尺寸 ＝ 模型像素；解析度 ＝ 裝置像素比 × 縮放；CSS 大小 ＝ 模型像素 × 縮放。 */
+  /** 畫布的繪製尺寸 ＝ 模型像素（含上方預留）；解析度 ＝ 裝置像素比 × 縮放；CSS 大小 ＝ 模型像素 × 縮放。 */
   private applySize(model: DrawModel): void {
-    const size = canvasSize(model);
+    const size = stagePixels(model);
+    this.world.y = topReserve(model);
     const resolution = (window.devicePixelRatio || 1) * this.scale;
     const r = this.app.renderer;
     if (r.screen.width !== size.width || r.screen.height !== size.height || r.resolution !== resolution) {
@@ -185,95 +211,138 @@ export class BattleRenderer {
     style.height = `${shown.height}px`;
   }
 
+  /** 格子的高度（地圖外 0）。 */
+  private heightOf(p: Pos): number {
+    return this.model === null ? 0 : heightAt(this.model, p);
+  }
+
+  /** 抬高後格子頂面的左上角、中心（世界座標）。 */
+  private origin(p: Pos): { x: number; y: number } {
+    return liftedOrigin(p, this.heightOf(p));
+  }
+
+  private center(p: Pos): { x: number; y: number } {
+    return liftedCenter(p, this.heightOf(p));
+  }
+
+  /** 把節點放到格子 `p`（`x`、`y` 是未抬高的世界座標），跟著格子抬高。 */
+  private place(node: Container, p: Pos, x: number, y: number): void {
+    this.rows.place(node, p, x, y, tileLift(this.heightOf(p)));
+  }
+
   draw(model: DrawModel): void {
     this.model = model;
     if (!this.ready) return;
     this.applySize(model);
-    clearLayer(this.tiles);
-    clearLayer(this.cliffs);
-    clearLayer(this.auras);
-    clearLayer(this.zones);
-    clearLayer(this.objects);
-    clearLayer(this.badges);
-    clearLayer(this.traps);
-    clearLayer(this.units);
+    this.rows.reset(model.height);
+    clearLayer(this.silhouettes);
+    this.silhouetteOf.clear();
     this.unitSprites.clear();
     this.art.beginFrame();
-    for (const t of model.tiles) this.tiles.addChild(this.tileSprite(model, t));
-    this.drawHeight(model);
-    const aura = new Graphics();
+    for (const t of model.tiles) this.tileSprite(model, t);
     for (const a of model.auras) {
-      const o = tileOrigin(a);
-      aura.rect(o.x + 2, o.y + 2, T - 4, T - 4).fill({ color: HIGHLIGHT.summon, alpha: 0.14 });
+      const aura = new Graphics().rect(2, 2, T - 4, T - 4).fill({ color: HIGHLIGHT.summon, alpha: 0.14 });
+      this.rows.row(a.y).deco.addChild(aura);
+      this.place(aura, a, a.x * T, a.y * T);
     }
-    this.auras.addChild(aura);
     this.drawZones(model);
     this.drawWells(model);
     const kinds = objectKinds(model);
-    for (const o of model.objects) this.objects.addChild(this.objectSprite(o, kinds));
+    for (const o of model.objects) {
+      const node = this.objectSprite(o, kinds);
+      this.rows.row(o.y).objects.addChild(node);
+      this.place(node, o, o.x * T, o.y * T);
+    }
     this.drawBadges(model);
     for (const trap of model.traps) {
-      const c = tileCenter(trap);
       const glyph = label(trap.revealed ? "×" : "^", 22, trap.color, true);
       glyph.anchor.set(0.5);
-      glyph.position.set(c.x + T * 0.28, c.y + T * 0.22);
-      this.traps.addChild(glyph);
+      this.rows.row(trap.y).traps.addChild(glyph);
+      this.place(glyph, trap, trap.x * T + T / 2 + T * 0.28, trap.y * T + T / 2 + T * 0.22);
     }
-    for (const u of model.units) {
-      const sprite = this.unitSprite(u, tileAt(model, u)?.height ?? 0);
-      this.units.addChild(sprite);
-      if (!u.downed) this.unitSprites.set(u.id, sprite);
-    }
+    for (const u of model.units) this.drawUnit(model, u);
     this.art.endFrame();
+    this.resumeLifts(model);
+  }
+
+  /** 重畫後：目標高度沒變的升降動畫套回目前的高度繼續播，其餘作廢。 */
+  private resumeLifts(model: DrawModel): void {
+    for (const [key, st] of [...this.lifting]) {
+      if (heightAt(model, st.pos) === st.to) this.rows.setLift(st.pos, tileLift(st.h));
+      else this.lifting.delete(key);
+    }
+  }
+
+  /** 一個單位：畫在所在排；被南邊高格擋住時另在最上層畫剪影。 */
+  private drawUnit(model: DrawModel, u: UnitDraw): void {
+    const sprite = this.unitSprite(u, tileAt(model, u)?.height ?? 0);
+    this.rows.row(u.y).units.addChild(sprite);
+    this.place(sprite, u, u.x * T + T / 2, u.y * T + T / 2);
+    if (!u.downed) this.unitSprites.set(u.id, sprite);
+    if (!occluded(model, u)) return;
+    const c = this.center(u);
+    const ring = u.summon ? RING.summon : RING[u.team];
+    const outline = silhouette(c.x, c.y + T * 0.23, ring.stroke, T);
+    this.silhouettes.addChild(outline);
+    this.silhouetteOf.set(u.id, outline);
   }
 
   /** 源泉格（Phase 3C-6a）：格子中央一顆紫色菱形，標「源」；單位站上去時才會被取用。 */
   private drawWells(model: DrawModel): void {
-    const g = new Graphics();
     for (const w of model.wells) {
-      const c = tileCenter(w);
+      const node = new Container();
       const r = T * 0.26;
-      g.poly([c.x, c.y - r, c.x + r, c.y, c.x, c.y + r, c.x - r, c.y])
-        .fill({ color: HIGHLIGHT.well, alpha: 0.35 })
-        .stroke({ width: 2, color: HIGHLIGHT.well, alpha: 0.95 });
-    }
-    this.auras.addChild(g);
-    for (const w of model.wells) {
-      const c = tileCenter(w);
+      node.addChild(
+        new Graphics()
+          .poly([0, -r, r, 0, 0, r, -r, 0])
+          .fill({ color: HIGHLIGHT.well, alpha: 0.35 })
+          .stroke({ width: 2, color: HIGHLIGHT.well, alpha: 0.95 }),
+      );
       const mark = label("源", 14, HIGHLIGHT.well, true);
       mark.anchor.set(0.5);
-      mark.position.set(c.x, c.y);
       mark.style.stroke = { color: 0x000000, width: 3 };
-      this.auras.addChild(mark);
+      node.addChild(mark);
+      this.rows.row(w.y).deco.addChild(node);
+      this.place(node, w, w.x * T + T / 2, w.y * T + T / 2);
     }
   }
 
   /** 持續區域（Phase 3D-5）：半透明底色加細框；移動型在格子左下角畫方向箭頭。 */
   private drawZones(model: DrawModel): void {
-    const g = new Graphics();
     for (const z of model.zones) {
-      const o = tileOrigin(z);
-      g.rect(o.x + 1, o.y + 1, T - 2, T - 2)
-        .fill({ color: z.color, alpha: 0.22 })
-        .stroke({ width: 1, color: z.color, alpha: 0.7 });
-    }
-    this.zones.addChild(g);
-    for (const z of model.zones) {
-      if (z.arrow === null) continue;
-      const o = tileOrigin(z);
-      const arrow = label(z.arrow, 16, z.color, true);
-      arrow.anchor.set(0.5);
-      arrow.position.set(o.x + 11, o.y + T - 11);
-      arrow.style.stroke = { color: 0x000000, width: 3 };
-      this.zones.addChild(arrow);
+      const node = new Container();
+      node.addChild(
+        new Graphics()
+          .rect(1, 1, T - 2, T - 2)
+          .fill({ color: z.color, alpha: 0.22 })
+          .stroke({ width: 1, color: z.color, alpha: 0.7 }),
+      );
+      if (z.arrow !== null) {
+        const arrow = label(z.arrow, 16, z.color, true);
+        arrow.anchor.set(0.5);
+        arrow.position.set(11, T - 11);
+        arrow.style.stroke = { color: 0x000000, width: 3 };
+        node.addChild(arrow);
+      }
+      this.rows.row(z.y).deco.addChild(node);
+      this.place(node, z, z.x * T, z.y * T);
     }
   }
 
-  /** 地形格（Phase 3-16a）：一張程式繪製的貼圖（地形＋高度明暗＋表面＋陰影＋崖面＋格線）；致命標記疊在上面。 */
-  private tileSprite(model: DrawModel, t: TileDraw): Container {
+  /**
+   * 地形格（Phase 3-16a）：崖面（3-19，頂面底下到地面）→ 程式繪製的頂面貼圖（地形＋高度明暗＋表面＋格線）
+   * → 高格描邊 → 致命標記。崖面與描邊依抬高量重畫（升降動畫）。
+   */
+  private tileSprite(model: DrawModel, t: TileDraw): void {
     const c = new Container();
-    const o = tileOrigin(t);
-    c.position.set(o.x, o.y);
+    const cliff = new Graphics();
+    const edges = new Graphics();
+    const marks = edgeMarks(model, t);
+    const redraw = (lift: number) => {
+      drawCliff(cliff, lift, T);
+      drawEdges(edges, lift, marks, T);
+    };
+    c.addChild(cliff);
     const texture = this.art.tile(tileArtSpec(model, t));
     const g = new Graphics();
     if (texture !== null) {
@@ -284,6 +353,7 @@ export class BattleRenderer {
     } else {
       g.rect(0, 0, T, T).fill(t.fill).stroke({ width: 1, color: 0x000000, alpha: 0.35 }); // 無法產生貼圖：退回色塊
     }
+    c.addChild(edges);
     if (t.deadly) {
       g.rect(3, 3, T - 6, T - 6).stroke({ width: 1.5, color: HIGHLIGHT.deadly, alpha: 0.3 });
       g.moveTo(T * 0.3, T * 0.3).lineTo(T * 0.7, T * 0.7);
@@ -291,55 +361,30 @@ export class BattleRenderer {
       g.stroke({ width: 1.5, color: HIGHLIGHT.deadly, alpha: 0.22 });
     }
     c.addChild(g);
-    return c;
+    redraw(tileLift(t.height));
+    this.rows.row(t.y).ground.addChild(c);
+    this.rows.place(c, t, t.x * T, t.y * T, tileLift(t.height), redraw);
   }
 
-  /** 高度徽章：只在高度 > 0 的格子左上角畫「▲N」。 */
+  /** 高度徽章：只在高度 > 0 的格子左上角畫「▲N」（跟著頂面抬高）。 */
   private drawBadges(model: DrawModel): void {
     for (const t of model.tiles) {
       const text = heightBadgeText(model, t);
       if (text === null) continue;
-      const o = tileOrigin(t);
+      const node = new Container();
       const g = new Graphics();
-      g.roundRect(o.x + 3, o.y + 3, 19, 13, 4).fill({ color: 0x1e1812, alpha: 0.7 });
-      g.poly([o.x + 6, o.y + 13, o.x + 9.5, o.y + 6, o.x + 13, o.y + 13]).fill(0xfff3c4);
+      g.roundRect(3, 3, 19, 13, 4).fill({ color: 0x1e1812, alpha: 0.7 });
+      g.poly([6, 13, 9.5, 6, 13, 13]).fill(0xfff3c4);
       const num = label(text, 10, 0xfff3c4, true);
-      num.position.set(o.x + 14, o.y + 4);
-      this.badges.addChild(g, num);
+      num.position.set(14, 4);
+      node.addChild(g, num);
+      this.rows.row(t.y).badges.addChild(node);
+      this.place(node, t, t.x * T, t.y * T);
     }
-  }
-
-  /** 高度的懸崖線（Phase 3-14；高度差 ≥ 2 的邊緣）；側面、投影、崖面已畫進地形貼圖（3-16a）。 */
-  private drawHeight(model: DrawModel): void {
-    const decor = heightDecor(model);
-    const g = new Graphics();
-    for (const c of decor.cliffs) {
-      const x = c.x * T;
-      const y = c.y * T;
-      const w = c.diff >= 3 ? 4 : 3;
-      switch (c.side) {
-        case "south":
-          g.rect(x, y + T - w, T, w);
-          break;
-        case "north":
-          g.rect(x, y, T, w);
-          break;
-        case "east":
-          g.rect(x + T - w, y, w, T);
-          break;
-        case "west":
-          g.rect(x, y, w, T);
-          break;
-      }
-      g.fill({ color: 0x1c140c, alpha: 0.75 });
-    }
-    this.cliffs.addChild(g);
   }
 
   private objectSprite(o: ObjectDraw, kinds: ReadonlyMap<string, string>): Container {
     const c = new Container();
-    const origin = tileOrigin(o);
-    c.position.set(origin.x, origin.y);
     const g = new Graphics();
     const known = hasObjectArt(o.kind);
     const texture = this.art.object(objectArtSpec(o, kinds));
@@ -387,8 +432,6 @@ export class BattleRenderer {
 
   private unitSprite(u: UnitDraw, standingHeight: number): Container {
     const c = new Container();
-    const center = tileCenter(u);
-    c.position.set(center.x, center.y);
     c.alpha = u.downed ? 0.35 : 1;
     const r = T * 0.32;
     const pedestal = pedestalScale(standingHeight);
@@ -503,57 +546,84 @@ export class BattleRenderer {
     c.addChild(badge, text);
   }
 
+  /** 高亮畫在格子所在排（跟著頂面抬高、被南邊的高格自然蓋住）；每排一個 Graphics，文字另外疊上。 */
+  private markPen(): { at(p: Pos): Graphics; add(p: Pos, ...nodes: Container[]): void } {
+    const byRow = new Map<number, Graphics>();
+    return {
+      at: (p) => {
+        let g = byRow.get(p.y);
+        if (g === undefined) {
+          g = new Graphics();
+          byRow.set(p.y, g);
+          this.rows.row(p.y).marks.addChildAt(g, 0);
+        }
+        return g;
+      },
+      add: (p, ...nodes) => {
+        this.rows.row(p.y).marks.addChild(...nodes);
+      },
+    };
+  }
+
   setHighlights(h: Highlights): void {
     if (!this.ready) return;
-    clearLayer(this.highlights);
+    this.rows.clearMarks();
     clearLayer(this.hover);
-    const g = new Graphics();
+    const pen = this.markPen();
     for (const p of h.moves) {
-      const o = tileOrigin(p);
-      g.rect(o.x + 2, o.y + 2, T - 4, T - 4).fill({ color: HIGHLIGHT.move, alpha: 0.4 });
+      const o = this.origin(p);
+      pen.at(p).rect(o.x + 2, o.y + 2, T - 4, T - 4).fill({ color: HIGHLIGHT.move, alpha: 0.4 });
     }
     for (const p of h.preview) {
-      const o = tileOrigin(p);
-      g.rect(o.x + 1, o.y + 1, T - 2, T - 2).fill({ color: HIGHLIGHT.preview, alpha: 0.38 });
+      const o = this.origin(p);
+      pen.at(p).rect(o.x + 1, o.y + 1, T - 2, T - 2).fill({ color: HIGHLIGHT.preview, alpha: 0.38 });
     }
     for (const m of h.telegraph) {
-      const o = tileOrigin(m.pos);
-      g.rect(o.x + 3, o.y + 3, T - 6, T - 6)
+      const o = this.origin(m.pos);
+      pen
+        .at(m.pos)
+        .rect(o.x + 3, o.y + 3, T - 6, T - 6)
         .fill({ color: m.color, alpha: 0.16 })
         .stroke({ width: 2, color: m.color, alpha: 0.85 });
       const badge = new Graphics().circle(o.x + T - 11, o.y + 11, 9).fill({ color: 0x000000, alpha: 0.65 });
       const glyph = label(m.glyph, 12, m.color, true);
       glyph.anchor.set(0.5);
       glyph.position.set(o.x + T - 11, o.y + 11);
-      this.highlights.addChild(badge, glyph);
+      pen.add(m.pos, badge, glyph);
     }
-    const tags: Text[] = [];
+    const tags: Array<{ pos: Pos; text: Text }> = [];
     for (const o of h.overlays) {
-      const tag = this.drawOverlay(g, o);
-      if (tag !== null) tags.push(tag);
+      const tag = this.drawOverlay(pen.at(o.pos), o);
+      if (tag !== null) tags.push({ pos: o.pos, text: tag });
     }
     for (const p of h.picked) {
-      const o = tileOrigin(p);
-      g.rect(o.x + 1, o.y + 1, T - 2, T - 2)
+      const o = this.origin(p);
+      pen
+        .at(p)
+        .rect(o.x + 1, o.y + 1, T - 2, T - 2)
         .fill({ color: HIGHLIGHT.picked, alpha: 0.25 })
         .stroke({ width: 4, color: HIGHLIGHT.picked });
     }
     for (const d of h.directions) {
-      const o = tileOrigin(d.pos);
-      g.rect(o.x + 2, o.y + 2, T - 4, T - 4).fill({ color: HIGHLIGHT.direction, alpha: 0.3 });
+      const o = this.origin(d.pos);
+      pen.at(d.pos).rect(o.x + 2, o.y + 2, T - 4, T - 4).fill({ color: HIGHLIGHT.direction, alpha: 0.3 });
       const arrow = label(d.arrow, 26, HIGHLIGHT.direction, true);
       arrow.anchor.set(0.5);
       arrow.position.set(o.x + T / 2, o.y + T / 2);
-      this.highlights.addChild(arrow);
+      pen.add(d.pos, arrow);
     }
     for (const p of h.attacks) {
-      const o = tileOrigin(p);
-      g.rect(o.x + 2, o.y + 2, T - 4, T - 4).stroke({ width: 3, color: HIGHLIGHT.attack });
+      const o = this.origin(p);
+      pen.at(p).rect(o.x + 2, o.y + 2, T - 4, T - 4).stroke({ width: 3, color: HIGHLIGHT.attack });
     }
-    this.highlights.addChild(g);
-    for (const tag of tags) this.highlights.addChild(tag); // 文字標記畫在所有色塊之上
-    if (h.focus !== null) {
-      const o = tileOrigin(h.focus);
+    for (const tag of tags) pen.add(tag.pos, tag.text); // 文字標記畫在色塊之上
+    this.drawFrames(h.focus, h.hover);
+  }
+
+  /** 反應詢問的觸發者（洋紅雙框）與滑鼠所在格（白框），畫在最上層、跟著頂面抬高。 */
+  private drawFrames(focus: Pos | null, hover: Pos | null): void {
+    if (focus !== null) {
+      const o = this.origin(focus);
       const frame = new Graphics()
         .rect(o.x + 1, o.y + 1, T - 2, T - 2)
         .stroke({ width: 3, color: HIGHLIGHT.trigger })
@@ -561,8 +631,8 @@ export class BattleRenderer {
         .stroke({ width: 2, color: HIGHLIGHT.trigger, alpha: 0.8 });
       this.hover.addChild(frame);
     }
-    if (h.hover !== null) {
-      const o = tileOrigin(h.hover);
+    if (hover !== null) {
+      const o = this.origin(hover);
       const frame = new Graphics()
         .rect(o.x + 1, o.y + 1, T - 2, T - 2)
         .stroke({ width: 2, color: 0xffffff, alpha: 0.9 });
@@ -574,8 +644,8 @@ export class BattleRenderer {
  * 落點，以及衝鋒路線、跳躍落點、交換位置的兩格）。 */
   private drawOverlay(g: Graphics, overlay: Overlay): Text | null {
     const color = OVERLAY_COLORS[overlay.kind];
-    const o = tileOrigin(overlay.pos);
-    const c = tileCenter(overlay.pos);
+    const o = this.origin(overlay.pos);
+    const c = this.center(overlay.pos);
     switch (overlay.kind) {
       case "route":
       case "dash_path":
@@ -632,12 +702,14 @@ export class BattleRenderer {
     for (const m of plan) {
       const sprite = this.unitSprites.get(m.unitId);
       if (sprite === undefined) continue;
-      const to = tileCenter(m.to);
+      const outline = this.silhouetteOf.get(m.unitId);
+      if (outline !== undefined) outline.visible = false; // 剪影留在原位會誤導；重畫時再依新位置判斷
+      const to = this.center(m.to);
       if (m.durationMs <= 0 || skip()) {
         sprite.position.set(to.x, to.y);
         continue;
       }
-      await this.tween(sprite, tileCenter(m.from), to, m.durationMs, skip, m.style);
+      await this.tween(sprite, this.center(m.from), to, m.durationMs, skip, m.style);
     }
   }
 
@@ -710,8 +782,9 @@ export class BattleRenderer {
     const chargeMs = Math.round(VFX_TIMING.charge * scale);
     const effects: Effect[] = [];
     const auraHits = vfx.casts.some((c) => c.kind === "aura");
-    for (const cast of vfx.casts) effects.push(...castEffects(cast, now, impactMs, chargeMs));
-    for (const hit of vfx.hits) effects.push(...hitEffects(hit, now, impactMs, auraHits));
+    const at = (p: Pos) => this.center(p);
+    for (const cast of vfx.casts) effects.push(...castEffects(cast, now, impactMs, chargeMs, at));
+    for (const hit of vfx.hits) effects.push(...hitEffects(hit, now, impactMs, auraHits, at));
     if (shake && vfx.shake > 0 && vfx.hits.length > 0) {
       const first = Math.min(...vfx.hits.map((h) => h.atMs));
       const stage = this.app.stage;
@@ -724,9 +797,45 @@ export class BattleRenderer {
     this.ensureEffectTick();
   }
 
+  /**
+   * 地形升降動畫（Phase 3-19）：呼叫前已用新的 `view` 重畫（以結果為準），這裡把變動的格子先放回舊高度，
+   * 再以 ease-out 補間到新高度（格上的物件、單位一起移動）；升起時碎土＋輕微震動（`shake` 為假時不震），
+   * 下降結束時一圈塵土。`durationMs` 已依播放速度縮放；`skip()` 為真時直接跳到結果。
+   */
+  playLift(shifts: readonly HeightShift[], durationMs: number, shake: boolean, skip: () => boolean): void {
+    const model = this.model;
+    if (!this.ready || model === null || durationMs <= 0 || shifts.length === 0 || skip()) return;
+    const now = this.effectClock;
+    const effects: Effect[] = [];
+    for (const s of shifts) {
+      const shift = { ...s, to: heightAt(model, s.pos) };
+      const key = `${s.pos.x},${s.pos.y}`;
+      const state: LiftState = { pos: shift.pos, h: shift.from, to: shift.to };
+      this.lifting.set(key, state);
+      const apply = (h: number) => {
+        if (this.lifting.get(key) !== state) return; // 已被新的畫面或新的動畫取代
+        state.h = h;
+        this.rows.setLift(shift.pos, tileLift(h));
+        if (h === shift.to) this.lifting.delete(key);
+      };
+      apply(shift.from);
+      const origin = (h: number) => liftedOrigin(shift.pos, h);
+      effects.push(...liftEffects({ shift, now, durationMs, origin, apply, skip, size: T }));
+    }
+    if (shake && shifts.some((s) => heightAt(model, s.pos) > s.from)) {
+      const stage = this.app.stage;
+      effects.push(shakeEffect(1, now, durationMs * 0.6, (x, y) => stage.position.set(x * 0.6, y * 0.6)));
+    }
+    for (const e of effects) {
+      this.effects.addChild(e.node);
+      this.effectList.push(e);
+    }
+    this.ensureEffectTick();
+  }
+
   private makeEffect(item: FeedbackItem, now: number, durationMs: number): Effect {
     if (item.kind === "line") return this.lineEffect(item.from, item.to, now, durationMs);
-    const c = tileCenter(item.pos);
+    const c = this.center(item.pos);
     const delay = item.slot * durationMs * 0.15;
     const isStatus = item.kind === "status";
     const text = isStatus ? `＋${item.text}` : item.text;
@@ -759,8 +868,8 @@ export class BattleRenderer {
   }
 
   private lineEffect(from: Pos, to: Pos, now: number, durationMs: number): Effect {
-    const a = tileCenter(from);
-    const b = tileCenter(to);
+    const a = this.center(from);
+    const b = this.center(to);
     const angle = Math.atan2(b.y - a.y, b.x - a.x);
     const head = 10;
     const g = new Graphics()

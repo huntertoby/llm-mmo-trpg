@@ -1,9 +1,10 @@
 // 逐步播放計畫（純函式）：回應的 `steps` → 一格一格的畫面。
 // 每一步的順序固定為：標示行動中的單位 → 該步的移動動畫 → 技能特效（蓄力與飛行，等到命中）→
-// 畫該步的 `view` → 地圖回饋 → 加入該步的紀錄 → 停頓。
+// 畫該步的 `view` → 地形升降動畫（3-19）→ 地圖回饋 → 加入該步的紀錄 → 停頓。
 // 最後一定以 `res.view` 為準（播放只是過場）。
 import type { BattleResponse, BattleView } from "../api/types";
 import { movePlan, type MoveAnim } from "./animation";
+import { heightShifts, LIFT_MS, type HeightShift } from "./elevation";
 import { feedbackFor, type FeedbackItem } from "./feedback";
 import { logLines, type LogLine } from "./log";
 import { unitNames } from "./units";
@@ -41,6 +42,10 @@ export interface Frame {
   vfx: StepVfx | null;
   /** 命中後爆發與粒子的時間（毫秒，已依速度縮放）。 */
   vfxImpactMs: number;
+  /** 這一步高度改變的格子（3-19 升降動畫；略過時為空）。 */
+  lifts: HeightShift[];
+  /** 升降動畫的時間（毫秒，已依速度縮放）。 */
+  liftMs: number;
   view: BattleView;
   lines: LogLine[];
   pauseMs: number;
@@ -57,6 +62,7 @@ export type PlayOp =
   | { op: "move"; anim: MoveAnim }
   | { op: "vfx"; vfx: StepVfx; impactMs: number }
   | { op: "view"; view: BattleView }
+  | { op: "lift"; shifts: HeightShift[]; durationMs: number }
   | { op: "feedback"; items: FeedbackItem[]; durationMs: number }
   | { op: "log"; lines: LogLine[] }
   | { op: "pause"; ms: number };
@@ -80,7 +86,7 @@ export function playbackPlan(res: BattleResponse, heroId: string, speed: PlaySpe
     const frames: Frame[] =
       res.steps.length === 0
         ? []
-        : [{ actorId: null, moves: [], feedback: [], feedbackMs: 0, vfx: null, vfxImpactMs: 0, view: res.view, lines, pauseMs: 0 }];
+        : [{ actorId: null, moves: [], feedback: [], feedbackMs: 0, vfx: null, vfxImpactMs: 0, lifts: [], liftMs: 0, view: res.view, lines, pauseMs: 0 }];
     return { initialView: res.initial_view, frames, finalView: res.view };
   }
   const frames = res.steps.map<Frame>((step) => ({
@@ -90,6 +96,8 @@ export function playbackPlan(res: BattleResponse, heroId: string, speed: PlaySpe
     feedbackMs: Math.round(FEEDBACK_MS * SPEED_SCALE[speed]),
     vfx: stepVfx(step.events, step.view, cards, SPEED_SCALE[speed]),
     vfxImpactMs: Math.round(VFX_TIMING.impact * SPEED_SCALE[speed]),
+    lifts: heightShifts(step.events),
+    liftMs: Math.round(LIFT_MS * SPEED_SCALE[speed]),
     view: step.view,
     lines: logLines([step], unitNames(step.view)),
     pauseMs: pauseFor(step.step?.type, step.actor_id, heroId, speed),
@@ -103,6 +111,7 @@ export function frameOps(frame: Frame): PlayOp[] {
   for (const anim of frame.moves) ops.push({ op: "move", anim });
   if (frame.vfx !== null) ops.push({ op: "vfx", vfx: frame.vfx, impactMs: frame.vfxImpactMs });
   ops.push({ op: "view", view: frame.view });
+  if (frame.lifts.length > 0) ops.push({ op: "lift", shifts: frame.lifts, durationMs: frame.liftMs });
   if (frame.feedback.length > 0) ops.push({ op: "feedback", items: frame.feedback, durationMs: frame.feedbackMs });
   if (frame.lines.length > 0) ops.push({ op: "log", lines: frame.lines });
   if (frame.pauseMs > 0) ops.push({ op: "pause", ms: frame.pauseMs });

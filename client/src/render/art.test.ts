@@ -60,32 +60,11 @@ const CHASM = { terrain: "chasm", blocked: true, deadly: true };
 const WALL = { terrain: "wall", blocked: true, wall: true };
 
 describe("tileArtSpec（高度與鄰格）", () => {
-  it("高格的南鄰較低：畫崖面（每層 5，上限 15）；高 1 層差 5", () => {
-    const m = model([[{ height: 1 }], [{ height: 0 }]]);
-    expect(tileArtSpec(m, m.tiles[0]!).drop).toBe(5);
-    const m2 = model([[{ height: 9 }], [{ height: 0 }]]);
-    expect(tileArtSpec(m2, m2.tiles[0]!).drop).toBe(15);
-  });
-
-  it("較高的北鄰、西鄰在本格投下陰影，不可站立的格子不投也不受影響", () => {
-    const m = model([[{ height: 2 }, { height: 0 }], [{ height: 0 }, { height: 0 }]]);
-    expect(tileArtSpec(m, m.tiles[1]!).shadowW).toBe(2);
-    expect(tileArtSpec(m, m.tiles[2]!).shadowN).toBe(2);
-    expect(tileArtSpec(m, m.tiles[3]!)).toMatchObject({ shadowN: 0, shadowW: 0 });
-    const w = model([[WALL, {}]]);
-    expect(tileArtSpec(w, w.tiles[1]!).shadowW).toBe(0);
-  });
-
-  it("深淵旁的高台也有崖面（3-14 待決定 #7）；牆旁沒有", () => {
-    const m = model([[{ height: 2 }], [CHASM]]);
-    expect(tileArtSpec(m, m.tiles[0]!).drop).toBe(10);
-    const w = model([[{ height: 2 }], [WALL]]);
-    expect(tileArtSpec(w, w.tiles[0]!).drop).toBe(0);
-  });
-
-  it("崖面畫在高格自己的底部，不蓋住較低格（低格規格不受影響）", () => {
+  it("高度只影響頂面亮度：崖面、陰影、描邊不在貼圖規格裡（3-19 改由 Pixi 畫）", () => {
     const m = model([[{ height: 3 }], [{ height: 0 }]]);
-    expect(tileArtSpec(m, m.tiles[1]!)).toMatchObject({ drop: 0 });
+    const spec = tileArtSpec(m, m.tiles[0]!);
+    expect(spec.height).toBe(3);
+    for (const gone of ["drop", "shadowN", "shadowW", "lowerW", "lowerE"]) expect(spec).not.toHaveProperty(gone);
   });
 
   it("牆：南鄰不是牆才畫立面；深淵：四鄰非深淵才有崖緣；地圖外視為同種", () => {
@@ -132,7 +111,7 @@ describe("tileArtKey", () => {
     const m = model([[{ height: 1 }, {}], [{}, {}]]);
     const a = tileArtSpec(m, m.tiles[0]!);
     expect(tileArtKey(a)).toBe(tileArtKey({ ...a }));
-    for (const change of [{ x: 5 }, { height: 3 }, { surface: "fire" }, { drop: 15 }, { tint: 1 }] as Array<Partial<TileArtSpec>>) {
+    for (const change of [{ x: 5 }, { height: 3 }, { surface: "fire" }, { wallFace: true }, { tint: 1 }] as Array<Partial<TileArtSpec>>) {
       expect(tileArtKey({ ...a, ...change })).not.toBe(tileArtKey(a));
     }
   });
@@ -147,7 +126,7 @@ describe("程式繪製（假 Canvas）", () => {
     for (const terrain of terrains) {
       for (const surface of surfaces) {
         const { ctx, calls } = mockCtx();
-        expect(() => drawTile(ctx, { ...base, terrain, surface, height: 2, drop: 10, shadowN: 1, shadowW: 1, lowerW: true, lowerE: true, wallFace: true, lip: { n: true, s: true, w: true, e: true }, tint: hasTerrainArt(terrain) ? null : 0xff00ff })).not.toThrow();
+        expect(() => drawTile(ctx, { ...base, terrain, surface, height: 2, wallFace: true, lip: { n: true, s: true, w: true, e: true }, tint: hasTerrainArt(terrain) ? null : 0xff00ff })).not.toThrow();
         expect(calls.length).toBeGreaterThan(5);
       }
     }
