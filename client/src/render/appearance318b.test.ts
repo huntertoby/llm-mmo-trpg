@@ -1,6 +1,7 @@
 // Phase 3-18b：外觀小修（docs/art/3-16b檢查.md 第 1–3 項）與 `weapon_class` 退回。
 import { describe, expect, it } from "vitest";
 import { dollKey, resolveDoll } from "./appearance";
+import { weaponIconItem } from "./weaponIcon";
 
 const base = { team: "ally", summon: false } as const;
 const doll = (template: string) => resolveDoll({ ...base, template, weaponId: "one_handed_sword" });
@@ -52,5 +53,16 @@ describe("未知 weapon_id 依 weapon_class 退回對應武器圖", () => {
   });
   it("認得的 weapon_id 不受 weapon_class 影響", () => {
     expect(main("dagger", "ranged")).toBe("dagger");
+  });
+});
+
+describe("武器小圖示（一輪中英雄面板）", () => {
+  it("認得的武器用自己的圖（含元素）；未知武器依類別退回弓、杖、劍", () => {
+    expect(weaponIconItem("dagger", "melee").kind).toBe("dagger");
+    expect(weaponIconItem("fire_staff", "focus")).toMatchObject({ kind: "staff", element: "fire" });
+    expect(weaponIconItem("mystery", "ranged").kind).toBe("bow");
+    expect(weaponIconItem("mystery", "focus").kind).toBe("staff");
+    expect(weaponIconItem("mystery", "melee").kind).toBe("sword");
+    expect(weaponIconItem("", "").kind).toBe("sword");
   });
 });

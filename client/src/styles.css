@@ -2128,48 +2128,6 @@ button.selected {
   min-width: 0;
 }
 
-/* 組裝列：每個部件一塊（類別、小圖、名稱） */
-.asm {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 4px;
-  margin: 6px 0;
-}
-
-.asm-tile {
-  width: 52px;
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  gap: 1px;
-  padding: 2px 0 3px;
-  background: #1b1b26;
-  border: 1px solid var(--panel-border);
-  border-radius: 4px;
-}
-
-.asm-tile.asm-link {
-  border-color: #ffffff66;
-  background: #262634;
-}
-
-.asm-cat {
-  font-size: 9px;
-  line-height: 1.1;
-  color: var(--muted);
-  white-space: nowrap;
-}
-
-.asm-label {
-  max-width: 50px;
-  font-size: 10px;
-  line-height: 1.15;
-  text-align: center;
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
-}
-
 /* 工坊選項旁的小圖 */
 .opt-glyph {
   display: inline-flex;
@@ -2340,4 +2298,17 @@ button.selected {
 
 .skill-card.compact .formula {
   margin: 3px 0;
+}
+
+/* Phase 3-18b：一輪中英雄面板的武器列 */
+.run-weapon {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  margin: 4px 0;
+}
+
+.weapon-icon {
+  display: block;
+  flex: none;
 }

@@ -73,6 +73,7 @@ def _node(library: ContentLibrary, run: RunState) -> NodeOut:
 
 def _hero(library: ContentLibrary, run: RunState) -> HeroOut:
     thresholds = library.roguelite.level_thresholds
+    weapon = library.weapons.get(run.hero.weapon)
     return HeroOut(
         build_id=run.build_id,
         name_zh=run.hero.name_zh,
@@ -89,6 +90,8 @@ def _hero(library: ContentLibrary, run: RunState) -> HeroOut:
         source=run.source,
         source_max=library.ruleset.core.source_max,
         weapon=run.hero.weapon,
+        weapon_name_zh=weapon.name_zh if weapon is not None else "",
+        weapon_class=weapon.weapon_class if weapon is not None else "",
         skills=tuple(_card(library, run, s) for s in skill_defs(library, run, run.hero.skills)),
     )
 

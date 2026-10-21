@@ -3333,6 +3333,16 @@
             "type": "string",
             "title": "Weapon"
           },
+          "weapon_name_zh": {
+            "type": "string",
+            "title": "Weapon Name Zh",
+            "default": ""
+          },
+          "weapon_class": {
+            "type": "string",
+            "title": "Weapon Class",
+            "default": ""
+          },
           "skills": {
             "items": {
               "$ref": "#/components/schemas/SkillCard"
