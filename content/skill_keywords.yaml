@@ -12,6 +12,9 @@
 #   change     修正規則的改變種類（add_element 以 element 比對）
 # 參數：status、surface、element、object、stack、rule、on_hit、tag、skill
 #
+# 規則分三種：專屬（原語、條件本身就對應該關鍵字）、通用（沒有專屬機制的技能類型，依既有引擎規則歸類，註解寫「通用」）、
+# 暫定（沒有真實機制可接、為了「每招技能至少一個關鍵字」先歸類，註解寫「暫定」；之後應換成真實內容）。
+#
 # 技能池（trpg.skillgen.keywords.keyword_pools）：技能製造或利用某關鍵字就歸入該池，一招可在多個池。
 keywords:
   - id: ignite
@@ -46,11 +49,11 @@ keywords:
       - {condition: target_on_surface, surface: water}
       - {trigger: on_enter_surface, surface: water}
       - {condition: cast_tag_this_turn, tag: water}
-      - {effect: heal}
+      - {effect: heal}   # 通用：潮濕表面治療（08 8.21.4.2）——治療、護盾、淨化類技能利用潮濕
       - {effect: shield}
       - {effect: cleanse}
-      - {effect: damage, element: holy}
-      - {change: allow_self_target}
+      - {effect: damage, element: holy}   # 通用：神聖傷害（聖水、雙效治療）
+      - {change: allow_self_target}   # 通用：治療類修正（套用在治療技能上）
       - {change: shape_to}
       - {change: heal_permille}
   - id: charged
@@ -92,9 +95,9 @@ keywords:
     uses:
       - {condition: target_has_status, status: prone}
       - {effect: consume_status, status: prone}
-      - {effect: damage, weapon_req: melee, category: weapon}
-      - {trigger: on_crit}
-      - {effect: apply_status, status: stance_fury}
+      - {effect: damage, weapon_req: melee, category: weapon}   # 通用：近戰攻擊倒地者有優勢（statuses.yaml prone）
+      - {trigger: on_crit}   # 暫定：暴擊類（08 8.21.4.2「對倒地暴擊」），之後換成真實條件
+      - {effect: apply_status, status: stance_fury}   # 暫定：同上
   - id: collision
     name_zh: 撞擊
     description_zh: 推擊把人撞上牆或同伴，造成撞擊傷害；撞擊時可以觸發更多效果。
@@ -104,13 +107,13 @@ keywords:
       - {effect: dash}
       - {effect: charge_through}
       - {change: push_distance_delta}
-      - {effect: create_obstacle}
-      - {effect: hurl_object}
+      - {effect: create_obstacle}   # 通用：障礙物是讓人撞上的牆
+      - {effect: hurl_object}   # 通用：投擲物件（08 8.21.4.2：撞擊、投擲）
       - {effect: rule_change, rule: move_any_object}
     uses:
       - {trigger: on_collision}
-      - {trigger: on_damaged}
-      - {effect: apply_status, status: stance_bulwark}
+      - {trigger: on_damaged}   # 暫定：受傷（含撞擊傷害）時反擊
+      - {effect: apply_status, status: stance_bulwark}   # 暫定：堅壁姿態站穩腳步、不怕被推
   - id: marked
     name_zh: 標記
     description_zh: 咒印與揭露標記目標；標記可以被引爆，被標記者會被追擊。
@@ -119,19 +122,19 @@ keywords:
       - {effect: inscribe}
       - {effect: reveal}
       - {effect: apply_status, status: overwatch}
-      - {effect: apply_status, status: silenced}
+      - {effect: apply_status, status: silenced}   # 暫定：控制型的標記（被盯上的目標）：沉默、恐懼、嘲諷、中毒
       - {effect: apply_status, status: feared}
       - {effect: apply_status, status: taunted}
       - {effect: apply_status, status: poison}
-      - {effect: rule_change, rule: bleeding_wake}
-      - {effect: copy_skill}
-      - {change: area_delta}
+      - {effect: rule_change, rule: bleeding_wake}   # 暫定：血痕標記路徑上的敵人
+      - {effect: copy_skill}   # 暫定
+      - {change: area_delta}   # 暫定：吼叫（嘲諷）範圍 +1
       - {change: damage_permille, applies_to: all_attacks, unconditional: true}
     uses:
       - {condition: target_has_status, status: marked}
       - {effect: detonate_runes}
       - {condition: on_own_rune}
-      - {effect: consume_status}
+      - {effect: consume_status}   # 通用：引爆任何狀態
   - id: high_ground
     name_zh: 高處
     description_zh: 升高平台、飛行與攀跳讓你站得更高；居高臨下命中更準。
@@ -140,14 +143,14 @@ keywords:
       - {effect: lower_terrain}
       - {effect: leap}
       - {effect: grant_skill, skill: skill_flight}
-      - {effect: teleport_target}
+      - {effect: teleport_target}   # 暫定：把人調到別的位置（高低差）
       - {effect: swap_any}
       - {trigger: on_move}
-      - {effect: grant_ap}
+      - {effect: grant_ap}   # 暫定
     uses:
       - {condition: height_advantage}
-      - {effect: damage, weapon_req: ranged, category: weapon}
-      - {change: grant_pierce}
+      - {effect: damage, weapon_req: ranged, category: weapon}   # 通用：遠程攻擊吃高低差命中加成（core.yaml height_hit_bonus）
+      - {change: grant_pierce}   # 通用：遠程修正
   - id: concealed
     name_zh: 隱蔽
     description_zh: 煙霧、黑暗與暗影讓你隱蔽；隱蔽中的偷襲與伏擊更致命。
@@ -167,7 +170,7 @@ keywords:
       - {effect: summon}
       - {effect: rule_change, rule: afterimage_double}
     uses:
-      - {condition: adjacent_ally}
+      - {condition: adjacent_ally}   # 通用：召喚物也是友方；以下是對友方生效的效果（召喚物也算友方）
       - {effect: apply_status, affects: allies}
       - {effect: restore_resource, affects: allies}
       - {effect: reset_cooldown, affects: allies}

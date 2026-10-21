@@ -97,7 +97,7 @@ def test_no_keyword_is_a_school_or_theme() -> None:
         "血怒",
     )
     blob = Path(library().root / "skill_keywords.yaml").read_text(encoding="utf-8")
-    body = "\n".join(line for line in blob.splitlines() if not line.lstrip().startswith("#"))
+    body = "\n".join(line.split("#", 1)[0] for line in blob.splitlines())
     assert not [s for s in schools if s in body]
 
 
