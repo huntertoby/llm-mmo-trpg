@@ -2166,7 +2166,9 @@ class _Cast:
             elif effect.type == "create_obstacle":
                 assert spec.object is not None
                 batch.append(
-                    CreateObstacleEffect(source_id=source, pos=xy, object_kind=spec.object)
+                    CreateObstacleEffect(
+                        source_id=source, pos=xy, object_kind=spec.object, duration=spec.duration
+                    )
                 )
             elif effect.type == "raise_terrain":
                 batch.append(RaiseTerrainEffect(source_id=source, pos=xy, amount=spec.amount or 1))

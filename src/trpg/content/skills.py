@@ -537,6 +537,8 @@ class PrimitiveDef(ContentModel):
     - ``budget_basis``／``base_points``：預算點數的算法（``docs/phases/Phase2B計畫.md`` 4.2）：
       ``fixed`` 固定 ``base_points``、``per_distance`` ``base_points × distance``、
       ``per_amount`` ``base_points × amount``（2E-3 的 ``add_stack``）、
+      ``obstacle`` ``base_points`` × ``obstacle_duration_permille``（依 ``duration``；省略＝永久，
+      Phase 3-11）、
       ``consume_status`` ``then`` 的點數 × 期望倍率 × 濺射 × 「需要先有狀態」折扣（3C-3b）、
       ``consume_stack`` 同技能傷害點數 × 期望消耗層數 × ``per_stack_permille``（2E-3）、
       ``hurl_object`` 骰子平均 × 「需要附近有物件」折扣（＋擊倒點數，3C-5a）、
@@ -571,6 +573,7 @@ class PrimitiveDef(ContentModel):
             "damage",
             "status",
             "surface",
+            "obstacle",
             "consume_stack",
             "consume_status",
             "hurl_object",
@@ -592,7 +595,7 @@ class PrimitiveDef(ContentModel):
 
     @model_validator(mode="after")
     def _check_budget(self) -> PrimitiveDef:
-        needs_points = ("fixed", "per_distance", "per_amount")
+        needs_points = ("fixed", "per_distance", "per_amount", "obstacle")
         if self.budget_basis in needs_points and self.base_points is None:
             raise ValueError(f"原語 {self.id}：budget_basis {self.budget_basis} 必須填 base_points")
         return self

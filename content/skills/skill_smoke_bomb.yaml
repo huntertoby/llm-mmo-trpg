@@ -1,0 +1,22 @@
+id: skill_smoke_bomb
+schema_version: 1
+name_zh: 煙霧彈
+tier: 1
+rank: 1
+rarity: rare
+kind: active
+skeleton: control
+category: weapon
+weapon_req: ranged
+ap_cost: 1
+scaling_attr: dex
+shape: {type: square3, range: 5}
+effects:
+  - {type: create_surface, surface: smoke, duration: 5}
+condition: null
+cost: {mana: 4, cooldown: 3}
+tags: [ranged, area, utility, smoke]
+narrative:
+  concept: 射出煙霧彈，白煙擋住視線、讓站在裡面的人隱蔽；風一吹就散，聖光卻驅不走它
+  cast_flavor: 煙霧彈落地炸開，一團濃白的煙瞬間漫開
+provenance: {origin: builtin, owner_id: null, created_by: null, parents: [], bound: true, tradeable: false}

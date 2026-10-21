@@ -63,3 +63,10 @@ surfaces:
     element: shadow
     blocks_sight: true
     conceal: true
+  - id: smoke
+    name_zh: 煙霧
+    glyph: s
+    budget_points: 2
+    duration: 3
+    blocks_sight: true
+    conceal: true

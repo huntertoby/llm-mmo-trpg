@@ -199,15 +199,16 @@ primitives:
     acts_on: tile
   - id: create_obstacle
     name_zh: 產生障礙
-    description_zh: 在影響格中的空格產生物件。
+    description_zh: 在影響格中的空格產生物件；可選 duration（1–10 個環境回合）讓它到期自動消失（不算摧毀：不觸發破壞效果、不掉落、不算擊殺），省略為永久。預算：基礎點數 × obstacle_duration_permille（永久 ＝ 基礎）。
     category: structural
     harmful: false
     min_rarity: rare
-    budget_basis: fixed
+    budget_basis: obstacle
     base_points: 3
     acts_on: tile
     params:
       object: {type: object, required: true}
+      duration: {type: int, min: 1, max: 10}
   - id: raise_terrain
     name_zh: 隆起地形
     description_zh: 影響格的高度 +1（上限 3），站在上面的單位跟著升高。

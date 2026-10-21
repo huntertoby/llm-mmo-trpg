@@ -10,4 +10,4 @@ resist: {elemental: 150}
 element_mods: {}
 tags: [hero]
 max_mana: 40
-skills: [skill_chain_lightning, skill_summon_tide, skill_stone_wall, skill_sanctuary]
+skills: [skill_chain_lightning, skill_summon_tide, skill_stone_wall, skill_sanctuary, skill_ice_wall, skill_thorn_wall]

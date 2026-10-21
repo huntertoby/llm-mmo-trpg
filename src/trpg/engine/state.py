@@ -150,6 +150,7 @@ class ObjectState:
 
     ``burning``：著火後剩餘的環境回合數，歸零時摧毀（``None`` 表示沒有著火）。
     ``burn_source``：點燃它的單位（燒斷橋造成的墜落歸給點燃者；追溯不到為 ``None``）。
+    ``expires_in``（Phase 3-11）：暫時障礙還剩幾次環境回合，歸零時自動移除（``None`` 為永久）。
     """
 
     id: ObjectId
@@ -160,6 +161,7 @@ class ObjectState:
     burning: int | None = None
     destroyed: bool = False
     burn_source: UnitId | None = None
+    expires_in: int | None = None
 
     @property
     def xy(self) -> tuple[int, int]:
@@ -177,6 +179,7 @@ class ObjectState:
             burning=self.burning,
             destroyed=self.destroyed,
             burn_source=self.burn_source,
+            expires_in=self.expires_in,
         )
 
 

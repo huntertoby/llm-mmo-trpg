@@ -387,6 +387,8 @@ class CreateObstacleEffect(_AtPos):
 
     kind: Literal["create_obstacle"] = "create_obstacle"
     object_kind: str = "earth_wall"
+    duration: int | None = Field(default=None, ge=1)
+    """暫時障礙（Phase 3-11）：存在的環境回合數；``None`` 為永久。"""
 
 
 class SpawnUnitEffect(_AtPos):

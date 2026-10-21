@@ -59,6 +59,7 @@ __all__ = [
     "ObjectDamaged",
     "ObjectDestroyCause",
     "ObjectDestroyed",
+    "ObjectExpired",
     "ObjectExploded",
     "ObjectHurled",
     "ObjectIgnited",
@@ -669,6 +670,15 @@ class ShotPierced(EventBase):
 
 class ObjectCreated(EventBase):
     type: Literal["object_created"] = "object_created"
+    object_id: ObjectId
+    kind: str
+    pos: Pos
+
+
+class ObjectExpired(EventBase):
+    """暫時障礙（``create_obstacle`` 的 ``duration``）到期自動移除；不算被摧毀。"""
+
+    type: Literal["object_expired"] = "object_expired"
     object_id: ObjectId
     kind: str
     pos: Pos
@@ -1425,6 +1435,7 @@ type Event = Annotated[
     | ObjectToppled
     | ShotPierced
     | ObjectCreated
+    | ObjectExpired
     | SurfaceChanged
     | TerrainChanged
     | ElementTouched

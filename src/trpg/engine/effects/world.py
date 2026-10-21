@@ -406,16 +406,21 @@ def _create_obstacle(ctx: Ctx, effect: EffectBase) -> list[EventBase]:
         return [_fizzle(ctx, effect.kind, xy, "occupied")]
     if not is_standable(state, xy):
         return [_fizzle(ctx, effect.kind, xy, "not_standable")]
-    return [_new_object(ctx, xy, effect.object_kind)]
+    return [_new_object(ctx, xy, effect.object_kind, effect.duration)]
 
 
-def _new_object(ctx: Ctx, xy: XY, kind: str) -> EventBase:
+def _new_object(ctx: Ctx, xy: XY, kind: str, duration: int | None = None) -> EventBase:
     """在 ``xy`` 放一個新的 ``kind`` 物件（呼叫端已確認放得下），回傳 ``object_created``。"""
     state = ctx.state
     definition = ctx.rules.object_def(kind)
     oid = ObjectId(f"obj_{len(state.objects) + 1:04d}")
     state.objects[oid] = ObjectState(
-        id=oid, kind=definition.id, pos=_pos(xy), hp=definition.max_hp, max_hp=definition.max_hp
+        id=oid,
+        kind=definition.id,
+        pos=_pos(xy),
+        hp=definition.max_hp,
+        max_hp=definition.max_hp,
+        expires_in=duration,
     )
     state.set_tile(*xy, replace(state.tile(*xy), object_id=oid))
     return ctx.emit(ObjectCreated, object_id=oid, kind=definition.id, pos=_pos(xy))

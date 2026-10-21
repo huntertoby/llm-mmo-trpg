@@ -218,6 +218,11 @@ class BudgetRules(ContentModel):
     """``dispel`` 驅散 1 個增益的預算點數（Phase 3D-8a；初值，未經模擬）。"""
     dispel_all_points: int = Field(default=6, ge=0)
     """``dispel`` 驅散全部增益的預算點數（Phase 3D-8a；初值）。"""
+    obstacle_duration_permille: tuple[int, ...] = Field(
+        default=(400, 500, 600, 700, 750, 800, 850, 900, 950, 1000), min_length=10, max_length=10
+    )
+    """``create_obstacle``（Phase 3-11）：``duration`` 為 n 回合時，點數 ＝ 基礎 × 第 n 項（‰）；
+    共 10 項（1–10 回合），永久（省略 ``duration``）＝ 基礎 × 1000‰ ＝ 現狀（初值，未經模擬）。"""
     reveal_base_points: int = Field(default=2, ge=0)
     reveal_round_points: int = Field(default=1, ge=0)
     """``reveal`` 的預算點數 ＝ ``reveal_base_points`` ＋ ``reveal_round_points`` × ``duration``

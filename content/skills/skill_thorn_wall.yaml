@@ -1,0 +1,23 @@
+id: skill_thorn_wall
+schema_version: 1
+name_zh: 荊棘牆術
+tier: 1
+rank: 1
+rarity: rare
+kind: active
+skeleton: control
+category: spell
+weapon_req: focus
+ap_cost: 1
+scaling_attr: wis
+shape: {type: ring, radius: 1}
+effects:
+  - {type: create_obstacle, object: thorn_wall, duration: 2}
+  - {type: create_surface, surface: poison, duration: 2}
+condition: null
+cost: {mana: 3, cooldown: 2}
+tags: [nature, spell, obstacle]
+narrative:
+  concept: 在自己周圍催生一圈帶刺的荊棘叢（地上帶毒），擋住去路卻擋不住視線，兩輪後枯萎
+  cast_flavor: 藤蔓破土而出，在你四周糾結成一圈帶刺的矮牆
+provenance: {origin: builtin, owner_id: null, created_by: null, parents: [], bound: true, tradeable: false}

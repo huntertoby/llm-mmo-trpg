@@ -121,6 +121,7 @@ class Surface(StrEnum):
     POISON = "poison"
     HOLY = "holy"
     DARKNESS = "darkness"
+    SMOKE = "smoke"
 
     @property
     def display_name(self) -> str:
@@ -217,6 +218,7 @@ _SURFACE_NAMES: dict[Surface, str] = {
     Surface.POISON: "毒",
     Surface.HOLY: "聖光",
     Surface.DARKNESS: "黑暗",
+    Surface.SMOKE: "煙霧",
 }
 
 # 對應 docs/專案計畫.md 第 7.2 節

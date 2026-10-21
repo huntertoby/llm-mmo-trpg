@@ -98,6 +98,7 @@ def test_enum_values() -> None:
         "poison",
         "holy",
         "darkness",
+        "smoke",
     ]
     assert [g.value for g in ResistGroup] == ["physical", "elemental", "nature", "spirit"]
     assert [t.value for t in Team] == ["ally", "enemy"]

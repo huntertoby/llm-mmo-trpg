@@ -73,6 +73,8 @@ class ObjectView(_ViewModel):
     hp: int | None
     max_hp: int | None
     burning: int | None
+    expires_in: int | None = None
+    """暫時障礙（Phase 3-11）還剩幾次環境回合；永久為 ``None``。"""
 
 
 class StatusView(_ViewModel):
@@ -475,7 +477,15 @@ def project_for(state: BattleState, team: Team) -> BattleView:
         height=state.height,
         tiles=tiles,
         objects=tuple(
-            ObjectView(id=o.id, kind=o.kind, pos=o.pos, hp=o.hp, max_hp=o.max_hp, burning=o.burning)
+            ObjectView(
+                id=o.id,
+                kind=o.kind,
+                pos=o.pos,
+                hp=o.hp,
+                max_hp=o.max_hp,
+                burning=o.burning,
+                expires_in=o.expires_in,
+            )
             for o in state.objects_sorted()
         ),
         units=tuple(_unit_view(state, u, team) for u in state.units_sorted()),
