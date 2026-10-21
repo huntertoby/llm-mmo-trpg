@@ -1,0 +1,42 @@
+<!doctype html>
+<html lang="zh-Hant">
+<head>
+<meta charset="utf-8">
+<title>裝備圖示尺寸檢查</title>
+<style>
+  body { margin: 0; padding: 16px 20px; background: #1b1e24; color: #e8e8ea; font-family: "Noto Sans TC", "Microsoft JhengHei", sans-serif; width: 1200px; }
+  h1 { font-size: 18px; margin: 0 0 8px; }
+  .row { display: flex; gap: 8px; align-items: center; margin-bottom: 10px; }
+  .lab { width: 70px; font-size: 13px; color: #c8cad0; }
+</style>
+</head>
+<body>
+<h1>G4 尺寸檢查：64px（欄位格）、48px（物品清單）、32px（英雄面板）</h1>
+<div id="root"></div>
+<script src="paperdoll.js"></script>
+<script src="gearArt.js"></script>
+<script>
+const G = GearArt;
+const ITEMS = [
+  { kind: "sword", form: "curved", material: "steel", keywords: ["ignite"], rarity: "epic" },
+  { kind: "dual_dagger", form: "kris", material: "steel", keywords: ["hidden"], rarity: "rare" },
+  { kind: "longgun", form: "sniper", keywords: ["mark"], rarity: "uncommon" },
+  { kind: "whip", form: "chain", material: "silver", keywords: ["shock"], rarity: "rare" },
+  { kind: "kite_shield", form: "tower", material: "steel", rarity: "common" },
+  { kind: "plate", form: "full", keywords: ["impact"], rarity: "epic" },
+  { kind: "helmet", form: "greathelm", rarity: "rare" },
+  { kind: "leather_gloves", form: "long", dye: "black", keywords: ["hidden"], rarity: "rare" },
+  { kind: "greaves", form: "knee", rarity: "uncommon" },
+  { kind: "pendant", form: "pendant", material: "bone", keywords: ["mark"], rarity: "uncommon" },
+  { kind: "ring", form: "signet", material: "gold", rarity: "common" },
+  { kind: "ring", form: "gem", material: "crystal", keywords: ["freeze"], rarity: "epic" },
+];
+const root = document.getElementById("root");
+for (const px of [64, 48, 32]) {
+  const r = document.createElement("div"); r.className = "row"; r.innerHTML = `<div class="lab">${px}px</div>`;
+  for (const it of ITEMS) r.appendChild(G.icon(it, px));
+  root.appendChild(r);
+}
+</script>
+</body>
+</html>
