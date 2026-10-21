@@ -1,0 +1,169 @@
+<!doctype html>
+<html lang="zh-Hant">
+<head>
+<meta charset="utf-8">
+<title>高度邊緣樣張</title>
+<style>
+  body { margin: 0; padding: 18px 22px; background: #1b1e24; color: #e8e8ea; font-family: "Noto Sans TC", "Microsoft JhengHei", sans-serif; }
+  h1 { font-size: 20px; margin: 0 0 4px; }
+  .sub { color: #a0a4ad; font-size: 13px; margin-bottom: 12px; }
+  .cols { display: flex; gap: 22px; }
+  .col h2 { font-size: 15px; margin: 0 0 6px; }
+  .col .d { font-size: 12px; color: #a0a4ad; margin-top: 6px; width: 416px; line-height: 1.5; }
+  canvas { display: block; border-radius: 6px; }
+</style>
+</head>
+<body>
+<h1>高度邊緣：同一張地圖、三種畫法（數字＝高度）</h1>
+<div class="sub">左上台地高 3、右側一階一階的坡（高 1→2→3）、中間凹地高 0。光從左上來。</div>
+<div class="cols">
+  <div class="col"><h2>現行（3-14／3-16a）</h2><canvas id="cur"></canvas><div class="d">差 1 的邊幾乎看不到；只有南邊有崖面，北邊、西邊靠很淡的陰影。</div></div>
+  <div class="col"><h2>A 強化邊緣（建議）</h2><canvas id="a"></canvas><div class="d">每條高低邊都描「亮邊＋暗線」；南面崖面加高（每階 8px）、東面窄側面；低格吃投影；每高一階頂面更亮。格子位置不動。</div></div>
+  <div class="col"><h2>B 整格抬高（偽 3D）</h2><canvas id="b"></canvas><div class="d">高格整個往上抬（每階 8px），露出完整崖面，像 Into the Breach。最立體，但會遮住後面一排、點選位置要跟著改。</div></div>
+</div>
+<script>
+const T = 52, W = 8, H = 6;
+const HM = [
+  "33310000",
+  "33310011",
+  "32100012",
+  "11000123",
+  "00000123",
+  "00110000",
+].map((r) => [...r].map(Number));
+const UNITS = [[1, 1, "#3d7bd8"], [5, 3, "#d8483d"], [7, 4, "#d8483d"], [2, 5, "#3d7bd8"]];
+const h = (x, y) => (x < 0 || y < 0 || x >= W || y >= H ? null : HM[y][x]);
+function rnd(x, y) { const s = Math.sin(x * 127.1 + y * 311.7) * 43758.5; return s - Math.floor(s); }
+const GRASS = ["#6f9c4c", "#6a9648", "#74a150"];
+const CLIFF = "#6b5236", CLIFF_DARK = "#4a3824", RIM = "rgba(255,248,215,0.8)", EDGE = "rgba(25,18,10,0.85)";
+
+function grass(ctx, x, y, oy = 0) {
+  ctx.fillStyle = GRASS[Math.floor(rnd(x, y) * 3)];
+  ctx.fillRect(x * T, y * T + oy, T, T);
+  ctx.fillStyle = "rgba(0,0,0,0.06)";
+  for (let i = 0; i < 6; i++) ctx.fillRect(x * T + rnd(x + i, y) * 46, y * T + oy + rnd(x, y + i) * 46, 3, 2);
+  ctx.strokeStyle = "rgba(0,0,0,0.12)"; ctx.lineWidth = 1;
+  ctx.strokeRect(x * T + 0.5, y * T + oy + 0.5, T - 1, T - 1);
+}
+function badge(ctx, x, y, n, oy = 0) {
+  if (n <= 0) return;
+  const px = x * T + 3, py = y * T + 3 + oy;
+  ctx.fillStyle = "rgba(30,24,18,0.7)"; ctx.beginPath(); ctx.roundRect(px, py, 19, 13, 4); ctx.fill();
+  ctx.fillStyle = "#fff3c4"; ctx.beginPath(); ctx.moveTo(px + 3, py + 10); ctx.lineTo(px + 6.5, py + 3); ctx.lineTo(px + 10, py + 10); ctx.fill();
+  ctx.font = "bold 10px sans-serif"; ctx.fillText(String(n), px + 11, py + 10);
+}
+function unit(ctx, x, y, c, oy = 0) {
+  const cx = x * T + T / 2, cy = y * T + T / 2 + oy;
+  ctx.fillStyle = "rgba(0,0,0,0.3)"; ctx.beginPath(); ctx.ellipse(cx, cy + 12, 15, 6, 0, 0, 7); ctx.fill();
+  ctx.fillStyle = c; ctx.strokeStyle = "#111"; ctx.lineWidth = 1.5;
+  ctx.beginPath(); ctx.ellipse(cx, cy + 4, 9, 11, 0, 0, 7); ctx.fill(); ctx.stroke();
+  ctx.fillStyle = "#f0c8a0"; ctx.beginPath(); ctx.arc(cx, cy - 10, 7, 0, 7); ctx.fill(); ctx.stroke();
+}
+function setup(id, extraH = 0) {
+  const cv = document.getElementById(id);
+  const dpr = 1;
+  cv.width = W * T * dpr; cv.height = (H * T + extraH) * dpr;
+  const ctx = cv.getContext("2d"); ctx.scale(dpr, dpr);
+  ctx.fillStyle = "#2b2f36"; ctx.fillRect(0, 0, W * T, H * T + extraH);
+  return ctx;
+}
+
+// ---- 現行：照 terrainArt.ts cliffs()/castShadow()/heightLight() 與 BattleRenderer.drawHeight() 簡化 ----
+(function current() {
+  const ctx = setup("cur");
+  for (let y = 0; y < H; y++) for (let x = 0; x < W; x++) {
+    const v = h(x, y); grass(ctx, x, y);
+    if (v > 0) { ctx.fillStyle = `rgba(255,248,230,${0.07 * v})`; ctx.fillRect(x * T, y * T, T, T); }
+    const n = h(x, y - 1), wv = h(x - 1, y);
+    if (n !== null && n > v) { const len = 8 + (n - v) * 4; const g = ctx.createLinearGradient(0, y * T, 0, y * T + len); g.addColorStop(0, "rgba(0,0,0,0.35)"); g.addColorStop(1, "rgba(0,0,0,0)"); ctx.fillStyle = g; ctx.fillRect(x * T, y * T, T, len); }
+    if (wv !== null && wv > v) { const len = 6 + (wv - v) * 3; const g = ctx.createLinearGradient(x * T, 0, x * T + len, 0); g.addColorStop(0, "rgba(0,0,0,0.3)"); g.addColorStop(1, "rgba(0,0,0,0)"); ctx.fillStyle = g; ctx.fillRect(x * T, y * T, len, T); }
+    const s = h(x, y + 1);
+    if (s !== null && s < v) { const d = (v - s) * 5; ctx.fillStyle = CLIFF; ctx.fillRect(x * T, y * T + T - d, T, d); ctx.fillStyle = "rgba(255,255,255,0.25)"; ctx.fillRect(x * T, y * T + T - d - 1, T, 1.5); }
+    ctx.fillStyle = "rgba(40,30,20,0.45)";
+    if (wv !== null && wv < v) ctx.fillRect(x * T, y * T, 2, T);
+    const e = h(x + 1, y); if (e !== null && e < v) ctx.fillRect(x * T + T - 2, y * T, 2, T);
+    ctx.fillStyle = "rgba(28,20,12,0.75)";
+    for (const [dx, dy] of [[0, 1], [1, 0], [-1, 0], [0, -1]]) {
+      const o = h(x + dx, y + dy); if (o === null || v - o < 2) continue;
+      const w = v - o >= 3 ? 4 : 3;
+      if (dy === 1) ctx.fillRect(x * T, y * T + T - w, T, w); else if (dy === -1) ctx.fillRect(x * T, y * T, T, w);
+      else if (dx === 1) ctx.fillRect(x * T + T - w, y * T, w, T); else ctx.fillRect(x * T, y * T, w, T);
+    }
+  }
+  for (let y = 0; y < H; y++) for (let x = 0; x < W; x++) badge(ctx, x, y, h(x, y));
+  for (const [x, y, c] of UNITS) unit(ctx, x, y, c);
+})();
+
+// ---- A：強化邊緣（格子位置不變）----
+const STEP = 8; // 南面崖面每階高度
+function edgesA(ctx, x, y, v, oy = 0) {
+  const X = x * T, Y = y * T + oy;
+  const n = h(x, y - 1), s = h(x, y + 1), wv = h(x - 1, y), e = h(x + 1, y);
+  // 低格：吃高鄰格的投影（光從左上 → 影子落向右下）
+  if (n !== null && n > v) { const len = 10 + (n - v) * 6; const g = ctx.createLinearGradient(0, Y, 0, Y + len); g.addColorStop(0, "rgba(0,0,0,0.45)"); g.addColorStop(1, "rgba(0,0,0,0)"); ctx.fillStyle = g; ctx.fillRect(X, Y, T, len); }
+  if (wv !== null && wv > v) { const len = 8 + (wv - v) * 5; const g = ctx.createLinearGradient(X, 0, X + len, 0); g.addColorStop(0, "rgba(0,0,0,0.4)"); g.addColorStop(1, "rgba(0,0,0,0)"); ctx.fillStyle = g; ctx.fillRect(X, Y, len, T); }
+  // 高格：南面崖面（每階 8px、最高 24px，每階一條地層線）
+  if (s !== null && s < v) {
+    const lv = Math.min(3, v - s), d = lv * STEP;
+    const g = ctx.createLinearGradient(0, Y + T - d, 0, Y + T); g.addColorStop(0, CLIFF); g.addColorStop(1, CLIFF_DARK);
+    ctx.fillStyle = g; ctx.fillRect(X, Y + T - d, T, d);
+    ctx.fillStyle = "rgba(0,0,0,0.3)"; for (let i = 1; i < lv; i++) ctx.fillRect(X, Y + T - d + i * STEP, T, 1);
+  }
+  // 東面窄側面（每階 3px）
+  if (e !== null && e < v) { const d = Math.min(3, v - e) * 3; ctx.fillStyle = CLIFF_DARK; ctx.fillRect(X + T - d, Y, d, T); }
+  // 頂面邊緣：北、西亮邊（受光）；所有低邊外緣一條暗線
+  const sd = s !== null && s < v ? Math.min(3, v - s) * STEP : 0;
+  const ed = e !== null && e < v ? Math.min(3, v - e) * 3 : 0;
+  ctx.fillStyle = RIM;
+  if (n !== null && n < v) ctx.fillRect(X, Y, T - ed, 2);
+  if (wv !== null && wv < v) ctx.fillRect(X, Y, 2, T - sd);
+  if (s !== null && s < v) ctx.fillRect(X, Y + T - sd - 2, T - ed, 2); // 崖頂亮唇
+  ctx.fillStyle = EDGE;
+  const lw = (d) => (d >= 2 ? 2.5 : 1.5);
+  if (n !== null && n < v) ctx.fillRect(X, Y - lw(v - n) / 2, T, lw(v - n));
+  if (wv !== null && wv < v) ctx.fillRect(X - lw(v - wv) / 2, Y, lw(v - wv), T);
+  if (s !== null && s < v) ctx.fillRect(X, Y + T - lw(v - s) / 2, T, lw(v - s));
+  if (e !== null && e < v) ctx.fillRect(X + T - lw(v - e) / 2, Y, lw(v - e), T);
+}
+(function a() {
+  const ctx = setup("a");
+  for (let y = 0; y < H; y++) for (let x = 0; x < W; x++) {
+    const v = h(x, y); grass(ctx, x, y);
+    if (v > 0) { ctx.fillStyle = `rgba(255,246,220,${0.1 * v})`; ctx.fillRect(x * T, y * T, T, T); }
+  }
+  for (let y = 0; y < H; y++) for (let x = 0; x < W; x++) edgesA(ctx, x, y, h(x, y));
+  for (let y = 0; y < H; y++) for (let x = 0; x < W; x++) badge(ctx, x, y, h(x, y));
+  for (const [x, y, c] of UNITS) unit(ctx, x, y, c);
+})();
+
+// ---- B：整格抬高 ----
+(function b() {
+  const RAISE = 8, top = 3 * RAISE;
+  const ctx = setup("b", top);
+  ctx.translate(0, top);
+  for (let y = 0; y < H; y++) {
+    for (let x = 0; x < W; x++) {
+      const v = h(x, y), oy = -v * RAISE;
+      // 崖面：從頂面底緣一路畫到地面（高 0 的底緣）
+      if (v > 0) {
+        const g = ctx.createLinearGradient(0, y * T + T + oy, 0, y * T + T);
+        g.addColorStop(0, CLIFF); g.addColorStop(1, CLIFF_DARK);
+        ctx.fillStyle = g; ctx.fillRect(x * T, y * T + T + oy, T, v * RAISE);
+        ctx.fillStyle = "rgba(0,0,0,0.3)"; for (let i = 1; i < v; i++) ctx.fillRect(x * T, y * T + T + oy + i * RAISE, T, 1);
+      }
+      grass(ctx, x, y, oy);
+      if (v > 0) { ctx.fillStyle = `rgba(255,246,220,${0.08 * v})`; ctx.fillRect(x * T, y * T + oy, T, T); }
+      ctx.fillStyle = EDGE;
+      const e = h(x + 1, y), wv = h(x - 1, y), n = h(x, y - 1);
+      if (e !== null && e < v) ctx.fillRect(x * T + T - 1.5, y * T + oy, 1.5, T + v * RAISE);
+      if (wv !== null && wv < v) ctx.fillRect(x * T, y * T + oy, 1.5, T + v * RAISE);
+      if (n !== null && n < v) { ctx.fillStyle = RIM; ctx.fillRect(x * T, y * T + oy, T, 2); }
+      ctx.fillStyle = RIM; if (h(x, y + 1) !== null && h(x, y + 1) < v) ctx.fillRect(x * T, y * T + T + oy - 2, T, 2);
+    }
+    for (let x = 0; x < W; x++) badge(ctx, x, y, h(x, y), -h(x, y) * RAISE);
+    for (const [ux, uy, c] of UNITS) if (uy === y) unit(ctx, ux, uy, c, -h(ux, uy) * RAISE);
+  }
+})();
+</script>
+</body>
+</html>
