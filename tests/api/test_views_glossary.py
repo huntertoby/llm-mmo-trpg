@@ -88,3 +88,11 @@ def test_glossary_covers_every_content_id(client: TestClient) -> None:
     flags = {e["id"]: e["tags"] for e in data["terrain"]}
     assert "deadly" in flags["chasm"]
     assert "blocked" in flags["wall"]
+
+
+def test_glossary_has_static_rules_for_tiles(client: TestClient) -> None:
+    data = client.get("/api/glossary").json()
+    for key in ("terrain", "surfaces", "objects"):
+        assert all(e["rules_zh"] for e in data[key]), key
+    by_id = {e["id"]: e for e in data["objects"]}
+    assert any("半掩護" in line for line in by_id["crate"]["rules_zh"])

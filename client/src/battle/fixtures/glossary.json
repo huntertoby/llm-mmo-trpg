@@ -4,19 +4,28 @@
    "id": "stone",
    "name_zh": "石地",
    "description_zh": null,
-   "tags": []
+   "tags": [],
+   "rules_zh": [
+    "可通行"
+   ]
   },
   {
    "id": "grass",
    "name_zh": "草地",
    "description_zh": null,
-   "tags": []
+   "tags": [],
+   "rules_zh": [
+    "可通行"
+   ]
   },
   {
    "id": "dirt",
    "name_zh": "泥土",
    "description_zh": null,
-   "tags": []
+   "tags": [],
+   "rules_zh": [
+    "可通行"
+   ]
   },
   {
    "id": "chasm",
@@ -25,6 +34,10 @@
    "tags": [
     "blocked",
     "deadly"
+   ],
+   "rules_zh": [
+    "不可通行",
+    "致命地形：被推進去的單位死亡（精英與 Boss 改受 30% 最大 HP 傷害）"
    ]
   },
   {
@@ -34,6 +47,10 @@
    "tags": [
     "blocked",
     "deadly"
+   ],
+   "rules_zh": [
+    "不可通行",
+    "致命地形：被推進去的單位死亡（精英與 Boss 改受 30% 最大 HP 傷害）"
    ]
   },
   {
@@ -43,6 +60,10 @@
    "tags": [
     "blocked",
     "deadly"
+   ],
+   "rules_zh": [
+    "不可通行",
+    "致命地形：被推進去的單位死亡（精英與 Boss 改受 30% 最大 HP 傷害）"
    ]
   },
   {
@@ -52,6 +73,10 @@
    "tags": [
     "blocked",
     "blocks_sight"
+   ],
+   "rules_zh": [
+    "不可通行",
+    "擋視線（全掩護）；一般攻擊無法破壞"
    ]
   }
  ],
@@ -62,31 +87,65 @@
    "description_zh": null,
    "tags": [
     "flammable"
+   ],
+   "rules_zh": [
+    "可燃：火勢會蔓延過來",
+    "火焰：變成火焰"
    ]
   },
   {
    "id": "water",
    "name_zh": "水",
    "description_zh": null,
-   "tags": []
+   "tags": [],
+   "rules_zh": [
+    "由技能產生時持續 3 回合",
+    "雷電：沿相連的水與導電物傳導，波及其上的其他單位",
+    "冰霜：變成冰",
+    "冰霜：站在上面的單位獲得冰凍 1 回合",
+    "在上面產生火焰：維持原狀"
+   ]
   },
   {
    "id": "fire",
    "name_zh": "火焰",
    "description_zh": null,
-   "tags": []
+   "tags": [],
+   "rules_zh": [
+    "由技能產生時持續 2 回合",
+    "帶有火焰元素（產生時會觸及格上的物件）",
+    "進入時獲得燃燒",
+    "回合開始時獲得燃燒",
+    "風：沿方向蔓延到下一格（火焰）",
+    "在上面產生水：消失",
+    "在上面產生油：維持原狀"
+   ]
   },
   {
    "id": "ice",
    "name_zh": "冰",
    "description_zh": null,
-   "tags": []
+   "tags": [],
+   "rules_zh": [
+    "由技能產生時持續 3 回合，之後變成水",
+    "帶有冰霜元素（產生時會觸及格上的物件）",
+    "進入時 敏捷檢定 DC 12，失敗會倒地（滑倒判定）",
+    "火焰：變成水",
+    "在上面產生火焰：變成水"
+   ]
   },
   {
    "id": "poison",
    "name_zh": "毒",
    "description_zh": null,
-   "tags": []
+   "tags": [],
+   "rules_zh": [
+    "由技能產生時持續 3 回合",
+    "帶有毒素元素（產生時會觸及格上的物件）",
+    "回合開始時站在上面的單位受 1d4 毒素傷害",
+    "神聖：消失",
+    "風：消失"
+   ]
   },
   {
    "id": "holy",
@@ -94,6 +153,13 @@
    "description_zh": null,
    "tags": [
     "beneficial"
+   ],
+   "rules_zh": [
+    "由技能產生時持續 3 回合",
+    "帶有神聖元素（產生時會觸及格上的物件）",
+    "對站在上面的友方有益",
+    "回合開始時站在上面的單位受 1d4 神聖傷害（只傷害不死系）",
+    "回合開始時治療站在上面的友方 1d4"
    ]
   },
   {
@@ -103,6 +169,28 @@
    "tags": [
     "blocks_sight",
     "conceal"
+   ],
+   "rules_zh": [
+    "由技能產生時持續 3 回合",
+    "帶有暗影元素（產生時會觸及格上的物件）",
+    "擋視線",
+    "站在上面的單位隱蔽",
+    "神聖：消失"
+   ]
+  },
+  {
+   "id": "smoke",
+   "name_zh": "煙霧",
+   "description_zh": null,
+   "tags": [
+    "blocks_sight",
+    "conceal"
+   ],
+   "rules_zh": [
+    "由技能產生時持續 3 回合",
+    "擋視線",
+    "站在上面的單位隱蔽",
+    "風：消失"
    ]
   }
  ],
@@ -115,6 +203,13 @@
     "breakable",
     "flammable",
     "over_chasm"
+   ],
+   "rules_zh": [
+    "架在致命地形上，可以走；被打破後格上的單位會落下",
+    "可被破壞",
+    "可燃",
+    "火焰：被點燃（燃燒後摧毀，並產生火焰）",
+    "大地：被填平，格子變成泥土"
    ]
   },
   {
@@ -127,6 +222,17 @@
     "flammable",
     "half_cover",
     "pushable"
+   ],
+   "rules_zh": [
+    "半掩護（遠程攻擊其後的目標，命中 −2）",
+    "可推動",
+    "可被破壞",
+    "可燃",
+    "碰火爆炸",
+    "爆炸範圍 3×3，2d6 火焰傷害",
+    "被傷害打破或摔破時（非被火引爆）漏出油",
+    "火焰：爆炸",
+    "風：被推動"
    ]
   },
   {
@@ -136,6 +242,11 @@
    "tags": [
     "breakable",
     "over_chasm"
+   ],
+   "rules_zh": [
+    "架在致命地形上，可以走；被打破後格上的單位會落下",
+    "可被破壞",
+    "大地：被填平，格子變成泥土"
    ]
   },
   {
@@ -147,6 +258,13 @@
     "blocks_sight",
     "breakable",
     "topplable"
+   ],
+   "rules_zh": [
+    "不可通行",
+    "擋視線（全掩護）",
+    "可推倒（往推的方向倒下，壓住後面 2 格）",
+    "可被破壞",
+    "風：被推倒"
    ]
   },
   {
@@ -156,6 +274,11 @@
    "tags": [
     "conceal",
     "flammable"
+   ],
+   "rules_zh": [
+    "站在同一格的單位隱蔽",
+    "可燃",
+    "火焰：被點燃（燃燒後摧毀，並產生火焰）"
    ]
   },
   {
@@ -169,6 +292,16 @@
     "half_cover",
     "penetrable",
     "pushable"
+   ],
+   "rules_zh": [
+    "不可通行",
+    "半掩護（遠程攻擊其後的目標，命中 −2）",
+    "可推動",
+    "可被破壞",
+    "可被穿透",
+    "可燃",
+    "火焰：被點燃（燃燒後摧毀，並產生火焰）",
+    "風：被推動"
    ]
   },
   {
@@ -179,6 +312,11 @@
     "blocks_move",
     "blocks_sight",
     "breakable"
+   ],
+   "rules_zh": [
+    "不可通行",
+    "擋視線（全掩護）",
+    "可被破壞"
    ]
   },
   {
@@ -189,6 +327,11 @@
     "blocks_move",
     "breakable",
     "half_cover"
+   ],
+   "rules_zh": [
+    "不可通行",
+    "半掩護（遠程攻擊其後的目標，命中 −2）",
+    "可被破壞"
    ]
   },
   {
@@ -201,6 +344,14 @@
     "flammable",
     "half_cover",
     "penetrable"
+   ],
+   "rules_zh": [
+    "不可通行",
+    "半掩護（遠程攻擊其後的目標，命中 −2）",
+    "可被破壞",
+    "可被穿透",
+    "可燃",
+    "火焰：被點燃（燃燒後摧毀，並產生火焰）"
    ]
   },
   {
@@ -213,6 +364,15 @@
     "breakable",
     "flammable",
     "topplable"
+   ],
+   "rules_zh": [
+    "不可通行",
+    "擋視線（全掩護）",
+    "可推倒（往推的方向倒下，壓住後面 2 格）",
+    "可被破壞",
+    "可燃",
+    "火焰：被點燃（燃燒後摧毀，並產生火焰）",
+    "風：被推倒"
    ]
   },
   {
@@ -223,6 +383,45 @@
     "blocks_move",
     "breakable",
     "half_cover"
+   ],
+   "rules_zh": [
+    "不可通行",
+    "半掩護（遠程攻擊其後的目標，命中 −2）",
+    "可被破壞"
+   ]
+  },
+  {
+   "id": "ice_wall",
+   "name_zh": "冰牆",
+   "description_zh": null,
+   "tags": [
+    "blocks_move",
+    "blocks_sight",
+    "breakable",
+    "meltable"
+   ],
+   "rules_zh": [
+    "不可通行",
+    "擋視線（全掩護）",
+    "可被破壞",
+    "遇火融化",
+    "火焰：融化消失"
+   ]
+  },
+  {
+   "id": "thorn_wall",
+   "name_zh": "荊棘叢",
+   "description_zh": null,
+   "tags": [
+    "blocks_move",
+    "breakable",
+    "flammable"
+   ],
+   "rules_zh": [
+    "不可通行",
+    "可被破壞",
+    "可燃",
+    "火焰：被點燃（燃燒後摧毀，並產生火焰）"
    ]
   }
  ],
@@ -233,19 +432,22 @@
    "description_zh": "防禦值 +25%，持續到自己的下回合開始。",
    "tags": [
     "beneficial"
-   ]
+   ],
+   "rules_zh": []
   },
   {
    "id": "prone",
    "name_zh": "倒地",
    "description_zh": "移動前要先站起來（消耗一半移動點數）；近戰攻擊倒地者有優勢，遠程攻擊有劣勢。",
-   "tags": []
+   "tags": [],
+   "rules_zh": []
   },
   {
    "id": "burning",
    "name_zh": "燃燒",
    "description_zh": "回合開始時受到 1d6 火焰傷害，持續 2 回合；重複施加時刷新持續時間。",
-   "tags": []
+   "tags": [],
+   "rules_zh": []
   },
   {
    "id": "concealed",
@@ -253,67 +455,96 @@
    "description_zh": "對其攻擊有劣勢；超過 2 格的遠程攻擊無法選為目標。站在黑暗表面或草叢中的單位也視為隱蔽。",
    "tags": [
     "beneficial"
-   ]
+   ],
+   "rules_zh": []
   },
   {
    "id": "revealed",
    "name_zh": "被揭露",
    "description_zh": "不算隱蔽（黑暗與草叢也一樣），也不能再獲得隱蔽。只能由揭露（reveal）施加。",
-   "tags": []
+   "tags": [],
+   "rules_zh": []
+  },
+  {
+   "id": "overwatch",
+   "name_zh": "監視",
+   "description_zh": "持續到自己的下回合開始。期間敵人在武器射程與視線內完成一步移動，就自動普攻一次（佔本輪反應，不花 AP），射擊後監視結束。",
+   "tags": [
+    "beneficial"
+   ],
+   "rules_zh": []
   },
   {
    "id": "time_bomb",
    "name_zh": "定時炸彈",
    "description_zh": "身上綁著定時炸彈，剩餘回合就是倒數（每次環境回合 −1）：歸零時在身體當下的位置爆炸，波及周圍；倒下時也會立即爆炸。可被淨化移除，驅散不移除。只能由定時炸彈（delayed_damage）施加。",
-   "tags": []
+   "tags": [],
+   "rules_zh": []
+  },
+  {
+   "id": "charging",
+   "name_zh": "蓄力",
+   "description_zh": "延遲段（複合技能）等待釋放中：下回合開始時、或被攻擊時（依技能）以自己為中心釋放第二段。倒下、暈眩或冰凍時取消。不能被淨化、驅散或奪取。只能由延遲段施加。",
+   "tags": [
+    "beneficial"
+   ],
+   "rules_zh": []
   },
   {
    "id": "slow",
    "name_zh": "緩速",
    "description_zh": "回合開始時的移動點數減半（無條件捨去）。",
-   "tags": []
+   "tags": [],
+   "rules_zh": []
   },
   {
    "id": "root",
    "name_zh": "定身",
    "description_zh": "不能主動移動（仍可被推擊、拉扯等強制位移）。",
-   "tags": []
+   "tags": [],
+   "rules_zh": []
   },
   {
    "id": "stun",
    "name_zh": "暈眩",
    "description_zh": "跳過整個回合：沒有 AP、移動點數與反應。",
-   "tags": []
+   "tags": [],
+   "rules_zh": []
   },
   {
    "id": "frozen",
    "name_zh": "冰凍",
    "description_zh": "跳過整個回合（同暈眩，與暈眩共用硬控的控制遞減）；受到火焰傷害時立即解除。",
-   "tags": []
+   "tags": [],
+   "rules_zh": []
   },
   {
    "id": "weaken",
    "name_zh": "虛弱",
    "description_zh": "自己造成的攻擊傷害 ×75%。",
-   "tags": []
+   "tags": [],
+   "rules_zh": []
   },
   {
    "id": "vulnerable",
    "name_zh": "易傷",
    "description_zh": "受到的骰值傷害 ×125%（不含墜落、致命地形等百分比傷害）。",
-   "tags": []
+   "tags": [],
+   "rules_zh": []
   },
   {
    "id": "bleed",
    "name_zh": "流血",
    "description_zh": "回合開始時受到 1d4 物理傷害，持續 3 回合。",
-   "tags": []
+   "tags": [],
+   "rules_zh": []
   },
   {
    "id": "poison",
    "name_zh": "中毒",
    "description_zh": "回合開始時受到 1d4 毒素傷害，持續 3 回合；受到的治療減半。",
-   "tags": []
+   "tags": [],
+   "rules_zh": []
   },
   {
    "id": "guarded",
@@ -321,7 +552,8 @@
    "description_zh": "受到的骰值傷害 ×70%（不含墜落、致命地形等百分比傷害）。",
    "tags": [
     "beneficial"
-   ]
+   ],
+   "rules_zh": []
   },
   {
    "id": "empowered",
@@ -329,7 +561,8 @@
    "description_zh": "六個屬性各 +2（命中、抵抗、傷害與治療的縮放都用加值後的屬性；先攻不變）。",
    "tags": [
     "beneficial"
-   ]
+   ],
+   "rules_zh": []
   },
   {
    "id": "hasted",
@@ -337,7 +570,8 @@
    "description_zh": "回合開始時的移動點數 ×150%（無條件捨去）。",
    "tags": [
     "beneficial"
-   ]
+   ],
+   "rules_zh": []
   },
   {
    "id": "regenerating",
@@ -345,7 +579,8 @@
    "description_zh": "回合開始時恢復 1d4 HP，持續 3 回合。",
    "tags": [
     "beneficial"
-   ]
+   ],
+   "rules_zh": []
   },
   {
    "id": "shielded",
@@ -353,7 +588,8 @@
    "description_zh": "帶有吸收量；受到的骰值傷害先扣護盾，吸收量歸零時消失。",
    "tags": [
     "beneficial"
-   ]
+   ],
+   "rules_zh": []
   },
   {
    "id": "undying",
@@ -361,7 +597,8 @@
    "description_zh": "受到致命傷害時 HP 留在 1，然後此狀態消失（墜落與致命地形除外）。",
    "tags": [
     "beneficial"
-   ]
+   ],
+   "rules_zh": []
   },
   {
    "id": "soul_link",
@@ -369,37 +606,43 @@
    "description_zh": "受到的傷害有一部分轉給連結者（施放者）；連結者倒下時消失。",
    "tags": [
     "beneficial"
-   ]
+   ],
+   "rules_zh": []
   },
   {
    "id": "taunted",
    "name_zh": "嘲諷",
    "description_zh": "對嘲諷者以外的目標發動攻擊時有劣勢；嘲諷者倒下時消失。",
-   "tags": []
+   "tags": [],
+   "rules_zh": []
   },
   {
    "id": "feared",
    "name_zh": "恐懼",
    "description_zh": "主動移動時不能靠近恐懼的來源；攻擊有劣勢。來源倒下時消失。",
-   "tags": []
+   "tags": [],
+   "rules_zh": []
   },
   {
    "id": "silenced",
    "name_zh": "沉默",
    "description_zh": "不能使用法術技（武器技與基本攻擊照常）。",
-   "tags": []
+   "tags": [],
+   "rules_zh": []
   },
   {
    "id": "blinded",
    "name_zh": "致盲",
    "description_zh": "攻擊與以單位為目標的技能只能選擇 2 格以內的單位；攻擊有劣勢。",
-   "tags": []
+   "tags": [],
+   "rules_zh": []
   },
   {
    "id": "marked",
    "name_zh": "被標記",
    "description_zh": "對其攻擊有優勢；隱蔽也無法讓它免於被選為目標。",
-   "tags": []
+   "tags": [],
+   "rules_zh": []
   },
   {
    "id": "stance_fury",
@@ -407,7 +650,8 @@
    "description_zh": "力量 +2，但受到的骰值傷害 ×120%；持續到取消。",
    "tags": [
     "beneficial"
-   ]
+   ],
+   "rules_zh": []
   },
   {
    "id": "stance_bulwark",
@@ -415,7 +659,8 @@
    "description_zh": "受到的骰值傷害 ×75%，但回合開始時的移動點數減半；持續到取消。",
    "tags": [
     "beneficial"
-   ]
+   ],
+   "rules_zh": []
   }
  ],
  "stacks": [
@@ -425,7 +670,8 @@
    "description_zh": "累積在施放者自己身上的蓄能；雷霆終結消耗全部靜電，每層提高傷害。",
    "tags": [
     "self"
-   ]
+   ],
+   "rules_zh": []
   },
   {
    "id": "sunder",
@@ -433,7 +679,8 @@
    "description_zh": "疊在被命中的目標身上的印記；碎甲重擊消耗目標身上的全部破甲印，每層提高傷害。3 輪沒有再疊就清空。",
    "tags": [
     "target"
-   ]
+   ],
+   "rules_zh": []
   },
   {
    "id": "overload_surge",
@@ -441,7 +688,8 @@
    "description_zh": "累積在施放者自己身上的電流；每層讓你帶「overcurrent」標籤的技能傷害 +20%，累積到 5 層時你立刻被雷擊（2d6 雷電傷害，不致命）並清空全部層數。",
    "tags": [
     "self"
-   ]
+   ],
+   "rules_zh": []
   }
  ],
  "reactions": [
@@ -449,13 +697,22 @@
    "id": "block",
    "name_zh": "格擋",
    "description_zh": "被近戰攻擊命中後，傷害減半，消耗 10 耐力。",
-   "tags": []
+   "tags": [],
+   "rules_zh": []
   },
   {
    "id": "opportunity_attack",
    "name_zh": "藉機攻擊",
    "description_zh": "敵人離開相鄰格時，以近戰武器攻擊一次（不花 AP）。",
-   "tags": []
+   "tags": [],
+   "rules_zh": []
+  },
+  {
+   "id": "overwatch_shot",
+   "name_zh": "監視射擊",
+   "description_zh": "帶有「監視」狀態時，敵人在武器射程與視線內完成一步移動，就自動普攻一次（不花 AP）；射擊後監視結束。",
+   "tags": [],
+   "rules_zh": []
   }
  ],
  "elements": [
@@ -463,55 +720,64 @@
    "id": "physical",
    "name_zh": "物理",
    "description_zh": "刀劍、拳腳、鈍器與墜落等不帶元素的傷害，擅長破壞物件。",
-   "tags": []
+   "tags": [],
+   "rules_zh": []
   },
   {
    "id": "fire",
    "name_zh": "火焰",
    "description_zh": "點燃易燃物與油表面，引爆爆炸物，造成持續燃燒；遇水熄滅。",
-   "tags": []
+   "tags": [],
+   "rules_zh": []
   },
   {
    "id": "ice",
    "name_zh": "冰霜",
    "description_zh": "把水凍成冰表面，冰上的單位可能滑倒。",
-   "tags": []
+   "tags": [],
+   "rules_zh": []
   },
   {
    "id": "lightning",
    "name_zh": "雷電",
    "description_zh": "沿著導電物與相連的水面擴散、連鎖。",
-   "tags": []
+   "tags": [],
+   "rules_zh": []
   },
   {
    "id": "poison",
    "name_zh": "毒素",
    "description_zh": "造成持續傷害，可形成毒表面或毒霧。",
-   "tags": []
+   "tags": [],
+   "rules_zh": []
   },
   {
    "id": "wind",
    "name_zh": "風",
    "description_zh": "推擊單位與物件，讓火勢蔓延、吹散毒霧。",
-   "tags": []
+   "tags": [],
+   "rules_zh": []
   },
   {
    "id": "earth",
    "name_zh": "大地",
    "description_zh": "產生障礙物，讓地形隆起或下陷而改變高度。",
-   "tags": []
+   "tags": [],
+   "rules_zh": []
   },
   {
    "id": "holy",
    "name_zh": "神聖",
    "description_zh": "淨化與治癒之力，可形成聖光表面治療友方、傷害不死者。",
-   "tags": []
+   "tags": [],
+   "rules_zh": []
   },
   {
    "id": "shadow",
    "name_zh": "暗影",
    "description_zh": "侵蝕心智與視線，可形成阻擋視線的黑暗表面，擅長隱匿與恐懼。",
-   "tags": []
+   "tags": [],
+   "rules_zh": []
   }
  ],
  "attributes": [
@@ -519,37 +785,43 @@
    "id": "str",
    "name_zh": "力量",
    "description_zh": null,
-   "tags": []
+   "tags": [],
+   "rules_zh": []
   },
   {
    "id": "dex",
    "name_zh": "敏捷",
    "description_zh": null,
-   "tags": []
+   "tags": [],
+   "rules_zh": []
   },
   {
    "id": "con",
    "name_zh": "體質",
    "description_zh": null,
-   "tags": []
+   "tags": [],
+   "rules_zh": []
   },
   {
    "id": "int",
    "name_zh": "智力",
    "description_zh": null,
-   "tags": []
+   "tags": [],
+   "rules_zh": []
   },
   {
    "id": "wis",
    "name_zh": "感知",
    "description_zh": null,
-   "tags": []
+   "tags": [],
+   "rules_zh": []
   },
   {
    "id": "wil",
    "name_zh": "意志",
    "description_zh": null,
-   "tags": []
+   "tags": [],
+   "rules_zh": []
   }
  ]
 }

@@ -9,15 +9,22 @@ from __future__ import annotations
 
 from trpg.api.schemas import Glossary, GlossaryEntry
 from trpg.content.library import ContentLibrary
+from trpg.narrative.tile_info import object_rules, surface_rules, terrain_rules
 from trpg.shared.types import Attribute
 
 __all__ = ["build_glossary"]
 
 
 def _entry(
-    id_: str, name_zh: str, description_zh: str | None = None, tags: tuple[str, ...] = ()
+    id_: str,
+    name_zh: str,
+    description_zh: str | None = None,
+    tags: tuple[str, ...] = (),
+    rules_zh: tuple[str, ...] = (),
 ) -> GlossaryEntry:
-    return GlossaryEntry(id=id_, name_zh=name_zh, description_zh=description_zh, tags=tags)
+    return GlossaryEntry(
+        id=id_, name_zh=name_zh, description_zh=description_zh, tags=tags, rules_zh=rules_zh
+    )
 
 
 def _terrain_tags(walkable: bool, deadly: bool, blocks_sight: bool) -> tuple[str, ...]:
@@ -37,7 +44,13 @@ def build_glossary(library: ContentLibrary) -> Glossary:
     rules = library.ruleset
     return Glossary(
         terrain=tuple(
-            _entry(t.id, t.name_zh, None, _terrain_tags(t.walkable, t.deadly, t.blocks_sight))
+            _entry(
+                t.id,
+                t.name_zh,
+                None,
+                _terrain_tags(t.walkable, t.deadly, t.blocks_sight),
+                terrain_rules(t, rules),
+            )
             for t in rules.terrain.terrain
         ),
         surfaces=tuple(
@@ -55,10 +68,14 @@ def build_glossary(library: ContentLibrary) -> Glossary:
                     )
                     if on
                 ),
+                surface_rules(s, library),
             )
             for s in rules.surfaces.surfaces
         ),
-        objects=tuple(_entry(o.id, o.name_zh, None, o.tags) for o in rules.objects.objects),
+        objects=tuple(
+            _entry(o.id, o.name_zh, None, o.tags, object_rules(o, library))
+            for o in rules.objects.objects
+        ),
         statuses=tuple(
             _entry(
                 s.id,
