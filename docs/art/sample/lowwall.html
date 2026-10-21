@@ -1,0 +1,96 @@
+<!doctype html>
+<html lang="zh-Hant">
+<head>
+<meta charset="utf-8">
+<title>矮牆樣張</title>
+<style>
+  body { margin: 0; padding: 18px 22px; background: #1b1e24; color: #e8e8ea; font-family: "Noto Sans TC", "Microsoft JhengHei", sans-serif; }
+  h1 { font-size: 20px; margin: 0 0 4px; }
+  .sub { color: #a0a4ad; font-size: 13px; margin-bottom: 12px; }
+  .cols { display: flex; gap: 24px; }
+  .col h2 { font-size: 15px; margin: 0 0 6px; }
+  .col .d { font-size: 12px; color: #a0a4ad; margin-top: 6px; width: 420px; line-height: 1.5; }
+  canvas { display: block; border-radius: 6px; }
+</style>
+</head>
+<body>
+<h1>矮牆：和地面拉開明暗、加粗外框（上：石地板、下：草地；右半是實際大小）</h1>
+<div class="sub">每張：單格矮牆、三格相連、旁邊一個站在矮牆後的單位（半掩護）。</div>
+<div class="cols">
+  <div class="col"><h2>現行</h2><canvas id="old"></canvas><div class="d">淺灰欄杆＋灰色底座，和石地板幾乎同色；沒有外框，縮小後只剩一條橫線。</div></div>
+  <div class="col"><h2>提案</h2><canvas id="neu"></canvas><div class="d">暖色石塊（頂面亮、正面暗、錯縫磚紋）＋2px 深色外框＋較深的投影；高度略加，正面露出來。草地、石地都分得出來。</div></div>
+</div>
+<script>
+const T = 52;
+function floor(ctx, x, y, kind) {
+  ctx.fillStyle = kind === "stone" ? "#8a8a84" : "#6f9c4c"; ctx.fillRect(x, y, T, T);
+  ctx.strokeStyle = kind === "stone" ? "#6d6d68" : "rgba(0,0,0,0.12)"; ctx.lineWidth = kind === "stone" ? 2 : 1;
+  if (kind === "stone") { ctx.beginPath(); ctx.roundRect(x + 2, y + 2, T - 4, T - 4, 6); ctx.stroke(); } else ctx.strokeRect(x + 0.5, y + 0.5, T - 1, T - 1);
+}
+// 現行：照 objectArt.ts lowWall()
+function oldWall(ctx, X, Y, joinL, joinR) {
+  const x0 = X + (joinL ? 0 : 5), x1 = X + (joinR ? T : T - 5), y0 = Y + T * 0.36, h = T * 0.3;
+  ctx.fillStyle = "rgba(0,0,0,0.28)"; ctx.fillRect(x0 + 3, y0 + h, x1 - x0, 6);
+  ctx.fillStyle = "#6e675c"; ctx.fillRect(x0, y0 + h - 5, x1 - x0, 5);
+  ctx.fillStyle = "#9b9385"; ctx.fillRect(x0, y0, x1 - x0, h - 5);
+  ctx.strokeStyle = "#5c564c"; ctx.lineWidth = 1.5; ctx.beginPath();
+  for (let bx = x0 + 13; bx < x1 - 2; bx += 13) { ctx.moveTo(bx, y0); ctx.lineTo(bx, y0 + h - 5); }
+  ctx.moveTo(x0, y0 + (h - 5) / 2); ctx.lineTo(x1, y0 + (h - 5) / 2); ctx.stroke();
+}
+// 提案
+const LW = { top: "#d8c7a2", topEdge: "#f2e6c8", face: "#86704f", mortar: "#4c3d2a", outline: "#241c13" };
+function newWall(ctx, X, Y, joinL, joinR) {
+  const x0 = X + (joinL ? 0 : 4), x1 = X + (joinR ? T : T - 4);
+  const capY = Y + T * 0.3, capH = T * 0.16, faceH = T * 0.26, faceY = capY + capH;
+  // 投影（落向右下）
+  ctx.fillStyle = "rgba(0,0,0,0.42)"; ctx.fillRect(x0 + 4, faceY + faceH, x1 - x0, 7);
+  // 正面：錯縫磚
+  ctx.fillStyle = LW.face; ctx.fillRect(x0, faceY, x1 - x0, faceH);
+  ctx.strokeStyle = LW.mortar; ctx.lineWidth = 1.5; ctx.beginPath();
+  const rowH = faceH / 2;
+  ctx.moveTo(x0, faceY + rowH); ctx.lineTo(x1, faceY + rowH);
+  for (let r = 0; r < 2; r++) for (let bx = X + (r ? 8 : 17); bx < x1 - 1; bx += 17) if (bx > x0 + 1) { ctx.moveTo(bx, faceY + r * rowH); ctx.lineTo(bx, faceY + (r + 1) * rowH); }
+  ctx.stroke();
+  // 頂面（壓頂石）
+  ctx.fillStyle = LW.top; ctx.fillRect(x0, capY, x1 - x0, capH);
+  ctx.fillStyle = LW.topEdge; ctx.fillRect(x0, capY, x1 - x0, 2);
+  ctx.strokeStyle = "rgba(76,61,42,0.6)"; ctx.lineWidth = 1; ctx.beginPath();
+  for (let bx = X + 13; bx < x1 - 1; bx += 26) if (bx > x0 + 1) { ctx.moveTo(bx, capY); ctx.lineTo(bx, capY + capH); }
+  ctx.stroke();
+  // 外框：只框外輪廓（相連的那一邊不框）
+  ctx.strokeStyle = LW.outline; ctx.lineWidth = 2; ctx.beginPath();
+  ctx.moveTo(x0, capY); ctx.lineTo(x1, capY);
+  ctx.moveTo(x0, faceY + faceH); ctx.lineTo(x1, faceY + faceH);
+  if (!joinL) { ctx.moveTo(x0, capY); ctx.lineTo(x0, faceY + faceH); }
+  if (!joinR) { ctx.moveTo(x1, capY); ctx.lineTo(x1, faceY + faceH); }
+  ctx.stroke();
+  ctx.strokeStyle = "rgba(36,28,19,0.7)"; ctx.lineWidth = 1; ctx.beginPath(); ctx.moveTo(x0, faceY); ctx.lineTo(x1, faceY); ctx.stroke();
+}
+function unit(ctx, X, Y) {
+  const cx = X + T / 2, cy = Y + T / 2;
+  ctx.fillStyle = "rgba(0,0,0,0.3)"; ctx.beginPath(); ctx.ellipse(cx, cy + 12, 15, 6, 0, 0, 7); ctx.fill();
+  ctx.fillStyle = "#3d7bd8"; ctx.strokeStyle = "#111"; ctx.lineWidth = 1.5;
+  ctx.beginPath(); ctx.ellipse(cx, cy + 4, 9, 11, 0, 0, 7); ctx.fill(); ctx.stroke();
+  ctx.fillStyle = "#f0c8a0"; ctx.beginPath(); ctx.arc(cx, cy - 10, 7, 0, 7); ctx.fill(); ctx.stroke();
+}
+function scene(ctx, ox, oy, k, wall) {
+  ctx.save(); ctx.translate(ox, oy); ctx.scale(k, k);
+  for (const [row, kind] of [[0, "stone"], [2, "grass"]]) {
+    for (let y = 0; y < 2; y++) for (let x = 0; x < 5; x++) floor(ctx, x * T, (row + y) * T, kind);
+    wall(ctx, 0, (row + 1) * T, false, false);
+    for (let i = 2; i < 5; i++) wall(ctx, i * T, (row + 1) * T, i > 2, i < 4);
+    unit(ctx, 3 * T, row * T);
+  }
+  ctx.restore();
+}
+for (const [id, wall] of [["old", oldWall], ["neu", newWall]]) {
+  const cv = document.getElementById(id); cv.width = 420; cv.height = 4 * T * 1.4;
+  const ctx = cv.getContext("2d"); ctx.fillStyle = "#2b2f36"; ctx.fillRect(0, 0, cv.width, cv.height);
+  scene(ctx, 0, 0, 1.4, wall);
+  ctx.save(); ctx.beginPath(); ctx.rect(5 * T * 1.4 + 6, 0, 200, cv.height); ctx.clip();
+  scene(ctx, 5 * T * 1.4 + 6, 0, 0.6, wall);
+  ctx.restore();
+}
+</script>
+</body>
+</html>
