@@ -1,4 +1,5 @@
-// 「版面」彈出面板（Phase 3-10）：右側窄欄寬、底部列高、主角狀態卡寬、地圖縮放的滑桿與「重設為預設」。
+// 「版面」彈出面板（Phase 3-10）：右側窄欄寬、底部列高、主角狀態卡寬、地圖縮放的滑桿與「重設為預設」；
+// 技能特效的畫面震動開關（Phase 3-12）。
 import { ZOOM_MAX, ZOOM_MIN, zoomPercent, type LayoutLimits, type LayoutPrefs, type Range } from "../battle/layoutPrefs";
 
 interface Props {
@@ -10,6 +11,9 @@ interface Props {
   narrow: boolean;
   onChange(patch: Partial<LayoutPrefs>): void;
   onReset(): void;
+  /** 技能特效的畫面震動（Phase 3-12；另外存，不受「重設為預設」影響）。 */
+  shake: boolean;
+  onShake(on: boolean): void;
 }
 
 function SliderRow({
@@ -46,7 +50,7 @@ function SliderRow({
   );
 }
 
-export function LayoutPanel({ prefs, limits, scale, narrow, onChange, onReset }: Props) {
+export function LayoutPanel({ prefs, limits, scale, narrow, onChange, onReset, shake, onShake }: Props) {
   return (
     <div className="layout-panel" aria-label="版面設定">
       <div className="section-title">版面</div>
@@ -84,6 +88,10 @@ export function LayoutPanel({ prefs, limits, scale, narrow, onChange, onReset }:
           onChange={(e) => onChange({ zoom: Number(e.target.value) / 100 })}
         />
         <span className="layout-value">{prefs.zoom === null ? `自動 ${zoomPercent(scale)}` : zoomPercent(scale)}</span>
+      </label>
+      <label className="layout-check">
+        <input type="checkbox" checked={shake} onChange={(e) => onShake(e.target.checked)} />
+        <span>技能特效的畫面震動</span>
       </label>
       <div className="layout-actions">
         <button type="button" disabled={prefs.zoom === null} onClick={() => onChange({ zoom: null })}>

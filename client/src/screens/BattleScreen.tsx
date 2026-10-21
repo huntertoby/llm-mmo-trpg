@@ -106,6 +106,7 @@ import { TelegraphPanel } from "../ui/TelegraphPanel";
 import { TurnBar } from "../ui/TurnBar";
 import { UnitInfo } from "../ui/UnitInfo";
 import { useSkillCards, useSkillNames } from "../ui/useSkillCards";
+import { loadShake, saveShake } from "../battle/vfxPrefs";
 import { usePreview } from "../ui/usePreview";
 
 interface Props {
@@ -182,6 +183,9 @@ export function BattleScreen({ initial, onExit, exitLabel, runMode }: Props) {
   /** 縮放前記下捲動區中心的相對位置，縮放後還原，讓畫面不跳。 */
   const anchorRef = useRef<{ fx: number; fy: number } | null>(null);
   const [speed, setSpeed] = useState<PlaySpeed>(loadSpeed);
+  /** 技能特效的畫面震動（Phase 3-12，「版面」面板可關閉）。 */
+  const [shake, setShake] = useState<boolean>(loadShake);
+  const shakeRef = useRef(shake);
   const [modeKey, setModeKey] = useState<string | null>(null);
   /** 投擲物件的兩段選取：第一段選好（舉起）的物件 ID；`null` ＝ 還在選物件。 */
   const [hurlPick, setHurlPick] = useState<string | null>(null);
@@ -201,6 +205,10 @@ export function BattleScreen({ initial, onExit, exitLabel, runMode }: Props) {
     speedRef.current = speed;
     saveSpeed(speed);
   }, [speed]);
+  useEffect(() => {
+    shakeRef.current = shake;
+    saveShake(shake);
+  }, [shake]);
 
   // ---- 派生資料 --------------------------------------------------------------
   const view = response.view;
@@ -212,9 +220,12 @@ export function BattleScreen({ initial, onExit, exitLabel, runMode }: Props) {
     for (const id of Object.keys(hero?.cooldowns ?? {})) ids.add(id);
     const copied = response.pending?.copy_skill_id; // 複製技能暫停時，被複製的技能（要顯示名稱）
     if (copied != null) ids.add(copied);
+    for (const u of view.units) for (const id of u.skills) ids.add(id); // 技能特效要所有單位的技能形狀（Phase 3-12）
     return [...ids].sort();
-  }, [hero, response.legal_actions, response.pending]);
+  }, [hero, response.legal_actions, response.pending, view]);
   const cards = useSkillCards(skillIds, battleId);
+  const cardsRef = useRef(cards);
+  cardsRef.current = cards;
   const skillNames = useSkillNames(cards);
   const names = useMemo(() => unitNames(shown), [shown]);
   const liveNames = useMemo(() => unitNames(view), [view]);
@@ -384,6 +395,12 @@ export function BattleScreen({ initial, onExit, exitLabel, runMode }: Props) {
         case "move":
           await rendererRef.current?.animate([op.anim], skip);
           break;
+        case "vfx":
+          // 技能特效：蓄力與飛行物先播，等到命中才更新畫面與浮動數字（略過時不播）
+          if (skip()) break;
+          rendererRef.current?.playVfx(op.vfx, op.impactMs, shakeRef.current);
+          if (op.vfx.leadMs > 0) await sleep(op.vfx.leadMs);
+          break;
         case "view":
           flushSync(() => setShown(op.view));
           break;
@@ -406,7 +423,7 @@ export function BattleScreen({ initial, onExit, exitLabel, runMode }: Props) {
       skipRef.current = false;
       setPlaying(true);
       try {
-        const plan = playbackPlan(res, heroId, speedRef.current);
+        const plan = playbackPlan(res, heroId, speedRef.current, cardsRef.current);
         flushSync(() => {
           setActing(undefined);
           setShown(plan.initialView);
@@ -765,6 +782,8 @@ export function BattleScreen({ initial, onExit, exitLabel, runMode }: Props) {
           narrow={narrow}
           onChange={patchLayout}
           onReset={() => setLayoutPref(DEFAULT_LAYOUT)}
+          shake={shake}
+          onShake={setShake}
         />
       ),
     },

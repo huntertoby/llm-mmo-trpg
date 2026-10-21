@@ -362,6 +362,13 @@ button.primary {
   color: var(--muted);
 }
 
+.layout-check {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 13px;
+}
+
 .layout-actions {
   display: flex;
   gap: 8px;

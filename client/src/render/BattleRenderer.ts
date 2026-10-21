@@ -20,6 +20,8 @@ import { scaledSize } from "../battle/stageLayout";
 import { HIGHLIGHT } from "../battle/glossary";
 import type { Overlay, OverlayKind } from "../battle/scenePreview";
 import type { TelegraphMark } from "../battle/telegraph";
+import { VFX_TIMING, type StepVfx } from "../battle/vfx";
+import { castEffects, hitEffects, shakeEffect, type Effect } from "./vfxEffects";
 
 export interface DirectionMark {
   pos: Pos;
@@ -96,14 +98,6 @@ const FLOAT_COLORS: Readonly<Record<FloatTone, number>> = {
 const LINE_COLOR = 0xfff1a8;
 const STATUS_COLOR = 0xd9a0ff;
 
-/** 地圖回饋的一個動態效果：`update(t)` 傳入 0–1 的進度；結束時移除。 */
-interface Effect {
-  node: Container;
-  startMs: number;
-  endMs: number;
-  update(t: number): void;
-}
-
 function hpColor(ratio: number): number {
   if (ratio > 0.5) return 0x4cd964;
   if (ratio > 0.25) return 0xffcc00;
@@ -155,6 +149,7 @@ export class BattleRenderer {
 
   destroy(): void {
     this.destroyed = true;
+    for (const e of this.effectList) e.end?.();
     this.effectList = [];
     if (this.ready) this.app.destroy(true, { children: true });
     this.ready = false;
@@ -603,6 +598,31 @@ export class BattleRenderer {
     this.ensureEffectTick();
   }
 
+  /**
+   * 播放一步的技能特效（Phase 3-12）：蓄力、飛行物或光束、命中爆發、受擊閃白與震動。不等待結束；
+   * 描述內的時間已依播放速度縮放，`impactMs` 是命中後爆發的時間。`shake` 為假時不震動（版面設定）。
+   */
+  playVfx(vfx: StepVfx, impactMs: number, shake: boolean): void {
+    if (!this.ready || impactMs <= 0) return;
+    const now = this.effectClock;
+    const scale = impactMs / VFX_TIMING.impact;
+    const chargeMs = Math.round(VFX_TIMING.charge * scale);
+    const effects: Effect[] = [];
+    const auraHits = vfx.casts.some((c) => c.kind === "aura");
+    for (const cast of vfx.casts) effects.push(...castEffects(cast, now, impactMs, chargeMs));
+    for (const hit of vfx.hits) effects.push(...hitEffects(hit, now, impactMs, auraHits));
+    if (shake && vfx.shake > 0 && vfx.hits.length > 0) {
+      const first = Math.min(...vfx.hits.map((h) => h.atMs));
+      const stage = this.app.stage;
+      effects.push(shakeEffect(vfx.shake === 2 ? 2 : 1, now + first, impactMs * (vfx.shake === 2 ? 0.55 : 0.35), (x, y) => stage.position.set(x, y)));
+    }
+    for (const e of effects) {
+      this.effects.addChild(e.node);
+      this.effectList.push(e);
+    }
+    this.ensureEffectTick();
+  }
+
   private makeEffect(item: FeedbackItem, now: number, durationMs: number): Effect {
     if (item.kind === "line") return this.lineEffect(item.from, item.to, now, durationMs);
     const c = tileCenter(item.pos);
@@ -675,6 +695,7 @@ export class BattleRenderer {
       const alive: Effect[] = [];
       for (const e of this.effectList) {
         if (this.effectClock >= e.endMs) {
+          e.end?.();
           e.node.destroy({ children: true });
           continue;
         }
