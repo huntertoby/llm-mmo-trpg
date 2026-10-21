@@ -123,13 +123,13 @@ keywords:
       - {effect: reveal}
       - {effect: apply_status, status: overwatch}
       - {effect: apply_status, status: silenced}   # 暫定：控制型的標記（被盯上的目標）：沉默、恐懼、嘲諷、中毒
-      - {effect: apply_status, status: feared}
-      - {effect: apply_status, status: taunted}
-      - {effect: apply_status, status: poison}
+      - {effect: apply_status, status: feared}   # 暫定
+      - {effect: apply_status, status: taunted}   # 暫定
+      - {effect: apply_status, status: poison}   # 暫定
       - {effect: rule_change, rule: bleeding_wake}   # 暫定：血痕標記路徑上的敵人
       - {effect: copy_skill}   # 暫定
       - {change: area_delta}   # 暫定：吼叫（嘲諷）範圍 +1
-      - {change: damage_permille, applies_to: all_attacks, unconditional: true}
+      - {change: damage_permille, applies_to: all_attacks, unconditional: true}   # 暫定：無條件的全攻擊傷害修正
     uses:
       - {condition: target_has_status, status: marked}
       - {effect: detonate_runes}
@@ -144,8 +144,8 @@ keywords:
       - {effect: leap}
       - {effect: grant_skill, skill: skill_flight}
       - {effect: teleport_target}   # 暫定：把人調到別的位置（高低差）
-      - {effect: swap_any}
-      - {trigger: on_move}
+      - {effect: swap_any}   # 暫定
+      - {trigger: on_move}   # 暫定
       - {effect: grant_ap}   # 暫定
     uses:
       - {condition: height_advantage}
@@ -159,7 +159,7 @@ keywords:
       - {effect: create_surface, surface: smoke}
       - {effect: create_surface, surface: darkness}
       - {effect: damage, element: shadow}
-      - {effect: place_trap}
+      - {effect: place_trap}   # 通用：陷阱藏在落葉底下
     uses:
       - {condition: self_concealed}
       - {condition: from_behind}
@@ -171,16 +171,16 @@ keywords:
       - {effect: rule_change, rule: afterimage_double}
     uses:
       - {condition: adjacent_ally}   # 通用：召喚物也是友方；以下是對友方生效的效果（召喚物也算友方）
-      - {effect: apply_status, affects: allies}
-      - {effect: restore_resource, affects: allies}
-      - {effect: reset_cooldown, affects: allies}
-      - {effect: grant_skill, affects: allies}
-      - {effect: redirect_damage}
-      - {effect: extra_reaction, affects: allies}
-      - {effect: cheat_death, affects: allies}
-      - {effect: zone, affects: allies}
-      - {effect: swap, affects: allies}
-      - {effect: revive}
+      - {effect: apply_status, affects: allies}   # 通用
+      - {effect: restore_resource, affects: allies}   # 通用
+      - {effect: reset_cooldown, affects: allies}   # 通用
+      - {effect: grant_skill, affects: allies}   # 通用
+      - {effect: redirect_damage}   # 通用
+      - {effect: extra_reaction, affects: allies}   # 通用
+      - {effect: cheat_death, affects: allies}   # 通用
+      - {effect: zone, affects: allies}   # 通用
+      - {effect: swap, affects: allies}   # 通用
+      - {effect: revive}   # 通用
       - {change: summon_hp_permille}
       - {change: summon_attack_dice}
-      - {effect: intercept}
+      - {effect: intercept}   # 通用
