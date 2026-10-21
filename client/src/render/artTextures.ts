@@ -6,9 +6,14 @@ import { TILE_SIZE } from "../battle/geometry";
 import { drawObject, objectArtKey, type ObjectArtSpec } from "./objectArt";
 import { ART_T, drawTile, tileArtKey, type TileArtSpec } from "./terrainArt";
 import type { Ctx } from "./artDraw";
+import type { Facing } from "../api/types";
+import { dollKey, type DollSpec } from "./appearance";
+import { renderFigureCanvas } from "./paperdoll";
 
 /** 貼圖解析度倍率（相對 TILE_SIZE）。 */
 export const ART_RESOLUTION = 2;
+/** 小人貼圖解析度倍率（相對虛擬像素）。 */
+export const FIGURE_RESOLUTION = 3;
 
 function paint(draw: (ctx: Ctx) => void): Texture | null {
   if (typeof document === "undefined") return null;
@@ -58,6 +63,19 @@ export class ArtTextures {
 
   object(spec: ObjectArtSpec): Texture | null {
     return this.get(`o|${objectArtKey(spec)}`, (ctx) => drawObject(ctx, spec));
+  }
+
+  /** 紙娃娃小人貼圖（鍵 ＝ 裝備組合＋朝向＋姿勢）；沒有 DOM 時回傳 `null`。 */
+  figure(spec: DollSpec, facing: Facing, downed: boolean): Texture | null {
+    const key = `f|${dollKey(spec, facing, downed)}`;
+    this.used.add(key);
+    const hit = this.cache.get(key);
+    if (hit !== undefined) return hit;
+    const canvas = renderFigureCanvas(spec, facing, downed, FIGURE_RESOLUTION);
+    if (canvas === null) return null;
+    const tex = Texture.from(canvas);
+    this.cache.set(key, tex);
+    return tex;
   }
 
   destroy(): void {

@@ -35,6 +35,7 @@ export function unit(id: string, team: "ally" | "enemy", x: number, y: number, o
     speed: 4,
     initiative: 10,
     weapon_name_zh: "劍",
+    weapon_id: "one_handed_sword",
     tags: [],
     skills: [],
     statuses: [],
