@@ -1,0 +1,107 @@
+<!doctype html>
+<html lang="zh-Hant">
+<head>
+<meta charset="utf-8">
+<title>武器擴充造型</title>
+<style>
+  body { margin: 0; padding: 18px 22px; background: #1b1e24; color: #e8e8ea; font-family: "Noto Sans TC", "Microsoft JhengHei", sans-serif; width: 1500px; }
+  h1 { font-size: 22px; margin: 0 0 4px; }
+  h2 { font-size: 16px; margin: 0 0 8px; }
+  .sub { color: #a0a4ad; font-size: 13px; margin-bottom: 12px; }
+  .note { color: #8a8f99; font-size: 11px; margin-top: 6px; line-height: 1.5; }
+  .box { background: #262a32; border-radius: 10px; padding: 12px; margin-bottom: 14px; }
+  .row { display: flex; gap: 14px; align-items: flex-start; flex-wrap: wrap; }
+  .kind { background: #1f2229; border-radius: 8px; padding: 4px 5px 5px; }
+  .kind .kn { font-size: 12px; color: #ffe9a8; text-align: center; margin-bottom: 2px; }
+  .kind .kn small { color: #8a8f99; font-size: 10px; }
+  .kind .fs { display: flex; gap: 3px; }
+  .ic { text-align: center; font-size: 10px; color: #c8cad0; }
+  .ic canvas { display: block; margin: 0 auto 1px; }
+  .strip { display: flex; gap: 6px; align-items: flex-end; margin: 4px 0 10px; }
+  .strip .lab { width: 74px; font-size: 12px; color: #c8cad0; align-self: center; }
+  .doll { text-align: center; font-size: 12px; color: #c8cad0; background: #1f2229; border-radius: 8px; padding: 6px; }
+</style>
+</head>
+<body>
+<h1>武器擴充的造型（#34，08-裝備.md 8.11）</h1>
+<div class="sub">新武器都照組裝規則：造型 × 形制 × 材質 ＋ 關鍵字 ＋ 稀有度。成對武器算一件，圖示畫兩把；紙娃娃左右手各拿一把。</div>
+
+<div class="box"><h2>① 第一批（跟 3-24）</h2><div class="row" id="b1"></div></div>
+<div class="box"><h2>② 第二批（跟裝備系統）</h2><div class="row" id="b2"></div></div>
+
+<div class="row">
+  <div class="box" style="flex:1"><h2>③ 關鍵字與稀有度（同規則套到新武器）</h2><div id="vars"></div></div>
+  <div class="box"><h2>④ 槍的風格包（第一季只有通用）</h2><div id="sty"></div>
+    <div class="note">通用版＝燧發、獵槍等奇幻火器；科技風包把三種槍都換成能量槍，<br>形制仍決定長短。</div></div>
+</div>
+
+<div class="box"><h2>⑤ 紙娃娃持新武器</h2><div class="row" id="dolls"></div>
+  <div class="note">成對武器：主手、副手各畫一把同樣的武器。拳套畫在兩手上。</div></div>
+
+<script src="paperdoll.js"></script>
+<script src="gearArt.js"></script>
+<script>
+const G = GearArt;
+const ic = (it, px = 56, label) => { const d = document.createElement("div"); d.className = "ic"; d.appendChild(G.icon(it, px)); if (label != null) d.insertAdjacentHTML("beforeend", label); return d; };
+function kindBox(el, k, note, mat) {
+  const K = G.KINDS[k];
+  const box = document.createElement("div"); box.className = "kind"; box.innerHTML = `<div class="kn">${K.zh}${note ? ` <small>${note}</small>` : ""}</div>`;
+  const fs = document.createElement("div"); fs.className = "fs";
+  for (const [f, fz] of Object.entries(K.forms)) if (!(k === "staff" && f !== "totem" && note)) fs.appendChild(ic({ kind: k, form: f, material: mat ?? K.def, rarity: "common" }, 56, fz));
+  box.appendChild(fs); el.appendChild(box);
+}
+const b1 = document.getElementById("b1");
+kindBox(b1, "crossbow"); kindBox(b1, "longgun"); kindBox(b1, "staff", "新增形制", "wood");
+const b1old = document.createElement("div"); b1old.className = "kind"; b1old.innerHTML = `<div class="kn">已有 <small>斧・錘・矛・圓盾</small></div>`;
+const fo = document.createElement("div"); fo.className = "fs";
+for (const it of [{ kind: "axe", form: "battle" }, { kind: "hammer", form: "warhammer" }, { kind: "spear", form: "spear" }, { kind: "round_shield", form: "banded", material: "iron" }]) fo.appendChild(ic({ ...it, rarity: "common" }, 56, G.KINDS[it.kind].forms[it.form]));
+b1old.appendChild(fo); b1.appendChild(b1old);
+
+const b2 = document.getElementById("b2");
+for (const k of ["pistol", "shotgun", "fist", "scythe", "whip"]) kindBox(b2, k);
+kindBox(b2, "dual_dagger", "成對"); kindBox(b2, "dual_pistol", "成對");
+
+const vars = document.getElementById("vars");
+function strip(label, items) {
+  const s = document.createElement("div"); s.className = "strip"; s.insertAdjacentHTML("beforeend", `<div class="lab">${label}</div>`);
+  for (const [it, l] of items) s.appendChild(ic(it, 56, l)); vars.appendChild(s);
+}
+const KW = ["ignite", "wet", "shock", "freeze", "impact", "mark", "hidden", "summon"];
+strip("弩", KW.map((k) => [{ kind: "crossbow", form: "heavy", material: "wood", keywords: [k], rarity: "rare" }, G.KEYWORD[k].zh]));
+strip("鐮刀", KW.map((k) => [{ kind: "scythe", form: "long", material: "steel", keywords: [k], rarity: "rare" }, G.KEYWORD[k].zh]));
+strip("稀有度", Object.entries(G.RARITY).map(([r, v]) => [{ kind: "dual_dagger", form: "kris", material: "steel", keywords: r === "common" ? [] : ["hidden"], rarity: r }, `雙匕首・${v[1]}`]));
+strip("稀有度", Object.entries(G.RARITY).map(([r, v]) => [{ kind: "longgun", form: "sniper", material: "steel", keywords: r === "common" ? [] : ["mark"], rarity: r }, `長槍・${v[1]}`]));
+
+const sty = document.getElementById("sty");
+const sg = document.createElement("div"); sg.style.display = "grid"; sg.style.gridTemplateColumns = "60px repeat(4, 64px)"; sg.style.gap = "6px"; sg.style.alignItems = "center";
+sg.innerHTML = `<div></div>${["長槍", "霰彈槍", "手槍", "雙手槍"].map((n) => `<div class="ic" style="font-size:12px">${n}</div>`).join("")}`;
+for (const [lab, style] of [["通用", "common"], ["科技", "scifi"]]) {
+  sg.insertAdjacentHTML("beforeend", `<div class="ic" style="font-size:12px;text-align:right">${lab}</div>`);
+  for (const it of [{ kind: "longgun", form: "sniper" }, { kind: "shotgun", form: "pump" }, { kind: "pistol", form: "revolver" }, { kind: "dual_pistol", form: "revolver" }]) sg.appendChild(ic({ ...it, material: "steel", keywords: ["shock"], rarity: "rare", style }, 56, ""));
+}
+sty.appendChild(sg);
+
+const D = window.PaperDoll;
+const OUT = [
+  ["弩", "hero_archer", { main_hand: { kind: "crossbow", material: "wood" }, body: { kind: "leather", material: "leather" } }],
+  ["長槍", "hero_archer", { main_hand: { kind: "longgun", material: "steel" }, body: { kind: "leather", material: "leather", color: "#3a3a42" } }],
+  ["雙手槍", "hero_fighter", { main_hand: { kind: "pistol", material: "steel" }, off_hand: { kind: "pistol", material: "steel" }, body: { kind: "leather", material: "leather", color: "#5a2a2a" } }],
+  ["霰彈槍", "hero_fighter", { main_hand: { kind: "shotgun", material: "iron" }, body: { kind: "mail", material: "iron" } }],
+  ["雙匕首", "hero_archer", { main_hand: { kind: "dagger", material: "steel" }, off_hand: { kind: "dagger", material: "steel" }, body: { kind: "leather", material: "leather", color: "#2a2a32" }, head: { kind: "hood", material: "cloth", color: "#2a2a32" } }],
+  ["拳套", "hero_fighter", { main_hand: { kind: "fist", form: "katar", material: "steel" }, off_hand: { kind: "fist", form: "katar", material: "steel" }, body: { kind: "shirt", material: "cloth", color: "#b83a3a" } }],
+  ["鐮刀", "hero_mage", { main_hand: { kind: "scythe", material: "steel", element: "shadow" }, body: { kind: "robe", material: "cloth", color: "#2a2a32" } }],
+  ["鞭", "hero_archer", { main_hand: { kind: "whip", material: "leather" }, body: { kind: "leather", material: "leather" } }],
+  ["圖騰杖", "hero_mage", { main_hand: { kind: "staff", material: "wood", element: "poison" }, body: { kind: "robe", material: "cloth", color: "#3f6a32" } }],
+];
+const dollsEl = document.getElementById("dolls");
+for (const [n, tpl, gear] of OUT) {
+  const d = document.createElement("div"); d.className = "doll";
+  const cv = document.createElement("canvas"); cv.width = 220; cv.height = 240; cv.style.width = "110px"; cv.style.height = "120px";
+  const ctx = cv.getContext("2d"); ctx.scale(2, 2);
+  const look = D.TEMPLATES[tpl].look;
+  D.stamp(ctx, { look, gear: { feet: { kind: "boots", material: "leather" }, ...gear } }, "south", 55, 110, 1.75);
+  d.appendChild(cv); d.insertAdjacentHTML("beforeend", `<div>${n}</div>`); dollsEl.appendChild(d);
+}
+</script>
+</body>
+</html>

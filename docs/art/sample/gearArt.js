@@ -47,8 +47,18 @@ window.GearArt = (() => {
     hammer: { slot: "main", zh: "錘", forms: { mace: "釘頭錘", warhammer: "戰錘", flail: "連枷" }, mats: [...METAL], def: "iron" },
     spear: { slot: "main", zh: "矛", forms: { spear: "長矛", halberd: "戟", trident: "三叉戟" }, mats: [...METAL, "wood"], def: "iron" },
     bow: { slot: "main", zh: "弓", forms: { short: "短弓", long: "長弓", recurve: "反曲弓" }, mats: ["wood", ...METAL], def: "wood" },
-    gun: { slot: "main", zh: "槍", forms: { pistol: "手槍", rifle: "步槍", shotgun: "霰彈槍", energy: "能量槍" }, mats: [...METAL, "wood"], def: "steel" },
-    staff: { slot: "main", zh: "杖", forms: { long: "長杖", scepter: "權杖", wand: "短杖" }, mats: ["wood", ...METAL, "bone", "crystal"], def: "wood" },
+    crossbow: { slot: "main", zh: "弩", forms: { light: "輕弩", heavy: "重弩", repeater: "連弩" }, mats: ["wood", ...METAL], def: "wood" },
+    longgun: { slot: "main", zh: "長槍", forms: { flintlock: "燧發長槍", hunting: "獵槍", sniper: "狙擊長槍" }, mats: [...METAL], def: "steel" },
+    shotgun: { slot: "main", zh: "霰彈槍", forms: { blunderbuss: "喇叭槍", double: "雙管", pump: "泵動" }, mats: [...METAL], def: "iron" },
+    pistol: { slot: "main", zh: "手槍", forms: { flintlock: "燧發手槍", revolver: "左輪", derringer: "短銃" }, mats: [...METAL], def: "steel" },
+    dual_pistol: { slot: "main", zh: "雙手槍", forms: { flintlock: "燧發手槍", revolver: "左輪", derringer: "短銃" }, mats: [...METAL], def: "steel", pair: true },
+    fist: { slot: "main", zh: "拳套", forms: { katar: "拳刃", knuckle: "鐵拳", claw: "爪" }, mats: [...METAL, "bone", "leather"], def: "iron" },
+    scythe: { slot: "main", zh: "鐮刀", forms: { long: "長柄鐮", crescent: "彎月鐮", hook: "鉤鐮" }, mats: [...METAL, "bone"], def: "iron" },
+    whip: { slot: "main", zh: "鞭", forms: { leather: "皮鞭", chain: "鏈鞭", bladed: "蛇骨鞭" }, mats: ["leather", ...METAL, "bone"], def: "leather" },
+    dual_dagger: { slot: "main", zh: "雙匕首", forms: { short: "短刀", stiletto: "三稜刺", kris: "彎匕" }, mats: [...METAL, "bone", "crystal"], def: "iron", pair: true },
+    // 舊樣張（gear3.html）用的合併造型；正式清單改用 longgun／shotgun／pistol
+    gun: { legacy: true, slot: "main", zh: "槍", forms: { pistol: "手槍", rifle: "步槍", shotgun: "霰彈槍", energy: "能量槍" }, mats: [...METAL, "wood"], def: "steel" },
+    staff: { slot: "main", zh: "杖", forms: { long: "長杖", scepter: "權杖", wand: "短杖", totem: "圖騰杖" }, mats: ["wood", ...METAL, "bone", "crystal"], def: "wood" },
     round_shield: { slot: "off", zh: "圓盾", forms: { wood: "木圓盾", banded: "包鐵圓盾" }, mats: ["wood", ...METAL], def: "wood" },
     kite_shield: { slot: "off", zh: "鳶盾", forms: { kite: "鳶盾", tower: "塔盾" }, mats: [...METAL], def: "iron" },
     tome: { slot: "off", zh: "法書", forms: { book: "典籍", scroll: "卷軸匣" }, mats: ["leather", "cloth"], def: "leather" },
@@ -421,6 +431,187 @@ window.GearArt = (() => {
     return [[mx + 2, my - 4], [24, 44]];
   };
 
+  // ======== 武器擴充（#34，08-裝備.md 8.11）========
+  const WOOD = "#7a5232", WOOD_D = "#4e321c";
+  /** 以槍身方向（往右上 −0.42 rad）畫；回傳槍口位置（64 格座標）。 */
+  function gunFrame(ctx, fn, muzzle) {
+    ctx.save(); ctx.translate(32, 34); ctx.rotate(-0.42); fn(); ctx.restore();
+    const a = -0.42;
+    return [32 + Math.cos(a) * muzzle[0] - Math.sin(a) * muzzle[1], 34 + Math.sin(a) * muzzle[0] + Math.cos(a) * muzzle[1]];
+  }
+  function flintHammer(ctx, x, y) { shape(ctx, "#454c58", () => { ctx.moveTo(x, y); ctx.lineTo(x - 2, y - 6); ctx.lineTo(x + 2, y - 7); ctx.lineTo(x + 3, y); ctx.closePath(); }, 1.2); }
+  D.longgun = (ctx, r, P) => {
+    const m = gunFrame(ctx, () => {
+      if (r.form === "flintlock") {
+        shape(ctx, WOOD, () => { ctx.moveTo(-28, -2); ctx.lineTo(-14, -6); ctx.lineTo(16, -6); ctx.lineTo(16, -2); ctx.lineTo(-12, 0); ctx.lineTo(-28, 6); ctx.closePath(); });
+        shape(ctx, P.a, () => ctx.roundRect(-12, -9, 40, 3.5, 1.2), 1.5);
+        for (const x of [-2, 10]) shape(ctx, P.d, () => ctx.roundRect(x, -9.5, 2.5, 7, 0.8), 1);
+        flintHammer(ctx, -10, -6);
+      } else if (r.form === "hunting") {
+        shape(ctx, WOOD, () => { ctx.moveTo(-28, -3); ctx.lineTo(-12, -6); ctx.lineTo(-10, 2); ctx.lineTo(-28, 6); ctx.closePath(); });
+        shape(ctx, P.a, () => ctx.roundRect(-12, -7, 18, 7, 1.5));
+        shape(ctx, P.d, () => ctx.roundRect(6, -6, 22, 3.5, 1), 1.5);
+        shape(ctx, WOOD, () => ctx.roundRect(6, -2.5, 14, 3.5, 1.2), 1.2);
+        shape(ctx, P.d, () => { ctx.moveTo(-6, 0); ctx.lineTo(-1, 0); ctx.lineTo(-3, 8); ctx.lineTo(-8, 8); ctx.closePath(); });
+      } else {
+        shape(ctx, P.d, () => { ctx.moveTo(-28, -4); ctx.lineTo(-12, -6); ctx.lineTo(-10, 2); ctx.lineTo(-22, 2); ctx.lineTo(-28, 6); ctx.closePath(); });
+        shape(ctx, P.a, () => ctx.roundRect(-12, -7, 20, 7, 1.5));
+        shape(ctx, P.d, () => ctx.roundRect(8, -5.5, 22, 3, 1), 1.5);
+        shape(ctx, "#2a2d33", () => ctx.roundRect(-8, -14, 16, 5, 2), 1.5); // 瞄準鏡
+        shape(ctx, "#8fe3ff", () => ctx.arc(8, -11.5, 1.6, 0, TAU), 0.8);
+        line(ctx, INK, 1.8, [[18, -2], [14, 8]]); line(ctx, INK, 1.8, [[18, -2], [22, 8]]); // 腳架
+      }
+      shine(ctx, P, [[-10, -8], [8, -8]]);
+    }, [r.form === "flintlock" ? 28 : 30, -6]);
+    return [[m[0] - 2, m[1] - 4], [24, 44]];
+  };
+  D.pistol = (ctx, r, P) => {
+    const m = gunFrame(ctx, () => {
+      ctx.scale(1.4, 1.4);
+      if (r.form === "flintlock") {
+        shape(ctx, WOOD, () => { ctx.moveTo(-6, -6); ctx.lineTo(4, -6); ctx.lineTo(4, -2); ctx.quadraticCurveTo(-4, 0, -10, 10); ctx.lineTo(-15, 8); ctx.quadraticCurveTo(-10, 0, -6, -6); });
+        shape(ctx, P.a, () => ctx.roundRect(-2, -8.5, 20, 3.5, 1.2), 1.5);
+        flintHammer(ctx, -4, -6);
+      } else if (r.form === "revolver") {
+        shape(ctx, P.a, () => ctx.roundRect(-2, -8, 20, 4, 1.2), 1.5);
+        shape(ctx, P.d, () => ctx.roundRect(-4, -9, 9, 8, 2.5), 1.5);
+        for (const x of [-1.5, 2.5]) line(ctx, INK, 1, [[x, -8], [x, -2]]);
+        shape(ctx, WOOD, () => { ctx.moveTo(-6, -4); ctx.lineTo(-2, -2); ctx.lineTo(-6, 10); ctx.lineTo(-11, 8); ctx.closePath(); });
+        line(ctx, INK, 1.6, [[-1, -1], [2, 2], [-1, 3]]);
+      } else {
+        shape(ctx, P.a, () => ctx.roundRect(-4, -9, 14, 3.5, 1), 1.5);
+        shape(ctx, P.a, () => ctx.roundRect(-4, -5.5, 14, 3.5, 1), 1.5);
+        shape(ctx, "#e8bb48", () => ctx.roundRect(-6, -9, 4, 7, 1), 1.2);
+        shape(ctx, WOOD, () => { ctx.moveTo(-6, -2); ctx.lineTo(-2, -2); ctx.lineTo(-4, 6); ctx.lineTo(-8, 5); ctx.closePath(); });
+      }
+      shine(ctx, P, [[0, -7.5], [14, -7.5]]);
+    }, [24, -9]);
+    return [[m[0], m[1] - 4], [24, 44]];
+  };
+  D.shotgun = (ctx, r, P) => {
+    const m = gunFrame(ctx, () => {
+      shape(ctx, WOOD, () => { ctx.moveTo(-28, -3); ctx.lineTo(-12, -7); ctx.lineTo(-10, 2); ctx.lineTo(-28, 7); ctx.closePath(); });
+      if (r.form === "blunderbuss") {
+        shape(ctx, P.a, () => { ctx.moveTo(-12, -8); ctx.lineTo(16, -7); ctx.lineTo(26, -12); ctx.lineTo(26, 2); ctx.lineTo(16, -2); ctx.lineTo(-12, -1); ctx.closePath(); });
+        flintHammer(ctx, -10, -7);
+      } else if (r.form === "double") {
+        shape(ctx, P.a, () => ctx.roundRect(-12, -8, 10, 9, 2));
+        shape(ctx, P.d, () => ctx.roundRect(-2, -8, 28, 4, 1), 1.5); shape(ctx, P.d, () => ctx.roundRect(-2, -4, 28, 4, 1), 1.5);
+        shape(ctx, WOOD, () => ctx.roundRect(0, 0, 10, 3.5, 1.2), 1.2);
+      } else {
+        shape(ctx, P.a, () => ctx.roundRect(-12, -8, 14, 9, 2));
+        shape(ctx, P.d, () => ctx.roundRect(2, -8, 24, 4, 1), 1.5); shape(ctx, P.d, () => ctx.roundRect(2, -4, 24, 4, 1), 1.5);
+        shape(ctx, WOOD, () => ctx.roundRect(6, 0, 12, 4, 1.5), 1.5);
+      }
+      shape(ctx, P.d, () => { ctx.moveTo(-6, 0); ctx.lineTo(-1, 0); ctx.lineTo(-3, 8); ctx.lineTo(-8, 8); ctx.closePath(); });
+      shine(ctx, P, [[-10, -6], [0, -6]]);
+    }, [26, -5]);
+    return [[m[0] - 2, m[1] - 4], [24, 44]];
+  };
+  D.crossbow = (ctx, r, P) => {
+    ctx.save(); ctx.translate(32, 34); ctx.rotate(-Math.PI / 4);
+    const wide = r.form === "heavy" ? 24 : 19;
+    shape(ctx, r.material === "wood" ? WOOD : P.d, () => ctx.roundRect(-3, -14, 6, 32, 2), 1.8); // 弩身
+    ctx.beginPath(); ctx.moveTo(-wide, -4); ctx.quadraticCurveTo(0, -18, wide, -4);
+    ctx.lineWidth = r.form === "heavy" ? 7 : 5.5; ctx.strokeStyle = INK; ctx.stroke(); ctx.lineWidth = r.form === "heavy" ? 4.5 : 3.2; ctx.strokeStyle = P.a; ctx.stroke(); // 弩臂
+    line(ctx, "#e6e0d0", 1, [[-wide + 1, -4], [0, 4], [wide - 1, -4]]); // 弦
+    shape(ctx, "#c3ccd6", () => { ctx.moveTo(0, -22); ctx.lineTo(1.8, -17); ctx.lineTo(-1.8, -17); ctx.closePath(); }, 1); // 弩箭頭
+    line(ctx, "#a06a36", 1.6, [[0, -17], [0, 3]]);
+    if (r.form === "heavy") { shape(ctx, P.d, () => ctx.arc(0, 14, 4.5, 0, TAU), 1.5); line(ctx, INK, 1.6, [[0, 14], [7, 18]]); }
+    if (r.form === "repeater") shape(ctx, WOOD_D, () => ctx.roundRect(-5, -12, 10, 12, 1.5), 1.5);
+    shape(ctx, P.handle, () => ctx.roundRect(-2.5, 6, 5, 9, 1.5), 1.2);
+    ctx.restore();
+    return [[40, 18], [24, 40]];
+  };
+  D.fist = (ctx, r, P) => {
+    // 拳頭朝右上；套在拳上的部分＝P.a
+    ctx.save(); ctx.translate(30, 36); ctx.rotate(-0.6);
+    shape(ctx, "#8a5a32", () => ctx.roundRect(-14, -6, 12, 12, 3), 1.8); // 腕套
+    shape(ctx, "#f0c8a0", () => ctx.roundRect(-3, -8, 13, 16, 5), 1.8); // 拳
+    if (r.form === "katar") {
+      shape(ctx, P.a, () => { ctx.moveTo(8, -4); ctx.lineTo(28, 0); ctx.lineTo(8, 4); ctx.closePath(); });
+      shape(ctx, P.d, () => ctx.roundRect(4, -9, 4, 18, 1), 1.5);
+    } else if (r.form === "knuckle") {
+      shape(ctx, P.a, () => ctx.roundRect(7, -9, 6, 18, 2.5));
+      for (const y of [-6, -1.5, 3]) shape(ctx, P.d, () => ctx.arc(14, y + 1.5, 1.8, 0, TAU), 1);
+    } else {
+      for (const y of [-6, 0, 6]) shape(ctx, P.a, () => { ctx.moveTo(8, y - 1.6); ctx.quadraticCurveTo(22, y - 4, 27, y + 2); ctx.quadraticCurveTo(20, y, 8, y + 1.6); ctx.closePath(); }, 1.5);
+    }
+    ctx.restore();
+    return [[44, 18], [18, 46]];
+  };
+  D.scythe = (ctx, r, P) => {
+    diag(ctx, () => {
+      const len = r.form === "hook" ? 30 : 46;
+      shape(ctx, P.handle, () => ctx.roundRect(-2.2, -24, 4.4, len, 2), 1.5);
+      if (r.form === "long") shape(ctx, P.a, () => { ctx.moveTo(1, -24); ctx.quadraticCurveTo(-18, -30, -26, -12); ctx.quadraticCurveTo(-16, -22, 1, -19); ctx.closePath(); });
+      else if (r.form === "crescent") { shape(ctx, P.a, () => { ctx.moveTo(1, -24); ctx.quadraticCurveTo(-18, -30, -24, -14); ctx.quadraticCurveTo(-14, -22, 1, -19); ctx.closePath(); }); shape(ctx, P.a, () => { ctx.moveTo(-1, -24); ctx.quadraticCurveTo(14, -30, 18, -18); ctx.quadraticCurveTo(10, -23, -1, -20); ctx.closePath(); }); }
+      else shape(ctx, P.a, () => { ctx.moveTo(1, -24); ctx.quadraticCurveTo(-12, -28, -14, -16); ctx.quadraticCurveTo(-10, -12, -7, -15); ctx.quadraticCurveTo(-8, -21, 1, -19); ctx.closePath(); });
+      shine(ctx, P, [[-6, -25], [-14, -22]]);
+    });
+    return [[22, 18], [40, 40]];
+  };
+  D.whip = (ctx, r, P) => {
+    shape(ctx, P.handle, () => { ctx.save(); ctx.translate(16, 48); ctx.rotate(-0.7); ctx.roundRect(-2.5, -10, 5, 14, 2); ctx.restore(); }, 1.5);
+    const pts = []; for (let i = 0; i <= 24; i++) { const t = i / 24; pts.push([20 + t * 34 - Math.sin(t * Math.PI) * 6, 42 - t * 30 + Math.sin(t * Math.PI * 2.2) * 9 * t]); }
+    if (r.form === "chain") {
+      pts.forEach(([x, y], i) => { if (i % 2 === 0) { ctx.beginPath(); ctx.ellipse(x, y, 2.6, 1.8, i * 0.4, 0, TAU); ctx.lineWidth = 2.8; ctx.strokeStyle = INK; ctx.stroke(); ctx.lineWidth = 1.6; ctx.strokeStyle = P.a; ctx.stroke(); } });
+    } else {
+      ctx.beginPath(); pts.forEach(([x, y], i) => (i ? ctx.lineTo(x, y) : ctx.moveTo(x, y)));
+      ctx.lineCap = "round"; ctx.lineWidth = 5; ctx.strokeStyle = INK; ctx.stroke(); ctx.lineWidth = 3; ctx.strokeStyle = r.form === "bladed" ? P.d : P.a; ctx.stroke(); ctx.lineCap = "butt";
+      if (r.form === "bladed") pts.forEach(([x, y], i) => { if (i % 3 === 1) shape(ctx, P.a, () => { ctx.moveTo(x - 3, y + 1); ctx.lineTo(x, y - 4); ctx.lineTo(x + 3, y + 1); ctx.closePath(); }, 1); });
+    }
+    return [[44, 16], [30, 34]];
+  };
+  /** 成對武器：畫兩把（左邊一把縮小、右邊鏡像）。 */
+  function pair(base) {
+    return (ctx, r, P) => {
+      ctx.save(); ctx.translate(32, 33); ctx.scale(0.78, 0.78); ctx.translate(-36, -33); const s = base(ctx, r, P); ctx.restore();
+      ctx.save(); ctx.translate(32, 33); ctx.scale(-0.78, 0.78); ctx.translate(-36, -31); base(ctx, r, P); ctx.restore();
+      return [[32 + (s[0][0] - 36) * 0.78, 33 + (s[0][1] - 33) * 0.78], [32 - (s[0][0] - 36) * 0.78, 33 + (s[0][1] - 31) * 0.78]];
+    };
+  }
+  D.dual_dagger = pair(D.dagger);
+  D.dual_pistol = pair(D.pistol);
+  // 圖騰杖：疊兩張刻臉＋羽毛
+  const baseStaff = D.staff;
+  D.staff = (ctx, r, P) => {
+    if (r.form !== "totem") return baseStaff(ctx, r, P);
+    diag(ctx, () => {
+      shape(ctx, P.a, () => ctx.roundRect(-3, -12, 6, 38, 2), 1.5);
+      for (const [y, c] of [[-26, "#b83a3a"], [-17, "#3a8a8a"]]) {
+        shape(ctx, P.a, () => ctx.roundRect(-6, y, 12, 9, 2.5), 1.5);
+        shape(ctx, c, () => ctx.rect(-4, y + 2, 8, 2), 0.8);
+        shape(ctx, INK, () => ctx.rect(-3, y + 5.5, 6, 1.5), 0);
+      }
+      for (const s of [-1, 1]) shape(ctx, "#e6e6e0", () => { ctx.moveTo(s * 6, -24); ctx.quadraticCurveTo(s * 16, -30, s * 14, -20); ctx.quadraticCurveTo(s * 10, -21, s * 6, -21); ctx.closePath(); }, 1.2);
+      const orb = r.keywords.length ? P.accent : "#7dffb0";
+      shape(ctx, orb, () => ctx.arc(0, -30, 3, 0, TAU), 1.2);
+    });
+    return [[42, 18], [28, 38]];
+  };
+  // 科技風包的槍：全部改成能量槍外型（形制仍決定長短）
+  function energyGun(len) {
+    return (ctx, r, P) => {
+      const glow = r.keywords.length ? P.accent : "#5ad8ff";
+      const m = gunFrame(ctx, () => {
+        const L = len[r.form] ?? 14;
+        shape(ctx, "#e8edf2", () => { ctx.moveTo(-12, -9); ctx.lineTo(L, -9); ctx.quadraticCurveTo(L + 8, -6, L, -1); ctx.lineTo(-12, -1); ctx.closePath(); });
+        if (L > 16) shape(ctx, "#3a3f4a", () => { ctx.moveTo(-26, -6); ctx.lineTo(-12, -8); ctx.lineTo(-12, 0); ctx.lineTo(-26, 4); ctx.closePath(); });
+        shape(ctx, "#3a3f4a", () => { ctx.moveTo(-10, -1); ctx.lineTo(-3, -1); ctx.lineTo(-6, 11); ctx.lineTo(-13, 11); ctx.closePath(); });
+        ctx.save(); ctx.shadowColor = glow; ctx.shadowBlur = 6; shape(ctx, glow, () => ctx.roundRect(-8, -6.5, L + 2, 3, 1.5), 1); ctx.restore();
+        shape(ctx, glow, () => ctx.arc(L + 5, -5, 2.4, 0, TAU), 1.2);
+      }, [26, -5]);
+      return [[m[0] - 2, m[1] - 4], [24, 44]];
+    };
+  }
+  const SCIFI_GUNS = {
+    longgun: energyGun({ flintlock: 26, hunting: 22, sniper: 28 }),
+    pistol: energyGun({ flintlock: 12, revolver: 10, derringer: 6 }),
+    shotgun: energyGun({ blunderbuss: 16, double: 18, pump: 18 }),
+  };
+  SCIFI_GUNS.dual_pistol = pair(SCIFI_GUNS.pistol);
+
   // ---- 風格包：魔導科技（黃銅＋晶能＋符文）----
   const BRASS = "#c8963c", BRASS_D = "#7a5a22";
   const MAGITECH = {
@@ -546,7 +737,7 @@ window.GearArt = (() => {
       return [[40, 20], [24, 40]];
     },
   };
-  const STYLES = { common: {}, eastern: EASTERN, magitech: MAGITECH, scifi: SCIFI, modern: MODERN };
+  const STYLES = { common: {}, eastern: EASTERN, magitech: MAGITECH, scifi: { ...SCIFI, ...SCIFI_GUNS }, modern: MODERN };
 
   // ---- 外框（稀有度）----
   function frame(ctx, rarity) {
@@ -564,7 +755,7 @@ window.GearArt = (() => {
     frame(ctx, r.rarity);
     const fn = STYLES[r.style][r.kind] || D[r.kind];
     // 細長的造型放大一點，讓圖示填滿外框
-    const k = { sword: 1.15, dagger: 1.5, axe: 1.0, hammer: 1.1, spear: 1.05, bow: 1.15, staff: 1.1, gun: 1.15 }[r.kind] ?? 1;
+    const k = { sword: 1.15, dagger: 1.5, axe: 1.0, hammer: 1.1, spear: 1.05, bow: 1.15, staff: 1.1, gun: 1.15, longgun: 1.0, shotgun: 1.0, crossbow: 1.15, scythe: 1.05, dual_dagger: 1.3 }[r.kind] ?? 1;
     ctx.save(); ctx.beginPath(); ctx.roundRect(3, 3, 58, 58, 8); ctx.clip(); ctx.translate(32, 33); ctx.scale(k, k); ctx.translate(-32, -33);
     const spots = fn(ctx, r, P);
     r.keywords.forEach((kw, i) => motif(ctx, kw, ...spots[i % spots.length]));
