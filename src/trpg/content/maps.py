@@ -23,6 +23,8 @@ __all__ = [
     "MAX_HEIGHT",
     "TEST_ARCHETYPE",
     "TRAINING_ARCHETYPE",
+    "AltObjective",
+    "AltObjectives",
     "Archetype",
     "Encounter",
     "MapDef",
@@ -124,6 +126,33 @@ class Objective(ContentModel):
         return self
 
 
+class AltObjective(ContentModel):
+    """地圖可替換的一個勝利條件資料（Phase 3-22）：出口格或守點格，加上輪數。"""
+
+    rounds: int = Field(ge=1)
+    tiles: tuple[tuple[int, int], ...] = Field(min_length=1)
+
+    @model_validator(mode="after")
+    def _check(self) -> AltObjective:
+        if len(set(self.tiles)) != len(self.tiles):
+            raise ValueError("alt_objectives 的 tiles 不可重複")
+        return self
+
+
+class AltObjectives(ContentModel):
+    """地圖支援的替代勝利條件（Phase 3-22）：``escape``（撤離：出口格＋輪數）、``defend``
+    （守點：守點格＋輪數）。至少要有一個。roguelite 抽一輪時依此決定哪些地圖可以撤離或守點。"""
+
+    escape: AltObjective | None = None
+    defend: AltObjective | None = None
+
+    @model_validator(mode="after")
+    def _check(self) -> AltObjectives:
+        if self.escape is None and self.defend is None:
+            raise ValueError("alt_objectives 至少要設定 escape 或 defend 其中之一")
+        return self
+
+
 class Encounter(ContentModel):
     """地圖的預設陣容（單位範本 ID）。"""
 
@@ -198,6 +227,9 @@ class MapDef(ContentModel):
     surfaces: tuple[MapSurfacePlacement, ...] = ()
     start_zones: dict[Team, tuple[tuple[int, int], ...]]
     objective: Objective = Field(default_factory=Objective)
+    alt_objectives: AltObjectives | None = None
+    """可替換的勝利條件（Phase 3-22）：roguelite 抽到撤離或守點時，用這裡的格子與輪數取代
+    ``objective``。格子必須在地圖內、不與任何起始區重疊。"""
     weather: str = Field(default="clear", pattern=ID_PATTERN)
     encounter: Encounter | None = None
     events: tuple[MapEvent, ...] = ()
@@ -212,6 +244,23 @@ class MapDef(ContentModel):
     @property
     def height(self) -> int:
         return self.size[1]
+
+    def supports_objective(self, kind: str) -> bool:
+        """地圖是否有 ``kind``（``escape``／``defend``）的資料；``eliminate`` 一律可以。"""
+        if kind == "eliminate":
+            return True
+        alt = self.alt_objectives
+        return alt is not None and getattr(alt, kind, None) is not None
+
+    def objective_for(self, kind: str) -> Objective:
+        """本地圖在 ``kind`` 勝利條件下的 :class:`Objective`（沒有資料時拋出 ``ValueError``）。"""
+        if kind == "eliminate":
+            return Objective()
+        if kind not in ("escape", "defend") or not self.supports_objective(kind):
+            raise ValueError(f"地圖 {self.id} 沒有 {kind} 的勝利條件資料")
+        assert self.alt_objectives is not None
+        alt: AltObjective = getattr(self.alt_objectives, kind)
+        return Objective(kind=kind, rounds=alt.rounds, tiles=alt.tiles)  # type: ignore[arg-type]
 
     def height_rows(self) -> list[str]:
         return _grid_lines(self.heights)
@@ -291,6 +340,7 @@ class MapDef(ContentModel):
         placed: list[tuple[str, tuple[int, int]]] = [("objects", o.at) for o in self.objects]
         placed += [("surfaces", s.at) for s in self.surfaces]
         placed += [("objective.tiles", t) for t in self.objective.tiles]
+        placed += [(f"alt_objectives.{k}", t) for k, alt in self.alt_pairs() for t in alt.tiles]
         for event in self.events:
             placed += [(f"events（第 {event.round} 輪）", at) for at in event.positions()]
         problems += [
@@ -303,7 +353,17 @@ class MapDef(ContentModel):
         for what, spots in groups:
             dup = sorted({c for c in spots if spots.count(c) > 1})
             problems += [f"{what} 的 {list(c)} 重複（每格最多一個）" for c in dup]
+        for kind, alt in self.alt_pairs():
+            problems += [
+                f"alt_objectives.{kind} 的 {list(t)} 在起始區內" for t in alt.tiles if t in seen
+            ]
         return problems + self._well_problems(seen)
+
+    def alt_pairs(self) -> list[tuple[str, AltObjective]]:
+        if self.alt_objectives is None:
+            return []
+        pairs = (("escape", self.alt_objectives.escape), ("defend", self.alt_objectives.defend))
+        return [(k, alt) for k, alt in pairs if alt is not None]
 
     def _well_problems(self, zones: set[XY]) -> list[str]:
         problems: list[str] = []
@@ -413,6 +473,12 @@ def check_map(
         for x, y in map_def.objective.tiles
         if not passable[y][x]
     ]
+    for kind, alt in map_def.alt_pairs():
+        problems += [
+            f"alt_objectives.{kind} 的 [{x}, {y}] 位於不可站立的格子"
+            for x, y in alt.tiles
+            if not passable[y][x]
+        ]
     problems += [
         f"surfaces 的 {list(s.at)} 位於致命地形"
         for s in map_def.surfaces
@@ -450,4 +516,20 @@ def check_map(
                     f"start_zones.{team.value} 的 {list(cell)} 無法走到 "
                     f"{team.opponent.value} 的起始區（連通性檢查失敗）"
                 )
+    problems += _alt_reach_problems(map_def, grid, passable, core)
+    return problems
+
+
+def _alt_reach_problems(
+    map_def: MapDef, grid: list[list[tuple[int, str]]], passable: Passable, core: CoreRules
+) -> list[str]:
+    """替代勝利條件的格子要走得到：我方每個起始格都能走到至少一格出口（或守點）。"""
+    problems: list[str] = []
+    for kind, alt in map_def.alt_pairs():
+        targets = set(alt.tiles)
+        problems += [
+            f"alt_objectives.{kind} 的目標格無法從我方起始格 {list(cell)} 走到"
+            for cell in map_def.start_zones[Team.ALLY]
+            if not _reachable_from(cell, grid, passable, core) & targets
+        ]
     return problems

@@ -43,6 +43,9 @@ objects:
 start_zones:
   ally: [[0, 3], [1, 4], [0, 5], [1, 6]]
   enemy: [[7, 3], [8, 3], [7, 6], [8, 5]]
+# 勝利條件輪替（Phase 3-22）：roguelite 抽到撤離或守點時用這裡的格子與輪數（初值，未經平衡）。
+alt_objectives:
+  defend: {rounds: 6, tiles: [[3, 4]]}
 encounter:
   allies: [hero_fighter, hero_archer, hero_mage]
   enemies: [bandit_archer, bandit_archer, bandit_shieldbearer, bandit]

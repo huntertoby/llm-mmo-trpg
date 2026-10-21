@@ -15,7 +15,14 @@ from trpg.content.maps import TRAINING_ARCHETYPE, MapDef
 from trpg.content.schemas import ContentModel
 from trpg.shared.types import Team
 
-__all__ = ["BossRules", "EncounterStep", "RunRules", "RunSourceRules", "roguelite_problems"]
+__all__ = [
+    "BossRules",
+    "EncounterStep",
+    "ObjectiveRotation",
+    "RunRules",
+    "RunSourceRules",
+    "roguelite_problems",
+]
 
 
 class EncounterStep(ContentModel):
@@ -48,6 +55,14 @@ class RunSourceRules(ContentModel):
     """進入 Boss 戰前至少 N 點。"""
 
 
+class ObjectiveRotation(ContentModel):
+    """勝利條件輪替（Phase 3-22）：一輪的一般戰鬥中至少幾場撤離、幾場守點，其餘全滅。
+    Boss 戰一律全滅。"""
+
+    min_escape: int = Field(default=0, ge=0)
+    min_defend: int = Field(default=0, ge=0)
+
+
 class RunRules(ContentModel):
     """``content/roguelite.yaml``。"""
 
@@ -58,6 +73,8 @@ class RunRules(ContentModel):
     encounters: tuple[EncounterStep, ...]
     """第 1 場起每場的敵人（長度必須等於 ``battles``）。"""
     boss: BossRules
+    objective_rotation: ObjectiveRotation = Field(default_factory=ObjectiveRotation)
+    """一般戰鬥的勝利條件最少場數（Phase 3-22）。"""
     companions: tuple[str, ...]
     """每場的標準隊友（滿狀態、不升級、不跨戰鬥保留）。"""
     max_rounds: int = Field(ge=1)
@@ -94,6 +111,8 @@ class RunRules(ContentModel):
             raise ValueError(f"campfire_after 必須是 1～{self.battles} 且不重複")
         if self.off_route_per_offer > self.offer_size:
             raise ValueError("off_route_per_offer 不可超過 offer_size")
+        if self.objective_rotation.min_escape + self.objective_rotation.min_defend > self.battles:
+            raise ValueError("objective_rotation 的最少場數總和不可超過 battles")
         if self.boss.map in self.map_pool:
             raise ValueError(f"Boss 地圖 {self.boss.map} 不可在一般地圖池內")
         return self
@@ -138,4 +157,24 @@ def roguelite_problems(
     bad_tiers = sorted({t for t in rules.offer_tier_by_level if t not in tiers})
     if bad_tiers:
         problems.append(f"offer_tier_by_level 有沒有預算的階級：{bad_tiers}")
+    return problems + _rotation_problems(rules, maps)
+
+
+def _rotation_problems(rules: RunRules, maps: Mapping[str, MapDef]) -> list[str]:
+    """勝利條件輪替要「不論抽到哪幾種地圖類型都排得出來」：支援某條件的地圖類型數，至少要有
+    「未被抽中的類型數 ＋ 兩種條件的最少場數總和」（才保證抽中的類型裡有足夠的不同場次可用）。"""
+    rotation = rules.objective_rotation
+    archetypes = {maps[m].archetype for m in rules.map_pool}
+    spare = max(0, len(archetypes) - rules.battles)
+    need = rotation.min_escape + rotation.min_defend
+    problems: list[str] = []
+    for kind, minimum in (("escape", rotation.min_escape), ("defend", rotation.min_defend)):
+        if minimum == 0:
+            continue
+        capable = {maps[m].archetype for m in rules.map_pool if maps[m].supports_objective(kind)}
+        if len(capable) < spare + need:
+            problems.append(
+                f"支援 {kind} 的地圖類型只有 {len(capable)} 種，"
+                f"不足以保證每輪排得出 {minimum} 場（至少需要 {spare + need} 種）"
+            )
     return problems

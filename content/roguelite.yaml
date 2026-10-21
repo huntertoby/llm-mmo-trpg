@@ -6,6 +6,12 @@ battles: 5                    # 一般戰鬥的場數，之後 1 場 Boss（設�
 # 一般戰鬥的地圖池：每場先抽一個地圖類型（同一輪不重複），再抽該類型的一張地圖。Boss 地圖不在池內。
 map_pool: [bridge_chasm, cliff_outpost, dark_forest, frozen_lake, lava_crossing, narrow_halls, oil_depot, open_plain, swamp]
 
+# 勝利條件輪替（Phase 3-22，玩法 #23）：一般戰鬥中至少 N 場撤離、M 場守點，其餘全滅；Boss 戰一律全滅。
+# 抽一輪時一併決定（亂數標籤 plan/objective/*）；撤離與守點的格子與輪數由地圖的 alt_objectives 提供。
+objective_rotation:
+  min_escape: 1
+  min_defend: 1
+
 # 第 1 場起每場的敵人（先用現有盜賊系列；隨場數增加人數與種類），每場從 options 抽一組。
 # 起始區每方 4 格，所以最多 4 名敵人。
 encounters:

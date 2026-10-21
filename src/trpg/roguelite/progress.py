@@ -59,7 +59,12 @@ def battle_setup(library: ContentLibrary, run: RunState) -> BattleSetup:
     plan = run.plan_of(_battle_node(run).index)
     rules = library.roguelite
     base = build_setup(
-        library, plan.map_id, rules.companions, plan.enemies, max_rounds=rules.max_rounds
+        library,
+        plan.map_id,
+        rules.companions,
+        plan.enemies,
+        max_rounds=rules.max_rounds,
+        objective=library.map(plan.map_id).objective_for(plan.objective),
     )
     core = library.ruleset.core
     # 等級加成併入範本的基礎 HP，體質的部分由引擎加（與 RunState.max_hp_in 同一個式子）
