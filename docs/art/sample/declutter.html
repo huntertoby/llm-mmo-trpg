@@ -1,0 +1,160 @@
+<!doctype html>
+<html lang="zh-Hant">
+<head>
+<meta charset="utf-8">
+<title>技能卡減雜樣張</title>
+<style>
+  body { margin: 0; padding: 18px 22px; background: #1b1e24; color: #e8e8ea; font-family: "Noto Sans TC", "Microsoft JhengHei", sans-serif; }
+  h1 { font-size: 20px; margin: 0 0 4px; }
+  .sub { color: #a0a4ad; font-size: 13px; margin-bottom: 12px; }
+  .cols { display: grid; grid-template-columns: repeat(4, 400px); gap: 16px; align-items: start; }
+  .colh { font-size: 15px; font-weight: 700; margin-bottom: 2px; }
+  .cold { font-size: 12px; color: #a0a4ad; margin-bottom: 8px; line-height: 1.5; min-height: 54px; }
+  .card { background: #14161c; border: 1px solid #2e323b; border-radius: 10px; padding: 10px; margin-bottom: 12px; }
+  .head { display: flex; gap: 10px; align-items: flex-start; margin-bottom: 8px; }
+  .head .n { font-weight: 700; font-size: 16px; }
+  .head .n span { font-size: 12px; font-weight: 400; color: #a0a4ad; }
+  .head .m { font-size: 12px; color: #c8cad0; line-height: 1.5; }
+  .desc { font-size: 12px; color: #a0a4ad; margin-top: 8px; line-height: 1.5; }
+  /* 現行：每格一塊 */
+  .asm { display: flex; gap: 4px; flex-wrap: wrap; }
+  .asm-tile { background: #1f2229; border: 1px solid #2e323b; border-radius: 6px; padding: 2px 3px 3px; text-align: center; width: 56px; }
+  .asm-tile canvas { display: block; margin: 0 auto; border-radius: 6px; }
+  .asm-cat { font-size: 9px; color: #8a8f99; white-space: nowrap; overflow: hidden; }
+  .asm-label { font-size: 10px; color: #e0e2e6; }
+  /* 一：統一圓、只留名稱 */
+  .chips { display: flex; gap: 6px; flex-wrap: wrap; }
+  .chip1 { text-align: center; width: 44px; font-size: 10px; color: #d0d2d8; }
+  .chip1 canvas { display: block; margin: 0 auto 1px; }
+  /* 二：算式 */
+  .eq { display: flex; align-items: center; gap: 3px; margin: 3px 0; }
+  .eq .lab { font-size: 10px; color: #8a8f99; width: 34px; }
+  .eq .op { color: #6a7080; font-size: 13px; width: 10px; text-align: center; }
+  .eq .pc { text-align: center; font-size: 10px; color: #d0d2d8; width: 40px; }
+  .eq .pc canvas { display: block; margin: 0 auto 1px; }
+  .eq .lk { display: flex; align-items: center; gap: 4px; font-size: 10px; color: #ffe9a8; margin-left: 34px; }
+  .eq .lk canvas { display: block; }
+  .tail { display: flex; gap: 8px; margin-top: 4px; padding-top: 5px; border-top: 1px solid #2e323b; font-size: 10px; color: #a0a4ad; align-items: center; }
+  .tail .pc { display: flex; gap: 3px; align-items: center; color: #d0d2d8; }
+  /* 三：清單 */
+  .list { font-size: 12px; line-height: 1.2; }
+  .list .seg { color: #8a8f99; font-size: 10px; margin: 4px 0 2px; }
+  .list .it { display: flex; gap: 6px; align-items: center; margin: 2px 0; }
+  .list .it canvas { flex: none; }
+  .list .it .k { color: #8a8f99; font-size: 10px; width: 26px; }
+  .bar { display: flex; gap: 6px; margin-top: 4px; }
+  .bar .b { background: #262a32; border-radius: 6px; padding: 4px 6px; display: flex; gap: 6px; align-items: center; font-size: 12px; }
+</style>
+</head>
+<body>
+<h1>技能卡「清楚但雜亂」：三種減法（同兩個技能）</h1>
+<div class="sub">雜亂的來源：大圖示四角＋中間共 6 個小徽章；部件格 11 塊、四種外形（方、圓、紋理方、菱形）、每塊上下兩行字；類型、元素、稀有度和標題列重複。</div>
+<div class="cols" id="cols"></div>
+<script src="skillsData.js"></script>
+<script src="skillIcons.js"></script>
+<script src="parts.js"></script>
+<script src="assembled.js"></script>
+<script>
+const A = AssembledIcon;
+const byId = Object.fromEntries(SKILLS.map((s) => [s.id.replace(/^skill_/, ""), s]));
+const SAMPLE = [byId.charged_cleave, byId.arcane_blade];
+const REDUNDANT = new Set(["類型", "元素", "稀有度"]); // 外框形狀、底色、外框顏色、標題列已經表示
+
+function icon(s, px, small) { const c = document.createElement("canvas"); A.draw(c, s, px, { small }); return c; }
+/** 部件統一畫成圓形（形狀、骨架等方塊也裁成圓）。 */
+function round(t, px) {
+  return A.tileCanvas((ctx) => {
+    ctx.save(); ctx.beginPath(); ctx.arc(50, 50, 46, 0, Math.PI * 2); ctx.clip();
+    ctx.fillStyle = "#23262d"; ctx.fillRect(0, 0, 100, 100);
+    t.drawFn(ctx); ctx.restore();
+    ctx.strokeStyle = t.cat === "效果（核心）" ? "#ffffff" : "rgba(255,255,255,0.25)"; ctx.lineWidth = 4;
+    ctx.beginPath(); ctx.arc(50, 50, 46, 0, Math.PI * 2); ctx.stroke();
+  }, px);
+}
+function head(s, iconEl) {
+  const d = document.createElement("div"); d.className = "head";
+  d.appendChild(iconEl);
+  d.insertAdjacentHTML("beforeend", `<div><div class="n">${s.name} <span>${A.RARITY_ZH[s.rarity]}・${A.KIND_ZH[s.kind]}</span></div><div class="m">AP 2，法力 5，冷卻 3 回合</div></div>`);
+  return d;
+}
+function card(s, iconEl, body) {
+  const c = document.createElement("div"); c.className = "card";
+  c.appendChild(head(s, iconEl)); c.appendChild(body);
+  c.insertAdjacentHTML("beforeend", `<div class="desc">• 主要效果一行　縮放：力量</div>`);
+  return c;
+}
+/** 依「接續」切段：[段1部件, 接續, 段2部件, 條件與代價] */
+function segments(s) {
+  const out = { segs: [[]], link: null, tail: [] };
+  for (const t of A.tiles(s)) {
+    if (REDUNDANT.has(t.cat)) continue;
+    if (t.cat === "接續") { out.link = t; out.segs.push([]); continue; }
+    if (t.cat === "條件" || t.cat === "代價") { out.tail.push(t); continue; }
+    out.segs[out.segs.length - 1].push(t);
+  }
+  return out;
+}
+
+const COLS = [
+  { h: "現行", d: "大圖示 6 個小徽章；部件 11 塊、四種外形、每塊兩行字。", build(s) {
+    const row = document.createElement("div"); row.className = "asm";
+    for (const t of A.tiles(s)) {
+      const cell = document.createElement("div"); cell.className = "asm-tile";
+      cell.innerHTML = `<div class="asm-cat">${t.cat}</div>`; cell.appendChild(A.tileCanvas(t.drawFn, 44));
+      cell.insertAdjacentHTML("beforeend", `<div class="asm-label">${t.label}</div>`); row.appendChild(cell);
+    }
+    return card(s, icon(s, 76, false), row);
+  } },
+  { h: "一、只減不改", d: "大圖示只留主圖＋右下核心效果（和技能列小圖一樣）。部件拿掉重複的 3 塊，統一成圓形、只留名稱。改動最小。", build(s) {
+    const row = document.createElement("div"); row.className = "chips";
+    for (const t of A.tiles(s)) {
+      if (REDUNDANT.has(t.cat)) continue;
+      const d = document.createElement("div"); d.className = "chip1"; d.appendChild(round(t, 34)); d.insertAdjacentHTML("beforeend", t.label); row.appendChild(d);
+    }
+    return card(s, icon(s, 76, true), row);
+  } },
+  { h: "二、組裝算式（建議）", d: "大圖示同一。部件排成「每段一行」的算式：骨架＋形狀＋效果，段與段之間是接續；條件與代價放在底下一條細線後。組裝順序一眼看懂。", build(s) {
+    const { segs, link, tail } = segments(s);
+    const body = document.createElement("div");
+    segs.forEach((seg, i) => {
+      if (i > 0 && link) {
+        const lk = document.createElement("div"); lk.className = "eq"; const inner = document.createElement("div"); inner.className = "lk";
+        inner.appendChild(round(link, 20)); inner.insertAdjacentHTML("beforeend", `↓ ${link.label}`); lk.appendChild(inner); body.appendChild(lk);
+      }
+      const row = document.createElement("div"); row.className = "eq";
+      row.insertAdjacentHTML("beforeend", `<div class="lab">${segs.length > 1 ? `第${"一二"[i]}段` : ""}</div>`);
+      seg.forEach((t, j) => {
+        if (j > 0) row.insertAdjacentHTML("beforeend", `<div class="op">+</div>`);
+        const pc = document.createElement("div"); pc.className = "pc"; pc.appendChild(round(t, 30)); pc.insertAdjacentHTML("beforeend", t.label); row.appendChild(pc);
+      });
+      body.appendChild(row);
+    });
+    if (tail.length) {
+      const tl = document.createElement("div"); tl.className = "tail";
+      for (const t of tail) { const pc = document.createElement("div"); pc.className = "pc"; pc.appendChild(round(t, 18)); pc.insertAdjacentHTML("beforeend", `${t.cat}：${t.label}`); tl.appendChild(pc); }
+      body.appendChild(tl);
+    }
+    return card(s, icon(s, 76, true), body);
+  } },
+  { h: "三、圖示＋清單", d: "大圖示同一。部件改成直式清單（小圖示＋類別＋名稱），像關鍵字說明。最安靜，但「組裝感」最弱，較像說明書。", build(s) {
+    const { segs, link, tail } = segments(s);
+    const body = document.createElement("div"); body.className = "list";
+    const it = (t) => { const d = document.createElement("div"); d.className = "it"; d.appendChild(round(t, 18)); d.insertAdjacentHTML("beforeend", `<span class="k">${t.cat.replace(/（.*）/, "")}</span>${t.label}`); return d; };
+    segs.forEach((seg, i) => {
+      if (segs.length > 1) body.insertAdjacentHTML("beforeend", `<div class="seg">${i === 0 ? "第一段" : `第二段（${link?.label ?? ""}）`}</div>`);
+      for (const t of seg) body.appendChild(it(t));
+    });
+    for (const t of tail) body.appendChild(it(t));
+    return card(s, icon(s, 76, true), body);
+  } },
+];
+const root = document.getElementById("cols");
+for (const c of COLS) {
+  const col = document.createElement("div");
+  col.innerHTML = `<div class="colh">${c.h}</div><div class="cold">${c.d}</div>`;
+  for (const s of SAMPLE) col.appendChild(c.build(s));
+  root.appendChild(col);
+}
+</script>
+</body>
+</html>
