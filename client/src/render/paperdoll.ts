@@ -382,6 +382,89 @@ function drawBow(ctx: Ctx, c: string, front: boolean): void {
   ctx.stroke();
 }
 
+/** 弩（Phase 3-24a2，形制 `light` 輕弩、`heavy` 重弩、`repeater` 連弩；美術樣張 `paperdoll.js` 的 crossbow）：
+ *  木製弩身橫持，前端一張橫向的弩臂（弓身顏色取材質），拉著弦；重弩弩臂更寬更粗並多一個腳蹬環，連弩弩身上多一個箭匣。 */
+function drawCrossbow(ctx: Ctx, it: GearItem, c: string, front: boolean): void {
+  ctx.rotate(front ? 0.35 : -0.35);
+  const s = front ? -1 : 1;
+  const heavy = it.form === "heavy";
+  const span = heavy ? 10 : 8;
+  const tip = s * (heavy ? 11.5 : 10.5);
+  fill(ctx, "#7a5232", () => rr(ctx, s > 0 ? 0 : -12.5, -3, 12.5, 2.8, 1));
+  fill(ctx, "#4e321c", () => rr(ctx, s > 0 ? -1.5 : -0.5, -3.4, 2, 5, 0.8)); // 握把
+  if (it.form === "repeater") {
+    fill(ctx, "#4e321c", () => rr(ctx, s > 0 ? 1.5 : -8.5, -6.6, 7, 3.8, 0.8)); // 箭匣
+    fill(ctx, "#c3ccd6", () => ctx.rect(s > 0 ? 2.5 : -7.5, -5.6, 5, 0.8));
+  }
+  ctx.strokeStyle = c;
+  ctx.lineWidth = heavy ? 3 : 2;
+  ctx.beginPath();
+  ctx.moveTo(tip, -span - 1);
+  ctx.quadraticCurveTo(tip + s * (heavy ? 3 : 2.5), -1.6, tip, span - 4);
+  ctx.stroke();
+  ctx.strokeStyle = "rgba(240,240,240,0.8)";
+  ctx.lineWidth = 0.7;
+  ctx.beginPath();
+  ctx.moveTo(tip, -span - 1);
+  ctx.lineTo(tip - s * 3.5, -1.6);
+  ctx.lineTo(tip, span - 4);
+  ctx.stroke();
+  if (heavy) {
+    ctx.strokeStyle = "#4e321c";
+    ctx.lineWidth = 1.2;
+    ctx.beginPath();
+    ctx.arc(tip - s * 0.5, -1.6, 2.6, 0, TAU);
+    ctx.stroke(); // 腳蹬環
+  }
+  fill(ctx, "#a06a36", () => rr(ctx, Math.min(tip - s * 3.5, tip), -2.2, 3.6, 0.9, 0.4)); // 弩箭
+  fill(ctx, "#c3ccd6", () => {
+    ctx.beginPath();
+    ctx.moveTo(tip + s * 1.6, -2.7);
+    ctx.lineTo(tip - s * 0.4, -1.7);
+    ctx.lineTo(tip + s * 1.6, -0.7);
+    ctx.closePath();
+  });
+}
+
+/** 長槍（火器，Phase 3-24a2；形制 `flintlock` 燧發長槍、`hunting` 獵槍、`sniper` 狙擊長槍）：槍口朝前下方，
+ *  槍托在手後；槍身金屬色取材質，槍托固定木色（狙擊長槍的槍托是暗色金屬），燧發槍有擊錘、獵槍有木製護木、狙擊槍有瞄準鏡與腳架。 */
+function drawLongGun(ctx: Ctx, it: GearItem, c: string, d: string, front: boolean): void {
+  ctx.rotate(front ? 0.35 : -0.35);
+  const s = front ? -1 : 1;
+  const sniper = it.form === "sniper";
+  const L = sniper ? 21 : it.form === "hunting" ? 18 : 17;
+  const x0 = s > 0 ? -1 : -L;
+  fill(ctx, "#3a2a1c", () => rr(ctx, -1.2, -1, 2.4, 5, 0.8)); // 握把
+  fill(ctx, sniper ? d : "#7a5232", () => rr(ctx, s > 0 ? -7 : 1, -3.4, 6.5, 3.6, 1)); // 槍托
+  fill(ctx, c, () => rr(ctx, x0, -3.2, L + 1, 2.6, 1)); // 槍身
+  if (it.form === "hunting") {
+    fill(ctx, "#7a5232", () => rr(ctx, x0 + (s > 0 ? 0 : L * 0.35), -0.9, L * 0.65 + 1, 1.8, 0.8)); // 護木
+  }
+  if (it.form === "flintlock") {
+    fill(ctx, d, () => {
+      ctx.beginPath();
+      ctx.moveTo(s * 0.5, -3.2);
+      ctx.lineTo(s * -1.2, -6.2);
+      ctx.lineTo(s * 1.2, -6.6);
+      ctx.lineTo(s * 2.2, -3.2);
+      ctx.closePath();
+    }); // 擊錘
+    fill(ctx, "#e8bb48", () => ctx.rect(x0 + (s > 0 ? 6 : L - 7), -3.4, 1.4, 3)); // 銅箍
+  }
+  if (sniper) {
+    fill(ctx, "#2a2d33", () => rr(ctx, x0 + (s > 0 ? 5 : L - 12), -6.4, 8, 2.4, 1)); // 瞄準鏡
+    fill(ctx, "#8fe3ff", () => ctx.arc(x0 + (s > 0 ? 13 : L - 12), -5.2, 0.9, 0, TAU));
+    ctx.strokeStyle = "#1d1a22";
+    ctx.lineWidth = 0.9;
+    ctx.beginPath();
+    ctx.moveTo(x0 + (s > 0 ? L - 6 : 6), -0.6);
+    ctx.lineTo(x0 + (s > 0 ? L - 8 : 8), 3.4);
+    ctx.moveTo(x0 + (s > 0 ? L - 6 : 6), -0.6);
+    ctx.lineTo(x0 + (s > 0 ? L - 4 : 4), 3.4);
+    ctx.stroke(); // 腳架
+  }
+}
+
 function drawShield(ctx: Ctx, it: GearItem, c: string, d: string): void {
   if (it.kind === "shield_round") {
     fill(ctx, d, () => ctx.arc(0, -4, 7.5, 0, TAU));
@@ -465,6 +548,12 @@ function drawWeapon(ctx: Ctx, it: GearItem | undefined, x: number, front: boolea
       break;
     case "bow":
       drawBow(ctx, c, front);
+      break;
+    case "crossbow":
+      drawCrossbow(ctx, it, c, front);
+      break;
+    case "longgun":
+      drawLongGun(ctx, it, c, d, front);
       break;
     case "shield_round":
     case "shield_kite":

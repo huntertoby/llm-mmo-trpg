@@ -45,7 +45,7 @@ export const KNOWN_KINDS: Readonly<Record<GearSlot, readonly string[]>> = {
   hands: ["gloves", "gauntlets"],
   feet: ["boots", "greaves"],
   cloak: ["cape"],
-  main_hand: ["sword", "greatsword", "dagger", "axe", "hammer", "spear", "bow", "staff"],
+  main_hand: ["sword", "greatsword", "dagger", "axe", "hammer", "spear", "bow", "crossbow", "longgun", "staff"],
   off_hand: ["shield_round", "shield_kite", "tome"],
 };
 
@@ -97,6 +97,10 @@ export const WEAPON_LOOKS: Readonly<Record<string, WeaponLook>> = {
   spear: { kind: "spear", material: "iron", twoHanded: true },
   scepter: { kind: "staff", material: "wood", form: "scepter", twoHanded: false },
   totem_staff: { kind: "staff", material: "wood", form: "totem", twoHanded: true },
+  // Phase 3-24a2：武器擴充第一批的遠程（弩：輕弩、重弩、連弩三形制；長槍：燧發、獵槍、狙擊三形制）。
+  // 武器資料上各是一種武器，預設畫輕弩與燧發長槍；之後裝備的造型（`form`）決定畫哪一種。
+  crossbow: { kind: "crossbow", material: "wood", form: "light", twoHanded: true },
+  longgun: { kind: "longgun", material: "steel", form: "flintlock", twoHanded: true },
 };
 
 /** 武器大類 → 主手 kind（`weapon_id` 不認得時的退回）。 */
