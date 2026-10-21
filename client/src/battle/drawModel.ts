@@ -1,5 +1,5 @@
 // 視圖 → 繪製模型（純函式；PixiJS 只負責照著畫）。
-import type { BattleView, Facing, Pos } from "../api/types";
+import type { BattleView, Facing, Pos, Surface } from "../api/types";
 import {
   HIGHLIGHT,
   SURFACES,
@@ -23,6 +23,8 @@ export interface TileDraw {
   /** 角落的高度數字（高度 0 也顯示，方便比較）。 */
   heightLabel: string;
   terrain: string;
+  /** 表面（火、油、冰……）；前端美術在圖塊上疊半透明表面色。 */
+  surface: Surface;
   terrainName: string;
   surfaceName: string | null;
   blocked: boolean;
@@ -32,6 +34,8 @@ export interface TileDraw {
 
 export interface ObjectDraw {
   id: string;
+  /** 物件種類（美術對照用）。 */
+  kind: string;
   x: number;
   y: number;
   name: string;
@@ -51,6 +55,8 @@ export interface UnitDraw {
   x: number;
   y: number;
   marker: string;
+  /** 單位範本 ID（美術對照用）。 */
+  template: string;
   name: string;
   team: "ally" | "enemy";
   fill: number;
@@ -163,6 +169,7 @@ export function buildDrawModel(
       fill: tileFill(t.terrain, t.surface, t.height),
       heightLabel: String(t.height),
       terrain: t.terrain,
+      surface: t.surface,
       terrainName: style.name,
       surfaceName: surface === null ? null : surfaceName(t.surface),
       blocked: style.blocked,
@@ -174,6 +181,7 @@ export function buildDrawModel(
     const style = objectStyle(o.kind);
     return {
       id: o.id,
+      kind: o.kind,
       x: o.pos.x,
       y: o.pos.y,
       name: style.name,
@@ -194,6 +202,7 @@ export function buildDrawModel(
       x: u.pos.x,
       y: u.pos.y,
       marker: markers.get(u.id) ?? "?",
+      template: u.template_id,
       name: u.name_zh,
       team: u.team,
       fill: TEAM_COLORS[u.team],
