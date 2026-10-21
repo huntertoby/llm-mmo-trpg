@@ -46,6 +46,26 @@ function ring(ctx: Ctx, x: number, y: number, r: number): void {
   ctx.arc(x, y, r, 0, TAU);
   ctx.stroke();
 }
+/** 符文：菱形外框，裡面一個小菱形（`filled` 時填滿）。 */
+function runeMark(ctx: Ctx, x: number, y: number, k = 1, filled = false): void {
+  const r = 8 * k;
+  ctx.beginPath();
+  ctx.moveTo(x, y - r);
+  ctx.lineTo(x + r, y);
+  ctx.lineTo(x, y + r);
+  ctx.lineTo(x - r, y);
+  ctx.closePath();
+  ctx.stroke();
+  const s = 3.6 * k;
+  ctx.beginPath();
+  ctx.moveTo(x, y - s);
+  ctx.lineTo(x + s, y);
+  ctx.lineTo(x, y + s);
+  ctx.lineTo(x - s, y);
+  ctx.closePath();
+  if (filled) ctx.fill();
+  else ctx.stroke();
+}
 function person(ctx: Ctx, x: number, y: number, k = 1): void {
   dot(ctx, x, y - 5 * k, 2.6 * k);
   ctx.beginPath();
@@ -766,6 +786,18 @@ const EFFECT: Record<string, readonly [string, Draw]> = {
       plus(c, 6, -5);
     },
   ],
+  // 3-23 刻印：留下符文（菱形紋）、引爆符文（菱形向外迸出四道光）
+  inscribe: ["#ffe08a", (c) => runeMark(c, 0, 0, 1.1, true)],
+  detonate_runes: [
+    "#ffb36b",
+    (c) => {
+      runeMark(c, 0, 0, 0.6, true);
+      arrow(c, 0, -5, 0, -10, 3);
+      arrow(c, 0, 5, 0, 10, 3);
+      arrow(c, -5, 0, -10, 0, 3);
+      arrow(c, 5, 0, 10, 0, 3);
+    },
+  ],
 };
 // 傳送他人、任意兩者互換：和互換位置同一個圖示
 EFFECT["teleport_target"] = EFFECT["swap"] as readonly [string, Draw];
@@ -818,6 +850,8 @@ export const EFFECT_NAMES: Readonly<Record<string, string>> = {
   rule_change: "規則改變",
   gamble: "賭注",
   grant_skill: "暫時獲得技能",
+  inscribe: "刻印",
+  detonate_runes: "引爆符文",
 };
 
 /** 效果的描述資料（技能圖示 `icon.segments[].effects[]` 的一項）。 */
@@ -917,6 +951,13 @@ const COND: Readonly<Record<string, Draw>> = {
     arrow(c, 1, 0, 9, 0, 3.5);
   },
   self_concealed: (c) => (STATUS["concealed"] as readonly [string, Draw])[1](c),
+  on_own_rune: (c) => {
+    runeMark(c, -2, 1, 0.95, true);
+    c.save();
+    c.translate(6.5, -5.5);
+    text(c, "?", 8);
+    c.restore();
+  },
   adjacent_ally: (c) => {
     person(c, -4, 1, 0.85);
     person(c, 4, 1, 0.85);
@@ -937,6 +978,7 @@ export const CONDITION_NAMES: Readonly<Record<string, string>> = {
   flanked: "夾擊",
   from_behind: "背刺",
   self_concealed: "潛行偷襲",
+  on_own_rune: "目標站在自己的符文上",
 };
 
 const CONDITION_COLOR = "#ffe9a8";

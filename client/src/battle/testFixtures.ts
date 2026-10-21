@@ -107,6 +107,7 @@ export function smallView(over: Partial<BattleView> = {}): BattleView {
     pending: null,
     source_wells: [],
     zones: [],
+    runes: [],
     ...over,
   };
 }

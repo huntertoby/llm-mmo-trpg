@@ -10,6 +10,7 @@ export type UnitView = Schemas["UnitView"];
 export type ObjectView = Schemas["ObjectView"];
 export type TrapView = Schemas["TrapView"];
 export type ZoneView = Schemas["ZoneView"];
+export type RuneView = Schemas["RuneView"];
 export type ActivationView = Schemas["ActivationView"];
 export type GrantedSkillView = Schemas["GrantedSkillView"];
 export type StatusView = Schemas["StatusView"];

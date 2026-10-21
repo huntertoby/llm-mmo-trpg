@@ -12,6 +12,7 @@ import { bombCountdown } from "./bombs";
 import { chargeCountdown } from "./followup";
 import { auraTiles, isTotem, remainingRounds } from "./summons";
 import { onField, unitMarkers } from "./units";
+import { runeDraws, type RuneDraw } from "./runes";
 import { zoneDraws, type ZoneDraw } from "./zones";
 
 export interface TileDraw {
@@ -116,6 +117,8 @@ export interface DrawModel {
   auras: AuraDraw[];
   /** 持續區域的格子（半透明底色，移動型附方向箭頭；Phase 3D-5）。 */
   zones: ZoneDraw[];
+  /** 格子上的符文（施放者陣營色外框＋元素色內紋；Phase 3-23）。 */
+  runes: RuneDraw[];
   /** 尚未被取用的源泉格（我方單位進入時 +1 源力）。 */
   wells: WellDraw[];
 }
@@ -245,7 +248,8 @@ export function buildDrawModel(
     }
   }
   const zones = zoneDraws(view);
-  return { width: view.width, height: view.height, tiles, objects, units, traps, auras, zones, wells };
+  const runes = runeDraws(view);
+  return { width: view.width, height: view.height, tiles, objects, units, traps, auras, zones, runes, wells };
 }
 
 export function tileAt(model: DrawModel, p: Pos): TileDraw | undefined {
