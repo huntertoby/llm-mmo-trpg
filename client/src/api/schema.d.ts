@@ -2576,6 +2576,11 @@ export interface components {
              * @default
              */
             weapon_id: string;
+            /**
+             * Weapon Class
+             * @default
+             */
+            weapon_class: string;
             /** Tags */
             tags: string[];
             /** Skills */

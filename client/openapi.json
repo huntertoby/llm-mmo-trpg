@@ -6685,6 +6685,11 @@
             "title": "Weapon Id",
             "default": ""
           },
+          "weapon_class": {
+            "type": "string",
+            "title": "Weapon Class",
+            "default": ""
+          },
           "tags": {
             "items": {
               "type": "string"

@@ -5,13 +5,13 @@ from __future__ import annotations
 import json
 from dataclasses import replace
 
-from tests.engine.helpers import give_turn
+from tests.engine.helpers import give_turn, library
 from tests.engine.skill_helpers import U1, U2, U3
 from tests.engine.test_pending_serialization import _two_guards
 from tests.engine.test_reactions import P, _prompt_state
 from tests.engine.test_traps import BEAR, CINDER, place, scene
 from trpg.engine import Move, resolve
-from trpg.engine.view import BattleView, project_for
+from trpg.engine.view import BattleView, _unit_view, project_for
 from trpg.shared.types import Team
 
 FORBIDDEN_KEYS = {
@@ -118,3 +118,15 @@ def test_the_view_describes_the_map_and_units() -> None:
     assert view.active_unit == U1 and view.round == state.round
     assert view.ended is False and view.winner is None
     assert all(u.weapon_id == state.units[u.id].weapon.id != "" for u in view.units)
+
+
+def test_every_content_weapon_has_a_weapon_class_in_the_view() -> None:
+    """Phase 3-18b：``UnitView.weapon_class`` 對所有內容武器都有值（前端依此退回武器圖）。"""
+    state = scene()
+    unit = state.units[U1]
+    weapons = library().weapons
+    assert weapons
+    for weapon in weapons.values():
+        view = _unit_view(state, replace(unit, weapon=weapon), Team.ALLY)
+        assert view.weapon_class == weapon.weapon_class != ""
+        assert view.weapon_class in {"melee", "ranged", "focus"}

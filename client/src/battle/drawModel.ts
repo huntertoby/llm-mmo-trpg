@@ -81,6 +81,8 @@ export interface UnitDraw {
   facing: Facing;
   /** 武器 ID（紙娃娃主手外觀用）。 */
   weaponId: string;
+  /** 武器大類（melee、ranged、focus）：不認得 `weaponId` 時依此退回武器圖。 */
+  weaponClass: string;
 }
 
 export interface TrapDraw {
@@ -221,6 +223,7 @@ export function buildDrawModel(
       charge: chargeCountdown(u.statuses),
       facing: u.facing,
       weaponId: u.weapon_id,
+      weaponClass: u.weapon_class,
     }))
     // 倒下的先畫（在底層），其餘依 y 由上往下排序（下面的人蓋住上面的人）
     .sort((a, b) => Number(b.downed) - Number(a.downed) || a.y - b.y);

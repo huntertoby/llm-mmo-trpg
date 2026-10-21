@@ -1,5 +1,5 @@
 // 由北到南一排一排的圖層（Phase 3-19 整格抬高）：每排依序畫地形與崖面、表面裝飾、物件、高度徽章、
-// 高亮、陷阱、單位，讓南邊的高格自然蓋住北邊一排。另外記下每個「跟著格子抬高」的節點，升降動畫時一起移動。
+// 陷阱、單位，讓南邊的高格自然蓋住北邊一排。另外記下每個「跟著格子抬高」的節點，升降動畫時一起移動。
 import { Container } from "pixi.js";
 import type { Pos } from "../api/types";
 import { posKey } from "../battle/geometry";
@@ -10,7 +10,6 @@ export interface RowLayer {
   deco: Container;
   objects: Container;
   badges: Container;
-  marks: Container;
   traps: Container;
   units: Container;
 }
@@ -22,11 +21,10 @@ function makeRow(): RowLayer {
     deco: new Container(),
     objects: new Container(),
     badges: new Container(),
-    marks: new Container(),
     traps: new Container(),
     units: new Container(),
   };
-  row.root.addChild(row.ground, row.deco, row.objects, row.badges, row.marks, row.traps, row.units);
+  row.root.addChild(row.ground, row.deco, row.objects, row.badges, row.traps, row.units);
   return row;
 }
 
@@ -54,11 +52,6 @@ export class RowStack {
   row(y: number): RowLayer {
     const i = Math.max(0, Math.min(this.rows.length - 1, y));
     return this.rows[i] as RowLayer;
-  }
-
-  /** 清掉每一排的高亮。 */
-  clearMarks(): void {
-    for (const r of this.rows) for (const child of r.marks.removeChildren()) child.destroy({ children: true });
   }
 
   /** 把節點放在 (x, y − lift)，並登記成跟著格子 `p` 抬高。 */
