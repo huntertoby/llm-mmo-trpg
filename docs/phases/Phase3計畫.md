@@ -1264,6 +1264,11 @@ PM 驗收後請使用者試玩一整輪（`docs/專案計畫.md` 第 14 節 🎮
 
 驗收（3-24a2）：pytest 每個特性一組（含參數化測試）、裝填流程、站定與移動後、貼臉與遠距；`--log-json` ＋ `replay` 一致；vitest 造型繪製資料；`check.py` 全過、`pnpm build` 成功；截圖 `docs/phases/img/3-24a2-*.png`（三種弩、三種長槍、空膛與裝填選單）。
 
+### 25.3 3-24a1 驗收（2026-10-22）
+
+- PM 合併：`test_basic_actions_cli.py` 換種子衝突（取 98、格式 `/38`）、產生檔 `skill_icons.json` 重產；`check.py` 全過（實作者的全量 pytest 因同時三個 agent 搶 CPU 卡住，PM 合併後重跑通過）、`pnpm build` 成功；`open_plain` 種子 21 `--log-json` ＋ `replay` 一致。抽查 `content/weapons.yaml`：`armor_break`、`knockback`、`reach`、`lob`、`blessing`、`summon_dice_bonus`、`secondary_scaling_attr` 都是資料參數。新狀態 `armor_broken`；換種子 7 處（報告列出）。報告 `Phase3-24a1報告.md`。
+- 待 PM 決定：#1 單位不擋視線（拋射越過單位無差別）→ 接受現狀；#2 拋射只越過物件與地形高差、視線不對稱、也套用武器技 → 接受；#3 祝禱給最近隊友 flat 3 → 接受；#4 權杖與圖騰杖元素暫為物理 → 接受，請玩法 PM 判斷權杖是否改聖光；#5 傷害骰、#8 AI 權重 → 平衡階段；#6 矛兵 2 格內不觸發藉機攻擊、#7 破甲多來源取最大 → 接受。
+
 ## 26. Phase 3-24b｜關鍵字協同（#36；拆兩段，依序）
 
 > 設計：`docs/design/06-技能.md` 6.27（整節，#36 改寫）、`docs/玩法決定紀錄.md` #28、#36。模型：3-24b1 sonnet、3-24b2 opus（開局與存檔、共用產生器屬難以事後修改的設計）。遊戲 **不定義流派**：任何玩家可見的介面都不出現流派名稱。
