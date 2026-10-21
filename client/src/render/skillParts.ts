@@ -1444,6 +1444,30 @@ export function modifierChangePart(key: string, value: unknown, partIds: readonl
       };
       label = "穿透";
       break;
+    case "heal_permille":
+    case "summon_hp_permille":
+    case "summon_attack_dice": {
+      // 治療量與召喚物數值（Phase 3-24b1）：治療或召喚的圖示加一個小標記
+      const base = (EFFECT[key === "heal_permille" ? "heal" : "summon"] as readonly [string, Draw])[1];
+      draw = (c) => {
+        c.save();
+        c.scale(0.85, 0.85);
+        base(c);
+        c.restore();
+        if (key === "summon_attack_dice") {
+          c.save();
+          c.translate(6.5, -6.5);
+          text(c, "骰", 7);
+          c.restore();
+        } else {
+          plus(c, 6.5, -6.5);
+        }
+      };
+      if (key === "heal_permille") label = `治療量 ${num > 0 ? "+" : ""}${num / 10}%`;
+      else if (key === "summon_hp_permille") label = `召喚物 HP +${num / 10}%`;
+      else label = `召喚物攻擊 +${num} 骰`;
+      break;
+    }
     default:
       draw = (c) => text(c, "?", 13);
       label = key;

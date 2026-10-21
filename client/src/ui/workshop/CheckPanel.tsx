@@ -1,6 +1,7 @@
 // 即時檢查面板：預算條、違反的規則、最低稀有度、技能卡片預覽。
 import type { BudgetLine, WorkshopCheck } from "../../api/types";
 import { budgetView, checkHeadline, missingStepNames, rarityName } from "../../workshop/state";
+import { KeywordLine } from "../KeywordLine";
 import { SkillCardView } from "../SkillCardView";
 import { AssemblyFormula, SkillIconView } from "../SkillIconView";
 
@@ -120,6 +121,7 @@ export function CheckPanel({ check, pending }: { check: WorkshopCheck | null; pe
           <AssemblyFormula icon={check.icon} />
         </div>
       )}
+      {check !== null && <KeywordLine keywords={check.keywords} empty="關鍵字：還沒有（技能至少要製造或利用一個）" />}
       <div className={`ws-headline ${head.tone}`}>{head.text}</div>
       {missing.length > 0 && <div className="small">還沒填完：{missing.join("、")}</div>}
       {check !== null && <BudgetBar check={check} />}
