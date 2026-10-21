@@ -28,6 +28,7 @@ from trpg.engine.actions import (
     EndTurn,
     Interact,
     Move,
+    Reload,
     Run,
     SetReactionMode,
     Shove,
@@ -42,8 +43,10 @@ from trpg.engine.basics import (
     aim_problem,
     do_aim,
     do_defend,
+    do_reload,
     do_swap,
     guard_problem,
+    reload_problem,
     swap_problem,
     vault_action,
     vault_destinations,
@@ -127,7 +130,7 @@ from trpg.engine.state import (
     state_to_json,
 )
 from trpg.engine.turns import advance_turn, end_turn, finish_resolution, start_turn
-from trpg.engine.weapon_traits import attack_dice
+from trpg.engine.weapon_traits import attack_dice, spend_ammo
 from trpg.shared.errors import IllegalActionError
 from trpg.shared.ids import IdAllocator
 from trpg.shared.rng import Rng
@@ -764,6 +767,7 @@ def _do_attack(ctx: Ctx, unit: UnitState, action: Action) -> None:
         if problem is not None:
             raise IllegalActionError(problem)
         unit.ap -= cost
+        spend_ammo(unit)  # 有彈匣的武器：打物件也用掉 1 發（3-24a2）
         ctx.emit(ObjectAttacked, attacker_id=unit.id, object_id=obj.id)
         face_toward(unit, obj.xy)  # 攻擊後面向目標（Phase 3D-8d）
         weapon = unit.weapon
@@ -952,6 +956,7 @@ ACTION_HANDLERS: dict[str, ActionHandler] = {
     "defend": do_defend,
     "swap": do_swap,
     "aim": do_aim,
+    "reload": do_reload,
     "vault": _do_vault,
     "run": _do_run,
     "shove": _do_shove,
@@ -1162,6 +1167,7 @@ def _legal_actions(
     )
     if aim_problem(state, unit) is None and _has_attack_to_aim(state, unit):
         actions.append(Aim(unit_id=unit.id))
+    actions.extend(_weapon_actions(state, unit))
     actions.extend(vault_action(unit, plan) for plan in vault_destinations(state, unit))
     if stance_status_ids(state.ruleset, unit):
         actions.append(EndStance(unit_id=unit.id))
@@ -1179,6 +1185,11 @@ def _legal_actions(
             actions.append(Move(unit_id=unit.id, path=path))
     actions.append(EndTurn(unit_id=unit.id))
     return actions
+
+
+def _weapon_actions(state: BattleState, unit: UnitState) -> list[Action]:
+    """武器動作（Phase 3-24a2）：目前只有裝填（彈匣空時才出現）。"""
+    return [Reload(unit_id=unit.id)] if reload_problem(state, unit) is None else []
 
 
 def _usable_skills(state: BattleState, unit: UnitState) -> list[SkillDef]:
@@ -1239,11 +1250,12 @@ def _has_attack_to_aim(state: BattleState, unit: UnitState) -> bool:
 
 
 def _has_basic_action(state: BattleState, unit: UnitState) -> bool:
-    """守護、跑步、瞄準、換位、攀跳（Phase 3-20、3-21）任一個合法。"""
+    """守護、跑步、瞄準、換位、攀跳（Phase 3-20、3-21）、裝填（3-24a2）任一個合法。"""
     return (
         guard_problem(state, unit, None) is None
         or run_problem(state, unit) is None
         or (aim_problem(state, unit) is None and _has_attack_to_aim(state, unit))
+        or reload_problem(state, unit) is None
         or any(swap_problem(state, unit, a.id) is None for a in adjacent_allies(state, unit))
         or bool(vault_destinations(state, unit))
     )

@@ -80,6 +80,7 @@ from trpg.engine.actions import (
     EndStance,
     EndTurn,
     Move,
+    Reload,
     Run,
     Shove,
     Swap,
@@ -171,6 +172,7 @@ from trpg.engine.skills.targeting import (
 )
 from trpg.engine.state import BattleState, UnitState, reaction_limit
 from trpg.engine.traps import own_traps
+from trpg.engine.weapon_traits import pierce_line_targets
 from trpg.shared.types import ObjectId, Pos, Surface, Team, UnitId
 
 __all__ = [
@@ -459,6 +461,15 @@ def _weapon_terms(
                 value -= w.reach_spacing
             elif distance <= weapon.range and attack_problem(state, unit, e) is None:
                 value += w.reach_spacing
+    if w.line_up and weapon.pierce_line > 0:
+        value += w.line_up * max(
+            (
+                len(pierce_line_targets(state, unit, e))
+                for e in enemies
+                if attack_problem(state, unit, e) is None
+            ),
+            default=0,
+        )
     if w.knock_angle and weapon.knockback > 0:
         value += w.knock_angle * sum(
             1 for e in enemies if manhattan(unit.xy, e.xy) == 1 and _knock_collides(state, unit, e)
@@ -1990,7 +2001,7 @@ class UtilityAI:
                 estimates.append(
                     (virtual_move_score(state, unit, action, w, before, scene=scene), index)
                 )
-            elif isinstance(action, Defend | Run | Swap | Vault):  # 不跑 preview：直接計算
+            elif isinstance(action, Defend | Run | Swap | Vault | Reload):  # 不跑 preview：直接計算
                 scored[index] = ActionScore(
                     action, self._cheap_score(state, unit, w, action, scene=scene), None
                 )
@@ -2047,11 +2058,13 @@ class UtilityAI:
         state: BattleState,
         unit: UnitState,
         w: AiWeights,
-        action: Defend | Run | Swap | Vault,
+        action: Defend | Run | Swap | Vault | Reload,
         *,
         scene: _Scene,
     ) -> Fraction:
-        """守護／跑步／換位／攀跳的分數（不跑 preview）；守護隊友 ＝ 守護自己 ＋ 隊友的加分。"""
+        """守護／跑步／換位／攀跳／裝填的分數（不跑 preview）；守護隊友 ＝ 守護自己 ＋ 加分。"""
+        if isinstance(action, Reload):
+            return Fraction(self._basic.reload_points)
         if isinstance(action, Vault):
             return vault_score(unit, (action.dest.x, action.dest.y), scene, self._basic)
         if isinstance(action, Run):

@@ -323,6 +323,9 @@
                     "$ref": "#/components/schemas/Interact"
                   },
                   {
+                    "$ref": "#/components/schemas/Reload"
+                  },
+                  {
                     "$ref": "#/components/schemas/EndStance"
                   },
                   {
@@ -346,6 +349,7 @@
                     "shove": "#/components/schemas/Shove",
                     "trip": "#/components/schemas/Trip",
                     "interact": "#/components/schemas/Interact",
+                    "reload": "#/components/schemas/Reload",
                     "end_stance": "#/components/schemas/EndStance",
                     "set_reaction_mode": "#/components/schemas/SetReactionMode",
                     "end_turn": "#/components/schemas/EndTurn"
@@ -490,6 +494,9 @@
                     "$ref": "#/components/schemas/Interact"
                   },
                   {
+                    "$ref": "#/components/schemas/Reload"
+                  },
+                  {
                     "$ref": "#/components/schemas/EndStance"
                   },
                   {
@@ -513,6 +520,7 @@
                     "shove": "#/components/schemas/Shove",
                     "trip": "#/components/schemas/Trip",
                     "interact": "#/components/schemas/Interact",
+                    "reload": "#/components/schemas/Reload",
                     "end_stance": "#/components/schemas/EndStance",
                     "set_reaction_mode": "#/components/schemas/SetReactionMode",
                     "end_turn": "#/components/schemas/EndTurn"
@@ -1243,6 +1251,9 @@
             "$ref": "#/components/schemas/Interact"
           },
           {
+            "$ref": "#/components/schemas/Reload"
+          },
+          {
             "$ref": "#/components/schemas/EndStance"
           },
           {
@@ -1262,6 +1273,7 @@
             "end_turn": "#/components/schemas/EndTurn",
             "interact": "#/components/schemas/Interact",
             "move": "#/components/schemas/Move",
+            "reload": "#/components/schemas/Reload",
             "run": "#/components/schemas/Run",
             "set_reaction_mode": "#/components/schemas/SetReactionMode",
             "shove": "#/components/schemas/Shove",
@@ -5188,6 +5200,27 @@
         "title": "ReactionRuleView",
         "description": "單位身上的一條反應規則（玩家可以用 ``set_reaction_mode`` 切換 ``mode``）。"
       },
+      "Reload": {
+        "properties": {
+          "unit_id": {
+            "type": "string",
+            "title": "Unit Id"
+          },
+          "type": {
+            "type": "string",
+            "const": "reload",
+            "title": "Type",
+            "default": "reload"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "unit_id"
+        ],
+        "title": "Reload",
+        "description": "裝填（Phase 3-24a2，**武器動作**：只有帶彈匣的武器——長槍——才有，不算進基本動作的 10 個\n上限，見 :data:`WEAPON_ACTION_TYPES`）：花武器的 ``reload_ap`` AP 裝滿彈匣；空膛時才合法。"
+      },
       "RerollChoice": {
         "properties": {
           "kind": {
@@ -6247,6 +6280,9 @@
             "$ref": "#/components/schemas/Interact"
           },
           {
+            "$ref": "#/components/schemas/Reload"
+          },
+          {
             "$ref": "#/components/schemas/EndStance"
           },
           {
@@ -6270,6 +6306,7 @@
             "end_turn": "#/components/schemas/EndTurn",
             "interact": "#/components/schemas/Interact",
             "move": "#/components/schemas/Move",
+            "reload": "#/components/schemas/Reload",
             "run": "#/components/schemas/Run",
             "set_reaction_mode": "#/components/schemas/SetReactionMode",
             "shove": "#/components/schemas/Shove",
@@ -7010,6 +7047,16 @@
             "type": "array",
             "title": "Weapon Traits Zh",
             "default": []
+          },
+          "ammo": {
+            "type": "integer",
+            "title": "Ammo",
+            "default": 0
+          },
+          "magazine": {
+            "type": "integer",
+            "title": "Magazine",
+            "default": 0
           },
           "tags": {
             "items": {

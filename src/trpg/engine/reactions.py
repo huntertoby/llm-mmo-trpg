@@ -49,11 +49,19 @@ from trpg.engine.rules.combat import ForcedOutcome, attack_problem, roll_attack
 from trpg.engine.rules.facing import face_toward
 from trpg.engine.rules.geometry import XY, has_line_of_sight, manhattan
 from trpg.engine.rules.statuses import skip_turn_status, weapon_attribute
+from trpg.engine.rules.weapons import range_damage_permille
 from trpg.engine.skill_triggers import check_trigger_depth, holding, redirect_fired
 from trpg.engine.skills.conditions import Subject, skill_condition_met
 from trpg.engine.skills.targeting import reaction_problem, reaction_target_problem
 from trpg.engine.state import UnitState, reaction_limit
-from trpg.engine.weapon_traits import apply_hit_traits, attack_dice
+from trpg.engine.weapon_traits import (
+    apply_hit_traits,
+    attack_dice,
+    gunshot_reveals,
+    pierce_line_targets,
+    reveal_after_gunshot,
+    spend_ammo,
+)
 from trpg.shared.errors import TrpgError
 
 __all__ = [
@@ -471,9 +479,19 @@ def perform_unit_attack(ctx: Ctx, attacker: UnitState, target: UnitState, *, pri
     """
     with holding(ctx):
         target_xy, attacker_xy = target.xy, attacker.xy
+        if attacker.weapon.magazine > 0 and attacker.ammo <= 0:
+            return  # 空膛（Phase 3-24a2）：合法性已在 attack_problem 檢查，這裡只是保險
+        reveal = gunshot_reveals(ctx.state, attacker)
+        behind = pierce_line_targets(ctx.state, attacker, target)  # 開火前的直線（弩，3-24a2）
+        spend_ammo(attacker)
         ambushed, rolled, victim = _attack_once(ctx, attacker, target, primary=primary)
+        for extra in behind:  # 穿透：各自擲命中與傷害
+            if attacker.alive and extra.alive:
+                _attack_once(ctx, attacker, extra, primary=False)
         turns = [(victim, attacker_xy)] if rolled and attacker.weapon.is_melee else []
         after_attack(ctx, attacker, target_xy, ambushed=ambushed, turns=turns)
+        if reveal:
+            reveal_after_gunshot(ctx, attacker)  # 槍聲（3-24a2）
 
 
 def after_attack(
@@ -556,6 +574,9 @@ def _attack_once(
     use = modifiers.ATTACK
     bonus_permille = modifiers.damage_permille(state, attacker, use, Subject(target, target.xy))
     multiplier = block_multiplier(ctx, attacker, target) * bonus_permille // PERMILLE
+    multiplier = (
+        multiplier * range_damage_permille(attacker, manhattan(attacker.xy, target.xy)) // PERMILLE
+    )
     weapon = attacker.weapon
     execute(
         ctx,

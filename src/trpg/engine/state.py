@@ -341,6 +341,9 @@ class UnitState:
     """本輪已替隊友承受的次數（上限 ``guard_transfers_per_round``）；每輪開始時歸零。"""
     aimed: bool = False
     """已瞄準（Phase 3-21a）：下一次需要擲命中的攻擊命中加值；用掉或回合結束時清除。"""
+    ammo: int = 0
+    """彈匣裡的子彈數（Phase 3-24a2；開場為武器的 ``magazine``，沒有彈匣的武器恆為 0）：普攻開火
+    用掉 1 發，空了要先裝填（``reload``）。"""
     turn_cast_tags: tuple[str, ...] = ()
     """本回合已施放的主動技能的標籤（依施放順序、含重複；``cast_tag_this_turn`` 條件，Phase 3D-1）；
     自己回合開始時清除。"""
@@ -445,6 +448,7 @@ class UnitState:
             guarding_id=self.guarding_id,
             guard_transfers=self.guard_transfers,
             aimed=self.aimed,
+            ammo=self.ammo,
             turn_cast_tags=self.turn_cast_tags,
             owner_id=self.owner_id,
             summon_expires_round=self.summon_expires_round,

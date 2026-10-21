@@ -38,8 +38,12 @@ __all__ = [
     "run_battle",
 ]
 
-LOG_FORMAT = "trpg-battle-log/38"
-"""``/38``（Phase 3-23，接在 3-21b 的 ``/37`` 之後）：刻印——原語 ``inscribe``／
+LOG_FORMAT = "trpg-battle-log/39"
+"""``/39``（Phase 3-24a2）：基本動作之外的武器動作裝填（動作 ``reload``、事件 ``weapon_reloaded``、
+單位的 ``ammo``）、武器資料新增遠程特性欄位（``pierce_line``／``ignore_height``／``magazine``／
+``reload_ap``／``gunshot``／``steady``／``ignore_cover``／``armor_pierce_permille``／``range_mod``）；
+帶彈匣的武器空膛時不能普攻，同種子的 AI 對戰結果可能與 ``/38`` 不同。
+``/38``（Phase 3-23，接在 3-21b 的 ``/37`` 之後）：刻印——原語 ``inscribe``／
 ``detonate_runes``（符文用 ``EffectSpec`` 的 ``element``／``tag``）、
 條件 ``on_own_rune``（``ConditionSpec`` 新欄位 ``element``）、骨架 ``rune``、
 戰鬥狀態的 ``runes``／``next_rune_id``、新事件 ``rune_inscribed``／

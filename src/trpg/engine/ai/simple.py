@@ -13,7 +13,8 @@
 
 from __future__ import annotations
 
-from trpg.engine.actions import Action, Attack, Defend, EndTurn, Move
+from trpg.engine.actions import Action, Attack, Defend, EndTurn, Move, Reload
+from trpg.engine.basics import reload_problem
 from trpg.engine.ids import DEFENDING
 from trpg.engine.rules.combat import attack_problem, is_height_limited
 from trpg.engine.rules.geometry import XY, has_line_of_sight, manhattan
@@ -86,6 +87,8 @@ def choose_action(state: BattleState) -> Action:
         raise ValueError("目前沒有行動中的單位")
     core = state.ruleset.core
     enemies = _enemies(state, unit)
+    if reload_problem(state, unit) is None:
+        return Reload(unit_id=unit.id)  # 空膛先裝填（3-24a2）
     if unit.ap >= core.basic_attack_ap_cost:
         targets = [e for e in enemies if attack_problem(state, unit, e) is None]
         if targets:

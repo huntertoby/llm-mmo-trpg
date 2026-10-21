@@ -7,6 +7,14 @@
 - 權杖 ``blessing``：普攻命中時，最近的隊友（不含自己與召喚物）回復 HP。
 - 圖騰杖 ``summon_dice_bonus``：召喚者的召喚物普攻多加 N 顆傷害骰（:func:`attack_dice`）。
 
+遠程武器（Phase 3-24a2）：
+
+- 弩 ``pierce_line``：普攻之後，同一直線上的後方敵人也被擊中（:func:`pierce_line_targets`）；
+  ``ignore_height`` 在 :func:`trpg.engine.rules.combat.situational_modifier`；
+- 長槍 ``magazine``：開火用掉子彈（:func:`spend_ammo`），裝填是 ``Reload`` 動作；
+  ``gunshot``：開火讓隱蔽的自己被揭露（:func:`gunshot_reveals`）；``steady``、``range_mod``、
+  ``ignore_cover``、``armor_pierce_permille`` 在 :mod:`trpg.engine.rules.weapons` 與命中判定。
+
 矛的 ``reach``（藉機攻擊範圍）在 :func:`trpg.engine.reactions.opportunity_attacks`，弓的 ``lob``
 （拋射）在 :func:`trpg.engine.rules.geometry.has_line_of_sight`。
 """
@@ -17,11 +25,19 @@ from trpg.content.battle import Dice
 from trpg.engine.context import Ctx
 from trpg.engine.effects import execute
 from trpg.engine.effects.models import ApplyStatusEffect, EffectBase, HealEffect, PushEffect
-from trpg.engine.ids import ARMOR_BROKEN
-from trpg.engine.rules.geometry import axis_direction, manhattan
+from trpg.engine.ids import ARMOR_BROKEN, REVEALED
+from trpg.engine.rules.combat import attack_reach, is_concealed
+from trpg.engine.rules.geometry import XY, axis_direction, bresenham, has_line_of_sight, manhattan
 from trpg.engine.state import BattleState, UnitState
 
-__all__ = ["apply_hit_traits", "attack_dice", "blessing_target"]
+__all__ = [
+    "apply_hit_traits",
+    "attack_dice",
+    "blessing_target",
+    "gunshot_reveals",
+    "pierce_line_targets",
+    "spend_ammo",
+]
 
 
 def attack_dice(state: BattleState, attacker: UnitState) -> Dice:
@@ -90,3 +106,58 @@ def apply_hit_traits(ctx: Ctx, attacker: UnitState, target: UnitState) -> None:
                 )
             ],
         )
+
+
+def spend_ammo(attacker: UnitState) -> None:
+    """有彈匣的武器開火：用掉 1 發（沒有彈匣的武器不動作）。"""
+    if attacker.weapon.magazine > 0 and attacker.ammo > 0:
+        attacker.ammo -= 1
+
+
+def gunshot_reveals(state: BattleState, attacker: UnitState) -> bool:
+    """開火前：武器有槍聲，而且自己現在是隱蔽的（開火後要被揭露）。"""
+    return attacker.weapon.gunshot and is_concealed(state, attacker)
+
+
+def reveal_after_gunshot(ctx: Ctx, attacker: UnitState) -> None:
+    """槍聲：施加 ``revealed``（不算隱蔽，連黑暗與草叢也一樣，持續到下一個自己的回合結束）。"""
+    if attacker.alive:
+        execute(
+            ctx,
+            [ApplyStatusEffect(target_id=attacker.id, status_id=REVEALED, source_id=attacker.id)],
+        )
+
+
+def pierce_line_targets(
+    state: BattleState, attacker: UnitState, target: UnitState
+) -> list[UnitState]:
+    """弩的穿透：從 ``attacker`` 經過 ``target`` 延伸的直線上，``target`` 後方、射程內、視線沒被擋住
+    的敵人（由近到遠，最多 ``pierce_line`` 名）。直線是 Bresenham 直線的延伸，所以和普攻的視線
+    判斷一致；遇到擋住視線的地形就停止。"""
+    limit = attacker.weapon.pierce_line
+    ax, ay = attacker.xy
+    dx, dy = target.xy[0] - ax, target.xy[1] - ay
+    distance = abs(dx) + abs(dy)
+    if limit <= 0 or distance == 0:
+        return []
+    reach = attack_reach(state, attacker)
+    k = reach // distance + 2
+    end: XY = (ax + dx * k, ay + dy * k)
+    found: list[UnitState] = []
+    passed = False
+    for cell in bresenham(attacker.xy, end)[1:]:
+        if cell == target.xy:
+            passed = True
+            continue
+        if not passed:
+            continue
+        if not state.in_bounds(*cell) or manhattan(attacker.xy, cell) > reach:
+            break
+        if not has_line_of_sight(state, attacker.xy, cell):
+            break
+        unit = state.unit_at(*cell)
+        if unit is not None and unit.alive and unit.team is not attacker.team:
+            found.append(unit)
+            if len(found) >= limit:
+                break
+    return found

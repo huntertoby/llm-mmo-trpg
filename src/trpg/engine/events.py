@@ -127,6 +127,7 @@ __all__ = [
     "UnitStoodUp",
     "UnitSummoned",
     "UnitVaulted",
+    "WeaponReloaded",
     "ZoneCreated",
     "ZoneExpired",
     "ZoneExpiryReason",
@@ -324,6 +325,15 @@ class UnitAimed(EventBase):
     type: Literal["unit_aimed"] = "unit_aimed"
     unit_id: UnitId
     bonus: int
+
+
+class WeaponReloaded(EventBase):
+    """裝填（Phase 3-24a2）：``unit_id`` 花 ``cost`` AP 把彈匣裝到 ``ammo`` 發。"""
+
+    type: Literal["weapon_reloaded"] = "weapon_reloaded"
+    unit_id: UnitId
+    ammo: int
+    cost: int
 
 
 class MoveBlocked(EventBase):
@@ -1487,6 +1497,7 @@ type Event = Annotated[
     | UnitVaulted
     | GuardSet
     | UnitAimed
+    | WeaponReloaded
     | MoveBlocked
     | Collided
     | UnitFell

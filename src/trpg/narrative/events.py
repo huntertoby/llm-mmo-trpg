@@ -110,6 +110,7 @@ from trpg.engine.events import (
     UnitStoodUp,
     UnitSummoned,
     UnitVaulted,
+    WeaponReloaded,
     ZoneCreated,
     ZoneExpired,
     ZoneMoved,
@@ -393,6 +394,11 @@ def _guard_set(e: GuardSet, v: _View) -> str:
 @_handles(UnitAimed)
 def _aimed(e: UnitAimed, v: _View) -> str:
     return f"  {v.name[e.unit_id]} 瞄準（下一次攻擊命中 +{e.bonus}）"
+
+
+@_handles(WeaponReloaded)
+def _reloaded(e: WeaponReloaded, v: _View) -> str:
+    return f"  {v.name[e.unit_id]} 裝填（花 {e.cost} AP，彈匣 {e.ammo} 發）"
 
 
 @_handles(MoveBlocked)

@@ -13,11 +13,11 @@ from __future__ import annotations
 from dataclasses import dataclass
 from typing import Literal
 
-from trpg.engine.actions import Action, Aim, Defend, Swap, Vault
+from trpg.engine.actions import Action, Aim, Defend, Reload, Swap, Vault
 from trpg.engine.context import Ctx
 from trpg.engine.effects import execute
 from trpg.engine.effects.models import ApplyStatusEffect, SwapUnitsEffect
-from trpg.engine.events import GuardSet, UnitAimed
+from trpg.engine.events import GuardSet, UnitAimed, WeaponReloaded
 from trpg.engine.ids import DEFENDING, PRONE
 from trpg.engine.rules.geometry import XY, manhattan
 from trpg.engine.rules.movement import fear_blocks_step, fear_origins, is_standable
@@ -32,8 +32,10 @@ __all__ = [
     "aim_problem",
     "do_aim",
     "do_defend",
+    "do_reload",
     "do_swap",
     "guard_problem",
+    "reload_problem",
     "swap_problem",
     "vault_action",
     "vault_destinations",
@@ -155,6 +157,29 @@ def do_aim(ctx: Ctx, unit: UnitState, action: Action) -> None:
     unit.ap -= ctx.core.aim_ap_cost
     unit.aimed = True
     ctx.emit(UnitAimed, unit_id=unit.id, bonus=ctx.core.aim_hit_bonus)
+
+
+def reload_problem(state: BattleState, unit: UnitState) -> str | None:
+    """裝填不合法的原因（Phase 3-24a2，武器動作）：武器沒有彈匣、彈匣還沒空、AP 不足。"""
+    weapon = unit.weapon
+    if weapon.magazine <= 0:
+        return f"{weapon.name_zh}不用裝填"
+    if unit.ammo > 0:
+        return "彈匣還沒空，不需要裝填"
+    if unit.ap < weapon.reload_ap:
+        return f"AP 不足：需要 {weapon.reload_ap}，剩餘 {unit.ap}"
+    return None
+
+
+def do_reload(ctx: Ctx, unit: UnitState, action: Action) -> None:
+    assert isinstance(action, Reload)
+    problem = reload_problem(ctx.state, unit)
+    if problem is not None:
+        raise IllegalActionError(problem)
+    weapon = unit.weapon
+    unit.ap -= weapon.reload_ap
+    unit.ammo = weapon.magazine
+    ctx.emit(WeaponReloaded, unit_id=unit.id, ammo=unit.ammo, cost=weapon.reload_ap)
 
 
 # ---------------------------------------------------------------------------
