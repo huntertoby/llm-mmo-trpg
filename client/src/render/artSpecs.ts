@@ -84,7 +84,19 @@ export function objectArtSpec(o: ObjectDraw, kinds: ReadonlyMap<string, string>)
   };
 }
 
-/** 左上角高度徽章的文字：只有高度 > 0 才有（取代每格都寫 0）。 */
-export function heightBadgeText(t: TileDraw): string | null {
-  return !t.blocked && t.height > 0 ? String(t.height) : null;
+/** 左上角高度徽章的文字：高度 > 0 且至少一個鄰格高度不同才有（高台內部格不標）。 */
+export function heightBadgeText(model: DrawModel, t: TileDraw): string | null {
+  if (t.blocked || t.height <= 0) return null;
+  const edge = (
+    [
+      [0, -1],
+      [0, 1],
+      [-1, 0],
+      [1, 0],
+    ] as const
+  ).some(([dx, dy]) => {
+    const n = neighbor(model, t, dx, dy);
+    return n !== undefined && n.height !== t.height;
+  });
+  return edge ? String(t.height) : null;
 }
