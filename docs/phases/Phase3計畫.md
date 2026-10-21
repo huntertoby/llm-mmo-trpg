@@ -1227,6 +1227,15 @@ PM 驗收後請使用者試玩一整輪（`docs/專案計畫.md` 第 14 節 🎮
 3. vitest：勝利條件文字、出口／守點格繪製資料。截圖 `docs/phases/img/3-22-*.png`：開場勝利條件、地圖上的出口與守點、HUD 剩餘輪數、結算畫面。
 4. `check.py` 全過、`pnpm build` 成功。
 
+### 24.3 3-22 驗收（2026-10-22）
+
+- PM 合併：與 3-23 在 `drawModel.ts`、`tileInfo.ts`、`BattleRenderer.ts`、`art.test.ts`、`styles.css` 衝突（符文與目標格都是新增），兩邊保留；重產 `openapi.json`／`schema.d.ts`。`check.py` 全過、`pnpm build` 成功；`cliff_outpost` 種子 3 守點 `--log-json` ＋ `replay` 一致。存檔 `trpg-run/2`（舊存檔拒絕並提示開新一輪）；`LOG_FORMAT` 不變。9 張地圖有 `alt_objectives`（7 撤離、7 守點）。模擬：撤離 80～100%、守點 25～75%，無 0%。報告 `Phase3-22報告.md`。
+- 待 PM 決定：#1 撤離偏易、守點偏難等數值 → 平衡階段；#2 敵人站出口格擋撤離 → 接受；#3 守點單格 → 接受，試玩再看；#4 主角倒下撤離必敗、#5 沒有額外獎勵、#6 不支援時換同類地圖、#7 舊存檔拒絕 → 接受；#8 圖例缺出口／守點 → 下一個介面小修；#9 模擬只用標準陣容 → 平衡階段。
+
+### 24.4 下一個介面小修（累積，未排）
+
+- 3-23 #9 符文引爆特效；3-21b #8 工坊換骨架改頁內確認；3-22 #8 圖例加出口格與守點格。
+
 ## 25. Phase 3-24a｜武器擴充第一批（玩法 #34；拆兩段，依序）
 
 > 設計：`docs/design/08-裝備.md` 8.11（第一批）；詞條預留 8.21（`docs/design/草稿-詞條全景.md` 已定案為 #35）。美術：`docs/art/組裝式裝備.md` 末節、樣張 `docs/art/sample/gear4.html`（畫法參考 `docs/art/sample/gearArt.js`、`paperdoll.js`）。模型 sonnet。
