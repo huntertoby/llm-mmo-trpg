@@ -144,6 +144,16 @@ function AsideHelp({ mode, enabled, interactOptions, view, onAction, onPreviewAc
   );
 }
 
+/** 一般選目標模式的提示文字（攀跳與守護有自己的說法）。 */
+function modeHint(mode: ActionMode, pickable: number): string {
+  const t = mode.targets;
+  if (mode.kind === "vault") return `點選紫色格子（攀＝爬上高台，跳＝跳過缺口；共 ${pickable} 個）。Esc／右鍵取消。`;
+  if (mode.kind === "defend" && t.self !== null)
+    return `點自己守護自己，或點相鄰的隊友（紅框）改由你替他承受單體攻擊。Esc／右鍵取消。`;
+  if (isSelfOnly(t)) return "對自身施放。";
+  return `點選格子上的目標（紅框 ${pickable} 個${t.directions.size > 0 ? "，或選擇方向" : ""}）。Esc／右鍵取消。`;
+}
+
 function ModeHelp(props: HelpProps) {
   const { mode, enabled, onAction, onPreviewAction } = props;
   if (mode.kind === "shove_aside") return <AsideHelp {...props} />;
@@ -151,9 +161,7 @@ function ModeHelp(props: HelpProps) {
   if (isHurlMode(mode)) return <HurlHelp {...props} />;
   const t = mode.targets;
   const pickable = t.units.size + t.objects.size + t.tiles.size;
-  const hint = isSelfOnly(t)
-    ? "對自身施放。"
-    : `點選格子上的目標（紅框 ${pickable} 個${t.directions.size > 0 ? "，或選擇方向" : ""}）。Esc／右鍵取消。`;
+  const hint = modeHint(mode, pickable);
   return (
     <div className="mode-help">
       <div className="section-title">{mode.label}</div>
