@@ -880,7 +880,78 @@ window.ProcRender = (() => {
     ctx.restore();
   }
 
-  function render(canvas, scale = 2) {
+  // ==== 單位：紙娃娃小人（paperdoll.js）。腳下是陣營色底圈，圈上的尖角＝朝向 ====
+  function drawUnitFigure(ctx, u) {
+    const cx = u.x * T + T / 2;
+    const cy = u.y * T + T / 2;
+    const [dx, dy] = U.FACING[u.facing];
+    const fill = u.summon ? PAL.summon : u.team === "ally" ? PAL.ally : PAL.enemy;
+    const ring = u.summon ? PAL.summonRing : u.team === "ally" ? PAL.allyRing : PAL.enemyRing;
+    const footY = T * 0.3;
+    const rx = T * 0.36;
+    const ry = T * 0.17;
+    ctx.save();
+    ctx.translate(cx, cy);
+    // 底圈
+    ctx.fillStyle = "rgba(0,0,0,0.3)";
+    ctx.beginPath();
+    ctx.ellipse(1.5, footY + 2, rx + 1, ry + 1, 0, 0, TAU);
+    ctx.fill();
+    ctx.fillStyle = rgba(fill, 0.55);
+    ctx.strokeStyle = ring;
+    ctx.lineWidth = 2.2;
+    ctx.beginPath();
+    ctx.ellipse(0, footY, rx, ry, 0, 0, TAU);
+    ctx.fill();
+    ctx.stroke();
+    // 朝向尖角（貼在底圈外緣）
+    const ex = dx * rx;
+    const ey = footY + dy * ry;
+    ctx.beginPath();
+    ctx.moveTo(ex + dx * 9, ey + dy * 6);
+    ctx.lineTo(ex - dy * 5 + dx * 0, ey + dx * 4);
+    ctx.lineTo(ex + dy * 5, ey - dx * 4);
+    ctx.closePath();
+    ctx.fillStyle = ring;
+    ctx.fill();
+    ctx.strokeStyle = "rgba(0,0,0,0.6)";
+    ctx.lineWidth = 1;
+    ctx.stroke();
+    if (u.active) {
+      ctx.setLineDash([5, 3]);
+      ctx.lineWidth = 2.5;
+      ctx.strokeStyle = PAL.active;
+      ctx.beginPath();
+      ctx.ellipse(0, footY, rx + 5, ry + 4, 0, 0, TAU);
+      ctx.stroke();
+      ctx.setLineDash([]);
+    }
+    ctx.restore();
+    const unit = PaperDoll.TEMPLATES[u.template] ?? PaperDoll.TEMPLATES.bandit;
+    PaperDoll.stamp(ctx, unit, u.facing, cx, cy + footY + 1, 1.0);
+    ctx.save();
+    ctx.translate(cx, cy);
+    // 代號小標與血條（與棋子版相同）
+    ctx.font = '700 11px "Noto Sans TC","Microsoft JhengHei",sans-serif';
+    const tw = Math.max(13, ctx.measureText(u.marker).width + 6);
+    roundRect(ctx, -T * 0.5, -T * 0.5, tw, 14, 4);
+    ctx.fillStyle = u.summon ? "rgba(18,80,72,0.9)" : u.team === "ally" ? "rgba(30,70,150,0.92)" : "rgba(150,30,30,0.92)";
+    ctx.fill();
+    ctx.fillStyle = "#fff";
+    ctx.textAlign = "center";
+    ctx.textBaseline = "middle";
+    ctx.fillText(u.marker, -T * 0.5 + tw / 2, -T * 0.5 + 7.5);
+    const w = T * 0.78;
+    roundRect(ctx, -w / 2, T * 0.42, w, 6, 3);
+    ctx.fillStyle = "rgba(10,10,14,0.85)";
+    ctx.fill();
+    roundRect(ctx, -w / 2 + 1, T * 0.42 + 1, (w - 2) * u.hp, 4, 2);
+    ctx.fillStyle = U.hpColor(u.hp);
+    ctx.fill();
+    ctx.restore();
+  }
+
+  function render(canvas, scale = 2, opts = {}) {
     canvas.width = S.w * T * scale;
     canvas.height = S.h * T * scale;
     canvas.style.width = `${S.w * T}px`;
@@ -928,7 +999,8 @@ window.ProcRender = (() => {
         ctx.restore();
       }
     }
-    for (const u of S.units) drawUnit(ctx, u);
+    const units = [...S.units].sort((a, b) => a.y - b.y);
+    for (const u of units) (opts.units === "token" || !window.PaperDoll ? drawUnit : drawUnitFigure)(ctx, u);
   }
 
   return { render, flame, rng, PAL };
