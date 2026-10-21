@@ -241,6 +241,14 @@ export function isEmptyDraft(draft: Json): boolean {
   return Object.keys(draft).length === 0;
 }
 
+/**
+ * 「清空重來」按下去要做什麼（頁內確認，不用 `window.confirm`；內嵌瀏覽器會直接回傳否）：
+ * 空草稿直接清空；有內容時第一下先問（`ask`），已經問過再按一次才清空。
+ */
+export function resetStep(draft: Json, confirming: boolean): "clear" | "ask" {
+  return isEmptyDraft(draft) || confirming ? "clear" : "ask";
+}
+
 /** 必填、而且只有一個選項的單選欄位（例：被動技的形狀只能是「自己」）直接幫使用者選好。
  * 沒有任何變動時回傳原物件（呼叫端可用 `===` 判斷）。 */
 export function autoSingles(container: Json, fields: readonly FieldSpec[], base = ""): Json {

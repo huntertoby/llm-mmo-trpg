@@ -27,7 +27,6 @@ import { HIGHLIGHT } from "../battle/glossary";
 import type { Overlay, OverlayKind } from "../battle/scenePreview";
 import type { TelegraphMark } from "../battle/telegraph";
 import { warpPlan, type StepVfx } from "../battle/vfx";
-import { tileAt } from "../battle/drawModel";
 import { RING } from "./artPalette";
 import { ArtTextures } from "./artTextures";
 import { heightBadgeText, objectArtSpec, objectKinds, tileArtSpec } from "./artSpecs";
@@ -60,6 +59,8 @@ export interface Highlights {
   overlays: readonly Overlay[];
   /** 投擲物件第二段選取時，已經選好（舉起）的物件所在格（青色粗框）。 */
   picked: readonly Pos[];
+  /** 攀跳模式（Phase 3-21b）：可攀爬或跳躍的落點（紫色，附「攀」「跳」字樣），與一般目標的紅框分開。 */
+  vaults?: readonly { pos: Pos; kind: "climb" | "jump" }[];
 }
 
 const T = TILE_SIZE;
@@ -260,7 +261,7 @@ export class BattleRenderer {
 
   /** 一個單位：畫在所在排；被南邊高格擋住時另在最上層畫剪影。 */
   private drawUnit(model: DrawModel, u: UnitDraw): void {
-    const sprite = buildUnitSprite(this.art, this.pulses, u, tileAt(model, u)?.height ?? 0);
+    const sprite = buildUnitSprite(this.art, this.pulses, u);
     this.rows.row(u.y).units.addChild(sprite);
     this.place(sprite, u, u.x * T + T / 2, u.y * T + T / 2);
     if (!u.downed) this.unitSprites.set(u.id, sprite);
@@ -473,6 +474,15 @@ export class BattleRenderer {
       arrow.anchor.set(0.5);
       arrow.position.set(o.x + T / 2, o.y + T / 2);
       pen.add(d.pos, arrow);
+    }
+    for (const v of h.vaults ?? []) {
+      const o = this.origin(v.pos);
+      pen.at(v.pos).rect(o.x + 2, o.y + 2, T - 4, T - 4).fill({ color: HIGHLIGHT.vault, alpha: 0.32 });
+      pen.at(v.pos).rect(o.x + 2, o.y + 2, T - 4, T - 4).stroke({ width: 3, color: HIGHLIGHT.vault });
+      const glyph = label(v.kind === "climb" ? "攀" : "跳", 24, HIGHLIGHT.vault, true);
+      glyph.anchor.set(0.5);
+      glyph.position.set(o.x + T / 2, o.y + T / 2);
+      pen.add(v.pos, glyph);
     }
     for (const p of h.attacks) {
       const o = this.origin(p);

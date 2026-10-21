@@ -44,6 +44,7 @@ from trpg.engine.actions import (
     Swap,
     Trip,
     UseSkill,
+    Vault,
 )
 from trpg.engine.battle import begin_battle, legal_actions, resolve, resume, start_battle
 from trpg.engine.environment import Telegraph, telegraph
@@ -89,6 +90,7 @@ __all__ = [
     "Trip",
     "UnitSpawn",
     "UseSkill",
+    "Vault",
     "battle_result",
     "begin_battle",
     "build_setup",

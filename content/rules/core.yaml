@@ -13,6 +13,10 @@ swap_ap_cost: 1               # 換位（3-21a，玩法 #24）消耗
 aim_ap_cost: 1                # 瞄準（3-21a）消耗
 aim_hit_bonus: 2              # 瞄準：下一次需要擲命中的攻擊命中 +2（不疊加；平衡階段初值）
 guard_transfers_per_round: 1  # 守護隊友：每輪最多替隊友承受的次數（單體攻擊；平衡階段初值）
+vault_ap_cost: 1              # 攀跳（3-21b，玩法 #24）消耗
+vault_move_cost: 2            # 攀跳：另外消耗的移動點數（平衡階段初值）
+vault_climb_height: 2         # 攀爬：可爬上的相鄰格高度差上限（超過一般移動的 max_climb_height 才算攀爬）
+vault_jump_width: 1           # 跳躍：最多越過幾格連續的不可站立格（深淵、岩漿；平衡階段初值）
 run_move_bonus: 3             # 跑步：本回合移動點數 +3 格（固定格數，不受加速／緩速影響；平衡階段初值）
 
 # --- 判定 ---

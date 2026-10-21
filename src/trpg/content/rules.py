@@ -71,6 +71,14 @@ class CoreRules(ContentModel):
     """瞄準（Phase 3-21a）消耗的 AP。"""
     aim_hit_bonus: int = Field(ge=0)
     """瞄準：下一次需要擲命中的攻擊的命中加值（不疊加；平衡階段初值）。"""
+    vault_ap_cost: int = Field(ge=0)
+    """攀跳（Phase 3-21b，玩法 #24）消耗的 AP。"""
+    vault_move_cost: int = Field(ge=0)
+    """攀跳另外消耗的移動點數（平衡階段初值）。"""
+    vault_climb_height: int = Field(ge=1, le=4)
+    """攀爬：可爬上的相鄰格高度差上限（要大於 ``max_climb_height`` 才有意義；平衡階段初值）。"""
+    vault_jump_width: int = Field(ge=1, le=3)
+    """跳躍：最多越過幾格連續的不可站立格（深淵、岩漿；初值 1 格寬）。"""
     guard_transfers_per_round: int = Field(ge=0)
     """守護隊友：守護者每輪最多替隊友承受單體攻擊的次數（平衡階段初值）。"""
 

@@ -7,7 +7,7 @@ import { ErrorBanner } from "../ui/ErrorBanner";
 import { StepView } from "../ui/workshop/StepView";
 import { ExportPanel, RandomPanel, YamlPanel } from "../ui/workshop/ToolPanels";
 import { TryoutPanel } from "../ui/workshop/TryoutPanel";
-import type { Json } from "../workshop/draft";
+import { resetStep, type Json } from "../workshop/draft";
 import {
   browserStore,
   editorReducer,
@@ -92,8 +92,15 @@ export function WorkshopScreen({ onHome, onStartBattle, store }: Props) {
   const setDraft = useCallback((next: Json) => dispatch({ type: "edit", draft: next }), []);
   const skeletons: readonly Choice[] = state.options?.steps[0]?.fields[0]?.choices ?? [];
 
+  // 清空重來：有內容時先在頁內問一次（尚未匯出的內容會消失），草稿被別處改了就作廢
+  const [confirmingReset, setConfirmingReset] = useState(false);
+  useEffect(() => setConfirmingReset(false), [draft]);
   function reset() {
-    if (Object.keys(draft).length > 0 && !window.confirm("清空目前編輯中的技能，從頭開始？（尚未匯出的內容會消失）")) return;
+    if (resetStep(draft, confirmingReset) === "ask") {
+      setConfirmingReset(true);
+      return;
+    }
+    setConfirmingReset(false);
     dispatch({ type: "replace", draft: {} });
   }
 
@@ -103,9 +110,17 @@ export function WorkshopScreen({ onHome, onStartBattle, store }: Props) {
         <h1>技能工坊</h1>
         <span className="muted">一步步組出自己的技能，檢查強度，再裝上主角試玩。</span>
         <span className="ws-header-tools">
-          <button type="button" onClick={reset}>
-            清空重來
+          {confirmingReset && (
+            <span className="ws-reset-ask muted small">清空目前編輯中的技能？（尚未匯出的內容會消失）</span>
+          )}
+          <button type="button" className={confirmingReset ? "danger" : ""} onClick={reset}>
+            {confirmingReset ? "確定清空" : "清空重來"}
           </button>
+          {confirmingReset && (
+            <button type="button" onClick={() => setConfirmingReset(false)}>
+              取消
+            </button>
+          )}
           <button type="button" onClick={onHome}>
             回首頁
           </button>

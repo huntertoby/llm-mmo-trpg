@@ -55,19 +55,58 @@ export function objectArtSpec(o: ObjectDraw, kinds: ReadonlyMap<string, string>)
   };
 }
 
-/** 左上角高度徽章的文字：高度 > 0 且至少一個鄰格高度不同才有（高台內部格不標）。 */
+const NEIGHBORS = [
+  [0, -1],
+  [0, 1],
+  [-1, 0],
+  [1, 0],
+] as const;
+
+/** 同高、相連（四方向）、可站立、高度 > 0 的一片格子；回傳這一片的格子與是否有鄰格不同高。 */
+function heightRegion(model: DrawModel, start: TileDraw, seen: Set<string>): { tiles: TileDraw[]; edge: boolean } {
+  const tiles: TileDraw[] = [];
+  let edge = false;
+  const stack = [start];
+  seen.add(`${start.x},${start.y}`);
+  for (let t = stack.pop(); t !== undefined; t = stack.pop()) {
+    tiles.push(t);
+    for (const [dx, dy] of NEIGHBORS) {
+      const n = neighbor(model, t, dx, dy);
+      if (n === undefined) continue;
+      if (n.height !== t.height) edge = true;
+      const key = `${n.x},${n.y}`;
+      if (n.height === t.height && !n.blocked && !seen.has(key)) {
+        seen.add(key);
+        stack.push(n);
+      }
+    }
+  }
+  return { tiles, edge };
+}
+
+const badgeCache = new WeakMap<DrawModel, ReadonlyMap<string, string>>();
+
+/**
+ * 高度徽章（3-21b，美術 PM 檢查）：同高、相連的一片只標一個，放在這片最上排最左邊的格子；單獨一格照標；
+ * 整張圖都同高（沒有任何鄰格不同高）的一片不標。鍵為 `x,y`，值為高度文字。
+ */
+export function heightBadges(model: DrawModel): ReadonlyMap<string, string> {
+  const cached = badgeCache.get(model);
+  if (cached !== undefined) return cached;
+  const badges = new Map<string, string>();
+  const seen = new Set<string>();
+  for (const t of model.tiles) {
+    if (t.blocked || t.height <= 0 || seen.has(`${t.x},${t.y}`)) continue;
+    const { tiles, edge } = heightRegion(model, t, seen);
+    if (!edge) continue;
+    const anchor = tiles.reduce((a, b) => (b.y < a.y || (b.y === a.y && b.x < a.x) ? b : a));
+    badges.set(`${anchor.x},${anchor.y}`, String(t.height));
+  }
+  badgeCache.set(model, badges);
+  return badges;
+}
+
+/** 左上角高度徽章的文字：這一格是它那一片的徽章位置時才有（見 :func:`heightBadges`）。 */
 export function heightBadgeText(model: DrawModel, t: TileDraw): string | null {
-  if (t.blocked || t.height <= 0) return null;
-  const edge = (
-    [
-      [0, -1],
-      [0, 1],
-      [-1, 0],
-      [1, 0],
-    ] as const
-  ).some(([dx, dy]) => {
-    const n = neighbor(model, t, dx, dy);
-    return n !== undefined && n.height !== t.height;
-  });
-  return edge ? String(t.height) : null;
+  return heightBadges(model).get(`${t.x},${t.y}`) ?? null;
 }

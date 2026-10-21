@@ -24,3 +24,9 @@ describe("pixelToTile", () => {
     expect(canvasSize(grid, 10)).toEqual({ width: 40, height: 30 });
   });
 });
+
+describe("TILE_SIZE", () => {
+  it("格子基礎尺寸是 16 px 素材的整數倍", () => {
+    expect(TILE_SIZE % 16).toBe(0);
+  });
+});

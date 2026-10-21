@@ -34,6 +34,7 @@ from trpg.engine.actions import (
     Swap,
     Trip,
     UseSkill,
+    Vault,
 )
 from trpg.engine.activations import moves_object
 from trpg.engine.basics import (
@@ -44,6 +45,9 @@ from trpg.engine.basics import (
     do_swap,
     guard_problem,
     swap_problem,
+    vault_action,
+    vault_destinations,
+    vault_plan,
 )
 from trpg.engine.context import Ctx, GambleBranch, PreviewMode
 from trpg.engine.copying import copy_selections, has_copy_effect
@@ -66,6 +70,7 @@ from trpg.engine.events import (
     TurnOrderSet,
     UnitRan,
     UnitStoodUp,
+    UnitVaulted,
 )
 from trpg.engine.ids import PRONE, TOPPLABLE
 from trpg.engine.lifecycle import make_unit
@@ -801,6 +806,31 @@ def _do_run(ctx: Ctx, unit: UnitState, action: Action) -> None:
     ctx.emit(UnitRan, unit_id=unit.id, bonus=bonus, move_points=unit.move_points)
 
 
+def _do_vault(ctx: Ctx, unit: UnitState, action: Action) -> None:
+    """攀跳（Phase 3-21b）：先花 AP，離開相鄰格照常觸發藉機攻擊，之後花移動點數並移到落點。"""
+    assert isinstance(action, Vault)
+    plan = vault_plan(ctx.state, unit, (action.dest.x, action.dest.y))
+    if isinstance(plan, str):
+        raise IllegalActionError(plan)
+    core = ctx.core
+    start = unit.xy
+    unit.ap -= core.vault_ap_cost
+    opportunity_attacks(ctx, unit, start, plan.dest)
+    if not unit.alive or unit.xy != start or _move_interrupted(ctx, unit, start):
+        return  # 被打倒、被推開、暈眩或倒地：攀跳取消（AP 已付）
+    unit.move_points -= core.vault_move_cost
+    ctx.emit(UnitVaulted, unit_id=unit.id, kind=plan.kind, from_pos=unit.pos, to_pos=action.dest)
+    execute(
+        ctx,
+        [MoveUnitEffect(unit_id=unit.id, dest=plan.dest, mode="walk", cost=core.vault_move_cost)],
+    )
+    enemy_enters_adjacent_reactions(ctx, unit, start)
+    enemy_moves_in_range_reactions(ctx, unit)
+    if unit.alive:
+        collect_move(ctx, unit)
+        settle(ctx)
+
+
 def _maneuver_target(ctx: Ctx, unit: UnitState, target_id: UnitId) -> UnitState:
     target = ctx.state.units.get(target_id)
     if target is None:
@@ -921,6 +951,7 @@ ACTION_HANDLERS: dict[str, ActionHandler] = {
     "defend": do_defend,
     "swap": do_swap,
     "aim": do_aim,
+    "vault": _do_vault,
     "run": _do_run,
     "shove": _do_shove,
     "trip": _do_trip,
@@ -1130,6 +1161,7 @@ def _legal_actions(
     )
     if aim_problem(state, unit) is None and _has_attack_to_aim(state, unit):
         actions.append(Aim(unit_id=unit.id))
+    actions.extend(vault_action(unit, plan) for plan in vault_destinations(state, unit))
     if stance_status_ids(state.ruleset, unit):
         actions.append(EndStance(unit_id=unit.id))
     budget = available_move_budget(state, unit)
@@ -1206,12 +1238,13 @@ def _has_attack_to_aim(state: BattleState, unit: UnitState) -> bool:
 
 
 def _has_basic_action(state: BattleState, unit: UnitState) -> bool:
-    """守護、跑步、瞄準、換位（Phase 3-20、3-21a）任一個合法。"""
+    """守護、跑步、瞄準、換位、攀跳（Phase 3-20、3-21）任一個合法。"""
     return (
         guard_problem(state, unit, None) is None
         or run_problem(state, unit) is None
         or (aim_problem(state, unit) is None and _has_attack_to_aim(state, unit))
         or any(swap_problem(state, unit, a.id) is None for a in adjacent_allies(state, unit))
+        or bool(vault_destinations(state, unit))
     )
 
 

@@ -835,7 +835,9 @@ class BasicActionAiRules(ContentModel):
       ``swap_tank_ratio_permille``‰ ＜把坦克換上前＞），自己 HP 不低於 ``swap_self_hp_permille``‰
       → ``swap_points``；
     - 瞄準：AP 剛好夠「瞄準 ＋ 一個 AP 花費 ≥ ``aim_min_attack_ap`` 的攻擊」，而該攻擊的命中率低於
-      ``aim_hit_permille``‰ 且有收益 → 該攻擊的分數 ＋ ``aim_points``（所以先瞄準再攻擊）。
+      ``aim_hit_permille``‰ 且有收益 → 該攻擊的分數 ＋ ``aim_points``（所以先瞄準再攻擊）；
+    - 攀跳（3-21b）：攀爬或跳躍後，走到最近敵人的步數比現在少至少 ``vault_min_saving`` 步（現在走不
+      到、攀跳後走得到也算）→ ``vault_points``（低權重：只在明顯縮短路徑時用）。
     """
 
     guard_points: int = Field(default=3, ge=0)
@@ -850,6 +852,8 @@ class BasicActionAiRules(ContentModel):
     aim_points: int = Field(default=2, ge=0)
     aim_hit_permille: int = Field(default=500, ge=0, le=1000)
     aim_min_attack_ap: int = Field(default=2, ge=1)
+    vault_points: int = Field(default=4, ge=0)
+    vault_min_saving: int = Field(default=4, ge=1)
 
 
 class AiProfileTable(ContentModel):

@@ -107,6 +107,7 @@ from trpg.engine.events import (
     UnitSpawned,
     UnitStoodUp,
     UnitSummoned,
+    UnitVaulted,
     ZoneCreated,
     ZoneExpired,
     ZoneMoved,
@@ -374,6 +375,12 @@ def _stood_up(e: UnitStoodUp, v: _View) -> str:
 @_handles(UnitRan)
 def _ran(e: UnitRan, v: _View) -> str:
     return f"  {v.name[e.unit_id]} 跑步（本回合移動 +{e.bonus}，剩餘 {e.move_points}）"
+
+
+@_handles(UnitVaulted)
+def _vaulted(e: UnitVaulted, v: _View) -> str:
+    verb = "攀爬到" if e.kind == "climb" else "跳到"
+    return f"  {v.name[e.unit_id]} {verb} {xy_text(e.to_pos)}"
 
 
 @_handles(GuardSet)
