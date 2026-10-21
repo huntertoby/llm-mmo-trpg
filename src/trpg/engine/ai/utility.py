@@ -73,6 +73,7 @@ from trpg.content.skills import (
 )
 from trpg.engine.actions import (
     Action,
+    Aim,
     Attack,
     Defend,
     EndStance,
@@ -80,9 +81,11 @@ from trpg.engine.actions import (
     Move,
     Run,
     Shove,
+    Swap,
     Trip,
     UseSkill,
 )
+from trpg.engine.ai.basics import aim_bonus, guard_bonus, swap_score
 from trpg.engine.ai.composite import composite_estimate
 from trpg.engine.ai.displace import DISPLACE_PRIMITIVES, displace_estimate, exposure, is_hurt
 from trpg.engine.ai.gamble import cautious, on_miss_cost
@@ -1849,6 +1852,7 @@ class UtilityAI:
         self._profiles = profiles.by_id()
         self._bonuses = profiles.orders
         self._run = profiles.run
+        self._basic = profiles.basic
         self.orders: OrdersSource | None = orders
         """戰術指令的來源（Phase 2C-2）；``None`` 時完全不受指令影響。"""
         self._override = override
@@ -1921,17 +1925,12 @@ class UtilityAI:
                 estimates.append(
                     (virtual_move_score(state, unit, action, w, before, scene=scene), index)
                 )
-            elif isinstance(action, Defend | Run):  # 不移動、不跑 preview：直接計算
-                points = (
-                    defend_score(state, unit, w)
-                    if isinstance(action, Defend)
-                    else run_score(state, unit, self._run)
-                )
-                scored[index] = ActionScore(action, points, None)
+            elif isinstance(action, Defend | Run | Swap):  # 不移動、不跑 preview：直接計算
+                scored[index] = ActionScore(action, self._cheap_score(state, unit, w, action), None)
             elif isinstance(action, Attack) and not worth_previewing(state, scene, action):
                 continue
-            elif isinstance(action, UseSkill | EndStance):
-                continue  # 技能在下面依估計篩選後才評分；AI 不主動取消姿態
+            elif isinstance(action, UseSkill | EndStance | Aim):
+                continue  # 技能在下面依估計篩選後才評分；AI 不主動取消姿態；瞄準看其他攻擊的預覽
             else:
                 scored[index] = score_action(
                     state, action, profile, before=before, orders=ctx, walk=walk
@@ -1942,6 +1941,7 @@ class UtilityAI:
             scored[index] = score_action(
                 state, actions[index], profile, before=before, orders=ctx, walk=walk
             )
+        self._score_aim(state, unit, actions, scored)
         estimates.sort(key=lambda item: (-item[0], item[1]))
         enemies = reactive_enemies(state, unit)
         for estimate, index in estimates[: self._move_candidates]:
@@ -1954,6 +1954,39 @@ class UtilityAI:
             else:
                 scored[index] = ActionScore(move, estimate, None)
         return [scored[i] for i in sorted(scored)]
+
+    def _score_aim(
+        self,
+        state: BattleState,
+        unit: UnitState,
+        actions: list[Action],
+        scored: dict[int, ActionScore],
+    ) -> None:
+        """瞄準（Phase 3-21a）：依已評分的攻擊與技能的預覽計分（技能評分之後才算）。"""
+        index = next((i for i, a in enumerate(actions) if isinstance(a, Aim)), None)
+        if index is None:
+            return
+        attacks = [
+            (s.score, s.preview)
+            for s in scored.values()
+            if isinstance(s.action, Attack | UseSkill) and s.preview is not None
+        ]
+        scored[index] = ActionScore(
+            actions[index], aim_bonus(state, unit, attacks, self._basic), None
+        )
+
+    def _cheap_score(
+        self, state: BattleState, unit: UnitState, w: AiWeights, action: Defend | Run | Swap
+    ) -> Fraction:
+        """守護／跑步／換位的分數（不跑 preview）。守護隊友 ＝ 守護自己的分數 ＋ 隊友的加分。"""
+        if isinstance(action, Run):
+            return run_score(state, unit, self._run)
+        if isinstance(action, Swap):
+            return swap_score(state, unit, state.units[action.target_id], self._basic)
+        points = defend_score(state, unit, w)
+        if action.target_id is not None:
+            points += guard_bonus(state, unit, state.units[action.target_id], self._basic)
+        return points
 
     def _skill_candidates(  # noqa: PLR0917
         self,

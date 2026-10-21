@@ -25,6 +25,7 @@ __all__ = [
     "AiProfile",
     "AiProfileTable",
     "AiWeights",
+    "BasicActionAiRules",
     "ElementCapability",
     "ExplosionDef",
     "GambleAiRules",
@@ -822,6 +823,35 @@ class RunAiRules(ContentModel):
     retreat_enemy_radius: int = Field(default=4, ge=1)
 
 
+class BasicActionAiRules(ContentModel):
+    """AI 使用守護隊友、換位、瞄準的數值（Phase 3-21a，玩法 #24；``content/ai_profiles.yaml`` 的
+    ``basic:``）。條件不成立一律 0 分（不會用）；初值未經模擬（平衡階段調整）。
+
+    - 守護隊友：相鄰隊友 HP 低於 ``guard_ally_hp_permille``‰、``guard_threat_radius`` 格內有敵人、
+      自己 HP 不低於 ``guard_self_hp_permille``‰ → 在「守護自己」的分數上加
+      ``guard_points``（所以只在這種情況勝過守護自己）；
+    - 換位：隊友比自己更靠近最近的敵人（在前線），且隊友在 ``swap_threat_radius`` 格內有敵人，並且
+      （隊友 HP 低於 ``swap_rescue_hp_permille``‰ ＜把低血量隊友換離前線＞，或自己的最大 HP 達隊友的
+      ``swap_tank_ratio_permille``‰ ＜把坦克換上前＞），自己 HP 不低於 ``swap_self_hp_permille``‰
+      → ``swap_points``；
+    - 瞄準：AP 剛好夠「瞄準 ＋ 一個 AP 花費 ≥ ``aim_min_attack_ap`` 的攻擊」，而該攻擊的命中率低於
+      ``aim_hit_permille``‰ 且有收益 → 該攻擊的分數 ＋ ``aim_points``（所以先瞄準再攻擊）。
+    """
+
+    guard_points: int = Field(default=3, ge=0)
+    guard_ally_hp_permille: int = Field(default=500, ge=0, le=1000)
+    guard_self_hp_permille: int = Field(default=500, ge=0, le=1000)
+    guard_threat_radius: int = Field(default=6, ge=1)
+    swap_points: int = Field(default=6, ge=0)
+    swap_rescue_hp_permille: int = Field(default=350, ge=0, le=1000)
+    swap_tank_ratio_permille: int = Field(default=1500, ge=1000)
+    swap_self_hp_permille: int = Field(default=500, ge=0, le=1000)
+    swap_threat_radius: int = Field(default=3, ge=1)
+    aim_points: int = Field(default=2, ge=0)
+    aim_hit_permille: int = Field(default=500, ge=0, le=1000)
+    aim_min_attack_ap: int = Field(default=2, ge=1)
+
+
 class AiProfileTable(ContentModel):
     """``content/ai_profiles.yaml``：至少包含 brute、archer、cunning、guard。
 
@@ -852,6 +882,8 @@ class AiProfileTable(ContentModel):
     zone: ZoneAiRules = Field(default_factory=ZoneAiRules)
     gamble: GambleAiRules = Field(default_factory=GambleAiRules)
     orders: OrderBonuses = Field(default_factory=OrderBonuses)
+    basic: BasicActionAiRules = Field(default_factory=BasicActionAiRules)
+    """守護隊友、換位、瞄準的 AI 數值（Phase 3-21a；敵我同一套，不分行為模式）。"""
     run: RunAiRules = Field(default_factory=RunAiRules)
     """跑步的 AI 數值（Phase 3-20；敵我同一套，不分行為模式）。"""
     facing: dict[str, int] = Field(default_factory=dict)
