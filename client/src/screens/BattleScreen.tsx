@@ -84,6 +84,7 @@ import { cardPlacement, dialogStartsLow, fitScale } from "../battle/stageLayout"
 import { hasOrders, orderButton } from "../battle/orders";
 import { BattleCanvas } from "../ui/BattleCanvas";
 import { BattleLog, type LogHover } from "../ui/BattleLog";
+import { HoverFloat } from "../ui/HoverFloat";
 import { TileCard } from "../ui/TileCard";
 import { tileSections } from "../battle/tileInfo";
 import { CopyDialog } from "../ui/CopyDialog";
@@ -845,12 +846,12 @@ export function BattleScreen({ initial, onExit, exitLabel, runMode }: Props) {
           rendererRef={rendererRef}
         >
           {hover !== null && (hoverUnit !== null || tileCardSections.length > 0) && (
-            <div className="unit-float" style={cardPlacement(hover, model, scale)}>
+            <HoverFloat placement={cardPlacement(hover, model, scale)}>
               {hoverUnit !== null && (
                 <UnitInfo unit={hoverUnit} names={names} heroId={heroId} skills={skillNames} view={view} />
               )}
               <TileCard sections={tileCardSections} />
-            </div>
+            </HoverFloat>
           )}
         </BattleCanvas>
         </div>
