@@ -6,6 +6,8 @@
 - ``plan/map_types``：洗牌地圖類型，取前 ``battles`` 種（同一輪不重複）。
 - ``plan/map/<i>``：第 i 場在該類型的地圖中抽一張。
 - ``plan/encounter/<i>``：第 i 場的敵人選項。
+- ``plan/objective/<kind>/<n>``：勝利條件輪替（Phase 3-22）——挑出第 n 場撤離（``escape``）或守點
+  （``defend``）的場次；該場的地圖若不支援，改在同類型中重抽（``plan/map/<i>``）。
 - ``plan/battle/<i>``：第 i 場戰鬥的種子（含 Boss 戰）。
 - 升級與重骰的候選見 :mod:`trpg.roguelite.offers`（``offer/<n>``）。
 """
@@ -13,7 +15,8 @@
 from __future__ import annotations
 
 from collections import Counter
-from collections.abc import Iterable, Mapping
+from collections.abc import Iterable, Mapping, Sequence
+from typing import Literal
 
 from trpg.content.battle import UnitTemplate
 from trpg.content.library import ContentLibrary
@@ -76,16 +79,22 @@ def make_plan(library: ContentLibrary, seed: int) -> tuple[BattlePlan, ...]:
     pool = sorted(rules.map_pool)
     archetypes = sorted({library.map(m).archetype for m in pool})
     picked = root.fork("plan/map_types").shuffled(archetypes)[: rules.battles]
+    map_ids = [
+        root.fork(f"plan/map/{i}").choice([m for m in pool if library.map(m).archetype == a])
+        for i, a in enumerate(picked, start=1)
+    ]
+    objectives = _assign_objectives(library, root, pool, picked, map_ids)
     plans: list[BattlePlan] = []
-    for index, archetype in enumerate(picked, start=1):
-        maps = [m for m in pool if library.map(m).archetype == archetype]
-        options = rules.encounters[index - 1].options
+    for index, map_id in enumerate(map_ids, start=1):
         plans.append(
             BattlePlan(
                 index=index,
-                map_id=root.fork(f"plan/map/{index}").choice(maps),
-                enemies=root.fork(f"plan/encounter/{index}").choice(options),
+                map_id=map_id,
+                enemies=root.fork(f"plan/encounter/{index}").choice(
+                    rules.encounters[index - 1].options
+                ),
                 seed=_battle_seed(root, index),
+                objective=objectives[index - 1],
             )
         )
     boss = rules.battles + 1
@@ -99,6 +108,37 @@ def make_plan(library: ContentLibrary, seed: int) -> tuple[BattlePlan, ...]:
         )
     )
     return tuple(plans)
+
+
+def _assign_objectives(
+    library: ContentLibrary,
+    root: Rng,
+    pool: list[str],
+    archetypes: Sequence[str],
+    map_ids: list[str],
+) -> list[Literal["eliminate", "escape", "defend"]]:
+    """一般戰鬥的勝利條件（Phase 3-22）：先排滿撤離、再排滿守點的最少場數，其餘全滅。被選中的場次若
+    原本抽到的地圖不支援該條件，在同地圖類型中改抽支援的地圖（就地修改 ``map_ids``）。"""
+    rotation = library.roguelite.objective_rotation
+    result: list[Literal["eliminate", "escape", "defend"]] = ["eliminate"] * len(map_ids)
+    for kind, count in (("escape", rotation.min_escape), ("defend", rotation.min_defend)):
+        for n in range(1, count + 1):
+            supporting = [
+                [
+                    m
+                    for m in pool
+                    if library.map(m).archetype == a and library.map(m).supports_objective(kind)
+                ]
+                for a in archetypes
+            ]
+            free = [i for i, r in enumerate(result) if r == "eliminate" and supporting[i]]
+            if not free:
+                raise ChoiceError(f"排不出第 {n} 場 {kind}：沒有支援它的地圖類型")
+            i = root.fork(f"plan/objective/{kind}/{n}").choice(free)
+            if map_ids[i] not in supporting[i]:
+                map_ids[i] = root.fork(f"plan/map/{i + 1}").choice(supporting[i])
+            result[i] = "escape" if kind == "escape" else "defend"
+    return result
 
 
 def _battle_seed(root: Rng, index: int) -> int:

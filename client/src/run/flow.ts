@@ -1,6 +1,7 @@
 // roguelite 一輪的流程狀態（Phase 3-5c-1；純函式）：由 `RunResponse` 決定要顯示哪個畫面、有哪些按鈕，
 // 以及升級畫面的配點、候選排列、欄位上限判斷。
 import { END_REASONS } from "../battle/glossary";
+import { objectiveBadge, objectiveLine, type ObjectiveKind, type ObjectiveLike } from "../battle/objective";
 import type { AttributeId, RunChoice, RunHero, RunOffer, RunResponse, SkillCard } from "../api/types";
 
 /** 六項屬性（與後端 `Attribute` 的順序相同）與中文名。 */
@@ -42,6 +43,10 @@ export type RunView =
       boss: boolean;
       mapName: string;
       enemies: readonly string[];
+      /** 本場的勝利條件（Phase 3-22）：圖示加名稱，與一行說明。 */
+      goalKind: ObjectiveKind;
+      goalBadge: string;
+      goalLine: string;
       /** 本場已經開打（讀檔回來在戰鬥中）→ 按鈕是「繼續戰鬥」。 */
       resume: boolean;
       buttonLabel: string;
@@ -71,12 +76,16 @@ export function runView(run: RunResponse): RunView {
   const boss = node.boss === true || plan?.boss === true;
   const resume = run.battle_id !== null;
   const base = boss ? "Boss 戰" : `第 ${index} 場`;
+  const goal: ObjectiveLike = plan?.objective ?? { kind: "eliminate" };
   return {
     screen: "progress",
     index,
     boss,
     mapName: plan?.map_name_zh ?? "",
     enemies: plan?.enemies ?? [],
+    goalKind: goal.kind,
+    goalBadge: objectiveBadge(goal),
+    goalLine: objectiveLine(goal),
     resume,
     // 「Boss 戰」是英文開頭，前面要空格；「第 3 場」是中文，不用。
     buttonLabel: resume ? `繼續${boss ? " " : ""}${base}` : `開始${boss ? " " : ""}${base}`,

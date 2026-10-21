@@ -54,6 +54,8 @@ class BattlePlan(_Model):
     enemies: tuple[str, ...]
     seed: int = Field(ge=0)
     boss: bool = False
+    objective: Literal["eliminate", "escape", "defend"] = "eliminate"
+    """本場的勝利條件種類（Phase 3-22）；撤離與守點的格子、輪數取自地圖的 ``alt_objectives``。"""
 
 
 class BattleRecord(_Model):

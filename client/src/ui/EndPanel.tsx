@@ -2,6 +2,7 @@
 import { logUrl } from "../api/client";
 import type { BattleResponse } from "../api/types";
 import { END_REASONS } from "../battle/glossary";
+import { endDetail } from "../battle/objective";
 
 interface Props {
   response: BattleResponse;
@@ -22,9 +23,11 @@ export function outcomeText(response: BattleResponse): string {
 }
 
 export function EndPanel({ response, onRestart, restartLabel = "再來一場" }: Props) {
+  const detail = endDetail(response.outcome?.end_reason ?? null);
   return (
     <div className="panel end-panel">
       <div className="end-title">{outcomeText(response)}</div>
+      {detail !== null && <div className="end-detail">{detail}</div>}
       <div className="end-buttons">
         <button type="button" className="primary" onClick={onRestart}>
           {restartLabel}

@@ -91,6 +91,7 @@ from trpg.engine.ai.basics import aim_bonus, guard_bonus, swap_score
 from trpg.engine.ai.composite import composite_estimate
 from trpg.engine.ai.displace import DISPLACE_PRIMITIVES, displace_estimate, exposure, is_hurt
 from trpg.engine.ai.gamble import cautious, on_miss_cost
+from trpg.engine.ai.objective import hold_guard_bonus, objective_cost
 from trpg.engine.ai.orders import (
     FocusTarget,
     HoldPosition,
@@ -293,15 +294,6 @@ def _harmful(state: BattleState, xy: tuple[int, int]) -> bool:
     return enter is not None and enter.apply_status is not None
 
 
-def _objective_distance(state: BattleState, unit: UnitState) -> int:
-    objective = state.objective
-    if objective.kind == "eliminate" or not objective.tiles:
-        return 0
-    if objective.kind == "escape" and unit.team is not Team.ALLY:
-        return 0
-    return min(manhattan(unit.xy, t) for t in objective.tiles)
-
-
 def _ward(state: BattleState, unit: UnitState, orders: OrderContext | None = None) -> XY | None:
     """最需要保護的友方（HP 比例最低，同比例依 ID）的位置；沒有其他友方時為 ``None``。
     保護指令（``orders.ward``）指定了對象時固定用它。"""
@@ -478,8 +470,7 @@ def _unit_position_value(
     value += w.height * state.tile(*xy).height
     if w.protect and scene.ward is not None:
         value -= w.protect * manhattan(xy, scene.ward)
-    if w.objective:
-        value -= w.objective * _objective_distance(state, unit)
+    value -= objective_cost(state, unit, w)
     if scene.orders is not None:
         value -= _order_penalty(scene.orders, xy)
     if _harmful(state, xy) or (state.zones and hostile_zone_at(state, xy, unit.team)):
@@ -2033,7 +2024,7 @@ class UtilityAI:
             return run_score(state, unit, self._run)
         if isinstance(action, Swap):
             return swap_score(state, unit, state.units[action.target_id], self._basic)
-        points = defend_score(state, unit, w)
+        points = defend_score(state, unit, w) + hold_guard_bonus(state, unit, w)
         if action.target_id is not None:
             points += guard_bonus(state, unit, state.units[action.target_id], self._basic)
         return points

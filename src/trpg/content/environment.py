@@ -630,6 +630,22 @@ class AiWeights(ContentModel):
     """（Phase 3E-1）瞬步（``shadowstep``）的固定加分；預設 3，不是 0。"""
     shadowstep_behind: int = 2
     """（Phase 3E-1）瞬步落在目標背後時再加的分數；預設 2，不是 0。"""
+    contest: int = 0
+    """（Phase 3-22）守點戰中，**敵方** 與最近守點格的距離（位置價值每格扣分；搶點）。表格層級的
+    ``objective_ai`` 填入每個行為模式。"""
+    intercept: int = 0
+    """（Phase 3-22）撤離戰中，**敵方** 與最近出口格的距離（位置價值每格扣分；攔截出口路線）。"""
+    rush_exit: int = 0
+    """（Phase 3-22）撤離戰中，**我方** 與最近出口格的距離（位置價值每格額外扣分；朝出口，疊加在
+    ``objective`` 上）。"""
+    hold_point: int = 0
+    """（Phase 3-22）守點戰中，**我方** 離守點格超過 ``hold_radius`` 的每一格位置價值扣分（守在點
+    附近）。"""
+    hold_radius: int = Field(default=2, ge=0)
+    """（Phase 3-22）``hold_point`` 與 ``hold_guard`` 的半徑（曼哈頓格數）。"""
+    hold_guard: int = 0
+    """（Phase 3-22）守點戰中，**我方** 單位在守點 ``hold_radius`` 格內且有敵人逼近（6 格內）時，
+    守護（防禦）動作多加的分數。"""
 
 
 class TrapAiRules(ContentModel):
@@ -912,6 +928,10 @@ class AiProfileTable(ContentModel):
     """守護隊友、換位、瞄準的 AI 數值（Phase 3-21a；敵我同一套，不分行為模式）。"""
     run: RunAiRules = Field(default_factory=RunAiRules)
     """跑步的 AI 數值（Phase 3-20；敵我同一套，不分行為模式）。"""
+    objective_ai: dict[str, int] = Field(default_factory=dict)
+    """勝利條件的 AI 權重（Phase 3-22；``contest``、``intercept``、``rush_exit``、``hold_point``、
+    ``hold_radius``、``hold_guard``）：敵我同一套，填入每個行為模式的 ``weights``（行為模式自己
+    列出的優先）。只在撤離或守點戰中生效。"""
     facing: dict[str, int] = Field(default_factory=dict)
     """朝向與背刺的位置權重（Phase 3D-8d；``backstab``、``back_exposed``）：敵我同一套，填入每個行為
     模式的 ``weights``（行為模式自己列出的優先）。"""
@@ -938,6 +958,9 @@ class AiProfileTable(ContentModel):
             if key in data
         }
         facing = data.get("facing")
+        objective_ai = data.get("objective_ai")
+        if isinstance(objective_ai, dict):
+            facing = {**(facing if isinstance(facing, dict) else {}), **objective_ai}
         if (
             not isinstance(shared, dict)
             and not isinstance(ally_shared, dict)

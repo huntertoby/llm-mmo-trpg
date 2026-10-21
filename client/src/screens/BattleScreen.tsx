@@ -97,6 +97,7 @@ import { FollowupDialog } from "../ui/FollowupDialog";
 import { followupMode, followupTargetOf, isFollowupPending } from "../battle/followup";
 import { DecisionDialog } from "../ui/DecisionDialog";
 import { EndPanel } from "../ui/EndPanel";
+import { objectiveLine } from "../battle/objective";
 import { ErrorBanner } from "../ui/ErrorBanner";
 import { NoticeBanner } from "../ui/NoticeBanner";
 import { needsLogRestore } from "../run/flow";
@@ -448,7 +449,9 @@ export function BattleScreen({ initial, onExit, exitLabel, runMode }: Props) {
         });
         if (withBanner) {
           setBanner(true);
-          if (speedRef.current !== "skip") await sleep(BANNER_MS);
+          // 撤離與守點多停一會兒，讓玩家讀完本場目標
+          const longer = plan.initialView.objective.kind !== "eliminate";
+          if (speedRef.current !== "skip") await sleep(longer ? BANNER_MS * 2 : BANNER_MS);
           setBanner(false);
         }
         let done = 0;
@@ -915,7 +918,12 @@ export function BattleScreen({ initial, onExit, exitLabel, runMode }: Props) {
             onReset={() => patchLayout({ bottomHeight: DEFAULT_LAYOUT.bottomHeight })}
           />
         )}
-        {banner && <div className="battle-banner">戰鬥開始</div>}
+        {banner && (
+          <div className="battle-banner">
+            戰鬥開始
+            <div className="battle-banner-goal">{objectiveLine(shown.objective)}</div>
+          </div>
+        )}
         <div className="board-toasts">
           <ErrorBanner message={error} onClose={() => setError(null)} />
           <NoticeBanner message={hint} onClose={closeHint} />

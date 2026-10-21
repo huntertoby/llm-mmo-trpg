@@ -4,6 +4,7 @@
 import type { BattleView, Pos, TileView } from "../api/types";
 import type { SkillNames } from "./actions";
 import { glossaryEntry, glossaryName } from "./glossary";
+import { markerCard } from "./objective";
 import { ownerNameOf, runeLine, runesAt } from "./runes";
 
 // 與圖例（legend.ts）共用的用語；測試比對兩邊一致。
@@ -13,7 +14,7 @@ export const LABEL_TRAP = "陷阱";
 export const LABEL_ZONE = "持續區域";
 export const LABEL_RUNE = "符文";
 
-export type TileSectionKind = "terrain" | "surface" | "object" | "trap" | "rune" | "zone";
+export type TileSectionKind = "terrain" | "surface" | "object" | "trap" | "rune" | "zone" | "objective";
 
 export interface TileSection {
   kind: TileSectionKind;
@@ -83,6 +84,8 @@ export function tileSections(
   }
   const obj = objectSection(view, tile);
   if (obj !== null) out.push(obj);
+  const goal = markerCard(view, pos);
+  if (goal !== null) out.push(section("objective", goal.title, goal.lines));
   for (const t of view.traps.filter((x) => x.pos.x === pos.x && x.pos.y === pos.y)) {
     out.push({
       kind: "trap",

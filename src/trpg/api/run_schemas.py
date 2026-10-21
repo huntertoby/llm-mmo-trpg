@@ -7,6 +7,7 @@ from typing import Literal
 from pydantic import BaseModel, ConfigDict, Field
 
 from trpg.api.schemas import BattleResponse
+from trpg.content.maps import Objective
 from trpg.narrative.skills import SkillCard
 from trpg.roguelite.save import RUN_ID_PATTERN
 from trpg.roguelite.state import BattleRecord
@@ -89,6 +90,8 @@ class BattlePlanOut(_ApiModel):
     enemies: tuple[str, ...]
     """敵人的中文名。"""
     done: bool
+    objective: Objective
+    """本場的勝利條件（Phase 3-22）：全滅、撤離（出口格＋輪數）或守點（守點格＋輪數）。"""
 
 
 class OfferOut(_ApiModel):

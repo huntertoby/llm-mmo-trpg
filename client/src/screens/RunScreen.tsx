@@ -2,6 +2,7 @@
 import { useEffect, useRef, useState } from "react";
 import { api, ApiError } from "../api/client";
 import type { BattleResponse, RunChoice, RunResponse } from "../api/types";
+import { objectiveBadge } from "../battle/objective";
 import { battleName, runView, writeCurrentRun } from "../run/flow";
 import { RunHeroPanel } from "../run/RunHeroPanel";
 import { ErrorBanner } from "../ui/ErrorBanner";
@@ -162,6 +163,9 @@ export function RunScreen({ initial, autoResume = false, onHome, onNewRun }: Pro
                 <h2>
                   下一場：{battleName(view.index, view.boss)}　{view.mapName}
                 </h2>
+                <div className={`run-next-goal ${view.goalKind}`}>
+                  {view.goalBadge}：{view.goalLine}
+                </div>
                 <div className="muted small">敵人：{view.enemies.join("、")}</div>
                 <div className="muted small">隊友：標準隊友 2 名（滿狀態）；HP、法力不會在戰鬥之間回復，只有營火會回滿。</div>
                 <div className="run-actions">
@@ -203,6 +207,7 @@ function RunPlanList({ run }: { run: RunResponse }) {
           return (
             <li key={p.index} className={`${p.done ? "done" : ""}${current ? " current" : ""}`}>
               <b>{battleName(p.index, p.boss)}</b>　{p.map_name_zh}
+              <span className={`run-goal ${p.objective.kind}`}>{objectiveBadge(p.objective)}</span>
               <span className="muted small">
                 {"　"}
                 {rec !== undefined ? (rec.won ? `勝利・${rec.rounds} 輪` : "失敗") : p.done ? "完成" : ""}

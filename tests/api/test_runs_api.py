@@ -97,6 +97,17 @@ def test_create_run_returns_hero_plan_and_first_battle(runs_client: TestClient) 
     assert run["battle_id"] is None
 
 
+def test_run_plan_carries_each_battles_objective(runs_client: TestClient) -> None:
+    """Phase 3-22：計畫列出每場的勝利條件（一般戰鬥至少 1 撤離、1 守點；Boss 全滅）。"""
+    plan = _create(runs_client)["plan"]
+    kinds = [p["objective"]["kind"] for p in plan]
+    assert kinds.count("escape") >= 1 and kinds.count("defend") >= 1
+    assert kinds[-1] == "eliminate" and plan[-1]["objective"]["tiles"] == []
+    for p in plan:
+        if p["objective"]["kind"] != "eliminate":
+            assert p["objective"]["rounds"] and p["objective"]["tiles"]
+
+
 @pytest.mark.parametrize(
     ("body", "status"),
     [
@@ -182,7 +193,7 @@ def test_save_mid_battle_load_and_continue_matches(
     assert saved == {
         "run_id": run["run_id"],
         "file": f"run-{run['run_id']}.json",
-        "format": "trpg-run/1",
+        "format": "trpg-run/2",
         "in_battle": True,
     }
     assert (save_dir / saved["file"]).is_file()
@@ -210,7 +221,7 @@ def test_corrupt_save_is_422(runs_client: TestClient, save_dir: Path) -> None:
     (save_dir / "run-bad.json").write_text('{"format": "trpg-run/0"}', encoding="utf-8")
     reply = runs_client.post("/api/runs/load", json={"run_id": "bad"})
     assert reply.status_code == 422
-    assert "trpg-run/1" in reply.json()["detail"]
+    assert "trpg-run/2" in reply.json()["detail"]
     assert runs_client.get("/api/runs/saves").json() == []
 
 

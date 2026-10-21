@@ -181,6 +181,10 @@ export const HIGHLIGHT = {
   trap_revealed: 0xff5a5a,
   /** 源泉格（Phase 3C-6a）。 */
   well: 0xb98cff,
+  /** 撤離的出口格（Phase 3-22）。 */
+  exit: 0x5ee08a,
+  /** 守點格（Phase 3-22）。 */
+  point: 0xffc83d,
   burning: 0xff5a00,
   flammable: 0xe0a040,
   deadly: 0xff3030,

@@ -9,7 +9,8 @@
 - ``trpg map show <map_id>``：以文字網格印出地圖。
 - ``trpg map list``：列出所有地圖的類型、大小與是否有預設遭遇。
 - ``trpg battle --map <map_id> --seed <n> [--rounds-max 30] [--log-json <path>]
-  [--ai utility|simple] [--weather <id>] [--deploy x,y;x,y] [--allies ...] [--enemies ...]``：
+  [--ai utility|simple] [--weather <id>] [--objective escape|defend]
+  [--deploy x,y;x,y] [--allies ...] [--enemies ...]``：
   雙方由效用 AI（預設）自動對戰，印出每輪戰場、環境預告與繁體中文戰鬥紀錄。
 - ``trpg skills list`` / ``trpg skills show <id>``：技能的自動摘要。
 - ``trpg skills random --seed N [--tier T] [--rarity R] [--skeleton S] [--count C]``：隨機組合器。
@@ -203,6 +204,12 @@ def build_parser() -> argparse.ArgumentParser:  # noqa: PLR0915
         "--ai", choices=("utility", "simple"), default="utility", help="AI（預設 utility 效用 AI）"
     )
     battle.add_argument("--weather", default=None, help="天氣 ID（預設為地圖的天氣）")
+    battle.add_argument(
+        "--objective",
+        choices=("eliminate", "escape", "defend"),
+        default=None,
+        help="勝利條件（預設為地圖的 objective；escape／defend 用地圖的 alt_objectives）",
+    )
     battle.add_argument(
         "--deploy",
         default=None,
@@ -464,6 +471,7 @@ def _battle(args: argparse.Namespace) -> int:  # noqa: PLR0911
             out=sys.stdout,
             ai=args.ai,
             weather=args.weather,
+            objective=args.objective,
             deploy=deploy,
             ally_commander=args.ally_commander,
             enemy_commander=args.enemy_commander,

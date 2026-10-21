@@ -9,6 +9,7 @@ import {
   terrainStyle,
 } from "./glossary";
 import { bombCountdown } from "./bombs";
+import { objectiveMarkers, type ObjectiveMarker } from "./objective";
 import { chargeCountdown } from "./followup";
 import { auraTiles, isTotem, remainingRounds } from "./summons";
 import { onField, unitMarkers } from "./units";
@@ -121,6 +122,8 @@ export interface DrawModel {
   runes: RuneDraw[];
   /** 尚未被取用的源泉格（我方單位進入時 +1 源力）。 */
   wells: WellDraw[];
+  /** 勝利條件的目標格（撤離的出口格、守點的守點格；Phase 3-22）。 */
+  markers: ObjectiveMarker[];
 }
 
 export const MAX_HEIGHT = 3;
@@ -249,7 +252,8 @@ export function buildDrawModel(
   }
   const zones = zoneDraws(view);
   const runes = runeDraws(view);
-  return { width: view.width, height: view.height, tiles, objects, units, traps, auras, zones, runes, wells };
+  const goalMarkers = objectiveMarkers(view.objective);
+  return { width: view.width, height: view.height, tiles, objects, units, traps, auras, zones, runes, wells, markers: goalMarkers };
 }
 
 export function tileAt(model: DrawModel, p: Pos): TileDraw | undefined {
