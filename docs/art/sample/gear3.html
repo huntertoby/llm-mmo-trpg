@@ -1,0 +1,104 @@
+<!doctype html>
+<html lang="zh-Hant">
+<head>
+<meta charset="utf-8">
+<title>風格包與槍</title>
+<style>
+  body { margin: 0; padding: 18px 22px; background: #1b1e24; color: #e8e8ea; font-family: "Noto Sans TC", "Microsoft JhengHei", sans-serif; width: 1500px; }
+  h1 { font-size: 22px; margin: 0 0 4px; }
+  h2 { font-size: 16px; margin: 0 0 8px; }
+  .sub { color: #a0a4ad; font-size: 13px; margin-bottom: 12px; }
+  .note { color: #8a8f99; font-size: 11px; margin-top: 6px; line-height: 1.5; }
+  .box { background: #262a32; border-radius: 10px; padding: 12px; margin-bottom: 14px; }
+  .row { display: flex; gap: 14px; align-items: flex-start; }
+  .grid { display: grid; gap: 6px 8px; align-items: center; }
+  .h { font-size: 12px; color: #a0a4ad; text-align: center; }
+  .rh { font-size: 13px; color: #e8e8ea; text-align: right; line-height: 1.3; }
+  .rh small { display: block; color: #8a8f99; font-size: 10px; }
+  .ic { text-align: center; font-size: 10px; color: #c8cad0; }
+  .ic canvas { display: block; margin: 0 auto 1px; }
+  .strip { display: flex; gap: 6px; align-items: flex-end; margin: 4px 0 10px; }
+  .strip .lab { width: 64px; font-size: 12px; color: #c8cad0; align-self: center; }
+  .doll { text-align: center; font-size: 12px; color: #c8cad0; background: #1f2229; border-radius: 8px; padding: 6px; }
+  .doll .gs { display: flex; gap: 3px; justify-content: center; margin-top: 4px; }
+</style>
+</head>
+<body>
+<h1>風格包比較與槍（組裝式裝備樣張・續）</h1>
+<div class="sub">同樣的資料欄位（造型、形制、材質、關鍵字、稀有度），只換 <b>style</b>。關鍵字、稀有度、外框所有風格共用；風格包沒有的造型自動退回通用版。</div>
+
+<div class="box"><h2>① 同四件裝備 × 五種風格</h2><div class="grid" id="styles" style="grid-template-columns: 110px repeat(4, 84px) 24px repeat(4, 84px);"></div>
+  <div class="note">左半：無關鍵字的普通款；右半：同一件加上關鍵字與較高稀有度（魔導與科技的發光線會跟著換成關鍵字的顏色）。<br>魔導科技＝黃銅齒輪＋晶能＋符文，和奇幻、東方比較搭；科技＝深色金屬＋電路＋能量刃，最「未來」；現代＝工業製品（開山刀、鎮暴盾、連帽外套、消防斧）。</div>
+</div>
+
+<div class="row">
+  <div class="box"><h2>② 槍：遠程主手造型，4 種形制</h2><div id="guns"></div>
+    <div class="note">槍的彈藥、射程、和弓的差別屬於玩法，另由玩法 PM 決定；這裡只示範外觀。</div></div>
+  <div class="box"><h2>③ 紙娃娃持槍</h2><div class="row" id="dolls"></div>
+    <div class="note">示意：用現有的身體部件；科技、現代風的服裝部件之後隨風格包補。</div></div>
+</div>
+
+<script src="paperdoll.js"></script>
+<script src="gearArt.js"></script>
+<script>
+const G = GearArt;
+const ic = (it, px = 64, label) => { const d = document.createElement("div"); d.className = "ic"; d.appendChild(G.icon(it, px)); if (label != null) d.insertAdjacentHTML("beforeend", label); return d; };
+
+// ① 風格
+const ITEMS = [
+  ["劍", { kind: "sword", form: "straight", material: "steel" }, { keywords: ["shock"], rarity: "epic" }],
+  ["圓盾", { kind: "round_shield", form: "wood", material: "wood" }, { keywords: ["freeze"], rarity: "rare" }],
+  ["布袍", { kind: "robe", form: "long", material: "cloth", dye: "blue" }, { keywords: ["ignite"], rarity: "epic" }],
+  ["斧", { kind: "axe", form: "battle", material: "iron" }, { keywords: ["ignite"], rarity: "rare" }],
+];
+const STY = [
+  ["common", "通用版", "奇幻基準"], ["eastern", "東方", "劍穗、藤牌、交領"], ["magitech", "魔導科技", "黃銅＋晶能"], ["scifi", "科技", "電路＋能量"], ["modern", "現代", "工業製品"],
+];
+const LABEL = {
+  eastern: { sword: "劍", round_shield: "藤牌", robe: "交領寬袖", axe: "（退回通用）" },
+  magitech: { sword: "符文劍", round_shield: "齒輪盾", robe: "晶能法袍", axe: "晶刃斧" },
+  scifi: { sword: "能量刃", round_shield: "力場盾", robe: "戰術服", axe: "電漿斧" },
+  modern: { sword: "開山刀", round_shield: "鎮暴盾", robe: "連帽外套", axe: "消防斧" },
+};
+const st = document.getElementById("styles");
+st.insertAdjacentHTML("beforeend", `<div></div>${ITEMS.map(([n]) => `<div class="h">${n}</div>`).join("")}<div></div>${ITEMS.map(([n, , x]) => `<div class="h">${n}＋${G.KEYWORD[x.keywords[0]].zh}</div>`).join("")}`);
+for (const [s, zh, note] of STY) {
+  st.insertAdjacentHTML("beforeend", `<div class="rh">${zh}<small>${note}</small></div>`);
+  for (const [, it] of ITEMS) st.appendChild(ic({ ...it, style: s, rarity: "common" }, 64, LABEL[s]?.[it.kind] ?? ""));
+  st.insertAdjacentHTML("beforeend", `<div></div>`);
+  for (const [, it, x] of ITEMS) st.appendChild(ic({ ...it, ...x, style: s }, 64, ""));
+}
+
+// ② 槍
+const guns = document.getElementById("guns");
+function strip(label, items) {
+  const s = document.createElement("div"); s.className = "strip"; s.insertAdjacentHTML("beforeend", `<div class="lab">${label}</div>`);
+  for (const [it, l] of items) s.appendChild(ic(it, 60, l)); guns.appendChild(s);
+}
+const FORMS = G.KINDS.gun.forms;
+strip("形制", Object.entries(FORMS).map(([f, z]) => [{ kind: "gun", form: f, material: "steel", rarity: "common" }, z]));
+strip("材質", [["iron", "鐵"], ["steel", "鋼"], ["copper", "銅"], ["silver", "銀"], ["gold", "金"]].map(([m, z]) => [{ kind: "gun", form: "pistol", material: m, rarity: "uncommon" }, z]));
+strip("關鍵字", [["ignite"], ["wet"], ["shock"], ["freeze"], ["impact"], ["mark"], ["hidden"]].map(([k]) => [{ kind: "gun", form: "rifle", material: "steel", keywords: [k], rarity: "rare" }, G.KEYWORD[k].zh]));
+strip("稀有度", Object.entries(G.RARITY).map(([r, v]) => [{ kind: "gun", form: "energy", material: "steel", keywords: r === "common" ? [] : ["shock"], rarity: r }, v[1] + (r === "legendary" ? "（正式季）" : "")]));
+strip("霰彈槍", [[{ kind: "gun", form: "shotgun", material: "iron", keywords: ["impact"], rarity: "uncommon" }, "撞擊"], [{ kind: "gun", form: "shotgun", material: "steel", keywords: ["ignite", "prone"], rarity: "epic" }, "點燃＋倒地"], [{ kind: "gun", form: "energy", material: "steel", keywords: ["freeze"], rarity: "epic" }, "能量槍＋冰凍"]]);
+
+// ③ 紙娃娃持槍
+const D = window.PaperDoll;
+const look = D.TEMPLATES.hero_archer.look;
+const OUT = [
+  ["手槍＋皮甲", { main_hand: { kind: "gun", form: "pistol", material: "steel" }, body: { kind: "leather", material: "leather", color: "#3a3a42" }, feet: { kind: "boots", material: "leather" } }, undefined, [{ kind: "gun", form: "pistol", material: "steel", rarity: "uncommon" }]],
+  ["步槍＋鎖甲（帶電）", { main_hand: { kind: "gun", form: "rifle", material: "steel", element: "lightning" }, body: { kind: "mail", material: "iron" }, head: { kind: "helmet", material: "steel" }, feet: { kind: "boots", material: "leather" } }, undefined, [{ kind: "gun", form: "rifle", material: "steel", keywords: ["shock"], rarity: "rare" }]],
+  ["能量槍（冰凍、史詩）", { main_hand: { kind: "gun", form: "energy", material: "steel", element: "ice" }, body: { kind: "plate", material: "steel" }, hands: { kind: "gauntlets", material: "steel" }, feet: { kind: "greaves", material: "steel" } }, "epic", [{ kind: "gun", form: "energy", material: "steel", keywords: ["freeze"], rarity: "epic" }]],
+];
+const dollsEl = document.getElementById("dolls");
+for (const [n, gear, rarity, icons] of OUT) {
+  const d = document.createElement("div"); d.className = "doll";
+  const cv = document.createElement("canvas"); cv.width = 240; cv.height = 260; cv.style.width = "120px"; cv.style.height = "130px";
+  const ctx = cv.getContext("2d"); ctx.scale(2, 2); D.stamp(ctx, { look, gear, rarity }, "south", 60, 118, 1.85);
+  d.appendChild(cv); d.insertAdjacentHTML("beforeend", `<div>${n}</div>`);
+  const gs = document.createElement("div"); gs.className = "gs"; for (const it of icons) gs.appendChild(G.icon(it, 40)); d.appendChild(gs);
+  dollsEl.appendChild(d);
+}
+</script>
+</body>
+</html>

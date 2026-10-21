@@ -272,6 +272,10 @@ window.PaperDoll = (() => {
   }
   function drawWeapon(ctx, it, x, front) {
     if (!it) return;
+    // 火器（#34）：三種造型共用槍的畫法
+    const GUN = { longgun: "rifle", shotgun: "shotgun", pistol: "pistol" };
+    if (GUN[it.kind]) it = { ...it, kind: "gun", form: it.style === "scifi" ? "energy" : GUN[it.kind] };
+    if (it.kind === "crossbow" || it.kind === "fist" || it.kind === "scythe" || it.kind === "whip") return drawWeapon2(ctx, it, x, front);
     const [c, d] = itemColors(it);
     const hy = -9.5;
     ctx.save();
@@ -323,6 +327,18 @@ window.PaperDoll = (() => {
         fill(ctx, "rgba(255,255,255,0.8)", () => { ctx.beginPath(); ctx.arc(-1.2, -33.2, 1.1, 0, TAU); });
         break;
       }
+      case "gun": {
+        // 槍（樣張）：槍口朝前下方；形制決定長度與外型
+        const L = { pistol: 7, rifle: 17, shotgun: 15, energy: 12 }[it.form] ?? 7;
+        ctx.rotate(front ? 0.35 : -0.35);
+        const s = front ? -1 : 1;
+        fill(ctx, "#3a2a1c", () => rr(ctx, -1.2, -1, 2.4, 5, 0.8)); // 握把
+        if (it.form === "rifle" || it.form === "shotgun") fill(ctx, it.form === "shotgun" ? "#7a5232" : d, () => rr(ctx, s > 0 ? -6 : 1, -3, 5, 3, 1)); // 槍托
+        fill(ctx, it.form === "energy" ? "#e8edf2" : c, () => rr(ctx, s > 0 ? -1 : -L, -3.2, L + 1, it.form === "shotgun" ? 3.2 : 2.6, 1));
+        if (it.form === "energy") fill(ctx, it.element ? ELEMENT_TINT[it.element] : "#5ad8ff", () => rr(ctx, s > 0 ? 1 : -L + 1, -2.6, L - 3, 1.2, 0.6));
+        else if (it.element) fill(ctx, ELEMENT_TINT[it.element], () => { ctx.beginPath(); ctx.arc(s * (L - 0.5), -2, 1.3, 0, TAU); });
+        break;
+      }
       case "bow":
         ctx.strokeStyle = c;
         ctx.lineWidth = 2.2;
@@ -371,6 +387,38 @@ window.PaperDoll = (() => {
    * 畫一個小人。`unit = { look, gear }`：look 是外觀（膚色、髮型、髮色、褲子），gear 是各欄位的裝備。
    * facing：south＝正面、north＝背面、east／west＝側面（左右鏡射）。腳底中心在 (0, 0)。
    */
+  /** 武器擴充（#34）的紙娃娃畫法：弩、拳套、鐮刀、鞭。 */
+  function drawWeapon2(ctx, it, x, front) {
+    const [c, d] = itemColors(it);
+    ctx.save();
+    ctx.translate(x, -9.5);
+    switch (it.kind) {
+      case "crossbow":
+        ctx.rotate(front ? 0.35 : -0.35);
+        fill(ctx, "#7a5232", () => rr(ctx, front ? -12 : 0, -3, 12, 2.6, 1));
+        ctx.strokeStyle = c; ctx.lineWidth = 2; ctx.beginPath();
+        const tip = front ? -10 : 10;
+        ctx.moveTo(tip, -9); ctx.quadraticCurveTo(tip + (front ? -2 : 2), -2, tip, 5); ctx.stroke();
+        ctx.strokeStyle = "rgba(240,240,240,0.8)"; ctx.lineWidth = 0.7; ctx.beginPath(); ctx.moveTo(tip, -9); ctx.lineTo(tip + (front ? 3 : -3), -2); ctx.lineTo(tip, 5); ctx.stroke();
+        break;
+      case "fist":
+        fill(ctx, c, () => rr(ctx, -2.5, -3, 5, 5, 1.5));
+        if (it.form === "katar" || it.form === "claw") fill(ctx, c, () => { ctx.beginPath(); ctx.moveTo(-1.2, -3); ctx.lineTo(0, -9); ctx.lineTo(1.2, -3); ctx.closePath(); });
+        break;
+      case "scythe":
+        ctx.rotate(front ? -0.15 : 0.15);
+        fill(ctx, "#6a4420", () => ctx.rect(-1, -26, 2, 30));
+        fill(ctx, c, () => { ctx.beginPath(); ctx.moveTo(0, -26); ctx.quadraticCurveTo(front ? 12 : -12, -28, front ? 14 : -14, -18); ctx.quadraticCurveTo(front ? 8 : -8, -23, 0, -23); ctx.closePath(); });
+        break;
+      case "whip":
+        fill(ctx, "#4a3020", () => ctx.rect(-1, -4, 2, 5));
+        ctx.strokeStyle = c; ctx.lineWidth = 1.4; ctx.beginPath(); ctx.moveTo(0, -4);
+        ctx.bezierCurveTo(front ? -8 : 8, -8, front ? -4 : 4, 6, front ? -12 : 12, 8); ctx.stroke();
+        break;
+    }
+    ctx.restore();
+  }
+
   function drawFigure(ctx, unit, facing) {
     const { look, gear } = unit;
     const view = facing === "north" ? "back" : "front";

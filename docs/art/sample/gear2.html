@@ -1,0 +1,158 @@
+<!doctype html>
+<html lang="zh-Hant">
+<head>
+<meta charset="utf-8">
+<title>組裝式裝備樣張</title>
+<style>
+  body { margin: 0; padding: 18px 22px; background: #1b1e24; color: #e8e8ea; font-family: "Noto Sans TC", "Microsoft JhengHei", sans-serif; width: 1560px; }
+  h1 { font-size: 22px; margin: 0 0 4px; }
+  h2 { font-size: 16px; margin: 0 0 8px; }
+  .sub { color: #a0a4ad; font-size: 13px; margin-bottom: 12px; }
+  .note { color: #8a8f99; font-size: 11px; margin-top: 6px; }
+  .box { background: #262a32; border-radius: 10px; padding: 12px; margin-bottom: 14px; }
+  .row { display: flex; gap: 14px; align-items: flex-start; }
+  .slot { display: flex; gap: 6px; align-items: flex-start; margin-bottom: 6px; }
+  .slot .sn { width: 40px; font-size: 13px; color: #c8cad0; padding-top: 18px; }
+  .kind { background: #1f2229; border-radius: 8px; padding: 4px 5px 5px; }
+  .kind .kn { font-size: 11px; color: #ffe9a8; text-align: center; margin-bottom: 2px; }
+  .kind .fs { display: flex; gap: 3px; }
+  .ic { text-align: center; font-size: 10px; color: #c8cad0; }
+  .ic canvas { display: block; margin: 0 auto 1px; }
+  .strip { display: flex; gap: 6px; align-items: flex-end; margin: 4px 0 10px; }
+  .strip .lab { width: 74px; font-size: 12px; color: #c8cad0; align-self: center; }
+  .card { background: #14161c; border: 1px solid #2e323b; border-radius: 10px; padding: 10px; width: 360px; }
+  .card .top { display: flex; gap: 10px; }
+  .card .nm { font-size: 17px; font-weight: 700; }
+  .card .meta { font-size: 12px; color: #a0a4ad; line-height: 1.6; }
+  .card .flow { display: grid; grid-template-columns: 62px 1fr; gap: 3px 8px; font-size: 11px; margin-top: 8px; line-height: 1.45; }
+  .card .flow .k { color: #8a8f99; }
+  .card .flow .v b { color: #ffe9a8; font-weight: 400; }
+  .card .desc { font-size: 11px; color: #a0a4ad; margin-top: 6px; font-style: italic; }
+  .pipe { display: flex; gap: 8px; align-items: center; font-size: 12px; color: #c8cad0; margin-bottom: 10px; }
+  .pipe .st { background: #1f2229; border-radius: 6px; padding: 5px 9px; }
+  .pipe .ar { color: #6a7080; }
+  .doll { text-align: center; font-size: 12px; color: #c8cad0; background: #1f2229; border-radius: 8px; padding: 6px; }
+  .doll .gs { display: flex; gap: 3px; justify-content: center; margin-top: 4px; }
+  .vs { display: grid; grid-template-columns: 70px repeat(4, 84px); gap: 6px; align-items: center; }
+  .vs .h { font-size: 12px; color: #a0a4ad; text-align: center; }
+</style>
+</head>
+<body>
+<h1>組裝式裝備樣張（依 08-裝備.md 8.18）</h1>
+<div class="sub">外觀＝造型 × 形制 × 外觀材質（＋選填染色）× 風格 ＋ 關鍵字 ＋ 稀有度。名稱由 LLM 自由取；外觀欄位只能從清單選，不認得或不合理就退回預設。全部程式繪製、零手繪。</div>
+
+<div class="box"><h2>① 每個部位的造型與形制（第一季 21 種造型、49 個形制，全部畫出）</h2><div id="kinds"></div></div>
+
+<div class="row">
+  <div class="box" style="flex:1"><h2>② 同一把「鋼・直劍」：關鍵字、稀有度、材質、染色</h2><div id="vars"></div>
+    <div class="note">元素類關鍵字（點燃、潮濕、帶電、冰凍）會混入元素色；其他關鍵字只加小圖樣。最多顯示 2 個關鍵字。晶石有關鍵字時整塊換成元素色。傳說是正式季才有，先示意。</div></div>
+</div>
+
+<div class="box"><h2>③ 完整範例：從配方到成品</h2>
+  <div class="pipe"><span class="st">玩家投入：部位＋物品等級＋稀有度＋指定關鍵字＋材料</span><span class="ar">→</span><span class="st">引擎：以配方指紋擲出其餘詞條與數值</span><span class="ar">→</span><span class="st">LLM：取名、寫描述、從清單選外觀欄位</span><span class="ar">→</span><span class="st">驗證後畫出圖示（同配方永遠同一件）</span></div>
+  <div class="row" id="examples"></div>
+  <div class="note">材料名稱用 8.14 的暫定名；詞條數字僅示意。</div>
+</div>
+
+<div class="row">
+  <div class="box"><h2>④ 穿上後紙娃娃同步（示意：用現有紙娃娃部件）</h2><div class="row" id="dolls"></div>
+    <div class="note">紙娃娃擴充（錘、矛、法器珠、外套等新造型與關鍵字小圖樣）晚一段做；在那之前用最接近的舊造型。</div></div>
+  <div class="box" style="flex:1"><h2>⑤ 風格包示意：同一件裝備，通用版 vs 東方風格包</h2><div class="vs" id="style"></div>
+    <div class="note">風格包只換造型輪廓、紋飾與配色；關鍵字、稀有度、外框完全共用。風格包沒有的造型（右欄的斧）自動退回通用版，不會壞。</div></div>
+</div>
+
+<script src="paperdoll.js"></script>
+<script src="gearArt.js"></script>
+<script>
+const G = GearArt;
+const ic = (it, px = 64, label) => { const d = document.createElement("div"); d.className = "ic"; d.appendChild(G.icon(it, px)); if (label != null) d.insertAdjacentHTML("beforeend", label); return d; };
+
+// ① 造型 × 形制
+const SLOT_ZH = { main: "主手", off: "副手", body: "身體", acc: "飾品" };
+const SHOWMAT = { sword: "steel", greatsword: "steel", dagger: "iron", axe: "iron", hammer: "iron", spear: "iron", bow: "wood", staff: "wood", round_shield: "wood", kite_shield: "iron", tome: "leather", orb: "crystal", robe: "cloth", leather: "leather", mail: "iron", plate: "steel", coat: "cloth", ring: "gold", pendant: "silver", charm: "gold", bracelet: "copper" };
+const SHOWDYE = { robe: "blue", coat: "brown", tome: "red" };
+const kindsEl = document.getElementById("kinds");
+for (const slot of ["main", "off", "body", "acc"]) {
+  const row = document.createElement("div"); row.className = "slot";
+  row.insertAdjacentHTML("beforeend", `<div class="sn">${SLOT_ZH[slot]}</div>`);
+  for (const [k, K] of Object.entries(G.KINDS)) {
+    if (K.slot !== slot || K.legacy) continue;
+    const box = document.createElement("div"); box.className = "kind"; box.innerHTML = `<div class="kn">${K.zh}</div>`;
+    const fs = document.createElement("div"); fs.className = "fs";
+    for (const [f, fz] of Object.entries(K.forms)) fs.appendChild(ic({ kind: k, form: f, material: SHOWMAT[k], dye: SHOWDYE[k], rarity: "common" }, slot === "main" ? 50 : 50, fz));
+    box.appendChild(fs); row.appendChild(box);
+  }
+  kindsEl.appendChild(row);
+}
+
+// ② 變化
+const vars = document.getElementById("vars");
+function strip(label, items) {
+  const s = document.createElement("div"); s.className = "strip"; s.insertAdjacentHTML("beforeend", `<div class="lab">${label}</div>`);
+  for (const [it, l] of items) s.appendChild(ic(it, 56, l)); vars.appendChild(s);
+}
+const base = { kind: "sword", form: "straight", material: "steel", rarity: "rare" };
+strip("關鍵字", [[{ ...base, keywords: [] }, "無"], ...Object.entries(G.KEYWORD).map(([k, v]) => [{ ...base, keywords: [k] }, v.zh]), [{ ...base, keywords: ["ignite", "impact"] }, "點燃＋撞擊"]]);
+strip("稀有度", Object.entries(G.RARITY).map(([r, v]) => [{ ...base, rarity: r, keywords: ["freeze"] }, v[1] + (r === "legendary" ? "（正式季）" : "")]));
+strip("材質（匕首）", ["iron", "steel", "copper", "silver", "gold", "bone", "crystal"].map((m) => [{ kind: "dagger", form: "kris", material: m, rarity: "uncommon" }, G.MATERIAL[m].zh]).concat([[{ kind: "dagger", form: "kris", material: "crystal", keywords: ["shock"], rarity: "uncommon" }, "晶石＋帶電"], [{ kind: "dagger", form: "kris", material: "cloth", rarity: "uncommon" }, "布（不合理→鐵）"]]));
+strip("染色（長袍）", [[{ kind: "robe", form: "long", material: "cloth" }, "不染色"], ...Object.keys(G.DYE).map((d) => [{ kind: "robe", form: "long", material: "cloth", dye: d }, G.DYE_ZH[d]])]);
+
+// ③ 完整範例
+const EX = [
+  { name: "餘燼之心", it: { kind: "greatsword", form: "zhanma", material: "steel", keywords: ["ignite", "impact"], rarity: "epic" },
+    recipe: "主手・物品等級 8・史詩・指定「點燃」", mats: "上料 ×3、區域 A 特產 ×2", affix: "傷害 +4；燃燒中的目標受到傷害 +25%；<b>撞擊時點燃目標</b>", desc: "鍛爐熄了，刀心還燒著。", llm: "巨劍／斬馬刀／鋼" },
+  { name: "霜脊鱗衣", it: { kind: "mail", form: "scale", material: "silver", keywords: ["freeze"], rarity: "rare" },
+    recipe: "身體・物品等級 6・稀有・指定「冰凍」", mats: "精料 ×3、區域 B 特產 ×1", affix: "護甲 +3；被近戰命中時 15% 冰凍攻擊者", desc: "鱗片之間結著不化的霜。", llm: "鎖甲／鱗甲／銀" },
+  { name: "雷鳴浮珠", it: { kind: "orb", form: "floating", material: "crystal", keywords: ["shock", "mark"], rarity: "epic" },
+    recipe: "副手・物品等級 8・史詩・指定「帶電」", mats: "上料 ×2、精華 ×1", affix: "法力 +6；雷技能 +1 連鎖；<b>帶電的目標同時被標記</b>", desc: "它不肯落地，像在等下一道閃電。", llm: "法器珠／浮空寶珠／晶石" },
+  { name: "獵影者短弓", it: { kind: "bow", form: "recurve", material: "wood", keywords: ["hidden"], rarity: "uncommon" },
+    recipe: "主手・物品等級 3・優良・指定「隱蔽」", mats: "粗料 ×3", affix: "射程 +1；隱蔽中首次攻擊暴擊範圍 +1", desc: "弓弦纏著黑布，拉開時沒有聲音。", llm: "弓／反曲弓／木" },
+];
+const exEl = document.getElementById("examples");
+for (const e of EX) {
+  const d = G.describe(e.it);
+  const c = document.createElement("div"); c.className = "card";
+  const top = document.createElement("div"); top.className = "top"; top.appendChild(G.icon(e.it, 84));
+  top.insertAdjacentHTML("beforeend", `<div><div class="nm" style="color:${d.rarityColor}">${e.name}</div><div class="meta">${d.rarity}・${d.kind}<br>關鍵字：${d.keywords.join("、")}</div></div>`);
+  c.appendChild(top);
+  c.insertAdjacentHTML("beforeend", `<div class="flow"><div class="k">配方</div><div class="v">${e.recipe}</div><div class="k">材料</div><div class="v">${e.mats}</div><div class="k">引擎詞條</div><div class="v">${e.affix}</div><div class="k">LLM 外觀</div><div class="v">${e.llm}${d.dye ? `／${d.dye}` : ""}</div></div><div class="desc">「${e.desc}」</div>`);
+  exEl.appendChild(c);
+}
+
+// ④ 紙娃娃
+const D = window.PaperDoll;
+const look = D.TEMPLATES.hero_fighter.look;
+const OUT = [
+  ["餘燼之心套", { main_hand: { kind: "greatsword", material: "steel", element: "fire" }, body: { kind: "plate", material: "steel" }, feet: { kind: "greaves", material: "steel" }, hands: { kind: "gauntlets", material: "steel" } }, "epic",
+    [EX[0].it, { kind: "plate", form: "full", material: "steel", rarity: "rare" }]],
+  ["霜脊套", { main_hand: { kind: "sword", material: "steel", element: "ice" }, body: { kind: "mail", material: "iron", element: "ice" }, off_hand: { kind: "shield_kite", material: "steel", element: "ice" }, feet: { kind: "boots", material: "leather" } }, undefined,
+    [{ kind: "sword", form: "straight", material: "silver", keywords: ["freeze"], rarity: "rare" }, EX[1].it, { kind: "kite_shield", form: "kite", material: "steel", keywords: ["freeze"], rarity: "uncommon" }]],
+  ["雷鳴法師套", { main_hand: { kind: "staff", material: "wood", element: "lightning" }, body: { kind: "robe", material: "cloth", color: "#3a5fb8" }, off_hand: { kind: "tome", material: "leather", color: "#7a2a3a" }, head: { kind: "wizard_hat", material: "cloth", color: "#3a5fb8" }, feet: { kind: "boots", material: "leather" } }, undefined,
+    [{ kind: "staff", form: "long", material: "wood", keywords: ["shock"], rarity: "rare" }, { kind: "robe", form: "long", material: "cloth", dye: "blue", rarity: "uncommon" }, EX[2].it]],
+];
+const dollsEl = document.getElementById("dolls");
+for (const [n, gear, rarity, icons] of OUT) {
+  const d = document.createElement("div"); d.className = "doll";
+  const cv = document.createElement("canvas"); cv.width = 220; cv.height = 240; cv.style.width = "110px"; cv.style.height = "120px";
+  const ctx = cv.getContext("2d"); ctx.scale(2, 2); D.stamp(ctx, { look, gear, rarity }, "south", 55, 108, 1.7);
+  d.appendChild(cv); d.insertAdjacentHTML("beforeend", `<div>${n}</div>`);
+  const gs = document.createElement("div"); gs.className = "gs"; for (const it of icons) gs.appendChild(G.icon(it, 36)); d.appendChild(gs);
+  dollsEl.appendChild(d);
+}
+
+// ⑤ 風格包
+const st = document.getElementById("style");
+const SI = [
+  ["直劍", { kind: "sword", form: "straight", material: "steel", keywords: ["shock"], rarity: "rare" }],
+  ["木圓盾", { kind: "round_shield", form: "wood", material: "wood", rarity: "uncommon" }],
+  ["長袍", { kind: "robe", form: "long", material: "cloth", dye: "green", keywords: ["wet"], rarity: "epic" }],
+  ["戰斧", { kind: "axe", form: "battle", material: "iron", keywords: ["ignite"], rarity: "rare" }],
+];
+st.insertAdjacentHTML("beforeend", `<div></div>${SI.map(([n]) => `<div class="h">${n}</div>`).join("")}`);
+for (const [lab, style] of [["通用版", "common"], ["東方", "eastern"]]) {
+  st.insertAdjacentHTML("beforeend", `<div class="h" style="text-align:right">${lab}</div>`);
+  for (const [n, it] of SI) st.appendChild(ic({ ...it, style }, 64, style === "eastern" && it.kind === "axe" ? "（退回通用）" : style === "eastern" ? { sword: "劍穗、玉格", round_shield: "藤牌", robe: "交領寬袖" }[it.kind] : ""));
+}
+</script>
+</body>
+</html>
