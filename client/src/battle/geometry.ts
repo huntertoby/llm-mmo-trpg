@@ -1,7 +1,7 @@
 // 格子 ↔ 像素的座標換算（純函式）。原點在左上角，x 向右、y 向下（與引擎相同）。
 import type { Pos } from "../api/types";
 
-export const TILE_SIZE = 52;
+export const TILE_SIZE = 48;
 
 export interface GridSize {
   width: number;

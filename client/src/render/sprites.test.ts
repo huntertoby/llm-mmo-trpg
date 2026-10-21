@@ -25,7 +25,8 @@ describe("sprites 對照表", () => {
 
   it("沒有對照的地形與物件回傳 null（退回色塊）", () => {
     expect(terrainSprite("no_such_terrain_2")).toBeNull();
-    expect(terrainSprite("lava")).not.toBeNull();
+    expect(terrainSprite("lava")).toBeNull(); // 程式繪製紋理（3-14）
+    expect(terrainSprite("stone")).not.toBeNull();
     expect(terrainSprite("no_such_terrain")).toBeNull();
     expect(objectSprite("no_such_object")).toBeNull();
   });
