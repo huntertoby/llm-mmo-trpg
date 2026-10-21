@@ -65,7 +65,11 @@ export function actionLabel(
       return action.path.length <= 1 || dest === undefined ? "起身" : `移動到 ${posText(dest)}`;
     }
     case "defend":
-      return "防禦";
+      return action.target_id != null ? `守護：${names.label(action.target_id)}` : "守護自己";
+    case "swap":
+      return `換位：${names.label(action.target_id)}`;
+    case "aim":
+      return "瞄準";
     case "run":
       return "跑步";
     case "shove":

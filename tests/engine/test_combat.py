@@ -196,7 +196,7 @@ def test_defend_raises_defense_by_quarter() -> None:
     s = resolve(state, Defend(unit_id=U1)).state
     assert defense_value_permille(s.units[U1], rules) == base * 1250 // 1000
     assert s.units[U1].ap == state.units[U1].ap - 1
-    with pytest.raises(IllegalActionError, match="已處於防禦姿態"):
+    with pytest.raises(IllegalActionError, match="已處於守護姿態"):
         resolve(s, Defend(unit_id=U1))
 
 

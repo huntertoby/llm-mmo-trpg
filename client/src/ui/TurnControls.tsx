@@ -1,4 +1,4 @@
-// 右下角（Phase 3-8）：大的「結束回合」、「防禦」、「其他動作（備援）」（點開在上方彈出清單）；
+// 右下角（Phase 3-8）：大的「結束回合」、「守護」（原防禦）、「其他動作（備援）」（點開在上方彈出清單）；
 // 播放速度控制在旁邊。戰鬥結束時換成結束面板。
 import { useState, type ReactNode } from "react";
 import type { Action } from "../api/types";
@@ -8,7 +8,7 @@ import type { ActionMode } from "../battle/targeting";
 interface Props {
   enabled: boolean;
   endTurn: Action | null;
-  /** 防禦的模式（沒有合法的防禦時 `null`）。 */
+  /** 守護自己的模式（沒有合法的守護時 `null`）。 */
   defend: ActionMode | null;
   /** 跑步的模式（不合法時 `null`，按鈕灰掉並顯示 `runReason`）。 */
   run: ActionMode | null;
@@ -52,9 +52,10 @@ export function TurnControls({
           type="button"
           className={selectedKey === defend?.key ? "selected" : ""}
           disabled={!enabled || defend === null}
+          title="守護：花 1 AP，防禦 +25% 到下回合開始；要守護相鄰隊友請用「其他動作」"
           onClick={() => defend !== null && onPickMode(defend)}
         >
-          防禦
+          守護
         </button>
         <button
           type="button"

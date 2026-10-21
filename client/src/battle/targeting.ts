@@ -225,7 +225,7 @@ export const BASIC_MODES: readonly { kind: Exclude<ModeKind, "skill">; label: st
   { kind: "trip", label: "絆倒" },
   { kind: "interact", label: "推動物件" },
   { kind: "shove_aside", label: "撥開物件" },
-  { kind: "defend", label: "防禦" },
+  { kind: "defend", label: "守護" },
   { kind: "run", label: "跑步" },
   { kind: "end_stance", label: "結束姿態" },
   { kind: "stand", label: "起身" },
@@ -236,10 +236,12 @@ function modeKindOf(a: Action): ModeKind | null {
     case "attack":
     case "shove":
     case "trip":
-    case "defend":
     case "run":
     case "end_stance":
       return a.type;
+    case "defend":
+      // 守護自己是常駐按鈕；守護相鄰隊友（有 target_id）先放「其他動作」清單，3-21b 改成選單
+      return a.target_id == null ? "defend" : null;
     case "interact":
       return a.mode === "shove_aside" ? "shove_aside" : "interact";
     case "move":
@@ -249,7 +251,7 @@ function modeKindOf(a: Action): ModeKind | null {
   }
 }
 
-/** 基本動作（不含技能）的模式：攻擊、推擊、絆倒、推動物件、防禦、結束姿態、起身。 */
+/** 基本動作（不含技能）的模式：攻擊、推擊、絆倒、推動物件、守護自己、跑步、結束姿態、起身。 */
 export function basicModes(legal: readonly Action[]): ActionMode[] {
   return BASIC_MODES.flatMap(({ kind, label }) => {
     const actions = legal.filter((a) => modeKindOf(a) === kind);

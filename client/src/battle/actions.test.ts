@@ -49,7 +49,7 @@ describe("classifyActions", () => {
       "推擊：b 單位4",
       "絆倒：b 單位4",
       "推動：油桶 (2, 2)",
-      "防禦",
+      "守護自己",
       "結束姿態",
     ]);
     expect(c.endTurn).toEqual({ type: "end_turn", unit_id: H });
