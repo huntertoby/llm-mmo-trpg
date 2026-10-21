@@ -64,6 +64,11 @@
 - 需求已寫進 `docs/art/移植需求.md` 5.3（SkillCard 新增結構化欄位 `icon`，取代 5.1 的三個欄位）。
 - **使用者採用（2026-10-22）**：「組裝式技能圖示採用，請開發 PM 排段」。由開發 PM 照 5.3 排段；實作時有視覺問題會找美術 PM。
 
+### 3.5 3-16a 檢查（2026-10-22）
+
+- 檢查實作者補畫的表面與物件，清單在 `docs/art/3-16a檢查.md`、一覽圖在 `docs/art/review-3-16a.png`；已交給開發 PM 排小修。
+- 檢查方法：用 `client/node_modules/.bin/tsc` 把正式的 `render/*.ts` 編成 ES 模組放在 scratchpad，寫一個小頁面直接呼叫 `drawTile`、`drawObject` 畫一覽，再用無頭 Chrome 截圖（不需要伺服器）。
+
 ## 4. 待辦與想法
 
 - 已寫好給開發 PM 的需求摘要：`docs/art/移植需求.md`（2026-10-22）。
