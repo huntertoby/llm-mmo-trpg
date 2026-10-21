@@ -33,6 +33,19 @@ _STATUS_VIA_PRIMITIVE = {
 }
 
 
+# 3-24b1 為關鍵字技能池補的技能：3-24b2 起由開局與候選產生器從池裡給出（不經過 build），
+# 在那之前先以池為裝備來源（builds.yaml 是模擬回歸範本，不為補池而改動）。
+_POOL_ONLY = frozenset(
+    {
+        "skill_kindling_strike",
+        "skill_flash_freeze",
+        "skill_shatter_ice",
+        "skill_downpour",
+        "skill_holy_water",
+    }
+)
+
+
 def _skills() -> list[SkillDef]:
     return list(library().skills.values())
 
@@ -41,6 +54,7 @@ def _equipped() -> set[str]:
     lib = library()
     ids = {s for b in lib.builds.builds for s in b.hero.skills}
     ids |= {s for unit in lib.units.values() for s in unit.skills}
+    ids |= _POOL_ONLY
     # 3D-8c：裝備的 grant_skill 技能暫時給出的技能（不佔欄位）也算被裝備
     ids |= {
         e.skill

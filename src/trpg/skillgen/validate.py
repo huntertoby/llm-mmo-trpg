@@ -10,6 +10,7 @@
 4. ``skeleton.*``：骨架結構（4.5）。
 5. ``rarity.*``：稀有度限制（4.6）。
 6. ``budget.*``：預算區間（4.2）。
+7. ``keyword.required``：每招技能至少製造或利用一個關鍵字（Phase 3-24b1，6.27.1）。
 
 修正技能（``kind: modifier``，Phase 3C-2）沒有效果原語，只檢查引用、骨架（啟用、kind、形狀）、
 稀有度（骨架、規則條件與命中後效果的原語、狀態）與預算（見 :func:`_modifier_violations`）。
@@ -41,6 +42,7 @@ from trpg.content.skills import (
     rarity_rank,
 )
 from trpg.skillgen.budget import BudgetError, BudgetReport, skill_budget
+from trpg.skillgen.keywords import derive_keywords
 from trpg.skillgen.mechanics import affect_set, resolved_affects
 
 __all__ = [
@@ -78,6 +80,25 @@ def validate_skill(skill: SkillDef, library: ContentLibrary) -> list[Violation]:
     reference = _reference_violations(skill, library)
     if reference:
         return reference
+    return [*_structure_violations(skill, library), *_keyword_violations(skill, library)]
+
+
+def _keyword_violations(skill: SkillDef, library: ContentLibrary) -> list[Violation]:
+    """``keyword.required``（Phase 3-24b1，6.27.1）：每招技能至少製造或利用一個關鍵字。"""
+    if derive_keywords(skill, library.keywords):
+        return []
+    return [
+        Violation(
+            skill.id,
+            "keyword.required",
+            "沒有製造或利用任何關鍵字（"
+            + "、".join(k.name_zh for k in library.keywords.keywords)
+            + "）：請加入對應的效果、條件或觸發",
+        )
+    ]
+
+
+def _structure_violations(skill: SkillDef, library: ContentLibrary) -> list[Violation]:
     if skill.is_modifier:
         return _modifier_violations(skill, library)
     if skill.followup is not None:

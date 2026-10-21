@@ -28,7 +28,7 @@ from trpg.api.workshop_schemas import (
 )
 from trpg.content.library import ContentLibrary
 from trpg.narrative.skill_icon import icon_of
-from trpg.narrative.skills import skill_card
+from trpg.narrative.skills import draft_card_keywords, skill_card
 from trpg.skillgen.draft import build_skill
 from trpg.skillgen.draft_check import check_draft
 from trpg.skillgen.option_models import DraftOptions
@@ -46,7 +46,12 @@ def _check(library: ContentLibrary, skill: dict[str, Any]) -> WorkshopCheck:
     card = None
     if result.skill is not None:
         card = skill_card(library, build_skill(result.skill))
-    return WorkshopCheck(**result.model_dump(), card=card, icon=icon_of(skill))
+    return WorkshopCheck(
+        **result.model_dump(),
+        card=card,
+        icon=icon_of(skill),
+        keywords=draft_card_keywords(library, skill),
+    )
 
 
 @router.get("/arena")

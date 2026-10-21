@@ -42,6 +42,7 @@ from trpg.content.rule_changes import RuleChangeDef, RuleChangeTable
 from trpg.content.rules import CoreRules, HitTable
 from trpg.content.schemas import ContentModel, ElementTable
 from trpg.content.sim_builds import BuildTable
+from trpg.content.skill_keywords import KeywordRule, KeywordTable
 from trpg.content.skill_rules import (
     BudgetRules,
     ExclusionTable,
@@ -51,6 +52,7 @@ from trpg.content.skill_rules import (
 )
 from trpg.content.skill_triggers import SkillTriggerDef, SkillTriggerTable
 from trpg.content.skills import (
+    MODIFIER_CHANGES,
     SKELETON_IDS,
     ConditionDef,
     ConditionTable,
@@ -349,6 +351,8 @@ class ContentLibrary:
     composer: ComposerRules
     builds: BuildTable
     synergies: SynergyTable
+    keywords: KeywordTable
+    """關鍵字推導表（``skill_keywords.yaml``，Phase 3-24b1）。"""
     exclusions: ExclusionTable
     skeletons: dict[str, SkeletonDef]
     roguelite: RunRules
@@ -432,6 +436,7 @@ def load_library(  # noqa: PLR0915
     composer = load("skill_composer.yaml", ComposerRules)
     builds = load("sim/builds.yaml", BuildTable)
     synergies = load("skill_synergies.yaml", SynergyTable)
+    keywords = load("skill_keywords.yaml", KeywordTable)
     exclusions = load("skill_exclusions.yaml", ExclusionTable)
     skeletons = _load_dir(root / "skeletons", SkeletonDef, files)
     skills = _load_dir(root / "skills", SkillDef, files)
@@ -463,6 +468,7 @@ def load_library(  # noqa: PLR0915
 
     _check_skills(root, skills, ruleset)
     _check_skill_rules(root, ruleset, exclusions, skeletons)
+    _check_keywords(root, keywords, ruleset, skills)
     unknown_values = sorted(set(ai_profiles.status_values) - {s.id for s in statuses.statuses})
     if unknown_values:
         raise ContentError(
@@ -527,6 +533,7 @@ def load_library(  # noqa: PLR0915
         composer=composer,
         builds=builds,
         synergies=synergies,
+        keywords=keywords,
         exclusions=exclusions,
         skeletons=skeletons,
         roguelite=roguelite,
@@ -600,6 +607,49 @@ def _check_skills(root: Path, skills: dict[str, SkillDef], ruleset: Ruleset) -> 
         problems = skill_reference_problems(skill, ruleset, skills)
         if problems:
             raise ContentError(root / "skills" / f"{skill_id}.yaml", "；".join(problems))
+
+
+def _keyword_rule_problems(
+    rule: KeywordRule, ruleset: Ruleset, skills: Mapping[str, SkillDef]
+) -> list[str]:
+    """關鍵字推導規則引用的原語、條件、觸發、形狀、狀態、物件、層數、規則改變、技能都存在。"""
+    known: dict[str, set[str]] = {
+        "effect": set(ruleset.primitives.by_id()),
+        "condition": set(ruleset.conditions.by_id()),
+        "trigger": set(ruleset.skill_triggers.by_id()),
+        "shape": set(ruleset.shapes.by_id()),
+        "change": set(MODIFIER_CHANGES),
+    }
+    problems: list[str] = []
+    if rule.source_id not in known[rule.source]:
+        problems.append(f"未知的{rule.source} {rule.source_id!r}")
+    params = rule.params()
+    refs: dict[str, set[str]] = {
+        "status": {s.id for s in ruleset.statuses.statuses},
+        "object": {o.id for o in ruleset.objects.objects},
+        "stack": set(ruleset.stacks.by_id()),
+        "rule": set(ruleset.rule_changes.by_id()),
+        "skill": set(skills),
+    }
+    problems += [
+        f"未知的 {name} {params[name]!r}"
+        for name, ids in refs.items()
+        if name in params and params[name] not in ids
+    ]
+    return problems
+
+
+def _check_keywords(
+    root: Path, keywords: KeywordTable, ruleset: Ruleset, skills: Mapping[str, SkillDef]
+) -> None:
+    """關鍵字推導表引用的內容都存在。"""
+    path = root / "skill_keywords.yaml"
+    for keyword in keywords.keywords:
+        for label, rules in (("makes", keyword.makes), ("uses", keyword.uses)):
+            for index, rule in enumerate(rules):
+                found = _keyword_rule_problems(rule, ruleset, skills)
+                if found:
+                    raise ContentError(path, f"{keyword.id}.{label}[{index}]：" + "；".join(found))
 
 
 def _match_problems(match: SkillMatch | None, ruleset: Ruleset) -> list[str]:

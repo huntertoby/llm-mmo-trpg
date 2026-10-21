@@ -1,0 +1,28 @@
+# 連段（Phase 3-24b1 補技能，數值為初值，未經模擬）：目標已經在燃燒時，火種被引爆，追加一段火焰傷害（點燃池的利用者）。
+id: skill_kindling_strike
+schema_version: 1
+name_zh: 引火重擊
+tier: 1
+rank: 1
+rarity: rare
+kind: active
+skeleton: combo
+category: spell
+weapon_req: focus
+ap_cost: 2
+scaling_attr: int
+shape: {type: single, range: 5}
+effects:
+  - {type: damage, dice: 1d8, element: fire}
+  # 目標正在燃燒時，火勢被一口氣助長
+  - type: damage
+    dice: 2d8
+    element: fire
+    condition: {type: target_has_status, status: burning}
+condition: null
+cost: {mana: 6, cooldown: 2}
+tags: [fire, spell, combo]
+narrative:
+  concept: 對正在燃燒的敵人再補一道火，讓火勢一口氣竄高
+  cast_flavor: 你朝著還在冒煙的目標吹了一口氣，火舌轟地竄了起來
+provenance: {origin: builtin, owner_id: null, created_by: null, parents: [], bound: true, tradeable: false}

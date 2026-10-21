@@ -1,0 +1,24 @@
+# 控制（Phase 3-24b1 補技能，數值為初值，未經模擬）：召來一陣驟雨，範圍內的地面全部變得潮濕（潮濕池的製造者）。
+id: skill_downpour
+schema_version: 1
+name_zh: 驟雨
+tier: 1
+rank: 1
+rarity: rare
+kind: active
+skeleton: control
+category: spell
+weapon_req: focus
+ap_cost: 1
+scaling_attr: wis
+shape: {type: square3, range: 4}
+effects:
+  - {type: create_surface, surface: water}
+  - {type: apply_status, status: slow, duration: 1}
+condition: null
+cost: {mana: 6, cooldown: 2}
+tags: [water, spell, area, utility]
+narrative:
+  concept: 一朵烏雲憑空聚在頭頂，雨水把整片地面澆得濕透
+  cast_flavor: 雲層在你的杖尖上方翻滾，豆大的雨點嘩啦啦地砸下來
+provenance: {origin: builtin, owner_id: null, created_by: null, parents: [], bound: true, tradeable: false}

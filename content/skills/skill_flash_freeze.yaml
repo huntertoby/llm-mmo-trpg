@@ -1,0 +1,24 @@
+# 控制（Phase 3-24b1 補技能，數值為初值，未經模擬）：瞬間凍結單一目標（硬控：單體、冷卻 4 回合），冰凍池的製造者。
+id: skill_flash_freeze
+schema_version: 1
+name_zh: 急凍
+tier: 1
+rank: 1
+rarity: rare
+kind: active
+skeleton: control
+category: spell
+weapon_req: focus
+ap_cost: 2
+scaling_attr: int
+shape: {type: single, range: 4}
+effects:
+  - {type: apply_status, status: frozen, duration: 1}
+  - {type: damage, dice: 2d4, element: ice}
+condition: null
+cost: {mana: 8, cooldown: 4}
+tags: [ice, spell, control]
+narrative:
+  concept: 一口寒氣把目標整個人封進冰裡，只留下一瞬間的空隙
+  cast_flavor: 白霜從你的掌心炸開，目標連呼吸都被凍在半空中
+provenance: {origin: builtin, owner_id: null, created_by: null, parents: [], bound: true, tradeable: false}
