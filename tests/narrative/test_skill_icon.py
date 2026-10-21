@@ -5,6 +5,7 @@ from __future__ import annotations
 from typing import Any
 
 from tests.engine.helpers import library
+from tests.narrative.icon_fixture import FIXTURE_PATH, render
 from tests.skillgen.workshop_walks import DISPLACE, MODIFIER, STRIKE, walk_draft
 from trpg.narrative.skill_icon import ELEMENT_IDS, SkillIcon, icon_of, skill_icon
 from trpg.narrative.skills import skill_card
@@ -172,8 +173,6 @@ def test_workshop_drafts_get_more_parts_with_every_step() -> None:
 
 
 def test_client_fixture_is_current() -> None:
-    from tests.narrative.icon_fixture import FIXTURE_PATH, render
-
     saved = FIXTURE_PATH.read_text(encoding="utf-8")
     assert saved == render(), "重產：uv run python -m tests.narrative.icon_fixture"
 

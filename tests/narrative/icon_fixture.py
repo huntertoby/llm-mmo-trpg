@@ -1,6 +1,6 @@
 """前端測試用的技能圖示資料（Phase 3-17）：內容庫的每個技能、隨機組合器的種子、工坊示範的每一步。
 
-重產：``uv run python -m tests.narrative.icon_fixture``（寫到 ``client/src/render/fixtures/skill_icons.json``）；
+重產：``uv run python -m tests.narrative.icon_fixture``（寫到 ``client/src/render/fixtures``）；
 ``tests/narrative/test_skill_icon.py`` 檢查檔案是最新的。
 """
 
