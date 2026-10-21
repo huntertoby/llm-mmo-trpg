@@ -1006,3 +1006,9 @@ PM 驗收後請使用者試玩一整輪（`docs/專案計畫.md` 第 14 節 🎮
 
 - PM 合併（無衝突）、`check.py` 全過、`pnpm build` 成功；看過截圖（`docs/phases/img/3-16b-*.jpg`）。`UnitView.weapon_id`；紙娃娃四朝向、倒地、召喚骷髏、圖騰柱；美術 PM 3-16a 檢查（`docs/art/3-16a檢查.md`）7 項小修中 6 項完成，煙霧雲團受貼圖裁切不能超出格子。
 - 待 PM 決定：#1 未知武器一律畫劍（前端沒有 `weapon_class`）→ 下一個介面小修補 `weapon_class` 欄位；#2 法杖、弓是雙手所以沒有魔典 → 接受；#3 新補的四個外觀、#6 倒地紅叉 → 請美術 PM 過目；#4 錘、長柄、弩 → 有內容時再加；#5 煙霧不能超出格子 → 接受；#7 蓄力徽章移左上、#9 同 y 單位不處理碰撞 → 接受；#8 截圖解析度 → 使用者試玩時看。
+
+### 18.3 3-17 驗收（2026-10-22）
+
+- PM 合併（與 3-16b 無衝突；重產 `openapi.json`／`schema.d.ts` 無差異）、`check.py` 全過（vitest 432）、`pnpm build` 成功；看過截圖（`docs/phases/img/3-17-*.png`）。後端 `trpg.narrative.skill_icon.icon_of` 推導 `SkillCard.icon`／`WorkshopCheck.icon`；152 個內容技能、組合器種子 0–49、工坊每一步半成品都推導得到；前端部件庫 `render/skillParts.ts`、`render/skillIcon.ts`；`vfx.ts` 改讀 `shape_id`。
+- 待 PM 決定：#1 多 `partial`、`segments[].elements`、`shape_id` 可為 null → 接受；#2 元素配色兩張表（icon 與 vfx）→ 下一個介面小修合成一份；#3 效果、條件、觸發的中文名在前端靜態表 → 3E-2（Phase 4 前）加進 glossary API；#4 戰場狀態徽章、狀態列、表面說明改用部件庫 → 下一個介面小修；#5 技能列浮動卡約 325 px 偏高 → 下一個介面小修做緊湊版；#6 `add_tags`、`on_hit_effects` 畫「?」、#7 代價只有種類沒有數值 → 下一個介面小修；#8 延遲段特效 → 接受；#9 截圖解析度 → PM 已確認是內建瀏覽器模擬大視窗的縮放問題（DOM 量測 1600×900 無捲軸、地圖 646×646），不是版面問題；#10 技能列按鈕高 48 px → 接受。
+- 美術 PM 3-16b 檢查（`docs/art/3-16b檢查.md`）的 4 項小修（`bandit_warlord` 外觀、`hero_stormcaller` 改深藍、兩名標準隊友外觀、倒地拿掉紅叉並提高徽章透明度）→ 下一個介面小修。
