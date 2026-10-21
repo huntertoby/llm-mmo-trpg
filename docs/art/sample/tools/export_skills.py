@@ -13,6 +13,7 @@ import yaml
 ROOT = Path(__file__).resolve().parents[4]
 CONTENT = ROOT / "content"
 OUT = Path(__file__).resolve().parents[1] / "skillsData.js"
+COST_KEYS = ("source", "on_miss", "self_status", "uses_per_battle", "stacks")
 ELEMENTS = ["physical", "fire", "ice", "lightning", "poison", "wind", "earth", "holy", "shadow"]
 
 
@@ -70,7 +71,7 @@ def skill(d: dict) -> dict:
         "elements": els,
         **segment(d),
         "condition": (d.get("condition") or {}).get("type"),
-        "cost": {k: cost[k] for k in ("source", "on_miss", "self_status", "uses_per_battle", "stacks") if k in cost},
+        "cost": {k: cost[k] for k in COST_KEYS if k in cost},
         "activation": d.get("activation"),
         "trigger": (d.get("trigger") or {}).get("event"),
         "reaction": (d.get("reaction") or {}).get("event"),
@@ -79,11 +80,13 @@ def skill(d: dict) -> dict:
     if any(e["type"] == "gamble" for e in all_effects):
         out["cost"]["gamble"] = True
     if fu:
-        out["followup"] = {"when": fu.get("when"), "release": fu.get("release"), **segment({**fu, "shape": fu.get("shape")})}
+        out["followup"] = {"when": fu.get("when"), "release": fu.get("release"), **segment(fu)}
         f_els = elements_of(list(fu.get("effects") or []))
         out["followup"]["elements"] = f_els or els
     if d.get("modifiers"):
-        out["modifiers"] = [{"applies_to": m.get("applies_to"), "change": m.get("change")} for m in d["modifiers"]]
+        out["modifiers"] = [
+            {"applies_to": m.get("applies_to"), "change": m.get("change")} for m in d["modifiers"]
+        ]
     return out
 
 
