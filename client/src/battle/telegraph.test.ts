@@ -41,6 +41,13 @@ describe("telegraph marks", () => {
     expect(marksTextAt(marks, null)).toEqual([]);
   });
 
+  it("marks a temporary wall that will vanish (Phase 3-11)", () => {
+    const t = telegraph([change("object_expired", "冰牆 將在本輪結束時消失", { pos: { x: 1, y: 2 } })]);
+    const [mark] = telegraphMarks(t, view);
+    expect(mark).toMatchObject({ kind: "object_expired", glyph: "消" });
+    expect(telegraphLines(t)).toEqual(["冰牆 將在本輪結束時消失"]);
+  });
+
   it("places unit changes without a position on the unit's tile", () => {
     const t = telegraph([change("unit_downed", "A 將倒下", { unit_id: "unit_0003" })]);
     expect(telegraphMarks(t, view).map((m) => [m.pos.x, m.pos.y])).toEqual([[2, 1]]);

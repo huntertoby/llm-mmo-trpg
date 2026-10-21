@@ -3919,6 +3919,17 @@
               }
             ],
             "title": "Burning"
+          },
+          "expires_in": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Expires In"
           }
         },
         "additionalProperties": false,
@@ -5838,7 +5849,8 @@
           "ice",
           "poison",
           "holy",
-          "darkness"
+          "darkness",
+          "smoke"
         ],
         "title": "Surface",
         "description": "格子的表面狀態。"

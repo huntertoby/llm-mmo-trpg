@@ -1576,6 +1576,8 @@ export interface components {
             max_hp: number | null;
             /** Burning */
             burning: number | null;
+            /** Expires In */
+            expires_in?: number | null;
         };
         /**
          * Objective
@@ -2291,7 +2293,7 @@ export interface components {
          * @description 格子的表面狀態。
          * @enum {string}
          */
-        Surface: "none" | "oil" | "water" | "fire" | "ice" | "poison" | "holy" | "darkness";
+        Surface: "none" | "oil" | "water" | "fire" | "ice" | "poison" | "holy" | "darkness" | "smoke";
         TacticalOrder: components["schemas"]["FocusTarget"] | components["schemas"]["HoldPosition"] | components["schemas"]["RetreatTo"] | components["schemas"]["Protect"] | components["schemas"]["UseEnvironment"];
         /** TargetOut */
         TargetOut: {

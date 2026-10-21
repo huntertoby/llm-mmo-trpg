@@ -306,6 +306,15 @@ export class BattleRenderer {
       g.circle(T - 8, 8, 4).fill(HIGHLIGHT.flammable);
     }
     c.addChild(g);
+    if (o.expiresIn !== null) {
+      // 暫時障礙（Phase 3-11）：淡化並在右上角顯示剩餘回合；最後一輪更淡
+      c.alpha = o.expiresIn <= 1 ? 0.5 : 0.8;
+      const badge = label(String(o.expiresIn), 12, 0xffffff, true);
+      badge.anchor.set(1, 0);
+      badge.position.set(T - 3, 2);
+      c.addChild(new Graphics().circle(T - 10, 10, 9).fill({ color: 0x1a2a3a, alpha: 0.85 }));
+      c.addChild(badge);
+    }
     const glyph = label(o.burning ? `${o.glyph}火` : o.glyph, o.floor ? 12 : 16, 0xffffff, true);
     glyph.anchor.set(0.5);
     glyph.position.set(T / 2, o.floor ? T - 10 : T / 2);

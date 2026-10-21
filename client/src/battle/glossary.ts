@@ -104,6 +104,7 @@ export const SURFACES: Readonly<Record<Surface, SurfaceStyle | null>> = {
   poison: { color: 0x7bc043, alpha: 0.6 },
   holy: { color: 0xfff1a8, alpha: 0.6 },
   darkness: { color: 0x3b1f4f, alpha: 0.65 },
+  smoke: { color: 0xb8b8c0, alpha: 0.6 },
 };
 
 export interface ObjectStyle {
@@ -134,6 +135,8 @@ export const OBJECTS: Readonly<Record<string, ObjectLook>> = {
   fallen_log: { glyph: "木", color: 0x6a4a2a, floor: false },
   dead_tree: { glyph: "樹", color: 0x5a4a32, floor: false },
   rubble: { glyph: "礫", color: 0x7a7468, floor: false },
+  ice_wall: { glyph: "冰", color: 0x8fd3f0, floor: false },
+  thorn_wall: { glyph: "棘", color: 0x4f7a2a, floor: false },
 };
 
 export function objectStyle(kind: string): ObjectStyle {
