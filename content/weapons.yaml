@@ -3,6 +3,14 @@
 #       range（射程，曼哈頓距離；1 為近戰）、dice（傷害骰 NdM）、flat（固定傷害）、
 #       attack_bonus（攻擊值加值）、scaling_attr（縮放屬性：str/dex/con/int/wis/wil）、
 #       element（元素）、crit_range（暴擊最低自然骰值，20 表示只有自然 20）、two_handed（雙手）。
+# 武器小特性（Phase 3-24a1；全部是下列選填參數，引擎只讀參數、不寫死數值）：
+#       secondary_scaling_attr（第二縮放屬性，與 scaling_attr 取平均）、
+#       armor_break {defense_permille: -100, rounds: 1}（破甲：普攻命中後目標防禦 ‰ 變化與回合數）、
+#       knockback（震退：普攻命中後沿攻擊方向推幾格，沿用推擊與撞擊）、
+#       reach（觸及：藉機攻擊範圍，不可超過 range）、
+#       blessing {flat, dice}（祝禱：普攻命中時最近的隊友回復量）、
+#       summon_dice_bonus（統御：自己的召喚物普攻多幾顆傷害骰）、
+#       lob（拋射：視線可越過幾層高的障礙）。
 weapons:
   - id: one_handed_sword
     name_zh: 單手劍
@@ -48,6 +56,7 @@ weapons:
     element: physical
     crit_range: 20
     two_handed: true
+    lob: 1
   - id: fire_staff
     name_zh: 火焰法杖
     weapon_class: focus
@@ -81,3 +90,65 @@ weapons:
     element: ice
     crit_range: 20
     two_handed: true
+  # --- Phase 3-24a1：武器擴充第一批（數值為初值，未經模擬）---
+  - id: axe
+    name_zh: 斧
+    weapon_class: melee
+    range: 1
+    dice: 1d8
+    flat: 0
+    attack_bonus: 0
+    scaling_attr: str
+    element: physical
+    crit_range: 20
+    two_handed: false
+    armor_break: {defense_permille: -100, rounds: 1}
+  - id: hammer
+    name_zh: 錘
+    weapon_class: melee
+    range: 1
+    dice: 1d12
+    flat: 0
+    attack_bonus: 0
+    scaling_attr: str
+    secondary_scaling_attr: con
+    element: physical
+    crit_range: 20
+    two_handed: true
+    knockback: 1
+  - id: spear
+    name_zh: 矛
+    weapon_class: melee
+    range: 2
+    dice: 1d10
+    flat: 0
+    attack_bonus: 0
+    scaling_attr: str
+    element: physical
+    crit_range: 20
+    two_handed: true
+    reach: 2
+  - id: scepter
+    name_zh: 權杖
+    weapon_class: focus
+    range: 4
+    dice: 1d6
+    flat: 0
+    attack_bonus: 0
+    scaling_attr: wis
+    element: physical
+    crit_range: 20
+    two_handed: false
+    blessing: {flat: 3}
+  - id: totem_staff
+    name_zh: 圖騰杖
+    weapon_class: focus
+    range: 4
+    dice: 1d6
+    flat: 0
+    attack_bonus: 0
+    scaling_attr: wil
+    element: physical
+    crit_range: 20
+    two_handed: true
+    summon_dice_bonus: 1

@@ -100,10 +100,10 @@ from trpg.engine.rules.movement import (
 )
 from trpg.engine.rules.statuses import (
     base_attribute,
-    effective_attribute,
     is_rooted,
     skip_turn_status,
     stance_status_ids,
+    weapon_attribute,
 )
 from trpg.engine.setup import BattleSetup, BattleSetupError, starting_source
 from trpg.engine.skill_triggers import collect_move, settle
@@ -127,6 +127,7 @@ from trpg.engine.state import (
     state_to_json,
 )
 from trpg.engine.turns import advance_turn, end_turn, finish_resolution, start_turn
+from trpg.engine.weapon_traits import attack_dice
 from trpg.shared.errors import IllegalActionError
 from trpg.shared.ids import IdAllocator
 from trpg.shared.rng import Rng
@@ -775,9 +776,9 @@ def _do_attack(ctx: Ctx, unit: UnitState, action: Action) -> None:
                     source_id=unit.id,
                     cause="attack",
                     element=modifiers.damage_element(state, unit, use, weapon.element),
-                    dice=weapon.dice,
+                    dice=attack_dice(state, unit),
                     flat=weapon.flat,
-                    scaled_permille=effective_attribute(ctx.rules, unit, weapon.scaling_attr)
+                    scaled_permille=weapon_attribute(ctx.rules, unit)
                     * ctx.core.basic_attack_attr_multiplier_permille,
                     min_damage=ctx.core.min_damage_on_hit,
                     multiplier_permille=modifiers.damage_permille(

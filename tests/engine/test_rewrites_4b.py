@@ -554,8 +554,13 @@ def test_the_ai_gives_extra_reactions_only_to_units_that_react() -> None:
     ("build", "map_id", "seed", "event"),
     [
         ("build_support", "oil_depot", 4, SkillCopied),
-        ("build_guardian", "open_plain", 2, DamageRedirected),
-        ("build_guardian", "open_plain", 2, ReactionsGranted),
+        (
+            "build_guardian",
+            "open_plain",
+            0,
+            DamageRedirected,
+        ),  # 3-24a1：弓有拋射，AI 軌跡改變，種子 2 → 0
+        ("build_guardian", "open_plain", 0, ReactionsGranted),
     ],
 )
 def test_demo_battles_use_the_new_primitives_and_replay(

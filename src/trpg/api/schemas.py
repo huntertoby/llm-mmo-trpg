@@ -109,6 +109,8 @@ class BuildSummary(_ApiModel):
     weapon: str = ""
     weapon_name_zh: str = ""
     """主角的武器（ID 與中文名）。"""
+    weapon_traits_zh: tuple[str, ...] = ()
+    """主角武器小特性的說明，每個特性一行（Phase 3-24a1）。"""
 
 
 class SkillReasons(_ApiModel):

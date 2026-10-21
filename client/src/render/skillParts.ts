@@ -269,6 +269,14 @@ const STATUS: Readonly<Record<string, readonly [string, Draw]>> = {
       c.stroke();
     },
   ],
+  armor_broken: [
+    "#d8a060",
+    (c) => {
+      shieldPath(c);
+      c.stroke();
+      arrow(c, 0, -5, 0, 6, 3.2);
+    },
+  ],
   weaken: [
     "#e09a9a",
     (c) => {

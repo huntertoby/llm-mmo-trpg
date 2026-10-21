@@ -59,7 +59,15 @@ def test_the_ai_does_not_charge_when_nobody_is_on_the_line() -> None:
 
 
 def test_the_ai_uses_the_charge_in_real_battles(capsys: pytest.CaptureFixture[str]) -> None:
-    argv = ["battle", "--map", "bridge_chasm", "--seed", "2", "--ally-build", "build_charger"]
+    argv = [
+        "battle",
+        "--map",
+        "bridge_chasm",
+        "--seed",
+        "1",
+        "--ally-build",
+        "build_charger",
+    ]  # 3-24a1：弓有拋射，AI 軌跡改變，種子 2 → 1
     assert main(argv) == 0
     out = capsys.readouterr().out
     assert "直線衝撞：" in out and "以「蠻牛衝陣」攻擊" in out
@@ -68,9 +76,17 @@ def test_the_ai_uses_the_charge_in_real_battles(capsys: pytest.CaptureFixture[st
 def test_an_ai_battle_with_charges_replays(
     tmp_path: Path, capsys: pytest.CaptureFixture[str]
 ) -> None:
-    """bridge_chasm 種子 2：衝撞一次撞到兩個敵人（命中、擊倒），紀錄重播一致。"""
+    """bridge_chasm 種子 1：衝撞一次撞到兩個敵人（命中、擊倒），紀錄重播一致。"""
     log = tmp_path / "charge.json"
-    argv = ["battle", "--map", "bridge_chasm", "--seed", "2", "--ally-build", "build_charger"]
+    argv = [
+        "battle",
+        "--map",
+        "bridge_chasm",
+        "--seed",
+        "1",
+        "--ally-build",
+        "build_charger",
+    ]  # 3-24a1：弓有拋射，AI 軌跡改變，種子 2 → 1
     assert main([*argv, "--log-json", str(log)]) == 0
     assert "直線衝撞" in capsys.readouterr().out
     replayed = io.StringIO()

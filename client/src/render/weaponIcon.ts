@@ -8,13 +8,18 @@ import { drawWeaponAlone } from "./paperdoll";
 const WORK = 120;
 const WORK_RES = 3;
 /** 這些武器斜放（-45 度）；弓與杖直立。 */
-const DIAGONAL: ReadonlySet<string> = new Set(["sword", "greatsword", "dagger", "axe"]);
+const DIAGONAL: ReadonlySet<string> = new Set(["sword", "greatsword", "dagger", "axe", "hammer", "spear"]);
 const PAD = 0.08;
 
 /** 武器小圖示要畫的那一件裝備（供測試與繪製共用）。 */
 export function weaponIconItem(weaponId: string | null | undefined, weaponClass: string | null | undefined): GearItem {
   const look = weaponLook(weaponId, weaponClass);
-  return { kind: look.kind, material: look.material, ...(look.element !== undefined ? { element: look.element } : {}) };
+  return {
+    kind: look.kind,
+    material: look.material,
+    ...(look.element !== undefined ? { element: look.element } : {}),
+    ...(look.form !== undefined ? { form: look.form } : {}),
+  };
 }
 
 /** 斜放的武器種類。 */
@@ -55,7 +60,7 @@ const cache = new Map<string, HTMLCanvasElement>();
 export function weaponIconCanvas(weaponId: string | null | undefined, weaponClass: string | null | undefined, px = 28): HTMLCanvasElement | null {
   if (typeof document === "undefined") return null;
   const item = weaponIconItem(weaponId, weaponClass);
-  const key = `${px}|${item.kind}|${item.material ?? ""}|${item.element ?? ""}`;
+  const key = `${px}|${item.kind}|${item.material ?? ""}|${item.element ?? ""}|${item.form ?? ""}`;
   const hit = cache.get(key);
   if (hit !== undefined) return hit;
   const work = workCanvas(item);

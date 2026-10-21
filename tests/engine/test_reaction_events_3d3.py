@@ -620,7 +620,7 @@ def test_previews_include_the_new_reactions() -> None:
     [
         ("build_assassin", "open_plain", 1, "迎頭痛擊"),
         ("build_tank", "swamp", 0, "悲憤"),
-        ("build_ranged", "open_plain", 1, "掩護射擊"),
+        ("build_ranged", "open_plain", 3, "掩護射擊"),  # 3-24a1：弓有拋射，AI 軌跡改變，種子 1 → 3
     ],
 )
 def test_ai_battles_with_the_new_reactions_replay(

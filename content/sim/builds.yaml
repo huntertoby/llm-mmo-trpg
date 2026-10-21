@@ -467,3 +467,90 @@ builds:
       tags: [hero, sim]
       max_mana: 40
       skills: []
+
+  # Phase 3-24a1：武器擴充第一批的白板主角（沒有任何技能，讓新武器能在網頁試玩；屬性、HP 比照白板戰士與白板法師）。
+
+  - id: build_blank_axe
+    name_zh: 白板斧手
+    blank: true
+    theme_zh: 沒有任何技能、只拿斧的戰士。普攻命中會破甲（目標防禦 −10%，1 回合）。
+    hero:
+      id: build_blank_axe
+      name_zh: 白板斧手
+      attributes: {str: 10, dex: 10, con: 10, int: 10, wis: 10, wil: 10}
+      max_hp: 60
+      speed: 5
+      armor_bonus: 4
+      weapon: axe
+      resist: {physical: 100}
+      tags: [hero, sim]
+      max_mana: 20
+      skills: []
+
+  - id: build_blank_hammer
+    name_zh: 白板錘手
+    blank: true
+    theme_zh: 沒有任何技能、只拿錘的戰士（雙手）。普攻命中會把目標推開 1 格，撞到東西還會受撞擊傷害。
+    hero:
+      id: build_blank_hammer
+      name_zh: 白板錘手
+      attributes: {str: 10, dex: 10, con: 10, int: 10, wis: 10, wil: 10}
+      max_hp: 60
+      speed: 5
+      armor_bonus: 4
+      weapon: hammer
+      resist: {physical: 100}
+      tags: [hero, sim]
+      max_mana: 20
+      skills: []
+
+  - id: build_blank_spear
+    name_zh: 白板矛兵
+    blank: true
+    theme_zh: 沒有任何技能、只拿矛的戰士（雙手）。2 格就能攻擊，敵人離開 2 格範圍時還會藉機攻擊。
+    hero:
+      id: build_blank_spear
+      name_zh: 白板矛兵
+      attributes: {str: 10, dex: 10, con: 10, int: 10, wis: 10, wil: 10}
+      max_hp: 60
+      speed: 5
+      armor_bonus: 4
+      weapon: spear
+      resist: {physical: 100}
+      tags: [hero, sim]
+      max_mana: 20
+      skills: []
+
+  - id: build_blank_priest
+    name_zh: 白板牧師
+    blank: true
+    theme_zh: 沒有任何技能、只拿權杖的法器使（單手，可搭副手）。普攻命中時，最近的隊友回復 3 HP。
+    hero:
+      id: build_blank_priest
+      name_zh: 白板牧師
+      attributes: {str: 10, dex: 10, con: 10, int: 10, wis: 10, wil: 10}
+      max_hp: 40
+      speed: 5
+      armor_bonus: 1
+      weapon: scepter
+      resist: {elemental: 150}
+      tags: [hero, sim]
+      max_mana: 40
+      skills: []
+
+  - id: build_blank_totemist
+    name_zh: 白板圖騰師
+    blank: true
+    theme_zh: 沒有任何技能、只拿圖騰杖的法器使（雙手）。自己的召喚物攻擊多一顆傷害骰。
+    hero:
+      id: build_blank_totemist
+      name_zh: 白板圖騰師
+      attributes: {str: 10, dex: 10, con: 10, int: 10, wis: 10, wil: 10}
+      max_hp: 40
+      speed: 5
+      armor_bonus: 1
+      weapon: totem_staff
+      resist: {elemental: 150}
+      tags: [hero, sim]
+      max_mana: 40
+      skills: []

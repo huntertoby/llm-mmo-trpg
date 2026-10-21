@@ -21,6 +21,7 @@ function Bar({ label, value, max, kind }: { label: string; value: number; max: n
 
 export function RunHeroPanel({ hero }: { hero: RunHero }) {
   const usage = slotUsage(hero.skills);
+  const traits: readonly string[] = (hero as { weapon_traits_zh?: readonly string[] }).weapon_traits_zh ?? [];
   const kinds = Object.keys(SLOT_LIMITS) as SlotKind[];
   return (
     <div className="panel run-hero">
@@ -44,6 +45,13 @@ export function RunHeroPanel({ hero }: { hero: RunHero }) {
         <WeaponIcon weaponId={hero.weapon} weaponClass={hero.weapon_class} size={24} />
         <span className="muted">武器</span> <b>{hero.weapon_name_zh === "" ? hero.weapon : hero.weapon_name_zh}</b>
       </div>
+      {traits.length > 0 && (
+        <div className="weapon-traits small muted" data-testid="run-weapon-traits">
+          {traits.map((line) => (
+            <div key={line}>{line}</div>
+          ))}
+        </div>
+      )}
       <div className="run-attrs small">
         {ATTRIBUTES.map((a) => (
           <span key={a.id}>

@@ -107,6 +107,7 @@ from trpg.engine.ai.summon import has_summon, summon_estimate, summon_gains, sum
 from trpg.engine.ai.zone import hostile_zone_at, is_zone_skill, zone_estimate, zone_gains
 from trpg.engine.battle import legal_actions, legal_actions_with_areas
 from trpg.engine.bombs import blast_tiles
+from trpg.engine.effects.world import unit_push_block
 from trpg.engine.events import (
     ApGranted,
     ApRefunded,
@@ -143,6 +144,7 @@ from trpg.engine.rules.combat import (
 from trpg.engine.rules.facing import FACING_VECTORS, facing_between, is_behind
 from trpg.engine.rules.geometry import (
     XY,
+    axis_direction,
     bresenham,
     chebyshev,
     has_line_of_sight,
@@ -429,7 +431,39 @@ def _enemy_terms(state: BattleState, unit: UnitState, w: AiWeights, scene: _Scen
         value -= w.exposed * _outgunned_by(state, unit, enemies)
     if w.flank:
         value += w.flank * _flanked_count(state, unit, enemies)
-    return value + _facing_terms(state, unit, w, enemies)
+    return value + _facing_terms(state, unit, w, enemies) + _weapon_terms(state, unit, w, enemies)
+
+
+def _knock_collides(state: BattleState, unit: UnitState, enemy: UnitState) -> bool:
+    """``unit`` 從現在的位置普攻相鄰的 ``enemy`` 並震退時，會不會撞到東西或掉進致命地形。"""
+    direction = axis_direction(enemy.xy[0] - unit.xy[0], enemy.xy[1] - unit.xy[1])
+    if direction is None or attack_problem(state, unit, enemy) is not None:
+        return False
+    nxt = (enemy.xy[0] + direction[0], enemy.xy[1] + direction[1])
+    if unit_push_block(state, enemy.xy, nxt, enemy.id) is not None:
+        return True
+    return is_deadly(state, nxt)
+
+
+def _weapon_terms(
+    state: BattleState, unit: UnitState, w: AiWeights, enemies: list[UnitState]
+) -> int:
+    """位置價值中與武器特性有關的部分（Phase 3-24a1）：長柄武器偏好在觸及距離出手（不貼臉）、
+    震退武器偏好能撞擊的角度。"""
+    weapon = unit.weapon
+    value = 0
+    if w.reach_spacing and weapon.is_melee and weapon.range > 1:
+        for e in enemies:
+            distance = manhattan(unit.xy, e.xy)
+            if distance == 1:
+                value -= w.reach_spacing
+            elif distance <= weapon.range and attack_problem(state, unit, e) is None:
+                value += w.reach_spacing
+    if w.knock_angle and weapon.knockback > 0:
+        value += w.knock_angle * sum(
+            1 for e in enemies if manhattan(unit.xy, e.xy) == 1 and _knock_collides(state, unit, e)
+        )
+    return value
 
 
 def _facing_terms(
@@ -521,7 +555,7 @@ def _covered_from(state: BattleState, xy: XY, enemies: list[UnitState]) -> int:
         for e in enemies
         if manhattan(e.xy, xy) <= e.weapon.range
         and cover_object_between(state, e.xy, xy) is not None
-        and has_line_of_sight(state, e.xy, xy)
+        and has_line_of_sight(state, e.xy, xy, lob=e.weapon.lob)
     )
 
 

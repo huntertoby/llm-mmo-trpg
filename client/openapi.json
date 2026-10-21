@@ -2233,6 +2233,14 @@
             "type": "string",
             "title": "Weapon Name Zh",
             "default": ""
+          },
+          "weapon_traits_zh": {
+            "items": {
+              "type": "string"
+            },
+            "type": "array",
+            "title": "Weapon Traits Zh",
+            "default": []
           }
         },
         "additionalProperties": false,
@@ -3460,6 +3468,14 @@
             "type": "string",
             "title": "Weapon Class",
             "default": ""
+          },
+          "weapon_traits_zh": {
+            "items": {
+              "type": "string"
+            },
+            "type": "array",
+            "title": "Weapon Traits Zh",
+            "default": []
           },
           "skills": {
             "items": {
@@ -6986,6 +7002,14 @@
             "type": "string",
             "title": "Weapon Class",
             "default": ""
+          },
+          "weapon_traits_zh": {
+            "items": {
+              "type": "string"
+            },
+            "type": "array",
+            "title": "Weapon Traits Zh",
+            "default": []
           },
           "tags": {
             "items": {

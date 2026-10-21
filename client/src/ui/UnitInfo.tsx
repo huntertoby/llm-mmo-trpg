@@ -42,6 +42,7 @@ export function UnitInfo({ unit, names, heroId, skills, view }: Props) {
     ["耐力", `${unit.stamina} / ${unit.max_stamina}`],
     ["AP／移動", `${unit.ap}／${unit.move_points}（速度 ${unit.speed}）`],
     ["武器", unit.weapon_name_zh],
+    ...unit.weapon_traits_zh.map((line): [string, string] => ["　特性", line]),
     ["位置", `(${unit.pos.x}, ${unit.pos.y})`],
     ["朝向", facingText(unit)],
   ];

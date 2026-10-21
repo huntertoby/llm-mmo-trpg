@@ -310,7 +310,51 @@ function drawBlade(ctx: Ctx, it: GearItem, c: string, front: boolean): void {
   fill(ctx, "#4a3020", () => ctx.rect(-1, -2, 2, 4));
 }
 
+/** 權杖：短柄，頂端一個金環＋寶珠（美術樣張 `gearArt.js` 的 scepter 形制）。 */
+function drawScepter(ctx: Ctx, it: GearItem, c: string): void {
+  fill(ctx, "#6a4420", () => ctx.rect(-1.1, -22, 2.2, 26));
+  ctx.strokeStyle = "#e8bb48";
+  ctx.lineWidth = 1.8;
+  ctx.beginPath();
+  ctx.arc(0, -26, 5.2, 0, TAU);
+  ctx.stroke();
+  fill(ctx, elementTint(it.element) ?? c, () => ctx.arc(0, -26, 2.6, 0, TAU));
+  fill(ctx, "rgba(255,255,255,0.8)", () => ctx.arc(-0.9, -27, 0.8, 0, TAU));
+}
+
+/** 圖騰杖：木柱疊兩張刻臉（紅、青）＋兩側羽毛＋頂端綠珠（美術樣張的 totem 形制）。 */
+function drawTotemStaff(ctx: Ctx): void {
+  fill(ctx, "#8f5f2c", () => ctx.rect(-1.4, -32, 2.8, 36));
+  for (const [y, color] of [
+    [-30, "#b83a3a"],
+    [-21, "#3a8a8a"],
+  ] as const) {
+    fill(ctx, "#b77f3f", () => rr(ctx, -4, y, 8, 7, 1.6));
+    fill(ctx, color, () => ctx.rect(-2.6, y + 1.4, 5.2, 1.4));
+    fill(ctx, "#1d1a22", () => ctx.rect(-2, y + 4, 4, 1));
+  }
+  for (const s of [-1, 1]) {
+    fill(ctx, "#e6e6e0", () => {
+      ctx.beginPath();
+      ctx.moveTo(s * 4, -28);
+      ctx.quadraticCurveTo(s * 11, -33, s * 10, -25);
+      ctx.quadraticCurveTo(s * 7, -26, s * 4, -25);
+      ctx.closePath();
+    });
+  }
+  fill(ctx, "#7dffb0", () => ctx.arc(0, -35, 2.6, 0, TAU));
+  fill(ctx, "rgba(255,255,255,0.8)", () => ctx.arc(-0.8, -36, 0.8, 0, TAU));
+}
+
 function drawStaff(ctx: Ctx, it: GearItem, c: string): void {
+  if (it.form === "totem") {
+    drawTotemStaff(ctx);
+    return;
+  }
+  if (it.form === "scepter") {
+    drawScepter(ctx, it, c);
+    return;
+  }
   fill(ctx, "#6a4420", () => ctx.rect(-1.1, -30, 2.2, 34));
   const orb = elementTint(it.element) ?? c; // 法杖寶珠直接用元素色
   ctx.fillStyle = orb;
@@ -396,6 +440,23 @@ function drawWeapon(ctx: Ctx, it: GearItem | undefined, x: number, front: boolea
         ctx.moveTo(1, -17);
         ctx.quadraticCurveTo(9, -18, 8, -10);
         ctx.lineTo(1, -12);
+        ctx.closePath();
+      });
+      break;
+    case "hammer":
+      ctx.rotate(front ? -0.3 : 0.3);
+      fill(ctx, "#6a4420", () => ctx.rect(-1.1, -22, 2.2, 24));
+      fill(ctx, c, () => rr(ctx, -6.5, -28, 13, 8, 1.5));
+      fill(ctx, d, () => ctx.rect(-6.5, -24.5, 13, 1.2));
+      break;
+    case "spear":
+      ctx.rotate(front ? -0.15 : 0.15);
+      fill(ctx, "#8a6a3a", () => ctx.rect(-0.9, -34, 1.8, 38));
+      fill(ctx, c, () => {
+        ctx.beginPath();
+        ctx.moveTo(0, -42);
+        ctx.quadraticCurveTo(3.4, -37, 0, -32);
+        ctx.quadraticCurveTo(-3.4, -37, 0, -42);
         ctx.closePath();
       });
       break;

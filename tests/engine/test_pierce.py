@@ -127,6 +127,8 @@ def test_pierce_ignores_half_cover(monkeypatch: pytest.MonkeyPatch) -> None:
 
 def test_a_stone_pillar_still_blocks_the_shot() -> None:
     state = arena((ARROW,), objects=[(2, 3, "stone_pillar")])
+    # 3-24a1：弓有拋射、能越過 1 格高的石柱；這裡驗證一般（無拋射）武器的視線，改用無拋射的弓
+    state.units[U1].weapon = state.units[U1].weapon.model_copy(update={"lob": 0})
     with pytest.raises(IllegalActionError, match="視線"):
         resolve(state, shoot())
     assert not any(

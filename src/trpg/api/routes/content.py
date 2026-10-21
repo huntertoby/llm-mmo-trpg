@@ -41,6 +41,7 @@ def list_builds(request: Request) -> list[BuildSummary]:
             max_hp=library.ruleset.core.template_max_hp(b.hero),
             weapon=b.hero.weapon,
             weapon_name_zh=library.weapons[b.hero.weapon].name_zh,
+            weapon_traits_zh=library.weapons[b.hero.weapon].trait_lines_zh(),
         )
         for b in library.builds.builds
     ]

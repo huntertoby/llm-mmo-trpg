@@ -456,7 +456,8 @@ def _reach_problem(  # noqa: PLR0917
         diff = abs(state.tile(*caster.xy).height - state.tile(*xy).height)
         if diff > core.melee_height_limit:
             return f"高度差過大，無法近戰：相差 {diff} 層（上限 {core.melee_height_limit} 層）"
-    if not has_line_of_sight(state, caster.xy, xy):
+    lob = caster.weapon.lob if skill.category == "weapon" else 0  # 弓的拋射（3-24a1）
+    if not has_line_of_sight(state, caster.xy, xy, lob=lob):
         return f"視線被阻擋：{caster.name_zh} 看不到 {what}"
     return None
 
