@@ -32,7 +32,9 @@ import {
   terrainSprite as terrainSpriteRef,
   unitSprite as unitSpriteRef,
 } from "./sprites";
-import { shadeForHeight } from "../battle/drawModel";
+import { shadeForHeight, tileAt } from "../battle/drawModel";
+import { heightDecor, pedestalScale } from "../battle/heightModel";
+import { isProcedural, proceduralPatches } from "./proceduralTerrain";
 import { castEffects, hitEffects, shakeEffect, type Effect } from "./vfxEffects";
 
 export interface DirectionMark {
@@ -119,6 +121,8 @@ function hpColor(ratio: number): number {
 export class BattleRenderer {
   private readonly app = new Application();
   private readonly tiles = new Container();
+  /** 高度裝飾（側面、懸崖線、投影），畫在地形之上、其他圖層之下。 */
+  private readonly cliffs = new Container();
   private readonly auras = new Container();
   private readonly zones = new Container();
   private readonly highlights = new Container();
@@ -158,7 +162,7 @@ export class BattleRenderer {
     }
     host.appendChild(this.app.canvas);
     const stage = this.app.stage;
-    stage.addChild(this.tiles, this.auras, this.zones, this.objects, this.highlights, this.traps, this.units, this.hover, this.effects);
+    stage.addChild(this.tiles, this.cliffs, this.auras, this.zones, this.objects, this.highlights, this.traps, this.units, this.hover, this.effects);
     stage.eventMode = "none";
     this.app.canvas.style.display = "block";
     this.ready = true;
@@ -224,6 +228,7 @@ export class BattleRenderer {
     if (!this.ready) return;
     this.applySize(model);
     clearLayer(this.tiles);
+    clearLayer(this.cliffs);
     clearLayer(this.auras);
     clearLayer(this.zones);
     clearLayer(this.objects);
@@ -231,6 +236,7 @@ export class BattleRenderer {
     clearLayer(this.units);
     this.unitSprites.clear();
     for (const t of model.tiles) this.tiles.addChild(this.tileSprite(t));
+    this.drawHeight(model);
     const aura = new Graphics();
     for (const a of model.auras) {
       const o = tileOrigin(a);
@@ -248,7 +254,7 @@ export class BattleRenderer {
       this.traps.addChild(glyph);
     }
     for (const u of model.units) {
-      const sprite = this.unitSprite(u);
+      const sprite = this.unitSprite(u, tileAt(model, u)?.height ?? 0);
       this.units.addChild(sprite);
       if (!u.downed) this.unitSprites.set(u.id, sprite);
     }
@@ -303,7 +309,13 @@ export class BattleRenderer {
     const ref = terrainSpriteRef(t.terrain);
     const texture = this.book.get(ref);
     const g = new Graphics();
-    if (ref !== null && texture !== undefined) {
+    if (isProcedural(t.terrain)) {
+      // 岩漿、深淵、冰窟：程式繪製的紋理（沒有素材圖）
+      for (const p of proceduralPatches(t.terrain, t.x, t.y, T)) g.rect(p.x, p.y, p.w, p.h).fill({ color: p.color, alpha: p.alpha });
+      const surface = SURFACES[t.surface];
+      if (surface !== null) g.rect(0, 0, T, T).fill({ color: surface.color, alpha: surface.alpha });
+      g.rect(0, 0, T, T).stroke({ width: 1, color: 0x000000, alpha: 0.35 });
+    } else if (ref !== null && texture !== undefined) {
       // 原型美術：圖塊乘上高度明暗，表面（火、油、冰……）疊半透明色
       c.addChild(this.spriteNode(texture, 0, 0, T, t.blocked && !t.wall ? (ref.tint ?? 0xffffff) : shadeForHeight(ref.tint ?? 0xffffff, t.height)));
       const surface = SURFACES[t.surface];
@@ -329,11 +341,56 @@ export class BattleRenderer {
     c.addChild(g);
     if (!t.blocked || t.wall) {
       const h = label(t.heightLabel, 11, 0x000000, true);
-      h.alpha = 0.55;
-      h.position.set(3, 1);
+      h.alpha = 0.4;
+      h.position.set(3, T - 14); // 左下角：左上角常被上方高格的側面蓋住
       c.addChild(h);
     }
     return c;
+  }
+
+  /** 高度（Phase 3-14）：高格往南的側面、較低鄰格上的投影、高度差 ≥ 2 的懸崖線；只是繪圖，點擊仍以格子頂面為準。 */
+  private drawHeight(model: DrawModel): void {
+    const decor = heightDecor(model);
+    const g = new Graphics();
+    for (const sh of decor.shadows) {
+      const o = tileOrigin(sh);
+      g.rect(o.x, o.y, sh.width, T).fill({ color: 0x000000, alpha: 0.16 });
+      g.rect(o.x, o.y, sh.width / 2, T).fill({ color: 0x000000, alpha: 0.14 });
+    }
+    for (const f of decor.sides) {
+      const x = f.x * T;
+      const y = (f.y + 1) * T;
+      g.rect(x, y, T, f.thickness).fill(shadeForHeight(0x6b5a48, f.height - 1));
+      // 岩層紋：每 6 像素一條橫線，加上幾道直縫
+      for (let ly = 5; ly < f.thickness; ly += 6) g.rect(x, y + ly, T, 1).fill({ color: 0x000000, alpha: 0.22 });
+      for (let k = 0; k < 3; k++) {
+        const vx = x + 6 + ((f.x * 7 + f.y * 13 + k * 17) % (T - 12));
+        g.rect(vx, y, 1, f.thickness).fill({ color: 0x000000, alpha: 0.18 });
+      }
+      g.rect(x, y, T, 2).fill({ color: 0xffffff, alpha: 0.18 }); // 邊緣亮線
+      g.rect(x, y + f.thickness - 2, T, 2).fill({ color: 0x000000, alpha: 0.35 }); // 底緣陰影
+    }
+    for (const c of decor.cliffs) {
+      const x = c.x * T;
+      const y = c.y * T;
+      const w = c.diff >= 3 ? 4 : 3;
+      switch (c.side) {
+        case "south":
+          g.rect(x, y + T - w, T, w);
+          break;
+        case "north":
+          g.rect(x, y, T, w);
+          break;
+        case "east":
+          g.rect(x + T - w, y, w, T);
+          break;
+        case "west":
+          g.rect(x, y, w, T);
+          break;
+      }
+      g.fill({ color: 0x1c140c, alpha: 0.75 });
+    }
+    this.cliffs.addChild(g);
   }
 
   private objectSprite(o: ObjectDraw): Container {
@@ -345,7 +402,7 @@ export class BattleRenderer {
     const texture = this.book.get(ref);
     const hasSprite = ref !== null && texture !== undefined;
     if (hasSprite) {
-      const size = o.floor ? T : T * 0.92;
+      const size = T;
       const off = (T - size) / 2;
       const node = this.spriteNode(texture, off, off, size, ref.tint ?? 0xffffff);
       if (o.floor) node.alpha = 0.9;
@@ -385,12 +442,20 @@ export class BattleRenderer {
     return c;
   }
 
-  private unitSprite(u: UnitDraw): Container {
+  private unitSprite(u: UnitDraw, standingHeight: number): Container {
     const c = new Container();
     const center = tileCenter(u);
     c.position.set(center.x, center.y);
     c.alpha = u.downed ? 0.35 : 1;
     const r = T * 0.32;
+    const pedestal = pedestalScale(standingHeight);
+    if (pedestal > 0) {
+      // 站在高處：腳下一圈底座陰影（越高越大、越深）
+      const base = new Graphics();
+      base.ellipse(0, r * 0.72, r * 1.15 * pedestal, r * 0.5 * pedestal).fill({ color: 0x000000, alpha: 0.28 + 0.05 * standingHeight });
+      base.ellipse(0, r * 0.72, r * 0.8 * pedestal, r * 0.32 * pedestal).fill({ color: 0x000000, alpha: 0.25 });
+      c.addChild(base);
+    }
     const g = new Graphics();
     const ref = unitSpriteRef(u.template, u.team);
     const texture = this.book.get(ref);
@@ -417,8 +482,8 @@ export class BattleRenderer {
     }
     c.addChild(g);
     if (art) {
-      const size = T * 0.86;
-      c.addChild(this.spriteNode(texture, -size / 2, -size / 2 - 1, size, 0xffffff));
+      const size = T; // 16 px 素材的 3 倍（整數倍，最近鄰縮放）
+      c.addChild(this.spriteNode(texture, -size / 2, -size / 2 - 2, size, 0xffffff));
     }
     if (!u.downed) {
       // 朝向（Phase 3D-8d）：外緣的小三角形箭頭，尖端指向單位面對的方向
