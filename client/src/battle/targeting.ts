@@ -51,7 +51,7 @@ export interface TargetSet {
 
 export type PairKind = "hurl" | "teleport" | "swap" | "shadowstep" | "composite";
 
-export type ModeKind = "skill" | "attack" | "shove" | "trip" | "interact" | "shove_aside" | "defend" | "end_stance" | "stand";
+export type ModeKind = "skill" | "attack" | "shove" | "trip" | "interact" | "shove_aside" | "defend" | "run" | "end_stance" | "stand";
 
 export interface ActionMode {
   /** 選取用的鍵：技能為 `skill:<id>`，其他為類型。 */
@@ -226,6 +226,7 @@ export const BASIC_MODES: readonly { kind: Exclude<ModeKind, "skill">; label: st
   { kind: "interact", label: "推動物件" },
   { kind: "shove_aside", label: "撥開物件" },
   { kind: "defend", label: "防禦" },
+  { kind: "run", label: "跑步" },
   { kind: "end_stance", label: "結束姿態" },
   { kind: "stand", label: "起身" },
 ];
@@ -236,6 +237,7 @@ function modeKindOf(a: Action): ModeKind | null {
     case "shove":
     case "trip":
     case "defend":
+    case "run":
     case "end_stance":
       return a.type;
     case "interact":

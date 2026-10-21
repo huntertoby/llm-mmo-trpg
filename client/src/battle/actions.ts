@@ -66,6 +66,8 @@ export function actionLabel(
     }
     case "defend":
       return "防禦";
+    case "run":
+      return "跑步";
     case "shove":
       return `推擊：${names.label(action.target_id)}`;
     case "trip":

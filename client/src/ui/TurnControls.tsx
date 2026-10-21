@@ -10,6 +10,11 @@ interface Props {
   endTurn: Action | null;
   /** 防禦的模式（沒有合法的防禦時 `null`）。 */
   defend: ActionMode | null;
+  /** 跑步的模式（不合法時 `null`，按鈕灰掉並顯示 `runReason`）。 */
+  run: ActionMode | null;
+  runReason: string | null;
+  /** 滑過跑步按鈕時預覽（顯示跑步後的移動範圍）；移開時傳 `null`。 */
+  onPreviewAction(action: Action | null): void;
   selectedKey: string | null;
   fallback: readonly LabeledAction[];
   onPickMode(mode: ActionMode): void;
@@ -18,7 +23,19 @@ interface Props {
   speed: ReactNode;
 }
 
-export function TurnControls({ enabled, endTurn, defend, selectedKey, fallback, onPickMode, onAction, speed }: Props) {
+export function TurnControls({
+  enabled,
+  endTurn,
+  defend,
+  run,
+  runReason,
+  onPreviewAction,
+  selectedKey,
+  fallback,
+  onPickMode,
+  onAction,
+  speed,
+}: Props) {
   const [open, setOpen] = useState(false);
   return (
     <div className="turn-controls" aria-label="回合操作">
@@ -38,6 +55,23 @@ export function TurnControls({ enabled, endTurn, defend, selectedKey, fallback, 
           onClick={() => defend !== null && onPickMode(defend)}
         >
           防禦
+        </button>
+        <button
+          type="button"
+          className="run-button"
+          disabled={!enabled || run === null}
+          title={
+            run === null && runReason !== null
+              ? `不能跑步：${runReason}`
+              : "跑步：花 1 AP，本回合移動點數 +3 格（每回合 1 次）"
+          }
+          onClick={() => run !== null && onPickMode(run)}
+          onMouseEnter={() => run !== null && onPreviewAction(run.targets.self)}
+          onMouseLeave={() => onPreviewAction(null)}
+          onFocus={() => run !== null && onPreviewAction(run.targets.self)}
+          onBlur={() => onPreviewAction(null)}
+        >
+          跑步
         </button>
         <div className="fallback">
           <button type="button" aria-expanded={open} onClick={() => setOpen((o) => !o)}>
@@ -64,6 +98,7 @@ export function TurnControls({ enabled, endTurn, defend, selectedKey, fallback, 
           )}
         </div>
       </div>
+      {enabled && run === null && runReason !== null && <p className="run-reason muted">跑步：{runReason}</p>}
       {speed}
     </div>
   );

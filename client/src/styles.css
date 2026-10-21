@@ -2341,3 +2341,14 @@ button.selected {
 .skill-card.compact .formula {
   margin: 3px 0;
 }
+
+/* 跑步按鈕（Phase 3-20）：灰掉時旁邊顯示原因 */
+.turn-controls .run-button:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.turn-controls .run-reason {
+  margin: 0;
+  font-size: 11px;
+}
