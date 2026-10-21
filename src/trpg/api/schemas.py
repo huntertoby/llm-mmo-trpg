@@ -121,6 +121,8 @@ class GlossaryEntry(_ApiModel):
     name_zh: str
     description_zh: str | None = None
     tags: tuple[str, ...] = ()
+    rules_zh: tuple[str, ...] = ()
+    """靜態規則說明（Phase 3-15）：地形、表面、物件「會怎樣」的中文短句，由內容資料產生。"""
 
 
 class Glossary(_ApiModel):

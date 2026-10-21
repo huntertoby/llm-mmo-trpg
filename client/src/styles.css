@@ -1637,6 +1637,7 @@ button.selected {
 }
 
 .unit-float .unit-info,
+.unit-float .tile-card,
 .unit-float .telegraph-hover {
   margin: 0;
   box-shadow: 0 4px 16px rgb(0 0 0 / 55%);
@@ -1645,6 +1646,32 @@ button.selected {
 
 .unit-float .telegraph-hover {
   padding: 6px 10px 6px 24px;
+}
+
+.tile-card {
+  padding: 6px 10px;
+  font-size: 12px;
+  line-height: 1.35;
+}
+
+.tile-section + .tile-section {
+  margin-top: 6px;
+  padding-top: 5px;
+  border-top: 1px solid var(--panel-border);
+}
+
+.tile-title {
+  font-weight: 700;
+}
+
+.tile-section.zone .tile-title,
+.tile-section.trap .tile-title {
+  color: var(--accent);
+}
+
+.tile-lines {
+  margin: 2px 0 0;
+  padding-left: 16px;
 }
 
 .board-toasts {

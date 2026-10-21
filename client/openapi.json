@@ -3143,6 +3143,14 @@
             "type": "array",
             "title": "Tags",
             "default": []
+          },
+          "rules_zh": {
+            "items": {
+              "type": "string"
+            },
+            "type": "array",
+            "title": "Rules Zh",
+            "default": []
           }
         },
         "additionalProperties": false,

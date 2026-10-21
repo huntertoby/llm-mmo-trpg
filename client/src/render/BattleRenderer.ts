@@ -5,9 +5,12 @@
 // 由 `BattleCanvas` 以 DOM 座標換算（`battle/stageLayout.ts` 的 `clientToTile`）。
 import {
   Application,
+  Assets,
   Container,
   Graphics,
+  Sprite,
   Text,
+  type Texture,
   type Ticker,
 } from "pixi.js";
 import type { Pos } from "../api/types";
@@ -17,10 +20,21 @@ import type { DrawModel, ObjectDraw, TileDraw, UnitDraw } from "../battle/drawMo
 import { facingArrow } from "../battle/facing";
 import { canvasSize, TILE_SIZE, tileCenter, tileOrigin } from "../battle/geometry";
 import { scaledSize } from "../battle/stageLayout";
-import { HIGHLIGHT } from "../battle/glossary";
+import { HIGHLIGHT, SURFACES } from "../battle/glossary";
 import type { Overlay, OverlayKind } from "../battle/scenePreview";
 import type { TelegraphMark } from "../battle/telegraph";
 import { VFX_TIMING, type StepVfx } from "../battle/vfx";
+import {
+  allSpriteRefs,
+  objectSprite as objectSpriteRef,
+  SpriteBook,
+  spriteUrl,
+  terrainSprite as terrainSpriteRef,
+  unitSprite as unitSpriteRef,
+} from "./sprites";
+import { shadeForHeight, tileAt } from "../battle/drawModel";
+import { heightDecor, pedestalScale } from "../battle/heightModel";
+import { isProcedural, proceduralPatches } from "./proceduralTerrain";
 import { castEffects, hitEffects, shakeEffect, type Effect } from "./vfxEffects";
 
 export interface DirectionMark {
@@ -107,6 +121,8 @@ function hpColor(ratio: number): number {
 export class BattleRenderer {
   private readonly app = new Application();
   private readonly tiles = new Container();
+  /** 高度裝飾（側面、懸崖線、投影），畫在地形之上、其他圖層之下。 */
+  private readonly cliffs = new Container();
   private readonly auras = new Container();
   private readonly zones = new Container();
   private readonly highlights = new Container();
@@ -119,6 +135,7 @@ export class BattleRenderer {
   private effectClock = 0;
   private effectTick: ((ticker: Ticker) => void) | null = null;
   private readonly unitSprites = new Map<string, Container>();
+  private readonly book = new SpriteBook<Texture>();
   private model: DrawModel | null = null;
   private ready = false;
   private destroyed = false;
@@ -138,13 +155,43 @@ export class BattleRenderer {
       this.app.destroy(true, { children: true });
       return;
     }
+    await this.loadSprites();
+    if (this.destroyed) {
+      this.app.destroy(true, { children: true });
+      return;
+    }
     host.appendChild(this.app.canvas);
     const stage = this.app.stage;
-    stage.addChild(this.tiles, this.auras, this.zones, this.objects, this.highlights, this.traps, this.units, this.hover, this.effects);
+    stage.addChild(this.tiles, this.cliffs, this.auras, this.zones, this.objects, this.highlights, this.traps, this.units, this.hover, this.effects);
     stage.eventMode = "none";
     this.app.canvas.style.display = "block";
     this.ready = true;
     if (this.model !== null) this.draw(this.model);
+  }
+
+  /** 預先載入原型美術；載入失敗的圖不放進貼圖庫，繪圖時退回色塊。 */
+  private async loadSprites(): Promise<void> {
+    await Promise.all(
+      allSpriteRefs().map(async (ref) => {
+        try {
+          const texture = await Assets.load<Texture>(spriteUrl(ref));
+          texture.source.scaleMode = "nearest";
+          this.book.set(ref, texture);
+        } catch {
+          // 缺圖：忽略，退回色塊
+        }
+      }),
+    );
+  }
+
+  /** 把圖放成 `size` 見方、置於 (x, y)，可乘上顏色。 */
+  private spriteNode(texture: Texture, x: number, y: number, size: number, tint: number): Sprite {
+    const sprite = new Sprite(texture);
+    sprite.position.set(x, y);
+    sprite.width = size;
+    sprite.height = size;
+    sprite.tint = tint;
+    return sprite;
   }
 
   destroy(): void {
@@ -181,6 +228,7 @@ export class BattleRenderer {
     if (!this.ready) return;
     this.applySize(model);
     clearLayer(this.tiles);
+    clearLayer(this.cliffs);
     clearLayer(this.auras);
     clearLayer(this.zones);
     clearLayer(this.objects);
@@ -188,6 +236,7 @@ export class BattleRenderer {
     clearLayer(this.units);
     this.unitSprites.clear();
     for (const t of model.tiles) this.tiles.addChild(this.tileSprite(t));
+    this.drawHeight(model);
     const aura = new Graphics();
     for (const a of model.auras) {
       const o = tileOrigin(a);
@@ -205,7 +254,7 @@ export class BattleRenderer {
       this.traps.addChild(glyph);
     }
     for (const u of model.units) {
-      const sprite = this.unitSprite(u);
+      const sprite = this.unitSprite(u, tileAt(model, u)?.height ?? 0);
       this.units.addChild(sprite);
       if (!u.downed) this.unitSprites.set(u.id, sprite);
     }
@@ -257,11 +306,25 @@ export class BattleRenderer {
     const c = new Container();
     const o = tileOrigin(t);
     c.position.set(o.x, o.y);
-    const g = new Graphics()
-      .rect(0, 0, T, T)
-      .fill(t.fill)
-      .stroke({ width: 1, color: 0x000000, alpha: 0.35 });
-    if (t.wall) {
+    const ref = terrainSpriteRef(t.terrain);
+    const texture = this.book.get(ref);
+    const g = new Graphics();
+    if (isProcedural(t.terrain)) {
+      // 岩漿、深淵、冰窟：程式繪製的紋理（沒有素材圖）
+      for (const p of proceduralPatches(t.terrain, t.x, t.y, T)) g.rect(p.x, p.y, p.w, p.h).fill({ color: p.color, alpha: p.alpha });
+      const surface = SURFACES[t.surface];
+      if (surface !== null) g.rect(0, 0, T, T).fill({ color: surface.color, alpha: surface.alpha });
+      g.rect(0, 0, T, T).stroke({ width: 1, color: 0x000000, alpha: 0.35 });
+    } else if (ref !== null && texture !== undefined) {
+      // 原型美術：圖塊乘上高度明暗，表面（火、油、冰……）疊半透明色
+      c.addChild(this.spriteNode(texture, 0, 0, T, t.blocked && !t.wall ? (ref.tint ?? 0xffffff) : shadeForHeight(ref.tint ?? 0xffffff, t.height)));
+      const surface = SURFACES[t.surface];
+      if (surface !== null) g.rect(0, 0, T, T).fill({ color: surface.color, alpha: surface.alpha });
+      g.rect(0, 0, T, T).stroke({ width: 1, color: 0x000000, alpha: 0.35 });
+    } else {
+      g.rect(0, 0, T, T).fill(t.fill).stroke({ width: 1, color: 0x000000, alpha: 0.35 });
+    }
+    if (t.wall && texture === undefined) {
       // 牆：磚紋
       g.moveTo(0, T / 2).lineTo(T, T / 2);
       g.moveTo(T / 2, 0).lineTo(T / 2, T / 2);
@@ -278,11 +341,56 @@ export class BattleRenderer {
     c.addChild(g);
     if (!t.blocked || t.wall) {
       const h = label(t.heightLabel, 11, 0x000000, true);
-      h.alpha = 0.55;
-      h.position.set(3, 1);
+      h.alpha = 0.4;
+      h.position.set(3, T - 14); // 左下角：左上角常被上方高格的側面蓋住
       c.addChild(h);
     }
     return c;
+  }
+
+  /** 高度（Phase 3-14）：高格往南的側面、較低鄰格上的投影、高度差 ≥ 2 的懸崖線；只是繪圖，點擊仍以格子頂面為準。 */
+  private drawHeight(model: DrawModel): void {
+    const decor = heightDecor(model);
+    const g = new Graphics();
+    for (const sh of decor.shadows) {
+      const o = tileOrigin(sh);
+      g.rect(o.x, o.y, sh.width, T).fill({ color: 0x000000, alpha: 0.16 });
+      g.rect(o.x, o.y, sh.width / 2, T).fill({ color: 0x000000, alpha: 0.14 });
+    }
+    for (const f of decor.sides) {
+      const x = f.x * T;
+      const y = (f.y + 1) * T;
+      g.rect(x, y, T, f.thickness).fill(shadeForHeight(0x6b5a48, f.height - 1));
+      // 岩層紋：每 6 像素一條橫線，加上幾道直縫
+      for (let ly = 5; ly < f.thickness; ly += 6) g.rect(x, y + ly, T, 1).fill({ color: 0x000000, alpha: 0.22 });
+      for (let k = 0; k < 3; k++) {
+        const vx = x + 6 + ((f.x * 7 + f.y * 13 + k * 17) % (T - 12));
+        g.rect(vx, y, 1, f.thickness).fill({ color: 0x000000, alpha: 0.18 });
+      }
+      g.rect(x, y, T, 2).fill({ color: 0xffffff, alpha: 0.18 }); // 邊緣亮線
+      g.rect(x, y + f.thickness - 2, T, 2).fill({ color: 0x000000, alpha: 0.35 }); // 底緣陰影
+    }
+    for (const c of decor.cliffs) {
+      const x = c.x * T;
+      const y = c.y * T;
+      const w = c.diff >= 3 ? 4 : 3;
+      switch (c.side) {
+        case "south":
+          g.rect(x, y + T - w, T, w);
+          break;
+        case "north":
+          g.rect(x, y, T, w);
+          break;
+        case "east":
+          g.rect(x + T - w, y, w, T);
+          break;
+        case "west":
+          g.rect(x, y, w, T);
+          break;
+      }
+      g.fill({ color: 0x1c140c, alpha: 0.75 });
+    }
+    this.cliffs.addChild(g);
   }
 
   private objectSprite(o: ObjectDraw): Container {
@@ -290,7 +398,16 @@ export class BattleRenderer {
     const origin = tileOrigin(o);
     c.position.set(origin.x, origin.y);
     const g = new Graphics();
-    if (o.floor) {
+    const ref = objectSpriteRef(o.kind);
+    const texture = this.book.get(ref);
+    const hasSprite = ref !== null && texture !== undefined;
+    if (hasSprite) {
+      const size = T;
+      const off = (T - size) / 2;
+      const node = this.spriteNode(texture, off, off, size, ref.tint ?? 0xffffff);
+      if (o.floor) node.alpha = 0.9;
+      c.addChild(node);
+    } else if (o.floor) {
       g.rect(2, 2, T - 4, T - 4).fill({ color: o.fill, alpha: 0.75 });
     } else {
       g.roundRect(T * 0.18, T * 0.18, T * 0.64, T * 0.64, 6).fill(o.fill);
@@ -310,10 +427,13 @@ export class BattleRenderer {
       c.addChild(new Graphics().circle(T - 10, 10, 9).fill({ color: 0x1a2a3a, alpha: 0.85 }));
       c.addChild(badge);
     }
-    const glyph = label(o.burning ? `${o.glyph}火` : o.glyph, o.floor ? 12 : 16, 0xffffff, true);
-    glyph.anchor.set(0.5);
-    glyph.position.set(T / 2, o.floor ? T - 10 : T / 2);
-    c.addChild(glyph);
+    if (!hasSprite || o.burning) {
+      const glyph = label(o.burning ? (hasSprite ? "火" : `${o.glyph}火`) : o.glyph, o.floor ? 12 : 16, 0xffffff, true);
+      glyph.anchor.set(0.5);
+      glyph.position.set(T / 2, o.floor ? T - 10 : T / 2);
+      glyph.style.stroke = { color: 0x000000, width: 3 };
+      c.addChild(glyph);
+    }
     if (o.hpRatio !== null && o.hpRatio < 1 && !o.floor) {
       const bar = new Graphics().rect(T * 0.18, T * 0.84, T * 0.64, 3).fill(0x000000);
       bar.rect(T * 0.18, T * 0.84, T * 0.64 * o.hpRatio, 3).fill(0xd0d0d0);
@@ -322,14 +442,34 @@ export class BattleRenderer {
     return c;
   }
 
-  private unitSprite(u: UnitDraw): Container {
+  private unitSprite(u: UnitDraw, standingHeight: number): Container {
     const c = new Container();
     const center = tileCenter(u);
     c.position.set(center.x, center.y);
     c.alpha = u.downed ? 0.35 : 1;
     const r = T * 0.32;
+    const pedestal = pedestalScale(standingHeight);
+    if (pedestal > 0) {
+      // 站在高處：腳下一圈底座陰影（越高越大、越深）
+      const base = new Graphics();
+      base.ellipse(0, r * 0.72, r * 1.15 * pedestal, r * 0.5 * pedestal).fill({ color: 0x000000, alpha: 0.28 + 0.05 * standingHeight });
+      base.ellipse(0, r * 0.72, r * 0.8 * pedestal, r * 0.32 * pedestal).fill({ color: 0x000000, alpha: 0.25 });
+      c.addChild(base);
+    }
     const g = new Graphics();
-    if (u.summon) {
+    const ref = unitSpriteRef(u.template, u.team);
+    const texture = this.book.get(ref);
+    const art = texture !== undefined;
+    if (art && u.summon) {
+      const d = r * 1.25;
+      g.poly([0, -d, d, 0, 0, d, -d, 0]).fill({ color: u.fill, alpha: 0.4 }).stroke({ width: 3, color: HIGHLIGHT.summon });
+      if (u.active) g.poly([0, -d - 5, d + 5, 0, 0, d + 5, -d - 5, 0]).stroke({ width: 3, color: HIGHLIGHT.active });
+    } else if (art) {
+      // 原型美術：陣營色圓底（半透明）加外框，圖放在上面；英雄、行動中的外圈保留
+      g.circle(0, 0, r + 1).fill({ color: u.fill, alpha: 0.55 }).stroke({ width: 2, color: u.fill });
+      if (u.hero) g.circle(0, 0, r + 4).stroke({ width: 2, color: HIGHLIGHT.hero });
+      if (u.active) g.circle(0, 0, r + 7).stroke({ width: 3, color: HIGHLIGHT.active });
+    } else if (u.summon) {
       // 召喚物（Phase 3D-4b）：菱形加青綠外框，和一般單位的圓形區別
       const d = r * 1.25;
       const diamond = [0, -d, d, 0, 0, d, -d, 0];
@@ -341,6 +481,10 @@ export class BattleRenderer {
       if (u.active) g.circle(0, 0, r + 5).stroke({ width: 3, color: HIGHLIGHT.active });
     }
     c.addChild(g);
+    if (art) {
+      const size = T; // 16 px 素材的 3 倍（整數倍，最近鄰縮放）
+      c.addChild(this.spriteNode(texture, -size / 2, -size / 2 - 2, size, 0xffffff));
+    }
     if (!u.downed) {
       // 朝向（Phase 3D-8d）：外緣的小三角形箭頭，尖端指向單位面對的方向
       const arrow = new Graphics().poly(facingArrow(u.facing, u.summon ? r * 1.25 : r)).fill(0xffffff).stroke({ width: 1, color: 0x000000 });
@@ -355,8 +499,13 @@ export class BattleRenderer {
       badgeLabel.position.set(T * 0.3, -T * 0.3);
       c.addChild(badge, badgeLabel);
     }
-    const marker = label(u.marker, 18, 0xffffff, true);
+    const marker = label(u.marker, art ? 13 : 18, 0xffffff, true);
     marker.anchor.set(0.5);
+    if (art) {
+      // 代號縮小移到左上角，加深色外框，不遮住角色
+      marker.position.set(-T * 0.34, -T * 0.34);
+      marker.style.stroke = { color: 0x000000, width: 4 };
+    }
     c.addChild(marker);
     if (u.downed) this.addDownedMark(c, u, r);
     if (u.bomb !== null) this.addBombBadge(c, u.bomb);
