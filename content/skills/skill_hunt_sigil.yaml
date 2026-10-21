@@ -1,0 +1,23 @@
+# 刻印（Phase 3-23 示範，數值為初值，未經模擬）：在指定的一格刻下「獵」標籤的符文（不帶元素），持續 5 輪。
+id: skill_hunt_sigil
+schema_version: 1
+name_zh: 獵印
+tier: 1
+rank: 1
+rarity: rare
+kind: active
+skeleton: rune
+category: spell
+weapon_req: focus
+ap_cost: 1
+scaling_attr: wis
+shape: {type: ground_tile, range: 5}
+effects:
+  - {type: inscribe, tag: hunt, duration: 5}
+condition: null
+cost: {mana: 4, cooldown: 2}
+tags: [spell, rune]
+narrative:
+  concept: 在獵物會經過的地方刻下記號，等牠自己走進來
+  cast_flavor: 你用杖尖在泥地上劃了一個小小的獵印
+provenance: {origin: builtin, owner_id: null, created_by: null, parents: [], bound: true, tradeable: false}

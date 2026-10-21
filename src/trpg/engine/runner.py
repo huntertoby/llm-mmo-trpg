@@ -38,8 +38,15 @@ __all__ = [
     "run_battle",
 ]
 
-LOG_FORMAT = "trpg-battle-log/36"
-"""``/36``（Phase 3-21a）：基本動作守護（``defend`` 加 ``target_id``、事件 ``guard_set``、
+LOG_FORMAT = "trpg-battle-log/37"
+"""``/37``（Phase 3-23）：刻印——原語 ``inscribe``／``detonate_runes``（符文用 ``EffectSpec`` 的
+``element``／``tag``）、條件 ``on_own_rune``（``ConditionSpec`` 新欄位 ``element``）、
+骨架 ``rune``、戰鬥狀態的 ``runes``／``next_rune_id``、新事件 ``rune_inscribed``／
+``rune_removed``、新效果
+``inscribe``／``detonate_rune``、核心規則 ``rune_limit_per_owner``／``rune_default_rounds``／
+``rune_max_rounds``、預算規則 ``inscribe_duration_permille``／``detonate_runes_permille``；
+``/36`` 的規則包沒有這些欄位，舊紀錄不能由新版程式重播。
+``/36``（Phase 3-21a）：基本動作守護（``defend`` 加 ``target_id``、事件 ``guard_set``、
 ``attack_intercepted.guard``、單位的 ``guarding_id``／``guard_transfers``）、換位（``swap``）、瞄準
 （``aim``、事件 ``unit_aimed``、單位的 ``aimed``）、核心規則 ``swap_ap_cost``／``aim_ap_cost``／
 ``aim_hit_bonus``／``guard_transfers_per_round``，AI 規則 ``guard``／``swap``／``aim``；

@@ -377,6 +377,34 @@ def _obstacle_points(
     )
 
 
+def _inscribe_points(
+    _skill: SkillDef, effect: EffectSpec, library: ContentLibrary
+) -> tuple[Fraction, str]:
+    """``inscribe`` 的點數（3-23）：基礎點數 × 持續時間係數（省略 ``duration`` ＝ 預設輪數）。"""
+    rules = library.budget
+    primitive = library.ruleset.primitives.by_id()[effect.type]
+    assert primitive.base_points is not None
+    rounds = effect.duration or library.ruleset.core.rune_default_rounds
+    permille = rules.inscribe_duration_permille[min(rounds, 5) - 1]
+    return (
+        Fraction(primitive.base_points * permille, _PERMILLE),
+        f"{primitive.base_points} × {rounds} 輪 {permille}‰",
+    )
+
+
+def _detonate_runes_points(
+    _skill: SkillDef, effect: EffectSpec, library: ContentLibrary
+) -> tuple[Fraction, str]:
+    """``detonate_runes`` 的點數（3-23）：骰子平均 × ``detonate_runes_permille``‰。"""
+    if effect.dice is None:
+        raise BudgetError("detonate_runes 缺少 dice，無法計算點數")
+    permille = library.budget.detonate_runes_permille
+    return (
+        _dice_average(effect.dice) * Fraction(permille, _PERMILLE),
+        f"{effect.dice} 平均 × 引爆折扣 {permille}‰",
+    )
+
+
 def _reveal_points(
     _skill: SkillDef, effect: EffectSpec, library: ContentLibrary
 ) -> tuple[Fraction, str]:
@@ -749,6 +777,8 @@ _SPECIAL_BASES: dict[
     "dispel": _dispel_points,
     "reveal": _reveal_points,
     "obstacle": _obstacle_points,
+    "inscribe": _inscribe_points,
+    "detonate_runes": _detonate_runes_points,
     "revive": _revive_points,
     "delayed_damage": _delayed_damage_points,
     "grant_skill": _grant_skill_points,

@@ -132,7 +132,7 @@ _HAND_WRITTEN_ONLY = frozenset({"consume_status", "summon"})
 _LEGENDARY_SKELETONS = frozenset({"modifier", "aura"})
 """傳說技能的骨架（3C-6b）：修正規則用 ``modifier``，規則改變與改寫規則型原語用 ``aura``。"""
 
-_EXPLICIT_ONLY_ACTIVE = frozenset({"builder_finisher", "trap"})
+_EXPLICIT_ONLY_ACTIVE = frozenset({"builder_finisher", "trap", "rune"})
 """主動骨架中，只在明確指定或由 :func:`_wants_special` 決定時使用的（2E-3；不影響其他種子）。"""
 
 
@@ -205,6 +205,7 @@ def _wants_special(seed: int, rarity: SkillRarity, library: ContentLibrary) -> s
         ("stance", library.composer.stance.skeleton_permille),
         ("builder_finisher", library.composer.builder.skeleton_permille),
         ("trap", library.composer.trap.skeleton_permille),
+        ("rune", library.composer.rune.skeleton_permille),
         ("modifier", library.composer.special.modifier_permille),
     ):
         skeleton = library.skeletons.get(name)
@@ -511,7 +512,7 @@ def _compose_special(
         found = compose_modifier(seed, lib)
         return None if found is None else ComposeResult(found, 1)
     chosen = category
-    if kind in ("reaction", "builder_finisher", "trap") and chosen is None:
+    if kind in ("reaction", "builder_finisher", "trap", "rune") and chosen is None:
         chosen = _choose_category(rng, lib.skeletons[kind], None, lib.composer)
     for attempt in range(1, MAX_ATTEMPTS + 1):
         try:

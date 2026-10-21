@@ -63,6 +63,8 @@ from trpg.engine.events import (
     RoundEnded,
     RoundStarted,
     RuleChangeTriggered,
+    RuneInscribed,
+    RuneRemoved,
     ShieldAbsorbed,
     ShieldGained,
     ShotPierced,
@@ -114,7 +116,7 @@ from trpg.engine.events import (
 )
 from trpg.engine.skill_triggers import MODIFIER_ON_HIT
 from trpg.engine.state import BattleState
-from trpg.shared.types import Pos, Surface
+from trpg.shared.types import Pos, Surface, rune_name
 
 __all__ = [
     "DIRECTION_TEXT",
@@ -1117,6 +1119,30 @@ def _zone_expired(e: ZoneExpired, v: _View) -> str:
     skill = v.state.ruleset.skill_def(e.skill_id).name_zh
     owner = v.name.get(e.owner_id, e.owner_id)
     return f"  {_ZONE_EXPIRY_TEXT[e.reason]}：{owner} 的「{skill}」區域消失了"
+
+
+@_handles(RuneInscribed)
+def _rune_inscribed(e: RuneInscribed, v: _View) -> str:
+    owner = v.name.get(e.owner_id, e.owner_id)
+    return (
+        f"  {owner} 在 {xy_text(e.pos)} 刻下{rune_name(e.element, e.tag)}"
+        f"（剩 {e.remaining} 輪；只有 {owner} 讀得到）"
+    )
+
+
+_RUNE_REMOVAL_TEXT = {
+    "expired": "時效到了，消失了",
+    "limit": "超過同時存在的上限，最舊的符文消失了",
+    "detonated": "被引爆了",
+    "replaced": "被新刻下的符文取代了",
+}
+
+
+@_handles(RuneRemoved)
+def _rune_removed(e: RuneRemoved, v: _View) -> str:
+    owner = v.name.get(e.owner_id, e.owner_id)
+    name = rune_name(e.element, e.tag)
+    return f"  {owner} 的{name}（{xy_text(e.pos)}）{_RUNE_REMOVAL_TEXT[e.reason]}"
 
 
 # ---------------------------------------------------------------------------

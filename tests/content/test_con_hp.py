@@ -21,6 +21,7 @@ OLD_HP = {
     "build:build_bomber": 40,
     "build:build_charger": 60,
     "build:build_detonator": 40,
+    "build:build_runeweaver": 40,
     "build:build_fire": 40,
     "build:build_gambler": 56,
     "build:build_guardian": 60,

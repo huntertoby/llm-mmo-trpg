@@ -1879,6 +1879,14 @@
             "type": "array",
             "title": "Zones",
             "default": []
+          },
+          "runes": {
+            "items": {
+              "$ref": "#/components/schemas/RuneView"
+            },
+            "type": "array",
+            "title": "Runes",
+            "default": []
           }
         },
         "additionalProperties": false,
@@ -2739,6 +2747,22 @@
         ],
         "title": "DraftOptions",
         "description": ":func:`~trpg.skillgen.options.draft_options` 的結果：前置步驟都完成的步驟（依序），以及\n第一個還沒完成的步驟 ``next_step``（全部完成時為 ``None``）。"
+      },
+      "Element": {
+        "type": "string",
+        "enum": [
+          "physical",
+          "fire",
+          "ice",
+          "lightning",
+          "poison",
+          "wind",
+          "earth",
+          "holy",
+          "shadow"
+        ],
+        "title": "Element",
+        "description": "傷害與效果的元素（9 種，見 ``docs/專案計畫.md`` 5.1.1）。水不是元素，只是表面。"
       },
       "EndStance": {
         "properties": {
@@ -5353,6 +5377,67 @@
         ],
         "title": "RunRules",
         "description": "開局規則（``content/roguelite.yaml``）。"
+      },
+      "RuneView": {
+        "properties": {
+          "id": {
+            "type": "integer",
+            "title": "Id"
+          },
+          "owner_id": {
+            "type": "string",
+            "title": "Owner Id"
+          },
+          "team": {
+            "$ref": "#/components/schemas/Team"
+          },
+          "pos": {
+            "$ref": "#/components/schemas/Pos"
+          },
+          "element": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/Element"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "tag": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Tag"
+          },
+          "name_zh": {
+            "type": "string",
+            "title": "Name Zh"
+          },
+          "remaining": {
+            "type": "integer",
+            "title": "Remaining"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "id",
+          "owner_id",
+          "team",
+          "pos",
+          "element",
+          "tag",
+          "name_zh",
+          "remaining"
+        ],
+        "title": "RuneView",
+        "description": "格子上的符文（Phase 3-23 ``inscribe``；雙方都看得到，但只有 ``owner_id`` 自己讀得到）。\n\n``element``／``tag``：恰好一個；``name_zh`` 例如「雷紋」；``remaining``：剩餘的環境回合數。"
       },
       "SaveOut": {
         "properties": {

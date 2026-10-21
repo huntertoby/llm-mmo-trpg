@@ -527,3 +527,30 @@ primitives:
     params:
       skill: {type: skill, required: true, description_zh: 暫時給出的技能 ID（content/skills/）}
       duration: {type: int, required: true, min: 1, max: 4, description_zh: 持續的輪數（在目標回合結束時倒數）}
+
+  # --- Phase 3-23：刻印（docs/design/06-技能.md 6.25；點數為初值，未經模擬）---
+  - id: inscribe
+    name_zh: 刻印
+    description_zh: 在影響格（可站立的格子）留下施放者專屬的符文：恰好帶一個 element（元素，例如雷紋、火紋）或 tag（標籤），持續 duration 個環境回合（省略為 core.yaml 的 rune_default_rounds，初值 3；上限 5）。符文本身沒有任何效果，敵我都看得到；只有刻下它的施放者讀得到（條件 on_own_rune、消耗型原語 detonate_runes）。同一施放者在同一格再刻一次是更新；同一施放者同時存在的符文格超過 rune_limit_per_owner（core.yaml，初值 6）時最舊的消失。施放者倒下時符文保留到時效結束。預算：base_points × inscribe_duration_permille（依 duration；省略＝預設 3 輪）。
+    category: structural
+    harmful: false
+    min_rarity: rare
+    budget_basis: inscribe
+    base_points: 5
+    acts_on: tile
+    params:
+      element: {type: element, required: true, description_zh: 符文的元素（填了 tag 就不用填；兩者恰好填一個）}
+      tag: {type: tag, description_zh: 符文的標籤（與 element 恰好填一個）}
+      duration: {type: int, min: 1, max: 5, description_zh: 符文持續的環境回合數}
+  - id: detonate_runes
+    name_zh: 引爆符文
+    description_zh: 引爆影響範圍內施放者自己的符文（依編號）：每格移除符文，並對該格上符合 affects 的單位自動命中（不擲命中）造成一次傷害＝骰值＋縮放屬性×0.5（法術公式）；元素取 element、省略時取符文的元素（標籤符文為物理）。施放者自己不受傷害；沒有符文的格子沒有效果。預算：骰子平均 × detonate_runes_permille（需要先刻印的折扣）。
+    category: structural
+    harmful: true
+    min_rarity: rare
+    budget_basis: detonate_runes
+    forbid_affects: [self, allies, tiles]
+    allowed_shapes: [cross, square3, ring, allies_in_radius]
+    params:
+      dice: {type: dice, required: true, description_zh: 每格的傷害骰}
+      element: {type: element, description_zh: 傷害元素（省略時取符文的元素）}

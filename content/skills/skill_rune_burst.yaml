@@ -1,0 +1,23 @@
+# 讀取符文——消耗（Phase 3-23 示範，數值為初值，未經模擬）：引爆半徑 3 內自己的所有符文，每格對站在上面的敵人造成一次傷害並移除符文。
+id: skill_rune_burst
+schema_version: 1
+name_zh: 符文爆裂
+tier: 2
+rank: 1
+rarity: rare
+kind: active
+skeleton: rune
+category: spell
+weapon_req: focus
+ap_cost: 2
+scaling_attr: int
+shape: {type: allies_in_radius, radius: 3}
+effects:
+  - {type: detonate_runes, dice: 3d6}
+condition: null
+cost: {mana: 8, cooldown: 3}
+tags: [spell, rune_read, rune_detonate]
+narrative:
+  concept: 先前刻下的每一道符文，在同一瞬間全部炸開
+  cast_flavor: 你合上手掌，地上所有的紋路同時亮起，然後轟然炸裂
+provenance: {origin: builtin, owner_id: null, created_by: null, parents: [], bound: true, tradeable: false}

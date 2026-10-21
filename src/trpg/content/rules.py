@@ -211,6 +211,14 @@ class CoreRules(ContentModel):
     zone_limit_per_owner: int = Field(default=2, ge=1, le=6)
     """同一施放者同時存在的區域上限（Phase 3D-5）；超過時最舊的消失。"""
 
+    # 刻印（3-23）
+    rune_limit_per_owner: int = Field(default=6, ge=1, le=12)
+    """同一施放者同時存在的符文格上限（Phase 3-23）；超過時最舊的消失。"""
+    rune_default_rounds: int = Field(default=3, ge=1, le=6)
+    """``inscribe`` 省略 ``duration`` 時符文的持續環境回合數（Phase 3-23）。"""
+    rune_max_rounds: int = Field(default=5, ge=1, le=10)
+    """``inscribe`` 的 ``duration`` 上限（Phase 3-23）。"""
+
     # 常駐類傳說的啟動（3D-6）
     legendary_activation_ap: int = Field(default=1, ge=1, le=3)
     """啟動常駐類傳說（修正型與規則改變型，``activation``）花的 AP（Phase 3D-6）。"""

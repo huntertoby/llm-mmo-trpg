@@ -77,6 +77,9 @@ __all__ = [
     "RoundStarted",
     "RuleChangeKindName",
     "RuleChangeTriggered",
+    "RuneInscribed",
+    "RuneRemovalReason",
+    "RuneRemoved",
     "ShieldAbsorbed",
     "ShieldGained",
     "ShotPierced",
@@ -1336,6 +1339,36 @@ class ZoneExpired(EventBase):
     """消失前的格子（跟隨型為施放者當時位置展開的格子，施放者已倒下時為空）。"""
 
 
+class RuneInscribed(EventBase):
+    """施放者在 ``pos`` 刻下符文（Phase 3-23 ``inscribe``）：恰好帶 ``element`` 或 ``tag`` 之一，
+    ``remaining`` 為剩餘的環境回合數。同一施放者在同一格再刻一次視為更新（舊的先以
+    ``replaced`` 移除）。"""
+
+    type: Literal["rune_inscribed"] = "rune_inscribed"
+    rune_id: int
+    owner_id: UnitId
+    pos: Pos
+    element: Element | None = None
+    tag: str | None = None
+    remaining: int
+
+
+type RuneRemovalReason = Literal["expired", "limit", "detonated", "replaced"]
+"""符文消失的原因（Phase 3-23）：到期、超過同時存在的上限（最舊的）、被引爆、同格重刻。"""
+
+
+class RuneRemoved(EventBase):
+    """符文消失（Phase 3-23）。``detonated`` 是消耗型原語 ``detonate_runes`` 的「讀取」。"""
+
+    type: Literal["rune_removed"] = "rune_removed"
+    rune_id: int
+    owner_id: UnitId
+    pos: Pos
+    element: Element | None = None
+    tag: str | None = None
+    reason: RuneRemovalReason
+
+
 class SkillActivated(EventBase):
     """常駐類傳說啟動（Phase 3D-6；緊接在 ``skill_used`` 與 ``source_changed`` 之後）。
 
@@ -1518,6 +1551,8 @@ type Event = Annotated[
     | ZoneMoved
     | ZoneTriggered
     | ZoneExpired
+    | RuneInscribed
+    | RuneRemoved
     | SkillActivated
     | ActivationExpired
     | SkillGranted

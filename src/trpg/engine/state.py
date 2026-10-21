@@ -32,6 +32,7 @@ __all__ = [
     "LastCast",
     "ObjectState",
     "PendingResolution",
+    "RuneState",
     "SpawnTemplate",
     "StatusInstance",
     "Tile",
@@ -142,6 +143,29 @@ class ZoneState:
     speed: int = 0
     shape: str = "self"
     radius: int | None = None
+
+
+@dataclass(slots=True, frozen=True)
+class RuneState:
+    """格子上的符文（Phase 3-23 ``inscribe``，``docs/design/06-技能.md`` 6.25；不可變）。
+
+    - ``id``：符文編號（依建立順序，從 1 起；:attr:`BattleState.next_rune_id`），也是「最舊」依據。
+    - ``owner_id``／``team``：刻下符文的施放者與其陣營（只有 ``owner_id`` 讀得到；雙方都看得到）。
+    - ``element``／``tag``：符文帶的元素或標籤（恰好一個）。
+    - ``remaining``：剩餘的環境回合數，歸零時移除；施放者倒下後符文仍保留到時效結束。
+    """
+
+    id: int
+    owner_id: UnitId
+    team: Team
+    pos: Pos
+    remaining: int
+    element: Element | None = None
+    tag: str | None = None
+
+    @property
+    def xy(self) -> tuple[int, int]:
+        return (self.pos.x, self.pos.y)
 
 
 @dataclass(slots=True)
@@ -471,6 +495,10 @@ class BattleState:
     """戰場上的持續區域（Phase 3D-5），依 ``id`` 排序。"""
     next_zone_id: int = 1
     """下一個區域的編號（Phase 3D-5）。"""
+    runes: list[RuneState] = field(default_factory=list)
+    """格子上的符文（Phase 3-23），依 ``id`` 排序；同一施放者在同一格最多一個。"""
+    next_rune_id: int = 1
+    """下一個符文的編號（Phase 3-23）。"""
 
     # ------------------------------------------------------------------
     # 複製
@@ -512,6 +540,8 @@ class BattleState:
             casts=self.casts,
             zones=list(self.zones),
             next_zone_id=self.next_zone_id,
+            runes=list(self.runes),
+            next_rune_id=self.next_rune_id,
         )
 
     # ------------------------------------------------------------------

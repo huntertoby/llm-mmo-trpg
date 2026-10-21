@@ -1,0 +1,25 @@
+# 讀取符文——修正型被動（Phase 3-23 示範，數值為初值，未經模擬）：你的攻擊打到站在自己符文上的目標時，傷害 +15%。
+id: skill_rune_resonance
+schema_version: 1
+name_zh: 符文共鳴
+tier: 1
+rank: 1
+rarity: epic
+kind: modifier
+skeleton: modifier
+category: spell
+weapon_req: any
+ap_cost: null
+scaling_attr: int
+shape: {type: self}
+effects: []
+modifiers:
+  - applies_to: {all_attacks: true}
+    condition: {type: on_own_rune}
+    change: {damage_permille: 150}
+condition: null
+tags: [passive, modifier, rune_read]
+narrative:
+  concept: 你親手刻下的紋路會回應你的每一次攻擊
+  cast_flavor: 攻擊落在符文上的瞬間，紋路與你的力量同時亮起
+provenance: {origin: builtin, owner_id: null, created_by: null, parents: [], bound: true, tradeable: false}

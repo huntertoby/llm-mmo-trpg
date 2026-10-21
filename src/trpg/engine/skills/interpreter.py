@@ -32,12 +32,14 @@ from trpg.content.skills import (
     DAMAGE_MULTIPLIER,
     DASH,
     DELAYED_DAMAGE,
+    DETONATE_RUNES,
     DISPEL,
     EXTRA_REACTION,
     GAMBLE,
     GRANT_AP,
     GRANT_SKILL,
     HURL_OBJECT,
+    INSCRIBE,
     INTERCEPT,
     LEAP,
     PLACE_TRAP,
@@ -81,10 +83,12 @@ from trpg.engine.effects.models import (
     DamageEffect,
     DamageObjectEffect,
     DestroyObjectEffect,
+    DetonateRuneEffect,
     EffectBase,
     ElementTouchEffect,
     HealEffect,
     HurlObjectEffect,
+    InscribeEffect,
     LowerTerrainEffect,
     MoveUnitEffect,
     PushEffect,
@@ -139,6 +143,7 @@ from trpg.engine.rules.facing import face_toward
 from trpg.engine.rules.geometry import XY, axis_direction, manhattan
 from trpg.engine.rules.movement import is_deadly
 from trpg.engine.rules.statuses import is_rooted, skip_turn_status
+from trpg.engine.runes import own_runes
 from trpg.engine.skill_triggers import collect_cast, collect_move, holding
 from trpg.engine.skills.charge import aside_direction
 from trpg.engine.skills.conditions import Subject, condition_met
@@ -200,9 +205,9 @@ REWRITE_PRIMITIVES = (
 )
 """由 :meth:`_Cast.rewrite` 結算的改寫規則型原語。"""
 _TOUCHING_AFFECTS = ("enemies", "all", "tiles")
-_OWN_CHECK = (SWAP, SWAP_ANY, TELEPORT_TARGET, ZONE, REVEAL)
+_OWN_CHECK = (SWAP, SWAP_ANY, TELEPORT_TARGET, ZONE, REVEAL, DETONATE_RUNES)
 """位移類原語自己擲抵抗判定（Phase 3D-2b），不另外擲命中；揭露（Phase 3D-8a）自動命中範圍內的
-敵人。"""
+敵人；引爆符文（Phase 3-23）也自動命中。"""
 
 
 def _unit_id(unit: UnitState) -> str:
@@ -1769,6 +1774,36 @@ class _Cast:
         attr = skill_scaling_value(self.ctx.rules, self.caster, self.skill)
         return attr * self.ctx.core.spell_attr_multiplier_permille
 
+    def detonate_runes(self, effect: ResolvedEffect, spec: EffectSpec) -> list[EffectBase]:
+        """``detonate_runes``（Phase 3-23）：影響範圍內施放者自己的符文（依編號）每格引爆一次：移除
+        符文，並對該格上符合 ``affects`` 的單位自動命中造成一次傷害（骰值＋縮放屬性 × 法術倍率；
+        元素取 ``element``、省略時取符文的元素，標籤符文為物理；施放者自己不受 ``all`` 的傷害）。"""
+        assert spec.dice is not None
+        state, caster = self.ctx.state, self.caster
+        scaled = self._spell_scaled()
+        batch: list[EffectBase] = []
+        for rune in own_runes(state, caster.id):
+            if rune.xy not in self.area.tiles or not self.tile_holds(spec.condition, rune.xy):
+                continue
+            batch.append(DetonateRuneEffect(source_id=caster.id, pos=rune.xy, rune_id=rune.id))
+            unit = state.unit_at(*rune.xy)
+            if unit is None or unit.id == caster.id:
+                continue
+            if effect.affects == "enemies" and unit.team is caster.team:
+                continue
+            batch.append(
+                DamageEffect(
+                    target_id=unit.id,
+                    source_id=caster.id,
+                    cause="effect",
+                    element=spec.element or rune.element or Element.PHYSICAL,
+                    dice=spec.dice,
+                    scaled_permille=scaled,
+                    min_damage=self.ctx.core.min_damage_on_hit,
+                )
+            )
+        return batch
+
     def heal(self, effect: ResolvedEffect, spec: EffectSpec) -> list[EffectBase]:
         scaled = self._spell_scaled()
         return [
@@ -2173,6 +2208,17 @@ class _Cast:
                         source_id=source, pos=xy, object_kind=spec.object, duration=spec.duration
                     )
                 )
+            elif effect.type == INSCRIBE:
+                batch.append(
+                    InscribeEffect(
+                        source_id=source,
+                        pos=xy,
+                        team=self.caster.team,
+                        element=spec.element,
+                        tag=spec.tag,
+                        duration=spec.duration,
+                    )
+                )
             elif effect.type == "raise_terrain":
                 batch.append(RaiseTerrainEffect(source_id=source, pos=xy, amount=spec.amount or 1))
             elif effect.type == "lower_terrain":
@@ -2196,6 +2242,7 @@ _Cast._SIMPLE = {
     REVIVE: _Cast.revive,
     DELAYED_DAMAGE: _Cast.delayed_damage,
     GRANT_SKILL: _Cast.grant_skill,
+    DETONATE_RUNES: _Cast.detonate_runes,
     HURL_OBJECT: _Cast.hurl_object,
     SUMMON: _Cast.summon,
     ZONE: _Cast.zone,

@@ -22,11 +22,13 @@ from trpg.engine.effects.models import (
     CreateSurfaceEffect,
     DamageObjectEffect,
     DestroyObjectEffect,
+    DetonateRuneEffect,
     EffectBase,
     ElementTouchEffect,
     ExplodeEffect,
     HurlObjectEffect,
     IgniteObjectEffect,
+    InscribeEffect,
     LowerTerrainEffect,
     PushEffect,
     RaiseTerrainEffect,
@@ -62,6 +64,7 @@ from trpg.engine.lifecycle import make_unit
 from trpg.engine.rules.combat import PERMILLE
 from trpg.engine.rules.facing import facing_toward_enemies
 from trpg.engine.rules.movement import is_deadly, is_standable
+from trpg.engine.runes import inscribe_rune, remove_rune
 from trpg.engine.state import BattleState, ObjectState, UnitState
 from trpg.shared.types import ObjectId, Pos, Surface, Team, UnitId
 
@@ -407,6 +410,32 @@ def _create_obstacle(ctx: Ctx, effect: EffectBase) -> list[EventBase]:
     if not is_standable(state, xy):
         return [_fizzle(ctx, effect.kind, xy, "not_standable")]
     return [_new_object(ctx, xy, effect.object_kind, effect.duration)]
+
+
+@register_effect("inscribe")
+def _inscribe(ctx: Ctx, effect: EffectBase) -> list[EventBase]:
+    assert isinstance(effect, InscribeEffect) and effect.source_id is not None
+    xy = effect.pos
+    if not ctx.state.in_bounds(*xy):
+        return [_fizzle(ctx, effect.kind, xy, "out_of_bounds")]
+    if not is_standable(ctx.state, xy):
+        return [_fizzle(ctx, effect.kind, xy, "not_standable")]
+    return inscribe_rune(
+        ctx,
+        effect.source_id,
+        effect.team,
+        xy,
+        element=effect.element,
+        tag=effect.tag,
+        duration=effect.duration,
+    )
+
+
+@register_effect("detonate_rune")
+def _detonate_rune(ctx: Ctx, effect: EffectBase) -> list[EventBase]:
+    assert isinstance(effect, DetonateRuneEffect)
+    rune = next((r for r in ctx.state.runes if r.id == effect.rune_id), None)
+    return [] if rune is None else [remove_rune(ctx, rune, "detonated")]
 
 
 def _new_object(ctx: Ctx, xy: XY, kind: str, duration: int | None = None) -> EventBase:

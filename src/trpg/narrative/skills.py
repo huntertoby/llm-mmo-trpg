@@ -30,6 +30,7 @@ from trpg.content.skills import (
 )
 from trpg.content.stacks import StackDef
 from trpg.narrative.skill_icon import SkillIcon, skill_icon
+from trpg.shared.types import rune_name
 
 __all__ = [
     "CATEGORY_TEXT",
@@ -414,6 +415,23 @@ def _create_obstacle(lib: ContentLibrary, _skill: SkillDef, spec: EffectSpec) ->
     return f"生成「{lib.ruleset.object_def(spec.object).name_zh}」{turns}"
 
 
+def _inscribe(lib: ContentLibrary, _skill: SkillDef, spec: EffectSpec) -> str:
+    rounds = spec.duration or lib.ruleset.core.rune_default_rounds
+    return (
+        f"在影響格刻下你專屬的「{rune_name(spec.element, spec.tag)}」，持續 {rounds} 輪"
+        "（符文本身沒有效果，敵我都看得到；之後由你的技能讀取）"
+    )
+
+
+def _detonate_runes(_lib: ContentLibrary, skill: SkillDef, spec: EffectSpec) -> str:
+    assert spec.dice is not None
+    element = f"{spec.element.display_name}" if spec.element is not None else "符文元素的"
+    return (
+        f"引爆影響範圍內你自己的符文：每格移除符文，並對站在上面的單位自動命中，造成"
+        f" {_dice(spec.dice)}＋{scaling_label(skill)}加成的{element}傷害"
+    )
+
+
 def _destroy_object(_lib: ContentLibrary, _skill: SkillDef, _spec: EffectSpec) -> str:
     return "摧毀可破壞的物件"
 
@@ -625,6 +643,8 @@ _EFFECT_TEXT: dict[str, _EffectText] = {
     "create_surface": _create_surface,
     "create_obstacle": _create_obstacle,
     "destroy_object": _destroy_object,
+    "inscribe": _inscribe,
+    "detonate_runes": _detonate_runes,
     "add_stack": _stack,
     "consume_stack": _stack,
     "consume_status": _consume_status,

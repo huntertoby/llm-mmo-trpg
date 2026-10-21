@@ -1,0 +1,23 @@
+# 刻印（Phase 3-23 示範，數值為初值，未經模擬）：在地面刻下自己專屬的雷紋，持續 2 輪（十字 5 格）；符文本身沒有效果，等「咒雷」「符文爆裂」讀取。
+id: skill_thunder_sigil
+schema_version: 1
+name_zh: 雷紋刻印
+tier: 1
+rank: 1
+rarity: rare
+kind: active
+skeleton: rune
+category: spell
+weapon_req: focus
+ap_cost: 1
+scaling_attr: int
+shape: {type: cross, range: 4}
+effects:
+  - {type: inscribe, element: lightning, duration: 2}
+condition: null
+cost: {mana: 4, cooldown: 2}
+tags: [lightning, spell, rune]
+narrative:
+  concept: 在地上畫下只有你認得的雷紋，等電光回來找它
+  cast_flavor: 杖尖劃過地面，留下一道隱隱發亮的藍白紋路
+provenance: {origin: builtin, owner_id: null, created_by: null, parents: [], bound: true, tradeable: false}

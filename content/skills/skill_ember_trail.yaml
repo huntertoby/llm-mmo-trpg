@@ -1,0 +1,23 @@
+# 刻印（Phase 3-23 示範，數值為初值，未經模擬）：沿一個方向留下一串火紋（3 格，持續 3 輪）。
+id: skill_ember_trail
+schema_version: 1
+name_zh: 火痕
+tier: 1
+rank: 1
+rarity: rare
+kind: active
+skeleton: rune
+category: spell
+weapon_req: focus
+ap_cost: 1
+scaling_attr: int
+shape: {type: line, size: 3}
+effects:
+  - {type: inscribe, element: fire, duration: 3}
+condition: null
+cost: {mana: 4, cooldown: 2}
+tags: [fire, spell, rune]
+narrative:
+  concept: 一串只有你看得見的火紋，沿著地面延伸出去
+  cast_flavor: 你的指尖拖過地面，焦黑的火紋一格接一格亮了起來
+provenance: {origin: builtin, owner_id: null, created_by: null, parents: [], bound: true, tradeable: false}

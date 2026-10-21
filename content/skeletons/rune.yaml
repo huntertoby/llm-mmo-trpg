@@ -1,0 +1,15 @@
+# 刻印（Phase 3-23，docs/design/06-技能.md 6.25）：在格子上留下自己的符文（inscribe），之後的技能讀取它。
+# 隨機組合器只產生 inscribe（低權重，見 skill_composer.yaml 的 rune.skeleton_permille）；
+# detonate_runes（消耗型）只給手寫技能。
+id: rune
+name_zh: 刻印
+description_zh: 在地面刻下自己專屬的符文（不立即生效），或引爆範圍內自己的符文。
+kinds: [active]
+enabled: true
+min_rarity: rare
+shapes: [line, cone, cross, square3, ring, ground_tile, allies_in_radius]
+core: {primitives: [inscribe, detonate_runes]}
+secondary:
+  primitives: [damage, apply_status]
+  max_count: 1
+  max_share_permille: {damage: 400}
