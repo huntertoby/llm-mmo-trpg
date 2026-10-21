@@ -1,0 +1,19 @@
+# 裝備規則（Phase 3G-G1，docs/design/08-裝備.md 8.21.5.2～8.21.5.3）。數值都是初值，未經模擬。
+# 先算遞減，再套硬上限。
+
+# 同一詞條 id 的數值部分：依數值大到小（同值依欄位固定順序 main_hand → ring_2）
+# 第 1 條 100%、第 2 條 50%、第 3 條 25%，之後 0%（‰；加總後無條件捨去，往 0 的方向）。
+# 非數值效果（普攻附加、觸發、充能、動作、反應、改變規則）同 id 只生效 1 條。
+diminishing_permille: [1000, 500, 250]
+
+max_affixes_per_item: 4          # 每件物品最多幾條詞條
+
+caps:
+  damage_bonus_permille: 500     # 全身傷害加成（裝備來源合計）上限 +50%
+  damage_reduction_permille: 750 # 總減傷 75%（＝ 1000 − core.yaml 的 element_mod_floor_permille，載入時檢查一致）
+  element_resist_permille: 500   # 單一元素抗性上限 50%
+  ap_gain_per_round: 1           # 每回合 AP 回復（所有來源合計）+1（G3 接上）
+  cooldown_min: 1                # 冷卻最低 1（本來就沒有冷卻的技能不受影響）
+  crit_range_min: 18             # 暴擊範圍最低自然 18（G2 接上）
+  move_bonus: 2                  # 裝備的移動加成合計 +2
+  cost_affixes: 2                # 代價型詞條全身最多 2 條（超過時穿戴驗證失敗）
