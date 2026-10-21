@@ -2467,6 +2467,11 @@ export interface components {
             initiative: number;
             /** Weapon Name Zh */
             weapon_name_zh: string;
+            /**
+             * Weapon Id
+             * @default
+             */
+            weapon_id: string;
             /** Tags */
             tags: string[];
             /** Skills */
