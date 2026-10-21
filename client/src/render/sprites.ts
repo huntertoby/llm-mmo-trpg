@@ -21,10 +21,7 @@ export const TERRAIN_SPRITES: Readonly<Record<string, SpriteRef>> = {
   grass: town("0000"),
   dirt: town("0025"),
   wall: dungeon("0058"),
-  // 素材包沒有岩漿、深淵、冰窟：用石地圖塊乘上顏色，保留紋理又一眼分得出來
-  lava: town("0109", 0xff6a2a),
-  chasm: town("0109", 0x2a2a3c),
-  ice_hole: town("0109", 0x3a6aa8),
+  // 岩漿、深淵、冰窟沒有素材圖：由 `proceduralTerrain.ts` 程式繪製紋理（3-14）
 };
 
 /** 物件圖（畫在地形圖塊之上，背景透明）。 */
