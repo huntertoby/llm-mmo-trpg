@@ -27,6 +27,7 @@ import {
   getPath,
   moveItem,
   removeItem,
+  resetStep,
   selectChoice,
   setPath,
   type Json,
@@ -393,5 +394,13 @@ describe("advanced YAML editing", () => {
     const nested = parseDraftText("effects:\n  - type: gamble\n    chance_permille: 500\n    win:\n      - type: damage\n        multiplier_permille: 2000\n");
     expect(nested.ok && getPath(nested.draft, "effects.0.win")).toBeUndefined();
     expect(nested.ok && (getPath(nested.draft, "effects") as Json[])[0]?.["win"]).toEqual([{ type: "damage", multiplier_permille: 2000 }]);
+  });
+});
+
+describe("reset confirmation (Phase 3-21b)", () => {
+  it("clears an empty draft at once, asks first for a filled one, then clears on the second press", () => {
+    expect(resetStep({}, false)).toBe("clear");
+    expect(resetStep({ name_zh: "火球" }, false)).toBe("ask");
+    expect(resetStep({ name_zh: "火球" }, true)).toBe("clear");
   });
 });

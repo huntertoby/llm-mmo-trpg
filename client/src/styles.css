@@ -2384,3 +2384,13 @@ button.selected {
 .more-list button.selected {
   outline: 2px solid var(--accent);
 }
+
+/* 技能工坊「清空重來」的頁內確認（Phase 3-21b） */
+.ws-header-tools button.danger {
+  color: var(--danger);
+  border-color: var(--danger);
+}
+
+.ws-reset-ask {
+  align-self: center;
+}

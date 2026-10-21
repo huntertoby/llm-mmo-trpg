@@ -92,17 +92,35 @@ describe("tileArtSpec（高度與鄰格）", () => {
   it("高度徽章只在可站立且高度 > 0 時出現", () => {
     const flat = model([[{ height: 0 }, { height: 0 }]]);
     expect(heightBadgeText(flat, flat.tiles[0]!)).toBeNull();
-    // 3×3 高台：只有邊緣格（與鄰格不同高）標高度，中心與平地不標
+    // 3×3 高台：整片只標一個，放在最上排最左邊的格子
     const rows = [0, 1, 2].map((y) => [0, 1, 2, 3, 4].map((x) => ({ height: x >= 1 && x <= 3 && y >= 0 && y <= 2 ? 2 : 0 })));
     const m = model(rows);
     const at = (x: number, y: number): string | null => heightBadgeText(m, m.tiles.find((t) => t.x === x && t.y === y)!);
-    expect(at(2, 1)).toBeNull();
-    expect(at(1, 1)).toBe("2");
-    expect(at(2, 2)).toBeNull(); // 地圖邊緣外不算鄰格
     expect(at(1, 0)).toBe("2");
-    expect(at(0, 0)).toBeNull();
+    expect(m.tiles.filter((t) => heightBadgeText(m, t) !== null)).toHaveLength(1);
+    expect(at(2, 1)).toBeNull();
+    expect(at(1, 1)).toBeNull();
+    expect(at(0, 0)).toBeNull(); // 平地不標
     const pit = model([[{ height: 2, ...CHASM }, {}]]);
     expect(heightBadgeText(pit, pit.tiles[0]!)).toBeNull();
+  });
+
+  it("高度徽章：單獨一格照標；兩片同高但不相連各標一個；不同高的相連台階各標各的", () => {
+    const lone = model([[{ height: 0 }, { height: 3 }, { height: 0 }]]);
+    expect(lone.tiles.filter((t) => heightBadgeText(lone, t) !== null).map((t) => t.x)).toEqual([1]);
+    const two = model([[{ height: 2 }, { height: 0 }, { height: 2 }]]);
+    expect(two.tiles.filter((t) => heightBadgeText(two, t) !== null).map((t) => t.x)).toEqual([0, 2]);
+    const steps = model([[{ height: 1 }, { height: 1 }, { height: 2 }, { height: 2 }]]);
+    const marked = steps.tiles.filter((t) => heightBadgeText(steps, t) !== null);
+    expect(marked.map((t) => [t.x, heightBadgeText(steps, t)])).toEqual([
+      [0, "1"],
+      [2, "2"],
+    ]);
+  });
+
+  it("整張圖都同高（沒有高低差）不標徽章", () => {
+    const all = model([[{ height: 1 }, { height: 1 }]]);
+    expect(all.tiles.every((t) => heightBadgeText(all, t) === null)).toBe(true);
   });
 });
 

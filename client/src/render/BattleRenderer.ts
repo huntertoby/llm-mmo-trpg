@@ -27,7 +27,6 @@ import { HIGHLIGHT } from "../battle/glossary";
 import type { Overlay, OverlayKind } from "../battle/scenePreview";
 import type { TelegraphMark } from "../battle/telegraph";
 import { warpPlan, type StepVfx } from "../battle/vfx";
-import { tileAt } from "../battle/drawModel";
 import { RING } from "./artPalette";
 import { ArtTextures } from "./artTextures";
 import { heightBadgeText, objectArtSpec, objectKinds, tileArtSpec } from "./artSpecs";
@@ -262,7 +261,7 @@ export class BattleRenderer {
 
   /** 一個單位：畫在所在排；被南邊高格擋住時另在最上層畫剪影。 */
   private drawUnit(model: DrawModel, u: UnitDraw): void {
-    const sprite = buildUnitSprite(this.art, this.pulses, u, tileAt(model, u)?.height ?? 0);
+    const sprite = buildUnitSprite(this.art, this.pulses, u);
     this.rows.row(u.y).units.addChild(sprite);
     this.place(sprite, u, u.x * T + T / 2, u.y * T + T / 2);
     if (!u.downed) this.unitSprites.set(u.id, sprite);

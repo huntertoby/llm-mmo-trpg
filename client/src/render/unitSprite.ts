@@ -6,7 +6,6 @@ import type { UnitDraw } from "../battle/drawModel";
 import { ringArrow } from "../battle/facing";
 import { TILE_SIZE } from "../battle/geometry";
 import { HIGHLIGHT } from "../battle/glossary";
-import { pedestalScale } from "../battle/heightModel";
 import { resolveDoll } from "./appearance";
 import { RING } from "./artPalette";
 import type { ArtTextures } from "./artTextures";
@@ -107,16 +106,6 @@ function statusBadge(badge: StatusBadge): Container {
   return c;
 }
 
-/** 站在高處：腳下一圈底座陰影（越高越大、越深）。 */
-function pedestal(standingHeight: number, r: number): Graphics | null {
-  const scale = pedestalScale(standingHeight);
-  if (scale <= 0) return null;
-  const base = new Graphics();
-  base.ellipse(0, r * 0.72, r * 1.15 * scale, r * 0.5 * scale).fill({ color: 0x000000, alpha: 0.28 + 0.05 * standingHeight });
-  base.ellipse(0, r * 0.72, r * 0.8 * scale, r * 0.32 * scale).fill({ color: 0x000000, alpha: 0.25 });
-  return base;
-}
-
 function doll(art: ArtTextures, u: UnitDraw, look: DownedLook, feet: number, r: number): Sprite | Graphics {
   const spec = resolveDoll({ template: u.template, team: u.team, summon: u.summon, totem: u.totem, weaponId: u.weaponId, weaponClass: u.weaponClass });
   const texture = art.figure(spec, u.facing, u.downed);
@@ -157,12 +146,10 @@ function hpBar(u: UnitDraw): Graphics {
 }
 
 /** 一個單位的所有圖層（圖層順序見檔頭）；位置由呼叫端放到格子中心。 */
-export function buildUnitSprite(art: ArtTextures, pulses: Pulses, u: UnitDraw, standingHeight: number): Container {
+export function buildUnitSprite(art: ArtTextures, pulses: Pulses, u: UnitDraw): Container {
   const c = new Container();
   const r = T * 0.32;
   const look = downedLook(u.downed, u.revivable);
-  const base = pedestal(standingHeight, r);
-  if (base !== null) c.addChild(base);
   const teamRing = u.summon ? RING.summon : RING[u.team];
   const ring = look.ring ?? teamRing;
   const feet = T * 0.23; // 腳底（相對格子中心）
