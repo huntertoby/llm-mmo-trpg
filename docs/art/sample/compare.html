@@ -1,0 +1,57 @@
+<!doctype html>
+<html lang="zh-Hant">
+<head>
+<meta charset="utf-8">
+<title>美術風格對比</title>
+<style>
+  body { margin: 0; padding: 20px 24px; background: #1b1e24; color: #e8e8ea; font-family: "Noto Sans TC", "Microsoft JhengHei", sans-serif; }
+  h1 { font-size: 22px; margin: 0 0 4px; }
+  .sub { color: #a0a4ad; font-size: 13px; margin-bottom: 16px; }
+  .row { display: flex; gap: 20px; }
+  .panel { background: #262a32; border-radius: 10px; padding: 12px; }
+  .panel h2 { font-size: 16px; margin: 0 0 2px; }
+  .panel p { font-size: 12px; color: #a0a4ad; margin: 0 0 10px; }
+  canvas { display: block; border-radius: 4px; }
+  .tag { display: inline-block; font-size: 11px; padding: 1px 6px; border-radius: 8px; margin-left: 6px; vertical-align: 2px; }
+  .t1 { background: #4a4f5a; } .t2 { background: #6b4a1a; } .t3 { background: #1f5d4a; }
+</style>
+</head>
+<body>
+<h1>同一個戰鬥畫面 × 三種畫法</h1>
+<div class="sub">展示場景 12×9：草、石、土、牆、深淵＋木橋、岩漿、冰窟、高台（高度 0–3）；表面：油、火、水、冰、毒；我方 3 名＋召喚骷髏、敵方 4 名（尖角／箭頭＝朝向）。A 為行動中。</div>
+<div class="row">
+  <div class="panel"><h2>① 目前的畫面<span class="tag t1">main</span></h2><p>色塊＋文字（依 BattleRenderer.ts 重現）</p><canvas id="cur"></canvas></div>
+  <div class="panel"><h2>② Kenney 資源包版<span class="tag t2">3-13 進行中・未合併</span></h2><p>Tiny Town／Tiny Dungeon（16px 像素圖，CC0）；依 3-13 目前的對照表</p><canvas id="ken"></canvas></div>
+  <div class="panel"><h2>③ 程式繪製版<span class="tag t3">本次樣張</span></h2><p>幾何扁平風，零下載素材；地磚紋理依座標程序生成</p><canvas id="pro"></canvas></div>
+</div>
+<script src="scene.js"></script>
+<script src="legacy.js"></script>
+<script src="procedural.js"></script>
+<script>
+  // ?zoom：只看左上 6×5 格、放大 2 倍，比較細節
+  const zoom = new URLSearchParams(location.search).has("zoom");
+  const SCALE = zoom ? 3 : 2;
+  function fit(id) {
+    if (!zoom) return;
+    const c = document.getElementById(id);
+    const T = LegacyRender.T;
+    c.style.width = `${SCENE.w * T * 1.6}px`;
+    c.style.height = `${SCENE.h * T * 1.6}px`;
+    const wrap = document.createElement("div");
+    wrap.style.cssText = `width:${6 * T * 1.6}px;height:${5 * T * 1.6}px;overflow:hidden;border-radius:4px`;
+    c.parentNode.insertBefore(wrap, c);
+    wrap.appendChild(c);
+  }
+  if (zoom) document.querySelector("h1").textContent = "細節放大（左上 6×5 格，1.6 倍）";
+  LegacyRender.render(document.getElementById("cur"), false, SCALE);
+  ProcRender.render(document.getElementById("pro"), SCALE);
+  fit("cur");
+  fit("pro");
+  LegacyRender.loadKenney().then(() => {
+    LegacyRender.render(document.getElementById("ken"), true, SCALE);
+    fit("ken");
+    document.body.dataset.ready = "1";
+  });
+</script>
+</body>
+</html>
