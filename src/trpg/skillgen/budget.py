@@ -361,6 +361,22 @@ def _dispel_points(
     return Fraction(rules.dispel_one_points), "驅散 1 個增益"
 
 
+def _obstacle_points(
+    _skill: SkillDef, effect: EffectSpec, library: ContentLibrary
+) -> tuple[Fraction, str]:
+    """``create_obstacle`` 的點數（3-11）：基礎點數 × 持續時間係數（永久 ＝ 基礎）。"""
+    rules = library.budget
+    primitive = library.ruleset.primitives.by_id()[effect.type]
+    assert primitive.base_points is not None
+    if effect.duration is None:
+        return Fraction(primitive.base_points), "固定（永久）"
+    permille = rules.obstacle_duration_permille[min(effect.duration, 10) - 1]
+    return (
+        Fraction(primitive.base_points * permille, _PERMILLE),
+        f"{primitive.base_points} × {effect.duration} 回合 {permille}‰",
+    )
+
+
 def _reveal_points(
     _skill: SkillDef, effect: EffectSpec, library: ContentLibrary
 ) -> tuple[Fraction, str]:
@@ -732,6 +748,7 @@ _SPECIAL_BASES: dict[
     "gamble": _gamble_points,
     "dispel": _dispel_points,
     "reveal": _reveal_points,
+    "obstacle": _obstacle_points,
     "revive": _revive_points,
     "delayed_damage": _delayed_damage_points,
     "grant_skill": _grant_skill_points,

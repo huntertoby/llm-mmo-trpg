@@ -39,6 +39,8 @@ export interface ObjectDraw {
   fill: number;
   flammable: boolean;
   burning: boolean;
+  /** 暫時障礙（Phase 3-11）還剩幾次環境回合；永久為 `null`。 */
+  expiresIn: number | null;
   floor: boolean;
   /** 0–1；沒有耐久的物件為 `null`。 */
   hpRatio: number | null;
@@ -179,6 +181,7 @@ export function buildDrawModel(
       fill: style.color,
       flammable: style.flammable,
       burning: o.burning !== null && o.burning > 0,
+      expiresIn: o.expires_in ?? null,
       floor: style.floor,
       hpRatio: o.hp === null || o.max_hp === null ? null : ratio(o.hp, o.max_hp),
     };

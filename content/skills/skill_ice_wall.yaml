@@ -1,0 +1,23 @@
+id: skill_ice_wall
+schema_version: 1
+name_zh: 冰牆術
+tier: 1
+rank: 1
+rarity: rare
+kind: active
+skeleton: control
+category: spell
+weapon_req: focus
+ap_cost: 1
+scaling_attr: int
+shape: {type: line, size: 3}
+effects:
+  - {type: create_obstacle, object: ice_wall, duration: 3}
+  - {type: create_surface, surface: ice, duration: 3}
+condition: null
+cost: {mana: 4, cooldown: 2}
+tags: [ice, spell, obstacle]
+narrative:
+  concept: 凍出一道透明的冰牆擋住去路與視線，三輪後自行融化
+  cast_flavor: 寒氣沿地面竄起，凝成一道晶瑩的冰牆，腳下的地面也結了冰
+provenance: {origin: builtin, owner_id: null, created_by: null, parents: [], bound: true, tradeable: false}

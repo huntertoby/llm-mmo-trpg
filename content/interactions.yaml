@@ -29,6 +29,13 @@ rules:
     target: object
     object_tag: flammable
     then: [{op: ignite_object}]
+  - id: fire_melts_object
+    description_zh: 火焰融化可融化的物件（冰牆；直接移除，Phase 3-11）
+    trigger: element
+    element: fire
+    target: object
+    object_tag: meltable
+    then: [{op: destroy_object}]
   - id: fire_ignites_oil
     description_zh: 火焰點燃油，產生火焰表面
     trigger: element
@@ -109,6 +116,13 @@ rules:
     element: wind
     target: surface
     surface: poison
+    then: [{op: set_surface, surface: none}]
+  - id: wind_disperses_smoke
+    description_zh: 風吹散煙霧（聖光不會，只有風；Phase 3-11）
+    trigger: element
+    element: wind
+    target: surface
+    surface: smoke
     then: [{op: set_surface, surface: none}]
   - id: wind_pushes_object
     description_zh: 風推動可推動的物件（距離由效果決定）

@@ -46,6 +46,7 @@ from trpg.engine.events import (
     ObjectCreated,
     ObjectDamaged,
     ObjectDestroyed,
+    ObjectExpired,
     ObjectExploded,
     ObjectHurled,
     ObjectIgnited,
@@ -957,6 +958,11 @@ def _shot_pierced(e: ShotPierced, v: _View) -> str:
 @_handles(ObjectCreated)
 def _object_created(e: ObjectCreated, v: _View) -> str:
     return f"  {xy_text(e.pos)} 出現了{v.state.ruleset.object_def(e.kind).name_zh}"
+
+
+@_handles(ObjectExpired)
+def _object_expired(e: ObjectExpired, v: _View) -> str:
+    return f"  {v.state.ruleset.object_def(e.kind).name_zh} {xy_text(e.pos)} 消失了"
 
 
 @_handles(SurfaceChanged)

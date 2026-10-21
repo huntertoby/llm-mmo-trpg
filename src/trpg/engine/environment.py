@@ -46,6 +46,7 @@ from trpg.engine.events import (
     EventBase,
     MapEventTriggered,
     ObjectDestroyed,
+    ObjectExpired,
     ObjectExploded,
     ObjectIgnited,
     SurfaceChanged,
@@ -106,6 +107,7 @@ def run_environment(ctx: Ctx) -> None:
         tiles = _all_tiles(state)
         fires = [xy for xy in tiles if state.tile(*xy).surface is Surface.FIRE]
         _burn_objects(ctx)
+        _expire_objects(ctx)  # 暫時障礙到期（Phase 3-11）
         _tick_surfaces(ctx, tiles)
         _spread_fire(ctx, fires)
         move_zones(ctx)  # 持續區域：到期與移動型的前進（Phase 3D-5）
@@ -130,6 +132,22 @@ def _burn_objects(ctx: Ctx) -> None:
             )
     if destroy:
         execute(ctx, destroy)
+
+
+def _expire_objects(ctx: Ctx) -> None:
+    """暫時障礙倒數（與表面同一時機：每次環境回合 −1，歸零時移除）。到期不是被摧毀：
+    不發 ``object_destroyed``、不觸發破壞效果（``spill``）、不掉落、不算擊殺。"""
+    state = ctx.state
+    for obj in state.objects_sorted():
+        if obj.expires_in is None:
+            continue
+        obj.expires_in -= 1
+        if obj.expires_in > 0:
+            continue
+        obj.destroyed = True
+        tile = state.tile(*obj.xy)
+        state.set_tile(*obj.xy, replace(tile, object_id=None))
+        ctx.emit(ObjectExpired, object_id=obj.id, kind=obj.kind, pos=obj.pos)
 
 
 def _tick_surfaces(ctx: Ctx, tiles: list[XY]) -> None:
@@ -211,6 +229,7 @@ type ChangeKind = Literal[
     "surface",
     "terrain",
     "object_destroyed",
+    "object_expired",
     "object_ignited",
     "object_exploded",
     "unit_spawned",
@@ -313,6 +332,8 @@ def _changes(events: list[EventBase]) -> list[TelegraphChange]:
             )
         if isinstance(e, ObjectDestroyed):
             return TelegraphChange(kind="object_destroyed", pos=e.pos, object_id=e.object_id)
+        if isinstance(e, ObjectExpired):
+            return TelegraphChange(kind="object_expired", pos=e.pos, object_id=e.object_id)
         if isinstance(e, ObjectIgnited):
             return TelegraphChange(kind="object_ignited", pos=e.pos, object_id=e.object_id)
         if isinstance(e, ObjectExploded):

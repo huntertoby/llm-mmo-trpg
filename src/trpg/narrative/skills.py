@@ -409,7 +409,8 @@ def _create_surface(lib: ContentLibrary, _skill: SkillDef, spec: EffectSpec) -> 
 
 def _create_obstacle(lib: ContentLibrary, _skill: SkillDef, spec: EffectSpec) -> str:
     assert spec.object is not None
-    return f"生成「{lib.ruleset.object_def(spec.object).name_zh}」"
+    turns = f"，{spec.duration} 回合後消失" if spec.duration else ""
+    return f"生成「{lib.ruleset.object_def(spec.object).name_zh}」{turns}"
 
 
 def _destroy_object(_lib: ContentLibrary, _skill: SkillDef, _spec: EffectSpec) -> str:

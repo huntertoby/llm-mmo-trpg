@@ -328,7 +328,8 @@ def render_telegraph(state: BattleState, forecast: Telegraph) -> str:
         "zone_moved",
         "zone_expired",
         "bomb_exploded",
-    )  # 區域（3D-5）、炸彈（3D-8b）：沿用網頁的預告文字
+        "object_expired",
+    )  # 區域（3D-5）、炸彈（3D-8b）、暫時障礙到期（3-11）：沿用網頁的預告文字
     for c in (c for c in forecast.changes if c.kind not in zone_kinds):
         if c.kind == "object_destroyed" and c.object_id in exploded:
             continue

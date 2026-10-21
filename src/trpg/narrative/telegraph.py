@@ -51,6 +51,10 @@ def _destroyed(state: BattleState, c: TelegraphChange, _t: Callable[[str], str])
     return f"{_object_name(state, c)}{_where(c)} 將被摧毀"
 
 
+def _expired(state: BattleState, c: TelegraphChange, _t: Callable[[str], str]) -> str:
+    return f"{_object_name(state, c)}{_where(c)} 將在本輪結束時消失"
+
+
 def _ignited(state: BattleState, c: TelegraphChange, _t: Callable[[str], str]) -> str:
     return f"{_object_name(state, c)}{_where(c)} 將被點燃"
 
@@ -107,6 +111,7 @@ _CHANGE_TEXT: dict[str, Callable[[BattleState, TelegraphChange, Callable[[str], 
     "surface": _surface,
     "terrain": _terrain,
     "object_destroyed": _destroyed,
+    "object_expired": _expired,
     "object_ignited": _ignited,
     "object_exploded": _exploded,
     "unit_spawned": _spawned,

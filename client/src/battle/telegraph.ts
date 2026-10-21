@@ -22,6 +22,7 @@ export const MARK_STYLES: Readonly<Record<string, MarkStyle>> = {
   unit_damaged: { glyph: "傷", color: 0xff6a3d, priority: 6 },
   object_ignited: { glyph: "燃", color: 0xff9a2e, priority: 5 },
   object_destroyed: { glyph: "毀", color: 0xc0a080, priority: 4 },
+  object_expired: { glyph: "消", color: 0x9ad0e8, priority: 4 },
   unit_spawned: { glyph: "援", color: 0xb06bff, priority: 4 },
   terrain: { glyph: "地", color: 0xd0a060, priority: 3 },
   surface: { glyph: "面", color: 0x7fe3ff, priority: 2 },

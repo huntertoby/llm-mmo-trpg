@@ -64,6 +64,7 @@ OBJECT_TAGS: frozenset[str] = frozenset(
         "extinguish",  # 可熄滅火焰（資料保留，Phase 1 無引擎規則使用）
         "flammable",  # 可被點燃；環境回合火勢會蔓延過來
         "freezable",  # 冰霜可使其結冰
+        "meltable",  # 火焰觸及時融化（直接移除，Phase 3-11 的冰牆）
         "half_cover",  # 半掩護：遠程攻擊緊鄰其後的目標命中 −2（Phase 1C）
         "over_chasm",  # 架在致命地形上：此格變成可站立、非致命
         "pushable",  # 可被推動

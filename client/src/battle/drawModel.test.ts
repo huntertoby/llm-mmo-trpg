@@ -78,6 +78,14 @@ describe("buildDrawModel", () => {
     expect(crate).toMatchObject({ name: "木箱", burning: true });
     expect(model.traps).toEqual([expect.objectContaining({ x: 1, y: 1 })]);
   });
+
+  it("carries the remaining rounds of temporary obstacles (Phase 3-11)", () => {
+    const view = smallView();
+    const objects = view.objects.map((o, i) => (i === 0 ? { ...o, kind: "ice_wall", expires_in: 2 } : o));
+    const drawn = buildDrawModel({ ...view, objects }, "unit_0001");
+    expect(drawn.objects[0]).toMatchObject({ glyph: "冰", expiresIn: 2 });
+    expect(drawn.objects[1]?.expiresIn).toBeNull();
+  });
 });
 
 describe("colours", () => {

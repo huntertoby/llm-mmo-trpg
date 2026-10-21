@@ -308,6 +308,7 @@ def test_status_and_surface_points_match_the_spec() -> None:
         "water": 1,
         "holy": 4,
         "darkness": 2,
+        "smoke": 2,  # 3-11：比照 darkness
     }
 
 

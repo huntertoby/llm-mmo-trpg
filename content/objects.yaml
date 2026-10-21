@@ -72,3 +72,13 @@ objects:
     glyph: "m"
     max_hp: 15
     tags: [blocks_move, half_cover, breakable]   # 推倒後產生（3C-5a）；3D-3 起可以被打掉（HP 同木箱），避免永久堵死窄路
+  - id: ice_wall
+    name_zh: 冰牆
+    glyph: "#"
+    max_hp: 20
+    tags: [blocks_move, blocks_sight, breakable, meltable]   # 3-11：暫時障礙（冰牆術 3 輪後融化）；火焰觸及時融化
+  - id: thorn_wall
+    name_zh: 荊棘叢
+    glyph: "x"
+    max_hp: 10
+    tags: [blocks_move, breakable, flammable]   # 3-11：暫時障礙（荊棘牆術 2 輪後枯萎）；不擋視線、可燃
