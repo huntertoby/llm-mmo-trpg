@@ -34,17 +34,58 @@ function vfx(primary: number, secondary: number, particle: ParticleKind, particl
   return { primary, secondary, particle, particles, jagged: false, column: false, ...extra };
 }
 
-/** 元素 → 特效配色與粒子（對照表只放這一處）。 */
+/**
+ * 元素顏色的唯一來源（Phase 3-18a）：特效（`primary`、`secondary`）與技能圖示（`accent`、`dark`、`light`）
+ * 都從這一張表取色。顏色一律寫十六進位字串，需要數字的地方用 `hexToNumber`。
+ */
+export interface ElementColors {
+  /** 中文名。 */
+  name: string;
+  /** 特效主色（飛行物、光束、範圍底色）。 */
+  primary: string;
+  /** 特效副色（粒子、外圈、拖尾）。 */
+  secondary: string;
+  /** 圖示標誌與主圖的亮色。 */
+  accent: string;
+  /** 圖示底色漸層的暗端與亮端。 */
+  dark: string;
+  light: string;
+}
+
+export const ELEMENT_COLORS: Readonly<Record<string, ElementColors>> = {
+  physical: { name: "物理", primary: "#f2f2f2", secondary: "#b8bcc8", accent: "#e8ebf0", dark: "#2c313b", light: "#7d8798" },
+  fire: { name: "火", primary: "#ff6a1a", secondary: "#ffd23f", accent: "#ffb23a", dark: "#4a1104", light: "#e8541a" },
+  ice: { name: "冰", primary: "#8fe3ff", secondary: "#ffffff", accent: "#d8f6ff", dark: "#0b2f4e", light: "#3fa6d8" },
+  lightning: { name: "雷", primary: "#fff36b", secondary: "#8fd0ff", accent: "#fff36b", dark: "#1d1d4a", light: "#5a5ac8" },
+  poison: { name: "毒", primary: "#7ddc3a", secondary: "#3f8f2a", accent: "#b6f06a", dark: "#12320c", light: "#4f9a28" },
+  wind: { name: "風", primary: "#c8ffe8", secondary: "#7fe0c0", accent: "#dcfff1", dark: "#0b3f3a", light: "#3fb59a" },
+  earth: { name: "大地", primary: "#b0814a", secondary: "#6e5236", accent: "#f0c890", dark: "#2e1d0e", light: "#9a6a36" },
+  holy: { name: "聖光", primary: "#fff2b0", secondary: "#ffd75e", accent: "#fff6c8", dark: "#5a3a06", light: "#e7b23a" },
+  shadow: { name: "暗影", primary: "#9a6ad8", secondary: "#2a1840", accent: "#d2b0ff", dark: "#10071e", light: "#5a3590" },
+};
+
+/** `#rrggbb` → 0xrrggbb。 */
+export function hexToNumber(hex: string): number {
+  return parseInt(hex.slice(1), 16);
+}
+
+function fromColors(id: string, particle: ParticleKind, particles: number, extra: Partial<ElementVfx> = {}): ElementVfx {
+  const c = ELEMENT_COLORS[id];
+  if (c === undefined) throw new Error(`ELEMENT_COLORS 缺少 ${id}`);
+  return vfx(hexToNumber(c.primary), hexToNumber(c.secondary), particle, particles, extra);
+}
+
+/** 元素 → 特效配色與粒子（顏色取自 `ELEMENT_COLORS`，這裡只決定粒子行為）。 */
 export const ELEMENT_VFX: Readonly<Record<string, ElementVfx>> = {
-  physical: vfx(0xf2f2f2, 0xb8bcc8, "spark", 8),
-  fire: vfx(0xff6a1a, 0xffd23f, "ember", 12),
-  ice: vfx(0x8fe3ff, 0xffffff, "shard", 10),
-  lightning: vfx(0xfff36b, 0x8fd0ff, "bolt", 7, { jagged: true }),
-  poison: vfx(0x7ddc3a, 0x3f8f2a, "bubble", 9),
-  wind: vfx(0xc8ffe8, 0x7fe0c0, "gust", 7),
-  earth: vfx(0xb0814a, 0x6e5236, "rock", 9),
-  holy: vfx(0xfff2b0, 0xffd75e, "pillar", 9, { column: true }),
-  shadow: vfx(0x9a6ad8, 0x2a1840, "smoke", 9),
+  physical: fromColors("physical", "spark", 8),
+  fire: fromColors("fire", "ember", 12),
+  ice: fromColors("ice", "shard", 10),
+  lightning: fromColors("lightning", "bolt", 7, { jagged: true }),
+  poison: fromColors("poison", "bubble", 9),
+  wind: fromColors("wind", "gust", 7),
+  earth: fromColors("earth", "rock", 9),
+  holy: fromColors("holy", "pillar", 9, { column: true }),
+  shadow: fromColors("shadow", "smoke", 9),
   // 水不是元素（只是表面）；保留一組水花，若之後內容加入水元素可直接使用。
   water: vfx(0x4aa8ff, 0xd8f0ff, "splash", 10),
 };

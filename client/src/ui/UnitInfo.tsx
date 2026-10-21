@@ -3,6 +3,8 @@ import type { BattleView, StatusView, UnitView } from "../api/types";
 import { bombStatusText, TIME_BOMB } from "../battle/bombs";
 import { CHARGING, chargeStatusText } from "../battle/followup";
 import { facingText } from "../battle/facing";
+import { statusTile } from "../render/skillIcon";
+import { TipGlyph } from "./SkillIconView";
 import { stackName, statusName } from "../battle/glossary";
 import type { SkillNames } from "../battle/actions";
 import { remainingRounds, summonKind } from "../battle/summons";
@@ -69,7 +71,16 @@ export function UnitInfo({ unit, names, heroId, skills, view }: Props) {
         </tbody>
       </table>
       <div className="unit-line">
-        狀態：{unit.statuses.length === 0 ? "無" : unit.statuses.map((s) => statusText(s, skills)).join("、")}
+        狀態：
+        {unit.statuses.length === 0 ? (
+          "無"
+        ) : (
+          <span className="status-chips">
+            {unit.statuses.map((s, i) => (
+              <TipGlyph key={`${i}:${s.status_id}`} tile={statusTile(s.status_id)} text={statusText(s, skills)} />
+            ))}
+          </span>
+        )}
       </div>
       {stacks.length > 0 && (
         <div className="unit-line">層數：{stacks.map(([k, v]) => `${stackName(k)} ×${v}`).join("、")}</div>

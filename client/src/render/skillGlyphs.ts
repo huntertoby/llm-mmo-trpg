@@ -1,7 +1,8 @@
 // 組裝式技能圖示的底圖（Phase 3-17）：元素標誌與紋理、形狀主圖、骨架徽章、外框形狀。
 // 全部在 100×100 的座標系畫（呼叫端先縮放），只有 Canvas 2D 繪圖，沒有任何外部素材。
 // 不認得的元素＝紫色六角（預設）、不認得的形狀＝自身光環、不認得的骨架＝空心圓徽章，永遠畫得出來。
-// 元素色的主色與 `battle/vfxPalette.ts` 的 `ELEMENT_VFX` 同一組（另有底色深淺，見 `ELEMENT_ICON`）。
+// 元素色與 `battle/vfxPalette.ts` 的 `ELEMENT_VFX` 取自同一張 `ELEMENT_COLORS`。
+import { ELEMENT_COLORS } from "../battle/vfxPalette";
 
 export type Ctx = CanvasRenderingContext2D;
 
@@ -16,19 +17,11 @@ export interface ElementIcon {
   light: string;
 }
 
-/** 元素 → 圖示配色；鍵與 `ELEMENT_VFX` 相同（vitest 檢查）。 */
-export const ELEMENT_ICON: Readonly<Record<string, ElementIcon>> = {
-  physical: { name: "物理", accent: "#e8ebf0", dark: "#2c313b", light: "#7d8798" },
-  fire: { name: "火", accent: "#ffb23a", dark: "#4a1104", light: "#e8541a" },
-  ice: { name: "冰", accent: "#d8f6ff", dark: "#0b2f4e", light: "#3fa6d8" },
-  lightning: { name: "雷", accent: "#fff36b", dark: "#1d1d4a", light: "#5a5ac8" },
-  poison: { name: "毒", accent: "#b6f06a", dark: "#12320c", light: "#4f9a28" },
-  wind: { name: "風", accent: "#dcfff1", dark: "#0b3f3a", light: "#3fb59a" },
-  earth: { name: "大地", accent: "#f0c890", dark: "#2e1d0e", light: "#9a6a36" },
-  holy: { name: "聖光", accent: "#fff6c8", dark: "#5a3a06", light: "#e7b23a" },
-  shadow: { name: "暗影", accent: "#d2b0ff", dark: "#10071e", light: "#5a3590" },
-};
-/** 沒有元素（支援、位移類）或不認得的元素：紫色預設（`DEFAULT_VFX` 色系）。 */
+/** 元素 → 圖示配色；顏色與特效共用 `battle/vfxPalette.ts` 的 `ELEMENT_COLORS`（唯一來源）。 */
+export const ELEMENT_ICON: Readonly<Record<string, ElementIcon>> = Object.fromEntries(
+  Object.entries(ELEMENT_COLORS).map(([id, c]) => [id, { name: c.name, accent: c.accent, dark: c.dark, light: c.light }]),
+);
+
 export const DEFAULT_ELEMENT_ICON: ElementIcon = { name: "（無）", accent: "#e8e0ff", dark: "#221c44", light: "#6a5ad0" };
 /** 工坊還沒選元素時的中性色。 */
 export const NEUTRAL_ELEMENT_ICON: ElementIcon = { name: "（未選）", accent: "#c8ccd4", dark: "#23262d", light: "#4a4f5a" };

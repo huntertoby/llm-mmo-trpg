@@ -1,6 +1,8 @@
 // 戰鬥 HUD（設計文件 7.3）：固定顯示主角當下需要的資訊。
 import type { BattleView, StatusView, UnitView } from "../api/types";
 import { sourcePips } from "../battle/source";
+import { statusTile, surfaceTile } from "../render/skillIcon";
+import { TipGlyph } from "./SkillIconView";
 import { glossaryName, stackName, statusName, surfaceName } from "../battle/glossary";
 import type { SkillNames } from "../battle/actions";
 import { activationLine } from "../battle/activations";
@@ -49,6 +51,12 @@ export function surfaceUnder(view: BattleView, hero: UnitView): string {
   if (tile === undefined || tile.surface === "none") return "無";
   const left = tile.surface_remaining === null ? "" : `（${tile.surface_remaining} 輪）`;
   return `${surfaceName(tile.surface)}${left}`;
+}
+
+function SurfaceUnder({ view, hero }: { view: BattleView; hero: UnitView }) {
+  const tile = view.tiles.find((t) => t.x === hero.pos.x && t.y === hero.pos.y);
+  if (tile === undefined || tile.surface === "none") return <>無</>;
+  return <TipGlyph tile={surfaceTile(tile.surface)} text={surfaceUnder(view, hero)} />;
 }
 
 /** 一行版的主角狀態（窄螢幕，Phase 3-8）。 */
@@ -120,7 +128,7 @@ export function Hud({ view, hero, skills, compact = false }: Props) {
       </div>
       <div className="hud-line">
         <span className="muted">腳下表面：</span>
-        {surfaceUnder(view, hero)}
+        <SurfaceUnder view={view} hero={hero} />
       </div>
       <div className="hud-line">
         <span className="muted">層數：</span>
@@ -128,7 +136,15 @@ export function Hud({ view, hero, skills, compact = false }: Props) {
       </div>
       <div className="hud-line">
         <span className="muted">狀態：</span>
-        {hero.statuses.length === 0 ? "無" : hero.statuses.map(statusLine).join("、")}
+        {hero.statuses.length === 0 ? (
+          "無"
+        ) : (
+          <span className="status-chips">
+            {hero.statuses.map((s, i) => (
+              <TipGlyph key={`${i}:${s.status_id}`} tile={statusTile(s.status_id)} text={statusLine(s)} />
+            ))}
+          </span>
+        )}
       </div>
       {(hero.activations ?? []).length > 0 && (
         <div className="hud-line hud-activations" aria-label="生效中的傳說">

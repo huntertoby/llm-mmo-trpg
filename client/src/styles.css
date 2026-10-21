@@ -2192,3 +2192,152 @@ button.selected {
   gap: 8px;
   align-items: center;
 }
+
+/* ---- Phase 3-18a：組裝算式、部件說明框、緊湊浮動卡 ---- */
+.formula {
+  margin: 6px 0;
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+}
+
+.f-row {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: flex-start;
+  gap: 2px 3px;
+}
+
+.f-item {
+  display: inline-flex;
+  align-items: flex-start;
+  gap: 3px;
+}
+
+.f-plus {
+  margin-top: 6px;
+  font-size: 11px;
+  color: var(--muted);
+}
+
+.part-tip {
+  cursor: help;
+}
+
+.f-tile {
+  display: inline-flex;
+  flex-direction: column;
+  align-items: center;
+  width: 44px;
+  gap: 1px;
+}
+
+.f-tile canvas {
+  display: block;
+}
+
+.f-label {
+  max-width: 44px;
+  font-size: 10px;
+  line-height: 1.15;
+  text-align: center;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.f-linkrow {
+  display: block;
+  padding: 1px 0 1px 4px;
+  font-size: 11px;
+  color: #d8d8e8;
+}
+
+.f-extras {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 3px 10px;
+  margin-top: 3px;
+  padding-top: 4px;
+  border-top: 1px solid var(--panel-border);
+  font-size: 11px;
+}
+
+.f-extra {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+}
+
+.f-extra canvas, .tip-glyph canvas {
+  display: block;
+}
+
+.tip-glyph {
+  display: inline-flex;
+  align-items: center;
+  gap: 3px;
+  margin-right: 8px;
+}
+
+.status-chips {
+  display: inline-flex;
+  flex-wrap: wrap;
+  gap: 2px 4px;
+}
+
+.part-tip-box {
+  position: fixed;
+  z-index: 1000;
+  max-width: 240px;
+  padding: 6px 8px;
+  background: #1d1d2a;
+  border: 1px solid #ffffff55;
+  border-radius: 4px;
+  box-shadow: 0 4px 16px rgb(0 0 0 / 60%);
+  font-size: 12px;
+  line-height: 1.35;
+  pointer-events: none;
+}
+
+.part-tip-box.pinned {
+  pointer-events: auto;
+  border-color: #ffe14d;
+}
+
+.part-tip-cat {
+  font-size: 10px;
+  color: var(--muted);
+}
+
+.part-tip-name {
+  font-weight: 700;
+}
+
+.part-tip-text {
+  margin-top: 2px;
+  color: #d0d0dc;
+}
+
+/* 浮動卡要讓滑鼠移上去看部件說明，所以可以接收滑鼠事件 */
+.skill-card-float {
+  pointer-events: auto;
+}
+
+.skill-card.compact {
+  padding: 5px 7px;
+}
+
+.skill-card.compact .skill-card-head {
+  gap: 7px;
+}
+
+.skill-card.compact .skill-card-effects {
+  margin: 3px 0 0;
+  padding-left: 16px;
+  font-size: 11px;
+}
+
+.skill-card.compact .formula {
+  margin: 3px 0;
+}

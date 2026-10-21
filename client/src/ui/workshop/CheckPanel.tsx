@@ -2,7 +2,7 @@
 import type { BudgetLine, WorkshopCheck } from "../../api/types";
 import { budgetView, checkHeadline, missingStepNames, rarityName } from "../../workshop/state";
 import { SkillCardView } from "../SkillCardView";
-import { AssemblyRow, SkillIconView } from "../SkillIconView";
+import { AssemblyFormula, SkillIconView } from "../SkillIconView";
 
 function LinesTable({ lines }: { lines: BudgetLine[] }) {
   return (
@@ -117,7 +117,7 @@ export function CheckPanel({ check, pending }: { check: WorkshopCheck | null; pe
               <SkillIconView icon={check.icon} size={28} title="被動、反應等小圖示（28px）" />
             </div>
           </div>
-          <AssemblyRow icon={check.icon} />
+          <AssemblyFormula icon={check.icon} />
         </div>
       )}
       <div className={`ws-headline ${head.tone}`}>{head.text}</div>
