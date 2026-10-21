@@ -150,6 +150,15 @@ gamble: {hp_floor_permille: 300, low_hp_permille: 100}
 orders: {focus_permille: 1500, hold_weight: 20, retreat_weight: 15, protect_min: 12, environment_permille: 2000}
 # facing（Phase 3D-8d；初值未經模擬）：朝向與背刺的位置權重，敵我同一套（填入每個行為模式的 weights，模式自己列出的優先）。
 facing: {backstab: 4, back_exposed: 3}
+# objective_ai（Phase 3-22，玩法 #23；初值未經模擬，平衡階段再調）：撤離與守點戰的 AI 權重，敵我同一套，填入每個行為模式的 weights
+# （模式自己列出的優先）。只在撤離或守點的戰鬥生效，其他戰鬥完全不變：
+#   rush_exit    撤離戰，我方：離最近出口每一格的位置價值額外扣分（疊加在 objective 上）→ 朝出口
+#   intercept    撤離戰，敵方：離最近出口每一格的位置價值扣分 → 守在出口路線上攔截
+#   contest      守點戰，敵方：離最近守點格每一格額外扣分（疊加在 objective 上）→ 搶點
+#   hold_point   守點戰，我方：離守點超過 hold_radius 格的每一格扣分 → 守在點附近
+#   hold_radius  hold_point 與 hold_guard 的半徑（曼哈頓格數）
+#   hold_guard   守點戰，我方在守點 hold_radius 格內、6 格內有敵人時，守護（防禦）動作多加的分數 → 守住點
+objective_ai: {rush_exit: 6, intercept: 8, contest: 4, hold_point: 10, hold_radius: 2, hold_guard: 4}
 profiles:
   - id: brute
     name_zh: 莽夫

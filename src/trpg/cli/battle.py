@@ -178,6 +178,7 @@ def cmd_battle(
     ally_builds: list[str] | None = None,
     ai: str = "utility",
     weather: str | None = None,
+    objective: str | None = None,
     deploy: list[tuple[int, int]] | None = None,
     ally_commander: str | None = None,
     enemy_commander: str | None = None,
@@ -189,6 +190,11 @@ def cmd_battle(
         except UnknownBuildError as exc:
             print(f"錯誤：{exc}", file=sys.stderr)
             return 2
+    try:
+        chosen = None if objective is None else library.map(map_id).objective_for(objective)
+    except ValueError as exc:
+        print(f"錯誤：{exc}", file=sys.stderr)
+        return 2
     setup = build_setup(
         library,
         map_id,
@@ -196,6 +202,7 @@ def cmd_battle(
         enemies or default_enemies,
         max_rounds=rounds_max,
         weather=weather,
+        objective=chosen,
     )
     if deploy:
         try:

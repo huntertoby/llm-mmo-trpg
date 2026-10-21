@@ -171,3 +171,38 @@ def test_ally_build_rejects_unknown_builds_and_allies_together(
         capsys,
     )  # fmt: skip
     assert code == 2 and "--allies" in err
+
+
+@pytest.mark.parametrize(
+    ("map_id", "objective", "reasons"),
+    [
+        ("bridge_chasm", "escape", ("escaped", "escape_failed", "eliminate")),
+        ("swamp", "defend", ("defended", "point_lost", "eliminate")),
+    ],
+)
+def test_objective_battle_log_and_replay(
+    tmp_path: Path,
+    capsys: pytest.CaptureFixture[str],
+    map_id: str,
+    objective: str,
+    reasons: tuple[str, ...],
+) -> None:
+    """Phase 3-22：``--objective escape|defend`` 用地圖的 alt_objectives；紀錄可重播且一致。"""
+    log = tmp_path / f"{objective}.json"
+    argv = ["battle", "--map", map_id, "--seed", "5", "--objective", objective]
+    code, _, _ = _run([*argv, "--log-json", str(log)], capsys)
+    assert code == 0
+    setup = json.loads(log.read_text(encoding="utf-8"))["setup"]
+    assert setup["objective"]["kind"] == objective
+    assert setup["objective"]["tiles"]
+    code, out, _ = _run(["battle", "replay", str(log)], capsys)
+    assert code == 0 and "重播驗證通過" in out
+
+
+def test_objective_option_rejects_maps_without_the_data(
+    capsys: pytest.CaptureFixture[str],
+) -> None:
+    code, _, err = _run(
+        ["battle", "--map", "test_flat_6x6", "--seed", "1", "--objective", "escape"], capsys
+    )
+    assert code == 2 and "沒有 escape" in err
