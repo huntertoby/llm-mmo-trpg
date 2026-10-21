@@ -181,7 +181,7 @@ profiles:
     name_zh: 原地不動
     description_zh: 什麼都不做（靶場的木樁）。
     weights: {backstab: 0, back_exposed: 0}
-# run（Phase 3-20，玩法 #22；初值未經模擬，平衡階段再調）：AI 的跑步只在兩種情況考慮，其餘 0 分（不會跑）：
+# run（Phase 3-20，玩法 #22；初值未經模擬，平衡階段再調）：AI 的跑步只在移動點數用完（先走再跑）、且符合下列兩種情況時考慮，其餘 0 分（不會跑）：
 #   pursue_points         追擊：目前移動點數走不到攻擊距離，但跑步（+3 格）後能 → 這個分數（比防禦大、比大多數攻擊小）
 #   retreat_points        撤離：HP 低於 retreat_hp_permille‰ 且最近的敵人在 retreat_enemy_radius 格內、跑步後能離敵人更遠 → 這個分數
 run: {pursue_points: 6, retreat_points: 6, retreat_hp_permille: 350, retreat_enemy_radius: 4}

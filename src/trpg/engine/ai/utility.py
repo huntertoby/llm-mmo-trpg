@@ -1381,13 +1381,17 @@ def _run_tiles(state: BattleState, unit: UnitState, budget: int) -> list[XY]:
 
 def run_score(state: BattleState, unit: UnitState, rules: RunAiRules) -> Fraction:
     """跑步的分數（Phase 3-20）：只有追擊（目前走不到攻擊距離、跑步後走得到）與撤離（低血量、
-    敵人逼近、跑步後能離敵人更遠）兩種情況給分，其餘 0 分。跑步不移動，所以不跑完整 ``preview``。"""
+    敵人逼近、跑步後能離敵人更遠）兩種情況給分，其餘 0 分。跑步不移動，所以不跑完整 ``preview``。
+
+    只在移動點數用完時才考慮（先走、走完才跑：跑步的 +3 格不會因為先跑而更有效，先走也不會讓
+    走位評分被跑步搶走）；速度 0 ＝ 固定不動（木樁、圖騰），不跑。
+    """
     budget = available_move_budget(state, unit)
     enemies = _enemies(state, unit)
-    if unit.speed == 0 or budget is None or not enemies:  # 速度 0 ＝ 固定不動（木樁、圖騰）：不跑
+    if unit.speed == 0 or budget != 0 or not enemies:
         return Fraction(0)
-    now = _run_tiles(state, unit, budget)
-    after = _run_tiles(state, unit, budget + state.ruleset.core.run_move_bonus)
+    now = [unit.xy]
+    after = _run_tiles(state, unit, state.ruleset.core.run_move_bonus)
     if unit.hp * 1000 < rules.retreat_hp_permille * unit.max_hp:  # 低血量：只考慮撤離，不追擊
         if min(manhattan(unit.xy, e.xy) for e in enemies) > rules.retreat_enemy_radius:
             return Fraction(0)
