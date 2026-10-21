@@ -950,7 +950,8 @@ window.GearArt = (() => {
     if (rarity === "legendary") { ctx.lineWidth = 1; ctx.globalAlpha = 0.6; ctx.beginPath(); ctx.roundRect(6, 6, 52, 52, 6); ctx.stroke(); ctx.globalAlpha = 1; }
   }
 
-  function draw(ctx, item) {
+  /** small：顯示尺寸 ≤ 36px 時不畫關鍵字小圖樣（元素混色照留），避免糊成一團。 */
+  function draw(ctx, item, small = false) {
     const r = resolve(item);
     const P = palette(r);
     frame(ctx, r.rarity);
@@ -959,15 +960,17 @@ window.GearArt = (() => {
     const k = { sword: 1.15, dagger: 1.5, axe: 1.0, hammer: 1.1, spear: 1.05, bow: 1.15, staff: 1.1, gun: 1.15, longgun: 1.0, shotgun: 1.0, crossbow: 1.15, scythe: 1.05, dual_dagger: 1.3 }[r.kind] ?? 1;
     ctx.save(); ctx.beginPath(); ctx.roundRect(3, 3, 58, 58, 8); ctx.clip(); ctx.translate(32, 33); ctx.scale(k, k); ctx.translate(-32, -33);
     const spots = fn(ctx, r, P);
-    r.keywords.forEach((kw, i) => motif(ctx, kw, ...spots[i % spots.length]));
-    if (r.keywords.length === 1) motif(ctx, r.keywords[0], ...spots[1]);
+    if (!small) {
+      r.keywords.forEach((kw, i) => motif(ctx, kw, ...spots[i % spots.length]));
+      if (r.keywords.length === 1) motif(ctx, r.keywords[0], ...spots[1]);
+    }
     ctx.restore();
   }
   function icon(item, px = 64) {
     const cv = document.createElement("canvas");
     cv.width = px * 2; cv.height = px * 2; cv.style.width = `${px}px`; cv.style.height = `${px}px`;
     const ctx = cv.getContext("2d"); ctx.scale((px * 2) / 64, (px * 2) / 64); ctx.lineJoin = "round";
-    draw(ctx, item);
+    draw(ctx, item, px <= 36);
     return cv;
   }
   function describe(item) {
