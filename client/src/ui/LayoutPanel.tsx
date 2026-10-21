@@ -14,6 +14,9 @@ interface Props {
   /** 技能特效的畫面震動（Phase 3-12；另外存，不受「重設為預設」影響）。 */
   shake: boolean;
   onShake(on: boolean): void;
+  /** 格子上有單位時，地形資訊卡收起成一行（Phase 3-18b；另外存）。 */
+  collapseTile: boolean;
+  onCollapseTile(on: boolean): void;
 }
 
 function SliderRow({
@@ -50,7 +53,7 @@ function SliderRow({
   );
 }
 
-export function LayoutPanel({ prefs, limits, scale, narrow, onChange, onReset, shake, onShake }: Props) {
+export function LayoutPanel({ prefs, limits, scale, narrow, onChange, onReset, shake, onShake, collapseTile, onCollapseTile }: Props) {
   return (
     <div className="layout-panel" aria-label="版面設定">
       <div className="section-title">版面</div>
@@ -92,6 +95,10 @@ export function LayoutPanel({ prefs, limits, scale, narrow, onChange, onReset, s
       <label className="layout-check">
         <input type="checkbox" checked={shake} onChange={(e) => onShake(e.target.checked)} />
         <span>技能特效的畫面震動</span>
+      </label>
+      <label className="layout-check">
+        <input type="checkbox" checked={collapseTile} onChange={(e) => onCollapseTile(e.target.checked)} />
+        <span>格子上有單位時，地形資訊卡只留一行</span>
       </label>
       <div className="layout-actions">
         <button type="button" disabled={prefs.zoom === null} onClick={() => onChange({ zoom: null })}>
