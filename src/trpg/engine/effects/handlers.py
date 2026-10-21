@@ -393,7 +393,8 @@ def _heal(ctx: Ctx, effect: EffectBase) -> list[EventBase]:
         0,
         ((sum(rolls) + effect.flat) * PERMILLE + effect.scaled_permille)
         * received
-        // (PERMILLE * PERMILLE),
+        * effect.multiplier_permille
+        // (PERMILLE * PERMILLE * PERMILLE),
     )
     hp_before = unit.hp
     unit.hp = min(unit.max_hp, unit.hp + amount)

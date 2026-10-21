@@ -157,6 +157,9 @@ modifier:
     grant_pierce: 1200    # 技能獲得穿透（3C-5b；命中前就生效；每次使用的價值，3 次 ≈ 3.6 點）
     area_delta: 1400      # 範圍 +1（3D-3）：基準傷害 7 × 直線每格的形狀倍率加成 200‰
     allow_self_target: 2800   # 治療、護盾、增益類技能也包含自己（3D-3；約半個小治療）
+    summon_hp_per_100: 500    # 召喚物最大 HP 每 +10%（3-24b1；召喚物約 14 HP，每 +10% ≈ 1.4 HP；初值，未經模擬）
+    summon_attack_die: 1200   # 召喚物攻擊每多 1 顆傷害骰（3-24b1；初值，未經模擬）
+    # heal_permille（3-24b1）不在這裡：基準武器傷害 × ‰（同 damage_permille，初值，未經模擬）
     # shape_to（3D-3）不在這裡：基準傷害 × 轉換前後的形狀倍率差（skill_shapes.yaml），單體→直線 ≈ 2.8、單體→連鎖 ≈ 1.75、直線→錐形 ≈ 1.4
 
 # 改寫規則型原語（Phase 3C-4a 起：grant_ap、reset_cooldown、cheat_death）

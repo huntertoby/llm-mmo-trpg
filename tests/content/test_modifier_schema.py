@@ -61,6 +61,9 @@ VALID_CHANGES: dict[str, dict[str, Any]] = {
     "area_delta": rule({"skill_tags": ["fire"]}, {"area_delta": 1}),
     "shape_to": rule({"skill_tags": ["fire"]}, {"shape_to": "line"}),
     "allow_self_target": rule({"skill_tags": ["heal"]}, {"allow_self_target": True}),
+    "heal_permille": rule({"skill_tags": ["heal"]}, {"heal_permille": 150}),
+    "summon_hp_permille": rule({"skill_tags": ["summon"]}, {"summon_hp_permille": 200}),
+    "summon_attack_dice": rule({"skill_tags": ["summon"]}, {"summon_attack_dice": 1}),
 }
 
 

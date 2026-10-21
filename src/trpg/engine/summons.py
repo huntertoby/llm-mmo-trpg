@@ -16,7 +16,8 @@
 
 from __future__ import annotations
 
-from trpg.content.battle import TotemSpec
+from trpg.content.battle import Dice, TotemSpec, WeaponDef
+from trpg.engine import modifiers
 from trpg.engine.context import Ctx
 from trpg.engine.effects import execute
 from trpg.engine.effects.models import ApplyStatusEffect
@@ -26,6 +27,7 @@ from trpg.engine.lifecycle import dismiss_summon, make_unit, summons_of
 from trpg.engine.rules.geometry import XY, manhattan
 from trpg.engine.skills.targeting import summon_site_problem
 from trpg.engine.state import BattleState, UnitState
+from trpg.shared.rng import PERMILLE
 from trpg.shared.types import Pos, UnitId
 
 __all__ = ["expire_summons", "pulse_totem", "summon_unit", "totem_of"]
@@ -47,6 +49,32 @@ def _insert_in_order(state: BattleState, uid: UnitId, index: int) -> None:
     # 插在目前位置之前（或正好插在行動者的位置）時，目前位置往後移一格，維持指向同一個單位
     if index < state.turn_pos or (index == state.turn_pos and state.active_unit is not None):
         state.turn_pos += 1
+
+
+def _skill_use(state: BattleState, skill_id: str) -> modifiers.Use | None:
+    """召喚技能的修正用途；技能不存在（例如測試用的假 ID）時為 ``None``。"""
+    try:
+        return modifiers.skill_use(state.ruleset.skill_def(skill_id))
+    except KeyError:
+        return None
+
+
+def _hp_permille(state: BattleState, owner: UnitState, skill_id: str) -> int:
+    """召喚者的修正規則 ``summon_hp_permille``：召喚物最大 HP 倍率（‰；Phase 3-24b1）。"""
+    use = _skill_use(state, skill_id)
+    return PERMILLE if use is None else modifiers.summon_hp_permille(state, owner, use)
+
+
+def _empowered_weapon(
+    state: BattleState, owner: UnitState, skill_id: str, weapon: WeaponDef
+) -> WeaponDef:
+    """召喚者的修正規則 ``summon_attack_dice``：召喚物武器的傷害骰多幾顆（Phase 3-24b1）。"""
+    use = _skill_use(state, skill_id)
+    extra = 0 if use is None else modifiers.summon_attack_dice(state, owner, use)
+    if extra <= 0:
+        return weapon
+    dice = Dice(count=weapon.dice.count + extra, sides=weapon.dice.sides)
+    return weapon.model_copy(update={"dice": dice})
 
 
 def summon_unit(  # noqa: PLR0917
@@ -81,10 +109,11 @@ def summon_unit(  # noqa: PLR0917
         events += dismiss_summon(ctx, existing.pop(0), "limit")
     uid = next_unit_id(state)
     same = sum(1 for u in state.units.values() if u.template_id == template_id)
+    weapon = _empowered_weapon(state, owner, skill_id, summon.weapon)
     unit = make_unit(
         uid,
         template=summon.template,
-        weapon=summon.weapon,
+        weapon=weapon,
         team=owner.team,
         pos=Pos(x=xy[0], y=xy[1]),
         name=f"{summon.template.name_zh}{same + 1}",
@@ -92,6 +121,8 @@ def summon_unit(  # noqa: PLR0917
         facing=owner.facing,  # 召喚物與召喚者同向（Phase 3D-8d）
     )
     unit.owner_id = owner.id
+    unit.max_hp = unit.max_hp * _hp_permille(state, owner, skill_id) // PERMILLE
+    unit.hp = unit.max_hp
     unit.summon_expires_round = state.round + duration
     unit.initiative = owner.initiative  # 不擲先攻：顯示用，順序由插入位置決定
     state.units[uid] = unit

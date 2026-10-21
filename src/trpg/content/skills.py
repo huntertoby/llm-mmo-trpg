@@ -1427,6 +1427,9 @@ MODIFIER_CHANGES: tuple[str, ...] = (
     "area_delta",
     "shape_to",
     "allow_self_target",
+    "heal_permille",
+    "summon_hp_permille",
+    "summon_attack_dice",
 )
 """``change`` 的種類（每條規則恰好一種）。"""
 
@@ -1450,12 +1453,25 @@ CHANGE_TARGETS: dict[str, frozenset[str]] = {
     "area_delta": frozenset({"all_attacks", "all_skills", "skill_tags"}),
     "shape_to": frozenset({"all_attacks", "all_skills", "skill_tags"}),
     "allow_self_target": _SKILL_TARGETS,
+    "heal_permille": _SKILL_TARGETS,
+    "summon_hp_permille": _SKILL_TARGETS,
+    "summon_attack_dice": _SKILL_TARGETS,
 }
 """每種 ``change`` 可以套用的對象（``applies_to`` 的每一項都必須在內）：推擊、絆倒、互動沒有傷害與
 命中骰，基本動作沒有冷卻與標籤。"""
 
 SELF_ONLY_CHANGES: frozenset[str] = frozenset(
-    {"ap_delta", "range_delta", "add_element", "add_tags", "grant_pierce", *SHAPE_CHANGES}
+    {
+        "ap_delta",
+        "range_delta",
+        "add_element",
+        "add_tags",
+        "grant_pierce",
+        "heal_permille",
+        "summon_hp_permille",
+        "summon_attack_dice",
+        *SHAPE_CHANGES,
+    }
 )
 """在選目標之前就要決定的修正：條件只能看持有者自己（``self_hp_below``）或省略。"""
 
@@ -1555,6 +1571,11 @@ class ModifierChange(ContentModel):
     - ``allow_self_target``（3D-3，只能是 ``true``）：治療、護盾、增益類技能（有對友方生效的效果）
       的影響範圍也包含施放者自己（單體形狀本來就能選自己；直線、錐形等形狀的範圍不含施放者，
       這條規則把他算進去）。
+    - ``heal_permille``（3-24b1，8.21.4.2）：你的治療量 ±‰（技能的治療與聖光雙效的治療；
+      −500～＋1000，不可為 0；多條規則加總後套用一次，結果下限 0）。
+    - ``summon_hp_permille``（3-24b1）：你召喚出來的召喚物最大 HP +n‰（1～1000；召喚時結算）。
+    - ``summon_attack_dice``（3-24b1）：你召喚出來的召喚物攻擊傷害骰多 +n 顆（只能是 1；召喚時
+      結算）。
     """
 
     damage_permille: int | None = Field(default=None, ge=-500, le=1000)
@@ -1570,6 +1591,9 @@ class ModifierChange(ContentModel):
     area_delta: int | None = Field(default=None, ge=1, le=1)
     shape_to: Literal["line", "chain", "cone"] | None = None
     allow_self_target: bool | None = None
+    heal_permille: int | None = Field(default=None, ge=-500, le=1000)
+    summon_hp_permille: int | None = Field(default=None, ge=1, le=1000)
+    summon_attack_dice: int | None = Field(default=None, ge=1, le=1)
 
     @model_validator(mode="after")
     def _check(self) -> ModifierChange:
@@ -1579,7 +1603,10 @@ class ModifierChange(ContentModel):
             raise ValueError(f"change 必須恰好一種（{'、'.join(MODIFIER_CHANGES)}），收到 {got}")
         kind = given[0]
         value = getattr(self, kind)
-        if kind in ("damage_permille", "hit_bonus", "ap_delta", "range_delta") and value == 0:
+        if (
+            kind in ("damage_permille", "hit_bonus", "ap_delta", "range_delta", "heal_permille")
+            and value == 0
+        ):
             raise ValueError(f"change.{kind} 不可為 0")
         if kind == "add_element" and value is Element.PHYSICAL:
             raise ValueError("change.add_element 不可是物理（physical）")

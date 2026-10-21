@@ -120,6 +120,8 @@ class HealEffect(EffectBase):
     """已經擲好的骰值（Phase 3D-8a 聖光雙效）；省略時依 ``dice`` 擲骰。"""
     cause: Literal["heal", "lifesteal"] = "heal"
     """``lifesteal``：吸血（Phase 3D-8a；``flat`` 為回復量）。"""
+    multiplier_permille: int = 1000
+    """施放者的治療量倍率（‰；修正規則 ``heal_permille``，Phase 3-24b1）；1000 為不變。"""
 
     def sort_target(self) -> str:
         return self.target_id

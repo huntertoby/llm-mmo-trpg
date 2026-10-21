@@ -136,6 +136,9 @@ _CHANGE_TEXT: dict[str, str] = {
     "area_delta": "範圍 +1",
     "shape_to": "形狀轉換",
     "allow_self_target": "範圍包含自己",
+    "heal_permille": "治療量 ±‰",
+    "summon_hp_permille": "召喚物最大 HP +‰",
+    "summon_attack_dice": "召喚物攻擊 +1 顆傷害骰",
 }
 _TRAP_SHAPES = ("single", "cross", "square3")
 """陷阱觸發範圍可用的形狀（``skill_budget.yaml`` 的陷阱預算以這三種形狀的倍率計算）。"""

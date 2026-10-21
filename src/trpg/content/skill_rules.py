@@ -128,6 +128,11 @@ class ModifierPoints(ContentModel):
     """技能獲得穿透（Phase 3C-5b；每次使用的價值）。"""
     area_delta: int = Field(default=0, ge=0)
     """範圍型形狀大小 +1（Phase 3D-3；每次使用的價值，約為基準傷害 × 直線每格的形狀倍率加成）。"""
+    summon_hp_per_100: int = Field(default=0, ge=0)
+    """召喚物最大 HP 每 +100‰（Phase 3-24b1；每次使用的價值）。"""
+    summon_attack_die: int = Field(default=0, ge=0)
+    """召喚物攻擊每多 1 顆傷害骰（Phase 3-24b1；每次使用的價值）。``heal_permille`` 沒有列在這裡：
+    與 ``damage_permille`` 一樣以基準武器傷害 × ‰ 計算。"""
     allow_self_target: int = Field(default=0, ge=0)
     """治療、護盾、增益類技能也包含自己（Phase 3D-3；每次使用的價值）。``shape_to`` 沒有列在這裡：
     依 ``skill_shapes.yaml`` 的形狀倍率差 × 基準武器傷害計算。"""

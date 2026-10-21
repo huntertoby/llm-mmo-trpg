@@ -49,6 +49,7 @@ __all__ = [
     "displace_split",
     "effective_tags",
     "grants_pierce",
+    "heal_permille",
     "hit_bonus",
     "is_attack_skill",
     "on_hit_rules",
@@ -57,6 +58,8 @@ __all__ = [
     "skill_has_fire",
     "skill_is_fiery",
     "skill_use",
+    "summon_attack_dice",
+    "summon_hp_permille",
     "unit_rules",
 ]
 
@@ -196,6 +199,22 @@ def hit_bonus(state: BattleState, unit: UnitState, use: Use, subject: Subject) -
 def damage_permille(state: BattleState, unit: UnitState, use: Use, subject: Subject) -> int:
     """對 ``subject`` 的傷害倍率（‰）：1000 ＋ ``damage_permille`` 加總，下限 0。"""
     return max(0, _PERMILLE + _sum_for(state, unit, use, "damage_permille", subject))
+
+
+def heal_permille(state: BattleState, unit: UnitState, use: Use) -> int:
+    """你的治療量倍率（‰）：1000 ＋ ``heal_permille`` 加總，下限 0（Phase 3-24b1；技能的治療與聖光
+    雙效的治療，不含狀態與表面的回合開始治療、吸血）。"""
+    return max(0, _PERMILLE + _sum_self(state, unit, use, "heal_permille"))
+
+
+def summon_hp_permille(state: BattleState, unit: UnitState, use: Use) -> int:
+    """你召喚的召喚物最大 HP 倍率（‰）：1000 ＋ ``summon_hp_permille`` 加總（召喚時結算）。"""
+    return _PERMILLE + _sum_self(state, unit, use, "summon_hp_permille")
+
+
+def summon_attack_dice(state: BattleState, unit: UnitState, use: Use) -> int:
+    """你召喚的召喚物攻擊傷害骰多出的顆數（``summon_attack_dice`` 加總；召喚時結算）。"""
+    return _sum_self(state, unit, use, "summon_attack_dice")
 
 
 def damage_element(state: BattleState, unit: UnitState, use: Use, base: Element) -> Element:
