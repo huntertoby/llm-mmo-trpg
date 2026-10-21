@@ -113,6 +113,47 @@ describe("vfxFor: shape × ranged / melee", () => {
   });
 });
 
+describe("vfxFor: 形狀讀 icon.segments[].shape_id（Phase 3-17）", () => {
+  const seg = (shape_id: string | null, skeleton = "strike") => ({ skeleton, shape_id, range: null, elements: [], effects: [] });
+  const iconCard = (segments: ReturnType<typeof seg>[], shape = "單體（射程 1）"): SkillCard =>
+    ({ id: "skill_x", shape, skeleton: "strike", icon: { segments } }) as unknown as SkillCard;
+  const followup = (tiles: Pos[], origin: Pos) => ({ seq: 3, round: 1, type: "skill_followup", unit_id: CASTER, skill_id: "skill_x", origin, tiles });
+
+  it("shape_id 優先於中文一句話；中文名只在沒有 icon 時當退回", () => {
+    expect(shapeIdOf(iconCard([seg("cone")], "單體（射程 1）"))).toBe("cone");
+    expect(shapeIdOf({ shape: "錐形（大小 2）" })).toBe("cone");
+    expect(shapeIdOf({ shape: "錐形（大小 2）", icon: { segments: [seg("line")] } as unknown as SkillCard["icon"] })).toBe("line");
+  });
+
+  it("不認得或還沒選的 shape_id 回傳 null（交給格子推斷），不丟例外", () => {
+    expect(shapeIdOf(iconCard([seg("tesseract")]))).toBeNull();
+    expect(shapeIdOf(iconCard([seg(null)]))).toBeNull();
+    expect(shapeIdOf(iconCard([seg("cone")]), 1)).toBeNull();
+    expect(shapeIdOf({ shape: "錐形（大小 2）" }, 1)).toBeNull();
+  });
+
+  it("第一段用 segments[0]，第二段（skill_followup）用 segments[1]", () => {
+    const c = { skill_x: iconCard([seg("single"), seg("cone", "area")]) };
+    const first = [used([at(3, 2)]), damage(FOE, "fire")];
+    const second = [followup([at(5, 2), at(6, 1), at(6, 2), at(6, 3)], at(5, 2)), damage(FOE, "fire")];
+    const v = vfxFor([...first, ...second], view({ [CASTER]: HERO_AT, [FOE]: at(6, 2) }), c);
+    expect(v.casts.map((x) => x.kind)).toEqual(["slash", "cone"]);
+  });
+
+  it("舊資料（沒有 icon）的第二段仍由格子推斷", () => {
+    const old = { skill_x: card("單體（射程 1）") };
+    const v = vfxFor([followup([at(5, 2), at(5, 3), at(6, 2), at(6, 3)], at(5, 2)), damage(FOE, "fire")], view({ [CASTER]: HERO_AT, [FOE]: at(5, 2) }), old);
+    expect(v.casts[0]!.kind).toBe("area");
+  });
+
+  it("單體的遠近仍由實際距離決定", () => {
+    const c = { skill_x: iconCard([seg("single")]) };
+    const near = vfxFor([used([at(3, 2)]), damage(FOE, "fire")], view({ [CASTER]: HERO_AT, [FOE]: at(3, 2) }), c);
+    const far = vfxFor([used([at(7, 2)]), damage(FOE, "fire")], view({ [CASTER]: HERO_AT, [FOE]: at(7, 2) }), c);
+    expect([near.casts[0]!.kind, far.casts[0]!.kind]).toEqual(["slash", "projectile"]);
+  });
+});
+
 describe("vfxFor: elements, crits and defaults", () => {
   const ELEMENTS = ["physical", "fire", "ice", "lightning", "poison", "wind", "earth", "holy", "shadow"];
 

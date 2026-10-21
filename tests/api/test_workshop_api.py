@@ -50,6 +50,19 @@ def test_check_endpoint_returns_budget_rarity_and_card(client: TestClient) -> No
     assert any(p["rule"] == "rarity.primitive" for p in bad["problems"])
 
 
+def test_check_endpoint_returns_an_icon_even_for_partial_drafts(client: TestClient) -> None:
+    full = client.post("/api/workshop/check", json={"skill": CHARGE}).json()
+    assert full["icon"]["partial"] is False
+    assert full["icon"] == full["card"]["icon"]
+    assert [e["type"] for e in full["icon"]["segments"][0]["effects"]] == ["dash", "damage", "push"]
+    empty = client.post("/api/workshop/check", json={"skill": {}}).json()
+    assert empty["card"] is None and empty["icon"]["partial"] is True
+    assert empty["icon"]["segments"][0]["shape_id"] is None
+    half = {k: v for k, v in CHARGE.items() if k in ("skeleton", "shape")}
+    icon = client.post("/api/workshop/check", json={"skill": half}).json()["icon"]
+    assert icon["partial"] is True and icon["segments"][0]["shape_id"] == "single"
+
+
 def test_random_endpoint_is_deterministic_and_legal(client: TestClient) -> None:
     request = {"seed": 42, "tier": 2, "skeleton": "strike"}
     first = client.post("/api/workshop/random", json=request).json()

@@ -1397,6 +1397,63 @@ export interface components {
             outcome: string;
             placed_pos: components["schemas"]["XY"] | null;
         };
+        /** IconCondition */
+        IconCondition: {
+            /** Id */
+            id: string;
+            /** Status */
+            status?: string | null;
+        };
+        /** @enum {string} */
+        IconCost: "source" | "gamble" | "self" | "stacks" | "once" | "delay";
+        /**
+         * IconEffect
+         * @description 一個效果：原語代碼，附加狀態／表面／條件時帶上對應代碼。
+         */
+        IconEffect: {
+            /** Type */
+            type: string;
+            /** Status */
+            status?: string | null;
+            /** Surface */
+            surface?: string | null;
+            /** Condition */
+            condition?: string | null;
+        };
+        /** IconModifier */
+        IconModifier: {
+            /** Applies To */
+            applies_to: {
+                [key: string]: components["schemas"]["JsonValue"];
+            };
+            /** Changes */
+            changes: components["schemas"]["IconModifierChange"][];
+        };
+        /** IconModifierChange */
+        IconModifierChange: {
+            /** Key */
+            key: string;
+            value?: components["schemas"]["JsonValue"];
+        };
+        /**
+         * IconSegment
+         * @description 技能的一段（複合技能有兩段）。
+         */
+        IconSegment: {
+            /** Skeleton */
+            skeleton: string | null;
+            /** Shape Id */
+            shape_id: string | null;
+            /** Range */
+            range: number | null;
+            /**
+             * Elements
+             * @default []
+             */
+            elements: string[];
+            /** Effects */
+            effects: components["schemas"]["IconEffect"][];
+        };
         /**
          * IgnoredOrder
          * @description 被忽略的指令與原因。``scope`` 為 ``"team"`` 或單位 ID。
@@ -1457,6 +1514,7 @@ export interface components {
             reason: string | null;
             to_pos: components["schemas"]["Pos"] | null;
         };
+        JsonValue: unknown;
         /**
          * LeaveChoice
          * @description 離開營火（有候選沒選時視為放棄）。
@@ -2182,6 +2240,40 @@ export interface components {
             followup?: string | null;
             /** Followup When */
             followup_when?: string | null;
+            icon: components["schemas"]["SkillIcon"];
+        };
+        /**
+         * SkillIcon
+         * @description 組裝式圖示需要的全部欄位（由 :func:`icon_of` 推導）。
+         *
+         *     ``kind``、``rarity``、``weapon_req`` 為技能定義的代碼；草稿缺漏時退回
+         *     ``active``／``common``／``any``。``partial`` 為真表示這是組到一半的草稿（沒有形狀或沒有效果），
+         *     前端據此把還沒決定的部件畫成「（未選）」。
+         */
+        SkillIcon: {
+            /** Kind */
+            kind: string;
+            /** Rarity */
+            rarity: string;
+            /** Elements */
+            elements: string[];
+            /** Weapon Req */
+            weapon_req: string;
+            /** Segments */
+            segments: components["schemas"]["IconSegment"][];
+            /** Link */
+            link: string | null;
+            condition: components["schemas"]["IconCondition"] | null;
+            /** Costs */
+            costs: components["schemas"]["IconCost"][];
+            /** Trigger */
+            trigger: string | null;
+            modifier: components["schemas"]["IconModifier"] | null;
+            /**
+             * Partial
+             * @default false
+             */
+            partial: boolean;
         };
         /** @enum {string} */
         SkillRarity: "common" | "rare" | "epic" | "legendary";
@@ -2686,6 +2778,7 @@ export interface components {
                 [key: string]: unknown;
             } | null;
             card?: components["schemas"]["SkillCard"] | null;
+            icon: components["schemas"]["SkillIcon"];
         };
         /** WorkshopExport */
         WorkshopExport: {

@@ -3453,6 +3453,194 @@
         "title": "HurlOut",
         "description": "預覽中的物件投擲（Phase 3C-5b）：``outcome`` 為 exploded／shattered／placed／lost。"
       },
+      "IconCondition": {
+        "properties": {
+          "id": {
+            "type": "string",
+            "title": "Id"
+          },
+          "status": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Status"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "id"
+        ],
+        "title": "IconCondition"
+      },
+      "IconCost": {
+        "type": "string",
+        "enum": [
+          "source",
+          "gamble",
+          "self",
+          "stacks",
+          "once",
+          "delay"
+        ]
+      },
+      "IconEffect": {
+        "properties": {
+          "type": {
+            "type": "string",
+            "title": "Type"
+          },
+          "status": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Status"
+          },
+          "surface": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Surface"
+          },
+          "condition": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Condition"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "type"
+        ],
+        "title": "IconEffect",
+        "description": "一個效果：原語代碼，附加狀態／表面／條件時帶上對應代碼。"
+      },
+      "IconModifier": {
+        "properties": {
+          "applies_to": {
+            "additionalProperties": {
+              "$ref": "#/components/schemas/JsonValue"
+            },
+            "type": "object",
+            "title": "Applies To"
+          },
+          "changes": {
+            "items": {
+              "$ref": "#/components/schemas/IconModifierChange"
+            },
+            "type": "array",
+            "title": "Changes"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "applies_to",
+          "changes"
+        ],
+        "title": "IconModifier"
+      },
+      "IconModifierChange": {
+        "properties": {
+          "key": {
+            "type": "string",
+            "title": "Key"
+          },
+          "value": {
+            "$ref": "#/components/schemas/JsonValue"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "key"
+        ],
+        "title": "IconModifierChange"
+      },
+      "IconSegment": {
+        "properties": {
+          "skeleton": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Skeleton"
+          },
+          "shape_id": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Shape Id"
+          },
+          "range": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Range"
+          },
+          "elements": {
+            "items": {
+              "type": "string"
+            },
+            "type": "array",
+            "title": "Elements",
+            "default": []
+          },
+          "effects": {
+            "items": {
+              "$ref": "#/components/schemas/IconEffect"
+            },
+            "type": "array",
+            "title": "Effects"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "skeleton",
+          "shape_id",
+          "range",
+          "effects"
+        ],
+        "title": "IconSegment",
+        "description": "技能的一段（複合技能有兩段）。"
+      },
       "IgnoredOrder": {
         "properties": {
           "scope": {
@@ -3595,6 +3783,7 @@
         "title": "InteractOptionOut",
         "description": "主角相鄰的可推動物件的一種互動（推、往左撥、往右撥）及其是否合法（Phase 3C-1）。\n``legal_actions`` 只列合法的；這裡連不合法的也列出，讓介面灰掉並顯示原因。"
       },
+      "JsonValue": {},
       "LeaveChoice": {
         "properties": {
           "kind": {
@@ -5448,6 +5637,9 @@
               }
             ],
             "title": "Followup When"
+          },
+          "icon": {
+            "$ref": "#/components/schemas/SkillIcon"
           }
         },
         "additionalProperties": false,
@@ -5479,10 +5671,111 @@
           "category_id",
           "weapon_req_id",
           "scaling_attrs",
-          "mastery_id"
+          "mastery_id",
+          "icon"
         ],
         "title": "SkillCard",
         "description": "一張技能卡片的顯示內容（繁體中文文字，給網頁技能卡片用）。\n\n``*_id`` 與 ``scaling_attrs`` 是對應的英文代碼（Phase 3-2；給前端上色、排序與篩選用）。"
+      },
+      "SkillIcon": {
+        "properties": {
+          "kind": {
+            "type": "string",
+            "title": "Kind"
+          },
+          "rarity": {
+            "type": "string",
+            "title": "Rarity"
+          },
+          "elements": {
+            "items": {
+              "type": "string"
+            },
+            "type": "array",
+            "title": "Elements"
+          },
+          "weapon_req": {
+            "type": "string",
+            "title": "Weapon Req"
+          },
+          "segments": {
+            "items": {
+              "$ref": "#/components/schemas/IconSegment"
+            },
+            "type": "array",
+            "title": "Segments"
+          },
+          "link": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Link"
+          },
+          "condition": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/IconCondition"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "costs": {
+            "items": {
+              "$ref": "#/components/schemas/IconCost"
+            },
+            "type": "array",
+            "title": "Costs"
+          },
+          "trigger": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Trigger"
+          },
+          "modifier": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/IconModifier"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "partial": {
+            "type": "boolean",
+            "title": "Partial",
+            "default": false
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "kind",
+          "rarity",
+          "elements",
+          "weapon_req",
+          "segments",
+          "link",
+          "condition",
+          "costs",
+          "trigger",
+          "modifier"
+        ],
+        "title": "SkillIcon",
+        "description": "組裝式圖示需要的全部欄位（由 :func:`icon_of` 推導）。\n\n``kind``、``rarity``、``weapon_req`` 為技能定義的代碼；草稿缺漏時退回\n``active``／``common``／``any``。``partial`` 為真表示這是組到一半的草稿（沒有形狀或沒有效果），\n前端據此把還沒決定的部件畫成「（未選）」。"
       },
       "SkillRarity": {
         "type": "string",
@@ -6937,6 +7230,9 @@
                 "type": "null"
               }
             ]
+          },
+          "icon": {
+            "$ref": "#/components/schemas/SkillIcon"
           }
         },
         "additionalProperties": false,
@@ -6949,7 +7245,8 @@
           "budget",
           "minimum_rarity",
           "rarity_reasons",
-          "skill"
+          "skill",
+          "icon"
         ],
         "title": "WorkshopCheck",
         "description": ":class:`~trpg.skillgen.draft_check.DraftCheck` ＋ 技能卡片（完整且通過 schema 時才有）。"

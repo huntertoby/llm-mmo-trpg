@@ -12,6 +12,7 @@ from pydantic import BaseModel, ConfigDict, Field
 
 from trpg.api.schemas import MapSummary
 from trpg.content.skills import SkillRarity
+from trpg.narrative.skill_icon import SkillIcon
 from trpg.narrative.skills import SkillCard
 from trpg.shared.rng import MASK64
 from trpg.skillgen.draft_check import DraftCheck
@@ -41,6 +42,8 @@ class WorkshopCheck(DraftCheck):
     """:class:`~trpg.skillgen.draft_check.DraftCheck` ＋ 技能卡片（完整且通過 schema 時才有）。"""
 
     card: SkillCard | None = None
+    icon: SkillIcon
+    """組裝式圖示（Phase 3-17）：草稿組到哪一步就有哪些部件（沒完成也有，``partial`` 為真）。"""
 
 
 class WorkshopRandomRequest(_ApiModel):

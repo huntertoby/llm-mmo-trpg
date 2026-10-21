@@ -2,6 +2,7 @@
 import type { BudgetLine, WorkshopCheck } from "../../api/types";
 import { budgetView, checkHeadline, missingStepNames, rarityName } from "../../workshop/state";
 import { SkillCardView } from "../SkillCardView";
+import { AssemblyRow, SkillIconView } from "../SkillIconView";
 
 function LinesTable({ lines }: { lines: BudgetLine[] }) {
   return (
@@ -106,6 +107,19 @@ export function CheckPanel({ check, pending }: { check: WorkshopCheck | null; pe
         即時檢查
         {pending && <span className="muted small">（更新中……）</span>}
       </div>
+      {check?.icon != null && (
+        <div className="ws-icon-preview">
+          <div className="section-title">技能圖示（每完成一步，多一個部件）</div>
+          <div className="ws-preview">
+            <SkillIconView icon={check.icon} size={96} />
+            <div className="ws-preview-sizes">
+              <SkillIconView icon={check.icon} size={40} title="技能列的大小（40px）" />
+              <SkillIconView icon={check.icon} size={28} title="被動、反應等小圖示（28px）" />
+            </div>
+          </div>
+          <AssemblyRow icon={check.icon} />
+        </div>
+      )}
       <div className={`ws-headline ${head.tone}`}>{head.text}</div>
       {missing.length > 0 && <div className="small">還沒填完：{missing.join("、")}</div>}
       {check !== null && <BudgetBar check={check} />}
