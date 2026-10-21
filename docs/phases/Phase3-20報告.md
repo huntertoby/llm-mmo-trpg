@@ -55,7 +55,7 @@ AI 現在會跑步，同種子的整場 AI 對戰軌跡改變，下列依特定�
 
 結果見 `check.py` 輸出（最後一次）：
 
-- `uv run python scripts/check.py`：第一次執行時 pytest 有 2 項失敗（`test_ai_deadlock` 的弓手對峙、`test_event_filter` 的陷阱整場），原因是 AI 在移動點數還沒用完時就選擇跑步（`Run` 搶在 `Move` 前），已改成「移動點數用完才考慮跑步」並重新釘種子；修正後全部 pytest（`uv run pytest -q tests -n auto`）3315 項通過、ruff／format／mypy／lint-imports／client typecheck／vitest 通過（最後會再完整執行一次 `check.py`，結果記於 commit 後的驗收註記）。
+- `uv run python scripts/check.py`：第一次執行時 pytest 有 2 項失敗（`test_ai_deadlock` 的弓手對峙、`test_event_filter` 的陷阱整場），原因是 AI 在移動點數還沒用完時就選擇跑步（`Run` 搶在 `Move` 前），已改成「移動點數用完才考慮跑步」並重新釘種子；修正後全部 pytest（`uv run pytest -q tests -n auto`）3315 項通過、ruff／format／mypy／lint-imports／client typecheck／vitest 通過；修正後再完整執行一次 `check.py`：全部檢查通過（ruff、format、mypy、lint-imports、pytest、client install/typecheck/test）。
 - `corepack pnpm -C client build`：成功（僅有既有的 chunk 大於 500 kB 警告）。
 - `uv run ruff check .`、`ruff format --check .`、`uv run mypy`（429 個檔案）、`lint-imports`：通過。
 
