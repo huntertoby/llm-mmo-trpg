@@ -1,0 +1,155 @@
+<!doctype html>
+<html lang="zh-Hant">
+<head>
+<meta charset="utf-8">
+<title>裝備範例卡</title>
+<style>
+  body { margin: 0; padding: 18px 22px; background: #1b1e24; color: #e8e8ea; font-family: "Noto Sans TC", "Microsoft JhengHei", sans-serif; width: 1440px; }
+  h1 { font-size: 22px; margin: 0 0 4px; }
+  h2 { font-size: 17px; margin: 0 0 8px; display: flex; gap: 10px; align-items: baseline; }
+  h2 small { font-size: 12px; color: #a0a4ad; font-weight: 400; }
+  .sub { color: #a0a4ad; font-size: 13px; margin-bottom: 10px; line-height: 1.6; }
+  .box { background: #262a32; border-radius: 10px; padding: 12px; margin-bottom: 14px; }
+  .alloc { display: flex; height: 34px; border-radius: 6px; overflow: hidden; margin: 6px 0 4px; }
+  .alloc div { display: flex; align-items: center; justify-content: center; font-size: 11px; color: #111; font-weight: 700; border-right: 2px solid #262a32; }
+  .grid { display: grid; grid-template-columns: 56px repeat(4, 1fr); gap: 8px; }
+  .ch { font-size: 13px; text-align: center; font-weight: 700; }
+  .rh { font-size: 13px; color: #c8cad0; display: flex; align-items: center; justify-content: center; font-weight: 700; }
+  .card { background: #14161c; border: 2px solid #333; border-radius: 9px; padding: 7px 8px; display: flex; flex-direction: column; gap: 4px; }
+  .top { display: flex; gap: 8px; align-items: center; }
+  .nm { font-size: 14px; font-weight: 700; }
+  .base { font-size: 12px; color: #e8e8ea; }
+  .aff { font-size: 11px; color: #c8cad0; line-height: 1.45; display: flex; justify-content: space-between; gap: 6px; }
+  .aff .p { color: #8a8f99; white-space: nowrap; }
+  .aff.kw { color: #ffe9a8; }
+  .none { font-size: 11px; color: #6a6f7a; font-style: italic; }
+  .bar { display: flex; height: 9px; border-radius: 4px; overflow: hidden; background: #2a2e36; margin-top: auto; }
+  .bar .b { background: #8a8f99; }
+  .tot { font-size: 11px; color: #a0a4ad; display: flex; justify-content: space-between; }
+  .tot b { color: #e8e8ea; }
+  .legend { font-size: 11px; color: #a0a4ad; display: flex; gap: 14px; margin-top: 4px; }
+  .sw { display: inline-block; width: 10px; height: 10px; border-radius: 2px; vertical-align: -1px; margin-right: 4px; }
+  .three { display: grid; grid-template-columns: repeat(3, 1fr); gap: 10px; margin-top: 6px; }
+  .three div { background: #1f2229; border-radius: 8px; padding: 8px 10px; font-size: 13px; line-height: 1.5; }
+  .three b { color: #ffe9a8; }
+</style>
+</head>
+<body>
+<h1>裝備範例：等級 × 稀有度（4 件 × 3 等級 × 4 稀有度＝48 張）</h1>
+<div class="sub">資料取自 <code>docs/design/草稿-裝備範例.md</code>。<b>數字都是示意的初值</b>，實作後以模擬校正；名稱是範例，Phase 4 起由 LLM 依玩家的關鍵字與經歷命名。圖示照組裝式規則自動產生（外框＝稀有度，關鍵字混色與小圖樣）。</div>
+
+<div class="three">
+  <div>① <b>等級越高越強</b>：同一件單手劍，等級 1／5／10 的合計是 30／60／105 點（每張卡底部的長條越來越長）。</div>
+  <div>② <b>稀有度不加強度</b>：同一列四張卡的長條一樣長。普通＝全部是基礎（灰）；越稀有，詞條（彩色）越多、越會接上關鍵字與觸發。</div>
+  <div>③ <b>9 格分配</b>：主手一件占全身 30%，戒指一件只占 4%（見下方長條）。</div>
+</div>
+
+<div class="box" style="margin-top:12px"><h2>9 格的強度分配 <small>全身預算：等級 1＝100、等級 5＝200、等級 10＝350 點</small></h2>
+  <div class="alloc" id="alloc"></div>
+  <div class="legend"><span><span class="sw" style="background:#8a8f99"></span>基礎數值（傷害或防禦）</span><span><span class="sw" style="background:#4f9dff"></span>詞條（顏色＝稀有度）</span><span>長條長度＝合計點數（同一件裝備的三個等級比例相同）</span></div>
+</div>
+
+<div id="items"></div>
+
+<script src="gearArt.js"></script>
+<script>
+const G = GearArt;
+const RAR = ["common", "uncommon", "rare", "epic"];
+const RZ = { common: "普通", uncommon: "優良", rare: "稀有", epic: "史詩" };
+const RC = { common: "#8a8f99", uncommon: "#5fd05f", rare: "#4f9dff", epic: "#b06cff" };
+
+const SLOTS = [["主手", 30, "#ffbf3a"], ["身體", 20, "#e08a4a"], ["副手", 10, "#d0b060"], ["頭", 8, "#7fb0d0"], ["手", 8, "#7fc0b0"], ["腳", 8, "#90b0e0"], ["項鍊", 8, "#c0a0e0"], ["戒指", 4, "#e0a0c0"], ["戒指", 4, "#e0a0c0"]];
+const alloc = document.getElementById("alloc");
+for (const [n, p, c] of SLOTS) { const d = document.createElement("div"); d.style.width = `${p}%`; d.style.background = c; d.textContent = `${n} ${p}%`; alloc.appendChild(d); }
+
+// 資料：[名稱, 基礎文字, [[詞條, 點數, 是否關鍵字或觸發]], 外觀]
+const A = (t, p, k) => [t, p, k === true];
+const ITEMS = [
+  { title: "單手劍", slot: "主手 30%", totals: [30, 60, 105], rows: [
+    [["鐵劍", "傷害 1d8+5", [], { kind: "sword", form: "straight", material: "iron" }],
+     ["精鋼長劍", "傷害 1d8+3", [A("力量 +2", 6), A("最大 HP +8", 6)], { kind: "sword", form: "straight", material: "steel" }],
+     ["銳刃直劍", "傷害 1d8+3", [A("力量 +1", 3), A("利用倒地的技能傷害 +6%", 6, true), A("先攻 +2", 3)], { kind: "sword", form: "straight", material: "steel", keywords: ["prone"] }],
+     ["餘燼彎刀", "傷害 1d8+3", [A("力量 +1", 3), A("對燃燒中目標傷害 +5%", 5, true), A("每第 4 次命中：目標燃燒 1 回合", 4, true)], { kind: "sword", form: "curved", material: "steel", keywords: ["ignite"] }]],
+    [["鋼劍", "傷害 1d8+10", [], { kind: "sword", form: "straight", material: "steel" }],
+     ["騎士長劍", "傷害 1d8+6", [A("力量 +4", 12), A("最大 HP +16", 12)], { kind: "sword", form: "broad", material: "steel" }],
+     ["斷骨直劍", "傷害 1d8+6", [A("力量 +3", 9), A("利用倒地的技能傷害 +9%", 9, true), A("最大 HP +8", 6)], { kind: "sword", form: "broad", material: "iron", keywords: ["prone"] }],
+     ["灰燼之牙", "傷害 1d8+6", [A("力量 +2", 6), A("你施加的燃燒 +1 回合", 10, true), A("每第 3 次命中：目標倒地", 8, true)], { kind: "sword", form: "curved", material: "steel", keywords: ["ignite", "prone"] }]],
+    [["精鍛鋼劍", "傷害 1d8+17", [], { kind: "sword", form: "straight", material: "steel" }],
+     ["王庭長劍", "傷害 1d8+10", [A("力量 +7", 21), A("最大 HP +28", 21)], { kind: "sword", form: "broad", material: "gold" }],
+     ["碎顱者", "傷害 1d8+10", [A("力量 +5", 15), A("利用倒地的技能傷害 +15%", 15, true), A("最大 HP +16", 12)], { kind: "sword", form: "broad", material: "steel", keywords: ["prone"] }],
+     ["焚城灰牙", "傷害 1d8+10", [A("力量 +4", 12), A("燃燒 +1 回合且對燃燒中目標傷害 +8%", 18, true), A("每第 3 次命中：目標倒地並受 1d6", 12, true)], { kind: "sword", form: "curved", material: "silver", keywords: ["ignite", "prone"] }]],
+  ] },
+  { title: "板甲", slot: "身體 20%", note: "類型特性（不算詞條）：移動 −1、不能攀跳、無法隱蔽；守護時防禦加成 +50%", totals: [20, 40, 70], rows: [
+    [["鐵板甲", "防禦 10", [], { kind: "plate", form: "half", material: "iron" }],
+     ["守衛胸甲", "防禦 6", [A("體質 +1", 3), A("火焰抗性 +8%", 5)], { kind: "plate", form: "half", material: "steel" }],
+     ["堡壘半身甲", "防禦 6", [A("體質 +1", 3), A("本回合沒移動：防禦 +10%", 5)], { kind: "plate", form: "half", material: "steel" }],
+     ["壁壘甲", "防禦 6", [A("力量 +1", 3), A("被近戰攻擊時：攻擊者被推 1 格，會撞擊", 5, true)], { kind: "plate", form: "half", material: "steel", keywords: ["impact"] }]],
+    [["鋼板甲", "防禦 20", [], { kind: "plate", form: "full", material: "steel" }],
+     ["騎士板甲", "防禦 12", [A("體質 +3", 9), A("最大 HP +8", 6)], { kind: "plate", form: "full", material: "steel" }],
+     ["城牆板甲", "防禦 12", [A("體質 +2", 6), A("本回合沒移動：防禦 +15%", 10)], { kind: "plate", form: "full", material: "iron" }],
+     ["誓守者之鎧", "防禦 12", [A("力量 +2", 6), A("守護隊友時獲得 1 層護盾", 5, true), A("被近戰攻擊時：攻擊者被推 1 格", 5, true)], { kind: "plate", form: "full", material: "silver", keywords: ["impact"] }]],
+    [["精鍛全身甲", "防禦 35", [], { kind: "plate", form: "full", material: "steel" }],
+     ["王庭全身甲", "防禦 21", [A("體質 +5", 15), A("最大 HP +16", 12)], { kind: "plate", form: "full", material: "gold" }],
+     ["不動之城", "防禦 21", [A("體質 +4", 12), A("本回合沒移動：防禦 +20%", 16)], { kind: "plate", form: "full", material: "iron" }],
+     ["磐石誓約", "防禦 21", [A("力量 +3", 9), A("守護隊友時獲得 2 層護盾", 9, true), A("被近戰攻擊時：推 1 格並倒地", 10, true)], { kind: "plate", form: "full", material: "silver", keywords: ["impact", "prone"] }]],
+  ] },
+  { title: "皮手套", slot: "手 8%", note: "手欄偏好：命中、投擲、裝填", totals: [8, 16, 28], rows: [
+    [["皮手套", "防禦 4", [], { kind: "gloves" }],
+     ["獵人手套", "防禦 2", [A("敏捷 +1", 3)], { kind: "gloves", dye: "brown" }],
+     ["投手護腕", "防禦 2", [A("投擲射程 +1", 4)], { kind: "gloves", dye: "green" }],
+     ["影指手套", "防禦 2", [A("投擲射程 +1", 2), A("潛行偷襲傷害 +2%", 2, true)], { kind: "gloves", dye: "black", keywords: ["hidden"] }]],
+    [["硬皮手套", "防禦 8", [], { kind: "gloves" }],
+     ["遊俠手套", "防禦 4", [A("敏捷 +2", 6), A("先攻 +1", 2)], { kind: "gloves", dye: "green" }],
+     ["速裝手套", "防禦 4", [A("敏捷 +1", 3), A("裝填後的第一槍命中 +1", 5)], { kind: "gloves", dye: "red" }],
+     ["幽影握", "防禦 4", [A("敏捷 +1", 3), A("潛行偷襲傷害 +3%", 3, true), A("投擲射程 +1", 2)], { kind: "gloves", dye: "black", keywords: ["hidden"] }]],
+    [["精製皮手套", "防禦 14", [], { kind: "gloves" }],
+     ["神射手套", "防禦 7", [A("敏捷 +3", 9), A("火焰抗性 +8%", 5)], { kind: "gloves", dye: "blue" }],
+     ["疾裝手套", "防禦 7", [A("敏捷 +2", 6), A("裝填後的第一槍暴擊範圍 +1", 8)], { kind: "gloves", dye: "red" }],
+     ["夜梟之爪", "防禦 7", [A("敏捷 +1", 3), A("潛行偷襲傷害 +6%", 6, true), A("隱蔽中第一次攻擊命中 +1", 5, true)], { kind: "gloves", dye: "purple", keywords: ["hidden"] }]],
+  ] },
+  { title: "戒指", slot: "戒指 4%（×2）", note: "沒有基礎數值，預算全部是詞條", totals: [4, 8, 14], rows: [
+    [["銅戒", "—", [A("最大 HP +5", 4)], { kind: "ring", form: "plain", material: "copper" }],
+     ["銀戒", "—", [A("智力 +1", 3)], { kind: "ring", form: "plain", material: "silver" }],
+     ["標記之戒", "—", [A("對被標記者傷害 +4%", 4, true)], { kind: "ring", form: "gem", material: "silver", keywords: ["mark"] }],
+     ["收割之戒", "—", [A("擊殺時回 5 法力", 4, true)], { kind: "ring", form: "gem", material: "bone" }]],
+    [["銀戒", "—", [A("最大 HP +10", 8)], { kind: "ring", form: "plain", material: "silver" }],
+     ["金戒", "—", [A("智力 +1", 3), A("雷電抗性 +8%", 5)], { kind: "ring", form: "plain", material: "gold" }],
+     ["獵印戒", "—", [A("對被標記者傷害 +5%", 5, true), A("先攻 +2", 3)], { kind: "ring", form: "gem", material: "gold", keywords: ["mark"] }],
+     ["收魂印戒", "—", [A("對被標記者傷害 +4%", 4, true), A("擊殺被標記者時回 5 法力", 4, true)], { kind: "ring", form: "gem", material: "bone", keywords: ["mark"] }]],
+    [["金戒", "—", [A("最大 HP +18", 14)], { kind: "ring", form: "plain", material: "gold" }],
+     ["晶石戒", "—", [A("智力 +2", 6), A("雷電抗性 +12%", 8)], { kind: "ring", form: "gem", material: "crystal", keywords: ["shock"] }],
+     ["獵王印戒", "—", [A("對被標記者傷害 +8%", 8, true), A("智力 +2", 6)], { kind: "ring", form: "gem", material: "gold", keywords: ["mark"] }],
+     ["審判之印", "—", [A("對被標記者傷害 +6%", 6, true), A("被標記者被擊殺時：回 1 AP（每回合 1 次）", 8, true)], { kind: "ring", form: "gem", material: "crystal", keywords: ["mark"] }]],
+  ] },
+];
+const LV = [1, 5, 10];
+const root = document.getElementById("items");
+for (const item of ITEMS) {
+  const box = document.createElement("div"); box.className = "box";
+  box.innerHTML = `<h2>${item.title} <small>${item.slot}　合計 ${item.totals.join("／")} 點${item.note ? `　｜　${item.note}` : ""}</small></h2>`;
+  const grid = document.createElement("div"); grid.className = "grid";
+  grid.insertAdjacentHTML("beforeend", `<div></div>${RAR.map((r) => `<div class="ch" style="color:${RC[r]}">${RZ[r]}</div>`).join("")}`);
+  const max = item.totals[2];
+  item.rows.forEach((row, li) => {
+    grid.insertAdjacentHTML("beforeend", `<div class="rh">等級 ${LV[li]}</div>`);
+    row.forEach(([name, base, affs, look], ri) => {
+      const rar = RAR[ri];
+      const total = item.totals[li];
+      const affPts = affs.reduce((s, a) => s + a[1], 0);
+      const c = document.createElement("div"); c.className = "card"; c.style.borderColor = RC[rar] + "aa";
+      const top = document.createElement("div"); top.className = "top";
+      top.appendChild(G.icon({ ...look, rarity: rar }, 46));
+      top.insertAdjacentHTML("beforeend", `<div><div class="nm" style="color:${RC[rar]}">${name}</div><div class="base">${base === "—" ? "（無基礎數值）" : base}</div></div>`);
+      c.appendChild(top);
+      if (!affs.length) c.insertAdjacentHTML("beforeend", `<div class="none">沒有詞條：點數全部在基礎數值</div>`);
+      for (const [t, p, kw] of affs) c.insertAdjacentHTML("beforeend", `<div class="aff${kw ? " kw" : ""}"><span>${kw ? "◆ " : ""}${t}</span><span class="p">${p}</span></div>`);
+      const basePts = base === "—" ? 0 : Math.max(0, total - affPts);
+      c.insertAdjacentHTML("beforeend", `<div class="bar" style="width:${(total / max) * 100}%"><div class="b" style="width:${(basePts / total) * 100}%"></div><div style="width:${(affPts / total) * 100}%;background:${RC[rar]}"></div></div><div class="tot"><span>基礎 ${basePts}＋詞條 ${affPts}</span><b>合計 ${total}${affPts + basePts !== total || (base === "—" && affPts !== total) ? "（≈）" : ""}</b></div>`);
+      grid.appendChild(c);
+    });
+  });
+  box.appendChild(grid); root.appendChild(box);
+}
+</script>
+</body>
+</html>

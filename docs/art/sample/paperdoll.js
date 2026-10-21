@@ -17,7 +17,7 @@ window.PaperDoll = (() => {
   };
   // 元素詞條會讓裝備帶一點元素色（與技能特效、技能圖示同一份色票）
   const ELEMENT_TINT = {
-    fire: "#ff6a1a", ice: "#8fe3ff", lightning: "#fff36b", poison: "#7ddc3a", wind: "#7fe0c0",
+    fire: "#ff6a1a", water: "#4aa8ff", ice: "#8fe3ff", lightning: "#fff36b", poison: "#7ddc3a", wind: "#7fe0c0",
     earth: "#b0814a", holy: "#ffd75e", shadow: "#9a6ad8",
   };
   const RARITY_GLOW = { epic: "#b06cff", legendary: "#ffbf3a" };
@@ -78,13 +78,17 @@ window.PaperDoll = (() => {
     fill(ctx, pants, () => rr(ctx, -5, -9, 4, 8, 1));
     fill(ctx, pants, () => rr(ctx, 1, -9, 4, 8, 1));
     const [b, bd] = feet ? itemColors(feet) : ["#5a4030", "#3a281c"];
-    const tall = feet?.kind === "greaves" ? 4 : feet?.kind === "boots" ? 2.5 : 0;
+    // 9 格（樣張）：布鞋不加高；皮靴短 2.5／長 4；鐵靴 3＋鞋尖；脛甲 4（護膝形制再加一塊）
+    const tall = { greaves: 4, boots: feet?.form === "tall" ? 4 : 2.5, iron_boots: 3, shoes: 0 }[feet?.kind] ?? 0;
     for (const sx of [-1, 1]) {
       if (tall) fill(ctx, b, () => rr(ctx, sx * 3 - 2.2, -2 - tall, 4.4, tall + 1, 1));
+      if (feet?.kind === "greaves" && feet.form === "knee") fill(ctx, mix(b, "#ffffff", 0.3), () => rr(ctx, sx * 3 - 2, -8, 4, 2.4, 1));
+      if (feet?.kind === "shoes" && feet.form === "wrapped") { ctx.strokeStyle = bd; ctx.lineWidth = 0.8; for (const y of [-4, -6]) { ctx.beginPath(); ctx.moveTo(sx * 3 - 2, y); ctx.lineTo(sx * 3 + 2, y + 1); ctx.stroke(); } }
       fill(ctx, bd, () => {
         ctx.beginPath();
-        ctx.ellipse(sx * 3.2, -1.2, 3.2, 2, 0, 0, TAU);
+        ctx.ellipse(sx * 3.2, -1.2, feet?.kind === "iron_boots" ? 3.6 : 3.2, 2, 0, 0, TAU);
       });
+      if (feet?.kind === "iron_boots") fill(ctx, mix(b, "#ffffff", 0.35), () => { ctx.beginPath(); ctx.ellipse(sx * 3.2, -1.6, 1.6, 1, 0, 0, TAU); });
     }
   }
   function drawBody(ctx, it, look) {
@@ -105,16 +109,23 @@ window.PaperDoll = (() => {
       return;
     }
     if (kind === "robe") {
+      const hem = it?.form === "short" ? -6 : -1.5;
       fill(ctx, c, () => {
         ctx.beginPath();
         ctx.moveTo(-7, -21);
         ctx.lineTo(7, -21);
-        ctx.lineTo(10, -1.5);
-        ctx.lineTo(-10, -1.5);
+        ctx.lineTo(10, hem);
+        ctx.lineTo(-10, hem);
         ctx.closePath();
       });
       fill(ctx, look.trim ?? d, () => ctx.rect(-1.2, -20, 2.4, 18.5));
-      fill(ctx, look.trim ?? d, () => ctx.rect(-10, -3, 20, 1.6));
+      fill(ctx, look.trim ?? d, () => ctx.rect(-10, hem - 1.5, 20, 1.6));
+    } else if (kind === "coat") {
+      // 外套：長下襬開衩＋翻領；披風外套多一片肩披
+      fill(ctx, c, () => { ctx.beginPath(); ctx.moveTo(-7.5, -21); ctx.lineTo(7.5, -21); ctx.lineTo(8.5, -3); ctx.lineTo(1, -3); ctx.lineTo(0, -9); ctx.lineTo(-1, -3); ctx.lineTo(-8.5, -3); ctx.closePath(); });
+      fill(ctx, d, () => { ctx.beginPath(); ctx.moveTo(-4, -21); ctx.lineTo(0, -15); ctx.lineTo(4, -21); ctx.closePath(); });
+      for (const y of [-17, -14, -11]) fill(ctx, "#e8bb48", () => { ctx.beginPath(); ctx.arc(1.8, y, 0.7, 0, TAU); });
+      if (it?.form === "cape") fill(ctx, d, () => rr(ctx, -9, -22, 18, 5, 2));
     } else {
       fill(ctx, c, () => rr(ctx, -7.5, -21, 15, 13.5, 3));
       if (kind === "plate") {
@@ -122,7 +133,8 @@ window.PaperDoll = (() => {
         fill(ctx, d, () => ctx.rect(-7.5, -14, 15, 1.2));
       } else if (kind === "mail") {
         ctx.fillStyle = d;
-        for (let y = -19; y < -9; y += 2.4) for (let x = -6 + ((y | 0) % 2); x < 6.5; x += 2.4) ctx.fillRect(x, y, 1, 1);
+        if (it?.form === "scale") { for (let y = -19; y < -9; y += 2.6) for (let x = -6; x < 6.5; x += 3) { ctx.beginPath(); ctx.arc(x + ((y | 0) % 2 ? 1.5 : 0), y, 1.3, 0, Math.PI); ctx.fill(); } }
+        else for (let y = -19; y < -9; y += 2.4) for (let x = -6 + ((y | 0) % 2); x < 6.5; x += 2.4) ctx.fillRect(x, y, 1, 1);
       } else if (kind === "leather") {
         ctx.strokeStyle = d;
         ctx.lineWidth = 1;
@@ -138,14 +150,20 @@ window.PaperDoll = (() => {
     const sleeve = kind === "ribs" ? "#d9d2bd" : c;
     fill(ctx, sleeve, () => rr(ctx, -10.5, -20, 4, 10, 2));
     fill(ctx, sleeve, () => rr(ctx, 6.5, -20, 4, 10, 2));
-    if (kind === "plate") {
+    if (kind === "plate" && it?.form !== "half") {
       fill(ctx, mix(c, "#ffffff", 0.25), () => { ctx.beginPath(); ctx.ellipse(-8.5, -19.5, 3.5, 2.5, 0, 0, TAU); });
       fill(ctx, mix(c, "#ffffff", 0.25), () => { ctx.beginPath(); ctx.ellipse(8.5, -19.5, 3.5, 2.5, 0, 0, TAU); });
     }
   }
   function drawHands(ctx, look, hands) {
-    const c = hands ? itemColors(hands)[0] : look.skin;
-    for (const x of [-8.5, 8.5]) fill(ctx, c, () => { ctx.beginPath(); ctx.arc(x, -9.5, 2.4, 0, TAU); });
+    // 9 格（樣張）：臂甲只包前臂、手露膚色；露指手套也露膚色；長皮手套多一截袖口
+    const bracer = hands?.kind === "bracers";
+    const [c, d] = hands ? itemColors(hands) : [look.skin, look.skin];
+    for (const x of [-8.5, 8.5]) {
+      if (bracer || hands?.kind === "gauntlets" || hands?.form === "long") fill(ctx, bracer ? c : d, () => rr(ctx, x - 2.2, -14, 4.4, hands?.form === "ring" ? 1.8 : 3.4, 1));
+      fill(ctx, bracer || hands?.form === "fingerless" ? look.skin : c, () => { ctx.beginPath(); ctx.arc(x, -9.5, 2.4, 0, TAU); });
+      if (hands?.form === "fingerless") fill(ctx, c, () => rr(ctx, x - 2.4, -10.5, 4.8, 2, 0.8));
+    }
   }
   function drawHead(ctx, look, view, side) {
     const skin = look.skin;
@@ -172,7 +190,7 @@ window.PaperDoll = (() => {
     if (!look.hair || look.skull) return;
     const c = look.hairColor ?? "#5a3a22";
     // 戴著蓋住頭的帽子就不畫頭髮頂
-    const covered = head && ["helmet", "hood", "wizard_hat", "horned_helm"].includes(head.kind);
+    const covered = head && ["helmet", "hood", "wizard_hat", "horned_helm", "greathelm", "cap"].includes(head.kind);
     if (view === "back") {
       fill(ctx, c, () => { ctx.beginPath(); ctx.arc(0, -29, 8.8, 0, TAU); });
       if (look.hair === "long") fill(ctx, c, () => rr(ctx, -7, -29, 14, 10, 3));
@@ -258,6 +276,21 @@ window.PaperDoll = (() => {
           ctx.closePath();
         });
         break;
+      case "wide_hat":
+        fill(ctx, d, () => { ctx.beginPath(); ctx.ellipse(0, -34, 14, 3.4, 0, 0, TAU); });
+        fill(ctx, c, () => rr(ctx, -7, -42, 14, 8, 3));
+        fill(ctx, it.trim ?? d, () => ctx.rect(-7, -36.5, 14, 1.6));
+        break;
+      case "cap":
+        // 皮帽／毛帽（form fur：毛邊白、較圓）
+        fill(ctx, c, () => { ctx.beginPath(); ctx.arc(0, -31, 9.2, Math.PI, 0); ctx.closePath(); });
+        fill(ctx, it.form === "fur" ? "#e9e3cf" : d, () => rr(ctx, -9.6, -32.5, 19.2, it.form === "fur" ? 4 : 2.4, 1.5));
+        break;
+      case "greathelm":
+        fill(ctx, c, () => rr(ctx, -9.6, -39, 19.2, 17, 4));
+        if (view !== "back") { fill(ctx, "#1d1a22", () => ctx.rect(-6.5, -31, 13, 1.8)); fill(ctx, d, () => ctx.rect(-0.8, -29, 1.6, 6)); }
+        fill(ctx, mix(c, "#ffffff", 0.4), () => rr(ctx, -6, -38, 4, 3, 1.5));
+        break;
       case "crown":
         fill(ctx, c, () => {
           ctx.beginPath();
@@ -275,7 +308,7 @@ window.PaperDoll = (() => {
     // 火器（#34）：三種造型共用槍的畫法
     const GUN = { longgun: "rifle", shotgun: "shotgun", pistol: "pistol" };
     if (GUN[it.kind]) it = { ...it, kind: "gun", form: it.style === "scifi" ? "energy" : GUN[it.kind] };
-    if (it.kind === "crossbow" || it.kind === "fist" || it.kind === "scythe" || it.kind === "whip") return drawWeapon2(ctx, it, x, front);
+    if (["crossbow", "fist", "scythe", "whip", "hammer", "spear", "orb"].includes(it.kind) || (it.kind === "shield_kite" && it.form === "tower")) return drawWeapon2(ctx, it, x, front);
     const [c, d] = itemColors(it);
     const hy = -9.5;
     ctx.save();
@@ -409,6 +442,32 @@ window.PaperDoll = (() => {
         ctx.rotate(front ? -0.15 : 0.15);
         fill(ctx, "#6a4420", () => ctx.rect(-1, -26, 2, 30));
         fill(ctx, c, () => { ctx.beginPath(); ctx.moveTo(0, -26); ctx.quadraticCurveTo(front ? 12 : -12, -28, front ? 14 : -14, -18); ctx.quadraticCurveTo(front ? 8 : -8, -23, 0, -23); ctx.closePath(); });
+        break;
+      case "hammer":
+        ctx.rotate(front ? -0.25 : 0.25);
+        fill(ctx, "#6a4420", () => ctx.rect(-1, -18, 2, 21));
+        if (it.form === "mace") fill(ctx, c, () => { ctx.beginPath(); ctx.arc(0, -19, 4, 0, TAU); });
+        else fill(ctx, c, () => rr(ctx, -5.5, -22, 11, 6, 1.2));
+        fill(ctx, d, () => ctx.rect(-5.5, -19.5, 11, 1));
+        break;
+      case "spear":
+        fill(ctx, "#6a4420", () => ctx.rect(-0.9, -34, 1.8, 40));
+        fill(ctx, c, () => { ctx.beginPath(); ctx.moveTo(0, -42); ctx.lineTo(2.4, -34); ctx.lineTo(-2.4, -34); ctx.closePath(); });
+        if (it.form === "halberd") fill(ctx, c, () => { ctx.beginPath(); ctx.moveTo(1, -37); ctx.quadraticCurveTo(7, -38, 6.5, -32); ctx.lineTo(1, -33); ctx.closePath(); });
+        if (it.form === "trident") for (const sx of [-3, 3]) fill(ctx, c, () => { ctx.beginPath(); ctx.moveTo(sx, -40); ctx.lineTo(sx + 1, -34); ctx.lineTo(sx - 1, -34); ctx.closePath(); });
+        break;
+      case "orb": {
+        const orb = it.element ? ELEMENT_TINT[it.element] : c;
+        ctx.fillStyle = orb; ctx.globalAlpha = 0.35; ctx.beginPath(); ctx.arc(0, -6, 6, 0, TAU); ctx.fill(); ctx.globalAlpha = 1;
+        fill(ctx, orb, () => { ctx.beginPath(); ctx.arc(0, -6, 3.6, 0, TAU); });
+        fill(ctx, "rgba(255,255,255,0.8)", () => { ctx.beginPath(); ctx.arc(-1.2, -7.2, 1.1, 0, TAU); });
+        break;
+      }
+      case "shield_kite":
+        // 塔盾：長方形大盾
+        fill(ctx, d, () => rr(ctx, -7.5, -16, 15, 21, 2));
+        fill(ctx, c, () => rr(ctx, -6, -14.5, 12, 18, 1.5));
+        fill(ctx, "#e8e0c8", () => ctx.rect(-0.9, -14, 1.8, 17));
         break;
       case "whip":
         fill(ctx, "#4a3020", () => ctx.rect(-1, -4, 2, 5));

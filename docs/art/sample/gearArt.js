@@ -68,10 +68,26 @@ window.GearArt = (() => {
     mail: { slot: "body", zh: "鎖甲", forms: { chain: "鎖子甲", scale: "鱗甲" }, mats: [...METAL], def: "iron" },
     plate: { slot: "body", zh: "板甲", forms: { half: "半身板甲", full: "全身板甲" }, mats: [...METAL], def: "steel" },
     coat: { slot: "body", zh: "外套", forms: { travel: "旅行外套", cape: "披風外套" }, mats: ["cloth", "leather"], def: "cloth" },
-    ring: { slot: "acc", zh: "戒指", forms: { plain: "素戒", gem: "寶石戒" }, mats: [...METAL, "bone", "crystal"], def: "gold" },
-    pendant: { slot: "acc", zh: "墜飾", forms: { pendant: "項鍊墜", tag: "吊牌" }, mats: [...METAL, "bone", "crystal"], def: "gold" },
-    charm: { slot: "acc", zh: "護符", forms: { tablet: "符牌", bone: "骨符" }, mats: [...METAL, "bone", "crystal", "leather", "cloth"], def: "gold" },
-    bracelet: { slot: "acc", zh: "手環", forms: { metal: "金屬環", woven: "編織環" }, mats: [...METAL, "bone", "crystal", "leather", "cloth"], def: "gold" },
+    // ---- 9 格：頭、手、腳（#37）----
+    hood: { slot: "head", zh: "兜帽", forms: { cloth: "布兜帽", cowl: "斗篷帽" }, mats: ["cloth", "leather"], def: "cloth" },
+    hat: { slot: "head", zh: "帽子", forms: { wizard: "法師帽", wide: "寬簷帽" }, mats: ["cloth", "leather"], def: "cloth" },
+    circlet: { slot: "head", zh: "頭巾／頭冠", forms: { bandana: "頭巾", crown: "頭冠" }, mats: ["cloth", "leather", ...METAL, "bone", "crystal"], def: "cloth", formDef: { crown: "gold" }, formMats: { bandana: ["cloth", "leather"], crown: [...METAL, "bone", "crystal"] } },
+    cap: { slot: "head", zh: "皮帽", forms: { leather: "皮帽", fur: "毛帽" }, mats: ["leather", "cloth"], def: "leather" },
+    helmet: { slot: "head", zh: "頭盔", forms: { iron: "鐵盔", horned: "角盔", greathelm: "全罩盔" }, mats: [...METAL], def: "iron" },
+    cloth_gloves: { slot: "hands", zh: "布手套", forms: { plain: "素手套", fingerless: "露指手套" }, mats: ["cloth"], def: "cloth" },
+    leather_gloves: { slot: "hands", zh: "皮手套", forms: { short: "短皮手套", long: "長皮手套" }, mats: ["leather"], def: "leather" },
+    gauntlets: { slot: "hands", zh: "護手", forms: { plate: "板金護手", mail: "鎖鏈護手" }, mats: [...METAL], def: "steel" },
+    bracers: { slot: "hands", zh: "臂甲", forms: { leather: "皮臂甲", ring: "臂環" }, mats: ["leather", ...METAL], def: "leather", formDef: { ring: "copper" }, formMats: { leather: ["leather"], ring: [...METAL] } },
+    shoes: { slot: "feet", zh: "布鞋", forms: { slipper: "布鞋", wrapped: "綁腿鞋" }, mats: ["cloth"], def: "cloth" },
+    boots: { slot: "feet", zh: "皮靴", forms: { short: "短靴", tall: "長靴" }, mats: ["leather"], def: "leather" },
+    iron_boots: { slot: "feet", zh: "鐵靴", forms: { plain: "鐵靴", sabaton: "尖頭鐵靴" }, mats: [...METAL], def: "iron" },
+    greaves: { slot: "feet", zh: "脛甲", forms: { plain: "脛甲", knee: "護膝脛甲" }, mats: [...METAL], def: "steel" },
+    // 舊樣張（gear5.html）用的皮手套；正式清單改用 leather_gloves
+    gloves: { legacy: true, slot: "hands", zh: "手套", forms: { leather: "皮手套" }, mats: ["leather", "cloth"], def: "leather" },
+    ring: { slot: "ring", zh: "戒指", forms: { plain: "素戒", gem: "寶石戒", signet: "印戒" }, mats: [...METAL, "bone", "crystal"], def: "gold" },
+    pendant: { slot: "neck", zh: "墜飾", forms: { pendant: "項鍊墜", tag: "吊牌" }, mats: [...METAL, "bone", "crystal"], def: "gold" },
+    charm: { slot: "neck", zh: "護符", forms: { tablet: "符牌", bone: "骨符" }, mats: [...METAL, "bone", "crystal", "leather", "cloth"], def: "gold" },
+    bracelet: { legacy: true, slot: "acc", zh: "手環", forms: { metal: "金屬環", woven: "編織環" }, mats: [...METAL, "bone", "crystal", "leather", "cloth"], def: "gold" },
   };
 
   /** 驗證＋補預設：任何輸入都回傳畫得出來的外觀。 */
@@ -79,7 +95,8 @@ window.GearArt = (() => {
     const kind = KINDS[it.kind] ? it.kind : "sword";
     const K = KINDS[kind];
     const form = it.form in K.forms ? it.form : Object.keys(K.forms)[0];
-    const material = K.mats.includes(it.material) ? it.material : K.def;
+    const mats = K.formMats?.[form] ?? K.mats;
+    const material = mats.includes(it.material) ? it.material : K.formDef?.[form] ?? K.def;
     const dye = (material === "cloth" || material === "leather") && DYE[it.dye] ? it.dye : null;
     const keywords = (it.keywords ?? []).filter((k) => KEYWORD[k]).slice(0, 2);
     const rarity = RARITY[it.rarity] ? it.rarity : "common";
@@ -431,6 +448,190 @@ window.GearArt = (() => {
     return [[mx + 2, my - 4], [24, 44]];
   };
 
+  // ---- 手（9 格草案；樣張只先畫皮手套）----
+  D.gloves = (ctx, r, P) => {
+    shape(ctx, P.a, () => {
+      ctx.moveTo(20, 56); ctx.lineTo(20, 34); ctx.lineTo(16, 26); ctx.quadraticCurveTo(14, 21, 19, 22); ctx.lineTo(23, 28);
+      ctx.lineTo(23, 12); ctx.quadraticCurveTo(26, 8, 29, 12); ctx.lineTo(29, 24);
+      ctx.lineTo(30, 9); ctx.quadraticCurveTo(33, 5, 36, 9); ctx.lineTo(35, 24);
+      ctx.lineTo(37, 11); ctx.quadraticCurveTo(40, 8, 42, 12); ctx.lineTo(41, 26);
+      ctx.lineTo(43, 17); ctx.quadraticCurveTo(46, 15, 47, 19); ctx.lineTo(45, 38); ctx.lineTo(44, 56); ctx.closePath();
+    }, 2.5);
+    shape(ctx, P.d, () => ctx.roundRect(18, 46, 28, 10, 2), 2);
+    line(ctx, P.d, 1.2, [[26, 30], [38, 30]]);
+    for (const x of [24, 32, 40]) shape(ctx, "#c8a040", () => ctx.arc(x, 51, 1.4, 0, TAU), 0.6);
+    return [[40, 22], [26, 38]];
+  };
+
+  // ======== 9 格：頭（#37）========
+  const SKIN_HINT = "#3a3f4a"; // 圖示裡的臉部空洞
+  D.hood = (ctx, r, P) => {
+    shape(ctx, P.a, () => { ctx.moveTo(12, 52); ctx.quadraticCurveTo(10, 14, 32, 10); ctx.quadraticCurveTo(54, 14, 52, 52); ctx.closePath(); }, 2.5);
+    shape(ctx, SKIN_HINT, () => ctx.ellipse(32, 34, 11, 13, 0, 0, TAU), 1.5);
+    if (r.form === "cowl") shape(ctx, P.d, () => { ctx.moveTo(8, 50); ctx.quadraticCurveTo(32, 60, 56, 50); ctx.lineTo(58, 58); ctx.lineTo(6, 58); ctx.closePath(); }, 2);
+    else line(ctx, P.d, 2, [[14, 48], [50, 48]]);
+    return [[46, 22], [18, 26]];
+  };
+  D.hat = (ctx, r, P) => {
+    if (r.form === "wizard") {
+      shape(ctx, P.d, () => ctx.ellipse(32, 46, 26, 7, 0, 0, TAU), 2.5);
+      shape(ctx, P.a, () => { ctx.moveTo(18, 46); ctx.quadraticCurveTo(26, 26, 30, 8); ctx.quadraticCurveTo(38, 6, 44, 14); ctx.quadraticCurveTo(38, 14, 36, 20); ctx.lineTo(46, 46); ctx.closePath(); }, 2.5);
+      shape(ctx, "#e8bb48", () => ctx.roundRect(19, 39, 26, 4, 1), 1.2);
+    } else {
+      shape(ctx, P.d, () => ctx.ellipse(32, 44, 28, 9, 0, 0, TAU), 2.5);
+      shape(ctx, P.a, () => { ctx.moveTo(18, 44); ctx.lineTo(19, 24); ctx.quadraticCurveTo(32, 16, 45, 24); ctx.lineTo(46, 44); ctx.closePath(); }, 2.5);
+      shape(ctx, P.d, () => ctx.roundRect(18, 36, 28, 5, 1), 1.2);
+      shape(ctx, "#e6e6e0", () => { ctx.moveTo(42, 36); ctx.quadraticCurveTo(52, 22, 48, 14); ctx.quadraticCurveTo(46, 26, 40, 34); ctx.closePath(); }, 1.2); // 羽毛
+    }
+    return [[48, 22], [16, 30]];
+  };
+  D.circlet = (ctx, r, P) => {
+    if (r.form === "bandana") {
+      shape(ctx, P.a, () => { ctx.moveTo(10, 40); ctx.quadraticCurveTo(12, 14, 32, 14); ctx.quadraticCurveTo(52, 14, 54, 40); ctx.quadraticCurveTo(32, 32, 10, 40); }, 2.5);
+      shape(ctx, P.d, () => { ctx.moveTo(48, 36); ctx.lineTo(58, 48); ctx.lineTo(52, 52); ctx.lineTo(46, 40); ctx.closePath(); }, 1.8);
+      for (const [x, y] of [[22, 24], [32, 21], [42, 24]]) shape(ctx, P.d, () => ctx.arc(x, y, 1.6, 0, TAU), 0.6);
+    } else {
+      shape(ctx, P.a, () => { ctx.moveTo(12, 44); ctx.lineTo(12, 22); ctx.lineTo(20, 32); ctx.lineTo(26, 16); ctx.lineTo(32, 30); ctx.lineTo(38, 16); ctx.lineTo(44, 32); ctx.lineTo(52, 22); ctx.lineTo(52, 44); ctx.closePath(); }, 2.5);
+      shape(ctx, P.d, () => ctx.roundRect(12, 38, 40, 6, 1.5), 1.5);
+      gem(ctx, 32, 36, 5, P.accent);
+      shine(ctx, P, [[15, 26], [15, 36]]);
+    }
+    return [[48, 18], [16, 18]];
+  };
+  D.cap = (ctx, r, P) => {
+    shape(ctx, P.a, () => { ctx.moveTo(12, 42); ctx.quadraticCurveTo(12, 14, 32, 14); ctx.quadraticCurveTo(52, 14, 52, 42); ctx.closePath(); }, 2.5);
+    if (r.form === "fur") { shape(ctx, "#e9e3cf", () => ctx.roundRect(9, 38, 46, 11, 5), 2); for (let x = 13; x < 52; x += 5) line(ctx, "#b8b09a", 1, [[x, 41], [x + 1.5, 46]]); }
+    else { shape(ctx, P.d, () => ctx.roundRect(10, 38, 44, 7, 2), 2); line(ctx, P.d, 1.4, [[32, 15], [32, 38]]); for (const y of [20, 27, 34]) line(ctx, "#2a1c10", 1, [[30, y], [34, y]]); }
+    return [[46, 24], [18, 24]];
+  };
+  D.helmet = (ctx, r, P) => {
+    if (r.form === "greathelm") {
+      shape(ctx, P.a, () => ctx.roundRect(14, 12, 36, 42, 7), 2.5);
+      shape(ctx, INK, () => ctx.roundRect(18, 28, 28, 4, 1), 0.5);
+      line(ctx, P.d, 2, [[32, 32], [32, 50]]);
+      for (const y of [38, 43]) for (const x of [24, 40]) shape(ctx, INK, () => ctx.arc(x, y, 1, 0, TAU), 0);
+    } else {
+      shape(ctx, P.a, () => { ctx.moveTo(12, 44); ctx.lineTo(12, 32); ctx.quadraticCurveTo(12, 12, 32, 12); ctx.quadraticCurveTo(52, 12, 52, 32); ctx.lineTo(52, 44); ctx.closePath(); }, 2.5);
+      shape(ctx, P.d, () => ctx.roundRect(10, 38, 44, 7, 2), 2);
+      shape(ctx, P.d, () => ctx.roundRect(29.5, 38, 5, 14, 1.5), 1.5);
+      if (r.form === "horned") for (const s of [-1, 1]) shape(ctx, "#efe6cc", () => { ctx.moveTo(32 + s * 16, 26); ctx.quadraticCurveTo(32 + s * 30, 22, 32 + s * 28, 6); ctx.quadraticCurveTo(32 + s * 24, 18, 32 + s * 14, 20); ctx.closePath(); }, 2);
+    }
+    shine(ctx, P, [[19, 22], [24, 17]]);
+    return [[46, 22], [18, 28]];
+  };
+  // ======== 9 格：手 ========
+  function glove(ctx, P, fingerless, cuff) {
+    if (cuff) shape(ctx, P.d, () => ctx.roundRect(17, 44, 30, 14, 3), 2);
+    shape(ctx, P.a, () => {
+      ctx.moveTo(20, 50); ctx.lineTo(20, 34); ctx.lineTo(16, 26); ctx.quadraticCurveTo(14, 21, 19, 22); ctx.lineTo(23, 28);
+      if (fingerless) { ctx.lineTo(23, 20); ctx.lineTo(29, 20); ctx.lineTo(30, 18); ctx.lineTo(36, 18); ctx.lineTo(37, 20); ctx.lineTo(42, 20); ctx.lineTo(43, 24); ctx.lineTo(47, 24); }
+      else { ctx.lineTo(23, 12); ctx.quadraticCurveTo(26, 8, 29, 12); ctx.lineTo(29, 24); ctx.lineTo(30, 9); ctx.quadraticCurveTo(33, 5, 36, 9); ctx.lineTo(35, 24); ctx.lineTo(37, 11); ctx.quadraticCurveTo(40, 8, 42, 12); ctx.lineTo(41, 26); ctx.lineTo(43, 17); ctx.quadraticCurveTo(46, 15, 47, 19); }
+      ctx.lineTo(45, 38); ctx.lineTo(44, 50); ctx.closePath();
+    }, 2.5);
+    if (fingerless) for (const [x, y] of [[26, 14], [33, 12], [39.5, 14], [45, 19]]) shape(ctx, "#f0c8a0", () => ctx.roundRect(x - 2.5, y, 5, 7, 2.5), 1.5);
+  }
+  D.cloth_gloves = (ctx, r, P) => { glove(ctx, P, r.form === "fingerless", false); line(ctx, P.d, 1.5, [[21, 44], [44, 44]]); return [[40, 30], [26, 38]]; };
+  D.leather_gloves = (ctx, r, P) => {
+    glove(ctx, P, false, r.form === "long");
+    line(ctx, P.d, 1.2, [[26, 30], [38, 30]]);
+    if (r.form === "short") shape(ctx, P.d, () => ctx.roundRect(19, 44, 26, 7, 2), 1.8);
+    for (const x of [24, 32, 40]) shape(ctx, "#c8a040", () => ctx.arc(x, 48, 1.3, 0, TAU), 0.6);
+    return [[40, 22], [26, 38]];
+  };
+  D.gauntlets = (ctx, r, P) => {
+    shape(ctx, P.d, () => ctx.roundRect(16, 42, 32, 16, 3), 2);
+    glove(ctx, P, false, false);
+    if (r.form === "plate") { for (const y of [28, 34, 40]) line(ctx, P.d, 1.5, [[21, y], [45, y - 1]]); shape(ctx, P.a, () => ctx.ellipse(32, 46, 14, 5, 0, 0, TAU), 1.8); }
+    else { ctx.save(); ctx.beginPath(); ctx.rect(20, 26, 26, 30); ctx.clip(); ctx.strokeStyle = P.d; ctx.lineWidth = 1; for (let y = 27; y < 56; y += 3) for (let x = 20 + ((y / 3) % 2) * 1.5; x < 46; x += 3) { ctx.beginPath(); ctx.arc(x, y, 1.2, 0, TAU); ctx.stroke(); } ctx.restore(); }
+    shine(ctx, P, [[23, 30], [23, 40]]);
+    return [[42, 18], [24, 50]];
+  };
+  D.bracers = (ctx, r, P) => {
+    if (r.form === "ring") {
+      for (const y of [22, 40]) { ctx.beginPath(); ctx.ellipse(32, y, 18, 7, 0, 0, TAU); ctx.lineWidth = 9; ctx.strokeStyle = INK; ctx.stroke(); ctx.lineWidth = 6; ctx.strokeStyle = P.a; ctx.stroke(); }
+      shine(ctx, P, [[18, 20], [24, 16]]); gem(ctx, 32, 47, 3.5, P.accent);
+    } else {
+      shape(ctx, P.a, () => { ctx.moveTo(18, 12); ctx.lineTo(46, 12); ctx.lineTo(44, 54); ctx.lineTo(20, 54); ctx.closePath(); }, 2.5);
+      for (const y of [20, 32, 44]) { shape(ctx, P.d, () => ctx.roundRect(18, y - 2, 28, 4, 1), 1.2); shape(ctx, "#c8a040", () => ctx.roundRect(30, y - 2.5, 4, 5, 1), 0.8); }
+      line(ctx, "#2a1c10", 1, [[24, 14], [22, 52]]);
+    }
+    return [[48, 30], [16, 30]];
+  };
+  // ======== 9 格：腳 ========
+  function boot(ctx, P, top, toe) {
+    shape(ctx, P.a, () => { ctx.moveTo(22, top); ctx.lineTo(38, top); ctx.lineTo(38, 42); ctx.quadraticCurveTo(52, 42, 54, 50); ctx.lineTo(54, 54); ctx.lineTo(20, 54); ctx.lineTo(20, 46); ctx.closePath(); }, 2.5);
+    shape(ctx, P.d, () => ctx.roundRect(18, 52, 38, 5, 2), 2);
+    if (toe) shape(ctx, P.d, () => { ctx.moveTo(42, 44); ctx.quadraticCurveTo(54, 44, 58, 52); ctx.lineTo(44, 52); ctx.closePath(); }, 1.8);
+  }
+  D.shoes = (ctx, r, P) => {
+    boot(ctx, P, 36, false);
+    if (r.form === "wrapped") { boot(ctx, P, 14, false); for (let y = 18; y < 44; y += 6) line(ctx, P.d, 1.5, [[22, y], [38, y + 3]]); }
+    line(ctx, P.d, 1.5, [[22, 40], [38, 40]]);
+    return [[46, 30], [28, 46]];
+  };
+  D.boots = (ctx, r, P) => {
+    boot(ctx, P, r.form === "tall" ? 8 : 24, false);
+    shape(ctx, P.d, () => ctx.roundRect(20, (r.form === "tall" ? 8 : 24) - 2, 20, 5, 1.5), 1.5);
+    for (const y of [32, 38]) shape(ctx, "#c8a040", () => ctx.arc(36, y, 1.2, 0, TAU), 0.5);
+    return [[46, 30], [28, 46]];
+  };
+  D.iron_boots = (ctx, r, P) => {
+    boot(ctx, P, 20, r.form === "sabaton");
+    for (const y of [28, 36]) line(ctx, P.d, 1.6, [[21, y], [38, y]]);
+    shine(ctx, P, [[24, 24], [24, 44]]);
+    return [[48, 30], [28, 46]];
+  };
+  D.greaves = (ctx, r, P) => {
+    boot(ctx, P, 6, false);
+    shape(ctx, P.d, () => ctx.roundRect(20, 18, 20, 3, 1), 1.2);
+    if (r.form === "knee") shape(ctx, P.a, () => ctx.ellipse(30, 10, 11, 7, 0, 0, TAU), 2);
+    shine(ctx, P, [[24, 12], [24, 44]]);
+    return [[48, 28], [28, 46]];
+  };
+  // 戒指加「印戒」形制
+  const baseRing = D.ring;
+  D.ring = (ctx, r, P) => {
+    if (r.form !== "signet") return baseRing(ctx, r, P);
+    ctx.beginPath(); ctx.ellipse(32, 40, 15, 12, 0, 0, TAU); ctx.lineWidth = 8; ctx.strokeStyle = INK; ctx.stroke(); ctx.lineWidth = 5; ctx.strokeStyle = P.a; ctx.stroke();
+    shape(ctx, P.a, () => ctx.roundRect(21, 14, 22, 16, 3), 2.2);
+    shape(ctx, P.d, () => ctx.roundRect(24, 17, 16, 10, 2), 1.2);
+    line(ctx, P.a, 1.6, [[28, 25], [32, 19], [36, 25]]);
+    shine(ctx, P, [[20, 36], [23, 30]]);
+    return [[50, 44], [14, 44]];
+  };
+
+  /** 外觀 → 紙娃娃部件（slot 用紙娃娃的欄位名）。項鍊、戒指不畫，回傳 null。 */
+  const ELEMENT_OF = { ignite: "fire", wet: "water", shock: "lightning", freeze: "ice" };
+  const DOLL = {
+    head: { hood: () => "hood", hat: (f) => (f === "wide" ? "wide_hat" : "wizard_hat"), circlet: (f) => (f === "crown" ? "crown" : "bandana"), cap: () => "cap", helmet: (f) => ({ horned: "horned_helm", greathelm: "greathelm" })[f] ?? "helmet" },
+    hands: { cloth_gloves: () => "gloves", leather_gloves: () => "gloves", gauntlets: () => "gauntlets", bracers: () => "bracers" },
+    feet: { shoes: () => "shoes", boots: () => "boots", iron_boots: () => "iron_boots", greaves: () => "greaves" },
+    off_hand: { round_shield: () => "shield_round", kite_shield: () => "shield_kite", tome: () => "tome", orb: () => "orb" },
+  };
+  function dollItem(item) {
+    const r = resolve(item); const K = KINDS[r.kind];
+    if (K.slot === "neck" || K.slot === "ring") return null;
+    const slot = { main: "main_hand", off: "off_hand", body: "body", head: "head", hands: "hands", feet: "feet" }[K.slot];
+    const kind = DOLL[slot]?.[r.kind]?.(r.form) ?? r.kind;
+    const el = r.keywords.map((k) => ELEMENT_OF[k]).find(Boolean);
+    const out = { slot, kind, form: r.form, material: r.material };
+    if (r.dye) out.color = DYE[r.dye];
+    if (el) out.element = el;
+    return out;
+  }
+  /** 一整套裝備 → 紙娃娃的 gear；成對武器主手、副手各一把。 */
+  function dollGear(items) {
+    const gear = {};
+    for (const it of items) {
+      const d = dollItem(it); if (!d) continue;
+      gear[d.slot] = d;
+      if (KINDS[resolve(it).kind].pair) gear.off_hand = { ...d, slot: "off_hand", kind: d.kind === "dual_dagger" ? "dagger" : "pistol" };
+    }
+    if (gear.main_hand?.kind === "dual_dagger") gear.main_hand = { ...gear.main_hand, kind: "dagger" };
+    if (gear.main_hand?.kind === "dual_pistol") gear.main_hand = { ...gear.main_hand, kind: "pistol" };
+    return gear;
+  }
+
   // ======== 武器擴充（#34，08-裝備.md 8.11）========
   const WOOD = "#7a5232", WOOD_D = "#4e321c";
   /** 以槍身方向（往右上 −0.42 rad）畫；回傳槍口位置（64 格座標）。 */
@@ -773,5 +974,5 @@ window.GearArt = (() => {
     const r = resolve(item); const K = KINDS[r.kind];
     return { kind: K.zh, form: K.forms[r.form], material: MATERIAL[r.material].zh, dye: r.dye ? DYE_ZH[r.dye] : null, keywords: r.keywords.map((k) => KEYWORD[k].zh), rarity: RARITY[r.rarity][1], rarityColor: RARITY[r.rarity][0], slot: K.slot };
   }
-  return { icon, draw, resolve, describe, KINDS, MATERIAL, DYE, DYE_ZH, KEYWORD, RARITY };
+  return { icon, draw, resolve, describe, dollItem, dollGear, KINDS, MATERIAL, DYE, DYE_ZH, KEYWORD, RARITY };
 })();
