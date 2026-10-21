@@ -1,0 +1,420 @@
+// 組裝式裝備圖示（美術樣張，08-裝備.md 8.18）：外觀只看資料欄位。
+// 外觀 ＝ 造型 kind × 形制 form × 外觀材質 material（＋選填染色 dye）× 風格 style ＋ 關鍵字 keywords ＋ 稀有度 rarity。
+// 不認得的值一律退回預設，不會出錯；材質不合造型時退回該造型的預設材質。
+// 座標：64 × 64 的虛擬格。
+window.GearArt = (() => {
+  const TAU = Math.PI * 2;
+  const INK = "#16181d";
+
+  // ---- 色票 ----
+  const MATERIAL = {
+    iron: { zh: "鐵", c: ["#6e757d", "#474c52"] },
+    steel: { zh: "鋼", c: ["#a9b6c6", "#6d7a8a"] },
+    copper: { zh: "銅", c: ["#c27a48", "#7e4a28"] },
+    silver: { zh: "銀", c: ["#e8edf2", "#a8b0ba"], shine: true },
+    gold: { zh: "金", c: ["#e8bb48", "#9c7420"] },
+    wood: { zh: "木", c: ["#a06a36", "#6a4420"] },
+    leather: { zh: "皮", c: ["#8a5a32", "#5e3b1f"] },
+    cloth: { zh: "布", c: ["#8a8f99", "#5d6168"] },
+    bone: { zh: "骨", c: ["#e9e3cf", "#a8a08a"] },
+    crystal: { zh: "晶石", c: ["#b8a8ff", "#7a68c8"] },
+  };
+  const DYE = { red: "#b83a3a", blue: "#3a5fb8", green: "#3f8a4a", purple: "#7a4ab0", black: "#33363d", white: "#e6e6e0", brown: "#7a5232", gold: "#d9a83a" };
+  const DYE_ZH = { red: "紅", blue: "藍", green: "綠", purple: "紫", black: "黑", white: "白", brown: "褐", gold: "金" };
+  // 關鍵字（06 6.27）：元素類混色＋小圖樣；其他只加小圖樣
+  const KEYWORD = {
+    ignite: { zh: "點燃", c: "#ff6a1a", tint: true },
+    wet: { zh: "潮濕", c: "#4aa8ff", tint: true },
+    shock: { zh: "帶電", c: "#fff36b", tint: true },
+    freeze: { zh: "冰凍", c: "#8fe3ff", tint: true },
+    prone: { zh: "倒地", c: "#e0b080" },
+    impact: { zh: "撞擊", c: "#ff9a4a" },
+    mark: { zh: "標記", c: "#d06aff" },
+    high: { zh: "高處", c: "#ffe9a8" },
+    hidden: { zh: "隱蔽", c: "#a0a0c8" },
+    summon: { zh: "召喚物", c: "#7dffb0" },
+  };
+  // 第一季到史詩；傳說留到正式季（樣張一併示意）
+  const RARITY = { common: ["#8a8f99", "普通"], uncommon: ["#5fd05f", "優良"], rare: ["#4f9dff", "稀有"], epic: ["#b06cff", "史詩"], legendary: ["#ffbf3a", "傳說"] };
+
+  // ---- 造型 → 部位、形制、可用材質、預設材質 ----
+  const METAL = ["iron", "steel", "copper", "silver", "gold"];
+  const KINDS = {
+    sword: { slot: "main", zh: "劍", forms: { straight: "直劍", curved: "彎刀", broad: "闊劍" }, mats: [...METAL], def: "iron" },
+    greatsword: { slot: "main", zh: "巨劍", forms: { twohand: "雙手劍", zhanma: "斬馬刀", serrated: "鋸齒巨劍" }, mats: [...METAL], def: "iron" },
+    dagger: { slot: "main", zh: "匕首", forms: { short: "短刀", stiletto: "三稜刺", kris: "彎匕" }, mats: [...METAL, "bone", "crystal"], def: "iron" },
+    axe: { slot: "main", zh: "斧", forms: { hand: "手斧", battle: "戰斧", double: "雙刃斧" }, mats: [...METAL], def: "iron" },
+    hammer: { slot: "main", zh: "錘", forms: { mace: "釘頭錘", warhammer: "戰錘", flail: "連枷" }, mats: [...METAL], def: "iron" },
+    spear: { slot: "main", zh: "矛", forms: { spear: "長矛", halberd: "戟", trident: "三叉戟" }, mats: [...METAL, "wood"], def: "iron" },
+    bow: { slot: "main", zh: "弓", forms: { short: "短弓", long: "長弓", recurve: "反曲弓" }, mats: ["wood", ...METAL], def: "wood" },
+    staff: { slot: "main", zh: "杖", forms: { long: "長杖", scepter: "權杖", wand: "短杖" }, mats: ["wood", ...METAL, "bone", "crystal"], def: "wood" },
+    round_shield: { slot: "off", zh: "圓盾", forms: { wood: "木圓盾", banded: "包鐵圓盾" }, mats: ["wood", ...METAL], def: "wood" },
+    kite_shield: { slot: "off", zh: "鳶盾", forms: { kite: "鳶盾", tower: "塔盾" }, mats: [...METAL], def: "iron" },
+    tome: { slot: "off", zh: "法書", forms: { book: "典籍", scroll: "卷軸匣" }, mats: ["leather", "cloth"], def: "leather" },
+    orb: { slot: "off", zh: "法器珠", forms: { ball: "水晶球", floating: "浮空寶珠" }, mats: ["crystal", "bone"], def: "crystal" },
+    robe: { slot: "body", zh: "布袍", forms: { long: "長袍", short: "短袍" }, mats: ["cloth"], def: "cloth" },
+    leather: { slot: "body", zh: "皮甲", forms: { vest: "皮背心", hunter: "獵裝" }, mats: ["leather"], def: "leather" },
+    mail: { slot: "body", zh: "鎖甲", forms: { chain: "鎖子甲", scale: "鱗甲" }, mats: [...METAL], def: "iron" },
+    plate: { slot: "body", zh: "板甲", forms: { half: "半身板甲", full: "全身板甲" }, mats: [...METAL], def: "steel" },
+    coat: { slot: "body", zh: "外套", forms: { travel: "旅行外套", cape: "披風外套" }, mats: ["cloth", "leather"], def: "cloth" },
+    ring: { slot: "acc", zh: "戒指", forms: { plain: "素戒", gem: "寶石戒" }, mats: [...METAL, "bone", "crystal"], def: "gold" },
+    pendant: { slot: "acc", zh: "墜飾", forms: { pendant: "項鍊墜", tag: "吊牌" }, mats: [...METAL, "bone", "crystal"], def: "gold" },
+    charm: { slot: "acc", zh: "護符", forms: { tablet: "符牌", bone: "骨符" }, mats: [...METAL, "bone", "crystal", "leather", "cloth"], def: "gold" },
+    bracelet: { slot: "acc", zh: "手環", forms: { metal: "金屬環", woven: "編織環" }, mats: [...METAL, "bone", "crystal", "leather", "cloth"], def: "gold" },
+  };
+
+  /** 驗證＋補預設：任何輸入都回傳畫得出來的外觀。 */
+  function resolve(it) {
+    const kind = KINDS[it.kind] ? it.kind : "sword";
+    const K = KINDS[kind];
+    const form = it.form in K.forms ? it.form : Object.keys(K.forms)[0];
+    const material = K.mats.includes(it.material) ? it.material : K.def;
+    const dye = (material === "cloth" || material === "leather") && DYE[it.dye] ? it.dye : null;
+    const keywords = (it.keywords ?? []).filter((k) => KEYWORD[k]).slice(0, 2);
+    const rarity = RARITY[it.rarity] ? it.rarity : "common";
+    return { kind, form, material, dye, keywords, rarity, style: it.style === "eastern" ? "eastern" : "common" };
+  }
+
+  function mix(a, b, t) {
+    const pa = parseInt(a.slice(1), 16), pb = parseInt(b.slice(1), 16);
+    const m = (s) => Math.round(((pa >> s) & 255) * (1 - t) + ((pb >> s) & 255) * t);
+    return `#${((m(16) << 16) | (m(8) << 8) | m(0)).toString(16).padStart(6, "0")}`;
+  }
+  /** 主色、暗色、強調色（寶石、寶珠用）。 */
+  function palette(r) {
+    let [a, d] = MATERIAL[r.material].c;
+    if (r.dye) { a = DYE[r.dye]; d = mix(DYE[r.dye], "#000000", 0.35); }
+    const el = r.keywords.map((k) => KEYWORD[k]).find((k) => k.tint);
+    if (el) {
+      if (r.material === "crystal") { a = el.c; d = mix(el.c, "#000000", 0.4); }
+      else { a = mix(a, el.c, 0.4); d = mix(d, el.c, 0.25); }
+    }
+    const accent = r.keywords.length ? KEYWORD[r.keywords[0]].c : r.material === "crystal" ? "#b8a8ff" : "#e04060";
+    return { a, d, accent, shine: MATERIAL[r.material].shine === true, handle: "#5e3b1f", guard: r.rarity === "epic" || r.rarity === "legendary" ? "#e8bb48" : "#7a5a3a" };
+  }
+
+  // ---- 小工具 ----
+  function shape(ctx, fillC, path, lw = 2) {
+    ctx.beginPath(); path(); ctx.fillStyle = fillC; ctx.fill(); ctx.lineWidth = lw; ctx.strokeStyle = INK; ctx.stroke();
+  }
+  function line(ctx, c, w, pts) { ctx.beginPath(); ctx.moveTo(...pts[0]); for (const p of pts.slice(1)) ctx.lineTo(...p); ctx.strokeStyle = c; ctx.lineWidth = w; ctx.stroke(); }
+  function diag(ctx, fn) { ctx.save(); ctx.translate(32, 33); ctx.rotate(Math.PI / 4); fn(); ctx.restore(); }
+  function grip(ctx, P, y0, len) {
+    shape(ctx, P.handle, () => ctx.roundRect(-2.5, y0, 5, len, 1.5), 1.5);
+    ctx.strokeStyle = "rgba(0,0,0,0.35)"; ctx.lineWidth = 1;
+    for (let y = y0 + 2.5; y < y0 + len - 1; y += 3) { ctx.beginPath(); ctx.moveTo(-2.5, y); ctx.lineTo(2.5, y + 1.2); ctx.stroke(); }
+  }
+  function guard(ctx, P, y, w) { shape(ctx, P.guard, () => ctx.roundRect(-w / 2, y, w, 4, 2), 1.5); }
+  function shine(ctx, P, pts) { if (P.shine) line(ctx, "rgba(255,255,255,0.95)", 1.4, pts); }
+  function gem(ctx, x, y, r, c) {
+    shape(ctx, c, () => { ctx.moveTo(x, y - r); ctx.lineTo(x + r, y); ctx.lineTo(x, y + r); ctx.lineTo(x - r, y); ctx.closePath(); }, 1.5);
+    ctx.fillStyle = "rgba(255,255,255,0.55)"; ctx.beginPath(); ctx.moveTo(x, y - r); ctx.lineTo(x + r * 0.5, y - r * 0.2); ctx.lineTo(x, y); ctx.closePath(); ctx.fill();
+  }
+
+  // ---- 關鍵字小圖樣（畫在器物上，最多 2 個關鍵字、各 2 處）----
+  function motif(ctx, kw, x, y) {
+    const k = KEYWORD[kw]; ctx.save(); ctx.fillStyle = k.c; ctx.strokeStyle = k.c; ctx.lineWidth = 1.6; ctx.lineCap = "round";
+    switch (kw) {
+      case "ignite": ctx.beginPath(); ctx.moveTo(x, y - 6); ctx.quadraticCurveTo(x + 4.5, y, x, y + 3); ctx.quadraticCurveTo(x - 4.5, y, x, y - 6); ctx.fill(); break;
+      case "wet": ctx.beginPath(); ctx.moveTo(x, y - 5); ctx.quadraticCurveTo(x + 4, y + 1, x, y + 3); ctx.quadraticCurveTo(x - 4, y + 1, x, y - 5); ctx.fill(); break;
+      case "shock": ctx.beginPath(); ctx.moveTo(x - 3, y - 5); ctx.lineTo(x + 1, y - 1); ctx.lineTo(x - 1, y + 1); ctx.lineTo(x + 3, y + 5); ctx.stroke(); break;
+      case "freeze": ctx.beginPath(); for (let i = 0; i < 3; i++) { const a = (i * Math.PI) / 3; ctx.moveTo(x - Math.cos(a) * 4.5, y - Math.sin(a) * 4.5); ctx.lineTo(x + Math.cos(a) * 4.5, y + Math.sin(a) * 4.5); } ctx.stroke(); break;
+      case "prone": ctx.beginPath(); ctx.moveTo(x - 4, y - 2); ctx.lineTo(x, y + 2); ctx.lineTo(x + 4, y - 2); ctx.stroke(); ctx.beginPath(); ctx.moveTo(x - 4, y + 2); ctx.lineTo(x + 4, y + 2); ctx.stroke(); break;
+      case "impact": ctx.beginPath(); for (let i = 0; i < 8; i++) { const a = (i / 8) * TAU, r = i % 2 ? 2 : 5; ctx.lineTo(x + Math.cos(a) * r, y + Math.sin(a) * r); } ctx.closePath(); ctx.fill(); break;
+      case "mark": ctx.beginPath(); ctx.arc(x, y, 3.5, 0, TAU); ctx.stroke(); ctx.beginPath(); ctx.moveTo(x - 6, y); ctx.lineTo(x - 4, y); ctx.moveTo(x + 4, y); ctx.lineTo(x + 6, y); ctx.moveTo(x, y - 6); ctx.lineTo(x, y - 4); ctx.moveTo(x, y + 4); ctx.lineTo(x, y + 6); ctx.stroke(); break;
+      case "high": ctx.beginPath(); ctx.moveTo(x - 4, y + 2); ctx.lineTo(x, y - 3); ctx.lineTo(x + 4, y + 2); ctx.stroke(); break;
+      case "hidden": ctx.globalAlpha = 0.85; ctx.beginPath(); ctx.arc(x - 2, y, 2.6, 0, TAU); ctx.arc(x + 2, y - 1, 3, 0, TAU); ctx.arc(x + 1, y + 2, 2.2, 0, TAU); ctx.fill(); break;
+      case "summon": ctx.beginPath(); ctx.arc(x, y - 1, 3.4, Math.PI, 0); ctx.lineTo(x + 3.4, y + 4); ctx.lineTo(x + 1.2, y + 2.5); ctx.lineTo(x, y + 4); ctx.lineTo(x - 1.2, y + 2.5); ctx.lineTo(x - 3.4, y + 4); ctx.closePath(); ctx.fill(); break;
+    }
+    ctx.restore();
+  }
+
+  // ---- 造型畫法：每個回傳「小圖樣位置」（在 64 格座標）----
+  const D = {};
+  D.sword = (ctx, r, P) => {
+    diag(ctx, () => {
+      const blade = {
+        straight: () => { ctx.moveTo(-3.5, 8); ctx.lineTo(-3.5, -22); ctx.lineTo(0, -28); ctx.lineTo(3.5, -22); ctx.lineTo(3.5, 8); ctx.closePath(); },
+        curved: () => { ctx.moveTo(-3, 8); ctx.quadraticCurveTo(-6, -12, 6, -28); ctx.quadraticCurveTo(4, -10, 4, 8); ctx.closePath(); },
+        broad: () => { ctx.moveTo(-6, 8); ctx.lineTo(-6, -18); ctx.lineTo(0, -28); ctx.lineTo(6, -18); ctx.lineTo(6, 8); ctx.closePath(); },
+      }[r.form];
+      shape(ctx, P.a, blade); if (r.form !== "curved") line(ctx, P.d, 1.2, [[0, 6], [0, -20]]);
+      shine(ctx, P, [[-1.5, 4], [-1.5, -18]]);
+      guard(ctx, P, 8, r.form === "broad" ? 22 : 18); grip(ctx, P, 12, 10);
+      shape(ctx, P.guard, () => ctx.arc(0, 24, 2.5, 0, TAU), 1.2);
+    });
+    return [[36, 26], [28, 36]];
+  };
+  D.greatsword = (ctx, r, P) => {
+    diag(ctx, () => {
+      if (r.form === "twohand") shape(ctx, P.a, () => { ctx.moveTo(-4.5, 5); ctx.lineTo(-4.5, -27); ctx.lineTo(0, -32); ctx.lineTo(4.5, -27); ctx.lineTo(4.5, 5); ctx.closePath(); });
+      else if (r.form === "zhanma") shape(ctx, P.a, () => { ctx.moveTo(-4, 5); ctx.lineTo(-4, -26); ctx.quadraticCurveTo(-1, -33, 7, -31); ctx.lineTo(6, 5); ctx.closePath(); });
+      else shape(ctx, P.a, () => { ctx.moveTo(-5, 5); ctx.lineTo(-5, -26); ctx.lineTo(0, -32); ctx.lineTo(5, -26); for (let y = -22; y < 5; y += 5) { ctx.lineTo(8, y); ctx.lineTo(5, y + 2.5); } ctx.lineTo(5, 5); ctx.closePath(); });
+      line(ctx, P.d, 1.2, [[0, 3], [0, -25]]); shine(ctx, P, [[-2, 2], [-2, -24]]);
+      guard(ctx, P, 5, 20); grip(ctx, P, 9, 16);
+    });
+    return [[38, 22], [30, 32]];
+  };
+  D.dagger = (ctx, r, P) => {
+    diag(ctx, () => {
+      if (r.form === "short") shape(ctx, P.a, () => { ctx.moveTo(-3.5, 6); ctx.lineTo(-3.5, -10); ctx.lineTo(0, -16); ctx.lineTo(3.5, -10); ctx.lineTo(3.5, 6); ctx.closePath(); });
+      else if (r.form === "stiletto") shape(ctx, P.a, () => { ctx.moveTo(-2.5, 6); ctx.lineTo(0, -20); ctx.lineTo(2.5, 6); ctx.closePath(); });
+      else shape(ctx, P.a, () => { ctx.moveTo(-3, 6); ctx.quadraticCurveTo(-5, -4, 0, -8); ctx.quadraticCurveTo(5, -12, 2, -18); ctx.quadraticCurveTo(9, -10, 3, -3); ctx.lineTo(3, 6); ctx.closePath(); });
+      shine(ctx, P, [[-1, 4], [-1, -10]]);
+      guard(ctx, P, 6, 14); grip(ctx, P, 10, 9);
+    });
+    return [[33, 30], [27, 34]];
+  };
+  D.axe = (ctx, r, P) => {
+    diag(ctx, () => {
+      shape(ctx, P.handle, () => ctx.roundRect(-2.5, -24, 5, 46, 2), 1.5);
+      const head = (s) => () => { ctx.moveTo(2, -22); ctx.quadraticCurveTo(14 * s, -28, 16 * s, -14); ctx.quadraticCurveTo(12 * s, -12, 2, -10); ctx.closePath(); };
+      if (r.form === "hand") { ctx.save(); ctx.scale(0.8, 0.8); shape(ctx, P.a, head(1)); ctx.restore(); }
+      else if (r.form === "battle") shape(ctx, P.a, () => { ctx.moveTo(2, -26); ctx.quadraticCurveTo(20, -32, 20, -12); ctx.quadraticCurveTo(14, -6, 2, -8); ctx.closePath(); });
+      else { shape(ctx, P.a, head(1)); ctx.save(); ctx.scale(-1, 1); shape(ctx, P.a, head(1)); ctx.restore(); }
+      shine(ctx, P, [[8, -22], [13, -16]]);
+    });
+    return [[40, 20], [24, 40]];
+  };
+  D.hammer = (ctx, r, P) => {
+    diag(ctx, () => {
+      shape(ctx, P.handle, () => ctx.roundRect(-2.5, -14, 5, 36, 2), 1.5);
+      if (r.form === "mace") {
+        for (let i = 0; i < 8; i++) { const a = (i / 8) * TAU; shape(ctx, P.d, () => { ctx.moveTo(Math.cos(a) * 7, -20 + Math.sin(a) * 7); ctx.lineTo(Math.cos(a + 0.25) * 12, -20 + Math.sin(a + 0.25) * 12); ctx.lineTo(Math.cos(a + 0.5) * 7, -20 + Math.sin(a + 0.5) * 7); }, 1); }
+        shape(ctx, P.a, () => ctx.arc(0, -20, 8, 0, TAU));
+      } else if (r.form === "warhammer") { shape(ctx, P.a, () => ctx.roundRect(-11, -26, 22, 12, 2)); line(ctx, P.d, 1.5, [[-11, -20], [11, -20]]); }
+      else {
+        line(ctx, INK, 3.5, [[0, -14], [6, -20], [4, -26]]); line(ctx, P.d, 2, [[0, -14], [6, -20], [4, -26]]);
+        for (let i = 0; i < 8; i++) { const a = (i / 8) * TAU; shape(ctx, P.d, () => { ctx.moveTo(4 + Math.cos(a) * 5, -31 + Math.sin(a) * 5); ctx.lineTo(4 + Math.cos(a + 0.3) * 9, -31 + Math.sin(a + 0.3) * 9); ctx.lineTo(4 + Math.cos(a + 0.6) * 5, -31 + Math.sin(a + 0.6) * 5); }, 1); }
+        shape(ctx, P.a, () => ctx.arc(4, -31, 6, 0, TAU));
+      }
+      shine(ctx, P, [[-4, -24], [-1, -24]]);
+    });
+    return [[40, 18], [28, 38]];
+  };
+  D.spear = (ctx, r, P) => {
+    diag(ctx, () => {
+      shape(ctx, P.handle, () => ctx.roundRect(-2, -18, 4, 46, 2), 1.5);
+      if (r.form === "spear") shape(ctx, P.a, () => { ctx.moveTo(0, -32); ctx.quadraticCurveTo(6, -22, 0, -16); ctx.quadraticCurveTo(-6, -22, 0, -32); });
+      else if (r.form === "halberd") { shape(ctx, P.a, () => { ctx.moveTo(0, -33); ctx.lineTo(3, -18); ctx.lineTo(-3, -18); ctx.closePath(); }); shape(ctx, P.a, () => { ctx.moveTo(2, -26); ctx.quadraticCurveTo(14, -28, 13, -16); ctx.lineTo(2, -18); ctx.closePath(); }); }
+      else { shape(ctx, P.a, () => ctx.roundRect(-8, -20, 16, 3, 1), 1.5); for (const x of [-7, 0, 7]) shape(ctx, P.a, () => { ctx.moveTo(x, -32); ctx.lineTo(x + 2, -20); ctx.lineTo(x - 2, -20); ctx.closePath(); }, 1.5); }
+      shine(ctx, P, [[-1, -28], [-1, -20]]);
+    });
+    return [[42, 18], [26, 40]];
+  };
+  D.bow = (ctx, r, P) => {
+    const L = r.form === "long" ? 26 : 20;
+    ctx.save(); ctx.translate(30, 32);
+    ctx.beginPath();
+    if (r.form === "recurve") { ctx.moveTo(4, -L); ctx.quadraticCurveTo(-2, -L + 4, 8, -L / 2); ctx.quadraticCurveTo(16, 0, 8, L / 2); ctx.quadraticCurveTo(-2, L - 4, 4, L); }
+    else { ctx.moveTo(0, -L); ctx.quadraticCurveTo(18, 0, 0, L); }
+    ctx.lineWidth = 6; ctx.strokeStyle = INK; ctx.stroke(); ctx.lineWidth = 3.5; ctx.strokeStyle = P.a; ctx.stroke();
+    line(ctx, "#e6e0d0", 1, [[r.form === "recurve" ? 4 : 0, -L], [r.form === "recurve" ? 4 : 0, L]]);
+    shape(ctx, P.handle, () => ctx.roundRect(r.form === "recurve" ? 9 : 6, -4, 5, 8, 1), 1.2);
+    ctx.restore();
+    return [[38, 20], [38, 44]];
+  };
+  D.staff = (ctx, r, P) => {
+    const orb = r.keywords.length ? P.accent : r.material === "crystal" ? P.a : "#9ad0ff";
+    diag(ctx, () => {
+      const len = r.form === "wand" ? 26 : 40;
+      shape(ctx, r.material === "wood" ? P.a : P.d, () => ctx.roundRect(-2.5, -14, 5, len, 2), 1.5);
+      if (r.form === "scepter") { ctx.beginPath(); ctx.arc(0, -20, 8, 0, TAU); ctx.lineWidth = 5; ctx.strokeStyle = INK; ctx.stroke(); ctx.lineWidth = 3; ctx.strokeStyle = r.material === "wood" ? "#e8bb48" : P.a; ctx.stroke(); gem(ctx, 0, -20, 4.5, orb); }
+      else { shape(ctx, orb, () => ctx.arc(0, -20, r.form === "wand" ? 5 : 7, 0, TAU)); ctx.fillStyle = "rgba(255,255,255,0.6)"; ctx.beginPath(); ctx.arc(-2, -22, 2, 0, TAU); ctx.fill(); }
+      if (r.form === "long") { line(ctx, INK, 3, [[-5, -14], [5, -14]]); line(ctx, r.material === "wood" ? "#6a4420" : P.d, 1.6, [[-5, -14], [5, -14]]); }
+    });
+    return [[40, 22], [28, 38]];
+  };
+  D.round_shield = (ctx, r, P) => {
+    shape(ctx, P.a, () => ctx.arc(32, 33, 22, 0, TAU), 2.5);
+    if (r.form === "wood") { for (const x of [-11, 0, 11]) line(ctx, P.d, 1.5, [[32 + x, 13 + Math.abs(x) / 3], [32 + x, 53 - Math.abs(x) / 3]]); }
+    else { ctx.beginPath(); ctx.arc(32, 33, 19, 0, TAU); ctx.lineWidth = 4; ctx.strokeStyle = "#8d969f"; ctx.stroke(); for (let i = 0; i < 8; i++) { const a = (i / 8) * TAU; shape(ctx, "#c3ccd6", () => ctx.arc(32 + Math.cos(a) * 19, 33 + Math.sin(a) * 19, 1.6, 0, TAU), 0.8); } }
+    shape(ctx, r.form === "wood" ? "#8d969f" : P.d, () => ctx.arc(32, 33, 6, 0, TAU), 1.5);
+    shine(ctx, P, [[20, 22], [26, 16]]);
+    return [[22, 26], [42, 42]];
+  };
+  D.kite_shield = (ctx, r, P) => {
+    if (r.form === "kite") shape(ctx, P.a, () => { ctx.moveTo(14, 12); ctx.lineTo(50, 12); ctx.lineTo(50, 30); ctx.quadraticCurveTo(48, 48, 32, 57); ctx.quadraticCurveTo(16, 48, 14, 30); ctx.closePath(); }, 2.5);
+    else shape(ctx, P.a, () => ctx.roundRect(15, 8, 34, 50, 4), 2.5);
+    line(ctx, P.d, 3, [[32, 13], [32, r.form === "kite" ? 52 : 54]]); line(ctx, P.d, 3, [[19, 27], [45, 27]]);
+    if (r.form === "tower") for (const y of [12, 54]) for (const x of [19, 45]) shape(ctx, P.d, () => ctx.arc(x, y, 1.6, 0, TAU), 0.8);
+    shine(ctx, P, [[18, 16], [18, 26]]);
+    return [[23, 20], [41, 40]];
+  };
+  D.tome = (ctx, r, P) => {
+    if (r.form === "book") {
+      shape(ctx, "#efe6cf", () => ctx.roundRect(17, 14, 32, 40, 3), 1.5);
+      shape(ctx, P.a, () => ctx.roundRect(14, 12, 32, 40, 3), 2.5);
+      line(ctx, P.d, 3, [[19, 12], [19, 52]]);
+      gem(ctx, 32, 32, 6, P.accent);
+      for (const y of [16, 48]) line(ctx, "#e8bb48", 2, [[38, y], [44, y]]);
+    } else {
+      shape(ctx, P.a, () => ctx.roundRect(22, 10, 20, 44, 6), 2.5);
+      for (const y of [16, 48]) { shape(ctx, "#e8bb48", () => ctx.roundRect(20, y - 2, 24, 4, 1.5), 1.2); }
+      shape(ctx, "#efe6cf", () => { ctx.moveTo(42, 26); ctx.lineTo(54, 30); ctx.lineTo(54, 40); ctx.lineTo(42, 36); ctx.closePath(); }, 1.5);
+      gem(ctx, 32, 32, 4, P.accent);
+    }
+    return [[24, 22], [40, 44]];
+  };
+  D.orb = (ctx, r, P) => {
+    const c = r.keywords.length && KEYWORD[r.keywords[0]].tint ? P.a : r.material === "crystal" ? P.a : P.a;
+    if (r.form === "ball") {
+      shape(ctx, "#7a5a3a", () => { ctx.moveTo(20, 54); ctx.lineTo(44, 54); ctx.lineTo(38, 44); ctx.lineTo(26, 44); ctx.closePath(); }, 2);
+      shape(ctx, c, () => ctx.arc(32, 30, 15, 0, TAU), 2.5);
+    } else {
+      ctx.beginPath(); ctx.ellipse(32, 32, 24, 7, -0.3, 0, TAU); ctx.lineWidth = 4; ctx.strokeStyle = INK; ctx.stroke(); ctx.lineWidth = 2; ctx.strokeStyle = "#e8bb48"; ctx.stroke();
+      shape(ctx, c, () => ctx.arc(32, 31, 12, 0, TAU), 2.5);
+      ctx.beginPath(); ctx.ellipse(32, 32, 24, 7, -0.3, 0, Math.PI); ctx.lineWidth = 4; ctx.strokeStyle = INK; ctx.stroke(); ctx.lineWidth = 2; ctx.strokeStyle = "#e8bb48"; ctx.stroke();
+    }
+    ctx.fillStyle = "rgba(255,255,255,0.6)"; ctx.beginPath(); ctx.arc(26, 24, 4, 0, TAU); ctx.fill();
+    return [[32, 30], [40, 36]];
+  };
+  function torso(ctx, P, sleeves, hem) {
+    shape(ctx, P.a, () => {
+      ctx.moveTo(22, 12); ctx.quadraticCurveTo(32, 18, 42, 12);
+      if (sleeves) { ctx.lineTo(54, 20); ctx.lineTo(50, 32); ctx.lineTo(44, 28); } else ctx.lineTo(46, 18);
+      ctx.lineTo(45, hem); ctx.lineTo(19, hem);
+      if (sleeves) { ctx.lineTo(20, 28); ctx.lineTo(14, 32); ctx.lineTo(10, 20); } else ctx.lineTo(18, 18);
+      ctx.closePath();
+    }, 2.5);
+  }
+  D.robe = (ctx, r, P) => {
+    const hem = r.form === "long" ? 58 : 46;
+    shape(ctx, P.a, () => { ctx.moveTo(22, 12); ctx.quadraticCurveTo(32, 18, 42, 12); ctx.lineTo(54, 22); ctx.lineTo(48, 30); ctx.lineTo(44, 26); ctx.lineTo(48, hem); ctx.lineTo(16, hem); ctx.lineTo(20, 26); ctx.lineTo(16, 30); ctx.lineTo(10, 22); ctx.closePath(); }, 2.5);
+    line(ctx, P.d, 2, [[32, 17], [32, hem]]); line(ctx, "#e8bb48", 2.5, [[17, hem - 2], [47, hem - 2]]);
+    shape(ctx, P.d, () => ctx.roundRect(20, 32, 24, 4, 1), 1.2);
+    return [[25, 42], [39, 24]];
+  };
+  D.leather = (ctx, r, P) => {
+    torso(ctx, P, r.form === "hunter", 52);
+    line(ctx, P.d, 1.5, [[32, 16], [32, 52]]);
+    for (const y of [24, 31, 38]) { line(ctx, "#2a1c10", 1.5, [[29, y], [35, y]]); }
+    shape(ctx, "#3a2a1a", () => ctx.roundRect(19, 42, 26, 5, 1), 1.2); shape(ctx, "#c8a040", () => ctx.roundRect(30, 42, 5, 5, 1), 1);
+    return [[24, 30], [40, 30]];
+  };
+  D.mail = (ctx, r, P) => {
+    torso(ctx, P, true, 54);
+    ctx.save(); ctx.beginPath(); ctx.rect(19, 14, 26, 40); ctx.clip();
+    ctx.strokeStyle = P.d; ctx.lineWidth = 1;
+    if (r.form === "chain") { for (let y = 16; y < 54; y += 3.5) for (let x = 19 + ((y / 3.5) % 2) * 1.75; x < 46; x += 3.5) { ctx.beginPath(); ctx.arc(x, y, 1.4, 0, TAU); ctx.stroke(); } }
+    else { for (let y = 16; y < 56; y += 5) for (let x = 19 + ((y / 5) % 2) * 3; x < 47; x += 6) { ctx.beginPath(); ctx.arc(x, y, 3, 0, Math.PI); ctx.stroke(); } }
+    ctx.restore(); shine(ctx, P, [[22, 18], [22, 30]]);
+    return [[25, 30], [39, 44]];
+  };
+  D.plate = (ctx, r, P) => {
+    if (r.form === "full") { shape(ctx, P.a, () => ctx.ellipse(16, 20, 9, 7, -0.4, 0, TAU), 2); shape(ctx, P.a, () => ctx.ellipse(48, 20, 9, 7, 0.4, 0, TAU), 2); }
+    shape(ctx, P.a, () => { ctx.moveTo(20, 14); ctx.quadraticCurveTo(32, 20, 44, 14); ctx.lineTo(46, 34); ctx.quadraticCurveTo(32, 46, 18, 34); ctx.closePath(); }, 2.5);
+    if (r.form === "full") for (const y of [42, 48, 54]) shape(ctx, P.a, () => ctx.roundRect(21, y - 6 + (y - 42) * 0, 22, 6, 2), 1.5);
+    line(ctx, P.d, 1.5, [[32, 20], [32, 40]]); line(ctx, P.d, 1.5, [[22, 26], [42, 26]]);
+    shine(ctx, P, [[24, 18], [25, 32]]);
+    return [[26, 32], [38, 22]];
+  };
+  D.coat = (ctx, r, P) => {
+    if (r.form === "cape") shape(ctx, P.d, () => { ctx.moveTo(18, 14); ctx.lineTo(46, 14); ctx.lineTo(54, 58); ctx.lineTo(10, 58); ctx.closePath(); }, 2);
+    torso(ctx, P, true, 56);
+    line(ctx, P.d, 2, [[32, 16], [32, 56]]);
+    shape(ctx, P.d, () => { ctx.moveTo(24, 12); ctx.lineTo(32, 22); ctx.lineTo(40, 12); ctx.lineTo(36, 10); ctx.lineTo(32, 16); ctx.lineTo(28, 10); ctx.closePath(); }, 1.5);
+    for (const y of [28, 36, 44]) shape(ctx, "#e8bb48", () => ctx.arc(35, y, 1.6, 0, TAU), 0.8);
+    return [[25, 34], [40, 46]];
+  };
+  D.ring = (ctx, r, P) => {
+    ctx.beginPath(); ctx.ellipse(32, 38, 15, 13, 0, 0, TAU); ctx.lineWidth = 8; ctx.strokeStyle = INK; ctx.stroke(); ctx.lineWidth = 5; ctx.strokeStyle = P.a; ctx.stroke();
+    shine(ctx, P, [[20, 34], [23, 28]]);
+    if (r.form === "gem") { shape(ctx, P.a, () => ctx.roundRect(25, 18, 14, 9, 2), 1.5); gem(ctx, 32, 18, 7, P.accent); }
+    return [[46, 44], [18, 46]];
+  };
+  D.pendant = (ctx, r, P) => {
+    ctx.beginPath(); ctx.arc(32, 14, 18, 0.15 * Math.PI, 0.85 * Math.PI, true); ctx.strokeStyle = "#9c7420"; ctx.lineWidth = 1.8; ctx.setLineDash([2, 1.5]); ctx.stroke(); ctx.setLineDash([]);
+    if (r.form === "pendant") { shape(ctx, P.a, () => ctx.arc(32, 40, 12, 0, TAU), 2); gem(ctx, 32, 40, 6, P.accent); }
+    else { shape(ctx, P.a, () => ctx.roundRect(22, 28, 20, 26, 3), 2); line(ctx, P.d, 1.5, [[26, 36], [38, 36]]); line(ctx, P.d, 1.5, [[26, 42], [36, 42]]); shape(ctx, INK, () => ctx.arc(32, 32, 1.6, 0, TAU), 0.5); }
+    return [[46, 44], [18, 44]];
+  };
+  D.charm = (ctx, r, P) => {
+    if (r.form === "tablet") {
+      shape(ctx, P.a, () => ctx.roundRect(20, 12, 24, 40, 4), 2.5);
+      line(ctx, P.d, 2, [[32, 18], [32, 46]]); line(ctx, P.d, 2, [[26, 24], [38, 24]]); line(ctx, P.d, 2, [[27, 34], [37, 40]]);
+      line(ctx, "#b83a3a", 2.5, [[32, 52], [30, 60]]); line(ctx, "#b83a3a", 2.5, [[32, 52], [35, 60]]);
+    } else {
+      shape(ctx, "#e9e3cf", () => { ctx.moveTo(32, 10); ctx.quadraticCurveTo(44, 24, 36, 50); ctx.lineTo(28, 50); ctx.quadraticCurveTo(20, 24, 32, 10); }, 2.5);
+      for (const y of [24, 32, 40]) line(ctx, "#8a8070", 1.5, [[28, y], [36, y]]);
+      line(ctx, P.a, 3, [[26, 50], [38, 50]]);
+    }
+    return [[46, 30], [18, 40]];
+  };
+  D.bracelet = (ctx, r, P) => {
+    if (r.form === "metal") {
+      ctx.beginPath(); ctx.ellipse(32, 34, 20, 12, 0, 0, TAU); ctx.lineWidth = 10; ctx.strokeStyle = INK; ctx.stroke(); ctx.lineWidth = 7; ctx.strokeStyle = P.a; ctx.stroke();
+      shine(ctx, P, [[18, 30], [26, 24]]); gem(ctx, 32, 46, 4, P.accent);
+    } else {
+      for (let i = 0; i < 14; i++) { const a = (i / 14) * TAU; shape(ctx, i % 2 ? P.a : P.d, () => ctx.ellipse(32 + Math.cos(a) * 19, 34 + Math.sin(a) * 11, 4.5, 3, a + 0.8, 0, TAU), 1.2); }
+      gem(ctx, 32, 46, 4, P.accent);
+    }
+    return [[50, 22], [14, 46]];
+  };
+
+  // ---- 風格包示意：東方（只覆寫有專屬造型的部分，其餘退回通用版）----
+  const EASTERN = {
+    sword: (ctx, r, P) => {
+      diag(ctx, () => {
+        shape(ctx, P.a, () => { ctx.moveTo(-3, 8); ctx.lineTo(-3, -24); ctx.lineTo(0, -29); ctx.lineTo(3, -24); ctx.lineTo(3, 8); ctx.closePath(); });
+        line(ctx, P.d, 1, [[0, 6], [0, -22]]);
+        shape(ctx, "#2f6a5a", () => ctx.ellipse(0, 9.5, 8, 3, 0, 0, TAU), 1.5); // 劍格：玉色
+        shape(ctx, "#2a1c14", () => ctx.roundRect(-2.2, 12, 4.4, 11, 1.5), 1.5);
+        ctx.strokeStyle = "#b83a3a"; ctx.lineWidth = 2; ctx.beginPath(); ctx.moveTo(0, 23); ctx.quadraticCurveTo(-4, 28, -2, 34); ctx.moveTo(0, 23); ctx.quadraticCurveTo(3, 29, 2, 34); ctx.stroke(); // 劍穗
+      });
+      return [[36, 26], [28, 36]];
+    },
+    round_shield: (ctx, r, P) => {
+      shape(ctx, "#b89a5a", () => ctx.arc(32, 33, 22, 0, TAU), 2.5); // 藤牌
+      ctx.strokeStyle = "#7a5a2a"; ctx.lineWidth = 1.5; for (let rr = 6; rr < 22; rr += 4) { ctx.beginPath(); ctx.arc(32, 33, rr, 0, TAU); ctx.stroke(); }
+      shape(ctx, "#b83a3a", () => ctx.arc(32, 33, 6, 0, TAU), 1.5);
+      line(ctx, "#e8bb48", 2, [[28, 33], [36, 33]]); line(ctx, "#e8bb48", 2, [[32, 29], [32, 37]]);
+      return [[22, 26], [42, 42]];
+    },
+    robe: (ctx, r, P) => {
+      const hem = 58;
+      shape(ctx, P.a, () => { ctx.moveTo(24, 12); ctx.lineTo(40, 12); ctx.lineTo(58, 26); ctx.lineTo(50, 34); ctx.lineTo(44, 30); ctx.lineTo(46, hem); ctx.lineTo(18, hem); ctx.lineTo(20, 30); ctx.lineTo(14, 34); ctx.lineTo(6, 26); ctx.closePath(); }, 2.5); // 寬袖
+      shape(ctx, "#efe6cf", () => { ctx.moveTo(26, 12); ctx.lineTo(32, 26); ctx.lineTo(38, 12); ctx.lineTo(35, 12); ctx.lineTo(32, 19); ctx.lineTo(29, 12); ctx.closePath(); }, 1.2); // 交領
+      line(ctx, P.d, 2, [[32, 26], [40, 40]]);
+      shape(ctx, "#2f6a5a", () => ctx.roundRect(19, 33, 26, 5, 1), 1.2); // 腰帶
+      ctx.strokeStyle = "#e8bb48"; ctx.lineWidth = 1.4; ctx.beginPath(); ctx.arc(24, 48, 3, Math.PI, 0); ctx.arc(30, 48, 3, Math.PI, 0); ctx.stroke(); // 雲紋
+      return [[25, 44], [39, 22]];
+    },
+  };
+
+  // ---- 外框（稀有度）----
+  function frame(ctx, rarity) {
+    const [c] = RARITY[rarity];
+    ctx.fillStyle = "#23262d"; ctx.beginPath(); ctx.roundRect(2, 2, 60, 60, 9); ctx.fill();
+    if (rarity === "epic" || rarity === "legendary") { const g = ctx.createRadialGradient(32, 32, 4, 32, 32, 34); g.addColorStop(0, c + "66"); g.addColorStop(1, c + "00"); ctx.fillStyle = g; ctx.fill(); }
+    ctx.lineWidth = rarity === "legendary" ? 3.5 : 2.5; ctx.strokeStyle = c; ctx.beginPath(); ctx.roundRect(2, 2, 60, 60, 9); ctx.stroke();
+    if (rarity !== "common") { ctx.fillStyle = c; ctx.beginPath(); ctx.moveTo(50, 3.5); ctx.lineTo(60.5, 3.5); ctx.lineTo(60.5, 14); ctx.closePath(); ctx.fill(); }
+    if (rarity === "legendary") { ctx.lineWidth = 1; ctx.globalAlpha = 0.6; ctx.beginPath(); ctx.roundRect(6, 6, 52, 52, 6); ctx.stroke(); ctx.globalAlpha = 1; }
+  }
+
+  function draw(ctx, item) {
+    const r = resolve(item);
+    const P = palette(r);
+    frame(ctx, r.rarity);
+    const fn = (r.style === "eastern" && EASTERN[r.kind]) || D[r.kind];
+    // 細長的造型放大一點，讓圖示填滿外框
+    const k = { sword: 1.15, dagger: 1.5, axe: 1.0, hammer: 1.1, spear: 1.05, bow: 1.15, staff: 1.1 }[r.kind] ?? 1;
+    ctx.save(); ctx.beginPath(); ctx.roundRect(3, 3, 58, 58, 8); ctx.clip(); ctx.translate(32, 33); ctx.scale(k, k); ctx.translate(-32, -33);
+    const spots = fn(ctx, r, P);
+    r.keywords.forEach((kw, i) => motif(ctx, kw, ...spots[i % spots.length]));
+    if (r.keywords.length === 1) motif(ctx, r.keywords[0], ...spots[1]);
+    ctx.restore();
+  }
+  function icon(item, px = 64) {
+    const cv = document.createElement("canvas");
+    cv.width = px * 2; cv.height = px * 2; cv.style.width = `${px}px`; cv.style.height = `${px}px`;
+    const ctx = cv.getContext("2d"); ctx.scale((px * 2) / 64, (px * 2) / 64); ctx.lineJoin = "round";
+    draw(ctx, item);
+    return cv;
+  }
+  function describe(item) {
+    const r = resolve(item); const K = KINDS[r.kind];
+    return { kind: K.zh, form: K.forms[r.form], material: MATERIAL[r.material].zh, dye: r.dye ? DYE_ZH[r.dye] : null, keywords: r.keywords.map((k) => KEYWORD[k].zh), rarity: RARITY[r.rarity][1], rarityColor: RARITY[r.rarity][0], slot: K.slot };
+  }
+  return { icon, draw, resolve, describe, KINDS, MATERIAL, DYE, DYE_ZH, KEYWORD, RARITY };
+})();
