@@ -171,6 +171,13 @@ def test_workshop_drafts_get_more_parts_with_every_step() -> None:
         assert not final.partial or walk is MODIFIER
 
 
+def test_client_fixture_is_current() -> None:
+    from tests.narrative.icon_fixture import FIXTURE_PATH, render
+
+    saved = FIXTURE_PATH.read_text(encoding="utf-8")
+    assert saved == render(), "重產：uv run python -m tests.narrative.icon_fixture"
+
+
 def test_workshop_draft_partial_flag() -> None:
     assert icon_of({}).partial
     assert icon_of({"skeleton": "strike", "shape": {"type": "single"}}).partial

@@ -28,7 +28,8 @@ export type ShapeId =
 
 /**
  * 技能卡 `shape` 文字的開頭（形狀的中文名，`skill_shapes.yaml` 的 `name_zh`）→ 形狀 id。
- * 卡片目前只有中文一句話（例如「錐形（大小 2）」「單體（射程 6）・穿透」），API 不改，所以在這裡對照。
+ * **只當最後的退回**：技能卡有 `icon`（Phase 3-17）時一律讀 `icon.segments[n].shape_id`；
+ * 沒有 `icon` 的舊資料才用卡片的中文一句話（例如「錐形（大小 2）」「單體（射程 6）・穿透」）對照。
  */
 export const SHAPE_NAMES: Readonly<Record<string, ShapeId>> = {
   自身: "self",
@@ -143,9 +144,29 @@ function tilesOf(v: unknown): Pos[] {
   return Array.isArray(v) ? v.map(posOf).filter((p): p is Pos => p !== null) : [];
 }
 
-/** 技能卡的形狀 id；卡片沒有或不認得時 `null`。 */
-export function shapeIdOf(card: Pick<SkillCard, "shape"> | undefined | null): ShapeId | null {
+/** 這個字串是不是已知的形狀 id。 */
+function isShapeId(id: string | null | undefined): id is ShapeId {
+  return id != null && Object.prototype.hasOwnProperty.call(SHAPE_KIND, id);
+}
+
+/** 複合技能的第幾段（0 ＝ 第一段、1 ＝ 第二段，對應 `icon.segments`）。 */
+export type SegmentIndex = 0 | 1;
+
+/**
+ * 技能卡的形狀 id：讀 `icon.segments[segment].shape_id`；卡片沒有 `icon`（舊資料）時第一段才退回
+ * 中文名對照；卡片沒有或不認得時 `null`。
+ */
+export function shapeIdOf(
+  card: Pick<SkillCard, "shape"> & Partial<Pick<SkillCard, "icon">> | undefined | null,
+  segment: SegmentIndex = 0,
+): ShapeId | null {
   if (card == null) return null;
+  const segments = card.icon?.segments;
+  if (segments !== undefined) {
+    const id = segments[segment]?.shape_id;
+    return isShapeId(id) ? id : null;
+  }
+  if (segment > 0) return null;
   const name = card.shape.split(/[（(・\s]/u)[0] ?? "";
   return SHAPE_NAMES[name] ?? null;
 }
@@ -172,10 +193,11 @@ function isRay(from: Pos, tiles: readonly Pos[]): boolean {
 }
 
 /** 卡片的形狀和實際影響的格子不符（修正規則轉換形狀等）時，以格子推斷為準。 */
-function effectiveShape(card: SkillCard | undefined, from: Pos, tiles: readonly Pos[]): ShapeId {
-  const fromCard = shapeIdOf(card);
+function effectiveShape(card: SkillCard | undefined, segment: SegmentIndex, from: Pos, tiles: readonly Pos[]): ShapeId {
+  const fromCard = shapeIdOf(card, segment);
   if (fromCard === null) {
-    if (card !== undefined && AURA_SKELETONS.has(card.skeleton) && tiles.every((p) => chebyshev(p, from) <= 3)) {
+    const skeleton = card?.icon?.segments[segment]?.skeleton ?? (segment === 0 ? card?.skeleton : undefined);
+    if (skeleton != null && AURA_SKELETONS.has(skeleton) && tiles.every((p) => chebyshev(p, from) <= 3)) {
       return tiles.length <= 1 ? "self" : "allies_in_radius";
     }
     return inferShape(from, tiles);
@@ -197,6 +219,8 @@ interface Segment {
   from: Pos;
   tiles: Pos[];
   card: SkillCard | undefined;
+  /** 複合技能的第幾段（第二段讀 `icon.segments[1]`）。 */
+  segment: SegmentIndex;
   /** 一般攻擊（沒有技能）。 */
   basic: boolean;
   /** 一般攻擊的目標。 */
@@ -263,7 +287,7 @@ function segmentElement(seg: Segment): string {
 }
 
 function toCast(seg: Segment, startMs: number): VfxCast {
-  const shape = seg.basic ? "single" : effectiveShape(seg.card, seg.from, seg.tiles);
+  const shape = seg.basic ? "single" : effectiveShape(seg.card, seg.segment, seg.from, seg.tiles);
   const to = castTarget(seg, shape);
   const kind = castKind(seg, shape, to);
   const tiles = seg.tiles.length > 0 ? seg.tiles : [to];
@@ -294,15 +318,16 @@ function openSegment(e: EventBase, at: Locate, cards: VfxCards): Segment | null 
     const caster = String(e.unit_id);
     const from = e.type === "skill_followup" ? (posOf(e.origin) ?? at(caster)) : at(caster);
     if (from === null) return null;
-    // 第二段的形狀和卡片不同：交給格子推斷
-    const card = e.type === "skill_used" ? cards[String(e.skill_id)] : undefined;
-    return { ...base, caster, from, tiles: tilesOf(e.tiles), card, basic: false, target: null };
+    // 第二段讀 `icon.segments[1]`（沒有 icon 的舊資料交給格子推斷）
+    const card = cards[String(e.skill_id)];
+    const segment: SegmentIndex = e.type === "skill_followup" ? 1 : 0;
+    return { ...base, caster, from, tiles: tilesOf(e.tiles), card, segment, basic: false, target: null };
   }
   const caster = String(e.attacker_id);
   const from = at(caster);
   const target = at(e.target_id);
   if (from === null || target === null) return null;
-  return { ...base, caster, from, tiles: [target], card: undefined, basic: true, target };
+  return { ...base, caster, from, tiles: [target], card: undefined, segment: 0, basic: true, target };
 }
 
 /** 事件是否開啟新的一段（技能、複合技能第二段、不屬於目前技能的一般攻擊）。 */

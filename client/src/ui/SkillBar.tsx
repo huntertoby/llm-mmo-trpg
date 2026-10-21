@@ -7,6 +7,7 @@ import { minorGlyph, splitSkills } from "../battle/skillTray";
 import type { ActionMode, SkillButton } from "../battle/targeting";
 import { grantedBadge } from "../battle/granted";
 import { SkillCardView } from "./SkillCardView";
+import { SkillIconView } from "./SkillIconView";
 
 interface Props {
   /** 基本動作的模式（防禦除外，防禦在右下角）。 */
@@ -32,6 +33,7 @@ function costText(b: SkillButton): string {
 
 function SkillSlot({
   b,
+  card,
   selected,
   enabled,
   onSelect,
@@ -39,6 +41,7 @@ function SkillSlot({
   onHover,
 }: {
   b: SkillButton;
+  card: SkillCard | undefined;
   selected: boolean;
   enabled: boolean;
   onSelect(id: string): void;
@@ -61,13 +64,16 @@ function SkillSlot({
         aria-disabled={blocked}
         onClick={() => (blocked ? onBlocked?.(b) : onSelect(b.skillId))}
       >
-        <span className="skill-name">{b.name}</span>
-        {b.grantedRemaining != null && (
-          <span className="skill-granted" aria-label="暫時技能">
-            {grantedBadge(b.grantedRemaining)}
-          </span>
-        )}
-        <span className="skill-cost">{costText(b)}</span>
+        <SkillIconView icon={card?.icon} size={40} className="skill-button-icon" />
+        <span className="skill-button-text">
+          <span className="skill-name">{b.name}</span>
+          {b.grantedRemaining != null && (
+            <span className="skill-granted" aria-label="暫時技能">
+              {grantedBadge(b.grantedRemaining)}
+            </span>
+          )}
+          <span className="skill-cost">{costText(b)}</span>
+        </span>
       </button>
     </div>
   );
@@ -104,6 +110,7 @@ export function SkillBar(props: Props) {
             <SkillSlot
               key={b.skillId}
               b={b}
+              card={cards[b.skillId]}
               selected={selectedKey === `skill:${b.skillId}`}
               enabled={enabled}
               onSelect={props.onSelect}
@@ -133,7 +140,7 @@ export function SkillBar(props: Props) {
                     else setPinned((p) => (p === b.skillId ? null : b.skillId));
                   }}
                 >
-                  {minorGlyph(b.name)}
+                  {cards[b.skillId]?.icon == null ? minorGlyph(b.name) : <SkillIconView icon={cards[b.skillId]?.icon} size={28} />}
                 </button>
               );
             })}

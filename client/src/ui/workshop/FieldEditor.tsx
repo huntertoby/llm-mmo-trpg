@@ -20,6 +20,7 @@ import {
   type Json,
 } from "../../workshop/draft";
 import { rarityName } from "../../workshop/state";
+import { OptionGlyph } from "../SkillIconView";
 
 interface FieldProps {
   spec: FieldSpec;
@@ -146,7 +147,10 @@ function ChoiceField({ spec, container, base, onChange }: FieldProps) {
               aria-pressed={chosen?.value === c.value}
               onClick={() => pick(c)}
             >
-              <span className="ws-card-title">{c.name_zh}</span>
+              <span className="ws-card-title">
+                <OptionGlyph field={spec.field} value={c.value} />
+                {c.name_zh}
+              </span>
               {badges(spec, c).map((b) => (
                 <span key={b} className="ws-badge">
                   {b}
@@ -167,6 +171,7 @@ function ChoiceField({ spec, container, base, onChange }: FieldProps) {
               title={c.description_zh}
               onClick={() => pick(c)}
             >
+              <OptionGlyph field={spec.field} value={c.value} px={20} />
               {c.name_zh}
             </button>
           ))}
@@ -385,7 +390,8 @@ function EffectsField({ spec, container, base, onChange }: FieldProps) {
           <div className="ws-item" key={`${index}:${String(item["type"])}`}>
             <div className="ws-item-head">
               <strong>
-                {index + 1}. {choice?.name_zh ?? String(item["type"])}
+                {index + 1}. <OptionGlyph field="effects" value={item["type"]} px={22} />
+                {choice?.name_zh ?? String(item["type"])}
               </strong>
               <span className="ws-item-tools">
                 <button type="button" disabled={index === 0} onClick={() => onChange(moveItem(container, spec, index, -1, base))} aria-label="上移">
@@ -418,7 +424,10 @@ function EffectsField({ spec, container, base, onChange }: FieldProps) {
         <div className="ws-cards">
           {spec.choices.map((c) => (
             <button type="button" key={String(c.value)} className="ws-card" onClick={() => onChange(addEffect(container, spec, c, base))}>
-              <span className="ws-card-title">{c.name_zh}</span>
+              <span className="ws-card-title">
+                <OptionGlyph field="effects" value={c.value} />
+                {c.name_zh}
+              </span>
               {badges(spec, c).map((b) => (
                 <span key={b} className="ws-badge">
                   {b}

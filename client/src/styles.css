@@ -542,16 +542,29 @@ button.selected {
 
 .skill-button {
   min-width: 78px;
-  max-width: 150px;
-  height: 42px;
+  max-width: 190px;
+  height: 48px;
   display: flex;
-  flex-direction: column;
-  justify-content: center;
-  align-items: flex-start;
+  flex-direction: row;
+  justify-content: flex-start;
+  align-items: center;
+  gap: 6px;
   text-align: left;
-  padding: 2px 8px;
+  padding: 2px 8px 2px 4px;
   overflow: hidden;
   white-space: nowrap;
+}
+
+/* 組裝式技能圖示（Phase 3-17）：技能列 40px 小圖 */
+.skill-button-icon {
+  flex: 0 0 auto;
+}
+
+.skill-button-text {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  min-width: 0;
 }
 
 .skill-button .skill-name,
@@ -562,7 +575,7 @@ button.selected {
 }
 
 .basic-button {
-  height: 42px;
+  height: 48px;
   min-width: 52px;
 }
 
@@ -1830,9 +1843,12 @@ button.selected {
 }
 
 .skill-mini {
-  width: 30px;
-  height: 30px;
-  padding: 0;
+  width: 34px;
+  height: 34px;
+  padding: 2px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
   border-radius: 50%;
   font-size: 13px;
   font-weight: 700;
@@ -2094,4 +2110,86 @@ button.selected {
 .log-text {
   min-width: 0;
   overflow-wrap: anywhere;
+}
+
+/* ---- 組裝式技能圖示（Phase 3-17）---- */
+.skill-icon {
+  display: block;
+  flex: 0 0 auto;
+}
+
+.skill-card-head {
+  display: flex;
+  gap: 10px;
+  align-items: flex-start;
+}
+
+.skill-card-headtext {
+  min-width: 0;
+}
+
+/* 組裝列：每個部件一塊（類別、小圖、名稱） */
+.asm {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px;
+  margin: 6px 0;
+}
+
+.asm-tile {
+  width: 52px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 1px;
+  padding: 2px 0 3px;
+  background: #1b1b26;
+  border: 1px solid var(--panel-border);
+  border-radius: 4px;
+}
+
+.asm-tile.asm-link {
+  border-color: #ffffff66;
+  background: #262634;
+}
+
+.asm-cat {
+  font-size: 9px;
+  line-height: 1.1;
+  color: var(--muted);
+  white-space: nowrap;
+}
+
+.asm-label {
+  max-width: 50px;
+  font-size: 10px;
+  line-height: 1.15;
+  text-align: center;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+/* 工坊選項旁的小圖 */
+.opt-glyph {
+  display: inline-flex;
+  vertical-align: middle;
+  margin-right: 4px;
+}
+
+.opt-glyph canvas {
+  display: block;
+}
+
+.ws-preview {
+  display: flex;
+  gap: 10px;
+  align-items: flex-start;
+}
+
+.ws-preview-sizes {
+  display: flex;
+  gap: 6px;
+  align-items: center;
+  margin-top: 6px;
 }
