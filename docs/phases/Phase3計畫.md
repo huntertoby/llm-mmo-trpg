@@ -1164,3 +1164,8 @@ PM 驗收後請使用者試玩一整輪（`docs/專案計畫.md` 第 14 節 🎮
 4. 截圖 `docs/phases/img/3-21b-*.png`：常駐 5 鈕、更多動作選單（相鄰有隊友、面前有高台時）、攀爬與跳躍的落點標示。
 
 驗收（3-21b）：pytest（攀爬、跳躍、遇單位或擋路物件不合法、藉機攻擊、AI 會跳過深淵）；vitest（選單只列合法動作、上限 10）；`--log-json` ＋ `replay` 一致；`check.py` 全過、`pnpm build` 成功。
+
+### 22.3 3-21a 驗收（2026-10-22）
+
+- PM 驗收：`check.py` 全過（vitest 527）、`pnpm build` 成功；`lava_crossing` 種子 11 `--log-json` ＋ `replay` 一致；引擎無 `random`。守護轉移接進 2E-2 的 `try_intercept`。`LOG_FORMAT` → `/36`。因 AI 軌跡改變換種子（summon_ai、gamble、displace_ai、totem）並重產 CLI 雜湊快照。報告 `Phase3-21a報告.md`。
+- 待 PM 決定：#1 內部 ID 保留 `defend`／`defending`、只改顯示文字 → 接受；#2 守護隊友、換位、瞄準暫放「其他動作」→ 3-21b 改選單；#3 守護轉移先於 `intercept`、不花反應、多名守護者依單位 ID、守護者暈眩不轉移 → 接受；#4 換位遇墜落高低差、速度 0 不可 → 接受；#5 換位、瞄準合法時不自動結束回合 → 接受；#6 AI 數值與瞄準條件收窄 → 平衡階段；#7 AI 不用速度 0 單位守護 → 接受；#8 逾時自動守護沒做（目前沒有逾時機制）→ 接受，日後加逾時時送不帶目標的 `Defend`。
