@@ -47,6 +47,7 @@ window.GearArt = (() => {
     hammer: { slot: "main", zh: "錘", forms: { mace: "釘頭錘", warhammer: "戰錘", flail: "連枷" }, mats: [...METAL], def: "iron" },
     spear: { slot: "main", zh: "矛", forms: { spear: "長矛", halberd: "戟", trident: "三叉戟" }, mats: [...METAL, "wood"], def: "iron" },
     bow: { slot: "main", zh: "弓", forms: { short: "短弓", long: "長弓", recurve: "反曲弓" }, mats: ["wood", ...METAL], def: "wood" },
+    gun: { slot: "main", zh: "槍", forms: { pistol: "手槍", rifle: "步槍", shotgun: "霰彈槍", energy: "能量槍" }, mats: [...METAL, "wood"], def: "steel" },
     staff: { slot: "main", zh: "杖", forms: { long: "長杖", scepter: "權杖", wand: "短杖" }, mats: ["wood", ...METAL, "bone", "crystal"], def: "wood" },
     round_shield: { slot: "off", zh: "圓盾", forms: { wood: "木圓盾", banded: "包鐵圓盾" }, mats: ["wood", ...METAL], def: "wood" },
     kite_shield: { slot: "off", zh: "鳶盾", forms: { kite: "鳶盾", tower: "塔盾" }, mats: [...METAL], def: "iron" },
@@ -72,7 +73,7 @@ window.GearArt = (() => {
     const dye = (material === "cloth" || material === "leather") && DYE[it.dye] ? it.dye : null;
     const keywords = (it.keywords ?? []).filter((k) => KEYWORD[k]).slice(0, 2);
     const rarity = RARITY[it.rarity] ? it.rarity : "common";
-    return { kind, form, material, dye, keywords, rarity, style: it.style === "eastern" ? "eastern" : "common" };
+    return { kind, form, material, dye, keywords, rarity, style: STYLES[it.style] ? it.style : "common" };
   }
 
   function mix(a, b, t) {
@@ -382,6 +383,171 @@ window.GearArt = (() => {
     },
   };
 
+  // ---- 槍（遠程主手；槍口朝右上）----
+  D.gun = (ctx, r, P) => {
+    ctx.save(); ctx.translate(32, 34); ctx.rotate(-0.42);
+    const wood = "#7a5232";
+    if (r.form === "pistol") {
+      ctx.scale(1.45, 1.45);
+      shape(ctx, P.a, () => ctx.roundRect(-12, -9, 26, 8, 2));
+      shape(ctx, P.d, () => { ctx.moveTo(-10, -2); ctx.lineTo(-2, -2); ctx.lineTo(-4, 12); ctx.lineTo(-12, 12); ctx.closePath(); });
+      line(ctx, INK, 1.8, [[-2, -1], [2, 3], [-1, 4]]);
+      shine(ctx, P, [[-9, -7], [10, -7]]);
+      var muzzle = [20, -7];
+    } else if (r.form === "rifle") {
+      shape(ctx, wood, () => { ctx.moveTo(-26, -4); ctx.lineTo(-12, -6); ctx.lineTo(-10, 2); ctx.lineTo(-26, 6); ctx.closePath(); });
+      shape(ctx, P.a, () => ctx.roundRect(-12, -7, 22, 7, 1.5));
+      shape(ctx, P.d, () => ctx.roundRect(10, -5.5, 18, 3.5, 1), 1.5);
+      shape(ctx, P.d, () => ctx.roundRect(-6, -12, 12, 4, 1.5), 1.5); // 瞄準鏡
+      shape(ctx, P.d, () => { ctx.moveTo(-6, 0); ctx.lineTo(-1, 0); ctx.lineTo(-3, 9); ctx.lineTo(-8, 9); ctx.closePath(); });
+      muzzle = [28, -4];
+    } else if (r.form === "shotgun") {
+      shape(ctx, wood, () => { ctx.moveTo(-26, -4); ctx.lineTo(-12, -7); ctx.lineTo(-10, 2); ctx.lineTo(-26, 7); ctx.closePath(); });
+      shape(ctx, P.a, () => ctx.roundRect(-12, -8, 14, 9, 2));
+      shape(ctx, P.d, () => ctx.roundRect(2, -8, 24, 4, 1), 1.5);
+      shape(ctx, P.d, () => ctx.roundRect(2, -4, 24, 4, 1), 1.5);
+      shape(ctx, wood, () => ctx.roundRect(6, 0, 12, 4, 1.5), 1.5); // 泵動護木
+      muzzle = [26, -4];
+    } else {
+      const glow = r.keywords.length ? P.accent : "#5ad8ff";
+      shape(ctx, "#e8edf2", () => { ctx.moveTo(-16, -9); ctx.lineTo(14, -9); ctx.quadraticCurveTo(22, -6, 14, -1); ctx.lineTo(-16, -1); ctx.closePath(); });
+      shape(ctx, "#3a3f4a", () => { ctx.moveTo(-12, -1); ctx.lineTo(-3, -1); ctx.lineTo(-6, 12); ctx.lineTo(-14, 12); ctx.closePath(); });
+      ctx.save(); ctx.shadowColor = glow; ctx.shadowBlur = 6; shape(ctx, glow, () => ctx.roundRect(-10, -6.5, 22, 3, 1.5), 1); ctx.restore();
+      shape(ctx, glow, () => ctx.arc(20, -5, 2.5, 0, TAU), 1.2);
+      muzzle = [20, -5];
+    }
+    ctx.restore();
+    const a = -0.42, mx = 32 + Math.cos(a) * muzzle[0] - Math.sin(a) * muzzle[1], my = 34 + Math.sin(a) * muzzle[0] + Math.cos(a) * muzzle[1];
+    return [[mx + 2, my - 4], [24, 44]];
+  };
+
+  // ---- 風格包：魔導科技（黃銅＋晶能＋符文）----
+  const BRASS = "#c8963c", BRASS_D = "#7a5a22";
+  const MAGITECH = {
+    sword: (ctx, r, P) => {
+      const glow = r.keywords.length ? P.accent : "#8fe3ff";
+      diag(ctx, () => {
+        shape(ctx, P.a, () => { ctx.moveTo(-4, 8); ctx.lineTo(-4, -22); ctx.lineTo(0, -28); ctx.lineTo(4, -22); ctx.lineTo(4, 8); ctx.closePath(); });
+        ctx.save(); ctx.shadowColor = glow; ctx.shadowBlur = 5; line(ctx, glow, 1.6, [[0, 6], [0, -22]]); ctx.restore();
+        for (const y of [-4, -12]) line(ctx, glow, 1.2, [[-3, y], [-1, y - 2], [1, y], [3, y - 2]]);
+        shape(ctx, BRASS, () => ctx.arc(0, 10, 5.5, 0, TAU), 1.5); // 齒輪護手
+        for (let i = 0; i < 8; i++) { const t = (i / 8) * TAU; shape(ctx, BRASS, () => ctx.rect(Math.cos(t) * 6 - 1.2, 10 + Math.sin(t) * 6 - 1.2, 2.4, 2.4), 0.8); }
+        shape(ctx, glow, () => ctx.arc(0, 10, 2, 0, TAU), 1);
+        shape(ctx, BRASS_D, () => ctx.roundRect(-2.2, 15, 4.4, 9, 1.5), 1.5);
+      });
+      return [[36, 26], [28, 36]];
+    },
+    round_shield: (ctx, r, P) => {
+      const glow = r.keywords.length ? P.accent : "#8fe3ff";
+      shape(ctx, BRASS, () => ctx.arc(32, 33, 22, 0, TAU), 2.5);
+      for (let i = 0; i < 12; i++) { const t = (i / 12) * TAU; shape(ctx, BRASS_D, () => ctx.arc(32 + Math.cos(t) * 18, 33 + Math.sin(t) * 18, 1.4, 0, TAU), 0.6); }
+      ctx.strokeStyle = BRASS_D; ctx.lineWidth = 2; ctx.beginPath(); ctx.arc(32, 33, 13, 0, TAU); ctx.stroke();
+      ctx.save(); ctx.shadowColor = glow; ctx.shadowBlur = 8; gem(ctx, 32, 33, 8, glow); ctx.restore();
+      return [[22, 26], [42, 42]];
+    },
+    robe: (ctx, r, P) => {
+      const glow = r.keywords.length ? P.accent : "#8fe3ff";
+      D.robe(ctx, r, P);
+      shape(ctx, BRASS, () => ctx.roundRect(19, 31, 26, 6, 1.5), 1.2);
+      ctx.save(); ctx.shadowColor = glow; ctx.shadowBlur = 5; shape(ctx, glow, () => ctx.arc(32, 34, 2.5, 0, TAU), 1); line(ctx, glow, 1.4, [[24, 40], [24, 54]]); line(ctx, glow, 1.4, [[40, 40], [40, 54]]); ctx.restore();
+      shape(ctx, BRASS, () => ctx.ellipse(16, 22, 5, 4, -0.4, 0, TAU), 1.2); shape(ctx, BRASS, () => ctx.ellipse(48, 22, 5, 4, 0.4, 0, TAU), 1.2);
+      return [[25, 46], [39, 22]];
+    },
+    axe: (ctx, r, P) => {
+      const glow = r.keywords.length ? P.accent : "#8fe3ff";
+      diag(ctx, () => {
+        shape(ctx, BRASS_D, () => ctx.roundRect(-2.5, -24, 5, 46, 2), 1.5);
+        shape(ctx, P.a, () => { ctx.moveTo(2, -26); ctx.quadraticCurveTo(20, -32, 20, -12); ctx.quadraticCurveTo(14, -6, 2, -8); ctx.closePath(); });
+        ctx.save(); ctx.shadowColor = glow; ctx.shadowBlur = 5; ctx.beginPath(); ctx.moveTo(5, -24); ctx.quadraticCurveTo(18, -27, 18, -12); ctx.strokeStyle = glow; ctx.lineWidth = 1.6; ctx.stroke(); ctx.restore();
+        shape(ctx, BRASS, () => ctx.arc(0, -17, 4, 0, TAU), 1.2); shape(ctx, glow, () => ctx.arc(0, -17, 1.6, 0, TAU), 0.6);
+      });
+      return [[40, 20], [24, 40]];
+    },
+  };
+  // ---- 風格包：科技（深色金屬＋電路＋發光）----
+  const DARK = "#2a2f38", DARK2 = "#454c58";
+  const SCIFI = {
+    sword: (ctx, r, P) => {
+      const glow = r.keywords.length ? P.accent : "#5ad8ff";
+      diag(ctx, () => {
+        ctx.save(); ctx.shadowColor = glow; ctx.shadowBlur = 10;
+        shape(ctx, glow, () => { ctx.moveTo(-3, 6); ctx.lineTo(-3, -24); ctx.quadraticCurveTo(0, -30, 3, -24); ctx.lineTo(3, 6); ctx.closePath(); }, 1);
+        ctx.restore();
+        shape(ctx, "rgba(255,255,255,0.85)", () => ctx.roundRect(-1, -22, 2, 27, 1), 0);
+        shape(ctx, DARK2, () => ctx.roundRect(-5, 6, 10, 4, 1), 1.5);
+        shape(ctx, DARK, () => ctx.roundRect(-3, 10, 6, 14, 1.5), 1.5);
+        for (const y of [13, 17, 21]) line(ctx, glow, 1, [[-2, y], [2, y]]);
+      });
+      return [[36, 26], [28, 36]];
+    },
+    round_shield: (ctx, r, P) => {
+      const glow = r.keywords.length ? P.accent : "#5ad8ff";
+      ctx.save(); ctx.globalAlpha = 0.35; shape(ctx, glow, () => { for (let i = 0; i < 6; i++) { const t = (i / 6) * TAU - Math.PI / 2; ctx.lineTo(32 + Math.cos(t) * 23, 33 + Math.sin(t) * 23); } ctx.closePath(); }, 0); ctx.restore();
+      ctx.strokeStyle = glow; ctx.lineWidth = 1; ctx.save(); ctx.shadowColor = glow; ctx.shadowBlur = 6;
+      for (const [hx, hy] of [[32, 33], [32, 21], [32, 45], [21.6, 27], [42.4, 27], [21.6, 39], [42.4, 39]]) { ctx.beginPath(); for (let i = 0; i < 6; i++) { const t = (i / 6) * TAU; ctx.lineTo(hx + Math.cos(t) * 6.5, hy + Math.sin(t) * 6.5); } ctx.closePath(); ctx.stroke(); }
+      ctx.restore();
+      shape(ctx, DARK, () => ctx.roundRect(26, 50, 12, 8, 2), 1.5); shape(ctx, glow, () => ctx.arc(32, 54, 1.8, 0, TAU), 0.6);
+      return [[22, 26], [42, 42]];
+    },
+    robe: (ctx, r, P) => {
+      const glow = r.keywords.length ? P.accent : "#5ad8ff";
+      shape(ctx, DARK2, () => { ctx.moveTo(22, 12); ctx.quadraticCurveTo(32, 16, 42, 12); ctx.lineTo(54, 22); ctx.lineTo(50, 34); ctx.lineTo(45, 30); ctx.lineTo(45, 56); ctx.lineTo(19, 56); ctx.lineTo(19, 30); ctx.lineTo(14, 34); ctx.lineTo(10, 22); ctx.closePath(); }, 2.5);
+      shape(ctx, DARK, () => ctx.roundRect(23, 18, 18, 18, 3), 1.5);
+      ctx.save(); ctx.shadowColor = glow; ctx.shadowBlur = 6;
+      line(ctx, glow, 1.6, [[32, 22], [32, 30], [36, 34], [36, 52]]); line(ctx, glow, 1.6, [[26, 40], [26, 52]]); shape(ctx, glow, () => ctx.arc(32, 22, 2.2, 0, TAU), 0.8);
+      ctx.restore();
+      return [[25, 46], [40, 22]];
+    },
+    axe: (ctx, r, P) => {
+      const glow = r.keywords.length ? P.accent : "#5ad8ff";
+      diag(ctx, () => {
+        shape(ctx, DARK, () => ctx.roundRect(-2.5, -24, 5, 46, 2), 1.5);
+        for (const y of [4, 10, 16]) line(ctx, glow, 1, [[-2, y], [2, y]]);
+        ctx.save(); ctx.shadowColor = glow; ctx.shadowBlur = 10; shape(ctx, glow, () => { ctx.moveTo(3, -26); ctx.quadraticCurveTo(20, -30, 19, -12); ctx.quadraticCurveTo(13, -8, 3, -9); ctx.closePath(); }, 1); ctx.restore();
+        shape(ctx, DARK2, () => ctx.roundRect(-4, -27, 9, 20, 2), 1.5);
+      });
+      return [[40, 20], [24, 40]];
+    },
+  };
+  // ---- 風格包：現代（工業製品、橡膠、塗裝）----
+  const MODERN = {
+    sword: (ctx, r, P) => { // 開山刀
+      diag(ctx, () => {
+        shape(ctx, P.a, () => { ctx.moveTo(-3, 8); ctx.lineTo(-3, -18); ctx.quadraticCurveTo(-3, -28, 5, -27); ctx.lineTo(5, 8); ctx.closePath(); });
+        line(ctx, "rgba(255,255,255,0.7)", 1.2, [[-1.5, 6], [-1.5, -18]]);
+        shape(ctx, "#2a2d33", () => ctx.roundRect(-3.5, 8, 9, 15, 3), 1.5);
+        for (const y of [11, 15, 19]) shape(ctx, "#5a5f68", () => ctx.arc(1, y, 1, 0, TAU), 0);
+      });
+      return [[36, 26], [28, 36]];
+    },
+    round_shield: (ctx, r, P) => { // 鎮暴盾
+      ctx.save(); ctx.globalAlpha = 0.45; shape(ctx, "#b8d4e8", () => ctx.roundRect(16, 8, 32, 50, 5), 0); ctx.restore();
+      ctx.beginPath(); ctx.roundRect(16, 8, 32, 50, 5); ctx.lineWidth = 2.5; ctx.strokeStyle = INK; ctx.stroke(); ctx.lineWidth = 2; ctx.strokeStyle = "#2a2d33"; ctx.stroke();
+      line(ctx, "rgba(255,255,255,0.8)", 2, [[21, 14], [21, 30]]);
+      shape(ctx, "#2a2d33", () => ctx.roundRect(19, 40, 26, 6, 1), 1.2);
+      return [[24, 24], [40, 50]];
+    },
+    robe: (ctx, r, P) => { // 連帽外套
+      shape(ctx, P.a, () => { ctx.moveTo(20, 14); ctx.quadraticCurveTo(32, 4, 44, 14); ctx.lineTo(54, 22); ctx.lineTo(51, 38); ctx.lineTo(45, 36); ctx.lineTo(45, 54); ctx.lineTo(19, 54); ctx.lineTo(19, 36); ctx.lineTo(13, 38); ctx.lineTo(10, 22); ctx.closePath(); }, 2.5);
+      shape(ctx, P.d, () => { ctx.moveTo(24, 14); ctx.quadraticCurveTo(32, 8, 40, 14); ctx.quadraticCurveTo(32, 20, 24, 14); }, 1.5); // 帽口
+      line(ctx, "#d0d4da", 1.6, [[32, 18], [32, 54]]);
+      shape(ctx, P.d, () => ctx.roundRect(22, 40, 20, 8, 2), 1.2); // 口袋
+      line(ctx, "#e6e6e0", 1.2, [[29, 18], [28, 26]]); line(ctx, "#e6e6e0", 1.2, [[35, 18], [36, 26]]);
+      return [[25, 30], [39, 30]];
+    },
+    axe: (ctx, r, P) => { // 消防斧
+      diag(ctx, () => {
+        shape(ctx, "#c03030", () => ctx.roundRect(-2.5, -24, 5, 46, 2), 1.5);
+        shape(ctx, "#2a2d33", () => ctx.roundRect(-3, 12, 6, 10, 2), 1.5);
+        shape(ctx, "#c03030", () => { ctx.moveTo(2, -24); ctx.lineTo(16, -26); ctx.lineTo(17, -12); ctx.lineTo(2, -12); ctx.closePath(); });
+        shape(ctx, "#c3ccd6", () => { ctx.moveTo(13, -26); ctx.lineTo(17, -26.5); ctx.lineTo(18, -11.5); ctx.lineTo(14, -12); ctx.closePath(); }, 1);
+        shape(ctx, "#454c58", () => { ctx.moveTo(-2, -23); ctx.lineTo(-11, -16); ctx.lineTo(-2, -15); ctx.closePath(); }, 1.5); // 尖鎬
+      });
+      return [[40, 20], [24, 40]];
+    },
+  };
+  const STYLES = { common: {}, eastern: EASTERN, magitech: MAGITECH, scifi: SCIFI, modern: MODERN };
+
   // ---- 外框（稀有度）----
   function frame(ctx, rarity) {
     const [c] = RARITY[rarity];
@@ -396,9 +562,9 @@ window.GearArt = (() => {
     const r = resolve(item);
     const P = palette(r);
     frame(ctx, r.rarity);
-    const fn = (r.style === "eastern" && EASTERN[r.kind]) || D[r.kind];
+    const fn = STYLES[r.style][r.kind] || D[r.kind];
     // 細長的造型放大一點，讓圖示填滿外框
-    const k = { sword: 1.15, dagger: 1.5, axe: 1.0, hammer: 1.1, spear: 1.05, bow: 1.15, staff: 1.1 }[r.kind] ?? 1;
+    const k = { sword: 1.15, dagger: 1.5, axe: 1.0, hammer: 1.1, spear: 1.05, bow: 1.15, staff: 1.1, gun: 1.15 }[r.kind] ?? 1;
     ctx.save(); ctx.beginPath(); ctx.roundRect(3, 3, 58, 58, 8); ctx.clip(); ctx.translate(32, 33); ctx.scale(k, k); ctx.translate(-32, -33);
     const spots = fn(ctx, r, P);
     r.keywords.forEach((kw, i) => motif(ctx, kw, ...spots[i % spots.length]));

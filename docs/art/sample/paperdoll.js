@@ -323,6 +323,18 @@ window.PaperDoll = (() => {
         fill(ctx, "rgba(255,255,255,0.8)", () => { ctx.beginPath(); ctx.arc(-1.2, -33.2, 1.1, 0, TAU); });
         break;
       }
+      case "gun": {
+        // 槍（樣張）：槍口朝前下方；形制決定長度與外型
+        const L = { pistol: 7, rifle: 17, shotgun: 15, energy: 12 }[it.form] ?? 7;
+        ctx.rotate(front ? 0.35 : -0.35);
+        const s = front ? -1 : 1;
+        fill(ctx, "#3a2a1c", () => rr(ctx, -1.2, -1, 2.4, 5, 0.8)); // 握把
+        if (it.form === "rifle" || it.form === "shotgun") fill(ctx, it.form === "shotgun" ? "#7a5232" : d, () => rr(ctx, s > 0 ? -6 : 1, -3, 5, 3, 1)); // 槍托
+        fill(ctx, it.form === "energy" ? "#e8edf2" : c, () => rr(ctx, s > 0 ? -1 : -L, -3.2, L + 1, it.form === "shotgun" ? 3.2 : 2.6, 1));
+        if (it.form === "energy") fill(ctx, it.element ? ELEMENT_TINT[it.element] : "#5ad8ff", () => rr(ctx, s > 0 ? 1 : -L + 1, -2.6, L - 3, 1.2, 0.6));
+        else if (it.element) fill(ctx, ELEMENT_TINT[it.element], () => { ctx.beginPath(); ctx.arc(s * (L - 0.5), -2, 1.3, 0, TAU); });
+        break;
+      }
       case "bow":
         ctx.strokeStyle = c;
         ctx.lineWidth = 2.2;
