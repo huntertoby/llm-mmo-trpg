@@ -1,6 +1,6 @@
 // 技能特效的 PixiJS 繪圖（Phase 3-12）：把 `battle/vfx.ts` 的特效描述變成一組有起訖時間的動態效果。
 // 每個效果一個 `Graphics`，每幀 `clear()` 後重畫（粒子數少，不需要粒子套件）；結束時由 `BattleRenderer`
-// 的效果迴圈銷毀。座標一律是模型像素（`tileCenter`），與場景其他圖層相同。
+// 的效果迴圈銷毀。座標一律是模型像素；格子中心由呼叫端的 `at` 給（3-19 起含高度抬高，預設 `tileCenter`）。
 import { Container, Graphics } from "pixi.js";
 import type { Pos } from "../api/types";
 import { chebyshev, type VfxCast, type VfxHit } from "../battle/vfx";
@@ -19,6 +19,9 @@ export interface Effect {
 }
 
 type Pt = { x: number; y: number };
+
+/** 格子 → 畫面上的中心點（模型像素）。 */
+export type Locate = (p: Pos) => Pt;
 
 function effect(g: Graphics, startMs: number, endMs: number, update: (t: number) => void): Effect {
   g.visible = false;
@@ -80,8 +83,8 @@ function drawParticle(g: Graphics, kind: ParticleKind, c: Pt, p: ReturnType<type
 }
 
 /** 一處爆發：中心閃光 ＋ 元素粒子（聖光另有光柱）。`scale` 是大小（1 ＝ 一格，範圍的每格較小）。 */
-function burstEffect(pos: Pos, pal: ElementVfx, startMs: number, durationMs: number, intensity: number, scale: number): Effect {
-  const c = tileCenter(pos);
+function burstEffect(pos: Pos, pal: ElementVfx, startMs: number, durationMs: number, intensity: number, scale: number, at: Locate): Effect {
+  const c = at(pos);
   const g = new Graphics();
   const n = Math.max(3, Math.round(pal.particles * intensity * scale));
   const reach = T * 0.6 * intensity * scale;
@@ -104,8 +107,8 @@ function burstEffect(pos: Pos, pal: ElementVfx, startMs: number, durationMs: num
 // ---- 各種特效 ---------------------------------------------------------------
 
 /** 施放前的蓄力光：施放者身上的光暈逐漸變亮，命中前淡出。 */
-function chargeEffect(cast: VfxCast, pal: ElementVfx, now: number): Effect {
-  const c = tileCenter(cast.from);
+function chargeEffect(cast: VfxCast, pal: ElementVfx, now: number, at: Locate): Effect {
+  const c = at(cast.from);
   const g = new Graphics();
   const start = now + cast.startMs;
   const end = now + Math.max(cast.startMs + 1, cast.impactMs);
@@ -122,9 +125,9 @@ function travelStart(cast: VfxCast, now: number, chargeMs: number): number {
 }
 
 /** 遠程單體：飛行物（拖尾 3 顆；雷改成鋸齒軌跡）。 */
-function projectileEffect(cast: VfxCast, pal: ElementVfx, start: number, end: number): Effect {
-  const a = tileCenter(cast.from);
-  const b = tileCenter(cast.to);
+function projectileEffect(cast: VfxCast, pal: ElementVfx, start: number, end: number, at: Locate): Effect {
+  const a = at(cast.from);
+  const b = at(cast.to);
   const g = new Graphics();
   const r = 6 * cast.intensity;
   return effect(g, start, end, (t) => {
@@ -144,9 +147,9 @@ function projectileEffect(cast: VfxCast, pal: ElementVfx, start: number, end: nu
 }
 
 /** 近戰單體：在目標身上揮出一道弧（垂直於攻擊方向掃過）。 */
-function slashEffect(cast: VfxCast, pal: ElementVfx, start: number, end: number): Effect {
-  const a = tileCenter(cast.from);
-  const b = tileCenter(cast.to);
+function slashEffect(cast: VfxCast, pal: ElementVfx, start: number, end: number, at: Locate): Effect {
+  const a = at(cast.from);
+  const b = at(cast.to);
   const g = new Graphics();
   const dir = Math.atan2(b.y - a.y, b.x - a.x);
   const radius = T * 0.42 * cast.intensity;
@@ -169,8 +172,8 @@ function slashEffect(cast: VfxCast, pal: ElementVfx, start: number, end: number)
 }
 
 /** 直線、連鎖：光束沿路徑延伸到底，命中後變細淡出（雷為鋸齒）。 */
-function beamEffect(cast: VfxCast, pal: ElementVfx, start: number, impact: number, impactMs: number): Effect {
-  const pts = cast.path.map((p) => tileCenter(p));
+function beamEffect(cast: VfxCast, pal: ElementVfx, start: number, impact: number, impactMs: number, at: Locate): Effect {
+  const pts = cast.path.map((p) => at(p));
   const g = new Graphics();
   const end = impact + impactMs * 0.45;
   const reachAt = (impact - start) / (end - start);
@@ -194,9 +197,9 @@ function beamEffect(cast: VfxCast, pal: ElementVfx, start: number, impact: numbe
 }
 
 /** 錐形：從施放者朝目標方向擴散的扇形。 */
-function coneEffect(cast: VfxCast, pal: ElementVfx, start: number, impact: number, impactMs: number): Effect {
-  const a = tileCenter(cast.from);
-  const b = tileCenter(cast.to);
+function coneEffect(cast: VfxCast, pal: ElementVfx, start: number, impact: number, impactMs: number, at: Locate): Effect {
+  const a = at(cast.from);
+  const b = at(cast.to);
   const dir = Math.atan2(b.y - a.y, b.x - a.x);
   const radius = (Math.max(1, ...cast.tiles.map((p) => chebyshev(p, cast.from))) + 0.5) * T;
   const half = Math.PI / 4;
@@ -220,8 +223,8 @@ function coneEffect(cast: VfxCast, pal: ElementVfx, start: number, impact: numbe
 }
 
 /** 自身、光環：從施放者向外擴散的兩道環。 */
-function auraEffect(cast: VfxCast, pal: ElementVfx, start: number, impact: number, impactMs: number): Effect {
-  const c = tileCenter(cast.from);
+function auraEffect(cast: VfxCast, pal: ElementVfx, start: number, impact: number, impactMs: number, at: Locate): Effect {
+  const c = at(cast.from);
   const radius = Math.max(T * 0.8, (Math.max(0, ...cast.tiles.map((p) => chebyshev(p, cast.from))) + 0.5) * T);
   const g = new Graphics();
   const end = impact + impactMs * 0.6;
@@ -237,8 +240,8 @@ function auraEffect(cast: VfxCast, pal: ElementVfx, start: number, impact: numbe
 }
 
 /** 範圍的一格：底色一閃（逐格爆發時的格子標記）。 */
-function tileFlash(pos: Pos, pal: ElementVfx, start: number, durationMs: number): Effect {
-  const c = tileCenter(pos);
+function tileFlash(pos: Pos, pal: ElementVfx, start: number, durationMs: number, at: Locate): Effect {
+  const c = at(pos);
   const g = new Graphics();
   return effect(g, start, start + durationMs, (t) => {
     const alpha = t < 0.25 ? t / 0.25 : 1 - (t - 0.25) / 0.75;
@@ -247,54 +250,54 @@ function tileFlash(pos: Pos, pal: ElementVfx, start: number, durationMs: number)
 }
 
 /** 範圍的各格依與中心（或施放者）的距離錯開爆發；每格的粒子較少。 */
-function tileBursts(cast: VfxCast, pal: ElementVfx, impact: number, impactMs: number, origin: Pos): Effect[] {
+function tileBursts(cast: VfxCast, pal: ElementVfx, impact: number, impactMs: number, origin: Pos, at: Locate): Effect[] {
   const out: Effect[] = [];
   const stagger = impactMs * 0.08;
   const scale = cast.tiles.length > 1 ? 0.6 : 1;
   for (const p of cast.tiles) {
     const delay = chebyshev(p, origin) * stagger;
-    out.push(tileFlash(p, pal, impact + delay, impactMs * 0.7));
-    out.push(burstEffect(p, pal, impact + delay, impactMs, cast.intensity, scale));
+    out.push(tileFlash(p, pal, impact + delay, impactMs * 0.7, at));
+    out.push(burstEffect(p, pal, impact + delay, impactMs, cast.intensity, scale, at));
   }
   return out;
 }
 
 /** 一個特效描述 → 一組動態效果（`now` 是目前的效果時鐘；描述內的時間已依播放速度縮放）。 */
-export function castEffects(cast: VfxCast, now: number, impactMs: number, chargeMs: number): Effect[] {
+export function castEffects(cast: VfxCast, now: number, impactMs: number, chargeMs: number, at: Locate = tileCenter): Effect[] {
   const pal = elementVfx(cast.element);
   const out: Effect[] = [];
-  if (cast.charge) out.push(chargeEffect(cast, pal, now));
+  if (cast.charge) out.push(chargeEffect(cast, pal, now, at));
   const start = travelStart(cast, now, chargeMs);
   const impact = Math.max(start, now + cast.impactMs);
   switch (cast.kind) {
     case "projectile":
-      out.push(projectileEffect(cast, pal, start, impact), burstEffect(cast.to, pal, impact, impactMs, cast.intensity, 1));
+      out.push(projectileEffect(cast, pal, start, impact, at), burstEffect(cast.to, pal, impact, impactMs, cast.intensity, 1, at));
       break;
     case "slash":
-      out.push(slashEffect(cast, pal, start, impact + impactMs * 0.4), burstEffect(cast.to, pal, impact, impactMs, cast.intensity, 0.8));
+      out.push(slashEffect(cast, pal, start, impact + impactMs * 0.4, at), burstEffect(cast.to, pal, impact, impactMs, cast.intensity, 0.8, at));
       break;
     case "burst":
-      out.push(burstEffect(cast.to, pal, impact, impactMs, cast.intensity, 1));
+      out.push(burstEffect(cast.to, pal, impact, impactMs, cast.intensity, 1, at));
       break;
     case "beam":
-      out.push(beamEffect(cast, pal, start, impact, impactMs), ...tileBursts(cast, pal, impact, impactMs, cast.from));
+      out.push(beamEffect(cast, pal, start, impact, impactMs, at), ...tileBursts(cast, pal, impact, impactMs, cast.from, at));
       break;
     case "cone":
-      out.push(coneEffect(cast, pal, start, impact, impactMs), ...tileBursts(cast, pal, impact, impactMs, cast.from));
+      out.push(coneEffect(cast, pal, start, impact, impactMs, at), ...tileBursts(cast, pal, impact, impactMs, cast.from, at));
       break;
     case "area":
-      out.push(...tileBursts(cast, pal, impact, impactMs, cast.to));
+      out.push(...tileBursts(cast, pal, impact, impactMs, cast.to, at));
       break;
     case "aura":
-      out.push(auraEffect(cast, pal, start, impact, impactMs));
+      out.push(auraEffect(cast, pal, start, impact, impactMs, at));
       break;
   }
   return out;
 }
 
 /** 受擊閃白（暴擊加一圈金色外環）；光環類技能另在命中的單位身上爆發。 */
-export function hitEffects(hit: VfxHit, now: number, impactMs: number, withBurst: boolean): Effect[] {
-  const c = tileCenter(hit.pos);
+export function hitEffects(hit: VfxHit, now: number, impactMs: number, withBurst: boolean, at: Locate = tileCenter): Effect[] {
+  const c = at(hit.pos);
   const g = new Graphics();
   const start = now + hit.atMs;
   const flash = effect(g, start, start + impactMs * 0.4, (t) => {
@@ -303,7 +306,7 @@ export function hitEffects(hit: VfxHit, now: number, impactMs: number, withBurst
     if (hit.crit) g.circle(c.x, c.y, T * (0.4 + 0.5 * t)).stroke({ width: 4, color: 0xffe066, alpha });
   });
   const out = [flash];
-  if (withBurst) out.push(burstEffect(hit.pos, elementVfx(hit.element), start, impactMs, hit.crit ? 1.6 : 1, 0.8));
+  if (withBurst) out.push(burstEffect(hit.pos, elementVfx(hit.element), start, impactMs, hit.crit ? 1.6 : 1, 0.8, at));
   return out;
 }
 

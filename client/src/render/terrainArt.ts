@@ -1,6 +1,7 @@
 // 地形、表面、高度的程式繪製（Phase 3-16a；移植自美術 PM 樣張 docs/art/sample/procedural.js）。
 // 每個格子畫成一張離屏貼圖（座標以 ART_T ＝ 52 的虛擬格為單位，快取時再縮放到 TILE_SIZE）。
-// 圖層順序（移植需求第 2 節）：地形 → 高度明暗 → 表面 → 陰影 → 崖面 → 格線。
+// 圖層順序（移植需求第 2 節）：地形 → 高度明暗 → 表面 → 格線。
+// 崖面、描邊與抬高位移（3-19 整格抬高）由 Pixi 另畫（render/heightArt.ts），不在貼圖裡。
 // 新地形、新表面沒有畫法時有預設，不會出錯。
 import { numToHex, PAL, rgba, shade } from "./artPalette";
 import { flame, roundRect, TAU, type Ctx } from "./artDraw";
@@ -32,14 +33,6 @@ export interface TileArtSpec {
   lip: Sides;
   /** 牆：南鄰不是牆就畫立面。 */
   wallFace: boolean;
-  /** 南側崖面高度（虛擬像素）；0 ＝ 沒有。 */
-  drop: number;
-  /** 較高的北鄰、西鄰投在本格的陰影強度（高度差）；0 ＝ 沒有。 */
-  shadowN: number;
-  shadowW: number;
-  /** 西、東鄰比本格低（畫細邊線）。 */
-  lowerW: boolean;
-  lowerE: boolean;
   /** 不可站立（牆、深淵、岩漿、冰窟）：不做高度明暗。 */
   blocked: boolean;
   /** 未知地形的色調（0xRRGGBB）；已知地形為 null。 */
@@ -59,11 +52,6 @@ export function tileArtKey(s: TileArtSpec): string {
     flags(s.surfSame),
     flags(s.lip),
     +s.wallFace,
-    s.drop,
-    s.shadowN,
-    s.shadowW,
-    +s.lowerW,
-    +s.lowerE,
     +s.blocked,
     s.tint ?? "-",
   ].join("|");
@@ -310,45 +298,11 @@ export function hasTerrainArt(terrain: string): boolean {
 
 // ---- 高度 ----
 
+/** 頂面亮度（3-19 定案第 4 條）：每高一階疊一層暖白。 */
 function heightLight(ctx: Ctx, h: number): void {
   if (h <= 0) return;
-  ctx.fillStyle = `rgba(255,248,230,${0.07 * h})`;
+  ctx.fillStyle = `rgba(255,246,220,${0.1 * h})`;
   ctx.fillRect(0, 0, T, T);
-}
-
-/** 南鄰較低：在本格底部畫立面（高度差 × 5 px）；左右較低鄰格畫細邊線。 */
-function cliffs(ctx: Ctx, s: TileArtSpec): void {
-  if (s.drop > 0) {
-    const d = s.drop;
-    const levels = Math.max(1, Math.round(d / 5));
-    ctx.fillStyle = PAL.cliff;
-    ctx.fillRect(0, T - d, T, d);
-    ctx.fillStyle = "rgba(0,0,0,0.25)";
-    for (let i = 0; i < levels; i++) ctx.fillRect(0, T - d + i * 5, T, 1);
-    ctx.fillStyle = "rgba(255,255,255,0.25)";
-    ctx.fillRect(0, T - d - 1, T, 1.5);
-  }
-  ctx.fillStyle = "rgba(40,30,20,0.45)";
-  if (s.lowerW) ctx.fillRect(0, 0, 2, T);
-  if (s.lowerE) ctx.fillRect(T - 2, 0, 2, T);
-}
-
-function castShadow(ctx: Ctx, s: TileArtSpec): void {
-  if (s.shadowN > 0) {
-    const len = 8 + s.shadowN * 4;
-    const g = ctx.createLinearGradient(0, 0, 0, len);
-    g.addColorStop(0, "rgba(0,0,0,0.35)");
-    g.addColorStop(1, "rgba(0,0,0,0)");
-    ctx.fillStyle = g;
-    ctx.fillRect(0, 0, T, len);
-  }
-  if (s.shadowW > 0) {
-    const g = ctx.createLinearGradient(0, 0, 10, 0);
-    g.addColorStop(0, "rgba(0,0,0,0.25)");
-    g.addColorStop(1, "rgba(0,0,0,0)");
-    ctx.fillStyle = g;
-    ctx.fillRect(0, 0, 10, T);
-  }
 }
 
 // ---- 表面：相鄰同種表面連成一片，不是一格一格的方塊 ----
@@ -517,8 +471,6 @@ export function drawTile(ctx: Ctx, s: TileArtSpec): void {
   }
   if (!s.blocked) heightLight(ctx, s.height);
   if (s.surface !== "none") drawSurface(ctx, s);
-  castShadow(ctx, s);
-  cliffs(ctx, s);
   // 極淡格線：讓地面連成一片又看得出格子
   ctx.strokeStyle = "rgba(0,0,0,0.14)";
   ctx.lineWidth = 1;
