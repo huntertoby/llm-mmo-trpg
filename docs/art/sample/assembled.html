@@ -1,0 +1,235 @@
+<!doctype html>
+<html lang="zh-Hant">
+<head>
+<meta charset="utf-8">
+<title>組裝式技能圖示</title>
+<style>
+  body { margin: 0; padding: 18px 24px; background: #1b1e24; color: #e8e8ea; font-family: "Noto Sans TC", "Microsoft JhengHei", sans-serif; }
+  h1 { font-size: 22px; margin: 0 0 4px; }
+  h2 { font-size: 16px; margin: 16px 0 8px; }
+  .sub { color: #a0a4ad; font-size: 13px; }
+  .row { display: flex; gap: 10px; flex-wrap: wrap; align-items: stretch; }
+  .box { background: #262a32; border-radius: 10px; padding: 10px; }
+  .pair { display: grid; grid-template-columns: 70px repeat(3, 130px); gap: 8px; align-items: center; }
+  .pair .h { font-size: 12px; color: #a0a4ad; text-align: center; }
+  .pair .rh { font-size: 12px; color: #c8cad0; }
+  .pair .c { text-align: center; font-size: 11px; color: #a0a4ad; }
+  .pair canvas { margin: 0 auto 2px; display: block; }
+  .grid { display: grid; grid-template-columns: repeat(5, 1fr); gap: 8px; }
+  .sk { background: #262a32; border-radius: 10px; padding: 8px; display: flex; gap: 8px; align-items: center; }
+  .sk .n { font-weight: 700; font-size: 13px; }
+  .sk .m { font-size: 11px; color: #a0a4ad; line-height: 1.45; }
+  .sm { display: flex; gap: 5px; align-items: flex-end; margin-top: 3px; }
+  .cards { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+  .card { background: #262a32; border-radius: 10px; padding: 10px; display: flex; gap: 12px; position: relative; }
+  .card .title { font-weight: 700; font-size: 15px; margin-bottom: 6px; }
+  .asm { display: flex; gap: 4px; flex-wrap: wrap; }
+  .asm-tile { background: #1b1e24; border-radius: 6px; padding: 3px 4px 4px; text-align: center; width: 54px; }
+  .asm-tile canvas { display: block; margin: 0 auto; border-radius: 6px; }
+  .asm-link { background: #3a3424; }
+  .asm-cat { font-size: 9px; color: #8a8f99; white-space: nowrap; overflow: hidden; }
+  .asm-label { font-size: 10px; color: #e0e2e6; line-height: 1.2; margin-top: 2px; }
+  .tip { position: absolute; background: #0f1116; border: 1px solid #4a4f5a; border-radius: 6px; padding: 6px 8px; font-size: 11px; color: #e8e8ea; width: 190px; line-height: 1.5; box-shadow: 0 4px 12px rgba(0,0,0,0.5); z-index: 3; }
+  .tip b { color: #ffe9a8; }
+  .ws { display: flex; gap: 6px; align-items: flex-start; }
+  .step { background: #262a32; border-radius: 10px; padding: 8px; width: 132px; text-align: center; }
+  .step .s { font-size: 11px; color: #a0a4ad; }
+  .step .t { font-size: 13px; font-weight: 700; margin: 2px 0 6px; }
+  .step canvas { display: block; margin: 0 auto; }
+  .opts { display: flex; gap: 3px; justify-content: center; margin-top: 6px; flex-wrap: wrap; }
+  .opt { border-radius: 6px; padding: 1px; opacity: 0.45; }
+  .opt.on { opacity: 1; outline: 2px solid #ffe14d; }
+  .arrow { color: #6a7080; font-size: 18px; align-self: center; }
+  .legend { font-size: 12px; color: #c8cad0; line-height: 1.8; }
+  .all { display: grid; grid-template-columns: repeat(19, 44px); gap: 6px; }
+  .hide { display: none; }
+</style>
+</head>
+<body>
+<div id="main">
+<h1>組裝式技能圖示：看圖就懂技能怎麼組成（玩法 #21）</h1>
+<div class="sub">全部由技能資料自動產生、零下載素材。元素＝底色、形狀＝主圖、效果原語＝底部一排（核心大、附帶小）、條件＝左下、特殊代價＝右上、骨架＝右下、類型＝外框形狀、稀有度＝外框顏色、複合＝斜切兩半。</div>
+<div class="row" style="margin-top:10px">
+  <div class="box">
+    <h2 style="margin-top:0">① 同樣是「火・錐形・範圍」：舊版幾乎一樣，新版看得出差別</h2>
+    <div class="pair" id="pair"></div>
+  </div>
+  <div class="box" style="flex:1">
+    <h2 style="margin-top:0">外框形狀＝技能類型</h2>
+    <div class="row" id="kinds"></div>
+    <h2>讀圖方式</h2>
+    <div class="legend">
+      <b>底部一排</b>：效果原語（傷害✶、推→、拉←、擊倒、狀態圖示、表面水滴、治療、護盾、位移、召喚…）<br>
+      <b>左下</b>：條件（居高臨下▲、目標血少、背刺、夾擊、本回合移動過…）　<b>右上</b>：特殊代價（源力◆、賭注骰、自傷、每場一次、延遲⌛）<br>
+      <b>複合</b>：左上＝第一段、右下＝第二段，切線上：→ 接著做、骷髏＝擊殺才觸發、✓＝命中才觸發、⌛＝延遲、腳印＝移動後<br>
+      <b>修正</b>：主圖＝被改造的對象，底部＝改變的內容　<b>被動／反應</b>：主圖＝觸發時機<br>
+      <b>小圖（技能列 28–40px）</b>：只留元素、形狀、核心效果（右下大圓）、外框
+    </div>
+  </div>
+</div>
+<h2>② 現有技能（資料取自 content/skills/；右側為 40px／28px 小圖）</h2>
+<div class="grid" id="grid"></div>
+<h2>③ 技能卡上的組裝列（每個部件一塊；滑過顯示說明，下圖示意其中一塊）</h2>
+<div class="cards" id="cards"></div>
+<h2>④ 技能工坊：邊選邊組（每一步的選項用同一套部件圖示）</h2>
+<div class="ws" id="ws"></div>
+</div>
+<div id="allwrap" class="hide">
+<h1>全部 152 個現有技能（40px 小圖，依資料自動產生）</h1>
+<div class="sub">每格滑過可看名稱。只畫元素、形狀、核心效果與外框（類型、稀有度）。</div>
+<div class="all" id="all" style="margin-top:10px"></div>
+</div>
+<script src="skillsData.js"></script>
+<script src="skillIcons.js"></script>
+<script src="parts.js"></script>
+<script src="assembled.js"></script>
+<script>
+  const A = AssembledIcon;
+  const byId = Object.fromEntries(SKILLS.map((s) => [s.id.replace(/^skill_/, ""), s]));
+  const cv = (s, px, small) => { const c = document.createElement("canvas"); A.draw(c, s, px, small === undefined ? {} : { small }); return c; };
+  const oldCv = (s, px) => {
+    const c = document.createElement("canvas");
+    SkillIcon.draw(c, { element: s.elements?.[0], shape: s.shape, range: s.range, skeleton: s.skeleton, rarity: s.rarity, weapon_req: s.weapon_req }, px);
+    return c;
+  };
+  if (new URLSearchParams(location.search).has("all")) {
+    document.getElementById("main").classList.add("hide");
+    document.getElementById("allwrap").classList.remove("hide");
+    const all = document.getElementById("all");
+    for (const s of SKILLS) { const c = cv(s, 44, true); c.title = s.name; all.appendChild(c); }
+  }
+  // ① 同樣「火・錐形・範圍」
+  const ash = byId.ashen_oath;
+  const variants = [
+    ["灰燼誓約", ash, "＋火焰表面"],
+    ["炎浪衝擊", { ...ash, id: "x1", name: "炎浪衝擊", effects: [{ type: "damage" }, { type: "push" }] }, "＋推（假想）"],
+    ["焚風扇", { ...ash, id: "x2", name: "焚風扇", effects: [{ type: "damage" }, { type: "apply_status", status: "burning" }] }, "＋燃燒（假想）"],
+  ];
+  const pair = document.getElementById("pair");
+  pair.insertAdjacentHTML("beforeend", `<div></div>${variants.map(([n, , m]) => `<div class="h">${n}<br>${m}</div>`).join("")}`);
+  for (const [label, fn] of [["舊版", (s) => oldCv(s, 84)], ["新版", (s) => cv(s, 84)], ["新版小圖", (s) => { const d = document.createElement("div"); d.style.display = "flex"; d.style.gap = "6px"; d.style.justifyContent = "center"; d.append(cv(s, 40), cv(s, 28)); return d; }]]) {
+    pair.insertAdjacentHTML("beforeend", `<div class="rh">${label}</div>`);
+    for (const [, s] of variants) { const d = document.createElement("div"); d.className = "c"; d.appendChild(fn(s)); pair.appendChild(d); }
+  }
+  // 外框
+  const kinds = document.getElementById("kinds");
+  for (const [k, sid] of [["active", "fire_bolt"], ["reaction", "riposte"], ["passive", "ember_brand"], ["stance", "bulwark_stance"], ["modifier", "burning_shove"]]) {
+    const d = document.createElement("div");
+    d.style.textAlign = "center";
+    d.style.fontSize = "12px";
+    d.appendChild(cv(byId[sid], 64));
+    d.insertAdjacentHTML("beforeend", `<div>${A.KIND_ZH[k]}</div>`);
+    kinds.appendChild(d);
+  }
+  // ② 現有技能
+  const SHOW = [
+    ["fire_bolt", ""], ["ashen_oath", ""], ["deep_freeze", "冰凍"], ["gale_kick", "推"], ["grapple_arrow", "拉"],
+    ["high_ground_shot", "條件：居高臨下"], ["execute", "條件：目標血少"], ["all_in", "代價：失手自傷"], ["blood_sacrifice", "代價：賭注"], ["venom_cloud", ""],
+    ["sanctuary", ""], ["raise_skeleton", "召喚"], ["leap_slam", "複合：移動後"], ["death_spiral", "複合：擊殺才觸發"], ["parry_riposte", "複合：延遲"],
+    ["burning_shove", "修正"], ["ember_brand", "被動"], ["riposte", "反應"], ["bulwark_stance", "姿態"], ["kindred_flame", "傳說：源力"],
+  ];
+  const grid = document.getElementById("grid");
+  for (const [id, note] of SHOW) {
+    const s = byId[id];
+    if (!s) continue;
+    const d = document.createElement("div");
+    d.className = "sk";
+    d.appendChild(cv(s, 96));
+    const info = document.createElement("div");
+    info.innerHTML = `<div class="n">${s.name}</div><div class="m">${A.KIND_ZH[s.kind]}・${A.RARITY_ZH[s.rarity]}${note ? `<br>${note}` : ""}</div>`;
+    const sm = document.createElement("div");
+    sm.className = "sm";
+    sm.append(cv(s, 40), cv(s, 28));
+    info.appendChild(sm);
+    d.appendChild(info);
+    grid.appendChild(d);
+  }
+  // ③ 組裝列
+  const cards = document.getElementById("cards");
+  ["leap_slam", "burning_shove", "kindred_flame", "high_ground_shot"].forEach((id, i) => {
+    const s = byId[id];
+    const card = document.createElement("div");
+    card.className = "card";
+    card.appendChild(cv(s, 96));
+    const right = document.createElement("div");
+    right.innerHTML = `<div class="title">${s.name}<span style="font-weight:400;font-size:12px;color:#a0a4ad">　${A.KIND_ZH[s.kind]}・${A.RARITY_ZH[s.rarity]}</span></div>`;
+    const row = A.assemblyRow(right, s);
+    card.appendChild(right);
+    cards.appendChild(card);
+    if (i === 0) {
+      // 示意：滑過「接續」那塊的說明
+      const tiles = [...row.children];
+      const t = tiles.find((x) => x.classList.contains("asm-link"));
+      if (t) {
+        t.style.outline = "2px solid #ffe14d";
+        const tip = document.createElement("div");
+        tip.className = "tip";
+        tip.innerHTML = "<b>接續：移動後觸發</b><br>第一段（躍擊）落地後，立刻放出第二段：十字範圍傷害＋擊倒。切線上的腳印就是這個意思。";
+        card.appendChild(tip);
+        requestAnimationFrame(() => {
+          const r = t.getBoundingClientRect();
+          const c = card.getBoundingClientRect();
+          tip.style.left = `${r.left - c.left - 40}px`;
+          tip.style.top = `${r.bottom - c.top + 6}px`;
+        });
+      }
+    }
+  });
+  // ④ 工坊逐步組裝（示意：組一招「炎浪衝擊」）
+  const base = { id: "ws", name: "炎浪衝擊" };
+  const steps = [
+    ["1 骨架", "範圍", { ...base, kind: "active", skeleton: "area" }, ["strike", "area", "control", "aura"], "area", "skeleton"],
+    ["2 基本・元素", "主動・火", { ...base, kind: "active", skeleton: "area", elements: ["fire"] }, ["fire", "ice", "lightning", "poison"], "fire", "element"],
+    ["3 形狀", "錐形", { ...base, kind: "active", skeleton: "area", elements: ["fire"], shape: "cone" }, ["single", "line", "cone", "square3"], "cone", "shape"],
+    ["4 效果", "傷害＋推", { ...base, kind: "active", skeleton: "area", elements: ["fire"], shape: "cone", effects: [{ type: "damage" }, { type: "push" }] }, ["damage", "push", "status:burning", "surface:fire"], ["damage", "push"], "effect"],
+    ["5 條件", "居高臨下", { ...base, kind: "active", skeleton: "area", elements: ["fire"], shape: "cone", effects: [{ type: "damage" }, { type: "push" }], condition: "height_advantage" }, ["height_advantage", "from_behind", "target_hp_below", "moved_this_turn"], "height_advantage", "condition"],
+    ["6 代價・稀有度", "源力・史詩", { ...base, kind: "active", skeleton: "area", elements: ["fire"], shape: "cone", effects: [{ type: "damage" }, { type: "push" }], condition: "height_advantage", cost: { source: 1 }, rarity: "epic" }, ["source", "gamble", "self", "once"], "source", "cost"],
+  ];
+  const ws = document.getElementById("ws");
+  const optPart = (kind, v) => {
+    if (kind === "effect") {
+      const [t, x] = v.split(":");
+      return Parts.effectPart(t === "status" ? { type: "apply_status", status: x } : t === "surface" ? { type: "create_surface", surface: x } : { type: v });
+    }
+    if (kind === "condition") return Parts.conditionPart(v);
+    if (kind === "cost") return Parts.costParts(v === "source" ? { cost: { source: 1 } } : v === "gamble" ? { cost: { gamble: true } } : v === "self" ? { cost: { self_status: 1 } } : { activation: "battle" })[0];
+    return null;
+  };
+  steps.forEach(([s, t, skill, opts, chosen, kind], i) => {
+    if (i) ws.insertAdjacentHTML("beforeend", '<div class="arrow">›</div>');
+    const d = document.createElement("div");
+    d.className = "step";
+    d.innerHTML = `<div class="s">${s}</div><div class="t">${t}</div>`;
+    d.appendChild(cv(skill, 88, false));
+    const o = document.createElement("div");
+    o.className = "opts";
+    for (const v of opts) {
+      const on = Array.isArray(chosen) ? chosen.includes(v) : chosen === v;
+      const c = A.tileCanvas((ctx) => {
+        if (kind === "skeleton") { ctx.fillStyle = "#14161c"; ctx.beginPath(); ctx.arc(50, 50, 46, 0, 7); ctx.fill(); ctx.save(); ctx.translate(50, 50); ctx.scale(3.2, 3.2); SkillIcon.skeletonGlyph(ctx, v, 0, 0); ctx.restore(); }
+        else if (kind === "element") { ctx.fillStyle = SkillIcon.EL[v].dark; ctx.beginPath(); ctx.arc(50, 50, 46, 0, 7); ctx.fill(); SkillIcon.elementGlyph(ctx, v, 50, 50, 2.8, SkillIcon.EL[v].accent); }
+        else if (kind === "shape") { ctx.fillStyle = "#3a2018"; ctx.beginPath(); ctx.roundRect(4, 4, 92, 92, 14); ctx.fill(); ctx.save(); ctx.translate(50, 50); ctx.scale(0.9, 0.9); ctx.translate(-50, -50); SkillIcon.motif(ctx, { shape: v, range: 5, skeleton: "area" }, "fire", SkillIcon.EL.fire); ctx.restore(); }
+        else Parts.chip(ctx, optPart(kind, v), 50, 50, 46, { ring: on ? "#ffe14d" : "rgba(255,255,255,0.3)" });
+      }, 26);
+      c.className = `opt${on ? " on" : ""}`;
+      o.appendChild(c);
+    }
+    d.appendChild(o);
+    ws.appendChild(d);
+  });
+  ws.insertAdjacentHTML("beforeend", '<div class="arrow">›</div>');
+  const fin = document.createElement("div");
+  fin.className = "step";
+  fin.style.width = "auto";
+  fin.innerHTML = '<div class="s">完成</div><div class="t">炎浪衝擊</div>';
+  const last = steps.at(-1)[2];
+  fin.appendChild(cv(last, 88));
+  const sm = document.createElement("div");
+  sm.className = "sm";
+  sm.style.justifyContent = "center";
+  sm.append(cv(last, 40), cv(last, 28));
+  fin.appendChild(sm);
+  ws.appendChild(fin);
+</script>
+</body>
+</html>
