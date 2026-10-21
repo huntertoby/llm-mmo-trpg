@@ -29,6 +29,7 @@ from __future__ import annotations
 
 from trpg.engine.actions import (
     Action,
+    Aim,
     Attack,
     Decision,
     Defend,
@@ -40,6 +41,7 @@ from trpg.engine.actions import (
     SetReactionMode,
     Shove,
     Step,
+    Swap,
     Trip,
     UseSkill,
 )
@@ -61,6 +63,7 @@ from trpg.engine.view import BattleView, project_for
 
 __all__ = [
     "Action",
+    "Aim",
     "AllyResult",
     "Attack",
     "BattleResult",
@@ -81,6 +84,7 @@ __all__ = [
     "SetReactionMode",
     "Shove",
     "Step",
+    "Swap",
     "Telegraph",
     "Trip",
     "UnitSpawn",

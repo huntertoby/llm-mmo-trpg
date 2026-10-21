@@ -29,6 +29,7 @@ from trpg.content.battle import ReactionRule
 from trpg.content.environment import ReactionDef
 from trpg.content.skills import SkillDef
 from trpg.engine import modifiers
+from trpg.engine.basics import guard_covers
 from trpg.engine.context import Ctx
 from trpg.engine.effects import execute
 from trpg.engine.effects.models import DamageEffect, RemoveStatusEffect
@@ -316,6 +317,28 @@ def hit_reactions(ctx: Ctx, attacker: UnitState, target: UnitState, *, melee: bo
         _run_skill(ctx, target, picked, attacker)
 
 
+def _guard_transfer(
+    ctx: Ctx, attacker: UnitState, target: UnitState, seq: int, skill_id: str | None
+) -> UnitState | None:
+    """「守護」動作（Phase 3-21a）：守著 ``target`` 的相鄰隊友（依單位 ID，第一個本輪還能轉移的）
+    替他承受這次單體攻擊；不花反應。"""
+    for guardian in ctx.state.units_sorted():
+        if guardian.team is not target.team or not guard_covers(ctx, guardian, target):
+            continue
+        guardian.guard_transfers += 1
+        ctx.emit(
+            AttackIntercepted,
+            guardian_id=guardian.id,
+            attacker_id=attacker.id,
+            target_id=target.id,
+            skill_id=skill_id,
+            guard=True,
+        )
+        redirect_fired(ctx, seq, target.id, guardian.id)
+        return guardian
+    return None
+
+
 def try_intercept(
     ctx: Ctx, attacker: UnitState, target: UnitState, seq: int, *, skill_id: str | None = None
 ) -> UnitState | None:
@@ -328,6 +351,9 @@ def try_intercept(
     """
     if attacker.team is target.team:
         return None
+    guarded = _guard_transfer(ctx, attacker, target, seq, skill_id)
+    if guarded is not None:
+        return guarded
     for guardian in ctx.state.units_sorted():
         if guardian.id == target.id or guardian.team is not target.team:
             continue
@@ -495,6 +521,9 @@ def _attack_once(
             forced = "miss" if ctx.preview == "min" else "crit"
     state = ctx.state
     bonus = modifiers.hit_bonus(state, attacker, modifiers.ATTACK, Subject(target, target.xy))
+    if attacker.aimed:  # 瞄準（Phase 3-21a）：下一次需要擲命中的攻擊，用掉即失效
+        bonus += ctx.core.aim_hit_bonus
+        attacker.aimed = False
     roll = roll_attack(state, ctx.rng, attacker, target, forced, bonus=bonus)
     rolled_event = ctx.emit(
         AttackRolled,

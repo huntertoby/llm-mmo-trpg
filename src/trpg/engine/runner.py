@@ -38,8 +38,14 @@ __all__ = [
     "run_battle",
 ]
 
-LOG_FORMAT = "trpg-battle-log/35"
-"""``/35``（Phase 3-20）：基本動作跑步——動作 ``run``、事件 ``unit_ran``、單位的 ``ran_this_turn``、
+LOG_FORMAT = "trpg-battle-log/36"
+"""``/36``（Phase 3-21a）：基本動作守護（``defend`` 加 ``target_id``、事件 ``guard_set``、
+``attack_intercepted.guard``、單位的 ``guarding_id``／``guard_transfers``）、換位（``swap``）、瞄準
+（``aim``、事件 ``unit_aimed``、單位的 ``aimed``）、核心規則 ``swap_ap_cost``／``aim_ap_cost``／
+``aim_hit_bonus``／``guard_transfers_per_round``，AI 規則 ``guard``／``swap``／``aim``；
+速度 0 的單位不能跑步。舊紀錄的步驟仍可逐步重播，但 AI 會選擇新動作，同種子的 AI 對戰結果
+與 ``/35`` 不同，且 ``format`` 不符的紀錄由 ``trpg battle replay`` 拒絕。
+``/35``（Phase 3-20）：基本動作跑步——動作 ``run``、事件 ``unit_ran``、單位的 ``ran_this_turn``、
 核心規則 ``run_ap_cost``／``run_move_bonus``、AI 規則 ``run``；``resolve`` 對舊紀錄中的動作行為不變
 （舊紀錄的步驟仍可逐步重播），但 AI 會選擇跑步，同種子的 AI 對戰結果與 ``/34`` 不同，且
 ``format`` 不符的紀錄由 ``trpg battle replay`` 拒絕。

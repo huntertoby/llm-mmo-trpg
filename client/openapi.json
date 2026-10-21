@@ -305,6 +305,12 @@
                     "$ref": "#/components/schemas/Run"
                   },
                   {
+                    "$ref": "#/components/schemas/Swap"
+                  },
+                  {
+                    "$ref": "#/components/schemas/Aim"
+                  },
+                  {
                     "$ref": "#/components/schemas/Shove"
                   },
                   {
@@ -331,6 +337,8 @@
                     "use_skill": "#/components/schemas/UseSkill-Input",
                     "defend": "#/components/schemas/Defend",
                     "run": "#/components/schemas/Run",
+                    "swap": "#/components/schemas/Swap",
+                    "aim": "#/components/schemas/Aim",
                     "shove": "#/components/schemas/Shove",
                     "trip": "#/components/schemas/Trip",
                     "interact": "#/components/schemas/Interact",
@@ -460,6 +468,12 @@
                     "$ref": "#/components/schemas/Run"
                   },
                   {
+                    "$ref": "#/components/schemas/Swap"
+                  },
+                  {
+                    "$ref": "#/components/schemas/Aim"
+                  },
+                  {
                     "$ref": "#/components/schemas/Shove"
                   },
                   {
@@ -486,6 +500,8 @@
                     "use_skill": "#/components/schemas/UseSkill-Input",
                     "defend": "#/components/schemas/Defend",
                     "run": "#/components/schemas/Run",
+                    "swap": "#/components/schemas/Swap",
+                    "aim": "#/components/schemas/Aim",
                     "shove": "#/components/schemas/Shove",
                     "trip": "#/components/schemas/Trip",
                     "interact": "#/components/schemas/Interact",
@@ -1201,6 +1217,12 @@
             "$ref": "#/components/schemas/Run"
           },
           {
+            "$ref": "#/components/schemas/Swap"
+          },
+          {
+            "$ref": "#/components/schemas/Aim"
+          },
+          {
             "$ref": "#/components/schemas/Shove"
           },
           {
@@ -1222,6 +1244,7 @@
         "discriminator": {
           "propertyName": "type",
           "mapping": {
+            "aim": "#/components/schemas/Aim",
             "attack": "#/components/schemas/Attack",
             "defend": "#/components/schemas/Defend",
             "end_stance": "#/components/schemas/EndStance",
@@ -1231,6 +1254,7 @@
             "run": "#/components/schemas/Run",
             "set_reaction_mode": "#/components/schemas/SetReactionMode",
             "shove": "#/components/schemas/Shove",
+            "swap": "#/components/schemas/Swap",
             "trip": "#/components/schemas/Trip",
             "use_skill": "#/components/schemas/UseSkill-Output"
           }
@@ -1288,6 +1312,27 @@
         ],
         "title": "ActivationView",
         "description": "生效中的常駐類傳說（Phase 3D-6；雙方都看得到）。\n\n``expires_round``：限時型在持有者第 ``expires_round`` 輪的回合開始時結束（剩餘輪數 ＝\n``expires_round − round``）；整場型為 ``None``。``rule_name_zh``：規則改變的名稱（修正型為\n``None``）。"
+      },
+      "Aim": {
+        "properties": {
+          "unit_id": {
+            "type": "string",
+            "title": "Unit Id"
+          },
+          "type": {
+            "type": "string",
+            "const": "aim",
+            "title": "Type",
+            "default": "aim"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "unit_id"
+        ],
+        "title": "Aim",
+        "description": "瞄準（Phase 3-21a）：本回合下一次需要擲命中的攻擊（普攻或技能）命中 ``+aim_hit_bonus``；\n不疊加，回合結束或用掉即失效。"
       },
       "ArenaOpponents": {
         "properties": {
@@ -2598,6 +2643,17 @@
             "const": "defend",
             "title": "Type",
             "default": "defend"
+          },
+          "target_id": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Target Id"
           }
         },
         "additionalProperties": false,
@@ -2606,7 +2662,7 @@
           "unit_id"
         ],
         "title": "Defend",
-        "description": "防禦姿態：防禦值 +25%，到自己的下回合開始。"
+        "description": "守護（Phase 3-21a，玩法 #24；內部 ID 仍為 ``defend``）：防禦值 +25%，到自己的下回合開始。\n\n``target_id`` 為 ``None`` 時守護自己；給相鄰隊友時，敵人以單體攻擊該隊友、且自己仍與他相鄰\n時，改由自己承受（每輪上限 ``guard_transfers_per_round``，範圍技能不轉移）。"
       },
       "Direction": {
         "type": "string",
@@ -6056,6 +6112,12 @@
             "$ref": "#/components/schemas/Run"
           },
           {
+            "$ref": "#/components/schemas/Swap"
+          },
+          {
+            "$ref": "#/components/schemas/Aim"
+          },
+          {
             "$ref": "#/components/schemas/Shove"
           },
           {
@@ -6080,6 +6142,7 @@
         "discriminator": {
           "propertyName": "type",
           "mapping": {
+            "aim": "#/components/schemas/Aim",
             "attack": "#/components/schemas/Attack",
             "decision": "#/components/schemas/Decision",
             "defend": "#/components/schemas/Defend",
@@ -6090,6 +6153,7 @@
             "run": "#/components/schemas/Run",
             "set_reaction_mode": "#/components/schemas/SetReactionMode",
             "shove": "#/components/schemas/Shove",
+            "swap": "#/components/schemas/Swap",
             "trip": "#/components/schemas/Trip",
             "use_skill": "#/components/schemas/UseSkill-Output"
           }
@@ -6273,6 +6337,32 @@
         ],
         "title": "Surface",
         "description": "格子的表面狀態。"
+      },
+      "Swap": {
+        "properties": {
+          "unit_id": {
+            "type": "string",
+            "title": "Unit Id"
+          },
+          "type": {
+            "type": "string",
+            "const": "swap",
+            "title": "Type",
+            "default": "swap"
+          },
+          "target_id": {
+            "type": "string",
+            "title": "Target Id"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "unit_id",
+          "target_id"
+        ],
+        "title": "Swap",
+        "description": "換位（Phase 3-21a）：與相鄰的我方單位（含召喚物）互換位置；朝向不變，不觸發藉機攻擊。"
       },
       "TacticalOrder": {
         "oneOf": [

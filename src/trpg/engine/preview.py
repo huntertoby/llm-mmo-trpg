@@ -31,7 +31,18 @@ from trpg.content.skills import (
     SkillDef,
 )
 from trpg.engine import modifiers
-from trpg.engine.actions import Action, Attack, Interact, Run, Shove, Trip, UseSkill
+from trpg.engine.actions import (
+    Action,
+    Aim,
+    Attack,
+    Defend,
+    Interact,
+    Run,
+    Shove,
+    Swap,
+    Trip,
+    UseSkill,
+)
 from trpg.engine.battle import _actor, action_ap_cost, simulate_preview
 from trpg.engine.bombs import blast_tiles, bomb_spec
 from trpg.engine.control import plan_status, status_save_chance
@@ -1359,8 +1370,15 @@ def _build(
         tiles = tuple(sorted({*tiles, *area.tiles, *follow_tiles}, key=lambda p: (p[1], p[0])))
         units = tuple(sorted({*units, *area.units, *follow_units}))
     ap_cost, reach = _cost_and_reach(state, actor, action)
+    core = state.ruleset.core
     if isinstance(action, Run):
-        ap_cost = state.ruleset.core.run_ap_cost
+        ap_cost = core.run_ap_cost
+    elif isinstance(action, Defend):
+        ap_cost = core.defend_ap_cost
+    elif isinstance(action, Swap):
+        ap_cost = core.swap_ap_cost
+    elif isinstance(action, Aim):
+        ap_cost = core.aim_ap_cost
     pierce = _pierce_info(state, actor, action) if isinstance(action, UseSkill) else None
     topples, hurls = _scene_infos(max_events)
     checks: tuple[DisplaceCheck, ...] = ()

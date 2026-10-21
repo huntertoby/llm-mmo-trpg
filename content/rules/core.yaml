@@ -9,6 +9,10 @@ ap_carry_max: 1               # 可保留到下回合的 AP
 basic_attack_ap_cost: 1       # 普攻消耗
 defend_ap_cost: 1             # 防禦動作消耗
 run_ap_cost: 1                # 跑步（3-20，玩法 #22）消耗
+swap_ap_cost: 1               # 換位（3-21a，玩法 #24）消耗
+aim_ap_cost: 1                # 瞄準（3-21a）消耗
+aim_hit_bonus: 2              # 瞄準：下一次需要擲命中的攻擊命中 +2（不疊加；平衡階段初值）
+guard_transfers_per_round: 1  # 守護隊友：每輪最多替隊友承受的次數（單體攻擊；平衡階段初值）
 run_move_bonus: 3             # 跑步：本回合移動點數 +3 格（固定格數，不受加速／緩速影響；平衡階段初值）
 
 # --- 判定 ---

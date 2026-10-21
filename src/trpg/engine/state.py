@@ -310,6 +310,13 @@ class UnitState:
     自己回合開始時清除。"""
     ran_this_turn: bool = False
     """本回合已跑步（Phase 3-20；每回合限 1 次）；自己回合開始時清除。"""
+    guarding_id: UnitId | None = None
+    """守護的隊友（Phase 3-21a）：到自己的下回合開始為止，敵人以單體攻擊該隊友時由自己承受；
+    守護自己或沒有守護時為 ``None``。"""
+    guard_transfers: int = 0
+    """本輪已替隊友承受的次數（上限 ``guard_transfers_per_round``）；每輪開始時歸零。"""
+    aimed: bool = False
+    """已瞄準（Phase 3-21a）：下一次需要擲命中的攻擊命中加值；用掉或回合結束時清除。"""
     turn_cast_tags: tuple[str, ...] = ()
     """本回合已施放的主動技能的標籤（依施放順序、含重複；``cast_tag_this_turn`` 條件，Phase 3D-1）；
     自己回合開始時清除。"""
@@ -411,6 +418,9 @@ class UnitState:
             extra_reactions=self.extra_reactions,
             moved_this_turn=self.moved_this_turn,
             ran_this_turn=self.ran_this_turn,
+            guarding_id=self.guarding_id,
+            guard_transfers=self.guard_transfers,
+            aimed=self.aimed,
             turn_cast_tags=self.turn_cast_tags,
             owner_id=self.owner_id,
             summon_expires_round=self.summon_expires_round,

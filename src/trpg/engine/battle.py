@@ -20,6 +20,7 @@ from trpg.engine import modifiers
 from trpg.engine.actions import (
     ACTION_ADAPTER,
     Action,
+    Aim,
     Attack,
     Decision,
     Defend,
@@ -30,10 +31,20 @@ from trpg.engine.actions import (
     Run,
     SetReactionMode,
     Shove,
+    Swap,
     Trip,
     UseSkill,
 )
 from trpg.engine.activations import moves_object
+from trpg.engine.basics import (
+    adjacent_allies,
+    aim_problem,
+    do_aim,
+    do_defend,
+    do_swap,
+    guard_problem,
+    swap_problem,
+)
 from trpg.engine.context import Ctx, GambleBranch, PreviewMode
 from trpg.engine.copying import copy_selections, has_copy_effect
 from trpg.engine.effects import execute
@@ -56,7 +67,7 @@ from trpg.engine.events import (
     UnitRan,
     UnitStoodUp,
 )
-from trpg.engine.ids import DEFENDING, PRONE, TOPPLABLE
+from trpg.engine.ids import PRONE, TOPPLABLE
 from trpg.engine.lifecycle import make_unit
 from trpg.engine.maneuvers import contest
 from trpg.engine.reactions import (
@@ -387,6 +398,8 @@ def run_problem(state: BattleState, unit: UnitState) -> str | None:
         return "已經跑過了"
     if is_rooted(state.ruleset, unit):
         return "被定身，不能跑"
+    if unit.speed == 0:
+        return "速度為 0，不能跑"  # 木樁、圖騰等不能移動的單位（3-20 待決定 #1）
     cost = state.ruleset.core.run_ap_cost
     if unit.ap < cost:
         return f"AP 不足：需要 {cost}，剩餘 {unit.ap}"
@@ -775,16 +788,6 @@ def _do_attack(ctx: Ctx, unit: UnitState, action: Action) -> None:
     perform_unit_attack(ctx, unit, target, primary=True)
 
 
-def _do_defend(ctx: Ctx, unit: UnitState, action: Action) -> None:
-    assert isinstance(action, Defend)
-    cost = ctx.core.defend_ap_cost
-    _require_ap(unit, cost)
-    if unit.has_status(DEFENDING):
-        raise IllegalActionError("已處於防禦姿態")
-    unit.ap -= cost
-    execute(ctx, [ApplyStatusEffect(target_id=unit.id, status_id=DEFENDING, source_id=unit.id)])
-
-
 def _do_run(ctx: Ctx, unit: UnitState, action: Action) -> None:
     assert isinstance(action, Run)
     problem = run_problem(ctx.state, unit)
@@ -915,7 +918,9 @@ def _do_use_skill(ctx: Ctx, unit: UnitState, action: Action) -> None:
 ACTION_HANDLERS: dict[str, ActionHandler] = {
     "move": _do_move,
     "attack": _do_attack,
-    "defend": _do_defend,
+    "defend": do_defend,
+    "swap": do_swap,
+    "aim": do_aim,
     "run": _do_run,
     "shove": _do_shove,
     "trip": _do_trip,
@@ -1083,7 +1088,6 @@ def legal_actions_with_areas(
 def _legal_actions(
     state: BattleState, unit: UnitState, areas: dict[int, SkillArea], *, expand_copy: bool = False
 ) -> list[Action]:
-    core = state.ruleset.core
     actions: list[Action] = []
     if unit.ap >= action_ap_cost(state, unit, modifiers.ATTACK):
         actions.extend(
@@ -1112,10 +1116,20 @@ def _legal_actions(
             )
     actions.extend(_skill_actions(state, unit, areas, expand_copy=expand_copy))
     actions.extend(interact_actions(state, unit))
-    if unit.ap >= core.defend_ap_cost and not unit.has_status(DEFENDING):
+    if guard_problem(state, unit, None) is None:
         actions.append(Defend(unit_id=unit.id))
+        actions.extend(
+            Defend(unit_id=unit.id, target_id=a.id) for a in adjacent_allies(state, unit)
+        )
     if run_problem(state, unit) is None:
         actions.append(Run(unit_id=unit.id))
+    actions.extend(
+        Swap(unit_id=unit.id, target_id=a.id)
+        for a in adjacent_allies(state, unit)
+        if swap_problem(state, unit, a.id) is None
+    )
+    if aim_problem(state, unit) is None and _has_attack_to_aim(state, unit):
+        actions.append(Aim(unit_id=unit.id))
     if stance_status_ids(state.ruleset, unit):
         actions.append(EndStance(unit_id=unit.id))
     budget = available_move_budget(state, unit)
@@ -1181,11 +1195,28 @@ def has_only_end_turn(state: BattleState) -> bool:
     return not (_has_ap_action(state, unit) or _can_move(state, unit))
 
 
-def _has_ap_action(state: BattleState, unit: UnitState) -> bool:
+def _has_attack_to_aim(state: BattleState, unit: UnitState) -> bool:
+    """瞄準有意義：AP 夠再打一次，而且現在有普攻目標或可用的技能。"""
     core = state.ruleset.core
-    if (unit.ap >= core.defend_ap_cost and not unit.has_status(DEFENDING)) or run_problem(
-        state, unit
-    ) is None:
+    if unit.ap < core.aim_ap_cost + 1:
+        return False
+    if any(attack_problem(state, unit, t) is None for t in state.living_units()):
+        return True
+    return any(has_selection(state, unit, s) for s in _usable_skills(state, unit))
+
+
+def _has_basic_action(state: BattleState, unit: UnitState) -> bool:
+    """守護、跑步、瞄準、換位（Phase 3-20、3-21a）任一個合法。"""
+    return (
+        guard_problem(state, unit, None) is None
+        or run_problem(state, unit) is None
+        or (aim_problem(state, unit) is None and _has_attack_to_aim(state, unit))
+        or any(swap_problem(state, unit, a.id) is None for a in adjacent_allies(state, unit))
+    )
+
+
+def _has_ap_action(state: BattleState, unit: UnitState) -> bool:
+    if _has_basic_action(state, unit):
         return True
     if unit.ap >= action_ap_cost(state, unit, modifiers.ATTACK):
         if any(attack_problem(state, unit, t) is None for t in state.living_units()):

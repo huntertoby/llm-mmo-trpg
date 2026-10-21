@@ -36,6 +36,7 @@ from trpg.engine.events import (
     FollowupCancelled,
     FollowupCharged,
     GambleRolled,
+    GuardSet,
     Healed,
     InitiativeRolled,
     InitiativeTieBroken,
@@ -94,6 +95,7 @@ from trpg.engine.events import (
     TurnOrderSet,
     TurnSkipped,
     TurnStarted,
+    UnitAimed,
     UnitCharged,
     UnitDashed,
     UnitDowned,
@@ -372,6 +374,16 @@ def _stood_up(e: UnitStoodUp, v: _View) -> str:
 @_handles(UnitRan)
 def _ran(e: UnitRan, v: _View) -> str:
     return f"  {v.name[e.unit_id]} 跑步（本回合移動 +{e.bonus}，剩餘 {e.move_points}）"
+
+
+@_handles(GuardSet)
+def _guard_set(e: GuardSet, v: _View) -> str:
+    return f"  {v.name[e.unit_id]} 守護 {v.name[e.ally_id]}（到下回合開始）"
+
+
+@_handles(UnitAimed)
+def _aimed(e: UnitAimed, v: _View) -> str:
+    return f"  {v.name[e.unit_id]} 瞄準（下一次攻擊命中 +{e.bonus}）"
 
 
 @_handles(MoveBlocked)
@@ -1175,6 +1187,11 @@ def _reaction_mode_set(e: ReactionModeSet, v: _View) -> str:
 def _intercepted(e: AttackIntercepted, v: _View) -> str:
     name = v.name
     skill = "" if e.skill_id is None else f"「{v.state.ruleset.skill_def(e.skill_id).name_zh}」"
+    if e.guard:
+        return (
+            f"  🛡 {name[e.guardian_id]} 守護 {name[e.target_id]}：{name[e.attacker_id]} 的"
+            f"攻擊{skill}改由 {name[e.guardian_id]} 承受"
+        )
     return (
         f"  🛡 {name[e.guardian_id]} 攔截了 {name[e.attacker_id]} 對 {name[e.target_id]} 的"
         f"攻擊{skill}——改由 {name[e.guardian_id]} 承受"

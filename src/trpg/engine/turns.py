@@ -74,6 +74,7 @@ def start_turn(ctx: Ctx, unit_id: UnitId) -> None:
     unit.ap_carry = 0
     unit.moved_this_turn = False  # 連段條件的「本回合」紀錄（Phase 3D-1）
     unit.ran_this_turn = False  # 跑步每回合限 1 次（Phase 3-20）
+    unit.guarding_id = None  # 守護到自己的下回合開始（Phase 3-21a）
     unit.turn_cast_tags = ()
     unit.ap_pending = 0  # grant_ap 給的、等到這個回合才加上的 AP（Phase 3C-4a）
     unit.move_points = move_points_for_turn(ctx.rules, unit)
@@ -239,6 +240,7 @@ def end_turn(ctx: Ctx) -> None:
     unit.ap_carry = min(unit.ap, ctx.core.ap_carry_max)
     unit.ap = 0
     unit.move_points = 0
+    unit.aimed = False  # 瞄準到回合結束失效（Phase 3-21a）
     expire_granted_skills(ctx, unit)  # 暫時獲得的技能倒數（Phase 3D-8c）
     expire_summons(ctx, unit)  # 召喚物到期：在召喚者的回合結束時消失（Phase 3D-4a）
     expire_zones_at_turn_end(ctx, unit)  # 持續區域到期：在施放者的回合結束時消失（Phase 3D-5）
@@ -259,6 +261,7 @@ def _end_round(ctx: Ctx) -> bool:
     for unit in state.units.values():
         unit.reactions_used = 0
         unit.extra_reactions = 0  # extra_reaction 到下一輪開始為止（Phase 3C-4b）
+        unit.guard_transfers = 0  # 守護每輪的轉移次數（Phase 3-21a）
     reset_round_counts(iter(state.units_sorted()))
     ctx.emit(RoundStarted)
     expire_stacks(ctx)  # 到期的層數在新的一輪開始時清空（Phase 2E-3）

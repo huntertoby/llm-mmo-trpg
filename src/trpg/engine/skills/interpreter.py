@@ -695,6 +695,8 @@ class _Cast:
         units = [ctx.state.units[uid] for uid in area.units]
         self.enemies = [u for u in units if u.team is not caster.team]
         self.allies = [u for u in units if u.team is caster.team]
+        self.aim_bonus = ctx.core.aim_hit_bonus if self.modified and caster.aimed else 0
+        """瞄準（Phase 3-21a）：這次施放每一次命中判定的加值；第一次擲命中時用掉施放者的瞄準。"""
         self.hits: dict[str, AttackRoll] = {}
         self.blocks: dict[str, int] = {}
         self.caster_bonus = 0
@@ -770,7 +772,8 @@ class _Cast:
         if ctx.preview is not None:
             ctx.mark_branch()
             forced = "hit" if ctx.preview == "min" else "crit"
-        bonus = self._modifier(modifiers.hit_bonus, unit)
+        bonus = self._modifier(modifiers.hit_bonus, unit) + self.aim_bonus
+        self.caster.aimed = self.caster.aimed and not self.aim_bonus  # 用掉瞄準
         roll = roll_attack(ctx.state, ctx.rng, self.caster, unit, forced, self.profile, bonus=bonus)
         rolled_event = ctx.emit(
             AttackRolled,

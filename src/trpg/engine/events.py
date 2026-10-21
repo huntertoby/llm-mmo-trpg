@@ -47,6 +47,7 @@ __all__ = [
     "FollowupCancelled",
     "FollowupCharged",
     "GambleRolled",
+    "GuardSet",
     "Healed",
     "InitiativeRolled",
     "InitiativeTieBroken",
@@ -110,6 +111,7 @@ __all__ = [
     "TurnOrderSet",
     "TurnSkipped",
     "TurnStarted",
+    "UnitAimed",
     "UnitCharged",
     "UnitDashed",
     "UnitDowned",
@@ -291,6 +293,22 @@ class UnitRan(EventBase):
     unit_id: UnitId
     bonus: int
     move_points: int
+
+
+class GuardSet(EventBase):
+    """守護隊友（Phase 3-21a）：``unit_id`` 守護相鄰的 ``ally_id``，到自己的下回合開始。"""
+
+    type: Literal["guard_set"] = "guard_set"
+    unit_id: UnitId
+    ally_id: UnitId
+
+
+class UnitAimed(EventBase):
+    """瞄準（Phase 3-21a）：下一次需要擲命中的攻擊命中 ``+bonus``。"""
+
+    type: Literal["unit_aimed"] = "unit_aimed"
+    unit_id: UnitId
+    bonus: int
 
 
 class MoveBlocked(EventBase):
@@ -813,6 +831,8 @@ class AttackIntercepted(EventBase):
     attacker_id: UnitId
     target_id: UnitId
     skill_id: str | None = None
+    guard: bool = False
+    """``True`` 為「守護」動作的轉移（Phase 3-21a），否則為 ``intercept`` 反應技。"""
 
 
 class ReactionModeSet(EventBase):
@@ -1419,6 +1439,8 @@ type Event = Annotated[
     | UnitMoved
     | UnitStoodUp
     | UnitRan
+    | GuardSet
+    | UnitAimed
     | MoveBlocked
     | Collided
     | UnitFell

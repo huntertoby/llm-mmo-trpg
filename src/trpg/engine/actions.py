@@ -20,6 +20,7 @@ __all__ = [
     "STEP_ADAPTER",
     "STEP_LIST_ADAPTER",
     "Action",
+    "Aim",
     "Attack",
     "Decision",
     "Defend",
@@ -33,6 +34,7 @@ __all__ = [
     "SetReactionMode",
     "Shove",
     "Step",
+    "Swap",
     "Trip",
     "UseSkill",
 ]
@@ -77,9 +79,14 @@ class Attack(_ActionBase):
 
 
 class Defend(_ActionBase):
-    """防禦姿態：防禦值 +25%，到自己的下回合開始。"""
+    """守護（Phase 3-21a，玩法 #24；內部 ID 仍為 ``defend``）：防禦值 +25%，到自己的下回合開始。
+
+    ``target_id`` 為 ``None`` 時守護自己；給相鄰隊友時，敵人以單體攻擊該隊友、且自己仍與他相鄰
+    時，改由自己承受（每輪上限 ``guard_transfers_per_round``，範圍技能不轉移）。
+    """
 
     type: Literal["defend"] = "defend"
+    target_id: UnitId | None = None
 
 
 class Run(_ActionBase):
@@ -87,6 +94,20 @@ class Run(_ActionBase):
     每回合限 1 次，定身時不合法。跑步本身不移動。"""
 
     type: Literal["run"] = "run"
+
+
+class Swap(_ActionBase):
+    """換位（Phase 3-21a）：與相鄰的我方單位（含召喚物）互換位置；朝向不變，不觸發藉機攻擊。"""
+
+    type: Literal["swap"] = "swap"
+    target_id: UnitId
+
+
+class Aim(_ActionBase):
+    """瞄準（Phase 3-21a）：本回合下一次需要擲命中的攻擊（普攻或技能）命中 ``+aim_hit_bonus``；
+    不疊加，回合結束或用掉即失效。"""
+
+    type: Literal["aim"] = "aim"
 
 
 class Shove(_ActionBase):
@@ -212,6 +233,8 @@ type Action = Annotated[
     | UseSkill
     | Defend
     | Run
+    | Swap
+    | Aim
     | Shove
     | Trip
     | Interact
@@ -250,6 +273,8 @@ type Step = Annotated[
     | UseSkill
     | Defend
     | Run
+    | Swap
+    | Aim
     | Shove
     | Trip
     | Interact

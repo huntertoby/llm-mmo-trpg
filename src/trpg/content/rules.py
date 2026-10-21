@@ -65,6 +65,14 @@ class CoreRules(ContentModel):
     """跑步（Phase 3-20，玩法 #22）消耗的 AP。"""
     run_move_bonus: int = Field(ge=0)
     """跑步：本回合移動點數增加的固定格數（不受加速、緩速倍率影響；平衡階段初值）。"""
+    swap_ap_cost: int = Field(ge=0)
+    """換位（Phase 3-21a，玩法 #24）消耗的 AP。"""
+    aim_ap_cost: int = Field(ge=0)
+    """瞄準（Phase 3-21a）消耗的 AP。"""
+    aim_hit_bonus: int = Field(ge=0)
+    """瞄準：下一次需要擲命中的攻擊的命中加值（不疊加；平衡階段初值）。"""
+    guard_transfers_per_round: int = Field(ge=0)
+    """守護隊友：守護者每輪最多替隊友承受單體攻擊的次數（平衡階段初值）。"""
 
     # 判定
     hit_target: int = Field(ge=1)

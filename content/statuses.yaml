@@ -65,8 +65,8 @@
 statuses:
   - id: defending
     polarity: buff
-    name_zh: 防禦
-    description_zh: 防禦值 +25%，持續到自己的下回合開始。
+    name_zh: 守護
+    description_zh: 防禦值 +25%，持續到自己的下回合開始；若守護著相鄰隊友，敵人的單體攻擊會改由自己承受（每輪 1 次）。
     expires: own_turn_start
     stacking: refresh
     beneficial: true
