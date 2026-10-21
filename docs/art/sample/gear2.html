@@ -76,7 +76,7 @@ for (const slot of ["main", "off", "body", "acc"]) {
   const row = document.createElement("div"); row.className = "slot";
   row.insertAdjacentHTML("beforeend", `<div class="sn">${SLOT_ZH[slot]}</div>`);
   for (const [k, K] of Object.entries(G.KINDS)) {
-    if (K.slot !== slot || K.legacy) continue;
+    if (K.slot !== slot || K.legacy || K.slot === "hands") continue;
     const box = document.createElement("div"); box.className = "kind"; box.innerHTML = `<div class="kn">${K.zh}</div>`;
     const fs = document.createElement("div"); fs.className = "fs";
     for (const [f, fz] of Object.entries(K.forms)) fs.appendChild(ic({ kind: k, form: f, material: SHOWMAT[k], dye: SHOWDYE[k], rarity: "common" }, slot === "main" ? 50 : 50, fz));

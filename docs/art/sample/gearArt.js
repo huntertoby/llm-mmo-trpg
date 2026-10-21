@@ -68,6 +68,7 @@ window.GearArt = (() => {
     mail: { slot: "body", zh: "鎖甲", forms: { chain: "鎖子甲", scale: "鱗甲" }, mats: [...METAL], def: "iron" },
     plate: { slot: "body", zh: "板甲", forms: { half: "半身板甲", full: "全身板甲" }, mats: [...METAL], def: "steel" },
     coat: { slot: "body", zh: "外套", forms: { travel: "旅行外套", cape: "披風外套" }, mats: ["cloth", "leather"], def: "cloth" },
+    gloves: { slot: "hands", zh: "手套", forms: { leather: "皮手套" }, mats: ["leather", "cloth"], def: "leather" },
     ring: { slot: "acc", zh: "戒指", forms: { plain: "素戒", gem: "寶石戒" }, mats: [...METAL, "bone", "crystal"], def: "gold" },
     pendant: { slot: "acc", zh: "墜飾", forms: { pendant: "項鍊墜", tag: "吊牌" }, mats: [...METAL, "bone", "crystal"], def: "gold" },
     charm: { slot: "acc", zh: "護符", forms: { tablet: "符牌", bone: "骨符" }, mats: [...METAL, "bone", "crystal", "leather", "cloth"], def: "gold" },
@@ -429,6 +430,21 @@ window.GearArt = (() => {
     ctx.restore();
     const a = -0.42, mx = 32 + Math.cos(a) * muzzle[0] - Math.sin(a) * muzzle[1], my = 34 + Math.sin(a) * muzzle[0] + Math.cos(a) * muzzle[1];
     return [[mx + 2, my - 4], [24, 44]];
+  };
+
+  // ---- 手（9 格草案；樣張只先畫皮手套）----
+  D.gloves = (ctx, r, P) => {
+    shape(ctx, P.a, () => {
+      ctx.moveTo(20, 56); ctx.lineTo(20, 34); ctx.lineTo(16, 26); ctx.quadraticCurveTo(14, 21, 19, 22); ctx.lineTo(23, 28);
+      ctx.lineTo(23, 12); ctx.quadraticCurveTo(26, 8, 29, 12); ctx.lineTo(29, 24);
+      ctx.lineTo(30, 9); ctx.quadraticCurveTo(33, 5, 36, 9); ctx.lineTo(35, 24);
+      ctx.lineTo(37, 11); ctx.quadraticCurveTo(40, 8, 42, 12); ctx.lineTo(41, 26);
+      ctx.lineTo(43, 17); ctx.quadraticCurveTo(46, 15, 47, 19); ctx.lineTo(45, 38); ctx.lineTo(44, 56); ctx.closePath();
+    }, 2.5);
+    shape(ctx, P.d, () => ctx.roundRect(18, 46, 28, 10, 2), 2);
+    line(ctx, P.d, 1.2, [[26, 30], [38, 30]]);
+    for (const x of [24, 32, 40]) shape(ctx, "#c8a040", () => ctx.arc(x, 51, 1.4, 0, TAU), 0.6);
+    return [[40, 22], [26, 38]];
   };
 
   // ======== 武器擴充（#34，08-裝備.md 8.11）========
