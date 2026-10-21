@@ -47,9 +47,12 @@ import {
   isCopyPending,
   isHurlMode,
   isSelfOnly,
+  moreModes,
   skillButtons,
   skillMode,
   targetTiles,
+  TRAY_KINDS,
+  vaultMarks,
   type ActionMode,
 } from "../battle/targeting";
 import { onField, unitNames } from "../battle/units";
@@ -139,6 +142,7 @@ const NO_HIGHLIGHTS: Highlights = {
   hover: null,
   overlays: [],
   picked: [],
+  vaults: [],
 };
 
 function errorText(e: unknown): string {
@@ -331,7 +335,8 @@ export function BattleScreen({ initial, onExit, exitLabel, runMode }: Props) {
       const pickedAt = hurlPickPos(mode, view, hurlPick);
       return {
         moves: [],
-        attacks: tt.targets,
+        attacks: mode.kind === "vault" ? [] : tt.targets,
+        vaults: vaultMarks(mode, hero),
         directions: tt.directions.map((d) => ({ pos: d.pos, arrow: DIRECTION_ARROWS[d.direction] })),
         preview: previewTiles,
         overlays,
@@ -755,6 +760,7 @@ export function BattleScreen({ initial, onExit, exitLabel, runMode }: Props) {
   const hoverTexts = [...zoneLinesAt(shown, hover, liveNames), ...marksTextAt(marks, hover)];
   const fullTileSections = tileSections(shown, hover, skillNames, hoverTexts);
   const tileCardSections = hoverUnit !== null && collapseTile ? collapseSections(fullTileSections) : fullTileSections;
+  const attackMode = basic.find((m) => m.kind === "attack") ?? null;
   const defendMode = basic.find((m) => m.kind === "defend") ?? null;
   const sprintMode = basic.find((m) => m.kind === "run") ?? null;
   const runReason = runButton(sprintMode, response.run_option).reason;
@@ -963,7 +969,7 @@ export function BattleScreen({ initial, onExit, exitLabel, runMode }: Props) {
           )}
         </div>
         <SkillBar
-          basic={basic.filter((m) => m.kind !== "defend" && m.kind !== "run")}
+          basic={basic.filter((m) => TRAY_KINDS.includes(m.kind))}
           buttons={buttons}
           cards={cards}
           selectedKey={mode?.key ?? null}
@@ -987,12 +993,17 @@ export function BattleScreen({ initial, onExit, exitLabel, runMode }: Props) {
             <TurnControls
               enabled={canAct}
               endTurn={copying ? null : classified.endTurn}
+              attack={copying ? null : attackMode}
               defend={copying ? null : defendMode}
               run={copying ? null : sprintMode}
               runReason={runReason}
+              moveCount={classified.moves.size}
+              moving={mode === null}
+              onMove={cancel}
               onPreviewAction={setPanelPreview}
               selectedKey={mode?.key ?? null}
-              fallback={copying ? [] : fallback}
+              more={copying ? [] : moreModes(basic)}
+              extra={copying ? [] : fallback}
               onPickMode={pickMode}
               onAction={act}
               speed={<SpeedControl speed={speed} playing={playing} onSpeed={setSpeed} onSkipNow={skipNow} />}

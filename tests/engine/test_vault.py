@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 from dataclasses import replace
+from typing import get_args
 
 import pytest
 
@@ -18,6 +19,7 @@ from tests.engine.helpers import (
 from tests.engine.skill_helpers import FLAT7, U1, U2, U3, of
 from tests.engine.test_passive_triggers import always
 from trpg.engine import BattleState, EndTurn, Vault, legal_actions, resolve
+from trpg.engine.actions import Action
 from trpg.engine.ai.utility import UtilityAI
 from trpg.engine.basics import vault_destinations, vault_problem
 from trpg.engine.battle import has_only_end_turn
@@ -303,3 +305,12 @@ def test_vault_battle_replays_identically() -> None:
     result = run_battle(setup, 3, policy=ai)
     assert any(isinstance(a, Vault) for a in result.actions)
     assert replay(setup, 3, result.actions).events == result.events
+
+
+def test_basic_actions_stay_within_the_limit_of_ten() -> None:
+    """``docs/design/05-戰鬥.md`` 5.2.2：基本動作總數上限 10（不含技能與管理動作）。"""
+    union = get_args(get_args(Action.__value__)[0])
+    types = {get_args(cls.model_fields["type"].annotation)[0] for cls in union}
+    basic = types - {"use_skill", "end_turn", "end_stance", "set_reaction_mode"}
+    assert {"move", "attack", "run", "defend", "swap", "aim", "vault"} <= basic
+    assert len(basic) <= 10

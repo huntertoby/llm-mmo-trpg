@@ -51,7 +51,20 @@ export interface TargetSet {
 
 export type PairKind = "hurl" | "teleport" | "swap" | "shadowstep" | "composite";
 
-export type ModeKind = "skill" | "attack" | "shove" | "trip" | "interact" | "shove_aside" | "defend" | "run" | "end_stance" | "stand";
+export type ModeKind =
+  | "skill"
+  | "attack"
+  | "shove"
+  | "trip"
+  | "interact"
+  | "shove_aside"
+  | "defend"
+  | "run"
+  | "swap"
+  | "aim"
+  | "vault"
+  | "end_stance"
+  | "stand";
 
 export interface ActionMode {
   /** 選取用的鍵：技能為 `skill:<id>`，其他為類型。 */
@@ -133,7 +146,16 @@ function addTarget(t: TargetSet, action: Action): void {
     }
     case "shove":
     case "trip":
+    case "swap":
       setOnce(t.units, action.target_id, action);
+      return;
+    case "defend":
+      // 守護自己是「自身」；守護相鄰隊友像選目標一樣點隊友（Phase 3-21b）
+      if (action.target_id == null) t.self ??= action;
+      else setOnce(t.units, action.target_id, action);
+      return;
+    case "vault":
+      setOnce(t.tiles, posKey(action.dest), action); // 攀跳的落點（Phase 3-21b）
       return;
     case "interact":
       setOnce(t.objects, action.object_id, action);
@@ -220,16 +242,44 @@ export function skillButtons(hero: UnitView, legal: readonly Action[], cards: Sk
 // ---- 動作模式 -------------------------------------------------------------
 
 export const BASIC_MODES: readonly { kind: Exclude<ModeKind, "skill">; label: string }[] = [
-  { kind: "attack", label: "攻擊" },
+  { kind: "attack", label: "普攻" },
   { kind: "shove", label: "推擊" },
   { kind: "trip", label: "絆倒" },
   { kind: "interact", label: "推動物件" },
   { kind: "shove_aside", label: "撥開物件" },
   { kind: "defend", label: "守護" },
   { kind: "run", label: "跑步" },
+  { kind: "swap", label: "換位" },
+  { kind: "aim", label: "瞄準" },
+  { kind: "vault", label: "攀跳" },
   { kind: "end_stance", label: "結束姿態" },
   { kind: "stand", label: "起身" },
 ];
+
+/**
+ * 基本動作的種類（Phase 3-21b；`docs/design/05-戰鬥.md` 5.2.2：不含結束回合與管理動作，上限 10 個）：
+ * 移動（點格子）＋ 普攻、跑步、守護、推擊、絆倒、互動（推動、撥開）、換位、瞄準、攀跳。
+ */
+export const BASIC_ACTION_KINDS: readonly string[] = [
+  "move",
+  "attack",
+  "run",
+  "defend",
+  "shove",
+  "trip",
+  "interact",
+  "swap",
+  "aim",
+  "vault",
+];
+export const BASIC_ACTION_LIMIT = 10;
+
+/** 常駐按鈕（移動除外，移動是點格子）：普攻、跑步、守護；結束回合另外放。 */
+export const RESIDENT_KINDS: readonly ModeKind[] = ["attack", "run", "defend"];
+/** 「更多動作」選單的順序。 */
+export const MORE_KINDS: readonly ModeKind[] = ["shove", "trip", "interact", "shove_aside", "swap", "aim", "vault"];
+/** 留在技能列的基本動作（姿態與起身這類管理動作，只在合法時出現）。 */
+export const TRAY_KINDS: readonly ModeKind[] = ["end_stance", "stand"];
 
 function modeKindOf(a: Action): ModeKind | null {
   switch (a.type) {
@@ -240,8 +290,11 @@ function modeKindOf(a: Action): ModeKind | null {
     case "end_stance":
       return a.type;
     case "defend":
-      // 守護自己是常駐按鈕；守護相鄰隊友（有 target_id）先放「其他動作」清單，3-21b 改成選單
-      return a.target_id == null ? "defend" : null;
+    case "swap":
+    case "vault":
+      return a.type;
+    case "aim":
+      return "aim";
     case "interact":
       return a.mode === "shove_aside" ? "shove_aside" : "interact";
     case "move":
@@ -388,6 +441,14 @@ export function asideRows(
   }));
 }
 
+/** 「更多動作」選單（Phase 3-21b）：推擊、絆倒、互動、換位、瞄準、攀跳，**只列出當下合法的**
+ *  （灰色的「推不動」模式不列）；順序固定。 */
+export function moreModes(basic: readonly ActionMode[]): ActionMode[] {
+  return MORE_KINDS.flatMap((kind) =>
+    basic.filter((m) => m.kind === kind && m.blockedReason === undefined && m.actions.length > 0),
+  );
+}
+
 /** 備援清單：技能與基本模式都沒涵蓋的動作（正常情況為空；不含移動與結束回合）。 */
 export function fallbackActions(legal: readonly Action[], hero: UnitView): Action[] {
   return legal.filter((a) => {
@@ -520,6 +581,7 @@ export function actionAtTile(
 ): Action | null {
   const t = mode.targets;
   if (t.hurls.size > 0) return hurlActionAt(mode, hurlPick, tile, view);
+  if (mode.kind === "defend" && t.self !== null && samePos(hero.pos, tile)) return t.self; // 點自己 ＝ 守護自己
   for (const id of unitIdsAt(view, tile)) {
     const hit = t.units.get(id);
     if (hit !== undefined) return hit;
@@ -574,6 +636,7 @@ export function targetTiles(
     }
     return { targets, directions: [] };
   }
+  if (mode.kind === "defend" && t.self !== null) targets.push(hero.pos);
   for (const id of t.units.keys()) {
     const u = view.units.find((x) => x.id === id);
     if (u !== undefined) targets.push(u.pos);
@@ -605,4 +668,22 @@ export function hurlPickPos(mode: ActionMode, view: BattleView, pick: string | n
 export function compositePromptFor(mode: ActionMode, pick: string | null): string {
   const set = mode.targets.composite;
   return compositePrompt(pick === null ? null : (set?.get(pick) ?? null), set?.size ?? 0);
+}
+
+// ---- 攀跳 -------------------------------------------------------------------
+
+export interface VaultMark {
+  pos: Pos;
+  /** 攀爬（相鄰、高 2 層）或跳躍（越過一格缺口）。 */
+  kind: "climb" | "jump";
+}
+
+/** 攀跳模式的落點標示（用不同的顏色畫，分攀爬與跳躍）；不是攀跳模式時為空。 */
+export function vaultMarks(mode: ActionMode | null, hero: UnitView): VaultMark[] {
+  if (mode === null || mode.kind !== "vault") return [];
+  return mode.actions.flatMap((a) => {
+    if (a.type !== "vault") return [];
+    const dist = Math.abs(a.dest.x - hero.pos.x) + Math.abs(a.dest.y - hero.pos.y);
+    return [{ pos: a.dest, kind: dist <= 1 ? ("climb" as const) : ("jump" as const) }];
+  });
 }
