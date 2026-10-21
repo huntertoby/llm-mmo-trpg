@@ -22,7 +22,7 @@ export function SkillIconView({ icon, size, className, title }: IconProps) {
     ctx.clearRect(0, 0, canvas.width, canvas.height);
     ctx.drawImage(skillIconCanvas(icon, size), 0, 0);
     // 圖示由 key 決定；icon 物件換了但內容相同時不必重畫
-  }, [key, size]); // eslint-disable-line react-hooks/exhaustive-deps
+  }, [key, size]);
   if (icon == null) return null;
   return (
     <canvas
@@ -46,7 +46,7 @@ function TileCanvas({ tile, px }: { tile: AssemblyTile; px: number }) {
     if (canvas == null || ctx == null) return;
     ctx.clearRect(0, 0, canvas.width, canvas.height);
     ctx.drawImage(tileCanvas(tile, px), 0, 0);
-  }, [tile.id, px]); // eslint-disable-line react-hooks/exhaustive-deps
+  }, [tile.id, px]);
   return <canvas ref={ref} width={px * 2} height={px * 2} style={{ width: px, height: px }} aria-hidden="true" />;
 }
 
