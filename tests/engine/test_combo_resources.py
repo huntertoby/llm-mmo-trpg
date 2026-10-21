@@ -538,7 +538,7 @@ def test_demo_battles_replay_exactly(build: str, map_id: str, seed: int) -> None
             0,
             lambda e: isinstance(e, ResourceRestored) and e.resource == "cooldown",
         ),
-        ("build_warlock", 1, lambda e: isinstance(e, StatusRemoved) and e.reason == "stolen"),
+        ("build_warlock", 5, lambda e: isinstance(e, StatusRemoved) and e.reason == "stolen"),
     ],
 )
 def test_the_ai_uses_the_resource_skills_in_a_real_battle(

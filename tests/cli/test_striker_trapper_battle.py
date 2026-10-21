@@ -20,7 +20,7 @@ def test_striker_battle_accumulates_and_consumes_static_charge_and_replays(
     tmp_path: Path, capsys: pytest.CaptureFixture[str]
 ) -> None:
     log = tmp_path / "striker.json"
-    argv = ["battle", "--map", "test_flat_6x6", "--ally-build", "build_striker", "--seed", "57"]
+    argv = ["battle", "--map", "test_flat_6x6", "--ally-build", "build_striker", "--seed", "69"]
     code, out = _run([*argv, "--log-json", str(log)], capsys)
     assert code == 0
     assert "施放「雷霆終結」" in out and "的「靜電」消耗：" in out
@@ -35,7 +35,7 @@ def test_trapper_battle_places_and_triggers_traps_and_replays(
     tmp_path: Path, capsys: pytest.CaptureFixture[str]
 ) -> None:
     log = tmp_path / "trapper.json"
-    argv = ["battle", "--map", "test_flat_6x6", "--ally-build", "build_trapper", "--seed", "1"]
+    argv = ["battle", "--map", "test_flat_6x6", "--ally-build", "build_trapper", "--seed", "2"]
     code, out = _run([*argv, "--log-json", str(log)], capsys)
     assert code == 0
     assert "設下陷阱「" in out and "踩中了" in out

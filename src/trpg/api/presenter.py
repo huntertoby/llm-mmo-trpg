@@ -20,6 +20,7 @@ from trpg.api.schemas import (
     HistoryStepOut,
     InteractOptionOut,
     PreviewOut,
+    RunOptionOut,
     StepOut,
     preview_out,
 )
@@ -27,7 +28,12 @@ from trpg.api.sessions import BattleSession, StepRecord
 from trpg.api.telegraph import telegraph_out
 from trpg.engine.actions import Step, UseSkill
 from trpg.engine.ai.commanded import ignored_orders
-from trpg.engine.battle import interact_direction, interact_options, legal_actions
+from trpg.engine.battle import (
+    interact_direction,
+    interact_options,
+    legal_actions,
+    run_problem,
+)
 from trpg.engine.copying import copy_selections
 from trpg.engine.event_filter import filter_events
 from trpg.engine.events import BattleStarted, EventBase
@@ -128,6 +134,18 @@ def interact_options_out(state: BattleState, hero_id: UnitId) -> tuple[InteractO
     )
 
 
+def run_option_out(state: BattleState, hero_id: UnitId) -> RunOptionOut:
+    """主角跑步是否合法與原因（Phase 3-20）。"""
+    problem = run_problem(state, state.units[hero_id])
+    core = state.ruleset.core
+    return RunOptionOut(
+        legal=problem is None,
+        reason=problem,
+        ap_cost=core.run_ap_cost,
+        move_bonus=core.run_move_bonus,
+    )
+
+
 def _offset(pos: Pos, direction: tuple[int, int]) -> Pos | None:
     """位移後的格子；落在地圖左／上緣之外（座標為負）時 ``None``（``Pos`` 不允許負座標）。"""
     x, y = pos.x + direction[0], pos.y + direction[1]
@@ -184,6 +202,7 @@ def battle_response(
         interact_options=interact_options_out(state, session.hero_id)
         if awaiting == "action"
         else (),
+        run_option=run_option_out(state, session.hero_id) if awaiting == "action" else None,
         pending=pending,
         copy_options=copy_options_out(state, pending),
         followup_options=followup_options_out(state, pending),

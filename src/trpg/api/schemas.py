@@ -60,6 +60,7 @@ __all__ = [
     "PierceOut",
     "PreviewOut",
     "ReviveOut",
+    "RunOptionOut",
     "SkillReasons",
     "StatusChanceOut",
     "StepOut",
@@ -277,6 +278,18 @@ class InteractOptionOut(_ApiModel):
     """物件會移到的格子（即使不合法也給出）；會被推出地圖左／上緣時 ``None``。"""
 
 
+class RunOptionOut(_ApiModel):
+    """跑步（Phase 3-20）目前是否合法與原因；``legal_actions`` 只在合法時列出 ``run``，這裡讓介面在
+    不合法時灰掉按鈕並顯示原因（「已經跑過了」「被定身，不能跑」「AP 不足」）。"""
+
+    legal: bool
+    reason: str | None
+    """不合法的原因（繁體中文）；合法時 ``None``。"""
+    ap_cost: int
+    move_bonus: int
+    """跑步增加的移動點數。"""
+
+
 class FollowupOptionOut(_ApiModel):
     """複合技能第二段的一個合法選取（Phase 3F-4a，``pending.kind == "followup"`` 時）：
     ``followup_target`` 原樣放進 ``DecisionRequest``；``tiles`` 是這個選取影響的格子
@@ -323,6 +336,8 @@ class BattleResponse(_ApiModel):
     copy_options: tuple[UseSkill, ...]
     """``pending.kind == "copy_skill"`` 時，複製技能（``pending.copy_skill_id``）目前所有合法的
     選取（``DecisionRequest.copy_cast`` 從中挑一個）；其他時候為空。"""
+    run_option: RunOptionOut | None = None
+    """輪到主角時，跑步是否合法與原因（Phase 3-20）；其他時候 ``None``。"""
     followup_options: tuple[FollowupOptionOut, ...] = ()
     """``pending.kind == "followup"``（Phase 3F-4a）時，複合技能（``pending.skill_id``）第二段
     從施放者目前位置所有合法的選取；其他時候為空。"""
@@ -590,6 +605,8 @@ class PreviewOut(_ApiModel):
     """動作會復活的單位（Phase 3D-8b）。"""
     grants: tuple[GrantPreviewOut, ...] = ()
     """動作會讓誰暫時獲得哪個技能（Phase 3D-8c）。"""
+    run_range: tuple[XY, ...] = ()
+    """跑步（Phase 3-20）：跑完之後本回合能走到的格子（依 (y, x)）；其他動作為空。"""
     displace_permille: int | None = None
     """位移成功的總機率（千分比；所有敵方目標都沒抵抗成功）；沒有檢定（全是友方）為 ``None``。"""
     gamble: GambleOut | None = None
@@ -776,6 +793,7 @@ def preview_out(
         ),
         revives=tuple(_revive(r) for r in p.revives),
         grants=tuple(_grant(g) for g in p.grants),
+        run_range=p.run_range,
         moves=tuple(
             MoveOut(kind=m.kind, unit_id=m.unit_id, other_id=m.other_id, path=m.path)
             for m in p.moves

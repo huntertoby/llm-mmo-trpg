@@ -29,6 +29,7 @@ __all__ = [
     "FollowupTarget",
     "Interact",
     "Move",
+    "Run",
     "SetReactionMode",
     "Shove",
     "Step",
@@ -79,6 +80,13 @@ class Defend(_ActionBase):
     """防禦姿態：防禦值 +25%，到自己的下回合開始。"""
 
     type: Literal["defend"] = "defend"
+
+
+class Run(_ActionBase):
+    """跑步（基本動作，Phase 3-20）：花 ``run_ap_cost`` AP，本回合移動點數 ``+run_move_bonus`` 格；
+    每回合限 1 次，定身時不合法。跑步本身不移動。"""
+
+    type: Literal["run"] = "run"
 
 
 class Shove(_ActionBase):
@@ -203,6 +211,7 @@ type Action = Annotated[
     | Attack
     | UseSkill
     | Defend
+    | Run
     | Shove
     | Trip
     | Interact
@@ -240,6 +249,7 @@ type Step = Annotated[
     | Attack
     | UseSkill
     | Defend
+    | Run
     | Shove
     | Trip
     | Interact

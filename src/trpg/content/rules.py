@@ -61,6 +61,10 @@ class CoreRules(ContentModel):
     ap_carry_max: int = Field(ge=0)
     basic_attack_ap_cost: int = Field(ge=0)
     defend_ap_cost: int = Field(ge=0)
+    run_ap_cost: int = Field(ge=0)
+    """跑步（Phase 3-20，玩法 #22）消耗的 AP。"""
+    run_move_bonus: int = Field(ge=0)
+    """跑步：本回合移動點數增加的固定格數（不受加速、緩速倍率影響；平衡階段初值）。"""
 
     # 判定
     hit_target: int = Field(ge=1)

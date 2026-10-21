@@ -27,6 +27,7 @@ from trpg.engine.actions import (
     EndTurn,
     Interact,
     Move,
+    Run,
     SetReactionMode,
     Shove,
     Trip,
@@ -52,6 +53,7 @@ from trpg.engine.events import (
     ReactionModeSet,
     RoundStarted,
     TurnOrderSet,
+    UnitRan,
     UnitStoodUp,
 )
 from trpg.engine.ids import DEFENDING, PRONE, TOPPLABLE
@@ -130,6 +132,7 @@ __all__ = [
     "resolve",
     "resolve_with",
     "resume",
+    "run_problem",
     "shove_problem",
     "simulate_preview",
     "start_battle",
@@ -376,6 +379,18 @@ def _actor(state: BattleState, action: Action) -> UnitState:
 def _require_ap(unit: UnitState, cost: int) -> None:
     if unit.ap < cost:
         raise IllegalActionError(f"AP 不足：需要 {cost}，剩餘 {unit.ap}")
+
+
+def run_problem(state: BattleState, unit: UnitState) -> str | None:
+    """跑步（Phase 3-20）不合法的原因；合法時 ``None``。順序：已跑過、被定身、AP 不足。"""
+    if unit.ran_this_turn:
+        return "已經跑過了"
+    if is_rooted(state.ruleset, unit):
+        return "被定身，不能跑"
+    cost = state.ruleset.core.run_ap_cost
+    if unit.ap < cost:
+        return f"AP 不足：需要 {cost}，剩餘 {unit.ap}"
+    return None
 
 
 @dataclass(frozen=True, slots=True)
@@ -770,6 +785,19 @@ def _do_defend(ctx: Ctx, unit: UnitState, action: Action) -> None:
     execute(ctx, [ApplyStatusEffect(target_id=unit.id, status_id=DEFENDING, source_id=unit.id)])
 
 
+def _do_run(ctx: Ctx, unit: UnitState, action: Action) -> None:
+    assert isinstance(action, Run)
+    problem = run_problem(ctx.state, unit)
+    if problem is not None:
+        raise IllegalActionError(problem)
+    bonus = ctx.core.run_move_bonus
+    unit.ap -= ctx.core.run_ap_cost
+    unit.ran_this_turn = True
+    unit.move_points += bonus  # 固定格數：不乘加速／緩速倍率
+    unit.moved_this_turn = True  # 算移動類動作（連段條件 moved_this_turn）
+    ctx.emit(UnitRan, unit_id=unit.id, bonus=bonus, move_points=unit.move_points)
+
+
 def _maneuver_target(ctx: Ctx, unit: UnitState, target_id: UnitId) -> UnitState:
     target = ctx.state.units.get(target_id)
     if target is None:
@@ -888,6 +916,7 @@ ACTION_HANDLERS: dict[str, ActionHandler] = {
     "move": _do_move,
     "attack": _do_attack,
     "defend": _do_defend,
+    "run": _do_run,
     "shove": _do_shove,
     "trip": _do_trip,
     "interact": _do_interact,
@@ -1085,6 +1114,8 @@ def _legal_actions(
     actions.extend(interact_actions(state, unit))
     if unit.ap >= core.defend_ap_cost and not unit.has_status(DEFENDING):
         actions.append(Defend(unit_id=unit.id))
+    if run_problem(state, unit) is None:
+        actions.append(Run(unit_id=unit.id))
     if stance_status_ids(state.ruleset, unit):
         actions.append(EndStance(unit_id=unit.id))
     budget = available_move_budget(state, unit)
@@ -1152,7 +1183,9 @@ def has_only_end_turn(state: BattleState) -> bool:
 
 def _has_ap_action(state: BattleState, unit: UnitState) -> bool:
     core = state.ruleset.core
-    if unit.ap >= core.defend_ap_cost and not unit.has_status(DEFENDING):
+    if (unit.ap >= core.defend_ap_cost and not unit.has_status(DEFENDING)) or run_problem(
+        state, unit
+    ) is None:
         return True
     if unit.ap >= action_ap_cost(state, unit, modifiers.ATTACK):
         if any(attack_problem(state, unit, t) is None for t in state.living_units()):

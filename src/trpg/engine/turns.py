@@ -73,6 +73,7 @@ def start_turn(ctx: Ctx, unit_id: UnitId) -> None:
     )
     unit.ap_carry = 0
     unit.moved_this_turn = False  # 連段條件的「本回合」紀錄（Phase 3D-1）
+    unit.ran_this_turn = False  # 跑步每回合限 1 次（Phase 3-20）
     unit.turn_cast_tags = ()
     unit.ap_pending = 0  # grant_ap 給的、等到這個回合才加上的 AP（Phase 3C-4a）
     unit.move_points = move_points_for_turn(ctx.rules, unit)

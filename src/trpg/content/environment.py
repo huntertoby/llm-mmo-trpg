@@ -39,6 +39,7 @@ __all__ = [
     "ReactionTable",
     "ReactionUnless",
     "ReactionWhen",
+    "RunAiRules",
     "SpillDef",
     "SurfaceCheck",
     "SurfaceDamage",
@@ -802,6 +803,25 @@ def _with_facing(weights: Any, facing: Any) -> Any:
     return {**facing, **weights}
 
 
+class RunAiRules(ContentModel):
+    """AI 使用跑步的數值（Phase 3-20，玩法 #22；``content/ai_profiles.yaml`` 的 ``run:``）。
+
+    AI 只在兩種情況考慮跑步，其餘一律 0 分（不會跑）：
+
+    - 追擊：沒有任何敵人在「目前移動點數能走到的格子」的攻擊距離內，但跑步後能——``pursue_points``；
+    - 撤離：HP 低於最大 HP 的 ``retreat_hp_permille``‰、最近的敵人在 ``retreat_enemy_radius`` 格
+      （曼哈頓）內，且跑步後能走到離最近敵人更遠的格子——``retreat_points``。
+
+    初值未經模擬（平衡階段調整）；兩者都比防禦的分數大，才會在這些情況下勝過防禦，但比大多數
+    攻擊與走位的收益小。
+    """
+
+    pursue_points: int = Field(default=6, ge=0)
+    retreat_points: int = Field(default=6, ge=0)
+    retreat_hp_permille: int = Field(default=350, ge=0, le=1000)
+    retreat_enemy_radius: int = Field(default=4, ge=1)
+
+
 class AiProfileTable(ContentModel):
     """``content/ai_profiles.yaml``：至少包含 brute、archer、cunning、guard。
 
@@ -832,6 +852,8 @@ class AiProfileTable(ContentModel):
     zone: ZoneAiRules = Field(default_factory=ZoneAiRules)
     gamble: GambleAiRules = Field(default_factory=GambleAiRules)
     orders: OrderBonuses = Field(default_factory=OrderBonuses)
+    run: RunAiRules = Field(default_factory=RunAiRules)
+    """跑步的 AI 數值（Phase 3-20；敵我同一套，不分行為模式）。"""
     facing: dict[str, int] = Field(default_factory=dict)
     """朝向與背刺的位置權重（Phase 3D-8d；``backstab``、``back_exposed``）：敵我同一套，填入每個行為
     模式的 ``weights``（行為模式自己列出的優先）。"""
