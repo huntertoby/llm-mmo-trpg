@@ -420,6 +420,11 @@ function drawWeapon(ctx: Ctx, it: GearItem | undefined, x: number, front: boolea
   ctx.restore();
 }
 
+/** 單獨畫一件主手武器（原點在握把附近、往上為負；小圖示用，Phase 3-18b）。 */
+export function drawWeaponAlone(ctx: Ctx, it: GearItem): void {
+  drawWeapon(ctx, it, 0, true);
+}
+
 /** 圖騰柱（召喚的圖騰）：木柱＋刻出的臉＋頂端寶珠。 */
 function drawTotem(ctx: Ctx): void {
   fill(ctx, "rgba(0,0,0,0.25)", () => ctx.ellipse(0, -1, 9, 3, 0, 0, TAU));

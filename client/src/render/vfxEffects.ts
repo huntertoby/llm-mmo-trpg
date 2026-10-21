@@ -3,8 +3,9 @@
 // 的效果迴圈銷毀。座標一律是模型像素；格子中心由呼叫端的 `at` 給（3-19 起含高度抬高，預設 `tileCenter`）。
 import { Container, Graphics } from "pixi.js";
 import type { Pos } from "../api/types";
-import { chebyshev, type VfxCast, type VfxHit } from "../battle/vfx";
-import { elementVfx, jitter, particleAt, type ElementVfx, type ParticleKind } from "../battle/vfxPalette";
+import { chebyshev, type VfxCast, type VfxHit, type VfxWarp } from "../battle/vfx";
+import { jitter, particleAt, type ElementVfx, type ParticleKind } from "../battle/vfxPalette";
+import { paletteOf } from "./statusVfx";
 import { TILE_SIZE, tileCenter } from "../battle/geometry";
 
 const T = TILE_SIZE;
@@ -120,9 +121,75 @@ function chargeEffect(cast: VfxCast, pal: ElementVfx, now: number, at: Locate): 
   });
 }
 
-function travelStart(cast: VfxCast, now: number, chargeMs: number): number {
-  return now + cast.startMs + (cast.charge ? chargeMs : 0);
+function travelStart(cast: VfxCast, now: number): number {
+  return now + cast.startMs + cast.chargeMs;
 }
+
+const LEGENDARY_GOLD = 0xffbf3a;
+
+/**
+ * 傳說技能的蓄力（3-18b）：在一般蓄力光之外，金色的光點從四周向施放者匯聚、兩圈反向旋轉的符文環、
+ * 一道往上升的光柱；越接近釋放越亮。
+ */
+function legendaryChargeEffect(cast: VfxCast, pal: ElementVfx, now: number, at: Locate): Effect {
+  const c = at(cast.from);
+  const g = new Graphics();
+  const start = now + cast.startMs;
+  const end = now + Math.max(cast.startMs + 1, cast.startMs + cast.chargeMs);
+  const motes = 14;
+  return effect(g, start, end, (t) => {
+    const glow = Math.min(1, t * 1.6);
+    g.rect(c.x - T * 0.14, c.y - T * 1.5 * glow, T * 0.28, T * 1.5 * glow).fill({ color: pal.secondary, alpha: 0.22 * glow });
+    for (const [dir, radius, color] of [
+      [1, T * 0.62, LEGENDARY_GOLD],
+      [-1, T * 0.8, pal.primary],
+    ] as const) {
+      const spin = dir * t * Math.PI * 3;
+      for (let i = 0; i < 8; i += 1) {
+        const a = spin + (i / 8) * Math.PI * 2;
+        const x = c.x + Math.cos(a) * radius * (1 - t * 0.25);
+        const y = c.y + Math.sin(a) * radius * 0.55 * (1 - t * 0.25);
+        g.circle(x, y, 2.4).fill({ color, alpha: 0.35 + 0.55 * glow });
+      }
+    }
+    for (let i = 0; i < motes; i += 1) {
+      const lag = jitter(i, 5) * 0.4;
+      const k = Math.max(0, Math.min(1, (t - lag) / (1 - lag)));
+      const a = (i / motes) * Math.PI * 2 + jitter(i, 6);
+      const r = T * (1.3 - 1.15 * k);
+      g.circle(c.x + Math.cos(a) * r, c.y + Math.sin(a) * r * 0.7 - T * 0.1, 1.8 + 1.6 * k).fill({ color: i % 2 === 0 ? LEGENDARY_GOLD : 0xffffff, alpha: Math.sin(Math.PI * Math.min(1, k + 0.05)) });
+    }
+    g.circle(c.x, c.y, T * (0.3 + 0.35 * glow)).stroke({ width: 3, color: LEGENDARY_GOLD, alpha: 0.7 * glow });
+  });
+}
+
+// ---- 傳送的消散與出現（3-18b） ------------------------------------------------
+
+/** 起點消散：光環往內收、微粒往上飄散；終點出現：光環往外擴、微粒從中心湧出。 */
+function warpEffect(w: VfxWarp, now: number, at: Locate): Effect {
+  const c = at(w.pos);
+  const g = new Graphics();
+  const pal = BANISH;
+  const n = 10;
+  return effect(g, now + w.startMs, now + w.endMs, (t) => {
+    const vanish = w.kind === "vanish";
+    const k = vanish ? t : 1 - t;
+    g.circle(c.x, c.y + T * 0.2, T * (0.15 + 0.4 * (vanish ? 1 - t : t))).stroke({ width: 3, color: pal.primary, alpha: 0.9 * (vanish ? 1 - t * 0.4 : 1 - t) });
+    g.ellipse(c.x, c.y + T * 0.2, T * 0.34 * (1 - k * 0.3), T * 0.14).fill({ color: pal.secondary, alpha: 0.35 * (vanish ? 1 - t : t < 0.5 ? t * 2 : 2 - t * 2) });
+    for (let i = 0; i < n; i += 1) {
+      const p = particleAt("sparkle", i, n, vanish ? t : 1 - t, T * 0.7);
+      const dir = vanish ? 1 : -1;
+      g.circle(c.x + p.x * dir, c.y + p.y, p.size).fill({ color: i % 2 === 0 ? pal.primary : 0xffffff, alpha: p.alpha });
+    }
+  });
+}
+
+/** 傳送類位移的特效（`battle/vfx.warpPlan` 算出的消散與出現）。 */
+export function warpEffects(plan: readonly VfxWarp[], now: number, at: Locate = tileCenter): Effect[] {
+  return plan.map((w) => warpEffect(w, now, at));
+}
+
+const BANISH: ElementVfx = { primary: 0xb890ff, secondary: 0x6a4cc8, particle: "sparkle", particles: 10, jagged: false, column: false };
 
 /** 遠程單體：飛行物（拖尾 3 顆；雷改成鋸齒軌跡）。 */
 function projectileEffect(cast: VfxCast, pal: ElementVfx, start: number, end: number, at: Locate): Effect {
@@ -263,11 +330,12 @@ function tileBursts(cast: VfxCast, pal: ElementVfx, impact: number, impactMs: nu
 }
 
 /** 一個特效描述 → 一組動態效果（`now` 是目前的效果時鐘；描述內的時間已依播放速度縮放）。 */
-export function castEffects(cast: VfxCast, now: number, impactMs: number, chargeMs: number, at: Locate = tileCenter): Effect[] {
-  const pal = elementVfx(cast.element);
+export function castEffects(cast: VfxCast, now: number, impactMs: number, at: Locate = tileCenter): Effect[] {
+  const pal = paletteOf(cast.element);
   const out: Effect[] = [];
   if (cast.charge) out.push(chargeEffect(cast, pal, now, at));
-  const start = travelStart(cast, now, chargeMs);
+  if (cast.legendary) out.push(legendaryChargeEffect(cast, pal, now, at));
+  const start = travelStart(cast, now);
   const impact = Math.max(start, now + cast.impactMs);
   switch (cast.kind) {
     case "projectile":
@@ -306,7 +374,7 @@ export function hitEffects(hit: VfxHit, now: number, impactMs: number, withBurst
     if (hit.crit) g.circle(c.x, c.y, T * (0.4 + 0.5 * t)).stroke({ width: 4, color: 0xffe066, alpha });
   });
   const out = [flash];
-  if (withBurst) out.push(burstEffect(hit.pos, elementVfx(hit.element), start, impactMs, hit.crit ? 1.6 : 1, 0.8, at));
+  if (withBurst) out.push(burstEffect(hit.pos, paletteOf(hit.element), start, impactMs, hit.crit ? 1.6 : 1, 0.8, at));
   return out;
 }
 

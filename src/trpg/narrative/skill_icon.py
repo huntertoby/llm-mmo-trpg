@@ -232,6 +232,10 @@ def _costs(skill: Mapping[str, Any], all_effects: list[Any]) -> tuple[IconCost, 
     return tuple(out)
 
 
+# 延遲段釋放時機 → 等待的回合數：next_turn、attacked 都在施放者下回合開始時結算或失效（1 回合）。
+_DELAY_ROUNDS: Mapping[str, int] = {"next_turn": 1, "attacked": 1}
+
+
 def _cost_values(skill: Mapping[str, Any], costs: tuple[IconCost, ...]) -> dict[str, int]:
     cost = _map(skill.get("cost"))
     out: dict[str, int] = {}
@@ -242,8 +246,9 @@ def _cost_values(skill: Mapping[str, Any], costs: tuple[IconCost, ...]) -> dict[
     ):
         if key in costs and isinstance(raw, int) and not isinstance(raw, bool) and raw > 0:
             out[key] = raw
-    if "delay" in costs and _map(skill.get("followup")).get("when") == "delayed":
-        out["delay"] = 1
+    followup = _map(skill.get("followup"))
+    if "delay" in costs and followup.get("when") == "delayed":
+        out["delay"] = _DELAY_ROUNDS.get(_text(followup.get("release")) or "", 1)
     return out
 
 

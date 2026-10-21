@@ -34,6 +34,18 @@ function rulesOf(category: "terrain" | "surfaces" | "objects", id: string): read
   return glossaryEntry(category, id)?.rules_zh ?? [];
 }
 
+/** 持續時間那一行（表面規則「由技能產生時持續 N 回合…」）；沒有剩餘回合的永久表面不寫。 */
+const DURATION_RULE = /^由技能產生時持續/;
+
+/**
+ * 物件的規則前 `tagCount` 行是標籤短句（後端 `OBJECT_TAG_TEXT`，一個標籤一行）：濃縮成一行，
+ * 去掉括號補充、用「・」連接（「不可通行・半掩護・可推動」）；其餘（欄位說明、互動結果）照舊逐行。
+ */
+export function condenseObjectRules(rules: readonly string[], tagCount: number): string[] {
+  const tags = rules.slice(0, tagCount).map((r) => r.replace(/（.*?）/g, "").trim());
+  return [...(tags.length > 0 ? [tags.join("・")] : []), ...rules.slice(tagCount)];
+}
+
 function objectSection(view: BattleView, tile: TileView): TileSection | null {
   const obj =
     view.objects.find((o) => o.id === tile.object_id) ??
@@ -43,7 +55,7 @@ function objectSection(view: BattleView, tile: TileView): TileSection | null {
   if (obj.hp !== null) head.push(`HP ${obj.hp}/${obj.max_hp ?? obj.hp}`);
   if (obj.burning !== null && obj.burning > 0) head.push(LABEL_BURNING);
   if (obj.expires_in != null) head.push(`剩 ${obj.expires_in} 回合消失`);
-  return section("object", head.join("・"), rulesOf("objects", obj.kind));
+  return section("object", head.join("・"), condenseObjectRules(rulesOf("objects", obj.kind), glossaryEntry("objects", obj.kind)?.tags.length ?? 0));
 }
 
 /**
@@ -64,7 +76,8 @@ export function tileSections(
   ];
   if (tile.surface !== "none") {
     const left = tile.surface_remaining === null ? "" : `・剩 ${tile.surface_remaining} 回合`;
-    out.push(section("surface", `${glossaryName("surfaces", tile.surface)}${left}`, rulesOf("surfaces", tile.surface)));
+    const rules = rulesOf("surfaces", tile.surface).filter((r) => tile.surface_remaining !== null || !DURATION_RULE.test(r));
+    out.push(section("surface", `${glossaryName("surfaces", tile.surface)}${left}`, rules));
   }
   const obj = objectSection(view, tile);
   if (obj !== null) out.push(obj);
@@ -77,4 +90,10 @@ export function tileSections(
   }
   if (extra.length > 0) out.push({ kind: "zone", title: `${LABEL_ZONE}與預告`, lines: [...extra] });
   return out;
+}
+
+/** 收起的資訊卡（格子上有單位時，使用者選擇收起）：只留地形那一行標題。 */
+export function collapseSections(sections: readonly TileSection[]): TileSection[] {
+  const first = sections[0];
+  return first === undefined ? [] : [{ ...first, lines: [] }];
 }

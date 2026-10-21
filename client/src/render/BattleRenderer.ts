@@ -5,12 +5,11 @@
 // 由 `BattleCanvas` 以 DOM 座標換算（`battle/stageLayout.ts` 的 `clientToTile`）。
 // 高度「整格抬高」（Phase 3-19）：場景放在 `world`（往下移畫布上方預留的高度），由北到南一排一排畫
 // （`RowStack`），格子上的所有東西都依 `tileLift` 往上移；位移只從 `battle/elevation.ts` 來。
-import { Application, Container, Graphics, Sprite, Text, type Ticker } from "pixi.js";
+import { Application, Container, Graphics, Sprite, type Text, type Ticker } from "pixi.js";
 import type { Pos } from "../api/types";
 import type { FeedbackItem, FloatTone } from "../battle/feedback";
 import { lerpPos, type MoveAnim, type MoveStyle } from "../battle/animation";
 import type { DrawModel, ObjectDraw, TileDraw, UnitDraw } from "../battle/drawModel";
-import { ringArrow } from "../battle/facing";
 import { TILE_SIZE } from "../battle/geometry";
 import { scaledSize } from "../battle/stageLayout";
 import {
@@ -27,18 +26,17 @@ import {
 import { HIGHLIGHT } from "../battle/glossary";
 import type { Overlay, OverlayKind } from "../battle/scenePreview";
 import type { TelegraphMark } from "../battle/telegraph";
-import { VFX_TIMING, type StepVfx } from "../battle/vfx";
+import { warpPlan, type StepVfx } from "../battle/vfx";
 import { tileAt } from "../battle/drawModel";
-import { pedestalScale } from "../battle/heightModel";
 import { RING } from "./artPalette";
 import { ArtTextures } from "./artTextures";
-import { resolveDoll } from "./appearance";
-import { DOLL_FOOT_Y, DOLL_H, DOLL_W } from "./paperdoll";
 import { heightBadgeText, objectArtSpec, objectKinds, tileArtSpec } from "./artSpecs";
 import { hasObjectArt } from "./objectArt";
-import { castEffects, hitEffects, shakeEffect, type Effect } from "./vfxEffects";
+import { castEffects, hitEffects, shakeEffect, warpEffects, type Effect } from "./vfxEffects";
 import { drawCliff, drawEdges, liftEffects, silhouette } from "./heightArt";
 import { RowStack } from "./rowLayers";
+import { clearLayer, label } from "./labels";
+import { buildUnitSprite, Pulses } from "./unitSprite";
 
 export interface DirectionMark {
   pos: Pos;
@@ -66,18 +64,6 @@ export interface Highlights {
 
 const T = TILE_SIZE;
 const BACKGROUND = 0x15151c;
-const FONT = "system-ui, 'Microsoft JhengHei', 'PingFang TC', sans-serif";
-
-function clearLayer(layer: Container): void {
-  for (const child of layer.removeChildren()) child.destroy({ children: true });
-}
-
-function label(text: string, size: number, fill: number, bold = false): Text {
-  return new Text({
-    text,
-    style: { fontFamily: FONT, fontSize: size, fill, fontWeight: bold ? "700" : "400" },
-  });
-}
 
 const OVERLAY_COLORS: Readonly<Record<OverlayKind, number>> = {
   route: HIGHLIGHT.route,
@@ -115,12 +101,6 @@ const FLOAT_COLORS: Readonly<Record<FloatTone, number>> = {
 const LINE_COLOR = 0xfff1a8;
 const STATUS_COLOR = 0xd9a0ff;
 
-function hpColor(ratio: number): number {
-  if (ratio > 0.5) return 0x4cd964;
-  if (ratio > 0.25) return 0xffcc00;
-  return 0xff3b30;
-}
-
 /** 一格進行中的升降動畫。 */
 interface LiftState {
   pos: Pos;
@@ -138,6 +118,9 @@ export class BattleRenderer {
   /** 被南邊高格擋住的單位的虛線剪影（最上層）。 */
   private readonly silhouettes = new Container();
   private readonly silhouetteOf = new Map<string, Graphics>();
+  /** 高亮（移動、預覽、目標框…）：畫在所有排之上，仍跟著所在格抬高，不被南邊的高格蓋住（3-18b）。 */
+  private readonly marks = new Container();
+  private readonly pulses = new Pulses();
   private readonly hover = new Container();
   private readonly effects = new Container();
   private effectList: Effect[] = [];
@@ -173,7 +156,8 @@ export class BattleRenderer {
     host.appendChild(this.app.canvas);
     const stage = this.app.stage;
     stage.addChild(this.world);
-    this.world.addChild(this.rows.root, this.silhouettes, this.hover, this.effects);
+    this.world.addChild(this.rows.root, this.marks, this.silhouettes, this.hover, this.effects);
+    this.app.ticker.add((ticker) => this.pulses.tick(ticker.deltaMS));
     stage.eventMode = "none";
     this.app.canvas.style.display = "block";
     this.ready = true;
@@ -238,6 +222,7 @@ export class BattleRenderer {
     clearLayer(this.silhouettes);
     this.silhouetteOf.clear();
     this.unitSprites.clear();
+    this.pulses.clear();
     this.art.beginFrame();
     for (const t of model.tiles) this.tileSprite(model, t);
     for (const a of model.auras) {
@@ -275,7 +260,7 @@ export class BattleRenderer {
 
   /** 一個單位：畫在所在排；被南邊高格擋住時另在最上層畫剪影。 */
   private drawUnit(model: DrawModel, u: UnitDraw): void {
-    const sprite = this.unitSprite(u, tileAt(model, u)?.height ?? 0);
+    const sprite = buildUnitSprite(this.art, this.pulses, u, tileAt(model, u)?.height ?? 0);
     this.rows.row(u.y).units.addChild(sprite);
     this.place(sprite, u, u.x * T + T / 2, u.y * T + T / 2);
     if (!u.downed) this.unitSprites.set(u.id, sprite);
@@ -430,144 +415,21 @@ export class BattleRenderer {
     return c;
   }
 
-  private unitSprite(u: UnitDraw, standingHeight: number): Container {
-    const c = new Container();
-    c.alpha = u.downed ? 0.35 : 1;
-    const r = T * 0.32;
-    const pedestal = pedestalScale(standingHeight);
-    if (pedestal > 0) {
-      // 站在高處：腳下一圈底座陰影（越高越大、越深）
-      const base = new Graphics();
-      base.ellipse(0, r * 0.72, r * 1.15 * pedestal, r * 0.5 * pedestal).fill({ color: 0x000000, alpha: 0.28 + 0.05 * standingHeight });
-      base.ellipse(0, r * 0.72, r * 0.8 * pedestal, r * 0.32 * pedestal).fill({ color: 0x000000, alpha: 0.25 });
-      c.addChild(base);
-    }
-    // 圖層（移植需求 4.1/2）：底圈 → 朝向尖角 → 行動中虛線圈 → 小人 → 代號小標 → 血條 → 徽章
-    const ring = u.summon ? RING.summon : RING[u.team];
-    const feet = T * 0.23; // 腳底（相對格子中心）
-    const cy = feet - 1;
-    const rx = T * 0.36;
-    const ry = T * 0.15;
-    const g = new Graphics();
-    g.ellipse(0, cy, rx, ry).fill({ color: ring.fill, alpha: 0.8 }).stroke({ width: 1.5, color: ring.stroke });
-    if (u.hero) g.ellipse(0, cy, rx + 2.5, ry + 2).stroke({ width: 2, color: HIGHLIGHT.hero });
-    c.addChild(g);
-    if (!u.downed) c.addChild(new Graphics().poly(ringArrow(u.facing, 0, cy, rx, ry, 5)).fill(0xffffff).stroke({ width: 1, color: 0x000000 }));
-    if (u.active) c.addChild(this.dashedEllipse(cy, rx + 6, ry + 4, HIGHLIGHT.active));
-    const spec = resolveDoll({ template: u.template, team: u.team, summon: u.summon, totem: u.totem, weaponId: u.weaponId });
-    const texture = this.art.figure(spec, u.facing, u.downed);
-    if (texture !== null) {
-      const doll = new Sprite(texture);
-      const k = T / 52; // 身高約 46px 在 52px 格子裡縮放 1.0
-      doll.anchor.set(0.5, DOLL_FOOT_Y / DOLL_H);
-      doll.width = DOLL_W * k;
-      doll.height = DOLL_H * k;
-      doll.position.set(0, feet);
-      c.addChild(doll);
-    } else {
-      c.addChild(new Graphics().circle(0, 0, r).fill(u.fill)); // 無法產生貼圖：退回色塊
-    }
-    if (u.summon) {
-      // 右上角小徽章：圖騰標「圖」，其他標剩餘輪數
-      const badgeText = u.totem ? "圖" : String(u.remaining ?? "");
-      const badge = new Graphics().circle(T * 0.3, -T * 0.3, 9).fill({ color: 0x000000, alpha: 0.75 }).stroke({ width: 1, color: HIGHLIGHT.summon });
-      const badgeLabel = label(badgeText, 12, HIGHLIGHT.summon, true);
-      badgeLabel.anchor.set(0.5);
-      badgeLabel.position.set(T * 0.3, -T * 0.3);
-      c.addChild(badge, badgeLabel);
-    }
-    const tag = new Graphics().circle(-T * 0.37, T * 0.22, 8).fill({ color: 0x000000, alpha: 0.78 }).stroke({ width: 1.5, color: ring.stroke });
-    const marker = label(u.marker, 12, 0xffffff, true);
-    marker.anchor.set(0.5);
-    marker.position.set(-T * 0.37, T * 0.22);
-    c.addChild(tag, marker);
-    if (u.downed) this.addDownedMark(c, u, T * 0.16);
-    if (u.bomb !== null) this.addBombBadge(c, u.bomb);
-    if (u.charge != null) this.addChargeBadge(c, u.charge);
-    const w = T * 0.8;
-    const bar = new Graphics().rect(-w / 2, T * 0.36, w, 5).fill(0x000000);
-    bar.rect(-w / 2, T * 0.36, w * u.hpRatio, 5).fill(hpColor(u.hpRatio));
-    if (u.shieldRatio > 0) bar.rect(-w / 2, T * 0.36 - 3, w * u.shieldRatio, 2).fill(0x9fd8ff);
-    c.addChild(bar);
-    return c;
-  }
-
-  /** 橢圓虛線圈（行動中）：以短線段交錯畫出。 */
-  private dashedEllipse(cy: number, rx: number, ry: number, color: number): Graphics {
-    const g = new Graphics();
-    const n = 28;
-    for (let i = 0; i < n; i += 2) {
-      const a0 = (i / n) * Math.PI * 2;
-      const a1 = ((i + 1) / n) * Math.PI * 2;
-      g.moveTo(Math.cos(a0) * rx, cy + Math.sin(a0) * ry).lineTo(Math.cos(a1) * rx, cy + Math.sin(a1) * ry);
-    }
-    return g.stroke({ width: 2.5, color });
-  }
-
-  /** 倒地標記（Phase 3D-8b）：紅色叉叉加「倒」徽章；可以被復活的另標「可復活」。 */
-  private addDownedMark(c: Container, u: UnitDraw, r: number): void {
-    const cross = new Graphics()
-      .moveTo(-r, -r)
-      .lineTo(r, r)
-      .moveTo(r, -r)
-      .lineTo(-r, r)
-      .stroke({ width: 3, color: HIGHLIGHT.downed, alpha: 0.95 });
-    const badge = new Graphics()
-      .roundRect(-T * 0.46, -T * 0.46, 24, 16, 4)
-      .fill({ color: 0x000000, alpha: 0.75 })
-      .stroke({ width: 1, color: HIGHLIGHT.downed });
-    const text = label(u.revivable ? "倒·復" : "倒", 11, HIGHLIGHT.downed, true);
-    text.anchor.set(0.5);
-    text.position.set(-T * 0.46 + 12, -T * 0.46 + 8);
-    c.addChild(cross, badge, text);
-  }
-
-  /** 帶著定時炸彈的單位：右下角的徽章標還要幾次環境回合爆炸（Phase 3D-8b）。 */
-  private addBombBadge(c: Container, rounds: number): void {
-    const badge = new Graphics()
-      .circle(T * 0.3, T * 0.12, 10)
-      .fill({ color: 0x000000, alpha: 0.8 })
-      .stroke({ width: 2, color: HIGHLIGHT.bomb });
-    const text = label(`炸${rounds}`, 11, HIGHLIGHT.bomb, true);
-    text.anchor.set(0.5);
-    text.position.set(T * 0.3, T * 0.12);
-    c.addChild(badge, text);
-  }
-
-  /** 蓄力中的單位（延遲段，Phase 3F-4b）：左下角的徽章標還要幾回合釋放。 */
-  private addChargeBadge(c: Container, rounds: number): void {
-    const badge = new Graphics()
-      .circle(-T * 0.37, -T * 0.2, 10)
-      .fill({ color: 0x000000, alpha: 0.8 })
-      .stroke({ width: 2, color: HIGHLIGHT.followup });
-    const text = label(`蓄${rounds}`, 11, HIGHLIGHT.followup, true);
-    text.anchor.set(0.5);
-    text.position.set(-T * 0.37, -T * 0.2);
-    c.addChild(badge, text);
-  }
-
-  /** 高亮畫在格子所在排（跟著頂面抬高、被南邊的高格自然蓋住）；每排一個 Graphics，文字另外疊上。 */
+  /** 高亮畫在最上層（座標已含抬高）；所有色塊共用一個 Graphics，文字另外疊上。 */
   private markPen(): { at(p: Pos): Graphics; add(p: Pos, ...nodes: Container[]): void } {
-    const byRow = new Map<number, Graphics>();
+    const g = new Graphics();
+    this.marks.addChild(g);
     return {
-      at: (p) => {
-        let g = byRow.get(p.y);
-        if (g === undefined) {
-          g = new Graphics();
-          byRow.set(p.y, g);
-          this.rows.row(p.y).marks.addChildAt(g, 0);
-        }
-        return g;
-      },
-      add: (p, ...nodes) => {
-        this.rows.row(p.y).marks.addChild(...nodes);
+      at: () => g,
+      add: (_p, ...nodes) => {
+        this.marks.addChild(...nodes);
       },
     };
   }
 
   setHighlights(h: Highlights): void {
     if (!this.ready) return;
-    this.rows.clearMarks();
+    clearLayer(this.marks);
     clearLayer(this.hover);
     const pen = this.markPen();
     for (const p of h.moves) {
@@ -709,6 +571,7 @@ export class BattleRenderer {
         sprite.position.set(to.x, to.y);
         continue;
       }
+      this.launch(warpEffects(warpPlan(m), this.effectClock, (p) => this.center(p))); // 傳送：起點消散、終點出現
       await this.tween(sprite, this.center(m.from), to, m.durationMs, skip, m.style);
     }
   }
@@ -763,10 +626,14 @@ export class BattleRenderer {
   playFeedback(items: readonly FeedbackItem[], durationMs: number): void {
     if (!this.ready || durationMs <= 0) return;
     const now = this.effectClock;
-    for (const item of items) {
-      const effect = this.makeEffect(item, now, durationMs);
-      this.effects.addChild(effect.node);
-      this.effectList.push(effect);
+    this.launch(items.map((item) => this.makeEffect(item, now, durationMs)));
+  }
+
+  /** 把一組效果放進效果圖層並啟動效果迴圈。 */
+  private launch(effects: readonly Effect[]): void {
+    for (const e of effects) {
+      this.effects.addChild(e.node);
+      this.effectList.push(e);
     }
     this.ensureEffectTick();
   }
@@ -778,23 +645,17 @@ export class BattleRenderer {
   playVfx(vfx: StepVfx, impactMs: number, shake: boolean): void {
     if (!this.ready || impactMs <= 0) return;
     const now = this.effectClock;
-    const scale = impactMs / VFX_TIMING.impact;
-    const chargeMs = Math.round(VFX_TIMING.charge * scale);
     const effects: Effect[] = [];
     const auraHits = vfx.casts.some((c) => c.kind === "aura");
     const at = (p: Pos) => this.center(p);
-    for (const cast of vfx.casts) effects.push(...castEffects(cast, now, impactMs, chargeMs, at));
+    for (const cast of vfx.casts) effects.push(...castEffects(cast, now, impactMs, at));
     for (const hit of vfx.hits) effects.push(...hitEffects(hit, now, impactMs, auraHits, at));
     if (shake && vfx.shake > 0 && vfx.hits.length > 0) {
       const first = Math.min(...vfx.hits.map((h) => h.atMs));
       const stage = this.app.stage;
       effects.push(shakeEffect(vfx.shake === 2 ? 2 : 1, now + first, impactMs * (vfx.shake === 2 ? 0.55 : 0.35), (x, y) => stage.position.set(x, y)));
     }
-    for (const e of effects) {
-      this.effects.addChild(e.node);
-      this.effectList.push(e);
-    }
-    this.ensureEffectTick();
+    this.launch(effects);
   }
 
   /**
@@ -826,11 +687,7 @@ export class BattleRenderer {
       const stage = this.app.stage;
       effects.push(shakeEffect(1, now, durationMs * 0.6, (x, y) => stage.position.set(x * 0.6, y * 0.6)));
     }
-    for (const e of effects) {
-      this.effects.addChild(e.node);
-      this.effectList.push(e);
-    }
-    this.ensureEffectTick();
+    this.launch(effects);
   }
 
   private makeEffect(item: FeedbackItem, now: number, durationMs: number): Effect {

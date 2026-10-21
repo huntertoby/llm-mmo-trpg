@@ -74,6 +74,10 @@ class HeroOut(_ApiModel):
     source: int
     source_max: int
     weapon: str
+    weapon_name_zh: str = ""
+    """武器中文名（Phase 3-18b，一輪中英雄面板顯示）。"""
+    weapon_class: str = ""
+    """武器大類（melee、ranged、focus）；前端不認得 ``weapon`` 時依此退回武器小圖示。"""
     skills: tuple[SkillCard, ...]
 
 

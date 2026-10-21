@@ -130,6 +130,9 @@ const ITEMS = {
   tome: I("tome", "leather", { color: "#7a2a3a" }),
   red_cape: I("cape", "cloth", { color: "#a32a2a" }),
   blue_cape: I("cape", "cloth", { color: "#2c4f8a" }),
+  dark_cape: I("cape", "cloth", { color: "#3a2a4a" }),
+  storm_robe: I("robe", "cloth", { color: "#2c4f8a" }),
+  storm_hat: I("wizard_hat", "cloth", { color: "#2c4f8a" }),
   ribs: I("ribs", "bone"),
 } as const satisfies Record<string, GearItem>;
 
@@ -159,6 +162,9 @@ const SLOT_OF: Readonly<Record<ItemId, GearSlot>> = {
   tome: "off_hand",
   red_cape: "cloak",
   blue_cape: "cloak",
+  dark_cape: "cloak",
+  storm_robe: "body",
+  storm_hat: "head",
 };
 
 export const SKIN = ["#f1c9a5", "#d9a47a", "#a8724c", "#7a4e32"] as const;
@@ -187,11 +193,13 @@ export const APPEARANCES: Readonly<Record<string, Appearance>> = {
   bandit_boss: build({ skin: SKIN[2], hair: "short", hairColor: "#1c1410" }, ["chain_mail", "greaves", "gauntlets", "horned_helm", "red_cape"], { rarity: "epic" }),
   summon_skeleton_warrior: build({ skin: "#e9e3cf", skull: true, pants: "#d9d2bd", eyes: "#2a1030" }, ["ribs"], { mainStyle: RUSTY }),
   // 補充（內容庫既有範本，樣張沒有）
-  // 隊友（模擬用範本）沿用同職業英雄的外觀
-  sim_companion_fighter: build({ skin: SKIN[3], hair: "short", hairColor: "#2a1c14" }, ["plate_armor", "greaves", "gauntlets", "round_shield", "blue_cape"]),
-  sim_companion_archer: build({ skin: SKIN[1], hair: "long", hairColor: "#c27a2c", pants: "#3a3a2a" }, ["green_leather", "boots", "gloves", "hood_green"]),
-  hero_stormcaller: build({ skin: SKIN[0], hair: "long", hairColor: "#8fb8e8", trim: "#fff36b" }, ["mage_robe", "boots", "wizard_hat", "tome"]),
-  bandit_warlord: build({ skin: SKIN[3], hair: "short", hairColor: "#1c1410" }, ["plate_armor", "greaves", "gauntlets", "horned_helm", "red_cape"], { rarity: "epic" }),
+  // 隊友（模擬用範本）要和同職業的主角分得出來（美術 PM 3-16b 檢查第 3 項）：戰士鎖甲＋鳶盾、不披披風；弓手皮背心、不戴兜帽
+  sim_companion_fighter: build({ skin: SKIN[3], hair: "short", hairColor: "#2a1c14" }, ["chain_mail", "greaves", "gauntlets", "kite_shield"]),
+  sim_companion_archer: build({ skin: SKIN[1], hair: "long", hairColor: "#c27a2c", pants: "#3a3a2a" }, ["leather_vest", "boots", "gloves"]),
+  // 風暴法師：深藍法袍與帽子、飾邊用雷的黃色（和紫袍的 hero_mage 分開，檢查第 2 項）
+  hero_stormcaller: build({ skin: SKIN[0], hair: "long", hairColor: "#8fb8e8", trim: "#fff36b" }, ["storm_robe", "boots", "storm_hat", "tome"]),
+  // 軍閥：鐵盔＋板甲＋深紫披風，不加外光（外光留給 bandit_boss，檢查第 1 項）
+  bandit_warlord: build({ skin: SKIN[3], hair: "short", hairColor: "#1c1410" }, ["plate_armor", "greaves", "gauntlets", "iron_helmet", "dark_cape"]),
 };
 
 /** 骷髏身形：召喚物不在外觀表內時用。 */

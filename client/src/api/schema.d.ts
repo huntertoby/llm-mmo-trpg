@@ -1352,6 +1352,16 @@ export interface components {
             source_max: number;
             /** Weapon */
             weapon: string;
+            /**
+             * Weapon Name Zh
+             * @default
+             */
+            weapon_name_zh: string;
+            /**
+             * Weapon Class
+             * @default
+             */
+            weapon_class: string;
             /** Skills */
             skills: components["schemas"]["SkillCard"][];
         };
@@ -2576,6 +2586,11 @@ export interface components {
              * @default
              */
             weapon_id: string;
+            /**
+             * Weapon Class
+             * @default
+             */
+            weapon_class: string;
             /** Tags */
             tags: string[];
             /** Skills */

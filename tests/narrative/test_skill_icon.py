@@ -220,3 +220,11 @@ def test_cost_values_follow_the_special_costs() -> None:
     )
     assert icon.cost_values == {"source": 2, "stacks": 3, "once": 1, "delay": 1}
     assert icon_of({"cost": {"mana": 2, "cooldown": 2}}).cost_values == {}
+
+
+def test_the_delay_value_comes_from_the_release_timing() -> None:
+    for release in ("next_turn", "attacked"):
+        icon = icon_of(
+            {"followup": {"when": "delayed", "release": release, "effects": [{"type": "damage"}]}}
+        )
+        assert icon.cost_values == {"delay": 1}

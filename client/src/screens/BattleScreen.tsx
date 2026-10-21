@@ -86,7 +86,8 @@ import { BattleCanvas } from "../ui/BattleCanvas";
 import { BattleLog, type LogHover } from "../ui/BattleLog";
 import { HoverFloat } from "../ui/HoverFloat";
 import { TileCard } from "../ui/TileCard";
-import { tileSections } from "../battle/tileInfo";
+import { collapseSections, tileSections } from "../battle/tileInfo";
+import { loadTileCollapse, saveTileCollapse } from "../battle/tileCardPrefs";
 import { CopyDialog } from "../ui/CopyDialog";
 import { FollowupDialog } from "../ui/FollowupDialog";
 import { followupMode, followupTargetOf, isFollowupPending } from "../battle/followup";
@@ -188,6 +189,7 @@ export function BattleScreen({ initial, onExit, exitLabel, runMode }: Props) {
   const [speed, setSpeed] = useState<PlaySpeed>(loadSpeed);
   /** 技能特效的畫面震動（Phase 3-12，「版面」面板可關閉）。 */
   const [shake, setShake] = useState<boolean>(loadShake);
+  const [collapseTile, setCollapseTile] = useState<boolean>(loadTileCollapse);
   const shakeRef = useRef(shake);
   const [modeKey, setModeKey] = useState<string | null>(null);
   /** 投擲物件的兩段選取：第一段選好（舉起）的物件 ID；`null` ＝ 還在選物件。 */
@@ -746,7 +748,8 @@ export function BattleScreen({ initial, onExit, exitLabel, runMode }: Props) {
     return () => el.removeEventListener("wheel", onWheel);
   }, [zoomStep]);
   const hoverTexts = [...zoneLinesAt(shown, hover, liveNames), ...marksTextAt(marks, hover)];
-  const tileCardSections = tileSections(shown, hover, skillNames, hoverTexts);
+  const fullTileSections = tileSections(shown, hover, skillNames, hoverTexts);
+  const tileCardSections = hoverUnit !== null && collapseTile ? collapseSections(fullTileSections) : fullTileSections;
   const defendMode = basic.find((m) => m.kind === "defend") ?? null;
   const collapsed = sideCollapsed(sidePref, narrow);
   const toggleSide = () => {
@@ -791,6 +794,11 @@ export function BattleScreen({ initial, onExit, exitLabel, runMode }: Props) {
           onReset={() => setLayoutPref(DEFAULT_LAYOUT)}
           shake={shake}
           onShake={setShake}
+          collapseTile={collapseTile}
+          onCollapseTile={(on) => {
+            setCollapseTile(on);
+            saveTileCollapse(on);
+          }}
         />
       ),
     },

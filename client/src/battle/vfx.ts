@@ -5,7 +5,7 @@
 import { asEvent, type BattleView, type EventBase, type Pos, type SkillCard } from "../api/types";
 import { areaCenter } from "./feedback";
 import { samePos } from "./geometry";
-import { DEFAULT_VFX_KEY, SUPPORT_VFX_KEY } from "./vfxPalette";
+import { DEFAULT_VFX_KEY, statusVfxKey, SUPPORT_VFX_KEY, WATER_VFX_KEY } from "./vfxPalette";
 
 /** 特效的種類：飛行物、揮砍弧、單點爆發、範圍逐格爆發、光束、扇形擴散、向外擴散的環。 */
 export type VfxKind = "projectile" | "slash" | "burst" | "area" | "beam" | "cone" | "aura";
@@ -89,6 +89,10 @@ export interface VfxCast {
   crit: boolean;
   /** 施放前的蓄力光（技能有，一般攻擊沒有）。 */
   charge: boolean;
+  /** 傳說技能：蓄力更長、更華麗（3-18b）。 */
+  legendary: boolean;
+  /** 蓄力的時間（毫秒；沒有蓄力為 0）。 */
+  chargeMs: number;
   /** 開始的時間（毫秒，相對這一步；多段依序排開）。 */
   startMs: number;
   /** 命中（爆發開始）的時間。 */
@@ -117,6 +121,8 @@ export interface StepVfx {
 /** 基準時間（毫秒，正常速度；`scaleVfx` 依播放速度縮放）。 */
 export const VFX_TIMING = {
   charge: 160,
+  /** 傳說技能的蓄力（3-18b）。 */
+  chargeLegendary: 380,
   projectileBase: 90,
   projectilePerTile: 45,
   projectileMax: 360,
@@ -228,6 +234,12 @@ interface Segment {
   element: string | null;
   touched: string | null;
   support: boolean;
+  /** 這一段生成了水表面（3-18b：沒有傷害元素時用水花配色）。 */
+  water: boolean;
+  /** 這一段施放者施加的第一個狀態（3-18b：沒有傷害的技能依它上色）。 */
+  status: string | null;
+  /** 傳說技能（卡片稀有度）。 */
+  legendary: boolean;
   crit: boolean;
   /** 這一段命中的單位位置（依序；連鎖用）。 */
   hitPath: Pos[];
@@ -282,8 +294,17 @@ function leadOf(kind: VfxKind, from: Pos, to: Pos): number {
   }
 }
 
+/**
+ * 這一段的配色鍵：傷害元素 → 觸及的元素 → 生成水表面（水花）→ 治療護盾（支援）→ 施加的狀態色
+ * → 一般攻擊的物理 → 通用預設。
+ */
 function segmentElement(seg: Segment): string {
-  return seg.element ?? seg.touched ?? (seg.support ? SUPPORT_VFX_KEY : seg.basic ? "physical" : DEFAULT_VFX_KEY);
+  if (seg.element !== null) return seg.element;
+  if (seg.touched !== null) return seg.touched;
+  if (seg.water) return WATER_VFX_KEY;
+  if (seg.support) return SUPPORT_VFX_KEY;
+  if (seg.status !== null) return statusVfxKey(seg.status);
+  return seg.basic ? "physical" : DEFAULT_VFX_KEY;
 }
 
 function toCast(seg: Segment, startMs: number): VfxCast {
@@ -293,7 +314,8 @@ function toCast(seg: Segment, startMs: number): VfxCast {
   const tiles = seg.tiles.length > 0 ? seg.tiles : [to];
   const path = shape === "chain" && seg.hitPath.length > 0 ? [seg.from, ...seg.hitPath] : [seg.from, to];
   const charge = !seg.basic;
-  const impactMs = startMs + (charge ? VFX_TIMING.charge : 0) + leadOf(kind, seg.from, to);
+  const chargeMs = !charge ? 0 : seg.legendary ? VFX_TIMING.chargeLegendary : VFX_TIMING.charge;
+  const impactMs = startMs + chargeMs + leadOf(kind, seg.from, to);
   return {
     kind,
     element: segmentElement(seg),
@@ -305,6 +327,8 @@ function toCast(seg: Segment, startMs: number): VfxCast {
     intensity: seg.crit ? CRIT_INTENSITY : 1,
     crit: seg.crit,
     charge,
+    legendary: charge && seg.legendary,
+    chargeMs,
     startMs,
     impactMs,
   };
@@ -313,7 +337,7 @@ function toCast(seg: Segment, startMs: number): VfxCast {
 type Locate = (id: unknown) => Pos | null;
 
 function openSegment(e: EventBase, at: Locate, cards: VfxCards): Segment | null {
-  const base = { element: null, touched: null, support: false, crit: false, hitPath: [], hits: [] };
+  const base = { element: null, touched: null, support: false, water: false, status: null, legendary: false, crit: false, hitPath: [], hits: [] };
   if (e.type === "skill_used" || e.type === "skill_followup") {
     const caster = String(e.unit_id);
     const from = e.type === "skill_followup" ? (posOf(e.origin) ?? at(caster)) : at(caster);
@@ -321,7 +345,8 @@ function openSegment(e: EventBase, at: Locate, cards: VfxCards): Segment | null 
     // 第二段讀 `icon.segments[1]`（沒有 icon 的舊資料交給格子推斷）
     const card = cards[String(e.skill_id)];
     const segment: SegmentIndex = e.type === "skill_followup" ? 1 : 0;
-    return { ...base, caster, from, tiles: tilesOf(e.tiles), card, segment, basic: false, target: null };
+    const legendary = card?.rarity_id === "legendary" || card?.icon?.rarity === "legendary";
+    return { ...base, legendary, caster, from, tiles: tilesOf(e.tiles), card, segment, basic: false, target: null };
   }
   const caster = String(e.attacker_id);
   const from = at(caster);
@@ -359,6 +384,8 @@ function absorb(seg: Segment | null, e: EventBase, at: Locate): VfxHit | null {
   if (seg === null) return null;
   if (e.type === "element_touched" && e.source_id === seg.caster && typeof e.element === "string") seg.touched ??= e.element;
   if (e.type === "healed" || e.type === "shield_gained") seg.support = true;
+  if (e.type === "surface_changed" && e.cause === "effect" && e.after === "water") seg.water = true;
+  if (e.type === "status_applied" && e.source_id === seg.caster && typeof e.status_id === "string") seg.status ??= e.status_id;
   return null;
 }
 
@@ -407,7 +434,7 @@ function assemble(segments: readonly Segment[], loose: readonly VfxHit[]): StepV
 export function scaleVfx(vfx: StepVfx, scale: number): StepVfx {
   const s = (ms: number) => Math.round(ms * scale);
   return {
-    casts: vfx.casts.map((c) => ({ ...c, startMs: s(c.startMs), impactMs: s(c.impactMs) })),
+    casts: vfx.casts.map((c) => ({ ...c, startMs: s(c.startMs), impactMs: s(c.impactMs), chargeMs: s(c.chargeMs) })),
     hits: vfx.hits.map((h) => ({ ...h, atMs: s(h.atMs) })),
     shake: vfx.shake,
     leadMs: s(vfx.leadMs),
@@ -417,4 +444,27 @@ export function scaleVfx(vfx: StepVfx, scale: number): StepVfx {
 /** 沒有任何特效（略過、純移動、結束回合）。 */
 export function isEmptyVfx(vfx: StepVfx): boolean {
   return vfx.casts.length === 0 && vfx.hits.length === 0;
+}
+
+// ---- 傳送的消散與出現（3-18b） -------------------------------------------------
+
+/** 傳送類位移（淡出淡入）的特效：起點消散、終點出現。時間相對這一步位移動畫的開始。 */
+export interface VfxWarp {
+  kind: "vanish" | "appear";
+  pos: Pos;
+  startMs: number;
+  endMs: number;
+}
+
+/**
+ * 位移動畫 → 特效：只有淡出淡入的位移（傳送、交換、瞬步）才有。前半（單位在原地淡出）起點消散，
+ * 後半（在新格淡入）終點出現；`durationMs` 為 0（略過）時沒有。
+ */
+export function warpPlan(move: { style: string; from: Pos; to: Pos; durationMs: number }): VfxWarp[] {
+  if (move.style !== "fade" || move.durationMs <= 0) return [];
+  const half = move.durationMs / 2;
+  return [
+    { kind: "vanish", pos: move.from, startMs: 0, endMs: half },
+    { kind: "appear", pos: move.to, startMs: half, endMs: move.durationMs },
+  ];
 }

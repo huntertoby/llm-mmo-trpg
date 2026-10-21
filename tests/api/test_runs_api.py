@@ -92,6 +92,7 @@ def test_create_run_returns_hero_plan_and_first_battle(runs_client: TestClient) 
     assert hero["level"] == 1 and hero["xp_next"] == 100
     assert hero["hp"] == hero["max_hp"] and hero["source_max"] == 3
     assert [c["id"] for c in hero["skills"]]
+    assert hero["weapon_name_zh"] != "" and hero["weapon_class"] in {"melee", "ranged", "focus"}
     assert len(run["plan"]) == 6 and run["plan"][-1]["boss"]
     assert run["battle_id"] is None
 
