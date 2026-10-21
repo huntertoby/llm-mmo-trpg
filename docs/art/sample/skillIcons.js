@@ -591,10 +591,27 @@ window.SkillIcon = (() => {
     ctx.restore();
   }
 
+  /** 形狀主圖（組裝式圖示也用）。 */
+  function motif(ctx, skill, el, P) {
+    const shape = skill.shape;
+    if (shape === "single" && skill.skeleton === "aura") buffTarget(ctx, el, P);
+    else if (shape === "single") (isRanged(skill) ? projectile : slash)(ctx, el, P);
+    else if (shape === "line") beam(ctx, el, P);
+    else if (shape === "cone") fan(ctx, el, P);
+    else if (GRID[shape]) grid(ctx, el, P, shape);
+    else if (shape === "chain") chain(ctx, el, P);
+    else if (shape === "ground_tile") ground(ctx, el, P, skill.skeleton);
+    else if (shape === "allies_in_radius") alliesRadius(ctx, el, P);
+    else if (shape === "object_then_tile") hurl(ctx, el, P);
+    else if (shape === "unit_pair" || shape === "unit_then_tile") pair(ctx, el, P);
+    else selfAura(ctx, el, P, skill.skeleton); // self 與不認得的形狀
+  }
+
   // ---- 組合 ----
   function isRanged(skill) {
     const r = skill.range;
     if (typeof r === "number") return r >= 2;
+    if (r === "weapon" && skill.weapon_req) return skill.weapon_req === "ranged";
     return (skill.tags ?? []).some((t) => ["bow", "ranged", "arrow"].includes(t));
   }
   function draw(canvas, skill, size = 96) {
@@ -620,18 +637,7 @@ window.SkillIcon = (() => {
     ctx.fillRect(0, 0, 100, 100);
     texture(ctx, el, P);
     // ② 形狀主圖
-    const shape = skill.shape;
-    if (shape === "single" && skill.skeleton === "aura") buffTarget(ctx, el, P);
-    else if (shape === "single") (isRanged(skill) ? projectile : slash)(ctx, el, P);
-    else if (shape === "line") beam(ctx, el, P);
-    else if (shape === "cone") fan(ctx, el, P);
-    else if (GRID[shape]) grid(ctx, el, P, shape);
-    else if (shape === "chain") chain(ctx, el, P);
-    else if (shape === "ground_tile") ground(ctx, el, P, skill.skeleton);
-    else if (shape === "allies_in_radius") alliesRadius(ctx, el, P);
-    else if (shape === "object_then_tile") hurl(ctx, el, P);
-    else if (shape === "unit_pair" || shape === "unit_then_tile") pair(ctx, el, P);
-    else selfAura(ctx, el, P, skill.skeleton); // self 與不認得的形狀
+    motif(ctx, skill, el, P);
     ctx.restore();
     // ③ 左上元素標誌
     ctx.fillStyle = "rgba(8,10,16,0.75)";
@@ -664,5 +670,5 @@ window.SkillIcon = (() => {
       ctx.globalAlpha = 1;
     }
   }
-  return { draw, EL, RARITY, SHAPE_NAME, SKELETON_NAME, isRanged };
+  return { draw, EL, RARITY, SHAPE_NAME, SKELETON_NAME, isRanged, motif, texture, elementGlyph, skeletonGlyph, star, figure };
 })();

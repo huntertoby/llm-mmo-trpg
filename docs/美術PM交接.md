@@ -55,6 +55,14 @@
 - 已通知玩法 PM；由開發 PM 排進階段規格（移植成 `client/src/render/` 的正式程式，取代或接在 3-13 的 Kenney 對照之後）。
 - 第 3.1 節的「等使用者決定」已結案；3-13 完成後的正式對比可以省略，除非使用者要。
 
+### 3.4 組裝式技能圖示（玩法 #21，2026-10-22）
+
+- 使用者：「技能是組裝的，所以我也希望圖示是組裝的，能了解組裝概念。」玩法 PM 規劃見 `docs/玩法PM交接.md` #21。
+- 樣張：`docs/art/sample/assembled.html`（`?all` 看全部 152 個）、截圖 `docs/art/skill-icons-assembled.png`、`skill-icons-all.png`。
+- 程式：`parts.js`（部件圖示庫：效果原語、狀態、表面、條件、代價、觸發、修正）、`assembled.js`（`partsOf` 拆解＋圖示＋組裝列）、`skillsData.js`（由 `tools/export_skills.py` 從 `content/` 匯出）。
+- 視覺決定：類型用外框形狀（不用角標）；效果列核心大圓、附帶小圓，最多 4 個；被動、反應的主圖換成觸發時機；小圖右下一個大圓放核心效果。
+- **狀態：等使用者看圖。** 採用後要補進 `docs/art/移植需求.md`（新增 5.3：部件圖示庫、`partsOf`、SkillCard 還需要的欄位：效果清單含狀態／表面 id、條件 id、代價、followup 的 when 與第二段、modifiers、trigger／reaction 事件）。
+
 ## 4. 待辦與想法
 
 - 已寫好給開發 PM 的需求摘要：`docs/art/移植需求.md`（2026-10-22）。
