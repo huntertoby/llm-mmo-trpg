@@ -39,11 +39,18 @@ export function RandomPanel({ skeletons, draft, onResult }: RandomProps) {
   const [seedText, setSeedText] = useState(() => String(randomSeed()));
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  /** 草稿有內容時，第一下按鈕先要求確認（頁內確認；`window.confirm` 在內嵌瀏覽器會直接回傳否而什麼都不發生）。 */
+  const [confirming, setConfirming] = useState(false);
   const seed = parseSeed(seedText);
+  useEffect(() => setConfirming(false), [draft]); // 草稿被別處改了：確認作廢
 
   async function roll() {
     if (seed === null) return;
-    if (!isEmptyDraft(draft) && !window.confirm("隨機產生的技能會取代目前正在編輯的內容，確定嗎？")) return;
+    if (!isEmptyDraft(draft) && !confirming) {
+      setConfirming(true);
+      return;
+    }
+    setConfirming(false);
     setBusy(true);
     setError(null);
     try {
@@ -111,9 +118,17 @@ export function RandomPanel({ skeletons, draft, onResult }: RandomProps) {
           </span>
         </label>
       </div>
-      <button type="button" disabled={busy || seed === null} onClick={() => void roll()}>
-        {busy ? "產生中……" : "隨機一個"}
-      </button>
+      {confirming && <div className="muted small">隨機產生的技能會取代目前正在編輯的內容，確定嗎？</div>}
+      <div className="layout-actions">
+        <button type="button" disabled={busy || seed === null} onClick={() => void roll()}>
+          {busy ? "產生中……" : confirming ? "確定取代並隨機" : "隨機一個"}
+        </button>
+        {confirming && (
+          <button type="button" onClick={() => setConfirming(false)}>
+            取消
+          </button>
+        )}
+      </div>
     </div>
   );
 }

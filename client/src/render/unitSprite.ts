@@ -174,7 +174,7 @@ export function buildUnitSprite(art: ArtTextures, pulses: Pulses, u: UnitDraw, s
   if (u.hero) g.ellipse(0, cy, rx + 2.5, ry + 2).stroke({ width: 2, color: HIGHLIGHT.hero });
   c.addChild(g);
   if (look.dashed !== null) {
-    const dashed = dashedEllipse(cy, T * 0.4, T * 0.18, look.dashed.color, 2);
+    const dashed = dashedEllipse(cy, T * 0.4, T * 0.18, look.dashed.color, 2.5);
     c.addChild(dashed);
     pulses.add(dashed, look.dashed);
   }
