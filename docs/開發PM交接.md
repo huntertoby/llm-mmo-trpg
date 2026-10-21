@@ -43,7 +43,7 @@ Phase 3 各段（`Phase3計畫.md` 節號；報告 `Phase3-*報告.md`）：
 | 3-17 | 組裝式技能圖示（`SkillCard.icon` 由 `trpg.narrative.skill_icon` 推導；`render/skillParts.ts`、`skillIcon.ts`，#21） | 18.3 |
 | 其他 | 白板主角 `build_blank_warrior`、`build_blank_mage`（`blank: true`，不進模擬） | commit c09c339 |
 
-- 測試：**3294 個 pytest ＋ 432 個 vitest**（`check.py` 一併跑，本機約 1–2 分鐘）；`LOG_FORMAT` 為 `trpg-battle-log/36`（3-20 跑步、3-21a 守護／換位／瞄準後，之前的 `--log-json` 與戰鬥中存檔無法讀取，已接受）。
+- 測試：**3294 個 pytest ＋ 432 個 vitest**（`check.py` 一併跑，本機約 1–2 分鐘）；`LOG_FORMAT` 為 `trpg-battle-log/37`（3-20 跑步、3-21a 守護／換位／瞄準、3-21b 攀跳後，之前的 `--log-json` 與戰鬥中存檔無法讀取，已接受）。
 - 內容：22 個模擬用 build ＋ 2 個白板主角（`content/sim/builds.yaml`）；手寫技能 152 個；正式地圖 10 張 ＋ 靶場 `training_range` ＋ Boss 地圖 `bandit_lair`。
 - 主要指令：`trpg battle --map <id> --seed <n> [--log-json f]`、`trpg battle replay f`、`trpg map list`、`trpg sim maps|matrix|skills|completion`、`trpg skills list|budget|random`、`trpg run new|auto|show`、`uv run trpg serve`（網頁，預設 8000 埠）。
 - 一輪的平衡現況：AI 代打種子 1～10 勝 2 場（3-7 後）。
