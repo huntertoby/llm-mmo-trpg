@@ -90,6 +90,24 @@ export const ELEMENT_VFX: Readonly<Record<string, ElementVfx>> = {
   water: vfx(0x4aa8ff, 0xd8f0ff, "splash", 10),
 };
 
+/** 生成水表面的技能用水花配色（水不是元素，`ELEMENT_VFX.water`）。 */
+export const WATER_VFX_KEY = "water";
+
+/** 依施加的狀態上色的配色鍵（3-18b）：`status:<狀態 id>`；顏色由繪圖端取自技能部件庫的狀態色。 */
+export const STATUS_VFX_PREFIX = "status:";
+export const statusVfxKey = (statusId: string): string => `${STATUS_VFX_PREFIX}${statusId}`;
+/** 配色鍵是狀態色時回傳狀態 id，否則 `null`。 */
+export function statusOfVfxKey(key: string): string | null {
+  return key.startsWith(STATUS_VFX_PREFIX) ? key.slice(STATUS_VFX_PREFIX.length) : null;
+}
+
+/** 由一個十六進位色做出的特效配色：主色 ＝ 該色，副色 ＝ 與白混 55%，閃光粒子。 */
+export function colorVfx(hex: string): ElementVfx {
+  const n = hexToNumber(hex);
+  const mix = (shift: number): number => Math.round((((n >> shift) & 255) * 0.45) + 255 * 0.55);
+  return vfx(n, (mix(16) << 16) | (mix(8) << 8) | mix(0), "sparkle", 9);
+}
+
 /** 不是元素的技能：治療、護盾等支援技能。 */
 export const SUPPORT_VFX_KEY = "support";
 export const SUPPORT_VFX: ElementVfx = vfx(0x7cf29a, 0xe6ffe9, "sparkle", 9);

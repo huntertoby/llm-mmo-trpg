@@ -26,13 +26,13 @@ import {
 import { HIGHLIGHT } from "../battle/glossary";
 import type { Overlay, OverlayKind } from "../battle/scenePreview";
 import type { TelegraphMark } from "../battle/telegraph";
-import { VFX_TIMING, type StepVfx } from "../battle/vfx";
+import { warpPlan, type StepVfx } from "../battle/vfx";
 import { tileAt } from "../battle/drawModel";
 import { RING } from "./artPalette";
 import { ArtTextures } from "./artTextures";
 import { heightBadgeText, objectArtSpec, objectKinds, tileArtSpec } from "./artSpecs";
 import { hasObjectArt } from "./objectArt";
-import { castEffects, hitEffects, shakeEffect, type Effect } from "./vfxEffects";
+import { castEffects, hitEffects, shakeEffect, warpEffects, type Effect } from "./vfxEffects";
 import { drawCliff, drawEdges, liftEffects, silhouette } from "./heightArt";
 import { RowStack } from "./rowLayers";
 import { clearLayer, label } from "./labels";
@@ -571,6 +571,7 @@ export class BattleRenderer {
         sprite.position.set(to.x, to.y);
         continue;
       }
+      this.launch(warpEffects(warpPlan(m), this.effectClock, (p) => this.center(p))); // 傳送：起點消散、終點出現
       await this.tween(sprite, this.center(m.from), to, m.durationMs, skip, m.style);
     }
   }
@@ -625,10 +626,14 @@ export class BattleRenderer {
   playFeedback(items: readonly FeedbackItem[], durationMs: number): void {
     if (!this.ready || durationMs <= 0) return;
     const now = this.effectClock;
-    for (const item of items) {
-      const effect = this.makeEffect(item, now, durationMs);
-      this.effects.addChild(effect.node);
-      this.effectList.push(effect);
+    this.launch(items.map((item) => this.makeEffect(item, now, durationMs)));
+  }
+
+  /** 把一組效果放進效果圖層並啟動效果迴圈。 */
+  private launch(effects: readonly Effect[]): void {
+    for (const e of effects) {
+      this.effects.addChild(e.node);
+      this.effectList.push(e);
     }
     this.ensureEffectTick();
   }
@@ -640,23 +645,17 @@ export class BattleRenderer {
   playVfx(vfx: StepVfx, impactMs: number, shake: boolean): void {
     if (!this.ready || impactMs <= 0) return;
     const now = this.effectClock;
-    const scale = impactMs / VFX_TIMING.impact;
-    const chargeMs = Math.round(VFX_TIMING.charge * scale);
     const effects: Effect[] = [];
     const auraHits = vfx.casts.some((c) => c.kind === "aura");
     const at = (p: Pos) => this.center(p);
-    for (const cast of vfx.casts) effects.push(...castEffects(cast, now, impactMs, chargeMs, at));
+    for (const cast of vfx.casts) effects.push(...castEffects(cast, now, impactMs, at));
     for (const hit of vfx.hits) effects.push(...hitEffects(hit, now, impactMs, auraHits, at));
     if (shake && vfx.shake > 0 && vfx.hits.length > 0) {
       const first = Math.min(...vfx.hits.map((h) => h.atMs));
       const stage = this.app.stage;
       effects.push(shakeEffect(vfx.shake === 2 ? 2 : 1, now + first, impactMs * (vfx.shake === 2 ? 0.55 : 0.35), (x, y) => stage.position.set(x, y)));
     }
-    for (const e of effects) {
-      this.effects.addChild(e.node);
-      this.effectList.push(e);
-    }
-    this.ensureEffectTick();
+    this.launch(effects);
   }
 
   /**
@@ -688,11 +687,7 @@ export class BattleRenderer {
       const stage = this.app.stage;
       effects.push(shakeEffect(1, now, durationMs * 0.6, (x, y) => stage.position.set(x * 0.6, y * 0.6)));
     }
-    for (const e of effects) {
-      this.effects.addChild(e.node);
-      this.effectList.push(e);
-    }
-    this.ensureEffectTick();
+    this.launch(effects);
   }
 
   private makeEffect(item: FeedbackItem, now: number, durationMs: number): Effect {
