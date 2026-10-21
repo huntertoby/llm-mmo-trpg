@@ -128,5 +128,5 @@ def test_every_content_weapon_has_a_weapon_class_in_the_view() -> None:
     assert weapons
     for weapon in weapons.values():
         view = _unit_view(state, replace(unit, weapon=weapon), Team.ALLY)
-        assert view.weapon_class == weapon.weapon_class != ""
+        assert view.weapon_class == weapon.weapon_class
         assert view.weapon_class in {"melee", "ranged", "focus"}
