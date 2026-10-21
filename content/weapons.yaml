@@ -136,7 +136,7 @@ weapons:
     flat: 0
     attack_bonus: 0
     scaling_attr: wis
-    element: physical
+    element: holy
     crit_range: 20
     two_handed: false
     blessing: {flat: 3}
