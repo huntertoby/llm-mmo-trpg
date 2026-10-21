@@ -183,3 +183,40 @@ def test_workshop_draft_partial_flag() -> None:
     done = icon_of(walk_draft(STRIKE))
     assert not done.partial and done.segments[0].shape_id == "single"
     assert [e.type for e in done.segments[0].effects] == ["damage", "knock_prone"]
+
+
+def test_modifier_add_tags_and_on_hit_effects_get_part_ids() -> None:
+    icon = icon_of(
+        {
+            "kind": "modifier",
+            "modifiers": [
+                {
+                    "applies_to": {"all_attacks": True},
+                    "change": {
+                        "add_tags": ["push", "fire"],
+                        "on_hit_effects": [
+                            {"type": "damage"},
+                            {"type": "apply_status", "status": "burn"},
+                        ],
+                        "hit_bonus": 1,
+                    },
+                }
+            ],
+        }
+    )
+    assert icon.modifier is not None
+    by_key = {c.key: c for c in icon.modifier.changes}
+    assert by_key["add_tags"].part_ids == ("push", "fire")
+    assert by_key["on_hit_effects"].part_ids == ("damage", "apply_status:burn")
+    assert by_key["hit_bonus"].part_ids == ()
+
+
+def test_cost_values_follow_the_special_costs() -> None:
+    icon = icon_of(
+        {
+            "cost": {"source": 2, "stacks": 3, "uses_per_battle": 1},
+            "followup": {"when": "delayed", "effects": [{"type": "damage"}]},
+        }
+    )
+    assert icon.cost_values == {"source": 2, "stacks": 3, "once": 1, "delay": 1}
+    assert icon_of({"cost": {"mana": 2, "cooldown": 2}}).cost_values == {}

@@ -88,6 +88,9 @@ class IconCondition(_Model):
 class IconModifierChange(_Model):
     key: str
     value: JsonValue = None
+    part_ids: tuple[str, ...] = ()
+    """``add_tags`` 的標籤、``on_hit_effects`` 的效果代碼（帶狀態時 ``apply_status:burn``）；
+    前端據此畫專屬部件（Phase 3-18a）。其他鍵為空。"""
 
 
 class IconModifier(_Model):
@@ -115,6 +118,9 @@ class SkillIcon(_Model):
     """複合技能的接續種類（``followup.when``）。"""
     condition: IconCondition | None
     costs: tuple[IconCost, ...]
+    cost_values: dict[str, int] = {}
+    """代價的數值（Phase 3-18a）：``source`` 源力、``stacks`` 層數、``once`` 每場次數、
+    ``delay`` 延遲回合數；沒有數值的代價（賭注、自身代價）不列。"""
     trigger: str | None
     """被動的 ``trigger.event`` 或反應的 ``reaction.event``。"""
     modifier: IconModifier | None
@@ -226,13 +232,49 @@ def _costs(skill: Mapping[str, Any], all_effects: list[Any]) -> tuple[IconCost, 
     return tuple(out)
 
 
+def _cost_values(skill: Mapping[str, Any], costs: tuple[IconCost, ...]) -> dict[str, int]:
+    cost = _map(skill.get("cost"))
+    out: dict[str, int] = {}
+    for key, raw in (
+        ("source", cost.get("source")),
+        ("stacks", cost.get("stacks")),
+        ("once", cost.get("uses_per_battle")),
+    ):
+        if key in costs and isinstance(raw, int) and not isinstance(raw, bool) and raw > 0:
+            out[key] = raw
+    if "delay" in costs and _map(skill.get("followup")).get("when") == "delayed":
+        out["delay"] = 1
+    return out
+
+
+def _part_ids(key: str, value: Any) -> tuple[str, ...]:
+    """``add_tags``／``on_hit_effects`` 的可辨識部件代碼；其他鍵沒有。"""
+    if key == "add_tags":
+        return tuple(t for t in _seq(value) if isinstance(t, str) and t)
+    if key != "on_hit_effects":
+        return ()
+    ids: list[str] = []
+    for raw in _seq(value)[:_MAX_EFFECTS_PER_SEGMENT]:
+        e = _map(raw)
+        kind = _text(e.get("type"))
+        if kind is None:
+            continue
+        status = _text(e.get("status"))
+        ids.append(f"{kind}:{status}" if status is not None else kind)
+    return tuple(ids)
+
+
 def _changes(modifiers: list[Any]) -> tuple[IconModifierChange, ...]:
     out: list[IconModifierChange] = []
     for m in modifiers:
         for key, value in _map(_map(m).get("change")).items():
             if value is None or value is False or value in ([], ()):
                 continue
-            out.append(IconModifierChange(key=str(key), value=_json(value)))
+            out.append(
+                IconModifierChange(
+                    key=str(key), value=_json(value), part_ids=_part_ids(str(key), value)
+                )
+            )
     return tuple(out)
 
 
@@ -277,6 +319,7 @@ def icon_of(skill: Mapping[str, Any]) -> SkillIcon:
         elements = [t for t in tags if isinstance(t, str) and t in ELEMENT_IDS][:1]
     modifiers = _seq(skill.get("modifiers"))
     partial = segments[0].shape_id is None or not segments[0].effects
+    costs = _costs(skill, all_effects)
     return SkillIcon(
         kind=kind,
         rarity=_choice(skill.get("rarity"), _RARITIES, "common"),
@@ -285,7 +328,8 @@ def icon_of(skill: Mapping[str, Any]) -> SkillIcon:
         segments=tuple(segments),
         link=(_text(followup.get("when")) or "after_move") if has_followup else None,
         condition=_condition(skill, followup),
-        costs=_costs(skill, all_effects),
+        costs=costs,
+        cost_values=_cost_values(skill, costs),
         trigger=_trigger(skill, kind),
         modifier=_modifier(modifiers),
         partial=partial and kind != "modifier" and not modifiers,

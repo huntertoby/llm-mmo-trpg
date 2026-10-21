@@ -1434,6 +1434,11 @@ export interface components {
             /** Key */
             key: string;
             value?: components["schemas"]["JsonValue"];
+            /**
+             * Part Ids
+             * @default []
+             */
+            part_ids: string[];
         };
         /**
          * IconSegment
@@ -2266,6 +2271,13 @@ export interface components {
             condition: components["schemas"]["IconCondition"] | null;
             /** Costs */
             costs: components["schemas"]["IconCost"][];
+            /**
+             * Cost Values
+             * @default {}
+             */
+            cost_values: {
+                [key: string]: number;
+            };
             /** Trigger */
             trigger: string | null;
             modifier: components["schemas"]["IconModifier"] | null;
