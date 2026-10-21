@@ -1,0 +1,146 @@
+<!doctype html>
+<html lang="zh-Hant">
+<head>
+<meta charset="utf-8">
+<title>技能圖示樣張</title>
+<style>
+  body { margin: 0; padding: 20px 24px; background: #1b1e24; color: #e8e8ea; font-family: "Noto Sans TC", "Microsoft JhengHei", sans-serif; }
+  h1 { font-size: 22px; margin: 0 0 4px; }
+  h2 { font-size: 16px; margin: 18px 0 8px; }
+  .sub { color: #a0a4ad; font-size: 13px; margin-bottom: 8px; }
+  .cards { display: grid; grid-template-columns: repeat(6, 1fr); gap: 10px; }
+  .card { background: #262a32; border-radius: 10px; padding: 10px; display: flex; gap: 10px; align-items: center; }
+  .card .name { font-weight: 700; font-size: 14px; }
+  .card .meta { font-size: 11px; color: #a0a4ad; line-height: 1.5; }
+  .small { display: flex; gap: 6px; align-items: end; margin-top: 4px; }
+  .matrix { display: grid; grid-template-columns: 64px repeat(8, 64px); gap: 6px; align-items: center; }
+  .matrix .h { font-size: 12px; color: #a0a4ad; text-align: center; }
+  .matrix .rh { font-size: 13px; text-align: right; padding-right: 6px; }
+  .wrap { display: flex; gap: 28px; align-items: flex-start; }
+  .legend { font-size: 12px; color: #c8cad0; line-height: 1.9; background: #262a32; border-radius: 10px; padding: 12px 14px; }
+  .legend b { color: #fff; }
+  .new { display: flex; gap: 10px; }
+</style>
+</head>
+<body>
+<h1>技能圖示自動生成（零下載素材）</h1>
+<div class="sub">只讀技能卡的欄位：元素 → 底色與紋理；形狀＋射程 → 主圖；骨架 → 右下徽章；稀有度 → 外框。大圖 96px，右側是 40px／28px（技能列實際大小）。</div>
+<h2>現有技能（17 個，資料取自 content/skills/）</h2>
+<div class="cards" id="cards"></div>
+<div class="wrap">
+  <div>
+    <h2>自動覆蓋：9 元素 × 8 種形狀（新技能任意組合都有圖）</h2>
+    <div class="matrix" id="matrix"></div>
+  </div>
+  <div>
+    <h2>LLM 新生成技能（假想）</h2>
+    <div class="new" id="new"></div>
+    <h2>讀圖方式</h2>
+    <div class="legend">
+      <b>左上</b>：元素（火、冰、雷、毒、風、大地、聖光、暗影、物理；無元素＝紫色六角）<br>
+      <b>中央</b>：形狀——飛行物＝遠程單體、揮砍弧＝近戰單體、光束＝直線、扇形＝錐形、<br>
+      　　　　九宮格＝方陣／十字／環形、連線＝連鎖、地面圈＝指定格（召喚、陷阱另有圖）、光環＝自身<br>
+      <b>右下</b>：骨架——劍＝打擊、星＝範圍、鎖＝控制、雙箭頭＝增益、＋＝召喚、齒＝陷阱、<br>
+      　　　　左右箭頭＝位移、空心星＝引爆狀態、階梯＝累積終結、盾＝姿態、迴轉＝反應<br>
+      <b>外框</b>：灰＝普通、藍＝稀有、紫＝史詩、金＝傳說
+    </div>
+  </div>
+</div>
+<script src="skillIcons.js"></script>
+<script>
+  // 依 content/skills/*.yaml 抽出的欄位（element 取 effects 的 element 或 tags）
+  const SKILLS = [
+    { id: "skill_fire_bolt", name: "火焰箭", element: "fire", shape: "single", range: 5, skeleton: "strike", rarity: "common" },
+    { id: "skill_ashen_oath", name: "灰燼誓約", element: "fire", shape: "cone", range: null, skeleton: "area", rarity: "rare" },
+    { id: "skill_deep_freeze", name: "凍結", element: "ice", shape: "single", range: 5, skeleton: "control", rarity: "rare" },
+    { id: "skill_ice_wall", name: "冰牆術", element: "ice", shape: "line", range: null, skeleton: "control", rarity: "rare" },
+    { id: "skill_chain_lightning", name: "連鎖閃電", element: "lightning", shape: "chain", range: 5, skeleton: "area", rarity: "rare" },
+    { id: "skill_thunder_finisher", name: "雷霆終結", element: "lightning", shape: "single", range: 5, skeleton: "builder_finisher", rarity: "rare" },
+    { id: "skill_venom_cloud", name: "毒霧", element: "poison", shape: "square3", range: 5, skeleton: "control", rarity: "rare" },
+    { id: "skill_toxin_burst", name: "毒血迸發", element: "poison", shape: "single", range: 4, skeleton: "consume_status", rarity: "rare" },
+    { id: "skill_tailwind", name: "順風", element: "wind", shape: "single", range: 4, skeleton: "aura", rarity: "rare" },
+    { id: "skill_stone_wall", name: "石牆術", element: "earth", shape: "cross", range: 3, skeleton: "control", rarity: "rare" },
+    { id: "skill_holy_burst", name: "聖光爆發", element: "holy", shape: "square3", range: 4, skeleton: "area", rarity: "rare" },
+    { id: "skill_sanctuary", name: "聖域", element: "holy", shape: "allies_in_radius", range: null, skeleton: "aura", rarity: "rare" },
+    { id: "skill_hex_bolt", name: "咒印飛彈", element: "shadow", shape: "single", range: 5, skeleton: "strike", rarity: "common" },
+    { id: "skill_raise_skeleton", name: "喚起骷髏", element: "shadow", shape: "ground_tile", range: 3, skeleton: "summon", rarity: "rare" },
+    { id: "skill_whirlwind", name: "旋風斬", element: "physical", shape: "ring", range: null, skeleton: "area", rarity: "common" },
+    { id: "skill_bear_trap", name: "捕獸夾", element: "physical", shape: "ground_tile", range: 4, skeleton: "trap", rarity: "rare" },
+    { id: "skill_afterimage_vow", name: "殘影之誓", element: null, shape: "self", range: null, skeleton: "aura", rarity: "legendary" },
+  ];
+  const cards = document.getElementById("cards");
+  for (const s of SKILLS) {
+    const card = document.createElement("div");
+    card.className = "card";
+    const big = document.createElement("canvas");
+    SkillIcon.draw(big, s, 96);
+    const info = document.createElement("div");
+    const el = SkillIcon.EL[s.element] ?? SkillIcon.EL.default;
+    const shapeName = SkillIcon.SHAPE_NAME[s.shape] + (s.shape === "single" ? (SkillIcon.isRanged(s) ? "・遠程" : "・近戰") : "");
+    info.innerHTML = `<div class="name">${s.name}</div><div class="meta">${el.name}｜${shapeName}<br>${SkillIcon.SKELETON_NAME[s.skeleton]}｜${({ common: "普通", rare: "稀有", epic: "史詩", legendary: "傳說" })[s.rarity]}</div>`;
+    const small = document.createElement("div");
+    small.className = "small";
+    for (const px of [40, 28]) {
+      const c = document.createElement("canvas");
+      SkillIcon.draw(c, s, px);
+      small.appendChild(c);
+    }
+    info.appendChild(small);
+    card.append(big, info);
+    cards.appendChild(card);
+  }
+  // 矩陣
+  const SHAPES = [
+    ["遠程單體", { shape: "single", range: 5, skeleton: "strike" }],
+    ["近戰單體", { shape: "single", range: 1, skeleton: "strike" }],
+    ["直線", { shape: "line", skeleton: "area" }],
+    ["錐形", { shape: "cone", skeleton: "area" }],
+    ["方陣", { shape: "square3", skeleton: "area" }],
+    ["十字", { shape: "cross", skeleton: "control" }],
+    ["連鎖", { shape: "chain", skeleton: "area" }],
+    ["自身", { shape: "self", skeleton: "aura" }],
+  ];
+  const ELS = ["physical", "fire", "ice", "lightning", "poison", "wind", "earth", "holy", "shadow"];
+  const m = document.getElementById("matrix");
+  m.appendChild(document.createElement("div"));
+  for (const [n] of SHAPES) {
+    const h = document.createElement("div");
+    h.className = "h";
+    h.textContent = n;
+    m.appendChild(h);
+  }
+  ELS.forEach((e, i) => {
+    const rh = document.createElement("div");
+    rh.className = "rh";
+    rh.textContent = SkillIcon.EL[e].name;
+    m.appendChild(rh);
+    SHAPES.forEach(([, sh], j) => {
+      const c = document.createElement("canvas");
+      SkillIcon.draw(c, { element: e, rarity: ["common", "rare", "epic", "legendary"][(i + j) % 4], ...sh }, 64);
+      m.appendChild(c);
+    });
+  });
+  // LLM 新技能（假想）：資料裡從沒出現過的組合，甚至不認得的元素
+  const NEW = [
+    { name: "霜雷鎖鏈", element: "lightning", shape: "chain", range: 4, skeleton: "control", rarity: "epic" },
+    { name: "腐土突刺", element: "poison", shape: "line", range: null, skeleton: "strike", rarity: "rare" },
+    { name: "聖風步", element: "wind", shape: "ground_tile", range: 4, skeleton: "displace", rarity: "rare" },
+    { name: "虛空之觸", element: "void", shape: "single", range: 1, skeleton: "mystery", rarity: "legendary" },
+  ];
+  const nw = document.getElementById("new");
+  for (const s of NEW) {
+    const card = document.createElement("div");
+    card.className = "card";
+    card.style.flexDirection = "column";
+    const c = document.createElement("canvas");
+    SkillIcon.draw(c, s, 80);
+    const t = document.createElement("div");
+    t.className = "meta";
+    t.style.textAlign = "center";
+    t.innerHTML = `<span class="name" style="color:#fff">${s.name}</span><br>${s.element}｜${s.shape}<br>${s.skeleton}`;
+    card.append(c, t);
+    nw.appendChild(card);
+  }
+</script>
+</body>
+</html>

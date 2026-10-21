@@ -1,0 +1,162 @@
+<!doctype html>
+<html lang="zh-Hant">
+<head>
+<meta charset="utf-8">
+<title>紙娃娃小人樣張</title>
+<style>
+  body { margin: 0; padding: 20px 24px; background: #1b1e24; color: #e8e8ea; font-family: "Noto Sans TC", "Microsoft JhengHei", sans-serif; }
+  h1 { font-size: 22px; margin: 0 0 4px; }
+  h2 { font-size: 16px; margin: 16px 0 8px; }
+  .sub { color: #a0a4ad; font-size: 13px; }
+  .row { display: flex; gap: 10px; align-items: flex-end; flex-wrap: wrap; }
+  .cell { background: #262a32; border-radius: 10px; padding: 6px 8px 8px; text-align: center; }
+  .cell .t { font-size: 12px; color: #c8cad0; margin-top: 2px; }
+  .cell .m { font-size: 10px; color: #8a8f99; }
+  .plus { font-size: 20px; color: #6a7080; align-self: center; }
+  .cols { display: flex; gap: 28px; }
+  canvas { display: block; margin: 0 auto; }
+</style>
+</head>
+<body>
+<h1>紙娃娃小人：裝備換了，外觀就跟著換（零下載素材）</h1>
+<div class="sub">一個基本身體＋依裝備欄位（身、腳、手、頭、主手、副手，外加披風）疊上的圖層；裝備外觀只看資料欄位：種類＋材質＋顏色＋元素＋稀有度。</div>
+<h2>① 組裝過程（同一個人，一件一件穿上）</h2>
+<div class="row" id="assemble"></div>
+<div class="cols">
+  <div>
+    <h2>② 同一個戰士，六套裝備</h2>
+    <div class="row" id="outfits"></div>
+  </div>
+  <div>
+    <h2>③ 四個朝向（腳下尖角＝朝向）</h2>
+    <div class="row" id="facings"></div>
+  </div>
+</div>
+<div class="cols">
+  <div>
+    <h2>④ 展示場景裡的角色（依單位範本）</h2>
+    <div class="row" id="cast"></div>
+  </div>
+  <div>
+    <h2>⑤ 遊戲中的實際大小（每格 52px）</h2>
+    <div class="row" id="tiles"></div>
+  </div>
+</div>
+<script src="paperdoll.js"></script>
+<script>
+  const D = PaperDoll;
+  function cell(parent, title, meta, draw, w = 110, h = 130) {
+    const div = document.createElement("div");
+    div.className = "cell";
+    const c = document.createElement("canvas");
+    c.width = w * 2;
+    c.height = h * 2;
+    c.style.width = `${w}px`;
+    c.style.height = `${h}px`;
+    const ctx = c.getContext("2d");
+    ctx.scale(2, 2);
+    draw(ctx, w, h);
+    div.appendChild(c);
+    div.insertAdjacentHTML("beforeend", `<div class="t">${title}</div>${meta ? `<div class="m">${meta}</div>` : ""}`);
+    parent.appendChild(div);
+  }
+  function base(ctx, w, h, color = "#2f6fd0", ring = "#a9ccff") {
+    ctx.fillStyle = color + "88";
+    ctx.strokeStyle = ring;
+    ctx.lineWidth = 2;
+    ctx.beginPath();
+    ctx.ellipse(w / 2, h - 16, 34, 13, 0, 0, Math.PI * 2);
+    ctx.fill();
+    ctx.stroke();
+  }
+  const fighterLook = { skin: D.SKIN[0], hair: "short", hairColor: "#6a3d1e" };
+  // ① 組裝
+  const steps = [
+    ["基本身體", "膚色、髮型", []],
+    ["＋身", "鎖甲", ["chain_mail"]],
+    ["＋腳", "鐵脛甲", ["chain_mail", "greaves"]],
+    ["＋手", "鐵手甲", ["chain_mail", "greaves", "gauntlets"]],
+    ["＋頭", "鋼盔", ["chain_mail", "greaves", "gauntlets", "helmet"]],
+    ["＋主手", "長劍", ["chain_mail", "greaves", "gauntlets", "helmet", "sword"]],
+    ["＋副手", "圓盾", ["chain_mail", "greaves", "gauntlets", "helmet", "sword", "round_shield"]],
+    ["＋披風", "藍披風", ["chain_mail", "greaves", "gauntlets", "helmet", "sword", "round_shield", "blue_cape"]],
+  ];
+  const as = document.getElementById("assemble");
+  steps.forEach(([t, m, ids], i) => {
+    cell(as, t, m, (ctx, w, h) => {
+      base(ctx, w, h);
+      D.stamp(ctx, D.build(fighterLook, ids), "south", w / 2, h - 14, 2.1);
+    });
+  });
+  // ② 換裝
+  const outfits = [
+    ["布衣＋斧", "普通", ["tunic", "boots", "axe"]],
+    ["皮甲＋匕首", "普通", ["leather_vest", "boots", "gloves", "bandana_red", "dagger"]],
+    ["板甲＋劍盾", "稀有", ["plate_armor", "greaves", "gauntlets", "helmet", "sword", "kite_shield"]],
+    ["法袍＋雷杖", "稀有", ["mage_robe", "boots", "wizard_hat", "lightning_staff", "tome"]],
+    ["霜紋鎖甲", "LLM 新裝備：鎖甲＋冰詞條", ["frost_mail", "greaves", "gauntlets", "iron_helmet", "sword", "round_shield"], "epic"],
+    ["烈焰巨劍＋聖盾", "傳說：火、聖光詞條", ["plate_armor", "greaves", "gauntlets", "horned_helm", "flame_greatsword", "holy_shield", "red_cape"], "legendary"],
+  ];
+  const of = document.getElementById("outfits");
+  for (const [t, m, ids, rarity] of outfits) {
+    cell(of, t, m, (ctx, w, h) => {
+      base(ctx, w, h);
+      D.stamp(ctx, D.build(fighterLook, ids, rarity), "south", w / 2, h - 14, 2.0);
+    }, 104, 130);
+  }
+  // ③ 朝向
+  const fc = document.getElementById("facings");
+  const NAMES = { south: "南（正面）", east: "東", north: "北（背面）", west: "西" };
+  for (const f of ["south", "east", "north", "west"]) {
+    cell(fc, NAMES[f], "", (ctx, w, h) => {
+      base(ctx, w, h);
+      const [dx, dy] = { north: [0, -1], east: [1, 0], south: [0, 1], west: [-1, 0] }[f];
+      const ex = w / 2 + dx * 34;
+      const ey = h - 16 + dy * 13;
+      ctx.fillStyle = "#a9ccff";
+      ctx.beginPath();
+      ctx.moveTo(ex + dx * 10, ey + dy * 7);
+      ctx.lineTo(ex - dy * 6, ey + dx * 5);
+      ctx.lineTo(ex + dy * 6, ey - dx * 5);
+      ctx.closePath();
+      ctx.fill();
+      D.stamp(ctx, D.TEMPLATES.hero_fighter, f, w / 2, h - 14, 2.0);
+    }, 104, 130);
+  }
+  // ④ 角色
+  const cast = [
+    ["hero_fighter", "戰士", "ally"], ["hero_mage", "法師", "ally"], ["hero_archer", "弓手", "ally"],
+    ["summon_skeleton_warrior", "骷髏（召喚）", "summon"],
+    ["bandit", "盜賊", "enemy"], ["bandit_archer", "盜賊弓手", "enemy"], ["bandit_shieldbearer", "盾兵", "enemy"], ["bandit_boss", "盜賊頭目", "enemy"],
+  ];
+  const COLORS = { ally: ["#2f6fd0", "#a9ccff"], enemy: ["#c63b3b", "#ffb3a8"], summon: ["#1f9e8f", "#8ff0e2"] };
+  const ca = document.getElementById("cast");
+  for (const [id, name, team] of cast) {
+    cell(ca, name, id, (ctx, w, h) => {
+      base(ctx, w, h, ...COLORS[team]);
+      D.stamp(ctx, D.TEMPLATES[id], "south", w / 2, h - 14, 1.8);
+    }, 92, 118);
+  }
+  // ⑤ 實際大小
+  const tl = document.getElementById("tiles");
+  cell(tl, "52px 格子", "", (ctx) => {
+    const T = 52;
+    const list = cast.slice(0, 8);
+    list.forEach(([id, , team], i) => {
+      const x = (i % 4) * T;
+      const y = Math.floor(i / 4) * T;
+      ctx.fillStyle = (i + Math.floor(i / 4)) % 2 ? "#8e8a80" : "#6b9a4b";
+      ctx.fillRect(x, y, T, T);
+      ctx.fillStyle = COLORS[team][0] + "88";
+      ctx.strokeStyle = COLORS[team][1];
+      ctx.lineWidth = 2;
+      ctx.beginPath();
+      ctx.ellipse(x + T / 2, y + T / 2 + 14, 18.7, 8.8, 0, 0, Math.PI * 2);
+      ctx.fill();
+      ctx.stroke();
+      D.stamp(ctx, D.TEMPLATES[id], "south", x + T / 2, y + T / 2 + 16, 1.0);
+    });
+  }, 208, 104);
+</script>
+</body>
+</html>
