@@ -117,3 +117,4 @@ def test_the_view_describes_the_map_and_units() -> None:
     )
     assert view.active_unit == U1 and view.round == state.round
     assert view.ended is False and view.winner is None
+    assert all(u.weapon_id == state.units[u.id].weapon.id != "" for u in view.units)

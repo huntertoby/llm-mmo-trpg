@@ -33,7 +33,7 @@ describe("buildDrawModel", () => {
   });
 
   it("places units with markers, hp bars and outlines; escaped units are removed", () => {
-    expect(model.units.map((u) => u.id)).toEqual(["unit_0002", "unit_0001", "unit_0003", "unit_0004"]);
+    expect(model.units.map((u) => u.id)).toEqual(["unit_0002", "unit_0001", "unit_0004", "unit_0003"]);
     const hero = model.units.find((u) => u.id === "unit_0001")!;
     expect(hero).toMatchObject({ x: 0, y: 0, marker: "A", hero: true, active: true, hpRatio: 0.5 });
     expect(hero.fill).toBe(TEAM_COLORS.ally);

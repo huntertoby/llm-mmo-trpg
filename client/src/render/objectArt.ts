@@ -308,66 +308,87 @@ function thornWall(ctx: Ctx, s: ObjectArtSpec): void {
 }
 
 function rubble(ctx: Ctx, s: ObjectArtSpec): void {
+  // 3–5 塊大石頭，約佔格子 70%；每塊有影子與亮面
   const r = rng(s.x, s.y, 41);
-  const n = 6 + Math.floor(r() * 3);
+  const n = 3 + Math.floor(r() * 3);
   for (let i = 0; i < n; i++) {
-    const cx = 10 + r() * (T - 20);
-    const cy = 12 + r() * (T - 22);
-    const rad = 4 + r() * 5;
-    shadowEllipse(ctx, cx + 2, cy + 3, rad, rad * 0.7);
+    const a0 = (i / n) * TAU + r() * 0.8;
+    const dist = i === 0 ? 0 : 9 + r() * 5;
+    const cx = T / 2 + Math.cos(a0) * dist;
+    const cy = T / 2 + 2 + Math.sin(a0) * dist * 0.8;
+    const rad = 8 + r() * 4;
+    shadowEllipse(ctx, cx + 2, cy + rad * 0.6, rad * 1.05, rad * 0.55);
     ctx.fillStyle = i % 2 === 0 ? PAL.rock : PAL.rockDark;
     ctx.beginPath();
-    for (let k = 0; k < 6; k++) {
-      const a = (k / 6) * TAU;
-      const rr = rad * (0.75 + r() * 0.35);
-      ctx.lineTo(cx + Math.cos(a) * rr, cy + Math.sin(a) * rr);
+    for (let k = 0; k < 7; k++) {
+      const a = (k / 7) * TAU;
+      const rr = rad * (0.78 + r() * 0.3);
+      ctx.lineTo(cx + Math.cos(a) * rr, cy + Math.sin(a) * rr * 0.85);
     }
     ctx.closePath();
     ctx.fill();
-    ctx.fillStyle = "rgba(255,255,255,0.15)";
-    ctx.fillRect(cx - rad * 0.5, cy - rad * 0.6, rad, 1.5);
+    ctx.fillStyle = "rgba(255,255,255,0.28)";
+    ctx.beginPath();
+    ctx.ellipse(cx - rad * 0.25, cy - rad * 0.3, rad * 0.45, rad * 0.25, -0.4, 0, TAU);
+    ctx.fill();
+    ctx.fillStyle = "rgba(0,0,0,0.18)";
+    ctx.fillRect(cx - rad * 0.2, cy + rad * 0.25, rad * 0.8, 1.5);
   }
 }
 
 function thinIce(ctx: Ctx, s: ObjectArtSpec): void {
+  // 不規則的薄冰邊緣＋從一點放射的細裂紋
   const r = rng(s.x, s.y, 42);
-  roundRect(ctx, 3, 3, T - 6, T - 6, 8);
+  ctx.beginPath();
+  const pts = 11;
+  for (let k = 0; k < pts; k++) {
+    const a = (k / pts) * TAU;
+    const rad = T * (0.4 + r() * 0.08);
+    ctx.lineTo(T / 2 + Math.cos(a) * rad, T / 2 + Math.sin(a) * rad);
+  }
+  ctx.closePath();
   ctx.fillStyle = "rgba(205,238,255,0.55)";
   ctx.fill();
   ctx.lineWidth = 1.5;
   ctx.strokeStyle = "rgba(255,255,255,0.8)";
   ctx.stroke();
-  ctx.strokeStyle = "rgba(90,150,200,0.7)";
+  ctx.strokeStyle = "rgba(90,150,200,0.75)";
   ctx.lineWidth = 1;
   ctx.beginPath();
   const cx = T * (0.35 + r() * 0.3);
   const cy = T * (0.35 + r() * 0.3);
-  for (let i = 0; i < 5; i++) {
-    const a = r() * TAU;
+  for (let i = 0; i < 6; i++) {
+    const a = (i / 6) * TAU + r() * 0.5;
+    const len = 12 + r() * 10;
+    const mx = cx + Math.cos(a) * len * 0.5;
+    const my = cy + Math.sin(a) * len * 0.5;
     ctx.moveTo(cx, cy);
-    ctx.lineTo(cx + Math.cos(a) * (12 + r() * 10), cy + Math.sin(a) * (12 + r() * 10));
+    ctx.lineTo(mx, my);
+    ctx.lineTo(mx + Math.cos(a + 0.6) * len * 0.5, my + Math.sin(a + 0.6) * len * 0.5);
   }
   ctx.stroke();
 }
 
 function grassFloor(ctx: Ctx, s: ObjectArtSpec): void {
+  // 一團較高的深色草叢：3–4 簇草葉，約佔格子 70%，下方有淡影子（和地面的短草明顯不同）
   const r = rng(s.x, s.y, 43);
-  roundRect(ctx, 3, 3, T - 6, T - 6, 8);
-  ctx.fillStyle = rgba(PAL.grass, 0.35);
-  ctx.fill();
-  ctx.lineWidth = 1.8;
-  ctx.lineCap = "round";
-  for (let i = 0; i < 9; i++) {
-    const gx = 7 + r() * (T - 14);
-    const gy = 12 + r() * (T - 18);
-    ctx.strokeStyle = r() < 0.5 ? PAL.grassLight : PAL.grassDark;
-    ctx.beginPath();
-    ctx.moveTo(gx - 3, gy - 6);
-    ctx.lineTo(gx, gy);
-    ctx.lineTo(gx + 3, gy - 7);
-    ctx.moveTo(gx, gy);
-    ctx.lineTo(gx, gy - 9);
-    ctx.stroke();
+  shadowEllipse(ctx, T / 2 + 2, T * 0.78, T * 0.36, T * 0.12);
+  const clumps = 3 + Math.floor(r() * 2);
+  for (let i = 0; i < clumps; i++) {
+    const bx = T * (0.22 + (0.56 * i) / (clumps - 1)) + (r() - 0.5) * 4;
+    const by = T * (0.74 + (i % 2) * 0.04);
+    const blades = 6 + Math.floor(r() * 3);
+    for (let b = 0; b < blades; b++) {
+      const lean = ((b / (blades - 1)) * 2 - 1) * 9 + (r() - 0.5) * 3;
+      const h = 20 + r() * 8 - Math.abs(lean) * 0.5;
+      ctx.fillStyle = b % 3 === 0 ? PAL.grassLight : PAL.bush;
+      ctx.beginPath();
+      ctx.moveTo(bx + (b - blades / 2) * 1.1 - 1.6, by);
+      ctx.quadraticCurveTo(bx + lean * 0.5, by - h * 0.6, bx + lean, by - h);
+      ctx.quadraticCurveTo(bx + lean * 0.5 + 2, by - h * 0.5, bx + (b - blades / 2) * 1.1 + 1.6, by);
+      ctx.closePath();
+      ctx.fill();
+    }
   }
 }
 

@@ -6371,6 +6371,11 @@
             "type": "string",
             "title": "Weapon Name Zh"
           },
+          "weapon_id": {
+            "type": "string",
+            "title": "Weapon Id",
+            "default": ""
+          },
           "tags": {
             "items": {
               "type": "string"

@@ -165,6 +165,8 @@ class UnitView(_ViewModel):
     speed: int
     initiative: int
     weapon_name_zh: str
+    weapon_id: str = ""
+    """武器 ID（Phase 3-16b，紙娃娃主手外觀用）；未知武器由前端退回預設。"""
     tags: tuple[str, ...]
     skills: tuple[str, ...]
     """裝備的技能 ID；只有自己陣營的單位會列出（其他陣營的單位為空，避免洩漏陷阱技能）。"""
@@ -386,6 +388,7 @@ def _unit_view(state: BattleState, unit: UnitState, team: Team) -> UnitView:
         speed=unit.speed,
         initiative=unit.initiative,
         weapon_name_zh=unit.weapon.name_zh,
+        weapon_id=unit.weapon.id,
         tags=unit.tags,
         skills=unit.skills if unit.team is team else (),
         statuses=tuple(_status_view(state, unit, s) for s in unit.statuses),

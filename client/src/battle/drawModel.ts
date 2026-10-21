@@ -79,6 +79,8 @@ export interface UnitDraw {
   charge?: number | null;
   /** 朝向（Phase 3D-8d）：圖示外緣畫小箭頭；背後格站著近戰敵人時會被背刺。 */
   facing: Facing;
+  /** 武器 ID（紙娃娃主手外觀用）。 */
+  weaponId: string;
 }
 
 export interface TrapDraw {
@@ -218,8 +220,10 @@ export function buildDrawModel(
       bomb: bombCountdown(u),
       charge: chargeCountdown(u.statuses),
       facing: u.facing,
+      weaponId: u.weapon_id,
     }))
-    .sort((a, b) => Number(b.downed) - Number(a.downed));
+    // 倒下的先畫（在底層），其餘依 y 由上往下排序（下面的人蓋住上面的人）
+    .sort((a, b) => Number(b.downed) - Number(a.downed) || a.y - b.y);
   const traps: TrapDraw[] = view.traps.map((t) => {
     const revealed = t.team !== view.team;
     return { x: t.pos.x, y: t.pos.y, color: revealed ? HIGHLIGHT.trap_revealed : HIGHLIGHT.trap, revealed };

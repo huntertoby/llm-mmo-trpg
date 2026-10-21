@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 import type { DrawModel, TileDraw } from "./drawModel";
-import { CLIFF_MIN_DIFF, heightDecor, pedestalScale, sideThickness, SIDE_MAX_PX, shadowWidth } from "./heightModel";
+import { CLIFF_MIN_DIFF, heightDecor, pedestalScale } from "./heightModel";
 import { clientToTile } from "./stageLayout";
 import { TILE_SIZE } from "./geometry";
 
@@ -32,16 +32,7 @@ function model(heights: number[][], blockedAt: Array<[number, number]> = []): Dr
 describe("heightDecor", () => {
   it("平地沒有任何裝飾", () => {
     const d = heightDecor(model([[0, 0], [0, 0]]));
-    expect(d.sides).toEqual([]);
     expect(d.cliffs).toEqual([]);
-    expect(d.shadows).toEqual([]);
-  });
-
-  it("高格往南畫側面，越高越厚且有上限", () => {
-    const d = heightDecor(model([[1], [0]]));
-    expect(d.sides).toEqual([{ x: 0, y: 0, diff: 1, thickness: sideThickness(1), height: 1 }]);
-    expect(sideThickness(2)).toBeGreaterThan(sideThickness(1));
-    expect(sideThickness(99)).toBe(SIDE_MAX_PX);
   });
 
   it("高度差 1 沒有懸崖線，≥ 2 有（每個較低的邊）", () => {
@@ -50,14 +41,8 @@ describe("heightDecor", () => {
     expect(d.cliffs.map((c) => c.side).sort()).toEqual(["east", "south"]);
   });
 
-  it("高台投影到東側較低鄰格", () => {
-    const d = heightDecor(model([[2, 0]]));
-    expect(d.shadows).toEqual([{ x: 1, y: 0, from: "west", width: shadowWidth(2) }]);
-  });
-
   it("阻擋地形（深淵）不參與高度比較", () => {
     const d = heightDecor(model([[3, 0]], [[1, 0]]));
-    expect(d.sides).toEqual([]);
     expect(d.cliffs).toEqual([]);
   });
 

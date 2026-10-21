@@ -8,7 +8,7 @@ import type { Pos } from "../api/types";
 import type { FeedbackItem, FloatTone } from "../battle/feedback";
 import { lerpPos, type MoveAnim, type MoveStyle } from "../battle/animation";
 import type { DrawModel, ObjectDraw, TileDraw, UnitDraw } from "../battle/drawModel";
-import { facingArrow } from "../battle/facing";
+import { ringArrow } from "../battle/facing";
 import { canvasSize, TILE_SIZE, tileCenter, tileOrigin } from "../battle/geometry";
 import { scaledSize } from "../battle/stageLayout";
 import { HIGHLIGHT } from "../battle/glossary";
@@ -17,7 +17,10 @@ import type { TelegraphMark } from "../battle/telegraph";
 import { VFX_TIMING, type StepVfx } from "../battle/vfx";
 import { tileAt } from "../battle/drawModel";
 import { heightDecor, pedestalScale } from "../battle/heightModel";
+import { RING } from "./artPalette";
 import { ArtTextures } from "./artTextures";
+import { resolveDoll } from "./appearance";
+import { DOLL_FOOT_Y, DOLL_H, DOLL_W } from "./paperdoll";
 import { heightBadgeText, objectArtSpec, objectKinds, tileArtSpec } from "./artSpecs";
 import { hasObjectArt } from "./objectArt";
 import { castEffects, hitEffects, shakeEffect, type Effect } from "./vfxEffects";
@@ -209,7 +212,6 @@ export class BattleRenderer {
     const kinds = objectKinds(model);
     for (const o of model.objects) this.objects.addChild(this.objectSprite(o, kinds));
     this.drawBadges(model);
-    this.art.endFrame();
     for (const trap of model.traps) {
       const c = tileCenter(trap);
       const glyph = label(trap.revealed ? "×" : "^", 22, trap.color, true);
@@ -222,6 +224,7 @@ export class BattleRenderer {
       this.units.addChild(sprite);
       if (!u.downed) this.unitSprites.set(u.id, sprite);
     }
+    this.art.endFrame();
   }
 
   /** 源泉格（Phase 3C-6a）：格子中央一顆紫色菱形，標「源」；單位站上去時才會被取用。 */
@@ -282,10 +285,10 @@ export class BattleRenderer {
       g.rect(0, 0, T, T).fill(t.fill).stroke({ width: 1, color: 0x000000, alpha: 0.35 }); // 無法產生貼圖：退回色塊
     }
     if (t.deadly) {
-      g.rect(3, 3, T - 6, T - 6).stroke({ width: 2, color: HIGHLIGHT.deadly, alpha: 0.8 });
+      g.rect(3, 3, T - 6, T - 6).stroke({ width: 1.5, color: HIGHLIGHT.deadly, alpha: 0.3 });
       g.moveTo(T * 0.3, T * 0.3).lineTo(T * 0.7, T * 0.7);
       g.moveTo(T * 0.7, T * 0.3).lineTo(T * 0.3, T * 0.7);
-      g.stroke({ width: 2, color: HIGHLIGHT.deadly, alpha: 0.6 });
+      g.stroke({ width: 1.5, color: HIGHLIGHT.deadly, alpha: 0.22 });
     }
     c.addChild(g);
     return c;
@@ -294,7 +297,7 @@ export class BattleRenderer {
   /** 高度徽章：只在高度 > 0 的格子左上角畫「▲N」。 */
   private drawBadges(model: DrawModel): void {
     for (const t of model.tiles) {
-      const text = heightBadgeText(t);
+      const text = heightBadgeText(model, t);
       if (text === null) continue;
       const o = tileOrigin(t);
       const g = new Graphics();
@@ -396,23 +399,30 @@ export class BattleRenderer {
       base.ellipse(0, r * 0.72, r * 0.8 * pedestal, r * 0.32 * pedestal).fill({ color: 0x000000, alpha: 0.25 });
       c.addChild(base);
     }
+    // 圖層（移植需求 4.1/2）：底圈 → 朝向尖角 → 行動中虛線圈 → 小人 → 代號小標 → 血條 → 徽章
+    const ring = u.summon ? RING.summon : RING[u.team];
+    const feet = T * 0.23; // 腳底（相對格子中心）
+    const cy = feet - 1;
+    const rx = T * 0.36;
+    const ry = T * 0.15;
     const g = new Graphics();
-    if (u.summon) {
-      // 召喚物（Phase 3D-4b）：菱形加青綠外框，和一般單位的圓形區別
-      const d = r * 1.25;
-      const diamond = [0, -d, d, 0, 0, d, -d, 0];
-      g.poly(diamond).fill(u.fill).stroke({ width: 3, color: HIGHLIGHT.summon });
-      if (u.active) g.poly([0, -d - 5, d + 5, 0, 0, d + 5, -d - 5, 0]).stroke({ width: 3, color: HIGHLIGHT.active });
-    } else {
-      g.circle(0, 0, r).fill(u.fill);
-      if (u.hero) g.circle(0, 0, r + 2).stroke({ width: 2, color: HIGHLIGHT.hero });
-      if (u.active) g.circle(0, 0, r + 5).stroke({ width: 3, color: HIGHLIGHT.active });
-    }
+    g.ellipse(0, cy, rx, ry).fill({ color: ring.fill, alpha: 0.8 }).stroke({ width: 1.5, color: ring.stroke });
+    if (u.hero) g.ellipse(0, cy, rx + 2.5, ry + 2).stroke({ width: 2, color: HIGHLIGHT.hero });
     c.addChild(g);
-    if (!u.downed) {
-      // 朝向（Phase 3D-8d）：外緣的小三角形箭頭，尖端指向單位面對的方向
-      const arrow = new Graphics().poly(facingArrow(u.facing, u.summon ? r * 1.25 : r)).fill(0xffffff).stroke({ width: 1, color: 0x000000 });
-      c.addChild(arrow);
+    if (!u.downed) c.addChild(new Graphics().poly(ringArrow(u.facing, 0, cy, rx, ry, 5)).fill(0xffffff).stroke({ width: 1, color: 0x000000 }));
+    if (u.active) c.addChild(this.dashedEllipse(cy, rx + 6, ry + 4, HIGHLIGHT.active));
+    const spec = resolveDoll({ template: u.template, team: u.team, summon: u.summon, totem: u.totem, weaponId: u.weaponId });
+    const texture = this.art.figure(spec, u.facing, u.downed);
+    if (texture !== null) {
+      const doll = new Sprite(texture);
+      const k = T / 52; // 身高約 46px 在 52px 格子裡縮放 1.0
+      doll.anchor.set(0.5, DOLL_FOOT_Y / DOLL_H);
+      doll.width = DOLL_W * k;
+      doll.height = DOLL_H * k;
+      doll.position.set(0, feet);
+      c.addChild(doll);
+    } else {
+      c.addChild(new Graphics().circle(0, 0, r).fill(u.fill)); // 無法產生貼圖：退回色塊
     }
     if (u.summon) {
       // 右上角小徽章：圖騰標「圖」，其他標剩餘輪數
@@ -423,10 +433,12 @@ export class BattleRenderer {
       badgeLabel.position.set(T * 0.3, -T * 0.3);
       c.addChild(badge, badgeLabel);
     }
-    const marker = label(u.marker, 18, 0xffffff, true);
+    const tag = new Graphics().circle(-T * 0.37, T * 0.22, 8).fill({ color: 0x000000, alpha: 0.78 }).stroke({ width: 1.5, color: ring.stroke });
+    const marker = label(u.marker, 12, 0xffffff, true);
     marker.anchor.set(0.5);
-    c.addChild(marker);
-    if (u.downed) this.addDownedMark(c, u, r);
+    marker.position.set(-T * 0.37, T * 0.22);
+    c.addChild(tag, marker);
+    if (u.downed) this.addDownedMark(c, u, T * 0.16);
     if (u.bomb !== null) this.addBombBadge(c, u.bomb);
     if (u.charge != null) this.addChargeBadge(c, u.charge);
     const w = T * 0.8;
@@ -435,6 +447,18 @@ export class BattleRenderer {
     if (u.shieldRatio > 0) bar.rect(-w / 2, T * 0.36 - 3, w * u.shieldRatio, 2).fill(0x9fd8ff);
     c.addChild(bar);
     return c;
+  }
+
+  /** 橢圓虛線圈（行動中）：以短線段交錯畫出。 */
+  private dashedEllipse(cy: number, rx: number, ry: number, color: number): Graphics {
+    const g = new Graphics();
+    const n = 28;
+    for (let i = 0; i < n; i += 2) {
+      const a0 = (i / n) * Math.PI * 2;
+      const a1 = ((i + 1) / n) * Math.PI * 2;
+      g.moveTo(Math.cos(a0) * rx, cy + Math.sin(a0) * ry).lineTo(Math.cos(a1) * rx, cy + Math.sin(a1) * ry);
+    }
+    return g.stroke({ width: 2.5, color });
   }
 
   /** 倒地標記（Phase 3D-8b）：紅色叉叉加「倒」徽章；可以被復活的另標「可復活」。 */
@@ -470,12 +494,12 @@ export class BattleRenderer {
   /** 蓄力中的單位（延遲段，Phase 3F-4b）：左下角的徽章標還要幾回合釋放。 */
   private addChargeBadge(c: Container, rounds: number): void {
     const badge = new Graphics()
-      .circle(-T * 0.3, T * 0.12, 10)
+      .circle(-T * 0.37, -T * 0.2, 10)
       .fill({ color: 0x000000, alpha: 0.8 })
       .stroke({ width: 2, color: HIGHLIGHT.followup });
     const text = label(`蓄${rounds}`, 11, HIGHLIGHT.followup, true);
     text.anchor.set(0.5);
-    text.position.set(-T * 0.3, T * 0.12);
+    text.position.set(-T * 0.37, -T * 0.2);
     c.addChild(badge, text);
   }
 

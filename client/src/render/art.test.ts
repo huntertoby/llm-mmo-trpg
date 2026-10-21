@@ -111,9 +111,19 @@ describe("tileArtSpec（高度與鄰格）", () => {
   });
 
   it("高度徽章只在可站立且高度 > 0 時出現", () => {
-    expect(heightBadgeText(tile(0, 0, { height: 0 }))).toBeNull();
-    expect(heightBadgeText(tile(0, 0, { height: 2 }))).toBe("2");
-    expect(heightBadgeText(tile(0, 0, { height: 2, ...CHASM }))).toBeNull();
+    const flat = model([[{ height: 0 }, { height: 0 }]]);
+    expect(heightBadgeText(flat, flat.tiles[0]!)).toBeNull();
+    // 3×3 高台：只有邊緣格（與鄰格不同高）標高度，中心與平地不標
+    const rows = [0, 1, 2].map((y) => [0, 1, 2, 3, 4].map((x) => ({ height: x >= 1 && x <= 3 && y >= 0 && y <= 2 ? 2 : 0 })));
+    const m = model(rows);
+    const at = (x: number, y: number): string | null => heightBadgeText(m, m.tiles.find((t) => t.x === x && t.y === y)!);
+    expect(at(2, 1)).toBeNull();
+    expect(at(1, 1)).toBe("2");
+    expect(at(2, 2)).toBeNull(); // 地圖邊緣外不算鄰格
+    expect(at(1, 0)).toBe("2");
+    expect(at(0, 0)).toBeNull();
+    const pit = model([[{ height: 2, ...CHASM }, {}]]);
+    expect(heightBadgeText(pit, pit.tiles[0]!)).toBeNull();
   });
 });
 

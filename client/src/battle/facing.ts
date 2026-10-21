@@ -22,6 +22,19 @@ export function backTile(pos: Pos, facing: Facing): Pos {
 }
 
 /**
+ * 橢圓底圈外緣的朝向尖角（紙娃娃，Phase 3-16b）：底邊貼著中心 (cx, cy)、半徑 (rx, ry) 的橢圓，
+ * 尖端朝 `facing` 往外 `size`；回傳 `[x0, y0, x1, y1, x2, y2]`（第一組為尖端）。
+ */
+export function ringArrow(facing: Facing, cx: number, cy: number, rx: number, ry: number, size = 6): number[] {
+  const d = DIRECTION_DELTA[facing];
+  const tip = { x: cx + d.dx * (rx + size), y: cy + d.dy * (ry + size) };
+  const bx = cx + d.dx * (rx - 1);
+  const by = cy + d.dy * (ry - 1);
+  const half = size * 0.9;
+  return [tip.x, tip.y, bx - d.dy * half, by + d.dx * half, bx + d.dy * half, by - d.dx * half];
+}
+
+/**
  * 單位圖示外緣的小三角形箭頭（相對於格子中心的頂點座標 `[x0, y0, x1, y1, x2, y2]`）：尖端朝向
  * `facing`，底邊貼著半徑 `r` 的圓。
  */
