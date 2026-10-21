@@ -1,11 +1,13 @@
 import { describe, expect, it } from "vitest";
 import { parse } from "yaml";
 import type { SkillIconData } from "../api/types";
-import { ELEMENT_VFX } from "../battle/vfxPalette";
+import { ELEMENT_COLORS, ELEMENT_VFX, hexToNumber } from "../battle/vfxPalette";
 import fixture from "./fixtures/skill_icons.json";
 import { ELEMENT_ICON, elementPalette, isRanged, SKELETON_NAME } from "./skillGlyphs";
 import {
-  assemblyTiles,
+  assemblyFormula,
+  statusTile,
+  surfaceTile,
   iconCacheKey,
   optionTile,
   paintSkillIcon,
@@ -62,6 +64,7 @@ const minimal = (over: Partial<SkillIconData> = {}): SkillIconData => ({
   link: null,
   condition: null,
   costs: [],
+  cost_values: {},
   trigger: null,
   modifier: null,
   partial: false,
@@ -143,7 +146,7 @@ describe("技能圖示：每個技能都畫得出來", () => {
     for (const icon of [...data.random, ...drafts]) {
       const { ctx } = fakeCtx();
       expect(() => paintSkillIcon(ctx, icon, false)).not.toThrow();
-      expect(() => assemblyTiles(icon)).not.toThrow();
+      expect(() => assemblyFormula(icon)).not.toThrow();
     }
   });
 
@@ -191,66 +194,123 @@ describe("拆解：核心效果與組裝順序", () => {
     expect(partsOf(minimal({ segments: [{ skeleton: null, shape_id: null, range: null, elements: [], effects: [] }] })).core).toBeNull();
   });
 
-  it("組裝列順序：類型 → 骨架 → 元素 → 形狀 → 效果 → 接續 → 第二段 → 條件 → 代價 → 稀有度", () => {
+  it("組裝算式：每段一行（骨架＋形狀＋效果），段間是接續，條件與代價在最後；類型、元素、稀有度被濾掉", () => {
     const icon = minimal({
       rarity: "epic",
       elements: ["fire"],
       link: "after_move",
       condition: { id: "height_advantage", status: null },
       costs: ["source", "once"],
+      cost_values: { source: 2, once: 1 },
       segments: [
         { skeleton: "displace", shape_id: "single", range: 4, elements: [], effects: [{ type: "leap" }] },
         { skeleton: "area", shape_id: "cross", range: null, elements: ["ice"], effects: [{ type: "damage" }, { type: "knock_prone" }] },
       ],
     });
-    const cats = assemblyTiles(icon).map((t) => t.cat);
-    expect(cats).toEqual([
-      "類型",
-      "骨架",
-      "元素",
-      "形狀",
-      "效果（核心）",
-      "接續",
-      "骨架（第二段）",
-      "元素", // 第二段元素不同才多一塊
-      "形狀",
-      "效果",
-      "效果",
-      "條件",
-      "代價",
-      "代價",
-      "稀有度",
+    const f = assemblyFormula(icon);
+    expect(f.rows.map((r) => r.map((t) => t.cat))).toEqual([
+      ["骨架", "形狀", "效果（核心）"],
+      ["骨架（第二段）", "形狀", "效果", "效果"],
     ]);
-    expect(assemblyTiles(icon).find((t) => t.cat === "接續")?.label).toBe("移動後觸發");
+    expect(f.links.map((t) => [t.cat, t.label])).toEqual([["接續", "移動後觸發"]]);
+    expect(f.extras.map((t) => t.cat)).toEqual(["條件", "代價", "代價"]);
+    const all = [...f.rows.flat(), ...f.links, ...f.extras].map((t) => t.cat);
+    for (const gone of ["類型", "元素", "稀有度"]) expect(all).not.toContain(gone);
   });
 
-  it("被動、反應：觸發時機在類型之後；修正：改造對象與改變內容", () => {
-    const passive = assemblyTiles(minimal({ kind: "passive", trigger: "on_kill" }));
-    expect(passive.map((t) => t.cat).slice(0, 2)).toEqual(["類型", "觸發"]);
-    expect(passive[1]?.label).toBe("擊倒時");
-    const reaction = assemblyTiles(minimal({ kind: "reaction", trigger: "hit_by_melee" }));
-    expect(reaction[1]?.tip).toBe("反應時機");
-    const mod = assemblyTiles(
+  it("單段技能只有一行、沒有接續", () => {
+    const f = assemblyFormula(minimal());
+    expect(f.rows).toHaveLength(1);
+    expect(f.links).toEqual([]);
+    expect(f.extras).toEqual([]);
+  });
+
+  it("接續是延遲時，代價裡的延遲不重複；代價帶數值", () => {
+    const delayed = assemblyFormula(
       minimal({
-        kind: "modifier",
-        modifier: { applies_to: { actions: ["attack"] }, changes: [{ key: "damage_permille", value: 200 }, { key: "add_element", value: "fire" }] },
+        link: "delayed",
+        costs: ["delay", "source"],
+        cost_values: { delay: 1, source: 2 },
+        segments: [
+          { skeleton: "strike", shape_id: "single", range: 1, elements: [], effects: [{ type: "damage" }] },
+          { skeleton: "area", shape_id: "cross", range: null, elements: [], effects: [{ type: "damage" }] },
+        ],
       }),
     );
-    expect(mod.map((t) => t.cat)).toEqual(["類型", "改造對象", "改變內容", "改變內容", "稀有度"]);
-    expect(mod[2]?.label).toBe("傷害 +20%");
-    expect(mod[3]?.label).toBe("加上火元素");
+    expect(delayed.extras.map((t) => t.label)).toEqual(["源力 2"]);
+    const timed = assemblyFormula(minimal({ costs: ["delay", "once", "stacks"], cost_values: { delay: 3, once: 2, stacks: 1 } }));
+    expect(timed.extras.map((t) => t.label)).toEqual(["延遲 3 回合", "每場 2 次", "消耗層數 1"]);
   });
 
-  it("每個浮動說明都是「類別：名稱（位置）」", () => {
-    for (const t of assemblyTiles(data.skills["skill_leap_slam"] as SkillIconData)) {
+  it("被動、反應：觸發時機放在第一行最前面；修正：改造對象與改變內容", () => {
+    const passive = assemblyFormula(minimal({ kind: "passive", trigger: "on_kill" }));
+    expect(passive.rows[0]?.slice(0, 2).map((t) => t.cat)).toEqual(["觸發", "骨架"]);
+    expect(passive.rows[0]?.[0]?.label).toBe("擊倒時");
+    const reaction = assemblyFormula(minimal({ kind: "reaction", trigger: "hit_by_melee" }));
+    expect(reaction.rows[0]?.[0]?.tip).toBe("反應時機");
+    const mod = assemblyFormula(
+      minimal({
+        kind: "modifier",
+        modifier: {
+          applies_to: { actions: ["attack"] },
+          changes: [
+            { key: "damage_permille", value: 200, part_ids: [] },
+            { key: "add_element", value: "fire", part_ids: [] },
+          ],
+        },
+      }),
+    );
+    expect(mod.rows).toHaveLength(1);
+    expect(mod.rows[0]?.map((t) => t.cat)).toEqual(["改造對象", "改變內容", "改變內容"]);
+    expect(mod.rows[0]?.[1]?.label).toBe("傷害 +20%");
+    expect(mod.rows[0]?.[2]?.label).toBe("加上火元素");
+  });
+
+  it("add_tags 與 on_hit_effects 有專屬部件（不是「?」）", () => {
+    const tags = modifierChangePart("add_tags", ["push", "fire"], ["push", "fire"]);
+    expect(tags.label).toBe("加上標籤：推擊／fire");
+    const hit = modifierChangePart("on_hit_effects", [{ type: "damage" }, { type: "apply_status", status: "burning" }], ["damage", "apply_status:burning"]);
+    expect(hit.label).toContain("命中後：傷害／");
+    expect(hit.label).toContain(effectPart({ type: "apply_status", status: "burning" }).label);
+    const { ctx } = fakeCtx();
+    expect(() => tags.draw(ctx)).not.toThrow();
+    expect(() => hit.draw(ctx)).not.toThrow();
+    // 沒有 part_ids（舊資料）也能從 value 取
+    expect(modifierChangePart("on_hit_effects", [{ type: "damage" }]).label).toBe("命中後：傷害");
+  });
+
+  it("代價名稱帶數值", () => {
+    expect(costPart("source", 2).label).toBe("源力 2");
+    expect(costPart("delay", 1).label).toBe("延遲 1 回合");
+    expect(costPart("once", 1).label).toBe("每場一次");
+    expect(costPart("gamble").label).toBe("賭注");
+  });
+
+  it("每個說明都是「類別：名稱（說明）」", () => {
+    const f = assemblyFormula(data.skills["skill_leap_slam"] as SkillIconData);
+    for (const t of [...f.rows.flat(), ...f.links, ...f.extras]) {
       expect(tileTitle(t)).toBe(`${t.cat}：${t.label}（${t.tip}）`);
     }
   });
 
-  it("工坊每多一步，組裝列只會變長不會變短", () => {
-    // 修正技能到效果那一步才換成「改造對象＋改變內容」，只比頭尾；其他技能逐步遞增
+  it("狀態與表面部件：類別、名稱與說明取自名詞對照表", () => {
+    const burning = statusTile("burning");
+    expect(burning.cat).toBe("狀態");
+    expect(burning.label).not.toBe("burning");
+    expect(burning.tip.length).toBeGreaterThan(2);
+    expect(surfaceTile("fire").cat).toBe("表面");
+    const { ctx } = fakeCtx();
+    expect(() => statusTile("never_heard_of").draw(ctx)).not.toThrow();
+    expect(() => surfaceTile("never_heard_of").draw(ctx)).not.toThrow();
+  });
+
+  it("工坊每多一步，算式只會變長不會變短", () => {
+    const size = (icon: SkillIconData) => {
+      const f = assemblyFormula(icon);
+      return f.rows.flat().length + f.links.length + f.extras.length;
+    };
     for (const [name, steps] of Object.entries(data.workshop)) {
-      const lengths = steps.map((icon) => assemblyTiles(icon).length);
+      const lengths = steps.map(size);
       if (name === "modifier") continue;
       expect(lengths).toEqual([...lengths].sort((a, b) => a - b));
       expect(lengths[lengths.length - 1]).toBeGreaterThan(lengths[0] as number);
@@ -284,12 +344,31 @@ describe("快取鍵", () => {
     expect(keys.size).toBeLessThan(SKILLS.length);
   });
 
-  it("組裝列的小圖：同一個部件鍵相同；形狀隨元素與骨架變", () => {
-    const tiles = assemblyTiles(minimal({ elements: ["fire"] }));
-    const again = assemblyTiles(minimal({ elements: ["fire"] }));
-    expect(tiles.map((t) => tileKey(t, 44))).toEqual(again.map((t) => tileKey(t, 44)));
-    const shapeOf = (el: string) => tileKey(assemblyTiles(minimal({ elements: [el] })).find((t) => t.cat === "形狀") as never, 44);
+  it("算式的小圖：同一個部件鍵相同；形狀隨元素與骨架變", () => {
+    const tiles = assemblyFormula(minimal({ elements: ["fire"] })).rows.flat();
+    const again = assemblyFormula(minimal({ elements: ["fire"] })).rows.flat();
+    expect(tiles.map((t) => tileKey(t, 30))).toEqual(again.map((t) => tileKey(t, 30)));
+    const shapeOf = (el: string) => tileKey(assemblyFormula(minimal({ elements: [el] })).rows.flat().find((t) => t.cat === "形狀") as never, 30);
     expect(shapeOf("fire")).not.toBe(shapeOf("ice"));
+  });
+
+  it("大小圖是不同的快取鍵", () => {
+    const a = minimal();
+    expect(iconCacheKey(a, 72, true)).not.toBe(iconCacheKey(a, 72, false));
+    expect(iconCacheKey(a, 72, true)).not.toBe(iconCacheKey(a, 40));
+    expect(iconCacheKey(a, 40)).toBe(iconCacheKey(a, 40, true));
+  });
+});
+
+describe("元素配色只有一個來源", () => {
+  it("技能圖示與特效取到同一個顏色", () => {
+    for (const [id, c] of Object.entries(ELEMENT_COLORS)) {
+      expect(ELEMENT_VFX[id]?.primary).toBe(hexToNumber(c.primary));
+      expect(ELEMENT_VFX[id]?.secondary).toBe(hexToNumber(c.secondary));
+      expect(elementPalette(id).accent).toBe(c.accent);
+      expect(elementPalette(id).dark).toBe(c.dark);
+      expect(elementPalette(id).light).toBe(c.light);
+    }
   });
 });
 

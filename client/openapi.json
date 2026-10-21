@@ -3570,6 +3570,14 @@
           },
           "value": {
             "$ref": "#/components/schemas/JsonValue"
+          },
+          "part_ids": {
+            "items": {
+              "type": "string"
+            },
+            "type": "array",
+            "title": "Part Ids",
+            "default": []
           }
         },
         "additionalProperties": false,
@@ -5732,6 +5740,14 @@
             },
             "type": "array",
             "title": "Costs"
+          },
+          "cost_values": {
+            "additionalProperties": {
+              "type": "integer"
+            },
+            "type": "object",
+            "title": "Cost Values",
+            "default": {}
           },
           "trigger": {
             "anyOf": [

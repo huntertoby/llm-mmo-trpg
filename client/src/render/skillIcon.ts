@@ -5,6 +5,7 @@
 // 圖示、組裝列、工坊都用它；資料來自後端 `SkillCard.icon`（`trpg.narrative.skill_icon`）。
 // 純繪圖：只有 Canvas 2D，沒有任何外部素材；確定性（沒有亂數）。
 import type { SkillIconData } from "../api/types";
+import { glossaryEntry, statusName, surfaceName } from "../battle/glossary";
 import { SHAPE_NAMES } from "../battle/vfx";
 import {
   drawMotif,
@@ -37,8 +38,6 @@ import {
 
 const TAU = Math.PI * 2;
 
-export const KIND_NAME: Readonly<Record<string, string>> = { active: "主動", reaction: "反應", passive: "被動", stance: "姿態", modifier: "修正" };
-export const RARITY_NAME: Readonly<Record<string, string>> = { common: "普通", rare: "稀有", epic: "史詩", legendary: "傳說" };
 /** 形狀 id → 中文名（由 `vfx.ts` 的名稱表反查，只放一處）。 */
 export const SHAPE_NAME_ZH: Readonly<Record<string, string>> = Object.fromEntries(Object.entries(SHAPE_NAMES).map(([zh, id]) => [id, zh]));
 
@@ -83,7 +82,7 @@ export function partsOf(icon: SkillIconData): IconParts {
   const mod =
     icon.modifier === null || icon.modifier === undefined
       ? null
-      : { target: modifierTargetPart(icon.modifier.applies_to), changes: icon.modifier.changes.map((c) => modifierChangePart(c.key, c.value)) };
+      : { target: modifierTargetPart(icon.modifier.applies_to), changes: icon.modifier.changes.map((c) => modifierChangePart(c.key, c.value, c.part_ids ?? [])) };
   // 效果列：去重後，核心效果（第一個「不是單純傷害」的效果；沒有就是傷害）放第一個
   let effects: Part[] = [];
   const seen = new Set<string>();
@@ -108,7 +107,7 @@ export function partsOf(icon: SkillIconData): IconParts {
     trigger: kind === "reaction" || kind === "passive" ? triggerPart(icon.trigger, isReaction) : null,
     mod,
     condition: icon.condition == null ? null : conditionPart(icon.condition.id, icon.condition.status),
-    costs: icon.costs.map(costPart),
+    costs: icon.costs.map((c) => costPart(c, icon.cost_values?.[c])),
     effects: effects.slice(0, 4),
     core,
   };
@@ -327,9 +326,9 @@ export function stableStringify(value: unknown): string {
   return JSON.stringify(value) ?? "null";
 }
 
-/** 圖示的快取鍵：`icon` 的穩定序列化 ＋ 尺寸（同組合共用一張貼圖，不是每個技能一張）。 */
-export function iconCacheKey(icon: SkillIconData, size: number): string {
-  return `${size}|${stableStringify(icon)}`;
+/** 圖示的快取鍵：`icon` 的穩定序列化 ＋ 尺寸 ＋ 大小圖（同組合共用一張貼圖，不是每個技能一張）。 */
+export function iconCacheKey(icon: SkillIconData, size: number, small: boolean = size <= SMALL_ICON_MAX): string {
+  return `${size}|${small ? "s" : "l"}|${stableStringify(icon)}`;
 }
 
 const DPR = 2;
@@ -341,9 +340,9 @@ export function clearSkillIconCache(): void {
 }
 export const skillIconCacheSize = (): number => cache.size;
 
-/** 取得（或畫出並快取）一張圖示的離屏 canvas，邊長 `size` px（內部解析度 ×2）。 */
-export function skillIconCanvas(icon: SkillIconData, size: number): HTMLCanvasElement {
-  const key = iconCacheKey(icon, size);
+/** 取得（或畫出並快取）一張圖示的離屏 canvas，邊長 `size` px（內部解析度 ×2）；`small` 預設依邊長決定。 */
+export function skillIconCanvas(icon: SkillIconData, size: number, small: boolean = size <= SMALL_ICON_MAX): HTMLCanvasElement {
+  const key = iconCacheKey(icon, size, small);
   const hit = cache.get(key);
   if (hit !== undefined) return hit;
   const canvas = document.createElement("canvas");
@@ -352,7 +351,7 @@ export function skillIconCanvas(icon: SkillIconData, size: number): HTMLCanvasEl
   const ctx = canvas.getContext("2d");
   if (ctx !== null) {
     ctx.scale((size * DPR) / 100, (size * DPR) / 100);
-    paintSkillIcon(ctx, icon, size <= SMALL_ICON_MAX);
+    paintSkillIcon(ctx, icon, small);
   }
   if (cache.size >= CACHE_LIMIT) {
     const oldest = cache.keys().next().value;
@@ -362,13 +361,13 @@ export function skillIconCanvas(icon: SkillIconData, size: number): HTMLCanvasEl
   return canvas;
 }
 
-// ---- 組裝列 ----
+// ---- 組裝算式（Phase 3-18a）----
 
 export interface AssemblyTile {
-  /** 部件類別（類型、骨架、元素、形狀、效果（核心）、效果、接續、觸發、改造對象、改變內容、條件、代價、稀有度）。 */
+  /** 部件類別（骨架、形狀、效果（核心）、效果、接續、觸發、改造對象、改變內容、條件、代價、狀態、表面……）。 */
   cat: string;
   label: string;
-  /** 在圖示上的位置。 */
+  /** 部件的說明（說明框的內文）。 */
   tip: string;
   /** 畫法的唯一鍵（快取用：同一個部件共用一張小圖）。 */
   id: string;
@@ -376,15 +375,18 @@ export interface AssemblyTile {
   draw(ctx: Ctx): void;
 }
 
+const FAINT_RING = "rgba(255,255,255,0.3)";
+const CORE_RING = "#ffffff";
+
 function chipTile(cat: string, part: Part, ring: string): AssemblyTile {
-  return { cat, label: part.label, tip: part.note, id: `${cat}|${part.key}|${ring}`, draw: (ctx) => drawChip(ctx, part, 50, 50, 42, { ring }) };
+  return { cat, label: part.label, tip: part.note, id: `${cat}|${part.key}|${part.label}|${ring}`, draw: (ctx) => drawChip(ctx, part, 50, 50, 42, { ring }) };
 }
 
 function skeletonTile(skeleton: string, second: boolean): AssemblyTile {
   return {
     cat: second ? "骨架（第二段）" : "骨架",
     label: SKELETON_NAME[skeleton] ?? skeleton,
-    tip: "右下徽章",
+    tip: "技能的骨架：決定這一段怎麼出手",
     id: `skeleton|${skeleton}`,
     draw: (ctx) => {
       ctx.fillStyle = "#14161c";
@@ -400,113 +402,93 @@ function skeletonTile(skeleton: string, second: boolean): AssemblyTile {
   };
 }
 
-function segmentTiles(seg: SegmentParts, index: number, firstEl: ElementSlot, core: Part | null): AssemblyTile[] {
+function shapeTile(seg: SegmentParts): AssemblyTile | null {
+  if (seg.motif.shape_id === null) return null;
+  const shape = seg.motif.shape_id;
+  return {
+    cat: "形狀",
+    label: SHAPE_NAME_ZH[shape] ?? shape,
+    tip: "技能的作用範圍",
+    id: `shape|${shape}|${String(seg.el)}|${seg.motif.skeleton ?? ""}|${seg.motif.ranged ? 1 : 0}`,
+    draw: (ctx) => {
+      paintBackground(ctx, seg.el);
+      segMotif(ctx, seg, 50, 50, 0.95);
+    },
+  };
+}
+
+/** 一段的部件：骨架 ＋ 形狀 ＋ 效果（核心效果白外圈）。元素、類型、稀有度不是部件，已由圖示本身表達。 */
+function segmentTiles(seg: SegmentParts, index: number, core: Part | null): AssemblyTile[] {
   const out: AssemblyTile[] = [];
   if (seg.motif.skeleton !== null) out.push(skeletonTile(seg.motif.skeleton, index > 0));
-  if (index === 0 || seg.el !== firstEl) {
-    const el = seg.el;
-    out.push({
-      cat: "元素",
-      label: elementPalette(el).name,
-      tip: "底色與紋理",
-      id: `element|${String(el)}`,
-      draw: (ctx) => {
-        paintBackground(ctx, el);
-        elementGlyph(ctx, el ?? "default", 50, 50, 2.6, "#ffffff");
-      },
-    });
-  }
-  if (seg.motif.shape_id !== null) {
-    const shape = seg.motif.shape_id;
-    out.push({
-      cat: "形狀",
-      label: SHAPE_NAME_ZH[shape] ?? shape,
-      tip: "中央主圖",
-      id: `shape|${shape}|${String(seg.el)}|${seg.motif.skeleton ?? ""}|${seg.motif.ranged ? 1 : 0}`,
-      draw: (ctx) => {
-        paintBackground(ctx, seg.el);
-        segMotif(ctx, seg, 50, 50, 0.95);
-      },
-    });
-  }
+  const shape = shapeTile(seg);
+  if (shape !== null) out.push(shape);
   const unique = seg.effects.filter((x, i, a) => a.findIndex((y) => y.key === x.key) === i);
-  for (const e of unique) out.push(chipTile(e.key === core?.key ? "效果（核心）" : "效果", e, e.color));
+  for (const e of unique) {
+    const isCore = e.key === core?.key;
+    out.push(chipTile(isCore ? "效果（核心）" : "效果", e, isCore ? CORE_RING : FAINT_RING));
+  }
   return out;
 }
 
-function kindTile(parts: IconParts): AssemblyTile {
-  return {
-    cat: "類型",
-    label: KIND_NAME[parts.kind] ?? parts.kind,
-    tip: "外框形狀：主動方形、反應盾形、被動圓形、姿態六角、修正齒輪",
-    id: `kind|${parts.kind}|${parts.rarity}`,
-    draw: (ctx) => {
-      ctx.save();
-      ctx.translate(14, 14);
-      ctx.scale(0.72, 0.72);
-      framePath(ctx, parts.kind);
-      ctx.fillStyle = "#3a3f4a";
-      ctx.fill();
-      ctx.lineWidth = 5;
-      ctx.strokeStyle = rarityColor(parts.rarity);
-      ctx.stroke();
-      ctx.restore();
-    },
-  };
+/** 組裝算式：每段一行（骨架 ＋ 形狀 ＋ 效果），段間是接續；條件與代價在最下面一條細線後。 */
+export interface AssemblyFormula {
+  rows: AssemblyTile[][];
+  /** `links[i]` 在 `rows[i]` 與 `rows[i + 1]` 之間。 */
+  links: AssemblyTile[];
+  /** 條件與代價（18px 小圓，「類別：名稱」）。 */
+  extras: AssemblyTile[];
 }
 
-function rarityTile(rarity: string): AssemblyTile {
-  return {
-    cat: "稀有度",
-    label: RARITY_NAME[rarity] ?? rarity,
-    tip: "外框顏色",
-    id: `rarity|${rarity}`,
-    draw: (ctx) => {
-      ctx.fillStyle = rarityColor(rarity);
-      ctx.beginPath();
-      ctx.moveTo(50, 12);
-      ctx.lineTo(82, 42);
-      ctx.lineTo(50, 88);
-      ctx.lineTo(18, 42);
-      ctx.closePath();
-      ctx.fill();
-      ctx.fillStyle = "rgba(255,255,255,0.35)";
-      ctx.beginPath();
-      ctx.moveTo(50, 12);
-      ctx.lineTo(82, 42);
-      ctx.lineTo(50, 42);
-      ctx.closePath();
-      ctx.fill();
-    },
-  };
-}
-
-/**
- * 組裝列的部件方塊，順序：類型 → 骨架 → 元素 → 形狀 → 效果… →（接續 → 第二段骨架、形狀、效果）→
- * 觸發／修正對象與改變 → 條件 → 代價 → 稀有度。
- */
-export function assemblyTiles(icon: SkillIconData): AssemblyTile[] {
+export function assemblyFormula(icon: SkillIconData): AssemblyFormula {
   const parts = partsOf(icon);
-  const out: AssemblyTile[] = [kindTile(parts)];
-  if (parts.trigger !== null) out.push(chipTile("觸發", parts.trigger, "#ffffff"));
+  const rows: AssemblyTile[][] = [];
+  const links: AssemblyTile[] = [];
   if (parts.mod !== null) {
-    out.push(chipTile("改造對象", parts.mod.target, "#ffffff"));
-    for (const c of parts.mod.changes) out.push(chipTile("改變內容", c, c.color));
+    rows.push([chipTile("改造對象", parts.mod.target, CORE_RING), ...parts.mod.changes.map((c) => chipTile("改變內容", c, FAINT_RING))]);
   } else {
     const [a, b] = parts.segs as [SegmentParts, SegmentParts | undefined];
-    out.push(...segmentTiles(a, 0, parts.el, parts.core));
+    const first = segmentTiles(a, 0, parts.core);
+    rows.push(parts.trigger === null ? first : [chipTile("觸發", parts.trigger, CORE_RING), ...first]);
     if (parts.link !== null && b !== undefined) {
-      out.push(chipTile("接續", parts.link, "#ffffff"));
-      out.push(...segmentTiles(b, 1, parts.el, parts.core));
+      links.push(chipTile("接續", parts.link, CORE_RING));
+      rows.push(segmentTiles(b, 1, parts.core));
     }
   }
-  if (parts.condition !== null) out.push(chipTile("條件", parts.condition, "#ffe9a8"));
-  for (const c of parts.costs) out.push(chipTile("代價", c, c.color));
-  out.push(rarityTile(parts.rarity));
-  return out;
+  const extras: AssemblyTile[] = [];
+  if (parts.condition !== null) extras.push(chipTile("條件", parts.condition, "#ffe9a8"));
+  // 接續本身就是延遲時，代價裡的「延遲」不重複寫
+  for (const c of parts.costs) if (!(c.key === "delay" && parts.link?.key === "delayed")) extras.push(chipTile("代價", c, c.color));
+  return { rows, links, extras };
 }
 
-/** 組裝列方塊的浮動說明：「部件類別：名稱（在圖示上的位置）」。 */
+/** 狀態的部件小圖（說明取名詞對照表的描述）。 */
+export function statusTile(id: string): AssemblyTile {
+  const entry = glossaryEntry("statuses", id);
+  const tip = [entry?.description_zh ?? "", ...(entry?.rules_zh ?? [])].filter((x) => x !== "").join(" ");
+  return {
+    cat: "狀態",
+    label: statusName(id),
+    tip: tip === "" ? "狀態" : tip,
+    id: `status|${id}`,
+    draw: (ctx) => drawChip(ctx, { cat: "effect", key: `status:${id}`, color: statusColor(id), draw: (c) => statusGlyph(c, id), label: id, note: "" }, 50, 50, 42, { ring: FAINT_RING }),
+  };
+}
+
+/** 表面的部件小圖（說明取名詞對照表的描述與規則）。 */
+export function surfaceTile(id: string): AssemblyTile {
+  const entry = glossaryEntry("surfaces", id);
+  const tip = [entry?.description_zh ?? "", ...(entry?.rules_zh ?? [])].filter((x) => x !== "").join(" ");
+  return {
+    cat: "表面",
+    label: surfaceName(id),
+    tip: tip === "" ? "地面上的表面" : tip,
+    id: `surface|${id}`,
+    draw: (ctx) => drawChip(ctx, { cat: "effect", key: `surface:${id}`, color: surfaceColor(id), draw: (c) => surfaceGlyph(c, id), label: id, note: "" }, 50, 50, 42, { ring: FAINT_RING }),
+  };
+}
+
+/** 部件的說明字串：「部件類別：名稱（說明）」。 */
 export const tileTitle = (t: AssemblyTile): string => `${t.cat}：${t.label}（${t.tip}）`;
 
 /** 組裝列方塊的快取鍵（同一個部件共用一張小圖）。 */
@@ -525,6 +507,10 @@ export function tileCanvas(tile: AssemblyTile, px = 44): HTMLCanvasElement {
   const ctx = canvas.getContext("2d");
   if (ctx !== null) {
     ctx.scale((px * DPR) / 100, (px * DPR) / 100);
+    // 每個部件都是圓：形狀、骨架等原本的方塊裁成圓
+    ctx.beginPath();
+    ctx.arc(50, 50, 49, 0, TAU);
+    ctx.clip();
     tile.draw(ctx);
   }
   if (tileCache.size >= CACHE_LIMIT) {
@@ -539,8 +525,10 @@ export function tileCanvas(tile: AssemblyTile, px = 44): HTMLCanvasElement {
 
 const OPTION_ID = (field: string, value: string) => `option|${field}|${value}`;
 
+const PART_CAT_NAME: Readonly<Record<string, string>> = { effect: "效果", condition: "條件", cost: "代價", trigger: "觸發", link: "接續", target: "改造對象", change: "改變內容" };
+
 function partTile(field: string, value: string, part: Part): AssemblyTile {
-  return { cat: part.cat, label: part.label, tip: part.note, id: OPTION_ID(field, value), draw: (ctx) => drawChip(ctx, part, 50, 50, 46, { ring: "rgba(255,255,255,0.3)" }) };
+  return { cat: PART_CAT_NAME[part.cat] ?? part.cat, label: part.label, tip: part.note, id: OPTION_ID(field, value), draw: (ctx) => drawChip(ctx, part, 50, 50, 46, { ring: "rgba(255,255,255,0.3)" }) };
 }
 
 /**
@@ -559,7 +547,7 @@ export function optionTile(field: string, value: unknown): AssemblyTile | null {
       return {
         cat: "形狀",
         label: SHAPE_NAME_ZH[value] ?? value,
-        tip: "中央主圖",
+        tip: "技能的作用範圍",
         id: OPTION_ID(field, value),
         draw: (ctx) => {
           paintBackground(ctx, null);
@@ -579,14 +567,14 @@ export function optionTile(field: string, value: unknown): AssemblyTile | null {
     case "effects":
       return partTile(field, value, effectPart({ type: value }));
     case "status":
-      return partTile(field, value, { cat: "effect", key: `status:${value}`, color: statusColor(value), draw: (c) => statusGlyph(c, value), label: value, note: "狀態" });
+      return statusTile(value);
     case "surface":
-      return partTile(field, value, { cat: "effect", key: `surface:${value}`, color: surfaceColor(value), draw: (c) => surfaceGlyph(c, value), label: value, note: "表面" });
+      return surfaceTile(value);
     case "element":
       return {
         cat: "元素",
         label: elementPalette(value).name,
-        tip: "底色與紋理",
+        tip: "技能的元素",
         id: OPTION_ID(field, value),
         draw: (ctx) => {
           paintBackground(ctx, value);

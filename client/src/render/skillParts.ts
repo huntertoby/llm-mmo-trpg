@@ -1012,15 +1012,24 @@ const COST_ART: Readonly<Record<CostId, readonly [string, Draw]>> = {
   delay: ["#a8e0ff", hourglass],
 };
 
-/** 特殊代價 → 部件；不認得的代價畫「?」。 */
-export function costPart(id: string): Part {
+/** 帶數值時的名稱（Phase 3-18a）：源力 2、消耗層數 3、每場一次、延遲 1 回合。 */
+function costLabel(id: string, value: number | undefined): string {
+  const base = COST_LABEL[id as CostId] ?? id;
+  if (value === undefined) return base;
+  if (id === "delay") return `${base} ${value} 回合`;
+  if (id === "once") return value === 1 ? base : `每場 ${value} 次`;
+  return `${base} ${value}`;
+}
+
+/** 特殊代價 → 部件（`value` 是代價的數值，沒有就不寫）；不認得的代價畫「?」。 */
+export function costPart(id: string, value?: number): Part {
   const art = COST_ART[id as CostId];
   return {
     cat: "cost",
     key: id,
     color: art?.[0] ?? "#d8d8e0",
     draw: art?.[1] ?? ((x) => text(x, "?", 13)),
-    label: COST_LABEL[id as CostId] ?? id,
+    label: costLabel(id, value),
     note: "特殊代價",
   };
 }
@@ -1249,8 +1258,21 @@ export function modifierTargetPart(applies: Readonly<Record<string, unknown>> | 
 
 const ELEMENT_FALLBACK = "#ffffff";
 
+/** `on_hit_effects` 的一項（原始效果或後端給的 `type[:status]`）→ `type[:status]`。 */
+function effectId(raw: unknown): string {
+  if (typeof raw === "string") return raw;
+  const e = (typeof raw === "object" && raw !== null ? raw : {}) as Record<string, unknown>;
+  const type = typeof e["type"] === "string" ? e["type"] : "?";
+  return typeof e["status"] === "string" && e["status"] !== "" ? `${type}:${e["status"]}` : type;
+}
+
+function effectLikeOf(id: string): EffectLike {
+  const [type = "?", status] = id.split(":");
+  return status === undefined ? { type } : { type, status };
+}
+
 /** 修正的改變內容（一個鍵一個部件）。 */
-export function modifierChangePart(key: string, value: unknown): Part {
+export function modifierChangePart(key: string, value: unknown, partIds: readonly string[] = []): Part {
   let draw: Draw;
   let label: string;
   let color = "#ffe14d";
@@ -1324,6 +1346,39 @@ export function modifierChangePart(key: string, value: unknown): Part {
       draw = rangedGlyph;
       label = `射程 ${signed}`;
       break;
+    case "add_tags": {
+      const tags = partIds.length > 0 ? partIds : Array.isArray(value) ? value.map(String) : [];
+      const first = tags[0] ?? "";
+      const base = first === "ranged" ? rangedGlyph : (EFFECT[TAG_TARGET[first] ?? ""] ?? (EFFECT["damage"] as readonly [string, Draw]))[1];
+      draw = (c) => {
+        c.save();
+        c.scale(0.85, 0.85);
+        base(c);
+        c.restore();
+        plus(c, 6.5, -6.5);
+      };
+      label = tags.length === 0 ? "加上標籤" : `加上標籤：${tags.map((t) => TAG_NAMES[t] ?? t).join("／")}`;
+      break;
+    }
+    case "on_hit_effects": {
+      const ids = partIds.length > 0 ? partIds : Array.isArray(value) ? value.map((v) => effectId(v)) : [];
+      const first = ids[0];
+      const part = first === undefined ? null : effectPart(effectLikeOf(first));
+      draw = (c) => {
+        if (part !== null) {
+          c.save();
+          c.scale(0.85, 0.85);
+          part.draw(c);
+          c.restore();
+        }
+        c.save();
+        c.translate(6.5, -6.5);
+        text(c, "命", 7);
+        c.restore();
+      };
+      label = ids.length === 0 ? "命中後效果" : `命中後：${ids.map((i) => effectPart(effectLikeOf(i)).label).join("／")}`;
+      break;
+    }
     case "shape_to":
       draw = (c) => {
         c.beginPath();
