@@ -61,7 +61,8 @@
 - 樣張：`docs/art/sample/assembled.html`（`?all` 看全部 152 個）、截圖 `docs/art/skill-icons-assembled.png`、`skill-icons-all.png`。
 - 程式：`parts.js`（部件圖示庫：效果原語、狀態、表面、條件、代價、觸發、修正）、`assembled.js`（`partsOf` 拆解＋圖示＋組裝列）、`skillsData.js`（由 `tools/export_skills.py` 從 `content/` 匯出）。
 - 視覺決定：類型用外框形狀（不用角標）；效果列核心大圓、附帶小圓，最多 4 個；被動、反應的主圖換成觸發時機；小圖右下一個大圓放核心效果。
-- **狀態：等使用者看圖。** 採用後要補進 `docs/art/移植需求.md`（新增 5.3：部件圖示庫、`partsOf`、SkillCard 還需要的欄位：效果清單含狀態／表面 id、條件 id、代價、followup 的 when 與第二段、modifiers、trigger／reaction 事件）。
+- 需求已寫進 `docs/art/移植需求.md` 5.3（SkillCard 新增結構化欄位 `icon`，取代 5.1 的三個欄位）。
+- **使用者採用（2026-10-22）**：「組裝式技能圖示採用，請開發 PM 排段」。由開發 PM 照 5.3 排段；實作時有視覺問題會找美術 PM。
 
 ## 4. 待辦與想法
 
