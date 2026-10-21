@@ -31,7 +31,7 @@ from trpg.content.skills import (
     SkillDef,
 )
 from trpg.engine import modifiers
-from trpg.engine.actions import Action, Attack, Interact, Shove, Trip, UseSkill
+from trpg.engine.actions import Action, Attack, Interact, Run, Shove, Trip, UseSkill
 from trpg.engine.battle import _actor, action_ap_cost, simulate_preview
 from trpg.engine.bombs import blast_tiles, bomb_spec
 from trpg.engine.control import plan_status, status_save_chance
@@ -87,7 +87,7 @@ from trpg.engine.rules.combat import (
     situational_modifier,
     weapon_profile,
 )
-from trpg.engine.rules.movement import is_deadly
+from trpg.engine.rules.movement import available_move_budget, is_deadly, path_map
 from trpg.engine.rules.statuses import effective_attribute, shield_amount
 from trpg.engine.skills.conditions import Subject, condition_met
 from trpg.engine.skills.scaling import skill_scaling_value
@@ -393,6 +393,8 @@ class Preview:
     """動作會復活的單位（Phase 3D-8b）。"""
     grants: tuple[GrantInfo, ...] = ()
     """動作會讓誰暫時獲得哪個技能（Phase 3D-8c）。"""
+    run_range: tuple[XY, ...] = ()
+    """跑步（Phase 3-20）：跑完之後本回合能走到的格子（依 (y, x)；不含目前位置）；其他動作為空。"""
     gamble: GambleInfo | None = None
     """技能有賭注時（Phase 3D-7a）：成功率與兩個分支各自的預覽。本預覽的其他欄位（傷害範圍、
     確定與可能的連鎖）不含賭注的分支，只算賭注以外的效果。"""
@@ -979,6 +981,17 @@ def _collision_damage(
     return tuple((uid, low.get(uid, 0), high[uid]) for uid in sorted(high))
 
 
+def _run_range(after: BattleState, actor: UnitState) -> tuple[XY, ...]:
+    """跑步之後（``after`` 為模擬後的狀態）行動者本回合能停留的格子（不含目前位置）。"""
+    unit = after.units[actor.id]
+    budget = available_move_budget(after, unit)
+    if budget is None:
+        return ()
+    pm = path_map(after, unit, budget)
+    ends = (xy for xy in pm.cost if xy != unit.xy and pm.can_end_at(xy))
+    return tuple(sorted(ends, key=lambda p: (p[1], p[0])))
+
+
 def _cost_and_reach(
     state: BattleState, actor: UnitState, action: Action
 ) -> tuple[int | None, int | None]:
@@ -1346,6 +1359,8 @@ def _build(
         tiles = tuple(sorted({*tiles, *area.tiles, *follow_tiles}, key=lambda p: (p[1], p[0])))
         units = tuple(sorted({*units, *area.units, *follow_units}))
     ap_cost, reach = _cost_and_reach(state, actor, action)
+    if isinstance(action, Run):
+        ap_cost = state.ruleset.core.run_ap_cost
     pierce = _pierce_info(state, actor, action) if isinstance(action, UseSkill) else None
     topples, hurls = _scene_infos(max_events)
     checks: tuple[DisplaceCheck, ...] = ()
@@ -1392,6 +1407,7 @@ def _build(
         bombs=_bomb_infos(high.state, max_events),
         revives=_revive_infos(max_events),
         grants=_grant_infos(state, max_events),
+        run_range=_run_range(high.state, actor) if isinstance(action, Run) else (),
         miss_notes=_miss_notes(state, actor, action),
         backstab=backstab,
         landing=landing,

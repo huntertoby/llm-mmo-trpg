@@ -302,6 +302,9 @@
                     "$ref": "#/components/schemas/Defend"
                   },
                   {
+                    "$ref": "#/components/schemas/Run"
+                  },
+                  {
                     "$ref": "#/components/schemas/Shove"
                   },
                   {
@@ -327,6 +330,7 @@
                     "attack": "#/components/schemas/Attack",
                     "use_skill": "#/components/schemas/UseSkill-Input",
                     "defend": "#/components/schemas/Defend",
+                    "run": "#/components/schemas/Run",
                     "shove": "#/components/schemas/Shove",
                     "trip": "#/components/schemas/Trip",
                     "interact": "#/components/schemas/Interact",
@@ -453,6 +457,9 @@
                     "$ref": "#/components/schemas/Defend"
                   },
                   {
+                    "$ref": "#/components/schemas/Run"
+                  },
+                  {
                     "$ref": "#/components/schemas/Shove"
                   },
                   {
@@ -478,6 +485,7 @@
                     "attack": "#/components/schemas/Attack",
                     "use_skill": "#/components/schemas/UseSkill-Input",
                     "defend": "#/components/schemas/Defend",
+                    "run": "#/components/schemas/Run",
                     "shove": "#/components/schemas/Shove",
                     "trip": "#/components/schemas/Trip",
                     "interact": "#/components/schemas/Interact",
@@ -1190,6 +1198,9 @@
             "$ref": "#/components/schemas/Defend"
           },
           {
+            "$ref": "#/components/schemas/Run"
+          },
+          {
             "$ref": "#/components/schemas/Shove"
           },
           {
@@ -1217,6 +1228,7 @@
             "end_turn": "#/components/schemas/EndTurn",
             "interact": "#/components/schemas/Interact",
             "move": "#/components/schemas/Move",
+            "run": "#/components/schemas/Run",
             "set_reaction_mode": "#/components/schemas/SetReactionMode",
             "shove": "#/components/schemas/Shove",
             "trip": "#/components/schemas/Trip",
@@ -1595,6 +1607,16 @@
             },
             "type": "array",
             "title": "Copy Options"
+          },
+          "run_option": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/RunOptionOut"
+              },
+              {
+                "type": "null"
+              }
+            ]
           },
           "followup_options": {
             "items": {
@@ -4845,6 +4867,14 @@
             "title": "Grants",
             "default": []
           },
+          "run_range": {
+            "items": {
+              "$ref": "#/components/schemas/XY"
+            },
+            "type": "array",
+            "title": "Run Range",
+            "default": []
+          },
           "displace_permille": {
             "anyOf": [
               {
@@ -5108,6 +5138,27 @@
         "title": "ReviveOut",
         "description": "預覽中的復活（Phase 3D-8b）：站起來的單位、HP 與站的格子（``from_pos`` 是倒下的位置）。"
       },
+      "Run": {
+        "properties": {
+          "unit_id": {
+            "type": "string",
+            "title": "Unit Id"
+          },
+          "type": {
+            "type": "string",
+            "const": "run",
+            "title": "Type",
+            "default": "run"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "unit_id"
+        ],
+        "title": "Run",
+        "description": "跑步（基本動作，Phase 3-20）：花 ``run_ap_cost`` AP，本回合移動點數 ``+run_move_bonus`` 格；\n每回合限 1 次，定身時不合法。跑步本身不移動。"
+      },
       "RunBattleResponse": {
         "properties": {
           "run": {
@@ -5124,6 +5175,43 @@
           "battle"
         ],
         "title": "RunBattleResponse"
+      },
+      "RunOptionOut": {
+        "properties": {
+          "legal": {
+            "type": "boolean",
+            "title": "Legal"
+          },
+          "reason": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Reason"
+          },
+          "ap_cost": {
+            "type": "integer",
+            "title": "Ap Cost"
+          },
+          "move_bonus": {
+            "type": "integer",
+            "title": "Move Bonus"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "legal",
+          "reason",
+          "ap_cost",
+          "move_bonus"
+        ],
+        "title": "RunOptionOut",
+        "description": "跑步（Phase 3-20）目前是否合法與原因；``legal_actions`` 只在合法時列出 ``run``，這裡讓介面在\n不合法時灰掉按鈕並顯示原因（「已經跑過了」「被定身，不能跑」「AP 不足」）。"
       },
       "RunResponse": {
         "properties": {
@@ -5965,6 +6053,9 @@
             "$ref": "#/components/schemas/Defend"
           },
           {
+            "$ref": "#/components/schemas/Run"
+          },
+          {
             "$ref": "#/components/schemas/Shove"
           },
           {
@@ -5996,6 +6087,7 @@
             "end_turn": "#/components/schemas/EndTurn",
             "interact": "#/components/schemas/Interact",
             "move": "#/components/schemas/Move",
+            "run": "#/components/schemas/Run",
             "set_reaction_mode": "#/components/schemas/SetReactionMode",
             "shove": "#/components/schemas/Shove",
             "trip": "#/components/schemas/Trip",

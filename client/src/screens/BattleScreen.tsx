@@ -32,6 +32,7 @@ import {
   triggerEventText,
 } from "../battle/reactions";
 import { blockedPushAt, withPushReasons } from "../battle/pushReasons";
+import { runButton, runRangeTiles } from "../battle/runAction";
 import { previewOverlays } from "../battle/scenePreview";
 import { marksTextAt, telegraphMarks } from "../battle/telegraph";
 import { zoneLinesAt } from "../battle/zones";
@@ -338,7 +339,11 @@ export function BattleScreen({ initial, onExit, exitLabel, runMode }: Props) {
         ...common,
       };
     }
-    const moves = [...classified.moves.values()].map((m) => m.path[m.path.length - 1] as Pos);
+    const runTiles = runRangeTiles(preview);
+    const moves =
+      runTiles.length > 0
+        ? runTiles // 滑過「跑步」：預覽跑完之後本回合能走到的格子
+        : [...classified.moves.values()].map((m) => m.path[m.path.length - 1] as Pos);
     const attacks = [...classified.attacks.keys()].flatMap((id) => {
       const u = view.units.find((x) => x.id === id);
       return u === undefined ? [] : [u.pos];
@@ -751,6 +756,8 @@ export function BattleScreen({ initial, onExit, exitLabel, runMode }: Props) {
   const fullTileSections = tileSections(shown, hover, skillNames, hoverTexts);
   const tileCardSections = hoverUnit !== null && collapseTile ? collapseSections(fullTileSections) : fullTileSections;
   const defendMode = basic.find((m) => m.kind === "defend") ?? null;
+  const sprintMode = basic.find((m) => m.kind === "run") ?? null;
+  const runReason = runButton(sprintMode, response.run_option).reason;
   const collapsed = sideCollapsed(sidePref, narrow);
   const toggleSide = () => {
     saveSideCollapsed(!collapsed);
@@ -956,7 +963,7 @@ export function BattleScreen({ initial, onExit, exitLabel, runMode }: Props) {
           )}
         </div>
         <SkillBar
-          basic={basic.filter((m) => m.kind !== "defend")}
+          basic={basic.filter((m) => m.kind !== "defend" && m.kind !== "run")}
           buttons={buttons}
           cards={cards}
           selectedKey={mode?.key ?? null}
@@ -981,6 +988,9 @@ export function BattleScreen({ initial, onExit, exitLabel, runMode }: Props) {
               enabled={canAct}
               endTurn={copying ? null : classified.endTurn}
               defend={copying ? null : defendMode}
+              run={copying ? null : sprintMode}
+              runReason={runReason}
+              onPreviewAction={setPanelPreview}
               selectedKey={mode?.key ?? null}
               fallback={copying ? [] : fallback}
               onPickMode={pickMode}

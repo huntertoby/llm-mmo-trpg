@@ -497,7 +497,7 @@ export interface paths {
 export type webhooks = Record<string, never>;
 export interface components {
     schemas: {
-        Action: components["schemas"]["Move"] | components["schemas"]["Attack"] | components["schemas"]["UseSkill-Output"] | components["schemas"]["Defend"] | components["schemas"]["Shove"] | components["schemas"]["Trip"] | components["schemas"]["Interact"] | components["schemas"]["EndStance"] | components["schemas"]["SetReactionMode"] | components["schemas"]["EndTurn"];
+        Action: components["schemas"]["Move"] | components["schemas"]["Attack"] | components["schemas"]["UseSkill-Output"] | components["schemas"]["Defend"] | components["schemas"]["Run"] | components["schemas"]["Shove"] | components["schemas"]["Trip"] | components["schemas"]["Interact"] | components["schemas"]["EndStance"] | components["schemas"]["SetReactionMode"] | components["schemas"]["EndTurn"];
         /**
          * ActivationView
          * @description 生效中的常駐類傳說（Phase 3D-6；雙方都看得到）。
@@ -641,6 +641,7 @@ export interface components {
             pending: components["schemas"]["Pending"] | null;
             /** Copy Options */
             copy_options: components["schemas"]["UseSkill-Output"][];
+            run_option?: components["schemas"]["RunOptionOut"] | null;
             /**
              * Followup Options
              * @default []
@@ -1931,6 +1932,11 @@ export interface components {
              * @default []
              */
             grants: components["schemas"]["GrantPreviewOut"][];
+            /**
+             * Run Range
+             * @default []
+             */
+            run_range: components["schemas"]["XY"][];
             /** Displace Permille */
             displace_permille?: number | null;
             gamble?: components["schemas"]["GambleOut"] | null;
@@ -2041,10 +2047,39 @@ export interface components {
             pos: components["schemas"]["XY"];
             from_pos: components["schemas"]["XY"];
         };
+        /**
+         * Run
+         * @description 跑步（基本動作，Phase 3-20）：花 ``run_ap_cost`` AP，本回合移動點數 ``+run_move_bonus`` 格；
+         *     每回合限 1 次，定身時不合法。跑步本身不移動。
+         */
+        Run: {
+            /** Unit Id */
+            unit_id: string;
+            /**
+             * @description discriminator enum property added by openapi-typescript
+             * @enum {string}
+             */
+            type: "run";
+        };
         /** RunBattleResponse */
         RunBattleResponse: {
             run: components["schemas"]["RunResponse"];
             battle: components["schemas"]["BattleResponse"];
+        };
+        /**
+         * RunOptionOut
+         * @description 跑步（Phase 3-20）目前是否合法與原因；``legal_actions`` 只在合法時列出 ``run``，這裡讓介面在
+         *     不合法時灰掉按鈕並顯示原因（「已經跑過了」「被定身，不能跑」「AP 不足」）。
+         */
+        RunOptionOut: {
+            /** Legal */
+            legal: boolean;
+            /** Reason */
+            reason: string | null;
+            /** Ap Cost */
+            ap_cost: number;
+            /** Move Bonus */
+            move_bonus: number;
         };
         /** RunResponse */
         RunResponse: {
@@ -2342,7 +2377,7 @@ export interface components {
              */
             charge_tiles: components["schemas"]["Pos"][];
         };
-        Step: components["schemas"]["Move"] | components["schemas"]["Attack"] | components["schemas"]["UseSkill-Output"] | components["schemas"]["Defend"] | components["schemas"]["Shove"] | components["schemas"]["Trip"] | components["schemas"]["Interact"] | components["schemas"]["EndStance"] | components["schemas"]["SetReactionMode"] | components["schemas"]["EndTurn"] | components["schemas"]["Decision"];
+        Step: components["schemas"]["Move"] | components["schemas"]["Attack"] | components["schemas"]["UseSkill-Output"] | components["schemas"]["Defend"] | components["schemas"]["Run"] | components["schemas"]["Shove"] | components["schemas"]["Trip"] | components["schemas"]["Interact"] | components["schemas"]["EndStance"] | components["schemas"]["SetReactionMode"] | components["schemas"]["EndTurn"] | components["schemas"]["Decision"];
         /** @enum {string} */
         StepId: "skeleton" | "basics" | "shape" | "effects" | "followup" | "condition" | "cost" | "rarity";
         /**
@@ -3109,7 +3144,7 @@ export interface operations {
         };
         requestBody: {
             content: {
-                "application/json": components["schemas"]["Move"] | components["schemas"]["Attack"] | components["schemas"]["UseSkill-Input"] | components["schemas"]["Defend"] | components["schemas"]["Shove"] | components["schemas"]["Trip"] | components["schemas"]["Interact"] | components["schemas"]["EndStance"] | components["schemas"]["SetReactionMode"] | components["schemas"]["EndTurn"];
+                "application/json": components["schemas"]["Move"] | components["schemas"]["Attack"] | components["schemas"]["UseSkill-Input"] | components["schemas"]["Defend"] | components["schemas"]["Run"] | components["schemas"]["Shove"] | components["schemas"]["Trip"] | components["schemas"]["Interact"] | components["schemas"]["EndStance"] | components["schemas"]["SetReactionMode"] | components["schemas"]["EndTurn"];
             };
         };
         responses: {
@@ -3179,7 +3214,7 @@ export interface operations {
         };
         requestBody: {
             content: {
-                "application/json": components["schemas"]["Move"] | components["schemas"]["Attack"] | components["schemas"]["UseSkill-Input"] | components["schemas"]["Defend"] | components["schemas"]["Shove"] | components["schemas"]["Trip"] | components["schemas"]["Interact"] | components["schemas"]["EndStance"] | components["schemas"]["SetReactionMode"] | components["schemas"]["EndTurn"];
+                "application/json": components["schemas"]["Move"] | components["schemas"]["Attack"] | components["schemas"]["UseSkill-Input"] | components["schemas"]["Defend"] | components["schemas"]["Run"] | components["schemas"]["Shove"] | components["schemas"]["Trip"] | components["schemas"]["Interact"] | components["schemas"]["EndStance"] | components["schemas"]["SetReactionMode"] | components["schemas"]["EndTurn"];
             };
         };
         responses: {

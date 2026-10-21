@@ -116,6 +116,7 @@ __all__ = [
     "UnitEscaped",
     "UnitFell",
     "UnitMoved",
+    "UnitRan",
     "UnitRevived",
     "UnitSpawned",
     "UnitStoodUp",
@@ -281,6 +282,15 @@ class UnitStoodUp(EventBase):
     type: Literal["unit_stood_up"] = "unit_stood_up"
     unit_id: UnitId
     cost: int
+
+
+class UnitRan(EventBase):
+    """跑步（Phase 3-20）：``bonus`` 為增加的移動點數，``move_points`` 為跑步後剩餘的移動點數。"""
+
+    type: Literal["unit_ran"] = "unit_ran"
+    unit_id: UnitId
+    bonus: int
+    move_points: int
 
 
 class MoveBlocked(EventBase):
@@ -1408,6 +1418,7 @@ type Event = Annotated[
     | BattleEnded
     | UnitMoved
     | UnitStoodUp
+    | UnitRan
     | MoveBlocked
     | Collided
     | UnitFell

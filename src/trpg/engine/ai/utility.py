@@ -44,6 +44,7 @@ from trpg.content.environment import (
     AiWeights,
     OrderBonuses,
     RewriteAiRules,
+    RunAiRules,
     TrapAiRules,
 )
 from trpg.content.skills import (
@@ -77,6 +78,7 @@ from trpg.engine.actions import (
     EndStance,
     EndTurn,
     Move,
+    Run,
     Shove,
     Trip,
     UseSkill,
@@ -127,6 +129,7 @@ from trpg.engine.rewrites import grant_ap_problem, resettable_cooldowns
 from trpg.engine.rules.combat import (
     HALF_COVER,
     attack_problem,
+    attack_reach,
     cover_object_between,
     is_concealed,
 )
@@ -139,7 +142,13 @@ from trpg.engine.rules.geometry import (
     manhattan,
     neighbors4,
 )
-from trpg.engine.rules.movement import is_deadly, is_standable, step_cost
+from trpg.engine.rules.movement import (
+    available_move_budget,
+    is_deadly,
+    is_standable,
+    path_map,
+    step_cost,
+)
 from trpg.engine.rules.statuses import forced_target_sources, shield_amount, stance_status_ids
 from trpg.engine.skills.conditions import is_flanked
 from trpg.engine.skills.mobility import shadowstep_behind
@@ -1364,6 +1373,41 @@ def defend_score(state: BattleState, unit: UnitState, w: AiWeights) -> Fraction:
     return Fraction(w.defend * near)
 
 
+def _run_tiles(state: BattleState, unit: UnitState, budget: int) -> list[XY]:
+    """``budget`` 點移動點數本回合能停留的格子（含目前位置）。"""
+    pm = path_map(state, unit, budget)
+    return [unit.xy, *sorted(xy for xy in pm.cost if pm.can_end_at(xy))]
+
+
+def run_score(state: BattleState, unit: UnitState, rules: RunAiRules) -> Fraction:
+    """跑步的分數（Phase 3-20）：只有追擊（目前走不到攻擊距離、跑步後走得到）與撤離（低血量、
+    敵人逼近、跑步後能離敵人更遠）兩種情況給分，其餘 0 分。跑步不移動，所以不跑完整 ``preview``。
+
+    只在移動點數用完時才考慮（先走、走完才跑：跑步的 +3 格不會因為先跑而更有效，先走也不會讓
+    走位評分被跑步搶走）；速度 0 ＝ 固定不動（木樁、圖騰），不跑。
+    """
+    budget = available_move_budget(state, unit)
+    enemies = _enemies(state, unit)
+    if unit.speed == 0 or budget != 0 or not enemies:
+        return Fraction(0)
+    now = [unit.xy]
+    after = _run_tiles(state, unit, state.ruleset.core.run_move_bonus)
+    if unit.hp * 1000 < rules.retreat_hp_permille * unit.max_hp:  # 低血量：只考慮撤離，不追擊
+        if min(manhattan(unit.xy, e.xy) for e in enemies) > rules.retreat_enemy_radius:
+            return Fraction(0)
+
+        def gap(tiles: list[XY]) -> int:
+            return max(min(manhattan(t, e.xy) for e in enemies) for t in tiles)
+
+        return Fraction(rules.retreat_points if gap(after) > gap(now) else 0)
+    reach = attack_reach(state, unit)
+
+    def can_hit(tiles: list[XY]) -> bool:
+        return any(manhattan(t, e.xy) <= reach for t in tiles for e in enemies)
+
+    return Fraction(rules.pursue_points if not can_hit(now) and can_hit(after) else 0)
+
+
 _ALWAYS_PREVIEW_TAGS = ("explosive", "conductive", "blocks_sight")
 _OBJECT_NEAR_ENEMY = 2
 
@@ -1804,6 +1848,7 @@ class UtilityAI:
     ) -> None:
         self._profiles = profiles.by_id()
         self._bonuses = profiles.orders
+        self._run = profiles.run
         self.orders: OrdersSource | None = orders
         """戰術指令的來源（Phase 2C-2）；``None`` 時完全不受指令影響。"""
         self._override = override
@@ -1876,8 +1921,13 @@ class UtilityAI:
                 estimates.append(
                     (virtual_move_score(state, unit, action, w, before, scene=scene), index)
                 )
-            elif isinstance(action, Defend):
-                scored[index] = ActionScore(action, defend_score(state, unit, w), None)
+            elif isinstance(action, Defend | Run):  # 不移動、不跑 preview：直接計算
+                points = (
+                    defend_score(state, unit, w)
+                    if isinstance(action, Defend)
+                    else run_score(state, unit, self._run)
+                )
+                scored[index] = ActionScore(action, points, None)
             elif isinstance(action, Attack) and not worth_previewing(state, scene, action):
                 continue
             elif isinstance(action, UseSkill | EndStance):

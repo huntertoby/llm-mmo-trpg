@@ -136,7 +136,7 @@ def _trapper_battle() -> tuple[list[EventBase], BattleState]:
     allies = ["build_trapper", *lib.builds.companions][:3]
     default_allies, default_enemies = default_lineup(lib, "open_plain")
     setup = build_setup(lib, "open_plain", allies or default_allies, default_enemies, max_rounds=30)
-    run = run_battle(setup, 1, UtilityAI(lib.ai_profiles))
+    run = run_battle(setup, 2, UtilityAI(lib.ai_profiles))
     return run.events, run.state
 
 
