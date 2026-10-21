@@ -440,16 +440,23 @@ const SURFACE_DRAW: Readonly<Record<string, SurfaceDrawer>> = {
   },
   // ---- 樣張沒有的表面：依同一套規則補（連成一片的底色＋該表面的標誌紋理）----
   smoke(ctx, s, r) {
-    surfaceBlob(ctx, s, PAL.smoke, 0.6);
-    for (let i = 0; i < 4; i++) {
-      ctx.fillStyle = i % 2 === 0 ? "rgba(255,255,255,0.28)" : "rgba(90,90,100,0.22)";
+    // 白灰半透明底＋幾個較大的雲團（貼圖以格子為界，雲團貼著邊緣被裁切，看起來浮在地面上）
+    surfaceBlob(ctx, s, PAL.smoke, 0.35);
+    const n = 4 + Math.floor(r() * 3);
+    for (let i = 0; i < n; i++) {
+      ctx.fillStyle = i % 3 === 2 ? "rgba(150,155,170,0.22)" : "rgba(235,238,245,0.38)";
       ctx.beginPath();
-      ctx.arc(8 + r() * (T - 16), 8 + r() * (T - 16), 6 + r() * 7, 0, TAU);
+      ctx.arc(4 + r() * (T - 8), 4 + r() * (T - 8), 9 + r() * 7, 0, TAU);
       ctx.fill();
     }
   },
   holy(ctx, s, r) {
-    surfaceBlob(ctx, s, PAL.holy, 0.55);
+    surfaceBlob(ctx, s, PAL.holy, 0.5);
+    const g = ctx.createRadialGradient(T / 2, T / 2, 2, T / 2, T / 2, T * 0.55);
+    g.addColorStop(0, "rgba(255,255,240,0.55)");
+    g.addColorStop(1, "rgba(255,255,240,0)");
+    ctx.fillStyle = g;
+    ctx.fillRect(0, 0, T, T);
     ctx.strokeStyle = "rgba(255,255,255,0.9)";
     ctx.lineWidth = 1.5;
     ctx.lineCap = "round";
@@ -465,19 +472,26 @@ const SURFACE_DRAW: Readonly<Record<string, SurfaceDrawer>> = {
       ctx.stroke();
     }
   },
-  darkness(ctx, s, r) {
-    surfaceBlob(ctx, s, PAL.darkness, 0.65);
-    ctx.strokeStyle = "rgba(170,110,220,0.45)";
-    ctx.lineWidth = 1.5;
-    for (let i = 0; i < 2; i++) {
+  darkness(ctx, _s, r) {
+    // 深紫徑向暈染（中心較深，不用橢圓斑塊避免和油混淆）＋2–3 道捲曲煙絲
+    const g = ctx.createRadialGradient(T / 2, T / 2, 2, T / 2, T / 2, T * 0.62);
+    g.addColorStop(0, rgba(PAL.darkness, 0.85));
+    g.addColorStop(1, rgba(PAL.darkness, 0.12));
+    ctx.fillStyle = g;
+    ctx.fillRect(0, 0, T, T);
+    ctx.strokeStyle = "rgba(190,130,240,0.5)";
+    ctx.lineWidth = 1.4;
+    ctx.lineCap = "round";
+    const wisps = 2 + Math.floor(r() * 2);
+    for (let i = 0; i < wisps; i++) {
+      const x0 = 8 + r() * (T - 16);
+      const y0 = T - 6 - r() * 10;
       ctx.beginPath();
-      ctx.arc(10 + r() * (T - 20), 10 + r() * (T - 20), 5 + r() * 6, r() * TAU, r() * TAU + 3.5);
+      ctx.moveTo(x0, y0);
+      ctx.bezierCurveTo(x0 + 10, y0 - 10, x0 - 12, y0 - 18, x0 + 4, y0 - 26 - r() * 8);
+      ctx.bezierCurveTo(x0 + 10, y0 - 30, x0 + 12, y0 - 24, x0 + 6, y0 - 22);
       ctx.stroke();
     }
-    ctx.fillStyle = "rgba(0,0,0,0.35)";
-    ctx.beginPath();
-    ctx.ellipse(T / 2, T / 2, 14, 9, r() * TAU, 0, TAU);
-    ctx.fill();
   },
 };
 

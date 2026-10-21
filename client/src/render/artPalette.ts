@@ -25,8 +25,8 @@ export const PAL = {
   oil: "#211a10",
   fire: "#ff7a1a",
   poison: "#74c23c",
-  smoke: "#b8b8c0",
-  holy: "#fff1a8",
+  smoke: "#dcdfe6",
+  holy: "#ffe58a",
   darkness: "#3b1f4f",
   wood: "#b77f3f",
   woodDark: "#6e4620",
@@ -36,6 +36,14 @@ export const PAL = {
   cliff: "#5b4a3a",
   iceWall: "#9fe0ff",
   thorn: "#4f7a2a",
+  bush: "#3f6e2a",
+} as const;
+
+/** 陣營底圈（填色／外框；Pixi 數字色）：我方、敵方、召喚。 */
+export const RING = {
+  ally: { fill: 0x2f6fd0, stroke: 0xa9ccff },
+  enemy: { fill: 0xc63b3b, stroke: 0xffb3a8 },
+  summon: { fill: 0x1f9e8f, stroke: 0x8ff0e2 },
 } as const;
 
 export type PalKey = keyof typeof PAL;
