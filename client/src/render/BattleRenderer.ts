@@ -121,6 +121,14 @@ function hpColor(ratio: number): number {
   return 0xff3b30;
 }
 
+/** 一格進行中的升降動畫。 */
+interface LiftState {
+  pos: Pos;
+  /** 目前補間到的高度。 */
+  h: number;
+  to: number;
+}
+
 export class BattleRenderer {
   private readonly app = new Application();
   /** 整個場景（世界座標）；y ＝ 畫布上方預留的高度。震動只動 `stage`，不影響這個位移。 */
@@ -139,8 +147,11 @@ export class BattleRenderer {
   /** 程式繪製的地形、物件貼圖快取（Phase 3-16a）。 */
   private readonly art = new ArtTextures();
   private model: DrawModel | null = null;
-  /** 每次重畫加一；升降動畫只在同一次繪製內有效。 */
-  private drawGen = 0;
+  /**
+   * 進行中的升降動畫：格子 → 目前補間到的高度與目標。播放結束時常會再重畫一次（同樣的結果），
+   * 目標高度沒變的動畫在重畫後接著播；目標變了（又有新的地形變化）就以新畫面為準。
+   */
+  private readonly lifting = new Map<string, LiftState>();
   private ready = false;
   private destroyed = false;
   /** 畫面上的縮放比例（1 ＝ 每格 TILE_SIZE 個 CSS 像素）。 */
@@ -222,7 +233,6 @@ export class BattleRenderer {
   draw(model: DrawModel): void {
     this.model = model;
     if (!this.ready) return;
-    this.drawGen += 1;
     this.applySize(model);
     this.rows.reset(model.height);
     clearLayer(this.silhouettes);
@@ -252,6 +262,15 @@ export class BattleRenderer {
     }
     for (const u of model.units) this.drawUnit(model, u);
     this.art.endFrame();
+    this.resumeLifts(model);
+  }
+
+  /** 重畫後：目標高度沒變的升降動畫套回目前的高度繼續播，其餘作廢。 */
+  private resumeLifts(model: DrawModel): void {
+    for (const [key, st] of [...this.lifting]) {
+      if (heightAt(model, st.pos) === st.to) this.rows.setLift(st.pos, tileLift(st.h));
+      else this.lifting.delete(key);
+    }
   }
 
   /** 一個單位：畫在所在排；被南邊高格擋住時另在最上層畫剪影。 */
@@ -786,13 +805,18 @@ export class BattleRenderer {
   playLift(shifts: readonly HeightShift[], durationMs: number, shake: boolean, skip: () => boolean): void {
     const model = this.model;
     if (!this.ready || model === null || durationMs <= 0 || shifts.length === 0 || skip()) return;
-    const gen = this.drawGen;
     const now = this.effectClock;
     const effects: Effect[] = [];
     for (const s of shifts) {
       const shift = { ...s, to: heightAt(model, s.pos) };
+      const key = `${s.pos.x},${s.pos.y}`;
+      const state: LiftState = { pos: shift.pos, h: shift.from, to: shift.to };
+      this.lifting.set(key, state);
       const apply = (h: number) => {
-        if (gen === this.drawGen) this.rows.setLift(shift.pos, tileLift(h));
+        if (this.lifting.get(key) !== state) return; // 已被新的畫面或新的動畫取代
+        state.h = h;
+        this.rows.setLift(shift.pos, tileLift(h));
+        if (h === shift.to) this.lifting.delete(key);
       };
       apply(shift.from);
       const origin = (h: number) => liftedOrigin(shift.pos, h);
