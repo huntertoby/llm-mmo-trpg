@@ -19,9 +19,11 @@ from pydantic import BaseModel, ConfigDict, TypeAdapter
 
 from trpg.content.battle import ReactionRule, UnitTemplate, WeaponDef
 from trpg.content.environment import ObjectDef, WeatherDef
+from trpg.content.equipment import Loadout
 from trpg.content.library import Ruleset
 from trpg.content.maps import MapEvent, Objective
 from trpg.content.rules import CoreRules
+from trpg.engine.gear_state import GearState
 from trpg.shared.types import Attribute, Element, ObjectId, Pos, ResistGroup, Surface, Team, UnitId
 
 __all__ = [
@@ -214,6 +216,8 @@ class SpawnTemplate(BaseModel):
 
     template: UnitTemplate
     weapon: WeaponDef
+    equipment: Loadout = Loadout()
+    """裝備快照（Phase 3G-G1；範本沒有裝備時為空）。"""
 
 
 @dataclass(slots=True, frozen=True)
@@ -361,6 +365,9 @@ class UnitState:
     facing: Facing = "east"
     """朝向（Phase 3D-8d）：主動移動（步行、衝鋒、跳躍、直線衝撞、瞬步）後面向移動方向，攻擊或對
     單位施放技能後面向目標；強制位移、傳送、交換不改。只影響背刺（``from_behind``）的判斷。"""
+    gear: GearState = field(default_factory=GearState)
+    """裝備狀態（Phase 3G-G1）：開戰時由裝備快照算好、戰鬥中不變（數值類已併進上面的屬性、HP、
+    抗性與速度；條件數值與代價型在戰鬥中查詢，見 :mod:`trpg.engine.gear`）。"""
 
     @property
     def alive(self) -> bool:
@@ -453,6 +460,7 @@ class UnitState:
             revived=self.revived,
             granted_skills=self.granted_skills,
             facing=self.facing,
+            gear=self.gear,
         )
 
 

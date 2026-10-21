@@ -15,6 +15,7 @@ from collections.abc import Callable
 from dataclasses import dataclass, replace
 from typing import Literal
 
+from trpg.content.equipment import loadout_problems
 from trpg.content.skills import SkillDef, skill_slot_problems, weapon_problem
 from trpg.engine import modifiers
 from trpg.engine.actions import (
@@ -243,7 +244,8 @@ def _initial_board(setup: BattleSetup) -> tuple[list[Tile], dict[ObjectId, Objec
 
 
 def _check_loadouts(setup: BattleSetup) -> None:
-    """每個單位的技能裝備必須合法：存在、武器相容、不超過欄位上限。"""
+    """每個單位的技能裝備必須合法：存在、武器相容、不超過欄位上限；物品裝備（Phase 3G-G1）的
+    欄位、占用與代價型條數合法。"""
     rules = setup.ruleset
     for spawn in setup.units:
         defs: list[SkillDef] = []
@@ -254,6 +256,7 @@ def _check_loadouts(setup: BattleSetup) -> None:
                 raise BattleSetupError(f"{spawn.template.name_zh}：未知的技能 {skill_id}") from None
         problems = [weapon_problem(s, spawn.weapon.weapon_class) for s in defs]
         problems += skill_slot_problems(defs, rules.core.skill_slots)
+        problems += loadout_problems(spawn.equipment, spawn.weapon, rules.equipment)  # 3G-G1
         found = next((p for p in problems if p is not None), None)
         if found is not None:
             raise BattleSetupError(f"{spawn.template.name_zh}：{found}")
@@ -303,6 +306,7 @@ def begin_battle(setup: BattleSetup, seed: int) -> ResolveResult:
             name=name,
             rules=setup.ruleset,
             facing=facings[spawn.team],
+            equipment=spawn.equipment,
         )
         unit = state.units[uid]
         unit.source = starting_source(spawn, setup.ruleset.core)

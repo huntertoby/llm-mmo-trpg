@@ -11,6 +11,7 @@ from collections.abc import Callable
 
 from trpg.content.battle import StatusDef
 from trpg.content.library import Ruleset
+from trpg.engine.gear import gear_damage_taken_permille
 from trpg.engine.ids import BOSS_TAG
 from trpg.engine.state import UnitState
 from trpg.shared.types import Attribute, UnitId
@@ -83,8 +84,12 @@ def damage_dealt_permille(rules: Ruleset, unit: UnitState) -> int:
 
 
 def damage_taken_permille(rules: Ruleset, unit: UnitState) -> int:
-    """受到的骰值傷害倍率（‰；易傷 1250）。"""
-    return _combined(rules, unit, lambda d: d.damage_taken_permille)
+    """受到的骰值傷害倍率（‰；易傷 1250）；再乘上裝備的受傷倍率（Phase 3G-G1，例如
+    ``affix_cost_glass`` 的 1100），無條件捨去。"""
+    combined = _combined(rules, unit, lambda d: d.damage_taken_permille)
+    if not unit.gear.bonuses:
+        return combined
+    return combined * gear_damage_taken_permille(unit) // PERMILLE
 
 
 def healing_received_permille(rules: Ruleset, unit: UnitState) -> int:

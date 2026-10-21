@@ -38,8 +38,13 @@ __all__ = [
     "run_battle",
 ]
 
-LOG_FORMAT = "trpg-battle-log/38"
-"""``/38``（Phase 3-23，接在 3-21b 的 ``/37`` 之後）：刻印——原語 ``inscribe``／
+LOG_FORMAT = "trpg-battle-log/39"
+"""``/39``（Phase 3G-G1，接在 3-23 的 ``/38`` 之後）：裝備——戰鬥設定 ``UnitSpawn.equipment``／
+``SpawnTemplate.equipment``（裝備快照：物品與詞條定義內嵌）、單位範本 ``equipment``、單位狀態
+``gear``（遞減後的詞條與數值）、規則包 ``equipment``（遞減權重與硬上限）、新事件 ``gear_hp_lost``；
+裝備改變戰鬥的初始狀態，``/38`` 的紀錄無法由新版程式重播（已接受）。
+
+``/38``（Phase 3-23，接在 3-21b 的 ``/37`` 之後）：刻印——原語 ``inscribe``／
 ``detonate_runes``（符文用 ``EffectSpec`` 的 ``element``／``tag``）、
 條件 ``on_own_rune``（``ConditionSpec`` 新欄位 ``element``）、骨架 ``rune``、
 戰鬥狀態的 ``runes``／``next_rune_id``、新事件 ``rune_inscribed``／

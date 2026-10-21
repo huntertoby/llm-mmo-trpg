@@ -14,8 +14,10 @@ from typing import Literal
 from pydantic import BaseModel, ConfigDict
 
 from trpg.content.battle import ReactionRule
+from trpg.content.equipment import AFFIX_CATEGORY_NUMBER, AFFIX_CATEGORY_ZH, affix_text
 from trpg.content.maps import Objective
 from trpg.content.skills import CHARGING, TIME_BOMB
+from trpg.content.slots import SLOT_ZH
 from trpg.engine.bombs import bomb_spec
 from trpg.engine.delayed import charge_infos
 from trpg.engine.skills.revive import revivable
@@ -36,7 +38,9 @@ from trpg.shared.types import Element, Pos, Surface, Team, UnitId, rune_name
 __all__ = [
     "REACTION_TRIGGER_TEXT",
     "ActivationView",
+    "AffixLineView",
     "BattleView",
+    "EquipmentSlotView",
     "GrantedSkillView",
     "ObjectView",
     "PendingView",
@@ -147,6 +151,28 @@ class GrantedSkillView(_ViewModel):
     remaining: int
 
 
+class AffixLineView(_ViewModel):
+    """裝備上的一條詞條（Phase 3G-G1，唯讀）。``active``：遞減後仍生效（非數值類同 id 只生效 1 條；
+    數值類第 4 條起權重 0）；``weight_permille``：遞減權重（1000／500／250／0）。"""
+
+    affix_id: str
+    category: str
+    category_zh: str
+    text_zh: str
+    active: bool
+    weight_permille: int
+
+
+class EquipmentSlotView(_ViewModel):
+    """一個裝備欄位（Phase 3G-G1，唯讀）：欄位、物品名與詞條文字。"""
+
+    slot: str
+    slot_zh: str
+    item_id: str
+    name_zh: str
+    affixes: tuple[AffixLineView, ...] = ()
+
+
 class UnitView(_ViewModel):
     id: UnitId
     template_id: str
@@ -209,6 +235,8 @@ class UnitView(_ViewModel):
     facing: Facing = "east"
     """朝向（Phase 3D-8d；north／east／south／west）。背後格 ＝ 位置 ＋ 朝向的反方向；站在那裡的
     近戰攻擊者有背刺加成。"""
+    equipment: tuple[EquipmentSlotView, ...] = ()
+    """裝備摘要（Phase 3G-G1，唯讀；依欄位固定順序，沒有裝備時為空）。"""
 
 
 class TrapView(_ViewModel):
@@ -408,6 +436,39 @@ def _rule_view(state: BattleState, unit: UnitState, rule: ReactionRule) -> React
     )
 
 
+def _equipment_view(unit: UnitState) -> tuple[EquipmentSlotView, ...]:
+    """裝備摘要：每個欄位的物品與詞條（詞條依類別、id 排序）。"""
+    gear = unit.gear
+    if not gear.items:
+        return ()
+    views: list[EquipmentSlotView] = []
+    for item in gear.items:
+        lines = sorted(
+            (a for a in gear.affixes if a.slot == item.slot),
+            key=lambda a: (AFFIX_CATEGORY_NUMBER[a.affix.category], a.affix.id),
+        )
+        views.append(
+            EquipmentSlotView(
+                slot=item.slot,
+                slot_zh=SLOT_ZH[item.slot],
+                item_id=item.item_id,
+                name_zh=item.name_zh,
+                affixes=tuple(
+                    AffixLineView(
+                        affix_id=a.affix.id,
+                        category=a.affix.category,
+                        category_zh=AFFIX_CATEGORY_ZH[a.affix.category],
+                        text_zh=affix_text(a.affix, a.value),
+                        active=a.active,
+                        weight_permille=a.weight_permille,
+                    )
+                    for a in lines
+                ),
+            )
+        )
+    return tuple(views)
+
+
 def _unit_view(state: BattleState, unit: UnitState, team: Team) -> UnitView:
     return UnitView(
         id=unit.id,
@@ -453,6 +514,7 @@ def _unit_view(state: BattleState, unit: UnitState, team: Team) -> UnitView:
         totem_radius=None if (totem := totem_of(state, unit)) is None else totem.radius,
         activations=tuple(_activation_view(state, a) for a in unit.activations),
         facing=unit.facing,
+        equipment=_equipment_view(unit),
         granted_skills=(
             tuple(
                 GrantedSkillView(

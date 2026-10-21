@@ -47,6 +47,7 @@ __all__ = [
     "FollowupCancelled",
     "FollowupCharged",
     "GambleRolled",
+    "GearHpLost",
     "GuardSet",
     "Healed",
     "InitiativeRolled",
@@ -1002,6 +1003,18 @@ class OverloadTriggered(EventBase):
     threshold: int
 
 
+class GearHpLost(EventBase):
+    """裝備的代價（Phase 3G-G1，例如 ``affix_cost_blood``）：回合開始時失去 HP。不是傷害（不觸發
+    受傷類觸發、不受抗性與護盾影響），也不會致死（最低剩 1）。"""
+
+    type: Literal["gear_hp_lost"] = "gear_hp_lost"
+    unit_id: UnitId
+    affix_id: str
+    amount: int
+    hp_before: int
+    hp_after: int
+
+
 # ---------------------------------------------------------------------------
 # Phase 3C-4a：源力與改寫規則型原語
 # ---------------------------------------------------------------------------
@@ -1573,7 +1586,8 @@ type Event = Annotated[
     | RuleChangeTriggered
     | GambleRolled
     | BacklashTriggered
-    | OverloadTriggered,
+    | OverloadTriggered
+    | GearHpLost,
     Field(discriminator="type"),
 ]
 

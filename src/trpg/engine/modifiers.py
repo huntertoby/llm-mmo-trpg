@@ -29,6 +29,7 @@ from trpg.content.skills import (
     default_affects,
 )
 from trpg.engine.activations import is_active
+from trpg.engine.gear import gear_damage_permille, gear_hit_bonus
 from trpg.engine.skills.conditions import Subject, condition_met
 from trpg.engine.state import BattleState, UnitState
 from trpg.shared.types import Element
@@ -189,13 +190,15 @@ def range_delta(state: BattleState, unit: UnitState, use: Use) -> int:
 
 
 def hit_bonus(state: BattleState, unit: UnitState, use: Use, subject: Subject) -> int:
-    """對 ``subject`` 的命中修正（``hit_bonus`` 加總）。"""
-    return _sum_for(state, unit, use, "hit_bonus", subject)
+    """對 ``subject`` 的命中修正（``hit_bonus`` 加總，再加上裝備的命中加值，Phase 3G-G1）。"""
+    return _sum_for(state, unit, use, "hit_bonus", subject) + gear_hit_bonus(state, unit, subject)
 
 
 def damage_permille(state: BattleState, unit: UnitState, use: Use, subject: Subject) -> int:
-    """對 ``subject`` 的傷害倍率（‰）：1000 ＋ ``damage_permille`` 加總，下限 0。"""
-    return max(0, _PERMILLE + _sum_for(state, unit, use, "damage_permille", subject))
+    """對 ``subject`` 的傷害倍率（‰）：1000 ＋ ``damage_permille`` 加總 ＋ 裝備的傷害加成（Phase
+    3G-G1，已套全身傷害加成上限），下限 0。"""
+    rules_sum = _sum_for(state, unit, use, "damage_permille", subject)
+    return max(0, _PERMILLE + rules_sum + gear_damage_permille(state, unit, subject))
 
 
 def damage_element(state: BattleState, unit: UnitState, use: Use, base: Element) -> Element:
