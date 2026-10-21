@@ -29,6 +29,7 @@ from trpg.content.skills import (
     on_hit_carrier,
 )
 from trpg.content.stacks import StackDef
+from trpg.narrative.skill_icon import SkillIcon, skill_icon
 
 __all__ = [
     "CATEGORY_TEXT",
@@ -878,6 +879,8 @@ class SkillCard(BaseModel):
     followup_when: str | None = None
     """複合技能第二段的種類（``followup.when``，Phase 3F-4b；網頁只有「位移 → 動作」用兩段選取，
     其他種類照第一段選取）；其他技能為 ``None``。"""
+    icon: SkillIcon
+    """組裝式技能圖示的資料（Phase 3-17，:func:`trpg.narrative.skill_icon.skill_icon`）。"""
 
 
 def skill_card(
@@ -922,4 +925,5 @@ def skill_card(
         effect_ids=tuple(e.type for e in skill.effects),
         followup=followup_text(library, skill),
         followup_when=None if skill.followup is None else skill.followup.when,
+        icon=skill_icon(skill),
     )
