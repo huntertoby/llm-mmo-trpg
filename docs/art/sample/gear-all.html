@@ -1,0 +1,110 @@
+<!doctype html>
+<html lang="zh-Hant">
+<head>
+<meta charset="utf-8">
+<title>第一季裝備外觀總覽</title>
+<style>
+  body { margin: 0; padding: 18px 22px; background: #1b1e24; color: #e8e8ea; font-family: "Noto Sans TC", "Microsoft JhengHei", sans-serif; width: 1560px; }
+  h1 { font-size: 22px; margin: 0 0 4px; }
+  h2 { font-size: 16px; margin: 0 0 8px; }
+  .sub { color: #a0a4ad; font-size: 13px; margin-bottom: 10px; line-height: 1.6; }
+  .ok { color: #7dff7d; }
+  .bad { color: #ff5050; }
+  .box { background: #262a32; border-radius: 10px; padding: 10px 12px; margin-bottom: 12px; }
+  .slot { display: flex; gap: 6px; align-items: flex-start; flex-wrap: wrap; margin-bottom: 6px; }
+  .sn { width: 46px; font-size: 13px; color: #c8cad0; padding-top: 18px; font-weight: 700; }
+  .kind { background: #1f2229; border-radius: 8px; padding: 3px 4px 4px; }
+  .kn { font-size: 11px; color: #ffe9a8; text-align: center; margin-bottom: 1px; }
+  .kn small { color: #8a8f99; }
+  .fs { display: flex; gap: 2px; }
+  .ic { text-align: center; font-size: 9.5px; color: #c8cad0; }
+  .ic canvas { display: block; margin: 0 auto 1px; }
+  .row { display: flex; gap: 12px; align-items: flex-start; }
+  .strip { display: flex; gap: 4px; align-items: flex-end; margin: 2px 0 6px; flex-wrap: wrap; }
+  .strip .lab { width: 60px; font-size: 12px; color: #c8cad0; align-self: center; }
+  .set { background: #1f2229; border-radius: 8px; padding: 6px; display: grid; grid-template-columns: 38px 96px 38px; gap: 3px; align-items: center; justify-items: center; }
+  .set .nm { grid-column: 1 / 4; font-size: 12px; color: #e8e8ea; }
+  .set .doll { grid-row: 2 / 6; grid-column: 2; }
+  .set .rings { grid-column: 1 / 4; display: flex; gap: 3px; }
+</style>
+</head>
+<body>
+<h1>第一季裝備外觀總覽（通用版，9 格全部造型）</h1>
+<div class="sub">外觀＝造型 kind × 形制 form × 外觀材質 material（＋選填染色 dye）＋ 關鍵字 ＋ 稀有度。全部由 <code>gearArt.js</code> 程式繪製；紙娃娃由 <code>paperdoll.js</code> 分層疊。<span id="test"></span></div>
+
+<div class="box"><h2>① 9 格的全部造型與形制（括號內是預設材質）</h2><div id="kinds"></div></div>
+
+<div class="row">
+  <div class="box" style="flex:1"><h2>② 共用規則：材質、染色、關鍵字、稀有度</h2><div id="rules"></div></div>
+</div>
+
+<div class="box"><h2>③ 整套穿上：圖示（9 格）＋紙娃娃同步</h2><div class="row" id="sets"></div>
+  <div class="note" style="font-size:11px;color:#8a8f99;margin-top:6px">項鍊、戒指只有圖示，紙娃娃不畫。雙手武器、成對武器占用副手欄（副手格顯示鎖住）。</div></div>
+
+<script src="paperdoll.js"></script>
+<script src="gearArt.js"></script>
+<script>
+const G = GearArt;
+const ic = (it, px = 46, label) => { const d = document.createElement("div"); d.className = "ic"; d.appendChild(G.icon(it, px)); if (label != null) d.insertAdjacentHTML("beforeend", label); return d; };
+
+// 全組合自測：每個造型 × 形制 × 全部材質 × 關鍵字 × 稀有度都畫得出來、不丟例外
+(() => {
+  let n = 0, bad = 0; const cv = document.createElement("canvas"); cv.width = 64; cv.height = 64; const ctx = cv.getContext("2d");
+  const mats = [...Object.keys(G.MATERIAL), "unknown"], kws = [[], ...Object.keys(G.KEYWORD).map((k) => [k]), ["ignite", "mark"], ["nope"]];
+  for (const [k, K] of Object.entries(G.KINDS)) for (const f of [...Object.keys(K.forms), "nope"]) for (const m of mats) for (const kw of kws) for (const r of ["common", "uncommon", "rare", "epic", "legendary", "nope"]) {
+    n++; try { ctx.clearRect(0, 0, 64, 64); G.draw(ctx, { kind: k, form: f, material: m, keywords: kw, rarity: r, dye: "red" }); G.dollItem({ kind: k, form: f, material: m, keywords: kw }); } catch (e) { bad++; if (bad < 3) console.error(k, f, m, e); }
+  }
+  try { G.draw(ctx, { kind: "laser_sword" }); n++; } catch { bad++; }
+  document.getElementById("test").innerHTML = `　自測：全組合 ${n.toLocaleString()} 個，<span class="${bad ? "bad" : "ok"}">錯誤 ${bad}</span>（含不認得的造型、形制、材質、關鍵字）。`;
+})();
+
+// ① 造型
+const SLOT_ZH = { main: "主手", off: "副手", body: "身體", head: "頭", hands: "手", feet: "腳", neck: "項鍊", ring: "戒指" };
+const SHOW = { robe: { dye: "blue" }, coat: { dye: "brown" }, tome: { dye: "red" }, hood: { dye: "green" }, hat: { dye: "purple" }, cloth_gloves: { dye: "white" }, shoes: { dye: "brown" } };
+const kindsEl = document.getElementById("kinds");
+for (const slot of Object.keys(SLOT_ZH)) {
+  const row = document.createElement("div"); row.className = "slot"; row.insertAdjacentHTML("beforeend", `<div class="sn">${SLOT_ZH[slot]}</div>`);
+  for (const [k, K] of Object.entries(G.KINDS)) {
+    if (K.slot !== slot || K.legacy) continue;
+    const box = document.createElement("div"); box.className = "kind";
+    box.innerHTML = `<div class="kn">${K.zh} <small>(${G.MATERIAL[K.def].zh}${K.pair ? "・成對" : ""})</small></div>`;
+    const fs = document.createElement("div"); fs.className = "fs";
+    for (const [f, fz] of Object.entries(K.forms)) fs.appendChild(ic({ kind: k, form: f, rarity: "common", ...(SHOW[k] ?? {}) }, 46, fz));
+    box.appendChild(fs); row.appendChild(box);
+  }
+  kindsEl.appendChild(row);
+}
+
+// ② 規則
+const rules = document.getElementById("rules");
+function strip(label, items) { const s = document.createElement("div"); s.className = "strip"; s.insertAdjacentHTML("beforeend", `<div class="lab">${label}</div>`); for (const [it, l] of items) s.appendChild(ic(it, 46, l)); rules.appendChild(s); }
+strip("材質", Object.keys(G.MATERIAL).map((m) => [{ kind: ["leather", "cloth"].includes(m) ? (m === "cloth" ? "robe" : "leather") : ["wood"].includes(m) ? "staff" : ["bone", "crystal"].includes(m) ? "dagger" : "helmet", form: m === "wood" ? "long" : undefined, material: m }, G.MATERIAL[m].zh]).concat([[{ kind: "helmet", material: "cloth" }, "布頭盔→鐵"]]));
+strip("染色", [[{ kind: "coat", material: "cloth" }, "原色"], ...Object.keys(G.DYE).map((d) => [{ kind: "coat", material: "cloth", dye: d }, G.DYE_ZH[d]])].concat([[{ kind: "helmet", dye: "red" }, "金屬不染"]]));
+strip("關鍵字", [[{ kind: "boots", form: "tall" }, "無"], ...Object.entries(G.KEYWORD).map(([k, v]) => [{ kind: k === "summon" ? "staff" : ["ignite", "shock", "freeze", "wet"].includes(k) ? "gauntlets" : "boots", form: k === "summon" ? "totem" : undefined, keywords: [k], rarity: "rare" }, v.zh])]);
+strip("稀有度", Object.entries(G.RARITY).map(([r, v]) => [{ kind: "circlet", form: "crown", keywords: r === "common" ? [] : ["mark"], rarity: r }, v[1] + (r === "legendary" ? "（正式季）" : "")]));
+
+// ③ 整套
+const D = window.PaperDoll;
+const SETS = [
+  ["鐵壁騎士", "hero_fighter", [{ kind: "sword", form: "broad", material: "steel", rarity: "rare", keywords: ["impact"] }, { kind: "kite_shield", form: "tower", material: "steel", rarity: "uncommon" }, { kind: "helmet", form: "greathelm", rarity: "rare" }, { kind: "plate", form: "full", rarity: "epic", keywords: ["impact"] }, { kind: "gauntlets", form: "plate", rarity: "uncommon" }, { kind: "greaves", form: "knee", rarity: "common" }, { kind: "pendant", form: "tag", material: "silver", rarity: "common" }, { kind: "ring", form: "signet", material: "gold", rarity: "rare" }, { kind: "ring", form: "plain", material: "iron", rarity: "common" }]],
+  ["烈焰法師", "hero_mage", [{ kind: "staff", form: "long", rarity: "epic", keywords: ["ignite"] }, null, { kind: "hat", form: "wizard", dye: "red", rarity: "rare" }, { kind: "robe", form: "long", dye: "red", rarity: "rare", keywords: ["ignite"] }, { kind: "cloth_gloves", form: "fingerless", dye: "black", rarity: "common" }, { kind: "shoes", form: "slipper", dye: "brown", rarity: "common" }, { kind: "charm", form: "tablet", rarity: "uncommon", keywords: ["ignite"] }, { kind: "ring", form: "gem", material: "gold", rarity: "rare", keywords: ["ignite"] }, { kind: "ring", form: "plain", material: "copper", rarity: "common" }]],
+  ["影刃", "hero_archer", [{ kind: "dual_dagger", form: "kris", material: "steel", rarity: "epic", keywords: ["hidden"] }, null, { kind: "hood", form: "cowl", dye: "black", rarity: "rare" }, { kind: "leather", form: "vest", dye: "black", rarity: "uncommon" }, { kind: "leather_gloves", form: "long", dye: "black", rarity: "rare", keywords: ["hidden"] }, { kind: "boots", form: "tall", dye: "black", rarity: "common" }, { kind: "pendant", form: "pendant", material: "bone", rarity: "uncommon", keywords: ["mark"] }, { kind: "ring", form: "gem", material: "silver", rarity: "rare", keywords: ["mark"] }, { kind: "ring", form: "signet", material: "bone", rarity: "uncommon" }]],
+  ["鷹眼槍手", "hero_archer", [{ kind: "longgun", form: "sniper", rarity: "rare", keywords: ["mark"] }, null, { kind: "hat", form: "wide", dye: "brown", rarity: "uncommon" }, { kind: "coat", form: "cape", dye: "brown", rarity: "rare" }, { kind: "leather_gloves", form: "short", rarity: "common" }, { kind: "boots", form: "short", rarity: "common" }, { kind: "charm", form: "bone", rarity: "common" }, { kind: "ring", form: "plain", material: "silver", rarity: "uncommon" }, { kind: "ring", form: "gem", material: "crystal", rarity: "rare", keywords: ["shock"] }]],
+  ["撼地者", "hero_fighter", [{ kind: "hammer", form: "warhammer", material: "iron", rarity: "epic", keywords: ["prone", "impact"] }, null, { kind: "helmet", form: "horned", rarity: "uncommon" }, { kind: "mail", form: "scale", material: "copper", rarity: "rare" }, { kind: "bracers", form: "ring", rarity: "uncommon" }, { kind: "iron_boots", form: "sabaton", rarity: "rare" }, { kind: "pendant", form: "pendant", material: "gold", rarity: "uncommon" }, { kind: "ring", form: "plain", material: "iron", rarity: "common" }, { kind: "ring", form: "signet", material: "copper", rarity: "common" }]],
+  ["潮雷念動", "hero_mage", [{ kind: "whip", form: "chain", material: "silver", rarity: "rare", keywords: ["shock"] }, { kind: "orb", form: "floating", rarity: "epic", keywords: ["wet"] }, { kind: "circlet", form: "crown", material: "silver", rarity: "rare", keywords: ["shock"] }, { kind: "robe", form: "short", dye: "blue", rarity: "uncommon" }, { kind: "bracers", form: "leather", rarity: "common" }, { kind: "shoes", form: "wrapped", dye: "white", rarity: "common" }, { kind: "charm", form: "tablet", material: "crystal", rarity: "rare", keywords: ["wet"] }, { kind: "ring", form: "gem", material: "crystal", rarity: "epic", keywords: ["shock"] }, { kind: "ring", form: "plain", material: "silver", rarity: "common" }]],
+];
+const setsEl = document.getElementById("sets");
+const lock = () => { const d = document.createElement("div"); d.style.cssText = "width:38px;height:38px;border-radius:7px;background:#14161c;border:1px dashed #4a4f5a;display:flex;align-items:center;justify-content:center;font-size:10px;color:#6a6f7a"; d.textContent = "占用"; return d; };
+for (const [n, tpl, items] of SETS) {
+  const [main, off, head, body, hands, feet, neck, r1, r2] = items;
+  const s = document.createElement("div"); s.className = "set"; s.innerHTML = `<div class="nm">${n}</div>`;
+  const cell = (it) => (it ? G.icon(it, 38) : lock());
+  s.append(cell(head)); const cv = document.createElement("canvas"); cv.className = "doll"; cv.width = 192; cv.height = 220; cv.style.width = "96px"; cv.style.height = "110px";
+  const ctx = cv.getContext("2d"); ctx.scale(2, 2); D.stamp(ctx, { look: D.TEMPLATES[tpl].look, gear: G.dollGear(items.filter(Boolean)), rarity: items.some((x) => x?.rarity === "epic") ? "epic" : undefined }, "south", 48, 104, 1.6);
+  s.append(cv, cell(neck), cell(body), cell(main), cell(hands), cell(off), cell(feet));
+  const rings = document.createElement("div"); rings.className = "rings"; rings.style.gridColumn = "1 / 4"; rings.style.justifyContent = "center"; rings.append(cell(r1), cell(r2)); s.appendChild(rings);
+  setsEl.appendChild(s);
+}
+</script>
+</body>
+</html>
