@@ -38,8 +38,12 @@ __all__ = [
     "run_battle",
 ]
 
-LOG_FORMAT = "trpg-battle-log/39"
-"""``/39``（Phase 3-24a2）：基本動作之外的武器動作裝填（動作 ``reload``、事件 ``weapon_reloaded``、
+LOG_FORMAT = "trpg-battle-log/40"
+"""``/40``（Phase 3G-G1，接在 3-24a2 的 ``/39`` 之後）：裝備——戰鬥設定 ``UnitSpawn.equipment``／
+``SpawnTemplate.equipment``（裝備快照：物品與詞條定義內嵌）、單位範本 ``equipment``、單位狀態
+``gear``（遞減後的詞條與數值）、規則包 ``equipment``（遞減權重與硬上限）、新事件 ``gear_hp_lost``；
+裝備改變戰鬥的初始狀態，``/39`` 的紀錄無法由新版程式重播（已接受）。
+``/39``（Phase 3-24a2）：基本動作之外的武器動作裝填（動作 ``reload``、事件 ``weapon_reloaded``、
 單位的 ``ammo``）、武器資料新增遠程特性欄位（``pierce_line``／``ignore_height``／``magazine``／
 ``reload_ap``／``gunshot``／``steady``／``ignore_cover``／``armor_pierce_permille``／``range_mod``）；
 帶彈匣的武器空膛時不能普攻，同種子的 AI 對戰結果可能與 ``/38`` 不同。

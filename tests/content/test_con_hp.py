@@ -16,6 +16,7 @@ OLD_HP = {
     "bandit_boss": 80,
     "bandit_shieldbearer": 32,
     "bandit_warlord": 110,
+    "gear_tester": 60,  # 3G-G1 新增（遷移之後）：範本的 HP，不含裝備加成
     "build:build_assassin": 50,
     "build:build_banisher": 40,
     "build:build_bomber": 40,

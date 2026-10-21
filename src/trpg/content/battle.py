@@ -13,6 +13,7 @@ from typing import Literal
 from pydantic import Field, field_validator, model_serializer, model_validator
 
 from trpg.content.schemas import ContentModel
+from trpg.content.slots import Slot
 from trpg.shared.types import Attribute, Element, ResistGroup
 
 __all__ = [
@@ -596,6 +597,8 @@ class UnitTemplate(ContentModel):
     - ``summon``：召喚物範本（Phase 3D-4a；放在 ``content/units/summons/``，只能由 ``summon``
       原語產生，不能直接參戰）。
     - ``totem``：圖騰（Phase 3D-4b；不移動、不攻擊，只提供光環）。
+    - ``equipment``：裝備（Phase 3G-G1）：欄位 → ``items.yaml`` 的物品 id。省略為沒有裝備；主手沒有
+      物品時 ``weapon`` 就是主手（舊資料不必改）；主手有物品時，物品的武器必須等於 ``weapon``。
     - 元素修正 ＝ (1 − 分組抗性) × (1 + 個別弱點 − 個別抗性)，
       下限見 ``element_mod_floor_permille``。
     """
@@ -618,12 +621,22 @@ class UnitTemplate(ContentModel):
     summon: bool = False
     totem: TotemSpec | None = None
     """圖騰（Phase 3D-4b）：必須是召喚物、速度 0；沒有行動，只在自己的回合開始時給光環。"""
+    equipment: dict[Slot, str] = Field(default_factory=dict)
+    """裝備（Phase 3G-G1）：欄位 → 物品 id（``content/items.yaml``）。"""
 
     @model_validator(mode="after")
     def _check_totem(self) -> UnitTemplate:
         if self.totem is not None and not (self.summon and self.speed == 0):
             raise ValueError("圖騰必須是召喚物（summon: true）且 speed 為 0")
         return self
+
+    @field_validator("equipment")
+    @classmethod
+    def _equipment_format(cls, value: dict[Slot, str]) -> dict[Slot, str]:
+        bad = [i for i in value.values() if re.match(ID_PATTERN, i) is None]
+        if bad:
+            raise ValueError(f"物品 ID 格式錯誤：{', '.join(bad)}")
+        return value
 
     @field_validator("skills")
     @classmethod

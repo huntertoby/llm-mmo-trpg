@@ -1,0 +1,25 @@
+# 裝備測試用單位（Phase 3G-G1）：戰士的數值 ＋ 9 個欄位都穿上 items.yaml 的測試物品。
+# 用來驗證「含裝備的一場 --log-json ＋ replay」：
+#   uv run trpg battle --map test_flat_6x6 --allies gear_tester --enemies bandit --seed 7 --log-json <檔案>
+id: gear_tester
+name_zh: 試裝戰士
+attributes: {str: 16, dex: 12, con: 14, int: 10, wis: 10, wil: 10}
+max_hp: 48
+speed: 5
+armor_bonus: 4
+weapon: one_handed_sword
+resist: {physical: 100}
+element_mods: {}
+tags: [hero]
+max_mana: 20
+skills: [skill_bone_crusher, skill_whirlwind, skill_gale_kick, skill_execute, skill_rending_strike]
+equipment:
+  main_hand: item_test_sword
+  off_hand: item_test_shield
+  head: item_test_helm
+  body: item_test_armor
+  hands: item_test_gloves
+  feet: item_test_boots
+  neck: item_test_amulet
+  ring_1: item_test_ring_str
+  ring_2: item_test_ring_hp

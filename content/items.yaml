@@ -1,0 +1,98 @@
+# 測試用物品（Phase 3G-G1；docs/design/08-裝備.md 8.23）。數值都是初值，未經模擬；不是掉落表。
+#
+# 欄位：id、name_zh、slot_type（weapon 武器／offhand 副手／head／body／hands／feet／neck／ring）、
+#   weapon（武器類物品引用 weapons.yaml，基礎數值沿用武器資料）、paired（成對武器：占用副手）、
+#   tags（例：shield）、legendary（傳說）、affixes（白名單 affixes.yaml 的 id ＋ 擲出的 value）。
+# 頭、身體、手、腳、項鍊、戒指目前沒有基礎數值資料，基礎數值為 0（只有詞條）。
+# G1 的測試物品只掛已結算的第 1、2、8 類詞條。
+items:
+  # --- 主手 ---
+  - id: item_test_sword
+    name_zh: 試煉長劍
+    slot_type: weapon
+    weapon: one_handed_sword
+    affixes:
+      - {affix: affix_attr_str, value: 2}
+      - {affix: affix_cond_height_hit, value: 1}
+  - id: item_test_hammer
+    name_zh: 試煉戰錘
+    slot_type: weapon
+    weapon: hammer
+    affixes:
+      - {affix: affix_cond_low_hp_damage, value: 150}
+      - {affix: affix_cost_glass}
+  - id: item_test_bow
+    name_zh: 試煉長弓
+    slot_type: weapon
+    weapon: bow
+    affixes:
+      - {affix: affix_max_hp, value: 8}
+  - id: item_test_twin_daggers
+    name_zh: 試煉雙匕首
+    slot_type: weapon
+    weapon: dagger
+    paired: true
+    affixes:
+      - {affix: affix_attr_str, value: 1}
+  # --- 副手 ---
+  - id: item_test_shield
+    name_zh: 試煉圓盾
+    slot_type: offhand
+    tags: [shield]
+    affixes:
+      - {affix: affix_max_hp, value: 8}
+      - {affix: affix_attr_str, value: 1}
+  # --- 頭 ---
+  - id: item_test_helm
+    name_zh: 試煉頭盔
+    slot_type: head
+    affixes:
+      - {affix: affix_cond_still_defense, value: 150}
+      - {affix: affix_resist_fire, value: 100}
+  # --- 身體 ---
+  - id: item_test_armor
+    name_zh: 試煉鎖甲
+    slot_type: body
+    affixes:
+      - {affix: affix_max_hp, value: 12}
+      - {affix: affix_resist_fire, value: 150}
+      - {affix: affix_cond_still_defense, value: 200}
+  # --- 手 ---
+  - id: item_test_gloves
+    name_zh: 試煉手套
+    slot_type: hands
+    affixes:
+      - {affix: affix_attr_str, value: 1}
+      - {affix: affix_max_hp, value: 4}
+  # --- 腳 ---
+  - id: item_test_boots
+    name_zh: 試煉疾行靴
+    slot_type: feet
+    affixes:
+      - {affix: affix_cost_swift}
+      - {affix: affix_max_hp, value: 4}
+  # --- 項鍊 ---
+  - id: item_test_amulet
+    name_zh: 試煉血契項鍊
+    slot_type: neck
+    affixes:
+      - {affix: affix_cond_low_hp_damage, value: 100}
+      - {affix: affix_cost_blood}
+  # --- 戒指 ---
+  - id: item_test_ring_fire
+    name_zh: 試煉焰紋戒
+    slot_type: ring
+    affixes:
+      - {affix: affix_resist_fire, value: 150}
+      - {affix: affix_cost_glass}
+  - id: item_test_ring_str
+    name_zh: 試煉力量戒
+    slot_type: ring
+    affixes:
+      - {affix: affix_attr_str, value: 2}
+      - {affix: affix_cond_height_hit, value: 1}
+  - id: item_test_ring_hp
+    name_zh: 試煉生命戒
+    slot_type: ring
+    affixes:
+      - {affix: affix_max_hp, value: 16}

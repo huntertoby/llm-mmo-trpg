@@ -15,6 +15,7 @@ from pydantic import BaseModel, ConfigDict, Field
 
 from trpg.content.battle import UnitTemplate, WeaponDef
 from trpg.content.environment import WeatherDef
+from trpg.content.equipment import Loadout
 from trpg.content.library import ContentLibrary, Ruleset
 from trpg.content.maps import MapDef, Objective, SpawnUnitsEvent
 from trpg.content.rules import CoreRules
@@ -46,12 +47,17 @@ class UnitSpawn(BaseModel):
 
     ``hp``／``mana``：開場 HP／法力（Phase 3-5a：一輪中戰鬥之間不回復，由存檔帶入）。``None`` 為
     滿；超過上限時以上限計。
+
+    ``equipment``：裝備快照（Phase 3G-G1，內嵌物品與詞條定義，重播不依賴資料檔）；空 ＝ 沒有裝備，
+    ``weapon`` 就是主手。由 :meth:`~trpg.content.library.ContentLibrary.loadout_of` 從範本的
+    ``equipment`` 解析。
     """
 
     model_config = ConfigDict(frozen=True, extra="forbid")
 
     template: UnitTemplate
     weapon: WeaponDef
+    equipment: Loadout = Loadout()
     team: Team
     position: tuple[int, int] | None = None
     source: int | None = None
@@ -111,7 +117,12 @@ def build_setup(
         for template_id in template_ids:
             template = library.unit(template_id)
             spawns.append(
-                UnitSpawn(template=template, weapon=library.weapon_of(template), team=team)
+                UnitSpawn(
+                    template=template,
+                    weapon=library.weapon_of(template),
+                    equipment=library.loadout_of(template),
+                    team=team,
+                )
             )
     templates: dict[str, SpawnTemplate] = {}
     for event in map_def.events:
@@ -119,7 +130,9 @@ def build_setup(
             for placement in event.units:
                 template = library.unit(placement.template)
                 templates[template.id] = SpawnTemplate(
-                    template=template, weapon=library.weapon_of(template)
+                    template=template,
+                    weapon=library.weapon_of(template),
+                    equipment=library.loadout_of(template),
                 )
     return BattleSetup(
         map=map_def,

@@ -35,6 +35,21 @@ from trpg.content.environment import (
     WeatherTable,
     check_rule,
 )
+from trpg.content.equipment import (
+    AffixDef,
+    AffixTable,
+    ConditionalAffix,
+    EquipmentRules,
+    ItemDef,
+    ItemTable,
+    Loadout,
+    ReactionAffix,
+    RuleAffix,
+    TriggerAffix,
+    item_problems,
+    loadout_problems,
+    resolve_loadout,
+)
 from trpg.content.loader import default_content_dir, load_content_file
 from trpg.content.maps import MapDef, SpawnUnitsEvent, check_map
 from trpg.content.roguelite import RunRules, roguelite_problems
@@ -117,6 +132,8 @@ class Ruleset(ContentModel):
     """召喚物範本（Phase 3D-4a，``content/units/summons/``）：嵌入規則包，重播不依賴資料檔。"""
     rule_changes: RuleChangeTable = RuleChangeTable()
     """規則改變（Phase 3D-6，``content/rule_changes.yaml``）：嵌入規則包，重播不依賴資料檔。"""
+    equipment: EquipmentRules = EquipmentRules()
+    """裝備的遞減權重與硬上限（Phase 3G-G1，``content/rules/equipment.yaml``）。"""
 
     _rule_change_index: dict[str, RuleChangeDef] = PrivateAttr(default_factory=dict)
     _summon_index: dict[str, SummonDef] = PrivateAttr(default_factory=dict)
@@ -197,6 +214,12 @@ class Ruleset(ContentModel):
             raise ValueError(f"core.yaml 的 topple_rubble_object 引用了未知的物件：{rubble}")
         self._check_rule_changes(ids)
         self._check_overloads(ids)
+        reduction = 1000 - self.core.element_mod_floor_permille
+        if self.equipment.caps.damage_reduction_permille != reduction:
+            raise ValueError(
+                "rules/equipment.yaml 的 caps.damage_reduction_permille 必須等於 1000 − "
+                f"core.yaml 的 element_mod_floor_permille（{reduction}）"
+            )
         return self
 
     def _check_overloads(self, status_ids: set[str]) -> None:
@@ -355,7 +378,18 @@ class ContentLibrary:
     """roguelite 一輪的參數（``roguelite.yaml``，Phase 3-5a）。"""
     workshop: WorkshopRules
     """技能工坊「裝上試玩」的設定（``workshop.yaml``，Phase 3F-1）。"""
+    affixes: dict[str, AffixDef] = field(default_factory=dict)
+    """詞條白名單（``affixes.yaml``，Phase 3G-G1）。"""
+    items: dict[str, ItemDef] = field(default_factory=dict)
+    """物品（``items.yaml``，Phase 3G-G1；目前只有測試用物品）。"""
     files: list[tuple[Path, ContentModel]] = field(default_factory=list)
+
+    def loadout_of(self, template: UnitTemplate) -> Loadout:
+        """單位範本的裝備快照（``equipment`` 解析成內嵌定義的 :class:`Loadout`；沒有裝備時
+        為空）。"""
+        if not template.equipment:
+            return Loadout()
+        return resolve_loadout(template.equipment, self.items, self.affixes)
 
     def unit(self, template_id: str) -> UnitTemplate:
         try:
@@ -439,6 +473,9 @@ def load_library(  # noqa: PLR0915
     rule_changes = load("rule_changes.yaml", RuleChangeTable)
     roguelite = load("roguelite.yaml", RunRules)
     workshop = load("workshop.yaml", WorkshopRules)
+    equipment_rules = load("rules/equipment.yaml", EquipmentRules)
+    affix_table = load("affixes.yaml", AffixTable)
+    item_table = load("items.yaml", ItemTable)
     try:
         ruleset = Ruleset(
             core=core,
@@ -457,9 +494,19 @@ def load_library(  # noqa: PLR0915
             skills=SkillTable(skills=tuple(skills[k] for k in sorted(skills))),
             summons=summons,
             rule_changes=rule_changes,
+            equipment=equipment_rules,
         )
     except ValueError as exc:
         raise ContentError(root / "rules", str(exc)) from exc
+    affixes = affix_table.by_id()
+    items = item_table.by_id()
+    _check_affixes(root, affixes, ruleset)
+    weapon_map = weapons.by_id()
+    for item in item_table.items:
+        problems = item_problems(item, affixes, weapon_map, equipment_rules)
+        if problems:
+            raise ContentError(root / "items.yaml", "；".join(problems))
+    gear = _GearCatalog(items=items, affixes=affixes, rules=equipment_rules)
 
     _check_skills(root, skills, ruleset)
     _check_skill_rules(root, ruleset, exclusions, skeletons)
@@ -470,12 +517,17 @@ def load_library(  # noqa: PLR0915
             f"status_values 引用了未知的狀態：{', '.join(unknown_values)}",
         )
     units = _load_dir(root / "units", UnitTemplate, files)
-    weapon_map = weapons.by_id()
     stray = sorted(t for t, u in units.items() if u.summon)
     if stray:
         raise ContentError(root / "units", f"召喚物範本要放在 units/summons/：{', '.join(stray)}")
     _check_units(
-        root, units, weapons=weapon_map, skills=skills, ruleset=ruleset, ai_profiles=ai_profiles
+        root,
+        units,
+        weapons=weapon_map,
+        skills=skills,
+        ruleset=ruleset,
+        ai_profiles=ai_profiles,
+        gear=gear,
     )
     _check_units(
         root,
@@ -495,6 +547,7 @@ def load_library(  # noqa: PLR0915
         skills=skills,
         ruleset=ruleset,
         ai_profiles=ai_profiles,
+        gear=gear,
     )
 
     maps = _load_dir(root / "maps", MapDef, files)
@@ -531,6 +584,8 @@ def load_library(  # noqa: PLR0915
         skeletons=skeletons,
         roguelite=roguelite,
         workshop=workshop,
+        affixes=affixes,
+        items=items,
         files=files,
     )
 
@@ -658,13 +713,23 @@ def _check_units(
     ruleset: Ruleset,
     ai_profiles: AiProfileTable,
     source: Path | None = None,
+    gear: _GearCatalog | None = None,
 ) -> None:
-    """單位範本引用的武器、行為模式、反應與技能都存在且合法（``source``：錯誤訊息指向的檔案）。"""
+    """單位範本引用的武器、行為模式、反應與技能都存在且合法（``source``：錯誤訊息指向的檔案）。
+    ``gear``：有給時檢查範本的裝備（物品存在、穿戴合法；Phase 3G-G1）；召喚物不能有裝備。"""
     reaction_index = ruleset.reactions.by_id()
     for template_id, template in units.items():
         path = source or root / "units" / f"{template_id}.yaml"
         if template.weapon not in weapons:
             raise ContentError(path, f"未知的武器：{template.weapon}")
+        if template.equipment:
+            problems = (
+                ["召喚物不能有裝備"]
+                if gear is None
+                else gear.problems(template, weapons[template.weapon])
+            )
+            if problems:
+                raise ContentError(path, "；".join(problems))
         if template.ai_profile is not None and template.ai_profile not in ai_profiles.by_id():
             raise ContentError(path, f"未知的行為模式：{template.ai_profile}")
         if template.totem is not None:
@@ -694,8 +759,9 @@ def _check_builds(
     skills: dict[str, SkillDef],
     ruleset: Ruleset,
     ai_profiles: AiProfileTable,
+    gear: _GearCatalog,
 ) -> None:
-    """build 的英雄範本合法（武器、技能、行為模式），隊友存在，build ID 不與單位範本衝突。"""
+    """build 的英雄範本合法（武器、技能、行為模式、裝備），隊友存在，build ID 不與單位範本衝突。"""
     path = root / "sim" / "builds.yaml"
     unknown = sorted(c for c in builds.companions if c not in units)
     if unknown:
@@ -712,7 +778,67 @@ def _check_builds(
         ruleset=ruleset,
         ai_profiles=ai_profiles,
         source=path,
+        gear=gear,
     )
+
+
+@dataclass(frozen=True)
+class _GearCatalog:
+    """載入時檢查單位裝備用的物品、詞條與裝備規則（Phase 3G-G1）。"""
+
+    items: dict[str, ItemDef]
+    affixes: dict[str, AffixDef]
+    rules: EquipmentRules
+
+    def problems(self, template: UnitTemplate, weapon: WeaponDef) -> list[str]:
+        try:
+            loadout = resolve_loadout(template.equipment, self.items, self.affixes)
+        except ValueError as exc:
+            return [f"equipment：{exc}"]
+        return [f"equipment：{p}" for p in loadout_problems(loadout, weapon, self.rules)]
+
+
+def _affix_reference_problems(affix: AffixDef, ruleset: Ruleset) -> list[str]:
+    """詞條引用的條件、狀態、觸發時機、反應與規則改變存在（Phase 3G-G1）。
+
+    不檢查（之後的段落才加入，已記錄在報告）：充能的層數（``fury`` 由 G3 加入）、授予動作的技能
+    （G3 加入）、武器特性強化限定的武器 id（長槍由 3-24a2 加入）。
+    """
+    statuses = {s.id for s in ruleset.statuses.statuses}
+    refs: list[tuple[str, str, set[str]]] = []
+    if isinstance(affix, ConditionalAffix):
+        refs.append(("條件", affix.condition.type, {c.id for c in ruleset.conditions.conditions}))
+    if isinstance(affix, TriggerAffix):
+        refs.append(("觸發時機", affix.trigger, {t.id for t in ruleset.skill_triggers.triggers}))
+    if isinstance(affix, RuleAffix):
+        refs.append(("規則改變", affix.rule, {r.id for r in ruleset.rule_changes.rule_changes}))
+    if isinstance(affix, ReactionAffix) and affix.mode != "grant":
+        refs.append(("反應", affix.reaction, {r.id for r in ruleset.reactions.reactions}))
+    for status in _affix_statuses(affix):
+        refs.append(("狀態", status, statuses))
+    return [
+        f"詞條 {affix.id} 引用了未知的{what}：{ref}"
+        for what, ref, known in refs
+        if ref not in known
+    ]
+
+
+def _affix_statuses(affix: AffixDef) -> list[str]:
+    found: list[str] = []
+    for name in ("status", "on_hit_status"):
+        value = getattr(affix, name, None)
+        if isinstance(value, str):
+            found.append(value)
+    for effect in getattr(affix, "effects", ()):
+        if effect.status is not None:
+            found.append(effect.status)
+    return found
+
+
+def _check_affixes(root: Path, affixes: Mapping[str, AffixDef], ruleset: Ruleset) -> None:
+    problems = [p for affix in affixes.values() for p in _affix_reference_problems(affix, ruleset)]
+    if problems:
+        raise ContentError(root / "affixes.yaml", "；".join(problems))
 
 
 def unit_skill_problems(

@@ -36,6 +36,7 @@ from trpg.engine.events import (
     FollowupCancelled,
     FollowupCharged,
     GambleRolled,
+    GearHpLost,
     GuardSet,
     Healed,
     InitiativeRolled,
@@ -834,6 +835,11 @@ def _gamble_rolled(e: GambleRolled, v: _View) -> str:
 def _backlash_triggered(e: BacklashTriggered, v: _View) -> str:
     skill = v.state.ruleset.skill_def(e.skill_id).name_zh
     return f"  ✦ {v.name[e.unit_id]} 的「{skill}」失手了，遭到反噬"
+
+
+@_handles(GearHpLost)
+def _gear_hp_lost(e: GearHpLost, v: _View) -> str:
+    return f"  ✦ {v.name[e.unit_id]} 的裝備代價：失去 {e.amount} HP（{e.hp_before} → {e.hp_after}）"
 
 
 @_handles(OverloadTriggered)

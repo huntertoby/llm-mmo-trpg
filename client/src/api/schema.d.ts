@@ -522,6 +522,25 @@ export interface components {
             rule_name_zh: string | null;
         };
         /**
+         * AffixLineView
+         * @description 裝備上的一條詞條（Phase 3G-G1，唯讀）。``active``：遞減後仍生效（非數值類同 id 只生效 1 條；
+         *     數值類第 4 條起權重 0）；``weight_permille``：遞減權重（1000／500／250／0）。
+         */
+        AffixLineView: {
+            /** Affix Id */
+            affix_id: string;
+            /** Category */
+            category: string;
+            /** Category Zh */
+            category_zh: string;
+            /** Text Zh */
+            text_zh: string;
+            /** Active */
+            active: boolean;
+            /** Weight Permille */
+            weight_permille: number;
+        };
+        /**
          * Aim
          * @description 瞄準（Phase 3-21a）：本回合下一次需要擲命中的攻擊（普攻或技能）命中 ``+aim_hit_bonus``；
          *     不疊加，回合結束或用掉即失效。
@@ -1131,6 +1150,25 @@ export interface components {
              * @enum {string}
              */
             type: "end_turn";
+        };
+        /**
+         * EquipmentSlotView
+         * @description 一個裝備欄位（Phase 3G-G1，唯讀）：欄位、物品名與詞條文字。
+         */
+        EquipmentSlotView: {
+            /** Slot */
+            slot: string;
+            /** Slot Zh */
+            slot_zh: string;
+            /** Item Id */
+            item_id: string;
+            /** Name Zh */
+            name_zh: string;
+            /**
+             * Affixes
+             * @default []
+             */
+            affixes: components["schemas"]["AffixLineView"][];
         };
         /** @enum {string} */
         Facing: "north" | "east" | "south" | "west";
@@ -2785,6 +2823,11 @@ export interface components {
             granted_skills: components["schemas"]["GrantedSkillView"][];
             /** @default east */
             facing: components["schemas"]["Facing"];
+            /**
+             * Equipment
+             * @default []
+             */
+            equipment: components["schemas"]["EquipmentSlotView"][];
         };
         /** UpcomingEventOut */
         UpcomingEventOut: {

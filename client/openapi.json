@@ -1337,6 +1337,46 @@
         "title": "ActivationView",
         "description": "生效中的常駐類傳說（Phase 3D-6；雙方都看得到）。\n\n``expires_round``：限時型在持有者第 ``expires_round`` 輪的回合開始時結束（剩餘輪數 ＝\n``expires_round − round``）；整場型為 ``None``。``rule_name_zh``：規則改變的名稱（修正型為\n``None``）。"
       },
+      "AffixLineView": {
+        "properties": {
+          "affix_id": {
+            "type": "string",
+            "title": "Affix Id"
+          },
+          "category": {
+            "type": "string",
+            "title": "Category"
+          },
+          "category_zh": {
+            "type": "string",
+            "title": "Category Zh"
+          },
+          "text_zh": {
+            "type": "string",
+            "title": "Text Zh"
+          },
+          "active": {
+            "type": "boolean",
+            "title": "Active"
+          },
+          "weight_permille": {
+            "type": "integer",
+            "title": "Weight Permille"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "affix_id",
+          "category",
+          "category_zh",
+          "text_zh",
+          "active",
+          "weight_permille"
+        ],
+        "title": "AffixLineView",
+        "description": "裝備上的一條詞條（Phase 3G-G1，唯讀）。``active``：遞減後仍生效（非數值類同 id 只生效 1 條；\n數值類第 4 條起權重 0）；``weight_permille``：遞減權重（1000／500／250／0）。"
+      },
       "Aim": {
         "properties": {
           "unit_id": {
@@ -2841,6 +2881,44 @@
         ],
         "title": "EndTurn",
         "description": "結束回合。"
+      },
+      "EquipmentSlotView": {
+        "properties": {
+          "slot": {
+            "type": "string",
+            "title": "Slot"
+          },
+          "slot_zh": {
+            "type": "string",
+            "title": "Slot Zh"
+          },
+          "item_id": {
+            "type": "string",
+            "title": "Item Id"
+          },
+          "name_zh": {
+            "type": "string",
+            "title": "Name Zh"
+          },
+          "affixes": {
+            "items": {
+              "$ref": "#/components/schemas/AffixLineView"
+            },
+            "type": "array",
+            "title": "Affixes",
+            "default": []
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "slot",
+          "slot_zh",
+          "item_id",
+          "name_zh"
+        ],
+        "title": "EquipmentSlotView",
+        "description": "一個裝備欄位（Phase 3G-G1，唯讀）：欄位、物品名與詞條文字。"
       },
       "Facing": {
         "type": "string",
@@ -7185,6 +7263,14 @@
           "facing": {
             "$ref": "#/components/schemas/Facing",
             "default": "east"
+          },
+          "equipment": {
+            "items": {
+              "$ref": "#/components/schemas/EquipmentSlotView"
+            },
+            "type": "array",
+            "title": "Equipment",
+            "default": []
           }
         },
         "additionalProperties": false,

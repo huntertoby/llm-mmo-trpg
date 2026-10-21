@@ -74,6 +74,7 @@ def battle_setup(library: ContentLibrary, run: RunState) -> BattleSetup:
     hero = UnitSpawn(
         template=leveled,
         weapon=library.weapons[run.hero.weapon],
+        equipment=library.loadout_of(run.hero),
         team=Team.ALLY,
         source=run.source,
         hp=run.hp,

@@ -33,6 +33,7 @@ from trpg.engine.events import (
     TurnSkipped,
     TurnStarted,
 )
+from trpg.engine.gear import gear_turn_start
 from trpg.engine.grants import expire_granted_skills
 from trpg.engine.objectives import check_battle_end, check_round_end, end_battle
 from trpg.engine.results import ResolveResult
@@ -130,9 +131,11 @@ def start_turn(ctx: Ctx, unit_id: UnitId) -> None:
 
 
 def _turn_start_hooks(ctx: Ctx, unit: UnitState) -> None:
-    """回合開始、狀態與表面效果之後：持續區域、陷阱倒數、圖騰、延遲段，最後是被動的
-    ``on_turn_start``（每一步之前都確認行動者還站著）。"""
+    """回合開始、狀態與表面效果之後：裝備的代價（3G-G1）、持續區域、陷阱倒數、圖騰、延遲段，最後是
+    被動的 ``on_turn_start``（每一步之前都確認行動者還站著）。"""
     state = ctx.state
+    if unit.alive and unit.gear.bonuses:  # 裝備的代價型：回合開始失去 HP（不致死，Phase 3G-G1）
+        gear_turn_start(ctx, unit)
     if unit.alive and state.zones:  # 站在持續區域內的回合開始效果（Phase 3D-5）
         zones_turn_start(ctx, unit)
     if unit.alive and state.traps:  # 放置者的陷阱倒數（Phase 2E-3）：delay 到期觸發、enter 到期消失
