@@ -172,6 +172,10 @@ class UnitView(_ViewModel):
     """武器大類（Phase 3-18b）：melee、ranged、focus；不認得 weapon_id 時前端依此退回。"""
     weapon_traits_zh: tuple[str, ...] = ()
     """武器小特性的說明，每個特性一行（Phase 3-24a1；取自武器資料的參數）。"""
+    ammo: int = 0
+    """彈匣裡的子彈數（Phase 3-24a2；HUD 顯示用，沒有彈匣的武器為 0）。"""
+    magazine: int = 0
+    """彈匣容量（武器的 ``magazine``；0 ＝ 沒有彈匣，不顯示）。"""
     tags: tuple[str, ...]
     skills: tuple[str, ...]
     """裝備的技能 ID；只有自己陣營的單位會列出（其他陣營的單位為空，避免洩漏陷阱技能）。"""
@@ -430,6 +434,8 @@ def _unit_view(state: BattleState, unit: UnitState, team: Team) -> UnitView:
         weapon_id=unit.weapon.id,
         weapon_class=unit.weapon.weapon_class,
         weapon_traits_zh=unit.weapon.trait_lines_zh(),
+        ammo=unit.ammo,
+        magazine=unit.weapon.magazine,
         tags=unit.tags,
         skills=unit.skills if unit.team is team else (),
         statuses=tuple(_status_view(state, unit, s) for s in unit.statuses),

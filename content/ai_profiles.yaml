@@ -43,6 +43,7 @@
 #   reach_spacing  （3-24a1）長柄近戰武器（矛）：站在 2 格到射程內且打得到的每個敵人加分、緊貼的每個敵人扣同樣的分數（偏好在觸及距離出手；
 #                  必須大於 approach，才會在還有移動點數時停在 2 格而不是貼上去）
 #   knock_angle    （3-24a1）帶震退的武器（錘）：緊貼著、推開後會撞到東西或掉進致命地形的每個敵人加分（低權重，偏好能撞擊的角度）
+#   line_up        （3-24a2）帶穿透的武器（弩）：站位能讓一條直線穿過多名敵人時，每多穿透一名敵人加分（低權重）
 #   charge_per_enemy  （3E-1）直線衝撞每個會被穿過的敵人的固定加分（預設 3，不是 0）
 #   shadowstep     （3E-1）瞬步的固定加分（預設 3，不是 0）；shadowstep_behind：落在目標背後再加（預設 2）
 #   exposed        能打到自己、自己卻打不到的敵人數（射程更長，或自己被遮住；扣分）。互相打得到的對射
@@ -179,7 +180,7 @@ profiles:
   - id: archer
     name_zh: 弓手
     description_zh: 重視距離、高處與視線。
-    weights: {damage: 6, env_damage: 2, kill: 20, env_kill: 20, push: 3, surface: 5, expose: 15, friendly_fire: 8, approach: 1, threat: 10, keep_distance: 40, height: 15, objective: 8, hazard: 10, defend: 1, cover: 12, heal: 6, shield: 5, support: 3, exposed: 20, mana: 1, cooldown: 2}
+    weights: {damage: 6, env_damage: 2, kill: 20, env_kill: 20, push: 3, surface: 5, expose: 15, friendly_fire: 8, approach: 1, threat: 10, keep_distance: 40, height: 15, objective: 8, hazard: 10, defend: 1, cover: 12, heal: 6, shield: 5, support: 3, exposed: 20, mana: 1, cooldown: 2, line_up: 3}
   - id: cunning
     name_zh: 狡猾
     description_zh: 重視環境擊殺、推擊與表面。
@@ -207,5 +208,6 @@ run: {pursue_points: 6, retreat_points: 6, retreat_hp_permille: 350, retreat_ene
 #   guard_points          守護相鄰隊友：隊友 HP 低於 guard_ally_hp_permille‰、guard_threat_radius 格內有敵人、自己 HP ≥ guard_self_hp_permille‰ → 在「守護自己」的分數上加這個分數
 #   swap_points           換位：隊友比自己更靠近最近的敵人（在前線）、其 swap_threat_radius 格內有敵人，且（隊友 HP < swap_rescue_hp_permille‰，或自己最大 HP ≥ 隊友的 swap_tank_ratio_permille‰ 倍），自己 HP ≥ swap_self_hp_permille‰
 #   vault_points          攀跳：攀爬或跳躍後走到最近敵人的步數比現在少至少 vault_min_saving 步（現在走不到、攀跳後走得到也算）→ 這個分數（低權重；平衡階段初值）
+#   reload_points         裝填（3-24a2，武器動作）：彈匣空時的固定分數（遠大於走位，所以空膛先裝填）
 #   aim_points            瞄準：AP 剛好夠「瞄準 + 一個 AP ≥ aim_min_attack_ap 的攻擊」，該攻擊命中率 < aim_hit_permille‰ 且有收益 → 該攻擊的分數 + 這個分數
-basic: {guard_points: 3, guard_ally_hp_permille: 500, guard_self_hp_permille: 500, guard_threat_radius: 6, swap_points: 6, swap_rescue_hp_permille: 350, swap_tank_ratio_permille: 1500, swap_self_hp_permille: 500, swap_threat_radius: 3, aim_points: 2, aim_hit_permille: 500, aim_min_attack_ap: 2, vault_points: 4, vault_min_saving: 4}
+basic: {guard_points: 3, guard_ally_hp_permille: 500, guard_self_hp_permille: 500, guard_threat_radius: 6, swap_points: 6, swap_rescue_hp_permille: 350, swap_tank_ratio_permille: 1500, swap_self_hp_permille: 500, swap_threat_radius: 3, aim_points: 2, aim_hit_permille: 500, aim_min_attack_ap: 2, vault_points: 4, vault_min_saving: 4, reload_points: 20}

@@ -63,6 +63,7 @@ export type ModeKind =
   | "swap"
   | "aim"
   | "vault"
+  | "reload"
   | "end_stance"
   | "stand";
 
@@ -252,6 +253,7 @@ export const BASIC_MODES: readonly { kind: Exclude<ModeKind, "skill">; label: st
   { kind: "swap", label: "換位" },
   { kind: "aim", label: "瞄準" },
   { kind: "vault", label: "攀跳" },
+  { kind: "reload", label: "裝填" },
   { kind: "end_stance", label: "結束姿態" },
   { kind: "stand", label: "起身" },
 ];
@@ -273,11 +275,13 @@ export const BASIC_ACTION_KINDS: readonly string[] = [
   "vault",
 ];
 export const BASIC_ACTION_LIMIT = 10;
+/** 武器動作（Phase 3-24a2）：只有特定武器才有，不算進基本動作的上限；目前只有裝填（長槍空膛時才出現在「更多動作」）。 */
+export const WEAPON_ACTION_KINDS: readonly string[] = ["reload"];
 
 /** 常駐按鈕（移動除外，移動是點格子）：普攻、跑步、守護；結束回合另外放。 */
 export const RESIDENT_KINDS: readonly ModeKind[] = ["attack", "run", "defend"];
 /** 「更多動作」選單的順序。 */
-export const MORE_KINDS: readonly ModeKind[] = ["shove", "trip", "interact", "shove_aside", "swap", "aim", "vault"];
+export const MORE_KINDS: readonly ModeKind[] = ["shove", "trip", "interact", "shove_aside", "swap", "aim", "vault", "reload"];
 /** 留在技能列的基本動作（姿態與起身這類管理動作，只在合法時出現）。 */
 export const TRAY_KINDS: readonly ModeKind[] = ["end_stance", "stand"];
 
@@ -295,6 +299,8 @@ function modeKindOf(a: Action): ModeKind | null {
       return a.type;
     case "aim":
       return "aim";
+    case "reload":
+      return "reload";
     case "interact":
       return a.mode === "shove_aside" ? "shove_aside" : "interact";
     case "move":

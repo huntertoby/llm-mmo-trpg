@@ -1,5 +1,5 @@
 // 右下角（Phase 3-8、3-21b）：常駐 5 鈕——移動、普攻、跑步、守護、結束回合；旁邊一個「更多動作」選單，
-// 只列出當下合法的動作（推擊、絆倒、互動、換位、瞄準、攀跳），選了之後在地圖上點目標。
+// 只列出當下合法的動作（推擊、絆倒、互動、換位、瞄準、攀跳、裝填），選了之後在地圖上點目標。
 // 播放速度控制在下面。戰鬥結束時換成結束面板。
 import { useState, type ReactNode } from "react";
 import type { Action } from "../api/types";
@@ -116,7 +116,7 @@ export function TurnControls({
           type="button"
           aria-expanded={open}
           disabled={count === 0}
-          title={count === 0 ? "目前沒有其他可用的動作" : "推擊、絆倒、互動、換位、瞄準、攀跳（只列出現在合法的）"}
+          title={count === 0 ? "目前沒有其他可用的動作" : "推擊、絆倒、互動、換位、瞄準、攀跳、裝填（只列出現在合法的）"}
           onClick={() => setOpen((o) => !o)}
         >
           更多動作（{count}）

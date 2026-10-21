@@ -1,5 +1,6 @@
 // 單位資訊：滑過或點選單位時顯示（文字即可）。
 import type { BattleView, StatusView, UnitView } from "../api/types";
+import { ammoText, hasMagazine } from "../battle/ammo";
 import { bombStatusText, TIME_BOMB } from "../battle/bombs";
 import { CHARGING, chargeStatusText } from "../battle/followup";
 import { facingText } from "../battle/facing";
@@ -43,6 +44,7 @@ export function UnitInfo({ unit, names, heroId, skills, view }: Props) {
     ["AP／移動", `${unit.ap}／${unit.move_points}（速度 ${unit.speed}）`],
     ["武器", unit.weapon_name_zh],
     ...unit.weapon_traits_zh.map((line): [string, string] => ["　特性", line]),
+    ...(hasMagazine(unit) ? [["　彈匣", ammoText(unit).replace("彈匣 ", "")] as [string, string]] : []),
     ["位置", `(${unit.pos.x}, ${unit.pos.y})`],
     ["朝向", facingText(unit)],
   ];

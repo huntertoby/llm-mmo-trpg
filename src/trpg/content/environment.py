@@ -628,6 +628,9 @@ class AiWeights(ContentModel):
     """（Phase 3-24a1）長柄近戰武器（射程 > 1，矛）：站在 2 格到射程內且打得到的每個敵人加分、緊貼的
     每個敵人扣同樣的分數（位置價值；偏好在觸及距離出手）。"""
     knock_angle: int = 0
+    line_up: int = 0
+    """（Phase 3-24a2）帶穿透的武器（弩）：能對準一條直線上有多名敵人的站位，每多穿透一名敵人加分
+    （位置價值；低權重）。"""
     """（Phase 3-24a1）帶震退的武器（錘）：緊貼著、而且推開後會撞到東西（單位、障礙、牆、邊緣）
     或掉進致命地形的每個敵人加分（位置價值；低權重，偏好能撞擊的角度）。"""
     charge_per_enemy: int = 3
@@ -897,6 +900,8 @@ class BasicActionAiRules(ContentModel):
     aim_min_attack_ap: int = Field(default=2, ge=1)
     vault_points: int = Field(default=4, ge=0)
     vault_min_saving: int = Field(default=4, ge=1)
+    reload_points: int = Field(default=20, ge=0)
+    """裝填（3-24a2，武器動作）：彈匣空時的固定分數（要大於一般走位，所以空膛就先裝填）。"""
 
 
 class AiProfileTable(ContentModel):

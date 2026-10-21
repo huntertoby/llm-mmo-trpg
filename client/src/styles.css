@@ -2463,3 +2463,28 @@ button.selected {
   margin: 6px 0;
   font-weight: 700;
 }
+
+/* Phase 3-24a2：彈匣（長槍）——HUD 的彈匣格與空膛提示 */
+.ammo-pips {
+  display: inline-flex;
+  gap: 3px;
+  vertical-align: middle;
+}
+.ammo-pip {
+  width: 8px;
+  height: 12px;
+  border-radius: 2px 2px 1px 1px;
+  border: 1px solid #8a8f99;
+  background: transparent;
+}
+.ammo-pip.loaded {
+  background: #e8bb48;
+  border-color: #9c7420;
+}
+.ammo-chip.empty {
+  border-color: #c0504d;
+}
+.ammo-empty {
+  margin-left: 6px;
+  color: #e5736f;
+}

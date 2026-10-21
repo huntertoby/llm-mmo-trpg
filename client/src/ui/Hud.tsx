@@ -1,5 +1,6 @@
 // 戰鬥 HUD（設計文件 7.3）：固定顯示主角當下需要的資訊。
 import type { BattleView, StatusView, UnitView } from "../api/types";
+import { ammoPips, ammoText, hasMagazine } from "../battle/ammo";
 import { sourcePips } from "../battle/source";
 import { statusTile, surfaceTile } from "../render/skillIcon";
 import { TipGlyph } from "./SkillIconView";
@@ -68,6 +69,7 @@ export function compactHudText(view: BattleView, hero: UnitView): string {
     `耐力 ${hero.stamina}/${hero.max_stamina}`,
     `AP ${hero.ap}`,
     `移動 ${hero.move_points}`,
+    ...(hasMagazine(hero) ? [ammoText(hero)] : []),
     `反應${hero.reaction_available ? "可用" : "已用"}`,
     `源力 ${hero.source}/${hero.source_max}`,
     `狀態 ${hero.statuses.length === 0 ? "無" : hero.statuses.map(statusLine).join("、")}`,
@@ -110,6 +112,21 @@ export function Hud({ view, hero, skills, compact = false }: Props) {
         <span className="hud-chip" title="剩餘移動點數">
           移動 <b>{hero.move_points}</b>
         </span>
+        {hasMagazine(hero) && (
+          <span
+            className={`hud-chip ammo-chip${hero.ammo <= 0 ? " empty" : ""}`}
+            title={`${ammoText(hero)}：開火一次用掉 1 發，空膛時從「更多動作」選單裝填`}
+            aria-label={ammoText(hero)}
+          >
+            彈匣{" "}
+            <span className="ammo-pips">
+              {ammoPips(hero.ammo, hero.magazine).map((loaded, i) => (
+                <span key={i} className={`ammo-pip${loaded ? " loaded" : ""}`} />
+              ))}
+            </span>
+            {hero.ammo <= 0 && <b className="ammo-empty">空膛</b>}
+          </span>
+        )}
         <span
           className="hud-chip"
           title={`源力 ${hero.source}/${hero.source_max}：傳說技能的代價（跨戰鬥保留，每場至少 1 點；走上地圖上的「源」格 +1）`}

@@ -311,6 +311,7 @@ def test_basic_actions_stay_within_the_limit_of_ten() -> None:
     """``docs/design/05-戰鬥.md`` 5.2.2：基本動作總數上限 10（不含技能與管理動作）。"""
     union = get_args(get_args(Action.__value__)[0])
     types = {get_args(cls.model_fields["type"].annotation)[0] for cls in union}
-    basic = types - {"use_skill", "end_turn", "end_stance", "set_reaction_mode"}
+    # 裝填（3-24a2）是武器動作（只有帶彈匣的武器才有），不算進基本動作
+    basic = types - {"use_skill", "end_turn", "end_stance", "set_reaction_mode", "reload"}
     assert {"move", "attack", "run", "defend", "swap", "aim", "vault"} <= basic
     assert len(basic) <= 10

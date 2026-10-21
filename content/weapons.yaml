@@ -11,6 +11,12 @@
 #       blessing {flat, dice}（祝禱：普攻命中時最近的隊友回復量）、
 #       summon_dice_bonus（統御：自己的召喚物普攻多幾顆傷害骰）、
 #       lob（拋射：視線可越過幾層高的障礙）。
+# 遠程武器小特性（Phase 3-24a2；同樣只是參數）：
+#       pierce_line（穿透一直線：命中後最多再擊中幾名後方敵人）、ignore_height（不受高度影響）、
+#       magazine／reload_ap（彈匣容量與裝填 AP；0 ＝ 不用裝填；有彈匣即直射，不可有 lob）、
+#       gunshot（槍聲：開火解除自己的隱蔽）、steady {hit, crit_range}（站定：本回合未移動時加成）、
+#       ignore_cover（無視半掩護）、armor_pierce_permille（穿透目標防禦的 ‰）、
+#       range_mod [{min_distance, max_distance, hit, damage_permille}]（依攻擊距離的命中與傷害修正）。
 weapons:
   - id: one_handed_sword
     name_zh: 單手劍
@@ -152,3 +158,39 @@ weapons:
     crit_range: 20
     two_handed: true
     summon_dice_bonus: 1
+  # --- Phase 3-24a2：武器擴充第一批的遠程（數值為初值，未經模擬）---
+  # 弩：穿透一直線（pierce_line 最多再擊中幾名後方敵人）、不受高度影響、不用裝填（沒有彈匣）。
+  - id: crossbow
+    name_zh: 弩
+    weapon_class: ranged
+    range: 6
+    dice: 1d8
+    flat: 0
+    attack_bonus: 0
+    scaling_attr: dex
+    element: physical
+    crit_range: 20
+    two_handed: true
+    pierce_line: 5
+    ignore_height: true
+  # 長槍（火器）：彈匣 1 發、裝填 1 AP；槍聲；直射（沒有 lob）；站定狙擊；直射穿甲；貼臉懲罰與遠距加成。
+  - id: longgun
+    name_zh: 長槍
+    weapon_class: ranged
+    range: 8
+    dice: 1d12
+    flat: 0
+    attack_bonus: 0
+    scaling_attr: dex
+    element: physical
+    crit_range: 20
+    two_handed: true
+    magazine: 1
+    reload_ap: 1
+    gunshot: true
+    steady: {hit: 2, crit_range: 2}
+    ignore_cover: true
+    armor_pierce_permille: 250
+    range_mod:
+      - {min_distance: 1, max_distance: 1, hit: -2, damage_permille: 500}
+      - {min_distance: 4, damage_permille: 1250}

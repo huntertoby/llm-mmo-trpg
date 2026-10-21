@@ -37,6 +37,7 @@ from trpg.engine.actions import (
     Attack,
     Defend,
     Interact,
+    Reload,
     Run,
     Shove,
     Swap,
@@ -99,8 +100,10 @@ from trpg.engine.rules.combat import (
     situational_modifier,
     weapon_profile,
 )
+from trpg.engine.rules.geometry import manhattan
 from trpg.engine.rules.movement import available_move_budget, is_deadly, path_map
 from trpg.engine.rules.statuses import effective_attribute, shield_amount, weapon_attribute
+from trpg.engine.rules.weapons import weapon_hit_bonus
 from trpg.engine.skills.conditions import Subject, condition_met
 from trpg.engine.skills.scaling import skill_scaling_value
 from trpg.engine.skills.targeting import (
@@ -638,6 +641,7 @@ def _attack_numbers(
             hit_modifier(actor, target, state.ruleset)
             + core.proficiency
             + situational_modifier(state, actor, target)
+            + weapon_hit_bonus(actor, manhattan(actor.xy, target.xy))
             - (0 if cover is None else cover.penalty)
             + modifiers.hit_bonus(state, actor, modifiers.ATTACK, Subject(target, target.xy))
         )
@@ -1335,19 +1339,18 @@ def preview(state: BattleState, action: Action) -> Preview:
 
 
 def _basic_ap_cost(state: BattleState, action: Action, default: int | None) -> int | None:
-    """基本動作（跑步、守護、換位、瞄準、攀跳）的 AP 花費；其他動作沿用 ``default``。"""
+    """基本動作（跑步、守護、換位、瞄準、攀跳）與裝填的 AP 花費；其他動作沿用 ``default``。"""
     core = state.ruleset.core
-    if isinstance(action, Run):
-        return core.run_ap_cost
-    if isinstance(action, Defend):
-        return core.defend_ap_cost
-    if isinstance(action, Swap):
-        return core.swap_ap_cost
-    if isinstance(action, Aim):
-        return core.aim_ap_cost
-    if isinstance(action, Vault):
-        return core.vault_ap_cost
-    return default
+    costs: dict[type, int] = {
+        Run: core.run_ap_cost,
+        Defend: core.defend_ap_cost,
+        Swap: core.swap_ap_cost,
+        Aim: core.aim_ap_cost,
+        Vault: core.vault_ap_cost,
+    }
+    if isinstance(action, Reload):
+        return state.units[action.unit_id].weapon.reload_ap
+    return costs.get(type(action), default)
 
 
 def _build(

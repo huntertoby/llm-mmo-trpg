@@ -25,6 +25,7 @@ from trpg.engine.rules.statuses import (
     prevents_concealment,
     weapon_attribute,
 )
+from trpg.engine.rules.weapons import crit_range_cut, weapon_hit_bonus
 from trpg.engine.state import BattleState, UnitState
 from trpg.shared.rng import Rng
 from trpg.shared.types import Attribute, Element, ObjectId, Surface
@@ -83,7 +84,9 @@ class AttackProfile:
     - ``melee``：近戰（射程 1）——倒地目標有優勢／遠程有劣勢、濃霧的遠程劣勢。
     - ``height_limited``：近戰與長柄（射程 ≤ ``melee_height_limit_max_range``）——無視半掩護。
     - ``crit_range``：暴擊的最低自然骰值。
-    - ``pierce``：穿透（Phase 3C-5b）——無視半掩護。
+    - ``pierce``：穿透（Phase 3C-5b）——無視半掩護（普攻：武器的 ``ignore_cover``）。
+    - ``defense_cut_permille``：目標防禦值被穿透的千分比（普攻：武器的 ``armor_pierce_permille``）。
+    - ``weapon_attack``：普攻（武器自己的攻擊）——站定與距離修正（Phase 3-24a2）只套用在普攻。
     """
 
     attack_value: int
@@ -91,6 +94,8 @@ class AttackProfile:
     height_limited: bool
     crit_range: int
     pierce: bool = False
+    defense_cut_permille: int = 0
+    weapon_attack: bool = False
 
 
 def weapon_profile(state: BattleState, attacker: UnitState) -> AttackProfile:
@@ -100,16 +105,20 @@ def weapon_profile(state: BattleState, attacker: UnitState) -> AttackProfile:
         attack_value=attack_value(attacker, state.ruleset),
         melee=weapon.is_melee,
         height_limited=weapon.range <= state.ruleset.core.melee_height_limit_max_range,
-        crit_range=weapon.crit_range,
+        crit_range=max(2, weapon.crit_range - crit_range_cut(attacker)),  # 站定狙擊（3-24a2）
+        pierce=weapon.ignore_cover,
+        defense_cut_permille=weapon.armor_pierce_permille,
+        weapon_attack=True,
     )
 
 
-def defense_value_permille(unit: UnitState, rules: Ruleset) -> int:
-    """防禦值（×1000）＝ (敏捷 ＋ 護甲) × (1 ＋ 防禦姿態加成 − 破甲)。基礎防禦值最低視為 1，
-    防禦值至少 1（Phase 3-24a1：破甲 ``defense_break`` 狀態與防禦姿態的加成直接相加）。"""
+def defense_value_permille(unit: UnitState, rules: Ruleset, cut: int = 0) -> int:
+    """防禦值（×1000）＝ (敏捷 ＋ 護甲) × (1 ＋ 防禦姿態加成 − 破甲 − 穿透)。基礎防禦值最低視為 1，
+    防禦值至少 1（Phase 3-24a1：破甲 ``defense_break`` 狀態與防禦姿態的加成直接相加；Phase 3-24a2：
+    ``cut`` 為攻擊者武器的 ``armor_pierce_permille``，同樣直接相減）。"""
     base = max(1, effective_attribute(rules, unit, Attribute.DEX) + unit.armor_bonus)
     bonus = rules.core.defend_defense_bonus_permille if unit.has_status(DEFENDING) else 0
-    bonus -= defense_break_permille(rules, unit)
+    bonus -= defense_break_permille(rules, unit) + cut
     return max(1, base * (PERMILLE + bonus))
 
 
@@ -121,11 +130,15 @@ def hit_modifier(
 ) -> int:
     """命中修正 ＝ clamp(round(slope × log2(攻擊值 ÷ 防禦值)), ±cap)，以整數門檻表計算。"""
     value = attack_value(attacker, rules) if profile is None else profile.attack_value
-    return rules.hit_table.modifier(value * PERMILLE, defense_value_permille(target, rules))
+    cut = attacker.weapon.armor_pierce_permille if profile is None else profile.defense_cut_permille
+    return rules.hit_table.modifier(value * PERMILLE, defense_value_permille(target, rules, cut))
 
 
 def situational_modifier(state: BattleState, attacker: UnitState, target: UnitState) -> int:
-    """情境修正：高打低 ``+height_hit_bonus``、低打高 ``−height_hit_bonus``。"""
+    """情境修正：高打低 ``+height_hit_bonus``、低打高 ``−height_hit_bonus``（武器的
+    ``ignore_height``——弩——沒有這項修正，Phase 3-24a2）。"""
+    if attacker.weapon.ignore_height:
+        return 0
     bonus = state.ruleset.core.height_hit_bonus
     ha = state.tile(*attacker.xy).height
     ht = state.tile(*target.xy).height
@@ -200,7 +213,7 @@ def half_cover(
     左順序中的第一個（確定性）。懲罰為 ``half_cover_hit_penalty``（為 0 時視為沒有掩護）。
     """
     limited = is_height_limited(state, attacker) if profile is None else profile.height_limited
-    if limited or (profile is not None and profile.pierce):
+    if limited or (profile.pierce if profile is not None else attacker.weapon.ignore_cover):
         return None
     penalty = state.ruleset.core.half_cover_hit_penalty
     if penalty <= 0:
@@ -403,6 +416,8 @@ def roll_attack(  # noqa: PLR0917
     cover_mod = 0 if cover is None else -cover.penalty
     proficiency = rules.core.proficiency
     positional = positional_bonus(state, attacker, target, profile)
+    if profile.weapon_attack:  # 站定與距離修正（Phase 3-24a2）
+        bonus += weapon_hit_bonus(attacker, manhattan(attacker.xy, target.xy))
     bonus += positional.hit
     if forced is not None:
         natural = _forced_natural(
@@ -428,7 +443,7 @@ def roll_attack(  # noqa: PLR0917
         advantage=adv,
         natural=natural,
         attack_value=profile.attack_value,
-        defense_value_permille=defense_value_permille(target, rules),
+        defense_value_permille=defense_value_permille(target, rules, profile.defense_cut_permille),
         hit_modifier=modifier,
         proficiency=proficiency,
         situational=situational,
@@ -488,7 +503,10 @@ def attack_reach(state: BattleState, attacker: UnitState) -> int:
 
 
 def reach_problem(state: BattleState, attacker: UnitState, target_xy: XY, what: str) -> str | None:
-    """射程、近戰高度差與視線的檢查（目標可以是單位或物件所在的格子）。"""
+    """射程、近戰高度差與視線的檢查（目標可以是單位或物件所在的格子）；有彈匣的武器空膛時
+    不能開火（Phase 3-24a2）。"""
+    if attacker.weapon.magazine > 0 and attacker.ammo <= 0:
+        return f"空膛：{attacker.weapon.name_zh}需要先裝填"
     distance = manhattan(attacker.xy, target_xy)
     reach = attack_reach(state, attacker)
     if distance > reach:

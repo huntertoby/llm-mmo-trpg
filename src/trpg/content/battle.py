@@ -149,6 +149,56 @@ class Blessing(ContentModel):
         return self
 
 
+_NEUTRAL_PERMILLE = 1000
+
+
+class RangeMod(ContentModel):
+    """武器特性「距離修正」（Phase 3-24a2，長槍的貼臉懲罰與遠距加成）：攻擊距離在
+    ``min_distance``～``max_distance``（含；省略 ＝ 不設上限）格時，普攻命中 ``hit``、傷害 ×
+    ``damage_permille``‰。多條重疊時全部生效（命中相加、傷害相乘）。"""
+
+    min_distance: int = Field(ge=1)
+    max_distance: int | None = Field(default=None, ge=1)
+    hit: int = Field(default=0, ge=-10, le=10)
+    damage_permille: int = Field(default=1000, ge=0, le=3000)
+
+    @model_validator(mode="after")
+    def _check(self) -> RangeMod:
+        if self.max_distance is not None and self.max_distance < self.min_distance:
+            raise ValueError("range_mod 的 max_distance 不可小於 min_distance")
+        if self.hit == 0 and self.damage_permille == _NEUTRAL_PERMILLE:
+            raise ValueError("range_mod 沒有任何修正（hit 與 damage_permille 至少改一個）")
+        return self
+
+    def covers(self, distance: int) -> bool:
+        return distance >= self.min_distance and (
+            self.max_distance is None or distance <= self.max_distance
+        )
+
+    def label_zh(self) -> str:
+        if self.min_distance == 1 and self.max_distance == 1:
+            return "貼臉（相鄰）"
+        if self.max_distance is None:
+            return f"{self.min_distance} 格以上"
+        if self.max_distance == self.min_distance:
+            return f"{self.min_distance} 格"
+        return f"{self.min_distance}～{self.max_distance} 格"
+
+
+class Steady(ContentModel):
+    """武器特性「站定」（Phase 3-24a2，長槍的站定狙擊）：本回合還沒主動移動時開火，普攻命中
+    ``+hit``、暴擊範圍擴大 ``crit_range``（可和瞄準、背刺疊加）。"""
+
+    hit: int = Field(default=0, ge=0, le=10)
+    crit_range: int = Field(default=0, ge=0, le=10)
+
+    @model_validator(mode="after")
+    def _check(self) -> Steady:
+        if self.hit == 0 and self.crit_range == 0:
+            raise ValueError("steady 沒有任何加成（hit 與 crit_range 至少填一個）")
+        return self
+
+
 class WeaponDef(ContentModel):
     """一把武器。
 
@@ -168,6 +218,19 @@ class WeaponDef(ContentModel):
     - ``blessing``：祝禱，見 :class:`Blessing`。
     - ``summon_dice_bonus``：統御——持有者召喚物的普攻多加這麼多顆傷害骰。
     - ``lob``：拋射——視線可以越過這麼多層高的障礙（物件、地形高差；牆壁與黑暗不行）。
+
+    遠程武器小特性（Phase 3-24a2；同樣只是參數，引擎只讀參數）：
+
+    - ``pierce_line``：穿透一直線——普攻命中（結算）目標之後，子彈／弩箭沿同一直線繼續飛，最多再
+      擊中這麼多名射程內、視線未被擋住的敵人（各自擲命中與傷害）；
+    - ``ignore_height``：不受高度影響——這把武器的攻擊沒有高打低、低打高的命中修正；
+    - ``magazine``／``reload_ap``：彈匣容量與裝填的 AP 花費（0 ＝ 不用裝填）；開火一次用掉 1 發，
+      彈匣空了不能普攻，要先裝填（彈匣空時才能裝填）；有彈匣的武器是直射——不可同時有 ``lob``；
+    - ``gunshot``：槍聲——普攻開火會解除自己的隱蔽狀態；
+    - ``steady``：站定，見 :class:`Steady`；
+    - ``ignore_cover``：普攻無視半掩護；
+    - ``armor_pierce_permille``：普攻命中判定時，目標防禦值穿透這麼多‰（250 ＝ 防禦 −25%）；
+    - ``range_mod``：距離修正，見 :class:`RangeMod`。
     """
 
     id: str = Field(pattern=ID_PATTERN)
@@ -188,9 +251,20 @@ class WeaponDef(ContentModel):
     blessing: Blessing | None = None
     summon_dice_bonus: int = Field(default=0, ge=0, le=3)
     lob: int = Field(default=0, ge=0, le=2)
+    pierce_line: int = Field(default=0, ge=0, le=8)
+    ignore_height: bool = False
+    magazine: int = Field(default=0, ge=0, le=6)
+    reload_ap: int = Field(default=1, ge=1, le=3)
+    gunshot: bool = False
+    steady: Steady | None = None
+    ignore_cover: bool = False
+    armor_pierce_permille: int = Field(default=0, ge=0, le=1000)
+    range_mod: tuple[RangeMod, ...] = ()
 
     @model_validator(mode="after")
     def _check(self) -> WeaponDef:
+        if self.magazine > 0 and self.lob > 0:
+            raise ValueError(f"武器 {self.id}：有彈匣的武器是直射，不可同時有 lob（拋射）")
         if self.secondary_scaling_attr == self.scaling_attr:
             raise ValueError(f"武器 {self.id}：secondary_scaling_attr 不可和 scaling_attr 相同")
         if self.reach > self.range:
@@ -220,11 +294,45 @@ class WeaponDef(ContentModel):
             lines.append(f"祝禱：普攻命中時，最近的隊友回復 {amount} HP")
         if on_hit_only:
             return tuple(lines)
+        lines.extend(_weapon_ranged_lines(self))
         if self.summon_dice_bonus:
             lines.append(f"統御：你的召喚物攻擊 +{self.summon_dice_bonus} 顆傷害骰")
         if self.lob:
             lines.append(f"拋射：可越過 {self.lob} 格高的障礙射擊")
         return tuple(lines)
+
+
+def _signed(value: int) -> str:
+    return f"+{value}" if value > 0 else f"−{-value}"
+
+
+def _weapon_ranged_lines(w: WeaponDef) -> list[str]:
+    lines: list[str] = []
+    if w.pierce_line:
+        lines.append("穿透：命中後箭矢貫穿同一直線上的後方敵人")
+    if w.ignore_height:
+        lines.append("不受高度影響：命中沒有高低差修正")
+    if w.magazine:
+        lines.append(f"彈匣 {w.magazine} 發：開火後空膛，裝填花 {w.reload_ap} AP（空膛時才能裝填）")
+        lines.append("直射：不能拋射，視線被擋就不能打")
+    if w.gunshot:
+        lines.append("槍聲：開火會解除自己的隱蔽")
+    if w.steady is not None:
+        parts = [f"命中 {_signed(w.steady.hit)}"] if w.steady.hit else []
+        parts += [f"暴擊範圍 {_signed(w.steady.crit_range)}"] if w.steady.crit_range else []
+        lines.append(f"站定狙擊：本回合未移動時開火，{'、'.join(parts)}")
+    if w.ignore_cover or w.armor_pierce_permille:
+        parts = ["無視半掩護"] if w.ignore_cover else []
+        if w.armor_pierce_permille:
+            parts.append(f"穿透 {w.armor_pierce_permille / 10:g}% 防禦")
+        lines.append(f"直射穿甲：{'、'.join(parts)}")
+    for mod in w.range_mod:
+        parts = [f"命中 {_signed(mod.hit)}"] if mod.hit else []
+        if mod.damage_permille != _NEUTRAL_PERMILLE:
+            pct = (mod.damage_permille - _NEUTRAL_PERMILLE) / 10
+            parts.append(f"傷害 {'+' if pct > 0 else '−'}{abs(pct):g}%")
+        lines.append(f"{mod.label_zh()}：{'、'.join(parts)}")
+    return lines
 
 
 class WeaponTable(ContentModel):

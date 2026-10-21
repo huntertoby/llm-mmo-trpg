@@ -70,6 +70,8 @@ export function actionLabel(
       return `換位：${names.label(action.target_id)}`;
     case "aim":
       return "瞄準";
+    case "reload":
+      return "裝填";
     case "vault":
       return `攀跳到 ${posText(action.dest)}`;
     case "run":

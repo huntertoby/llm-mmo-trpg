@@ -17,8 +17,11 @@ from trpg.shared.types import ObjectId, Pos, UnitId
 __all__ = [
     "ACTION_ADAPTER",
     "ACTION_LIST_ADAPTER",
+    "BASIC_ACTION_TYPES",
+    "MANAGEMENT_ACTION_TYPES",
     "STEP_ADAPTER",
     "STEP_LIST_ADAPTER",
+    "WEAPON_ACTION_TYPES",
     "Action",
     "Aim",
     "Attack",
@@ -30,6 +33,7 @@ __all__ = [
     "FollowupTarget",
     "Interact",
     "Move",
+    "Reload",
     "Run",
     "SetReactionMode",
     "Shove",
@@ -77,6 +81,13 @@ class Attack(_ActionBase):
         if (self.target_id is None) == (self.target_object_id is None):
             raise ValueError("Attack 必須恰好指定 target_id 或 target_object_id 其中之一")
         return self
+
+
+class Reload(_ActionBase):
+    """裝填（Phase 3-24a2，**武器動作**：只有帶彈匣的武器——長槍——才有，不算進基本動作的 10 個
+    上限，見 :data:`WEAPON_ACTION_TYPES`）：花武器的 ``reload_ap`` AP 裝滿彈匣；空膛時才合法。"""
+
+    type: Literal["reload"] = "reload"
 
 
 class Defend(_ActionBase):
@@ -251,11 +262,32 @@ type Action = Annotated[
     | Shove
     | Trip
     | Interact
+    | Reload
     | EndStance
     | SetReactionMode
     | EndTurn,
     Field(discriminator="type"),
 ]
+
+BASIC_ACTION_TYPES: tuple[str, ...] = (
+    "move",
+    "attack",
+    "run",
+    "defend",
+    "shove",
+    "trip",
+    "interact",
+    "swap",
+    "aim",
+    "vault",
+)
+"""基本動作的種類（``docs/design/05-戰鬥.md`` 5.2.2：上限 10 個，不含結束回合與管理操作）。"""
+
+WEAPON_ACTION_TYPES: tuple[str, ...] = ("reload",)
+"""武器動作：只有特定武器才有（裝填）；不算進基本動作的上限。"""
+
+MANAGEMENT_ACTION_TYPES: tuple[str, ...] = ("end_turn", "end_stance", "set_reaction_mode")
+"""管理操作：不算動作的上限（``use_skill`` 是技能，也不在基本動作之內）。"""
 
 ACTION_ADAPTER: TypeAdapter[Action] = TypeAdapter(Action)
 ACTION_LIST_ADAPTER: TypeAdapter[list[Action]] = TypeAdapter(list[Action])
@@ -292,6 +324,7 @@ type Step = Annotated[
     | Shove
     | Trip
     | Interact
+    | Reload
     | EndStance
     | SetReactionMode
     | EndTurn
