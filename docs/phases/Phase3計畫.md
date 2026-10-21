@@ -1269,6 +1269,11 @@ PM 驗收後請使用者試玩一整輪（`docs/專案計畫.md` 第 14 節 🎮
 - PM 合併：`test_basic_actions_cli.py` 換種子衝突（取 98、格式 `/38`）、產生檔 `skill_icons.json` 重產；`check.py` 全過（實作者的全量 pytest 因同時三個 agent 搶 CPU 卡住，PM 合併後重跑通過）、`pnpm build` 成功；`open_plain` 種子 21 `--log-json` ＋ `replay` 一致。抽查 `content/weapons.yaml`：`armor_break`、`knockback`、`reach`、`lob`、`blessing`、`summon_dice_bonus`、`secondary_scaling_attr` 都是資料參數。新狀態 `armor_broken`；換種子 7 處（報告列出）。報告 `Phase3-24a1報告.md`。
 - 待 PM 決定：#1 單位不擋視線（拋射越過單位無差別）→ 接受現狀；#2 拋射只越過物件與地形高差、視線不對稱、也套用武器技 → 接受；#3 祝禱給最近隊友 flat 3 → 接受；#4 權杖與圖騰杖元素暫為物理 → 接受，請玩法 PM 判斷權杖是否改聖光；#5 傷害骰、#8 AI 權重 → 平衡階段；#6 矛兵 2 格內不觸發藉機攻擊、#7 破甲多來源取最大 → 接受。
 
+### 25.4 3-24a2 驗收（2026-10-22）
+
+- PM 合併（無衝突，權杖改聖光一併保留）、`check.py` 全過、`pnpm build` 成功；`narrow_halls` 種子 9 `--log-json` ＋ `replay` 一致。新參數 `pierce_line`、`ignore_height`、`magazine`、`reload_ap`、`gunshot`、`steady`、`ignore_cover`、`armor_pierce_permille`、`range_mod`；新動作 `reload`、事件 `weapon_reloaded`、單位 `ammo`；**`LOG_FORMAT` → `/39`**。報告 `Phase3-24a2報告.md`。
+- 待 PM 決定：#1 裝填算武器動作、不計入基本動作上限 10 → 接受；#2 穿透最多 5 名各自擲命中、#3 `ignore_height` 也作用於武器技、#5 槍聲施加 `revealed`、#6 遠程不藉機攻擊、#9 預設畫輕弩與燧發長槍、#10 單位不擋視線 → 接受；#4 火器武器技不耗彈、不套用站定等 → 接受，請玩法 PM 之後判斷；#7 傷害骰、#8 AI 權重 → 平衡階段。
+
 ## 26. Phase 3-24b｜關鍵字協同（#36；拆兩段，依序）
 
 > 設計：`docs/design/06-技能.md` 6.27（整節，#36 改寫）、`docs/玩法決定紀錄.md` #28、#36。模型：3-24b1 sonnet、3-24b2 opus（開局與存檔、共用產生器屬難以事後修改的設計）。遊戲 **不定義流派**：任何玩家可見的介面都不出現流派名稱。
