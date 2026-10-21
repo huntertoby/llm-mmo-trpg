@@ -1268,6 +1268,11 @@ export interface components {
              * @default []
              */
             tags: string[];
+            /**
+             * Rules Zh
+             * @default []
+             */
+            rules_zh: string[];
         };
         /**
          * GrantPreviewOut
