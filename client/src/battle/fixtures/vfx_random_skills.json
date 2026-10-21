@@ -1,0 +1,2655 @@
+[
+ {
+  "seed": 1,
+  "card": {
+   "id": "skill_rand_1",
+   "name_zh": "大地・光環 #1",
+   "skeleton": "aura",
+   "tier": 2,
+   "rank": 1,
+   "rarity": "普通",
+   "kind": "主動",
+   "category": "法術技",
+   "weapon_req": "法器",
+   "scaling": "感知",
+   "ap_cost": 1,
+   "cost": [
+    "AP 1",
+    "法力 6",
+    "冷卻 2 回合"
+   ],
+   "source_cost": null,
+   "shape": "單體（射程 3）",
+   "condition": null,
+   "effects": [
+    "狀態「護衛」 4 回合（友方）"
+   ],
+   "modifiers": [],
+   "activation": null,
+   "activation_id": null,
+   "mastery": null,
+   "tags": [
+    "earth",
+    "aura"
+   ],
+   "concept": "隨機組合器產生的光環技能（種子 1，暫定）",
+   "cast_flavor": "（暫定）力量依你的意志成形。",
+   "rarity_id": "common",
+   "kind_id": "active",
+   "category_id": "spell",
+   "weapon_req_id": "focus",
+   "scaling_attrs": [
+    "wis"
+   ],
+   "mastery_id": null,
+   "timing": null,
+   "effect_ids": [
+    "apply_status"
+   ],
+   "followup": null,
+   "followup_when": null
+  },
+  "events": [
+   {
+    "seq": 15,
+    "round": 1,
+    "type": "skill_used",
+    "unit_id": "unit_0001",
+    "skill_id": "skill_rand_1",
+    "name_zh": "大地・光環 #1",
+    "ap": 1,
+    "mana": 6,
+    "mana_after": 34,
+    "hp_spent": 0,
+    "cooldown": 2,
+    "tiles": [
+     {
+      "x": 0,
+      "y": 3
+     }
+    ],
+    "source": 0,
+    "text": "  火焰流英雄 施放「大地・光環 #1」（AP 1，法力 6，冷卻 2 回合）→ 影響 1 格"
+   },
+   {
+    "seq": 16,
+    "round": 1,
+    "type": "skill_cooldown_changed",
+    "unit_id": "unit_0001",
+    "skill_id": "skill_rand_1",
+    "remaining": 2
+   },
+   {
+    "seq": 17,
+    "round": 1,
+    "type": "status_applied",
+    "target_id": "unit_0001",
+    "status_id": "guarded",
+    "duration": 4,
+    "refreshed": false,
+    "source_id": "unit_0001",
+    "text": "  火焰流英雄 獲得狀態「護衛」（4 回合）"
+   }
+  ],
+  "units": [
+   {
+    "id": "unit_0001",
+    "pos": {
+     "x": 0,
+     "y": 3
+    }
+   },
+   {
+    "id": "unit_0002",
+    "pos": {
+     "x": 6,
+     "y": 4
+    }
+   },
+   {
+    "id": "unit_0003",
+    "pos": {
+     "x": 9,
+     "y": 1
+    }
+   },
+   {
+    "id": "unit_0004",
+    "pos": {
+     "x": 8,
+     "y": 6
+    }
+   }
+  ]
+ },
+ {
+  "seed": 2,
+  "card": {
+   "id": "skill_rand_2",
+   "name_zh": "火焰・範圍 #2",
+   "skeleton": "area",
+   "tier": 4,
+   "rank": 1,
+   "rarity": "史詩",
+   "kind": "主動",
+   "category": "武器技",
+   "weapon_req": "遠程武器",
+   "scaling": "敏捷 50%＋力量 50%",
+   "ap_cost": 1,
+   "cost": [
+    "AP 1",
+    "法力 3",
+    "冷卻 3 回合"
+   ],
+   "source_cost": null,
+   "shape": "方陣（射程 2）",
+   "condition": null,
+   "effects": [
+    "武器傷害 ×1（火焰）（敵方），若目標帶有狀態「被揭露」",
+    "摧毀可破壞的物件（影響的格子）"
+   ],
+   "modifiers": [],
+   "activation": null,
+   "activation_id": null,
+   "mastery": null,
+   "tags": [
+    "fire",
+    "area",
+    "damage",
+    "terrain"
+   ],
+   "concept": "隨機組合器產生的範圍技能（種子 2，暫定）",
+   "cast_flavor": "（暫定）力量依你的意志成形。",
+   "rarity_id": "epic",
+   "kind_id": "active",
+   "category_id": "weapon",
+   "weapon_req_id": "ranged",
+   "scaling_attrs": [
+    "dex",
+    "str"
+   ],
+   "mastery_id": null,
+   "timing": null,
+   "effect_ids": [
+    "damage",
+    "destroy_object"
+   ],
+   "followup": null,
+   "followup_when": null
+  },
+  "events": [
+   {
+    "seq": 8,
+    "round": 1,
+    "type": "skill_used",
+    "unit_id": "unit_0001",
+    "skill_id": "skill_rand_2",
+    "name_zh": "火焰・範圍 #2",
+    "ap": 1,
+    "mana": 3,
+    "mana_after": 21,
+    "hp_spent": 0,
+    "cooldown": 3,
+    "tiles": [
+     {
+      "x": 0,
+      "y": 0
+     },
+     {
+      "x": 1,
+      "y": 0
+     },
+     {
+      "x": 0,
+      "y": 1
+     },
+     {
+      "x": 1,
+      "y": 1
+     },
+     {
+      "x": 0,
+      "y": 2
+     },
+     {
+      "x": 1,
+      "y": 2
+     }
+    ],
+    "source": 0,
+    "text": "  遠程英雄 施放「火焰・範圍 #2」（AP 1，法力 3，冷卻 3 回合）→ 影響 6 格"
+   },
+   {
+    "seq": 9,
+    "round": 1,
+    "type": "skill_cooldown_changed",
+    "unit_id": "unit_0001",
+    "skill_id": "skill_rand_2",
+    "remaining": 3
+   }
+  ],
+  "units": [
+   {
+    "id": "unit_0001",
+    "pos": {
+     "x": 0,
+     "y": 3
+    }
+   },
+   {
+    "id": "unit_0002",
+    "pos": {
+     "x": 6,
+     "y": 4
+    }
+   },
+   {
+    "id": "unit_0003",
+    "pos": {
+     "x": 9,
+     "y": 1
+    }
+   },
+   {
+    "id": "unit_0004",
+    "pos": {
+     "x": 8,
+     "y": 6
+    }
+   }
+  ]
+ },
+ {
+  "seed": 3,
+  "card": {
+   "id": "skill_rand_3",
+   "name_zh": "物理・範圍 #3",
+   "skeleton": "area",
+   "tier": 1,
+   "rank": 1,
+   "rarity": "普通",
+   "kind": "主動",
+   "category": "武器技",
+   "weapon_req": "遠程武器",
+   "scaling": "敏捷",
+   "ap_cost": 2,
+   "cost": [
+    "AP 2",
+    "冷卻 2 回合"
+   ],
+   "source_cost": null,
+   "shape": "環形（半徑 2）",
+   "condition": null,
+   "effects": [
+    "武器傷害 ×0.5（敵方）",
+    "狀態「緩速」 1 回合（敵方）"
+   ],
+   "modifiers": [],
+   "activation": null,
+   "activation_id": null,
+   "mastery": null,
+   "tags": [
+    "physical",
+    "area",
+    "damage",
+    "control"
+   ],
+   "concept": "隨機組合器產生的範圍技能（種子 3，暫定）",
+   "cast_flavor": "（暫定）力量依你的意志成形。",
+   "rarity_id": "common",
+   "kind_id": "active",
+   "category_id": "weapon",
+   "weapon_req_id": "ranged",
+   "scaling_attrs": [
+    "dex"
+   ],
+   "mastery_id": null,
+   "timing": null,
+   "effect_ids": [
+    "damage",
+    "apply_status"
+   ],
+   "followup": null,
+   "followup_when": null
+  },
+  "events": [
+   {
+    "seq": 12,
+    "round": 1,
+    "type": "skill_used",
+    "unit_id": "unit_0001",
+    "skill_id": "skill_rand_3",
+    "name_zh": "物理・範圍 #3",
+    "ap": 2,
+    "mana": 0,
+    "mana_after": 24,
+    "hp_spent": 0,
+    "cooldown": 2,
+    "tiles": [
+     {
+      "x": 0,
+      "y": 1
+     },
+     {
+      "x": 1,
+      "y": 1
+     },
+     {
+      "x": 2,
+      "y": 1
+     },
+     {
+      "x": 2,
+      "y": 2
+     },
+     {
+      "x": 2,
+      "y": 3
+     },
+     {
+      "x": 2,
+      "y": 4
+     },
+     {
+      "x": 0,
+      "y": 5
+     },
+     {
+      "x": 1,
+      "y": 5
+     },
+     {
+      "x": 2,
+      "y": 5
+     }
+    ],
+    "source": 0,
+    "text": "  遠程英雄 施放「物理・範圍 #3」（AP 2，冷卻 2 回合）→ 影響 9 格"
+   },
+   {
+    "seq": 13,
+    "round": 1,
+    "type": "skill_cooldown_changed",
+    "unit_id": "unit_0001",
+    "skill_id": "skill_rand_3",
+    "remaining": 2
+   }
+  ],
+  "units": [
+   {
+    "id": "unit_0001",
+    "pos": {
+     "x": 0,
+     "y": 3
+    }
+   },
+   {
+    "id": "unit_0002",
+    "pos": {
+     "x": 6,
+     "y": 4
+    }
+   },
+   {
+    "id": "unit_0003",
+    "pos": {
+     "x": 9,
+     "y": 1
+    }
+   },
+   {
+    "id": "unit_0004",
+    "pos": {
+     "x": 8,
+     "y": 6
+    }
+   }
+  ]
+ },
+ {
+  "seed": 4,
+  "card": {
+   "id": "skill_rand_4",
+   "name_zh": "傳說修正 #4",
+   "skeleton": "modifier",
+   "tier": 2,
+   "rank": 1,
+   "rarity": "傳說",
+   "kind": "修正",
+   "category": "法術技",
+   "weapon_req": "任何武器",
+   "scaling": "智力",
+   "ap_cost": 1,
+   "cost": [
+    "AP 1",
+    "源力 1"
+   ],
+   "source_cost": 1,
+   "shape": "自身",
+   "condition": null,
+   "effects": [],
+   "modifiers": [
+    "你的所有攻擊（普攻與攻擊技能）：直線形狀的技能轉為錐形（效果原語不支援新形狀的技能不轉）"
+   ],
+   "activation": "整場：花 AP 1 ＋ 源力 1 啟動，本場剩餘時間有效",
+   "activation_id": "battle",
+   "mastery": null,
+   "tags": [
+    "poison",
+    "passive",
+    "modifier",
+    "legendary"
+   ],
+   "concept": "隨機組合器產生的傳說修正技能（種子 4，暫定）",
+   "cast_flavor": "（暫定）力量依你的意志成形。",
+   "rarity_id": "legendary",
+   "kind_id": "modifier",
+   "category_id": "spell",
+   "weapon_req_id": "any",
+   "scaling_attrs": [
+    "int"
+   ],
+   "mastery_id": null,
+   "timing": null,
+   "effect_ids": [],
+   "followup": null,
+   "followup_when": null
+  },
+  "events": [
+   {
+    "seq": 12,
+    "round": 1,
+    "type": "skill_used",
+    "unit_id": "unit_0001",
+    "skill_id": "skill_rand_4",
+    "name_zh": "傳說修正 #4",
+    "ap": 1,
+    "mana": 0,
+    "mana_after": 40,
+    "hp_spent": 0,
+    "cooldown": null,
+    "tiles": [
+     {
+      "x": 0,
+      "y": 3
+     }
+    ],
+    "source": 1,
+    "text": "  雷電流英雄 施放「傳說修正 #4」（AP 1，源力 1）→ 影響 1 格"
+   },
+   {
+    "seq": 13,
+    "round": 1,
+    "type": "source_changed",
+    "unit_id": "unit_0001",
+    "before": 1,
+    "after": 0,
+    "reason": "skill",
+    "skill_id": "skill_rand_4",
+    "pos": null,
+    "other_id": null,
+    "text": "    ✦ 雷電流英雄 花費源力：源力 1 → 0"
+   },
+   {
+    "seq": 14,
+    "round": 1,
+    "type": "skill_activated",
+    "unit_id": "unit_0001",
+    "skill_id": "skill_rand_4",
+    "activation": "battle",
+    "expires_round": null,
+    "rule": null,
+    "text": "  ✦ 雷電流英雄 啟動了傳說「傳說修正 #4」（本場剩餘時間有效）"
+   }
+  ],
+  "units": [
+   {
+    "id": "unit_0001",
+    "pos": {
+     "x": 0,
+     "y": 3
+    }
+   },
+   {
+    "id": "unit_0002",
+    "pos": {
+     "x": 6,
+     "y": 4
+    }
+   },
+   {
+    "id": "unit_0003",
+    "pos": {
+     "x": 9,
+     "y": 1
+    }
+   },
+   {
+    "id": "unit_0004",
+    "pos": {
+     "x": 8,
+     "y": 6
+    }
+   }
+  ]
+ },
+ {
+  "seed": 5,
+  "card": {
+   "id": "skill_rand_5",
+   "name_zh": "火焰・光環 #5",
+   "skeleton": "aura",
+   "tier": 5,
+   "rank": 1,
+   "rarity": "普通",
+   "kind": "主動",
+   "category": "法術技",
+   "weapon_req": "法器",
+   "scaling": "智力",
+   "ap_cost": 2,
+   "cost": [
+    "AP 2",
+    "法力 14",
+    "冷卻 3 回合"
+   ],
+   "source_cost": null,
+   "shape": "自身",
+   "condition": null,
+   "effects": [
+    "治療 7d8＋智力加成（自己）",
+    "淨化（自己）"
+   ],
+   "modifiers": [],
+   "activation": null,
+   "activation_id": null,
+   "mastery": null,
+   "tags": [
+    "fire",
+    "aura",
+    "heal"
+   ],
+   "concept": "隨機組合器產生的光環技能（種子 5，暫定）",
+   "cast_flavor": "（暫定）力量依你的意志成形。",
+   "rarity_id": "common",
+   "kind_id": "active",
+   "category_id": "spell",
+   "weapon_req_id": "focus",
+   "scaling_attrs": [
+    "int"
+   ],
+   "mastery_id": null,
+   "timing": null,
+   "effect_ids": [
+    "heal",
+    "cleanse"
+   ],
+   "followup": null,
+   "followup_when": null
+  },
+  "events": [
+   {
+    "seq": 9,
+    "round": 1,
+    "type": "skill_used",
+    "unit_id": "unit_0001",
+    "skill_id": "skill_rand_5",
+    "name_zh": "火焰・光環 #5",
+    "ap": 2,
+    "mana": 14,
+    "mana_after": 26,
+    "hp_spent": 0,
+    "cooldown": 3,
+    "tiles": [
+     {
+      "x": 0,
+      "y": 3
+     }
+    ],
+    "source": 0,
+    "text": "  火焰流英雄 施放「火焰・光環 #5」（AP 2，法力 14，冷卻 3 回合）→ 影響 1 格"
+   },
+   {
+    "seq": 10,
+    "round": 1,
+    "type": "skill_cooldown_changed",
+    "unit_id": "unit_0001",
+    "skill_id": "skill_rand_5",
+    "remaining": 3
+   },
+   {
+    "seq": 11,
+    "round": 1,
+    "type": "healed",
+    "target_id": "unit_0001",
+    "source_id": "unit_0001",
+    "rolls": [
+     2,
+     7,
+     8,
+     8,
+     2,
+     4,
+     8
+    ],
+    "amount": 0,
+    "hp_before": 40,
+    "hp_after": 40,
+    "received_permille": 1000,
+    "cause": "heal",
+    "text": "    火焰流英雄 回復 0 HP，HP 40 → 40"
+   },
+   {
+    "seq": 12,
+    "round": 1,
+    "type": "skill_triggered",
+    "unit_id": "unit_0001",
+    "skill_id": "skill_ember_ward",
+    "name_zh": "烈焰護身",
+    "trigger": "on_cast_tag",
+    "other_id": null,
+    "trigger_depth": 1,
+    "mana": 2,
+    "mana_after": 24,
+    "hp_spent": 0,
+    "cooldown": null,
+    "text": "  ★ 火焰流英雄 的被動「烈焰護身」觸發（施放帶標籤的技能後，深度 1）（法力 2）"
+   },
+   {
+    "seq": 13,
+    "round": 1,
+    "type": "shield_gained",
+    "unit_id": "unit_0001",
+    "source_id": "unit_0001",
+    "amount": 12,
+    "total": 12,
+    "rolls": [
+     4
+    ],
+    "text": "    火焰流英雄 獲得 12 點護盾"
+   }
+  ],
+  "units": [
+   {
+    "id": "unit_0001",
+    "pos": {
+     "x": 0,
+     "y": 3
+    }
+   },
+   {
+    "id": "unit_0002",
+    "pos": {
+     "x": 6,
+     "y": 4
+    }
+   },
+   {
+    "id": "unit_0003",
+    "pos": {
+     "x": 9,
+     "y": 1
+    }
+   },
+   {
+    "id": "unit_0004",
+    "pos": {
+     "x": 8,
+     "y": 6
+    }
+   }
+  ]
+ },
+ {
+  "seed": 6,
+  "card": {
+   "id": "skill_rand_6",
+   "name_zh": "大地・光環 #6",
+   "skeleton": "aura",
+   "tier": 1,
+   "rank": 1,
+   "rarity": "普通",
+   "kind": "主動",
+   "category": "法術技",
+   "weapon_req": "法器",
+   "scaling": "意志",
+   "ap_cost": 1,
+   "cost": [
+    "AP 1",
+    "法力 4"
+   ],
+   "source_cost": null,
+   "shape": "單體（射程 6）",
+   "condition": null,
+   "effects": [
+    "治療 1d12＋意志加成（友方）"
+   ],
+   "modifiers": [],
+   "activation": null,
+   "activation_id": null,
+   "mastery": null,
+   "tags": [
+    "earth",
+    "aura",
+    "heal"
+   ],
+   "concept": "隨機組合器產生的光環技能（種子 6，暫定）",
+   "cast_flavor": "（暫定）力量依你的意志成形。",
+   "rarity_id": "common",
+   "kind_id": "active",
+   "category_id": "spell",
+   "weapon_req_id": "focus",
+   "scaling_attrs": [
+    "wil"
+   ],
+   "mastery_id": null,
+   "timing": null,
+   "effect_ids": [
+    "heal"
+   ],
+   "followup": null,
+   "followup_when": null
+  },
+  "events": [
+   {
+    "seq": 12,
+    "round": 1,
+    "type": "skill_used",
+    "unit_id": "unit_0001",
+    "skill_id": "skill_rand_6",
+    "name_zh": "大地・光環 #6",
+    "ap": 1,
+    "mana": 4,
+    "mana_after": 36,
+    "hp_spent": 0,
+    "cooldown": null,
+    "tiles": [
+     {
+      "x": 0,
+      "y": 3
+     }
+    ],
+    "source": 0,
+    "text": "  火焰流英雄 施放「大地・光環 #6」（AP 1，法力 4）→ 影響 1 格"
+   },
+   {
+    "seq": 13,
+    "round": 1,
+    "type": "healed",
+    "target_id": "unit_0001",
+    "source_id": "unit_0001",
+    "rolls": [
+     11
+    ],
+    "amount": 0,
+    "hp_before": 40,
+    "hp_after": 40,
+    "received_permille": 1000,
+    "cause": "heal",
+    "text": "    火焰流英雄 回復 0 HP，HP 40 → 40"
+   }
+  ],
+  "units": [
+   {
+    "id": "unit_0001",
+    "pos": {
+     "x": 0,
+     "y": 3
+    }
+   },
+   {
+    "id": "unit_0002",
+    "pos": {
+     "x": 6,
+     "y": 4
+    }
+   },
+   {
+    "id": "unit_0003",
+    "pos": {
+     "x": 9,
+     "y": 1
+    }
+   },
+   {
+    "id": "unit_0004",
+    "pos": {
+     "x": 8,
+     "y": 6
+    }
+   }
+  ]
+ },
+ {
+  "seed": 7,
+  "card": {
+   "id": "skill_rand_7",
+   "name_zh": "火焰・控場 #7",
+   "skeleton": "control",
+   "tier": 5,
+   "rank": 1,
+   "rarity": "普通",
+   "kind": "主動",
+   "category": "武器技",
+   "weapon_req": "近戰武器",
+   "scaling": "力量",
+   "ap_cost": 1,
+   "cost": [
+    "AP 1",
+    "法力 3",
+    "冷卻 2 回合"
+   ],
+   "source_cost": null,
+   "shape": "直線（大小 5）",
+   "condition": null,
+   "effects": [
+    "狀態「被標記」 5 回合（敵方）"
+   ],
+   "modifiers": [],
+   "activation": null,
+   "activation_id": null,
+   "mastery": null,
+   "tags": [
+    "fire",
+    "control",
+    "area"
+   ],
+   "concept": "隨機組合器產生的控場技能（種子 7，暫定）",
+   "cast_flavor": "（暫定）力量依你的意志成形。",
+   "rarity_id": "common",
+   "kind_id": "active",
+   "category_id": "weapon",
+   "weapon_req_id": "melee",
+   "scaling_attrs": [
+    "str"
+   ],
+   "mastery_id": null,
+   "timing": null,
+   "effect_ids": [
+    "apply_status"
+   ],
+   "followup": null,
+   "followup_when": null
+  },
+  "events": [
+   {
+    "seq": 8,
+    "round": 1,
+    "type": "skill_used",
+    "unit_id": "unit_0001",
+    "skill_id": "skill_rand_7",
+    "name_zh": "火焰・控場 #7",
+    "ap": 1,
+    "mana": 3,
+    "mana_after": 17,
+    "hp_spent": 0,
+    "cooldown": 2,
+    "tiles": [
+     {
+      "x": 0,
+      "y": 0
+     },
+     {
+      "x": 0,
+      "y": 1
+     },
+     {
+      "x": 0,
+      "y": 2
+     }
+    ],
+    "source": 0,
+    "text": "  位移流英雄 施放「火焰・控場 #7」（AP 1，法力 3，冷卻 2 回合）→ 影響 3 格"
+   },
+   {
+    "seq": 9,
+    "round": 1,
+    "type": "skill_cooldown_changed",
+    "unit_id": "unit_0001",
+    "skill_id": "skill_rand_7",
+    "remaining": 2
+   }
+  ],
+  "units": [
+   {
+    "id": "unit_0001",
+    "pos": {
+     "x": 0,
+     "y": 3
+    }
+   },
+   {
+    "id": "unit_0002",
+    "pos": {
+     "x": 6,
+     "y": 4
+    }
+   },
+   {
+    "id": "unit_0003",
+    "pos": {
+     "x": 9,
+     "y": 1
+    }
+   },
+   {
+    "id": "unit_0004",
+    "pos": {
+     "x": 8,
+     "y": 6
+    }
+   }
+  ]
+ },
+ {
+  "seed": 8,
+  "card": {
+   "id": "skill_rand_8",
+   "name_zh": "傳說 #8",
+   "skeleton": "aura",
+   "tier": 1,
+   "rank": 1,
+   "rarity": "傳說",
+   "kind": "主動",
+   "category": "法術技",
+   "weapon_req": "任何武器",
+   "scaling": "意志",
+   "ap_cost": 1,
+   "cost": [
+    "AP 1",
+    "法力 8",
+    "源力 1"
+   ],
+   "source_cost": 1,
+   "shape": "自身",
+   "condition": null,
+   "effects": [
+    "規則改變「殘影」：你倒下時，在原地留下殘影分身（接替你的行動順序），持續 2 輪"
+   ],
+   "modifiers": [],
+   "activation": "整場：花 AP 1 ＋ 源力 1 啟動，本場剩餘時間有效",
+   "activation_id": "battle",
+   "mastery": null,
+   "tags": [
+    "holy",
+    "legendary"
+   ],
+   "concept": "隨機組合器產生的傳說技能（種子 8，暫定）",
+   "cast_flavor": "（暫定）力量依你的意志成形。",
+   "rarity_id": "legendary",
+   "kind_id": "active",
+   "category_id": "spell",
+   "weapon_req_id": "any",
+   "scaling_attrs": [
+    "wil"
+   ],
+   "mastery_id": null,
+   "timing": null,
+   "effect_ids": [
+    "rule_change"
+   ],
+   "followup": null,
+   "followup_when": null
+  },
+  "events": [
+   {
+    "seq": 10,
+    "round": 1,
+    "type": "skill_used",
+    "unit_id": "unit_0001",
+    "skill_id": "skill_rand_8",
+    "name_zh": "傳說 #8",
+    "ap": 1,
+    "mana": 8,
+    "mana_after": 12,
+    "hp_spent": 0,
+    "cooldown": null,
+    "tiles": [
+     {
+      "x": 0,
+      "y": 3
+     }
+    ],
+    "source": 1,
+    "text": "  位移流英雄 施放「傳說 #8」（AP 1，法力 8，源力 1）→ 影響 1 格"
+   },
+   {
+    "seq": 11,
+    "round": 1,
+    "type": "source_changed",
+    "unit_id": "unit_0001",
+    "before": 1,
+    "after": 0,
+    "reason": "skill",
+    "skill_id": "skill_rand_8",
+    "pos": null,
+    "other_id": null,
+    "text": "    ✦ 位移流英雄 花費源力：源力 1 → 0"
+   },
+   {
+    "seq": 12,
+    "round": 1,
+    "type": "skill_activated",
+    "unit_id": "unit_0001",
+    "skill_id": "skill_rand_8",
+    "activation": "battle",
+    "expires_round": null,
+    "rule": "afterimage_double",
+    "text": "  ✦ 位移流英雄 啟動了傳說「傳說 #8」（本場剩餘時間有效）"
+   }
+  ],
+  "units": [
+   {
+    "id": "unit_0001",
+    "pos": {
+     "x": 0,
+     "y": 3
+    }
+   },
+   {
+    "id": "unit_0002",
+    "pos": {
+     "x": 6,
+     "y": 4
+    }
+   },
+   {
+    "id": "unit_0003",
+    "pos": {
+     "x": 9,
+     "y": 1
+    }
+   },
+   {
+    "id": "unit_0004",
+    "pos": {
+     "x": 8,
+     "y": 6
+    }
+   }
+  ]
+ },
+ {
+  "seed": 9,
+  "card": {
+   "id": "skill_rand_9",
+   "name_zh": "物理・範圍 #9",
+   "skeleton": "area",
+   "tier": 4,
+   "rank": 1,
+   "rarity": "稀有",
+   "kind": "主動",
+   "category": "武器技",
+   "weapon_req": "遠程武器",
+   "scaling": "敏捷",
+   "ap_cost": 2,
+   "cost": [
+    "AP 2",
+    "法力 6",
+    "冷卻 1 回合"
+   ],
+   "source_cost": null,
+   "shape": "環形（半徑 2）",
+   "condition": "身旁有友方",
+   "effects": [
+    "武器傷害 ×2.2（敵方）"
+   ],
+   "modifiers": [],
+   "activation": null,
+   "activation_id": null,
+   "mastery": null,
+   "tags": [
+    "physical",
+    "area",
+    "damage"
+   ],
+   "concept": "隨機組合器產生的範圍技能（種子 9，暫定）",
+   "cast_flavor": "（暫定）力量依你的意志成形。",
+   "rarity_id": "rare",
+   "kind_id": "active",
+   "category_id": "weapon",
+   "weapon_req_id": "ranged",
+   "scaling_attrs": [
+    "dex"
+   ],
+   "mastery_id": null,
+   "timing": null,
+   "effect_ids": [
+    "damage"
+   ],
+   "followup": null,
+   "followup_when": null
+  },
+  "events": null,
+  "units": null
+ },
+ {
+  "seed": 10,
+  "card": {
+   "id": "skill_rand_10",
+   "name_zh": "物理・控場 #10",
+   "skeleton": "control",
+   "tier": 4,
+   "rank": 1,
+   "rarity": "普通",
+   "kind": "主動",
+   "category": "武器技",
+   "weapon_req": "近戰武器",
+   "scaling": "力量",
+   "ap_cost": 1,
+   "cost": [
+    "AP 1",
+    "法力 3",
+    "施放後自身緩速 2 回合"
+   ],
+   "source_cost": null,
+   "shape": "環形（半徑 1）",
+   "condition": null,
+   "effects": [
+    "狀態「被標記」 4 回合（敵方）"
+   ],
+   "modifiers": [],
+   "activation": null,
+   "activation_id": null,
+   "mastery": null,
+   "tags": [
+    "physical",
+    "control",
+    "area"
+   ],
+   "concept": "隨機組合器產生的控場技能（種子 10，暫定）",
+   "cast_flavor": "（暫定）力量依你的意志成形。",
+   "rarity_id": "common",
+   "kind_id": "active",
+   "category_id": "weapon",
+   "weapon_req_id": "melee",
+   "scaling_attrs": [
+    "str"
+   ],
+   "mastery_id": null,
+   "timing": null,
+   "effect_ids": [
+    "apply_status"
+   ],
+   "followup": null,
+   "followup_when": null
+  },
+  "events": [
+   {
+    "seq": 8,
+    "round": 1,
+    "type": "skill_used",
+    "unit_id": "unit_0001",
+    "skill_id": "skill_rand_10",
+    "name_zh": "物理・控場 #10",
+    "ap": 1,
+    "mana": 3,
+    "mana_after": 17,
+    "hp_spent": 0,
+    "cooldown": null,
+    "tiles": [
+     {
+      "x": 0,
+      "y": 2
+     },
+     {
+      "x": 1,
+      "y": 2
+     },
+     {
+      "x": 1,
+      "y": 3
+     },
+     {
+      "x": 0,
+      "y": 4
+     },
+     {
+      "x": 1,
+      "y": 4
+     }
+    ],
+    "source": 0,
+    "text": "  位移流英雄 施放「物理・控場 #10」（AP 1，法力 3）→ 影響 5 格"
+   },
+   {
+    "seq": 9,
+    "round": 1,
+    "type": "status_applied",
+    "target_id": "unit_0001",
+    "status_id": "slow",
+    "duration": 2,
+    "refreshed": false,
+    "source_id": "unit_0001",
+    "text": "  位移流英雄 獲得狀態「緩速」（2 回合）"
+   }
+  ],
+  "units": [
+   {
+    "id": "unit_0001",
+    "pos": {
+     "x": 0,
+     "y": 3
+    }
+   },
+   {
+    "id": "unit_0002",
+    "pos": {
+     "x": 6,
+     "y": 4
+    }
+   },
+   {
+    "id": "unit_0003",
+    "pos": {
+     "x": 9,
+     "y": 1
+    }
+   },
+   {
+    "id": "unit_0004",
+    "pos": {
+     "x": 8,
+     "y": 6
+    }
+   }
+  ]
+ },
+ {
+  "seed": 11,
+  "card": {
+   "id": "skill_rand_11",
+   "name_zh": "雷電・光環 #11",
+   "skeleton": "aura",
+   "tier": 1,
+   "rank": 1,
+   "rarity": "普通",
+   "kind": "主動",
+   "category": "法術技",
+   "weapon_req": "法器",
+   "scaling": "感知",
+   "ap_cost": 1,
+   "cost": [
+    "AP 1",
+    "法力 2",
+    "冷卻 3 回合"
+   ],
+   "source_cost": null,
+   "shape": "範圍光環（半徑 1）",
+   "condition": null,
+   "effects": [
+    "護盾（友方）"
+   ],
+   "modifiers": [],
+   "activation": null,
+   "activation_id": null,
+   "mastery": null,
+   "tags": [
+    "lightning",
+    "aura",
+    "area"
+   ],
+   "concept": "隨機組合器產生的光環技能（種子 11，暫定）",
+   "cast_flavor": "（暫定）力量依你的意志成形。",
+   "rarity_id": "common",
+   "kind_id": "active",
+   "category_id": "spell",
+   "weapon_req_id": "focus",
+   "scaling_attrs": [
+    "wis"
+   ],
+   "mastery_id": null,
+   "timing": null,
+   "effect_ids": [
+    "shield"
+   ],
+   "followup": null,
+   "followup_when": null
+  },
+  "events": [
+   {
+    "seq": 14,
+    "round": 1,
+    "type": "skill_used",
+    "unit_id": "unit_0001",
+    "skill_id": "skill_rand_11",
+    "name_zh": "雷電・光環 #11",
+    "ap": 1,
+    "mana": 2,
+    "mana_after": 38,
+    "hp_spent": 0,
+    "cooldown": 3,
+    "tiles": [
+     {
+      "x": 0,
+      "y": 2
+     },
+     {
+      "x": 0,
+      "y": 3
+     },
+     {
+      "x": 1,
+      "y": 3
+     },
+     {
+      "x": 0,
+      "y": 4
+     }
+    ],
+    "source": 0,
+    "text": "  火焰流英雄 施放「雷電・光環 #11」（AP 1，法力 2，冷卻 3 回合）→ 影響 4 格"
+   },
+   {
+    "seq": 15,
+    "round": 1,
+    "type": "skill_cooldown_changed",
+    "unit_id": "unit_0001",
+    "skill_id": "skill_rand_11",
+    "remaining": 3
+   },
+   {
+    "seq": 16,
+    "round": 1,
+    "type": "shield_gained",
+    "unit_id": "unit_0001",
+    "source_id": "unit_0001",
+    "amount": 10,
+    "total": 10,
+    "rolls": [
+     3,
+     1
+    ],
+    "text": "    火焰流英雄 獲得 10 點護盾"
+   }
+  ],
+  "units": [
+   {
+    "id": "unit_0001",
+    "pos": {
+     "x": 0,
+     "y": 3
+    }
+   },
+   {
+    "id": "unit_0002",
+    "pos": {
+     "x": 6,
+     "y": 4
+    }
+   },
+   {
+    "id": "unit_0003",
+    "pos": {
+     "x": 9,
+     "y": 1
+    }
+   },
+   {
+    "id": "unit_0004",
+    "pos": {
+     "x": 8,
+     "y": 6
+    }
+   }
+  ]
+ },
+ {
+  "seed": 12,
+  "card": {
+   "id": "skill_rand_12",
+   "name_zh": "火焰・範圍 #12",
+   "skeleton": "area",
+   "tier": 2,
+   "rank": 1,
+   "rarity": "普通",
+   "kind": "主動",
+   "category": "法術技",
+   "weapon_req": "法器",
+   "scaling": "智力",
+   "ap_cost": 2,
+   "cost": [
+    "AP 2",
+    "法力 10",
+    "冷卻 3 回合"
+   ],
+   "source_cost": null,
+   "shape": "錐形（大小 2）",
+   "condition": null,
+   "effects": [
+    "4d6＋智力加成的火焰傷害（敵方）"
+   ],
+   "modifiers": [],
+   "activation": null,
+   "activation_id": null,
+   "mastery": null,
+   "tags": [
+    "fire",
+    "area",
+    "damage"
+   ],
+   "concept": "隨機組合器產生的範圍技能（種子 12，暫定）",
+   "cast_flavor": "（暫定）力量依你的意志成形。",
+   "rarity_id": "common",
+   "kind_id": "active",
+   "category_id": "spell",
+   "weapon_req_id": "focus",
+   "scaling_attrs": [
+    "int"
+   ],
+   "mastery_id": null,
+   "timing": null,
+   "effect_ids": [
+    "damage"
+   ],
+   "followup": null,
+   "followup_when": null
+  },
+  "events": [
+   {
+    "seq": 10,
+    "round": 1,
+    "type": "skill_used",
+    "unit_id": "unit_0001",
+    "skill_id": "skill_rand_12",
+    "name_zh": "火焰・範圍 #12",
+    "ap": 2,
+    "mana": 10,
+    "mana_after": 30,
+    "hp_spent": 0,
+    "cooldown": 3,
+    "tiles": [
+     {
+      "x": 0,
+      "y": 1
+     },
+     {
+      "x": 1,
+      "y": 1
+     },
+     {
+      "x": 0,
+      "y": 2
+     }
+    ],
+    "source": 0,
+    "text": "  火焰流英雄 施放「火焰・範圍 #12」（AP 2，法力 10，冷卻 3 回合）→ 影響 3 格"
+   },
+   {
+    "seq": 11,
+    "round": 1,
+    "type": "skill_cooldown_changed",
+    "unit_id": "unit_0001",
+    "skill_id": "skill_rand_12",
+    "remaining": 3
+   },
+   {
+    "seq": 12,
+    "round": 1,
+    "type": "element_touched",
+    "pos": {
+     "x": 0,
+     "y": 1
+    },
+    "element": "fire",
+    "source_id": "unit_0001",
+    "direction": null,
+    "push_distance": 0,
+    "damage": 0,
+    "objects_only": false,
+    "tile_only": true
+   },
+   {
+    "seq": 13,
+    "round": 1,
+    "type": "element_touched",
+    "pos": {
+     "x": 1,
+     "y": 1
+    },
+    "element": "fire",
+    "source_id": "unit_0001",
+    "direction": null,
+    "push_distance": 0,
+    "damage": 0,
+    "objects_only": false,
+    "tile_only": true
+   },
+   {
+    "seq": 14,
+    "round": 1,
+    "type": "element_touched",
+    "pos": {
+     "x": 0,
+     "y": 2
+    },
+    "element": "fire",
+    "source_id": "unit_0001",
+    "direction": null,
+    "push_distance": 0,
+    "damage": 0,
+    "objects_only": false,
+    "tile_only": true
+   },
+   {
+    "seq": 15,
+    "round": 1,
+    "type": "skill_triggered",
+    "unit_id": "unit_0001",
+    "skill_id": "skill_ember_ward",
+    "name_zh": "烈焰護身",
+    "trigger": "on_cast_tag",
+    "other_id": null,
+    "trigger_depth": 1,
+    "mana": 2,
+    "mana_after": 28,
+    "hp_spent": 0,
+    "cooldown": null,
+    "text": "  ★ 火焰流英雄 的被動「烈焰護身」觸發（施放帶標籤的技能後，深度 1）（法力 2）"
+   },
+   {
+    "seq": 16,
+    "round": 1,
+    "type": "shield_gained",
+    "unit_id": "unit_0001",
+    "source_id": "unit_0001",
+    "amount": 9,
+    "total": 9,
+    "rolls": [
+     1
+    ],
+    "text": "    火焰流英雄 獲得 9 點護盾"
+   }
+  ],
+  "units": [
+   {
+    "id": "unit_0001",
+    "pos": {
+     "x": 0,
+     "y": 3
+    }
+   },
+   {
+    "id": "unit_0002",
+    "pos": {
+     "x": 6,
+     "y": 4
+    }
+   },
+   {
+    "id": "unit_0003",
+    "pos": {
+     "x": 9,
+     "y": 1
+    }
+   },
+   {
+    "id": "unit_0004",
+    "pos": {
+     "x": 8,
+     "y": 6
+    }
+   }
+  ]
+ },
+ {
+  "seed": 13,
+  "card": {
+   "id": "skill_rand_13",
+   "name_zh": "神聖・控場 #13",
+   "skeleton": "control",
+   "tier": 2,
+   "rank": 1,
+   "rarity": "普通",
+   "kind": "主動",
+   "category": "法術技",
+   "weapon_req": "法器",
+   "scaling": "智力",
+   "ap_cost": 1,
+   "cost": [
+    "AP 1",
+    "法力 5"
+   ],
+   "source_cost": null,
+   "shape": "直線（大小 2）",
+   "condition": null,
+   "effects": [
+    "狀態「易傷」 3 回合（敵方）"
+   ],
+   "modifiers": [],
+   "activation": null,
+   "activation_id": null,
+   "mastery": null,
+   "tags": [
+    "holy",
+    "control",
+    "area",
+    "debuff"
+   ],
+   "concept": "隨機組合器產生的控場技能（種子 13，暫定）",
+   "cast_flavor": "（暫定）力量依你的意志成形。",
+   "rarity_id": "common",
+   "kind_id": "active",
+   "category_id": "spell",
+   "weapon_req_id": "focus",
+   "scaling_attrs": [
+    "int"
+   ],
+   "mastery_id": null,
+   "timing": null,
+   "effect_ids": [
+    "apply_status"
+   ],
+   "followup": null,
+   "followup_when": null
+  },
+  "events": [
+   {
+    "seq": 8,
+    "round": 1,
+    "type": "skill_used",
+    "unit_id": "unit_0001",
+    "skill_id": "skill_rand_13",
+    "name_zh": "神聖・控場 #13",
+    "ap": 1,
+    "mana": 5,
+    "mana_after": 35,
+    "hp_spent": 0,
+    "cooldown": null,
+    "tiles": [
+     {
+      "x": 0,
+      "y": 1
+     },
+     {
+      "x": 0,
+      "y": 2
+     }
+    ],
+    "source": 0,
+    "text": "  火焰流英雄 施放「神聖・控場 #13」（AP 1，法力 5）→ 影響 2 格"
+   }
+  ],
+  "units": [
+   {
+    "id": "unit_0001",
+    "pos": {
+     "x": 0,
+     "y": 3
+    }
+   },
+   {
+    "id": "unit_0002",
+    "pos": {
+     "x": 6,
+     "y": 4
+    }
+   },
+   {
+    "id": "unit_0003",
+    "pos": {
+     "x": 9,
+     "y": 1
+    }
+   },
+   {
+    "id": "unit_0004",
+    "pos": {
+     "x": 8,
+     "y": 6
+    }
+   }
+  ]
+ },
+ {
+  "seed": 14,
+  "card": {
+   "id": "skill_rand_14",
+   "name_zh": "毒素・控場 #14",
+   "skeleton": "control",
+   "tier": 2,
+   "rank": 1,
+   "rarity": "普通",
+   "kind": "主動",
+   "category": "武器技",
+   "weapon_req": "遠程武器",
+   "scaling": "敏捷",
+   "ap_cost": 1,
+   "cost": [
+    "AP 1",
+    "法力 3",
+    "冷卻 1 回合"
+   ],
+   "source_cost": null,
+   "shape": "錐形（大小 2）",
+   "condition": null,
+   "effects": [
+    "狀態「嘲諷」 3 回合（敵方）"
+   ],
+   "modifiers": [],
+   "activation": null,
+   "activation_id": null,
+   "mastery": null,
+   "tags": [
+    "poison",
+    "control",
+    "area"
+   ],
+   "concept": "隨機組合器產生的控場技能（種子 14，暫定）",
+   "cast_flavor": "（暫定）力量依你的意志成形。",
+   "rarity_id": "common",
+   "kind_id": "active",
+   "category_id": "weapon",
+   "weapon_req_id": "ranged",
+   "scaling_attrs": [
+    "dex"
+   ],
+   "mastery_id": null,
+   "timing": null,
+   "effect_ids": [
+    "apply_status"
+   ],
+   "followup": null,
+   "followup_when": null
+  },
+  "events": [
+   {
+    "seq": 8,
+    "round": 1,
+    "type": "skill_used",
+    "unit_id": "unit_0001",
+    "skill_id": "skill_rand_14",
+    "name_zh": "毒素・控場 #14",
+    "ap": 1,
+    "mana": 3,
+    "mana_after": 21,
+    "hp_spent": 0,
+    "cooldown": 1,
+    "tiles": [
+     {
+      "x": 0,
+      "y": 1
+     },
+     {
+      "x": 1,
+      "y": 1
+     },
+     {
+      "x": 0,
+      "y": 2
+     }
+    ],
+    "source": 0,
+    "text": "  遠程英雄 施放「毒素・控場 #14」（AP 1，法力 3，冷卻 1 回合）→ 影響 3 格"
+   },
+   {
+    "seq": 9,
+    "round": 1,
+    "type": "skill_cooldown_changed",
+    "unit_id": "unit_0001",
+    "skill_id": "skill_rand_14",
+    "remaining": 1
+   }
+  ],
+  "units": [
+   {
+    "id": "unit_0001",
+    "pos": {
+     "x": 0,
+     "y": 3
+    }
+   },
+   {
+    "id": "unit_0002",
+    "pos": {
+     "x": 6,
+     "y": 4
+    }
+   },
+   {
+    "id": "unit_0003",
+    "pos": {
+     "x": 9,
+     "y": 1
+    }
+   },
+   {
+    "id": "unit_0004",
+    "pos": {
+     "x": 8,
+     "y": 6
+    }
+   }
+  ]
+ },
+ {
+  "seed": 15,
+  "card": {
+   "id": "skill_rand_15",
+   "name_zh": "火焰・範圍 #15",
+   "skeleton": "area",
+   "tier": 4,
+   "rank": 1,
+   "rarity": "普通",
+   "kind": "主動",
+   "category": "法術技",
+   "weapon_req": "法器",
+   "scaling": "意志",
+   "ap_cost": 2,
+   "cost": [
+    "AP 2",
+    "法力 12",
+    "冷卻 4 回合"
+   ],
+   "source_cost": null,
+   "shape": "錐形（大小 2）",
+   "condition": null,
+   "effects": [
+    "4d10＋意志加成的火焰傷害（敵方）"
+   ],
+   "modifiers": [],
+   "activation": null,
+   "activation_id": null,
+   "mastery": null,
+   "tags": [
+    "fire",
+    "area",
+    "damage"
+   ],
+   "concept": "隨機組合器產生的範圍技能（種子 15，暫定）",
+   "cast_flavor": "（暫定）力量依你的意志成形。",
+   "rarity_id": "common",
+   "kind_id": "active",
+   "category_id": "spell",
+   "weapon_req_id": "focus",
+   "scaling_attrs": [
+    "wil"
+   ],
+   "mastery_id": null,
+   "timing": null,
+   "effect_ids": [
+    "damage"
+   ],
+   "followup": null,
+   "followup_when": null
+  },
+  "events": [
+   {
+    "seq": 8,
+    "round": 1,
+    "type": "skill_used",
+    "unit_id": "unit_0001",
+    "skill_id": "skill_rand_15",
+    "name_zh": "火焰・範圍 #15",
+    "ap": 2,
+    "mana": 12,
+    "mana_after": 28,
+    "hp_spent": 0,
+    "cooldown": 4,
+    "tiles": [
+     {
+      "x": 0,
+      "y": 1
+     },
+     {
+      "x": 1,
+      "y": 1
+     },
+     {
+      "x": 0,
+      "y": 2
+     }
+    ],
+    "source": 0,
+    "text": "  火焰流英雄 施放「火焰・範圍 #15」（AP 2，法力 12，冷卻 4 回合）→ 影響 3 格"
+   },
+   {
+    "seq": 9,
+    "round": 1,
+    "type": "skill_cooldown_changed",
+    "unit_id": "unit_0001",
+    "skill_id": "skill_rand_15",
+    "remaining": 4
+   },
+   {
+    "seq": 10,
+    "round": 1,
+    "type": "element_touched",
+    "pos": {
+     "x": 0,
+     "y": 1
+    },
+    "element": "fire",
+    "source_id": "unit_0001",
+    "direction": null,
+    "push_distance": 0,
+    "damage": 0,
+    "objects_only": false,
+    "tile_only": true
+   },
+   {
+    "seq": 11,
+    "round": 1,
+    "type": "element_touched",
+    "pos": {
+     "x": 1,
+     "y": 1
+    },
+    "element": "fire",
+    "source_id": "unit_0001",
+    "direction": null,
+    "push_distance": 0,
+    "damage": 0,
+    "objects_only": false,
+    "tile_only": true
+   },
+   {
+    "seq": 12,
+    "round": 1,
+    "type": "element_touched",
+    "pos": {
+     "x": 0,
+     "y": 2
+    },
+    "element": "fire",
+    "source_id": "unit_0001",
+    "direction": null,
+    "push_distance": 0,
+    "damage": 0,
+    "objects_only": false,
+    "tile_only": true
+   },
+   {
+    "seq": 13,
+    "round": 1,
+    "type": "skill_triggered",
+    "unit_id": "unit_0001",
+    "skill_id": "skill_ember_ward",
+    "name_zh": "烈焰護身",
+    "trigger": "on_cast_tag",
+    "other_id": null,
+    "trigger_depth": 1,
+    "mana": 2,
+    "mana_after": 26,
+    "hp_spent": 0,
+    "cooldown": null,
+    "text": "  ★ 火焰流英雄 的被動「烈焰護身」觸發（施放帶標籤的技能後，深度 1）（法力 2）"
+   },
+   {
+    "seq": 14,
+    "round": 1,
+    "type": "shield_gained",
+    "unit_id": "unit_0001",
+    "source_id": "unit_0001",
+    "amount": 11,
+    "total": 11,
+    "rolls": [
+     3
+    ],
+    "text": "    火焰流英雄 獲得 11 點護盾"
+   }
+  ],
+  "units": [
+   {
+    "id": "unit_0001",
+    "pos": {
+     "x": 0,
+     "y": 3
+    }
+   },
+   {
+    "id": "unit_0002",
+    "pos": {
+     "x": 6,
+     "y": 4
+    }
+   },
+   {
+    "id": "unit_0003",
+    "pos": {
+     "x": 9,
+     "y": 1
+    }
+   },
+   {
+    "id": "unit_0004",
+    "pos": {
+     "x": 8,
+     "y": 6
+    }
+   }
+  ]
+ },
+ {
+  "seed": 16,
+  "card": {
+   "id": "skill_rand_16",
+   "name_zh": "雷電・連段 #16",
+   "skeleton": "combo",
+   "tier": 3,
+   "rank": 1,
+   "rarity": "稀有",
+   "kind": "主動",
+   "category": "法術技",
+   "weapon_req": "法器",
+   "scaling": "智力",
+   "ap_cost": 1,
+   "cost": [
+    "AP 1",
+    "法力 6"
+   ],
+   "source_cost": null,
+   "shape": "直線（大小 5）",
+   "condition": "居高臨下",
+   "effects": [
+    "2d6＋智力加成的雷電傷害（敵方）"
+   ],
+   "modifiers": [],
+   "activation": null,
+   "activation_id": null,
+   "mastery": null,
+   "tags": [
+    "lightning",
+    "combo",
+    "damage",
+    "area"
+   ],
+   "concept": "隨機組合器產生的連段技能（種子 16，暫定）",
+   "cast_flavor": "（暫定）力量依你的意志成形。",
+   "rarity_id": "rare",
+   "kind_id": "active",
+   "category_id": "spell",
+   "weapon_req_id": "focus",
+   "scaling_attrs": [
+    "int"
+   ],
+   "mastery_id": null,
+   "timing": null,
+   "effect_ids": [
+    "damage"
+   ],
+   "followup": null,
+   "followup_when": null
+  },
+  "events": null,
+  "units": null
+ },
+ {
+  "seed": 17,
+  "card": {
+   "id": "skill_rand_17",
+   "name_zh": "冰霜・被動 #17",
+   "skeleton": "passive",
+   "tier": 5,
+   "rank": 1,
+   "rarity": "史詩",
+   "kind": "被動",
+   "category": "法術技",
+   "weapon_req": "任何武器",
+   "scaling": "智力",
+   "ap_cost": null,
+   "cost": [
+    "法力 5",
+    "冷卻 1 回合"
+   ],
+   "source_cost": null,
+   "shape": "自身",
+   "condition": null,
+   "effects": [
+    "2d8＋智力加成的冰霜傷害（敵方）"
+   ],
+   "modifiers": [],
+   "activation": null,
+   "activation_id": null,
+   "mastery": null,
+   "tags": [
+    "ice",
+    "passive",
+    "damage"
+   ],
+   "concept": "隨機組合器產生的被動技能（種子 17，暫定）",
+   "cast_flavor": "（暫定）力量依你的意志成形。",
+   "rarity_id": "epic",
+   "kind_id": "passive",
+   "category_id": "spell",
+   "weapon_req_id": "any",
+   "scaling_attrs": [
+    "int"
+   ],
+   "mastery_id": null,
+   "timing": "觸發時機：造成撞擊後",
+   "effect_ids": [
+    "damage"
+   ],
+   "followup": null,
+   "followup_when": null
+  },
+  "events": null,
+  "units": null
+ },
+ {
+  "seed": 18,
+  "card": {
+   "id": "skill_rand_18",
+   "name_zh": "雷電・光環 #18",
+   "skeleton": "aura",
+   "tier": 4,
+   "rank": 1,
+   "rarity": "稀有",
+   "kind": "主動",
+   "category": "法術技",
+   "weapon_req": "法器",
+   "scaling": "意志",
+   "ap_cost": 1,
+   "cost": [
+    "AP 1",
+    "法力 9",
+    "冷卻 1 回合"
+   ],
+   "source_cost": null,
+   "shape": "範圍光環（半徑 1）",
+   "condition": null,
+   "effects": [
+    "回復 10 點法力（不超過上限）（友方），若第一輪",
+    "生成「聖光」表面 4 回合（友方）"
+   ],
+   "modifiers": [],
+   "activation": null,
+   "activation_id": null,
+   "mastery": null,
+   "tags": [
+    "lightning",
+    "aura",
+    "area",
+    "dot",
+    "surface"
+   ],
+   "concept": "隨機組合器產生的光環技能（種子 18，暫定）",
+   "cast_flavor": "（暫定）力量依你的意志成形。",
+   "rarity_id": "rare",
+   "kind_id": "active",
+   "category_id": "spell",
+   "weapon_req_id": "focus",
+   "scaling_attrs": [
+    "wil"
+   ],
+   "mastery_id": null,
+   "timing": null,
+   "effect_ids": [
+    "restore_resource",
+    "create_surface"
+   ],
+   "followup": null,
+   "followup_when": null
+  },
+  "events": [
+   {
+    "seq": 9,
+    "round": 1,
+    "type": "skill_used",
+    "unit_id": "unit_0001",
+    "skill_id": "skill_rand_18",
+    "name_zh": "雷電・光環 #18",
+    "ap": 1,
+    "mana": 9,
+    "mana_after": 31,
+    "hp_spent": 0,
+    "cooldown": 1,
+    "tiles": [
+     {
+      "x": 0,
+      "y": 2
+     },
+     {
+      "x": 0,
+      "y": 3
+     },
+     {
+      "x": 1,
+      "y": 3
+     },
+     {
+      "x": 0,
+      "y": 4
+     }
+    ],
+    "source": 0,
+    "text": "  火焰流英雄 施放「雷電・光環 #18」（AP 1，法力 9，冷卻 1 回合）→ 影響 4 格"
+   },
+   {
+    "seq": 10,
+    "round": 1,
+    "type": "skill_cooldown_changed",
+    "unit_id": "unit_0001",
+    "skill_id": "skill_rand_18",
+    "remaining": 1
+   },
+   {
+    "seq": 11,
+    "round": 1,
+    "type": "resource_restored",
+    "unit_id": "unit_0001",
+    "source_id": "unit_0001",
+    "resource": "mana",
+    "amount": 9,
+    "mana_after": 40,
+    "skill_ids": [],
+    "text": "    火焰流英雄 回復了 9 點法力（現在 40）"
+   },
+   {
+    "seq": 12,
+    "round": 1,
+    "type": "surface_changed",
+    "pos": {
+     "x": 0,
+     "y": 3
+    },
+    "before": "none",
+    "after": "holy",
+    "remaining": 4,
+    "cause": "effect",
+    "text": "  (0, 3) 出現了聖光"
+   }
+  ],
+  "units": [
+   {
+    "id": "unit_0001",
+    "pos": {
+     "x": 0,
+     "y": 3
+    }
+   },
+   {
+    "id": "unit_0002",
+    "pos": {
+     "x": 6,
+     "y": 4
+    }
+   },
+   {
+    "id": "unit_0003",
+    "pos": {
+     "x": 9,
+     "y": 1
+    }
+   },
+   {
+    "id": "unit_0004",
+    "pos": {
+     "x": 8,
+     "y": 6
+    }
+   }
+  ]
+ },
+ {
+  "seed": 19,
+  "card": {
+   "id": "skill_rand_19",
+   "name_zh": "大地・連段 #19",
+   "skeleton": "combo",
+   "tier": 5,
+   "rank": 1,
+   "rarity": "史詩",
+   "kind": "主動",
+   "category": "法術技",
+   "weapon_req": "法器",
+   "scaling": "智力",
+   "ap_cost": 3,
+   "cost": [
+    "AP 3",
+    "法力 20",
+    "冷卻 2 回合"
+   ],
+   "source_cost": null,
+   "shape": "連鎖（跳躍距離 1，跳躍 1，射程 6）",
+   "condition": null,
+   "effects": [
+    "7d10＋智力加成的大地傷害（敵方）",
+    "1d12＋智力加成的大地傷害（敵方），若目標帶有狀態「倒地」",
+    "擊倒（智力對抗）（敵方）"
+   ],
+   "modifiers": [],
+   "activation": null,
+   "activation_id": null,
+   "mastery": null,
+   "tags": [
+    "earth",
+    "combo",
+    "damage",
+    "area",
+    "displace"
+   ],
+   "concept": "隨機組合器產生的連段技能（種子 19，暫定）",
+   "cast_flavor": "（暫定）力量依你的意志成形。",
+   "rarity_id": "epic",
+   "kind_id": "active",
+   "category_id": "spell",
+   "weapon_req_id": "focus",
+   "scaling_attrs": [
+    "int"
+   ],
+   "mastery_id": null,
+   "timing": null,
+   "effect_ids": [
+    "damage",
+    "damage",
+    "knock_prone"
+   ],
+   "followup": null,
+   "followup_when": null
+  },
+  "events": [
+   {
+    "seq": 13,
+    "round": 1,
+    "type": "skill_used",
+    "unit_id": "unit_0001",
+    "skill_id": "skill_rand_19",
+    "name_zh": "大地・連段 #19",
+    "ap": 3,
+    "mana": 20,
+    "mana_after": 20,
+    "hp_spent": 0,
+    "cooldown": 2,
+    "tiles": [
+     {
+      "x": 6,
+      "y": 4
+     }
+    ],
+    "source": 0,
+    "text": "  火焰流英雄 施放「大地・連段 #19」（AP 3，法力 20，冷卻 2 回合）→ 影響 1 格"
+   },
+   {
+    "seq": 14,
+    "round": 1,
+    "type": "skill_cooldown_changed",
+    "unit_id": "unit_0001",
+    "skill_id": "skill_rand_19",
+    "remaining": 2
+   },
+   {
+    "seq": 15,
+    "round": 1,
+    "type": "attack_rolled",
+    "attacker_id": "unit_0001",
+    "target_id": "unit_0002",
+    "rolls": [
+     6
+    ],
+    "advantage": "none",
+    "natural": 6,
+    "attack_value": 16,
+    "defense_value_permille": 10000,
+    "hit_modifier": 3,
+    "proficiency": 2,
+    "situational": 0,
+    "total": 11,
+    "target_number": 11,
+    "hit": true,
+    "crit": false,
+    "cover": 0,
+    "cover_object_id": null,
+    "skill_id": "skill_rand_19",
+    "modifier_bonus": 0,
+    "backstab": 0,
+    "ambush": 0,
+    "text": "  火焰流英雄 以「大地・連段 #19」攻擊 木樁1：d20=6 修正 +3 熟練 +2 = 11（目標 11）→ 命中"
+   },
+   {
+    "seq": 16,
+    "round": 1,
+    "type": "damage_dealt",
+    "target_id": "unit_0002",
+    "source_id": "unit_0001",
+    "cause": "attack",
+    "element": "earth",
+    "rolls": [
+     10,
+     9,
+     10,
+     6,
+     9,
+     6,
+     1
+    ],
+    "crit": false,
+    "element_mod_ppm": 1000000,
+    "amount": 59,
+    "hp_before": 300,
+    "hp_after": 241,
+    "pos": {
+     "x": 6,
+     "y": 4
+    },
+    "weather_permille": 1000,
+    "multiplier_permille": 1000,
+    "pierce_permille": 1000,
+    "base_amount": 59,
+    "status_ppm": 1000000,
+    "absorbed": 0,
+    "redirected": 0,
+    "exploded": 0,
+    "text": "    木樁1 受到 59 點大地傷害［骰 10+9+10+6+9+6+1］，HP 300 → 241"
+   },
+   {
+    "seq": 17,
+    "round": 1,
+    "type": "maneuver_rolled",
+    "maneuver": "knock_prone",
+    "attacker_id": "unit_0001",
+    "target_id": "unit_0002",
+    "natural": 16,
+    "modifier": 3,
+    "proficiency": 2,
+    "total": 21,
+    "target_number": 11,
+    "success": true,
+    "skill_id": "skill_rand_19",
+    "resist_bonus": 0,
+    "text": "  火焰流英雄 對 木樁1 使出擊倒：d20=16 修正 +3 熟練 +2 = 21（目標 11）→ 成功"
+   },
+   {
+    "seq": 18,
+    "round": 1,
+    "type": "status_applied",
+    "target_id": "unit_0002",
+    "status_id": "prone",
+    "duration": null,
+    "refreshed": false,
+    "source_id": "unit_0001",
+    "text": "  木樁1 獲得狀態「倒地」"
+   }
+  ],
+  "units": [
+   {
+    "id": "unit_0001",
+    "pos": {
+     "x": 5,
+     "y": 3
+    }
+   },
+   {
+    "id": "unit_0002",
+    "pos": {
+     "x": 6,
+     "y": 4
+    }
+   },
+   {
+    "id": "unit_0003",
+    "pos": {
+     "x": 9,
+     "y": 1
+    }
+   },
+   {
+    "id": "unit_0004",
+    "pos": {
+     "x": 8,
+     "y": 6
+    }
+   }
+  ]
+ },
+ {
+  "seed": 20,
+  "card": {
+   "id": "skill_rand_20",
+   "name_zh": "冰霜・範圍 #20",
+   "skeleton": "area",
+   "tier": 1,
+   "rank": 1,
+   "rarity": "普通",
+   "kind": "主動",
+   "category": "武器技",
+   "weapon_req": "遠程武器",
+   "scaling": "敏捷",
+   "ap_cost": 1,
+   "cost": [
+    "AP 1",
+    "法力 2"
+   ],
+   "source_cost": null,
+   "shape": "錐形（大小 2）",
+   "condition": null,
+   "effects": [
+    "武器傷害 ×0.7（冰霜）（敵方）"
+   ],
+   "modifiers": [],
+   "activation": null,
+   "activation_id": null,
+   "mastery": null,
+   "tags": [
+    "ice",
+    "area",
+    "damage"
+   ],
+   "concept": "隨機組合器產生的範圍技能（種子 20，暫定）",
+   "cast_flavor": "（暫定）力量依你的意志成形。",
+   "rarity_id": "common",
+   "kind_id": "active",
+   "category_id": "weapon",
+   "weapon_req_id": "ranged",
+   "scaling_attrs": [
+    "dex"
+   ],
+   "mastery_id": null,
+   "timing": null,
+   "effect_ids": [
+    "damage"
+   ],
+   "followup": null,
+   "followup_when": null
+  },
+  "events": [
+   {
+    "seq": 9,
+    "round": 1,
+    "type": "skill_used",
+    "unit_id": "unit_0001",
+    "skill_id": "skill_rand_20",
+    "name_zh": "冰霜・範圍 #20",
+    "ap": 1,
+    "mana": 2,
+    "mana_after": 22,
+    "hp_spent": 0,
+    "cooldown": null,
+    "tiles": [
+     {
+      "x": 0,
+      "y": 1
+     },
+     {
+      "x": 1,
+      "y": 1
+     },
+     {
+      "x": 0,
+      "y": 2
+     }
+    ],
+    "source": 0,
+    "text": "  遠程英雄 施放「冰霜・範圍 #20」（AP 1，法力 2）→ 影響 3 格"
+   },
+   {
+    "seq": 10,
+    "round": 1,
+    "type": "element_touched",
+    "pos": {
+     "x": 0,
+     "y": 1
+    },
+    "element": "ice",
+    "source_id": "unit_0001",
+    "direction": null,
+    "push_distance": 0,
+    "damage": 0,
+    "objects_only": false,
+    "tile_only": true
+   },
+   {
+    "seq": 11,
+    "round": 1,
+    "type": "element_touched",
+    "pos": {
+     "x": 1,
+     "y": 1
+    },
+    "element": "ice",
+    "source_id": "unit_0001",
+    "direction": null,
+    "push_distance": 0,
+    "damage": 0,
+    "objects_only": false,
+    "tile_only": true
+   },
+   {
+    "seq": 12,
+    "round": 1,
+    "type": "element_touched",
+    "pos": {
+     "x": 0,
+     "y": 2
+    },
+    "element": "ice",
+    "source_id": "unit_0001",
+    "direction": null,
+    "push_distance": 0,
+    "damage": 0,
+    "objects_only": false,
+    "tile_only": true
+   }
+  ],
+  "units": [
+   {
+    "id": "unit_0001",
+    "pos": {
+     "x": 0,
+     "y": 3
+    }
+   },
+   {
+    "id": "unit_0002",
+    "pos": {
+     "x": 6,
+     "y": 4
+    }
+   },
+   {
+    "id": "unit_0003",
+    "pos": {
+     "x": 9,
+     "y": 1
+    }
+   },
+   {
+    "id": "unit_0004",
+    "pos": {
+     "x": 8,
+     "y": 6
+    }
+   }
+  ]
+ }
+]

@@ -1,11 +1,13 @@
 // 逐步播放計畫（純函式）：回應的 `steps` → 一格一格的畫面。
-// 每一步的順序固定為：標示行動中的單位 → 該步的移動動畫 → 畫該步的 `view` → 加入該步的紀錄 → 停頓。
+// 每一步的順序固定為：標示行動中的單位 → 該步的移動動畫 → 技能特效（蓄力與飛行，等到命中）→
+// 畫該步的 `view` → 地圖回饋 → 加入該步的紀錄 → 停頓。
 // 最後一定以 `res.view` 為準（播放只是過場）。
 import type { BattleResponse, BattleView } from "../api/types";
 import { movePlan, type MoveAnim } from "./animation";
 import { feedbackFor, type FeedbackItem } from "./feedback";
 import { logLines, type LogLine } from "./log";
 import { unitNames } from "./units";
+import { isEmptyVfx, scaleVfx, vfxFor, VFX_TIMING, type StepVfx, type VfxCards } from "./vfx";
 
 export type PlaySpeed = "slow" | "normal" | "fast" | "skip";
 
@@ -35,6 +37,10 @@ export interface Frame {
   feedback: FeedbackItem[];
   /** 回饋項目顯示的時間（毫秒，已依速度縮放）。 */
   feedbackMs: number;
+  /** 技能特效（Phase 3-12；時間已依速度縮放）；沒有特效或略過時為 `null`。 */
+  vfx: StepVfx | null;
+  /** 命中後爆發與粒子的時間（毫秒，已依速度縮放）。 */
+  vfxImpactMs: number;
   view: BattleView;
   lines: LogLine[];
   pauseMs: number;
@@ -49,6 +55,7 @@ export interface PlaybackPlan {
 export type PlayOp =
   | { op: "mark"; unitId: string | null }
   | { op: "move"; anim: MoveAnim }
+  | { op: "vfx"; vfx: StepVfx; impactMs: number }
   | { op: "view"; view: BattleView }
   | { op: "feedback"; items: FeedbackItem[]; durationMs: number }
   | { op: "log"; lines: LogLine[] }
@@ -61,13 +68,19 @@ function pauseFor(stepType: string | undefined, actorId: string | null, heroId: 
   return stepType === "move" ? MOVE_PAUSE_MS[speed] : AI_PAUSE_MS[speed];
 }
 
-export function playbackPlan(res: BattleResponse, heroId: string, speed: PlaySpeed): PlaybackPlan {
+function stepVfx(events: readonly Record<string, unknown>[], view: BattleView, cards: VfxCards, scale: number): StepVfx | null {
+  const vfx = vfxFor(events, view, cards);
+  return isEmptyVfx(vfx) ? null : scaleVfx(vfx, scale);
+}
+
+/** `cards`：技能 ID → 技能卡（推導技能特效的形狀用；缺的技能以影響的格子推斷）。 */
+export function playbackPlan(res: BattleResponse, heroId: string, speed: PlaySpeed, cards: VfxCards = {}): PlaybackPlan {
   if (speed === "skip" || res.steps.length === 0) {
     const lines = logLines(res.steps, unitNames(res.view));
     const frames: Frame[] =
       res.steps.length === 0
         ? []
-        : [{ actorId: null, moves: [], feedback: [], feedbackMs: 0, view: res.view, lines, pauseMs: 0 }];
+        : [{ actorId: null, moves: [], feedback: [], feedbackMs: 0, vfx: null, vfxImpactMs: 0, view: res.view, lines, pauseMs: 0 }];
     return { initialView: res.initial_view, frames, finalView: res.view };
   }
   const frames = res.steps.map<Frame>((step) => ({
@@ -75,6 +88,8 @@ export function playbackPlan(res: BattleResponse, heroId: string, speed: PlaySpe
     moves: movePlan([step], SPEED_SCALE[speed]),
     feedback: feedbackFor(step.events, step.view),
     feedbackMs: Math.round(FEEDBACK_MS * SPEED_SCALE[speed]),
+    vfx: stepVfx(step.events, step.view, cards, SPEED_SCALE[speed]),
+    vfxImpactMs: Math.round(VFX_TIMING.impact * SPEED_SCALE[speed]),
     view: step.view,
     lines: logLines([step], unitNames(step.view)),
     pauseMs: pauseFor(step.step?.type, step.actor_id, heroId, speed),
@@ -86,6 +101,7 @@ export function playbackPlan(res: BattleResponse, heroId: string, speed: PlaySpe
 export function frameOps(frame: Frame): PlayOp[] {
   const ops: PlayOp[] = [{ op: "mark", unitId: frame.actorId }];
   for (const anim of frame.moves) ops.push({ op: "move", anim });
+  if (frame.vfx !== null) ops.push({ op: "vfx", vfx: frame.vfx, impactMs: frame.vfxImpactMs });
   ops.push({ op: "view", view: frame.view });
   if (frame.feedback.length > 0) ops.push({ op: "feedback", items: frame.feedback, durationMs: frame.feedbackMs });
   if (frame.lines.length > 0) ops.push({ op: "log", lines: frame.lines });
