@@ -865,6 +865,11 @@ export interface components {
              * @default
              */
             weapon_name_zh: string;
+            /**
+             * Weapon Traits Zh
+             * @default []
+             */
+            weapon_traits_zh: string[];
         };
         /** BurningOut */
         BurningOut: {
@@ -1382,6 +1387,11 @@ export interface components {
              * @default
              */
             weapon_class: string;
+            /**
+             * Weapon Traits Zh
+             * @default []
+             */
+            weapon_traits_zh: string[];
             /** Skills */
             skills: components["schemas"]["SkillCard"][];
         };
@@ -2660,6 +2670,11 @@ export interface components {
              * @default
              */
             weapon_class: string;
+            /**
+             * Weapon Traits Zh
+             * @default []
+             */
+            weapon_traits_zh: string[];
             /** Tags */
             tags: string[];
             /** Skills */

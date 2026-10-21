@@ -12,6 +12,8 @@ export interface GearItem {
   element?: string;
   trim?: string;
   hilt?: string;
+  /** 形制（同一種 `kind` 的不同畫法，例如杖的 `scepter` 權杖、`totem` 圖騰杖）；不認得時畫預設形制。 */
+  form?: string;
 }
 
 export interface Look {
@@ -43,7 +45,7 @@ export const KNOWN_KINDS: Readonly<Record<GearSlot, readonly string[]>> = {
   hands: ["gloves", "gauntlets"],
   feet: ["boots", "greaves"],
   cloak: ["cape"],
-  main_hand: ["sword", "greatsword", "dagger", "axe", "bow", "staff"],
+  main_hand: ["sword", "greatsword", "dagger", "axe", "hammer", "spear", "bow", "staff"],
   off_hand: ["shield_round", "shield_kite", "tome"],
 };
 
@@ -77,6 +79,7 @@ interface WeaponLook {
   kind: string;
   material: string;
   element?: string;
+  form?: string;
   twoHanded: boolean;
 }
 
@@ -88,6 +91,12 @@ export const WEAPON_LOOKS: Readonly<Record<string, WeaponLook>> = {
   fire_staff: { kind: "staff", material: "wood", element: "fire", twoHanded: true },
   lightning_staff: { kind: "staff", material: "wood", element: "lightning", twoHanded: true },
   frost_staff: { kind: "staff", material: "wood", element: "ice", twoHanded: true },
+  // Phase 3-24a1：武器擴充第一批（斧、錘、矛已有畫法；權杖、圖騰杖是杖的形制）
+  axe: { kind: "axe", material: "iron", twoHanded: false },
+  hammer: { kind: "hammer", material: "iron", twoHanded: true },
+  spear: { kind: "spear", material: "iron", twoHanded: true },
+  scepter: { kind: "staff", material: "wood", form: "scepter", twoHanded: false },
+  totem_staff: { kind: "staff", material: "wood", form: "totem", twoHanded: true },
 };
 
 /** 武器大類 → 主手 kind（`weapon_id` 不認得時的退回）。 */
@@ -232,6 +241,7 @@ export function resolveDoll(input: DollInput): DollSpec {
     kind: weapon.kind,
     material: weapon.material,
     ...(weapon.element !== undefined ? { element: weapon.element } : {}),
+    ...(weapon.form !== undefined ? { form: weapon.form } : {}),
     ...app.mainStyle,
   };
   const gear: Gear = {};

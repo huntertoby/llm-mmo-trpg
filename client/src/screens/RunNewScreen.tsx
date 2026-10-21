@@ -92,6 +92,7 @@ export function RunNewScreen({ onCreated, onHome }: Props) {
             {build.theme_zh}
             <br />
             主角：HP {build.max_hp + (rules === null ? 0 : conHpGain(alloc, rules.hp_per_con_point))}・法力 {build.max_mana}・武器 {build.weapon_name_zh}
+            {build.weapon_traits_zh.length > 0 && <span data-testid="build-weapon-traits">（{build.weapon_traits_zh.join("；")}）</span>}
             <br />
             起始技能：{build.skills.length === 0 ? "（無，從升級長出技能）" : build.skills.map((id) => names[id] ?? id).join("、")}
           </div>

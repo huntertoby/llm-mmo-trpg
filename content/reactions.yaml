@@ -28,7 +28,7 @@ reactions:
     damage_reduction_permille: 500
   - id: opportunity_attack
     name_zh: 藉機攻擊
-    description_zh: 敵人離開相鄰格時，以近戰武器攻擊一次（不花 AP）。
+    description_zh: 敵人離開武器的觸及範圍（一般近戰為相鄰格，矛為 2 格）時，以近戰武器攻擊一次（不花 AP）。
     effect: basic_attack
     events: [enemy_leaves_adjacent]
     requires_melee_weapon: true

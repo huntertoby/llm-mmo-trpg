@@ -34,6 +34,23 @@ describe("resolveDoll（外觀表與退回）", () => {
     expect(resolveDoll({ ...base, template: "x", weaponId: "frost_staff" }).gear.main_hand?.element).toBe("ice");
   });
 
+  it("3-24a1 新武器：斧、錘、矛有自己的造型，權杖與圖騰杖是杖的形制（權杖單手、圖騰杖雙手）", () => {
+    const look = (id: string) => resolveDoll({ ...base, template: "hero_fighter", weaponId: id }).gear;
+    expect(look("axe").main_hand?.kind).toBe("axe");
+    expect(look("hammer").main_hand?.kind).toBe("hammer");
+    expect(look("spear").main_hand?.kind).toBe("spear");
+    expect(look("scepter").main_hand).toMatchObject({ kind: "staff", form: "scepter" });
+    expect(look("totem_staff").main_hand).toMatchObject({ kind: "staff", form: "totem" });
+    expect(look("hammer").off_hand).toBeUndefined();
+    expect(look("spear").off_hand).toBeUndefined();
+    expect(look("totem_staff").off_hand).toBeUndefined();
+    expect(look("axe").off_hand?.kind).toBe("shield_round");
+    expect(look("scepter").off_hand?.kind).toBe("shield_round");
+    // 形制進快取鍵：權杖、圖騰杖與一般杖不共用貼圖
+    const keys = ["fire_staff", "scepter", "totem_staff"].map((id) => dollKey(resolveDoll({ ...base, template: "x", weaponId: id }), "south", false));
+    expect(new Set(keys).size).toBe(3);
+  });
+
   it("未知武器依 weapon_class，都沒有畫劍", () => {
     expect(weaponLook("mystery", "ranged").kind).toBe("bow");
     expect(weaponLook("mystery", "focus").kind).toBe("staff");
