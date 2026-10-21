@@ -1,0 +1,109 @@
+<!doctype html>
+<html lang="zh-Hant">
+<head>
+<meta charset="utf-8">
+<title>倒地圖示樣張</title>
+<style>
+  body { margin: 0; padding: 18px 22px; background: #1b1e24; color: #e8e8ea; font-family: "Noto Sans TC", "Microsoft JhengHei", sans-serif; }
+  h1 { font-size: 20px; margin: 0 0 4px; }
+  .sub { color: #a0a4ad; font-size: 13px; margin-bottom: 12px; }
+  .row { display: flex; gap: 14px; align-items: flex-start; }
+  .cell { background: #262a32; border-radius: 10px; padding: 8px; text-align: center; }
+  .cell .t { font-size: 13px; margin-top: 6px; }
+  .cell .m { font-size: 11px; color: #8a8f99; margin-top: 2px; width: 208px; line-height: 1.45; }
+  canvas { display: block; margin: 0 auto; }
+</style>
+</head>
+<body>
+<h1>倒地：拿掉文字與紅叉，改用圖示（左邊放大 ×2，右下角是實際大小）</h1>
+<div class="sub">小人已經躺下，本身就說明「倒地」；徽章只回答一件事：還救不救得回來。</div>
+<div class="row" id="row"></div>
+<script src="paperdoll.js"></script>
+<script>
+const D = window.PaperDoll;
+const T = 52, Z = 2;
+const GREEN = "#7dff7d", RED = "#ff5050", GRAY = "#a8acb4";
+
+function tile(ctx) {
+  ctx.fillStyle = "#6f9c4c"; ctx.fillRect(0, 0, T, T);
+  ctx.strokeStyle = "rgba(0,0,0,0.15)"; ctx.strokeRect(0.5, 0.5, T - 1, T - 1);
+}
+function ring(ctx, color, fill) {
+  ctx.fillStyle = fill; ctx.strokeStyle = color; ctx.lineWidth = 1.5;
+  ctx.beginPath(); ctx.ellipse(T / 2, T / 2 + T * 0.23 - 1, T * 0.36, T * 0.15, 0, 0, 7); ctx.fill(); ctx.stroke();
+}
+function lying(ctx, unit, alpha, gray) {
+  const off = document.createElement("canvas"); off.width = T * 4; off.height = T * 4;
+  const o = off.getContext("2d"); o.scale(4, 4);
+  o.translate(T / 2 + 17, T / 2 + 7); o.rotate(-Math.PI / 2);
+  D.stamp(o, unit, "south", 0, 0, 0.62, { dpr: 4 });
+  ctx.save(); ctx.globalAlpha = alpha; if (gray) ctx.filter = "grayscale(1) brightness(0.85)";
+  ctx.drawImage(off, 0, 0, T, T); ctx.restore();
+}
+function hpBar(ctx) {
+  ctx.fillStyle = "#000"; ctx.fillRect(T * 0.1, T / 2 + T * 0.36, T * 0.8, 5);
+}
+function tag(ctx) {
+  const x = T / 2 - T * 0.37, y = T / 2 + T * 0.22;
+  ctx.fillStyle = "rgba(0,0,0,0.78)"; ctx.strokeStyle = "#cfd6e0"; ctx.lineWidth = 1.5;
+  ctx.beginPath(); ctx.arc(x, y, 8, 0, 7); ctx.fill(); ctx.stroke();
+  ctx.fillStyle = "#fff"; ctx.font = "bold 12px sans-serif"; ctx.textAlign = "center"; ctx.textBaseline = "middle"; ctx.fillText("C", x, y + 1);
+}
+// 可復活：綠色圓徽章＋白色愛心＋小十字；腳下綠色虛線圈（正式版慢慢閃）
+function heartBadge(ctx) {
+  const cx = 11, cy = 11;
+  ctx.fillStyle = "rgba(0,0,0,0.8)"; ctx.strokeStyle = GREEN; ctx.lineWidth = 2;
+  ctx.beginPath(); ctx.arc(cx, cy, 9, 0, 7); ctx.fill(); ctx.stroke();
+  ctx.fillStyle = GREEN;
+  ctx.beginPath(); ctx.moveTo(cx, cy + 5.5);
+  ctx.bezierCurveTo(cx - 8, cy, cx - 4.5, cy - 6.5, cx, cy - 2.5);
+  ctx.bezierCurveTo(cx + 4.5, cy - 6.5, cx + 8, cy, cx, cy + 5.5); ctx.fill();
+  ctx.fillStyle = "#0a200a"; ctx.fillRect(cx - 0.9, cy - 2.6, 1.8, 5.2); ctx.fillRect(cx - 2.6, cy - 0.9, 5.2, 1.8);
+}
+function dashedRing(ctx) {
+  ctx.save(); ctx.setLineDash([4, 3]); ctx.strokeStyle = GREEN; ctx.lineWidth = 2;
+  ctx.beginPath(); ctx.ellipse(T / 2, T / 2 + T * 0.23 - 1, T * 0.4, T * 0.18, 0, 0, 7); ctx.stroke(); ctx.restore();
+}
+// 救不回：灰色圓徽章＋墓碑
+function graveBadge(ctx) {
+  const cx = 11, cy = 11;
+  ctx.fillStyle = "rgba(0,0,0,0.8)"; ctx.strokeStyle = GRAY; ctx.lineWidth = 2;
+  ctx.beginPath(); ctx.arc(cx, cy, 9, 0, 7); ctx.fill(); ctx.stroke();
+  ctx.fillStyle = GRAY;
+  ctx.beginPath(); ctx.moveTo(cx - 4, cy + 5); ctx.lineTo(cx - 4, cy - 1); ctx.arc(cx, cy - 1, 4, Math.PI, 0); ctx.lineTo(cx + 4, cy + 5); ctx.fill();
+  ctx.fillStyle = "#222"; ctx.fillRect(cx - 0.8, cy - 3.2, 1.6, 5); ctx.fillRect(cx - 2.4, cy - 1.8, 4.8, 1.5);
+}
+// 現行：紅叉＋「倒·復」文字
+function oldMark(ctx) {
+  const r = T * 0.16;
+  ctx.strokeStyle = RED; ctx.lineWidth = 3; ctx.globalAlpha = 0.95;
+  ctx.beginPath(); ctx.moveTo(T / 2 - r, T / 2 - r); ctx.lineTo(T / 2 + r, T / 2 + r); ctx.moveTo(T / 2 + r, T / 2 - r); ctx.lineTo(T / 2 - r, T / 2 + r); ctx.stroke();
+  ctx.globalAlpha = 1;
+  ctx.fillStyle = "rgba(0,0,0,0.75)"; ctx.strokeStyle = RED; ctx.lineWidth = 1;
+  ctx.beginPath(); ctx.roundRect(T / 2 - T * 0.46, T / 2 - T * 0.46, 24, 16, 4); ctx.fill(); ctx.stroke();
+  ctx.fillStyle = RED; ctx.font = "bold 9px sans-serif"; ctx.textAlign = "center"; ctx.textBaseline = "middle";
+  ctx.fillText("倒·復", T / 2 - T * 0.46 + 12, T / 2 - T * 0.46 + 8);
+}
+
+const CASES = [
+  { t: "現行", m: "紅叉擋臉、文字太小看不清；整個單位透明度 0.35。", draw(ctx, u) { ring(ctx, "#cfd6e0", "rgba(80,110,160,0.8)"); lying(ctx, u, 0.35); tag(ctx); oldMark(ctx); hpBar(ctx); }, a: 1 },
+  { t: "提案：倒地、可復活", m: "綠色愛心徽章＋腳下綠色虛線圈（慢慢閃）。小人保留原色、透明度 0.6。", draw(ctx, u) { ring(ctx, "#cfd6e0", "rgba(80,110,160,0.8)"); dashedRing(ctx); lying(ctx, u, 0.6); tag(ctx); heartBadge(ctx); hpBar(ctx); } },
+  { t: "提案：倒地、救不回", m: "灰色墓碑徽章；小人變灰、透明度 0.45，底圈變灰。", draw(ctx, u) { ring(ctx, "#8a8f99", "rgba(80,84,92,0.7)"); lying(ctx, u, 0.45, true); tag(ctx); graveBadge(ctx); hpBar(ctx); } },
+  { t: "對照：站著", m: "同一個單位站著的樣子。", draw(ctx, u) { ring(ctx, "#cfd6e0", "rgba(80,110,160,0.8)"); D.stamp(ctx, u, "south", T / 2, T / 2 + T * 0.23, 0.72, { dpr: 4 }); tag(ctx); ctx.fillStyle = "#000"; ctx.fillRect(T * 0.1, T / 2 + T * 0.36, T * 0.8, 5); ctx.fillStyle = "#5fd05f"; ctx.fillRect(T * 0.1, T / 2 + T * 0.36, T * 0.6, 5); } },
+];
+const unitDoll = D.TEMPLATES.hero_fighter;
+const row = document.getElementById("row");
+for (const c of CASES) {
+  const cell = document.createElement("div"); cell.className = "cell";
+  const cv = document.createElement("canvas"); cv.width = (T * Z + 8 + T) * 2; cv.height = T * Z * 2;
+  cv.style.width = `${T * Z + 8 + T}px`; cv.style.height = `${T * Z}px`;
+  const ctx = cv.getContext("2d");
+  ctx.save(); ctx.scale(Z * 2, Z * 2); tile(ctx); c.draw(ctx, unitDoll); ctx.restore();
+  ctx.save(); ctx.translate((T * Z + 8) * 2, T * Z * 2 - T * 2); ctx.scale(2, 2); tile(ctx); c.draw(ctx, unitDoll); ctx.restore();
+  cell.appendChild(cv);
+  cell.insertAdjacentHTML("beforeend", `<div class="t">${c.t}</div><div class="m">${c.m}</div>`);
+  row.appendChild(cell);
+}
+</script>
+</body>
+</html>
