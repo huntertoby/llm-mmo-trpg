@@ -9,7 +9,7 @@ from trpg.engine.state import BattleState, ObjectState, UnitState, state_to_json
 from trpg.shared.types import Team
 
 _COPIED = {
-    BattleState: {"tiles", "units", "objects", "turn_order", "traps", "zones"},
+    BattleState: {"tiles", "units", "objects", "turn_order", "traps", "zones", "runes"},
     UnitState: {
         "statuses",
         "cooldowns",

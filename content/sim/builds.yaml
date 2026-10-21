@@ -46,6 +46,7 @@ companions: [sim_companion_fighter, sim_companion_archer]
 # Phase 3F-4b：AI 會用複合技能的五種第二段——回馬斬由 hero_fighter 搬到 build_assassin（換下處決，處決仍在 hero_fighter）；
 # 延遲段示範：build_push 以蓄力斬（下回合開始釋放方陣斬）換下閃現（閃現仍在 build_assassin 等）、build_tank 以格擋反擊
 # （被攻擊時十字反擊，搭配嘲諷）換下盾擊（盾擊仍在 build_wallburn 與敵方盾兵）。
+# Phase 3-23：新增 build_runeweaver（刻印流）：先刻（雷紋刻印、火痕、獵印）再讀（咒雷的條件追加傷害、符文爆裂的引爆、符文共鳴的修正）。
 builds:
   - id: build_push
     name_zh: 位移流
@@ -413,6 +414,23 @@ builds:
       tags: [hero, sim]
       max_mana: 40
       skills: [skill_fire_bolt, skill_venom_cloud, skill_hex_bolt, skill_detonate_burning, skill_toxin_burst, skill_dread_gaze, skill_creeping_blight, skill_mark_detonation, skill_ember_brand]
+
+  - id: build_runeweaver
+    name_zh: 刻印流
+    theme_zh: 先在地上刻下自己的符文（雷紋、火紋、獵印），再用咒雷（打在雷紋上追加傷害）、符文共鳴（打在符文上傷害 +15%）和符文爆裂（引爆半徑 3 內所有符文）讀取它。敵人願意停在原地、戰鬥拖得夠久時最強；一路被追著跑、符文刻在沒人經過的地方就是白費 AP（Phase 3-23，初值未經模擬）。
+    hero:
+      id: build_runeweaver
+      name_zh: 刻印流英雄
+      attributes: {str: 8, dex: 12, con: 10, int: 16, wis: 12, wil: 12}
+      max_hp: 40
+      speed: 5
+      armor_bonus: 1
+      weapon: lightning_staff
+      ai_profile: cunning
+      resist: {elemental: 150}
+      tags: [hero, sim]
+      max_mana: 40
+      skills: [skill_thunder_sigil, skill_ember_trail, skill_hunt_sigil, skill_rune_thunderbolt, skill_rune_burst, skill_chain_lightning, skill_rune_resonance]
 
   # 使用者要求（2026-10-20）：沒有任何技能的白板主角，從一輪的升級裡長出技能。屬性全 10（一輪開局再配 4 點）。
   # HP、法力比照戰士型（位移流）與法師型（火焰流）英雄的最終值。

@@ -258,6 +258,13 @@ class TrapRules(ContentModel):
     """觸發範圍 ``trap.shape`` 的抽選權重。"""
 
 
+class RuneRules(ContentModel):
+    """刻印技能的抽選（Phase 3-23；``rune`` 骨架）。"""
+
+    skeleton_permille: int = _PERMILLE
+    """稀有度 rare 以上、未指定骨架時，改組刻印技能的機率（獨立的亂數串流；低權重）。"""
+
+
 class ScalingRules(ContentModel):
     """雙屬性縮放與專精加成的抽選（Phase 2H-2；主動技能，強度調整成功之後才抽）。
 
@@ -307,6 +314,7 @@ class ComposerRules(ContentModel):
     stance: StanceRules
     builder: BuilderRules
     trap: TrapRules
+    rune: RuneRules
     scaling: ScalingRules
     special: SpecialRules
 

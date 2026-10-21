@@ -129,6 +129,11 @@ summon_limit_per_owner: 2     # 同一召喚者同時存在的召喚物上限；
 # --- 持續區域（Phase 3D-5，docs/design/06-技能.md 6.16 G；初值，未經模擬）---
 zone_limit_per_owner: 2       # 同一施放者同時存在的區域上限；超過時最舊的消失
 
+# --- 刻印（Phase 3-23，docs/design/06-技能.md 6.25；初值，未經模擬）---
+rune_limit_per_owner: 6       # 同一施放者同時存在的符文格上限；超過時最舊的消失
+rune_default_rounds: 3        # inscribe 省略 duration 時，符文持續的環境回合數
+rune_max_rounds: 5            # inscribe 的 duration 上限
+
 # --- 常駐類傳說的啟動（Phase 3D-6，docs/design/06-技能.md 6.14.4；初值，以模擬調整）---
 legendary_activation_ap: 1    # 啟動修正型與規則改變型傳說（activation: timed | battle）花的 AP（另花技能的源力）
 legendary_timed_rounds: 3     # activation: timed 的持續輪數：持有者連同啟動那一回合共 3 個回合，第 4 個回合開始時結束

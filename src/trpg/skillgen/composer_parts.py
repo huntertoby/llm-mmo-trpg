@@ -349,6 +349,10 @@ def _fixed_effect(ctx: Ctx, primitive_id: str) -> None:
         spec["object"] = ctx.rng.choice(objects)
     elif primitive_id in ("raise_terrain", "lower_terrain"):
         spec["amount"] = 1
+    elif primitive_id == "inscribe":  # 3-23：符文元素取技能的主題元素，持續輪數是強度旋鈕
+        spec["element"] = ctx.theme.value
+        ctx.add(spec, (("duration", (1, 2, 3, 4, 5), ctx.rules.structure.knob_weight_core),))
+        return
     elif primitive_id == "dispel":
         spec["count"] = 1
     elif primitive_id == "reveal":
@@ -743,6 +747,7 @@ _HAND_WRITTEN_PRIMITIVES = frozenset(
         "revive",
         "shadowstep",
         "grant_skill",
+        "detonate_runes",
     }
 )
 """只給手寫技能的結構型原語（Phase 3C-5a 的場景物件原語：需要地圖上有對應的物件；3D-2 的

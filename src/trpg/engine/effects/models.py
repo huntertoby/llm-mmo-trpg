@@ -29,6 +29,7 @@ __all__ = [
     "DamageEffect",
     "DamageObjectEffect",
     "DestroyObjectEffect",
+    "DetonateRuneEffect",
     "Effect",
     "EffectBase",
     "ElementTouchEffect",
@@ -36,6 +37,7 @@ __all__ = [
     "HealEffect",
     "HurlObjectEffect",
     "IgniteObjectEffect",
+    "InscribeEffect",
     "LowerTerrainEffect",
     "MoveUnitEffect",
     "PushEffect",
@@ -391,6 +393,25 @@ class CreateObstacleEffect(_AtPos):
     """暫時障礙（Phase 3-11）：存在的環境回合數；``None`` 為永久。"""
 
 
+class InscribeEffect(_AtPos):
+    """刻印（Phase 3-23）：在 ``pos`` 留下 ``source_id`` 的符文（恰好帶 ``element`` 或 ``tag``）；
+    ``duration`` 省略時用核心規則的預設。不可站立或超出地圖的格子沒有效果。"""
+
+    kind: Literal["inscribe"] = "inscribe"
+    team: Team
+    element: Element | None = None
+    tag: str | None = None
+    duration: int | None = Field(default=None, ge=1)
+
+
+class DetonateRuneEffect(_AtPos):
+    """引爆符文（Phase 3-23 ``detonate_runes``）：移除 ``rune_id`` 的符文（傷害另由同一技能的
+    ``damage`` 效果結算）。符文已不存在時沒有效果。"""
+
+    kind: Literal["detonate_rune"] = "detonate_rune"
+    rune_id: int
+
+
 class SpawnUnitEffect(_AtPos):
     """產生單位（``template_id`` 必須在 ``BattleState.spawn_templates`` 中）。
 
@@ -467,6 +488,8 @@ type Effect = Annotated[
     | RaiseTerrainEffect
     | LowerTerrainEffect
     | CreateObstacleEffect
+    | InscribeEffect
+    | DetonateRuneEffect
     | SpawnUnitEffect
     | ElementTouchEffect
     | ExplodeEffect

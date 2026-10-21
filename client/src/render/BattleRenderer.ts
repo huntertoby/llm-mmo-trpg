@@ -232,6 +232,7 @@ export class BattleRenderer {
       this.place(aura, a, a.x * T, a.y * T);
     }
     this.drawZones(model);
+    this.drawRunes(model);
     this.drawWells(model);
     const kinds = objectKinds(model);
     for (const o of model.objects) {
@@ -290,6 +291,32 @@ export class BattleRenderer {
       node.addChild(mark);
       this.rows.row(w.y).deco.addChild(node);
       this.place(node, w, w.x * T + T / 2, w.y * T + T / 2);
+    }
+  }
+
+  /**
+   * 符文（Phase 3-23）：菱形外框（刻下它的施放者的陣營色）＋菱形內紋與四個端點的短刻痕（元素色）；
+   * 畫在格子上（跟著格子抬高），同一格有多個符文時各占一個象限、縮小。
+   */
+  private drawRunes(model: DrawModel): void {
+    for (const r of model.runes) {
+      const node = new Container();
+      const multi = r.slots > 1;
+      const half = multi ? T * 0.17 : T * 0.3;
+      const alpha = r.fading ? 0.55 : 1;
+      const dx = multi ? ((r.slot % 2) - 0.5) * T * 0.46 : 0;
+      const dy = multi ? (Math.floor(r.slot / 2) % 2 === 0 ? -1 : 1) * T * 0.23 : 0;
+      const diamond = (s: number): number[] => [0, -s, s, 0, 0, s, -s, 0];
+      const g = new Graphics();
+      g.poly(diamond(half)).fill({ color: r.color, alpha: 0.18 * alpha }).stroke({ width: 2, color: r.teamColor, alpha: 0.95 * alpha });
+      g.poly(diamond(half * 0.5)).fill({ color: r.color, alpha: 0.75 * alpha });
+      for (const [ux, uy] of [[0, -1], [1, 0], [0, 1], [-1, 0]] as const) {
+        g.moveTo(ux * half * 0.62, uy * half * 0.62).lineTo(ux * half * 1.0, uy * half * 1.0);
+      }
+      g.stroke({ width: 1.5, color: r.color, alpha: 0.9 * alpha });
+      node.addChild(g);
+      this.rows.row(r.y).deco.addChild(node);
+      this.place(node, r, r.x * T + T / 2 + dx, r.y * T + T / 2 + dy);
     }
   }
 

@@ -4,14 +4,16 @@
 import type { BattleView, Pos, TileView } from "../api/types";
 import type { SkillNames } from "./actions";
 import { glossaryEntry, glossaryName } from "./glossary";
+import { ownerNameOf, runeLine, runesAt } from "./runes";
 
 // 與圖例（legend.ts）共用的用語；測試比對兩邊一致。
 export const LABEL_DEADLY = "致命地形";
 export const LABEL_BURNING = "燃燒中";
 export const LABEL_TRAP = "陷阱";
 export const LABEL_ZONE = "持續區域";
+export const LABEL_RUNE = "符文";
 
-export type TileSectionKind = "terrain" | "surface" | "object" | "trap" | "zone";
+export type TileSectionKind = "terrain" | "surface" | "object" | "trap" | "rune" | "zone";
 
 export interface TileSection {
   kind: TileSectionKind;
@@ -87,6 +89,9 @@ export function tileSections(
       title: `${LABEL_TRAP}：${skills[t.skill_id] ?? t.skill_id}・剩 ${t.remaining} 回合`,
       lines: [],
     });
+  }
+  for (const r of runesAt(view, pos)) {
+    out.push({ kind: "rune", title: `${LABEL_RUNE}：${runeLine(r, ownerNameOf(view, r))}`, lines: [] });
   }
   if (extra.length > 0) out.push({ kind: "zone", title: `${LABEL_ZONE}與預告`, lines: [...extra] });
   return out;

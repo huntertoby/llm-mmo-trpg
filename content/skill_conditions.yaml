@@ -90,3 +90,12 @@ conditions:
     description_zh: 施放者帶有「隱蔽」狀態（concealed；站在黑暗或草叢中不算）。隱蔽中發動攻擊另有通用的命中加成，攻擊結算完後脫離隱蔽。
     harshness: harsh
     min_rarity: rare
+  # 3-23 刻印（harshness 為初值，未經模擬）：需要先用 inscribe 刻下符文才成立，所以算嚴苛。
+  - id: on_own_rune
+    name_zh: 站在自己的符文上
+    description_zh: 目標所在的格子上有施放者自己（用 inscribe）刻下的符文；可用 element 或 tag 篩選符文（省略＝任何符文）。別人的符文不算；對格子判斷，所以也可以用在沒有單位的格子。
+    harshness: harsh
+    min_rarity: rare
+    params:
+      element: {type: element}
+      tag: {type: tag}

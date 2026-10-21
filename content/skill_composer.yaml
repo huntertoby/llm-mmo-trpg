@@ -116,6 +116,10 @@ trap:
   delay_rounds: {min: 1, max: 3}
   shape_weights: {single: 4, cross: 3, square3: 2}
 
+# 刻印（Phase 3-23，初值）：稀有度 rare 以上、未指定骨架時改組刻印技能（inscribe）的機率（獨立的亂數串流；低權重）
+rune:
+  skeleton_permille: 40
+
 # 強度調整：比例收在 [low, high]，目標均勻分佈在 [low, high − margin]
 tuning:
   low_permille: 750

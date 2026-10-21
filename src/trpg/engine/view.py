@@ -31,7 +31,7 @@ from trpg.engine.state import (
 from trpg.engine.summons import totem_of
 from trpg.engine.traps import visible_traps
 from trpg.engine.zones import next_zone_cells, zone_cells, zone_is_harmful, zone_spec
-from trpg.shared.types import Pos, Surface, Team, UnitId
+from trpg.shared.types import Element, Pos, Surface, Team, UnitId, rune_name
 
 __all__ = [
     "REACTION_TRIGGER_TEXT",
@@ -41,6 +41,7 @@ __all__ = [
     "ObjectView",
     "PendingView",
     "ReactionRuleView",
+    "RuneView",
     "StatusView",
     "TileView",
     "TrapView",
@@ -243,6 +244,22 @@ class ZoneView(_ViewModel):
     next_cells: tuple[Pos, ...] | None
 
 
+class RuneView(_ViewModel):
+    """格子上的符文（Phase 3-23 ``inscribe``；雙方都看得到，但只有 ``owner_id`` 自己讀得到）。
+
+    ``element``／``tag``：恰好一個；``name_zh`` 例如「雷紋」；``remaining``：剩餘的環境回合數。
+    """
+
+    id: int
+    owner_id: UnitId
+    team: Team
+    pos: Pos
+    element: Element | None
+    tag: str | None
+    name_zh: str
+    remaining: int
+
+
 class PendingView(_ViewModel):
     """目前的反應詢問（只有公開欄位；內部的重播資料不外流）。"""
 
@@ -287,6 +304,8 @@ class BattleView(_ViewModel):
     """尚未被取用的源泉格（Phase 3C-4a；我方單位進入時 +1 源力，之後消失；雙方都看得到）。"""
     zones: tuple[ZoneView, ...] = ()
     """持續區域（Phase 3D-5），依編號排序；雙方都看得到。"""
+    runes: tuple[RuneView, ...] = ()
+    """格子上的符文（Phase 3-23），依編號排序；雙方都看得到。"""
 
 
 def _pos(cells: tuple[tuple[int, int], ...]) -> tuple[Pos, ...]:
@@ -318,6 +337,22 @@ def _zone_views(state: BattleState) -> tuple[ZoneView, ...]:
             )
         )
     return tuple(views)
+
+
+def _rune_views(state: BattleState) -> tuple[RuneView, ...]:
+    return tuple(
+        RuneView(
+            id=r.id,
+            owner_id=r.owner_id,
+            team=r.team,
+            pos=r.pos,
+            element=r.element,
+            tag=r.tag,
+            name_zh=rune_name(r.element, r.tag),
+            remaining=r.remaining,
+        )
+        for r in state.runes
+    )
 
 
 def _status_view(state: BattleState, unit: UnitState, status: StatusInstance) -> StatusView:
@@ -518,4 +553,5 @@ def project_for(state: BattleState, team: Team) -> BattleView:
         pending=None if state.pending is None else _pending_view(state.pending),
         source_wells=tuple(Pos(x=x, y=y) for x, y in state.source_wells),
         zones=_zone_views(state),
+        runes=_rune_views(state),
     )

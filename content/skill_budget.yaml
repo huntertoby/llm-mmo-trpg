@@ -60,6 +60,10 @@ dispel_one_points: 3
 dispel_all_points: 6
 # 3-11 暫時障礙：create_obstacle 持續 n 回合（1–10）的點數 ＝ 基礎 3 × 第 n 項（‰）；永久 ＝ 1000‰（現狀）。
 obstacle_duration_permille: [400, 500, 600, 700, 750, 800, 850, 900, 950, 1000]
+# 3-23 刻印（初值，未經模擬）：inscribe 的點數 ＝ 基礎 5 × 第 n 項（‰，n ＝ duration 1–5，省略取預設 3 輪）；
+# detonate_runes 的點數 ＝ 骰子平均 × detonate_runes_permille ÷ 1000（需要先刻印的折扣），形狀倍率照一般效果。
+inscribe_duration_permille: [600, 800, 1000, 1200, 1400]
+detonate_runes_permille: 700
 reveal_base_points: 2
 reveal_round_points: 1
 # 3D-8b 復活與定時炸彈（初值，未經模擬）：復活 ＝ revive_base_points ＋ hp_permille × revive_hp_point_permille ÷ 1000；

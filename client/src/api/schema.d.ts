@@ -717,6 +717,11 @@ export interface components {
              * @default []
              */
             zones: components["schemas"]["ZoneView"][];
+            /**
+             * Runes
+             * @default []
+             */
+            runes: components["schemas"]["RuneView"][];
         };
         /**
          * BombOut
@@ -1089,6 +1094,12 @@ export interface components {
              */
             problems: string[];
         };
+        /**
+         * Element
+         * @description 傷害與效果的元素（9 種，見 ``docs/專案計畫.md`` 5.1.1）。水不是元素，只是表面。
+         * @enum {string}
+         */
+        Element: "physical" | "fire" | "ice" | "lightning" | "poison" | "wind" | "earth" | "holy" | "shadow";
         /**
          * EndStance
          * @description 取消目前的姿態（Phase 2E-2）：只能在自己的回合，免費（不花 AP）。
@@ -2128,6 +2139,27 @@ export interface components {
             base_attribute: number;
             /** Hp Per Con Point */
             hp_per_con_point: number;
+        };
+        /**
+         * RuneView
+         * @description 格子上的符文（Phase 3-23 ``inscribe``；雙方都看得到，但只有 ``owner_id`` 自己讀得到）。
+         *
+         *     ``element``／``tag``：恰好一個；``name_zh`` 例如「雷紋」；``remaining``：剩餘的環境回合數。
+         */
+        RuneView: {
+            /** Id */
+            id: number;
+            /** Owner Id */
+            owner_id: string;
+            team: components["schemas"]["Team"];
+            pos: components["schemas"]["Pos"];
+            element: components["schemas"]["Element"] | null;
+            /** Tag */
+            tag: string | null;
+            /** Name Zh */
+            name_zh: string;
+            /** Remaining */
+            remaining: number;
         };
         /** SaveOut */
         SaveOut: {

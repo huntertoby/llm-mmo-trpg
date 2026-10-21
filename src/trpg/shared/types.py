@@ -25,6 +25,7 @@ __all__ = [
     "Surface",
     "Team",
     "UnitId",
+    "rune_name",
 ]
 
 # ---------------------------------------------------------------------------
@@ -183,6 +184,26 @@ _ELEMENT_NAMES: dict[Element, str] = {
     Element.HOLY: "神聖",
     Element.SHADOW: "暗影",
 }
+
+_RUNE_ELEMENT_NAMES: dict[Element, str] = {
+    Element.PHYSICAL: "力",
+    Element.FIRE: "火",
+    Element.ICE: "冰",
+    Element.LIGHTNING: "雷",
+    Element.POISON: "毒",
+    Element.WIND: "風",
+    Element.EARTH: "土",
+    Element.HOLY: "聖",
+    Element.SHADOW: "影",
+}
+
+
+def rune_name(element: Element | None, tag: str | None) -> str:
+    """符文的名稱（Phase 3-23），例如「雷紋」「火紋」；標籤符文為「<標籤>紋」。"""
+    if element is not None:
+        return f"{_RUNE_ELEMENT_NAMES[element]}紋"
+    return f"{tag or ''}紋"
+
 
 # 對應 docs/專案計畫.md 5.1.1 的「抗性分組」欄
 ELEMENT_RESIST_GROUP: dict[Element, ResistGroup] = {

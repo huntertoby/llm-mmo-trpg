@@ -56,6 +56,7 @@ export const SKELETON_NAME: Readonly<Record<string, string>> = {
   modifier: "改造",
   passive: "被動",
   combo: "連段",
+  rune: "刻印",
 };
 
 // ---- 小工具 ----
@@ -766,6 +767,22 @@ export function skeletonGlyph(ctx: Ctx, sk: string | null, cx: number, cy: numbe
       ctx.lineTo(-7, 0);
       ctx.lineTo(-3, 4);
       ctx.stroke();
+      break;
+    case "rune":
+      ctx.beginPath();
+      ctx.moveTo(0, -7);
+      ctx.lineTo(7, 0);
+      ctx.lineTo(0, 7);
+      ctx.lineTo(-7, 0);
+      ctx.closePath();
+      ctx.stroke();
+      ctx.beginPath();
+      ctx.moveTo(0, -2.6);
+      ctx.lineTo(2.6, 0);
+      ctx.lineTo(0, 2.6);
+      ctx.lineTo(-2.6, 0);
+      ctx.closePath();
+      ctx.fill();
       break;
     case "consume_status":
       starPath(ctx, 0, 0, 5, 7, 3);

@@ -41,6 +41,7 @@ __all__ = [
     "ReactionUnless",
     "ReactionWhen",
     "RunAiRules",
+    "RuneAiRules",
     "SpillDef",
     "SurfaceCheck",
     "SurfaceDamage",
@@ -752,6 +753,24 @@ class ZoneAiRules(ContentModel):
     path_permille: int = Field(default=500, ge=0, le=1000)
 
 
+class RuneAiRules(ContentModel):
+    """刻印的 AI 數值（Phase 3-23；``content/ai_profiles.yaml`` 的 ``rune:``；初值未經模擬）。
+
+    只在行動者有「讀取技能」（條件 ``on_own_rune`` 或原語 ``detonate_runes``）時才會主動刻印。
+
+    - ``inscribe_points``：在敵人腳下刻一個符文的價值（等值傷害點數 × ``damage`` 權重）；
+    - ``adjacent_permille``／``near_permille``：符文刻在距離最近的敵人 1 格、2 格時相對於腳下的
+      比例（‰；更遠為 0，敵人「會停留」的格子才有價值）；
+    - ``read_points``：讀取技能（有 ``on_own_rune`` 條件的效果，或引爆）打到站在自己符文上的敵人
+      時的額外價值（每個目標；單位同上）。
+    """
+
+    inscribe_points: int = Field(default=6, ge=0)
+    adjacent_permille: int = Field(default=600, ge=0, le=1000)
+    near_permille: int = Field(default=300, ge=0, le=1000)
+    read_points: int = Field(default=6, ge=0)
+
+
 class AiProfile(ContentModel):
     id: str = Field(pattern=ID_PATTERN)
     name_zh: str = Field(min_length=1)
@@ -776,6 +795,8 @@ class AiProfile(ContentModel):
     """持續區域的 AI 數值（Phase 3D-5）；由 :class:`AiProfileTable` 的同名欄位填入。"""
     gamble: GambleAiRules = Field(default_factory=GambleAiRules)
     """賭博型技能的 AI 數值（Phase 3D-7a）；由 :class:`AiProfileTable` 的同名欄位填入。"""
+    rune: RuneAiRules = Field(default_factory=RuneAiRules)
+    """刻印的 AI 數值（Phase 3-23）；由 :class:`AiProfileTable` 的同名欄位填入。"""
 
 
 class OrderBonuses(ContentModel):
@@ -885,6 +906,7 @@ class AiProfileTable(ContentModel):
     summon: SummonAiRules = Field(default_factory=SummonAiRules)
     zone: ZoneAiRules = Field(default_factory=ZoneAiRules)
     gamble: GambleAiRules = Field(default_factory=GambleAiRules)
+    rune: RuneAiRules = Field(default_factory=RuneAiRules)
     orders: OrderBonuses = Field(default_factory=OrderBonuses)
     basic: BasicActionAiRules = Field(default_factory=BasicActionAiRules)
     """守護隊友、換位、瞄準的 AI 數值（Phase 3-21a；敵我同一套，不分行為模式）。"""
@@ -904,7 +926,15 @@ class AiProfileTable(ContentModel):
         ally_shared = data.get("ally_status_values")
         trap_shared = {
             key: data[key]
-            for key in ("trap_likelihood_permille", "trap", "rewrite", "summon", "zone", "gamble")
+            for key in (
+                "trap_likelihood_permille",
+                "trap",
+                "rewrite",
+                "summon",
+                "zone",
+                "gamble",
+                "rune",
+            )
             if key in data
         }
         facing = data.get("facing")

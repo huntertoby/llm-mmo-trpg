@@ -2394,3 +2394,8 @@ button.selected {
 .ws-reset-ask {
   align-self: center;
 }
+
+/* 符文資訊卡（Phase 3-23）：標題用強調色，同陷阱與持續區域 */
+.tile-section.rune .tile-title {
+  color: var(--accent);
+}

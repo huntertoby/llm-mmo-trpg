@@ -38,8 +38,16 @@ __all__ = [
     "run_battle",
 ]
 
-LOG_FORMAT = "trpg-battle-log/37"
-"""``/37``（Phase 3-21b）：基本動作攀跳（動作 ``vault``、事件 ``unit_vaulted``）、核心規則
+LOG_FORMAT = "trpg-battle-log/38"
+"""``/38``（Phase 3-23，接在 3-21b 的 ``/37`` 之後）：刻印——原語 ``inscribe``／
+``detonate_runes``（符文用 ``EffectSpec`` 的 ``element``／``tag``）、
+條件 ``on_own_rune``（``ConditionSpec`` 新欄位 ``element``）、骨架 ``rune``、
+戰鬥狀態的 ``runes``／``next_rune_id``、新事件 ``rune_inscribed``／
+``rune_removed``、新效果
+``inscribe``／``detonate_rune``、核心規則 ``rune_limit_per_owner``／``rune_default_rounds``／
+``rune_max_rounds``、預算規則 ``inscribe_duration_permille``／``detonate_runes_permille``；
+``/37`` 的規則包沒有這些欄位，舊紀錄不能由新版程式重播。
+``/37``（Phase 3-21b）：基本動作攀跳（動作 ``vault``、事件 ``unit_vaulted``）、核心規則
 ``vault_ap_cost``／``vault_move_cost``／``vault_climb_height``／``vault_jump_width``、AI 規則
 ``basic`` 的 ``vault_*``；AI 會選擇攀跳，同種子的 AI 對戰結果與 ``/36`` 可能不同，且 ``format`` 不符
 的紀錄由 ``trpg battle replay`` 拒絕。

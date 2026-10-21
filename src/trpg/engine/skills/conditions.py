@@ -3,7 +3,8 @@
 這個模組只讀取狀態，不修改。條件的判斷對象（:class:`Subject`）是 **一個單位或一個格子**：
 
 - 單位類條件（``target_hp_below``、``target_has_status``）需要單位，沒有單位時不成立；
-- 格子類條件（``height_advantage``、``target_on_surface``）看格子，單位只是站在上面；
+- 格子類條件（``height_advantage``、``target_on_surface``、``on_own_rune``）看格子，單位只是
+  站在上面；
 - ``self_hp_below`` 與 3D-1 的連段條件（``moved_this_turn``、``adjacent_ally``、``first_round``、
   ``cast_tag_this_turn``）只看施放者，與對象無關；``target_isolated`` 看對象單位的周圍；
   ``flanked``（Phase 3D-8c）看對象單位與施放者的相對位置：對象的對面有施放者的友方；
@@ -23,6 +24,7 @@ from trpg.content.skills import CASTER_CONDITIONS, ConditionSpec, SkillDef, cond
 from trpg.engine.ids import CONCEALED
 from trpg.engine.rules.facing import is_behind
 from trpg.engine.rules.geometry import XY
+from trpg.engine.rune_queries import has_own_rune
 from trpg.engine.state import BattleState, UnitState
 
 __all__ = [
@@ -141,6 +143,10 @@ def condition_met(
         return state.tile(*caster.xy).height > state.tile(*subject.xy).height
     if kind == "target_on_surface":
         return state.tile(*subject.xy).surface == condition.surface
+    if kind == "on_own_rune":  # 目標格上有施放者自己的符文（Phase 3-23）；別人的不算
+        return has_own_rune(
+            state, caster.id, subject.xy, element=condition.element, tag=condition.tag
+        )
     raise ValueError(f"未知的條件：{kind}")
 
 

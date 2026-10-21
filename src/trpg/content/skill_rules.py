@@ -223,6 +223,14 @@ class BudgetRules(ContentModel):
     )
     """``create_obstacle``（Phase 3-11）：``duration`` 為 n 回合時，點數 ＝ 基礎 × 第 n 項（‰）；
     共 10 項（1–10 回合），永久（省略 ``duration``）＝ 基礎 × 1000‰ ＝ 現狀（初值，未經模擬）。"""
+    inscribe_duration_permille: tuple[int, ...] = Field(
+        default=(600, 800, 1000, 1200, 1400), min_length=5, max_length=5
+    )
+    """``inscribe``（Phase 3-23）：``duration`` 為 n 輪時，點數 ＝ 基礎 × 第 n 項（‰）；共 5 項
+    （1–5 輪），省略 ``duration`` 時取 ``core.rune_default_rounds`` 對應的項（初值，未經模擬）。"""
+    detonate_runes_permille: int = Field(default=700, ge=1, le=3000)
+    """``detonate_runes``（Phase 3-23）：點數 ＝ 骰子平均 × 此值 ÷ 1000（需要先刻印、且敵人要站在
+    符文上的折扣；形狀倍率另外照一般效果計算；初值，未經模擬）。"""
     reveal_base_points: int = Field(default=2, ge=0)
     reveal_round_points: int = Field(default=1, ge=0)
     """``reveal`` 的預算點數 ＝ ``reveal_base_points`` ＋ ``reveal_round_points`` × ``duration``

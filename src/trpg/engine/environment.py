@@ -59,6 +59,7 @@ from trpg.engine.events import (
 from trpg.engine.rule_changes import expire_orphan_summons
 from trpg.engine.rules.geometry import XY, neighbors4
 from trpg.engine.rules.movement import is_deadly, is_standable
+from trpg.engine.runes import tick_runes
 from trpg.engine.state import BattleState
 from trpg.engine.zones import move_zones
 from trpg.shared.rng import Rng
@@ -108,6 +109,7 @@ def run_environment(ctx: Ctx) -> None:
         fires = [xy for xy in tiles if state.tile(*xy).surface is Surface.FIRE]
         _burn_objects(ctx)
         _expire_objects(ctx)  # 暫時障礙到期（Phase 3-11）
+        tick_runes(ctx)  # 符文倒數與到期（Phase 3-23）
         _tick_surfaces(ctx, tiles)
         _spread_fire(ctx, fires)
         move_zones(ctx)  # 持續區域：到期與移動型的前進（Phase 3D-5）

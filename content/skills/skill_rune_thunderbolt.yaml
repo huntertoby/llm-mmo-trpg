@@ -1,0 +1,27 @@
+# 讀取符文（Phase 3-23 示範，數值為初值，未經模擬）：目標若站在自己的雷紋上，電光再追加一段傷害（不吃掉符文）。
+id: skill_rune_thunderbolt
+schema_version: 1
+name_zh: 咒雷
+tier: 1
+rank: 1
+rarity: rare
+kind: active
+skeleton: combo
+category: spell
+weapon_req: focus
+ap_cost: 2
+scaling_attr: int
+shape: {type: single, range: 5}
+effects:
+  - {type: damage, dice: 2d8, element: lightning}
+  - type: damage
+    dice: 2d8
+    element: lightning
+    condition: {type: on_own_rune, element: lightning}
+condition: null
+cost: {mana: 6, cooldown: 2}
+tags: [lightning, spell, combo, rune_read]
+narrative:
+  concept: 雷紋像一個靶心，電光只認得它
+  cast_flavor: 電光劈下，在你刻過的雷紋上炸開一圈藍白的光
+provenance: {origin: builtin, owner_id: null, created_by: null, parents: [], bound: true, tradeable: false}

@@ -30,7 +30,7 @@ from pydantic import Field, ValidationError, field_validator, model_validator
 from trpg.content.battle import ID_PATTERN, Dice
 from trpg.content.rules import SkillSlots
 from trpg.content.schemas import ContentModel
-from trpg.shared.types import Attribute, Element, Surface
+from trpg.shared.types import Attribute, Element, Surface, rune_name
 
 if TYPE_CHECKING:
     from trpg.content.skill_triggers import SkillTriggerDef
@@ -58,6 +58,7 @@ __all__ = [
     "DELAYED_DAMAGE",
     "DELAYED_RELEASE_VALUES",
     "DELAYED_SHAPES",
+    "DETONATE_RUNES",
     "DISPEL",
     "EFFECT_NON_PARAM_FIELDS",
     "EFFECT_PARAM_FIELDS",
@@ -74,6 +75,7 @@ __all__ = [
     "GRANT_AP",
     "GRANT_SKILL",
     "HURL_OBJECT",
+    "INSCRIBE",
     "INTERCEPT",
     "LEAP",
     "LEGACY_REACTION_EVENTS",
@@ -178,9 +180,11 @@ SKELETON_IDS: tuple[str, ...] = (
     "passive",
     "modifier",
     "consume_status",
+    "rune",
 )
 """``docs/design/06-技能.md`` 6.9 的 12 種骨架，加上 Phase 3C-2 的 ``modifier``（修正規則：改造型與
-修正型被動，6.14.1）與 3C-3b 的 ``consume_status``（6.14.2 管道 1）。結構驗證見 ``skillgen``。"""
+修正型被動，6.14.1）、3C-3b 的 ``consume_status``（6.14.2 管道 1）與 3-23 的 ``rune``（6.25 刻印）。
+結構驗證見 ``skillgen``。"""
 
 WEAPON_CLASSES: tuple[str, ...] = ("melee", "ranged", "focus")
 
@@ -219,8 +223,9 @@ REQUIRED_CONDITIONS: tuple[str, ...] = (
     "flanked",
     "from_behind",
     "self_concealed",
+    "on_own_rune",
 )
-"""引擎實作的 13 種條件（``trpg.engine.skills.conditions``），資料檔必須全部定義。"""
+"""引擎實作的 14 種條件（``trpg.engine.skills.conditions``），資料檔必須全部定義。"""
 
 type Targeting = Literal[
     "self", "unit", "tile", "direction", "none", "object_tile", "unit_tile", "unit_pair"
@@ -549,6 +554,8 @@ class PrimitiveDef(ContentModel):
       ``revive`` 基礎點數 ＋ 回復比例 × 係數（3D-8b）、
       ``delayed_damage`` 骰子平均 × 預期波及人數（3D-8b）、
       ``grant_skill`` 被給技能的總點數 × 預期使用次數（3D-8c）、
+      ``inscribe`` ``base_points`` × ``inscribe_duration_permille``（依 ``duration``，3-23）、
+      ``detonate_runes`` 骰子平均 × ``detonate_runes_permille``（需要先刻印的折扣，3-23）、
       ``dice_average`` 骰子平均值、``damage`` 法術為骰子平均值而武器為倍率 × 基準武器傷害、
       ``status``／``surface`` 為該狀態或表面的 ``budget_points`` × 持續 ÷ 預設持續。
       ``None`` 表示無法計算預算（驗證器會拒絕）。
@@ -588,6 +595,8 @@ class PrimitiveDef(ContentModel):
             "revive",
             "delayed_damage",
             "grant_skill",
+            "inscribe",
+            "detonate_runes",
         ]
         | None
     ) = None
@@ -595,7 +604,7 @@ class PrimitiveDef(ContentModel):
 
     @model_validator(mode="after")
     def _check_budget(self) -> PrimitiveDef:
-        needs_points = ("fixed", "per_distance", "per_amount", "obstacle")
+        needs_points = ("fixed", "per_distance", "per_amount", "obstacle", "inscribe")
         if self.budget_basis in needs_points and self.base_points is None:
             raise ValueError(f"原語 {self.id}：budget_basis {self.budget_basis} 必須填 base_points")
         return self
@@ -687,11 +696,14 @@ class ConditionSpec(ContentModel):
     surface: Surface | None = None
     status: str | None = Field(default=None, pattern=ID_PATTERN)
     tag: str | None = Field(default=None, pattern=ID_PATTERN)
-    """``cast_tag_this_turn`` 專用（Phase 3D-1）：本回合施放過的技能標籤。"""
+    """``cast_tag_this_turn`` 專用（Phase 3D-1）：本回合施放過的技能標籤；``on_own_rune`` 的符文標籤
+    篩選（Phase 3-23）。"""
+    element: Element | None = None
+    """``on_own_rune`` 專用（Phase 3-23）：符文元素篩選（省略＝任何符文）。"""
 
     def param_values(self) -> dict[str, Any]:
         """已填寫的參數（依名稱排序）。"""
-        names = ("permille", "status", "surface", "tag")
+        names = ("element", "permille", "status", "surface", "tag")
         return {n: getattr(self, n) for n in names if getattr(self, n) is not None}
 
 
@@ -705,6 +717,13 @@ _PLAIN_CONDITION_TEXT = {
     "first_round": "第一輪",
 }
 """沒有參數的條件的一句話（Phase 3D-1）。"""
+
+
+def _rune_condition_text(condition: ConditionSpec) -> str:
+    """``on_own_rune`` 的一句話（Phase 3-23）：可帶元素或標籤篩選。"""
+    if condition.element is None and condition.tag is None:
+        return "目標站在自己的符文上"
+    return f"目標站在自己的{rune_name(condition.element, condition.tag)}上"
 
 
 def condition_text(
@@ -726,7 +745,10 @@ def condition_text(
         return f"目標帶有狀態「{status_name(condition.status)}」"
     if kind == "cast_tag_this_turn" and condition.tag is not None:
         return f"本回合已施放過「{condition.tag}」類技能"
-    return _PLAIN_CONDITION_TEXT.get(kind, kind)
+    plain = _PLAIN_CONDITION_TEXT.get(kind)
+    if plain is None and kind == "on_own_rune":
+        plain = _rune_condition_text(condition)
+    return plain or kind
 
 
 # ---------------------------------------------------------------------------
@@ -1117,6 +1139,10 @@ SUMMON = "summon"
 RULE_CHANGE = "rule_change"
 """規則改變（Phase 3D-6）：引用 ``content/rule_changes.yaml`` 的一條規則，以 ``activation``
 啟動。"""
+INSCRIBE = "inscribe"
+"""Phase 3-23 的刻印原語 ID（6.25）：在影響格留下施放者專屬的符文（``element`` 或 ``tag``）。"""
+DETONATE_RUNES = "detonate_runes"
+"""Phase 3-23 的消耗型原語 ID（6.25）：引爆影響格內施放者自己的符文，每格對該格單位一次小傷害。"""
 ZONE = "zone"
 """Phase 3D-5 的持續區域原語 ID（6.16 G）：在格子上建立持續 ``duration`` 輪的區域。"""
 ZONE_EFFECT_TYPES: tuple[str, ...] = ("damage", "heal", "shield", "apply_status")
@@ -1745,6 +1771,7 @@ class SkillDef(ContentModel):
         self._check_pair_moves()
         self._check_summon()
         self._check_zone()
+        self._check_runes()
         self._check_gamble()
         self._check_revive()
         self._check_delayed_damage()
@@ -2050,6 +2077,20 @@ class SkillDef(ContentModel):
                 raise ValueError(f"{at}：技能沒有冷卻（cost.cooldown），沒有東西可以歸零")
         else:
             self._check_effect(0, sub)
+
+    def _check_runes(self) -> None:
+        """刻印（Phase 3-23）：``inscribe``、``detonate_runes`` 只能用在主動技能；``inscribe`` 恰好
+        填 ``element`` 或 ``tag`` 其中一個（標籤符文不可同時帶元素）。"""
+        for index, effect in enumerate(self.effects):
+            if effect.type not in (INSCRIBE, DETONATE_RUNES):
+                continue
+            where = f"effects[{index}]（{effect.type}）"
+            if self.kind != "active":
+                raise ValueError(f"{where}：只能用在主動技能，收到 kind: {self.kind}")
+            if effect.type == INSCRIBE and (effect.element is None) == (effect.tag is None):
+                raise ValueError(f"{where}：必須恰好填 element 或 tag 其中一個")
+            if effect.type == INSCRIBE and effect.dice is not None:
+                raise ValueError(f"{where}：符文本身沒有效果，不可填 dice")
 
     def _check_zone(self) -> None:
         """持續區域（Phase 3D-5）：只能用在主動技能，而且是技能唯一的效果；``anchor``、``when``、
@@ -2429,7 +2470,7 @@ class SkillDef(ContentModel):
                 raise ValueError(f"{where}：reset_cooldown 必須填 which（all 或 tag）")
             if (effect.which == "tag") != (effect.tag is not None):
                 raise ValueError(f"{where}：which: tag 必須填 tag，which: all 不可填 tag")
-        elif effect.which is not None or effect.tag is not None:
+        elif effect.which is not None or (effect.tag is not None and effect.type != INSCRIBE):
             raise ValueError(f"{where}：只有 reset_cooldown 使用 which、tag")
         if effect.type == RESTORE_RESOURCE:
             self._check_restore_resource(where, effect)
@@ -2833,7 +2874,10 @@ def _cost_stack_problems(skill: SkillDef, stacks: dict[str, StackDef]) -> list[s
 
 
 def _filled_by_category(skill: SkillDef, primitive: PrimitiveDef, name: str) -> bool:
-    """法術技的傷害骰必填，武器技的傷害骰來自武器：``dice`` 對武器技的 damage 不是必要參數。"""
+    """法術技的傷害骰必填，武器技的傷害骰來自武器：``dice`` 對武器技的 damage 不是必要參數；
+    符文帶元素或標籤其中一個：填了 ``tag`` 時 ``inscribe`` 的 ``element`` 不是必要參數（3-23）。"""
+    if primitive.id == INSCRIBE and name == "element":
+        return any(e.type == INSCRIBE and e.tag is not None for e in skill.effects)
     return primitive.id == "damage" and name == "dice" and skill.category == "weapon"
 
 
