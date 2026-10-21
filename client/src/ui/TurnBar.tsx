@@ -1,5 +1,6 @@
 // 回合列：輪數、目前行動者、先攻順序（每個單位的代號與 HP 小條，目前行動者強調）。
 import type { BattleView } from "../api/types";
+import { objectiveHud, objectiveLine } from "../battle/objective";
 import { remainingRounds, summonKind } from "../battle/summons";
 import type { UnitNames } from "../battle/units";
 
@@ -18,6 +19,12 @@ export function TurnBar({ view, names, acting }: Props) {
   return (
     <div className="turn-bar">
       <span className="turn-round">{rounds}</span>
+      <span
+        className={`turn-objective ${view.objective.kind}`}
+        title={objectiveLine(view.objective)}
+      >
+        {objectiveHud(view.objective, view.round)}
+      </span>
       <span className="turn-map">
         {view.map_name_zh}
         {view.weather_name_zh === null ? "" : `・${view.weather_name_zh}`}

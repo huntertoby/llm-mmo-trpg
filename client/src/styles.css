@@ -2394,3 +2394,67 @@ button.selected {
 .ws-reset-ask {
   align-self: center;
 }
+
+/* Phase 3-22：勝利條件輪替 */
+.turn-objective {
+  padding: 1px 8px;
+  border-radius: 10px;
+  border: 1px solid var(--border, #444);
+  font-weight: 700;
+  font-size: 13px;
+}
+
+.turn-objective.escape {
+  color: #5ee08a;
+  border-color: #5ee08a;
+}
+
+.turn-objective.defend {
+  color: #ffc83d;
+  border-color: #ffc83d;
+}
+
+.battle-banner-goal {
+  margin-top: 6px;
+  font-size: 20px;
+  font-weight: 700;
+  letter-spacing: 2px;
+  color: #fff;
+}
+
+.end-detail {
+  margin: 4px 0 8px;
+  color: var(--muted);
+  font-size: 13px;
+}
+
+.tile-section.objective .tile-title {
+  color: #ffc83d;
+}
+
+.run-goal {
+  display: inline-block;
+  margin-left: 6px;
+  padding: 0 6px;
+  border-radius: 8px;
+  border: 1px solid currentColor;
+  font-size: 12px;
+  font-weight: 700;
+}
+
+.run-goal.escape {
+  color: #5ee08a;
+}
+
+.run-goal.defend {
+  color: #ffc83d;
+}
+
+.run-goal.eliminate {
+  color: var(--muted);
+}
+
+.run-next-goal {
+  margin: 6px 0;
+  font-weight: 700;
+}

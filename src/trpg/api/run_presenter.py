@@ -106,6 +106,7 @@ def run_response(session: RunSession) -> RunResponse:
             boss=p.boss,
             enemies=tuple(library.unit(t).name_zh for t in p.enemies),
             done=p.index <= run.battles_done,
+            objective=library.map(p.map_id).objective_for(p.objective),
         )
         for p in run.plan
     )

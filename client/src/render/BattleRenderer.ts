@@ -233,6 +233,7 @@ export class BattleRenderer {
     }
     this.drawZones(model);
     this.drawWells(model);
+    this.drawMarkers(model);
     const kinds = objectKinds(model);
     for (const o of model.objects) {
       const node = this.objectSprite(o, kinds);
@@ -290,6 +291,33 @@ export class BattleRenderer {
       node.addChild(mark);
       this.rows.row(w.y).deco.addChild(node);
       this.place(node, w, w.x * T + T / 2, w.y * T + T / 2);
+    }
+  }
+
+  /**
+   * 勝利條件的目標格（Phase 3-22）：出口格是綠色的門形框加「出」，守點格是金色的雙圈加「守」；
+   * 位置跟著格子抬高（`place`），畫在單位底下的裝飾層。
+   */
+  private drawMarkers(model: DrawModel): void {
+    for (const m of model.markers) {
+      const node = new Container();
+      const color = m.kind === "exit" ? HIGHLIGHT.exit : HIGHLIGHT.point;
+      const g = new Graphics();
+      if (m.kind === "exit") {
+        g.roundRect(3, 3, T - 6, T - 6, 6).fill({ color, alpha: 0.24 }).stroke({ width: 3, color, alpha: 0.95 });
+        g.roundRect(9, 9, T - 18, T - 18, 4).stroke({ width: 1.5, color, alpha: 0.7 });
+      } else {
+        g.circle(T / 2, T / 2, T * 0.42).fill({ color, alpha: 0.2 }).stroke({ width: 3, color, alpha: 0.95 });
+        g.circle(T / 2, T / 2, T * 0.28).stroke({ width: 1.5, color, alpha: 0.7 });
+      }
+      node.addChild(g);
+      const mark = label(m.kind === "exit" ? "出" : "守", 14, color, true);
+      mark.anchor.set(0.5);
+      mark.position.set(T / 2, T / 2);
+      mark.style.stroke = { color: 0x000000, width: 3 };
+      node.addChild(mark);
+      this.rows.row(m.y).deco.addChild(node);
+      this.place(node, m, m.x * T, m.y * T);
     }
   }
 

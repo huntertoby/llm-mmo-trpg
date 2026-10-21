@@ -97,6 +97,17 @@ def test_create_run_returns_hero_plan_and_first_battle(runs_client: TestClient) 
     assert run["battle_id"] is None
 
 
+def test_run_plan_carries_each_battles_objective(runs_client: TestClient) -> None:
+    """Phase 3-22：計畫列出每場的勝利條件（一般戰鬥至少 1 撤離、1 守點；Boss 全滅）。"""
+    plan = _create(runs_client)["plan"]
+    kinds = [p["objective"]["kind"] for p in plan]
+    assert kinds.count("escape") >= 1 and kinds.count("defend") >= 1
+    assert kinds[-1] == "eliminate" and plan[-1]["objective"]["tiles"] == []
+    for p in plan:
+        if p["objective"]["kind"] != "eliminate":
+            assert p["objective"]["rounds"] and p["objective"]["tiles"]
+
+
 @pytest.mark.parametrize(
     ("body", "status"),
     [

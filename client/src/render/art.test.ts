@@ -49,7 +49,7 @@ function tile(x: number, y: number, over: Partial<TileDraw> = {}): TileDraw {
 function model(rows: Array<Array<Partial<TileDraw>>>, objects: ObjectDraw[] = []): DrawModel {
   const tiles: TileDraw[] = [];
   rows.forEach((row, y) => row.forEach((o, x) => tiles.push(tile(x, y, o))));
-  return { width: rows[0]?.length ?? 0, height: rows.length, tiles, objects, units: [], traps: [], auras: [], zones: [], wells: [] };
+  return { width: rows[0]?.length ?? 0, height: rows.length, tiles, objects, units: [], traps: [], auras: [], zones: [], wells: [], markers: [] };
 }
 
 function obj(kind: string, x: number, y: number): ObjectDraw {

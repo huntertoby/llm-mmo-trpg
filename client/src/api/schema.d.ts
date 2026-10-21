@@ -601,6 +601,7 @@ export interface components {
             enemies: string[];
             /** Done */
             done: boolean;
+            objective: components["schemas"]["Objective"];
         };
         /**
          * BattleRecord

@@ -4,6 +4,7 @@
 import type { BattleView, Pos, TileView } from "../api/types";
 import type { SkillNames } from "./actions";
 import { glossaryEntry, glossaryName } from "./glossary";
+import { markerCard } from "./objective";
 
 // 與圖例（legend.ts）共用的用語；測試比對兩邊一致。
 export const LABEL_DEADLY = "致命地形";
@@ -11,7 +12,7 @@ export const LABEL_BURNING = "燃燒中";
 export const LABEL_TRAP = "陷阱";
 export const LABEL_ZONE = "持續區域";
 
-export type TileSectionKind = "terrain" | "surface" | "object" | "trap" | "zone";
+export type TileSectionKind = "terrain" | "surface" | "object" | "trap" | "zone" | "objective";
 
 export interface TileSection {
   kind: TileSectionKind;
@@ -81,6 +82,8 @@ export function tileSections(
   }
   const obj = objectSection(view, tile);
   if (obj !== null) out.push(obj);
+  const goal = markerCard(view, pos);
+  if (goal !== null) out.push(section("objective", goal.title, goal.lines));
   for (const t of view.traps.filter((x) => x.pos.x === pos.x && x.pos.y === pos.y)) {
     out.push({
       kind: "trap",

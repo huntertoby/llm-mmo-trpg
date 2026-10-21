@@ -1517,6 +1517,9 @@
           "done": {
             "type": "boolean",
             "title": "Done"
+          },
+          "objective": {
+            "$ref": "#/components/schemas/Objective"
           }
         },
         "additionalProperties": false,
@@ -1527,7 +1530,8 @@
           "map_name_zh",
           "boss",
           "enemies",
-          "done"
+          "done",
+          "objective"
         ],
         "title": "BattlePlanOut"
       },
