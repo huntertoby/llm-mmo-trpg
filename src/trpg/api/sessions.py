@@ -126,8 +126,9 @@ class BattleSession:
     def awaits_player(self, state: BattleState, pending: Pending | None) -> bool:
         """自動推進的停止條件：主角的反應詢問，或輪到主角且有 ``EndTurn`` 以外的合法動作。
 
-        只剩 ``EndTurn`` 時，若主角還有可以操控的召喚物（切換模式是 0 AP、不在 ``legal_actions`` 裡），
-        也停下來等玩家按「結束回合」，不自動結束（Phase 3-32b）。這只影響網頁工作階段；
+        只剩 ``EndTurn`` 時，若主角還有可以操控的召喚物（切換模式是 0 AP、不在
+        ``legal_actions`` 裡），也停下來等玩家按「結束回合」，不自動結束（Phase 3-32b）。
+        這只影響網頁工作階段；
         引擎的 :func:`~trpg.engine.battle.has_only_end_turn` 與 CLI／模擬的自動結束不變。
         """
         if pending is not None:

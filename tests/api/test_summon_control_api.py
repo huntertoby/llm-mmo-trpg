@@ -103,7 +103,9 @@ def test_command_options_reject_other_units(client: TestClient) -> None:
     assert reply.status_code == 400 and "不是你的召喚物" in reply.text
 
 
-def _exhaust_hero_actions(client: TestClient, battle_id: str, data: dict[str, Any]) -> dict[str, Any]:
+def _exhaust_hero_actions(
+    client: TestClient, battle_id: str, data: dict[str, Any]
+) -> dict[str, Any]:
     """主角一直做 ``end_turn`` 以外的動作（優先花 AP 的），直到只剩 ``end_turn``。"""
     for _ in range(40):
         rest = [a for a in data["legal_actions"] if a["type"] != "end_turn"]
@@ -126,7 +128,8 @@ def test_a_summoner_with_no_ap_left_is_not_auto_ended(client: TestClient) -> Non
     switched = client.post(f"/api/battles/{battle_id}/actions", json=mode)
     assert switched.status_code == 200, switched.text
     assert switched.json()["awaiting"] == "action"
-    ended = client.post(f"/api/battles/{battle_id}/actions", json={"type": "end_turn", "unit_id": hero})
+    end = {"type": "end_turn", "unit_id": hero}
+    ended = client.post(f"/api/battles/{battle_id}/actions", json=end)
     assert ended.status_code == 200, ended.text
     out = ended.json()
     assert out["view"]["active_unit"] != hero or out["view"]["round"] > data["view"]["round"]
