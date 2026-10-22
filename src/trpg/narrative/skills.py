@@ -39,6 +39,7 @@ from trpg.skillgen.keywords import SkillKeywords, derive_draft_keywords, derive_
 
 __all__ = [
     "CATEGORY_TEXT",
+    "DESCRIBED_PRIMITIVES",
     "KIND_TEXT",
     "RARITY_TEXT",
     "WEAPON_REQ_TEXT",
@@ -678,9 +679,17 @@ def _terrain(_lib: ContentLibrary, _skill: SkillDef, spec: EffectSpec) -> str:
     return f"{verb}地形 {spec.amount or 1} 層"
 
 
+def _name_only(lib: ContentLibrary, _skill: SkillDef, spec: EffectSpec) -> str:
+    """只寫原語的中文名（``skill_primitives.yaml`` 的 ``name_zh``）。"""
+    return lib.ruleset.primitive_def(spec.type).name_zh
+
+
 _EFFECT_TEXT: dict[str, _EffectText] = {
     "damage": _damage,
     "heal": _heal,
+    "shield": _name_only,
+    "cleanse": _name_only,
+    "intercept": _name_only,
     "push": _push_pull,
     "pull": _push_pull,
     "knock_prone": _knock_prone,
@@ -725,6 +734,11 @@ _EFFECT_TEXT: dict[str, _EffectText] = {
     "rule_change": _rule_change,
     "gamble": _gamble,
 }
+"""原語 → 效果敘述（Phase 3E-2b：載入內容時檢查 ``skill_primitives.yaml`` 的每個原語都在這裡，
+見 :mod:`trpg.primitive_coverage`）。"""
+
+DESCRIBED_PRIMITIVES: frozenset[str] = frozenset(_EFFECT_TEXT)
+"""有效果敘述的原語 ID。"""
 
 
 def _effect_core(library: ContentLibrary, skill: SkillDef, spec: EffectSpec) -> str:

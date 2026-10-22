@@ -50,6 +50,7 @@ from trpg.skillgen.combo import self_combo_reasons
 from trpg.skillgen.mechanics import mechanic_tags, resolved_affects
 
 __all__ = [
+    "BUDGET_BASES",
     "BudgetError",
     "BudgetReport",
     "EffectBudget",
@@ -357,7 +358,9 @@ def _plain_base_points(  # noqa: PLR0911
         return Fraction(permille * reference, _PERMILLE), f"武器 ×{permille / _PERMILLE:g}"
     if basis == "status":
         return _status_points(effect, rules.statuses.by_id())
-    return _surface_points(effect, library)
+    if basis == "surface":
+        return _surface_points(effect, library)
+    raise BudgetError(f"原語 {primitive.id} 的預算算法 {basis} 沒有實作")
 
 
 def _restore_resource_points(
@@ -1031,6 +1034,12 @@ _SPECIAL_BASES: dict[
     "grant_skill": _grant_skill_points,
 }
 """需要整個技能或特殊規則的 ``budget_basis`` → 點數算法。"""
+
+BUDGET_BASES: frozenset[str] = frozenset(
+    {"fixed", "per_distance", "per_amount", "dice_average", "damage", "status", "surface"}
+) | frozenset(_SPECIAL_BASES)
+""":func:`_plain_base_points` 有實作的全部 ``budget_basis``（Phase 3E-2b：載入內容時檢查每個原語的
+``budget_basis`` 都在這裡，見 :mod:`trpg.primitive_coverage`）。"""
 
 
 def _shape_multiplier(
