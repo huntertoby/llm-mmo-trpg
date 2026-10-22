@@ -42,7 +42,7 @@ def candidate_request(library: ContentLibrary, run: RunState) -> CandidateReques
         seed=Rng(run.seed).fork(f"offer/{run.offers_made}").next_u32(),
         tier=library.roguelite.offer_tier(run.level),
         behavior=dict(run.behavior),
-        exclude=frozenset(run.hero.skills),
+        exclude=frozenset((*run.hero.skills, *run.bench)),
     )
 
 
@@ -114,10 +114,17 @@ def take_candidate(
     if problems:
         hint = "；請指定要替換的技能（replace）" if replace is None else ""
         raise ChoiceError("；".join(problems) + hint)
+    # 被換掉的技能進備用（等級保留，3-26a；營火可以換回）
+    bench = tuple(sorted({*run.bench, *([] if replace is None else [replace])}))
     # 候選可能是內容庫的手寫技能（技能池，3-24b2）：只有生成技能才存定義
     new = () if skill.id in library.skills else (skill,)
-    generated = {s.id: s for s in (*run.generated_skills, *new) if s.id in skills}
+    keep = {*skills, *bench}
+    generated = {s.id: s for s in (*run.generated_skills, *new) if s.id in keep}
     hero = run.hero.model_copy(update={"skills": tuple(skills)})
     return run.model_copy(
-        update={"hero": hero, "generated_skills": tuple(generated[k] for k in sorted(generated))}
+        update={
+            "hero": hero,
+            "bench": bench,
+            "generated_skills": tuple(generated[k] for k in sorted(generated)),
+        }
     )

@@ -63,6 +63,7 @@ from trpg.content.rule_changes import RuleChangeDef, RuleChangeTable
 from trpg.content.rules import CoreRules, HitTable
 from trpg.content.schemas import ContentModel, ElementTable
 from trpg.content.sim_builds import BuildTable
+from trpg.content.skill_growth import SkillGrowthRules
 from trpg.content.skill_keywords import KeywordRule, KeywordTable
 from trpg.content.skill_rules import (
     BudgetRules,
@@ -157,6 +158,9 @@ class Ruleset(ContentModel):
     keywords: KeywordTable = KeywordTable.model_construct(keywords=())
     """關鍵字推導表（Phase 3G-G2，``content/skill_keywords.yaml``）：裝備的技能強化詞條依關鍵字
     選取技能。嵌入規則包，重播不依賴資料檔。"""
+    skill_growth: SkillGrowthRules = SkillGrowthRules()
+    """技能成長（Phase 3-26a，``content/skill_growth.yaml``）：技能等級的效果倍率與 5 級小特性。
+    嵌入規則包，重播不依賴資料檔。"""
 
     _keyword_cache: dict[object, SkillKeywords] = PrivateAttr(default_factory=_CacheDict)
     _rule_change_index: dict[str, RuleChangeDef] = PrivateAttr(default_factory=dict)
@@ -515,6 +519,7 @@ def load_library(  # noqa: PLR0915
     synergies = load("skill_synergies.yaml", SynergyTable)
     keywords = load("skill_keywords.yaml", KeywordTable)
     exclusions = load("skill_exclusions.yaml", ExclusionTable)
+    skill_growth = load("skill_growth.yaml", SkillGrowthRules)
     skeletons = _load_dir(root / "skeletons", SkeletonDef, files)
     skills = _load_dir(root / "skills", SkillDef, files)
     summons = _load_summons(root, weapons.by_id(), files)
@@ -545,6 +550,7 @@ def load_library(  # noqa: PLR0915
             rule_changes=rule_changes,
             equipment=equipment_rules,
             keywords=keywords,
+            skill_growth=skill_growth,
         )
     except ValueError as exc:
         raise ContentError(root / "rules", str(exc)) from exc

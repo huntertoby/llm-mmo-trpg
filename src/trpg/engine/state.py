@@ -379,6 +379,9 @@ class UnitState:
     facing: Facing = "east"
     """朝向（Phase 3D-8d）：主動移動（步行、衝鋒、跳躍、直線衝撞、瞬步）後面向移動方向，攻擊或對
     單位施放技能後面向目標；強制位移、傳送、交換不改。只影響背刺（``from_behind``）的判斷。"""
+    skill_levels: dict[str, int] = field(default_factory=dict)
+    """技能等級（Phase 3-26a）：技能 ID → 等級（2～5，只列出不是 1 級的）；開戰時由範本帶入、戰鬥中
+    不變（可共用，不必複製）。見 :mod:`trpg.engine.skill_levels`。"""
     gear: GearState = field(default_factory=GearState)
     """裝備狀態（Phase 3G-G1）：開戰時由裝備快照算好、戰鬥中不變（數值類已併進上面的屬性、HP、
     抗性與速度；條件數值與代價型在戰鬥中查詢，見 :mod:`trpg.engine.gear`）。"""
@@ -478,6 +481,7 @@ class UnitState:
             activations=self.activations,
             revived=self.revived,
             granted_skills=self.granted_skills,
+            skill_levels=self.skill_levels,
             facing=self.facing,
             gear=self.gear,
         )

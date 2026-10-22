@@ -38,8 +38,10 @@ __all__ = [
     "run_battle",
 ]
 
-LOG_FORMAT = "trpg-battle-log/43"
-"""``/43``（Phase 3-24c，接在 3G-G3a 的 ``/42`` 之後）：新條件 ``target_collided``
+LOG_FORMAT = "trpg-battle-log/44"
+"""``/44``（Phase 3-26a，接在 3-24c 的 ``/43`` 之後）：單位狀態多了技能等級 ``skill_levels``、
+技能等級的效果倍率（傷害、治療、護盾）與 5 級小特性（範圍 +1／冷卻 −1）；``/43`` 的紀錄無法重播。
+``/43``（Phase 3-24c，接在 3G-G3a 的 ``/42`` 之後）：新條件 ``target_collided``
 （單位的 ``collided_round``）、新原語
 ``sacrifice_summon``（召喚物消失原因 ``sacrificed``）、火器的武器技也算開火（消耗彈匣、槍聲、站定、
 距離修正）；``/42`` 的紀錄無法重播。

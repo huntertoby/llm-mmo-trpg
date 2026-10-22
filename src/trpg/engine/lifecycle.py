@@ -259,6 +259,7 @@ def make_unit(
         mana=template.max_mana,
         max_mana=template.max_mana,
         skills=template.skills,
+        skill_levels=dict(template.skill_levels),
         ammo=weapon.magazine,
         facing=default_facing(team) if facing is None else facing,
         gear=gear,

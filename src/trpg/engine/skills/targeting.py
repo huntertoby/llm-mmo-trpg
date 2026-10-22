@@ -53,6 +53,7 @@ from trpg.engine.rules.statuses import (
     skip_turn_status,
 )
 from trpg.engine.rules.weapons import crit_range_cut
+from trpg.engine.skill_levels import level_multiplier
 from trpg.engine.skills import shapes
 from trpg.engine.skills.conditions import skill_condition_problem
 from trpg.engine.skills.mobility import (
@@ -1311,6 +1312,7 @@ def damage_parameters(
         multiplier = spec.multiplier_permille or _PERMILLE
     if skill.damage_permille is not None:  # 高變異（3D-7b）：基礎傷害折扣
         multiplier = multiplier * skill.damage_permille // _PERMILLE
+    multiplier = multiplier * level_multiplier(state.ruleset, caster, skill) // _PERMILLE  # 3-26a
     if modified:
         element = modifiers.damage_element(state, caster, modifiers.skill_use(skill), element)
     return DamageParameters(dice, flat, scaled, multiplier, element)

@@ -21,6 +21,7 @@ from trpg.engine.results import battle_result
 from trpg.engine.setup import BattleSetup, UnitSpawn, build_setup
 from trpg.engine.state import BattleState, state_to_json
 from trpg.roguelite.errors import ChoiceError, NodeConflictError
+from trpg.roguelite.growth import battle_levels, respec, set_loadout, spend_points
 from trpg.roguelite.offers import make_offer, take_candidate
 from trpg.roguelite.start import allocation_problems, apply_allocation
 from trpg.roguelite.state import (
@@ -32,9 +33,12 @@ from trpg.roguelite.state import (
     LeaveChoice,
     LevelUpChoice,
     LevelUpNode,
+    LoadoutChoice,
     PickChoice,
     RerollChoice,
+    RespecChoice,
     RunState,
+    SpendChoice,
 )
 from trpg.shared.types import Team, UnitId
 
@@ -73,7 +77,10 @@ def battle_setup(library: ContentLibrary, run: RunState) -> BattleSetup:
     core = library.ruleset.core
     # 等級加成併入範本的基礎 HP，體質的部分由引擎加（與 RunState.max_hp_in 同一個式子）
     leveled = run.hero.model_copy(
-        update={"max_hp": run.hero.max_hp + core.level_hp_bonus(run.hero.max_hp, run.level)}
+        update={
+            "max_hp": run.hero.max_hp + core.level_hp_bonus(run.hero.max_hp, run.level),
+            "skill_levels": battle_levels(run),  # 技能等級（3-26a）：戰鬥設定帶入，重播一致
+        }
     )
     hero = UnitSpawn(
         template=leveled,
@@ -196,7 +203,12 @@ def next_node(library: ContentLibrary, run: RunState) -> RunState:
             library,
             run,
             run.model_copy(
-                update={"level": run.level + 1, "levels_pending": run.levels_pending - 1}
+                update={
+                    "level": run.level + 1,
+                    "levels_pending": run.levels_pending - 1,
+                    "skill_points": run.skill_points
+                    + library.ruleset.skill_growth.points_per_level,
+                }
             ),
         )
         offer = make_offer(library, leveled, "level_up")
@@ -227,6 +239,8 @@ def apply_choice(library: ContentLibrary, run: RunState, choice: Choice) -> RunS
     """套用升級或營火的選擇。節點不符時拋出 :class:`NodeConflictError`，內容不合法時拋出
     :class:`ChoiceError`（狀態不變）。"""
     node = run.node
+    if isinstance(choice, SpendChoice | RespecChoice | LoadoutChoice):
+        return _manage_skills(library, run, choice)
     if isinstance(node, LevelUpNode):
         if not isinstance(choice, LevelUpChoice):
             raise NodeConflictError("目前在升級，請送出升級選擇（level_up）")
@@ -236,10 +250,28 @@ def apply_choice(library: ContentLibrary, run: RunState, choice: Choice) -> RunS
         hero = apply_allocation(run.hero, choice.attributes)
         allocated = with_hp_change(library, run, run.model_copy(update={"hero": hero}))
         taken = take_candidate(library, allocated, node.offer, choice.pick, choice.replace)
+        if choice.levels:
+            taken = spend_points(library, taken, choice.levels)
         return next_node(library, taken)
     if isinstance(node, CampfireNode):
         return _campfire(library, run, node, choice)
     raise NodeConflictError(f"目前是{_NODE_TEXT[node.kind]}，沒有可以選擇的東西")
+
+
+def _manage_skills(
+    library: ContentLibrary, run: RunState, choice: SpendChoice | RespecChoice | LoadoutChoice
+) -> RunState:
+    """技能點與換裝（Phase 3-26a；不推進節點）：花點數在升級、營火、戰鬥前都可以；重配與換裝
+    只在營火。"""
+    if isinstance(choice, SpendChoice):
+        if run.ended:
+            raise NodeConflictError(f"目前是{_NODE_TEXT[run.node.kind]}，不能花技能點")
+        return spend_points(library, run, choice.levels)
+    if not isinstance(run.node, CampfireNode):
+        raise NodeConflictError(f"重配點數與換裝只能在營火（目前是{_NODE_TEXT[run.node.kind]}）")
+    if isinstance(choice, RespecChoice):
+        return respec(library, run)
+    return set_loadout(library, run, choice.skills)
 
 
 def _campfire(
