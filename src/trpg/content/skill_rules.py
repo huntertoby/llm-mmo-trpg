@@ -133,6 +133,12 @@ class ModifierPoints(ContentModel):
     summon_attack_die: int = Field(default=0, ge=0)
     """召喚物攻擊每多 1 顆傷害骰（Phase 3-24b1；每次使用的價值）。``heal_permille`` 沒有列在這裡：
     與 ``damage_permille`` 一樣以基準武器傷害 × ‰ 計算。"""
+    summon_limit: int = Field(default=0, ge=0)
+    """召喚物同時上限每 ±1 的價值（Phase 3-33f1，召喚專精；每次使用的價值，負的上限改變為代價）。"""
+    summon_duration: int = Field(default=0, ge=0)
+    """召喚物持續每 +1 輪的價值（Phase 3-33f1）。"""
+    summon_damage_per_100: int = Field(default=0, ge=0)
+    """召喚物傷害加成每 +100‰ 的價值（Phase 3-33f1）。"""
     allow_self_target: int = Field(default=0, ge=0)
     """治療、護盾、增益類技能也包含自己（Phase 3D-3；每次使用的價值）。``shape_to`` 沒有列在這裡：
     依 ``skill_shapes.yaml`` 的形狀倍率差 × 基準武器傷害計算。"""

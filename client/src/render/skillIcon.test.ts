@@ -292,6 +292,15 @@ describe("拆解：核心效果與組裝順序", () => {
     }
   });
 
+  it("召喚專精的改變（Phase 3-33f1）有專屬部件", () => {
+    const limit = modifierChangePart("summon_limit_delta", -1);
+    const dur = modifierChangePart("summon_duration_delta", 2);
+    const dmg = modifierChangePart("summon_damage_permille", 500);
+    expect([limit.label, dur.label, dmg.label]).toEqual(["召喚物上限 -1", "召喚物持續 +2 輪", "召喚物傷害 +50%"]);
+    const { ctx } = fakeCtx();
+    for (const p of [limit, dur, dmg]) expect(() => p.draw(ctx)).not.toThrow();
+  });
+
   it("代價名稱帶數值", () => {
     expect(costPart("source", 2).label).toBe("源力 2");
     expect(costPart("delay", 1).label).toBe("延遲 1 回合");

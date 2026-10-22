@@ -1283,6 +1283,9 @@ export function linkPart(when: string | null | undefined): Part {
 const TAG_TARGET: Readonly<Record<string, string>> = { push: "push", heal: "heal", control: "apply_status", ranged: "dash", shout: "damage", area: "damage" };
 const TAG_NAMES: Readonly<Record<string, string>> = { push: "推擊", heal: "治療", control: "控制", ranged: "遠程", shout: "吼叫", area: "範圍" };
 
+/** 召喚物數值類修正的小標記字（3-24b1、3-33f1）；沒列出的（HP）畫「＋」。 */
+const SUMMON_MARK: Readonly<Record<string, string>> = { summon_attack_dice: "骰", summon_limit_delta: "數", summon_duration_delta: "時", summon_damage_permille: "攻" };
+
 const rangedGlyph: Draw = (c) => {
   c.beginPath();
   c.arc(-4, 0, 9, -1.1, 1.1);
@@ -1472,6 +1475,9 @@ export function modifierChangePart(key: string, value: unknown, partIds: readonl
       break;
     case "heal_permille":
     case "summon_hp_permille":
+    case "summon_limit_delta":
+    case "summon_duration_delta":
+    case "summon_damage_permille":
     case "summon_attack_dice": {
       // 治療量與召喚物數值（Phase 3-24b1）：治療或召喚的圖示加一個小標記
       const base = (EFFECT[key === "heal_permille" ? "heal" : "summon"] as readonly [string, Draw])[1];
@@ -1480,10 +1486,11 @@ export function modifierChangePart(key: string, value: unknown, partIds: readonl
         c.scale(0.85, 0.85);
         base(c);
         c.restore();
-        if (key === "summon_attack_dice") {
+        const mark = SUMMON_MARK[key];
+        if (mark !== undefined) {
           c.save();
           c.translate(6.5, -6.5);
-          text(c, "骰", 7);
+          text(c, mark, 7);
           c.restore();
         } else {
           plus(c, 6.5, -6.5);
@@ -1491,6 +1498,9 @@ export function modifierChangePart(key: string, value: unknown, partIds: readonl
       };
       if (key === "heal_permille") label = `治療量 ${num > 0 ? "+" : ""}${num / 10}%`;
       else if (key === "summon_hp_permille") label = `召喚物 HP +${num / 10}%`;
+      else if (key === "summon_limit_delta") label = `召喚物上限 ${signed}`;
+      else if (key === "summon_duration_delta") label = `召喚物持續 ${signed} 輪`;
+      else if (key === "summon_damage_permille") label = `召喚物傷害 +${num / 10}%`;
       else label = `召喚物攻擊 +${num} 骰`;
       break;
     }

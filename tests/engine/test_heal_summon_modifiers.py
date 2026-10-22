@@ -178,12 +178,17 @@ def summoned(state: BattleState) -> Any:
     return result.state.units[UnitId(event.unit_id)]
 
 
+def role_hp() -> int:
+    """骷髏（近戰定位）：範本 20 HP ＋ 施放者屬性修正的成長 3（3-33b），再 × 定位係數（3-33f1）。"""
+    coefficient = summon_arena([]).ruleset.core.summon_role_hp_permille["melee"]
+    return 23 * coefficient // 1000
+
+
 def test_summon_hp_permille_raises_the_summons_max_hp_and_fills_it() -> None:
     base = summoned(summon_arena([]))
     boosted = summoned(summon_arena([mod({"summon_hp_permille": 200})]))
-    # 範本 20 HP ＋ 施放者屬性修正的成長 3（3-33b）→ 23
-    assert base.max_hp == 23 and base.hp == 23
-    assert boosted.max_hp == 27 and boosted.hp == 27  # (20+3) × 1.2
+    assert base.max_hp == role_hp() and base.hp == role_hp()
+    assert boosted.max_hp == role_hp() * 12 // 10 and boosted.hp == boosted.max_hp
 
 
 def test_summon_hp_permille_rules_add_up() -> None:
@@ -195,7 +200,7 @@ def test_summon_hp_permille_rules_add_up() -> None:
             ]
         )
     )
-    assert both.max_hp == 34  # (20+3) × 1.5
+    assert both.max_hp == role_hp() * 15 // 10  # × 1.5
 
 
 def test_summon_attack_dice_adds_one_die_to_the_summons_weapon_only() -> None:
@@ -208,11 +213,11 @@ def test_summon_attack_dice_adds_one_die_to_the_summons_weapon_only() -> None:
 
 def test_summon_modifiers_follow_their_applies_to() -> None:
     other = summoned(summon_arena([mod({"summon_hp_permille": 500}, skill_tags=["fire"])]))
-    assert other.max_hp == 23
+    assert other.max_hp == role_hp()
     tagged = summoned(
         summon_arena([mod({"summon_hp_permille": 500}, skill_tags=["summon"])], tags=("summon",))
     )
-    assert tagged.max_hp == 34
+    assert tagged.max_hp == role_hp() * 15 // 10
 
 
 def test_summon_modifiers_validate_their_range() -> None:

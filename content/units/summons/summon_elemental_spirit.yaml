@@ -13,5 +13,6 @@ element_mods: {}
 tags: [summoned, elemental]
 reactions: []
 summon: true
+role: ranged   # 定位（3-33f1；HP 係數見 rules/core.yaml summon_role_hp_permille）
 # 外觀（Phase 3-33h1）：元素之靈是通用的靈，元素顏色由灌注關鍵字決定。
 look: {body: spirit, size: medium}

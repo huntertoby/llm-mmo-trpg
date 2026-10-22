@@ -34,6 +34,7 @@ __all__ = [
     "SUMMON_MAPS",
     "BattleSample",
     "PackSummary",
+    "downed_ratio",
     "format_summons",
     "run_summon_sim",
     "summarize",
@@ -160,6 +161,11 @@ class PackSummary:
     """召喚物的結束原因計數。"""
 
 
+def downed_ratio(summary: PackSummary) -> float | None:
+    """被打倒的召喚物占比（3-33f1 門檻：一般戰鬥 ≤ 50%、≥ 10%）；沒有召喚物時 ``None``。"""
+    return summary.ends.get("downed", 0) / summary.summons_total if summary.summons_total else None
+
+
 def _mean(values: Sequence[int | Fraction]) -> float | None:
     return float(sum(values, Fraction(0)) / len(values)) if values else None
 
@@ -225,8 +231,8 @@ def format_summons(summaries: Sequence[PackSummary], labels: dict[str, str]) -> 
     """Markdown 摘要表。"""
     lines = [
         "| 起始包 | 場數 | 勝率 | 平均輪數 | 主角 DPR | 我方傷害/場 | 召喚物傷害/場 | 召喚物占比 "
-        "| 召喚次數/場 | 有召喚場數 | 平均存活輪數 | 平均行動回合 | 首召輪 |",
-        "|" + "---|" * 13,
+        "| 召喚次數/場 | 有召喚場數 | 平均存活輪數 | 平均行動回合 | 首召輪 | 召喚物數 | 被打倒 |",
+        "|" + "---|" * 15,
     ]
     for s in summaries:
         win = "—" if s.battles == 0 else f"{s.wins * 100 // s.battles}%"
@@ -235,7 +241,8 @@ def format_summons(summaries: Sequence[PackSummary], labels: dict[str, str]) -> 
             f"| {s.rounds_mean:.1f} | {s.hero_dpr:.1f} | {s.ally_damage:.0f} "
             f"| {s.summon_damage:.0f} | {s.summon_share * 100:.1f}% | {s.summons_per_battle:.2f} "
             f"| {s.battles_with_summon} | {_fmt(s.life_rounds_mean)} | {_fmt(s.turns_mean)} "
-            f"| {_fmt(s.first_summon_round_mean)} |"
+            f"| {_fmt(s.first_summon_round_mean)} | {s.summons_total} "
+            f"| {_fmt(None if downed_ratio(s) is None else (downed_ratio(s) or 0) * 100, '.0f')}% |"
         )
     lines.append("")
     for s in summaries:

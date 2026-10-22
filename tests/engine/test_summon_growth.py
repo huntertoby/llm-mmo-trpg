@@ -101,11 +101,18 @@ def hp_of(owner: dict[str, Any]) -> tuple[int, int]:
     return unit.max_hp, unit.weapon.flat
 
 
+def melee_permille() -> int:
+    """骷髏（近戰定位）的 HP 係數（‰；3-33f1）。"""
+    return library().ruleset.core.summon_role_hp_permille["melee"]
+
+
 def test_growth_follows_the_owner_level() -> None:
     base_hp, base_flat = hp_of({"level": 1, "attributes": {"int": 10}})
     hp5, flat5 = hp_of({"level": 5, "attributes": {"int": 10}})
     growth = library().ruleset.core.summon_growth
-    assert hp5 - base_hp == growth.hp_per_level * 4
+    # 成長的 HP 也跟著定位係數（骷髏是近戰，3-33f1）放大；取整容許差 1
+    scaled = growth.hp_per_level * 4 * melee_permille() / 1000
+    assert abs((hp5 - base_hp) - scaled) <= 1
     assert flat5 - base_flat == growth.flat_per_level_permille * 4 // 1000
 
 
@@ -114,7 +121,8 @@ def test_growth_follows_the_scaling_attribute() -> None:
     high, _ = hp_of({"attributes": {"int": 20}})
     core = library().ruleset.core
     mod = (20 - core.ability_mod_base) // core.ability_mod_divisor
-    assert high - low == core.summon_growth.hp_per_attr_mod * mod
+    scaled = core.summon_growth.hp_per_attr_mod * mod * melee_permille() / 1000
+    assert abs((high - low) - scaled) <= 1
     # 縮放屬性之外的屬性不影響（召喚技能縮放智力）
     other, _ = hp_of({"attributes": {"int": 10, "str": 20}})
     assert other == low

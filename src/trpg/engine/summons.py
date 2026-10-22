@@ -90,10 +90,10 @@ class Growth(NamedTuple):
     bonus_permille: int
 
 
-def summon_limit(core: CoreRules) -> int:
-    """同一召喚者同時存在的召喚物上限：``summon_limit_per_owner``，不得超過硬上限
-    ``summon_hard_cap``（之後召喚專精改上限時也走這裡）。"""
-    return min(core.summon_limit_per_owner, core.summon_hard_cap)
+def summon_limit(core: CoreRules, delta: int = 0) -> int:
+    """同一召喚者同時存在的召喚物上限：``summon_limit_per_owner`` ＋ 召喚專精的修正 ``delta``
+    （3-33f1），至少 1，不得超過硬上限 ``summon_hard_cap``。"""
+    return max(1, min(core.summon_limit_per_owner + delta, core.summon_hard_cap))
 
 
 def growth_of(state: BattleState, owner: UnitState, skill_id: str) -> Growth:
@@ -196,7 +196,10 @@ def summon_unit(  # noqa: PLR0917
         return [ctx.emit(EffectFizzled, effect_kind="summon", pos=pos, reason="summon_blocked")]
     events: list[EventBase] = []
     existing = summons_of(ctx, owner.id)
-    limit = summon_limit(ctx.core)
+    use = _skill_use(state, skill_id)
+    limit = summon_limit(
+        ctx.core, 0 if use is None else modifiers.summon_limit_delta(state, owner, use)
+    )
     while len(existing) >= limit:
         events += dismiss_summon(ctx, existing.pop(0), "limit")
     uid = next_unit_id(state)
@@ -216,15 +219,21 @@ def summon_unit(  # noqa: PLR0917
         facing=owner.facing,  # 召喚物與召喚者同向（Phase 3D-8d）
     )
     unit.owner_id = owner.id
-    unit.max_hp = (unit.max_hp + grown.hp) * _hp_permille(state, owner, skill_id) // PERMILLE
+    role_permille = ctx.core.summon_role_hp_permille.get(summon.template.role or "", PERMILLE)
+    base_hp = (unit.max_hp + grown.hp) * role_permille // PERMILLE  # 依定位的 HP 係數（3-33f1）
+    unit.max_hp = base_hp * _hp_permille(state, owner, skill_id) // PERMILLE
     unit.level = owner.level
-    unit.summon_bonus_permille = grown.bonus_permille
+    unit.summon_bonus_permille = grown.bonus_permille + (
+        0 if use is None else modifiers.summon_damage_permille(state, owner, use)
+    )
     unit.infusion = infusion
     infusions = active_infusions(state, unit)  # 固有與施放時選的灌注（3-33e1）
     unit.max_hp = unit.max_hp * (PERMILLE + sum(i.hp_permille for i in infusions)) // PERMILLE
     unit.hp = unit.max_hp
     unit.summon_mode = summon.template.default_mode
     duration = min(duration, ctx.core.summon_max_duration)
+    if use is not None:  # 召喚專精（3-33f1）：持續輪數加在上限之後
+        duration += modifiers.summon_duration_delta(state, owner, use)
     unit.summon_expires_round = state.round + duration
     unit.initiative = owner.initiative  # 不擲先攻：顯示用，順序由插入位置決定
     state.units[uid] = unit

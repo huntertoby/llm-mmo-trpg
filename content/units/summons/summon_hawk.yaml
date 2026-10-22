@@ -12,6 +12,7 @@ element_mods: {}
 tags: [summoned, beast, flying]
 reactions: []
 summon: true
+role: scout   # 定位（3-33f1；HP 係數見 rules/core.yaml summon_role_hp_permille）
 innate: marked   # 命中標記
 hit_rules:
   - {when: always, status: revealed, duration: 2}   # 命中揭露隱蔽的目標

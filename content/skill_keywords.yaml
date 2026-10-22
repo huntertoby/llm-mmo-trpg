@@ -209,4 +209,7 @@ keywords:
       - {effect: revive, grade: general}   # 通用
       - {change: summon_hp_permille}
       - {change: summon_attack_dice}
+      - {change: summon_limit_delta}
+      - {change: summon_duration_delta}
+      - {change: summon_damage_permille}
       - {effect: intercept, grade: general}   # 通用

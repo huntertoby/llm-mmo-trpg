@@ -38,8 +38,10 @@ __all__ = [
     "run_battle",
 ]
 
-LOG_FORMAT = "trpg-battle-log/54"
-"""``/54``（Phase 3-33e2a，接在 3-33e2b 的 ``/53`` 之後；合併時定號）：召喚物（二）a——範本多了
+LOG_FORMAT = "trpg-battle-log/55"
+"""``/55``（Phase 3-33f1，合併時定號）：召喚物依定位的 HP 係數、召喚專精（群召、精英召喚）改變
+上限／持續／傷害，單位範本多了 ``role``。``/54``（Phase 3-33e2a，接在 3-33e2b 的 ``/53`` 之後；
+合併時定號）：召喚物（二）a——範本多了
 ``detonate``（自爆）、``inert``（不行動）與標籤 ``immovable``／``topplable``／``blocks_sight``，
 新事件 ``summon_detonated``／``wall_toppled``、``push_resisted`` 多了 ``reason``、``move_blocked``
 多了 ``immovable``、召喚物消失原因多了 ``detonated``／``toppled``，石像不會被推動、土牆擋視線

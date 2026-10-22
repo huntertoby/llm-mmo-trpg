@@ -12,6 +12,7 @@ element_mods: {}
 tags: [summoned, elemental, ice]
 reactions: []
 summon: true
+role: ranged   # 定位（3-33f1；HP 係數見 rules/core.yaml summon_role_hp_permille）
 innate: frozen   # 普攻緩速
 hit_rules:
   - {when: target_in_water, status: frozen, duration: 1}   # 命中潮濕（站在水面）的目標時冰凍

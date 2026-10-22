@@ -145,6 +145,9 @@ _CHANGE_TEXT: dict[str, str] = {
     "heal_permille": "治療量 ±‰",
     "summon_hp_permille": "召喚物最大 HP +‰",
     "summon_attack_dice": "召喚物攻擊 +1 顆傷害骰",
+    "summon_limit_delta": "召喚物同時上限 ±1",
+    "summon_duration_delta": "召喚物持續 +輪數",
+    "summon_damage_permille": "召喚物傷害 +‰",
 }
 _TRAP_SHAPES = ("single", "cross", "square3")
 """陷阱觸發範圍可用的形狀（``skill_budget.yaml`` 的陷阱預算以這三種形狀的倍率計算）。"""

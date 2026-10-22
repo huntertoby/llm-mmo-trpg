@@ -13,6 +13,7 @@ element_mods: {}
 tags: [summoned, undead]
 reactions: []
 summon: true
+role: melee   # 定位（3-33f1；HP 係數見 rules/core.yaml summon_role_hp_permille）
 innate: prone   # 3-33e1 強化：盾擊——命中時絆倒目標（對抗判定，每輪 1 次）
 # 外觀（Phase 3-33h1，docs/art/召喚物外觀.md）：純顯示資料。
 look: {body: humanoid, variant: skeleton, element: prone, size: medium, trait: shield}

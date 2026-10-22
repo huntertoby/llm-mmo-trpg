@@ -1,0 +1,33 @@
+# 精英召喚——召喚專精（取捨型修正型被動，Phase 3-33f1，06 6.29.4；數值為初值，未經模擬）：
+# 召喚物 HP 與傷害 +50%、持續 +2 輪；代價：同時上限 2 → 1 隻。
+# 與普攻精通、群召互斥（exclusive_group: mastery，裝備時由 skill_slot_problems 擋）。
+id: skill_summon_elite
+schema_version: 1
+name_zh: 精英召喚
+tier: 1
+rank: 1
+rarity: epic
+kind: modifier
+skeleton: modifier
+category: spell
+weapon_req: any
+ap_cost: null
+scaling_attr: int
+shape: {type: self}
+effects: []
+modifiers:
+  - applies_to: {skill_tags: [summon]}
+    change: {summon_hp_permille: 500}
+  - applies_to: {skill_tags: [summon]}
+    change: {summon_damage_permille: 500}
+  - applies_to: {skill_tags: [summon]}
+    change: {summon_duration_delta: 2}
+  - applies_to: {skill_tags: [summon]}
+    change: {summon_limit_delta: -1}
+condition: null
+exclusive_group: mastery
+tags: [passive, modifier]
+narrative:
+  concept: 不求數量，只召喚最強悍的那一個
+  cast_flavor: 你把全部的力量灌進同一個身影
+provenance: {origin: builtin, owner_id: null, created_by: null, parents: [], bound: true, tradeable: false}

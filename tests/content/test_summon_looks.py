@@ -46,6 +46,7 @@ def test_unknown_body_is_rejected() -> None:
 def test_look_only_for_summons() -> None:
     base = library().ruleset.summons.summons[0].template.model_dump()
     base["summon"] = False
+    base["role"] = None
     base["totem"] = None
     with pytest.raises(ValidationError, match="外觀欄位"):
         UnitTemplate.model_validate(base)

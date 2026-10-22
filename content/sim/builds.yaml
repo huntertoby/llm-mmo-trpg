@@ -629,3 +629,40 @@ builds:
       skills: [skill_piercing_shot, skill_thunder_clap, skill_bear_trap, skill_sniper_shot]
       equipment:
         main_hand: item_test_bow
+
+  # Phase 3-33f1：召喚專精的對照 build（reference，不列入矩陣；供 3-33g 的召喚流對照）——與召喚師同屬性，只多一個專精被動。
+  - id: build_summon_swarm
+    name_zh: 群召召喚師
+    reference: true
+    theme_zh: 召喚專精「群召」：同時 3 隻、持續 +1 輪，代價是自己造成的傷害 −20%。
+    hero:
+      id: build_summon_swarm
+      name_zh: 群召召喚師
+      attributes: {str: 8, dex: 12, con: 12, int: 16, wis: 14, wil: 12}
+      max_hp: 36
+      speed: 5
+      armor_bonus: 1
+      weapon: fire_staff
+      ai_profile: archer
+      resist: {elemental: 100}
+      tags: [hero, sim]
+      max_mana: 40
+      skills: [skill_summon_swarm, skill_summon_spirit, skill_raise_skeleton, skill_frost_shackle, skill_fire_wall]
+
+  - id: build_summon_elite
+    name_zh: 精英召喚師
+    reference: true
+    theme_zh: 召喚專精「精英召喚」：召喚物 HP 與傷害 +50%、持續 +2 輪，代價是同時只能有 1 隻。
+    hero:
+      id: build_summon_elite
+      name_zh: 精英召喚師
+      attributes: {str: 8, dex: 12, con: 12, int: 16, wis: 14, wil: 12}
+      max_hp: 36
+      speed: 5
+      armor_bonus: 1
+      weapon: fire_staff
+      ai_profile: archer
+      resist: {elemental: 100}
+      tags: [hero, sim]
+      max_mana: 40
+      skills: [skill_summon_elite, skill_summon_spirit, skill_raise_skeleton, skill_frost_shackle, skill_fire_wall]
