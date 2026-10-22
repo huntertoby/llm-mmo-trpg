@@ -5,6 +5,7 @@ import type { BattleResponse, Choice } from "../api/types";
 import { CheckPanel } from "../ui/workshop/CheckPanel";
 import { ErrorBanner } from "../ui/ErrorBanner";
 import { StepView } from "../ui/workshop/StepView";
+import { GearScreen } from "./GearScreen";
 import { ExportPanel, RandomPanel, YamlPanel } from "../ui/workshop/ToolPanels";
 import { TryoutPanel } from "../ui/workshop/TryoutPanel";
 import { resetStep, type Json } from "../workshop/draft";
@@ -32,7 +33,34 @@ function message(e: unknown): string {
   return e instanceof Error ? e.message : String(e);
 }
 
-export function WorkshopScreen({ onHome, onStartBattle, store }: Props) {
+const TAB_KEY = "trpg-workshop-tab";
+
+function readTab(): "skills" | "gear" {
+  try {
+    return typeof localStorage !== "undefined" && localStorage.getItem(TAB_KEY) === "gear" ? "gear" : "skills";
+  } catch {
+    return "skills";
+  }
+}
+
+/** 工坊：「技能」與「裝備」兩個分頁（裝備測試，Phase 3G-G4）；分頁記在瀏覽器，從戰鬥回來時停在原處。 */
+export function WorkshopScreen(props: Props) {
+  const [tab, setTab] = useState<"skills" | "gear">(readTab);
+  const choose = (next: "skills" | "gear") => {
+    setTab(next);
+    try {
+      localStorage.setItem(TAB_KEY, next);
+    } catch {
+      // 存不進去就略過
+    }
+  };
+  if (tab === "gear") {
+    return <GearScreen onHome={props.onHome} onSkills={() => choose("skills")} onStartBattle={props.onStartBattle} />;
+  }
+  return <SkillWorkshop {...props} onGear={() => choose("gear")} />;
+}
+
+function SkillWorkshop({ onHome, onStartBattle, onGear, store }: Props & { onGear(): void }) {
   const storage = store === undefined ? browserStore() : store;
   const [state, dispatch] = useReducer(editorReducer, undefined, () => {
     const saved = loadSaved(storage);
@@ -108,6 +136,14 @@ export function WorkshopScreen({ onHome, onStartBattle, store }: Props) {
     <div className="workshop-screen">
       <header className="ws-header">
         <h1>技能工坊</h1>
+        <nav className="ws-tabs" aria-label="工坊分頁">
+          <button type="button" className="active" aria-current="page">
+            技能
+          </button>
+          <button type="button" onClick={onGear}>
+            裝備
+          </button>
+        </nav>
         <span className="muted">一步步組出自己的技能，檢查強度，再裝上主角試玩。</span>
         <span className="ws-header-tools">
           {confirmingReset && (

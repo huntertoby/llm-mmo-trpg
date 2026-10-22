@@ -141,47 +141,63 @@ def _bonus_entries(gear: GearState, bonus: GearBonus) -> Iterable[GearAffix]:
     return (e for e in gear.affixes if e.affix.id == bonus.affix_id)
 
 
+def _bonus_line(
+    gear: GearState, stat: BonusStat, cond: str | None, negate: bool, bonuses: list[GearBonus]
+) -> GearTotalView:
+    total = sum(b.amount for b in bonuses)
+    permille = stat in _PERMILLE_STATS
+    label = _STAT_LABEL[stat]
+    condition = None if cond is None else (f"不是「{cond}」" if negate else cond)
+    note = "來自裝備"
+    if condition is not None:
+        note += f"；條件成立時才生效：{condition}"
+    sources = tuple(
+        dict.fromkeys(_source_text(gear, e) for b in bonuses for e in _bonus_entries(gear, b))
+    )
+    return GearTotalView(
+        key=f"{stat}:{cond or ''}:{int(negate)}",
+        label_zh=label,
+        value=total,
+        before_cap=total,
+        capped=False,
+        permille=permille,
+        text_zh=f"{label} {_signed(total, permille=permille)}",
+        note_zh=note,
+        condition_zh=condition,
+        sources_zh=sources,
+    )
+
+
+def _damage_summary(total: int, cap: int) -> GearTotalView:
+    """全身傷害加成的合計行：各行（條件全成立時）加總後才套上限，所以截斷出現在這一行。"""
+    value = min(total, cap)
+    note = "各行傷害加成（條件全成立時）的合計"
+    note += f"；全身傷害加成上限 {_signed(cap, permille=True)}"
+    if total > cap:
+        note += f"，已截斷（截斷前 {_signed(total, permille=True)}）"
+    return GearTotalView(
+        key="damage_permille:total",
+        label_zh="傷害加成合計",
+        value=value,
+        before_cap=total,
+        capped=total > cap,
+        permille=True,
+        text_zh=f"傷害加成合計 {_signed(value, permille=True)}",
+        note_zh=note,
+    )
+
+
 def _bonus_lines(gear: GearState, damage_cap: int) -> list[GearTotalView]:
     groups: dict[tuple[BonusStat, str | None, bool], list[GearBonus]] = defaultdict(list)
     for bonus in gear.bonuses:
         cond = None if bonus.condition is None else condition_text(bonus.condition)
         groups[(bonus.stat, cond, bonus.negate)].append(bonus)
-    damage_total = sum(b.amount for b in gear.bonuses if b.stat == "damage_permille")
-    lines: list[GearTotalView] = []
-    for (stat, cond, negate), bonuses in sorted(
-        groups.items(), key=lambda kv: (kv[0][0], kv[0][1] or "")
-    ):
-        total = sum(b.amount for b in bonuses)
-        permille = stat in _PERMILLE_STATS
-        capped = stat == "damage_permille" and damage_total > damage_cap
-        value = min(total, damage_cap) if stat == "damage_permille" else total
-        label = _STAT_LABEL[stat]
-        condition = None if cond is None else (f"不是「{cond}」" if negate else cond)
-        note = "來自裝備"
-        if condition is not None:
-            note += f"；條件成立時才生效：{condition}"
-        if capped:
-            note += (
-                f"；截斷：全身傷害加成合計上限 {_signed(damage_cap, permille=True)}"
-                f"（所有傷害加成合計 {_signed(damage_total, permille=True)}）"
-            )
-        sources = tuple(
-            dict.fromkeys(_source_text(gear, e) for b in bonuses for e in _bonus_entries(gear, b))
-        )
-        lines.append(
-            GearTotalView(
-                key=f"{stat}:{cond or ''}:{int(negate)}",
-                label_zh=label,
-                value=value,
-                before_cap=total,
-                capped=capped,
-                permille=permille,
-                text_zh=f"{label} {_signed(value, permille=permille)}",
-                note_zh=note,
-                condition_zh=condition,
-                sources_zh=sources,
-            )
-        )
+    ordered = sorted(groups.items(), key=lambda kv: (kv[0][0], kv[0][1] or ""))
+    lines = [_bonus_line(gear, stat, cond, negate, b) for (stat, cond, negate), b in ordered]
+    damage = [line for line in lines if line.key.startswith("damage_permille:")]
+    total = sum(line.value for line in damage)
+    if len(damage) > 1 or total > damage_cap:
+        lines.insert(lines.index(damage[-1]) + 1, _damage_summary(total, damage_cap))
     return lines
 
 

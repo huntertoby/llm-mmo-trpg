@@ -161,7 +161,8 @@ def _friendly(text: str, item: ItemDef, affixes: Mapping[str, AffixDef]) -> str:
         if affix is not None:
             label = affix.name_zh.replace("{n}", "N")
             text = text.replace(f"詞條 {affix.id}", f"詞條「{label}」")
-    return text
+    text = text.replace("」 的", "」的").replace("的 value ", "的數值 ")
+    return text.replace("需要 value", "需要數值").replace("不可填 value", "不可填數值")
 
 
 def _build_custom(

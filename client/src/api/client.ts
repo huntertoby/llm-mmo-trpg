@@ -7,6 +7,9 @@ import type {
   CreateBattleRequest,
   DraftOptions,
   FollowupTarget,
+  GearCatalog,
+  GearCheck,
+  GearCheckRequest,
   CreateRunRequest,
   Glossary,
   MapSummary,
@@ -110,6 +113,9 @@ export const api = {
     request<WorkshopRandom>("POST", "/workshop/random", body),
   workshopExport: (skill: Record<string, unknown>) =>
     request<WorkshopExport>("POST", "/workshop/export", { skill }),
+  /** 裝備測試（Phase 3G-G4）：選單與穿戴檢查。 */
+  gearCatalog: () => request<GearCatalog>("GET", "/gear/catalog"),
+  gearCheck: (body: GearCheckRequest) => request<GearCheck>("POST", "/gear/check", body),
   /** roguelite 一輪（Phase 3-5c-1）。 */
   createRun: (body: CreateRunRequest) => request<RunResponse>("POST", "/runs", body),
   /** 開局規則（配點數）；Phase 3-6。 */

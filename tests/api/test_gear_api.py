@@ -2,11 +2,15 @@
 
 from __future__ import annotations
 
+import io
+from pathlib import Path
 from typing import Any
 
 from fastapi.testclient import TestClient
 
 from tests.api.conftest import store_of
+from trpg.cli.battle import cmd_replay
+from trpg.engine.runner import BattleLog
 
 BUILD = "build_charger"
 
@@ -186,3 +190,35 @@ def test_main_hand_weapon_item_swaps_the_hero_weapon(client: TestClient) -> None
     bow = _check(client, {"main_hand": {"item_id": "item_test_bow"}})
     assert bow["legal"] is False
     assert any("主手換成" in p for p in bow["problems"])
+
+
+def test_custom_gear_battle_log_replays(client: TestClient, tmp_path: Path) -> None:
+    glass = {"affix": "affix_cost_glass"}
+    body = {
+        "map_id": "training_range",
+        "seed": 11,
+        "hero_build": BUILD,
+        "ally_builds": [],
+        "equipment": {
+            "main_hand": _custom(
+                glass, {"affix": "affix_attr_str", "value": 3}, weapon="one_handed_sword"
+            ),
+            "neck": _custom({"affix": "affix_max_hp", "value": 12}, name="健壯項鍊"),
+        },
+    }
+    created = client.post("/api/battles", json=body)
+    assert created.status_code == 201, created.text
+    battle_id = created.json()["battle_id"]
+    end = client.post(
+        f"/api/battles/{battle_id}/actions",
+        json={"type": "end_turn", "unit_id": created.json()["hero_id"]},
+    )
+    assert end.status_code == 200, end.text
+    log_text = client.get(f"/api/battles/{battle_id}/log").text
+    log = BattleLog.model_validate_json(log_text)
+    assert log.setup.units[0].equipment.item_in("neck") is not None  # 快照內嵌，重播不讀資料檔
+    path = tmp_path / "gear.json"
+    path.write_text(log_text, encoding="utf-8")
+    out = io.StringIO()
+    assert cmd_replay(path, out) == 0
+    assert "重播驗證通過" in out.getvalue()
