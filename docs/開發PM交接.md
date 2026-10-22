@@ -52,6 +52,8 @@ Phase 3 各段（`Phase3計畫.md` 節號；報告 `Phase3-*報告.md`）：
 
 ### 3.0 接手後要做的（2026-10-22）
 
+> **最新狀態（2026-10-23）**：Phase 3（3-1～3-34b）與 Phase 3 結束審查完成；**3E-2a～g 全部完成**（`Phase3E計畫.md` 第 3 節）；`LOG_FORMAT` `/57`。下一步：**Phase 4 規格**——先請使用者決定 `Phase4-LLM技能提議設計.md` 末尾的 5 個問題（世界觀 #5、模型與成本、LLM 是否決定數值、給 LLM 的短說明、重試與退回），再照該文件的 4-L1～L9 寫 `Phase4計畫.md`。3E-3 可穿插。平衡工作在平衡階段（3.3 B1～B9）。
+
 > （2026-10-22 暫停後已恢復，「繼續」；3-33e2b 已驗收 push，3-33e2a 由合併 agent 處理衝突中。）
 
 1. **確認環境**：`git status` 乾淨；`uv run python scripts/check.py` 全過。使用者常自己開 `uv run trpg serve` 佔用 8000 埠：**不要關使用者的程序**，`preview_start` 會自動改用 8001。程式改動後要 `corepack pnpm -C client build` 並請使用者 **重開伺服器** 才看得到。

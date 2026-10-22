@@ -112,3 +112,11 @@ R4 拆 `skills.py`、R6 `LOG_FORMAT` 版本策略（Phase 4 大量新增原語�
 - PM 合併（無衝突）；`check.py --full` 全過（14 分 16 秒，比上次 4 分 32 秒慢；PM 抽查 YAML 讀取有快取、相關測試 1193 個 43.9 秒，判斷多半是機器負載，下次全量再看）；`bridge_chasm` 種子 59 `--log-json` ＋ `replay` 一致。**純重構、行為不變**：既有測試未改；實作者對照 5826670 的 `sim maps --seeds 4`、`sim skills --demo` JSON 逐位元組相同；`LOG_FORMAT` 維持 `/57`。`engine/rules/landing.py`（`landing_problem`、`nearest_free`）取代各處落點判斷；`charge` 改用 `unit_push_block`（保留排除致命地形）；`EffectSpec` 7 個欄位範圍改讀 `skill_primitives.yaml`；`skill_shapes.yaml` `shape_roles`、`split_heal` `allowed_skeletons`、機制狀態 ID 改讀 YAML。報告 `Phase3E-2f報告.md`。
 - 待 PM 決定：#1 衝撞仍不把人撞進致命地形 → 接受（行為不變）；#2 其他欄位保留 schema 粗範圍、#3 部分狀態 ID 常數名仍在 Python、#5 `create_obstacle`／`inscribe` 不合併 → 接受；#4 內建 YAML 不受 `TRPG_CONTENT_DIR` 影響 → 接受，Phase 4 若需要多內容資料夾再改。
 
+### 3.10 3E-2g 驗收（2026-10-23）——3E-2 全部完成
+
+- PM 合併（無衝突）；ruff、mypy、`tests/skillgen`＋`test_architecture` 767 全過。設計文件 `docs/phases/Phase4-LLM技能提議設計.md`；原型 `src/trpg/skillgen/proposal.py`（由 `skill_primitives.yaml` 動態產生每原語一支的提議模型與 JSON Schema、提議 → `SkillDef`、三道檢查與結構化錯誤 `stage`／`path`／`code`／`message`／`allowed`），`tests/skillgen/test_proposal.py` 17 項。217 個手寫技能中 163 個能完整往返；44 個用到原型不開放的頂層欄位（修正、反應、複合）；10 個用到不開放的巢狀內容。不改現有 schema 與引擎。
+- 發現：完整 JSON Schema 約 15.8 萬字元（只開 6 個原語約 5.1 萬）→ Phase 4 必須依情境縮小 schema；`damage.dice`、`inscribe.element` 的條件式必填只在 Python → Phase 4 搬進 YAML。
+- 建議 Phase 4 拆 9 段（4-L1～L9）；**需要使用者決定**（Phase 4 開工前）：① 世界觀（待決定 #5）② 模型選擇與成本（名稱敘事是否另用小模型）③ LLM 只選結構、數值由預算器補（建議）④ YAML 是否加給 LLM 看的短說明 ⑤ 重試上限 3 次、退回順序與退回率警戒。
+
+**3E-2 完成**：3E-2a～g 全部合併。剩 3E-3（3.2，可在 Phase 4 期間穿插）。
+
