@@ -102,3 +102,8 @@ R4 拆 `skills.py`、R6 `LOG_FORMAT` 版本策略（Phase 4 大量新增原語�
 - PM 合併（無衝突）；`check.py --full` 全過（4 分 32 秒）；`oil_depot` 種子 58 `--log-json` ＋ `replay` 一致。**純重構、行為不變**：既有測試未改全過（含 CLI 快照）；實作者比對 875822c 與 HEAD 的 `sim maps`（4 種子）、`sim skills --demo`（434 場）JSON 逐位元組相同；`LOG_FORMAT` 維持 `/57`。`interpreter.py` 2464 → 約 620 行（只留施放入口）；施放流程 `skills/cast.py`（`Cast`、`TriggeredCast`、`GearCast`）；48 個原語 handler 在 `skills/primitives/*.py`（7 模組），未登錄的原語丟 `KeyError`；`trpg/primitive_coverage.py` 載入時檢查每個原語在解譯器、預算、AI 估值、敘事、預覽都有對應（CLI 與 API `create_app` 呼叫）；預算與敘事的預設分支改明確項目。`PLC0415` 24 → 14。報告 `Phase3E-2b報告.md`（含 **Phase 4 新增原語要改哪幾處** 清單）。
 - 待 PM 決定：#1 AI 估值與預覽的對應項是宣告表（只確保有項目）、#2 直接呼叫 `load_library()` 不檢查（靠測試）、#4 只檢查缺項、#5 拆檔一個 commit、#6 `Cast` 輔助方法改公開 → 接受；#3 剩下 11 個引擎內延遲匯入 → 3E-3（R7 剩餘）。
 
+### 3.8 3E-2e 驗收（2026-10-23）
+
+- PM 合併（無衝突）；快速檢查：ruff、mypy、相關 pytest 2010、vitest 766、typecheck、`pnpm build` 全過。48 個原語補 `player_description`；glossary 新增 `effects`、`conditions`、`triggers`、`weapon_looks`；反應事件名稱進 `reactions.yaml` `events:`；武器 `look` 在 `weapons.yaml`、單位 `doll` 在範本經 `UnitView.doll_look`；`FieldSpec.card`／`object_choice` 由後端提供；`scripts/export_client_fixtures.py`＋過期檢查測試。前端刪除 `EFFECT_NAMES`、`CONDITION_NAMES`、`TRIGGER_NAMES`、`WEAPON_LOOKS`、`APPEARANCES`、`CARD_FIELDS`、`OBJECT_CHOICE_FIELDS`。報告 `Phase3E-2e報告.md`。
+- 待 PM 決定：#1 `on_own_rune` 中文名 → **PM 改 YAML 為「目標站在自己的符文上」**（與舊前端一致，重產 `glossary.json`）；#2 武器外觀走 glossary、#5 `FieldSpec` 判斷表搬到後端、#6 殘影退回陣營預設、`ruleset_hash` 變更 → 接受；#3 玩家英雄（`build_*`）沒有專屬外觀、沿用陣營預設 → 照舊（Phase 4 或美術排期再定）；#4 其餘前端寫死表（`COST_LABEL`、`TAG_NAMES`、地形與物件色塊）→ 3E-3。
+
