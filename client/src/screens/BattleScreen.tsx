@@ -97,6 +97,14 @@ import { CopyDialog } from "../ui/CopyDialog";
 import { FollowupDialog } from "../ui/FollowupDialog";
 import { InfusionDialog } from "../ui/InfusionDialog";
 import { infusionChoices, withInfusion } from "../battle/infusion";
+import { SummonPanel, type CommandSession } from "../ui/SummonPanel";
+import {
+  commandAction,
+  commandMoveTiles,
+  commandTargetTiles,
+  controllableSummons,
+  optionAt,
+} from "../battle/summonControl";
 import { followupMode, followupTargetOf, isFollowupPending } from "../battle/followup";
 import { DecisionDialog } from "../ui/DecisionDialog";
 import { EndPanel } from "../ui/EndPanel";
@@ -204,6 +212,9 @@ export function BattleScreen({ initial, onExit, exitLabel, runMode }: Props) {
   const [modeKey, setModeKey] = useState<string | null>(null);
   /** 投擲物件的兩段選取：第一段選好（舉起）的物件 ID；`null` ＝ 還在選物件。 */
   const [hurlPick, setHurlPick] = useState<string | null>(null);
+  // 召喚物指揮（3-33c）：進行中的指揮（伺服器給的終點與目標、目前選的終點）與取得選項中的旗標
+  const [command, setCommand] = useState<CommandSession | null>(null);
+  const [loadingCommand, setLoadingCommand] = useState(false);
   const [panelPreview, setPanelPreview] = useState<Action | null>(null);
   /** 正在等玩家在戰場上點目標的隊友指令。 */
   const [orderPick, setOrderPick] = useState<OrderKind | null>(null);
@@ -305,6 +316,7 @@ export function BattleScreen({ initial, onExit, exitLabel, runMode }: Props) {
     setModeKey(null);
     setPanelPreview(null);
     setHurlPick(null);
+    setCommand(null);
   }, [response]);
   // 換了模式（選了別的技能或取消）就重新從第一段選物件。
   useEffect(() => {
@@ -313,7 +325,7 @@ export function BattleScreen({ initial, onExit, exitLabel, runMode }: Props) {
 
   // ---- 預覽 -----------------------------------------------------------------
   const hoverAction = useMemo<Action | null>(() => {
-    if (!(canAct || copying) || hover === null || hero === null) return null;
+    if (!(canAct || copying) || hover === null || hero === null || command !== null) return null;
     if (mode !== null) return actionAtTile(mode, view, hero, hover, hurlPick);
     const target = view.units.find((u) => !u.downed && !u.escaped && !u.dismissed && samePos(u.pos, hover));
     return target === undefined ? null : (classified.attacks.get(target.id) ?? null);
@@ -333,6 +345,19 @@ export function BattleScreen({ initial, onExit, exitLabel, runMode }: Props) {
       return { ...NO_HIGHLIGHTS, ...common, attacks: orderTargetTiles(orderPick, view, heroId) };
     }
     if (!(canAct || copying) || hero === null) return { ...NO_HIGHLIGHTS, ...common };
+    if (command !== null) {
+      // 指揮召喚物（3-33c）：可到達的格子（藍）、選定終點後打得到的敵人（紅）、已選的終點
+      const chosen = command.dest === null ? undefined : optionAt(command.options, command.dest);
+      const previewTiles = (preview?.affected_tiles ?? []).map(([x, y]): Pos => ({ x: x as number, y: y as number }));
+      return {
+        ...NO_HIGHLIGHTS,
+        ...common,
+        moves: commandMoveTiles(command.options),
+        attacks: commandTargetTiles(chosen, view),
+        picked: command.dest === null ? [] : [command.dest],
+        preview: previewTiles,
+      };
+    }
     const previewTiles = (preview?.affected_tiles ?? []).map(([x, y]): Pos => ({ x: x as number, y: y as number }));
     const overlays = previewOverlays(preview, view);
     if (mode !== null) {
@@ -374,6 +399,7 @@ export function BattleScreen({ initial, onExit, exitLabel, runMode }: Props) {
     focusTile,
     orderPick,
     hurlPick,
+    command,
   ]);
 
   // 滑過戰鬥紀錄的一組：高亮相關單位目前所在的格子與事件指出的格子（疊在預覽範圍的橘色上）。
@@ -606,6 +632,27 @@ export function BattleScreen({ initial, onExit, exitLabel, runMode }: Props) {
     setPanelPreview(null);
     setOrderPick(null);
     setHurlPick(null);
+    setCommand(null);
+  }, []);
+
+  // ---- 召喚物操控（3-33c）-----------------------------------------------------
+  const summons = useMemo(() => controllableSummons(view, heroId), [view, heroId]);
+  const startCommand = useCallback(
+    (summonId: string) => {
+      setModeKey(null);
+      setOrderPick(null);
+      setPanelPreview(null);
+      setLoadingCommand(true);
+      api
+        .commandOptions(battleId, summonId)
+        .then((options) => setCommand({ summonId, options, dest: null }))
+        .catch((e: unknown) => setError(errorText(e)))
+        .finally(() => setLoadingCommand(false));
+    },
+    [battleId],
+  );
+  const pickCommandDest = useCallback((dest: Pos) => {
+    setCommand((cur) => (cur === null ? cur : { ...cur, dest }));
   }, []);
 
   useEffect(() => {
@@ -665,6 +712,20 @@ export function BattleScreen({ initial, onExit, exitLabel, runMode }: Props) {
 
   const onTileClick = useCallback(
     (tile: Pos) => {
+      if (command !== null && canAct && hero !== null) {
+        // 指揮召喚物：點藍格選終點；選好終點後點紅框的敵人 ＝ 移動並攻擊
+        if (command.dest !== null) {
+          const chosen = optionAt(command.options, command.dest);
+          const foe = chosen?.targets.find((id) => samePos(view.units.find((u) => u.id === id)?.pos ?? { x: -1, y: -1 }, tile));
+          if (chosen !== undefined && foe !== undefined) {
+            const action = commandAction(hero.id, command.summonId, chosen, foe);
+            if (action !== null) act(action);
+            return;
+          }
+        }
+        if (optionAt(command.options, tile) !== undefined) setCommand({ ...command, dest: tile });
+        return;
+      }
       if (orderPick !== null && canOrder) {
         const order = orderFromTile(orderPick, view, tile);
         if (order !== null) issueOrders(withOrder(response.orders, order));
@@ -704,6 +765,7 @@ export function BattleScreen({ initial, onExit, exitLabel, runMode }: Props) {
     [
       act,
       canAct,
+      command,
       copying,
       decideCopy,
       canOrder,
@@ -978,6 +1040,26 @@ export function BattleScreen({ initial, onExit, exitLabel, runMode }: Props) {
           onAction={copying ? decideCopy : act}
           onPreviewAction={setPanelPreview}
         />
+        {hero !== null && !view.ended && !copying && (
+          <SummonPanel
+            view={view}
+            hero={hero}
+            summons={summons}
+            names={liveNames}
+            enabled={canAct}
+            command={command}
+            loadingCommand={loadingCommand}
+            onSetMode={send}
+            onStartCommand={startCommand}
+            onPickDest={pickCommandDest}
+            onCancelCommand={() => {
+              setCommand(null);
+              setPanelPreview(null);
+            }}
+            onCommand={send}
+            onPreviewAction={setPanelPreview}
+          />
+        )}
       </div>
       <SidePanel
         collapsed={collapsed}

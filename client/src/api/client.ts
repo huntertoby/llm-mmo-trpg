@@ -4,6 +4,7 @@ import type {
   BattleHistory,
   BattleResponse,
   BuildSummary,
+  CommandOptions,
   CreateBattleRequest,
   CreateRunRequest,
   DevPack,
@@ -94,6 +95,9 @@ export const api = {
     ),
   /** 主角灰掉的技能 → 引擎的拒絕理由（Phase 3-5c-2）。 */
   skillReasons: (battleId: string) => request<SkillReasons>("GET", `/battles/${battleId}/skill-reasons`),
+  /** 指揮主角的一隻召喚物時可選的終點與目標（Phase 3-33c）。 */
+  commandOptions: (battleId: string, summonId: string) =>
+    request<CommandOptions>("GET", `/battles/${battleId}/summons/${encodeURIComponent(summonId)}/command-options`),
   glossary: () => request<Glossary>("GET", "/glossary"),
   createBattle: (body: CreateBattleRequest) => request<BattleResponse>("POST", "/battles", body),
   battle: (id: string) => request<BattleResponse>("GET", `/battles/${id}`),

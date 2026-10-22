@@ -60,6 +60,9 @@ export function unit(id: string, team: "ally" | "enemy", x: number, y: number, o
     totem_radius: null,
     infusion: null,
     infusion_options: [],
+    summon_mode: null,
+    summon_target_id: null,
+    commanded: false,
     activations: [],
     granted_skills: [],
     facing: "east",
@@ -118,6 +121,7 @@ export function smallView(over: Partial<BattleView> = {}): BattleView {
     source_wells: [],
     zones: [],
     runes: [],
+    summon_command_ap_cost: 1,
     ...over,
   };
 }
