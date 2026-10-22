@@ -51,7 +51,10 @@ def start_label(library: ContentLibrary, run: RunState) -> str:
     return f"{weapon.name_zh if weapon is not None else run.start.weapon}・{names}"
 
 
-def _card(library: ContentLibrary, run: RunState, skill: SkillDef) -> SkillCard:
+def _card(
+    library: ContentLibrary, run: RunState, skill: SkillDef, *, owned: bool = False
+) -> SkillCard:
+    """技能卡；``owned``（主角持有的技能）才帶技能等級的顯示資料（Phase 3-26a）。"""
     attrs = run.hero.attributes
     mastery = (
         None
@@ -59,7 +62,8 @@ def _card(library: ContentLibrary, run: RunState, skill: SkillDef) -> SkillCard:
         else all(attrs[skill.scaling_attr] >= v for v in attrs.values())
     )
     card = skill_card(library, skill, mastery_active=mastery)
-    # 技能等級（Phase 3-26a）：卡片帶這一輪實際的等級與下一級效果
+    if not owned:
+        return card
     return card.model_copy(
         update={"growth": skill_level_info(library, skill, run.skill_levels.get(skill.id, 1))}
     )
@@ -132,7 +136,9 @@ def _hero(library: ContentLibrary, run: RunState) -> HeroOut:
         weapon_name_zh=weapon.name_zh if weapon is not None else "",
         weapon_class=weapon.weapon_class if weapon is not None else "",
         weapon_traits_zh=weapon.trait_lines_zh() if weapon is not None else (),
-        skills=tuple(_card(library, run, s) for s in skill_defs(library, run, run.hero.skills)),
+        skills=tuple(
+            _card(library, run, s, owned=True) for s in skill_defs(library, run, run.hero.skills)
+        ),
         start_keywords=() if run.start is None else keyword_refs(library, run.start.keywords),
         dev_pack=None if run.start is None else run.start.dev_pack,
         skill_points=run.skill_points,
@@ -143,7 +149,9 @@ def _hero(library: ContentLibrary, run: RunState) -> HeroOut:
             trait_level=growth.trait_level,
             evolve_level=growth.evolve_level,
         ),
-        bench=tuple(_card(library, run, s) for s in skill_defs(library, run, run.bench)),
+        bench=tuple(
+            _card(library, run, s, owned=True) for s in skill_defs(library, run, run.bench)
+        ),
     )
 
 

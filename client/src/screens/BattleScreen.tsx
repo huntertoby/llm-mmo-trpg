@@ -980,6 +980,7 @@ export function BattleScreen({ initial, onExit, exitLabel, runMode }: Props) {
           basic={basic.filter((m) => TRAY_KINDS.includes(m.kind))}
           buttons={buttons}
           cards={cards}
+          levels={hero?.skill_levels}
           selectedKey={mode?.key ?? null}
           enabled={canAct}
           hint={actionHintText({

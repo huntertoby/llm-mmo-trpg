@@ -2,6 +2,7 @@
 // Phase 3-18a：大圖示用小圖模式；部件區是「組裝算式」，每個部件都能滑過或點一下看說明。
 import type { SkillCard } from "../api/types";
 import { kindLabel, sourceCostText } from "../battle/source";
+import { growthLines, levelBadge, levelOf } from "../run/skillGrowth";
 import { KeywordLine } from "./KeywordLine";
 import { AssemblyFormula, SkillIconView } from "./SkillIconView";
 
@@ -23,6 +24,7 @@ export function SkillCardView({ card, compact = false }: Props) {
         <div className="skill-card-headtext">
           <div className="skill-card-title">
             {card.name_zh}
+            {card.growth != null && <b className="skill-level-badge"> {levelBadge(levelOf(card))}</b>}
             <span className="muted small">
               {" "}
               <span className="skill-card-rarity">{card.rarity}</span>・{kindLabel(card)}・{card.skeleton}
@@ -46,6 +48,12 @@ export function SkillCardView({ card, compact = false }: Props) {
           <li key={`modifier:${i}:${m}`}>修正：{m}</li>
         ))}
       </ul>
+      {!compact &&
+        growthLines(card).map((line) => (
+          <div key={line} className="small skill-card-growth">
+            {line}
+          </div>
+        ))}
       {!compact && <div className="small muted">縮放：{card.scaling}</div>}
       {card.mastery !== null && !compact && <div className="small">專精：{card.mastery}</div>}
       {card.concept !== "" && !compact && <div className="small muted">{card.concept}</div>}

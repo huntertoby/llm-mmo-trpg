@@ -6,6 +6,7 @@ import type { SkillCard } from "../api/types";
 import { minorGlyph, splitSkills } from "../battle/skillTray";
 import type { ActionMode, SkillButton } from "../battle/targeting";
 import { grantedBadge } from "../battle/granted";
+import { levelBadge } from "../run/skillGrowth";
 import { SkillCardView } from "./SkillCardView";
 import { SkillIconView } from "./SkillIconView";
 
@@ -14,6 +15,8 @@ interface Props {
   basic: readonly ActionMode[];
   buttons: readonly SkillButton[];
   cards: Readonly<Record<string, SkillCard | undefined>>;
+  /** 主角的技能等級（技能 ID → 等級，只列 2 級以上的；Phase 3-26a）：按鈕上顯示「Lv.N」。 */
+  levels?: Readonly<Record<string, number>>;
   selectedKey: string | null;
   enabled: boolean;
   /** 技能列上方的一行提示（可移動格數、攻擊目標數、等待中……）。 */
@@ -37,6 +40,7 @@ function costText(b: SkillButton): string {
 function SkillSlot({
   b,
   card,
+  level,
   selected,
   enabled,
   onSelect,
@@ -45,6 +49,7 @@ function SkillSlot({
 }: {
   b: SkillButton;
   card: SkillCard | undefined;
+  level: number;
   selected: boolean;
   enabled: boolean;
   onSelect(id: string): void;
@@ -69,7 +74,10 @@ function SkillSlot({
       >
         <SkillIconView icon={card?.icon} size={40} className="skill-button-icon" />
         <span className="skill-button-text">
-          <span className="skill-name">{b.name}</span>
+          <span className="skill-name">
+            {b.name}
+            {level > 1 && <span className="skill-lv">{levelBadge(level)}</span>}
+          </span>
           {b.grantedRemaining != null && (
             <span className="skill-granted" aria-label="暫時技能">
               {grantedBadge(b.grantedRemaining)}
@@ -128,6 +136,7 @@ export function SkillBar(props: Props) {
               key={b.skillId}
               b={b}
               card={cards[b.skillId]}
+              level={props.levels?.[b.skillId] ?? 1}
               selected={selectedKey === `skill:${b.skillId}`}
               enabled={enabled}
               onSelect={props.onSelect}

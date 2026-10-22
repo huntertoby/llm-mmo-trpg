@@ -31,7 +31,7 @@ from trpg.content.skills import (
 )
 from trpg.content.stacks import StackDef
 from trpg.narrative.skill_icon import SkillIcon, skill_icon
-from trpg.narrative.skill_levels import SkillLevelInfo, skill_level_info
+from trpg.narrative.skill_levels import SkillLevelInfo
 from trpg.shared.types import rune_name
 from trpg.skillgen.keywords import SkillKeywords, derive_draft_keywords, derive_keywords
 
@@ -975,8 +975,8 @@ class SkillCard(BaseModel):
     keywords: SkillCardKeywords = SkillCardKeywords()
     """製造與利用的關鍵字（Phase 3-24b1，:func:`skill_card_keywords`）。"""
     growth: SkillLevelInfo | None = None
-    """技能等級的顯示資料（Phase 3-26a；只有主動技能有。一般技能卡是 1 級；一輪中的卡片由
-    ``trpg.api.run_presenter`` 帶入實際等級）。"""
+    """技能等級的顯示資料（Phase 3-26a）：只有一輪中主角持有（裝備或備用）的主動技能卡片帶它，
+    由 ``trpg.api.run_presenter`` 帶入實際等級；候選、技能庫與工坊的卡片為 ``None``。"""
 
 
 def skill_card(
@@ -1023,5 +1023,4 @@ def skill_card(
         followup_when=None if skill.followup is None else skill.followup.when,
         icon=skill_icon(skill),
         keywords=skill_card_keywords(library, skill),
-        growth=skill_level_info(library, skill, 1),
     )
