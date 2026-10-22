@@ -107,7 +107,7 @@ function statusBadge(badge: StatusBadge): Container {
 }
 
 function doll(art: ArtTextures, u: UnitDraw, look: DownedLook, feet: number, r: number): Sprite | Graphics {
-  const spec = resolveDoll({ template: u.template, team: u.team, summon: u.summon, totem: u.totem, weaponId: u.weaponId, weaponClass: u.weaponClass });
+  const spec = resolveDoll({ template: u.template, team: u.team, summon: u.summon, totem: u.totem, weaponId: u.weaponId, weaponClass: u.weaponClass, equipment: u.equipment });
   const texture = art.figure(spec, u.facing, u.downed);
   if (texture === null) return new Graphics().circle(0, 0, r).fill(u.fill); // 無法產生貼圖：退回色塊
   const sprite = new Sprite(texture);
