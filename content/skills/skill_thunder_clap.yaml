@@ -1,0 +1,23 @@
+# 範圍（Phase 3-24c 補技能，數值為初值，未經模擬）：向前方的錐形範圍轟出一掌雷霆（帶電池的製造者；錐形的大小可以被「製造帶電的技能範圍 +1」增長）。
+id: skill_thunder_clap
+schema_version: 1
+name_zh: 震雷掌
+tier: 1
+rank: 1
+rarity: rare
+kind: active
+skeleton: area
+category: spell
+weapon_req: any
+ap_cost: 1
+scaling_attr: int
+shape: {type: cone, size: 2}
+effects:
+  - {type: damage, dice: 1d8, element: lightning}
+condition: null
+cost: {mana: 5, cooldown: 2}
+tags: [lightning, spell, area]
+narrative:
+  concept: 一掌拍出的雷霆，在身前炸成扇形
+  cast_flavor: 你掌心一推，一道雷光沿著地面向前炸開成扇形
+provenance: {origin: builtin, owner_id: null, created_by: null, parents: [], bound: true, tradeable: false}

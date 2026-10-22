@@ -42,6 +42,22 @@ _POOL_ONLY = frozenset(
         "skill_shatter_ice",
         "skill_downpour",
         "skill_holy_water",
+        # 3-24c：關鍵字池的真實利用者與不限武器的 1 階技能（由池給出）
+        "skill_bone_pursuit",
+        "skill_shock_follow",
+        "skill_soul_burst",
+        "skill_spirit_offering",
+        "skill_scorching_slash",
+        "skill_flare_shot",
+        "skill_kindle_pop",
+        "skill_icebreaker",
+        "skill_frost_snap",
+        "skill_thaw_blast",
+        "skill_spark_chain",
+        "skill_thunder_clap",
+        "skill_splash_flask",
+        "skill_frost_touch",
+        "skill_mark_prey",
     }
 )
 

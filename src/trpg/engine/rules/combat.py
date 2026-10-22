@@ -87,7 +87,9 @@ class AttackProfile:
     - ``crit_range``：暴擊的最低自然骰值。
     - ``pierce``：穿透（Phase 3C-5b）——無視半掩護（普攻：武器的 ``ignore_cover``）。
     - ``defense_cut_permille``：目標防禦值被穿透的千分比（普攻：武器的 ``armor_pierce_permille``）。
-    - ``weapon_attack``：普攻（武器自己的攻擊）——站定與距離修正（Phase 3-24a2）只套用在普攻。
+    - ``weapon_attack``：武器自己的攻擊（普攻；Phase 3-24c 起也包含火器的武器技）——站定與距離修正
+      （Phase 3-24a2）只套用在這類攻擊。
+    - ``ignore_cover``：無視半掩護，但不產生穿透射線（火器武器技的 ``ignore_cover``，3-24c）。
     """
 
     attack_value: int
@@ -97,6 +99,7 @@ class AttackProfile:
     pierce: bool = False
     defense_cut_permille: int = 0
     weapon_attack: bool = False
+    ignore_cover: bool = False
 
 
 def weapon_profile(state: BattleState, attacker: UnitState) -> AttackProfile:
@@ -218,7 +221,11 @@ def half_cover(
     左順序中的第一個（確定性）。懲罰為 ``half_cover_hit_penalty``（為 0 時視為沒有掩護）。
     """
     limited = is_height_limited(state, attacker) if profile is None else profile.height_limited
-    if limited or (profile.pierce if profile is not None else attacker.weapon.ignore_cover):
+    if limited or (
+        (profile.pierce or profile.ignore_cover)
+        if profile is not None
+        else attacker.weapon.ignore_cover
+    ):
         return None
     penalty = state.ruleset.core.half_cover_hit_penalty
     if penalty <= 0:

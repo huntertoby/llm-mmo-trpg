@@ -210,10 +210,17 @@ def _prepare(state: BattleState, skill: SkillDef) -> None:
         stack = state.ruleset.stack_def(effect.stack)
         for unit in [caster] if stack.owner == "self" else others:
             unit.stacks[stack.id] = stack.max
+    if any(e.type == "sacrifice_summon" for e in skill.effects):
+        others[0].owner_id = caster.id  # 獻祭召喚物（3-24c）：場上的友方當成施放者的召喚物
     for kind, _, name in _conditions(skill):
         if kind in _SELF_PREPARE:
             _prepare_self(caster, others, kind)
-        elif kind in ("target_hp_below", "target_has_status", "target_on_surface"):
+        elif kind in (
+            "target_hp_below",
+            "target_has_status",
+            "target_on_surface",
+            "target_collided",
+        ):
             _prepare_targets(state, others, kind, name)
         elif kind == "height_advantage":
             x, y = caster.xy
@@ -252,6 +259,8 @@ def _prepare_targets(
     for unit in others:
         if kind == "target_hp_below":
             unit.hp = 1
+        elif kind == "target_collided":
+            unit.collided_round = state.round
         elif kind == "target_has_status" and name is not None:
             unit.statuses.append(StatusInstance(name, _STATUS_TURNS))
         elif kind == "target_on_surface" and name is not None:

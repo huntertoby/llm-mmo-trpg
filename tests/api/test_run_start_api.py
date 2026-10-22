@@ -67,12 +67,12 @@ def test_preview_matches_the_created_run(client: TestClient, library: ContentLib
     assert tuple(c["id"] for c in run["hero"]["skills"]) == expected.hero.skills
 
 
-def test_preview_marks_unreachable_keywords(client: TestClient) -> None:
+def test_preview_marks_keywords_every_weapon_can_reach(client: TestClient) -> None:
     preview = _ok(
         client.post("/api/runs/start-preview", json={"weapon": "bow", "seed": 1, "keywords": []})
     )
     wet = next(o for o in preview["options"] if o["keyword"]["id"] == "wet")
-    assert wet["skill"] is None  # 弓湊不到潮濕的起始技能（不可選）
+    assert wet["skill"] is not None  # 3-24c 4b：不限武器的潮濕技能讓弓也能選潮濕
     ignite = next(o for o in preview["options"] if o["keyword"]["id"] == "ignite")
     assert ignite["skill"] is not None
 

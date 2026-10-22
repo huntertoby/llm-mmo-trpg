@@ -2,6 +2,8 @@
 
 from __future__ import annotations
 
+from typing import Any
+
 import pytest
 
 from tests.engine.helpers import library
@@ -108,12 +110,15 @@ def test_behavior_tilts_the_new_direction() -> None:
     """常用推擊（shove）的玩家，新方向較常出撞擊（skill_keywords.yaml 的 actions）。"""
     lib = library()
     assert behavior_weights(lib, {"shove": 5, "trip": 1})["collision"] == 5
-    plain = sum(_generate({"ignite": 1}, seed=s)[-1].keywords == ("collision",) for s in range(30))
-    tilted = sum(
-        _generate({"ignite": 1}, seed=s, behavior={"shove": 40})[-1].keywords == ("collision",)
-        for s in range(30)
-    )
-    assert tilted > plain
+
+    # 3-24c：橋接的退回也會往行為偏向的關鍵字走，所以看三個候選裡有沒有出現撞擊
+    def seen(**kw: Any) -> int:
+        return sum(
+            any("collision" in c.keywords for c in _generate({"ignite": 1}, seed=s, **kw))
+            for s in range(30)
+        )
+
+    assert seen(behavior={"shove": 40}) > seen()
 
 
 def test_behavior_breaks_deepen_ties() -> None:

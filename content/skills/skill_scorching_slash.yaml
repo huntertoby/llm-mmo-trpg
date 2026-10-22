@@ -1,0 +1,27 @@
+# 連段（Phase 3-24c 補技能，數值為初值，未經模擬）：目標正在燃燒時，劈砍連同火勢一起加碼（點燃池的利用者）。
+id: skill_scorching_slash
+schema_version: 1
+name_zh: 灼斬
+tier: 1
+rank: 1
+rarity: rare
+kind: active
+skeleton: strike
+category: weapon
+weapon_req: melee
+ap_cost: 2
+scaling_attr: str
+shape: {type: single, range: weapon}
+effects:
+  - {type: damage, multiplier_permille: 1000}
+  # 目標已經著火，刀刃順著火舌多劃一刀
+  - type: damage
+    multiplier_permille: 1200
+    condition: {type: target_has_status, status: burning}
+condition: null
+cost: {mana: 5, cooldown: 2}
+tags: [physical, melee, combo]
+narrative:
+  concept: 趁敵人身上的火還沒熄，再補一刀
+  cast_flavor: 你的劍順著敵人身上的火光劈下，火星濺得像雨
+provenance: {origin: builtin, owner_id: null, created_by: null, parents: [], bound: true, tradeable: false}

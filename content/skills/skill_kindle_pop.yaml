@@ -1,0 +1,28 @@
+# 消耗狀態（Phase 3-24c 補技能，數值為初值，未經模擬）：引爆目標身上的燃燒，造成「燃燒剩餘回合 × 1d8」火焰傷害；目標沒有燃燒時不生效（點燃池的利用者）。
+id: skill_kindle_pop
+schema_version: 1
+name_zh: 火種爆燃
+tier: 1
+rank: 1
+rarity: rare
+kind: active
+skeleton: consume_status
+category: spell
+weapon_req: any
+ap_cost: 2
+scaling_attr: int
+shape: {type: single, range: 4}
+effects:
+  - type: consume_status
+    status: burning
+    scale: remaining_rounds
+    then:
+      - {type: damage, dice: 2d8, element: fire}
+
+condition: null
+cost: {mana: 6, cooldown: 2}
+tags: [fire, spell, detonate]
+narrative:
+  concept: 把目標身上的火焰收攏成一團，轟然引爆
+  cast_flavor: 你五指一收，敵人身上的火苗被硬生生扯成一團，砰地炸開
+provenance: {origin: builtin, owner_id: null, created_by: null, parents: [], bound: true, tradeable: false}

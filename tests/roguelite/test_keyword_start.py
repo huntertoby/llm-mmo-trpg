@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import json
+from dataclasses import replace
 
 import pytest
 
@@ -27,7 +28,7 @@ from trpg.roguelite.start import (
 )
 from trpg.roguelite.state import LevelUpNode
 from trpg.shared.types import Attribute, Pos, UnitId
-from trpg.skillgen.keywords import is_starter_skill
+from trpg.skillgen.keywords import is_starter_skill, pool_skills
 
 
 def test_every_weapon_is_offered() -> None:
@@ -99,12 +100,26 @@ def test_second_keyword_never_repeats_the_first_skill() -> None:
         ("fire_staff", ("ignite", "ignite"), "2 個不同"),
         ("fire_staff", ("ignite", "nope"), "未知的關鍵字"),
         ("nope", ("ignite", "marked"), "未知的武器"),
-        ("bow", ("wet", "marked"), "沒有弓能用的起始技能"),
     ],
 )
 def test_bad_starts_are_rejected(weapon: str, keywords: tuple[str, ...], match: str) -> None:
     with pytest.raises(ChoiceError, match=match):
         new_keyword_run(library(), weapon, keywords, 1)
+
+
+def test_bow_can_start_with_wet_thanks_to_any_weapon_skills() -> None:
+    """3-24c 4b：不限武器的潮濕 1 階技能讓遠程開局也能選潮濕。"""
+    run = new_keyword_run(library(), "bow", ("wet", "marked"), 1)
+    assert len(set(run.hero.skills)) == 2
+
+
+def test_a_pool_without_compatible_starters_is_rejected() -> None:
+    lib = library()
+    starters = {s.id for s in pool_skills(lib, "wet", exclusive_only=True)}
+    kept = {i: s for i, s in lib.skills.items() if i not in starters or s.weapon_req == "focus"}
+    poor = replace(lib, skills=kept)
+    with pytest.raises(ChoiceError, match="沒有弓能用的起始技能"):
+        new_keyword_run(poor, "bow", ("wet", "marked"), 1)
 
 
 def test_allocation_is_checked() -> None:

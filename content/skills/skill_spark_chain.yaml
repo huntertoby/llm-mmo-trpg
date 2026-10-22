@@ -1,0 +1,23 @@
+# 連鎖（Phase 3-24c 補技能，數值為初值，未經模擬）：電弧在目標與旁邊的敵人之間跳一次（帶電池的製造者與連鎖利用者）。
+id: skill_spark_chain
+schema_version: 1
+name_zh: 火花連鎖
+tier: 1
+rank: 1
+rarity: rare
+kind: active
+skeleton: area
+category: spell
+weapon_req: focus
+ap_cost: 1
+scaling_attr: int
+shape: {type: chain, range: 4, jumps: 1, jump_range: 2}
+effects:
+  - {type: damage, dice: 1d8, element: lightning}
+condition: null
+cost: {mana: 5, cooldown: 1}
+tags: [lightning, spell, chain]
+narrative:
+  concept: 電弧挑最近的敵人，一次跳過去
+  cast_flavor: 杖尖噴出一束火花，沿著敵人的甲冑連跳了一下
+provenance: {origin: builtin, owner_id: null, created_by: null, parents: [], bound: true, tradeable: false}

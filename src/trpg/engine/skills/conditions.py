@@ -105,7 +105,7 @@ def _unit_condition_met(
     state: BattleState, caster: UnitState, condition: ConditionSpec, unit: UnitState
 ) -> bool:
     """看對象單位的條件（``target_hp_below``、``target_has_status``、``target_isolated``、
-    ``flanked``）。"""
+    ``flanked``、``from_behind``、``target_collided``）。"""
     kind = condition.type
     if kind == "target_hp_below":
         assert condition.permille is not None
@@ -117,12 +117,21 @@ def _unit_condition_met(
         return is_flanked(state, caster, unit)
     if kind == "from_behind":
         return is_behind(caster.xy, unit)
+    if kind == "target_collided":  # 本回合（這一輪）受過撞擊（Phase 3-24c）
+        return unit.collided_round == state.round
     assert kind == "target_isolated"
     return not _has_living_ally_beside(state, unit)
 
 
 _UNIT_CONDITIONS = frozenset(
-    {"target_hp_below", "target_has_status", "target_isolated", "flanked", "from_behind"}
+    {
+        "target_hp_below",
+        "target_has_status",
+        "target_isolated",
+        "flanked",
+        "from_behind",
+        "target_collided",
+    }
 )
 
 

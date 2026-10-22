@@ -405,6 +405,19 @@ def _detonate_runes_points(
     )
 
 
+def _sacrifice_summon_points(
+    _skill: SkillDef, effect: EffectSpec, library: ContentLibrary
+) -> tuple[Fraction, str]:
+    """``sacrifice_summon`` 的點數（3-24c）：骰子平均 × ``sacrifice_summon_permille``‰。"""
+    if effect.dice is None:
+        raise BudgetError("sacrifice_summon 缺少 dice，無法計算點數")
+    permille = library.budget.sacrifice_summon_permille
+    return (
+        _dice_average(effect.dice) * Fraction(permille, _PERMILLE),
+        f"{effect.dice} 平均 × 獻祭折扣 {permille}‰",
+    )
+
+
 def _reveal_points(
     _skill: SkillDef, effect: EffectSpec, library: ContentLibrary
 ) -> tuple[Fraction, str]:
@@ -779,6 +792,7 @@ _SPECIAL_BASES: dict[
     "obstacle": _obstacle_points,
     "inscribe": _inscribe_points,
     "detonate_runes": _detonate_runes_points,
+    "sacrifice_summon": _sacrifice_summon_points,
     "revive": _revive_points,
     "delayed_damage": _delayed_damage_points,
     "grant_skill": _grant_skill_points,

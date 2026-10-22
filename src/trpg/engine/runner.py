@@ -38,8 +38,12 @@ __all__ = [
     "run_battle",
 ]
 
-LOG_FORMAT = "trpg-battle-log/42"
-"""``/42``（Phase 3G-G3a）：裝備的觸發與充能——新動作 ``activate_charge``、新事件
+LOG_FORMAT = "trpg-battle-log/43"
+"""``/43``（Phase 3-24c，接在 3G-G3a 的 ``/42`` 之後）：新條件 ``target_collided``
+（單位的 ``collided_round``）、新原語
+``sacrifice_summon``（召喚物消失原因 ``sacrificed``）、火器的武器技也算開火（消耗彈匣、槍聲、站定、
+距離修正）；``/42`` 的紀錄無法重播。
+``/42``（Phase 3G-G3a）：裝備的觸發與充能——新動作 ``activate_charge``、新事件
 ``gear_triggered``／``charge_activated``、單位狀態 ``gear_turn_counts``／``gear_round_counts``／
 ``ap_gain_turn``、詞條欄位（觸發的 ``tag``／``status``／``surface``、充能的
 ``effect_target``）、層數 ``fury``。

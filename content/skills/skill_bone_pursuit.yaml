@@ -1,0 +1,27 @@
+# 連段（Phase 3-24c 補技能，數值為初值，未經模擬）：目標本回合撞過牆或同伴時，追擊再加一段重擊（撞擊池的利用者）。
+id: skill_bone_pursuit
+schema_version: 1
+name_zh: 碎骨追擊
+tier: 1
+rank: 1
+rarity: rare
+kind: active
+skeleton: strike
+category: weapon
+weapon_req: melee
+ap_cost: 2
+scaling_attr: str
+shape: {type: single, range: weapon}
+effects:
+  - {type: damage, multiplier_permille: 1000}
+  # 目標這一輪被撞得七葷八素，追擊直接砸在斷裂的骨頭上
+  - type: damage
+    multiplier_permille: 1300
+    condition: {type: target_collided}
+condition: null
+cost: {mana: 5, cooldown: 2}
+tags: [physical, melee, combo]
+narrative:
+  concept: 專挑剛撞過牆的敵人補上致命一擊
+  cast_flavor: 你踏著對手被撞退的軌跡逼近，沉重的一擊落在還在發麻的肩骨上
+provenance: {origin: builtin, owner_id: null, created_by: null, parents: [], bound: true, tradeable: false}

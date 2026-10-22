@@ -497,6 +497,7 @@ def _push_unit(ctx: Ctx, effect: PushEffect, unit_id: UnitId) -> list[EventBase]
         if not unit.alive or any(isinstance(e, EnteredDeadlyTerrain) for e in moved):
             return events  # 墜落、致命地形造成的停下不算撞擊（多推的部分也不算）
     if effect.extra_collisions > 0 and unit.alive:
+        unit.collided_round = state.round  # 超過上限的撞擊也算（target_collided，3-24c）
         events.append(
             ctx.emit(
                 Collided,
@@ -531,6 +532,9 @@ def _collide(
             obstacle, object_id = "object", state.tile(*blocked).object_id
         else:
             obstacle = "wall"
+    unit.collided_round = state.round  # 被擋下的單位與撞到的單位都「受過撞擊」（3-24c）
+    if other is not None:
+        other.collided_round = state.round
     return ctx.emit(
         Collided,
         unit_id=unit.id,

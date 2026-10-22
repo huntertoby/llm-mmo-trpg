@@ -344,6 +344,9 @@ class UnitState:
     moved_this_turn: bool = False
     """本回合做過主動移動（步行；傳送與強制位移不算；``moved_this_turn`` 條件，Phase 3D-1）；
     自己回合開始時清除。"""
+    collided_round: int = 0
+    """最近一次被撞擊（``collided`` 事件的受害者：被擋下的單位與撞到的單位）的輪數（0 為從未；
+    ``target_collided`` 條件「目標本回合受過撞擊」，Phase 3-24c）。"""
     ran_this_turn: bool = False
     """本回合已跑步（Phase 3-20；每回合限 1 次）；自己回合開始時清除。"""
     guarding_id: UnitId | None = None
@@ -462,6 +465,7 @@ class UnitState:
             ap_granted_round=self.ap_granted_round,
             extra_reactions=self.extra_reactions,
             moved_this_turn=self.moved_this_turn,
+            collided_round=self.collided_round,
             ran_this_turn=self.ran_this_turn,
             guarding_id=self.guarding_id,
             guard_transfers=self.guard_transfers,

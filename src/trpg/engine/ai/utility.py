@@ -65,6 +65,7 @@ from trpg.content.skills import (
     RESTORE_RESOURCE,
     REVEAL,
     REVIVE,
+    SACRIFICE_SUMMON,
     SHADOWSTEP,
     STEAL_BUFF,
     TIME_BOMB,
@@ -106,7 +107,13 @@ from trpg.engine.ai.orders import (
 )
 from trpg.engine.ai.rune import is_inscribe_skill, read_gains, rune_estimate, rune_gains
 from trpg.engine.ai.scene_objects import SCENE_PRIMITIVES, has_fire_follow_up, scene_estimate
-from trpg.engine.ai.summon import has_summon, summon_estimate, summon_gains, summon_template
+from trpg.engine.ai.summon import (
+    has_summon,
+    sacrifice_estimate,
+    summon_estimate,
+    summon_gains,
+    summon_template,
+)
 from trpg.engine.ai.zone import hostile_zone_at, is_zone_skill, zone_estimate, zone_gains
 from trpg.engine.battle import legal_actions, legal_actions_with_areas
 from trpg.engine.bombs import blast_tiles
@@ -1596,6 +1603,11 @@ def _placement_estimate(
         return _trap_estimate(state, unit, skill, area, scene, rules=trap)
     if has_summon(skill):
         return summon_estimate(state, unit, area.origin, summon_template(skill))
+    if any(e.type == SACRIFICE_SUMMON for e in skill.effects):  # 獻祭召喚物（3-24c）
+        target = next(
+            (state.units[u] for u in area.units if state.units[u].owner_id == unit.id), None
+        )
+        return None if target is None else sacrifice_estimate(state, unit, skill, target.xy)
     return _field_placement_estimate(state, unit, skill, area)
 
 

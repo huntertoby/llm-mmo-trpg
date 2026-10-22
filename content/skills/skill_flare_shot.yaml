@@ -1,0 +1,27 @@
+# 連段（Phase 3-24c 補技能，數值為初值，未經模擬）：目標正在燃燒時，借著火光多補一箭（點燃池的利用者）。
+id: skill_flare_shot
+schema_version: 1
+name_zh: 照火追射
+tier: 1
+rank: 1
+rarity: rare
+kind: active
+skeleton: strike
+category: weapon
+weapon_req: ranged
+ap_cost: 2
+scaling_attr: dex
+shape: {type: single, range: weapon}
+effects:
+  - {type: damage, multiplier_permille: 1000}
+  # 目標身上的火光照亮要害，第二箭準確命中
+  - type: damage
+    multiplier_permille: 1200
+    condition: {type: target_has_status, status: burning}
+condition: null
+cost: {mana: 5, cooldown: 2}
+tags: [physical, ranged, combo]
+narrative:
+  concept: 借敵人身上的火光瞄準要害
+  cast_flavor: 你就著對手身上跳動的火光拉滿弓，第二箭釘進同一個位置
+provenance: {origin: builtin, owner_id: null, created_by: null, parents: [], bound: true, tradeable: false}

@@ -62,7 +62,7 @@ keywords:
       - {change: heal_permille, grade: general}
   - id: charged
     name_zh: 帶電
-    description_zh: 雷電讓目標帶電；帶電的目標會被連鎖、被雷擊得更重。
+    description_zh: 雷電讓目標帶電；雷電能沿著水與連鎖擴散，靜電也能累積成更強的一擊。
     makes:
       - {effect: damage, element: lightning}
       - {effect: delayed_damage, element: lightning}
@@ -90,7 +90,7 @@ keywords:
       - {effect: consume_status, status: frozen}
   - id: prone
     name_zh: 倒地
-    description_zh: 絆倒、撞擊、推倒讓目標倒地；倒地的目標更容易被背刺與處決。
+    description_zh: 絆倒、推倒、撞擊讓目標倒地；倒地的目標更容易被近戰命中與處決。
     actions: [trip]   # 行為紀錄提示（Phase 3-24b2）：常用這個動作的玩家，候選偏向這個關鍵字
     makes:
       - {effect: knock_prone}
@@ -118,6 +118,7 @@ keywords:
       - {effect: rule_change, rule: move_any_object}
     uses:
       - {trigger: on_collision}
+      - {condition: target_collided}   # 3-24c：對本回合撞過牆的目標加碼
       - {trigger: on_damaged, grade: provisional}   # 暫定：受傷（含撞擊傷害）時反擊
       - {effect: apply_status, status: stance_bulwark, grade: provisional}   # 暫定：堅壁姿態站穩腳步、不怕被推
   - id: marked
@@ -173,11 +174,12 @@ keywords:
       - {condition: from_behind}
   - id: summon
     name_zh: 召喚物
-    description_zh: 召喚與圖騰讓場上多出幫手；召喚物也能被獻祭或當作施放的原點。
+    description_zh: 召喚與圖騰讓場上多出幫手；你可以獻祭自己的召喚物，在它所在的位置爆炸或治療。
     makes:
       - {effect: summon}
       - {effect: rule_change, rule: afterimage_double}
     uses:
+      - {effect: sacrifice_summon}   # 3-24c：獻祭召喚物（專屬）
       - {condition: adjacent_ally, grade: general}   # 通用：召喚物也是友方；以下是對友方生效的效果（召喚物也算友方）
       - {effect: apply_status, affects: allies, grade: general}   # 通用
       - {effect: restore_resource, affects: allies, grade: general}   # 通用

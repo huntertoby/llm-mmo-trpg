@@ -64,6 +64,8 @@ obstacle_duration_permille: [400, 500, 600, 700, 750, 800, 850, 900, 950, 1000]
 # detonate_runes 的點數 ＝ 骰子平均 × detonate_runes_permille ÷ 1000（需要先刻印的折扣），形狀倍率照一般效果。
 inscribe_duration_permille: [600, 800, 1000, 1200, 1400]
 detonate_runes_permille: 700
+# 3-24c 獻祭召喚物（初值，未經模擬）：點數 ＝ 骰子平均 × sacrifice_summon_permille ÷ 1000（需要先有召喚物、且召喚物會消失的折扣）。
+sacrifice_summon_permille: 800
 reveal_base_points: 2
 reveal_round_points: 1
 # 3D-8b 復活與定時炸彈（初值，未經模擬）：復活 ＝ revive_base_points ＋ hp_permille × revive_hp_point_permille ÷ 1000；

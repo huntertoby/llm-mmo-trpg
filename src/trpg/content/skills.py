@@ -102,6 +102,7 @@ __all__ = [
     "REVEAL",
     "REVIVE",
     "RULE_CHANGE",
+    "SACRIFICE_SUMMON",
     "SCALE_BY_VALUES",
     "SELF_CONDITIONS",
     "SELF_DAMAGE_OF_HIT",
@@ -181,6 +182,7 @@ SKELETON_IDS: tuple[str, ...] = (
     "modifier",
     "consume_status",
     "rune",
+    "sacrifice",
 )
 """``docs/design/06-技能.md`` 6.9 的 12 種骨架，加上 Phase 3C-2 的 ``modifier``（修正規則：改造型與
 修正型被動，6.14.1）、3C-3b 的 ``consume_status``（6.14.2 管道 1）與 3-23 的 ``rune``（6.25 刻印）。
@@ -224,8 +226,9 @@ REQUIRED_CONDITIONS: tuple[str, ...] = (
     "from_behind",
     "self_concealed",
     "on_own_rune",
+    "target_collided",
 )
-"""引擎實作的 14 種條件（``trpg.engine.skills.conditions``），資料檔必須全部定義。"""
+"""引擎實作的 15 種條件（``trpg.engine.skills.conditions``），資料檔必須全部定義。"""
 
 type Targeting = Literal[
     "self", "unit", "tile", "direction", "none", "object_tile", "unit_tile", "unit_pair"
@@ -597,6 +600,7 @@ class PrimitiveDef(ContentModel):
             "grant_skill",
             "inscribe",
             "detonate_runes",
+            "sacrifice_summon",
         ]
         | None
     ) = None
@@ -715,6 +719,7 @@ _PLAIN_CONDITION_TEXT = {
     "from_behind": "背刺（站在目標背後）",
     "self_concealed": "潛行偷襲（自身隱蔽中）",
     "first_round": "第一輪",
+    "target_collided": "目標本回合受過撞擊",
 }
 """沒有參數的條件的一句話（Phase 3D-1）。"""
 
@@ -1143,6 +1148,8 @@ INSCRIBE = "inscribe"
 """Phase 3-23 的刻印原語 ID（6.25）：在影響格留下施放者專屬的符文（``element`` 或 ``tag``）。"""
 DETONATE_RUNES = "detonate_runes"
 """Phase 3-23 的消耗型原語 ID（6.25）：引爆影響格內施放者自己的符文，每格對該格單位一次小傷害。"""
+SACRIFICE_SUMMON = "sacrifice_summon"
+"""Phase 3-24c 的獻祭召喚物原語 ID（6.27.2）：移除自己的一個召喚物，在它的位置爆炸或治療。"""
 ZONE = "zone"
 """Phase 3D-5 的持續區域原語 ID（6.16 G）：在格子上建立持續 ``duration`` 輪的區域。"""
 ZONE_EFFECT_TYPES: tuple[str, ...] = ("damage", "heal", "shield", "apply_status")
@@ -1799,6 +1806,7 @@ class SkillDef(ContentModel):
         self._check_summon()
         self._check_zone()
         self._check_runes()
+        self._check_sacrifice()
         self._check_gamble()
         self._check_revive()
         self._check_delayed_damage()
@@ -2118,6 +2126,21 @@ class SkillDef(ContentModel):
                 raise ValueError(f"{where}：必須恰好填 element 或 tag 其中一個")
             if effect.type == INSCRIBE and effect.dice is not None:
                 raise ValueError(f"{where}：符文本身沒有效果，不可填 dice")
+
+    def _check_sacrifice(self) -> None:
+        """獻祭召喚物（Phase 3-24c）：只能用在主動技能，形狀是 ``single``（選自己的一個召喚物），
+        必須填 ``dice`` 與 ``radius``；填了 ``element`` 是爆炸（傷害範圍內的敵人），省略是治療
+        範圍內的友方。"""
+        for index, effect in enumerate(self.effects):
+            if effect.type != SACRIFICE_SUMMON:
+                continue
+            where = f"effects[{index}]（{SACRIFICE_SUMMON}）"
+            if self.kind != "active":
+                raise ValueError(f"{where}：只能用在主動技能，收到 kind: {self.kind}")
+            if self.shape.type != "single":
+                raise ValueError(f"{where}：形狀必須是 single（選自己的召喚物）")
+            if effect.dice is None or effect.radius is None:
+                raise ValueError(f"{where}：必須填 dice 與 radius")
 
     def _check_zone(self) -> None:
         """持續區域（Phase 3D-5）：只能用在主動技能，而且是技能唯一的效果；``anchor``、``when``、

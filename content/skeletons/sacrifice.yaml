@@ -1,0 +1,11 @@
+# 獻祭（Phase 3-24c，docs/design/06-技能.md 6.27.2）：選自己的一個召喚物，讓它消失並在原地爆炸或治療。
+# 隨機組合器低權重產生（見 skill_composer.yaml 的 sacrifice.skeleton_permille）。
+id: sacrifice
+name_zh: 獻祭
+description_zh: 獻祭自己的一個召喚物，在它的位置爆炸（傷害範圍內的敵人）或治療範圍內的友方。
+kinds: [active]
+enabled: true
+min_rarity: rare
+shapes: [single]
+core: {primitives: [sacrifice_summon]}
+secondary: {max_count: 0}

@@ -1083,6 +1083,7 @@ _SUMMON_EXPIRY_TEXT = {
     "expired": "時間到了",
     "owner_gone": "召喚者離場",
     "limit": "超過同時存在的上限，最舊的召喚物",
+    "sacrificed": "被獻祭",
 }
 
 

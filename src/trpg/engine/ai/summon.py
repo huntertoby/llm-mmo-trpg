@@ -15,7 +15,7 @@ from collections.abc import Sequence
 from fractions import Fraction
 
 from trpg.content.environment import AiProfile
-from trpg.content.skills import SUMMON, SkillDef
+from trpg.content.skills import SACRIFICE_SUMMON, SUMMON, SkillDef
 from trpg.content.summons import summon_dpr
 from trpg.engine.events import EventBase, SummonExpired, UnitSummoned
 from trpg.engine.rules.geometry import XY, manhattan
@@ -24,6 +24,7 @@ from trpg.engine.summons import totem_of
 
 __all__ = [
     "has_summon",
+    "sacrifice_estimate",
     "summon_estimate",
     "summon_gains",
     "summon_template",
@@ -40,6 +41,23 @@ def has_summon(skill: SkillDef) -> bool:
 def summon_template(skill: SkillDef) -> str | None:
     """技能召喚的範本 ID（沒有召喚效果時 ``None``）。"""
     return next((e.unit for e in skill.effects if e.type == SUMMON), None)
+
+
+def sacrifice_estimate(
+    state: BattleState, unit: UnitState, skill: SkillDef, target_xy: XY
+) -> Fraction | None:
+    """獻祭召喚物（Phase 3-24c）的便宜估計：被獻祭的召喚物所在位置、半徑內的敵人數 × 3（爆炸）或
+    受傷的友方數 × 2（治療）；範圍內沒有值得的對象時 ``None``（不納入候選）。"""
+    spec = next(e for e in skill.effects if e.type == SACRIFICE_SUMMON)
+    radius = spec.radius or 0
+    near = [u for u in state.living_units() if manhattan(u.xy, target_xy) <= radius]
+    if spec.element is not None:
+        score = 3 * sum(1 for u in near if u.team is not unit.team)
+    else:
+        score = 2 * sum(1 for u in near if u.team is unit.team and u.hp < u.max_hp)
+    if score == 0:
+        return None
+    return Fraction(score) - Fraction(manhattan(unit.xy, target_xy), _PERMILLE)
 
 
 def _nearest_enemy(state: BattleState, team: object, xy: XY) -> int | None:
@@ -117,7 +135,7 @@ def summon_gains(
             nearest = _nearest_enemy(state, actor.team, xy)
             if nearest is not None and not _is_totem(state, e.template_id):
                 gains -= cost * nearest
-        elif isinstance(e, SummonExpired) and e.reason == "limit":
+        elif isinstance(e, SummonExpired) and e.reason in ("limit", "sacrificed"):
             old = state.units.get(e.unit_id)
             if old is not None and old.team is actor.team and old.summon_expires_round is not None:
                 rounds = old.summon_expires_round - state.round
