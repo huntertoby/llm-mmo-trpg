@@ -57,6 +57,7 @@ from trpg.engine.gear_state import GearAffix
 from trpg.engine.rules.combat import NATURAL_HIT
 from trpg.engine.rules.geometry import manhattan
 from trpg.engine.rules.statuses import skip_turn_status
+from trpg.engine.skills.casting import use_modifier_effects, use_triggered_skill
 from trpg.engine.skills.conditions import Subject, condition_met, skill_condition_met
 from trpg.engine.skills.targeting import PaidCost, pay_skill_cost, resource_problem
 from trpg.engine.state import UnitState
@@ -570,9 +571,6 @@ def _usable(ctx: Ctx, owner: UnitState, skill: SkillDef) -> bool:
 
 
 def _resolve_one(ctx: Ctx, fired: Fired) -> None:
-    # 延後匯入：技能解譯器與效果佇列匯入 context（context 匯入本模組）。
-    from trpg.engine.skills.interpreter import use_triggered_skill  # noqa: PLC0415
-
     state = ctx.state
     if state.ended:
         return
@@ -629,8 +627,6 @@ def _resolve_delayed(ctx: Ctx, fired: Fired) -> None:
 def _resolve_on_hit(ctx: Ctx, fired: Fired) -> None:
     """修正規則的命中後效果：持有者在場、目標仍存活、規則條件（對目標）成立、深度未超過上限。
     沒有代價與每輪次數（預算以「每場使用次數」計算）。"""
-    from trpg.engine.skills.interpreter import use_modifier_effects  # noqa: PLC0415
-
     state = ctx.state
     owner = state.units.get(fired.owner_id)
     other = None if fired.other_id is None else state.units.get(fired.other_id)

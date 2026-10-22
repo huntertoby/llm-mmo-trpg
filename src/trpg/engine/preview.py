@@ -14,9 +14,11 @@
 from __future__ import annotations
 
 from collections import Counter
+from collections.abc import Mapping
 from dataclasses import dataclass, replace
 from fractions import Fraction
 from itertools import product
+from types import MappingProxyType
 from typing import Literal
 
 from trpg.content.skills import (
@@ -128,6 +130,7 @@ from trpg.engine.weapon_traits import attack_dice
 from trpg.shared.types import Attribute, ObjectId, UnitId
 
 __all__ = [
+    "PRIMITIVE_PREVIEW",
     "BombInfo",
     "DamageRange",
     "DisplaceCheck",
@@ -1539,3 +1542,63 @@ def _infusion_info(state: BattleState, action: InfuseSkill) -> InfusionInfo:
         units=area.units,
         no_target=False,
     )
+
+
+_OUTCOMES = "事件摘要（certain／possible）"
+
+PRIMITIVE_PREVIEW: Mapping[str, str] = MappingProxyType(
+    {
+        "damage": "targets（命中率、傷害範圍與期望）",
+        "heal": "healed",
+        "shield": _OUTCOMES,
+        "cleanse": _OUTCOMES,
+        "push": f"collisions、topples、{_OUTCOMES}",
+        "pull": f"collisions、{_OUTCOMES}",
+        "knock_prone": "targets（擊倒對抗的成功率 _knock_chance）",
+        "teleport": "moves",
+        "dash": "moves（衝鋒路線）",
+        "charge_through": "moves、targets（擊倒對抗的成功率）",
+        "shadowstep": "moves",
+        "leap": "moves（落點）",
+        "swap": "moves",
+        "teleport_target": "displace_checks、displace_chance、notes（Boss 免疫）",
+        "swap_any": "displace_checks、displace_chance、moves",
+        "apply_status": "targets（狀態抵抗的成功率 _status_chances）",
+        "create_surface": f"affected_tiles、{_OUTCOMES}",
+        "destroy_object": _OUTCOMES,
+        "create_obstacle": f"affected_tiles、{_OUTCOMES}",
+        "raise_terrain": _OUTCOMES,
+        "lower_terrain": _OUTCOMES,
+        "intercept": "反應技，不在施放的預覽內（反應時照常結算）",
+        "add_stack": _OUTCOMES,
+        "consume_stack": f"targets（傷害加成）、{_OUTCOMES}",
+        "consume_status": _OUTCOMES,
+        "place_trap": _OUTCOMES,
+        "grant_ap": _OUTCOMES,
+        "reset_cooldown": _OUTCOMES,
+        "cheat_death": _OUTCOMES,
+        "redirect_damage": _OUTCOMES,
+        "copy_skill": "以帶著 copy_cast 的動作模擬（被複製的技能的事件）",
+        "extra_reaction": _OUTCOMES,
+        "hurl_object": "hurls",
+        "topple": "topples",
+        "restore_resource": _OUTCOMES,
+        "steal_buff": _OUTCOMES,
+        "dispel": _OUTCOMES,
+        "reveal": _OUTCOMES,
+        "revive": "revives",
+        "delayed_damage": "bombs",
+        "summon": "summons",
+        "zone": f"affected_tiles、{_OUTCOMES}",
+        "rule_change": _OUTCOMES,
+        "gamble": "gamble（成功與失敗兩個分支）",
+        "grant_skill": "grants",
+        "inscribe": f"affected_tiles、{_OUTCOMES}",
+        "detonate_runes": _OUTCOMES,
+        "sacrifice_summon": f"healed、{_OUTCOMES}",
+    }
+)
+"""原語 ID → 預覽呈現它的欄位（Phase 3E-2b 的宣告表）。預覽是模擬結算再整理事件，不是逐原語
+分派；新增原語時要確認它的事件有被 :func:`outcomes` 或專用欄位呈現，並寫進這張表。載入內容時
+:func:`trpg.primitive_coverage.check_primitive_coverage` 檢查 ``skill_primitives.yaml`` 的每個
+原語都在這裡（缺了就報錯）。"""

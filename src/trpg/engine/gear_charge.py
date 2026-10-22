@@ -19,7 +19,7 @@ from trpg.engine.gear_state import GearAffix
 from trpg.engine.gear_triggers import gear_carrier
 from trpg.engine.rules.combat import attack_problem
 from trpg.engine.skill_triggers import holding
-from trpg.engine.skills.interpreter import use_gear_effects
+from trpg.engine.skills.casting import use_gear_effects
 from trpg.engine.stacks import spend_stacks
 from trpg.engine.state import BattleState, UnitState
 from trpg.shared.errors import IllegalActionError

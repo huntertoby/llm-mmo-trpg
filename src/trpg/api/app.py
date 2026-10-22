@@ -28,6 +28,7 @@ from trpg.api.sessions import (
 from trpg.api.workshop import WorkshopRequestError
 from trpg.content.library import ContentLibrary, load_library
 from trpg.engine.runner import DEFAULT_MAX_ACTIONS
+from trpg.primitive_coverage import check_primitive_coverage
 from trpg.roguelite.errors import ChoiceError, NodeConflictError, SaveFormatError
 from trpg.roguelite.save import default_save_dir
 from trpg.shared.errors import IllegalActionError
@@ -73,7 +74,8 @@ def create_app(
     static_dir: Path | None = None,
     save_dir: Path | None = None,
 ) -> FastAPI:
-    """建立應用。``library`` 省略時載入 ``content/``。
+    """建立應用。``library`` 省略時載入 ``content/``；兩種情況都先檢查效果原語的對應項
+    （:func:`~trpg.primitive_coverage.check_primitive_coverage`，缺了拋出 ``ContentError``）。
 
     ``max_auto_steps`` 是每次請求自動推進的步數上限（超過時 500，工作階段保留）。
     ``save_dir`` 是一輪的存檔資料夾（省略時 :func:`~trpg.roguelite.save.default_save_dir`）。
@@ -82,6 +84,7 @@ def create_app(
     """
     app = FastAPI(title="LLM-MMO-TRPG 本機 API", version=__version__)
     lib = library if library is not None else load_library()
+    check_primitive_coverage(lib)
     app.state.store = SessionStore(lib, max_auto_steps=max_auto_steps)
     app.state.runs = RunStore(
         lib, app.state.store, save_dir if save_dir is not None else default_save_dir()

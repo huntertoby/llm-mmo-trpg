@@ -54,6 +54,7 @@ from trpg.engine.rules.statuses import (
     skip_turn_status,
 )
 from trpg.engine.skill_levels import skill_level
+from trpg.engine.skills.casting import run_infused
 from trpg.engine.skills.mobility import self_move_problem
 from trpg.engine.skills.targeting import (
     SkillArea,
@@ -395,9 +396,6 @@ def _pick_with(
 
 def release_infusion(ctx: Ctx, summon: UnitState) -> None:
     """召喚物回合開始（其他回合開始的處理之後）：施放灌注的技能，或放棄（``infusion_fizzled``）。"""
-    # 延後匯入：技能解譯器間接匯入回合流程（本函式由回合流程呼叫）。
-    from trpg.engine.skills.interpreter import run_infused  # noqa: PLC0415
-
     infused = summon.infused_skill
     assert infused is not None
     summon.infused_skill = None

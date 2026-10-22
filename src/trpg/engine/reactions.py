@@ -15,7 +15,7 @@
   Phase 3D-8c 新增內建反應事件 ``enemy_moves_in_range``（監視射擊 ``overwatch_shot``，需要狀態
   ``overwatch``：敵人主動移動的一步結束後位在持有者的武器射程與視線內，自動普攻一次並移除
   ``overwatch``，見 :func:`enemy_moves_in_range_reactions`）。
-  反應技不花 AP，立刻施放一次技能（:func:`trpg.engine.skills.interpreter.use_reaction_skill`）。
+  反應技不花 AP，立刻施放一次技能（:func:`trpg.engine.skills.casting.use_reaction_skill`）。
 
 普攻的結算（:func:`perform_unit_attack`）也放在這裡，因為格擋會在命中後、傷害前介入，
 藉機攻擊本身也是一次普攻。
@@ -57,6 +57,7 @@ from trpg.engine.rules.geometry import XY, has_line_of_sight, manhattan
 from trpg.engine.rules.statuses import skip_turn_status, weapon_attribute
 from trpg.engine.rules.weapons import range_damage_permille
 from trpg.engine.skill_triggers import check_trigger_depth, holding, redirect_fired
+from trpg.engine.skills.casting import use_reaction_skill
 from trpg.engine.skills.conditions import Subject, skill_condition_met
 from trpg.engine.skills.targeting import reaction_problem, reaction_target_problem
 from trpg.engine.state import UnitState
@@ -302,9 +303,6 @@ def _run_skill(
     trigger: UnitState,
     on_paid: Callable[[], None] | None = None,
 ) -> None:
-    # 延後匯入：技能解譯器匯入本模組（block_multiplier、try_intercept……）。
-    from trpg.engine.skills.interpreter import use_reaction_skill  # noqa: PLC0415
-
     use_reaction_skill(ctx, unit, skill, trigger, depth=ctx.trigger_depth + 1, on_paid=on_paid)
 
 

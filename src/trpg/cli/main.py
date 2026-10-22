@@ -50,10 +50,11 @@ from trpg.cli.sim_completion import cmd_sim_completion
 from trpg.cli.sim_matrix import cmd_sim_matrix, cmd_sim_skills
 from trpg.cli.skills import cmd_skills_list, cmd_skills_show
 from trpg.cli.skills_random import cmd_skills_random
-from trpg.content.library import ContentLibrary, load_library
+from trpg.content.library import ContentLibrary
 from trpg.content.loader import default_content_dir
 from trpg.content.registry import load_all_content
 from trpg.content.skills import SKELETON_IDS
+from trpg.primitive_coverage import load_checked_library
 from trpg.shared.errors import ContentError
 from trpg.shared.rng import MASK64, Rng
 from trpg.sim.commanders import COMMANDER_IDS
@@ -340,7 +341,7 @@ def _cmd_content_check() -> int:
     content_dir = default_content_dir()
     try:
         loaded = load_all_content(content_dir)
-        library = load_library(content_dir)
+        library = load_checked_library(content_dir)
     except ContentError as exc:
         print(f"內容檢查失敗：\n{exc}", file=sys.stderr)
         return 1
@@ -385,7 +386,7 @@ def _run_serve(args: argparse.Namespace) -> int:
 
 def _with_library(fn: Callable[[ContentLibrary], int]) -> int:
     try:
-        library = load_library()
+        library = load_checked_library()
     except ContentError as exc:
         print(f"內容資料錯誤：\n{exc}", file=sys.stderr)
         return 1

@@ -11,7 +11,7 @@
   觸發，:mod:`trpg.engine.skill_triggers`）才結算——到下回合開始都沒被攻擊就失效（``expired``）。
 - **取消**：施放者倒下（``unit_downed``）、被施加 ``skip_turn`` 的狀態（暈眩、冰凍）時立即取消
   （``followup_cancelled``）；施放另一個延遲段時舊的取消（``replaced``）。
-- 第二段的結算由 :func:`trpg.engine.skills.interpreter.run_delayed` 處理（命中、傷害照常；不付
+- 第二段的結算由 :func:`trpg.engine.skills.casting.run_delayed` 處理（命中、傷害照常；不付
   代價，代價在施放時已付）。
 - ``charging`` 是中性、有益的狀態：不會被淨化、驅散或奪取。
 """
@@ -35,6 +35,7 @@ from trpg.engine.events import (
     UnitDowned,
 )
 from trpg.engine.rules.statuses import skip_turn_status
+from trpg.engine.skills.casting import run_delayed
 from trpg.engine.skills.targeting import SkillArea, checked_area
 from trpg.engine.state import BattleState, StatusInstance, UnitState
 from trpg.engine.triggers import register_trigger
@@ -130,9 +131,6 @@ def _charged_skill(state: BattleState, unit: UnitState) -> tuple[StatusInstance,
 
 def _release(ctx: Ctx, unit: UnitState, skill: SkillDef) -> None:
     """移除蓄力並結算第二段（以當下位置推算不出選取時 ``followup_no_target``）。"""
-    # 延後匯入：技能解譯器匯入本模組（charge）。
-    from trpg.engine.skills.interpreter import run_delayed  # noqa: PLC0415
-
     unit.statuses = [s for s in unit.statuses if s.status_id != CHARGING]
     found = delayed_selection(ctx.state, unit, skill)
     if found is None:
