@@ -81,3 +81,9 @@
 
 - PM 合併（無衝突）、`check.py` 全過、`pnpm build` 成功；看過 `docs/phases/img/3G-5a-overview.png`（42 種造型，9 個欄位）。外觀清單 `content/equipment/`、`content/items.yaml` 外觀欄位、前端 `GearIcon`（64／48／32px，≤ 36px 不畫關鍵字小圖樣）；單位資訊顯示 32px 圖示。報告 `Phase3G-5a報告.md`。美術清單 #1～#5 請美術 PM 目視驗收。
 - 待 PM 決定：#1 主手造型以樣張為準（17 種）→ 接受；#2 `shock` 以別名對照 `charged` → G2 對齊後刪別名；#3 關鍵字只由第 3、4 類詞條推導、#4 稀有度預設、#5 沒寫 `kind` 依欄位退回、#6 載入時嚴格檢查、#7 只畫 `common`、#8 圖示先放單位資訊 → 接受；#9 `client/gear-gallery.html` 開發用頁面 → 保留（美術驗收用）；#10 合併注意 → 已處理。
+
+## 8. G2 驗收（2026-10-22）
+
+- PM 合併：`library.py` 與 G5a 衝突（外觀檢查與詞條引用檢查兩邊保留）；G2 新增的兩件測試物品補外觀欄位（G5a 要求每件物品寫明外觀）。`check.py` 全過（第一次全量時 `test_traps_and_stacks_survive_a_json_round_trip` 失敗一次，單獨與 `tests/engine` 平行重跑都通過，第二次全量通過 → **疑似順序相依的不穩定測試，排進審查**）；`pnpm build` 成功；`swamp` 種子 12 `--log-json` ＋ `replay` 一致。`LOG_FORMAT` → `/41`（`Ruleset.keywords`）。關鍵字推導核心搬到 `trpg/content/keyword_derive.py`（引擎不得匯入 skillgen）。報告 `Phase3G-2報告.md`。
+- G1 驗收 #4（+50% 改所有來源合計）、#9（`charged`、`range_mod.penalty`、載入時檢查）已做。
+- 待 PM 決定：#1 推導核心搬到 content → 接受；#2 傷害上限正負分開（正值合計後截斷、負值直接相加）→ 接受；#3「利用倒地傷害」對多數近戰技生效（通用規則）→ 接受，平衡階段看；#4 沒有可增長形狀的「製造帶電」技能 → 3-24c 補帶電技能時含一招範圍雷電；#5 暴擊下限 18 只套在武器特性強化路徑 → 接受（裝備暴擊範圍詞條出現時再全域套）；#6 英雄面板的武器特性文字未反映裝備 → G4；#7 `scale_permille` 與 `delta` 的遞減細節 → 接受。G5a 的 `shock` 別名已無用，之後順手刪。
