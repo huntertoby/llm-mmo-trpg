@@ -56,7 +56,11 @@ __all__ = [
     "default_library",
 ]
 
-MAX_ATTEMPTS = 50
+# 重抽上限。控場等骨架的核心原語若沒有旋鈕（地形、障礙、驅散…），高階時強度到不了預算窗，單次
+# 成功率只有約一成，50 次偶爾全軍覆沒（Phase 3-34b，種子 966）；只有原本失敗的種子會用到後半段。
+MAX_ATTEMPTS = 100
+# 帶變奏的重抽次數（維持 Phase 3-25b 的 25 次，已成功種子的結果不變）
+VARIANT_ATTEMPTS = 25
 
 _RARITIES: tuple[SkillRarity, ...] = ("common", "rare", "epic", "legendary")
 _SPELL_ELEMENTS: tuple[Element, ...] = tuple(
@@ -718,7 +722,7 @@ def _compose_plain(
                 skill = _attempt_passive(rng, lib, seed, tier_value, rarity_value)
             else:
                 # 前半的重抽帶變奏；都做不出來時退回不帶變奏，確保一定有結果
-                variant = wants_variant and attempt <= MAX_ATTEMPTS // 2
+                variant = wants_variant and attempt <= VARIANT_ATTEMPTS
                 skill = _attempt(rng, lib, seed, fixed, ap_cost, variant=variant)
         except (Retry, ValidationError, BudgetError):
             continue

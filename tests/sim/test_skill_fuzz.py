@@ -134,8 +134,10 @@ def test_one_thousand_skills_pass_everything_and_the_summary_is_reproducible() -
     assert all(o.violations == 0 and o.castable and o.error is None for o in report.outcomes)
     skills = [o.skill for o in report.outcomes]
     counts = Counter(s.skeleton for s in skills)
-    enabled = {s.id for s in lib().skeletons.values() if s.enabled}
-    assert set(counts) == enabled and max(counts.values()) <= 400  # 2E-3：11 種骨架都抽得到
+    # 手寫專用的骨架（3C-3b、3D-4a）隨機組合器本來就不產生，不算在「抽得到」之內
+    hand_written_only = {"consume_status", "summon"}
+    enabled = {s.id for s in lib().skeletons.values() if s.enabled} - hand_written_only
+    assert set(counts) == enabled and max(counts.values()) <= 400  # 2E-3：其餘骨架都抽得到
     assert counts["builder_finisher"] > 0 and counts["trap"] > 0
     assert {s.tier for s in skills} == {1, 2, 3, 4, 5}
     assert len({s.rarity for s in skills}) == 4
