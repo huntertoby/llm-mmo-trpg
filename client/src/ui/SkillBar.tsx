@@ -1,7 +1,7 @@
 // 底部技能列（Phase 3-8）：基本動作（攻擊、推擊……）＋主動技能排成一排（超出寬度換成兩排，不捲動）；
 // 被動、反應、姿態、修正以小圖示放在同一列最右側，點開看卡片（可施放的姿態點了照樣選取）。
-// 灰掉原因、滑過看卡片、選取提示照舊；卡片浮在技能列上方。
-import { useEffect, useRef, useState } from "react";
+// 灰掉原因、滑過看卡片、選取提示照舊；卡片用共用的浮動卡規則（`useFloatCard`，Phase 3-30）：貼齊按鈕上方，滑過約 150ms 顯示，
+// 離開有 250ms 寬限可滑進卡片，點卡片釘住，Esc／點外面關閉。
 import type { SkillCard } from "../api/types";
 import { minorGlyph, splitSkills } from "../battle/skillTray";
 import type { ActionMode, SkillButton } from "../battle/targeting";
@@ -10,6 +10,7 @@ import { grantedBadge } from "../battle/granted";
 import { levelBadge } from "../run/skillGrowth";
 import { SkillCardView } from "./SkillCardView";
 import { SkillIconView } from "./SkillIconView";
+import { FloatCard, useFloatCard } from "./useFloatCard";
 
 interface Props {
   /** 基本動作的模式（防禦除外，防禦在右下角）。 */
@@ -30,9 +31,6 @@ interface Props {
   onBlockedMode?(reason: string): void;
 }
 
-/** 滑鼠離開技能按鈕後，浮動卡再停留多久（毫秒）；期間移進卡片就不關閉。 */
-export const FLOAT_CLOSE_MS = 180;
-
 function costText(b: SkillButton): string {
   if (b.cooldown > 0) return `冷卻 ${b.cooldown}`;
   return b.costs.length > 0 ? b.costs.join("・") : "…";
@@ -46,7 +44,6 @@ function SkillSlot({
   enabled,
   onSelect,
   onBlocked,
-  onHover,
 }: {
   b: SkillButton;
   card: SkillCard | undefined;
@@ -55,17 +52,13 @@ function SkillSlot({
   enabled: boolean;
   onSelect(id: string): void;
   onBlocked?(b: SkillButton): void;
-  onHover(id: string | null): void;
 }) {
   const blocked = !enabled || b.disabledReason !== null;
   const reasoned = b.disabledReason !== null;
+  // 點按鈕是施放／選取，所以滑鼠點擊不釘住卡片；觸控沒有滑過，點一下同時顯示卡片
+  const f = useFloatCard({ pinOn: "touch" });
   return (
-    <div
-      className="skill-slot"
-      title={b.disabledReason ?? undefined}
-      onMouseEnter={() => onHover(b.skillId)}
-      onMouseLeave={() => onHover(null)}
-    >
+    <div className="skill-slot" title={b.disabledReason ?? undefined} {...f.triggerProps}>
       <button
         type="button"
         className={`skill-button${selected ? " selected" : ""}${b.grantedRemaining != null ? " granted" : ""}${b.gearSource != null ? " from-gear" : ""}${reasoned ? " blocked" : ""}`}
@@ -92,33 +85,55 @@ function SkillSlot({
           <span className="skill-cost">{costText(b)}</span>
         </span>
       </button>
+      {f.open && card !== undefined && (
+        <FloatCard float={f} className="skill-card-float">
+          <SkillCardView card={card} compact />
+        </FloatCard>
+      )}
     </div>
+  );
+}
+
+/** 被動、反應、姿態的小圖示：可施放的姿態點了選取，其他點一下釘住卡片。 */
+function MiniSlot({
+  b,
+  card,
+  selected,
+  enabled,
+  onSelect,
+}: {
+  b: SkillButton;
+  card: SkillCard | undefined;
+  selected: boolean;
+  enabled: boolean;
+  onSelect(id: string): void;
+}) {
+  const usable = enabled && b.disabledReason === null && b.actions.length > 0;
+  const f = useFloatCard({ pinOn: usable ? "touch" : "always" });
+  return (
+    <span className="skill-mini-wrap" {...f.triggerProps}>
+      <button
+        type="button"
+        className={`skill-mini${selected || f.pinned ? " selected" : ""}`}
+        title={`${b.name}（${costText(b)}）`}
+        aria-label={b.name}
+        aria-pressed={f.pinned}
+        onClick={() => usable && onSelect(b.skillId)}
+      >
+        {card?.icon == null ? minorGlyph(b.name) : <SkillIconView icon={card.icon} size={28} />}
+      </button>
+      {f.open && card !== undefined && (
+        <FloatCard float={f} className="skill-card-float">
+          <SkillCardView card={card} compact />
+        </FloatCard>
+      )}
+    </span>
   );
 }
 
 export function SkillBar(props: Props) {
   const { basic, buttons, cards, selectedKey, enabled, hint } = props;
-  const [hovered, setHovered] = useState<string | null>(null);
-  /** 點開的小圖示（被動、反應、姿態）：卡片固定顯示，再點一次收起。 */
-  const [pinned, setPinned] = useState<string | null>(null);
   const { main, minor } = splitSkills(buttons, cards);
-  const shownId = hovered ?? pinned;
-  const card = shownId === null ? undefined : cards[shownId];
-  // 滑鼠從技能按鈕移到浮動卡上（要滑過卡上的部件看說明）時不關閉：離開後稍等一下才收起，移進卡片就取消
-  const closeTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
-  const cancelClose = () => {
-    if (closeTimer.current !== null) clearTimeout(closeTimer.current);
-    closeTimer.current = null;
-  };
-  useEffect(() => cancelClose, []);
-  const leave = (id: string) => {
-    cancelClose();
-    closeTimer.current = setTimeout(() => setHovered((h) => (h === id ? null : h)), FLOAT_CLOSE_MS);
-  };
-  const enter = (id: string) => {
-    cancelClose();
-    setHovered(id);
-  };
   return (
     <div className="skill-bar" aria-label="技能列">
       <div className="skill-hint small muted">{hint}</div>
@@ -147,47 +162,25 @@ export function SkillBar(props: Props) {
               enabled={enabled}
               onSelect={props.onSelect}
               onBlocked={props.onBlocked}
-              onHover={(id) => (id === null ? leave(b.skillId) : enter(id))}
             />
           ))}
           {basic.length === 0 && main.length === 0 && <span className="muted small">（沒有可用的動作）</span>}
         </div>
         {minor.length > 0 && (
           <div className="skill-minor" aria-label="被動、反應與姿態">
-            {minor.map((b) => {
-              const usable = enabled && b.disabledReason === null && b.actions.length > 0;
-              const selected = selectedKey === `skill:${b.skillId}` || pinned === b.skillId;
-              return (
-                <button
-                  key={b.skillId}
-                  type="button"
-                  className={`skill-mini${selected ? " selected" : ""}`}
-                  title={`${b.name}（${costText(b)}）`}
-                  aria-label={b.name}
-                  aria-pressed={pinned === b.skillId}
-                  onMouseEnter={() => enter(b.skillId)}
-                  onMouseLeave={() => leave(b.skillId)}
-                  onClick={() => {
-                    if (usable) props.onSelect(b.skillId);
-                    else setPinned((p) => (p === b.skillId ? null : b.skillId));
-                  }}
-                >
-                  {cards[b.skillId]?.icon == null ? minorGlyph(b.name) : <SkillIconView icon={cards[b.skillId]?.icon} size={28} />}
-                </button>
-              );
-            })}
+            {minor.map((b) => (
+              <MiniSlot
+                key={b.skillId}
+                b={b}
+                card={cards[b.skillId]}
+                selected={selectedKey === `skill:${b.skillId}`}
+                enabled={enabled}
+                onSelect={props.onSelect}
+              />
+            ))}
           </div>
         )}
       </div>
-      {card !== undefined && (
-        <div
-          className="skill-card-float"
-          onMouseEnter={() => (shownId === null ? undefined : enter(shownId))}
-          onMouseLeave={() => (shownId === null ? undefined : leave(shownId))}
-        >
-          <SkillCardView card={card} compact />
-        </div>
-      )}
     </div>
   );
 }
