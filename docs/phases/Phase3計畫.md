@@ -1493,6 +1493,7 @@ PM 驗收後請使用者試玩一整輪（`docs/專案計畫.md` 第 14 節 🎮
 4. 隨機組合器：稀有以上低權重產生 1 個變奏（權重放 `content/skill_composer.yaml`），產物必須通過驗證。
 5. 進化模板：`content/skill_evolution.yaml` 加「戰場變奏」模板（6.28：進化時加一個變奏），走同一個驗證。
 6. **schema 限制（3-25a #8）**：帶變奏的技能不可含區域（zone）、延遲傷害、`copy_skill` 等「後續查表會拿到基礎型態」的原語（清單見 `Phase3-25a報告.md` 待 PM 決定 #8），中文錯誤訊息；技能卡關鍵字標「（特定地形）」用 `SkillKeywords.variant`（3-25a #2）。
+7. **射程 ± 計入預算（3-25a #9，玩法 PM 2026-10-22）**：變奏的射程每 +1 格加基礎點數 5%（`variant_range_step_permille: 50`，放 `content/skill_budget.yaml`；−1 不折抵）；潮汐之矛的居高型態拿掉擊倒、回到純射程 +2，仍須過預算窗（過不了就寫進報告，不硬調其他數值）。
 
 驗收（3-25b）：vitest（型態列表、發亮條件、預覽型態切換）；pytest（視圖欄位、組合器種子 0–49 全過且有產生變奏、進化模板產生合法變奏、工坊驗證）；截圖 `docs/phases/img/3-25b-*.png`（技能卡型態、發亮、預覽）；`check.py` 全過、`pnpm build` 成功。
 
