@@ -1325,3 +1325,8 @@ PM 驗收後請使用者試玩一整輪（`docs/專案計畫.md` 第 14 節 🎮
 8. **不穩定測試**：`tests/engine/test_traps.py::test_traps_and_stacks_survive_a_json_round_trip` 只在全量平行時偶發失敗（`ruleset` 不相等），疑為其他測試改動了共用的內容快取或規則包；找出原因並修正（測試隔離或避免共用物件被改），報告寫明原因。
 
 驗收（3-24c）：pytest（新條件、新原語、各池專屬規則下的主動利用者數量表、嘲諷怒吼的標記、火器武器技的耗彈與修正、空膛不能施放）；`--log-json` ＋ `replay` 一致；`check.py` 全過、`pnpm build` 成功。
+
+### 27.1 3-24c 驗收（2026-10-22）
+
+- PM 合併：與 G3a 同時遞增到 `/42`，合併時改為 **`LOG_FORMAT` `/43`**；帶電、倒地的關鍵字說明改用玩法 PM 的文字（召喚物說明因獻祭已實作，保留提到獻祭的版本），對應測試同步。`check.py` 全過、`pnpm build` 成功；`lava_crossing` 種子 14 `--log-json` ＋ `replay` 一致。新條件 `target_collided`、新原語 `sacrifice_summon` 與骨架 `sacrifice`、火器武器技算開火、新技能 15 招（163 → 178）。專屬規則下的起始主動利用者：點燃 4、冰凍 4、帶電 3、撞擊 2、召喚物 2；弓＋潮濕可以開局。第 8 項不穩定測試已由 G3a 修好。報告 `Phase3-24c報告.md`。
+- 待 PM 決定：#1 三段說明 → 已處理；#2 挑釁怒吼加標記後 AP 1→2、冷卻 2→3（影響 `build_tank`）→ 先接受，平衡階段看；#3 以召喚物為原點施放沒做 → 之後；#4 火器只對主動、有傷害的武器技算開火、#5 `target_collided` 以輪為單位、#7 組合器新增低權重 → 接受；#6 倒地、潮濕、標記、高處的專屬主動利用者仍少（倒地 0）→ 請玩法 PM 決定是否再補；新技能沒進 `builds.yaml` → 接受；新增 noqa `interpreter._resolve_cast` 的 `PLR0917`（從 `use_skill` 拆出）→ 接受，審查時看。
