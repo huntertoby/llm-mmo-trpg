@@ -5,11 +5,16 @@
 #   tags（例：shield）、legendary（傳說）、affixes（白名單 affixes.yaml 的 id ＋ 擲出的 value）。
 # 頭、身體、手、腳、項鍊、戒指目前沒有基礎數值資料，基礎數值為 0（只有詞條）。
 # G1 的測試物品只掛已結算的第 1、2、8 類詞條。
+# 外觀（G5a，選填，只影響圖示）：kind 造型、form 形制、material 材質、dye 染色（只對布、皮）、style、rarity；
+# 清單與預設見 equipment/appearance.yaml，關鍵字由詞條推導、不在這裡填。
 items:
   # --- 主手 ---
   - id: item_test_sword
     name_zh: 試煉長劍
     slot_type: weapon
+    kind: sword
+    form: straight
+    material: steel
     weapon: one_handed_sword
     affixes:
       - {affix: affix_attr_str, value: 2}
@@ -17,6 +22,9 @@ items:
   - id: item_test_hammer
     name_zh: 試煉戰錘
     slot_type: weapon
+    kind: hammer
+    form: warhammer
+    material: iron
     weapon: hammer
     affixes:
       - {affix: affix_cond_low_hp_damage, value: 150}
@@ -24,12 +32,18 @@ items:
   - id: item_test_bow
     name_zh: 試煉長弓
     slot_type: weapon
+    kind: bow
+    form: long
+    material: wood
     weapon: bow
     affixes:
       - {affix: affix_max_hp, value: 8}
   - id: item_test_twin_daggers
     name_zh: 試煉雙匕首
     slot_type: weapon
+    kind: dual_dagger
+    form: stiletto
+    material: steel
     weapon: dagger
     paired: true
     affixes:
@@ -38,6 +52,9 @@ items:
   - id: item_test_shield
     name_zh: 試煉圓盾
     slot_type: offhand
+    kind: round_shield
+    form: banded
+    material: iron
     tags: [shield]
     affixes:
       - {affix: affix_max_hp, value: 8}
@@ -46,6 +63,9 @@ items:
   - id: item_test_helm
     name_zh: 試煉頭盔
     slot_type: head
+    kind: helmet
+    form: horned
+    material: iron
     affixes:
       - {affix: affix_cond_still_defense, value: 150}
       - {affix: affix_resist_fire, value: 100}
@@ -53,6 +73,9 @@ items:
   - id: item_test_armor
     name_zh: 試煉鎖甲
     slot_type: body
+    kind: mail
+    form: chain
+    material: iron
     affixes:
       - {affix: affix_max_hp, value: 12}
       - {affix: affix_resist_fire, value: 150}
@@ -61,6 +84,10 @@ items:
   - id: item_test_gloves
     name_zh: 試煉手套
     slot_type: hands
+    kind: leather_gloves
+    form: short
+    material: leather
+    dye: brown
     affixes:
       - {affix: affix_attr_str, value: 1}
       - {affix: affix_max_hp, value: 4}
@@ -68,6 +95,10 @@ items:
   - id: item_test_boots
     name_zh: 試煉疾行靴
     slot_type: feet
+    kind: boots
+    form: tall
+    material: leather
+    dye: black
     affixes:
       - {affix: affix_cost_swift}
       - {affix: affix_max_hp, value: 4}
@@ -75,6 +106,9 @@ items:
   - id: item_test_amulet
     name_zh: 試煉血契項鍊
     slot_type: neck
+    kind: pendant
+    form: pendant
+    material: silver
     affixes:
       - {affix: affix_cond_low_hp_damage, value: 100}
       - {affix: affix_cost_blood}
@@ -82,17 +116,26 @@ items:
   - id: item_test_ring_fire
     name_zh: 試煉焰紋戒
     slot_type: ring
+    kind: ring
+    form: gem
+    material: gold
     affixes:
       - {affix: affix_resist_fire, value: 150}
       - {affix: affix_cost_glass}
   - id: item_test_ring_str
     name_zh: 試煉力量戒
     slot_type: ring
+    kind: ring
+    form: signet
+    material: silver
     affixes:
       - {affix: affix_attr_str, value: 2}
       - {affix: affix_cond_height_hit, value: 1}
   - id: item_test_ring_hp
     name_zh: 試煉生命戒
     slot_type: ring
+    kind: ring
+    form: plain
+    material: copper
     affixes:
       - {affix: affix_max_hp, value: 16}

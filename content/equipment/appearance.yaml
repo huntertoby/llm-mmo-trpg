@@ -1,0 +1,378 @@
+# 裝備外觀清單（Phase 3G-G5a；來源：美術 PM 的 docs/art/裝備外觀移植需求.md 第 1 節與 docs/art/sample/gearArt.js 的 KINDS）。
+#
+# 外觀只由資料欄位決定，不影響任何規則。物品（items.yaml）可選填 kind／form／material／dye／style；
+# LLM 之後只能從這份清單選。不認得的值一律退回預設（前端 render/gearIcon.ts 的 resolve），不會出錯：
+#   kind 不認得 → sword｜form 不認得 → 該 kind 的第一個形制｜material 不在允許內 → 該 form 的預設材質（沒有就用 kind 的預設）
+#   dye 只對布、皮有效，否則不染色｜style 目前只有 common｜rarity 不認得 → common
+# keywords 不是人填的：由物品的詞條推導（trpg.content.appearance.derive_keywords），取前 2 個；id 與
+# skill_keywords.yaml（3-24b1）一致。顏色不放這裡，統一在前端 render/artPalette.ts。
+# 風格包（東方、魔導、科技、現代）不做，等世界觀定案。
+# 前端用的 JSON 由 scripts/export_appearance.py 匯出到 client/src/render/gearAppearance.json（tests 檢查沒有過期）。
+styles: [common]
+materials: [iron, steel, copper, silver, gold, wood, leather, cloth, bone, crystal]
+dyes: [red, blue, green, purple, black, white, brown, gold]
+dye_materials: [cloth, leather]
+rarities: [common, uncommon, rare, epic, legendary]
+max_keywords: 2
+keywords: [ignite, wet, charged, frozen, prone, collision, marked, high_ground, concealed, summon]
+# 元素關鍵字（混色）；其餘只加小圖樣
+element_keywords: [ignite, wet, charged, frozen]
+kinds:
+  - id: sword
+    slot_type: weapon
+    name_zh: 劍
+    forms:
+      - {id: straight, name_zh: 直劍}
+      - {id: curved, name_zh: 彎刀}
+      - {id: broad, name_zh: 闊劍}
+    materials: [iron, steel, copper, silver, gold]
+    default_material: iron
+  - id: greatsword
+    slot_type: weapon
+    name_zh: 巨劍
+    forms:
+      - {id: twohand, name_zh: 雙手劍}
+      - {id: zhanma, name_zh: 斬馬刀}
+      - {id: serrated, name_zh: 鋸齒巨劍}
+    materials: [iron, steel, copper, silver, gold]
+    default_material: iron
+  - id: dagger
+    slot_type: weapon
+    name_zh: 匕首
+    forms:
+      - {id: short, name_zh: 短刀}
+      - {id: stiletto, name_zh: 三稜刺}
+      - {id: kris, name_zh: 彎匕}
+    materials: [iron, steel, copper, silver, gold, bone, crystal]
+    default_material: iron
+  - id: axe
+    slot_type: weapon
+    name_zh: 斧
+    forms:
+      - {id: hand, name_zh: 手斧}
+      - {id: battle, name_zh: 戰斧}
+      - {id: double, name_zh: 雙刃斧}
+    materials: [iron, steel, copper, silver, gold]
+    default_material: iron
+  - id: hammer
+    slot_type: weapon
+    name_zh: 錘
+    forms:
+      - {id: mace, name_zh: 釘頭錘}
+      - {id: warhammer, name_zh: 戰錘}
+      - {id: flail, name_zh: 連枷}
+    materials: [iron, steel, copper, silver, gold]
+    default_material: iron
+  - id: spear
+    slot_type: weapon
+    name_zh: 矛
+    forms:
+      - {id: spear, name_zh: 長矛}
+      - {id: halberd, name_zh: 戟}
+      - {id: trident, name_zh: 三叉戟}
+    materials: [iron, steel, copper, silver, gold, wood]
+    default_material: iron
+  - id: bow
+    slot_type: weapon
+    name_zh: 弓
+    forms:
+      - {id: short, name_zh: 短弓}
+      - {id: long, name_zh: 長弓}
+      - {id: recurve, name_zh: 反曲弓}
+    materials: [wood, iron, steel, copper, silver, gold]
+    default_material: wood
+  - id: crossbow
+    slot_type: weapon
+    name_zh: 弩
+    forms:
+      - {id: light, name_zh: 輕弩}
+      - {id: heavy, name_zh: 重弩}
+      - {id: repeater, name_zh: 連弩}
+    materials: [wood, iron, steel, copper, silver, gold]
+    default_material: wood
+  - id: longgun
+    slot_type: weapon
+    name_zh: 長槍
+    forms:
+      - {id: flintlock, name_zh: 燧發長槍}
+      - {id: hunting, name_zh: 獵槍}
+      - {id: sniper, name_zh: 狙擊長槍}
+    materials: [iron, steel, copper, silver, gold]
+    default_material: steel
+  - id: shotgun
+    slot_type: weapon
+    name_zh: 霰彈槍
+    forms:
+      - {id: blunderbuss, name_zh: 喇叭槍}
+      - {id: double, name_zh: 雙管}
+      - {id: pump, name_zh: 泵動}
+    materials: [iron, steel, copper, silver, gold]
+    default_material: iron
+  - id: pistol
+    slot_type: weapon
+    name_zh: 手槍
+    forms:
+      - {id: flintlock, name_zh: 燧發手槍}
+      - {id: revolver, name_zh: 左輪}
+      - {id: derringer, name_zh: 短銃}
+    materials: [iron, steel, copper, silver, gold]
+    default_material: steel
+  - id: dual_pistol
+    slot_type: weapon
+    name_zh: 雙手槍
+    paired: true
+    forms:
+      - {id: flintlock, name_zh: 燧發手槍}
+      - {id: revolver, name_zh: 左輪}
+      - {id: derringer, name_zh: 短銃}
+    materials: [iron, steel, copper, silver, gold]
+    default_material: steel
+  - id: fist
+    slot_type: weapon
+    name_zh: 拳套
+    forms:
+      - {id: katar, name_zh: 拳刃}
+      - {id: knuckle, name_zh: 鐵拳}
+      - {id: claw, name_zh: 爪}
+    materials: [iron, steel, copper, silver, gold, bone, leather]
+    default_material: iron
+  - id: scythe
+    slot_type: weapon
+    name_zh: 鐮刀
+    forms:
+      - {id: long, name_zh: 長柄鐮}
+      - {id: crescent, name_zh: 彎月鐮}
+      - {id: hook, name_zh: 鉤鐮}
+    materials: [iron, steel, copper, silver, gold, bone]
+    default_material: iron
+  - id: whip
+    slot_type: weapon
+    name_zh: 鞭
+    forms:
+      - {id: leather, name_zh: 皮鞭}
+      - {id: chain, name_zh: 鏈鞭}
+      - {id: bladed, name_zh: 蛇骨鞭}
+    materials: [leather, iron, steel, copper, silver, gold, bone]
+    default_material: leather
+  - id: dual_dagger
+    slot_type: weapon
+    name_zh: 雙匕首
+    paired: true
+    forms:
+      - {id: short, name_zh: 短刀}
+      - {id: stiletto, name_zh: 三稜刺}
+      - {id: kris, name_zh: 彎匕}
+    materials: [iron, steel, copper, silver, gold, bone, crystal]
+    default_material: iron
+  - id: staff
+    slot_type: weapon
+    name_zh: 杖
+    forms:
+      - {id: long, name_zh: 長杖}
+      - {id: scepter, name_zh: 權杖}
+      - {id: wand, name_zh: 短杖}
+      - {id: totem, name_zh: 圖騰杖}
+    materials: [wood, iron, steel, copper, silver, gold, bone, crystal]
+    default_material: wood
+  - id: round_shield
+    slot_type: offhand
+    name_zh: 圓盾
+    forms:
+      - {id: wood, name_zh: 木圓盾}
+      - {id: banded, name_zh: 包鐵圓盾}
+    materials: [wood, iron, steel, copper, silver, gold]
+    default_material: wood
+  - id: kite_shield
+    slot_type: offhand
+    name_zh: 鳶盾
+    forms:
+      - {id: kite, name_zh: 鳶盾}
+      - {id: tower, name_zh: 塔盾}
+    materials: [iron, steel, copper, silver, gold]
+    default_material: iron
+  - id: tome
+    slot_type: offhand
+    name_zh: 法書
+    forms:
+      - {id: book, name_zh: 典籍}
+      - {id: scroll, name_zh: 卷軸匣}
+    materials: [leather, cloth]
+    default_material: leather
+  - id: orb
+    slot_type: offhand
+    name_zh: 法器珠
+    forms:
+      - {id: ball, name_zh: 水晶球}
+      - {id: floating, name_zh: 浮空寶珠}
+    materials: [crystal, bone]
+    default_material: crystal
+  - id: robe
+    slot_type: body
+    name_zh: 布袍
+    forms:
+      - {id: long, name_zh: 長袍}
+      - {id: short, name_zh: 短袍}
+    materials: [cloth]
+    default_material: cloth
+  - id: leather
+    slot_type: body
+    name_zh: 皮甲
+    forms:
+      - {id: vest, name_zh: 皮背心}
+      - {id: hunter, name_zh: 獵裝}
+    materials: [leather]
+    default_material: leather
+  - id: mail
+    slot_type: body
+    name_zh: 鎖甲
+    forms:
+      - {id: chain, name_zh: 鎖子甲}
+      - {id: scale, name_zh: 鱗甲}
+    materials: [iron, steel, copper, silver, gold]
+    default_material: iron
+  - id: plate
+    slot_type: body
+    name_zh: 板甲
+    forms:
+      - {id: half, name_zh: 半身板甲}
+      - {id: full, name_zh: 全身板甲}
+    materials: [iron, steel, copper, silver, gold]
+    default_material: steel
+  - id: coat
+    slot_type: body
+    name_zh: 外套
+    forms:
+      - {id: travel, name_zh: 旅行外套}
+      - {id: cape, name_zh: 披風外套}
+    materials: [cloth, leather]
+    default_material: cloth
+  - id: hood
+    slot_type: head
+    name_zh: 兜帽
+    forms:
+      - {id: cloth, name_zh: 布兜帽}
+      - {id: cowl, name_zh: 斗篷帽}
+    materials: [cloth, leather]
+    default_material: cloth
+  - id: hat
+    slot_type: head
+    name_zh: 帽子
+    forms:
+      - {id: wizard, name_zh: 法師帽}
+      - {id: wide, name_zh: 寬簷帽}
+    materials: [cloth, leather]
+    default_material: cloth
+  - id: circlet
+    slot_type: head
+    name_zh: 頭巾／頭冠
+    forms:
+      - {id: bandana, name_zh: 頭巾, materials: [cloth, leather]}
+      - {id: crown, name_zh: 頭冠, materials: [iron, steel, copper, silver, gold, bone, crystal], default_material: gold}
+    materials: [cloth, leather, iron, steel, copper, silver, gold, bone, crystal]
+    default_material: cloth
+  - id: cap
+    slot_type: head
+    name_zh: 皮帽
+    forms:
+      - {id: leather, name_zh: 皮帽}
+      - {id: fur, name_zh: 毛帽}
+    materials: [leather, cloth]
+    default_material: leather
+  - id: helmet
+    slot_type: head
+    name_zh: 頭盔
+    forms:
+      - {id: iron, name_zh: 鐵盔}
+      - {id: horned, name_zh: 角盔}
+      - {id: greathelm, name_zh: 全罩盔}
+    materials: [iron, steel, copper, silver, gold]
+    default_material: iron
+  - id: cloth_gloves
+    slot_type: hands
+    name_zh: 布手套
+    forms:
+      - {id: plain, name_zh: 素手套}
+      - {id: fingerless, name_zh: 露指手套}
+    materials: [cloth]
+    default_material: cloth
+  - id: leather_gloves
+    slot_type: hands
+    name_zh: 皮手套
+    forms:
+      - {id: short, name_zh: 短皮手套}
+      - {id: long, name_zh: 長皮手套}
+    materials: [leather]
+    default_material: leather
+  - id: gauntlets
+    slot_type: hands
+    name_zh: 護手
+    forms:
+      - {id: plate, name_zh: 板金護手}
+      - {id: mail, name_zh: 鎖鏈護手}
+    materials: [iron, steel, copper, silver, gold]
+    default_material: steel
+  - id: bracers
+    slot_type: hands
+    name_zh: 臂甲
+    forms:
+      - {id: leather, name_zh: 皮臂甲, materials: [leather]}
+      - {id: ring, name_zh: 臂環, materials: [iron, steel, copper, silver, gold], default_material: copper}
+    materials: [leather, iron, steel, copper, silver, gold]
+    default_material: leather
+  - id: shoes
+    slot_type: feet
+    name_zh: 布鞋
+    forms:
+      - {id: slipper, name_zh: 布鞋}
+      - {id: wrapped, name_zh: 綁腿鞋}
+    materials: [cloth]
+    default_material: cloth
+  - id: boots
+    slot_type: feet
+    name_zh: 皮靴
+    forms:
+      - {id: short, name_zh: 短靴}
+      - {id: tall, name_zh: 長靴}
+    materials: [leather]
+    default_material: leather
+  - id: iron_boots
+    slot_type: feet
+    name_zh: 鐵靴
+    forms:
+      - {id: plain, name_zh: 鐵靴}
+      - {id: sabaton, name_zh: 尖頭鐵靴}
+    materials: [iron, steel, copper, silver, gold]
+    default_material: iron
+  - id: greaves
+    slot_type: feet
+    name_zh: 脛甲
+    forms:
+      - {id: plain, name_zh: 脛甲}
+      - {id: knee, name_zh: 護膝脛甲}
+    materials: [iron, steel, copper, silver, gold]
+    default_material: steel
+  - id: ring
+    slot_type: ring
+    name_zh: 戒指
+    forms:
+      - {id: plain, name_zh: 素戒}
+      - {id: gem, name_zh: 寶石戒}
+      - {id: signet, name_zh: 印戒}
+    materials: [iron, steel, copper, silver, gold, bone, crystal]
+    default_material: gold
+  - id: pendant
+    slot_type: neck
+    name_zh: 墜飾
+    forms:
+      - {id: pendant, name_zh: 項鍊墜}
+      - {id: tag, name_zh: 吊牌}
+    materials: [iron, steel, copper, silver, gold, bone, crystal]
+    default_material: gold
+  - id: charm
+    slot_type: neck
+    name_zh: 護符
+    forms:
+      - {id: tablet, name_zh: 符牌}
+      - {id: bone, name_zh: 骨符}
+    materials: [iron, steel, copper, silver, gold, bone, crystal, leather, cloth]
+    default_material: gold

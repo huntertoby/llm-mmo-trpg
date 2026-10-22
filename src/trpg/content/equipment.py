@@ -580,6 +580,10 @@ class ItemDef(ContentModel):
     - ``tags``：物品標籤（例如盾 ``shield``，給「限盾」的詞條用）。
     - ``legendary``：傳說物品（可掛改變規則類詞條）。
     - ``affixes``：1～``EquipmentRules.max_affixes_per_item`` 條（同一件不可重複同一 id）。
+    - 外觀（Phase 3G-G5a，只影響圖示，不影響任何規則；清單在
+      ``content/equipment/appearance.yaml``，見 :mod:`trpg.content.appearance`）：
+      ``kind`` 造型、``form`` 形制、``material`` 材質、
+      ``dye`` 染色、``style`` 風格、``rarity`` 稀有度。全部選填；不認得的值由前端退回預設。
     """
 
     id: str = Field(pattern=ID_PATTERN)
@@ -590,6 +594,12 @@ class ItemDef(ContentModel):
     tags: tuple[str, ...] = ()
     legendary: bool = False
     affixes: tuple[AffixRoll, ...] = Field(default=(), max_length=8)
+    kind: str | None = Field(default=None, pattern=ID_PATTERN)
+    form: str | None = Field(default=None, pattern=ID_PATTERN)
+    material: str | None = Field(default=None, pattern=ID_PATTERN)
+    dye: str | None = Field(default=None, pattern=ID_PATTERN)
+    style: str | None = Field(default=None, pattern=ID_PATTERN)
+    rarity: str | None = Field(default=None, pattern=ID_PATTERN)
 
     @model_validator(mode="after")
     def _check(self) -> ItemDef:

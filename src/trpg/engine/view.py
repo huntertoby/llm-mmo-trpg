@@ -39,6 +39,7 @@ __all__ = [
     "REACTION_TRIGGER_TEXT",
     "ActivationView",
     "AffixLineView",
+    "AppearanceView",
     "BattleView",
     "EquipmentSlotView",
     "GrantedSkillView",
@@ -163,6 +164,20 @@ class AffixLineView(_ViewModel):
     weight_permille: int
 
 
+class AppearanceView(_ViewModel):
+    """物品外觀（Phase 3G-G5a，只給圖示用）：欄位同 ``content/equipment/appearance.yaml``；
+    物品沒寫的欄位為 ``None``（前端依欄位退回預設）；``keywords`` 由詞條推導（前 2 個）；
+    ``rarity`` 沒寫時傳說物品為 ``legendary``、其餘 ``common``。"""
+
+    kind: str | None = None
+    form: str | None = None
+    material: str | None = None
+    dye: str | None = None
+    style: str | None = None
+    rarity: str = "common"
+    keywords: tuple[str, ...] = ()
+
+
 class EquipmentSlotView(_ViewModel):
     """一個裝備欄位（Phase 3G-G1，唯讀）：欄位、物品名與詞條文字。"""
 
@@ -171,6 +186,7 @@ class EquipmentSlotView(_ViewModel):
     item_id: str
     name_zh: str
     affixes: tuple[AffixLineView, ...] = ()
+    appearance: AppearanceView = AppearanceView()
 
 
 class UnitView(_ViewModel):
@@ -457,6 +473,15 @@ def _equipment_view(unit: UnitState) -> tuple[EquipmentSlotView, ...]:
                 slot_zh=SLOT_ZH[item.slot],
                 item_id=item.item_id,
                 name_zh=item.name_zh,
+                appearance=AppearanceView(
+                    kind=item.kind or None,
+                    form=item.form or None,
+                    material=item.material or None,
+                    dye=item.dye or None,
+                    style=item.style or None,
+                    rarity=item.rarity or "common",
+                    keywords=item.keywords,
+                ),
                 affixes=tuple(
                     AffixLineView(
                         affix_id=a.affix.id,

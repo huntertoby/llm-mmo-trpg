@@ -554,6 +554,34 @@ export interface components {
              */
             type: "aim";
         };
+        /**
+         * AppearanceView
+         * @description 物品外觀（Phase 3G-G5a，只給圖示用）：欄位同 ``content/equipment/appearance.yaml``；
+         *     物品沒寫的欄位為 ``None``（前端依欄位退回預設）；``keywords`` 由詞條推導（前 2 個）；
+         *     ``rarity`` 沒寫時傳說物品為 ``legendary``、其餘 ``common``。
+         */
+        AppearanceView: {
+            /** Kind */
+            kind?: string | null;
+            /** Form */
+            form?: string | null;
+            /** Material */
+            material?: string | null;
+            /** Dye */
+            dye?: string | null;
+            /** Style */
+            style?: string | null;
+            /**
+             * Rarity
+             * @default common
+             */
+            rarity: string;
+            /**
+             * Keywords
+             * @default []
+             */
+            keywords: string[];
+        };
         /** ArenaOpponents */
         ArenaOpponents: {
             /** Id */
@@ -1169,6 +1197,13 @@ export interface components {
              * @default []
              */
             affixes: components["schemas"]["AffixLineView"][];
+            /**
+             * @default {
+             *       "rarity": "common",
+             *       "keywords": []
+             *     }
+             */
+            appearance: components["schemas"]["AppearanceView"];
         };
         /** @enum {string} */
         Facing: "north" | "east" | "south" | "west";
