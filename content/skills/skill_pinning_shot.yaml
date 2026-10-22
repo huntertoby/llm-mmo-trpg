@@ -1,0 +1,27 @@
+# 連段（Phase 3-27 補技能，數值為初值，未經模擬）：目標本回合受過撞擊時，趁亂補一箭（撞擊池的利用者）。
+id: skill_pinning_shot
+schema_version: 1
+name_zh: 趁亂釘射
+tier: 1
+rank: 1
+rarity: rare
+kind: active
+skeleton: strike
+category: weapon
+weapon_req: ranged
+ap_cost: 2
+scaling_attr: dex
+shape: {type: single, range: weapon}
+effects:
+  - {type: damage, multiplier_permille: 1000}
+  # 撞得暈頭轉向的目標躲不開，箭矢直接釘進去
+  - type: damage
+    multiplier_permille: 1300
+    condition: {type: target_collided}
+condition: null
+cost: {mana: 5, cooldown: 2}
+tags: [physical, ranged, combo]
+narrative:
+  concept: 趁對手還沒站穩補上一箭
+  cast_flavor: 你抓住目標被撞退的空檔，一箭把它釘在原地
+provenance: {origin: builtin, owner_id: null, created_by: null, parents: [], bound: true, tradeable: false}

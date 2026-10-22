@@ -1,0 +1,27 @@
+# 連段（Phase 3-27 補技能，數值為初值，未經模擬）：目標倒在地上時，踩踏再補一段重擊（倒地池的利用者）。
+id: skill_trample
+schema_version: 1
+name_zh: 踩踏
+tier: 1
+rank: 1
+rarity: rare
+kind: active
+skeleton: strike
+category: weapon
+weapon_req: melee
+ap_cost: 2
+scaling_attr: str
+shape: {type: single, range: weapon}
+effects:
+  - {type: damage, multiplier_permille: 1000}
+  # 倒地的敵人無處閃躲，整個人的重量壓上去
+  - type: damage
+    multiplier_permille: 1400
+    condition: {type: target_has_status, status: prone}
+condition: null
+cost: {mana: 5, cooldown: 2}
+tags: [physical, melee, combo]
+narrative:
+  concept: 專挑已經倒地的敵人落腳
+  cast_flavor: 你抬腳重重踏下，倒地的對手連呼吸都被踩斷了
+provenance: {origin: builtin, owner_id: null, created_by: null, parents: [], bound: true, tradeable: false}

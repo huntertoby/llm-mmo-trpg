@@ -1,0 +1,27 @@
+# 連段（Phase 3-27 補技能，數值為初值，未經模擬）：站得比目標高時，居高臨下再補一段重擊（高處池的利用者）。
+id: skill_plunging_strike
+schema_version: 1
+name_zh: 俯衝斬
+tier: 1
+rank: 1
+rarity: rare
+kind: active
+skeleton: strike
+category: weapon
+weapon_req: melee
+ap_cost: 2
+scaling_attr: str
+shape: {type: single, range: weapon}
+effects:
+  - {type: damage, multiplier_permille: 1000}
+  # 從高處往下劈，重力替刀刃多添一份力
+  - type: damage
+    multiplier_permille: 1300
+    condition: {type: height_advantage}
+condition: null
+cost: {mana: 5, cooldown: 2}
+tags: [physical, melee, combo]
+narrative:
+  concept: 把高低差變成劈砍的力道
+  cast_flavor: 你從高處一躍而下，刀鋒帶著全身的重量劈落
+provenance: {origin: builtin, owner_id: null, created_by: null, parents: [], bound: true, tradeable: false}

@@ -1,0 +1,27 @@
+# 連段（Phase 3-27 補技能，數值為初值，未經模擬）：目標被標記時，獵手一擊再補一段重擊（標記池的利用者）。
+id: skill_hunters_strike
+schema_version: 1
+name_zh: 獵殺一擊
+tier: 1
+rank: 1
+rarity: rare
+kind: active
+skeleton: strike
+category: weapon
+weapon_req: melee
+ap_cost: 2
+scaling_attr: str
+shape: {type: single, range: weapon}
+effects:
+  - {type: damage, multiplier_permille: 1000}
+  # 被標記的獵物逃不出視線，揮出的一擊毫不留情
+  - type: damage
+    multiplier_permille: 1300
+    condition: {type: target_has_status, status: marked}
+condition: null
+cost: {mana: 5, cooldown: 2}
+tags: [physical, melee, combo]
+narrative:
+  concept: 專挑被標記的獵物下手
+  cast_flavor: 你循著標記的光痕撲上去，一擊切斷獵物的退路
+provenance: {origin: builtin, owner_id: null, created_by: null, parents: [], bound: true, tradeable: false}

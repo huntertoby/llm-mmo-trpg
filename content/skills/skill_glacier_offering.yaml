@@ -1,0 +1,23 @@
+# 獻祭（Phase 3-27 補技能，數值為初值，未經模擬）：獻祭自己的一個召喚物，在它的位置炸出一團寒冰（召喚物池的利用者）。
+id: skill_glacier_offering
+schema_version: 1
+name_zh: 寒祭
+tier: 1
+rank: 1
+rarity: rare
+kind: active
+skeleton: sacrifice
+category: spell
+weapon_req: any
+ap_cost: 1
+scaling_attr: int
+shape: {type: single, range: 5}
+effects:
+  - {type: sacrifice_summon, dice: 2d8, radius: 1, element: ice}
+condition: null
+cost: {mana: 6, cooldown: 3}
+tags: [ice, spell, sacrifice]
+narrative:
+  concept: 讓聽命的召喚物凝成寒冰，在敵群中碎開
+  cast_flavor: 你低聲一喝，召喚物的身軀瞬間結霜，迸裂成一圈刺骨的冰碎
+provenance: {origin: builtin, owner_id: null, created_by: null, parents: [], bound: true, tradeable: false}

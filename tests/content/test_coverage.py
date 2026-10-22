@@ -58,6 +58,19 @@ _POOL_ONLY = frozenset(
         "skill_splash_flask",
         "skill_frost_touch",
         "skill_mark_prey",
+        # 3-27：倒地、潮濕、標記、高處與撞擊、隱蔽、召喚物的專屬主動利用者
+        "skill_trample",
+        "skill_ground_finish",
+        "skill_gravity_crush",
+        "skill_tide_cleave",
+        "skill_ripple_shot",
+        "skill_hunters_strike",
+        "skill_pinpoint_shot",
+        "skill_plunging_strike",
+        "skill_downdraft",
+        "skill_pinning_shot",
+        "skill_veiled_shot",
+        "skill_glacier_offering",
     }
 )
 

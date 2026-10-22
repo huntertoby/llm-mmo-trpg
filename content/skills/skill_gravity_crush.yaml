@@ -1,0 +1,28 @@
+# 連段（Phase 3-27 補技能，數值為初值，未經模擬）：法術版的倒地追擊，目標倒在地上時重力加倍壓下（倒地池的利用者）。
+id: skill_gravity_crush
+schema_version: 1
+name_zh: 重壓
+tier: 1
+rank: 1
+rarity: rare
+kind: active
+skeleton: combo
+category: spell
+weapon_req: any
+ap_cost: 2
+scaling_attr: int
+shape: {type: single, range: 4}
+effects:
+  - {type: damage, dice: 2d6, element: physical}
+  # 倒地的目標爬不起來，重力直接把它按進地面
+  - type: damage
+    dice: 2d8
+    element: physical
+    condition: {type: target_has_status, status: prone}
+condition: null
+cost: {mana: 6, cooldown: 2}
+tags: [arcane, spell, combo]
+narrative:
+  concept: 對已經倒下的敵人加倍施壓
+  cast_flavor: 你五指一按，倒地的目標像被一座無形的山壓住，連骨頭都在悲鳴
+provenance: {origin: builtin, owner_id: null, created_by: null, parents: [], bound: true, tradeable: false}
