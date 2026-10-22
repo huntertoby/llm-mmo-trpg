@@ -1,0 +1,16 @@
+# 裝備測試用單位（Phase 3G-G3b）：弓手哨兵，戴哨兵頭盔（監視射擊每輪多觸發 1 次）、穿護衛鎖甲。
+id: gear_tester_g3b_sentinel
+name_zh: 哨兵弓手
+attributes: {str: 10, dex: 16, con: 12, int: 10, wis: 12, wil: 10}
+max_hp: 40
+speed: 5
+armor_bonus: 2
+weapon: bow
+resist: {}
+element_mods: {}
+tags: [hero]
+max_mana: 24
+skills: [skill_overwatch, skill_piercing_shot, skill_grapple_arrow]
+equipment:
+  head: item_g3b_sniper_helm
+  body: item_g3b_guard_mail

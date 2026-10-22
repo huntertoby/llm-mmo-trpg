@@ -41,6 +41,12 @@ export function ruleSummary(rule: ReactionRuleView): string {
   return parts.join("・");
 }
 
+/** 反應規則的「來自裝備」說明（Phase 3G-G3b，授予或擴充這條反應的物品與詞條）；不是裝備來的為空字串。 */
+export function gearSourceText(rule: Pick<ReactionRuleView, "gear_source_zh">): string {
+  const source = rule.gear_source_zh ?? "";
+  return source === "" ? "" : `來自裝備・${source}`;
+}
+
 /** 主角的規則（同一個反應可能有多條規則，介面只列一個）。 */
 export function uniqueRules(hero: UnitView): ReactionRuleView[] {
   const seen = new Set<string>();

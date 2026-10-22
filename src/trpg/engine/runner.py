@@ -38,8 +38,13 @@ __all__ = [
     "run_battle",
 ]
 
-LOG_FORMAT = "trpg-battle-log/42"
-"""``/42``（Phase 3G-G3a）：裝備的觸發與充能——新動作 ``activate_charge``、新事件
+LOG_FORMAT = "trpg-battle-log/43"
+"""``/43``（Phase 3G-G3b）：裝備的授予動作、授予反應與改變規則——授予的技能併進單位的
+``skills``（開戰時由裝備快照決定）、單位的反應規則多了裝備授予或擴充的規則（反應事件 ``ally_hit_in_range``、內建反應
+``redirect_damage``、反應定義 ``effect: redirect_damage``）、單位狀態 ``gear_round_counts`` 多了
+``extra:<反應>``（額外觸發次數）、裝備規則 ``caps.rule_affixes``、新技能 ``skill_gear_*``；裝備的
+規則改變查詢走 ``active_rule_change``。``/42`` 的紀錄無法重播。
+``/42``（Phase 3G-G3a）：裝備的觸發與充能——新動作 ``activate_charge``、新事件
 ``gear_triggered``／``charge_activated``、單位狀態 ``gear_turn_counts``／``gear_round_counts``／
 ``ap_gain_turn``、詞條欄位（觸發的 ``tag``／``status``／``surface``、充能的
 ``effect_target``）、層數 ``fury``。

@@ -26,6 +26,7 @@ function rule(reaction: string, mode: ReactionRuleView["mode"], over: Partial<Re
     stamina_cost: 10,
     mana_cost: 0,
     hp_cost_permille: 0,
+    gear_source_zh: "",
     ...over,
   };
 }

@@ -13,6 +13,7 @@ export type TrapView = Schemas["TrapView"];
 export type ZoneView = Schemas["ZoneView"];
 export type RuneView = Schemas["RuneView"];
 export type ActivationView = Schemas["ActivationView"];
+export type GearSkillView = Schemas["GearSkillView"];
 export type GrantedSkillView = Schemas["GrantedSkillView"];
 export type StatusView = Schemas["StatusView"];
 export type Pending = Schemas["Pending"];

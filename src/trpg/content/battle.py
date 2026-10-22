@@ -539,6 +539,7 @@ class ReactionWhen(ContentModel):
         "enemy_enters_adjacent",
         "ally_targeted",
         "enemy_moves_in_range",
+        "ally_hit_in_range",
     ]
 
 

@@ -17,11 +17,13 @@ from __future__ import annotations
 
 from typing import TYPE_CHECKING
 
+from trpg.content.equipment import RuleAffix
 from trpg.content.rule_changes import PUSH_ANY_OBJECT, RuleChangeDef
-from trpg.content.skills import SkillDef
+from trpg.content.skills import ShapeSpec, SkillDef
 from trpg.engine.events import ActivationExpired, SkillActivated
+from trpg.engine.rules.statuses import effective_attribute
 from trpg.engine.state import Activation, BattleState, UnitState
-from trpg.shared.types import UnitId
+from trpg.shared.types import Attribute, UnitId
 
 if TYPE_CHECKING:
     from trpg.engine.context import Ctx
@@ -32,6 +34,7 @@ __all__ = [
     "activation_problem",
     "active_rule_change",
     "expire_activations",
+    "has_rule_source",
     "is_active",
     "moves_object",
     "remaining_rounds",
@@ -114,11 +117,55 @@ class ActiveRuleChange:
         self.rule = rule
 
 
+def has_rule_source(unit: UnitState) -> bool:
+    """``unit`` 可能有生效中的規則改變（啟動過傳說，或身上有裝備詞條）。"""
+    return bool(unit.activations) or bool(unit.gear.affixes)
+
+
+def _gear_rule_carrier(state: BattleState, unit: UnitState, affix: RuleAffix) -> SkillDef:
+    """裝備的規則改變（第 11 類，Phase 3G-G3b）沒有技能可依據：包成一個不經 schema 驗證的被動技能，
+    當作規則改變的來源（``skill_gear_*``；縮放屬性取持有者最高的有效屬性）。"""
+    best = max(sorted(Attribute), key=lambda a: effective_attribute(state.ruleset, unit, a))
+    return SkillDef.model_construct(
+        id=f"skill_gear_{affix.id.removeprefix('affix_')}",
+        name_zh=affix.name_zh,
+        tier=1,
+        rank=1,
+        rarity="legendary",
+        kind="passive",
+        skeleton="passive",
+        category="spell",
+        weapon_req="any",
+        scaling_attr=best,
+        shape=ShapeSpec(type="self"),
+        effects=(),
+    )
+
+
+def _gear_rule_change(
+    state: BattleState, unit: UnitState, kind: str | None
+) -> ActiveRuleChange | None:
+    """裝備詞條提供的規則改變（只算生效的詞條，詞條 ID 排序）。一個單位同時最多 1 個規則改變：
+    穿戴驗證不允許兩條不同的規則詞條，啟動型傳說遇到裝備的規則時不能啟動。"""
+    for entry in unit.gear.active_affixes("rule"):
+        affix = entry.affix
+        if not isinstance(affix, RuleAffix):
+            continue
+        rule = state.ruleset.rule_change_def(affix.rule)
+        if kind is None or rule.kind == kind:
+            return ActiveRuleChange(_gear_rule_carrier(state, unit, affix), rule)
+    return None
+
+
 def active_rule_change(
     state: BattleState, unit: UnitState | None, kind: str | None = None
 ) -> ActiveRuleChange | None:
-    """``unit`` 生效中的規則改變（``kind`` 給定時只找這一類）；沒有時為 ``None``。"""
-    if unit is None or not unit.activations:
+    """``unit`` 生效中的規則改變（``kind`` 給定時只找這一類）；沒有時為 ``None``。
+
+    來源有兩種：啟動過的傳說技能（``unit.activations``），以及裝備的第 11 類詞條（Phase 3G-G3b，
+    開戰起一直生效）。查詢都以 **持有者** 為單位（呼叫端傳入造成效果的單位或步行者），所以規則
+    改變不會影響其他單位。"""
+    if unit is None or not has_rule_source(unit):
         return None
     rules = state.ruleset
     for activation in unit.activations:
@@ -126,7 +173,7 @@ def active_rule_change(
         rule = _rule_of(state, skill)
         if rule is not None and (kind is None or rule.kind == kind):
             return ActiveRuleChange(skill, rule)
-    return None
+    return _gear_rule_change(state, unit, kind)
 
 
 _FLOOR_TAGS = ("over_chasm",)

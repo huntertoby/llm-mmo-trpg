@@ -39,6 +39,7 @@ from typing import TYPE_CHECKING
 from trpg.content.appearance import derive_keywords
 from trpg.content.battle import UnitTemplate
 from trpg.content.equipment import (
+    ActionAffix,
     ConditionalAffix,
     CostAffix,
     EquipmentRules,
@@ -218,9 +219,31 @@ def build_gear(loadout: Loadout, rules: EquipmentRules) -> GearState:
     )
 
 
+def gear_skill_ids(gear: GearState) -> tuple[str, ...]:
+    """裝備（第 9 類，生效的詞條）授予的技能 ID，依欄位固定順序、不重複。"""
+    seen: list[str] = []
+    for entry in gear.active_affixes("action"):
+        affix = entry.affix
+        if isinstance(affix, ActionAffix) and affix.skill not in seen:
+            seen.append(affix.skill)
+    return tuple(seen)
+
+
+def granted_skills(skills: tuple[str, ...], gear: GearState) -> tuple[str, ...]:
+    """``skills`` 加上裝備授予、還沒有的技能。"""
+    extra = tuple(s for s in gear_skill_ids(gear) if s not in skills)
+    return (*skills, *extra) if extra else skills
+
+
 def geared_template(template: UnitTemplate, gear: GearState, rules: Ruleset) -> UnitTemplate:
     """把裝備的 ``merged`` 加值併進範本（屬性、基礎最大 HP、個別元素抗性、速度）；沒有加值時回傳
-    原範本。最大 HP 之後照常由 ``core.template_max_hp`` 加上體質（裝備的體質也算）。"""
+    原範本。最大 HP 之後照常由 ``core.template_max_hp`` 加上體質（裝備的體質也算）。
+
+    第 9 類（授予動作，Phase 3G-G3b）：生效的詞條授予的常駐技能接在 ``skills`` 後面（已有的不
+    重複）；技能只存在於這個範本，不帶那條詞條就沒有（卸下裝備即失去）。"""
+    skills = granted_skills(template.skills, gear)
+    if skills != template.skills:
+        template = template.model_copy(update={"skills": skills})
     if not gear.merged:
         return template
     attributes = dict(template.attributes)

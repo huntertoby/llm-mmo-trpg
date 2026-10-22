@@ -5,6 +5,7 @@ import { useEffect, useRef, useState } from "react";
 import type { SkillCard } from "../api/types";
 import { minorGlyph, splitSkills } from "../battle/skillTray";
 import type { ActionMode, SkillButton } from "../battle/targeting";
+import { gearSkillBadge } from "../battle/gearSkills";
 import { grantedBadge } from "../battle/granted";
 import { SkillCardView } from "./SkillCardView";
 import { SkillIconView } from "./SkillIconView";
@@ -62,7 +63,7 @@ function SkillSlot({
     >
       <button
         type="button"
-        className={`skill-button${selected ? " selected" : ""}${b.grantedRemaining != null ? " granted" : ""}${reasoned ? " blocked" : ""}`}
+        className={`skill-button${selected ? " selected" : ""}${b.grantedRemaining != null ? " granted" : ""}${b.gearSource != null ? " from-gear" : ""}${reasoned ? " blocked" : ""}`}
         disabled={blocked && !reasoned}
         aria-disabled={blocked}
         onClick={() => (blocked ? onBlocked?.(b) : onSelect(b.skillId))}
@@ -73,6 +74,11 @@ function SkillSlot({
           {b.grantedRemaining != null && (
             <span className="skill-granted" aria-label="暫時技能">
               {grantedBadge(b.grantedRemaining)}
+            </span>
+          )}
+          {b.gearSource != null && (
+            <span className="skill-gear" aria-label="來自裝備">
+              {gearSkillBadge(b.gearSource)}
             </span>
           )}
           <span className="skill-cost">{costText(b)}</span>

@@ -13,6 +13,9 @@
 # 內建反應的事件（reactions[].events）：
 #   enemy_moves_in_range（3D-8c）    敵人主動移動（步行、衝鋒、直線衝撞）的一步結束後，位置在持有者武器射程與視線內
 #                                    （強制位移、傳送、跳躍、互換不算）。監視射擊 overwatch_shot 用它
+#   ally_hit_in_range（3G-G3b）      射程內（距離由裝備詞條決定）的友方被敵人單體攻擊命中、傷害之前；另一方是攻擊者。
+#                                    redirect_damage 用它（只由裝備詞條授予，不在 default_rules）
+# redirect_damage：改由持有者承受這次攻擊（同 intercept，不重擲命中、不花耐力）。
 # requires_status（3D-8c）：持有者必須帶有這個狀態才能反應，反應用掉（普攻結算完）之後移除該狀態
 # 監視射擊沒有出現在 default_rules：單位裝備了施加 overwatch 狀態的技能時，由引擎自動加上一條 auto 規則
 # （玩家可用 SetReactionMode 改成 prompt 或 off）。
@@ -38,6 +41,11 @@ reactions:
     effect: basic_attack
     events: [enemy_moves_in_range]
     requires_status: overwatch
+  - id: redirect_damage
+    name_zh: 替隊友承受
+    description_zh: 範圍內的隊友被敵人單體攻擊命中時，改由你承受這次攻擊（來自裝備，每輪最多一次）。
+    effect: redirect_damage
+    events: [ally_hit_in_range]
 default_rules:
   - reaction: block
     when: {event: targeted_by_melee}

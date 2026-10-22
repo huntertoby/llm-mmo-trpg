@@ -1711,6 +1711,25 @@ export interface components {
             /** Text Zh */
             text_zh: string;
         };
+        /**
+         * GearSkillView
+         * @description 裝備授予的常駐技能（Phase 3G-G3b，第 9 類；唯讀）：技能來自哪個欄位的哪件物品與詞條。
+         *     技能本身也在 ``UnitView.skills`` 裡，卸下裝備（戰鬥開始前不穿那件物品）就沒有。
+         */
+        GearSkillView: {
+            /** Skill Id */
+            skill_id: string;
+            /** Name Zh */
+            name_zh: string;
+            /** Affix Id */
+            affix_id: string;
+            /** Slot */
+            slot: string;
+            /** Slot Zh */
+            slot_zh: string;
+            /** Item Name Zh */
+            item_name_zh: string;
+        };
         /** GearSlotInfo */
         GearSlotInfo: {
             /** Slot */
@@ -2594,6 +2613,11 @@ export interface components {
             mana_cost: number;
             /** Hp Cost Permille */
             hp_cost_permille: number;
+            /**
+             * Gear Source Zh
+             * @default
+             */
+            gear_source_zh: string;
         };
         /**
          * Reload
@@ -3431,6 +3455,11 @@ export interface components {
              * @default []
              */
             gear_totals: components["schemas"]["GearTotalView"][];
+            /**
+             * Gear Skills
+             * @default []
+             */
+            gear_skills: components["schemas"]["GearSkillView"][];
             /**
              * Charges
              * @default []

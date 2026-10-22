@@ -17,6 +17,7 @@ from trpg.engine.events import (
 )
 from trpg.engine.gear import build_gear, geared_template
 from trpg.engine.gear_enhance import geared_weapon
+from trpg.engine.gear_reactions import gear_reaction_rules
 from trpg.engine.rules.facing import default_facing
 from trpg.engine.rules.statuses import is_removed_with_source, stance_status_ids
 from trpg.engine.state import Facing, UnitState
@@ -91,7 +92,7 @@ def down_unit(ctx: Ctx, unit: UnitState) -> list[EventBase]:
         *remove_caster_zones_of(ctx, unit.id),  # 施放者離場，跟隨型區域消失（Phase 3D-5）
         *dismiss_summons_of(ctx, unit, "owner_gone"),  # 召喚者倒下：召喚物一併消失（3D-4a）
     ]
-    if unit.activations:  # 規則改變「殘影」：倒下時留下分身（Phase 3D-6）
+    if unit.activations or unit.gear.affixes:  # 規則改變「殘影」：倒下時留下分身（Phase 3D-6）
         # 延後匯入：規則改變模組匯入召喚（召喚匯入本模組）
         from trpg.engine.rule_changes import spawn_on_downed  # noqa: PLC0415
 
@@ -236,6 +237,7 @@ def make_unit(
         template.reactions if template.reactions is not None else rules.reactions.default_rules
     )
     reactions = (*_auto_reaction_rules(template, rules, reactions), *reactions)
+    reactions = (*reactions, *gear_reaction_rules(gear, rules, tuple(reactions)))  # 3G-G3b
     max_hp = rules.core.template_max_hp(template)
     return UnitState(
         id=uid,

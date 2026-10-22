@@ -63,6 +63,7 @@ export function unit(id: string, team: "ally" | "enemy", x: number, y: number, o
     equipment: [],
     gear_totals: [],
     charges: [],
+    gear_skills: [],
     ...over,
   };
 }

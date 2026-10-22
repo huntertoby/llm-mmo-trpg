@@ -513,6 +513,8 @@ class ReactionDef(ContentModel):
 
     - ``reduce_damage``：本次攻擊傷害 × (1 − ``damage_reduction_permille``)，無條件捨去，最低 1。
     - ``basic_attack``：以武器普攻觸發者（不花 AP；需能攻擊到觸發者原本的位置）。
+    - ``redirect_damage``（Phase 3G-G3b，只由裝備詞條授予）：``ally_hit_in_range`` 時，範圍內的友方
+      被單體攻擊命中，改由持有者承受這次攻擊（距離由詞條的 ``range`` 決定）。
 
     ``requires_status``（Phase 3D-8c）：持有者必須帶有這個狀態才能反應，反應用掉之後移除該狀態
     （監視射擊 ``overwatch_shot`` 用 ``overwatch``）。
@@ -521,13 +523,14 @@ class ReactionDef(ContentModel):
     id: str = Field(pattern=ID_PATTERN)
     name_zh: str = Field(min_length=1)
     description_zh: str = Field(min_length=1)
-    effect: Literal["reduce_damage", "basic_attack"]
+    effect: Literal["reduce_damage", "basic_attack", "redirect_damage"]
     events: tuple[
         Literal[
             "targeted_by_melee",
             "targeted_by_attack",
             "enemy_leaves_adjacent",
             "enemy_moves_in_range",
+            "ally_hit_in_range",
         ],
         ...,
     ]

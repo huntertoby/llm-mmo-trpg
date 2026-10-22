@@ -161,7 +161,7 @@ def test_test_items_cover_every_slot_with_1_to_3_affixes() -> None:
     assert set(kinds) == set(SLOT_TYPE_OF.values())
     assert kinds["ring"] >= 2  # 兩個戒指欄需要兩枚不同的戒指
     assert all(1 <= len(i.affixes) <= 3 for i in items)
-    implemented = {  # G1、G2、G3a
+    implemented = {  # G1、G2、G3a、G3b
         "stat",
         "conditional",
         "cost",
@@ -170,6 +170,9 @@ def test_test_items_cover_every_slot_with_1_to_3_affixes() -> None:
         "weapon_trait",
         "trigger",
         "charge",
+        "action",
+        "reaction",
+        "rule",
     }
     lib = library()
     assert {lib.affixes[r.affix].category for i in items for r in i.affixes} <= implemented

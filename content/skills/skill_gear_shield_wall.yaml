@@ -1,0 +1,22 @@
+id: skill_gear_shield_wall
+schema_version: 1
+name_zh: 盾牆
+tier: 1
+rank: 1
+rarity: rare
+kind: active
+skeleton: control
+category: spell
+weapon_req: any
+ap_cost: 1
+scaling_attr: str
+shape: {type: ground_tile, range: 1}
+effects:
+  - {type: create_obstacle, object: earth_wall, duration: 2}
+condition: null
+cost: {mana: 0, cooldown: 3}
+tags: [obstacle, defense, gear]
+narrative:
+  concept: 裝備授予的盾牆：在身前 1 格豎起一面暫時的障礙，2 回合後消失
+  cast_flavor: 你把盾牌重重頓地，一面厚牆在身前隆起
+provenance: {origin: builtin, owner_id: null, created_by: null, parents: [], bound: true, tradeable: false}

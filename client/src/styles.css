@@ -2937,3 +2937,15 @@ button.selected {
 .charge-line .charge-chip {
   margin-right: 4px;
 }
+
+/* Phase 3G-G3b：裝備授予的技能與反應（來自裝備） */
+.skill-gear {
+  font-size: 12px;
+  color: #e8c46a;
+}
+.skill-button.from-gear {
+  border-color: #b8923f;
+}
+.reaction-gear {
+  color: #e8c46a;
+}
