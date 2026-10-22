@@ -9,6 +9,8 @@ from trpg.content.skills import GRANT_SKILL
 from trpg.engine.context import Ctx
 from trpg.engine.events import (
     EventBase,
+    InfusionFizzled,
+    InfusionFizzleReason,
     StatusRemoved,
     SummonExpired,
     SummonExpiryReason,
@@ -19,6 +21,7 @@ from trpg.engine.events import (
 from trpg.engine.gear import build_gear, geared_template
 from trpg.engine.gear_enhance import geared_weapon
 from trpg.engine.gear_reactions import gear_reaction_rules
+from trpg.engine.heights import change_height
 from trpg.engine.rules.facing import default_facing
 from trpg.engine.rules.statuses import is_removed_with_source, stance_status_ids
 from trpg.engine.state import Facing, UnitState
@@ -76,6 +79,36 @@ def _release_forced_targets(ctx: Ctx, source: UnitState) -> list[EventBase]:
     return events
 
 
+def _lose_summon_extras(ctx: Ctx, unit: UnitState, reason: InfusionFizzleReason) -> list[EventBase]:
+    """召喚物離開戰場（倒下或消失）時收尾（Phase 3-33e2b）：等待施放的灌注技能失效
+    （``infusion_fizzled``，法力與冷卻不退），高台圖騰升起的高台恢復原狀。"""
+    events: list[EventBase] = []
+    infused = unit.infused_skill
+    if infused is not None and unit.is_summon:
+        unit.infused_skill = None
+        try:
+            name = ctx.rules.skill_def(infused.skill_id).name_zh
+        except KeyError:
+            name = infused.skill_id
+        events.append(
+            ctx.emit(
+                InfusionFizzled,
+                unit_id=unit.id,
+                owner_id=infused.owner_id,
+                skill_id=infused.skill_id,
+                name_zh=name,
+                reason=reason,
+            )
+        )
+    platform = unit.platform_pos
+    if platform is not None:
+        unit.platform_pos = None
+        events += change_height(
+            ctx, (platform.x, platform.y), ctx.state.tile(platform.x, platform.y).height - 1
+        )
+    return events
+
+
 def down_unit(ctx: Ctx, unit: UnitState) -> list[EventBase]:
     """單位倒下（HP ≤ 0）：標記倒下、立即移出先攻順序，產生 ``unit_downed``；
     以它為來源的嘲諷立即解除。生效中的規則改變 ``on_downed_spawn`` 在原地留下分身（3D-6）。"""
@@ -88,6 +121,7 @@ def down_unit(ctx: Ctx, unit: UnitState) -> list[EventBase]:
     _remove_from_order(ctx, unit)
     events: list[EventBase] = [
         ctx.emit(UnitDowned, unit_id=unit.id),
+        *_lose_summon_extras(ctx, unit, "downed"),
         *_drop_stances(ctx, unit),
         *_release_forced_targets(ctx, unit),
         *remove_traps_of(ctx, unit.id),  # 放置者離場，陷阱消失（Phase 2E-3）
@@ -150,6 +184,7 @@ def dismiss_summon(ctx: Ctx, unit: UnitState, reason: SummonExpiryReason) -> lis
         ctx.emit(
             SummonExpired, unit_id=unit.id, owner_id=unit.owner_id, reason=reason, pos=unit.pos
         ),
+        *_lose_summon_extras(ctx, unit, "gone"),
         *_drop_stances(ctx, unit),
         *_release_forced_targets(ctx, unit),
         *remove_traps_of(ctx, unit.id),

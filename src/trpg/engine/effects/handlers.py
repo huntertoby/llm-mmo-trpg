@@ -44,7 +44,7 @@ from trpg.engine.lifecycle import down_unit, escape_unit
 from trpg.engine.rules.combat import PERMILLE, PPM, element_modifier_ppm
 from trpg.engine.rules.facing import facing_between
 from trpg.engine.rules.geometry import XY
-from trpg.engine.rules.movement import is_deadly, is_standable
+from trpg.engine.rules.movement import is_deadly, is_flying, is_standable
 from trpg.engine.rules.statuses import (
     boss_converted_status,
     damage_dealt_permille,
@@ -562,7 +562,7 @@ def enter_surface(ctx: Ctx, unit: UnitState) -> list[EventBase]:
     """``unit`` 所在格表面的進入效果：``surface_entered``（套用狀態），有檢定時擲骰
     （``check_rolled``）。走進表面、被推進表面，以及表面出現在腳下時都會呼叫。"""
     surface = ctx.state.tile(*unit.xy).surface
-    if surface is Surface.NONE:
+    if surface is Surface.NONE or is_flying(unit):  # 會飛的單位不受地面表面影響（3-33e2b）
         return []
     definition = ctx.rules.surface_def(surface)
     if definition.on_enter is None:

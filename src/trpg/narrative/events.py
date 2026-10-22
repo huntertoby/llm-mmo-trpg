@@ -82,6 +82,7 @@ from trpg.engine.events import (
     SkillInfused,
     SkillTriggered,
     SkillUsed,
+    SnareTriggered,
     SourceChanged,
     StacksChanged,
     StatusApplied,
@@ -92,6 +93,7 @@ from trpg.engine.events import (
     SummonCommanded,
     SummonExpired,
     SummonModeSet,
+    SummonPulled,
     SurfaceChanged,
     SurfaceEntered,
     TerrainChanged,
@@ -1151,14 +1153,38 @@ def _infused_skill_cast(e: InfusedSkillCast, v: _View) -> str:
     )
 
 
-_INFUSION_FIZZLE_TEXT = {"no_target": "選不到目標", "controlled": "無法行動"}
+_INFUSION_FIZZLE_TEXT = {
+    "no_target": "選不到目標",
+    "controlled": "無法行動",
+    "downed": "被打倒了",
+    "gone": "消失了",
+}
 
 
 @_handles(InfusionFizzled)
 def _infusion_fizzled(e: InfusionFizzled, v: _View) -> str:
     summon = v.name.get(e.unit_id, e.unit_id)
+    if e.reason in ("downed", "gone"):  # 施放前就離場（3-33e2b）
+        why = _INFUSION_FIZZLE_TEXT[e.reason]
+        return f"  {summon}的灌注技能失效：{summon}{why}，「{e.name_zh}」沒有施放（法力與冷卻不退）"
     why = _INFUSION_FIZZLE_TEXT[e.reason]
     return f"  {summon} {why}，灌注的「{e.name_zh}」失效（法力與冷卻不退）"
+
+
+@_handles(SnareTriggered)
+def _snare_triggered(e: SnareTriggered, v: _View) -> str:
+    vine = v.name.get(e.unit_id, e.unit_id)
+    target = v.name.get(e.target_id, e.target_id)
+    status = v.statuses.get(e.status_id, e.status_id)
+    extra = "並絆倒" if e.prone else ""
+    return f"  {vine} 纏住了 {target}（{status}{extra}）"
+
+
+@_handles(SummonPulled)
+def _summon_pulled(e: SummonPulled, v: _View) -> str:
+    totem = v.name.get(e.unit_id, e.unit_id)
+    target = v.name.get(e.target_id, e.target_id)
+    return f"  {totem} 把 {target} 從 {xy_text(e.from_pos)} 拉近了 1 格"
 
 
 _SUMMON_EXPIRY_TEXT = {
