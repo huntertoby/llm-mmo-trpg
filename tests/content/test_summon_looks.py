@@ -1,4 +1,4 @@
-"""召喚物外觀（Phase 3-33h1）：外觀表 schema、範本外觀與表一致、視圖帶出外觀欄位。"""
+"""召喚物外觀（Phase 3-33h1）：外觀表 schema、範本外觀由表查得、視圖帶出外觀欄位。"""
 
 from __future__ import annotations
 
@@ -12,24 +12,45 @@ from trpg.content.summons import load_summon_looks
 CONTENT = PROJECT_ROOT / "content"
 
 
-def test_the_seventeen_looks_load() -> None:
+def test_the_look_table_loads() -> None:
     table = load_summon_looks(CONTENT)
-    assert len(table.looks) == 17
+    assert len(table.looks) == 18  # 17 種特色召喚物＋通用的元素之靈
     bodies = {e.body for e in table.looks.values()}
     assert bodies == {"humanoid", "spirit", "construct", "beast", "plant", "totem"}
 
 
-def test_existing_summon_templates_match_the_table() -> None:
-    by_name = {e.zh: e for e in load_summon_looks(CONTENT).looks.values()}
-    for summon in library().ruleset.summons.summons:
+def test_every_summon_template_resolves_its_look_from_the_table() -> None:
+    table = load_summon_looks(CONTENT).looks
+    summons = library().ruleset.summons.summons
+    assert len(summons) == len(table)
+    for summon in summons:
+        entry = table[summon.id.removeprefix("summon_")]
         look = summon.template.look
         assert look is not None, summon.id
-        entry = by_name.get(summon.template.name_zh)
-        if entry is None:  # 元素之靈是通用的靈，沒有對應的單一列
-            assert look.body == "spirit"
-            continue
-        got = (look.body, look.variant, look.element, look.size, look.trait)
-        assert got == (entry.body, entry.variant, entry.element, entry.size, entry.trait)
+        assert look == SummonLook.model_validate(entry.model_dump(exclude={"zh"})), summon.id
+
+
+def test_template_files_do_not_carry_their_own_look() -> None:
+    for path in sorted((CONTENT / "units" / "summons").glob("*.yaml")):
+        assert "\nlook:" not in "\n" + path.read_text(encoding="utf-8"), path.name
+
+
+def test_unknown_trait_is_rejected() -> None:
+    with pytest.raises(ValidationError):
+        SummonLook.model_validate({"body": "totem", "trait": "sparkle"})
+    traits = (
+        "shield",
+        "translucent",
+        "glow",
+        "puddle",
+        "fuse",
+        "no_ring",
+        "flying",
+        "ground",
+        "aura",
+    )
+    for trait in traits:
+        assert SummonLook.model_validate({"body": "totem", "trait": trait}).trait == trait
 
 
 def test_look_elements_are_known_keywords() -> None:

@@ -1,9 +1,11 @@
 # 召喚物外觀表（Phase 3-33h1，docs/art/召喚物外觀.md「移植需求」第 1 節；美術 PM 定案的 17 種）。
-# 純顯示資料，不進引擎結算。召喚物範本（content/units/summons/）存在時，範本的 look 欄位要與這裡一致
-# （tests/content/test_summon_looks.py 檢查）；尚未存在的（3-33e1／e2 才新增）先放在這裡，新增時照填。
+# 純顯示資料，不進引擎結算。這裡是外觀的唯一來源（Phase 3-33h2）：召喚物範本 summon_<id>.yaml 不寫 look，
+# 載入時依 ID（去掉 summon_ 前綴）查這張表；每個召喚物範本都必須有對應的一列（tests/content/test_summon_looks.py）。
+# trait 合法值只有前端認得的 9 個（schema 驗證）；新增值時由美術 PM 補畫法並同步 docs/art/召喚物外觀.md。
 # element 用關鍵字 ID（skill_keywords.yaml），實際顯示以召喚物的灌注關鍵字為先。
 # 大小倍率：small 0.8、medium 1.0、large 1.25（前端）。
 looks:
+  elemental_spirit: {zh: 元素之靈,   body: spirit,   size: medium}   # 通用的靈：顏色由灌注關鍵字決定
   fire_spirit:      {zh: 火靈,       body: spirit,    element: ignite,      size: medium}
   ice_spirit:       {zh: 冰靈,       body: spirit,    element: frozen,      size: medium}
   thunder_spirit:   {zh: 雷靈,       body: spirit,    element: charged,     size: medium}

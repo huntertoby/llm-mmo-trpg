@@ -3,6 +3,7 @@ import type { Facing } from "../api/types";
 import { resolveDoll } from "./appearance";
 import {
   drawSummonBody,
+  drawSummonGround,
   hasNoRing,
   humanoidSpec,
   KEYWORD_COLOR,
@@ -129,13 +130,36 @@ describe("召喚物外觀渲染器", () => {
     expect(run("east")).not.toBe(run("west"));
   });
 
-  it("鷹隼的身體抬高 22、影子留在地上；藤蔓貼地（沒有往上畫超過 22）", () => {
+  it("地面影子與水窪只由 drawSummonGround 畫（不在加外框的身體層）、不描邊、透明度 0.22～0.3", () => {
+    for (const look of [
+      { body: "spirit" }, { body: "construct", variant: "golem" }, { body: "construct", variant: "bomb" },
+      { body: "construct", variant: "wall" }, { body: "beast", variant: "wolf" }, { body: "beast", variant: "bird" }, { body: "totem" },
+    ] as const) {
+      const r = resolveSummonLook(look);
+      const body = mockCtx();
+      drawSummonBody(body.ctx, r, "south");
+      expect(body.calls.some((c) => c.startsWith("ellipse(0.00,-1.00,"))).toBe(false);
+      const ground = mockCtx();
+      drawSummonGround(ground.ctx, r);
+      expect(ground.calls.some((c) => c.startsWith("ellipse(0.00,-1.00,"))).toBe(true);
+      expect(ground.calls.some((c) => c.startsWith("stroke"))).toBe(false);
+      const alphas = ground.calls.filter((c) => c.startsWith("fillStyle=rgba(0,0,0,")).map((c) => Number(/rgba\(0,0,0,([\d.]+)\)/.exec(c)?.[1]));
+      expect(alphas.length).toBe(1);
+      expect(alphas[0]).toBeGreaterThanOrEqual(0.22);
+      expect(alphas[0]).toBeLessThanOrEqual(0.3);
+    }
+    const puddle = mockCtx();
+    drawSummonGround(puddle.ctx, resolveSummonLook({ body: "spirit", element: "wet", trait: "puddle" }));
+    expect(puddle.calls.some((c) => c.startsWith("ellipse(0.00,-1.00,13.00"))).toBe(true);
+    const human = mockCtx();
+    drawSummonGround(human.ctx, resolveSummonLook({ body: "humanoid" }));
+    expect(human.calls.length).toBe(0);
+  });
+
+  it("鷹隼的身體抬高 22；藤蔓貼地（沒有往上畫超過 22）", () => {
     const { ctx, calls } = mockCtx();
     drawSummonBody(ctx, resolveSummonLook({ body: "beast", variant: "bird", trait: "flying" }), "east");
-    const shadowAt = calls.findIndex((c) => c.startsWith("ellipse(0.00,-1.00,7.00"));
-    const liftAt = calls.indexOf("translate(0.00,-22.00)");
-    expect(shadowAt).toBeGreaterThanOrEqual(0);
-    expect(liftAt).toBeGreaterThan(shadowAt); // 影子先畫在地上，之後身體才抬高
+    expect(calls.indexOf("translate(0.00,-22.00)")).toBeGreaterThanOrEqual(0);
     const vine = mockCtx();
     drawSummonBody(vine.ctx, resolveSummonLook({ body: "plant" }), "east");
     expect(vine.calls.some((c) => c.startsWith("translate(0.00,-22"))).toBe(false);

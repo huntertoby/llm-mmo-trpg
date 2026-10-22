@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 import { HIGHLIGHT } from "../battle/glossary";
-import { downedLook, GRAVE_GRAY, LOST_RING, pulseAlpha, statusBadges } from "./unitLook";
+import { downedLook, GRAVE_GRAY, LOST_RING, pulseAlpha, statusBadges, summonBadgeOffset, SUMMON_BADGE_RADIUS, SUMMON_BADGE_FONT } from "./unitLook";
 import { statusColor } from "./skillParts";
 
 describe("downedLook（倒地圖示，不含文字）", () => {
@@ -65,5 +65,15 @@ describe("statusBadges（戰場狀態徽章對應部件庫）", () => {
 
   it("徽章用的狀態都是部件庫認得的狀態（有專屬顏色）", () => {
     for (const b of statusBadges({ bomb: 1, charge: 1 })) expect(statusColor(b.statusId)).not.toBe("#d8d8e0");
+  });
+});
+
+describe("召喚物徽章位置（3-33h2）", () => {
+  it("在右下（T×0.36, T×0.14），半徑 7、字級 10；有炸彈徽章時往左 16px", () => {
+    expect(summonBadgeOffset({ bomb: null }, 50).y).toBeCloseTo(7);
+    expect(summonBadgeOffset({ bomb: null }, 50).x).toBeCloseTo(18);
+    expect(summonBadgeOffset({ bomb: 2 }, 50).x).toBeCloseTo(2);
+    expect(SUMMON_BADGE_RADIUS).toBe(7);
+    expect(SUMMON_BADGE_FONT).toBe(10);
   });
 });
