@@ -2158,9 +2158,13 @@ class _Cast:
         """此技能施加狀態的持續回合：``mastery: duration`` 生效時在（效果指定的或狀態預設的）
         持續上加 1；永久狀態（沒有持續回合）不變。"""
         bonus = mastery_duration_bonus(self.caster, self.skill)
+        assert spec.status is not None
+        if self.modified:  # 裝備的技能強化：你施加的某狀態 +N 回合（3G-G2）
+            bonus += modifiers.status_duration_bonus(
+                self.ctx.state, self.caster, self.use, spec.status
+            )
         if bonus == 0:
             return spec.duration
-        assert spec.status is not None
         base = spec.duration
         if base is None:
             base = self.ctx.rules.status_def(spec.status).duration

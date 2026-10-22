@@ -88,7 +88,7 @@ affixes:
     category: keyword
     name_zh: 製造帶電的技能範圍 +1
     slots: [weapon, offhand, neck]
-    keyword: shock
+    keyword: charged
     direction: create
     change: area_delta
     amount: 1
@@ -119,7 +119,7 @@ affixes:
     name_zh: 長槍的貼臉懲罰減半
     slots: [weapon]
     weapons: [longgun]
-    param: point_blank
+    param: range_mod.penalty
     scale_permille: 500
   - id: affix_trait_axe_sunder
     category: weapon_trait

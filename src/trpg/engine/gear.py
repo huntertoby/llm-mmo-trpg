@@ -69,6 +69,7 @@ __all__ = [
     "diminish",
     "diminished_total",
     "gear_cooldown",
+    "gear_damage_parts",
     "gear_damage_permille",
     "gear_damage_taken_permille",
     "gear_defense_permille",
@@ -235,7 +236,8 @@ def geared_template(template: UnitTemplate, gear: GearState, rules: Ruleset) -> 
 
 
 def cap_damage_bonus(rules: Ruleset, total_permille: int) -> int:
-    """全身傷害加成（裝備來源合計，‰）上限 ``caps.damage_bonus_permille``；負值不截斷。"""
+    """全身傷害加成（所有來源合計：裝備、技能強化、修正型被動，‰）上限
+    ``caps.damage_bonus_permille``；負值不截斷。"""
     return min(total_permille, rules.equipment.caps.damage_bonus_permille)
 
 
@@ -318,12 +320,28 @@ def gear_hit_bonus(state: BattleState, unit: UnitState, subject: Subject) -> int
     return _sum(state, unit, "hit", subject)
 
 
+def gear_damage_parts(state: BattleState, unit: UnitState, subject: Subject) -> tuple[int, int]:
+    """``unit`` 的裝備對 ``subject`` 的傷害加成，分成 ``(加成, 減益)``（‰）：條件數值與代價型的
+    傷害，正的歸加成、負的歸減益。還沒套全身傷害加成上限（上限要和技能的修正一起算，見
+    :func:`trpg.engine.modifiers.damage_permille`）。"""
+    gain = loss = 0
+    for bonus in unit.gear.bonuses:
+        if bonus.stat != "damage_permille" or not _holds(state, unit, bonus, subject):
+            continue
+        if bonus.amount > 0:
+            gain += bonus.amount
+        else:
+            loss += bonus.amount
+    return gain, loss
+
+
 def gear_damage_permille(state: BattleState, unit: UnitState, subject: Subject) -> int:
-    """``unit`` 的裝備對 ``subject`` 的傷害加成（‰，加在 1000 上）：條件數值與代價型的傷害加總，
-    再套全身傷害加成上限。"""
+    """只看裝備來源的傷害加成（‰，加在 1000 上）：加成部分套全身傷害加成上限，再加上減益。
+    （實際結算的上限是「所有來源合計」，在 :func:`trpg.engine.modifiers.damage_permille`。）"""
     if not unit.gear.bonuses:
         return 0
-    return cap_damage_bonus(state.ruleset, _sum(state, unit, "damage_permille", subject))
+    gain, loss = gear_damage_parts(state, unit, subject)
+    return cap_damage_bonus(state.ruleset, gain) + loss
 
 
 def _self_sum(unit: UnitState, stat: BonusStat) -> int:

@@ -10,14 +10,23 @@
 
 from __future__ import annotations
 
-from collections.abc import Iterable, Iterator, Mapping
-from dataclasses import dataclass
+from collections.abc import Iterable, Mapping
 from typing import Any
 
 from pydantic import BaseModel, ValidationError
 
+from trpg.content.keyword_derive import (
+    Facts,
+    SkillKeywords,
+    derive_from_facts,
+    derive_keywords,
+    modifier_effects,
+    skill_condition_specs,
+    skill_effect_specs,
+    walk_effect,
+)
 from trpg.content.library import ContentLibrary
-from trpg.content.skill_keywords import KeywordDef, KeywordRule, KeywordTable
+from trpg.content.skill_keywords import KeywordDef, KeywordTable
 from trpg.content.skills import (
     ConditionSpec,
     EffectSpec,
@@ -34,153 +43,12 @@ __all__ = [
     "is_starter_skill",
     "keyword_pools",
     "pool_skills",
+    "skill_condition_specs",
+    "skill_effect_specs",
     "skills_without_keywords",
 ]
 
 _STARTER_RARITIES = ("common", "rare")
-
-
-@dataclass(frozen=True, slots=True)
-class SkillKeywords:
-    """一個技能製造與利用的關鍵字 ID（依推導表的順序）。"""
-
-    makes: tuple[str, ...] = ()
-    uses: tuple[str, ...] = ()
-
-    def all(self) -> tuple[str, ...]:
-        """製造或利用的關鍵字（依推導表的順序，不重複）。"""
-        return tuple(dict.fromkeys((*self.makes, *self.uses)))
-
-    def __bool__(self) -> bool:
-        return bool(self.makes or self.uses)
-
-
-# ---------------------------------------------------------------------------
-# 從技能收集「來源」
-# ---------------------------------------------------------------------------
-
-
-def _walk_effect(effect: EffectSpec) -> Iterator[EffectSpec]:
-    yield effect
-    for group in (effect.then, effect.win, effect.lose, effect.on_kill, effect.effects):
-        for sub in group or ():
-            yield from _walk_effect(sub)
-
-
-def _modifier_effects(rule: ModifierSpec) -> Iterator[EffectSpec]:
-    for effect in rule.change.on_hit_effects or ():
-        yield from _walk_effect(effect)
-
-
-def skill_effect_specs(skill: SkillDef) -> tuple[EffectSpec, ...]:
-    """技能所有層級的效果（含 ``then``、賭注分支、擊殺時效果、區域效果、複合第二段與修正規則的
-    命中後效果）。"""
-    found: list[EffectSpec] = []
-    for effect in skill.effects:
-        found.extend(_walk_effect(effect))
-    if skill.followup is not None:
-        for effect in skill.followup.effects:
-            found.extend(_walk_effect(effect))
-    for rule in skill.modifiers:
-        found.extend(_modifier_effects(rule))
-    return tuple(found)
-
-
-def skill_condition_specs(skill: SkillDef) -> tuple[ConditionSpec, ...]:
-    """技能所有層級的條件（技能、效果、複合第二段與修正規則）。"""
-    return _facts_of(skill).conditions
-
-
-@dataclass(frozen=True, slots=True)
-class _Facts:
-    """推導用的事實：技能（或組到一半的草稿）上的效果、條件、觸發、形狀與修正規則。"""
-
-    effects: tuple[EffectSpec, ...] = ()
-    conditions: tuple[ConditionSpec, ...] = ()
-    trigger: TriggerSpec | None = None
-    shape: str | None = None
-    modifiers: tuple[ModifierSpec, ...] = ()
-    weapon_req: str | None = None
-    category: str | None = None
-
-
-def _facts_of(skill: SkillDef) -> _Facts:
-    effects = skill_effect_specs(skill)
-    conditions: list[ConditionSpec] = []
-    if skill.condition is not None:
-        conditions.append(skill.condition)
-    if skill.followup is not None and skill.followup.condition is not None:
-        conditions.append(skill.followup.condition)
-    conditions.extend(e.condition for e in effects if e.condition is not None)
-    conditions.extend(r.condition for r in skill.modifiers if r.condition is not None)
-    return _Facts(
-        effects=effects,
-        conditions=tuple(conditions),
-        trigger=skill.trigger,
-        shape=skill.shape.type,
-        modifiers=skill.modifiers,
-        weapon_req=skill.weapon_req,
-        category=skill.category,
-    )
-
-
-def _params_match(rule: KeywordRule, source: object) -> bool:
-    """規則的每個參數都等於來源的同名欄位（修正規則的 ``add_element`` 以 ``element`` 比對）。"""
-    return all(
-        _same(getattr(source, name, None) or getattr(source, f"add_{name}", None), value)
-        for name, value in rule.params().items()
-    )
-
-
-def _same(actual: object, expected: str) -> bool:
-    if actual is None:
-        return False
-    return str(getattr(actual, "value", actual)) == expected
-
-
-def _rule_matches(rule: KeywordRule, facts: _Facts) -> bool:
-    if any(getattr(facts, name) != value for name, value in rule.filters().items()):
-        return False
-    kind, wanted = rule.source, rule.source_id
-    if kind == "effect":
-        return any(e.type == wanted and _params_match(rule, e) for e in facts.effects)
-    if kind == "condition":
-        return any(c.type == wanted and _params_match(rule, c) for c in facts.conditions)
-    if kind == "trigger":
-        trig = facts.trigger
-        return trig is not None and trig.event == wanted and _params_match(rule, trig)
-    if kind == "shape":
-        return facts.shape == wanted
-    return any(_change_matches(rule, r) for r in facts.modifiers)
-
-
-def _change_matches(rule: KeywordRule, modifier: ModifierSpec) -> bool:
-    """修正規則的改變種類與參數相符；``applies_to`` 參數看修正規則的套用對象旗標。"""
-    if modifier.change.kind != rule.source_id:
-        return False
-    applies = rule.applies_to
-    if applies is not None and not getattr(modifier.applies_to, applies):
-        return False
-    if rule.unconditional and modifier.condition is not None:
-        return False
-    plain = rule.model_copy(update={"applies_to": None, "unconditional": None})
-    return _params_match(plain, modifier.change)
-
-
-def _derive(facts: _Facts, table: KeywordTable) -> SkillKeywords:
-    makes: list[str] = []
-    uses: list[str] = []
-    for keyword in table.keywords:
-        if any(_rule_matches(rule, facts) for rule in keyword.makes):
-            makes.append(keyword.id)
-        if any(_rule_matches(rule, facts) for rule in keyword.uses):
-            uses.append(keyword.id)
-    return SkillKeywords(tuple(makes), tuple(uses))
-
-
-def derive_keywords(skill: SkillDef, table: KeywordTable) -> SkillKeywords:
-    """``skill`` 製造與利用的關鍵字（純函式；依 ``table`` 的順序）。"""
-    return _derive(_facts_of(skill), table)
 
 
 def _parsed[T: BaseModel](model: type[T], raw: object) -> T | None:
@@ -202,15 +70,15 @@ def derive_draft_keywords(draft: Mapping[str, Any], table: KeywordTable) -> Skil
     followup = draft.get("followup")
     if isinstance(followup, Mapping):
         effects += _parsed_list(EffectSpec, followup.get("effects"))
-    expanded = [sub for effect in effects for sub in _walk_effect(effect)]
+    expanded = [sub for effect in effects for sub in walk_effect(effect)]
     modifiers = _parsed_list(ModifierSpec, draft.get("modifiers"))
     for rule in modifiers:
-        expanded.extend(_modifier_effects(rule))
+        expanded.extend(modifier_effects(rule))
     conditions = [c for c in (_parsed(ConditionSpec, draft.get("condition")),) if c is not None]
     conditions += [e.condition for e in expanded if e.condition is not None]
     conditions += [r.condition for r in modifiers if r.condition is not None]
     shape = _parsed(ShapeSpec, draft.get("shape"))
-    facts = _Facts(
+    facts = Facts(
         effects=tuple(expanded),
         conditions=tuple(conditions),
         trigger=_parsed(TriggerSpec, draft.get("trigger")),
@@ -219,7 +87,7 @@ def derive_draft_keywords(draft: Mapping[str, Any], table: KeywordTable) -> Skil
         weapon_req=_text(draft.get("weapon_req")),
         category=_text(draft.get("category")),
     )
-    return _derive(facts, table)
+    return derive_from_facts(facts, table)
 
 
 def _text(value: object) -> str | None:

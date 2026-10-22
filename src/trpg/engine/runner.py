@@ -38,7 +38,7 @@ __all__ = [
     "run_battle",
 ]
 
-LOG_FORMAT = "trpg-battle-log/40"
+LOG_FORMAT = "trpg-battle-log/41"
 """``/40``（Phase 3G-G1，接在 3-24a2 的 ``/39`` 之後）：裝備——戰鬥設定 ``UnitSpawn.equipment``／
 ``SpawnTemplate.equipment``（裝備快照：物品與詞條定義內嵌）、單位範本 ``equipment``、單位狀態
 ``gear``（遞減後的詞條與數值）、規則包 ``equipment``（遞減權重與硬上限）、新事件 ``gear_hp_lost``；
