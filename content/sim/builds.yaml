@@ -48,7 +48,7 @@ companions: [sim_companion_fighter, sim_companion_archer]
 # （被攻擊時十字反擊，搭配嘲諷）換下盾擊（盾擊仍在 build_wallburn 與敵方盾兵）。
 # Phase 3-23：新增 build_runeweaver（刻印流）：先刻（雷紋刻印、火痕、獵印）再讀（咒雷的條件追加傷害、符文爆裂的引爆、符文共鳴的修正）。
 # Phase 3-32a：新增兩個對照 build（普攻流 vs 技能流弓手，08 8.25；供 scripts/sim_attack_flow.py，不列入矩陣的平衡結論）——
-# build_attack_archer（普攻流弓手）：普攻精通＋連擊／分裂／高處射程的長弓，主動欄只放 3 招（空 3 格 → 普攻 +24%）；
+# build_attack_archer（普攻流弓手）：普攻精通＋連擊／分裂／高處射程的長弓，主動欄只放 3 招（空 3 格 → 普攻 +18%）；
 # build_skill_archer（技能流弓手）：同屬性同武器，主動欄放滿 6 招、普通長弓。
 builds:
   - id: build_push
@@ -597,7 +597,7 @@ builds:
   - id: build_attack_archer
     name_zh: 普攻流弓手
     reference: true
-    theme_zh: 不太靠技能、靠普攻加裝備詞條的弓手：普攻精通（主動欄每空 1 格普攻 +8%）、每第 2 次普攻多射一次、命中後分裂到相鄰敵人、高處射程 +1。長戰單體約等於技能流；範圍、爆發、控制輸技能流。
+    theme_zh: 不太靠技能、靠普攻加裝備詞條的弓手：普攻精通（主動欄每空 1 格普攻 +6%）、每第 2 次普攻多射一次、命中後分裂到相鄰敵人、高處射程 +1。長戰單體約等於技能流；範圍、爆發、控制輸技能流。
     hero:
       id: build_attack_archer
       name_zh: 普攻流弓手
@@ -615,7 +615,7 @@ builds:
   - id: build_skill_archer
     name_zh: 技能流弓手
     reference: true
-    theme_zh: 與普攻流弓手同屬性、同武器的對照組：主動技能欄放滿 6 招（穿透、居高、狙擊、監視、破甲箭、定點射擊），搭配穿木者；普通長弓。
+    theme_zh: 與普攻流弓手同屬性、同武器的對照組（Phase 3-32c 改成實際技能流配置）：2 招範圍技（穿透射擊、震雷掌）、1 招控制（捕獸夾，tier 2：同大類技能中唯一能用弓的控制技）、1 招單體爆發（遠距狙擊）；普通長弓。
     hero:
       id: build_skill_archer
       name_zh: 技能流弓手
@@ -626,6 +626,6 @@ builds:
       weapon: bow
       tags: [hero, sim]
       max_mana: 24
-      skills: [skill_piercing_shot, skill_high_ground_shot, skill_sniper_shot, skill_overwatch, skill_armor_piercing_arrow, skill_pinpoint_shot, skill_timber_piercer]
+      skills: [skill_piercing_shot, skill_thunder_clap, skill_bear_trap, skill_sniper_shot]
       equipment:
         main_hand: item_test_bow
