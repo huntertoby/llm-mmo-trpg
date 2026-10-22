@@ -17,8 +17,8 @@ export function AttributeAllocator({ base, points, alloc, onChange, disabled = f
   const left = points - allocationTotal(alloc);
   return (
     <div className="run-alloc">
-      <div className="section-title">
-        屬性配點
+      <div className="section-title run-alloc-title">
+        <span>屬性配點</span>
         <span className="muted small">
           剩餘 {left} / {points} 點（可全部加在同一項）
         </span>
@@ -41,11 +41,6 @@ export function AttributeAllocator({ base, points, alloc, onChange, disabled = f
                 {base[a.id] ?? 10}
                 {add > 0 && <span className="run-alloc-add"> +{add}</span>}
               </span>
-              {a.id === "con" && hpPerCon !== undefined && add > 0 && (
-                <span className="run-alloc-hp small" data-testid="con-hp-preview">
-                  最大 HP {hpDeltaText(conHpGain(alloc, hpPerCon))}
-                </span>
-              )}
               <button
                 type="button"
                 aria-label={`${a.label} 加一點`}
@@ -54,6 +49,11 @@ export function AttributeAllocator({ base, points, alloc, onChange, disabled = f
               >
                 ＋
               </button>
+              {a.id === "con" && hpPerCon !== undefined && add > 0 && (
+                <span className="run-alloc-hp small" data-testid="con-hp-preview">
+                  最大 HP {hpDeltaText(conHpGain(alloc, hpPerCon))}
+                </span>
+              )}
             </div>
           );
         })}

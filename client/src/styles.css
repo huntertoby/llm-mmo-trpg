@@ -1458,26 +1458,34 @@ button.selected {
   color: var(--accent);
 }
 
+.run-alloc-title {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  gap: 4px 12px;
+}
+
 .run-alloc-grid {
   display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
+  grid-template-columns: repeat(auto-fill, minmax(220px, 1fr));
   gap: 6px 16px;
   margin: 6px 0;
 }
 
 .run-alloc-row {
-  display: flex;
+  display: grid;
+  grid-template-columns: 3em 32px minmax(56px, 1fr) 32px;
   align-items: center;
   gap: 8px;
 }
 
 .run-alloc-name {
-  width: 40px;
+  white-space: nowrap;
 }
 
 .run-alloc-value {
-  min-width: 56px;
   text-align: center;
+  white-space: nowrap;
 }
 
 .run-alloc-add {
@@ -1486,6 +1494,7 @@ button.selected {
 }
 
 .run-alloc-hp {
+  grid-column: 2 / -1;
   color: #7ddc9a;
   white-space: nowrap;
 }

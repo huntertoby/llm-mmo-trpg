@@ -43,10 +43,13 @@ from trpg.engine.runner import (
 )
 from trpg.engine.setup import BattleSetup, BattleSetupError, build_setup
 from trpg.engine.state import BattleState, PendingResolution, state_from_json
+from trpg.roguelite.errors import ChoiceError
+from trpg.roguelite.progress import hero_spawn
+from trpg.roguelite.start import new_dev_run, new_keyword_run
 from trpg.shared.errors import IllegalActionError, TrpgError
 from trpg.shared.types import Team, UnitId
 from trpg.sim.commanders import build_commanded_ai
-from trpg.sim.lineup import UnknownBuildError, build_allies, default_lineup
+from trpg.sim.lineup import TEAM_SIZE, UnknownBuildError, build_allies, default_lineup
 
 __all__ = [
     "AutoAdvanceLimitError",
@@ -372,14 +375,39 @@ class SessionStore:
         )
         if request.map_id not in maps:
             raise InvalidRequestError(f"未知的地圖：{request.map_id}（可用：{', '.join(maps)}）")
+        enemies = self._enemies(request)
+        if request.hero_build is None:
+            return self._start_setup(request, enemies)
         fill = request.ally_builds is None
         builds = (request.hero_build, *(request.ally_builds or ()))
         try:
             library, allies = build_allies(self.library, builds, fill=fill)
         except UnknownBuildError as exc:
             raise InvalidRequestError(str(exc)) from exc
-        enemies = self._enemies(request)
         return build_setup(library, request.map_id, allies, enemies, max_rounds=request.max_rounds)
+
+    def _start_setup(self, request: CreateBattleRequest, enemies: list[str]) -> BattleSetup:
+        """單場戰鬥的新開局（Phase 3-28）：主角用一輪的開局（武器＋關鍵字或開發者起始包）、
+        標準隊友補到 3 人。"""
+        weapon, pack = request.weapon, request.dev_pack
+        if (weapon is None) == (pack is None):
+            raise InvalidRequestError("必須選 hero_build、weapon＋keywords 或 dev_pack 其中之一")
+        try:
+            if pack is not None:
+                run = new_dev_run(self.library, pack, request.seed)
+            elif weapon is not None:
+                run = new_keyword_run(self.library, weapon, request.keywords, request.seed)
+            else:  # pragma: no cover - 上面已擋
+                raise InvalidRequestError("缺少武器")
+        except ChoiceError as exc:
+            raise InvalidRequestError(str(exc)) from exc
+        companions = self.library.builds.companions[: TEAM_SIZE - 1]
+        base = build_setup(
+            self.library, request.map_id, companions, enemies, max_rounds=request.max_rounds
+        )
+        ruleset = self.library.ruleset.with_skills(run.generated_skills)
+        units = (hero_spawn(self.library, run), *base.units)
+        return base.model_copy(update={"units": units, "ruleset": ruleset})
 
     def _setup(self, request: CreateBattleRequest) -> BattleSetup:
         setup = self.base_setup(request)

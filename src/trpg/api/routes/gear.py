@@ -36,7 +36,13 @@ def post_check(body: GearCheckRequest, request: Request) -> GearCheck:
     library = store.library
     base = store.base_setup(
         CreateBattleRequest(
-            map_id=library.workshop.map, seed=0, hero_build=body.hero_build, ally_builds=()
+            map_id=library.workshop.map,
+            seed=0,
+            hero_build=body.hero_build,
+            weapon=body.weapon,
+            keywords=body.keywords,
+            dev_pack=body.dev_pack,
+            ally_builds=(),
         )
     )
     setup, problems = gear_problems(base, library, body.equipment)

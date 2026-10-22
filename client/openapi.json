@@ -2856,8 +2856,45 @@
             "title": "Seed"
           },
           "hero_build": {
-            "type": "string",
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
             "title": "Hero Build"
+          },
+          "weapon": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Weapon"
+          },
+          "keywords": {
+            "items": {
+              "type": "string"
+            },
+            "type": "array",
+            "title": "Keywords",
+            "default": []
+          },
+          "dev_pack": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Dev Pack"
           },
           "ally_builds": {
             "anyOf": [
@@ -2920,8 +2957,7 @@
         "type": "object",
         "required": [
           "map_id",
-          "seed",
-          "hero_build"
+          "seed"
         ],
         "title": "CreateBattleRequest",
         "description": "建立戰鬥。``ally_builds`` 省略時與 ``trpg battle --ally-build <hero_build>`` 相同，以標準\n隊友補齊到 3 人；給了（可以是空串列）就只用 ``hero_build`` ＋ 這些 build。"
@@ -4015,8 +4051,45 @@
       "GearCheckRequest": {
         "properties": {
           "hero_build": {
-            "type": "string",
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
             "title": "Hero Build"
+          },
+          "weapon": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Weapon"
+          },
+          "keywords": {
+            "items": {
+              "type": "string"
+            },
+            "type": "array",
+            "title": "Keywords",
+            "default": []
+          },
+          "dev_pack": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Dev Pack"
           },
           "equipment": {
             "additionalProperties": {
@@ -4028,9 +4101,6 @@
         },
         "additionalProperties": false,
         "type": "object",
-        "required": [
-          "hero_build"
-        ],
         "title": "GearCheckRequest"
       },
       "GearChoice": {

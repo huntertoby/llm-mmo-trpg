@@ -67,7 +67,11 @@ class GearChoice(_ApiModel):
 
 
 class GearCheckRequest(_ApiModel):
-    hero_build: str
+    hero_build: str | None = None
+    """主角 build（開發用）；與 ``weapon``＋``keywords``／``dev_pack`` 三擇一。"""
+    weapon: str | None = None
+    keywords: tuple[str, ...] = ()
+    dev_pack: str | None = None
     equipment: dict[str, GearChoice] = Field(default_factory=dict)
 
 
