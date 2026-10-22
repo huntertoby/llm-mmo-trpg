@@ -97,3 +97,8 @@
 
 - PM 合併：`view.py`（`gear_totals` 與 `charges` 兩欄並存）、`UnitInfo.tsx`、`testFixtures.ts`、`styles.css` 兩邊保留，OpenAPI 重產。`check.py` 全過（含 G4 合併後的內容）、`pnpm build` 成功；`frozen_lake` 種子 8 `--log-json` ＋ `replay` 一致。`LOG_FORMAT` → `/42`；新動作類別 `activate_charge`；新充能 `fury`。**不穩定測試原因已查明並修好**：`Ruleset._keyword_cache` 私有屬性被 pydantic `__eq__` 比較（3-24c 第 8 項因此取消）。報告 `Phase3G-3a報告.md`。
 - 待 PM 決定：#1 AP +1 上限只約束裝備來源（技能 `grant_ap` 計入但不受限）→ 接受；#2「每回合」在持有者回合開始時清除、`per_round` 每輪清除 → 接受；#3 近戰判定 → 接受；#4 充能目標與縮放屬性 → 接受；#5 裝備與技能共用 `static_charge`（上限 3／5）→ 接受；#6 新 schema 欄位 → 接受；#7 AI 權重 → 平衡階段；#8 `activate_charge` 不計入基本動作上限 → 接受；#9 noqa：`PLR0917` 2 處（`_fire_gear`、`_score_other` 參數多）、`PLC0415` 2 處（避免循環匯入的延後匯入）→ 接受，審查時看。
+
+## 11. G5b 驗收（2026-10-22）
+
+- PM 合併（無衝突）、`check.py` 全過、`pnpm build` 成功；看過 `docs/phases/img/3G-5b-arena-equipped.png`（靶場中穿角盔、鎖甲、圓盾的主角）。新增 `render/dollGear.ts`、`render/paperdollGear.ts`；只動前端。報告 `Phase3G-5b報告.md`。美術清單 #6～#8 請美術 PM 目視複核。
+- 待 PM 決定：#1 史詩／傳說裝備小人加外光、#2 護手袖口只在指定形制時畫、#3 沒穿的欄位沿用範本、#4 雙手武器依武器 id 判斷、#5 手槍與霰彈槍沿用長槍畫風 → 接受；#6 雙匕首正面辨識度、#7 紙娃娃與圖示的鐵／鋼色差 → 請美術 PM 決定。
