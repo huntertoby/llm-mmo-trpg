@@ -114,6 +114,7 @@ from trpg.engine.ai.summon import (
     summon_gains,
     summon_template,
 )
+from trpg.engine.ai.variant import cast_form, variant_move_bonus
 from trpg.engine.ai.zone import hostile_zone_at, is_zone_skill, zone_estimate, zone_gains
 from trpg.engine.battle import legal_actions, legal_actions_with_areas
 from trpg.engine.bombs import blast_tiles
@@ -1176,7 +1177,9 @@ def effective_skill(state: BattleState, action: UseSkill) -> SkillDef:
     """動作實際結算效果的技能：``copy_skill`` 帶著 ``copy_cast`` 時是被複製的技能（Phase 3C-4b），
     其他是動作自己的技能。"""
     pick = action.copy_cast
-    return state.ruleset.skill_def(action.skill_id if pick is None else pick.skill_id)
+    if pick is not None:
+        return state.ruleset.skill_def(pick.skill_id)
+    return cast_form(state, action)  # 戰場變奏（3-25a）：目標點選出的型態
 
 
 def _rewrite_gains(
@@ -1197,7 +1200,7 @@ def _rewrite_gains(
 
     ``copy_skill`` 沒有額外收益：預覽已包含複製的技能自己的效果（:func:`effective_skill`）。
     """
-    skill = state.ruleset.skill_def(action.skill_id)
+    skill = cast_form(state, action)
     types = {e.type for e in skill.effects}
     rules = profile.rewrite
     source = skill.cost.source or 0
@@ -2009,11 +2012,12 @@ class UtilityAI:
         before = position_value(state, unit.id, w, ctx, walk=walk)
         scored: dict[int, ActionScore] = {}
         estimates: list[tuple[Fraction, int]] = []
+        bonus = self._basic.variant_position_bonus
         for index, action in enumerate(actions):
             if isinstance(action, Move):
-                estimates.append(
-                    (virtual_move_score(state, unit, action, w, before, scene=scene), index)
-                )
+                dest = (action.path[-1].x, action.path[-1].y)
+                virtual = virtual_move_score(state, unit, action, w, before, scene=scene)
+                estimates.append((virtual + variant_move_bonus(state, unit, dest, bonus), index))
             elif isinstance(action, Defend | Run | Swap | Vault | Reload):  # 不跑 preview：直接計算
                 scored[index] = ActionScore(
                     action, self._cheap_score(state, unit, w, action, scene=scene), None
@@ -2037,9 +2041,10 @@ class UtilityAI:
             move = actions[index]
             assert isinstance(move, Move)
             if is_risky_move(state, unit, move, enemies):
-                scored[index] = score_action(
-                    state, move, profile, before=before, orders=ctx, walk=walk
-                )
+                full = score_action(state, move, profile, before=before, orders=ctx, walk=walk)
+                dest = (move.path[-1].x, move.path[-1].y)
+                extra = variant_move_bonus(state, unit, dest, bonus)  # 戰場變奏（3-25a）
+                scored[index] = ActionScore(move, full.score + extra, full.preview)
             else:
                 scored[index] = ActionScore(move, estimate, None)
         return [scored[i] for i in sorted(scored)]

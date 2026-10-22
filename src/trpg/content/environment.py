@@ -903,6 +903,9 @@ class BasicActionAiRules(ContentModel):
     aim_min_attack_ap: int = Field(default=2, ge=1)
     vault_points: int = Field(default=4, ge=0)
     vault_min_saving: int = Field(default=4, ge=1)
+    variant_position_bonus: int = Field(default=3, ge=0)
+    """戰場變奏（Phase 3-25a）：移動的目的地能讓某招現在可用的技能的變奏成立（現在的位置不成立）
+    時，移動分數加這麼多（初值保守，未經模擬）。"""
     reload_points: int = Field(default=20, ge=0)
     """裝填（3-24a2，武器動作）：彈匣空時的固定分數（要大於一般走位，所以空膛就先裝填）。"""
     charge_permille: int = Field(default=400, ge=0, le=1000)
