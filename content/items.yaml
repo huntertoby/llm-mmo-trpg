@@ -254,3 +254,15 @@ items:
     legendary: true
     affixes:
       - {affix: affix_rule_bleeding_wake}
+  # --- Phase 3-32a 普攻流對照模擬用（不是掉落表；數值為初值）---
+  - id: item_sim_attack_bow
+    name_zh: 連擊長弓
+    slot_type: weapon
+    kind: bow
+    form: long
+    material: wood
+    weapon: bow
+    affixes:
+      - {affix: affix_attack_combo, value: 2}
+      - {affix: affix_attack_cleave}
+      - {affix: affix_trait_bow_high_range}

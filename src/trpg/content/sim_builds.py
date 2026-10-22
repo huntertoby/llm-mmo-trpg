@@ -32,6 +32,10 @@ class BuildDef(ContentModel):
     """白板主角（沒有任何技能，一輪中從升級長出技能）：允許空技能清單，不列入 build 矩陣與
     ``trpg run auto`` 的隨機抽選。"""
 
+    reference: bool = False
+    """對照組 build（Phase 3-32a，例如普攻流弓手 vs 技能流弓手）：只給專用的對照腳本使用，不列入
+    build 矩陣與 ``trpg run auto`` 的隨機抽選。"""
+
     @model_validator(mode="after")
     def _check(self) -> BuildDef:
         if self.hero.id != self.id:
@@ -59,8 +63,8 @@ class BuildTable(ContentModel):
         return {b.id: b for b in self.builds}
 
     def sim_builds(self) -> tuple[BuildDef, ...]:
-        """模擬用的 build（排除白板主角）。"""
-        return tuple(b for b in self.builds if not b.blank)
+        """模擬用的 build（排除白板主角與對照組）。"""
+        return tuple(b for b in self.builds if not b.blank and not b.reference)
 
     def summary(self) -> str:
         return f"{len(self.builds)} 個 build，隊友 {', '.join(self.companions)}"
