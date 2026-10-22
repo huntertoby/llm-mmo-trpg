@@ -38,8 +38,15 @@ __all__ = [
     "run_battle",
 ]
 
-LOG_FORMAT = "trpg-battle-log/43"
-"""``/43``（Phase 3-24c，接在 3G-G3a 的 ``/42`` 之後）：新條件 ``target_collided``
+LOG_FORMAT = "trpg-battle-log/44"
+"""``/44``（Phase 3G-G3b，接在 3-24c 的 ``/43`` 之後）：裝備的授予動作、授予反應與改變規則——
+授予的技能併進單位的 ``skills``（開戰時由裝備快照決定）、單位的反應規則多了裝備授予或擴充的
+規則（反應事件
+``ally_hit_in_range``、內建反應 ``redirect_damage``、反應定義 ``effect: redirect_damage``）、
+單位狀態 ``gear_round_counts`` 多了 ``extra:<反應>``（額外觸發次數）、裝備規則
+``caps.rule_affixes``、新技能 ``skill_gear_*``；裝備的規則改變查詢走 ``active_rule_change``。
+``/43`` 的紀錄無法重播。
+``/43``（Phase 3-24c，接在 3G-G3a 的 ``/42`` 之後）：新條件 ``target_collided``
 （單位的 ``collided_round``）、新原語
 ``sacrifice_summon``（召喚物消失原因 ``sacrificed``）、火器的武器技也算開火（消耗彈匣、槍聲、站定、
 距離修正）；``/42`` 的紀錄無法重播。

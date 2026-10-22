@@ -810,6 +810,10 @@ def _rarity_violations(skill: SkillDef, library: ContentLibrary) -> list[Violati
 # ---------------------------------------------------------------------------
 
 
+GEAR_TAG = "gear"
+"""裝備授予的常駐技能（Phase 3G-G3b）的標籤：不套「過弱」下限（詞條有自己的預算）。"""
+
+
 def _budget_violations(
     skill: SkillDef, library: ContentLibrary
 ) -> tuple[BudgetReport | None, list[Violation]]:
@@ -827,7 +831,7 @@ def _budget_violations(
                 f"（上限 {_percent(report.max_ratio)}，階級 {skill.tier}）",
             )
         ]
-    if report.too_weak:
+    if report.too_weak and GEAR_TAG not in skill.tags:  # 裝備授予的技能：預算算在詞條上（8.21.2.9）
         return report, [
             Violation(
                 skill.id,

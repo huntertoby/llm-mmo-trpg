@@ -43,6 +43,12 @@ from trpg.engine.events import (
     UnitDowned,
     UnitMoved,
 )
+from trpg.engine.gear_reactions import (
+    extra_uses_left,
+    reaction_available,
+    redirect_affix,
+    spend_reaction,
+)
 from trpg.engine.ids import CONCEALED
 from trpg.engine.results import Pending
 from trpg.engine.rules.combat import ForcedOutcome, attack_problem, roll_attack
@@ -53,7 +59,7 @@ from trpg.engine.rules.weapons import range_damage_permille
 from trpg.engine.skill_triggers import check_trigger_depth, holding, redirect_fired
 from trpg.engine.skills.conditions import Subject, skill_condition_met
 from trpg.engine.skills.targeting import reaction_problem, reaction_target_problem
-from trpg.engine.state import UnitState, reaction_limit
+from trpg.engine.state import UnitState
 from trpg.engine.weapon_traits import (
     apply_hit_traits,
     attack_dice,
@@ -98,7 +104,7 @@ def is_melee_attack(ctx: Ctx, attacker: UnitState) -> bool:
 
 def _usable(ctx: Ctx, unit: UnitState, rule: ReactionRule) -> ReactionDef | None:
     definition = ctx.rules.reaction_def(rule.reaction)
-    if not unit.alive or unit.reactions_used >= reaction_limit(ctx.core, unit):
+    if not unit.alive or not reaction_available(ctx.core, unit, rule.reaction):
         return None
     if skip_turn_status(ctx.rules, unit) is not None:
         return None  # 暈眩中不能執行反應
@@ -129,7 +135,7 @@ def _skill_usable(
     """反應技目前能不能施放：每輪次數、狀態與代價、目標（射程、致盲）、技能條件，最後才檢查
     觸發深度（超過上限發出 ``trigger_limit_reached``，不付代價、不計次數）。"""
     state = ctx.state
-    if unit.reactions_used >= reaction_limit(ctx.core, unit) or _unless(unit, rule):
+    if not reaction_available(ctx.core, unit, rule.reaction) or _unless(unit, rule):
         return False
     if reaction_problem(state, unit, skill) is not None:
         return False
@@ -162,6 +168,7 @@ _TRIGGER_EVENT_MATCHERS: dict[str, Callable[[EventBase, UnitState, UnitState], b
         isinstance(e, AttackRolled) and e.target_id == u.id and e.attacker_id == t.id
     ),
     "ally_targeted": lambda e, _u, t: isinstance(e, AttackRolled) and e.attacker_id == t.id,
+    "ally_hit_in_range": lambda e, _u, t: isinstance(e, AttackRolled) and e.attacker_id == t.id,
     "ally_downed": lambda e, _u, t: isinstance(e, UnitDowned) and e.unit_id == t.id,
     "enemy_enters_adjacent": lambda e, _u, t: isinstance(e, UnitMoved) and e.unit_id == t.id,
     "enemy_moves_in_range": lambda e, _u, t: isinstance(e, UnitMoved) and e.unit_id == t.id,
@@ -227,7 +234,7 @@ def _decide(
 
 
 def _use(ctx: Ctx, unit: UnitState, picked: ReactionDef | SkillDef, trigger: UnitState) -> None:
-    unit.reactions_used += 1
+    spend_reaction(ctx.core, unit, picked.id)  # 一般反應次數；用完才用裝備給的額外次數（3G-G3b）
     cost = picked.stamina_cost if isinstance(picked, ReactionDef) else 0
     unit.stamina -= cost
     ctx.emit(
@@ -363,6 +370,47 @@ def try_intercept(
     guarded = _guard_transfer(ctx, attacker, target, seq, skill_id)
     if guarded is not None:
         return guarded
+    skill_guardian = _intercept_by_skill(ctx, attacker, target, seq, skill_id)
+    if skill_guardian is not None:
+        return skill_guardian
+    return _gear_redirect(ctx, attacker, target, seq, skill_id)
+
+
+def _gear_redirect(
+    ctx: Ctx, attacker: UnitState, target: UnitState, seq: int, skill_id: str | None
+) -> UnitState | None:
+    """裝備授予的 ``redirect_damage`` 反應（Phase 3G-G3b，``affix_react_guard_ally``）：``target``
+    的友方（依單位 ID，第一個願意且能反應的）在詞條的 ``range`` 格內，且這個詞條本輪還沒用過
+    （``limit: per_round``）時，替他承受這次攻擊（同 ``intercept``：不重擲命中）。"""
+    for guardian in ctx.state.units_sorted():
+        if guardian.id == target.id or guardian.team is not target.team or not guardian.alive:
+            continue
+        affix = redirect_affix(guardian)
+        if affix is None or manhattan(guardian.xy, target.xy) > (affix.range or 1):
+            continue
+        if affix.limit == "per_round" and guardian.gear_round_counts.get(affix.id, 0) >= 1:
+            continue
+        picked = _react(ctx, guardian, ("ally_hit_in_range",), attacker, effect="redirect_damage")
+        if not isinstance(picked, ReactionDef):
+            continue
+        counts = guardian.gear_round_counts
+        counts[affix.id] = counts.get(affix.id, 0) + 1
+        ctx.emit(
+            AttackIntercepted,
+            guardian_id=guardian.id,
+            attacker_id=attacker.id,
+            target_id=target.id,
+            skill_id=skill_id,
+        )
+        redirect_fired(ctx, seq, target.id, guardian.id)
+        return guardian
+    return None
+
+
+def _intercept_by_skill(
+    ctx: Ctx, attacker: UnitState, target: UnitState, seq: int, skill_id: str | None
+) -> UnitState | None:
+    """相鄰友方用 ``intercept`` 反應技替 ``target`` 擋下（見 :func:`try_intercept`）。"""
     for guardian in ctx.state.units_sorted():
         if guardian.id == target.id or guardian.team is not target.team:
             continue
@@ -464,6 +512,8 @@ def enemy_moves_in_range_reactions(ctx: Ctx, mover: UnitState) -> None:
             continue
         perform_unit_attack(ctx, reactor, mover, primary=False)
         status_id = picked.requires_status
+        if extra_uses_left(reactor, picked.id) > 0:
+            continue  # 裝備給了額外次數（3G-G3b）：還能再觸發一次，監視狀態保留到最後一次
         if status_id is not None and reactor.alive and reactor.has_status(status_id):
             execute(
                 ctx,

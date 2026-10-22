@@ -1,0 +1,22 @@
+id: skill_gear_grapple
+schema_version: 1
+name_zh: 鉤爪
+tier: 1
+rank: 1
+rarity: rare
+kind: active
+skeleton: displace
+category: spell
+weapon_req: any
+ap_cost: 1
+scaling_attr: dex
+shape: {type: single, range: 4}
+effects:
+  - {type: pull, distance: 2}
+condition: null
+cost: {mana: 0, cooldown: 3}
+tags: [physical, pull, gear]
+narrative:
+  concept: 裝備授予的鉤爪：甩出帶鉤的細索，把 4 格內的目標拉近 2 格
+  cast_flavor: 鉤爪破空而出，扣住目標往回一扯
+provenance: {origin: builtin, owner_id: null, created_by: null, parents: [], bound: true, tradeable: false}

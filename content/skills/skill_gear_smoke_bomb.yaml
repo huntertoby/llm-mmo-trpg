@@ -1,0 +1,22 @@
+id: skill_gear_smoke_bomb
+schema_version: 1
+name_zh: 煙霧彈（裝備）
+tier: 1
+rank: 1
+rarity: rare
+kind: active
+skeleton: control
+category: spell
+weapon_req: any
+ap_cost: 1
+scaling_attr: dex
+shape: {type: square3, range: 3}
+effects:
+  - {type: create_surface, surface: smoke, duration: 2}
+condition: null
+cost: {mana: 0, cooldown: 4}
+tags: [area, utility, smoke, gear]
+narrative:
+  concept: 裝備授予的煙霧彈：3 格內一點炸開半徑 1 的白煙，2 回合後散去
+  cast_flavor: 你扯開裝備上的煙霧彈，一團濃煙在落點漫開
+provenance: {origin: builtin, owner_id: null, created_by: null, parents: [], bound: true, tradeable: false}

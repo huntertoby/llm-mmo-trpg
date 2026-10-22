@@ -17,7 +17,9 @@ from trpg.content.battle import ReactionRule
 from trpg.content.equipment import (
     AFFIX_CATEGORY_NUMBER,
     AFFIX_CATEGORY_ZH,
+    ActionAffix,
     ChargeAffix,
+    ReactionAffix,
     affix_text,
 )
 from trpg.content.maps import Objective
@@ -49,6 +51,7 @@ __all__ = [
     "BattleView",
     "ChargeView",
     "EquipmentSlotView",
+    "GearSkillView",
     "GearTotalView",
     "GrantedSkillView",
     "ObjectView",
@@ -117,6 +120,7 @@ REACTION_TRIGGER_TEXT: dict[str, str] = {
     "ally_downed": "視野內的友方倒下後",
     "enemy_enters_adjacent": "敵人進入相鄰格後",
     "enemy_moves_in_range": "敵人在射程與視線內移動一步後",
+    "ally_hit_in_range": "範圍內的友方被攻擊命中時（傷害之前）",
     "ally_targeted": "相鄰友方被敵人瞄準時（命中之前）",
 }
 """反應規則觸發事件的中文說明（``ReactionWhen.event`` → 文字）。"""
@@ -135,6 +139,9 @@ class ReactionRuleView(_ViewModel):
     stamina_cost: int
     mana_cost: int
     hp_cost_permille: int
+    gear_source_zh: str = ""
+    """來自裝備的說明（Phase 3G-G3b）：授予或擴充這條反應的物品與詞條（「物品名：詞條文字」，多條用
+    「；」分隔）；不是裝備來的為空字串。"""
 
 
 class ActivationView(_ViewModel):
@@ -158,6 +165,18 @@ class GrantedSkillView(_ViewModel):
     skill_id: str
     name_zh: str
     remaining: int
+
+
+class GearSkillView(_ViewModel):
+    """裝備授予的常駐技能（Phase 3G-G3b，第 9 類；唯讀）：技能來自哪個欄位的哪件物品與詞條。
+    技能本身也在 ``UnitView.skills`` 裡，卸下裝備（戰鬥開始前不穿那件物品）就沒有。"""
+
+    skill_id: str
+    name_zh: str
+    affix_id: str
+    slot: str
+    slot_zh: str
+    item_name_zh: str
 
 
 class AffixLineView(_ViewModel):
@@ -287,6 +306,8 @@ class UnitView(_ViewModel):
     """裝備摘要（Phase 3G-G1，唯讀；依欄位固定順序，沒有裝備時為空）。"""
     gear_totals: tuple[GearTotalView, ...] = ()
     """裝備加成的來源（Phase 3G-G4，唯讀）：實際值（遞減、截斷後）與每條詞條的貢獻。"""
+    gear_skills: tuple[GearSkillView, ...] = ()
+    """裝備授予的常駐技能（Phase 3G-G3b，唯讀；只有自己陣營的單位會列出，依欄位固定順序）。"""
     charges: tuple[ChargeView, ...] = ()
     """裝備的充能詞條（Phase 3G-G3a，唯讀；依詞條 ID，沒有時為空）：層數與啟動需求。"""
 
@@ -485,6 +506,7 @@ def _rule_view(state: BattleState, unit: UnitState, rule: ReactionRule) -> React
         stamina_cost=stamina,
         mana_cost=mana,
         hp_cost_permille=hp,
+        gear_source_zh=_reaction_gear_source(unit, rule.reaction),
     )
 
 
@@ -559,6 +581,36 @@ def _charge_views(state: BattleState, unit: UnitState) -> tuple[ChargeView, ...]
     return tuple(views)
 
 
+def _gear_skill_views(state: BattleState, unit: UnitState) -> tuple[GearSkillView, ...]:
+    """裝備授予的常駐技能（第 9 類，生效的詞條）：來源欄位與物品。"""
+    names = {item.slot: item.name_zh for item in unit.gear.items}
+    views: list[GearSkillView] = []
+    for gear in unit.gear.active_affixes("action"):
+        affix = gear.affix
+        assert isinstance(affix, ActionAffix)
+        views.append(
+            GearSkillView(
+                skill_id=affix.skill,
+                name_zh=state.ruleset.skill_def(affix.skill).name_zh,
+                affix_id=affix.id,
+                slot=gear.slot,
+                slot_zh=SLOT_ZH[gear.slot],
+                item_name_zh=names.get(gear.slot, ""),
+            )
+        )
+    return tuple(views)
+
+
+def _reaction_gear_source(unit: UnitState, reaction: str) -> str:
+    """授予或擴充 ``reaction`` 的裝備詞條（第 10 類）：「物品名：詞條文字」，多條用「；」分隔。"""
+    names = {item.slot: item.name_zh for item in unit.gear.items}
+    return "；".join(
+        f"{names.get(gear.slot, '')}：{affix_text(gear.affix, gear.value)}"
+        for gear in unit.gear.active_affixes("reaction")
+        if isinstance(gear.affix, ReactionAffix) and gear.affix.reaction == reaction
+    )
+
+
 def _unit_view(state: BattleState, unit: UnitState, team: Team) -> UnitView:
     return UnitView(
         id=unit.id,
@@ -609,6 +661,7 @@ def _unit_view(state: BattleState, unit: UnitState, team: Team) -> UnitView:
         equipment=_equipment_view(unit),
         gear_totals=_gear_totals(state, unit),
         charges=_charge_views(state, unit),
+        gear_skills=_gear_skill_views(state, unit) if unit.team is team else (),
         granted_skills=(
             tuple(
                 GrantedSkillView(

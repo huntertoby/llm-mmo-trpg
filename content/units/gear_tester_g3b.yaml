@@ -1,0 +1,20 @@
+# 裝備測試用單位（Phase 3G-G3b）：持劍戰士，穿上授予動作與授予反應的測試物品（鉤爪、煙霧彈、盾牆、
+# 遠程也能格擋、替隊友承受）。
+#   uv run trpg battle --map test_flat_6x6 --allies gear_tester_g3b,gear_tester_g3b_sentinel --enemies bandit,bandit --seed 3 --log-json <檔案>
+id: gear_tester_g3b
+name_zh: 鉤盾戰士
+attributes: {str: 16, dex: 12, con: 14, int: 10, wis: 10, wil: 10}
+max_hp: 48
+speed: 5
+armor_bonus: 4
+weapon: one_handed_sword
+resist: {physical: 100}
+element_mods: {}
+tags: [hero]
+max_mana: 20
+skills: [skill_bone_crusher, skill_whirlwind, skill_execute]
+equipment:
+  main_hand: item_test_sword
+  off_hand: item_g3b_bulwark_shield
+  body: item_g3b_guard_mail
+  hands: item_g3b_hook_gauntlets

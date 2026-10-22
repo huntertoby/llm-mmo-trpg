@@ -38,6 +38,7 @@ from trpg.content.environment import (
     check_rule,
 )
 from trpg.content.equipment import (
+    ActionAffix,
     AffixDef,
     AffixTable,
     ChargeAffix,
@@ -953,7 +954,7 @@ def _affix_reference_problems(
 
     Phase 3G-G2 起也檢查：技能強化的關鍵字 id（對照推導表）、武器特性強化限定的武器與參數。
     Phase 3G-G3a 起也檢查：觸發與充能的時機（對象要有「另一方」）、效果原語、充能的層數。
-    不檢查（G3b 才加入）：授予動作的技能。
+    Phase 3G-G3b 起也檢查：授予動作的技能（存在、主動技）、授予反應的反應與事件。
     """
     statuses = {s.id for s in ruleset.statuses.statuses}
     refs: list[tuple[str, str, set[str]]] = []
@@ -967,13 +968,19 @@ def _affix_reference_problems(
         )
     if isinstance(affix, RuleAffix):
         refs.append(("規則改變", affix.rule, {r.id for r in ruleset.rule_changes.rule_changes}))
-    if isinstance(affix, ReactionAffix) and affix.mode != "grant":
+    if isinstance(affix, ReactionAffix):
         refs.append(("反應", affix.reaction, {r.id for r in ruleset.reactions.reactions}))
+    if isinstance(affix, ActionAffix):
+        refs.append(("技能", affix.skill, set(ruleset.skills.by_id())))
     for status in _affix_statuses(affix):
         refs.append(("狀態", status, statuses))
     if isinstance(affix, KeywordAffix):
         refs.append(("關鍵字", affix.keyword, set(keyword_ids)))
     extra = _trait_problems(affix, weapons) if isinstance(affix, WeaponTraitAffix) else []
+    if isinstance(affix, ActionAffix):
+        extra += _action_problems(affix, ruleset)
+    if isinstance(affix, ReactionAffix):
+        extra += _reaction_affix_problems(affix, ruleset)
     if isinstance(affix, TriggerAffix | ChargeAffix):
         extra += _trigger_charge_problems(affix, ruleset)
     return extra + [
@@ -981,6 +988,27 @@ def _affix_reference_problems(
         for what, ref, known in refs
         if ref not in known
     ]
+
+
+def _action_problems(affix: ActionAffix, ruleset: Ruleset) -> list[str]:
+    """授予動作（G3b）：授予的必須是主動技（被動技與反應技不是「動作」）。"""
+    skill = ruleset.skills.by_id().get(affix.skill)
+    if skill is not None and skill.kind != "active":
+        return [f"詞條 {affix.id} 授予的技能 {skill.id} 必須是主動技（目前 {skill.kind}）"]
+    return []
+
+
+def _reaction_affix_problems(affix: ReactionAffix, ruleset: Ruleset) -> list[str]:
+    """授予反應（G3b）：``extend_trigger`` 的事件必須是該反應支援的事件；``grant`` 的反應必須有
+    ``range``（目前只有 ``redirect_damage``），也不能需要狀態。"""
+    definition = ruleset.reactions.by_id().get(affix.reaction)
+    if definition is None:
+        return []
+    if affix.mode == "extend_trigger" and affix.event not in definition.events:
+        return [f"詞條 {affix.id}：反應 {affix.reaction} 不支援事件 {affix.event}"]
+    if affix.mode == "grant" and (definition.effect != "redirect_damage" or affix.range is None):
+        return [f"詞條 {affix.id}：授予的反應必須是 redirect_damage 並填寫 range"]
+    return []
 
 
 def _trigger_charge_problems(affix: TriggerAffix | ChargeAffix, ruleset: Ruleset) -> list[str]:

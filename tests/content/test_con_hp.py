@@ -18,6 +18,8 @@ OLD_HP = {
     "bandit_warlord": 110,
     "gear_tester_g2": 60,  # 3G-G2 新增
     "gear_tester_g3a": 60,  # 3G-G3a 新增
+    "gear_tester_g3b": 60,  # 3G-G3b 新增
+    "gear_tester_g3b_sentinel": 46,  # 3G-G3b 新增
     "gear_tester": 60,  # 3G-G1 新增（遷移之後）：範本的 HP，不含裝備加成
     "build:build_assassin": 50,
     "build:build_banisher": 40,

@@ -71,6 +71,8 @@ def _equipped() -> set[str]:
     ids = {s for b in lib.builds.builds for s in b.hero.skills}
     ids |= {s for unit in lib.units.values() for s in unit.skills}
     ids |= _POOL_ONLY
+    # 3G-G3b：裝備的授予動作詞條授予的常駐技能也算被裝備
+    ids |= {a.skill for a in lib.affixes.values() if a.category == "action"}
     # 3D-8c：裝備的 grant_skill 技能暫時給出的技能（不佔欄位）也算被裝備
     ids |= {
         e.skill

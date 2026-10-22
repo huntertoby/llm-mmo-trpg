@@ -188,3 +188,69 @@ items:
     material: copper
     affixes:
       - {affix: affix_trig_kill_ap}
+  # --- Phase 3G-G3b：授予動作（第 9 類）、授予反應（第 10 類）、改變規則（第 11 類，傳說）---
+  - id: item_g3b_hook_gauntlets
+    name_zh: 鉤爪護手
+    slot_type: hands
+    kind: gauntlets
+    form: plate
+    material: steel
+    affixes:
+      - {affix: affix_act_grapple}
+      - {affix: affix_act_smoke}
+  - id: item_g3b_bulwark_shield
+    name_zh: 壁壘塔盾
+    slot_type: offhand
+    kind: kite_shield
+    form: tower
+    material: steel
+    tags: [shield]
+    affixes:
+      - {affix: affix_act_shield_wall}
+      - {affix: affix_react_ranged_block}
+  - id: item_g3b_guard_mail
+    name_zh: 護衛鎖甲
+    slot_type: body
+    kind: mail
+    form: chain
+    material: iron
+    affixes:
+      - {affix: affix_react_guard_ally}
+  - id: item_g3b_sniper_helm
+    name_zh: 哨兵頭盔
+    slot_type: head
+    kind: helmet
+    form: iron
+    material: steel
+    affixes:
+      - {affix: affix_react_double_overwatch}
+  - id: item_g3b_legend_ember
+    name_zh: 慈焰項鍊
+    slot_type: neck
+    kind: pendant
+    form: pendant
+    material: gold
+    rarity: legendary
+    legendary: true
+    affixes:
+      - {affix: affix_rule_fire_mends}
+  - id: item_g3b_legend_titan
+    name_zh: 移山項鍊
+    slot_type: neck
+    kind: pendant
+    form: pendant
+    material: gold
+    rarity: legendary
+    legendary: true
+    affixes:
+      - {affix: affix_rule_move_any_object}
+  - id: item_g3b_legend_wake
+    name_zh: 血痕項鍊
+    slot_type: neck
+    kind: pendant
+    form: tag
+    material: gold
+    rarity: legendary
+    legendary: true
+    affixes:
+      - {affix: affix_rule_bleeding_wake}

@@ -4131,6 +4131,46 @@
         ],
         "title": "GearItemLine"
       },
+      "GearSkillView": {
+        "properties": {
+          "skill_id": {
+            "type": "string",
+            "title": "Skill Id"
+          },
+          "name_zh": {
+            "type": "string",
+            "title": "Name Zh"
+          },
+          "affix_id": {
+            "type": "string",
+            "title": "Affix Id"
+          },
+          "slot": {
+            "type": "string",
+            "title": "Slot"
+          },
+          "slot_zh": {
+            "type": "string",
+            "title": "Slot Zh"
+          },
+          "item_name_zh": {
+            "type": "string",
+            "title": "Item Name Zh"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "skill_id",
+          "name_zh",
+          "affix_id",
+          "slot",
+          "slot_zh",
+          "item_name_zh"
+        ],
+        "title": "GearSkillView",
+        "description": "裝備授予的常駐技能（Phase 3G-G3b，第 9 類；唯讀）：技能來自哪個欄位的哪件物品與詞條。\n技能本身也在 ``UnitView.skills`` 裡，卸下裝備（戰鬥開始前不穿那件物品）就沒有。"
+      },
       "GearSlotInfo": {
         "properties": {
           "slot": {
@@ -6358,6 +6398,11 @@
           "hp_cost_permille": {
             "type": "integer",
             "title": "Hp Cost Permille"
+          },
+          "gear_source_zh": {
+            "type": "string",
+            "title": "Gear Source Zh",
+            "default": ""
           }
         },
         "additionalProperties": false,
@@ -8586,6 +8631,14 @@
             },
             "type": "array",
             "title": "Gear Totals",
+            "default": []
+          },
+          "gear_skills": {
+            "items": {
+              "$ref": "#/components/schemas/GearSkillView"
+            },
+            "type": "array",
+            "title": "Gear Skills",
             "default": []
           },
           "charges": {

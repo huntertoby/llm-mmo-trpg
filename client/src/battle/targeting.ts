@@ -3,6 +3,7 @@ import type { Action, BattleView, ChargeView, Direction, InteractOption, Pending
 import { buildComposite, compositePrompt, firstKeyAt, firstPos, secondAt, secondTiles, soleCenter, type CompositeSet } from "./composite";
 import { posKey, samePos } from "./geometry";
 import { activeReason } from "./activations";
+import { gearSkillSource } from "./gearSkills";
 import { grantedRemaining } from "./granted";
 import { objectStyle } from "./glossary";
 
@@ -201,6 +202,8 @@ export interface SkillButton {
   disabledReason: string | null;
   /** 暫時獲得的技能（Phase 3D-8c）：剩餘輪數；裝備的技能為 `null`。 */
   grantedRemaining?: number | null;
+  /** 裝備授予的技能（Phase 3G-G3b）：「來自裝備」的說明（物品名）；不是裝備來的為 `null`。 */
+  gearSource?: string | null;
   /** 效果原語的代碼（Phase 3D-8d；分辨一般瞬步與傳送他人）；卡片還沒取得時為空。 */
   effectIds?: readonly string[];
   /** 複合技能（位移 → 動作，Phase 3F-3b）：有第二段。 */
@@ -238,6 +241,7 @@ export function skillButtons(hero: UnitView, legal: readonly Action[], cards: Sk
       actions,
       disabledReason,
       grantedRemaining: grantedRemaining(hero, skillId),
+      gearSource: gearSkillSource(hero, skillId),
       effectIds: card?.effect_ids ?? [],
       // 只有「位移 → 動作」用兩段選取（Phase 3F-3b）；其他種類（3F-4a／4b）照第一段選取，
       // 第二段在結算時暫停詢問或自動結算（延遲段：之後才釋放）

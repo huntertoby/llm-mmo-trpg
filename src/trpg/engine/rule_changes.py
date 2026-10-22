@@ -16,7 +16,7 @@ from __future__ import annotations
 
 from trpg.content.rule_changes import ON_DOWNED_SPAWN, PASS_THROUGH_APPLY
 from trpg.content.skills import EffectSpec
-from trpg.engine.activations import active_rule_change
+from trpg.engine.activations import active_rule_change, has_rule_source
 from trpg.engine.context import Ctx
 from trpg.engine.events import EventBase, RuleChangeTriggered
 from trpg.engine.lifecycle import dismiss_summon
@@ -32,7 +32,7 @@ __all__ = ["expire_orphan_summons", "pass_through", "spawn_on_downed"]
 def pass_through(ctx: Ctx, unit: UnitState, touched: set[UnitId]) -> None:
     """``unit`` 步行踏進一格之後：生效中的 ``pass_through_apply`` 對相鄰、這次移動還沒碰過的敵人
     （依 ID）施加狀態。``touched`` 由呼叫端在整個移動動作中共用。"""
-    if not unit.activations or not unit.alive:
+    if not has_rule_source(unit) or not unit.alive:
         return
     state = ctx.state
     change = active_rule_change(state, unit, PASS_THROUGH_APPLY)
