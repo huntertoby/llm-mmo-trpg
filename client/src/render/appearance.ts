@@ -54,13 +54,13 @@ export const KNOWN_KINDS: Readonly<Record<GearSlot, readonly string[]>> = {
 export const MATERIAL: Readonly<Record<string, readonly [string, string]>> = {
   cloth: ["#8a8f99", "#5d6168"],
   leather: ["#8a5a32", "#5e3b1f"],
-  iron: ["#8d969f", "#5a6169"],
-  steel: ["#c3ccd6", "#7d8794"],
+  iron: ["#6e757d", "#474c52"],
+  steel: ["#a9b6c6", "#6d7a8a"],
   gold: ["#e8bb48", "#9c7420"],
   wood: ["#a06a36", "#6a4420"],
   bone: ["#e9e3cf", "#a8a08a"],
   // Phase 3G-G5b：裝備外觀新增的材質（色票同 artPalette 的 GEAR_MATERIAL）；原有 7 種不動，舊單位畫面不變
-  copper: ["#c27a48", "#7e4a28"],
+  copper: ["#b06a3c", "#6e3e20"],
   silver: ["#e8edf2", "#a8b0ba"],
   crystal: ["#b8a8ff", "#7a68c8"],
 };
@@ -263,7 +263,7 @@ export function resolveDoll(input: DollInput): DollSpec {
   const mainKnown = known("main_hand", main);
   if (mainKnown !== undefined) gear.main_hand = mainKnown;
   let twoHanded = weapon.twoHanded;
-  let rarity = app.rarity;
+  const rarity = app.rarity; // 外光只來自範本（頭目記號）；裝備稀有度不影響小人
   if (input.equipment !== undefined && input.equipment.length > 0) {
     const worn = dollGear(input.equipment);
     for (const slot of ["head", "body", "hands", "feet", "main_hand", "off_hand"] as const) {
@@ -274,7 +274,6 @@ export function resolveDoll(input: DollInput): DollSpec {
     // 雙手武器：優先看武器資料（外觀表），沒有對照的新武器才依造型判斷
     if (worn.gear.main_hand !== undefined) twoHanded = WEAPON_LOOKS[input.weaponId ?? ""]?.twoHanded ?? isTwoHandedPart(worn.gear.main_hand);
     if (worn.paired) twoHanded = false; // 成對武器：副手格已經是第二把武器
-    if (worn.rarity !== undefined && (rarity === undefined || worn.rarity === "legendary")) rarity = worn.rarity;
   }
   if (twoHanded) delete gear.off_hand; // 雙手武器副手留空
   return { look: app.look, gear, ...(rarity !== undefined ? { rarity } : {}) };
