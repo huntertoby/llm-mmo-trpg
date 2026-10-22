@@ -97,3 +97,8 @@ R4 拆 `skills.py`、R6 `LOG_FORMAT` 版本策略（Phase 4 大量新增原語�
 - PM 合併（無衝突）；前端 typecheck、vitest 762、`pnpm build` 全過（只動 `client/`）。共用 `usePopupMenu`（Esc、點外面、同時一張），`.more-list`、`.top-popup` 改用；浮動卡與格子資訊卡處理 Esc 後 `stopPropagation`（第一次 Esc 只關卡片、第二次才取消瞄準）；`.decision-card` 最大高度可捲；刪除 `.modal-backdrop`、`.fallback-list` 死碼；藤蔓底影改無外框、透明度 0.35。**發現**：vitest 不處理 CSS，`styles.css?raw` 在測試裡是空字串，原本的 CSS 規則一直空過 → 改讀真檔並加長度守門；規則補 `absolute`＋`z-index ≥ 20` 白名單、`.decision-card` max-height、`role=tooltip` 只在共用元件、掃描擴到 `.ts`（PM 抽查其他 `?raw` 都是讀 YAML，正常）。報告 `Phase3E-2d報告.md`。
 - 待 PM 決定：#1 截圖無法存檔、詢問視窗以注入假卡驗證、藤蔓底影未目視 → 接受（使用者試玩時順帶看）；#2 頂端面板開著時 Esc 只關面板、#3 點外面關面板的同一下仍送到棋盤、#4 選單與滑過的浮動卡可並存、#5 `.resize-handle` 列為版面例外 → 接受。
 
+### 3.7 3E-2b 驗收（2026-10-23）
+
+- PM 合併（無衝突）；`check.py --full` 全過（4 分 32 秒）；`oil_depot` 種子 58 `--log-json` ＋ `replay` 一致。**純重構、行為不變**：既有測試未改全過（含 CLI 快照）；實作者比對 875822c 與 HEAD 的 `sim maps`（4 種子）、`sim skills --demo`（434 場）JSON 逐位元組相同；`LOG_FORMAT` 維持 `/57`。`interpreter.py` 2464 → 約 620 行（只留施放入口）；施放流程 `skills/cast.py`（`Cast`、`TriggeredCast`、`GearCast`）；48 個原語 handler 在 `skills/primitives/*.py`（7 模組），未登錄的原語丟 `KeyError`；`trpg/primitive_coverage.py` 載入時檢查每個原語在解譯器、預算、AI 估值、敘事、預覽都有對應（CLI 與 API `create_app` 呼叫）；預算與敘事的預設分支改明確項目。`PLC0415` 24 → 14。報告 `Phase3E-2b報告.md`（含 **Phase 4 新增原語要改哪幾處** 清單）。
+- 待 PM 決定：#1 AI 估值與預覽的對應項是宣告表（只確保有項目）、#2 直接呼叫 `load_library()` 不檢查（靠測試）、#4 只檢查缺項、#5 拆檔一個 commit、#6 `Cast` 輔助方法改公開 → 接受；#3 剩下 11 個引擎內延遲匯入 → 3E-3（R7 剩餘）。
+
