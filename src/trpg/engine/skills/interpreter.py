@@ -152,6 +152,7 @@ from trpg.engine.rules.movement import is_deadly
 from trpg.engine.rules.statuses import is_rooted, skip_turn_status
 from trpg.engine.rules.weapons import range_damage_permille
 from trpg.engine.runes import own_runes
+from trpg.engine.skill_levels import level_multiplier
 from trpg.engine.skill_triggers import collect_cast, collect_move, holding
 from trpg.engine.skills.charge import aside_direction
 from trpg.engine.skills.conditions import Subject, condition_met
@@ -1615,6 +1616,7 @@ class _Cast:
                     source_id=caster.id,
                     dice=spec.dice,
                     scaled_permille=self._spell_scaled(),
+                    multiplier_permille=self._level_permille(),
                 )
             ]
         if spec.type == "shield":
@@ -1624,6 +1626,7 @@ class _Cast:
                     source_id=caster.id,
                     dice=spec.dice,
                     scaled_permille=self._spell_scaled(),
+                    multiplier_permille=self._level_permille(),
                 )
             ]
         return self._status_effects(spec, target)
@@ -1901,11 +1904,16 @@ class _Cast:
             if u.team is caster.team
         ]
 
+    def _level_permille(self) -> int:
+        """技能等級的效果倍率（‰；Phase 3-26a，傷害由 ``damage_parameters`` 處理）。"""
+        return level_multiplier(self.ctx.rules, self.caster, self.skill)
+
     def _heal_multiplier(self) -> int:
-        """施放者的治療量倍率（‰；修正規則 ``heal_permille``，Phase 3-24b1）。"""
-        if not self.modified:
-            return PERMILLE
-        return modifiers.heal_permille(self.ctx.state, self.caster, self.use)
+        """施放者的治療量倍率（‰；修正規則 ``heal_permille``，3-24b1；再乘技能等級的倍率）。"""
+        base = PERMILLE
+        if self.modified:
+            base = modifiers.heal_permille(self.ctx.state, self.caster, self.use)
+        return base * self._level_permille() // PERMILLE
 
     def heal(self, effect: ResolvedEffect, spec: EffectSpec) -> list[EffectBase]:
         scaled = self._spell_scaled()
@@ -1923,12 +1931,14 @@ class _Cast:
 
     def shield(self, effect: ResolvedEffect, spec: EffectSpec) -> list[EffectBase]:
         scaled = self._spell_scaled()
+        multiplier = self._level_permille()
         return [
             ShieldEffect(
                 target_id=unit.id,
                 source_id=self.caster.id,
                 dice=spec.dice,
                 scaled_permille=scaled,
+                multiplier_permille=multiplier,
             )
             for unit in self.targets(effect.affects, spec.condition)
         ]

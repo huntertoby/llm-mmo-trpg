@@ -36,6 +36,7 @@ from trpg.engine.gear_enhance import (
     gear_keyword_damage_permille,
     gear_status_duration,
 )
+from trpg.engine.skill_levels import grow_shape, leveled_skill
 from trpg.engine.skills.conditions import Subject, condition_met
 from trpg.engine.state import BattleState, UnitState
 from trpg.shared.types import Element
@@ -341,9 +342,6 @@ def skill_is_fiery(state: BattleState, unit: UnitState, skill: SkillDef) -> bool
 # 技能變形（Phase 3D-3）：範圍 +1、形狀轉換、施放者也算在內
 # ---------------------------------------------------------------------------
 
-_GROWABLE = ("size", "radius")
-"""``area_delta`` 能加 1 的形狀參數（``cross``、``square3`` 只有 ``range``，大小固定）。"""
-
 
 def acting_skill(state: BattleState, unit: UnitState, skill_id: str) -> SkillDef:
     """``unit`` 施放 ``skill_id`` 時實際使用的技能（變形後；:func:`shaped_skill`）。"""
@@ -360,6 +358,7 @@ def shaped_skill(state: BattleState, unit: UnitState, skill: SkillDef) -> SkillD
     順序：先依技能 ID、規則索引依序套用 ``shape_to``（每條至多轉一次，可以接續轉，例如
     單體 → 直線 → 錐形），再把每條 ``area_delta`` 的 +1 加上去，最後看 ``allow_self_target``。
     """
+    skill = leveled_skill(state.ruleset, unit, skill)  # 技能等級的 5 級小特性（Phase 3-26a）
     if skill.kind != "active" or not (state.ruleset.has_modifier(unit.skills) or unit.gear.affixes):
         return skill
     if skill.followup is not None:  # 複合技能（Phase 3F-3a）的兩段形狀不變形（保守做法）
@@ -427,12 +426,7 @@ def _convert(
 
 def _grow(state: BattleState, shape: ShapeSpec, delta: int) -> ShapeSpec:
     """``shape`` 的第一個可增加的大小參數（``size``、``radius``）加 ``delta``（不超過最大值）。"""
-    params = state.ruleset.shape_def(shape.type).params
-    for name in _GROWABLE:
-        value = getattr(shape, name)
-        if name in params and isinstance(value, int):
-            return shape.model_copy(update={name: min(value + delta, params[name].max)})
-    return shape
+    return grow_shape(state.ruleset, shape, delta)
 
 
 def _helps_allies(state: BattleState, skill: SkillDef) -> bool:

@@ -139,7 +139,7 @@ def test_equip_limits_are_six_three_one() -> None:
     assert equip_problems(lib, reactions[:2])
 
 
-def test_replaced_generated_skills_are_dropped() -> None:
+def test_replaced_generated_skills_go_to_the_bench() -> None:
     lib = library()
     run, offer, index = _composed_offer(_with_free_slots(new_run(lib, "build_fire", 2)))
     first = take_candidate(lib, run, offer, index, None)
@@ -153,6 +153,9 @@ def test_replaced_generated_skills_are_dropped() -> None:
         ]
         if picks:
             second = take_candidate(lib, first, second_offer, picks[0], gen.id)
-            assert [s.id for s in second.generated_skills] == [second_offer.candidates[picks[0]].id]
+            # 3-26a：被換掉的生成技能進備用（定義保留，等級跟著走），不再裝備
+            new_id = second_offer.candidates[picks[0]].id
+            assert sorted(s.id for s in second.generated_skills) == sorted([new_id, gen.id])
+            assert second.bench == (gen.id,) and gen.id not in second.hero.skills
             return
     raise AssertionError("找不到可替換的生成技能候選")

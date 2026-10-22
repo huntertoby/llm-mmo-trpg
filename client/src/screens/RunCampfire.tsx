@@ -1,8 +1,10 @@
 // 營火畫面：HP、法力已回滿（源力 +1）；可重骰一組新的技能候選（中段與 Boss 前各一次），選一張或放棄後離開。
+// Phase 3-26a：也可以分配技能點、免費重配點數與換裝。
 import { useState } from "react";
 import type { RunChoice, RunResponse } from "../api/types";
 import { offerGroupKey, pickChoice, pickReady, type RunView } from "../run/flow";
 import { OfferPicker } from "../run/OfferPicker";
+import { SkillPointsSection } from "../run/SkillPointsSection";
 
 type Props = {
   run: RunResponse;
@@ -33,6 +35,7 @@ export function RunCampfire({ run, view, busy, onChoose }: Props) {
             : "這處營火的重骰已用完。"
           : "選一張新技能，或放棄後離開營火。"}
       </p>
+      <SkillPointsSection hero={run.hero} busy={busy} onChoose={onChoose} campfire />
       {offer !== null && (
         <>
           <OfferPicker

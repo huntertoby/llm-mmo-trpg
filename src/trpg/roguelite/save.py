@@ -2,10 +2,11 @@
 
 存檔是一個 JSON 物件：
 
-- ``format``：:data:`SAVE_FORMAT`（``trpg-run/3``）。讀檔時必須相同，否則拒絕。
+- ``format``：:data:`SAVE_FORMAT`（``trpg-run/4``）。讀檔時必須相同，否則拒絕。
   Phase 3-22 起每場戰鬥的安排多了勝利條件 ``objective``（``/2``）；Phase 3-24b2 起開局改成「武器 ＋
   關鍵字」（``run.start``，``build_id`` 可為空）、多了行為紀錄 ``run.behavior`` 與候選標示
-  ``offer.tags``（``/3``）。舊存檔明確拒絕並提示開新一輪。
+  ``offer.tags``（``/3``）；Phase 3-26a 起多了技能成長 ``run.skill_points``、``run.skill_levels``、
+  ``run.bench``（``/4``）。舊存檔明確拒絕並提示開新一輪。
 - ``engine``：寫入時引擎的戰鬥紀錄格式（``LOG_FORMAT``）。只有 **戰鬥進行中** 的存檔需要重播；
   此時版本不同就拒絕（舊版引擎的步驟不保證能在新版重播出同樣結果）。戰鬥之間的存檔不受影響。
 - ``run_id``：一輪的 ID（檔名 ``run-<run_id>.json``）。
@@ -37,6 +38,7 @@ from trpg.roguelite.errors import SaveFormatError
 from trpg.roguelite.state import BattleNode, RunState
 
 __all__ = [
+    "OLD_FORMATS",
     "RUN_ID_PATTERN",
     "SAVE_DIR_ENV",
     "SAVE_FORMAT",
@@ -51,7 +53,9 @@ __all__ = [
     "write_save",
 ]
 
-SAVE_FORMAT = "trpg-run/3"
+SAVE_FORMAT = "trpg-run/4"
+OLD_FORMATS = ("trpg-run/1", "trpg-run/2", "trpg-run/3")
+"""已知的舊存檔格式（讀檔時提示開新一輪）。"""
 RUN_ID_PATTERN = r"^[A-Za-z0-9_-]{1,64}$"
 SAVE_DIR_ENV = "TRPG_SAVE_DIR"
 """可覆寫存檔資料夾的環境變數。"""
@@ -102,7 +106,7 @@ def loads_save(text: str) -> RunSave:
         raise SaveFormatError(f"存檔不是有效的 JSON：{exc}") from exc
     found = raw.get("format") if isinstance(raw, dict) else None
     if found != SAVE_FORMAT:
-        hint = "（舊版存檔無法讀取，請開新一輪）" if found in ("trpg-run/1", "trpg-run/2") else ""
+        hint = "（舊版存檔無法讀取，請開新一輪）" if found in OLD_FORMATS else ""
         raise SaveFormatError(f"存檔格式必須是 {SAVE_FORMAT}，收到 {found!r}{hint}")
     try:
         save = RunSave.model_validate(raw)

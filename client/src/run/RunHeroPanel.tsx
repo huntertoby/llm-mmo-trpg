@@ -2,6 +2,7 @@
 import type { RunHero } from "../api/types";
 import { SkillCardView } from "../ui/SkillCardView";
 import { WeaponIcon } from "../ui/WeaponIcon";
+import { levelBadge, levelOf } from "./skillGrowth";
 import { ATTRIBUTES, conHpBonus, hpDeltaText, SLOT_LABELS, SLOT_LIMITS, slotUsage, type SlotKind } from "./flow";
 
 function Bar({ label, value, max, kind }: { label: string; value: number; max: number; kind: string }) {
@@ -71,12 +72,18 @@ export function RunHeroPanel({ hero }: { hero: RunHero }) {
           {kinds.map((k) => `${SLOT_LABELS[k]} ${usage[k]}/${SLOT_LIMITS[k]}`).join("・")}
         </span>
       </div>
+      {(hero.skill_points ?? 0) > 0 && (
+        <div className="small run-skill-points-hint" data-testid="run-skill-points">
+          未花的技能點：<b>{hero.skill_points}</b>
+        </div>
+      )}
       <ul className="run-skill-list">
         {hero.skills.map((s) => (
           <li key={s.id}>
             <details>
               <summary>
                 {s.name_zh}{" "}
+                {s.growth != null && <b className="skill-level-badge">{levelBadge(levelOf(s))}</b>}{" "}
                 <span className="muted small">
                   {s.kind}・{s.rarity}
                 </span>

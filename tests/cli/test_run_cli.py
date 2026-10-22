@@ -30,11 +30,11 @@ def test_run_new_writes_a_save_and_show_reads_it(
     assert "力量 13" in out and "體質 11" in out
     assert "第 6 場 Boss" in out
     raw = json.loads(saves[0].read_text(encoding="utf-8"))
-    assert raw["format"] == "trpg-run/3"
+    assert raw["format"] == "trpg-run/4"
     assert raw["run"]["seed"] == 4
     code, shown, _ = _run(["run", "show", str(saves[0])], capsys)
     assert code == 0
-    assert "trpg-run/3" in shown and "build_push" in shown and "目前：戰鬥" in shown
+    assert "trpg-run/4" in shown and "build_push" in shown and "目前：戰鬥" in shown
 
 
 @pytest.mark.parametrize(
@@ -148,6 +148,17 @@ def test_run_auto_without_a_start_draws_weapon_and_keywords(
     assert code == 0
     first = out.splitlines()[0]
     assert first.startswith(f"一輪：種子 {seed}，") and "＋" in first
+    assert out.splitlines()[-1].startswith("結果：")
+
+
+@pytest.mark.parametrize("seed", [1, 2])
+def test_run_auto_spends_skill_points_and_shows_levels(
+    seed: int, capsys: pytest.CaptureFixture[str]
+) -> None:
+    """Phase 3-26a：``trpg run auto`` 升級時花技能點，進度與存檔列出技能等級。"""
+    code, out, _ = _run(["run", "auto", "--seed", str(seed)], capsys)
+    assert code == 0
+    assert "技能點升級：" in out and " Lv." in out
     assert out.splitlines()[-1].startswith("結果：")
 
 

@@ -38,8 +38,10 @@ __all__ = [
     "run_battle",
 ]
 
-LOG_FORMAT = "trpg-battle-log/44"
-"""``/44``（Phase 3G-G3b，接在 3-24c 的 ``/43`` 之後）：裝備的授予動作、授予反應與改變規則——
+LOG_FORMAT = "trpg-battle-log/45"
+"""``/45``（Phase 3-26a，接在 3G-G3b 的 ``/44`` 之後）：單位狀態多了技能等級 ``skill_levels``、
+技能等級的效果倍率（傷害、治療、護盾）與 5 級小特性（範圍 +1／冷卻 −1）；``/44`` 的紀錄無法重播。
+``/44``（Phase 3G-G3b，接在 3-24c 的 ``/43`` 之後）：裝備的授予動作、授予反應與改變規則——
 授予的技能併進單位的 ``skills``（開戰時由裝備快照決定）、單位的反應規則多了裝備授予或擴充的
 規則（反應事件
 ``ally_hit_in_range``、內建反應 ``redirect_damage``、反應定義 ``effect: redirect_damage``）、

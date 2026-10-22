@@ -131,6 +131,9 @@ export type StartPreview = Schemas["StartPreview"];
 export type StartKeywordOption = Schemas["StartKeywordOption"];
 export type DevPack = Schemas["DevPackOut"];
 export type OfferTag = Schemas["OfferTagOut"];
+// 技能點與技能等級（Phase 3-26a）
+export type SkillLevelInfo = Schemas["SkillLevelInfo"];
+export type SkillGrowth = Schemas["SkillGrowthOut"];
 export type BattleHistory = Schemas["BattleHistory"];
 export type AttributeId = Schemas["Attribute"];
 /** `POST /api/runs/{id}/choice` 的請求（工坊另有同名的 `Choice`，所以加前綴）。 */
@@ -138,7 +141,10 @@ export type RunChoice =
   | Schemas["LevelUpChoice"]
   | Schemas["RerollChoice"]
   | Schemas["PickChoice"]
-  | Schemas["LeaveChoice"];
+  | Schemas["LeaveChoice"]
+  | Schemas["SpendChoice"]
+  | Schemas["RespecChoice"]
+  | Schemas["LoadoutChoice"];
 /** 開新一輪：`weapon` ＋ `keywords`（一般開局）或 `dev_pack`（開發者起始包）；`attributes` 省略時伺服器把開局點數全部點在武器的縮放屬性。 */
 export type CreateRunRequest = Omit<Schemas["CreateRunRequest"], "attributes"> & {
   attributes?: Partial<Record<AttributeId, number>>;

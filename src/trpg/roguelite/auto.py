@@ -2,6 +2,7 @@
 
 - 戰鬥：所有單位（含主角）由效用 AI 控制（:class:`~trpg.roguelite.battle.ActiveBattle`）。
 - 配點：全部點在主角技能最常用的縮放屬性。
+- 技能點：升級時全部花在主角裝備的第一個還沒滿級的主動技能（滿了換下一個）。
 - 升級與重骰：依序找第一個不用替換就裝得下的候選；都裝不下時，用第一個裝得下的候選換掉主角同一種
   欄位的最後一個技能；還是不行就跳過。營火一律重骰。
 
@@ -16,6 +17,7 @@ from trpg.content.library import ContentLibrary
 from trpg.content.skills import SkillDef
 from trpg.roguelite.battle import ActiveBattle
 from trpg.roguelite.errors import ChoiceError
+from trpg.roguelite.growth import level_of
 from trpg.roguelite.offers import skill_defs, take_candidate
 from trpg.roguelite.progress import apply_choice, finish_battle
 from trpg.roguelite.start import primary_attribute
@@ -32,7 +34,7 @@ from trpg.roguelite.state import (
     SkillOffer,
 )
 
-__all__ = ["AutoStop", "auto_choice", "auto_play"]
+__all__ = ["AutoStop", "auto_choice", "auto_levels", "auto_play"]
 
 type AutoStop = Callable[[RunState, ActiveBattle | None], bool]
 """停止條件：在每個節點與每個戰鬥步驟之前呼叫（``ActiveBattle`` 為進行中的戰鬥或 ``None``）。"""
@@ -67,6 +69,22 @@ def _auto_pick(
     return None, None
 
 
+def auto_levels(library: ContentLibrary, run: RunState) -> dict[str, int]:
+    """AI 代打花技能點（Phase 3-26a）：依裝備順序，把點數集中在第一個還沒滿級的主動技能。"""
+    growth = library.ruleset.skill_growth
+    points = run.skill_points
+    levels: dict[str, int] = {}
+    for skill in skill_defs(library, run, run.hero.skills):
+        if skill.kind != "active":
+            continue
+        current = level_of(run, skill.id)
+        affordable = min(growth.max_level - current, points // growth.upgrade_cost)
+        if affordable > 0:
+            levels[skill.id] = current + affordable
+            points -= affordable * growth.upgrade_cost
+    return levels
+
+
 def _battle_stop(stop: AutoStop, run: RunState) -> Callable[[ActiveBattle], bool]:
     return lambda battle: stop(run, battle)
 
@@ -78,7 +96,13 @@ def auto_choice(library: ContentLibrary, run: RunState) -> Choice:
         weapon_attr = library.weapons[run.hero.weapon].scaling_attr
         attr = primary_attribute(skill_defs(library, run, run.hero.skills), weapon_attr)
         pick, replace = _auto_pick(library, run, node.offer)
-        return LevelUpChoice(attributes={attr: node.points}, pick=pick, replace=replace)
+        after = take_candidate(library, run, node.offer, pick, replace)
+        return LevelUpChoice(
+            attributes={attr: node.points},
+            pick=pick,
+            replace=replace,
+            levels=auto_levels(library, after),
+        )
     if isinstance(node, CampfireNode):
         if node.offer is not None:
             pick, replace = _auto_pick(library, run, node.offer)

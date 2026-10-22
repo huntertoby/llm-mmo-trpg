@@ -422,7 +422,12 @@ def _shield(ctx: Ctx, effect: EffectBase) -> list[EventBase]:
     rolls: tuple[int, ...] = ()
     if effect.dice is not None:
         rolls = tuple(ctx.rng.roll(effect.dice.sides) for _ in range(effect.dice.count))
-    amount = max(0, ((sum(rolls) + effect.flat) * PERMILLE + effect.scaled_permille) // PERMILLE)
+    amount = max(
+        0,
+        ((sum(rolls) + effect.flat) * PERMILLE + effect.scaled_permille)
+        * effect.multiplier_permille
+        // (PERMILLE * PERMILLE),
+    )
     status_id = SHIELDED
     current = unit.get_status(status_id)
     total = max(amount, 0 if current is None or current.amount is None else current.amount)

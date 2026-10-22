@@ -8,8 +8,11 @@
 - 主角：目前的單位範本 ``hero``（屬性與技能清單隨升級改變；其餘欄位沿用開局時的主角）、
   等級與經驗、**目前 HP、法力、源力**（戰鬥之間不回復，0.11 G、K）。技能清單就是裝備（主動 ≤ 6、
   被動 ≤ 3、反應 ≤ 1、姿態 ≤ 1，``core.yaml`` 的 ``skill_slots``）；欄位滿時要替換或放棄。
-- ``generated_skills``：主角目前裝備的 **生成技能定義**（隨機組合器的產物不在內容庫裡；讀檔與開戰時
-  以 ``Ruleset.with_skills`` 加回規則包）。
+- 技能成長（Phase 3-26a）：``skill_points`` 未花的技能點、``skill_levels`` 技能等級、``bench``
+  備用技能（卸下的技能，等級保留）；規則在 ``content/skill_growth.yaml``，邏輯在
+  ``trpg.roguelite.growth``。
+- ``generated_skills``：主角目前裝備與備用的 **生成技能定義**（隨機組合器的產物不在內容庫裡；讀檔與
+  開戰時以 ``Ruleset.with_skills`` 加回規則包）。
 - ``plan``：開局時以種子排好的每一場（地圖、敵人、戰鬥種子）；存進存檔，所以之後改了抽選方式，
   舊存檔的下一場仍然不變。
 - ``node``：目前在等什麼（戰鬥／升級／營火／結束）；升級與重骰的候選 **連同完整技能定義**
@@ -37,13 +40,16 @@ __all__ = [
     "LeaveChoice",
     "LevelUpChoice",
     "LevelUpNode",
+    "LoadoutChoice",
     "Node",
     "OfferTag",
     "PickChoice",
     "RerollChoice",
+    "RespecChoice",
     "RunStart",
     "RunState",
     "SkillOffer",
+    "SpendChoice",
 ]
 
 
@@ -154,6 +160,8 @@ class LevelUpChoice(_Model):
     attributes: dict[Attribute, int] = Field(default_factory=dict)
     pick: int | None = None
     replace: str | None = None
+    levels: dict[str, int] = Field(default_factory=dict)
+    """選完候選之後順便花技能點（Phase 3-26a；同 ``SpendChoice.levels``，空 ＝ 先不花）。"""
 
 
 class RerollChoice(_Model):
@@ -176,8 +184,38 @@ class LeaveChoice(_Model):
     kind: Literal["leave"] = "leave"
 
 
+class SpendChoice(_Model):
+    """花技能點升級（Phase 3-26a）：``levels`` 是技能 ID → 升到的等級（只能升、不能降；每升 1 級花
+    ``skill_growth.upgrade_cost`` 點）。升級、營火與下一場戰鬥之前都可以送；不推進節點。"""
+
+    kind: Literal["spend"] = "spend"
+    levels: dict[str, int] = Field(default_factory=dict)
+
+
+class RespecChoice(_Model):
+    """營火：免費重配（Phase 3-26a）——全部技能退回 1 級，花掉的點數退回，之後再用 ``spend`` 重新
+    分配。不推進節點。"""
+
+    kind: Literal["respec"] = "respec"
+
+
+class LoadoutChoice(_Model):
+    """營火：換裝（Phase 3-26a）——``skills`` 是新的裝備清單（必須是目前裝備與備用技能的子集，符合
+    欄位上限）；沒裝上的進備用，技能等級保留。不推進節點。"""
+
+    kind: Literal["loadout"] = "loadout"
+    skills: tuple[str, ...]
+
+
 type Choice = Annotated[
-    LevelUpChoice | RerollChoice | PickChoice | LeaveChoice, Field(discriminator="kind")
+    LevelUpChoice
+    | RerollChoice
+    | PickChoice
+    | LeaveChoice
+    | SpendChoice
+    | RespecChoice
+    | LoadoutChoice,
+    Field(discriminator="kind"),
 ]
 
 
@@ -207,6 +245,14 @@ class RunState(_Model):
     history: tuple[BattleRecord, ...] = ()
     behavior: dict[str, int] = Field(default_factory=dict)
     """主角用過的動作類型 → 次數（每場戰後累加；候選產生器的行為紀錄，Phase 3-24b2）。"""
+    skill_points: int = Field(default=0, ge=0)
+    """還沒花掉的技能點（Phase 3-26a；每升 1 級 ``skill_growth.points_per_level`` 點）。"""
+    skill_levels: dict[str, int] = Field(default_factory=dict)
+    """技能等級（Phase 3-26a）：技能 ID → 等級（2～``max_level``，1 級不列）。技能點跟著技能走：
+    卸下（進備用）後等級保留。依 ID 排序存入，所以序列化確定。"""
+    bench: tuple[str, ...] = ()
+    """備用技能 ID（Phase 3-26a）：被替換或在營火卸下的技能，等級保留，可在營火換回；定義在
+    ``generated_skills``（生成技能）或內容庫。"""
     node: Node
 
     def max_hp_in(self, core: CoreRules) -> int:

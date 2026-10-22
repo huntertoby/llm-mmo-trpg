@@ -5,6 +5,7 @@ import type { BattleResponse, RunChoice, RunResponse } from "../api/types";
 import { objectiveBadge } from "../battle/objective";
 import { battleName, runView, writeCurrentRun } from "../run/flow";
 import { RunHeroPanel } from "../run/RunHeroPanel";
+import { SkillPointsSection } from "../run/SkillPointsSection";
 import { ErrorBanner } from "../ui/ErrorBanner";
 import { primeSkillCard } from "../ui/useSkillCards";
 import { BattleScreen } from "./BattleScreen";
@@ -174,6 +175,9 @@ export function RunScreen({ initial, autoResume = false, onHome, onNewRun }: Pro
                   </button>
                 </div>
               </div>
+            )}
+            {view.screen === "progress" && (run.hero.skill_points ?? 0) > 0 && (
+              <SkillPointsSection hero={run.hero} busy={busy} onChoose={choose} />
             )}
             {view.screen === "level_up" && (
               <RunLevelUp key={view.level} run={run} view={view} busy={busy} onChoose={choose} />

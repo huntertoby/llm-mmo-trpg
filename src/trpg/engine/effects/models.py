@@ -246,6 +246,8 @@ class ShieldEffect(EffectBase):
     dice: Dice | None = None
     flat: int = 0
     scaled_permille: int = 0
+    multiplier_permille: int = 1000
+    """技能等級的效果倍率（‰；Phase 3-26a）；1000 為不變，護盾量 ＝ 上式 × 倍率，無條件捨去。"""
 
     def sort_target(self) -> str:
         return self.target_id
