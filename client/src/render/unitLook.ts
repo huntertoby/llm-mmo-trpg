@@ -79,3 +79,20 @@ export function statusBadges(u: BadgeSource): StatusBadge[] {
   if (u.charge != null) out.push({ statusId: CHARGING, count: u.charge, color: HIGHLIGHT.followup, at: { x: -0.37, y: -0.2 } });
   return out;
 }
+
+// ---- 待施放的灌注技能（Phase 3-33d）----
+
+export interface InfusedBadge {
+  /** 徽章裡的字。 */
+  glyph: string;
+  /** 外框與字的顏色。 */
+  color: number;
+  /** 徽章中心（相對格子中心的比例，乘上格子大小）：左上，避開右上的剩餘輪數與左下的蓄力。 */
+  at: { x: number; y: number };
+}
+
+/** 召喚物身上有待施放的灌注技能（下一個自己的回合開始時施放）時的「灌」徽章；沒有時 `null`。 */
+export function infusedBadge(u: { infused?: boolean | undefined; downed: boolean }): InfusedBadge | null {
+  if (u.infused !== true || u.downed) return null;
+  return { glyph: "灌", color: HIGHLIGHT.followup, at: { x: -0.3, y: -0.4 } };
+}

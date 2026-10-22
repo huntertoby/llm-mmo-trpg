@@ -98,12 +98,13 @@ import { CopyDialog } from "../ui/CopyDialog";
 import { FollowupDialog } from "../ui/FollowupDialog";
 import { InfusionDialog } from "../ui/InfusionDialog";
 import { infusionChoices, withInfusion } from "../battle/infusion";
-import { SummonPanel, type CommandSession } from "../ui/SummonPanel";
+import { SummonPanel, type CommandSession, type InfuseSession } from "../ui/SummonPanel";
 import {
   commandAction,
   commandMoveTiles,
   commandTargetTiles,
   controllableSummons,
+  infusionTargetTiles,
   optionAt,
 } from "../battle/summonControl";
 import { followupMode, followupTargetOf, isFollowupPending } from "../battle/followup";
@@ -217,6 +218,8 @@ export function BattleScreen({ initial, onExit, exitLabel, runMode }: Props) {
   // 召喚物指揮（3-33c）：進行中的指揮（伺服器給的終點與目標、目前選的終點）與取得選項中的旗標
   const [command, setCommand] = useState<CommandSession | null>(null);
   const [loadingCommand, setLoadingCommand] = useState(false);
+  const [infuse, setInfuse] = useState<InfuseSession | null>(null);
+  const [loadingInfuse, setLoadingInfuse] = useState(false);
   const [panelPreview, setPanelPreview] = useState<Action | null>(null);
   /** 正在等玩家在戰場上點目標的隊友指令。 */
   const [orderPick, setOrderPick] = useState<OrderKind | null>(null);
@@ -319,6 +322,7 @@ export function BattleScreen({ initial, onExit, exitLabel, runMode }: Props) {
     setPanelPreview(null);
     setHurlPick(null);
     setCommand(null);
+    setInfuse(null);
   }, [response]);
   // 換了模式（選了別的技能或取消）就重新從第一段選物件。
   useEffect(() => {
@@ -361,6 +365,17 @@ export function BattleScreen({ initial, onExit, exitLabel, runMode }: Props) {
       };
     }
     const previewTiles = (preview?.affected_tiles ?? []).map(([x, y]): Pos => ({ x: x as number, y: y as number }));
+    if (infuse !== null) {
+      // 灌注技能（3-33d）：滑過技能時，召喚物的位置（原點）、會選的目標（紅）與施放範圍（橘）
+      const info = preview?.infusion ?? null;
+      return {
+        ...NO_HIGHLIGHTS,
+        ...common,
+        attacks: info === null ? [] : infusionTargetTiles(info, view),
+        picked: info === null ? [] : [{ x: info.origin[0] as number, y: info.origin[1] as number }],
+        preview: previewTiles,
+      };
+    }
     const overlays = previewOverlays(preview, view);
     if (mode !== null) {
       const tt = targetTiles(mode, view, hero, hurlPick);
@@ -402,6 +417,7 @@ export function BattleScreen({ initial, onExit, exitLabel, runMode }: Props) {
     orderPick,
     hurlPick,
     command,
+    infuse,
   ]);
 
   // 滑過戰鬥紀錄的一組：高亮相關單位目前所在的格子與事件指出的格子（疊在預覽範圍的橘色上）。
@@ -635,6 +651,7 @@ export function BattleScreen({ initial, onExit, exitLabel, runMode }: Props) {
     setOrderPick(null);
     setHurlPick(null);
     setCommand(null);
+    setInfuse(null);
   }, []);
 
   // ---- 召喚物操控（3-33c）-----------------------------------------------------
@@ -644,12 +661,29 @@ export function BattleScreen({ initial, onExit, exitLabel, runMode }: Props) {
       setModeKey(null);
       setOrderPick(null);
       setPanelPreview(null);
+      setInfuse(null);
       setLoadingCommand(true);
       api
         .commandOptions(battleId, summonId)
         .then((options) => setCommand({ summonId, options, dest: null }))
         .catch((e: unknown) => setError(errorText(e)))
         .finally(() => setLoadingCommand(false));
+    },
+    [battleId],
+  );
+  // 灌注技能（3-33d）：取得技能選單（不能灌注的附原因），滑過技能預覽召喚物從自己位置施放的範圍
+  const startInfuse = useCallback(
+    (summonId: string) => {
+      setModeKey(null);
+      setOrderPick(null);
+      setPanelPreview(null);
+      setCommand(null);
+      setLoadingInfuse(true);
+      api
+        .infuseOptions(battleId, summonId)
+        .then((options) => setInfuse({ summonId, options }))
+        .catch((e: unknown) => setError(errorText(e)))
+        .finally(() => setLoadingInfuse(false));
     },
     [battleId],
   );
@@ -1066,6 +1100,16 @@ export function BattleScreen({ initial, onExit, exitLabel, runMode }: Props) {
             }}
             onCommand={send}
             onPreviewAction={setPanelPreview}
+            infuse={infuse}
+            loadingInfuse={loadingInfuse}
+            onStartInfuse={startInfuse}
+            onCancelInfuse={() => {
+              setInfuse(null);
+              setPanelPreview(null);
+            }}
+            onInfuse={send}
+            infusePreview={infuse === null ? null : (preview?.infusion ?? null)}
+            cards={cards}
           />
         )}
       </div>

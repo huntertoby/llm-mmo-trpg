@@ -42,6 +42,7 @@ from trpg.engine.runner import (
     apply_step,
 )
 from trpg.engine.setup import BattleSetup, BattleSetupError, build_setup
+from trpg.engine.skill_infusion import InfuseChoice, infuse_choices
 from trpg.engine.state import BattleState, PendingResolution, state_from_json
 from trpg.engine.summon_control import CommandOption, command_options, summon_problem
 from trpg.roguelite.errors import ChoiceError
@@ -260,6 +261,12 @@ class BattleSession:
         ``IllegalActionError``。"""
         self._require("action")
         return command_options(self.state, self.hero_id, summon_id)
+
+    def infuse_options(self, summon_id: UnitId) -> tuple[str | None, tuple[InfuseChoice, ...]]:
+        """主角灌注 ``summon_id`` 時的技能選單（Phase 3-33d）：
+        ``(召喚物或 AP 的問題, 技能選項)``。"""
+        self._require("action")
+        return infuse_choices(self.state, self.state.units[self.hero_id], summon_id)
 
     def _preview_copy(self, pending: PendingResolution, pick: Action) -> Preview:
         """``copy_skill`` 暫停中（Phase 3C-6a）：``pick`` 是被複製技能的選取（``copy_options``

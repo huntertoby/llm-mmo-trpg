@@ -773,6 +773,10 @@ class SummonAiRules(ContentModel):
       低於最大 HP 的這個千分比時，召喚物改守護我（0 ＝ 不切換）；``auto_focus_boss`` 場上有 Boss
       時召喚物改集火 Boss。
     - ``infusion_points``：估值時，帶灌注的召喚物每輪多算這麼多點等值傷害（0 ＝ 不計）。
+    - 灌注技能（Phase 3-33d）：施放者 AI 評估「把技能灌注給召喚物」＝ 召喚物從自己位置施放的完整
+      預覽分數 × ``infuse_value_permille`` ‰ × 存活機率的保守估計（召喚物 HP ÷（HP ＋ 能打到牠的
+      敵人數 × ``infuse_threat_damage``））；高於其他動作的最佳分數時灌注。``infuse_value_permille``
+      為 0 時 AI 不灌注。
     """
 
     hit_permille: int = Field(default=500, ge=0, le=1000)
@@ -786,6 +790,8 @@ class SummonAiRules(ContentModel):
     auto_guard_hp_permille: int = Field(default=0, ge=0, le=1000)
     auto_focus_boss: bool = False
     infusion_points: int = Field(default=0, ge=0)
+    infuse_value_permille: int = Field(default=0, ge=0, le=2000)
+    infuse_threat_damage: int = Field(default=4, ge=0)
 
 
 class ZoneAiRules(ContentModel):

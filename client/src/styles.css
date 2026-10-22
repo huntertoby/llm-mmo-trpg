@@ -3304,3 +3304,54 @@ button.selected {
 .hint-tip-text {
   white-space: pre-line;
 }
+
+/* 灌注技能（Phase 3-33d） */
+.summon-pending {
+  color: #d9b3ff;
+}
+
+.summon-infuse {
+  margin: 4px 0;
+  padding: 4px;
+  background: rgb(150 90 220 / 14%);
+  border-radius: 4px;
+}
+
+.summon-infuse-list {
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+  margin: 4px 0;
+}
+
+.summon-infuse-row {
+  display: flex;
+  flex-direction: column;
+}
+
+.summon-infuse .infuse-skill {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  width: 100%;
+  min-height: 0;
+  padding: 3px 6px;
+  text-align: left;
+}
+
+.summon-infuse .infuse-skill.blocked {
+  opacity: 0.5;
+  filter: grayscale(0.8);
+}
+
+.summon-infuse .infuse-reason {
+  padding-left: 6px;
+}
+
+.summon-infuse-warn {
+  color: #ffb070;
+}
+
+.summon-infuse-preview {
+  color: #c8f0c0;
+}

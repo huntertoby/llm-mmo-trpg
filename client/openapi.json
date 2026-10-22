@@ -341,6 +341,9 @@
                     "$ref": "#/components/schemas/CommandSummon"
                   },
                   {
+                    "$ref": "#/components/schemas/InfuseSkill"
+                  },
+                  {
                     "$ref": "#/components/schemas/EndTurn"
                   }
                 ],
@@ -364,6 +367,7 @@
                     "set_reaction_mode": "#/components/schemas/SetReactionMode",
                     "set_summon_mode": "#/components/schemas/SetSummonMode",
                     "command_summon": "#/components/schemas/CommandSummon",
+                    "infuse_skill": "#/components/schemas/InfuseSkill",
                     "end_turn": "#/components/schemas/EndTurn"
                   }
                 },
@@ -524,6 +528,9 @@
                     "$ref": "#/components/schemas/CommandSummon"
                   },
                   {
+                    "$ref": "#/components/schemas/InfuseSkill"
+                  },
+                  {
                     "$ref": "#/components/schemas/EndTurn"
                   }
                 ],
@@ -547,6 +554,7 @@
                     "set_reaction_mode": "#/components/schemas/SetReactionMode",
                     "set_summon_mode": "#/components/schemas/SetSummonMode",
                     "command_summon": "#/components/schemas/CommandSummon",
+                    "infuse_skill": "#/components/schemas/InfuseSkill",
                     "end_turn": "#/components/schemas/EndTurn"
                   }
                 },
@@ -614,6 +622,58 @@
               "application/json": {
                 "schema": {
                   "$ref": "#/components/schemas/CommandOptionsOut"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/battles/{battle_id}/summons/{summon_id}/infuse-options": {
+      "get": {
+        "tags": [
+          "battles"
+        ],
+        "summary": "Get Infuse Options",
+        "description": "灌注技能給主角的一隻召喚物（Phase 3-33d）時的技能選單：不能灌注的附中文原因。不改變狀態。",
+        "operationId": "get_infuse_options_api_battles__battle_id__summons__summon_id__infuse_options_get",
+        "parameters": [
+          {
+            "name": "battle_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Battle Id"
+            }
+          },
+          {
+            "name": "summon_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Summon Id"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/InfuseOptionsOut"
                 }
               }
             }
@@ -1511,6 +1571,9 @@
             "$ref": "#/components/schemas/CommandSummon"
           },
           {
+            "$ref": "#/components/schemas/InfuseSkill"
+          },
+          {
             "$ref": "#/components/schemas/EndTurn"
           }
         ],
@@ -1524,6 +1587,7 @@
             "defend": "#/components/schemas/Defend",
             "end_stance": "#/components/schemas/EndStance",
             "end_turn": "#/components/schemas/EndTurn",
+            "infuse_skill": "#/components/schemas/InfuseSkill",
             "interact": "#/components/schemas/Interact",
             "move": "#/components/schemas/Move",
             "reload": "#/components/schemas/Reload",
@@ -2345,6 +2409,11 @@
           "summon_command_ap_cost": {
             "type": "integer",
             "title": "Summon Command Ap Cost",
+            "default": 1
+          },
+          "summon_infuse_ap_cost": {
+            "type": "integer",
+            "title": "Summon Infuse Ap Cost",
             "default": 1
           }
         },
@@ -5383,6 +5452,109 @@
         "title": "IgnoredOrder",
         "description": "被忽略的指令與原因。``scope`` 為 ``\"team\"`` 或單位 ID。"
       },
+      "InfuseOptionsOut": {
+        "properties": {
+          "summon_id": {
+            "type": "string",
+            "title": "Summon Id"
+          },
+          "ap_cost": {
+            "type": "integer",
+            "title": "Ap Cost"
+          },
+          "problem": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Problem"
+          },
+          "skills": {
+            "items": {
+              "$ref": "#/components/schemas/InfuseSkillOptionOut"
+            },
+            "type": "array",
+            "title": "Skills"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "summon_id",
+          "ap_cost",
+          "problem",
+          "skills"
+        ],
+        "title": "InfuseOptionsOut",
+        "description": "灌注一隻召喚物時的技能選單（Phase 3-33d）：``problem`` 是召喚物這邊（本輪已灌注、已有待\n施放、暈眩……）或 AP 的問題（有問題時所有技能都不能灌注）；``skills`` 依裝備順序。"
+      },
+      "InfuseSkill": {
+        "properties": {
+          "unit_id": {
+            "type": "string",
+            "title": "Unit Id"
+          },
+          "type": {
+            "type": "string",
+            "const": "infuse_skill",
+            "title": "Type",
+            "default": "infuse_skill"
+          },
+          "summon_id": {
+            "type": "string",
+            "title": "Summon Id"
+          },
+          "skill_id": {
+            "type": "string",
+            "title": "Skill Id"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "unit_id",
+          "summon_id",
+          "skill_id"
+        ],
+        "title": "InfuseSkill",
+        "description": "灌注技能（Phase 3-33d，6.29.3；``summon_infuse_ap_cost`` AP）：把自己的一招主動技能\n``skill_id`` 借給自己的一隻召喚物 ``summon_id``。法力、HP 代價與冷卻 **當下** 由施放者付，\n同時記下施放者的屬性快照；召喚物在 **下一個自己的回合開始時** 以自己的位置為原點、依目前模式選\n目標施放（:mod:`trpg.engine.skill_infusion`）。每隻每輪最多被灌注 1 次、身上同時只有 1 招待\n施放；召喚、傳說、改變規則類、複合（``followup``）等技能不能灌注。**不列入**\n``legal_actions``（同 :class:`CommandSummon`），由\n:func:`trpg.engine.skill_infusion.infuse_problem` 判斷合法。"
+      },
+      "InfuseSkillOptionOut": {
+        "properties": {
+          "skill_id": {
+            "type": "string",
+            "title": "Skill Id"
+          },
+          "name_zh": {
+            "type": "string",
+            "title": "Name Zh"
+          },
+          "problem": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Problem"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "skill_id",
+          "name_zh",
+          "problem"
+        ],
+        "title": "InfuseSkillOptionOut",
+        "description": "灌注選單的一招主動技能（Phase 3-33d）：``problem`` 是不能灌注的中文原因（可以時\n``None``）。"
+      },
       "InfusionOptionView": {
         "properties": {
           "id": {
@@ -5407,6 +5579,86 @@
         ],
         "title": "InfusionOptionView",
         "description": "召喚技能可灌注的關鍵字（Phase 3-33b）：ID、名稱與效果說明（「命中附加 燃燒 2 回合」）。"
+      },
+      "InfusionPreviewOut": {
+        "properties": {
+          "summon_id": {
+            "type": "string",
+            "title": "Summon Id"
+          },
+          "skill_id": {
+            "type": "string",
+            "title": "Skill Id"
+          },
+          "origin": {
+            "$ref": "#/components/schemas/XY"
+          },
+          "target_id": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Target Id"
+          },
+          "target_pos": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/XY"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "direction": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Direction"
+          },
+          "tiles": {
+            "items": {
+              "$ref": "#/components/schemas/XY"
+            },
+            "type": "array",
+            "title": "Tiles"
+          },
+          "units": {
+            "items": {
+              "type": "string"
+            },
+            "type": "array",
+            "title": "Units"
+          },
+          "no_target": {
+            "type": "boolean",
+            "title": "No Target"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "summon_id",
+          "skill_id",
+          "origin",
+          "target_id",
+          "target_pos",
+          "direction",
+          "tiles",
+          "units",
+          "no_target"
+        ],
+        "title": "InfusionPreviewOut",
+        "description": "灌注技能的預覽（Phase 3-33d）：召喚物 ``summon_id`` 以目前位置 ``origin`` 與目前模式會選的\n目標與範圍（``tiles``／``units``）；``no_target`` 為真時選不到目標（下回合會放棄，法力與冷卻\n不退）。實際在召喚物的回合開始時才選，位置或戰況改變時可能不同。"
       },
       "Interact": {
         "properties": {
@@ -6766,6 +7018,16 @@
               }
             ],
             "title": "Followup When"
+          },
+          "infusion": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/InfusionPreviewOut"
+              },
+              {
+                "type": "null"
+              }
+            ]
           },
           "variant": {
             "anyOf": [
@@ -8542,6 +8804,9 @@
             "$ref": "#/components/schemas/CommandSummon"
           },
           {
+            "$ref": "#/components/schemas/InfuseSkill"
+          },
+          {
             "$ref": "#/components/schemas/EndTurn"
           },
           {
@@ -8559,6 +8824,7 @@
             "defend": "#/components/schemas/Defend",
             "end_stance": "#/components/schemas/EndStance",
             "end_turn": "#/components/schemas/EndTurn",
+            "infuse_skill": "#/components/schemas/InfuseSkill",
             "interact": "#/components/schemas/Interact",
             "move": "#/components/schemas/Move",
             "reload": "#/components/schemas/Reload",
@@ -9528,6 +9794,33 @@
           "commanded": {
             "type": "boolean",
             "title": "Commanded",
+            "default": false
+          },
+          "infused_skill_id": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Infused Skill Id"
+          },
+          "infused_skill_name_zh": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Infused Skill Name Zh"
+          },
+          "infused": {
+            "type": "boolean",
+            "title": "Infused",
             "default": false
           },
           "summon_look": {

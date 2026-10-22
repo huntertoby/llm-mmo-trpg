@@ -105,6 +105,8 @@ export function actionLabel(
       ];
       return `指揮 ${names.name(action.summon_id)}：${parts.join("、")}`;
     }
+    case "infuse_skill":
+      return `灌注：${skills[action.skill_id] ?? action.skill_id} → ${names.name(action.summon_id)}`;
     case "end_turn":
       return "結束回合";
   }

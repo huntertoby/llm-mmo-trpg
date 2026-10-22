@@ -41,6 +41,8 @@ from trpg.engine.events import (
     GearTriggered,
     GuardSet,
     Healed,
+    InfusedSkillCast,
+    InfusionFizzled,
     InitiativeRolled,
     InitiativeTieBroken,
     ManeuverRolled,
@@ -77,6 +79,7 @@ from trpg.engine.events import (
     SkillFollowup,
     SkillGranted,
     SkillGrantExpired,
+    SkillInfused,
     SkillTriggered,
     SkillUsed,
     SourceChanged,
@@ -1118,6 +1121,44 @@ def _summon_commanded(e: SummonCommanded, v: _View) -> str:
     if e.target_id is not None:
         parts.append(f"攻擊 {v.name.get(e.target_id, e.target_id)}")
     return f"  {owner} 指揮 {summon}：{'、'.join(parts)}"
+
+
+@_handles(SkillInfused)
+def _skill_infused(e: SkillInfused, v: _View) -> str:
+    costs = [f"AP {e.ap}"]
+    if e.mana:
+        costs.append(f"法力 {e.mana}")
+    if e.hp_spent:
+        costs.append(f"HP {e.hp_spent}")
+    if e.cooldown:
+        costs.append(f"冷卻 {e.cooldown} 回合")
+    owner = v.name.get(e.owner_id, e.owner_id)
+    summon = v.name.get(e.unit_id, e.unit_id)
+    return f"  {owner} 把「{e.name_zh}」灌注給 {summon}（{'，'.join(costs)}；下回合開始時施放）"
+
+
+@_handles(InfusedSkillCast)
+def _infused_skill_cast(e: InfusedSkillCast, v: _View) -> str:
+    summon = v.name.get(e.unit_id, e.unit_id)
+    target = ""
+    if e.target_id is not None:
+        target = f" → {v.name.get(e.target_id, e.target_id)}"
+    elif e.target_pos is not None:
+        target = f" → {xy_text(e.target_pos)}"
+    return (
+        f"  {summon} 施放灌注的「{e.name_zh}」{target}（從 {xy_text(e.origin)}）"
+        f"→ 影響 {len(e.tiles)} 格"
+    )
+
+
+_INFUSION_FIZZLE_TEXT = {"no_target": "選不到目標", "controlled": "無法行動"}
+
+
+@_handles(InfusionFizzled)
+def _infusion_fizzled(e: InfusionFizzled, v: _View) -> str:
+    summon = v.name.get(e.unit_id, e.unit_id)
+    why = _INFUSION_FIZZLE_TEXT[e.reason]
+    return f"  {summon} {why}，灌注的「{e.name_zh}」失效（法力與冷卻不退）"
 
 
 _SUMMON_EXPIRY_TEXT = {

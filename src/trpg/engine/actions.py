@@ -36,6 +36,7 @@ __all__ = [
     "EndStance",
     "EndTurn",
     "FollowupTarget",
+    "InfuseSkill",
     "Interact",
     "Move",
     "Reload",
@@ -306,6 +307,20 @@ class CommandSummon(_ActionBase):
         return self
 
 
+class InfuseSkill(_ActionBase):
+    """灌注技能（Phase 3-33d，6.29.3；``summon_infuse_ap_cost`` AP）：把自己的一招主動技能
+    ``skill_id`` 借給自己的一隻召喚物 ``summon_id``。法力、HP 代價與冷卻 **當下** 由施放者付，
+    同時記下施放者的屬性快照；召喚物在 **下一個自己的回合開始時** 以自己的位置為原點、依目前模式選
+    目標施放（:mod:`trpg.engine.skill_infusion`）。每隻每輪最多被灌注 1 次、身上同時只有 1 招待
+    施放；召喚、傳說、改變規則類、複合（``followup``）等技能不能灌注。**不列入**
+    ``legal_actions``（同 :class:`CommandSummon`），由
+    :func:`trpg.engine.skill_infusion.infuse_problem` 判斷合法。"""
+
+    type: Literal["infuse_skill"] = "infuse_skill"
+    summon_id: UnitId
+    skill_id: str
+
+
 class EndTurn(_ActionBase):
     """結束回合。"""
 
@@ -330,6 +345,7 @@ type Action = Annotated[
     | SetReactionMode
     | SetSummonMode
     | CommandSummon
+    | InfuseSkill
     | EndTurn,
     Field(discriminator="type"),
 ]
@@ -362,8 +378,9 @@ MANAGEMENT_ACTION_TYPES: tuple[str, ...] = (
 )
 """管理操作：不算動作的上限（``use_skill`` 是技能，也不在基本動作之內）。"""
 
-SUMMON_ACTION_TYPES: tuple[str, ...] = ("command_summon",)
-"""指揮召喚物（Phase 3-33c）：花 AP 但不算基本動作的上限；切換模式（0 AP）歸在管理操作。"""
+SUMMON_ACTION_TYPES: tuple[str, ...] = ("command_summon", "infuse_skill")
+"""指揮召喚物（Phase 3-33c）與灌注技能（Phase 3-33d）：花 AP 但不算基本動作的上限；切換模式
+（0 AP）歸在管理操作。"""
 
 ACTION_ADAPTER: TypeAdapter[Action] = TypeAdapter(Action)
 ACTION_LIST_ADAPTER: TypeAdapter[list[Action]] = TypeAdapter(list[Action])
@@ -406,6 +423,7 @@ type Step = Annotated[
     | SetReactionMode
     | SetSummonMode
     | CommandSummon
+    | InfuseSkill
     | EndTurn
     | Decision,
     Field(discriminator="type"),

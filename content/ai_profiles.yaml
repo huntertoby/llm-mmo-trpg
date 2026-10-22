@@ -130,6 +130,8 @@ rewrite:
 # summon 的模式欄位（Phase 3-33c，初值）：follow_radius 跟隨時待在召喚者幾格內（軟性）、guard_radius 守護我時只走到召喚者幾格內、
 #   guard_threat_range 守護我時敵人「威脅施放者」的距離寬限（敵人射程＋速度＋此值 ≥ 與施放者的距離）、auto_guard_hp_permille 我方 AI 施放者
 #   HP 低於此千分比時召喚物改守護我（0＝不切換）、auto_focus_boss 場上有 Boss 時改集火 Boss、infusion_points 估值時帶灌注的召喚物每輪加幾點。
+# summon 的灌注欄位（Phase 3-33d，初值未經模擬）：施放者 AI 把技能灌注給召喚物的分數 ＝ 召喚物從自己位置施放的完整預覽分數
+#   × infuse_value_permille‰ × 存活機率（召喚物 HP ÷（HP ＋ 能打到牠的敵人數 × infuse_threat_damage））；高於其他動作才灌注（0＝不灌注）。
 # summon（Phase 3D-4a 寫在程式裡，3D-4b 搬到這裡；初值未經模擬）：召喚技能的評分，收益 ＝ 召喚物的預估價值
 # （單位為等值傷害點數）× 行為模式的對應權重：
 #   hit_permille            召喚物預估傷害（武器骰平均 ＋ 固定傷害，每輪一次攻擊）× 持續輪數 × damage 權重
@@ -137,7 +139,7 @@ rewrite:
 #   distance_cost_permille  召喚位置與最近敵人每差一格扣的分數（‰；在同一技能的位置之間排序）
 #   totem_ally_points       圖騰：範圍內每個友方 × 狀態價值（ally_status_values，沒列出的用這個值）×
 #                           持續輪數 × support 權重，同樣乘 hit_permille 折合
-summon: {hit_permille: 500, distance_cost_permille: 100, totem_ally_points: 3, boss_blocker_points: 60, boss_blocker_slack: 1, follow_radius: 3, guard_radius: 2, guard_threat_range: 1, auto_guard_hp_permille: 400, auto_focus_boss: true, infusion_points: 1}   # boss_blocker_*：3-33b，Boss 優先清擋在它與我方非召喚物單位之間的召喚物（初值）
+summon: {hit_permille: 500, distance_cost_permille: 100, totem_ally_points: 3, boss_blocker_points: 60, boss_blocker_slack: 1, follow_radius: 3, guard_radius: 2, guard_threat_range: 1, auto_guard_hp_permille: 400, auto_focus_boss: true, infusion_points: 1, infuse_value_permille: 700, infuse_threat_damage: 4}   # boss_blocker_*：3-33b，Boss 優先清擋在它與我方非召喚物單位之間的召喚物（初值）
 # zone（Phase 3D-5；初值未經模擬）：持續區域的評分。收益 ＝ 區域每次觸發的價值（傷害骰平均 × damage 權重、
 # 狀態價值、治療 × heal 權重……）× 區域格內與移動路徑上的對象數 × 持續輪數 × likelihood_permille（之後
 # 每輪真的有對象觸發的比例）；移動型路徑上的對象乘 path_permille。建立當下就在區域內的對象由預覽計算。

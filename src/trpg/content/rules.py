@@ -261,6 +261,11 @@ class CoreRules(ContentModel):
     """Boss（``boss`` 標籤）對召喚物造成的傷害倍率（‰；Phase 3-33b，預設 ×2）。"""
     summon_command_ap_cost: int = Field(default=1, ge=0, le=3)
     """指揮召喚物（Phase 3-33c）的 AP 花費（切換模式免費）。"""
+    summon_infuse_ap_cost: int = Field(default=1, ge=0, le=3)
+    """灌注技能（Phase 3-33d，6.29.3）：施放者花的 AP（取代技能本身的 AP；法力與冷卻照技能）。"""
+    summon_infused_cast_ap_cost: int = Field(default=1, ge=0, le=3)
+    """召喚物在自己回合開始時施放灌注的技能，佔用牠自己的 AP（Phase 3-33d；取代一次普攻，
+    不足時扣到 0）。"""
     summon_growth: SummonGrowth = Field(default_factory=SummonGrowth)
     """召喚物 HP 與傷害的成長（Phase 3-33b）。"""
     summon_infusions: dict[str, SummonInfusion] = Field(default_factory=dict)

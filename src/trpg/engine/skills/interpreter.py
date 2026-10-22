@@ -410,6 +410,20 @@ def run_delayed(
         after_attack(ctx, caster, None, ambushed=cast.ambushed, turns=cast.melee_victims)
 
 
+def run_infused(
+    ctx: Ctx, caster: UnitState, skill: SkillDef, pick: UseSkill, area: SkillArea
+) -> None:
+    """結算召喚物施放的灌注技能（Phase 3-33d，:mod:`trpg.engine.skill_infusion`）：
+    ``infused_skill_cast`` 已由呼叫端發出；不付代價（灌注時施放者已付），也沒有失手反噬。命中、
+    傷害照常（施放者的數字由呼叫端借給召喚物）；施放後面向主要目標。被動觸發等技能結算完才處理。"""
+    with holding(ctx):
+        cast = _Cast(ctx, caster, skill, pick, area)
+        cast.pays_miss_cost = False
+        cast.run()
+        face = _primary_xy(ctx.state, caster, pick)
+        after_attack(ctx, caster, face, ambushed=cast.ambushed, turns=cast.melee_victims)
+
+
 def _second_selection(
     ctx: Ctx, caster: UnitState, skill: SkillDef, action: UseSkill, hit: UnitState | None
 ) -> UseSkill | None:

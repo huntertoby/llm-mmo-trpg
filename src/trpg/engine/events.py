@@ -52,6 +52,8 @@ __all__ = [
     "GearTriggered",
     "GuardSet",
     "Healed",
+    "InfusedSkillCast",
+    "InfusionFizzled",
     "InitiativeRolled",
     "InitiativeTieBroken",
     "ManeuverRolled",
@@ -92,6 +94,7 @@ __all__ = [
     "SkillFollowup",
     "SkillGrantExpired",
     "SkillGranted",
+    "SkillInfused",
     "SkillTriggered",
     "SkillUsed",
     "SourceChanged",
@@ -1367,6 +1370,56 @@ class SummonCommanded(EventBase):
     target_id: UnitId | None = None
 
 
+class SkillInfused(EventBase):
+    """施放者 ``owner_id`` 把技能灌注給召喚物 ``unit_id``（Phase 3-33d）：代價已支付（``ap`` 是
+    灌注的 AP，``mana``／``mana_after``／``hp_spent``／``cooldown`` 同 ``skill_used``；冷卻之後另有
+    ``skill_cooldown_changed``）。召喚物在下一個自己的回合開始時施放。"""
+
+    type: Literal["skill_infused"] = "skill_infused"
+    unit_id: UnitId
+    owner_id: UnitId
+    skill_id: str
+    name_zh: str
+    ap: int
+    mana: int
+    mana_after: int
+    hp_spent: int = 0
+    cooldown: int | None = None
+
+
+class InfusedSkillCast(EventBase):
+    """召喚物 ``unit_id`` 施放灌注的技能（Phase 3-33d）：原點是牠的位置 ``origin``，``target_id``／
+    ``target_pos``／``direction`` 是依模式選的目標，``tiles`` 是影響的格子（依 (y, x)）；之後是
+    命中、傷害等事件。"""
+
+    type: Literal["infused_skill_cast"] = "infused_skill_cast"
+    unit_id: UnitId
+    owner_id: UnitId
+    skill_id: str
+    name_zh: str
+    origin: Pos
+    target_id: UnitId | None = None
+    target_pos: Pos | None = None
+    direction: str | None = None
+    tiles: tuple[Pos, ...] = ()
+
+
+type InfusionFizzleReason = Literal["no_target", "controlled"]
+"""灌注沒有施放的原因：``no_target`` 依模式選不到合法目標、``controlled`` 回合開始時被暈眩等
+跳過回合的狀態控制。法力與冷卻都不退。"""
+
+
+class InfusionFizzled(EventBase):
+    """召喚物 ``unit_id`` 的灌注技能沒有施放就失效（Phase 3-33d；法力與冷卻不退）。"""
+
+    type: Literal["infusion_fizzled"] = "infusion_fizzled"
+    unit_id: UnitId
+    owner_id: UnitId
+    skill_id: str
+    name_zh: str
+    reason: InfusionFizzleReason
+
+
 class TotemPulsed(EventBase):
     """圖騰的光環（Phase 3D-4b）：圖騰 ``unit_id`` 在自己的回合開始時，讓 ``targets`` 內的友方
     獲得 ``status_id``（接著是各目標的 ``status_applied``）。"""
@@ -1626,6 +1679,9 @@ type Event = Annotated[
     | SummonExpired
     | SummonModeSet
     | SummonCommanded
+    | SkillInfused
+    | InfusedSkillCast
+    | InfusionFizzled
     | TotemPulsed
     | SkillUsed
     | SkillCooldownChanged

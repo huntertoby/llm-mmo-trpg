@@ -16,6 +16,8 @@ from trpg.api.schemas import (
     CommandOptionsOut,
     CreateBattleRequest,
     DecisionRequest,
+    InfuseOptionsOut,
+    InfuseSkillOptionOut,
     PreviewOut,
     SkillReasons,
 )
@@ -94,6 +96,24 @@ def get_command_options(battle_id: str, summon_id: str, request: Request) -> Com
         ap_cost=cost,
         options=tuple(
             CommandOptionOut(dest=o.dest, path=o.path, targets=o.targets) for o in options
+        ),
+    )
+
+
+@router.get("/{battle_id}/summons/{summon_id}/infuse-options")
+def get_infuse_options(battle_id: str, summon_id: str, request: Request) -> InfuseOptionsOut:
+    """灌注技能給主角的一隻召喚物（Phase 3-33d）時的技能選單：不能灌注的附中文原因。不改變狀態。"""
+    session = store_of(request).get(battle_id)
+    with session.lock:
+        problem, choices = session.infuse_options(UnitId(summon_id))
+        cost = session.state.ruleset.core.summon_infuse_ap_cost
+    return InfuseOptionsOut(
+        summon_id=UnitId(summon_id),
+        ap_cost=cost,
+        problem=problem,
+        skills=tuple(
+            InfuseSkillOptionOut(skill_id=c.skill_id, name_zh=c.name_zh, problem=c.problem)
+            for c in choices
         ),
     )
 

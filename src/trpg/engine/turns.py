@@ -39,6 +39,7 @@ from trpg.engine.objectives import check_battle_end, check_round_end, end_battle
 from trpg.engine.results import ResolveResult
 from trpg.engine.rewrites import ap_cap
 from trpg.engine.rules.statuses import move_points_for_turn, skip_turn_status
+from trpg.engine.skill_infusion import release_infusion
 from trpg.engine.skill_triggers import (
     collect_turn_end,
     collect_turn_start,
@@ -133,8 +134,8 @@ def start_turn(ctx: Ctx, unit_id: UnitId) -> None:
 
 
 def _turn_start_hooks(ctx: Ctx, unit: UnitState) -> None:
-    """回合開始、狀態與表面效果之後：裝備的代價（3G-G1）、持續區域、陷阱倒數、圖騰、延遲段，最後是
-    被動的 ``on_turn_start``（每一步之前都確認行動者還站著）。"""
+    """回合開始、狀態與表面效果之後：裝備的代價（3G-G1）、持續區域、陷阱倒數、圖騰、延遲段、被動的
+    ``on_turn_start``，最後是召喚物身上灌注的技能（Phase 3-33d；每一步之前都確認行動者還站著）。"""
     state = ctx.state
     if unit.alive and unit.gear.bonuses:  # 裝備的代價型：回合開始失去 HP（不致死，Phase 3G-G1）
         gear_turn_start(ctx, unit)
@@ -148,6 +149,9 @@ def _turn_start_hooks(ctx: Ctx, unit: UnitState) -> None:
         release_at_turn_start(ctx, unit)
     if unit.alive:  # 被動技能 on_turn_start：在狀態與表面的回合開始效果之後
         collect_turn_start(ctx, unit)
+        settle(ctx)
+    if unit.alive and unit.infused_skill is not None:  # 灌注的技能（Phase 3-33d）：行動之前施放
+        release_infusion(ctx, unit)
         settle(ctx)
 
 

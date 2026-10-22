@@ -130,6 +130,8 @@ summon_hard_cap: 3            # 硬上限（Phase 3-33b；之後專精可提高�
 summon_max_duration: 4        # 召喚物持續輪數上限（技能的 duration 超過時以此為準）
 boss_summon_damage_permille: 2000   # Boss（boss 標籤）對召喚物的傷害倍率（‰；×2）
 summon_command_ap_cost: 1     # 指揮召喚物（Phase 3-33c，6.29.2）的 AP；切換模式（集火／守護我／跟隨／待命）免費
+summon_infuse_ap_cost: 1      # 灌注技能（Phase 3-33d，6.29.3）：施放者花的 AP（法力、冷卻照技能，灌注當下付）
+summon_infused_cast_ap_cost: 1  # 召喚物在自己回合開始時施放灌注的技能，佔用牠自己的 AP（取代一次普攻；初值）
 # 召喚物成長（Phase 3-33b，6.29.1；初值，未經模擬）：召喚當下依施放者等級 L 與縮放屬性修正 M 快照。
 summon_growth:
   hp_per_level: 2

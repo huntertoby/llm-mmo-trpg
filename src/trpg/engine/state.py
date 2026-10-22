@@ -31,6 +31,7 @@ __all__ = [
     "BattleState",
     "Facing",
     "GrantedSkill",
+    "InfusedSkill",
     "LastCast",
     "ObjectState",
     "PendingResolution",
@@ -242,6 +243,24 @@ class GrantedSkill:
 
 
 @dataclass(slots=True, frozen=True)
+class InfusedSkill:
+    """召喚物身上等待施放的灌注技能（Phase 3-33d，``docs/design/06-技能.md`` 6.29.3）。
+
+    - ``skill_id``／``owner_id``：被借出的技能與借出的施放者（法力與冷卻已在灌注時由施放者付）。
+    - ``attributes``：灌注當下施放者的有效屬性快照（同陷阱的 ``attributes``；施放時以它代替
+      召喚物自己的屬性，之後施放者的屬性變化不影響）。
+    - ``skill_level``：灌注當下施放者的技能等級（Phase 3-26a 的效果倍率與 5 級小特性）。
+    - ``round``：灌注的輪數。
+    """
+
+    skill_id: str
+    owner_id: UnitId
+    attributes: tuple[tuple[Attribute, int], ...]
+    skill_level: int = 1
+    round: int = 0
+
+
+@dataclass(slots=True, frozen=True)
 class LastCast:
     """一次以 ``UseSkill`` 施放的主動技能（Phase 3C-4b）：施放者、技能與施放當輪。
     ``copy_skill`` 只複製本輪內的。"""
@@ -385,6 +404,10 @@ class UnitState:
     ``follow``。"""
     commanded_round: int = 0
     """最近一次被指揮（``command_summon``）的輪數（0 為從未；每隻每輪最多一次）。"""
+    infused_skill: InfusedSkill | None = None
+    """等待施放的灌注技能（Phase 3-33d）：召喚物在下一個自己的回合開始時施放（或放棄）後清除。"""
+    infused_round: int = 0
+    """最近一次被灌注（``infuse_skill``）的輪數（0 為從未；每隻每輪最多一次）。"""
     dismissed: bool = False
     """召喚物已消失（到期、召喚者離場或超過上限；Phase 3D-4a）。保留在 ``units`` 中（事件仍引用
     它），但不在戰場上。"""
@@ -503,6 +526,8 @@ class UnitState:
             summon_mode=self.summon_mode,
             summon_target_id=self.summon_target_id,
             commanded_round=self.commanded_round,
+            infused_skill=self.infused_skill,
+            infused_round=self.infused_round,
             dismissed=self.dismissed,
             activations=self.activations,
             revived=self.revived,

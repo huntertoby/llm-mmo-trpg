@@ -97,6 +97,8 @@ export interface UnitDraw {
   bomb: number | null;
   /** 延遲段（蓄力，Phase 3F-4b）還要幾回合釋放；沒有蓄力為 `null`。 */
   charge?: number | null;
+  /** 召喚物身上有待施放的灌注技能（Phase 3-33d，頭上畫「灌」）。 */
+  infused?: boolean;
   /** 朝向（Phase 3D-8d）：圖示外緣畫小箭頭；背後格站著近戰敵人時會被背刺。 */
   facing: Facing;
   /** 武器 ID（紙娃娃主手外觀用）。 */
@@ -251,6 +253,7 @@ export function buildDrawModel(
       revivable: u.revivable,
       bomb: bombCountdown(u),
       charge: chargeCountdown(u.statuses),
+      infused: u.infused_skill_id != null,
       facing: u.facing,
       weaponId: u.weapon_id,
       weaponClass: u.weapon_class,

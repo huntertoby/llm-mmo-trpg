@@ -213,6 +213,26 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/battles/{battle_id}/summons/{summon_id}/infuse-options": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Get Infuse Options
+         * @description 灌注技能給主角的一隻召喚物（Phase 3-33d）時的技能選單：不能灌注的附中文原因。不改變狀態。
+         */
+        get: operations["get_infuse_options_api_battles__battle_id__summons__summon_id__infuse_options_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/battles/{battle_id}/skill-reasons": {
         parameters: {
             query?: never;
@@ -618,7 +638,7 @@ export interface paths {
 export type webhooks = Record<string, never>;
 export interface components {
     schemas: {
-        Action: components["schemas"]["Move"] | components["schemas"]["Attack"] | components["schemas"]["UseSkill-Output"] | components["schemas"]["Defend"] | components["schemas"]["Run"] | components["schemas"]["Swap"] | components["schemas"]["Aim"] | components["schemas"]["Vault"] | components["schemas"]["Shove"] | components["schemas"]["Trip"] | components["schemas"]["Interact"] | components["schemas"]["Reload"] | components["schemas"]["ActivateCharge"] | components["schemas"]["EndStance"] | components["schemas"]["SetReactionMode"] | components["schemas"]["SetSummonMode"] | components["schemas"]["CommandSummon"] | components["schemas"]["EndTurn"];
+        Action: components["schemas"]["Move"] | components["schemas"]["Attack"] | components["schemas"]["UseSkill-Output"] | components["schemas"]["Defend"] | components["schemas"]["Run"] | components["schemas"]["Swap"] | components["schemas"]["Aim"] | components["schemas"]["Vault"] | components["schemas"]["Shove"] | components["schemas"]["Trip"] | components["schemas"]["Interact"] | components["schemas"]["Reload"] | components["schemas"]["ActivateCharge"] | components["schemas"]["EndStance"] | components["schemas"]["SetReactionMode"] | components["schemas"]["SetSummonMode"] | components["schemas"]["CommandSummon"] | components["schemas"]["InfuseSkill"] | components["schemas"]["EndTurn"];
         /**
          * ActivateCharge
          * @description 啟動裝備的充能詞條（Phase 3G-G3a，第 7 類）：花 ``cost_stacks`` 層與 ``cost_ap`` AP，結算詞條
@@ -925,6 +945,11 @@ export interface components {
              * @default 1
              */
             summon_command_ap_cost: number;
+            /**
+             * Summon Infuse Ap Cost
+             * @default 1
+             */
+            summon_infuse_ap_cost: number;
         };
         /**
          * BombOut
@@ -2210,6 +2235,57 @@ export interface components {
             reason: string;
         };
         /**
+         * InfuseOptionsOut
+         * @description 灌注一隻召喚物時的技能選單（Phase 3-33d）：``problem`` 是召喚物這邊（本輪已灌注、已有待
+         *     施放、暈眩……）或 AP 的問題（有問題時所有技能都不能灌注）；``skills`` 依裝備順序。
+         */
+        InfuseOptionsOut: {
+            /** Summon Id */
+            summon_id: string;
+            /** Ap Cost */
+            ap_cost: number;
+            /** Problem */
+            problem: string | null;
+            /** Skills */
+            skills: components["schemas"]["InfuseSkillOptionOut"][];
+        };
+        /**
+         * InfuseSkill
+         * @description 灌注技能（Phase 3-33d，6.29.3；``summon_infuse_ap_cost`` AP）：把自己的一招主動技能
+         *     ``skill_id`` 借給自己的一隻召喚物 ``summon_id``。法力、HP 代價與冷卻 **當下** 由施放者付，
+         *     同時記下施放者的屬性快照；召喚物在 **下一個自己的回合開始時** 以自己的位置為原點、依目前模式選
+         *     目標施放（:mod:`trpg.engine.skill_infusion`）。每隻每輪最多被灌注 1 次、身上同時只有 1 招待
+         *     施放；召喚、傳說、改變規則類、複合（``followup``）等技能不能灌注。**不列入**
+         *     ``legal_actions``（同 :class:`CommandSummon`），由
+         *     :func:`trpg.engine.skill_infusion.infuse_problem` 判斷合法。
+         */
+        InfuseSkill: {
+            /** Unit Id */
+            unit_id: string;
+            /**
+             * @description discriminator enum property added by openapi-typescript
+             * @enum {string}
+             */
+            type: "infuse_skill";
+            /** Summon Id */
+            summon_id: string;
+            /** Skill Id */
+            skill_id: string;
+        };
+        /**
+         * InfuseSkillOptionOut
+         * @description 灌注選單的一招主動技能（Phase 3-33d）：``problem`` 是不能灌注的中文原因（可以時
+         *     ``None``）。
+         */
+        InfuseSkillOptionOut: {
+            /** Skill Id */
+            skill_id: string;
+            /** Name Zh */
+            name_zh: string;
+            /** Problem */
+            problem: string | null;
+        };
+        /**
          * InfusionOptionView
          * @description 召喚技能可灌注的關鍵字（Phase 3-33b）：ID、名稱與效果說明（「命中附加 燃燒 2 回合」）。
          */
@@ -2220,6 +2296,30 @@ export interface components {
             name_zh: string;
             /** Effect Zh */
             effect_zh: string;
+        };
+        /**
+         * InfusionPreviewOut
+         * @description 灌注技能的預覽（Phase 3-33d）：召喚物 ``summon_id`` 以目前位置 ``origin`` 與目前模式會選的
+         *     目標與範圍（``tiles``／``units``）；``no_target`` 為真時選不到目標（下回合會放棄，法力與冷卻
+         *     不退）。實際在召喚物的回合開始時才選，位置或戰況改變時可能不同。
+         */
+        InfusionPreviewOut: {
+            /** Summon Id */
+            summon_id: string;
+            /** Skill Id */
+            skill_id: string;
+            origin: components["schemas"]["XY"];
+            /** Target Id */
+            target_id: string | null;
+            target_pos: components["schemas"]["XY"] | null;
+            /** Direction */
+            direction: string | null;
+            /** Tiles */
+            tiles: components["schemas"]["XY"][];
+            /** Units */
+            units: string[];
+            /** No Target */
+            no_target: boolean;
         };
         /**
          * Interact
@@ -2764,6 +2864,7 @@ export interface components {
             followup_tiles: components["schemas"]["XY"][];
             /** Followup When */
             followup_when?: string | null;
+            infusion?: components["schemas"]["InfusionPreviewOut"] | null;
             variant?: components["schemas"]["PreviewVariantOut"] | null;
         };
         /**
@@ -3469,7 +3570,7 @@ export interface components {
              */
             charge_tiles: components["schemas"]["Pos"][];
         };
-        Step: components["schemas"]["Move"] | components["schemas"]["Attack"] | components["schemas"]["UseSkill-Output"] | components["schemas"]["Defend"] | components["schemas"]["Run"] | components["schemas"]["Swap"] | components["schemas"]["Aim"] | components["schemas"]["Vault"] | components["schemas"]["Shove"] | components["schemas"]["Trip"] | components["schemas"]["Interact"] | components["schemas"]["Reload"] | components["schemas"]["ActivateCharge"] | components["schemas"]["EndStance"] | components["schemas"]["SetReactionMode"] | components["schemas"]["SetSummonMode"] | components["schemas"]["CommandSummon"] | components["schemas"]["EndTurn"] | components["schemas"]["Decision"];
+        Step: components["schemas"]["Move"] | components["schemas"]["Attack"] | components["schemas"]["UseSkill-Output"] | components["schemas"]["Defend"] | components["schemas"]["Run"] | components["schemas"]["Swap"] | components["schemas"]["Aim"] | components["schemas"]["Vault"] | components["schemas"]["Shove"] | components["schemas"]["Trip"] | components["schemas"]["Interact"] | components["schemas"]["Reload"] | components["schemas"]["ActivateCharge"] | components["schemas"]["EndStance"] | components["schemas"]["SetReactionMode"] | components["schemas"]["SetSummonMode"] | components["schemas"]["CommandSummon"] | components["schemas"]["InfuseSkill"] | components["schemas"]["EndTurn"] | components["schemas"]["Decision"];
         /** @enum {string} */
         StepId: "skeleton" | "basics" | "shape" | "effects" | "followup" | "condition" | "cost" | "rarity" | "variants";
         /**
@@ -3829,6 +3930,15 @@ export interface components {
              * @default false
              */
             commanded: boolean;
+            /** Infused Skill Id */
+            infused_skill_id?: string | null;
+            /** Infused Skill Name Zh */
+            infused_skill_name_zh?: string | null;
+            /**
+             * Infused
+             * @default false
+             */
+            infused: boolean;
             summon_look?: components["schemas"]["SummonLookView"] | null;
             /**
              * Infusion Options
@@ -4399,7 +4509,7 @@ export interface operations {
         };
         requestBody: {
             content: {
-                "application/json": components["schemas"]["Move"] | components["schemas"]["Attack"] | components["schemas"]["UseSkill-Input"] | components["schemas"]["Defend"] | components["schemas"]["Run"] | components["schemas"]["Swap"] | components["schemas"]["Aim"] | components["schemas"]["Vault"] | components["schemas"]["Shove"] | components["schemas"]["Trip"] | components["schemas"]["Interact"] | components["schemas"]["Reload"] | components["schemas"]["ActivateCharge"] | components["schemas"]["EndStance"] | components["schemas"]["SetReactionMode"] | components["schemas"]["SetSummonMode"] | components["schemas"]["CommandSummon"] | components["schemas"]["EndTurn"];
+                "application/json": components["schemas"]["Move"] | components["schemas"]["Attack"] | components["schemas"]["UseSkill-Input"] | components["schemas"]["Defend"] | components["schemas"]["Run"] | components["schemas"]["Swap"] | components["schemas"]["Aim"] | components["schemas"]["Vault"] | components["schemas"]["Shove"] | components["schemas"]["Trip"] | components["schemas"]["Interact"] | components["schemas"]["Reload"] | components["schemas"]["ActivateCharge"] | components["schemas"]["EndStance"] | components["schemas"]["SetReactionMode"] | components["schemas"]["SetSummonMode"] | components["schemas"]["CommandSummon"] | components["schemas"]["InfuseSkill"] | components["schemas"]["EndTurn"];
             };
         };
         responses: {
@@ -4469,7 +4579,7 @@ export interface operations {
         };
         requestBody: {
             content: {
-                "application/json": components["schemas"]["Move"] | components["schemas"]["Attack"] | components["schemas"]["UseSkill-Input"] | components["schemas"]["Defend"] | components["schemas"]["Run"] | components["schemas"]["Swap"] | components["schemas"]["Aim"] | components["schemas"]["Vault"] | components["schemas"]["Shove"] | components["schemas"]["Trip"] | components["schemas"]["Interact"] | components["schemas"]["Reload"] | components["schemas"]["ActivateCharge"] | components["schemas"]["EndStance"] | components["schemas"]["SetReactionMode"] | components["schemas"]["SetSummonMode"] | components["schemas"]["CommandSummon"] | components["schemas"]["EndTurn"];
+                "application/json": components["schemas"]["Move"] | components["schemas"]["Attack"] | components["schemas"]["UseSkill-Input"] | components["schemas"]["Defend"] | components["schemas"]["Run"] | components["schemas"]["Swap"] | components["schemas"]["Aim"] | components["schemas"]["Vault"] | components["schemas"]["Shove"] | components["schemas"]["Trip"] | components["schemas"]["Interact"] | components["schemas"]["Reload"] | components["schemas"]["ActivateCharge"] | components["schemas"]["EndStance"] | components["schemas"]["SetReactionMode"] | components["schemas"]["SetSummonMode"] | components["schemas"]["CommandSummon"] | components["schemas"]["InfuseSkill"] | components["schemas"]["EndTurn"];
             };
         };
         responses: {
@@ -4512,6 +4622,38 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["CommandOptionsOut"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    get_infuse_options_api_battles__battle_id__summons__summon_id__infuse_options_get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                battle_id: string;
+                summon_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["InfuseOptionsOut"];
                 };
             };
             /** @description Validation Error */

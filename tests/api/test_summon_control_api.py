@@ -133,3 +133,50 @@ def test_a_summoner_with_no_ap_left_is_not_auto_ended(client: TestClient) -> Non
     assert ended.status_code == 200, ended.text
     out = ended.json()
     assert out["view"]["active_unit"] != hero or out["view"]["round"] > data["view"]["round"]
+
+
+# ---------------------------------------------------------------------------
+# 灌注技能（Phase 3-33d）
+# ---------------------------------------------------------------------------
+
+
+def test_infuse_options_preview_and_infuse(client: TestClient) -> None:
+    battle_id, hero, sid, data = _open_and_summon(client)
+    assert data["view"]["summon_infuse_ap_cost"] == 1
+    summon = _unit(data, sid)
+    assert summon["infused_skill_id"] is None and summon["infused"] is False
+    options = client.get(f"/api/battles/{battle_id}/summons/{sid}/infuse-options")
+    assert options.status_code == 200, options.text
+    body: dict[str, Any] = options.json()
+    assert body["summon_id"] == sid and body["ap_cost"] == 1 and body["problem"] is None
+    by_id = {s["skill_id"]: s for s in body["skills"]}
+    assert "召喚技能" in by_id[SKILL]["problem"]  # 召喚技能不能灌注，附中文原因
+    usable = [s for s in body["skills"] if s["problem"] is None]
+    assert usable
+    action = {
+        "type": "infuse_skill",
+        "unit_id": hero,
+        "summon_id": sid,
+        "skill_id": usable[0]["skill_id"],
+    }
+    preview = client.post(f"/api/battles/{battle_id}/preview", json=action)
+    assert preview.status_code == 200, preview.text
+    infusion = preview.json()["infusion"]
+    origin = [summon["pos"]["x"], summon["pos"]["y"]]
+    assert infusion["summon_id"] == sid and infusion["origin"] == origin
+    reply = client.post(f"/api/battles/{battle_id}/actions", json=action)
+    assert reply.status_code == 200, reply.text
+    out: dict[str, Any] = reply.json()
+    events = [e for step in out["steps"] for e in step["events"]]
+    assert any(e["type"] == "skill_infused" and "灌注給" in e["text"] for e in events)
+    if _unit(out, sid)["infused_skill_id"] is not None:  # 還沒輪到召喚物
+        assert _unit(out, sid)["infused"] is True
+        again = client.get(f"/api/battles/{battle_id}/summons/{sid}/infuse-options")
+        assert again.status_code == 200 and "待施放" in again.json()["problem"]
+
+
+def test_infuse_options_report_other_units(client: TestClient) -> None:
+    battle_id, _, _, data = _open_and_summon(client)
+    foe = next(u["id"] for u in data["view"]["units"] if u["team"] == "enemy")
+    reply = client.get(f"/api/battles/{battle_id}/summons/{foe}/infuse-options")
+    assert reply.status_code == 200 and "不是你的召喚物" in reply.json()["problem"]
