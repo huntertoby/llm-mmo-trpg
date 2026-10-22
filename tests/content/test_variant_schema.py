@@ -187,10 +187,13 @@ def test_keywords_are_the_union_of_all_forms() -> None:
     assert "frozen" in spear.makes and "frozen" not in spear.variant  # 基礎型態就有
     bash = derive_keywords(lib.skills["skill_wall_brace_bash"], lib.keywords)
     assert "collision" in bash.makes and bash.variant == ("collision",)
+    spark = derive_keywords(lib.skills["skill_oil_spark_throw"], lib.keywords)
+    assert "ignite" in spark.makes and spark.variant == ("ignite",)
+    # 開局技能池與候選產生器（exclusive_only）只看基礎型態：特定地形的關鍵字不進池
     exclusive = derive_keywords(
         lib.skills["skill_oil_spark_throw"], lib.keywords, exclusive_only=True
     )
-    assert "ignite" in exclusive.makes and exclusive.variant == ("ignite",)
+    assert "ignite" not in exclusive.makes and exclusive.variant == ()
     plain = derive_keywords(lib.skills["skill_fire_bolt"], lib.keywords)
     assert plain.variant == ()
 

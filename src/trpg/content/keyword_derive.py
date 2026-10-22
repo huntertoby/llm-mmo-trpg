@@ -192,9 +192,10 @@ def derive_keywords(
     （``grade: exclusive``；開局技能池與候選產生器用，Phase 3-24b2 PM 決定）。
 
     帶戰場變奏的技能（Phase 3-25a，PM 決定 #8）看所有型態的聯集；只由變奏型態帶來的關鍵字另外
-    列在 ``variant``。"""
+    列在 ``variant``。``exclusive_only``（開局技能池與候選產生器）只看基礎型態：只在特定地形才
+    成立的關鍵字不讓技能進入該關鍵字的池（保守做法，見 Phase 3-25a 報告）。"""
     base = derive_from_facts(facts_of(skill), table, exclusive_only=exclusive_only)
-    if not skill.variants:
+    if not skill.variants or exclusive_only:
         return base
     found = [base]
     found += [
