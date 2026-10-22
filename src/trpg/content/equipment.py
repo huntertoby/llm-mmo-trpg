@@ -22,18 +22,19 @@ from __future__ import annotations
 
 import re
 from collections import Counter
-from collections.abc import Mapping
+from collections.abc import Iterable, Mapping
 from itertools import pairwise
 from typing import Annotated, Literal
 
 from pydantic import Field, field_validator, model_validator
 
-from trpg.content.battle import ID_PATTERN, WeaponDef
+from trpg.content.battle import ID_PATTERN, Dice, WeaponDef
 from trpg.content.schemas import ContentModel
 from trpg.content.skills import (
     ON_CAST_TAG,
     ON_ENTER_SURFACE,
     ON_STATUS_APPLIED,
+    RUNE_BOTH_MESSAGE,
     ConditionSpec,
     EffectSpec,
     condition_text,
@@ -84,6 +85,7 @@ __all__ = [
     "item_problems",
     "loadout_problems",
     "resolve_loadout",
+    "rune_pair_problems",
 ]
 
 AFFIX_ID_PATTERN = r"^affix_[a-z0-9_]+$"
@@ -316,22 +318,57 @@ class KeywordAffix(_AffixBase):
 
 class AttackAffix(_AffixBase):
     """第 4 類 普攻附加（8.21.2.4；結算在 G2）：``add_element`` 普攻帶元素（法杖等已有元素的
-    武器不能掛），或 ``on_hit_status`` 普攻命中時施加狀態 ``status_duration`` 回合。"""
+    武器不能掛），或 ``on_hit_status`` 普攻命中時施加狀態 ``status_duration`` 回合，或 ``rune``
+    （Phase 3-31，6.25 普攻與符文；三者恰好填一個）：
+
+    - ``read``：普攻打到站在自己符文上的敵人時，傷害 +``value``‰（計入全身 +50% 上限）；
+    - ``detonate``：普攻命中時引爆目標那 1 格上自己的符文，造成一次 ``dice`` 的傷害；
+    - ``inscribe``：普攻命中時在目標格刻下 ``rune_element``（預設雷紋）的符文，持續
+      ``rune_rounds`` 輪（預設 2）。
+
+    三種都 **每回合最多觸發 1 次**；同一件裝備不能同時有 ``inscribe`` 與 ``detonate``。
+    """
 
     category: Literal["attack"]
     add_element: Element | None = None
     on_hit_status: str | None = Field(default=None, pattern=ID_PATTERN)
     status_duration: int | None = Field(default=None, ge=1)
+    rune: Literal["read", "detonate", "inscribe"] | None = None
+    dice: Dice | None = None
+    rune_element: Element | None = None
+    rune_rounds: int | None = Field(default=None, ge=1, le=5)
 
     @model_validator(mode="after")
     def _check(self) -> AttackAffix:
-        if (self.add_element is None) == (self.on_hit_status is None):
-            raise ValueError(f"詞條 {self.id}：add_element 與 on_hit_status 恰好填一個")
+        given = [
+            self.add_element is not None,
+            self.on_hit_status is not None,
+            self.rune is not None,
+        ]
+        if sum(given) != 1:
+            raise ValueError(f"詞條 {self.id}：add_element、on_hit_status、rune 恰好填一個")
         if self.add_element is Element.PHYSICAL:
             raise ValueError(f"詞條 {self.id}：add_element 不可是物理")
         if (self.on_hit_status is None) != (self.status_duration is None):
             raise ValueError(f"詞條 {self.id}：on_hit_status 與 status_duration 要一起填")
+        self._check_rune()
         return self
+
+    def _check_rune(self) -> None:
+        if self.rune is None:
+            if self.dice is not None or self.rune_element is not None or self.rune_rounds:
+                raise ValueError(f"詞條 {self.id}：dice、rune_element、rune_rounds 只能搭配 rune")
+            return
+        if (self.rune == "read") != (self.value is not None):
+            raise ValueError(f"詞條 {self.id}：value 只在 rune: read 時填寫（且必填）")
+        if self.rune == "read" and self.value_unit != "permille":
+            raise ValueError(f"詞條 {self.id}：讀取符文的 value_unit 必須是 permille")
+        if (self.rune == "detonate") != (self.dice is not None):
+            raise ValueError(f"詞條 {self.id}：dice 只在 rune: detonate 時填寫（且必填）")
+        if self.rune != "inscribe" and (self.rune_element is not None or self.rune_rounds):
+            raise ValueError(f"詞條 {self.id}：rune_element、rune_rounds 只能搭配 rune: inscribe")
+        if self.rune_element is Element.PHYSICAL:
+            raise ValueError(f"詞條 {self.id}：rune_element 不可是物理")
 
 
 class WeaponTraitAffix(_AffixBase):
@@ -800,6 +837,14 @@ def _affix_slot_problems(item: ItemDef, affix: AffixDef, weapon: WeaponDef | Non
     return problems
 
 
+def rune_pair_problems(name: str, affixes: Iterable[AffixDef]) -> list[str]:
+    """同一件裝備不能同時有「刻」與「引爆」的普攻符文詞條（Phase 3-31，6.25）。"""
+    runes = {a.rune for a in affixes if isinstance(a, AttackAffix) and a.rune is not None}
+    if {"inscribe", "detonate"} <= runes:
+        return [f"{name}：{RUNE_BOTH_MESSAGE}"]
+    return []
+
+
 def item_problems(
     item: ItemDef,
     affixes: Mapping[str, AffixDef],
@@ -824,7 +869,8 @@ def item_problems(
             continue
         problems += _affix_slot_problems(item, affix, weapon)
         problems += _value_problems(item, affix, roll.value)
-    return problems
+    known = [a for roll in item.affixes if (a := affixes.get(roll.affix)) is not None]
+    return problems + rune_pair_problems(f"物品 {item.id}", known)
 
 
 def _value_problems(item: ItemDef, affix: AffixDef, value: int | None) -> list[str]:
@@ -897,6 +943,7 @@ def loadout_problems(loadout: Loadout, weapon: WeaponDef, rules: EquipmentRules)
             problems += _value_problems(item, equipped.affix, equipped.value)
         if len(entry.affixes) > rules.max_affixes_per_item:
             problems.append(f"{item.name_zh}：詞條最多 {rules.max_affixes_per_item} 條")
+        problems += rune_pair_problems(item.name_zh, (e.affix for e in entry.affixes))
     main = by_slot.get("main_hand")
     if main is not None and main.item.weapon is not None and main.item.weapon != weapon.id:
         problems.append(

@@ -18,6 +18,7 @@ from fractions import Fraction
 from trpg.content.environment import AiProfile
 from trpg.content.skills import DETONATE_RUNES, INSCRIBE, SkillDef
 from trpg.engine.events import EventBase, RuneInscribed, RuneRemoved
+from trpg.engine.gear_enhance import rune_affixes
 from trpg.engine.preview import Preview
 from trpg.engine.rules.geometry import XY, manhattan
 from trpg.engine.rune_queries import own_runes_at
@@ -44,10 +45,30 @@ def _reads_runes(skill: SkillDef) -> bool:
     )
 
 
+def _modifier_reads_runes(skill: SkillDef) -> bool:
+    """修正型被動讀取符文（Phase 3-31）：規則條件是 ``on_own_rune``，或命中後引爆符文。"""
+    return any(
+        (rule.condition is not None and rule.condition.type == "on_own_rune")
+        or any(e.type == DETONATE_RUNES for e in rule.change.on_hit_effects or ())
+        for rule in skill.modifiers
+    )
+
+
+def _gear_reads_runes(unit: UnitState) -> bool:
+    """裝備的普攻符文詞條讀取符文（Phase 3-31）：讀取加傷或單格引爆。"""
+    return bool(rune_affixes(unit, "read") or rune_affixes(unit, "detonate"))
+
+
 def has_rune_reader(state: BattleState, unit: UnitState) -> bool:
-    """``unit`` 的技能中有沒有讀取符文的（包含暫時獲得的技能）。"""
+    """``unit`` 的技能中有沒有讀取符文的（包含暫時獲得的技能、修正型被動與裝備的普攻符文詞條）。"""
     rules = state.ruleset
-    return any(_reads_runes(rules.skill_def(sid)) for sid in unit.all_skills)
+    if _gear_reads_runes(unit):
+        return True
+    for sid in unit.all_skills:
+        skill = rules.skill_def(sid)
+        if _reads_runes(skill) or (skill.is_modifier and _modifier_reads_runes(skill)):
+            return True
+    return False
 
 
 def _enemy_distance(state: BattleState, unit: UnitState, xy: XY) -> int | None:

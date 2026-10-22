@@ -37,7 +37,7 @@ from contextlib import contextmanager
 from dataclasses import dataclass, replace
 from typing import TYPE_CHECKING
 
-from trpg.content.equipment import ChargeAffix, TriggerAffix
+from trpg.content.equipment import AttackAffix, ChargeAffix, TriggerAffix
 from trpg.content.skills import SkillDef
 from trpg.engine import modifiers
 from trpg.engine.events import (
@@ -65,6 +65,8 @@ if TYPE_CHECKING:
     from trpg.engine.context import Ctx
 
 __all__ = [
+    "GEAR_ATTACK_RUNE",
+    "GEAR_PREFIX",
     "MODIFIER_ON_HIT",
     "Fired",
     "PassiveIndex",
@@ -82,6 +84,10 @@ __all__ = [
 
 GEAR_PREFIX = "gear:"
 """裝備詞條的 ``Fired.event`` 前綴（``gear:<觸發時機>``；``Fired.skill_id`` 為詞條 ID）。"""
+
+GEAR_ATTACK_RUNE = "attack_rune"
+"""普攻符文詞條（Phase 3-31，``rune: detonate／inscribe``）的觸發時機名稱（``Fired.event`` 為
+``gear:attack_rune``；``gear_triggered.trigger`` 也用它）。"""
 
 _OBSERVED = frozenset(
     {"attack_rolled", "damage_dealt", "status_applied", "collided", "unit_moved", "unit_downed"}
@@ -122,7 +128,10 @@ class PassiveIndex:
         for unit in ctx.state.units_sorted():
             for gear in unit.gear.active_affixes():
                 affix = gear.affix
-                if isinstance(affix, TriggerAffix):
+                if isinstance(affix, AttackAffix):
+                    if affix.rune in ("detonate", "inscribe"):
+                        owners.add(unit.id)  # 普攻命中後的符文效果（3-31）
+                elif isinstance(affix, TriggerAffix):
                     self.by_gear_event.setdefault(affix.trigger, []).append((unit.id, gear))
                 elif isinstance(affix, ChargeAffix):
                     self.by_gear_event.setdefault(affix.gain_trigger, []).append((unit.id, gear))
@@ -291,6 +300,21 @@ def _on_modified_hit(ctx: Ctx, event: AttackRolled) -> None:
         use = modifiers.ATTACK
     else:
         use = modifiers.skill_use(ctx.rules.skill_def(event.skill_id))
+    if event.skill_id is None:  # 普攻的符文詞條（3-31；刻與引爆不會同時出現，依詞條 ID 排序）
+        for gear in attacker.gear.active_affixes("attack"):
+            affix = gear.affix
+            assert isinstance(affix, AttackAffix)
+            if affix.rune in ("detonate", "inscribe"):
+                ctx.fired.append(
+                    Fired(
+                        event.seq,
+                        attacker.id,
+                        affix.id,
+                        f"{GEAR_PREFIX}{GEAR_ATTACK_RUNE}",
+                        event.target_id,
+                        ctx.trigger_depth + 1,
+                    )
+                )
     for active in modifiers.on_hit_rules(state, attacker, use):
         ctx.fired.append(
             Fired(
@@ -593,8 +617,14 @@ def _resolve_on_hit(ctx: Ctx, fired: Fired) -> None:
     assert effects is not None
     if not condition_met(state, owner, rule.condition, Subject(other, other.xy)):
         return
+    index = int(fired.event.removeprefix(_MODIFIER_PREFIX))
+    if modifiers.rule_limit_reached(owner, modifiers.ActiveRule(skill, index, rule)):
+        return  # 每回合 1 次（3-31）
     if not check_trigger_depth(ctx, owner.id, skill.id, fired.depth):
         return
+    if rule.per_turn_limit is not None:
+        key = modifiers.rule_limit_key(skill.id, index)
+        owner.gear_turn_counts[key] = owner.gear_turn_counts.get(key, 0) + 1
     ctx.emit(
         SkillTriggered,
         unit_id=owner.id,

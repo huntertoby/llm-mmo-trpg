@@ -1834,13 +1834,16 @@ class _Cast:
     def detonate_runes(self, effect: ResolvedEffect, spec: EffectSpec) -> list[EffectBase]:
         """``detonate_runes``（Phase 3-23）：影響範圍內施放者自己的符文（依編號）每格引爆一次：移除
         符文，並對該格上符合 ``affects`` 的單位自動命中造成一次傷害（骰值＋縮放屬性 × 法術倍率；
-        元素取 ``element``、省略時取符文的元素，標籤符文為物理；施放者自己不受 ``all`` 的傷害）。"""
+        元素取 ``element``、省略時取符文的元素，標籤符文為物理；施放者自己不受 ``all`` 的傷害）。
+        ``scope: target_cell``（Phase 3-31，命中後效果與普攻詞條）：只引爆影響範圍的第一格（被命中
+        目標所在的那 1 格）。"""
         assert spec.dice is not None
         state, caster = self.ctx.state, self.caster
         scaled = self._spell_scaled()
         batch: list[EffectBase] = []
+        tiles = self.area.tiles[:1] if spec.scope == "target_cell" else self.area.tiles
         for rune in own_runes(state, caster.id):
-            if rune.xy not in self.area.tiles or not self.tile_holds(spec.condition, rune.xy):
+            if rune.xy not in tiles or not self.tile_holds(spec.condition, rune.xy):
                 continue
             batch.append(DetonateRuneEffect(source_id=caster.id, pos=rune.xy, rune_id=rune.id))
             unit = state.unit_at(*rune.xy)

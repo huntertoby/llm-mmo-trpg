@@ -35,7 +35,9 @@ from trpg.engine.gear_enhance import (
     gear_area_delta,
     gear_attack_element,
     gear_keyword_damage_permille,
+    gear_rune_read_permille,
     gear_status_duration,
+    spend_gear_rune_read,
 )
 from trpg.engine.skill_levels import grow_shape, leveled_skill
 from trpg.engine.skills.conditions import Subject, condition_met
@@ -64,10 +66,13 @@ __all__ = [
     "is_attack_skill",
     "on_hit_rules",
     "range_delta",
+    "rule_limit_key",
+    "rule_limit_reached",
     "shaped_skill",
     "skill_has_fire",
     "skill_is_fiery",
     "skill_use",
+    "spend_attack_limits",
     "status_duration_bonus",
     "summon_attack_dice",
     "summon_hp_permille",
@@ -160,9 +165,9 @@ def effective_tags(state: BattleState, unit: UnitState, skill: SkillDef) -> tupl
     return tuple(tags)
 
 
-def _applicable(
+def _applicable_active(
     state: BattleState, unit: UnitState, use: Use, change: str
-) -> Iterator[ModifierSpec]:
+) -> Iterator[ActiveRule]:
     """``unit`` 套用在 ``use`` 上、``change`` 種類的規則（未檢查條件）。"""
     rules = unit_rules(state, unit)
     if not rules:
@@ -171,7 +176,30 @@ def _applicable(
     for active in rules:
         rule = active.rule
         if getattr(rule.change, change) is not None and _matches(state, rule, use, tags):
-            yield rule
+            yield active
+
+
+def _applicable(
+    state: BattleState, unit: UnitState, use: Use, change: str
+) -> Iterator[ModifierSpec]:
+    """:func:`_applicable_active` 的規則本身。"""
+    for active in _applicable_active(state, unit, use, change):
+        yield active.rule
+
+
+def rule_limit_key(skill_id: str, index: int) -> str:
+    """修正規則 ``per_turn_limit`` 的計數鍵（存在 ``UnitState.gear_turn_counts``，自己回合開始時
+    清除；Phase 3-31）。"""
+    return f"rule:{skill_id}:{index}"
+
+
+def rule_limit_reached(unit: UnitState, active: ActiveRule) -> bool:
+    """規則帶 ``per_turn_limit`` 且本回合已用完。"""
+    limit = active.rule.per_turn_limit
+    return (
+        limit is not None
+        and unit.gear_turn_counts.get(rule_limit_key(active.skill.id, active.index), 0) >= limit
+    )
 
 
 def _sum_self(state: BattleState, unit: UnitState, use: Use, change: str) -> int:
@@ -210,11 +238,13 @@ def hit_bonus(state: BattleState, unit: UnitState, use: Use, subject: Subject) -
 def _split_for(
     state: BattleState, unit: UnitState, use: Use, change: str, subject: Subject
 ) -> tuple[int, int]:
-    """:func:`_sum_for` 分成 ``(正的加總, 負的加總)``。"""
+    """:func:`_sum_for` 分成 ``(正的加總, 負的加總)``（本回合次數已用完的規則不計）。"""
     gain = loss = 0
-    for rule in _applicable(state, unit, use, change):
-        if condition_met(state, unit, rule.condition, subject):
-            amount = getattr(rule.change, change)
+    for active in _applicable_active(state, unit, use, change):
+        if rule_limit_reached(unit, active):
+            continue
+        if condition_met(state, unit, active.rule.condition, subject):
+            amount = getattr(active.rule.change, change)
             if amount > 0:
                 gain += amount
             else:
@@ -232,8 +262,24 @@ def damage_permille(state: BattleState, unit: UnitState, use: Use, subject: Subj
     gain, loss = _split_for(state, unit, use, "damage_permille", subject)
     gear_gain, gear_loss = gear_damage_parts(state, unit, subject)
     keyword = gear_keyword_damage_permille(state, unit, use.skill, use.action == "attack")
-    capped = cap_damage_bonus(state.ruleset, gain + gear_gain + keyword)
+    rune = gear_rune_read_permille(state, unit, use, subject)  # 普攻讀取符文（3-31）
+    capped = cap_damage_bonus(state.ruleset, gain + gear_gain + keyword + rune)
     return max(0, _PERMILLE + capped + loss + gear_loss)
+
+
+def spend_attack_limits(state: BattleState, unit: UnitState, use: Use, subject: Subject) -> None:
+    """普攻的傷害真的結算時，記下本回合用掉的「每回合 1 次」加傷（Phase 3-31）。
+
+    帶 ``per_turn_limit`` 的修正規則（傷害‰）與普攻的讀取符文詞條，條件成立且次數還沒用完的才
+    計一次。必須在 :func:`damage_permille` 之後、同一個 ``subject`` 呼叫。"""
+    for active in _applicable_active(state, unit, use, "damage_permille"):
+        if active.rule.per_turn_limit is None or rule_limit_reached(unit, active):
+            continue
+        if condition_met(state, unit, active.rule.condition, subject):
+            key = rule_limit_key(active.skill.id, active.index)
+            unit.gear_turn_counts[key] = unit.gear_turn_counts.get(key, 0) + 1
+    if use.action == "attack":
+        spend_gear_rune_read(state, unit, subject)
 
 
 def status_duration_bonus(state: BattleState, unit: UnitState, use: Use, status: str) -> int:
