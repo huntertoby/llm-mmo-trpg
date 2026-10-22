@@ -1558,6 +1558,12 @@ PM 驗收後請使用者試玩一整輪（`docs/專案計畫.md` 第 14 節 🎮
 
 驗收（3-32c）：pytest（新詞條效果與 +50% 上限、對照 build 的技能組成）；報告附三情境前後對照表；`check.py` 全過。
 
+### 35.3a 3-32c 驗收（2026-10-22）
+
+- PM 合併（無衝突，CLI 快照重產）、`check.py` 全過。技能流對照組改為穿透射擊、震雷掌、捕獸夾、遠距狙擊；長槍站定詞條改「站定時傷害 +10%」（id 保留 `still_crit`、類別 `conditional`）。報告 `Phase3-32c報告.md`。
+- **三情境（每格 40 場，傷害／場）**：長戰單體 普攻流 74→74、技能流 76；範圍戰 51→47、40；Boss 戰 82→73、55。仍高於技能流 → **已套用旋鈕**（精通 60‰、連擊／分裂 400‰；精通預算掉到 54% → `empty_slots_permille` 500→700）。套用後範圍與 Boss 戰仍偏高 → 請玩法 PM 決定再降或改以勝率／存活為準（平衡階段由 PM 背景跑 200 場以上）。
+- 待 PM 決定：#2 捕獸夾是 2 階、震雷掌是智力技（弓手偏弱）→ 接受（對照組只能近似）；#3 詞條 id 不改名 → 接受；#4 `empty_slots_permille` 700 → 接受；#5 `dollGear.test.ts` 逾時 → PM 合併後全量通過，視為環境負載。
+
 ## 36. Phase 3-33｜召喚物（玩法 #41；全部在 Phase 3 做，拆 8 段）
 
 > 設計：`docs/design/06-技能.md` 6.29（玩法 PM commit ca9eca1）；外觀 `docs/art/召喚物外觀.md`（美術 PM，約 1.5 段，與引擎平行）。使用者原話：「灌注技能放到 Phase 3 都做一做 直接先做 17 種召喚物」。數值都是初值，放 `content/`。詳細規格照慣例在派工前寫（依當時程式狀態），本節先定段數與順序。
@@ -1619,6 +1625,11 @@ PM 驗收後請使用者試玩一整輪（`docs/專案計畫.md` 第 14 節 🎮
 
 驗收（3-33c）：pytest（四種模式的 AI 行為情境、集火目標倒下退回跟隨、指揮的移動範圍與每輪 1 次、0 AP／1 AP 扣點、同種子確定、`--log-json` ＋ `replay`）；vitest（按鈕出現條件、目前模式標示）；瀏覽器實測切換模式與指揮各一次＋6.5.1 浮動卡路徑；截圖 `docs/phases/img/3-33c-*.png`；`check.py` 全過、`pnpm build` 成功。
 
+### 36.3a 3-33c 驗收（2026-10-22）
+
+- PM 合併（無衝突）、`check.py` 全過（實作者全量沒跑完，PM 單獨跑通過）、`pnpm build` 成功；`swamp` 種子 41 `--log-json` ＋ `replay` 一致。**`LOG_FORMAT` → `/50`**。新動作 `set_summon_mode`（0 AP）與 `command_summon`（1 AP，每隻每輪 1 次）、`GET /summons/{id}/command-options`、模式 AI、我方 AI 自動切換（Boss→集火、HP<40%→守護我）、召喚估值納入成長與灌注、「召喚物操控」面板與資訊卡模式列。報告 `Phase3-33c報告.md`。
+- 待 PM 決定：#2 半徑與門檻初值 → 3-33g 模擬檢視；#3 只有我方 AI 自動切換、#4 AI 不主動用「指揮」、#5 召喚物不再吃隊友指令、#7 `default_mode` → 接受；#6 主角 AP 用完時自動結束回合、玩家沒機會再切模式 → 切換是 0 AP，**排進下一個介面小修**：有可切換的召喚物時不自動結束回合（或跳出提示）；#8 800×600 卡片內捲動未測（內容不夠高）→ 接受。
+
 ### 36.4 3-33h1｜召喚物外觀渲染器（sonnet；與 3-33c 平行，只動 render 與視圖欄位）
 
 規格以 `docs/art/召喚物外觀.md`「定案」以下為準（移植需求表、檢查清單）；參考實作 `docs/art/sample/summonArt.js`、`docs/art/summons.png`。
@@ -1629,4 +1640,9 @@ PM 驗收後請使用者試玩一整輪（`docs/專案計畫.md` 第 14 節 🎮
 4. **測試**：全組合（含不認得的輸入）不丟例外的 vitest；美術檢查清單逐項截圖 `docs/phases/img/3-33h1-*.png`（可用測試頁或靶場擺出 17 種外觀）。
 
 驗收（3-33h1）：vitest（全組合、退回骷髏、朝向）；pytest（schema 與視圖欄位）；截圖對照美術檢查清單；`check.py` 全過、`pnpm build` 成功。完成後由美術 PM 驗收外觀。
+
+### 36.4a 3-33h1 驗收（2026-10-22）
+
+- PM 合併（與 3-33c 在 `battle.py`、`summons.py`、`view.py` 衝突 → 兩邊欄位都保留；OpenAPI 重產；`summonGallery.ts` 型別轉換修正）、`check.py` 全過、`pnpm build` 成功。`UnitTemplate.look`（`SummonLook`）、`content/summon_looks.yaml`（17 種）、`UnitView.summon_look`（元素先取灌注）、`client/src/render/summonArt.ts`（5 種新體型＋人形 4 款）、開發一覽頁 `client/summon-gallery.html`；截圖 `docs/phases/img/3-33h1-*.png`。報告 `Phase3-33h1報告.md`。**外觀請美術 PM 驗收**（含 #5 第 0 排高度、#6 輪數徽章遮住漂浮靈上緣）。
+- 待 PM 決定：#1 沒灌注的元素之靈是灰白 → 3-33e1 新增 4 種元素靈時處理；#2 外觀同時在 `summon_looks.yaml` 與範本 `look`（pytest 比對）→ 3-33h2 改成範本引用表；#3 `trait` 只驗格式、#4 沒有 `look` 的圖騰畫舊圖騰柱、#7 截圖用自己的 vite → 接受。
 
