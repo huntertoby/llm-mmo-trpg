@@ -77,7 +77,7 @@ def _items_problems(field: FieldSpec, value: object, where: str) -> list[str]:
         here = f"{where}[{index}]"
         if not isinstance(item, Mapping):
             out.append(f"{here}：必須是物件")
-        elif field.type == "modifiers":
+        elif field.type in ("modifiers", "variants"):
             out += field_problems(field.fields, item, here)
         else:
             out += _choice_problems(field, item, item, here)
@@ -104,7 +104,7 @@ def _one(field: FieldSpec, value: object, container: Mapping[str, Any], where: s
         return _choice_problems(field, value, container, where)
     if kind in ("int", "count", "dice"):
         return _scalar_problems(field, value, where)
-    if kind == "modifiers" or (kind == "effects" and field.choices):
+    if kind in ("modifiers", "variants") or (kind == "effects" and field.choices):
         return _items_problems(field, value, where)
     if kind == "multi_choice":
         return _multi_problems(field, value, where)

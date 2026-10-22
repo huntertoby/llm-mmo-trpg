@@ -4,6 +4,7 @@ import type { SkillCard } from "../api/types";
 import { kindLabel, sourceCostText } from "../battle/source";
 import { growthLines, levelBadge, levelOf } from "../run/skillGrowth";
 import { KeywordLine } from "./KeywordLine";
+import { VariantList } from "./VariantList";
 import { AssemblyFormula, SkillIconView } from "./SkillIconView";
 
 /** 源力上限（`content/rules/core.yaml` 的 `source_max`）；HUD 與卡片都用 3 格圖示。 */
@@ -13,9 +14,11 @@ interface Props {
   card: SkillCard;
   /** 緊湊版（技能列的浮動卡）：更小的圖示與間距，不寫縮放、專精與設計概念。 */
   compact?: boolean;
+  /** 目前生效的戰場變奏型態 id（技能列的浮動卡傳入，Phase 3-25b）。 */
+  activeVariantId?: string | null;
 }
 
-export function SkillCardView({ card, compact = false }: Props) {
+export function SkillCardView({ card, compact = false, activeVariantId = null }: Props) {
   const source = sourceCostText(card, SOURCE_MAX);
   return (
     <div className={`skill-card rarity-${card.rarity_id}${compact ? " compact" : ""}`}>
@@ -48,6 +51,7 @@ export function SkillCardView({ card, compact = false }: Props) {
           <li key={`modifier:${i}:${m}`}>修正：{m}</li>
         ))}
       </ul>
+      <VariantList card={card} activeId={activeVariantId} />
       {!compact &&
         growthLines(card).map((line) => (
           <div key={line} className="small skill-card-growth">

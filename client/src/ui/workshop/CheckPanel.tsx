@@ -63,6 +63,21 @@ function BudgetBar({ check }: { check: WorkshopCheck }) {
         <div className="ws-bar-mark" style={{ left: `${v.maxMark * 100}%` }} title={`合格上限 ${Math.round(b.max_ratio * 100)}%`} />
       </div>
       <div className="muted small">{v.hint}</div>
+      {b.variants.length > 0 && (
+        <div className="ws-variant-budgets small" aria-label="各型態預算">
+          <div>
+            戰場變奏：基礎型態因 {b.variants.length} 個變奏多算 {b.variant_surcharge_permille / 10}%（已含在上面的點數）；每個型態各自要落在合格區間內：
+          </div>
+          <ul>
+            {b.variants.map((f) => (
+              <li key={f.id}>
+                <span className={`ws-verdict ${f.verdict}`}>{f.ratio_text}</span> {f.name_zh}（{f.verdict_zh}，點數 {f.total} ／ 可用 {f.usable}
+                {f.range_permille > 0 ? `，含射程加價 ${f.range_permille / 10}%` : ""}）
+              </li>
+            ))}
+          </ul>
+        </div>
+      )}
       <details className="ws-details">
         <summary>點數明細</summary>
         {b.segments.length > 0 ? (

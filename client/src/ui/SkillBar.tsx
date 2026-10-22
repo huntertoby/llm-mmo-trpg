@@ -7,6 +7,7 @@ import { minorGlyph, splitSkills } from "../battle/skillTray";
 import type { ActionMode, SkillButton } from "../battle/targeting";
 import { gearSkillBadge } from "../battle/gearSkills";
 import { grantedBadge } from "../battle/granted";
+import { activeVariantCard, variantBadge } from "../battle/variants";
 import { levelBadge } from "../run/skillGrowth";
 import { SkillCardView } from "./SkillCardView";
 import { SkillIconView } from "./SkillIconView";
@@ -57,16 +58,19 @@ function SkillSlot({
   const reasoned = b.disabledReason !== null;
   // 點按鈕是施放／選取，所以滑鼠點擊不釘住卡片；觸控沒有滑過，點一下同時顯示卡片
   const f = useFloatCard({ pinOn: "touch" });
+  const variant = b.variant ?? null;
+  const form = activeVariantCard(card, variant);
   return (
     <div className="skill-slot" title={b.disabledReason ?? undefined} {...f.triggerProps}>
       <button
         type="button"
-        className={`skill-button${selected ? " selected" : ""}${b.grantedRemaining != null ? " granted" : ""}${b.gearSource != null ? " from-gear" : ""}${reasoned ? " blocked" : ""}`}
+        className={`skill-button${selected ? " selected" : ""}${b.grantedRemaining != null ? " granted" : ""}${b.gearSource != null ? " from-gear" : ""}${reasoned ? " blocked" : ""}${variant?.glow === true && !blocked ? " variant-ready" : ""}`}
+        data-variant={form?.id}
         disabled={blocked && !reasoned}
         aria-disabled={blocked}
         onClick={() => (blocked ? onBlocked?.(b) : onSelect(b.skillId))}
       >
-        <SkillIconView icon={card?.icon} size={40} className="skill-button-icon" />
+        <SkillIconView icon={form?.icon ?? card?.icon} size={40} className="skill-button-icon" />
         <span className="skill-button-text">
           <span className="skill-name">
             {b.name}
@@ -82,12 +86,17 @@ function SkillSlot({
               {gearSkillBadge(b.gearSource)}
             </span>
           )}
+          {variant?.glow === true && (
+            <span className="skill-variant" aria-label="戰場變奏">
+              {variantBadge(card, variant)}
+            </span>
+          )}
           <span className="skill-cost">{costText(b)}</span>
         </span>
       </button>
       {f.open && card !== undefined && (
         <FloatCard float={f} className="skill-card-float">
-          <SkillCardView card={card} compact />
+          <SkillCardView card={card} compact activeVariantId={form?.id ?? null} />
         </FloatCard>
       )}
     </div>

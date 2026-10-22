@@ -19,6 +19,7 @@
 - ``effects``：效果列表（每一項的可選原語在 ``choices``，數量 ``min_count``–``max_count``）。
 - ``object``：巢狀物件，子欄位在 ``fields``（例：``scaling``、修正規則的 ``applies_to``）。
 - ``modifiers``：修正規則列表（子欄位在 ``fields``）。
+- ``variants``：戰場變奏列表（子欄位在 ``fields``，Phase 3-25b）。
 """
 
 from __future__ import annotations
@@ -38,7 +39,15 @@ __all__ = [
 ]
 
 type StepId = Literal[
-    "skeleton", "basics", "shape", "effects", "followup", "condition", "cost", "rarity"
+    "skeleton",
+    "basics",
+    "shape",
+    "effects",
+    "followup",
+    "condition",
+    "cost",
+    "rarity",
+    "variants",
 ]
 STEP_IDS: tuple[StepId, ...] = (
     "skeleton",
@@ -49,9 +58,11 @@ STEP_IDS: tuple[StepId, ...] = (
     "condition",
     "cost",
     "rarity",
+    "variants",
 )
 """組技能的步驟，依序：骨架 → 基本設定（種類、類別、縮放屬性、階級、AP、觸發）→ 形狀 → 效果 →
-動作段（只有位移技能可以接，可省略；Phase 3F-3b）→ 條件 → 代價 → 稀有度。每一步的選項只取決於
+動作段（只有位移技能可以接，可省略；Phase 3F-3b）→ 條件 → 代價 → 稀有度 → 戰場變奏（稀有以上的
+主動技能才有，可省略；Phase 3-25b）。每一步的選項只取決於
 前面的步驟；動作段步驟在不能接動作段的技能不會出現。"""
 
 type FieldType = Literal[
@@ -66,6 +77,7 @@ type FieldType = Literal[
     "effects",
     "object",
     "modifiers",
+    "variants",
 ]
 
 

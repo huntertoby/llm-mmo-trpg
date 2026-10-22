@@ -163,5 +163,6 @@ def step_complete(step: StepId, draft: Draft, library: ContentLibrary) -> bool:
         "condition": lambda: _condition_complete(draft, skeleton),
         "cost": lambda: True,  # 代價全部可省略
         "rarity": lambda: draft.get("rarity") is not None,
+        "variants": lambda: True,  # 戰場變奏全部可省略（Phase 3-25b）
     }
     return checks[step]()

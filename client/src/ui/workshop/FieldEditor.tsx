@@ -106,6 +106,8 @@ export function FieldEditor(props: FieldProps) {
       return <ObjectField {...props} />;
     case "modifiers":
       return <ModifiersField {...props} />;
+    case "variants":
+      return <ModifiersField {...props} itemLabel="戰場變奏" addLabel="新增一個戰場變奏" />;
   }
 }
 
@@ -442,7 +444,14 @@ function EffectsField({ spec, container, base, onChange }: FieldProps) {
   );
 }
 
-function ModifiersField({ spec, container, base, onChange }: FieldProps) {
+function ModifiersField({
+  spec,
+  container,
+  base,
+  onChange,
+  itemLabel = "修正規則",
+  addLabel = "新增一條修正規則",
+}: FieldProps & { itemLabel?: string; addLabel?: string }) {
   const path = joinPath(base, spec.field);
   const list = listOf(container, path);
   const full = spec.max_count != null && list.length >= spec.max_count;
@@ -452,7 +461,10 @@ function ModifiersField({ spec, container, base, onChange }: FieldProps) {
       {list.map((item, index) => (
         <div className="ws-item" key={index}>
           <div className="ws-item-head">
-            <strong>修正規則 {index + 1}</strong>
+            <strong>
+              {itemLabel} {index + 1}
+              {typeof item["name_zh"] === "string" && item["name_zh"] !== "" ? `：${item["name_zh"]}` : ""}
+            </strong>
             <button type="button" onClick={() => onChange(removeItem(container, spec, index, base))}>
               移除
             </button>
@@ -466,7 +478,7 @@ function ModifiersField({ spec, container, base, onChange }: FieldProps) {
         </div>
       ))}
       <button type="button" disabled={full} onClick={() => onChange(addModifier(container, spec, base))}>
-        新增一條修正規則
+        {addLabel}
       </button>
     </div>
   );

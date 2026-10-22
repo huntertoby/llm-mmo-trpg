@@ -46,6 +46,7 @@ __all__ = [
     "SkillCard",
     "SkillCardKeywords",
     "SkillLevelInfo",
+    "SkillVariantCard",
     "activation_text",
     "branch_text",
     "condition_summary",
@@ -919,6 +920,8 @@ class KeywordRef(BaseModel):
     id: str
     name_zh: str
     description_zh: str
+    variant: bool = False
+    """只有特定地形的戰場變奏型態才有這個關鍵字（Phase 3-25b；技能卡標「（特定地形）」）。"""
 
 
 class SkillCardKeywords(BaseModel):
@@ -937,7 +940,12 @@ def keywords_card(library: ContentLibrary, found: SkillKeywords) -> SkillCardKey
 
     def ref(keyword_id: str) -> KeywordRef:
         d = defs[keyword_id]
-        return KeywordRef(id=d.id, name_zh=d.name_zh, description_zh=d.description_zh)
+        return KeywordRef(
+            id=d.id,
+            name_zh=d.name_zh,
+            description_zh=d.description_zh,
+            variant=keyword_id in found.variant,
+        )
 
     return SkillCardKeywords(
         makes=tuple(ref(k) for k in found.makes), uses=tuple(ref(k) for k in found.uses)
@@ -952,6 +960,25 @@ def skill_card_keywords(library: ContentLibrary, skill: SkillDef) -> SkillCardKe
 def draft_card_keywords(library: ContentLibrary, draft: Mapping[str, Any]) -> SkillCardKeywords:
     """組到一半的技能草稿（技能工坊）目前製造與利用的關鍵字。"""
     return keywords_card(library, derive_draft_keywords(draft, library.keywords))
+
+
+class SkillVariantCard(BaseModel):
+    """技能卡上的一個戰場變奏型態（Phase 3-25b，6.24）：型態名、條件與替換內容的中文說明、
+    型態自己的圖示（技能列在這個型態生效時換成它）。"""
+
+    model_config = ConfigDict(frozen=True, extra="forbid")
+
+    id: str
+    name_zh: str
+    condition: str
+    """條件的一句話，例如「施放者站在「水」上」。"""
+    condition_kind: str
+    """``caster_surface``、``caster_high_ground``、``caster_adjacent_blocker``、``target_surface``。"""
+    target_dependent: bool
+    """條件看目標點（居高、目標點表面）：施放前要看預覽才知道生效哪個型態。"""
+    change: str
+    """替換內容的一句話，例如「形狀為直線（大小 3）；傷害改為雷電」。"""
+    icon: SkillIcon
 
 
 class SkillCard(BaseModel):
@@ -1011,9 +1038,25 @@ class SkillCard(BaseModel):
     """組裝式技能圖示的資料（Phase 3-17，:func:`trpg.narrative.skill_icon.skill_icon`）。"""
     keywords: SkillCardKeywords = SkillCardKeywords()
     """製造與利用的關鍵字（Phase 3-24b1，:func:`skill_card_keywords`）。"""
+    variants: tuple[SkillVariantCard, ...] = ()
+    """戰場變奏的所有型態（Phase 3-25b；資料順序，多個成立時取前面的）；沒有變奏為空。"""
     growth: SkillLevelInfo | None = None
     """技能等級的顯示資料（Phase 3-26a）：只有一輪中主角持有（裝備或備用）的主動技能卡片帶它，
     由 ``trpg.api.run_presenter`` 帶入實際等級；候選、技能庫與工坊的卡片為 ``None``。"""
+
+
+def _variant_card(
+    library: ContentLibrary, skill: SkillDef, variant: VariantSpec
+) -> SkillVariantCard:
+    return SkillVariantCard(
+        id=variant.id,
+        name_zh=variant.name_zh,
+        condition=variant_condition_text(library, variant.when),
+        condition_kind=variant.when.kind,
+        target_dependent=variant.when.target_dependent,
+        change=variant_change_text(library, skill, variant),
+        icon=skill_icon(skill.variant_form(variant.id)),
+    )
 
 
 def skill_card(
@@ -1060,4 +1103,5 @@ def skill_card(
         followup_when=None if skill.followup is None else skill.followup.when,
         icon=skill_icon(skill),
         keywords=skill_card_keywords(library, skill),
+        variants=tuple(_variant_card(library, skill, v) for v in skill.variants),
     )

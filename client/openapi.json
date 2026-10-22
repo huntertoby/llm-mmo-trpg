@@ -2022,6 +2022,14 @@
               }
             ]
           },
+          "variant_states": {
+            "items": {
+              "$ref": "#/components/schemas/VariantStateOut"
+            },
+            "type": "array",
+            "title": "Variant States",
+            "default": []
+          },
           "followup_options": {
             "items": {
               "$ref": "#/components/schemas/FollowupOptionOut"
@@ -2510,6 +2518,19 @@
             "type": "array",
             "title": "Self Combo Reasons",
             "default": []
+          },
+          "variants": {
+            "items": {
+              "$ref": "#/components/schemas/VariantLine"
+            },
+            "type": "array",
+            "title": "Variants",
+            "default": []
+          },
+          "variant_surcharge_permille": {
+            "type": "integer",
+            "title": "Variant Surcharge Permille",
+            "default": 0
           }
         },
         "additionalProperties": false,
@@ -3634,7 +3655,8 @@
           "tags",
           "effects",
           "object",
-          "modifiers"
+          "modifiers",
+          "variants"
         ]
       },
       "FocusTarget": {
@@ -5298,6 +5320,11 @@
           "description_zh": {
             "type": "string",
             "title": "Description Zh"
+          },
+          "variant": {
+            "type": "boolean",
+            "title": "Variant",
+            "default": false
           }
         },
         "additionalProperties": false,
@@ -6519,6 +6546,16 @@
               }
             ],
             "title": "Followup When"
+          },
+          "variant": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/PreviewVariantOut"
+              },
+              {
+                "type": "null"
+              }
+            ]
           }
         },
         "additionalProperties": false,
@@ -6541,6 +6578,26 @@
         ],
         "title": "PreviewOut",
         "description": ":class:`trpg.engine.preview.Preview` 的公開版本：不含模擬後的完整狀態與原始事件。"
+      },
+      "PreviewVariantOut": {
+        "properties": {
+          "id": {
+            "type": "string",
+            "title": "Id"
+          },
+          "name_zh": {
+            "type": "string",
+            "title": "Name Zh"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "id",
+          "name_zh"
+        ],
+        "title": "PreviewVariantOut",
+        "description": "預覽的動作會用到的型態（Phase 3-25b）。"
       },
       "Problem": {
         "properties": {
@@ -7434,6 +7491,14 @@
               "uses": []
             }
           },
+          "variants": {
+            "items": {
+              "$ref": "#/components/schemas/SkillVariantCard"
+            },
+            "type": "array",
+            "title": "Variants",
+            "default": []
+          },
           "growth": {
             "anyOf": [
               {
@@ -7795,6 +7860,50 @@
         ],
         "title": "SkillReasons",
         "description": "主角灰掉的技能 → 引擎的拒絕理由（繁體中文）；可以用的技能不在表內（Phase 3-5c-2）。"
+      },
+      "SkillVariantCard": {
+        "properties": {
+          "id": {
+            "type": "string",
+            "title": "Id"
+          },
+          "name_zh": {
+            "type": "string",
+            "title": "Name Zh"
+          },
+          "condition": {
+            "type": "string",
+            "title": "Condition"
+          },
+          "condition_kind": {
+            "type": "string",
+            "title": "Condition Kind"
+          },
+          "target_dependent": {
+            "type": "boolean",
+            "title": "Target Dependent"
+          },
+          "change": {
+            "type": "string",
+            "title": "Change"
+          },
+          "icon": {
+            "$ref": "#/components/schemas/SkillIcon"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "id",
+          "name_zh",
+          "condition",
+          "condition_kind",
+          "target_dependent",
+          "change",
+          "icon"
+        ],
+        "title": "SkillVariantCard",
+        "description": "技能卡上的一個戰場變奏型態（Phase 3-25b，6.24）：型態名、條件與替換內容的中文說明、\n型態自己的圖示（技能列在這個型態生效時換成它）。"
       },
       "SlotType": {
         "type": "string",
@@ -8205,7 +8314,8 @@
           "followup",
           "condition",
           "cost",
-          "rarity"
+          "rarity",
+          "variants"
         ]
       },
       "StepOptions": {
@@ -9427,6 +9537,96 @@
           "type"
         ],
         "title": "ValidationError"
+      },
+      "VariantLine": {
+        "properties": {
+          "id": {
+            "type": "string",
+            "title": "Id"
+          },
+          "name_zh": {
+            "type": "string",
+            "title": "Name Zh"
+          },
+          "total": {
+            "type": "number",
+            "title": "Total"
+          },
+          "usable": {
+            "type": "number",
+            "title": "Usable"
+          },
+          "ratio": {
+            "type": "number",
+            "title": "Ratio"
+          },
+          "ratio_text": {
+            "type": "string",
+            "title": "Ratio Text"
+          },
+          "verdict": {
+            "type": "string",
+            "title": "Verdict"
+          },
+          "verdict_zh": {
+            "type": "string",
+            "title": "Verdict Zh"
+          },
+          "range_permille": {
+            "type": "integer",
+            "title": "Range Permille",
+            "default": 0
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "id",
+          "name_zh",
+          "total",
+          "usable",
+          "ratio",
+          "ratio_text",
+          "verdict",
+          "verdict_zh"
+        ],
+        "title": "VariantLine",
+        "description": "戰場變奏（Phase 3-25b）一個型態的預算：與基礎型態各自落在預算窗內。"
+      },
+      "VariantStateOut": {
+        "properties": {
+          "skill_id": {
+            "type": "string",
+            "title": "Skill Id"
+          },
+          "active": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Active"
+          },
+          "available": {
+            "items": {
+              "type": "string"
+            },
+            "type": "array",
+            "title": "Available"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "skill_id",
+          "active",
+          "available"
+        ],
+        "title": "VariantStateOut",
+        "description": "主角一招帶戰場變奏的技能，目前會生效的型態（Phase 3-25b；引擎的 ``varied_skill`` 判定）。"
       },
       "Vault": {
         "properties": {

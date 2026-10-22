@@ -45,6 +45,7 @@ from trpg.skillgen.composer_tuning import tune
 from trpg.skillgen.keywords import derive_keywords
 from trpg.skillgen.mechanics import mechanic_tags
 from trpg.skillgen.validate import validate_skill
+from trpg.skillgen.variant_gen import variant_specs
 
 __all__ = [
     "MAX_ATTEMPTS",
@@ -268,6 +269,8 @@ def _attempt(
     seed: int,
     fixed: tuple[int, SkillRarity, SkeletonDef, str],
     ap_cost: int | None,
+    *,
+    variant: bool = False,
 ) -> SkillDef:
     """一次嘗試；做不出合格技能時拋出 ``Retry``、``ValidationError`` 或 ``BudgetError``。
 
@@ -307,6 +310,11 @@ def _attempt(
     }
     if ctx.trap is not None:
         base["trap"] = ctx.trap
+    elif variant:
+        draft = {**base, "ap_cost": order[0], "cost": {}, "effects": ctx.effects}
+        picked = _pick_variant(rng, library, draft)
+        if picked is not None:
+            base["variants"] = [picked]
     for ap in order:
         ctx.ap_cost = ap
         base = {**base, "ap_cost": ap, "cost": build_cost(ctx)}
@@ -629,6 +637,28 @@ def compose_with_stats(
     return _compose_plain(seed, lib, **fixed)
 
 
+def _wants_variant(seed: int, rarity: SkillRarity, library: ContentLibrary) -> bool:
+    """稀有以上的主動技能以低權重帶一個戰場變奏（Phase 3-25b）：獨立的亂數串流，沒有抽中的種子
+    結果與以往完全相同。"""
+    return rarity != "common" and (
+        Rng(seed).fork("composer.variant").chance_permille(library.composer.variant.permille)
+    )
+
+
+def _pick_variant(
+    rng: Rng, library: ContentLibrary, draft: dict[str, Any]
+) -> dict[str, Any] | None:
+    """候選中第一個（亂數順序）能和已組好的結構組成合法 schema 的變奏；預算窗在強度調整與最後的
+    驗證處理。"""
+    for spec in rng.shuffled(variant_specs(library)):
+        try:
+            SkillDef.model_validate({**draft, "variants": [spec]})
+        except ValidationError:
+            continue
+        return spec
+    return None
+
+
 def _compose_plain(
     seed: int,
     lib: ContentLibrary,
@@ -681,12 +711,15 @@ def _compose_plain(
         "spell" if passive else _choose_category(rng, skeleton_def, category, lib.composer)
     )
     fixed = (tier_value, rarity_value, skeleton_def, category_value)
+    wants_variant = not passive and _wants_variant(seed, rarity_value, lib)
     for attempt in range(1, MAX_ATTEMPTS + 1):
         try:
             if passive:
                 skill = _attempt_passive(rng, lib, seed, tier_value, rarity_value)
             else:
-                skill = _attempt(rng, lib, seed, fixed, ap_cost)
+                # 前半的重抽帶變奏；都做不出來時退回不帶變奏，確保一定有結果
+                variant = wants_variant and attempt <= MAX_ATTEMPTS // 2
+                skill = _attempt(rng, lib, seed, fixed, ap_cost, variant=variant)
         except (Retry, ValidationError, BudgetError):
             continue
         if not validate_skill(skill, lib):

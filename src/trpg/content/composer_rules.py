@@ -14,7 +14,8 @@ from typing import Literal
 from pydantic import Field, model_validator
 
 from trpg.content.schemas import ContentModel
-from trpg.content.skills import RARITY_ORDER
+from trpg.content.skills import RARITY_ORDER, EffectSpec, ShapeSpec, VariantWhen
+from trpg.shared.types import Element
 
 __all__ = [
     "AttrWeights",
@@ -298,6 +299,46 @@ class SpecialRules(ContentModel):
     """稀有度史詩以上、未指定骨架時改組修正技能（``kind: modifier``）的機率（獨立的亂數串流）。"""
 
 
+class VariantCondition(ContentModel):
+    """組合器與進化的變奏候選：一個條件（名稱用來組成型態名）。"""
+
+    id: str
+    name_zh: str
+    when: VariantWhen
+
+
+class VariantChange(ContentModel):
+    """組合器與進化的變奏候選：一項替換內容（恰好一欄）。"""
+
+    id: str
+    name_zh: str
+    shape: ShapeSpec | None = None
+    range_delta: int | None = None
+    element: Element | None = None
+    add_effect: EffectSpec | None = None
+
+    @model_validator(mode="after")
+    def _check(self) -> VariantChange:
+        given = [
+            n
+            for n in ("shape", "range_delta", "element", "add_effect")
+            if getattr(self, n) is not None
+        ]
+        if len(given) != 1:
+            raise ValueError(f"變奏候選 {self.id} 的替換內容必須恰好填一欄，收到 {len(given)} 欄")
+        return self
+
+
+class VariantRules(ContentModel):
+    """戰場變奏的組合器設定（Phase 3-25b，6.24）。"""
+
+    permille: int = _PERMILLE
+    """稀有度 rare 以上的主動技能，組好之後再加一個變奏的機率（獨立的亂數串流；低權重）。"""
+    conditions: tuple[VariantCondition, ...] = Field(min_length=1)
+    changes: tuple[VariantChange, ...] = Field(min_length=1)
+    """候選＝條件 × 替換內容的所有組合；依亂數順序逐一試，第一個通過驗證的採用。"""
+
+
 class ComposerRules(ContentModel):
     """``content/skill_composer.yaml``。"""
 
@@ -331,6 +372,7 @@ class ComposerRules(ContentModel):
     sacrifice: SacrificeRules
     scaling: ScalingRules
     special: SpecialRules
+    variant: VariantRules
 
     @model_validator(mode="after")
     def _check(self) -> ComposerRules:

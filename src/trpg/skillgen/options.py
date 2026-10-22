@@ -73,6 +73,7 @@ from trpg.skillgen.option_params import (
     primitive_param_fields,
     shape_param_fields,
 )
+from trpg.skillgen.option_variant import variant_fields, variant_notes, variants_visible
 from trpg.skillgen.validate import rarity_requirements
 
 __all__ = ["RarityFloor", "draft_options", "minimum_rarity"]
@@ -120,6 +121,11 @@ STEP_TEXT: dict[StepId, tuple[str, str]] = {
     "condition": ("條件", "技能要在什麼情況下才生效（可省略）"),
     "cost": ("代價", "法力、冷卻、每場次數、生命、自身狀態、源力；代價越重，可用預算越多"),
     "rarity": ("稀有度", "由用到的形狀、原語、狀態、條件推導出最低稀有度"),
+    "variants": (
+        "戰場變奏",
+        "同一招在不同地形有不同型態：站在某種表面、居高、靠牆或目標在某種表面時自動換型態"
+        "（稀有以上，可省略）",
+    ),
 }
 _ACTION_TEXT = {"attack": "普攻", "shove": "推擊", "trip": "絆倒", "interact": "互動"}
 _CHANGE_TEXT: dict[str, str] = {
@@ -1034,6 +1040,14 @@ def _rarity_step(draft: Draft, library: ContentLibrary) -> StepOptions:
 # ---------------------------------------------------------------------------
 
 
+def _variants_step(draft: Draft, library: ContentLibrary, skeleton: SkeletonDef) -> StepOptions:
+    def shapes(d: Draft, lib: ContentLibrary, sk: SkeletonDef) -> tuple[Choice, ...]:
+        return _shape_step(d, lib, sk).fields[0].choices
+
+    fields = variant_fields(draft, library, skeleton, _effect_choices, shapes)
+    return _step("variants", draft, library, fields, variant_notes(draft, library))
+
+
 def _build_step(
     step: StepId, draft: Draft, library: ContentLibrary, skeleton: SkeletonDef | None
 ) -> StepOptions:
@@ -1047,6 +1061,7 @@ def _build_step(
         "condition": lambda: _condition_step(draft, library, skeleton),
         "cost": lambda: _cost_step(draft, library),
         "rarity": lambda: _rarity_step(draft, library),
+        "variants": lambda: _variants_step(draft, library, skeleton),
     }
     return builders[step]()
 
@@ -1060,6 +1075,8 @@ def draft_options(draft: Draft, library: ContentLibrary) -> DraftOptions:
     for step_id in STEP_IDS:
         if step_id == "followup" and not followup_visible(draft):
             continue  # 只有位移技能能接動作段
+        if step_id == "variants" and not variants_visible(draft, library):
+            continue  # 只有稀有以上的主動技能能帶變奏
         step = _build_step(step_id, draft, library, skeleton)
         steps.append(step)
         problems += field_problems(step.fields, draft)

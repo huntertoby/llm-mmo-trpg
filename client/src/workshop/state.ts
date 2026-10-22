@@ -30,7 +30,9 @@ export function availableSteps(options: DraftOptions | null): StepId[] {
 
 /** 沒有指定時預設看哪一步：第一個沒填完的；全部填完就看最後一步。 */
 export function defaultStep(options: DraftOptions): StepId {
-  return options.next_step ?? options.steps.at(-1)?.id ?? "skeleton";
+  // 戰場變奏（Phase 3-25b）是最後一個可省略的步驟：全部填完時停在稀有度，不自動跳去變奏
+  const last = options.steps.filter((s) => s.id !== "variants").at(-1)?.id ?? options.steps.at(-1)?.id;
+  return options.next_step ?? last ?? "skeleton";
 }
 
 export function currentStep(state: EditorState): StepId | null {
@@ -161,7 +163,7 @@ export interface KeyValueStore {
   setItem(key: string, value: string): void;
 }
 
-const STEP_IDS: readonly string[] = ["skeleton", "basics", "shape", "effects", "followup", "condition", "cost", "rarity"];
+const STEP_IDS: readonly string[] = ["skeleton", "basics", "shape", "effects", "followup", "condition", "cost", "rarity", "variants"];
 
 function stringField(obj: Json, key: string): string | undefined {
   const v = obj[key];
@@ -228,6 +230,7 @@ export const STEP_NAMES: Readonly<Record<StepId, string>> = {
   condition: "條件",
   cost: "代價",
   rarity: "稀有度",
+  variants: "戰場變奏",
 };
 
 /** 還沒填完的步驟（中文，依序）。條件與代價大多可省略，只有其他步驟都完成時才提到條件（有些骨架必填）。 */

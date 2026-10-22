@@ -266,6 +266,8 @@ class BudgetRules(ContentModel):
     variant_surcharge_permille: int = Field(default=100, ge=0, le=1000)
     """戰場變奏（Phase 3-25a，6.24）：每個變奏的加價（‰）。基礎型態的總點數 ×（1000 ＋ 這個值 ×
     變奏數）÷ 1000；每個變奏型態另外照一般技能計算，各自落在預算窗內（初值，之後以模擬調整）。"""
+    variant_range_step_permille: int = Field(default=50, ge=0, le=1000)
+    """變奏的射程 +1 格，該型態的點數加基礎型態點數的這個比例（‰；Phase 3-25b；射程 −1 不折抵）。"""
     composite_tax_permille: int = Field(default=150, ge=0, le=1000)
     """複合技能（Phase 3F-3a，6.23）的加成：總點數 ＝（位移段點數 ＋ 動作段點數）×（1000 ＋ 這個值）
     ÷ 1000（省下一次行動的代價；初值，之後以模擬調整）。"""

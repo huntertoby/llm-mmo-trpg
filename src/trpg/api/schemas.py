@@ -330,6 +330,23 @@ class BattleHistory(_ApiModel):
     steps: tuple[HistoryStepOut, ...]
 
 
+class VariantStateOut(_ApiModel):
+    """主角一招帶戰場變奏的技能，目前會生效的型態（Phase 3-25b；引擎的 ``varied_skill`` 判定）。"""
+
+    skill_id: str
+    active: str | None
+    """只看施放者位置的條件（站在表面上、身旁有牆）現在成立的型態 ID；沒有為 ``None``。"""
+    available: tuple[str, ...]
+    """目前的合法動作中，某個目標點會選出的型態 ID（含居高、目標點表面；資料順序）。"""
+
+
+class PreviewVariantOut(_ApiModel):
+    """預覽的動作會用到的型態（Phase 3-25b）。"""
+
+    id: str
+    name_zh: str
+
+
 class BattleResponse(_ApiModel):
     """建立、讀取、動作、決定、戰術指令共用的回應。"""
 
@@ -350,6 +367,8 @@ class BattleResponse(_ApiModel):
     選取（``DecisionRequest.copy_cast`` 從中挑一個）；其他時候為空。"""
     run_option: RunOptionOut | None = None
     """輪到主角時，跑步是否合法與原因（Phase 3-20）；其他時候 ``None``。"""
+    variant_states: tuple[VariantStateOut, ...] = ()
+    """主角每一招帶戰場變奏的技能目前會生效的型態（Phase 3-25b）；輪到主角時才有。"""
     followup_options: tuple[FollowupOptionOut, ...] = ()
     """``pending.kind == "followup"``（Phase 3F-4a）時，複合技能（``pending.skill_id``）第二段
     從施放者目前位置所有合法的選取；其他時候為空。"""
@@ -634,6 +653,9 @@ class PreviewOut(_ApiModel):
     """複合技能：動作段的影響格（``affected_tiles`` 已含兩段的範圍）。"""
     followup_when: str | None = None
     """複合技能第二段的種類（``followup.when``，Phase 3F-4b）；其他動作為 ``None``。"""
+    variant: PreviewVariantOut | None = None
+    """這個目標點會生效的戰場變奏型態（Phase 3-25b）；沒有變奏成立為 ``None``（傷害、範圍等已是
+    該型態的結果）。"""
 
 
 def _damage(d: DamageRange | None) -> DamageOut | None:

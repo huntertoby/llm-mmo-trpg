@@ -120,6 +120,7 @@ __all__ = [
     "TIME_BOMB",
     "TOPPLE",
     "VARIANT_CONDITIONS",
+    "VARIANT_FORBIDDEN_PRIMITIVES",
     "VARIANT_TARGET_CONDITIONS",
     "WEAPON_CLASSES",
     "ZONE",
@@ -1709,6 +1710,9 @@ class ModifierSpec(ContentModel):
 # ---------------------------------------------------------------------------
 
 MAX_VARIANTS = 2
+VARIANT_FORBIDDEN_PRIMITIVES = frozenset({"zone", "delayed_damage", "copy_skill"})
+"""帶變奏的技能不能含的原語（Phase 3-25b，3-25a 待 PM 決定 #8）：它們事後以 ``skill_def(id)`` 查表，
+拿到的是基礎型態。"""
 """一招技能最多的變奏數（實際上限再依稀有度，見 ``core.yaml`` 的 ``variant_max_by_rarity``）。"""
 VARIANT_CONDITIONS: tuple[str, ...] = (
     "caster_surface",
@@ -1975,12 +1979,31 @@ class SkillDef(ContentModel):
             raise ValueError("複合技能（有 followup）不能帶變奏")
         if self.is_activatable:
             raise ValueError("常駐類傳說（有 activation）不能帶變奏")
+        for spec in self._all_effect_specs():
+            if spec.type in VARIANT_FORBIDDEN_PRIMITIVES:
+                raise ValueError(
+                    f"帶變奏的技能不能含「{spec.type}」效果（區域、延遲傷害、複製技能等後續查表"
+                    "拿到的是基礎型態，變奏不會生效）"
+                )
         for variant in self.variants:
             self._check_variant(variant)
             try:
                 self.variant_form(variant.id)
             except ValueError as exc:
                 raise ValueError(f"變奏 {variant.id}：{exc}") from None
+
+    def _all_effect_specs(self) -> list[EffectSpec]:
+        found: list[EffectSpec] = []
+
+        def walk(effect: EffectSpec) -> None:
+            found.append(effect)
+            for group in (effect.then, effect.win, effect.lose, effect.on_kill, effect.effects):
+                for sub in group or ():
+                    walk(sub)
+
+        for effect in self.effects:
+            walk(effect)
+        return found
 
     def _check_variant(self, variant: VariantSpec) -> None:
         main = self.main_damage_index
