@@ -776,6 +776,20 @@ def skill_reference_problems(
     return problems
 
 
+def _variant_lookup_problems(variant_id: str | None, form: SkillDef, ruleset: Ruleset) -> list[str]:
+    """帶變奏的技能（基礎型態與每個變奏型態）不能含「事後以技能 ID 查表」的原語（Phase 3E-2a；
+    ``skill_primitives.yaml`` 的 ``lookup_by_skill_id``）：查到的是基礎型態，變奏的替換不會生效，
+    引擎還可能找不到效果而崩潰。"""
+    flagged = {p.id for p in ruleset.primitives.primitives if p.lookup_by_skill_id}
+    where = "variants" if variant_id is None else f"variants.{variant_id}"
+    found = sorted({e.type for e in form.iter_effects(include_followup=True)} & flagged)
+    return [
+        f"{where}：帶變奏的技能不能含「{name}」效果（區域、延遲傷害、複製技能等事後以技能 ID 查表，"
+        "拿到的是基礎型態，變奏不會生效）"
+        for name in found
+    ]
+
+
 def _variant_reference_problems(
     skill: SkillDef, ruleset: Ruleset, skills: Mapping[str, SkillDef]
 ) -> list[str]:
@@ -789,6 +803,7 @@ def _variant_reference_problems(
         problems.append(
             f"variants：稀有度 {skill.rarity} 最多帶 {limit} 個變奏，收到 {len(skill.variants)} 個"
         )
+    problems += _variant_lookup_problems(None, skill, ruleset)
     known = {s.id.value for s in ruleset.surfaces.surfaces}
     for variant in skill.variants:
         unknown = [s for s in variant.when.surfaces if s not in known]
@@ -798,6 +813,7 @@ def _variant_reference_problems(
                 f"（可用：{', '.join(sorted(known))}）"
             )
         form = skill.variant_form(variant.id)
+        problems += _variant_lookup_problems(variant.id, form, ruleset)
         problems += [
             f"variants.{variant.id}.{p}" for p in skill_reference_problems(form, ruleset, skills)
         ]

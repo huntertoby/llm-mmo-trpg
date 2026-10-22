@@ -35,7 +35,7 @@ from collections.abc import Iterator
 from contextlib import contextmanager
 from dataclasses import dataclass
 
-from trpg.content.skills import SACRIFICE_SUMMON, SUMMON, EffectSpec, SkillDef
+from trpg.content.skills import SACRIFICE_SUMMON, SUMMON, SkillDef
 from trpg.engine import modifiers
 from trpg.engine.actions import InfuseSkill, UseSkill
 from trpg.engine.context import Ctx
@@ -90,20 +90,12 @@ _ALLY_HIT_POINTS = 15
 _PERMILLE = 1000
 
 
-def _walk(effects: tuple[EffectSpec, ...]) -> Iterator[EffectSpec]:
-    for effect in effects:
-        yield effect
-        for group in (effect.then, effect.win, effect.lose, effect.on_kill, effect.effects):
-            if group:
-                yield from _walk(group)
-
-
 def skill_ban(state: BattleState, skill: SkillDef) -> str | None:
     """技能本身不能灌注的原因（不看施放者的資源）；可以時 ``None``。
 
     只能灌注一般的主動技能；不能灌注召喚（含獻祭召喚物）、傳說、改變規則類（改寫規則型原語、
     規則改變）、複合技能（``followup``）、陷阱技能與需要層數的技能。"""
-    specs = list(_walk(skill.effects))
+    specs = list(skill.iter_effects())
     rules = state.ruleset
     checks = (
         (skill.kind != "active" or skill.is_activatable, "只有主動技能可以灌注"),

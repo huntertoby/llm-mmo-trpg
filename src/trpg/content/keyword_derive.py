@@ -20,6 +20,7 @@ from trpg.content.skills import (
     ModifierSpec,
     SkillDef,
     TriggerSpec,
+    walk_effect,
 )
 
 __all__ = [
@@ -57,13 +58,6 @@ class SkillKeywords:
 # ---------------------------------------------------------------------------
 
 
-def walk_effect(effect: EffectSpec) -> Iterator[EffectSpec]:
-    yield effect
-    for group in (effect.then, effect.win, effect.lose, effect.on_kill, effect.effects):
-        for sub in group or ():
-            yield from walk_effect(sub)
-
-
 def modifier_effects(rule: ModifierSpec) -> Iterator[EffectSpec]:
     for effect in rule.change.on_hit_effects or ():
         yield from walk_effect(effect)
@@ -72,15 +66,7 @@ def modifier_effects(rule: ModifierSpec) -> Iterator[EffectSpec]:
 def skill_effect_specs(skill: SkillDef) -> tuple[EffectSpec, ...]:
     """技能所有層級的效果（含 ``then``、賭注分支、擊殺時效果、區域效果、複合第二段與修正規則的
     命中後效果）。"""
-    found: list[EffectSpec] = []
-    for effect in skill.effects:
-        found.extend(walk_effect(effect))
-    if skill.followup is not None:
-        for effect in skill.followup.effects:
-            found.extend(walk_effect(effect))
-    for rule in skill.modifiers:
-        found.extend(modifier_effects(rule))
-    return tuple(found)
+    return tuple(skill.iter_effects(include_followup=True, include_modifiers=True))
 
 
 def skill_condition_specs(skill: SkillDef) -> tuple[ConditionSpec, ...]:

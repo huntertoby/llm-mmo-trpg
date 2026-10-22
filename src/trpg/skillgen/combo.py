@@ -13,21 +13,10 @@
 
 from __future__ import annotations
 
-from collections.abc import Iterator
-
 from trpg.content.library import ContentLibrary
-from trpg.content.skills import CONSUME_STATUS, EffectSpec, SkillDef
+from trpg.content.skills import CONSUME_STATUS, SkillDef
 
 __all__ = ["self_combo_reasons"]
-
-
-def _walk(effects: tuple[EffectSpec, ...]) -> Iterator[EffectSpec]:
-    """效果與它們巢狀的效果（``then``、賭注的 ``win``／``lose``、擊殺時效果）。"""
-    for effect in effects:
-        yield effect
-        for nested in (effect.then, effect.win, effect.lose, effect.on_kill):
-            if nested:
-                yield from _walk(nested)
 
 
 def self_combo_reasons(skill: SkillDef, library: ContentLibrary) -> tuple[str, ...]:
@@ -36,8 +25,8 @@ def self_combo_reasons(skill: SkillDef, library: ContentLibrary) -> tuple[str, .
     follow = skill.followup_skill()
     if follow is None:
         return ()
-    first = list(_walk(skill.effects))
-    second = list(_walk(follow.effects))
+    first = list(skill.iter_effects())
+    second = list(follow.iter_effects())
     surfaces = {e.surface for e in first if e.type == "create_surface" and e.surface is not None}
     statuses = {e.status for e in first if e.type == "apply_status" and e.status is not None}
     elements = {e.element for e in second if e.element is not None}

@@ -1950,7 +1950,7 @@ def _with_infusion(state: BattleState, unit: UnitState, action: Action) -> Actio
     沒有可選的關鍵字時不變。"""
     if not isinstance(action, UseSkill) or action.infusion is not None:
         return action
-    template = summon_template(state.ruleset.skill_def(action.skill_id))
+    template = summon_template(cast_form(state, action))
     if template is None:
         return action
     picked = preferred_infusion(state, unit, template)
