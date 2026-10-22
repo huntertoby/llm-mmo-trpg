@@ -258,6 +258,43 @@ weapons:
     crit_range: 20
     two_handed: false
     summon_only: true
+  # Phase 3-33e2b：召喚物（二）專用武器（初值，未經模擬）
+  - id: vine_lash
+    name_zh: 藤鞭
+    weapon_class: melee
+    range: 1
+    dice: 1d4
+    flat: 0
+    attack_bonus: 0
+    scaling_attr: str
+    element: earth
+    crit_range: 20
+    two_handed: false
+    summon_only: true
+  - id: guardian_rod
+    name_zh: 守護之杖
+    weapon_class: focus
+    range: 3
+    dice: 1d4
+    flat: 0
+    attack_bonus: 0
+    scaling_attr: wis
+    element: holy
+    crit_range: 20
+    two_handed: true
+    summon_only: true
+  - id: totem_stone
+    name_zh: 圖騰石
+    weapon_class: melee
+    range: 1
+    dice: 1d4
+    flat: 0
+    attack_bonus: 0
+    scaling_attr: str
+    element: physical
+    crit_range: 20
+    two_handed: false
+    summon_only: true
   - id: stone_fist
     name_zh: 石拳
     weapon_class: melee

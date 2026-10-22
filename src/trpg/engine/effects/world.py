@@ -11,7 +11,6 @@ from __future__ import annotations
 from dataclasses import dataclass, replace
 from typing import Literal
 
-from trpg.content.maps import MAX_HEIGHT
 from trpg.content.rule_changes import PUSH_ANY_OBJECT
 from trpg.engine.activations import moves_object
 from trpg.engine.context import Ctx
@@ -56,10 +55,10 @@ from trpg.engine.events import (
     RuleChangeTriggered,
     SurfaceChanged,
     TerrainChanged,
-    UnitFell,
     UnitSpawned,
     WallToppled,
 )
+from trpg.engine.heights import change_height
 from trpg.engine.ids import IMMOVABLE, STEADFAST, TOPPLABLE, next_unit_id
 from trpg.engine.lifecycle import dismiss_summon, make_unit
 from trpg.engine.rules.combat import PERMILLE
@@ -865,42 +864,6 @@ def _hurl_object(ctx: Ctx, effect: EffectBase) -> list[EventBase]:
 # ---------------------------------------------------------------------------
 # 地形
 # ---------------------------------------------------------------------------
-
-
-def change_height(
-    ctx: Ctx, xy: XY, new_height: int, source_id: UnitId | None = None
-) -> list[EventBase]:
-    """改變高度；站在上面的單位跟著移動（往下落差達門檻時墜落）。"""
-    state = ctx.state
-    tile = state.tile(*xy)
-    new_height = max(0, min(MAX_HEIGHT, new_height))
-    if new_height == tile.height:
-        return []
-    state.set_tile(*xy, replace(tile, height=new_height))
-    events: list[EventBase] = [
-        ctx.emit(
-            TerrainChanged,
-            pos=_pos(xy),
-            height_before=tile.height,
-            height_after=new_height,
-            terrain_before=tile.terrain,
-            terrain_after=tile.terrain,
-        )
-    ]
-    drop = tile.height - new_height
-    unit = state.unit_at(*xy)
-    min_drop = ctx.core.fall_damage_min_drop
-    if unit is not None and drop >= min_drop:
-        events.append(
-            ctx.emit(
-                UnitFell,
-                unit_id=unit.id,
-                drop=drop,
-                levels=drop - (min_drop - 1),
-                source_id=source_id,
-            )
-        )
-    return events
 
 
 @register_effect("raise_terrain")

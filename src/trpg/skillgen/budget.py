@@ -744,6 +744,20 @@ def summon_trait_points(
     if "immovable" in summon.template.tags:
         per_round += Fraction(library.budget.summon_trait_immovable_permille, _PERMILLE)
         notes.append("不會被推動")
+    pulse = summon.template.pulse
+    if pulse is not None and pulse.pull_radius > 0:  # 拉扯（吸引圖騰，3-33e2b）：每輪拉近 1 格
+        pull = library.ruleset.primitives.by_id()["pull"].base_points or 0
+        per_round += pull * Fraction(library.budget.summon_trait_pull_permille, _PERMILLE)
+        notes.append("拉扯")
+    platform = summon.template.platform
+    if platform is not None:  # 高台（高台圖騰，3-33e2b）：高台在的每一輪都有地形價值
+        raised = library.ruleset.primitives.by_id()["raise_terrain"].base_points or 0
+        per_round += (
+            raised
+            * platform.height
+            * Fraction(library.budget.summon_trait_platform_permille, _PERMILLE)
+        )
+        notes.append("高台")
     return per_round, once, notes
 
 

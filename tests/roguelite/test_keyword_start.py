@@ -134,7 +134,7 @@ def test_allocation_is_checked() -> None:
 def test_dev_packs_all_start_and_stay_out_of_the_player_start() -> None:
     lib = library()
     packs = lib.dev_starters.packs
-    assert len(packs) == 24
+    assert len(packs) == 28
     labels = {p.label_zh for p in packs}
     assert labels == {"烈焰", "潮雷", "霜寒", "撼地", "鐵壁", "影刃"} | {
         "鷹眼",
@@ -157,6 +157,11 @@ def test_dev_packs_all_start_and_stay_out_of_the_player_start() -> None:
         "石像包",
         "土牆包",
         "戰狼包",
+        # 3-33e2b
+        "藤蔓包",
+        "守護靈包",
+        "吸引圖騰包",
+        "高台圖騰包",
     }
     for pack in packs:
         run = new_dev_run(lib, pack.id, 0)
@@ -209,7 +214,9 @@ def test_behavior_counts_the_heros_actions() -> None:
 
 def test_a_keyword_run_plays_and_records_behavior_and_offer_tags() -> None:
     lib = library()
-    run = new_keyword_run(lib, "one_handed_sword", ("prone", "collision"), 2)
+    run = new_keyword_run(
+        lib, "one_handed_sword", ("prone", "collision"), 1
+    )  # 3-33e2a 合併：種子 2 的提案換成召喚技，改 1
 
     def stop(r: object, battle: object) -> bool:
         return isinstance(getattr(r, "node", None), LevelUpNode)

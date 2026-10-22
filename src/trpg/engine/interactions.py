@@ -43,6 +43,7 @@ from trpg.engine.events import (
     SurfaceEntered,
 )
 from trpg.engine.rules.geometry import XY, chebyshev
+from trpg.engine.rules.movement import is_flying
 from trpg.engine.state import BattleState
 from trpg.engine.triggers import register_trigger
 from trpg.shared.types import Element, Surface, UnitId
@@ -96,6 +97,9 @@ def matching_rules(
                 and unit is not None
                 and (rule.unit_tag is None or unit.has_tag(rule.unit_tag))
                 and (rule.unit_surface is None or rule.unit_surface is tile.surface)
+                and not (
+                    rule.unit_surface is not None and is_flying(unit)
+                )  # 會飛的不受地面表面影響
             ):
                 chosen.append(rule)
                 break

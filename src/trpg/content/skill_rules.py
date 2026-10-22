@@ -243,6 +243,10 @@ class BudgetRules(ContentModel):
     """不會被推動（石像）：每輪折合的點數（‰，擋路的價值）。"""
     summon_detonate_rounds: int = Field(default=1, ge=1, le=6)
     """會自爆的召喚物（爆裂傀儡）：一般攻擊與特性只算這麼多輪（自爆後就消失了），自爆另計。"""
+    summon_trait_pull_permille: int = Field(default=1000, ge=0, le=5000)
+    """拉扯（吸引圖騰，Phase 3-33e2b）：拉扯原語點數 × 此比例（‰），每輪。"""
+    summon_trait_platform_permille: int = Field(default=1000, ge=0, le=5000)
+    """高台（高台圖騰，Phase 3-33e2b）：升起地形原語點數 × 高度 × 此比例（‰），每輪。"""
     summon_topple_targets_permille: int = Field(default=1000, ge=0, le=5000)
     """被推倒壓人（土牆）：推倒傷害骰平均 ＋ 擊倒原語點數，× 預期被壓到的敵人數（‰），一次性。"""
     totem_expected_allies_permille: int = Field(default=1000, ge=0, le=5000)

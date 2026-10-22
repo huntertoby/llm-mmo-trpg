@@ -1,0 +1,20 @@
+# 召喚物（Phase 3-33e2b，docs/design/06-技能.md 6.29.5；數值為初值，未經模擬）：地形工具。圖騰（沒有行動，
+# inert）；召喚時在旁邊（離召喚者最近的空格）升起 1 格高台，圖騰消失（到期、被打倒…）時高台恢復。
+id: summon_plateau_totem
+name_zh: 高台圖騰
+attributes: {str: 6, dex: 6, con: 12, int: 6, wis: 6, wil: 6}
+max_hp: 12
+speed: 0
+armor_bonus: 0
+weapon: totem_stone
+ai_profile: guard
+default_mode: hold   # 6.29.5「AI 預設」＝不動
+resist: {}
+element_mods: {}
+tags: [summoned, totem]
+reactions: []
+summon: true
+inert: true
+platform: {height: 1}
+# 外觀（Phase 3-33h1，docs/art/召喚物外觀.md）：純顯示資料。
+look: {body: totem, variant: plateau, element: high_ground, size: medium}

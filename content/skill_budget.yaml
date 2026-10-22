@@ -60,6 +60,8 @@ summon_trait_height_permille: 300          # 高處加傷：每輪傷害 × 加�
 summon_trait_conceal_points: 1             # 召喚時隱蔽（一次性）
 summon_detonate_targets_permille: 800      # 自爆：傷害骰平均 × 0.8 個敵人（一次性；爆裂傀儡要先走到敵人旁）
 summon_detonate_rounds: 1                  # 會自爆的召喚物：一般攻擊與特性只算 1 輪（自爆後就消失了）
+summon_trait_pull_permille: 1000           # 拉扯（吸引圖騰，3-33e2b 合併補上；初值，未經模擬）：拉扯點數 × 100%，每輪
+summon_trait_platform_permille: 1000       # 高台（高台圖騰，3-33e2b 合併補上；初值，未經模擬）：升起地形點數 × 高度 × 100%，每輪
 summon_topple_targets_permille: 900        # 被推倒壓人：（傷害骰平均 ＋ 擊倒點數）× 0.9 個敵人（一次性；土牆不攻擊，價值全在這裡）
 
 # 3D-5 持續區域：點數 ＝ effects 的基礎點數合計 × 預估觸發次數（形狀格數 × duration × zone_cell_round_permille ÷ 1000）
@@ -172,7 +174,7 @@ modifier:
   uses: {attack: 6, shove: 2, trip: 2, interact: 1, all_attacks: 10, all_skills: 6, skill_tag: 3}
   uses_cap: 12
   per_turn_limit_uses: 8        # 3-31：帶 per_turn_limit 的規則，每場預估使用次數（每個自己的回合最多 1 次；初值，未經模擬）
-  empty_slots_permille: 700     # 3-32a：依空欄位數加傷的規則（普攻精通）以滿格估算再 × 此值（技能欄空著本身就是代價；初值，未經模擬；3-32c 精通 80‰→60‰ 後由 500 調到 700，維持預算 ≥ 70%）
+  empty_slots_permille: 800     # 3-32a：依空欄位數加傷的規則（普攻精通）以滿格估算再 × 此值（技能欄空著本身就是代價；初值，未經模擬；3-32c 精通 80‰→60‰ 後由 500 調到 700；3-32d 精通 60‰→50‰ 再調到 800，維持預算 ≥ 70%）
   on_hit_rune_permille: 270     # 3-31：命中後的 inscribe／detonate_runes 點數 × 此值（符文單獨沒效果、要搭配讀取者；初值，未經模擬）
   points_milli:
     hit_bonus: 350        # 命中 +1 ≈ 命中率 +5% × 基準傷害 7

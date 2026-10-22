@@ -3,7 +3,7 @@
 
 from __future__ import annotations
 
-from collections.abc import Callable, Sequence
+from collections.abc import Callable, Iterator, Sequence
 
 import pytest
 
@@ -16,7 +16,7 @@ from tests.engine.helpers import (
     spawn,
 )
 from tests.engine.test_gear_g2 import Rolls, _spawn, _weapon_of
-from trpg.content.equipment import ItemDef, item_problems
+from trpg.content.equipment import AttackAffix, ItemDef, ValueRange, item_problems
 from trpg.content.skills import ModifierSpec
 from trpg.engine import Attack, BattleState, EndTurn, UseSkill, resolve, start_battle, weapon_traits
 from trpg.engine import modifiers as mods
@@ -45,6 +45,18 @@ ACTIVES = (
     "skill_shield_bash",
     "skill_gale_kick",
 )
+
+
+@pytest.fixture(autouse=True)
+def _wide_combo_range() -> Iterator[None]:
+    """內容的連擊詞條 N 只剩 3（3-32d）；引擎測試仍要驗證 N ＝ 2 的計數與「取較頻繁者」，
+    所以測試期間把初值範圍放寬成 2～3（只換掉快取內容庫裡的詞條定義，結束後還原）。"""
+    affixes = library().affixes
+    original = affixes[COMBO]
+    assert isinstance(original, AttackAffix)
+    affixes[COMBO] = original.model_copy(update={"value": ValueRange(min=2, max=3)})
+    yield
+    affixes[COMBO] = original
 
 
 class _Missed(Exception):
@@ -124,22 +136,22 @@ def _multiplier(state: BattleState) -> int:
 
 @pytest.mark.parametrize(
     ("actives", "expected"),
-    [(0, 1180), (3, 1180), (4, 1120), (5, 1060), (6, 1000)],
+    [(0, 1150), (3, 1150), (4, 1100), (5, 1050), (6, 1000)],
     ids=["0-actives-capped", "3-actives", "4-actives", "5-actives", "6-actives-none-empty"],
 )
 def test_mastery_scales_with_empty_active_slots_and_caps_at_three(
     actives: int, expected: int
 ) -> None:
     state = _fighting({}, skills=(MASTERY, *ACTIVES[:actives]))
-    assert _multiplier(state) == expected  # 每空 1 格 +6%，最多算 3 格（+18%）
+    assert _multiplier(state) == expected  # 每空 1 格 +5%，最多算 3 格（+15%）
 
 
 def test_mastery_counts_the_bar_when_the_attack_resolves() -> None:
     state = _fighting({}, skills=(MASTERY, *ACTIVES[:3]))
-    assert _multiplier(state) == 1180
+    assert _multiplier(state) == 1150
     unit = state.units[U1]
     unit.skills = (*unit.skills, ACTIVES[3])  # 戰鬥中多裝一招：空格少一格
-    assert _multiplier(state) == 1120
+    assert _multiplier(state) == 1100
 
 
 def test_mastery_ignores_passives_and_only_applies_to_basic_attacks() -> None:
@@ -151,7 +163,7 @@ def test_mastery_ignores_passives_and_only_applies_to_basic_attacks() -> None:
 
 
 def test_mastery_counts_towards_the_fifty_percent_damage_cap() -> None:
-    # 精通 +180，加上兩枚玻璃（+200、遞減 +100）與低血傷害 +150 ＝ 630 → 截斷為 +500
+    # 精通 +150，加上兩枚玻璃（+200、遞減 +100）與低血傷害 +150 ＝ 600 → 截斷為 +500
     slots: dict[str, Rolls] = {
         "main_hand": [("affix_cost_glass", None)],
         "neck": [("affix_cost_glass", None)],
@@ -166,7 +178,7 @@ def test_mastery_damage_reaches_the_damage_event() -> None:
     state = _fighting({}, skills=(MASTERY, *ACTIVES[:3]))
     _, events = _scan(state, _attack)
     hit = next(e for e in events if isinstance(e, DamageDealt) and e.source_id == U1)
-    assert hit.multiplier_permille == 1180
+    assert hit.multiplier_permille == 1150
 
 
 def test_mastery_passive_is_valid_and_within_budget() -> None:
@@ -175,7 +187,7 @@ def test_mastery_passive_is_valid_and_within_budget() -> None:
     assert validate_skill(skill, lib) == []
     assert skill_budget(skill, lib).ok
     rule = skill.modifiers[0]
-    assert rule.empty_slots_cap == 3 and rule.change.damage_permille == 60
+    assert rule.empty_slots_cap == 3 and rule.change.damage_permille == 50
 
 
 @pytest.mark.parametrize(
@@ -323,7 +335,7 @@ def test_cleave_hits_the_lowest_hp_adjacent_enemy_for_half_once_per_turn() -> No
     fired = _triggers(first, "attack_cleave")
     assert [(t.unit_id, t.other_id) for t in fired] == [(U1, U4)]  # (1,1) 的 HP 12 最低
     splash = [e for e in first if isinstance(e, DamageDealt) and e.target_id == U4]
-    assert len(splash) == 1 and splash[0].multiplier_permille == 400 and splash[0].cause == "attack"
+    assert len(splash) == 1 and splash[0].multiplier_permille == 300 and splash[0].cause == "attack"
     assert not [e for e in first if isinstance(e, DamageDealt) and e.target_id == U3]
     assert not [
         e for e in first if isinstance(e, DamageDealt) and e.target_id == UnitId("unit_0005")

@@ -13,6 +13,7 @@ from trpg.content.equipment import (
     AFFIX_CATEGORIES,
     AffixDef,
     AffixTable,
+    AttackAffix,
     EquipmentRules,
     ItemDef,
     Loadout,
@@ -370,3 +371,14 @@ def test_diminishing_weights_must_start_at_1000_and_not_grow() -> None:
         EquipmentRules(diminishing_permille=(500, 250))
     with pytest.raises(ValidationError):
         EquipmentRules(diminishing_permille=(1000, 250, 500))
+
+
+def test_attack_flow_strike_affixes_after_3_32d() -> None:
+    """3-32d：連擊只出「每第 3 次」（N 範圍 3～3）、多出的一下 400‰；分裂 300‰。"""
+    affixes = library().affixes
+    combo, cleave = affixes["affix_attack_combo"], affixes["affix_attack_cleave"]
+    assert combo.value is not None and (combo.value.min, combo.value.max) == (3, 3)
+    assert isinstance(combo, AttackAffix) and isinstance(cleave, AttackAffix)
+    assert (combo.strike_permille, cleave.strike_permille) == (400, 300)
+    mastery = library().skills["skill_attack_mastery"]
+    assert mastery.modifiers[0].change.damage_permille == 50

@@ -103,10 +103,11 @@ from trpg.engine.rules.movement import (
     fear_blocks_step,
     fear_origins,
     is_deadly,
+    is_flying,
     is_standable,
     path_map,
     stand_up_cost,
-    step_cost,
+    unit_step_cost,
 )
 from trpg.engine.rules.statuses import (
     base_attribute,
@@ -476,7 +477,7 @@ def plan_move(  # noqa: PLR0912
             raise IllegalActionError(
                 f"{unit.name_zh} 正在恐懼中，不能靠近恐懼的來源：{prev} → {cur}"
             )
-        cost = step_cost(state, prev, cur)
+        cost = unit_step_cost(state, unit, prev, cur)
         if cost is None:
             if not is_standable(state, cur):
                 obj = state.object_at(*cur)
@@ -495,6 +496,8 @@ def plan_move(  # noqa: PLR0912
             raise IllegalActionError(f"被敵方單位 {other.name_zh} 阻擋：{cur}")
         steps.append((cur, cost))
         prev = cur
+    if is_flying(unit) and steps and not is_standable(state, prev):
+        raise IllegalActionError(f"不能停在無法站立的格子：{prev}")  # 會飛的單位只能飛越（3-33e2b）
     end_unit = occupancy.get(prev)
     if end_unit is not None and end_unit.id != unit.id:
         raise IllegalActionError(f"不能停在已有單位的格子：{prev}（{end_unit.name_zh}）")

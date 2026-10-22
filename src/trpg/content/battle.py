@@ -36,7 +36,9 @@ __all__ = [
     "SummonLookBody",
     "SummonLookSize",
     "SummonMode",
+    "SummonPlatform",
     "SummonPulse",
+    "SummonSnare",
     "TerrainDef",
     "TerrainTable",
     "TotemSpec",
@@ -676,20 +678,52 @@ class SummonDetonate(ContentModel):
 
 
 class SummonPulse(ContentModel):
-    """召喚物自己的回合開始時的脈動（Phase 3-33e1，水精）：在自己腳下造 ``surface``，並治療
-    曼哈頓距離
-    ``heal_radius`` 以內受傷的友方（不含自己；骰 ``heal_dice`` ＋ ``heal_flat``）。"""
+    """召喚物自己的回合開始時的脈動（Phase 3-33e1，水精；3-33e2b 擴充）。
+
+    - 在自己腳下造 ``surface``；
+    - 治療曼哈頓距離 ``heal_radius`` 以內受傷的友方（不含自己；骰 ``heal_dice`` ＋ ``heal_flat``）；
+    - 護盾（守護靈）：``shield_dice``／``shield_flat`` 有值時，給 **最虛弱** 的友方（含召喚者與其他
+      召喚物，不含自己；HP 比例最低，再依 HP、單位 ID）一層護盾；
+    - 拉扯（吸引圖騰）：``pull_radius`` 大於 0 時，把範圍內最近的一個敵人往自己拉近 1 格
+      （確定性選目標：距離最近、再依座標 ``(y, x)``；拉不動的略過）。
+    """
 
     surface: Surface | None = None
     heal_radius: int = Field(default=1, ge=1, le=3)
     heal_dice: Dice | None = None
     heal_flat: int = Field(default=0, ge=0, le=10)
+    shield_dice: Dice | None = None
+    shield_flat: int = Field(default=0, ge=0, le=10)
+    pull_radius: int = Field(default=0, ge=0, le=4)
 
     @model_validator(mode="after")
     def _has_effect(self) -> SummonPulse:
-        if self.surface is None and self.heal_dice is None and self.heal_flat == 0:
-            raise ValueError("脈動至少要有表面或治療")
+        if (
+            self.surface is None
+            and self.heal_dice is None
+            and self.heal_flat == 0
+            and self.shield_dice is None
+            and self.shield_flat == 0
+            and self.pull_radius == 0
+        ):
+            raise ValueError("脈動至少要有表面、治療、護盾或拉扯")
         return self
+
+
+class SummonSnare(ContentModel):
+    """纏繞（Phase 3-33e2b，藤蔓）：敵人踏入（走進、被推進、被拉進）自己相鄰的格子時，施加
+    ``status``（``duration`` 回合）；``prone`` 為真時並使其倒地。每隻每輪最多觸發 1 次。"""
+
+    status: str = Field(default="slow", pattern=ID_PATTERN)
+    duration: int = Field(default=2, ge=1, le=6)
+    prone: bool = True
+
+
+class SummonPlatform(ContentModel):
+    """高台（Phase 3-33e2b，高台圖騰）：召喚時在旁邊（曼哈頓距離 1）升起 1 格高台（地形高度 +1），
+    召喚物消失時恢復。目前只支援 1 層（恢復時不結算墜落）。"""
+
+    height: int = Field(default=1, ge=1, le=1)
 
 
 class UnitTemplate(ContentModel):
@@ -747,8 +781,13 @@ class UnitTemplate(ContentModel):
     """回合開始的脈動（Phase 3-33e1）。"""
     detonate: SummonDetonate | None = None
     """自爆（Phase 3-33e2a）：走到敵人相鄰、回合開始時已相鄰或被打倒時爆炸並消失。"""
+    snare: SummonSnare | None = None
+    """纏繞（Phase 3-33e2b，藤蔓）：敵人踏入相鄰格時施加狀態。"""
+    platform: SummonPlatform | None = None
+    """召喚時在旁邊升起高台（Phase 3-33e2b，高台圖騰）。"""
     inert: bool = False
-    """不行動（Phase 3-33e2a，土牆）：回合內沒有 AP、不能操控（同圖騰，但沒有光環）。"""
+    """沒有行動（Phase 3-33e2a 土牆、3-33e2b）：AP 恆為 0（不移動、不攻擊）、不能操控，只有回合開始
+    的脈動與被動特性；圖騰（``totem``）本來就是如此，這個旗標給沒有光環的純功能召喚物。"""
     equipment: dict[Slot, str] = Field(default_factory=dict)
     """裝備（Phase 3G-G1）：欄位 → 物品 id（``content/items.yaml``）。"""
     level: int = Field(default=1, ge=1, le=99)
@@ -769,9 +808,18 @@ class UnitTemplate(ContentModel):
         if self.look is not None and not self.summon:
             raise ValueError("外觀欄位 look 只有召喚物（summon: true）可以填")
         if not self.summon and (
-            self.innate or self.hit_rules or self.pulse or self.detonate or self.inert
+            self.innate
+            or self.hit_rules
+            or self.pulse
+            or self.detonate
+            or self.snare
+            or self.platform
+            or self.inert
         ):
-            raise ValueError("innate／hit_rules／pulse／detonate／inert 只有召喚物可以填")
+            raise ValueError(
+                "innate／hit_rules／pulse／detonate／snare／platform／inert"
+                " 只有召喚物（summon: true）可以填"
+            )
         return self
 
     @field_validator("skill_levels")

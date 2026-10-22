@@ -55,6 +55,11 @@ def test_the_summon_templates_are_loaded_into_the_ruleset() -> None:
         "summon_golem",
         "summon_earth_wall",
         "summon_war_wolf",
+        # 3-33e2b：召喚物（二）b
+        "summon_vine",
+        "summon_guardian_spirit",
+        "summon_pull_totem",
+        "summon_plateau_totem",
     }
     spirit, skeleton = summons["summon_elemental_spirit"], summons["summon_skeleton_warrior"]
     assert spirit.template.summon and skeleton.template.summon

@@ -106,3 +106,21 @@
 新增 1 個 `PLC0415`（`engine/lifecycle.py` 的 `down_unit` 內延後匯入 `detonate_on_downed`，避免 `summons` ↔ `lifecycle` 循環匯入；沿用同函式 `spawn_on_downed` 的作法）；測試沒有新增 `noqa`。沒有新增複雜度類（`C901`／`PLR*`）的 `noqa`。
 
 FINAL_PLACEHOLDER
+
+## 合併 3-33e2b
+
+main（已含 3-33e2b）合併進本分支，18 個檔案衝突，原則是兩段的新增全部保留。
+
+- **LOG_FORMAT**：兩段都定 `/53`，合併後改 **`/54`**；`runner.py` 文件字串依序寫 `/54`（3-33e2a）、`/53`（3-33e2b）；測試裡的 `trpg-battle-log/53`、`endswith("/53")` 一併改 `/54`。
+- **範本欄位**（`content/battle.py`）：`detonate`、`snare`、`platform`、`inert` 並存；兩段都新增了 `inert`，合併成同一個欄位（不行動、不能操控）。驗證訊息列出全部欄位。
+- **`inert` 判斷函式**：3-33e2a 叫 `summon_inert`、3-33e2b 叫 `is_inert`，語意相同，保留 `summon_inert`（`summon_control`、`view` 等已在用），拿掉 `is_inert`。
+- **引擎**：`ids.py` 同時有 `FLYING`、`IMMOVABLE`；`effects/world.py` 同時匯入 `change_height` 與 `dismiss_summon`；`summons.py` 合併事件匯入（自爆、纏繞、拉扯），自爆與高台函式並存。
+- **內容**：武器（炸藥殼、石拳、利齒、藤鞭、守護之杖、圖騰石）、起始包（8 個召喚對照組，共 28 包）、關鍵字規則（`prone` 與 `collision` 各含兩段的召喚）全部保留。召喚物特性計入預算（3-33e2a）之後，總技能數 215。
+- **測試**：技能數 211 → 215、起始包 24 → 28、召喚專用武器改成列出全部 7 把的相等斷言。`tests/roguelite/test_keyword_start.py` 的固定種子 2 在新技能池下提案第一個變成 `summon`，改種子 **1**（`test_run_cli.py` 的參數 `[5, 6]` 合併後仍有效）。
+- 重產：`tests.narrative.icon_fixture`、CLI 快照；OpenAPI 與 `client gen:api` 沒有變動需要重產（`check.py` 的 client 步驟全過）。
+
+### 第 5 點：召喚物特性計入預算後重審 3-33e2b 的 4 招
+
+- 藤蔓、守護靈：武器骰與脈動讓總點數 8，在區間內，不用動。
+- 吸引圖騰、高台圖騰：3-33e2a 之後，不行動的召喚物（`inert`）不計武器骰，`totem_stone` 不再貢獻任何點數（每輪 0），兩招總點數 0，**預算不過**。原有特性（沒有拉扯、高台）沒有計價項目，所以「特性已足夠」不成立，不能單靠拿掉佔位武器解決（範本的 `weapon` 欄位也是必填，`totem_stone` 因此保留）。
+- 處理（最小補價，初值未經模擬，請 PM 決定）：在 `skill_budget.yaml` 新增 `summon_trait_pull_permille: 1000`（拉扯 ＝ 拉扯原語 2 點 × 每輪）與 `summon_trait_platform_permille: 1000`（高台 ＝ 升起地形原語 2 點 × 高度 × 每輪），`skillgen/budget.py` 的 `summon_trait_points` 在 `inert` 濾掉每輪特性之後再加入。兩招各 2 × 4 輪 × 800‰ ＝ 6.4 點，落在 6.1～8.7 的合格區間內。藤蔓的纏繞、守護靈的護盾仍未計價（本來就過，沒動）。

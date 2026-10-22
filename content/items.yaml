@@ -263,6 +263,6 @@ items:
     material: wood
     weapon: bow
     affixes:
-      - {affix: affix_attack_combo, value: 2}
+      - {affix: affix_attack_combo, value: 3}
       - {affix: affix_attack_cleave}
       - {affix: affix_trait_bow_high_range}

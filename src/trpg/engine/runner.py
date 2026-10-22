@@ -38,12 +38,17 @@ __all__ = [
     "run_battle",
 ]
 
-LOG_FORMAT = "trpg-battle-log/53"
-"""``/53``（Phase 3-33e2a，接在 3-33e1 的 ``/52`` 之後；PM 合併時定號）：召喚物（二）a——範本多了
+LOG_FORMAT = "trpg-battle-log/54"
+"""``/54``（Phase 3-33e2a，接在 3-33e2b 的 ``/53`` 之後；合併時定號）：召喚物（二）a——範本多了
 ``detonate``（自爆）、``inert``（不行動）與標籤 ``immovable``／``topplable``／``blocks_sight``，
 新事件 ``summon_detonated``／``wall_toppled``、``push_resisted`` 多了 ``reason``、``move_blocked``
 多了 ``immovable``、召喚物消失原因多了 ``detonated``／``toppled``，石像不會被推動、土牆擋視線
-也能被推倒，召喚技能的預算與 AI 估值計入召喚物特性（持續輪數調整），因此 ``/52`` 的紀錄無法重播。
+也能被推倒，召喚技能的預算與 AI 估值計入召喚物特性（持續輪數調整），因此 ``/53`` 的紀錄無法重播。
+``/53``（Phase 3-33e2b，接在 3-33e1 的 ``/52`` 之後；PM 合併時定號）：召喚物（二）b——範本多了
+``snare``／``platform``／``inert``、``pulse`` 多了護盾與拉扯，單位狀態多了 ``snare_round``／
+``platform_pos``，新事件 ``snare_triggered``／``summon_pulled``，灌注失效多了原因
+``downed``／``gone``；
+會飛的單位（``flying``）移動不看高度差與障礙、不受地面表面影響，因此 ``/52`` 的紀錄無法重播。
 ``/52``（Phase 3-33e1，接在 3-33d 的 ``/51`` 之後）：灌注關鍵字補齊到 10 個
 （``summon_infusions``）、召喚物範本的固有灌注／命中特性／脈動（``innate``、``hit_rules``、``pulse``）、
 單位狀態多了 ``trip_round``、新狀態「戰意」（``attack_bonus``，戰意圖騰改版），召喚物的 HP、命中

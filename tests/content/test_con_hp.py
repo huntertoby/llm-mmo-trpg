@@ -72,6 +72,10 @@ OLD_HP = {
     "summon_thunder_spirit": 14,
     "summon_war_totem": 18,
     "summon_war_wolf": 14,
+    "summon_vine": 16,  # 3-33e2b 新增
+    "summon_guardian_spirit": 14,  # 3-33e2b 新增
+    "summon_pull_totem": 18,  # 3-33e2b 新增
+    "summon_plateau_totem": 18,  # 3-33e2b 新增
     "summon_water_sprite": 12,
     "training_dummy": 300,
 }

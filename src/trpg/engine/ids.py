@@ -19,6 +19,7 @@ __all__ = [
     "CONCEALED",
     "DEFENDING",
     "ELITE_TAG",
+    "FLYING",
     "IMMOVABLE",
     "PENETRABLE",
     "PRONE",
@@ -52,6 +53,8 @@ BOSS_TAG = "boss"
 """首領單位的標籤。"""
 ELITE_TAG = "elite"
 """精英單位的標籤（落入致命地形的規則也用它）。"""
+FLYING = "flying"
+"""會飛的單位標籤（Phase 3-33e2b）：移動無視地形高度差與障礙（不能停在牆內），不受地面表面影響。"""
 PENETRABLE = "penetrable"
 """可被穿透攻擊穿過的物件標籤。"""
 IMMOVABLE = "immovable"

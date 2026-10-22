@@ -1,0 +1,23 @@
+# 主動（Phase 3-33e2b，docs/design/06-技能.md 6.29.5；數值為初值，未經模擬）：在射程內的空格立起吸引圖騰，持續 4 輪；由效用 AI 控制。
+id: skill_summon_pull_totem
+schema_version: 1
+name_zh: 立起吸引圖騰
+tier: 1
+rank: 1
+rarity: rare
+kind: active
+skeleton: summon
+category: spell
+weapon_req: any
+ap_cost: 1
+scaling_attr: wis
+shape: {type: ground_tile, range: 3}
+effects:
+  - {type: summon, unit: summon_pull_totem, duration: 4}
+condition: null
+cost: {mana: 8, cooldown: 4}
+tags: [spirit, spell, summon, control]
+narrative:
+  concept: 立起一根吸引圖騰，每回合把附近的敵人拉近一步
+  cast_flavor: 你將刻滿漩渦紋的木樁釘入地面，空氣裡傳來一股拉力
+provenance: {origin: builtin, owner_id: null, created_by: null, parents: [], bound: true, tradeable: false}

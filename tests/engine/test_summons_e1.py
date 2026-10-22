@@ -383,7 +383,20 @@ def test_summon_only_weapons_are_not_start_weapons() -> None:
 
     lib = library()
     only = {w for w, d in lib.weapons.items() if d.summon_only}
-    assert {"spark_staff", "water_jet", "shade_blades", "talons"} <= only  # 之後的段落會再加
+    assert only == {
+        "spark_staff",
+        "water_jet",
+        "shade_blades",
+        "talons",
+        # 3-33e2b
+        "vine_lash",
+        "guardian_rod",
+        "totem_stone",
+        # 3-33e2a
+        "bomb_casing",
+        "stone_fist",
+        "fangs",
+    }
     assert only.isdisjoint(start_weapons(lib))
     for summon in lib.ruleset.summons.summons:  # 召喚物範本用的武器都存在
         assert summon.template.weapon in lib.weapons

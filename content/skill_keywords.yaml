@@ -100,6 +100,7 @@ keywords:
     makes:
       - {effect: summon, unit: summon_skeleton_warrior}   # 3-33e1：召喚物的固有關鍵字
       - {effect: summon, unit: summon_war_wolf}   # 3-33e2a：召喚物的固有關鍵字
+      - {effect: summon, unit: summon_vine}   # 3-33e2b：藤蔓纏住（倒地）
       - {effect: knock_prone}
       - {effect: topple}
       - {effect: charge_through, on_hit: knock_prone}
@@ -117,6 +118,7 @@ keywords:
     makes:
       - {effect: summon, unit: summon_golem}   # 3-33e2a：召喚物的固有關鍵字
       - {effect: summon, unit: summon_earth_wall}   # 3-33e2a：召喚物的固有關鍵字
+      - {effect: summon, unit: summon_pull_totem}   # 3-33e2b：吸引圖騰拉扯
       - {effect: push}
       - {effect: pull}
       - {effect: dash}
@@ -160,6 +162,7 @@ keywords:
     actions: [vault]   # 行為紀錄提示（Phase 3-24b2）：常用這個動作的玩家，候選偏向這個關鍵字
     makes:
       - {effect: summon, unit: summon_hawk}   # 3-33e1：召喚物的固有關鍵字
+      - {effect: summon, unit: summon_plateau_totem}   # 3-33e2b：高台圖騰升起高台
       - {effect: raise_terrain}
       - {effect: lower_terrain}
       - {effect: leap}

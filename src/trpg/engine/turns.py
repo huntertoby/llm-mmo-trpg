@@ -38,6 +38,7 @@ from trpg.engine.grants import expire_granted_skills
 from trpg.engine.objectives import check_battle_end, check_round_end, end_battle
 from trpg.engine.results import ResolveResult
 from trpg.engine.rewrites import ap_cap
+from trpg.engine.rules.movement import is_flying
 from trpg.engine.rules.statuses import move_points_for_turn, skip_turn_status
 from trpg.engine.skill_infusion import release_infusion
 from trpg.engine.skill_triggers import (
@@ -199,7 +200,7 @@ def _tick_cooldowns(ctx: Ctx, unit: UnitState) -> None:
 def _surface_turn_start(ctx: Ctx, unit: UnitState) -> list[EffectBase]:
     """站在表面上的回合開始效果（``surfaces.yaml`` 的 ``on_turn_start``）。"""
     tile = ctx.state.tile(*unit.xy)
-    if tile.surface is Surface.NONE:
+    if tile.surface is Surface.NONE or is_flying(unit):  # 會飛的單位不受地面表面影響（3-33e2b）
         return []
     on_start = ctx.rules.surface_def(tile.surface).on_turn_start
     if on_start is None:
