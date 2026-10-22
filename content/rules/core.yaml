@@ -133,7 +133,7 @@ summon_role_hp_permille:         # 依定位的召喚物 HP 係數‰（3-33f1�
   support: 2300                 # 治療、護盾輔助（水精、守護靈）
   assassin: 1700                # 刺殺（影魅）
   ranged: 1000                  # 遠程（各種靈）維持
-  scout: 2000                   # 斥候（鷹隼）：仍是最脆的，但被打倒要 ≤ 50%
+  scout: 2400                   # 斥候（鷹隼）：仍是最脆的，但被打倒要 ≤ 50%（玩法 PM，3-33f1 驗收 2.0→2.4）
   bomber: 1000                  # 自爆（傀儡）
 summon_max_duration: 4        # 召喚物持續輪數上限（技能的 duration 超過時以此為準）
 boss_summon_damage_permille: 2000   # Boss（boss 標籤）對召喚物的傷害倍率（‰；×2）
