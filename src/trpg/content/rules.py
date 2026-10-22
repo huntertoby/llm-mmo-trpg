@@ -32,6 +32,8 @@ __all__ = [
     "HitTable",
     "HitThreshold",
     "SkillSlots",
+    "SummonGrowth",
+    "SummonInfusion",
     "compute_hit_thresholds",
 ]
 
@@ -48,6 +50,39 @@ class SkillSlots(ContentModel):
     passive: int = Field(ge=0)
     reaction: int = Field(ge=0)
     stance: int = Field(ge=0)
+
+
+class SummonGrowth(ContentModel):
+    """召喚物數值成長（Phase 3-33b，``docs/design/06-技能.md`` 6.29.1；初值，未經模擬）。
+
+    召喚當下依施放者的等級 ``L`` 與縮放屬性修正 ``M``（``(屬性 − ability_mod_base) ÷
+    ability_mod_divisor``，下限 0）快照：最大 HP ＋ ``hp_per_level × (L−1) + hp_per_attr_mod × M``；
+    普攻固定傷害 ＋ ``(flat_per_level_permille × (L−1) + flat_per_attr_mod_permille × M) ÷ 1000``
+    （無條件捨去）；傷害加成（‰）＝ ``bonus_per_level_permille × (L−1) +
+    bonus_per_attr_mod_permille × M``，與施放者自己的傷害加成合計套全身上限。"""
+
+    hp_per_level: int = Field(default=2, ge=0, le=20)
+    hp_per_attr_mod: int = Field(default=1, ge=0, le=20)
+    flat_per_level_permille: int = Field(default=250, ge=0, le=5000)
+    flat_per_attr_mod_permille: int = Field(default=250, ge=0, le=5000)
+    bonus_per_level_permille: int = Field(default=10, ge=0, le=200)
+    bonus_per_attr_mod_permille: int = Field(default=10, ge=0, le=200)
+
+
+class SummonInfusion(ContentModel):
+    """灌注關鍵字的效果（Phase 3-33b）：召喚物普攻命中後附加的狀態或震退。``roles`` 是 AI 偏好的
+    召喚物定位（``melee`` 近戰、``ranged`` 遠程）。"""
+
+    status: str | None = Field(default=None, pattern=r"^[a-z][a-z0-9_]*$")
+    duration: int = Field(default=2, ge=1, le=6)
+    knockback: int = Field(default=0, ge=0, le=2)
+    roles: tuple[Literal["melee", "ranged"], ...] = ()
+
+    @model_validator(mode="after")
+    def _has_effect(self) -> SummonInfusion:
+        if self.status is None and self.knockback == 0:
+            raise ValueError("灌注關鍵字至少要有狀態或震退")
+        return self
 
 
 class CoreRules(ContentModel):
@@ -218,6 +253,16 @@ class CoreRules(ContentModel):
     # 召喚（3D-4a）
     summon_limit_per_owner: int = Field(default=2, ge=1, le=6)
     """同一召喚者同時存在的召喚物上限（Phase 3D-4a）；超過時最舊的消失。"""
+    summon_hard_cap: int = Field(default=3, ge=1, le=6)
+    """召喚物同時存在的硬上限（Phase 3-33b）：之後專精可提高上限，但不得超過這個值。"""
+    summon_max_duration: int = Field(default=4, ge=1, le=10)
+    """召喚物持續輪數的上限（Phase 3-33b）：召喚技能的 ``duration`` 超過時以此為準。"""
+    boss_summon_damage_permille: int = Field(default=2000, ge=1000, le=5000)
+    """Boss（``boss`` 標籤）對召喚物造成的傷害倍率（‰；Phase 3-33b，預設 ×2）。"""
+    summon_growth: SummonGrowth = Field(default_factory=SummonGrowth)
+    """召喚物 HP 與傷害的成長（Phase 3-33b）。"""
+    summon_infusions: dict[str, SummonInfusion] = Field(default_factory=dict)
+    """灌注關鍵字對照（Phase 3-33b）：關鍵字 ID → 召喚物普攻附加效果；不在表中的關鍵字不可灌注。"""
 
     # 持續區域（3D-5）
     zone_limit_per_owner: int = Field(default=2, ge=1, le=6)
@@ -237,6 +282,12 @@ class CoreRules(ContentModel):
     legendary_timed_rounds: int = Field(default=3, ge=1, le=10)
     """``activation: timed`` 的持續輪數（Phase 3D-6；初值，以模擬調整）：啟動後在持有者第
     ``N`` 次之後的回合開始時結束（也就是持有者連同啟動的那一回合共有 ``N`` 個回合）。"""
+
+    @model_validator(mode="after")
+    def _check_summon_cap(self) -> CoreRules:
+        if self.summon_limit_per_owner > self.summon_hard_cap:
+            raise ValueError("summon_limit_per_owner 不可大於 summon_hard_cap")
+        return self
 
     @model_validator(mode="after")
     def _check_source(self) -> CoreRules:

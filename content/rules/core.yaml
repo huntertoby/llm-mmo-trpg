@@ -126,6 +126,23 @@ source_min_at_start: 1        # 我方單位每場開場至少 1 點（敵人一
 
 # --- 召喚（Phase 3D-4a，docs/design/06-技能.md 6.16 B；初值，未經模擬）---
 summon_limit_per_owner: 2     # 同一召喚者同時存在的召喚物上限；超過時最舊的消失
+summon_hard_cap: 3            # 硬上限（Phase 3-33b；之後專精可提高上面的上限，但不得超過這個）
+summon_max_duration: 4        # 召喚物持續輪數上限（技能的 duration 超過時以此為準）
+boss_summon_damage_permille: 2000   # Boss（boss 標籤）對召喚物的傷害倍率（‰；×2）
+# 召喚物成長（Phase 3-33b，6.29.1；初值，未經模擬）：召喚當下依施放者等級 L 與縮放屬性修正 M 快照。
+summon_growth:
+  hp_per_level: 2
+  hp_per_attr_mod: 1
+  flat_per_level_permille: 250        # 普攻固定傷害：(此值 × (L-1) + 下行 × M) / 1000，無條件捨去
+  flat_per_attr_mod_permille: 250
+  bonus_per_level_permille: 10        # 傷害加成‰：與施放者自己的傷害加成合計套全身 +50% 上限
+  bonus_per_attr_mod_permille: 10
+# 灌注關鍵字（Phase 3-33b）：召喚技能可選一個「施放者持有、且在此表中」的關鍵字，召喚物普攻命中後附加。
+summon_infusions:
+  ignite: {status: burning, duration: 2, roles: [ranged]}
+  frozen: {status: slow, duration: 2, roles: [ranged]}
+  marked: {status: marked, duration: 2, roles: [ranged]}
+  collision: {knockback: 1, roles: [melee]}
 
 # --- 持續區域（Phase 3D-5，docs/design/06-技能.md 6.16 G；初值，未經模擬）---
 zone_limit_per_owner: 2       # 同一施放者同時存在的區域上限；超過時最舊的消失

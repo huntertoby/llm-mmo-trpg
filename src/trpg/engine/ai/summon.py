@@ -17,12 +17,15 @@ from fractions import Fraction
 from trpg.content.environment import AiProfile
 from trpg.content.skills import SACRIFICE_SUMMON, SUMMON, SkillDef
 from trpg.content.summons import summon_dpr
-from trpg.engine.events import EventBase, SummonExpired, UnitSummoned
+from trpg.engine.events import DamageDealt, EventBase, SummonExpired, UnitSummoned
+from trpg.engine.ids import BOSS_TAG
 from trpg.engine.rules.geometry import XY, manhattan
 from trpg.engine.state import BattleState, UnitState
 from trpg.engine.summons import totem_of
 
 __all__ = [
+    "blocker_gains",
+    "blocking_summons",
     "has_summon",
     "sacrifice_estimate",
     "summon_estimate",
@@ -41,6 +44,39 @@ def has_summon(skill: SkillDef) -> bool:
 def summon_template(skill: SkillDef) -> str | None:
     """技能召喚的範本 ID（沒有召喚效果時 ``None``）。"""
     return next((e.unit for e in skill.effects if e.type == SUMMON), None)
+
+
+def blocking_summons(state: BattleState, boss: UnitState, slack: int) -> frozenset[str]:
+    """``boss`` 的敵方召喚物中「擋路」的 ID（Phase 3-33b）：召喚物 ``s`` 與某個敵方非召喚物單位
+    ``h`` 滿足 ``距離(boss, s) + 距離(s, h) ≤ 距離(boss, h) + slack``（在 Boss 走向 ``h`` 的
+    最短路徑附近）。"""
+    foes = [u for u in state.living_units() if u.team is not boss.team]
+    heroes = [u for u in foes if not u.is_summon]
+    found: set[str] = set()
+    for s in foes:
+        if not s.is_summon:
+            continue
+        reach = manhattan(boss.xy, s.xy)
+        if any(reach + manhattan(s.xy, h.xy) <= manhattan(boss.xy, h.xy) + slack for h in heroes):
+            found.add(s.id)
+    return frozenset(found)
+
+
+def blocker_gains(
+    state: BattleState,
+    actor: UnitState,
+    events: Sequence[EventBase],
+    profile: AiProfile,
+    hit: Fraction,
+) -> Fraction:
+    """Boss 優先清擋路的召喚物（Phase 3-33b）：預覽事件中受到傷害的擋路召喚物，每隻加
+    ``boss_blocker_points`` × 命中折合（範圍技能順帶打到也算）。不是 Boss 或設定為 0 時 0。"""
+    points = profile.summon.boss_blocker_points
+    if points == 0 or not actor.has_tag(BOSS_TAG):
+        return Fraction(0)
+    blockers = blocking_summons(state, actor, profile.summon.boss_blocker_slack)
+    hurt = {e.target_id for e in events if isinstance(e, DamageDealt) and e.target_id in blockers}
+    return Fraction(points) * hit * len(hurt)
 
 
 def sacrifice_estimate(

@@ -2097,7 +2097,15 @@ class _Cast:
             return []
         assert spec.unit is not None and spec.duration is not None
         xy = (action.target_pos.x, action.target_pos.y)
-        summon_unit(self.ctx, self.caster, spec.unit, xy, spec.duration, self.skill.id)
+        summon_unit(
+            self.ctx,
+            self.caster,
+            spec.unit,
+            xy,
+            spec.duration,
+            self.skill.id,
+            infusion=action.infusion,
+        )
         return []
 
     def zone(self, _effect: ResolvedEffect, spec: EffectSpec) -> list[EffectBase]:

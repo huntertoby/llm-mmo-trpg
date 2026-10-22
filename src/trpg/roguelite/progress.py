@@ -72,6 +72,7 @@ def hero_spawn(library: ContentLibrary, run: RunState) -> UnitSpawn:
         update={
             "max_hp": run.hero.max_hp + core.level_hp_bonus(run.hero.max_hp, run.level),
             "skill_levels": battle_levels(run),  # 技能等級（3-26a）：戰鬥設定帶入，重播一致
+            "level": run.level,  # 角色等級（3-33b）：召喚物成長依施放者等級
         }
     )
     return UnitSpawn(

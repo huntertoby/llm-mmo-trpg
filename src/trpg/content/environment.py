@@ -761,11 +761,17 @@ class SummonAiRules(ContentModel):
       排序）。
     - ``totem_ally_points``：圖騰光環的價值：每個範圍內友方 × 狀態在 ``ally_status_values`` 的價值
       （沒列出的用這個值）× 持續輪數 × ``support`` 權重 × 折合（沿用 ``hit_permille``）。
+    - ``boss_blocker_points`` / ``boss_blocker_slack``（Phase 3-33b）：Boss 優先清擋路的召喚物——
+      召喚物與 Boss 的距離加上它與某個非召喚物敵人的距離，不超過 Boss 到該敵人的距離再加
+      ``boss_blocker_slack`` 時算「擋在路徑上」；Boss 的動作會打到這樣的召喚物時，每隻加
+      ``boss_blocker_points`` 分（× 命中折合）。0 ＝ 不加分。
     """
 
     hit_permille: int = Field(default=500, ge=0, le=1000)
     distance_cost_permille: int = Field(default=100, ge=0)
     totem_ally_points: int = Field(default=3, ge=0)
+    boss_blocker_points: int = Field(default=0, ge=0)
+    boss_blocker_slack: int = Field(default=1, ge=0, le=4)
 
 
 class ZoneAiRules(ContentModel):

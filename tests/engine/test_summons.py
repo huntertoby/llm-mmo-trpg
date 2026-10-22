@@ -115,7 +115,7 @@ def test_summon_places_an_allied_unit_owned_by_the_caster() -> None:
     summon = state.units[event.unit_id]
     assert (event.owner_id, event.template_id, event.team) == (U1, SKELETON, Team.ALLY)
     assert summon.xy == (2, 3) and summon.team is Team.ALLY and summon.owner_id == U1
-    assert summon.name_zh == "骷髏戰士1" and summon.max_hp == 20 and summon.source == 0
+    assert summon.name_zh == "骷髏戰士1" and summon.max_hp == 23 and summon.source == 0
     assert summon.ai_profile == "brute" and summon.is_summon
     assert summon.summon_expires_round == state.round + 2 == event.expires_round
     assert state.unit_at(2, 3) is summon
