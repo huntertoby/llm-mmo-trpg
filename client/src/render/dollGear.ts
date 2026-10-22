@@ -80,15 +80,12 @@ export interface DollGear {
   gear: Partial<Record<GearSlot, GearItem>>;
   /** 成對武器：副手也畫同一把。 */
   paired: boolean;
-  /** 裝備裡最高的稀有度（只有 epic、legendary 會畫外光）。 */
-  rarity?: "epic" | "legendary";
 }
 
 /** 一整套裝備 → 各欄位的紙娃娃部件。成對武器：主手、副手各一把單把武器。 */
 export function dollGear(equipment: readonly DollEquipment[]): DollGear {
   const gear: DollGear["gear"] = {};
   let paired = false;
-  let rarity: DollGear["rarity"];
   // 依欄位名排序，結果不依賴陣列順序（確定性、快取鍵穩定）
   for (const e of [...equipment].sort((a, b) => (a.slot < b.slot ? -1 : a.slot > b.slot ? 1 : 0))) {
     if (e.slot === "main_hand" && e.appearance?.kind == null) continue; // 主手沒寫造型：沿用武器 id 的外觀
@@ -96,12 +93,10 @@ export function dollGear(equipment: readonly DollEquipment[]): DollGear {
     if (d === null) continue;
     gear[d.slot] = d.item;
     if (d.slot === "main_hand" && d.paired) paired = true;
-    const rar = e.appearance?.rarity;
-    if (rar === "legendary" || (rar === "epic" && rarity !== "legendary")) rarity = rar;
   }
   const main = gear.main_hand;
   if (paired && main !== undefined) gear.off_hand = { ...main };
-  return { gear, paired, ...(rarity !== undefined ? { rarity } : {}) };
+  return { gear, paired };
 }
 
 /** 紙娃娃的主手部件是否為雙手武器（武器 id 不在外觀表時才用；權杖、短杖、釘頭錘是單手）。 */

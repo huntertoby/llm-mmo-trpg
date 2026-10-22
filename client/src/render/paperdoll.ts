@@ -520,10 +520,10 @@ function drawWeapon(ctx: Ctx, it: GearItem | undefined, x: number, front: boolea
       break;
     case "dagger":
       ctx.rotate(front ? -0.6 : 0.6);
-      fill(ctx, c, () => {
+      fill(ctx, mix(c, "#ffffff", 0.15), () => {
         ctx.beginPath();
         ctx.moveTo(-1.3, -2);
-        ctx.lineTo(0, -10);
+        ctx.lineTo(0, -12.8); // 刃長 ×1.35
         ctx.lineTo(1.3, -2);
         ctx.closePath();
       });
@@ -636,12 +636,16 @@ export function drawFigure(ctx: Ctx, spec: DollSpec, facing: Facing): void {
   // 成對武器（主手副手同一種武器）與拳套（兩手都戴）：副手也畫手持物，並鏡像讓兩把向外張開
   const offItem = gear.off_hand ?? (gear.main_hand?.kind === "fist" ? gear.main_hand : undefined);
   const offMirror = offItem !== undefined && !SHIELD_LIKE.has(offItem.kind);
+  // 雙匕首：兩把往外多張開 2px，刃身才跳出身體輪廓
+  const spread = gear.main_hand?.kind === "dagger" && offItem?.kind === "dagger" ? 2 : 0;
+  const mainX = main + Math.sign(main) * spread;
+  const offX = off + Math.sign(off) * spread;
   ctx.save();
   if (side !== 0) ctx.scale(0.9, 1);
   if (gear.cloak !== undefined && view !== "back") drawCloak(ctx, gear.cloak, view);
   if (view === "back") {
-    drawWeapon(ctx, gear.main_hand, main, false); // 背面時武器畫在身體後面
-    drawWeapon(ctx, offItem, off, false, offMirror);
+    drawWeapon(ctx, gear.main_hand, mainX, false); // 背面時武器畫在身體後面
+    drawWeapon(ctx, offItem, offX, false, offMirror);
   }
   drawLegs(ctx, look, gear.feet);
   drawBody(ctx, gear.body, look);
@@ -651,8 +655,8 @@ export function drawFigure(ctx: Ctx, spec: DollSpec, facing: Facing): void {
   drawHair(ctx, look, view, gear.head);
   drawHeadgear(ctx, gear.head, view);
   if (view !== "back") {
-    drawWeapon(ctx, gear.main_hand, main, true);
-    drawWeapon(ctx, offItem, off + (offInFront ? side * 2 : 0), true, offMirror);
+    drawWeapon(ctx, gear.main_hand, mainX, true);
+    drawWeapon(ctx, offItem, offX + (offInFront ? side * 2 : 0), true, offMirror);
   }
   ctx.restore();
 }

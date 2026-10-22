@@ -93,13 +93,12 @@ describe("dollGear（一整套裝備）", () => {
     expect(dollGear([eq("main_hand", "sword")]).paired).toBe(false);
   });
 
-  it("項鍊、戒指不畫；結果不依陣列順序；稀有度取最高", () => {
+  it("項鍊、戒指不畫；結果不依陣列順序；不帶稀有度", () => {
     const a = dollGear([eq("neck", "pendant"), eq("ring_1", "ring"), eq("head", "helmet", { rarity: "epic" }), eq("body", "robe", { rarity: "legendary" })]);
     const b = dollGear([eq("body", "robe", { rarity: "legendary" }), eq("head", "helmet", { rarity: "epic" }), eq("ring_2", "ring")]);
     expect(Object.keys(a.gear).sort()).toEqual(["body", "head"]);
     expect(a).toEqual(b);
-    expect(a.rarity).toBe("legendary");
-    expect(dollGear([eq("head", "helmet", { rarity: "rare" })]).rarity).toBeUndefined();
+    expect("rarity" in a).toBe(false);
   });
 });
 
@@ -137,10 +136,9 @@ describe("resolveDoll（有穿裝備的單位）", () => {
     expect(pairBow.gear.off_hand?.kind).toBe("pistol");
   });
 
-  it("史詩、傳說裝備讓小人帶外光；範本原有的外光不被蓋掉", () => {
-    expect(resolveDoll({ ...base, equipment: [eq("body", "plate", { rarity: "legendary" })] }).rarity).toBe("legendary");
-    expect(resolveDoll({ ...base, equipment: [eq("body", "plate", { rarity: "rare" })] }).rarity).toBeUndefined();
-    expect(resolveDoll({ ...base, template: "bandit_boss", equipment: [eq("body", "plate", { rarity: "epic" })] }).rarity).toBe("epic");
+  it("裝備稀有度不讓小人帶外光；範本（頭目）原有的外光保留", () => {
+    expect(resolveDoll({ ...base, equipment: [eq("body", "plate", { rarity: "legendary" })] }).rarity).toBeUndefined();
+    expect(resolveDoll({ ...base, template: "bandit_boss", equipment: [eq("body", "plate", { rarity: "legendary" })] }).rarity).toBe("epic");
   });
 
   it("快取鍵：外觀不同則不同，相同輸入相同", () => {

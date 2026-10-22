@@ -79,7 +79,7 @@ export const GEAR_INK = "#16181d";
 export const GEAR_MATERIAL: Readonly<Record<string, { c: readonly [string, string]; shine?: boolean }>> = {
   iron: { c: ["#6e757d", "#474c52"] },
   steel: { c: ["#a9b6c6", "#6d7a8a"] },
-  copper: { c: ["#c27a48", "#7e4a28"] },
+  copper: { c: ["#b06a3c", "#6e3e20"] },
   silver: { c: ["#e8edf2", "#a8b0ba"], shine: true },
   gold: { c: ["#e8bb48", "#9c7420"] },
   wood: { c: ["#a06a36", "#6a4420"] },

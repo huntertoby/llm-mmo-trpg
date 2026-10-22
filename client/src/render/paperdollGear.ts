@@ -95,11 +95,13 @@ export function drawCoat(ctx: Ctx, it: GearItem | undefined, c: string, d: strin
 export function drawMailPattern(ctx: Ctx, form: string | undefined, d: string): void {
   ctx.fillStyle = d;
   if (form === "scale") {
+    ctx.strokeStyle = d;
+    ctx.lineWidth = 1.2;
     for (let y = -19; y < -9; y += 2.6) {
       for (let x = -6; x < 6.5; x += 3) {
         ctx.beginPath();
         ctx.arc(x + (Math.trunc(y) % 2 !== 0 ? 1.5 : 0), y, 1.3, 0, Math.PI);
-        ctx.fill();
+        ctx.stroke();
       }
     }
     return;
