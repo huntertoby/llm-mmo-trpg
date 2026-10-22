@@ -52,7 +52,7 @@ function baseView(width: number, height: number, tiles: TileView[], units: UnitV
     source_wells: [],
     zones: [],
     runes: [],
-  } as BattleView;
+  } as unknown as BattleView;
 }
 
 function summonUnit(i: number, x: number, y: number, l: Look, facing: UnitView["facing"]): UnitView {
