@@ -12,6 +12,7 @@ import type { SkillNames } from "../battle/actions";
 import { remainingRounds, summonKind } from "../battle/summons";
 import type { UnitNames } from "../battle/units";
 import { GearIcon } from "./GearIcon";
+import { PartTip } from "./PartTip";
 import { GearTotals } from "./GearTotals";
 
 interface Props {
@@ -92,7 +93,9 @@ export function UnitInfo({ unit, names, heroId, skills, view }: Props) {
         <div className="unit-line gear-row">
           裝備：
           {unit.equipment.map((e) => (
-            <GearIcon key={e.slot} look={e.appearance} slot={e.slot} size={32} title={`${e.slot_zh}：${e.name_zh}${e.affixes.length > 0 ? `（${e.affixes.map((a) => a.text_zh).join("；")}）` : ""}`} />
+            <PartTip key={e.slot} cat={e.slot_zh} label={e.name_zh} tip={e.affixes.map((a) => a.text_zh).join("；")}>
+              <GearIcon look={e.appearance} slot={e.slot} size={32} />
+            </PartTip>
           ))}
         </div>
       )}

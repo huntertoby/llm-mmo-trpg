@@ -37,7 +37,7 @@ export function PartTip({ cat, label, tip, children, pin = true, className }: Pr
     >
       {children}
       {f.open && (
-        <FloatCard float={f} className="part-tip-box" align="center" role="tooltip">
+        <FloatCard float={f} className={`part-tip-box${pin ? "" : " no-bridge"}`} align="center" role="tooltip">
           <div className="part-tip-cat">{cat}</div>
           <div className="part-tip-name">{label}</div>
           {tip !== "" && <div className="part-tip-text">{tip}</div>}

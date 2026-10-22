@@ -1,6 +1,7 @@
 // 反應設定面板：主角的每條反應規則一個三段切換（自動／詢問／關閉）。
 // 切換用 `set_reaction_mode` 動作（0 AP、不結束回合），只能在自己的回合；預設維持內容的設定。
 import type { ReactionMode, UnitView } from "../api/types";
+import { PartTip } from "./PartTip";
 import { gearSourceText, REACTION_MODES, REACTION_MODE_LABELS, ruleSummary, uniqueRules } from "../battle/reactions";
 
 interface Props {
@@ -20,9 +21,11 @@ export function ReactionPanel({ hero, enabled, queued, onSet }: Props) {
     <div className="panel reaction-panel" aria-label="反應設定">
       <div className="section-title">反應設定</div>
       {rules.map((rule) => (
-        <div className="reaction-row" key={rule.reaction} title={rule.description_zh}>
+        <div className="reaction-row" key={rule.reaction}>
           <div className="reaction-info">
-            <div className="reaction-name">{rule.name_zh}</div>
+            <PartTip cat="反應" label={rule.name_zh} tip={rule.description_zh} className="reaction-name">
+              {rule.name_zh}
+            </PartTip>
             <div className="small muted">
               {ruleSummary(rule)}
               {queued.includes(rule.reaction) && "（下回合改為自動）"}

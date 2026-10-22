@@ -2,6 +2,7 @@
 import type { GearCatalog, GearItemInfo } from "../../api/types";
 import { draftSummary, type CustomDraft, type Selection } from "../../gear/gearDraft";
 import { GearIcon } from "../GearIcon";
+import { PartTip } from "../PartTip";
 
 /** 3×3 的排列（依欄位 id）：戒指放在角落，主手與副手在身體兩側。 */
 export const GRID_ORDER: readonly string[] = ["head", "neck", "ring_1", "main_hand", "body", "off_hand", "hands", "feet", "ring_2"];
@@ -37,17 +38,19 @@ export function SlotGrid({ catalog, selection, selected, offHandBlocked, onSelec
         const shown = pick === undefined ? null : pickLook(pick, catalog);
         const classes = ["gear-cell", selected === slotId ? "selected" : "", blocked ? "blocked" : "", pick === undefined ? "empty" : ""].filter(Boolean).join(" ");
         return (
-          <button key={slotId} type="button" className={classes} onClick={() => onSelect(slotId)} title={shown?.tip ?? slot.name_zh} data-slot={slotId}>
+          <PartTip key={slotId} cat={slot.name_zh} label={shown?.name ?? "空"} tip={shown?.tip ?? ""} pin={false} className="gear-cell-tip">
+          <button type="button" className={classes} onClick={() => onSelect(slotId)} data-slot={slotId}>
             <span className="gear-cell-slot">{slot.name_zh}</span>
             <span className="gear-cell-art">
               {shown !== null && shown.look !== null ? (
-                <GearIcon look={shown.look} slot={slotId} size={64} title={shown.tip} />
+                <GearIcon look={shown.look} slot={slotId} size={64} />
               ) : (
                 <span className="gear-cell-empty">{blocked ? "被主手占用" : "空"}</span>
               )}
             </span>
             <span className="gear-cell-name">{shown?.name ?? ""}</span>
           </button>
+          </PartTip>
         );
       })}
     </div>

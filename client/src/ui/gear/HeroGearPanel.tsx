@@ -2,6 +2,7 @@
 // 以及遞減、截斷後的實際值與每條詞條的貢獻。
 import type { UnitView } from "../../api/types";
 import { GearIcon } from "../GearIcon";
+import { PartTip } from "../PartTip";
 import { GearTotals } from "../GearTotals";
 
 interface Props {
@@ -44,7 +45,9 @@ export function HeroGearPanel({ hero, pending }: Props) {
       {hero.equipment.length > 0 && (
         <div className="gear-row">
           {hero.equipment.map((e) => (
-            <GearIcon key={e.slot} look={e.appearance} slot={e.slot} size={32} title={`${e.slot_zh}：${e.name_zh}`} />
+            <PartTip key={e.slot} cat={e.slot_zh} label={e.name_zh} tip={e.affixes.map((a) => a.text_zh).join("；")}>
+              <GearIcon look={e.appearance} slot={e.slot} size={32} />
+            </PartTip>
           ))}
         </div>
       )}
