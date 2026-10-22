@@ -167,20 +167,31 @@ def _change_matches(rule: KeywordRule, modifier: ModifierSpec) -> bool:
     return _params_match(plain, modifier.change)
 
 
-def _derive(facts: _Facts, table: KeywordTable) -> SkillKeywords:
+def _derive(facts: _Facts, table: KeywordTable, *, exclusive_only: bool = False) -> SkillKeywords:
     makes: list[str] = []
     uses: list[str] = []
+
+    def hit(rules: Iterable[KeywordRule]) -> bool:
+        return any(
+            _rule_matches(rule, facts)
+            for rule in rules
+            if not exclusive_only or rule.grade == "exclusive"
+        )
+
     for keyword in table.keywords:
-        if any(_rule_matches(rule, facts) for rule in keyword.makes):
+        if hit(keyword.makes):
             makes.append(keyword.id)
-        if any(_rule_matches(rule, facts) for rule in keyword.uses):
+        if hit(keyword.uses):
             uses.append(keyword.id)
     return SkillKeywords(tuple(makes), tuple(uses))
 
 
-def derive_keywords(skill: SkillDef, table: KeywordTable) -> SkillKeywords:
-    """``skill`` 製造與利用的關鍵字（純函式；依 ``table`` 的順序）。"""
-    return _derive(_facts_of(skill), table)
+def derive_keywords(
+    skill: SkillDef, table: KeywordTable, *, exclusive_only: bool = False
+) -> SkillKeywords:
+    """``skill`` 製造與利用的關鍵字（純函式；依 ``table`` 的順序）。``exclusive_only`` 只看專屬規則
+    （``grade: exclusive``；開局技能池與候選產生器用，Phase 3-24b2 PM 決定）。"""
+    return _derive(_facts_of(skill), table, exclusive_only=exclusive_only)
 
 
 def _parsed[T: BaseModel](model: type[T], raw: object) -> T | None:
@@ -242,25 +253,32 @@ def is_starter_skill(skill: SkillDef) -> bool:
 
 
 def keyword_pools(
-    library: ContentLibrary, *, starter_only: bool = False
+    library: ContentLibrary, *, starter_only: bool = False, exclusive_only: bool = False
 ) -> dict[str, tuple[str, ...]]:
-    """每個關鍵字的技能池：關鍵字 ID → 技能 ID（排序）。``starter_only`` 只列可當起始技能的。"""
+    """每個關鍵字的技能池：關鍵字 ID → 技能 ID（排序）。``starter_only`` 只列可當起始技能的；
+    ``exclusive_only`` 只依專屬規則歸池（開局與候選產生器用）。"""
     table = library.keywords
     pools: dict[str, list[str]] = {k.id: [] for k in table.keywords}
     for skill_id in sorted(library.skills):
         skill = library.skills[skill_id]
         if starter_only and not is_starter_skill(skill):
             continue
-        for keyword_id in derive_keywords(skill, table).all():
+        for keyword_id in derive_keywords(skill, table, exclusive_only=exclusive_only).all():
             pools[keyword_id].append(skill_id)
     return {k: tuple(v) for k, v in pools.items()}
 
 
 def pool_skills(
-    library: ContentLibrary, keyword_id: str, *, starter_only: bool = True
+    library: ContentLibrary,
+    keyword_id: str,
+    *,
+    starter_only: bool = True,
+    exclusive_only: bool = False,
 ) -> tuple[SkillDef, ...]:
     """``keyword_id`` 技能池裡的技能（依 ID 排序；預設只列可當起始技能的）。"""
-    ids = keyword_pools(library, starter_only=starter_only)[keyword_id]
+    ids = keyword_pools(library, starter_only=starter_only, exclusive_only=exclusive_only)[
+        keyword_id
+    ]
     return tuple(library.skills[i] for i in ids)
 
 

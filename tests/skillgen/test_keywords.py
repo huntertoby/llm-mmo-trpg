@@ -15,6 +15,7 @@ from tests.skillgen.workshop_walks import MODIFIER, STRIKE, walk_draft
 from trpg.content.library import load_library
 from trpg.content.skill_keywords import KeywordRule
 from trpg.content.skills import SkillDef
+from trpg.engine.actions import BASIC_ACTION_TYPES
 from trpg.narrative.skills import draft_card_keywords, skill_card
 from trpg.shared.errors import ContentError
 from trpg.skillgen.draft_check import check_draft
@@ -490,3 +491,48 @@ def test_duplicate_keyword_ids_are_rejected(tmp_path: Path) -> None:
     _edit_table(root, lambda d: d["keywords"].append(copy.deepcopy(d["keywords"][0])))
     with pytest.raises(ContentError, match="重複"):
         load_library(root)
+
+
+# ---------------------------------------------------------------------------
+# Phase 3-24b2：規則種類（專屬／通用／暫定）與只看專屬規則的推導
+# ---------------------------------------------------------------------------
+
+
+def test_rule_grades_are_data_and_match_the_comments() -> None:
+    """推導表的「通用」「暫定」註解改成資料欄位 grade：行尾註解寫通用或暫定的規則都有對應的
+    grade。"""
+    text = (Path(library().root) / "skill_keywords.yaml").read_text(encoding="utf-8")
+    for line in text.splitlines():
+        stripped = line.strip()
+        if not stripped.startswith("- {"):
+            continue
+        if "# 通用" in stripped:
+            assert "grade: general" in stripped, stripped
+        if "# 暫定" in stripped:
+            assert "grade: provisional" in stripped, stripped
+    rules = [r for k in library().keywords.keywords for r in (*k.makes, *k.uses)]
+    grades = {g: sum(1 for r in rules if r.grade == g) for g in ("general", "provisional")}
+    assert grades == {"general": 26, "provisional": 16}
+
+
+def test_exclusive_only_derivation_drops_general_and_provisional_rules() -> None:
+    lib = library()
+    cleave = lib.skills["skill_cleave"]  # 近戰武器技：只靠通用規則利用倒地
+    assert "prone" in derive_keywords(cleave, lib.keywords).all()
+    assert not derive_keywords(cleave, lib.keywords, exclusive_only=True)
+    hush = lib.skills["skill_hush"]  # 沉默：暫定規則製造標記
+    assert "marked" in derive_keywords(hush, lib.keywords).makes
+    assert "marked" not in derive_keywords(hush, lib.keywords, exclusive_only=True).makes
+    fire = lib.skills["skill_fire_bolt"]
+    assert derive_keywords(fire, lib.keywords, exclusive_only=True) == derive_keywords(
+        fire, lib.keywords
+    )
+    pools = keyword_pools(lib, starter_only=True, exclusive_only=True)
+    assert all(len(ids) >= 3 for ids in pools.values())
+    assert len(pools["prone"]) < len(keyword_pools(lib, starter_only=True)["prone"])
+
+
+def test_keyword_actions_are_basic_actions() -> None:
+    for keyword in library().keywords.keywords:
+        assert set(keyword.actions) <= set(BASIC_ACTION_TYPES), keyword.id
+    assert library().keywords.by_id()["high_ground"].actions == ("vault",)

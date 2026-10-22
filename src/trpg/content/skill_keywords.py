@@ -30,7 +30,12 @@ from trpg.content.battle import ID_PATTERN
 from trpg.content.schemas import ContentModel
 from trpg.shared.types import Element, Surface
 
-__all__ = ["KeywordDef", "KeywordRule", "KeywordTable"]
+__all__ = ["KeywordDef", "KeywordRule", "KeywordTable", "RuleGrade"]
+
+RuleGrade = Literal["exclusive", "general", "provisional"]
+"""規則的種類（Phase 3-24b2）：``exclusive`` 專屬（原語、條件本身就對應該關鍵字）、
+``general`` 通用（依既有引擎規則歸類）、``provisional`` 暫定（沒有真實機制，只為了「每招至少一個
+關鍵字」）。開局技能池與候選產生器只看專屬規則。"""
 
 RuleSource = Literal["effect", "condition", "trigger", "shape", "change"]
 RULE_SOURCES: tuple[RuleSource, ...] = ("effect", "condition", "trigger", "shape", "change")
@@ -76,6 +81,8 @@ class KeywordRule(ContentModel):
     """``change`` 專用：修正規則沒有條件（有條件的規則另有自己的關鍵字，例如對燃燒中目標）。"""
     weapon_req: Literal["melee", "ranged", "focus", "any"] | None = None
     category: Literal["weapon", "spell"] | None = None
+    grade: RuleGrade = "exclusive"
+    """規則的種類（:data:`RuleGrade`；省略＝專屬）。"""
 
     @model_validator(mode="after")
     def _one_source(self) -> KeywordRule:
@@ -119,6 +126,9 @@ class KeywordDef(ContentModel):
     description_zh: str = Field(min_length=1)
     makes: tuple[KeywordRule, ...] = Field(min_length=1)
     uses: tuple[KeywordRule, ...] = Field(min_length=1)
+    actions: tuple[str, ...] = ()
+    """和這個關鍵字相符的基本動作（Phase 3-24b2）：候選產生器依玩家的行為紀錄（用過這些動作的次數）
+    偏向這個關鍵字。只是提示，不影響推導。"""
 
 
 class KeywordTable(ContentModel):
