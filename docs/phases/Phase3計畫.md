@@ -1785,3 +1785,13 @@ PM 驗收後請使用者試玩一整輪（`docs/專案計畫.md` 第 14 節 🎮
 4. 報告列出：改動前後的 pytest 時間（快速版、`--full`）、被標 slow 的清單與理由；不得刪除測試，只能標記或縮小樣本。
 
 驗收（3-34）：`scripts/check.py` 與 `scripts/check.py --full` 都全過；報告附時間對照；`ruff`、`mypy` 全過。
+
+### 37.1 3-34 驗收（2026-10-23）
+
+- PM 合併（無衝突）、快速版 `check.py` 全過（見下）。`check.py` pytest 改 `-n 8`（`TRPG_PYTEST_WORKERS` 覆寫）、`--full` 跑 `-m ""` 並設 `TRPG_FULL=1`；約 30 個 ≥ 5 秒的測試標 slow（CLI 快照 164 秒、自動跑局、各種 jobs 比對、技能報表、演化存檔重播、大量模擬）；3 個 hypothesis 檔平常 `max_examples` 3（`TRPG_FULL=1` 回原值）；`dollGear.test.ts` 平常每 8 組取 1。時間（另一個 agent 同時在跑，偏高）：改前 pytest `-n 8` 全量 527 秒；快速版整體 2 分 46 秒；`--full` 9 分 51 秒。報告 `Phase3-34報告.md`。
+- **`--full` 有 2 個既有失敗**（這兩個測試 3-34 前就標 slow，平常沒跑到）：`test_random_composer.py::test_one_thousand_seeds_are_all_valid_and_spread_out`、`test_skill_fuzz.py::test_one_thousand_skills_pass_everything_and_the_summary_is_reproducible`，種子 966「50 次重抽都做不出合格技能（階級 5、rare、control、weapon）」→ 排 3-34b 修。
+- 待 PM 決定：#3 slow 門檻 5 秒、#4 hypothesis 用環境變數切換 → 接受；#5 文件 → PM 已補（`docs/開發PM交接.md` 6.2）。
+
+### 37.2 3-34b｜隨機組合器種子 966 做不出合格技能（sonnet）
+
+`--full` 下兩個千種子測試失敗：階級 5、rare、control、weapon 的組合 50 次重抽都不合格。找出原因（哪一段內容或預算變更後開始失敗、哪條驗證擋下），修正組合器或內容讓千種子全過；不得改測試門檻或跳過種子。報告寫明原因。驗收：兩個測試在 `TRPG_FULL=1` 下通過；相關 skillgen 測試全過；`ruff`、`mypy` 全過。
