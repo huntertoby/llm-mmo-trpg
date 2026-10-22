@@ -5,7 +5,7 @@
 # 頂層參數（每個種子只抽一次）
 rarity_weights: {common: 35, rare: 35, epic: 20, legendary: 10}
 ap_weights: {1: 35, 2: 50, 3: 15}     # AP 的嘗試順序權重（結構太強或太弱時換 AP）
-spell_share_permille: {default: 500, aura: 850}   # 骨架 → 法術占比
+spell_share_permille: {default: 500, aura: 850, sacrifice: 1000}   # 骨架 → 法術占比
 spell_any_weapon_permille: 250        # 法術技的武器需求為「任何」（其餘為法器）
 spell_attr_weights: {int: 60, wis: 20, wil: 20}
 melee_permille: 500                   # 武器技是近戰（其餘遠程）
@@ -52,6 +52,9 @@ condition:
   # 施放者條件（3C-6b）：技能層級的條件不需要影響範圍內有對象。flanked、from_behind、cast_tag_this_turn、
   # self_concealed 需要特定站位或前一個動作，隨機組合器不產生（驗收的測試場面無法穩定成立）。
   self_conditions: [self_hp_below, moved_this_turn, adjacent_ally, first_round]
+  # 低權重的額外目標型條件（3-24c；獨立的亂數串流，沒有被抽中的種子結果不變）：撞擊的真實利用者
+  extra_conditions: [target_collided]
+  extra_permille: 60
   target_hp_below: {min: 200, max: 600}   # ‰
   self_hp_below: {min: 300, max: 700}
 
@@ -119,6 +122,11 @@ trap:
 # 刻印（Phase 3-23，初值）：稀有度 rare 以上、未指定骨架時改組刻印技能（inscribe）的機率（獨立的亂數串流；低權重）
 rune:
   skeleton_permille: 40
+
+# 獻祭召喚物（Phase 3-24c，初值）：稀有度 rare 以上、未指定骨架時改組獻祭技能（sacrifice_summon）的機率（獨立的亂數串流；低權重）
+sacrifice:
+  skeleton_permille: 30
+  heal_permille: 350                  # 治療版（沒有 element）的機率，其餘為爆炸
 
 # 強度調整：比例收在 [low, high]，目標均勻分佈在 [low, high − margin]
 tuning:

@@ -554,3 +554,18 @@ primitives:
     params:
       dice: {type: dice, required: true, description_zh: 每格的傷害骰}
       element: {type: element, description_zh: 傷害元素（省略時取符文的元素）}
+
+  # --- Phase 3-24c：獻祭召喚物（docs/design/06-技能.md 6.27.2；點數為初值，未經模擬）---
+  - id: sacrifice_summon
+    name_zh: 獻祭召喚物
+    description_zh: 選射程內自己的一個召喚物（含圖騰；別人的、敵人的不行）作為獻祭：它立刻消失（原因「被獻祭」，不算倒下），並在它所在的位置以 radius 格（曼哈頓距離）為半徑結算一次——填了 element 是爆炸：範圍內所有敵人自動命中（不擲命中、不暴擊）受到 dice ＋ 縮放屬性 × 0.5 的 element 傷害（帶元素的傷害照常與表面、物件互動）；省略 element 是治療：範圍內的友方（含施放者，不含被獻祭的召喚物）回復 dice ＋ 縮放屬性 × 0.5 的 HP（受治療量修正）。只能用在主動技能，形狀 single。預算：骰子平均 × sacrifice_summon_permille（需要先有召喚物、且召喚物會消失的折扣）。
+    category: structural
+    harmful: false
+    min_rarity: rare
+    budget_basis: sacrifice_summon
+    forbid_affects: [self, enemies, all, tiles]
+    allowed_shapes: [single]
+    params:
+      dice: {type: dice, required: true, description_zh: 爆炸的傷害骰或治療骰}
+      radius: {type: int, required: true, min: 0, max: 2, description_zh: 結算半徑（曼哈頓距離，0 只波及召喚物所在的格子）}
+      element: {type: element, description_zh: 填了＝爆炸（傷害敵人）；省略＝治療範圍內的友方}

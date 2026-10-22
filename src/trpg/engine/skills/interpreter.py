@@ -51,6 +51,7 @@ from trpg.content.skills import (
     RESTORE_RESOURCE,
     REVEAL,
     REVIVE,
+    SACRIFICE_SUMMON,
     SELF_DAMAGE_OF_HIT,
     SHADOWSTEP,
     STEAL_BUFF,
@@ -115,6 +116,7 @@ from trpg.engine.events import (
 )
 from trpg.engine.grants import grant_skill
 from trpg.engine.ids import CONCEALED, PRONE, REVEALED, TOPPLABLE
+from trpg.engine.lifecycle import dismiss_summon
 from trpg.engine.maneuvers import contest
 from trpg.engine.pierce import NO_PIERCE, PierceTrace, pierce_trace
 from trpg.engine.reactions import (
@@ -143,6 +145,7 @@ from trpg.engine.rules.facing import face_toward
 from trpg.engine.rules.geometry import XY, axis_direction, manhattan
 from trpg.engine.rules.movement import is_deadly
 from trpg.engine.rules.statuses import is_rooted, skip_turn_status
+from trpg.engine.rules.weapons import range_damage_permille
 from trpg.engine.runes import own_runes
 from trpg.engine.skill_triggers import collect_cast, collect_move, holding
 from trpg.engine.skills.charge import aside_direction
@@ -165,6 +168,7 @@ from trpg.engine.skills.targeting import (
     checked_area,
     composite_area,
     damage_parameters,
+    fires_gun,
     followup_origin,
     followup_selection,
     gather_pick,
@@ -182,6 +186,7 @@ from trpg.engine.stacks import add_stacks, consume_stacks
 from trpg.engine.state import BattleState, LastCast, TrapState, UnitState, ZoneState
 from trpg.engine.summons import summon_unit
 from trpg.engine.traps import place_trap, reveal_traps
+from trpg.engine.weapon_traits import gunshot_reveals, reveal_after_gunshot, spend_ammo
 from trpg.engine.zones import create_zone, zone_spec
 from trpg.shared.errors import IllegalActionError
 from trpg.shared.types import Element, Pos, UnitId
@@ -234,36 +239,54 @@ def use_skill(ctx: Ctx, caster: UnitState, action: UseSkill) -> None:
             area, followup_selection(ctx.state, caster, skill, action, origin)[1]
         )
     _check_copy(ctx, caster, skill, action)
+    gun = fires_gun(caster, skill)
+    reveal = gun and gunshot_reveals(ctx.state, caster)  # 槍聲：開火前是隱蔽的，開火後被揭露
     with holding(ctx):  # 被動的觸發等整個技能結算完才處理
         _pay_costs(ctx, caster, skill, paid_area)
+        if gun:
+            spend_ammo(caster)  # 火器武器技也算開火：用掉 1 發（3-24c）
         if skill.is_activatable:  # 常駐類傳說（Phase 3D-6）：施放＝啟動，沒有立即的效果
             activate(ctx, caster, skill)
         elif skill.trap is not None:  # 陷阱技能：施放時只放置陷阱，其餘效果等觸發時結算
             assert action.target_pos is not None
             place_trap(ctx, caster, skill, (action.target_pos.x, action.target_pos.y))
         else:
-            cast = _Cast(ctx, caster, skill, action, area)
-            face = _primary_xy(ctx.state, caster, action)
-            start = len(ctx.events)
-            cast.run()
-            ambushed, victims = cast.ambushed, cast.melee_victims
-            second: _Cast | None = None
-            if origin is not None:  # 複合技能（Phase 3F-3a）：到達落點才結算動作段
-                second = _run_followup(ctx, caster, skill, action, origin)
-            elif skill.followup is not None and skill.followup.when == "delayed":
-                charge(ctx, caster, skill)  # 延遲段（Phase 3F-4b）：開始蓄力，之後才結算
-            elif skill.followup is not None:  # 其他四種即時的第二段（Phase 3F-4a）
-                second = _run_second(ctx, caster, skill, action, cast, start)
-            if second is not None:
-                ambushed = ambushed or second.ambushed
-                victims = [*victims, *second.melee_victims]
-                face = _primary_xy(ctx.state, caster, second.action) or face
-            after_attack(ctx, caster, face, ambushed=ambushed, turns=victims)
+            _resolve_cast(ctx, caster, skill, action, area, origin)
+            if reveal:
+                reveal_after_gunshot(ctx, caster)
         if skill.kind == "active":  # copy_skill 的複製對象（Phase 3C-4b）
             _record_cast(ctx.state, caster, skill)
         _apply_self_status(ctx, caster, skill)
         collect_cast(ctx, caster, skill)  # on_cast_tag：在該技能結算之後
         _record_turn_tags(ctx.state, caster, skill)
+
+
+def _resolve_cast(  # noqa: PLR0917
+    ctx: Ctx,
+    caster: UnitState,
+    skill: SkillDef,
+    action: UseSkill,
+    area: SkillArea,
+    origin: XY | None,
+) -> None:
+    """一般技能（含複合技能的第二段）的結算與施放後的轉向、潛行偷襲脫離。"""
+    cast = _Cast(ctx, caster, skill, action, area)
+    face = _primary_xy(ctx.state, caster, action)
+    start = len(ctx.events)
+    cast.run()
+    ambushed, victims = cast.ambushed, cast.melee_victims
+    second: _Cast | None = None
+    if origin is not None:  # 複合技能（Phase 3F-3a）：到達落點才結算動作段
+        second = _run_followup(ctx, caster, skill, action, origin)
+    elif skill.followup is not None and skill.followup.when == "delayed":
+        charge(ctx, caster, skill)  # 延遲段（Phase 3F-4b）：開始蓄力，之後才結算
+    elif skill.followup is not None:  # 其他四種即時的第二段（Phase 3F-4a）
+        second = _run_second(ctx, caster, skill, action, cast, start)
+    if second is not None:
+        ambushed = ambushed or second.ambushed
+        victims = [*victims, *second.melee_victims]
+        face = _primary_xy(ctx.state, caster, second.action) or face
+    after_attack(ctx, caster, face, ambushed=ambushed, turns=victims)
 
 
 def _planned_followup(
@@ -693,6 +716,8 @@ class _Cast:
         self.area = area
         self.effects: tuple[ResolvedEffect, ...] = resolve_effects(ctx.state, skill)
         self.profile: AttackProfile = skill_profile(ctx.state, caster, skill)
+        self.gun = self.modified and fires_gun(caster, skill)
+        """火器開火的武器技（Phase 3-24c）：傷害套用武器的距離修正（遠距加成、貼臉與距離衰減）。"""
         self.trace: PierceTrace = NO_PIERCE
         """穿透的射線（Phase 3C-5b；沒有穿透或被動、陷阱的施放為 ``NO_PIERCE``）。"""
         if self.modified and self.profile.pierce:
@@ -1615,6 +1640,9 @@ class _Cast:
         bonus += scale_bonus(self.ctx.state, self.caster, unit, spec.scaling)
         bonus = bonus * self._modifier(modifiers.damage_permille, unit) // PERMILLE
         bonus = bonus * gamble // PERMILLE
+        if self.gun:  # 火器：站在這個距離的傷害修正（長槍遠距 +25%、貼臉 −50%、霰彈槍衰減）
+            bonus = bonus * range_damage_permille(self.caster, manhattan(self.caster.xy, unit.xy))
+            bonus //= PERMILLE
         behind = self.behind_permille(unit)
         return DamageEffect(
             target_id=unit.id,
@@ -1804,6 +1832,55 @@ class _Cast:
                 )
             )
         return batch
+
+    def sacrifice_summon(self, _effect: ResolvedEffect, spec: EffectSpec) -> list[EffectBase]:
+        """``sacrifice_summon``（Phase 3-24c）：選取的自己的召喚物消失（原因 ``sacrificed``，不算
+        倒下），並在它所在的位置以 ``radius`` 格結算：有 ``element`` 是爆炸（範圍內的敵人自動命中、
+        骰值＋縮放屬性 × 法術倍率的傷害），沒有是治療範圍內的友方（含施放者，不含被獻祭者）。"""
+        assert spec.dice is not None and spec.radius is not None
+        batch: list[EffectBase] = []
+        for unit in self.targets("allies", spec.condition):
+            if unit.owner_id != self.caster.id:  # 只能獻祭自己的召喚物（選取時已檢查）
+                continue
+            xy = unit.xy
+            dismiss_summon(self.ctx, unit, "sacrificed")
+            batch += self._sacrifice_blast(xy, spec)
+        return batch
+
+    def _sacrifice_blast(self, xy: XY, spec: EffectSpec) -> list[EffectBase]:
+        assert spec.dice is not None and spec.radius is not None
+        caster = self.caster
+        scaled = self._spell_scaled()
+        near = sorted(
+            (u for u in self.ctx.state.living_units() if manhattan(u.xy, xy) <= spec.radius),
+            key=lambda u: u.id,
+        )
+        if spec.element is not None:
+            return [
+                DamageEffect(
+                    target_id=u.id,
+                    source_id=caster.id,
+                    cause="effect",
+                    element=spec.element,
+                    dice=spec.dice,
+                    scaled_permille=scaled,
+                    min_damage=self.ctx.core.min_damage_on_hit,
+                )
+                for u in near
+                if u.team is not caster.team
+            ]
+        multiplier = self._heal_multiplier()
+        return [
+            HealEffect(
+                target_id=u.id,
+                source_id=caster.id,
+                dice=spec.dice,
+                scaled_permille=scaled,
+                multiplier_permille=multiplier,
+            )
+            for u in near
+            if u.team is caster.team
+        ]
 
     def _heal_multiplier(self) -> int:
         """施放者的治療量倍率（‰；修正規則 ``heal_permille``，Phase 3-24b1）。"""
@@ -2256,6 +2333,7 @@ _Cast._SIMPLE = {
     DELAYED_DAMAGE: _Cast.delayed_damage,
     GRANT_SKILL: _Cast.grant_skill,
     DETONATE_RUNES: _Cast.detonate_runes,
+    SACRIFICE_SUMMON: _Cast.sacrifice_summon,
     HURL_OBJECT: _Cast.hurl_object,
     SUMMON: _Cast.summon,
     ZONE: _Cast.zone,

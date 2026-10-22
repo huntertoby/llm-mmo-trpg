@@ -236,6 +236,9 @@ class BudgetRules(ContentModel):
     detonate_runes_permille: int = Field(default=700, ge=1, le=3000)
     """``detonate_runes``（Phase 3-23）：點數 ＝ 骰子平均 × 此值 ÷ 1000（需要先刻印、且敵人要站在
     符文上的折扣；形狀倍率另外照一般效果計算；初值，未經模擬）。"""
+    sacrifice_summon_permille: int = Field(default=800, ge=1, le=3000)
+    """``sacrifice_summon``（Phase 3-24c）：點數 ＝ 骰子平均 × 此值 ÷ 1000（需要先有召喚物、而且
+    召喚物會消失的折扣；形狀倍率另外照一般效果計算；初值，未經模擬）。"""
     reveal_base_points: int = Field(default=2, ge=0)
     reveal_round_points: int = Field(default=1, ge=0)
     """``reveal`` 的預算點數 ＝ ``reveal_base_points`` ＋ ``reveal_round_points`` × ``duration``

@@ -19,6 +19,7 @@ from trpg.shared.errors import ContentError
 
 ENABLED = {
     "rune",  # Phase 3-23
+    "sacrifice",  # Phase 3-24c
     "strike",
     "area",
     "control",
@@ -53,11 +54,11 @@ def _edit(path: Path, change: Any) -> None:
 # ---------------------------------------------------------------------------
 
 
-def test_all_fifteen_skeletons_have_a_data_file() -> None:
+def test_all_sixteen_skeletons_have_a_data_file() -> None:
     # 6.9 的 12 種骨架 ＋ Phase 3C-2 的 modifier（修正技能）＋ Phase 3C-3b 的 consume_status
-    # ＋ Phase 3-23 的 rune
+    # ＋ Phase 3-23 的 rune ＋ Phase 3-24c 的 sacrifice
     lib = library()
-    assert set(lib.skeletons) == set(SKELETON_IDS) and len(lib.skeletons) == 15
+    assert set(lib.skeletons) == set(SKELETON_IDS) and len(lib.skeletons) == 16
     assert {i for i, s in lib.skeletons.items() if s.enabled} == ENABLED
     for skeleton_id in SKELETON_IDS:
         assert (PROJECT_ROOT / "content" / "skeletons" / f"{skeleton_id}.yaml").is_file()

@@ -91,9 +91,9 @@ def _keyword_violations(skill: SkillDef, library: ContentLibrary) -> list[Violat
         Violation(
             skill.id,
             "keyword.required",
-            "沒有製造或利用任何關鍵字（"
-            + "、".join(k.name_zh for k in library.keywords.keywords)
-            + "）：請加入對應的效果、條件或觸發",
+            "這招還沒有接上任何關鍵字，無法和其他技能協同。請加入一個會製造或利用關鍵字的效果、"
+            "條件或觸發（例如：附加燃燒、對倒地目標加傷）。可用的關鍵字："
+            + "、".join(k.name_zh for k in library.keywords.keywords),
         )
     ]
 

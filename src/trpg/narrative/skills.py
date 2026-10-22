@@ -429,6 +429,20 @@ def _inscribe(lib: ContentLibrary, _skill: SkillDef, spec: EffectSpec) -> str:
     )
 
 
+def _sacrifice_summon(_lib: ContentLibrary, skill: SkillDef, spec: EffectSpec) -> str:
+    assert spec.dice is not None and spec.radius is not None
+    scope = "只有它所在的格子" if spec.radius == 0 else f"{spec.radius} 格內"
+    if spec.element is not None:
+        return (
+            f"獻祭你的一個召喚物，在它的位置爆炸：{scope}的敵人自動命中，受到"
+            f" {_dice(spec.dice)}＋{scaling_label(skill)}加成的{spec.element.display_name}傷害"
+        )
+    return (
+        f"獻祭你的一個召喚物，在它的位置化為治療：{scope}的友方回復"
+        f" {_dice(spec.dice)}＋{scaling_label(skill)}加成的 HP"
+    )
+
+
 def _detonate_runes(_lib: ContentLibrary, skill: SkillDef, spec: EffectSpec) -> str:
     assert spec.dice is not None
     element = f"{spec.element.display_name}" if spec.element is not None else "符文元素的"
@@ -651,6 +665,7 @@ _EFFECT_TEXT: dict[str, _EffectText] = {
     "destroy_object": _destroy_object,
     "inscribe": _inscribe,
     "detonate_runes": _detonate_runes,
+    "sacrifice_summon": _sacrifice_summon,
     "add_stack": _stack,
     "consume_stack": _stack,
     "consume_status": _consume_status,

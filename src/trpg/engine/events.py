@@ -1286,9 +1286,9 @@ class UnitSummoned(EventBase):
     輪的環境回合消失。"""
 
 
-type SummonExpiryReason = Literal["expired", "owner_gone", "limit"]
+type SummonExpiryReason = Literal["expired", "owner_gone", "limit", "sacrificed"]
 """召喚物消失的原因：``expired`` 到期、``owner_gone`` 召喚者倒下或撤離、``limit`` 超過同時存在的
-上限（最舊的消失）。"""
+上限（最舊的消失）、``sacrificed`` 被召喚者獻祭（``sacrifice_summon``，Phase 3-24c）。"""
 
 
 class SummonExpired(EventBase):

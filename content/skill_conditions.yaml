@@ -99,3 +99,9 @@ conditions:
     params:
       element: {type: element}
       tag: {type: tag}
+  # 3-24c 撞擊的真實利用者：需要先被推擊撞上障礙或其他單位，所以算嚴苛（初值，未經模擬）。
+  - id: target_collided
+    name_zh: 目標本回合受過撞擊
+    description_zh: 目標在這一輪內受過撞擊（被推擊擋下撞上牆壁、物件、其他單位，或推擊距離超過上限；撞到的另一個單位也算）。輪數結束後失效。
+    harshness: harsh
+    min_rarity: rare

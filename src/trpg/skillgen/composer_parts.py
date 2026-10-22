@@ -336,8 +336,22 @@ def _cleanse_effect(ctx: Ctx) -> None:
     ctx.add({"type": "cleanse", "affects": "self" if ctx.shape == "self" else "allies"}, ())
 
 
+def _sacrifice_effect(ctx: Ctx, spec: dict[str, Any]) -> None:
+    """獻祭召喚物（3-24c）：只能是法術技；半徑隨機，爆炸取主題元素（少數為治療）。"""
+    if ctx.category != "spell":
+        raise Retry
+    spec["radius"] = ctx.rng.randint(0, 2)
+    if not ctx.chance(ctx.rules.sacrifice.heal_permille):
+        spec["element"] = ctx.theme.value
+    weight = ctx.rules.structure.knob_weight_core
+    ctx.add(spec, (("dice", dice_ladder(ctx.rules.dice), weight),))
+
+
 def _fixed_effect(ctx: Ctx, primitive_id: str) -> None:
     spec: dict[str, Any] = {"type": primitive_id}
+    if primitive_id == "sacrifice_summon":
+        _sacrifice_effect(ctx, spec)
+        return
     if primitive_id == "create_obstacle":
         objects = sorted(
             o.id
@@ -625,6 +639,27 @@ def _condition_kinds(ctx: Ctx, enemy_effects: list[int]) -> list[str]:
     return [k for k in kinds if k in available]
 
 
+def _with_extra_condition(ctx: Ctx, kind: str) -> str:
+    """抽到目標型條件時，小機率改成額外條件（Phase 3-24c）。"""
+    rules = ctx.rules.condition
+    if kind not in rules.target_conditions:
+        return kind
+    available = _available(ctx)
+    extras = [k for k in rules.extra_conditions if k in available]
+    if not extras:
+        return kind
+    extra_rng = ctx.rng.fork("composer.extra_condition")
+    return extra_rng.choice(extras) if extra_rng.chance_permille(rules.extra_permille) else kind
+
+
+def _available(ctx: Ctx) -> set[str]:
+    return {
+        c.id
+        for c in ctx.library.ruleset.conditions.conditions
+        if rarity_rank(c.min_rarity) <= ctx.rank
+    }
+
+
 def _rolls_condition(ctx: Ctx) -> bool:
     return ctx.rank >= rarity_rank("rare") and ctx.chance(ctx.rules.condition.skill_permille)
 
@@ -645,7 +680,7 @@ def build_condition(ctx: Ctx) -> dict[str, Any] | None:
         if required:
             raise Retry
         return None
-    spec = _condition_spec(ctx, ctx.rng.choice(kinds))
+    spec = _condition_spec(ctx, _with_extra_condition(ctx, ctx.rng.choice(kinds)))
     damages = [i for i, e in enumerate(ctx.effects) if e["type"] == "damage"]
     effect_level = ctx.skeleton.id == "combo" and len(damages) > 1
     if effect_level or (not required and ctx.chance(ctx.rules.condition.effect_level_permille)):

@@ -27,6 +27,7 @@ from trpg.content.skills import (
     LEAP,
     PIERCE_SHAPES,
     REVIVE,
+    SACRIFICE_SUMMON,
     SHADOWSTEP,
     SUMMON,
     SWAP,
@@ -51,6 +52,7 @@ from trpg.engine.rules.statuses import (
     blocks_spells,
     skip_turn_status,
 )
+from trpg.engine.rules.weapons import crit_range_cut
 from trpg.engine.skills import shapes
 from trpg.engine.skills.conditions import skill_condition_problem
 from trpg.engine.skills.mobility import (
@@ -84,6 +86,7 @@ __all__ = [
     "composite_area",
     "compute_area",
     "damage_parameters",
+    "fires_gun",
     "followup_origin",
     "followup_selection",
     "gather_pick",
@@ -201,6 +204,18 @@ def pierce_active(state: BattleState, caster: UnitState, skill: SkillDef) -> boo
     return skill.pierce or modifiers.grants_pierce(state, caster, modifiers.skill_use(skill))
 
 
+def fires_gun(caster: UnitState, skill: SkillDef) -> bool:
+    """這次施放是火器開火（Phase 3-24c，08 8.11）：拿有彈匣的武器施放「用武器攻擊」的主動技
+    （武器技、有傷害效果）。法術技不受影響；開火要消耗 1 發、觸發槍聲，並套用站定、遠距、貼臉、
+    距離衰減等修正。"""
+    return (
+        skill.kind == "active"
+        and skill.category == "weapon"
+        and caster.weapon.magazine > 0
+        and any(e.type == "damage" for e in skill.effects)
+    )
+
+
 def skill_profile(state: BattleState, caster: UnitState, skill: SkillDef) -> AttackProfile:
     """技能命中判定的攻擊參數。
 
@@ -218,6 +233,15 @@ def skill_profile(state: BattleState, caster: UnitState, skill: SkillDef) -> Att
             crit_range=caster.weapon.crit_range,
             pierce=pierce,
         )
+        if fires_gun(caster, skill):  # 火器武器技套用武器的特性（3-24c）：站定、穿甲、無視掩護
+            weapon = caster.weapon
+            profile = replace(
+                profile,
+                crit_range=max(2, weapon.crit_range - crit_range_cut(caster)),
+                defense_cut_permille=weapon.armor_pierce_permille,
+                weapon_attack=True,
+                ignore_cover=weapon.ignore_cover,
+            )
     else:
         bonus = caster.weapon.attack_bonus if caster.weapon.weapon_class == "focus" else 0
         profile = AttackProfile(
@@ -296,6 +320,8 @@ def resource_problem(  # noqa: PLR0911
     problem = weapon_problem(skill, unit.weapon.weapon_class)
     if problem is not None:
         return problem
+    if fires_gun(unit, skill) and unit.ammo <= 0:  # 火器武器技要有子彈（3-24c）
+        return f"空膛：{unit.weapon.name_zh}需要先裝填才能施放：{skill.name_zh}"
     if skill.category == "spell" and blocks_spells(state.ruleset, unit):
         return f"沉默中：不能使用法術技：{skill.name_zh}"
     if unit.mana < skill.cost.mana:
@@ -415,6 +441,8 @@ def _unit_target_problem(  # noqa: PLR0917
     if skill.followup is not None and skill.followup.when == "after_move":
         # 複合技能（3F-3a）的位移段：目標只是位移的參照，敵我都可以
         return _visible_problem(state, caster, skill, target, reach)
+    if any(e.type == SACRIFICE_SUMMON for e in effects) and target.owner_id != caster.id:
+        return f"只能獻祭自己的召喚物：{target.name_zh} 不是你的召喚物"  # 獻祭召喚物（3-24c）
     enemy = target.team is not caster.team
     if enemy and not any(e.affects in ("enemies", "all", "tiles") for e in effects):
         return f"此技能無法對敵方使用：{target.name_zh}"

@@ -28,7 +28,7 @@ def test_composer_rules_are_loaded_into_the_library() -> None:
     assert isinstance(rules, ComposerRules)
     assert rules.rarity_weights == {"common": 35, "rare": 35, "epic": 20, "legendary": 10}
     assert rules.ap_weights == {1: 35, 2: 50, 3: 15}
-    assert rules.spell_share_permille == {"default": 500, "aura": 850}
+    assert rules.spell_share_permille == {"default": 500, "aura": 850, "sacrifice": 1000}
     assert (rules.tuning.low_permille, rules.tuning.high_permille) == (750, 950)
 
 

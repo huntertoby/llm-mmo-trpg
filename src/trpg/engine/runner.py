@@ -38,8 +38,11 @@ __all__ = [
     "run_battle",
 ]
 
-LOG_FORMAT = "trpg-battle-log/41"
-"""``/41``（Phase 3G-G2）：規則包 ``Ruleset.keywords``（關鍵字推導表，技能強化詞條依關鍵字選技能）；
+LOG_FORMAT = "trpg-battle-log/42"
+"""``/42``（Phase 3-24c）：新條件 ``target_collided``（單位的 ``collided_round``）、新原語
+``sacrifice_summon``（召喚物消失原因 ``sacrificed``）、火器的武器技也算開火（消耗彈匣、槍聲、站定、
+距離修正）；``/41`` 的紀錄無法重播。
+``/41``（Phase 3G-G2）：規則包 ``Ruleset.keywords``（關鍵字推導表，技能強化詞條依關鍵字選技能）；
 武器特性強化、普攻附加、技能強化都由裝備快照在開戰時算出，戰鬥事件沒有新增。``/40`` 的紀錄無法重播。
 ``/40``（Phase 3G-G1，接在 3-24a2 的 ``/39`` 之後）：裝備——戰鬥設定 ``UnitSpawn.equipment``／
 ``SpawnTemplate.equipment``（裝備快照：物品與詞條定義內嵌）、單位範本 ``equipment``、單位狀態

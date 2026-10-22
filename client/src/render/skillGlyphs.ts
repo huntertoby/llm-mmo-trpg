@@ -57,6 +57,7 @@ export const SKELETON_NAME: Readonly<Record<string, string>> = {
   passive: "被動",
   combo: "連段",
   rune: "刻印",
+  sacrifice: "獻祭",
 };
 
 // ---- 小工具 ----

@@ -794,6 +794,16 @@ const EFFECT: Record<string, readonly [string, Draw]> = {
       plus(c, 6, -5);
     },
   ],
+  // 3-24c 獻祭召喚物：召喚物的人影向外迸出四道光
+  sacrifice_summon: [
+    "#ff9f6b",
+    (c) => {
+      person(c, 0, 1, 0.9);
+      arrow(c, 0, -6, 0, -10.5, 3);
+      arrow(c, -6, 0, -10.5, 0, 3);
+      arrow(c, 6, 0, 10.5, 0, 3);
+    },
+  ],
   // 3-23 刻印：留下符文（菱形紋）、引爆符文（菱形向外迸出四道光）
   inscribe: ["#ffe08a", (c) => runeMark(c, 0, 0, 1.1, true)],
   detonate_runes: [
@@ -860,6 +870,7 @@ export const EFFECT_NAMES: Readonly<Record<string, string>> = {
   grant_skill: "暫時獲得技能",
   inscribe: "刻印",
   detonate_runes: "引爆符文",
+  sacrifice_summon: "獻祭召喚物",
 };
 
 /** 效果的描述資料（技能圖示 `icon.segments[].effects[]` 的一項）。 */
@@ -970,6 +981,11 @@ const COND: Readonly<Record<string, Draw>> = {
     person(c, -4, 1, 0.85);
     person(c, 4, 1, 0.85);
   },
+  target_collided: (c) => {
+    person(c, -3, 1, 0.9);
+    c.fillRect(4, -8, 3, 16);
+    arrow(c, -9, -7, -4, -7, 3);
+  },
 };
 
 export const CONDITION_NAMES: Readonly<Record<string, string>> = {
@@ -987,6 +1003,7 @@ export const CONDITION_NAMES: Readonly<Record<string, string>> = {
   from_behind: "背刺",
   self_concealed: "潛行偷襲",
   on_own_rune: "目標站在自己的符文上",
+  target_collided: "目標本回合受過撞擊",
 };
 
 const CONDITION_COLOR = "#ffe9a8";

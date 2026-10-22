@@ -944,6 +944,11 @@ def _skill_targets(
             hit_modifier(shooter, target, state.ruleset, profile)
             + core.proficiency
             + situational_modifier(state, shooter, target)
+            + (
+                weapon_hit_bonus(shooter, manhattan(shooter.xy, target.xy))
+                if profile.weapon_attack
+                else 0
+            )
             - (0 if cover is None else cover.penalty)
             + modifiers.hit_bonus(state, actor, use, Subject(target, target.xy))
         )

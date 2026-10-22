@@ -125,6 +125,10 @@ class ConditionRules(ContentModel):
     """有條件時，條件掛在單一效果（而非整個技能）的機率。"""
     target_conditions: tuple[str, ...]
     """目標型條件（需要影響範圍內有敵人）。"""
+    extra_conditions: tuple[str, ...] = ()
+    """低權重的額外目標型條件（Phase 3-24c）：已經抽到目標型條件時，以 ``extra_permille`` 的機率改成
+    從這裡抽（用 ``rng.fork`` 的獨立串流，沒有抽到的種子得到與加入之前完全相同的技能）。"""
+    extra_permille: int = 0
     self_conditions: tuple[str, ...] = ("self_hp_below",)
     """施放者條件（只看施放者，Phase 3C-6b 加入連段條件）；技能層級的條件不需要影響範圍內有對象。"""
     target_hp_below: IntRange
@@ -265,6 +269,15 @@ class RuneRules(ContentModel):
     """稀有度 rare 以上、未指定骨架時，改組刻印技能的機率（獨立的亂數串流；低權重）。"""
 
 
+class SacrificeRules(ContentModel):
+    """獻祭召喚物技能的抽選（Phase 3-24c；``sacrifice`` 骨架）。"""
+
+    skeleton_permille: int = _PERMILLE
+    """稀有度 rare 以上、未指定骨架時，改組獻祭技能的機率（獨立的亂數串流；低權重）。"""
+    heal_permille: int = _PERMILLE
+    """獻祭技能是治療（沒有 element）而非爆炸的機率。"""
+
+
 class ScalingRules(ContentModel):
     """雙屬性縮放與專精加成的抽選（Phase 2H-2；主動技能，強度調整成功之後才抽）。
 
@@ -315,6 +328,7 @@ class ComposerRules(ContentModel):
     builder: BuilderRules
     trap: TrapRules
     rune: RuneRules
+    sacrifice: SacrificeRules
     scaling: ScalingRules
     special: SpecialRules
 
