@@ -5188,6 +5188,31 @@
         "title": "IgnoredOrder",
         "description": "被忽略的指令與原因。``scope`` 為 ``\"team\"`` 或單位 ID。"
       },
+      "InfusionOptionView": {
+        "properties": {
+          "id": {
+            "type": "string",
+            "title": "Id"
+          },
+          "name_zh": {
+            "type": "string",
+            "title": "Name Zh"
+          },
+          "effect_zh": {
+            "type": "string",
+            "title": "Effect Zh"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "id",
+          "name_zh",
+          "effect_zh"
+        ],
+        "title": "InfusionOptionView",
+        "description": "召喚技能可灌注的關鍵字（Phase 3-33b）：ID、名稱與效果說明（「命中附加 燃燒 2 回合」）。"
+      },
       "Interact": {
         "properties": {
           "unit_id": {
@@ -9162,6 +9187,25 @@
             ],
             "title": "Totem Radius"
           },
+          "infusion": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Infusion"
+          },
+          "infusion_options": {
+            "items": {
+              "$ref": "#/components/schemas/InfusionOptionView"
+            },
+            "type": "array",
+            "title": "Infusion Options",
+            "default": []
+          },
           "activations": {
             "items": {
               "$ref": "#/components/schemas/ActivationView"
@@ -9369,6 +9413,17 @@
             ],
             "title": "Second Target Id"
           },
+          "infusion": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Infusion"
+          },
           "copy_cast": {
             "anyOf": [
               {
@@ -9467,6 +9522,17 @@
               }
             ],
             "title": "Second Target Id"
+          },
+          "infusion": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Infusion"
           },
           "copy_cast": {
             "anyOf": [

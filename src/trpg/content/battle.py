@@ -627,6 +627,9 @@ class UnitTemplate(ContentModel):
     """圖騰（Phase 3D-4b）：必須是召喚物、速度 0；沒有行動，只在自己的回合開始時給光環。"""
     equipment: dict[Slot, str] = Field(default_factory=dict)
     """裝備（Phase 3G-G1）：欄位 → 物品 id（``content/items.yaml``）。"""
+    level: int = Field(default=1, ge=1, le=99)
+    """角色等級（Phase 3-33b）：召喚物的 HP 與傷害依施放者的等級成長；一輪的主角帶入目前等級，
+    其他單位為 1。"""
     skill_levels: dict[str, int] = Field(default_factory=dict)
     """技能等級（Phase 3-26a）：技能 ID → 等級（2～5；省略的技能是 1 級）。只列出裝備中的技能；
     由一輪的存檔帶入，戰鬥設定因此包含等級，重播一致。"""

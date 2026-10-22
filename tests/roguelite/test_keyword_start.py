@@ -132,7 +132,7 @@ def test_allocation_is_checked() -> None:
 def test_dev_packs_all_start_and_stay_out_of_the_player_start() -> None:
     lib = library()
     packs = lib.dev_starters.packs
-    assert len(packs) == 12
+    assert len(packs) == 14
     labels = {p.label_zh for p in packs}
     assert labels == {"烈焰", "潮雷", "霜寒", "撼地", "鐵壁", "影刃"} | {
         "鷹眼",
@@ -141,6 +141,8 @@ def test_dev_packs_all_start_and_stay_out_of_the_player_start() -> None:
         "機關",
         "念動",
         "血怒",
+        "喚靈（保證召喚）",  # 3-33b：指定起始技能的對照組
+        "喚靈（骷髏）",
     }
     for pack in packs:
         run = new_dev_run(lib, pack.id, 0)
@@ -149,7 +151,10 @@ def test_dev_packs_all_start_and_stay_out_of_the_player_start() -> None:
         assert len(run.hero.skills) == 2
         # 一般開局同樣的武器與關鍵字得到同樣的主角（起始包只是捷徑）
         plain = new_keyword_run(lib, pack.weapon, pack.keywords, 0)
-        assert plain.hero == run.hero
+        if pack.skills:  # 指定起始技能的對照組：技能固定，其餘（武器、關鍵字）同一般開局
+            assert run.hero.skills == pack.skills
+        else:
+            assert plain.hero == run.hero
         # 主角名稱沒有流派名
         assert all(label not in run.hero.name_zh for label in labels)
     with pytest.raises(ChoiceError, match="未知的開發者起始包"):

@@ -1319,6 +1319,10 @@ class UnitSummoned(EventBase):
     orphan: bool = False
     """召喚者已不在場（Phase 3D-6，規則改變 ``on_downed_spawn`` 的分身）：在第 ``expires_round``
     輪的環境回合消失。"""
+    max_hp: int | None = None
+    """召喚物依施放者等級與屬性成長後的最大 HP（Phase 3-33b；舊紀錄沒有）。"""
+    infusion: str | None = None
+    """灌注的關鍵字（Phase 3-33b）；沒有灌注時 ``None``。"""
 
 
 type SummonExpiryReason = Literal["expired", "owner_gone", "limit", "sacrificed"]

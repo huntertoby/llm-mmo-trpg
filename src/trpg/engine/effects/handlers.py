@@ -39,7 +39,7 @@ from trpg.engine.events import (
     UnitFell,
     UnitMoved,
 )
-from trpg.engine.ids import CONCEALED, SHIELDED
+from trpg.engine.ids import BOSS_TAG, CONCEALED, SHIELDED
 from trpg.engine.lifecycle import down_unit, escape_unit
 from trpg.engine.rules.combat import PERMILLE, PPM, element_modifier_ppm
 from trpg.engine.rules.facing import facing_between
@@ -87,6 +87,7 @@ def _damage(ctx: Ctx, effect: EffectBase) -> list[EventBase]:
     exploded = 0
     mod_ppm = PPM
     weather = PERMILLE
+    multiplier = effect.multiplier_permille
     base_amount: int | None = None
     status_ppm = PPM
     absorbed = 0
@@ -104,11 +105,13 @@ def _damage(ctx: Ctx, effect: EffectBase) -> list[EventBase]:
             weather = weather_permille(ctx.state, effect.element)
         dealt = _dealt_permille(ctx, effect)  # 虛弱
         status_ppm = dealt * damage_taken_permille(ctx.rules, unit)  # 易傷；千分比 × 千分比
+        multiplier = effect.multiplier_permille * _boss_vs_summon_permille(ctx, unit, effect)
+        multiplier //= PERMILLE
         amount = max(
             raw_permille
             * mod_ppm
             * weather
-            * effect.multiplier_permille
+            * multiplier
             * status_ppm
             // (PERMILLE * PPM * PERMILLE * PERMILLE * PPM),
             effect.min_damage,
@@ -143,7 +146,7 @@ def _damage(ctx: Ctx, effect: EffectBase) -> list[EventBase]:
             hp_after=unit.hp,
             pos=unit.pos,
             weather_permille=weather,
-            multiplier_permille=effect.multiplier_permille,
+            multiplier_permille=multiplier,
             pierce_permille=effect.pierce_permille,
             base_amount=base_amount,
             status_ppm=status_ppm,
@@ -161,6 +164,17 @@ def _damage(ctx: Ctx, effect: EffectBase) -> list[EventBase]:
         events.extend(down_unit(ctx, unit))
         events.extend(credit_elite_kill(ctx, unit, effect.source_id))
     return events
+
+
+def _boss_vs_summon_permille(ctx: Ctx, target: UnitState, effect: DamageEffect) -> int:
+    """Boss（``boss`` 標籤）對敵方召喚物的傷害倍率（Phase 3-33b，``boss_summon_damage_permille``，
+    ×2）；其他來源與目標為 1000。範圍技能、區域與表面等帶 ``source_id`` 的傷害一律適用。"""
+    if not target.is_summon or effect.source_id is None:
+        return PERMILLE
+    source = ctx.state.units.get(effect.source_id)
+    if source is None or source.team is target.team or not source.has_tag(BOSS_TAG):
+        return PERMILLE
+    return ctx.core.boss_summon_damage_permille
 
 
 def _damage_rolls(ctx: Ctx, effect: DamageEffect) -> tuple[tuple[int, ...], int]:

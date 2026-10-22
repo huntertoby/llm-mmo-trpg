@@ -252,6 +252,23 @@ def _split_for(
     return gain, loss
 
 
+def summon_damage_bonus(state: BattleState, unit: UnitState, use: Use, subject: Subject) -> int:
+    """召喚物自己的傷害加成（‰；Phase 3-33b，6.29.1）：召喚當下快照的成長加成，**計入施放者全身
+    +50% 上限**——施放者自己的正向傷害加成（修正規則、裝備、技能強化）先占用上限，召喚物的加成
+    只能用掉剩下的空間（召喚者已不在場時視為 0）。不是召喚物、或沒有加成時為 0。"""
+    if unit.owner_id is None or unit.summon_bonus_permille <= 0:
+        return 0
+    owner = state.units.get(unit.owner_id)
+    used = 0
+    if owner is not None:
+        gain, _ = _split_for(state, owner, use, "damage_permille", subject)
+        gear_gain, _ = gear_damage_parts(state, owner, subject)
+        keyword = gear_keyword_damage_permille(state, owner, use.skill, use.action == "attack")
+        used = gain + gear_gain + keyword
+    room = max(0, state.ruleset.equipment.caps.damage_bonus_permille - used)
+    return min(unit.summon_bonus_permille, room)
+
+
 def damage_permille(state: BattleState, unit: UnitState, use: Use, subject: Subject) -> int:
     """對 ``subject`` 的傷害倍率（‰）：1000 ＋ 傷害加成 ＋ 減益，下限 0。
 
@@ -263,7 +280,8 @@ def damage_permille(state: BattleState, unit: UnitState, use: Use, subject: Subj
     gear_gain, gear_loss = gear_damage_parts(state, unit, subject)
     keyword = gear_keyword_damage_permille(state, unit, use.skill, use.action == "attack")
     rune = gear_rune_read_permille(state, unit, use, subject)  # 普攻讀取符文（3-31）
-    capped = cap_damage_bonus(state.ruleset, gain + gear_gain + keyword + rune)
+    summon = summon_damage_bonus(state, unit, use, subject)  # 召喚物成長的加成（3-33b）
+    capped = cap_damage_bonus(state.ruleset, gain + gear_gain + keyword + rune + summon)
     return max(0, _PERMILLE + capped + loss + gear_loss)
 
 

@@ -22,6 +22,7 @@
 from __future__ import annotations
 
 from trpg.content.battle import Dice
+from trpg.content.rules import SummonInfusion
 from trpg.engine.context import Ctx
 from trpg.engine.effects import execute
 from trpg.engine.effects.models import ApplyStatusEffect, EffectBase, HealEffect, PushEffect
@@ -66,6 +67,13 @@ def blessing_target(state: BattleState, attacker: UnitState) -> UnitState | None
     return min(allies, key=lambda u: (manhattan(u.xy, attacker.xy), u.id))
 
 
+def _infusion_of(ctx: Ctx, attacker: UnitState) -> SummonInfusion | None:
+    """召喚物灌注的關鍵字在對照表中的效果（沒有灌注時 ``None``）。"""
+    if attacker.infusion is None:
+        return None
+    return ctx.core.summon_infusions.get(attacker.infusion)
+
+
 def apply_hit_traits(ctx: Ctx, attacker: UnitState, target: UnitState) -> None:
     """``attacker`` 的普攻命中 ``target``、傷害結算之後：依武器參數結算命中特性。"""
     weapon = attacker.weapon
@@ -100,9 +108,20 @@ def apply_hit_traits(ctx: Ctx, attacker: UnitState, target: UnitState) -> None:
                     source_id=attacker.id, target_id=target.id, status_id=status, duration=rounds
                 )
             )
+    infusion = _infusion_of(ctx, attacker)
+    if infusion is not None and infusion.status is not None and target.alive:
+        batch.append(  # 召喚物的灌注關鍵字（3-33b）：命中附帶狀態
+            ApplyStatusEffect(
+                source_id=attacker.id,
+                target_id=target.id,
+                status_id=infusion.status,
+                duration=infusion.duration,
+            )
+        )
     execute(ctx, batch)
     direction = axis_direction(target.xy[0] - attacker.xy[0], target.xy[1] - attacker.xy[1])
-    if weapon.knockback > 0 and direction is not None and target.alive:
+    knockback = weapon.knockback + (0 if infusion is None else infusion.knockback)
+    if knockback > 0 and direction is not None and target.alive:
         limit = ctx.core.max_displace_distance  # 推擊距離上限（6.6），超過的每 1 格改為撞擊傷害
         execute(
             ctx,
@@ -111,8 +130,8 @@ def apply_hit_traits(ctx: Ctx, attacker: UnitState, target: UnitState) -> None:
                     source_id=attacker.id,
                     target_id=target.id,
                     direction=direction,
-                    distance=min(weapon.knockback, limit),
-                    extra_collisions=max(0, weapon.knockback - limit),
+                    distance=min(knockback, limit),
+                    extra_collisions=max(0, knockback - limit),
                 )
             ],
         )

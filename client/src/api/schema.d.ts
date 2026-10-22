@@ -2129,6 +2129,18 @@ export interface components {
             reason: string;
         };
         /**
+         * InfusionOptionView
+         * @description 召喚技能可灌注的關鍵字（Phase 3-33b）：ID、名稱與效果說明（「命中附加 燃燒 2 回合」）。
+         */
+        InfusionOptionView: {
+            /** Id */
+            id: string;
+            /** Name Zh */
+            name_zh: string;
+            /** Effect Zh */
+            effect_zh: string;
+        };
+        /**
          * Interact
          * @description 互動：移動相鄰的 ``pushable`` 物件 1 格（只對物件，不能對單位）。
          *
@@ -3681,6 +3693,13 @@ export interface components {
             dismissed: boolean;
             /** Totem Radius */
             totem_radius: number | null;
+            /** Infusion */
+            infusion?: string | null;
+            /**
+             * Infusion Options
+             * @default []
+             */
+            infusion_options: components["schemas"]["InfusionOptionView"][];
             /**
              * Activations
              * @default []
@@ -3777,6 +3796,8 @@ export interface components {
             direction?: components["schemas"]["Direction"] | null;
             /** Second Target Id */
             second_target_id?: string | null;
+            /** Infusion */
+            infusion?: string | null;
             copy_cast?: components["schemas"]["UseSkill-Input"] | null;
             followup_target?: components["schemas"]["FollowupTarget"] | null;
         };
@@ -3821,6 +3842,8 @@ export interface components {
             direction?: components["schemas"]["Direction"] | null;
             /** Second Target Id */
             second_target_id?: string | null;
+            /** Infusion */
+            infusion?: string | null;
             copy_cast?: components["schemas"]["UseSkill-Output"] | null;
             followup_target?: components["schemas"]["FollowupTarget"] | null;
         };

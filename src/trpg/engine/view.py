@@ -28,6 +28,7 @@ from trpg.content.slots import SLOT_ZH
 from trpg.engine.bombs import bomb_spec
 from trpg.engine.delayed import charge_infos
 from trpg.engine.gear_view import GearTotalView, gear_totals
+from trpg.engine.infusion import infusion_options
 from trpg.engine.skills.revive import revivable
 from trpg.engine.state import (
     Activation,
@@ -54,6 +55,7 @@ __all__ = [
     "GearSkillView",
     "GearTotalView",
     "GrantedSkillView",
+    "InfusionOptionView",
     "ObjectView",
     "PendingView",
     "ReactionRuleView",
@@ -236,6 +238,14 @@ class ChargeView(_ViewModel):
     ready: bool
 
 
+class InfusionOptionView(_ViewModel):
+    """召喚技能可灌注的關鍵字（Phase 3-33b）：ID、名稱與效果說明（「命中附加 燃燒 2 回合」）。"""
+
+    id: str
+    name_zh: str
+    effect_zh: str
+
+
 class UnitView(_ViewModel):
     id: UnitId
     template_id: str
@@ -296,6 +306,11 @@ class UnitView(_ViewModel):
     """召喚物已消失（Phase 3D-4a）：不在戰場上，保留在清單中讓紀錄能查名字。"""
     totem_radius: int | None
     """圖騰（Phase 3D-4b）：光環半徑（回合開始時給範圍內友方狀態）；不是圖騰為 ``None``。"""
+    infusion: str | None = None
+    """召喚物灌注的關鍵字 ID（Phase 3-33b）；沒有灌注或不是召喚物為 ``None``。"""
+    infusion_options: tuple[InfusionOptionView, ...] = ()
+    """這個單位（施放者，只有自己陣營）施放召喚技能時可灌注的關鍵字（Phase 3-33b）；
+    依預設順序（第一個是省略時的預設）。沒有時為空。"""
     activations: tuple[ActivationView, ...] = ()
     """生效中的常駐類傳說（Phase 3D-6），依啟動順序。"""
     granted_skills: tuple[GrantedSkillView, ...] = ()
@@ -613,6 +628,31 @@ def _reaction_gear_source(unit: UnitState, reaction: str) -> str:
     )
 
 
+def _infusion_views(state: BattleState, unit: UnitState) -> tuple[InfusionOptionView, ...]:
+    """``unit`` 可灌注的關鍵字（召喚物本身與沒有召喚技能的單位也會列出，前端只在召喚技能用）。"""
+    if unit.is_summon or not unit.alive:
+        return ()
+    names = {k.id: k.name_zh for k in state.ruleset.keywords.keywords}
+    table = state.ruleset.core.summon_infusions
+    views: list[InfusionOptionView] = []
+    for keyword in infusion_options(state, unit):
+        spec = table[keyword]
+        parts: list[str] = []
+        if spec.status is not None:
+            status = state.ruleset.status_def(spec.status).name_zh
+            parts.append(f"附加{status} {spec.duration} 回合")
+        if spec.knockback > 0:
+            parts.append(f"震退 {spec.knockback} 格")
+        views.append(
+            InfusionOptionView(
+                id=keyword,
+                name_zh=names.get(keyword, keyword),
+                effect_zh=f"召喚物普攻命中：{'、'.join(parts)}",
+            )
+        )
+    return tuple(views)
+
+
 def _unit_view(state: BattleState, unit: UnitState, team: Team) -> UnitView:
     return UnitView(
         id=unit.id,
@@ -659,6 +699,8 @@ def _unit_view(state: BattleState, unit: UnitState, team: Team) -> UnitView:
         summon_expires_round=unit.summon_expires_round,
         dismissed=unit.dismissed,
         totem_radius=None if (totem := totem_of(state, unit)) is None else totem.radius,
+        infusion=unit.infusion,
+        infusion_options=_infusion_views(state, unit) if unit.team is team else (),
         activations=tuple(_activation_view(state, a) for a in unit.activations),
         facing=unit.facing,
         equipment=_equipment_view(unit),

@@ -108,6 +108,7 @@ from trpg.engine.ai.orders import (
 from trpg.engine.ai.rune import is_inscribe_skill, read_gains, rune_estimate, rune_gains
 from trpg.engine.ai.scene_objects import SCENE_PRIMITIVES, has_fire_follow_up, scene_estimate
 from trpg.engine.ai.summon import (
+    blocker_gains,
     has_summon,
     sacrifice_estimate,
     summon_estimate,
@@ -142,6 +143,7 @@ from trpg.engine.events import (
 )
 from trpg.engine.grants import granted_remaining
 from trpg.engine.ids import PRONE
+from trpg.engine.infusion import preferred_infusion
 from trpg.engine.preview import DamageRange, Preview, preview
 from trpg.engine.resources import restorable_cooldowns
 from trpg.engine.rewrites import grant_ap_problem, resettable_cooldowns
@@ -984,6 +986,8 @@ def _gains(
     f = _gain_frame(state, actor, p, profile, only)
     gains = _damage_gains(f) + _ally_gains(f) + _kill_gains(f) + _push_gains(f)
     gains += _surface_gains(f) + _displace_gains(f)
+    if only is None:  # Boss 優先清擋路的召喚物（3-33b）
+        gains += blocker_gains(state, actor, [*p.min_events, *p.max_events], profile, f.hit)
     if f.w.expose or f.w.cover_damage:
         gains += _cover_gains(state, actor, p, f.w, f.hit, only)
     return gains + _defend_gains(f)
@@ -1926,6 +1930,18 @@ def _hits_unit(scored: ActionScore, uid: UnitId) -> bool:
     )
 
 
+def _with_infusion(state: BattleState, unit: UnitState, action: Action) -> Action:
+    """召喚技能補上 AI 挑的灌注關鍵字（Phase 3-33b）：依召喚物定位（近戰／遠程）取對照表偏好的；
+    沒有可選的關鍵字時不變。"""
+    if not isinstance(action, UseSkill) or action.infusion is not None:
+        return action
+    template = summon_template(state.ruleset.skill_def(action.skill_id))
+    if template is None:
+        return action
+    picked = preferred_infusion(state, unit, template)
+    return action if picked is None else action.model_copy(update={"infusion": picked})
+
+
 class UtilityAI:
     """效用評分 AI（可當作 ``Policy`` 使用：``UtilityAI(profiles)(state) -> Action``）。
 
@@ -2152,4 +2168,6 @@ class UtilityAI:
         for scored in ranked:
             if scored.score > 0 and (best is None or scored.score > best.score):
                 best = scored
-        return best.action if best is not None else EndTurn(unit_id=unit.id)
+        if best is None:
+            return EndTurn(unit_id=unit.id)
+        return _with_infusion(state, unit, best.action)

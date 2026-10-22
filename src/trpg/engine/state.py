@@ -366,6 +366,13 @@ class UnitState:
     """召喚物的召喚者（Phase 3D-4a）；一般單位為 ``None``。"""
     summon_expires_round: int | None = None
     """召喚物在召喚者這一輪（含）的回合結束時消失（施放輪 ＋ ``duration``；Phase 3D-4a）。"""
+    level: int = 1
+    """角色等級（Phase 3-33b）：由範本帶入；召喚物成長依施放者的等級。"""
+    summon_bonus_permille: int = 0
+    """召喚物的傷害加成（‰；Phase 3-33b）：召喚當下依施放者等級與縮放屬性快照，與施放者自己的
+    傷害加成合計套全身上限（:func:`trpg.engine.modifiers.summon_damage_bonus`）。"""
+    infusion: str | None = None
+    """召喚物灌注的關鍵字（Phase 3-33b）：普攻命中後附加對照表（``summon_infusions``）的效果。"""
     dismissed: bool = False
     """召喚物已消失（到期、召喚者離場或超過上限；Phase 3D-4a）。保留在 ``units`` 中（事件仍引用
     它），但不在戰場上。"""
@@ -477,6 +484,9 @@ class UnitState:
             turn_cast_tags=self.turn_cast_tags,
             owner_id=self.owner_id,
             summon_expires_round=self.summon_expires_round,
+            level=self.level,
+            summon_bonus_permille=self.summon_bonus_permille,
+            infusion=self.infusion,
             dismissed=self.dismissed,
             activations=self.activations,
             revived=self.revived,

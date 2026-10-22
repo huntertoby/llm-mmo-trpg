@@ -229,6 +229,9 @@ class UseSkill(_ActionBase):
     target_pos: Pos | None = None
     direction: Direction | None = None
     second_target_id: UnitId | None = None
+    infusion: str | None = None
+    """召喚技能灌注的關鍵字（Phase 3-33b）：必須是施放者持有、且在 ``summon_infusions`` 對照表中的
+    關鍵字；省略時玩家取第一個可選的、AI 依召喚物定位挑。其他技能不能帶。"""
     copy_cast: UseSkill | None = None
     followup_target: FollowupTarget | None = None
     """複合技能第二段的選取：「位移 → 動作」（Phase 3F-3a）以位移段的落點為原點；「動作 → 位移」

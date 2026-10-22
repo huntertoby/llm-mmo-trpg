@@ -181,8 +181,9 @@ def summoned(state: BattleState) -> Any:
 def test_summon_hp_permille_raises_the_summons_max_hp_and_fills_it() -> None:
     base = summoned(summon_arena([]))
     boosted = summoned(summon_arena([mod({"summon_hp_permille": 200})]))
-    assert base.max_hp == 20 and base.hp == 20
-    assert boosted.max_hp == 24 and boosted.hp == 24  # +20%
+    # 範本 20 HP ＋ 施放者屬性修正的成長 3（3-33b）→ 23
+    assert base.max_hp == 23 and base.hp == 23
+    assert boosted.max_hp == 27 and boosted.hp == 27  # (20+3) × 1.2
 
 
 def test_summon_hp_permille_rules_add_up() -> None:
@@ -194,7 +195,7 @@ def test_summon_hp_permille_rules_add_up() -> None:
             ]
         )
     )
-    assert both.max_hp == 30  # +50%
+    assert both.max_hp == 34  # (20+3) × 1.5
 
 
 def test_summon_attack_dice_adds_one_die_to_the_summons_weapon_only() -> None:
@@ -207,11 +208,11 @@ def test_summon_attack_dice_adds_one_die_to_the_summons_weapon_only() -> None:
 
 def test_summon_modifiers_follow_their_applies_to() -> None:
     other = summoned(summon_arena([mod({"summon_hp_permille": 500}, skill_tags=["fire"])]))
-    assert other.max_hp == 20
+    assert other.max_hp == 23
     tagged = summoned(
         summon_arena([mod({"summon_hp_permille": 500}, skill_tags=["summon"])], tags=("summon",))
     )
-    assert tagged.max_hp == 30
+    assert tagged.max_hp == 34
 
 
 def test_summon_modifiers_validate_their_range() -> None:

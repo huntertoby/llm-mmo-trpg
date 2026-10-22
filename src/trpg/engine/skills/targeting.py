@@ -44,6 +44,7 @@ from trpg.engine.actions import Direction, FollowupTarget, UseSkill
 from trpg.engine.activations import activation_problem
 from trpg.engine.gear import gear_cooldown
 from trpg.engine.ids import BOSS_TAG
+from trpg.engine.infusion import check_infusion
 from trpg.engine.rules.combat import AttackProfile, attack_value, concealment_problem
 from trpg.engine.rules.geometry import XY, has_line_of_sight, manhattan
 from trpg.engine.rules.movement import is_deadly, is_standable
@@ -868,6 +869,7 @@ def compute_area(
     state: BattleState, caster: UnitState, skill: SkillDef, action: UseSkill
 ) -> SkillArea:
     """驗證 ``action`` 的選取並計算影響範圍；不合法或影響範圍為空時拋出 ``IllegalActionError``。"""
+    check_infusion(state, caster, skill, action.infusion)
     if action.followup_target is not None and skill.followup is None:
         raise IllegalActionError(f"只有複合技能可以指定 followup_target：{skill.name_zh}")
     if action.followup_target is not None and _auto_followup(skill):
