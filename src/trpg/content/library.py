@@ -109,10 +109,13 @@ __all__ = [
 ]
 
 REQUIRED_STATUSES = (
+    "armor_broken",
     "burning",
     "concealed",
     "defending",
     "prone",
+    "revealed",
+    "shielded",
     "slow",
     "root",
     "stun",
@@ -208,6 +211,9 @@ class Ruleset(ContentModel):
         missing = [s for s in REQUIRED_STATUSES if s not in ids]
         if missing:
             raise ValueError(f"statuses.yaml 缺少引擎需要的狀態：{', '.join(missing)}")
+        unknown_refs = sorted(self.primitives.status_refs() - ids)
+        if unknown_refs:
+            raise ValueError(f"skill_primitives.yaml 引用了未知的狀態：{', '.join(unknown_refs)}")
         by_status = self.statuses.by_id()
         for source, target in sorted(self.core.boss_control_conversion.items()):
             if source not in by_status or by_status[source].control_group != "hard":

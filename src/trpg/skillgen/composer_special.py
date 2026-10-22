@@ -18,7 +18,7 @@ from typing import Any
 from pydantic import ValidationError
 
 from trpg.content.library import ContentLibrary
-from trpg.content.skills import SkillDef
+from trpg.content.skills import SHAPE_TO_VALUES, SkillDef
 from trpg.shared.rng import Rng
 from trpg.shared.types import Element
 from trpg.skillgen.budget import BudgetError, skill_budget
@@ -38,7 +38,7 @@ _LADDERS: dict[str, tuple[Any, ...]] = {
     "area_delta": (1,),
     "grant_pierce": (True,),
     "allow_self_target": (True,),
-    "shape_to": ("line", "chain", "cone"),
+    "shape_to": SHAPE_TO_VALUES,
 }
 """修正規則各種改變的值階梯（由弱到強）。``add_element``、``add_tags`` 另外處理。"""
 

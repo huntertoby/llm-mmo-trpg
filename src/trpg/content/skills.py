@@ -33,6 +33,12 @@ from trpg.content.battle import ID_PATTERN, Dice
 from trpg.content.loader import default_content_dir, load_content_file
 from trpg.content.rules import SkillSlots
 from trpg.content.schemas import ContentModel
+from trpg.content.yaml_sources import (
+    mechanic_status,
+    primitive_status,
+    shape_role,
+    split_heal_skeletons,
+)
 from trpg.shared.types import Attribute, Element, Surface, rune_name
 
 if TYPE_CHECKING:
@@ -419,7 +425,16 @@ class ShapeDef(ContentModel):
         return self.name_zh
 
 
-SHAPE_TO_VALUES: tuple[str, ...] = ("line", "chain", "cone")
+SHAPE_ROLES: tuple[str, ...] = (
+    "followup",
+    "on_kill_second",
+    "pierce",
+    "shape_to",
+    "zone_caster",
+    "zone_moving",
+)
+"""``skill_shapes.yaml`` 的 ``shape_roles`` 必須有的用途。"""
+SHAPE_TO_VALUES: tuple[str, ...] = shape_role("shape_to")
 """修正規則 ``shape_to`` 可以轉成的形狀（Phase 3D-3；組合見 ``skill_shapes.yaml``）。"""
 
 
@@ -443,6 +458,8 @@ class ShapeTable(ContentModel):
     shapes: tuple[ShapeDef, ...] = Field(min_length=1)
     conversions: tuple[ShapeConversion, ...] = ()
     """允許的形狀轉換（Phase 3D-3）。"""
+    shape_roles: dict[str, tuple[str, ...]] = Field(default_factory=dict)
+    """形狀的用途清單（Phase 3E-2f）：鍵必須是 :data:`SHAPE_ROLES`，值是存在的形狀 ID。"""
 
     @model_validator(mode="after")
     def _check(self) -> ShapeTable:
@@ -455,7 +472,25 @@ class ShapeTable(ContentModel):
         if unknown:
             raise ValueError(f"引擎尚未實作的形狀：{', '.join(unknown)}")
         self._check_conversions()
+        self._check_roles(ids)
         return self
+
+    def _check_roles(self, ids: set[str]) -> None:
+        if not self.shape_roles:
+            return
+        unknown_roles = sorted(set(self.shape_roles) - set(SHAPE_ROLES))
+        missing_roles = [r for r in SHAPE_ROLES if r not in self.shape_roles]
+        if unknown_roles or missing_roles:
+            raise ValueError(
+                f"shape_roles 的用途必須是 {'、'.join(SHAPE_ROLES)}"
+                f"（未知：{unknown_roles or '無'}；缺少：{missing_roles or '無'}）"
+            )
+        for role, role_ids in sorted(self.shape_roles.items()):
+            bad = sorted(set(role_ids) - ids)
+            if bad or not role_ids:
+                raise ValueError(
+                    f"shape_roles.{role}：形狀必須存在且至少一個（未知：{bad or '無'}）"
+                )
 
     def _check_conversions(self) -> None:
         by_id = self.by_id()
@@ -542,6 +577,8 @@ class PrimitiveParam(ContentModel):
     required: bool = False
     min: int | None = None
     max: int | None = None
+    allowed_skeletons: tuple[str, ...] | None = None
+    """只能用在這些骨架（``None`` ＝ 不限；``split_heal``，Phase 3E-2f）。"""
     description_zh: str = ""
 
 
@@ -586,6 +623,9 @@ class PrimitiveDef(ContentModel):
     acts_on: Literal["unit", "tile", "caster"] = "unit"
     allowed_shapes: tuple[str, ...] | None = None
     forbid_affects: tuple[Affects, ...] = ()
+    status: str | None = Field(default=None, pattern=ID_PATTERN)
+    """這個原語固定施加的狀態 ID（``statuses.yaml``；Phase 3E-2f）。引擎常數
+    :data:`CHEAT_DEATH_STATUS`、:data:`REDIRECT_STATUS`、:data:`TIME_BOMB` 從這裡讀取。"""
     lookup_by_skill_id: bool = False
     """事後以技能 ID 查表（``skill_def(id)``）取回本原語的設定（Phase 3E-2a）：查到的是基礎型態，
     所以帶變奏的技能（基礎或任一變奏型態）不能含它——變奏的替換不會生效，甚至找不到效果而崩潰。"""
@@ -627,6 +667,12 @@ class PrimitiveDef(ContentModel):
         needs_points = ("fixed", "per_distance", "per_amount", "obstacle", "inscribe")
         if self.budget_basis in needs_points and self.base_points is None:
             raise ValueError(f"原語 {self.id}：budget_basis {self.budget_basis} 必須填 base_points")
+        for name, spec in self.params.items():
+            unknown = sorted(set(spec.allowed_skeletons or ()) - set(SKELETON_IDS))
+            if unknown:
+                raise ValueError(
+                    f"原語 {self.id}.{name}：allowed_skeletons 有未知的骨架：{', '.join(unknown)}"
+                )
         return self
 
     def summary(self) -> str:
@@ -637,11 +683,19 @@ class PrimitiveTable(ContentModel):
     """``content/skill_primitives.yaml``。"""
 
     primitives: tuple[PrimitiveDef, ...] = Field(min_length=1)
+    mechanic_statuses: dict[str, str] = Field(default_factory=dict)
+    """不是由原語施加、由技能機制使用的狀態 ID（``charging``；Phase 3E-2f）。"""
 
     @model_validator(mode="after")
     def _check(self) -> PrimitiveTable:
         _unique((p.id for p in self.primitives), "原語")
         return self
+
+    def status_refs(self) -> set[str]:
+        """原語與技能機制固定使用的狀態 ID（必須存在於 ``statuses.yaml``）。"""
+        return {p.status for p in self.primitives if p.status is not None} | set(
+            self.mechanic_statuses.values()
+        )
 
     def by_id(self) -> dict[str, PrimitiveDef]:
         return {p.id: p for p in self.primitives}
@@ -1179,7 +1233,7 @@ GRANT_AP = "grant_ap"
 RESET_COOLDOWN = "reset_cooldown"
 CHEAT_DEATH = "cheat_death"
 """Phase 3C-4a 的改寫規則型原語 ID（6.3；規則見 ``content/skill_primitives.yaml``）。"""
-CHEAT_DEATH_STATUS = "undying"
+CHEAT_DEATH_STATUS = primitive_status("cheat_death")
 """``cheat_death`` 施加的狀態（``statuses.yaml``，``prevents_death``）。"""
 REDIRECT_DAMAGE = "redirect_damage"
 COPY_SKILL = "copy_skill"
@@ -1197,7 +1251,7 @@ MAX_GRANT_DURATION = 4
 （在目標自己的回合結束時倒數）消失。持續輪數上限。"""
 REVIVE = "revive"
 DELAYED_DAMAGE = "delayed_damage"
-TIME_BOMB = "time_bomb"
+TIME_BOMB = primitive_status("delayed_damage")
 """Phase 3D-8b 的原語 ID（6.18 C、H）：復活倒下的友方、在目標身上附加定時炸彈（狀態 ``time_bomb``，
 ``statuses.yaml``；倒數與爆炸見 ``trpg.engine.bombs``）。"""
 REFUND_AP = "refund_ap"
@@ -1209,7 +1263,7 @@ ON_KILL_TYPES: tuple[str, ...] = (REFUND_AP, REFUND_COOLDOWN, "heal", "shield", 
 MAX_ON_KILL_EFFECTS = 2
 MAX_REFUND_AP = 2
 """``on_kill`` 的效果個數上限，與 ``refund_ap`` 一次最多返還的 AP。"""
-SPLIT_SKELETONS: tuple[str, ...] = ("aura", "area")
+SPLIT_SKELETONS: tuple[str, ...] = split_heal_skeletons()
 """``split_heal``（聖光雙效）可以使用的骨架。"""
 DASH = "dash"
 LEAP = "leap"
@@ -1245,9 +1299,9 @@ ZONE = "zone"
 """Phase 3D-5 的持續區域原語 ID（6.16 G）：在格子上建立持續 ``duration`` 輪的區域。"""
 ZONE_EFFECT_TYPES: tuple[str, ...] = ("damage", "heal", "shield", "apply_status")
 """``zone`` 的 ``effects`` 可用的原語（Phase 3D-5；與 ``consume_status`` 的 ``then`` 相同）。"""
-ZONE_MOVING_SHAPES: tuple[str, ...] = ("line", "cone")
+ZONE_MOVING_SHAPES: tuple[str, ...] = shape_role("zone_moving")
 """``anchor: moving`` 可用的形狀（選方向的形狀；區域沿施放方向前進）。"""
-ZONE_CASTER_SHAPES: tuple[str, ...] = ("self", "ring", "allies_in_radius")
+ZONE_CASTER_SHAPES: tuple[str, ...] = shape_role("zone_caster")
 """``anchor: caster`` 可用的形狀（以施放者為中心、不需要選取的形狀；跟著施放者重新展開）。"""
 _ZONE_ONLY_FIELDS = ("anchor", "when", "speed", "effects")
 GAMBLE = "gamble"
@@ -1276,7 +1330,7 @@ SELF_MOVES: tuple[str, ...] = (DASH, LEAP, SWAP, CHARGE_THROUGH, SHADOWSTEP, "te
 """改變施放者位置的原語；一個技能最多一個。"""
 COMPOSITE_MOVES: tuple[str, ...] = ("teleport", LEAP, DASH, CHARGE_THROUGH, SHADOWSTEP)
 """複合技能（Phase 3F-3a，6.23 基本型「位移 → 動作」）的位移段可用的施放者自身位移原語。"""
-FOLLOWUP_SHAPES: tuple[str, ...] = ("single", "line", "cone", "cross", "square3", "ring")
+FOLLOWUP_SHAPES: tuple[str, ...] = shape_role("followup")
 """複合技能動作段可用的形狀（Phase 3F-3a）：以落點為原點；``cross``、``square3`` 必須 ``range: 0``
 （以落點為中心）。"""
 FOLLOWUP_CENTERED: tuple[str, ...] = ("cross", "square3")
@@ -1314,7 +1368,7 @@ FOLLOWUP_WHEN_VALUES: tuple[str, ...] = (
 DELAYED_RELEASE_VALUES: tuple[str, ...] = ("next_turn", "attacked")
 DELAYED_SHAPES: tuple[str, ...] = ("cross", "square3", "ring")
 """延遲段的形狀（Phase 3F-4b）：以施放者釋放當下的位置為中心（十字、方陣 ``range: 0``）。"""
-CHARGING = "charging"
+CHARGING = mechanic_status("charging")
 """延遲段等待期間施放者身上的狀態（Phase 3F-4b；``StatusInstance.skill_id`` 是技能、
 ``remaining`` 是還要幾回合釋放）。"""
 FOLLOWUP_CHOICE_WHENS: tuple[str, ...] = ("after_action", "on_kill")
@@ -1334,7 +1388,7 @@ COMPOSITE_KIND_ZH: dict[str, str] = {
 GATHER_SHAPES: tuple[str, ...] = ("cross", "square3", "ring")
 """聚集段（``after_gather`` 的第一段）的形狀：十字、方陣以選的中心格為聚集點，環形以施放者
 為聚集點。"""
-ON_KILL_SECOND_SHAPES: tuple[str, ...] = (*FOLLOWUP_SHAPES, "ground_tile")
+ON_KILL_SECOND_SHAPES: tuple[str, ...] = shape_role("on_kill_second")
 """``on_kill`` 第二段的形狀：動作段的形狀，加上跳躍、傳送用的指定格。"""
 _FOLLOWUP_CACHE: dict[int, tuple[Any, Any]] = {}
 _FOLLOWUP_CACHE_LIMIT = 4096
@@ -1462,9 +1516,9 @@ _MAX_COOLDOWN_RESTORE = 2
 HURL_OBJECT = "hurl_object"
 TOPPLE = "topple"
 """Phase 3C-5a 的物件原語 ID（6.15）：投擲物件、推倒。"""
-PIERCE_SHAPES: tuple[str, ...] = ("single", "line")
+PIERCE_SHAPES: tuple[str, ...] = shape_role("pierce")
 """可以穿透（``pierce``，Phase 3C-5b）的形狀：遠程單體與直線。"""
-REDIRECT_STATUS = "soul_link"
+REDIRECT_STATUS = primitive_status("redirect_damage")
 """``redirect_damage`` 施加的狀態（``statuses.yaml``，``redirects_damage``）：
 ``StatusInstance.amount`` 存轉移的千分比、``source_id`` 是承受轉移的施放者。"""
 

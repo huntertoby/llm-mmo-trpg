@@ -11,7 +11,7 @@ from pydantic import BaseModel, ValidationError
 
 from trpg.shared.errors import ContentError
 
-__all__ = ["CONTENT_DIR_ENV", "default_content_dir", "load_content_file"]
+__all__ = ["CONTENT_DIR_ENV", "bundled_content_dir", "default_content_dir", "load_content_file"]
 
 CONTENT_DIR_ENV = "TRPG_CONTENT_DIR"
 """可覆寫內容資料夾位置的環境變數名稱。"""
@@ -19,6 +19,11 @@ CONTENT_DIR_ENV = "TRPG_CONTENT_DIR"
 _YAML_SUFFIXES = frozenset({".yaml", ".yml"})
 _JSON_SUFFIXES = frozenset({".json"})
 _MAX_REPORTED_ERRORS = 10
+
+
+def bundled_content_dir() -> Path:
+    """專案內建的 ``content/`` 資料夾（不受 ``TRPG_CONTENT_DIR`` 影響；schema 匯入時讀清單用）。"""
+    return Path(__file__).resolve().parents[3] / "content"
 
 
 def default_content_dir() -> Path:
@@ -30,7 +35,7 @@ def default_content_dir() -> Path:
     override = os.environ.get(CONTENT_DIR_ENV)
     if override:
         return Path(override)
-    return Path(__file__).resolve().parents[3] / "content"
+    return bundled_content_dir()
 
 
 def _read_raw(path: Path) -> object:

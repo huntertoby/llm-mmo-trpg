@@ -11,6 +11,9 @@
 # allowed_shapes：只能搭配這些形狀
 # forbid_affects：不可搭配的 affects（2D-1：cleanse 不能對敵方使用；驅散不在本階段）
 # params：可填的參數（type：dice／int／status／surface／object／element）
+#   int 參數的 min／max 是唯一的範圍來源（Phase 3E-2f）；allowed_skeletons：只能用在這些骨架
+# status：這個原語固定施加的狀態 ID（Phase 3E-2f；引擎的常數 CHEAT_DEATH_STATUS 等從這裡讀）
+# mechanic_statuses（檔尾）：不是由原語施加、由技能機制使用的狀態 ID
 primitives:
   - id: damage
     name_zh: 傷害
@@ -26,7 +29,7 @@ primitives:
       scaling: {type: scaling, description_zh: "依情況縮放（Phase 3D-7b）：by／per_step_permille／cap_permille 三個欄位；每一步傷害 +n‰（無條件捨去）、cap_permille 必填且不超過 core.scale_cap_max_permille；by 可為 missing_hp_10pct（施放者每少 10% 最大 HP）、distance（與目標每距 1 格）、enemies_adjacent_target（目標相鄰的敵方數）、enemies_adjacent_self（施放者相鄰的敵方數）"}
       lifesteal_permille: {type: int, min: 1, max: 500, description_zh: "吸血（Phase 3D-8a）：施放者回復這個效果對敵人實際造成的傷害（扣掉護盾吸收，含溢出）× n‰（無條件捨去，不超過最大 HP）；用 heal 事件、原因 lifesteal；只有技能自己的傷害效果可以用；預算：傷害點數 × (1 ＋ n‰ × lifesteal_value_permille)"}
       on_kill: {type: effects, description_zh: "技能內的擊殺時效果（Phase 3D-8b）：這個傷害效果讓敵人倒下時才結算的 1–2 個效果，對象一律是施放者。可用類型：refund_ap（返還 amount 點 AP，1–2，用專用效果、不受改寫規則限制）、refund_cooldown（本技能冷卻歸零，技能必須有 cost.cooldown）、heal、shield、apply_status（一般原語）。同一個傷害效果讓一個以上的敵人倒下只結算一次；施放者自己在結算中倒下則不結算。只有主動技能自己的傷害效果可以用。預算：on_kill 各效果的點數 × on_kill_expected_permille（預估擊殺率）"}
-      split_heal: {type: bool, description_zh: "聖光雙效（Phase 3D-8a）：必須搭配 affects: all、主動法術技、aura 或 area 骨架，不可與 lifesteal、explode、scaling 並用。敵方依一般命中判定受到傷害、友方（含自己）不擲命中而治療同樣的骰值（骰一次，治療量 ＝ 骰值 ＋ 縮放屬性 × 0.5，受治療倍率影響）；預算傷害與治療兩邊都計；只能填 true"}
+      split_heal: {type: bool, allowed_skeletons: [aura, area], description_zh: "聖光雙效（Phase 3D-8a）：必須搭配 affects: all、主動法術技、aura 或 area 骨架，不可與 lifesteal、explode、scaling 並用。敵方依一般命中判定受到傷害、友方（含自己）不擲命中而治療同樣的骰值（骰一次，治療量 ＝ 骰值 ＋ 縮放屬性 × 0.5，受治療倍率影響）；預算傷害與治療兩邊都計；只能填 true"}
   - id: heal
     name_zh: 治療
     description_zh: 治療量＝骰值＋縮放屬性×0.5，不超過最大 HP。
@@ -314,6 +317,7 @@ primitives:
       which: {type: which, required: true, description_zh: all 或 tag}
       tag: {type: tag, description_zh: which 為 tag 時必填：要重置的技能標籤}
   - id: cheat_death
+    status: undying
     name_zh: 免死
     description_zh: 目標（自己或友方）獲得狀態「不死」（undying）duration 回合（省略時用狀態的預設持續）：期間 HP 會降到 0 時改為 1 並移除此狀態（墜落與致命地形照樣生效）。
     category: rule_rewrite
@@ -326,6 +330,7 @@ primitives:
       duration: {type: int, min: 1, max: 2, description_zh: 不死的持續回合}
   # --- Phase 3C-4b：另外三個改寫規則型原語（同上：每技能最多 1 個、冷卻或源力規則；點數為初值，未經模擬）---
   - id: redirect_damage
+    status: soul_link
     name_zh: 分擔傷害
     description_zh: 目標友方（不含施放者自己）獲得狀態「靈魂連結」（soul_link）duration 回合：它受到的傷害有 permille‰（≤ 500）轉給施放者，直接扣施放者的 HP。與替隊友擋下整次攻擊（intercept）不同；兩者同時存在時先攔截，傷害落在守護者身上之後才看守護者有沒有連結。施放者倒下或離場時連結消失。
     category: rule_rewrite
@@ -438,6 +443,7 @@ primitives:
     params:
       hp_permille: {type: int, required: true, min: 100, max: 1000, description_zh: 站起來時的 HP（最大 HP 的 n‰，至少 1）}
   - id: delayed_damage
+    status: time_bomb
     name_zh: 定時炸彈
     description_zh: "命中的敵方目標身上附加狀態 time_bomb（不擲抵抗；已有定時炸彈的目標不能再附加，發出 effect_fizzled）：每次環境回合倒數 −1，歸零時在 **目標當下位置** 爆炸——目標與 radius 格（曼哈頓距離）內的所有存活單位（敵我不分，包含施放者）受到 dice ＋ 縮放屬性 × 0.5 的 element 傷害（自動命中、不暴擊、沒有格擋），空格依元素觸及；帶元素的傷害照常與表面、物件互動。目標在倒數中倒下時，立即在倒下的位置爆炸（目標已倒下，不算受傷者）。可被淨化（cleanse）移除；驅散（dispel）不移除（time_bomb 不是增益）。環境預告顯示倒數與爆炸範圍。只能用在主動的法術技。預算：骰子平均 × 預期波及的敵人數（delayed_damage_expected_targets_permille）。"
     category: structural
@@ -577,3 +583,7 @@ primitives:
       dice: {type: dice, required: true, description_zh: 爆炸的傷害骰或治療骰}
       radius: {type: int, required: true, min: 0, max: 2, description_zh: 結算半徑（曼哈頓距離，0 只波及召喚物所在的格子）}
       element: {type: element, description_zh: 填了＝爆炸（傷害敵人）；省略＝治療範圍內的友方}
+
+# 不是由原語施加、由技能機制使用的狀態（Phase 3E-2f）：charging＝複合技延遲段（followup.when: delayed）的蓄力。
+mechanic_statuses:
+  charging: charging
