@@ -143,13 +143,13 @@ affixes:
     slots: [weapon, hands]
     strike: combo
     strike_permille: 400
-    value: {min: 2, max: 3}
+    value: {min: 3, max: 3}  # 3-32d：連擊只出「每第 3 次」（原 2～3）
   - id: affix_attack_cleave
     category: attack
-    name_zh: 普攻命中後，對目標相鄰的另一個敵人造成 40% 傷害（每回合 1 次）
+    name_zh: 普攻命中後，對目標相鄰的另一個敵人造成 30% 傷害（每回合 1 次）
     slots: [weapon]
     strike: cleave
-    strike_permille: 400
+    strike_permille: 300  # 3-32d：400 → 300
 
   # --- 5 武器特性強化（結算在 G2；長槍由 3-24a2 加入）---
   - id: affix_trait_hammer_knockback

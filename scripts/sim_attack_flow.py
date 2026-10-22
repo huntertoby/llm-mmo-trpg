@@ -15,6 +15,8 @@ from trpg.content.library import load_library
 from trpg.sim.attack_flow_report import (
     SCENARIOS,
     format_attack_flow,
+    format_diagnosis,
+    format_new_metrics,
     run_attack_flow,
     summarize,
 )
@@ -25,12 +27,19 @@ def main() -> int:
     parser.add_argument("--seeds", type=int, default=20, help="每格種子數（預設 20）")
     parser.add_argument("--seed-start", type=int, default=0)
     parser.add_argument("--jobs", type=int, default=1, help="平行行程數（預設 1）")
+    parser.add_argument("--diagnose", action="store_true", help="另外輸出診斷表（3-32d）")
     args = parser.parse_args()
     library = load_library()
     samples = run_attack_flow(library, seeds=args.seeds, seed_start=args.seed_start, jobs=args.jobs)
     labels = {s.id: s.label_zh for s in SCENARIOS}
     builds = {b.id: b.name_zh for b in library.builds.builds}
-    print(format_attack_flow(summarize(samples), labels, builds))
+    summaries = summarize(samples)
+    print(format_attack_flow(summaries, labels, builds))
+    print()
+    print(format_new_metrics(summaries, builds))
+    if args.diagnose:
+        print()
+        print(format_diagnosis(summaries, builds))
     return 0
 
 
