@@ -343,6 +343,7 @@ def test_the_original_caster_must_be_alive_and_visible() -> None:
         ("skill_thunder_finisher", "層數"),
         ("skill_bear_trap", "不是一般的主動技能"),
         ("skill_riposte", "不是一般的主動技能"),
+        ("skill_tidal_spear", "戰場變奏"),  # 3E-2a：紀錄看不出型態，保守不複製
     ],
 )
 def test_some_skills_cannot_be_copied(skill_id: str, reason: str) -> None:

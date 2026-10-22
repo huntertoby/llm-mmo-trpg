@@ -93,10 +93,64 @@ def test_lookup_primitives_cannot_sit_in_a_variant_skill(skill_id: str) -> None:
     """3-25b：事後以 skill_def 查表的原語（區域、延遲傷害、複製技能）拿到基礎型態，不能帶變奏。"""
     data = library().skills[skill_id].model_dump(mode="json", exclude_defaults=True)
     data["variants"] = [
-        {"id": "v", "name_zh": "測試", "when": {"caster_surface": ["water"]}, "range_delta": 1}
+        {
+            "id": "v",
+            "name_zh": "測試",
+            "when": {"caster_surface": ["water"]},
+            "shape": data["shape"],
+        }
     ]
-    with pytest.raises(ValidationError, match="不能含"):
-        SkillDef.model_validate(data)
+    skill = SkillDef.model_validate(data)
+    assert any("不能含" in p for p in _problems(skill))
+
+
+_LOOKUP_EFFECTS = {
+    "delayed_damage": {
+        "type": "delayed_damage",
+        "dice": "2d6",
+        "element": "fire",
+        "rounds": 2,
+        "radius": 1,
+    },
+}
+
+
+@pytest.mark.parametrize("primitive", ["delayed_damage"])
+def test_a_variant_cannot_smuggle_in_a_lookup_primitive(primitive: str) -> None:
+    """3E-2a（R1 實測案例）：變奏的 add_effect／replace_effect 偷帶事後查表的原語，驗證要擋下。"""
+    effect = _LOOKUP_EFFECTS[primitive]
+    lib = library()
+    base = lib.skills["skill_tidal_spear"].model_dump(mode="json", exclude_defaults=True)
+    head = {k: base["variants"][0][k] for k in ("id", "name_zh", "when")}
+    added = dict(base, variants=[dict(head, add_effect=effect)])
+    swapped = dict(base, variants=[dict(head, replace_effect={"index": 1, "effect": effect})])
+    for data in (added, swapped):
+        skill = SkillDef.model_validate(data)  # schema 本身放行（沒有 ruleset 看不出旗標）
+        problems = _problems(skill)
+        assert any("不能含" in p and primitive in p for p in problems), problems
+
+
+def test_a_variant_adding_a_zone_is_rejected() -> None:
+    lib = library()
+    base = lib.skills["skill_tidal_spear"].model_dump(mode="json", exclude_defaults=True)
+    zone = lib.skills["skill_fire_wall"].effects[0].model_dump(mode="json", exclude_defaults=True)
+    data = dict(base, variants=[dict(base["variants"][0], add_effect=zone)])
+    try:
+        skill = SkillDef.model_validate(data)
+    except ValidationError:
+        return  # zone 必須是唯一的效果，schema 先擋下
+    assert any("不能含" in p and "zone" in p for p in _problems(skill))
+
+
+def test_the_lookup_flag_lives_in_the_primitive_table() -> None:
+    flagged = {p.id for p in library().ruleset.primitives.primitives if p.lookup_by_skill_id}
+    assert flagged == {"zone", "delayed_damage", "copy_skill"}
+
+
+def test_every_builtin_skill_still_passes_reference_checks() -> None:
+    lib = library()
+    bad = {sid: _problems(s) for sid, s in lib.skills.items() if _problems(s)}
+    assert not bad
 
 
 def test_composite_skills_cannot_carry_variants() -> None:

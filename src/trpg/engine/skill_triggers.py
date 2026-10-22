@@ -47,6 +47,7 @@ from trpg.engine.events import (
     EventBase,
     SkillCooldownChanged,
     SkillTriggered,
+    SkillUsed,
     StatusApplied,
     TriggerLimitReached,
     UnitDowned,
@@ -304,6 +305,18 @@ def _count_hits(ctx: Ctx, index: PassiveIndex, event: AttackRolled) -> None:
         )
 
 
+def _cast_form(ctx: Ctx, caster_id: UnitId, skill_id: str) -> SkillDef:
+    """這次攻擊所屬施放的型態（Phase 3E-2a）：最近一筆同施放者、同技能的 ``skill_used`` 帶有變奏
+    時回傳變奏型態，否則是基礎型態——修正規則的比對（元素、標籤）要看實際施放的型態。"""
+    skill = ctx.rules.skill_def(skill_id)
+    if not skill.variants:
+        return skill
+    for past in reversed(ctx.events):
+        if isinstance(past, SkillUsed) and past.unit_id == caster_id and past.skill_id == skill_id:
+            return skill if past.variant is None else skill.variant_form(past.variant)
+    return skill
+
+
 def _on_modified_hit(ctx: Ctx, event: AttackRolled) -> None:
     """持有者的攻擊命中：套用在這次攻擊（普攻或技能）上的命中後效果規則各記一筆。"""
     state = ctx.state
@@ -311,7 +324,7 @@ def _on_modified_hit(ctx: Ctx, event: AttackRolled) -> None:
     if event.skill_id is None:
         use = modifiers.ATTACK
     else:
-        use = modifiers.skill_use(ctx.rules.skill_def(event.skill_id))
+        use = modifiers.skill_use(_cast_form(ctx, attacker.id, event.skill_id))
     if event.skill_id is None:  # 普攻的符文詞條（3-31；刻與引爆不會同時出現，依詞條 ID 排序）
         for gear in attacker.gear.active_affixes("attack"):
             affix = gear.affix

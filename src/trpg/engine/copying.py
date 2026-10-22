@@ -39,13 +39,15 @@ def has_copy_effect(skill: SkillDef) -> bool:
 
 
 def uncopyable_reason(state: BattleState, skill: SkillDef) -> str | None:
-    """技能本身不能被複製的原因（傳說、改寫規則型、非主動、陷阱、層數需求）；可以時為 ``None``。"""
+    """技能本身不能被複製的原因（傳說、改寫規則型、非主動、陷阱、層數需求、帶變奏）。"""
     if skill.kind != "active" or skill.trap is not None:
         return f"「{skill.name_zh}」不是一般的主動技能，不能複製"
     if skill.rarity == "legendary":
         return f"「{skill.name_zh}」是傳說技能，不能複製"
     if skill.cost.stacks is not None:
         return f"「{skill.name_zh}」需要層數，不能複製"
+    if skill.variants:  # 紀錄只存技能 ID，看不出當時施放的是哪個型態，保守地不複製（3E-2a）
+        return f"「{skill.name_zh}」帶有戰場變奏，不能複製"
     for effect in skill.effects:
         if state.ruleset.primitive_def(effect.type).category == "rule_rewrite":
             return f"「{skill.name_zh}」改寫了規則，不能複製"

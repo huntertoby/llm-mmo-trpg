@@ -21,7 +21,7 @@ from __future__ import annotations
 
 import re
 from collections import Counter
-from collections.abc import Callable, Collection, Iterable, Mapping
+from collections.abc import Callable, Collection, Iterable, Iterator, Mapping
 from dataclasses import dataclass
 from typing import TYPE_CHECKING, Any, Literal
 
@@ -121,7 +121,6 @@ __all__ = [
     "TIME_BOMB",
     "TOPPLE",
     "VARIANT_CONDITIONS",
-    "VARIANT_FORBIDDEN_PRIMITIVES",
     "VARIANT_TARGET_CONDITIONS",
     "WEAPON_CLASSES",
     "ZONE",
@@ -169,6 +168,7 @@ __all__ = [
     "rarity_rank",
     "skill_problems",
     "skill_slot_problems",
+    "walk_effect",
     "weapon_problem",
 ]
 
@@ -584,6 +584,9 @@ class PrimitiveDef(ContentModel):
     acts_on: Literal["unit", "tile", "caster"] = "unit"
     allowed_shapes: tuple[str, ...] | None = None
     forbid_affects: tuple[Affects, ...] = ()
+    lookup_by_skill_id: bool = False
+    """事後以技能 ID 查表（``skill_def(id)``）取回本原語的設定（Phase 3E-2a）：查到的是基礎型態，
+    所以帶變奏的技能（基礎或任一變奏型態）不能含它——變奏的替換不會生效，甚至找不到效果而崩潰。"""
     params: dict[str, PrimitiveParam] = Field(default_factory=dict)
     budget_basis: (
         Literal[
@@ -1819,9 +1822,6 @@ class ModifierSpec(ContentModel):
 # ---------------------------------------------------------------------------
 
 MAX_VARIANTS = 2
-VARIANT_FORBIDDEN_PRIMITIVES = frozenset({"zone", "delayed_damage", "copy_skill"})
-"""帶變奏的技能不能含的原語（Phase 3-25b，3-25a 待 PM 決定 #8）：它們事後以 ``skill_def(id)`` 查表，
-拿到的是基礎型態。"""
 """一招技能最多的變奏數（實際上限再依稀有度，見 ``core.yaml`` 的 ``variant_max_by_rarity``）。"""
 VARIANT_CONDITIONS: tuple[str, ...] = (
     "caster_surface",
@@ -1890,6 +1890,14 @@ class VariantEffectSwap(ContentModel):
 
     index: int = Field(ge=0)
     effect: EffectSpec
+
+
+def walk_effect(effect: EffectSpec) -> Iterator[EffectSpec]:
+    """效果本身與巢狀的效果（``then``、``win``／``lose``、``on_kill``、zone 的 ``effects``）。"""
+    yield effect
+    for group in (effect.then, effect.win, effect.lose, effect.on_kill, effect.effects):
+        for sub in group or ():
+            yield from walk_effect(sub)
 
 
 class VariantSpec(ContentModel):
@@ -2097,12 +2105,6 @@ class SkillDef(ContentModel):
             raise ValueError("複合技能（有 followup）不能帶變奏")
         if self.is_activatable:
             raise ValueError("常駐類傳說（有 activation）不能帶變奏")
-        for spec in self._all_effect_specs():
-            if spec.type in VARIANT_FORBIDDEN_PRIMITIVES:
-                raise ValueError(
-                    f"帶變奏的技能不能含「{spec.type}」效果（區域、延遲傷害、複製技能等後續查表"
-                    "拿到的是基礎型態，變奏不會生效）"
-                )
         for variant in self.variants:
             self._check_variant(variant)
             try:
@@ -2110,18 +2112,40 @@ class SkillDef(ContentModel):
             except ValueError as exc:
                 raise ValueError(f"變奏 {variant.id}：{exc}") from None
 
-    def _all_effect_specs(self) -> list[EffectSpec]:
-        found: list[EffectSpec] = []
+    def iter_effects(
+        self,
+        *,
+        include_followup: bool = False,
+        include_variants: bool = False,
+        include_backlash: bool = False,
+        include_modifiers: bool = False,
+    ) -> Iterator[EffectSpec]:
+        """技能所有層級的效果（Phase 3E-2a 統一走訪）：``effects`` 與其巢狀的 ``then``、賭注
+        ``win``／``lose``、擊殺時效果 ``on_kill``、區域子效果 ``effects``（zone）。陷阱技能的觸發
+        效果就是 ``effects``，自然包含在內。
 
-        def walk(effect: EffectSpec) -> None:
-            found.append(effect)
-            for group in (effect.then, effect.win, effect.lose, effect.on_kill, effect.effects):
-                for sub in group or ():
-                    walk(sub)
-
-        for effect in self.effects:
-            walk(effect)
-        return found
+        - ``include_followup``：複合技能第二段的效果；
+        - ``include_variants``：每個變奏的 ``add_effect``、``replace_effect.effect``（尚未套用到
+          基礎效果上的原始內容；要看變奏型態的完整效果請走 :meth:`variant_form`）；
+        - ``include_backlash``：失手反噬 ``cost.on_miss``；
+        - ``include_modifiers``：修正規則的命中後效果 ``change.on_hit_effects``。
+        """
+        roots: list[EffectSpec] = list(self.effects)
+        if include_followup and self.followup is not None:
+            roots += self.followup.effects
+        if include_backlash:
+            roots += self.cost.on_miss
+        if include_modifiers:
+            for rule in self.modifiers:
+                roots += rule.change.on_hit_effects or ()
+        if include_variants:
+            for variant in self.variants:
+                if variant.add_effect is not None:
+                    roots.append(variant.add_effect)
+                if variant.replace_effect is not None:
+                    roots.append(variant.replace_effect.effect)
+        for root in roots:
+            yield from walk_effect(root)
 
     def _check_variant(self, variant: VariantSpec) -> None:
         main = self.main_damage_index

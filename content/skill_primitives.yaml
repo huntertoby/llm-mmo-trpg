@@ -341,6 +341,7 @@ primitives:
     name_zh: 複製技能
     description_zh: 立即施放「本輪內最後一個被其他單位施放、且施放者看得到的主動技能」，由自己當施放者重新選目標；不能複製傳說、改寫規則型技能與有層數需求的技能。複製的技能不扣法力與 AP、不進冷卻，不檢查武器需求（傷害與射程照自己的武器算），但射程、視線與目標都要合法。沒有可以複製的技能時不能施放。必須是技能唯一的效果，形狀為 self。
     category: rule_rewrite
+    lookup_by_skill_id: true
     harmful: false
     min_rarity: epic
     budget_basis: fixed
@@ -440,6 +441,7 @@ primitives:
     name_zh: 定時炸彈
     description_zh: "命中的敵方目標身上附加狀態 time_bomb（不擲抵抗；已有定時炸彈的目標不能再附加，發出 effect_fizzled）：每次環境回合倒數 −1，歸零時在 **目標當下位置** 爆炸——目標與 radius 格（曼哈頓距離）內的所有存活單位（敵我不分，包含施放者）受到 dice ＋ 縮放屬性 × 0.5 的 element 傷害（自動命中、不暴擊、沒有格擋），空格依元素觸及；帶元素的傷害照常與表面、物件互動。目標在倒數中倒下時，立即在倒下的位置爆炸（目標已倒下，不算受傷者）。可被淨化（cleanse）移除；驅散（dispel）不移除（time_bomb 不是增益）。環境預告顯示倒數與爆炸範圍。只能用在主動的法術技。預算：骰子平均 × 預期波及的敵人數（delayed_damage_expected_targets_permille）。"
     category: structural
+    lookup_by_skill_id: true
     harmful: true
     min_rarity: rare
     budget_basis: delayed_damage
@@ -475,6 +477,7 @@ primitives:
     name_zh: 持續區域
     description_zh: 在技能形狀的格子上建立持續 duration 輪的區域（施放者第 duration 次回合結束時消失，施放當回合不算；施放者不在場時於那一輪的環境回合消失）。anchor：tile 固定在施放時的格子、caster 跟隨施放者（形狀 self／ring／allies_in_radius，每次施放者移動就以新位置重新展開；施放者倒下或離場時消失）、moving 每次環境回合沿施放方向前進 speed 格（形狀 line／cone；前進到牆壁或地圖外的格子消失，全部消失時區域消失）。單位進入區域（區域建立、移動或跟隨到他身上也算；在區域內移動不算）或回合開始時站在區域內（when：enter／turn_start／both），依 affects（enemies／allies／all）對他結算 effects（1–2 個 damage／heal／shield／apply_status；自動命中，狀態照常擲抵抗，施放者屬性在建立時快照；施放者自己不受 all 的有害效果）。surface：區域新覆蓋的格子留下表面。同一施放者同時存在的區域超過 zone_limit_per_owner（core.yaml）時最舊的消失。必須是主動技能唯一的效果。
     category: structural
+    lookup_by_skill_id: true
     harmful: false
     min_rarity: rare
     budget_basis: zone
