@@ -1,0 +1,17 @@
+# 裝備測試用單位（Phase 3G-G2）：持錘戰士，主手與項鍊掛技能強化、普攻附加與武器特性強化詞條。
+#   uv run trpg battle --map test_flat_6x6 --allies gear_tester_g2 --enemies bandit,bandit --seed 7 --log-json <檔案>
+id: gear_tester_g2
+name_zh: 震地戰士
+attributes: {str: 16, dex: 10, con: 14, int: 10, wis: 10, wil: 10}
+max_hp: 48
+speed: 5
+armor_bonus: 4
+weapon: hammer
+resist: {physical: 100}
+element_mods: {}
+tags: [hero]
+max_mana: 20
+skills: [skill_bone_crusher, skill_cleave, skill_whirlwind, skill_execute]
+equipment:
+  main_hand: item_g2_hammer
+  neck: item_g2_amulet
