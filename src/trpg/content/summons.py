@@ -62,6 +62,8 @@ def summon_dpr(summon: SummonDef, *, flat: int = 0, bonus_permille: int = 0) -> 
     """召喚物每輪的預估傷害（最簡單的近似，預算與 AI 共用）：武器骰平均 ＋ 固定傷害，
     每輪一次攻擊、不計命中率與屬性。``flat``／``bonus_permille`` 是施放者成長的普攻固定傷害與
     傷害加成（‰；Phase 3-33c，AI 估值用）。"""
+    if summon.template.inert:  # 不行動的召喚物（土牆）沒有攻擊
+        return Fraction(0)
     dice = summon.weapon.dice
     base = Fraction(dice.count * (dice.sides + 1), 2) + summon.weapon.flat + flat
     return base * (1000 + bonus_permille) / 1000

@@ -81,7 +81,7 @@ def test_preview_marks_keywords_every_weapon_can_reach(client: TestClient) -> No
 
 def test_dev_packs_endpoint_and_start(client: TestClient, library: ContentLibrary) -> None:
     packs = _ok(client.get("/api/runs/dev-packs"))
-    assert len(packs) == 24 and {p["label_zh"] for p in packs} == _school_names(library)
+    assert len(packs) == 28 and {p["label_zh"] for p in packs} == _school_names(library)
     run = _ok(client.post("/api/runs", json={"dev_pack": packs[0]["id"], "seed": 3}))
     assert run["hero"]["dev_pack"] == packs[0]["id"]
     # 一輪的回應（玩家介面）不出現流派名

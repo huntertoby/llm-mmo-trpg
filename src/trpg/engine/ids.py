@@ -14,11 +14,13 @@ if TYPE_CHECKING:
 
 __all__ = [
     "ARMOR_BROKEN",
+    "BLOCKS_SIGHT_TAG",
     "BOSS_TAG",
     "CONCEALED",
     "DEFENDING",
     "ELITE_TAG",
     "FLYING",
+    "IMMOVABLE",
     "PENETRABLE",
     "PRONE",
     "REVEALED",
@@ -45,6 +47,8 @@ SHIELDED = "shielded"
 
 # -- 標籤（單位範本或物件的 ``tags``）------------------------------------------
 
+BLOCKS_SIGHT_TAG = "blocks_sight"
+"""擋視線的單位標籤（土牆召喚物，Phase 3-33e2a）：所在的格子像 ``blocks_sight`` 物件一樣擋視線。"""
 BOSS_TAG = "boss"
 """首領單位的標籤。"""
 ELITE_TAG = "elite"
@@ -53,6 +57,8 @@ FLYING = "flying"
 """會飛的單位標籤（Phase 3-33e2b）：移動無視地形高度差與障礙（不能停在牆內），不受地面表面影響。"""
 PENETRABLE = "penetrable"
 """可被穿透攻擊穿過的物件標籤。"""
+IMMOVABLE = "immovable"
+"""不會被移動的單位標籤（石像，Phase 3-33e2a）：推擊、拉扯與強制位移、傳送對它無效。"""
 STEADFAST = "steadfast"
 """堅守單位的標籤：被推擊的距離打折（``core.steadfast_push_permille``）。"""
 TOPPLABLE = "topplable"

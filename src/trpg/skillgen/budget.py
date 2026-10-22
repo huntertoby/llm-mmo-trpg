@@ -45,7 +45,7 @@ from trpg.content.skills import (
     VariantSpec,
     on_hit_carrier,
 )
-from trpg.content.summons import summon_dpr
+from trpg.content.summons import SummonDef, summon_dpr
 from trpg.skillgen.combo import self_combo_reasons
 from trpg.skillgen.mechanics import mechanic_tags, resolved_affects
 
@@ -598,8 +598,167 @@ def _summon_points(
             f" × {permille}‰"
         )
     dpr = summon_dpr(summon)
-    points = dpr * effect.duration * Fraction(permille, _PERMILLE)
-    return points, f"每輪 {_fmt(dpr)} × {effect.duration} 輪 × {permille}‰"
+    per_round, once, notes = summon_trait_points(summon, library, dpr)
+    value = Fraction(permille, _PERMILLE)
+    rounds = effect.duration
+    if summon.template.detonate is not None:  # 自爆後就消失了：一般攻擊與特性只算幾輪
+        rounds = min(rounds, library.budget.summon_detonate_rounds)
+    points = (dpr + per_round) * rounds * value + once * value
+    note = f"每輪 {_fmt(dpr)}"
+    if per_round:
+        note += f" ＋ 特性 {_fmt(per_round)}"
+    note += f" × {rounds} 輪"
+    if once:
+        note += f" ＋ 一次性 {_fmt(once)}"
+    note += f" × {permille}‰"
+    if notes:
+        note += f"（{'；'.join(notes)}）"
+    return points, note
+
+
+def _status_value(library: ContentLibrary, status_id: str) -> Fraction:
+    return Fraction(library.ruleset.status_def(status_id).budget_points or 0)
+
+
+def _infusion_trait_points(
+    summon: SummonDef, library: ContentLibrary, dpr: Fraction
+) -> tuple[Fraction, Fraction, list[str]]:
+    """固有灌注關鍵字（``innate``）的特性點數：（每輪, 一次性, 說明）。"""
+    rules = library.budget
+    template = summon.template
+    infusion = library.ruleset.core.summon_infusions.get(template.innate or "")
+    per_round, once = Fraction(0), Fraction(0)
+    notes: list[str] = []
+    if infusion is None:
+        return per_round, once, notes
+    primitives = library.ruleset.primitives.by_id()
+    if infusion.status is not None:
+        per_round += _status_value(library, infusion.status) * Fraction(
+            rules.summon_trait_status_permille, _PERMILLE
+        )
+        notes.append(f"命中{infusion.status}")
+    if infusion.surface is not None:
+        surface = library.ruleset.surfaces.get(infusion.surface).budget_points or 0
+        per_round += surface * Fraction(rules.summon_trait_surface_permille, _PERMILLE)
+        notes.append(f"命中造{infusion.surface.value}")
+    if infusion.extra_damage is not None:
+        per_round += _dice_average(infusion.extra_damage) * Fraction(
+            rules.summon_trait_extra_damage_permille, _PERMILLE
+        )
+        notes.append(f"額外 {infusion.extra_damage}")
+    if infusion.trip:
+        prone = primitives["knock_prone"].base_points or 0
+        per_round += prone * Fraction(rules.summon_trait_trip_permille, _PERMILLE)
+        notes.append("絆倒")
+    if infusion.knockback:
+        push = primitives["push"].base_points or 0
+        per_round += (
+            push * infusion.knockback * Fraction(rules.summon_trait_knockback_permille, _PERMILLE)
+        )
+        notes.append(f"震退{infusion.knockback}")
+    if infusion.height_permille:
+        per_round += (
+            dpr
+            * Fraction(infusion.height_permille, _PERMILLE)
+            * Fraction(rules.summon_trait_height_permille, _PERMILLE)
+        )
+        notes.append("高處加傷")
+    if infusion.conceal_rounds:
+        once += rules.summon_trait_conceal_points
+        notes.append("召喚時隱蔽")
+    return per_round, once, notes
+
+
+def _rule_trait_points(
+    summon: SummonDef, library: ContentLibrary
+) -> tuple[Fraction, Fraction, list[str]]:
+    """範本的命中特性、脈動、自爆、被推倒與背刺骰的特性點數（每輪, 一次性, 說明）。"""
+    rules = library.budget
+    template = summon.template
+    weapon = summon.weapon
+    per_round, once = Fraction(0), Fraction(0)
+    notes: list[str] = []
+    for rule in template.hit_rules:
+        if rule.status is not None:
+            status_points = _status_value(library, rule.status) * Fraction(
+                rules.summon_trait_status_permille, _PERMILLE
+            )
+            if rule.when != "always":
+                status_points *= Fraction(rules.summon_trait_conditional_permille, _PERMILLE)
+            per_round += status_points
+            notes.append(f"命中{rule.status}")
+        if rule.chain_targets:
+            chain = (
+                _dice_average(weapon.dice)
+                * rule.chain_targets
+                * Fraction(rule.chain_permille, _PERMILLE)
+            )
+            per_round += chain * Fraction(rules.summon_trait_chain_permille, _PERMILLE)
+            notes.append("水面連鎖")
+    pulse = template.pulse
+    if pulse is not None:
+        if pulse.surface is not None:
+            surface = library.ruleset.surfaces.get(pulse.surface).budget_points or 0
+            per_round += surface * Fraction(rules.summon_trait_surface_permille, _PERMILLE)
+        if pulse.heal_dice is not None or pulse.heal_flat:
+            heal = (
+                _dice_average(pulse.heal_dice) if pulse.heal_dice else Fraction(0)
+            ) + pulse.heal_flat
+            per_round += heal * Fraction(rules.summon_trait_heal_permille, _PERMILLE)
+        notes.append("脈動")
+    if weapon.backstab_dice:
+        per_round += Fraction(weapon.backstab_dice * (weapon.dice.sides + 1), 2) * Fraction(
+            rules.summon_trait_backstab_permille, _PERMILLE
+        )
+        notes.append("背刺骰")
+    if template.detonate is not None:
+        blast = template.detonate
+        once += (_dice_average(blast.dice) + blast.flat) * Fraction(
+            rules.summon_detonate_targets_permille, _PERMILLE
+        )
+        if blast.surface is not None:
+            tiles = 2 * blast.radius * (blast.radius + 1) + 1
+            surface = library.ruleset.surfaces.get(blast.surface).budget_points or 0
+            once += surface * tiles * Fraction(rules.summon_trait_surface_permille, _PERMILLE)
+        notes.append("自爆")
+    if "topplable" in template.tags:
+        prone = library.ruleset.primitives.by_id()["knock_prone"].base_points or 0
+        topple = _dice_average(library.ruleset.core.topple_damage_dice) + prone
+        once += topple * Fraction(rules.summon_topple_targets_permille, _PERMILLE)
+        notes.append("被推倒壓人")
+    return per_round, once, notes
+
+
+def summon_trait_points(
+    summon: SummonDef, library: ContentLibrary, dpr: Fraction
+) -> tuple[Fraction, Fraction, list[str]]:
+    """召喚物特性的預算點數（Phase 3-33e2a）：（每輪, 一次性, 說明）。每輪的與武器骰平均相加後乘
+    持續輪數，一次性的（自爆、被推倒壓人、召喚時隱蔽）只算一次；係數都在 ``skill_budget.yaml``。"""
+    per_round, once, notes = _infusion_trait_points(summon, library, dpr)
+    more_round, more_once, more_notes = _rule_trait_points(summon, library)
+    per_round, once = per_round + more_round, once + more_once
+    notes = notes + more_notes
+    if summon.template.inert:  # 不行動（土牆）：沒有攻擊，只剩一次性的特性
+        per_round = Fraction(0)
+        notes = [n for n in notes if n in ("被推倒壓人", "召喚時隱蔽")]
+    if "immovable" in summon.template.tags:
+        per_round += Fraction(library.budget.summon_trait_immovable_permille, _PERMILLE)
+        notes.append("不會被推動")
+    pulse = summon.template.pulse
+    if pulse is not None and pulse.pull_radius > 0:  # 拉扯（吸引圖騰，3-33e2b）：每輪拉近 1 格
+        pull = library.ruleset.primitives.by_id()["pull"].base_points or 0
+        per_round += pull * Fraction(library.budget.summon_trait_pull_permille, _PERMILLE)
+        notes.append("拉扯")
+    platform = summon.template.platform
+    if platform is not None:  # 高台（高台圖騰，3-33e2b）：高台在的每一輪都有地形價值
+        raised = library.ruleset.primitives.by_id()["raise_terrain"].base_points or 0
+        per_round += (
+            raised
+            * platform.height
+            * Fraction(library.budget.summon_trait_platform_permille, _PERMILLE)
+        )
+        notes.append("高台")
+    return per_round, once, notes
 
 
 def zone_cell_count(skill: SkillDef, library: ContentLibrary) -> int:

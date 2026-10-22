@@ -36,6 +36,7 @@ from trpg.engine.effects import execute
 from trpg.engine.effects.models import (
     ApplyStatusEffect,
     CreateSurfaceEffect,
+    DamageEffect,
     EffectBase,
     HealEffect,
     PushEffect,
@@ -44,9 +45,11 @@ from trpg.engine.effects.models import (
 )
 from trpg.engine.effects.world import push_distance, unit_push_block
 from trpg.engine.events import (
+    DetonateReason,
     EffectFizzled,
     EventBase,
     SnareTriggered,
+    SummonDetonated,
     SummonPulled,
     TotemPulsed,
     UnitMoved,
@@ -66,11 +69,13 @@ from trpg.shared.types import Pos, UnitId
 
 __all__ = [
     "Growth",
+    "detonate_if_adjacent",
+    "detonate_on_downed",
     "expire_summons",
     "growth_of",
-    "is_inert",
     "pulse_summon",
     "pulse_totem",
+    "summon_inert",
     "summon_limit",
     "summon_unit",
     "totem_of",
@@ -276,12 +281,84 @@ def totem_of(state: BattleState, unit: UnitState) -> TotemSpec | None:
         return None
 
 
-def is_inert(state: BattleState, unit: UnitState) -> bool:
-    """沒有行動的召喚物：圖騰（光環）與範本標了 ``inert`` 的純功能圖騰（AP 恆為 0）。"""
+def summon_inert(state: BattleState, unit: UnitState) -> bool:
+    """召喚物回合內沒有行動（Phase 3-33e2a）：圖騰，或範本寫了 ``inert``（土牆）。"""
     if totem_of(state, unit) is not None:
         return True
     template = template_of(state, unit)
     return template is not None and template.inert
+
+
+def _blast_tiles(ctx: Ctx, unit: UnitState, radius: int) -> list[XY]:
+    """爆心與曼哈頓距離 ``radius`` 以內的格子（地圖內，依 ``(y, x)`` 排序）。"""
+    x0, y0 = unit.xy
+    cells = [
+        (x, y)
+        for y in range(y0 - radius, y0 + radius + 1)
+        for x in range(x0 - radius, x0 + radius + 1)
+        if abs(x - x0) + abs(y - y0) <= radius and ctx.state.in_bounds(x, y)
+    ]
+    return cells
+
+
+def _detonate(ctx: Ctx, unit: UnitState, reason: DetonateReason) -> None:
+    template = template_of(ctx.state, unit)
+    assert template is not None and template.detonate is not None
+    spec = template.detonate
+    victims = [
+        u
+        for u in ctx.state.units_sorted()
+        if u.alive and u.team is not unit.team and manhattan(u.xy, unit.xy) <= spec.radius
+    ]
+    ctx.emit(
+        SummonDetonated,
+        unit_id=unit.id,
+        pos=unit.pos,
+        radius=spec.radius,
+        reason=reason,
+        targets=[u.id for u in victims],
+    )
+    if unit.alive:  # 自爆後消失（被打倒的已經離場）
+        dismiss_summon(ctx, unit, "detonated")
+    batch: list[EffectBase] = [
+        DamageEffect(
+            source_id=unit.id,
+            target_id=u.id,
+            element=spec.element,
+            dice=spec.dice,
+            flat=spec.flat,
+            min_damage=ctx.core.min_damage_on_hit,
+        )
+        for u in victims
+    ]
+    if spec.surface is not None:
+        batch += [
+            CreateSurfaceEffect(source_id=unit.id, pos=xy, surface=spec.surface, team=unit.team)
+            for xy in _blast_tiles(ctx, unit, spec.radius)
+        ]
+    execute(ctx, batch)
+
+
+def detonate_if_adjacent(ctx: Ctx, unit: UnitState, reason: DetonateReason) -> bool:
+    """會自爆的召喚物（範本 ``detonate``）與任一敵人相鄰時爆炸並消失（Phase 3-33e2a）；
+    回傳是否爆炸了。"""
+    template = template_of(ctx.state, unit)
+    if template is None or template.detonate is None or not unit.alive:
+        return False
+    if not any(
+        u.alive and u.team is not unit.team and manhattan(u.xy, unit.xy) == 1
+        for u in ctx.state.living_units()
+    ):
+        return False
+    _detonate(ctx, unit, reason)
+    return True
+
+
+def detonate_on_downed(ctx: Ctx, unit: UnitState) -> None:
+    """會自爆的召喚物被打倒時爆炸（Phase 3-33e2a；單位已標記倒下，只結算爆炸）。"""
+    template = template_of(ctx.state, unit)
+    if template is not None and template.detonate is not None:
+        _detonate(ctx, unit, "downed")
 
 
 def _platform_site(state: BattleState, owner: UnitState, unit: UnitState) -> XY | None:

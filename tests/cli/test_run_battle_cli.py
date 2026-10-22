@@ -20,7 +20,7 @@ def test_battle_log_contains_runs_and_replays(
     out = capsys.readouterr().out
     assert "跑步（本回合移動 +3" in out  # 戰鬥紀錄有一行
     data = json.loads(log.read_text(encoding="utf-8"))
-    assert data["format"] == "trpg-battle-log/53"
+    assert data["format"] == "trpg-battle-log/54"
     assert any(a.get("type") == "run" for a in data["actions"])
     assert any(e["type"] == "unit_ran" for e in data["events"])
     assert main(["battle", "replay", str(log)]) == 0

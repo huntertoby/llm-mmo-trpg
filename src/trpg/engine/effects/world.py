@@ -56,10 +56,11 @@ from trpg.engine.events import (
     SurfaceChanged,
     TerrainChanged,
     UnitSpawned,
+    WallToppled,
 )
 from trpg.engine.heights import change_height
-from trpg.engine.ids import STEADFAST, TOPPLABLE, next_unit_id
-from trpg.engine.lifecycle import make_unit
+from trpg.engine.ids import IMMOVABLE, STEADFAST, TOPPLABLE, next_unit_id
+from trpg.engine.lifecycle import dismiss_summon, make_unit
 from trpg.engine.rules.combat import PERMILLE
 from trpg.engine.rules.facing import facing_toward_enemies
 from trpg.engine.rules.movement import is_deadly, is_standable
@@ -474,11 +475,22 @@ def _push_unit(ctx: Ctx, effect: PushEffect, unit_id: UnitId) -> list[EventBase]
     unit = state.units.get(unit_id)
     if unit is None or not unit.alive:
         return []
+    if unit.has_tag(TOPPLABLE):  # 土牆（Phase 3-33e2a）：不移動，往推的方向倒下
+        return _topple_unit(ctx, unit, effect.direction, effect.source_id)
     events: list[EventBase] = []
     distance = push_distance(state, unit, effect.distance)
-    if unit.has_tag(STEADFAST) and distance != effect.distance:
+    if (unit.has_tag(STEADFAST) or unit.has_tag(IMMOVABLE)) and distance != effect.distance:
+        why: Literal["steadfast", "immovable"] = (
+            "immovable" if unit.has_tag(IMMOVABLE) else "steadfast"
+        )
         events.append(
-            ctx.emit(PushResisted, unit_id=unit.id, requested=effect.distance, distance=distance)
+            ctx.emit(
+                PushResisted,
+                unit_id=unit.id,
+                requested=effect.distance,
+                distance=distance,
+                reason=why,
+            )
         )
     dx, dy = effect.direction
     for step in range(distance):
@@ -552,6 +564,8 @@ def push_distance(state: BattleState, unit: UnitState, requested: int) -> int:
 
     技能的推擊效果（Phase 2）遇到 0 格時只是不移動；基本動作 ``Shove`` 遇到 0 格時不合法。
     """
+    if unit.has_tag(IMMOVABLE):  # 石像（Phase 3-33e2a）：完全推不動
+        return 0
     if unit.has_tag(STEADFAST):
         return requested * state.ruleset.core.steadfast_push_permille // PERMILLE
     return requested
@@ -663,12 +677,24 @@ def topple_line(state: BattleState, obj: ObjectState, direction: XY) -> ToppleLi
     ``breakable`` 物件的格子照壓（物件受傷）；不阻擋移動的非破壞物件（草叢）不影響；其他物件
     （阻擋移動又不能破壞，例如倒塌物）擋住倒下，停在它之前。
     """
+    tiles, units, objects = _topple_scan(state, obj.xy, direction)
+    rubble = next(
+        (xy for xy in reversed([obj.xy, *tiles]) if _rubble_fits(state, xy, obj)),
+        None,
+    )
+    return ToppleLine(tuple(tiles), tuple(units), tuple(objects), rubble)
+
+
+def _topple_scan(
+    state: BattleState, origin: XY, direction: XY
+) -> tuple[list[XY], list[UnitId], list[ObjectId]]:
+    """從 ``origin`` 的下一格起往 ``direction`` 掃 ``topple_length`` 格：壓住的格子、單位與物件。"""
     dx, dy = direction
     tiles: list[XY] = []
     units: list[UnitId] = []
     objects: list[ObjectId] = []
     for step in range(1, state.ruleset.core.topple_length + 1):
-        xy = (obj.pos.x + dx * step, obj.pos.y + dy * step)
+        xy = (origin[0] + dx * step, origin[1] + dy * step)
         if not state.in_bounds(*xy) or is_deadly(state, xy) or not _walkable(state, xy):
             continue
         other = state.object_at(*xy)
@@ -682,11 +708,29 @@ def topple_line(state: BattleState, obj: ObjectState, direction: XY) -> ToppleLi
         if unit is not None:
             units.append(unit.id)
         tiles.append(xy)
-    rubble = next(
-        (xy for xy in reversed([obj.xy, *tiles]) if _rubble_fits(state, xy, obj)),
-        None,
-    )
-    return ToppleLine(tuple(tiles), tuple(units), tuple(objects), rubble)
+    return tiles, units, objects
+
+
+def _topple_unit(
+    ctx: Ctx, unit: UnitState, direction: XY, source_id: UnitId | None
+) -> list[EventBase]:
+    """土牆（Phase 3-33e2a，``topplable`` 標籤的召喚物）被推：發出 ``wall_toppled``（傷害與倒地由
+    :mod:`trpg.engine.triggers` 結算，與物件推倒同一組規則），土牆隨後消失。"""
+    tiles, units, objects = _topple_scan(ctx.state, unit.xy, direction)
+    events: list[EventBase] = [
+        ctx.emit(
+            WallToppled,
+            unit_id=unit.id,
+            pos=unit.pos,
+            direction=direction,
+            tiles=tuple(_pos(xy) for xy in tiles),
+            units=tuple(units),
+            objects=tuple(objects),
+            source_id=source_id,
+        )
+    ]
+    events.extend(dismiss_summon(ctx, unit, "toppled"))
+    return events
 
 
 def _walkable(state: BattleState, xy: XY) -> bool:

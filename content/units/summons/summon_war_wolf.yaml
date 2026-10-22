@@ -1,0 +1,18 @@
+# 召喚物（Phase 3-33e2a，docs/design/06-技能.md 6.29.5；數值為初值，未經模擬）：戰狼。
+# 快速突擊：移動 6；固有「倒地」——撲倒：普攻命中時絆倒目標（敏捷對抗，每輪 1 次，沿用 3-33e1）。
+id: summon_war_wolf
+name_zh: 戰狼
+attributes: {str: 12, dex: 16, con: 10, int: 4, wis: 8, wil: 6}
+max_hp: 14
+speed: 6
+armor_bonus: 0
+weapon: fangs
+ai_profile: brute
+resist: {}
+element_mods: {}
+tags: [summoned, beast]
+reactions: []
+summon: true
+innate: prone
+# 外觀（Phase 3-33h1，docs/art/召喚物外觀.md）：純顯示資料。
+look: {body: beast, variant: wolf, element: prone, size: medium}

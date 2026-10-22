@@ -178,10 +178,21 @@ def _value(
     rounds = max(rounds, 0)
     spec = summon.template.totem
     if spec is None:
+        template = summon.template
         dpr = summon_dpr(summon, flat=flat, bonus_permille=bonus_permille)
         if infused:
             dpr += rules.infusion_points
-        return profile.weights.damage * dpr * rounds * hit
+        extra = Fraction(0)
+        if template.inert:  # 不行動的召喚物（土牆）：擋路的價值
+            extra += Fraction(rules.inert_round_points) * rounds
+        if (
+            template.detonate is not None
+        ):  # 自爆（爆裂傀儡，3-33e2a）：爆炸算一次，一般攻擊只算 1 輪
+            blast = template.detonate
+            average = Fraction(blast.dice.count * (blast.dice.sides + 1), 2) + blast.flat
+            extra += average * Fraction(rules.detonate_targets_permille, _PERMILLE)
+            rounds = min(rounds, 1)
+        return profile.weights.damage * (dpr * rounds + extra) * hit
     points = profile.ally_status_values.get(spec.status, rules.totem_ally_points)
     allies = _totem_allies(state, team, template_id, xy)
     return profile.weights.support * points * allies * min(rounds, 99) * hit

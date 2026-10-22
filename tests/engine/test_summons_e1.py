@@ -392,6 +392,10 @@ def test_summon_only_weapons_are_not_start_weapons() -> None:
         "vine_lash",
         "guardian_rod",
         "totem_stone",
+        # 3-33e2a
+        "bomb_casing",
+        "stone_fist",
+        "fangs",
     }
     assert only.isdisjoint(start_weapons(lib))
     for summon in lib.ruleset.summons.summons:  # 召喚物範本用的武器都存在

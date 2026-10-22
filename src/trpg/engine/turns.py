@@ -49,7 +49,13 @@ from trpg.engine.skill_triggers import (
 )
 from trpg.engine.stacks import expire_stacks
 from trpg.engine.state import StatusInstance, UnitState
-from trpg.engine.summons import expire_summons, is_inert, pulse_summon, pulse_totem
+from trpg.engine.summons import (
+    detonate_if_adjacent,
+    expire_summons,
+    pulse_summon,
+    pulse_totem,
+    summon_inert,
+)
 from trpg.engine.traps import tick_traps
 from trpg.engine.zones import expire_zones_at_turn_end, zones_turn_start
 from trpg.shared.types import Surface, UnitId
@@ -83,8 +89,8 @@ def start_turn(ctx: Ctx, unit_id: UnitId) -> None:
     unit.gear_turn_counts = {}  # 裝備觸發的每回合 1 次（3G-G3a）
     unit.ap_pending = 0  # grant_ap 給的、等到這個回合才加上的 AP（Phase 3C-4a）
     unit.move_points = move_points_for_turn(ctx.rules, unit)
-    if is_inert(state, unit):
-        unit.ap = 0  # 圖騰（3D-4b）與純功能圖騰（3-33e2b）：不攻擊、不施放
+    if summon_inert(state, unit):
+        unit.ap = 0  # 圖騰（Phase 3D-4b）、土牆（3-33e2a）：不攻擊、不施放，只有回合開始的特性
     ctx.emit(
         TurnStarted,
         unit_id=unit.id,
@@ -147,6 +153,7 @@ def _turn_start_hooks(ctx: Ctx, unit: UnitState) -> None:
     if unit.alive and unit.is_summon:  # 圖騰的光環（Phase 3D-4b）
         pulse_totem(ctx, unit)
         pulse_summon(ctx, unit)  # 水精等的脈動（3-33e1）
+        detonate_if_adjacent(ctx, unit, "adjacent")  # 爆裂傀儡回合開始時已相鄰（3-33e2a）
     if unit.alive and unit.has_status(CHARGING):  # 延遲段（Phase 3F-4b）：釋放或失效
         release_at_turn_start(ctx, unit)
     if unit.alive:  # 被動技能 on_turn_start：在狀態與表面的回合開始效果之後

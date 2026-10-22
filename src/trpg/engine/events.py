@@ -37,6 +37,7 @@ __all__ = [
     "DamageDealt",
     "DamageRedirected",
     "DeathCheated",
+    "DetonateReason",
     "EffectFizzled",
     "ElementTouched",
     "EndReason",
@@ -107,6 +108,7 @@ __all__ = [
     "StatusResisted",
     "StatusSaveRolled",
     "SummonCommanded",
+    "SummonDetonated",
     "SummonExpired",
     "SummonExpiryReason",
     "SummonModeSet",
@@ -137,6 +139,7 @@ __all__ = [
     "UnitStoodUp",
     "UnitSummoned",
     "UnitVaulted",
+    "WallToppled",
     "WeaponReloaded",
     "ZoneCreated",
     "ZoneExpired",
@@ -350,7 +353,7 @@ class MoveBlocked(EventBase):
     type: Literal["move_blocked"] = "move_blocked"
     unit_id: UnitId
     to_pos: Pos
-    reason: Literal["out_of_bounds", "occupied", "obstacle", "too_high"]
+    reason: Literal["out_of_bounds", "occupied", "obstacle", "too_high", "immovable"]
     forced: bool = False
     """強制位移（推擊）被擋下（Phase 3C-6a）：緊接著的 ``collided`` 事件才是紀錄的主角。"""
 
@@ -840,12 +843,13 @@ class ManeuverRolled(EventBase):
 
 
 class PushResisted(EventBase):
-    """``steadfast`` 使推擊距離減少。"""
+    """``steadfast`` 使推擊距離減少；``immovable``（石像，Phase 3-33e2a）使推擊完全無效。"""
 
     type: Literal["push_resisted"] = "push_resisted"
     unit_id: UnitId
     requested: int
     distance: int
+    reason: Literal["steadfast", "immovable"] = "steadfast"
 
 
 class ReactionTriggered(EventBase):
@@ -1332,9 +1336,12 @@ class UnitSummoned(EventBase):
     """灌注的關鍵字（Phase 3-33b）；沒有灌注時 ``None``。"""
 
 
-type SummonExpiryReason = Literal["expired", "owner_gone", "limit", "sacrificed"]
+type SummonExpiryReason = Literal[
+    "expired", "owner_gone", "limit", "sacrificed", "detonated", "toppled"
+]
 """召喚物消失的原因：``expired`` 到期、``owner_gone`` 召喚者倒下或撤離、``limit`` 超過同時存在的
-上限（最舊的消失）、``sacrificed`` 被召喚者獻祭（``sacrifice_summon``，Phase 3-24c）。"""
+上限（最舊的消失）、``sacrificed`` 被召喚者獻祭（``sacrifice_summon``，Phase 3-24c）、
+``detonated`` 自爆（爆裂傀儡，Phase 3-33e2a）、``toppled`` 土牆被推倒。"""
 
 
 class SummonExpired(EventBase):
@@ -1454,6 +1461,38 @@ class TotemPulsed(EventBase):
     duration: int
     radius: int
     targets: list[UnitId]
+
+
+type DetonateReason = Literal["arrived", "adjacent", "downed"]
+"""自爆的時機：走到敵人相鄰、回合開始時已相鄰、被打倒。"""
+
+
+class SummonDetonated(EventBase):
+    """召喚物自爆（Phase 3-33e2a，爆裂傀儡）：``unit_id`` 在 ``pos`` 爆炸，``radius`` 格內的敵人
+    ``targets`` 受傷（接著是各目標的 ``damage_dealt``），``reason`` 為 ``arrived``（走到敵人相鄰）、
+    ``adjacent``（回合開始時已相鄰）或 ``downed``（被打倒）。"""
+
+    type: Literal["summon_detonated"] = "summon_detonated"
+    unit_id: UnitId
+    pos: Pos
+    radius: int
+    reason: DetonateReason
+    targets: list[UnitId]
+
+
+class WallToppled(EventBase):
+    """土牆被推倒（Phase 3-33e2a）：``unit_id`` 往 ``direction`` 倒下，壓住 ``tiles``；壓到的單位
+    ``units`` 與 ``breakable`` 物件 ``objects`` 受推倒傷害，單位並倒地（由觸發表結算，歸給
+    ``source_id``）。土牆隨後消失（``summon_expired``，原因 ``toppled``）。"""
+
+    type: Literal["wall_toppled"] = "wall_toppled"
+    unit_id: UnitId
+    pos: Pos
+    direction: tuple[int, int]
+    tiles: tuple[Pos, ...]
+    units: tuple[UnitId, ...]
+    objects: tuple[ObjectId, ...]
+    source_id: UnitId | None
 
 
 class ZoneCreated(EventBase):
@@ -1709,6 +1748,8 @@ type Event = Annotated[
     | SnareTriggered
     | SummonPulled
     | TotemPulsed
+    | SummonDetonated
+    | WallToppled
     | SkillUsed
     | SkillCooldownChanged
     | SkillTriggered

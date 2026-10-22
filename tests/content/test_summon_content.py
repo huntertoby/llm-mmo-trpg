@@ -50,6 +50,11 @@ def test_the_summon_templates_are_loaded_into_the_ruleset() -> None:
         "summon_water_sprite",
         "summon_shade",
         "summon_hawk",
+        # 3-33e2a：召喚物（二）a
+        "summon_bomb_puppet",
+        "summon_golem",
+        "summon_earth_wall",
+        "summon_war_wolf",
         # 3-33e2b：召喚物（二）b
         "summon_vine",
         "summon_guardian_spirit",
@@ -139,7 +144,9 @@ def test_the_summon_budget_is_dpr_times_duration_times_the_round_value() -> None
     lib = library()
     report = skill_budget(lib.skills["skill_raise_skeleton"], lib)
     permille = lib.budget.summon_round_value_permille
-    assert report.raw == Fraction(9, 2) * 2 * Fraction(permille, 1000)
+    # 3-33e2a：特性（骷髏的盾擊絆倒）計入預算：（武器骰平均 ＋ 特性）× 輪數 × 係數
+    trip = Fraction(3 * lib.budget.summon_trait_trip_permille, 1000)
+    assert report.raw == (Fraction(9, 2) + trip) * 2 * Fraction(permille, 1000)
     assert report.ok
     spirit = make_skill(
         "skill_t_sum", TILE, [{**SUMMON, "unit": "summon_elemental_spirit", "duration": 3}]

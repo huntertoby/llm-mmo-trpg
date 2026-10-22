@@ -82,7 +82,7 @@ from trpg.engine.events import (
     UnitVaulted,
 )
 from trpg.engine.gear_charge import charge_actions, do_activate_charge
-from trpg.engine.ids import PRONE, TOPPLABLE
+from trpg.engine.ids import IMMOVABLE, PRONE, TOPPLABLE
 from trpg.engine.lifecycle import make_unit
 from trpg.engine.maneuvers import contest
 from trpg.engine.reactions import (
@@ -139,6 +139,7 @@ from trpg.engine.state import (
     state_to_json,
 )
 from trpg.engine.summon_control import command_problem, mode_problem
+from trpg.engine.summons import detonate_if_adjacent
 from trpg.engine.turns import advance_turn, end_turn, finish_resolution, start_turn
 from trpg.engine.weapon_traits import attack_dice, spend_ammo
 from trpg.shared.errors import IllegalActionError
@@ -589,6 +590,8 @@ def shove_problem(state: BattleState, unit: UnitState, target: UnitState) -> str
     則目標不移動、受 1 次撞擊（Phase 3C-3b，``docs/phases/Phase3C計畫.md`` 5.4）。
     """
     distance = push_distance(state, target, shove_distance(state, unit, target))
+    if distance <= 0 and target.has_tag(IMMOVABLE):
+        return f"推不動：{target.name_zh}紋風不動（不會被推動、拉扯或傳送）"
     if distance <= 0:
         return f"推不動：{target.name_zh} 不為所動（推擊距離減半後為 0 格）"
     return None
@@ -738,6 +741,8 @@ def _do_move(ctx: Ctx, unit: UnitState, action: Action) -> None:
         if unit.xy == dest:
             pass_through(ctx, unit, touched)
         walked.append(unit.xy)
+        if unit.is_summon and detonate_if_adjacent(ctx, unit, "arrived"):
+            break  # 爆裂傀儡走到敵人相鄰就自爆（Phase 3-33e2a）
         if _move_interrupted(ctx, unit, dest):
             break
     _slide_back_if_stacked(ctx, unit, walked)

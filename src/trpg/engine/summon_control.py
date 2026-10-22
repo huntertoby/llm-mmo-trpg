@@ -20,7 +20,7 @@ from trpg.engine.rules.combat import attack_problem
 from trpg.engine.rules.movement import available_move_budget, path_map
 from trpg.engine.rules.statuses import move_points_for_turn, skip_turn_status
 from trpg.engine.state import BattleState, UnitState
-from trpg.engine.summons import totem_of
+from trpg.engine.summons import summon_inert
 from trpg.shared.errors import IllegalActionError
 from trpg.shared.types import Pos, UnitId
 
@@ -61,8 +61,8 @@ def summon_problem(state: BattleState, owner: UnitState, summon_id: UnitId) -> s
         return f"不是你的召喚物：{summon.name_zh}"
     if not summon.alive:
         return f"{summon.name_zh}已不在戰場上"
-    if totem_of(state, summon) is not None:
-        return f"{summon.name_zh}是圖騰，不能操控"
+    if summon_inert(state, summon):
+        return f"{summon.name_zh}不會行動，不能操控"
     return None
 
 
