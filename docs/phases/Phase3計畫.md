@@ -1355,6 +1355,11 @@ PM 驗收後請使用者試玩一整輪（`docs/專案計畫.md` 第 14 節 🎮
 
 驗收（3-26b）：pytest（統計確定性、門檻、兩支的推導、預算驗證、存檔、整場重播）；`trpg run auto` 跑到至少一次進化；vitest；截圖 `docs/phases/img/3-26b-*.png`；`check.py` 全過、`pnpm build` 成功。
 
+### 28.3 3-26a 驗收（2026-10-22）
+
+- PM 合併：與 G3b 同時遞增到 `/44`，合併時改為 **`LOG_FORMAT` `/45`**；`styles.css` 兩邊保留、OpenAPI 重產。`check.py` 全過、`pnpm build` 成功；`trpg run auto --seed 6` 跑完一輪；`bridge_chasm` 種子 13 `--log-json` ＋ `replay` 一致。`content/skill_growth.yaml`、`UnitState.skill_levels`、一輪的技能點／備用技能 `bench`／花點／重配／換裝；存檔 `trpg-run/4`。報告 `Phase3-26a報告.md`（第 5 節是 3-26b 接點）。
+- 待 PM 決定：#1 只有主動技能有等級、#2 2／4 級加成只套傷害、治療、護盾、#3 5 級小特性的擇一規則、#4 新增備用技能 `bench`（大世界技能庫來時合併）、#5 分配時機（升級、營火、戰鬥前；重配與換裝只在營火）→ 接受；#6 `run auto` 的點數策略與平衡 → 平衡階段。
+
 ## 29. Phase 3-27｜關鍵字池補齊第二批＋挑釁怒吼（玩法 PM，2026-10-22；06 6.27.2，commit 22bba8b）
 
 > 模型 sonnet。排程：3-26 合併後（同樣動技能內容）。目標：10 個池各至少 3 招 **專屬規則** 下的主動利用者。不需要新原語，照引火重擊、碎冰擊「條件成立時加碼」的模板。
