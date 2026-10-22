@@ -27,6 +27,7 @@ from tests.engine.skill_helpers import FLAT7
 from tests.engine.test_gear import Rolls, _loadout
 from trpg.cli.main import main as cli_main
 from trpg.content.equipment import AffixDef, ChargeAffix, TriggerAffix
+from trpg.content.keyword_derive import Facts
 from trpg.content.library import _affix_reference_problems
 from trpg.engine import (
     ActivateCharge,
@@ -569,3 +570,13 @@ def test_g3a_gear_battle_log_json_and_replay(tmp_path: Path) -> None:
     for needle in ('"gear_triggered"', '"charge_activated"', '"activate_charge"'):
         assert needle in text
     assert cli_main(["battle", "replay", str(log)]) == 0
+
+
+def test_ruleset_equality_ignores_the_keyword_cache() -> None:
+    """3G-G2 起快取在私有屬性裡、pydantic 的相等比較會一併比較它，讓「狀態 JSON 來回後相等」好時壞
+    （同一個行程裡先有人填過快取）；快取不是規則資料，不影響相等。"""
+    state = scene({"main_hand": [KILL_AP]})
+    fresh = state_from_json(state_to_json(state))
+    state.ruleset.facts_keywords(("attack", "physical", ()), Facts(effects=()))
+    assert fresh.ruleset == state.ruleset
+    assert fresh == state

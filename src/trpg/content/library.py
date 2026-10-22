@@ -119,6 +119,17 @@ REQUIRED_STATUSES = (
 """引擎規則直接引用的狀態 ID，必須存在於 ``statuses.yaml``。"""
 
 
+class _CacheDict(dict[object, SkillKeywords]):
+    """快取字典：永遠與另一個快取「相等」。pydantic 的 ``__eq__`` 會比較私有屬性，而快取內容只是
+    推導結果（依需要才填），不是規則資料——同一份規則包因為快取填過與否而不相等，會讓
+    「狀態 JSON 來回後仍相等」這類比較時好時壞（3G-G2 起的不穩定測試）。"""
+
+    def __eq__(self, other: object) -> bool:
+        return isinstance(other, _CacheDict)
+
+    __hash__ = None
+
+
 class Ruleset(ContentModel):
     """引擎需要的規則資料。"""
 
@@ -146,7 +157,7 @@ class Ruleset(ContentModel):
     """關鍵字推導表（Phase 3G-G2，``content/skill_keywords.yaml``）：裝備的技能強化詞條依關鍵字
     選取技能。嵌入規則包，重播不依賴資料檔。"""
 
-    _keyword_cache: dict[object, SkillKeywords] = PrivateAttr(default_factory=dict)
+    _keyword_cache: dict[object, SkillKeywords] = PrivateAttr(default_factory=_CacheDict)
     _rule_change_index: dict[str, RuleChangeDef] = PrivateAttr(default_factory=dict)
     _summon_index: dict[str, SummonDef] = PrivateAttr(default_factory=dict)
     _skill_index: dict[str, SkillDef] = PrivateAttr(default_factory=dict)
