@@ -365,9 +365,11 @@ def format_new_metrics(summaries: Sequence[CellSummary], builds: dict[str, str])
     ]
     rows: tuple[tuple[str, str, Callable[[CellSummary], float], str], ...] = (
         ("boss", "Boss 擊殺輪數（含設限）", lambda s: s.boss_kill_rounds, "≥ 0.90"),
+        ("boss", "Boss 擊殺輪數（只計打倒的場）", lambda s: s.boss_kill_rounds_kills, "—"),
         ("boss", "Boss 擊殺率", lambda s: s.boss_kill_rate * 100, "—"),
         ("boss", "Boss 戰勝率", lambda s: 100 * s.wins / s.battles if s.battles else 0.0, "—"),
         ("area", "範圍清場輪數（含設限）", lambda s: s.clear_rounds, "≥ 1.15"),
+        ("area", "範圍清場輪數（只計清場的場）", lambda s: s.clear_rounds_clears, "—"),
         ("area", "範圍清場率", lambda s: s.clear_rate * 100, "—"),
         ("single", "長戰單體 DPR", lambda s: s.hero_dpr, "相當"),
     )
