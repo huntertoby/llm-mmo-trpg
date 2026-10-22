@@ -14,7 +14,7 @@ from pydantic import Field, field_validator, model_serializer, model_validator
 
 from trpg.content.schemas import ContentModel
 from trpg.content.slots import Slot
-from trpg.shared.types import Attribute, Element, ResistGroup
+from trpg.shared.types import Attribute, Element, ResistGroup, Surface
 
 __all__ = [
     "ID_PATTERN",
@@ -22,6 +22,7 @@ __all__ = [
     "ArmorBreak",
     "Blessing",
     "Dice",
+    "HitCondition",
     "ReactionRule",
     "ReactionUnless",
     "ReactionWhen",
@@ -29,10 +30,12 @@ __all__ = [
     "StatusTable",
     "StatusTickDamage",
     "StatusTickHeal",
+    "SummonHitRule",
     "SummonLook",
     "SummonLookBody",
     "SummonLookSize",
     "SummonMode",
+    "SummonPulse",
     "TerrainDef",
     "TerrainTable",
     "TotemSpec",
@@ -276,6 +279,8 @@ class WeaponDef(ContentModel):
     range_mod: tuple[RangeMod, ...] = ()
     high_range: int = Field(default=0, ge=0, le=2)
     backstab_dice: int = Field(default=0, ge=0, le=2)
+    summon_only: bool = False
+    """召喚物專用的武器（Phase 3-33e1）：不列入開局可選的武器，也不給玩家裝備。"""
 
     @model_validator(mode="after")
     def _check(self) -> WeaponDef:
@@ -490,6 +495,7 @@ class StatusDef(ContentModel):
     redirects_damage: bool = False
     prevents_concealment: bool = False
     defense_break: bool = False
+    attack_bonus: int = Field(default=0, ge=0, le=10)
     move_permille: int = Field(default=1000, ge=0, le=10000)
     prevents_move: bool = False
     skip_turn: bool = False
@@ -626,6 +632,50 @@ class SummonLook(ContentModel):
     trait: str | None = Field(default=None, pattern=ID_PATTERN)
 
 
+HitCondition = Literal["always", "target_in_water", "self_in_water"]
+"""召喚物命中特性的條件（Phase 3-33e1）：無條件、目標站在水面上、自己站在水面上。"""
+
+
+class SummonHitRule(ContentModel):
+    """召喚物普攻命中後的條件特性（Phase 3-33e1；初值，未經模擬）。
+
+    ``when`` 成立時：對目標施加 ``status``（``duration`` 回合）；並讓雷電沿著水面連鎖到目標附近
+    （曼哈頓距離 ``chain_radius`` 以內）最多 ``chain_targets`` 名其他敵人，各吃武器骰 ×
+    ``chain_permille``‰
+    的傷害（元素取武器元素）。冰靈（命中潮濕目標時冰凍）、雷靈（站在水裡時連鎖）、鷹隼（揭露並標記）。
+    """
+
+    when: HitCondition = "always"
+    status: str | None = Field(default=None, pattern=ID_PATTERN)
+    duration: int = Field(default=2, ge=1, le=6)
+    chain_targets: int = Field(default=0, ge=0, le=3)
+    chain_radius: int = Field(default=1, ge=1, le=3)
+    chain_permille: int = Field(default=500, ge=0, le=2000)
+
+    @model_validator(mode="after")
+    def _has_effect(self) -> SummonHitRule:
+        if self.status is None and self.chain_targets == 0:
+            raise ValueError("命中特性至少要有狀態或連鎖")
+        return self
+
+
+class SummonPulse(ContentModel):
+    """召喚物自己的回合開始時的脈動（Phase 3-33e1，水精）：在自己腳下造 ``surface``，並治療
+    曼哈頓距離
+    ``heal_radius`` 以內受傷的友方（不含自己；骰 ``heal_dice`` ＋ ``heal_flat``）。"""
+
+    surface: Surface | None = None
+    heal_radius: int = Field(default=1, ge=1, le=3)
+    heal_dice: Dice | None = None
+    heal_flat: int = Field(default=0, ge=0, le=10)
+
+    @model_validator(mode="after")
+    def _has_effect(self) -> SummonPulse:
+        if self.surface is None and self.heal_dice is None and self.heal_flat == 0:
+            raise ValueError("脈動至少要有表面或治療")
+        return self
+
+
 class UnitTemplate(ContentModel):
     """``content/units/<id>.yaml``：一個單位範本（Phase 1 直接給定屬性與武器）。
 
@@ -672,6 +722,13 @@ class UnitTemplate(ContentModel):
     其餘與沒寫＝``follow``）。集火要指定目標，不能當預設。"""
     look: SummonLook | None = None
     """召喚物外觀（Phase 3-33h1）：只有召喚物可以填；省略時前端退回人形骷髏。"""
+    innate: str | None = Field(default=None, pattern=ID_PATTERN)
+    """固有的灌注關鍵字（Phase 3-33e1，6.29.5「關鍵字」欄）：召喚物一律帶有，效果見 ``core.yaml`` 的
+    ``summon_infusions``；與召喚時施放者選的灌注關鍵字並存（相同時只算一次）。"""
+    hit_rules: tuple[SummonHitRule, ...] = ()
+    """普攻命中後的條件特性（Phase 3-33e1）。"""
+    pulse: SummonPulse | None = None
+    """回合開始的脈動（Phase 3-33e1）。"""
     equipment: dict[Slot, str] = Field(default_factory=dict)
     """裝備（Phase 3G-G1）：欄位 → 物品 id（``content/items.yaml``）。"""
     level: int = Field(default=1, ge=1, le=99)
@@ -691,6 +748,8 @@ class UnitTemplate(ContentModel):
     def _check_look(self) -> UnitTemplate:
         if self.look is not None and not self.summon:
             raise ValueError("外觀欄位 look 只有召喚物（summon: true）可以填")
+        if not self.summon and (self.innate or self.hit_rules or self.pulse):
+            raise ValueError("innate／hit_rules／pulse 只有召喚物（summon: true）可以填")
         return self
 
     @field_validator("skill_levels")

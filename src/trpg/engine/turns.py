@@ -47,7 +47,7 @@ from trpg.engine.skill_triggers import (
 )
 from trpg.engine.stacks import expire_stacks
 from trpg.engine.state import StatusInstance, UnitState
-from trpg.engine.summons import expire_summons, pulse_totem, totem_of
+from trpg.engine.summons import expire_summons, pulse_summon, pulse_totem, totem_of
 from trpg.engine.traps import tick_traps
 from trpg.engine.zones import expire_zones_at_turn_end, zones_turn_start
 from trpg.shared.types import Surface, UnitId
@@ -144,6 +144,7 @@ def _turn_start_hooks(ctx: Ctx, unit: UnitState) -> None:
         tick_traps(ctx, unit)
     if unit.alive and unit.is_summon:  # 圖騰的光環（Phase 3D-4b）
         pulse_totem(ctx, unit)
+        pulse_summon(ctx, unit)  # 水精等的脈動（3-33e1）
     if unit.alive and unit.has_status(CHARGING):  # 延遲段（Phase 3F-4b）：釋放或失效
         release_at_turn_start(ctx, unit)
     if unit.alive:  # 被動技能 on_turn_start：在狀態與表面的回合開始效果之後

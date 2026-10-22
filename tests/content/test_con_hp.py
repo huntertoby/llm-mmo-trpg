@@ -61,8 +61,14 @@ OLD_HP = {
     "std_enemy_t5": 77,
     "summon_afterimage": 14,
     "summon_elemental_spirit": 14,
+    "summon_fire_spirit": 14,  # 3-33e1 新增
+    "summon_hawk": 8,
+    "summon_ice_spirit": 14,
+    "summon_shade": 10,
     "summon_skeleton_warrior": 20,
+    "summon_thunder_spirit": 14,
     "summon_war_totem": 18,
+    "summon_water_sprite": 12,
     "training_dummy": 300,
 }
 

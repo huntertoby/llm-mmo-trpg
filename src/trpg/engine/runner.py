@@ -38,8 +38,12 @@ __all__ = [
     "run_battle",
 ]
 
-LOG_FORMAT = "trpg-battle-log/50"
-"""``/50``（Phase 3-33c，接在 3-32a 的 ``/49`` 之後；PM 合併時定號）：召喚物操控——單位狀態多了
+LOG_FORMAT = "trpg-battle-log/51"
+"""``/51``（Phase 3-33e1，接在 3-33c 的 ``/50`` 之後；PM 合併時定號）：灌注關鍵字補齊到 10 個
+（``summon_infusions``）、召喚物範本的固有灌注／命中特性／脈動（``innate``、``hit_rules``、``pulse``）、
+單位狀態多了 ``trip_round``、新狀態「戰意」（``attack_bonus``，戰意圖騰改版），召喚物的 HP、命中
+後效果與回合開始都可能不同，因此 ``/50`` 的紀錄無法重播。
+``/50``（Phase 3-33c，接在 3-32a 的 ``/49`` 之後；PM 合併時定號）：召喚物操控——單位狀態多了
 ``summon_mode``／``summon_target_id``／``commanded_round``，新動作 ``set_summon_mode``（0 AP）與
 ``command_summon``（1 AP），新事件 ``summon_mode_set``／``summon_commanded``；召喚物的 AI 依模式行動
 （跟隨預設會待在召喚者附近、圖騰預設待命）、召喚技能的 AI 估值納入成長與灌注、我方 AI 施放者會自動

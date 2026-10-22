@@ -925,6 +925,7 @@ def _check_units(
             )
             if status is None or not status.beneficial:
                 raise ContentError(path, f"圖騰的狀態必須是有益的既有狀態：{template.totem.status}")
+        _check_summon_traits(path, template, ruleset)
         for rule in template.reactions or ():
             try:
                 check_rule(rule, reaction_index, skills)
@@ -935,6 +936,16 @@ def _check_units(
         problems = unit_skill_problems(template, weapons[template.weapon], skills, ruleset.core)
         if problems:
             raise ContentError(path, "；".join(problems))
+
+
+def _check_summon_traits(path: Path, template: UnitTemplate, ruleset: Ruleset) -> None:
+    """召喚物的固有灌注關鍵字在對照表中、命中特性的狀態存在（Phase 3-33e1）。"""
+    if template.innate is not None and template.innate not in ruleset.core.summon_infusions:
+        raise ContentError(path, f"固有灌注關鍵字不在 summon_infusions 對照表中：{template.innate}")
+    status_ids = {d.id for d in ruleset.statuses.statuses}
+    for rule in template.hit_rules:
+        if rule.status is not None and rule.status not in status_ids:
+            raise ContentError(path, f"命中特性引用了未知的狀態：{rule.status}")
 
 
 def _check_builds(

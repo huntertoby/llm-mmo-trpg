@@ -173,15 +173,18 @@ def test_same_seed_and_inputs_give_the_same_summon() -> None:
 
 def test_infusion_options_are_held_keywords_with_a_mapping() -> None:
     state = arena([RAISE, FIRE_BOLT, GALE_KICK])
-    assert infusion_options(state, state.units[U1]) == ("ignite", "collision")
-    plain = arena([RAISE])  # 只有「召喚」關鍵字：沒有對應，沒有可選的
-    assert infusion_options(plain, plain.units[U1]) == ()
+    assert infusion_options(state, state.units[U1]) == ("prone", "summon", "ignite", "collision")
+    # 3-33e1：10 個關鍵字都有對照，召喚技能自己製造的「倒地」「召喚物」也能灌注
+    plain = arena([RAISE])
+    assert infusion_options(plain, plain.units[U1]) == ("prone", "summon")
+    none = arena([FIRE_BOLT])  # 沒有召喚技能：持有的只有點燃
+    assert infusion_options(none, none.units[U1]) == ("ignite",)
 
 
 def test_infusion_defaults_to_the_first_option() -> None:
     state = arena([RAISE, FIRE_BOLT, GALE_KICK])
     state, sid = cast_at(state, RAISE, 2, 3)
-    assert state.units[sid].infusion == "ignite"
+    assert state.units[sid].infusion == "prone"
 
 
 def test_a_chosen_infusion_is_recorded_on_the_summon_and_event() -> None:
@@ -194,14 +197,17 @@ def test_a_chosen_infusion_is_recorded_on_the_summon_and_event() -> None:
     assert result.state.units[event.unit_id].infusion == "collision"
 
 
-def test_infusion_without_options_is_none() -> None:
-    state, sid = cast_at(arena([RAISE]), RAISE, 2, 3)
-    assert state.units[sid].infusion is None
+def test_infusion_without_a_specific_keyword_is_the_summon_one() -> None:
+    # 元素之靈沒有專屬關鍵字：召喚技能只製造「召喚物」，預設灌注它（3-33e1 起 10 個關鍵字都有對照）
+    state, sid = cast_at(arena([SPIRIT_SKILL]), SPIRIT_SKILL, 2, 3)
+    assert state.units[sid].infusion == "summon"
+    state = arena([FIRE_BOLT])  # 沒有召喚技能：施放者持有點燃，不是召喚技能不能帶 infusion
+    assert infusion_options(state, state.units[U1]) == ("ignite",)
 
 
-@pytest.mark.parametrize("bad", ["wet", "summon", "no_such_keyword"])
+@pytest.mark.parametrize("bad", ["wet", "charged", "no_such_keyword"])
 def test_an_unavailable_infusion_is_illegal(bad: str) -> None:
-    # wet：施放者沒有持有；summon：持有但沒有對應；其餘：不存在
+    # wet、charged：施放者沒有持有；其餘：不存在
     state = arena([RAISE, FIRE_BOLT])
     action = UseSkill(unit_id=U1, skill_id=RAISE, target_pos=Pos(x=2, y=3), infusion=bad)
     with pytest.raises(IllegalActionError):
@@ -218,18 +224,22 @@ def test_only_summon_skills_take_an_infusion() -> None:
 def test_ai_picks_the_infusion_by_the_summon_role() -> None:
     state = arena([RAISE, FIRE_BOLT, GALE_KICK, SPIRIT_SKILL])
     owner = state.units[U1]
-    assert preferred_infusion(state, owner, SKELETON) == "collision"  # 近戰
+    assert preferred_infusion(state, owner, SKELETON) == "prone"  # 近戰：持有順序第一個偏好近戰的
     assert preferred_infusion(state, owner, SPIRIT) == "ignite"  # 遠程
-    plain = arena([RAISE])
-    assert preferred_infusion(plain, plain.units[U1], SKELETON) is None
+    only_fire = arena([FIRE_BOLT])
+    assert (
+        preferred_infusion(only_fire, only_fire.units[U1], SKELETON) == "ignite"
+    )  # 沒有符合的取第一個
+    nothing = arena([])  # 沒有任何技能：沒有可選的
+    assert preferred_infusion(nothing, nothing.units[U1], SKELETON) is None
 
 
 def test_infused_attack_applies_the_mapped_status() -> None:
-    state, sid = cast_at(arena([RAISE, FIRE_BOLT]), RAISE, 2, 3)
+    state, sid = cast_at(arena([RAISE, FIRE_BOLT]), RAISE, 2, 3, "ignite")
     ctx = Ctx(state.clone())
     apply_hit_traits(ctx, ctx.state.units[sid], ctx.state.units[U2])
     assert ctx.state.units[U2].has_status("burning")
-    plain, pid = cast_at(arena([RAISE]), RAISE, 2, 3)
+    plain, pid = cast_at(arena([RAISE, FIRE_BOLT]), RAISE, 2, 3, "summon")
     ctx = Ctx(plain.clone())
     apply_hit_traits(ctx, ctx.state.units[pid], ctx.state.units[U2])
     assert not ctx.state.units[U2].has_status("burning")

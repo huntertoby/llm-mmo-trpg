@@ -1,0 +1,23 @@
+# 主動（Phase 3-33e1，docs/design/06-技能.md 6.29.5；數值為初值，未經模擬）：在射程內的空格召喚火靈，持續 3 輪；由效用 AI 控制。
+id: skill_summon_fire_spirit
+schema_version: 1
+name_zh: 召喚火靈
+tier: 1
+rank: 1
+rarity: rare
+kind: active
+skeleton: summon
+category: spell
+weapon_req: any
+ap_cost: 1
+scaling_attr: int
+shape: {type: ground_tile, range: 4}
+effects:
+  - {type: summon, unit: summon_fire_spirit, duration: 3}
+condition: null
+cost: {mana: 10, cooldown: 4}
+tags: [fire, spell, summon]
+narrative:
+  concept: 呼喚一縷火靈，替你在遠處噴吐火焰
+  cast_flavor: 你的法杖敲向地面，一團火光從空中凝聚成形
+provenance: {origin: builtin, owner_id: null, created_by: null, parents: [], bound: true, tradeable: false}

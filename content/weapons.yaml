@@ -3,6 +3,7 @@
 #       range（射程，曼哈頓距離；1 為近戰）、dice（傷害骰 NdM）、flat（固定傷害）、
 #       attack_bonus（攻擊值加值）、scaling_attr（縮放屬性：str/dex/con/int/wis/wil）、
 #       element（元素）、crit_range（暴擊最低自然骰值，20 表示只有自然 20）、two_handed（雙手）。
+# summon_only（Phase 3-33e1）：true ＝ 召喚物專用的武器，不列入開局可選的武器。
 # 武器小特性（Phase 3-24a1；全部是下列選填參數，引擎只讀參數、不寫死數值）：
 #       secondary_scaling_attr（第二縮放屬性，與 scaling_attr 取平均）、
 #       armor_break {defense_permille: -100, rounds: 1}（破甲：普攻命中後目標防禦 ‰ 變化與回合數）、
@@ -194,3 +195,53 @@ weapons:
     range_mod:
       - {min_distance: 1, max_distance: 1, hit: -2, damage_permille: 500}
       - {min_distance: 4, damage_permille: 1250}
+  # --- Phase 3-33e1：召喚物專用武器（數值為初值，未經模擬；不給玩家裝備）---
+  - id: spark_staff
+    name_zh: 電火法杖
+    weapon_class: focus
+    range: 5
+    dice: 1d4
+    flat: 0
+    attack_bonus: 0
+    scaling_attr: int
+    element: lightning
+    crit_range: 20
+    two_handed: true
+    summon_only: true
+  - id: water_jet
+    name_zh: 水流
+    weapon_class: focus
+    range: 3
+    dice: 1d4
+    flat: 0
+    attack_bonus: 0
+    scaling_attr: int
+    element: physical
+    crit_range: 20
+    two_handed: true
+    summon_only: true
+  - id: shade_blades
+    name_zh: 影刃
+    weapon_class: melee
+    range: 1
+    dice: 1d4
+    flat: 0
+    attack_bonus: 0
+    scaling_attr: dex
+    element: shadow
+    crit_range: 19
+    two_handed: false
+    summon_only: true
+    backstab_dice: 2
+  - id: talons
+    name_zh: 利爪
+    weapon_class: melee
+    range: 1
+    dice: 1d4
+    flat: 0
+    attack_bonus: 0
+    scaling_attr: dex
+    element: physical
+    crit_range: 20
+    two_handed: false
+    summon_only: true

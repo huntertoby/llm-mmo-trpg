@@ -1,0 +1,19 @@
+# 召喚物（Phase 3-33e1，docs/design/06-技能.md 6.29.5；數值為初值，未經模擬）：遠程輸出。電火法杖、固有「帶電」（普攻帶雷）；自己站在水面時攻擊連鎖到目標附近的敵人。
+id: summon_thunder_spirit
+name_zh: 雷靈
+attributes: {str: 8, dex: 14, con: 10, int: 12, wis: 10, wil: 10}
+max_hp: 14
+speed: 5
+armor_bonus: 0
+weapon: spark_staff
+ai_profile: archer
+resist: {elemental: 250}
+element_mods: {}
+tags: [summoned, elemental, lightning]
+reactions: []
+summon: true
+innate: charged   # 普攻帶雷：另加 1d4 雷電傷害
+hit_rules:
+  - {when: self_in_water, chain_targets: 2, chain_radius: 2, chain_permille: 500}   # 站在水裡時攻擊沿水面連鎖
+# 外觀（Phase 3-33h1，docs/art/召喚物外觀.md）：純顯示資料。
+look: {body: spirit, element: charged, size: medium}

@@ -33,7 +33,9 @@ from trpg.skillgen.keywords import is_starter_skill, pool_skills
 
 def test_every_weapon_is_offered() -> None:
     lib = library()
-    assert start_weapons(lib) == tuple(sorted(lib.weapons))
+    assert start_weapons(lib) == tuple(
+        sorted(w for w, d in lib.weapons.items() if not d.summon_only)
+    )
     assert {"one_handed_sword", "longgun", "totem_staff", "scepter"} <= set(start_weapons(lib))
 
 
@@ -132,7 +134,7 @@ def test_allocation_is_checked() -> None:
 def test_dev_packs_all_start_and_stay_out_of_the_player_start() -> None:
     lib = library()
     packs = lib.dev_starters.packs
-    assert len(packs) == 14
+    assert len(packs) == 20
     labels = {p.label_zh for p in packs}
     assert labels == {"烈焰", "潮雷", "霜寒", "撼地", "鐵壁", "影刃"} | {
         "鷹眼",
@@ -143,6 +145,13 @@ def test_dev_packs_all_start_and_stay_out_of_the_player_start() -> None:
         "血怒",
         "喚靈（保證召喚）",  # 3-33b：指定起始技能的對照組
         "喚靈（骷髏）",
+        # 3-33e1：召喚物（一）的對照組
+        "召喚火靈",
+        "召喚冰靈",
+        "召喚雷靈",
+        "召喚水精",
+        "喚出影魅",
+        "喚出鷹隼",
     }
     for pack in packs:
         run = new_dev_run(lib, pack.id, 0)

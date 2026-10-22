@@ -2,6 +2,8 @@
 
 from __future__ import annotations
 
+import pytest
+
 from tests.engine.helpers import library
 from trpg.shared.types import Team
 from trpg.sim.summon_report import format_summons, run_summon_sim, summarize
@@ -53,3 +55,31 @@ def test_a_summoner_battle_with_growth_and_infusion_replays_identically() -> Non
     assert state_to_json(again.state) == state_to_json(run.state)
     summoned = [e for e in run.events if isinstance(e, UnitSummoned)]
     assert summoned and all(e.infusion == "ignite" and e.max_hp is not None for e in summoned)
+
+
+@pytest.mark.parametrize(
+    "pack",
+    [
+        "dev_summon_fire",
+        "dev_summon_ice",
+        "dev_summon_thunder",
+        "dev_summon_water",
+        "dev_summon_shade",
+        "dev_summon_hawk",
+    ],
+)
+def test_the_new_summon_packs_summon_and_replay_identically(pack: str) -> None:
+    """3-33e1：每個新召喚技能的對照包會召喚；固有灌注、命中特性與脈動都是確定的，重播得到同一個終局。"""
+    from trpg.engine.ai.utility import UtilityAI  # noqa: PLC0415
+    from trpg.engine.events import UnitSummoned  # noqa: PLC0415
+    from trpg.engine.runner import replay, run_battle  # noqa: PLC0415
+    from trpg.engine.state import state_to_json  # noqa: PLC0415
+    from trpg.sim.summon_report import _spec  # noqa: PLC0415
+
+    lib = library()
+    spec, _ = _spec(lib, pack, "boss", 1, 30)
+    seed = spec.seeds[0]
+    run = run_battle(spec.setup, seed, UtilityAI(lib.ai_profiles))
+    again = replay(spec.setup, seed, run.actions)
+    assert state_to_json(again.state) == state_to_json(run.state)
+    assert any(isinstance(e, UnitSummoned) for e in run.events)

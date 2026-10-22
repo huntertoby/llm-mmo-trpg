@@ -20,3 +20,10 @@ packs:
   - {id: dev_gadget,     label_zh: 機關, weapon: crossbow,         keywords: [ignite, collision]}
   - {id: dev_telekinesis, label_zh: 念動, weapon: fire_staff,      keywords: [prone, high_ground]}
   - {id: dev_bloodrage,  label_zh: 血怒, weapon: axe,              keywords: [prone, ignite]}
+  # 3-33e1：召喚物（一）的對照組（每包一種新召喚技能 ＋ 火焰箭，供 scripts/sim_summons.py 量每種召喚物的貢獻）
+  - {id: dev_summon_fire,    label_zh: 召喚火靈, weapon: totem_staff, keywords: [summon, ignite], skills: [skill_summon_fire_spirit, skill_fire_bolt]}
+  - {id: dev_summon_ice,     label_zh: 召喚冰靈, weapon: totem_staff, keywords: [summon, ignite], skills: [skill_summon_ice_spirit, skill_fire_bolt]}
+  - {id: dev_summon_thunder, label_zh: 召喚雷靈, weapon: totem_staff, keywords: [summon, ignite], skills: [skill_summon_thunder_spirit, skill_fire_bolt]}
+  - {id: dev_summon_water,   label_zh: 召喚水精, weapon: totem_staff, keywords: [summon, ignite], skills: [skill_summon_water_sprite, skill_fire_bolt]}
+  - {id: dev_summon_shade,   label_zh: 喚出影魅, weapon: totem_staff, keywords: [summon, ignite], skills: [skill_summon_shade, skill_fire_bolt]}
+  - {id: dev_summon_hawk,    label_zh: 喚出鷹隼, weapon: totem_staff, keywords: [summon, ignite], skills: [skill_summon_hawk, skill_fire_bolt]}

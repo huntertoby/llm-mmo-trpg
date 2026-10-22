@@ -15,7 +15,7 @@
 - ``shape``：技能形狀；
 - ``change``：修正規則的改變種類。
 
-參數（``status``、``surface``、``element``、``object``、``stack``、``rule``、``on_hit``、``tag``、``skill``）必須等於該來源
+參數（``status``、``surface``、``element``、``object``、``stack``、``rule``、``on_hit``、``tag``、``skill``、``unit``）必須等於該來源
 上同名的欄位。
 """
 
@@ -49,6 +49,7 @@ RULE_PARAMS: tuple[str, ...] = (
     "on_hit",
     "tag",
     "skill",
+    "unit",
     "affects",
     "applies_to",
 )
@@ -74,6 +75,7 @@ class KeywordRule(ContentModel):
     on_hit: str | None = Field(default=None, pattern=ID_PATTERN)
     tag: str | None = Field(default=None, pattern=ID_PATTERN)
     skill: str | None = Field(default=None, pattern=ID_PATTERN)
+    unit: str | None = Field(default=None, pattern=ID_PATTERN)
     affects: Literal["self", "allies", "enemies", "all", "tiles"] | None = None
     applies_to: Literal["all_attacks", "all_skills", "actions"] | None = None
     """``change`` 專用：修正規則的 ``applies_to`` 開了這個旗標（不看標籤）；``actions`` ＝ 套用

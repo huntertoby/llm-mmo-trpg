@@ -24,7 +24,7 @@ from pydantic import Field, model_validator
 
 from trpg.content.battle import Dice, UnitTemplate
 from trpg.content.schemas import ContentModel
-from trpg.shared.types import Attribute
+from trpg.shared.types import Attribute, Element, Surface
 
 __all__ = [
     "HIT_TABLE_SCALE",
@@ -70,18 +70,40 @@ class SummonGrowth(ContentModel):
 
 
 class SummonInfusion(ContentModel):
-    """灌注關鍵字的效果（Phase 3-33b）：召喚物普攻命中後附加的狀態或震退。``roles`` 是 AI 偏好的
-    召喚物定位（``melee`` 近戰、``ranged`` 遠程）。"""
+    """灌注關鍵字的效果（Phase 3-33b，3-33e1 補齊到 10 個）。``roles`` 是 AI 偏好的召喚物定位
+    （``melee`` 近戰、``ranged`` 遠程）。
+
+    普攻命中後附加：``status``（持續 ``duration`` 回合）、``knockback``（震退）、
+    ``surface``（在目標格造表面）、``extra_damage``（另加一擊 ``extra_element`` 元素的傷害）、
+    ``trip``（對抗判定絆倒，每隻
+    召喚物每輪 1 次）。傷害：``height_permille``（站得比目標高時普攻傷害 ＋‰）。召喚時：
+    ``conceal_rounds``（獲得隱蔽幾回合）、``hp_permille``（最大 HP ＋‰）。"""
 
     status: str | None = Field(default=None, pattern=r"^[a-z][a-z0-9_]*$")
     duration: int = Field(default=2, ge=1, le=6)
     knockback: int = Field(default=0, ge=0, le=2)
+    surface: Surface | None = None
+    extra_damage: Dice | None = None
+    extra_element: Element = Element.PHYSICAL
+    trip: bool = False
+    height_permille: int = Field(default=0, ge=0, le=1000)
+    conceal_rounds: int = Field(default=0, ge=0, le=4)
+    hp_permille: int = Field(default=0, ge=0, le=1000)
     roles: tuple[Literal["melee", "ranged"], ...] = ()
 
     @model_validator(mode="after")
     def _has_effect(self) -> SummonInfusion:
-        if self.status is None and self.knockback == 0:
-            raise ValueError("灌注關鍵字至少要有狀態或震退")
+        if not (
+            self.status is not None
+            or self.knockback
+            or self.surface is not None
+            or self.extra_damage is not None
+            or self.trip
+            or self.height_permille
+            or self.conceal_rounds
+            or self.hp_permille
+        ):
+            raise ValueError("灌注關鍵字至少要有一項效果")
         return self
 
 

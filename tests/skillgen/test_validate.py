@@ -426,6 +426,7 @@ def test_beneficial_flags_in_content() -> None:
         # 2D-1
         "guarded",
         "empowered",
+        "rallied",  # 3-33e1
         "hasted",
         "regenerating",
         "shielded",

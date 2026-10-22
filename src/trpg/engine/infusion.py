@@ -13,11 +13,15 @@
 
 from __future__ import annotations
 
+from trpg.content.battle import UnitTemplate
+from trpg.content.rules import SummonInfusion
 from trpg.content.skills import SUMMON, SkillDef
 from trpg.engine.state import BattleState, UnitState
 from trpg.shared.errors import IllegalActionError
 
 __all__ = [
+    "active_infusions",
+    "active_keywords",
     "check_infusion",
     "default_infusion",
     "held_keywords",
@@ -26,6 +30,7 @@ __all__ = [
     "is_summon_skill",
     "preferred_infusion",
     "summon_template_ids",
+    "template_of",
 ]
 
 
@@ -96,3 +101,31 @@ def check_infusion(
     problem = infusion_problem(state, owner, skill, requested)
     if problem is not None:
         raise IllegalActionError(problem)
+
+
+def template_of(state: BattleState, unit: UnitState) -> UnitTemplate | None:
+    """召喚物的範本（不是召喚物或範本不在規則包時 ``None``）。"""
+    if not unit.is_summon:
+        return None
+    try:
+        return state.ruleset.summon_def(unit.template_id).template
+    except KeyError:
+        return None
+
+
+def active_keywords(state: BattleState, unit: UnitState) -> tuple[str, ...]:
+    """召喚物生效的灌注關鍵字（Phase 3-33e1）：範本固有的在前，施放時選的在後；不在對照表中的略過、
+    不重複。"""
+    template = template_of(state, unit)
+    table = state.ruleset.core.summon_infusions
+    found: dict[str, None] = {}
+    for keyword in (template.innate if template else None, unit.infusion):
+        if keyword is not None and keyword in table:
+            found.setdefault(keyword)
+    return tuple(found)
+
+
+def active_infusions(state: BattleState, unit: UnitState) -> tuple[SummonInfusion, ...]:
+    """:func:`active_keywords` 在對照表中的效果。"""
+    table = state.ruleset.core.summon_infusions
+    return tuple(table[k] for k in active_keywords(state, unit))

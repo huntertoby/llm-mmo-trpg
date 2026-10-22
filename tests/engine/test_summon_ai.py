@@ -38,6 +38,9 @@ def test_summon_gains_are_dpr_times_rounds_minus_distance() -> None:
         flat=grown.flat,
         bonus_permille=grown.bonus_permille,
     )
+    [summoned] = [e for e in p.min_events if isinstance(e, UnitSummoned)]
+    assert summoned.infusion == "prone"  # 3-33e1：技能製造「倒地」「召喚物」，預設灌注第一個
+    dpr += profile.summon.infusion_points  # 帶灌注的召喚物每輪多算 infusion_points
     hit = Fraction(profile.summon.hit_permille, 1000)
     cost = Fraction(profile.summon.distance_cost_permille, 1000)
     expected = profile.weights.damage * dpr * 2 * hit - cost * 4

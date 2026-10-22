@@ -21,22 +21,34 @@
 
 from __future__ import annotations
 
-from trpg.content.battle import Dice
+from trpg.content.battle import Dice, SummonHitRule
 from trpg.content.rules import SummonInfusion
 from trpg.engine.context import Ctx
 from trpg.engine.effects import execute
-from trpg.engine.effects.models import ApplyStatusEffect, EffectBase, HealEffect, PushEffect
+from trpg.engine.effects.models import (
+    ApplyStatusEffect,
+    CreateSurfaceEffect,
+    DamageEffect,
+    EffectBase,
+    HealEffect,
+    PushEffect,
+)
 from trpg.engine.gear_enhance import gear_on_hit_statuses
-from trpg.engine.ids import ARMOR_BROKEN, REVEALED
+from trpg.engine.ids import ARMOR_BROKEN, PRONE, REVEALED
+from trpg.engine.infusion import active_infusions, template_of
+from trpg.engine.maneuvers import contest
 from trpg.engine.rules.combat import attack_reach, is_concealed
 from trpg.engine.rules.geometry import XY, axis_direction, bresenham, has_line_of_sight, manhattan
 from trpg.engine.state import BattleState, UnitState
+from trpg.shared.types import Attribute, Surface
 
 __all__ = [
     "apply_hit_traits",
     "attack_dice",
     "blessing_target",
+    "chain_targets",
     "gunshot_reveals",
+    "height_permille",
     "pierce_line_targets",
     "spend_ammo",
 ]
@@ -70,11 +82,125 @@ def blessing_target(state: BattleState, attacker: UnitState) -> UnitState | None
     return min(allies, key=lambda u: (manhattan(u.xy, attacker.xy), u.id))
 
 
-def _infusion_of(ctx: Ctx, attacker: UnitState) -> SummonInfusion | None:
-    """召喚物灌注的關鍵字在對照表中的效果（沒有灌注時 ``None``）。"""
-    if attacker.infusion is None:
-        return None
-    return ctx.core.summon_infusions.get(attacker.infusion)
+def _infusion_effects(
+    ctx: Ctx, attacker: UnitState, target: UnitState, infusions: tuple[SummonInfusion, ...]
+) -> list[EffectBase]:
+    """召喚物生效的灌注關鍵字（3-33b、3-33e1）在普攻命中後附加的狀態、表面、額外傷害與絆倒。"""
+    batch: list[EffectBase] = []
+    if not target.alive:
+        return batch
+    for infusion in infusions:
+        if infusion.status is not None:
+            batch.append(
+                ApplyStatusEffect(
+                    source_id=attacker.id,
+                    target_id=target.id,
+                    status_id=infusion.status,
+                    duration=infusion.duration,
+                )
+            )
+        if infusion.surface is not None:
+            batch.append(
+                CreateSurfaceEffect(
+                    source_id=attacker.id,
+                    pos=target.xy,
+                    surface=infusion.surface,
+                    team=attacker.team,
+                )
+            )
+        if infusion.extra_damage is not None:
+            batch.append(
+                DamageEffect(
+                    source_id=attacker.id,
+                    target_id=target.id,
+                    element=infusion.extra_element,
+                    dice=infusion.extra_damage,
+                    min_damage=ctx.core.min_damage_on_hit,
+                )
+            )
+        if infusion.trip and _try_trip(ctx, attacker, target):
+            batch.append(
+                ApplyStatusEffect(source_id=attacker.id, target_id=target.id, status_id=PRONE)
+            )
+    return batch
+
+
+def height_permille(state: BattleState, attacker: UnitState, target: UnitState) -> int:
+    """高處關鍵字（3-33e1）：召喚物站得比目標高時，普攻傷害加成（‰）；其他情況 0。"""
+    if state.tile(*attacker.xy).height <= state.tile(*target.xy).height:
+        return 0
+    return sum(i.height_permille for i in active_infusions(state, attacker))
+
+
+def _try_trip(ctx: Ctx, attacker: UnitState, target: UnitState) -> bool:
+    """倒地關鍵字的絆倒：每隻召喚物每輪 1 次、目標還沒倒地時，擲敏捷對抗；成功才倒地。"""
+    if attacker.trip_round == ctx.state.round or target.has_status(PRONE):
+        return False
+    attacker.trip_round = ctx.state.round
+    return contest(ctx, "trip", attacker, target, Attribute.DEX)
+
+
+def _in_water(state: BattleState, unit: UnitState) -> bool:
+    return state.tile(*unit.xy).surface is Surface.WATER
+
+
+def _rule_holds(
+    state: BattleState, rule: SummonHitRule, attacker: UnitState, target: UnitState
+) -> bool:
+    if rule.when == "target_in_water":
+        return _in_water(state, target)
+    if rule.when == "self_in_water":
+        return _in_water(state, attacker)
+    return True
+
+
+def chain_targets(
+    state: BattleState, attacker: UnitState, target: UnitState, rule: SummonHitRule
+) -> list[UnitState]:
+    """雷電連鎖的對象：``target`` 附近（``chain_radius`` 內）的其他敵人，由近到遠（同距離依 ID），
+    最多 ``chain_targets`` 名。"""
+    near = [
+        u
+        for u in state.living_units()
+        if u.team is not attacker.team
+        and u.id != target.id
+        and manhattan(u.xy, target.xy) <= rule.chain_radius
+    ]
+    near.sort(key=lambda u: (manhattan(u.xy, target.xy), u.id))
+    return near[: rule.chain_targets]
+
+
+def _hit_rule_effects(ctx: Ctx, attacker: UnitState, target: UnitState) -> list[EffectBase]:
+    """召喚物範本的 ``hit_rules``（3-33e1）：條件成立時的狀態與水面連鎖。"""
+    template = template_of(ctx.state, attacker)
+    batch: list[EffectBase] = []
+    if template is None or not target.alive:
+        return batch
+    for rule in template.hit_rules:
+        if not _rule_holds(ctx.state, rule, attacker, target):
+            continue
+        if rule.status is not None:
+            batch.append(
+                ApplyStatusEffect(
+                    source_id=attacker.id,
+                    target_id=target.id,
+                    status_id=rule.status,
+                    duration=rule.duration,
+                )
+            )
+        for other in chain_targets(ctx.state, attacker, target, rule):
+            batch.append(
+                DamageEffect(
+                    source_id=attacker.id,
+                    target_id=other.id,
+                    element=attacker.weapon.element,
+                    dice=attacker.weapon.dice,
+                    flat=attacker.weapon.flat,
+                    multiplier_permille=rule.chain_permille,
+                    min_damage=ctx.core.min_damage_on_hit,
+                )
+            )
+    return batch
 
 
 def apply_hit_traits(ctx: Ctx, attacker: UnitState, target: UnitState) -> None:
@@ -111,19 +237,12 @@ def apply_hit_traits(ctx: Ctx, attacker: UnitState, target: UnitState) -> None:
                     source_id=attacker.id, target_id=target.id, status_id=status, duration=rounds
                 )
             )
-    infusion = _infusion_of(ctx, attacker)
-    if infusion is not None and infusion.status is not None and target.alive:
-        batch.append(  # 召喚物的灌注關鍵字（3-33b）：命中附帶狀態
-            ApplyStatusEffect(
-                source_id=attacker.id,
-                target_id=target.id,
-                status_id=infusion.status,
-                duration=infusion.duration,
-            )
-        )
+    infusions = active_infusions(ctx.state, attacker)
+    batch += _infusion_effects(ctx, attacker, target, infusions)
+    batch += _hit_rule_effects(ctx, attacker, target)
     execute(ctx, batch)
     direction = axis_direction(target.xy[0] - attacker.xy[0], target.xy[1] - attacker.xy[1])
-    knockback = weapon.knockback + (0 if infusion is None else infusion.knockback)
+    knockback = weapon.knockback + sum(i.knockback for i in infusions)
     if knockback > 0 and direction is not None and target.alive:
         limit = ctx.core.max_displace_distance  # 推擊距離上限（6.6），超過的每 1 格改為撞擊傷害
         execute(

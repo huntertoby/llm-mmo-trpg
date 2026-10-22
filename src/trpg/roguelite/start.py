@@ -216,8 +216,8 @@ def new_run(
 
 
 def start_weapons(library: ContentLibrary) -> tuple[str, ...]:
-    """開局可選的武器：``weapons.yaml`` 的全部武器（依 ID 排序）。"""
-    return tuple(sorted(library.weapons))
+    """開局可選的武器：``weapons.yaml`` 的全部武器，不含召喚物專用的（依 ID 排序）。"""
+    return tuple(sorted(w for w, d in library.weapons.items() if not d.summon_only))
 
 
 def _check_seed(seed: int) -> None:

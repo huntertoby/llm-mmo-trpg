@@ -1,0 +1,17 @@
+# 召喚物（Phase 3-33e1，docs/design/06-技能.md 6.29.5；數值為初值，未經模擬）：刺殺、斥候。影刃（背刺多 2 顆骰）、固有「隱蔽」（召喚時隱蔽 2 回合）。
+id: summon_shade
+name_zh: 影魅
+attributes: {str: 8, dex: 16, con: 10, int: 10, wis: 10, wil: 10}
+max_hp: 10
+speed: 5
+armor_bonus: 0
+weapon: shade_blades
+ai_profile: brute
+resist: {}
+element_mods: {}
+tags: [summoned, shade]
+reactions: []
+summon: true
+innate: concealed   # 召喚時隱蔽 2 回合
+# 外觀（Phase 3-33h1，docs/art/召喚物外觀.md）：純顯示資料。
+look: {body: humanoid, variant: shade, element: concealed, size: medium, trait: translucent}

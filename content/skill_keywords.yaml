@@ -10,7 +10,7 @@
 #   trigger    被動技能的觸發時機
 #   shape      技能形狀
 #   change     修正規則的改變種類（add_element 以 element 比對）
-# 參數：status、surface、element、object、stack、rule、on_hit、tag、skill
+# 參數：status、surface、element、object、stack、rule、on_hit、tag、skill、unit
 #
 # 規則分三種：專屬（原語、條件本身就對應該關鍵字）、通用（沒有專屬機制的技能類型，依既有引擎規則歸類，註解寫「通用」）、
 # 暫定（沒有真實機制可接、為了「每招技能至少一個關鍵字」先歸類，註解寫「暫定」；之後應換成真實內容）。
@@ -25,6 +25,7 @@ keywords:
     name_zh: 點燃
     description_zh: 火焰讓目標燃燒；燃燒中的目標會受到更重的傷害，或被引爆。
     makes:
+      - {effect: summon, unit: summon_fire_spirit}   # 3-33e1：召喚物的固有關鍵字
       - {effect: apply_status, status: burning}
       - {effect: damage, element: fire}
       - {effect: create_surface, surface: fire}
@@ -47,6 +48,7 @@ keywords:
     name_zh: 潮濕
     description_zh: 水讓目標與地面變得潮濕；潮濕的目標容易導電與凍結。
     makes:
+      - {effect: summon, unit: summon_water_sprite}   # 3-33e1：召喚物的固有關鍵字
       - {effect: create_surface, surface: water}
       - {effect: zone, surface: water}
     uses:
@@ -64,6 +66,7 @@ keywords:
     name_zh: 帶電
     description_zh: 雷電讓目標帶電；雷電能沿著水與連鎖擴散，靜電也能累積成更強的一擊。
     makes:
+      - {effect: summon, unit: summon_thunder_spirit}   # 3-33e1：召喚物的固有關鍵字
       - {effect: damage, element: lightning}
       - {effect: delayed_damage, element: lightning}
       - {effect: inscribe, element: lightning}
@@ -79,6 +82,7 @@ keywords:
     name_zh: 冰凍
     description_zh: 寒冰凍結目標或水面；冰凍的目標可以被擊碎，冰面讓人滑倒。
     makes:
+      - {effect: summon, unit: summon_ice_spirit}   # 3-33e1：召喚物的固有關鍵字
       - {effect: apply_status, status: frozen}
       - {effect: damage, element: ice}
       - {effect: create_surface, surface: ice}
@@ -93,6 +97,7 @@ keywords:
     description_zh: 絆倒、推倒、撞擊讓目標倒地；倒地的目標更容易被近戰命中與處決。
     actions: [trip]   # 行為紀錄提示（Phase 3-24b2）：常用這個動作的玩家，候選偏向這個關鍵字
     makes:
+      - {effect: summon, unit: summon_skeleton_warrior}   # 3-33e1：召喚物的固有關鍵字
       - {effect: knock_prone}
       - {effect: topple}
       - {effect: charge_through, on_hit: knock_prone}
@@ -126,6 +131,7 @@ keywords:
     description_zh: 咒印與揭露標記目標；標記可以被引爆，被標記者會被追擊。
     actions: [aim]   # 行為紀錄提示（Phase 3-24b2）：常用這個動作的玩家，候選偏向這個關鍵字
     makes:
+      - {effect: summon, unit: summon_hawk}   # 3-33e1：召喚物的固有關鍵字
       - {effect: apply_status, status: marked}
       - {effect: inscribe}
       - {effect: reveal}
@@ -149,6 +155,7 @@ keywords:
     description_zh: 升高平台、飛行與攀跳讓你站得更高；居高臨下命中更準。
     actions: [vault]   # 行為紀錄提示（Phase 3-24b2）：常用這個動作的玩家，候選偏向這個關鍵字
     makes:
+      - {effect: summon, unit: summon_hawk}   # 3-33e1：召喚物的固有關鍵字
       - {effect: raise_terrain}
       - {effect: lower_terrain}
       - {effect: leap}
@@ -165,6 +172,7 @@ keywords:
     name_zh: 隱蔽
     description_zh: 煙霧、黑暗與暗影讓你隱蔽；隱蔽中的偷襲與伏擊更致命。
     makes:
+      - {effect: summon, unit: summon_shade}   # 3-33e1：召喚物的固有關鍵字
       - {effect: apply_status, status: concealed}
       - {effect: create_surface, surface: smoke}
       - {effect: create_surface, surface: darkness}

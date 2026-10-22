@@ -144,6 +144,13 @@ summon_infusions:
   frozen: {status: slow, duration: 2, roles: [ranged]}
   marked: {status: marked, duration: 2, roles: [ranged]}
   collision: {knockback: 1, roles: [melee]}
+  # Phase 3-33e1 補齊（初值，未經模擬）：6.29.1 的另外 6 個關鍵字
+  wet: {surface: water, roles: [ranged]}                                       # 命中時在目標格造水
+  charged: {extra_damage: 1d4, extra_element: lightning, roles: [ranged]}      # 普攻帶雷：另加一擊雷電傷害
+  prone: {trip: true, roles: [melee]}                                          # 命中時絆倒（對抗判定，每隻每輪 1 次）
+  high_ground: {height_permille: 250, roles: [ranged]}                         # 站得比目標高時傷害 +25%
+  concealed: {conceal_rounds: 2, roles: [melee]}                               # 召喚時隱蔽 2 回合
+  summon: {hp_permille: 200}                                                   # 召喚物自身最大 HP +20%（AI 的最後選擇）
 
 # --- 持續區域（Phase 3D-5，docs/design/06-技能.md 6.16 G；初值，未經模擬）---
 zone_limit_per_owner: 2       # 同一施放者同時存在的區域上限；超過時最舊的消失

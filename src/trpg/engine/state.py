@@ -385,6 +385,8 @@ class UnitState:
     ``follow``。"""
     commanded_round: int = 0
     """最近一次被指揮（``command_summon``）的輪數（0 為從未；每隻每輪最多一次）。"""
+    trip_round: int = 0
+    """最近一次用灌注的「絆倒」（倒地關鍵字，Phase 3-33e1）出手的輪數（0 為從未；每輪最多一次）。"""
     dismissed: bool = False
     """召喚物已消失（到期、召喚者離場或超過上限；Phase 3D-4a）。保留在 ``units`` 中（事件仍引用
     它），但不在戰場上。"""
@@ -503,6 +505,7 @@ class UnitState:
             summon_mode=self.summon_mode,
             summon_target_id=self.summon_target_id,
             commanded_round=self.commanded_round,
+            trip_round=self.trip_round,
             dismissed=self.dismissed,
             activations=self.activations,
             revived=self.revived,

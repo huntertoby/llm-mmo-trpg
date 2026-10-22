@@ -1,0 +1,23 @@
+# 主動（Phase 3-33e1，docs/design/06-技能.md 6.29.5；數值為初值，未經模擬）：在射程內的空格召喚冰靈，持續 3 輪；由效用 AI 控制。
+id: skill_summon_ice_spirit
+schema_version: 1
+name_zh: 召喚冰靈
+tier: 1
+rank: 1
+rarity: rare
+kind: active
+skeleton: summon
+category: spell
+weapon_req: any
+ap_cost: 1
+scaling_attr: int
+shape: {type: ground_tile, range: 4}
+effects:
+  - {type: summon, unit: summon_ice_spirit, duration: 3}
+condition: null
+cost: {mana: 10, cooldown: 4}
+tags: [ice, spell, summon]
+narrative:
+  concept: 呼喚一縷冰靈，凍住踏進潮濕地面的敵人
+  cast_flavor: 你呵出一口白氣，冰晶在半空中凝成一團寒霧
+provenance: {origin: builtin, owner_id: null, created_by: null, parents: [], bound: true, tradeable: false}

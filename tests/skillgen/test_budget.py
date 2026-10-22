@@ -281,6 +281,7 @@ def test_status_and_surface_points_match_the_spec() -> None:
         # 2D-1
         "guarded": 4,
         "empowered": 4,
+        "rallied": 4,  # 3-33e1：戰意圖騰的光環
         "hasted": 3,
         "regenerating": 4,
         "shielded": None,  # 只能由 shield 原語施加
