@@ -63,6 +63,7 @@ summon_detonate_rounds: 1                  # 會自爆的召喚物：一般攻�
 summon_trait_pull_permille: 1000           # 拉扯（吸引圖騰，3-33e2b 合併補上；初值，未經模擬）：拉扯點數 × 100%，每輪
 summon_trait_platform_permille: 1000       # 高台（高台圖騰，3-33e2b 合併補上；初值，未經模擬）：升起地形點數 × 高度 × 100%，每輪
 summon_topple_targets_permille: 900        # 被推倒壓人：（傷害骰平均 ＋ 擊倒點數）× 0.9 個敵人（一次性；土牆不攻擊，價值全在這裡）
+summon_hp_weight_permille: 300                # 3-33f2 加深進化：召喚物最大 HP +N% 的價值 ＝ 每輪價值 × N% × 30%（初值，未經模擬）
 
 # 3D-5 持續區域：點數 ＝ effects 的基礎點數合計 × 預估觸發次數（形狀格數 × duration × zone_cell_round_permille ÷ 1000）
 #   × zone_both_permille（when: both 時）× zone_moving_permille（anchor: moving 時）

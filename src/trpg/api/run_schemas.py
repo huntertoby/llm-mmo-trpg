@@ -154,7 +154,7 @@ class EvolutionOptionOut(_ApiModel):
     """一支分歧進化（Phase 3-26b）：``index`` 是送 ``evolve`` 時的索引。"""
 
     index: int
-    branch: Literal["deepen", "bridge"]
+    branch: Literal["deepen", "bridge", "count"]
     label_zh: str
     """「加深」或「橋接」。"""
     template: str

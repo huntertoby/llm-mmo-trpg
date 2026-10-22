@@ -51,7 +51,7 @@ from trpg.skillgen.variant_gen import variant_specs, with_variant
 
 __all__ = ["Evolution", "EvolutionRequest", "evolution_options", "evolved_id"]
 
-type Branch = Literal["deepen", "bridge"]
+type Branch = Literal["deepen", "bridge", "count"]
 _RARITIES: tuple[SkillRarity, ...] = ("common", "rare", "epic", "legendary")
 _LEGENDARY = rarity_rank("legendary")
 type _Draft = tuple[dict[str, Any], list[dict[str, Any]]]
@@ -70,7 +70,8 @@ class EvolutionRequest:
 
 @dataclass(frozen=True, slots=True)
 class Evolution:
-    """一支進化：分支、模板、帶的關鍵字（換形狀等不看關鍵字的模板為 ``None``）、進化後的技能。"""
+    """一支進化：分支、模板、帶的關鍵字（換形狀等不看關鍵字的模板為 ``None``）、進化後的技能。
+    ``count`` 是召喚技能獨有的數量型分支（3-33f2）。"""
 
     branch: Branch
     template: str
@@ -385,7 +386,7 @@ def _rarity(draft: dict[str, Any], effects: list[dict[str, Any]], library: Conte
     return _RARITIES[max(rarity_rank(str(draft["rarity"])), need)]
 
 
-def _costs(skill: SkillDef) -> list[dict[str, Any]]:
+def cost_attempts(skill: SkillDef) -> list[dict[str, Any]]:
     """代價的嘗試順序：原本的代價；超出預算時再試冷卻 +1、+2（沒有冷卻的從 2 回合起）——以代價折抵
     換取預算（6.5），不加強度。冷卻不超過 :data:`MAX_EVOLVED_COOLDOWN`。"""
     cost = skill.cost.model_dump(mode="json")
@@ -429,7 +430,7 @@ def _finish(
     """依序試「原骨架 → 模板列出的骨架」×「原代價 → 冷卻 +1」，回傳第一個合格的版本。"""
     base, effects = draft
     for skeleton in dict.fromkeys((skill.skeleton, *template.skeletons)):
-        for index, cost in enumerate(_costs(skill)):
+        for index, cost in enumerate(cost_attempts(skill)):
             attempt = {**base, "skeleton": skeleton, "cost": cost}
             evolved = _tuned(attempt, effects, rng.fork(f"{skeleton}/{index}"), library)
             if evolved is not None:
@@ -491,7 +492,17 @@ def _deepen_options(
 
 
 def evolution_options(library: ContentLibrary, request: EvolutionRequest) -> tuple[Evolution, ...]:
-    """兩支進化（加深、橋接；見模組說明）。做不出來的分支省略，所以可能只有 0～1 支。"""
+    """兩支進化（加深、橋接；見模組說明）。做不出來的分支省略，所以可能只有 0～1 支。
+
+    召喚技能（有 ``summon`` 效果）改走 :mod:`trpg.skillgen.summon_evolution`：加深、橋接、數量型三支
+    （Phase 3-33f2）。"""
+    from trpg.skillgen.summon_evolution import (  # noqa: PLC0415
+        is_summon_skill,
+        summon_evolution_options,
+    )
+
+    if is_summon_skill(request.skill):
+        return summon_evolution_options(library, request)
     table = library.evolution
     found: list[Evolution] = []
     deepen = _deepen_options(request, library)

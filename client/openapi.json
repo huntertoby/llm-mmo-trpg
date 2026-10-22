@@ -3724,7 +3724,8 @@
             "type": "string",
             "enum": [
               "deepen",
-              "bridge"
+              "bridge",
+              "count"
             ],
             "title": "Branch"
           },

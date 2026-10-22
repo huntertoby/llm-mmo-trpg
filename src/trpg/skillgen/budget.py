@@ -603,7 +603,11 @@ def _summon_points(
     rounds = effect.duration
     if summon.template.detonate is not None:  # 自爆後就消失了：一般攻擊與特性只算幾輪
         rounds = min(rounds, library.budget.summon_detonate_rounds)
-    points = (dpr + per_round) * rounds * value + once * value
+    per_round_total, once, variant_note = _summon_variant_points(
+        summon, effect, library, dpr, (per_round, once)
+    )
+    notes += variant_note
+    points = per_round_total * rounds * value + once * value
     note = f"每輪 {_fmt(dpr)}"
     if per_round:
         note += f" ＋ 特性 {_fmt(per_round)}"
@@ -614,6 +618,51 @@ def _summon_points(
     if notes:
         note += f"（{'；'.join(notes)}）"
     return points, note
+
+
+def _summon_variant_points(
+    summon: SummonDef,
+    effect: EffectSpec,
+    library: ContentLibrary,
+    dpr: Fraction,
+    traits: tuple[Fraction, Fraction],
+) -> tuple[Fraction, Fraction, list[str]]:
+    """召喚技能分歧進化（Phase 3-33f2）對點數的影響：回傳（每輪總價值, 一次性價值, 說明）。
+
+    - 橋接 ``infusion``：第二個灌注關鍵字的特性點數（同固有灌注的算法）；
+    - 加深 ``max_hp_permille``：每輪價值 ×（1 ＋ 多出的 HP 比例 × ``summon_hp_weight_permille``）；
+      ``trait``：小特性的一次性點數；
+    - 數量型 ``count`` × ``power_permille``：每隻只有一般的比例（HP 與傷害），整體 × 隻數。
+    """
+    notes: list[str] = []
+    core = library.ruleset.core
+    per_round, once = traits  # 範本本身的特性點數（每輪, 一次性）
+    if effect.infusion is not None:
+        extra = summon.model_copy(
+            update={
+                "template": summon.template.model_copy(update={"innate": effect.infusion}),
+            }
+        )
+        more_round, more_once, more_notes = _infusion_trait_points(extra, library, dpr)
+        per_round += more_round
+        once += more_once
+        notes += [f"第二灌注 {n}" for n in more_notes] or [f"第二灌注 {effect.infusion}"]
+    total = dpr + per_round
+    if effect.max_hp_permille:
+        weight = Fraction(library.budget.summon_hp_weight_permille, _PERMILLE)
+        total *= 1 + Fraction(effect.max_hp_permille, _PERMILLE) * weight
+        notes.append(f"HP +{effect.max_hp_permille // 10}%")
+    trait = None if effect.trait is None else core.summon_traits.get(effect.trait)
+    if trait is not None:
+        once += trait.budget_points
+        notes.append(f"小特性 {trait.name_zh}")
+    count = effect.count if isinstance(effect.count, int) else 1
+    if count > 1:
+        scale = count * Fraction(effect.power_permille or _PERMILLE, _PERMILLE)
+        total *= scale
+        once *= scale
+        notes.append(f"{count} 隻各 {(effect.power_permille or _PERMILLE) // 10}%")
+    return total, once, notes
 
 
 def _status_value(library: ContentLibrary, status_id: str) -> Fraction:
