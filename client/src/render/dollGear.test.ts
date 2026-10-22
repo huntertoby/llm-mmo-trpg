@@ -155,7 +155,7 @@ describe("全組合畫得出來", () => {
     const spy = vi.spyOn(Math, "random");
     const slotOf = { weapon: "main_hand", offhand: "off_hand", body: "body", head: "head", hands: "hands", feet: "feet" } as const;
     // 平常只畫抽樣（每 8 個組合取 1 個，確定性）；TRPG_FULL=1（scripts/check.py --full）才跑完整組合。
-    const full = process.env.TRPG_FULL === "1";
+    const full = (globalThis as { process?: { env: Record<string, string | undefined> } }).process?.env.TRPG_FULL === "1";
     let drawn = 0;
     let combo = 0;
     for (const k of gearKinds()) {
