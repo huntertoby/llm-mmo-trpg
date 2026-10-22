@@ -12,7 +12,6 @@
 
 from __future__ import annotations
 
-import multiprocessing
 from collections.abc import Callable, Sequence
 from dataclasses import dataclass
 from fractions import Fraction
@@ -39,6 +38,7 @@ from trpg.sim.batch import (
 )
 from trpg.sim.matrix import library_with_builds
 from trpg.sim.metrics import BattleMetrics, StepTrace, TrackedRun, battle_metrics
+from trpg.sim.parallel import run_tasks
 
 __all__ = [
     "BUILDS",
@@ -173,31 +173,15 @@ def _run_flow(spec: BatchSpec, hero: str, seed: int) -> _Result:
         return seed, None, None
 
 
-_SPECS: tuple[tuple[BatchSpec, str], ...] = ()
-
-
-def _init(specs: tuple[tuple[BatchSpec, str], ...]) -> None:
-    global _SPECS  # noqa: PLW0603 - 行程初始化：每個工作行程只收一次規格
-    _SPECS = specs
-
-
-def _work(task: tuple[int, int]) -> tuple[int, _Result]:
+def _work(specs: tuple[tuple[BatchSpec, str], ...], task: tuple[int, int]) -> tuple[int, _Result]:
     index, seed = task
-    spec, hero = _SPECS[index]
+    spec, hero = specs[index]
     return index, _run_flow(spec, hero, seed)
 
 
 def _run_specs(specs: Sequence[tuple[BatchSpec, str]], jobs: int) -> list[list[_Result]]:
-    if jobs < 1:
-        raise ValueError("jobs 必須 >= 1")
     tasks = [(i, seed) for i, (spec, _) in enumerate(specs) for seed in spec.seeds]
-    if jobs == 1 or len(tasks) <= 1:
-        done = [(i, _run_flow(specs[i][0], specs[i][1], seed)) for i, seed in tasks]
-    else:
-        with multiprocessing.get_context("spawn").Pool(
-            min(jobs, len(tasks)), initializer=_init, initargs=(tuple(specs),)
-        ) as pool:
-            done = pool.map(_work, tasks, chunksize=1)
+    done = run_tasks(_work, tuple(specs), tasks, jobs=jobs)
     grouped: dict[int, list[_Result]] = {i: [] for i in range(len(specs))}
     for index, result in done:
         grouped[index].append(result)

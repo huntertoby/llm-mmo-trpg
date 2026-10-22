@@ -24,6 +24,7 @@ dev = [
     "types-PyYAML",
     "pytest-xdist>=3.8.0",
     "httpx>=0.28.1",
+    "pytest-timeout>=2.4.0",
 ]
 
 [build-system]
@@ -101,8 +102,11 @@ warn_required_dynamic_aliases = true
 # ---------------------------------------------------------------------------
 [tool.pytest.ini_options]
 testpaths = ["tests"]
-addopts = "-ra -m 'not slow'"
+addopts = "-ra -m 'not slow' --dist loadgroup"
 pythonpath = ["src"]
+# 單一測試逾時（秒）；標 slow 的測試在 tests/conftest.py 放寬為 1800。逾時用 thread 方法，Windows 也有效。
+timeout = 300
+timeout_method = "thread"
 # starlette 1.9 建議改用 httpx2；規格（Phase 3-2 4.1）指定 httpx，功能相同，只略過這則提示。
 filterwarnings = [
     "ignore:Using `httpx` with `starlette.testclient` is deprecated",
