@@ -38,8 +38,11 @@ __all__ = [
     "run_battle",
 ]
 
-LOG_FORMAT = "trpg-battle-log/56"
-"""``/56``（Phase 3-33f2，接在 3-33f1 的 ``/55`` 之後）：召喚技能分歧進化與
+LOG_FORMAT = "trpg-battle-log/57"
+"""``/57``（Phase 3E-2a，接在 3-33f2 的 ``/56`` 之後）：帶變奏的技能不能被 ``copy_skill`` 複製、
+命中後修正規則改用實際施放的型態比對；帶變奏技能的邊角情況結果可能不同，
+因此 ``/56`` 的紀錄無法重播。
+``/56``（Phase 3-33f2，接在 3-33f1 的 ``/55`` 之後）：召喚技能分歧進化與
 召喚詞條——``summon`` 效果多了 ``power_permille``／``max_hp_permille``／``trait``／``infusion``
 且 ``count`` 可為 2，單位狀態多了 ``bonus_infusion``／``summon_power_permille``，
 新觸發時機 ``on_summon_downed``（召喚物倒下時）、新詞條（召喚冷卻／持續／獻祭加成、
