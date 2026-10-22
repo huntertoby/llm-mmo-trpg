@@ -85,6 +85,11 @@ _POOL_ONLY = frozenset(
         "skill_summon_water_sprite",
         "skill_summon_shade",
         "skill_summon_hawk",
+        # 3-33e2b：召喚物（二）b 的召喚技能
+        "skill_summon_vine",
+        "skill_summon_guardian_spirit",
+        "skill_summon_pull_totem",
+        "skill_summon_plateau_totem",
     }
 )
 

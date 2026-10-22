@@ -27,3 +27,8 @@ packs:
   - {id: dev_summon_water,   label_zh: 水精包, weapon: totem_staff, keywords: [summon, ignite], skills: [skill_summon_water_sprite, skill_fire_bolt]}
   - {id: dev_summon_shade,   label_zh: 影魅包, weapon: totem_staff, keywords: [summon, ignite], skills: [skill_summon_shade, skill_fire_bolt]}
   - {id: dev_summon_hawk,    label_zh: 鷹隼包, weapon: totem_staff, keywords: [summon, ignite], skills: [skill_summon_hawk, skill_fire_bolt]}
+  # 3-33e2b：召喚物（二）b 的對照組（每包一種新召喚技能 ＋ 火焰箭）
+  - {id: dev_summon_vine,     label_zh: 藤蔓包,     weapon: totem_staff, keywords: [summon, ignite], skills: [skill_summon_vine, skill_fire_bolt]}
+  - {id: dev_summon_guardian, label_zh: 守護靈包,   weapon: totem_staff, keywords: [summon, ignite], skills: [skill_summon_guardian_spirit, skill_fire_bolt]}
+  - {id: dev_summon_pull,     label_zh: 吸引圖騰包, weapon: totem_staff, keywords: [summon, ignite], skills: [skill_summon_pull_totem, skill_fire_bolt]}
+  - {id: dev_summon_plateau,  label_zh: 高台圖騰包, weapon: totem_staff, keywords: [summon, ignite], skills: [skill_summon_plateau_totem, skill_fire_bolt]}

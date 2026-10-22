@@ -1,0 +1,20 @@
+# 召喚物（Phase 3-33e2b，docs/design/06-技能.md 6.29.5；數值為初值，未經模擬）：拉扯控場。圖騰（沒有行動，
+# inert）；每個自己的回合開始把 2 格內最近的一個敵人（再依座標）往自己拉近 1 格，拉進火牆、陷阱照常結算。
+id: summon_pull_totem
+name_zh: 吸引圖騰
+attributes: {str: 6, dex: 6, con: 12, int: 6, wis: 6, wil: 6}
+max_hp: 12
+speed: 0
+armor_bonus: 0
+weapon: totem_stone
+ai_profile: guard
+default_mode: hold   # 6.29.5「AI 預設」＝不動
+resist: {}
+element_mods: {}
+tags: [summoned, totem]
+reactions: []
+summon: true
+inert: true
+pulse: {pull_radius: 2}
+# 外觀（Phase 3-33h1，docs/art/召喚物外觀.md）：純顯示資料。
+look: {body: totem, variant: pull, element: collision, size: medium}

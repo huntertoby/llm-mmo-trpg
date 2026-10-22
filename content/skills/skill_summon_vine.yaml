@@ -1,0 +1,23 @@
+# 主動（Phase 3-33e2b，docs/design/06-技能.md 6.29.5；數值為初值，未經模擬）：在射程內的空格召喚藤蔓，持續 4 輪；由效用 AI 控制。
+id: skill_summon_vine
+schema_version: 1
+name_zh: 召喚藤蔓
+tier: 1
+rank: 1
+rarity: rare
+kind: active
+skeleton: summon
+category: spell
+weapon_req: any
+ap_cost: 1
+scaling_attr: wis
+shape: {type: ground_tile, range: 4}
+effects:
+  - {type: summon, unit: summon_vine, duration: 4}
+condition: null
+cost: {mana: 8, cooldown: 4}
+tags: [nature, spell, summon, control]
+narrative:
+  concept: 讓一叢藤蔓破土而出，纏住踏進來的敵人
+  cast_flavor: 你掌心貼地，泥土裂開，一叢帶刺的藤蔓蜿蜒竄出
+provenance: {origin: builtin, owner_id: null, created_by: null, parents: [], bound: true, tradeable: false}

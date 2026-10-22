@@ -66,6 +66,11 @@ def test_a_summoner_battle_with_growth_and_infusion_replays_identically() -> Non
         "dev_summon_water",
         "dev_summon_shade",
         "dev_summon_hawk",
+        # 3-33e2b
+        "dev_summon_vine",
+        "dev_summon_guardian",
+        "dev_summon_pull",
+        "dev_summon_plateau",
     ],
 )
 def test_the_new_summon_packs_summon_and_replay_identically(pack: str) -> None:
