@@ -63,6 +63,13 @@ describe("actionHintText", () => {
     expect(actionHintText({ ...base, copying: true })).toContain("Esc 放棄");
     expect(actionHintText({ ...base, ended: true })).toBe("戰鬥結束。");
   });
+
+  it("tells the player the summons can still be switched when only End Turn is left (3-32b)", () => {
+    const idle = { ...base, moveCount: 0, attackCount: 0, summonIdle: true };
+    expect(actionHintText(idle)).toContain("召喚物");
+    expect(actionHintText(idle)).toContain("結束回合");
+    expect(actionHintText({ ...idle, canAct: false })).toBe("等待中……");
+  });
 });
 
 describe("side panel preference", () => {

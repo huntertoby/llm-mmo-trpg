@@ -3,7 +3,7 @@ import type { PreviewOut } from "../api/types";
 import { buildDrawModel } from "./drawModel";
 import { previewOverlays } from "./scenePreview";
 import { previewLines } from "./previewText";
-import { auraTiles, remainingRounds, summonKind, summonLine, summonLines, summonsOf } from "./summons";
+import { auraTiles, hasControllableSummon, remainingRounds, summonKind, summonLine, summonLines, summonsOf } from "./summons";
 import { smallView, unit } from "./testFixtures";
 import { unitNames } from "./units";
 
@@ -72,6 +72,13 @@ describe("summons (Phase 3D-4b)", () => {
     expect(summonKind(view.units.find((u) => u.id === "unit_0007")!)).toBe("圖騰");
     expect(summonKind(view.units.find((u) => u.id === "unit_0006")!)).toBe("召喚物");
     expect(summonKind(view.units.find((u) => u.id === "unit_0003")!)).toBeNull();
+  });
+
+  it("knows whether the owner has a summon whose mode can be switched (totems cannot)", () => {
+    expect(hasControllableSummon(view, "unit_0001")).toBe(true);
+    expect(hasControllableSummon(view, "unit_0003")).toBe(false);
+    const onlyTotem = { ...view, units: view.units.filter((u) => u.id !== "unit_0006") };
+    expect(hasControllableSummon(onlyTotem, "unit_0001")).toBe(false);
   });
 
   it("marks summons with digits instead of team letters", () => {
