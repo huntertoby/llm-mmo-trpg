@@ -71,12 +71,21 @@ def dash_route(state: BattleState, caster: UnitState, target: XY, reach: int) ->
 
 @dataclass(frozen=True, slots=True)
 class ChargeRoute:
-    """直線衝撞（Phase 3D-2c）的路線：``cells`` 是施放者依序經過的格子（不含起點，含有單位的格子；
-    施放者不會停在有單位的格子，所以最後一格一定是空的），``stop`` 是停下的格子（＝``cells`` 的
-    最後一格）。"""
+    """直線衝撞（Phase 3D-2c；3-29 改為可選任何格）的路線：``cells`` 是施放者依序經過的格子（不含
+    起點，含有單位的格子，也含最後被撞的有單位的格子）。``stop`` 是停下的格子——最後一個空格；
+    前面全是單位時為起點（原地不動，只攻擊）。``bump`` 是會被撞擊的格子：路線的最後一格站著
+    單位、而再往前一格是牆、地圖邊或擋路物件時為該格，否則為 ``None``（命中的敵人另受一次撞擊）。"""
 
     cells: tuple[XY, ...]
     stop: XY
+    bump: XY | None = None
+
+    @property
+    def walked(self) -> tuple[XY, ...]:
+        """施放者預定走到的格子（路線到停點為止；原地不動時為空）。"""
+        if self.stop not in self.cells:
+            return ()
+        return self.cells[: self.cells.index(self.stop) + 1]
 
 
 def _sign(value: int) -> int:
@@ -84,7 +93,7 @@ def _sign(value: int) -> int:
 
 
 def _charge_line_problem(state: BattleState, caster: UnitState, dest: XY, reach: int) -> str | None:
-    """衝撞終點的方向問題：在地圖內、與施放者同一列或同一行、在射程內。"""
+    """衝撞目標格的方向問題：在地圖內、與施放者同一列或同一行、在射程內。"""
     if not state.in_bounds(*dest):
         return f"超出地圖範圍：{dest}"
     dx, dy = dest[0] - caster.xy[0], dest[1] - caster.xy[1]
@@ -97,27 +106,15 @@ def _charge_line_problem(state: BattleState, caster: UnitState, dest: XY, reach:
     return None
 
 
-def _charge_dest_problem(state: BattleState, caster: UnitState, dest: XY, reach: int) -> str | None:
-    """衝撞終點本身的問題：方向、射程，以及要可站立、沒有單位。"""
-    problem = _charge_line_problem(state, caster, dest, reach)
-    if problem is not None:
-        return problem
-    if not is_standable(state, dest):
-        return f"無法衝撞到不可站立的格子：{dest}"
-    other = state.unit_at(*dest)
-    if other is not None:
-        return f"終點必須是空格：{dest}（{other.name_zh}）"
-    return None
-
-
 def charge_route(state: BattleState, caster: UnitState, dest: XY, reach: int) -> ChargeRoute | str:
-    """衝撞到終點格 ``dest`` 的路線；不合法時回傳原因（繁體中文）。
+    """衝撞朝目標格 ``dest`` 的路線；不合法時回傳原因（繁體中文）。
 
-    終點要與施放者同一列或同一行、距離在 ``reach`` 內、可站立且沒有單位。沿直線一格一格走（步行
-    規則：不可站立的格子與爬升過高的格子擋住），被擋住時停在擋住前的格子；單位（敵我）不擋，但
-    不能停在有單位的格子，所以停點往回退到最後一個空格；退到起點就停不下來，不能施放。
+    目標格可以是射程內直線上的任何格（含站著敵人的格子、牆前、地圖邊）。沿直線一格一格走（步行
+    規則：不可站立的格子與爬升過高的格子擋住），被擋住時停在擋住前的格子；單位（敵我）不擋，
+    但不能停在有單位的格子，所以停點是最後一個空格（前面全是單位則留在原地）。最後一格站著單位
+    且再往前一格走不過去時，該格是撞擊格 ``bump``。第一格就走不過去才不能施放。
     """
-    problem = _charge_dest_problem(state, caster, dest, reach)
+    problem = _charge_line_problem(state, caster, dest, reach)
     if problem is not None:
         return problem
     x0, y0 = caster.xy
@@ -130,20 +127,28 @@ def charge_route(state: BattleState, caster: UnitState, dest: XY, reach: int) ->
             break
         cells.append(cell)
         prev = cell
-    while cells and state.unit_at(*cells[-1]) is not None:
-        cells.pop()
     if not cells:
-        return f"衝撞被擋住，停不下來：{dest} 方向的第一個空格就過不去"
-    return ChargeRoute(cells=tuple(cells), stop=cells[-1])
+        return f"衝撞被擋住，停不下來：{dest} 方向的第一格就過不去"
+    last = cells[-1]
+    ahead = (last[0] + step[0], last[1] + step[1])
+    walled = not state.in_bounds(*ahead) or step_cost(state, last, ahead) is None
+    bump = last if walled and state.unit_at(*last) is not None else None
+    stop = caster.xy
+    for cell in reversed(cells):
+        if state.unit_at(*cell) is None:
+            stop = cell
+            break
+    return ChargeRoute(cells=tuple(cells), stop=stop, bump=bump)
 
 
 def charge_candidates(state: BattleState, caster: UnitState, reach: int) -> list[XY]:
-    """射程內四個方向所有合法的衝撞終點（依 ``(y, x)`` 排序）。"""
+    """射程內四個方向所有合法的衝撞目標格（依 ``(y, x)`` 排序）。"""
     x0, y0 = caster.xy
     cells = [
         (x0 + dx * i, y0 + dy * i)
         for dx, dy in ((0, -1), (1, 0), (0, 1), (-1, 0))
         for i in range(1, reach + 1)
+        if state.in_bounds(x0 + dx * i, y0 + dy * i)
     ]
     legal = [c for c in cells if isinstance(charge_route(state, caster, c, reach), ChargeRoute)]
     return sorted(legal, key=lambda p: (p[1], p[0]))
