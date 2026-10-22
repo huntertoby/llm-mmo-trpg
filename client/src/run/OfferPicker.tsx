@@ -1,4 +1,5 @@
-// 技能候選（升級三選一、營火重骰）：卡片順序由種子決定；偏離路線那張有明顯標籤；可跳過；欄位滿時選要換掉的技能。
+// 技能候選（升級三選一、營火重骰）：卡片順序由種子決定；每張標示「加深／橋接／新方向」與帶的關鍵字（Phase 3-24b2）；
+// 偏離路線那張有明顯標籤；可跳過；欄位滿時選要換掉的技能。
 import { useMemo } from "react";
 import type { RunHero, RunOffer } from "../api/types";
 import { SkillCardView } from "../ui/SkillCardView";
@@ -11,6 +12,7 @@ import {
   SLOT_LABELS,
   slotOf,
 } from "./flow";
+import { offerTagHint, offerTagText } from "./startFlow";
 
 interface Props {
   offer: RunOffer;
@@ -51,11 +53,18 @@ export function OfferPicker({
           const card = offer.candidates[index];
           if (card === undefined) return null;
           const off = offer.off_route.includes(index);
+          const tag = offer.tags?.[index];
           return (
             <div
               key={card.id}
               className={`run-offer-card${pick === index ? " selected" : ""}${off ? " off-route" : ""}`}
             >
+              {tag !== undefined && (
+                <div className={`offer-kind-tag offer-kind-${tag.kind}`} data-testid="offer-kind" title={offerTagHint(tag)}>
+                  <b>{offerTagText(tag)}</b>
+                  <span className="small">　{offerTagHint(tag)}</span>
+                </div>
+              )}
               {off && (
                 <div className="off-route-tag">
                   <b>{OFF_ROUTE_LABEL}</b>

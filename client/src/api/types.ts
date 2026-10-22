@@ -120,6 +120,13 @@ export type RunRecord = Schemas["BattleRecord"];
 export type RunSaveOut = Schemas["SaveOut"];
 export type RunSaveSummary = Schemas["SaveSummary"];
 export type RunRules = Schemas["RunRules"];
+// 新開局（Phase 3-24b2）：起始武器 ＋ 2 個關鍵字；開發者起始包只在 ?dev=1 顯示
+export type StartOptions = Schemas["StartOptions"];
+export type StartWeaponOption = Schemas["StartWeaponOption"];
+export type StartPreview = Schemas["StartPreview"];
+export type StartKeywordOption = Schemas["StartKeywordOption"];
+export type DevPack = Schemas["DevPackOut"];
+export type OfferTag = Schemas["OfferTagOut"];
 export type BattleHistory = Schemas["BattleHistory"];
 export type AttributeId = Schemas["Attribute"];
 /** `POST /api/runs/{id}/choice` 的請求（工坊另有同名的 `Choice`，所以加前綴）。 */
@@ -128,7 +135,7 @@ export type RunChoice =
   | Schemas["RerollChoice"]
   | Schemas["PickChoice"]
   | Schemas["LeaveChoice"];
-/** 開新一輪；`attributes` 省略時伺服器把開局點數全部點在技能最常用的縮放屬性。 */
+/** 開新一輪：`weapon` ＋ `keywords`（一般開局）或 `dev_pack`（開發者起始包）；`attributes` 省略時伺服器把開局點數全部點在武器的縮放屬性。 */
 export type CreateRunRequest = Omit<Schemas["CreateRunRequest"], "attributes"> & {
   attributes?: Partial<Record<AttributeId, number>>;
 };
