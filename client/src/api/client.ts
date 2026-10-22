@@ -14,6 +14,7 @@ import type {
   GearCheck,
   GearCheckRequest,
   Glossary,
+  InfuseOptions,
   MapSummary,
   OrderSet,
   PreviewOut,
@@ -98,6 +99,9 @@ export const api = {
   /** 指揮主角的一隻召喚物時可選的終點與目標（Phase 3-33c）。 */
   commandOptions: (battleId: string, summonId: string) =>
     request<CommandOptions>("GET", `/battles/${battleId}/summons/${encodeURIComponent(summonId)}/command-options`),
+  /** 灌注技能給主角的一隻召喚物時的技能選單（不能灌注的附中文原因；Phase 3-33d）。 */
+  infuseOptions: (battleId: string, summonId: string) =>
+    request<InfuseOptions>("GET", `/battles/${battleId}/summons/${encodeURIComponent(summonId)}/infuse-options`),
   glossary: () => request<Glossary>("GET", "/glossary"),
   createBattle: (body: CreateBattleRequest) => request<BattleResponse>("POST", "/battles", body),
   battle: (id: string) => request<BattleResponse>("GET", `/battles/${id}`),

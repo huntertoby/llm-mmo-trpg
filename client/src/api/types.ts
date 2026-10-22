@@ -86,6 +86,11 @@ export type SetSummonModeAction = Schemas["SetSummonMode"];
 export type CommandSummonAction = Schemas["CommandSummon"];
 export type CommandOptions = Schemas["CommandOptionsOut"];
 export type CommandOption = Schemas["CommandOptionOut"];
+/** 灌注技能（Phase 3-33d）：動作、技能選單與預覽中的灌注範圍。 */
+export type InfuseSkillAction = Schemas["InfuseSkill"];
+export type InfuseOptions = Schemas["InfuseOptionsOut"];
+export type InfuseSkillOption = Schemas["InfuseSkillOptionOut"];
+export type InfusionPreview = Schemas["InfusionPreviewOut"];
 export type InteractOption = Schemas["InteractOptionOut"];
 export type RunOption = Schemas["RunOptionOut"];
 export type TelegraphOut = Schemas["TelegraphOut"];

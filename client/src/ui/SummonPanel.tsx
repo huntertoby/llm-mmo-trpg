@@ -3,12 +3,19 @@
 // 指揮：伺服器給可到達的終點與各終點打得到的敵人，玩家點地圖上的藍格或用下拉清單選終點，
 // 再選要打的敵人（或只移動）；滑過按鈕預覽那個指揮。說明一律用共用浮動卡（PartTip，6.5.1），
 // 不用原生 title。
+// 灌注（Phase 3-33d）：「灌注（1 AP）」→ 伺服器給技能選單（不能灌注的變灰、附中文原因）→ 滑過技能預覽
+// 召喚物從自己位置施放的範圍 → 點一下灌注；有待施放的技能時列上顯示「待施放：〔技能〕」。
 import { useState } from "react";
-import type { Action, BattleView, CommandOption, CommandOptions, Pos, UnitView } from "../api/types";
+import type { Action, BattleView, CommandOption, CommandOptions, InfuseOptions, InfusionPreview, Pos, SkillCard, UnitView } from "../api/types";
 import {
   commandAction,
   commandBlocked,
   focusTargets,
+  INFUSE_HINT,
+  infuseAction,
+  infuseBlocked,
+  infuseRows,
+  infusionPreviewText,
   MODE_HINTS,
   MODE_LABELS,
   MODE_ORDER,
@@ -16,6 +23,7 @@ import {
   modeText,
   optionAt,
   optionLabel,
+  pendingInfusionText,
   setModeAction,
   type SummonMode,
 } from "../battle/summonControl";
@@ -23,6 +31,13 @@ import { remainingRounds } from "../battle/summons";
 import type { UnitNames } from "../battle/units";
 import { posKey } from "../battle/geometry";
 import { PartTip } from "./PartTip";
+import { SkillIconView } from "./SkillIconView";
+
+/** 進行中的灌注：哪隻、伺服器給的技能選單。 */
+export interface InfuseSession {
+  summonId: string;
+  options: InfuseOptions;
+}
 
 /** 進行中的指揮：哪隻、伺服器給的選項、目前選的終點（`null` ＝ 還沒選）。 */
 export interface CommandSession {
@@ -48,12 +63,23 @@ interface Props {
   onCommand(action: Action): void;
   /** 滑過指揮按鈕時預覽那個動作（離開時 `null`）。 */
   onPreviewAction(action: Action | null): void;
+  /** 灌注（3-33d）：進行中的選單、正在取得選單、開始／取消／送出。 */
+  infuse: InfuseSession | null;
+  loadingInfuse: boolean;
+  onStartInfuse(summonId: string): void;
+  onCancelInfuse(): void;
+  onInfuse(action: Action): void;
+  /** 目前滑過的灌注技能的預覽（召喚物會從哪裡、打誰）；沒有時 `null`。 */
+  infusePreview?: InfusionPreview | null;
+  /** 技能卡（選單的技能圖示用）。 */
+  cards?: Readonly<Record<string, SkillCard | undefined>>;
 }
 
 const MODES_TIP = MODE_ORDER.map((m) => `${MODE_LABELS[m]}：${MODE_HINTS[m]}`).join("\n");
 
 const TIP_TEXT = `${MODES_TIP}
-切換模式不花 AP、可以隨時換；指揮要花 1 AP，讓這隻召喚物立刻走到你指定的格子（用牠自己的移動力）並攻擊，不佔牠自己的回合；每隻每輪最多指揮 1 次。`;
+切換模式不花 AP、可以隨時換；指揮要花 1 AP，讓這隻召喚物立刻走到你指定的格子（用牠自己的移動力）並攻擊，不佔牠自己的回合；每隻每輪最多指揮 1 次。
+灌注要花 1 AP：${INFUSE_HINT}`;
 
 function ModeRow({ summon, view, names, enabled, onSetMode }: Pick<Props, "view" | "names" | "enabled" | "onSetMode"> & { summon: UnitView }) {
   const [picking, setPicking] = useState(false);
@@ -187,6 +213,65 @@ function CommandBox({
   );
 }
 
+function InfuseBox({
+  session,
+  summon,
+  hero,
+  enabled,
+  names,
+  cards,
+  infusePreview,
+  onInfuse,
+  onCancelInfuse,
+  onPreviewAction,
+}: Pick<Props, "hero" | "names" | "enabled" | "cards" | "infusePreview" | "onInfuse" | "onCancelInfuse" | "onPreviewAction"> & {
+  session: InfuseSession;
+  summon: UnitView;
+}) {
+  const rows = infuseRows(session.options);
+  return (
+    <div className="summon-infuse" aria-label={`灌注給 ${summon.name_zh}`}>
+      <div className="small muted">選一招技能（花 {session.options.ap_cost} AP＋技能的法力與冷卻）；滑過預覽牠從自己位置施放的範圍。</div>
+      {session.options.problem != null && <div className="small summon-infuse-warn">{session.options.problem}</div>}
+      <div className="summon-infuse-list" role="group" aria-label="可灌注的技能">
+        {rows.length === 0 && <span className="small muted">沒有主動技能。</span>}
+        {rows.map((r) => {
+          const action = infuseAction(hero.id, summon.id, r.skillId);
+          const blocked = !enabled || r.reason !== null;
+          return (
+            <div key={r.skillId} className="summon-infuse-row">
+              <PartTip cat="灌注技能" label={r.name} tip={r.reason ?? "點一下灌注；牠在下一個自己的回合開始時施放。"} pin={false}>
+                <button
+                  type="button"
+                  className={`skill-button infuse-skill${blocked ? " blocked" : ""}`}
+                  aria-disabled={blocked}
+                  disabled={blocked}
+                  onMouseEnter={() => onPreviewAction(blocked ? null : action)}
+                  onMouseLeave={() => onPreviewAction(null)}
+                  onFocus={() => onPreviewAction(blocked ? null : action)}
+                  onBlur={() => onPreviewAction(null)}
+                  onClick={() => !blocked && onInfuse(action)}
+                >
+                  <SkillIconView icon={cards?.[r.skillId]?.icon} size={28} className="skill-button-icon" />
+                  <span className="skill-name">{r.name}</span>
+                </button>
+              </PartTip>
+              {r.reason !== null && <span className="small muted infuse-reason">{r.reason}</span>}
+            </div>
+          );
+        })}
+      </div>
+      {infusePreview != null && infusePreview.summon_id === summon.id && (
+        <div className={`small ${infusePreview.no_target ? "summon-infuse-warn" : "summon-infuse-preview"}`}>{infusionPreviewText(infusePreview, names)}</div>
+      )}
+      <button type="button" className="small-button" onClick={onCancelInfuse}>
+        取消灌注
+      </button>
+      <span className="small muted">　Esc 也可取消</span>
+    </div>
+  );
+}
+
 export function SummonPanel(props: Props) {
   const { view, hero, summons, names, enabled, command, loadingCommand } = props;
   if (summons.length === 0) return null;
@@ -201,6 +286,9 @@ export function SummonPanel(props: Props) {
         const blocked = commandBlocked(view, hero, s, enabled);
         const left = remainingRounds(view, s);
         const active = command !== null && command.summonId === s.id;
+        const infusing = props.infuse !== null && props.infuse.summonId === s.id;
+        const infuseNo = infuseBlocked(view, hero, s, enabled);
+        const pending = pendingInfusionText(s);
         return (
           <div key={s.id} className={`summon-row${active ? " commanding" : ""}`}>
             <div className="summon-title">
@@ -214,6 +302,7 @@ export function SummonPanel(props: Props) {
               模式：<b>{modeText(s, names)}</b>
               {s.commanded && <span className="muted">　（本輪已指揮）</span>}
             </div>
+            {pending !== null && <div className="small summon-pending">{pending}</div>}
             <ModeRow summon={s} view={view} names={names} enabled={enabled} onSetMode={props.onSetMode} />
             <div className="summon-command-row">
               <PartTip cat="召喚物指揮" label={`指揮（${view.summon_command_ap_cost} AP）`} tip={blocked ?? "讓牠立刻走到指定格子並攻擊，不佔牠自己的回合；每隻每輪 1 次。"} pin={false}>
@@ -228,6 +317,33 @@ export function SummonPanel(props: Props) {
               </PartTip>
               {blocked !== null && !s.commanded && <span className="muted small">　{blocked}</span>}
             </div>
+            <div className="summon-command-row">
+              <PartTip cat="灌注技能" label={`灌注（${view.summon_infuse_ap_cost} AP）`} tip={infuseNo ?? INFUSE_HINT} pin={false}>
+                <button
+                  type="button"
+                  disabled={infuseNo !== null || props.loadingInfuse}
+                  aria-pressed={infusing}
+                  onClick={() => (infusing ? props.onCancelInfuse() : props.onStartInfuse(s.id))}
+                >
+                  灌注（{view.summon_infuse_ap_cost} AP）
+                </button>
+              </PartTip>
+              {infuseNo !== null && enabled && <span className="muted small">　{infuseNo}</span>}
+            </div>
+            {infusing && props.infuse !== null && (
+              <InfuseBox
+                session={props.infuse}
+                summon={s}
+                hero={hero}
+                names={names}
+                enabled={enabled}
+                cards={props.cards}
+                infusePreview={props.infusePreview ?? null}
+                onInfuse={props.onInfuse}
+                onCancelInfuse={props.onCancelInfuse}
+                onPreviewAction={props.onPreviewAction}
+              />
+            )}
             {active && command !== null && (
               <CommandBox
                 session={command}

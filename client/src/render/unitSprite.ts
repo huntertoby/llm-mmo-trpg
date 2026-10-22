@@ -13,7 +13,7 @@ import { label } from "./labels";
 import { DOLL_FOOT_Y, DOLL_H, DOLL_W } from "./paperdoll";
 import { statusTile, tileCanvas } from "./skillIcon";
 import { hasNoRing, humanoidSpec, resolveSummonLook, type ResolvedLook } from "./summonArt";
-import { downedLook, pulseAlpha, statusBadges, type DownedLook, type StatusBadge } from "./unitLook";
+import { downedLook, infusedBadge, pulseAlpha, statusBadges, type DownedLook, type InfusedBadge, type StatusBadge } from "./unitLook";
 
 const T = TILE_SIZE;
 
@@ -104,6 +104,17 @@ function statusBadge(badge: StatusBadge): Container {
   num.position.set(8, 8);
   num.style.stroke = { color: 0x000000, width: 3 };
   c.addChild(num);
+  return c;
+}
+
+/** 待施放的灌注技能（Phase 3-33d）：黑底圓＋紫框＋「灌」。 */
+function infusedMark(badge: InfusedBadge): Container {
+  const c = new Container();
+  c.position.set(badge.at.x * T, badge.at.y * T);
+  c.addChild(new Graphics().circle(0, 0, 9).fill({ color: 0x000000, alpha: 0.8 }).stroke({ width: 2, color: badge.color }));
+  const glyph = label(badge.glyph, 11, badge.color, true);
+  glyph.anchor.set(0.5);
+  c.addChild(glyph);
   return c;
 }
 
@@ -198,6 +209,8 @@ export function buildUnitSprite(art: ArtTextures, pulses: Pulses, u: UnitDraw): 
     c.addChild(badge);
   }
   for (const b of statusBadges(u)) c.addChild(statusBadge(b));
+  const infused = infusedBadge(u);
+  if (infused !== null) c.addChild(infusedMark(infused));
   c.addChild(hpBar(u));
   return c;
 }
