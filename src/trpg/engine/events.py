@@ -905,6 +905,8 @@ class SkillUsed(EventBase):
     tiles: tuple[Pos, ...]
     source: int = 0
     """花費的源力（傳說技能，Phase 3C-4a；之後另有 ``source_changed``）。"""
+    variant: str | None = None
+    """生效的戰場變奏 ID（Phase 3-25a，6.24）；基礎型態為 ``None``。"""
 
 
 class SkillFollowup(EventBase):

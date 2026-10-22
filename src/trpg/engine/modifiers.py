@@ -28,6 +28,7 @@ from trpg.content.skills import (
     SkillDef,
     default_affects,
 )
+from trpg.engine.actions import UseSkill
 from trpg.engine.activations import is_active
 from trpg.engine.gear import cap_damage_bonus, gear_damage_parts, gear_hit_bonus
 from trpg.engine.gear_enhance import (
@@ -39,6 +40,7 @@ from trpg.engine.gear_enhance import (
 from trpg.engine.skill_levels import grow_shape, leveled_skill
 from trpg.engine.skills.conditions import Subject, condition_met
 from trpg.engine.state import BattleState, UnitState
+from trpg.engine.variants import target_point, varied_skill
 from trpg.shared.types import Element
 
 __all__ = [
@@ -343,9 +345,15 @@ def skill_is_fiery(state: BattleState, unit: UnitState, skill: SkillDef) -> bool
 # ---------------------------------------------------------------------------
 
 
-def acting_skill(state: BattleState, unit: UnitState, skill_id: str) -> SkillDef:
-    """``unit`` 施放 ``skill_id`` 時實際使用的技能（變形後；:func:`shaped_skill`）。"""
-    return shaped_skill(state, unit, state.ruleset.skill_def(skill_id))
+def acting_skill(
+    state: BattleState, unit: UnitState, skill_id: str, action: UseSkill | None = None
+) -> SkillDef:
+    """``unit`` 施放 ``skill_id`` 時實際使用的技能：基礎 → 戰場變奏（Phase 3-25a，依 ``action``
+    的目標點選型態；沒給 ``action`` 時是基礎型態）→ 技能等級 → 修正（:func:`shaped_skill`）。"""
+    skill = state.ruleset.skill_def(skill_id)
+    if action is not None and skill.variants:
+        skill = varied_skill(state, unit, skill, target_point(state, action))[0]
+    return shaped_skill(state, unit, skill)
 
 
 def shaped_skill(state: BattleState, unit: UnitState, skill: SkillDef) -> SkillDef:

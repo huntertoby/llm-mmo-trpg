@@ -512,8 +512,12 @@ def _skill_used(e: SkillUsed, v: _View) -> str:
         costs.append(f"冷卻 {e.cooldown} 回合")
     if e.source:
         costs.append(f"源力 {e.source}")
+    form = ""
+    if e.variant is not None:  # 戰場變奏（Phase 3-25a）：「（型態名）」
+        form = f"（{v.state.ruleset.skill_def(e.skill_id).variant(e.variant).name_zh}）"
     return (
-        f"  {v.name[e.unit_id]} 施放「{e.name_zh}」（{'，'.join(costs)}）→ 影響 {len(e.tiles)} 格"
+        f"  {v.name[e.unit_id]} 施放「{e.name_zh}」{form}（{'，'.join(costs)}）"
+        f"→ 影響 {len(e.tiles)} 格"
     )
 
 

@@ -192,6 +192,7 @@ from trpg.engine.stacks import add_stacks, consume_stacks
 from trpg.engine.state import BattleState, LastCast, TrapState, UnitState, ZoneState
 from trpg.engine.summons import summon_unit
 from trpg.engine.traps import place_trap, reveal_traps
+from trpg.engine.variants import target_point, varied_skill
 from trpg.engine.weapon_traits import gunshot_reveals, reveal_after_gunshot, spend_ammo
 from trpg.engine.zones import create_zone, zone_spec
 from trpg.shared.errors import IllegalActionError
@@ -232,7 +233,9 @@ def use_skill(ctx: Ctx, caster: UnitState, action: UseSkill) -> None:
         skill = ctx.rules.skill_def(action.skill_id)
     except KeyError:
         raise IllegalActionError(f"找不到技能：{action.skill_id}") from None
-    skill = modifiers.shaped_skill(ctx.state, caster, skill)  # 修正規則的變形（3D-3）
+    # 戰場變奏（3-25a）：依目標點選型態，再套技能等級與修正規則的變形（3D-3）
+    skill, variant = varied_skill(ctx.state, caster, skill, target_point(ctx.state, action))
+    skill = modifiers.shaped_skill(ctx.state, caster, skill)
     if skill.id not in caster.all_skills:
         raise IllegalActionError(f"{caster.name_zh} 沒有裝備技能：{skill.name_zh}")
     problem = skill_problem(ctx.state, caster, skill)
@@ -249,7 +252,7 @@ def use_skill(ctx: Ctx, caster: UnitState, action: UseSkill) -> None:
     gun = fires_gun(caster, skill)
     reveal = gun and gunshot_reveals(ctx.state, caster)  # 槍聲：開火前是隱蔽的，開火後被揭露
     with holding(ctx):  # 被動的觸發等整個技能結算完才處理
-        _pay_costs(ctx, caster, skill, paid_area)
+        _pay_costs(ctx, caster, skill, paid_area, variant=variant)
         if gun:
             spend_ammo(caster)  # 火器武器技也算開火：用掉 1 發（3-24c）
         if skill.is_activatable:  # 常駐類傳說（Phase 3D-6）：施放＝啟動，沒有立即的效果
@@ -666,7 +669,9 @@ def use_reaction_skill(
         ctx.trigger_depth = outer
 
 
-def _pay_costs(ctx: Ctx, caster: UnitState, skill: SkillDef, area: SkillArea) -> None:
+def _pay_costs(
+    ctx: Ctx, caster: UnitState, skill: SkillDef, area: SkillArea, *, variant: str | None = None
+) -> None:
     ap = skill_ap_cost(ctx.state, skill, caster)
     paid: PaidCost = pay_skill_cost(caster, skill, ap=ap)
     ctx.emit(
@@ -681,6 +686,7 @@ def _pay_costs(ctx: Ctx, caster: UnitState, skill: SkillDef, area: SkillArea) ->
         cooldown=paid.cooldown,
         tiles=tuple(Pos(x=x, y=y) for x, y in area.tiles),
         source=skill.cost.source or 0,
+        variant=variant,
     )
     if paid.cooldown is not None:
         ctx.emit(

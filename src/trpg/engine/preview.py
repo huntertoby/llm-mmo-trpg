@@ -724,10 +724,10 @@ def _maneuver_chance(state: BattleState, actor: UnitState, action: Shove | Trip)
     return hit
 
 
-def _preview_skill(state: BattleState, actor: UnitState, skill_id: str) -> SkillDef:
+def _preview_skill(state: BattleState, actor: UnitState, action: UseSkill) -> SkillDef:
     """命中與傷害估計用的技能：複合技能（Phase 3F-3a）把兩段的效果接在一起（位移段、動作段的命中
     判定都以同一個技能 ID 記錄）；其他技能就是施放時的技能。"""
-    skill = modifiers.acting_skill(state, actor, skill_id)
+    skill = modifiers.acting_skill(state, actor, action.skill_id, action)
     follow = skill.followup_skill()
     if follow is None:
         return skill
@@ -737,7 +737,7 @@ def _preview_skill(state: BattleState, actor: UnitState, skill_id: str) -> Skill
 def _followup_when(state: BattleState, actor: UnitState, action: Action) -> str | None:
     if not isinstance(action, UseSkill):
         return None
-    skill = modifiers.acting_skill(state, actor, action.skill_id)
+    skill = modifiers.acting_skill(state, actor, action.skill_id, action)
     return None if skill.followup is None else skill.followup.when
 
 
@@ -763,7 +763,7 @@ def _followup_info(
     模擬裡第二段的 ``skill_followup`` 事件（第二段沒有結算——沒有觸發、或還沒選目標——時為空）。"""
     if not isinstance(action, UseSkill):
         return None, (), ()
-    skill = modifiers.acting_skill(state, actor, action.skill_id)
+    skill = modifiers.acting_skill(state, actor, action.skill_id, action)
     if skill.followup is None:
         return None, (), ()
     if skill.followup.when != "after_move":
@@ -787,7 +787,7 @@ def _damage_expectation(  # noqa: PLR0917
 ) -> DamageRange | None:
     """技能對 ``target_id`` 的傷害範圍：最少／最多取自模擬事件，期望值依效果的骰子分布精確計算
     （事件與效果數量對不上時退回最少與最多的平均）。"""
-    skill = _preview_skill(state, actor, action.skill_id)
+    skill = _preview_skill(state, actor, action)
 
     def direct(events: list[EventBase]) -> list[DamageDealt]:
         return [
@@ -929,7 +929,7 @@ def _skill_targets(
     min_events: list[EventBase],
     max_events: list[EventBase],
 ) -> tuple[TargetPreview, ...]:
-    skill = _preview_skill(state, actor, action.skill_id)
+    skill = _preview_skill(state, actor, action)
     profile = skill_profile(state, actor, skill)
     use = modifiers.skill_use(skill)
     core = state.ruleset.core
@@ -1027,7 +1027,7 @@ def _cost_and_reach(
     if isinstance(action, Interact):
         return action_ap_cost(state, actor, modifiers.INTERACT), None
     if isinstance(action, UseSkill):
-        skill = modifiers.acting_skill(state, actor, action.skill_id)
+        skill = modifiers.acting_skill(state, actor, action.skill_id, action)
         reach = shape_reach(state, skill, actor) if skill.shape.range is not None else None
         return skill_ap_cost(state, skill, actor), reach
     return None, None
@@ -1035,7 +1035,7 @@ def _cost_and_reach(
 
 def _pierce_info(state: BattleState, actor: UnitState, action: UseSkill) -> PierceInfo | None:
     """穿透技能的射線（只讀目前狀態）；不是穿透的技能為 ``None``。"""
-    skill = modifiers.acting_skill(state, actor, action.skill_id)
+    skill = modifiers.acting_skill(state, actor, action.skill_id, action)
     if not pierce_active(state, actor, skill):
         return None
     area = compute_area(state, actor, skill, action)
@@ -1160,7 +1160,7 @@ def _displace_checks(
     state: BattleState, actor: UnitState, action: UseSkill
 ) -> tuple[DisplaceCheck, ...]:
     """位移類技能的抵抗判定：每個敵方被移動的單位（依單位 ID）的精確成功率。"""
-    skill = modifiers.acting_skill(state, actor, action.skill_id)
+    skill = modifiers.acting_skill(state, actor, action.skill_id, action)
     kinds = {e.type for e in skill.effects}
     if not kinds & {SWAP, SWAP_ANY, TELEPORT_TARGET}:
         return ()
@@ -1235,7 +1235,7 @@ def _gamble_spec(state: BattleState, actor: UnitState, action: Action) -> Effect
     """動作是帶賭注的技能時，它的 ``gamble`` 效果；否則 ``None``。"""
     if not isinstance(action, UseSkill):
         return None
-    skill = modifiers.acting_skill(state, actor, action.skill_id)
+    skill = modifiers.acting_skill(state, actor, action.skill_id, action)
     return next((e for e in skill.effects if e.type == GAMBLE), None)
 
 
@@ -1289,7 +1289,7 @@ def _miss_notes(state: BattleState, actor: UnitState, action: Action) -> tuple[s
     """失手反噬的說明（Phase 3D-7a）：每個反噬效果一行。"""
     if not isinstance(action, UseSkill):
         return ()
-    skill = modifiers.acting_skill(state, actor, action.skill_id)
+    skill = modifiers.acting_skill(state, actor, action.skill_id, action)
     lines: list[str] = []
     for sub in skill.cost.on_miss:
         if sub.type == "apply_status" and sub.status is not None:
@@ -1424,7 +1424,7 @@ def _build(
     landing, follow_tiles, follow_units = _followup_info(state, actor, action, max_events)
     if isinstance(action, UseSkill):
         area = compute_area(
-            state, actor, modifiers.acting_skill(state, actor, action.skill_id), action
+            state, actor, modifiers.acting_skill(state, actor, action.skill_id, action), action
         )
         tiles = tuple(sorted({*tiles, *area.tiles, *follow_tiles}, key=lambda p: (p[1], p[0])))
         units = tuple(sorted({*units, *area.units, *follow_units}))
@@ -1441,7 +1441,7 @@ def _build(
     if isinstance(action, UseSkill):
         checks = _displace_checks(state, actor, action)
         notes += _displace_notes(
-            state, actor, action, modifiers.acting_skill(state, actor, action.skill_id)
+            state, actor, action, modifiers.acting_skill(state, actor, action.skill_id, action)
         )
     chance: Fraction | None = None
     if checks:

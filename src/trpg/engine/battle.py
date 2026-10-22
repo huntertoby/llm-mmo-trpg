@@ -114,11 +114,10 @@ from trpg.engine.setup import BattleSetup, BattleSetupError, starting_source
 from trpg.engine.skill_triggers import collect_move, settle
 from trpg.engine.skills.conditions import Subject
 from trpg.engine.skills.followups import second_problem
+from trpg.engine.skills.forms import has_skill_selection, skill_selections
 from trpg.engine.skills.interpreter import use_skill
 from trpg.engine.skills.targeting import (
     SkillArea,
-    has_selection,
-    selections,
     skill_problem,
 )
 from trpg.engine.state import (
@@ -1210,7 +1209,7 @@ def _skill_actions(
     """可用的技能動作：依技能 ID，再依選取（目標 ID／座標／方向）排序。"""
     actions: list[Action] = []
     for skill in _usable_skills(state, unit):
-        for action, area in selections(state, unit, skill):
+        for action, area in skill_selections(state, unit, skill):
             if expand_copy and has_copy_effect(skill):
                 for copy, copy_area in copy_selections(state, unit):
                     full = action.model_copy(update={"copy_cast": copy})
@@ -1253,7 +1252,7 @@ def _has_attack_to_aim(state: BattleState, unit: UnitState) -> bool:
         return False
     if any(attack_problem(state, unit, t) is None for t in state.living_units()):
         return True
-    return any(has_selection(state, unit, s) for s in _usable_skills(state, unit))
+    return any(has_skill_selection(state, unit, s) for s in _usable_skills(state, unit))
 
 
 def _has_basic_action(state: BattleState, unit: UnitState) -> bool:
@@ -1287,7 +1286,7 @@ def _has_ap_action(state: BattleState, unit: UnitState) -> bool:
         for t in state.living_units()
     ):
         return True
-    if any(has_selection(state, unit, s) for s in _usable_skills(state, unit)):
+    if any(has_skill_selection(state, unit, s) for s in _usable_skills(state, unit)):
         return True
     return bool(interact_actions(state, unit))
 
