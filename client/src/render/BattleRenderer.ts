@@ -31,7 +31,7 @@ import { RING } from "./artPalette";
 import { ArtTextures } from "./artTextures";
 import { heightBadgeText, objectArtSpec, objectKinds, tileArtSpec } from "./artSpecs";
 import { hasObjectArt } from "./objectArt";
-import { castEffects, hitEffects, shakeEffect, warpEffects, type Effect } from "./vfxEffects";
+import { blastEffect, castEffects, hitEffects, shakeEffect, warpEffects, type Effect } from "./vfxEffects";
 import { drawCliff, drawEdges, liftEffects, silhouette } from "./heightArt";
 import { RowStack } from "./rowLayers";
 import { clearLayer, label } from "./labels";
@@ -715,6 +715,7 @@ export class BattleRenderer {
     const at = (p: Pos) => this.center(p);
     for (const cast of vfx.casts) effects.push(...castEffects(cast, now, impactMs, at));
     for (const hit of vfx.hits) effects.push(...hitEffects(hit, now, impactMs, auraHits, at));
+    for (const blast of vfx.blasts) effects.push(blastEffect(blast, now, impactMs, at));
     if (shake && vfx.shake > 0 && vfx.hits.length > 0) {
       const first = Math.min(...vfx.hits.map((h) => h.atMs));
       const stage = this.app.stage;

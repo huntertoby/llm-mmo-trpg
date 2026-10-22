@@ -107,12 +107,22 @@ export interface VfxHit {
   atMs: number;
 }
 
+/** 符文被引爆的爆發（3-28，沿用「爆發」型）：在符文所在格迸出元素色的光（標籤符文用預設色）。 */
+export interface VfxBlast {
+  pos: Pos;
+  element: string;
+  /** 爆發開始的時間（毫秒，相對這一步；接在最後一段技能命中的時間）。 */
+  atMs: number;
+}
+
 /** 震動強度：0 不震、1 輕微、2 暴擊。 */
 export type ShakeLevel = 0 | 1 | 2;
 
 export interface StepVfx {
   casts: VfxCast[];
   hits: VfxHit[];
+  /** 被引爆的符文（3-28）。 */
+  blasts: VfxBlast[];
   shake: ShakeLevel;
   /** 命中前的準備時間（蓄力 ＋ 飛行）；播放時先等這段，再更新畫面與浮動數字。 */
   leadMs: number;
@@ -398,9 +408,15 @@ export function vfxFor(events: readonly Record<string, unknown>[], view: BattleV
   const at: Locate = (id) => (typeof id === "string" ? (positions.get(id) ?? null) : null);
   const segments: Segment[] = [];
   const loose: VfxHit[] = [];
+  const blasts: VfxBlast[] = [];
   let current: Segment | null = null;
   for (const raw of events) {
     const e = asEvent(raw);
+    if (e.type === "rune_removed" && e.reason === "detonated") {
+      const pos = posOf(e.pos);
+      if (pos !== null) blasts.push({ pos, element: typeof e.element === "string" ? e.element : DEFAULT_VFX_KEY, atMs: 0 });
+      continue;
+    }
     if (opensSegment(e, current)) {
       const seg = openSegment(e, at, cards);
       if (seg !== null) {
@@ -412,10 +428,10 @@ export function vfxFor(events: readonly Record<string, unknown>[], view: BattleV
     const hit = absorb(current, e, at);
     if (hit !== null) loose.push(hit);
   }
-  return assemble(segments, loose);
+  return assemble(segments, loose, blasts);
 }
 
-function assemble(segments: readonly Segment[], loose: readonly VfxHit[]): StepVfx {
+function assemble(segments: readonly Segment[], loose: readonly VfxHit[], rawBlasts: readonly VfxBlast[]): StepVfx {
   const casts: VfxCast[] = [];
   const hits: VfxHit[] = [];
   let clock = 0;
@@ -426,8 +442,9 @@ function assemble(segments: readonly Segment[], loose: readonly VfxHit[]): StepV
     clock = cast.impactMs;
   }
   for (const h of loose) hits.push({ ...h, atMs: clock });
+  const blasts = rawBlasts.map((b) => ({ ...b, atMs: clock }));
   const shake: ShakeLevel = hits.some((h) => h.crit) ? 2 : segments.some((s) => s.hits.length > 0) ? 1 : 0;
-  return { casts, hits, shake, leadMs: clock };
+  return { casts, hits, blasts, shake, leadMs: clock };
 }
 
 /** 依播放速度縮放所有時間（慢 2、正常 1、快 0.5）。 */
@@ -436,6 +453,7 @@ export function scaleVfx(vfx: StepVfx, scale: number): StepVfx {
   return {
     casts: vfx.casts.map((c) => ({ ...c, startMs: s(c.startMs), impactMs: s(c.impactMs), chargeMs: s(c.chargeMs) })),
     hits: vfx.hits.map((h) => ({ ...h, atMs: s(h.atMs) })),
+    blasts: vfx.blasts.map((b) => ({ ...b, atMs: s(b.atMs) })),
     shake: vfx.shake,
     leadMs: s(vfx.leadMs),
   };
@@ -443,7 +461,7 @@ export function scaleVfx(vfx: StepVfx, scale: number): StepVfx {
 
 /** 沒有任何特效（略過、純移動、結束回合）。 */
 export function isEmptyVfx(vfx: StepVfx): boolean {
-  return vfx.casts.length === 0 && vfx.hits.length === 0;
+  return vfx.casts.length === 0 && vfx.hits.length === 0 && vfx.blasts.length === 0;
 }
 
 // ---- 傳送的消散與出現（3-18b） -------------------------------------------------

@@ -1,7 +1,7 @@
 // Phase 3-18b 特效補強：生成水表面用水花配色、無傷害技能依施加的狀態上色、傳送的消散與出現、傳說技能較華麗的蓄力。
 import { describe, expect, it } from "vitest";
 import type { BattleView, Pos, SkillCard } from "../api/types";
-import { scaleVfx, vfxFor, VFX_TIMING, warpPlan } from "./vfx";
+import { isEmptyVfx, scaleVfx, vfxFor, VFX_TIMING, warpPlan } from "./vfx";
 import { colorVfx, elementVfx, statusOfVfxKey, statusVfxKey, WATER_VFX_KEY } from "./vfxPalette";
 import { paletteOf } from "../render/statusVfx";
 import { statusColor } from "../render/skillParts";
@@ -82,7 +82,24 @@ describe("傳說技能較華麗的蓄力", () => {
     expect(cast({ icon: { rarity: "legendary", segments: [] } }).legendary).toBe(true);
     const basic = vfxFor([{ type: "attack_rolled", attacker_id: CASTER, target_id: FOE, hit: true }], units, {}).casts[0]!;
     expect(basic).toMatchObject({ legendary: false, chargeMs: 0 });
-    const fast = scaleVfx({ casts: [cast({ rarity_id: "legendary" })], hits: [], shake: 0, leadMs: 0 }, 0.5);
+    const fast = scaleVfx({ casts: [cast({ rarity_id: "legendary" })], hits: [], blasts: [], shake: 0, leadMs: 0 }, 0.5);
     expect(fast.casts[0]!.chargeMs).toBe(Math.round(VFX_TIMING.chargeLegendary * 0.5));
+  });
+});
+
+describe("rune detonation burst (3-28)", () => {
+  const view = { units: [{ id: "u1", pos: { x: 1, y: 1 } }] } as unknown as Parameters<typeof vfxFor>[1];
+
+  it("turns a detonated rune into a burst at the rune tile in the element colour", () => {
+    const vfx = vfxFor([{ type: "rune_removed", reason: "detonated", pos: { x: 3, y: 2 }, element: "fire", rune_id: 1, owner_id: "u1" }], view, {});
+    expect(vfx.blasts).toEqual([{ pos: { x: 3, y: 2 }, element: "fire", atMs: 0 }]);
+    expect(isEmptyVfx(vfx)).toBe(false);
+  });
+
+  it("ignores runes that merely expired and scales with playback speed", () => {
+    expect(vfxFor([{ type: "rune_removed", reason: "expired", pos: { x: 3, y: 2 }, element: "fire" }], view, {}).blasts).toEqual([]);
+    const tag = vfxFor([{ type: "rune_removed", reason: "detonated", pos: { x: 0, y: 0 }, element: null }], view, {});
+    expect(tag.blasts[0]?.element).toBe("default");
+    expect(scaleVfx({ ...tag, blasts: [{ pos: { x: 0, y: 0 }, element: "x", atMs: 100 }] }, 0.5).blasts[0]?.atMs).toBe(50);
   });
 });

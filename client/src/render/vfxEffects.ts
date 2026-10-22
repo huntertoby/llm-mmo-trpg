@@ -3,7 +3,7 @@
 // 的效果迴圈銷毀。座標一律是模型像素；格子中心由呼叫端的 `at` 給（3-19 起含高度抬高，預設 `tileCenter`）。
 import { Container, Graphics } from "pixi.js";
 import type { Pos } from "../api/types";
-import { chebyshev, type VfxCast, type VfxHit, type VfxWarp } from "../battle/vfx";
+import { chebyshev, type VfxBlast, type VfxCast, type VfxHit, type VfxWarp } from "../battle/vfx";
 import { jitter, particleAt, type ElementVfx, type ParticleKind } from "../battle/vfxPalette";
 import { paletteOf } from "./statusVfx";
 import { TILE_SIZE, tileCenter } from "../battle/geometry";
@@ -376,6 +376,11 @@ export function hitEffects(hit: VfxHit, now: number, impactMs: number, withBurst
   const out = [flash];
   if (withBurst) out.push(burstEffect(hit.pos, paletteOf(hit.element), start, impactMs, hit.crit ? 1.6 : 1, 0.8, at));
   return out;
+}
+
+/** 符文被引爆（3-28）：在符文格迸出元素色的爆發（沿用爆發型，比一般命中大一點）。 */
+export function blastEffect(blast: VfxBlast, now: number, impactMs: number, at: Locate = tileCenter): Effect {
+  return burstEffect(blast.pos, paletteOf(blast.element), now + blast.atMs, impactMs, 1.3, 1.2, at);
 }
 
 /** 畫面震動：振幅隨時間遞減；`apply` 設定場景位移，結束時歸零。 */
