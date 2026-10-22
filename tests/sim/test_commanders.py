@@ -133,6 +133,7 @@ def test_registry_and_pickling() -> None:
         CommandedPolicyFactory(library().ai_profiles, "nope")
 
 
+@pytest.mark.xdist_group("sim_pool")
 @pytest.mark.slow
 def test_commanded_batch_is_deterministic_and_jobs_independent() -> None:
     lib = library()

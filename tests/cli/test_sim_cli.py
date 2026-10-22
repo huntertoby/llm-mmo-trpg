@@ -37,6 +37,7 @@ def test_sim_maps_prints_sections_and_timing_goes_to_stderr(
     assert "秒" not in out and "執行時間" in err
 
 
+@pytest.mark.xdist_group("sim_pool")
 @pytest.mark.slow
 def test_stdout_is_identical_across_runs_and_jobs(capsys: pytest.CaptureFixture[str]) -> None:
     argv = ["sim", "maps", "--maps", "oil_depot", "--seeds", "3", "--seed-start", "5"]

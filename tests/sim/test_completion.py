@@ -46,6 +46,7 @@ def test_fast_completion_run_has_the_expected_shape_and_no_anomalies() -> None:
     assert COMPLETION_ANOMALY_KINDS == ("exception", "max_actions", "draw")
 
 
+@pytest.mark.xdist_group("sim_pool")
 @pytest.mark.slow
 def test_completion_output_is_identical_between_runs_and_jobs() -> None:
     lib = library()
@@ -81,6 +82,7 @@ def test_cli_prints_the_report_to_stdout(capsys: pytest.CaptureFixture[str]) -> 
     assert "執行時間" in captured.err and "執行時間" not in captured.out
 
 
+@pytest.mark.xdist_group("sim_pool")
 @pytest.mark.slow
 def test_every_map_and_config_completes_without_exception_max_actions_or_draw() -> None:
     maps = default_sim_maps(library())

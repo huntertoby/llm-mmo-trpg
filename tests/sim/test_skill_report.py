@@ -122,6 +122,7 @@ def test_random_cases_are_reproducible_and_demo_cases_cover_the_library() -> Non
     assert len(demo_cases(lib)) == len(lib.skills)
 
 
+@pytest.mark.xdist_group("sim_pool")
 def test_a_real_small_skill_report_is_deterministic_and_independent_of_jobs() -> None:
     lib = library()
     cases = demo_cases(lib)[:2] + random_cases(lib, 2)

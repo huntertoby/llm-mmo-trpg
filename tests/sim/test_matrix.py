@@ -181,6 +181,7 @@ def test_specs_put_the_build_hero_first_then_the_companions_against_the_encounte
         matrix_specs(lib, ["nope"], ["open_plain"], [0])
 
 
+@pytest.mark.xdist_group("sim_pool")
 @pytest.mark.slow
 def test_a_real_matrix_is_deterministic_and_independent_of_jobs() -> None:
     lib = library()
@@ -195,6 +196,7 @@ def test_a_real_matrix_is_deterministic_and_independent_of_jobs() -> None:
     assert 0.0 <= cell.hero_survival <= 1.0 and cell.rank in (1, 2)
 
 
+@pytest.mark.xdist_group("sim_pool")
 @pytest.mark.slow
 def test_matrix_cli_output_is_identical_between_runs_and_jobs(
     capsys: pytest.CaptureFixture[str],

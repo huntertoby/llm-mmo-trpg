@@ -12,7 +12,6 @@
 
 from __future__ import annotations
 
-import multiprocessing
 import statistics
 from collections import Counter
 from collections.abc import Callable, Sequence
@@ -38,6 +37,7 @@ from trpg.sim.metrics import (
     battle_metrics,
     run_tracked,
 )
+from trpg.sim.parallel import run_tasks
 
 __all__ = [
     "ANOMALY_KINDS",
@@ -162,33 +162,16 @@ def run_one(spec: BatchSpec, seed: int) -> BattleOutcome:
         return BattleOutcome(seed, error_kind="exception", error_text=_last_line(exc))
 
 
-_WORKER_SPECS: tuple[BatchSpec, ...] = ()
-
-
-def _worker_init(specs: tuple[BatchSpec, ...]) -> None:
-    global _WORKER_SPECS  # noqa: PLW0603 - 行程初始化：每個工作行程只收一次規格
-    _WORKER_SPECS = specs
-
-
-def _worker(task: tuple[int, int]) -> tuple[int, BattleOutcome]:
+def _worker(specs: tuple[BatchSpec, ...], task: tuple[int, int]) -> tuple[int, BattleOutcome]:
     index, seed = task
-    return index, run_one(_WORKER_SPECS[index], seed)
+    return index, run_one(specs[index], seed)
 
 
 def run_outcomes(specs: Sequence[BatchSpec], *, jobs: int = 1) -> list[list[BattleOutcome]]:
     """執行多批戰鬥（共用同一組工作行程）；回傳與 ``specs`` 同順序、每批依種子排序的結果。"""
-    if jobs < 1:
-        raise ValueError("jobs 必須 >= 1")
     spec_list = tuple(specs)
     tasks = [(i, seed) for i, spec in enumerate(spec_list) for seed in spec.seeds]
-    results: list[tuple[int, BattleOutcome]]
-    if jobs == 1 or len(tasks) <= 1:
-        results = [(i, run_one(spec_list[i], seed)) for i, seed in tasks]
-    else:
-        with multiprocessing.get_context("spawn").Pool(
-            min(jobs, len(tasks)), initializer=_worker_init, initargs=(spec_list,)
-        ) as pool:
-            results = pool.map(_worker, tasks, chunksize=1)
+    results = run_tasks(_worker, spec_list, tasks, jobs=jobs)
     grouped: dict[int, list[BattleOutcome]] = {i: [] for i in range(len(spec_list))}
     for index, outcome in results:
         grouped[index].append(outcome)
