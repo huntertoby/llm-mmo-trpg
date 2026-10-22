@@ -1383,6 +1383,41 @@ export interface components {
              */
             appearance: components["schemas"]["AppearanceView"];
         };
+        /**
+         * EvolutionChoiceOut
+         * @description 一個升到分歧進化那一級時要二選一的技能（已達門檻、還沒進化）。
+         */
+        EvolutionChoiceOut: {
+            /** Skill Id */
+            skill_id: string;
+            /** Name Zh */
+            name_zh: string;
+            /** Options */
+            options: components["schemas"]["EvolutionOptionOut"][];
+        };
+        /**
+         * EvolutionOptionOut
+         * @description 一支分歧進化（Phase 3-26b）：``index`` 是送 ``evolve`` 時的索引。
+         */
+        EvolutionOptionOut: {
+            /** Index */
+            index: number;
+            /**
+             * Branch
+             * @enum {string}
+             */
+            branch: "deepen" | "bridge";
+            /** Label Zh */
+            label_zh: string;
+            /** Template */
+            template: string;
+            keyword: components["schemas"]["KeywordRef"] | null;
+            /** Summary Zh */
+            summary_zh: string;
+            /** Fallback */
+            fallback: boolean;
+            card: components["schemas"]["SkillCard"];
+        };
         /** @enum {string} */
         Facing: "north" | "east" | "south" | "west";
         /**
@@ -1939,6 +1974,11 @@ export interface components {
              * @default []
              */
             bench: components["schemas"]["SkillCard"][];
+            /**
+             * Evolutions
+             * @default []
+             */
+            evolutions: components["schemas"]["EvolutionChoiceOut"][];
         };
         /**
          * HistoryStepOut
@@ -2149,6 +2189,10 @@ export interface components {
             replace?: string | null;
             /** Levels */
             levels?: {
+                [key: string]: number;
+            };
+            /** Evolve */
+            evolve?: {
                 [key: string]: number;
             };
         };
@@ -3015,6 +3059,11 @@ export interface components {
             trait_level: number;
             /** Evolve Level */
             evolve_level: number;
+            /**
+             * Evolve Uses
+             * @default 0
+             */
+            evolve_uses: number;
         };
         /**
          * SkillIcon
@@ -3081,6 +3130,20 @@ export interface components {
             trait_active: boolean;
             /** Cost */
             cost: number;
+            /**
+             * Uses
+             * @default 0
+             */
+            uses: number;
+            /**
+             * Evolve Uses
+             * @default 0
+             */
+            evolve_uses: number;
+            /** Evolved From Zh */
+            evolved_from_zh?: string | null;
+            /** Blocked Text */
+            blocked_text?: string | null;
         };
         /** @enum {string} */
         SkillRarity: "common" | "rare" | "epic" | "legendary";
@@ -3109,6 +3172,10 @@ export interface components {
             kind: "spend";
             /** Levels */
             levels?: {
+                [key: string]: number;
+            };
+            /** Evolve */
+            evolve?: {
                 [key: string]: number;
             };
         };

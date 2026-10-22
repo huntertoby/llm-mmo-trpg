@@ -5,7 +5,7 @@
 - ``offers``：升級與重骰的技能候選（隨機組合器）、裝備上限檢查。
 - ``progress``：開戰設定、戰後結算、選擇、下一個節點（純函式）。
 - ``battle``：進行中的戰鬥（``setup ＋ seed ＋ 步驟 ＋ 指令``，可重播）。
-- ``save``：存檔格式 ``trpg-run/4``。
+- ``save``：存檔格式 ``trpg-run/5``。
 - ``auto``：AI 代打整輪。
 
 參數在 ``content/roguelite.yaml``。依賴：可匯入 ``engine``、``content``、``skillgen``、``shared``；

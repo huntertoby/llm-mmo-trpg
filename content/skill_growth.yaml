@@ -16,5 +16,8 @@ trait_area_delta: 1
 trait_cooldown_delta: 1
 trait_min_cooldown: 2
 
-# 3 級分歧進化的門檻（用過次數）在 3-26b 才使用，先保留設定位置（原型 3、大世界 10）。
+# 3 級分歧進化（Phase 3-26b）：升到 evolve_level 時，這招在這一輪要用過 evolve_uses 次（確認你真的在用），
+# 並從兩支進化（加深／橋接，模板在 skill_evolution.yaml）選一支。大世界的門檻是 evolve_uses_world（之後用）。
 evolve_level: 3
+evolve_uses: 3
+evolve_uses_world: 10

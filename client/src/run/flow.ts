@@ -240,11 +240,13 @@ export function pickChoice(
   pick: number | null,
   replace: string | null,
   levels: Readonly<Record<string, number>> = {},
+  evolve: Readonly<Record<string, number>> = {},
 ): RunChoice {
   if (view.screen === "level_up") {
     const base = { kind: "level_up" as const, attributes: cleanAllocation(alloc), pick, replace };
-    // 選完候選之後順便花技能點（Phase 3-26a）；沒有要花的就不帶
-    return Object.keys(levels).length > 0 ? { ...base, levels: { ...levels } } : base;
+    // 選完候選之後順便花技能點（Phase 3-26a）與分歧進化的選擇（3-26b）；沒有要花的就不帶
+    const withLevels = Object.keys(levels).length > 0 ? { ...base, levels: { ...levels } } : base;
+    return Object.keys(evolve).length > 0 ? { ...withLevels, evolve: { ...evolve } } : withLevels;
   }
   return { kind: "pick", pick, replace };
 }

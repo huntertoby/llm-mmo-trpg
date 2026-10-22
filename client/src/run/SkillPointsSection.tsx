@@ -4,7 +4,7 @@ import { useState } from "react";
 import type { RunChoice, RunHero } from "../api/types";
 import { LoadoutEditor } from "./LoadoutEditor";
 import { SkillGrowthPanel } from "./SkillGrowthPanel";
-import { loadoutChoice, spendChoice, type LevelDraft } from "./skillGrowth";
+import { draftEvolve, loadoutChoice, spendChoice, type EvolveDraft, type LevelDraft } from "./skillGrowth";
 
 interface Props {
   hero: RunHero;
@@ -17,10 +17,14 @@ interface Props {
 
 export function SkillPointsSection({ hero, busy, onChoose, campfire = false }: Props) {
   const [draft, setDraft] = useState<LevelDraft>({});
+  const [evolve, setEvolve] = useState<EvolveDraft>({});
 
   async function send(choice: RunChoice) {
     const status = await onChoose(choice);
-    if (status === null) setDraft({});
+    if (status === null) {
+      setDraft({});
+      setEvolve({});
+    }
   }
 
   return (
@@ -29,8 +33,10 @@ export function SkillPointsSection({ hero, busy, onChoose, campfire = false }: P
         hero={hero}
         draft={draft}
         onDraft={setDraft}
+        evolve={evolve}
+        onEvolve={setEvolve}
         disabled={busy}
-        onConfirm={() => void send(spendChoice(draft))}
+        onConfirm={() => void send(spendChoice(draft, draftEvolve(hero, draft, evolve)))}
         onRespec={campfire ? () => void send({ kind: "respec" }) : undefined}
       />
       {campfire && (

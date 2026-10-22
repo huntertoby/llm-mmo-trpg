@@ -5,7 +5,7 @@ import { allocationComplete, offerGroupKey, pickChoice, levelUpReady, type Alloc
 import { AttributeAllocator } from "../run/AttributeAllocator";
 import { OfferPicker } from "../run/OfferPicker";
 import { SkillGrowthPanel } from "../run/SkillGrowthPanel";
-import { draftLevels, type LevelDraft } from "../run/skillGrowth";
+import { draftEvolve, draftLevels, missingEvolutions, type EvolveDraft, type LevelDraft } from "../run/skillGrowth";
 
 type Props = {
   run: RunResponse;
@@ -21,13 +21,20 @@ export function RunLevelUp({ run, view, busy, onChoose }: Props) {
   const [replace, setReplace] = useState<string | null>(null);
   const [force, setForce] = useState(false);
   const [draft, setDraft] = useState<LevelDraft>({});
-  const ready = levelUpReady(view.points, alloc, run.hero, view.offer, pick, replace, force);
+  const [evolve, setEvolve] = useState<EvolveDraft>({});
+  const ready =
+    levelUpReady(view.points, alloc, run.hero, view.offer, pick, replace, force) &&
+    missingEvolutions(run.hero, draft, evolve).length === 0;
 
   async function confirm() {
     // 技能點的分配跟著升級選擇一起送出；被換掉的技能不能升級（它會進備用）
     const levels = draftLevels(draft);
-    if (replace !== null) delete levels[replace];
-    const status = await onChoose(pickChoice(view, alloc, pick, replace, levels));
+    const evolves = draftEvolve(run.hero, draft, evolve);
+    if (replace !== null) {
+      delete levels[replace];
+      delete evolves[replace];
+    }
+    const status = await onChoose(pickChoice(view, alloc, pick, replace, levels, evolves));
     // 後端另有前端不知道的限制（例如規則改變型傳說只能裝 1 個）：改列全部技能讓玩家選要換掉的。
     if (status === 422 && pick !== null && replace === null) setForce(true);
   }
@@ -43,7 +50,14 @@ export function RunLevelUp({ run, view, busy, onChoose }: Props) {
         disabled={busy}
         hpPerCon={run.hero.hp_per_con_point}
       />
-      <SkillGrowthPanel hero={run.hero} draft={draft} onDraft={setDraft} disabled={busy} />
+      <SkillGrowthPanel
+        hero={run.hero}
+        draft={draft}
+        onDraft={setDraft}
+        evolve={evolve}
+        onEvolve={setEvolve}
+        disabled={busy}
+      />
       <div className="section-title">選一張新技能（可跳過）</div>
       <OfferPicker
         offer={view.offer}

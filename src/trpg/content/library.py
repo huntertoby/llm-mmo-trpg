@@ -64,6 +64,7 @@ from trpg.content.rule_changes import RuleChangeDef, RuleChangeTable
 from trpg.content.rules import CoreRules, HitTable
 from trpg.content.schemas import ContentModel, ElementTable
 from trpg.content.sim_builds import BuildTable
+from trpg.content.skill_evolution import EvolutionTable
 from trpg.content.skill_growth import SkillGrowthRules
 from trpg.content.skill_keywords import KeywordRule, KeywordTable
 from trpg.content.skill_rules import (
@@ -434,6 +435,8 @@ class ContentLibrary:
     """裝備外觀清單（``equipment/appearance.yaml``，Phase 3G-G5a）。"""
     dev_starters: DevStarterTable = field(default_factory=DevStarterTable)
     """開發者起始包（``dev_starters.yaml``，Phase 3-24b2；不是設計規則，玩家介面不顯示）。"""
+    evolution: EvolutionTable = field(default_factory=EvolutionTable)
+    """3 級分歧進化的模板（``skill_evolution.yaml``，Phase 3-26b）。"""
     files: list[tuple[Path, ContentModel]] = field(default_factory=list)
 
     def loadout_of(self, template: UnitTemplate) -> Loadout:
@@ -630,6 +633,9 @@ def load_library(  # noqa: PLR0915
         problems = _dev_starter_problems(dev_starters, weapon_map, keywords, skills)
         if problems:
             raise ContentError(root / "dev_starters.yaml", "；".join(problems))
+    has_evolution = (root / "skill_evolution.yaml").exists()
+    evolution = load("skill_evolution.yaml", EvolutionTable) if has_evolution else EvolutionTable()
+    _check_evolution(root, evolution, keywords, skeletons)
 
     return ContentLibrary(
         root=root,
@@ -654,8 +660,28 @@ def load_library(  # noqa: PLR0915
         items=items,
         appearance=appearance,
         dev_starters=dev_starters,
+        evolution=evolution,
         files=files,
     )
+
+
+def _check_evolution(
+    root: Path,
+    table: EvolutionTable,
+    keywords: KeywordTable,
+    skeletons: Mapping[str, SkeletonDef],
+) -> None:
+    """進化模板的跨檔案檢查（Phase 3-26b）：嫁接的關鍵字與改試的骨架必須存在。"""
+    known = set(keywords.ids())
+    problems = [f"未知的關鍵字 {k}" for k in sorted(table.grafts) if k not in known]
+    problems += [
+        f"模板 {t.id} 的骨架 {s} 不存在"
+        for t in table.templates
+        for s in t.skeletons
+        if s not in skeletons
+    ]
+    if problems:
+        raise ContentError(root / "skill_evolution.yaml", "；".join(problems))
 
 
 def _dev_starter_problems(

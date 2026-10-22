@@ -30,11 +30,11 @@ def test_run_new_writes_a_save_and_show_reads_it(
     assert "力量 13" in out and "體質 11" in out
     assert "第 6 場 Boss" in out
     raw = json.loads(saves[0].read_text(encoding="utf-8"))
-    assert raw["format"] == "trpg-run/4"
+    assert raw["format"] == "trpg-run/5"
     assert raw["run"]["seed"] == 4
     code, shown, _ = _run(["run", "show", str(saves[0])], capsys)
     assert code == 0
-    assert "trpg-run/4" in shown and "build_push" in shown and "目前：戰鬥" in shown
+    assert "trpg-run/5" in shown and "build_push" in shown and "目前：戰鬥" in shown
 
 
 @pytest.mark.parametrize(
@@ -160,6 +160,17 @@ def test_run_auto_spends_skill_points_and_shows_levels(
     assert code == 0
     assert "技能點升級：" in out and " Lv." in out
     assert out.splitlines()[-1].startswith("結果：")
+
+
+@pytest.mark.parametrize("seed", [1, 4])
+def test_run_auto_reaches_a_branching_evolution(
+    seed: int, capsys: pytest.CaptureFixture[str]
+) -> None:
+    """Phase 3-26b：``trpg run auto`` 跑到至少一次分歧進化，進度印出進化前後的技能。"""
+    code, out, _ = _run(["run", "auto", "--seed", str(seed)], capsys)
+    assert code == 0
+    lines = [line for line in out.splitlines() if "分歧進化：" in line]
+    assert lines and "_evo_" in lines[0] and "（加深）" in lines[0]
 
 
 def test_run_auto_with_a_dev_pack(capsys: pytest.CaptureFixture[str]) -> None:

@@ -41,11 +41,13 @@ from trpg.roguelite.state import (
     SpendChoice,
 )
 from trpg.shared.types import Team, UnitId
+from trpg.skillgen.usage import SkillUsage, collect_usage, merge_usage
 
 __all__ = [
     "add_behavior",
     "apply_choice",
     "battle_setup",
+    "battle_usage",
     "finish_battle",
     "hero_unit_id",
     "level_for",
@@ -129,6 +131,18 @@ def add_behavior(
     return {k: counts[k] for k in sorted(counts)}
 
 
+def battle_usage(
+    library: ContentLibrary, run: RunState, actions: Sequence[Step], hero: UnitId
+) -> dict[str, SkillUsage]:
+    """這一場（``run`` 仍在戰鬥節點）主角每招技能的用法統計（Phase 3-26b）：以開戰設定、種子與步驟
+    重播出事件（確定性），只統計主角裝備中的技能。"""
+    if not actions:
+        return {}
+    setup = battle_setup(library, run)
+    plan = run.plan_of(_battle_node(run).index)
+    return collect_usage(setup, plan.seed, actions, hero, library.keywords, only=run.hero.skills)
+
+
 def finish_battle(
     library: ContentLibrary,
     run: RunState,
@@ -137,7 +151,8 @@ def finish_battle(
     actions: Sequence[Step] = (),
 ) -> RunState:
     """戰鬥結束後結算（``state`` 必須已結束）。主角在戰鬥中倒下但我方勝利時以 1 HP 繼續。
-    ``actions`` 是這場的步驟（累加進行為紀錄 ``RunState.behavior``）。"""
+    ``actions`` 是這場的步驟（累加進行為紀錄 ``RunState.behavior`` 與用法統計
+    ``RunState.skill_usage``）。"""
     node = _battle_node(run)
     if not state.ended:
         raise NodeConflictError("戰鬥還沒結束")
@@ -165,10 +180,12 @@ def finish_battle(
     )
     history = (*run.history, record)
     behavior = add_behavior(run.behavior, actions, hero_unit_id(state))
+    usage = merge_usage(run.skill_usage, battle_usage(library, run, actions, hero_unit_id(state)))
     if not won:
         return run.model_copy(
             update={
                 "behavior": behavior,
+                "skill_usage": usage,
                 "hp": 0 if hero.downed else hero.hp,
                 "mana": hero.mana,
                 "source": hero.source,
@@ -188,6 +205,7 @@ def finish_battle(
             "battles_done": node.index,
             "history": history,
             "behavior": behavior,
+            "skill_usage": usage,
         }
     )
     return next_node(library, finished)
@@ -250,8 +268,8 @@ def apply_choice(library: ContentLibrary, run: RunState, choice: Choice) -> RunS
         hero = apply_allocation(run.hero, choice.attributes)
         allocated = with_hp_change(library, run, run.model_copy(update={"hero": hero}))
         taken = take_candidate(library, allocated, node.offer, choice.pick, choice.replace)
-        if choice.levels:
-            taken = spend_points(library, taken, choice.levels)
+        if choice.levels or choice.evolve:
+            taken = spend_points(library, taken, choice.levels, choice.evolve)
         return next_node(library, taken)
     if isinstance(node, CampfireNode):
         return _campfire(library, run, node, choice)
@@ -266,7 +284,7 @@ def _manage_skills(
     if isinstance(choice, SpendChoice):
         if run.ended:
             raise NodeConflictError(f"目前是{_NODE_TEXT[run.node.kind]}，不能花技能點")
-        return spend_points(library, run, choice.levels)
+        return spend_points(library, run, choice.levels, choice.evolve)
     if not isinstance(run.node, CampfireNode):
         raise NodeConflictError(f"重配點數與換裝只能在營火（目前是{_NODE_TEXT[run.node.kind]}）")
     if isinstance(choice, RespecChoice):

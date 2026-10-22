@@ -42,7 +42,10 @@ def candidate_request(library: ContentLibrary, run: RunState) -> CandidateReques
         seed=Rng(run.seed).fork(f"offer/{run.offers_made}").next_u32(),
         tier=library.roguelite.offer_tier(run.level),
         behavior=dict(run.behavior),
-        exclude=frozenset((*run.hero.skills, *run.bench)),
+        # 進化前的技能也排除（Phase 3-26b：進化後原技能不再出現在候選）
+        exclude=frozenset(
+            (*run.hero.skills, *run.bench, *(r.base_id for r in run.evolutions.values()))
+        ),
     )
 
 

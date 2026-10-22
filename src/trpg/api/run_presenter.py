@@ -4,6 +4,8 @@ from __future__ import annotations
 
 from trpg.api.run_schemas import (
     BattlePlanOut,
+    EvolutionChoiceOut,
+    EvolutionOptionOut,
     HeroOut,
     NodeOut,
     OfferOut,
@@ -18,6 +20,13 @@ from trpg.content.skills import SkillDef
 from trpg.narrative.skill_levels import skill_level_info
 from trpg.narrative.skills import KeywordRef, SkillCard, skill_card
 from trpg.roguelite import RunSave, RunState
+from trpg.roguelite.growth import (
+    crosses_evolution,
+    evolution_choices,
+    level_of,
+    raise_problem,
+    uses_of,
+)
 from trpg.roguelite.offers import skill_defs
 from trpg.roguelite.state import (
     BattleNode,
@@ -64,9 +73,48 @@ def _card(
     card = skill_card(library, skill, mastery_active=mastery)
     if not owned:
         return card
-    return card.model_copy(
-        update={"growth": skill_level_info(library, skill, run.skill_levels.get(skill.id, 1))}
+    level = level_of(run, skill.id)
+    record = run.evolutions.get(skill.id)
+    blocked = None
+    if skill.id in run.hero.skills and level < library.ruleset.skill_growth.max_level:
+        blocked = raise_problem(library, run, skill, skill.id, level + 1)
+    info = skill_level_info(
+        library,
+        skill,
+        level,
+        uses=uses_of(run, skill.id),
+        evolved_from_zh=None if record is None else record.base_name_zh,
+        blocked_text=blocked,
     )
+    return card.model_copy(update={"growth": info})
+
+
+def _evolutions(library: ContentLibrary, run: RunState) -> tuple[EvolutionChoiceOut, ...]:
+    """升到分歧進化那一級時可選的兩支（Phase 3-26b）：已達門檻、還沒進化的裝備中主動技能。"""
+    growth = library.ruleset.skill_growth
+    out = []
+    for skill in skill_defs(library, run, run.hero.skills):
+        if skill.kind != "active" or not crosses_evolution(
+            library, run, skill.id, growth.evolve_level
+        ):
+            continue
+        if raise_problem(library, run, skill, skill.id, growth.evolve_level) is not None:
+            continue
+        options = tuple(
+            EvolutionOptionOut(
+                index=i,
+                branch=e.branch,
+                label_zh=_TAG_LABELS[e.branch],
+                template=e.template,
+                keyword=None if e.keyword is None else keyword_refs(library, (e.keyword,))[0],
+                summary_zh=e.summary_zh,
+                fallback=e.fallback,
+                card=_card(library, run, e.skill),
+            )
+            for i, e in enumerate(evolution_choices(library, run, skill.id))
+        )
+        out.append(EvolutionChoiceOut(skill_id=skill.id, name_zh=skill.name_zh, options=options))
+    return tuple(out)
 
 
 def _offer(library: ContentLibrary, run: RunState, offer: SkillOffer | None) -> OfferOut | None:
@@ -148,10 +196,12 @@ def _hero(library: ContentLibrary, run: RunState) -> HeroOut:
             points_per_level=growth.points_per_level,
             trait_level=growth.trait_level,
             evolve_level=growth.evolve_level,
+            evolve_uses=growth.evolve_uses,
         ),
         bench=tuple(
             _card(library, run, s, owned=True) for s in skill_defs(library, run, run.bench)
         ),
+        evolutions=_evolutions(library, run),
     )
 
 

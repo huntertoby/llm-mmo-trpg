@@ -40,14 +40,33 @@ class SkillLevelInfo(BaseModel):
     """目前等級已經到小特性的等級。"""
     cost: int
     """升到下一級要花的技能點。"""
+    uses: int = 0
+    """這一輪用過的次數（Phase 3-26b；分歧進化的門檻）。"""
+    evolve_uses: int = 0
+    """升到分歧進化那一級要用過的次數。"""
+    evolved_from_zh: str | None = None
+    """進化前的技能名稱（已進化的技能）；沒進化為 ``None``。"""
+    blocked_text: str | None = None
+    """下一級現在升不了的原因（例如用過的次數不夠）；可以升為 ``None``。"""
 
 
 def _bonus_text(percent: int) -> str:
     return "效果沒有加成" if percent == 0 else f"傷害、治療、護盾 +{percent}%"
 
 
-def skill_level_info(library: ContentLibrary, skill: SkillDef, level: int) -> SkillLevelInfo | None:
-    """``skill`` 在 ``level`` 級的顯示資料；不是主動技能（不能升級）時 ``None``。"""
+def skill_level_info(
+    library: ContentLibrary,
+    skill: SkillDef,
+    level: int,
+    *,
+    uses: int = 0,
+    evolved_from_zh: str | None = None,
+    blocked_text: str | None = None,
+) -> SkillLevelInfo | None:
+    """``skill`` 在 ``level`` 級的顯示資料；不是主動技能
+    （不能升級）時 ``None``。``uses`` 是這一輪用過
+    的次數、``evolved_from_zh`` 是進化前的名稱（已進化時）、``blocked_text`` 是下一級升不了的原因
+    （Phase 3-26b，由呼叫者依一輪的狀態算好）。"""
     if skill.kind != "active":
         return None
     rules = library.ruleset
@@ -73,7 +92,11 @@ def skill_level_info(library: ContentLibrary, skill: SkillDef, level: int) -> Sk
         if next_level == growth.trait_level:
             parts.append(_TRAIT_TEXT[trait] if trait is not None else "（沒有可用的小特性）")
         if next_level == growth.evolve_level:
-            parts.append("分歧進化（之後開放）")
+            parts.append(
+                "只計等級（已進化）"
+                if evolved_from_zh is not None
+                else f"分歧進化：加深／橋接二選一（用過 {uses}/{growth.evolve_uses} 次）"
+            )
         next_text = f"Lv.{next_level}：" + ("、".join(parts) if parts else "只計等級")
     return SkillLevelInfo(
         level=level,
@@ -86,4 +109,8 @@ def skill_level_info(library: ContentLibrary, skill: SkillDef, level: int) -> Sk
         trait_text=trait_text,
         trait_active=level >= growth.trait_level,
         cost=growth.upgrade_cost,
+        uses=uses,
+        evolve_uses=growth.evolve_uses,
+        evolved_from_zh=evolved_from_zh,
+        blocked_text=blocked_text,
     )

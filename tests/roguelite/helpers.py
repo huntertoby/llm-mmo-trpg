@@ -9,7 +9,7 @@ from trpg.roguelite import RunState, auto_play, new_run
 
 __all__ = ["VICTORY", "full_run", "library"]
 
-VICTORY = ("build_fire", 0)
+VICTORY = ("build_fire", 1)
 """AI 代打會打完整輪（含兩次營火與 Boss）的 build 與種子（目前內容與數值下）。"""
 
 
