@@ -1871,20 +1871,38 @@ button.selected {
   color: #cfc8ff;
 }
 
-.skill-card-float {
-  position: absolute;
-  left: 50%;
-  bottom: calc(100% + 6px);
-  transform: translateX(-50%);
-  z-index: 25;
-  width: 380px;
-  max-width: 100%;
-  pointer-events: none;
+/* 浮動卡（3-30，`useFloatCard`）：外框貼齊觸發元素，朝向觸發元素的一側有透明橋接區（滑過去不會斷）；內容在 .float-card-body */
+.float-card {
+  position: fixed;
+  z-index: 900;
+  outline: none;
+  pointer-events: auto;
 }
 
-.skill-card-float .skill-card {
+.float-card.side-above {
+  padding-bottom: 6px;
+}
+
+.float-card.side-below {
+  padding-top: 6px;
+}
+
+.float-card.skill-card-float {
+  width: 380px;
+  max-width: calc(100vw - 8px);
+}
+
+.float-card.skill-card-float .skill-card {
   margin-top: 0;
   box-shadow: 0 6px 24px rgb(0 0 0 / 60%);
+}
+
+.float-card:focus-visible .float-card-body {
+  outline: 2px solid #ffe14d;
+}
+
+.skill-mini-wrap {
+  display: inline-flex;
 }
 
 .battle-turn > .end-panel {
@@ -2260,10 +2278,12 @@ button.selected {
   gap: 2px 4px;
 }
 
-.part-tip-box {
-  position: fixed;
+.float-card.part-tip-box {
   z-index: 1000;
   max-width: 240px;
+}
+
+.part-tip-box .float-card-body {
   padding: 6px 8px;
   background: #1d1d2a;
   border: 1px solid #ffffff55;
@@ -2271,11 +2291,9 @@ button.selected {
   box-shadow: 0 4px 16px rgb(0 0 0 / 60%);
   font-size: 12px;
   line-height: 1.35;
-  pointer-events: none;
 }
 
-.part-tip-box.pinned {
-  pointer-events: auto;
+.part-tip-box.pinned .float-card-body {
   border-color: #ffe14d;
 }
 
@@ -2291,11 +2309,6 @@ button.selected {
 .part-tip-text {
   margin-top: 2px;
   color: #d0d0dc;
-}
-
-/* 浮動卡要讓滑鼠移上去看部件說明，所以可以接收滑鼠事件 */
-.skill-card-float {
-  pointer-events: auto;
 }
 
 .skill-card.compact {
