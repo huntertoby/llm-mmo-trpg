@@ -44,6 +44,24 @@ charge_through_expected_targets_permille: 1500
 summon_round_value_permille: 800
 # 3D-4b 圖騰：點數 ＝ 光環狀態的 budget_points × 預期受惠的友方數 × duration × summon_round_value_permille ÷ 1000²。初值，未經模擬。
 totem_expected_allies_permille: 1000
+# 3-33e2a 召喚物特性計入預算（初值，未經模擬）：特性價值 ＝ 各項（見 skill_rules.py 的 summon_trait_*）加總，
+# 與武器骰平均相加後乘持續輪數與 summon_round_value_permille；自爆與被推倒壓人是一次性（不乘持續輪數）。
+summon_trait_extra_damage_permille: 800    # 額外傷害（雷靈的雷電 1d4）：骰子平均 × 80%
+summon_trait_status_permille: 200          # 命中附帶狀態：狀態點數 × 20%（點燃 3 → 0.6）
+summon_trait_conditional_permille: 400     # 有條件才生效的命中特性（冰靈打水中的目標才冰凍）：再 × 40%
+summon_trait_surface_permille: 100         # 造表面：表面點數 × 10%
+summon_trait_chain_permille: 300           # 水面連鎖：連鎖傷害 × 30%（要站在水裡）
+summon_trait_heal_permille: 600            # 脈動治療：治療骰平均 × 60%
+summon_trait_backstab_permille: 250        # 背刺多的骰：骰子平均 × 25%（要繞背）
+summon_trait_trip_permille: 200            # 絆倒：擊倒點數 × 20%（對抗判定、每輪 1 次）
+summon_trait_knockback_permille: 250       # 震退：推擊點數 × 格數 × 25%
+summon_trait_immovable_permille: 500       # 不會被推動（石像）：每輪 0.5 點（擋路的價值）
+summon_trait_height_permille: 300          # 高處加傷：每輪傷害 × 加傷比例 × 30%（要站得比目標高）
+summon_trait_conceal_points: 1             # 召喚時隱蔽（一次性）
+summon_detonate_targets_permille: 800      # 自爆：傷害骰平均 × 0.8 個敵人（一次性；爆裂傀儡要先走到敵人旁）
+summon_detonate_rounds: 1                  # 會自爆的召喚物：一般攻擊與特性只算 1 輪（自爆後就消失了）
+summon_topple_targets_permille: 900        # 被推倒壓人：（傷害骰平均 ＋ 擊倒點數）× 0.9 個敵人（一次性；土牆不攻擊，價值全在這裡）
+
 # 3D-5 持續區域：點數 ＝ effects 的基礎點數合計 × 預估觸發次數（形狀格數 × duration × zone_cell_round_permille ÷ 1000）
 #   × zone_both_permille（when: both 時）× zone_moving_permille（anchor: moving 時）
 #   ＋ 表面（surface）的點數 × 形狀格數 ×（moving 時 1 ＋ duration × speed 次新覆蓋，否則 1）× zone_surface_permille。

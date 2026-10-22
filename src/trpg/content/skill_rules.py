@@ -210,6 +210,41 @@ class BudgetRules(ContentModel):
     summon_round_value_permille: int = Field(default=800, ge=1, le=5000)
     """``summon`` 的點數 ＝ 召喚物每輪預估傷害 × 持續輪數 × 這個值（‰；Phase 3D-4a；命中率與
     吸引火力的折合，初值，未經模擬）。"""
+    summon_trait_extra_damage_permille: int = Field(default=1000, ge=0, le=5000)
+    """召喚物特性計入預算（Phase 3-33e2a；以下 ``summon_trait_*`` 與 ``summon_detonate_*``、
+    ``summon_topple_*`` 都是初值，未經模擬）：每輪的特性點數 ＝ 各項價值 × 對應係數，與武器骰平均
+    加總後乘持續輪數與 ``summon_round_value_permille``。這個係數：灌注的額外傷害（雷靈的雷電）
+    骰子平均 × 此值。"""
+    summon_trait_status_permille: int = Field(default=100, ge=0, le=5000)
+    """普攻命中附帶狀態（點燃、冰凍、標記、揭露…）：狀態的 ``budget_points`` × 此值。"""
+    summon_trait_surface_permille: int = Field(default=100, ge=0, le=5000)
+    """造表面（命中造水、脈動造水）：表面的 ``budget_points`` × 此值。"""
+    summon_trait_chain_permille: int = Field(default=400, ge=0, le=5000)
+    """水面連鎖（雷靈）：連鎖傷害（武器骰平均 × 連鎖人數 × 連鎖倍率）× 此值（要站在水裡才生效）。"""
+    summon_trait_heal_permille: int = Field(default=600, ge=0, le=5000)
+    """脈動治療（水精）：治療骰平均 × 此值（預期約 1 名受傷的友方在範圍內）。"""
+    summon_trait_backstab_permille: int = Field(default=250, ge=0, le=5000)
+    """背刺多出的傷害骰（影魅）：多出的骰子平均 × 此值（要繞到背後才生效）。"""
+    summon_trait_trip_permille: int = Field(default=300, ge=0, le=5000)
+    """絆倒（倒地關鍵字、骷髏、戰狼）：擊倒原語的 ``base_points`` × 此值（對抗判定、每輪 1 次）。"""
+    summon_trait_knockback_permille: int = Field(default=200, ge=0, le=5000)
+    """震退（撞擊關鍵字、石像）：推擊原語的 ``base_points`` × 震退格數 × 此值。"""
+    summon_trait_height_permille: int = Field(default=300, ge=0, le=5000)
+    """高處加傷（鷹隼的利爪）：武器每輪傷害 × 加傷比例 × 此值（要站得比目標高才生效）。"""
+    summon_trait_conceal_points: int = Field(default=1, ge=0, le=10)
+    """召喚時隱蔽：一次性的點數（不乘持續輪數）。"""
+    summon_detonate_targets_permille: int = Field(default=1500, ge=0, le=5000)
+    """自爆（爆裂傀儡）：爆炸傷害骰平均 × 預期被炸到的敵人數（‰），一次性（不乘持續輪數）；
+    留下的表面另加 ``summon_trait_surface_permille`` × 表面點數 × 格數。"""
+    summon_trait_conditional_permille: int = Field(default=400, ge=0, le=1000)
+    """有條件才生效的命中特性（``hit_rules`` 的 ``when`` 不是 ``always``，如冰靈只凍水裡的目標）：
+    狀態點數再 × 此值。"""
+    summon_trait_immovable_permille: int = Field(default=500, ge=0, le=5000)
+    """不會被推動（石像）：每輪折合的點數（‰，擋路的價值）。"""
+    summon_detonate_rounds: int = Field(default=1, ge=1, le=6)
+    """會自爆的召喚物（爆裂傀儡）：一般攻擊與特性只算這麼多輪（自爆後就消失了），自爆另計。"""
+    summon_topple_targets_permille: int = Field(default=1000, ge=0, le=5000)
+    """被推倒壓人（土牆）：推倒傷害骰平均 ＋ 擊倒原語點數，× 預期被壓到的敵人數（‰），一次性。"""
     totem_expected_allies_permille: int = Field(default=1000, ge=0, le=5000)
     """圖騰（Phase 3D-4b）的點數 ＝ 光環狀態的 ``budget_points`` × 預期受惠的友方數（‰）× 持續輪數
     × ``summon_round_value_permille``（初值，未經模擬）。"""

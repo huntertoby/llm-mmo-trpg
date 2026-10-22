@@ -148,7 +148,7 @@ from trpg.engine.events import (
 )
 from trpg.engine.grants import granted_remaining
 from trpg.engine.ids import PRONE
-from trpg.engine.infusion import preferred_infusion
+from trpg.engine.infusion import preferred_infusion, template_of
 from trpg.engine.preview import DamageRange, Preview, preview
 from trpg.engine.resources import restorable_cooldowns
 from trpg.engine.rewrites import grant_ap_problem, resettable_cooldowns
@@ -1879,6 +1879,15 @@ def reactive_enemies(state: BattleState, unit: UnitState) -> list[XY]:
     ]
 
 
+def _detonates_on_arrival(state: BattleState, unit: UnitState, move: Move) -> bool:
+    """會自爆的召喚物（爆裂傀儡，3-33e2a）：路徑上有一步走到敵人相鄰（引擎會在那一步自爆）。"""
+    template = template_of(state, unit)
+    if template is None or template.detonate is None:
+        return False
+    foes = [u.xy for u in state.living_units() if u.team is not unit.team]
+    return any(manhattan((p.x, p.y), f) == 1 for p in move.path[1:] for f in foes)
+
+
 def is_risky_move(
     state: BattleState, unit: UnitState, move: Move, enemies: list[XY] | None = None
 ) -> bool:
@@ -1890,7 +1899,7 @@ def is_risky_move(
     - 往下的落差達到墜落門檻；
     - 撤離勝利條件下，我方走上出口格。
     """
-    if unit.has_status(PRONE):
+    if unit.has_status(PRONE) or _detonates_on_arrival(state, unit, move):
         return True
     if enemies is None:
         enemies = reactive_enemies(state, unit)
