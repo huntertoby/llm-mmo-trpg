@@ -20,6 +20,7 @@ from trpg.engine.effects.models import ApplyStatusEffect, SwapUnitsEffect
 from trpg.engine.events import GuardSet, UnitAimed, WeaponReloaded
 from trpg.engine.ids import DEFENDING, PRONE
 from trpg.engine.rules.geometry import XY, manhattan
+from trpg.engine.rules.landing import LandingBlock, landing_problem
 from trpg.engine.rules.movement import fear_blocks_step, fear_origins, is_standable
 from trpg.engine.rules.statuses import is_rooted, skip_turn_status
 from trpg.engine.state import BattleState, UnitState
@@ -201,12 +202,14 @@ def _unit_on(state: BattleState, xy: XY) -> UnitState | None:
 
 
 def _landing_problem(state: BattleState, unit: UnitState, dest: XY) -> str | None:
-    if not state.in_bounds(*dest):
+    block = landing_problem(state, dest, mover=unit.id)
+    if block is LandingBlock.OUT_OF_BOUNDS:
         return f"超出地圖範圍：{dest}"
-    if not is_standable(state, dest):
+    if block is LandingBlock.NOT_STANDABLE:
         return "落點不能站立"
-    other = _unit_on(state, dest)
-    if other is not None and other.id != unit.id:
+    if block is LandingBlock.OCCUPIED:
+        other = _unit_on(state, dest)
+        assert other is not None
         return f"落點已有單位：{other.name_zh}"
     return None
 

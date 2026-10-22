@@ -17,8 +17,8 @@ from __future__ import annotations
 from typing import TYPE_CHECKING
 
 from trpg.engine.events import EventBase, UnitRevived
-from trpg.engine.rules.geometry import XY, manhattan
-from trpg.engine.rules.movement import is_deadly, is_standable
+from trpg.engine.rules.geometry import XY
+from trpg.engine.rules.landing import nearest_free
 from trpg.engine.rules.statuses import base_attribute
 from trpg.engine.state import BattleState, UnitState
 from trpg.shared.types import Attribute, Pos
@@ -48,31 +48,10 @@ def revivable(unit: UnitState) -> bool:
     )
 
 
-def _free(state: BattleState, xy: XY) -> bool:
-    return (
-        state.in_bounds(*xy)
-        and is_standable(state, xy)
-        and not is_deadly(state, xy)
-        and state.unit_at(*xy) is None
-    )
-
-
 def revive_landing(state: BattleState, unit: UnitState) -> XY | None:
     """被復活的單位站的格子：原位置可站就用原位置，否則半徑內最近的空格（曼哈頓距離相同依
     ``(y, x)``）；沒有就是 ``None``。"""
-    if _free(state, unit.xy):
-        return unit.xy
-    radius = state.ruleset.core.revive_landing_radius
-    cells = [
-        (x, y)
-        for y in range(unit.pos.y - radius, unit.pos.y + radius + 1)
-        for x in range(unit.pos.x - radius, unit.pos.x + radius + 1)
-        if manhattan(unit.xy, (x, y)) <= radius
-    ]
-    for xy in sorted(cells, key=lambda p: (manhattan(unit.xy, p), p[1], p[0])):
-        if _free(state, xy):
-            return xy
-    return None
+    return nearest_free(state, unit.xy, radius=state.ruleset.core.revive_landing_radius)
 
 
 def revive_target_problem(state: BattleState, caster: UnitState, target: UnitState) -> str | None:

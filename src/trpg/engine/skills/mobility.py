@@ -12,7 +12,8 @@ from trpg.content.skills import CHARGE_THROUGH, DASH, LEAP, SHADOWSTEP, EffectSp
 from trpg.engine.ids import PRONE
 from trpg.engine.rules.facing import back_xy
 from trpg.engine.rules.geometry import XY, bresenham, chebyshev, manhattan
-from trpg.engine.rules.movement import is_deadly, is_standable, path_map, step_cost
+from trpg.engine.rules.landing import LandingBlock, landing_problem
+from trpg.engine.rules.movement import is_standable, path_map, step_cost
 from trpg.engine.rules.statuses import is_rooted
 from trpg.engine.skills.shapes import is_wall
 from trpg.engine.state import BattleState, UnitState
@@ -170,10 +171,12 @@ def _leap_blocked(state: BattleState, start: XY, dest: XY) -> XY | None:
 
 def _landing_problem(state: BattleState, caster: UnitState, dest: XY) -> str | None:
     """落點本身的問題：可站立、不是致命地形、沒有單位、與起點的高度差不超過 1 層。"""
-    if not is_standable(state, dest) or is_deadly(state, dest):
+    block = landing_problem(state, dest, mover=caster.id)
+    if block in (LandingBlock.OUT_OF_BOUNDS, LandingBlock.NOT_STANDABLE):
         return f"無法跳到不可站立的格子：{dest}"
-    other = state.unit_at(*dest)
-    if other is not None and other.id != caster.id:
+    if block is LandingBlock.OCCUPIED:
+        other = state.unit_at(*dest)
+        assert other is not None
         return f"無法跳到已有單位的格子：{dest}（{other.name_zh}）"
     diff = abs(state.tile(*caster.xy).height - state.tile(*dest).height)
     if diff > LEAP_MAX_HEIGHT_DIFF:
@@ -241,12 +244,14 @@ def shadowstep_spot_problem(
     （施放者自己所在的格子可以），與目標的高度差不超過近戰上限（落地後要打得到）。"""
     if manhattan(xy, target.xy) != 1:
         return f"瞬步的落點必須在 {target.name_zh} 的相鄰格：{xy}"
-    if not state.in_bounds(*xy):
+    block = landing_problem(state, xy, mover=caster.id)
+    if block is LandingBlock.OUT_OF_BOUNDS:
         return f"超出地圖範圍：{xy}"
-    if not is_standable(state, xy) or is_deadly(state, xy):
+    if block is LandingBlock.NOT_STANDABLE:
         return f"無法瞬步到不可站立的格子：{xy}"
-    other = state.unit_at(*xy)
-    if other is not None and other.id != caster.id:
+    if block is LandingBlock.OCCUPIED:
+        other = state.unit_at(*xy)
+        assert other is not None
         return f"無法瞬步到已有單位的格子：{xy}（{other.name_zh}）"
     limit = state.ruleset.core.melee_height_limit
     diff = abs(state.tile(*xy).height - state.tile(*target.xy).height)

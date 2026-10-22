@@ -48,7 +48,8 @@ from trpg.engine.ids import BOSS_TAG
 from trpg.engine.infusion import check_infusion
 from trpg.engine.rules.combat import AttackProfile, attack_value, concealment_problem
 from trpg.engine.rules.geometry import XY, has_line_of_sight, manhattan
-from trpg.engine.rules.movement import is_deadly, is_standable
+from trpg.engine.rules.landing import LandingBlock, landing_problem
+from trpg.engine.rules.movement import is_deadly
 from trpg.engine.rules.statuses import (
     attack_range_cap,
     blocks_spells,
@@ -672,10 +673,12 @@ def _tile_area(
     if problem is not None:
         raise IllegalActionError(problem)
     if any(e.type == "teleport" for e in effects):
-        if not is_standable(state, center) or is_deadly(state, center):
+        block = landing_problem(state, center, mover=caster.id)
+        if block in (LandingBlock.OUT_OF_BOUNDS, LandingBlock.NOT_STANDABLE):
             raise IllegalActionError(f"無法傳送到不可站立的格子：{center}")
-        other = state.unit_at(*center)
-        if other is not None and other.id != caster.id:
+        if block is LandingBlock.OCCUPIED:
+            other = state.unit_at(*center)
+            assert other is not None
             raise IllegalActionError(f"無法傳送到已有單位的格子：{center}（{other.name_zh}）")
     problem = _site_problem(state, skill, effects, center)
     if problem is not None:
@@ -726,7 +729,7 @@ def teleport_landing_problem(state: BattleState, target: UnitState, dest: XY) ->
         if target.has_tag(BOSS_TAG):
             return f"{target.name_zh} 是 Boss，對傳送到致命地形免疫：{dest}"
         return None
-    if not is_standable(state, dest):
+    if landing_problem(state, dest) is not None:
         return f"無法傳送到不可站立的格子：{dest}"
     return None
 
@@ -911,10 +914,12 @@ def compute_area(
 def _trap_site_problem(state: BattleState, center: XY) -> str | None:
     """陷阱的放置格：可站立、不是致命地形、沒有單位、沒有其他陷阱（同一格只能有一個；這個檢查
     不分陣營，所以放置的合法性會洩漏對方陷阱的存在——2E 敵人沒有陷阱技能，記錄在報告）。"""
-    if not is_standable(state, center) or is_deadly(state, center):
+    block = landing_problem(state, center)
+    if block in (LandingBlock.OUT_OF_BOUNDS, LandingBlock.NOT_STANDABLE):
         return f"無法在不可站立的格子放置陷阱：{center}"
-    other = state.unit_at(*center)
-    if other is not None:
+    if block is LandingBlock.OCCUPIED:
+        other = state.unit_at(*center)
+        assert other is not None
         return f"無法在已有單位的格子放置陷阱：{center}（{other.name_zh}）"
     if state.trap_at(*center) is not None:
         return f"這一格已經有陷阱：{center}"
@@ -924,12 +929,14 @@ def _trap_site_problem(state: BattleState, center: XY) -> str | None:
 def summon_site_problem(state: BattleState, xy: XY) -> str | None:
     """召喚位置（Phase 3D-4a）的問題（``None`` 為可以）：在地圖內、可站立、不是致命地形、沒有
     單位。射程與視線由技能形狀檢查。"""
-    if not state.in_bounds(*xy):
+    block = landing_problem(state, xy)
+    if block is LandingBlock.OUT_OF_BOUNDS:
         return f"召喚位置超出地圖：{xy}"
-    if not is_standable(state, xy) or is_deadly(state, xy):
+    if block is LandingBlock.NOT_STANDABLE:
         return f"無法在不可站立的格子召喚：{xy}"
-    other = state.unit_at(*xy)
-    if other is not None:
+    if block is LandingBlock.OCCUPIED:
+        other = state.unit_at(*xy)
+        assert other is not None
         return f"無法在已有單位的格子召喚：{xy}（{other.name_zh}）"
     return None
 
