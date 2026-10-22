@@ -122,7 +122,6 @@ def test_run_plan_carries_each_battles_objective(runs_client: TestClient) -> Non
         ({"weapon": "fire_staff", "keywords": ["ignite", "ignite"], "seed": 1}, 422),
         ({"weapon": "fire_staff", "keywords": ["ignite", "nope"], "seed": 1}, 422),
         ({"weapon": "nope", "keywords": ["ignite", "marked"], "seed": 1}, 422),
-        ({"weapon": "bow", "keywords": ["wet", "marked"], "seed": 1}, 422),
         ({"weapon": "fire_staff", "seed": 1}, 422),
         ({**START, "build": BUILD, "seed": 1}, 422),
         ({"dev_pack": "dev_nobody", "seed": 1}, 422),

@@ -1,0 +1,27 @@
+# 連段（Phase 3-24c 補技能，數值為初值，未經模擬）：目標被冰凍時，重擊連冰殼一起砸碎（冰凍池的利用者）。
+id: skill_icebreaker
+schema_version: 1
+name_zh: 破冰重擊
+tier: 1
+rank: 1
+rarity: rare
+kind: active
+skeleton: strike
+category: weapon
+weapon_req: melee
+ap_cost: 2
+scaling_attr: str
+shape: {type: single, range: weapon}
+effects:
+  - {type: damage, multiplier_permille: 1000}
+  # 冰殼脆得像玻璃，重擊直接穿透
+  - type: damage
+    multiplier_permille: 1400
+    condition: {type: target_has_status, status: frozen}
+condition: null
+cost: {mana: 5, cooldown: 2}
+tags: [physical, melee, combo]
+narrative:
+  concept: 專砸被凍住的敵人，連冰帶人一起碎
+  cast_flavor: 你高舉武器朝冰殼砸下，裂紋瞬間爬滿整個目標
+provenance: {origin: builtin, owner_id: null, created_by: null, parents: [], bound: true, tradeable: false}

@@ -126,7 +126,6 @@ def test_run_new_with_weapon_and_keywords(
 @pytest.mark.parametrize(
     ("argv", "message"),
     [
-        (["--weapon", "bow", "--keywords", "wet,marked"], "沒有弓能用的起始技能"),
         (["--weapon", "bow", "--keywords", "marked"], "2 個不同的關鍵字"),
         (["--dev-pack", "dev_nobody"], "未知的開發者起始包"),
         (["--dev-pack", "dev_blaze", "--build", "build_push"], "只能擇一"),

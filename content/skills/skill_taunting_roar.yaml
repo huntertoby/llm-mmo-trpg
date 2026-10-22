@@ -8,13 +8,15 @@ kind: active
 skeleton: control
 category: spell
 weapon_req: any
-ap_cost: 1
+ap_cost: 2
 scaling_attr: str
 shape: {type: ring, radius: 1}
 effects:
   - {type: apply_status, status: taunted, duration: 2}
+  # 3-24c：被吼的敵人同時被標記（標記的真實製造；隊友對其攻擊有優勢）
+  - {type: apply_status, status: marked, duration: 2}
 condition: null
-cost: {mana: 0, cooldown: 2}
+cost: {mana: 0, cooldown: 3}
 tags: [taunt, control, shout]
 narrative:
   concept: 用一聲怒吼逼所有靠近的敵人把目光放在自己身上

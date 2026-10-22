@@ -1,0 +1,23 @@
+# 獻祭（Phase 3-24c 補技能，數值為初值，未經模擬）：獻祭自己的一個召喚物，化為治療的光湧向附近的友方（召喚物池的利用者）。
+id: skill_spirit_offering
+schema_version: 1
+name_zh: 靈祭
+tier: 1
+rank: 1
+rarity: rare
+kind: active
+skeleton: sacrifice
+category: spell
+weapon_req: any
+ap_cost: 1
+scaling_attr: wis
+shape: {type: single, range: 5}
+effects:
+  - {type: sacrifice_summon, dice: 2d8, radius: 1}
+condition: null
+cost: {mana: 6, cooldown: 3}
+tags: [holy, spell, sacrifice, support]
+narrative:
+  concept: 召喚物把自己的力量還給身邊的同伴
+  cast_flavor: 召喚物的身影化成柔和的光點，落在附近每一個人的傷口上
+provenance: {origin: builtin, owner_id: null, created_by: null, parents: [], bound: true, tradeable: false}

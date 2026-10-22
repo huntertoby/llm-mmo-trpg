@@ -1,0 +1,27 @@
+# 消耗狀態（Phase 3-24c 補技能，數值為初值，未經模擬）：引爆目標身上的冰凍，造成冰霜碎裂傷害；目標沒有冰凍時不生效（冰凍池的利用者）。
+id: skill_thaw_blast
+schema_version: 1
+name_zh: 融冰震
+tier: 1
+rank: 1
+rarity: rare
+kind: active
+skeleton: consume_status
+category: spell
+weapon_req: any
+ap_cost: 2
+scaling_attr: int
+shape: {type: single, range: 4}
+effects:
+  - type: consume_status
+    status: frozen
+    then:
+      - {type: damage, dice: 5d6, element: ice}
+
+condition: null
+cost: {mana: 6, cooldown: 2}
+tags: [ice, spell, detonate]
+narrative:
+  concept: 把封住目標的冰一口氣震成碎片
+  cast_flavor: 你的掌心一震，冰殼從內側崩開，碎片像刀子一樣四散
+provenance: {origin: builtin, owner_id: null, created_by: null, parents: [], bound: true, tradeable: false}

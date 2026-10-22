@@ -1,0 +1,27 @@
+# 連段（Phase 3-24c 補技能，數值為初值，未經模擬）：目標被冰凍時，一箭射穿冰殼（冰凍池的利用者）。
+id: skill_frost_snap
+schema_version: 1
+name_zh: 碎霜射擊
+tier: 1
+rank: 1
+rarity: rare
+kind: active
+skeleton: strike
+category: weapon
+weapon_req: ranged
+ap_cost: 2
+scaling_attr: dex
+shape: {type: single, range: weapon}
+effects:
+  - {type: damage, multiplier_permille: 1000}
+  # 凍住的目標沒辦法閃躲，箭矢貫穿冰殼
+  - type: damage
+    multiplier_permille: 1400
+    condition: {type: target_has_status, status: frozen}
+condition: null
+cost: {mana: 5, cooldown: 2}
+tags: [physical, ranged, combo]
+narrative:
+  concept: 冰封的目標是最好的靶子
+  cast_flavor: 你瞄準冰殼上最薄的裂縫放箭，碎冰在空中炸成一片白霧
+provenance: {origin: builtin, owner_id: null, created_by: null, parents: [], bound: true, tradeable: false}

@@ -1,0 +1,28 @@
+# 連段（Phase 3-24c 補技能，數值為初值，未經模擬）：法術版的撞擊追擊，目標本回合受過撞擊時補上 2d6 震盪。
+id: skill_shock_follow
+schema_version: 1
+name_zh: 震盪追擊
+tier: 1
+rank: 1
+rarity: rare
+kind: active
+skeleton: combo
+category: spell
+weapon_req: any
+ap_cost: 2
+scaling_attr: int
+shape: {type: single, range: 4}
+effects:
+  - {type: damage, dice: 2d6, element: physical}
+  # 目標這一輪撞過牆或同伴，震盪順著裂縫鑽進去
+  - type: damage
+    dice: 3d6
+    element: physical
+    condition: {type: target_collided}
+condition: null
+cost: {mana: 6, cooldown: 2}
+tags: [arcane, spell, combo]
+narrative:
+  concept: 把撞擊的餘震推進對手的身體深處
+  cast_flavor: 你伸手一壓，剛被撞得發暈的目標體內傳出悶雷般的震響
+provenance: {origin: builtin, owner_id: null, created_by: null, parents: [], bound: true, tradeable: false}

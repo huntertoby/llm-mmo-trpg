@@ -1,0 +1,24 @@
+# 控制（Phase 3-24c 補技能，數值為初值，未經模擬）：伸手觸碰就把目標凍住（硬控：單體、冷卻 4 回合），不限武器（冰凍池的製造者）。
+id: skill_frost_touch
+schema_version: 1
+name_zh: 凍結之觸
+tier: 1
+rank: 1
+rarity: rare
+kind: active
+skeleton: control
+category: spell
+weapon_req: any
+ap_cost: 2
+scaling_attr: int
+shape: {type: single, range: 3}
+effects:
+  - {type: apply_status, status: frozen, duration: 1}
+  - {type: damage, dice: 2d4, element: ice}
+condition: null
+cost: {mana: 8, cooldown: 4}
+tags: [ice, spell, control]
+narrative:
+  concept: 指尖一觸，寒意順著手臂鑽進目標的血液
+  cast_flavor: 你的指尖點在對手的鎧甲上，白霜沿著縫隙飛快蔓延
+provenance: {origin: builtin, owner_id: null, created_by: null, parents: [], bound: true, tradeable: false}
