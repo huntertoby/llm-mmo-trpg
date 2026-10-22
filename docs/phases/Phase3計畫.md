@@ -1771,6 +1771,11 @@ PM 驗收後請使用者試玩一整輪（`docs/專案計畫.md` 第 14 節 🎮
 - PM 合併（`rules.py`、`runner.py`、`summons.py` 與 3-33f1 衝突 → 兩邊保留，持續輪數＝`min(技能, summon_max_duration)` ＋ 裝備詞條 ＋ 專精；**`LOG_FORMAT` → `/56`**；`skill_icons.json`、OpenAPI 重產）、`check.py` 全過、`pnpm build` 成功；`ruined_fort` 種子 56 `--log-json` ＋ `replay` 一致。召喚技分歧進化三支（`skillgen/summon_evolution.py`：加深＝HP +30%＋小特性、橋接＝第二灌注、數量型＝2 隻各 60%）；召喚詞條 6 條（詞條 40 → 46，新觸發 `on_summon_downed`）。報告 `Phase3-33f2報告.md`。
 - 待 PM 決定（只驗功能，數值記入平衡清單）：#1「召喚物數值」只有修正規則版 → 接受；#2 17 種只有 9 種三支齊全 → 平衡清單 B4；#3 持續加成合計無總上限（4 輪技能＋詞條＋精英可到 7 輪）→ 平衡清單 B2；#4 獻祭加成不與其他加成合計、#5 繼承取 ID 排序第一條、#7 爆炸／治療 1d8 → 接受（B2）；#6 數量型與精英上限 1 互擠、AI 高估數量型 → 平衡清單 B2。
 
+### 36.9 3-33h2 驗收（2026-10-23）
+
+- PM 合併（無衝突）；快速檢查（新流程）：`ruff`、`mypy` 全過，相關 pytest 750、vitest（render、battle）597 全過，`pnpm build` 成功；`dark_forest` 種子 57 `--log-json` ＋ `replay` 一致。影子與水精水窪改畫在無外框層（`drawSummonGround()`，透明度 0.22～0.3）；輪數與「圖」徽章移到右下（半徑 7、字級 10，遇炸彈徽章左移 16px）；外觀只留 `content/summon_looks.yaml`（範本不能再寫 `look`，載入時依範本 ID 查表；表多一列通用 `elemental_spirit`，共 18 列）；`trait` 後端改列舉（9 個）。截圖 `docs/phases/img/3-33h2-*.png`（實戰 18 種同場、一覽頁三朝向、整格抬高）。報告 `Phase3-33h2報告.md`。**外觀請美術 PM 驗收。**
+- 待 PM 決定：#1 表 18 列、#2 API `trait` 維持字串、#3 新召喚物要先在外觀表加列、#4 炸彈＋輪數徽章同時出現只有單元測試 → 接受；#5 藤蔓貼地底影仍在外框層 → 請美術 PM 判斷。
+
 
 ## 37. Phase 3-34｜檢查提速（使用者同意，2026-10-23：「現在的全量檢查是有多少要跑多久 為啥 9800x3d 要跑這麼九」→ 專案 PM 說明後「好」；sonnet；與 3-33h2 平行，只動測試設定與 `scripts/check.py`）
 
