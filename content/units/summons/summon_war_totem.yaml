@@ -15,3 +15,5 @@ tags: [summoned, totem]
 reactions: []
 summon: true
 totem: {radius: 2, status: empowered, duration: 2}
+# 外觀（Phase 3-33h1，docs/art/召喚物外觀.md）：純顯示資料。
+look: {body: totem, variant: war, element: summon, size: medium, trait: aura}

@@ -87,3 +87,6 @@ def test_the_preview_shows_the_summon_site_and_the_view_marks_totems(client: Tes
     totems = [u for u in units.values() if u["totem_radius"] is not None]
     assert [u["name_zh"] for u in totems] == ["戰意圖騰1"] and totems[0]["owner_id"] == hero
     assert units[hero]["totem_radius"] is None
+    [look] = [u["summon_look"] for u in units.values() if u["owner_id"] == hero]
+    assert look["body"] == "totem" and look["variant"] == "war" and look["trait"] == "aura"
+    assert units[hero]["summon_look"] is None

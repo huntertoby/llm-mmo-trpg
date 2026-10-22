@@ -212,6 +212,19 @@ class AppearanceView(_ViewModel):
     keywords: tuple[str, ...] = ()
 
 
+class SummonLookView(_ViewModel):
+    """召喚物外觀（Phase 3-33h1，唯讀）：體型、款式、元素、大小與特徵；前端不認得的值退回人形骷髏。
+
+    ``element`` 已套用灌注：有灌注關鍵字時為該關鍵字，否則為範本預設。
+    """
+
+    body: str
+    variant: str | None = None
+    element: str | None = None
+    size: str = "medium"
+    trait: str | None = None
+
+
 class EquipmentSlotView(_ViewModel):
     """一個裝備欄位（Phase 3G-G1，唯讀）：欄位、物品名與詞條文字。"""
 
@@ -313,6 +326,8 @@ class UnitView(_ViewModel):
     """圖騰（Phase 3D-4b）：光環半徑（回合開始時給範圍內友方狀態）；不是圖騰為 ``None``。"""
     infusion: str | None = None
     """召喚物灌注的關鍵字 ID（Phase 3-33b）；沒有灌注或不是召喚物為 ``None``。"""
+    summon_look: SummonLookView | None = None
+    """召喚物外觀（Phase 3-33h1）；範本沒有外觀欄位或不是召喚物為 ``None``（前端畫人形骷髏）。"""
     infusion_options: tuple[InfusionOptionView, ...] = ()
     """這個單位（施放者，只有自己陣營）施放召喚技能時可灌注的關鍵字（Phase 3-33b）；
     依預設順序（第一個是省略時的預設）。沒有時為空。"""
@@ -670,6 +685,24 @@ def _infusion_views(state: BattleState, unit: UnitState) -> tuple[InfusionOption
     return tuple(views)
 
 
+def _summon_look(state: BattleState, unit: UnitState) -> SummonLookView | None:
+    if not unit.is_summon:
+        return None
+    try:
+        look = state.ruleset.summon_def(unit.template_id).template.look
+    except KeyError:
+        return None
+    if look is None:
+        return None
+    return SummonLookView(
+        body=look.body,
+        variant=look.variant,
+        element=unit.infusion or look.element,
+        size=look.size,
+        trait=look.trait,
+    )
+
+
 def _unit_view(state: BattleState, unit: UnitState, team: Team) -> UnitView:
     return UnitView(
         id=unit.id,
@@ -717,6 +750,7 @@ def _unit_view(state: BattleState, unit: UnitState, team: Team) -> UnitView:
         dismissed=unit.dismissed,
         totem_radius=None if (totem := totem_of(state, unit)) is None else totem.radius,
         infusion=unit.infusion,
+        summon_look=_summon_look(state, unit),
         infusion_options=_infusion_views(state, unit) if unit.team is team else (),
         activations=tuple(_activation_view(state, a) for a in unit.activations),
         facing=unit.facing,

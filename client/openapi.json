@@ -8445,6 +8445,59 @@
         "title": "StepOut",
         "description": "自動推進中結算的一步。``actor_id`` 與 ``step`` 在開場時為 ``None``。\n\n``events`` 已依我方視角過濾（:func:`trpg.engine.event_filter.filter_events`），每個事件是\n事件的 JSON 再加上 ``text``（繁體中文描述；沒有描述的事件不含此鍵）。``seq`` 保留原值，\n過濾後可能跳號。"
       },
+      "SummonLookView": {
+        "properties": {
+          "body": {
+            "type": "string",
+            "title": "Body"
+          },
+          "variant": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Variant"
+          },
+          "element": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Element"
+          },
+          "size": {
+            "type": "string",
+            "title": "Size",
+            "default": "medium"
+          },
+          "trait": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Trait"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "body"
+        ],
+        "title": "SummonLookView",
+        "description": "召喚物外觀（Phase 3-33h1，唯讀）：體型、款式、元素、大小與特徵；前端不認得的值退回人形骷髏。\n\n``element`` 已套用灌注：有灌注關鍵字時為該關鍵字，否則為範本預設。"
+      },
       "SummonOut": {
         "properties": {
           "unit_id": {
@@ -9208,6 +9261,16 @@
               }
             ],
             "title": "Infusion"
+          },
+          "summon_look": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/SummonLookView"
+              },
+              {
+                "type": "null"
+              }
+            ]
           },
           "infusion_options": {
             "items": {

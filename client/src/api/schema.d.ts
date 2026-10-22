@@ -3414,6 +3414,27 @@ export interface components {
             view: components["schemas"]["BattleView"];
         };
         /**
+         * SummonLookView
+         * @description 召喚物外觀（Phase 3-33h1，唯讀）：體型、款式、元素、大小與特徵；前端不認得的值退回人形骷髏。
+         *
+         *     ``element`` 已套用灌注：有灌注關鍵字時為該關鍵字，否則為範本預設。
+         */
+        SummonLookView: {
+            /** Body */
+            body: string;
+            /** Variant */
+            variant?: string | null;
+            /** Element */
+            element?: string | null;
+            /**
+             * Size
+             * @default medium
+             */
+            size: string;
+            /** Trait */
+            trait?: string | null;
+        };
+        /**
          * SummonOut
          * @description 預覽中會出現的召喚物（Phase 3D-4b）：``expires_round`` 是在召喚者第幾輪的回合結束時消失，
          *     ``totem_radius`` 是圖騰的光環半徑（不是圖騰為 ``None``），``replaces`` 是因超過同時存在的上限
@@ -3700,6 +3721,7 @@ export interface components {
             totem_radius: number | null;
             /** Infusion */
             infusion?: string | null;
+            summon_look?: components["schemas"]["SummonLookView"] | null;
             /**
              * Infusion Options
              * @default []

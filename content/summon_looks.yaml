@@ -1,0 +1,23 @@
+# 召喚物外觀表（Phase 3-33h1，docs/art/召喚物外觀.md「移植需求」第 1 節；美術 PM 定案的 17 種）。
+# 純顯示資料，不進引擎結算。召喚物範本（content/units/summons/）存在時，範本的 look 欄位要與這裡一致
+# （tests/content/test_summon_looks.py 檢查）；尚未存在的（3-33e1／e2 才新增）先放在這裡，新增時照填。
+# element 用關鍵字 ID（skill_keywords.yaml），實際顯示以召喚物的灌注關鍵字為先。
+# 大小倍率：small 0.8、medium 1.0、large 1.25（前端）。
+looks:
+  fire_spirit:      {zh: 火靈,       body: spirit,    element: ignite,      size: medium}
+  ice_spirit:       {zh: 冰靈,       body: spirit,    element: frozen,      size: medium}
+  thunder_spirit:   {zh: 雷靈,       body: spirit,    element: charged,     size: medium}
+  water_sprite:     {zh: 水精,       body: spirit,    element: wet,         size: small,  trait: puddle}
+  skeleton_warrior: {zh: 骷髏戰士,   body: humanoid,  variant: skeleton,    element: prone,       size: medium, trait: shield}
+  shade:            {zh: 影魅,       body: humanoid,  variant: shade,       element: concealed,   size: medium, trait: translucent}
+  afterimage:       {zh: 殘影分身,   body: humanoid,  variant: afterimage,  element: concealed,   size: medium, trait: translucent}
+  guardian_spirit:  {zh: 守護靈,     body: humanoid,  variant: guardian,    element: summon,      size: medium, trait: glow}
+  golem:            {zh: 石像,       body: construct, variant: golem,       element: collision,   size: large}
+  bomb_puppet:      {zh: 爆裂傀儡,   body: construct, variant: bomb,        element: ignite,      size: small,  trait: fuse}
+  earth_wall:       {zh: 土牆,       body: construct, variant: wall,        element: collision,   size: medium, trait: no_ring}
+  war_wolf:         {zh: 戰狼,       body: beast,     variant: wolf,        element: prone,       size: medium}
+  hawk:             {zh: 鷹隼,       body: beast,     variant: bird,        element: marked,      size: small,  trait: flying}
+  vine:             {zh: 藤蔓,       body: plant,     element: prone,       size: medium, trait: ground}
+  war_totem:        {zh: 戰意圖騰,   body: totem,     variant: war,         element: summon,      size: medium, trait: aura}
+  pull_totem:       {zh: 吸引圖騰,   body: totem,     variant: pull,        element: collision,   size: medium}
+  plateau_totem:    {zh: 高台圖騰,   body: totem,     variant: plateau,     element: high_ground, size: medium}

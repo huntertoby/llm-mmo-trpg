@@ -8,14 +8,24 @@
 
 from __future__ import annotations
 
+import re
 from fractions import Fraction
+from pathlib import Path
 
 from pydantic import Field, model_validator
 
-from trpg.content.battle import UnitTemplate, WeaponDef
+from trpg.content.battle import ID_PATTERN, SummonLook, UnitTemplate, WeaponDef
+from trpg.content.loader import load_content_file
 from trpg.content.schemas import ContentModel
 
-__all__ = ["SummonDef", "SummonTable", "summon_dpr"]
+__all__ = [
+    "SummonDef",
+    "SummonLookEntry",
+    "SummonLookTable",
+    "SummonTable",
+    "load_summon_looks",
+    "summon_dpr",
+]
 
 
 class SummonDef(ContentModel):
@@ -53,3 +63,27 @@ def summon_dpr(summon: SummonDef) -> Fraction:
     每輪一次攻擊、不計命中率與屬性。"""
     dice = summon.weapon.dice
     return Fraction(dice.count * (dice.sides + 1), 2) + summon.weapon.flat
+
+
+class SummonLookEntry(SummonLook):
+    """外觀表的一列：外觀欄位加中文名。"""
+
+    zh: str = Field(min_length=1)
+
+
+class SummonLookTable(ContentModel):
+    """``content/summon_looks.yaml``（Phase 3-33h1）：17 種召喚物的外觀表（不進規則包）。"""
+
+    looks: dict[str, SummonLookEntry]
+
+    @model_validator(mode="after")
+    def _ids(self) -> SummonLookTable:
+        bad = [i for i in self.looks if re.match(ID_PATTERN, i) is None]
+        if bad:
+            raise ValueError(f"外觀表的召喚物 ID 格式錯誤：{', '.join(bad)}")
+        return self
+
+
+def load_summon_looks(root: Path) -> SummonLookTable:
+    """讀取 ``<root>/summon_looks.yaml``（找不到檔案時是 ``ContentError``）。"""
+    return load_content_file(root / "summon_looks.yaml", SummonLookTable)
