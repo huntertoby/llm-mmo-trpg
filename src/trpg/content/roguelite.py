@@ -13,14 +13,17 @@ from pydantic import Field, model_validator
 from trpg.content.battle import ID_PATTERN, UnitTemplate
 from trpg.content.maps import TRAINING_ARCHETYPE, MapDef
 from trpg.content.schemas import ContentModel
-from trpg.shared.types import Team
+from trpg.shared.types import ResistGroup, Team
 
 __all__ = [
     "BossRules",
+    "CandidateSettings",
     "EncounterStep",
     "ObjectiveRotation",
     "RunRules",
     "RunSourceRules",
+    "StartHero",
+    "StartRules",
     "roguelite_problems",
 ]
 
@@ -63,6 +66,70 @@ class ObjectiveRotation(ContentModel):
     min_defend: int = Field(default=0, ge=0)
 
 
+class StartHero(ContentModel):
+    """新開局主角的基礎數值（依武器大類；Phase 3-24b2）。屬性一律是 ``base_attribute``。"""
+
+    name_zh: str = Field(min_length=1)
+    max_hp: int = Field(ge=1)
+    speed: int = Field(default=5, ge=0)
+    armor_bonus: int = 0
+    max_mana: int = Field(default=0, ge=0)
+    resist: dict[ResistGroup, int] = Field(default_factory=dict)
+
+
+def _default_heroes() -> dict[str, StartHero]:
+    return {
+        "melee": StartHero(
+            name_zh="冒險者",
+            max_hp=60,
+            armor_bonus=4,
+            max_mana=20,
+            resist={ResistGroup.PHYSICAL: 100},
+        ),
+        "ranged": StartHero(
+            name_zh="冒險者",
+            max_hp=50,
+            armor_bonus=2,
+            max_mana=20,
+            resist={ResistGroup.PHYSICAL: 50},
+        ),
+        "focus": StartHero(
+            name_zh="冒險者",
+            max_hp=40,
+            armor_bonus=1,
+            max_mana=40,
+            resist={ResistGroup.ELEMENTAL: 150},
+        ),
+    }
+
+
+class StartRules(ContentModel):
+    """新開局（Phase 3-24b2，06 6.27.3）：自選武器 ＋ 選 ``keywords`` 個關鍵字，各給 1 招
+    起始技能。"""
+
+    keywords: int = Field(default=2, ge=1, le=4)
+    composer_tries: int = Field(default=16, ge=0)
+    """池裡沒有與武器相容的起始技能時，隨機組合器（指定關鍵字）最多試幾個種子。"""
+    heroes: dict[str, StartHero] = Field(default_factory=_default_heroes)
+    """武器大類（``melee``／``ranged``／``focus``）→ 主角的基礎數值。"""
+
+    @model_validator(mode="after")
+    def _classes(self) -> StartRules:
+        missing = sorted({"melee", "ranged", "focus"} - set(self.heroes))
+        if missing:
+            raise ValueError(f"start.heroes 缺少武器大類：{', '.join(missing)}")
+        return self
+
+
+class CandidateSettings(ContentModel):
+    """共用候選產生器的參數（Phase 3-24b2，06 6.27.4；``trpg.skillgen.candidates``）。"""
+
+    composer_share_permille: int = Field(default=500, ge=0, le=1000)
+    """每個候選先從隨機組合器找的機率（‰）；其餘先從技能池找。找不到時換另一個來源。"""
+    composer_tries: int = Field(default=8, ge=0)
+    """組合器每個候選最多試幾個種子。"""
+
+
 class RunRules(ContentModel):
     """``content/roguelite.yaml``。"""
 
@@ -99,6 +166,10 @@ class RunRules(ContentModel):
     """在第幾場（一般戰鬥）打完之後有營火。"""
     rerolls_per_campfire: int = Field(ge=0)
     source: RunSourceRules
+    start: StartRules = Field(default_factory=StartRules)
+    """新開局（Phase 3-24b2）。"""
+    candidates: CandidateSettings = Field(default_factory=CandidateSettings)
+    """升級與營火三選一的候選產生器（Phase 3-24b2）。"""
 
     @model_validator(mode="after")
     def _check(self) -> RunRules:

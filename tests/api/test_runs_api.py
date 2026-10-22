@@ -19,6 +19,9 @@ from trpg.engine.ai.utility import UtilityAI
 from trpg.roguelite import next_node
 
 BUILD, SEED = "build_fire", 0
+"""回歸範本 build（開發用的開局路徑，Phase 3-24b2 起玩家介面不提供）。"""
+START = {"weapon": "fire_staff", "keywords": ["ignite", "marked"]}
+"""一般開局（Phase 3-24b2）：起始武器 ＋ 2 個關鍵字。"""
 
 
 @pytest.fixture
@@ -39,7 +42,7 @@ def _runs(client: TestClient) -> RunStore:
 
 
 def _create(client: TestClient, **over: Any) -> dict[str, Any]:
-    body = {"build": BUILD, "seed": SEED, **over}
+    body = {**START, "seed": SEED, **over}
     reply = client.post("/api/runs", json=body)
     assert reply.status_code == 201, reply.text
     data: dict[str, Any] = reply.json()
@@ -114,6 +117,16 @@ def test_run_plan_carries_each_battles_objective(runs_client: TestClient) -> Non
         ({"build": "build_nobody", "seed": 1}, 422),
         ({"build": BUILD, "seed": 1, "attributes": {"str": 1}}, 422),
         ({"build": BUILD, "seed": -1}, 422),
+        ({**START, "seed": 1, "attributes": {"str": 1}}, 422),
+        ({"weapon": "fire_staff", "keywords": ["ignite"], "seed": 1}, 422),
+        ({"weapon": "fire_staff", "keywords": ["ignite", "ignite"], "seed": 1}, 422),
+        ({"weapon": "fire_staff", "keywords": ["ignite", "nope"], "seed": 1}, 422),
+        ({"weapon": "nope", "keywords": ["ignite", "marked"], "seed": 1}, 422),
+        ({"weapon": "bow", "keywords": ["wet", "marked"], "seed": 1}, 422),
+        ({"weapon": "fire_staff", "seed": 1}, 422),
+        ({**START, "build": BUILD, "seed": 1}, 422),
+        ({"dev_pack": "dev_nobody", "seed": 1}, 422),
+        ({"seed": 1}, 422),
     ],
 )
 def test_create_run_rejects_bad_input(
@@ -157,14 +170,16 @@ def test_finished_battle_writes_back_and_levels_up(
     after = _ok(runs_client.get(url))
     assert after["battle_id"] is None
     level_gain = library.ruleset.core.level_hp_bonus(  # 升到 2 級，目前 HP 同步增加
-        library.builds.by_id()[BUILD].hero.max_hp, 2
+        library.roguelite.start.heroes["focus"].max_hp, 2
     )
     assert after["hero"]["hp"] == max(hero_view["hp"], 1) + level_gain
     assert after["history"][0]["won"] and after["history"][0]["index"] == 1
     node = after["node"]
     assert node["kind"] == "level_up" and node["points"] == 2
     offer = node["offer"]
-    assert len(offer["candidates"]) == 3 and offer["off_route"] == [2]
+    assert len(offer["candidates"]) == 3
+    assert [t["kind"] for t in offer["tags"]] == ["deepen", "bridge", "new"]
+    assert [t["label_zh"] for t in offer["tags"]] == ["加深", "橋接", "新方向"]
     # 生成技能的卡片也查得到
     generated = offer["candidates"][0]["id"]
     assert _ok(runs_client.get(f"/api/skills/{generated}"))["id"] == generated
@@ -193,7 +208,7 @@ def test_save_mid_battle_load_and_continue_matches(
     assert saved == {
         "run_id": run["run_id"],
         "file": f"run-{run['run_id']}.json",
-        "format": "trpg-run/2",
+        "format": "trpg-run/3",
         "in_battle": True,
     }
     assert (save_dir / saved["file"]).is_file()
@@ -221,7 +236,7 @@ def test_corrupt_save_is_422(runs_client: TestClient, save_dir: Path) -> None:
     (save_dir / "run-bad.json").write_text('{"format": "trpg-run/0"}', encoding="utf-8")
     reply = runs_client.post("/api/runs/load", json={"run_id": "bad"})
     assert reply.status_code == 422
-    assert "trpg-run/2" in reply.json()["detail"]
+    assert "trpg-run/3" in reply.json()["detail"]
     assert runs_client.get("/api/runs/saves").json() == []
 
 

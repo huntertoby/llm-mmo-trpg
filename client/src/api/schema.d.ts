@@ -270,6 +270,67 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/runs/start-options": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Get Start Options
+         * @description 開局可選的武器（``weapons.yaml`` 全部）與關鍵字（推導表順序）。
+         */
+        get: operations["get_start_options_api_runs_start_options_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/runs/start-preview": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Post Start Preview
+         * @description 每個關鍵字的池會給哪一招（同種子確定）：已選的依選擇順序是實際會拿到的；沒選的是「下一個
+         *     選它」時會拿到的。湊不到時 ``skill`` 為 ``None``（不可選）。
+         */
+        post: operations["post_start_preview_api_runs_start_preview_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/runs/dev-packs": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * List Dev Packs
+         * @description 開發者起始包（``dev_starters.yaml``；開發用，玩家介面不顯示）。
+         */
+        get: operations["list_dev_packs_api_runs_dev_packs_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/runs/rules": {
         parameters: {
             query?: never;
@@ -1016,17 +1077,25 @@ export interface components {
         };
         /**
          * CreateRunRequest
-         * @description 開新一輪：起始 build、種子、開局配點（省略時全部點在技能最常用的縮放屬性）。
+         * @description 開新一輪（Phase 3-24b2）：``weapon`` ＋ ``keywords``（一般開局），或 ``dev_pack``（開發者
+         *     起始包），或 ``build``（回歸範本，開發與測試用）——三者擇一；種子；開局配點（省略時全部點在
+         *     武器的縮放屬性，以 build 開局時為技能最常用的縮放屬性）。
          */
         CreateRunRequest: {
             /** Build */
-            build: string;
+            build?: string | null;
             /** Seed */
             seed: number;
             /** Attributes */
             attributes?: {
                 [key: string]: number;
             } | null;
+            /** Weapon */
+            weapon?: string | null;
+            /** Keywords */
+            keywords?: string[] | null;
+            /** Dev Pack */
+            dev_pack?: string | null;
         };
         /** DamageOut */
         DamageOut: {
@@ -1086,6 +1155,22 @@ export interface components {
             type: "defend";
             /** Target Id */
             target_id?: string | null;
+        };
+        /**
+         * DevPackOut
+         * @description 開發者起始包（Phase 3-24b2，開發用；只在開發者選單顯示）。
+         */
+        DevPackOut: {
+            /** Id */
+            id: string;
+            /** Label Zh */
+            label_zh: string;
+            /** Weapon */
+            weapon: string;
+            /** Weapon Name Zh */
+            weapon_name_zh: string;
+            /** Keywords */
+            keywords: components["schemas"]["KeywordRef"][];
         };
         /** @enum {string} */
         Direction: "north" | "east" | "south" | "west";
@@ -1444,6 +1529,13 @@ export interface components {
             weapon_traits_zh: string[];
             /** Skills */
             skills: components["schemas"]["SkillCard"][];
+            /**
+             * Start Keywords
+             * @default []
+             */
+            start_keywords: components["schemas"]["KeywordRef"][];
+            /** Dev Pack */
+            dev_pack?: string | null;
         };
         /**
          * HistoryStepOut
@@ -1792,6 +1884,33 @@ export interface components {
             candidates: components["schemas"]["SkillCard"][];
             /** Off Route */
             off_route: number[];
+            /**
+             * Tags
+             * @default []
+             */
+            tags: components["schemas"]["OfferTagOut"][];
+        };
+        /**
+         * OfferTagOut
+         * @description 候選的標示（Phase 3-24b2）：加深／橋接／新方向與它帶的關鍵字。
+         */
+        OfferTagOut: {
+            /**
+             * Kind
+             * @enum {string}
+             */
+            kind: "deepen" | "bridge" | "new";
+            /** Label Zh */
+            label_zh: string;
+            /** Keywords */
+            keywords: components["schemas"]["KeywordRef"][];
+            /** Fallback */
+            fallback: boolean;
+            /**
+             * Source
+             * @enum {string}
+             */
+            source: "pool" | "composer";
         };
         /**
          * OrderSet
@@ -2493,6 +2612,74 @@ export interface components {
             reasons: {
                 [key: string]: string;
             };
+        };
+        /**
+         * StartKeywordOption
+         * @description 一個關鍵字的起始技能預覽：``skill`` 為 ``None`` 表示這把武器湊不到（不可選）。已選的關鍵字
+         *     是實際會拿到的技能；沒選的是「下一個選它」時會拿到的技能。
+         */
+        StartKeywordOption: {
+            keyword: components["schemas"]["KeywordRef"];
+            /** Selected */
+            selected: boolean;
+            skill: components["schemas"]["SkillCard"] | null;
+        };
+        /**
+         * StartOptions
+         * @description 開局選項（Phase 3-24b2）：全部武器、全部關鍵字、要選幾個關鍵字。
+         */
+        StartOptions: {
+            /** Weapons */
+            weapons: components["schemas"]["StartWeaponOption"][];
+            /** Keywords */
+            keywords: components["schemas"]["KeywordRef"][];
+            /** Keyword Count */
+            keyword_count: number;
+        };
+        /** StartPreview */
+        StartPreview: {
+            /** Weapon */
+            weapon: string;
+            /** Seed */
+            seed: number;
+            /** Options */
+            options: components["schemas"]["StartKeywordOption"][];
+        };
+        /**
+         * StartPreviewRequest
+         * @description 開局預覽：武器、種子與目前已選的關鍵字（依選擇順序）。
+         */
+        StartPreviewRequest: {
+            /** Weapon */
+            weapon: string;
+            /** Seed */
+            seed: number;
+            /**
+             * Keywords
+             * @default []
+             */
+            keywords: string[];
+        };
+        /**
+         * StartWeaponOption
+         * @description 開局可選的武器（Phase 3-24b2）。
+         */
+        StartWeaponOption: {
+            /** Id */
+            id: string;
+            /** Name Zh */
+            name_zh: string;
+            /** Weapon Class */
+            weapon_class: string;
+            /**
+             * Traits Zh
+             * @default []
+             */
+            traits_zh: string[];
+            /** Hp */
+            hp: number;
+            /** Mana */
+            mana: number;
         };
         /** StatusChanceOut */
         StatusChanceOut: {
@@ -3573,6 +3760,79 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    get_start_options_api_runs_start_options_get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["StartOptions"];
+                };
+            };
+        };
+    };
+    post_start_preview_api_runs_start_preview_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["StartPreviewRequest"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["StartPreview"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    list_dev_packs_api_runs_dev_packs_get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["DevPackOut"][];
                 };
             };
         };

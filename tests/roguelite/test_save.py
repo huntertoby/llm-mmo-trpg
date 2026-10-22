@@ -121,7 +121,7 @@ def test_save_json_has_format_and_engine_version(tmp_path: Path) -> None:
     assert path == save_path(tmp_path / "saves", "abc")
     assert path.name == "run-abc.json"
     raw = json.loads(path.read_text(encoding="utf-8"))
-    assert raw["format"] == SAVE_FORMAT == "trpg-run/2"
+    assert raw["format"] == SAVE_FORMAT == "trpg-run/3"
     assert raw["engine"] == LOG_FORMAT
     assert raw["battle"]["index"] == 1 and len(raw["battle"]["steps"]) == 3
     loaded = load_save(path)
@@ -131,7 +131,7 @@ def test_save_json_has_format_and_engine_version(tmp_path: Path) -> None:
 
 def test_generated_skills_are_saved_with_their_definitions() -> None:
     lib = library()
-    run, _ = auto_play(lib, new_run(lib, *VICTORY), stop=_mid_battle(4, 0))
+    run, _ = auto_play(lib, new_run(lib, *VICTORY))
     assert run.generated_skills
     raw = json.loads(dumps_save(RunSave(run_id="g", run=run)))
     ids = [s["id"] for s in raw["run"]["generated_skills"]]
@@ -145,10 +145,11 @@ def test_wrong_format_and_engine_are_rejected() -> None:
     run, battle = auto_play(lib, new_run(lib, *VICTORY), stop=_mid_battle(1, 3))
     assert battle is not None
     raw = json.loads(dumps_save(RunSave(run_id="w", run=run, battle=battle.to_saved())))
-    with pytest.raises(SaveFormatError, match="trpg-run/2"):
+    with pytest.raises(SaveFormatError, match="trpg-run/3"):
         loads_save(json.dumps({**raw, "format": "trpg-run/0"}))
-    with pytest.raises(SaveFormatError, match="開新一輪"):  # 3-22：舊版存檔明確拒絕並提示
-        loads_save(json.dumps({**raw, "format": "trpg-run/1"}))
+    for old in ("trpg-run/1", "trpg-run/2"):  # 3-22、3-24b2：舊版存檔明確拒絕並提示
+        with pytest.raises(SaveFormatError, match="開新一輪"):
+            loads_save(json.dumps({**raw, "format": old}))
     with pytest.raises(SaveFormatError, match="引擎版本"):
         loads_save(json.dumps({**raw, "engine": "trpg-battle-log/1"}))
     between = json.loads(dumps_save(RunSave(run_id="w", run=run)))

@@ -2,7 +2,10 @@
 
 ``RunState`` 是一輪進度的唯一真相，**可序列化**（存檔原樣寫入）：
 
-- 主角：目前的單位範本 ``hero``（屬性與技能清單隨升級改變；其餘欄位沿用起始 build 的英雄）、
+- 開局（Phase 3-24b2）：``start``＝起始武器 ＋ 選的關鍵字（與開發者起始包 ID）；``build_id`` 只在以
+  回歸範本（``content/sim/builds.yaml``）開局時有值（開發與測試用，玩家介面不提供）。
+- ``behavior``：主角在這一輪用過的動作類型與次數（候選產生器的行為紀錄）。
+- 主角：目前的單位範本 ``hero``（屬性與技能清單隨升級改變；其餘欄位沿用開局時的主角）、
   等級與經驗、**目前 HP、法力、源力**（戰鬥之間不回復，0.11 G、K）。技能清單就是裝備（主動 ≤ 6、
   被動 ≤ 3、反應 ≤ 1、姿態 ≤ 1，``core.yaml`` 的 ``skill_slots``）；欄位滿時要替換或放棄。
 - ``generated_skills``：主角目前裝備的 **生成技能定義**（隨機組合器的產物不在內容庫裡；讀檔與開戰時
@@ -35,8 +38,10 @@ __all__ = [
     "LevelUpChoice",
     "LevelUpNode",
     "Node",
+    "OfferTag",
     "PickChoice",
     "RerollChoice",
+    "RunStart",
     "RunState",
     "SkillOffer",
 ]
@@ -76,9 +81,28 @@ class BattleRecord(_Model):
     state_digest: str
 
 
+class RunStart(_Model):
+    """一輪的開局（Phase 3-24b2，06 6.27.3）：自選的起始武器與關鍵字；``dev_pack`` 是開發者起始包
+    ID（一般開局為 ``None``）。"""
+
+    weapon: str
+    keywords: tuple[str, ...] = ()
+    dev_pack: str | None = None
+
+
+class OfferTag(_Model):
+    """候選的標示（Phase 3-24b2，候選產生器）：``kind`` 加深／橋接／新方向、它帶的關鍵字、來源，
+    ``fallback`` 表示定義做不到而退回（例：只持有 1 個關鍵字時的橋接）。"""
+
+    kind: Literal["deepen", "bridge", "new"]
+    keywords: tuple[str, ...]
+    source: Literal["pool", "composer"]
+    fallback: bool = False
+
+
 class SkillOffer(_Model):
     """升級或重骰的技能候選。``off_route`` 是「偏離路線」候選的索引（縮放屬性與當時主角最高屬性
-    不同；湊不到時為空）。"""
+    不同；湊不到時為空）。``tags`` 與 ``candidates`` 一一對應（Phase 3-24b2 起）。"""
 
     reason: Literal["level_up", "reroll"]
     tier: int
@@ -86,6 +110,7 @@ class SkillOffer(_Model):
     """產生候選時主角的最高屬性（並列時取六屬性順序的第一個）。"""
     candidates: tuple[SkillDef, ...]
     off_route: tuple[int, ...] = ()
+    tags: tuple[OfferTag, ...] = ()
 
 
 class BattleNode(_Model):
@@ -160,7 +185,10 @@ class RunState(_Model):
     """一輪的進度（見模組說明）。"""
 
     seed: int = Field(ge=0)
-    build_id: str
+    build_id: str | None = None
+    """以回歸範本開局時的 build ID（開發與測試用）；一般開局為 ``None``。"""
+    start: RunStart | None = None
+    """一般開局與開發者起始包的選擇（Phase 3-24b2）；以回歸範本開局時為 ``None``。"""
     hero: UnitTemplate
     level: int = Field(ge=1)
     xp: int = Field(ge=0)
@@ -177,6 +205,8 @@ class RunState(_Model):
     offers_made: int = 0
     """已產生的候選組數（衍生候選亂數串流的計數器）。"""
     history: tuple[BattleRecord, ...] = ()
+    behavior: dict[str, int] = Field(default_factory=dict)
+    """主角用過的動作類型 → 次數（每場戰後累加；候選產生器的行為紀錄，Phase 3-24b2）。"""
     node: Node
 
     def max_hp_in(self, core: CoreRules) -> int:

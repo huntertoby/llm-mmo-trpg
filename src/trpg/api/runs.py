@@ -4,7 +4,7 @@
   戰鬥工作階段表裡，用既有的 ``/api/battles/{id}`` 端點操作）。
 - 戰鬥結束後，任何一輪的請求先 :meth:`RunSession.sync`：以 ``finish_battle`` 寫回主角並前進到下一個
   節點。
-- 存檔：``RunSave``（``trpg-run/2``），戰鬥中存的是 ``setup`` 以外的一切（種子、步驟、指令）；讀檔時
+- 存檔：``RunSave``（``trpg-run/3``），戰鬥中存的是 ``setup`` 以外的一切（種子、步驟、指令）；讀檔時
   重建 ``setup``、重播步驟、還原指令（:meth:`SessionStore.open`）。
 - 鎖的順序：一輪的鎖 → 戰鬥的鎖。
 """
@@ -29,6 +29,8 @@ from trpg.roguelite import (
     battle_setup,
     finish_battle,
     load_save,
+    new_dev_run,
+    new_keyword_run,
     new_run,
     ruleset_hash,
     save_path,
@@ -64,7 +66,9 @@ class RunSession:
         with battle.lock:
             if not battle.state.ended:
                 return False
-            self.run = finish_battle(self.library, self.run, battle.state, len(battle.steps))
+            self.run = finish_battle(
+                self.library, self.run, battle.state, len(battle.steps), battle.steps
+            )
         self.battle = None
         return True
 
@@ -123,8 +127,24 @@ class RunStore:
             self._runs[session.run_id] = session
         return session
 
-    def create(self, build: str, seed: int, attributes: dict[Attribute, int] | None) -> RunSession:
-        run = new_run(self.library, build, seed, attributes)
+    def create(
+        self,
+        seed: int,
+        attributes: dict[Attribute, int] | None,
+        *,
+        weapon: str | None = None,
+        keywords: tuple[str, ...] | None = None,
+        dev_pack: str | None = None,
+        build: str | None = None,
+    ) -> RunSession:
+        """開新一輪（Phase 3-24b2）：``weapon`` ＋ ``keywords``、``dev_pack`` 或 ``build`` 擇一。"""
+        if build is not None:
+            run = new_run(self.library, build, seed, attributes)
+        elif dev_pack is not None:
+            run = new_dev_run(self.library, dev_pack, seed, attributes)
+        else:
+            assert weapon is not None and keywords is not None
+            run = new_keyword_run(self.library, weapon, keywords, seed, attributes)
         with self._lock:
             run_id = self._new_id()
             while run_id in self._runs:  # pragma: no cover - 機率極低
