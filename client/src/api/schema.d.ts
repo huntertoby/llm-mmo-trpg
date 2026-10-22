@@ -1169,7 +1169,16 @@ export interface components {
             /** Seed */
             seed: number;
             /** Hero Build */
-            hero_build: string;
+            hero_build?: string | null;
+            /** Weapon */
+            weapon?: string | null;
+            /**
+             * Keywords
+             * @default []
+             */
+            keywords: string[];
+            /** Dev Pack */
+            dev_pack?: string | null;
             /** Ally Builds */
             ally_builds?: string[] | null;
             /**
@@ -1646,7 +1655,16 @@ export interface components {
         /** GearCheckRequest */
         GearCheckRequest: {
             /** Hero Build */
-            hero_build: string;
+            hero_build?: string | null;
+            /** Weapon */
+            weapon?: string | null;
+            /**
+             * Keywords
+             * @default []
+             */
+            keywords: string[];
+            /** Dev Pack */
+            dev_pack?: string | null;
             /** Equipment */
             equipment?: {
                 [key: string]: components["schemas"]["GearChoice"];

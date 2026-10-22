@@ -244,8 +244,10 @@ def test_save_list_has_build_name_and_victory(
 ) -> None:
     run = _create(runs_client)
     entry = runs_client.get("/api/runs/saves").json()[0]
-    expected = next(b.name_zh for b in library.builds.builds if b.id == BUILD)
-    assert entry["build_name_zh"] == expected and entry["victory"] is None
+    # 3-28：build（流派名）不出現在玩家看得到的存檔列表
+    build = next(b for b in library.builds.builds if b.id == BUILD)
+    assert build.name_zh not in entry["build_name_zh"]
+    assert entry["build_name_zh"].startswith("回歸測試開局・") and entry["victory"] is None
     path = _file(save_dir, run["run_id"])
     data = json.loads(path.read_text(encoding="utf-8"))
     data["run"]["node"] = {"kind": "ended", "victory": False}

@@ -54,3 +54,14 @@ export function isDevMode(search: string): boolean {
   const value = new URLSearchParams(search).get("dev");
   return value === "1" || value === "true";
 }
+
+/** 送給 `POST /api/battles`、`/api/gear/check` 的開局欄位（武器＋關鍵字，或開發者起始包）。 */
+export interface StartChoiceBody {
+  weapon?: string;
+  keywords: string[];
+  dev_pack?: string;
+}
+
+export function startBody(choice: { weapon: string; keywords: string[] } | { devPack: string }): StartChoiceBody {
+  return "devPack" in choice ? { keywords: [], dev_pack: choice.devPack } : { weapon: choice.weapon, keywords: [...choice.keywords] };
+}

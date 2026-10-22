@@ -31,6 +31,8 @@ export const BASE_LEGEND: readonly LegendEntry[] = [
   { color: HIGHLIGHT.trigger, label: "反應詢問的觸發者（洋紅雙框）" },
   { color: HIGHLIGHT.followup, label: "複合技能第二段的範圍" },
   { color: HIGHLIGHT.summon, label: "召喚物（菱形）與圖騰光環" },
+  { color: HIGHLIGHT.exit, label: "出口格「出」：我方單位走上去即撤離（撤離任務）" },
+  { color: HIGHLIGHT.point, label: "守點格「守」：守住指定回合數（守點任務）" },
   { color: HIGHLIGHT.well, label: "源泉格「源」：走上去源力 +1" },
   { color: HIGHLIGHT.deadly, label: "致命地形（叉叉）" },
   { color: HIGHLIGHT.burning, label: "燃燒中的物件" },

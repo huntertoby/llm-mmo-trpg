@@ -153,7 +153,13 @@ class CreateBattleRequest(_ApiModel):
 
     map_id: str
     seed: int = Field(ge=0, le=MASK64)
-    hero_build: str
+    hero_build: str | None = None
+    """主角 build（回歸測試與開發用）；與 ``weapon``＋``keywords``／``dev_pack`` 三擇一。"""
+    weapon: str | None = None
+    keywords: tuple[str, ...] = ()
+    """單場戰鬥的開局（Phase 3-28，與一輪新開局相同）：起始武器＋關鍵字，每個關鍵字的池給 1 招。"""
+    dev_pack: str | None = None
+    """開發者起始包（``?dev=1``）；武器與關鍵字取自 ``dev_starters.yaml``。"""
     ally_builds: tuple[str, ...] | None = None
     max_rounds: int = Field(default=30, ge=1, le=200)
     custom_skills: tuple[dict[str, Any], ...] = ()

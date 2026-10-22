@@ -50,11 +50,11 @@ def keyword_refs(library: ContentLibrary, ids: tuple[str, ...]) -> tuple[Keyword
 
 
 def start_label(library: ContentLibrary, run: RunState) -> str:
-    """一輪的開局說明（存檔列表用；不含任何流派名稱）：「單手劍・點燃＋倒地」。以 build 開局時用
-    build 的名稱（回歸範本，開發用）。"""
+    """一輪的開局說明（存檔列表用；不含任何流派名稱）：「單手劍・點燃＋倒地」。以 build 開局
+    （回歸範本，開發用）的存檔不顯示 build 名稱（那是流派名），只寫武器。"""
     if run.start is None:
-        build = next((b for b in library.builds.builds if b.id == run.build_id), None)
-        return build.name_zh if build is not None else (run.build_id or "")
+        weapon = library.weapons.get(run.hero.weapon)
+        return f"回歸測試開局・{weapon.name_zh if weapon is not None else run.hero.weapon}"
     weapon = library.weapons.get(run.start.weapon)
     names = "＋".join(r.name_zh for r in keyword_refs(library, run.start.keywords))
     return f"{weapon.name_zh if weapon is not None else run.start.weapon}・{names}"

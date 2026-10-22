@@ -49,6 +49,7 @@ __all__ = [
     "battle_setup",
     "battle_usage",
     "finish_battle",
+    "hero_spawn",
     "hero_unit_id",
     "level_for",
     "next_node",
@@ -61,6 +62,27 @@ def _battle_node(run: RunState) -> BattleNode:
     if not isinstance(run.node, BattleNode):
         raise NodeConflictError(f"目前不是戰鬥（{_NODE_TEXT[run.node.kind]}）")
     return run.node
+
+
+def hero_spawn(library: ContentLibrary, run: RunState) -> UnitSpawn:
+    """主角的出場設定：帶目前的 HP、法力、源力、等級加成與技能等級（一輪與單場戰鬥共用）。"""
+    core = library.ruleset.core
+    # 等級加成併入範本的基礎 HP，體質的部分由引擎加（與 RunState.max_hp_in 同一個式子）
+    leveled = run.hero.model_copy(
+        update={
+            "max_hp": run.hero.max_hp + core.level_hp_bonus(run.hero.max_hp, run.level),
+            "skill_levels": battle_levels(run),  # 技能等級（3-26a）：戰鬥設定帶入，重播一致
+        }
+    )
+    return UnitSpawn(
+        template=leveled,
+        weapon=library.weapons[run.hero.weapon],
+        equipment=library.loadout_of(run.hero),
+        team=Team.ALLY,
+        source=run.source,
+        hp=run.hp,
+        mana=run.mana,
+    )
 
 
 def battle_setup(library: ContentLibrary, run: RunState) -> BattleSetup:
@@ -76,23 +98,7 @@ def battle_setup(library: ContentLibrary, run: RunState) -> BattleSetup:
         max_rounds=rules.max_rounds,
         objective=library.map(plan.map_id).objective_for(plan.objective),
     )
-    core = library.ruleset.core
-    # 等級加成併入範本的基礎 HP，體質的部分由引擎加（與 RunState.max_hp_in 同一個式子）
-    leveled = run.hero.model_copy(
-        update={
-            "max_hp": run.hero.max_hp + core.level_hp_bonus(run.hero.max_hp, run.level),
-            "skill_levels": battle_levels(run),  # 技能等級（3-26a）：戰鬥設定帶入，重播一致
-        }
-    )
-    hero = UnitSpawn(
-        template=leveled,
-        weapon=library.weapons[run.hero.weapon],
-        equipment=library.loadout_of(run.hero),
-        team=Team.ALLY,
-        source=run.source,
-        hp=run.hp,
-        mana=run.mana,
-    )
+    hero = hero_spawn(library, run)
     ruleset = library.ruleset.with_skills(run.generated_skills)
     return base.model_copy(update={"units": (hero, *base.units), "ruleset": ruleset})
 

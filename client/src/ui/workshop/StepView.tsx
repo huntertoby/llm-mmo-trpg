@@ -1,5 +1,5 @@
 // 一步步組：步驟列（可回上一步）＋ 目前這一步的說明與欄位。
-import { useEffect } from "react";
+import { useEffect, useState } from "react";
 import type { DraftOptions, StepId, StepOptions } from "../../api/types";
 import { autoSingles, changeSkeleton, getPath, type Json } from "../../workshop/draft";
 import { availableSteps, canBack, canNext, currentStep, STEP_NAMES, type EditorState } from "../../workshop/state";
@@ -60,15 +60,22 @@ function StepBody({ step, draft, options, onDraft }: BodyProps) {
     if (next !== draft) onDraft(next);
   }, [draft, step, onDraft]);
 
+  // 換骨架會清掉其他欄位：先在頁內問一次（不用 window.confirm；內嵌瀏覽器會直接回傳否）
+  const [pendingSkeleton, setPendingSkeleton] = useState<{ next: Json; after: string } | null>(null);
+  useEffect(() => setPendingSkeleton(null), [step.id]);
   const onChange = (next: Json) => {
     const before = getPath(draft, "skeleton");
     const after = getPath(next, "skeleton");
     if (step.id === "skeleton" && typeof after === "string" && before !== after) {
       const filled = Object.keys(draft).filter((k) => k !== "skeleton" && k !== "name_zh").length;
-      if (filled > 0 && !window.confirm("換骨架會清掉其他已填的欄位（名稱除外），確定要換嗎？")) return;
+      if (filled > 0) {
+        setPendingSkeleton({ next, after });
+        return;
+      }
       onDraft(changeSkeleton(draft, after));
       return;
     }
+    setPendingSkeleton(null);
     onDraft(next);
   };
   return (
@@ -83,6 +90,26 @@ function StepBody({ step, draft, options, onDraft }: BodyProps) {
         </ul>
       )}
       <FieldList fields={step.fields} container={draft} base="" onChange={onChange} />
+      {pendingSkeleton !== null && (
+        <div className="ws-warning" role="alertdialog" data-testid="skeleton-confirm">
+          <div>換骨架會清掉其他已填的欄位（名稱除外），確定要換嗎？</div>
+          <div className="ws-row">
+            <button
+              type="button"
+              className="danger"
+              onClick={() => {
+                onDraft(changeSkeleton(draft, pendingSkeleton.after));
+                setPendingSkeleton(null);
+              }}
+            >
+              確定換骨架
+            </button>
+            <button type="button" onClick={() => setPendingSkeleton(null)}>
+              取消
+            </button>
+          </div>
+        </div>
+      )}
       {options.problems.length > 0 && (
         <div className="ws-problems" role="alert">
           <div className="section-title">已填的內容和選項不符</div>

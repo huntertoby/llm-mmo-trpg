@@ -1,8 +1,10 @@
-// 開始畫面：選地圖、主角 build、種子 → 建立戰鬥。
+// 開始畫面：選地圖、起始武器＋2 個關鍵字（與一輪開局相同）、種子 → 建立單場戰鬥。遊戲不定義流派；開發者起始包只在 ?dev=1 出現。
 import { useEffect, useState, type FormEvent } from "react";
 import { api, ApiError } from "../api/client";
-import type { BattleResponse, BuildSummary, MapSummary, RunResponse, RunSaveSummary } from "../api/types";
+import type { BattleResponse, MapSummary, RunResponse, RunSaveSummary } from "../api/types";
 import { saveLabel } from "../run/flow";
+import { DevPackSelect, StartPickerView, useStartPicker } from "../run/StartPicker";
+import { isDevMode, startBody, type StartChoiceBody } from "../run/startFlow";
 import { ErrorBanner } from "../ui/ErrorBanner";
 
 interface Props {
@@ -33,10 +35,9 @@ export function parseSeed(text: string): number | null {
 
 export function StartScreen({ onStart, onWorkshop, onNewRun, onLoadRun, notice = null, onCloseNotice }: Props) {
   const [maps, setMaps] = useState<MapSummary[]>([]);
-  const [builds, setBuilds] = useState<BuildSummary[]>([]);
   const [mapId, setMapId] = useState("");
-  const [buildId, setBuildId] = useState("");
   const [seedText, setSeedText] = useState(() => String(randomSeed()));
+  const dev = isDevMode(window.location.search);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [saves, setSaves] = useState<RunSaveSummary[]>([]);
@@ -67,13 +68,12 @@ export function StartScreen({ onStart, onWorkshop, onNewRun, onLoadRun, notice =
 
   useEffect(() => {
     let cancelled = false;
-    Promise.all([api.maps(), api.builds()])
-      .then(([m, b]) => {
+    api
+      .maps()
+      .then((m) => {
         if (cancelled) return;
         setMaps(m);
-        setBuilds(b);
         setMapId((cur) => cur || (m[0]?.id ?? ""));
-        setBuildId((cur) => cur || (b[0]?.id ?? ""));
       })
       .catch((e: unknown) => {
         if (!cancelled) setError(e instanceof Error ? e.message : String(e));
@@ -84,27 +84,31 @@ export function StartScreen({ onStart, onWorkshop, onNewRun, onLoadRun, notice =
   }, []);
 
   const seed = parseSeed(seedText);
-  const ready = mapId !== "" && buildId !== "" && seed !== null && !busy;
+  const picker = useStartPicker(seed, dev);
+  const ready = mapId !== "" && picker.body !== null && seed !== null && !busy;
 
-  async function submit(e: FormEvent) {
-    e.preventDefault();
-    if (!ready || seed === null) return;
+  async function start(body: StartChoiceBody | null) {
+    if (mapId === "" || seed === null || body === null) return;
     setBusy(true);
     setError(null);
     try {
-      onStart(await api.createBattle({ map_id: mapId, seed, hero_build: buildId }));
+      onStart(await api.createBattle({ map_id: mapId, seed, ...body }));
     } catch (err) {
       setError(err instanceof ApiError || err instanceof Error ? err.message : String(err));
       setBusy(false);
     }
   }
 
-  const build = builds.find((b) => b.id === buildId);
+  function submit(e: FormEvent) {
+    e.preventDefault();
+    if (ready) void start(picker.body);
+  }
+
   return (
     <div className="start-screen">
       <h1>LLM-MMO-TRPG 戰鬥原型</h1>
       <ErrorBanner message={notice} onClose={() => onCloseNotice?.()} />
-      <ErrorBanner message={error} onClose={() => setError(null)} />
+      <ErrorBanner message={error ?? picker.error} onClose={() => setError(null)} />
       <div className="panel start-run">
         <div className="section-title">roguelite 一輪</div>
         <div className="muted small">5 場戰鬥加 Boss：打贏升級、營火回滿，一路帶著同一個主角。</div>
@@ -128,7 +132,7 @@ export function StartScreen({ onStart, onWorkshop, onNewRun, onLoadRun, notice =
           </div>
         )}
       </div>
-      <form className="panel start-form" onSubmit={(e) => void submit(e)}>
+      <form className="panel start-form" onSubmit={submit}>
         <label>
           地圖
           <select value={mapId} onChange={(e) => setMapId(e.target.value)}>
@@ -139,17 +143,7 @@ export function StartScreen({ onStart, onWorkshop, onNewRun, onLoadRun, notice =
             ))}
           </select>
         </label>
-        <label>
-          主角 build
-          <select value={buildId} onChange={(e) => setBuildId(e.target.value)}>
-            {builds.map((b) => (
-              <option key={b.id} value={b.id}>
-                {b.name_zh}
-              </option>
-            ))}
-          </select>
-        </label>
-        {build !== undefined && <div className="muted small">{build.theme_zh}</div>}
+        <StartPickerView picker={picker} disabled={busy} />
         <label>
           種子
           <span className="seed-row">
@@ -170,6 +164,7 @@ export function StartScreen({ onStart, onWorkshop, onNewRun, onLoadRun, notice =
         </button>
         <div className="muted small">隊友由 AI 控制（標準隊友補到 3 人）；你操控主角。</div>
       </form>
+      <DevPackSelect picker={picker} disabled={busy || mapId === "" || seed === null} onGo={() => void start(startBody({ devPack: picker.packId }))} />
       <div className="panel start-workshop">
         <div className="section-title">技能工坊</div>
         <div className="muted small">自己一步步組技能、看強度檢查，再裝到主角身上試玩，也能匯出成 YAML。</div>

@@ -317,7 +317,7 @@ describe("try it out", () => {
   const choiceOf = (over: Partial<Parameters<typeof buildTryoutRequest>[0]> = {}) => ({
     mapId: "training_range",
     seed: 7,
-    buildId: "build_push",
+    start: { weapon: "lightning_staff", keywords: ["wet", "charged"] },
     replaceId: "skill_gale_kick",
     opponents: "fighting",
     ...over,
@@ -327,6 +327,9 @@ describe("try it out", () => {
     const req = buildTryoutRequest(choiceOf(), check, arena);
     expect(req).not.toBeNull();
     expect(req?.map_id).toBe("training_range");
+    expect(req?.weapon).toBe("lightning_staff");
+    expect(req?.keywords).toEqual(["wet", "charged"]);
+    expect(req?.hero_build).toBeUndefined();
     expect(req?.replace_skills).toEqual(["skill_gale_kick"]);
     expect(req?.opponents).toBe("fighting");
     expect(req?.max_rounds).toBe(30);
