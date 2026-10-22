@@ -92,3 +92,8 @@
 
 - PM 合併：`client.ts` 匯入、`styles.css` 檔尾兩邊保留，`openapi.json`／`schema.d.ts` 重產；`check.py` 全過、`pnpm build` 成功；看過 `docs/phases/img/3G-4-*.png`（技能工坊「技能｜裝備」分頁、3×3 欄位格、測試物品清單、加成來源含遞減）。報告 `Phase3G-4報告.md`。
 - 待 PM 決定：#1 裝備分頁放在技能工坊、固定用靶場、#2 加成來源顯示在裝備分頁主角面板與單位資訊、#3 主手換武器時主角武器跟著換、#4 空欄位取代範本裝備、#5 自訂物品可改的欄位、#6 不可用詞條灰掉附原因、#7 另列「傷害加成合計（截斷前／後）」、#8 沒有內建試打預覽、#9 `UnitView.gear_totals`、#10 截圖裁切以 DOM 驗證 → 全部接受。一輪的英雄面板武器特性文字反映裝備（G2 #6）→ 大世界裝備進一輪時再做。
+
+## 10. G3a 驗收（2026-10-22）
+
+- PM 合併：`view.py`（`gear_totals` 與 `charges` 兩欄並存）、`UnitInfo.tsx`、`testFixtures.ts`、`styles.css` 兩邊保留，OpenAPI 重產。`check.py` 全過（含 G4 合併後的內容）、`pnpm build` 成功；`frozen_lake` 種子 8 `--log-json` ＋ `replay` 一致。`LOG_FORMAT` → `/42`；新動作類別 `activate_charge`；新充能 `fury`。**不穩定測試原因已查明並修好**：`Ruleset._keyword_cache` 私有屬性被 pydantic `__eq__` 比較（3-24c 第 8 項因此取消）。報告 `Phase3G-3a報告.md`。
+- 待 PM 決定：#1 AP +1 上限只約束裝備來源（技能 `grant_ap` 計入但不受限）→ 接受；#2「每回合」在持有者回合開始時清除、`per_round` 每輪清除 → 接受；#3 近戰判定 → 接受；#4 充能目標與縮放屬性 → 接受；#5 裝備與技能共用 `static_charge`（上限 3／5）→ 接受；#6 新 schema 欄位 → 接受；#7 AI 權重 → 平衡階段；#8 `activate_charge` 不計入基本動作上限 → 接受；#9 noqa：`PLR0917` 2 處（`_fire_gear`、`_score_other` 參數多）、`PLC0415` 2 處（避免循環匯入的延後匯入）→ 接受，審查時看。
