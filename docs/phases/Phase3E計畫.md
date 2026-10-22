@@ -107,3 +107,8 @@ R4 拆 `skills.py`、R6 `LOG_FORMAT` 版本策略（Phase 4 大量新增原語�
 - PM 合併（無衝突）；快速檢查：ruff、mypy、相關 pytest 2010、vitest 766、typecheck、`pnpm build` 全過。48 個原語補 `player_description`；glossary 新增 `effects`、`conditions`、`triggers`、`weapon_looks`；反應事件名稱進 `reactions.yaml` `events:`；武器 `look` 在 `weapons.yaml`、單位 `doll` 在範本經 `UnitView.doll_look`；`FieldSpec.card`／`object_choice` 由後端提供；`scripts/export_client_fixtures.py`＋過期檢查測試。前端刪除 `EFFECT_NAMES`、`CONDITION_NAMES`、`TRIGGER_NAMES`、`WEAPON_LOOKS`、`APPEARANCES`、`CARD_FIELDS`、`OBJECT_CHOICE_FIELDS`。報告 `Phase3E-2e報告.md`。
 - 待 PM 決定：#1 `on_own_rune` 中文名 → **PM 改 YAML 為「目標站在自己的符文上」**（與舊前端一致，重產 `glossary.json`）；#2 武器外觀走 glossary、#5 `FieldSpec` 判斷表搬到後端、#6 殘影退回陣營預設、`ruleset_hash` 變更 → 接受；#3 玩家英雄（`build_*`）沒有專屬外觀、沿用陣營預設 → 照舊（Phase 4 或美術排期再定）；#4 其餘前端寫死表（`COST_LABEL`、`TAG_NAMES`、地形與物件色塊）→ 3E-3。
 
+### 3.9 3E-2f 驗收（2026-10-23）
+
+- PM 合併（無衝突）；`check.py --full` 全過（14 分 16 秒，比上次 4 分 32 秒慢；PM 抽查 YAML 讀取有快取、相關測試 1193 個 43.9 秒，判斷多半是機器負載，下次全量再看）；`bridge_chasm` 種子 59 `--log-json` ＋ `replay` 一致。**純重構、行為不變**：既有測試未改；實作者對照 5826670 的 `sim maps --seeds 4`、`sim skills --demo` JSON 逐位元組相同；`LOG_FORMAT` 維持 `/57`。`engine/rules/landing.py`（`landing_problem`、`nearest_free`）取代各處落點判斷；`charge` 改用 `unit_push_block`（保留排除致命地形）；`EffectSpec` 7 個欄位範圍改讀 `skill_primitives.yaml`；`skill_shapes.yaml` `shape_roles`、`split_heal` `allowed_skeletons`、機制狀態 ID 改讀 YAML。報告 `Phase3E-2f報告.md`。
+- 待 PM 決定：#1 衝撞仍不把人撞進致命地形 → 接受（行為不變）；#2 其他欄位保留 schema 粗範圍、#3 部分狀態 ID 常數名仍在 Python、#5 `create_obstacle`／`inscribe` 不合併 → 接受；#4 內建 YAML 不受 `TRPG_CONTENT_DIR` 影響 → 接受，Phase 4 若需要多內容資料夾再改。
+
