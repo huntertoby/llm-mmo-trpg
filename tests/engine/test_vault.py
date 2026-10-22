@@ -319,6 +319,7 @@ def test_basic_actions_stay_within_the_limit_of_ten() -> None:
         "set_reaction_mode",
         "set_summon_mode",
         "command_summon",
+        "infuse_skill",
         "reload",
         "activate_charge",
     }

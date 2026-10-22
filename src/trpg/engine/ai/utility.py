@@ -81,6 +81,7 @@ from trpg.engine.actions import (
     Defend,
     EndStance,
     EndTurn,
+    InfuseSkill,
     Move,
     Reload,
     Run,
@@ -95,6 +96,7 @@ from trpg.engine.ai.charge import charge_score
 from trpg.engine.ai.composite import composite_estimate
 from trpg.engine.ai.displace import DISPLACE_PRIMITIVES, displace_estimate, exposure, is_hurt
 from trpg.engine.ai.gamble import cautious, on_miss_cost
+from trpg.engine.ai.infuse import infuse_setups, infuse_value, survival
 from trpg.engine.ai.objective import hold_guard_bonus, objective_cost
 from trpg.engine.ai.orders import (
     FocusTarget,
@@ -188,6 +190,7 @@ from trpg.engine.skills.targeting import (
 from trpg.engine.state import BattleState, UnitState, reaction_limit
 from trpg.engine.traps import own_traps
 from trpg.engine.weapon_traits import pierce_line_targets
+from trpg.shared.errors import IllegalActionError
 from trpg.shared.types import ObjectId, Pos, Surface, Team, UnitId
 
 __all__ = [
@@ -2179,6 +2182,32 @@ class UtilityAI:
         for scored in ranked:
             if scored.score > 0 and (best is None or scored.score > best.score):
                 best = scored
+        if taunter is None:  # 灌注技能給召喚物（Phase 3-33d）：比其他動作都好時才灌注
+            infuse = self._best_infusion(state, unit)
+            if infuse is not None and infuse[0] > (Fraction(0) if best is None else best.score):
+                return infuse[1]
         if best is None:
             return EndTurn(unit_id=unit.id)
         return _with_infusion(state, unit, best.action)
+
+    def _best_infusion(
+        self, state: BattleState, unit: UnitState
+    ) -> tuple[Fraction, InfuseSkill] | None:
+        """分數最高的灌注候選（:mod:`trpg.engine.ai.infuse`；同分取列舉順序在前的）。"""
+        if not any(s.owner_id == unit.id and s.alive for s in state.units.values()):
+            return None
+        profile = self.profile_for(unit)
+        rules = profile.summon
+        best: tuple[Fraction, InfuseSkill] | None = None
+        for setup in infuse_setups(state, unit, rules):
+            try:
+                scored = score_action(setup.sim, setup.pick, profile)
+            except IllegalActionError:
+                continue
+            if scored.score <= 0:
+                continue
+            summon = state.units[setup.action.summon_id]
+            value = infuse_value(scored.score, survival(state, summon, rules), rules)
+            if best is None or value > best[0]:
+                best = (value, setup.action)
+        return best

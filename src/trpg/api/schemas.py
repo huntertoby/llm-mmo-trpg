@@ -56,6 +56,9 @@ __all__ = [
     "HealOut",
     "HistoryStepOut",
     "HurlOut",
+    "InfuseOptionsOut",
+    "InfuseSkillOptionOut",
+    "InfusionPreviewOut",
     "InteractOptionOut",
     "MapSummary",
     "OutcomeOut",
@@ -518,6 +521,41 @@ class HurlOut(_ApiModel):
     placed_pos: XY | None
 
 
+class InfusionPreviewOut(_ApiModel):
+    """灌注技能的預覽（Phase 3-33d）：召喚物 ``summon_id`` 以目前位置 ``origin`` 與目前模式會選的
+    目標與範圍（``tiles``／``units``）；``no_target`` 為真時選不到目標（下回合會放棄，法力與冷卻
+    不退）。實際在召喚物的回合開始時才選，位置或戰況改變時可能不同。"""
+
+    summon_id: UnitId
+    skill_id: str
+    origin: XY
+    target_id: UnitId | None
+    target_pos: XY | None
+    direction: str | None
+    tiles: tuple[XY, ...]
+    units: tuple[UnitId, ...]
+    no_target: bool
+
+
+class InfuseSkillOptionOut(_ApiModel):
+    """灌注選單的一招主動技能（Phase 3-33d）：``problem`` 是不能灌注的中文原因（可以時
+    ``None``）。"""
+
+    skill_id: str
+    name_zh: str
+    problem: str | None
+
+
+class InfuseOptionsOut(_ApiModel):
+    """灌注一隻召喚物時的技能選單（Phase 3-33d）：``problem`` 是召喚物這邊（本輪已灌注、已有待
+    施放、暈眩……）或 AP 的問題（有問題時所有技能都不能灌注）；``skills`` 依裝備順序。"""
+
+    summon_id: UnitId
+    ap_cost: int
+    problem: str | None
+    skills: tuple[InfuseSkillOptionOut, ...]
+
+
 class SummonOut(_ApiModel):
     """預覽中會出現的召喚物（Phase 3D-4b）：``expires_round`` 是在召喚者第幾輪的回合結束時消失，
     ``totem_radius`` 是圖騰的光環半徑（不是圖騰為 ``None``），``replaces`` 是因超過同時存在的上限
@@ -672,6 +710,8 @@ class PreviewOut(_ApiModel):
     """複合技能：動作段的影響格（``affected_tiles`` 已含兩段的範圍）。"""
     followup_when: str | None = None
     """複合技能第二段的種類（``followup.when``，Phase 3F-4b）；其他動作為 ``None``。"""
+    infusion: InfusionPreviewOut | None = None
+    """灌注技能（Phase 3-33d）：召喚物會從自己位置施放的範圍；其他動作為 ``None``。"""
     variant: PreviewVariantOut | None = None
     """這個目標點會生效的戰場變奏型態（Phase 3-25b）；沒有變奏成立為 ``None``（傷害、範圍等已是
     該型態的結果）。"""
@@ -867,4 +907,17 @@ def preview_out(
         landing=p.landing,
         followup_tiles=p.followup_tiles,
         followup_when=p.followup_when,
+        infusion=None
+        if p.infusion is None
+        else InfusionPreviewOut(
+            summon_id=p.infusion.summon_id,
+            skill_id=p.infusion.skill_id,
+            origin=p.infusion.origin,
+            target_id=p.infusion.target_id,
+            target_pos=p.infusion.target_pos,
+            direction=p.infusion.direction,
+            tiles=p.infusion.tiles,
+            units=p.infusion.units,
+            no_target=p.infusion.no_target,
+        ),
     )

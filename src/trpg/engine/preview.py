@@ -38,6 +38,7 @@ from trpg.engine.actions import (
     Attack,
     CommandSummon,
     Defend,
+    InfuseSkill,
     Interact,
     Reload,
     Run,
@@ -107,6 +108,7 @@ from trpg.engine.rules.geometry import manhattan
 from trpg.engine.rules.movement import available_move_budget, is_deadly, path_map
 from trpg.engine.rules.statuses import effective_attribute, shield_amount, weapon_attribute
 from trpg.engine.rules.weapons import weapon_hit_bonus
+from trpg.engine.skill_infusion import infused_pick
 from trpg.engine.skills.conditions import Subject, condition_met
 from trpg.engine.skills.scaling import skill_scaling_value
 from trpg.engine.skills.targeting import (
@@ -133,6 +135,7 @@ __all__ = [
     "GambleOutcome",
     "GrantInfo",
     "HurlInfo",
+    "InfusionInfo",
     "MoveInfo",
     "Outcome",
     "PierceInfo",
@@ -254,6 +257,23 @@ class SummonInfo:
     max_hp: int
     totem_radius: int | None
     replaces: tuple[UnitId, ...]
+
+
+@dataclass(frozen=True, slots=True)
+class InfusionInfo:
+    """灌注技能的預覽（Phase 3-33d）：召喚物 ``summon_id`` 以目前位置 ``origin`` 與目前模式會選的
+    目標（``target_id``／``target_pos``／``direction``）與影響範圍；選不到目標時 ``tiles`` 為空、
+    ``no_target`` 為真（下回合開始時位置或戰況改變，實際的選擇可能不同）。"""
+
+    summon_id: UnitId
+    skill_id: str
+    origin: XY
+    target_id: UnitId | None
+    target_pos: XY | None
+    direction: str | None
+    tiles: tuple[XY, ...]
+    units: tuple[UnitId, ...]
+    no_target: bool
 
 
 @dataclass(frozen=True, slots=True)
@@ -428,6 +448,8 @@ class Preview:
     最多後果的模擬裡第二段的原點，第二段沒有結算時為 ``None``）；其他動作為 ``None``。"""
     followup_tiles: tuple[XY, ...] = ()
     """複合技能：第二段的影響格（``affected_tiles`` 已含兩段）。"""
+    infusion: InfusionInfo | None = None
+    """灌注技能（Phase 3-33d）：召喚物會從自己的位置施放的範圍；其他動作為 ``None``。"""
     followup_when: str | None = None
     """複合技能第二段的種類（``followup.when``，Phase 3F-4b；網頁依此寫說明）；其他動作為 ``None``。
     延遲段的 ``landing``／``followup_tiles`` 是施放後以施放者位置推算的預計範圍。"""
@@ -1386,6 +1408,7 @@ def _basic_ap_cost(state: BattleState, action: Action, default: int | None) -> i
         Aim: core.aim_ap_cost,
         Vault: core.vault_ap_cost,
         CommandSummon: core.summon_command_ap_cost,
+        InfuseSkill: core.summon_infuse_ap_cost,
     }
     if isinstance(action, Reload):
         return state.units[action.unit_id].weapon.reload_ap
@@ -1432,6 +1455,9 @@ def _build(
         )
         tiles = tuple(sorted({*tiles, *area.tiles, *follow_tiles}, key=lambda p: (p[1], p[0])))
         units = tuple(sorted({*units, *area.units, *follow_units}))
+    infusion = _infusion_info(state, action) if isinstance(action, InfuseSkill) else None
+    if infusion is not None:
+        tiles, units = infusion.tiles, infusion.units
     ap_cost, reach = _cost_and_reach(state, actor, action)
     ap_cost = _basic_ap_cost(state, action, ap_cost)
     pierce = _pierce_info(state, actor, action) if isinstance(action, UseSkill) else None
@@ -1488,4 +1514,28 @@ def _build(
         landing=landing,
         followup_tiles=follow_tiles,
         followup_when=_followup_when(state, actor, action),
+        infusion=infusion,
+    )
+
+
+def _infusion_info(state: BattleState, action: InfuseSkill) -> InfusionInfo:
+    """灌注的預覽：召喚物以目前位置與模式會選的選取（:func:`infused_pick`）。"""
+    summon = state.units[action.summon_id]
+    found = infused_pick(state, action.summon_id, action.skill_id, action.unit_id)
+    if found is None:
+        return InfusionInfo(
+            action.summon_id, action.skill_id, summon.xy, None, None, None, (), (), True
+        )
+    pick, area = found
+    pos = None if pick.target_pos is None else (pick.target_pos.x, pick.target_pos.y)
+    return InfusionInfo(
+        summon_id=action.summon_id,
+        skill_id=action.skill_id,
+        origin=summon.xy,
+        target_id=pick.target_id,
+        target_pos=pos,
+        direction=pick.direction,
+        tiles=area.tiles,
+        units=area.units,
+        no_target=False,
     )

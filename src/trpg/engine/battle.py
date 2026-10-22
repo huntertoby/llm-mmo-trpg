@@ -28,6 +28,7 @@ from trpg.engine.actions import (
     Defend,
     EndStance,
     EndTurn,
+    InfuseSkill,
     Interact,
     Move,
     Reload,
@@ -116,6 +117,7 @@ from trpg.engine.rules.statuses import (
     weapon_attribute,
 )
 from trpg.engine.setup import BattleSetup, BattleSetupError, starting_source
+from trpg.engine.skill_infusion import do_infuse_skill
 from trpg.engine.skill_triggers import collect_move, settle
 from trpg.engine.skills.conditions import Subject
 from trpg.engine.skills.followups import second_problem
@@ -997,6 +999,12 @@ def _do_command_summon(ctx: Ctx, unit: UnitState, action: Action) -> None:
     summon.ap, summon.move_points, summon.moved_this_turn = kept
 
 
+def _do_infuse_skill(ctx: Ctx, unit: UnitState, action: Action) -> None:
+    """灌注技能（Phase 3-33d，:mod:`trpg.engine.skill_infusion`）。"""
+    assert isinstance(action, InfuseSkill)
+    do_infuse_skill(ctx, unit, action)
+
+
 def _do_end_turn(ctx: Ctx, unit: UnitState, action: Action) -> None:
     assert isinstance(action, EndTurn)
     end_turn(ctx)
@@ -1026,6 +1034,7 @@ ACTION_HANDLERS: dict[str, ActionHandler] = {
     "set_reaction_mode": _do_set_reaction_mode,
     "set_summon_mode": _do_set_summon_mode,
     "command_summon": _do_command_summon,
+    "infuse_skill": _do_infuse_skill,
     "end_turn": _do_end_turn,
 }
 

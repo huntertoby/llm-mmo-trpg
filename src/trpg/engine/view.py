@@ -333,6 +333,12 @@ class UnitView(_ViewModel):
     """集火的目標（模式為 ``focus`` 時）。"""
     commanded: bool = False
     """本輪已被指揮過（Phase 3-33c；每隻每輪最多指揮 1 次）。"""
+    infused_skill_id: str | None = None
+    """待施放的灌注技能（Phase 3-33d；召喚物在下一個自己的回合開始時施放）；沒有時為 ``None``。"""
+    infused_skill_name_zh: str | None = None
+    """待施放的灌注技能的名稱。"""
+    infused: bool = False
+    """本輪已被灌注過（Phase 3-33d；每隻每輪最多灌注 1 次）。"""
     summon_look: SummonLookView | None = None
     """召喚物外觀（Phase 3-33h1）；範本沒有外觀欄位或不是召喚物為 ``None``（前端畫人形骷髏）。"""
     infusion_options: tuple[InfusionOptionView, ...] = ()
@@ -455,6 +461,8 @@ class BattleView(_ViewModel):
     """格子上的符文（Phase 3-23），依編號排序；雙方都看得到。"""
     summon_command_ap_cost: int = 1
     """指揮召喚物的 AP 花費（Phase 3-33c；切換模式免費）。"""
+    summon_infuse_ap_cost: int = 1
+    """灌注技能的 AP 花費（Phase 3-33d；法力與冷卻照技能）。"""
 
 
 def _pos(cells: tuple[tuple[int, int], ...]) -> tuple[Pos, ...]:
@@ -720,6 +728,7 @@ def _summon_look(state: BattleState, unit: UnitState) -> SummonLookView | None:
 
 
 def _unit_view(state: BattleState, unit: UnitState, team: Team) -> UnitView:
+    infused = unit.infused_skill if unit.alive else None
     return UnitView(
         id=unit.id,
         template_id=unit.template_id,
@@ -769,6 +778,11 @@ def _unit_view(state: BattleState, unit: UnitState, team: Team) -> UnitView:
         summon_mode=_summon_mode(state, unit),
         summon_target_id=unit.summon_target_id if unit.summon_mode == "focus" else None,
         commanded=unit.is_summon and unit.commanded_round == state.round,
+        infused_skill_id=None if infused is None else infused.skill_id,
+        infused_skill_name_zh=None
+        if infused is None
+        else state.ruleset.skill_def(infused.skill_id).name_zh,
+        infused=unit.is_summon and unit.infused_round == state.round,
         summon_look=_summon_look(state, unit),
         infusion_options=_infusion_views(state, unit) if unit.team is team else (),
         activations=tuple(_activation_view(state, a) for a in unit.activations),
@@ -882,4 +896,5 @@ def project_for(state: BattleState, team: Team) -> BattleView:
         zones=_zone_views(state),
         runes=_rune_views(state),
         summon_command_ap_cost=state.ruleset.core.summon_command_ap_cost,
+        summon_infuse_ap_cost=state.ruleset.core.summon_infuse_ap_cost,
     )

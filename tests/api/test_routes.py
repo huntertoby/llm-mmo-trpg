@@ -319,6 +319,7 @@ def test_preview_returns_the_numbers_and_does_not_change_the_session(client: Tes
         "landing",  # Phase 3F-3a
         "followup_tiles",  # Phase 3F-3a
         "followup_when",  # Phase 3F-4b
+        "infusion",  # Phase 3-33d
         "variant",  # Phase 3-25b
         "run_range",  # Phase 3-20
     }

@@ -38,8 +38,12 @@ __all__ = [
     "run_battle",
 ]
 
-LOG_FORMAT = "trpg-battle-log/50"
-"""``/50``（Phase 3-33c，接在 3-32a 的 ``/49`` 之後；PM 合併時定號）：召喚物操控——單位狀態多了
+LOG_FORMAT = "trpg-battle-log/51"
+"""``/51``（Phase 3-33d，接在 3-33c 的 ``/50`` 之後；PM 合併時定號）：灌注技能——單位狀態多了
+``infused_skill``／``infused_round``，新動作 ``infuse_skill``（1 AP），新事件 ``skill_infused``／
+``infused_skill_cast``／``infusion_fizzled``；召喚物在自己回合開始時施放灌注的技能，效用 AI 的施放者
+會灌注，因此 ``/50`` 的紀錄無法重播。
+``/50``（Phase 3-33c，接在 3-32a 的 ``/49`` 之後；PM 合併時定號）：召喚物操控——單位狀態多了
 ``summon_mode``／``summon_target_id``／``commanded_round``，新動作 ``set_summon_mode``（0 AP）與
 ``command_summon``（1 AP），新事件 ``summon_mode_set``／``summon_commanded``；召喚物的 AI 依模式行動
 （跟隨預設會待在召喚者附近、圖騰預設待命）、召喚技能的 AI 估值納入成長與灌注、我方 AI 施放者會自動
