@@ -89,6 +89,7 @@ import { hasOrders, orderButton } from "../battle/orders";
 import { BattleCanvas } from "../ui/BattleCanvas";
 import { BattleLog, type LogHover } from "../ui/BattleLog";
 import { HoverFloat } from "../ui/HoverFloat";
+import { useTileCard } from "../ui/useTileCard";
 import { TileCard } from "../ui/TileCard";
 import { collapseSections, tileSections } from "../battle/tileInfo";
 import { loadTileCollapse, saveTileCollapse } from "../battle/tileCardPrefs";
@@ -175,6 +176,7 @@ export function BattleScreen({ initial, onExit, exitLabel, runMode }: Props) {
   const closeHint = useCallback(() => setHint(null), []);
   const [saveNote, setSaveNote] = useState<string | null>(null);
   const [hover, setHover] = useState<Pos | null>(null);
+  const tileCard = useTileCard();
   /** 頂端列開著的彈出面板（同時只開一個）。 */
   const [popup, setPopup] = useState<TopPopup | null>(null);
   const narrow = useNarrow();
@@ -701,14 +703,14 @@ export function BattleScreen({ initial, onExit, exitLabel, runMode }: Props) {
   );
 
   const onTileHover = useCallback((tile: Pos | null) => {
+    tileCard.ctl.setHover(tile);
     setHover((prev) => {
       if (prev === null || tile === null) return tile;
       return posKey(prev) === posKey(tile) ? prev : tile;
     });
-  }, []);
+  }, [tileCard]);
 
   /** 浮動資訊卡：只在滑過單位時出現（取代固定的單位資訊欄，Phase 3-8）。 */
-  const hoverUnit = unitAt(shown, hover) ?? null;
   const shownHero = shown.units.find((u) => u.id === heroId) ?? null;
   const ended = (response.awaiting === "ended" || response.awaiting === "stalled") && !busy;
 
@@ -760,8 +762,14 @@ export function BattleScreen({ initial, onExit, exitLabel, runMode }: Props) {
     el.addEventListener("wheel", onWheel, { passive: false });
     return () => el.removeEventListener("wheel", onWheel);
   }, [zoomStep]);
+  // 浮動資訊卡顯示的格子（3-30 起寬限期內可能與滑鼠所在格不同，見 ui/hoverCard.ts）
+  const sectionsAt = (tile: Pos | null) =>
+    tileSections(shown, tile, skillNames, [...zoneLinesAt(shown, tile, liveNames), ...marksTextAt(marks, tile)]);
+  tileCard.ctl.hasContent = (tile) => unitAt(shown, tile) !== undefined || sectionsAt(tile).length > 0;
+  const cardTile = tileCard.ctl.visible ? tileCard.ctl.shown : null;
   const hoverTexts = [...zoneLinesAt(shown, hover, liveNames), ...marksTextAt(marks, hover)];
-  const fullTileSections = tileSections(shown, hover, skillNames, hoverTexts);
+  const hoverUnit = unitAt(shown, cardTile) ?? null;
+  const fullTileSections = sectionsAt(cardTile);
   const tileCardSections = hoverUnit !== null && collapseTile ? collapseSections(fullTileSections) : fullTileSections;
   const attackMode = basic.find((m) => m.kind === "attack") ?? null;
   const defendMode = basic.find((m) => m.kind === "defend") ?? null;
@@ -872,8 +880,8 @@ export function BattleScreen({ initial, onExit, exitLabel, runMode }: Props) {
           onCancel={cancel}
           rendererRef={rendererRef}
         >
-          {hover !== null && (hoverUnit !== null || tileCardSections.length > 0) && (
-            <HoverFloat placement={cardPlacement(hover, model, scale)}>
+          {cardTile !== null && (hoverUnit !== null || tileCardSections.length > 0) && (
+            <HoverFloat placement={cardPlacement(cardTile, model, scale)} card={tileCard}>
               {hoverUnit !== null && (
                 <UnitInfo unit={hoverUnit} names={names} heroId={heroId} skills={skillNames} view={view} />
               )}

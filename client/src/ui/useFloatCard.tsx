@@ -25,10 +25,10 @@ import {
   type RefObject,
 } from "react";
 import { createPortal } from "react-dom";
-import { FloatController, floatPlacement, type Align, type PinMode, type Side } from "./floatCard";
+import { FloatController, floatPlacement, type Align, type Holdable, type PinMode, type Side } from "./floatCard";
 
 /** 卡片內容的上層控制器：卡片裡的部件說明框開著時，用它讓外面的卡片不關閉。 */
-const ParentFloat = createContext<FloatController | null>(null);
+export const ParentFloat = createContext<Holdable | null>(null);
 
 const FOCUSABLE = 'button, a[href], input, select, textarea, [tabindex]:not([tabindex="-1"])';
 

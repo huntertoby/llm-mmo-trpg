@@ -1661,7 +1661,28 @@ button.selected {
   display: flex;
   flex-direction: column;
   gap: 4px;
-  pointer-events: none;
+  /* 3-30 (32.2)：可滑進、可釘住、超出高度時卡片內捲動（最大高度由 HoverFloat 量測設定） */
+  pointer-events: auto;
+  overflow-y: auto;
+  overscroll-behavior: contain;
+  cursor: default;
+}
+
+.unit-float > * {
+  flex-shrink: 0;
+}
+
+.unit-float.pinned {
+  outline: 1px solid #ffe14d;
+}
+
+/* 卡片與格子之間 8px（CARD_GAP）的透明橋接區（外框 padding，位置往格子方向多挪 8px）：滑鼠從格子移向卡片不會斷 */
+.unit-float.bridge-left {
+  padding-left: 8px;
+}
+
+.unit-float.bridge-right {
+  padding-right: 8px;
 }
 
 .unit-float .unit-info,
@@ -2281,6 +2302,29 @@ button.selected {
 .float-card.part-tip-box {
   z-index: 1000;
   max-width: 240px;
+}
+
+/* 包在可點選的東西裡（工坊選項、裝備欄）的說明框只顯示、不攔截滑鼠（3-30 32.2：不再擋住下方一小塊） */
+.float-card.part-tip-box.no-bridge {
+  pointer-events: none;
+}
+
+.gear-cell-tip {
+  display: block;
+}
+
+.gear-cell-tip > .gear-cell {
+  width: 100%;
+  height: 100%;
+}
+
+.gear-totals-title.gear-fold {
+  display: block;
+  width: 100%;
+  margin: 4px 0 2px;
+  padding: 2px 4px;
+  text-align: left;
+  cursor: pointer;
 }
 
 .part-tip-box .float-card-body {

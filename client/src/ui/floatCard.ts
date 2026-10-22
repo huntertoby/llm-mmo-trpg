@@ -121,16 +121,27 @@ export class FloatController {
   }
 }
 
-let active: FloatController | null = null;
+/** 參與「同時只開一張」的浮動卡（技能卡、單位資訊卡……）。 */
+export interface Dismissable {
+  readonly nested: boolean;
+  dismiss(): void;
+}
 
-function claim(c: FloatController): void {
+/** 卡片裡的部件說明框開著時，用它讓外面的卡片不關閉。 */
+export interface Holdable {
+  hold(delta: 1 | -1): void;
+}
+
+let active: Dismissable | null = null;
+
+export function claim(c: Dismissable): void {
   if (c.nested) return;
   const previous = active;
   active = c;
   if (previous !== null && previous !== c) previous.dismiss();
 }
 
-function release(c: FloatController): void {
+export function release(c: Dismissable): void {
   if (active === c) active = null;
 }
 

@@ -1,7 +1,9 @@
 // 裝備加成的來源（Phase 3G-G4）：實際值（遞減、截斷後）、截斷前的值、每條詞條的貢獻。
 // 英雄面板（裝備測試）與單位資訊共用。
+import { useState } from "react";
 import type { GearTotalView } from "../api/types";
 import { totalLine } from "../gear/gearDraft";
+import { gearFoldLabel } from "./gearFold";
 
 interface Props {
   totals: readonly GearTotalView[];
@@ -10,11 +12,15 @@ interface Props {
 }
 
 export function GearTotals({ totals, compact = false }: Props) {
+  const [open, setOpen] = useState(false);
   if (totals.length === 0) return null;
   if (compact) {
     return (
       <div className="gear-totals compact">
-        <div className="gear-totals-title">裝備加成</div>
+        <button type="button" className="gear-totals-title gear-fold" aria-expanded={open} onClick={() => setOpen((v) => !v)}>
+          {gearFoldLabel(totals.length, open)}
+        </button>
+        {open && (
         <ul>
           {totals.map((t) => {
             const line = totalLine(t);
@@ -27,6 +33,7 @@ export function GearTotals({ totals, compact = false }: Props) {
             );
           })}
         </ul>
+        )}
       </div>
     );
   }
