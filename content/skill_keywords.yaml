@@ -26,6 +26,7 @@ keywords:
     description_zh: 火焰讓目標燃燒；燃燒中的目標會受到更重的傷害，或被引爆。
     makes:
       - {effect: summon, unit: summon_fire_spirit}   # 3-33e1：召喚物的固有關鍵字
+      - {effect: summon, unit: summon_bomb_puppet}   # 3-33e2a：召喚物的固有關鍵字
       - {effect: apply_status, status: burning}
       - {effect: damage, element: fire}
       - {effect: create_surface, surface: fire}
@@ -98,6 +99,7 @@ keywords:
     actions: [trip]   # 行為紀錄提示（Phase 3-24b2）：常用這個動作的玩家，候選偏向這個關鍵字
     makes:
       - {effect: summon, unit: summon_skeleton_warrior}   # 3-33e1：召喚物的固有關鍵字
+      - {effect: summon, unit: summon_war_wolf}   # 3-33e2a：召喚物的固有關鍵字
       - {effect: knock_prone}
       - {effect: topple}
       - {effect: charge_through, on_hit: knock_prone}
@@ -113,6 +115,8 @@ keywords:
     description_zh: 推擊把人撞上牆或同伴，造成撞擊傷害；撞擊時可以觸發更多效果。
     actions: [shove]   # 行為紀錄提示（Phase 3-24b2）：常用這個動作的玩家，候選偏向這個關鍵字
     makes:
+      - {effect: summon, unit: summon_golem}   # 3-33e2a：召喚物的固有關鍵字
+      - {effect: summon, unit: summon_earth_wall}   # 3-33e2a：召喚物的固有關鍵字
       - {effect: push}
       - {effect: pull}
       - {effect: dash}

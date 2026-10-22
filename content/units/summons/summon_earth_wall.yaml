@@ -1,0 +1,21 @@
+# 召喚物（Phase 3-33e2a，docs/design/06-技能.md 6.29.5；數值為初值，未經模擬）：土牆。
+# 有 HP 的牆：不能動、不行動（inert）、擋路、擋視線（標籤 blocks_sight，照物件 earth_wall）；
+# 標籤 topplable：被推擊時朝推的方向倒下，壓到的單位受推倒傷害並倒地，土牆消失。
+id: summon_earth_wall
+name_zh: 土牆
+attributes: {str: 10, dex: 4, con: 12, int: 4, wis: 4, wil: 4}
+max_hp: 14
+speed: 0
+armor_bonus: 1
+weapon: stone_fist
+ai_profile: guard
+default_mode: hold   # 6.29.5「AI 預設」＝不動
+resist: {}
+element_mods: {}
+tags: [summoned, construct, topplable, blocks_sight]
+reactions: []
+summon: true
+inert: true
+innate: collision
+# 外觀（Phase 3-33h1，docs/art/召喚物外觀.md）：純顯示資料。
+look: {body: construct, variant: wall, element: collision, size: medium, trait: no_ring}

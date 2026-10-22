@@ -1,0 +1,23 @@
+# 主動（Phase 3-33e2a，docs/design/06-技能.md 6.29.5；數值為初值，未經模擬）：在射程內的空格召喚戰狼，持續 2 輪；由效用 AI 控制。
+id: skill_summon_war_wolf
+schema_version: 1
+name_zh: 召喚戰狼
+tier: 1
+rank: 1
+rarity: rare
+kind: active
+skeleton: summon
+category: spell
+weapon_req: any
+ap_cost: 1
+scaling_attr: dex
+shape: {type: ground_tile, range: 4}
+effects:
+  - {type: summon, unit: summon_war_wolf, duration: 2}
+condition: null
+cost: {mana: 8, cooldown: 4}
+tags: [physical, spell, summon]
+narrative:
+  concept: 放出一頭迅捷的戰狼，撲倒獵物
+  cast_flavor: 一聲長嗥，灰影從你身側竄出
+provenance: {origin: builtin, owner_id: null, created_by: null, parents: [], bound: true, tradeable: false}

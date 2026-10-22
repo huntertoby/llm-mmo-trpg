@@ -1,4 +1,4 @@
-# 主動（Phase 3-33e1，docs/design/06-技能.md 6.29.5；數值為初值，未經模擬）：在射程內的空格召喚鷹隼，持續 4 輪；由效用 AI 控制。
+# 主動（Phase 3-33e1，docs/design/06-技能.md 6.29.5；數值為初值，未經模擬）：在射程內的空格召喚鷹隼，持續 3 輪；由效用 AI 控制。
 id: skill_summon_hawk
 schema_version: 1
 name_zh: 喚出鷹隼
@@ -13,7 +13,7 @@ ap_cost: 1
 scaling_attr: wis
 shape: {type: ground_tile, range: 4}
 effects:
-  - {type: summon, unit: summon_hawk, duration: 4}
+  - {type: summon, unit: summon_hawk, duration: 3}
 condition: null
 cost: {mana: 8, cooldown: 4}
 tags: [wind, spell, summon]

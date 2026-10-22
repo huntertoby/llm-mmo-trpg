@@ -1,0 +1,23 @@
+# 主動（Phase 3-33e2a，docs/design/06-技能.md 6.29.5；數值為初值，未經模擬）：在射程內的空格召喚爆裂傀儡，持續 2 輪；由效用 AI 控制。
+id: skill_summon_bomb_puppet
+schema_version: 1
+name_zh: 喚出爆裂傀儡
+tier: 1
+rank: 1
+rarity: rare
+kind: active
+skeleton: summon
+category: spell
+weapon_req: any
+ap_cost: 1
+scaling_attr: int
+shape: {type: ground_tile, range: 4}
+effects:
+  - {type: summon, unit: summon_bomb_puppet, duration: 2}
+condition: null
+cost: {mana: 8, cooldown: 4}
+tags: [fire, spell, summon]
+narrative:
+  concept: 捏出一具塞滿火藥的傀儡，讓它衝進敵群自爆
+  cast_flavor: 你把一撮火藥按進泥偶胸口，它歪歪扭扭地站了起來
+provenance: {origin: builtin, owner_id: null, created_by: null, parents: [], bound: true, tradeable: false}
