@@ -11,6 +11,7 @@ import type { SkillNames } from "../battle/actions";
 import { remainingRounds, summonKind } from "../battle/summons";
 import type { UnitNames } from "../battle/units";
 import { GearIcon } from "./GearIcon";
+import { GearTotals } from "./GearTotals";
 
 interface Props {
   unit: UnitView | null;
@@ -94,6 +95,7 @@ export function UnitInfo({ unit, names, heroId, skills, view }: Props) {
           ))}
         </div>
       )}
+      <GearTotals totals={unit.gear_totals} compact />
       {stacks.length > 0 && (
         <div className="unit-line">層數：{stacks.map(([k, v]) => `${stackName(k)} ×${v}`).join("、")}</div>
       )}

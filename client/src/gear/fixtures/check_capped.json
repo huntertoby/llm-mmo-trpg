@@ -1,0 +1,327 @@
+{
+ "legal": true,
+ "problems": [],
+ "hero": {
+  "id": "unit_0001",
+  "template_id": "build_charger",
+  "name_zh": "衝鋒流英雄",
+  "team": "ally",
+  "pos": {
+   "x": 0,
+   "y": 3
+  },
+  "hp": 60,
+  "max_hp": 60,
+  "shield": 0,
+  "mana": 24,
+  "max_mana": 24,
+  "stamina": 30,
+  "max_stamina": 30,
+  "ap": 0,
+  "move_points": 0,
+  "speed": 5,
+  "initiative": 7,
+  "weapon_name_zh": "單手劍",
+  "weapon_id": "one_handed_sword",
+  "weapon_class": "melee",
+  "weapon_traits_zh": [],
+  "ammo": 0,
+  "magazine": 0,
+  "tags": [
+   "hero",
+   "sim"
+  ],
+  "skills": [
+   "skill_tiger_charge",
+   "skill_vault_leap",
+   "skill_decoy_swap",
+   "skill_guard_swap",
+   "skill_shadow_whirl",
+   "skill_bull_rush",
+   "skill_war_avatar"
+  ],
+  "statuses": [],
+  "stacks": {},
+  "cooldowns": {},
+  "reaction_available": true,
+  "reaction_rules": [
+   {
+    "reaction": "block",
+    "name_zh": "格擋",
+    "description_zh": "被近戰攻擊命中後，傷害減半，消耗 10 耐力。",
+    "event": "targeted_by_melee",
+    "trigger_zh": "被近戰攻擊命中時",
+    "mode": "auto",
+    "unless_stamina_below": 20,
+    "stamina_cost": 10,
+    "mana_cost": 0,
+    "hp_cost_permille": 0
+   },
+   {
+    "reaction": "opportunity_attack",
+    "name_zh": "藉機攻擊",
+    "description_zh": "敵人離開武器的觸及範圍（一般近戰為相鄰格，矛為 2 格）時，以近戰武器攻擊一次（不花 AP）。",
+    "event": "enemy_leaves_adjacent",
+    "trigger_zh": "敵人離開相鄰格時",
+    "mode": "auto",
+    "unless_stamina_below": null,
+    "stamina_cost": 0,
+    "mana_cost": 0,
+    "hp_cost_permille": 0
+   }
+  ],
+  "ap_carry": 0,
+  "source": 1,
+  "source_max": 3,
+  "downed": false,
+  "revivable": false,
+  "escaped": false,
+  "owner_id": null,
+  "summon_expires_round": null,
+  "dismissed": false,
+  "totem_radius": null,
+  "activations": [],
+  "granted_skills": [],
+  "facing": "east",
+  "equipment": [
+   {
+    "slot": "main_hand",
+    "slot_zh": "主手",
+    "item_id": "custom_main_hand",
+    "name_zh": "殘血之劍",
+    "affixes": [
+     {
+      "affix_id": "affix_cond_low_hp_damage",
+      "category": "conditional",
+      "category_zh": "條件數值",
+      "text_zh": "HP 低於 50% 時傷害 +15%",
+      "active": true,
+      "weight_permille": 1000
+     },
+     {
+      "affix_id": "affix_cost_glass",
+      "category": "cost",
+      "category_zh": "代價型",
+      "text_zh": "傷害 +20%；受到的傷害 +10%",
+      "active": true,
+      "weight_permille": 1000
+     }
+    ],
+    "appearance": {
+     "kind": null,
+     "form": null,
+     "material": null,
+     "dye": null,
+     "style": null,
+     "rarity": "common",
+     "keywords": []
+    }
+   },
+   {
+    "slot": "head",
+    "slot_zh": "頭",
+    "item_id": "item_test_helm",
+    "name_zh": "試煉頭盔",
+    "affixes": [
+     {
+      "affix_id": "affix_resist_fire",
+      "category": "stat",
+      "category_zh": "數值",
+      "text_zh": "火焰抗性 +10%",
+      "active": true,
+      "weight_permille": 1000
+     },
+     {
+      "affix_id": "affix_cond_still_defense",
+      "category": "conditional",
+      "category_zh": "條件數值",
+      "text_zh": "本回合沒有移動：防禦 +15%",
+      "active": true,
+      "weight_permille": 1000
+     }
+    ],
+    "appearance": {
+     "kind": "helmet",
+     "form": "horned",
+     "material": "iron",
+     "dye": null,
+     "style": null,
+     "rarity": "common",
+     "keywords": []
+    }
+   },
+   {
+    "slot": "neck",
+    "slot_zh": "項鍊",
+    "item_id": "custom_neck",
+    "name_zh": "殘血項鍊",
+    "affixes": [
+     {
+      "affix_id": "affix_cond_low_hp_damage",
+      "category": "conditional",
+      "category_zh": "條件數值",
+      "text_zh": "HP 低於 50% 時傷害 +15%",
+      "active": true,
+      "weight_permille": 500
+     }
+    ],
+    "appearance": {
+     "kind": null,
+     "form": null,
+     "material": null,
+     "dye": null,
+     "style": null,
+     "rarity": "common",
+     "keywords": []
+    }
+   },
+   {
+    "slot": "ring_1",
+    "slot_zh": "戒指 1",
+    "item_id": "custom_ring_1",
+    "name_zh": "玻璃戒",
+    "affixes": [
+     {
+      "affix_id": "affix_cond_low_hp_damage",
+      "category": "conditional",
+      "category_zh": "條件數值",
+      "text_zh": "HP 低於 50% 時傷害 +15%",
+      "active": true,
+      "weight_permille": 250
+     },
+     {
+      "affix_id": "affix_cost_glass",
+      "category": "cost",
+      "category_zh": "代價型",
+      "text_zh": "傷害 +20%；受到的傷害 +10%",
+      "active": true,
+      "weight_permille": 500
+     }
+    ],
+    "appearance": {
+     "kind": null,
+     "form": null,
+     "material": null,
+     "dye": null,
+     "style": null,
+     "rarity": "common",
+     "keywords": []
+    }
+   },
+   {
+    "slot": "ring_2",
+    "slot_zh": "戒指 2",
+    "item_id": "custom_ring_2",
+    "name_zh": "殘血戒",
+    "affixes": [
+     {
+      "affix_id": "affix_cond_low_hp_damage",
+      "category": "conditional",
+      "category_zh": "條件數值",
+      "text_zh": "HP 低於 50% 時傷害 +15%",
+      "active": false,
+      "weight_permille": 0
+     }
+    ],
+    "appearance": {
+     "kind": null,
+     "form": null,
+     "material": null,
+     "dye": null,
+     "style": null,
+     "rarity": "common",
+     "keywords": []
+    }
+   }
+  ],
+  "gear_totals": [
+   {
+    "key": "resist:fire",
+    "label_zh": "火焰抗性",
+    "value": 100,
+    "before_cap": 100,
+    "capped": false,
+    "permille": true,
+    "text_zh": "火焰抗性 +10%",
+    "note_zh": "來自裝備",
+    "condition_zh": null,
+    "sources_zh": [
+     "試煉頭盔：火焰抗性 +10%"
+    ]
+   },
+   {
+    "key": "damage_permille::0",
+    "label_zh": "傷害",
+    "value": 300,
+    "before_cap": 300,
+    "capped": false,
+    "permille": true,
+    "text_zh": "傷害 +30%",
+    "note_zh": "來自裝備",
+    "condition_zh": null,
+    "sources_zh": [
+     "殘血之劍：傷害 +20%；受到的傷害 +10%",
+     "玻璃戒：傷害 +20%；受到的傷害 +10%（遞減：50%）"
+    ]
+   },
+   {
+    "key": "damage_permille:自身血量低於 50%:0",
+    "label_zh": "傷害",
+    "value": 262,
+    "before_cap": 262,
+    "capped": false,
+    "permille": true,
+    "text_zh": "傷害 +26.2%",
+    "note_zh": "來自裝備；條件成立時才生效：自身血量低於 50%",
+    "condition_zh": "自身血量低於 50%",
+    "sources_zh": [
+     "殘血之劍：HP 低於 50% 時傷害 +15%",
+     "殘血項鍊：HP 低於 50% 時傷害 +15%（遞減：50%）",
+     "玻璃戒：HP 低於 50% 時傷害 +15%（遞減：25%）",
+     "殘血戒：HP 低於 50% 時傷害 +15%（遞減：不生效）"
+    ]
+   },
+   {
+    "key": "damage_permille:total",
+    "label_zh": "傷害加成合計",
+    "value": 500,
+    "before_cap": 562,
+    "capped": true,
+    "permille": true,
+    "text_zh": "傷害加成合計 +50%",
+    "note_zh": "各行傷害加成（條件全成立時）的合計；全身傷害加成上限 +50%，已截斷（截斷前 +56.2%）",
+    "condition_zh": null,
+    "sources_zh": []
+   },
+   {
+    "key": "damage_taken_permille::0",
+    "label_zh": "受到的傷害",
+    "value": 150,
+    "before_cap": 150,
+    "capped": false,
+    "permille": true,
+    "text_zh": "受到的傷害 +15%",
+    "note_zh": "來自裝備",
+    "condition_zh": null,
+    "sources_zh": [
+     "殘血之劍：傷害 +20%；受到的傷害 +10%",
+     "玻璃戒：傷害 +20%；受到的傷害 +10%（遞減：50%）"
+    ]
+   },
+   {
+    "key": "defense_permille:本回合移動過:1",
+    "label_zh": "防禦",
+    "value": 150,
+    "before_cap": 150,
+    "capped": false,
+    "permille": true,
+    "text_zh": "防禦 +15%",
+    "note_zh": "來自裝備；條件成立時才生效：不是「本回合移動過」",
+    "condition_zh": "不是「本回合移動過」",
+    "sources_zh": [
+     "試煉頭盔：本回合沒有移動：防禦 +15%"
+    ]
+   }
+  ]
+ }
+}

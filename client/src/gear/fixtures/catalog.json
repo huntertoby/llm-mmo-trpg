@@ -1,0 +1,1153 @@
+{
+ "slots": [
+  {
+   "slot": "main_hand",
+   "name_zh": "主手",
+   "slot_type": "weapon",
+   "slot_type_zh": "武器"
+  },
+  {
+   "slot": "off_hand",
+   "name_zh": "副手",
+   "slot_type": "offhand",
+   "slot_type_zh": "副手"
+  },
+  {
+   "slot": "head",
+   "name_zh": "頭",
+   "slot_type": "head",
+   "slot_type_zh": "頭"
+  },
+  {
+   "slot": "body",
+   "name_zh": "身體",
+   "slot_type": "body",
+   "slot_type_zh": "身體"
+  },
+  {
+   "slot": "hands",
+   "name_zh": "手",
+   "slot_type": "hands",
+   "slot_type_zh": "手"
+  },
+  {
+   "slot": "feet",
+   "name_zh": "腳",
+   "slot_type": "feet",
+   "slot_type_zh": "腳"
+  },
+  {
+   "slot": "neck",
+   "name_zh": "項鍊",
+   "slot_type": "neck",
+   "slot_type_zh": "項鍊"
+  },
+  {
+   "slot": "ring_1",
+   "name_zh": "戒指 1",
+   "slot_type": "ring",
+   "slot_type_zh": "戒指"
+  },
+  {
+   "slot": "ring_2",
+   "name_zh": "戒指 2",
+   "slot_type": "ring",
+   "slot_type_zh": "戒指"
+  }
+ ],
+ "items": [
+  {
+   "id": "item_test_sword",
+   "name_zh": "試煉長劍",
+   "slot_type": "weapon",
+   "weapon": "one_handed_sword",
+   "weapon_name_zh": "單手劍",
+   "two_handed": false,
+   "paired": false,
+   "tags": [],
+   "legendary": false,
+   "affixes": [
+    {
+     "affix_id": "affix_attr_str",
+     "text_zh": "力量 +2"
+    },
+    {
+     "affix_id": "affix_cond_height_hit",
+     "text_zh": "站在高處時命中 +1"
+    }
+   ],
+   "appearance": {
+    "kind": "sword",
+    "form": "straight",
+    "material": "steel",
+    "dye": null,
+    "style": null,
+    "rarity": "common",
+    "keywords": []
+   }
+  },
+  {
+   "id": "item_test_hammer",
+   "name_zh": "試煉戰錘",
+   "slot_type": "weapon",
+   "weapon": "hammer",
+   "weapon_name_zh": "錘",
+   "two_handed": true,
+   "paired": false,
+   "tags": [],
+   "legendary": false,
+   "affixes": [
+    {
+     "affix_id": "affix_cond_low_hp_damage",
+     "text_zh": "HP 低於 50% 時傷害 +15%"
+    },
+    {
+     "affix_id": "affix_cost_glass",
+     "text_zh": "傷害 +20%；受到的傷害 +10%"
+    }
+   ],
+   "appearance": {
+    "kind": "hammer",
+    "form": "warhammer",
+    "material": "iron",
+    "dye": null,
+    "style": null,
+    "rarity": "common",
+    "keywords": []
+   }
+  },
+  {
+   "id": "item_test_bow",
+   "name_zh": "試煉長弓",
+   "slot_type": "weapon",
+   "weapon": "bow",
+   "weapon_name_zh": "弓",
+   "two_handed": true,
+   "paired": false,
+   "tags": [],
+   "legendary": false,
+   "affixes": [
+    {
+     "affix_id": "affix_max_hp",
+     "text_zh": "最大 HP +8"
+    }
+   ],
+   "appearance": {
+    "kind": "bow",
+    "form": "long",
+    "material": "wood",
+    "dye": null,
+    "style": null,
+    "rarity": "common",
+    "keywords": []
+   }
+  },
+  {
+   "id": "item_test_twin_daggers",
+   "name_zh": "試煉雙匕首",
+   "slot_type": "weapon",
+   "weapon": "dagger",
+   "weapon_name_zh": "匕首",
+   "two_handed": false,
+   "paired": true,
+   "tags": [],
+   "legendary": false,
+   "affixes": [
+    {
+     "affix_id": "affix_attr_str",
+     "text_zh": "力量 +1"
+    }
+   ],
+   "appearance": {
+    "kind": "dual_dagger",
+    "form": "stiletto",
+    "material": "steel",
+    "dye": null,
+    "style": null,
+    "rarity": "common",
+    "keywords": []
+   }
+  },
+  {
+   "id": "item_test_shield",
+   "name_zh": "試煉圓盾",
+   "slot_type": "offhand",
+   "weapon": null,
+   "weapon_name_zh": null,
+   "two_handed": false,
+   "paired": false,
+   "tags": [
+    "shield"
+   ],
+   "legendary": false,
+   "affixes": [
+    {
+     "affix_id": "affix_max_hp",
+     "text_zh": "最大 HP +8"
+    },
+    {
+     "affix_id": "affix_attr_str",
+     "text_zh": "力量 +1"
+    }
+   ],
+   "appearance": {
+    "kind": "round_shield",
+    "form": "banded",
+    "material": "iron",
+    "dye": null,
+    "style": null,
+    "rarity": "common",
+    "keywords": []
+   }
+  },
+  {
+   "id": "item_test_helm",
+   "name_zh": "試煉頭盔",
+   "slot_type": "head",
+   "weapon": null,
+   "weapon_name_zh": null,
+   "two_handed": false,
+   "paired": false,
+   "tags": [],
+   "legendary": false,
+   "affixes": [
+    {
+     "affix_id": "affix_cond_still_defense",
+     "text_zh": "本回合沒有移動：防禦 +15%"
+    },
+    {
+     "affix_id": "affix_resist_fire",
+     "text_zh": "火焰抗性 +10%"
+    }
+   ],
+   "appearance": {
+    "kind": "helmet",
+    "form": "horned",
+    "material": "iron",
+    "dye": null,
+    "style": null,
+    "rarity": "common",
+    "keywords": []
+   }
+  },
+  {
+   "id": "item_test_armor",
+   "name_zh": "試煉鎖甲",
+   "slot_type": "body",
+   "weapon": null,
+   "weapon_name_zh": null,
+   "two_handed": false,
+   "paired": false,
+   "tags": [],
+   "legendary": false,
+   "affixes": [
+    {
+     "affix_id": "affix_max_hp",
+     "text_zh": "最大 HP +12"
+    },
+    {
+     "affix_id": "affix_resist_fire",
+     "text_zh": "火焰抗性 +15%"
+    },
+    {
+     "affix_id": "affix_cond_still_defense",
+     "text_zh": "本回合沒有移動：防禦 +20%"
+    }
+   ],
+   "appearance": {
+    "kind": "mail",
+    "form": "chain",
+    "material": "iron",
+    "dye": null,
+    "style": null,
+    "rarity": "common",
+    "keywords": []
+   }
+  },
+  {
+   "id": "item_test_gloves",
+   "name_zh": "試煉手套",
+   "slot_type": "hands",
+   "weapon": null,
+   "weapon_name_zh": null,
+   "two_handed": false,
+   "paired": false,
+   "tags": [],
+   "legendary": false,
+   "affixes": [
+    {
+     "affix_id": "affix_attr_str",
+     "text_zh": "力量 +1"
+    },
+    {
+     "affix_id": "affix_max_hp",
+     "text_zh": "最大 HP +4"
+    }
+   ],
+   "appearance": {
+    "kind": "leather_gloves",
+    "form": "short",
+    "material": "leather",
+    "dye": "brown",
+    "style": null,
+    "rarity": "common",
+    "keywords": []
+   }
+  },
+  {
+   "id": "item_test_boots",
+   "name_zh": "試煉疾行靴",
+   "slot_type": "feet",
+   "weapon": null,
+   "weapon_name_zh": null,
+   "two_handed": false,
+   "paired": false,
+   "tags": [],
+   "legendary": false,
+   "affixes": [
+    {
+     "affix_id": "affix_cost_swift",
+     "text_zh": "移動 +2；防禦 −15%"
+    },
+    {
+     "affix_id": "affix_max_hp",
+     "text_zh": "最大 HP +4"
+    }
+   ],
+   "appearance": {
+    "kind": "boots",
+    "form": "tall",
+    "material": "leather",
+    "dye": "black",
+    "style": null,
+    "rarity": "common",
+    "keywords": []
+   }
+  },
+  {
+   "id": "item_test_amulet",
+   "name_zh": "試煉血契項鍊",
+   "slot_type": "neck",
+   "weapon": null,
+   "weapon_name_zh": null,
+   "two_handed": false,
+   "paired": false,
+   "tags": [],
+   "legendary": false,
+   "affixes": [
+    {
+     "affix_id": "affix_cond_low_hp_damage",
+     "text_zh": "HP 低於 50% 時傷害 +10%"
+    },
+    {
+     "affix_id": "affix_cost_blood",
+     "text_zh": "回合開始時失去 2 HP（不會致死）；技能冷卻 −1"
+    }
+   ],
+   "appearance": {
+    "kind": "pendant",
+    "form": "pendant",
+    "material": "silver",
+    "dye": null,
+    "style": null,
+    "rarity": "common",
+    "keywords": []
+   }
+  },
+  {
+   "id": "item_test_ring_fire",
+   "name_zh": "試煉焰紋戒",
+   "slot_type": "ring",
+   "weapon": null,
+   "weapon_name_zh": null,
+   "two_handed": false,
+   "paired": false,
+   "tags": [],
+   "legendary": false,
+   "affixes": [
+    {
+     "affix_id": "affix_resist_fire",
+     "text_zh": "火焰抗性 +15%"
+    },
+    {
+     "affix_id": "affix_cost_glass",
+     "text_zh": "傷害 +20%；受到的傷害 +10%"
+    }
+   ],
+   "appearance": {
+    "kind": "ring",
+    "form": "gem",
+    "material": "gold",
+    "dye": null,
+    "style": null,
+    "rarity": "common",
+    "keywords": []
+   }
+  },
+  {
+   "id": "item_test_ring_str",
+   "name_zh": "試煉力量戒",
+   "slot_type": "ring",
+   "weapon": null,
+   "weapon_name_zh": null,
+   "two_handed": false,
+   "paired": false,
+   "tags": [],
+   "legendary": false,
+   "affixes": [
+    {
+     "affix_id": "affix_attr_str",
+     "text_zh": "力量 +2"
+    },
+    {
+     "affix_id": "affix_cond_height_hit",
+     "text_zh": "站在高處時命中 +1"
+    }
+   ],
+   "appearance": {
+    "kind": "ring",
+    "form": "signet",
+    "material": "silver",
+    "dye": null,
+    "style": null,
+    "rarity": "common",
+    "keywords": []
+   }
+  },
+  {
+   "id": "item_test_ring_hp",
+   "name_zh": "試煉生命戒",
+   "slot_type": "ring",
+   "weapon": null,
+   "weapon_name_zh": null,
+   "two_handed": false,
+   "paired": false,
+   "tags": [],
+   "legendary": false,
+   "affixes": [
+    {
+     "affix_id": "affix_max_hp",
+     "text_zh": "最大 HP +16"
+    }
+   ],
+   "appearance": {
+    "kind": "ring",
+    "form": "plain",
+    "material": "copper",
+    "dye": null,
+    "style": null,
+    "rarity": "common",
+    "keywords": []
+   }
+  }
+ ],
+ "affixes": [
+  {
+   "id": "affix_attr_str",
+   "name_zh": "力量 +{n}",
+   "category": "stat",
+   "category_number": 1,
+   "category_zh": "數值",
+   "slot_types": [
+    "weapon",
+    "offhand",
+    "head",
+    "body",
+    "hands",
+    "feet",
+    "neck",
+    "ring"
+   ],
+   "weapons": [],
+   "weapon_class": null,
+   "item_tags": {},
+   "legendary_only": false,
+   "value_min": 1,
+   "value_max": 4,
+   "value_unit": "flat"
+  },
+  {
+   "id": "affix_max_hp",
+   "name_zh": "最大 HP +{n}",
+   "category": "stat",
+   "category_number": 1,
+   "category_zh": "數值",
+   "slot_types": [
+    "weapon",
+    "offhand",
+    "head",
+    "body",
+    "hands",
+    "feet",
+    "neck",
+    "ring"
+   ],
+   "weapons": [],
+   "weapon_class": null,
+   "item_tags": {},
+   "legendary_only": false,
+   "value_min": 4,
+   "value_max": 16,
+   "value_unit": "flat"
+  },
+  {
+   "id": "affix_resist_fire",
+   "name_zh": "火焰抗性 +{n}",
+   "category": "stat",
+   "category_number": 1,
+   "category_zh": "數值",
+   "slot_types": [
+    "body",
+    "head",
+    "hands",
+    "feet",
+    "neck",
+    "ring"
+   ],
+   "weapons": [],
+   "weapon_class": null,
+   "item_tags": {},
+   "legendary_only": false,
+   "value_min": 50,
+   "value_max": 150,
+   "value_unit": "permille"
+  },
+  {
+   "id": "affix_cond_height_hit",
+   "name_zh": "站在高處時命中 +{n}",
+   "category": "conditional",
+   "category_number": 2,
+   "category_zh": "條件數值",
+   "slot_types": [
+    "weapon",
+    "head",
+    "ring"
+   ],
+   "weapons": [],
+   "weapon_class": null,
+   "item_tags": {},
+   "legendary_only": false,
+   "value_min": 1,
+   "value_max": 1,
+   "value_unit": "flat"
+  },
+  {
+   "id": "affix_cond_still_defense",
+   "name_zh": "本回合沒有移動：防禦 +{n}",
+   "category": "conditional",
+   "category_number": 2,
+   "category_zh": "條件數值",
+   "slot_types": [
+    "body",
+    "head",
+    "hands",
+    "feet"
+   ],
+   "weapons": [],
+   "weapon_class": null,
+   "item_tags": {},
+   "legendary_only": false,
+   "value_min": 100,
+   "value_max": 200,
+   "value_unit": "permille"
+  },
+  {
+   "id": "affix_cond_low_hp_damage",
+   "name_zh": "HP 低於 50% 時傷害 +{n}",
+   "category": "conditional",
+   "category_number": 2,
+   "category_zh": "條件數值",
+   "slot_types": [
+    "weapon",
+    "neck",
+    "ring"
+   ],
+   "weapons": [],
+   "weapon_class": null,
+   "item_tags": {},
+   "legendary_only": false,
+   "value_min": 100,
+   "value_max": 150,
+   "value_unit": "permille"
+  },
+  {
+   "id": "affix_kw_burn_duration",
+   "name_zh": "你施加的燃燒 +1 回合",
+   "category": "keyword",
+   "category_number": 3,
+   "category_zh": "技能強化",
+   "slot_types": [
+    "weapon",
+    "offhand",
+    "neck",
+    "ring"
+   ],
+   "weapons": [],
+   "weapon_class": null,
+   "item_tags": {},
+   "legendary_only": false,
+   "value_min": null,
+   "value_max": null,
+   "value_unit": "flat"
+  },
+  {
+   "id": "affix_kw_prone_damage",
+   "name_zh": "利用倒地的技能傷害 +{n}",
+   "category": "keyword",
+   "category_number": 3,
+   "category_zh": "技能強化",
+   "slot_types": [
+    "weapon",
+    "offhand",
+    "neck",
+    "ring"
+   ],
+   "weapons": [],
+   "weapon_class": null,
+   "item_tags": {},
+   "legendary_only": false,
+   "value_min": 60,
+   "value_max": 150,
+   "value_unit": "permille"
+  },
+  {
+   "id": "affix_kw_shock_area",
+   "name_zh": "製造帶電的技能範圍 +1",
+   "category": "keyword",
+   "category_number": 3,
+   "category_zh": "技能強化",
+   "slot_types": [
+    "weapon",
+    "offhand",
+    "neck"
+   ],
+   "weapons": [],
+   "weapon_class": null,
+   "item_tags": {},
+   "legendary_only": false,
+   "value_min": null,
+   "value_max": null,
+   "value_unit": "flat"
+  },
+  {
+   "id": "affix_attack_lightning",
+   "name_zh": "普攻帶雷電（製造帶電）",
+   "category": "attack",
+   "category_number": 4,
+   "category_zh": "普攻附加",
+   "slot_types": [
+    "weapon"
+   ],
+   "weapons": [],
+   "weapon_class": null,
+   "item_tags": {},
+   "legendary_only": false,
+   "value_min": null,
+   "value_max": null,
+   "value_unit": "flat"
+  },
+  {
+   "id": "affix_attack_mark",
+   "name_zh": "普攻命中時標記目標 1 回合",
+   "category": "attack",
+   "category_number": 4,
+   "category_zh": "普攻附加",
+   "slot_types": [
+    "weapon"
+   ],
+   "weapons": [],
+   "weapon_class": null,
+   "item_tags": {},
+   "legendary_only": false,
+   "value_min": null,
+   "value_max": null,
+   "value_unit": "flat"
+  },
+  {
+   "id": "affix_trait_hammer_knockback",
+   "name_zh": "錘的震退 +1 格",
+   "category": "weapon_trait",
+   "category_number": 5,
+   "category_zh": "武器特性強化",
+   "slot_types": [
+    "weapon"
+   ],
+   "weapons": [
+    "hammer"
+   ],
+   "weapon_class": null,
+   "item_tags": {},
+   "legendary_only": false,
+   "value_min": null,
+   "value_max": null,
+   "value_unit": "flat"
+  },
+  {
+   "id": "affix_trait_longgun_pointblank",
+   "name_zh": "長槍的貼臉懲罰減半",
+   "category": "weapon_trait",
+   "category_number": 5,
+   "category_zh": "武器特性強化",
+   "slot_types": [
+    "weapon"
+   ],
+   "weapons": [
+    "longgun"
+   ],
+   "weapon_class": null,
+   "item_tags": {},
+   "legendary_only": false,
+   "value_min": null,
+   "value_max": null,
+   "value_unit": "flat"
+  },
+  {
+   "id": "affix_trait_axe_sunder",
+   "name_zh": "斧的破甲持續 +1 回合",
+   "category": "weapon_trait",
+   "category_number": 5,
+   "category_zh": "武器特性強化",
+   "slot_types": [
+    "weapon"
+   ],
+   "weapons": [
+    "axe"
+   ],
+   "weapon_class": null,
+   "item_tags": {},
+   "legendary_only": false,
+   "value_min": null,
+   "value_max": null,
+   "value_unit": "flat"
+  },
+  {
+   "id": "affix_trig_every3_prone",
+   "name_zh": "每第 3 次命中：目標倒地",
+   "category": "trigger",
+   "category_number": 6,
+   "category_zh": "觸發",
+   "slot_types": [
+    "weapon",
+    "hands"
+   ],
+   "weapons": [],
+   "weapon_class": null,
+   "item_tags": {},
+   "legendary_only": false,
+   "value_min": null,
+   "value_max": null,
+   "value_unit": "flat"
+  },
+  {
+   "id": "affix_trig_kill_ap",
+   "name_zh": "擊殺時：回 1 AP（每回合 1 次）",
+   "category": "trigger",
+   "category_number": 6,
+   "category_zh": "觸發",
+   "slot_types": [
+    "weapon",
+    "neck",
+    "ring"
+   ],
+   "weapons": [],
+   "weapon_class": null,
+   "item_tags": {},
+   "legendary_only": false,
+   "value_min": null,
+   "value_max": null,
+   "value_unit": "flat"
+  },
+  {
+   "id": "affix_trig_thorns_burn",
+   "name_zh": "受到近戰傷害時：攻擊者燃燒 1 回合（每輪 1 次）",
+   "category": "trigger",
+   "category_number": 6,
+   "category_zh": "觸發",
+   "slot_types": [
+    "body",
+    "offhand"
+   ],
+   "weapons": [],
+   "weapon_class": null,
+   "item_tags": {},
+   "legendary_only": false,
+   "value_min": null,
+   "value_max": null,
+   "value_unit": "flat"
+  },
+  {
+   "id": "affix_charge_static",
+   "name_zh": "命中時累積 1 層靜電（上限 3）；花 3 層＋1 AP：對目標造成 3d6 雷電",
+   "category": "charge",
+   "category_number": 7,
+   "category_zh": "充能",
+   "slot_types": [
+    "weapon",
+    "body"
+   ],
+   "weapons": [],
+   "weapon_class": null,
+   "item_tags": {},
+   "legendary_only": false,
+   "value_min": null,
+   "value_max": null,
+   "value_unit": "flat"
+  },
+  {
+   "id": "affix_charge_fury",
+   "name_zh": "受到傷害時累積 1 層怒氣（上限 4）；花 4 層：獲得強化 1 回合",
+   "category": "charge",
+   "category_number": 7,
+   "category_zh": "充能",
+   "slot_types": [
+    "body",
+    "weapon"
+   ],
+   "weapons": [],
+   "weapon_class": null,
+   "item_tags": {},
+   "legendary_only": false,
+   "value_min": null,
+   "value_max": null,
+   "value_unit": "flat"
+  },
+  {
+   "id": "affix_cost_glass",
+   "name_zh": "傷害 +20%；受到的傷害 +10%",
+   "category": "cost",
+   "category_number": 8,
+   "category_zh": "代價型",
+   "slot_types": [
+    "weapon",
+    "neck",
+    "ring"
+   ],
+   "weapons": [],
+   "weapon_class": null,
+   "item_tags": {},
+   "legendary_only": false,
+   "value_min": null,
+   "value_max": null,
+   "value_unit": "flat"
+  },
+  {
+   "id": "affix_cost_blood",
+   "name_zh": "回合開始時失去 2 HP（不會致死）；技能冷卻 −1",
+   "category": "cost",
+   "category_number": 8,
+   "category_zh": "代價型",
+   "slot_types": [
+    "neck",
+    "ring",
+    "body"
+   ],
+   "weapons": [],
+   "weapon_class": null,
+   "item_tags": {},
+   "legendary_only": false,
+   "value_min": null,
+   "value_max": null,
+   "value_unit": "flat"
+  },
+  {
+   "id": "affix_cost_swift",
+   "name_zh": "移動 +2；防禦 −15%",
+   "category": "cost",
+   "category_number": 8,
+   "category_zh": "代價型",
+   "slot_types": [
+    "feet",
+    "body"
+   ],
+   "weapons": [],
+   "weapon_class": null,
+   "item_tags": {},
+   "legendary_only": false,
+   "value_min": null,
+   "value_max": null,
+   "value_unit": "flat"
+  },
+  {
+   "id": "affix_act_grapple",
+   "name_zh": "解鎖「鉤爪」：1 AP、冷卻 3，把 4 格內的目標拉近 2 格",
+   "category": "action",
+   "category_number": 9,
+   "category_zh": "動作",
+   "slot_types": [
+    "weapon",
+    "offhand",
+    "hands"
+   ],
+   "weapons": [],
+   "weapon_class": null,
+   "item_tags": {},
+   "legendary_only": false,
+   "value_min": null,
+   "value_max": null,
+   "value_unit": "flat"
+  },
+  {
+   "id": "affix_act_smoke",
+   "name_zh": "解鎖「煙霧彈」：1 AP、冷卻 4，3 格內一點產生半徑 1 的煙霧（2 回合）",
+   "category": "action",
+   "category_number": 9,
+   "category_zh": "動作",
+   "slot_types": [
+    "offhand",
+    "hands",
+    "neck"
+   ],
+   "weapons": [],
+   "weapon_class": null,
+   "item_tags": {},
+   "legendary_only": false,
+   "value_min": null,
+   "value_max": null,
+   "value_unit": "flat"
+  },
+  {
+   "id": "affix_act_shield_wall",
+   "name_zh": "解鎖「盾牆」：1 AP、冷卻 3，在前方 1 格產生暫時障礙（2 回合）",
+   "category": "action",
+   "category_number": 9,
+   "category_zh": "動作",
+   "slot_types": [
+    "offhand"
+   ],
+   "weapons": [],
+   "weapon_class": null,
+   "item_tags": {
+    "offhand": [
+     "shield"
+    ]
+   },
+   "legendary_only": false,
+   "value_min": null,
+   "value_max": null,
+   "value_unit": "flat"
+  },
+  {
+   "id": "affix_react_ranged_block",
+   "name_zh": "被遠程攻擊時也可以格擋",
+   "category": "reaction",
+   "category_number": 10,
+   "category_zh": "反應",
+   "slot_types": [
+    "offhand",
+    "body"
+   ],
+   "weapons": [],
+   "weapon_class": null,
+   "item_tags": {
+    "offhand": [
+     "shield"
+    ]
+   },
+   "legendary_only": false,
+   "value_min": null,
+   "value_max": null,
+   "value_unit": "flat"
+  },
+  {
+   "id": "affix_react_guard_ally",
+   "name_zh": "2 格內的隊友被攻擊時：替他承受（每輪 1 次）",
+   "category": "reaction",
+   "category_number": 10,
+   "category_zh": "反應",
+   "slot_types": [
+    "body",
+    "offhand"
+   ],
+   "weapons": [],
+   "weapon_class": null,
+   "item_tags": {},
+   "legendary_only": false,
+   "value_min": null,
+   "value_max": null,
+   "value_unit": "flat"
+  },
+  {
+   "id": "affix_react_double_overwatch",
+   "name_zh": "監視射擊每輪可以觸發 2 次",
+   "category": "reaction",
+   "category_number": 10,
+   "category_zh": "反應",
+   "slot_types": [
+    "weapon",
+    "head"
+   ],
+   "weapons": [],
+   "weapon_class": "ranged",
+   "item_tags": {},
+   "legendary_only": false,
+   "value_min": null,
+   "value_max": null,
+   "value_unit": "flat"
+  },
+  {
+   "id": "affix_rule_fire_mends",
+   "name_zh": "你的火焰不會傷到隊友，反而治療他們",
+   "category": "rule",
+   "category_number": 11,
+   "category_zh": "改變規則",
+   "slot_types": [
+    "weapon",
+    "offhand",
+    "head",
+    "body",
+    "hands",
+    "feet",
+    "neck",
+    "ring"
+   ],
+   "weapons": [],
+   "weapon_class": null,
+   "item_tags": {},
+   "legendary_only": true,
+   "value_min": null,
+   "value_max": null,
+   "value_unit": "flat"
+  },
+  {
+   "id": "affix_rule_move_any_object",
+   "name_zh": "你可以推動任何物件，包括石柱",
+   "category": "rule",
+   "category_number": 11,
+   "category_zh": "改變規則",
+   "slot_types": [
+    "weapon",
+    "offhand",
+    "head",
+    "body",
+    "hands",
+    "feet",
+    "neck",
+    "ring"
+   ],
+   "weapons": [],
+   "weapon_class": null,
+   "item_tags": {},
+   "legendary_only": true,
+   "value_min": null,
+   "value_max": null,
+   "value_unit": "flat"
+  },
+  {
+   "id": "affix_rule_bleeding_wake",
+   "name_zh": "你移動經過的格子留下流血表面",
+   "category": "rule",
+   "category_number": 11,
+   "category_zh": "改變規則",
+   "slot_types": [
+    "weapon",
+    "offhand",
+    "head",
+    "body",
+    "hands",
+    "feet",
+    "neck",
+    "ring"
+   ],
+   "weapons": [],
+   "weapon_class": null,
+   "item_tags": {},
+   "legendary_only": true,
+   "value_min": null,
+   "value_max": null,
+   "value_unit": "flat"
+  }
+ ],
+ "weapons": [
+  {
+   "id": "axe",
+   "name_zh": "斧",
+   "weapon_class": "melee",
+   "two_handed": false
+  },
+  {
+   "id": "bow",
+   "name_zh": "弓",
+   "weapon_class": "ranged",
+   "two_handed": true
+  },
+  {
+   "id": "crossbow",
+   "name_zh": "弩",
+   "weapon_class": "ranged",
+   "two_handed": true
+  },
+  {
+   "id": "dagger",
+   "name_zh": "匕首",
+   "weapon_class": "melee",
+   "two_handed": false
+  },
+  {
+   "id": "fire_staff",
+   "name_zh": "火焰法杖",
+   "weapon_class": "focus",
+   "two_handed": true
+  },
+  {
+   "id": "frost_staff",
+   "name_zh": "冰霜法杖",
+   "weapon_class": "focus",
+   "two_handed": true
+  },
+  {
+   "id": "greatsword",
+   "name_zh": "雙手劍",
+   "weapon_class": "melee",
+   "two_handed": true
+  },
+  {
+   "id": "hammer",
+   "name_zh": "錘",
+   "weapon_class": "melee",
+   "two_handed": true
+  },
+  {
+   "id": "lightning_staff",
+   "name_zh": "雷電法杖",
+   "weapon_class": "focus",
+   "two_handed": true
+  },
+  {
+   "id": "longgun",
+   "name_zh": "長槍",
+   "weapon_class": "ranged",
+   "two_handed": true
+  },
+  {
+   "id": "one_handed_sword",
+   "name_zh": "單手劍",
+   "weapon_class": "melee",
+   "two_handed": false
+  },
+  {
+   "id": "scepter",
+   "name_zh": "權杖",
+   "weapon_class": "focus",
+   "two_handed": false
+  },
+  {
+   "id": "spear",
+   "name_zh": "矛",
+   "weapon_class": "melee",
+   "two_handed": true
+  },
+  {
+   "id": "totem_staff",
+   "name_zh": "圖騰杖",
+   "weapon_class": "focus",
+   "two_handed": true
+  }
+ ],
+ "max_affixes_per_item": 4,
+ "max_cost_affixes": 2,
+ "diminishing_permille": [
+  1000,
+  500,
+  250
+ ]
+}

@@ -61,6 +61,7 @@ export function unit(id: string, team: "ally" | "enemy", x: number, y: number, o
     granted_skills: [],
     facing: "east",
     equipment: [],
+    gear_totals: [],
     ...over,
   };
 }

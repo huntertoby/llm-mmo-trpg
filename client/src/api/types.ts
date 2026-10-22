@@ -37,11 +37,13 @@ export type SkillReasons = Schemas["SkillReasons"];
  * 技能工坊的 `custom_skills`、`replace_skills` 也可省略（預設空串列，Phase 3F-1）。 */
 export type CreateBattleRequest = Omit<
   Schemas["CreateBattleRequest"],
-  "max_rounds" | "custom_skills" | "replace_skills"
+  "max_rounds" | "custom_skills" | "replace_skills" | "equipment"
 > & {
   max_rounds?: number;
   custom_skills?: Record<string, unknown>[];
   replace_skills?: string[];
+  /** 裝備測試（Phase 3G-G4）：欄位 → 物品 id 或自訂物品。 */
+  equipment?: Record<string, GearChoice>;
 };
 // 技能工坊（Phase 3F）
 export type StepId = Schemas["StepId"];
@@ -139,3 +141,15 @@ export type RunChoice =
 export type CreateRunRequest = Omit<Schemas["CreateRunRequest"], "attributes"> & {
   attributes?: Partial<Record<AttributeId, number>>;
 };
+// 裝備測試（Phase 3G-G4）
+export type GearCatalog = Schemas["GearCatalog"];
+export type GearSlotInfo = Schemas["GearSlotInfo"];
+export type GearItemInfo = Schemas["GearItemInfo"];
+export type GearAffixInfo = Schemas["GearAffixInfo"];
+export type GearWeaponInfo = Schemas["GearWeaponInfo"];
+export type GearChoice = Schemas["GearChoice"];
+export type GearCustomItem = Schemas["GearCustomItem"];
+export type GearCheck = Schemas["GearCheck"];
+export type GearCheckRequest = Schemas["GearCheckRequest"];
+/** 英雄面板的一行裝備加成（實際值、截斷前的值、每條詞條的貢獻）。 */
+export type GearTotalView = Schemas["GearTotalView"];

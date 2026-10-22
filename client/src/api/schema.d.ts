@@ -554,6 +554,46 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/gear/catalog": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Get Catalog
+         * @description 裝備測試的選單。
+         */
+        get: operations["get_catalog_api_gear_catalog_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/gear/check": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Post Check
+         * @description 靶場上的主角穿這組裝備是否合法；合法時附上開戰時的主角（含裝備、加成來源與實際數值）。
+         */
+        post: operations["post_check_api_gear_check_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
 }
 export type webhooks = Record<string, never>;
 export interface components {
@@ -1102,6 +1142,10 @@ export interface components {
             replace_skills: string[];
             /** Opponents */
             opponents?: string | null;
+            /** Equipment */
+            equipment?: {
+                [key: string]: components["schemas"]["GearChoice"];
+            };
         };
         /**
          * CreateRunRequest
@@ -1427,6 +1471,251 @@ export interface components {
                 components["schemas"]["GambleBranchOut"],
                 components["schemas"]["GambleBranchOut"]
             ];
+        };
+        /**
+         * GearAffixInfo
+         * @description 白名單的一條詞條。``name_zh`` 含 ``{n}``（數值）；沒有 ``value_min`` 的是固定效果。
+         */
+        GearAffixInfo: {
+            /** Id */
+            id: string;
+            /** Name Zh */
+            name_zh: string;
+            /** Category */
+            category: string;
+            /** Category Number */
+            category_number: number;
+            /** Category Zh */
+            category_zh: string;
+            /** Slot Types */
+            slot_types: components["schemas"]["SlotType"][];
+            /**
+             * Weapons
+             * @default []
+             */
+            weapons: string[];
+            /** Weapon Class */
+            weapon_class?: string | null;
+            /** Item Tags */
+            item_tags?: {
+                [key: string]: string[];
+            };
+            /**
+             * Legendary Only
+             * @default false
+             */
+            legendary_only: boolean;
+            /** Value Min */
+            value_min?: number | null;
+            /** Value Max */
+            value_max?: number | null;
+            /**
+             * Value Unit
+             * @default flat
+             */
+            value_unit: string;
+        };
+        /**
+         * GearAffixPick
+         * @description 自訂物品上的一條詞條：白名單 id ＋ 數值（詞條沒有數值範圍時不填）。
+         */
+        GearAffixPick: {
+            /** Affix */
+            affix: string;
+            /** Value */
+            value?: number | null;
+        };
+        /**
+         * GearCatalog
+         * @description 測試介面的選單：欄位、測試物品、詞條白名單、武器。
+         */
+        GearCatalog: {
+            /** Slots */
+            slots: components["schemas"]["GearSlotInfo"][];
+            /** Items */
+            items: components["schemas"]["GearItemInfo"][];
+            /** Affixes */
+            affixes: components["schemas"]["GearAffixInfo"][];
+            /** Weapons */
+            weapons: components["schemas"]["GearWeaponInfo"][];
+            /** Max Affixes Per Item */
+            max_affixes_per_item: number;
+            /** Max Cost Affixes */
+            max_cost_affixes: number;
+            /** Diminishing Permille */
+            diminishing_permille: number[];
+        };
+        /**
+         * GearCheck
+         * @description 穿戴檢查：合法時附上主角（含裝備與加成來源）的單位資訊。
+         */
+        GearCheck: {
+            /** Legal */
+            legal: boolean;
+            /**
+             * Problems
+             * @default []
+             */
+            problems: string[];
+            hero?: components["schemas"]["UnitView"] | null;
+        };
+        /** GearCheckRequest */
+        GearCheckRequest: {
+            /** Hero Build */
+            hero_build: string;
+            /** Equipment */
+            equipment?: {
+                [key: string]: components["schemas"]["GearChoice"];
+            };
+        };
+        /**
+         * GearChoice
+         * @description 一個欄位的選擇：內容庫物品 id，或自訂物品（二選一）。
+         */
+        GearChoice: {
+            /** Item Id */
+            item_id?: string | null;
+            custom?: components["schemas"]["GearCustomItem"] | null;
+        };
+        /**
+         * GearCustomItem
+         * @description 手動組的物品（欄位的物品種類由欄位決定，所以不必填）。
+         *
+         *     ``weapon``：主手的武器 id；``paired``：成對武器；``kind``：外觀造型（只影響圖示，選填）。
+         */
+        GearCustomItem: {
+            /** Name Zh */
+            name_zh: string;
+            /** Weapon */
+            weapon?: string | null;
+            /**
+             * Paired
+             * @default false
+             */
+            paired: boolean;
+            /**
+             * Tags
+             * @default []
+             */
+            tags: string[];
+            /**
+             * Legendary
+             * @default false
+             */
+            legendary: boolean;
+            /** Kind */
+            kind?: string | null;
+            /**
+             * Affixes
+             * @default []
+             */
+            affixes: components["schemas"]["GearAffixPick"][];
+        };
+        /** GearItemInfo */
+        GearItemInfo: {
+            /** Id */
+            id: string;
+            /** Name Zh */
+            name_zh: string;
+            slot_type: components["schemas"]["SlotType"];
+            /** Weapon */
+            weapon?: string | null;
+            /** Weapon Name Zh */
+            weapon_name_zh?: string | null;
+            /**
+             * Two Handed
+             * @default false
+             */
+            two_handed: boolean;
+            /**
+             * Paired
+             * @default false
+             */
+            paired: boolean;
+            /**
+             * Tags
+             * @default []
+             */
+            tags: string[];
+            /**
+             * Legendary
+             * @default false
+             */
+            legendary: boolean;
+            /**
+             * Affixes
+             * @default []
+             */
+            affixes: components["schemas"]["GearItemLine"][];
+            /**
+             * @default {
+             *       "rarity": "common",
+             *       "keywords": []
+             *     }
+             */
+            appearance: components["schemas"]["AppearanceView"];
+        };
+        /** GearItemLine */
+        GearItemLine: {
+            /** Affix Id */
+            affix_id: string;
+            /** Text Zh */
+            text_zh: string;
+        };
+        /** GearSlotInfo */
+        GearSlotInfo: {
+            /** Slot */
+            slot: string;
+            /** Name Zh */
+            name_zh: string;
+            slot_type: components["schemas"]["SlotType"];
+            /** Slot Type Zh */
+            slot_type_zh: string;
+        };
+        /**
+         * GearTotalView
+         * @description 英雄面板的一行裝備加成。
+         *
+         *     - ``value``：實際值（遞減後、套上限後）；``permille`` 為真時單位是千分比。
+         *     - ``before_cap``：遞減後、套上限前的值；``capped`` 為真代表被上限截斷。
+         *     - ``condition_zh``：條件數值才有（例如「高處」）。
+         *     - ``sources_zh``：每一條貢獻的詞條，格式「物品名：詞條文字（權重）」。
+         */
+        GearTotalView: {
+            /** Key */
+            key: string;
+            /** Label Zh */
+            label_zh: string;
+            /** Value */
+            value: number;
+            /** Before Cap */
+            before_cap: number;
+            /** Capped */
+            capped: boolean;
+            /** Permille */
+            permille: boolean;
+            /** Text Zh */
+            text_zh: string;
+            /** Note Zh */
+            note_zh: string;
+            /** Condition Zh */
+            condition_zh?: string | null;
+            /**
+             * Sources Zh
+             * @default []
+             */
+            sources_zh: string[];
+        };
+        /** GearWeaponInfo */
+        GearWeaponInfo: {
+            /** Id */
+            id: string;
+            /** Name Zh */
+            name_zh: string;
+            /** Weapon Class */
+            weapon_class: string;
+            /** Two Handed */
+            two_handed: boolean;
         };
         /**
          * Glossary
@@ -2648,6 +2937,8 @@ export interface components {
                 [key: string]: string;
             };
         };
+        /** @enum {string} */
+        SlotType: "weapon" | "offhand" | "head" | "body" | "hands" | "feet" | "neck" | "ring";
         /**
          * StartKeywordOption
          * @description 一個關鍵字的起始技能預覽：``skill`` 為 ``None`` 表示這把武器湊不到（不可選）。已選的關鍵字
@@ -3086,6 +3377,11 @@ export interface components {
              * @default []
              */
             equipment: components["schemas"]["EquipmentSlotView"][];
+            /**
+             * Gear Totals
+             * @default []
+             */
+            gear_totals: components["schemas"]["GearTotalView"][];
         };
         /** UpcomingEventOut */
         UpcomingEventOut: {
@@ -4212,6 +4508,59 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["WorkshopExport"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    get_catalog_api_gear_catalog_get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["GearCatalog"];
+                };
+            };
+        };
+    };
+    post_check_api_gear_check_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["GearCheckRequest"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["GearCheck"];
                 };
             };
             /** @description Validation Error */
