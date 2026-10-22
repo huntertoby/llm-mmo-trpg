@@ -97,6 +97,7 @@ __all__ = [
     "SkillInfused",
     "SkillTriggered",
     "SkillUsed",
+    "SnareTriggered",
     "SourceChanged",
     "SourceReason",
     "StacksChanged",
@@ -109,6 +110,7 @@ __all__ = [
     "SummonExpired",
     "SummonExpiryReason",
     "SummonModeSet",
+    "SummonPulled",
     "SurfaceChanged",
     "SurfaceEntered",
     "TerrainChanged",
@@ -1404,9 +1406,10 @@ class InfusedSkillCast(EventBase):
     tiles: tuple[Pos, ...] = ()
 
 
-type InfusionFizzleReason = Literal["no_target", "controlled"]
+type InfusionFizzleReason = Literal["no_target", "controlled", "downed", "gone"]
 """灌注沒有施放的原因：``no_target`` 依模式選不到合法目標、``controlled`` 回合開始時被暈眩等
-跳過回合的狀態控制。法力與冷卻都不退。"""
+跳過回合的狀態控制、``downed`` 施放前被打倒、``gone`` 施放前消失（到期、召喚者離場、超過上限、
+被獻祭；Phase 3-33e2b）。法力與冷卻都不退。"""
 
 
 class InfusionFizzled(EventBase):
@@ -1418,6 +1421,27 @@ class InfusionFizzled(EventBase):
     skill_id: str
     name_zh: str
     reason: InfusionFizzleReason
+
+
+class SnareTriggered(EventBase):
+    """藤蔓 ``unit_id`` 纏住了踏入相鄰格的敵人 ``target_id``（Phase 3-33e2b；接著是緩速與倒地的
+    ``status_applied``）。"""
+
+    type: Literal["snare_triggered"] = "snare_triggered"
+    unit_id: UnitId
+    target_id: UnitId
+    status_id: str
+    prone: bool
+
+
+class SummonPulled(EventBase):
+    """吸引圖騰 ``unit_id`` 把敵人 ``target_id`` 從 ``from_pos`` 往自己拉近 1 格（Phase 3-33e2b；
+    接著是強制移動的 ``unit_moved``，拉進表面、陷阱照常結算）。"""
+
+    type: Literal["summon_pulled"] = "summon_pulled"
+    unit_id: UnitId
+    target_id: UnitId
+    from_pos: Pos
 
 
 class TotemPulsed(EventBase):
@@ -1682,6 +1706,8 @@ type Event = Annotated[
     | SkillInfused
     | InfusedSkillCast
     | InfusionFizzled
+    | SnareTriggered
+    | SummonPulled
     | TotemPulsed
     | SkillUsed
     | SkillCooldownChanged

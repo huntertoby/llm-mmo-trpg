@@ -410,6 +410,10 @@ class UnitState:
     """最近一次被灌注（``infuse_skill``）的輪數（0 為從未；每隻每輪最多一次）。"""
     trip_round: int = 0
     """最近一次用灌注的「絆倒」（倒地關鍵字，Phase 3-33e1）出手的輪數（0 為從未；每輪最多一次）。"""
+    snare_round: int = 0
+    """藤蔓最近一次纏住敵人的輪數（Phase 3-33e2b；0 為從未；每隻每輪最多一次）。"""
+    platform_pos: Pos | None = None
+    """高台圖騰升起的高台格（Phase 3-33e2b）；召喚物消失時恢復（沒有高台為 ``None``）。"""
     dismissed: bool = False
     """召喚物已消失（到期、召喚者離場或超過上限；Phase 3D-4a）。保留在 ``units`` 中（事件仍引用
     它），但不在戰場上。"""
@@ -531,6 +535,8 @@ class UnitState:
             infused_skill=self.infused_skill,
             infused_round=self.infused_round,
             trip_round=self.trip_round,
+            snare_round=self.snare_round,
+            platform_pos=self.platform_pos,
             dismissed=self.dismissed,
             activations=self.activations,
             revived=self.revived,

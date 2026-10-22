@@ -1,0 +1,19 @@
+# 召喚物（Phase 3-33e2b，docs/design/06-技能.md 6.29.5；數值為初值，未經模擬）：護盾輔助。守護之杖；
+# 每個自己的回合開始給最虛弱的友方（含召喚者與其他召喚物，不含自己）一層護盾（1d4＋2）。
+id: summon_guardian_spirit
+name_zh: 守護靈
+attributes: {str: 8, dex: 10, con: 10, int: 10, wis: 14, wil: 12}
+max_hp: 14
+speed: 4
+armor_bonus: 0
+weapon: guardian_rod
+ai_profile: guard
+default_mode: guard   # 6.29.5「AI 預設」＝守衛
+resist: {}
+element_mods: {}
+tags: [summoned, spirit, support]
+reactions: []
+summon: true
+pulse: {shield_dice: 1d4, shield_flat: 2}   # 每個自己的回合開始：最虛弱的友方獲得護盾
+# 外觀（Phase 3-33h1，docs/art/召喚物外觀.md）：純顯示資料。
+look: {body: humanoid, variant: guardian, element: summon, size: medium, trait: glow}

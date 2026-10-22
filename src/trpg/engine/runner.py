@@ -38,8 +38,13 @@ __all__ = [
     "run_battle",
 ]
 
-LOG_FORMAT = "trpg-battle-log/52"
-"""``/52``（Phase 3-33e1，接在 3-33d 的 ``/51`` 之後）：灌注關鍵字補齊到 10 個
+LOG_FORMAT = "trpg-battle-log/53"
+"""``/53``（Phase 3-33e2b，接在 3-33e1 的 ``/52`` 之後；PM 合併時定號）：召喚物（二）b——範本多了
+``snare``／``platform``／``inert``、``pulse`` 多了護盾與拉扯，單位狀態多了 ``snare_round``／
+``platform_pos``，新事件 ``snare_triggered``／``summon_pulled``，灌注失效多了原因
+``downed``／``gone``；
+會飛的單位（``flying``）移動不看高度差與障礙、不受地面表面影響，因此 ``/52`` 的紀錄無法重播。
+``/52``（Phase 3-33e1，接在 3-33d 的 ``/51`` 之後）：灌注關鍵字補齊到 10 個
 （``summon_infusions``）、召喚物範本的固有灌注／命中特性／脈動（``innate``、``hit_rules``、``pulse``）、
 單位狀態多了 ``trip_round``、新狀態「戰意」（``attack_bonus``，戰意圖騰改版），召喚物的 HP、命中
 後效果與回合開始都可能不同，因此 ``/51`` 的紀錄無法重播。

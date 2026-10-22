@@ -38,6 +38,7 @@ from trpg.engine.grants import expire_granted_skills
 from trpg.engine.objectives import check_battle_end, check_round_end, end_battle
 from trpg.engine.results import ResolveResult
 from trpg.engine.rewrites import ap_cap
+from trpg.engine.rules.movement import is_flying
 from trpg.engine.rules.statuses import move_points_for_turn, skip_turn_status
 from trpg.engine.skill_infusion import release_infusion
 from trpg.engine.skill_triggers import (
@@ -48,7 +49,7 @@ from trpg.engine.skill_triggers import (
 )
 from trpg.engine.stacks import expire_stacks
 from trpg.engine.state import StatusInstance, UnitState
-from trpg.engine.summons import expire_summons, pulse_summon, pulse_totem, totem_of
+from trpg.engine.summons import expire_summons, is_inert, pulse_summon, pulse_totem
 from trpg.engine.traps import tick_traps
 from trpg.engine.zones import expire_zones_at_turn_end, zones_turn_start
 from trpg.shared.types import Surface, UnitId
@@ -82,8 +83,8 @@ def start_turn(ctx: Ctx, unit_id: UnitId) -> None:
     unit.gear_turn_counts = {}  # 裝備觸發的每回合 1 次（3G-G3a）
     unit.ap_pending = 0  # grant_ap 給的、等到這個回合才加上的 AP（Phase 3C-4a）
     unit.move_points = move_points_for_turn(ctx.rules, unit)
-    if totem_of(state, unit) is not None:
-        unit.ap = 0  # 圖騰（Phase 3D-4b）：不攻擊、不施放，只有回合開始的光環
+    if is_inert(state, unit):
+        unit.ap = 0  # 圖騰（3D-4b）與純功能圖騰（3-33e2b）：不攻擊、不施放
     ctx.emit(
         TurnStarted,
         unit_id=unit.id,
@@ -192,7 +193,7 @@ def _tick_cooldowns(ctx: Ctx, unit: UnitState) -> None:
 def _surface_turn_start(ctx: Ctx, unit: UnitState) -> list[EffectBase]:
     """站在表面上的回合開始效果（``surfaces.yaml`` 的 ``on_turn_start``）。"""
     tile = ctx.state.tile(*unit.xy)
-    if tile.surface is Surface.NONE:
+    if tile.surface is Surface.NONE or is_flying(unit):  # 會飛的單位不受地面表面影響（3-33e2b）
         return []
     on_start = ctx.rules.surface_def(tile.surface).on_turn_start
     if on_start is None:

@@ -16,14 +16,19 @@
 - 召喚物沒有源力、不取用源泉、不計入勝負條件、不能撤離（各自的規則模組檢查 ``is_summon``）。
 - **圖騰**（Phase 3D-4b，範本的 ``totem``）：沒有 AP（不移動、不攻擊），自己的回合開始時讓範圍內的
   友方獲得狀態（:func:`pulse_totem`）。
+- **範本特性**（3-33e1／3-33e2b）：``pulse``（回合開始的脈動：造表面、治療、護盾、拉扯，
+  :func:`pulse_summon`）、``snare``（藤蔓，敵人踏入相鄰格時纏住）、``platform``（高台圖騰，召喚時升起
+  高台，消失時恢復）、``inert``（沒有行動的純功能圖騰）。
 - 消失的召喚物保留在 ``units`` 中（``dismissed``），事件與紀錄仍可引用它的名字。
 """
 
 from __future__ import annotations
 
+from fractions import Fraction
 from typing import NamedTuple
 
-from trpg.content.battle import Dice, TotemSpec, WeaponDef
+from trpg.content.battle import Dice, SummonPulse, TotemSpec, WeaponDef
+from trpg.content.maps import MAX_HEIGHT
 from trpg.content.rules import CoreRules
 from trpg.engine import modifiers
 from trpg.engine.context import Ctx
@@ -33,15 +38,29 @@ from trpg.engine.effects.models import (
     CreateSurfaceEffect,
     EffectBase,
     HealEffect,
+    PushEffect,
+    RaiseTerrainEffect,
+    ShieldEffect,
 )
-from trpg.engine.events import EffectFizzled, EventBase, TotemPulsed, UnitSummoned
-from trpg.engine.ids import CONCEALED, next_unit_id
+from trpg.engine.effects.world import push_distance, unit_push_block
+from trpg.engine.events import (
+    EffectFizzled,
+    EventBase,
+    SnareTriggered,
+    SummonPulled,
+    TotemPulsed,
+    UnitMoved,
+    UnitSummoned,
+)
+from trpg.engine.ids import CONCEALED, PRONE, next_unit_id
 from trpg.engine.infusion import active_infusions, default_infusion, template_of
 from trpg.engine.lifecycle import dismiss_summon, make_unit, summons_of
-from trpg.engine.rules.geometry import XY, manhattan
+from trpg.engine.rules.geometry import XY, manhattan, neighbors4
+from trpg.engine.rules.movement import is_deadly, is_standable
 from trpg.engine.rules.statuses import effective_attribute
 from trpg.engine.skills.targeting import summon_site_problem
 from trpg.engine.state import BattleState, UnitState
+from trpg.engine.triggers import register_trigger
 from trpg.shared.rng import PERMILLE
 from trpg.shared.types import Pos, UnitId
 
@@ -49,6 +68,7 @@ __all__ = [
     "Growth",
     "expire_summons",
     "growth_of",
+    "is_inert",
     "pulse_summon",
     "pulse_totem",
     "summon_limit",
@@ -221,6 +241,8 @@ def summon_unit(  # noqa: PLR0917
             infusion=infusion,
         )
     )
+    if summon.template.platform is not None:  # 高台圖騰（3-33e2b）：旁邊升起 1 格高台
+        _raise_platform(ctx, owner, unit)
     conceal = max((i.conceal_rounds for i in infusions), default=0)
     if conceal > 0:  # 隱蔽灌注（3-33e1）：召喚時獲得隱蔽
         execute(
@@ -254,13 +276,57 @@ def totem_of(state: BattleState, unit: UnitState) -> TotemSpec | None:
         return None
 
 
+def is_inert(state: BattleState, unit: UnitState) -> bool:
+    """沒有行動的召喚物：圖騰（光環）與範本標了 ``inert`` 的純功能圖騰（AP 恆為 0）。"""
+    if totem_of(state, unit) is not None:
+        return True
+    template = template_of(state, unit)
+    return template is not None and template.inert
+
+
+def _platform_site(state: BattleState, owner: UnitState, unit: UnitState) -> XY | None:
+    """高台升起的格子：圖騰旁邊（距離 1）可站立、沒有單位與物件、不是致命地形、還升得高的格子；
+    多個時取離召喚者最近的（方便攀上去），再依座標 ``(y, x)``。"""
+    sites = [
+        xy
+        for xy in neighbors4(state, unit.xy)
+        if is_standable(state, xy)
+        and not is_deadly(state, xy)
+        and state.unit_at(*xy) is None
+        and state.tile(*xy).object_id is None
+        and state.tile(*xy).height < MAX_HEIGHT
+    ]
+    if not sites:
+        return None
+    return min(sites, key=lambda xy: (manhattan(xy, owner.xy), xy[1], xy[0]))
+
+
+def _raise_platform(ctx: Ctx, owner: UnitState, unit: UnitState) -> None:
+    site = _platform_site(ctx.state, owner, unit)
+    if site is None:
+        return
+    unit.platform_pos = Pos(x=site[0], y=site[1])
+    execute(ctx, [RaiseTerrainEffect(source_id=unit.id, pos=site, amount=1)])
+
+
 def pulse_summon(ctx: Ctx, unit: UnitState) -> None:
-    """召喚物自己的回合開始時的脈動（Phase 3-33e1，水精）：腳下造表面、治療附近受傷的友方
-    （不含自己與倒下者；依 ID 順序）。沒有 ``pulse`` 的召喚物不動作。"""
+    """召喚物自己的回合開始時的脈動（水精、守護靈、吸引圖騰）：腳下造表面、治療附近受傷的友方
+    （不含自己與倒下者；依 ID 順序）、護盾給最虛弱的友方、把最近的敵人拉近 1 格。沒有 ``pulse`` 的
+    召喚物不動作。"""
     template = template_of(ctx.state, unit)
     if template is None or template.pulse is None:
         return
     pulse = template.pulse
+    batch = _surface_and_heal(ctx, unit, pulse)
+    shield = _shield_effect(ctx, unit, pulse)
+    if shield is not None:
+        batch.append(shield)
+    execute(ctx, batch)
+    if pulse.pull_radius > 0 and unit.alive:
+        _pull_nearest_enemy(ctx, unit, pulse.pull_radius)
+
+
+def _surface_and_heal(ctx: Ctx, unit: UnitState, pulse: SummonPulse) -> list[EffectBase]:
     batch: list[EffectBase] = []
     if pulse.surface is not None:
         batch.append(
@@ -268,6 +334,8 @@ def pulse_summon(ctx: Ctx, unit: UnitState) -> None:
                 source_id=unit.id, pos=unit.xy, surface=pulse.surface, team=unit.team
             )
         )
+    if pulse.heal_dice is None and pulse.heal_flat == 0:
+        return batch
     for ally in ctx.state.living_units():
         if (
             ally.team is unit.team
@@ -283,7 +351,110 @@ def pulse_summon(ctx: Ctx, unit: UnitState) -> None:
                     flat=pulse.heal_flat,
                 )
             )
-    execute(ctx, batch)
+    return batch
+
+
+def weakest_ally(state: BattleState, unit: UnitState) -> UnitState | None:
+    """最虛弱的友方（含召喚者與其他召喚物，不含自己）：HP 比例最低，再依目前 HP、單位 ID。"""
+    allies = [u for u in state.living_units() if u.team is unit.team and u.id != unit.id]
+    if not allies:
+        return None
+    return min(allies, key=lambda u: (Fraction(u.hp, u.max_hp), u.hp, u.id))
+
+
+def _shield_effect(ctx: Ctx, unit: UnitState, pulse: SummonPulse) -> EffectBase | None:
+    if pulse.shield_dice is None and pulse.shield_flat == 0:
+        return None
+    target = weakest_ally(ctx.state, unit)
+    if target is None:
+        return None
+    return ShieldEffect(
+        source_id=unit.id, target_id=target.id, dice=pulse.shield_dice, flat=pulse.shield_flat
+    )
+
+
+def _pull_step(state: BattleState, enemy: UnitState, totem: UnitState) -> XY | None:
+    """``enemy`` 往 ``totem`` 拉近 1 格的方向（長軸優先，距離相同時先 x）；第一個沒被擋住的方向，
+    都不行時 ``None``。已經相鄰的拉不動（那一格是圖騰自己）。"""
+    if push_distance(state, enemy, 1) == 0:  # 堅守的單位拉不動
+        return None
+    dx, dy = totem.xy[0] - enemy.xy[0], totem.xy[1] - enemy.xy[1]
+    steps = [(1 if dx > 0 else -1, 0)] if dx != 0 else []
+    if dy != 0:
+        vertical = (0, 1 if dy > 0 else -1)
+        steps = [*steps, vertical] if abs(dx) >= abs(dy) else [vertical, *steps]
+    for sx, sy in steps:
+        nxt = (enemy.xy[0] + sx, enemy.xy[1] + sy)
+        if nxt != totem.xy and unit_push_block(state, enemy.xy, nxt, enemy.id) is None:
+            return (sx, sy)
+    return None
+
+
+def _pull_nearest_enemy(ctx: Ctx, totem: UnitState, radius: int) -> None:
+    """吸引圖騰：``radius`` 以內最近（再依座標 ``(y, x)``）、拉得動的敵人往自己拉近 1 格。"""
+    state = ctx.state
+    candidates = sorted(
+        (u for u in state.living_units() if u.team is not totem.team and u.id != totem.id),
+        key=lambda u: (manhattan(u.xy, totem.xy), u.xy[1], u.xy[0], u.id),
+    )
+    for enemy in candidates:
+        if manhattan(enemy.xy, totem.xy) > radius:
+            break
+        step = _pull_step(state, enemy, totem)
+        if step is None:
+            continue
+        ctx.emit(SummonPulled, unit_id=totem.id, target_id=enemy.id, from_pos=enemy.pos)
+        execute(
+            ctx,
+            [PushEffect(source_id=totem.id, target_id=enemy.id, direction=step, distance=1)],
+        )
+        return
+
+
+@register_trigger("unit_moved")
+def _snare_trigger(ctx: Ctx, event: EventBase, depth: int) -> list[EffectBase]:
+    """藤蔓（``snare``）：敵人移動到藤蔓相鄰的格子時纏住（緩速＋倒地），每隻藤蔓每輪最多 1 次
+    （傳送復位不算）。"""
+    assert isinstance(event, UnitMoved)
+    state = ctx.state
+    mover = state.units.get(event.unit_id)
+    if mover is None or not mover.alive or event.mode == "teleport":
+        return []
+    effects: list[EffectBase] = []
+    for vine in state.units_sorted():
+        template = template_of(state, vine) if vine.alive and vine.is_summon else None
+        snare = None if template is None else template.snare
+        if (
+            snare is None
+            or vine.team is mover.team
+            or vine.snare_round == state.round
+            or manhattan(vine.xy, mover.xy) != 1
+        ):
+            continue
+        vine.snare_round = state.round
+        ctx.emit(
+            SnareTriggered,
+            unit_id=vine.id,
+            target_id=mover.id,
+            status_id=snare.status,
+            prone=snare.prone,
+        )
+        effects.append(
+            ApplyStatusEffect(
+                depth=depth,
+                source_id=vine.id,
+                target_id=mover.id,
+                status_id=snare.status,
+                duration=snare.duration,
+            )
+        )
+        if snare.prone:
+            effects.append(
+                ApplyStatusEffect(
+                    depth=depth, source_id=vine.id, target_id=mover.id, status_id=PRONE
+                )
+            )
+    return effects
 
 
 def totem_targets(state: BattleState, totem: UnitState, spec: TotemSpec) -> list[UnitState]:

@@ -3,6 +3,8 @@
 - 四方向移動。同高度或往下一步成本 1；往上 1 層成本 ``1 + move_climb_extra_cost``；
   往上超過 ``max_climb_height`` 層不可通行。
 - 不可穿過敵方單位；可穿過友方但不能停在同一格；不可主動進入不可站立的地形（深淵、岩漿）。
+- **會飛的單位**（Phase 3-33e2b，標籤 ``flying``）：每一步成本 1，無視高度差、不可站立的地形與障礙
+  （不穿過單位的規則不變），但只能停在可站立的格子（:func:`is_standable`）。
 - 路徑以 Dijkstra 計算；同成本時依固定方向順序（上、右、下、左）與發現順序打破平手。
 """
 
@@ -11,7 +13,7 @@ from __future__ import annotations
 import heapq
 
 from trpg.content.maps import standable
-from trpg.engine.ids import PRONE
+from trpg.engine.ids import FLYING, PRONE
 from trpg.engine.rules.geometry import XY, manhattan, neighbors4
 from trpg.engine.rules.statuses import fear_sources, is_rooted
 from trpg.engine.state import BattleState, UnitState
@@ -25,12 +27,14 @@ __all__ = [
     "fear_origins",
     "find_path",
     "is_deadly",
+    "is_flying",
     "is_standable",
     "nearest_safe_tile",
     "path_map",
     "reachable_tiles",
     "stand_up_cost",
     "step_cost",
+    "unit_step_cost",
 ]
 
 
@@ -71,6 +75,19 @@ def step_cost(state: BattleState, a: XY, b: XY) -> int | None:
     return 1
 
 
+def is_flying(unit: UnitState) -> bool:
+    """會飛的單位（標籤 ``flying``，Phase 3-33e2b）。"""
+    return unit.has_tag(FLYING)
+
+
+def unit_step_cost(state: BattleState, unit: UnitState, a: XY, b: XY) -> int | None:
+    """``unit`` 從 ``a`` 走到相鄰格 ``b`` 的成本：會飛的單位恆為 1（只要在地圖內），其餘同
+    :func:`step_cost`。"""
+    if is_flying(unit):
+        return 1 if state.in_bounds(*b) else None
+    return step_cost(state, a, b)
+
+
 def stand_up_cost(state: BattleState, unit: UnitState) -> int:
     """倒地者站起的移動點數消耗：速度 × ``prone_stand_up_move_permille``，無條件進位。"""
     permille = state.ruleset.core.prone_stand_up_move_permille
@@ -99,7 +116,7 @@ def can_only_stand_up(state: BattleState, unit: UnitState) -> bool:
 class PathMap:
     """單位出發的 Dijkstra 結果：``cost[xy]`` 與 ``prev[xy]``（只含能經過的格子）。"""
 
-    __slots__ = ("cost", "occupied", "prev", "start")
+    __slots__ = ("cost", "no_stop", "occupied", "prev", "start")
 
     def __init__(
         self,
@@ -107,14 +124,22 @@ class PathMap:
         cost: dict[XY, int],
         prev: dict[XY, XY],
         occupied: dict[XY, UnitState],
+        no_stop: frozenset[XY] = frozenset(),
     ) -> None:
         self.start = start
         self.cost = cost
         self.prev = prev
         self.occupied = occupied
+        self.no_stop = no_stop
+        """只能飛越、不能停下的格子（會飛的單位路過的牆、深淵等；Phase 3-33e2b）。"""
 
     def can_end_at(self, xy: XY) -> bool:
-        return xy in self.cost and xy != self.start and xy not in self.occupied
+        return (
+            xy in self.cost
+            and xy != self.start
+            and xy not in self.occupied
+            and xy not in self.no_stop
+        )
 
     def path_to(self, xy: XY) -> list[XY]:
         path = [xy]
@@ -144,6 +169,8 @@ def path_map(
     start = unit.xy
     occupied = {xy: u for xy, u in state.occupancy().items() if u.id != unit.id}
     fear = fear_origins(state, unit)
+    flying = is_flying(unit)
+    no_stop: set[XY] = set()
     cost: dict[XY, int] = {start: 0}
     prev: dict[XY, XY] = {}
     heap: list[tuple[int, int, XY]] = [(0, 0, start)]
@@ -156,9 +183,11 @@ def path_map(
             other = occupied.get(nxt)
             if other is not None and (other.team is not unit.team or not through_allies):
                 continue
-            c = step_cost(state, cur, nxt)
+            c = unit_step_cost(state, unit, cur, nxt)
             if c is None or (fear and fear_blocks_step(fear, cur, nxt)):
                 continue
+            if flying and not is_standable(state, nxt):
+                no_stop.add(nxt)
             nd = d + c
             if budget is not None and nd > budget:
                 continue
@@ -167,7 +196,7 @@ def path_map(
                 prev[nxt] = cur
                 heapq.heappush(heap, (nd, counter, nxt))
                 counter += 1
-    return PathMap(start, cost, prev, occupied)
+    return PathMap(start, cost, prev, occupied, frozenset(no_stop))
 
 
 def reachable_tiles(state: BattleState, unit_id: UnitId) -> dict[Pos, int]:
