@@ -13,7 +13,10 @@
 # params：可填的參數（type：dice／int／status／surface／object／element）
 #   int 參數的 min／max 是唯一的範圍來源（Phase 3E-2f）；allowed_skeletons：只能用在這些骨架
 # status：這個原語固定施加的狀態 ID（Phase 3E-2f；引擎的常數 CHEAT_DEATH_STATUS 等從這裡讀）
-# mechanic_statuses（檔尾）：不是由原語施加、由技能機制使用的狀態 ID
+# 不是由原語施加、由技能機制使用的狀態（Phase 3E-2f）：charging＝複合技延遲段（followup.when: delayed）的蓄力。
+mechanic_statuses:
+  charging: charging
+
 primitives:
   - id: damage
     name_zh: 傷害
@@ -583,7 +586,3 @@ primitives:
       dice: {type: dice, required: true, description_zh: 爆炸的傷害骰或治療骰}
       radius: {type: int, required: true, min: 0, max: 2, description_zh: 結算半徑（曼哈頓距離，0 只波及召喚物所在的格子）}
       element: {type: element, description_zh: 填了＝爆炸（傷害敵人）；省略＝治療範圍內的友方}
-
-# 不是由原語施加、由技能機制使用的狀態（Phase 3E-2f）：charging＝複合技延遲段（followup.when: delayed）的蓄力。
-mechanic_statuses:
-  charging: charging
