@@ -1842,6 +1842,7 @@ button.selected {
 
 .skill-hint {
   margin-bottom: 4px;
+  flex: 0 0 auto;
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
