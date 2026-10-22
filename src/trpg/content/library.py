@@ -750,6 +750,8 @@ def skill_reference_problems(
         rule_change_ids=set(ruleset.rule_changes.by_id()),
         unsafe_statuses=ruleset.unsafe_backlash_statuses(),
         scale_cap_max=ruleset.core.scale_cap_max_permille,
+        summon_trait_ids=set(ruleset.core.summon_traits),
+        infusion_ids=set(ruleset.core.summon_infusions),
     )
     problems += granted_skill_problems(skill, skills, ruleset.primitives.by_id())
     follow = skill.followup_skill()  # 複合技能的動作段（Phase 3F-3a）：同一套引用檢查
@@ -822,6 +824,7 @@ def _keyword_rule_problems(
         "stack": set(ruleset.stacks.by_id()),
         "rule": set(ruleset.rule_changes.by_id()),
         "skill": set(skills),
+        "infusion": set(ruleset.core.summon_infusions),
     }
     problems += [
         f"未知的 {name} {params[name]!r}"

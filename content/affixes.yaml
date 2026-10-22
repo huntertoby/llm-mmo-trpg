@@ -328,3 +328,56 @@ affixes:
     slots: [weapon, offhand, head, body, hands, feet, neck, ring]
     legendary_only: true
     rule: bleeding_wake
+
+  # --- 召喚專用詞條（Phase 3-33f2，docs/design/06-技能.md 6.29.6；數值為初值，未經模擬）---
+  # 「召喚物數值」（HP +%、攻擊 +1 骰）已有：修正規則 summon_hp_permille／summon_attack_dice（3-24b1，#35），不是裝備詞條。
+  # 技能強化類（keyword: summon）：遞減疊加與硬上限照 8.21.5.3；冷卻最低 1；獻祭傷害計入全身 +50% 上限。
+  - id: affix_summon_cooldown
+    category: keyword
+    name_zh: 你的召喚技能冷卻 −1（最低 1）
+    slots: [offhand, neck]
+    keyword: summon
+    direction: create
+    change: cooldown_delta
+    amount: -1
+  - id: affix_summon_duration
+    category: keyword
+    name_zh: 你的召喚物持續 +1 輪
+    slots: [offhand, neck]
+    item_tags: {offhand: [orb]}   # 法器珠（副手）或項鍊
+    keyword: summon
+    direction: create
+    change: duration_delta
+    amount: 1
+  - id: affix_summon_sacrifice
+    category: keyword
+    name_zh: 你獻祭召喚物的傷害與治療 +{n}
+    slots: [ring, neck]
+    keyword: summon
+    direction: exploit
+    change: sacrifice_permille
+    value: {min: 200, max: 200}
+    value_unit: permille
+  # 觸發類（新觸發「召喚物倒下時」，skill_triggers.yaml 的 on_summon_downed）：以倒下的召喚物為中心結算。
+  - id: affix_trig_summon_blast
+    category: trigger
+    name_zh: 召喚物倒下時：原地爆炸，對 1 格內的敵人造成 1d8 火焰傷害（每回合 1 次）
+    slots: [ring, neck]
+    trigger: on_summon_downed
+    effect_target: target
+    effects: [{type: sacrifice_summon, dice: 1d8, radius: 1, element: fire}]
+    limit: per_turn
+  - id: affix_trig_summon_mend
+    category: trigger
+    name_zh: 召喚物倒下時：湧出治療的光，治療 1 格內的友方 1d8（每回合 1 次）
+    slots: [ring, neck]
+    trigger: on_summon_downed
+    effect_target: target
+    effects: [{type: sacrifice_summon, dice: 1d8, radius: 1}]
+    limit: per_turn
+  # 普攻附加類：召喚物繼承你 1 條普攻附加詞條（元素、命中附帶狀態、連擊、分裂；符文不繼承）。
+  - id: affix_summon_inherit_attack
+    category: attack
+    name_zh: 你的召喚物繼承你 1 條普攻附加詞條
+    slots: [weapon, offhand]
+    summon_inherit: true

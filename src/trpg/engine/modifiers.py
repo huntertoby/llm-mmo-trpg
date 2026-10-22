@@ -301,7 +301,10 @@ def damage_permille(state: BattleState, unit: UnitState, use: Use, subject: Subj
     rune = gear_rune_read_permille(state, unit, use, subject)  # 普攻讀取符文（3-31）
     summon = summon_damage_bonus(state, unit, use, subject)  # 召喚物成長的加成（3-33b）
     capped = cap_damage_bonus(state.ruleset, gain + gear_gain + keyword + rune + summon)
-    return max(0, _PERMILLE + capped + loss + gear_loss)
+    total = max(0, _PERMILLE + capped + loss + gear_loss)
+    # 數量型分歧進化（3-33f2）：每隻只有一般的 power_permille ‰ 傷害
+    power = unit.summon_power_permille
+    return total if power >= _PERMILLE else total * power // _PERMILLE
 
 
 def spend_attack_limits(state: BattleState, unit: UnitState, use: Use, subject: Subject) -> None:

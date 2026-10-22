@@ -153,6 +153,12 @@ summon_infusions:
   high_ground: {height_permille: 250, roles: [ranged]}                         # 站得比目標高時傷害 +25%
   concealed: {conceal_rounds: 2, roles: [melee]}                               # 召喚時隱蔽 2 回合
   summon: {hp_permille: 200}                                                   # 召喚物自身最大 HP +20%（AI 的最後選擇）
+# 召喚物小特性（Phase 3-33f2，6.29.4）：召喚技能分歧進化「加深」多給的一個小特性（初值，未經模擬）。
+# 進化時依召喚物定位挑：不動或不攻擊的挑 sturdy、近戰挑 swift、遠程挑 keen（content/skill_evolution.yaml）。
+summon_traits:
+  sturdy: {name_zh: 堅韌, description_zh: 護甲 +1, armor_bonus: 1, budget_points: 1}
+  swift: {name_zh: 迅捷, description_zh: 移動 +1, speed_bonus: 1, budget_points: 1}
+  keen: {name_zh: 銳利, description_zh: 暴擊範圍擴大 1（自然 19 起暴擊）, crit_range_delta: 1, budget_points: 1}
 
 # --- 持續區域（Phase 3D-5，docs/design/06-技能.md 6.16 G；初值，未經模擬）---
 zone_limit_per_owner: 2       # 同一施放者同時存在的區域上限；超過時最舊的消失

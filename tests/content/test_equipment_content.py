@@ -35,7 +35,14 @@ WHITELIST: dict[str, tuple[str, ...]] = {
         "affix_cond_low_hp_damage",
         "affix_trait_longgun_still_crit",
     ),
-    "keyword": ("affix_kw_burn_duration", "affix_kw_prone_damage", "affix_kw_shock_area"),
+    "keyword": (
+        "affix_kw_burn_duration",
+        "affix_kw_prone_damage",
+        "affix_kw_shock_area",
+        "affix_summon_cooldown",
+        "affix_summon_duration",
+        "affix_summon_sacrifice",
+    ),
     "attack": (
         "affix_attack_lightning",
         "affix_attack_mark",
@@ -44,6 +51,7 @@ WHITELIST: dict[str, tuple[str, ...]] = {
         "affix_attack_rune_inscribe",
         "affix_attack_combo",
         "affix_attack_cleave",
+        "affix_summon_inherit_attack",
     ),
     "weapon_trait": (
         "affix_trait_hammer_knockback",
@@ -53,7 +61,13 @@ WHITELIST: dict[str, tuple[str, ...]] = {
         "affix_trait_bow_high_range",
         "affix_trait_dagger_backstab_die",
     ),
-    "trigger": ("affix_trig_every3_prone", "affix_trig_kill_ap", "affix_trig_thorns_burn"),
+    "trigger": (
+        "affix_trig_every3_prone",
+        "affix_trig_kill_ap",
+        "affix_trig_thorns_burn",
+        "affix_trig_summon_blast",
+        "affix_trig_summon_mend",
+    ),
     "charge": ("affix_charge_static", "affix_charge_fury"),
     "cost": ("affix_cost_glass", "affix_cost_blood", "affix_cost_swift"),
     "action": ("affix_act_grapple", "affix_act_smoke", "affix_act_shield_wall"),
@@ -80,9 +94,9 @@ def _loadout(**slots: str) -> Loadout:
 # ---------------------------------------------------------------------------
 
 
-def test_whitelist_has_all_40_affixes_in_11_categories() -> None:
+def test_whitelist_has_all_46_affixes_in_11_categories() -> None:
     affixes = library().affixes
-    assert len(affixes) == 40
+    assert len(affixes) == 46
     by_category: dict[str, set[str]] = {}
     for affix in affixes.values():
         by_category.setdefault(affix.category, set()).add(affix.id)

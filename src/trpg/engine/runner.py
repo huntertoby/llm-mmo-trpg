@@ -38,8 +38,14 @@ __all__ = [
     "run_battle",
 ]
 
-LOG_FORMAT = "trpg-battle-log/54"
-"""``/54``（Phase 3-33e2a，接在 3-33e2b 的 ``/53`` 之後；合併時定號）：召喚物（二）a——範本多了
+LOG_FORMAT = "trpg-battle-log/55"
+"""``/55``（Phase 3-33f2，接在 3-33e2a 的 ``/54`` 之後；PM 合併時定號）：召喚技能分歧進化與
+召喚詞條——``summon`` 效果多了 ``power_permille``／``max_hp_permille``／``trait``／``infusion``
+且 ``count`` 可為 2，單位狀態多了 ``bonus_infusion``／``summon_power_permille``，
+新觸發時機 ``on_summon_downed``（召喚物倒下時）、新詞條（召喚冷卻／持續／獻祭加成、
+召喚物倒下時爆炸或治療、召喚物繼承普攻附加），
+召喚物的傷害倍率與持續輪數可能不同，因此 ``/54`` 的紀錄無法重播。
+``/54``（Phase 3-33e2a，接在 3-33e2b 的 ``/53`` 之後；合併時定號）：召喚物（二）a——範本多了
 ``detonate``（自爆）、``inert``（不行動）與標籤 ``immovable``／``topplable``／``blocks_sight``，
 新事件 ``summon_detonated``／``wall_toppled``、``push_resisted`` 多了 ``reason``、``move_blocked``
 多了 ``immovable``、召喚物消失原因多了 ``detonated``／``toppled``，石像不會被推動、土牆擋視線

@@ -34,7 +34,9 @@ from trpg.content.skills import (
     ON_CAST_TAG,
     ON_ENTER_SURFACE,
     ON_STATUS_APPLIED,
+    ON_SUMMON_DOWNED,
     RUNE_BOTH_MESSAGE,
+    SACRIFICE_SUMMON,
     ConditionSpec,
     EffectSpec,
     condition_text,
@@ -90,6 +92,10 @@ __all__ = [
 ]
 
 AFFIX_ID_PATTERN = r"^affix_[a-z0-9_]+$"
+SUMMON_CHANGES: frozenset[str] = frozenset(
+    {"cooldown_delta", "duration_delta", "sacrifice_permille"}
+)
+"""技能強化詞條中召喚專用的 ``change``（Phase 3-33f2，6.29.6）。"""
 _PERMILLE = 1000
 
 type AffixCategory = Literal[
@@ -299,6 +305,11 @@ class KeywordAffix(_AffixBase):
       ``include_attack``：普攻也算（例如「你施加的燃燒」）。
     - ``change``：``status_duration`` 該狀態持續 +N 回合（``status`` 必填）、``damage_permille``
       傷害 +N‰、``area_delta`` 範圍 +N。
+    - 召喚專用（Phase 3-33f2，``keyword`` 必須是 ``summon``）：``cooldown_delta`` 製造召喚物的技能
+      冷卻 −1（``direction: create``，``amount`` 為負；冷卻最低 1）、``duration_delta`` 召喚物持續
+      +N 輪（``direction: create``，``amount`` 為正）、``sacrifice_permille`` 獻祭召喚物
+      （``sacrifice_summon``）的傷害與治療 +N‰（``direction: exploit``，``value_unit: permille``；
+      傷害加成計入全身 +50% 上限）。
     - ``amount``：沒有 ``value`` 範圍時的固定數值。
     """
 
@@ -306,7 +317,14 @@ class KeywordAffix(_AffixBase):
     keyword: str = Field(pattern=ID_PATTERN)
     direction: Literal["create", "exploit"]
     include_attack: bool = False
-    change: Literal["status_duration", "damage_permille", "area_delta"]
+    change: Literal[
+        "status_duration",
+        "damage_permille",
+        "area_delta",
+        "cooldown_delta",
+        "duration_delta",
+        "sacrifice_permille",
+    ]
     status: str | None = Field(default=None, pattern=ID_PATTERN)
     amount: int | None = None
 
@@ -318,7 +336,28 @@ class KeywordAffix(_AffixBase):
             raise ValueError(
                 f"詞條 {self.id}：status 只在 change: status_duration 時填寫（且必填）"
             )
+        self._check_summon()
         return self
+
+    def _check_summon(self) -> None:
+        """召喚專用的 ``change``（3-33f2）：關鍵字必須是 ``summon``，方向、正負與單位固定。"""
+        if self.change not in SUMMON_CHANGES:
+            return
+        direction = "exploit" if self.change == "sacrifice_permille" else "create"
+        if self.keyword != "summon" or self.direction != direction:
+            raise ValueError(
+                f"詞條 {self.id}：{self.change} 只能用在 keyword: summon、direction: {direction}"
+            )
+        if self.change == "cooldown_delta" and (self.amount is None or self.amount >= 0):
+            raise ValueError(f"詞條 {self.id}：cooldown_delta 的 amount 必須是負數（冷卻減少）")
+        if self.change == "duration_delta" and (self.amount is None or self.amount <= 0):
+            raise ValueError(f"詞條 {self.id}：duration_delta 的 amount 必須是正數")
+        if self.change == "sacrifice_permille" and (
+            self.value is None or self.value_unit != "permille"
+        ):
+            raise ValueError(
+                f"詞條 {self.id}：sacrifice_permille 必須用 value（value_unit: permille）"
+            )
 
 
 class AttackAffix(_AffixBase):
@@ -330,6 +369,9 @@ class AttackAffix(_AffixBase):
     - ``detonate``：普攻命中時引爆目標那 1 格上自己的符文，造成一次 ``dice`` 的傷害；
     - ``inscribe``：普攻命中時在目標格刻下 ``rune_element``（預設雷紋）的符文，持續
       ``rune_rounds`` 輪（預設 2）。
+
+    ``summon_inherit``（Phase 3-33f2，6.29.6；與其他恰好填一個）：你的召喚物繼承你身上 1 條普攻
+    附加詞條（元素、命中附帶狀態、連擊、分裂；符文不繼承；依詞條 ID 取第一條），本身沒有其他效果。
 
     三種都 **每回合最多觸發 1 次**；同一件裝備不能同時有 ``inscribe`` 與 ``detonate``。
 
@@ -351,6 +393,7 @@ class AttackAffix(_AffixBase):
     rune_rounds: int | None = Field(default=None, ge=1, le=5)
     strike: Literal["combo", "cleave"] | None = None
     strike_permille: int | None = Field(default=None, ge=100, le=1000)
+    summon_inherit: bool = False
 
     @model_validator(mode="after")
     def _check(self) -> AttackAffix:
@@ -359,9 +402,13 @@ class AttackAffix(_AffixBase):
             self.on_hit_status is not None,
             self.rune is not None,
             self.strike is not None,
+            self.summon_inherit,
         ]
         if sum(given) != 1:
-            raise ValueError(f"詞條 {self.id}：add_element、on_hit_status、rune、strike 恰好填一個")
+            raise ValueError(
+                f"詞條 {self.id}：add_element、on_hit_status、rune、strike、"
+                "summon_inherit 恰好填一個"
+            )
         self._check_strike()
         if self.add_element is Element.PHYSICAL:
             raise ValueError(f"詞條 {self.id}：add_element 不可是物理")
@@ -449,7 +496,25 @@ class TriggerAffix(_AffixBase):
             raise ValueError(f"詞條 {self.id}：status 只能搭配 trigger: on_status_applied")
         if self.surface is not None and self.trigger != ON_ENTER_SURFACE:
             raise ValueError(f"詞條 {self.id}：surface 只能搭配 trigger: on_enter_surface")
+        self._check_summon_downed()
         return self
+
+    def _check_summon_downed(self) -> None:
+        """``on_summon_downed``（3-33f2）：效果是恰好 1 個 ``sacrifice_summon``（有 ``element``
+        是爆炸、省略是治療），以倒下的召喚物為中心結算（``effect_target: target``）；其他時機
+        不可用。"""
+        uses = [e for e in self.effects if e.type == SACRIFICE_SUMMON]
+        if self.trigger != ON_SUMMON_DOWNED:
+            if uses:
+                raise ValueError(
+                    f"詞條 {self.id}：sacrifice_summon 只能搭配 trigger: on_summon_downed"
+                )
+            return
+        if self.effect_target != "target" or len(self.effects) != 1 or len(uses) != 1:
+            raise ValueError(
+                f"詞條 {self.id}：on_summon_downed 必須是 effect_target: target "
+                "與恰好 1 個 sacrifice_summon"
+            )
 
 
 CHARGE_GAIN_UNSUPPORTED: frozenset[str] = frozenset(

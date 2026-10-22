@@ -67,16 +67,19 @@ PARAM_TEXT: dict[str, str] = {
     "element": "元素",
     "explode": "爆骰",
     "hp_permille": "復活 HP（‰）",
+    "infusion": "第二個灌注關鍵字",
     "knock_prone": "另外擊倒",
     "landing": "落點",
     "lifesteal_permille": "吸血（‰）",
     "lose": "失敗時的效果",
+    "max_hp_permille": "召喚物最大 HP 加成（‰）",
     "multiplier_permille": "武器倍率（‰）",
     "object": "物件",
     "on_hit": "撞到時",
     "on_kill": "擊殺時效果",
     "per_stack_permille": "每層加成（‰）",
     "permille": "千分比（‰）",
+    "power_permille": "每隻召喚物的強度（‰）",
     "radius": "半徑（格）",
     "range": "距離（格）",
     "resource": "資源",
@@ -94,6 +97,7 @@ PARAM_TEXT: dict[str, str] = {
     "surface": "表面",
     "tag": "標籤",
     "then": "消耗後的效果",
+    "trait": "召喚物小特性",
     "unit": "召喚物",
     "when": "結算時機",
     "which": "哪些技能",
@@ -225,6 +229,10 @@ def _surface_choices(library: ContentLibrary, *, beneficial_only: bool) -> tuple
     )
 
 
+def _keyword_name(library: ContentLibrary, keyword: str) -> str:
+    return next((k.name_zh for k in library.keywords.keywords if k.id == keyword), keyword)
+
+
 def _ref_choices(kind: str, library: ContentLibrary) -> tuple[Choice, ...]:
     if kind in _LITERAL_CHOICES:
         return tuple(
@@ -248,6 +256,14 @@ def _ref_choices(kind: str, library: ContentLibrary) -> tuple[Choice, ...]:
         ),
         "rule_change": lambda: tuple(
             Choice(value=r.id, name_zh=r.name_zh) for r in rules.rule_changes.rule_changes
+        ),
+        "summon_trait": lambda: tuple(
+            Choice(value=i, name_zh=t.name_zh, description_zh=t.description_zh)
+            for i, t in sorted(rules.core.summon_traits.items())
+        ),
+        "infusion": lambda: tuple(
+            Choice(value=k, name_zh=_keyword_name(library, k))
+            for k in sorted(rules.core.summon_infusions)
         ),
         "skill": lambda: tuple(
             Choice(value=s.id, name_zh=s.name_zh)

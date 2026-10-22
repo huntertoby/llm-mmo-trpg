@@ -12,7 +12,9 @@ from trpg.content.skills import SKILL_REACTION_EVENTS, SkillDef
 # 尚未被手寫技能使用的 ID。分類 -> {ID: 原因}
 _UNCOVERED: dict[str, dict[str, str]] = {
     "skeleton": {},
-    "trigger": {},
+    "trigger": {
+        "on_summon_downed": "只給裝備詞條用（3-33f2）：召喚物倒下時爆炸或治療，沒有被動技能"
+    },
     "reaction_event": {},
     "condition": {},
     "primitive": {},

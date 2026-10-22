@@ -43,6 +43,7 @@ from trpg.engine import modifiers
 from trpg.engine.actions import Direction, FollowupTarget, UseSkill
 from trpg.engine.activations import activation_problem
 from trpg.engine.gear import gear_cooldown
+from trpg.engine.gear_summon import gear_summon_cooldown
 from trpg.engine.ids import BOSS_TAG
 from trpg.engine.infusion import check_infusion
 from trpg.engine.rules.combat import AttackProfile, attack_value, concealment_problem
@@ -310,6 +311,7 @@ def pay_skill_cost(caster: UnitState, skill: SkillDef, *, ap: int = 0) -> PaidCo
     if skill.cost.uses_per_battle is not None:
         caster.skill_uses[skill.id] = caster.skill_uses.get(skill.id, 0) + 1
     cooldown = gear_cooldown(caster, skill.cost.cooldown)  # 裝備的冷卻修正（3G-G1，下限 1）
+    cooldown = gear_summon_cooldown(caster, skill, cooldown)  # 召喚技能冷卻詞條（3-33f2）
     if cooldown is not None:
         caster.cooldowns[skill.id] = cooldown
     return PaidCost(ap=ap, hp=hp, cooldown=cooldown)

@@ -116,7 +116,9 @@ def test_invalid_summon_effects_are_reported(
 @pytest.mark.parametrize(
     ("effects", "kind", "message"),
     [
-        ([{**SUMMON, "count": 2}], "active", "count 目前只能是 1"),
+        ([{**SUMMON, "count": 3, "power_permille": 600}], "active", "count 只能是 1 或 2"),
+        ([{**SUMMON, "count": 2}], "active", "power_permille 與 count: 2 必須一起填"),
+        ([{**SUMMON, "power_permille": 600}], "active", "power_permille 與 count: 2 必須一起填"),
         ([SUMMON, SUMMON], "active", "最多一個 summon"),
         (
             [SUMMON, {"type": "apply_status", "status": "empowered", "duration": 2}],

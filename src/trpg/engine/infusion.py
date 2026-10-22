@@ -119,7 +119,7 @@ def active_keywords(state: BattleState, unit: UnitState) -> tuple[str, ...]:
     template = template_of(state, unit)
     table = state.ruleset.core.summon_infusions
     found: dict[str, None] = {}
-    for keyword in (template.innate if template else None, unit.infusion):
+    for keyword in (template.innate if template else None, unit.bonus_infusion, unit.infusion):
         if keyword is not None and keyword in table:
             found.setdefault(keyword)
     return tuple(found)

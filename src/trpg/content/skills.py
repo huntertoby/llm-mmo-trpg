@@ -82,6 +82,7 @@ __all__ = [
     "MAX_GRANT_DURATION",
     "MAX_LIFESTEAL_PERMILLE",
     "MAX_MODIFIERS",
+    "MAX_SUMMON_COUNT",
     "MAX_VARIANTS",
     "MIN_SKILL_CRIT_RANGE",
     "MODIFIER_CHANGES",
@@ -526,6 +527,8 @@ class PrimitiveParam(ContentModel):
         "skill",
         "on_hit",
         "summon",
+        "summon_trait",
+        "infusion",
         "anchor",
         "zone_when",
         "rule_change",
@@ -871,8 +874,21 @@ class EffectSpec(ContentModel):
     unit: str | None = Field(default=None, pattern=ID_PATTERN)
     """``summon`` 專用（Phase 3D-4a）：召喚物範本 ID（``content/units/summons/``）。"""
     count: int | Literal["all"] | None = Field(default=None)
-    """``summon`` 專用（Phase 3D-4a）：一次召喚的數量（目前只能是 1）。``dispel`` 專用
-    （Phase 3D-8a）：驅散的增益個數（1）或 ``all``（全部）。"""
+    """``summon`` 專用（Phase 3D-4a）：一次召喚的數量（1；數量型分歧進化 3-33f2 可為 2，此時必須
+    填 ``power_permille``）。``dispel`` 專用（Phase 3D-8a）：驅散的增益個數（1）或
+    ``all``（全部）。"""
+    power_permille: int | None = Field(default=None, ge=100, le=_PERMILLE - 1)
+    """``summon`` 專用（Phase 3-33f2，數量型分歧進化）：每隻召喚物的最大 HP 與傷害只有一般的這麼多
+    ‰（例如 600 ＝ 60%）；一次召喚 2 隻（``count: 2``）時必填，只有一隻時不可填。"""
+    max_hp_permille: int | None = Field(default=None, ge=1, le=1000)
+    """``summon`` 專用（Phase 3-33f2，加深分歧進化）：召喚物的最大 HP 多 ‰（召喚時結算，在成長與
+    修正規則之後相乘）。"""
+    trait: str | None = Field(default=None, pattern=ID_PATTERN)
+    """``summon`` 專用（Phase 3-33f2，加深分歧進化）：召喚物的小特性（``core.yaml`` 的
+    ``summon_traits``）。"""
+    infusion: str | None = Field(default=None, pattern=ID_PATTERN)
+    """``summon`` 專用（Phase 3-33f2，橋接分歧進化）：召喚物固有的第二個灌注關鍵字
+    （``core.yaml`` 的 ``summon_infusions``）；與施放時選的灌注、範本固有的灌注並存。"""
     anchor: Literal["tile", "caster", "moving"] | None = None
     """``zone`` 專用（Phase 3D-5）：``tile`` 固定在施放時的格子、``caster`` 跟隨施放者、``moving``
     每次環境回合沿施放方向前進 ``speed`` 格。"""
@@ -1022,6 +1038,9 @@ class Provenance(ContentModel):
 
 ON_CAST_TAG = "on_cast_tag"
 ON_STATUS_APPLIED = "on_status_applied"
+ON_SUMMON_DOWNED = "on_summon_downed"
+"""召喚物倒下時（Phase 3-33f2）：只給裝備詞條用的觸發時機，效果是以倒下的召喚物為中心的爆炸或治療
+（``sacrifice_summon`` 效果）。"""
 ON_COLLISION = "on_collision"
 ON_ENTER_SURFACE = "on_enter_surface"
 """帶參數或需要特別處理的觸發時機 ID（Phase 3C-3a；其餘見 ``content/skill_triggers.yaml``）。"""
@@ -1151,6 +1170,8 @@ PAIR_SHAPES: dict[str, str] = {TELEPORT_TARGET: "unit_then_tile", SWAP_ANY: "uni
 CHARGE_THROUGH = "charge_through"
 """Phase 3D-2c 的直線衝撞原語 ID（6.22）：形狀 ``ground_tile`` 選終點格，沿直線衝過去。"""
 SUMMON = "summon"
+MAX_SUMMON_COUNT = 2
+"""一次召喚的數量上限（Phase 3-33f2，數量型分歧進化：2 隻各 ``power_permille``）。"""
 """Phase 3D-4a 的召喚原語 ID（6.16 B）：在 ``ground_tile`` 選的空格召喚 ``unit`` 範本。"""
 RULE_CHANGE = "rule_change"
 """規則改變（Phase 3D-6）：引用 ``content/rule_changes.yaml`` 的一條規則，以 ``activation``
@@ -2321,8 +2342,11 @@ class SkillDef(ContentModel):
             raise ValueError(f"summon 只能用在主動技能，收到 kind: {self.kind}")
         if len(summons) > 1:
             raise ValueError("一個技能最多一個 summon 效果")
-        if (summons[0].count or 1) != 1:
-            raise ValueError(f"summon 的 count 目前只能是 1，收到 {summons[0].count}")
+        count = summons[0].count or 1
+        if count not in (1, MAX_SUMMON_COUNT):
+            raise ValueError(f"summon 的 count 只能是 1 或 {MAX_SUMMON_COUNT}，收到 {count}")
+        if (count > 1) != (summons[0].power_permille is not None):
+            raise ValueError("summon 的 power_permille 與 count: 2 必須一起填（數量型分歧進化）")
         for effect in self.effects:
             if effect.type != SUMMON and effect.affects != "self":
                 raise ValueError("summon 以外的效果必須明寫 affects: self（只作用在施放者）")
@@ -2988,6 +3012,8 @@ def _reference_problem(where: str, name: str, kind: str, value: object, refs: _R
         "object": (refs.object_ids, "物件"),
         "stack": (refs.stacks, "層數"),
         "summon": (refs.summon_ids, "召喚物範本"),
+        "summon_trait": (refs.summon_trait_ids, "召喚物小特性"),
+        "infusion": (refs.infusion_ids, "灌注關鍵字"),
         "rule_change": (refs.rule_change_ids, "規則改變"),
     }
     entry = known.get(kind)
@@ -3012,6 +3038,10 @@ class _Refs:
     scale_cap_max: int | None = None
     """``scaling.cap_permille`` 的上限（``core.yaml`` 的 ``scale_cap_max_permille``；Phase 3D-7b）；
     ``None`` 不檢查。"""
+    summon_trait_ids: set[str] | None = None
+    """``summon`` 的 ``trait`` 可用的小特性 ID（Phase 3-33f2）；``None`` 不檢查。"""
+    infusion_ids: set[str] | None = None
+    """``summon`` 的 ``infusion`` 可用的灌注關鍵字 ID（Phase 3-33f2）；``None`` 不檢查。"""
 
 
 def _condition_problems(where: str, condition: ConditionSpec, refs: _Refs) -> list[str]:
@@ -3325,8 +3355,13 @@ def skill_problems(
     rule_change_ids: set[str] | None = None,
     unsafe_statuses: frozenset[str] | None = None,
     scale_cap_max: int | None = None,
+    summon_trait_ids: set[str] | None = None,
+    infusion_ids: set[str] | None = None,
 ) -> list[str]:
     """技能引用的形狀、原語、條件、狀態、物件是否存在、參數是否在範圍內（繁體中文，空串列為通過）。
+
+    ``summon_trait_ids``／``infusion_ids``（Phase 3-33f2）：``summon`` 的 ``trait``、``infusion``
+    可用的 ID（省略時不檢查）。
 
     ``triggers``：觸發時機表（省略時不檢查被動的 ``trigger``）；``stacks``：層數表（省略時不檢查
     層數原語引用的層數）；``dual_min_rarity``：雙屬性縮放的最低稀有度（省略時不檢查）；
@@ -3363,6 +3398,8 @@ def skill_problems(
         rule_change_ids,
         unsafe_statuses,
         scale_cap_max,
+        summon_trait_ids,
+        infusion_ids,
     )
     if stacks is not None:
         problems += _cost_stack_problems(skill, stacks)
