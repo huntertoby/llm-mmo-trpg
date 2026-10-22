@@ -113,5 +113,5 @@
 |---|---|
 | 專案 PM | `local_303947de-1819-43c7-be4f-c7eef357a5c0` |
 | 玩法 PM | `local_41fdee85-b96f-46e8-9dc2-13dfd8ff4cda` |
-| 開發 PM | `local_20367f07-111d-40a2-a818-887df2d1d8e8` |
+| 開發 PM | `local_0e2e4721-88d5-4724-95e6-733b7a723dc6`（2026-10-22 起，3-25 起）；前任 `local_20367f07-111d-40a2-a818-887df2d1d8e8`（3-18～3-30，已交接） |
 | 美術 PM | `local_1a2c74ca-6312-458f-8e7b-4a74f7d86d61`（worktree 分支） |
