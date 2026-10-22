@@ -794,6 +794,8 @@ _SIMPLE_CHANGE_TEXT = {
     "area_delta": "範圍型形狀的大小 +{value}（直線與錐形的長度、環形與光環的半徑，有上限）",
     "allow_self_target": "治療、護盾、增益類技能的影響範圍也包含自己",
     "summon_attack_dice": "召喚物的攻擊傷害骰 +{value} 顆",
+    "summon_limit_delta": "你同時存在的召喚物上限 {value:+d} 隻（最少 1 隻、最多 3 隻）",
+    "summon_duration_delta": "你召喚的召喚物持續 +{value} 輪",
 }
 """只有一個整數的改變：格式字串（``value`` 為改變的數值）。"""
 
@@ -824,8 +826,13 @@ def _change_text(library: ContentLibrary, skill: SkillDef, rule: ModifierSpec) -
         return _damage_text(rule)
     if change.heal_permille is not None:
         return f"你的治療量 {change.heal_permille / 10:+g}%"
-    if change.summon_hp_permille is not None:
-        return f"你召喚的召喚物最大 HP +{change.summon_hp_permille / 10:g}%"
+    if change.summon_hp_permille is not None or change.summon_damage_permille is not None:
+        what, value = (
+            ("最大 HP", change.summon_hp_permille)
+            if change.summon_hp_permille is not None
+            else ("傷害", change.summon_damage_permille)
+        )
+        return f"你召喚的召喚物{what} +{(value or 0) / 10:g}%"
     if change.push_distance_delta is not None:
         cap = library.ruleset.core.max_displace_distance
         return (

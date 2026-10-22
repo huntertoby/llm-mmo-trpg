@@ -76,7 +76,10 @@ __all__ = [
     "spend_attack_limits",
     "status_duration_bonus",
     "summon_attack_dice",
+    "summon_damage_permille",
+    "summon_duration_delta",
     "summon_hp_permille",
+    "summon_limit_delta",
     "unit_rules",
 ]
 
@@ -338,6 +341,21 @@ def summon_hp_permille(state: BattleState, unit: UnitState, use: Use) -> int:
 def summon_attack_dice(state: BattleState, unit: UnitState, use: Use) -> int:
     """你召喚的召喚物攻擊傷害骰多出的顆數（``summon_attack_dice`` 加總；召喚時結算）。"""
     return _sum_self(state, unit, use, "summon_attack_dice")
+
+
+def summon_limit_delta(state: BattleState, unit: UnitState, use: Use) -> int:
+    """你同時存在的召喚物上限的修正量（``summon_limit_delta`` 加總；召喚專精，3-33f1）。"""
+    return _sum_self(state, unit, use, "summon_limit_delta")
+
+
+def summon_duration_delta(state: BattleState, unit: UnitState, use: Use) -> int:
+    """你召喚的召喚物多持續幾輪（``summon_duration_delta`` 加總；召喚時結算，3-33f1）。"""
+    return _sum_self(state, unit, use, "summon_duration_delta")
+
+
+def summon_damage_permille(state: BattleState, unit: UnitState, use: Use) -> int:
+    """你召喚的召喚物傷害加成（‰；``summon_damage_permille`` 加總；召喚時快照，3-33f1）。"""
+    return _sum_self(state, unit, use, "summon_damage_permille")
 
 
 def damage_element(state: BattleState, unit: UnitState, use: Use, base: Element) -> Element:

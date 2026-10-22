@@ -42,7 +42,7 @@ def test_budget_shows_conditions_and_synergies(capsys: pytest.CaptureFixture[str
 def test_budget_all_lists_every_skill(capsys: pytest.CaptureFixture[str]) -> None:
     code, out, _ = _run(["skills", "budget", "--all"], capsys)
     assert code == 0
-    assert "技能預算總表（共 215 個" in out and "通過 215 個，違規 0 個。" in out
+    assert "技能預算總表（共 217 個" in out and "通過 217 個，違規 0 個。" in out
     for skill_id in sorted(p.stem for p in (PROJECT_ROOT / "content/skills").glob("*.yaml")):
         assert skill_id in out
 
@@ -56,7 +56,7 @@ def test_budget_needs_an_id_or_all(capsys: pytest.CaptureFixture[str]) -> None:
 
 def test_content_check_passes_with_the_shipped_skills(capsys: pytest.CaptureFixture[str]) -> None:
     code, out, _ = _run(["content", "check"], capsys)
-    assert code == 0 and "215 個技能通過預算與結構驗證" in out
+    assert code == 0 and "217 個技能通過預算與結構驗證" in out
 
 
 def test_content_check_fails_on_a_skill_that_breaks_the_rules(

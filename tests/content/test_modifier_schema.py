@@ -64,6 +64,9 @@ VALID_CHANGES: dict[str, dict[str, Any]] = {
     "heal_permille": rule({"skill_tags": ["heal"]}, {"heal_permille": 150}),
     "summon_hp_permille": rule({"skill_tags": ["summon"]}, {"summon_hp_permille": 200}),
     "summon_attack_dice": rule({"skill_tags": ["summon"]}, {"summon_attack_dice": 1}),
+    "summon_limit_delta": rule({"skill_tags": ["summon"]}, {"summon_limit_delta": -1}),
+    "summon_duration_delta": rule({"skill_tags": ["summon"]}, {"summon_duration_delta": 2}),
+    "summon_damage_permille": rule({"skill_tags": ["summon"]}, {"summon_damage_permille": 500}),
 }
 
 

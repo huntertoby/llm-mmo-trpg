@@ -20,6 +20,7 @@ modifiers:
     change: {damage_permille: 50}
     empty_slots_cap: 3
 condition: null
+exclusive_group: mastery
 tags: [passive, modifier]
 narrative:
   concept: 不靠花俏的招式，把最基本的一擊練到極致

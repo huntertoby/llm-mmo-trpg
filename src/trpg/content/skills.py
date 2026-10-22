@@ -1452,6 +1452,9 @@ MODIFIER_CHANGES: tuple[str, ...] = (
     "heal_permille",
     "summon_hp_permille",
     "summon_attack_dice",
+    "summon_limit_delta",
+    "summon_duration_delta",
+    "summon_damage_permille",
 )
 """``change`` 的種類（每條規則恰好一種）。"""
 
@@ -1478,6 +1481,9 @@ CHANGE_TARGETS: dict[str, frozenset[str]] = {
     "heal_permille": _SKILL_TARGETS,
     "summon_hp_permille": _SKILL_TARGETS,
     "summon_attack_dice": _SKILL_TARGETS,
+    "summon_limit_delta": _SKILL_TARGETS,
+    "summon_duration_delta": _SKILL_TARGETS,
+    "summon_damage_permille": _SKILL_TARGETS,
 }
 """每種 ``change`` 可以套用的對象（``applies_to`` 的每一項都必須在內）：推擊、絆倒、互動沒有傷害與
 命中骰，基本動作沒有冷卻與標籤。"""
@@ -1492,6 +1498,9 @@ SELF_ONLY_CHANGES: frozenset[str] = frozenset(
         "heal_permille",
         "summon_hp_permille",
         "summon_attack_dice",
+        "summon_limit_delta",
+        "summon_duration_delta",
+        "summon_damage_permille",
         *SHAPE_CHANGES,
     }
 )
@@ -1528,6 +1537,8 @@ PER_TURN_LIMIT_CHANGES: frozenset[str] = frozenset({"damage_permille", "on_hit_e
 """可以帶 ``per_turn_limit`` 的 ``change`` 種類（Phase 3-31）。"""
 
 _MAX_MODIFIERS = 2
+_MAX_MASTERY_MODIFIERS = 4
+"""專精（帶 ``exclusive_group`` 的修正型被動，3-33f1）可以有的規則數：效果與代價各幾條。"""
 MAX_MODIFIERS = _MAX_MODIFIERS
 """修正技能的修正規則條數上限（Phase 3F-1 公開給技能工坊的選項推導）。"""
 _MAX_CONSUME_THEN = 2
@@ -1604,6 +1615,12 @@ class ModifierChange(ContentModel):
     - ``summon_hp_permille``（3-24b1）：你召喚出來的召喚物最大 HP +n‰（1～1000；召喚時結算）。
     - ``summon_attack_dice``（3-24b1）：你召喚出來的召喚物攻擊傷害骰多 +n 顆（只能是 1；召喚時
       結算）。
+    - ``summon_limit_delta``（3-33f1，6.29.4）：你同時存在的召喚物上限 ±1（只能是 +1 或 −1；
+      結果不低於 1、不超過 ``core.summon_hard_cap``）。
+    - ``summon_duration_delta``（3-33f1）：你召喚出來的召喚物持續輪數 +n（1～2；加在
+      ``summon_max_duration`` 之後）。
+    - ``summon_damage_permille``（3-33f1）：你召喚出來的召喚物傷害加成 +n‰（1～1000；召喚時快照，
+      與成長加成一樣計入全身 +50% 上限）。
     """
 
     damage_permille: int | None = Field(default=None, ge=-500, le=1000)
@@ -1622,6 +1639,9 @@ class ModifierChange(ContentModel):
     heal_permille: int | None = Field(default=None, ge=-500, le=1000)
     summon_hp_permille: int | None = Field(default=None, ge=1, le=1000)
     summon_attack_dice: int | None = Field(default=None, ge=1, le=1)
+    summon_limit_delta: int | None = Field(default=None, ge=-1, le=1)
+    summon_duration_delta: int | None = Field(default=None, ge=1, le=2)
+    summon_damage_permille: int | None = Field(default=None, ge=1, le=1000)
 
     @model_validator(mode="after")
     def _check(self) -> ModifierChange:
@@ -1632,7 +1652,15 @@ class ModifierChange(ContentModel):
         kind = given[0]
         value = getattr(self, kind)
         if (
-            kind in ("damage_permille", "hit_bonus", "ap_delta", "range_delta", "heal_permille")
+            kind
+            in (
+                "damage_permille",
+                "hit_bonus",
+                "ap_delta",
+                "range_delta",
+                "heal_permille",
+                "summon_limit_delta",
+            )
             and value == 0
         ):
             raise ValueError(f"change.{kind} 不可為 0")
@@ -1937,6 +1965,9 @@ class SkillDef(ContentModel):
     """常駐類傳說的啟動方式（Phase 3D-6）：修正型傳說（``kind: modifier``）與規則改變型傳說
     （``rule_change`` 原語）必填，其他技能不可填。以 ``UseSkill`` 花 ``legendary_activation_ap``
     AP ＋ 源力啟動；啟動前修正規則與規則改變都不生效。"""
+    exclusive_group: str | None = Field(default=None, pattern=ID_PATTERN)
+    """互斥群組（Phase 3-33f1，6.29.4）：同一群組的技能不能同時裝備（例如普攻精通、群召、精英召喚
+    都是 ``mastery``）；只有修正型被動可以填。檢查在 :func:`skill_slot_problems`。"""
     tags: tuple[str, ...] = ()
     narrative: NarrativeDef = Field(default_factory=NarrativeDef)
     provenance: Provenance = Field(default_factory=Provenance)
@@ -1963,6 +1994,12 @@ class SkillDef(ContentModel):
         if len(set(value)) != len(value):
             raise ValueError("標籤不可重複")
         return value
+
+    @model_validator(mode="after")
+    def _check_exclusive_group(self) -> SkillDef:
+        if self.exclusive_group is not None and self.kind != "modifier":
+            raise ValueError("只有修正型被動（kind: modifier）可以填 exclusive_group")
+        return self
 
     @model_validator(mode="after")
     def _check(self) -> SkillDef:
@@ -2672,11 +2709,10 @@ class SkillDef(ContentModel):
 
     def _check_modifier(self) -> None:
         """修正技能（3C-2）：裝在被動欄位、不花 AP、沒有觸發；效果都寫在 ``modifiers`` 裡。"""
-        if not 1 <= len(self.modifiers) <= _MAX_MODIFIERS:
+        limit = _MAX_MODIFIERS if self.exclusive_group is None else _MAX_MASTERY_MODIFIERS
+        if not 1 <= len(self.modifiers) <= limit:
             count = len(self.modifiers)
-            raise ValueError(
-                f"修正技能的 modifiers 必須有 1 到 {_MAX_MODIFIERS} 條，收到 {count} 條"
-            )
+            raise ValueError(f"修正技能的 modifiers 必須有 1 到 {limit} 條，收到 {count} 條")
         if self.effects:
             raise ValueError("修正技能（kind: modifier）的 effects 必須為空（效果寫在 modifiers）")
         if self.shape.type != "self":
@@ -3452,6 +3488,9 @@ def weapon_problem(skill: SkillDef, weapon_class: str) -> str | None:
 _REQ_NAMES = {"melee": "近戰武器", "ranged": "遠程武器", "focus": "法器", "any": "任何武器"}
 
 
+_GROUP_NAMES = {"mastery": "專精（普攻精通、群召、精英召喚）"}
+
+
 def skill_slot_problems(skills: Iterable[SkillDef], slots: SkillSlots) -> list[str]:
     """裝備的技能數量超過 ``core.yaml`` 的欄位上限時的原因（依 ``kind``），以及規則改變型傳說
     超過 1 個（Phase 3D-6）。"""
@@ -3470,6 +3509,16 @@ def skill_slot_problems(skills: Iterable[SkillDef], slots: SkillSlots) -> list[s
         for kind in limits
         if counts[kind] > limits[kind]
     ]
+    groups: dict[str, list[str]] = {}
+    for s in skills:
+        if s.exclusive_group is not None:
+            groups.setdefault(s.exclusive_group, []).append(s.name_zh)
+    for group in sorted(groups):  # 專精互斥（3-33f1）：同一群組最多裝 1 個
+        if len(groups[group]) > 1:
+            problems.append(
+                f"{_GROUP_NAMES.get(group, group)}只能擇一裝備，收到 {len(groups[group])} 個："
+                f"{'、'.join(sorted(groups[group]))}"
+            )
     changes = sorted(s.name_zh for s in skills if s.rule_change_id is not None)
     if len(changes) > 1:  # 改變規則型傳說每人最多裝 1 個（Phase 3D-6，使用者決定）
         problems.append(

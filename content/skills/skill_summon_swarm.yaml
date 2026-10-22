@@ -1,0 +1,31 @@
+# 群召——召喚專精（取捨型修正型被動，Phase 3-33f1，06 6.29.4；數值為初值，未經模擬）：
+# 同時上限 2 → 3 隻（硬上限 3 照舊）、召喚物持續 +1 輪；代價：你自己造成的傷害 −20%。
+# 與普攻精通、精英召喚互斥（exclusive_group: mastery，裝備時由 skill_slot_problems 擋）。
+id: skill_summon_swarm
+schema_version: 1
+name_zh: 群召
+tier: 1
+rank: 1
+rarity: epic
+kind: modifier
+skeleton: modifier
+category: spell
+weapon_req: any
+ap_cost: null
+scaling_attr: int
+shape: {type: self}
+effects: []
+modifiers:
+  - applies_to: {skill_tags: [summon]}
+    change: {summon_limit_delta: 1}
+  - applies_to: {skill_tags: [summon]}
+    change: {summon_duration_delta: 1}
+  - applies_to: {all_attacks: true}
+    change: {damage_permille: -200}
+condition: null
+exclusive_group: mastery
+tags: [passive, modifier]
+narrative:
+  concept: 與其磨練自己的手藝，不如讓更多的僕從替你出力
+  cast_flavor: 你低聲呼喚，身後的影子又多了一個
+provenance: {origin: builtin, owner_id: null, created_by: null, parents: [], bound: true, tradeable: false}
