@@ -167,6 +167,8 @@ export type GearCatalog = Schemas["GearCatalog"];
 export type GearSlotInfo = Schemas["GearSlotInfo"];
 export type GearItemInfo = Schemas["GearItemInfo"];
 export type GearAffixInfo = Schemas["GearAffixInfo"];
+/** 裝備上的一條詞條（含 `active`／`duplicate_of`，3-32a）。 */
+export type AffixLineView = Schemas["AffixLineView"];
 export type GearWeaponInfo = Schemas["GearWeaponInfo"];
 export type GearChoice = Schemas["GearChoice"];
 export type GearCustomItem = Schemas["GearCustomItem"];

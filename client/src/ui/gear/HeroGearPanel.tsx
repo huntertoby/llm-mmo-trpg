@@ -1,5 +1,6 @@
 // 英雄面板（裝備測試，Phase 3G-G4）：穿上這組裝備後開戰時的主角——數值旁標出「來自裝備」，
 // 以及遞減、截斷後的實際值與每條詞條的貢獻。
+import { tipLines } from "../../gear/affixStatus";
 import type { UnitView } from "../../api/types";
 import { GearIcon } from "../GearIcon";
 import { PartTip } from "../PartTip";
@@ -45,7 +46,7 @@ export function HeroGearPanel({ hero, pending }: Props) {
       {hero.equipment.length > 0 && (
         <div className="gear-row">
           {hero.equipment.map((e) => (
-            <PartTip key={e.slot} cat={e.slot_zh} label={e.name_zh} tip={e.affixes.map((a) => a.text_zh).join("；")}>
+            <PartTip key={e.slot} cat={e.slot_zh} label={e.name_zh} tip="" lines={tipLines(e.affixes)}>
               <GearIcon look={e.appearance} slot={e.slot} size={32} />
             </PartTip>
           ))}

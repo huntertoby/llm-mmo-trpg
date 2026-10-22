@@ -1,4 +1,5 @@
 // 單位資訊：滑過或點選單位時顯示（文字即可）。
+import { tipLines } from "../gear/affixStatus";
 import { ChargeChips } from "./ChargeChips";
 import type { BattleView, StatusView, UnitView } from "../api/types";
 import { ammoText, hasMagazine } from "../battle/ammo";
@@ -98,7 +99,7 @@ export function UnitInfo({ unit, names, heroId, skills, view }: Props) {
         <div className="unit-line gear-row">
           裝備：
           {unit.equipment.map((e) => (
-            <PartTip key={e.slot} cat={e.slot_zh} label={e.name_zh} tip={e.affixes.map((a) => a.text_zh).join("；")}>
+            <PartTip key={e.slot} cat={e.slot_zh} label={e.name_zh} tip="" lines={tipLines(e.affixes)}>
               <GearIcon look={e.appearance} slot={e.slot} size={32} />
             </PartTip>
           ))}
