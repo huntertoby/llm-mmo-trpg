@@ -54,7 +54,7 @@ export const KNOWN_KINDS: Readonly<Record<GearSlot, readonly string[]>> = {
 export const MATERIAL: Readonly<Record<string, readonly [string, string]>> = {
   cloth: ["#8a8f99", "#5d6168"],
   leather: ["#8a5a32", "#5e3b1f"],
-  iron: ["#6e757d", "#474c52"],
+  iron: ["#7a828b", "#474c52"],
   steel: ["#a9b6c6", "#6d7a8a"],
   gold: ["#e8bb48", "#9c7420"],
   wood: ["#a06a36", "#6a4420"],

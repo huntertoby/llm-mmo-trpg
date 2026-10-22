@@ -77,7 +77,7 @@ export const GEAR_INK = "#16181d";
 
 /** 材質 `[主色, 暗色]`；`shine`：銀，加 1.4px 白色亮線。 */
 export const GEAR_MATERIAL: Readonly<Record<string, { c: readonly [string, string]; shine?: boolean }>> = {
-  iron: { c: ["#6e757d", "#474c52"] },
+  iron: { c: ["#7a828b", "#474c52"] },
   steel: { c: ["#a9b6c6", "#6d7a8a"] },
   copper: { c: ["#b06a3c", "#6e3e20"] },
   silver: { c: ["#e8edf2", "#a8b0ba"], shine: true },
