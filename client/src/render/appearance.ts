@@ -272,7 +272,7 @@ export function resolveDoll(input: DollInput): DollSpec {
     }
     if (worn.paired && gear.main_hand !== undefined) gear.off_hand = { ...gear.main_hand }; // 成對武器：副手格是第二把武器
     // 雙手武器：優先看武器資料（外觀表），沒有對照的新武器才依造型判斷
-    if (worn.gear.main_hand !== undefined) twoHanded = WEAPON_LOOKS[input.weaponId ?? ""]?.twoHanded ?? isTwoHandedPart(worn.gear.main_hand.kind);
+    if (worn.gear.main_hand !== undefined) twoHanded = WEAPON_LOOKS[input.weaponId ?? ""]?.twoHanded ?? isTwoHandedPart(worn.gear.main_hand);
     if (worn.paired) twoHanded = false; // 成對武器：副手格已經是第二把武器
     if (worn.rarity !== undefined && (rarity === undefined || worn.rarity === "legendary")) rarity = worn.rarity;
   }

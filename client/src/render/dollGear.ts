@@ -51,8 +51,8 @@ const PART_OF: Readonly<Record<string, string>> = {
 /** 元素關鍵字 → 紙娃娃的 `element`。 */
 export const ELEMENT_OF_KEYWORD: Readonly<Record<string, string>> = { ignite: "fire", wet: "water", charged: "lightning", frozen: "ice" };
 
-/** 雙手武器的部件（武器 id 不在外觀表時，用部件判斷副手是否被占用）。 */
-const TWO_HANDED_PARTS: ReadonlySet<string> = new Set(["greatsword", "bow", "crossbow", "longgun", "shotgun", "hammer", "spear", "scythe"]);
+/** 一律雙手的武器部件（武器 id 不在外觀表時，用部件判斷副手是否被占用）。 */
+const TWO_HANDED_PARTS: ReadonlySet<string> = new Set(["greatsword", "bow", "crossbow", "longgun", "shotgun", "spear", "scythe"]);
 
 const PAIRED_KINDS: ReadonlySet<string> = new Set(gearKinds().filter((k) => k.paired).map((k) => k.id));
 
@@ -104,7 +104,9 @@ export function dollGear(equipment: readonly DollEquipment[]): DollGear {
   return { gear, paired, ...(rarity !== undefined ? { rarity } : {}) };
 }
 
-/** 紙娃娃的部件是否為雙手武器（外觀表沒有的武器 id 用）。 */
-export function isTwoHandedPart(kind: string): boolean {
-  return TWO_HANDED_PARTS.has(kind);
+/** 紙娃娃的主手部件是否為雙手武器（武器 id 不在外觀表時才用；權杖、短杖、釘頭錘是單手）。 */
+export function isTwoHandedPart(item: GearItem): boolean {
+  if (item.kind === "staff") return item.form !== "scepter" && item.form !== "wand";
+  if (item.kind === "hammer") return item.form !== "mace";
+  return TWO_HANDED_PARTS.has(item.kind);
 }
