@@ -11,7 +11,7 @@
   觸發，:mod:`trpg.engine.skill_triggers`）才結算——到下回合開始都沒被攻擊就失效（``expired``）。
 - **取消**：施放者倒下（``unit_downed``）、被施加 ``skip_turn`` 的狀態（暈眩、冰凍）時立即取消
   （``followup_cancelled``）；施放另一個延遲段時舊的取消（``replaced``）。
-- 第二段的結算由 :func:`trpg.engine.skills.interpreter.run_delayed` 處理（命中、傷害照常；不付
+- 第二段的結算由 :func:`trpg.engine.skills.casting.run_delayed` 處理（命中、傷害照常；不付
   代價，代價在施放時已付）。
 - ``charging`` 是中性、有益的狀態：不會被淨化、驅散或奪取。
 """

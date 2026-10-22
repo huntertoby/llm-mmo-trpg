@@ -1,7 +1,7 @@
 """自身位移（Phase 3D-2，``docs/design/06-技能.md`` 6.16 A）的選取檢查：``dash``（衝鋒）、
 ``leap``（跳躍）、``swap``（交換位置），以及 ``shadowstep``（瞬步，Phase 3D-8d）的落點。
 
-只讀取狀態，不修改；實際的移動由解譯器（``_Cast``）與效果處理器結算。
+只讀取狀態，不修改；實際的移動由施放（``skills.cast.Cast``）與效果處理器結算。
 """
 
 from __future__ import annotations

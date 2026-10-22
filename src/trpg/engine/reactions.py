@@ -15,7 +15,7 @@
   Phase 3D-8c 新增內建反應事件 ``enemy_moves_in_range``（監視射擊 ``overwatch_shot``，需要狀態
   ``overwatch``：敵人主動移動的一步結束後位在持有者的武器射程與視線內，自動普攻一次並移除
   ``overwatch``，見 :func:`enemy_moves_in_range_reactions`）。
-  反應技不花 AP，立刻施放一次技能（:func:`trpg.engine.skills.interpreter.use_reaction_skill`）。
+  反應技不花 AP，立刻施放一次技能（:func:`trpg.engine.skills.casting.use_reaction_skill`）。
 
 普攻的結算（:func:`perform_unit_attack`）也放在這裡，因為格擋會在命中後、傷害前介入，
 藉機攻擊本身也是一次普攻。

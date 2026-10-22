@@ -7,7 +7,7 @@
   :func:`move_zones`），走到牆壁或地圖外的格子消失，全部消失時區域消失（``blocked``）。
 - **結算**：單位 **進入** 區域時（``when: enter``／``both``）或 **回合開始時** 站在區域內時
   （``turn_start``／``both``），依 ``affects`` 判斷敵我，對他結算 ``effects``（自動命中，狀態照常
-  擲抵抗；:func:`~trpg.engine.skills.interpreter.use_zone_effects`），觸發深度 +1，所以命中後的
+  擲抵抗；:func:`~trpg.engine.skills.casting.use_zone_effects`），觸發深度 +1，所以命中後的
   被動（``on_damaged`` 等）照常觸發。「進入」＝單位的位置從區域外變成區域內：單位移動（走路、
   推擊、傳送、交換都算）、區域建立、移動型區域前進、跟隨型區域隨施放者移動都會造成；在區域內移動、
   站著不動都不算，所以同一次進入只結算一次。進入在效果佇列清空時（表面與陷阱之後）結算。
