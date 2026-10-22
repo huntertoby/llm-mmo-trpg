@@ -77,6 +77,7 @@ __all__ = [
     "MaxActionsExceeded",
     "SkillMetrics",
     "StepTrace",
+    "SummonRecord",
     "TrackedRun",
     "UnitInfo",
     "UnitMetrics",
@@ -147,6 +148,21 @@ class UnitMetrics(_Model):
         return Fraction(self.damage_dealt, max(1, self.alive_rounds))
 
 
+class SummonRecord(_Model):
+    """一隻召喚物的一生（Phase 3-33a；由 ``unit_summoned`` 與結束事件推導）。"""
+
+    unit_id: str
+    owner_id: str
+    template_id: str
+    team: Team
+    spawn_round: int
+    end: str
+    """``expired``／``owner_gone``／``limit``／``sacrificed``（``summon_expired`` 的原因）、
+    ``downed``（被打倒）或 ``survived``（戰鬥結束時還在）。"""
+    end_round: int
+    """結束的輪（``survived`` 時為戰鬥的最後一輪）。"""
+
+
 class SkillMetrics(_Model):
     """一個技能在一場戰鬥中的使用統計。"""
 
@@ -187,6 +203,14 @@ class BattleMetrics(_Model):
     ``ambush:ally``、``ambush:enemy``（攻擊者的陣營）；沒有發生的不列出。"""
     summon_events: dict[str, int] = {}
     """召喚物出現的次數（Phase 3C-6a）：``ally``、``enemy``（召喚物的陣營）；沒有發生的不列出。"""
+    summons: tuple[SummonRecord, ...] = ()
+    """每隻召喚物的一生（Phase 3-33a），依出現順序。召喚物的傷害、回合數與存活輪數在 ``units``
+    同一個 ``unit_id`` 的 :class:`UnitMetrics`。"""
+
+    def summon_damage(self, team: Team) -> int:
+        """``team`` 的召喚物造成的傷害（直接＋間接；已含在 :meth:`team_damage`，這裡另列）。"""
+        ids = {r.unit_id for r in self.summons if r.team is team}
+        return sum(u.damage_dealt for u in self.units if u.unit_id in ids)
 
     def team_damage(self, team: Team, *, direct: bool | None = None) -> int:
         """陣營造成的傷害；``direct`` 為 ``None`` 時直接＋間接。"""
@@ -356,6 +380,8 @@ def metrics_from_events(  # noqa: C901, PLR0912, PLR0915 - 單一事件迴圈，
     scene: dict[str, int] = {}
     positional: dict[str, int] = {}
     summons: dict[str, int] = {}
+    summoned: dict[UnitId, UnitSummoned] = {}
+    summon_end: dict[UnitId, tuple[str, int]] = {}
     boss_round_one_down = False
     one_shots = 0
     boss_burst_hits: list[str] = []
@@ -394,8 +420,11 @@ def metrics_from_events(  # noqa: C901, PLR0912, PLR0915 - 單一事件迴圈，
             present.add(event.unit_id)
             if isinstance(event, UnitSummoned):
                 summons[event.team.value] = summons.get(event.team.value, 0) + 1
+                summoned[event.unit_id] = event
         elif isinstance(event, UnitEscaped | SummonExpired):
             present.discard(event.unit_id)
+            if isinstance(event, SummonExpired):
+                summon_end[event.unit_id] = (event.reason, event.round)
         elif isinstance(event, TurnStarted):
             acc[event.unit_id].turns += 1
             for status_id, source in sorted(statuses.get(event.unit_id, {}).items()):
@@ -418,6 +447,8 @@ def metrics_from_events(  # noqa: C901, PLR0912, PLR0915 - 單一事件迴圈，
             present.discard(event.unit_id)
             statuses.pop(event.unit_id, None)
             acc[event.unit_id].downed = True
+            if event.unit_id in summoned:
+                summon_end[event.unit_id] = ("downed", event.round)
             killer = last_hit.get(event.unit_id)
             if (
                 killer is not None
@@ -539,6 +570,18 @@ def metrics_from_events(  # noqa: C901, PLR0912, PLR0915 - 單一事件迴圈，
         scene_events=dict(sorted(scene.items())),
         positional_events=dict(sorted(positional.items())),
         summon_events=dict(sorted(summons.items())),
+        summons=tuple(
+            SummonRecord(
+                unit_id=e.unit_id,
+                owner_id=e.owner_id,
+                template_id=e.template_id,
+                team=e.team,
+                spawn_round=e.round,
+                end=summon_end.get(e.unit_id, ("survived", rounds))[0],
+                end_round=summon_end.get(e.unit_id, ("survived", rounds))[1],
+            )
+            for e in summoned.values()
+        ),
     )
 
 
