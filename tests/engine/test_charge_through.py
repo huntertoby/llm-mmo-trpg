@@ -218,7 +218,10 @@ def test_any_tile_in_line_within_reach_can_be_chosen() -> None:
     """3-29：目標格可以是站著敵人的格子、牆、或射程內的任何格（只要至少能前進一格）。"""
     state = arena(skill(PRONE_HIT), foes=[(3, 3)], terrain=terrain_of({(5, 3): "#"}))
     assert {(3, 3), (5, 3), (4, 3)} <= set(ends(state))
-    assert go(state, SID, (5, 3)).state.units[U1].xy == (4, 3)  # 敵人在 (3,3) 背後有路：穿過去停在牆前
+    assert go(state, SID, (5, 3)).state.units[U1].xy == (
+        4,
+        3,
+    )  # 敵人在 (3,3) 背後有路：穿過去停在牆前
 
 
 def test_a_wall_stops_the_charge_before_it(monkeypatch: pytest.MonkeyPatch) -> None:
@@ -560,6 +563,17 @@ def test_bull_rush_runs_through_two_enemies_and_knocks_them_down(
     assert [r.target_id for r in of(result, AttackRolled)] == [U2, U3]
     assert result.state.units[U2].has_status("prone") and result.state.units[U3].has_status("prone")
     assert result.state.units[U1].xy == (4, 3)
+
+
+def test_bull_rush_hits_an_enemy_standing_at_the_map_edge(monkeypatch: pytest.MonkeyPatch) -> None:
+    """使用者案例（蠻牛衝陣）：右邊貼著地圖邊的敵人也打得到，且吃撞擊傷害。"""
+    d20s(monkeypatch, die=3)
+    state = arena(BULL, caster=(3, 3), foes=[(6, 3)])
+    assert (6, 3) in ends(state, BULL)
+    result = go(state, BULL, (6, 3))
+    assert [r.target_id for r in of(result, AttackRolled)] == [U2]
+    assert [c.obstacle for c in bumps(result)] == ["edge"]
+    assert result.state.units[U1].xy == (5, 3)
 
 
 # ---------------------------------------------------------------------------

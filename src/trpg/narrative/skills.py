@@ -382,8 +382,8 @@ def miss_text(lib: ContentLibrary, skill: SkillDef) -> str | None:
 def _charge_through(_lib: ContentLibrary, skill: SkillDef, spec: EffectSpec) -> str:
     after = f"擊倒（{scaling_label(skill)}對抗）" if spec.on_hit == "knock_prone" else "推到路徑旁"
     return (
-        f"沿直線衝到終點格：沿途每個敵人各擲命中，命中受 {spec.dice} 物理傷害並{after}"
-        "（隊友讓路；不觸發藉機攻擊）"
+        f"沿直線衝向目標格：沿途每個敵人各擲命中，命中受 {spec.dice} 物理傷害並{after}"
+        "（隊友讓路；不觸發藉機攻擊；目標格的敵人背後被擋住時另受一次撞擊）"
     )
 
 

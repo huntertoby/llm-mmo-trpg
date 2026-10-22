@@ -160,7 +160,18 @@ describe("charge-through previews", () => {
   it("does not mark allies as hit and marks nothing for a charge that does not move", () => {
     const ally = { ...foe, ally: true };
     expect(previewOverlays(withCharge({ targets: [ally] }), view).some((m) => m.kind === "charge_hit")).toBe(false);
-    expect(previewOverlays(withCharge({ moves: [{ ...charge, path: [[0, 1]] }] }), view)).toEqual([]);
+    expect(previewOverlays(withCharge({ moves: [{ ...charge, path: [[0, 1]] }], targets: [] }), view)).toEqual([]);
+  });
+
+  it("marks an enemy beyond the stop tile (against the wall) and explains the bump (Phase 3-29)", () => {
+    const stopShort = { ...charge, path: [[0, 1], [1, 1]] };
+    const p = withCharge({ moves: [stopShort], collisions: [{ unit_id: "unit_0003", minimum: 2, maximum: 8 }] });
+    const marks = previewOverlays(p, view);
+    expect(marks).toContainEqual({ pos: { x: 2, y: 1 }, kind: "charge_hit", label: "55%" });
+    expect(marks).toContainEqual({ pos: { x: 1, y: 1 }, kind: "dash_end", label: "衝" });
+    expect(sceneLines(p, names, view)[0]).toContain("背後被擋住，命中後另受一次撞擊");
+    const still = withCharge({ moves: [{ ...charge, path: [[0, 1]] }] });
+    expect(previewOverlays(still, view)).toEqual([{ pos: { x: 2, y: 1 }, kind: "charge_hit", label: "55%" }]);
   });
 
   it("explains the route, the enemies hit with their chance and the knock down", () => {
@@ -169,7 +180,7 @@ describe("charge-through previews", () => {
     expect(line).toContain("(0, 1)→(1, 1)→(2, 1)→(3, 1)");
     expect(line).toContain(`${names.label("unit_0003")}（命中 55%）`);
     expect(line).toContain("撞倒");
-    expect(line).not.toContain("被擋住");
+    expect(line).not.toContain("實際停在");
     expect(previewLines(withCharge(), names, view).some((l) => l.startsWith("衝撞："))).toBe(true);
   });
 
@@ -179,7 +190,7 @@ describe("charge-through previews", () => {
     expect(sceneLines(withCharge({ targets: [] }), names, view)[0]).toContain("沿途沒有敵人");
     const blocked = withCharge({ moves: [{ ...charge, path: [[0, 1], [1, 1]] }] });
     const text = sceneLines(blocked, names, view)[0];
-    expect(text).toContain("被擋住：選的終點是 (3, 1)，實際停在 (1, 1)");
+    expect(text).toContain("選的目標是 (3, 1)，實際停在 (1, 1)");
   });
 });
 

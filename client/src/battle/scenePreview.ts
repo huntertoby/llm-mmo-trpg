@@ -111,17 +111,24 @@ export function previewOverlays(p: PreviewOut | null, view: BattleView): Overlay
 /** 直線衝撞：沿途的格子畫點，會被撞到的敵人標命中率，終點標「衝」（Phase 3D-2c）。 */
 function chargeOverlays(m: MoveOut, p: PreviewOut, view: BattleView): Overlay[] {
   const last = m.path[m.path.length - 1];
-  if (last === undefined || m.path.length < 2) return [];
+  if (last === undefined) return [];
   const hits = new Map<string, string>();
   for (const t of p.targets) {
     const at = t.ally ? null : unitPos(view, t.unit_id);
     if (at !== null) hits.set(`${at.x},${at.y}`, pct(t.hit_permille));
   }
+  const walked = new Set(m.path.map((xy) => `${xy[0]},${xy[1]}`));
   const route: Overlay[] = m.path.slice(1, -1).map((xy) => {
     const hit = hits.get(`${xy[0]},${xy[1]}`);
     return hit === undefined ? { pos: pos(xy), kind: "dash_path", label: "" } : { pos: pos(xy), kind: "charge_hit", label: hit };
   });
-  return [...route, { pos: pos(last), kind: "dash_end", label: "衝" }];
+  // 停點之後的敵人（目標格上的敵人、貼牆或地圖邊的敵人，Phase 3-29）：施放者不會走到那裡，仍標命中率
+  const beyond: Overlay[] = [...hits].filter(([key]) => !walked.has(key)).map(([key, label]) => {
+    const [x, y] = key.split(",").map(Number);
+    return { pos: { x: x ?? 0, y: y ?? 0 }, kind: "charge_hit", label };
+  });
+  const end: Overlay[] = m.path.length < 2 ? [] : [{ pos: pos(last), kind: "dash_end", label: "衝" }];
+  return [...route, ...beyond, ...end];
 }
 
 type MoveOut = NonNullable<PreviewOut["moves"]>[number];
@@ -189,7 +196,7 @@ function chargeLine(m: MoveOut, p: PreviewOut, names: UnitNames): string {
   const chosen = (p.action as { target_pos?: { x: number; y: number } | null }).target_pos ?? null;
   const blocked =
     last !== undefined && chosen !== null && (chosen.x !== last[0] || chosen.y !== last[1])
-      ? `（被擋住：選的終點是 (${chosen.x}, ${chosen.y})，實際停在 ${posText(last)}）`
+      ? `（停點與選的目標不同：選的目標是 (${chosen.x}, ${chosen.y})，實際停在 ${posText(last)}）`
       : "";
   const foes = p.targets.filter((t) => !t.ally);
   const hit =
@@ -197,7 +204,12 @@ function chargeLine(m: MoveOut, p: PreviewOut, names: UnitNames): string {
       ? "沿途沒有敵人"
       : `沿途會撞到 ${foes.map((t) => `${names.label(t.unit_id)}（命中 ${pct(t.hit_permille)}）`).join("、")}，命中者受傷` +
         (foes.some((t) => t.knock_permille != null) ? "並可能被撞倒" : "並被推到路徑旁");
-  return `衝撞：${who} 沿 ${path.map((xy) => posText(xy)).join("→")} 直線衝過去${blocked}；${hit}（隊友讓路，不會被藉機攻擊，沿途陷阱與表面照常結算）`;
+  const bumped = (p.collisions ?? []).filter((c) => foes.some((t) => t.unit_id === c.unit_id));
+  const bump =
+    bumped.length === 0
+      ? ""
+      : `；${bumped.map((c) => names.label(c.unit_id)).join("、")} 背後被擋住，命中後另受一次撞擊（${bumped.map((c) => `${c.minimum}–${c.maximum}`).join("、")} 傷害）`;
+  return `衝撞：${who} 沿 ${path.map((xy) => posText(xy)).join("→")} 直線衝過去${blocked}；${hit}${bump}（隊友讓路，不會被藉機攻擊，沿途陷阱與表面照常結算）`;
 }
 
 type CheckOut = NonNullable<PreviewOut["displace_checks"]>[number];
