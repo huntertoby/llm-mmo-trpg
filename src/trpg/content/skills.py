@@ -82,6 +82,7 @@ __all__ = [
     "MAX_GRANT_DURATION",
     "MAX_LIFESTEAL_PERMILLE",
     "MAX_MODIFIERS",
+    "MAX_VARIANTS",
     "MIN_SKILL_CRIT_RANGE",
     "MODIFIER_CHANGES",
     "ON_HIT_PRIMITIVES",
@@ -118,6 +119,8 @@ __all__ = [
     "TELEPORT_TARGET",
     "TIME_BOMB",
     "TOPPLE",
+    "VARIANT_CONDITIONS",
+    "VARIANT_TARGET_CONDITIONS",
     "WEAPON_CLASSES",
     "ZONE",
     "ZONE_CASTER_SHAPES",
@@ -153,6 +156,9 @@ __all__ = [
     "SkillTable",
     "TrapSpec",
     "TriggerSpec",
+    "VariantEffectSwap",
+    "VariantSpec",
+    "VariantWhen",
     "condition_text",
     "default_affects",
     "granted_skill_problems",
@@ -1247,6 +1253,9 @@ ON_KILL_SECOND_SHAPES: tuple[str, ...] = (*FOLLOWUP_SHAPES, "ground_tile")
 """``on_kill`` 第二段的形狀：動作段的形狀，加上跳躍、傳送用的指定格。"""
 _FOLLOWUP_CACHE: dict[int, tuple[Any, Any]] = {}
 _FOLLOWUP_CACHE_LIMIT = 4096
+_VARIANT_CACHE: dict[tuple[int, str], tuple[Any, Any]] = {}
+"""變奏型態（:meth:`SkillDef.variant_form`）的快取：以技能物件的 ``id`` 與變奏 ID 為鍵
+（值保留原物件，避免 ``id`` 重用時取錯）。"""
 
 
 def _types(effects: tuple[EffectSpec, ...]) -> str:
@@ -1695,6 +1704,119 @@ class ModifierSpec(ContentModel):
         return self
 
 
+# ---------------------------------------------------------------------------
+# 戰場變奏（Phase 3-25a，06 6.24）
+# ---------------------------------------------------------------------------
+
+MAX_VARIANTS = 2
+"""一招技能最多的變奏數（實際上限再依稀有度，見 ``core.yaml`` 的 ``variant_max_by_rarity``）。"""
+VARIANT_CONDITIONS: tuple[str, ...] = (
+    "caster_surface",
+    "caster_high_ground",
+    "caster_adjacent_blocker",
+    "target_surface",
+)
+"""變奏條件的四種（PM 決定 #2）。"""
+VARIANT_TARGET_CONDITIONS: tuple[str, ...] = ("caster_high_ground", "target_surface")
+"""依賴目標點的條件：同一招對不同的目標點可能選出不同的型態（PM 決定 #4）。"""
+_MAX_VARIANT_REPLACEMENTS = 2
+_VARIANT_REPLACEMENTS = ("shape", "range_delta", "element", "add_effect", "replace_effect")
+
+
+class VariantWhen(ContentModel):
+    """變奏的條件：四種恰好填一種（PM 決定 #2）。
+
+    - ``caster_surface``：施放者所在格的表面是其中之一（表面 id，必須在 ``surfaces.yaml``）；
+    - ``caster_high_ground: true``：施放者所在格比目標點高至少 1 層；
+    - ``caster_adjacent_blocker: true``：施放者八方向相鄰的格子有牆壁或 ``blocks_move`` 物件；
+    - ``target_surface``：目標點的表面是其中之一。
+    """
+
+    caster_surface: tuple[str, ...] | None = None
+    caster_high_ground: Literal[True] | None = None
+    caster_adjacent_blocker: Literal[True] | None = None
+    target_surface: tuple[str, ...] | None = None
+
+    @model_validator(mode="after")
+    def _check(self) -> VariantWhen:
+        given = [name for name in VARIANT_CONDITIONS if getattr(self, name) is not None]
+        if len(given) != 1:
+            raise ValueError(
+                f"變奏條件 when 必須恰好填一種（{'、'.join(VARIANT_CONDITIONS)}），"
+                f"收到 {len(given)} 種"
+            )
+        for name in ("caster_surface", "target_surface"):
+            ids = getattr(self, name)
+            if ids is None:
+                continue
+            if not ids:
+                raise ValueError(f"when.{name} 至少要列一種表面")
+            bad = [i for i in ids if re.match(ID_PATTERN, i) is None]
+            if bad or len(set(ids)) != len(ids):
+                raise ValueError(f"when.{name} 必須是不重複的表面 id，收到 {', '.join(ids)}")
+        return self
+
+    @property
+    def kind(self) -> str:
+        """填了哪一種條件。"""
+        return next(name for name in VARIANT_CONDITIONS if getattr(self, name) is not None)
+
+    @property
+    def target_dependent(self) -> bool:
+        """條件依賴目標點（居高、目標格表面）。"""
+        return self.kind in VARIANT_TARGET_CONDITIONS
+
+    @property
+    def surfaces(self) -> tuple[str, ...]:
+        """條件引用的表面 id（沒有時為空）。"""
+        return self.caster_surface or self.target_surface or ()
+
+
+class VariantEffectSwap(ContentModel):
+    """``replace_effect``：把第 ``index`` 個效果（從 0 起算）換成 ``effect``。"""
+
+    index: int = Field(ge=0)
+    effect: EffectSpec
+
+
+class VariantSpec(ContentModel):
+    """技能的一個戰場變奏（Phase 3-25a，06 6.24；PM 決定 #1）：條件 ``when`` 成立時，施放的是把
+    替換內容套上去的型態（:meth:`SkillDef.variant_form`）。
+
+    替換內容填 1～2 項：``shape``（整個換掉）、``range_delta``（射程 ±，結果至少 1；形狀要有數字
+    射程）、``element``（換掉所有傷害效果的元素）、``add_effect``（加一個附帶效果）、
+    ``replace_effect``（換掉一個附帶效果；不可換掉主傷害或唯一的效果）。AP、冷卻、代價、kind 與
+    骨架不能改（沒有這些欄位）。
+    """
+
+    id: str = Field(pattern=ID_PATTERN)
+    name_zh: str = Field(min_length=1)
+    """型態名，例如「水中貫穿」。"""
+    when: VariantWhen
+    shape: ShapeSpec | None = None
+    range_delta: int | None = None
+    element: Element | None = None
+    add_effect: EffectSpec | None = None
+    replace_effect: VariantEffectSwap | None = None
+
+    @model_validator(mode="after")
+    def _check(self) -> VariantSpec:
+        count = len(self.replacements)
+        if not 1 <= count <= _MAX_VARIANT_REPLACEMENTS:
+            raise ValueError(
+                f"變奏 {self.id} 的替換內容必須填 1～2 項"
+                f"（{'、'.join(_VARIANT_REPLACEMENTS)}），收到 {count} 項"
+            )
+        if self.range_delta == 0:
+            raise ValueError(f"變奏 {self.id} 的 range_delta 不可為 0")
+        return self
+
+    @property
+    def replacements(self) -> tuple[str, ...]:
+        """填了的替換欄位（依 :data:`_VARIANT_REPLACEMENTS` 的順序）。"""
+        return tuple(name for name in _VARIANT_REPLACEMENTS if getattr(self, name) is not None)
+
+
 type Activation = Literal["timed", "battle"]
 """常駐類傳說的啟動方式（Phase 3D-6，6.14.4）：``timed`` 持續 ``legendary_timed_rounds`` 輪、
 ``battle`` 本場剩餘時間有效（預算較低）。"""
@@ -1757,6 +1879,9 @@ class SkillDef(ContentModel):
     followup: FollowupSpec | None = None
     """複合技能的第二段（Phase 3F-3a，6.23）：有它的技能本身是第一段，``followup.when`` 決定第二段
     何時、以哪裡為原點結算（見 :class:`FollowupSpec`、:meth:`followup_skill`）。"""
+    variants: tuple[VariantSpec, ...] = ()
+    """戰場變奏（Phase 3-25a，6.24）：0～2 個，條件成立時施放的是變奏型態（:meth:`variant_form`）；
+    多個成立時取排在前面的。只有主動技能可以帶；稀有度上限是跨檔案檢查（``core.yaml``）。"""
 
     @field_validator("skeleton")
     @classmethod
@@ -1830,7 +1955,102 @@ class SkillDef(ContentModel):
         self._check_variance()
         self._add_gamble_tag()
         self._check_followup()
+        self._check_variants()
         return self
+
+    def _check_variants(self) -> None:
+        """戰場變奏（Phase 3-25a，PM 決定 #1、#7）：最多 2 個、ID 不重複；只有主動技能（不是陷阱、
+        不是複合技能、不是常駐類傳說）可以帶；每個型態本身也要是合法的技能（:meth:`variant_form`
+        以同一套 schema 檢查）。"""
+        if not self.variants:
+            return
+        if len(self.variants) > MAX_VARIANTS:
+            raise ValueError(f"一招技能最多 {MAX_VARIANTS} 個變奏，收到 {len(self.variants)} 個")
+        ids = [v.id for v in self.variants]
+        if len(set(ids)) != len(ids):
+            raise ValueError(f"變奏的 id 不可重複：{', '.join(ids)}")
+        if self.kind != "active" or self.trap is not None:
+            raise ValueError("只有主動技能可以帶變奏（被動、反應、姿態、陷阱之後再開放）")
+        if self.followup is not None:
+            raise ValueError("複合技能（有 followup）不能帶變奏")
+        if self.is_activatable:
+            raise ValueError("常駐類傳說（有 activation）不能帶變奏")
+        for variant in self.variants:
+            self._check_variant(variant)
+            try:
+                self.variant_form(variant.id)
+            except ValueError as exc:
+                raise ValueError(f"變奏 {variant.id}：{exc}") from None
+
+    def _check_variant(self, variant: VariantSpec) -> None:
+        main = self.main_damage_index
+        swap = variant.replace_effect
+        if swap is not None:
+            if len(self.effects) == 1:
+                raise ValueError(f"變奏 {variant.id}：唯一的效果不能被 replace_effect 換掉")
+            if swap.index >= len(self.effects):
+                raise ValueError(
+                    f"變奏 {variant.id}：replace_effect.index {swap.index} 超出效果數"
+                    f" {len(self.effects)}"
+                )
+            if swap.index == main:
+                raise ValueError(f"變奏 {variant.id}：主傷害（第 {main} 個效果）不能被換掉")
+        if variant.element is not None and main is None:
+            raise ValueError(f"變奏 {variant.id}：沒有傷害效果，不能換元素（element）")
+        if variant.range_delta is not None:
+            shape = variant.shape or self.shape
+            if not isinstance(shape.range, int):
+                raise ValueError(
+                    f"變奏 {variant.id}：range_delta 只能用在射程是數字的形狀，"
+                    f"收到 {shape.type} 的射程 {shape.range!r}"
+                )
+
+    @property
+    def main_damage_index(self) -> int | None:
+        """主傷害：第一個 ``damage`` 效果的索引（沒有時為 ``None``）。"""
+        return next((i for i, e in enumerate(self.effects) if e.type == "damage"), None)
+
+    def variant(self, variant_id: str) -> VariantSpec:
+        """ID 為 ``variant_id`` 的變奏；沒有時拋出 ``KeyError``。"""
+        for variant in self.variants:
+            if variant.id == variant_id:
+                return variant
+        raise KeyError(f"{self.id} 沒有變奏 {variant_id}")
+
+    def variant_form(self, variant_id: str) -> SkillDef:
+        """變奏型態（Phase 3-25a）：本技能套上變奏的替換內容，展開成一個獨立的技能（沒有
+        ``variants``；ID、名稱、代價、骨架都不變）。依序套用：換形狀 → 射程 ± → 換掉附帶效果 →
+        加附帶效果 → 換所有傷害效果的元素。引擎施放、驗證器與預算都用它。"""
+        key = (id(self), variant_id)
+        cached = _VARIANT_CACHE.get(key)
+        if cached is not None and cached[0] is self:
+            found: SkillDef = cached[1]
+            return found
+        variant = self.variant(variant_id)
+        shape = variant.shape or self.shape
+        if variant.range_delta is not None and isinstance(shape.range, int):
+            shape = shape.model_copy(update={"range": max(1, shape.range + variant.range_delta)})
+        effects = list(self.effects)
+        if variant.replace_effect is not None and variant.replace_effect.index < len(effects):
+            effects[variant.replace_effect.index] = variant.replace_effect.effect
+        if variant.add_effect is not None:
+            effects.append(variant.add_effect)
+        if variant.element is not None:
+            effects = [
+                e.model_copy(update={"element": variant.element}) if e.type == "damage" else e
+                for e in effects
+            ]
+        data = {name: getattr(self, name) for name in type(self).model_fields}
+        data.update(shape=shape, effects=tuple(effects), variants=())
+        try:
+            form = SkillDef.model_validate(data)
+        except ValidationError as exc:
+            messages = "；".join(str(e["msg"]).removeprefix("Value error, ") for e in exc.errors())
+            raise ValueError(messages) from None
+        if len(_VARIANT_CACHE) >= _FOLLOWUP_CACHE_LIMIT:
+            _VARIANT_CACHE.clear()
+        _VARIANT_CACHE[key] = (self, form)
+        return form
 
     def _check_followup(self) -> None:
         """複合技能（Phase 3F-3a／3F-4a，6.23）：主動技能、不是陷阱、沒有失手反噬；兩段的結構依

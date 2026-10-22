@@ -755,12 +755,41 @@ def skill_reference_problems(
     follow = skill.followup_skill()  # 複合技能的動作段（Phase 3F-3a）：同一套引用檢查
     if follow is not None:
         problems += [f"followup.{p}" for p in skill_reference_problems(follow, ruleset, skills)]
+    problems += _variant_reference_problems(skill, ruleset, skills)
     activation_ap = ruleset.core.legendary_activation_ap
     if skill.rule_change_id is not None and skill.ap_cost != activation_ap:
         problems.append(
             f"ap_cost：規則改變型傳說以 core.yaml 的 legendary_activation_ap（{activation_ap}）"
             f"啟動，收到 {skill.ap_cost}"
         )
+    return problems
+
+
+def _variant_reference_problems(
+    skill: SkillDef, ruleset: Ruleset, skills: Mapping[str, SkillDef]
+) -> list[str]:
+    """戰場變奏（Phase 3-25a）：數量不超過稀有度上限（``core.variant_max_by_rarity``）、條件引用的
+    表面存在，每個型態本身也通過同一套引用檢查。"""
+    if not skill.variants:
+        return []
+    problems: list[str] = []
+    limit = ruleset.core.variant_max_by_rarity.get(skill.rarity, 0)
+    if len(skill.variants) > limit:
+        problems.append(
+            f"variants：稀有度 {skill.rarity} 最多帶 {limit} 個變奏，收到 {len(skill.variants)} 個"
+        )
+    known = {s.id.value for s in ruleset.surfaces.surfaces}
+    for variant in skill.variants:
+        unknown = [s for s in variant.when.surfaces if s not in known]
+        if unknown:
+            problems.append(
+                f"variants.{variant.id}.when：未知的表面 {', '.join(unknown)}"
+                f"（可用：{', '.join(sorted(known))}）"
+            )
+        form = skill.variant_form(variant.id)
+        problems += [
+            f"variants.{variant.id}.{p}" for p in skill_reference_problems(form, ruleset, skills)
+        ]
     return problems
 
 

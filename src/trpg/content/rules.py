@@ -180,6 +180,10 @@ class CoreRules(ContentModel):
     spell_attr_multiplier_permille: int = Field(ge=0)
     dual_scaling_min_rarity: Literal["common", "rare", "epic", "legendary"] = "epic"
     """雙屬性縮放（``secondary_scaling_attr``，Phase 2H-2）的最低技能稀有度。"""
+    variant_max_by_rarity: dict[str, int] = Field(
+        default_factory=lambda: {"common": 0, "rare": 1, "epic": 2, "legendary": 2}
+    )
+    """各稀有度最多可帶的戰場變奏數（Phase 3-25a，6.24；PM 決定 #7）。沒列的稀有度為 0。"""
     skill_slots: SkillSlots
 
     # 狀態與控制（2B-1）

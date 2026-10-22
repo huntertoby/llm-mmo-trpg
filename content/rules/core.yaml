@@ -95,6 +95,7 @@ burning_object_rounds: 1      # 著火的物件在第幾次環境回合摧毀（
 # --- 技能（Phase 2A，docs/phases/Phase2A計畫.md 4.2、4.5）---
 spell_attr_multiplier_permille: 500   # 法術技與治療：縮放屬性 × 0.5 加進骰值
 dual_scaling_min_rarity: epic         # 雙屬性縮放（各 50%）的最低稀有度（Phase 2H-2，初值，未經模擬）
+variant_max_by_rarity: {common: 0, rare: 1, epic: 2, legendary: 2}   # 戰場變奏的數量上限（Phase 3-25a，6.24）
 skill_slots:                          # 戰鬥時可裝備的技能數量上限（依 kind）
   active: 6
   passive: 3                          # 含修正技能（kind: modifier，Phase 3C-2 由 2 → 3）
