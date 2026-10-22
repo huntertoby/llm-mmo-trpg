@@ -785,15 +785,6 @@ button.selected {
   padding: 6px 10px;
 }
 
-.modal-backdrop {
-  position: fixed;
-  inset: 0;
-  background: rgb(0 0 0 / 50%);
-  display: flex;
-  align-items: center;
-  justify-content: center;
-}
-
 .modal {
   background: var(--panel);
   border: 1px solid var(--accent);
@@ -821,6 +812,9 @@ button.selected {
   transform: translateX(-50%);
   z-index: 40;
   width: min(480px, calc(100vw - 32px));
+  max-height: calc(100vh - 70px); /* 800×600 這類小視窗：內容超出時卡片內捲動 */
+  overflow-y: auto;
+  overscroll-behavior: contain;
   background: var(--panel);
   border: 2px solid #ff4fd8;
   border-radius: 6px;
@@ -1619,15 +1613,20 @@ button.selected {
   font-size: 10px;
 }
 
-.top-popup {
+/* 點擊式選單共用外觀（`usePopupMenu`）：Esc／點外面關閉、同時一張；超出高度時卡片內捲動 */
+.popup-menu {
   position: absolute;
+  z-index: 30;
+  overflow-y: auto;
+  overscroll-behavior: contain;
+}
+
+.top-popup {
   right: 0;
   top: calc(100% + 6px);
-  z-index: 30;
   width: 400px;
   max-width: calc(100vw - 24px);
   max-height: calc(100vh - 80px);
-  overflow-y: auto;
   background: var(--panel);
   border: 1px solid var(--accent);
   border-radius: 6px;
@@ -1971,20 +1970,6 @@ button.selected {
   width: 100%;
   font-size: 12px;
   padding: 4px 6px;
-}
-
-.fallback-list {
-  position: absolute;
-  right: 0;
-  bottom: calc(100% + 4px);
-  z-index: 25;
-  width: 320px;
-  max-height: 50vh;
-  padding: 8px;
-  background: var(--panel);
-  border: 1px solid var(--accent);
-  border-radius: 6px;
-  box-shadow: 0 6px 24px rgb(0 0 0 / 60%);
 }
 
 .turn-controls .speed-control {
@@ -2441,12 +2426,10 @@ button.selected {
 }
 
 .more-list {
-  position: absolute;
   right: 0;
   bottom: calc(100% + 4px);
-  z-index: 25;
   width: 220px;
-  max-height: 50vh;
+  max-height: min(50vh, 360px);
   margin: 0;
   padding: 8px;
   list-style: none;

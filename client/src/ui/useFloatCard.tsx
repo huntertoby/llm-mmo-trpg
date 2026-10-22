@@ -89,7 +89,9 @@ export function useFloatCard({ pinOn = "always" }: { pinOn?: PinMode } = {}): Fl
   useEffect(() => {
     if (!open) return;
     const onKey = (e: globalThis.KeyboardEvent) => {
-      if (e.key === "Escape") ctl.dismiss();
+      if (e.key !== "Escape") return;
+      e.stopPropagation(); // 卡片處理了這次 Esc：BattleScreen 的 window 監聽不再取消瞄準
+      ctl.dismiss();
     };
     const onDown = (e: globalThis.PointerEvent) => {
       if (!ctl.pinned) return;

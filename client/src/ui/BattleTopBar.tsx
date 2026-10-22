@@ -2,6 +2,7 @@
 // 三個按鈕，點了在按鈕下方彈出面板（再點或按 Esc 關閉，同時只開一個）；一輪模式的「存檔」與返回鈕也在這裡。
 import type { ReactNode } from "react";
 import type { TopPopup } from "../battle/skillTray";
+import { usePopupMenu } from "./usePopupMenu";
 
 interface Tool {
   id: TopPopup;
@@ -22,6 +23,24 @@ interface Props {
   save: { busy: boolean; note: string | null; onSave(): void } | null;
 }
 
+/** 一個頂端按鈕＋它的面板；Esc、點外面關閉與「同時只開一張」由 `usePopupMenu` 負責。 */
+function TopTool({ tool: t, isOpen, onToggle }: { tool: Tool; isOpen: boolean; onToggle(): void }) {
+  const menu = usePopupMenu({ open: isOpen, setOpen: (v) => v !== isOpen && onToggle() });
+  return (
+    <div className="top-tool" ref={menu.rootRef}>
+      <button type="button" className={isOpen ? "selected" : ""} aria-expanded={isOpen} aria-haspopup="dialog" onClick={onToggle}>
+        {t.label}
+        {t.badge !== undefined && t.badge !== "" && <span className="top-tool-badge">{t.badge}</span>}
+      </button>
+      {isOpen && (
+        <div className="top-popup popup-menu" role="dialog" aria-label={t.label}>
+          {t.content}
+        </div>
+      )}
+    </div>
+  );
+}
+
 export function BattleTopBar({ turnBar, tools, open, onToggle, exit, save }: Props) {
   return (
     <header className="battle-top">
@@ -36,23 +55,7 @@ export function BattleTopBar({ turnBar, tools, open, onToggle, exit, save }: Pro
           </>
         )}
         {tools.map((t) => (
-          <span key={t.id} className="top-tool">
-            <button
-              type="button"
-              className={open === t.id ? "selected" : ""}
-              aria-expanded={open === t.id}
-              aria-haspopup="dialog"
-              onClick={() => onToggle(t.id)}
-            >
-              {t.label}
-              {t.badge !== undefined && t.badge !== "" && <span className="top-tool-badge">{t.badge}</span>}
-            </button>
-            {open === t.id && (
-              <div className="top-popup" role="dialog" aria-label={t.label}>
-                {t.content}
-              </div>
-            )}
-          </span>
+          <TopTool key={t.id} tool={t} isOpen={open === t.id} onToggle={() => onToggle(t.id)} />
         ))}
         {exit !== null && (
           <button type="button" className="battle-leave" onClick={exit.onExit}>
