@@ -72,6 +72,19 @@ export interface BadgeSource {
   charge?: number | null | undefined;
 }
 
+/**
+ * 召喚物徽章（剩餘輪數或「圖」）的位置（相對格子中心、單位為格寬 T；Phase 3-33h2）：右下、血條上方。
+ * 帶定時炸彈的召喚物，炸彈徽章優先，輪數徽章往左移 16px。
+ */
+export const SUMMON_BADGE_AT = { x: 0.36, y: 0.14 };
+export const SUMMON_BADGE_BOMB_SHIFT_PX = -16;
+export const SUMMON_BADGE_RADIUS = 7;
+export const SUMMON_BADGE_FONT = 10;
+
+export function summonBadgeOffset(u: { bomb: number | null }, tile: number): { x: number; y: number } {
+  return { x: SUMMON_BADGE_AT.x * tile + (u.bomb !== null ? SUMMON_BADGE_BOMB_SHIFT_PX : 0), y: SUMMON_BADGE_AT.y * tile };
+}
+
 /** 一個單位身上要畫的狀態徽章：定時炸彈（右下）、蓄力（左下）。 */
 export function statusBadges(u: BadgeSource): StatusBadge[] {
   const out: StatusBadge[] = [];

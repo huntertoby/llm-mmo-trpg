@@ -119,8 +119,6 @@ function eyes(ctx: Ctx, side: Side, y: number, c = "#ffffff", gap = 3): void {
 // ---- 漂浮靈：水滴身體＋元素邊緣＋粒子；底下只有小影子 ----
 function spirit(ctx: Ctx, s: ResolvedLook, side: Side): void {
   const c = (s.element !== undefined ? KEYWORD_COLOR[s.element] : undefined) ?? "#c8ccd4";
-  shadow(ctx, 8, 3, -1, 0.25);
-  if (s.trait === "puddle") fill(ctx, "rgba(74,168,255,0.45)", () => ctx.ellipse(0, -1, 13, 4, 0, 0, TAU));
   ctx.save();
   ctx.translate(0, -8);
   const g = ctx.createRadialGradient(0, -14, 2, 0, -14, 18);
@@ -186,7 +184,6 @@ function spirit(ctx: Ctx, s: ResolvedLook, side: Side): void {
 
 // ---- 構造體：石像、爆裂傀儡、土牆 ----
 function constructWall(ctx: Ctx): void {
-  shadow(ctx, 15, 4);
   fill(ctx, "#6e5a40", () => ctx.roundRect(-15, -24, 30, 23, 2));
   fill(ctx, "#8c7350", () => ctx.roundRect(-15, -26, 30, 6, 2));
   ctx.strokeStyle = "#4a3a28";
@@ -200,7 +197,6 @@ function constructWall(ctx: Ctx): void {
 }
 
 function constructBomb(ctx: Ctx, c: string, side: Side): void {
-  shadow(ctx, 9);
   for (const sx of [-1, 1]) fill(ctx, "#5a4a3a", () => ctx.roundRect(sx * 4 - 2, -6, 4, 6, 1));
   fill(ctx, "#6a5a4a", () => ctx.arc(0, -15, 10, 0, TAU));
   ctx.strokeStyle = c;
@@ -229,7 +225,6 @@ function constructBomb(ctx: Ctx, c: string, side: Side): void {
 }
 
 function constructGolem(ctx: Ctx, c: string, side: Side): void {
-  shadow(ctx, 13);
   const st = "#9a968c";
   const sd = "#6c685f";
   for (const sx of [-1, 1]) fill(ctx, sd, () => ctx.roundRect(sx * 6 - 3.5, -9, 7, 9, 1.5));
@@ -259,7 +254,6 @@ function construct(ctx: Ctx, s: ResolvedLook, side: Side): void {
 
 // ---- 野獸（側面骨架；朝南北時沿用東西的側面，朝西左右鏡像）----
 function bird(ctx: Ctx, side: Side): void {
-  shadow(ctx, 7, 2.5, -1, 0.22); // 飛行：影子留在地上、身體抬高 22
   ctx.translate(0, -22);
   const c = "#8a6a48";
   const d = "#5e4430";
@@ -293,7 +287,6 @@ function bird(ctx: Ctx, side: Side): void {
 }
 
 function wolf(ctx: Ctx, side: Side): void {
-  shadow(ctx, 15, 4);
   const c = "#7a7a82";
   const d = "#55555c";
   for (const x of [-9, -5, 6, 10]) fill(ctx, x < 0 ? d : c, () => ctx.roundRect(x - 1.6, -10, 3.2, 10, 1.2));
@@ -359,7 +352,6 @@ function plant(ctx: Ctx): void {
 // ---- 圖騰：柱子＋頂端符號 ----
 function totem(ctx: Ctx, s: ResolvedLook, side: Side): void {
   const c = (s.element !== undefined ? KEYWORD_COLOR[s.element] : undefined) ?? "#ffffff";
-  shadow(ctx, 8);
   if (s.trait === "aura") {
     ctx.strokeStyle = `${c}aa`;
     ctx.lineWidth = 1.4;
@@ -418,9 +410,35 @@ function totem(ctx: Ctx, s: ResolvedLook, side: Side): void {
   }
 }
 
+/** 地面影子的橢圓參數 `[rx, ry, 透明度]`；人形與植物（自己貼地）沒有。飛行的鷹隼影子留在地上、身體抬高。 */
+function groundShadow(look: ResolvedLook): readonly [number, number, number] | null {
+  switch (look.body) {
+    case "spirit":
+      return [8, 3, 0.25];
+    case "construct":
+      return look.variant === "wall" ? [15, 4, 0.3] : look.variant === "bomb" ? [9, 3.15, 0.3] : [13, 4.55, 0.3];
+    case "beast":
+      return look.variant === "bird" ? [7, 2.5, 0.22] : [15, 4, 0.3];
+    case "totem":
+      return [8, 2.8, 0.3];
+    default:
+      return null;
+  }
+}
+
+/**
+ * 地面影子與水精的水窪（Phase 3-33h2）：畫在**不加外框**的那一層（透明度 0.22～0.3、不描邊），
+ * 才不會被 8 方向深色外框描成一塊實心黑橢圓。腳底中心為原點。
+ */
+export function drawSummonGround(ctx: Ctx, look: ResolvedLook): void {
+  const sh = groundShadow(look);
+  if (sh !== null) shadow(ctx, sh[0], sh[1], -1, sh[2]);
+  if (look.body === "spirit" && look.trait === "puddle") fill(ctx, "rgba(74,168,255,0.45)", () => ctx.ellipse(0, -1, 13, 4, 0, 0, TAU));
+}
+
 /**
  * 把「非人形」體型畫到 `ctx`（腳底中心為原點，往上是負；未套大小與外框）。
- * 人形請用 `humanoidSpec` ＋ 紙娃娃；對人形呼叫時什麼都不畫。
+ * 人形請用 `humanoidSpec` ＋ 紙娃娃；對人形呼叫時什麼都不畫。**不含地面影子**（見 `drawSummonGround`）。
  */
 export function drawSummonBody(ctx: Ctx, look: ResolvedLook, facing: Facing): void {
   const side = sideOf(facing);
@@ -543,6 +561,12 @@ function bodyCanvas(look: ResolvedLook, facing: Facing, dpr: number): HTMLCanvas
   sc.fillStyle = INK;
   sc.fillRect(0, 0, sil.width, sil.height);
   const k = 1.3 * size * dpr;
+  ctx.save();
+  ctx.scale(dpr, dpr);
+  ctx.translate(DOLL_W / 2, DOLL_FOOT_Y);
+  ctx.scale(size, size);
+  drawSummonGround(ctx, look); // 影子在外框那層之外：透明、不描邊
+  ctx.restore();
   ctx.globalAlpha = look.body === "plant" ? 0.9 : 1;
   for (const [ox, oy] of [[-1, 0], [1, 0], [0, -1], [0, 1], [-1, -1], [1, -1], [-1, 1], [1, 1]] as const) ctx.drawImage(sil, ox * k, oy * k);
   ctx.drawImage(off, 0, 0);

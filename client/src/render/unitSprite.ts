@@ -13,7 +13,7 @@ import { label } from "./labels";
 import { DOLL_FOOT_Y, DOLL_H, DOLL_W } from "./paperdoll";
 import { statusTile, tileCanvas } from "./skillIcon";
 import { hasNoRing, humanoidSpec, resolveSummonLook, type ResolvedLook } from "./summonArt";
-import { downedLook, infusedBadge, pulseAlpha, statusBadges, type DownedLook, type InfusedBadge, type StatusBadge } from "./unitLook";
+import { SUMMON_BADGE_FONT, SUMMON_BADGE_RADIUS, downedLook, infusedBadge, pulseAlpha, statusBadges, summonBadgeOffset, type DownedLook, type InfusedBadge, type StatusBadge } from "./unitLook";
 
 const T = TILE_SIZE;
 
@@ -153,13 +153,14 @@ function doll(art: ArtTextures, u: UnitDraw, look: DownedLook, feet: number, r: 
 }
 
 function summonBadge(u: UnitDraw): Container {
-  // 右上角小徽章：圖騰標「圖」，其他標剩餘輪數
+  // 右下角小徽章（血條上方，不擋漂浮靈的上緣）：圖騰標「圖」，其他標剩餘輪數；撞到炸彈徽章時往左 16px
   const c = new Container();
   const badgeText = u.totem ? "圖" : String(u.remaining ?? "");
-  const badge = new Graphics().circle(T * 0.3, -T * 0.3, 9).fill({ color: 0x000000, alpha: 0.75 }).stroke({ width: 1, color: HIGHLIGHT.summon });
-  const badgeLabel = label(badgeText, 12, HIGHLIGHT.summon, true);
+  const at = summonBadgeOffset(u, T);
+  const badge = new Graphics().circle(at.x, at.y, SUMMON_BADGE_RADIUS).fill({ color: 0x000000, alpha: 0.75 }).stroke({ width: 1, color: HIGHLIGHT.summon });
+  const badgeLabel = label(badgeText, SUMMON_BADGE_FONT, HIGHLIGHT.summon, true);
   badgeLabel.anchor.set(0.5);
-  badgeLabel.position.set(T * 0.3, -T * 0.3);
+  badgeLabel.position.set(at.x, at.y);
   c.addChild(badge, badgeLabel);
   return c;
 }
