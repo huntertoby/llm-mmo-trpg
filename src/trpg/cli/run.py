@@ -275,7 +275,8 @@ def _attrs_text(run: RunState) -> str:
 
 def _skill_name(library: ContentLibrary, run: RunState, skill_id: str) -> str:
     skill = skill_defs(library, run, [skill_id])[0]
-    return f"{skill.name_zh}（{skill_id}）"
+    level = run.skill_levels.get(skill_id, 1)
+    return f"{skill.name_zh}（{skill_id}）" + (f" Lv.{level}" if level > 1 else "")
 
 
 def _resources(library: ContentLibrary, run: RunState) -> str:
@@ -307,6 +308,10 @@ def _print_summary(library: ContentLibrary, run: RunState, out: TextIO) -> None:
     _print_header(library, run, out)
     print(f"  {_resources(library, run)}；目前：{_NODE_TEXT[run.node.kind]}", file=out)
     print("  技能：" + "、".join(_skill_name(library, run, s) for s in run.hero.skills), file=out)
+    if run.bench:
+        print("  備用：" + "、".join(_skill_name(library, run, s) for s in run.bench), file=out)
+    if run.skill_points:
+        print(f"  未花的技能點：{run.skill_points}", file=out)
     for plan in run.plan:
         enemies = "、".join(library.unit(t).name_zh for t in plan.enemies)
         mark = "Boss " if plan.boss else ""
@@ -337,8 +342,15 @@ def _print_node(library: ContentLibrary, before: RunState, after: RunState, out:
             for a in Attribute
             if after.hero.attributes[a] != before.hero.attributes[a]
         ]
+        raised = [
+            f"{_skill_name(library, after, s)}"
+            for s in sorted(after.skill_levels)
+            if after.skill_levels[s] != before.skill_levels.get(s, 1)
+        ]
+        spent = f"；技能點升級：{'、'.join(raised)}" if raised else ""
         print(
-            f"    升級 Lv{node.level}：{' '.join(gained)}；{_skill_change(library, before, after)}",
+            f"    升級 Lv{node.level}：{' '.join(gained)}；"
+            f"{_skill_change(library, before, after)}{spent}",
             file=out,
         )
     elif isinstance(node, CampfireNode) and isinstance(after.node, CampfireNode):

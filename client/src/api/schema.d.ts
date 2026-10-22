@@ -1909,6 +1909,17 @@ export interface components {
             start_keywords: components["schemas"]["KeywordRef"][];
             /** Dev Pack */
             dev_pack?: string | null;
+            /**
+             * Skill Points
+             * @default 0
+             */
+            skill_points: number;
+            skill_growth?: components["schemas"]["SkillGrowthOut"] | null;
+            /**
+             * Bench
+             * @default []
+             */
+            bench: components["schemas"]["SkillCard"][];
         };
         /**
          * HistoryStepOut
@@ -2117,11 +2128,29 @@ export interface components {
             pick?: number | null;
             /** Replace */
             replace?: string | null;
+            /** Levels */
+            levels?: {
+                [key: string]: number;
+            };
         };
         /** LoadRunRequest */
         LoadRunRequest: {
             /** Run Id */
             run_id: string;
+        };
+        /**
+         * LoadoutChoice
+         * @description 營火：換裝（Phase 3-26a）——``skills`` 是新的裝備清單（必須是目前裝備與備用技能的子集，符合
+         *     欄位上限）；沒裝上的進備用，技能等級保留。不推進節點。
+         */
+        LoadoutChoice: {
+            /**
+             * @description discriminator enum property added by openapi-typescript
+             * @enum {string}
+             */
+            kind: "loadout";
+            /** Skills */
+            skills: string[];
         };
         /** MapSummary */
         MapSummary: {
@@ -2621,6 +2650,18 @@ export interface components {
             kind: "reroll";
         };
         /**
+         * RespecChoice
+         * @description 營火：免費重配（Phase 3-26a）——全部技能退回 1 級，花掉的點數退回，之後再用 ``spend`` 重新
+         *     分配。不推進節點。
+         */
+        RespecChoice: {
+            /**
+             * @description discriminator enum property added by openapi-typescript
+             * @enum {string}
+             */
+            kind: "respec";
+        };
+        /**
          * RetreatTo
          * @description 撤往指定格子。
          */
@@ -2916,6 +2957,7 @@ export interface components {
              *     }
              */
             keywords: components["schemas"]["SkillCardKeywords"];
+            growth?: components["schemas"]["SkillLevelInfo"] | null;
         };
         /**
          * SkillCardKeywords
@@ -2933,6 +2975,22 @@ export interface components {
              * @default []
              */
             uses: components["schemas"]["KeywordRef"][];
+        };
+        /**
+         * SkillGrowthOut
+         * @description 技能成長的規則（Phase 3-26a，``content/skill_growth.yaml``）：前端不寫死數值。
+         */
+        SkillGrowthOut: {
+            /** Max Level */
+            max_level: number;
+            /** Upgrade Cost */
+            upgrade_cost: number;
+            /** Points Per Level */
+            points_per_level: number;
+            /** Trait Level */
+            trait_level: number;
+            /** Evolve Level */
+            evolve_level: number;
         };
         /**
          * SkillIcon
@@ -2974,6 +3032,32 @@ export interface components {
              */
             partial: boolean;
         };
+        /**
+         * SkillLevelInfo
+         * @description 一個技能在某個等級的顯示資料。只有主動技能有（其他技能的卡片 ``growth`` 為 ``None``）。
+         */
+        SkillLevelInfo: {
+            /** Level */
+            level: number;
+            /** Max Level */
+            max_level: number;
+            /** Bonus Permille */
+            bonus_permille: number;
+            /** Current Text */
+            current_text: string;
+            /** Next Level */
+            next_level: number | null;
+            /** Next Text */
+            next_text: string | null;
+            /** Trait */
+            trait: ("area" | "cooldown") | null;
+            /** Trait Text */
+            trait_text: string;
+            /** Trait Active */
+            trait_active: boolean;
+            /** Cost */
+            cost: number;
+        };
         /** @enum {string} */
         SkillRarity: "common" | "rare" | "epic" | "legendary";
         /**
@@ -2988,6 +3072,22 @@ export interface components {
         };
         /** @enum {string} */
         SlotType: "weapon" | "offhand" | "head" | "body" | "hands" | "feet" | "neck" | "ring";
+        /**
+         * SpendChoice
+         * @description 花技能點升級（Phase 3-26a）：``levels`` 是技能 ID → 升到的等級（只能升、不能降；每升 1 級花
+         *     ``skill_growth.upgrade_cost`` 點）。升級、營火與下一場戰鬥之前都可以送；不推進節點。
+         */
+        SpendChoice: {
+            /**
+             * @description discriminator enum property added by openapi-typescript
+             * @enum {string}
+             */
+            kind: "spend";
+            /** Levels */
+            levels?: {
+                [key: string]: number;
+            };
+        };
         /**
          * StartKeywordOption
          * @description 一個關鍵字的起始技能預覽：``skill`` 為 ``None`` 表示這把武器湊不到（不可選）。已選的關鍵字
@@ -3372,6 +3472,13 @@ export interface components {
             tags: string[];
             /** Skills */
             skills: string[];
+            /**
+             * Skill Levels
+             * @default {}
+             */
+            skill_levels: {
+                [key: string]: number;
+            };
             /** Statuses */
             statuses: components["schemas"]["StatusView"][];
             /** Stacks */
@@ -4368,7 +4475,7 @@ export interface operations {
         };
         requestBody: {
             content: {
-                "application/json": components["schemas"]["LevelUpChoice"] | components["schemas"]["RerollChoice"] | components["schemas"]["PickChoice"] | components["schemas"]["LeaveChoice"];
+                "application/json": components["schemas"]["LevelUpChoice"] | components["schemas"]["RerollChoice"] | components["schemas"]["PickChoice"] | components["schemas"]["LeaveChoice"] | components["schemas"]["SpendChoice"] | components["schemas"]["RespecChoice"] | components["schemas"]["LoadoutChoice"];
             };
         };
         responses: {

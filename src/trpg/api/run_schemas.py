@@ -28,6 +28,7 @@ __all__ = [
     "RunRules",
     "SaveOut",
     "SaveSummary",
+    "SkillGrowthOut",
     "StartKeywordOption",
     "StartOptions",
     "StartPreview",
@@ -137,6 +138,16 @@ class RunRules(_ApiModel):
     """每點體質的最大 HP（``core.yaml``；配點預覽用）。"""
 
 
+class SkillGrowthOut(_ApiModel):
+    """技能成長的規則（Phase 3-26a，``content/skill_growth.yaml``）：前端不寫死數值。"""
+
+    max_level: int
+    upgrade_cost: int
+    points_per_level: int
+    trait_level: int
+    evolve_level: int
+
+
 class HeroOut(_ApiModel):
     build_id: str
     name_zh: str
@@ -167,6 +178,11 @@ class HeroOut(_ApiModel):
     """開局選的關鍵字（Phase 3-24b2；以 build 開局時為空）。"""
     dev_pack: str | None = None
     """開發者起始包 ID（Phase 3-24b2，開發用）。"""
+    skill_points: int = 0
+    """還沒花的技能點（Phase 3-26a）。"""
+    skill_growth: SkillGrowthOut | None = None
+    bench: tuple[SkillCard, ...] = ()
+    """備用技能（Phase 3-26a；卸下的技能，等級保留，卡片的 ``growth`` 帶實際等級）。"""
 
 
 class BattlePlanOut(_ApiModel):

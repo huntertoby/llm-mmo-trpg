@@ -10,10 +10,12 @@ from trpg.api.run_schemas import (
     OfferTagOut,
     RunResponse,
     SaveSummary,
+    SkillGrowthOut,
 )
 from trpg.api.runs import RunSession
 from trpg.content.library import ContentLibrary
 from trpg.content.skills import SkillDef
+from trpg.narrative.skill_levels import skill_level_info
 from trpg.narrative.skills import KeywordRef, SkillCard, skill_card
 from trpg.roguelite import RunSave, RunState
 from trpg.roguelite.offers import skill_defs
@@ -56,7 +58,11 @@ def _card(library: ContentLibrary, run: RunState, skill: SkillDef) -> SkillCard:
         if skill.mastery is None
         else all(attrs[skill.scaling_attr] >= v for v in attrs.values())
     )
-    return skill_card(library, skill, mastery_active=mastery)
+    card = skill_card(library, skill, mastery_active=mastery)
+    # 技能等級（Phase 3-26a）：卡片帶這一輪實際的等級與下一級效果
+    return card.model_copy(
+        update={"growth": skill_level_info(library, skill, run.skill_levels.get(skill.id, 1))}
+    )
 
 
 def _offer(library: ContentLibrary, run: RunState, offer: SkillOffer | None) -> OfferOut | None:
@@ -105,6 +111,7 @@ def _node(library: ContentLibrary, run: RunState) -> NodeOut:
 
 def _hero(library: ContentLibrary, run: RunState) -> HeroOut:
     thresholds = library.roguelite.level_thresholds
+    growth = library.ruleset.skill_growth
     weapon = library.weapons.get(run.hero.weapon)
     return HeroOut(
         build_id=run.build_id or "",
@@ -128,6 +135,15 @@ def _hero(library: ContentLibrary, run: RunState) -> HeroOut:
         skills=tuple(_card(library, run, s) for s in skill_defs(library, run, run.hero.skills)),
         start_keywords=() if run.start is None else keyword_refs(library, run.start.keywords),
         dev_pack=None if run.start is None else run.start.dev_pack,
+        skill_points=run.skill_points,
+        skill_growth=SkillGrowthOut(
+            max_level=growth.max_level,
+            upgrade_cost=growth.upgrade_cost,
+            points_per_level=growth.points_per_level,
+            trait_level=growth.trait_level,
+            evolve_level=growth.evolve_level,
+        ),
+        bench=tuple(_card(library, run, s) for s in skill_defs(library, run, run.bench)),
     )
 
 

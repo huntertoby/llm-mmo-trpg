@@ -249,6 +249,8 @@ class UnitView(_ViewModel):
     tags: tuple[str, ...]
     skills: tuple[str, ...]
     """裝備的技能 ID；只有自己陣營的單位會列出（其他陣營的單位為空，避免洩漏陷阱技能）。"""
+    skill_levels: dict[str, int] = {}
+    """技能等級（Phase 3-26a；只列出 2 級以上的，技能列顯示「Lv.N」；只有自己陣營的單位會列出）。"""
     statuses: tuple[StatusView, ...]
     stacks: dict[str, int]
     cooldowns: dict[str, int]
@@ -585,6 +587,7 @@ def _unit_view(state: BattleState, unit: UnitState, team: Team) -> UnitView:
         magazine=unit.weapon.magazine,
         tags=unit.tags,
         skills=unit.skills if unit.team is team else (),
+        skill_levels=dict(sorted(unit.skill_levels.items())) if unit.team is team else {},
         statuses=tuple(_status_view(state, unit, s) for s in unit.statuses),
         stacks=dict(sorted(unit.stacks.items())),
         cooldowns=_visible_cooldowns(state, unit, team),

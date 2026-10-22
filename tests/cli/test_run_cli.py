@@ -151,6 +151,17 @@ def test_run_auto_without_a_start_draws_weapon_and_keywords(
     assert out.splitlines()[-1].startswith("結果：")
 
 
+@pytest.mark.parametrize("seed", [1, 2])
+def test_run_auto_spends_skill_points_and_shows_levels(
+    seed: int, capsys: pytest.CaptureFixture[str]
+) -> None:
+    """Phase 3-26a：``trpg run auto`` 升級時花技能點，進度與存檔列出技能等級。"""
+    code, out, _ = _run(["run", "auto", "--seed", str(seed)], capsys)
+    assert code == 0
+    assert "技能點升級：" in out and " Lv." in out
+    assert out.splitlines()[-1].startswith("結果：")
+
+
 def test_run_auto_with_a_dev_pack(capsys: pytest.CaptureFixture[str]) -> None:
     code, out, _ = _run(["run", "auto", "--seed", "1", "--dev-pack", "dev_tidestorm"], capsys)
     assert code == 0
