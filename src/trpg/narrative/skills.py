@@ -806,6 +806,14 @@ def _shape_to_text(library: ContentLibrary, target: str) -> str:
     return f"{names}形狀的技能轉為{shapes[target].name_zh}（效果原語不支援新形狀的技能不轉）"
 
 
+def _damage_text(rule: ModifierSpec) -> str:
+    amount = rule.change.damage_permille
+    assert amount is not None
+    if rule.empty_slots_cap is None:
+        return f"傷害 {amount / 10:+g}%"
+    return f"主動技能欄每空 1 格，傷害 {amount / 10:+g}%（最多 {rule.empty_slots_cap} 格）"
+
+
 def _change_text(library: ContentLibrary, skill: SkillDef, rule: ModifierSpec) -> str:
     change = rule.change
     kind = change.kind
@@ -813,7 +821,7 @@ def _change_text(library: ContentLibrary, skill: SkillDef, rule: ModifierSpec) -
     if simple is not None:
         return simple.format(value=getattr(change, kind))
     if change.damage_permille is not None:
-        return f"傷害 {change.damage_permille / 10:+g}%"
+        return _damage_text(rule)
     if change.heal_permille is not None:
         return f"你的治療量 {change.heal_permille / 10:+g}%"
     if change.summon_hp_permille is not None:

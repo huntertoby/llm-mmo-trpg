@@ -160,6 +160,9 @@ class ModifierBudget(ContentModel):
     on_hit_rune_permille: int = Field(default=1000, ge=1, le=1000)
     """命中後效果裡的 ``inscribe``、``detonate_runes``（Phase 3-31）的點數再乘上的比例：符文單獨
     沒有效果、要先搭配另一個讀取者，且每回合只有 1 次（初值，未經模擬）。"""
+    empty_slots_permille: int = Field(default=1000, ge=1, le=1000)
+    """依空欄位數加傷的規則（``empty_slots_cap``，Phase 3-32a 普攻精通）以「滿格」估算的點數再乘上
+    的比例：技能欄空著本身就是代價（少帶技能），所以打折（初值，未經模擬）。"""
     points_milli: ModifierPoints
 
     @model_validator(mode="after")

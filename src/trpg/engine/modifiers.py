@@ -60,6 +60,7 @@ __all__ = [
     "displace_distance",
     "displace_split",
     "effective_tags",
+    "empty_active_slots",
     "grants_pierce",
     "heal_permille",
     "hit_bonus",
@@ -235,6 +236,24 @@ def hit_bonus(state: BattleState, unit: UnitState, use: Use, subject: Subject) -
     return _sum_for(state, unit, use, "hit_bonus", subject) + gear_hit_bonus(state, unit, subject)
 
 
+def empty_active_slots(state: BattleState, unit: UnitState) -> int:
+    """主動技能欄的空格數（Phase 3-32a，普攻精通）：``core.skill_slots.active`` 減去單位裝備的
+    主動技能數（裝備授予的常駐技能、暫時獲得的技能不算；下限 0）。結算當下由技能欄推算，不存
+    狀態。"""
+    rules = state.ruleset
+    used = sum(1 for skill_id in unit.skills if rules.skill_def(skill_id).kind == "active")
+    return max(0, rules.core.skill_slots.active - used)
+
+
+def _rule_amount(state: BattleState, unit: UnitState, active: ActiveRule, change: str) -> int:
+    """規則的改變量；帶 ``empty_slots_cap`` 的傷害加成依空格數（最多 cap 格）乘上去。"""
+    amount: int = getattr(active.rule.change, change)
+    cap = active.rule.empty_slots_cap
+    if cap is None:
+        return amount
+    return amount * min(cap, empty_active_slots(state, unit))
+
+
 def _split_for(
     state: BattleState, unit: UnitState, use: Use, change: str, subject: Subject
 ) -> tuple[int, int]:
@@ -244,7 +263,7 @@ def _split_for(
         if rule_limit_reached(unit, active):
             continue
         if condition_met(state, unit, active.rule.condition, subject):
-            amount = getattr(active.rule.change, change)
+            amount = _rule_amount(state, unit, active, change)
             if amount > 0:
                 gain += amount
             else:

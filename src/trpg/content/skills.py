@@ -1713,11 +1713,17 @@ class ModifierSpec(ContentModel):
     per_turn_limit: Literal[1] | None = None
     """每回合最多生效幾次（Phase 3-31；只能是 1）。次數存在持有者的戰鬥狀態內（自己回合開始時
     清除）；只有 ``damage_permille``（且只套用在普攻）與 ``on_hit_effects`` 可以填。"""
+    empty_slots_cap: int | None = Field(default=None, ge=1, le=6)
+    """傷害加成依空欄位數計算（Phase 3-32a，普攻精通）：``damage_permille`` 變成「主動技能欄每空
+    1 格加這麼多‰」，最多算這麼多格；空格數在每次普攻結算當下由引擎從單位裝備的主動技能數量算出
+    （``core.skill_slots.active`` 減去裝備的主動技能數）。只能搭配 ``damage_permille`` 且只套用在
+    普攻（``applies_to.actions``），不可與 ``per_turn_limit`` 並用。"""
 
     @model_validator(mode="after")
     def _check(self) -> ModifierSpec:
         kind = self.change.kind
         self._check_per_turn(kind)
+        self._check_empty_slots(kind)
         allowed = CHANGE_TARGETS[kind]
         extra = sorted(self.applies_to.keys() - allowed)
         if extra:
@@ -1746,6 +1752,17 @@ class ModifierSpec(ContentModel):
             target.skill_tags or target.all_attacks or target.all_skills
         ):
             raise ValueError("傷害加成的 per_turn_limit 只能套用在普攻（applies_to.actions）")
+
+    def _check_empty_slots(self, kind: str) -> None:
+        if self.empty_slots_cap is None:
+            return
+        target = self.applies_to
+        if kind != "damage_permille" or (self.change.damage_permille or 0) <= 0:
+            raise ValueError("empty_slots_cap 只能搭配正的 change.damage_permille")
+        if target.skill_tags or target.all_attacks or target.all_skills:
+            raise ValueError("empty_slots_cap 只能套用在普攻（applies_to.actions）")
+        if self.per_turn_limit is not None:
+            raise ValueError("empty_slots_cap 不可與 per_turn_limit 並用")
 
 
 # ---------------------------------------------------------------------------

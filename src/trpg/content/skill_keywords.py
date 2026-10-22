@@ -75,8 +75,9 @@ class KeywordRule(ContentModel):
     tag: str | None = Field(default=None, pattern=ID_PATTERN)
     skill: str | None = Field(default=None, pattern=ID_PATTERN)
     affects: Literal["self", "allies", "enemies", "all", "tiles"] | None = None
-    applies_to: Literal["all_attacks", "all_skills"] | None = None
-    """``change`` 專用：修正規則的 ``applies_to`` 開了這個旗標（不看標籤）。"""
+    applies_to: Literal["all_attacks", "all_skills", "actions"] | None = None
+    """``change`` 專用：修正規則的 ``applies_to`` 開了這個旗標（不看標籤）；``actions`` ＝ 套用
+    在基本動作（普攻等，Phase 3-32a）。"""
     unconditional: Literal[True] | None = None
     """``change`` 專用：修正規則沒有條件（有條件的規則另有自己的關鍵字，例如對燃燒中目標）。"""
     weapon_req: Literal["melee", "ranged", "focus", "any"] | None = None

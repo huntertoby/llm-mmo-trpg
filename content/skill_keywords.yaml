@@ -138,6 +138,7 @@ keywords:
       - {effect: copy_skill, grade: provisional}   # 暫定
       - {change: area_delta, grade: provisional}   # 暫定：吼叫（嘲諷）範圍 +1
       - {change: damage_permille, applies_to: all_attacks, unconditional: true, grade: provisional}   # 暫定：無條件的全攻擊傷害修正
+      - {change: damage_permille, applies_to: actions, unconditional: true, grade: provisional}   # 暫定：普攻的無條件傷害修正（普攻精通，3-32a）
     uses:
       - {condition: target_has_status, status: marked}
       - {effect: detonate_runes}
