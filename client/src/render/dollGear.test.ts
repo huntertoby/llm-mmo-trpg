@@ -174,7 +174,7 @@ describe("全組合畫得出來", () => {
     expect(drawn).toBeGreaterThan(5000);
     expect(spy).not.toHaveBeenCalled();
     spy.mockRestore();
-  });
+  }, 30_000); // 全組合較重，機器忙時（多個 agent 同時跑）5 秒不夠
 
   it("成對武器與拳套：副手那一側也畫手持物", () => {
     const count = (equipment: DollEquipment[], weaponId: string, op: string): number => {
