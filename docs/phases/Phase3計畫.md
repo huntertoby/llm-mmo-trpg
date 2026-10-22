@@ -1497,6 +1497,11 @@ PM 驗收後請使用者試玩一整輪（`docs/專案計畫.md` 第 14 節 🎮
 
 驗收（3-25b）：vitest（型態列表、發亮條件、預覽型態切換）；pytest（視圖欄位、組合器種子 0–49 全過且有產生變奏、進化模板產生合法變奏、工坊驗證）；截圖 `docs/phases/img/3-25b-*.png`（技能卡型態、發亮、預覽）；`check.py` 全過、`pnpm build` 成功。
 
+### 33.2a 3-25b 驗收（2026-10-22）
+
+- PM 合併（無衝突）、`check.py` 全過、`pnpm build` 成功。技能卡列出所有型態、條件成立時按鈕發亮並換生效型態圖示、預覽依目標點顯示型態；工坊可加變奏；組合器低權重產生變奏（種子 0–49 有 2 個）；進化模板 `battle_variant`；射程每 +1 格加 5% 預算，潮汐之矛居高型態回到純射程 +2（三型態 82.1%／95.8%／75.3%）；schema 擋 `zone`／`delayed_damage`／`copy_skill`。浮動卡實測通過。報告 `Phase3-25b報告.md`（截圖 jpg）。
+- 待 PM 決定：#1 組合器變奏機率低、#2 進化模板很少被挑到 → 平衡階段／Phase 4 再調；#3 工坊不支援 `replace_effect` → 接受（進階 YAML）；#4 `time_bomb`、`rule_change`、`grant_skill` 是否也拿到基礎型態 → 結束審查查；#5 居高型態只發亮不換圖示 → 接受；#6 組合器型態名 → Phase 4 由 LLM 命名；#7 合併時重產 → 已處理；#8 工坊預設步驟 → 接受。
+
 ## 34. Phase 3-31｜普攻與符文（玩法 #39；2026-10-22）
 
 > 設計：`docs/design/06-技能.md` 6.25 末段「普攻與符文」、`docs/design/08-裝備.md` 8.24 三條白名單（`affix_attack_rune_read`／`_detonate`／`_inscribe`）；玩法 PM commit 1649eec。使用者原話：「普攻幅文可行性」「兩個方向都做 但2個都是裝備詞條還是被動」「好」。模型 sonnet。排程：**3-25a 合併後**（同樣動修正規則與預算）；可與 3-25b 平行（3-31 不動前端，只在既有元件顯示新文字時例外）。數值都是初值，放 `content/`。
@@ -1510,6 +1515,11 @@ PM 驗收後請使用者試玩一整輪（`docs/專案計畫.md` 第 14 節 🎮
 7. AI：普攻評估納入加傷與引爆傷害（沿用現有估值，不新增權重，除非必要並寫進報告）。
 
 驗收（3-31）：pytest（三種效果各自觸發；每回合只觸發 1 次、下一回合重置；單格引爆只移除目標格符文；刻印 2 輪後消失與 6 格上限；加傷計入 +50% 上限；同件裝備／同被動「刻＋引爆」被擋；詞條擲出與部位；被動過預算；同種子確定）；`--log-json` ＋ `replay` 一致；`LOG_FORMAT` 若需改由 PM 合併時定號；`check.py` 全過。
+
+### 34.1 3-31 驗收（2026-10-22）
+
+- PM 合併（`cli_output_hashes.json`、`skill_icons.json` 與 3-25b 衝突 → 重產）、`check.py` 全過；`ruined_fort` 種子 31 `--log-json` ＋ `replay` 一致。`LOG_FORMAT` 維持 `/47`。修正規則新增 `per_turn_limit`、`detonate_runes` 的 `scope: target_cell`、`on_hit_effects` 允許 `inscribe`／`detonate_runes`；三條詞條 `affix_attack_rune_read`／`_detonate`／`_inscribe`；三招被動識紋、破紋、刃刻（epic）；驗證器擋「刻＋引爆」。實作者的全量 `check.py` 兩次卡在 97%（與其他 agent 同時跑），PM 合併後單獨跑通過。報告 `Phase3-31報告.md`。
+- 待 PM 決定：#1 三招名稱與稀有度 → 請玩法 PM 審；#2 預算旋鈕 `per_turn_limit_uses: 8`、`on_hit_rune_permille: 270` → 平衡階段；#3 詞條版引爆 1d6、元素取符文、#4 `per_turn_limit` 加傷只套普攻、#5 擊殺時不觸發刻印／引爆、#6 三招不進 `builds.yaml`、#7 AI 只補 `has_rune_reader`、#8 `option_params.py` → 接受。
 
 ## 35. Phase 3-32｜普攻流（玩法 #40；拆兩段）
 
@@ -1561,3 +1571,9 @@ PM 驗收後請使用者試玩一整輪（`docs/專案計畫.md` 第 14 節 🎮
 3. 報告寫摘要表與觀察（例如召喚物多快倒、AI 何時召喚），**不調數值、不改規則**；建議寫進「待 PM 決定」。
 
 驗收（3-33a）：pytest（新統計欄位的單元測試、同種子確定）；腳本一條指令可重跑；報告附摘要表；`check.py` 全過。
+
+### 36.1a 3-33a 驗收（2026-10-22）
+
+- PM 合併（無衝突）、`check.py` 全過。統計從現有事件推導（`SummonRecord`、`summon_damage`），一條指令重跑：`uv run python scripts/sim_summons.py --jobs 4`（約 40 秒）。報告 `Phase3-33a報告.md`。
+- **基線（4 包 × 5 圖 × 4 種子）**：喚靈勝率 60%、主角 DPR 7.9、召喚物只占我方傷害 1.4%（每場約 2 點）、每場召喚 0.6 次、平均存活 0.8 輪；鐵壁 50%／5.7、烈焰 55%／8.5、鷹眼 60%／10.2。召喚物幾乎沒有貢獻。
+- 待 PM 決定：#1 喚靈包有一個種子抽不到召喚技 → 3-33b 在 `dev_starters.yaml` 加一個保證帶召喚技的對照包並加大種子數；#2 本表當基線、3-33b 後重跑 → 照做；#3 存活輪數定義、#4 只做腳本不加 CLI → 接受；#5 未跑 Boss 地圖 → 3-33b 驗證 Boss ×2 時一併跑。
