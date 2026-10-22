@@ -622,7 +622,9 @@ def _attack_once(
     if guardian is not None:
         target = guardian  # 替隊友擋攻擊：傷害改作用在守護者身上（不重擲命中）
     use = modifiers.ATTACK
-    bonus_permille = modifiers.damage_permille(state, attacker, use, Subject(target, target.xy))
+    subject = Subject(target, target.xy)
+    bonus_permille = modifiers.damage_permille(state, attacker, use, subject)
+    modifiers.spend_attack_limits(state, attacker, use, subject)  # 每回合 1 次的加傷（3-31）
     multiplier = block_multiplier(ctx, attacker, target) * bonus_permille // PERMILLE
     multiplier = (
         multiplier * range_damage_permille(attacker, manhattan(attacker.xy, target.xy)) // PERMILLE

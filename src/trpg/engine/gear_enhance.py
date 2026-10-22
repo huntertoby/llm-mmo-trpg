@@ -37,9 +37,12 @@ from trpg.content.skills import EffectSpec, SkillDef
 from trpg.content.weapon_params import set_weapon_param
 from trpg.engine.gear import diminished_total
 from trpg.engine.gear_state import GearAffix, GearState
+from trpg.engine.rune_queries import has_own_rune
 from trpg.shared.types import Element
 
 if TYPE_CHECKING:
+    from trpg.engine.modifiers import Use
+    from trpg.engine.skills.conditions import Subject
     from trpg.engine.state import BattleState, UnitState
 
 __all__ = [
@@ -49,8 +52,11 @@ __all__ = [
     "gear_attack_element",
     "gear_keyword_damage_permille",
     "gear_on_hit_statuses",
+    "gear_rune_read_permille",
     "gear_status_duration",
     "geared_weapon",
+    "rune_affixes",
+    "spend_gear_rune_read",
 ]
 
 _PERMILLE = 1000
@@ -108,6 +114,43 @@ def gear_on_hit_statuses(state: BattleState, unit: UnitState) -> list[tuple[str,
         (status, rounds + gear_status_duration(state, unit, None, True, status))
         for status, rounds in _on_hit_entries(unit)
     ]
+
+
+def rune_affixes(unit: UnitState, rune: str) -> list[GearAffix]:
+    """生效中的普攻符文詞條（Phase 3-31；``rune`` 為 ``read``／``detonate``／``inscribe``，
+    依詞條 id 排序）。"""
+    if not unit.gear.affixes:
+        return []
+    found: list[GearAffix] = []
+    for entries in _groups(unit.gear, "attack").values():
+        affix = entries[0].affix
+        assert isinstance(affix, AttackAffix)
+        if affix.rune == rune:
+            found.append(entries[0])
+    return found
+
+
+def _read_ready(state: BattleState, unit: UnitState, subject: Subject) -> list[GearAffix]:
+    """可以生效的讀取符文詞條：本回合還沒用過，且目標格上有自己的符文。"""
+    entries = rune_affixes(unit, "read")
+    if not entries or not has_own_rune(state, unit.id, subject.xy):
+        return []
+    return [e for e in entries if unit.gear_turn_counts.get(e.affix.id, 0) < 1]
+
+
+def gear_rune_read_permille(state: BattleState, unit: UnitState, use: Use, subject: Subject) -> int:
+    """普攻讀取符文的傷害加成（‰，Phase 3-31）：打到站在自己符文上的敵人時 +N‰，每條詞條每回合
+    1 次（用完由 :func:`spend_gear_rune_read` 記錄）。還沒套全身傷害加成上限。"""
+    if use.action != "attack":
+        return 0
+    return sum(e.value or 0 for e in _read_ready(state, unit, subject))
+
+
+def spend_gear_rune_read(state: BattleState, unit: UnitState, subject: Subject) -> None:
+    """記下本回合用掉的讀取符文加傷（與 :func:`gear_rune_read_permille` 同一個 ``subject``）。"""
+    for entry in _read_ready(state, unit, subject):
+        key = entry.affix.id
+        unit.gear_turn_counts[key] = unit.gear_turn_counts.get(key, 0) + 1
 
 
 # ---------------------------------------------------------------------------

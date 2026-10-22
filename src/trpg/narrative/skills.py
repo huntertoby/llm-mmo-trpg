@@ -453,6 +453,11 @@ def _sacrifice_summon(_lib: ContentLibrary, skill: SkillDef, spec: EffectSpec) -
 def _detonate_runes(_lib: ContentLibrary, skill: SkillDef, spec: EffectSpec) -> str:
     assert spec.dice is not None
     element = f"{spec.element.display_name}" if spec.element is not None else "符文元素的"
+    if spec.scope == "target_cell":
+        return (
+            f"引爆被命中目標所在格上你自己的符文（只引爆那 1 格）：移除符文，並對站在上面的單位"
+            f"自動命中，造成 {_dice(spec.dice)}＋{scaling_label(skill)}加成的{element}傷害"
+        )
     return (
         f"引爆影響範圍內你自己的符文：每格移除符文，並對站在上面的單位自動命中，造成"
         f" {_dice(spec.dice)}＋{scaling_label(skill)}加成的{element}傷害"
@@ -842,6 +847,8 @@ def modifier_summary(library: ContentLibrary, skill: SkillDef, rule: ModifierSpe
     text = f"{_targets_text(rule.applies_to)}：{_change_text(library, skill, rule)}"
     if rule.condition is not None:
         text += f"，若{condition_summary(library, rule.condition)}"
+    if rule.per_turn_limit is not None:
+        text += f"（每回合最多 {rule.per_turn_limit} 次）"
     return text
 
 

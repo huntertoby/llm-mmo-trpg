@@ -978,9 +978,18 @@ def _passive_coefficient(skill: SkillDef, library: ContentLibrary) -> tuple[Frac
     return coefficient, f"觸發係數（{definition.id}）"
 
 
+def _rune_on_hit_factor(effect: EffectSpec, library: ContentLibrary) -> Fraction:
+    """命中後效果裡符文原語的點數比例（3-31，``modifier.on_hit_rune_permille``）；其他為 1。"""
+    if effect.type not in ("inscribe", "detonate_runes"):
+        return Fraction(1)
+    return Fraction(library.budget.modifier.on_hit_rune_permille, _PERMILLE)
+
+
 def _modifier_uses(rule: ModifierSpec, budget: ModifierBudget) -> tuple[int, str]:
     """一條修正規則每場的預估使用次數（``applies_to`` 各項加總，上限 ``uses_cap``）與說明。"""
     target, uses = rule.applies_to, budget.uses
+    if rule.per_turn_limit is not None:  # 每回合 1 次（3-31）：以自己的回合數估，不看 uses 表
+        return min(budget.per_turn_limit_uses, budget.uses_cap), "每回合 1 次"
     total = 0
     parts: list[str] = []
     if target.all_attacks:
@@ -1016,7 +1025,10 @@ def _structured_value(
     if change.on_hit_effects is not None:
         carrier = on_hit_carrier(skill, change.on_hit_effects)
         value = sum(
-            (_effect_budget(carrier, i, e, library).points for i, e in enumerate(carrier.effects)),
+            (
+                _effect_budget(carrier, i, e, library).points * _rune_on_hit_factor(e, library)
+                for i, e in enumerate(carrier.effects)
+            ),
             Fraction(0),
         )
         return value, f"命中後 {len(carrier.effects)} 個效果"

@@ -1,0 +1,27 @@
+# 普攻讀取符文——修正型被動（Phase 3-31，06 6.25 普攻與符文；數值為初值，未經模擬）：
+# 你的普攻打到站在你符文上的敵人時，傷害 +15%（每回合最多 1 次；計入全身傷害 +50% 上限）。
+id: skill_rune_sight
+schema_version: 1
+name_zh: 識紋
+tier: 1
+rank: 1
+rarity: epic
+kind: modifier
+skeleton: modifier
+category: spell
+weapon_req: any
+ap_cost: null
+scaling_attr: int
+shape: {type: self}
+effects: []
+modifiers:
+  - applies_to: {actions: [attack]}
+    condition: {type: on_own_rune}
+    change: {damage_permille: 150}
+    per_turn_limit: 1
+condition: null
+tags: [passive, modifier, rune_read]
+narrative:
+  concept: 你的刀鋒認得自己刻下的紋路，落在紋上的一擊格外沉
+  cast_flavor: 刃口掠過符文，紋路亮了一瞬，力道多出一分
+provenance: {origin: builtin, owner_id: null, created_by: null, parents: [], bound: true, tradeable: false}

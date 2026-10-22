@@ -154,6 +154,12 @@ class ModifierBudget(ContentModel):
     的比例：變形只有在目標的站位剛好受益時才有價值（類似命中率之於命中後效果）。"""
     uses: dict[str, int]
     uses_cap: int = Field(ge=1)
+    per_turn_limit_uses: int = Field(default=8, ge=1)
+    """帶 ``per_turn_limit`` 的規則（Phase 3-31）每場的預估使用次數：每個自己的回合最多 1 次，
+    不看 ``uses`` 表（初值，未經模擬）。"""
+    on_hit_rune_permille: int = Field(default=1000, ge=1, le=1000)
+    """命中後效果裡的 ``inscribe``、``detonate_runes``（Phase 3-31）的點數再乘上的比例：符文單獨
+    沒有效果、要先搭配另一個讀取者，且每回合只有 1 次（初值，未經模擬）。"""
     points_milli: ModifierPoints
 
     @model_validator(mode="after")

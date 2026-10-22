@@ -105,6 +105,27 @@ affixes:
     slots: [weapon]
     on_hit_status: marked
     status_duration: 1
+  # --- 4 普攻附加：符文（Phase 3-31，06 6.25 普攻與符文；數值為初值，未經模擬）---
+  - id: affix_attack_rune_read
+    category: attack
+    name_zh: 你的普攻打到站在你符文上的敵人時，傷害 +{n}（每回合 1 次）
+    slots: [weapon, hands, ring]
+    rune: read
+    value: {min: 100, max: 150}
+    value_unit: permille
+  - id: affix_attack_rune_detonate
+    category: attack
+    name_zh: 普攻命中時，引爆目標格上你的符文（每回合 1 次）
+    slots: [weapon, hands]
+    rune: detonate
+    dice: 1d6
+  - id: affix_attack_rune_inscribe
+    category: attack
+    name_zh: 普攻命中時，在目標格刻下雷紋（每回合 1 次，持續 2 輪）
+    slots: [weapon, hands]
+    rune: inscribe
+    rune_element: lightning
+    rune_rounds: 2
 
   # --- 5 武器特性強化（結算在 G2；長槍由 3-24a2 加入）---
   - id: affix_trait_hammer_knockback

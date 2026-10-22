@@ -1,0 +1,28 @@
+# 普攻引爆符文——修正型被動（Phase 3-31，06 6.25 普攻與符文；數值為初值，未經模擬）：
+# 你的普攻命中時，引爆目標所在格上你的符文（只引爆那 1 格），造成一次 1d6 的符文傷害（每回合最多 1 次）。
+id: skill_rune_breaker
+schema_version: 1
+name_zh: 破紋
+tier: 1
+rank: 1
+rarity: epic
+kind: modifier
+skeleton: modifier
+category: spell
+weapon_req: any
+ap_cost: null
+scaling_attr: int
+shape: {type: self}
+effects: []
+modifiers:
+  - applies_to: {actions: [attack]}
+    change:
+      on_hit_effects:
+        - {type: detonate_runes, dice: 1d6, scope: target_cell}
+    per_turn_limit: 1
+condition: null
+tags: [passive, modifier, rune_read]
+narrative:
+  concept: 一擊落下，腳下的紋路隨之炸開
+  cast_flavor: 刃鋒命中的瞬間，符文在對手腳下碎成一圈光
+provenance: {origin: builtin, owner_id: null, created_by: null, parents: [], bound: true, tradeable: false}

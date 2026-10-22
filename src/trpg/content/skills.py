@@ -532,6 +532,7 @@ class PrimitiveParam(ContentModel):
         "scaling",
         "count",
         "landing",
+        "scope",
     ]
     required: bool = False
     min: int | None = None
@@ -918,6 +919,9 @@ class EffectSpec(ContentModel):
     爆炸）。"""
     radius: int | None = Field(default=None, ge=0, le=2)
     """``delayed_damage`` 專用：爆炸半徑（曼哈頓距離；0 只波及目標自己）。"""
+    scope: Literal["target_cell"] | None = None
+    """``detonate_runes`` 專用（Phase 3-31，修正規則 ``on_hit_effects`` 與普攻詞條）：
+    ``target_cell`` 只引爆被命中目標所在的那 1 格上自己的符文。"""
     on_kill: tuple[EffectSpec, ...] | None = None
     """``damage`` 專用（Phase 3D-8b，6.18 F）：這個傷害效果讓敵人倒下時才結算的效果（1–2 個，類型見
     :data:`ON_KILL_TYPES`，對象一律是施放者）；同一個效果讓一個以上的敵人倒下只結算一次。只有技能
@@ -1155,6 +1159,7 @@ INSCRIBE = "inscribe"
 """Phase 3-23 的刻印原語 ID（6.25）：在影響格留下施放者專屬的符文（``element`` 或 ``tag``）。"""
 DETONATE_RUNES = "detonate_runes"
 """Phase 3-23 的消耗型原語 ID（6.25）：引爆影響格內施放者自己的符文，每格對該格單位一次小傷害。"""
+RUNE_BOTH_MESSAGE = "不能同時刻下符文又引爆符文（要靠兩件東西搭配，不是單一被動或單一裝備自己完成）"
 SACRIFICE_SUMMON = "sacrifice_summon"
 """Phase 3-24c 的獻祭召喚物原語 ID（6.27.2）：移除自己的一個召喚物，在它的位置爆炸或治療。"""
 ZONE = "zone"
@@ -1513,8 +1518,14 @@ ON_HIT_PRIMITIVES: tuple[str, ...] = (
     "pull",
     "knock_prone",
     "create_surface",
+    "detonate_runes",
+    "inscribe",
 )
-"""``on_hit_effects`` 可用的原語（作用在被命中的目標或其所在格，自動命中）。"""
+"""``on_hit_effects`` 可用的原語（作用在被命中的目標或其所在格，自動命中）。``detonate_runes``、
+``inscribe``（Phase 3-31 普攻與符文）只作用在目標所在的那 1 格。"""
+
+PER_TURN_LIMIT_CHANGES: frozenset[str] = frozenset({"damage_permille", "on_hit_effects"})
+"""可以帶 ``per_turn_limit`` 的 ``change`` 種類（Phase 3-31）。"""
 
 _MAX_MODIFIERS = 2
 MAX_MODIFIERS = _MAX_MODIFIERS
@@ -1665,6 +1676,22 @@ class ModifierChange(ContentModel):
                     f"change.on_hit_effects[{index}]：推擊與拉扯的距離必須是 1 到 "
                     f"{_MAX_DISPLACE} 格，收到 {effect.distance}"
                 )
+            ModifierChange._check_on_hit_rune(index, effect)
+        types = {e.type for e in effects}
+        if INSCRIBE in types and DETONATE_RUNES in types:
+            raise ValueError(RUNE_BOTH_MESSAGE)
+
+    @staticmethod
+    def _check_on_hit_rune(index: int, effect: EffectSpec) -> None:
+        where = f"change.on_hit_effects[{index}]（{effect.type}）"
+        if effect.type == DETONATE_RUNES and effect.scope != "target_cell":
+            raise ValueError(f"{where}：命中後引爆必須填 scope: target_cell（只引爆目標那 1 格）")
+        if effect.type != DETONATE_RUNES and effect.scope is not None:
+            raise ValueError(f"{where}：只有 detonate_runes 使用 scope")
+        if effect.type == INSCRIBE and (effect.element is None) == (effect.tag is None):
+            raise ValueError(f"{where}：必須恰好填 element 或 tag 其中一個")
+        if effect.type == INSCRIBE and effect.dice is not None:
+            raise ValueError(f"{where}：符文本身沒有效果，不可填 dice")
 
     @property
     def kind(self) -> str:
@@ -1683,10 +1710,14 @@ class ModifierSpec(ContentModel):
     applies_to: ModifierTarget
     condition: ConditionSpec | None = None
     change: ModifierChange
+    per_turn_limit: Literal[1] | None = None
+    """每回合最多生效幾次（Phase 3-31；只能是 1）。次數存在持有者的戰鬥狀態內（自己回合開始時
+    清除）；只有 ``damage_permille``（且只套用在普攻）與 ``on_hit_effects`` 可以填。"""
 
     @model_validator(mode="after")
     def _check(self) -> ModifierSpec:
         kind = self.change.kind
+        self._check_per_turn(kind)
         allowed = CHANGE_TARGETS[kind]
         extra = sorted(self.applies_to.keys() - allowed)
         if extra:
@@ -1703,6 +1734,18 @@ class ModifierSpec(ContentModel):
                 f"change.{kind} 在選目標之前就決定，條件只能是 self_hp_below，收到 {condition.type}"
             )
         return self
+
+    def _check_per_turn(self, kind: str) -> None:
+        if self.per_turn_limit is None:
+            return
+        if kind not in PER_TURN_LIMIT_CHANGES:
+            names = "、".join(sorted(PER_TURN_LIMIT_CHANGES))
+            raise ValueError(f"per_turn_limit 只能用在 {names}，收到 change.{kind}")
+        target = self.applies_to
+        if kind == "damage_permille" and (
+            target.skill_tags or target.all_attacks or target.all_skills
+        ):
+            raise ValueError("傷害加成的 per_turn_limit 只能套用在普攻（applies_to.actions）")
 
 
 # ---------------------------------------------------------------------------
@@ -2369,6 +2412,8 @@ class SkillDef(ContentModel):
                 raise ValueError(f"{where}：必須恰好填 element 或 tag 其中一個")
             if effect.type == INSCRIBE and effect.dice is not None:
                 raise ValueError(f"{where}：符文本身沒有效果，不可填 dice")
+            if effect.scope is not None:
+                raise ValueError(f"{where}：scope 只能用在修正規則的命中後效果")
 
     def _check_sacrifice(self) -> None:
         """獻祭召喚物（Phase 3-24c）：只能用在主動技能，形狀是 ``single``（選自己的一個召喚物），
@@ -2634,6 +2679,14 @@ class SkillDef(ContentModel):
             )
         if self.mastery is not None:
             raise ValueError("修正技能不能有 mastery")
+        rune_types = {
+            e.type
+            for rule in self.modifiers
+            for e in rule.change.on_hit_effects or ()
+            if e.type in (INSCRIBE, DETONATE_RUNES)
+        }
+        if len(rune_types) > 1:
+            raise ValueError(f"modifiers：{RUNE_BOTH_MESSAGE}")
         for rule_index, rule in enumerate(self.modifiers):
             for index, effect in enumerate(rule.change.on_hit_effects or ()):
                 try:
@@ -2975,7 +3028,9 @@ def _condition_problems(where: str, condition: ConditionSpec, refs: _Refs) -> li
     return problems
 
 
-def _effect_problems(skill: SkillDef, index: int, effect: EffectSpec, refs: _Refs) -> list[str]:
+def _effect_problems(
+    skill: SkillDef, index: int, effect: EffectSpec, refs: _Refs, *, on_hit: bool = False
+) -> list[str]:
     where = f"effects[{index}]"
     primitive = refs.primitives.get(effect.type)
     if primitive is None:
@@ -3000,7 +3055,11 @@ def _effect_problems(skill: SkillDef, index: int, effect: EffectSpec, refs: _Ref
         problems.append(f"{where}.affects：{primitive.id} 是對單位的效果，不能用 tiles")
     if affects in primitive.forbid_affects:
         problems.append(f"{where}.affects：{primitive.id} 不能搭配 affects: {affects}")
-    if primitive.allowed_shapes is not None and skill.shape.type not in primitive.allowed_shapes:
+    if (
+        primitive.allowed_shapes is not None
+        and skill.shape.type not in primitive.allowed_shapes
+        and not on_hit  # 命中後效果只作用在目標那 1 格，不看載體技能的形狀
+    ):
         allowed = "、".join(primitive.allowed_shapes)
         problems.append(f"{where}：{primitive.id} 只能搭配形狀 {allowed}，收到 {skill.shape.type}")
     problems += _stack_effect_problems(where, effect, affects, refs)
@@ -3348,7 +3407,8 @@ def _modifier_problems(skill: SkillDef, refs: _Refs) -> list[str]:
         carrier = on_hit_carrier(skill, effects)
         for index, effect in enumerate(effects):
             problems += [
-                f"{where}.change.on_hit_{p}" for p in _effect_problems(carrier, index, effect, refs)
+                f"{where}.change.on_hit_{p}"
+                for p in _effect_problems(carrier, index, effect, refs, on_hit=True)
             ]
     return problems
 

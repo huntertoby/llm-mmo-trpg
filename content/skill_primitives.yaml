@@ -554,6 +554,7 @@ primitives:
     params:
       dice: {type: dice, required: true, description_zh: 每格的傷害骰}
       element: {type: element, description_zh: 傷害元素（省略時取符文的元素）}
+      scope: {type: scope, description_zh: 填 target_cell 只引爆被命中目標所在的那 1 格（只能用在修正規則的命中後效果與普攻詞條；主動技能不可填）}
 
   # --- Phase 3-24c：獻祭召喚物（docs/design/06-技能.md 6.27.2；點數為初值，未經模擬）---
   - id: sacrifice_summon

@@ -83,6 +83,7 @@ PARAM_TEXT: dict[str, str] = {
     "rounds": "倒數輪數",
     "rule": "規則改變",
     "scale": "倍率依據",
+    "scope": "引爆範圍",
     "scaling": "依情況縮放",
     "skill": "技能",
     "speed": "速度（格）",
@@ -121,6 +122,7 @@ _LITERAL_CHOICES: dict[str, tuple[tuple[str, str, str], ...]] = {
         ("remaining_rounds", "剩餘回合", "倍率＝被消耗狀態的剩餘回合"),
         ("stacks", "層數", "倍率＝同時消耗目標身上的層數（另填 stack）"),
     ),
+    "scope": (("target_cell", "目標那 1 格", "只引爆被命中目標所在格上自己的符文"),),
     "anchor": (
         ("tile", "固定在格子", "區域固定在施放時的格子"),
         ("caster", "跟隨施放者", "區域跟著施放者移動"),
