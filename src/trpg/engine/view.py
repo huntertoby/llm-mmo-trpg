@@ -14,7 +14,12 @@ from typing import Literal
 from pydantic import BaseModel, ConfigDict
 
 from trpg.content.battle import ReactionRule
-from trpg.content.equipment import AFFIX_CATEGORY_NUMBER, AFFIX_CATEGORY_ZH, affix_text
+from trpg.content.equipment import (
+    AFFIX_CATEGORY_NUMBER,
+    AFFIX_CATEGORY_ZH,
+    ChargeAffix,
+    affix_text,
+)
 from trpg.content.maps import Objective
 from trpg.content.skills import CHARGING, TIME_BOMB
 from trpg.content.slots import SLOT_ZH
@@ -41,6 +46,7 @@ __all__ = [
     "AffixLineView",
     "AppearanceView",
     "BattleView",
+    "ChargeView",
     "EquipmentSlotView",
     "GrantedSkillView",
     "ObjectView",
@@ -189,6 +195,26 @@ class EquipmentSlotView(_ViewModel):
     appearance: AppearanceView = AppearanceView()
 
 
+class ChargeView(_ViewModel):
+    """裝備上的一條充能詞條（Phase 3G-G3a，唯讀）：層數、啟動需求與目前能不能啟動。
+
+    ``stacks``／``max_stacks``：目前層數與裝備版上限；``cost_stacks``／``cost_ap``：啟動花費；
+    ``needs_target``：啟動要選一個敵方目標（否則作用在自己）；``ready``：層數足夠（AP 與目標
+    另外看 ``legal_actions``）。
+    """
+
+    affix_id: str
+    name_zh: str
+    stack_id: str
+    stack_name_zh: str
+    stacks: int
+    max_stacks: int
+    cost_stacks: int
+    cost_ap: int
+    needs_target: bool
+    ready: bool
+
+
 class UnitView(_ViewModel):
     id: UnitId
     template_id: str
@@ -257,6 +283,8 @@ class UnitView(_ViewModel):
     近戰攻擊者有背刺加成。"""
     equipment: tuple[EquipmentSlotView, ...] = ()
     """裝備摘要（Phase 3G-G1，唯讀；依欄位固定順序，沒有裝備時為空）。"""
+    charges: tuple[ChargeView, ...] = ()
+    """裝備的充能詞條（Phase 3G-G3a，唯讀；依詞條 ID，沒有時為空）：層數與啟動需求。"""
 
 
 class TrapView(_ViewModel):
@@ -498,6 +526,30 @@ def _equipment_view(unit: UnitState) -> tuple[EquipmentSlotView, ...]:
     return tuple(views)
 
 
+def _charge_views(state: BattleState, unit: UnitState) -> tuple[ChargeView, ...]:
+    """裝備的充能詞條摘要（生效中的，詞條 ID 排序）。"""
+    views: list[ChargeView] = []
+    for gear in unit.gear.active_affixes("charge"):
+        affix = gear.affix
+        assert isinstance(affix, ChargeAffix)
+        stacks = unit.stacks.get(affix.stack, 0)
+        views.append(
+            ChargeView(
+                affix_id=affix.id,
+                name_zh=affix.name_zh,
+                stack_id=affix.stack,
+                stack_name_zh=state.ruleset.stack_def(affix.stack).name_zh,
+                stacks=stacks,
+                max_stacks=affix.max_stacks,
+                cost_stacks=affix.cost_stacks,
+                cost_ap=affix.cost_ap,
+                needs_target=affix.effect_target == "target",
+                ready=stacks >= affix.cost_stacks,
+            )
+        )
+    return tuple(views)
+
+
 def _unit_view(state: BattleState, unit: UnitState, team: Team) -> UnitView:
     return UnitView(
         id=unit.id,
@@ -546,6 +598,7 @@ def _unit_view(state: BattleState, unit: UnitState, team: Team) -> UnitView:
         activations=tuple(_activation_view(state, a) for a in unit.activations),
         facing=unit.facing,
         equipment=_equipment_view(unit),
+        charges=_charge_views(state, unit),
         granted_skills=(
             tuple(
                 GrantedSkillView(

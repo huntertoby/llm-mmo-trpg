@@ -23,6 +23,7 @@ from trpg.engine.state import BattleState, UnitState
 
 __all__ = [
     "ap_cap",
+    "gear_grant_ap",
     "grant_ap",
     "grant_ap_problem",
     "grant_reactions",
@@ -60,10 +61,42 @@ def grant_ap(ctx: Ctx, caster: UnitState, target: UnitState, amount: int) -> Non
         before = target.ap
         target.ap = max(before, min(before + amount, cap))
         after = target.ap
+    target.ap_gain_turn += after - before
     ctx.emit(
         ApGranted,
         unit_id=target.id,
         source_id=caster.id,
+        amount=after - before,
+        ap_after=after,
+        deferred=deferred,
+    )
+
+
+def gear_grant_ap(ctx: Ctx, owner: UnitState, target: UnitState, amount: int) -> None:
+    """裝備觸發（Phase 3G-G3a，``affix_trig_kill_ap``）回復 AP：本回合已回復的 AP（``grant_ap``、
+    ``refund_ap`` 與裝備，``ap_gain_turn``）合計不超過 ``caps.ap_gain_per_round``（+1）；不在自己
+    回合時存進 ``ap_pending``；不受「每輪最多被給一次」限制。沒有任何增加時發出 ``effect_fizzled``
+    （``ap_gain_cap``）。"""
+    from trpg.engine.gear import cap_ap_gain  # noqa: PLC0415 - gear 匯入 skills.conditions
+
+    state = ctx.state
+    granted = cap_ap_gain(ctx.rules, target.ap_gain_turn, amount)
+    cap = ap_cap(ctx.core)
+    deferred = state.active_unit != target.id
+    before = target.ap_pending if deferred else target.ap
+    after = max(before, min(before + granted, cap))
+    if after <= before:
+        ctx.emit(EffectFizzled, effect_kind="grant_ap", pos=target.pos, reason="ap_gain_cap")
+        return
+    if deferred:
+        target.ap_pending = after
+    else:
+        target.ap = after
+    target.ap_gain_turn += after - before
+    ctx.emit(
+        ApGranted,
+        unit_id=target.id,
+        source_id=owner.id,
         amount=after - before,
         ap_after=after,
         deferred=deferred,

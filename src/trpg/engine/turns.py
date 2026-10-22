@@ -77,6 +77,8 @@ def start_turn(ctx: Ctx, unit_id: UnitId) -> None:
     unit.ran_this_turn = False  # 跑步每回合限 1 次（Phase 3-20）
     unit.guarding_id = None  # 守護到自己的下回合開始（Phase 3-21a）
     unit.turn_cast_tags = ()
+    unit.ap_gain_turn = unit.ap_pending  # 回合外存下的 AP 算在這個回合的 AP 回復上限內（3G-G3a）
+    unit.gear_turn_counts = {}  # 裝備觸發的每回合 1 次（3G-G3a）
     unit.ap_pending = 0  # grant_ap 給的、等到這個回合才加上的 AP（Phase 3C-4a）
     unit.move_points = move_points_for_turn(ctx.rules, unit)
     if totem_of(state, unit) is not None:

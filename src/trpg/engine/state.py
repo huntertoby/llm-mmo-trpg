@@ -318,6 +318,14 @@ class UnitState:
     守方屬性 ×``control_dr_resist_permille``）。"""
     trigger_counts: dict[str, int] = field(default_factory=dict)
     """被動技能本輪已觸發的次數（技能 ID → 次數，只列出 > 0 的）；每輪開始時重設（Phase 2E-1）。"""
+    gear_turn_counts: dict[str, int] = field(default_factory=dict)
+    """裝備觸發（Phase 3G-G3a，``limit: per_turn``）本回合已觸發的次數（詞條 ID → 次數）；
+    自己回合開始時清除。"""
+    gear_round_counts: dict[str, int] = field(default_factory=dict)
+    """裝備觸發（``limit: per_round``）本輪已觸發的次數；每輪開始時清除。"""
+    ap_gain_turn: int = 0
+    """本回合已經由 ``grant_ap``、``refund_ap`` 與裝備觸發回復的 AP（裝備的每回合 AP 回復上限
+    +1 合計用）；自己回合開始時重設為「回合開始前存下的 AP」（``ap_pending``）。"""
     hits_landed: int = 0
     """整場戰鬥累計的命中次數（``every_n_hits`` 的計數；只有裝備了該類被動的單位會累計）。"""
     stacks: dict[str, int] = field(default_factory=dict)
@@ -443,6 +451,9 @@ class UnitState:
             skill_uses=dict(self.skill_uses),
             control_dr=dict(self.control_dr),
             trigger_counts=dict(self.trigger_counts),
+            gear_turn_counts=dict(self.gear_turn_counts),
+            gear_round_counts=dict(self.gear_round_counts),
+            ap_gain_turn=self.ap_gain_turn,
             hits_landed=self.hits_landed,
             stacks=dict(self.stacks),
             stack_expiry=dict(self.stack_expiry),

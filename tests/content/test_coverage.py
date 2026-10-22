@@ -17,7 +17,7 @@ _UNCOVERED: dict[str, dict[str, str]] = {
     "condition": {},
     "primitive": {},
     "status": {"armor_broken": "只由斧的 armor_break 武器參數施加（3-24a1），沒有技能施加"},
-    "stack": {},
+    "stack": {"fury": "只由裝備的充能詞條 affix_charge_fury 使用（3G-G3a），沒有手寫技能"},
 }
 
 # 只能由引擎原語間接產生的狀態：使用該原語就算「技能可施加」。

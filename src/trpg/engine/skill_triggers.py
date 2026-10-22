@@ -21,6 +21,11 @@
 結算時檢查持有者在場、目標仍存活、規則條件（對目標）與深度，發出 ``skill_triggered``
 （``trigger: modifier_on_hit``，沒有代價與每輪次數），再自動命中地結算效果。
 
+裝備的觸發與充能詞條（Phase 3G-G3a，第 6、7 類）走同一套收集與延後結算：持有者身上生效中的
+詞條依觸發時機（``trigger`` 或 ``gain_trigger``）加進 :class:`PassiveIndex`，收集時記一筆
+``event`` 為 ``gear:<時機>`` 的 :class:`Fired`（``skill_id`` 放詞條 ID），結算在
+:mod:`trpg.engine.gear_triggers`（每條每回合／每輪最多 1 次、深度檢查、充能累積）。
+
 這個模組在載入時不匯入效果佇列與技能解譯器（它們反過來匯入 :mod:`trpg.engine.context`），
 :func:`settle` 在呼叫時才延後匯入。
 """
@@ -32,6 +37,7 @@ from contextlib import contextmanager
 from dataclasses import dataclass, replace
 from typing import TYPE_CHECKING
 
+from trpg.content.equipment import ChargeAffix, TriggerAffix
 from trpg.content.skills import SkillDef
 from trpg.engine import modifiers
 from trpg.engine.events import (
@@ -46,6 +52,7 @@ from trpg.engine.events import (
     UnitDowned,
     UnitMoved,
 )
+from trpg.engine.gear_state import GearAffix
 from trpg.engine.rules.combat import NATURAL_HIT
 from trpg.engine.rules.geometry import manhattan
 from trpg.engine.rules.statuses import skip_turn_status
@@ -73,6 +80,9 @@ __all__ = [
     "settle",
 ]
 
+GEAR_PREFIX = "gear:"
+"""裝備詞條的 ``Fired.event`` 前綴（``gear:<觸發時機>``；``Fired.skill_id`` 為詞條 ID）。"""
+
 _OBSERVED = frozenset(
     {"attack_rolled", "damage_dealt", "status_applied", "collided", "unit_moved", "unit_downed"}
 )
@@ -97,17 +107,25 @@ class Fired:
 class PassiveIndex:
     """戰鬥中所有單位裝備的被動技能，依觸發時機分組（單位 ID、技能 ID 排序）。
 
-    ``on_hit_owners``：有命中後效果修正規則的單位（Phase 3C-2）。
+    ``on_hit_owners``：有命中後效果修正規則的單位（Phase 3C-2）。``by_gear_event``：裝備的觸發與
+    充能詞條（Phase 3G-G3a），依觸發時機分組（單位 ID、詞條 ID 排序）。
     """
 
-    __slots__ = ("any", "by_event", "by_unit", "on_hit_owners")
+    __slots__ = ("any", "by_event", "by_gear_event", "by_unit", "on_hit_owners")
 
     def __init__(self, ctx: Ctx) -> None:
         self.by_event: dict[str, list[tuple[UnitId, SkillDef]]] = {}
+        self.by_gear_event: dict[str, list[tuple[UnitId, GearAffix]]] = {}
         self.by_unit: dict[UnitId, list[SkillDef]] = {}
         owners: set[UnitId] = set()
         rules = ctx.rules
         for unit in ctx.state.units_sorted():
+            for gear in unit.gear.active_affixes():
+                affix = gear.affix
+                if isinstance(affix, TriggerAffix):
+                    self.by_gear_event.setdefault(affix.trigger, []).append((unit.id, gear))
+                elif isinstance(affix, ChargeAffix):
+                    self.by_gear_event.setdefault(affix.gain_trigger, []).append((unit.id, gear))
             for skill_id in sorted(unit.skills):
                 skill = rules.skill_def(skill_id)
                 if any(r.change.on_hit_effects for r in skill.modifiers):
@@ -117,10 +135,13 @@ class PassiveIndex:
                 self.by_event.setdefault(skill.trigger.event, []).append((unit.id, skill))
                 self.by_unit.setdefault(unit.id, []).append(skill)
         self.on_hit_owners = frozenset(owners)
-        self.any = bool(self.by_event) or bool(owners)
+        self.any = bool(self.by_event) or bool(owners) or bool(self.by_gear_event)
 
     def owners(self, event: str) -> list[tuple[UnitId, SkillDef]]:
         return self.by_event.get(event, [])
+
+    def gear_owners(self, event: str) -> list[tuple[UnitId, GearAffix]]:
+        return self.by_gear_event.get(event, [])
 
 
 def _index(ctx: Ctx) -> PassiveIndex:
@@ -140,6 +161,41 @@ def _fire(ctx: Ctx, seq: int, owner_id: UnitId, skill: SkillDef, other_id: UnitI
     ctx.fired.append(
         Fired(seq, owner_id, skill.id, skill.trigger.event, other_id, ctx.trigger_depth + 1)
     )
+
+
+def _fire_gear(  # noqa: PLR0917
+    ctx: Ctx,
+    index: PassiveIndex,
+    timing: str,
+    seq: int,
+    who: UnitId | None,
+    other_id: UnitId | None,
+    *,
+    melee: bool = True,
+    status: str | None = None,
+    tag: str | None = None,
+    surface: str | None = None,
+    hits: int | None = None,
+) -> None:
+    """裝備詞條的收集：``who`` 身上以 ``timing`` 為時機的觸發與充能詞條各記一筆（觸發詞條的
+    ``melee_only``、``status``、``tag``、``surface``、每第 n 次命中的篩選在這裡過濾）。"""
+    if who is None:
+        return
+    for owner, gear in index.gear_owners(timing):
+        if owner != who:
+            continue
+        affix = gear.affix
+        if isinstance(affix, TriggerAffix) and (
+            (affix.melee_only and not melee)
+            or (affix.status is not None and affix.status != status)
+            or (affix.tag is not None and affix.tag != tag)
+            or (affix.surface is not None and affix.surface != surface)
+            or (affix.n is not None and (hits is None or hits % affix.n != 0))
+        ):
+            continue
+        ctx.fired.append(
+            Fired(seq, owner, affix.id, f"{GEAR_PREFIX}{timing}", other_id, ctx.trigger_depth + 1)
+        )
 
 
 def observe(ctx: Ctx, event: EventBase) -> None:
@@ -192,23 +248,39 @@ def _on_attack(ctx: Ctx, index: PassiveIndex, event: AttackRolled) -> None:
         for owner, skill in index.owners("on_natural_20"):
             if owner == attacker:
                 _fire(ctx, event.seq, owner, skill, event.target_id)
+        _fire_gear(ctx, index, "on_natural_20", event.seq, attacker, event.target_id)
     if not event.hit:
         return
     for owner, skill in index.owners("on_hit"):
         if owner == attacker:
             _fire(ctx, event.seq, owner, skill, event.target_id)
+    _fire_gear(ctx, index, "on_hit", event.seq, attacker, event.target_id)
     if event.crit:
         for owner, skill in index.owners("on_crit"):
             if owner == attacker:
                 _fire(ctx, event.seq, owner, skill, event.target_id)
+        _fire_gear(ctx, index, "on_crit", event.seq, attacker, event.target_id)
+    _count_hits(ctx, index, event)
+
+
+def _count_hits(ctx: Ctx, index: PassiveIndex, event: AttackRolled) -> None:
+    """``every_n_hits``：持有者累計的命中次數 +1（只有裝備了這類被動或裝備詞條的單位才累計），
+    累計到 n 的倍數時觸發。"""
+    attacker = event.attacker_id
     counters = [(o, s) for o, s in index.owners("every_n_hits") if o == attacker]
-    if counters:
-        unit = ctx.state.units[attacker]
-        unit.hits_landed += 1
-        for owner, skill in counters:
-            assert skill.trigger is not None and skill.trigger.n is not None
-            if unit.hits_landed % skill.trigger.n == 0:
-                _fire(ctx, event.seq, owner, skill, event.target_id)
+    gear_counters = [(o, g) for o, g in index.gear_owners("every_n_hits") if o == attacker]
+    if not counters and not gear_counters:
+        return
+    unit = ctx.state.units[attacker]
+    unit.hits_landed += 1
+    for owner, skill in counters:
+        assert skill.trigger is not None and skill.trigger.n is not None
+        if unit.hits_landed % skill.trigger.n == 0:
+            _fire(ctx, event.seq, owner, skill, event.target_id)
+    if gear_counters:
+        _fire_gear(
+            ctx, index, "every_n_hits", event.seq, attacker, event.target_id, hits=unit.hits_landed
+        )
 
 
 def _on_modified_hit(ctx: Ctx, event: AttackRolled) -> None:
@@ -232,16 +304,32 @@ def _on_modified_hit(ctx: Ctx, event: AttackRolled) -> None:
         )
 
 
+def _is_melee_damage(ctx: Ctx, event: DamageDealt) -> bool:
+    """傷害是近戰攻擊造成的（裝備觸發的 ``melee_only``）：``attack`` 原因，且來源與目標的距離
+    不超過 ``core.melee_height_limit_max_range``。"""
+    source = None if event.source_id is None else ctx.state.units.get(event.source_id)
+    target = ctx.state.units.get(event.target_id)
+    if event.cause != "attack" or source is None or target is None:
+        return False
+    return manhattan(source.xy, target.xy) <= ctx.core.melee_height_limit_max_range
+
+
 def _on_damage(ctx: Ctx, index: PassiveIndex, event: DamageDealt) -> None:
     if event.amount <= 0:
         return
     for owner, skill in index.owners("on_damaged"):
         if owner == event.target_id:
             _fire(ctx, event.seq, owner, skill, event.source_id)
+    if index.gear_owners("on_damaged"):
+        _fire_gear(
+            ctx, index, "on_damaged", event.seq, event.target_id, event.source_id,
+            melee=_is_melee_damage(ctx, event),
+        )  # fmt: skip
     if event.hp_after <= 0 and event.source_id is not None and event.source_id != event.target_id:
         for owner, skill in index.owners("on_kill"):
             if owner == event.source_id:
                 _fire(ctx, event.seq, owner, skill, event.target_id)
+        _fire_gear(ctx, index, "on_kill", event.seq, event.source_id, event.target_id)
 
 
 def _on_status_applied(ctx: Ctx, index: PassiveIndex, event: StatusApplied) -> None:
@@ -254,6 +342,9 @@ def _on_status_applied(ctx: Ctx, index: PassiveIndex, event: StatusApplied) -> N
         assert skill.trigger is not None
         if owner == source and skill.trigger.status in (None, event.status_id):
             _fire(ctx, event.seq, owner, skill, event.target_id)
+    _fire_gear(
+        ctx, index, "on_status_applied", event.seq, source, event.target_id, status=event.status_id
+    )
 
 
 def _on_collision(ctx: Ctx, index: PassiveIndex, event: Collided) -> None:
@@ -264,6 +355,7 @@ def _on_collision(ctx: Ctx, index: PassiveIndex, event: Collided) -> None:
     for owner, skill in index.owners("on_collision"):
         if owner == source:
             _fire(ctx, event.seq, owner, skill, event.unit_id)
+    _fire_gear(ctx, index, "on_collision", event.seq, source, event.unit_id)
 
 
 def _on_enter_surface(ctx: Ctx, index: PassiveIndex, event: UnitMoved) -> None:
@@ -275,7 +367,7 @@ def _on_enter_surface(ctx: Ctx, index: PassiveIndex, event: UnitMoved) -> None:
     tile = state.tile(event.to_pos.x, event.to_pos.y)
     creator_id = tile.surface_creator
     owners = index.owners("on_enter_surface")
-    if creator_id is None or not owners:
+    if creator_id is None or not (owners or index.gear_owners("on_enter_surface")):
         return
     creator = state.units.get(creator_id)
     mover = state.units.get(event.unit_id)
@@ -285,6 +377,9 @@ def _on_enter_surface(ctx: Ctx, index: PassiveIndex, event: UnitMoved) -> None:
         assert skill.trigger is not None
         if owner == creator_id and skill.trigger.surface in (None, tile.surface):
             _fire(ctx, event.seq, owner, skill, mover.id)
+    _fire_gear(
+        ctx, index, "on_enter_surface", event.seq, creator_id, mover.id, surface=tile.surface.value
+    )
 
 
 def collect_cast(ctx: Ctx, caster: UnitState, skill: SkillDef) -> None:
@@ -294,7 +389,8 @@ def collect_cast(ctx: Ctx, caster: UnitState, skill: SkillDef) -> None:
     if not index.any:
         return
     owned = index.owners("on_cast_tag")
-    if not any(owner == caster.id for owner, _ in owned):
+    gear_owned = [(o, g) for o, g in index.gear_owners("on_cast_tag") if o == caster.id]
+    if not gear_owned and not any(owner == caster.id for owner, _ in owned):
         return
     tags = modifiers.effective_tags(ctx.state, caster, skill)
     seq = ctx.state.next_event_seq
@@ -302,6 +398,8 @@ def collect_cast(ctx: Ctx, caster: UnitState, skill: SkillDef) -> None:
         assert passive.trigger is not None
         if owner == caster.id and passive.trigger.tag in tags:
             _fire(ctx, seq, owner, passive, None)
+    for tag in sorted(tags):
+        _fire_gear(ctx, index, "on_cast_tag", seq, caster.id, None, tag=tag)
 
 
 def _collect_own(ctx: Ctx, unit: UnitState, event: str) -> None:
@@ -312,6 +410,7 @@ def _collect_own(ctx: Ctx, unit: UnitState, event: str) -> None:
     for owner, skill in index.owners(event):
         if owner == unit.id:
             _fire(ctx, seq, owner, skill, None)
+    _fire_gear(ctx, index, event, seq, unit.id, None)
 
 
 def collect_turn_start(ctx: Ctx, unit: UnitState) -> None:
@@ -342,6 +441,8 @@ def reset_round_counts(units: Iterator[UnitState]) -> None:
     for unit in units:
         if unit.trigger_counts:
             unit.trigger_counts = {}
+        if unit.gear_round_counts:
+            unit.gear_round_counts = {}
 
 
 # ---------------------------------------------------------------------------
@@ -371,7 +472,9 @@ def settle(ctx: Ctx) -> None:
             batch = sorted(ctx.fired, key=lambda f: (f.seq, f.owner_id, f.skill_id))
             ctx.fired = []
             for fired in batch:
-                if fired.event.startswith(_MODIFIER_PREFIX):
+                if fired.event.startswith(GEAR_PREFIX):
+                    _resolve_gear(ctx, fired)
+                elif fired.event.startswith(_MODIFIER_PREFIX):
                     _resolve_on_hit(ctx, fired)
                 elif fired.event == _DELAYED_RELEASE:
                     _resolve_delayed(ctx, fired)
@@ -448,6 +551,13 @@ def _resolve_one(ctx: Ctx, fired: Fired) -> None:
     _pay(ctx, owner, skill, fired)
     ctx.trigger_depth = fired.depth
     use_triggered_skill(ctx, owner, skill, other)
+
+
+def _resolve_gear(ctx: Ctx, fired: Fired) -> None:
+    """裝備的觸發與充能詞條（Phase 3G-G3a）。"""
+    from trpg.engine.gear_triggers import resolve_gear_fired  # noqa: PLC0415
+
+    resolve_gear_fired(ctx, fired)
 
 
 _DELAYED_RELEASE = "delayed_release"

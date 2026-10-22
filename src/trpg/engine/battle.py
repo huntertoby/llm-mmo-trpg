@@ -76,6 +76,7 @@ from trpg.engine.events import (
     UnitStoodUp,
     UnitVaulted,
 )
+from trpg.engine.gear_charge import charge_actions, do_activate_charge
 from trpg.engine.ids import PRONE, TOPPLABLE
 from trpg.engine.lifecycle import make_unit
 from trpg.engine.maneuvers import contest
@@ -961,6 +962,7 @@ ACTION_HANDLERS: dict[str, ActionHandler] = {
     "swap": do_swap,
     "aim": do_aim,
     "reload": do_reload,
+    "activate_charge": do_activate_charge,
     "vault": _do_vault,
     "run": _do_run,
     "shove": _do_shove,
@@ -1172,6 +1174,7 @@ def _legal_actions(
     if aim_problem(state, unit) is None and _has_attack_to_aim(state, unit):
         actions.append(Aim(unit_id=unit.id))
     actions.extend(_weapon_actions(state, unit))
+    actions.extend(charge_actions(state, unit))
     actions.extend(vault_action(unit, plan) for plan in vault_destinations(state, unit))
     if stance_status_ids(state.ruleset, unit):
         actions.append(EndStance(unit_id=unit.id))

@@ -30,6 +30,7 @@ from trpg.engine import (
 from trpg.engine.actions import (
     ACTION_ADAPTER,
     BASIC_ACTION_TYPES,
+    CHARGE_ACTION_TYPES,
     MANAGEMENT_ACTION_TYPES,
     WEAPON_ACTION_TYPES,
     Action,
@@ -617,7 +618,13 @@ def test_basic_action_cap_stays_at_ten_and_reload_is_a_weapon_action() -> None:
     # 每一種動作都歸類：基本動作、武器動作、管理操作，或技能
     union = get_args(get_args(Action.__value__)[0])
     types = {a.model_fields["type"].default for a in union}
-    classified = {*BASIC_ACTION_TYPES, *WEAPON_ACTION_TYPES, *MANAGEMENT_ACTION_TYPES, "use_skill"}
+    classified = {
+        *BASIC_ACTION_TYPES,
+        *WEAPON_ACTION_TYPES,
+        *CHARGE_ACTION_TYPES,
+        *MANAGEMENT_ACTION_TYPES,
+        "use_skill",
+    }
     assert types == classified
     # 加上武器動作的總數（含裝填）也有上限，避免之後無限長
     assert len(BASIC_ACTION_TYPES) + len(WEAPON_ACTION_TYPES) <= 11

@@ -137,7 +137,12 @@ from trpg.engine.resources import (
     restore_mana,
 )
 from trpg.engine.results import Pending
-from trpg.engine.rewrites import grant_ap, grant_reactions, reset_cooldowns
+from trpg.engine.rewrites import (
+    gear_grant_ap,
+    grant_ap,
+    grant_reactions,
+    reset_cooldowns,
+)
 from trpg.engine.rules.combat import PERMILLE, AttackProfile, AttackRoll, ForcedOutcome, roll_attack
 from trpg.engine.rules.facing import face_toward
 from trpg.engine.rules.geometry import XY, axis_direction, manhattan
@@ -188,6 +193,7 @@ from trpg.shared.types import Element, Pos, UnitId
 
 __all__ = [
     "run_delayed",
+    "use_gear_effects",
     "use_modifier_effects",
     "use_reaction_skill",
     "use_skill",
@@ -493,6 +499,19 @@ def use_triggered_skill(
     units = (subject.id,) if subject.alive else ()
     area = SkillArea(tiles=(subject.xy,), units=units, origin=owner.xy)
     _TriggeredCast(ctx, owner, skill, area).run()
+
+
+def use_gear_effects(
+    ctx: Ctx, owner: UnitState, carrier: SkillDef, subject: UnitState | None
+) -> None:
+    """結算裝備詞條（第 6、7 類，Phase 3G-G3a）的效果：``carrier`` 是詞條包成的被動技能
+    （:func:`trpg.engine.gear_triggers.gear_carrier`），作用在 ``subject``（沒有時為持有者自己）；
+    比照被動觸發：自動命中、狀態照常擲抵抗，不受修正規則影響；``grant_ap`` 受裝備的每回合 AP 回復
+    上限約束。"""
+    target = owner if subject is None else subject
+    units = (target.id,) if target.alive else ()
+    area = SkillArea(tiles=(target.xy,), units=units, origin=owner.xy)
+    _GearCast(ctx, owner, carrier, area).run()
 
 
 def use_modifier_effects(
@@ -2278,3 +2297,15 @@ class _TriggeredCast(_Cast):
 
     def _hit(self, unit: UnitState) -> bool:
         return unit.id != self.caster.id
+
+
+class _GearCast(_TriggeredCast):
+    """裝備詞條的施放（Phase 3G-G3a）：同被動技能，但 ``grant_ap`` 受裝備的每回合 AP 回復上限
+    （+1，所有來源合計）約束，且不吃「每輪最多被給一次」的限制。"""
+
+    def rewrite(self, effect: ResolvedEffect, spec: EffectSpec) -> list[EffectBase]:
+        if effect.type == GRANT_AP:
+            for unit in self.targets(effect.affects, spec.condition):
+                gear_grant_ap(self.ctx, self.caster, unit, spec.amount or 1)
+            return []
+        return super().rewrite(effect, spec)

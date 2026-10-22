@@ -74,6 +74,7 @@ from trpg.content.skills import (
 )
 from trpg.engine.actions import (
     Action,
+    ActivateCharge,
     Aim,
     Attack,
     Defend,
@@ -89,6 +90,7 @@ from trpg.engine.actions import (
     Vault,
 )
 from trpg.engine.ai.basics import aim_bonus, guard_bonus, swap_score
+from trpg.engine.ai.charge import charge_score
 from trpg.engine.ai.composite import composite_estimate
 from trpg.engine.ai.displace import DISPLACE_PRIMITIVES, displace_estimate, exposure, is_hurt
 from trpg.engine.ai.gamble import cautious, on_miss_cost
@@ -1969,8 +1971,7 @@ class UtilityAI:
         walk = _scene(state, unit, ctx).walk
         before = position_value(state, unit.id, profile.weights, ctx, walk=walk)
         return [
-            score_action(state, a, profile, before=before, orders=ctx, walk=walk)
-            for a in legal_actions(state)
+            self._score_other(state, a, profile, before, ctx, walk) for a in legal_actions(state)
         ]
 
     def rank(self, state: BattleState) -> list[ActionScore]:
@@ -2010,9 +2011,7 @@ class UtilityAI:
             elif isinstance(action, UseSkill | EndStance | Aim):
                 continue  # 技能在下面依估計篩選後才評分；AI 不主動取消姿態；瞄準看其他攻擊的預覽
             else:
-                scored[index] = score_action(
-                    state, action, profile, before=before, orders=ctx, walk=walk
-                )
+                scored[index] = self._score_other(state, action, profile, before, ctx, walk)
         for index in self._skill_candidates(
             state, unit, actions, areas, scene, w, before, profile.trap
         ):
@@ -2032,6 +2031,22 @@ class UtilityAI:
             else:
                 scored[index] = ActionScore(move, estimate, None)
         return [scored[i] for i in sorted(scored)]
+
+    def _score_other(  # noqa: PLR0917
+        self,
+        state: BattleState,
+        action: Action,
+        profile: AiProfile,
+        before: Fraction,
+        orders: OrderContext | None,
+        walk: _Walk | None,
+    ) -> ActionScore:
+        """其餘動作的完整預覽分數；裝備充能的啟動（3G-G3a）另乘低權重、加自我增益的估值。"""
+        scored = score_action(state, action, profile, before=before, orders=orders, walk=walk)
+        if not isinstance(action, ActivateCharge):
+            return scored
+        score = charge_score(state, action, scored.score, profile, self._basic)
+        return ActionScore(action, score, scored.preview)
 
     def _score_aim(
         self,

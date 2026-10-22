@@ -16,6 +16,8 @@ _COPIED = {
         "skill_uses",
         "control_dr",
         "trigger_counts",
+        "gear_turn_counts",
+        "gear_round_counts",
         "stacks",
         "stack_expiry",
     },
@@ -55,6 +57,8 @@ def test_clone_is_independent_and_equal() -> None:
         assert copy.units[uid].skill_uses is not unit.skill_uses
         assert copy.units[uid].control_dr is not unit.control_dr
         assert copy.units[uid].trigger_counts is not unit.trigger_counts
+        assert copy.units[uid].gear_turn_counts is not unit.gear_turn_counts
+        assert copy.units[uid].gear_round_counts is not unit.gear_round_counts
         assert copy.units[uid].stacks is not unit.stacks
         assert copy.units[uid].stack_expiry is not unit.stack_expiry
     assert copy.traps is not state.traps

@@ -902,6 +902,9 @@ class BasicActionAiRules(ContentModel):
     vault_min_saving: int = Field(default=4, ge=1)
     reload_points: int = Field(default=20, ge=0)
     """裝填（3-24a2，武器動作）：彈匣空時的固定分數（要大於一般走位，所以空膛就先裝填）。"""
+    charge_permille: int = Field(default=400, ge=0, le=1000)
+    """裝備充能的啟動（3G-G3a）：預覽收益（加上自我增益的價值）× 這個比例（低權重：AI 會啟動，
+    但通常排在一般攻擊與技能之後）。"""
 
 
 class AiProfileTable(ContentModel):
