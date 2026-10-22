@@ -35,3 +35,21 @@ def test_guaranteed_summoner_packs_summon_on_the_boss_map() -> None:
     assert all(s.metrics is not None for s in samples)
     for s in summarize(samples):
         assert s.summons_total >= 1 and s.failed == 0
+
+
+def test_a_summoner_battle_with_growth_and_infusion_replays_identically() -> None:
+    """成長、灌注與 Boss ×2 都是確定的：初始狀態 ＋ 動作列表重播得到同一個終局（3-33b）。"""
+    from trpg.engine.ai.utility import UtilityAI  # noqa: PLC0415
+    from trpg.engine.events import UnitSummoned  # noqa: PLC0415
+    from trpg.engine.runner import replay, run_battle  # noqa: PLC0415
+    from trpg.engine.state import state_to_json  # noqa: PLC0415
+    from trpg.sim.summon_report import _spec  # noqa: PLC0415
+
+    lib = library()
+    spec, _ = _spec(lib, "dev_summoner", "boss", 1, 30)
+    seed = spec.seeds[0]
+    run = run_battle(spec.setup, seed, UtilityAI(lib.ai_profiles))
+    again = replay(spec.setup, seed, run.actions)
+    assert state_to_json(again.state) == state_to_json(run.state)
+    summoned = [e for e in run.events if isinstance(e, UnitSummoned)]
+    assert summoned and all(e.infusion == "ignite" and e.max_hp is not None for e in summoned)
