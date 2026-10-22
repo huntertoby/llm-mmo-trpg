@@ -34,6 +34,7 @@ from trpg.engine.events import (
     EventBase,
     ObjectToppled,
     UnitFell,
+    WallToppled,
 )
 from trpg.engine.ids import ELITE_TAG, PRONE
 from trpg.engine.rules.movement import nearest_safe_tile
@@ -149,6 +150,37 @@ def _collision_damage(ctx: Ctx, event: EventBase, depth: int) -> list[EffectBase
 @register_trigger("object_toppled")
 def _topple_damage(ctx: Ctx, event: EventBase, depth: int) -> list[EffectBase]:
     assert isinstance(event, ObjectToppled)
+    dice = ctx.core.topple_damage_dice
+    effects: list[EffectBase] = []
+    for victim in event.units:
+        effects.append(
+            DamageEffect(
+                depth=depth,
+                source_id=event.source_id,
+                target_id=victim,
+                cause="topple",
+                dice=dice,
+            )
+        )
+        effects.append(
+            ApplyStatusEffect(
+                depth=depth, source_id=event.source_id, target_id=victim, status_id=PRONE
+            )
+        )
+    effects.extend(
+        DamageObjectEffect(
+            depth=depth, source_id=event.source_id, object_id=oid, dice=dice, cause="topple"
+        )
+        for oid in event.objects
+        if _breakable(ctx, oid)
+    )
+    return effects
+
+
+@register_trigger("wall_toppled")
+def _wall_topple_damage(ctx: Ctx, event: EventBase, depth: int) -> list[EffectBase]:
+    """土牆倒下（3-33e2a）：壓到的單位與物件照物件推倒的規則受傷，單位並倒地。"""
+    assert isinstance(event, WallToppled)
     dice = ctx.core.topple_damage_dice
     effects: list[EffectBase] = []
     for victim in event.units:

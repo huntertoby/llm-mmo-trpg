@@ -40,7 +40,7 @@ from trpg.engine.state import (
     UnitState,
     reaction_limit,
 )
-from trpg.engine.summons import totem_of
+from trpg.engine.summons import summon_inert, totem_of
 from trpg.engine.traps import visible_traps
 from trpg.engine.zones import next_zone_cells, zone_cells, zone_is_harmful, zone_spec
 from trpg.shared.types import Element, Pos, Surface, Team, UnitId, rune_name
@@ -704,7 +704,7 @@ def _infusion_views(state: BattleState, unit: UnitState) -> tuple[InfusionOption
 
 def _summon_mode(state: BattleState, unit: UnitState) -> SummonMode | None:
     """召喚物的模式；一般單位與圖騰（沒有行動）為 ``None``。"""
-    if not unit.is_summon or totem_of(state, unit) is not None:
+    if not unit.is_summon or summon_inert(state, unit):
         return None
     return unit.summon_mode
 

@@ -30,6 +30,7 @@ __all__ = [
     "StatusTable",
     "StatusTickDamage",
     "StatusTickHeal",
+    "SummonDetonate",
     "SummonHitRule",
     "SummonLook",
     "SummonLookBody",
@@ -659,6 +660,21 @@ class SummonHitRule(ContentModel):
         return self
 
 
+class SummonDetonate(ContentModel):
+    """召喚物的自爆（Phase 3-33e2a，爆裂傀儡；初值，未經模擬）。
+
+    召喚物走到敵人相鄰的格子時（自己的回合開始時已經相鄰、或被打倒時也一樣）爆炸：曼哈頓距離
+    ``radius`` 以內的敵人各受 ``dice`` ＋ ``flat`` 的 ``element`` 傷害，爆心與周圍各格留下
+    ``surface``，召喚物自己消失。
+    """
+
+    radius: int = Field(default=1, ge=1, le=2)
+    dice: Dice
+    flat: int = Field(default=0, ge=0, le=20)
+    element: Element = Element.FIRE
+    surface: Surface | None = None
+
+
 class SummonPulse(ContentModel):
     """召喚物自己的回合開始時的脈動（Phase 3-33e1，水精）：在自己腳下造 ``surface``，並治療
     曼哈頓距離
@@ -729,6 +745,10 @@ class UnitTemplate(ContentModel):
     """普攻命中後的條件特性（Phase 3-33e1）。"""
     pulse: SummonPulse | None = None
     """回合開始的脈動（Phase 3-33e1）。"""
+    detonate: SummonDetonate | None = None
+    """自爆（Phase 3-33e2a）：走到敵人相鄰、回合開始時已相鄰或被打倒時爆炸並消失。"""
+    inert: bool = False
+    """不行動（Phase 3-33e2a，土牆）：回合內沒有 AP、不能操控（同圖騰，但沒有光環）。"""
     equipment: dict[Slot, str] = Field(default_factory=dict)
     """裝備（Phase 3G-G1）：欄位 → 物品 id（``content/items.yaml``）。"""
     level: int = Field(default=1, ge=1, le=99)
@@ -748,8 +768,10 @@ class UnitTemplate(ContentModel):
     def _check_look(self) -> UnitTemplate:
         if self.look is not None and not self.summon:
             raise ValueError("外觀欄位 look 只有召喚物（summon: true）可以填")
-        if not self.summon and (self.innate or self.hit_rules or self.pulse):
-            raise ValueError("innate／hit_rules／pulse 只有召喚物（summon: true）可以填")
+        if not self.summon and (
+            self.innate or self.hit_rules or self.pulse or self.detonate or self.inert
+        ):
+            raise ValueError("innate／hit_rules／pulse／detonate／inert 只有召喚物可以填")
         return self
 
     @field_validator("skill_levels")

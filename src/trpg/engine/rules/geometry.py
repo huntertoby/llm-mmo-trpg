@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+from trpg.engine.ids import BLOCKS_SIGHT_TAG
 from trpg.engine.state import BattleState
 from trpg.shared.types import Surface
 
@@ -86,25 +87,35 @@ def blocks_sight_at(state: BattleState, xy: XY) -> bool:
     return tile.surface is not Surface.NONE and state.ruleset.surface_def(tile.surface).blocks_sight
 
 
-def _blocks_line(state: BattleState, cell: XY, limit: int, lob: int) -> bool:
+def _sight_walls(state: BattleState) -> frozenset[XY]:
+    """擋視線的單位（帶 ``blocks_sight`` 標籤，例如土牆召喚物，Phase 3-33e2a）所在的格子。"""
+    return frozenset(u.xy for u in state.units.values() if u.alive and u.has_tag(BLOCKS_SIGHT_TAG))
+
+
+def _blocks_line(state: BattleState, cell: XY, limit: int, lob: int, walls: frozenset[XY]) -> bool:
     """``cell`` 是否擋住視線。``lob``（拋射，Phase 3-24a1）> 0 時：高度差不超過 ``lob`` 層的地形
     高度與物件（物件視為 1 層高）可以越過；牆壁（地形 ``blocks_sight``）與黑暗表面照擋。"""
     tile = state.tile(*cell)
     if tile.height >= limit + lob:
         return True
     if lob <= 0:
-        return state.tile(*cell).height >= limit or blocks_sight_at(state, cell)
+        return state.tile(*cell).height >= limit or blocks_sight_at(state, cell) or cell in walls
     if state.ruleset.terrain_def(tile.terrain).blocks_sight:
         return True
     if tile.surface is not Surface.NONE and state.ruleset.surface_def(tile.surface).blocks_sight:
         return True
-    if tile.object_id is not None and state.object_has_tag(*cell, "blocks_sight"):
+    if (tile.object_id is not None and state.object_has_tag(*cell, "blocks_sight")) or (
+        cell in walls
+    ):
         return tile.height + 1 > limit - 1 + lob  # 物件頂端高過（兩端最高 ＋ lob）才擋
     return False
 
 
-def _line_clear(state: BattleState, a: XY, b: XY, limit: int, lob: int = 0) -> bool:
-    return not any(_blocks_line(state, cell, limit, lob) for cell in bresenham(a, b)[1:-1])
+def _line_clear(
+    state: BattleState, line: tuple[XY, XY], limit: int, lob: int, walls: frozenset[XY]
+) -> bool:
+    a, b = line
+    return not any(_blocks_line(state, cell, limit, lob, walls) for cell in bresenham(a, b)[1:-1])
 
 
 def has_line_of_sight(state: BattleState, a: XY, b: XY, *, lob: int = 0) -> bool:
@@ -121,6 +132,9 @@ def has_line_of_sight(state: BattleState, a: XY, b: XY, *, lob: int = 0) -> bool
     if manhattan(a, b) > sight_range(state):
         return False
     limit = max(state.tile(*a).height, state.tile(*b).height) + 1
+    walls = _sight_walls(state)
     if lob > 0:
-        return _line_clear(state, a, b, limit, lob)
-    return _line_clear(state, a, b, limit) and _line_clear(state, b, a, limit)
+        return _line_clear(state, (a, b), limit, lob, walls)
+    return _line_clear(state, (a, b), limit, 0, walls) and _line_clear(
+        state, (b, a), limit, 0, walls
+    )

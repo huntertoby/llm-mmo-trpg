@@ -95,6 +95,10 @@ def down_unit(ctx: Ctx, unit: UnitState) -> list[EventBase]:
         *dismiss_summons_of(ctx, unit, "owner_gone"),  # 召喚者倒下：召喚物一併消失（3D-4a）
         *retire_focus(ctx, unit),  # 集火的目標倒下：召喚物退回跟隨（3-33c）
     ]
+    if unit.is_summon:  # 爆裂傀儡被打倒時自爆（Phase 3-33e2a）；延後匯入：召喚匯入本模組
+        from trpg.engine.summons import detonate_on_downed  # noqa: PLC0415
+
+        detonate_on_downed(ctx, unit)
     if unit.activations or unit.gear.affixes:  # 規則改變「殘影」：倒下時留下分身（Phase 3D-6）
         # 延後匯入：規則改變模組匯入召喚（召喚匯入本模組）
         from trpg.engine.rule_changes import spawn_on_downed  # noqa: PLC0415

@@ -39,7 +39,7 @@ from trpg.engine.events import (
     UnitFell,
     UnitMoved,
 )
-from trpg.engine.ids import BOSS_TAG, CONCEALED, SHIELDED
+from trpg.engine.ids import BOSS_TAG, CONCEALED, IMMOVABLE, SHIELDED
 from trpg.engine.lifecycle import down_unit, escape_unit
 from trpg.engine.rules.combat import PERMILLE, PPM, element_modifier_ppm
 from trpg.engine.rules.facing import facing_between
@@ -603,6 +603,8 @@ def _move_unit(ctx: Ctx, effect: EffectBase) -> list[EventBase]:
     dest = Pos(x=max(dx, 0), y=max(dy, 0))
     if not state.in_bounds(dx, dy):
         return [ctx.emit(MoveBlocked, unit_id=unit.id, to_pos=dest, reason="out_of_bounds")]
+    if unit.has_tag(IMMOVABLE) and effect.mode in ("forced", "teleported"):  # 石像（3-33e2a）
+        return [ctx.emit(MoveBlocked, unit_id=unit.id, to_pos=dest, reason="immovable")]
     occupant = state.unit_at(dx, dy)
     if occupant is not None and occupant.id != unit.id and effect.mode != "walk":
         return [ctx.emit(MoveBlocked, unit_id=unit.id, to_pos=dest, reason="occupied")]

@@ -90,6 +90,7 @@ from trpg.engine.events import (
     StatusResisted,
     StatusSaveRolled,
     SummonCommanded,
+    SummonDetonated,
     SummonExpired,
     SummonModeSet,
     SurfaceChanged,
@@ -118,6 +119,7 @@ from trpg.engine.events import (
     UnitStoodUp,
     UnitSummoned,
     UnitVaulted,
+    WallToppled,
     WeaponReloaded,
     ZoneCreated,
     ZoneExpired,
@@ -1166,6 +1168,8 @@ _SUMMON_EXPIRY_TEXT = {
     "owner_gone": "召喚者離場",
     "limit": "超過同時存在的上限，最舊的召喚物",
     "sacrificed": "被獻祭",
+    "detonated": "自爆了",
+    "toppled": "被推倒了",
 }
 
 
@@ -1173,6 +1177,25 @@ _SUMMON_EXPIRY_TEXT = {
 def _summon_expired(e: SummonExpired, v: _View) -> str:
     why = _SUMMON_EXPIRY_TEXT[e.reason]
     return f"  {why}：{v.name.get(e.unit_id, e.unit_id)} 消失了"
+
+
+_DETONATE_TEXT = {"arrived": "走到敵人身旁", "adjacent": "身旁有敵人", "downed": "被打倒"}
+
+
+@_handles(SummonDetonated)
+def _summon_detonated(e: SummonDetonated, v: _View) -> str:
+    name = v.name.get(e.unit_id, e.unit_id)
+    hit = "、".join(v.name.get(t, t) for t in e.targets) or "沒有波及任何人"
+    return f"  {name} {_DETONATE_TEXT[e.reason]}，轟然自爆（{e.radius} 格內）：{hit}"
+
+
+@_handles(WallToppled)
+def _wall_toppled(e: WallToppled, v: _View) -> str:
+    name = v.name.get(e.unit_id, e.unit_id)
+    way = _DIRECTION_NAMES.get(e.direction, "")
+    hit = "、".join(v.name[u] for u in e.units)
+    text = f"  ✦ {name} 往{way}倒下"
+    return f"{text}（壓到 {hit}）" if hit else text
 
 
 @_handles(TotemPulsed)
@@ -1303,6 +1326,8 @@ def _maneuver(e: ManeuverRolled, v: _View) -> str:
 
 @_handles(PushResisted)
 def _push_resisted(e: PushResisted, v: _View) -> str:
+    if e.reason == "immovable":
+        return f"  {v.name[e.unit_id]} 紋風不動：不會被推動、拉扯或傳送"
     return f"  {v.name[e.unit_id]} 穩如泰山：推擊距離 {e.requested} → {e.distance}"
 
 
