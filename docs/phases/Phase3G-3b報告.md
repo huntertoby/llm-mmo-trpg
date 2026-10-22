@@ -102,4 +102,7 @@ uv run trpg battle replay g3b.json
 
 ## 最終檢查
 
-見文末（跑完後補上）。
+`uv run python scripts/check.py`：ruff check／format、mypy、lint-imports、pytest、client typecheck、client test **全部通過**（第一次全量有 12 個失敗：新技能的預算「過弱」檢查、技能總數 163→166 與 CLI 輸出快照、圖示 fixture；已處理——`skillgen/validate.py` 對標籤 `gear` 的技能不套「過弱」下限、更新數量與快照、校準測試排除 `skill_gear_*`，第二次全量全過）。
+`corepack pnpm -C client build`：成功（只有既有的 chunk 大於 500 kB 警告）。
+
+另列待 PM 決定 #11：裝備授予的技能預算算在詞條上，所以驗證器對標籤 `gear` 的技能不套「過弱」下限、階級預算校準也排除它們。
