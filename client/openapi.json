@@ -326,6 +326,9 @@
                     "$ref": "#/components/schemas/Reload"
                   },
                   {
+                    "$ref": "#/components/schemas/ActivateCharge"
+                  },
+                  {
                     "$ref": "#/components/schemas/EndStance"
                   },
                   {
@@ -350,6 +353,7 @@
                     "trip": "#/components/schemas/Trip",
                     "interact": "#/components/schemas/Interact",
                     "reload": "#/components/schemas/Reload",
+                    "activate_charge": "#/components/schemas/ActivateCharge",
                     "end_stance": "#/components/schemas/EndStance",
                     "set_reaction_mode": "#/components/schemas/SetReactionMode",
                     "end_turn": "#/components/schemas/EndTurn"
@@ -497,6 +501,9 @@
                     "$ref": "#/components/schemas/Reload"
                   },
                   {
+                    "$ref": "#/components/schemas/ActivateCharge"
+                  },
+                  {
                     "$ref": "#/components/schemas/EndStance"
                   },
                   {
@@ -521,6 +528,7 @@
                     "trip": "#/components/schemas/Trip",
                     "interact": "#/components/schemas/Interact",
                     "reload": "#/components/schemas/Reload",
+                    "activate_charge": "#/components/schemas/ActivateCharge",
                     "end_stance": "#/components/schemas/EndStance",
                     "set_reaction_mode": "#/components/schemas/SetReactionMode",
                     "end_turn": "#/components/schemas/EndTurn"
@@ -1408,6 +1416,9 @@
             "$ref": "#/components/schemas/Reload"
           },
           {
+            "$ref": "#/components/schemas/ActivateCharge"
+          },
+          {
             "$ref": "#/components/schemas/EndStance"
           },
           {
@@ -1420,6 +1431,7 @@
         "discriminator": {
           "propertyName": "type",
           "mapping": {
+            "activate_charge": "#/components/schemas/ActivateCharge",
             "aim": "#/components/schemas/Aim",
             "attack": "#/components/schemas/Attack",
             "defend": "#/components/schemas/Defend",
@@ -1437,6 +1449,43 @@
             "vault": "#/components/schemas/Vault"
           }
         }
+      },
+      "ActivateCharge": {
+        "properties": {
+          "unit_id": {
+            "type": "string",
+            "title": "Unit Id"
+          },
+          "type": {
+            "type": "string",
+            "const": "activate_charge",
+            "title": "Type",
+            "default": "activate_charge"
+          },
+          "affix_id": {
+            "type": "string",
+            "title": "Affix Id"
+          },
+          "target_id": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Target Id"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "unit_id",
+          "affix_id"
+        ],
+        "title": "ActivateCharge",
+        "description": "啟動裝備的充能詞條（Phase 3G-G3a，第 7 類）：花 ``cost_stacks`` 層與 ``cost_ap`` AP，結算詞條\n的效果。``affix_id`` 是持有者身上生效中的充能詞條；詞條作用在目標（``effect_target: target``）\n時 ``target_id`` 必填（武器射程內的敵人），作用在自己時不可填。"
       },
       "ActivationView": {
         "properties": {
@@ -2614,6 +2663,66 @@
         ],
         "title": "ChargeOut",
         "description": "等待中的延遲段（Phase 3F-4b）：施放者、技能、釋放時機與以施放者目前位置推算的預計範圍。"
+      },
+      "ChargeView": {
+        "properties": {
+          "affix_id": {
+            "type": "string",
+            "title": "Affix Id"
+          },
+          "name_zh": {
+            "type": "string",
+            "title": "Name Zh"
+          },
+          "stack_id": {
+            "type": "string",
+            "title": "Stack Id"
+          },
+          "stack_name_zh": {
+            "type": "string",
+            "title": "Stack Name Zh"
+          },
+          "stacks": {
+            "type": "integer",
+            "title": "Stacks"
+          },
+          "max_stacks": {
+            "type": "integer",
+            "title": "Max Stacks"
+          },
+          "cost_stacks": {
+            "type": "integer",
+            "title": "Cost Stacks"
+          },
+          "cost_ap": {
+            "type": "integer",
+            "title": "Cost Ap"
+          },
+          "needs_target": {
+            "type": "boolean",
+            "title": "Needs Target"
+          },
+          "ready": {
+            "type": "boolean",
+            "title": "Ready"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "affix_id",
+          "name_zh",
+          "stack_id",
+          "stack_name_zh",
+          "stacks",
+          "max_stacks",
+          "cost_stacks",
+          "cost_ap",
+          "needs_target",
+          "ready"
+        ],
+        "title": "ChargeView",
+        "description": "裝備上的一條充能詞條（Phase 3G-G3a，唯讀）：層數、啟動需求與目前能不能啟動。\n\n``stacks``／``max_stacks``：目前層數與裝備版上限；``cost_stacks``／``cost_ap``：啟動花費；\n``needs_target``：啟動要選一個敵方目標（否則作用在自己）；``ready``：層數足夠（AP 與目標\n另外看 ``legal_actions``）。"
       },
       "Choice": {
         "properties": {
@@ -7556,6 +7665,9 @@
             "$ref": "#/components/schemas/Reload"
           },
           {
+            "$ref": "#/components/schemas/ActivateCharge"
+          },
+          {
             "$ref": "#/components/schemas/EndStance"
           },
           {
@@ -7571,6 +7683,7 @@
         "discriminator": {
           "propertyName": "type",
           "mapping": {
+            "activate_charge": "#/components/schemas/ActivateCharge",
             "aim": "#/components/schemas/Aim",
             "attack": "#/components/schemas/Attack",
             "decision": "#/components/schemas/Decision",
@@ -8473,6 +8586,14 @@
             },
             "type": "array",
             "title": "Gear Totals",
+            "default": []
+          },
+          "charges": {
+            "items": {
+              "$ref": "#/components/schemas/ChargeView"
+            },
+            "type": "array",
+            "title": "Charges",
             "default": []
           }
         },

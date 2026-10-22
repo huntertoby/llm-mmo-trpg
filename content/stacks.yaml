@@ -32,3 +32,10 @@ stacks:
       per_stack_damage_permille: 200
       backlash:
         - {type: damage, dice: 2d6, element: lightning}
+  # 怒氣（Phase 3G-G3a，裝備詞條 affix_charge_fury 用；數值為初值）：受到傷害時累積，花滿層啟動強化。
+  - id: fury
+    name_zh: 怒氣
+    description_zh: 累積在持有者自己身上的怒氣（受到傷害時 +1 層）；裝備的充能詞條花滿層啟動強化。
+    owner: self
+    max: 4
+    ai_value: 2

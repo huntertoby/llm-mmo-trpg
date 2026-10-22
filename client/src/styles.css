@@ -2909,3 +2909,31 @@ button.selected {
   font-size: 12px;
   cursor: help;
 }
+
+/* Phase 3G-G3a：裝備充能的層數（HUD 與單位資訊） */
+.charge-pips {
+  display: inline-flex;
+  gap: 3px;
+  vertical-align: middle;
+}
+.charge-pip {
+  width: 10px;
+  height: 10px;
+  border-radius: 50%;
+  border: 1px solid #6aa9e0;
+  background: transparent;
+}
+.charge-pip.filled {
+  background: #6ec8ff;
+  border-color: #3b86c4;
+}
+.charge-chip.ready {
+  border-color: #6ec8ff;
+}
+.charge-ready {
+  margin-left: 6px;
+  color: #8fd8ff;
+}
+.charge-line .charge-chip {
+  margin-right: 4px;
+}

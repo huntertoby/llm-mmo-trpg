@@ -40,6 +40,7 @@ from trpg.content.environment import (
 from trpg.content.equipment import (
     AffixDef,
     AffixTable,
+    ChargeAffix,
     ConditionalAffix,
     EquipmentRules,
     ItemDef,
@@ -119,6 +120,17 @@ REQUIRED_STATUSES = (
 """引擎規則直接引用的狀態 ID，必須存在於 ``statuses.yaml``。"""
 
 
+class _CacheDict(dict[object, SkillKeywords]):
+    """快取字典：永遠與另一個快取「相等」。pydantic 的 ``__eq__`` 會比較私有屬性，而快取內容只是
+    推導結果（依需要才填），不是規則資料——同一份規則包因為快取填過與否而不相等，會讓
+    「狀態 JSON 來回後仍相等」這類比較時好時壞（3G-G2 起的不穩定測試）。"""
+
+    def __eq__(self, other: object) -> bool:
+        return isinstance(other, _CacheDict)
+
+    __hash__ = None
+
+
 class Ruleset(ContentModel):
     """引擎需要的規則資料。"""
 
@@ -146,7 +158,7 @@ class Ruleset(ContentModel):
     """關鍵字推導表（Phase 3G-G2，``content/skill_keywords.yaml``）：裝備的技能強化詞條依關鍵字
     選取技能。嵌入規則包，重播不依賴資料檔。"""
 
-    _keyword_cache: dict[object, SkillKeywords] = PrivateAttr(default_factory=dict)
+    _keyword_cache: dict[object, SkillKeywords] = PrivateAttr(default_factory=_CacheDict)
     _rule_change_index: dict[str, RuleChangeDef] = PrivateAttr(default_factory=dict)
     _summon_index: dict[str, SummonDef] = PrivateAttr(default_factory=dict)
     _skill_index: dict[str, SkillDef] = PrivateAttr(default_factory=dict)
@@ -940,7 +952,8 @@ def _affix_reference_problems(
     """詞條引用的條件、狀態、觸發時機、反應與規則改變存在（Phase 3G-G1）。
 
     Phase 3G-G2 起也檢查：技能強化的關鍵字 id（對照推導表）、武器特性強化限定的武器與參數。
-    不檢查（G3 才加入）：充能的層數（``fury``）、授予動作的技能。
+    Phase 3G-G3a 起也檢查：觸發與充能的時機（對象要有「另一方」）、效果原語、充能的層數。
+    不檢查（G3b 才加入）：授予動作的技能。
     """
     statuses = {s.id for s in ruleset.statuses.statuses}
     refs: list[tuple[str, str, set[str]]] = []
@@ -948,6 +961,10 @@ def _affix_reference_problems(
         refs.append(("條件", affix.condition.type, {c.id for c in ruleset.conditions.conditions}))
     if isinstance(affix, TriggerAffix):
         refs.append(("觸發時機", affix.trigger, {t.id for t in ruleset.skill_triggers.triggers}))
+    if isinstance(affix, ChargeAffix):
+        refs.append(
+            ("觸發時機", affix.gain_trigger, {t.id for t in ruleset.skill_triggers.triggers})
+        )
     if isinstance(affix, RuleAffix):
         refs.append(("規則改變", affix.rule, {r.id for r in ruleset.rule_changes.rule_changes}))
     if isinstance(affix, ReactionAffix) and affix.mode != "grant":
@@ -957,11 +974,42 @@ def _affix_reference_problems(
     if isinstance(affix, KeywordAffix):
         refs.append(("關鍵字", affix.keyword, set(keyword_ids)))
     extra = _trait_problems(affix, weapons) if isinstance(affix, WeaponTraitAffix) else []
+    if isinstance(affix, TriggerAffix | ChargeAffix):
+        extra += _trigger_charge_problems(affix, ruleset)
     return extra + [
         f"詞條 {affix.id} 引用了未知的{what}：{ref}"
         for what, ref, known in refs
         if ref not in known
     ]
+
+
+def _trigger_charge_problems(affix: TriggerAffix | ChargeAffix, ruleset: Ruleset) -> list[str]:
+    """觸發與充能詞條（G3a）：效果原語存在；觸發對象（目標、攻擊者）需要該時機有「另一方」；
+    充能的層數存在、屬於持有者自己（``owner: self``）且裝備版上限不超過層數本身的上限。"""
+    problems = [
+        f"詞條 {affix.id} 引用了未知的效果原語：{e.type}"
+        for e in affix.effects
+        if e.type not in ruleset.primitives.by_id()
+    ]
+    if isinstance(affix, ChargeAffix):
+        stacks = ruleset.stacks.by_id()
+        stack = stacks.get(affix.stack)
+        if stack is None:
+            problems.append(f"詞條 {affix.id} 引用了未知的層數：{affix.stack}")
+        elif stack.owner != "self" or affix.max_stacks > stack.max:
+            problems.append(
+                f"詞條 {affix.id} 的層數 {stack.id} 必須是 owner: self 且上限不小於 max_stacks"
+            )
+        return problems
+    triggers = ruleset.skill_triggers.by_id()
+    trigger = triggers.get(affix.trigger)
+    if trigger is not None and affix.effect_target != "self" and not trigger.has_other:
+        problems.append(
+            f"詞條 {affix.id}：時機 {affix.trigger} 沒有另一方，effect_target 只能是 self"
+        )
+    if affix.effect_target == "attacker" and affix.trigger != "on_damaged":
+        problems.append(f"詞條 {affix.id}：effect_target: attacker 只能搭配 on_damaged")
+    return problems
 
 
 def _affix_statuses(affix: AffixDef) -> list[str]:

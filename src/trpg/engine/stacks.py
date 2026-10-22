@@ -21,16 +21,26 @@ from trpg.engine.events import OverloadTriggered, StacksChanged
 from trpg.engine.state import BattleState, UnitState
 from trpg.shared.types import UnitId
 
-__all__ = ["add_stacks", "consume_stacks", "expire_stacks", "required_stack"]
+__all__ = ["add_stacks", "consume_stacks", "expire_stacks", "required_stack", "spend_stacks"]
 
 
 def add_stacks(
-    ctx: Ctx, unit: UnitState, stack_id: str, amount: int, *, source_id: UnitId | None
+    ctx: Ctx,
+    unit: UnitState,
+    stack_id: str,
+    amount: int,
+    *,
+    source_id: UnitId | None,
+    limit: int | None = None,
 ) -> None:
-    """``unit`` 累積 ``amount`` 層（超過上限截斷；層數沒有變化時不發事件，但仍刷新到期輪數）。"""
+    """``unit`` 累積 ``amount`` 層（超過上限截斷；層數沒有變化時不發事件，但仍刷新到期輪數）。
+
+    ``limit``（Phase 3G-G3a，裝備充能）：這次累積使用的上限，取它與層數本身上限中較小的；已經
+    超過 ``limit`` 的層數不會因此減少。"""
     definition = ctx.rules.stack_def(stack_id)
     before = unit.stacks.get(stack_id, 0)
-    after = min(before + amount, definition.max)
+    cap = definition.max if limit is None else min(limit, definition.max)
+    after = max(before, min(before + amount, cap))
     if definition.expires_after_rounds is not None:
         unit.stack_expiry[stack_id] = ctx.state.round + definition.expires_after_rounds
     if after == before:
@@ -112,6 +122,29 @@ def consume_stacks(ctx: Ctx, unit: UnitState, stack_id: str, *, source_id: UnitI
             source_id=source_id,
         )
     return before
+
+
+def spend_stacks(
+    ctx: Ctx, unit: UnitState, stack_id: str, amount: int, *, source_id: UnitId | None
+) -> None:
+    """花掉 ``unit`` 的 ``amount`` 層（裝備充能的啟動；呼叫端已確認層數足夠）。"""
+    before = unit.stacks.get(stack_id, 0)
+    after = before - amount
+    assert after >= 0
+    if after > 0:
+        unit.stacks[stack_id] = after
+    else:
+        unit.stacks.pop(stack_id, None)
+        unit.stack_expiry.pop(stack_id, None)
+    ctx.emit(
+        StacksChanged,
+        unit_id=unit.id,
+        stack_id=stack_id,
+        before=before,
+        after=after,
+        reason="consumed",
+        source_id=source_id,
+    )
 
 
 def expire_stacks(ctx: Ctx) -> None:

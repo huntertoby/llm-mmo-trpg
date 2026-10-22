@@ -23,6 +23,7 @@ def refund_ap(ctx: Ctx, caster: UnitState, skill_id: str, amount: int) -> None:
     before = caster.ap
     caster.ap = max(before, min(before + amount, ap_cap(ctx.core)))
     if caster.ap > before:
+        caster.ap_gain_turn += caster.ap - before
         ctx.emit(
             ApRefunded,
             unit_id=caster.id,

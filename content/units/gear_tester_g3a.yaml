@@ -1,0 +1,19 @@
+# 裝備測試用單位（Phase 3G-G3a）：持劍戰士，穿上觸發與充能的測試物品（每三次命中倒地、擊殺回 AP、
+# 荊棘燃燒、靜電與怒氣的充能）。
+#   uv run trpg battle --map test_flat_6x6 --allies gear_tester_g3a --enemies bandit,bandit --seed 7 --log-json <檔案>
+id: gear_tester_g3a
+name_zh: 蓄電戰士
+attributes: {str: 16, dex: 12, con: 14, int: 10, wis: 10, wil: 10}
+max_hp: 48
+speed: 5
+armor_bonus: 4
+weapon: one_handed_sword
+resist: {physical: 100}
+element_mods: {}
+tags: [hero]
+max_mana: 20
+skills: [skill_bone_crusher, skill_whirlwind, skill_gale_kick, skill_execute, skill_rending_strike]
+equipment:
+  main_hand: item_g3a_blade
+  body: item_g3a_armor
+  ring_1: item_g3a_ring

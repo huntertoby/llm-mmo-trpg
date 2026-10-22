@@ -33,6 +33,7 @@ from trpg.content.skills import (
 from trpg.engine import modifiers
 from trpg.engine.actions import (
     Action,
+    ActivateCharge,
     Aim,
     Attack,
     Defend,
@@ -83,6 +84,7 @@ from trpg.engine.events import (
     UnitRevived,
     UnitSummoned,
 )
+from trpg.engine.gear_charge import find_charge
 from trpg.engine.ids import BOSS_TAG
 from trpg.engine.maneuvers import contest_chance
 from trpg.engine.pierce import pierce_trace
@@ -1338,6 +1340,34 @@ def preview(state: BattleState, action: Action) -> Preview:
     return replace(base, gamble=GambleInfo(spec.chance_permille, (win, lose)))
 
 
+def _charge_damage(
+    action: ActivateCharge,
+    actor: UnitState,
+    min_events: list[EventBase],
+    max_events: list[EventBase],
+) -> DamageRange | None:
+    """裝備充能對目標的傷害範圍（自動命中：最少與最多取自模擬事件，期望值為兩者平均）。"""
+    if action.target_id is None:
+        return None
+
+    def total(events: list[EventBase]) -> int | None:
+        hits = [
+            e.amount - e.absorbed
+            for e in events
+            if isinstance(e, DamageDealt)
+            and e.source_id == actor.id
+            and e.target_id == action.target_id
+            and e.cause != "conduct"
+        ]
+        return sum(hits) if hits else None
+
+    low, high = total(min_events), total(max_events)
+    if low is None or high is None:
+        return None
+    mid = Fraction(low + high, 2)
+    return DamageRange(low, high, mid, mid)
+
+
 def _basic_ap_cost(state: BattleState, action: Action, default: int | None) -> int | None:
     """基本動作（跑步、守護、換位、瞄準、攀跳）與裝填的 AP 花費；其他動作沿用 ``default``。"""
     core = state.ruleset.core
@@ -1350,6 +1380,9 @@ def _basic_ap_cost(state: BattleState, action: Action, default: int | None) -> i
     }
     if isinstance(action, Reload):
         return state.units[action.unit_id].weapon.reload_ap
+    if isinstance(action, ActivateCharge):
+        affix = find_charge(state.units[action.unit_id], action.affix_id)
+        return None if affix is None else affix.cost_ap
     return costs.get(type(action), default)
 
 
@@ -1372,6 +1405,8 @@ def _build(
             cover = half_cover(state, actor, state.units[action.target_id])
     elif isinstance(action, Shove | Trip):
         hit, crit = _maneuver_chance(state, actor, action), Fraction(0)
+    elif isinstance(action, ActivateCharge):  # 裝備充能（3G-G3a）：自動命中，沒有命中率
+        damage = _charge_damage(action, actor, min_events, max_events)
     targets: tuple[TargetPreview, ...] = ()
     healed: tuple[tuple[UnitId, int, int], ...] = ()
     if isinstance(action, UseSkill):

@@ -30,7 +30,14 @@ from pydantic import Field, field_validator, model_validator
 
 from trpg.content.battle import ID_PATTERN, WeaponDef
 from trpg.content.schemas import ContentModel
-from trpg.content.skills import ConditionSpec, EffectSpec, condition_text
+from trpg.content.skills import (
+    ON_CAST_TAG,
+    ON_ENTER_SURFACE,
+    ON_STATUS_APPLIED,
+    ConditionSpec,
+    EffectSpec,
+    condition_text,
+)
 from trpg.content.slots import (
     SLOT_INDEX,
     SLOT_TYPE_OF,
@@ -46,6 +53,7 @@ __all__ = [
     "AFFIX_CATEGORIES",
     "AFFIX_CATEGORY_NUMBER",
     "AFFIX_CATEGORY_ZH",
+    "CHARGE_GAIN_UNSUPPORTED",
     "NUMERIC_CATEGORIES",
     "SELF_EVALUABLE_CONDITIONS",
     "ActionAffix",
@@ -346,9 +354,10 @@ class WeaponTraitAffix(_AffixBase):
 
 
 class TriggerAffix(_AffixBase):
-    """第 6 類 觸發（8.21.2.6；結算在 G3）：觸發時機 ``trigger``（``skill_triggers.yaml``）時對
+    """第 6 類 觸發（8.21.2.6；Phase 3G-G3a）：觸發時機 ``trigger``（``skill_triggers.yaml``）時對
     ``effect_target`` 結算 ``effects``；``limit`` 每回合／每輪最多 1 次。``melee_only``：只有近戰
-    造成的才算（``on_damaged``）。"""
+    造成的才算（``on_damaged``）。``tag``／``status``／``surface`` 是帶參數的時機（同被動技能的
+    ``trigger``）。"""
 
     category: Literal["trigger"]
     trigger: str = Field(pattern=ID_PATTERN)
@@ -357,17 +366,36 @@ class TriggerAffix(_AffixBase):
     effect_target: Literal["target", "self", "attacker"] = "target"
     effects: tuple[EffectSpec, ...] = Field(min_length=1, max_length=2)
     limit: Literal["per_turn", "per_round"] = "per_turn"
+    tag: str | None = Field(default=None, pattern=ID_PATTERN)
+    status: str | None = Field(default=None, pattern=ID_PATTERN)
+    surface: str | None = Field(default=None, pattern=ID_PATTERN)
 
     @model_validator(mode="after")
     def _check(self) -> TriggerAffix:
         if (self.trigger == "every_n_hits") != (self.n is not None):
             raise ValueError(f"詞條 {self.id}：n 只在 trigger: every_n_hits 時填寫（且必填）")
+        if self.melee_only and self.trigger != "on_damaged":
+            raise ValueError(f"詞條 {self.id}：melee_only 只能搭配 trigger: on_damaged")
+        if (self.trigger == ON_CAST_TAG) != (self.tag is not None):
+            raise ValueError(f"詞條 {self.id}：tag 只在 trigger: on_cast_tag 時填寫（且必填）")
+        if self.status is not None and self.trigger != ON_STATUS_APPLIED:
+            raise ValueError(f"詞條 {self.id}：status 只能搭配 trigger: on_status_applied")
+        if self.surface is not None and self.trigger != ON_ENTER_SURFACE:
+            raise ValueError(f"詞條 {self.id}：surface 只能搭配 trigger: on_enter_surface")
         return self
 
 
+CHARGE_GAIN_UNSUPPORTED: frozenset[str] = frozenset(
+    {"every_n_hits", ON_CAST_TAG, ON_STATUS_APPLIED, ON_ENTER_SURFACE}
+)
+"""充能不能用來累積層數的觸發時機（需要參數：次數、標籤、狀態、表面）。"""
+
+
 class ChargeAffix(_AffixBase):
-    """第 7 類 充能（8.21.2.7；結算在 G3）：``gain_trigger`` 時累積 ``stack``（裝備版上限
-    ``max_stacks``）；花 ``cost_stacks`` 層 ＋ ``cost_ap`` AP 啟動 ``effects``。"""
+    """第 7 類 充能（8.21.2.7；Phase 3G-G3a）：``gain_trigger`` 時累積 ``stack``（裝備版上限
+    ``max_stacks``）；花 ``cost_stacks`` 層 ＋ ``cost_ap`` AP 啟動 ``effects``（行動面板的
+    「更多動作」）。
+    ``effect_target``：``target``＝啟動時選一個武器射程內的敵人；``self``＝作用在自己。"""
 
     category: Literal["charge"]
     stack: str = Field(pattern=ID_PATTERN)
@@ -376,11 +404,14 @@ class ChargeAffix(_AffixBase):
     cost_stacks: int = Field(ge=1)
     cost_ap: int = Field(ge=0, le=3)
     effects: tuple[EffectSpec, ...] = Field(min_length=1, max_length=2)
+    effect_target: Literal["target", "self"] = "target"
 
     @model_validator(mode="after")
     def _check(self) -> ChargeAffix:
         if self.cost_stacks > self.max_stacks:
             raise ValueError(f"詞條 {self.id}：cost_stacks 不可超過 max_stacks")
+        if self.gain_trigger in CHARGE_GAIN_UNSUPPORTED:
+            raise ValueError(f"詞條 {self.id}：充能不能用需要參數的時機 {self.gain_trigger} 累積")
         return self
 
 

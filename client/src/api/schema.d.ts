@@ -598,7 +598,26 @@ export interface paths {
 export type webhooks = Record<string, never>;
 export interface components {
     schemas: {
-        Action: components["schemas"]["Move"] | components["schemas"]["Attack"] | components["schemas"]["UseSkill-Output"] | components["schemas"]["Defend"] | components["schemas"]["Run"] | components["schemas"]["Swap"] | components["schemas"]["Aim"] | components["schemas"]["Vault"] | components["schemas"]["Shove"] | components["schemas"]["Trip"] | components["schemas"]["Interact"] | components["schemas"]["Reload"] | components["schemas"]["EndStance"] | components["schemas"]["SetReactionMode"] | components["schemas"]["EndTurn"];
+        Action: components["schemas"]["Move"] | components["schemas"]["Attack"] | components["schemas"]["UseSkill-Output"] | components["schemas"]["Defend"] | components["schemas"]["Run"] | components["schemas"]["Swap"] | components["schemas"]["Aim"] | components["schemas"]["Vault"] | components["schemas"]["Shove"] | components["schemas"]["Trip"] | components["schemas"]["Interact"] | components["schemas"]["Reload"] | components["schemas"]["ActivateCharge"] | components["schemas"]["EndStance"] | components["schemas"]["SetReactionMode"] | components["schemas"]["EndTurn"];
+        /**
+         * ActivateCharge
+         * @description 啟動裝備的充能詞條（Phase 3G-G3a，第 7 類）：花 ``cost_stacks`` 層與 ``cost_ap`` AP，結算詞條
+         *     的效果。``affix_id`` 是持有者身上生效中的充能詞條；詞條作用在目標（``effect_target: target``）
+         *     時 ``target_id`` 必填（武器射程內的敵人），作用在自己時不可填。
+         */
+        ActivateCharge: {
+            /** Unit Id */
+            unit_id: string;
+            /**
+             * @description discriminator enum property added by openapi-typescript
+             * @enum {string}
+             */
+            type: "activate_charge";
+            /** Affix Id */
+            affix_id: string;
+            /** Target Id */
+            target_id?: string | null;
+        };
         /**
          * ActivationView
          * @description 生效中的常駐類傳說（Phase 3D-6；雙方都看得到）。
@@ -1055,6 +1074,36 @@ export interface components {
             tiles: components["schemas"]["Pos"][];
             /** Text */
             text: string;
+        };
+        /**
+         * ChargeView
+         * @description 裝備上的一條充能詞條（Phase 3G-G3a，唯讀）：層數、啟動需求與目前能不能啟動。
+         *
+         *     ``stacks``／``max_stacks``：目前層數與裝備版上限；``cost_stacks``／``cost_ap``：啟動花費；
+         *     ``needs_target``：啟動要選一個敵方目標（否則作用在自己）；``ready``：層數足夠（AP 與目標
+         *     另外看 ``legal_actions``）。
+         */
+        ChargeView: {
+            /** Affix Id */
+            affix_id: string;
+            /** Name Zh */
+            name_zh: string;
+            /** Stack Id */
+            stack_id: string;
+            /** Stack Name Zh */
+            stack_name_zh: string;
+            /** Stacks */
+            stacks: number;
+            /** Max Stacks */
+            max_stacks: number;
+            /** Cost Stacks */
+            cost_stacks: number;
+            /** Cost Ap */
+            cost_ap: number;
+            /** Needs Target */
+            needs_target: boolean;
+            /** Ready */
+            ready: boolean;
         };
         /**
          * Choice
@@ -3040,7 +3089,7 @@ export interface components {
              */
             charge_tiles: components["schemas"]["Pos"][];
         };
-        Step: components["schemas"]["Move"] | components["schemas"]["Attack"] | components["schemas"]["UseSkill-Output"] | components["schemas"]["Defend"] | components["schemas"]["Run"] | components["schemas"]["Swap"] | components["schemas"]["Aim"] | components["schemas"]["Vault"] | components["schemas"]["Shove"] | components["schemas"]["Trip"] | components["schemas"]["Interact"] | components["schemas"]["Reload"] | components["schemas"]["EndStance"] | components["schemas"]["SetReactionMode"] | components["schemas"]["EndTurn"] | components["schemas"]["Decision"];
+        Step: components["schemas"]["Move"] | components["schemas"]["Attack"] | components["schemas"]["UseSkill-Output"] | components["schemas"]["Defend"] | components["schemas"]["Run"] | components["schemas"]["Swap"] | components["schemas"]["Aim"] | components["schemas"]["Vault"] | components["schemas"]["Shove"] | components["schemas"]["Trip"] | components["schemas"]["Interact"] | components["schemas"]["Reload"] | components["schemas"]["ActivateCharge"] | components["schemas"]["EndStance"] | components["schemas"]["SetReactionMode"] | components["schemas"]["EndTurn"] | components["schemas"]["Decision"];
         /** @enum {string} */
         StepId: "skeleton" | "basics" | "shape" | "effects" | "followup" | "condition" | "cost" | "rarity";
         /**
@@ -3382,6 +3431,11 @@ export interface components {
              * @default []
              */
             gear_totals: components["schemas"]["GearTotalView"][];
+            /**
+             * Charges
+             * @default []
+             */
+            charges: components["schemas"]["ChargeView"][];
         };
         /** UpcomingEventOut */
         UpcomingEventOut: {
@@ -3871,7 +3925,7 @@ export interface operations {
         };
         requestBody: {
             content: {
-                "application/json": components["schemas"]["Move"] | components["schemas"]["Attack"] | components["schemas"]["UseSkill-Input"] | components["schemas"]["Defend"] | components["schemas"]["Run"] | components["schemas"]["Swap"] | components["schemas"]["Aim"] | components["schemas"]["Vault"] | components["schemas"]["Shove"] | components["schemas"]["Trip"] | components["schemas"]["Interact"] | components["schemas"]["Reload"] | components["schemas"]["EndStance"] | components["schemas"]["SetReactionMode"] | components["schemas"]["EndTurn"];
+                "application/json": components["schemas"]["Move"] | components["schemas"]["Attack"] | components["schemas"]["UseSkill-Input"] | components["schemas"]["Defend"] | components["schemas"]["Run"] | components["schemas"]["Swap"] | components["schemas"]["Aim"] | components["schemas"]["Vault"] | components["schemas"]["Shove"] | components["schemas"]["Trip"] | components["schemas"]["Interact"] | components["schemas"]["Reload"] | components["schemas"]["ActivateCharge"] | components["schemas"]["EndStance"] | components["schemas"]["SetReactionMode"] | components["schemas"]["EndTurn"];
             };
         };
         responses: {
@@ -3941,7 +3995,7 @@ export interface operations {
         };
         requestBody: {
             content: {
-                "application/json": components["schemas"]["Move"] | components["schemas"]["Attack"] | components["schemas"]["UseSkill-Input"] | components["schemas"]["Defend"] | components["schemas"]["Run"] | components["schemas"]["Swap"] | components["schemas"]["Aim"] | components["schemas"]["Vault"] | components["schemas"]["Shove"] | components["schemas"]["Trip"] | components["schemas"]["Interact"] | components["schemas"]["Reload"] | components["schemas"]["EndStance"] | components["schemas"]["SetReactionMode"] | components["schemas"]["EndTurn"];
+                "application/json": components["schemas"]["Move"] | components["schemas"]["Attack"] | components["schemas"]["UseSkill-Input"] | components["schemas"]["Defend"] | components["schemas"]["Run"] | components["schemas"]["Swap"] | components["schemas"]["Aim"] | components["schemas"]["Vault"] | components["schemas"]["Shove"] | components["schemas"]["Trip"] | components["schemas"]["Interact"] | components["schemas"]["Reload"] | components["schemas"]["ActivateCharge"] | components["schemas"]["EndStance"] | components["schemas"]["SetReactionMode"] | components["schemas"]["EndTurn"];
             };
         };
         responses: {

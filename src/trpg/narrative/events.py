@@ -22,6 +22,7 @@ from trpg.engine.events import (
     BombExploded,
     BombTicked,
     ChainLimitReached,
+    ChargeActivated,
     CheckRolled,
     Collided,
     DamageDealt,
@@ -37,6 +38,7 @@ from trpg.engine.events import (
     FollowupCharged,
     GambleRolled,
     GearHpLost,
+    GearTriggered,
     GuardSet,
     Healed,
     InitiativeRolled,
@@ -840,6 +842,26 @@ def _backlash_triggered(e: BacklashTriggered, v: _View) -> str:
 @_handles(GearHpLost)
 def _gear_hp_lost(e: GearHpLost, v: _View) -> str:
     return f"  ✦ {v.name[e.unit_id]} 的裝備代價：失去 {e.amount} HP（{e.hp_before} → {e.hp_after}）"
+
+
+@_handles(GearTriggered)
+def _gear_triggered(e: GearTriggered, v: _View) -> str:
+    timing = v.state.ruleset.trigger_def(e.trigger).name_zh
+    target = f"，對象 {v.name[e.other_id]}" if e.other_id is not None else ""
+    return (
+        f"  ★ {v.name[e.unit_id]} 的裝備「{e.name_zh}」（{timing}）觸發"
+        f"（深度 {e.trigger_depth}）{target}"
+    )
+
+
+@_handles(ChargeActivated)
+def _charge_activated(e: ChargeActivated, v: _View) -> str:
+    stack = v.state.ruleset.stack_def(e.stack_id).name_zh
+    target = f"，對象 {v.name[e.target_id]}" if e.target_id is not None else ""
+    return (
+        f"  ⚡ {v.name[e.unit_id]} 啟動裝備「{e.name_zh}」"
+        f"（花 {e.stacks_spent} 層{stack}、{e.ap_spent} AP）{target}"
+    )
 
 
 @_handles(OverloadTriggered)

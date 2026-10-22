@@ -156,7 +156,7 @@ affixes:
     effects: [{type: apply_status, status: burning, duration: 1}]
     limit: per_round
 
-  # --- 7 充能（結算在 G3；怒氣 fury 由 G3 加入 stacks.yaml）---
+  # --- 7 充能（Phase 3G-G3a；層數的定義在 stacks.yaml）---
   - id: affix_charge_static
     category: charge
     name_zh: 命中時累積 1 層靜電（上限 3）；花 3 層＋1 AP：對目標造成 3d6 雷電
@@ -176,6 +176,7 @@ affixes:
     gain_trigger: on_damaged
     cost_stacks: 4
     cost_ap: 0
+    effect_target: self
     effects: [{type: apply_status, status: empowered, duration: 1}]
 
   # --- 8 代價型（全身最多 2 條；rules/equipment.yaml 的 caps.cost_affixes）---

@@ -1,8 +1,10 @@
 // 戰鬥 HUD（設計文件 7.3）：固定顯示主角當下需要的資訊。
 import type { BattleView, StatusView, UnitView } from "../api/types";
 import { ammoPips, ammoText, hasMagazine } from "../battle/ammo";
+import { chargeText } from "../battle/charges";
 import { sourcePips } from "../battle/source";
 import { statusTile, surfaceTile } from "../render/skillIcon";
+import { ChargeChips } from "./ChargeChips";
 import { TipGlyph } from "./SkillIconView";
 import { glossaryName, stackName, statusName, surfaceName } from "../battle/glossary";
 import type { SkillNames } from "../battle/actions";
@@ -70,6 +72,7 @@ export function compactHudText(view: BattleView, hero: UnitView): string {
     `AP ${hero.ap}`,
     `移動 ${hero.move_points}`,
     ...(hasMagazine(hero) ? [ammoText(hero)] : []),
+    ...(hero.charges ?? []).map((c) => `充能 ${chargeText(c)}`),
     `反應${hero.reaction_available ? "可用" : "已用"}`,
     `源力 ${hero.source}/${hero.source_max}`,
     `狀態 ${hero.statuses.length === 0 ? "無" : hero.statuses.map(statusLine).join("、")}`,
@@ -127,6 +130,7 @@ export function Hud({ view, hero, skills, compact = false }: Props) {
             {hero.ammo <= 0 && <b className="ammo-empty">空膛</b>}
           </span>
         )}
+        <ChargeChips charges={hero.charges ?? []} />
         <span
           className="hud-chip"
           title={`源力 ${hero.source}/${hero.source_max}：傳說技能的代價（跨戰鬥保留，每場至少 1 點；走上地圖上的「源」格 +1）`}

@@ -1,5 +1,5 @@
 // 技能列與目標選取（純函式）：合法動作 → 「模式」（技能、攻擊、推擊……）→ 每個模式的合法目標。
-import type { Action, BattleView, Direction, InteractOption, Pending, Pos, SkillCard, UnitView } from "../api/types";
+import type { Action, BattleView, ChargeView, Direction, InteractOption, Pending, Pos, SkillCard, UnitView } from "../api/types";
 import { buildComposite, compositePrompt, firstKeyAt, firstPos, secondAt, secondTiles, soleCenter, type CompositeSet } from "./composite";
 import { posKey, samePos } from "./geometry";
 import { activeReason } from "./activations";
@@ -64,6 +64,7 @@ export type ModeKind =
   | "aim"
   | "vault"
   | "reload"
+  | "charge"
   | "end_stance"
   | "stand";
 
@@ -160,6 +161,11 @@ function addTarget(t: TargetSet, action: Action): void {
       return;
     case "interact":
       setOnce(t.objects, action.object_id, action);
+      return;
+    case "activate_charge":
+      // 裝備充能（Phase 3G-G3a）：需要目標的點敵人，作用在自己的是「自身」
+      if (action.target_id == null) t.self ??= action;
+      else setOnce(t.units, action.target_id, action);
       return;
     default:
       t.self ??= action;
@@ -278,6 +284,9 @@ export const BASIC_ACTION_LIMIT = 10;
 /** 武器動作（Phase 3-24a2）：只有特定武器才有，不算進基本動作的上限；目前只有裝填（長槍空膛時才出現在「更多動作」）。 */
 export const WEAPON_ACTION_KINDS: readonly string[] = ["reload"];
 
+/** 裝備充能（Phase 3G-G3a）：每條充能詞條一個模式，放在「更多動作」選單最後（只在層數與 AP 足夠時伺服器才列出）。 */
+export const CHARGE_KIND: ModeKind = "charge";
+
 /** 常駐按鈕（移動除外，移動是點格子）：普攻、跑步、守護；結束回合另外放。 */
 export const RESIDENT_KINDS: readonly ModeKind[] = ["attack", "run", "defend"];
 /** 「更多動作」選單的順序。 */
@@ -301,6 +310,8 @@ function modeKindOf(a: Action): ModeKind | null {
       return "aim";
     case "reload":
       return "reload";
+    case "activate_charge":
+      return CHARGE_KIND;
     case "interact":
       return a.mode === "shove_aside" ? "shove_aside" : "interact";
     case "move":
@@ -310,15 +321,40 @@ function modeKindOf(a: Action): ModeKind | null {
   }
 }
 
-/** 基本動作（不含技能）的模式：攻擊、推擊、絆倒、推動物件、守護自己、跑步、結束姿態、起身。 */
-export function basicModes(legal: readonly Action[]): ActionMode[] {
-  return BASIC_MODES.flatMap(({ kind, label }) => {
+/** 充能按鈕的文字：「啟動靜電（3 層＋1 AP）」。 */
+export function chargeLabel(charge: ChargeView | undefined, affixId: string): string {
+  if (charge === undefined) return `啟動充能 ${affixId}`;
+  const ap = charge.cost_ap > 0 ? `＋${charge.cost_ap} AP` : "";
+  return `啟動${charge.stack_name_zh}（${charge.cost_stacks} 層${ap}）`;
+}
+
+/** 裝備充能的模式（Phase 3G-G3a）：依詞條 ID 分組，每條一個；`charges` 提供名稱與花費。 */
+export function chargeModes(legal: readonly Action[], charges: readonly ChargeView[] = []): ActionMode[] {
+  const groups = new Map<string, Action[]>();
+  for (const a of legal) {
+    if (a.type !== "activate_charge") continue;
+    groups.set(a.affix_id, [...(groups.get(a.affix_id) ?? []), a]);
+  }
+  return [...groups.keys()].sort().map((affixId) => {
+    const actions = groups.get(affixId) ?? [];
+    const label = chargeLabel(
+      charges.find((c) => c.affix_id === affixId),
+      affixId,
+    );
+    return { key: `charge:${affixId}`, kind: CHARGE_KIND, label, skillId: null, actions, targets: buildTargets(actions) };
+  });
+}
+
+/** 基本動作（不含技能）的模式：攻擊、推擊、絆倒、推動物件、守護自己、跑步、結束姿態、起身，以及裝備充能。 */
+export function basicModes(legal: readonly Action[], charges: readonly ChargeView[] = []): ActionMode[] {
+  const basic = BASIC_MODES.flatMap(({ kind, label }) => {
     const actions = legal.filter((a) => modeKindOf(a) === kind);
     if (actions.length === 0) return [];
     // 撥開要選方向（面板上的按鈕），不能靠點物件，所以沒有可點的目標
     const targets = kind === "shove_aside" ? emptyTargets() : buildTargets(actions);
     return [{ key: kind, kind, label, skillId: null, actions, targets }];
   });
+  return [...basic, ...chargeModes(legal, charges)];
 }
 
 /** 複合技能：位移段選取（落點格或目標單位）→ 動作段選取（方向、目標、或以落點為中心）。 */
@@ -450,7 +486,7 @@ export function asideRows(
 /** 「更多動作」選單（Phase 3-21b）：推擊、絆倒、互動、換位、瞄準、攀跳，**只列出當下合法的**
  *  （灰色的「推不動」模式不列）；順序固定。 */
 export function moreModes(basic: readonly ActionMode[]): ActionMode[] {
-  return MORE_KINDS.flatMap((kind) =>
+  return [...MORE_KINDS, CHARGE_KIND].flatMap((kind) =>
     basic.filter((m) => m.kind === kind && m.blockedReason === undefined && m.actions.length > 0),
   );
 }

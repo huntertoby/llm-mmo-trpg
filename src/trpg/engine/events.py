@@ -29,6 +29,7 @@ __all__ = [
     "BombExploded",
     "BombTicked",
     "ChainLimitReached",
+    "ChargeActivated",
     "CheckRolled",
     "Collided",
     "CollisionObstacle",
@@ -48,6 +49,7 @@ __all__ = [
     "FollowupCharged",
     "GambleRolled",
     "GearHpLost",
+    "GearTriggered",
     "GuardSet",
     "Healed",
     "InitiativeRolled",
@@ -1025,6 +1027,37 @@ class GearHpLost(EventBase):
     hp_after: int
 
 
+class GearTriggered(EventBase):
+    """裝備的觸發詞條觸發（Phase 3G-G3a；第 6 類）。
+
+    ``trigger``：觸發時機 ID（``skill_triggers.yaml``）；``other_id``：該時機的另一方；
+    ``trigger_depth``：觸發深度（同 ``skill_triggered``）。之後是效果原本的事件。
+    """
+
+    type: Literal["gear_triggered"] = "gear_triggered"
+    unit_id: UnitId
+    affix_id: str
+    name_zh: str
+    trigger: str
+    other_id: UnitId | None
+    trigger_depth: int
+
+
+class ChargeActivated(EventBase):
+    """裝備的充能詞條被啟動（Phase 3G-G3a；第 7 類，``activate_charge`` 動作）：花掉
+    ``stacks_spent``
+    層 ``stack_id`` 與 ``ap_spent`` AP，之後是效果原本的事件。"""
+
+    type: Literal["charge_activated"] = "charge_activated"
+    unit_id: UnitId
+    affix_id: str
+    name_zh: str
+    stack_id: str
+    stacks_spent: int
+    ap_spent: int
+    target_id: UnitId | None
+
+
 # ---------------------------------------------------------------------------
 # Phase 3C-4a：源力與改寫規則型原語
 # ---------------------------------------------------------------------------
@@ -1598,7 +1631,9 @@ type Event = Annotated[
     | GambleRolled
     | BacklashTriggered
     | OverloadTriggered
-    | GearHpLost,
+    | GearHpLost
+    | GearTriggered
+    | ChargeActivated,
     Field(discriminator="type"),
 ]
 

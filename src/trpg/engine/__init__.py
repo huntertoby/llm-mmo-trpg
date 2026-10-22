@@ -29,6 +29,7 @@ from __future__ import annotations
 
 from trpg.engine.actions import (
     Action,
+    ActivateCharge,
     Aim,
     Attack,
     Decision,
@@ -65,6 +66,7 @@ from trpg.engine.view import BattleView, project_for
 
 __all__ = [
     "Action",
+    "ActivateCharge",
     "Aim",
     "AllyResult",
     "Attack",

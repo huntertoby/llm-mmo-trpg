@@ -18,11 +18,13 @@ __all__ = [
     "ACTION_ADAPTER",
     "ACTION_LIST_ADAPTER",
     "BASIC_ACTION_TYPES",
+    "CHARGE_ACTION_TYPES",
     "MANAGEMENT_ACTION_TYPES",
     "STEP_ADAPTER",
     "STEP_LIST_ADAPTER",
     "WEAPON_ACTION_TYPES",
     "Action",
+    "ActivateCharge",
     "Aim",
     "Attack",
     "Decision",
@@ -147,6 +149,16 @@ class Trip(_ActionBase):
     target_id: UnitId
 
 
+class ActivateCharge(_ActionBase):
+    """啟動裝備的充能詞條（Phase 3G-G3a，第 7 類）：花 ``cost_stacks`` 層與 ``cost_ap`` AP，結算詞條
+    的效果。``affix_id`` 是持有者身上生效中的充能詞條；詞條作用在目標（``effect_target: target``）
+    時 ``target_id`` 必填（武器射程內的敵人），作用在自己時不可填。"""
+
+    type: Literal["activate_charge"] = "activate_charge"
+    affix_id: str
+    target_id: UnitId | None = None
+
+
 class Interact(_ActionBase):
     """互動：移動相鄰的 ``pushable`` 物件 1 格（只對物件，不能對單位）。
 
@@ -263,6 +275,7 @@ type Action = Annotated[
     | Trip
     | Interact
     | Reload
+    | ActivateCharge
     | EndStance
     | SetReactionMode
     | EndTurn,
@@ -285,6 +298,9 @@ BASIC_ACTION_TYPES: tuple[str, ...] = (
 
 WEAPON_ACTION_TYPES: tuple[str, ...] = ("reload",)
 """武器動作：只有特定武器才有（裝填）；不算進基本動作的上限。"""
+
+CHARGE_ACTION_TYPES: tuple[str, ...] = ("activate_charge",)
+"""裝備充能的啟動（Phase 3G-G3a）：只有裝備了充能詞條且層數足夠才有；不算進基本動作的上限。"""
 
 MANAGEMENT_ACTION_TYPES: tuple[str, ...] = ("end_turn", "end_stance", "set_reaction_mode")
 """管理操作：不算動作的上限（``use_skill`` 是技能，也不在基本動作之內）。"""
@@ -325,6 +341,7 @@ type Step = Annotated[
     | Trip
     | Interact
     | Reload
+    | ActivateCharge
     | EndStance
     | SetReactionMode
     | EndTurn

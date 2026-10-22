@@ -160,3 +160,31 @@ items:
     affixes:
       - {affix: affix_kw_shock_area}
       - {affix: affix_kw_burn_duration}
+  # --- Phase 3G-G3a：觸發與充能 ---
+  - id: item_g3a_blade
+    name_zh: 蓄電長劍
+    slot_type: weapon
+    kind: sword
+    form: straight
+    material: steel
+    weapon: one_handed_sword
+    affixes:
+      - {affix: affix_trig_every3_prone}
+      - {affix: affix_charge_static}
+  - id: item_g3a_armor
+    name_zh: 怒焰荊棘甲
+    slot_type: body
+    kind: mail
+    form: chain
+    material: iron
+    affixes:
+      - {affix: affix_trig_thorns_burn}
+      - {affix: affix_charge_fury}
+  - id: item_g3a_ring
+    name_zh: 嗜戰戒指
+    slot_type: ring
+    kind: ring
+    form: signet
+    material: copper
+    affixes:
+      - {affix: affix_trig_kill_ap}
