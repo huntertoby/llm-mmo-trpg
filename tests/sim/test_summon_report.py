@@ -25,3 +25,13 @@ def test_summon_sim_is_deterministic_and_reports() -> None:
     assert blaze.summons_total == 0 and blaze.life_rounds_mean is None
     text = format_summons(summaries, {"dev_spirit": "喚靈"})
     assert "喚靈（dev_spirit）" in text and "未完成（例外或動作上限）：0 場" in text
+
+
+def test_guaranteed_summoner_packs_summon_on_the_boss_map() -> None:
+    lib = library()
+    samples = run_summon_sim(
+        lib, packs=["dev_summoner", "dev_summoner_bone"], maps=["boss"], seeds=1
+    )
+    assert all(s.metrics is not None for s in samples)
+    for s in summarize(samples):
+        assert s.summons_total >= 1 and s.failed == 0

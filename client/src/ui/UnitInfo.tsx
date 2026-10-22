@@ -9,6 +9,7 @@ import { statusTile } from "../render/skillIcon";
 import { TipGlyph } from "./SkillIconView";
 import { stackName, statusName } from "../battle/glossary";
 import type { SkillNames } from "../battle/actions";
+import { infusionName } from "../battle/infusion";
 import { remainingRounds, summonKind } from "../battle/summons";
 import type { UnitNames } from "../battle/units";
 import { GearIcon } from "./GearIcon";
@@ -59,6 +60,8 @@ export function UnitInfo({ unit, names, heroId, skills, view }: Props) {
       `${names.name(unit.owner_id)}${left === null ? "" : `；剩 ${left} 輪（第 ${unit.summon_expires_round} 輪結束時消失）`}`,
     ]);
   }
+  const infusion = infusionName(unit, view?.units.find((u) => u.id === unit.owner_id) ?? null);
+  if (infusion !== null) rows.push(["灌注", infusion]);
   if (unit.totem_radius !== null) rows.push(["光環", `${unit.totem_radius} 格內的友方在圖騰行動時獲得增益`]);
   return (
     <div className="panel unit-info">

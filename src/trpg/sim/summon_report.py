@@ -29,6 +29,7 @@ from trpg.sim.batch import (
 from trpg.sim.metrics import BattleMetrics
 
 __all__ = [
+    "BOSS_MAP",
     "DEFAULT_PACKS",
     "SUMMON_MAPS",
     "BattleSample",
@@ -38,8 +39,18 @@ __all__ = [
     "summarize",
 ]
 
-DEFAULT_PACKS: tuple[str, ...] = ("dev_spirit", "dev_bulwark", "dev_blaze", "dev_hawkeye")
-"""喚靈、普攻為主（鐵壁：單手劍）、技能為主（烈焰：火焰法杖）、遠程（鷹眼）。"""
+DEFAULT_PACKS: tuple[str, ...] = (
+    "dev_spirit",
+    "dev_summoner",
+    "dev_summoner_bone",
+    "dev_bulwark",
+    "dev_blaze",
+    "dev_hawkeye",
+)
+"""喚靈、保證帶召喚技的喚靈對照（元素之靈、骷髏戰士；3-33b）、普攻為主（鐵壁：單手劍）、
+技能為主（烈焰：火焰法杖）、遠程（鷹眼）。"""
+BOSS_MAP = "boss"
+"""特殊地圖 ID：一輪的 Boss 戰（``roguelite.yaml`` 的 ``boss``：專屬地圖與加強版頭目）。"""
 SUMMON_MAPS: tuple[str, ...] = ("open_plain", "dark_forest", "ruined_fort", "swamp", "narrow_halls")
 """預設的 5 張正式地圖。"""
 
@@ -59,14 +70,20 @@ def _spec(
     library: ContentLibrary, pack: str, map_id: str, seed: int, max_rounds: int
 ) -> tuple[BatchSpec, str]:
     run = new_dev_run(library, pack, seed)
-    encounter = library.map(map_id).encounter
-    if encounter is None:
-        raise ValueError(f"{map_id} 沒有預設陣容（encounter）")
+    real_map = map_id
+    enemies: tuple[str, ...]
+    if map_id == BOSS_MAP:
+        real_map, enemies = library.roguelite.boss.map, library.roguelite.boss.enemies
+    else:
+        encounter = library.map(map_id).encounter
+        if encounter is None:
+            raise ValueError(f"{map_id} 沒有預設陣容（encounter）")
+        enemies = encounter.enemies
     base = build_setup(
-        library, map_id, library.roguelite.companions, encounter.enemies, max_rounds=max_rounds
+        library, real_map, library.roguelite.companions, enemies, max_rounds=max_rounds
     )
     hero = UnitSpawn(
-        template=run.hero,
+        template=run.hero.model_copy(update={"level": run.level}),
         weapon=library.weapons[run.hero.weapon],
         equipment=library.loadout_of(run.hero),
         team=Team.ALLY,

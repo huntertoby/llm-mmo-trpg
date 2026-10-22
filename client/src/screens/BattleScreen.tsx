@@ -95,6 +95,8 @@ import { collapseSections, tileSections } from "../battle/tileInfo";
 import { loadTileCollapse, saveTileCollapse } from "../battle/tileCardPrefs";
 import { CopyDialog } from "../ui/CopyDialog";
 import { FollowupDialog } from "../ui/FollowupDialog";
+import { InfusionDialog } from "../ui/InfusionDialog";
+import { infusionChoices, withInfusion } from "../battle/infusion";
 import { followupMode, followupTargetOf, isFollowupPending } from "../battle/followup";
 import { DecisionDialog } from "../ui/DecisionDialog";
 import { EndPanel } from "../ui/EndPanel";
@@ -538,7 +540,17 @@ export function BattleScreen({ initial, onExit, exitLabel, runMode }: Props) {
     [battleId, play],
   );
 
-  const act = useCallback((a: Action) => void run(() => api.act(battleId, a)), [battleId, run]);
+  const send = useCallback((a: Action) => void run(() => api.act(battleId, a)), [battleId, run]);
+  // 召喚技能（3-33b）：目標選好後多一步選灌注的關鍵字（可選 2 個以上時才問）
+  const [infusionPick, setInfusionPick] = useState<Action | null>(null);
+  const act = useCallback(
+    (a: Action) => {
+      if (infusionChoices(hero, a, cardsRef.current).length > 0) setInfusionPick(a);
+      else send(a);
+    },
+    [hero, send],
+  );
+  const infusionOptions = infusionPick === null ? [] : infusionChoices(hero, infusionPick, cards);
   const decide = useCallback(
     (accept: boolean) => void run(() => api.decide(battleId, accept)),
     [battleId, run],
@@ -599,6 +611,10 @@ export function BattleScreen({ initial, onExit, exitLabel, runMode }: Props) {
   useEffect(() => {
     const onKey = (e: KeyboardEvent) => {
       if (e.key !== "Escape") return;
+      if (infusionPick !== null) {
+        setInfusionPick(null); // 灌注關鍵字的選擇視窗：Esc ＝ 取消施放（還沒送出，不付代價）
+        return;
+      }
       if (popup !== null) {
         // 開著彈出面板時 Esc 先關面板（並取消隊友指令的選目標），不放棄複製技能的施放
         setPopup(null);
@@ -610,7 +626,7 @@ export function BattleScreen({ initial, onExit, exitLabel, runMode }: Props) {
     };
     window.addEventListener("keydown", onKey);
     return () => window.removeEventListener("keydown", onKey);
-  }, [cancel, copying, decideCopy, popup]);
+  }, [cancel, copying, decideCopy, infusionPick, popup]);
 
   const pickMode = useCallback(
     (m: ActionMode) => {
@@ -1034,6 +1050,18 @@ export function BattleScreen({ initial, onExit, exitLabel, runMode }: Props) {
           optionCount={(response.followup_options ?? []).length}
           enabled={!busy}
           onCancel={() => decideCopy(null)}
+        />
+      )}
+      {infusionPick !== null && infusionPick.type === "use_skill" && infusionOptions.length > 0 && !busy && (
+        <InfusionDialog
+          skillName={skillNames[infusionPick.skill_id] ?? infusionPick.skill_id}
+          options={infusionOptions}
+          enabled={!busy}
+          onPick={(id) => {
+            send(withInfusion(infusionPick, id));
+            setInfusionPick(null);
+          }}
+          onCancel={() => setInfusionPick(null)}
         />
       )}
       {copyPaused && response.pending !== null && (
