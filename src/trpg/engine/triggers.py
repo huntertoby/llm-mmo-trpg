@@ -37,7 +37,7 @@ from trpg.engine.events import (
     WallToppled,
 )
 from trpg.engine.ids import ELITE_TAG, PRONE
-from trpg.engine.rules.movement import nearest_safe_tile
+from trpg.engine.rules.landing import nearest_free
 from trpg.shared.types import ObjectId
 
 __all__ = ["ELITE_TAG", "TriggerFn", "effects_for", "register_trigger"]
@@ -111,7 +111,7 @@ def _deadly_terrain(ctx: Ctx, event: EventBase, depth: int) -> list[EffectBase]:
             apply_element_mod=False,
         )
     ]
-    safe = nearest_safe_tile(ctx.state, (event.pos.x, event.pos.y), unit)
+    safe = nearest_free(ctx.state, (event.pos.x, event.pos.y), mover=unit.id)
     if safe is not None:
         effects.append(MoveUnitEffect(depth=depth, unit_id=unit.id, dest=safe, mode="teleport"))
     return effects

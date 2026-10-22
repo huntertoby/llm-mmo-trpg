@@ -63,6 +63,7 @@ from trpg.engine.ids import IMMOVABLE, STEADFAST, TOPPLABLE, next_unit_id
 from trpg.engine.lifecycle import dismiss_summon, make_unit
 from trpg.engine.rules.combat import PERMILLE
 from trpg.engine.rules.facing import facing_toward_enemies
+from trpg.engine.rules.landing import landing_problem, nearest_free
 from trpg.engine.rules.movement import is_deadly, is_standable
 from trpg.engine.runes import inscribe_rune, remove_rune
 from trpg.engine.state import BattleState, ObjectState, UnitState
@@ -785,18 +786,7 @@ def hurl_landing(state: BattleState, dest: XY) -> XY | None:
     if is_deadly(state, dest):
         return None
     radius = state.ruleset.core.hurl_scatter_radius
-    cells = sorted(
-        (abs(x - dest[0]) + abs(y - dest[1]), y, x)
-        for y in range(dest[1] - radius, dest[1] + radius + 1)
-        for x in range(dest[0] - radius, dest[0] + radius + 1)
-        if abs(x - dest[0]) + abs(y - dest[1]) <= radius and state.in_bounds(x, y)
-    )
-    for _, y, x in cells:
-        xy = (x, y)
-        free = state.tile(*xy).object_id is None and state.unit_at(*xy) is None
-        if free and is_standable(state, xy) and not is_deadly(state, xy):
-            return xy
-    return None
+    return nearest_free(state, dest, radius=radius, clear_of_objects=True)
 
 
 @register_effect("hurl_object")
@@ -949,15 +939,9 @@ def _spawn_unit(ctx: Ctx, effect: EffectBase) -> list[EventBase]:
     if spawn is None:
         return [_fizzle(ctx, effect.kind, effect.pos, f"unknown_template:{effect.template_id}")]
     xy: XY | None = effect.pos
-    if (
-        xy is None
-        or not state.in_bounds(*xy)
-        or not is_standable(state, xy)
-        or is_deadly(state, xy)
-        or state.unit_at(*xy) is not None
-    ):
+    if xy is None or landing_problem(state, xy) is not None:
         origin = effect.pos if state.in_bounds(*effect.pos) else (0, 0)
-        xy = _free_tile(state, origin)
+        xy = nearest_free(state, origin)
     if xy is None:
         return [_fizzle(ctx, effect.kind, effect.pos, "no_space")]
     uid = next_unit_id(state)
@@ -981,16 +965,3 @@ def _spawn_unit(ctx: Ctx, effect: EffectBase) -> list[EventBase]:
             UnitSpawned, unit_id=uid, template_id=spawn.template.id, team=effect.team, pos=_pos(xy)
         )
     ]
-
-
-def _free_tile(state: BattleState, origin: XY) -> XY | None:
-    occupied = set(state.occupancy())
-    best: tuple[int, int, int] | None = None
-    for y in range(state.height):
-        for x in range(state.width):
-            if (x, y) in occupied or not is_standable(state, (x, y)) or is_deadly(state, (x, y)):
-                continue
-            key = (abs(origin[0] - x) + abs(origin[1] - y), y, x)
-            if best is None or key < best:
-                best = key
-    return None if best is None else (best[2], best[1])

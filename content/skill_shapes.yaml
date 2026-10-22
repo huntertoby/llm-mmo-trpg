@@ -138,6 +138,21 @@ shapes:
     params:
       range: {min: 1, max: 6}
 
+# Phase 3E-2f：形狀的用途清單（引擎與驗證器共用的唯一來源；順序即錯誤訊息裡的列舉順序）。
+#   followup        複合技第二段、擊殺後第二段可用的形狀
+#   on_kill_second  擊殺後第二段（followup 加上 ground_tile）
+#   pierce          穿透（pierce）可用的形狀
+#   zone_moving     區域 anchor: moving 可用的形狀
+#   zone_caster     區域 anchor: caster 可用的形狀
+#   shape_to        修正規則 shape_to（形狀轉換）的目標形狀
+shape_roles:
+  followup: [single, line, cone, cross, square3, ring]
+  on_kill_second: [single, line, cone, cross, square3, ring, ground_tile]
+  pierce: [single, line]
+  zone_moving: [line, cone]
+  zone_caster: [self, ring, allies_in_radius]
+  shape_to: [line, chain, cone]
+
 # Phase 3D-3（docs/phases/Phase3D計畫.md 3.1）：修正規則的形狀轉換（change.shape_to）。只有表列的組合能轉換；
 # 技能的效果原語必須允許新形狀（skill_primitives.yaml 的 allowed_shapes），否則不轉。
 #   from_shape  原形狀；to  新形狀（line／chain／cone）

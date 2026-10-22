@@ -29,7 +29,6 @@ __all__ = [
     "is_deadly",
     "is_flying",
     "is_standable",
-    "nearest_safe_tile",
     "path_map",
     "reachable_tiles",
     "stand_up_cost",
@@ -229,20 +228,3 @@ def find_path(
     if not pm.can_end_at(target):
         return None
     return [Pos(x=x, y=y) for x, y in pm.path_to(target)]
-
-
-def nearest_safe_tile(state: BattleState, origin: XY, unit: UnitState) -> XY | None:
-    """離 ``origin`` 最近的安全格（曼哈頓距離；同距離依 ``y`` 再依 ``x`` 由小到大）。
-
-    安全格：地形可站立、沒有其他存活單位。找不到時回傳 ``None``。
-    """
-    occupied = {xy for xy, u in state.occupancy().items() if u.id != unit.id}
-    best: tuple[int, int, int] | None = None
-    for y in range(state.height):
-        for x in range(state.width):
-            if (x, y) in occupied or not is_standable(state, (x, y)):
-                continue
-            key = (manhattan(origin, (x, y)), y, x)
-            if best is None or key < best:
-                best = key
-    return None if best is None else (best[2], best[1])

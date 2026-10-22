@@ -61,7 +61,7 @@ from trpg.engine.ids import CONCEALED, PRONE, next_unit_id
 from trpg.engine.infusion import active_infusions, default_infusion, template_of
 from trpg.engine.lifecycle import dismiss_summon, make_unit, summons_of
 from trpg.engine.rules.geometry import XY, manhattan, neighbors4
-from trpg.engine.rules.movement import is_deadly, is_standable
+from trpg.engine.rules.landing import landing_problem
 from trpg.engine.rules.statuses import effective_attribute
 from trpg.engine.skills.targeting import summon_site_problem
 from trpg.engine.state import BattleState, UnitState
@@ -386,10 +386,7 @@ def _platform_site(state: BattleState, owner: UnitState, unit: UnitState) -> XY 
     sites = [
         xy
         for xy in neighbors4(state, unit.xy)
-        if is_standable(state, xy)
-        and not is_deadly(state, xy)
-        and state.unit_at(*xy) is None
-        and state.tile(*xy).object_id is None
+        if landing_problem(state, xy, clear_of_objects=True) is None
         and state.tile(*xy).height < MAX_HEIGHT
     ]
     if not sites:
