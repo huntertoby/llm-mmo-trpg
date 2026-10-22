@@ -27,6 +27,7 @@ from trpg.content.skills import CHARGING, TIME_BOMB
 from trpg.content.slots import SLOT_ZH
 from trpg.engine.bombs import bomb_spec
 from trpg.engine.delayed import charge_infos
+from trpg.engine.gear_state import GearAffix, GearState
 from trpg.engine.gear_view import GearTotalView, gear_totals
 from trpg.engine.skills.revive import revivable
 from trpg.engine.state import (
@@ -181,7 +182,10 @@ class GearSkillView(_ViewModel):
 
 class AffixLineView(_ViewModel):
     """裝備上的一條詞條（Phase 3G-G1，唯讀）。``active``：遞減後仍生效（非數值類同 id 只生效 1 條；
-    數值類第 4 條起權重 0）；``weight_permille``：遞減權重（1000／500／250／0）。"""
+    數值類第 4 條起權重 0）；``weight_permille``：遞減權重（1000／500／250／0）。
+
+    ``duplicate_of``（Phase 3-32a）：這條 **沒有生效** 的重複詞條，是和哪一條重複（生效的那條的
+    「部位＋詞條文字」，例如「主手的每第 2 次普攻命中：…」）；生效中的詞條為 ``None``。"""
 
     affix_id: str
     category: str
@@ -189,6 +193,7 @@ class AffixLineView(_ViewModel):
     text_zh: str
     active: bool
     weight_permille: int
+    duplicate_of: str | None = None
 
 
 class AppearanceView(_ViewModel):
@@ -512,6 +517,17 @@ def _rule_view(state: BattleState, unit: UnitState, rule: ReactionRule) -> React
     )
 
 
+def _duplicate_of(gear: GearState, entry: GearAffix) -> str | None:
+    """沒有生效的重複詞條所重複的那一條（同 id、排第一的詞條）：「部位＋詞條文字」；生效中的詞條
+    與找不到時 ``None``。"""
+    if entry.active:
+        return None
+    winner = next((g for g in gear.affixes if g.affix.id == entry.affix.id and g.rank == 0), None)
+    if winner is None or winner is entry:
+        return None
+    return f"{SLOT_ZH[winner.slot]}的{affix_text(winner.affix, winner.value)}"
+
+
 def _equipment_view(unit: UnitState) -> tuple[EquipmentSlotView, ...]:
     """裝備摘要：每個欄位的物品與詞條（詞條依類別、id 排序）。"""
     gear = unit.gear
@@ -546,6 +562,7 @@ def _equipment_view(unit: UnitState) -> tuple[EquipmentSlotView, ...]:
                         text_zh=affix_text(a.affix, a.value),
                         active=a.active,
                         weight_permille=a.weight_permille,
+                        duplicate_of=_duplicate_of(gear, a),
                     )
                     for a in lines
                 ),

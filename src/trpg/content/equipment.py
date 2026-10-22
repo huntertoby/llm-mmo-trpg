@@ -81,6 +81,7 @@ __all__ = [
     "TriggerAffix",
     "ValueRange",
     "WeaponTraitAffix",
+    "affix_strength",
     "affix_text",
     "item_problems",
     "loadout_problems",
@@ -159,6 +160,10 @@ def _unique(ids: list[str], what: str) -> None:
 # ---------------------------------------------------------------------------
 # 詞條
 # ---------------------------------------------------------------------------
+
+
+MIN_COMBO_N = 2
+"""普攻連擊 ``strike: combo`` 的 N 最小值（至少每 2 次）。"""
 
 
 class ValueRange(ContentModel):
@@ -327,6 +332,13 @@ class AttackAffix(_AffixBase):
       ``rune_rounds`` 輪（預設 2）。
 
     三種都 **每回合最多觸發 1 次**；同一件裝備不能同時有 ``inscribe`` 與 ``detonate``。
+
+    ``strike``（Phase 3-32a，08 8.25 普攻流；與上面三者恰好填一個）：
+
+    - ``combo``：每第 ``value``（N＝2～3）次普攻命中，多攻擊一次（``strike_permille`` 的傷害，
+      要重新擲命中；不花 AP、不用子彈），每回合最多 1 次；
+    - ``cleave``：普攻命中後，對目標相鄰的另一個敵人造成 ``strike_permille`` 的傷害（自動命中；
+      多個時取 HP 最低、再依座標），每回合最多 1 次。
     """
 
     category: Literal["attack"]
@@ -337,6 +349,8 @@ class AttackAffix(_AffixBase):
     dice: Dice | None = None
     rune_element: Element | None = None
     rune_rounds: int | None = Field(default=None, ge=1, le=5)
+    strike: Literal["combo", "cleave"] | None = None
+    strike_permille: int | None = Field(default=None, ge=100, le=1000)
 
     @model_validator(mode="after")
     def _check(self) -> AttackAffix:
@@ -344,15 +358,31 @@ class AttackAffix(_AffixBase):
             self.add_element is not None,
             self.on_hit_status is not None,
             self.rune is not None,
+            self.strike is not None,
         ]
         if sum(given) != 1:
-            raise ValueError(f"詞條 {self.id}：add_element、on_hit_status、rune 恰好填一個")
+            raise ValueError(f"詞條 {self.id}：add_element、on_hit_status、rune、strike 恰好填一個")
+        self._check_strike()
         if self.add_element is Element.PHYSICAL:
             raise ValueError(f"詞條 {self.id}：add_element 不可是物理")
         if (self.on_hit_status is None) != (self.status_duration is None):
             raise ValueError(f"詞條 {self.id}：on_hit_status 與 status_duration 要一起填")
         self._check_rune()
         return self
+
+    def _check_strike(self) -> None:
+        if self.strike is None:
+            if self.strike_permille is not None:
+                raise ValueError(f"詞條 {self.id}：strike_permille 只能搭配 strike")
+            return
+        if self.strike_permille is None:
+            raise ValueError(f"詞條 {self.id}：strike 必須填 strike_permille")
+        if (self.strike == "combo") != (self.value is not None):
+            raise ValueError(f"詞條 {self.id}：value（N）只在 strike: combo 時填寫（且必填）")
+        if self.strike == "combo" and (
+            self.value_unit != "flat" or self.value is None or self.value.min < MIN_COMBO_N
+        ):
+            raise ValueError(f"詞條 {self.id}：combo 的 N 至少 2，value_unit 必須是 flat")
 
     def _check_rune(self) -> None:
         if self.rune is None:
@@ -618,6 +648,15 @@ def affix_text(affix: AffixDef, value: int | None) -> str:
     if value is not None:
         text = text.replace("{n}", _format_value(value, affix.value_unit))
     return text
+
+
+def affix_strength(affix: AffixDef, value: int | None) -> int:
+    """同 id 詞條比強弱用的數值（越大越強；重複詞條只生效最強的 1 條，08 8.21.5.3）：一般是擲出的
+    數值；普攻連擊 ``combo`` 的 N 越小觸發越頻繁，所以取負數。"""
+    amount = value or 0
+    if isinstance(affix, AttackAffix) and affix.strike == "combo":
+        return -amount
+    return amount
 
 
 def condition_zh(affix: ConditionalAffix) -> str:

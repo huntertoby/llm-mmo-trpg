@@ -38,8 +38,12 @@ __all__ = [
     "run_battle",
 ]
 
-LOG_FORMAT = "trpg-battle-log/47"
-"""``/47``（Phase 3-25a，接在 3-29 的 ``/46`` 之後）：戰場變奏——技能可帶 ``variants``，條件成立時
+LOG_FORMAT = "trpg-battle-log/48"
+"""``/48``（Phase 3-32a，接在 3-25a 的 ``/47`` 之後）：普攻流——單位狀態多了 ``attack_hits_landed``
+（普攻連擊的普攻命中計數）、武器參數多了 ``high_range``／``backstab_dice``，普攻會因連擊
+（多攻擊一次，``gear_triggered.trigger == "attack_combo"``）、分裂（``"attack_cleave"``）、
+主動技能欄的空格（普攻精通）與武器特性強化而結果不同；``/47`` 的紀錄無法重播。
+``/47``（Phase 3-25a，接在 3-29 的 ``/46`` 之後）：戰場變奏——技能可帶 ``variants``，條件成立時
 施放變奏型態（形狀、射程、元素、附帶效果不同），施放事件 ``skill_used`` 多了 ``variant``；
 同一份動作在 ``/46`` 的規則下合法性與結果可能不同，``/46`` 的紀錄無法重播。
 ``/46``（Phase 3-29，接在 3-26a 的 ``/45`` 之後）：直線衝撞 ``charge_through`` 的目標格

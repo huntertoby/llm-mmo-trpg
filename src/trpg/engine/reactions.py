@@ -60,6 +60,7 @@ from trpg.engine.skill_triggers import check_trigger_depth, holding, redirect_fi
 from trpg.engine.skills.conditions import Subject, skill_condition_met
 from trpg.engine.skills.targeting import reaction_problem, reaction_target_problem
 from trpg.engine.state import UnitState
+from trpg.engine.strikes import after_attack_hit
 from trpg.engine.weapon_traits import (
     apply_hit_traits,
     attack_dice,
@@ -574,10 +575,18 @@ def after_attack(
 
 
 def _attack_once(
-    ctx: Ctx, attacker: UnitState, target: UnitState, *, primary: bool
+    ctx: Ctx,
+    attacker: UnitState,
+    target: UnitState,
+    *,
+    primary: bool,
+    extra_permille: int | None = None,
 ) -> tuple[bool, bool, UnitState]:
     """回傳（這次攻擊是不是在隱蔽中發動——潛行偷襲，結算完要移除隱蔽；有沒有擲命中；承受這次
-    攻擊的單位——被守護者擋下時是守護者，3C-6b：轉身的是它）。"""
+    攻擊的單位——被守護者擋下時是守護者，3C-6b：轉身的是它）。
+
+    ``extra_permille``：這是普攻連擊多出來的一下（Phase 3-32a），傷害再乘上這個倍率；它不會再
+    觸發連擊與分裂。"""
     ally_targeted_reactions(ctx, attacker, target)  # 相鄰友方被瞄準：命中判定之前（3D-3）
     if not attacker.alive or not target.alive:
         return False, False, target
@@ -629,6 +638,8 @@ def _attack_once(
     multiplier = (
         multiplier * range_damage_permille(attacker, manhattan(attacker.xy, target.xy)) // PERMILLE
     )
+    if extra_permille is not None:
+        multiplier = multiplier * extra_permille // PERMILLE
     weapon = attacker.weapon
     execute(
         ctx,
@@ -638,7 +649,7 @@ def _attack_once(
                 source_id=attacker.id,
                 cause="attack",
                 element=modifiers.damage_element(state, attacker, use, weapon.element),
-                dice=attack_dice(state, attacker),
+                dice=attack_dice(state, attacker, backstab=roll.backstab > 0),
                 flat=weapon.flat,
                 scaled_permille=weapon_attribute(ctx.rules, attacker)
                 * ctx.core.basic_attack_attr_multiplier_permille,
@@ -650,6 +661,12 @@ def _attack_once(
     )
     apply_hit_traits(ctx, attacker, target)  # 武器小特性：破甲、震退、祝禱（3-24a1）
     hit_reactions(ctx, attacker, target, melee=is_melee_attack(ctx, attacker))
+    if extra_permille is None and attacker.alive:  # 普攻流：分裂與連擊（3-32a）
+
+        def again(permille: int) -> None:
+            _attack_once(ctx, attacker, target, primary=False, extra_permille=permille)
+
+        after_attack_hit(ctx, attacker, target, again)
     return roll.ambush > 0, True, target
 
 

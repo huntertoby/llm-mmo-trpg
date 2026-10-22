@@ -25,7 +25,7 @@ from trpg.content.slots import SLOT_TYPE_OF, SLOTS
 
 AFFIX = TypeAdapter[AffixDef](AffixDef)
 
-# docs/design/08-裝備.md 8.24 的 34 條（類別 → id；含 3-31 的普攻符文三條）
+# docs/design/08-裝備.md 8.24 的 40 條（類別 → id；含 3-31 的普攻符文三條、3-32a 的普攻流六條）
 WHITELIST: dict[str, tuple[str, ...]] = {
     "stat": ("affix_attr_str", "affix_max_hp", "affix_resist_fire"),
     "conditional": (
@@ -40,11 +40,17 @@ WHITELIST: dict[str, tuple[str, ...]] = {
         "affix_attack_rune_read",
         "affix_attack_rune_detonate",
         "affix_attack_rune_inscribe",
+        "affix_attack_combo",
+        "affix_attack_cleave",
     ),
     "weapon_trait": (
         "affix_trait_hammer_knockback",
         "affix_trait_longgun_pointblank",
         "affix_trait_axe_sunder",
+        "affix_trait_bow_lob_cover",
+        "affix_trait_bow_high_range",
+        "affix_trait_longgun_still_crit",
+        "affix_trait_dagger_backstab_die",
     ),
     "trigger": ("affix_trig_every3_prone", "affix_trig_kill_ap", "affix_trig_thorns_burn"),
     "charge": ("affix_charge_static", "affix_charge_fury"),
@@ -73,9 +79,9 @@ def _loadout(**slots: str) -> Loadout:
 # ---------------------------------------------------------------------------
 
 
-def test_whitelist_has_all_34_affixes_in_11_categories() -> None:
+def test_whitelist_has_all_40_affixes_in_11_categories() -> None:
     affixes = library().affixes
-    assert len(affixes) == 34
+    assert len(affixes) == 40
     by_category: dict[str, set[str]] = {}
     for affix in affixes.values():
         by_category.setdefault(affix.category, set()).add(affix.id)

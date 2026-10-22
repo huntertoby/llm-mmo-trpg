@@ -635,6 +635,7 @@ def _attack_numbers(
         hit, crit = Fraction(1), Fraction(0)
         crit_dist: Counter[int] = Counter()
         target_key: str = action.target_object_id
+        backstab = False
     else:
         assert action.target_id is not None
         target = state.units[action.target_id]
@@ -652,14 +653,15 @@ def _attack_numbers(
         hit, crit = _chances(
             naturals, bonus + positional.hit, core.hit_target, positional.crit_range
         )
-        dice = attack_dice(state, actor)
+        backstab = positional.backstab > 0
+        dice = attack_dice(state, actor, backstab=backstab)
         crit_dist = dice_distribution(dice.count * 2, dice.sides)
         target_key = action.target_id
     low = _primary_damage(min_events, actor.id, target_key)
     high = _primary_damage(max_events, actor.id, target_key)
     if low is None or high is None:
         return hit, crit, None
-    dice = attack_dice(state, actor)
+    dice = attack_dice(state, actor, backstab=backstab)
     normal_dist = dice_distribution(dice.count, dice.sides)
     status_ppm = PPM
     shield = 0
