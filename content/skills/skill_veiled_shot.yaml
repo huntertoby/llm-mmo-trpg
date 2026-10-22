@@ -1,0 +1,27 @@
+# 連段（Phase 3-27 補技能，數值為初值，未經模擬）：施放者隱蔽中時，暗處射出的箭再補一段傷害（隱蔽池的利用者）。
+id: skill_veiled_shot
+schema_version: 1
+name_zh: 隱匿射擊
+tier: 1
+rank: 1
+rarity: rare
+kind: active
+skeleton: strike
+category: weapon
+weapon_req: ranged
+ap_cost: 2
+scaling_attr: dex
+shape: {type: single, range: weapon}
+effects:
+  - {type: damage, multiplier_permille: 1000}
+  # 藏在暗處的一箭對手看不見也躲不開
+  - type: damage
+    multiplier_permille: 1300
+    condition: {type: self_concealed}
+condition: null
+cost: {mana: 5, cooldown: 2}
+tags: [physical, ranged, combo]
+narrative:
+  concept: 從暗處射出看不見的一箭
+  cast_flavor: 你屏住呼吸藏在陰影裡，箭離弦時連風聲都沒有
+provenance: {origin: builtin, owner_id: null, created_by: null, parents: [], bound: true, tradeable: false}

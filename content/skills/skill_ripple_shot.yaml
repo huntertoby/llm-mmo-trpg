@@ -1,0 +1,27 @@
+# 連段（Phase 3-27 補技能，數值為初值，未經模擬）：目標站在水上時，漣漪暴露位置，多補一箭（潮濕池的利用者）。
+id: skill_ripple_shot
+schema_version: 1
+name_zh: 漣射
+tier: 1
+rank: 1
+rarity: rare
+kind: active
+skeleton: strike
+category: weapon
+weapon_req: ranged
+ap_cost: 2
+scaling_attr: dex
+shape: {type: single, range: weapon}
+effects:
+  - {type: damage, multiplier_permille: 1000}
+  # 水面的漣漪出賣了目標的位置，第二箭直指水心
+  - type: damage
+    multiplier_permille: 1300
+    condition: {type: target_on_surface, surface: water}
+condition: null
+cost: {mana: 5, cooldown: 2}
+tags: [physical, ranged, combo]
+narrative:
+  concept: 跟著水面的漣漪瞄準
+  cast_flavor: 你盯著水面一圈圈散開的漣漪，一箭射穿它的中心
+provenance: {origin: builtin, owner_id: null, created_by: null, parents: [], bound: true, tradeable: false}

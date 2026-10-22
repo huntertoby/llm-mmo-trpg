@@ -1,0 +1,28 @@
+# 連段（Phase 3-27 補技能，數值為初值，未經模擬）：法術版的居高臨下，站得比目標高時氣流加倍壓下（高處池的利用者）。
+id: skill_downdraft
+schema_version: 1
+name_zh: 下壓氣流
+tier: 1
+rank: 1
+rarity: rare
+kind: active
+skeleton: combo
+category: spell
+weapon_req: any
+ap_cost: 2
+scaling_attr: int
+shape: {type: single, range: 4}
+effects:
+  - {type: damage, dice: 2d6, element: physical}
+  # 站在高處時，氣流順著落差直灌而下
+  - type: damage
+    dice: 2d8
+    element: physical
+    condition: {type: height_advantage}
+condition: null
+cost: {mana: 6, cooldown: 2}
+tags: [arcane, spell, combo, height]
+narrative:
+  concept: 把腳下的高度化成一道向下的氣流
+  cast_flavor: 你站在高處往下一揮手，一股沉重的氣流砸向低處的目標
+provenance: {origin: builtin, owner_id: null, created_by: null, parents: [], bound: true, tradeable: false}
