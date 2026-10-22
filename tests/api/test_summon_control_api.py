@@ -101,3 +101,35 @@ def test_command_options_reject_other_units(client: TestClient) -> None:
     foe = next(u["id"] for u in data["view"]["units"] if u["team"] == "enemy")
     reply = client.get(f"/api/battles/{battle_id}/summons/{foe}/command-options")
     assert reply.status_code == 400 and "不是你的召喚物" in reply.text
+
+
+def _exhaust_hero_actions(
+    client: TestClient, battle_id: str, data: dict[str, Any]
+) -> dict[str, Any]:
+    """主角一直做 ``end_turn`` 以外的動作（優先花 AP 的），直到只剩 ``end_turn``。"""
+    for _ in range(40):
+        rest = [a for a in data["legal_actions"] if a["type"] != "end_turn"]
+        if not rest:
+            return data
+        spend = [a for a in rest if a["type"] not in ("move", "end_stance")] or rest
+        reply = client.post(f"/api/battles/{battle_id}/actions", json=spend[0])
+        assert reply.status_code == 200, reply.text
+        data = reply.json()
+    raise AssertionError("主角的動作一直用不完")
+
+
+def test_a_summoner_with_no_ap_left_is_not_auto_ended(client: TestClient) -> None:
+    """3-32b：AP 用完、只剩「結束回合」時，有召喚物的主角停下來等玩家（還能切模式），不自動結束。"""
+    battle_id, hero, sid, data = _open_and_summon(client)
+    data = _exhaust_hero_actions(client, battle_id, data)
+    assert data["awaiting"] == "action" and data["view"]["active_unit"] == hero
+    assert [a["type"] for a in data["legal_actions"]] == ["end_turn"]
+    mode = {"type": "set_summon_mode", "unit_id": hero, "summon_id": sid, "mode": "hold"}
+    switched = client.post(f"/api/battles/{battle_id}/actions", json=mode)
+    assert switched.status_code == 200, switched.text
+    assert switched.json()["awaiting"] == "action"
+    end = {"type": "end_turn", "unit_id": hero}
+    ended = client.post(f"/api/battles/{battle_id}/actions", json=end)
+    assert ended.status_code == 200, ended.text
+    out = ended.json()
+    assert out["view"]["active_unit"] != hero or out["view"]["round"] > data["view"]["round"]

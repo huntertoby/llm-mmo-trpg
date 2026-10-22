@@ -1,6 +1,7 @@
 // 部件說明框（Phase 3-18a；3-30 起與技能卡共用浮動卡規則 `useFloatCard`）：包住任何一個部件（技能圖示的小圓、狀態、表面……），
 // 滑過顯示「類別、名稱、說明」，點一下釘住（觸控也能用），點外面或按 Esc 關閉。說明框用 portal 放在 body 上，不會被卡片裁掉，也不會超出視窗。
 import type { ReactNode } from "react";
+import type { TipLine } from "../gear/affixStatus";
 import { FloatCard, useFloatCard } from "./useFloatCard";
 
 interface Props {
@@ -9,13 +10,15 @@ interface Props {
   label: string;
   /** 說明；空字串就不寫。 */
   tip: string;
+  /** 逐行說明（裝備詞條）：`note` 不為空的行標灰並註明沒有效果的原因（3-32b）；有這個就不顯示 `tip`。 */
+  lines?: readonly TipLine[];
   children: ReactNode;
   /** 包在可點選的東西裡面（例如工坊選項按鈕）時設為 false：只在滑過時顯示，不攔截點擊。 */
   pin?: boolean;
   className?: string;
 }
 
-export function PartTip({ cat, label, tip, children, pin = true, className }: Props) {
+export function PartTip({ cat, label, tip, lines, children, pin = true, className }: Props) {
   const f = useFloatCard({ pinOn: pin ? "always" : "never" });
   const { onKeyDown: triggerKeyDown, ...trigger } = f.triggerProps;
   return (
@@ -40,7 +43,14 @@ export function PartTip({ cat, label, tip, children, pin = true, className }: Pr
         <FloatCard float={f} className={`part-tip-box${pin ? "" : " no-bridge"}`} align="center" role="tooltip">
           <div className="part-tip-cat">{cat}</div>
           <div className="part-tip-name">{label}</div>
-          {tip !== "" && <div className="part-tip-text">{tip}</div>}
+          {lines === undefined
+            ? tip !== "" && <div className="part-tip-text">{tip}</div>
+            : lines.map((l, i) => (
+                <div key={i} className={`part-tip-text part-tip-line${l.note === null ? "" : " inactive"}`}>
+                  {l.text}
+                  {l.note !== null && <span className="part-tip-note">（{l.note}）</span>}
+                </div>
+              ))}
         </FloatCard>
       )}
     </span>

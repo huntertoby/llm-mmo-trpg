@@ -1,5 +1,6 @@
 // 測試物品清單（Phase 3G-G4）：每列 48px 圖示＋名稱＋詞條摘要；點一列穿到目前的欄位，再點一次卸下。不做背包格。
 import type { GearCatalog, GearSlotInfo } from "../../api/types";
+import { compareItem } from "../../gear/affixStatus";
 import { itemSummary, type Selection } from "../../gear/gearDraft";
 import { GearIcon } from "../GearIcon";
 
@@ -19,6 +20,7 @@ export function ItemList({ catalog, slot, selection, onPick }: Props) {
       {items.length === 0 && <div className="muted">沒有適合{slot.name_zh}的測試物品，請用「手動組裝」。</div>}
       {items.map((item) => {
         const active = item.id === currentId;
+        const changes = compareItem(catalog, selection, slot.slot, item);
         return (
           <button
             key={item.id}
@@ -36,6 +38,12 @@ export function ItemList({ catalog, slot, selection, onPick }: Props) {
                 {item.legendary && <span className="gear-legend">傳說</span>}
               </span>
               <span className="gear-row-affixes muted small">{itemSummary(item)}</span>
+              {changes.map((c, i) => (
+                <span key={i} className={`gear-row-change ${c.kind}`}>
+                  {c.kind === "gray" ? "換上後沒效果：" : "換上後恢復生效："}
+                  {c.text}（{c.note}）
+                </span>
+              ))}
             </span>
             <span className="gear-row-action">{active ? "卸下" : "穿上"}</span>
           </button>

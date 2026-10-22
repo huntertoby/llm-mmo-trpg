@@ -19,7 +19,7 @@ export function VariantList({ card, activeId = null }: Props) {
       <ul className="skill-variant-list">
         {variants.map((v) => (
           <li key={v.id} className={`skill-variant-item${v.id === activeId ? " active" : ""}`}>
-            <SkillIconView icon={v.icon} size={28} small className="skill-variant-icon" title={v.name_zh} />
+            <SkillIconView icon={v.icon} size={28} small className="skill-variant-icon" label={v.name_zh} />
             <div>
               <div className="small">
                 <b>{v.name_zh}</b>

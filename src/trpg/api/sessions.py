@@ -43,7 +43,7 @@ from trpg.engine.runner import (
 )
 from trpg.engine.setup import BattleSetup, BattleSetupError, build_setup
 from trpg.engine.state import BattleState, PendingResolution, state_from_json
-from trpg.engine.summon_control import CommandOption, command_options
+from trpg.engine.summon_control import CommandOption, command_options, summon_problem
 from trpg.roguelite.errors import ChoiceError
 from trpg.roguelite.progress import hero_spawn
 from trpg.roguelite.start import new_dev_run, new_keyword_run
@@ -124,10 +124,29 @@ class BattleSession:
     # -- 狀態 ------------------------------------------------------------------
 
     def awaits_player(self, state: BattleState, pending: Pending | None) -> bool:
-        """自動推進的停止條件：主角的反應詢問，或輪到主角且有 ``EndTurn`` 以外的合法動作。"""
+        """自動推進的停止條件：主角的反應詢問，或輪到主角且有 ``EndTurn`` 以外的合法動作。
+
+        只剩 ``EndTurn`` 時，若主角還有可以操控的召喚物（切換模式是 0 AP、不在
+        ``legal_actions`` 裡），也停下來等玩家按「結束回合」，不自動結束（Phase 3-32b）。
+        這只影響網頁工作階段；
+        引擎的 :func:`~trpg.engine.battle.has_only_end_turn` 與 CLI／模擬的自動結束不變。
+        """
         if pending is not None:
             return pending.unit_id == self.hero_id
-        return state.active_unit == self.hero_id and not has_only_end_turn(state)
+        if state.active_unit != self.hero_id:
+            return False
+        return not has_only_end_turn(state) or self._has_controllable_summon(state)
+
+    def _has_controllable_summon(self, state: BattleState) -> bool:
+        """主角在場上有可以切換模式的召喚物（不含圖騰）。"""
+        if state.ended or state.pending is not None:
+            return False
+        hero = state.units[self.hero_id]
+        return any(
+            summon_problem(state, hero, u.id) is None
+            for u in state.units_sorted()
+            if u.owner_id == self.hero_id
+        )
 
     @property
     def awaiting(self) -> Awaiting:

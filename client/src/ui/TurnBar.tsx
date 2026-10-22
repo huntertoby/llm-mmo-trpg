@@ -3,6 +3,7 @@ import type { BattleView } from "../api/types";
 import { objectiveHud, objectiveLine } from "../battle/objective";
 import { remainingRounds, summonKind } from "../battle/summons";
 import type { UnitNames } from "../battle/units";
+import { Hint } from "./Hint";
 
 interface Props {
   view: BattleView;
@@ -19,12 +20,9 @@ export function TurnBar({ view, names, acting }: Props) {
   return (
     <div className="turn-bar">
       <span className="turn-round">{rounds}</span>
-      <span
-        className={`turn-objective ${view.objective.kind}`}
-        title={objectiveLine(view.objective)}
-      >
-        {objectiveHud(view.objective, view.round)}
-      </span>
+      <Hint text={objectiveLine(view.objective)}>
+        <span className={`turn-objective ${view.objective.kind}`}>{objectiveHud(view.objective, view.round)}</span>
+      </Hint>
       <span className="turn-map">
         {view.map_name_zh}
         {view.weather_name_zh === null ? "" : `・${view.weather_name_zh}`}
@@ -49,13 +47,15 @@ export function TurnBar({ view, names, acting }: Props) {
               ? ""
               : `　${kind}（${names.name(u.owner_id)}召喚${left === null ? "" : `，剩 ${left} 輪`}）`;
           return (
-            <li key={id} className={cls} title={`${names.label(id)}　HP ${u?.hp ?? 0} / ${u?.max_hp ?? 0}${note}`}>
-              <span className="turn-chip-marker">{names.marker(id)}</span>
-              {left !== null && <span className="turn-chip-left">{left}</span>}
-              <span className="turn-chip-hp">
-                <span style={{ width: `${ratio * 100}%` }} />
-              </span>
-            </li>
+            <Hint key={id} text={`${names.label(id)}　HP ${u?.hp ?? 0} / ${u?.max_hp ?? 0}${note}`}>
+              <li className={cls}>
+                <span className="turn-chip-marker">{names.marker(id)}</span>
+                {left !== null && <span className="turn-chip-left">{left}</span>}
+                <span className="turn-chip-hp">
+                  <span style={{ width: `${ratio * 100}%` }} />
+                </span>
+              </li>
+            </Hint>
           );
         })}
       </ol>

@@ -7,10 +7,11 @@ interface Props {
   /** 欄位名（`main_hand`…）：物品沒有 `kind` 時用來選預設造型。 */
   slot?: string;
   size?: 32 | 48 | 64;
-  title?: string;
+  /** 無障礙名稱（`aria-label`）；不是原生 tooltip（要說明請用 `Hint`／`PartTip`）。 */
+  label?: string;
 }
 
-export function GearIcon({ look, slot, size = 32, title }: Props) {
+export function GearIcon({ look, slot, size = 32, label }: Props) {
   const ref = useRef<HTMLCanvasElement>(null);
   useEffect(() => {
     const target = ref.current;
@@ -20,5 +21,5 @@ export function GearIcon({ look, slot, size = 32, title }: Props) {
     ctx.clearRect(0, 0, target.width, target.height);
     ctx.drawImage(art, 0, 0);
   }, [look, slot, size]);
-  return <canvas ref={ref} className="gear-icon" width={size * 2} height={size * 2} style={{ width: size, height: size }} title={title} aria-label={title} role={title === undefined ? undefined : "img"} />;
+  return <canvas ref={ref} className="gear-icon" width={size * 2} height={size * 2} style={{ width: size, height: size }} aria-label={label} role={label === undefined ? undefined : "img"} />;
 }

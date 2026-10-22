@@ -41,6 +41,11 @@ export function summonsOf(view: BattleView, ownerId: string): UnitView[] {
     .sort((a, b) => (a.id < b.id ? -1 : a.id > b.id ? 1 : 0));
 }
 
+/** `ownerId` 有沒有可以切換模式的召喚物（在場、不是圖騰）。 */
+export function hasControllableSummon(view: BattleView, ownerId: string): boolean {
+  return summonsOf(view, ownerId).some((u) => !isTotem(u));
+}
+
 /** HUD／單位資訊的一行：「骷髏戰士1　HP 20/20　剩 2 輪（第 5 輪結束時消失）」。 */
 export function summonLine(view: BattleView, u: UnitView): string {
   const left = remainingRounds(view, u);

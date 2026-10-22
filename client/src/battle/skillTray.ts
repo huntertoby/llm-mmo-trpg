@@ -34,10 +34,13 @@ export function actionHintText(state: {
   ended: boolean;
   moveCount: number;
   attackCount: number;
+  /** 只剩「結束回合」，但還有可以切換模式的召喚物（3-32b）。 */
+  summonIdle?: boolean;
 }): string {
   if (state.ended) return "戰鬥結束。";
   if (state.copying) return "請為複製的技能或複合技能的第二段選擇目標（點高亮格子或左上角的方向鈕），或按 Esc 放棄。";
   if (!state.canAct) return "等待中……";
+  if (state.summonIdle === true) return "行動點數用完了，但還能調整召喚物的模式（0 AP）；準備好後按「結束回合」。";
   return `點選藍色格子移動（${state.moveCount} 格），點選紅框敵人攻擊（${state.attackCount} 個）；右鍵或 Esc 取消選取。`;
 }
 

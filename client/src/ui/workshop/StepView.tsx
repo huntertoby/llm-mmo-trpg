@@ -4,6 +4,7 @@ import type { DraftOptions, StepId, StepOptions } from "../../api/types";
 import { autoSingles, changeSkeleton, getPath, type Json } from "../../workshop/draft";
 import { availableSteps, canBack, canNext, currentStep, STEP_NAMES, type EditorState } from "../../workshop/state";
 import { FieldList } from "./FieldEditor";
+import { Hint } from "../Hint";
 
 interface Props {
   state: EditorState;
@@ -28,17 +29,12 @@ function StepBar({ state, onGoto }: { state: EditorState; onGoto(step: StepId): 
         const cls = ["ws-step", id === cur ? "current" : "", info?.complete === true ? "done" : "", enabled ? "" : "locked"].join(" ");
         return (
           <li key={id}>
-            <button
-              type="button"
-              className={cls}
-              disabled={!enabled}
-              aria-current={id === cur ? "step" : undefined}
-              title={enabled ? (id === "followup" ? "可省略：不接第二段就是普通技能" : "") : "先完成前面的步驟"}
-              onClick={() => onGoto(id)}
-            >
-              <span className="ws-step-no">{info?.complete === true ? "✓" : i + 1}</span>
-              {STEP_NAMES[id]}
-            </button>
+            <Hint text={enabled ? (id === "followup" ? "可省略：不接第二段就是普通技能" : "") : "先完成前面的步驟"}>
+              <button type="button" className={cls} disabled={!enabled} aria-current={id === cur ? "step" : undefined} onClick={() => onGoto(id)}>
+                <span className="ws-step-no">{info?.complete === true ? "✓" : i + 1}</span>
+                {STEP_NAMES[id]}
+              </button>
+            </Hint>
           </li>
         );
       })}

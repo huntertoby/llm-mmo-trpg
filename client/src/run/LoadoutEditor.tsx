@@ -3,6 +3,7 @@ import { useState } from "react";
 import type { RunHero } from "../api/types";
 import { SLOT_LABELS, SLOT_LIMITS, type SlotKind } from "./flow";
 import { canEquip, levelBadge, levelOf, loadoutChanged, loadoutUsage, ownedCards } from "./skillGrowth";
+import { Hint } from "../ui/Hint";
 
 interface Props {
   hero: RunHero;
@@ -56,14 +57,15 @@ export function LoadoutEditor({ hero, disabled = false, onApply }: Props) {
                     {card.name_zh}
                     {card.growth != null && <span className="muted small"> {levelBadge(levelOf(card))}</span>}
                   </span>
+                  <Hint text={ok ? undefined : "這種欄位已滿，先卸下一個"}>
                   <button
                     type="button"
                     disabled={disabled || !ok}
-                    title={ok ? undefined : "這種欄位已滿，先卸下一個"}
                     onClick={() => setIds([...ids, id])}
                   >
                     裝備
                   </button>
+                  </Hint>
                 </li>
               );
             })}

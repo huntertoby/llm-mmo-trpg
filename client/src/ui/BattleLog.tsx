@@ -5,6 +5,7 @@ import { useEffect, useMemo, useRef, useState } from "react";
 import type { Pos } from "../api/types";
 import type { LogLine, LogTone } from "../battle/log";
 import { groupLog, type LogGroup, type LogItem } from "../battle/logGroups";
+import { Hint } from "./Hint";
 
 /** 滑過紀錄時要在戰場上高亮的單位與格子。 */
 export interface LogHover {
@@ -50,15 +51,11 @@ function LogText({ line, head = false, open, onToggle }: LineProps) {
       )}
       <span className="log-text">{shown}</span>
       {hasDetail && (
-        <button
-          type="button"
-          className="log-more"
-          aria-expanded={open}
-          title={open ? "收起擲骰與修正細節" : "展開擲骰與修正細節"}
-          onClick={() => onToggle(line.seq)}
-        >
-          {open ? "收起" : "詳"}
-        </button>
+        <Hint text={open ? "收起擲骰與修正細節" : "展開擲骰與修正細節"}>
+          <button type="button" className="log-more" aria-expanded={open} onClick={() => onToggle(line.seq)}>
+            {open ? "收起" : "詳"}
+          </button>
+        </Hint>
       )}
     </div>
   );
@@ -119,15 +116,11 @@ export function BattleLog({ lines, onHover }: Props) {
     <div className="panel battle-log">
       <div className="section-title log-title">
         <span>戰鬥紀錄</span>
-        <button
-          type="button"
-          className={`log-all${all ? " on" : ""}`}
-          aria-pressed={all}
-          title="全部展開擲骰與修正細節"
-          onClick={() => setAll((v) => !v)}
-        >
-          擲骰細節
-        </button>
+        <Hint text="全部展開擲骰與修正細節">
+          <button type="button" className={`log-all${all ? " on" : ""}`} aria-pressed={all} onClick={() => setAll((v) => !v)}>
+            擲骰細節
+          </button>
+        </Hint>
       </div>
       <div className="log-lines" ref={boxRef} onMouseLeave={() => onHover?.(null)}>
         {items.map((item, i) => (

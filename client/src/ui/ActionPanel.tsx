@@ -18,6 +18,7 @@ import {
   type ActionMode,
 } from "../battle/targeting";
 import type { UnitNames } from "../battle/units";
+import { Hint } from "./Hint";
 
 interface Props {
   enabled: boolean;
@@ -117,17 +118,17 @@ function AsideHelp({ mode, enabled, interactOptions, view, onAction, onPreviewAc
           <div className="small">{row.name}</div>
           <div className="dir-buttons">
             {row.choices.map((c) => (
-              <button
-                key={c.side}
-                type="button"
-                disabled={!enabled || c.action === null}
-                title={c.reason ?? c.label}
-                onMouseEnter={() => onPreviewAction(c.action)}
-                onMouseLeave={() => onPreviewAction(null)}
-                onClick={() => c.action !== null && onAction(c.action)}
-              >
-                {c.label}
-              </button>
+              <Hint key={c.side} text={c.reason ?? c.label}>
+                <button
+                  type="button"
+                  disabled={!enabled || c.action === null}
+                  onMouseEnter={() => onPreviewAction(c.action)}
+                  onMouseLeave={() => onPreviewAction(null)}
+                  onClick={() => c.action !== null && onAction(c.action)}
+                >
+                  {c.label}
+                </button>
+              </Hint>
             ))}
           </div>
           {row.choices.map(
@@ -171,17 +172,17 @@ function ModeHelp(props: HelpProps) {
           {DIRECTION_ORDER.map((dir) => {
             const action = t.directions.get(dir);
             return (
-              <button
-                key={dir}
-                type="button"
-                disabled={!enabled || action === undefined}
-                title={`向${DIRECTIONS[dir] ?? dir}`}
-                onMouseEnter={() => onPreviewAction(action ?? null)}
-                onMouseLeave={() => onPreviewAction(null)}
-                onClick={() => action !== undefined && onAction(action)}
-              >
-                {DIRECTION_ARROWS[dir]}
-              </button>
+              <Hint key={dir} text={`向${DIRECTIONS[dir] ?? dir}`}>
+                <button
+                  type="button"
+                  disabled={!enabled || action === undefined}
+                  onMouseEnter={() => onPreviewAction(action ?? null)}
+                  onMouseLeave={() => onPreviewAction(null)}
+                  onClick={() => action !== undefined && onAction(action)}
+                >
+                  {DIRECTION_ARROWS[dir]}
+                </button>
+              </Hint>
             );
           })}
         </div>
