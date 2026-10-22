@@ -670,15 +670,15 @@ class UnitTemplate(ContentModel):
     由一輪的存檔帶入，戰鬥設定因此包含等級，重播一致。"""
 
     @model_validator(mode="after")
-    def _check_look(self) -> UnitTemplate:
-        if self.look is not None and not self.summon:
-            raise ValueError("外觀欄位 look 只有召喚物（summon: true）可以填")
-        return self
-
-    @model_validator(mode="after")
     def _check_totem(self) -> UnitTemplate:
         if self.totem is not None and not (self.summon and self.speed == 0):
             raise ValueError("圖騰必須是召喚物（summon: true）且 speed 為 0")
+        return self
+
+    @model_validator(mode="after")
+    def _check_look(self) -> UnitTemplate:
+        if self.look is not None and not self.summon:
+            raise ValueError("外觀欄位 look 只有召喚物（summon: true）可以填")
         return self
 
     @field_validator("skill_levels")
