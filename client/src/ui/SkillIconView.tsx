@@ -12,10 +12,11 @@ interface IconProps {
   /** 強制小圖模式（元素底色、主圖、外框、核心效果）；不填就依邊長（≤ 40px）決定。 */
   small?: boolean;
   className?: string;
-  title?: string;
+  /** 無障礙名稱（`aria-label`）；不是原生 tooltip（要說明請用 `Hint`）。 */
+  label?: string;
 }
 
-export function SkillIconView({ icon, size, small, className, title }: IconProps) {
+export function SkillIconView({ icon, size, small, className, label }: IconProps) {
   const ref = useRef<HTMLCanvasElement>(null);
   const key = icon == null ? null : iconCacheKey(icon, size, small);
   useEffect(() => {
@@ -34,9 +35,8 @@ export function SkillIconView({ icon, size, small, className, title }: IconProps
       width={size * 2}
       height={size * 2}
       style={{ width: size, height: size }}
-      title={title}
       role="img"
-      aria-label={title ?? "技能圖示"}
+      aria-label={label ?? "技能圖示"}
     />
   );
 }

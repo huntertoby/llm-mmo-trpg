@@ -12,6 +12,7 @@ import { levelBadge } from "../run/skillGrowth";
 import { SkillCardView } from "./SkillCardView";
 import { SkillIconView } from "./SkillIconView";
 import { FloatCard, useFloatCard } from "./useFloatCard";
+import { Hint } from "./Hint";
 
 interface Props {
   /** 基本動作的模式（防禦除外，防禦在右下角）。 */
@@ -61,7 +62,7 @@ function SkillSlot({
   const variant = b.variant ?? null;
   const form = activeVariantCard(card, variant);
   return (
-    <div className="skill-slot" title={b.disabledReason ?? undefined} {...f.triggerProps}>
+    <div className="skill-slot" {...f.triggerProps}>
       <button
         type="button"
         className={`skill-button${selected ? " selected" : ""}${b.grantedRemaining != null ? " granted" : ""}${b.gearSource != null ? " from-gear" : ""}${reasoned ? " blocked" : ""}${variant?.glow === true && !blocked ? " variant-ready" : ""}`}
@@ -96,6 +97,7 @@ function SkillSlot({
       </button>
       {f.open && card !== undefined && (
         <FloatCard float={f} className="skill-card-float">
+          {b.disabledReason !== null && <div className="skill-card-reason">現在不能用：{b.disabledReason}</div>}
           <SkillCardView card={card} compact activeVariantId={form?.id ?? null} />
         </FloatCard>
       )}
@@ -124,7 +126,6 @@ function MiniSlot({
       <button
         type="button"
         className={`skill-mini${selected || f.pinned ? " selected" : ""}`}
-        title={`${b.name}（${costText(b)}）`}
         aria-label={b.name}
         aria-pressed={f.pinned}
         onClick={() => usable && onSelect(b.skillId)}
@@ -149,17 +150,17 @@ export function SkillBar(props: Props) {
       <div className="skill-row">
         <div className="skill-buttons">
           {basic.map((m) => (
-            <button
-              key={m.key}
-              type="button"
-              className={`basic-button${selectedKey === m.key ? " selected" : ""}${m.blockedReason !== undefined ? " blocked" : ""}`}
-              disabled={!enabled}
-              aria-disabled={m.blockedReason !== undefined ? true : undefined}
-              title={m.blockedReason}
-              onClick={() => (m.blockedReason === undefined ? props.onPickMode(m) : props.onBlockedMode?.(m.blockedReason))}
-            >
-              {m.label}
-            </button>
+            <Hint key={m.key} text={m.blockedReason}>
+              <button
+                type="button"
+                className={`basic-button${selectedKey === m.key ? " selected" : ""}${m.blockedReason !== undefined ? " blocked" : ""}`}
+                disabled={!enabled}
+                aria-disabled={m.blockedReason !== undefined ? true : undefined}
+                onClick={() => (m.blockedReason === undefined ? props.onPickMode(m) : props.onBlockedMode?.(m.blockedReason))}
+              >
+                {m.label}
+              </button>
+            </Hint>
           ))}
           {main.map((b) => (
             <SkillSlot

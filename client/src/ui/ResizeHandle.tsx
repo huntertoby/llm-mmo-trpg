@@ -2,6 +2,7 @@
 // 數值的計算（夾上下限）在 `layoutPrefs.dragValue`；這裡只處理指標事件。
 import { useRef, type KeyboardEvent, type PointerEvent } from "react";
 import { dragValue, type Range } from "../battle/layoutPrefs";
+import { Hint } from "./Hint";
 
 interface Props {
   /** `vertical`：垂直的線，左右拖曳；`horizontal`：水平的線，上下拖曳。 */
@@ -44,22 +45,23 @@ export function ResizeHandle({ orientation, direction, value, range, label, onCh
   };
 
   return (
-    <div
-      className={`resize-handle ${orientation}`}
-      role="separator"
-      aria-orientation={orientation}
-      aria-label={label}
-      aria-valuemin={range[0]}
-      aria-valuemax={range[1]}
-      aria-valuenow={value}
-      tabIndex={0}
-      title={`${label}（拖曳調整，雙擊還原）`}
-      onPointerDown={onDown}
-      onPointerMove={onMove}
-      onPointerUp={onUp}
-      onPointerCancel={onUp}
-      onDoubleClick={onReset}
-      onKeyDown={onKey}
-    />
+    <Hint text={`${label}（拖曳調整，雙擊還原）`}>
+      <div
+        className={`resize-handle ${orientation}`}
+        role="separator"
+        aria-orientation={orientation}
+        aria-label={label}
+        aria-valuemin={range[0]}
+        aria-valuemax={range[1]}
+        aria-valuenow={value}
+        tabIndex={0}
+        onPointerDown={onDown}
+        onPointerMove={onMove}
+        onPointerUp={onUp}
+        onPointerCancel={onUp}
+        onDoubleClick={onReset}
+        onKeyDown={onKey}
+      />
+    </Hint>
   );
 }

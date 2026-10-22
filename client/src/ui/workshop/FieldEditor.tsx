@@ -21,6 +21,7 @@ import {
 } from "../../workshop/draft";
 import { rarityName } from "../../workshop/state";
 import { OptionGlyph } from "../SkillIconView";
+import { Hint } from "../Hint";
 
 interface FieldProps {
   spec: FieldSpec;
@@ -73,9 +74,9 @@ function Label({ spec }: { spec: FieldSpec }) {
       <span className="ws-label-name">
         {spec.name_zh}
         {spec.required && (
-          <span className="ws-required" title="必填">
-            *
-          </span>
+          <Hint text="必填">
+            <span className="ws-required">*</span>
+          </Hint>
         )}
       </span>
       {hint !== "" && <span className="muted small"> {hint}</span>}
@@ -165,17 +166,17 @@ function ChoiceField({ spec, container, base, onChange }: FieldProps) {
       ) : spec.choices.length <= COMPACT_MAX ? (
         <div className="ws-chips">
           {spec.choices.map((c) => (
-            <button
-              type="button"
-              key={String(c.value)}
-              className={`ws-chip${chosen?.value === c.value ? " selected" : ""}`}
-              aria-pressed={chosen?.value === c.value}
-              title={c.description_zh}
-              onClick={() => pick(c)}
-            >
-              <OptionGlyph field={spec.field} value={c.value} px={20} />
-              {c.name_zh}
-            </button>
+            <Hint key={String(c.value)} text={c.description_zh}>
+              <button
+                type="button"
+                className={`ws-chip${chosen?.value === c.value ? " selected" : ""}`}
+                aria-pressed={chosen?.value === c.value}
+                onClick={() => pick(c)}
+              >
+                <OptionGlyph field={spec.field} value={c.value} px={20} />
+                {c.name_zh}
+              </button>
+            </Hint>
           ))}
         </div>
       ) : (
@@ -226,10 +227,12 @@ function MultiChoiceField({ spec, container, base, onChange }: FieldProps) {
       <Label spec={spec} />
       <div className="ws-chips">
         {spec.choices.map((c) => (
-          <label key={String(c.value)} className={`ws-chip${value.includes(String(c.value)) ? " selected" : ""}`} title={c.description_zh}>
-            <input type="checkbox" checked={value.includes(String(c.value))} onChange={() => toggle(String(c.value))} />
-            {c.name_zh}
-          </label>
+          <Hint key={String(c.value)} text={c.description_zh}>
+            <label className={`ws-chip${value.includes(String(c.value)) ? " selected" : ""}`}>
+              <input type="checkbox" checked={value.includes(String(c.value))} onChange={() => toggle(String(c.value))} />
+              {c.name_zh}
+            </label>
+          </Hint>
         ))}
       </div>
     </div>

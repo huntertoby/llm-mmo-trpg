@@ -5,6 +5,7 @@ import { api } from "../api/client";
 import type { DevPack, SkillCard, StartOptions, StartPreview, StartWeaponOption, StartKeywordOption } from "../api/types";
 import { SkillCardView } from "../ui/SkillCardView";
 import { canStart, keepAvailable, keywordAvailable, startBody, toggleKeyword, type StartChoiceBody } from "./startFlow";
+import { Hint } from "../ui/Hint";
 
 const CLASS_LABELS: Record<string, string> = { melee: "近戰", ranged: "遠程", focus: "法器" };
 
@@ -123,17 +124,17 @@ export function StartPickerView({ picker, disabled = false }: ViewProps) {
       <div className="section-title">起始武器</div>
       <div className="run-weapon-list" data-testid="start-weapons">
         {options?.weapons.map((w) => (
-          <button
-            key={w.id}
-            type="button"
-            className={`run-weapon${weapon === w.id ? " primary selected" : ""}`}
-            disabled={disabled}
-            onClick={() => picker.setWeapon(w.id)}
-            title={w.traits_zh.join("\n")}
-          >
-            {w.name_zh}
-            <span className="muted small">　{CLASS_LABELS[w.weapon_class] ?? w.weapon_class}</span>
-          </button>
+          <Hint key={w.id} text={w.traits_zh.join("\n")}>
+            <button
+              type="button"
+              className={`run-weapon${weapon === w.id ? " primary selected" : ""}`}
+              disabled={disabled}
+              onClick={() => picker.setWeapon(w.id)}
+            >
+              {w.name_zh}
+              <span className="muted small">　{CLASS_LABELS[w.weapon_class] ?? w.weapon_class}</span>
+            </button>
+          </Hint>
         ))}
       </div>
       <div className="section-title">
@@ -145,17 +146,17 @@ export function StartPickerView({ picker, disabled = false }: ViewProps) {
           const on = selected.includes(o.keyword.id);
           const available = keywordAvailable(o);
           return (
-            <button
-              key={o.keyword.id}
-              type="button"
-              className={`run-keyword${on ? " primary selected" : ""}${available ? "" : " unavailable"}`}
-              disabled={disabled || !available || (!on && selected.length >= count)}
-              title={o.keyword.description_zh}
-              onClick={() => picker.setSelected((cur) => toggleKeyword(cur, o.keyword.id, count))}
-            >
-              <b>{o.keyword.name_zh}</b>
-              <span className="small">　{available ? o.skill?.name_zh : `${weaponDef?.name_zh ?? "這把武器"}沒有起始技能`}</span>
-            </button>
+            <Hint key={o.keyword.id} text={o.keyword.description_zh}>
+              <button
+                type="button"
+                className={`run-keyword${on ? " primary selected" : ""}${available ? "" : " unavailable"}`}
+                disabled={disabled || !available || (!on && selected.length >= count)}
+                onClick={() => picker.setSelected((cur) => toggleKeyword(cur, o.keyword.id, count))}
+              >
+                <b>{o.keyword.name_zh}</b>
+                <span className="small">　{available ? o.skill?.name_zh : `${weaponDef?.name_zh ?? "這把武器"}沒有起始技能`}</span>
+              </button>
+            </Hint>
           );
         })}
       </div>

@@ -5,6 +5,7 @@ import { useState, type ReactNode } from "react";
 import type { Action } from "../api/types";
 import type { LabeledAction } from "../battle/actions";
 import type { ActionMode } from "../battle/targeting";
+import { Hint } from "./Hint";
 
 interface Props {
   enabled: boolean;
@@ -58,50 +59,51 @@ export function TurnControls({
   return (
     <div className="turn-controls" aria-label="回合操作">
       <div className="resident-actions" aria-label="常駐動作">
-        <button
-          type="button"
-          className={`resident-button${moving ? " selected" : ""}`}
-          disabled={!enabled}
-          title={`移動：點亮起的格子（目前可到 ${moveCount} 格）`}
-          onClick={onMove}
-        >
-          移動
-        </button>
-        <button
-          type="button"
-          className={`resident-button${selectedKey === attack?.key && attack !== null ? " selected" : ""}`}
-          disabled={!enabled || attack === null}
-          title={attack === null ? "普攻：目前沒有可攻擊的目標" : "普攻：花 1 AP，點選紅框的目標"}
-          onClick={() => attack !== null && onPickMode(attack)}
-        >
-          普攻
-        </button>
-        <button
-          type="button"
-          className={`resident-button run-button${selectedKey === run?.key && run !== null ? " selected" : ""}`}
-          disabled={!enabled || run === null}
-          title={
+        <Hint text={`移動：點亮起的格子（目前可到 ${moveCount} 格）`}>
+          <button type="button" className={`resident-button${moving ? " selected" : ""}`} disabled={!enabled} onClick={onMove}>
+            移動
+          </button>
+        </Hint>
+        <Hint text={attack === null ? "普攻：目前沒有可攻擊的目標" : "普攻：花 1 AP，點選紅框的目標"}>
+          <button
+            type="button"
+            className={`resident-button${selectedKey === attack?.key && attack !== null ? " selected" : ""}`}
+            disabled={!enabled || attack === null}
+            onClick={() => attack !== null && onPickMode(attack)}
+          >
+            普攻
+          </button>
+        </Hint>
+        <Hint
+          text={
             run === null && runReason !== null
               ? `不能跑步：${runReason}`
               : "跑步：花 1 AP，本回合移動點數 +3 格（每回合 1 次）"
           }
-          onClick={() => run !== null && onPickMode(run)}
-          onMouseEnter={() => run !== null && onPreviewAction(run.targets.self)}
-          onMouseLeave={() => onPreviewAction(null)}
-          onFocus={() => run !== null && onPreviewAction(run.targets.self)}
-          onBlur={() => onPreviewAction(null)}
         >
-          跑步
-        </button>
-        <button
-          type="button"
-          className={`resident-button${selectedKey === defend?.key && defend !== null ? " selected" : ""}`}
-          disabled={!enabled || defend === null}
-          title="守護：花 1 AP，防禦 +25% 到下回合開始；相鄰有隊友時可點他，改由你替他承受單體攻擊"
-          onClick={() => defend !== null && onPickMode(defend)}
-        >
-          守護
-        </button>
+          <button
+            type="button"
+            className={`resident-button run-button${selectedKey === run?.key && run !== null ? " selected" : ""}`}
+            disabled={!enabled || run === null}
+            onClick={() => run !== null && onPickMode(run)}
+            onMouseEnter={() => run !== null && onPreviewAction(run.targets.self)}
+            onMouseLeave={() => onPreviewAction(null)}
+            onFocus={() => run !== null && onPreviewAction(run.targets.self)}
+            onBlur={() => onPreviewAction(null)}
+          >
+            跑步
+          </button>
+        </Hint>
+        <Hint text="守護：花 1 AP，防禦 +25% 到下回合開始；相鄰有隊友時可點他，改由你替他承受單體攻擊">
+          <button
+            type="button"
+            className={`resident-button${selectedKey === defend?.key && defend !== null ? " selected" : ""}`}
+            disabled={!enabled || defend === null}
+            onClick={() => defend !== null && onPickMode(defend)}
+          >
+            守護
+          </button>
+        </Hint>
         <button
           type="button"
           className="resident-button primary end-turn-button"
@@ -112,15 +114,11 @@ export function TurnControls({
         </button>
       </div>
       <div className="more-actions">
-        <button
-          type="button"
-          aria-expanded={open}
-          disabled={count === 0}
-          title={count === 0 ? "目前沒有其他可用的動作" : "推擊、絆倒、互動、換位、瞄準、攀跳、裝填（只列出現在合法的）"}
-          onClick={() => setOpen((o) => !o)}
-        >
-          更多動作（{count}）
-        </button>
+        <Hint text={count === 0 ? "目前沒有其他可用的動作" : "推擊、絆倒、互動、換位、瞄準、攀跳、裝填（只列出現在合法的）"}>
+          <button type="button" aria-expanded={open} disabled={count === 0} onClick={() => setOpen((o) => !o)}>
+            更多動作（{count}）
+          </button>
+        </Hint>
         {open && count > 0 && (
           <ul className="action-list more-list" aria-label="更多動作">
             {more.map((m) => (

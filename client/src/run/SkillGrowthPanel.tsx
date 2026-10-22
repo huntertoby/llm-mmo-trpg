@@ -4,6 +4,7 @@
 import type { RunHero, SkillCard } from "../api/types";
 import { SkillCardView } from "../ui/SkillCardView";
 import { EvolutionCompare } from "./EvolutionCompare";
+import { Hint } from "../ui/Hint";
 import {
   adjustLevel,
   canLower,
@@ -152,9 +153,11 @@ export function SkillGrowthPanel({
             </button>
           )}
           {onRespec !== undefined && (
-            <button type="button" disabled={disabled} onClick={onRespec} title="全部技能退回 1 級，點數全部退回，之後可以重新分配">
-              免費重配點數
-            </button>
+            <Hint text="全部技能退回 1 級，點數全部退回，之後可以重新分配">
+              <button type="button" disabled={disabled} onClick={onRespec}>
+                免費重配點數
+              </button>
+            </Hint>
           )}
         </div>
       )}

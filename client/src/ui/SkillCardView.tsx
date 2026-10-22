@@ -23,7 +23,7 @@ export function SkillCardView({ card, compact = false, activeVariantId = null }:
   return (
     <div className={`skill-card rarity-${card.rarity_id}${compact ? " compact" : ""}`}>
       <div className="skill-card-head">
-        <SkillIconView icon={card.icon} size={compact ? 48 : 72} small title={card.name_zh} />
+        <SkillIconView icon={card.icon} size={compact ? 48 : 72} small label={card.name_zh} />
         <div className="skill-card-headtext">
           <div className="skill-card-title">
             {card.name_zh}

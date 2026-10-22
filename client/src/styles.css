@@ -1898,6 +1898,16 @@ button.selected {
   z-index: 900;
   outline: none;
   pointer-events: auto;
+  /* 6.5.1 第 7 條：最高不超出視窗，超出時卡片內捲動（捲動不關閉） */
+  display: flex;
+  flex-direction: column;
+  max-height: calc(100vh - 8px);
+}
+
+.float-card > .float-card-body {
+  min-height: 0;
+  overflow-y: auto;
+  overscroll-behavior: contain;
 }
 
 .float-card.side-above {
@@ -3261,4 +3271,36 @@ button.selected {
 .summon-command select {
   width: 100%;
   margin: 4px 0;
+}
+
+/* 重複詞條標灰（3-32b） */
+.part-tip-line.inactive {
+  color: var(--muted);
+  text-decoration: line-through;
+  text-decoration-color: rgba(160, 160, 176, 0.6);
+}
+
+.part-tip-line.inactive .part-tip-note {
+  text-decoration: none;
+  display: inline-block;
+  color: #e0b060;
+}
+
+.gear-row-change {
+  display: block;
+  font-size: 11px;
+  color: #e0b060;
+}
+
+.gear-row-change.restore {
+  color: #7fd08a;
+}
+
+/* 一句話說明（3-32b，`Hint`）：外框不參與版面；卡片是只有文字的小浮動卡 */
+.hint-tip {
+  display: contents;
+}
+
+.hint-tip-text {
+  white-space: pre-line;
 }

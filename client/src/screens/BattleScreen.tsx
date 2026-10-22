@@ -56,6 +56,7 @@ import {
   type ActionMode,
 } from "../battle/targeting";
 import { onField, unitNames } from "../battle/units";
+import { hasControllableSummon } from "../battle/summons";
 import type { BattleRenderer, Highlights } from "../render/BattleRenderer";
 import { ModePanel } from "../ui/ActionPanel";
 import { BattleTopBar } from "../ui/BattleTopBar";
@@ -128,6 +129,7 @@ import { UnitInfo } from "../ui/UnitInfo";
 import { useSkillCards, useSkillNames } from "../ui/useSkillCards";
 import { loadShake, saveShake } from "../battle/vfxPrefs";
 import { usePreview } from "../ui/usePreview";
+import { Hint } from "../ui/Hint";
 
 interface Props {
   initial: BattleResponse;
@@ -969,18 +971,24 @@ export function BattleScreen({ initial, onExit, exitLabel, runMode }: Props) {
         </BattleCanvas>
         </div>
         <div className="zoom-controls" aria-label="地圖縮放">
-          <button type="button" aria-label="縮小" title="縮小（Ctrl＋滾輪）" onClick={() => zoomStep(1 / ZOOM_STEP)}>
-            －
-          </button>
-          <span className="zoom-percent" title={layout.zoom === null ? "自動填滿" : "手動縮放"}>
-            {layout.zoom === null ? `自動 ${zoomPercent(scale)}` : zoomPercent(scale)}
-          </span>
-          <button type="button" aria-label="放大" title="放大（Ctrl＋滾輪）" onClick={() => zoomStep(ZOOM_STEP)}>
-            ＋
-          </button>
-          <button type="button" disabled={layout.zoom === null} title="自動填滿可用空間" onClick={() => patchLayout({ zoom: null })}>
-            填滿
-          </button>
+          <Hint text="縮小（Ctrl＋滾輪）">
+            <button type="button" aria-label="縮小" onClick={() => zoomStep(1 / ZOOM_STEP)}>
+              －
+            </button>
+          </Hint>
+          <Hint text={layout.zoom === null ? "自動填滿" : "手動縮放"}>
+            <span className="zoom-percent">{layout.zoom === null ? `自動 ${zoomPercent(scale)}` : zoomPercent(scale)}</span>
+          </Hint>
+          <Hint text="放大（Ctrl＋滾輪）">
+            <button type="button" aria-label="放大" onClick={() => zoomStep(ZOOM_STEP)}>
+              ＋
+            </button>
+          </Hint>
+          <Hint text="自動填滿可用空間">
+            <button type="button" disabled={layout.zoom === null} onClick={() => patchLayout({ zoom: null })}>
+              填滿
+            </button>
+          </Hint>
         </div>
         {!collapsed && !narrow && (
           <ResizeHandle
@@ -1095,6 +1103,13 @@ export function BattleScreen({ initial, onExit, exitLabel, runMode }: Props) {
             ended,
             moveCount: classified.moves.size,
             attackCount: classified.attacks.size,
+            summonIdle:
+              hero !== null &&
+              classified.endTurn !== null &&
+              classified.moves.size === 0 &&
+              classified.attacks.size === 0 &&
+              classified.others.length === 0 &&
+              hasControllableSummon(view, hero.id),
           })}
           onPickMode={pickMode}
           onSelect={pickSkill}

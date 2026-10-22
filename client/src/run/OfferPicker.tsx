@@ -60,7 +60,7 @@ export function OfferPicker({
               className={`run-offer-card${pick === index ? " selected" : ""}${off ? " off-route" : ""}`}
             >
               {tag !== undefined && (
-                <div className={`offer-kind-tag offer-kind-${tag.kind}`} data-testid="offer-kind" title={offerTagHint(tag)}>
+                <div className={`offer-kind-tag offer-kind-${tag.kind}`} data-testid="offer-kind">
                   <b>{offerTagText(tag)}</b>
                   <span className="small">　{offerTagHint(tag)}</span>
                 </div>

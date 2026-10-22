@@ -15,6 +15,7 @@ import { CHARGING, chargeStatusText } from "../battle/followup";
 import { summonLine, summonsOf } from "../battle/summons";
 import { unitNames } from "../battle/units";
 import { zoneLine, zoneNextText, zonesOf } from "../battle/zones";
+import { Hint } from "./Hint";
 
 interface Props {
   view: BattleView;
@@ -87,9 +88,11 @@ export function Hud({ view, hero, skills, compact = false }: Props) {
   if (compact) {
     const text = compactHudText(view, hero);
     return (
-      <div className="panel hud hud-compact" aria-label="主角狀態" title={text}>
-        <b>{hero.name_zh}</b>　{text}
-      </div>
+      <Hint text={text}>
+        <div className="panel hud hud-compact" aria-label="主角狀態">
+          <b>{hero.name_zh}</b>　{text}
+        </div>
+      </Hint>
     );
   }
   const stacks = Object.entries(hero.stacks).filter(([, n]) => n > 0);
@@ -108,44 +111,46 @@ export function Hud({ view, hero, skills, compact = false }: Props) {
       <Bar label="法力" value={hero.mana} max={hero.max_mana} className="mana" />
       <Bar label="耐力" value={hero.stamina} max={hero.max_stamina} className="stamina" />
       <div className="hud-row">
-        <span className="hud-chip" title="剩餘行動點數（自己的回合已含上回合保留的 AP）">
-          AP <b>{hero.ap}</b>
-          {hero.ap_carry > 0 && <span className="muted">（下回合保留 +{hero.ap_carry}）</span>}
-        </span>
-        <span className="hud-chip" title="剩餘移動點數">
-          移動 <b>{hero.move_points}</b>
-        </span>
-        {hasMagazine(hero) && (
-          <span
-            className={`hud-chip ammo-chip${hero.ammo <= 0 ? " empty" : ""}`}
-            title={`${ammoText(hero)}：開火一次用掉 1 發，空膛時從「更多動作」選單裝填`}
-            aria-label={ammoText(hero)}
-          >
-            彈匣{" "}
-            <span className="ammo-pips">
-              {ammoPips(hero.ammo, hero.magazine).map((loaded, i) => (
-                <span key={i} className={`ammo-pip${loaded ? " loaded" : ""}`} />
-              ))}
-            </span>
-            {hero.ammo <= 0 && <b className="ammo-empty">空膛</b>}
+        <Hint text="剩餘行動點數（自己的回合已含上回合保留的 AP）">
+          <span className="hud-chip">
+            AP <b>{hero.ap}</b>
+            {hero.ap_carry > 0 && <span className="muted">（下回合保留 +{hero.ap_carry}）</span>}
           </span>
+        </Hint>
+        <Hint text="剩餘移動點數">
+          <span className="hud-chip">
+            移動 <b>{hero.move_points}</b>
+          </span>
+        </Hint>
+        {hasMagazine(hero) && (
+          <Hint text={`${ammoText(hero)}：開火一次用掉 1 發，空膛時從「更多動作」選單裝填`}>
+            <span className={`hud-chip ammo-chip${hero.ammo <= 0 ? " empty" : ""}`} aria-label={ammoText(hero)}>
+              彈匣{" "}
+              <span className="ammo-pips">
+                {ammoPips(hero.ammo, hero.magazine).map((loaded, i) => (
+                  <span key={i} className={`ammo-pip${loaded ? " loaded" : ""}`} />
+                ))}
+              </span>
+              {hero.ammo <= 0 && <b className="ammo-empty">空膛</b>}
+            </span>
+          </Hint>
         )}
         <ChargeChips charges={hero.charges ?? []} />
-        <span
-          className="hud-chip"
-          title={`源力 ${hero.source}/${hero.source_max}：傳說技能的代價（跨戰鬥保留，每場至少 1 點；走上地圖上的「源」格 +1）`}
-          aria-label={`源力 ${hero.source}/${hero.source_max}`}
-        >
-          源力{" "}
-          <span className="source-pips">
-            {sourcePips(hero.source, hero.source_max).map((filled, i) => (
-              <span key={i} className={`source-pip${filled ? " filled" : ""}`} />
-            ))}
+        <Hint text={`源力 ${hero.source}/${hero.source_max}：傳說技能的代價（跨戰鬥保留，每場至少 1 點；走上地圖上的「源」格 +1）`}>
+          <span className="hud-chip" aria-label={`源力 ${hero.source}/${hero.source_max}`}>
+            源力{" "}
+            <span className="source-pips">
+              {sourcePips(hero.source, hero.source_max).map((filled, i) => (
+                <span key={i} className={`source-pip${filled ? " filled" : ""}`} />
+              ))}
+            </span>
           </span>
-        </span>
-        <span className={`hud-chip ${hero.reaction_available ? "on" : "off"}`} title="本輪還能反應嗎">
-          反應 <b>{hero.reaction_available ? "可用" : "已用"}</b>
-        </span>
+        </Hint>
+        <Hint text="本輪還能反應嗎">
+          <span className={`hud-chip ${hero.reaction_available ? "on" : "off"}`}>
+            反應 <b>{hero.reaction_available ? "可用" : "已用"}</b>
+          </span>
+        </Hint>
       </div>
       <div className="hud-line">
         <span className="muted">腳下表面：</span>

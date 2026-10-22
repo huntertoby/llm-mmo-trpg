@@ -4,6 +4,7 @@ import { budgetView, checkHeadline, missingStepNames, rarityName } from "../../w
 import { KeywordLine } from "../KeywordLine";
 import { SkillCardView } from "../SkillCardView";
 import { AssemblyFormula, SkillIconView } from "../SkillIconView";
+import { Hint } from "../Hint";
 
 function LinesTable({ lines }: { lines: BudgetLine[] }) {
   return (
@@ -59,8 +60,12 @@ function BudgetBar({ check }: { check: WorkshopCheck }) {
         aria-valuemax={150}
       >
         <div className={`ws-bar-fill ${v.tone}`} style={{ width: `${v.fill * 100}%` }} />
-        <div className="ws-bar-mark" style={{ left: `${v.minMark * 100}%` }} title={`合格下限 ${Math.round(b.min_ratio * 100)}%`} />
-        <div className="ws-bar-mark" style={{ left: `${v.maxMark * 100}%` }} title={`合格上限 ${Math.round(b.max_ratio * 100)}%`} />
+        <Hint text={`合格下限 ${Math.round(b.min_ratio * 100)}%`}>
+          <div className="ws-bar-mark" style={{ left: `${v.minMark * 100}%` }} />
+        </Hint>
+        <Hint text={`合格上限 ${Math.round(b.max_ratio * 100)}%`}>
+          <div className="ws-bar-mark" style={{ left: `${v.maxMark * 100}%` }} />
+        </Hint>
       </div>
       <div className="muted small">{v.hint}</div>
       {b.variants.length > 0 && (
@@ -129,8 +134,12 @@ export function CheckPanel({ check, pending }: { check: WorkshopCheck | null; pe
           <div className="ws-preview">
             <SkillIconView icon={check.icon} size={96} />
             <div className="ws-preview-sizes">
-              <SkillIconView icon={check.icon} size={40} title="技能列的大小（40px）" />
-              <SkillIconView icon={check.icon} size={28} title="被動、反應等小圖示（28px）" />
+              <Hint text="技能列的大小（40px）">
+                <SkillIconView icon={check.icon} size={40} />
+              </Hint>
+              <Hint text="被動、反應等小圖示（28px）">
+                <SkillIconView icon={check.icon} size={28} />
+              </Hint>
             </div>
           </div>
           <AssemblyFormula icon={check.icon} />

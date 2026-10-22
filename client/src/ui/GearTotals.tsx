@@ -4,6 +4,7 @@ import { useState } from "react";
 import type { GearTotalView } from "../api/types";
 import { totalLine } from "../gear/gearDraft";
 import { gearFoldLabel } from "./gearFold";
+import { Hint } from "./Hint";
 
 interface Props {
   totals: readonly GearTotalView[];
@@ -25,8 +26,10 @@ export function GearTotals({ totals, compact = false }: Props) {
           {totals.map((t) => {
             const line = totalLine(t);
             return (
-              <li key={t.key} className={t.capped ? "capped" : ""} title={[line.detail, ...t.sources_zh].join(" / ")}>
-                <span className="gear-total-text">{line.main}</span>
+              <li key={t.key} className={t.capped ? "capped" : ""}>
+                <Hint text={[line.detail, ...t.sources_zh].join(" / ")}>
+                  <span className="gear-total-text">{line.main}</span>
+                </Hint>
                 <span className="gear-total-from">來自裝備</span>
                 {line.badge !== null && <span className="gear-total-capped">{line.badge}</span>}
               </li>
