@@ -4,6 +4,7 @@
 // 純資料與純函式（不碰 Canvas），可以用 vitest 檢查。
 import { ELEMENT_VFX } from "../battle/vfxPalette";
 import { numToHex } from "./artPalette";
+import { dollGear, isTwoHandedPart, type DollEquipment } from "./dollGear";
 
 export interface GearItem {
   kind: string;
@@ -40,13 +41,13 @@ export interface DollSpec {
 
 /** 每個欄位認得的 `kind`；不在清單內的該欄位不畫。 */
 export const KNOWN_KINDS: Readonly<Record<GearSlot, readonly string[]>> = {
-  head: ["hood", "helmet", "horned_helm", "wizard_hat", "bandana", "crown"],
-  body: ["shirt", "leather", "mail", "plate", "robe", "ribs"],
-  hands: ["gloves", "gauntlets"],
-  feet: ["boots", "greaves"],
+  head: ["hood", "helmet", "horned_helm", "wizard_hat", "bandana", "crown", "wide_hat", "cap", "greathelm"],
+  body: ["shirt", "leather", "mail", "plate", "robe", "ribs", "coat"],
+  hands: ["gloves", "gauntlets", "bracers"],
+  feet: ["boots", "greaves", "shoes", "iron_boots"],
   cloak: ["cape"],
-  main_hand: ["sword", "greatsword", "dagger", "axe", "hammer", "spear", "bow", "crossbow", "longgun", "staff"],
-  off_hand: ["shield_round", "shield_kite", "tome"],
+  main_hand: ["sword", "greatsword", "dagger", "axe", "hammer", "spear", "bow", "crossbow", "longgun", "staff", "pistol", "shotgun", "fist", "scythe", "whip"],
+  off_hand: ["shield_round", "shield_kite", "tome", "orb"],
 };
 
 /** 材質 → [主色, 暗色]；不認得的材質用布料色。 */
@@ -58,6 +59,10 @@ export const MATERIAL: Readonly<Record<string, readonly [string, string]>> = {
   gold: ["#e8bb48", "#9c7420"],
   wood: ["#a06a36", "#6a4420"],
   bone: ["#e9e3cf", "#a8a08a"],
+  // Phase 3G-G5b：裝備外觀新增的材質（色票同 artPalette 的 GEAR_MATERIAL）；原有 7 種不動，舊單位畫面不變
+  copper: ["#c27a48", "#7e4a28"],
+  silver: ["#e8edf2", "#a8b0ba"],
+  crystal: ["#b8a8ff", "#7a68c8"],
 };
 
 export const RARITY_GLOW: Readonly<Record<string, string>> = { epic: "#b06cff", legendary: "#ffbf3a" };
@@ -233,6 +238,8 @@ export interface DollInput {
   totem?: boolean;
   weaponId?: string | null;
   weaponClass?: string | null;
+  /** 身上穿的裝備（`UnitView.equipment`，Phase 3G-G5b）：有穿的欄位依外觀欄位畫，沒穿的沿用範本外觀。 */
+  equipment?: readonly DollEquipment[] | undefined;
 }
 
 /** 單位 → 紙娃娃規格；永遠回傳畫得出來的規格（未知範本、武器、kind 都有退回）。 */
@@ -255,8 +262,22 @@ export function resolveDoll(input: DollInput): DollSpec {
   }
   const mainKnown = known("main_hand", main);
   if (mainKnown !== undefined) gear.main_hand = mainKnown;
-  if (weapon.twoHanded) delete gear.off_hand; // 雙手武器副手留空
-  return { look: app.look, gear, ...(app.rarity !== undefined ? { rarity: app.rarity } : {}) };
+  let twoHanded = weapon.twoHanded;
+  let rarity = app.rarity;
+  if (input.equipment !== undefined && input.equipment.length > 0) {
+    const worn = dollGear(input.equipment);
+    for (const slot of ["head", "body", "hands", "feet", "main_hand", "off_hand"] as const) {
+      const item = known(slot, worn.gear[slot]);
+      if (item !== undefined) gear[slot] = item;
+    }
+    if (worn.paired && gear.main_hand !== undefined) gear.off_hand = { ...gear.main_hand }; // 成對武器：副手格是第二把武器
+    // 雙手武器：優先看武器資料（外觀表），沒有對照的新武器才依造型判斷
+    if (worn.gear.main_hand !== undefined) twoHanded = WEAPON_LOOKS[input.weaponId ?? ""]?.twoHanded ?? isTwoHandedPart(worn.gear.main_hand.kind);
+    if (worn.paired) twoHanded = false; // 成對武器：副手格已經是第二把武器
+    if (worn.rarity !== undefined && (rarity === undefined || worn.rarity === "legendary")) rarity = worn.rarity;
+  }
+  if (twoHanded) delete gear.off_hand; // 雙手武器副手留空
+  return { look: app.look, gear, ...(rarity !== undefined ? { rarity } : {}) };
 }
 
 /** 穩定的快取鍵（物件鍵排序）：同一套裝備＋朝向＋姿勢共用一張貼圖。 */

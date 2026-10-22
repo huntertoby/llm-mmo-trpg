@@ -4,18 +4,31 @@
 import type { Facing } from "../api/types";
 import { roundRect as rr, TAU, type Ctx } from "./artDraw";
 import { elementTint, MATERIAL, RARITY_GLOW, type DollSpec, type GearItem, type Look } from "./appearance";
+import {
+  drawCap,
+  drawCoat,
+  drawFeet,
+  drawFist,
+  drawGreathelm,
+  drawHammer,
+  drawHandsGear,
+  drawMailPattern,
+  drawOrb,
+  drawPistol,
+  drawScythe,
+  drawShotgun,
+  drawSpear,
+  drawTowerShield,
+  drawWhip,
+  drawWideHat,
+  fill,
+  mix,
+} from "./paperdollGear";
 
 /** 離屏畫布的虛擬大小與腳底位置（虛擬像素）。 */
 export const DOLL_W = 64;
 export const DOLL_H = 64;
 export const DOLL_FOOT_Y = DOLL_H - 6;
-
-function mix(a: string, b: string, t: number): string {
-  const pa = parseInt(a.slice(1), 16);
-  const pb = parseInt(b.slice(1), 16);
-  const m = (s: number): number => Math.round(((pa >> s) & 255) * (1 - t) + ((pb >> s) & 255) * t);
-  return `#${((m(16) << 16) | (m(8) << 8) | m(0)).toString(16).padStart(6, "0")}`;
-}
 
 function darker(c: string, f = 0.68): string {
   return mix(c, "#000000", 1 - f);
@@ -31,13 +44,6 @@ export function itemColors(item: GearItem): [string, string] {
     dark = mix(dark, tint, 0.3);
   }
   return [main, dark];
-}
-
-function fill(ctx: Ctx, color: string, path: () => void): void {
-  ctx.fillStyle = color;
-  ctx.beginPath();
-  path();
-  ctx.fill();
 }
 
 type View = "front" | "back";
@@ -69,14 +75,7 @@ function drawLegs(ctx: Ctx, look: Look, feet: GearItem | undefined): void {
   fill(ctx, pants, () => rr(ctx, -5, -9, 4, 8, 1));
   fill(ctx, pants, () => rr(ctx, 1, -9, 4, 8, 1));
   const [b, bd] = feet !== undefined ? itemColors(feet) : ["#5a4030", "#3a281c"];
-  const tall = feet?.kind === "greaves" ? 4 : feet?.kind === "boots" ? 2.5 : 0;
-  for (const sx of [-1, 1]) {
-    if (tall > 0) fill(ctx, b, () => rr(ctx, sx * 3 - 2.2, -2 - tall, 4.4, tall + 1, 1));
-    fill(ctx, bd, () => {
-      ctx.beginPath();
-      ctx.ellipse(sx * 3.2, -1.2, 3.2, 2, 0, 0, TAU);
-    });
-  }
+  drawFeet(ctx, feet, b, bd);
 }
 
 function drawRibs(ctx: Ctx): void {
@@ -92,18 +91,24 @@ function drawRibs(ctx: Ctx): void {
   fill(ctx, "#d9d2bd", () => rr(ctx, -5, -9, 10, 2.5, 1));
 }
 
-function drawTorso(ctx: Ctx, kind: string, c: string, d: string, look: Look): void {
+function drawTorso(ctx: Ctx, it: GearItem | undefined, c: string, d: string, look: Look): void {
+  const kind = it?.kind ?? "shirt";
   if (kind === "robe") {
+    const hem = it?.form === "short" ? -6 : -1.5; // 短袍的下襬較短
     fill(ctx, c, () => {
       ctx.beginPath();
       ctx.moveTo(-7, -21);
       ctx.lineTo(7, -21);
-      ctx.lineTo(10, -1.5);
-      ctx.lineTo(-10, -1.5);
+      ctx.lineTo(10, hem);
+      ctx.lineTo(-10, hem);
       ctx.closePath();
     });
     fill(ctx, look.trim ?? d, () => ctx.rect(-1.2, -20, 2.4, 18.5));
-    fill(ctx, look.trim ?? d, () => ctx.rect(-10, -3, 20, 1.6));
+    fill(ctx, look.trim ?? d, () => ctx.rect(-10, hem - 1.5, 20, 1.6));
+    return;
+  }
+  if (kind === "coat") {
+    drawCoat(ctx, it, c, d);
     return;
   }
   fill(ctx, c, () => rr(ctx, -7.5, -21, 15, 13.5, 3));
@@ -111,8 +116,7 @@ function drawTorso(ctx: Ctx, kind: string, c: string, d: string, look: Look): vo
     fill(ctx, mix(c, "#ffffff", 0.35), () => rr(ctx, -5, -19.5, 4, 6, 1.5));
     fill(ctx, d, () => ctx.rect(-7.5, -14, 15, 1.2));
   } else if (kind === "mail") {
-    ctx.fillStyle = d;
-    for (let y = -19; y < -9; y += 2.4) for (let x = -6 + (Math.trunc(y) % 2); x < 6.5; x += 2.4) ctx.fillRect(x, y, 1, 1);
+    drawMailPattern(ctx, it?.form, d);
   } else if (kind === "leather") {
     ctx.strokeStyle = d;
     ctx.lineWidth = 1;
@@ -125,10 +129,10 @@ function drawTorso(ctx: Ctx, kind: string, c: string, d: string, look: Look): vo
   fill(ctx, "#d8b04a", () => ctx.rect(-1, -9.5, 2, 2));
 }
 
-function drawArms(ctx: Ctx, kind: string, c: string): void {
+function drawArms(ctx: Ctx, kind: string, c: string, half = false): void {
   fill(ctx, c, () => rr(ctx, -10.5, -20, 4, 10, 2));
   fill(ctx, c, () => rr(ctx, 6.5, -20, 4, 10, 2));
-  if (kind === "plate") {
+  if (kind === "plate" && !half) {
     for (const x of [-8.5, 8.5]) fill(ctx, mix(c, "#ffffff", 0.25), () => ctx.ellipse(x, -19.5, 3.5, 2.5, 0, 0, TAU));
   }
 }
@@ -141,13 +145,12 @@ function drawBody(ctx: Ctx, it: GearItem | undefined, look: Look): void {
     return;
   }
   const [c, d] = it !== undefined ? itemColors(it) : ["#d8cdb4", "#a89c80"];
-  drawTorso(ctx, kind, c, d, look);
-  drawArms(ctx, kind, c);
+  drawTorso(ctx, it, c, d, look);
+  drawArms(ctx, kind, c, it?.form === "half"); // 半身板甲沒有肩甲
 }
 
 function drawHands(ctx: Ctx, look: Look, hands: GearItem | undefined): void {
-  const c = hands !== undefined ? itemColors(hands)[0] : look.skin;
-  for (const x of [-8.5, 8.5]) fill(ctx, c, () => ctx.arc(x, -9.5, 2.4, 0, TAU));
+  drawHandsGear(ctx, look, hands, hands !== undefined ? itemColors(hands) : [look.skin, look.skin]);
 }
 
 function drawHead(ctx: Ctx, look: Look, view: View, side: number): void {
@@ -170,7 +173,7 @@ function drawHead(ctx: Ctx, look: Look, view: View, side: number): void {
   ctx.fillRect(ex + 3, -26.5, 2, 1.2);
 }
 
-const HAIR_COVERED = ["helmet", "hood", "wizard_hat", "horned_helm"];
+const HAIR_COVERED = ["helmet", "hood", "wizard_hat", "horned_helm", "greathelm", "cap"];
 
 function drawHair(ctx: Ctx, look: Look, view: View, head: GearItem | undefined): void {
   if (look.hair === undefined || look.hair === "none" || look.skull === true) return;
@@ -271,6 +274,15 @@ function drawHeadgear(ctx: Ctx, it: GearItem | undefined, view: View): void {
       break;
     case "bandana":
       drawBandana(ctx, c, d, view);
+      break;
+    case "wide_hat":
+      drawWideHat(ctx, it, [c, d]);
+      break;
+    case "cap":
+      drawCap(ctx, it, [c, d]);
+      break;
+    case "greathelm":
+      drawGreathelm(ctx, [c, d], view === "back");
       break;
     case "crown":
       fill(ctx, c, () => {
@@ -494,11 +506,13 @@ function drawShield(ctx: Ctx, it: GearItem, c: string, d: string): void {
   fill(ctx, it.trim ?? "#e8e0c8", () => ctx.rect(-5, -7, 10, 1.8));
 }
 
-function drawWeapon(ctx: Ctx, it: GearItem | undefined, x: number, front: boolean): void {
+/** 一件手持物（主手或副手）；`mirror`：左右鏡像（成對武器的副手，兩把向外張開）。 */
+function drawWeapon(ctx: Ctx, it: GearItem | undefined, x: number, front: boolean, mirror = false): void {
   if (it === undefined) return;
   const [c, d] = itemColors(it);
   ctx.save();
   ctx.translate(x, -9.5);
+  if (mirror) ctx.scale(-1, 1);
   switch (it.kind) {
     case "sword":
     case "greatsword":
@@ -527,21 +541,28 @@ function drawWeapon(ctx: Ctx, it: GearItem | undefined, x: number, front: boolea
       });
       break;
     case "hammer":
-      ctx.rotate(front ? -0.3 : 0.3);
-      fill(ctx, "#6a4420", () => ctx.rect(-1.1, -22, 2.2, 24));
-      fill(ctx, c, () => rr(ctx, -6.5, -28, 13, 8, 1.5));
-      fill(ctx, d, () => ctx.rect(-6.5, -24.5, 13, 1.2));
+      drawHammer(ctx, it, [c, d], front);
       break;
     case "spear":
-      ctx.rotate(front ? -0.15 : 0.15);
-      fill(ctx, "#8a6a3a", () => ctx.rect(-0.9, -34, 1.8, 38));
-      fill(ctx, c, () => {
-        ctx.beginPath();
-        ctx.moveTo(0, -42);
-        ctx.quadraticCurveTo(3.4, -37, 0, -32);
-        ctx.quadraticCurveTo(-3.4, -37, 0, -42);
-        ctx.closePath();
-      });
+      drawSpear(ctx, it, [c, d], front);
+      break;
+    case "pistol":
+      drawPistol(ctx, it, [c, d], front);
+      break;
+    case "shotgun":
+      drawShotgun(ctx, it, [c, d], front);
+      break;
+    case "fist":
+      drawFist(ctx, it, [c, d]);
+      break;
+    case "scythe":
+      drawScythe(ctx, [c, d], front);
+      break;
+    case "whip":
+      drawWhip(ctx, [c, d], it, front);
+      break;
+    case "orb":
+      drawOrb(ctx, it, [c, d]);
       break;
     case "staff":
       drawStaff(ctx, it, c);
@@ -557,7 +578,8 @@ function drawWeapon(ctx: Ctx, it: GearItem | undefined, x: number, front: boolea
       break;
     case "shield_round":
     case "shield_kite":
-      drawShield(ctx, it, c, d);
+      if (it.kind === "shield_kite" && it.form === "tower") drawTowerShield(ctx, [c, d]);
+      else drawShield(ctx, it, c, d);
       break;
     case "tome":
       fill(ctx, c, () => rr(ctx, -4.5, -6, 9, 8, 1));
@@ -591,6 +613,9 @@ function drawTotem(ctx: Ctx): void {
   fill(ctx, "rgba(255,255,255,0.8)", () => ctx.arc(-1.2, -45.2, 1.1, 0, TAU));
 }
 
+/** 副手的非武器手持物（盾、書、法球）：不鏡像。 */
+const SHIELD_LIKE: ReadonlySet<string> = new Set(["shield_round", "shield_kite", "tome", "orb"]);
+
 /** 手的位置：正面時慣用手在畫面左、背面相反、側面時武器在前方。 */
 export function handSides(facing: Facing): { main: number; off: number; side: number; view: View } {
   const view: View = facing === "north" ? "back" : "front";
@@ -608,12 +633,15 @@ export function drawFigure(ctx: Ctx, spec: DollSpec, facing: Facing): void {
   const { look, gear } = spec;
   const { main, off, side, view } = handSides(facing);
   const offInFront = gear.off_hand?.kind.startsWith("shield") === true;
+  // 成對武器（主手副手同一種武器）與拳套（兩手都戴）：副手也畫手持物，並鏡像讓兩把向外張開
+  const offItem = gear.off_hand ?? (gear.main_hand?.kind === "fist" ? gear.main_hand : undefined);
+  const offMirror = offItem !== undefined && !SHIELD_LIKE.has(offItem.kind);
   ctx.save();
   if (side !== 0) ctx.scale(0.9, 1);
   if (gear.cloak !== undefined && view !== "back") drawCloak(ctx, gear.cloak, view);
   if (view === "back") {
     drawWeapon(ctx, gear.main_hand, main, false); // 背面時武器畫在身體後面
-    drawWeapon(ctx, gear.off_hand, off, false);
+    drawWeapon(ctx, offItem, off, false, offMirror);
   }
   drawLegs(ctx, look, gear.feet);
   drawBody(ctx, gear.body, look);
@@ -624,7 +652,7 @@ export function drawFigure(ctx: Ctx, spec: DollSpec, facing: Facing): void {
   drawHeadgear(ctx, gear.head, view);
   if (view !== "back") {
     drawWeapon(ctx, gear.main_hand, main, true);
-    drawWeapon(ctx, gear.off_hand, off + (offInFront ? side * 2 : 0), true);
+    drawWeapon(ctx, offItem, off + (offInFront ? side * 2 : 0), true, offMirror);
   }
   ctx.restore();
 }

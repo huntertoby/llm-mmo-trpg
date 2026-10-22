@@ -1,5 +1,6 @@
 // 視圖 → 繪製模型（純函式；PixiJS 只負責照著畫）。
 import type { BattleView, Facing, Pos, Surface } from "../api/types";
+import type { GearLook } from "../render/gearIcon";
 import {
   HIGHLIGHT,
   SURFACES,
@@ -85,6 +86,8 @@ export interface UnitDraw {
   weaponId: string;
   /** 武器大類（melee、ranged、focus）：不認得 `weaponId` 時依此退回武器圖。 */
   weaponClass: string;
+  /** 身上穿的裝備（Phase 3G-G5b，紙娃娃依各欄位外觀畫）；舊資料沒有時視為沒穿。 */
+  equipment?: ReadonlyArray<{ slot: string; appearance?: GearLook | null }>;
 }
 
 export interface TrapDraw {
@@ -230,6 +233,7 @@ export function buildDrawModel(
       facing: u.facing,
       weaponId: u.weapon_id,
       weaponClass: u.weapon_class,
+      equipment: (u.equipment ?? []).map((e) => ({ slot: e.slot, appearance: e.appearance })),
     }))
     // 倒下的先畫（在底層），其餘依 y 由上往下排序（下面的人蓋住上面的人）
     .sort((a, b) => Number(b.downed) - Number(a.downed) || a.y - b.y);
