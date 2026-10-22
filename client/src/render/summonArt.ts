@@ -326,7 +326,6 @@ function beast(ctx: Ctx, s: ResolvedLook, side: Side): void {
 
 // ---- 植物：藤蔓貼地、捲曲＋刺＋葉 ----
 function plant(ctx: Ctx): void {
-  fill(ctx, "rgba(40,70,30,0.45)", () => ctx.ellipse(0, -2, 18, 6, 0, 0, TAU));
   ctx.lineCap = "round";
   for (const [a, len] of [[-2.6, 16], [-1.9, 18], [-1.2, 15], [-0.5, 17], [0.2, 14], [-3.2, 13]] as const) {
     ctx.strokeStyle = "#3f6a2a";
@@ -434,6 +433,7 @@ export function drawSummonGround(ctx: Ctx, look: ResolvedLook): void {
   const sh = groundShadow(look);
   if (sh !== null) shadow(ctx, sh[0], sh[1], -1, sh[2]);
   if (look.body === "spirit" && look.trait === "puddle") fill(ctx, "rgba(74,168,255,0.45)", () => ctx.ellipse(0, -1, 13, 4, 0, 0, TAU));
+  if (look.body === "plant") fill(ctx, "rgba(40,70,30,0.35)", () => ctx.ellipse(0, -2, 18, 6, 0, 0, TAU)); // 藤蔓底影：不加外框，透明度 0.35
 }
 
 /**
