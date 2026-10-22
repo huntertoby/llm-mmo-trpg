@@ -17,6 +17,8 @@
 - ``trpg sim matrix [--builds a,b] [--maps a,b] [--seeds 20] [--jobs N] [--json out.json]``：
   build × 地圖矩陣（勝率、英雄 DPR、存活率、排名、6.8 標準檢查）。
 - ``trpg sim skills [--demo] [--random N] [--seeds 10] [--jobs N]``：技能報表（DPR 分佈、離群）。
+- ``trpg sim keywords [--samples 20] [--seed-start 0] [--battles 1] [--maps a,b] [--jobs N]``：
+  關鍵字組合抽樣（隨機武器＋2 個關鍵字的測試角色；Phase 3-24b2）。
 - ``trpg sim maps [--maps a,b] [--seeds 20] [--seed-start 0] [--jobs N] [--json out.json]
   [--ally-build a,b]``：每張地圖以預設陣容（或指定的 build）批次模擬，印出勝率、輪數、DPR、
   控制回合、技能使用與異常。
@@ -43,7 +45,7 @@ from trpg.cli.battle import cmd_battle, cmd_map_list, cmd_map_show, cmd_replay
 from trpg.cli.budget import cmd_skills_budget, cmd_skills_budget_all, library_violations
 from trpg.cli.run import add_run_parser
 from trpg.cli.serve import DEFAULT_HOST, DEFAULT_PORT, cmd_serve
-from trpg.cli.sim import cmd_sim_maps
+from trpg.cli.sim import cmd_sim_keywords, cmd_sim_maps
 from trpg.cli.sim_completion import cmd_sim_completion
 from trpg.cli.sim_matrix import cmd_sim_matrix, cmd_sim_skills
 from trpg.cli.skills import cmd_skills_list, cmd_skills_show
@@ -281,9 +283,46 @@ def _add_sim_report_parsers(
         "--jobs", type=_jobs_arg, default=0, help="平行行程數（預設 0＝CPU 邏輯核心數）"
     )
     skills.add_argument("--json", type=Path, default=None, help="另外寫出完整報表 JSON")
+    keywords = sim_commands.add_parser(
+        "keywords",
+        help="關鍵字組合抽樣：隨機武器＋2 個關鍵字組成測試角色，各打一張隨機地圖（Phase 3-24b2）",
+    )
+    keywords.add_argument("--samples", type=_positive_int, default=20, help="樣本數（預設 20）")
+    keywords.add_argument(
+        "--seed-start", type=_non_negative_int, default=0, help="起始樣本種子（預設 0）"
+    )
+    keywords.add_argument(
+        "--battles", type=_positive_int, default=1, help="每個樣本的場數（預設 1）"
+    )
+    keywords.add_argument(
+        "--maps", default=None, help="地圖 ID，以逗號分隔（預設：全部有 encounter 的非測試地圖）"
+    )
+    keywords.add_argument(
+        "--jobs", type=_jobs_arg, default=0, help="平行行程數（預設 0＝CPU 邏輯核心數）"
+    )
     matrix.set_defaults(func=_sim_matrix)
     completion.set_defaults(func=_sim_completion)
     skills.set_defaults(func=_sim_skills)
+    keywords.set_defaults(func=_sim_keywords)
+
+
+def _sim_keywords(args: argparse.Namespace) -> int:
+    maps = None if args.maps is None else _split(args.maps)
+    if maps == []:
+        print("錯誤：--maps 至少要有一張地圖", file=sys.stderr)
+        return 2
+    return _with_library(
+        lambda lib: cmd_sim_keywords(
+            lib,
+            samples=args.samples,
+            seed_start=args.seed_start,
+            battles=args.battles,
+            maps=maps,
+            jobs=_resolve_jobs(args.jobs),
+            out=sys.stdout,
+            err=sys.stderr,
+        )
+    )
 
 
 def _cmd_rng(seed: int, count: int, sides: int | None) -> int:
