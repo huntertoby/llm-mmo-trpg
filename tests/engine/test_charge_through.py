@@ -214,14 +214,14 @@ def test_only_straight_lines_within_the_reach_are_legal() -> None:
         go(far, SID, (4, 3))
 
 
-def test_the_end_tile_must_be_empty_and_standable() -> None:
+def test_any_tile_in_line_within_reach_can_be_chosen() -> None:
+    """3-29：目標格可以是站著敵人的格子、牆、或射程內的任何格（只要至少能前進一格）。"""
     state = arena(skill(PRONE_HIT), foes=[(3, 3)], terrain=terrain_of({(5, 3): "#"}))
-    with pytest.raises(IllegalActionError, match="終點必須是空格"):
-        go(state, SID, (3, 3))
-    with pytest.raises(IllegalActionError, match="不可站立"):
-        go(state, SID, (5, 3))
-    assert (3, 3) not in ends(state) and (5, 3) not in ends(state)
-    assert (4, 3) in ends(state)
+    assert {(3, 3), (5, 3), (4, 3)} <= set(ends(state))
+    assert go(state, SID, (5, 3)).state.units[U1].xy == (
+        4,
+        3,
+    )  # 敵人在 (3,3) 背後有路：穿過去停在牆前
 
 
 def test_a_wall_stops_the_charge_before_it(monkeypatch: pytest.MonkeyPatch) -> None:
@@ -244,21 +244,114 @@ def test_a_too_high_step_stops_the_charge() -> None:
     assert result.state.units[U1].xy == (2, 3)
 
 
-def test_it_cannot_be_cast_when_it_cannot_stop_anywhere() -> None:
+def test_it_cannot_be_cast_when_the_first_tile_is_blocked() -> None:
     state = arena(skill(PRONE_HIT), terrain=terrain_of({(1, 3): "#"}))
     with pytest.raises(IllegalActionError, match="停不下來"):
         go(state, SID, (4, 3))
-    assert (4, 3) not in ends(state)
+    assert (4, 3) not in ends(state) and (1, 3) not in ends(state)
 
 
 def test_it_never_stops_on_a_unit(monkeypatch: pytest.MonkeyPatch) -> None:
-    """牆前最後一個空格被敵人占住：停點退回到更前面的空格（敵人被穿過、不阻擋）。"""
+    """牆前最後一個空格被敵人占住：停點退回到更前面的空格；敵人照常被攻擊（3-29）。"""
     d20s(monkeypatch, 1)  # 這一擊失手
     state = arena(skill(PRONE_HIT), foes=[(2, 3)], terrain=terrain_of({(3, 3): "#"}))
     result = go(state, SID, (5, 3))
     assert result.state.units[U1].xy == (1, 3)
     assert path_of(result) == [(0, 3), (1, 3)]
-    assert [r.target_id for r in of(result, AttackRolled)] == []  # 沒有走到敵人身旁就停了
+    assert [r.target_id for r in of(result, AttackRolled)] == [U2]
+    assert of(result, Collided) == []  # 失手：沒有撞擊
+
+
+# ---------------------------------------------------------------------------
+# 3-29：貼牆、地圖邊的敵人也打得到
+# ---------------------------------------------------------------------------
+
+
+def bumps(result: ResolveResult) -> list[Collided]:
+    return of(result, Collided)
+
+
+def test_an_enemy_on_the_third_tile_against_the_map_edge_is_hit_and_bumped(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """使用者案例：敵人在第 3 格、背後是地圖邊。"""
+    d20s(monkeypatch)
+    state = arena(skill(PRONE_HIT, reach=6), caster=(4, 3), foes=[(6, 3)])
+    assert (6, 3) in ends(state)
+    result = go(state, SID, (6, 3))
+    assert result.state.units[U1].xy == (5, 3)
+    assert path_of(result) == [(4, 3), (5, 3)]
+    (hit,) = of(result, AttackRolled)
+    assert hit.target_id == U2
+    (col,) = bumps(result)
+    assert (col.unit_id, col.obstacle, col.shortfall, col.source_id) == (U2, "edge", 1, U1)
+    causes = [d.cause for d in of(result, DamageDealt) if d.target_id == U2]
+    assert causes.count("collision") == 1 and len(causes) == 2
+    assert result.state.units[U2].xy == (6, 3)
+
+
+def test_an_enemy_against_a_wall_is_bumped(monkeypatch: pytest.MonkeyPatch) -> None:
+    d20s(monkeypatch)
+    state = arena(skill(PRONE_HIT), foes=[(3, 3)], terrain=terrain_of({(4, 3): "#"}))
+    result = go(state, SID, (3, 3))
+    assert result.state.units[U1].xy == (2, 3)
+    assert [(c.unit_id, c.obstacle) for c in bumps(result)] == [(U2, "wall")]
+
+
+def test_an_enemy_against_a_blocking_object_is_bumped(monkeypatch: pytest.MonkeyPatch) -> None:
+    d20s(monkeypatch)
+    state = arena(skill(PRONE_HIT), foes=[(3, 3)], objects=[(4, 3, "crate")])
+    result = go(state, SID, (3, 3))
+    assert [(c.unit_id, c.obstacle) for c in bumps(result)] == [(U2, "object")]
+
+
+def test_an_enemy_with_room_behind_is_not_bumped(monkeypatch: pytest.MonkeyPatch) -> None:
+    d20s(monkeypatch)
+    state = arena(skill(PRONE_HIT), foes=[(3, 3)])
+    result = go(state, SID, (3, 3))
+    assert result.state.units[U1].xy == (2, 3)
+    assert bumps(result) == []
+
+
+def test_a_miss_does_not_bump(monkeypatch: pytest.MonkeyPatch) -> None:
+    d20s(monkeypatch, 1)
+    state = arena(skill(PRONE_HIT, reach=6), caster=(4, 3), foes=[(6, 3)])
+    assert bumps(go(state, SID, (6, 3))) == []
+
+
+def test_an_adjacent_enemy_against_the_wall_is_hit_without_moving(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    d20s(monkeypatch)
+    state = arena(skill(PRONE_HIT), foes=[(1, 3)], terrain=terrain_of({(2, 3): "#"}))
+    result = go(state, SID, (3, 3))  # 目標格選在牆後也可以
+    assert result.state.units[U1].xy == (0, 3)
+    assert [c.unit_id for c in bumps(result)] == [U2]
+    assert of(result, UnitMoved) == []
+
+
+def test_an_ally_against_the_edge_is_not_bumped(monkeypatch: pytest.MonkeyPatch) -> None:
+    d20s(monkeypatch)
+    state = arena(skill(PRONE_HIT, reach=6), caster=(4, 3), allies=[(6, 3)])
+    result = go(state, SID, (6, 3))
+    assert bumps(result) == [] and of(result, AttackRolled) == []
+    assert result.state.units[U1].xy == (5, 3)
+
+
+def test_the_bump_feeds_target_collided(monkeypatch: pytest.MonkeyPatch) -> None:
+    d20s(monkeypatch)
+    state = arena(skill(PRONE_HIT, reach=6), caster=(4, 3), foes=[(6, 3)])
+    result = go(state, SID, (6, 3))
+    assert result.state.units[U2].collided_round == result.state.round
+
+
+def test_the_preview_shows_the_stop_tile_and_the_bump() -> None:
+    state = arena(skill(PRONE_HIT, reach=6), caster=(4, 3), foes=[(6, 3)])
+    out = preview(state, UseSkill(unit_id=U1, skill_id=SID, target_pos=Pos(x=6, y=3)))
+    (move,) = out.moves
+    assert move.kind == "charge" and move.path[-1] == (5, 3)
+    assert [t.unit_id for t in out.targets] == [U2]
+    assert any(c[0] == U2 for c in out.collisions)
 
 
 def test_it_cannot_be_cast_while_rooted_or_prone() -> None:
@@ -470,6 +563,17 @@ def test_bull_rush_runs_through_two_enemies_and_knocks_them_down(
     assert [r.target_id for r in of(result, AttackRolled)] == [U2, U3]
     assert result.state.units[U2].has_status("prone") and result.state.units[U3].has_status("prone")
     assert result.state.units[U1].xy == (4, 3)
+
+
+def test_bull_rush_hits_an_enemy_standing_at_the_map_edge(monkeypatch: pytest.MonkeyPatch) -> None:
+    """使用者案例（蠻牛衝陣）：右邊貼著地圖邊的敵人也打得到，且吃撞擊傷害。"""
+    d20s(monkeypatch, die=3)
+    state = arena(BULL, caster=(3, 3), foes=[(6, 3)])
+    assert (6, 3) in ends(state, BULL)
+    result = go(state, BULL, (6, 3))
+    assert [r.target_id for r in of(result, AttackRolled)] == [U2]
+    assert [c.obstacle for c in bumps(result)] == ["edge"]
+    assert result.state.units[U1].xy == (5, 3)
 
 
 # ---------------------------------------------------------------------------

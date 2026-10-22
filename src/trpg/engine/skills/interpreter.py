@@ -2131,7 +2131,7 @@ class _Cast:
             UnitCharged,
             unit_id=caster.id,
             target=action.target_pos,
-            path=tuple(Pos(x=x, y=y) for x, y in (start, *route.cells)),
+            path=tuple(Pos(x=x, y=y) for x, y in (start, *route.walked)),
         )
         moved = self._charge_walk(spec, route, start, gamble)
         if moved and caster.alive:
@@ -2151,7 +2151,7 @@ class _Cast:
             occupant = state.unit_at(*cell)
             if occupant is not None and occupant.id != caster.id:
                 if occupant.team is not caster.team:
-                    self._charge_hit(spec, occupant, travel, gamble)
+                    self._charge_hit(spec, occupant, travel, gamble, bump=cell == route.bump)
                 if state.unit_at(*cell) is not None:
                     continue  # 還站在那裡：穿過去；倒下或被推開了就走進這一格
             before = caster.xy
@@ -2166,10 +2166,14 @@ class _Cast:
                 break
         return moved
 
-    def _charge_hit(self, spec: EffectSpec, unit: UnitState, travel: XY, gamble: int) -> None:
+    def _charge_hit(
+        self, spec: EffectSpec, unit: UnitState, travel: XY, gamble: int, *, bump: bool = False
+    ) -> None:
         """衝撞穿過敵人 ``unit``：擲命中；命中受 ``dice`` 物理傷害（暴擊、格擋與修正規則照常），
-        還活著時依 ``on_hit`` 擊倒或推到路徑旁。"""
+        還活著時依 ``on_hit`` 擊倒或推到路徑旁。``bump``（3-29）：他背後走不過去（牆、地圖邊、
+        擋路物件），命中後若還站在原地，另往前推一格——被擋下而受一次撞擊傷害（``collided``）。"""
         assert spec.dice is not None
+        route_cell = unit.xy
         roll = self._roll_one(unit, force_block=True)
         if not roll.hit:
             return
@@ -2190,6 +2194,19 @@ class _Cast:
             ]
         if follow:
             execute(self.ctx, follow)
+        if bump and unit.alive and unit.xy == route_cell:
+            execute(
+                self.ctx,
+                [
+                    PushEffect(
+                        source_id=self.caster.id,
+                        target_id=unit.id,
+                        direction=travel,
+                        distance=1,
+                        collision_dice=spec.collision_dice,
+                    )
+                ],
+            )
 
     def displace_check(
         self, kind: Literal["teleport", "swap"], target: UnitState, bonus: int
