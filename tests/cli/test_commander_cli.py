@@ -92,6 +92,7 @@ def test_commander_argument_errors(capsys: pytest.CaptureFixture[str]) -> None:
     assert code == 2 and "指揮官只能搭配效用 AI" in err
 
 
+@pytest.mark.xdist_group("sim_pool")
 @pytest.mark.slow
 def test_sim_maps_with_a_commander_prints_it_and_stays_deterministic(
     capsys: pytest.CaptureFixture[str],

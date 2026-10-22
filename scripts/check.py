@@ -6,6 +6,11 @@
     uv run python scripts/check.py --full   # 完整版（pytest -m ""、TRPG_FULL=1）
 
 pytest 平行數預設 8，可用環境變數 ``TRPG_PYTEST_WORKERS`` 覆寫（數字或 ``auto``）。
+單一測試預設逾時 300 秒（標 slow 的 1800 秒），見 ``pyproject.toml`` 的 ``timeout``。
+
+多個 agent 同時工作時：每個 agent 在自己的 worktree 執行本腳本（不要共用同一個 checkout），
+並設 ``UV_NO_SYNC=1``（或用 ``uv run --frozen``）避免 ``uv run`` 自動同步、重裝套件。
+跑 pytest 前會清掉 ``tests/**/__pycache__`` 中多個行程同時寫入留下的 ``*.pyc.<pid>`` 暫存檔。
 
 每個步驟都會執行（方便一次看到全部問題），最後印出各步驟結果摘要；
 任一步失敗時以非零代碼結束。``lint-imports`` 未安裝時只印出警告並略過，不算失敗
@@ -111,9 +116,23 @@ def _full_step(step: Step) -> Step:
     return Step(step.title, step.module, step.executable, (*step.args, "-m", ""), step.optional)
 
 
+def clean_stale_pyc() -> int:
+    """刪除 ``tests/**/__pycache__/*.pyc.<pid>``（並行寫入中斷留下的暫存檔）；回傳刪除數。"""
+    count = 0
+    for path in (PROJECT_ROOT / "tests").glob("**/__pycache__/*.pyc.*"):
+        try:
+            path.unlink()
+            count += 1
+        except OSError:
+            pass
+    return count
+
+
 def run_step(step: Step) -> str:
     """執行一個步驟，回傳 ``"通過"``、``"失敗"`` 或 ``"略過"``。"""
     print(f"\n=== {step.title} ===", flush=True)
+    if step.title == "pytest" and (removed := clean_stale_pyc()):
+        print(f"已清除 {removed} 個殘留的 .pyc 暫存檔。", flush=True)
     command = find_command(step)
     if command is None:
         if step.optional:
