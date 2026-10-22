@@ -335,6 +335,12 @@
                     "$ref": "#/components/schemas/SetReactionMode"
                   },
                   {
+                    "$ref": "#/components/schemas/SetSummonMode"
+                  },
+                  {
+                    "$ref": "#/components/schemas/CommandSummon"
+                  },
+                  {
                     "$ref": "#/components/schemas/EndTurn"
                   }
                 ],
@@ -356,6 +362,8 @@
                     "activate_charge": "#/components/schemas/ActivateCharge",
                     "end_stance": "#/components/schemas/EndStance",
                     "set_reaction_mode": "#/components/schemas/SetReactionMode",
+                    "set_summon_mode": "#/components/schemas/SetSummonMode",
+                    "command_summon": "#/components/schemas/CommandSummon",
                     "end_turn": "#/components/schemas/EndTurn"
                   }
                 },
@@ -510,6 +518,12 @@
                     "$ref": "#/components/schemas/SetReactionMode"
                   },
                   {
+                    "$ref": "#/components/schemas/SetSummonMode"
+                  },
+                  {
+                    "$ref": "#/components/schemas/CommandSummon"
+                  },
+                  {
                     "$ref": "#/components/schemas/EndTurn"
                   }
                 ],
@@ -531,6 +545,8 @@
                     "activate_charge": "#/components/schemas/ActivateCharge",
                     "end_stance": "#/components/schemas/EndStance",
                     "set_reaction_mode": "#/components/schemas/SetReactionMode",
+                    "set_summon_mode": "#/components/schemas/SetSummonMode",
+                    "command_summon": "#/components/schemas/CommandSummon",
                     "end_turn": "#/components/schemas/EndTurn"
                   }
                 },
@@ -546,6 +562,58 @@
               "application/json": {
                 "schema": {
                   "$ref": "#/components/schemas/PreviewOut"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/battles/{battle_id}/summons/{summon_id}/command-options": {
+      "get": {
+        "tags": [
+          "battles"
+        ],
+        "summary": "Get Command Options",
+        "description": "指揮主角的一隻召喚物（Phase 3-33c）時可選的終點與各終點打得到的敵人。不改變狀態。",
+        "operationId": "get_command_options_api_battles__battle_id__summons__summon_id__command_options_get",
+        "parameters": [
+          {
+            "name": "battle_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Battle Id"
+            }
+          },
+          {
+            "name": "summon_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Summon Id"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/CommandOptionsOut"
                 }
               }
             }
@@ -1437,6 +1505,12 @@
             "$ref": "#/components/schemas/SetReactionMode"
           },
           {
+            "$ref": "#/components/schemas/SetSummonMode"
+          },
+          {
+            "$ref": "#/components/schemas/CommandSummon"
+          },
+          {
             "$ref": "#/components/schemas/EndTurn"
           }
         ],
@@ -1446,6 +1520,7 @@
             "activate_charge": "#/components/schemas/ActivateCharge",
             "aim": "#/components/schemas/Aim",
             "attack": "#/components/schemas/Attack",
+            "command_summon": "#/components/schemas/CommandSummon",
             "defend": "#/components/schemas/Defend",
             "end_stance": "#/components/schemas/EndStance",
             "end_turn": "#/components/schemas/EndTurn",
@@ -1454,6 +1529,7 @@
             "reload": "#/components/schemas/Reload",
             "run": "#/components/schemas/Run",
             "set_reaction_mode": "#/components/schemas/SetReactionMode",
+            "set_summon_mode": "#/components/schemas/SetSummonMode",
             "shove": "#/components/schemas/Shove",
             "swap": "#/components/schemas/Swap",
             "trip": "#/components/schemas/Trip",
@@ -2265,6 +2341,11 @@
             "type": "array",
             "title": "Runes",
             "default": []
+          },
+          "summon_command_ap_cost": {
+            "type": "integer",
+            "title": "Summon Command Ap Cost",
+            "default": 1
           }
         },
         "additionalProperties": false,
@@ -2841,6 +2922,109 @@
         ],
         "title": "CollisionOut",
         "description": "撞擊傷害預覽（Phase 3C-3a）：某單位受到的撞擊傷害總和（最少、最多後果）。"
+      },
+      "CommandOptionOut": {
+        "properties": {
+          "dest": {
+            "$ref": "#/components/schemas/Pos"
+          },
+          "path": {
+            "items": {
+              "$ref": "#/components/schemas/Pos"
+            },
+            "type": "array",
+            "title": "Path"
+          },
+          "targets": {
+            "items": {
+              "type": "string"
+            },
+            "type": "array",
+            "title": "Targets"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "dest",
+          "path",
+          "targets"
+        ],
+        "title": "CommandOptionOut",
+        "description": "指揮召喚物的一個終點（Phase 3-33c）：``path`` 從召喚物目前位置開始（原地不動時只有起點），\n``targets`` 是從終點普攻打得到的敵方單位。"
+      },
+      "CommandOptionsOut": {
+        "properties": {
+          "summon_id": {
+            "type": "string",
+            "title": "Summon Id"
+          },
+          "ap_cost": {
+            "type": "integer",
+            "title": "Ap Cost"
+          },
+          "options": {
+            "items": {
+              "$ref": "#/components/schemas/CommandOptionOut"
+            },
+            "type": "array",
+            "title": "Options"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "summon_id",
+          "ap_cost",
+          "options"
+        ],
+        "title": "CommandOptionsOut",
+        "description": "指揮一隻召喚物時可選的終點與目標（Phase 3-33c）；第一個是原地不動。"
+      },
+      "CommandSummon": {
+        "properties": {
+          "unit_id": {
+            "type": "string",
+            "title": "Unit Id"
+          },
+          "type": {
+            "type": "string",
+            "const": "command_summon",
+            "title": "Type",
+            "default": "command_summon"
+          },
+          "summon_id": {
+            "type": "string",
+            "title": "Summon Id"
+          },
+          "path": {
+            "items": {
+              "$ref": "#/components/schemas/Pos"
+            },
+            "type": "array",
+            "title": "Path",
+            "default": []
+          },
+          "target_id": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Target Id"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "unit_id",
+          "summon_id"
+        ],
+        "title": "CommandSummon",
+        "description": "指揮自己一隻召喚物（Phase 3-33c，6.29.2；``summon_command_ap_cost`` AP）：立刻執行指定的\n移動（``path``，從召喚物目前位置開始、在牠的移動力內；省略＝不移動）與普攻（``target_id``，\n移動之後；省略＝不攻擊），**不佔召喚物自己的回合**（牠自己的 AP 與移動點數不變）。每隻每輪\n最多被指揮 1 次；移動與攻擊至少要有一個。**不列入**\n``legal_actions``（組合太多），由 :func:`trpg.engine.summon_control.command_problem` 與\nAPI 的指揮選項（``command-options``）提供。"
       },
       "CoverOut": {
         "properties": {
@@ -7268,6 +7452,47 @@
         "title": "SetReactionMode",
         "description": "設定自己身上某條反應規則的模式（Phase 3-4b）：``auto`` 自動、``prompt`` 詢問、``off`` 關閉。\n\n不花 AP、不結束回合，只能在自己的回合使用，只能改自己身上已有的規則（``reaction`` 為反應 ID\n或反應技 ID；同一個反應的所有規則一併改）。**不列入** ``legal_actions``（AI 不使用），由\n:func:`trpg.engine.battle.reaction_mode_problem` 判斷合法。"
       },
+      "SetSummonMode": {
+        "properties": {
+          "unit_id": {
+            "type": "string",
+            "title": "Unit Id"
+          },
+          "type": {
+            "type": "string",
+            "const": "set_summon_mode",
+            "title": "Type",
+            "default": "set_summon_mode"
+          },
+          "summon_id": {
+            "type": "string",
+            "title": "Summon Id"
+          },
+          "mode": {
+            "$ref": "#/components/schemas/SummonMode"
+          },
+          "target_id": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Target Id"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "unit_id",
+          "summon_id",
+          "mode"
+        ],
+        "title": "SetSummonMode",
+        "description": "切換自己一隻召喚物的模式（Phase 3-33c，6.29.2；**0 AP**、不結束回合，只能在自己的回合）：\n``focus`` 集火（``target_id`` 必填：場上的敵方單位）、``guard`` 守護我、``follow`` 跟隨、\n``hold`` 待命（這三種不可帶 ``target_id``）。與目前完全相同時不合法。**不列入**\n``legal_actions``（同 :class:`SetReactionMode`），由\n:func:`trpg.engine.summon_control.mode_problem` 判斷合法。"
+      },
       "Shove": {
         "properties": {
           "unit_id": {
@@ -8311,6 +8536,12 @@
             "$ref": "#/components/schemas/SetReactionMode"
           },
           {
+            "$ref": "#/components/schemas/SetSummonMode"
+          },
+          {
+            "$ref": "#/components/schemas/CommandSummon"
+          },
+          {
             "$ref": "#/components/schemas/EndTurn"
           },
           {
@@ -8323,6 +8554,7 @@
             "activate_charge": "#/components/schemas/ActivateCharge",
             "aim": "#/components/schemas/Aim",
             "attack": "#/components/schemas/Attack",
+            "command_summon": "#/components/schemas/CommandSummon",
             "decision": "#/components/schemas/Decision",
             "defend": "#/components/schemas/Defend",
             "end_stance": "#/components/schemas/EndStance",
@@ -8332,6 +8564,7 @@
             "reload": "#/components/schemas/Reload",
             "run": "#/components/schemas/Run",
             "set_reaction_mode": "#/components/schemas/SetReactionMode",
+            "set_summon_mode": "#/components/schemas/SetSummonMode",
             "shove": "#/components/schemas/Shove",
             "swap": "#/components/schemas/Swap",
             "trip": "#/components/schemas/Trip",
@@ -8444,6 +8677,15 @@
         ],
         "title": "StepOut",
         "description": "自動推進中結算的一步。``actor_id`` 與 ``step`` 在開場時為 ``None``。\n\n``events`` 已依我方視角過濾（:func:`trpg.engine.event_filter.filter_events`），每個事件是\n事件的 JSON 再加上 ``text``（繁體中文描述；沒有描述的事件不含此鍵）。``seq`` 保留原值，\n過濾後可能跳號。"
+      },
+      "SummonMode": {
+        "type": "string",
+        "enum": [
+          "focus",
+          "guard",
+          "follow",
+          "hold"
+        ]
       },
       "SummonOut": {
         "properties": {
@@ -9208,6 +9450,32 @@
               }
             ],
             "title": "Infusion"
+          },
+          "summon_mode": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/SummonMode"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "summon_target_id": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Summon Target Id"
+          },
+          "commanded": {
+            "type": "boolean",
+            "title": "Commanded",
+            "default": false
           },
           "infusion_options": {
             "items": {

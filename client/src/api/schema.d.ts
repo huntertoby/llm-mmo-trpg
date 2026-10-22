@@ -193,6 +193,26 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/battles/{battle_id}/summons/{summon_id}/command-options": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Get Command Options
+         * @description 指揮主角的一隻召喚物（Phase 3-33c）時可選的終點與各終點打得到的敵人。不改變狀態。
+         */
+        get: operations["get_command_options_api_battles__battle_id__summons__summon_id__command_options_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/battles/{battle_id}/skill-reasons": {
         parameters: {
             query?: never;
@@ -598,7 +618,7 @@ export interface paths {
 export type webhooks = Record<string, never>;
 export interface components {
     schemas: {
-        Action: components["schemas"]["Move"] | components["schemas"]["Attack"] | components["schemas"]["UseSkill-Output"] | components["schemas"]["Defend"] | components["schemas"]["Run"] | components["schemas"]["Swap"] | components["schemas"]["Aim"] | components["schemas"]["Vault"] | components["schemas"]["Shove"] | components["schemas"]["Trip"] | components["schemas"]["Interact"] | components["schemas"]["Reload"] | components["schemas"]["ActivateCharge"] | components["schemas"]["EndStance"] | components["schemas"]["SetReactionMode"] | components["schemas"]["EndTurn"];
+        Action: components["schemas"]["Move"] | components["schemas"]["Attack"] | components["schemas"]["UseSkill-Output"] | components["schemas"]["Defend"] | components["schemas"]["Run"] | components["schemas"]["Swap"] | components["schemas"]["Aim"] | components["schemas"]["Vault"] | components["schemas"]["Shove"] | components["schemas"]["Trip"] | components["schemas"]["Interact"] | components["schemas"]["Reload"] | components["schemas"]["ActivateCharge"] | components["schemas"]["EndStance"] | components["schemas"]["SetReactionMode"] | components["schemas"]["SetSummonMode"] | components["schemas"]["CommandSummon"] | components["schemas"]["EndTurn"];
         /**
          * ActivateCharge
          * @description 啟動裝備的充能詞條（Phase 3G-G3a，第 7 類）：花 ``cost_stacks`` 層與 ``cost_ap`` AP，結算詞條
@@ -900,6 +920,11 @@ export interface components {
              * @default []
              */
             runes: components["schemas"]["RuneView"][];
+            /**
+             * Summon Command Ap Cost
+             * @default 1
+             */
+            summon_command_ap_cost: number;
         };
         /**
          * BombOut
@@ -1165,6 +1190,57 @@ export interface components {
             minimum: number;
             /** Maximum */
             maximum: number;
+        };
+        /**
+         * CommandOptionOut
+         * @description 指揮召喚物的一個終點（Phase 3-33c）：``path`` 從召喚物目前位置開始（原地不動時只有起點），
+         *     ``targets`` 是從終點普攻打得到的敵方單位。
+         */
+        CommandOptionOut: {
+            dest: components["schemas"]["Pos"];
+            /** Path */
+            path: components["schemas"]["Pos"][];
+            /** Targets */
+            targets: string[];
+        };
+        /**
+         * CommandOptionsOut
+         * @description 指揮一隻召喚物時可選的終點與目標（Phase 3-33c）；第一個是原地不動。
+         */
+        CommandOptionsOut: {
+            /** Summon Id */
+            summon_id: string;
+            /** Ap Cost */
+            ap_cost: number;
+            /** Options */
+            options: components["schemas"]["CommandOptionOut"][];
+        };
+        /**
+         * CommandSummon
+         * @description 指揮自己一隻召喚物（Phase 3-33c，6.29.2；``summon_command_ap_cost`` AP）：立刻執行指定的
+         *     移動（``path``，從召喚物目前位置開始、在牠的移動力內；省略＝不移動）與普攻（``target_id``，
+         *     移動之後；省略＝不攻擊），**不佔召喚物自己的回合**（牠自己的 AP 與移動點數不變）。每隻每輪
+         *     最多被指揮 1 次；移動與攻擊至少要有一個。**不列入**
+         *     ``legal_actions``（組合太多），由 :func:`trpg.engine.summon_control.command_problem` 與
+         *     API 的指揮選項（``command-options``）提供。
+         */
+        CommandSummon: {
+            /** Unit Id */
+            unit_id: string;
+            /**
+             * @description discriminator enum property added by openapi-typescript
+             * @enum {string}
+             */
+            type: "command_summon";
+            /** Summon Id */
+            summon_id: string;
+            /**
+             * Path
+             * @default []
+             */
+            path: components["schemas"]["Pos"][];
+            /** Target Id */
+            target_id?: string | null;
         };
         /** CoverOut */
         CoverOut: {
@@ -2993,6 +3069,28 @@ export interface components {
             mode: "auto" | "prompt" | "off";
         };
         /**
+         * SetSummonMode
+         * @description 切換自己一隻召喚物的模式（Phase 3-33c，6.29.2；**0 AP**、不結束回合，只能在自己的回合）：
+         *     ``focus`` 集火（``target_id`` 必填：場上的敵方單位）、``guard`` 守護我、``follow`` 跟隨、
+         *     ``hold`` 待命（這三種不可帶 ``target_id``）。與目前完全相同時不合法。**不列入**
+         *     ``legal_actions``（同 :class:`SetReactionMode`），由
+         *     :func:`trpg.engine.summon_control.mode_problem` 判斷合法。
+         */
+        SetSummonMode: {
+            /** Unit Id */
+            unit_id: string;
+            /**
+             * @description discriminator enum property added by openapi-typescript
+             * @enum {string}
+             */
+            type: "set_summon_mode";
+            /** Summon Id */
+            summon_id: string;
+            mode: components["schemas"]["SummonMode"];
+            /** Target Id */
+            target_id?: string | null;
+        };
+        /**
          * Shove
          * @description 推擊（技巧動作）：相鄰敵人，力量對抗；成功時沿「行動者 → 目標」方向推 1 格。
          */
@@ -3371,7 +3469,7 @@ export interface components {
              */
             charge_tiles: components["schemas"]["Pos"][];
         };
-        Step: components["schemas"]["Move"] | components["schemas"]["Attack"] | components["schemas"]["UseSkill-Output"] | components["schemas"]["Defend"] | components["schemas"]["Run"] | components["schemas"]["Swap"] | components["schemas"]["Aim"] | components["schemas"]["Vault"] | components["schemas"]["Shove"] | components["schemas"]["Trip"] | components["schemas"]["Interact"] | components["schemas"]["Reload"] | components["schemas"]["ActivateCharge"] | components["schemas"]["EndStance"] | components["schemas"]["SetReactionMode"] | components["schemas"]["EndTurn"] | components["schemas"]["Decision"];
+        Step: components["schemas"]["Move"] | components["schemas"]["Attack"] | components["schemas"]["UseSkill-Output"] | components["schemas"]["Defend"] | components["schemas"]["Run"] | components["schemas"]["Swap"] | components["schemas"]["Aim"] | components["schemas"]["Vault"] | components["schemas"]["Shove"] | components["schemas"]["Trip"] | components["schemas"]["Interact"] | components["schemas"]["Reload"] | components["schemas"]["ActivateCharge"] | components["schemas"]["EndStance"] | components["schemas"]["SetReactionMode"] | components["schemas"]["SetSummonMode"] | components["schemas"]["CommandSummon"] | components["schemas"]["EndTurn"] | components["schemas"]["Decision"];
         /** @enum {string} */
         StepId: "skeleton" | "basics" | "shape" | "effects" | "followup" | "condition" | "cost" | "rarity" | "variants";
         /**
@@ -3413,6 +3511,8 @@ export interface components {
             }[];
             view: components["schemas"]["BattleView"];
         };
+        /** @enum {string} */
+        SummonMode: "focus" | "guard" | "follow" | "hold";
         /**
          * SummonOut
          * @description 預覽中會出現的召喚物（Phase 3D-4b）：``expires_round`` 是在召喚者第幾輪的回合結束時消失，
@@ -3700,6 +3800,14 @@ export interface components {
             totem_radius: number | null;
             /** Infusion */
             infusion?: string | null;
+            summon_mode?: components["schemas"]["SummonMode"] | null;
+            /** Summon Target Id */
+            summon_target_id?: string | null;
+            /**
+             * Commanded
+             * @default false
+             */
+            commanded: boolean;
             /**
              * Infusion Options
              * @default []
@@ -4269,7 +4377,7 @@ export interface operations {
         };
         requestBody: {
             content: {
-                "application/json": components["schemas"]["Move"] | components["schemas"]["Attack"] | components["schemas"]["UseSkill-Input"] | components["schemas"]["Defend"] | components["schemas"]["Run"] | components["schemas"]["Swap"] | components["schemas"]["Aim"] | components["schemas"]["Vault"] | components["schemas"]["Shove"] | components["schemas"]["Trip"] | components["schemas"]["Interact"] | components["schemas"]["Reload"] | components["schemas"]["ActivateCharge"] | components["schemas"]["EndStance"] | components["schemas"]["SetReactionMode"] | components["schemas"]["EndTurn"];
+                "application/json": components["schemas"]["Move"] | components["schemas"]["Attack"] | components["schemas"]["UseSkill-Input"] | components["schemas"]["Defend"] | components["schemas"]["Run"] | components["schemas"]["Swap"] | components["schemas"]["Aim"] | components["schemas"]["Vault"] | components["schemas"]["Shove"] | components["schemas"]["Trip"] | components["schemas"]["Interact"] | components["schemas"]["Reload"] | components["schemas"]["ActivateCharge"] | components["schemas"]["EndStance"] | components["schemas"]["SetReactionMode"] | components["schemas"]["SetSummonMode"] | components["schemas"]["CommandSummon"] | components["schemas"]["EndTurn"];
             };
         };
         responses: {
@@ -4339,7 +4447,7 @@ export interface operations {
         };
         requestBody: {
             content: {
-                "application/json": components["schemas"]["Move"] | components["schemas"]["Attack"] | components["schemas"]["UseSkill-Input"] | components["schemas"]["Defend"] | components["schemas"]["Run"] | components["schemas"]["Swap"] | components["schemas"]["Aim"] | components["schemas"]["Vault"] | components["schemas"]["Shove"] | components["schemas"]["Trip"] | components["schemas"]["Interact"] | components["schemas"]["Reload"] | components["schemas"]["ActivateCharge"] | components["schemas"]["EndStance"] | components["schemas"]["SetReactionMode"] | components["schemas"]["EndTurn"];
+                "application/json": components["schemas"]["Move"] | components["schemas"]["Attack"] | components["schemas"]["UseSkill-Input"] | components["schemas"]["Defend"] | components["schemas"]["Run"] | components["schemas"]["Swap"] | components["schemas"]["Aim"] | components["schemas"]["Vault"] | components["schemas"]["Shove"] | components["schemas"]["Trip"] | components["schemas"]["Interact"] | components["schemas"]["Reload"] | components["schemas"]["ActivateCharge"] | components["schemas"]["EndStance"] | components["schemas"]["SetReactionMode"] | components["schemas"]["SetSummonMode"] | components["schemas"]["CommandSummon"] | components["schemas"]["EndTurn"];
             };
         };
         responses: {
@@ -4350,6 +4458,38 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["PreviewOut"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    get_command_options_api_battles__battle_id__summons__summon_id__command_options_get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                battle_id: string;
+                summon_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["CommandOptionsOut"];
                 };
             };
             /** @description Validation Error */

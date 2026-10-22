@@ -18,6 +18,7 @@ from trpg.shared.types import Attribute, Element, ResistGroup
 
 __all__ = [
     "ID_PATTERN",
+    "SUMMON_MODES",
     "ArmorBreak",
     "Blessing",
     "Dice",
@@ -28,6 +29,7 @@ __all__ = [
     "StatusTable",
     "StatusTickDamage",
     "StatusTickHeal",
+    "SummonMode",
     "TerrainDef",
     "TerrainTable",
     "TotemSpec",
@@ -583,6 +585,13 @@ _MAX_ATTR = 999
 _PERMILLE = 1000
 
 
+type SummonMode = Literal["focus", "guard", "follow", "hold"]
+"""召喚物的模式（Phase 3-33c，6.29.2）：集火（打指定目標）、守護我、跟隨、待命。"""
+
+SUMMON_MODES: tuple[SummonMode, ...] = ("focus", "guard", "follow", "hold")
+"""模式的顯示順序（集火、守護我、跟隨、待命）。"""
+
+
 class TotemSpec(ContentModel):
     """圖騰（Phase 3D-4b）：不移動、不攻擊的召喚物，只提供光環。
 
@@ -636,6 +645,9 @@ class UnitTemplate(ContentModel):
     summon: bool = False
     totem: TotemSpec | None = None
     """圖騰（Phase 3D-4b）：必須是召喚物、速度 0；沒有行動，只在自己的回合開始時給光環。"""
+    default_mode: Literal["guard", "follow", "hold"] = "follow"
+    """召喚物剛召喚時的模式（Phase 3-33c；6.29.5「AI 預設」欄：守衛＝``guard``、不動＝``hold``，
+    其餘與沒寫＝``follow``）。集火要指定目標，不能當預設。"""
     equipment: dict[Slot, str] = Field(default_factory=dict)
     """裝備（Phase 3G-G1）：欄位 → 物品 id（``content/items.yaml``）。"""
     level: int = Field(default=1, ge=1, le=99)

@@ -13,7 +13,7 @@ from typing import Literal
 
 from pydantic import BaseModel, ConfigDict
 
-from trpg.content.battle import ReactionRule
+from trpg.content.battle import ReactionRule, SummonMode
 from trpg.content.equipment import (
     AFFIX_CATEGORY_NUMBER,
     AFFIX_CATEGORY_ZH,
@@ -313,6 +313,13 @@ class UnitView(_ViewModel):
     """圖騰（Phase 3D-4b）：光環半徑（回合開始時給範圍內友方狀態）；不是圖騰為 ``None``。"""
     infusion: str | None = None
     """召喚物灌注的關鍵字 ID（Phase 3-33b）；沒有灌注或不是召喚物為 ``None``。"""
+    summon_mode: SummonMode | None = None
+    """召喚物目前的模式（Phase 3-33c；``focus`` 集火／``guard`` 守護我／``follow`` 跟隨／
+    ``hold`` 待命）；一般單位與圖騰為 ``None``。"""
+    summon_target_id: UnitId | None = None
+    """集火的目標（模式為 ``focus`` 時）。"""
+    commanded: bool = False
+    """本輪已被指揮過（Phase 3-33c；每隻每輪最多指揮 1 次）。"""
     infusion_options: tuple[InfusionOptionView, ...] = ()
     """這個單位（施放者，只有自己陣營）施放召喚技能時可灌注的關鍵字（Phase 3-33b）；
     依預設順序（第一個是省略時的預設）。沒有時為空。"""
@@ -431,6 +438,8 @@ class BattleView(_ViewModel):
     """持續區域（Phase 3D-5），依編號排序；雙方都看得到。"""
     runes: tuple[RuneView, ...] = ()
     """格子上的符文（Phase 3-23），依編號排序；雙方都看得到。"""
+    summon_command_ap_cost: int = 1
+    """指揮召喚物的 AP 花費（Phase 3-33c；切換模式免費）。"""
 
 
 def _pos(cells: tuple[tuple[int, int], ...]) -> tuple[Pos, ...]:
@@ -670,6 +679,13 @@ def _infusion_views(state: BattleState, unit: UnitState) -> tuple[InfusionOption
     return tuple(views)
 
 
+def _summon_mode(state: BattleState, unit: UnitState) -> SummonMode | None:
+    """召喚物的模式；一般單位與圖騰（沒有行動）為 ``None``。"""
+    if not unit.is_summon or totem_of(state, unit) is not None:
+        return None
+    return unit.summon_mode
+
+
 def _unit_view(state: BattleState, unit: UnitState, team: Team) -> UnitView:
     return UnitView(
         id=unit.id,
@@ -717,6 +733,9 @@ def _unit_view(state: BattleState, unit: UnitState, team: Team) -> UnitView:
         dismissed=unit.dismissed,
         totem_radius=None if (totem := totem_of(state, unit)) is None else totem.radius,
         infusion=unit.infusion,
+        summon_mode=_summon_mode(state, unit),
+        summon_target_id=unit.summon_target_id if unit.summon_mode == "focus" else None,
+        commanded=unit.is_summon and unit.commanded_round == state.round,
         infusion_options=_infusion_views(state, unit) if unit.team is team else (),
         activations=tuple(_activation_view(state, a) for a in unit.activations),
         facing=unit.facing,
@@ -828,4 +847,5 @@ def project_for(state: BattleState, team: Team) -> BattleView:
         source_wells=tuple(Pos(x=x, y=y) for x, y in state.source_wells),
         zones=_zone_views(state),
         runes=_rune_views(state),
+        summon_command_ap_cost=state.ruleset.core.summon_command_ap_cost,
     )

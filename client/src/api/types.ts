@@ -81,6 +81,11 @@ export type ChargeOut = Schemas["ChargeOut"];
 export type ReactionRuleView = Schemas["ReactionRuleView"];
 export type ReactionMode = ReactionRuleView["mode"];
 export type SetReactionModeAction = Schemas["SetReactionMode"];
+/** 召喚物操控（Phase 3-33c）：切換模式（0 AP）、指揮（1 AP）與指揮時可選的終點和目標。 */
+export type SetSummonModeAction = Schemas["SetSummonMode"];
+export type CommandSummonAction = Schemas["CommandSummon"];
+export type CommandOptions = Schemas["CommandOptionsOut"];
+export type CommandOption = Schemas["CommandOptionOut"];
 export type InteractOption = Schemas["InteractOptionOut"];
 export type RunOption = Schemas["RunOptionOut"];
 export type TelegraphOut = Schemas["TelegraphOut"];

@@ -14,6 +14,7 @@ from trpg.engine.ai.summon import summon_estimate, summon_gains
 from trpg.engine.ai.utility import UtilityAI
 from trpg.engine.events import AttackRolled, SummonExpired, TurnStarted, UnitSummoned
 from trpg.engine.rules.geometry import manhattan
+from trpg.engine.summons import growth_of
 from trpg.shared.types import Pos
 
 
@@ -31,7 +32,12 @@ def test_summon_gains_are_dpr_times_rounds_minus_distance() -> None:
     action = UseSkill(unit_id=U1, skill_id=SID, target_pos=Pos(x=2, y=3))
     p = preview(state, action)
     profile = library().ai_profiles.by_id()["cunning"]
-    dpr = summon_dpr(state.ruleset.summon_def("summon_skeleton_warrior"))
+    grown = growth_of(state, state.units[U1], SID)  # 3-33c：估值納入施放者的成長
+    dpr = summon_dpr(
+        state.ruleset.summon_def("summon_skeleton_warrior"),
+        flat=grown.flat,
+        bonus_permille=grown.bonus_permille,
+    )
     hit = Fraction(profile.summon.hit_permille, 1000)
     cost = Fraction(profile.summon.distance_cost_permille, 1000)
     expected = profile.weights.damage * dpr * 2 * hit - cost * 4
@@ -99,13 +105,14 @@ def _trapper_run(map_id: str, seed: int) -> Any:
 
 
 def test_the_ai_casts_the_summon_and_the_summon_acts() -> None:
-    _, run = _trapper_run("dark_forest", 0)
+    _, run = _trapper_run("dark_forest", 6)
     # 3D-6：build_trapper 另有殘影之誓（倒下時的分身，orphan），這裡只看喚起骷髏；
     # 原本的 swamp 種子 1
     # 改為啟動殘影之誓後不再召喚，換成 dark_forest 種子 0；
     # 3-20 加入跑步後戰鬥節奏變快，換成種子 25；
     # 3-21a 加入守護、換位、瞄準後換成種子 10；
-    # 3-24a1 弓有拋射、AI 軌跡改變後換成種子 0
+    # 3-24a1 弓有拋射、AI 軌跡改變後換成種子 0；
+    # 3-33c 召喚物依模式行動（跟隨預設待在召喚者附近）、軌跡改變後換成種子 6
     [summoned] = [e for e in run.events if isinstance(e, UnitSummoned) and not e.orphan]
     assert summoned.skill_id == "skill_raise_skeleton"
     turns = [e for e in run.events if isinstance(e, TurnStarted) and e.unit_id == summoned.unit_id]

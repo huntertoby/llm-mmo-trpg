@@ -3,6 +3,7 @@ import type { Action, AttackAction, BattleView, MoveAction, Pos } from "../api/t
 import { DIRECTIONS, objectStyle, reactionName } from "./glossary";
 import { REACTION_MODE_LABELS } from "./reactions";
 import { posKey, samePos } from "./geometry";
+import { MODE_LABELS } from "./summonControl";
 import { chargeLabel } from "./targeting";
 import { unitNames, type UnitNames } from "./units";
 
@@ -94,6 +95,16 @@ export function actionLabel(
       return "結束姿態";
     case "set_reaction_mode":
       return `反應設定：${reactionName(action.reaction)} → ${REACTION_MODE_LABELS[action.mode]}`;
+    case "set_summon_mode":
+      return `${names.name(action.summon_id)}切換為${MODE_LABELS[action.mode]}${action.target_id != null ? ` → ${names.name(action.target_id)}` : ""}`;
+    case "command_summon": {
+      const dest = action.path[action.path.length - 1];
+      const parts = [
+        ...(dest === undefined ? [] : [`移動到 ${posText(dest)}`]),
+        ...(action.target_id != null ? [`攻擊 ${names.name(action.target_id)}`] : []),
+      ];
+      return `指揮 ${names.name(action.summon_id)}：${parts.join("、")}`;
+    }
     case "end_turn":
       return "結束回合";
   }

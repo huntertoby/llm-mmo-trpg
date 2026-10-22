@@ -10,7 +10,7 @@ from typing import Annotated, Literal
 
 from pydantic import BaseModel, ConfigDict, Field, TypeAdapter
 
-from trpg.content.battle import Dice
+from trpg.content.battle import Dice, SummonMode
 from trpg.shared.types import Attribute, Element, ObjectId, Pos, Surface, Team, UnitId
 
 __all__ = [
@@ -102,8 +102,10 @@ __all__ = [
     "StatusRemoved",
     "StatusResisted",
     "StatusSaveRolled",
+    "SummonCommanded",
     "SummonExpired",
     "SummonExpiryReason",
+    "SummonModeSet",
     "SurfaceChanged",
     "SurfaceEntered",
     "TerrainChanged",
@@ -1340,6 +1342,31 @@ class SummonExpired(EventBase):
     pos: Pos
 
 
+class SummonModeSet(EventBase):
+    """召喚物的模式改變（Phase 3-33c）：``owner_id`` 把召喚物 ``unit_id`` 切換為 ``mode``
+    （``reason="order"``，集火帶 ``target_id``），或集火目標離場使牠退回跟隨
+    （``reason="target_gone"``，
+    ``target_id`` 為離場的目標）。"""
+
+    type: Literal["summon_mode_set"] = "summon_mode_set"
+    unit_id: UnitId
+    owner_id: UnitId
+    mode: SummonMode
+    target_id: UnitId | None = None
+    reason: Literal["order", "target_gone"] = "order"
+
+
+class SummonCommanded(EventBase):
+    """召喚者指揮召喚物（Phase 3-33c）：之後是牠的移動與攻擊事件（``dest`` 為移動的終點，沒有移動
+    時 ``None``；``target_id`` 為普攻目標，沒有攻擊時 ``None``）。"""
+
+    type: Literal["summon_commanded"] = "summon_commanded"
+    unit_id: UnitId
+    owner_id: UnitId
+    dest: Pos | None = None
+    target_id: UnitId | None = None
+
+
 class TotemPulsed(EventBase):
     """圖騰的光環（Phase 3D-4b）：圖騰 ``unit_id`` 在自己的回合開始時，讓 ``targets`` 內的友方
     獲得 ``status_id``（接著是各目標的 ``status_applied``）。"""
@@ -1597,6 +1624,8 @@ type Event = Annotated[
     | UnitEscaped
     | UnitSummoned
     | SummonExpired
+    | SummonModeSet
+    | SummonCommanded
     | TotemPulsed
     | SkillUsed
     | SkillCooldownChanged

@@ -108,8 +108,11 @@ from trpg.engine.ai.orders import (
 from trpg.engine.ai.rune import is_inscribe_skill, read_gains, rune_estimate, rune_gains
 from trpg.engine.ai.scene_objects import SCENE_PRIMITIVES, has_fire_follow_up, scene_estimate
 from trpg.engine.ai.summon import (
+    auto_mode_action,
     blocker_gains,
+    filter_by_mode,
     has_summon,
+    mode_orders,
     sacrifice_estimate,
     summon_estimate,
     summon_gains,
@@ -1987,6 +1990,9 @@ class UtilityAI:
 
     def order_context(self, state: BattleState, unit: UnitState) -> OrderContext | None:
         """``unit`` 此刻適用的有效戰術指令；沒有指令來源或沒有有效指令時為 ``None``。"""
+        if unit.is_summon:  # 召喚物只依自己的模式行動（Phase 3-33c），不受陣營指令影響
+            modes = mode_orders(state, unit, self.profile_for(unit).summon)
+            return resolve_orders(state, unit, modes, self._bonuses)
         if self.orders is None:
             return None
         return resolve_orders(state, unit, self.orders(state, unit.id), self._bonuses)
@@ -2021,6 +2027,8 @@ class UtilityAI:
         ctx = self.order_context(state, unit)
         w = _order_weights(profile.weights, ctx)
         actions, areas = legal_actions_with_areas(state, expand_copy=True)
+        # 召喚物模式的硬性限制（待命不移動、守護我不離開太遠、集火只打目標；其他單位不變）
+        actions = filter_by_mode(state, unit, actions, profile.summon)
         if all(isinstance(a, EndStance | EndTurn) for a in actions):
             return []  # 只剩結束回合與取消姿態（AI 不取消姿態）：不需要評分
         scene = _scene(state, unit, ctx)
@@ -2156,6 +2164,9 @@ class UtilityAI:
         unit = state.active
         if unit is None:
             raise ValueError("目前沒有行動中的單位")
+        switch = auto_mode_action(state, unit, self.profile_for(unit).summon)
+        if switch is not None:  # 我方施放者切換召喚物的模式（0 AP；Phase 3-33c）
+            return switch
         ranked = self.rank(state)
         taunter = _taunter(state, unit)
         if taunter is not None:

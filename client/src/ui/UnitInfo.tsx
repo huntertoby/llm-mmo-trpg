@@ -11,6 +11,7 @@ import { stackName, statusName } from "../battle/glossary";
 import type { SkillNames } from "../battle/actions";
 import { infusionName } from "../battle/infusion";
 import { remainingRounds, summonKind } from "../battle/summons";
+import { modeText } from "../battle/summonControl";
 import type { UnitNames } from "../battle/units";
 import { GearIcon } from "./GearIcon";
 import { PartTip } from "./PartTip";
@@ -62,6 +63,7 @@ export function UnitInfo({ unit, names, heroId, skills, view }: Props) {
   }
   const infusion = infusionName(unit, view?.units.find((u) => u.id === unit.owner_id) ?? null);
   if (infusion !== null) rows.push(["灌注", infusion]);
+  if (unit.summon_mode != null) rows.push(["模式", modeText(unit, names)]);
   if (unit.totem_radius !== null) rows.push(["光環", `${unit.totem_radius} 格內的友方在圖騰行動時獲得增益`]);
   return (
     <div className="panel unit-info">

@@ -43,6 +43,7 @@ from trpg.engine.runner import (
 )
 from trpg.engine.setup import BattleSetup, BattleSetupError, build_setup
 from trpg.engine.state import BattleState, PendingResolution, state_from_json
+from trpg.engine.summon_control import CommandOption, command_options
 from trpg.roguelite.errors import ChoiceError
 from trpg.roguelite.progress import hero_spawn
 from trpg.roguelite.start import new_dev_run, new_keyword_run
@@ -234,6 +235,12 @@ class BattleSession:
         self._require("action")
         self._require_hero(action)
         return preview(self.state, action)
+
+    def command_options(self, summon_id: UnitId) -> tuple[CommandOption, ...]:
+        """主角指揮 ``summon_id`` 時可選的終點與目標（Phase 3-33c）；不能指揮時拋出
+        ``IllegalActionError``。"""
+        self._require("action")
+        return command_options(self.state, self.hero_id, summon_id)
 
     def _preview_copy(self, pending: PendingResolution, pick: Action) -> Preview:
         """``copy_skill`` 暫停中（Phase 3C-6a）：``pick`` 是被複製技能的選取（``copy_options``

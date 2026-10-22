@@ -12,6 +12,8 @@ from trpg.api.presenter import battle_response, history_response, preview_respon
 from trpg.api.schemas import (
     BattleHistory,
     BattleResponse,
+    CommandOptionOut,
+    CommandOptionsOut,
     CreateBattleRequest,
     DecisionRequest,
     PreviewOut,
@@ -21,6 +23,7 @@ from trpg.api.skill_reasons import skill_reasons
 from trpg.api.state import runs_of, store_of
 from trpg.engine.actions import Action
 from trpg.engine.ai.orders import OrderSet
+from trpg.shared.types import UnitId
 
 __all__ = ["router"]
 
@@ -77,6 +80,22 @@ def post_preview(battle_id: str, action: Action, request: Request) -> PreviewOut
     session = store_of(request).get(battle_id)
     with session.lock:
         return preview_response(session.preview(action), session.state)
+
+
+@router.get("/{battle_id}/summons/{summon_id}/command-options")
+def get_command_options(battle_id: str, summon_id: str, request: Request) -> CommandOptionsOut:
+    """指揮主角的一隻召喚物（Phase 3-33c）時可選的終點與各終點打得到的敵人。不改變狀態。"""
+    session = store_of(request).get(battle_id)
+    with session.lock:
+        options = session.command_options(UnitId(summon_id))
+        cost = session.state.ruleset.core.summon_command_ap_cost
+    return CommandOptionsOut(
+        summon_id=UnitId(summon_id),
+        ap_cost=cost,
+        options=tuple(
+            CommandOptionOut(dest=o.dest, path=o.path, targets=o.targets) for o in options
+        ),
+    )
 
 
 @router.get("/{battle_id}/skill-reasons")

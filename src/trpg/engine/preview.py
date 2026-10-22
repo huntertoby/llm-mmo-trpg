@@ -36,6 +36,7 @@ from trpg.engine.actions import (
     ActivateCharge,
     Aim,
     Attack,
+    CommandSummon,
     Defend,
     Interact,
     Reload,
@@ -1384,6 +1385,7 @@ def _basic_ap_cost(state: BattleState, action: Action, default: int | None) -> i
         Swap: core.swap_ap_cost,
         Aim: core.aim_ap_cost,
         Vault: core.vault_ap_cost,
+        CommandSummon: core.summon_command_ap_cost,
     }
     if isinstance(action, Reload):
         return state.units[action.unit_id].weapon.reload_ap
