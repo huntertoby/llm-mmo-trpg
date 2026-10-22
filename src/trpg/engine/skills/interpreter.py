@@ -155,6 +155,7 @@ from trpg.engine.rules.weapons import range_damage_permille
 from trpg.engine.runes import own_runes
 from trpg.engine.skill_levels import level_multiplier
 from trpg.engine.skill_triggers import collect_cast, collect_move, holding
+from trpg.engine.skills import casting
 from trpg.engine.skills.charge import aside_direction
 from trpg.engine.skills.conditions import Subject, condition_met
 from trpg.engine.skills.followups import (
@@ -2462,3 +2463,21 @@ class _GearCast(_TriggeredCast):
                 gear_grant_ap(self.ctx, self.caster, unit, spec.amount or 1)
             return []
         return super().rewrite(effect, spec)
+
+
+class _Interpreter:
+    """登錄到 :mod:`trpg.engine.skills.casting` 的實作（其他模組經由 ``casting`` 呼叫）。"""
+
+    use_skill = staticmethod(use_skill)
+    use_triggered_skill = staticmethod(use_triggered_skill)
+    use_gear_effects = staticmethod(use_gear_effects)
+    use_modifier_effects = staticmethod(use_modifier_effects)
+    use_rule_change_effects = staticmethod(use_rule_change_effects)
+    use_trap_skill = staticmethod(use_trap_skill)
+    use_zone_effects = staticmethod(use_zone_effects)
+    use_reaction_skill = staticmethod(use_reaction_skill)
+    run_delayed = staticmethod(run_delayed)
+    run_infused = staticmethod(run_infused)
+
+
+casting.install(_Interpreter())

@@ -35,6 +35,7 @@ from trpg.engine.events import (
     UnitDowned,
 )
 from trpg.engine.rules.statuses import skip_turn_status
+from trpg.engine.skills.casting import run_delayed
 from trpg.engine.skills.targeting import SkillArea, checked_area
 from trpg.engine.state import BattleState, StatusInstance, UnitState
 from trpg.engine.triggers import register_trigger
@@ -130,9 +131,6 @@ def _charged_skill(state: BattleState, unit: UnitState) -> tuple[StatusInstance,
 
 def _release(ctx: Ctx, unit: UnitState, skill: SkillDef) -> None:
     """移除蓄力並結算第二段（以當下位置推算不出選取時 ``followup_no_target``）。"""
-    # 延後匯入：技能解譯器匯入本模組（charge）。
-    from trpg.engine.skills.interpreter import run_delayed  # noqa: PLC0415
-
     unit.statuses = [s for s in unit.statuses if s.status_id != CHARGING]
     found = delayed_selection(ctx.state, unit, skill)
     if found is None:

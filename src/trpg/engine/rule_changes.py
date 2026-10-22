@@ -22,6 +22,7 @@ from trpg.engine.events import EventBase, RuleChangeTriggered
 from trpg.engine.lifecycle import dismiss_summon
 from trpg.engine.rules.geometry import manhattan
 from trpg.engine.skill_triggers import check_trigger_depth
+from trpg.engine.skills.casting import use_rule_change_effects
 from trpg.engine.state import UnitState
 from trpg.engine.summons import summon_unit
 from trpg.shared.types import UnitId
@@ -38,9 +39,6 @@ def pass_through(ctx: Ctx, unit: UnitState, touched: set[UnitId]) -> None:
     change = active_rule_change(state, unit, PASS_THROUGH_APPLY)
     if change is None:
         return
-    # 延後匯入：技能解譯器匯入效果佇列，而效果佇列（經由傷害處理器）匯入規則改變的查詢。
-    from trpg.engine.skills.interpreter import use_rule_change_effects  # noqa: PLC0415
-
     rule = change.rule
     assert rule.status is not None
     spec = EffectSpec(

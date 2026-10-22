@@ -19,6 +19,7 @@ from trpg.content.skills import EffectSpec, SkillDef
 from trpg.engine import modifiers
 from trpg.engine.context import Ctx
 from trpg.engine.events import ApGranted, EffectFizzled, ReactionsGranted, SkillCooldownChanged
+from trpg.engine.gear import cap_ap_gain
 from trpg.engine.state import BattleState, UnitState
 
 __all__ = [
@@ -77,7 +78,6 @@ def gear_grant_ap(ctx: Ctx, owner: UnitState, target: UnitState, amount: int) ->
     ``refund_ap`` 與裝備，``ap_gain_turn``）合計不超過 ``caps.ap_gain_per_round``（+1）；不在自己
     回合時存進 ``ap_pending``；不受「每輪最多被給一次」限制。沒有任何增加時發出 ``effect_fizzled``
     （``ap_gain_cap``）。"""
-    from trpg.engine.gear import cap_ap_gain  # noqa: PLC0415 - gear 匯入 skills.conditions
 
     state = ctx.state
     granted = cap_ap_gain(ctx.rules, target.ap_gain_turn, amount)

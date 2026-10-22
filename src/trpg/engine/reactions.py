@@ -57,6 +57,7 @@ from trpg.engine.rules.geometry import XY, has_line_of_sight, manhattan
 from trpg.engine.rules.statuses import skip_turn_status, weapon_attribute
 from trpg.engine.rules.weapons import range_damage_permille
 from trpg.engine.skill_triggers import check_trigger_depth, holding, redirect_fired
+from trpg.engine.skills.casting import use_reaction_skill
 from trpg.engine.skills.conditions import Subject, skill_condition_met
 from trpg.engine.skills.targeting import reaction_problem, reaction_target_problem
 from trpg.engine.state import UnitState
@@ -302,9 +303,6 @@ def _run_skill(
     trigger: UnitState,
     on_paid: Callable[[], None] | None = None,
 ) -> None:
-    # 延後匯入：技能解譯器匯入本模組（block_multiplier、try_intercept……）。
-    from trpg.engine.skills.interpreter import use_reaction_skill  # noqa: PLC0415
-
     use_reaction_skill(ctx, unit, skill, trigger, depth=ctx.trigger_depth + 1, on_paid=on_paid)
 
 

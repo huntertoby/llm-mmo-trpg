@@ -25,6 +25,7 @@ from dataclasses import replace
 
 from trpg.content.skills import ZONE, EffectSpec, SkillDef
 from trpg.engine.context import Ctx
+from trpg.engine.effects.models import CreateSurfaceEffect
 from trpg.engine.events import (
     EventBase,
     ZoneCreated,
@@ -37,6 +38,7 @@ from trpg.engine.rules.geometry import XY
 from trpg.engine.rules.statuses import effective_attribute
 from trpg.engine.skill_triggers import check_trigger_depth
 from trpg.engine.skills import shapes
+from trpg.engine.skills.casting import use_zone_effects
 from trpg.engine.state import BattleState, UnitState, ZoneState
 from trpg.shared.types import Attribute, Pos, Team, UnitId
 
@@ -213,7 +215,6 @@ def _covered(
     除外：跟隨型區域的施放者相對於區域不動，不算進入），然後結算。"""
     # 延後匯入：效果佇列匯入本模組。
     from trpg.engine.effects import execute  # noqa: PLC0415
-    from trpg.engine.effects.models import CreateSurfaceEffect  # noqa: PLC0415
 
     state = ctx.state
     before = set(old)
@@ -372,9 +373,6 @@ def zones_turn_start(ctx: Ctx, unit: UnitState) -> None:
 
 def _trigger(ctx: Ctx, zone: ZoneState, unit: UnitState, cause: str) -> None:
     """區域對 ``unit`` 結算效果：深度檢查（超過 ``max_trigger_depth`` 時不結算）、事件、效果。"""
-    # 延後匯入：技能解譯器匯入效果佇列，而效果佇列匯入本模組。
-    from trpg.engine.skills.interpreter import use_zone_effects  # noqa: PLC0415
-
     depth = ctx.trigger_depth + 1
     if not check_trigger_depth(ctx, zone.owner_id, zone.skill_id, depth):
         return

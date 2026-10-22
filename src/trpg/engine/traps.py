@@ -27,6 +27,7 @@ from trpg.engine.events import (
 )
 from trpg.engine.rules.statuses import effective_attribute
 from trpg.engine.skill_triggers import check_trigger_depth
+from trpg.engine.skills.casting import use_trap_skill
 from trpg.engine.skills.targeting import center_tiles
 from trpg.engine.state import BattleState, TrapState, UnitState
 from trpg.shared.types import Attribute, Pos, Team, UnitId
@@ -143,9 +144,6 @@ def _remove(state: BattleState, trap: TrapState) -> None:
 
 def _trigger(ctx: Ctx, trap: TrapState, skill: SkillDef, unit: UnitState | None) -> None:
     """觸發 ``trap``：深度檢查（超過 ``max_trigger_depth`` 時陷阱保留、不結算）、移除、結算。"""
-    # 延後匯入：技能解譯器匯入效果佇列，而效果佇列匯入本模組。
-    from trpg.engine.skills.interpreter import use_trap_skill  # noqa: PLC0415
-
     assert skill.trap is not None
     depth = ctx.trigger_depth + 1
     if not check_trigger_depth(ctx, trap.owner_id, skill.id, depth):

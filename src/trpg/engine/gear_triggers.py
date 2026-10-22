@@ -38,7 +38,7 @@ from trpg.engine.skill_triggers import (
     Fired,
     check_trigger_depth,
 )
-from trpg.engine.skills.interpreter import use_gear_effects
+from trpg.engine.skills.casting import use_gear_effects
 from trpg.engine.stacks import add_stacks
 from trpg.engine.state import UnitState
 from trpg.shared.types import Attribute, Element
