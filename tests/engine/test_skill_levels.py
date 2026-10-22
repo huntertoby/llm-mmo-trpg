@@ -30,7 +30,7 @@ _FIRE = [{"type": "damage", "dice": "2d6", "element": "fire", "affects": "enemie
 
 def _leveled(state: BattleState, level: int) -> BattleState:
     s = state.clone()
-    s.units[U1].skill_levels = {SID: level} if level > 1 else {}  # type: ignore[index]
+    s.units[U1].skill_levels = {SID: level} if level > 1 else {}
     return s
 
 
@@ -94,7 +94,7 @@ def test_heal_multiplier_applies_to_a_wounded_ally(monkeypatch: pytest.MonkeyPat
         skill = make_skill(SID, {"type": "single", "range": 4}, _HEAL)
         state = _leveled(battle(skill, foes=[(6, 6)], allies=[(3, 4)]), level)
         wounded = state.clone()
-        wounded.units["unit_0002"].hp = 1  # type: ignore[index]
+        wounded.units[U2].hp = 1
         with monkeypatch.context() as scripted:
             script_rolls(scripted, [6, 6])
             return of(cast(wounded, target_id="unit_0002"), Healed)[0].amount
@@ -108,7 +108,7 @@ def test_only_active_skills_get_the_effect_bonus() -> None:
     rules = library().ruleset
     skill = make_skill(SID, {"type": "single", "range": 4}, _FIRE)
     state = _leveled(battle(skill, foes=[(5, 3)]), 4)
-    unit = state.units[U1]  # type: ignore[index]
+    unit = state.units[U1]
     assert level_multiplier(rules, unit, skill) == 1200
     passive = skill.model_copy(update={"kind": "passive"})
     assert level_multiplier(rules, unit, passive) == 1000
@@ -119,10 +119,10 @@ def test_level_five_trait_picks_area_when_the_shape_can_grow() -> None:
     cone = make_skill(SID, {"type": "cone", "size": 3}, _FIRE)
     assert level_trait(rules, cone) == "area"
     state = _leveled(battle(cone, foes=[(5, 3)]), 5)
-    shaped = acting_skill(state, state.units[U1], SID)  # type: ignore[arg-type]
+    shaped = acting_skill(state, state.units[U1], SID)
     assert shaped.shape.size == 4 and cone.shape.size == 3
     four = _leveled(state, 4)
-    assert acting_skill(four, four.units[U1], SID).shape.size == 3  # type: ignore[arg-type]
+    assert acting_skill(four, four.units[U1], SID).shape.size == 3
 
 
 def test_level_five_area_trait_is_capped_by_the_shape_maximum() -> None:
@@ -131,7 +131,7 @@ def test_level_five_area_trait_is_capped_by_the_shape_maximum() -> None:
     maxed = make_skill(SID, {"type": "cone", "size": top}, _FIRE)
     assert level_trait(rules, maxed) is None  # 範圍已達上限、也沒有冷卻 → 沒有小特性
     state = _leveled(battle(maxed, foes=[(5, 3)]), 5)
-    assert acting_skill(state, state.units[U1], SID).shape.size == top  # type: ignore[arg-type]
+    assert acting_skill(state, state.units[U1], SID).shape.size == top
     with_cooldown = make_skill(SID, {"type": "cone", "size": top}, _FIRE, cost={"cooldown": 3})
     assert level_trait(rules, with_cooldown) == "cooldown"  # 範圍滿了就改減冷卻
 
@@ -141,7 +141,7 @@ def test_level_five_trait_falls_back_to_cooldown_minus_one() -> None:
     single = make_skill(SID, {"type": "single", "range": 4}, _FIRE, cost={"cooldown": 3})
     assert level_trait(rules, single) == "cooldown"
     state = _leveled(battle(single, foes=[(5, 3)]), 5)
-    assert acting_skill(state, state.units[U1], SID).cost.cooldown == 2  # type: ignore[arg-type]
+    assert acting_skill(state, state.units[U1], SID).cost.cooldown == 2
     # 冷卻 1 減了就沒有冷卻，不做；沒有冷卻也不做
     for cost in ({"cooldown": 1}, {"mana": 0}):
         plain = make_skill(SID, {"type": "single", "range": 4}, _FIRE, cost=cost)
@@ -152,16 +152,16 @@ def test_the_reduced_cooldown_is_what_the_cast_sets(monkeypatch: pytest.MonkeyPa
     single = make_skill(SID, {"type": "single", "range": 5}, _FIRE, cost={"cooldown": 3})
     state = _leveled(battle(single, foes=[(5, 3)]), 5)
     script_rolls(monkeypatch, [10, 3, 3])
-    assert cast(state, target_id=U2).state.units[U1].cooldowns[SID] == 2  # type: ignore[index]
+    assert cast(state, target_id=U2).state.units[U1].cooldowns[SID] == 2
 
 
 def test_skill_levels_survive_a_json_round_trip_and_clone() -> None:
     skill = make_skill(SID, {"type": "single", "range": 4}, _FIRE)
     state = _leveled(battle(skill, foes=[(5, 3)]), 4)
     again = state_from_json(state_to_json(state))
-    assert again.units[U1].skill_levels == {SID: 4}  # type: ignore[index]
+    assert again.units[U1].skill_levels == {SID: 4}
     assert again == state
-    assert state.clone().units[U1].skill_levels == {SID: 4}  # type: ignore[index]
+    assert state.clone().units[U1].skill_levels == {SID: 4}
 
 
 def test_a_template_with_skill_levels_builds_a_leveled_unit() -> None:
@@ -170,7 +170,7 @@ def test_a_template_with_skill_levels_builds_a_leveled_unit() -> None:
     tmpl = caster_template([skill], skill_levels={SID: 3})
     foe = spawn(Team.ENEMY, (2, 1), template("bandit"))
     state = make_state(m, [spawn(Team.ALLY, (0, 0), tmpl), foe], skills=[skill])
-    assert state.units[U1].skill_levels == {SID: 3}  # type: ignore[index]
+    assert state.units[U1].skill_levels == {SID: 3}
 
 
 def test_template_rejects_levels_for_unequipped_skills() -> None:
