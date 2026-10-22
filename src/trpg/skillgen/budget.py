@@ -42,6 +42,7 @@ from trpg.content.skills import (
     PrimitiveDef,
     SelfStatusCost,
     SkillDef,
+    VariantSpec,
     on_hit_carrier,
 )
 from trpg.content.summons import summon_dpr
@@ -149,6 +150,9 @@ class BudgetReport:
     """戰場變奏（Phase 3-25a）的加價合計（‰）：``variant_surcharge_permille`` × 變奏數；``total``
     已乘上 ×（1000 ＋ 它）÷ 1000。沒有變奏時為 0。"""
     variants: tuple[VariantBudget, ...] = ()
+    variant_range_permille: int = 0
+    """變奏型態的射程加價（‰，佔基礎型態點數；Phase 3-25b）：射程每 +1 格
+    ``variant_range_step_permille``；其他情況為 0。"""
     """各變奏型態自己的預算（依資料順序；型態本身照一般技能計算，不含加價）。"""
 
     @property
@@ -1259,14 +1263,31 @@ def _composite_budget(skill: SkillDef, library: ContentLibrary) -> BudgetReport:
     )
 
 
+def _form_budget(
+    skill: SkillDef, variant: VariantSpec, base: BudgetReport, step: int, library: ContentLibrary
+) -> BudgetReport:
+    """變奏型態的預算：型態本身照一般技能計算，射程每 +1 格再加基礎型態點數的
+    ``variant_range_step_permille`` ‰（Phase 3-25b，PM 追加；射程 −1 不折抵）。"""
+    report = skill_budget(skill.variant_form(variant.id), library)
+    extra = max(variant.range_delta or 0, 0) * step
+    if extra == 0:
+        return report
+    return replace(
+        report,
+        total=report.total + base.total * Fraction(extra, _PERMILLE),
+        variant_range_permille=extra,
+    )
+
+
 def _variant_budget(skill: SkillDef, library: ContentLibrary) -> BudgetReport:
     """帶戰場變奏的技能（Phase 3-25a，PM 決定 #6）：基礎型態照一般技能計算，總點數再 ×（1000 ＋
     ``variant_surcharge_permille`` × 變奏數）÷ 1000；各變奏型態另外照一般技能計算（列在
     ``variants``，驗證器要求每個型態都落在預算窗內）。"""
     base = skill_budget(skill.model_copy(update={"variants": ()}), library)
     surcharge = library.budget.variant_surcharge_permille * len(skill.variants)
+    step = library.budget.variant_range_step_permille
     forms = tuple(
-        VariantBudget(v.id, v.name_zh, skill_budget(skill.variant_form(v.id), library))
+        VariantBudget(v.id, v.name_zh, _form_budget(skill, v, base, step, library))
         for v in skill.variants
     )
     return replace(

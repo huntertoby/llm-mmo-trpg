@@ -86,6 +86,19 @@ def test_three_variants_are_rejected() -> None:
         SkillDef.model_validate(_data(rarity="epic", variants=three))
 
 
+@pytest.mark.parametrize(
+    "skill_id", ["skill_fire_wall", "skill_time_bomb_rune", "skill_mirror_cast"]
+)
+def test_lookup_primitives_cannot_sit_in_a_variant_skill(skill_id: str) -> None:
+    """3-25b：事後以 skill_def 查表的原語（區域、延遲傷害、複製技能）拿到基礎型態，所以不能帶變奏。"""
+    data = library().skills[skill_id].model_dump(mode="json", exclude_defaults=True)
+    data["variants"] = [
+        {"id": "v", "name_zh": "測試", "when": {"caster_surface": ["water"]}, "range_delta": 1}
+    ]
+    with pytest.raises(ValidationError, match="不能含"):
+        SkillDef.model_validate(data)
+
+
 def test_composite_skills_cannot_carry_variants() -> None:
     lib = library()
     composite = next(s for s in lib.skills.values() if s.followup is not None)
@@ -162,9 +175,25 @@ def test_budget_adds_the_surcharge_per_variant_and_reports_each_form() -> None:
     assert report.variant_surcharge_permille == 2 * surcharge
     assert report.total == plain.total * Fraction(1000 + 2 * surcharge, 1000)
     assert [v.id for v in report.variants] == ["tide_pierce", "high_tide"]
+    step = lib.budget.variant_range_step_permille
+    assert step == 50
     for form in report.variants:
         expected = skill_budget(spear.variant_form(form.id), lib)
-        assert form.report.total == expected.total and form.report.ok
+        # 射程 +2 的型態另加基礎型態點數的 2 × 5%（3-25b）；其他型態不變
+        extra = plain.total * Fraction(2 * step, 1000) if form.id == "high_tide" else 0
+        assert form.report.total == expected.total + extra and form.report.ok
+    assert report.variants[1].report.variant_range_permille == 2 * step
+    assert report.variants[0].report.variant_range_permille == 0
+
+
+def test_range_minus_is_not_refunded() -> None:
+    lib = library()
+    shorter = SkillDef.model_validate(
+        _data(variants=[{**_WATER, "range_delta": -1, "id": "short"}])
+    )
+    form = skill_budget(shorter, lib).variants[0].report
+    assert form.variant_range_permille == 0
+    assert form.total == skill_budget(shorter.variant_form("short"), lib).total
 
 
 def test_a_form_outside_the_window_is_a_violation() -> None:

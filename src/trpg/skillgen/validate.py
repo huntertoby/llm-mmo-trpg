@@ -110,20 +110,29 @@ def _structure_violations(skill: SkillDef, library: ContentLibrary) -> list[Viol
     report, budget_out = _budget_violations(skill, library)
     out += _skeleton_violations(skill, library, report)
     out += _rarity_violations(skill, library)
-    return out + budget_out + _variant_violations(skill, library)
+    return out + budget_out + _variant_violations(skill, library, report)
 
 
-def _variant_violations(skill: SkillDef, library: ContentLibrary) -> list[Violation]:
+def _variant_violations(
+    skill: SkillDef, library: ContentLibrary, report: BudgetReport | None
+) -> list[Violation]:
     """戰場變奏（Phase 3-25a，PM 決定 #6）：每個變奏型態本身照一般技能完整檢查（骨架、互斥、
-    稀有度、預算窗……）；基礎型態的預算已含變奏加價（:func:`skill_budget`）。"""
+    稀有度、預算窗……）；基礎型態的預算已含變奏加價（:func:`skill_budget`）；型態的預算取自
+    ``report.variants``（含射程加價，Phase 3-25b），不重算。"""
     out: list[Violation] = []
+    forms = {} if report is None else {f.id: f.report for f in report.variants}
     for variant in skill.variants:
         form = skill.variant_form(variant.id)
+        checked = [
+            v for v in _structure_violations(form, library) if not v.rule.startswith("budget.")
+        ]
+        if variant.id in forms:
+            checked += _ratio_violations(form, forms[variant.id])
         out += [
             Violation(
                 v.skill_id, f"variant.{variant.id}.{v.rule}", f"{variant.name_zh}：{v.message}"
             )
-            for v in _structure_violations(form, library)
+            for v in checked
         ]
     return out
 
@@ -836,8 +845,12 @@ def _budget_violations(
         report = skill_budget(skill, library)
     except BudgetError as exc:
         return None, [Violation(skill.id, "budget.unavailable", f"無法計算預算：{exc}")]
+    return report, _ratio_violations(skill, report)
+
+
+def _ratio_violations(skill: SkillDef, report: BudgetReport) -> list[Violation]:
     if report.over_budget:
-        return report, [
+        return [
             Violation(
                 skill.id,
                 "budget.over",
@@ -847,7 +860,7 @@ def _budget_violations(
             )
         ]
     if report.too_weak and GEAR_TAG not in skill.tags:  # 裝備授予的技能：預算算在詞條上（8.21.2.9）
-        return report, [
+        return [
             Violation(
                 skill.id,
                 "budget.weak",
@@ -856,4 +869,4 @@ def _budget_violations(
                 f"（下限 {_percent(report.min_ratio)}，階級 {skill.tier}）",
             )
         ]
-    return report, []
+    return []

@@ -1,5 +1,5 @@
 # 戰場變奏示範（Phase 3-25a，docs/design/06-技能.md 6.24；數值為初值，未經模擬）：
-# 平地＝單體冰矛；站在水裡＝直線貫穿 3 格＋導電（雷）；居高＝射程 +2 並把目標砸倒（只對比自己低的目標點）。
+# 平地＝單體冰矛；站在水裡＝直線貫穿 3 格＋導電（雷）；居高＝射程 +2（只對比自己低的目標點）。
 id: skill_tidal_spear
 schema_version: 1
 name_zh: 潮汐之矛
@@ -33,7 +33,6 @@ variants:
     name_zh: 居高投矛
     when: {caster_high_ground: true}
     range_delta: 2
-    add_effect: {type: knock_prone}
 narrative:
   concept: 凝水成矛；腳下有水時，矛化成一道貫穿的電流，站在高處則擲得更遠
   cast_flavor: 冰冷的水矛在掌中成形，你順勢擲出
