@@ -72,4 +72,11 @@
 
 ## 4. 完整檢查
 
-（見提交時的結果）
+- `ruff check .`、`ruff format --check .`、`mypy`（515 個檔案）、import-linter（6 個契約全 kept）：全過。
+- `scripts/check.py` 的 pytest 階段在本機（另一個 agent 同時在跑測試、CPU 吃緊）兩次都卡在約 97%（最後幾個重型模擬測試）而沒有跑完，所以改成分段全跑：
+  - `tests/engine tests/skillgen tests/narrative tests/content tests/cli tests/roguelite`：3843 通過；當時 6 個失敗（出貨技能階級視窗、技能覆蓋、預算 CLI 兩個、CLI 快照、圖示 fixture）已逐一修正並重跑相關檔案全過（112 通過，另外 CLI 快照以 `UPDATE_CLI_SNAPSHOTS=1` 重產）。
+  - `tests/api tests/shared tests/test_architecture.py`：325 通過（修正 `test_gear_api` 的詞條數 31 → 34 之後）。
+  - `tests/sim tests/test_play_script.py tests/test_sim_scripts.py`：93 通過。
+  - 建議 PM 合併後在乾淨的機器上再跑一次完整 `scripts/check.py`。
+- 沒有新增複雜度類 `noqa`。
+- 事件格式沒有變動，`LOG_FORMAT` 維持 `/47`。
