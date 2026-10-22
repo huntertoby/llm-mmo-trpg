@@ -1,0 +1,14 @@
+# 戰場變奏示範單位（Phase 3-25a）：弓手的數值，裝備遠程的變奏示範技能（燧石飛刃）。
+# 不在任何地圖的遭遇中，用 --allies 指定（見 variant_vanguard.yaml）。
+id: variant_slinger
+name_zh: 飛刃射手
+attributes: {str: 10, dex: 16, con: 12, int: 10, wis: 12, wil: 10}
+max_hp: 40
+speed: 5
+armor_bonus: 2
+weapon: bow
+resist: {}
+element_mods: {}
+tags: [hero]
+max_mana: 24
+skills: [skill_oil_spark_throw]

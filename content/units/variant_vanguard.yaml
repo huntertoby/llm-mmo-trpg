@@ -1,0 +1,15 @@
+# 戰場變奏示範單位（Phase 3-25a）：戰士的數值，裝備近戰的變奏示範技能（靠牆盾擊、霜崖斬）。
+# 不在任何地圖的遭遇中，用 --allies 指定：
+#   uv run trpg battle --map training_range --allies variant_vanguard,variant_tidecaller,variant_slinger --seed 0
+id: variant_vanguard
+name_zh: 地形戰士
+attributes: {str: 16, dex: 12, con: 14, int: 10, wis: 10, wil: 10}
+max_hp: 48
+speed: 5
+armor_bonus: 4
+weapon: one_handed_sword
+resist: {physical: 100}
+element_mods: {}
+tags: [hero]
+max_mana: 20
+skills: [skill_wall_brace_bash, skill_frost_ledge_cleave]

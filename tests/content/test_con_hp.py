@@ -51,6 +51,9 @@ OLD_HP = {
     "sim_companion_archer": 46,
     "sim_companion_fighter": 60,
     "sim_duelist": 60,
+    "variant_vanguard": 60,  # 3-25a 新增：戰士的數值
+    "variant_tidecaller": 40,  # 3-25a 新增：法師的數值
+    "variant_slinger": 46,  # 3-25a 新增：弓手的數值
     "std_enemy_t1": 30,
     "std_enemy_t2": 39,
     "std_enemy_t3": 49,

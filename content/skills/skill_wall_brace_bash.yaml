@@ -1,0 +1,29 @@
+# 戰場變奏示範（Phase 3-25a，docs/design/06-技能.md 6.24；數值為初值，未經模擬）：
+# 盾擊；背靠牆壁或擋路物件時借力，把目標撞開 1 格（撞上東西另受撞擊傷害）。
+id: skill_wall_brace_bash
+schema_version: 1
+name_zh: 靠牆盾擊
+tier: 1
+rank: 1
+rarity: rare
+kind: active
+skeleton: strike
+category: weapon
+weapon_req: melee
+ap_cost: 2
+scaling_attr: str
+shape: {type: single, range: weapon}
+effects:
+  - {type: damage, multiplier_permille: 1500}
+condition: null
+cost: {mana: 4, cooldown: 2}
+tags: [physical, melee]
+variants:
+  - id: braced
+    name_zh: 借牆猛撞
+    when: {caster_adjacent_blocker: true}
+    add_effect: {type: push, distance: 1, collision_dice: 1d6}
+narrative:
+  concept: 背後有牆可以蹬，這一下盾擊就能把人撞飛
+  cast_flavor: 你一腳蹬住身後的牆，盾面狠狠撞上對手
+provenance: {origin: builtin, owner_id: null, created_by: null, parents: [], bound: true, tradeable: false}

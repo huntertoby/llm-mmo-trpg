@@ -1,0 +1,15 @@
+# 戰場變奏示範單位（Phase 3-25a）：法師的數值，裝備法術的變奏示範技能（潮汐之矛）。
+# 不在任何地圖的遭遇中，用 --allies 指定（見 variant_vanguard.yaml）。
+id: variant_tidecaller
+name_zh: 潮汐術士
+attributes: {str: 8, dex: 12, con: 10, int: 16, wis: 12, wil: 12}
+max_hp: 40
+speed: 5
+armor_bonus: 1
+weapon: frost_staff
+ai_profile: cunning
+resist: {elemental: 150}
+element_mods: {}
+tags: [hero]
+max_mana: 40
+skills: [skill_tidal_spear]

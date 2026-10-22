@@ -1,0 +1,33 @@
+# 戰場變奏示範（Phase 3-25a，docs/design/06-技能.md 6.24；數值為初值，未經模擬）：
+# 重劈；站在冰或水上時劈出寒氣（冰元素），從高處往下劈時把目標劈倒。
+id: skill_frost_ledge_cleave
+schema_version: 1
+name_zh: 霜崖斬
+tier: 1
+rank: 1
+rarity: epic
+kind: active
+skeleton: strike
+category: weapon
+weapon_req: melee
+ap_cost: 2
+scaling_attr: str
+shape: {type: single, range: weapon}
+effects:
+  - {type: damage, multiplier_permille: 1650}
+condition: null
+cost: {mana: 5, cooldown: 2}
+tags: [physical, melee]
+variants:
+  - id: frost_edge
+    name_zh: 寒霜刃
+    when: {caster_surface: [ice, water]}
+    element: ice
+  - id: ledge_drop
+    name_zh: 崖頂下劈
+    when: {caster_high_ground: true}
+    add_effect: {type: knock_prone}
+narrative:
+  concept: 腳下結霜時刃帶寒氣，站在高處往下劈則勢大力沉
+  cast_flavor: 你雙手舉刃，一記重劈落下
+provenance: {origin: builtin, owner_id: null, created_by: null, parents: [], bound: true, tradeable: false}

@@ -1,0 +1,29 @@
+# 戰場變奏示範（Phase 3-25a，docs/design/06-技能.md 6.24；數值為初值，未經模擬）：
+# 投擲燧石飛刃；目標站在油上時，擦出的火星讓這一擊變成火元素。
+id: skill_oil_spark_throw
+schema_version: 1
+name_zh: 燧石飛刃
+tier: 1
+rank: 1
+rarity: rare
+kind: active
+skeleton: strike
+category: weapon
+weapon_req: ranged
+ap_cost: 2
+scaling_attr: dex
+shape: {type: single, range: weapon}
+effects:
+  - {type: damage, multiplier_permille: 1700}
+condition: null
+cost: {mana: 4, cooldown: 2}
+tags: [physical, ranged]
+variants:
+  - id: oil_spark
+    name_zh: 油上火星
+    when: {target_surface: [oil]}
+    element: fire
+narrative:
+  concept: 燧石打成的飛刃，擦過地上的油就會冒出火星
+  cast_flavor: 你甩出飛刃，刃口擦出一串火星
+provenance: {origin: builtin, owner_id: null, created_by: null, parents: [], bound: true, tradeable: false}
