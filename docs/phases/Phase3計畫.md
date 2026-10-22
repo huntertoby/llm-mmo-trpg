@@ -1536,6 +1536,12 @@ PM 驗收後請使用者試玩一整輪（`docs/專案計畫.md` 第 14 節 🎮
 
 驗收（3-32a）：pytest（精通依空格數、上限 3 格與 +50% 上限；combo 計數與每回合 1 次；cleave 選目標與每回合 1 次；四條特性強化只在對應武器、數值正確；重複詞條只生效 1 條且 `duplicate_of` 正確；同種子確定）；`--log-json` ＋ `replay` 一致；報告附三情境摘要表；`check.py` 全過。
 
+### 35.1a 3-32a 驗收（2026-10-22）
+
+- PM 合併（與 3-33b 同時遞增到 `/48` → **`LOG_FORMAT` `/49`**，`runner.py` 文件字串兩段保留、測試改號；OpenAPI、`skill_icons.json`、CLI 快照重產）、`check.py` 全過、`pnpm build` 成功；`bandit_lair` 種子 7 `--log-json` ＋ `replay` 一致。普攻精通 `skill_attack_mastery`、`affix_attack_combo`／`cleave`、四條武器特性強化、裝備視圖 `active`／`duplicate_of`、對照 build（`reference: true`，不進矩陣與隨機抽選）、三情境腳本。順手修了 3-31 的 `attack_rune` 觸發名稱缺漏（`trpg battle` KeyError）。報告 `Phase3-32a報告.md`。
+- **三情境（每格 20 場，普攻流／技能流）**：長戰單體傷害 73／75（約等於，符合）；範圍戰 47／39、Boss 戰 79／50（普攻流較高，**不符「不超過技能流」**；技能流對照組沒有範圍技、Boss 戰 DPR 僅 9.3，可能低估）→ 請玩法 PM 判斷，平衡階段由 PM 背景跑大量模擬；候選旋鈕：精通 80‰ → 60‰、combo／cleave 500‰ → 400‰。
+- 待 PM 決定：#1 號碼 → 已處理；#2 `affix_trait_longgun_still_crit` 在長槍上無效（站定暴擊已到下限 18）→ 請玩法 PM 決定換效果或調長槍基礎值；#3 普攻精通名稱與 epic、暫定關鍵字規則 → 請玩法 PM 審；#4 連擊重擲命中不再觸發、#5 分裂規則、#6 弓特性實作方式（`high_range` 只影響合法性）、#7 `duplicate_of` 為字串、#8 `reference` build → 接受；#9 平衡旋鈕 → 見上。
+
 ### 35.2 3-32b｜重複詞條標灰（sonnet；3-32a 與 3-30 合併後，只動前端）
 
 1. 角色面板與裝備比較中，沒生效的重複詞條標灰，並註明「和〇〇（部位）的〇〇重複，沒有效果」（資料來自 3-32a 的 `active`／`duplicate_of`）；比較時若換上新裝備會讓某條變成重複或恢復生效，也要標出。
