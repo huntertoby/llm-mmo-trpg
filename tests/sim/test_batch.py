@@ -282,6 +282,7 @@ def test_same_spec_twice_gives_equal_reports() -> None:
     assert run_batch(spec) == run_batch(spec)
 
 
+@pytest.mark.slow
 def test_report_does_not_depend_on_the_number_of_jobs() -> None:
     lib = library()
     specs = [map_spec(lib, "oil_depot", range(3)), map_spec(lib, "swamp", range(1, 4))]

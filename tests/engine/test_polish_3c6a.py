@@ -206,6 +206,7 @@ def test_a_low_hp_caster_avoids_the_cast_that_would_overload_it() -> None:
 # ---------------------------------------------------------------------------
 
 
+@pytest.mark.slow
 def test_the_cluster_bolt_scales_with_the_enemies_around_the_target() -> None:
     lib = load_library()
     skill = lib.skills["skill_cluster_bolt"]
@@ -259,6 +260,7 @@ def test_reaction_and_passive_cards_show_their_timing() -> None:
 # ---------------------------------------------------------------------------
 
 
+@pytest.mark.slow
 def test_sim_maps_reports_the_summon_count(capsys: pytest.CaptureFixture[str]) -> None:
     from trpg.cli.main import main  # noqa: PLC0415
 

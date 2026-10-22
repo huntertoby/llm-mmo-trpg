@@ -93,6 +93,7 @@ def test_single_target_usage_prefers_reshaping() -> None:
     assert deepen.skill.shape.type != library().skills[BERSERK].shape.type
 
 
+@pytest.mark.slow
 def test_every_option_passes_the_validator_within_the_same_tier_budget() -> None:
     lib = library()
     usages = [

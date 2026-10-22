@@ -444,6 +444,7 @@ def test_same_seed_same_result() -> None:
     assert [e.model_dump() for e in a.events] == [e.model_dump() for e in b.events]
 
 
+@pytest.mark.slow
 def test_an_ai_battle_with_infusions_replays_identically() -> None:
     """dev_summoner（元素之靈＋火球）由 AI 打到結束：會灌注，且初始狀態 ＋ 動作列表重播一致。"""
     from trpg.engine.runner import replay, run_battle  # noqa: PLC0415

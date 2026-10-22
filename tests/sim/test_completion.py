@@ -29,6 +29,7 @@ def test_nine_configs_cover_no_commander_and_every_commander_on_each_side() -> N
     assert len({c.label for c in configs}) == 9
 
 
+@pytest.mark.slow
 def test_fast_completion_run_has_the_expected_shape_and_no_anomalies() -> None:
     report = run_completion(library(), FAST_MAPS, [0])
     assert len(report.cells) == 9 * len(FAST_MAPS)
@@ -45,6 +46,7 @@ def test_fast_completion_run_has_the_expected_shape_and_no_anomalies() -> None:
     assert COMPLETION_ANOMALY_KINDS == ("exception", "max_actions", "draw")
 
 
+@pytest.mark.slow
 def test_completion_output_is_identical_between_runs_and_jobs() -> None:
     lib = library()
     maps = FAST_MAPS[:1]
@@ -70,6 +72,7 @@ def test_cli_returns_nonzero_on_unknown_map(capsys: pytest.CaptureFixture[str]) 
     assert "沒有這些地圖" in capsys.readouterr().err
 
 
+@pytest.mark.slow
 def test_cli_prints_the_report_to_stdout(capsys: pytest.CaptureFixture[str]) -> None:
     code = main(["sim", "completion", "--maps", "open_plain", "--seeds", "1"])
     captured = capsys.readouterr()

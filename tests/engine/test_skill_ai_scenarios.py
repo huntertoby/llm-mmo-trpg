@@ -4,6 +4,8 @@ from __future__ import annotations
 
 from collections.abc import Sequence
 
+import pytest
+
 from tests.engine.helpers import (
     caster_template,
     give_turn,
@@ -255,6 +257,7 @@ def test_only_the_boss_the_archer_and_the_shieldbearer_have_skills() -> None:
         assert 1 <= len(t.skills) <= 2 and t.max_mana > 0
 
 
+@pytest.mark.slow
 def test_enemies_actually_use_their_skills_in_demo_battles() -> None:
     lib = library()
     ai = UtilityAI(lib.ai_profiles)

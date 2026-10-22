@@ -67,6 +67,7 @@ def _current(capsys: pytest.CaptureFixture[str]) -> dict[str, str]:
     return result
 
 
+@pytest.mark.slow
 def test_cli_output_matches_the_recorded_snapshot(capsys: pytest.CaptureFixture[str]) -> None:
     current = _current(capsys)
     if os.environ.get("UPDATE_CLI_SNAPSHOTS") == "1":

@@ -281,6 +281,7 @@ def test_api_battle_log_replays_with_the_cli(
     assert digest == record["state_digest"]
 
 
+@pytest.mark.slow
 def test_api_load_and_cli_auto_from_finish_identically(
     runs_client: TestClient, library: ContentLibrary, save_dir: Path, tmp_path: Path
 ) -> None:

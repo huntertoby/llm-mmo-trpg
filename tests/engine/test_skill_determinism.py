@@ -2,6 +2,8 @@
 
 from __future__ import annotations
 
+import os
+
 import pytest
 from hypothesis import HealthCheck, given, settings
 from hypothesis import strategies as st
@@ -25,7 +27,9 @@ from trpg.shared.errors import IllegalActionError
 from trpg.shared.rng import Rng
 
 PROPERTY_SETTINGS = settings(
-    max_examples=12, deadline=None, suppress_health_check=[HealthCheck.too_slow]
+    max_examples=12 if os.environ.get("TRPG_FULL") == "1" else 3,
+    deadline=None,
+    suppress_health_check=[HealthCheck.too_slow],
 )
 SKILLED_ENEMIES = ("hero_fighter", "hero_stormcaller", "hero_archer")
 MAPS = ("test_flat_6x6", "oil_depot", "test_heights_8x8")
