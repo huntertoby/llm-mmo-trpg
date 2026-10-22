@@ -5,6 +5,7 @@ import { grantLines } from "./granted";
 import { gambleLines } from "./gamble";
 import { objectName, statusName, surfaceName } from "./glossary";
 import { sceneLines } from "./scenePreview";
+import { previewVariantLine } from "./variants";
 import { summonLines } from "./summons";
 import { zonePreviewLines } from "./zones";
 import type { UnitNames } from "./units";
@@ -149,6 +150,8 @@ export function previewLines(
   skipChain = false,
 ): string[] {
   const lines: string[] = [];
+  const form = previewVariantLine(p);
+  if (form !== null) lines.push(form);
   const head: string[] = [];
   if (p.hit_permille != null) head.push(`命中 ${percent(p.hit_permille)}`);
   if (p.crit_permille != null) head.push(`暴擊 ${percent(p.crit_permille)}`);

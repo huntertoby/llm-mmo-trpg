@@ -249,8 +249,8 @@ export function BattleScreen({ initial, onExit, exitLabel, runMode }: Props) {
   );
   const skillReasons = useSkillReasons(battleId, response);
   const buttons = useMemo(
-    () => (hero === null ? [] : withReasons(skillButtons(hero, response.legal_actions, cards), skillReasons)),
-    [hero, response.legal_actions, cards, skillReasons],
+    () => (hero === null ? [] : withReasons(skillButtons(hero, response.legal_actions, cards, response.variant_states ?? []), skillReasons)),
+    [hero, response.legal_actions, response.variant_states, cards, skillReasons],
   );
   const basic = useMemo(
     () => withPushReasons(basicModes(response.legal_actions, hero?.charges ?? []), response.interact_options, view),

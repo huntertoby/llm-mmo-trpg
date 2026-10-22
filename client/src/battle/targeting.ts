@@ -1,5 +1,6 @@
 // 技能列與目標選取（純函式）：合法動作 → 「模式」（技能、攻擊、推擊……）→ 每個模式的合法目標。
-import type { Action, BattleView, ChargeView, Direction, InteractOption, Pending, Pos, SkillCard, UnitView } from "../api/types";
+import type { Action, BattleView, ChargeView, Direction, InteractOption, Pending, Pos, SkillCard, UnitView, VariantState } from "../api/types";
+import { skillVariantView, type SkillVariantView } from "./variants";
 import { buildComposite, compositePrompt, firstKeyAt, firstPos, secondAt, secondTiles, soleCenter, type CompositeSet } from "./composite";
 import { posKey, samePos } from "./geometry";
 import { activeReason } from "./activations";
@@ -208,6 +209,8 @@ export interface SkillButton {
   effectIds?: readonly string[];
   /** 複合技能（位移 → 動作，Phase 3F-3b）：有第二段。 */
   composite?: boolean;
+  /** 戰場變奏（Phase 3-25b）：目前生效的型態與是否發亮；沒有變奏的技能省略。 */
+  variant?: SkillVariantView;
 }
 
 export type SkillCards = Readonly<Record<string, SkillCard | undefined>>;
@@ -215,7 +218,12 @@ export type SkillCards = Readonly<Record<string, SkillCard | undefined>>;
 /** 本地端猜不出原因時的通用說明；伺服器的 `skill-reasons` 有原因時會取代它（Phase 3-5c-2）。 */
 export const GENERIC_REASON = "目前沒有合法目標（或資源不足）";
 
-export function skillButtons(hero: UnitView, legal: readonly Action[], cards: SkillCards): SkillButton[] {
+export function skillButtons(
+  hero: UnitView,
+  legal: readonly Action[],
+  cards: SkillCards,
+  variants: readonly VariantState[] = [],
+): SkillButton[] {
   const granted = (hero.granted_skills ?? []).map((g) => g.skill_id).filter((id) => !hero.skills.includes(id));
   return [...hero.skills, ...granted].map((skillId) => {
     const actions = legal.filter((a) => a.type === "use_skill" && a.skill_id === skillId);
@@ -246,6 +254,7 @@ export function skillButtons(hero: UnitView, legal: readonly Action[], cards: Sk
       // 只有「位移 → 動作」用兩段選取（Phase 3F-3b）；其他種類（3F-4a／4b）照第一段選取，
       // 第二段在結算時暫停詢問或自動結算（延遲段：之後才釋放）
       composite: (card?.followup ?? null) !== null && (card?.followup_when ?? "after_move") === "after_move",
+      variant: skillVariantView(card, variants.find((v) => v.skill_id === skillId)),
     };
   });
 }

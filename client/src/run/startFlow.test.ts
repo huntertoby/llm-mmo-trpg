@@ -3,7 +3,7 @@ import type { OfferTag, StartKeywordOption } from "../api/types";
 import { canStart, isDevMode, keepAvailable, offerTagHint, offerTagText, startBody, toggleKeyword } from "./startFlow";
 
 function kw(id: string, name: string) {
-  return { id, name_zh: name, description_zh: "" };
+  return { id, name_zh: name, description_zh: "", variant: false };
 }
 
 function option(id: string, available: boolean): StartKeywordOption {

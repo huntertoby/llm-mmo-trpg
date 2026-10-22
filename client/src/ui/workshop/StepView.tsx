@@ -13,13 +13,13 @@ interface Props {
   onNext(): void;
 }
 
-const ALL_STEPS: readonly StepId[] = ["skeleton", "basics", "shape", "effects", "followup", "condition", "cost", "rarity"];
+const ALL_STEPS: readonly StepId[] = ["skeleton", "basics", "shape", "effects", "followup", "condition", "cost", "rarity", "variants"];
 
 function StepBar({ state, onGoto }: { state: EditorState; onGoto(step: StepId): void }) {
   const open = availableSteps(state.options);
   const cur = currentStep(state);
   // 「動作段」只有位移技能（或草稿已經有動作段）才會出現；其他技能的步驟列不顯示它。
-  const shown = ALL_STEPS.filter((id) => id !== "followup" || open.includes(id));
+  const shown = ALL_STEPS.filter((id) => (id !== "followup" && id !== "variants") || open.includes(id));
   return (
     <ol className="ws-steps">
       {shown.map((id, i) => {

@@ -34,6 +34,11 @@ export type IconSegment = Schemas["IconSegment"];
 /** 技能製造與利用的關鍵字（Phase 3-24b1；`SkillCard.keywords`、`WorkshopCheck.keywords`）。 */
 export type SkillKeywords = Schemas["SkillCardKeywords"];
 export type KeywordRef = Schemas["KeywordRef"];
+/** 戰場變奏（Phase 3-25b）：技能卡上的一個型態、技能列目前生效的型態、預覽的型態、工坊的各型態預算。 */
+export type SkillVariantCard = Schemas["SkillVariantCard"];
+export type VariantState = Schemas["VariantStateOut"];
+export type PreviewVariant = Schemas["PreviewVariantOut"];
+export type VariantBudgetLine = Schemas["VariantLine"];
 export type SkillReasons = Schemas["SkillReasons"];
 /** openapi-typescript 把有預設值的欄位標成必填；建立戰鬥時 `max_rounds` 可省略（伺服器預設 30），
  * 技能工坊的 `custom_skills`、`replace_skills` 也可省略（預設空串列，Phase 3F-1）。 */

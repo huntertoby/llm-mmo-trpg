@@ -14,6 +14,7 @@ function Side({ label, refs }: { label: string; refs: readonly KeywordRef[] }) {
           {i > 0 && "、"}
           <PartTip cat="關鍵字" label={k.name_zh} tip={k.description_zh} className="keyword-chip">
             {k.name_zh}
+            {k.variant === true && <span className="muted small">（特定地形）</span>}
           </PartTip>
         </span>
       ))}

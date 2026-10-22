@@ -90,7 +90,7 @@ def test_three_variants_are_rejected() -> None:
     "skill_id", ["skill_fire_wall", "skill_time_bomb_rune", "skill_mirror_cast"]
 )
 def test_lookup_primitives_cannot_sit_in_a_variant_skill(skill_id: str) -> None:
-    """3-25b：事後以 skill_def 查表的原語（區域、延遲傷害、複製技能）拿到基礎型態，所以不能帶變奏。"""
+    """3-25b：事後以 skill_def 查表的原語（區域、延遲傷害、複製技能）拿到基礎型態，不能帶變奏。"""
     data = library().skills[skill_id].model_dump(mode="json", exclude_defaults=True)
     data["variants"] = [
         {"id": "v", "name_zh": "測試", "when": {"caster_surface": ["water"]}, "range_delta": 1}

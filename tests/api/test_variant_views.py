@@ -3,7 +3,7 @@
 from __future__ import annotations
 
 from tests.engine.helpers import library
-from tests.engine.test_variants import FLAT7, SPARK, TIDAL, U1, _state
+from tests.engine.test_variants import FLAT7, SPARK, TIDAL, U1, U2, U3, _state
 from trpg.api.presenter import preview_response
 from trpg.api.variants import preview_variant, variant_states
 from trpg.engine import UseSkill, legal_actions
@@ -68,8 +68,8 @@ def test_skills_without_variants_are_not_listed() -> None:
 
 def test_the_preview_names_the_form_for_the_chosen_target_point() -> None:
     state = _state([SPARK], foes=[(3, 0), (3, 1)], surfaces=[(3, 0, "oil")])
-    oily = UseSkill(unit_id=U1, skill_id=SPARK, target_id="unit_0002")
-    plain = UseSkill(unit_id=U1, skill_id=SPARK, target_id="unit_0003")
+    oily = UseSkill(unit_id=U1, skill_id=SPARK, target_id=U2)
+    plain = UseSkill(unit_id=U1, skill_id=SPARK, target_id=U3)
     out = preview_response(preview(state, oily), state)
     assert out.variant is not None and out.variant.id == "oil_spark"
     assert out.variant.name_zh == "油上火星"
