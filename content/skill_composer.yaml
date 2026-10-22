@@ -149,3 +149,24 @@ scaling:
 # 傳說（rarity_weights.legendary）一律走 composer_special：核心三擇一（修正規則、規則改變、改寫規則型原語）＋ 1–2 點源力。
 special:
   modifier_permille: 100
+
+# 戰場變奏（Phase 3-25b，docs/design/06-技能.md 6.24；初值，未經模擬）：稀有度 rare 以上的主動技能組好之後，
+# 以 permille 的機率（獨立的亂數串流；沒有抽中的種子結果不變）再加一個變奏。候選＝條件 × 替換內容的所有組合
+# （型態名＝「條件名・替換名」），依亂數順序逐一試，第一個通過驗證（schema、每個型態的預算窗）的採用；
+# 都不合格就維持原技能。進化模板「戰場變奏」（skill_evolution.yaml）共用同一份候選。
+variant:
+  permille: 250
+  conditions:
+    - {id: wet, name_zh: 水中, when: {caster_surface: [water]}}
+    - {id: icy, name_zh: 冰上, when: {caster_surface: [ice]}}
+    - {id: high, name_zh: 居高, when: {caster_high_ground: true}}
+    - {id: wall, name_zh: 靠牆, when: {caster_adjacent_blocker: true}}
+    - {id: oil, name_zh: 油面, when: {target_surface: [oil]}}
+    - {id: puddle, name_zh: 水窪, when: {target_surface: [water]}}
+  changes:
+    - {id: far, name_zh: 遠投, range_delta: 2}
+    - {id: line, name_zh: 貫穿, shape: {type: line, size: 3}}
+    - {id: fire, name_zh: 火焰, element: fire}
+    - {id: lightning, name_zh: 雷電, element: lightning}
+    - {id: ice, name_zh: 寒霜, element: ice}
+    - {id: prone, name_zh: 擊倒, add_effect: {type: knock_prone}}

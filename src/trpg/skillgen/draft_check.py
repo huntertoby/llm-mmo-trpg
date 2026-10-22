@@ -22,11 +22,13 @@ from trpg.skillgen.budget import (
     BudgetReport,
     EffectBudget,
     SegmentBudget,
+    VariantBudget,
     skill_budget,
 )
 from trpg.skillgen.draft import Draft, DraftError, build_skill
 from trpg.skillgen.option_followup import followup_visible
 from trpg.skillgen.option_models import STEP_IDS, StepId
+from trpg.skillgen.option_variant import variants_visible
 from trpg.skillgen.options import draft_options, minimum_rarity
 from trpg.skillgen.validate import validate_skill
 
@@ -82,6 +84,21 @@ class SegmentLine(_Model):
     """有條件的第二段（擊殺後、命中後，Phase 3F-4a）的觸發機率（‰）；其他段為 1000。"""
 
 
+class VariantLine(_Model):
+    """戰場變奏（Phase 3-25b）一個型態的預算：與基礎型態各自落在預算窗內。"""
+
+    id: str
+    name_zh: str
+    total: float
+    usable: float
+    ratio: float
+    ratio_text: str
+    verdict: str
+    verdict_zh: str
+    range_permille: int = 0
+    """射程加價（‰，佔基礎型態點數）。"""
+
+
 class BudgetSummary(_Model):
     """預算（與 ``trpg skills budget`` 的數字相同；``ratio_text`` 也是同樣的格式，
     例 ``85.3%``）。"""
@@ -111,6 +128,10 @@ class BudgetSummary(_Model):
     self_combo_permille: int = 0
     """兩段之間有元素／表面連鎖時的加價（‰，Phase 3F-4a）；沒有時為 0。"""
     self_combo_reasons: tuple[str, ...] = ()
+    variants: tuple[VariantLine, ...] = ()
+    """戰場變奏（Phase 3-25b）：每個型態自己的預算；沒有變奏為空。"""
+    variant_surcharge_permille: int = 0
+    """基礎型態因變奏多算的比例（‰，已含在 ``total``）。"""
 
 
 class DraftCheck(_Model):
@@ -170,6 +191,21 @@ def _segment_line(segment: SegmentBudget) -> SegmentLine:
     )
 
 
+def _variant_line(v: VariantBudget) -> VariantLine:
+    verdict, verdict_zh = _verdict(v.report)
+    return VariantLine(
+        id=v.id,
+        name_zh=v.name_zh,
+        total=_f(v.report.total),
+        usable=_f(v.report.usable),
+        ratio=_f(v.report.ratio),
+        ratio_text=f"{float(v.report.ratio) * 100:.1f}%",
+        verdict=verdict,
+        verdict_zh=verdict_zh,
+        range_permille=v.report.variant_range_permille,
+    )
+
+
 def budget_summary(report: BudgetReport) -> BudgetSummary:
     verdict, verdict_zh = _verdict(report)
     return BudgetSummary(
@@ -194,6 +230,8 @@ def budget_summary(report: BudgetReport) -> BudgetSummary:
         composite_tax_permille=report.composite_tax_permille,
         self_combo_permille=report.self_combo_permille,
         self_combo_reasons=report.self_combo_reasons,
+        variants=tuple(_variant_line(v) for v in report.variants),
+        variant_surcharge_permille=report.variant_surcharge_permille,
     )
 
 
@@ -225,7 +263,8 @@ def check_draft(draft: Draft, library: ContentLibrary) -> DraftCheck:
         missing = tuple(
             s
             for s in STEP_IDS[STEP_IDS.index(options.next_step) :]
-            if s != "followup" or followup_visible(draft)
+            if (s != "followup" or followup_visible(draft))
+            and (s != "variants" or variants_visible(draft, library))
         )
         problems = tuple(Problem(rule="draft", message_zh=p) for p in options.problems)
         return DraftCheck(

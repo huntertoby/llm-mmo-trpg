@@ -825,6 +825,11 @@ export interface components {
             copy_options: components["schemas"]["UseSkill-Output"][];
             run_option?: components["schemas"]["RunOptionOut"] | null;
             /**
+             * Variant States
+             * @default []
+             */
+            variant_states: components["schemas"]["VariantStateOut"][];
+            /**
              * Followup Options
              * @default []
              */
@@ -1007,6 +1012,16 @@ export interface components {
              * @default []
              */
             self_combo_reasons: string[];
+            /**
+             * Variants
+             * @default []
+             */
+            variants: components["schemas"]["VariantLine"][];
+            /**
+             * Variant Surcharge Permille
+             * @default 0
+             */
+            variant_surcharge_permille: number;
         };
         /** BuildSummary */
         BuildSummary: {
@@ -1482,7 +1497,7 @@ export interface components {
             default?: string | number | boolean | null;
         };
         /** @enum {string} */
-        FieldType: "choice" | "multi_choice" | "int" | "count" | "dice" | "bool" | "text" | "tags" | "effects" | "object" | "modifiers";
+        FieldType: "choice" | "multi_choice" | "int" | "count" | "dice" | "bool" | "text" | "tags" | "effects" | "object" | "modifiers" | "variants";
         /**
          * FocusTarget
          * @description 集火指定敵人。
@@ -2174,6 +2189,11 @@ export interface components {
             name_zh: string;
             /** Description Zh */
             description_zh: string;
+            /**
+             * Variant
+             * @default false
+             */
+            variant: boolean;
         };
         /**
          * LeaveChoice
@@ -2651,6 +2671,17 @@ export interface components {
             followup_tiles: components["schemas"]["XY"][];
             /** Followup When */
             followup_when?: string | null;
+            variant?: components["schemas"]["PreviewVariantOut"] | null;
+        };
+        /**
+         * PreviewVariantOut
+         * @description 預覽的動作會用到的型態（Phase 3-25b）。
+         */
+        PreviewVariantOut: {
+            /** Id */
+            id: string;
+            /** Name Zh */
+            name_zh: string;
         };
         /**
          * Problem
@@ -3043,6 +3074,11 @@ export interface components {
              *     }
              */
             keywords: components["schemas"]["SkillCardKeywords"];
+            /**
+             * Variants
+             * @default []
+             */
+            variants: components["schemas"]["SkillVariantCard"][];
             growth?: components["schemas"]["SkillLevelInfo"] | null;
         };
         /**
@@ -3175,6 +3211,26 @@ export interface components {
                 [key: string]: string;
             };
         };
+        /**
+         * SkillVariantCard
+         * @description 技能卡上的一個戰場變奏型態（Phase 3-25b，6.24）：型態名、條件與替換內容的中文說明、
+         *     型態自己的圖示（技能列在這個型態生效時換成它）。
+         */
+        SkillVariantCard: {
+            /** Id */
+            id: string;
+            /** Name Zh */
+            name_zh: string;
+            /** Condition */
+            condition: string;
+            /** Condition Kind */
+            condition_kind: string;
+            /** Target Dependent */
+            target_dependent: boolean;
+            /** Change */
+            change: string;
+            icon: components["schemas"]["SkillIcon"];
+        };
         /** @enum {string} */
         SlotType: "weapon" | "offhand" | "head" | "body" | "hands" | "feet" | "neck" | "ring";
         /**
@@ -3300,7 +3356,7 @@ export interface components {
         };
         Step: components["schemas"]["Move"] | components["schemas"]["Attack"] | components["schemas"]["UseSkill-Output"] | components["schemas"]["Defend"] | components["schemas"]["Run"] | components["schemas"]["Swap"] | components["schemas"]["Aim"] | components["schemas"]["Vault"] | components["schemas"]["Shove"] | components["schemas"]["Trip"] | components["schemas"]["Interact"] | components["schemas"]["Reload"] | components["schemas"]["ActivateCharge"] | components["schemas"]["EndStance"] | components["schemas"]["SetReactionMode"] | components["schemas"]["EndTurn"] | components["schemas"]["Decision"];
         /** @enum {string} */
-        StepId: "skeleton" | "basics" | "shape" | "effects" | "followup" | "condition" | "cost" | "rarity";
+        StepId: "skeleton" | "basics" | "shape" | "effects" | "followup" | "condition" | "cost" | "rarity" | "variants";
         /**
          * StepOptions
          * @description 一個步驟：``complete`` 表示目前的技能已經填好這一步；``fields`` 是這一步的欄位與合法選項；
@@ -3780,6 +3836,45 @@ export interface components {
             input?: unknown;
             /** Context */
             ctx?: Record<string, never>;
+        };
+        /**
+         * VariantLine
+         * @description 戰場變奏（Phase 3-25b）一個型態的預算：與基礎型態各自落在預算窗內。
+         */
+        VariantLine: {
+            /** Id */
+            id: string;
+            /** Name Zh */
+            name_zh: string;
+            /** Total */
+            total: number;
+            /** Usable */
+            usable: number;
+            /** Ratio */
+            ratio: number;
+            /** Ratio Text */
+            ratio_text: string;
+            /** Verdict */
+            verdict: string;
+            /** Verdict Zh */
+            verdict_zh: string;
+            /**
+             * Range Permille
+             * @default 0
+             */
+            range_permille: number;
+        };
+        /**
+         * VariantStateOut
+         * @description 主角一招帶戰場變奏的技能，目前會生效的型態（Phase 3-25b；引擎的 ``varied_skill`` 判定）。
+         */
+        VariantStateOut: {
+            /** Skill Id */
+            skill_id: string;
+            /** Active */
+            active: string | null;
+            /** Available */
+            available: string[];
         };
         /**
          * Vault

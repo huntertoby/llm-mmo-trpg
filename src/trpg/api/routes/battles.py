@@ -76,7 +76,7 @@ def post_decision(battle_id: str, body: DecisionRequest, request: Request) -> Ba
 def post_preview(battle_id: str, action: Action, request: Request) -> PreviewOut:
     session = store_of(request).get(battle_id)
     with session.lock:
-        return preview_response(session.preview(action))
+        return preview_response(session.preview(action), session.state)
 
 
 @router.get("/{battle_id}/skill-reasons")

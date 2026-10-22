@@ -29,7 +29,7 @@ __all__ = [
 ]
 
 type EvolutionOp = Literal[
-    "reshape", "intensify", "extend", "delay", "on_kill", "graft_uses", "graft_makes"
+    "reshape", "intensify", "extend", "delay", "on_kill", "variant", "graft_uses", "graft_makes"
 ]
 """模板的改法：
 
@@ -39,6 +39,8 @@ type EvolutionOp = Literal[
 - ``extend``：這招的狀態、表面與區域各多持續 1 回合（硬控狀態不延長）。
 - ``delay``：第一個傷害效果改成延遲爆炸（``delayed_damage``，``delay_rounds``、``delay_radius``）。
 - ``on_kill``：第一個傷害效果加上擊殺時效果（``on_kill``）。
+- ``variant``：戰場變奏（6.24；Phase 3-25b）：加一個變奏，候選取自 ``skill_composer.yaml`` 的
+  ``variant``（依序試，第一個合格的）。
 - ``graft_uses``：加上「利用」橋接關鍵字的加碼效果（``grafts.<關鍵字>.uses``；條件成立時加傷）。
 - ``graft_makes``：加上「製造」橋接關鍵字的效果（``grafts.<關鍵字>.makes``）。
 """
@@ -83,7 +85,10 @@ class EvolutionTemplate(ContentModel):
             raise ValueError(f"模板 {self.id}：delay 必須填 delay_rounds 與 delay_radius")
         if self.op == "on_kill" and not self.on_kill:
             raise ValueError(f"模板 {self.id}：on_kill 必須列出 on_kill 效果")
-        if self.op in ("reshape", "extend", "delay", "on_kill") and self.prefix_zh is None:
+        if (
+            self.op in ("reshape", "extend", "delay", "on_kill", "variant")
+            and self.prefix_zh is None
+        ):
             raise ValueError(f"模板 {self.id}：{self.op} 必須填 prefix_zh")
         return self
 

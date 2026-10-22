@@ -47,6 +47,7 @@ from trpg.skillgen.composer_parts import Knob, dice_ladder
 from trpg.skillgen.composer_tuning import tune
 from trpg.skillgen.usage import SkillUsage
 from trpg.skillgen.validate import effect_count, rarity_requirements, validate_skill
+from trpg.skillgen.variant_gen import variant_specs, with_variant
 
 __all__ = ["Evolution", "EvolutionRequest", "evolution_options", "evolved_id"]
 
@@ -282,6 +283,27 @@ def _graft(
     return [(base, [*effects, _with_element(_effect_dict(spec), skill)])]
 
 
+MAX_VARIANT_DRAFTS = 8
+"""戰場變奏模板最多試幾個候選（每個都要重新調整強度，太多會很慢）。"""
+
+
+def _variant(skill: SkillDef, library: ContentLibrary) -> list[_Draft]:
+    """戰場變奏（Phase 3-25b）：資料順序中前幾個 schema 合法的候選各是一份草稿。"""
+    if skill.kind != "active" or skill.trap is not None or skill.followup is not None:
+        return []
+    drafts: list[_Draft] = []
+    for spec in variant_specs(library, {v.id for v in skill.variants}):
+        grown = with_variant(skill.model_copy(update={"rarity": "epic"}), spec)
+        if grown is None:
+            continue
+        base, effects = _base(skill)
+        base["variants"] = [*base.get("variants", []), spec]
+        drafts.append((base, effects))
+        if len(drafts) >= MAX_VARIANT_DRAFTS:
+            break
+    return drafts
+
+
 def _drafts(
     template: EvolutionTemplate,
     skill: SkillDef,
@@ -295,6 +317,7 @@ def _drafts(
         "reshape": lambda: _reshape(skill, template, usage, library.evolution.far_distance),
         "delay": lambda: _delay(skill, template),
         "on_kill": lambda: _on_kill(skill, template),
+        "variant": lambda: _variant(skill, library),
         "graft_uses": lambda: _graft(skill, keyword, "uses", library),
         "graft_makes": lambda: _graft(skill, keyword, "makes", library),
     }
@@ -353,6 +376,11 @@ def _rarity(draft: dict[str, Any], effects: list[dict[str, Any]], library: Conte
             (i for i, r in enumerate(_RARITIES) if library.budget.rarity[r].max_effects >= count),
             _LEGENDARY,
         ),
+    )
+    caps = library.ruleset.core.variant_max_by_rarity
+    count = len(draft.get("variants") or ())
+    need = max(
+        need, next((i for i, r in enumerate(_RARITIES) if caps.get(r, 0) >= count), _LEGENDARY)
     )
     return _RARITIES[max(rarity_rank(str(draft["rarity"])), need)]
 

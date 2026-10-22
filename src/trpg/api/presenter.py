@@ -26,6 +26,7 @@ from trpg.api.schemas import (
 )
 from trpg.api.sessions import BattleSession, StepRecord
 from trpg.api.telegraph import telegraph_out
+from trpg.api.variants import preview_variant, variant_states
 from trpg.engine.actions import Step, UseSkill
 from trpg.engine.ai.commanded import ignored_orders
 from trpg.engine.battle import (
@@ -107,15 +108,19 @@ def history_response(session: BattleSession) -> BattleHistory:
     return BattleHistory(steps=tuple(steps))
 
 
-def preview_response(p: Preview) -> PreviewOut:
-    """預覽的公開版本，另附過濾後的模擬事件（``min``／``max``，各附中文 ``text``）。"""
+def preview_response(p: Preview, state: BattleState | None = None) -> PreviewOut:
+    """預覽的公開版本，另附過濾後的模擬事件（``min``／``max``，各附中文 ``text``）。``state`` 是
+    預覽前的戰場（判定戰場變奏的型態用，Phase 3-25b）。"""
     low = filter_events(p.min_events, p.min_state, VIEW_TEAM)
     high = filter_events(p.max_events, p.max_state, VIEW_TEAM)
-    return preview_out(
+    out = preview_out(
         p,
         tuple(event_out(e, p.min_state) for e in low),
         tuple(event_out(e, p.max_state) for e in high),
     )
+    if state is None:
+        return out
+    return out.model_copy(update={"variant": preview_variant(state, p.action)})
 
 
 def interact_options_out(state: BattleState, hero_id: UnitId) -> tuple[InteractOptionOut, ...]:
@@ -192,17 +197,21 @@ def battle_response(
         if state.ended
         else None
     )
+    legal = tuple(legal_actions(state)) if awaiting == "action" else ()
     return BattleResponse(
         battle_id=session.battle_id,
         hero_id=session.hero_id,
         awaiting=awaiting,
         initial_view=project_for(before, VIEW_TEAM),
         view=project_for(state, VIEW_TEAM),
-        legal_actions=tuple(legal_actions(state)) if awaiting == "action" else (),
+        legal_actions=legal,
         interact_options=interact_options_out(state, session.hero_id)
         if awaiting == "action"
         else (),
         run_option=run_option_out(state, session.hero_id) if awaiting == "action" else None,
+        variant_states=variant_states(state, session.hero_id, legal)
+        if awaiting == "action"
+        else (),
         pending=pending,
         copy_options=copy_options_out(state, pending),
         followup_options=followup_options_out(state, pending),

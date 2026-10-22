@@ -6,7 +6,7 @@
 # 模板只描述「怎麼改」，不寫強度：套用之後依同階預算重新調整骰子與倍率（沿用隨機組合器的調整器），
 # 再交給驗證器；不合格的模板不出現。稀有度只決定可用的原語、不加強度（6.12）：進化後的稀有度取
 # 「原本」與「新內容需要」中較高的一個（不會變成傳說）。
-# 戰場變奏（6.24）尚未實作，先不列。沒有 LLM 時名稱用組合式「{前綴}・{原名}」。
+# 戰場變奏（6.24，battle_variant）：進化時加一個變奏，候選共用 skill_composer.yaml 的 variant。沒有 LLM 時名稱用組合式「{前綴}・{原名}」。
 
 far_distance: 3                 # 平均施放距離 ≥ 3：換形狀先試遠距離的形狀
 spread_targets_permille: 1500   # 平均目標數 < 1.5：視為單體用法，加深優先換形狀
@@ -49,6 +49,11 @@ templates:
     summary_zh: 擊殺接續：打倒敵人時返還 1 AP
     on_kill:
       - {type: refund_ap, amount: 1}
+  - id: battle_variant
+    branch: deepen
+    op: variant
+    prefix_zh: 變奏
+    summary_zh: 戰場變奏：在特定地形下自動換成另一種型態（強度依預算調整）
 
   # ---- 橋接 ----
   - id: bridge_exploit
