@@ -21,7 +21,14 @@ from __future__ import annotations
 
 from trpg.content.equipment import AttackAffix, ChargeAffix, TriggerAffix
 from trpg.content.library import Ruleset
-from trpg.content.skills import DETONATE_RUNES, INSCRIBE, EffectSpec, ShapeSpec, SkillDef
+from trpg.content.skills import (
+    DETONATE_RUNES,
+    INSCRIBE,
+    ON_SUMMON_DOWNED,
+    EffectSpec,
+    ShapeSpec,
+    SkillDef,
+)
 from trpg.engine.context import Ctx
 from trpg.engine.events import GearTriggered
 from trpg.engine.rules.statuses import effective_attribute, skip_turn_status
@@ -40,6 +47,9 @@ DEFAULT_RUNE_ROUNDS = 2
 """普攻刻下的符文預設持續輪數（6.25 普攻與符文）。"""
 
 __all__ = ["gear_carrier", "resolve_gear_fired"]
+
+_DEAD_TARGET_TIMINGS = ("on_kill", ON_SUMMON_DOWNED)
+"""另一方已經倒下仍然結算的觸發時機（擊倒時：地面效果；召喚物倒下時：以牠的位置為中心結算）。"""
 
 
 def gear_carrier(
@@ -138,7 +148,7 @@ def _resolve_trigger(ctx: Ctx, owner: UnitState, affix: TriggerAffix, fired: Fir
         return
     other = None if fired.other_id is None else ctx.state.units.get(fired.other_id)
     if affix.effect_target != "self" and (
-        other is None or (not other.alive and timing != "on_kill")
+        other is None or (not other.alive and timing not in _DEAD_TARGET_TIMINGS)
     ):
         return
     if not check_trigger_depth(ctx, owner.id, affix.id, fired.depth):

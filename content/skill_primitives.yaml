@@ -464,7 +464,11 @@ primitives:
     params:
       unit: {type: summon, required: true, description_zh: 召喚物範本 ID（content/units/summons/）}
       duration: {type: int, required: true, min: 1, max: 4, description_zh: 召喚物存在的輪數}
-      count: {type: int, min: 1, max: 1, description_zh: 一次召喚的數量（目前只能是 1；省略為 1）}
+      count: {type: int, min: 1, max: 2, description_zh: 一次召喚的數量（1 或 2；2 是數量型分歧進化，必須同時填 power_permille；省略為 1）}
+      power_permille: {type: int, min: 100, max: 999, description_zh: 數量型分歧進化：每隻召喚物的最大 HP 與傷害只有一般的這麼多‰（count 為 2 時必填）}
+      max_hp_permille: {type: int, min: 1, max: 1000, description_zh: 加深分歧進化：召喚物的最大 HP 多這麼多‰}
+      trait: {type: summon_trait, description_zh: 加深分歧進化：召喚物的小特性（core.yaml 的 summon_traits）}
+      infusion: {type: infusion, description_zh: 橋接分歧進化：召喚物固有的第二個灌注關鍵字（core.yaml 的 summon_infusions）}
 
   # --- Phase 3D-5：持續區域（docs/design/06-技能.md 6.16 G；點數為初值，未經模擬）---
   - id: zone

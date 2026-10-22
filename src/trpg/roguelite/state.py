@@ -163,7 +163,7 @@ class EvolutionRecord(_Model):
 
     base_id: str
     base_name_zh: str
-    branch: Literal["deepen", "bridge"]
+    branch: Literal["deepen", "bridge", "count"]
     template: str
     keyword: str | None = None
     fallback: bool = False

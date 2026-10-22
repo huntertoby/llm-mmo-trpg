@@ -255,6 +255,9 @@ class BudgetRules(ContentModel):
     """高台（高台圖騰，Phase 3-33e2b）：升起地形原語點數 × 高度 × 此比例（‰），每輪。"""
     summon_topple_targets_permille: int = Field(default=1000, ge=0, le=5000)
     """被推倒壓人（土牆）：推倒傷害骰平均 ＋ 擊倒原語點數，× 預期被壓到的敵人數（‰），一次性。"""
+    summon_hp_weight_permille: int = Field(default=300, ge=0, le=2000)
+    """召喚技能的 ``max_hp_permille``（加深進化，Phase 3-33f2）：召喚物每輪價值 ×（1 ＋ 多出的
+    HP 比例 × 此值）；HP 的價值只佔每輪價值的這個比例（‰，初值，未經模擬）。"""
     totem_expected_allies_permille: int = Field(default=1000, ge=0, le=5000)
     """圖騰（Phase 3D-4b）的點數 ＝ 光環狀態的 ``budget_points`` × 預期受惠的友方數（‰）× 持續輪數
     × ``summon_round_value_permille``（初值，未經模擬）。"""

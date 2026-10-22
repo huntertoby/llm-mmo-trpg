@@ -104,3 +104,16 @@ grafts:
     prefix_zh: 暗影
     makes: {type: create_surface, surface: smoke, duration: 2}
     uses: {type: damage, condition: {type: self_concealed}}
+
+# 召喚技能的三支分歧進化（Phase 3-33f2，docs/design/06-技能.md 6.29.4；數值為初值，未經模擬）。
+# 召喚技能沒有可調的骰子，進化直接改 summon 效果（見 trpg.skillgen.summon_evolution）：
+#   加深＝單隻更強並多一個小特性｜橋接＝召喚物多帶一個灌注關鍵字｜數量型＝一次召喚 2 隻較弱的。
+# 進化後照同階預算驗證；超出時依序縮短持續輪數、增加冷卻（不加強度）。
+summon:
+  deepen_prefix_zh: 強化
+  deepen_hp_permille: 300
+  traits: {static: sturdy, melee: swift, ranged: keen}   # 小特性依召喚物定位挑（core.yaml 的 summon_traits）
+  count_prefix_zh: 雙生
+  count_number: 2
+  count_power_permille: 600
+  min_duration: 1

@@ -213,6 +213,7 @@ def observe(ctx: Ctx, event: EventBase) -> None:
         return
     if isinstance(event, UnitDowned):
         ctx.downed.append(event.unit_id)  # ally_downed 反應：等效果佇列清空後（settle）才處理
+        _on_summon_downed(ctx, event)
         return
     if isinstance(event, AttackRolled):
         _on_attacked_charge(ctx, event)
@@ -231,6 +232,17 @@ def observe(ctx: Ctx, event: EventBase) -> None:
         _on_collision(ctx, index, event)
     elif isinstance(event, UnitMoved):
         _on_enter_surface(ctx, index, event)
+
+
+def _on_summon_downed(ctx: Ctx, event: UnitDowned) -> None:
+    """``on_summon_downed``（Phase 3-33f2，裝備詞條）：召喚物被打倒，召喚者身上的詞條各記一筆
+    （另一方為倒下的召喚物）。時效到期、被獻祭、召喚者倒下而消失的召喚物不會有 ``unit_downed``。"""
+    unit = ctx.state.units.get(event.unit_id)
+    if unit is None or unit.owner_id is None:
+        return
+    index = _index(ctx)
+    if index.gear_owners("on_summon_downed"):
+        _fire_gear(ctx, index, "on_summon_downed", event.seq, unit.owner_id, unit.id)
 
 
 def _on_attacked_charge(ctx: Ctx, event: AttackRolled) -> None:

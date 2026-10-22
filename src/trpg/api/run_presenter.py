@@ -38,7 +38,7 @@ from trpg.roguelite.state import (
 
 __all__ = ["keyword_refs", "run_response", "save_summary", "start_label"]
 
-_TAG_LABELS = {"deepen": "加深", "bridge": "橋接", "new": "新方向"}
+_TAG_LABELS = {"deepen": "加深", "bridge": "橋接", "count": "數量", "new": "新方向"}
 
 
 def keyword_refs(library: ContentLibrary, ids: tuple[str, ...]) -> tuple[KeywordRef, ...]:

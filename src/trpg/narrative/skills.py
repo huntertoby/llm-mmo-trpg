@@ -292,7 +292,29 @@ def _summon(lib: ContentLibrary, _skill: SkillDef, spec: EffectSpec) -> str:
                 f"友方獲得「{status}」{totem.duration} 回合）"
             )
         name = f"{template.name_zh}（HP {hp}，{weapon.name_zh}）"
-    return f"在目標空格召喚{name}，持續 {spec.duration} 輪（緊接在你之後行動，由 AI 控制）"
+    text = f"在目標空格召喚{name}，持續 {spec.duration} 輪（緊接在你之後行動，由 AI 控制）"
+    extra = _summon_variant_text(lib, spec)
+    return f"{text}；{extra}" if extra else text
+
+
+def _summon_variant_text(lib: ContentLibrary, spec: EffectSpec) -> str:
+    """召喚技能分歧進化（Phase 3-33f2）多出的內容：數量型、加深（HP 與小特性）、橋接。"""
+    parts: list[str] = []
+    if isinstance(spec.count, int) and spec.count > 1 and spec.power_permille is not None:
+        parts.append(
+            f"一次召喚 {spec.count} 隻，每隻只有 {spec.power_permille / 10:g}% 的 HP 與傷害"
+        )
+    if spec.max_hp_permille:
+        parts.append(f"最大 HP +{spec.max_hp_permille / 10:g}%")
+    trait = lib.ruleset.core.summon_traits.get(spec.trait or "")
+    if trait is not None:
+        parts.append(f"小特性「{trait.name_zh}」（{trait.description_zh}）")
+    if spec.infusion is not None:
+        name = next(
+            (k.name_zh for k in lib.keywords.keywords if k.id == spec.infusion), spec.infusion
+        )
+        parts.append(f"固有第二個灌注「{name}」")
+    return "、".join(parts)
 
 
 def rule_change_text(library: ContentLibrary, rule_id: str) -> str:

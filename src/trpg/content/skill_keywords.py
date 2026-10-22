@@ -50,6 +50,7 @@ RULE_PARAMS: tuple[str, ...] = (
     "tag",
     "skill",
     "unit",
+    "infusion",
     "affects",
     "applies_to",
 )
@@ -76,6 +77,7 @@ class KeywordRule(ContentModel):
     tag: str | None = Field(default=None, pattern=ID_PATTERN)
     skill: str | None = Field(default=None, pattern=ID_PATTERN)
     unit: str | None = Field(default=None, pattern=ID_PATTERN)
+    infusion: str | None = Field(default=None, pattern=ID_PATTERN)
     affects: Literal["self", "allies", "enemies", "all", "tiles"] | None = None
     applies_to: Literal["all_attacks", "all_skills", "actions"] | None = None
     """``change`` 專用：修正規則的 ``applies_to`` 開了這個旗標（不看標籤）；``actions`` ＝ 套用

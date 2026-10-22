@@ -395,6 +395,12 @@ class UnitState:
     傷害加成合計套全身上限（:func:`trpg.engine.modifiers.summon_damage_bonus`）。"""
     infusion: str | None = None
     """召喚物灌注的關鍵字（Phase 3-33b）：普攻命中後附加對照表（``summon_infusions``）的效果。"""
+    bonus_infusion: str | None = None
+    """召喚物固有的第二個灌注關鍵字（Phase 3-33f2，橋接分歧進化的 ``summon.infusion``）：與範本
+    固有的、施放時選的並存（相同只算一次）。"""
+    summon_power_permille: int = 1000
+    """召喚物的強度（‰；Phase 3-33f2，數量型分歧進化的 ``power_permille``）：最大 HP 在召喚時已
+    按比例縮小，這裡的值乘在傷害倍率上（一般召喚物為 1000）。"""
     summon_mode: SummonMode = "follow"
     """召喚物的模式（Phase 3-33c，6.29.2）：``focus`` 集火（打 ``summon_target_id``）、``guard``
     守護我、``follow`` 跟隨、``hold`` 待命；召喚時取範本的 ``default_mode``。一般單位恆為
@@ -529,6 +535,8 @@ class UnitState:
             level=self.level,
             summon_bonus_permille=self.summon_bonus_permille,
             infusion=self.infusion,
+            bonus_infusion=self.bonus_infusion,
+            summon_power_permille=self.summon_power_permille,
             summon_mode=self.summon_mode,
             summon_target_id=self.summon_target_id,
             commanded_round=self.commanded_round,

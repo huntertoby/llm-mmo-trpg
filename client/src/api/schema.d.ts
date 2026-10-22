@@ -1536,7 +1536,7 @@ export interface components {
              * Branch
              * @enum {string}
              */
-            branch: "deepen" | "bridge";
+            branch: "deepen" | "bridge" | "count";
             /** Label Zh */
             label_zh: string;
             /** Template */

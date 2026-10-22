@@ -34,6 +34,7 @@ __all__ = [
     "SkillSlots",
     "SummonGrowth",
     "SummonInfusion",
+    "SummonTrait",
     "compute_hit_thresholds",
 ]
 
@@ -109,6 +110,26 @@ class SummonInfusion(ContentModel):
 
 _ROLE_HP_RANGE = (500, 3000)
 """召喚物依定位的 HP 係數允許的範圍（‰）。"""
+
+
+class SummonTrait(ContentModel):
+    """召喚物的小特性（Phase 3-33f2，分歧進化「加深」多給的一個小特性；``content/rules/core.yaml``
+    的 ``summon_traits``）：召喚時直接加在召喚物身上的小幅數值。``budget_points`` 是這個特性在召喚技
+    預算中的一次性點數。"""
+
+    name_zh: str = Field(min_length=1)
+    description_zh: str = Field(min_length=1)
+    armor_bonus: int = Field(default=0, ge=0, le=3)
+    speed_bonus: int = Field(default=0, ge=0, le=3)
+    crit_range_delta: int = Field(default=0, ge=0, le=2)
+    """暴擊範圍擴大幾點（最低自然骰值 −N；不低於 2）。"""
+    budget_points: int = Field(default=1, ge=0, le=10)
+
+    @model_validator(mode="after")
+    def _has_effect(self) -> SummonTrait:
+        if not (self.armor_bonus or self.speed_bonus or self.crit_range_delta):
+            raise ValueError("召喚物小特性至少要有一項效果")
+        return self
 
 
 class CoreRules(ContentModel):
@@ -299,6 +320,8 @@ class CoreRules(ContentModel):
     """召喚物 HP 與傷害的成長（Phase 3-33b）。"""
     summon_infusions: dict[str, SummonInfusion] = Field(default_factory=dict)
     """灌注關鍵字對照（Phase 3-33b）：關鍵字 ID → 召喚物普攻附加效果；不在表中的關鍵字不可灌注。"""
+    summon_traits: dict[str, SummonTrait] = Field(default_factory=dict)
+    """召喚物小特性對照（Phase 3-33f2）：特性 ID → 效果；召喚技能的 ``trait`` 引用這裡。"""
 
     # 持續區域（3D-5）
     zone_limit_per_owner: int = Field(default=2, ge=1, le=6)

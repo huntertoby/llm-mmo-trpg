@@ -266,3 +266,42 @@ items:
       - {affix: affix_attack_combo, value: 3}
       - {affix: affix_attack_cleave}
       - {affix: affix_trait_bow_high_range}
+  # --- Phase 3-33f2 召喚專用詞條（測試／模擬用，不是掉落表；數值為初值）---
+  - id: item_sim_summon_orb
+    name_zh: 喚靈法珠
+    slot_type: offhand
+    kind: orb
+    form: ball
+    material: crystal
+    tags: [orb]
+    affixes:
+      - {affix: affix_summon_cooldown}
+      - {affix: affix_summon_duration}
+  - id: item_sim_summon_pendant
+    name_zh: 獻靈項鍊
+    slot_type: neck
+    kind: pendant
+    form: pendant
+    material: silver
+    affixes:
+      - {affix: affix_summon_sacrifice, value: 200}
+      - {affix: affix_trig_summon_blast}
+  - id: item_sim_summon_ring
+    name_zh: 安魂戒
+    slot_type: ring
+    kind: ring
+    form: gem
+    material: gold
+    affixes:
+      - {affix: affix_trig_summon_mend}
+      - {affix: affix_summon_sacrifice, value: 200}
+  - id: item_sim_summon_blade
+    name_zh: 傳承長劍
+    slot_type: weapon
+    kind: sword
+    form: straight
+    material: steel
+    weapon: one_handed_sword
+    affixes:
+      - {affix: affix_attack_mark}
+      - {affix: affix_summon_inherit_attack}

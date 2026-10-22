@@ -87,3 +87,11 @@ triggers:
     has_other: true
     budget_coefficient_permille: 350
     min_rarity: epic
+  # --- Phase 3-33f2：召喚物倒下時（只給裝備詞條用；效果是以倒下的召喚物為中心的爆炸或治療）。
+  - id: on_summon_downed
+    name_zh: 召喚物倒下時
+    description_zh: 持有者的召喚物被打倒（時效到期、被獻祭、召喚者倒下而消失都不算）。另一方為倒下的召喚物；效果以牠倒下的位置為中心結算。目前只有裝備詞條使用，被動技能與隨機組合器不使用。
+    has_other: true
+    budget_coefficient_permille: 300
+    min_rarity: epic
+    random_composer: false

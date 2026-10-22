@@ -114,6 +114,7 @@ from trpg.engine.events import (
     UnitDashed,
     UnitDowned,
 )
+from trpg.engine.gear_summon import gear_sacrifice_permille
 from trpg.engine.grants import grant_skill
 from trpg.engine.ids import CONCEALED, PRONE, REVEALED, TOPPLABLE
 from trpg.engine.lifecycle import dismiss_summon
@@ -190,6 +191,7 @@ from trpg.engine.skills.variance import overload_bonus, scale_bonus
 from trpg.engine.source import spend_source
 from trpg.engine.stacks import add_stacks, consume_stacks
 from trpg.engine.state import BattleState, LastCast, TrapState, UnitState, ZoneState
+from trpg.engine.summon_variants import second_summon_site
 from trpg.engine.summons import summon_unit
 from trpg.engine.traps import place_trap, reveal_traps
 from trpg.engine.variants import target_point, varied_skill
@@ -1900,6 +1902,7 @@ class _Cast:
             (u for u in self.ctx.state.living_units() if manhattan(u.xy, xy) <= spec.radius),
             key=lambda u: u.id,
         )
+        bonus = PERMILLE + gear_sacrifice_permille(self.ctx.state, caster)  # 獻祭詞條（3-33f2）
         if spec.element is not None:
             return [
                 DamageEffect(
@@ -1910,11 +1913,12 @@ class _Cast:
                     dice=spec.dice,
                     scaled_permille=scaled,
                     min_damage=self.ctx.core.min_damage_on_hit,
+                    multiplier_permille=bonus,
                 )
                 for u in near
                 if u.team is not caster.team
             ]
-        multiplier = self._heal_multiplier()
+        multiplier = self._heal_multiplier() * bonus // PERMILLE
         return [
             HealEffect(
                 target_id=u.id,
@@ -2111,15 +2115,22 @@ class _Cast:
             return []
         assert spec.unit is not None and spec.duration is not None
         xy = (action.target_pos.x, action.target_pos.y)
-        summon_unit(
-            self.ctx,
-            self.caster,
-            spec.unit,
-            xy,
-            spec.duration,
-            self.skill.id,
-            infusion=action.infusion,
-        )
+        sites = [xy]
+        # 數量型分歧進化（3-33f2）：第二隻放在旁邊第一個合法的空格
+        if isinstance(spec.count, int) and spec.count > 1:
+            second = second_summon_site(self.ctx.state, xy)
+            sites.append(second if second is not None else xy)  # 沒有空位：第二隻落空（log 有記錄）
+        for site in sites:
+            summon_unit(
+                self.ctx,
+                self.caster,
+                spec.unit,
+                site,
+                spec.duration,
+                self.skill.id,
+                infusion=action.infusion,
+                spec=spec,
+            )
         return []
 
     def zone(self, _effect: ResolvedEffect, spec: EffectSpec) -> list[EffectBase]:
@@ -2438,6 +2449,12 @@ class _TriggeredCast(_Cast):
 class _GearCast(_TriggeredCast):
     """裝備詞條的施放（Phase 3G-G3a）：同被動技能，但 ``grant_ap`` 受裝備的每回合 AP 回復上限
     （+1，所有來源合計）約束，且不吃「每輪最多被給一次」的限制。"""
+
+    def build(self, effect: ResolvedEffect, spec: EffectSpec) -> list[EffectBase]:
+        if effect.type == SACRIFICE_SUMMON:
+            # 召喚物倒下時（3-33f2）：不獻祭任何召喚物，直接以倒下的那一格為中心爆炸或治療
+            return self._sacrifice_blast(self.area.tiles[0], spec)
+        return super().build(effect, spec)
 
     def rewrite(self, effect: ResolvedEffect, spec: EffectSpec) -> list[EffectBase]:
         if effect.type == GRANT_AP:

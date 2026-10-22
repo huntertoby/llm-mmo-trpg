@@ -30,6 +30,7 @@ from typing import NamedTuple
 from trpg.content.battle import Dice, SummonPulse, TotemSpec, WeaponDef
 from trpg.content.maps import MAX_HEIGHT
 from trpg.content.rules import CoreRules
+from trpg.content.skills import EffectSpec
 from trpg.engine import modifiers
 from trpg.engine.context import Ctx
 from trpg.engine.effects import execute
@@ -55,6 +56,7 @@ from trpg.engine.events import (
     UnitMoved,
     UnitSummoned,
 )
+from trpg.engine.gear_summon import gear_summon_duration, inherit_attack_gear
 from trpg.engine.ids import CONCEALED, PRONE, next_unit_id
 from trpg.engine.infusion import active_infusions, default_infusion, template_of
 from trpg.engine.lifecycle import dismiss_summon, make_unit, summons_of
@@ -63,6 +65,7 @@ from trpg.engine.rules.movement import is_deadly, is_standable
 from trpg.engine.rules.statuses import effective_attribute
 from trpg.engine.skills.targeting import summon_site_problem
 from trpg.engine.state import BattleState, UnitState
+from trpg.engine.summon_variants import apply_summon_spec
 from trpg.engine.triggers import register_trigger
 from trpg.shared.rng import PERMILLE
 from trpg.shared.types import Pos, UnitId
@@ -177,6 +180,7 @@ def summon_unit(  # noqa: PLR0917
     order_index: int | None = None,
     orphan: bool = False,
     infusion: str | None = None,
+    spec: EffectSpec | None = None,
 ) -> list[EventBase]:
     """``owner`` 在 ``xy`` 召喚 ``template_id``，持續 ``duration`` 輪。位置不合法或範本不存在時
     發出 ``effect_fizzled``；超過上限時先讓最舊的召喚物消失。
@@ -184,7 +188,10 @@ def summon_unit(  # noqa: PLR0917
     ``order_index``／``orphan``（Phase 3D-6，``on_downed_spawn``）：召喚者已倒下，分身排在指定的
     先攻位置，``unit_summoned`` 標記 ``orphan``（到期改在環境回合處理）。
 
-    ``infusion``（Phase 3-33b）：灌注的關鍵字（已由動作檢查過）；省略時取施放者第一個可選的。"""
+    ``infusion``（Phase 3-33b）：灌注的關鍵字（已由動作檢查過）；省略時取施放者第一個可選的。
+
+    ``spec``（Phase 3-33f2）：技能的 ``summon`` 效果；分歧進化的 HP、強度、小特性與第二個灌注
+    （:mod:`trpg.engine.summon_variants`）從這裡來。召喚物持續的輪數另外加上施放者的召喚持續詞條。"""
     state = ctx.state
     try:
         summon = state.ruleset.summon_def(template_id)
@@ -227,11 +234,14 @@ def summon_unit(  # noqa: PLR0917
         0 if use is None else modifiers.summon_damage_permille(state, owner, use)
     )
     unit.infusion = infusion
+    unit.bonus_infusion = None if spec is None else spec.infusion  # 橋接進化（3-33f2）
     infusions = active_infusions(state, unit)  # 固有與施放時選的灌注（3-33e1）
     unit.max_hp = unit.max_hp * (PERMILLE + sum(i.hp_permille for i in infusions)) // PERMILLE
+    apply_summon_spec(state, unit, spec)  # 加深與數量型進化（3-33f2）
+    unit.gear = inherit_attack_gear(owner, unit.gear)  # 繼承 1 條普攻附加詞條（3-33f2）
     unit.hp = unit.max_hp
     unit.summon_mode = summon.template.default_mode
-    duration = min(duration, ctx.core.summon_max_duration)
+    duration = min(duration, ctx.core.summon_max_duration) + gear_summon_duration(owner)
     if use is not None:  # 召喚專精（3-33f1）：持續輪數加在上限之後
         duration += modifiers.summon_duration_delta(state, owner, use)
     unit.summon_expires_round = state.round + duration

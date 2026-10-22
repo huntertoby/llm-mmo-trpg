@@ -369,7 +369,7 @@ def _print_node(library: ContentLibrary, before: RunState, after: RunState, out:
         )
 
 
-_BRANCH_TEXT = {"deepen": "加深", "bridge": "橋接"}
+_BRANCH_TEXT = {"deepen": "加深", "bridge": "橋接", "count": "數量"}
 
 
 def _evolution_lines(library: ContentLibrary, before: RunState, after: RunState) -> list[str]:

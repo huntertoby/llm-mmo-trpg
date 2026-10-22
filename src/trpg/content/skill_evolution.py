@@ -26,6 +26,7 @@ __all__ = [
     "EvolutionTable",
     "EvolutionTemplate",
     "KeywordGraft",
+    "SummonEvolution",
 ]
 
 type EvolutionOp = Literal[
@@ -108,6 +109,37 @@ class KeywordGraft(ContentModel):
         return self
 
 
+class SummonEvolution(ContentModel):
+    """召喚技能的三支分歧進化（Phase 3-33f2，``docs/design/06-技能.md`` 6.29.4）。
+
+    召喚技能沒有骰子或倍率可調，所以不走一般的進化模板，而是直接改 ``summon`` 效果：
+
+    - **加深**（``deepen``）：召喚物最大 HP 多 ``deepen_hp_permille``‰，並多一個小特性
+      （``core.yaml`` 的 ``summon_traits``）；小特性依召喚物定位挑（``traits``：``static`` 不會動或
+      不攻擊的、``melee`` 近戰、``ranged`` 遠程）。
+    - **橋接**（``bridge``）：召喚物多帶一個灌注關鍵字（``summon_infusions`` 對照表中的另一個）。
+    - **數量型**（``count``）：一次召喚 ``count_number`` 隻，每隻只有 ``count_power_permille``‰ 的
+      最大 HP 與傷害。
+
+    進化之後照同階預算驗證（超出時依序縮短持續輪數、增加冷卻，見
+    :mod:`trpg.skillgen.summon_evolution`）。
+    """
+
+    deepen_prefix_zh: str = "強化"
+    deepen_hp_permille: int = Field(default=300, ge=1, le=1000)
+    deepen_summary_zh: str = "加深：單隻更強（最大 HP +{hp}%），並多一個小特性「{trait}」"
+    traits: dict[str, str] = Field(
+        default_factory=lambda: {"static": "sturdy", "melee": "swift", "ranged": "keen"}
+    )
+    bridge_summary_zh: str = "橋接{keyword}：召喚物多帶一個{keyword}灌注"
+    count_prefix_zh: str = "雙生"
+    count_number: int = Field(default=2, ge=2, le=2)
+    count_power_permille: int = Field(default=600, ge=100, le=999)
+    count_summary_zh: str = "數量型：一次召喚 {count} 隻較弱的（各 {power}% 的最大 HP 與傷害）"
+    min_duration: int = Field(default=1, ge=1, le=4)
+    """為了符合預算而縮短持續輪數時的下限。"""
+
+
 class EvolutionTable(ContentModel):
     """``content/skill_evolution.yaml``。"""
 
@@ -119,6 +151,8 @@ class EvolutionTable(ContentModel):
     """橋接最多嘗試幾個關鍵字（依統計排序）。"""
     templates: tuple[EvolutionTemplate, ...] = ()
     grafts: dict[str, KeywordGraft] = Field(default_factory=dict)
+    summon: SummonEvolution = Field(default_factory=SummonEvolution)
+    """召喚技能的三支分歧進化（Phase 3-33f2）。"""
 
     @model_validator(mode="after")
     def _unique(self) -> EvolutionTable:
