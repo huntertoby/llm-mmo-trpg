@@ -92,3 +92,8 @@ R4 拆 `skills.py`、R6 `LOG_FORMAT` 版本策略（Phase 4 大量新增原語�
 - **3E-2a**：`skill_primitives.yaml` 的 `zone`、`delayed_damage`、`copy_skill` 加 `lookup_by_skill_id: true`，跨檔案驗證檢查基礎型態與每個變奏型態（R1 實測案例回歸測試）；帶變奏的技能不能被 `copy_skill` 複製；命中後修正規則用實際施放型態；AI 召喚範本用生效型態；`SkillDef.iter_effects(...)`／`walk_effect` 取代四份走訪（`combo.py` 補 zone 子效果）。報告 `Phase3E-2a報告.md`。**PM 決定 `LOG_FORMAT` → `/57`**（複製與修正比對是引擎行為變更）。待 PM 決定：#1 旗標檢查只在跨檔案驗證（直接建 `SkillDef` 不擋）→ 接受，3E-2g 的 LLM 提議流程一定走驗證器；#2 帶變奏技能不能複製、#3 型態從最近的 `skill_used` 事件取得 → 接受；#5 `iter_effects` 預設不含反噬與修正命中後效果 → 接受（各呼叫端沿用原涵蓋範圍）。
 - **3E-2c**：`sim/parallel.py`（`ProcessPoolExecutor`，子行程失敗丟 `BrokenProcessPool`，有測試）；pytest-timeout 300 秒、slow 1800 秒（`tests/conftest.py`）；jobs>1 的 8 支測試 `xdist_group("sim_pool")`＋`--dist loadgroup`；`check.py` 在 pytest 前清 `*.pyc.<pid>`。實作者量測：快速版約 113 秒、`--full` 約 336 秒（另一 agent 同時跑）。報告 `Phase3E-2c報告.md`。待 PM 決定：#1～#4 → 接受；#5 `_relabel`、#6 `test_demo_balance` 自己的池 → 3E-3。
 
+### 3.6 3E-2d 驗收（2026-10-23）
+
+- PM 合併（無衝突）；前端 typecheck、vitest 762、`pnpm build` 全過（只動 `client/`）。共用 `usePopupMenu`（Esc、點外面、同時一張），`.more-list`、`.top-popup` 改用；浮動卡與格子資訊卡處理 Esc 後 `stopPropagation`（第一次 Esc 只關卡片、第二次才取消瞄準）；`.decision-card` 最大高度可捲；刪除 `.modal-backdrop`、`.fallback-list` 死碼；藤蔓底影改無外框、透明度 0.35。**發現**：vitest 不處理 CSS，`styles.css?raw` 在測試裡是空字串，原本的 CSS 規則一直空過 → 改讀真檔並加長度守門；規則補 `absolute`＋`z-index ≥ 20` 白名單、`.decision-card` max-height、`role=tooltip` 只在共用元件、掃描擴到 `.ts`（PM 抽查其他 `?raw` 都是讀 YAML，正常）。報告 `Phase3E-2d報告.md`。
+- 待 PM 決定：#1 截圖無法存檔、詢問視窗以注入假卡驗證、藤蔓底影未目視 → 接受（使用者試玩時順帶看）；#2 頂端面板開著時 Esc 只關面板、#3 點外面關面板的同一下仍送到棋盤、#4 選單與滑過的浮動卡可並存、#5 `.resize-handle` 列為版面例外 → 接受。
+
