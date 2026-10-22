@@ -9,6 +9,7 @@ speed: 0
 armor_bonus: 0
 weapon: one_handed_sword
 ai_profile: guard
+default_mode: hold   # 6.29.5「AI 預設」＝不動
 resist: {}
 element_mods: {}
 tags: [summoned, totem]

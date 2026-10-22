@@ -17,7 +17,7 @@ from typing import Literal
 
 from pydantic import BaseModel, ConfigDict, TypeAdapter
 
-from trpg.content.battle import ReactionRule, UnitTemplate, WeaponDef
+from trpg.content.battle import ReactionRule, SummonMode, UnitTemplate, WeaponDef
 from trpg.content.environment import ObjectDef, WeatherDef
 from trpg.content.equipment import Loadout
 from trpg.content.library import Ruleset
@@ -376,6 +376,15 @@ class UnitState:
     傷害加成合計套全身上限（:func:`trpg.engine.modifiers.summon_damage_bonus`）。"""
     infusion: str | None = None
     """召喚物灌注的關鍵字（Phase 3-33b）：普攻命中後附加對照表（``summon_infusions``）的效果。"""
+    summon_mode: SummonMode = "follow"
+    """召喚物的模式（Phase 3-33c，6.29.2）：``focus`` 集火（打 ``summon_target_id``）、``guard``
+    守護我、``follow`` 跟隨、``hold`` 待命；召喚時取範本的 ``default_mode``。一般單位恆為
+    ``follow``（無意義）。"""
+    summon_target_id: UnitId | None = None
+    """集火的目標（只有 ``summon_mode == "focus"`` 時有值）；目標倒下、撤離或消失時退回
+    ``follow``。"""
+    commanded_round: int = 0
+    """最近一次被指揮（``command_summon``）的輪數（0 為從未；每隻每輪最多一次）。"""
     dismissed: bool = False
     """召喚物已消失（到期、召喚者離場或超過上限；Phase 3D-4a）。保留在 ``units`` 中（事件仍引用
     它），但不在戰場上。"""
@@ -491,6 +500,9 @@ class UnitState:
             level=self.level,
             summon_bonus_permille=self.summon_bonus_permille,
             infusion=self.infusion,
+            summon_mode=self.summon_mode,
+            summon_target_id=self.summon_target_id,
+            commanded_round=self.commanded_round,
             dismissed=self.dismissed,
             activations=self.activations,
             revived=self.revived,

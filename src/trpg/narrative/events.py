@@ -86,7 +86,9 @@ from trpg.engine.events import (
     StatusRemoved,
     StatusResisted,
     StatusSaveRolled,
+    SummonCommanded,
     SummonExpired,
+    SummonModeSet,
     SurfaceChanged,
     SurfaceEntered,
     TerrainChanged,
@@ -1090,6 +1092,32 @@ def _unit_summoned(e: UnitSummoned, v: _View) -> str:
         f"  {owner} 召喚了 {summon}，出現在 {xy_text(e.pos)}"
         f"（緊接在 {owner} 之後行動，第 {e.expires_round} 輪 {owner} 的回合結束時消失）"
     )
+
+
+_SUMMON_MODE_TEXT = {"focus": "集火", "guard": "守護我", "follow": "跟隨", "hold": "待命"}
+
+
+@_handles(SummonModeSet)
+def _summon_mode_set(e: SummonModeSet, v: _View) -> str:
+    summon = v.name.get(e.unit_id, e.unit_id)
+    mode = _SUMMON_MODE_TEXT[e.mode]
+    if e.reason == "target_gone":
+        gone = v.name.get(e.target_id, e.target_id) if e.target_id is not None else "目標"
+        return f"  集火目標 {gone} 離場：{summon} 退回{mode}"
+    target = "" if e.target_id is None else f" → {v.name.get(e.target_id, e.target_id)}"
+    return f"  {summon} 切換為{mode}{target}"
+
+
+@_handles(SummonCommanded)
+def _summon_commanded(e: SummonCommanded, v: _View) -> str:
+    owner = v.name.get(e.owner_id, e.owner_id)
+    summon = v.name.get(e.unit_id, e.unit_id)
+    parts = []
+    if e.dest is not None:
+        parts.append(f"移動到 {xy_text(e.dest)}")
+    if e.target_id is not None:
+        parts.append(f"攻擊 {v.name.get(e.target_id, e.target_id)}")
+    return f"  {owner} 指揮 {summon}：{'、'.join(parts)}"
 
 
 _SUMMON_EXPIRY_TEXT = {

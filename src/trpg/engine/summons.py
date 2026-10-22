@@ -190,6 +190,7 @@ def summon_unit(  # noqa: PLR0917
     unit.level = owner.level
     unit.summon_bonus_permille = grown.bonus_permille
     unit.infusion = infusion
+    unit.summon_mode = summon.template.default_mode
     duration = min(duration, ctx.core.summon_max_duration)
     unit.summon_expires_round = state.round + duration
     unit.initiative = owner.initiative  # 不擲先攻：顯示用，順序由插入位置決定

@@ -38,8 +38,13 @@ __all__ = [
     "run_battle",
 ]
 
-LOG_FORMAT = "trpg-battle-log/49"
-"""``/49``（Phase 3-32a，接在 3-33b 的 ``/48`` 之後）：普攻流——單位狀態多了 ``attack_hits_landed``
+LOG_FORMAT = "trpg-battle-log/50"
+"""``/50``（Phase 3-33c，接在 3-32a 的 ``/49`` 之後；PM 合併時定號）：召喚物操控——單位狀態多了
+``summon_mode``／``summon_target_id``／``commanded_round``，新動作 ``set_summon_mode``（0 AP）與
+``command_summon``（1 AP），新事件 ``summon_mode_set``／``summon_commanded``；召喚物的 AI 依模式行動
+（跟隨預設會待在召喚者附近、圖騰預設待命）、召喚技能的 AI 估值納入成長與灌注、我方 AI 施放者會自動
+切換模式，因此 ``/49`` 的紀錄無法重播。
+``/49``（Phase 3-32a，接在 3-33b 的 ``/48`` 之後）：普攻流——單位狀態多了 ``attack_hits_landed``
 （普攻連擊的普攻命中計數）、武器參數多了 ``high_range``／``backstab_dice``，普攻會因連擊
 （多攻擊一次，``gear_triggered.trigger == "attack_combo"``）、分裂（``"attack_cleave"``）、
 主動技能欄的空格（普攻精通）與武器特性強化而結果不同；``/48`` 的紀錄無法重播。

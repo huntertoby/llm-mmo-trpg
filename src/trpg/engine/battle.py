@@ -23,6 +23,7 @@ from trpg.engine.actions import (
     Action,
     Aim,
     Attack,
+    CommandSummon,
     Decision,
     Defend,
     EndStance,
@@ -32,6 +33,7 @@ from trpg.engine.actions import (
     Reload,
     Run,
     SetReactionMode,
+    SetSummonMode,
     Shove,
     Swap,
     Trip,
@@ -71,6 +73,8 @@ from trpg.engine.events import (
     ObjectAttacked,
     ReactionModeSet,
     RoundStarted,
+    SummonCommanded,
+    SummonModeSet,
     TurnOrderSet,
     UnitRan,
     UnitStoodUp,
@@ -106,6 +110,7 @@ from trpg.engine.rules.movement import (
 from trpg.engine.rules.statuses import (
     base_attribute,
     is_rooted,
+    move_points_for_turn,
     skip_turn_status,
     stance_status_ids,
     weapon_attribute,
@@ -130,6 +135,7 @@ from trpg.engine.state import (
     state_from_json,
     state_to_json,
 )
+from trpg.engine.summon_control import command_problem, mode_problem
 from trpg.engine.turns import advance_turn, end_turn, finish_resolution, start_turn
 from trpg.engine.weapon_traits import attack_dice, spend_ammo
 from trpg.shared.errors import IllegalActionError
@@ -943,6 +949,54 @@ def _do_set_reaction_mode(ctx: Ctx, unit: UnitState, action: Action) -> None:
     ctx.emit(ReactionModeSet, unit_id=unit.id, reaction=action.reaction, mode=action.mode)
 
 
+def _do_set_summon_mode(ctx: Ctx, unit: UnitState, action: Action) -> None:
+    """切換召喚物的模式（Phase 3-33c；0 AP）。"""
+    assert isinstance(action, SetSummonMode)
+    problem = mode_problem(ctx.state, unit, action)
+    if problem is not None:
+        raise IllegalActionError(problem)
+    summon = ctx.state.units[action.summon_id]
+    summon.summon_mode = action.mode
+    summon.summon_target_id = action.target_id
+    ctx.emit(
+        SummonModeSet,
+        unit_id=summon.id,
+        owner_id=unit.id,
+        mode=action.mode,
+        target_id=action.target_id,
+        reason="order",
+    )
+
+
+def _do_command_summon(ctx: Ctx, unit: UnitState, action: Action) -> None:
+    """指揮召喚物（Phase 3-33c）：花召喚者的 AP，立刻讓召喚物用完整的移動力走 ``path``、再普攻
+    ``target_id``；不佔牠自己的回合（結算後還原牠的 AP、移動點數）。移動或攻擊不合法時整個動作
+    不合法（拋出錯誤，狀態不變）；被藉機攻擊打倒時不攻擊。"""
+    assert isinstance(action, CommandSummon)
+    problem = command_problem(ctx.state, unit, action.summon_id)
+    if problem is not None:
+        raise IllegalActionError(problem)
+    summon = ctx.state.units[action.summon_id]
+    unit.ap -= ctx.core.summon_command_ap_cost
+    summon.commanded_round = ctx.state.round
+    kept = (summon.ap, summon.move_points, summon.moved_this_turn)
+    summon.move_points = move_points_for_turn(ctx.rules, summon)
+    dest = action.path[-1] if action.path else None
+    ctx.emit(
+        SummonCommanded,
+        unit_id=summon.id,
+        owner_id=unit.id,
+        dest=dest,
+        target_id=action.target_id,
+    )
+    if action.path:
+        _do_move(ctx, summon, Move(unit_id=summon.id, path=action.path))
+    if action.target_id is not None and summon.alive:
+        target = _attack_target(ctx.state, summon, action.target_id)
+        perform_unit_attack(ctx, summon, target, primary=True)
+    summon.ap, summon.move_points, summon.moved_this_turn = kept
+
+
 def _do_end_turn(ctx: Ctx, unit: UnitState, action: Action) -> None:
     assert isinstance(action, EndTurn)
     end_turn(ctx)
@@ -970,6 +1024,8 @@ ACTION_HANDLERS: dict[str, ActionHandler] = {
     "use_skill": _do_use_skill,
     "end_stance": _do_end_stance,
     "set_reaction_mode": _do_set_reaction_mode,
+    "set_summon_mode": _do_set_summon_mode,
+    "command_summon": _do_command_summon,
     "end_turn": _do_end_turn,
 }
 

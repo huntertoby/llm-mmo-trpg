@@ -12,6 +12,7 @@ from trpg.engine.events import (
     StatusRemoved,
     SummonExpired,
     SummonExpiryReason,
+    SummonModeSet,
     UnitDowned,
     UnitEscaped,
 )
@@ -32,6 +33,7 @@ __all__ = [
     "down_unit",
     "escape_unit",
     "make_unit",
+    "retire_focus",
     "summons_of",
 ]
 
@@ -91,6 +93,7 @@ def down_unit(ctx: Ctx, unit: UnitState) -> list[EventBase]:
         *remove_traps_of(ctx, unit.id),  # 放置者離場，陷阱消失（Phase 2E-3）
         *remove_caster_zones_of(ctx, unit.id),  # 施放者離場，跟隨型區域消失（Phase 3D-5）
         *dismiss_summons_of(ctx, unit, "owner_gone"),  # 召喚者倒下：召喚物一併消失（3D-4a）
+        *retire_focus(ctx, unit),  # 集火的目標倒下：召喚物退回跟隨（3-33c）
     ]
     if unit.activations or unit.gear.affixes:  # 規則改變「殘影」：倒下時留下分身（Phase 3D-6）
         # 延後匯入：規則改變模組匯入召喚（召喚匯入本模組）
@@ -125,6 +128,7 @@ def escape_unit(ctx: Ctx, unit: UnitState) -> list[EventBase]:
         *remove_traps_of(ctx, unit.id),
         *remove_caster_zones_of(ctx, unit.id),
         *dismiss_summons_of(ctx, unit, "owner_gone"),
+        *retire_focus(ctx, unit),
     ]
     return events
 
@@ -150,7 +154,29 @@ def dismiss_summon(ctx: Ctx, unit: UnitState, reason: SummonExpiryReason) -> lis
         *_release_forced_targets(ctx, unit),
         *remove_traps_of(ctx, unit.id),
         *remove_caster_zones_of(ctx, unit.id),
+        *retire_focus(ctx, unit),
     ]
+
+
+def retire_focus(ctx: Ctx, gone: UnitState) -> list[EventBase]:
+    """``gone`` 離開戰場（倒下、撤離、消失）：以牠為集火目標的召喚物退回跟隨（Phase 3-33c）。"""
+    events: list[EventBase] = []
+    for summon in ctx.state.units_sorted():
+        if summon.alive and summon.summon_mode == "focus" and summon.summon_target_id == gone.id:
+            assert summon.owner_id is not None
+            summon.summon_mode = "follow"
+            summon.summon_target_id = None
+            events.append(
+                ctx.emit(
+                    SummonModeSet,
+                    unit_id=summon.id,
+                    owner_id=summon.owner_id,
+                    mode="follow",
+                    target_id=gone.id,
+                    reason="target_gone",
+                )
+            )
+    return events
 
 
 def dismiss_summons_of(ctx: Ctx, owner: UnitState, reason: SummonExpiryReason) -> list[EventBase]:

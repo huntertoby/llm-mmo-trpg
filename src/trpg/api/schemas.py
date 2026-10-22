@@ -44,6 +44,8 @@ __all__ = [
     "BombPreviewOut",
     "BuildSummary",
     "ChargeOut",
+    "CommandOptionOut",
+    "CommandOptionsOut",
     "CoverOut",
     "CreateBattleRequest",
     "DamageOut",
@@ -118,6 +120,23 @@ class SkillReasons(_ApiModel):
     """主角灰掉的技能 → 引擎的拒絕理由（繁體中文）；可以用的技能不在表內（Phase 3-5c-2）。"""
 
     reasons: dict[str, str]
+
+
+class CommandOptionOut(_ApiModel):
+    """指揮召喚物的一個終點（Phase 3-33c）：``path`` 從召喚物目前位置開始（原地不動時只有起點），
+    ``targets`` 是從終點普攻打得到的敵方單位。"""
+
+    dest: Pos
+    path: tuple[Pos, ...]
+    targets: tuple[UnitId, ...]
+
+
+class CommandOptionsOut(_ApiModel):
+    """指揮一隻召喚物時可選的終點與目標（Phase 3-33c）；第一個是原地不動。"""
+
+    summon_id: UnitId
+    ap_cost: int
+    options: tuple[CommandOptionOut, ...]
 
 
 class GlossaryEntry(_ApiModel):

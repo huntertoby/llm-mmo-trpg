@@ -317,6 +317,8 @@ def test_basic_actions_stay_within_the_limit_of_ten() -> None:
         "end_turn",
         "end_stance",
         "set_reaction_mode",
+        "set_summon_mode",
+        "command_summon",
         "reload",
         "activate_charge",
     }

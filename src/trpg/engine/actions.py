@@ -12,6 +12,7 @@ from typing import Annotated, Literal
 
 from pydantic import BaseModel, ConfigDict, Field, TypeAdapter, model_validator
 
+from trpg.content.battle import SummonMode
 from trpg.shared.types import ObjectId, Pos, UnitId
 
 __all__ = [
@@ -22,11 +23,13 @@ __all__ = [
     "MANAGEMENT_ACTION_TYPES",
     "STEP_ADAPTER",
     "STEP_LIST_ADAPTER",
+    "SUMMON_ACTION_TYPES",
     "WEAPON_ACTION_TYPES",
     "Action",
     "ActivateCharge",
     "Aim",
     "Attack",
+    "CommandSummon",
     "Decision",
     "Defend",
     "Direction",
@@ -38,6 +41,7 @@ __all__ = [
     "Reload",
     "Run",
     "SetReactionMode",
+    "SetSummonMode",
     "Shove",
     "Step",
     "Swap",
@@ -259,6 +263,49 @@ class SetReactionMode(_ActionBase):
     mode: Literal["auto", "prompt", "off"]
 
 
+class SetSummonMode(_ActionBase):
+    """切換自己一隻召喚物的模式（Phase 3-33c，6.29.2；**0 AP**、不結束回合，只能在自己的回合）：
+    ``focus`` 集火（``target_id`` 必填：場上的敵方單位）、``guard`` 守護我、``follow`` 跟隨、
+    ``hold`` 待命（這三種不可帶 ``target_id``）。與目前完全相同時不合法。**不列入**
+    ``legal_actions``（同 :class:`SetReactionMode`），由
+    :func:`trpg.engine.summon_control.mode_problem` 判斷合法。"""
+
+    type: Literal["set_summon_mode"] = "set_summon_mode"
+    summon_id: UnitId
+    mode: SummonMode
+    target_id: UnitId | None = None
+
+    @model_validator(mode="after")
+    def _check_target(self) -> SetSummonMode:
+        if self.mode == "focus" and self.target_id is None:
+            raise ValueError("集火（focus）必須指定 target_id")
+        if self.mode != "focus" and self.target_id is not None:
+            raise ValueError("只有集火（focus）可以指定 target_id")
+        return self
+
+
+class CommandSummon(_ActionBase):
+    """指揮自己一隻召喚物（Phase 3-33c，6.29.2；``summon_command_ap_cost`` AP）：立刻執行指定的
+    移動（``path``，從召喚物目前位置開始、在牠的移動力內；省略＝不移動）與普攻（``target_id``，
+    移動之後；省略＝不攻擊），**不佔召喚物自己的回合**（牠自己的 AP 與移動點數不變）。每隻每輪
+    最多被指揮 1 次；移動與攻擊至少要有一個。**不列入**
+    ``legal_actions``（組合太多），由 :func:`trpg.engine.summon_control.command_problem` 與
+    API 的指揮選項（``command-options``）提供。"""
+
+    type: Literal["command_summon"] = "command_summon"
+    summon_id: UnitId
+    path: tuple[Pos, ...] = ()
+    target_id: UnitId | None = None
+
+    @model_validator(mode="after")
+    def _check_something(self) -> CommandSummon:
+        if len(self.path) == 1:
+            raise ValueError("path 至少要有起點與一個目的格（不移動請省略 path）")
+        if not self.path and self.target_id is None:
+            raise ValueError("指揮必須指定移動（path）或攻擊目標（target_id）")
+        return self
+
+
 class EndTurn(_ActionBase):
     """結束回合。"""
 
@@ -281,6 +328,8 @@ type Action = Annotated[
     | ActivateCharge
     | EndStance
     | SetReactionMode
+    | SetSummonMode
+    | CommandSummon
     | EndTurn,
     Field(discriminator="type"),
 ]
@@ -305,8 +354,16 @@ WEAPON_ACTION_TYPES: tuple[str, ...] = ("reload",)
 CHARGE_ACTION_TYPES: tuple[str, ...] = ("activate_charge",)
 """裝備充能的啟動（Phase 3G-G3a）：只有裝備了充能詞條且層數足夠才有；不算進基本動作的上限。"""
 
-MANAGEMENT_ACTION_TYPES: tuple[str, ...] = ("end_turn", "end_stance", "set_reaction_mode")
+MANAGEMENT_ACTION_TYPES: tuple[str, ...] = (
+    "end_turn",
+    "end_stance",
+    "set_reaction_mode",
+    "set_summon_mode",
+)
 """管理操作：不算動作的上限（``use_skill`` 是技能，也不在基本動作之內）。"""
+
+SUMMON_ACTION_TYPES: tuple[str, ...] = ("command_summon",)
+"""指揮召喚物（Phase 3-33c）：花 AP 但不算基本動作的上限；切換模式（0 AP）歸在管理操作。"""
 
 ACTION_ADAPTER: TypeAdapter[Action] = TypeAdapter(Action)
 ACTION_LIST_ADAPTER: TypeAdapter[list[Action]] = TypeAdapter(list[Action])
@@ -347,6 +404,8 @@ type Step = Annotated[
     | ActivateCharge
     | EndStance
     | SetReactionMode
+    | SetSummonMode
+    | CommandSummon
     | EndTurn
     | Decision,
     Field(discriminator="type"),

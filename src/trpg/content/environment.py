@@ -765,6 +765,14 @@ class SummonAiRules(ContentModel):
       召喚物與 Boss 的距離加上它與某個非召喚物敵人的距離，不超過 Boss 到該敵人的距離再加
       ``boss_blocker_slack`` 時算「擋在路徑上」；Boss 的動作會打到這樣的召喚物時，每隻加
       ``boss_blocker_points`` 分（× 命中折合）。0 ＝ 不加分。
+    - 模式（Phase 3-33c）：``follow_radius`` 跟隨時待在召喚者幾格內（軟性：超出每格扣
+      ``orders.hold_weight`` 分，仍會主動攻擊）；``guard_radius`` 守護我時只走到召喚者幾格內；
+      ``guard_threat_range`` 守護我時，敵人與召喚者的距離不超過（敵人武器射程 ＋ 速度 ＋ 此值）
+      算「威脅施放者」，優先打他們。
+    - 自動切換（我方 AI 隊友與自動代打的施放者，規則保守）：``auto_guard_hp_permille`` 施放者 HP
+      低於最大 HP 的這個千分比時，召喚物改守護我（0 ＝ 不切換）；``auto_focus_boss`` 場上有 Boss
+      時召喚物改集火 Boss。
+    - ``infusion_points``：估值時，帶灌注的召喚物每輪多算這麼多點等值傷害（0 ＝ 不計）。
     """
 
     hit_permille: int = Field(default=500, ge=0, le=1000)
@@ -772,6 +780,12 @@ class SummonAiRules(ContentModel):
     totem_ally_points: int = Field(default=3, ge=0)
     boss_blocker_points: int = Field(default=0, ge=0)
     boss_blocker_slack: int = Field(default=1, ge=0, le=4)
+    follow_radius: int = Field(default=3, ge=0, le=3)
+    guard_radius: int = Field(default=2, ge=0, le=3)
+    guard_threat_range: int = Field(default=1, ge=0, le=4)
+    auto_guard_hp_permille: int = Field(default=0, ge=0, le=1000)
+    auto_focus_boss: bool = False
+    infusion_points: int = Field(default=0, ge=0)
 
 
 class ZoneAiRules(ContentModel):

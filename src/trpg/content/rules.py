@@ -259,6 +259,8 @@ class CoreRules(ContentModel):
     """召喚物持續輪數的上限（Phase 3-33b）：召喚技能的 ``duration`` 超過時以此為準。"""
     boss_summon_damage_permille: int = Field(default=2000, ge=1000, le=5000)
     """Boss（``boss`` 標籤）對召喚物造成的傷害倍率（‰；Phase 3-33b，預設 ×2）。"""
+    summon_command_ap_cost: int = Field(default=1, ge=0, le=3)
+    """指揮召喚物（Phase 3-33c）的 AP 花費（切換模式免費）。"""
     summon_growth: SummonGrowth = Field(default_factory=SummonGrowth)
     """召喚物 HP 與傷害的成長（Phase 3-33b）。"""
     summon_infusions: dict[str, SummonInfusion] = Field(default_factory=dict)
