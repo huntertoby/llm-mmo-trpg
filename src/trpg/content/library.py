@@ -12,6 +12,7 @@ from pathlib import Path
 
 from pydantic import PrivateAttr, model_validator
 
+from trpg.content.appearance import AppearanceTable, item_appearance_problems
 from trpg.content.battle import (
     StatusDef,
     StatusTable,
@@ -386,6 +387,8 @@ class ContentLibrary:
     """詞條白名單（``affixes.yaml``，Phase 3G-G1）。"""
     items: dict[str, ItemDef] = field(default_factory=dict)
     """物品（``items.yaml``，Phase 3G-G1；目前只有測試用物品）。"""
+    appearance: AppearanceTable | None = None
+    """裝備外觀清單（``equipment/appearance.yaml``，Phase 3G-G5a）。"""
     files: list[tuple[Path, ContentModel]] = field(default_factory=list)
 
     def loadout_of(self, template: UnitTemplate) -> Loadout:
@@ -481,6 +484,7 @@ def load_library(  # noqa: PLR0915
     equipment_rules = load("rules/equipment.yaml", EquipmentRules)
     affix_table = load("affixes.yaml", AffixTable)
     item_table = load("items.yaml", ItemTable)
+    appearance = load("equipment/appearance.yaml", AppearanceTable)
     try:
         ruleset = Ruleset(
             core=core,
@@ -511,6 +515,7 @@ def load_library(  # noqa: PLR0915
         problems = item_problems(item, affixes, weapon_map, equipment_rules)
         if problems:
             raise ContentError(root / "items.yaml", "；".join(problems))
+    _check_appearance(root, appearance, item_table, keywords)
     gear = _GearCatalog(items=items, affixes=affixes, rules=equipment_rules)
 
     _check_skills(root, skills, ruleset)
@@ -593,6 +598,7 @@ def load_library(  # noqa: PLR0915
         workshop=workshop,
         affixes=affixes,
         items=items,
+        appearance=appearance,
         files=files,
     )
 
@@ -883,6 +889,20 @@ def _affix_statuses(affix: AffixDef) -> list[str]:
         if effect.status is not None:
             found.append(effect.status)
     return found
+
+
+def _check_appearance(
+    root: Path, appearance: AppearanceTable, items: ItemTable, keywords: KeywordTable
+) -> None:
+    """外觀清單的關鍵字都是 3-24b1 的關鍵字；items.yaml 寫了的外觀欄位都認得且相容。"""
+    unknown = sorted(set(appearance.keywords) - set(keywords.ids()))
+    if unknown:
+        raise ContentError(
+            root / "equipment" / "appearance.yaml", f"未知的關鍵字：{', '.join(unknown)}"
+        )
+    problems = [p for item in items.items for p in item_appearance_problems(item, appearance)]
+    if problems:
+        raise ContentError(root / "items.yaml", "；".join(problems))
 
 
 def _check_affixes(root: Path, affixes: Mapping[str, AffixDef], ruleset: Ruleset) -> None:

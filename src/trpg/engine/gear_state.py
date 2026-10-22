@@ -34,11 +34,22 @@ type BonusStat = Literal[
 
 @dataclass(frozen=True, slots=True)
 class GearItem:
-    """一個欄位上的物品（顯示用）。"""
+    """一個欄位上的物品（顯示用）。
+
+    外觀欄位（Phase 3G-G5a，只給圖示用、不影響結算；空字串＝物品沒寫）：``kind``、``form``、
+    ``material``、``dye``、``style``、``rarity``；``keywords`` 由詞條推導（前 2 個）。
+    """
 
     slot: str
     item_id: str
     name_zh: str
+    kind: str = ""
+    form: str = ""
+    material: str = ""
+    dye: str = ""
+    style: str = ""
+    rarity: str = ""
+    keywords: tuple[str, ...] = ()
 
 
 @dataclass(frozen=True, slots=True)

@@ -1,0 +1,1945 @@
+{
+  "styles": [
+    "common"
+  ],
+  "materials": [
+    "iron",
+    "steel",
+    "copper",
+    "silver",
+    "gold",
+    "wood",
+    "leather",
+    "cloth",
+    "bone",
+    "crystal"
+  ],
+  "dyes": [
+    "red",
+    "blue",
+    "green",
+    "purple",
+    "black",
+    "white",
+    "brown",
+    "gold"
+  ],
+  "dyeMaterials": [
+    "cloth",
+    "leather"
+  ],
+  "rarities": [
+    "common",
+    "uncommon",
+    "rare",
+    "epic",
+    "legendary"
+  ],
+  "maxKeywords": 2,
+  "keywords": [
+    "ignite",
+    "wet",
+    "charged",
+    "frozen",
+    "prone",
+    "collision",
+    "marked",
+    "high_ground",
+    "concealed",
+    "summon"
+  ],
+  "elementKeywords": [
+    "ignite",
+    "wet",
+    "charged",
+    "frozen"
+  ],
+  "kinds": [
+    {
+      "id": "sword",
+      "slotType": "weapon",
+      "zh": "劍",
+      "paired": false,
+      "materials": [
+        "iron",
+        "steel",
+        "copper",
+        "silver",
+        "gold"
+      ],
+      "defaultMaterial": "iron",
+      "forms": [
+        {
+          "id": "straight",
+          "zh": "直劍",
+          "materials": [
+            "iron",
+            "steel",
+            "copper",
+            "silver",
+            "gold"
+          ],
+          "defaultMaterial": "iron"
+        },
+        {
+          "id": "curved",
+          "zh": "彎刀",
+          "materials": [
+            "iron",
+            "steel",
+            "copper",
+            "silver",
+            "gold"
+          ],
+          "defaultMaterial": "iron"
+        },
+        {
+          "id": "broad",
+          "zh": "闊劍",
+          "materials": [
+            "iron",
+            "steel",
+            "copper",
+            "silver",
+            "gold"
+          ],
+          "defaultMaterial": "iron"
+        }
+      ]
+    },
+    {
+      "id": "greatsword",
+      "slotType": "weapon",
+      "zh": "巨劍",
+      "paired": false,
+      "materials": [
+        "iron",
+        "steel",
+        "copper",
+        "silver",
+        "gold"
+      ],
+      "defaultMaterial": "iron",
+      "forms": [
+        {
+          "id": "twohand",
+          "zh": "雙手劍",
+          "materials": [
+            "iron",
+            "steel",
+            "copper",
+            "silver",
+            "gold"
+          ],
+          "defaultMaterial": "iron"
+        },
+        {
+          "id": "zhanma",
+          "zh": "斬馬刀",
+          "materials": [
+            "iron",
+            "steel",
+            "copper",
+            "silver",
+            "gold"
+          ],
+          "defaultMaterial": "iron"
+        },
+        {
+          "id": "serrated",
+          "zh": "鋸齒巨劍",
+          "materials": [
+            "iron",
+            "steel",
+            "copper",
+            "silver",
+            "gold"
+          ],
+          "defaultMaterial": "iron"
+        }
+      ]
+    },
+    {
+      "id": "dagger",
+      "slotType": "weapon",
+      "zh": "匕首",
+      "paired": false,
+      "materials": [
+        "iron",
+        "steel",
+        "copper",
+        "silver",
+        "gold",
+        "bone",
+        "crystal"
+      ],
+      "defaultMaterial": "iron",
+      "forms": [
+        {
+          "id": "short",
+          "zh": "短刀",
+          "materials": [
+            "iron",
+            "steel",
+            "copper",
+            "silver",
+            "gold",
+            "bone",
+            "crystal"
+          ],
+          "defaultMaterial": "iron"
+        },
+        {
+          "id": "stiletto",
+          "zh": "三稜刺",
+          "materials": [
+            "iron",
+            "steel",
+            "copper",
+            "silver",
+            "gold",
+            "bone",
+            "crystal"
+          ],
+          "defaultMaterial": "iron"
+        },
+        {
+          "id": "kris",
+          "zh": "彎匕",
+          "materials": [
+            "iron",
+            "steel",
+            "copper",
+            "silver",
+            "gold",
+            "bone",
+            "crystal"
+          ],
+          "defaultMaterial": "iron"
+        }
+      ]
+    },
+    {
+      "id": "axe",
+      "slotType": "weapon",
+      "zh": "斧",
+      "paired": false,
+      "materials": [
+        "iron",
+        "steel",
+        "copper",
+        "silver",
+        "gold"
+      ],
+      "defaultMaterial": "iron",
+      "forms": [
+        {
+          "id": "hand",
+          "zh": "手斧",
+          "materials": [
+            "iron",
+            "steel",
+            "copper",
+            "silver",
+            "gold"
+          ],
+          "defaultMaterial": "iron"
+        },
+        {
+          "id": "battle",
+          "zh": "戰斧",
+          "materials": [
+            "iron",
+            "steel",
+            "copper",
+            "silver",
+            "gold"
+          ],
+          "defaultMaterial": "iron"
+        },
+        {
+          "id": "double",
+          "zh": "雙刃斧",
+          "materials": [
+            "iron",
+            "steel",
+            "copper",
+            "silver",
+            "gold"
+          ],
+          "defaultMaterial": "iron"
+        }
+      ]
+    },
+    {
+      "id": "hammer",
+      "slotType": "weapon",
+      "zh": "錘",
+      "paired": false,
+      "materials": [
+        "iron",
+        "steel",
+        "copper",
+        "silver",
+        "gold"
+      ],
+      "defaultMaterial": "iron",
+      "forms": [
+        {
+          "id": "mace",
+          "zh": "釘頭錘",
+          "materials": [
+            "iron",
+            "steel",
+            "copper",
+            "silver",
+            "gold"
+          ],
+          "defaultMaterial": "iron"
+        },
+        {
+          "id": "warhammer",
+          "zh": "戰錘",
+          "materials": [
+            "iron",
+            "steel",
+            "copper",
+            "silver",
+            "gold"
+          ],
+          "defaultMaterial": "iron"
+        },
+        {
+          "id": "flail",
+          "zh": "連枷",
+          "materials": [
+            "iron",
+            "steel",
+            "copper",
+            "silver",
+            "gold"
+          ],
+          "defaultMaterial": "iron"
+        }
+      ]
+    },
+    {
+      "id": "spear",
+      "slotType": "weapon",
+      "zh": "矛",
+      "paired": false,
+      "materials": [
+        "iron",
+        "steel",
+        "copper",
+        "silver",
+        "gold",
+        "wood"
+      ],
+      "defaultMaterial": "iron",
+      "forms": [
+        {
+          "id": "spear",
+          "zh": "長矛",
+          "materials": [
+            "iron",
+            "steel",
+            "copper",
+            "silver",
+            "gold",
+            "wood"
+          ],
+          "defaultMaterial": "iron"
+        },
+        {
+          "id": "halberd",
+          "zh": "戟",
+          "materials": [
+            "iron",
+            "steel",
+            "copper",
+            "silver",
+            "gold",
+            "wood"
+          ],
+          "defaultMaterial": "iron"
+        },
+        {
+          "id": "trident",
+          "zh": "三叉戟",
+          "materials": [
+            "iron",
+            "steel",
+            "copper",
+            "silver",
+            "gold",
+            "wood"
+          ],
+          "defaultMaterial": "iron"
+        }
+      ]
+    },
+    {
+      "id": "bow",
+      "slotType": "weapon",
+      "zh": "弓",
+      "paired": false,
+      "materials": [
+        "wood",
+        "iron",
+        "steel",
+        "copper",
+        "silver",
+        "gold"
+      ],
+      "defaultMaterial": "wood",
+      "forms": [
+        {
+          "id": "short",
+          "zh": "短弓",
+          "materials": [
+            "wood",
+            "iron",
+            "steel",
+            "copper",
+            "silver",
+            "gold"
+          ],
+          "defaultMaterial": "wood"
+        },
+        {
+          "id": "long",
+          "zh": "長弓",
+          "materials": [
+            "wood",
+            "iron",
+            "steel",
+            "copper",
+            "silver",
+            "gold"
+          ],
+          "defaultMaterial": "wood"
+        },
+        {
+          "id": "recurve",
+          "zh": "反曲弓",
+          "materials": [
+            "wood",
+            "iron",
+            "steel",
+            "copper",
+            "silver",
+            "gold"
+          ],
+          "defaultMaterial": "wood"
+        }
+      ]
+    },
+    {
+      "id": "crossbow",
+      "slotType": "weapon",
+      "zh": "弩",
+      "paired": false,
+      "materials": [
+        "wood",
+        "iron",
+        "steel",
+        "copper",
+        "silver",
+        "gold"
+      ],
+      "defaultMaterial": "wood",
+      "forms": [
+        {
+          "id": "light",
+          "zh": "輕弩",
+          "materials": [
+            "wood",
+            "iron",
+            "steel",
+            "copper",
+            "silver",
+            "gold"
+          ],
+          "defaultMaterial": "wood"
+        },
+        {
+          "id": "heavy",
+          "zh": "重弩",
+          "materials": [
+            "wood",
+            "iron",
+            "steel",
+            "copper",
+            "silver",
+            "gold"
+          ],
+          "defaultMaterial": "wood"
+        },
+        {
+          "id": "repeater",
+          "zh": "連弩",
+          "materials": [
+            "wood",
+            "iron",
+            "steel",
+            "copper",
+            "silver",
+            "gold"
+          ],
+          "defaultMaterial": "wood"
+        }
+      ]
+    },
+    {
+      "id": "longgun",
+      "slotType": "weapon",
+      "zh": "長槍",
+      "paired": false,
+      "materials": [
+        "iron",
+        "steel",
+        "copper",
+        "silver",
+        "gold"
+      ],
+      "defaultMaterial": "steel",
+      "forms": [
+        {
+          "id": "flintlock",
+          "zh": "燧發長槍",
+          "materials": [
+            "iron",
+            "steel",
+            "copper",
+            "silver",
+            "gold"
+          ],
+          "defaultMaterial": "steel"
+        },
+        {
+          "id": "hunting",
+          "zh": "獵槍",
+          "materials": [
+            "iron",
+            "steel",
+            "copper",
+            "silver",
+            "gold"
+          ],
+          "defaultMaterial": "steel"
+        },
+        {
+          "id": "sniper",
+          "zh": "狙擊長槍",
+          "materials": [
+            "iron",
+            "steel",
+            "copper",
+            "silver",
+            "gold"
+          ],
+          "defaultMaterial": "steel"
+        }
+      ]
+    },
+    {
+      "id": "shotgun",
+      "slotType": "weapon",
+      "zh": "霰彈槍",
+      "paired": false,
+      "materials": [
+        "iron",
+        "steel",
+        "copper",
+        "silver",
+        "gold"
+      ],
+      "defaultMaterial": "iron",
+      "forms": [
+        {
+          "id": "blunderbuss",
+          "zh": "喇叭槍",
+          "materials": [
+            "iron",
+            "steel",
+            "copper",
+            "silver",
+            "gold"
+          ],
+          "defaultMaterial": "iron"
+        },
+        {
+          "id": "double",
+          "zh": "雙管",
+          "materials": [
+            "iron",
+            "steel",
+            "copper",
+            "silver",
+            "gold"
+          ],
+          "defaultMaterial": "iron"
+        },
+        {
+          "id": "pump",
+          "zh": "泵動",
+          "materials": [
+            "iron",
+            "steel",
+            "copper",
+            "silver",
+            "gold"
+          ],
+          "defaultMaterial": "iron"
+        }
+      ]
+    },
+    {
+      "id": "pistol",
+      "slotType": "weapon",
+      "zh": "手槍",
+      "paired": false,
+      "materials": [
+        "iron",
+        "steel",
+        "copper",
+        "silver",
+        "gold"
+      ],
+      "defaultMaterial": "steel",
+      "forms": [
+        {
+          "id": "flintlock",
+          "zh": "燧發手槍",
+          "materials": [
+            "iron",
+            "steel",
+            "copper",
+            "silver",
+            "gold"
+          ],
+          "defaultMaterial": "steel"
+        },
+        {
+          "id": "revolver",
+          "zh": "左輪",
+          "materials": [
+            "iron",
+            "steel",
+            "copper",
+            "silver",
+            "gold"
+          ],
+          "defaultMaterial": "steel"
+        },
+        {
+          "id": "derringer",
+          "zh": "短銃",
+          "materials": [
+            "iron",
+            "steel",
+            "copper",
+            "silver",
+            "gold"
+          ],
+          "defaultMaterial": "steel"
+        }
+      ]
+    },
+    {
+      "id": "dual_pistol",
+      "slotType": "weapon",
+      "zh": "雙手槍",
+      "paired": true,
+      "materials": [
+        "iron",
+        "steel",
+        "copper",
+        "silver",
+        "gold"
+      ],
+      "defaultMaterial": "steel",
+      "forms": [
+        {
+          "id": "flintlock",
+          "zh": "燧發手槍",
+          "materials": [
+            "iron",
+            "steel",
+            "copper",
+            "silver",
+            "gold"
+          ],
+          "defaultMaterial": "steel"
+        },
+        {
+          "id": "revolver",
+          "zh": "左輪",
+          "materials": [
+            "iron",
+            "steel",
+            "copper",
+            "silver",
+            "gold"
+          ],
+          "defaultMaterial": "steel"
+        },
+        {
+          "id": "derringer",
+          "zh": "短銃",
+          "materials": [
+            "iron",
+            "steel",
+            "copper",
+            "silver",
+            "gold"
+          ],
+          "defaultMaterial": "steel"
+        }
+      ]
+    },
+    {
+      "id": "fist",
+      "slotType": "weapon",
+      "zh": "拳套",
+      "paired": false,
+      "materials": [
+        "iron",
+        "steel",
+        "copper",
+        "silver",
+        "gold",
+        "bone",
+        "leather"
+      ],
+      "defaultMaterial": "iron",
+      "forms": [
+        {
+          "id": "katar",
+          "zh": "拳刃",
+          "materials": [
+            "iron",
+            "steel",
+            "copper",
+            "silver",
+            "gold",
+            "bone",
+            "leather"
+          ],
+          "defaultMaterial": "iron"
+        },
+        {
+          "id": "knuckle",
+          "zh": "鐵拳",
+          "materials": [
+            "iron",
+            "steel",
+            "copper",
+            "silver",
+            "gold",
+            "bone",
+            "leather"
+          ],
+          "defaultMaterial": "iron"
+        },
+        {
+          "id": "claw",
+          "zh": "爪",
+          "materials": [
+            "iron",
+            "steel",
+            "copper",
+            "silver",
+            "gold",
+            "bone",
+            "leather"
+          ],
+          "defaultMaterial": "iron"
+        }
+      ]
+    },
+    {
+      "id": "scythe",
+      "slotType": "weapon",
+      "zh": "鐮刀",
+      "paired": false,
+      "materials": [
+        "iron",
+        "steel",
+        "copper",
+        "silver",
+        "gold",
+        "bone"
+      ],
+      "defaultMaterial": "iron",
+      "forms": [
+        {
+          "id": "long",
+          "zh": "長柄鐮",
+          "materials": [
+            "iron",
+            "steel",
+            "copper",
+            "silver",
+            "gold",
+            "bone"
+          ],
+          "defaultMaterial": "iron"
+        },
+        {
+          "id": "crescent",
+          "zh": "彎月鐮",
+          "materials": [
+            "iron",
+            "steel",
+            "copper",
+            "silver",
+            "gold",
+            "bone"
+          ],
+          "defaultMaterial": "iron"
+        },
+        {
+          "id": "hook",
+          "zh": "鉤鐮",
+          "materials": [
+            "iron",
+            "steel",
+            "copper",
+            "silver",
+            "gold",
+            "bone"
+          ],
+          "defaultMaterial": "iron"
+        }
+      ]
+    },
+    {
+      "id": "whip",
+      "slotType": "weapon",
+      "zh": "鞭",
+      "paired": false,
+      "materials": [
+        "leather",
+        "iron",
+        "steel",
+        "copper",
+        "silver",
+        "gold",
+        "bone"
+      ],
+      "defaultMaterial": "leather",
+      "forms": [
+        {
+          "id": "leather",
+          "zh": "皮鞭",
+          "materials": [
+            "leather",
+            "iron",
+            "steel",
+            "copper",
+            "silver",
+            "gold",
+            "bone"
+          ],
+          "defaultMaterial": "leather"
+        },
+        {
+          "id": "chain",
+          "zh": "鏈鞭",
+          "materials": [
+            "leather",
+            "iron",
+            "steel",
+            "copper",
+            "silver",
+            "gold",
+            "bone"
+          ],
+          "defaultMaterial": "leather"
+        },
+        {
+          "id": "bladed",
+          "zh": "蛇骨鞭",
+          "materials": [
+            "leather",
+            "iron",
+            "steel",
+            "copper",
+            "silver",
+            "gold",
+            "bone"
+          ],
+          "defaultMaterial": "leather"
+        }
+      ]
+    },
+    {
+      "id": "dual_dagger",
+      "slotType": "weapon",
+      "zh": "雙匕首",
+      "paired": true,
+      "materials": [
+        "iron",
+        "steel",
+        "copper",
+        "silver",
+        "gold",
+        "bone",
+        "crystal"
+      ],
+      "defaultMaterial": "iron",
+      "forms": [
+        {
+          "id": "short",
+          "zh": "短刀",
+          "materials": [
+            "iron",
+            "steel",
+            "copper",
+            "silver",
+            "gold",
+            "bone",
+            "crystal"
+          ],
+          "defaultMaterial": "iron"
+        },
+        {
+          "id": "stiletto",
+          "zh": "三稜刺",
+          "materials": [
+            "iron",
+            "steel",
+            "copper",
+            "silver",
+            "gold",
+            "bone",
+            "crystal"
+          ],
+          "defaultMaterial": "iron"
+        },
+        {
+          "id": "kris",
+          "zh": "彎匕",
+          "materials": [
+            "iron",
+            "steel",
+            "copper",
+            "silver",
+            "gold",
+            "bone",
+            "crystal"
+          ],
+          "defaultMaterial": "iron"
+        }
+      ]
+    },
+    {
+      "id": "staff",
+      "slotType": "weapon",
+      "zh": "杖",
+      "paired": false,
+      "materials": [
+        "wood",
+        "iron",
+        "steel",
+        "copper",
+        "silver",
+        "gold",
+        "bone",
+        "crystal"
+      ],
+      "defaultMaterial": "wood",
+      "forms": [
+        {
+          "id": "long",
+          "zh": "長杖",
+          "materials": [
+            "wood",
+            "iron",
+            "steel",
+            "copper",
+            "silver",
+            "gold",
+            "bone",
+            "crystal"
+          ],
+          "defaultMaterial": "wood"
+        },
+        {
+          "id": "scepter",
+          "zh": "權杖",
+          "materials": [
+            "wood",
+            "iron",
+            "steel",
+            "copper",
+            "silver",
+            "gold",
+            "bone",
+            "crystal"
+          ],
+          "defaultMaterial": "wood"
+        },
+        {
+          "id": "wand",
+          "zh": "短杖",
+          "materials": [
+            "wood",
+            "iron",
+            "steel",
+            "copper",
+            "silver",
+            "gold",
+            "bone",
+            "crystal"
+          ],
+          "defaultMaterial": "wood"
+        },
+        {
+          "id": "totem",
+          "zh": "圖騰杖",
+          "materials": [
+            "wood",
+            "iron",
+            "steel",
+            "copper",
+            "silver",
+            "gold",
+            "bone",
+            "crystal"
+          ],
+          "defaultMaterial": "wood"
+        }
+      ]
+    },
+    {
+      "id": "round_shield",
+      "slotType": "offhand",
+      "zh": "圓盾",
+      "paired": false,
+      "materials": [
+        "wood",
+        "iron",
+        "steel",
+        "copper",
+        "silver",
+        "gold"
+      ],
+      "defaultMaterial": "wood",
+      "forms": [
+        {
+          "id": "wood",
+          "zh": "木圓盾",
+          "materials": [
+            "wood",
+            "iron",
+            "steel",
+            "copper",
+            "silver",
+            "gold"
+          ],
+          "defaultMaterial": "wood"
+        },
+        {
+          "id": "banded",
+          "zh": "包鐵圓盾",
+          "materials": [
+            "wood",
+            "iron",
+            "steel",
+            "copper",
+            "silver",
+            "gold"
+          ],
+          "defaultMaterial": "wood"
+        }
+      ]
+    },
+    {
+      "id": "kite_shield",
+      "slotType": "offhand",
+      "zh": "鳶盾",
+      "paired": false,
+      "materials": [
+        "iron",
+        "steel",
+        "copper",
+        "silver",
+        "gold"
+      ],
+      "defaultMaterial": "iron",
+      "forms": [
+        {
+          "id": "kite",
+          "zh": "鳶盾",
+          "materials": [
+            "iron",
+            "steel",
+            "copper",
+            "silver",
+            "gold"
+          ],
+          "defaultMaterial": "iron"
+        },
+        {
+          "id": "tower",
+          "zh": "塔盾",
+          "materials": [
+            "iron",
+            "steel",
+            "copper",
+            "silver",
+            "gold"
+          ],
+          "defaultMaterial": "iron"
+        }
+      ]
+    },
+    {
+      "id": "tome",
+      "slotType": "offhand",
+      "zh": "法書",
+      "paired": false,
+      "materials": [
+        "leather",
+        "cloth"
+      ],
+      "defaultMaterial": "leather",
+      "forms": [
+        {
+          "id": "book",
+          "zh": "典籍",
+          "materials": [
+            "leather",
+            "cloth"
+          ],
+          "defaultMaterial": "leather"
+        },
+        {
+          "id": "scroll",
+          "zh": "卷軸匣",
+          "materials": [
+            "leather",
+            "cloth"
+          ],
+          "defaultMaterial": "leather"
+        }
+      ]
+    },
+    {
+      "id": "orb",
+      "slotType": "offhand",
+      "zh": "法器珠",
+      "paired": false,
+      "materials": [
+        "crystal",
+        "bone"
+      ],
+      "defaultMaterial": "crystal",
+      "forms": [
+        {
+          "id": "ball",
+          "zh": "水晶球",
+          "materials": [
+            "crystal",
+            "bone"
+          ],
+          "defaultMaterial": "crystal"
+        },
+        {
+          "id": "floating",
+          "zh": "浮空寶珠",
+          "materials": [
+            "crystal",
+            "bone"
+          ],
+          "defaultMaterial": "crystal"
+        }
+      ]
+    },
+    {
+      "id": "robe",
+      "slotType": "body",
+      "zh": "布袍",
+      "paired": false,
+      "materials": [
+        "cloth"
+      ],
+      "defaultMaterial": "cloth",
+      "forms": [
+        {
+          "id": "long",
+          "zh": "長袍",
+          "materials": [
+            "cloth"
+          ],
+          "defaultMaterial": "cloth"
+        },
+        {
+          "id": "short",
+          "zh": "短袍",
+          "materials": [
+            "cloth"
+          ],
+          "defaultMaterial": "cloth"
+        }
+      ]
+    },
+    {
+      "id": "leather",
+      "slotType": "body",
+      "zh": "皮甲",
+      "paired": false,
+      "materials": [
+        "leather"
+      ],
+      "defaultMaterial": "leather",
+      "forms": [
+        {
+          "id": "vest",
+          "zh": "皮背心",
+          "materials": [
+            "leather"
+          ],
+          "defaultMaterial": "leather"
+        },
+        {
+          "id": "hunter",
+          "zh": "獵裝",
+          "materials": [
+            "leather"
+          ],
+          "defaultMaterial": "leather"
+        }
+      ]
+    },
+    {
+      "id": "mail",
+      "slotType": "body",
+      "zh": "鎖甲",
+      "paired": false,
+      "materials": [
+        "iron",
+        "steel",
+        "copper",
+        "silver",
+        "gold"
+      ],
+      "defaultMaterial": "iron",
+      "forms": [
+        {
+          "id": "chain",
+          "zh": "鎖子甲",
+          "materials": [
+            "iron",
+            "steel",
+            "copper",
+            "silver",
+            "gold"
+          ],
+          "defaultMaterial": "iron"
+        },
+        {
+          "id": "scale",
+          "zh": "鱗甲",
+          "materials": [
+            "iron",
+            "steel",
+            "copper",
+            "silver",
+            "gold"
+          ],
+          "defaultMaterial": "iron"
+        }
+      ]
+    },
+    {
+      "id": "plate",
+      "slotType": "body",
+      "zh": "板甲",
+      "paired": false,
+      "materials": [
+        "iron",
+        "steel",
+        "copper",
+        "silver",
+        "gold"
+      ],
+      "defaultMaterial": "steel",
+      "forms": [
+        {
+          "id": "half",
+          "zh": "半身板甲",
+          "materials": [
+            "iron",
+            "steel",
+            "copper",
+            "silver",
+            "gold"
+          ],
+          "defaultMaterial": "steel"
+        },
+        {
+          "id": "full",
+          "zh": "全身板甲",
+          "materials": [
+            "iron",
+            "steel",
+            "copper",
+            "silver",
+            "gold"
+          ],
+          "defaultMaterial": "steel"
+        }
+      ]
+    },
+    {
+      "id": "coat",
+      "slotType": "body",
+      "zh": "外套",
+      "paired": false,
+      "materials": [
+        "cloth",
+        "leather"
+      ],
+      "defaultMaterial": "cloth",
+      "forms": [
+        {
+          "id": "travel",
+          "zh": "旅行外套",
+          "materials": [
+            "cloth",
+            "leather"
+          ],
+          "defaultMaterial": "cloth"
+        },
+        {
+          "id": "cape",
+          "zh": "披風外套",
+          "materials": [
+            "cloth",
+            "leather"
+          ],
+          "defaultMaterial": "cloth"
+        }
+      ]
+    },
+    {
+      "id": "hood",
+      "slotType": "head",
+      "zh": "兜帽",
+      "paired": false,
+      "materials": [
+        "cloth",
+        "leather"
+      ],
+      "defaultMaterial": "cloth",
+      "forms": [
+        {
+          "id": "cloth",
+          "zh": "布兜帽",
+          "materials": [
+            "cloth",
+            "leather"
+          ],
+          "defaultMaterial": "cloth"
+        },
+        {
+          "id": "cowl",
+          "zh": "斗篷帽",
+          "materials": [
+            "cloth",
+            "leather"
+          ],
+          "defaultMaterial": "cloth"
+        }
+      ]
+    },
+    {
+      "id": "hat",
+      "slotType": "head",
+      "zh": "帽子",
+      "paired": false,
+      "materials": [
+        "cloth",
+        "leather"
+      ],
+      "defaultMaterial": "cloth",
+      "forms": [
+        {
+          "id": "wizard",
+          "zh": "法師帽",
+          "materials": [
+            "cloth",
+            "leather"
+          ],
+          "defaultMaterial": "cloth"
+        },
+        {
+          "id": "wide",
+          "zh": "寬簷帽",
+          "materials": [
+            "cloth",
+            "leather"
+          ],
+          "defaultMaterial": "cloth"
+        }
+      ]
+    },
+    {
+      "id": "circlet",
+      "slotType": "head",
+      "zh": "頭巾／頭冠",
+      "paired": false,
+      "materials": [
+        "cloth",
+        "leather",
+        "iron",
+        "steel",
+        "copper",
+        "silver",
+        "gold",
+        "bone",
+        "crystal"
+      ],
+      "defaultMaterial": "cloth",
+      "forms": [
+        {
+          "id": "bandana",
+          "zh": "頭巾",
+          "materials": [
+            "cloth",
+            "leather"
+          ],
+          "defaultMaterial": "cloth"
+        },
+        {
+          "id": "crown",
+          "zh": "頭冠",
+          "materials": [
+            "iron",
+            "steel",
+            "copper",
+            "silver",
+            "gold",
+            "bone",
+            "crystal"
+          ],
+          "defaultMaterial": "gold"
+        }
+      ]
+    },
+    {
+      "id": "cap",
+      "slotType": "head",
+      "zh": "皮帽",
+      "paired": false,
+      "materials": [
+        "leather",
+        "cloth"
+      ],
+      "defaultMaterial": "leather",
+      "forms": [
+        {
+          "id": "leather",
+          "zh": "皮帽",
+          "materials": [
+            "leather",
+            "cloth"
+          ],
+          "defaultMaterial": "leather"
+        },
+        {
+          "id": "fur",
+          "zh": "毛帽",
+          "materials": [
+            "leather",
+            "cloth"
+          ],
+          "defaultMaterial": "leather"
+        }
+      ]
+    },
+    {
+      "id": "helmet",
+      "slotType": "head",
+      "zh": "頭盔",
+      "paired": false,
+      "materials": [
+        "iron",
+        "steel",
+        "copper",
+        "silver",
+        "gold"
+      ],
+      "defaultMaterial": "iron",
+      "forms": [
+        {
+          "id": "iron",
+          "zh": "鐵盔",
+          "materials": [
+            "iron",
+            "steel",
+            "copper",
+            "silver",
+            "gold"
+          ],
+          "defaultMaterial": "iron"
+        },
+        {
+          "id": "horned",
+          "zh": "角盔",
+          "materials": [
+            "iron",
+            "steel",
+            "copper",
+            "silver",
+            "gold"
+          ],
+          "defaultMaterial": "iron"
+        },
+        {
+          "id": "greathelm",
+          "zh": "全罩盔",
+          "materials": [
+            "iron",
+            "steel",
+            "copper",
+            "silver",
+            "gold"
+          ],
+          "defaultMaterial": "iron"
+        }
+      ]
+    },
+    {
+      "id": "cloth_gloves",
+      "slotType": "hands",
+      "zh": "布手套",
+      "paired": false,
+      "materials": [
+        "cloth"
+      ],
+      "defaultMaterial": "cloth",
+      "forms": [
+        {
+          "id": "plain",
+          "zh": "素手套",
+          "materials": [
+            "cloth"
+          ],
+          "defaultMaterial": "cloth"
+        },
+        {
+          "id": "fingerless",
+          "zh": "露指手套",
+          "materials": [
+            "cloth"
+          ],
+          "defaultMaterial": "cloth"
+        }
+      ]
+    },
+    {
+      "id": "leather_gloves",
+      "slotType": "hands",
+      "zh": "皮手套",
+      "paired": false,
+      "materials": [
+        "leather"
+      ],
+      "defaultMaterial": "leather",
+      "forms": [
+        {
+          "id": "short",
+          "zh": "短皮手套",
+          "materials": [
+            "leather"
+          ],
+          "defaultMaterial": "leather"
+        },
+        {
+          "id": "long",
+          "zh": "長皮手套",
+          "materials": [
+            "leather"
+          ],
+          "defaultMaterial": "leather"
+        }
+      ]
+    },
+    {
+      "id": "gauntlets",
+      "slotType": "hands",
+      "zh": "護手",
+      "paired": false,
+      "materials": [
+        "iron",
+        "steel",
+        "copper",
+        "silver",
+        "gold"
+      ],
+      "defaultMaterial": "steel",
+      "forms": [
+        {
+          "id": "plate",
+          "zh": "板金護手",
+          "materials": [
+            "iron",
+            "steel",
+            "copper",
+            "silver",
+            "gold"
+          ],
+          "defaultMaterial": "steel"
+        },
+        {
+          "id": "mail",
+          "zh": "鎖鏈護手",
+          "materials": [
+            "iron",
+            "steel",
+            "copper",
+            "silver",
+            "gold"
+          ],
+          "defaultMaterial": "steel"
+        }
+      ]
+    },
+    {
+      "id": "bracers",
+      "slotType": "hands",
+      "zh": "臂甲",
+      "paired": false,
+      "materials": [
+        "leather",
+        "iron",
+        "steel",
+        "copper",
+        "silver",
+        "gold"
+      ],
+      "defaultMaterial": "leather",
+      "forms": [
+        {
+          "id": "leather",
+          "zh": "皮臂甲",
+          "materials": [
+            "leather"
+          ],
+          "defaultMaterial": "leather"
+        },
+        {
+          "id": "ring",
+          "zh": "臂環",
+          "materials": [
+            "iron",
+            "steel",
+            "copper",
+            "silver",
+            "gold"
+          ],
+          "defaultMaterial": "copper"
+        }
+      ]
+    },
+    {
+      "id": "shoes",
+      "slotType": "feet",
+      "zh": "布鞋",
+      "paired": false,
+      "materials": [
+        "cloth"
+      ],
+      "defaultMaterial": "cloth",
+      "forms": [
+        {
+          "id": "slipper",
+          "zh": "布鞋",
+          "materials": [
+            "cloth"
+          ],
+          "defaultMaterial": "cloth"
+        },
+        {
+          "id": "wrapped",
+          "zh": "綁腿鞋",
+          "materials": [
+            "cloth"
+          ],
+          "defaultMaterial": "cloth"
+        }
+      ]
+    },
+    {
+      "id": "boots",
+      "slotType": "feet",
+      "zh": "皮靴",
+      "paired": false,
+      "materials": [
+        "leather"
+      ],
+      "defaultMaterial": "leather",
+      "forms": [
+        {
+          "id": "short",
+          "zh": "短靴",
+          "materials": [
+            "leather"
+          ],
+          "defaultMaterial": "leather"
+        },
+        {
+          "id": "tall",
+          "zh": "長靴",
+          "materials": [
+            "leather"
+          ],
+          "defaultMaterial": "leather"
+        }
+      ]
+    },
+    {
+      "id": "iron_boots",
+      "slotType": "feet",
+      "zh": "鐵靴",
+      "paired": false,
+      "materials": [
+        "iron",
+        "steel",
+        "copper",
+        "silver",
+        "gold"
+      ],
+      "defaultMaterial": "iron",
+      "forms": [
+        {
+          "id": "plain",
+          "zh": "鐵靴",
+          "materials": [
+            "iron",
+            "steel",
+            "copper",
+            "silver",
+            "gold"
+          ],
+          "defaultMaterial": "iron"
+        },
+        {
+          "id": "sabaton",
+          "zh": "尖頭鐵靴",
+          "materials": [
+            "iron",
+            "steel",
+            "copper",
+            "silver",
+            "gold"
+          ],
+          "defaultMaterial": "iron"
+        }
+      ]
+    },
+    {
+      "id": "greaves",
+      "slotType": "feet",
+      "zh": "脛甲",
+      "paired": false,
+      "materials": [
+        "iron",
+        "steel",
+        "copper",
+        "silver",
+        "gold"
+      ],
+      "defaultMaterial": "steel",
+      "forms": [
+        {
+          "id": "plain",
+          "zh": "脛甲",
+          "materials": [
+            "iron",
+            "steel",
+            "copper",
+            "silver",
+            "gold"
+          ],
+          "defaultMaterial": "steel"
+        },
+        {
+          "id": "knee",
+          "zh": "護膝脛甲",
+          "materials": [
+            "iron",
+            "steel",
+            "copper",
+            "silver",
+            "gold"
+          ],
+          "defaultMaterial": "steel"
+        }
+      ]
+    },
+    {
+      "id": "ring",
+      "slotType": "ring",
+      "zh": "戒指",
+      "paired": false,
+      "materials": [
+        "iron",
+        "steel",
+        "copper",
+        "silver",
+        "gold",
+        "bone",
+        "crystal"
+      ],
+      "defaultMaterial": "gold",
+      "forms": [
+        {
+          "id": "plain",
+          "zh": "素戒",
+          "materials": [
+            "iron",
+            "steel",
+            "copper",
+            "silver",
+            "gold",
+            "bone",
+            "crystal"
+          ],
+          "defaultMaterial": "gold"
+        },
+        {
+          "id": "gem",
+          "zh": "寶石戒",
+          "materials": [
+            "iron",
+            "steel",
+            "copper",
+            "silver",
+            "gold",
+            "bone",
+            "crystal"
+          ],
+          "defaultMaterial": "gold"
+        },
+        {
+          "id": "signet",
+          "zh": "印戒",
+          "materials": [
+            "iron",
+            "steel",
+            "copper",
+            "silver",
+            "gold",
+            "bone",
+            "crystal"
+          ],
+          "defaultMaterial": "gold"
+        }
+      ]
+    },
+    {
+      "id": "pendant",
+      "slotType": "neck",
+      "zh": "墜飾",
+      "paired": false,
+      "materials": [
+        "iron",
+        "steel",
+        "copper",
+        "silver",
+        "gold",
+        "bone",
+        "crystal"
+      ],
+      "defaultMaterial": "gold",
+      "forms": [
+        {
+          "id": "pendant",
+          "zh": "項鍊墜",
+          "materials": [
+            "iron",
+            "steel",
+            "copper",
+            "silver",
+            "gold",
+            "bone",
+            "crystal"
+          ],
+          "defaultMaterial": "gold"
+        },
+        {
+          "id": "tag",
+          "zh": "吊牌",
+          "materials": [
+            "iron",
+            "steel",
+            "copper",
+            "silver",
+            "gold",
+            "bone",
+            "crystal"
+          ],
+          "defaultMaterial": "gold"
+        }
+      ]
+    },
+    {
+      "id": "charm",
+      "slotType": "neck",
+      "zh": "護符",
+      "paired": false,
+      "materials": [
+        "iron",
+        "steel",
+        "copper",
+        "silver",
+        "gold",
+        "bone",
+        "crystal",
+        "leather",
+        "cloth"
+      ],
+      "defaultMaterial": "gold",
+      "forms": [
+        {
+          "id": "tablet",
+          "zh": "符牌",
+          "materials": [
+            "iron",
+            "steel",
+            "copper",
+            "silver",
+            "gold",
+            "bone",
+            "crystal",
+            "leather",
+            "cloth"
+          ],
+          "defaultMaterial": "gold"
+        },
+        {
+          "id": "bone",
+          "zh": "骨符",
+          "materials": [
+            "iron",
+            "steel",
+            "copper",
+            "silver",
+            "gold",
+            "bone",
+            "crystal",
+            "leather",
+            "cloth"
+          ],
+          "defaultMaterial": "gold"
+        }
+      ]
+    }
+  ]
+}

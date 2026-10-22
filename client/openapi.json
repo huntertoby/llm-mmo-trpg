@@ -1398,6 +1398,82 @@
         "title": "Aim",
         "description": "瞄準（Phase 3-21a）：本回合下一次需要擲命中的攻擊（普攻或技能）命中 ``+aim_hit_bonus``；\n不疊加，回合結束或用掉即失效。"
       },
+      "AppearanceView": {
+        "properties": {
+          "kind": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Kind"
+          },
+          "form": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Form"
+          },
+          "material": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Material"
+          },
+          "dye": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Dye"
+          },
+          "style": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Style"
+          },
+          "rarity": {
+            "type": "string",
+            "title": "Rarity",
+            "default": "common"
+          },
+          "keywords": {
+            "items": {
+              "type": "string"
+            },
+            "type": "array",
+            "title": "Keywords",
+            "default": []
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "title": "AppearanceView",
+        "description": "物品外觀（Phase 3G-G5a，只給圖示用）：欄位同 ``content/equipment/appearance.yaml``；\n物品沒寫的欄位為 ``None``（前端依欄位退回預設）；``keywords`` 由詞條推導（前 2 個）；\n``rarity`` 沒寫時傳說物品為 ``legendary``、其餘 ``common``。"
+      },
       "ArenaOpponents": {
         "properties": {
           "id": {
@@ -2907,6 +2983,13 @@
             "type": "array",
             "title": "Affixes",
             "default": []
+          },
+          "appearance": {
+            "$ref": "#/components/schemas/AppearanceView",
+            "default": {
+              "rarity": "common",
+              "keywords": []
+            }
           }
         },
         "additionalProperties": false,

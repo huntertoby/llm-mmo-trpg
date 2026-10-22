@@ -36,11 +36,13 @@ from collections.abc import Callable, Iterable
 from dataclasses import replace
 from typing import TYPE_CHECKING
 
+from trpg.content.appearance import derive_keywords
 from trpg.content.battle import UnitTemplate
 from trpg.content.equipment import (
     ConditionalAffix,
     CostAffix,
     EquipmentRules,
+    EquippedItem,
     Loadout,
     StatAffix,
 )
@@ -154,6 +156,23 @@ def _value(entry: GearAffix) -> int:
     return entry.value or 0
 
 
+def _gear_item(equipped: EquippedItem) -> GearItem:
+    """欄位上的物品（含外觀欄位；關鍵字由該件的詞條推導，只給圖示用）。"""
+    item = equipped.item
+    return GearItem(
+        slot=equipped.slot,
+        item_id=item.id,
+        name_zh=item.name_zh,
+        kind=item.kind or "",
+        form=item.form or "",
+        material=item.material or "",
+        dye=item.dye or "",
+        style=item.style or "",
+        rarity=item.rarity or ("legendary" if item.legendary else "common"),
+        keywords=derive_keywords(a.affix for a in equipped.affixes),
+    )
+
+
 def build_gear(loadout: Loadout, rules: EquipmentRules) -> GearState:
     """開戰時算好單位的裝備狀態（遞減後的加值；移動的上限在這裡截斷，其他上限在使用時套用）。"""
     if not loadout.items:
@@ -189,7 +208,7 @@ def build_gear(loadout: Loadout, rules: EquipmentRules) -> GearState:
     if "move" in merged:
         merged["move"] = cap_move_bonus(rules, merged["move"])
     return GearState(
-        items=tuple(GearItem(e.slot, e.item.id, e.item.name_zh) for e in loadout.items),
+        items=tuple(_gear_item(e) for e in loadout.items),
         affixes=affixes,
         bonuses=tuple(b for b in bonuses if b.amount),
         merged=tuple(sorted((k, v) for k, v in merged.items() if v)),
