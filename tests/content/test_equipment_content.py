@@ -32,6 +32,7 @@ WHITELIST: dict[str, tuple[str, ...]] = {
         "affix_cond_height_hit",
         "affix_cond_still_defense",
         "affix_cond_low_hp_damage",
+        "affix_trait_longgun_still_crit",
     ),
     "keyword": ("affix_kw_burn_duration", "affix_kw_prone_damage", "affix_kw_shock_area"),
     "attack": (
@@ -49,7 +50,6 @@ WHITELIST: dict[str, tuple[str, ...]] = {
         "affix_trait_axe_sunder",
         "affix_trait_bow_lob_cover",
         "affix_trait_bow_high_range",
-        "affix_trait_longgun_still_crit",
         "affix_trait_dagger_backstab_die",
     ),
     "trigger": ("affix_trig_every3_prone", "affix_trig_kill_ap", "affix_trig_thorns_burn"),

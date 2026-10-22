@@ -1,5 +1,5 @@
 # 普攻精通——取捨型修正型被動（Phase 3-32a，08 8.25 普攻流；數值為初值，未經模擬）：
-# 主動技能欄每空 1 格，你的普攻傷害 +8%，最多算 3 格（+24%）；空格數在每次普攻結算當下由引擎從技能欄
+# 主動技能欄每空 1 格，你的普攻傷害 +6%（3-32c 由 8% 下修），最多算 3 格（+18%）；空格數在每次普攻結算當下由引擎從技能欄
 # 算出（確定、可重播）；計入全身傷害 +50% 上限。
 id: skill_attack_mastery
 schema_version: 1
@@ -17,7 +17,7 @@ shape: {type: self}
 effects: []
 modifiers:
   - applies_to: {actions: [attack]}
-    change: {damage_permille: 80}
+    change: {damage_permille: 60}
     empty_slots_cap: 3
 condition: null
 tags: [passive, modifier]

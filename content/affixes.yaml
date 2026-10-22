@@ -55,6 +55,16 @@ affixes:
     negate: true
     value: {min: 100, max: 200}
     value_unit: permille
+  - id: affix_trait_longgun_still_crit
+    category: conditional
+    name_zh: 長槍站定（本回合沒有移動）時傷害 +{n}
+    slots: [weapon]
+    weapons: [longgun]
+    effect: damage
+    condition: {type: moved_this_turn}
+    negate: true
+    value: {min: 100, max: 100}
+    value_unit: permille
   - id: affix_cond_low_hp_damage
     category: conditional
     name_zh: HP 低於 50% 時傷害 +{n}
@@ -129,17 +139,17 @@ affixes:
   # --- 4 普攻附加：普攻流（Phase 3-32a，08 8.25；數值為初值，未經模擬）---
   - id: affix_attack_combo
     category: attack
-    name_zh: 每第 {n} 次普攻命中：多攻擊一次（50% 傷害；每回合 1 次）
+    name_zh: 每第 {n} 次普攻命中：多攻擊一次（40% 傷害；每回合 1 次）
     slots: [weapon, hands]
     strike: combo
-    strike_permille: 500
+    strike_permille: 400
     value: {min: 2, max: 3}
   - id: affix_attack_cleave
     category: attack
-    name_zh: 普攻命中後，對目標相鄰的另一個敵人造成 50% 傷害（每回合 1 次）
+    name_zh: 普攻命中後，對目標相鄰的另一個敵人造成 40% 傷害（每回合 1 次）
     slots: [weapon]
     strike: cleave
-    strike_permille: 500
+    strike_permille: 400
 
   # --- 5 武器特性強化（結算在 G2；長槍由 3-24a2 加入）---
   - id: affix_trait_hammer_knockback
@@ -169,13 +179,6 @@ affixes:
     slots: [weapon]
     weapons: [bow]
     param: high_range
-    delta: 1
-  - id: affix_trait_longgun_still_crit
-    category: weapon_trait
-    name_zh: 長槍站定時暴擊範圍再 +1
-    slots: [weapon]
-    weapons: [longgun]
-    param: steady.crit_range
     delta: 1
   - id: affix_trait_dagger_backstab_die
     category: weapon_trait

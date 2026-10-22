@@ -154,7 +154,7 @@ modifier:
   uses: {attack: 6, shove: 2, trip: 2, interact: 1, all_attacks: 10, all_skills: 6, skill_tag: 3}
   uses_cap: 12
   per_turn_limit_uses: 8        # 3-31：帶 per_turn_limit 的規則，每場預估使用次數（每個自己的回合最多 1 次；初值，未經模擬）
-  empty_slots_permille: 500     # 3-32a：依空欄位數加傷的規則（普攻精通）以滿格估算再 × 此值（技能欄空著本身就是代價；初值，未經模擬）
+  empty_slots_permille: 700     # 3-32a：依空欄位數加傷的規則（普攻精通）以滿格估算再 × 此值（技能欄空著本身就是代價；初值，未經模擬；3-32c 精通 80‰→60‰ 後由 500 調到 700，維持預算 ≥ 70%）
   on_hit_rune_permille: 270     # 3-31：命中後的 inscribe／detonate_runes 點數 × 此值（符文單獨沒效果、要搭配讀取者；初值，未經模擬）
   points_milli:
     hit_bonus: 350        # 命中 +1 ≈ 命中率 +5% × 基準傷害 7
