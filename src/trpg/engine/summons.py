@@ -28,10 +28,15 @@ from trpg.content.rules import CoreRules
 from trpg.engine import modifiers
 from trpg.engine.context import Ctx
 from trpg.engine.effects import execute
-from trpg.engine.effects.models import ApplyStatusEffect
+from trpg.engine.effects.models import (
+    ApplyStatusEffect,
+    CreateSurfaceEffect,
+    EffectBase,
+    HealEffect,
+)
 from trpg.engine.events import EffectFizzled, EventBase, TotemPulsed, UnitSummoned
-from trpg.engine.ids import next_unit_id
-from trpg.engine.infusion import default_infusion
+from trpg.engine.ids import CONCEALED, next_unit_id
+from trpg.engine.infusion import active_infusions, default_infusion, template_of
 from trpg.engine.lifecycle import dismiss_summon, make_unit, summons_of
 from trpg.engine.rules.geometry import XY, manhattan
 from trpg.engine.rules.statuses import effective_attribute
@@ -44,6 +49,7 @@ __all__ = [
     "Growth",
     "expire_summons",
     "growth_of",
+    "pulse_summon",
     "pulse_totem",
     "summon_limit",
     "summon_unit",
@@ -186,10 +192,12 @@ def summon_unit(  # noqa: PLR0917
     )
     unit.owner_id = owner.id
     unit.max_hp = (unit.max_hp + grown.hp) * _hp_permille(state, owner, skill_id) // PERMILLE
-    unit.hp = unit.max_hp
     unit.level = owner.level
     unit.summon_bonus_permille = grown.bonus_permille
     unit.infusion = infusion
+    infusions = active_infusions(state, unit)  # 固有與施放時選的灌注（3-33e1）
+    unit.max_hp = unit.max_hp * (PERMILLE + sum(i.hp_permille for i in infusions)) // PERMILLE
+    unit.hp = unit.max_hp
     unit.summon_mode = summon.template.default_mode
     duration = min(duration, ctx.core.summon_max_duration)
     unit.summon_expires_round = state.round + duration
@@ -213,6 +221,16 @@ def summon_unit(  # noqa: PLR0917
             infusion=infusion,
         )
     )
+    conceal = max((i.conceal_rounds for i in infusions), default=0)
+    if conceal > 0:  # 隱蔽灌注（3-33e1）：召喚時獲得隱蔽
+        execute(
+            ctx,
+            [
+                ApplyStatusEffect(
+                    target_id=uid, status_id=CONCEALED, duration=conceal, source_id=owner.id
+                )
+            ],
+        )
     return events
 
 
@@ -234,6 +252,38 @@ def totem_of(state: BattleState, unit: UnitState) -> TotemSpec | None:
         return state.ruleset.summon_def(unit.template_id).template.totem
     except KeyError:
         return None
+
+
+def pulse_summon(ctx: Ctx, unit: UnitState) -> None:
+    """召喚物自己的回合開始時的脈動（Phase 3-33e1，水精）：腳下造表面、治療附近受傷的友方
+    （不含自己與倒下者；依 ID 順序）。沒有 ``pulse`` 的召喚物不動作。"""
+    template = template_of(ctx.state, unit)
+    if template is None or template.pulse is None:
+        return
+    pulse = template.pulse
+    batch: list[EffectBase] = []
+    if pulse.surface is not None:
+        batch.append(
+            CreateSurfaceEffect(
+                source_id=unit.id, pos=unit.xy, surface=pulse.surface, team=unit.team
+            )
+        )
+    for ally in ctx.state.living_units():
+        if (
+            ally.team is unit.team
+            and ally.id != unit.id
+            and ally.hp < ally.max_hp
+            and manhattan(ally.xy, unit.xy) <= pulse.heal_radius
+        ):
+            batch.append(
+                HealEffect(
+                    source_id=unit.id,
+                    target_id=ally.id,
+                    dice=pulse.heal_dice,
+                    flat=pulse.heal_flat,
+                )
+            )
+    execute(ctx, batch)
 
 
 def totem_targets(state: BattleState, totem: UnitState, spec: TotemSpec) -> list[UnitState]:

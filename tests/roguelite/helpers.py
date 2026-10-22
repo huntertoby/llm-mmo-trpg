@@ -9,8 +9,11 @@ from trpg.roguelite import RunState, auto_play, new_run
 
 __all__ = ["VICTORY", "full_run", "library"]
 
-VICTORY = ("build_fire", 1)
-"""AI 代打會打完整輪（含兩次營火與 Boss）的 build 與種子（目前內容與數值下）。"""
+VICTORY = ("build_fire", 6)
+"""AI 代打會打完整輪（含兩次營火與 Boss）的 build 與種子（目前內容與數值下）。
+
+3-33e1 技能池多了 6 招召喚技，原種子 1 不再勝利，改 6。
+"""
 
 
 @cache

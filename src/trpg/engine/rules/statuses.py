@@ -37,6 +37,7 @@ __all__ = [
     "shield_amount",
     "skip_turn_status",
     "stance_status_ids",
+    "status_attack_bonus",
     "weapon_attribute",
 ]
 
@@ -108,6 +109,11 @@ def effective_attribute(rules: Ruleset, unit: UnitState, attr: Attribute) -> int
     for status in unit.statuses:
         value += rules.status_def(status.status_id).attr_bonus.get(attr, 0)
     return value
+
+
+def status_attack_bonus(rules: Ruleset, unit: UnitState) -> int:
+    """所有狀態的 ``attack_bonus`` 之和（Phase 3-33e1，戰意圖騰的「攻擊 +1」）。"""
+    return sum(rules.status_def(s.status_id).attack_bonus for s in unit.statuses)
 
 
 def weapon_attribute(rules: Ruleset, unit: UnitState) -> int:

@@ -1,0 +1,19 @@
+# 召喚物（Phase 3-33e1，docs/design/06-技能.md 6.29.5；數值為初值，未經模擬）：遠程控場。冰霜法杖、固有「冰凍」（命中緩速；目標站在水面時直接冰凍）。
+id: summon_ice_spirit
+name_zh: 冰靈
+attributes: {str: 8, dex: 14, con: 10, int: 12, wis: 10, wil: 10}
+max_hp: 14
+speed: 5
+armor_bonus: 0
+weapon: frost_staff
+ai_profile: archer
+resist: {elemental: 250}
+element_mods: {}
+tags: [summoned, elemental, ice]
+reactions: []
+summon: true
+innate: frozen   # 普攻緩速
+hit_rules:
+  - {when: target_in_water, status: frozen, duration: 1}   # 命中潮濕（站在水面）的目標時冰凍
+# 外觀（Phase 3-33h1，docs/art/召喚物外觀.md）：純顯示資料。
+look: {body: spirit, element: frozen, size: medium}

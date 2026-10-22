@@ -1,0 +1,19 @@
+# 召喚物（Phase 3-33e1，docs/design/06-技能.md 6.29.5；數值為初值，未經模擬）：斥候。利爪、速度 7、固有「標記」；命中同時揭露目標。「會飛」在 3-33e1 只以高速度近似（沒有新增移動規則）。
+id: summon_hawk
+name_zh: 鷹隼
+attributes: {str: 6, dex: 16, con: 10, int: 8, wis: 12, wil: 8}
+max_hp: 8
+speed: 7
+armor_bonus: 0
+weapon: talons
+ai_profile: brute
+resist: {}
+element_mods: {}
+tags: [summoned, beast, flying]
+reactions: []
+summon: true
+innate: marked   # 命中標記
+hit_rules:
+  - {when: always, status: revealed, duration: 2}   # 命中揭露隱蔽的目標
+# 外觀（Phase 3-33h1，docs/art/召喚物外觀.md）：純顯示資料。
+look: {body: beast, variant: bird, element: marked, size: small, trait: flying}

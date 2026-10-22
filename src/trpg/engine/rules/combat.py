@@ -24,6 +24,7 @@ from trpg.engine.rules.statuses import (
     grants_advantage_against,
     has_attack_disadvantage_status,
     prevents_concealment,
+    status_attack_bonus,
     weapon_attribute,
 )
 from trpg.engine.rules.weapons import crit_range_cut, weapon_hit_bonus
@@ -73,8 +74,10 @@ _COVER_DIRECTIONS: tuple[XY, ...] = ((0, -1), (1, 0), (0, 1), (-1, 0))
 
 
 def attack_value(unit: UnitState, rules: Ruleset) -> int:
-    """攻擊值 ＝ 縮放屬性值（有效屬性） ＋ 武器攻擊加值。"""
-    return weapon_attribute(rules, unit) + unit.weapon.attack_bonus
+    """攻擊值 ＝ 縮放屬性值（有效屬性） ＋ 武器攻擊加值 ＋ 狀態的攻擊加值（戰意，3-33e1）。"""
+    return (
+        weapon_attribute(rules, unit) + unit.weapon.attack_bonus + status_attack_bonus(rules, unit)
+    )
 
 
 @dataclass(frozen=True, slots=True)

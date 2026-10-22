@@ -1,5 +1,5 @@
 # 召喚物（Phase 3D-4a，docs/design/06-技能.md 6.16 B；數值為初值，未經模擬）：骷髏戰士。
-# 近戰（單手劍）；由效用 AI 的 brute 模式控制。
+# 近戰（單手劍）；由效用 AI 的 brute 模式控制。Phase 3-33e1：固有「倒地」（盾擊）。
 id: summon_skeleton_warrior
 name_zh: 骷髏戰士
 attributes: {str: 12, dex: 10, con: 12, int: 6, wis: 8, wil: 8}
@@ -13,5 +13,6 @@ element_mods: {}
 tags: [summoned, undead]
 reactions: []
 summon: true
+innate: prone   # 3-33e1 強化：盾擊——命中時絆倒目標（對抗判定，每輪 1 次）
 # 外觀（Phase 3-33h1，docs/art/召喚物外觀.md）：純顯示資料。
 look: {body: humanoid, variant: skeleton, element: prone, size: medium, trait: shield}

@@ -713,15 +713,18 @@ def _summon_look(state: BattleState, unit: UnitState) -> SummonLookView | None:
     if not unit.is_summon:
         return None
     try:
-        look = state.ruleset.summon_def(unit.template_id).template.look
+        template = state.ruleset.summon_def(unit.template_id).template
     except KeyError:
         return None
+    look = template.look
     if look is None:
         return None
+    # 有固有關鍵字的召喚物（3-33e1）固定用自己的元素色；通用的靈才依灌注上色
+    element = look.element if template.innate and look.element else unit.infusion or look.element
     return SummonLookView(
         body=look.body,
         variant=look.variant,
-        element=unit.infusion or look.element,
+        element=element,
         size=look.size,
         trait=look.trait,
     )

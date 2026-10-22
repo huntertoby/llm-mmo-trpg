@@ -65,6 +65,7 @@ from trpg.engine.weapon_traits import (
     apply_hit_traits,
     attack_dice,
     gunshot_reveals,
+    height_permille,
     pierce_line_targets,
     reveal_after_gunshot,
     spend_ammo,
@@ -640,6 +641,8 @@ def _attack_once(
     )
     if extra_permille is not None:
         multiplier = multiplier * extra_permille // PERMILLE
+    if attacker.is_summon:  # 高處灌注（3-33e1）：比目標高時普攻傷害加成
+        multiplier = multiplier * (PERMILLE + height_permille(state, attacker, target)) // PERMILLE
     weapon = attacker.weapon
     execute(
         ctx,

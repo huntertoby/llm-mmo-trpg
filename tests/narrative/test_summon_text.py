@@ -34,7 +34,7 @@ def test_the_totem_pulse_and_cli_marks_summons() -> None:
     result = end(state)
     [pulse] = [e for e in result.events if isinstance(e, TotemPulsed)]
     text = describe_event(pulse, result.state)
-    assert text is not None and "戰意圖騰1 散發光環（2 格內）" in text and "獲得「激昂」" in text
+    assert text is not None and "戰意圖騰1 散發光環（2 格內）" in text and "獲得「戰意」" in text
     state = result.state
     [totem] = [u for u in state.units_sorted() if u.template_id == TOTEM]
     # 召喚物用數字代號，不佔用隊伍字母；單位表標明召喚者與到期輪；圖例說明數字

@@ -35,7 +35,7 @@ def _problems(skill: SkillDef, *, summon_ids: set[str] | None = None) -> list[st
     )
 
 
-def test_the_three_summon_templates_are_loaded_into_the_ruleset() -> None:
+def test_the_summon_templates_are_loaded_into_the_ruleset() -> None:
     lib = library()
     summons = lib.ruleset.summons.by_id()
     assert set(summons) == {
@@ -43,6 +43,13 @@ def test_the_three_summon_templates_are_loaded_into_the_ruleset() -> None:
         "summon_skeleton_warrior",
         "summon_war_totem",
         "summon_afterimage",  # 3D-6：規則改變「殘影」的分身
+        # 3-33e1：召喚物（一）
+        "summon_fire_spirit",
+        "summon_ice_spirit",
+        "summon_thunder_spirit",
+        "summon_water_sprite",
+        "summon_shade",
+        "summon_hawk",
     }
     spirit, skeleton = summons["summon_elemental_spirit"], summons["summon_skeleton_warrior"]
     assert spirit.template.summon and skeleton.template.summon

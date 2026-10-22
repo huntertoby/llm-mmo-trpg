@@ -52,7 +52,7 @@ def totem_turn(state: BattleState, x: int, y: int) -> tuple[BattleState, list[Ev
 def test_the_totem_template_is_an_immobile_summon() -> None:
     template = library().ruleset.summon_def(TOTEM).template
     assert template.speed == 0 and template.summon and template.totem is not None
-    assert template.totem.status == "empowered"
+    assert template.totem.status == "rallied"
 
 
 def test_a_totem_must_be_a_speed_zero_summon() -> None:
@@ -80,17 +80,17 @@ def test_the_totem_empowers_allies_within_its_radius_each_turn() -> None:
     [pulse] = of(events, TotemPulsed)
     assert pulse.targets == [U1, U2, U3]  # 依單位 ID 排序
     for uid in (U1, U2, U3):
-        status = state.units[uid].get_status("empowered")
+        status = state.units[uid].get_status("rallied")
         assert status is not None and status.remaining == 2 and status.source_id == pulse.unit_id
-    assert not state.units[U4].has_status("empowered")
-    assert not state.units[UnitId("unit_0005")].has_status("empowered")  # 敵人
+    assert not state.units[U4].has_status("rallied")
+    assert not state.units[UnitId("unit_0005")].has_status("rallied")  # 敵人
     applied = of(events, StatusApplied)
     assert [e.target_id for e in applied] == [U1, U2, U3]
 
 
 def test_the_aura_refreshes_every_round() -> None:
     state, _ = totem_turn(arena(allies=()), 1, 3)
-    assert state.units[U1].has_status("empowered")  # 施放者 (0, 3) 在 1 格內
+    assert state.units[U1].has_status("rallied")  # 施放者 (0, 3) 在 1 格內
     pulses = 0
     for _ in range(12):  # 輪過幾回合：每次輪到圖騰都再給一次
         result = end(state)
@@ -119,7 +119,7 @@ def test_two_totems_do_not_buff_each_other() -> None:
     state = end(state).state
     totems = [u for u in state.units_sorted() if u.template_id == TOTEM]
     assert len(totems) == 2
-    assert all(not t.has_status("empowered") for t in totems)
+    assert all(not t.has_status("rallied") for t in totems)
 
 
 def test_the_ai_values_a_totem_by_the_allies_in_its_aura() -> None:
@@ -130,7 +130,7 @@ def test_the_ai_values_a_totem_by_the_allies_in_its_aura() -> None:
     gains_near = summon_gains(state, state.units[U1], preview(state, near).min_events, profile)
     gains_far = summon_gains(state, state.units[U1], preview(state, far).min_events, profile)
     assert gains_near > gains_far >= 0
-    points = profile.ally_status_values["empowered"]
+    points = profile.ally_status_values["rallied"]
     # 光環範圍 2：U1 (0, 3) 與 U2 (1, 3) 都在 (1, 2) 的範圍內；持續 3 輪
     expected = (
         profile.weights.support * points * 2 * 3 * Fraction(profile.summon.hit_permille, 1000)

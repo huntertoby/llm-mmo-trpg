@@ -62,6 +62,7 @@
 #   overwatch  監視：持續到持有者下回合開始（expires: own_turn_start）；reactions.yaml 的內建反應 overwatch_shot
 #              （requires_status: overwatch）在敵人於射程與視線內完成一步移動時自動普攻一次，之後移除此狀態
 # 3-24a1（武器擴充）：
+#   attack_bonus   戰意（3-33e1）：帶有者的攻擊值加這麼多（戰意；戰意圖騰的光環狀態）
 #   defense_break  破甲：帶有者的防禦值降低 StatusInstance.amount ‰（斧的普攻命中帶入；沒有 budget_points，只能由武器施加）
 # control_group 新增 mental（心智：恐懼、沉默）：適用控制遞減，不是 hard，對 Boss 不轉換。
 statuses:
@@ -253,6 +254,17 @@ statuses:
     beneficial: true
     budget_points: 4
     attr_bonus: {str: 2, dex: 2, con: 2, int: 2, wis: 2, wil: 2}
+  - id: rallied
+    polarity: buff
+    name_zh: 戰意
+    description_zh: 攻擊值 +1（戰意圖騰的光環）。
+    duration: 2
+    expires: turn_end
+    stacking: refresh
+    beneficial: true
+    budget_points: 4
+    min_rarity: rare
+    attack_bonus: 1
   - id: hasted
     polarity: buff
     name_zh: 加速
