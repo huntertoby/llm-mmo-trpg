@@ -10,6 +10,7 @@ import { stackName, statusName } from "../battle/glossary";
 import type { SkillNames } from "../battle/actions";
 import { remainingRounds, summonKind } from "../battle/summons";
 import type { UnitNames } from "../battle/units";
+import { GearIcon } from "./GearIcon";
 
 interface Props {
   unit: UnitView | null;
@@ -85,6 +86,14 @@ export function UnitInfo({ unit, names, heroId, skills, view }: Props) {
           </span>
         )}
       </div>
+      {unit.equipment.length > 0 && (
+        <div className="unit-line gear-row">
+          裝備：
+          {unit.equipment.map((e) => (
+            <GearIcon key={e.slot} look={e.appearance} slot={e.slot} size={32} title={`${e.slot_zh}：${e.name_zh}${e.affixes.length > 0 ? `（${e.affixes.map((a) => a.text_zh).join("；")}）` : ""}`} />
+          ))}
+        </div>
+      )}
       {stacks.length > 0 && (
         <div className="unit-line">層數：{stacks.map(([k, v]) => `${stackName(k)} ×${v}`).join("、")}</div>
       )}

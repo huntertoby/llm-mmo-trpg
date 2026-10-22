@@ -2504,3 +2504,18 @@ button.selected {
   margin: 0 6px;
   color: var(--muted);
 }
+
+/* 裝備圖示（Phase 3G-G5a） */
+.gear-icon {
+  display: inline-block;
+  vertical-align: middle;
+  margin-right: 4px;
+  image-rendering: auto;
+}
+
+.gear-row {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 2px;
+}

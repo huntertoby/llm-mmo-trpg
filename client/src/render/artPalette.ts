@@ -69,3 +69,57 @@ export function rgba(h: string, a: number): string {
 export function numToHex(n: number): string {
   return `#${(n & 0xffffff).toString(16).padStart(6, "0")}`;
 }
+
+// ---- 裝備圖示色票（Phase 3G-G5a；來源：docs/art/裝備外觀移植需求.md 第 2 節）----
+
+/** 圖示描邊色。 */
+export const GEAR_INK = "#16181d";
+
+/** 材質 `[主色, 暗色]`；`shine`：銀，加 1.4px 白色亮線。 */
+export const GEAR_MATERIAL: Readonly<Record<string, { c: readonly [string, string]; shine?: boolean }>> = {
+  iron: { c: ["#6e757d", "#474c52"] },
+  steel: { c: ["#a9b6c6", "#6d7a8a"] },
+  copper: { c: ["#c27a48", "#7e4a28"] },
+  silver: { c: ["#e8edf2", "#a8b0ba"], shine: true },
+  gold: { c: ["#e8bb48", "#9c7420"] },
+  wood: { c: ["#a06a36", "#6a4420"] },
+  leather: { c: ["#8a5a32", "#5e3b1f"] },
+  cloth: { c: ["#8a8f99", "#5d6168"] },
+  bone: { c: ["#e9e3cf", "#a8a08a"] },
+  crystal: { c: ["#b8a8ff", "#7a68c8"] },
+};
+
+/** 染色（暗色＝染色混黑 35%）。 */
+export const GEAR_DYE: Readonly<Record<string, string>> = {
+  red: "#b83a3a",
+  blue: "#3a5fb8",
+  green: "#3f8a4a",
+  purple: "#7a4ab0",
+  black: "#33363d",
+  white: "#e6e6e0",
+  brown: "#7a5232",
+  gold: "#d9a83a",
+};
+
+/** 關鍵字（id 同 skill_keywords.yaml）：`tint` ＝ 元素，主色混入 40%、暗色混入 25%。 */
+export const GEAR_KEYWORD: Readonly<Record<string, { c: string; tint?: boolean }>> = {
+  ignite: { c: "#ff6a1a", tint: true },
+  wet: { c: "#4aa8ff", tint: true },
+  charged: { c: "#fff36b", tint: true },
+  frozen: { c: "#8fe3ff", tint: true },
+  prone: { c: "#e0b080" },
+  collision: { c: "#ff9a4a" },
+  marked: { c: "#d06aff" },
+  high_ground: { c: "#ffe9a8" },
+  concealed: { c: "#a0a0c8" },
+  summon: { c: "#7dffb0" },
+};
+
+/** 稀有度外框色。 */
+export const GEAR_RARITY: Readonly<Record<string, string>> = {
+  common: "#8a8f99",
+  uncommon: "#5fd05f",
+  rare: "#4f9dff",
+  epic: "#b06cff",
+  legendary: "#ffbf3a",
+};
