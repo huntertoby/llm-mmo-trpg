@@ -174,7 +174,9 @@ def test_melee_and_immobile_summons_are_tougher_than_ranged_ones() -> None:
     table = library().ruleset.core.summon_role_hp_permille
     assert table["melee"] > table["ranged"] and table["totem"] > table["ranged"]
     assert table["ranged"] == 1000  # 遠程靈維持
-    assert table["scout"] > table["ranged"]  # 鷹隼係數 2.4×（玩法 PM，3-33f1 驗收）；脆弱來自基礎 HP 低
+    assert (
+        table["scout"] > table["ranged"]
+    )  # 鷹隼係數 2.4×（玩法 PM，3-33f1 驗收）；脆弱來自基礎 HP 低
 
 
 def test_role_coefficient_scales_the_summons_hp() -> None:
