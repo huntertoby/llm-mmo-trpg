@@ -59,6 +59,7 @@ def test_the_support_profile_exists_and_values_support_over_damage() -> None:
     assert profiles["support"].ally_status_values == {
         "guarded": 5,
         "empowered": 5,
+        "rallied": 5,  # 3-33e1
         "hasted": 3,
         "regenerating": 6,
         "defending": 3,

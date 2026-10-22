@@ -465,6 +465,7 @@ def test_every_status_has_a_polarity_consistent_with_beneficial() -> None:
         "regenerating",
         "shielded",
         "overwatch",  # 3D-8c：監視（可被奪取或驅散）
+        "rallied",  # 3-33e1：戰意（戰意圖騰的光環）
     }
 
 
