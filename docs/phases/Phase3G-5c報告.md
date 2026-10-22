@@ -15,7 +15,7 @@
 ## 驗收
 
 - vitest 全過（59 檔、642 項）、`tsc --noEmit`、`vite build` 通過。
-- 完整 `scripts/check.py`：見交付訊息（最後執行一次）。
+- 完整 `scripts/check.py` 全部通過（ruff、format、mypy、lint-imports、pytest、client install/typecheck/test）。
 - 截圖用 `client/doll-gallery.html`（臨時 vite 埠 5199，已關閉；未動使用者的 8000 埠）。
 
 ## 待 PM 決定
