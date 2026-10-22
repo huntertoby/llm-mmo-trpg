@@ -66,3 +66,14 @@ def test_gear_check_accepts_the_new_start(client: TestClient) -> None:
     )
     assert reply.status_code == 200, reply.text
     assert reply.json()["legal"] is True
+
+
+def test_new_start_responses_name_no_school(client: TestClient, library: ContentLibrary) -> None:
+    names = {b.name_zh for b in library.builds.builds} | {
+        p.label_zh for p in library.dev_starters.packs
+    }
+    reply = client.post(
+        "/api/battles", json=_body(library, weapon="lightning_staff", keywords=["wet", "charged"])
+    )
+    assert reply.status_code == 201
+    assert not any(name in reply.text for name in names)
