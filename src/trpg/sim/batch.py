@@ -58,6 +58,7 @@ __all__ = [
     "map_spec",
     "run_batch",
     "run_batches",
+    "run_outcomes",
 ]
 
 DEFAULT_MAX_ROUNDS = 30
@@ -174,11 +175,8 @@ def _worker(task: tuple[int, int]) -> tuple[int, BattleOutcome]:
     return index, run_one(_WORKER_SPECS[index], seed)
 
 
-def run_batches(specs: Sequence[BatchSpec], *, jobs: int = 1) -> list[BatchReport]:
-    """執行多批戰鬥（共用同一組工作行程）；回傳與 ``specs`` 同順序的報表。
-
-    報表只依種子排序後的結果彙總，與 ``jobs`` 無關。
-    """
+def run_outcomes(specs: Sequence[BatchSpec], *, jobs: int = 1) -> list[list[BattleOutcome]]:
+    """執行多批戰鬥（共用同一組工作行程）；回傳與 ``specs`` 同順序、每批依種子排序的結果。"""
     if jobs < 1:
         raise ValueError("jobs 必須 >= 1")
     spec_list = tuple(specs)
@@ -194,10 +192,20 @@ def run_batches(specs: Sequence[BatchSpec], *, jobs: int = 1) -> list[BatchRepor
     grouped: dict[int, list[BattleOutcome]] = {i: [] for i in range(len(spec_list))}
     for index, outcome in results:
         grouped[index].append(outcome)
+    return [sorted(grouped[i], key=lambda o: o.seed) for i in range(len(spec_list))]
+
+
+def run_batches(specs: Sequence[BatchSpec], *, jobs: int = 1) -> list[BatchReport]:
+    """執行多批戰鬥（共用同一組工作行程）；回傳與 ``specs`` 同順序的報表。
+
+    報表只依種子排序後的結果彙總，與 ``jobs`` 無關。
+    """
+    spec_list = tuple(specs)
+    grouped = run_outcomes(spec_list, jobs=jobs)
     return [
         build_report(
             spec.name,
-            sorted(grouped[i], key=lambda o: o.seed),
+            grouped[i],
             equipped=_equipped_skills(spec.setup),
             max_rounds=spec.setup.max_rounds,
         )
