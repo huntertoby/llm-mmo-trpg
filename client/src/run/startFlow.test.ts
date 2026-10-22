@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 import type { OfferTag, StartKeywordOption } from "../api/types";
-import { canStart, isDevMode, keepAvailable, offerTagHint, offerTagText, toggleKeyword } from "./startFlow";
+import { canStart, isDevMode, keepAvailable, offerTagHint, offerTagText, startBody, toggleKeyword } from "./startFlow";
 
 function kw(id: string, name: string) {
   return { id, name_zh: name, description_zh: "" };
@@ -57,5 +57,18 @@ describe("開發者模式", () => {
     expect(isDevMode("?dev=0")).toBe(false);
     expect(isDevMode("?dev=1")).toBe(true);
     expect(isDevMode("?x=2&dev=true")).toBe(true);
+  });
+});
+
+describe("單場戰鬥開局（3-28）", () => {
+  it("送武器＋關鍵字，或只送開發者起始包；不送 build", () => {
+    expect(startBody({ weapon: "bow", keywords: ["ignite", "marked"] })).toEqual({ weapon: "bow", keywords: ["ignite", "marked"] });
+    expect(startBody({ devPack: "dev_a" })).toEqual({ keywords: [], dev_pack: "dev_a" });
+  });
+
+  it("?dev=1 才開啟開發者模式（起始包只在那時出現）", () => {
+    expect(isDevMode("")).toBe(false);
+    expect(isDevMode("?dev=0")).toBe(false);
+    expect(isDevMode("?dev=1")).toBe(true);
   });
 });

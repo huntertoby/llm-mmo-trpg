@@ -2,7 +2,7 @@
 // 不合法時顯示原因；英雄面板顯示加成來源；通過後進靶場戰鬥，預覽的數字已含裝備。
 import { useEffect, useMemo, useRef, useState } from "react";
 import { api, ApiError } from "../api/client";
-import type { BattleResponse, BuildSummary, GearCatalog, GearCheck, WorkshopArena } from "../api/types";
+import type { BattleResponse, GearCatalog, GearCheck, WorkshopArena } from "../api/types";
 import {
   emptyDraft,
   occupiesOffHand,
@@ -19,6 +19,8 @@ import { CustomItemForm } from "../ui/gear/CustomItemForm";
 import { HeroGearPanel } from "../ui/gear/HeroGearPanel";
 import { ItemList } from "../ui/gear/ItemList";
 import { SlotGrid } from "../ui/gear/SlotGrid";
+import { DevPackSelect, StartPickerView, useStartPicker } from "../run/StartPicker";
+import { isDevMode, type StartChoiceBody } from "../run/startFlow";
 import { parseSeed, randomSeed } from "./StartScreen";
 
 interface Props {
@@ -52,15 +54,15 @@ function writeSaved(selection: Selection): void {
 
 export function GearScreen({ onHome, onSkills, onStartBattle }: Props) {
   const [catalog, setCatalog] = useState<GearCatalog | null>(null);
-  const [builds, setBuilds] = useState<BuildSummary[]>([]);
   const [arena, setArena] = useState<WorkshopArena | null>(null);
   const [selection, setSelection] = useState<Selection>(readSaved);
   const [selected, setSelected] = useState("main_hand");
   const [mode, setMode] = useState<"items" | "custom">("items");
   const [drafts, setDrafts] = useState<Record<string, CustomDraft>>({});
-  const [buildId, setBuildId] = useState("");
   const [opponents, setOpponents] = useState("");
   const [seedText, setSeedText] = useState(() => String(randomSeed()));
+  const [usePack, setUsePack] = useState(false);
+  const picker = useStartPicker(parseSeed(seedText), isDevMode(window.location.search), usePack);
   const [check, setCheck] = useState<GearCheck | null>(null);
   const [checking, setChecking] = useState(false);
   const [busy, setBusy] = useState(false);
@@ -69,13 +71,11 @@ export function GearScreen({ onHome, onSkills, onStartBattle }: Props) {
 
   useEffect(() => {
     let cancelled = false;
-    Promise.all([api.gearCatalog(), api.builds(), api.workshopArena()])
-      .then(([c, b, a]) => {
+    Promise.all([api.gearCatalog(), api.workshopArena()])
+      .then(([c, a]) => {
         if (cancelled) return;
         setCatalog(c);
-        setBuilds(b);
         setArena(a);
-        setBuildId((cur) => cur || (b[0]?.id ?? ""));
         setOpponents((cur) => cur || (a.opponents[0]?.id ?? ""));
         setSelection((cur) => sanitizeSelection(cur, c));
       })
@@ -93,13 +93,15 @@ export function GearScreen({ onHome, onSkills, onStartBattle }: Props) {
   const localProblems = useMemo(() => (catalog === null ? [] : selectionProblems(selection, catalog)), [catalog, selection]);
 
   // 整組裝備的檢查（伺服器裁決）：防抖，且只採用最後一次請求的結果。
+  const startKey = JSON.stringify(picker.body);
   useEffect(() => {
-    if (catalog === null || buildId === "") return undefined;
+    const startBody = (JSON.parse(startKey) as StartChoiceBody | null) ?? null;
+    if (catalog === null || startBody === null) return undefined;
     const id = ++requestId.current;
     setChecking(true);
     const timer = setTimeout(() => {
       api
-        .gearCheck({ hero_build: buildId, equipment })
+        .gearCheck({ ...startBody, equipment })
         .then((result) => {
           if (id !== requestId.current) return;
           setCheck(result);
@@ -112,7 +114,7 @@ export function GearScreen({ onHome, onSkills, onStartBattle }: Props) {
         });
     }, CHECK_DELAY_MS);
     return () => clearTimeout(timer);
-  }, [catalog, buildId, equipment]);
+  }, [catalog, startKey, equipment]);
 
   if (catalog === null) {
     return (
@@ -132,7 +134,7 @@ export function GearScreen({ onHome, onSkills, onStartBattle }: Props) {
   const problems = localProblems.length > 0 ? localProblems : check !== null && !check.legal ? [...check.problems] : [];
   const seed = parseSeed(seedText);
   const legal = localProblems.length === 0 && check !== null && check.legal && !checking;
-  const ready = legal && buildId !== "" && seed !== null && !busy;
+  const ready = legal && picker.body !== null && seed !== null && !busy;
 
   const setPick = (slotId: string, pick: Selection[string]) =>
     setSelection((cur) => {
@@ -150,7 +152,7 @@ export function GearScreen({ onHome, onSkills, onStartBattle }: Props) {
       const response = await api.createBattle({
         map_id: arena?.default_map ?? "training_range",
         seed,
-        hero_build: buildId,
+        ...(picker.body ?? { keywords: [] }),
         ally_builds: [],
         max_rounds: arena?.max_rounds ?? 30,
         equipment,
@@ -248,17 +250,9 @@ export function GearScreen({ onHome, onSkills, onStartBattle }: Props) {
       </div>
       <section className="panel gear-tryout">
         <div className="section-title">進靶場試打</div>
+        <StartPickerView picker={picker} disabled={busy} />
+        <DevPackSelect picker={picker} active={usePack} onActive={setUsePack} disabled={busy} />
         <div className="gear-tryout-form">
-          <label>
-            主角 build
-            <select value={buildId} onChange={(e) => setBuildId(e.target.value)}>
-              {builds.map((b) => (
-                <option key={b.id} value={b.id}>
-                  {b.name_zh}（{b.weapon_name_zh}）
-                </option>
-              ))}
-            </select>
-          </label>
           <label>
             對手
             <select value={opponents} onChange={(e) => setOpponents(e.target.value)}>

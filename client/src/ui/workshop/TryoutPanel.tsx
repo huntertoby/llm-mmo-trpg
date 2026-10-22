@@ -1,12 +1,14 @@
-// 裝上試玩：選 build、要換掉哪一格、地圖與對手、種子 → 建立戰鬥並進入戰鬥畫面。
-import { useEffect, useMemo, useState } from "react";
+// 裝上試玩：選起始武器＋關鍵字、要換掉哪一格、地圖與對手、種子 → 建立戰鬥並進入戰鬥畫面。
+import { useEffect, useState } from "react";
 import { api, ApiError } from "../../api/client";
-import type { BattleResponse, BuildSummary, WorkshopArena, WorkshopCheck } from "../../api/types";
+import type { BattleResponse, WorkshopArena, WorkshopCheck } from "../../api/types";
 import type { TryoutPrefs } from "../../workshop/state";
 import { buildTryoutRequest, isTrainingMap, manaNote, manaWarning } from "../../workshop/tryout";
 import { parseSeed, randomSeed } from "../../screens/StartScreen";
+import { DevPackSelect, StartPickerView, useStartPicker } from "../../run/StartPicker";
+import { isDevMode } from "../../run/startFlow";
 import { ErrorBanner } from "../ErrorBanner";
-import { primeSkillCard, useSkillCards } from "../useSkillCards";
+import { primeSkillCard } from "../useSkillCards";
 
 interface Props {
   check: WorkshopCheck | null;
@@ -18,19 +20,20 @@ interface Props {
 }
 
 export function TryoutPanel({ check, pending, prefs, onPrefs, onStart }: Props) {
-  const [builds, setBuilds] = useState<BuildSummary[]>([]);
   const [arena, setArena] = useState<WorkshopArena | null>(null);
   const [seedText, setSeedText] = useState(() => String(randomSeed()));
+  const [usePack, setUsePack] = useState(false);
+  const picker = useStartPicker(parseSeed(seedText), isDevMode(window.location.search), usePack);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [warning, setWarning] = useState<{ text: string; response: BattleResponse } | null>(null);
 
   useEffect(() => {
     let cancelled = false;
-    Promise.all([api.builds(), api.workshopArena()])
-      .then(([b, a]) => {
+    api
+      .workshopArena()
+      .then((a) => {
         if (cancelled) return;
-        setBuilds(b);
         setArena(a);
       })
       .catch((e: unknown) => {
@@ -41,23 +44,22 @@ export function TryoutPanel({ check, pending, prefs, onPrefs, onStart }: Props) 
     };
   }, []);
 
-  const buildId = builds.some((b) => b.id === prefs.build) ? (prefs.build ?? "") : (builds[0]?.id ?? "");
-  const build = builds.find((b) => b.id === buildId);
   const mapId = arena?.maps.some((m) => m.id === prefs.map) ? (prefs.map ?? "") : (arena?.default_map ?? "");
   const opponentId = arena?.opponents.some((o) => o.id === prefs.opponents) ? (prefs.opponents ?? "") : (arena?.opponents[0]?.id ?? "");
-  const replaceId = build?.skills.includes(prefs.replace ?? "") ? (prefs.replace ?? "") : "";
-  const cards = useSkillCards(useMemo(() => build?.skills ?? [], [build]));
+  const heroSkills = picker.skills;
+  const replaceId = heroSkills.some((c) => c.id === prefs.replace) ? (prefs.replace ?? "") : "";
   const training = isTrainingMap(arena, mapId);
   const opponent = arena?.opponents.find((o) => o.id === opponentId);
   const seed = parseSeed(seedText);
   const playable = check !== null && check.complete && check.legal && !pending;
-  const ready = playable && buildId !== "" && mapId !== "" && seed !== null && !busy;
+  const ready = playable && picker.body !== null && mapId !== "" && seed !== null && !busy;
 
-  const set = (patch: Partial<TryoutPrefs>) => onPrefs({ ...prefs, build: buildId, map: mapId, opponents: opponentId, replace: replaceId, ...patch });
+  const set = (patch: Partial<TryoutPrefs>) => onPrefs({ ...prefs, map: mapId, opponents: opponentId, replace: replaceId, ...patch });
 
   async function start() {
     if (!ready || seed === null || check === null) return;
-    const body = buildTryoutRequest({ mapId, seed, buildId, replaceId, opponents: opponentId }, check, arena);
+    if (picker.body === null) return;
+    const body = buildTryoutRequest({ mapId, seed, start: picker.body, replaceId, opponents: opponentId }, check, arena);
     if (body === null) return;
     setBusy(true);
     setError(null);
@@ -76,30 +78,22 @@ export function TryoutPanel({ check, pending, prefs, onPrefs, onStart }: Props) 
     }
   }
 
-  const note = manaNote(check, build?.max_mana);
+  const note = manaNote(check, usePack ? undefined : picker.weaponDef?.mana);
   return (
     <div className="panel ws-panel">
       <div className="section-title">裝上試玩</div>
       <div className="muted small">把這個技能裝到主角身上，進入戰鬥畫面實際施放一次。戰鬥結束或中途都能回到工坊，技能不會遺失。</div>
-      <ErrorBanner message={error} onClose={() => setError(null)} />
+      <ErrorBanner message={error ?? picker.error} onClose={() => setError(null)} />
       <div className="ws-tryout-form">
-        <label>
-          主角 build
-          <select value={buildId} onChange={(e) => set({ build: e.target.value, replace: "" })}>
-            {builds.map((b) => (
-              <option key={b.id} value={b.id}>
-                {b.name_zh}
-              </option>
-            ))}
-          </select>
-        </label>
+        <StartPickerView picker={picker} disabled={busy} />
+        <DevPackSelect picker={picker} active={usePack} onActive={setUsePack} disabled={busy} />
         <label>
           要換掉哪一個技能
           <select value={replaceId} onChange={(e) => set({ replace: e.target.value })}>
             <option value="">不換（加在空格；主動技最多 6 個，滿了會被拒絕）</option>
-            {(build?.skills ?? []).map((id) => (
-              <option key={id} value={id}>
-                {cards[id]?.name_zh ?? id}
+            {heroSkills.map((c) => (
+              <option key={c.id} value={c.id}>
+                {c.name_zh}
               </option>
             ))}
           </select>
