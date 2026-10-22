@@ -15,15 +15,12 @@ from tests.engine.helpers import (
     no_reactions,
     spawn,
 )
-from tests.engine.test_gear import _item
 from tests.engine.test_gear_g2 import Rolls, _spawn, _weapon_of
-from trpg.content.equipment import ItemDef, Loadout, item_problems
+from trpg.content.equipment import ItemDef, item_problems
 from trpg.content.skills import ModifierSpec
 from trpg.engine import Attack, BattleState, EndTurn, UseSkill, resolve, start_battle, weapon_traits
 from trpg.engine import modifiers as mods
 from trpg.engine.events import AttackRolled, DamageDealt, EventBase, GearTriggered
-from trpg.engine.gear import build_gear
-from trpg.engine.gear_enhance import geared_weapon
 from trpg.engine.rules.combat import attack_problem, half_cover
 from trpg.engine.runner import replay, run_battle
 from trpg.engine.skills.conditions import Subject
@@ -37,6 +34,7 @@ from trpg.skillgen.validate import validate_skill
 
 U1, U2, U3, U4 = (UnitId(f"unit_000{i}") for i in range(1, 5))
 COMBO, CLEAVE = "affix_attack_combo", "affix_attack_cleave"
+STILL = "affix_trait_longgun_still_crit"
 MASTERY = "skill_attack_mastery"
 # 六招近戰主動技（欄位上限 6 個主動技），用來把主動技能欄填到指定的空格數
 ACTIVES = (
@@ -126,22 +124,22 @@ def _multiplier(state: BattleState) -> int:
 
 @pytest.mark.parametrize(
     ("actives", "expected"),
-    [(0, 1240), (3, 1240), (4, 1160), (5, 1080), (6, 1000)],
+    [(0, 1180), (3, 1180), (4, 1120), (5, 1060), (6, 1000)],
     ids=["0-actives-capped", "3-actives", "4-actives", "5-actives", "6-actives-none-empty"],
 )
 def test_mastery_scales_with_empty_active_slots_and_caps_at_three(
     actives: int, expected: int
 ) -> None:
     state = _fighting({}, skills=(MASTERY, *ACTIVES[:actives]))
-    assert _multiplier(state) == expected  # 每空 1 格 +8%，最多算 3 格（+24%）
+    assert _multiplier(state) == expected  # 每空 1 格 +6%，最多算 3 格（+18%）
 
 
 def test_mastery_counts_the_bar_when_the_attack_resolves() -> None:
     state = _fighting({}, skills=(MASTERY, *ACTIVES[:3]))
-    assert _multiplier(state) == 1240
+    assert _multiplier(state) == 1180
     unit = state.units[U1]
     unit.skills = (*unit.skills, ACTIVES[3])  # 戰鬥中多裝一招：空格少一格
-    assert _multiplier(state) == 1160
+    assert _multiplier(state) == 1120
 
 
 def test_mastery_ignores_passives_and_only_applies_to_basic_attacks() -> None:
@@ -153,12 +151,14 @@ def test_mastery_ignores_passives_and_only_applies_to_basic_attacks() -> None:
 
 
 def test_mastery_counts_towards_the_fifty_percent_damage_cap() -> None:
-    # 精通 +240，加上兩枚玻璃（各 +200）＝ 640 → 截斷為 +500
+    # 精通 +180，加上兩枚玻璃（+200、遞減 +100）與低血傷害 +150 ＝ 630 → 截斷為 +500
     slots: dict[str, Rolls] = {
         "main_hand": [("affix_cost_glass", None)],
         "neck": [("affix_cost_glass", None)],
+        "ring_1": [("affix_cond_low_hp_damage", 150)],
     }
     state = _fighting(slots, skills=(MASTERY,))
+    state.units[U1].hp = 1
     assert _multiplier(state) == 1500
 
 
@@ -166,7 +166,7 @@ def test_mastery_damage_reaches_the_damage_event() -> None:
     state = _fighting({}, skills=(MASTERY, *ACTIVES[:3]))
     _, events = _scan(state, _attack)
     hit = next(e for e in events if isinstance(e, DamageDealt) and e.source_id == U1)
-    assert hit.multiplier_permille == 1240
+    assert hit.multiplier_permille == 1180
 
 
 def test_mastery_passive_is_valid_and_within_budget() -> None:
@@ -175,7 +175,7 @@ def test_mastery_passive_is_valid_and_within_budget() -> None:
     assert validate_skill(skill, lib) == []
     assert skill_budget(skill, lib).ok
     rule = skill.modifiers[0]
-    assert rule.empty_slots_cap == 3 and rule.change.damage_permille == 80
+    assert rule.empty_slots_cap == 3 and rule.change.damage_permille == 60
 
 
 @pytest.mark.parametrize(
@@ -235,7 +235,7 @@ def test_combo_extra_hit_is_half_damage_and_does_not_count_as_a_hit() -> None:
 
     events = _scan(_combo_state(), plan)
     damages = [e for e in events if isinstance(e, DamageDealt) and e.source_id == U1]
-    assert [d.multiplier_permille for d in damages] == [1000, 500]
+    assert [d.multiplier_permille for d in damages] == [1000, 400]
 
 
 def test_combo_needs_to_roll_again_and_can_miss() -> None:
@@ -323,7 +323,7 @@ def test_cleave_hits_the_lowest_hp_adjacent_enemy_for_half_once_per_turn() -> No
     fired = _triggers(first, "attack_cleave")
     assert [(t.unit_id, t.other_id) for t in fired] == [(U1, U4)]  # (1,1) 的 HP 12 最低
     splash = [e for e in first if isinstance(e, DamageDealt) and e.target_id == U4]
-    assert len(splash) == 1 and splash[0].multiplier_permille == 500 and splash[0].cause == "attack"
+    assert len(splash) == 1 and splash[0].multiplier_permille == 400 and splash[0].cause == "attack"
     assert not [e for e in first if isinstance(e, DamageDealt) and e.target_id == U3]
     assert not [
         e for e in first if isinstance(e, DamageDealt) and e.target_id == UnitId("unit_0005")
@@ -378,7 +378,7 @@ def test_cleave_never_hits_allies() -> None:
 TRAITS = {
     "affix_trait_bow_lob_cover": "bow",
     "affix_trait_bow_high_range": "bow",
-    "affix_trait_longgun_still_crit": "longgun",
+    STILL: "longgun",
     "affix_trait_dagger_backstab_die": "dagger",
 }
 
@@ -396,7 +396,7 @@ def test_traits_only_appear_on_their_own_weapon(affix_id: str, weapon: str) -> N
                 "name_zh": "測試",
                 "slot_type": "weapon",
                 "weapon": weapon_id,
-                "affixes": [{"affix": affix_id}],
+                "affixes": [{"affix": affix_id, **({"value": 100} if affix_id == STILL else {})}],
             }
         )
         return item_problems(item, lib.affixes, lib.weapons, lib.ruleset.equipment)
@@ -447,20 +447,31 @@ def test_bow_high_range_adds_one_only_from_higher_ground() -> None:
     assert reach({}, (0, 0), 9) is not None  # 沒有詞條：8 格
 
 
-def test_longgun_still_crit_widens_the_steady_window_within_the_cap() -> None:
+def test_longgun_still_damage_applies_only_when_standing_still_and_counts_to_the_cap() -> None:
     lib = library()
+    affix = lib.affixes[STILL]
+    assert affix.category == "conditional" and affix.weapons == ("longgun",)
     stock = lib.weapons["longgun"]
-    assert stock.steady is not None and stock.steady.crit_range == 2  # 20 - 2 = 18：已在下限
-    capped = _weapon_of({"main_hand": [("affix_trait_longgun_still_crit", None)]}, "longgun")
-    assert capped.steady is not None and capped.steady.crit_range == 2  # 暴擊最低 18 照舊
-    # 武器的站定暴擊範圍還有餘地時，詞條 +1 照樣生效
-    loose = stock.model_copy(update={"steady": stock.steady.model_copy(update={"crit_range": 1})})
-
-    rules = lib.ruleset.equipment
-    item = _item("main_hand", [("affix_trait_longgun_still_crit", None)], weapon="longgun")
-    gear = build_gear(Loadout(items=(item,)), rules)
-    widened = geared_weapon(loose, gear, rules)
-    assert widened.steady is not None and widened.steady.crit_range == 2
+    assert stock.steady is not None and stock.steady.crit_range == 2  # 長槍基礎值不動
+    slots: dict[str, Rolls] = {"main_hand": [(STILL, 100)]}
+    state = _fighting(slots, weapon="longgun")
+    unit = state.units[U1]
+    assert unit.weapon.steady == stock.steady
+    unit.moved_this_turn = False
+    assert _multiplier(state) == 1100  # 站定：傷害 +10%
+    unit.moved_this_turn = True
+    assert _multiplier(state) == 1000  # 本回合移動過：沒有加成
+    # 計入全身 +50% 上限：+10% 加玻璃 +200、+100（第二枚遞減）加低血傷害 +150 ＝ 550 → 截斷為 +500
+    slots = {
+        "main_hand": [(STILL, 100)],
+        "neck": [("affix_cost_glass", None)],
+        "ring_1": [("affix_cost_glass", None)],
+        "ring_2": [("affix_cond_low_hp_damage", 150)],
+    }
+    capped = _fighting(slots, weapon="longgun")
+    capped.units[U1].moved_this_turn = False
+    capped.units[U1].hp = 1
+    assert _multiplier(capped) == 1500
 
 
 def test_dagger_backstab_die_adds_a_die_only_for_backstabs() -> None:
@@ -526,7 +537,7 @@ def test_equipment_view_marks_inactive_duplicates_with_the_winning_slot() -> Non
     loser = next(a for a in lines["main_hand"] if a.affix_id == COMBO)
     assert winner.active and winner.duplicate_of is None
     assert not loser.active
-    assert loser.duplicate_of == "手的每第 2 次普攻命中：多攻擊一次（50% 傷害；每回合 1 次）"
+    assert loser.duplicate_of == "手的每第 2 次普攻命中：多攻擊一次（40% 傷害；每回合 1 次）"
 
 
 def test_diminishing_numeric_duplicates_stay_active_until_the_fourth() -> None:
@@ -570,6 +581,8 @@ def test_new_affixes_roll_on_the_listed_slots() -> None:
     assert value is not None and (value.min, value.max) == (2, 3)
     for affix_id in TRAITS:
         assert lib.affixes[affix_id].slots == ("weapon",)
+    still = lib.affixes[STILL].value
+    assert still is not None and (still.min, still.max) == (100, 100)
 
 
 def test_reference_builds_are_valid_and_kept_out_of_the_matrix() -> None:
@@ -580,7 +593,16 @@ def test_reference_builds_are_valid_and_kept_out_of_the_matrix() -> None:
     assert MASTERY in attack.skills
     assert sum(1 for s in attack.skills if lib.skills[s].kind == "active") == 3
     skill = lib.builds.by_id()["build_skill_archer"].hero
-    assert sum(1 for s in skill.skills if lib.skills[s].kind == "active") == 6
+    actives = [lib.skills[s] for s in skill.skills if lib.skills[s].kind == "active"]
+    assert len(actives) == 4  # 3-32c：2 範圍＋1 控制＋1 單體爆發，欄位沒滿、沒有精通
+    area = {"skill_piercing_shot", "skill_thunder_clap"}
+    assert area <= set(skill.skills) and {"skill_bear_trap", "skill_sniper_shot"} <= set(
+        skill.skills
+    )
+    assert {s.shape.type for s in actives if s.id in area} == {"line", "cone"}
+    assert MASTERY not in skill.skills
+    assert any(e.type == "apply_status" for e in lib.skills["skill_bear_trap"].effects)
+    assert all(s.weapon_req in ("any", "ranged") for s in actives)  # 弓手能用
     loadout = lib.loadout_of(attack)
     assert {a.affix.id for item in loadout.items for a in item.affixes} == {
         COMBO,
