@@ -57,3 +57,32 @@
 
 - **3E-2**（#2、#3）：數值上下限、允許形狀、狀態 ID 以 YAML 為唯一真相來源（pydantic 只留型別）；落點與最近空格集中成 `landing_problem(...)`、`nearest_free(...)`，`charge` 改用 `unit_push_block`。
 - **3E-3**（#5）：interpreter 改成「原語 → handler」註冊表、拆到 `skills/primitives/*.py`，對外入口抽成 `casting.py`，解開延遲匯入；結算模型統一（都回傳效果批次）。
+
+## 3. Phase 3 結束審查後的 3E-2／3E-3 排程（2026-10-23）
+
+> 審查全文：`docs/phases/Phase3審查-Python.md`（R1～R12）、`docs/phases/Phase3審查-前端.md`（F1～F12）。審查結論：確定性與依賴方向良好；主要風險是「新增原語要改很多處、漏做不報錯」、變奏驗證漏洞（R1，已實測崩潰）、前端點擊式選單與 Esc 衝突。上方第 2 節的舊 3E-2／3E-3 項目併入下表。一次最多 2 個 agent；每段合併只跑快速檢查，全量每 2～3 段一次。
+
+### 3.1 3E-2（Phase 4 之前必做）
+
+| 段 | 內容 | 來源 | 模型 | 前置／平行 |
+|---|---|---|---|---|
+| 3E-2a | **技能資料安全**：① 變奏檢查走過 `add_effect`／`replace_effect`，禁用清單改 `skill_primitives.yaml` 旗標（例 `lookup_by_skill_id: true`），回歸測試（含 R1 的實測案例）；`copying`、`skill_triggers` 命中後修正、AI 召喚範本改用生效型態或明確擋下 ② 統一 `SkillDef.iter_effects(include_followup=, include_variants=)`，四份走訪改用它（`combo.py` 補 zone 子效果） | R1、R3 | sonnet | 現在派；與 3E-2c 平行 |
+| 3E-2c | **測試基礎**：sim 平行池改 `ProcessPoolExecutor` 並抽 `sim/parallel.py`（`batch.py`、`attack_flow_report.py` 共用）；加 pytest-timeout（預設 300 秒，slow 例外）；jobs>1 的測試 `xdist_group` 或 slow；清 `tests/**/__pycache__/*.pyc.<pid>`；文件寫明 agent 在自己 worktree 跑、`UV_NO_SYNC=1` 或 `uv run --frozen` | R5、R12 前半 | sonnet | 現在派；與 3E-2a 平行 |
+| 3E-2b | **原語登錄表**：interpreter 的 if 鏈改「原語 → handler」登錄表、拆到 `skills/primitives/*.py`、對外入口 `casting.py`（解開延遲匯入）；載入時檢查 `skill_primitives.yaml` 每個原語在解譯器、預算、AI 估值、敘事、預覽都有對應，缺了就報錯（含 `tile_effect` 沒有預設分支） | R2、R7、舊 3E-3 #5 | **opus** | 3E-2a 後 |
+| 3E-2d | **前端點擊式選單與 Esc**：共用 `usePopupMenu`（Esc、點外面、同時一張、最大高度捲動），`.more-list`、`.top-popup` 改用；浮動卡處理過 Esc 就不讓 BattleScreen 再處理；`.decision-card` 最大高度可捲；規則測試補 `position: absolute`＋`z-index ≥ 20`、移除 `.modal-backdrop` 死碼與白名單、`role=tooltip` 規則收緊 | F1、F2、F8、F12 | sonnet | 3E-2a／c 之後任一空檔 |
+| 3E-2e | **glossary API 與前端對照表**：效果／條件／觸發中文名與原語 `player_description` 進 glossary API，前端 `skillParts.ts` 的 `EFFECT_NAMES`／`CONDITION_NAMES`／`TRIGGER_NAMES` 改讀它；`FieldSpec` 旗標；英雄武器外觀改由後端外觀欄位提供（照 `SummonLookView`） | F4、舊 3E-2 | sonnet | 3E-2b 後 |
+| 3E-2f | **YAML 唯一來源與落點函式**：數值上下限、允許形狀、狀態 ID 以 YAML 為唯一來源；`landing_problem(...)`、`nearest_free(...)`、`charge` 改用 `unit_push_block` | 舊 3E-2 #2、#3 | sonnet | 3E-2b 後 |
+| 3E-2g | **LLM 技能提議 schema 設計**（只寫設計文件＋最小原型，不改現有 schema）：由 `skill_primitives.yaml` 的 `params` 產生每原語一支的 discriminated union，驗證後轉回 `EffectSpec`；錯誤回饋格式 | R4 設計部分 | **opus** | 3E-2b 後；Phase 4 規格的前置 |
+
+### 3.2 3E-3（可延後，Phase 4 期間或之後穿插）
+
+R4 拆 `skills.py`、R6 `LOG_FORMAT` 版本策略（Phase 4 大量新增原語時提前）、R8 寫死數值移 YAML、R9 `engine/summons/`、`engine/gear/` 子套件與改名、R10 `PLR0917` 改 keyword-only 與 `_outcome` 表驅動、R11 不再吞 `KeyError`、R12 後半 `_relabel` 結構化；F3 觸控開啟說明框、F5 配色唯一來源（Phase 4 開放新元素則提前）、F6 拆 `BattleScreen.tsx`（Phase 4 前至少把 `onTileClick` 抽成純函式）、F7 拆 `styles.css` 與 z-index 分層、F9 浮動卡監聽器依賴、F10 Pixi Text 物件池、F11 外觀 JSON 型別；3-34b 根本改善（無旋鈕核心在高階搭配有旋鈕效果）；藤蔓底影無外框（一行，併進碰到 `summonArt.ts` 的段落）。
+
+### 3.3 3E-2a 規格
+
+見 3.1 表的 3E-2a 列。驗收：pytest（R1 實測案例被擋下並給中文訊息；變奏加 `delayed_damage`／`copy_skill`／`zone` 都擋；`iter_effects` 涵蓋 followup、陷阱、反噬、變奏、zone 子效果的表格測試；既有技能全部仍合法）；相關測試全過；`ruff`、`mypy`。
+
+### 3.4 3E-2c 規格
+
+見 3.1 表的 3E-2c 列。驗收：`scripts/check.py` 快速版與 `--full` 各跑一次全過並記時間；模擬子行程故意失敗時丟 `BrokenProcessPool` 而不是卡住（測試）；`docs/開發PM交接.md` 由 PM 更新。
+

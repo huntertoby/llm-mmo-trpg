@@ -1801,3 +1801,9 @@ PM 驗收後請使用者試玩一整輪（`docs/專案計畫.md` 第 14 節 🎮
 - PM 合併（無衝突）；ruff、mypy、`tests/skillgen` 743 全過；**Phase 3 結束審查前 `check.py --full` 全過（8 分 59 秒）**。原因：控場骨架有一批沒有旋鈕的核心原語（升降地形、驅散、障礙、偷增益、揭露、表面），階級 5 時調不進預算窗、單次成功率約一成；3-33e1（1bd8b7a）改變抽選池與亂數串流後種子 966 落到 50 次全失敗（`git bisect`）。修法：`MAX_ATTEMPTS` 50 → 100、變奏重抽改獨立常數 `VARIANT_ATTEMPTS=25`（已成功的種子產物不變）；`test_skill_fuzz` 過期斷言排除只手寫的 `consume_status`／`summon` 骨架。報告 `Phase3-34b報告.md`。
 - 待 PM 決定：根本改善（無旋鈕核心在高階搭配有旋鈕效果，或從核心池剔除）會改變多數控場種子 → 排進 3E-2。
 
+## 38. Phase 3 結束審查（2026-10-23）
+
+- 審查前 `check.py --full` 全過（8 分 59 秒，e789993）。兩個 opus 審查 agent（只讀）：Python 端 `Phase3審查-Python.md`（R1～R12）、前端與全站浮動卡一致性 `Phase3審查-前端.md`（F1～F12）。
+- 結論：確定性守則與依賴方向良好；**R1 變奏可偷帶 `delayed_damage` 等禁用原語、執行時引擎崩潰（已實測）**；新增原語要改很多處且漏做不報錯（R2、R3）；pytest 卡住與 ImportError 的原因（spawn `Pool` 子行程失敗無限重開、多 agent 共用 checkout 的 `__pycache__`）；前端「更多動作」與頂端面板是自製彈出層、Esc 同時關卡片與取消瞄準。
+- 排程：`Phase3E計畫.md` 第 3 節（3E-2a～g Phase 4 前必做；其餘 3E-3）。**Phase 3 至此結束**，接 3E-2。
+
