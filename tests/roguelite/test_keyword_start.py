@@ -146,12 +146,12 @@ def test_dev_packs_all_start_and_stay_out_of_the_player_start() -> None:
         "喚靈（保證召喚）",  # 3-33b：指定起始技能的對照組
         "喚靈（骷髏）",
         # 3-33e1：召喚物（一）的對照組
-        "召喚火靈",
-        "召喚冰靈",
-        "召喚雷靈",
-        "召喚水精",
-        "喚出影魅",
-        "喚出鷹隼",
+        "火靈包",
+        "冰靈包",
+        "雷靈包",
+        "水精包",
+        "影魅包",
+        "鷹隼包",
     }
     for pack in packs:
         run = new_dev_run(lib, pack.id, 0)

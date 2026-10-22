@@ -341,6 +341,7 @@ const STATUS: Readonly<Record<string, readonly [string, Draw]>> = {
   revealed: ["#ffd04a", (c) => eye(c, false)],
   hasted: ["#7dffb0", (c) => chevrons(c, "right")],
   empowered: ["#ffb03a", (c) => chevrons(c, "up")],
+  rallied: ["#ff6a4a", (c) => chevrons(c, "up")],
   guarded: [
     "#7fc0ff",
     (c) => {
