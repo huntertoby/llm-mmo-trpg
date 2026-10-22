@@ -76,3 +76,8 @@
 
 - PM 合併：與 3-24a2 同時遞增到 `/39`，合併時改為 **`LOG_FORMAT` `/40`**；`defense_value_permille` 合併穿甲 `cut` 與裝備加成。`check.py` 全過；`open_plain` 種子 4 `--log-json` ＋ `replay` 一致。新增 `UnitState.gear`、事件 `gear_hp_lost`、規則包 `equipment`（遞減權重與上限）。報告 `Phase3G-1報告.md`（含 G2／G3 接點表）。
 - 待 PM 決定：#1 頭、身、手、腳、項鍊、戒指基礎數值 0 → 接受（防具資料在裝備段）；#2 主手物品須等於單位 `weapon`、#3 同一枚戒指用物品 id 判斷 → 接受；**#4 傷害加成 +50% 只算裝備來源 → 不接受，設計是「所有來源合計」，G2 改成包含技能修正型被動**；#5 抗性上限只限個別元素、#6 遞減先加總再捨去、#7 裝備加成不作用在被動觸發與陷阱、#8 `gear_hp_lost` 不算傷害 → 接受；**#9 暫定 id → G2 對齊 3-24b1 的關鍵字 id 與 3-24a2 的長槍參數（`range_mod` 等），並開啟載入時檢查**；`fury`、`skill_gear_*` 由 G3 建立後同樣開啟檢查。
+
+## 7. G5a 驗收（2026-10-22）
+
+- PM 合併（無衝突）、`check.py` 全過、`pnpm build` 成功；看過 `docs/phases/img/3G-5a-overview.png`（42 種造型，9 個欄位）。外觀清單 `content/equipment/`、`content/items.yaml` 外觀欄位、前端 `GearIcon`（64／48／32px，≤ 36px 不畫關鍵字小圖樣）；單位資訊顯示 32px 圖示。報告 `Phase3G-5a報告.md`。美術清單 #1～#5 請美術 PM 目視驗收。
+- 待 PM 決定：#1 主手造型以樣張為準（17 種）→ 接受；#2 `shock` 以別名對照 `charged` → G2 對齊後刪別名；#3 關鍵字只由第 3、4 類詞條推導、#4 稀有度預設、#5 沒寫 `kind` 依欄位退回、#6 載入時嚴格檢查、#7 只畫 `common`、#8 圖示先放單位資訊 → 接受；#9 `client/gear-gallery.html` 開發用頁面 → 保留（美術驗收用）；#10 合併注意 → 已處理。
