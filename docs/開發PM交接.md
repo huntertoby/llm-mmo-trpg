@@ -52,10 +52,7 @@ Phase 3 各段（`Phase3計畫.md` 節號；報告 `Phase3-*報告.md`）：
 
 ### 3.0 接手後要做的（2026-10-22）
 
-> **⏸ 暫停中（2026-10-22，使用者：「跟開發pm說告一段落停一下 我在打lol太卡了」）**：所有 agent 與背景檢查已停。接續時：
-> 1. main 本地有 **3-33e2b 的合併 commit（b8f8354，尚未 push，全量 `check.py` 沒跑完）**——先跑 `check.py`＋`pnpm build`＋一場 `--log-json`／`replay`，通過後記 36.7 的 3-33e2b 驗收再 push。
-> 2. **3-33e2a 已實作完、報告已 commit**（分支 `worktree-agent-aea963bdc1b2ec05e`，最後 8fe7175，worktree 乾淨），只差實作者的全量檢查 → 由 PM 合併（`LOG_FORMAT` 兩段都是 `/53`，合併時 3-33e2a 改 `/54`；`UnitTemplate`／`UnitState` 新欄位兩邊保留；`skill_icons.json`、CLI 快照重產），再跑全量。
-> 3. 之後依序：3-33f → 3-33g → 3-33h2 → Phase 3 結束審查（`Phase3計畫.md` 第 36 節）。
+> （2026-10-22 暫停後已恢復，「繼續」；3-33e2b 已驗收 push，3-33e2a 由合併 agent 處理衝突中。）
 
 1. **確認環境**：`git status` 乾淨；`uv run python scripts/check.py` 全過。使用者常自己開 `uv run trpg serve` 佔用 8000 埠：**不要關使用者的程序**，`preview_start` 會自動改用 8001。程式改動後要 `corepack pnpm -C client build` 並請使用者 **重開伺服器** 才看得到。
 2. **使用者的 🎮 戰鬥手感檢查**（`docs/專案計畫.md` 第 14 節；問題清單在 `docs/玩法PM交接.md`）：回饋中規則與玩法交給玩法 PM，介面問題排成下一個介面段（**編號從 3-18 起**）。

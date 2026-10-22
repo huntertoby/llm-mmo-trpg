@@ -1734,3 +1734,8 @@ PM 驗收後請使用者試玩一整輪（`docs/專案計畫.md` 第 14 節 🎮
 
 驗收（各段）：pytest（每種召喚物的特性情境、預算、同種子確定、`--log-json` ＋ `replay`）；`sim_summons.py` 小量跑通；`check.py` 全過、`pnpm build` 成功。`LOG_FORMAT` 由 PM 合併時定號。
 
+### 36.7a 3-33e2b 驗收（2026-10-22）
+
+- PM 合併（`skill_icons.json`、CLI 快照衝突 → 重產；中途因使用者要求暫停，恢復後跑完）、`check.py` 全過、`pnpm build` 成功；`frozen_lake` 種子 53 `--log-json` ＋ `replay` 一致。**`LOG_FORMAT` → `/53`**。藤蔓（`snare`）、守護靈（`pulse` 護盾）、吸引圖騰（`pull_radius`）、高台圖騰（`platform`）＋召喚技 4 招、鷹隼飛行（無視高度差與障礙、不受地面表面）、`infusion_fizzled` 帶原因 `downed`／`gone`；`change_height` 搬到 `engine/heights.py`。報告 `Phase3-33e2b報告.md`（名稱與數值表請玩法 PM 審）。
+- 待 PM 決定：#1 兩種圖騰靠佔位武器過預算 → 3-33e2a 的特性計入預算合併後重審；#2 AI 對護盾／拉扯／高台／纏住估值 0 → 3-33g 補；#3 吸引圖騰倒 9/13 → 3-33f 依定位調 HP；#4～#8（守護靈選目標、拉不動改選下一個、藤蔓每隻每輪 1 次、高台 1 格、飛行只做移動與表面）→ 接受。
+
