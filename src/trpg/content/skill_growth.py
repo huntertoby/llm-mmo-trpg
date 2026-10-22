@@ -30,6 +30,10 @@ class SkillGrowthRules(ContentModel):
     trait_cooldown_delta: int = Field(default=1, ge=1, le=2)
     trait_min_cooldown: int = Field(default=2, ge=2)
     evolve_level: int = Field(default=3, ge=2)
+    evolve_uses: int = Field(default=3, ge=0)
+    """升到 ``evolve_level`` 前，這招在這一輪要用過的次數（Phase 3-26b；原型 3）。"""
+    evolve_uses_world: int = Field(default=10, ge=0)
+    """大世界的進化門檻（之後用；原型不讀）。"""
 
     @model_validator(mode="after")
     def _check(self) -> SkillGrowthRules:

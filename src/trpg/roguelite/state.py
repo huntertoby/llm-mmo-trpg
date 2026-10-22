@@ -11,6 +11,9 @@
 - 技能成長（Phase 3-26a）：``skill_points`` 未花的技能點、``skill_levels`` 技能等級、``bench``
   備用技能（卸下的技能，等級保留）；規則在 ``content/skill_growth.yaml``，邏輯在
   ``trpg.roguelite.growth``。
+- 分歧進化（Phase 3-26b）：``skill_usage`` 每招的用法統計、``evolutions`` 進化紀錄（進化後的技能
+  定義也放在 ``generated_skills``）；
+  邏輯在 ``trpg.roguelite.growth`` 與 ``trpg.skillgen.evolution``。
 - ``generated_skills``：主角目前裝備與備用的 **生成技能定義**（隨機組合器的產物不在內容庫裡；讀檔與
   開戰時以 ``Ruleset.with_skills`` 加回規則包）。
 - ``plan``：開局時以種子排好的每一場（地圖、敵人、戰鬥種子）；存進存檔，所以之後改了抽選方式，
@@ -29,6 +32,7 @@ from trpg.content.battle import UnitTemplate
 from trpg.content.rules import CoreRules
 from trpg.content.skills import SkillDef
 from trpg.shared.types import Attribute
+from trpg.skillgen.usage import SkillUsage
 
 __all__ = [
     "BattleNode",
@@ -37,6 +41,7 @@ __all__ = [
     "CampfireNode",
     "Choice",
     "EndedNode",
+    "EvolutionRecord",
     "LeaveChoice",
     "LevelUpChoice",
     "LevelUpNode",
@@ -152,6 +157,17 @@ type Node = Annotated[
 ]
 
 
+class EvolutionRecord(_Model):
+    """一次分歧進化（Phase 3-26b）：進化前的技能 ID、分支（加深／橋接）、模板、帶的關鍵字，
+    ``fallback`` 表示橋接做不出來、改用第二個加深模板。進化後的技能定義在 ``generated_skills``。"""
+
+    base_id: str
+    branch: Literal["deepen", "bridge"]
+    template: str
+    keyword: str | None = None
+    fallback: bool = False
+
+
 class LevelUpChoice(_Model):
     """升級的選擇：``attributes`` 分配全部屬性點；``pick`` 為候選索引（``None`` ＝ 跳過）；
     欄位滿時 ``replace`` 指定要換掉的技能 ID。"""
@@ -162,6 +178,8 @@ class LevelUpChoice(_Model):
     replace: str | None = None
     levels: dict[str, int] = Field(default_factory=dict)
     """選完候選之後順便花技能點（Phase 3-26a；同 ``SpendChoice.levels``，空 ＝ 先不花）。"""
+    evolve: dict[str, int] = Field(default_factory=dict)
+    """升到 3 級時選的進化分支（Phase 3-26b；同 ``SpendChoice.evolve``）。"""
 
 
 class RerollChoice(_Model):
@@ -190,6 +208,11 @@ class SpendChoice(_Model):
 
     kind: Literal["spend"] = "spend"
     levels: dict[str, int] = Field(default_factory=dict)
+    evolve: dict[str, int] = Field(default_factory=dict)
+    """分歧進化（Phase 3-26b）：技能 ID → 選的分支索引（0 或 1，
+    對應 ``evolution_options`` 的順序）。
+    升到 ``skill_growth.evolve_level``（含以上）而且還沒進化過的技能必須選；進化後技能換成進化後的
+    定義（新的 ID），等級跟著過去。"""
 
 
 class RespecChoice(_Model):
@@ -253,6 +276,11 @@ class RunState(_Model):
     bench: tuple[str, ...] = ()
     """備用技能 ID（Phase 3-26a）：被替換或在營火卸下的技能，等級保留，可在營火換回；定義在
     ``generated_skills``（生成技能）或內容庫。"""
+    skill_usage: dict[str, SkillUsage] = Field(default_factory=dict)
+    """每招技能在這一輪的用法統計（Phase 3-26b；戰後由事件重播累加，``trpg.skillgen.usage``）：
+    技能 ID → 統計，依 ID 排序。進化的門檻與兩支的推導都讀它。"""
+    evolutions: dict[str, EvolutionRecord] = Field(default_factory=dict)
+    """分歧進化（Phase 3-26b）：進化後的技能 ID → 紀錄。進化結果跟著技能走（卸下、重配都保留）。"""
     node: Node
 
     def max_hp_in(self, core: CoreRules) -> int:

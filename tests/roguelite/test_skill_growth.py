@@ -1,12 +1,20 @@
-"""Phase 3-26a：技能點與技能等級（取得、花點、重配、卸下保留、換裝、戰鬥帶入、存檔、重播）。"""
+"""Phase 3-26a：技能點與技能等級（取得、花點、重配、卸下保留、換裝、戰鬥帶入、存檔、重播）。
+
+3-26b 的分歧進化另有測試（``test_evolution.py``）；這裡用關掉進化的內容庫（沒有進化模板、
+門檻 0 次），讓 3 級照 3-26a 的規則直接升。
+"""
 
 from __future__ import annotations
 
+import dataclasses
 import json
+from functools import cache
 
 import pytest
 
-from tests.roguelite.helpers import library
+from tests.roguelite.helpers import library as full_library
+from trpg.content.library import ContentLibrary
+from trpg.content.skill_evolution import EvolutionTable
 from trpg.engine.state import state_to_json
 from trpg.roguelite import (
     ActiveBattle,
@@ -38,6 +46,15 @@ from trpg.roguelite.state import (
 from trpg.shared.types import Attribute
 
 BUILD = "build_fire"
+
+
+@cache
+def library() -> ContentLibrary:
+    """關掉分歧進化的內容庫（見模組說明）。"""
+    lib = full_library()
+    growth = lib.ruleset.skill_growth.model_copy(update={"evolve_uses": 0})
+    ruleset = lib.ruleset.model_copy(update={"skill_growth": growth})
+    return dataclasses.replace(lib, ruleset=ruleset, evolution=EvolutionTable())
 
 
 def _stop_at(kind: type[object], *, nth: int = 1) -> AutoStop:
@@ -253,7 +270,7 @@ def test_replay_is_deterministic_with_levels_and_the_save_round_trips() -> None:
     )
     assert a.skill_levels  # 這一輪確實升了級
     raw = json.loads(dumps_save(RunSave(run_id="a", run=a)))
-    assert raw["format"] == "trpg-run/4"
+    assert raw["format"] == "trpg-run/5"
     assert raw["run"]["skill_levels"] == a.skill_levels and "bench" in raw["run"]
     assert loads_save(json.dumps(raw)).run == a
 
