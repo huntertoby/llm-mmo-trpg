@@ -134,6 +134,9 @@ export type OfferTag = Schemas["OfferTagOut"];
 // 技能點與技能等級（Phase 3-26a）
 export type SkillLevelInfo = Schemas["SkillLevelInfo"];
 export type SkillGrowth = Schemas["SkillGrowthOut"];
+// 分歧進化（Phase 3-26b）
+export type EvolutionChoice = Schemas["EvolutionChoiceOut"];
+export type EvolutionOption = Schemas["EvolutionOptionOut"];
 export type BattleHistory = Schemas["BattleHistory"];
 export type AttributeId = Schemas["Attribute"];
 /** `POST /api/runs/{id}/choice` 的請求（工坊另有同名的 `Choice`，所以加前綴）。 */
