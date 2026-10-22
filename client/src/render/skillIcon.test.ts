@@ -247,7 +247,7 @@ describe("拆解：核心效果與組裝順序", () => {
     expect(passive.rows[0]?.slice(0, 2).map((t) => t.cat)).toEqual(["觸發", "骨架"]);
     expect(passive.rows[0]?.[0]?.label).toBe("擊倒時");
     const reaction = assemblyFormula(minimal({ kind: "reaction", trigger: "hit_by_melee" }));
-    expect(reaction.rows[0]?.[0]?.tip).toBe("反應時機");
+    expect(reaction.rows[0]?.[0]?.tip).toBe("反應時機：被近戰攻擊命中、傷害結算之後。");
     const mod = assemblyFormula(
       minimal({
         kind: "modifier",

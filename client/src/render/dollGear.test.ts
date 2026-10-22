@@ -1,7 +1,8 @@
 // Phase 3G-G5b：裝備外觀 → 紙娃娃（對照表、退回預設、成對武器、全組合畫得出來）。
 import { describe, expect, it, vi } from "vitest";
 import type { Facing } from "../api/types";
-import { dollKey, KNOWN_KINDS, resolveDoll, type DollSpec } from "./appearance";
+import { dollKey, KNOWN_KINDS, type DollSpec } from "./appearance";
+import { resolveDollT } from "./testDolls";
 import { dollGear, dollItem, type DollEquipment } from "./dollGear";
 import { gearKinds } from "./gearIcon";
 import appearance from "./gearAppearance.json";
@@ -104,45 +105,45 @@ describe("dollGear（一整套裝備）", () => {
 
 describe("resolveDoll（有穿裝備的單位）", () => {
   it("沒有裝備或空陣列：和舊畫面完全一樣", () => {
-    const plain = resolveDoll(base);
-    expect(resolveDoll({ ...base, equipment: [] })).toEqual(plain);
-    expect(resolveDoll({ ...base, equipment: undefined })).toEqual(plain);
+    const plain = resolveDollT(base);
+    expect(resolveDollT({ ...base, equipment: [] })).toEqual(plain);
+    expect(resolveDollT({ ...base, equipment: undefined })).toEqual(plain);
   });
 
   it("穿了的欄位依外觀畫，沒穿的沿用範本", () => {
-    const d = resolveDoll({ ...base, equipment: [eq("head", "hat", { form: "wide", dye: "red" }), eq("feet", "iron_boots")] });
+    const d = resolveDollT({ ...base, equipment: [eq("head", "hat", { form: "wide", dye: "red" }), eq("feet", "iron_boots")] });
     expect(d.gear.head).toMatchObject({ kind: "wide_hat" });
     expect(d.gear.feet).toMatchObject({ kind: "iron_boots", material: "iron" });
-    expect(d.gear.body).toEqual(resolveDoll(base).gear.body); // hero_fighter 的板甲
+    expect(d.gear.body).toEqual(resolveDollT(base).gear.body); // hero_fighter 的板甲
     expect(d.gear.off_hand?.kind).toBe("shield_round");
-    expect(d.gear.cloak).toEqual(resolveDoll(base).gear.cloak);
+    expect(d.gear.cloak).toEqual(resolveDollT(base).gear.cloak);
   });
 
   it("主手：有造型就用裝備的，沒寫造型沿用武器 id 的外觀", () => {
-    expect(resolveDoll({ ...base, equipment: [eq("main_hand", "pistol", { form: "revolver" })] }).gear.main_hand).toMatchObject({ kind: "pistol", form: "revolver" });
-    expect(resolveDoll({ ...base, weaponId: "bow", equipment: [eq("main_hand", null)] }).gear.main_hand?.kind).toBe("bow");
+    expect(resolveDollT({ ...base, equipment: [eq("main_hand", "pistol", { form: "revolver" })] }).gear.main_hand).toMatchObject({ kind: "pistol", form: "revolver" });
+    expect(resolveDollT({ ...base, weaponId: "bow", equipment: [eq("main_hand", null)] }).gear.main_hand?.kind).toBe("bow");
   });
 
   it("雙手武器副手留空；單手保留；成對武器副手是第二把", () => {
-    const two = resolveDoll({ ...base, weaponId: "greatsword", equipment: [eq("main_hand", "greatsword")] });
+    const two = resolveDollT({ ...base, weaponId: "greatsword", equipment: [eq("main_hand", "greatsword")] });
     expect(two.gear.off_hand).toBeUndefined();
-    const newTwo = resolveDoll({ ...base, weaponId: "mystery_cannon", equipment: [eq("main_hand", "scythe")] });
+    const newTwo = resolveDollT({ ...base, weaponId: "mystery_cannon", equipment: [eq("main_hand", "scythe")] });
     expect(newTwo.gear.off_hand).toBeUndefined();
-    expect(resolveDoll({ ...base, equipment: [eq("main_hand", "axe")] }).gear.off_hand?.kind).toBe("shield_round");
-    const pair = resolveDoll({ ...base, weaponId: "dagger", equipment: [eq("main_hand", "dual_dagger")] });
+    expect(resolveDollT({ ...base, equipment: [eq("main_hand", "axe")] }).gear.off_hand?.kind).toBe("shield_round");
+    const pair = resolveDollT({ ...base, weaponId: "dagger", equipment: [eq("main_hand", "dual_dagger")] });
     expect(pair.gear.main_hand?.kind).toBe("dagger");
     expect(pair.gear.off_hand?.kind).toBe("dagger");
-    const pairBow = resolveDoll({ ...base, weaponId: "bow", equipment: [eq("main_hand", "dual_pistol")] });
+    const pairBow = resolveDollT({ ...base, weaponId: "bow", equipment: [eq("main_hand", "dual_pistol")] });
     expect(pairBow.gear.off_hand?.kind).toBe("pistol");
   });
 
   it("裝備稀有度不讓小人帶外光；範本（頭目）原有的外光保留", () => {
-    expect(resolveDoll({ ...base, equipment: [eq("body", "plate", { rarity: "legendary" })] }).rarity).toBeUndefined();
-    expect(resolveDoll({ ...base, template: "bandit_boss", equipment: [eq("body", "plate", { rarity: "legendary" })] }).rarity).toBe("epic");
+    expect(resolveDollT({ ...base, equipment: [eq("body", "plate", { rarity: "legendary" })] }).rarity).toBeUndefined();
+    expect(resolveDollT({ ...base, template: "bandit_boss", equipment: [eq("body", "plate", { rarity: "legendary" })] }).rarity).toBe("epic");
   });
 
   it("快取鍵：外觀不同則不同，相同輸入相同", () => {
-    const k = (e: DollEquipment[]) => dollKey(resolveDoll({ ...base, equipment: e }), "south", false);
+    const k = (e: DollEquipment[]) => dollKey(resolveDollT({ ...base, equipment: e }), "south", false);
     expect(k([eq("head", "helmet")])).toBe(k([eq("head", "helmet")]));
     expect(k([eq("head", "helmet")])).not.toBe(k([eq("head", "hood")]));
     expect(k([eq("head", "helmet", { material: "steel" })])).not.toBe(k([eq("head", "helmet", { material: "gold" })]));
@@ -165,7 +166,7 @@ describe("全組合畫得出來", () => {
         for (const material of [...appearance.materials, "???"]) {
           for (const keywords of [[], ["ignite"], ["frozen", "summon"], ["nope"]]) {
             if (!full && combo++ % 8 !== 0) continue;
-            const spec: DollSpec = resolveDoll({ ...base, equipment: [{ slot, appearance: { kind: k.id, form, material, dye: "red", keywords } }] });
+            const spec: DollSpec = resolveDollT({ ...base, equipment: [{ slot, appearance: { kind: k.id, form, material, dye: "red", keywords } }] });
             for (const f of FACINGS) {
               const { ctx } = mockCtx();
               expect(() => drawFigure(ctx, spec, f)).not.toThrow();
@@ -183,7 +184,7 @@ describe("全組合畫得出來", () => {
   it("成對武器與拳套：副手那一側也畫手持物", () => {
     const count = (equipment: DollEquipment[], weaponId: string, op: string): number => {
       const { ctx, calls } = mockCtx();
-      drawFigure(ctx, resolveDoll({ ...base, template: "unknown_ally", weaponId, equipment }), "south");
+      drawFigure(ctx, resolveDollT({ ...base, template: "unknown_ally", weaponId, equipment }), "south");
       return calls.filter((c) => c.startsWith(op)).length;
     };
     // 匕首每把轉一次；成對匕首兩把
@@ -196,13 +197,13 @@ describe("全組合畫得出來", () => {
   it("蓋住頭髮頂的頭部裝備：全罩盔、皮帽與頭盔一樣不畫髮頂", () => {
     const count = (kind: string, form?: string): number => {
       const { ctx, calls } = mockCtx();
-      drawFigure(ctx, resolveDoll({ ...base, equipment: [eq("head", kind, form === undefined ? {} : { form })] }), "south");
+      drawFigure(ctx, resolveDollT({ ...base, equipment: [eq("head", kind, form === undefined ? {} : { form })] }), "south");
       return calls.filter((c) => c.startsWith("quadraticCurveTo")).length;
     };
     // 髮頂用 quadraticCurveTo 畫；沒戴頭部裝備時有畫，蓋住頭髮的裝備比較少
     const bare = (() => {
       const { ctx, calls } = mockCtx();
-      drawFigure(ctx, resolveDoll(base), "south");
+      drawFigure(ctx, resolveDollT(base), "south");
       return calls.filter((c) => c.startsWith("quadraticCurveTo")).length;
     })();
     expect(count("helmet")).toBeLessThan(bare);

@@ -19,6 +19,8 @@ const skeleton: FieldSpec = {
   fields: [],
   dice_sides: [],
   allow_weapon: false,
+  card: true,
+  object_choice: false,
 };
 const sizeParam: FieldSpec = {
   field: "size",
@@ -32,8 +34,10 @@ const sizeParam: FieldSpec = {
   fields: [],
   dice_sides: [],
   allow_weapon: false,
+  card: false,
+  object_choice: false,
 };
-const shape: FieldSpec = { ...skeleton, field: "followup.shape", required: true, choices: [choice("cone", [sizeParam])] };
+const shape: FieldSpec = { ...skeleton, field: "followup.shape", object_choice: true, required: true, choices: [choice("cone", [sizeParam])] };
 const effects: FieldSpec = {
   ...skeleton,
   field: "followup.effects",

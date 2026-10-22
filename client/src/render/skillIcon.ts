@@ -34,6 +34,7 @@ import {
   surfaceGlyph,
   triggerPart,
   type Part,
+  partTip,
 } from "./skillParts";
 
 const TAU = Math.PI * 2;
@@ -379,7 +380,7 @@ const FAINT_RING = "rgba(255,255,255,0.3)";
 const CORE_RING = "#ffffff";
 
 function chipTile(cat: string, part: Part, ring: string): AssemblyTile {
-  return { cat, label: part.label, tip: part.note, id: `${cat}|${part.key}|${part.label}|${ring}`, draw: (ctx) => drawChip(ctx, part, 50, 50, 42, { ring }) };
+  return { cat, label: part.label, tip: partTip(part), id: `${cat}|${part.key}|${part.label}|${ring}`, draw: (ctx) => drawChip(ctx, part, 50, 50, 42, { ring }) };
 }
 
 function skeletonTile(skeleton: string, second: boolean): AssemblyTile {
@@ -528,7 +529,7 @@ const OPTION_ID = (field: string, value: string) => `option|${field}|${value}`;
 const PART_CAT_NAME: Readonly<Record<string, string>> = { effect: "效果", condition: "條件", cost: "代價", trigger: "觸發", link: "接續", target: "改造對象", change: "改變內容" };
 
 function partTile(field: string, value: string, part: Part): AssemblyTile {
-  return { cat: PART_CAT_NAME[part.cat] ?? part.cat, label: part.label, tip: part.note, id: OPTION_ID(field, value), draw: (ctx) => drawChip(ctx, part, 50, 50, 46, { ring: "rgba(255,255,255,0.3)" }) };
+  return { cat: PART_CAT_NAME[part.cat] ?? part.cat, label: part.label, tip: partTip(part), id: OPTION_ID(field, value), draw: (ctx) => drawChip(ctx, part, 50, 50, 46, { ring: "rgba(255,255,255,0.3)" }) };
 }
 
 /**

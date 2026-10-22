@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 import type { Facing } from "../api/types";
-import { resolveDoll } from "./appearance";
+import { resolveDollT } from "./testDolls";
 import {
   drawSummonBody,
   drawSummonGround,
@@ -183,8 +183,8 @@ describe("召喚物外觀渲染器", () => {
   });
 
   it("人形款式：影魅、守護靈、殘影、骷髏盾牌各有規格；殘影複製召喚者", () => {
-    const skeleton = resolveDoll({ template: "summon_skeleton_warrior", team: "ally", summon: true });
-    const hero = resolveDoll({ template: "hero_mage", team: "ally", summon: false });
+    const skeleton = resolveDollT({ template: "summon_skeleton_warrior", team: "ally", summon: true });
+    const hero = resolveDollT({ template: "hero_mage", team: "ally", summon: false });
     const spec = (look: SummonLookDraw, owner = hero) => humanoidSpec(resolveSummonLook(look), skeleton, owner);
     expect(spec({ body: "humanoid", variant: "shade" }).look.skin).not.toBe(skeleton.look.skin);
     expect(spec({ body: "humanoid", variant: "guardian" }).gear.off_hand?.kind).toBe("shield_round");

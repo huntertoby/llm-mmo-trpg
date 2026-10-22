@@ -1,5 +1,5 @@
 // 視圖 → 繪製模型（純函式；PixiJS 只負責照著畫）。
-import type { BattleView, Facing, Pos, Surface } from "../api/types";
+import type { BattleView, DollLook, Facing, Pos, Surface } from "../api/types";
 import type { DollInput } from "../render/appearance";
 import type { GearLook } from "../render/gearIcon";
 import type { SummonLookDraw } from "../render/summonArt";
@@ -28,6 +28,7 @@ function copyTarget(view: BattleView, u: BattleView["units"][number]): DollInput
     template: owner.template_id,
     team: owner.team,
     summon: false,
+    dollLook: owner.doll_look,
     weaponId: owner.weapon_id,
     weaponClass: owner.weapon_class,
     equipment: (owner.equipment ?? []).map((e) => ({ slot: e.slot, appearance: e.appearance })),
@@ -101,6 +102,8 @@ export interface UnitDraw {
   infused?: boolean;
   /** 朝向（Phase 3D-8d）：圖示外緣畫小箭頭；背後格站著近戰敵人時會被背刺。 */
   facing: Facing;
+  /** 紙娃娃外觀（Phase 3E-2e，單位視圖的 `doll_look`）；沒有時依陣營退回預設。 */
+  dollLook?: DollLook | null;
   /** 武器 ID（紙娃娃主手外觀用）。 */
   weaponId: string;
   /** 武器大類（melee、ranged、focus）：不認得 `weaponId` 時依此退回武器圖。 */
@@ -255,6 +258,7 @@ export function buildDrawModel(
       charge: chargeCountdown(u.statuses),
       infused: u.infused_skill_id != null,
       facing: u.facing,
+      dollLook: u.doll_look ?? null,
       weaponId: u.weapon_id,
       weaponClass: u.weapon_class,
       summonLook: u.summon_look ?? null,

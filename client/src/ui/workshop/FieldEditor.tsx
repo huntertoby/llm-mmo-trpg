@@ -38,13 +38,8 @@ interface ListProps {
   onChange(next: Json): void;
 }
 
-/** 這些欄位的選項用「卡片」顯示（附說明）；其他單選用小按鈕或下拉。 */
-const CARD_FIELDS: ReadonlySet<string> = new Set(["skeleton", "kind", "category", "shape", "condition", "event", "target"]);
+/** 單選欄位的選項數超過這個數量時改用下拉；是否用「卡片」顯示由後端的 `FieldSpec.card` 決定。 */
 const COMPACT_MAX = 8;
-
-function lastSegment(path: string): string {
-  return path.split(".").at(-1) ?? path;
-}
 
 export function FieldList({ fields, container, base, onChange }: ListProps) {
   return (
@@ -114,17 +109,15 @@ export function FieldEditor(props: FieldProps) {
 
 // ---------- 單選 ----------
 
-function badges(spec: FieldSpec, choice: Choice): string[] {
+function badges(choice: Choice): string[] {
   const out: string[] = [];
   const info = choice.info;
   if (info["core"] === true) out.push("核心");
   else if (info["secondary"] === true) out.push("附帶");
   const min = info["min_rarity"];
   if (typeof min === "string" && min !== "common") out.push(`${rarityName(min)}以上`);
-  if (spec.field === "skeleton") {
-    const kinds = info["kinds"];
-    if (Array.isArray(kinds) && kinds.length > 0 && !kinds.includes("active")) out.push("非主動技");
-  }
+  const kinds = info["kinds"]; // 骨架選項才有 `kinds`
+  if (Array.isArray(kinds) && kinds.length > 0 && !kinds.includes("active")) out.push("非主動技");
   return out;
 }
 
@@ -136,7 +129,7 @@ function ChoiceField({ spec, container, base, onChange }: FieldProps) {
   // 選項專屬的參數：物件選項（形狀、條件）寫在該物件裡，其他寫在同一層。
   const paramBase = objectChoice ? path : parentPath(path);
   const pick = (c: Choice) => onChange(selectChoice(container, spec, c, base));
-  const card = CARD_FIELDS.has(lastSegment(spec.field));
+  const card = spec.card === true; // 用卡片排列：後端 `FieldSpec.card` 旗標
   return (
     <div className="ws-field">
       <Label spec={spec} />
@@ -154,7 +147,7 @@ function ChoiceField({ spec, container, base, onChange }: FieldProps) {
                 <OptionGlyph field={spec.field} value={c.value} />
                 {c.name_zh}
               </span>
-              {badges(spec, c).map((b) => (
+              {badges(c).map((b) => (
                 <span key={b} className="ws-badge">
                   {b}
                 </span>
@@ -433,7 +426,7 @@ function EffectsField({ spec, container, base, onChange }: FieldProps) {
                 <OptionGlyph field="effects" value={c.value} />
                 {c.name_zh}
               </span>
-              {badges(spec, c).map((b) => (
+              {badges(c).map((b) => (
                 <span key={b} className="ws-badge">
                   {b}
                 </span>
