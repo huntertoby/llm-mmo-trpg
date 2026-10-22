@@ -139,3 +139,24 @@ items:
     material: copper
     affixes:
       - {affix: affix_max_hp, value: 16}
+  # --- Phase 3G-G2：技能強化、普攻附加、武器特性強化 ---
+  - id: item_g2_hammer
+    name_zh: 震地戰錘
+    slot_type: weapon
+    weapon: hammer
+    kind: hammer
+    form: warhammer
+    material: iron
+    affixes:
+      - {affix: affix_trait_hammer_knockback}
+      - {affix: affix_kw_prone_damage, value: 100}
+      - {affix: affix_attack_mark}
+  - id: item_g2_amulet
+    name_zh: 引雷項鍊
+    slot_type: neck
+    kind: pendant
+    form: pendant
+    material: silver
+    affixes:
+      - {affix: affix_kw_shock_area}
+      - {affix: affix_kw_burn_duration}

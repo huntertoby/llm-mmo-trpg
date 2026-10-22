@@ -43,14 +43,17 @@ from trpg.content.equipment import (
     EquipmentRules,
     ItemDef,
     ItemTable,
+    KeywordAffix,
     Loadout,
     ReactionAffix,
     RuleAffix,
     TriggerAffix,
+    WeaponTraitAffix,
     item_problems,
     loadout_problems,
     resolve_loadout,
 )
+from trpg.content.keyword_derive import Facts, SkillKeywords, derive_from_facts, derive_keywords
 from trpg.content.loader import default_content_dir, load_content_file
 from trpg.content.maps import MapDef, SpawnUnitsEvent, check_map
 from trpg.content.roguelite import RunRules, roguelite_problems
@@ -85,6 +88,7 @@ from trpg.content.skills import (
 )
 from trpg.content.stacks import StackDef, StackTable
 from trpg.content.summons import SummonDef, SummonTable
+from trpg.content.weapon_params import set_weapon_param
 from trpg.content.workshop import WorkshopRules, workshop_problems
 from trpg.shared.errors import ContentError
 from trpg.shared.types import Surface
@@ -137,7 +141,11 @@ class Ruleset(ContentModel):
     """規則改變（Phase 3D-6，``content/rule_changes.yaml``）：嵌入規則包，重播不依賴資料檔。"""
     equipment: EquipmentRules = EquipmentRules()
     """裝備的遞減權重與硬上限（Phase 3G-G1，``content/rules/equipment.yaml``）。"""
+    keywords: KeywordTable = KeywordTable.model_construct(keywords=())
+    """關鍵字推導表（Phase 3G-G2，``content/skill_keywords.yaml``）：裝備的技能強化詞條依關鍵字
+    選取技能。嵌入規則包，重播不依賴資料檔。"""
 
+    _keyword_cache: dict[object, SkillKeywords] = PrivateAttr(default_factory=dict)
     _rule_change_index: dict[str, RuleChangeDef] = PrivateAttr(default_factory=dict)
     _summon_index: dict[str, SummonDef] = PrivateAttr(default_factory=dict)
     _skill_index: dict[str, SkillDef] = PrivateAttr(default_factory=dict)
@@ -352,6 +360,23 @@ class Ruleset(ContentModel):
         index: dict[str, RuleChangeDef] = self.__pydantic_private__["_rule_change_index"]  # type: ignore[index]
         return index[rule_id]
 
+    def skill_keywords(self, skill: SkillDef) -> SkillKeywords:
+        """``skill`` 製造與利用的關鍵字（推導結果依技能 ID 快取；變形後的技能 ID 不變、效果不變，
+        所以共用同一筆）。"""
+        cache: dict[object, SkillKeywords] = self.__pydantic_private__["_keyword_cache"]  # type: ignore[index]
+        found = cache.get(skill.id)
+        if found is None:
+            found = cache[skill.id] = derive_keywords(skill, self.keywords)
+        return found
+
+    def facts_keywords(self, key: object, facts: Facts) -> SkillKeywords:
+        """由事實（例如普攻的元素與命中附帶狀態）推導的關鍵字，依 ``key`` 快取。"""
+        cache: dict[object, SkillKeywords] = self.__pydantic_private__["_keyword_cache"]  # type: ignore[index]
+        found = cache.get(key)
+        if found is None:
+            found = cache[key] = derive_from_facts(facts, self.keywords)
+        return found
+
     def has_modifier(self, skill_ids: Iterable[str]) -> bool:
         """``skill_ids`` 之中是否有修正技能（``kind: modifier``，3C-2；引擎的快速路徑）。"""
         ids: frozenset[str] = self.__pydantic_private__["_modifier_ids"]  # type: ignore[index]
@@ -504,13 +529,14 @@ def load_library(  # noqa: PLR0915
             summons=summons,
             rule_changes=rule_changes,
             equipment=equipment_rules,
+            keywords=keywords,
         )
     except ValueError as exc:
         raise ContentError(root / "rules", str(exc)) from exc
     affixes = affix_table.by_id()
     items = item_table.by_id()
-    _check_affixes(root, affixes, ruleset)
     weapon_map = weapons.by_id()
+    _check_affixes(root, affixes, ruleset, weapon_map)
     for item in item_table.items:
         problems = item_problems(item, affixes, weapon_map, equipment_rules)
         if problems:
@@ -854,11 +880,36 @@ class _GearCatalog:
         return [f"equipment：{p}" for p in loadout_problems(loadout, weapon, self.rules)]
 
 
-def _affix_reference_problems(affix: AffixDef, ruleset: Ruleset) -> list[str]:
+def _trait_problems(affix: WeaponTraitAffix, weapons: Mapping[str, WeaponDef]) -> list[str]:
+    """武器特性強化：限定的武器存在、參數路徑在這些武器上存在，而且套用一次之後武器資料仍然合法。"""
+    problems: list[str] = []
+    for weapon_id in affix.weapons:
+        weapon = weapons.get(weapon_id)
+        if weapon is None:
+            problems.append(f"詞條 {affix.id} 引用了未知的武器：{weapon_id}")
+            continue
+        data = weapon.model_dump()
+        factor = affix.scale_permille
+        if not set_weapon_param(data, affix.param, affix.delta, factor):
+            problems.append(f"詞條 {affix.id}：武器 {weapon_id} 沒有可改的參數 {affix.param}")
+            continue
+        try:
+            WeaponDef.model_validate(data)
+        except ValueError as exc:
+            problems.append(f"詞條 {affix.id}：改 {weapon_id}.{affix.param} 後武器不合法：{exc}")
+    return problems
+
+
+def _affix_reference_problems(
+    affix: AffixDef,
+    ruleset: Ruleset,
+    weapons: Mapping[str, WeaponDef],
+    keyword_ids: frozenset[str],
+) -> list[str]:
     """詞條引用的條件、狀態、觸發時機、反應與規則改變存在（Phase 3G-G1）。
 
-    不檢查（之後的段落才加入，已記錄在報告）：充能的層數（``fury`` 由 G3 加入）、授予動作的技能
-    （G3 加入）、武器特性強化限定的武器 id（長槍由 3-24a2 加入）。
+    Phase 3G-G2 起也檢查：技能強化的關鍵字 id（對照推導表）、武器特性強化限定的武器與參數。
+    不檢查（G3 才加入）：充能的層數（``fury``）、授予動作的技能。
     """
     statuses = {s.id for s in ruleset.statuses.statuses}
     refs: list[tuple[str, str, set[str]]] = []
@@ -872,7 +923,10 @@ def _affix_reference_problems(affix: AffixDef, ruleset: Ruleset) -> list[str]:
         refs.append(("反應", affix.reaction, {r.id for r in ruleset.reactions.reactions}))
     for status in _affix_statuses(affix):
         refs.append(("狀態", status, statuses))
-    return [
+    if isinstance(affix, KeywordAffix):
+        refs.append(("關鍵字", affix.keyword, set(keyword_ids)))
+    extra = _trait_problems(affix, weapons) if isinstance(affix, WeaponTraitAffix) else []
+    return extra + [
         f"詞條 {affix.id} 引用了未知的{what}：{ref}"
         for what, ref, known in refs
         if ref not in known
@@ -905,8 +959,18 @@ def _check_appearance(
         raise ContentError(root / "items.yaml", "；".join(problems))
 
 
-def _check_affixes(root: Path, affixes: Mapping[str, AffixDef], ruleset: Ruleset) -> None:
-    problems = [p for affix in affixes.values() for p in _affix_reference_problems(affix, ruleset)]
+def _check_affixes(
+    root: Path,
+    affixes: Mapping[str, AffixDef],
+    ruleset: Ruleset,
+    weapons: Mapping[str, WeaponDef],
+) -> None:
+    keyword_ids = frozenset(ruleset.keywords.ids())
+    problems = [
+        p
+        for affix in affixes.values()
+        for p in _affix_reference_problems(affix, ruleset, weapons, keyword_ids)
+    ]
     if problems:
         raise ContentError(root / "affixes.yaml", "；".join(problems))
 

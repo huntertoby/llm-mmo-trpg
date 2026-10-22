@@ -16,6 +16,7 @@ from trpg.engine.events import (
     UnitEscaped,
 )
 from trpg.engine.gear import build_gear, geared_template
+from trpg.engine.gear_enhance import geared_weapon
 from trpg.engine.rules.facing import default_facing
 from trpg.engine.rules.statuses import is_removed_with_source, stance_status_ids
 from trpg.engine.state import Facing, UnitState
@@ -229,6 +230,7 @@ def make_unit(
     最大 HP、抗性與速度（:func:`~trpg.engine.gear.geared_template`）。"""
     gear = build_gear(equipment if equipment is not None else Loadout(), rules.equipment)
     template = geared_template(template, gear, rules)
+    weapon = geared_weapon(weapon, gear, rules.equipment)  # 武器特性強化（3G-G2）
     stamina = template.stamina if template.stamina is not None else rules.core.default_stamina
     reactions = (
         template.reactions if template.reactions is not None else rules.reactions.default_rules

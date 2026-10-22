@@ -29,7 +29,13 @@ from trpg.content.skills import (
     default_affects,
 )
 from trpg.engine.activations import is_active
-from trpg.engine.gear import gear_damage_permille, gear_hit_bonus
+from trpg.engine.gear import cap_damage_bonus, gear_damage_parts, gear_hit_bonus
+from trpg.engine.gear_enhance import (
+    gear_area_delta,
+    gear_attack_element,
+    gear_keyword_damage_permille,
+    gear_status_duration,
+)
 from trpg.engine.skills.conditions import Subject, condition_met
 from trpg.engine.state import BattleState, UnitState
 from trpg.shared.types import Element
@@ -59,6 +65,7 @@ __all__ = [
     "skill_has_fire",
     "skill_is_fiery",
     "skill_use",
+    "status_duration_bonus",
     "summon_attack_dice",
     "summon_hp_permille",
     "unit_rules",
@@ -197,11 +204,38 @@ def hit_bonus(state: BattleState, unit: UnitState, use: Use, subject: Subject) -
     return _sum_for(state, unit, use, "hit_bonus", subject) + gear_hit_bonus(state, unit, subject)
 
 
+def _split_for(
+    state: BattleState, unit: UnitState, use: Use, change: str, subject: Subject
+) -> tuple[int, int]:
+    """:func:`_sum_for` 分成 ``(正的加總, 負的加總)``。"""
+    gain = loss = 0
+    for rule in _applicable(state, unit, use, change):
+        if condition_met(state, unit, rule.condition, subject):
+            amount = getattr(rule.change, change)
+            if amount > 0:
+                gain += amount
+            else:
+                loss += amount
+    return gain, loss
+
+
 def damage_permille(state: BattleState, unit: UnitState, use: Use, subject: Subject) -> int:
-    """對 ``subject`` 的傷害倍率（‰）：1000 ＋ ``damage_permille`` 加總 ＋ 裝備的傷害加成（Phase
-    3G-G1，已套全身傷害加成上限），下限 0。"""
-    rules_sum = _sum_for(state, unit, use, "damage_permille", subject)
-    return max(0, _PERMILLE + rules_sum + gear_damage_permille(state, unit, subject))
+    """對 ``subject`` 的傷害倍率（‰）：1000 ＋ 傷害加成 ＋ 減益，下限 0。
+
+    傷害加成是 **所有來源合計**（Phase 3G-G2，08 8.21.5.3）：修正規則的 ``damage_permille``、裝備的
+    條件數值與代價型（3G-G1）、裝備的技能強化（3G-G2）的正值加總後，套全身傷害加成上限（+50%）；
+    負值（減益）不受上限限制，直接相加。
+    """
+    gain, loss = _split_for(state, unit, use, "damage_permille", subject)
+    gear_gain, gear_loss = gear_damage_parts(state, unit, subject)
+    keyword = gear_keyword_damage_permille(state, unit, use.skill, use.action == "attack")
+    capped = cap_damage_bonus(state.ruleset, gain + gear_gain + keyword)
+    return max(0, _PERMILLE + capped + loss + gear_loss)
+
+
+def status_duration_bonus(state: BattleState, unit: UnitState, use: Use, status: str) -> int:
+    """裝備的技能強化讓這次動作施加的 ``status`` 多持續幾回合（Phase 3G-G2）。"""
+    return gear_status_duration(state, unit, use.skill, use.action == "attack", status)
 
 
 def heal_permille(state: BattleState, unit: UnitState, use: Use) -> int:
@@ -228,6 +262,8 @@ def damage_element(state: BattleState, unit: UnitState, use: Use, base: Element)
         if _self_holds(state, unit, rule):
             assert rule.change.add_element is not None
             return rule.change.add_element
+    if use.action == "attack":  # 裝備的普攻附加（Phase 3G-G2；修正技能優先）
+        return gear_attack_element(unit) or base
     return base
 
 
@@ -324,12 +360,13 @@ def shaped_skill(state: BattleState, unit: UnitState, skill: SkillDef) -> SkillD
     順序：先依技能 ID、規則索引依序套用 ``shape_to``（每條至多轉一次，可以接續轉，例如
     單體 → 直線 → 錐形），再把每條 ``area_delta`` 的 +1 加上去，最後看 ``allow_self_target``。
     """
-    if skill.kind != "active" or not state.ruleset.has_modifier(unit.skills):
+    if skill.kind != "active" or not (state.ruleset.has_modifier(unit.skills) or unit.gear.affixes):
         return skill
     if skill.followup is not None:  # 複合技能（Phase 3F-3a）的兩段形狀不變形（保守做法）
         return skill
-    rules = _shape_rules(state, unit, skill)
-    if not rules:
+    rules = _shape_rules(state, unit, skill) if state.ruleset.has_modifier(unit.skills) else []
+    gear_area = gear_area_delta(state, unit, skill)  # 裝備的技能強化（3G-G2）
+    if not rules and not gear_area:
         return skill
     shape = skill.shape
     for rule in rules:
@@ -338,6 +375,8 @@ def shaped_skill(state: BattleState, unit: UnitState, skill: SkillDef) -> SkillD
     for rule in rules:
         if rule.change.area_delta is not None:
             shape = _grow(state, shape, rule.change.area_delta)
+    if gear_area:
+        shape = _grow(state, shape, gear_area)
     include = skill.include_caster or (
         any(r.change.allow_self_target for r in rules) and _helps_allies(state, skill)
     )

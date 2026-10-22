@@ -54,7 +54,7 @@ def test_blank_ranged_heroes_play_a_whole_battle_and_replay_exactly(
     assert main([*argv, "--log-json", str(log)]) == 0
     capsys.readouterr()
     data = json.loads(log.read_text(encoding="utf-8"))
-    assert data["format"] == "trpg-battle-log/40"
+    assert data["format"] == "trpg-battle-log/41"
     assert fired(data["events"]), f"{build} 沒有發動武器特性"
     assert main(["battle", "replay", str(log)]) == 0
     assert "重播驗證通過" in capsys.readouterr().out

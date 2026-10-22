@@ -25,6 +25,7 @@ from trpg.content.battle import Dice
 from trpg.engine.context import Ctx
 from trpg.engine.effects import execute
 from trpg.engine.effects.models import ApplyStatusEffect, EffectBase, HealEffect, PushEffect
+from trpg.engine.gear_enhance import gear_on_hit_statuses
 from trpg.engine.ids import ARMOR_BROKEN, REVEALED
 from trpg.engine.rules.combat import attack_reach, is_concealed
 from trpg.engine.rules.geometry import XY, axis_direction, bresenham, has_line_of_sight, manhattan
@@ -92,9 +93,17 @@ def apply_hit_traits(ctx: Ctx, attacker: UnitState, target: UnitState) -> None:
                     flat=weapon.blessing.flat,
                 )
             )
+    if target.alive:  # 裝備的普攻附加：命中附帶狀態（3G-G2）
+        for status, rounds in gear_on_hit_statuses(ctx.state, attacker):
+            batch.append(
+                ApplyStatusEffect(
+                    source_id=attacker.id, target_id=target.id, status_id=status, duration=rounds
+                )
+            )
     execute(ctx, batch)
     direction = axis_direction(target.xy[0] - attacker.xy[0], target.xy[1] - attacker.xy[1])
     if weapon.knockback > 0 and direction is not None and target.alive:
+        limit = ctx.core.max_displace_distance  # 推擊距離上限（6.6），超過的每 1 格改為撞擊傷害
         execute(
             ctx,
             [
@@ -102,7 +111,8 @@ def apply_hit_traits(ctx: Ctx, attacker: UnitState, target: UnitState) -> None:
                     source_id=attacker.id,
                     target_id=target.id,
                     direction=direction,
-                    distance=weapon.knockback,
+                    distance=min(weapon.knockback, limit),
+                    extra_collisions=max(0, weapon.knockback - limit),
                 )
             ],
         )
