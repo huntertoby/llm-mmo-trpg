@@ -50,6 +50,7 @@ interface KindEntry {
   materials: string[];
   defaultMaterial: string;
 }
+const ARMOR_SLOT_TYPES: ReadonlySet<string> = new Set(["body", "head", "hands", "feet"]);
 const KINDS: Readonly<Record<string, KindEntry>> = Object.fromEntries((appearance.kinds as unknown as KindEntry[]).map((k) => [k.id, k]));
 const FALLBACK_KIND = "sword";
 const MAX_KEYWORDS = appearance.maxKeywords;
@@ -108,8 +109,10 @@ function palette(r: Resolved): Pal {
       a = el.c;
       d = mix(el.c, "#000000", 0.4);
     } else {
-      a = mix(a, el.c, 0.4);
-      d = mix(d, el.c, 0.25);
+      // 大面積的防具（身體、頭、手、腳）混色較淡，避免金屬混入火色像膚色（美術 PM 3G-5a 檢查）。
+      const armor = ARMOR_SLOT_TYPES.has(KINDS[r.kind]?.slotType ?? "");
+      a = mix(a, el.c, armor ? 0.25 : 0.4);
+      d = mix(d, el.c, armor ? 0.15 : 0.25);
     }
   }
   const first = r.keywords[0];
