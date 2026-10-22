@@ -15,7 +15,8 @@ from fastapi.responses import JSONResponse
 from fastapi.staticfiles import StaticFiles
 
 from trpg import __version__
-from trpg.api.routes import battles, content, runs, workshop
+from trpg.api.gear import GearRequestError
+from trpg.api.routes import battles, content, gear, runs, workshop
 from trpg.api.runs import RunNotFoundError, RunStore
 from trpg.api.sessions import (
     AutoAdvanceLimitError,
@@ -46,6 +47,7 @@ ERROR_STATUS: dict[type[Exception], int] = {
     ChoiceError: 422,
     SaveFormatError: 422,
     WorkshopRequestError: 422,
+    GearRequestError: 422,
     ComposeError: 422,
     DraftError: 422,
 }
@@ -90,6 +92,7 @@ def create_app(
     app.include_router(battles.router)
     app.include_router(runs.router)
     app.include_router(workshop.router)
+    app.include_router(gear.router)
     if static_dir is not None:
         app.mount("/", StaticFiles(directory=static_dir, html=True), name="client")
     return app

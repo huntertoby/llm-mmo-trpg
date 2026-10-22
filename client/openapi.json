@@ -1211,6 +1211,70 @@
           }
         }
       }
+    },
+    "/api/gear/catalog": {
+      "get": {
+        "tags": [
+          "gear"
+        ],
+        "summary": "Get Catalog",
+        "description": "裝備測試的選單。",
+        "operationId": "get_catalog_api_gear_catalog_get",
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/GearCatalog"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/gear/check": {
+      "post": {
+        "tags": [
+          "gear"
+        ],
+        "summary": "Post Check",
+        "description": "靶場上的主角穿這組裝備是否合法；合法時附上開戰時的主角（含裝備、加成來源與實際數值）。",
+        "operationId": "post_check_api_gear_check_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/GearCheckRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/GearCheck"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
     }
   },
   "components": {
@@ -2632,6 +2696,13 @@
               }
             ],
             "title": "Opponents"
+          },
+          "equipment": {
+            "additionalProperties": {
+              "$ref": "#/components/schemas/GearChoice"
+            },
+            "type": "object",
+            "title": "Equipment"
           }
         },
         "additionalProperties": false,
@@ -3339,6 +3410,573 @@
         ],
         "title": "GambleOut",
         "description": "賭注技能的預覽（Phase 3D-7a）：成功率與兩個分支（依序 ``win``、``lose``）。玩家是在知情下\n下注：網頁依它列出「60%：傷害 ×2｜40%：你受 15 傷害」。"
+      },
+      "GearAffixInfo": {
+        "properties": {
+          "id": {
+            "type": "string",
+            "title": "Id"
+          },
+          "name_zh": {
+            "type": "string",
+            "title": "Name Zh"
+          },
+          "category": {
+            "type": "string",
+            "title": "Category"
+          },
+          "category_number": {
+            "type": "integer",
+            "title": "Category Number"
+          },
+          "category_zh": {
+            "type": "string",
+            "title": "Category Zh"
+          },
+          "slot_types": {
+            "items": {
+              "$ref": "#/components/schemas/SlotType"
+            },
+            "type": "array",
+            "title": "Slot Types"
+          },
+          "weapons": {
+            "items": {
+              "type": "string"
+            },
+            "type": "array",
+            "title": "Weapons",
+            "default": []
+          },
+          "weapon_class": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Weapon Class"
+          },
+          "item_tags": {
+            "additionalProperties": {
+              "items": {
+                "type": "string"
+              },
+              "type": "array"
+            },
+            "type": "object",
+            "title": "Item Tags"
+          },
+          "legendary_only": {
+            "type": "boolean",
+            "title": "Legendary Only",
+            "default": false
+          },
+          "value_min": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Value Min"
+          },
+          "value_max": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Value Max"
+          },
+          "value_unit": {
+            "type": "string",
+            "title": "Value Unit",
+            "default": "flat"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "id",
+          "name_zh",
+          "category",
+          "category_number",
+          "category_zh",
+          "slot_types"
+        ],
+        "title": "GearAffixInfo",
+        "description": "白名單的一條詞條。``name_zh`` 含 ``{n}``（數值）；沒有 ``value_min`` 的是固定效果。"
+      },
+      "GearAffixPick": {
+        "properties": {
+          "affix": {
+            "type": "string",
+            "title": "Affix"
+          },
+          "value": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Value"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "affix"
+        ],
+        "title": "GearAffixPick",
+        "description": "自訂物品上的一條詞條：白名單 id ＋ 數值（詞條沒有數值範圍時不填）。"
+      },
+      "GearCatalog": {
+        "properties": {
+          "slots": {
+            "items": {
+              "$ref": "#/components/schemas/GearSlotInfo"
+            },
+            "type": "array",
+            "title": "Slots"
+          },
+          "items": {
+            "items": {
+              "$ref": "#/components/schemas/GearItemInfo"
+            },
+            "type": "array",
+            "title": "Items"
+          },
+          "affixes": {
+            "items": {
+              "$ref": "#/components/schemas/GearAffixInfo"
+            },
+            "type": "array",
+            "title": "Affixes"
+          },
+          "weapons": {
+            "items": {
+              "$ref": "#/components/schemas/GearWeaponInfo"
+            },
+            "type": "array",
+            "title": "Weapons"
+          },
+          "max_affixes_per_item": {
+            "type": "integer",
+            "title": "Max Affixes Per Item"
+          },
+          "max_cost_affixes": {
+            "type": "integer",
+            "title": "Max Cost Affixes"
+          },
+          "diminishing_permille": {
+            "items": {
+              "type": "integer"
+            },
+            "type": "array",
+            "title": "Diminishing Permille"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "slots",
+          "items",
+          "affixes",
+          "weapons",
+          "max_affixes_per_item",
+          "max_cost_affixes",
+          "diminishing_permille"
+        ],
+        "title": "GearCatalog",
+        "description": "測試介面的選單：欄位、測試物品、詞條白名單、武器。"
+      },
+      "GearCheck": {
+        "properties": {
+          "legal": {
+            "type": "boolean",
+            "title": "Legal"
+          },
+          "problems": {
+            "items": {
+              "type": "string"
+            },
+            "type": "array",
+            "title": "Problems",
+            "default": []
+          },
+          "hero": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/UnitView"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "legal"
+        ],
+        "title": "GearCheck",
+        "description": "穿戴檢查：合法時附上主角（含裝備與加成來源）的單位資訊。"
+      },
+      "GearCheckRequest": {
+        "properties": {
+          "hero_build": {
+            "type": "string",
+            "title": "Hero Build"
+          },
+          "equipment": {
+            "additionalProperties": {
+              "$ref": "#/components/schemas/GearChoice"
+            },
+            "type": "object",
+            "title": "Equipment"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "hero_build"
+        ],
+        "title": "GearCheckRequest"
+      },
+      "GearChoice": {
+        "properties": {
+          "item_id": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Item Id"
+          },
+          "custom": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/GearCustomItem"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "title": "GearChoice",
+        "description": "一個欄位的選擇：內容庫物品 id，或自訂物品（二選一）。"
+      },
+      "GearCustomItem": {
+        "properties": {
+          "name_zh": {
+            "type": "string",
+            "maxLength": 20,
+            "minLength": 1,
+            "title": "Name Zh"
+          },
+          "weapon": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Weapon"
+          },
+          "paired": {
+            "type": "boolean",
+            "title": "Paired",
+            "default": false
+          },
+          "tags": {
+            "items": {
+              "type": "string"
+            },
+            "type": "array",
+            "title": "Tags",
+            "default": []
+          },
+          "legendary": {
+            "type": "boolean",
+            "title": "Legendary",
+            "default": false
+          },
+          "kind": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Kind"
+          },
+          "affixes": {
+            "items": {
+              "$ref": "#/components/schemas/GearAffixPick"
+            },
+            "type": "array",
+            "maxItems": 8,
+            "title": "Affixes",
+            "default": []
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "name_zh"
+        ],
+        "title": "GearCustomItem",
+        "description": "手動組的物品（欄位的物品種類由欄位決定，所以不必填）。\n\n``weapon``：主手的武器 id；``paired``：成對武器；``kind``：外觀造型（只影響圖示，選填）。"
+      },
+      "GearItemInfo": {
+        "properties": {
+          "id": {
+            "type": "string",
+            "title": "Id"
+          },
+          "name_zh": {
+            "type": "string",
+            "title": "Name Zh"
+          },
+          "slot_type": {
+            "$ref": "#/components/schemas/SlotType"
+          },
+          "weapon": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Weapon"
+          },
+          "weapon_name_zh": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Weapon Name Zh"
+          },
+          "two_handed": {
+            "type": "boolean",
+            "title": "Two Handed",
+            "default": false
+          },
+          "paired": {
+            "type": "boolean",
+            "title": "Paired",
+            "default": false
+          },
+          "tags": {
+            "items": {
+              "type": "string"
+            },
+            "type": "array",
+            "title": "Tags",
+            "default": []
+          },
+          "legendary": {
+            "type": "boolean",
+            "title": "Legendary",
+            "default": false
+          },
+          "affixes": {
+            "items": {
+              "$ref": "#/components/schemas/GearItemLine"
+            },
+            "type": "array",
+            "title": "Affixes",
+            "default": []
+          },
+          "appearance": {
+            "$ref": "#/components/schemas/AppearanceView",
+            "default": {
+              "rarity": "common",
+              "keywords": []
+            }
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "id",
+          "name_zh",
+          "slot_type"
+        ],
+        "title": "GearItemInfo"
+      },
+      "GearItemLine": {
+        "properties": {
+          "affix_id": {
+            "type": "string",
+            "title": "Affix Id"
+          },
+          "text_zh": {
+            "type": "string",
+            "title": "Text Zh"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "affix_id",
+          "text_zh"
+        ],
+        "title": "GearItemLine"
+      },
+      "GearSlotInfo": {
+        "properties": {
+          "slot": {
+            "type": "string",
+            "title": "Slot"
+          },
+          "name_zh": {
+            "type": "string",
+            "title": "Name Zh"
+          },
+          "slot_type": {
+            "$ref": "#/components/schemas/SlotType"
+          },
+          "slot_type_zh": {
+            "type": "string",
+            "title": "Slot Type Zh"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "slot",
+          "name_zh",
+          "slot_type",
+          "slot_type_zh"
+        ],
+        "title": "GearSlotInfo"
+      },
+      "GearTotalView": {
+        "properties": {
+          "key": {
+            "type": "string",
+            "title": "Key"
+          },
+          "label_zh": {
+            "type": "string",
+            "title": "Label Zh"
+          },
+          "value": {
+            "type": "integer",
+            "title": "Value"
+          },
+          "before_cap": {
+            "type": "integer",
+            "title": "Before Cap"
+          },
+          "capped": {
+            "type": "boolean",
+            "title": "Capped"
+          },
+          "permille": {
+            "type": "boolean",
+            "title": "Permille"
+          },
+          "text_zh": {
+            "type": "string",
+            "title": "Text Zh"
+          },
+          "note_zh": {
+            "type": "string",
+            "title": "Note Zh"
+          },
+          "condition_zh": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Condition Zh"
+          },
+          "sources_zh": {
+            "items": {
+              "type": "string"
+            },
+            "type": "array",
+            "title": "Sources Zh",
+            "default": []
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "key",
+          "label_zh",
+          "value",
+          "before_cap",
+          "capped",
+          "permille",
+          "text_zh",
+          "note_zh"
+        ],
+        "title": "GearTotalView",
+        "description": "英雄面板的一行裝備加成。\n\n- ``value``：實際值（遞減後、套上限後）；``permille`` 為真時單位是千分比。\n- ``before_cap``：遞減後、套上限前的值；``capped`` 為真代表被上限截斷。\n- ``condition_zh``：條件數值才有（例如「高處」）。\n- ``sources_zh``：每一條貢獻的詞條，格式「物品名：詞條文字（權重）」。"
+      },
+      "GearWeaponInfo": {
+        "properties": {
+          "id": {
+            "type": "string",
+            "title": "Id"
+          },
+          "name_zh": {
+            "type": "string",
+            "title": "Name Zh"
+          },
+          "weapon_class": {
+            "type": "string",
+            "title": "Weapon Class"
+          },
+          "two_handed": {
+            "type": "boolean",
+            "title": "Two Handed"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "id",
+          "name_zh",
+          "weapon_class",
+          "two_handed"
+        ],
+        "title": "GearWeaponInfo"
       },
       "Glossary": {
         "properties": {
@@ -6341,6 +6979,19 @@
         "title": "SkillReasons",
         "description": "主角灰掉的技能 → 引擎的拒絕理由（繁體中文）；可以用的技能不在表內（Phase 3-5c-2）。"
       },
+      "SlotType": {
+        "type": "string",
+        "enum": [
+          "weapon",
+          "offhand",
+          "head",
+          "body",
+          "hands",
+          "feet",
+          "neck",
+          "ring"
+        ]
+      },
       "StatusChanceOut": {
         "properties": {
           "status_id": {
@@ -7409,6 +8060,14 @@
             },
             "type": "array",
             "title": "Equipment",
+            "default": []
+          },
+          "gear_totals": {
+            "items": {
+              "$ref": "#/components/schemas/GearTotalView"
+            },
+            "type": "array",
+            "title": "Gear Totals",
             "default": []
           }
         },

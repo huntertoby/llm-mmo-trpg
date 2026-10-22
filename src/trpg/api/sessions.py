@@ -22,6 +22,7 @@ import threading
 from collections.abc import Callable
 from dataclasses import dataclass
 
+from trpg.api.gear import equip_gear
 from trpg.api.schemas import Awaiting, CreateBattleRequest
 from trpg.api.workshop import custom_skill_defs, equip_custom_skills
 from trpg.content.library import ContentLibrary
@@ -363,7 +364,8 @@ class SessionStore:
         self._sessions: dict[str, BattleSession] = {}
         self._lock = threading.Lock()
 
-    def _setup(self, request: CreateBattleRequest) -> BattleSetup:
+    def base_setup(self, request: CreateBattleRequest) -> BattleSetup:
+        """地圖、陣容與主角 build 的設定（尚未套用裝備與自訂技能）。"""
         # 工坊試玩（帶自訂技能）可以選 Boss 地圖；一般開戰不行（Phase 3-5c-2）
         maps = playable_maps(
             self.library, include_training=True, include_boss=bool(request.custom_skills)
@@ -377,7 +379,12 @@ class SessionStore:
         except UnknownBuildError as exc:
             raise InvalidRequestError(str(exc)) from exc
         enemies = self._enemies(request)
-        setup = build_setup(library, request.map_id, allies, enemies, max_rounds=request.max_rounds)
+        return build_setup(library, request.map_id, allies, enemies, max_rounds=request.max_rounds)
+
+    def _setup(self, request: CreateBattleRequest) -> BattleSetup:
+        setup = self.base_setup(request)
+        if request.equipment:  # 裝備測試（Phase 3G-G4）：先換裝備（主手會換武器），再裝自訂技能
+            setup = equip_gear(setup, self.library, request.equipment)
         if not request.custom_skills and not request.replace_skills:
             return setup
         custom = custom_skill_defs(self.library, request.custom_skills)

@@ -20,6 +20,7 @@ from trpg.content.skills import CHARGING, TIME_BOMB
 from trpg.content.slots import SLOT_ZH
 from trpg.engine.bombs import bomb_spec
 from trpg.engine.delayed import charge_infos
+from trpg.engine.gear_view import GearTotalView, gear_totals
 from trpg.engine.skills.revive import revivable
 from trpg.engine.state import (
     Activation,
@@ -42,6 +43,7 @@ __all__ = [
     "AppearanceView",
     "BattleView",
     "EquipmentSlotView",
+    "GearTotalView",
     "GrantedSkillView",
     "ObjectView",
     "PendingView",
@@ -257,6 +259,8 @@ class UnitView(_ViewModel):
     近戰攻擊者有背刺加成。"""
     equipment: tuple[EquipmentSlotView, ...] = ()
     """裝備摘要（Phase 3G-G1，唯讀；依欄位固定順序，沒有裝備時為空）。"""
+    gear_totals: tuple[GearTotalView, ...] = ()
+    """裝備加成的來源（Phase 3G-G4，唯讀）：實際值（遞減、截斷後）與每條詞條的貢獻。"""
 
 
 class TrapView(_ViewModel):
@@ -498,6 +502,11 @@ def _equipment_view(unit: UnitState) -> tuple[EquipmentSlotView, ...]:
     return tuple(views)
 
 
+def _gear_totals(state: BattleState, unit: UnitState) -> tuple[GearTotalView, ...]:
+    caps = state.ruleset.equipment.caps
+    return gear_totals(unit, damage_cap=caps.damage_bonus_permille, move_cap=caps.move_bonus)
+
+
 def _unit_view(state: BattleState, unit: UnitState, team: Team) -> UnitView:
     return UnitView(
         id=unit.id,
@@ -546,6 +555,7 @@ def _unit_view(state: BattleState, unit: UnitState, team: Team) -> UnitView:
         activations=tuple(_activation_view(state, a) for a in unit.activations),
         facing=unit.facing,
         equipment=_equipment_view(unit),
+        gear_totals=_gear_totals(state, unit),
         granted_skills=(
             tuple(
                 GrantedSkillView(

@@ -13,6 +13,7 @@ from typing import Any, Literal
 
 from pydantic import BaseModel, ConfigDict, Field
 
+from trpg.api.gear_schemas import GearChoice
 from trpg.engine.actions import Action, FollowupTarget, Step, UseSkill
 from trpg.engine.ai.orders import IgnoredOrder, OrderSet
 from trpg.engine.preview import (
@@ -164,6 +165,9 @@ class CreateBattleRequest(_ApiModel):
     opponents: str | None = None
     """靶場（地圖類型 ``training``）的對手：``content/workshop.yaml`` 的 ``opponents`` 之一
     （``dummy`` 木樁、``fighting`` 會反擊），省略為第一個。其他地圖不可填。"""
+    equipment: dict[str, GearChoice] = Field(default_factory=dict)
+    """裝備測試（Phase 3G-G4）：主角各欄位的物品（內容庫物品 id，或自訂物品）。沒選的欄位是空的；
+    主手選了武器物品時主角的武器跟著換。不合法時 422 並列出中文原因。"""
 
 
 class DecisionRequest(_ApiModel):
