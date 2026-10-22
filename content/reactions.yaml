@@ -46,6 +46,21 @@ reactions:
     description_zh: 範圍內的隊友被敵人單體攻擊命中時，改由你承受這次攻擊（來自裝備，每輪最多一次）。
     effect: redirect_damage
     events: [ally_hit_in_range]
+# events（Phase 3E-2e）：反應事件的中文名與說明，ReactionWhen.event 的每個值都要有一列（schema 與測試檢查）；
+# 技能卡的「反應時機」部件與 glossary API 用，前端不再手寫。
+events:
+  - {id: targeted_by_melee, name_zh: 被近戰攻擊時, description_zh: 被近戰攻擊命中之後、傷害結算之前。}
+  - {id: targeted_by_attack, name_zh: 被攻擊時, description_zh: 被任何攻擊命中之後、傷害結算之前。}
+  - {id: enemy_leaves_adjacent, name_zh: 敵人離開時, description_zh: 敵人離開你的觸及範圍時。}
+  - {id: hit_by_melee, name_zh: 被近戰擊中時, description_zh: 被近戰攻擊命中、傷害結算之後。}
+  - {id: hit_by_attack, name_zh: 被攻擊時, description_zh: 被任何攻擊命中、傷害結算之後。}
+  - {id: ally_hit_adjacent, name_zh: 身旁隊友受擊時, description_zh: 相鄰的友方被攻擊命中、傷害結算之前。}
+  - {id: hit_by_spell, name_zh: 被法術擊中時, description_zh: 被法術技命中、傷害結算之前；另一方是施放者。}
+  - {id: ally_downed, name_zh: 隊友倒下時, description_zh: 視野內的友方倒下之後。}
+  - {id: enemy_enters_adjacent, name_zh: 敵人靠近時, description_zh: 敵人主動移動進入你的相鄰格之後；被強制位移不算。}
+  - {id: ally_targeted, name_zh: 隊友被瞄準時, description_zh: 相鄰友方被敵人的單體技能或普攻選為目標、命中判定之前。}
+  - {id: enemy_moves_in_range, name_zh: 敵人在射程內移動時, description_zh: 敵人主動移動一步後，位置在你的武器射程與視線內。}
+  - {id: ally_hit_in_range, name_zh: 範圍內隊友受擊時, description_zh: 範圍內的友方被敵人單體攻擊命中、傷害結算之前。}
 default_rules:
   - reaction: block
     when: {event: targeted_by_melee}

@@ -3546,6 +3546,181 @@
         "title": "DisplaceCheckOut",
         "description": "預覽中的位移抵抗判定（Phase 3D-2b）：敵方 ``unit_id`` 被移動的成功率（千分比）；\n``resist_bonus`` 是目標的抵抗加成，``lethal`` 為落點是致命地形。"
       },
+      "DollGear": {
+        "properties": {
+          "kind": {
+            "type": "string",
+            "pattern": "^[a-z][a-z0-9_]*$",
+            "title": "Kind"
+          },
+          "material": {
+            "type": "string",
+            "pattern": "^[a-z][a-z0-9_]*$",
+            "title": "Material"
+          },
+          "color": {
+            "anyOf": [
+              {
+                "type": "string",
+                "pattern": "^#[0-9a-fA-F]{6}$"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Color"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "kind",
+          "material"
+        ],
+        "title": "DollGear",
+        "description": "範本身上的一件外觀裝備（Phase 3E-2e）：造型、材質與染色。"
+      },
+      "DollLook": {
+        "properties": {
+          "skin": {
+            "type": "string",
+            "pattern": "^#[0-9a-fA-F]{6}$",
+            "title": "Skin"
+          },
+          "hair": {
+            "anyOf": [
+              {
+                "type": "string",
+                "enum": [
+                  "short",
+                  "long",
+                  "none"
+                ]
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Hair"
+          },
+          "hair_color": {
+            "anyOf": [
+              {
+                "type": "string",
+                "pattern": "^#[0-9a-fA-F]{6}$"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Hair Color"
+          },
+          "pants": {
+            "anyOf": [
+              {
+                "type": "string",
+                "pattern": "^#[0-9a-fA-F]{6}$"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Pants"
+          },
+          "trim": {
+            "anyOf": [
+              {
+                "type": "string",
+                "pattern": "^#[0-9a-fA-F]{6}$"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Trim"
+          },
+          "eyes": {
+            "anyOf": [
+              {
+                "type": "string",
+                "pattern": "^#[0-9a-fA-F]{6}$"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Eyes"
+          },
+          "skull": {
+            "type": "boolean",
+            "title": "Skull",
+            "default": false
+          },
+          "gear": {
+            "additionalProperties": {
+              "$ref": "#/components/schemas/DollGear"
+            },
+            "propertyNames": {
+              "enum": [
+                "head",
+                "body",
+                "hands",
+                "feet",
+                "cloak",
+                "off_hand"
+              ]
+            },
+            "type": "object",
+            "title": "Gear"
+          },
+          "main_material": {
+            "anyOf": [
+              {
+                "type": "string",
+                "pattern": "^[a-z][a-z0-9_]*$"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Main Material"
+          },
+          "main_color": {
+            "anyOf": [
+              {
+                "type": "string",
+                "pattern": "^#[0-9a-fA-F]{6}$"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Main Color"
+          },
+          "rarity": {
+            "anyOf": [
+              {
+                "type": "string",
+                "enum": [
+                  "epic",
+                  "legendary"
+                ]
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Rarity"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "skin"
+        ],
+        "title": "DollLook",
+        "description": "單位範本的紙娃娃外觀（Phase 3E-2e，純顯示資料，不進引擎結算）。\n\n頭身手腳披風與副手（``gear``）、膚色髮型（``skin``／``hair``／…）與稀有度外光；主手由武器的\n``look`` 決定，``main_style`` 只覆寫主手的材質或顏色（例如生鏽的劍）。範本沒有 ``doll`` 時，\n前端依陣營退回預設外觀。"
+      },
       "DraftOptions": {
         "properties": {
           "steps": {
@@ -3895,6 +4070,18 @@
               }
             ],
             "title": "Default"
+          },
+          "card": {
+            "type": "boolean",
+            "title": "Card",
+            "description": "單選欄位用卡片排列（Phase 3E-2e）；前端不再依欄位名猜。",
+            "readOnly": true
+          },
+          "object_choice": {
+            "type": "boolean",
+            "title": "Object Choice",
+            "description": "單選欄位的值是物件 ``{\"type\": ...}``，選項專屬參數寫在該物件裡（Phase 3E-2e）。",
+            "readOnly": true
           }
         },
         "additionalProperties": false,
@@ -3902,7 +4089,9 @@
         "required": [
           "field",
           "name_zh",
-          "type"
+          "type",
+          "card",
+          "object_choice"
         ],
         "title": "FieldSpec",
         "description": "一個欄位。``field`` 是相對於上一層的路徑（頂層為技能定義的欄位名，例 ``shape``、\n``cost.cooldown``）。"
@@ -4810,6 +4999,38 @@
             },
             "type": "array",
             "title": "Attributes"
+          },
+          "effects": {
+            "items": {
+              "$ref": "#/components/schemas/GlossaryEntry"
+            },
+            "type": "array",
+            "title": "Effects",
+            "default": []
+          },
+          "conditions": {
+            "items": {
+              "$ref": "#/components/schemas/GlossaryEntry"
+            },
+            "type": "array",
+            "title": "Conditions",
+            "default": []
+          },
+          "triggers": {
+            "items": {
+              "$ref": "#/components/schemas/GlossaryEntry"
+            },
+            "type": "array",
+            "title": "Triggers",
+            "default": []
+          },
+          "weapon_looks": {
+            "items": {
+              "$ref": "#/components/schemas/WeaponLookEntry"
+            },
+            "type": "array",
+            "title": "Weapon Looks",
+            "default": []
           }
         },
         "additionalProperties": false,
@@ -4825,7 +5046,7 @@
           "attributes"
         ],
         "title": "Glossary",
-        "description": "名詞對照表（由內容庫產生）：ID → 中文名與簡短說明。"
+        "description": "名詞對照表（由內容庫產生）：ID → 中文名與簡短說明。\n\n``effects``／``conditions``／``triggers``（Phase 3E-2e）：技能效果原語、條件、觸發與反應時機的\n中文名與給玩家看的說明（原語的 ``player_description``）；``weapon_looks``：武器預設外觀。"
       },
       "GlossaryEntry": {
         "properties": {
@@ -9824,6 +10045,16 @@
             "title": "Infused",
             "default": false
           },
+          "doll_look": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/DollLook"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
           "summon_look": {
             "anyOf": [
               {
@@ -10354,6 +10585,81 @@
         ],
         "title": "Vault",
         "description": "攀跳（Phase 3-21b，玩法 #24）：花 ``vault_ap_cost`` AP 與 ``vault_move_cost`` 點移動點數。\n\n``dest`` 是落點：相鄰且比現在高 2 層的格子＝**攀爬**；正前方隔著 1 格寬不可站立格（深淵、\n岩漿、斷橋缺口）的下一格＝**跳躍**。落點能分辨是哪一種，所以不另外帶 ``mode``。"
+      },
+      "WeaponLook": {
+        "properties": {
+          "kind": {
+            "type": "string",
+            "pattern": "^[a-z][a-z0-9_]*$",
+            "title": "Kind"
+          },
+          "material": {
+            "type": "string",
+            "pattern": "^[a-z][a-z0-9_]*$",
+            "title": "Material"
+          },
+          "element": {
+            "anyOf": [
+              {
+                "type": "string",
+                "pattern": "^[a-z][a-z0-9_]*$"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Element"
+          },
+          "form": {
+            "anyOf": [
+              {
+                "type": "string",
+                "pattern": "^[a-z][a-z0-9_]*$"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Form"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "kind",
+          "material"
+        ],
+        "title": "WeaponLook",
+        "description": "武器的預設外觀（Phase 3E-2e，純顯示資料）：紙娃娃主手與武器小圖示畫哪一種造型。\n\n``kind``／``form``／``material`` 是前端認得的裝備造型（``content/equipment/appearance.yaml``），\n不認得時前端退回預設畫法；``element`` 讓法杖帶元素色。沒有 ``look`` 的武器，前端依武器大類退回。"
+      },
+      "WeaponLookEntry": {
+        "properties": {
+          "id": {
+            "type": "string",
+            "title": "Id"
+          },
+          "weapon_class": {
+            "type": "string",
+            "title": "Weapon Class"
+          },
+          "two_handed": {
+            "type": "boolean",
+            "title": "Two Handed"
+          },
+          "look": {
+            "$ref": "#/components/schemas/WeaponLook"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "id",
+          "weapon_class",
+          "two_handed",
+          "look"
+        ],
+        "title": "WeaponLookEntry",
+        "description": "武器的預設外觀（Phase 3E-2e）：紙娃娃主手與武器小圖示的造型；只列出有 ``look`` 的武器。"
       },
       "WorkshopArena": {
         "properties": {

@@ -36,6 +36,7 @@ __all__ = [
     "ObjectTable",
     "OrderBonuses",
     "ReactionDef",
+    "ReactionEventDef",
     "ReactionRule",
     "ReactionTable",
     "ReactionUnless",
@@ -540,15 +541,26 @@ class ReactionDef(ContentModel):
     requires_status: str | None = Field(default=None, pattern=ID_PATTERN)
 
 
+class ReactionEventDef(ContentModel):
+    """反應事件的中文名與說明（Phase 3E-2e）：``ReactionWhen.event`` 的每個值都要有一列，
+    技能卡的「反應時機」部件與 glossary API 用。"""
+
+    id: str = Field(pattern=ID_PATTERN)
+    name_zh: str = Field(min_length=1)
+    description_zh: str = Field(min_length=1)
+
+
 class ReactionTable(ContentModel):
-    """``content/reactions.yaml``：反應定義與預設規則。"""
+    """``content/reactions.yaml``：反應定義、反應事件名稱與預設規則。"""
 
     reactions: tuple[ReactionDef, ...] = Field(min_length=1)
+    events: tuple[ReactionEventDef, ...] = ()
     default_rules: tuple[ReactionRule, ...] = ()
 
     @model_validator(mode="after")
     def _check(self) -> ReactionTable:
         _unique([r.id for r in self.reactions], "反應 ID")
+        _unique([e.id for e in self.events], "反應事件 ID")
         index = self.by_id()
         for rule in self.default_rules:
             check_rule(rule, index)

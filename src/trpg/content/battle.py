@@ -22,6 +22,8 @@ __all__ = [
     "ArmorBreak",
     "Blessing",
     "Dice",
+    "DollGear",
+    "DollLook",
     "HitCondition",
     "ReactionRule",
     "ReactionUnless",
@@ -45,6 +47,7 @@ __all__ = [
     "TotemSpec",
     "UnitTemplate",
     "WeaponDef",
+    "WeaponLook",
     "WeaponTable",
 ]
 
@@ -285,6 +288,8 @@ class WeaponDef(ContentModel):
     backstab_dice: int = Field(default=0, ge=0, le=2)
     summon_only: bool = False
     """召喚物專用的武器（Phase 3-33e1）：不列入開局可選的武器，也不給玩家裝備。"""
+    look: WeaponLook | None = None
+    """預設外觀（Phase 3E-2e）：紙娃娃主手與武器小圖示的造型；經 glossary API 給前端。"""
 
     @model_validator(mode="after")
     def _check(self) -> WeaponDef:
@@ -641,6 +646,52 @@ class SummonLook(ContentModel):
     trait: SummonLookTrait | None = None
 
 
+class WeaponLook(ContentModel):
+    """武器的預設外觀（Phase 3E-2e，純顯示資料）：紙娃娃主手與武器小圖示畫哪一種造型。
+
+    ``kind``／``form``／``material`` 是前端認得的裝備造型（``content/equipment/appearance.yaml``），
+    不認得時前端退回預設畫法；``element`` 讓法杖帶元素色。沒有 ``look`` 的武器，前端依武器大類退回。
+    """
+
+    kind: str = Field(pattern=ID_PATTERN)
+    material: str = Field(pattern=ID_PATTERN)
+    element: str | None = Field(default=None, pattern=ID_PATTERN)
+    form: str | None = Field(default=None, pattern=ID_PATTERN)
+
+
+DollSlot = Literal["head", "body", "hands", "feet", "cloak", "off_hand"]
+DollHair = Literal["short", "long", "none"]
+
+
+class DollGear(ContentModel):
+    """範本身上的一件外觀裝備（Phase 3E-2e）：造型、材質與染色。"""
+
+    kind: str = Field(pattern=ID_PATTERN)
+    material: str = Field(pattern=ID_PATTERN)
+    color: str | None = Field(default=None, pattern=r"^#[0-9a-fA-F]{6}$")
+
+
+class DollLook(ContentModel):
+    """單位範本的紙娃娃外觀（Phase 3E-2e，純顯示資料，不進引擎結算）。
+
+    頭身手腳披風與副手（``gear``）、膚色髮型（``skin``／``hair``／…）與稀有度外光；主手由武器的
+    ``look`` 決定，``main_style`` 只覆寫主手的材質或顏色（例如生鏽的劍）。範本沒有 ``doll`` 時，
+    前端依陣營退回預設外觀。
+    """
+
+    skin: str = Field(pattern=r"^#[0-9a-fA-F]{6}$")
+    hair: DollHair | None = None
+    hair_color: str | None = Field(default=None, pattern=r"^#[0-9a-fA-F]{6}$")
+    pants: str | None = Field(default=None, pattern=r"^#[0-9a-fA-F]{6}$")
+    trim: str | None = Field(default=None, pattern=r"^#[0-9a-fA-F]{6}$")
+    eyes: str | None = Field(default=None, pattern=r"^#[0-9a-fA-F]{6}$")
+    skull: bool = False
+    gear: dict[DollSlot, DollGear] = Field(default_factory=dict)
+    main_material: str | None = Field(default=None, pattern=ID_PATTERN)
+    main_color: str | None = Field(default=None, pattern=r"^#[0-9a-fA-F]{6}$")
+    rarity: Literal["epic", "legendary"] | None = None
+
+
 HitCondition = Literal["always", "target_in_water", "self_in_water"]
 """召喚物命中特性的條件（Phase 3-33e1）：無條件、目標站在水面上、自己站在水面上。"""
 
@@ -794,6 +845,9 @@ class UnitTemplate(ContentModel):
     role: SummonRole | None = None
     """召喚物定位（Phase 3-33f1，6.29.5「定位」欄）：決定 HP 係數（``core.yaml`` 的
     ``summon_role_hp_permille``）；召喚物必填，非召喚物不可填。"""
+    doll: DollLook | None = None
+    """紙娃娃外觀（Phase 3E-2e）：頭身手腳披風、膚色髮型；經 ``UnitView.doll_look`` 給前端，
+    沒有時前端依陣營退回預設外觀。"""
     look: SummonLook | None = None
     """召喚物外觀（Phase 3-33h1）：**不寫在範本檔裡**——唯一來源是 ``content/summon_looks.yaml``，
     載入內容庫時依範本 ID 查表填入（Phase 3-33h2）；嵌入規則包，重播不依賴資料檔。"""

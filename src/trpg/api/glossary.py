@@ -7,7 +7,7 @@
 
 from __future__ import annotations
 
-from trpg.api.schemas import Glossary, GlossaryEntry
+from trpg.api.schemas import Glossary, GlossaryEntry, WeaponLookEntry
 from trpg.content.library import ContentLibrary
 from trpg.narrative.tile_info import object_rules, surface_rules, terrain_rules
 from trpg.shared.types import Attribute
@@ -95,4 +95,34 @@ def build_glossary(library: ContentLibrary) -> Glossary:
             _entry(e.id.value, e.name_zh, e.description_zh) for e in library.elements.elements
         ),
         attributes=tuple(_entry(a.value, a.display_name) for a in Attribute),
+        effects=tuple(
+            _entry(p.id, p.name_zh, p.player_description or p.description_zh, (p.category,))
+            for p in rules.primitives.primitives
+        ),
+        conditions=tuple(
+            _entry(c.id, c.name_zh, c.description_zh) for c in rules.conditions.conditions
+        ),
+        triggers=_triggers(library),
+        weapon_looks=tuple(
+            WeaponLookEntry(
+                id=w.id, weapon_class=w.weapon_class, two_handed=w.two_handed, look=w.look
+            )
+            for w in sorted(library.weapons.values(), key=lambda w: w.id)
+            if w.look is not None
+        ),
     )
+
+
+def _triggers(library: ContentLibrary) -> tuple[GlossaryEntry, ...]:
+    """被動觸發時機（``skill_triggers.yaml``）加反應時機（``reactions.yaml`` 的 ``events``）。"""
+    rules = library.ruleset
+    passive = tuple(
+        _entry(t.id, t.name_zh, t.description_zh) for t in rules.skill_triggers.triggers
+    )
+    seen = {e.id for e in passive}
+    reaction = tuple(
+        _entry(e.id, e.name_zh, e.description_zh)
+        for e in rules.reactions.events
+        if e.id not in seen
+    )
+    return (*passive, *reaction)

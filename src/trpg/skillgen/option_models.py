@@ -26,7 +26,7 @@ from __future__ import annotations
 
 from typing import Any, Literal
 
-from pydantic import BaseModel, ConfigDict
+from pydantic import BaseModel, ConfigDict, computed_field, model_validator
 
 __all__ = [
     "STEP_IDS",
@@ -81,6 +81,14 @@ type FieldType = Literal[
 ]
 
 
+CARD_FIELDS: frozenset[str] = frozenset(
+    {"skeleton", "kind", "category", "shape", "condition", "event", "target"}
+)
+"""用卡片排列選項的單選欄位（欄位路徑最後一段；Phase 3E-2e，原本寫死在前端）。"""
+OBJECT_CHOICE_FIELDS: frozenset[str] = frozenset({"shape", "condition", "add_effect"})
+"""選了之後值是物件 ``{"type": ...}`` 的單選欄位（其餘單選欄位的值就是純值）。"""
+
+
 class _Model(BaseModel):
     model_config = ConfigDict(frozen=True, extra="forbid")
 
@@ -115,6 +123,26 @@ class FieldSpec(_Model):
     min_count: int | None = None
     max_count: int | None = None
     default: str | int | bool | None = None
+
+    @model_validator(mode="before")
+    @classmethod
+    def _drop_derived(cls, data: Any) -> Any:
+        """``card``／``object_choice`` 由欄位路徑推導；序列化後再讀回（過濾說明文字等）時忽略。"""
+        if isinstance(data, dict):
+            return {k: v for k, v in data.items() if k not in ("card", "object_choice")}
+        return data
+
+    @computed_field  # type: ignore[prop-decorator]
+    @property
+    def card(self) -> bool:
+        """單選欄位用卡片排列（Phase 3E-2e）；前端不再依欄位名猜。"""
+        return self.type == "choice" and self.field.rsplit(".", 1)[-1] in CARD_FIELDS
+
+    @computed_field  # type: ignore[prop-decorator]
+    @property
+    def object_choice(self) -> bool:
+        """單選欄位的值是物件 ``{"type": ...}``，選項專屬參數寫在該物件裡（Phase 3E-2e）。"""
+        return self.type == "choice" and self.field.rsplit(".", 1)[-1] in OBJECT_CHOICE_FIELDS
 
 
 class StepOptions(_Model):

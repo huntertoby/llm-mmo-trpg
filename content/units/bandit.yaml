@@ -8,3 +8,5 @@ weapon: dagger
 resist: {}
 element_mods: {}
 tags: [humanoid]
+# 紙娃娃外觀（Phase 3E-2e；純顯示資料，kind／material 見 equipment/appearance.yaml，前端認得的才畫）
+doll: {skin: '#a8724c', hair: short, hair_color: '#2a1c14', gear: {body: {kind: leather, material: leather}, feet: {kind: boots, material: leather}, head: {kind: bandana, material: cloth, color: '#b33a3a'}}}

@@ -578,6 +578,10 @@ class PrimitiveDef(ContentModel):
     id: str = Field(pattern=ID_PATTERN)
     name_zh: str = Field(min_length=1)
     description_zh: str = Field(min_length=1)
+    player_description: str | None = Field(default=None, min_length=1)
+    """給玩家看的一句話說明（Phase 3E-2e）：不含階段編號與程式識別字；glossary API 與部件說明框
+    用它，省略時退回 ``description_zh``。出貨的原語一律要寫
+    （``tests/content/test_player_description.py``）。"""
     category: Literal["numeric", "structural", "rule_rewrite", "rule_change"]
     min_rarity: SkillRarity = "common"
     harmful: bool

@@ -14,6 +14,7 @@ from typing import Any, Literal
 from pydantic import BaseModel, ConfigDict, Field
 
 from trpg.api.gear_schemas import GearChoice
+from trpg.content.battle import WeaponLook
 from trpg.engine.actions import Action, FollowupTarget, Step, UseSkill
 from trpg.engine.ai.orders import IgnoredOrder, OrderSet
 from trpg.engine.preview import (
@@ -151,8 +152,21 @@ class GlossaryEntry(_ApiModel):
     """靜態規則說明（Phase 3-15）：地形、表面、物件「會怎樣」的中文短句，由內容資料產生。"""
 
 
+class WeaponLookEntry(_ApiModel):
+    """武器的預設外觀（Phase 3E-2e）：紙娃娃主手與武器小圖示的造型；只列出有 ``look`` 的武器。"""
+
+    id: str
+    weapon_class: str
+    two_handed: bool
+    look: WeaponLook
+
+
 class Glossary(_ApiModel):
-    """名詞對照表（由內容庫產生）：ID → 中文名與簡短說明。"""
+    """名詞對照表（由內容庫產生）：ID → 中文名與簡短說明。
+
+    ``effects``／``conditions``／``triggers``（Phase 3E-2e）：技能效果原語、條件、觸發與反應時機的
+    中文名與給玩家看的說明（原語的 ``player_description``）；``weapon_looks``：武器預設外觀。
+    """
 
     terrain: tuple[GlossaryEntry, ...]
     surfaces: tuple[GlossaryEntry, ...]
@@ -162,6 +176,10 @@ class Glossary(_ApiModel):
     reactions: tuple[GlossaryEntry, ...]
     elements: tuple[GlossaryEntry, ...]
     attributes: tuple[GlossaryEntry, ...]
+    effects: tuple[GlossaryEntry, ...] = ()
+    conditions: tuple[GlossaryEntry, ...] = ()
+    triggers: tuple[GlossaryEntry, ...] = ()
+    weapon_looks: tuple[WeaponLookEntry, ...] = ()
 
 
 # ---------------------------------------------------------------------------

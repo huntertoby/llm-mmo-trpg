@@ -17,7 +17,7 @@ from typing import Literal
 
 from pydantic import BaseModel, ConfigDict, TypeAdapter
 
-from trpg.content.battle import ReactionRule, SummonMode, UnitTemplate, WeaponDef
+from trpg.content.battle import DollLook, ReactionRule, SummonMode, UnitTemplate, WeaponDef
 from trpg.content.environment import ObjectDef, WeatherDef
 from trpg.content.equipment import Loadout
 from trpg.content.library import Ruleset
@@ -439,6 +439,9 @@ class UnitState:
     gear: GearState = field(default_factory=GearState)
     """裝備狀態（Phase 3G-G1）：開戰時由裝備快照算好、戰鬥中不變（數值類已併進上面的屬性、HP、
     抗性與速度；條件數值與代價型在戰鬥中查詢，見 :mod:`trpg.engine.gear`）。"""
+    doll: DollLook | None = None
+    """紙娃娃外觀（Phase 3E-2e，純顯示資料）：由範本帶入、戰鬥中不變，不參與任何結算；
+    ``view.py`` 投影成 ``UnitView.doll_look``。"""
 
     @property
     def alive(self) -> bool:
@@ -552,6 +555,7 @@ class UnitState:
             skill_levels=self.skill_levels,
             facing=self.facing,
             gear=self.gear,
+            doll=self.doll,
         )
 
 

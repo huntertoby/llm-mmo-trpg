@@ -1441,6 +1441,55 @@ export interface components {
             lethal: boolean;
         };
         /**
+         * DollGear
+         * @description 範本身上的一件外觀裝備（Phase 3E-2e）：造型、材質與染色。
+         */
+        DollGear: {
+            /** Kind */
+            kind: string;
+            /** Material */
+            material: string;
+            /** Color */
+            color?: string | null;
+        };
+        /**
+         * DollLook
+         * @description 單位範本的紙娃娃外觀（Phase 3E-2e，純顯示資料，不進引擎結算）。
+         *
+         *     頭身手腳披風與副手（``gear``）、膚色髮型（``skin``／``hair``／…）與稀有度外光；主手由武器的
+         *     ``look`` 決定，``main_style`` 只覆寫主手的材質或顏色（例如生鏽的劍）。範本沒有 ``doll`` 時，
+         *     前端依陣營退回預設外觀。
+         */
+        DollLook: {
+            /** Skin */
+            skin: string;
+            /** Hair */
+            hair?: ("short" | "long" | "none") | null;
+            /** Hair Color */
+            hair_color?: string | null;
+            /** Pants */
+            pants?: string | null;
+            /** Trim */
+            trim?: string | null;
+            /** Eyes */
+            eyes?: string | null;
+            /**
+             * Skull
+             * @default false
+             */
+            skull: boolean;
+            /** Gear */
+            gear?: {
+                [key: string]: components["schemas"]["DollGear"];
+            };
+            /** Main Material */
+            main_material?: string | null;
+            /** Main Color */
+            main_color?: string | null;
+            /** Rarity */
+            rarity?: ("epic" | "legendary") | null;
+        };
+        /**
          * DraftOptions
          * @description :func:`~trpg.skillgen.options.draft_options` 的結果：前置步驟都完成的步驟（依序），以及
          *     第一個還沒完成的步驟 ``next_step``（全部完成時為 ``None``）。
@@ -1601,6 +1650,16 @@ export interface components {
             max_count?: number | null;
             /** Default */
             default?: string | number | boolean | null;
+            /**
+             * Card
+             * @description 單選欄位用卡片排列（Phase 3E-2e）；前端不再依欄位名猜。
+             */
+            readonly card: boolean;
+            /**
+             * Object Choice
+             * @description 單選欄位的值是物件 ``{"type": ...}``，選項專屬參數寫在該物件裡（Phase 3E-2e）。
+             */
+            readonly object_choice: boolean;
         };
         /** @enum {string} */
         FieldType: "choice" | "multi_choice" | "int" | "count" | "dice" | "bool" | "text" | "tags" | "effects" | "object" | "modifiers" | "variants";
@@ -1962,6 +2021,9 @@ export interface components {
         /**
          * Glossary
          * @description 名詞對照表（由內容庫產生）：ID → 中文名與簡短說明。
+         *
+         *     ``effects``／``conditions``／``triggers``（Phase 3E-2e）：技能效果原語、條件、觸發與反應時機的
+         *     中文名與給玩家看的說明（原語的 ``player_description``）；``weapon_looks``：武器預設外觀。
          */
         Glossary: {
             /** Terrain */
@@ -1980,6 +2042,26 @@ export interface components {
             elements: components["schemas"]["GlossaryEntry"][];
             /** Attributes */
             attributes: components["schemas"]["GlossaryEntry"][];
+            /**
+             * Effects
+             * @default []
+             */
+            effects: components["schemas"]["GlossaryEntry"][];
+            /**
+             * Conditions
+             * @default []
+             */
+            conditions: components["schemas"]["GlossaryEntry"][];
+            /**
+             * Triggers
+             * @default []
+             */
+            triggers: components["schemas"]["GlossaryEntry"][];
+            /**
+             * Weapon Looks
+             * @default []
+             */
+            weapon_looks: components["schemas"]["WeaponLookEntry"][];
         };
         /** GlossaryEntry */
         GlossaryEntry: {
@@ -3939,6 +4021,7 @@ export interface components {
              * @default false
              */
             infused: boolean;
+            doll_look?: components["schemas"]["DollLook"] | null;
             summon_look?: components["schemas"]["SummonLookView"] | null;
             /**
              * Infusion Options
@@ -4160,6 +4243,36 @@ export interface components {
              */
             type: "vault";
             dest: components["schemas"]["Pos"];
+        };
+        /**
+         * WeaponLook
+         * @description 武器的預設外觀（Phase 3E-2e，純顯示資料）：紙娃娃主手與武器小圖示畫哪一種造型。
+         *
+         *     ``kind``／``form``／``material`` 是前端認得的裝備造型（``content/equipment/appearance.yaml``），
+         *     不認得時前端退回預設畫法；``element`` 讓法杖帶元素色。沒有 ``look`` 的武器，前端依武器大類退回。
+         */
+        WeaponLook: {
+            /** Kind */
+            kind: string;
+            /** Material */
+            material: string;
+            /** Element */
+            element?: string | null;
+            /** Form */
+            form?: string | null;
+        };
+        /**
+         * WeaponLookEntry
+         * @description 武器的預設外觀（Phase 3E-2e）：紙娃娃主手與武器小圖示的造型；只列出有 ``look`` 的武器。
+         */
+        WeaponLookEntry: {
+            /** Id */
+            id: string;
+            /** Weapon Class */
+            weapon_class: string;
+            /** Two Handed */
+            two_handed: boolean;
+            look: components["schemas"]["WeaponLook"];
         };
         /**
          * WorkshopArena
