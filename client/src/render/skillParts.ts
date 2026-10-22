@@ -2,7 +2,7 @@
 // 修正的對象與改變內容。每個部件畫在以 (0, 0) 為中心、半徑約 10 的範圍內，顏色由呼叫端（`chip`）給。
 // 技能圖示、組裝列、工坊選項、表面說明共用這一份；不認得的部件有預設：狀態畫「名稱第一個字」，
 // 其他畫「?」，永遠畫得出來（不丟例外）。
-import { statusName, surfaceName } from "../battle/glossary";
+import { conditionName, effectName, glossaryDescription, statusName, surfaceName, triggerName } from "../battle/glossary";
 import { elementGlyph, ELEMENT_ICON, starPath, type Ctx } from "./skillGlyphs";
 
 const TAU = Math.PI * 2;
@@ -19,6 +19,17 @@ export interface Part {
   label: string;
   /** 部件在圖示上的位置或意義（組裝列的浮動說明）。 */
   note: string;
+  /** 玩家說明（效果原語、條件、觸發由 glossary API 提供；其他部件省略）。 */
+  description?: string;
+}
+
+/** 部件的浮動說明：分類字，有玩家說明時接在後面（效果原語、條件、觸發）。 */
+export function partTip(part: Part): string {
+  return part.description === undefined ? part.note : `${part.note}：${part.description}`;
+}
+
+function described(description: string): { description?: string } {
+  return description === "" ? {} : { description };
 }
 
 // ---- 小工具 ----
@@ -822,58 +833,6 @@ const EFFECT: Record<string, readonly [string, Draw]> = {
 EFFECT["teleport_target"] = EFFECT["swap"] as readonly [string, Draw];
 EFFECT["swap_any"] = EFFECT["swap"] as readonly [string, Draw];
 
-/** 效果原語的中文名（`content/skill_primitives.yaml`；不認得的顯示代碼）。 */
-export const EFFECT_NAMES: Readonly<Record<string, string>> = {
-  damage: "傷害",
-  heal: "治療",
-  shield: "護盾",
-  cleanse: "淨化",
-  push: "推擊",
-  pull: "拉扯",
-  knock_prone: "擊倒",
-  teleport: "傳送",
-  dash: "衝鋒",
-  charge_through: "直線衝撞",
-  shadowstep: "瞬步",
-  leap: "跳躍",
-  swap: "交換位置",
-  teleport_target: "傳送他人",
-  swap_any: "任意兩者互換",
-  apply_status: "施加狀態",
-  create_surface: "產生表面",
-  destroy_object: "摧毀物件",
-  create_obstacle: "產生障礙",
-  raise_terrain: "隆起地形",
-  lower_terrain: "下陷地形",
-  intercept: "替隊友擋攻擊",
-  add_stack: "累積層數",
-  consume_stack: "消耗層數",
-  consume_status: "消耗狀態",
-  place_trap: "放置陷阱",
-  grant_ap: "給予行動點",
-  reset_cooldown: "重置冷卻",
-  cheat_death: "免死",
-  redirect_damage: "分擔傷害",
-  copy_skill: "複製技能",
-  extra_reaction: "額外反應",
-  hurl_object: "投擲物件",
-  topple: "推倒",
-  restore_resource: "回復資源",
-  steal_buff: "奪取增益",
-  dispel: "驅散",
-  reveal: "揭露",
-  revive: "復活",
-  delayed_damage: "定時炸彈",
-  summon: "召喚",
-  zone: "持續區域",
-  rule_change: "規則改變",
-  gamble: "賭注",
-  grant_skill: "暫時獲得技能",
-  inscribe: "刻印",
-  detonate_runes: "引爆符文",
-  sacrifice_summon: "獻祭召喚物",
-};
-
 /** 效果的描述資料（技能圖示 `icon.segments[].effects[]` 的一項）。 */
 export interface EffectLike {
   type: string;
@@ -904,8 +863,9 @@ export function effectPart(e: EffectLike): Part {
     key: e.type,
     color: g?.[0] ?? UNKNOWN_COLOR,
     draw: g?.[1] ?? ((c) => text(c, "?", 13)),
-    label: EFFECT_NAMES[e.type] ?? e.type,
+    label: effectName(e.type),
     note: "效果原語",
+    ...described(glossaryDescription("effects", e.type)),
   };
 }
 
@@ -989,24 +949,6 @@ const COND: Readonly<Record<string, Draw>> = {
   },
 };
 
-export const CONDITION_NAMES: Readonly<Record<string, string>> = {
-  target_hp_below: "目標血量低於",
-  self_hp_below: "自身血量低於",
-  height_advantage: "居高臨下",
-  target_on_surface: "目標站在表面上",
-  target_has_status: "目標帶有狀態",
-  moved_this_turn: "本回合移動過",
-  adjacent_ally: "身旁有友方",
-  target_isolated: "目標落單",
-  first_round: "第一輪",
-  cast_tag_this_turn: "本回合施放過同類技能",
-  flanked: "夾擊",
-  from_behind: "背刺",
-  self_concealed: "潛行偷襲",
-  on_own_rune: "目標站在自己的符文上",
-  target_collided: "目標本回合受過撞擊",
-};
-
 const CONDITION_COLOR = "#ffe9a8";
 
 /** 條件 → 部件；`target_has_status` 帶狀態時畫該狀態圖示加問號。 */
@@ -1025,7 +967,7 @@ export function conditionPart(id: string | null | undefined, status?: string | n
       c.restore();
     };
   }
-  return { cat: "condition", key: id === "target_has_status" && status != null && status !== "" ? `${id}:${status}` : id, color: CONDITION_COLOR, draw, label: CONDITION_NAMES[id] ?? id, note: "條件" };
+  return { cat: "condition", key: id === "target_has_status" && status != null && status !== "" ? `${id}:${status}` : id, color: CONDITION_COLOR, draw, label: conditionName(id), note: "條件", ...described(glossaryDescription("conditions", id)) };
 }
 
 // ---- 代價 ----
@@ -1205,32 +1147,6 @@ const TRIG: Readonly<Record<string, Draw>> = {
   },
 };
 
-/** 觸發時機（被動，`content/skill_triggers.yaml`）與反應時機（反應技）的中文名。 */
-export const TRIGGER_NAMES: Readonly<Record<string, string>> = {
-  on_hit: "命中時",
-  on_crit: "暴擊時",
-  on_natural_20: "擲出自然 20 時",
-  on_kill: "擊倒時",
-  on_damaged: "受傷時",
-  on_turn_start: "回合開始時",
-  on_turn_end: "回合結束時",
-  on_move: "移動後",
-  every_n_hits: "每命中 n 次",
-  on_cast_tag: "施放帶標籤的技能後",
-  on_status_applied: "施加狀態後",
-  on_collision: "造成撞擊後",
-  on_enter_surface: "敵人進入你的表面時",
-  on_summon_downed: "召喚物倒下時",
-  enemy_enters_adjacent: "敵人靠近時",
-  enemy_leaves_adjacent: "敵人離開時",
-  hit_by_spell: "被法術擊中時",
-  hit_by_attack: "被攻擊時",
-  hit_by_melee: "被近戰擊中時",
-  ally_targeted: "隊友被瞄準時",
-  ally_downed: "隊友倒下時",
-  ally_hit_adjacent: "身旁隊友受擊時",
-};
-
 export function triggerPart(id: string | null | undefined, isReaction: boolean): Part | null {
   if (id == null || id === "") return null;
   return {
@@ -1238,8 +1154,9 @@ export function triggerPart(id: string | null | undefined, isReaction: boolean):
     key: id,
     color: "#ffffff",
     draw: TRIG[id] ?? ((c) => text(c, "?", 13)),
-    label: TRIGGER_NAMES[id] ?? id,
+    label: triggerName(id),
     note: isReaction ? "反應時機" : "觸發時機",
+    ...described(glossaryDescription("triggers", id)),
   };
 }
 

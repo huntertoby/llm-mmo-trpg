@@ -9,3 +9,5 @@ weapon: one_handed_sword
 resist: {physical: 100}
 element_mods: {}
 tags: [sim]
+# 紙娃娃外觀（Phase 3E-2e；純顯示資料，kind／material 見 equipment/appearance.yaml，前端認得的才畫）
+doll: {skin: '#7a4e32', hair: short, hair_color: '#2a1c14', gear: {body: {kind: mail, material: iron}, feet: {kind: greaves, material: steel}, hands: {kind: gauntlets, material: steel}, off_hand: {kind: shield_kite, material: wood, color: '#8a5a32'}}}

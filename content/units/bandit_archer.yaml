@@ -10,3 +10,5 @@ element_mods: {fire: 250}   # 皮甲與箭袋易燃：火焰弱點 +25%
 tags: [humanoid]
 max_mana: 9
 skills: [skill_fire_arrow]
+# 紙娃娃外觀（Phase 3E-2e；純顯示資料，kind／material 見 equipment/appearance.yaml，前端認得的才畫）
+doll: {skin: '#d9a47a', hair: short, hair_color: '#3a2a1c', gear: {body: {kind: leather, material: leather}, feet: {kind: boots, material: leather}, head: {kind: hood, material: cloth, color: '#6a4a2e'}}}

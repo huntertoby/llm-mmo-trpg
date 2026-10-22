@@ -1,0 +1,303 @@
+{
+ "bandit": {
+  "skin": "#a8724c",
+  "hair": "short",
+  "hair_color": "#2a1c14",
+  "skull": false,
+  "gear": {
+   "body": {
+    "kind": "leather",
+    "material": "leather"
+   },
+   "feet": {
+    "kind": "boots",
+    "material": "leather"
+   },
+   "head": {
+    "kind": "bandana",
+    "material": "cloth",
+    "color": "#b33a3a"
+   }
+  }
+ },
+ "bandit_archer": {
+  "skin": "#d9a47a",
+  "hair": "short",
+  "hair_color": "#3a2a1c",
+  "skull": false,
+  "gear": {
+   "body": {
+    "kind": "leather",
+    "material": "leather"
+   },
+   "feet": {
+    "kind": "boots",
+    "material": "leather"
+   },
+   "head": {
+    "kind": "hood",
+    "material": "cloth",
+    "color": "#6a4a2e"
+   }
+  }
+ },
+ "bandit_boss": {
+  "skin": "#a8724c",
+  "hair": "short",
+  "hair_color": "#1c1410",
+  "skull": false,
+  "gear": {
+   "body": {
+    "kind": "mail",
+    "material": "iron"
+   },
+   "feet": {
+    "kind": "greaves",
+    "material": "steel"
+   },
+   "hands": {
+    "kind": "gauntlets",
+    "material": "steel"
+   },
+   "head": {
+    "kind": "horned_helm",
+    "material": "iron"
+   },
+   "cloak": {
+    "kind": "cape",
+    "material": "cloth",
+    "color": "#a32a2a"
+   }
+  },
+  "rarity": "epic"
+ },
+ "bandit_shieldbearer": {
+  "skin": "#7a4e32",
+  "hair": "short",
+  "hair_color": "#1c1410",
+  "skull": false,
+  "gear": {
+   "body": {
+    "kind": "mail",
+    "material": "iron"
+   },
+   "feet": {
+    "kind": "boots",
+    "material": "leather"
+   },
+   "head": {
+    "kind": "helmet",
+    "material": "iron"
+   },
+   "off_hand": {
+    "kind": "shield_kite",
+    "material": "wood",
+    "color": "#8a5a32"
+   }
+  },
+  "main_material": "iron",
+  "main_color": "#9a8a76"
+ },
+ "bandit_warlord": {
+  "skin": "#7a4e32",
+  "hair": "short",
+  "hair_color": "#1c1410",
+  "skull": false,
+  "gear": {
+   "body": {
+    "kind": "plate",
+    "material": "steel"
+   },
+   "feet": {
+    "kind": "greaves",
+    "material": "steel"
+   },
+   "hands": {
+    "kind": "gauntlets",
+    "material": "steel"
+   },
+   "head": {
+    "kind": "helmet",
+    "material": "iron"
+   },
+   "cloak": {
+    "kind": "cape",
+    "material": "cloth",
+    "color": "#3a2a4a"
+   }
+  }
+ },
+ "hero_archer": {
+  "skin": "#f1c9a5",
+  "hair": "long",
+  "hair_color": "#c27a2c",
+  "pants": "#3a3a2a",
+  "skull": false,
+  "gear": {
+   "body": {
+    "kind": "leather",
+    "material": "leather",
+    "color": "#4f7a3a"
+   },
+   "feet": {
+    "kind": "boots",
+    "material": "leather"
+   },
+   "hands": {
+    "kind": "gloves",
+    "material": "leather"
+   },
+   "head": {
+    "kind": "hood",
+    "material": "cloth",
+    "color": "#3f6a32"
+   }
+  }
+ },
+ "hero_fighter": {
+  "skin": "#f1c9a5",
+  "hair": "short",
+  "hair_color": "#6a3d1e",
+  "skull": false,
+  "gear": {
+   "body": {
+    "kind": "plate",
+    "material": "steel"
+   },
+   "feet": {
+    "kind": "greaves",
+    "material": "steel"
+   },
+   "hands": {
+    "kind": "gauntlets",
+    "material": "steel"
+   },
+   "off_hand": {
+    "kind": "shield_round",
+    "material": "wood",
+    "color": "#2f5fae"
+   },
+   "cloak": {
+    "kind": "cape",
+    "material": "cloth",
+    "color": "#2c4f8a"
+   }
+  }
+ },
+ "hero_mage": {
+  "skin": "#d9a47a",
+  "hair": "long",
+  "hair_color": "#c8c0b0",
+  "trim": "#e8bb48",
+  "skull": false,
+  "gear": {
+   "body": {
+    "kind": "robe",
+    "material": "cloth",
+    "color": "#5a3fa0"
+   },
+   "feet": {
+    "kind": "boots",
+    "material": "leather"
+   },
+   "head": {
+    "kind": "wizard_hat",
+    "material": "cloth",
+    "color": "#5a3fa0"
+   },
+   "off_hand": {
+    "kind": "tome",
+    "material": "leather",
+    "color": "#7a2a3a"
+   }
+  }
+ },
+ "hero_stormcaller": {
+  "skin": "#f1c9a5",
+  "hair": "long",
+  "hair_color": "#8fb8e8",
+  "trim": "#fff36b",
+  "skull": false,
+  "gear": {
+   "body": {
+    "kind": "robe",
+    "material": "cloth",
+    "color": "#2c4f8a"
+   },
+   "feet": {
+    "kind": "boots",
+    "material": "leather"
+   },
+   "head": {
+    "kind": "wizard_hat",
+    "material": "cloth",
+    "color": "#2c4f8a"
+   },
+   "off_hand": {
+    "kind": "tome",
+    "material": "leather",
+    "color": "#7a2a3a"
+   }
+  }
+ },
+ "sim_companion_archer": {
+  "skin": "#d9a47a",
+  "hair": "long",
+  "hair_color": "#c27a2c",
+  "pants": "#3a3a2a",
+  "skull": false,
+  "gear": {
+   "body": {
+    "kind": "leather",
+    "material": "leather"
+   },
+   "feet": {
+    "kind": "boots",
+    "material": "leather"
+   },
+   "hands": {
+    "kind": "gloves",
+    "material": "leather"
+   }
+  }
+ },
+ "sim_companion_fighter": {
+  "skin": "#7a4e32",
+  "hair": "short",
+  "hair_color": "#2a1c14",
+  "skull": false,
+  "gear": {
+   "body": {
+    "kind": "mail",
+    "material": "iron"
+   },
+   "feet": {
+    "kind": "greaves",
+    "material": "steel"
+   },
+   "hands": {
+    "kind": "gauntlets",
+    "material": "steel"
+   },
+   "off_hand": {
+    "kind": "shield_kite",
+    "material": "wood",
+    "color": "#8a5a32"
+   }
+  }
+ },
+ "summon_skeleton_warrior": {
+  "skin": "#e9e3cf",
+  "pants": "#d9d2bd",
+  "eyes": "#2a1030",
+  "skull": true,
+  "gear": {
+   "body": {
+    "kind": "ribs",
+    "material": "bone"
+   }
+  },
+  "main_material": "iron",
+  "main_color": "#9a8a76"
+ }
+}

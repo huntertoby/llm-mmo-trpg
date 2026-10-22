@@ -2,7 +2,7 @@
 // 中文名與旗標（可燃、致命、不可通行……）不手寫：啟動時讀 /api/glossary（由 content 產生）。
 // 內容新增種類時找不到的鍵會退回預設值（顯示 ID），不會壞掉。
 
-import type { Glossary, GlossaryEntry, Surface } from "../api/types";
+import type { Glossary, GlossaryEntry, Surface, WeaponLookEntry } from "../api/types";
 
 // ---- 名詞對照（由 /api/glossary 提供；啟動時載入）-------------------------------------------
 
@@ -14,7 +14,10 @@ export type GlossaryCategory =
   | "stacks"
   | "reactions"
   | "elements"
-  | "attributes";
+  | "attributes"
+  | "effects"
+  | "conditions"
+  | "triggers";
 
 const index = new Map<GlossaryCategory, Map<string, GlossaryEntry>>();
 
@@ -30,8 +33,20 @@ export function setGlossary(g: Glossary): void {
     "reactions",
     "elements",
     "attributes",
+    "effects",
+    "conditions",
+    "triggers",
   ];
-  for (const c of categories) index.set(c, new Map(g[c].map((e) => [e.id, e])));
+  for (const c of categories) index.set(c, new Map((g[c] ?? []).map((e) => [e.id, e])));
+  weaponLooks.clear();
+  for (const w of g.weapon_looks ?? []) weaponLooks.set(w.id, w);
+}
+
+/** 武器預設外觀（`/api/glossary` 的 `weapon_looks`；`weapons.yaml` 的 `look`）。 */
+const weaponLooks = new Map<string, WeaponLookEntry>();
+
+export function weaponLookEntry(id: string): WeaponLookEntry | undefined {
+  return weaponLooks.get(id);
 }
 
 export function glossaryEntry(category: GlossaryCategory, id: string): GlossaryEntry | undefined {
@@ -53,6 +68,12 @@ export const reactionName = (id: string): string => glossaryName("reactions", id
 export const surfaceName = (id: string): string => glossaryName("surfaces", id);
 export const objectName = (id: string): string => glossaryName("objects", id);
 export const elementName = (id: string): string => glossaryName("elements", id);
+export const effectName = (id: string): string => glossaryName("effects", id);
+export const conditionName = (id: string): string => glossaryName("conditions", id);
+export const triggerName = (id: string): string => glossaryName("triggers", id);
+
+/** 效果原語、條件、觸發的玩家說明（內容檔的 `player_description`／`description_zh`）；沒有時為空字串。 */
+export const glossaryDescription = (category: GlossaryCategory, id: string): string => glossaryEntry(category, id)?.description_zh ?? "";
 
 // ---- 顯示用對照（色塊、圖示；中文名與旗標來自上面的對照表）--------------------------------------
 

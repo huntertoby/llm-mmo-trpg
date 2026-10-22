@@ -12,3 +12,5 @@ element_mods: {}
 tags: [boss, elite, humanoid, steadfast]
 max_mana: 14
 skills: [skill_cleave, skill_gale_kick]
+# 紙娃娃外觀（Phase 3E-2e；純顯示資料，kind／material 見 equipment/appearance.yaml，前端認得的才畫）
+doll: {skin: '#7a4e32', hair: short, hair_color: '#1c1410', gear: {body: {kind: plate, material: steel}, feet: {kind: greaves, material: steel}, hands: {kind: gauntlets, material: steel}, head: {kind: helmet, material: iron}, cloak: {kind: cape, material: cloth, color: '#3a2a4a'}}}

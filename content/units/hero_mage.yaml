@@ -11,3 +11,5 @@ element_mods: {}
 tags: [hero]
 max_mana: 40
 skills: [skill_fire_bolt, skill_ashen_oath, skill_blink, skill_cinder_burst, skill_frost_shackle]
+# 紙娃娃外觀（Phase 3E-2e；純顯示資料，kind／material 見 equipment/appearance.yaml，前端認得的才畫）
+doll: {skin: '#d9a47a', hair: long, hair_color: '#c8c0b0', trim: '#e8bb48', gear: {body: {kind: robe, material: cloth, color: '#5a3fa0'}, feet: {kind: boots, material: leather}, head: {kind: wizard_hat, material: cloth, color: '#5a3fa0'}, off_hand: {kind: tome, material: leather, color: '#7a2a3a'}}}

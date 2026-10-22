@@ -1,10 +1,11 @@
 // Phase 3-18b：外觀小修（docs/art/3-16b檢查.md 第 1–3 項）與 `weapon_class` 退回。
 import { describe, expect, it } from "vitest";
-import { dollKey, resolveDoll } from "./appearance";
+import { dollKey } from "./appearance";
+import { resolveDollT } from "./testDolls";
 import { weaponIconItem } from "./weaponIcon";
 
 const base = { team: "ally", summon: false } as const;
-const doll = (template: string) => resolveDoll({ ...base, template, weaponId: "one_handed_sword" });
+const doll = (template: string) => resolveDollT({ ...base, template, weaponId: "one_handed_sword" });
 
 describe("四個改外觀的單位", () => {
   it("bandit_warlord：鐵盔＋板甲＋深色披風 #3a2a4a，不加外光（外光留給 bandit_boss）", () => {
@@ -35,15 +36,15 @@ describe("四個改外觀的單位", () => {
   });
 
   it("sim_companion_archer：皮背心、不戴兜帽；和主角弓手不同", () => {
-    const d = resolveDoll({ ...base, template: "sim_companion_archer", weaponId: "bow" });
+    const d = resolveDollT({ ...base, template: "sim_companion_archer", weaponId: "bow" });
     expect(d.gear.body).toMatchObject({ kind: "leather", material: "leather" });
     expect(d.gear.head).toBeUndefined();
-    expect(resolveDoll({ ...base, template: "hero_archer", weaponId: "bow" }).gear.head?.kind).toBe("hood");
+    expect(resolveDollT({ ...base, template: "hero_archer", weaponId: "bow" }).gear.head?.kind).toBe("hood");
   });
 });
 
 describe("未知 weapon_id 依 weapon_class 退回對應武器圖", () => {
-  const main = (weaponId: string, weaponClass: string | null) => resolveDoll({ ...base, template: "x", weaponId, weaponClass }).gear.main_hand?.kind;
+  const main = (weaponId: string, weaponClass: string | null) => resolveDollT({ ...base, template: "x", weaponId, weaponClass }).gear.main_hand?.kind;
   it("遠程 → 弓、法器 → 杖、近戰 → 劍；沒有類別畫劍", () => {
     expect(main("mystery_bow", "ranged")).toBe("bow");
     expect(main("mystery_wand", "focus")).toBe("staff");

@@ -15,6 +15,7 @@ primitives:
   - id: damage
     name_zh: 傷害
     description_zh: 法術技：骰值＋縮放屬性×0.5；武器技：（武器骰＋固定值＋縮放屬性×0.3）×倍率。同時傷害影響格中的可破壞物件。
+    player_description: "對目標造成傷害；法術技用骰值加屬性加成，武器技用武器骰乘上倍率。"
     category: numeric
     harmful: true
     budget_basis: damage
@@ -30,6 +31,7 @@ primitives:
   - id: heal
     name_zh: 治療
     description_zh: 治療量＝骰值＋縮放屬性×0.5，不超過最大 HP。
+    player_description: "回復目標的生命，不會超過最大生命。"
     category: numeric
     harmful: false
     budget_basis: dice_average
@@ -38,6 +40,7 @@ primitives:
   - id: shield
     name_zh: 護盾
     description_zh: 目標獲得吸收量＝骰值＋縮放屬性×0.5（與治療同一公式）的護盾（狀態 shielded，持續 2 回合）；骰值傷害先扣護盾。已有護盾時取較大值並刷新持續時間。
+    player_description: "替目標加上一層護盾，傷害會先扣護盾，持續 2 回合。"
     category: numeric
     harmful: false
     budget_basis: dice_average
@@ -46,6 +49,7 @@ primitives:
   - id: cleanse
     name_zh: 淨化
     description_zh: 移除影響單位身上所有非有益的狀態（依狀態 ID 排序逐一移除）。不能對敵方使用。
+    player_description: "移除目標身上所有不利的狀態，不能對敵人使用。"
     category: numeric
     harmful: false
     budget_basis: fixed
@@ -54,6 +58,7 @@ primitives:
   - id: push
     name_zh: 推擊
     description_zh: 以施放者（中心格型為中心）為原點往外推；被擋住時停在擋住前的格子，steadfast 減半。
+    player_description: "把目標推離自己；被擋住就停下，撞到東西會受傷。"
     category: structural
     harmful: true
     min_rarity: rare
@@ -65,6 +70,7 @@ primitives:
   - id: pull
     name_zh: 拉扯
     description_zh: 往施放者（中心格型為中心）的方向拉，規則同推擊。
+    player_description: "把目標往自己的方向拉近。"
     category: structural
     harmful: true
     min_rarity: rare
@@ -76,6 +82,7 @@ primitives:
   - id: knock_prone
     name_zh: 擊倒
     description_zh: 對抗判定（技能的縮放屬性 vs 目標同屬性），成功才倒地。
+    player_description: "屬性對抗成功時，讓目標倒地。"
     category: structural
     harmful: true
     min_rarity: rare
@@ -84,6 +91,7 @@ primitives:
   - id: teleport
     name_zh: 傳送
     description_zh: 施放者移動到目標格（必須可站立且沒有單位）；不觸發藉機攻擊。
+    player_description: "自己瞬間移動到指定的空格，不會引來藉機攻擊。"
     category: structural
     harmful: false
     min_rarity: rare
@@ -95,6 +103,7 @@ primitives:
   - id: dash
     name_zh: 衝鋒
     description_zh: 施放者沿最短可走路徑（步行規則；不經過任何單位）移到目標單位的相鄰格（路徑成本不超過技能射程；不消耗移動點數），再結算同技能的其餘效果。一律最先結算，必須是技能的第一個效果。途中會觸發藉機攻擊與陷阱；被擋下（定身、倒地、倒下）或停下時目標不在相鄰格，其餘效果不結算。算「本回合移動過」，也觸發 on_move 被動。只能搭配形狀 single（目標單位）。
+    player_description: "衝向目標並停在他旁邊，再對他施展技能的其他效果。"
     category: structural
     harmful: true
     min_rarity: rare
@@ -105,6 +114,7 @@ primitives:
   - id: charge_through
     name_zh: 直線衝撞
     description_zh: 選一個目標格（形狀 ground_tile；與施放者同一列或同一行、距離不超過形狀射程；可以是站著敵人的格子、牆前或地圖邊的任何格）；施放者沿直線衝過去，被牆、不可走地形或 blocks_move 物件擋住時停在擋住前最後一個能站的空格（第一格就過不去才不能施放）。目標格上的敵人若背後走不過去（牆、地圖邊、擋路物件），命中後另受一次撞擊傷害（collided，接上撞擊關鍵字與 target_collided）。沿途經過的每個敵人依路徑順序各擲一次命中；命中受 dice 物理傷害（不加屬性，暴擊與格擋照常），再依 on_hit 擊倒（對抗判定）或推到路徑旁一格（push_aside：先左後右選可站的一側，兩側都不行就往左撞，照常觸發撞擊）。隊友讓路、敵人不阻擋，一律被穿過。不觸發藉機攻擊；沿途與終點的陷阱、表面照常結算，被定身或倒地就停下。算「本回合移動過」，也觸發 on_move 被動。定身或倒地時不能施放。必須是技能的第一個效果，其餘效果只能作用在施放者自己。
+    player_description: "沿一直線衝過去，撞開並傷害路上的敵人。"
     category: structural
     harmful: true
     min_rarity: rare
@@ -118,6 +128,7 @@ primitives:
   - id: shadowstep
     name_zh: 瞬步
     description_zh: 以射程內看得到的一個敵方單位為目標，施放者瞬間出現在他相鄰的格子（不經過中間的格子、不觸發藉機攻擊，也不觸發「敵人走進相鄰格」與監視射擊；不墜落），落地後面向目標。landing：choose 一般瞬步（形狀 unit_then_tile，兩段選取：敵人 → 他相鄰的空格，玩家自選）；behind 瞬步背刺類（形狀 single，固定落在目標的背後格；被占住或不可站立時改為目標相鄰的其他空格——先左右兩側、再正面，同距離依上、右、下、左的順序；都沒有就不能施放）。落點須可站立、沒有單位、不是致命地形，與目標的高度差不超過近戰上限。落點的陷阱與表面照常結算。之後的效果以落點結算，所以接在後面的近戰傷害會吃到背刺加成。不算「本回合移動過」，不觸發 on_move 被動。必須是技能的第一個效果；定身或倒地時不能施放。
+    player_description: "瞬間出現在視線內一名敵人的身旁。"
     category: structural
     harmful: true
     min_rarity: rare
@@ -130,6 +141,7 @@ primitives:
   - id: leap
     name_zh: 跳躍
     description_zh: 施放者跳到射程內的指定空格：無視中間的單位與低矮（落差不超過 1 層）的地形，不能越過同時擋住行動與視線的物件（石柱）與牆；落點須可站立、沒有單位、與起點的高度差不超過 1 層。不觸發藉機攻擊，不算「本回合移動過」，也不觸發 on_move 被動；落點的陷阱與表面照常結算。定身或倒地時不能跳。
+    player_description: "跳到射程內的空格，可以越過單位與矮障礙。"
     category: structural
     harmful: false
     min_rarity: rare
@@ -140,6 +152,7 @@ primitives:
   - id: swap
     name_zh: 交換位置
     description_zh: 施放者與目標單位（敵我皆可）交換位置。對敵人（affects 為 enemies）要過一般位移檢定（對抗判定：技能的縮放屬性 vs 目標同屬性；抵抗成功則不交換），不再另外擲命中；對友方（affects 為 allies）自動成功。不能和自己交換。交換後雙方的落點互動（表面、陷阱、致命地形、墜落）照常結算。不算「本回合移動過」，不觸發 on_move 被動。
+    player_description: "與目標交換位置；對敵人要通過位移對抗。"
     category: structural
     harmful: false
     min_rarity: rare
@@ -151,6 +164,7 @@ primitives:
   - id: teleport_target
     name_zh: 傳送他人
     description_zh: 兩段選取：射程內的一個單位（不能是自己）→ 射程內的落點（可站立、沒有單位的格子，或致命地形）。友方不檢定、一定成功；敵方要過抵抗（對抗判定：技能的縮放屬性 vs 目標同屬性，目標再加 teleport_enemy_resist_bonus）；落點是致命地形（深淵、岩漿）時目標再加 teleport_lethal_resist_bonus，成功率極低，失敗時目標不移動。Boss 對傳送到致命地形免疫（不能選）；傳送到一般格照常檢定。落點的陷阱、表面與致命地形照常結算，不觸發離開相鄰格的反應。必須搭配形狀 unit_then_tile，而且是技能唯一的效果。
+    player_description: "把射程內的一個單位傳送到另一個指定的格子；敵人可以抵抗。"
     category: structural
     harmful: false
     min_rarity: rare
@@ -161,6 +175,7 @@ primitives:
   - id: swap_any
     name_zh: 任意兩者互換
     description_zh: 選射程內的兩個單位（敵我皆可，不必包含施放者），互換位置；兩格都要能讓對方站上去。含敵人時每個敵方各自過一般位移檢定（對抗判定：技能的縮放屬性 vs 目標同屬性），任一個抵抗成功則整個互換失敗；全是友方時不檢定。落點的陷阱、表面與墜落照常結算。必須搭配形狀 unit_pair，而且是技能唯一的效果。
+    player_description: "讓射程內的兩個單位互換位置；敵人可以抵抗。"
     category: structural
     harmful: false
     min_rarity: rare
@@ -171,6 +186,7 @@ primitives:
   - id: apply_status
     name_zh: 施加狀態
     description_zh: 施加 statuses.yaml 中的狀態，重複施加時刷新持續時間。
+    player_description: "讓目標獲得一個狀態，重複施加會刷新持續時間。"
     category: numeric
     harmful: true
     budget_basis: status
@@ -180,6 +196,7 @@ primitives:
   - id: create_surface
     name_zh: 產生表面
     description_zh: 在影響格產生表面（先查互動表，例如水熄滅火）；表面記錄施放者陣營。
+    player_description: "在範圍內留下一種地面表面（水、油、火等），會與既有表面互相反應。"
     category: structural
     harmful: false
     min_rarity: rare
@@ -191,6 +208,7 @@ primitives:
   - id: destroy_object
     name_zh: 摧毀物件
     description_zh: 摧毀影響格中的可破壞物件。
+    player_description: "摧毀範圍內可破壞的物件。"
     category: structural
     harmful: false
     min_rarity: rare
@@ -200,6 +218,7 @@ primitives:
   - id: create_obstacle
     name_zh: 產生障礙
     description_zh: 在影響格中的空格產生物件；可選 duration（1–10 個環境回合）讓它到期自動消失（不算摧毀：不觸發破壞效果、不掉落、不算擊殺），省略為永久。預算：基礎點數 × obstacle_duration_permille（永久 ＝ 基礎）。
+    player_description: "在範圍內的空格生出障礙物，可設定幾回合後消失。"
     category: structural
     harmful: false
     min_rarity: rare
@@ -212,6 +231,7 @@ primitives:
   - id: raise_terrain
     name_zh: 隆起地形
     description_zh: 影響格的高度 +1（上限 3），站在上面的單位跟著升高。
+    player_description: "讓範圍內的地面升高一層，站在上面的單位跟著升高。"
     category: structural
     harmful: false
     min_rarity: rare
@@ -223,6 +243,7 @@ primitives:
   - id: lower_terrain
     name_zh: 下陷地形
     description_zh: 影響格的高度 −1（下限 0），站在上面的單位跟著下降（落差達門檻時墜落）。
+    player_description: "讓範圍內的地面下降一層，落差太大的單位會摔落。"
     category: structural
     harmful: false
     min_rarity: rare
@@ -234,6 +255,7 @@ primitives:
   - id: intercept
     name_zh: 替隊友擋攻擊
     description_zh: 只能出現在 event 為 ally_hit_adjacent 的反應技。相鄰友方被單體攻擊命中後、傷害與其他效果結算之前，這次攻擊的所有效果改為作用在持有者身上（不重擲命中；位移方向重新計算；範圍技能不攔截）。守護者的護盾、減傷、抗性照常結算。點數為初值，未經模擬。
+    player_description: "隊友被單體攻擊命中時，改由自己承受這次攻擊。"
     category: structural
     harmful: false
     min_rarity: rare
@@ -245,6 +267,7 @@ primitives:
   - id: add_stack
     name_zh: 累積層數
     description_zh: 依該層數（stacks.yaml）的 owner 把 amount 層加在施放者自己（affects 只能是 self；技能有對敵方的效果時，至少命中一名敵人才累積）或命中的目標（affects 只能是 enemies）身上，超過上限截斷。
+    player_description: "替自己或命中的目標累積指定的層數。"
     category: structural
     harmful: true
     min_rarity: rare
@@ -256,6 +279,7 @@ primitives:
   - id: consume_stack
     name_zh: 消耗層數
     description_zh: 消耗全部該層數（self 型從施放者、target 型從每個被命中的目標）；同一技能的傷害效果依消耗的層數 × per_stack_permille 加成（200 ＝ 每層 +20%）。沒有層數也可施放（加成 0）。預算以期望消耗＝上限的一半估算加成點數。
+    player_description: "消耗全部層數，讓同一技能的傷害依層數增加。"
     category: structural
     harmful: true
     min_rarity: rare
@@ -267,6 +291,7 @@ primitives:
   - id: consume_status
     name_zh: 消耗狀態
     description_zh: 目標（affects，預設敵方，需命中）身上有 status 時先移除它，再對同一個單位結算 then 的效果（1–2 個，只能是 damage／heal／shield／apply_status，自動命中；施加狀態照常擲抵抗）。沒有該狀態的單位不受影響，全部都沒有時整個效果不結算（effect_fizzled）。scale 把 then 的傷害、治療、護盾骰數乘上倍率（上限見 rules/core.yaml 的 consume_status_max_scale）：remaining_rounds＝被消耗狀態的剩餘回合（永久狀態為 1）、stacks＝同時消耗目標身上 stack 的層數。splash 設為 1 時 then 也作用在被消耗者周圍 1 格內的敵方單位。
+    player_description: "移除目標身上的指定狀態，並對他再結算一組追加效果。"
     category: structural
     harmful: true
     min_rarity: rare
@@ -280,6 +305,7 @@ primitives:
   - id: place_trap
     name_zh: 放置陷阱
     description_zh: 在目標格放一個對放置者陣營以外隱藏的陷阱，同一格只能有一個。陷阱帶著同一技能其餘的效果（自動命中，狀態照常擲抵抗；施放者的屬性在放置時快照），敵人進入（trap.trigger enter）或延遲回合數到了（delay）時，以陷阱格為中心依 trap.shape 結算。需要技能的 trap 欄位。
+    player_description: "在目標格放下對敵人隱形的陷阱，被踩到時觸發技能的效果。"
     category: structural
     harmful: false
     min_rarity: rare
@@ -293,6 +319,7 @@ primitives:
   - id: grant_ap
     name_zh: 給予行動點
     description_zh: 目標（自己或友方）立刻獲得 amount AP（1–2），超過本回合上限（ap_per_turn ＋ ap_carry_max）的部分不保留；目標不在自己的回合時，在它下次回合開始時加上。同一單位每輪最多被給一次（之後的給予不結算，effect_fizzled）。
+    player_description: "讓自己或友方立刻獲得行動點。"
     category: rule_rewrite
     harmful: false
     min_rarity: epic
@@ -304,6 +331,7 @@ primitives:
   - id: reset_cooldown
     name_zh: 重置冷卻
     description_zh: 目標友方（不含施放者自己）的技能冷卻歸零：which 為 all 時全部技能、tag 時只有帶 tag 標籤的技能；花源力的技能（cost.source）與這個技能本身不會被重置。沒有可重置的冷卻時不結算（effect_fizzled）。
+    player_description: "讓友方的技能冷卻歸零。"
     category: rule_rewrite
     harmful: false
     min_rarity: epic
@@ -316,6 +344,7 @@ primitives:
   - id: cheat_death
     name_zh: 免死
     description_zh: 目標（自己或友方）獲得狀態「不死」（undying）duration 回合（省略時用狀態的預設持續）：期間 HP 會降到 0 時改為 1 並移除此狀態（墜落與致命地形照樣生效）。
+    player_description: "讓自己或友方在一段時間內，致命傷害改為剩下 1 點生命。"
     category: rule_rewrite
     harmful: false
     min_rarity: epic
@@ -328,6 +357,7 @@ primitives:
   - id: redirect_damage
     name_zh: 分擔傷害
     description_zh: 目標友方（不含施放者自己）獲得狀態「靈魂連結」（soul_link）duration 回合：它受到的傷害有 permille‰（≤ 500）轉給施放者，直接扣施放者的 HP。與替隊友擋下整次攻擊（intercept）不同；兩者同時存在時先攔截，傷害落在守護者身上之後才看守護者有沒有連結。施放者倒下或離場時連結消失。
+    player_description: "讓友方受到的一部分傷害轉由自己承受。"
     category: rule_rewrite
     harmful: false
     min_rarity: epic
@@ -340,6 +370,7 @@ primitives:
   - id: copy_skill
     name_zh: 複製技能
     description_zh: 立即施放「本輪內最後一個被其他單位施放、且施放者看得到的主動技能」，由自己當施放者重新選目標；不能複製傳說、改寫規則型技能與有層數需求的技能。複製的技能不扣法力與 AP、不進冷卻，不檢查武器需求（傷害與射程照自己的武器算），但射程、視線與目標都要合法。沒有可以複製的技能時不能施放。必須是技能唯一的效果，形狀為 self。
+    player_description: "施放本輪最後一個被看見的主動技能。"
     category: rule_rewrite
     lookup_by_skill_id: true
     harmful: false
@@ -351,6 +382,7 @@ primitives:
   - id: extra_reaction
     name_zh: 額外反應
     description_zh: 目標（自己或友方）本輪的反應次數上限 +amount（1），到下一輪開始為止。
+    player_description: "讓自己或友方本輪多一次反應機會。"
     category: rule_rewrite
     harmful: false
     min_rarity: epic
@@ -363,6 +395,7 @@ primitives:
   - id: hurl_object
     name_zh: 投擲物件
     description_zh: 舉起 range 格內看得到的一個 pushable 物件，丟到落點格（形狀 object_then_tile；飛行路徑不檢查阻擋，落點要在視線內）。命中判定照技能，落點被命中的單位受 dice 物理傷害（不加屬性），knock_prone 為 true 時再以對抗判定擊倒。物件落地後依標籤結算：explosive 在落點爆炸、breakable 碎掉（摧毀）、其他放在落點；落點有單位或物件時放在 hurl_scatter_radius（rules/core.yaml）內最近的空格（同距離依 (y, x)），沒有空格或落點是致命地形就摧毀。預算為骰子平均 × 「需要附近有物件」折扣（skill_budget.yaml 的 hurl_object_discount_permille），擊倒另加 knock_prone 的點數。
+    player_description: "舉起附近的可推動物件，投擲到指定的格子。"
     category: structural
     harmful: true
     min_rarity: rare
@@ -375,6 +408,7 @@ primitives:
   - id: topple
     name_zh: 推倒
     description_zh: 推倒目標（射程內看得到的 topplable 物件，技能只能以物件為目標），往遠離施放者的方向倒下：從下一格起壓住 topple_length 格（rules/core.yaml），壓到的單位受 topple_damage_dice 物理傷害並倒地、壓到的 breakable 物件受同樣傷害，其他物件擋住倒下；原物件移除，最後一格產生倒塌物。互動的推、技能的推擊與風推到 topplable 物件時也一樣會推倒它（通用規則）。
+    player_description: "把高大的物件推倒，壓傷倒下路徑上的單位。"
     category: structural
     harmful: true
     min_rarity: rare
@@ -386,6 +420,7 @@ primitives:
   - id: restore_resource
     name_zh: 回復資源
     description_zh: resource 為 mana：目標（自己或友方）回復 amount 點法力，不超過法力上限；為 cooldown：目標所有技能的冷卻 −amount（最多 2，下限 0）。冷卻不影響花源力的技能（cost.source），也不影響施放中的這個技能。目標沒有法力空間或沒有冷卻中的技能時發出 effect_fizzled。預算：法力每點 restore_mana_point_permille‰、冷卻每回合 restore_cooldown_points 點（skill_budget.yaml）。
+    player_description: "回復法力，或縮短冷卻。"
     category: structural
     harmful: false
     min_rarity: rare
@@ -397,6 +432,7 @@ primitives:
   - id: steal_buff
     name_zh: 奪取增益
     description_zh: 移除目標身上一個增益狀態（statuses.yaml 中 polarity 為 buff；有多個時取剩餘回合最長、同長依狀態 ID 排序），並以相同的剩餘回合與數值施加到施放者身上（已有同狀態時取較長者）。目標沒有增益時發出 effect_fizzled（no_buff）。
+    player_description: "奪走目標身上一個增益，轉給自己。"
     category: structural
     harmful: true
     min_rarity: rare
@@ -407,6 +443,7 @@ primitives:
   - id: dispel
     name_zh: 驅散
     description_zh: 移除敵方目標身上的 count 個增益（statuses.yaml 中 polarity 為 buff；依剩餘回合最長者先，永久最長，同長依狀態 ID 排序；all 為全部）。中性狀態（姿態、隱蔽、不死、靈魂連結）與減益不是增益，不會被驅散。目標沒有增益時發出 effect_fizzled（no_buff）。預算：1 個 dispel_one_points 點、全部 dispel_all_points 點（skill_budget.yaml）。
+    player_description: "移除敵人身上的增益。"
     category: structural
     harmful: true
     min_rarity: rare
@@ -417,6 +454,7 @@ primitives:
   - id: reveal
     name_zh: 揭露
     description_zh: 揭露技能範圍內的敵人與陷阱（自動命中，不擲命中判定）：敵人失去 concealed 狀態（原因 revealed），並獲得 revealed 狀態 duration 回合——期間不算隱蔽（黑暗表面與草叢也不算）、不能再獲得 concealed；範圍內的敵方陷阱對施放者的陣營顯示（事件 trap_revealed，只給施放者的陣營）。範圍內沒有敵人也沒有敵方陷阱時發出 effect_fizzled（nothing_hidden）。預算：reveal_base_points ＋ reveal_round_points × duration。
+    player_description: "揭露範圍內的隱蔽敵人與陷阱，讓他們暫時無法躲藏。"
     category: structural
     harmful: true
     min_rarity: rare
@@ -429,6 +467,7 @@ primitives:
   - id: revive
     name_zh: 復活
     description_zh: "目標必須是射程內倒下的友方（倒下的單位留在戰鬥狀態、保留位置，但不占格子）：目標以 hp_permille‰ 的最大 HP（至少 1）站起來，站回原位置；原格被占用、不能站立或是致命地形時，站到 core.yaml revive_landing_radius 格內最近的空格（距離相同依 (y, x) 順序），範圍內沒有空格就不能施放。每個單位每場最多被復活 1 次；召喚物不能被復活；倒下時已移除的狀態（姿態、以來源為依據的狀態）、陷阱、區域與召喚物不會恢復。事件 unit_revived。技能必須每場限一次（uses_per_battle: 1）或冷卻至少 rule_rewrite_min_cooldown 回合。只能搭配 single 形狀，其餘效果必須是 affects: self。預算：revive_base_points ＋ hp_permille × revive_hp_point_permille ÷ 1000。"
+    player_description: "讓射程內倒下的友方以部分生命站起來。"
     category: structural
     harmful: false
     min_rarity: rare
@@ -440,6 +479,7 @@ primitives:
   - id: delayed_damage
     name_zh: 定時炸彈
     description_zh: "命中的敵方目標身上附加狀態 time_bomb（不擲抵抗；已有定時炸彈的目標不能再附加，發出 effect_fizzled）：每次環境回合倒數 −1，歸零時在 **目標當下位置** 爆炸——目標與 radius 格（曼哈頓距離）內的所有存活單位（敵我不分，包含施放者）受到 dice ＋ 縮放屬性 × 0.5 的 element 傷害（自動命中、不暴擊、沒有格擋），空格依元素觸及；帶元素的傷害照常與表面、物件互動。目標在倒數中倒下時，立即在倒下的位置爆炸（目標已倒下，不算受傷者）。可被淨化（cleanse）移除；驅散（dispel）不移除（time_bomb 不是增益）。環境預告顯示倒數與爆炸範圍。只能用在主動的法術技。預算：骰子平均 × 預期波及的敵人數（delayed_damage_expected_targets_permille）。"
+    player_description: "在目標身上裝上定時炸彈，倒數結束時爆炸並傷害周圍。"
     category: structural
     lookup_by_skill_id: true
     harmful: true
@@ -457,6 +497,7 @@ primitives:
   - id: summon
     name_zh: 召喚
     description_zh: 在目標格（形狀 ground_tile；必須可站立、不是致命地形、沒有單位）召喚 unit 範本（content/units/summons/）的召喚物，屬於施放者陣營，由效用 AI 控制。召喚物緊接在召喚者之後行動（插入先攻順序，不擲先攻；同一召喚者的召喚物依召喚順序排在一起），持續 duration 輪：在召喚者第 duration 次回合結束時消失（施放當回合不算）；召喚者倒下或撤離時一併消失。同一召喚者同時存在的召喚物超過 summon_limit_per_owner（core.yaml）時，最舊的消失。召喚物沒有源力、不取用源泉、不計入勝負條件、不能撤離。必須是主動技能，其餘效果只能作用在施放者自己。
+    player_description: "在指定的格子召喚一個替你戰鬥的召喚物。"
     category: structural
     harmful: false
     min_rarity: rare
@@ -476,6 +517,7 @@ primitives:
   - id: zone
     name_zh: 持續區域
     description_zh: 在技能形狀的格子上建立持續 duration 輪的區域（施放者第 duration 次回合結束時消失，施放當回合不算；施放者不在場時於那一輪的環境回合消失）。anchor：tile 固定在施放時的格子、caster 跟隨施放者（形狀 self／ring／allies_in_radius，每次施放者移動就以新位置重新展開；施放者倒下或離場時消失）、moving 每次環境回合沿施放方向前進 speed 格（形狀 line／cone；前進到牆壁或地圖外的格子消失，全部消失時區域消失）。單位進入區域（區域建立、移動或跟隨到他身上也算；在區域內移動不算）或回合開始時站在區域內（when：enter／turn_start／both），依 affects（enemies／allies／all）對他結算 effects（1–2 個 damage／heal／shield／apply_status；自動命中，狀態照常擲抵抗，施放者屬性在建立時快照；施放者自己不受 all 的有害效果）。surface：區域新覆蓋的格子留下表面。同一施放者同時存在的區域超過 zone_limit_per_owner（core.yaml）時最舊的消失。必須是主動技能唯一的效果。
+    player_description: "在範圍內建立持續數輪的區域，區域內的單位會受到效果影響。"
     category: structural
     lookup_by_skill_id: true
     harmful: false
@@ -495,6 +537,7 @@ primitives:
   - id: rule_change
     name_zh: 規則改變
     description_zh: 傳說的第三種核心：引用 rule_changes.yaml 的一條規則改變（只影響施放者自己）。技能必須寫 activation（timed 持續 legendary_timed_rounds 輪、battle 本場剩餘時間），施放＝以 legendary_activation_ap AP ＋ 源力啟動；生效中不能再啟動。每個單位最多裝 1 個、同時最多 1 個生效中的規則改變。必須是主動技能唯一的效果、形狀 self。
+    player_description: "傳說技能專用：在一段時間內改寫施放者自己的戰鬥規則。"
     category: rule_change
     harmful: false
     min_rarity: legendary
@@ -511,6 +554,7 @@ primitives:
   - id: gamble
     name_zh: 賭注
     description_zh: 命中判定之後（未命中則整個不結算；技能沒有對敵方的效果時直接擲）擲一次 d1000，不超過 chance_permille 結算 win 的效果，否則結算 lose 的效果（各 0–2 個，至少一邊有效果）。win／lose 可以對施放者自己（affects self，例如失敗的反噬）；damage_multiplier 讓本次施放的傷害效果乘上倍率，self_damage_of_hit 讓施放者受到本次造成傷害的 n‰。施放者受到的反噬傷害不會讓他的 HP 低於 1，反噬狀態不能是硬控、跳過回合或持續傷害。必須是主動技能的最後一個效果。預算以期望值計（成功率 × win ＋ 失敗率 × lose），對自己的有害效果打折（gamble_self_harm_permille）。
+    player_description: "擲骰賭一把：成功時結算好效果，失敗時結算壞效果。"
     category: structural
     harmful: true
     min_rarity: rare
@@ -525,6 +569,7 @@ primitives:
   - id: grant_skill
     name_zh: 暫時獲得技能
     description_zh: "目標（施放者自己，或形狀 single 選的友方）的技能列暫時多出 skill 指定的技能，持續 duration 輪：在目標自己的回合結束時倒數，歸零時消失（事件 skill_granted、skill_grant_expired），冷卻與使用次數紀錄一併清除。被給的技能是一般的主動技能（content/skills/），不佔技能欄位；不能是傳說、不含改寫規則型原語、不能是 grant_skill 技能或自己。同一個被給的技能不疊加，重新施放只刷新剩餘輪數；目標原本就裝備了該技能時不結算（effect_fizzled：already_equipped）。被給的技能照它自己的規則施放（AP、法力、冷卻、武器需求）。預算：被給技能的總點數 × 預期使用次數（grant_skill_expected_uses_per_round_permille × duration ÷ 1000）。"
+    player_description: "讓自己或友方暫時多獲得一個技能。"
     category: structural
     harmful: false
     min_rarity: rare
@@ -539,6 +584,7 @@ primitives:
   - id: inscribe
     name_zh: 刻印
     description_zh: 在影響格（可站立的格子）留下施放者專屬的符文：恰好帶一個 element（元素，例如雷紋、火紋）或 tag（標籤），持續 duration 個環境回合（省略為 core.yaml 的 rune_default_rounds，初值 3；上限 5）。符文本身沒有任何效果，敵我都看得到；只有刻下它的施放者讀得到（條件 on_own_rune、消耗型原語 detonate_runes）。同一施放者在同一格再刻一次是更新；同一施放者同時存在的符文格超過 rune_limit_per_owner（core.yaml，初值 6）時最舊的消失。施放者倒下時符文保留到時效結束。預算：base_points × inscribe_duration_permille（依 duration；省略＝預設 3 輪）。
+    player_description: "在地面刻下只有自己能引爆的符文，帶有元素或標籤。"
     category: structural
     harmful: false
     min_rarity: rare
@@ -552,6 +598,7 @@ primitives:
   - id: detonate_runes
     name_zh: 引爆符文
     description_zh: 引爆影響範圍內施放者自己的符文（依編號）：每格移除符文，並對該格上符合 affects 的單位自動命中（不擲命中）造成一次傷害＝骰值＋縮放屬性×0.5（法術公式）；元素取 element、省略時取符文的元素（標籤符文為物理）。施放者自己不受傷害；沒有符文的格子沒有效果。預算：骰子平均 × detonate_runes_permille（需要先刻印的折扣）。
+    player_description: "引爆範圍內自己的符文，對符文上的單位造成傷害。"
     category: structural
     harmful: true
     min_rarity: rare
@@ -567,6 +614,7 @@ primitives:
   - id: sacrifice_summon
     name_zh: 獻祭召喚物
     description_zh: 選射程內自己的一個召喚物（含圖騰；別人的、敵人的不行）作為獻祭：它立刻消失（原因「被獻祭」，不算倒下），並在它所在的位置以 radius 格（曼哈頓距離）為半徑結算一次——填了 element 是爆炸：範圍內所有敵人自動命中（不擲命中、不暴擊）受到 dice ＋ 縮放屬性 × 0.5 的 element 傷害（帶元素的傷害照常與表面、物件互動）；省略 element 是治療：範圍內的友方（含施放者，不含被獻祭的召喚物）回復 dice ＋ 縮放屬性 × 0.5 的 HP（受治療量修正）。只能用在主動技能，形狀 single。預算：骰子平均 × sacrifice_summon_permille（需要先有召喚物、且召喚物會消失的折扣）。
+    player_description: "獻祭自己的一個召喚物，在它的位置爆發出效果。"
     category: structural
     harmful: false
     min_rarity: rare

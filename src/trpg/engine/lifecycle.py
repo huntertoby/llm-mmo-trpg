@@ -331,4 +331,5 @@ def make_unit(
         ammo=weapon.magazine,
         facing=default_facing(team) if facing is None else facing,
         gear=gear,
+        doll=template.doll,
     )

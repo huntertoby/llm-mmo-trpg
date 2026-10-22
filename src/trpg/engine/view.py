@@ -13,7 +13,7 @@ from typing import Literal
 
 from pydantic import BaseModel, ConfigDict
 
-from trpg.content.battle import ReactionRule, SummonMode
+from trpg.content.battle import DollLook, ReactionRule, SummonMode
 from trpg.content.equipment import (
     AFFIX_CATEGORY_NUMBER,
     AFFIX_CATEGORY_ZH,
@@ -339,6 +339,9 @@ class UnitView(_ViewModel):
     """待施放的灌注技能的名稱。"""
     infused: bool = False
     """本輪已被灌注過（Phase 3-33d；每隻每輪最多灌注 1 次）。"""
+    doll_look: DollLook | None = None
+    """紙娃娃外觀（Phase 3E-2e，頭身手腳披風、膚色髮型）；範本沒有外觀資料時為 ``None``（前端依陣營
+    退回預設外觀）。主手由 glossary 的武器外觀表決定。"""
     summon_look: SummonLookView | None = None
     """召喚物外觀（Phase 3-33h1）；範本沒有外觀欄位或不是召喚物為 ``None``（前端畫人形骷髏）。"""
     infusion_options: tuple[InfusionOptionView, ...] = ()
@@ -786,6 +789,7 @@ def _unit_view(state: BattleState, unit: UnitState, team: Team) -> UnitView:
         if infused is None
         else state.ruleset.skill_def(infused.skill_id).name_zh,
         infused=unit.is_summon and unit.infused_round == state.round,
+        doll_look=unit.doll,
         summon_look=_summon_look(state, unit),
         infusion_options=_infusion_views(state, unit) if unit.team is team else (),
         activations=tuple(_activation_view(state, a) for a in unit.activations),

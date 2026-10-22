@@ -134,7 +134,7 @@ function doll(art: ArtTextures, u: UnitDraw, look: DownedLook, feet: number, r: 
   const sl = summonLookOf(u);
   // 倒地的人形召喚物沿用紙娃娃的躺下姿勢；其他體型（圖騰、構造體、植物…）不躺下
   const useSummonArt = sl !== null && !(u.downed && sl.body === "humanoid");
-  const spec = resolveDoll({ template: u.template, team: u.team, summon: u.summon, totem: u.totem, weaponId: u.weaponId, weaponClass: u.weaponClass, equipment: u.equipment });
+  const spec = resolveDoll({ template: u.template, team: u.team, summon: u.summon, totem: u.totem, dollLook: u.dollLook, weaponId: u.weaponId, weaponClass: u.weaponClass, equipment: u.equipment });
   const texture = useSummonArt ? art.summon(sl, u.facing, sl.body === "humanoid" ? summonHumanoidSpec(u, sl) : null) : art.figure(spec, u.facing, u.downed);
   if (texture === null) return new Graphics().circle(0, 0, r).fill(u.fill); // 無法產生貼圖：退回色塊
   const sprite = new Sprite(texture);

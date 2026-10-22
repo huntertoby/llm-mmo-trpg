@@ -14,3 +14,5 @@ element_mods: {}
 tags: [hero]
 max_mana: 20
 skills: [skill_bone_crusher, skill_whirlwind, skill_gale_kick, skill_execute, skill_rending_strike]
+# 紙娃娃外觀（Phase 3E-2e；純顯示資料，kind／material 見 equipment/appearance.yaml，前端認得的才畫）
+doll: {skin: '#f1c9a5', hair: short, hair_color: '#6a3d1e', gear: {body: {kind: plate, material: steel}, feet: {kind: greaves, material: steel}, hands: {kind: gauntlets, material: steel}, off_hand: {kind: shield_round, material: wood, color: '#2f5fae'}, cloak: {kind: cape, material: cloth, color: '#2c4f8a'}}}

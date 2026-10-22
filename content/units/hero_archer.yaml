@@ -10,3 +10,5 @@ element_mods: {}
 tags: [hero]
 max_mana: 24
 skills: [skill_piercing_shot, skill_grapple_arrow, skill_smoke_arrow, skill_vanish, skill_high_ground_shot, skill_smoke_bomb]
+# 紙娃娃外觀（Phase 3E-2e；純顯示資料，kind／material 見 equipment/appearance.yaml，前端認得的才畫）
+doll: {skin: '#f1c9a5', hair: long, hair_color: '#c27a2c', pants: '#3a3a2a', gear: {body: {kind: leather, material: leather, color: '#4f7a3a'}, feet: {kind: boots, material: leather}, hands: {kind: gloves, material: leather}, head: {kind: hood, material: cloth, color: '#3f6a32'}}}

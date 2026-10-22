@@ -1,7 +1,9 @@
 // Phase 3-24a2：弩（輕、重、連弩）與長槍（燧發、獵槍、狙擊）的造型——外觀表、快取鍵與紙娃娃／小圖示的繪製資料。
 import { describe, expect, it } from "vitest";
 import type { Facing } from "../api/types";
-import { dollKey, KNOWN_KINDS, resolveDoll, WEAPON_LOOKS, weaponLook, type DollSpec } from "./appearance";
+import { dollKey, KNOWN_KINDS, weaponLook, type DollSpec } from "./appearance";
+import { resolveDollT } from "./testDolls";
+import { weaponLookEntry } from "../battle/glossary";
 import { drawFigure, drawWeaponAlone } from "./paperdoll";
 import { weaponIconItem } from "./weaponIcon";
 
@@ -39,8 +41,8 @@ function drawn(kind: string, form: string, material: string): string[] {
 
 describe("武器外觀表（Phase 3-24a2）", () => {
   it("弩與長槍都有自己的造型，不再退回畫弓", () => {
-    expect(WEAPON_LOOKS.crossbow).toMatchObject({ kind: "crossbow", material: "wood", twoHanded: true });
-    expect(WEAPON_LOOKS.longgun).toMatchObject({ kind: "longgun", material: "steel", twoHanded: true });
+    expect(weaponLookEntry("crossbow")).toMatchObject({ look: { kind: "crossbow", material: "wood" }, two_handed: true });
+    expect(weaponLookEntry("longgun")).toMatchObject({ look: { kind: "longgun", material: "steel" }, two_handed: true });
     expect(KNOWN_KINDS.main_hand).toEqual(expect.arrayContaining(["crossbow", "longgun"]));
     // 武器大類退回仍是弓；但這兩個 id 認得，不會走退回
     expect(weaponLook("crossbow", "ranged").kind).toBe("crossbow");
@@ -49,7 +51,7 @@ describe("武器外觀表（Phase 3-24a2）", () => {
   });
 
   it("紙娃娃主手依武器 id，雙手武器副手留空，形制進快取鍵", () => {
-    const look = (id: string) => resolveDoll({ ...base, template: "hero_fighter", weaponId: id }).gear;
+    const look = (id: string) => resolveDollT({ ...base, template: "hero_fighter", weaponId: id }).gear;
     expect(look("crossbow").main_hand).toMatchObject({ kind: "crossbow", form: "light" });
     expect(look("longgun").main_hand).toMatchObject({ kind: "longgun", form: "flintlock" });
     expect(look("crossbow").off_hand).toBeUndefined();

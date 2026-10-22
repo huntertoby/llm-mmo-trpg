@@ -9,3 +9,5 @@ weapon: bow
 resist: {}
 element_mods: {}
 tags: [sim]
+# 紙娃娃外觀（Phase 3E-2e；純顯示資料，kind／material 見 equipment/appearance.yaml，前端認得的才畫）
+doll: {skin: '#d9a47a', hair: long, hair_color: '#c27a2c', pants: '#3a3a2a', gear: {body: {kind: leather, material: leather}, feet: {kind: boots, material: leather}, hands: {kind: gloves, material: leather}}}

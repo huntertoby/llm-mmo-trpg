@@ -12,6 +12,8 @@
 #       blessing {flat, dice}（祝禱：普攻命中時最近的隊友回復量）、
 #       summon_dice_bonus（統御：自己的召喚物普攻多幾顆傷害骰）、
 #       lob（拋射：視線可越過幾層高的障礙）。
+# look（Phase 3E-2e）：預設外觀 {kind, material, element?, form?}，紙娃娃主手與武器小圖示用；沒寫的武器前端依 weapon_class 退回。
+#       kind／form／material 是 equipment/appearance.yaml 的造型；雙手與否看 two_handed。
 # 遠程武器小特性（Phase 3-24a2；同樣只是參數）：
 #       pierce_line（穿透一直線：命中後最多再擊中幾名後方敵人）、ignore_height（不受高度影響）、
 #       magazine／reload_ap（彈匣容量與裝填 AP；0 ＝ 不用裝填；有彈匣即直射，不可有 lob）、
@@ -21,6 +23,7 @@
 weapons:
   - id: one_handed_sword
     name_zh: 單手劍
+    look: {kind: sword, material: steel}
     weapon_class: melee
     range: 1
     dice: 1d8
@@ -32,6 +35,7 @@ weapons:
     two_handed: false
   - id: greatsword
     name_zh: 雙手劍
+    look: {kind: greatsword, material: steel}
     weapon_class: melee
     range: 1
     dice: 2d6
@@ -43,6 +47,7 @@ weapons:
     two_handed: true
   - id: dagger
     name_zh: 匕首
+    look: {kind: dagger, material: iron}
     weapon_class: melee
     range: 1
     dice: 1d4
@@ -54,6 +59,7 @@ weapons:
     two_handed: false
   - id: bow
     name_zh: 弓
+    look: {kind: bow, material: wood}
     weapon_class: ranged
     range: 8
     dice: 1d8
@@ -66,6 +72,7 @@ weapons:
     lob: 1
   - id: fire_staff
     name_zh: 火焰法杖
+    look: {kind: staff, material: wood, element: fire}
     weapon_class: focus
     range: 5
     dice: 1d6
@@ -77,6 +84,7 @@ weapons:
     two_handed: true
   - id: lightning_staff
     name_zh: 雷電法杖
+    look: {kind: staff, material: wood, element: lightning}
     weapon_class: focus
     range: 5
     dice: 1d6
@@ -88,6 +96,7 @@ weapons:
     two_handed: true
   - id: frost_staff
     name_zh: 冰霜法杖
+    look: {kind: staff, material: wood, element: ice}
     weapon_class: focus
     range: 5
     dice: 1d6
@@ -100,6 +109,7 @@ weapons:
   # --- Phase 3-24a1：武器擴充第一批（數值為初值，未經模擬）---
   - id: axe
     name_zh: 斧
+    look: {kind: axe, material: iron}
     weapon_class: melee
     range: 1
     dice: 1d8
@@ -112,6 +122,7 @@ weapons:
     armor_break: {defense_permille: -100, rounds: 1}
   - id: hammer
     name_zh: 錘
+    look: {kind: hammer, material: iron}
     weapon_class: melee
     range: 1
     dice: 1d12
@@ -125,6 +136,7 @@ weapons:
     knockback: 1
   - id: spear
     name_zh: 矛
+    look: {kind: spear, material: iron}
     weapon_class: melee
     range: 2
     dice: 1d10
@@ -137,6 +149,7 @@ weapons:
     reach: 2
   - id: scepter
     name_zh: 權杖
+    look: {kind: staff, material: wood, form: scepter}
     weapon_class: focus
     range: 4
     dice: 1d6
@@ -149,6 +162,7 @@ weapons:
     blessing: {flat: 3}
   - id: totem_staff
     name_zh: 圖騰杖
+    look: {kind: staff, material: wood, form: totem}
     weapon_class: focus
     range: 4
     dice: 1d6
@@ -163,6 +177,7 @@ weapons:
   # 弩：穿透一直線（pierce_line 最多再擊中幾名後方敵人）、不受高度影響、不用裝填（沒有彈匣）。
   - id: crossbow
     name_zh: 弩
+    look: {kind: crossbow, material: wood, form: light}
     weapon_class: ranged
     range: 6
     dice: 1d8
@@ -177,6 +192,7 @@ weapons:
   # 長槍（火器）：彈匣 1 發、裝填 1 AP；槍聲；直射（沒有 lob）；站定狙擊；直射穿甲；貼臉懲罰與遠距加成。
   - id: longgun
     name_zh: 長槍
+    look: {kind: longgun, material: steel, form: flintlock}
     weapon_class: ranged
     range: 8
     dice: 1d12

@@ -5,10 +5,6 @@ import type { Choice, FieldSpec } from "../api/types";
 
 export type Json = Record<string, unknown>;
 
-/** 值是物件（`{type: ...}`）的單選欄位：形狀與條件（效果列表的每一項另外處理）。 */
-// 戰場變奏（Phase 3-25b）的「加一個附帶效果」也是物件選項（寫在 `add_effect.type`）
-const OBJECT_CHOICE_FIELDS: ReadonlySet<string> = new Set(["shape", "condition", "add_effect"]);
-
 /** 複合技能的第二段（Phase 3F-3b；3F-4b 起先選種類 `followup.when`）：欄位路徑都在 `followup.` 底下。 */
 export const FOLLOWUP_WHEN = "followup.when";
 export const FOLLOWUP_SKELETON = "followup.skeleton";
@@ -57,9 +53,9 @@ export function joinPath(base: string, field: string): string {
   return base === "" ? field : `${base}.${field}`;
 }
 
+/** 值是物件（`{type: ...}`）的單選欄位（形狀、條件……）：由後端的 `FieldSpec.object_choice` 旗標決定。 */
 export function isObjectChoice(spec: FieldSpec): boolean {
-  const last = spec.field.split(".").at(-1) ?? spec.field;
-  return OBJECT_CHOICE_FIELDS.has(last);
+  return spec.object_choice === true;
 }
 
 /** 目前的單選欄位選了哪個值（物件選項取 `type`）。 */

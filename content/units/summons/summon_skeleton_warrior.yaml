@@ -15,3 +15,5 @@ reactions: []
 summon: true
 role: melee   # 定位（3-33f1；HP 係數見 rules/core.yaml summon_role_hp_permille）
 innate: prone   # 3-33e1 強化：盾擊——命中時絆倒目標（對抗判定，每輪 1 次）
+# 紙娃娃外觀（Phase 3E-2e；純顯示資料，kind／material 見 equipment/appearance.yaml，前端認得的才畫）
+doll: {skin: '#e9e3cf', skull: true, pants: '#d9d2bd', eyes: '#2a1030', main_material: iron, main_color: '#9a8a76', gear: {body: {kind: ribs, material: bone}}}
