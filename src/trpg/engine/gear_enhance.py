@@ -57,6 +57,7 @@ __all__ = [
     "geared_weapon",
     "rune_affixes",
     "spend_gear_rune_read",
+    "strike_affixes",
 ]
 
 _PERMILLE = 1000
@@ -126,6 +127,19 @@ def rune_affixes(unit: UnitState, rune: str) -> list[GearAffix]:
         affix = entries[0].affix
         assert isinstance(affix, AttackAffix)
         if affix.rune == rune:
+            found.append(entries[0])
+    return found
+
+
+def strike_affixes(unit: UnitState, strike: str) -> list[GearAffix]:
+    """生效中的普攻流詞條（Phase 3-32a；``strike`` 為 ``combo``／``cleave``，依詞條 id 排序）。"""
+    if not unit.gear.affixes:
+        return []
+    found: list[GearAffix] = []
+    for entries in _groups(unit.gear, "attack").values():
+        affix = entries[0].affix
+        assert isinstance(affix, AttackAffix)
+        if affix.strike == strike:
             found.append(entries[0])
     return found
 

@@ -42,10 +42,13 @@ __all__ = [
 ]
 
 
-def attack_dice(state: BattleState, attacker: UnitState) -> Dice:
+def attack_dice(state: BattleState, attacker: UnitState, *, backstab: bool = False) -> Dice:
     """普攻的傷害骰：武器的骰子；召喚物另加召喚者武器的 ``summon_dice_bonus`` 顆同面數的骰
-    （圖騰杖的統御；召喚者已不在場時不加）。"""
+    （圖騰杖的統御；召喚者已不在場時不加）。``backstab``：這次是背刺，加上武器的
+    ``backstab_dice`` 顆（匕首的背刺強化，Phase 3-32a）。"""
     dice = attacker.weapon.dice
+    if backstab and attacker.weapon.backstab_dice > 0:
+        dice = Dice(count=dice.count + attacker.weapon.backstab_dice, sides=dice.sides)
     if attacker.owner_id is None:
         return dice
     owner = state.units.get(attacker.owner_id)

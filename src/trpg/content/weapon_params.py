@@ -2,7 +2,8 @@
 
 參數路徑是 ``WeaponDef.model_dump()`` 的整數欄位（``knockback``）、巢狀欄位
 （``armor_break.rounds``、``steady.hit``），或特例 ``range_mod.penalty``
-（距離修正裡的懲罰部分乘上倍率）。純函式、確定性。
+（距離修正裡的懲罰部分乘上倍率）；開關欄位（``ignore_cover``）``delta`` 為正即開啟。純函式、
+確定性。
 """
 
 from __future__ import annotations
@@ -34,6 +35,13 @@ def scale_penalties(entries: list[dict[str, Any]], factor: int) -> list[dict[str
     return result
 
 
+def _turn_on(holder: dict[str, Any], key: str, delta: int | None) -> bool:
+    if delta is None or delta <= 0:
+        return False
+    holder[key] = True
+    return True
+
+
 def set_weapon_param(
     data: dict[str, Any], param: str, delta: int | None, factor: int | None
 ) -> bool:
@@ -47,7 +55,9 @@ def set_weapon_param(
     holder: Any = data if not tail else data.get(head)
     key = tail or head
     value = holder.get(key) if isinstance(holder, dict) else None
-    if isinstance(value, bool) or not isinstance(value, int):
+    if isinstance(value, bool):  # 開關參數（例如 ignore_cover）：``delta`` 為正 ＝ 開啟
+        return _turn_on(holder, key, delta)
+    if not isinstance(value, int):
         return False
     if delta is not None:
         holder[key] = value + delta

@@ -1047,6 +1047,10 @@ def _modifier_value(
     milli = Fraction(1, _PERMILLE)
     structured = _structured_value(skill, change, library)
     if structured is not None:
+        value, what = structured
+        if rule.empty_slots_cap is not None:  # 普攻精通（3-32a）：以滿格（cap 格全空）估，再打折
+            ratio = Fraction(library.budget.modifier.empty_slots_permille, _PERMILLE)
+            return value * rule.empty_slots_cap * ratio, f"{what}／空格 × {rule.empty_slots_cap}"
         return structured
     if kind == "ap_delta":
         assert change.ap_delta is not None

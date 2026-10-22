@@ -235,6 +235,11 @@ class WeaponDef(ContentModel):
     - ``ignore_cover``：普攻無視半掩護；
     - ``armor_pierce_permille``：普攻命中判定時，目標防禦值穿透這麼多‰（250 ＝ 防禦 −25%）；
     - ``range_mod``：距離修正，見 :class:`RangeMod`。
+
+    只由「武器特性強化」詞條開啟的參數（Phase 3-32a；武器本身預設 0，引擎只讀參數）：
+
+    - ``high_range``：站得比目標高（高處）時，普攻射程再加這麼多格（弓的高處射程強化）；
+    - ``backstab_dice``：從背後近戰攻擊（背刺）時，普攻傷害骰再多加這麼多顆（匕首的背刺強化）。
     """
 
     id: str = Field(pattern=ID_PATTERN)
@@ -264,6 +269,8 @@ class WeaponDef(ContentModel):
     ignore_cover: bool = False
     armor_pierce_permille: int = Field(default=0, ge=0, le=1000)
     range_mod: tuple[RangeMod, ...] = ()
+    high_range: int = Field(default=0, ge=0, le=2)
+    backstab_dice: int = Field(default=0, ge=0, le=2)
 
     @model_validator(mode="after")
     def _check(self) -> WeaponDef:
@@ -303,6 +310,10 @@ class WeaponDef(ContentModel):
             lines.append(f"統御：你的召喚物攻擊 +{self.summon_dice_bonus} 顆傷害骰")
         if self.lob:
             lines.append(f"拋射：可越過 {self.lob} 格高的障礙射擊")
+        if self.high_range:
+            lines.append(f"居高射遠：站得比目標高時，射程 +{self.high_range}")
+        if self.backstab_dice:
+            lines.append(f"背刺強化：從背後攻擊時，傷害骰 +{self.backstab_dice} 顆")
         return tuple(lines)
 
 

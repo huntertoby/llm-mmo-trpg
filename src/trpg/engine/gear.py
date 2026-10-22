@@ -46,6 +46,7 @@ from trpg.content.equipment import (
     EquippedItem,
     Loadout,
     StatAffix,
+    affix_strength,
 )
 from trpg.content.library import Ruleset
 from trpg.content.skills import ConditionSpec
@@ -125,7 +126,10 @@ def diminish(loadout: Loadout, rules: EquipmentRules) -> tuple[GearAffix, ...]:
             )
     result: list[GearAffix] = []
     for affix_id in sorted(groups):
-        ordered = sorted(groups[affix_id], key=lambda g: (-(g.value or 0), SLOT_INDEX[g.slot]))
+        ordered = sorted(
+            groups[affix_id],
+            key=lambda g: (-affix_strength(g.affix, g.value), SLOT_INDEX[g.slot]),
+        )
         for rank, gear in enumerate(ordered):
             first = _PERMILLE if rank == 0 else 0
             weight = rules.weight(rank) if gear.affix.numeric else first

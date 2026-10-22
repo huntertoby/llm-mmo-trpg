@@ -328,6 +328,9 @@ class UnitState:
     +1 合計用）；自己回合開始時重設為「回合開始前存下的 AP」（``ap_pending``）。"""
     hits_landed: int = 0
     """整場戰鬥累計的命中次數（``every_n_hits`` 的計數；只有裝備了該類被動的單位會累計）。"""
+    attack_hits_landed: int = 0
+    """整場戰鬥累計的普攻命中次數（Phase 3-32a，普攻連擊 ``affix_attack_combo`` 的計數：只算普攻、
+    不含連擊多出來的那一下；只有帶連擊詞條的單位會累計）。"""
     stacks: dict[str, int] = field(default_factory=dict)
     """身上的層數（層數 ID → 層數，只列出 > 0 的；Phase 2E-3，定義在 ``stacks.yaml``）。"""
     stack_expiry: dict[str, int] = field(default_factory=dict)
@@ -468,6 +471,7 @@ class UnitState:
             gear_round_counts=dict(self.gear_round_counts),
             ap_gain_turn=self.ap_gain_turn,
             hits_landed=self.hits_landed,
+            attack_hits_landed=self.attack_hits_landed,
             stacks=dict(self.stacks),
             stack_expiry=dict(self.stack_expiry),
             source=self.source,

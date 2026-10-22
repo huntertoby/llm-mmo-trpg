@@ -1,0 +1,27 @@
+# 普攻精通——取捨型修正型被動（Phase 3-32a，08 8.25 普攻流；數值為初值，未經模擬）：
+# 主動技能欄每空 1 格，你的普攻傷害 +8%，最多算 3 格（+24%）；空格數在每次普攻結算當下由引擎從技能欄
+# 算出（確定、可重播）；計入全身傷害 +50% 上限。
+id: skill_attack_mastery
+schema_version: 1
+name_zh: 普攻精通
+tier: 1
+rank: 1
+rarity: epic
+kind: modifier
+skeleton: modifier
+category: spell
+weapon_req: any
+ap_cost: null
+scaling_attr: dex
+shape: {type: self}
+effects: []
+modifiers:
+  - applies_to: {actions: [attack]}
+    change: {damage_permille: 80}
+    empty_slots_cap: 3
+condition: null
+tags: [passive, modifier]
+narrative:
+  concept: 不靠花俏的招式，把最基本的一擊練到極致
+  cast_flavor: 手腕一沉，簡單的一擊乾淨俐落
+provenance: {origin: builtin, owner_id: null, created_by: null, parents: [], bound: true, tradeable: false}

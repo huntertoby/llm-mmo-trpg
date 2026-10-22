@@ -38,8 +38,12 @@ __all__ = [
     "run_battle",
 ]
 
-LOG_FORMAT = "trpg-battle-log/48"
-"""``/48``（Phase 3-33b，接在 3-25a 的 ``/47`` 之後）：召喚物基本規則——召喚物的 HP 與傷害依施放者
+LOG_FORMAT = "trpg-battle-log/49"
+"""``/49``（Phase 3-32a，接在 3-33b 的 ``/48`` 之後）：普攻流——單位狀態多了 ``attack_hits_landed``
+（普攻連擊的普攻命中計數）、武器參數多了 ``high_range``／``backstab_dice``，普攻會因連擊
+（多攻擊一次，``gear_triggered.trigger == "attack_combo"``）、分裂（``"attack_cleave"``）、
+主動技能欄的空格（普攻精通）與武器特性強化而結果不同；``/48`` 的紀錄無法重播。
+``/48``（Phase 3-33b，接在 3-25a 的 ``/47`` 之後）：召喚物基本規則——召喚物的 HP 與傷害依施放者
 等級與屬性成長（``UnitTemplate.level``、``summon_growth``）、``UseSkill.infusion`` 灌注關鍵字、
 持續輪數上限、硬上限、Boss 對召喚物傷害 ×2；召喚物數值與傷害在 ``/47`` 的規則下不同，``/47`` 的
 紀錄無法重播。

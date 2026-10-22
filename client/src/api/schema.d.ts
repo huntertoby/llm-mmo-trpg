@@ -645,6 +645,9 @@ export interface components {
          * AffixLineView
          * @description 裝備上的一條詞條（Phase 3G-G1，唯讀）。``active``：遞減後仍生效（非數值類同 id 只生效 1 條；
          *     數值類第 4 條起權重 0）；``weight_permille``：遞減權重（1000／500／250／0）。
+         *
+         *     ``duplicate_of``（Phase 3-32a）：這條 **沒有生效** 的重複詞條，是和哪一條重複（生效的那條的
+         *     「部位＋詞條文字」，例如「主手的每第 2 次普攻命中：…」）；生效中的詞條為 ``None``。
          */
         AffixLineView: {
             /** Affix Id */
@@ -659,6 +662,8 @@ export interface components {
             active: boolean;
             /** Weight Permille */
             weight_permille: number;
+            /** Duplicate Of */
+            duplicate_of?: string | null;
         };
         /**
          * Aim

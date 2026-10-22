@@ -508,10 +508,18 @@ def melee_height_problem(state: BattleState, attacker: UnitState, target_xy: XY)
     return None
 
 
-def attack_reach(state: BattleState, attacker: UnitState) -> int:
+def attack_reach(state: BattleState, attacker: UnitState, target_xy: XY | None = None) -> int:
     """普攻的射程：武器射程加上修正規則的 ``range_delta``（至少 1；Phase 3C-2）。近戰性質
-    （高度差限制、無視半掩護、倒地目標的優勢）仍由武器本身的射程決定。"""
-    return max(1, attacker.weapon.range + range_delta(state, attacker, ATTACK))
+    （高度差限制、無視半掩護、倒地目標的優勢）仍由武器本身的射程決定。給了 ``target_xy`` 且
+    攻擊者站得比那一格高時，再加武器的 ``high_range``（Phase 3-32a，弓的高處射程強化）。"""
+    reach = attacker.weapon.range + range_delta(state, attacker, ATTACK)
+    if (
+        target_xy is not None
+        and attacker.weapon.high_range
+        and state.tile(*attacker.xy).height > state.tile(*target_xy).height
+    ):
+        reach += attacker.weapon.high_range
+    return max(1, reach)
 
 
 def reach_problem(state: BattleState, attacker: UnitState, target_xy: XY, what: str) -> str | None:
@@ -520,7 +528,7 @@ def reach_problem(state: BattleState, attacker: UnitState, target_xy: XY, what: 
     if attacker.weapon.magazine > 0 and attacker.ammo <= 0:
         return f"空膛：{attacker.weapon.name_zh}需要先裝填"
     distance = manhattan(attacker.xy, target_xy)
-    reach = attack_reach(state, attacker)
+    reach = attack_reach(state, attacker, target_xy)
     if distance > reach:
         return f"目標超出射程：距離 {distance}，射程 {reach}"
     height_problem = melee_height_problem(state, attacker, target_xy)
