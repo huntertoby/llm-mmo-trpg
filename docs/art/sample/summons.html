@@ -1,0 +1,69 @@
+<!doctype html>
+<html lang="zh-Hant">
+<head>
+<meta charset="utf-8">
+<title>召喚物 17 種</title>
+<style>
+  body { margin: 0; padding: 16px 20px; background: #1b1e24; color: #e8e8ea; font-family: "Noto Sans TC", "Microsoft JhengHei", sans-serif; width: 1500px; }
+  h1 { font-size: 21px; margin: 0 0 4px; }
+  h2 { font-size: 15px; margin: 12px 0 6px; }
+  .sub { color: #a0a4ad; font-size: 13px; margin-bottom: 8px; line-height: 1.6; }
+  .grp { display: flex; gap: 10px; flex-wrap: wrap; align-items: flex-start; }
+  .g { background: #262a32; border-radius: 10px; padding: 6px 8px; }
+  .g .gn { font-size: 12px; color: #ffe9a8; margin-bottom: 4px; }
+  .cells { display: flex; gap: 6px; }
+  .cell { text-align: center; font-size: 11px; color: #c8cad0; }
+  .cell small { display: block; color: #8a8f99; font-size: 10px; }
+  canvas { display: block; }
+</style>
+</head>
+<body>
+<h1>召喚物 17 種（組裝式：體型 × 元素配色 × 大小 × 特徵）</h1>
+<div class="sub">在戰場格子上的實際比例（52px 一格，下方放大 1.4 倍）。底圈＝陣營色（召喚物用淡綠）；剩餘輪數徽章照舊。人形用紙娃娃；漂浮靈、構造體、野獸、植物、圖騰是新畫法。<span id="test"></span></div>
+<div class="grp" id="groups"></div>
+<h2>四個朝向（每種體型各一）</h2>
+<div class="grp" id="facings"></div>
+<script src="paperdoll.js"></script>
+<script src="summonArt.js"></script>
+<script>
+const S = SummonArt;
+const T = 52, Z = 1.4;
+function tile(id, facing = "south", z = Z) {
+  const cv = document.createElement("canvas"); const px = T * z; cv.width = px * 2; cv.height = px * 2; cv.style.width = cv.style.height = `${px}px`;
+  const ctx = cv.getContext("2d"); ctx.scale(2 * z, 2 * z);
+  ctx.fillStyle = "#8e8a80"; ctx.fillRect(0, 0, T, T); ctx.strokeStyle = "#6c685f"; ctx.strokeRect(1, 1, T - 2, T - 2);
+  const s = S.resolve(id);
+  if (s.body !== "construct" || s.variant !== "wall") { ctx.fillStyle = "rgba(125,255,176,0.55)"; ctx.strokeStyle = "#7dffb0"; ctx.lineWidth = 1.5; ctx.beginPath(); ctx.ellipse(T / 2, T / 2 + T * 0.23 - 1, T * 0.36, T * 0.15, 0, 0, Math.PI * 2); ctx.fill(); ctx.stroke(); }
+  S.stamp(ctx, id, facing, T / 2, T / 2 + T * 0.23, 0.9);
+  return cv;
+}
+const GROUPS = [
+  ["人形（紙娃娃）", ["skeleton_warrior", "shade", "afterimage", "guardian_spirit"]],
+  ["漂浮靈", ["fire_spirit", "ice_spirit", "thunder_spirit", "water_sprite"]],
+  ["構造體", ["golem", "bomb_puppet", "earth_wall"]],
+  ["野獸", ["war_wolf", "hawk"]],
+  ["植物", ["vine"]],
+  ["圖騰", ["war_totem", "pull_totem", "plateau_totem"]],
+];
+const SZ = { small: "小", medium: "中", large: "大" };
+const root = document.getElementById("groups");
+for (const [gn, ids] of GROUPS) {
+  const g = document.createElement("div"); g.className = "g"; g.innerHTML = `<div class="gn">${gn}</div>`;
+  const cells = document.createElement("div"); cells.className = "cells";
+  for (const id of ids) { const s = S.SUMMONS[id]; const c = document.createElement("div"); c.className = "cell"; c.appendChild(tile(id)); c.insertAdjacentHTML("beforeend", `${s.zh}<small>${SZ[s.size]}${s.trait ? "・" + s.trait : ""}</small>`); cells.appendChild(c); }
+  g.appendChild(cells); root.appendChild(g);
+}
+const fr = document.getElementById("facings");
+for (const id of ["shade", "fire_spirit", "golem", "war_wolf", "hawk", "war_totem"]) {
+  const g = document.createElement("div"); g.className = "g"; g.innerHTML = `<div class="gn">${S.SUMMONS[id].zh}</div>`;
+  const cells = document.createElement("div"); cells.className = "cells";
+  for (const f of ["south", "east", "west", "north"]) { const c = document.createElement("div"); c.className = "cell"; c.appendChild(tile(id, f, 1)); c.insertAdjacentHTML("beforeend", f); cells.appendChild(c); }
+  g.appendChild(cells); fr.appendChild(g);
+}
+// 自測：每種 × 4 朝向，加上不認得的輸入
+let n = 0, bad = 0; const tc = document.createElement("canvas").getContext("2d");
+for (const id of [...Object.keys(S.SUMMONS), "unknown", { body: "dragon" }, { body: "spirit", element: "nope", size: "huge" }]) for (const f of ["south", "east", "west", "north", "up"]) { n++; try { S.stamp(tc, id, f, 30, 50); } catch (e) { bad++; console.error(e); } }
+document.getElementById("test").textContent = `　自測：${n} 組（含不認得的體型、元素、大小、朝向），錯誤 ${bad}。`;
+</script>
+</body>
+</html>
