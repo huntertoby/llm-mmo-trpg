@@ -1,11 +1,12 @@
 // 右下角（Phase 3-8、3-21b）：常駐 5 鈕——移動、普攻、跑步、守護、結束回合；旁邊一個「更多動作」選單，
 // 只列出當下合法的動作（推擊、絆倒、互動、換位、瞄準、攀跳、裝填），選了之後在地圖上點目標。
 // 播放速度控制在下面。戰鬥結束時換成結束面板。
-import { useState, type ReactNode } from "react";
+import type { ReactNode } from "react";
 import type { Action } from "../api/types";
 import type { LabeledAction } from "../battle/actions";
 import type { ActionMode } from "../battle/targeting";
 import { Hint } from "./Hint";
+import { usePopupMenu } from "./usePopupMenu";
 
 interface Props {
   enabled: boolean;
@@ -54,7 +55,7 @@ export function TurnControls({
   onAction,
   speed,
 }: Props) {
-  const [open, setOpen] = useState(false);
+  const menu = usePopupMenu();
   const count = more.length + extra.length;
   return (
     <div className="turn-controls" aria-label="回合操作">
@@ -113,14 +114,14 @@ export function TurnControls({
           結束回合
         </button>
       </div>
-      <div className="more-actions">
+      <div className="more-actions" ref={menu.rootRef}>
         <Hint text={count === 0 ? "目前沒有其他可用的動作" : "推擊、絆倒、互動、換位、瞄準、攀跳、裝填（只列出現在合法的）"}>
-          <button type="button" aria-expanded={open} disabled={count === 0} onClick={() => setOpen((o) => !o)}>
+          <button type="button" aria-expanded={menu.open} disabled={count === 0} onClick={menu.toggle}>
             更多動作（{count}）
           </button>
         </Hint>
-        {open && count > 0 && (
-          <ul className="action-list more-list" aria-label="更多動作">
+        {menu.open && count > 0 && (
+          <ul className="action-list more-list popup-menu" aria-label="更多動作">
             {more.map((m) => (
               <li key={m.key}>
                 <button
@@ -128,7 +129,7 @@ export function TurnControls({
                   className={selectedKey === m.key ? "selected" : ""}
                   disabled={!enabled}
                   onClick={() => {
-                    setOpen(false);
+                    menu.setOpen(false);
                     onPickMode(m);
                   }}
                 >
@@ -142,7 +143,7 @@ export function TurnControls({
                   type="button"
                   disabled={!enabled}
                   onClick={() => {
-                    setOpen(false);
+                    menu.setOpen(false);
                     onAction(o.action);
                   }}
                 >

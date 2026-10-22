@@ -26,7 +26,9 @@ export function useTileCard(): TileCardApi {
   useEffect(() => {
     if (!open) return;
     const onKey = (e: KeyboardEvent) => {
-      if (e.key === "Escape") ctl.dismiss();
+      if (e.key !== "Escape") return;
+      e.stopPropagation(); // 卡片處理了這次 Esc：BattleScreen 的 window 監聽不再取消瞄準
+      ctl.dismiss();
     };
     const onDown = (e: PointerEvent) => {
       if (!ctl.pinned) return;

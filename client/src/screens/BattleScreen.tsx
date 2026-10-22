@@ -698,18 +698,12 @@ export function BattleScreen({ initial, onExit, exitLabel, runMode }: Props) {
         setInfusionPick(null); // 灌注關鍵字的選擇視窗：Esc ＝ 取消施放（還沒送出，不付代價）
         return;
       }
-      if (popup !== null) {
-        // 開著彈出面板時 Esc 先關面板（並取消隊友指令的選目標），不放棄複製技能的施放
-        setPopup(null);
-        if (!copying) cancel();
-        return;
-      }
       if (copying) decideCopy(null); // 複製技能暫停時，Esc ＝ 放棄施放（不付任何代價）
       else cancel();
     };
     window.addEventListener("keydown", onKey);
     return () => window.removeEventListener("keydown", onKey);
-  }, [cancel, copying, decideCopy, infusionPick, popup]);
+  }, [cancel, copying, decideCopy, infusionPick]);
 
   const pickMode = useCallback(
     (m: ActionMode) => {
