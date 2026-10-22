@@ -66,6 +66,11 @@ def test_a_summoner_battle_with_growth_and_infusion_replays_identically() -> Non
         "dev_summon_water",
         "dev_summon_shade",
         "dev_summon_hawk",
+        # 3-33e2a：構造體與野獸
+        "dev_summon_bomb",
+        "dev_summon_golem",
+        "dev_summon_wall",
+        "dev_summon_wolf",
     ],
 )
 def test_the_new_summon_packs_summon_and_replay_identically(pack: str) -> None:
@@ -77,9 +82,16 @@ def test_the_new_summon_packs_summon_and_replay_identically(pack: str) -> None:
     from trpg.sim.summon_report import _spec  # noqa: PLC0415
 
     lib = library()
-    spec, _ = _spec(lib, pack, "boss", 1, 30)
-    seed = spec.seeds[0]
-    run = run_battle(spec.setup, seed, UtilityAI(lib.ai_profiles))
-    again = replay(spec.setup, seed, run.actions)
-    assert state_to_json(again.state) == state_to_json(run.state)
-    assert any(isinstance(e, UnitSummoned) for e in run.events)
+    summoned = False
+    for run_seed in (1, 2, 3):  # 3-33e2a：持續輪數變短，個別種子第一回合可能先放火焰箭
+        1,
+        2,
+        3,
+    ):  # 3-33e2a：特性計入預算後持續輪數變短，個別種子的第一回合可能先放火焰箭
+        spec, _ = _spec(lib, pack, "boss", run_seed, 30)
+        seed = spec.seeds[0]
+        run = run_battle(spec.setup, seed, UtilityAI(lib.ai_profiles))
+        again = replay(spec.setup, seed, run.actions)
+        assert state_to_json(again.state) == state_to_json(run.state)
+        summoned = summoned or any(isinstance(e, UnitSummoned) for e in run.events)
+    assert summoned

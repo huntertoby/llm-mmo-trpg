@@ -446,5 +446,5 @@ def test_g2_gear_battle_log_json_and_replay(tmp_path: Path) -> None:
     args += ["--enemies", "bandit,bandit", "--seed", "7", "--log-json", str(log)]
     assert cli_main(args) == 0
     text = log.read_text(encoding="utf-8")
-    assert "trpg-battle-log/52" in text and '"affix_trait_hammer_knockback"' in text
+    assert "trpg-battle-log/53" in text and '"affix_trait_hammer_knockback"' in text
     assert cli_main(["battle", "replay", str(log)]) == 0

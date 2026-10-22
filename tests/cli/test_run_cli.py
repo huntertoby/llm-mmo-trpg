@@ -162,7 +162,7 @@ def test_run_auto_spends_skill_points_and_shows_levels(
     assert out.splitlines()[-1].startswith("結果：")
 
 
-@pytest.mark.parametrize("seed", [4, 6])  # 3-33e1：技能池多了召喚技，種子 1 的一輪不再進化
+@pytest.mark.parametrize("seed", [5, 6])  # 3-33e1／e2a：技能池多了召喚技，種子 1、4 的一輪不再進化
 def test_run_auto_reaches_a_branching_evolution(
     seed: int, capsys: pytest.CaptureFixture[str]
 ) -> None:

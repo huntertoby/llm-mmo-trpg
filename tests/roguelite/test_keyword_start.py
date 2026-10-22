@@ -134,7 +134,7 @@ def test_allocation_is_checked() -> None:
 def test_dev_packs_all_start_and_stay_out_of_the_player_start() -> None:
     lib = library()
     packs = lib.dev_starters.packs
-    assert len(packs) == 20
+    assert len(packs) == 24
     labels = {p.label_zh for p in packs}
     assert labels == {"烈焰", "潮雷", "霜寒", "撼地", "鐵壁", "影刃"} | {
         "鷹眼",
@@ -152,6 +152,11 @@ def test_dev_packs_all_start_and_stay_out_of_the_player_start() -> None:
         "水精包",
         "影魅包",
         "鷹隼包",
+        # 3-33e2a：構造體與野獸
+        "傀儡包",
+        "石像包",
+        "土牆包",
+        "戰狼包",
     }
     for pack in packs:
         run = new_dev_run(lib, pack.id, 0)
