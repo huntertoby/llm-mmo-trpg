@@ -31,7 +31,9 @@ def test_every_shipped_skill_is_inside_its_tier_window() -> None:
     windows = script.implied_windows(lib())
     assert sorted(windows) == [1, 2]  # 只有階級 1、2 有示範技能
     core = lib().ruleset.core.tier_budget
-    for tier, entries in windows.items():
+    for tier, all_entries in windows.items():
+        # 裝備授予的技能（3G-G3b，標籤 gear）的預算算在詞條上，不參與階級預算校準
+        entries = [e for e in all_entries if not e[0].startswith("skill_gear_")]
         assert script.count_ok(entries, core[tier]) == len(entries)
 
 
