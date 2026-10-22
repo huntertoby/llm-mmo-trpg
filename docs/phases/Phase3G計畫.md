@@ -102,3 +102,7 @@
 
 - PM 合併（無衝突）、`check.py` 全過、`pnpm build` 成功；看過 `docs/phases/img/3G-5b-arena-equipped.png`（靶場中穿角盔、鎖甲、圓盾的主角）。新增 `render/dollGear.ts`、`render/paperdollGear.ts`；只動前端。報告 `Phase3G-5b報告.md`。美術清單 #6～#8 請美術 PM 目視複核。
 - 待 PM 決定：#1 史詩／傳說裝備小人加外光、#2 護手袖口只在指定形制時畫、#3 沒穿的欄位沿用範本、#4 雙手武器依武器 id 判斷、#5 手槍與霰彈槍沿用長槍畫風 → 接受；#6 雙匕首正面辨識度、#7 紙娃娃與圖示的鐵／鋼色差 → 請美術 PM 決定。
+
+## 12. G5c 驗收（美術 PM 3G-5b 檢查小修，2026-10-22）
+
+- PM 合併（無衝突；只動前端繪圖）、前端 vitest／`tsc`／`pnpm build` 通過（實作者跑過完整 `check.py`）。雙匕首放大、鐵鋼色票與圖示統一、拿掉裝備稀有度外光、銅改 #b06a3c／#6e3e20 與鱗片紋暗色 1.2px。截圖 `docs/phases/img/3G-5c-copper.png`、更新 `3G-5b-paired.png`、`3G-5b-sets.png`。報告 `Phase3G-5c報告.md`。觀察：鐵變暗後鐵盔與背景對比略降 → 請美術 PM 看圖決定是否微調。
