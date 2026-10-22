@@ -48,7 +48,14 @@ from trpg.content.summons import summon_dpr
 from trpg.skillgen.combo import self_combo_reasons
 from trpg.skillgen.mechanics import mechanic_tags, resolved_affects
 
-__all__ = ["BudgetError", "BudgetReport", "EffectBudget", "SegmentBudget", "skill_budget"]
+__all__ = [
+    "BudgetError",
+    "BudgetReport",
+    "EffectBudget",
+    "SegmentBudget",
+    "VariantBudget",
+    "skill_budget",
+]
 
 _PERMILLE = 1000
 _SHAPED_AFFECTS = frozenset({"enemies", "allies", "all", "tiles"})
@@ -99,6 +106,15 @@ class SegmentBudget:
 
 
 @dataclass(frozen=True, slots=True)
+class VariantBudget:
+    """戰場變奏（Phase 3-25a）一個型態的預算：變奏 ID、型態名與型態自己的預算明細。"""
+
+    id: str
+    name_zh: str
+    report: BudgetReport
+
+
+@dataclass(frozen=True, slots=True)
 class BudgetReport:
     """:func:`skill_budget` 的結果：全部中間值，供 CLI 與驗證器使用。"""
 
@@ -129,6 +145,11 @@ class BudgetReport:
     沒有連鎖時為 0。"""
     self_combo_reasons: tuple[str, ...] = ()
     """連鎖的說明（:func:`~trpg.skillgen.combo.self_combo_reasons`）。"""
+    variant_surcharge_permille: int = 0
+    """戰場變奏（Phase 3-25a）的加價合計（‰）：``variant_surcharge_permille`` × 變奏數；``total``
+    已乘上 ×（1000 ＋ 它）÷ 1000。沒有變奏時為 0。"""
+    variants: tuple[VariantBudget, ...] = ()
+    """各變奏型態自己的預算（依資料順序；型態本身照一般技能計算，不含加價）。"""
 
     @property
     def allowance_raw_permille(self) -> int:
@@ -1238,8 +1259,28 @@ def _composite_budget(skill: SkillDef, library: ContentLibrary) -> BudgetReport:
     )
 
 
+def _variant_budget(skill: SkillDef, library: ContentLibrary) -> BudgetReport:
+    """帶戰場變奏的技能（Phase 3-25a，PM 決定 #6）：基礎型態照一般技能計算，總點數再 ×（1000 ＋
+    ``variant_surcharge_permille`` × 變奏數）÷ 1000；各變奏型態另外照一般技能計算（列在
+    ``variants``，驗證器要求每個型態都落在預算窗內）。"""
+    base = skill_budget(skill.model_copy(update={"variants": ()}), library)
+    surcharge = library.budget.variant_surcharge_permille * len(skill.variants)
+    forms = tuple(
+        VariantBudget(v.id, v.name_zh, skill_budget(skill.variant_form(v.id), library))
+        for v in skill.variants
+    )
+    return replace(
+        base,
+        total=base.total * Fraction(_PERMILLE + surcharge, _PERMILLE),
+        variant_surcharge_permille=surcharge,
+        variants=forms,
+    )
+
+
 def skill_budget(skill: SkillDef, library: ContentLibrary) -> BudgetReport:
     """計算 ``skill`` 的預算明細；缺少點數資料時拋出 :class:`BudgetError`。"""
+    if skill.variants:
+        return _variant_budget(skill, library)
     if skill.followup is not None:
         return _composite_budget(skill, library)
     rules, budget = library.ruleset, library.budget

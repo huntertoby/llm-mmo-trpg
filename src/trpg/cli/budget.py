@@ -8,6 +8,7 @@ from typing import TextIO
 from trpg.cli.skills import pad
 from trpg.content.library import ContentLibrary
 from trpg.content.skills import SkillDef
+from trpg.narrative.skills import variant_change_text, variant_condition_text
 from trpg.skillgen.budget import BudgetError, BudgetReport, skill_budget
 from trpg.skillgen.validate import Violation, validate_skill
 
@@ -135,6 +136,7 @@ def print_skill_budget(library: ContentLibrary, skill: SkillDef, out: TextIO) ->
         else:
             _print_effects(report, out, modifier=skill.is_modifier)
         _print_totals(report, out)
+        _print_variants(library, skill, report, out)
     if violations:
         print(f"  違規（{len(violations)} 項）：", file=out)
         for v in violations:
@@ -142,6 +144,30 @@ def print_skill_budget(library: ContentLibrary, skill: SkillDef, out: TextIO) ->
         return 1
     print("  驗證：通過", file=out)
     return 0
+
+
+def _print_variants(
+    library: ContentLibrary, skill: SkillDef, report: BudgetReport, out: TextIO
+) -> None:
+    """戰場變奏（Phase 3-25a）：基礎型態的加價，再逐型態列出各自的點數與比例。"""
+    if not report.variants:
+        return
+    print(
+        f"  戰場變奏 {len(report.variants)} 個：基礎型態加價 +{report.variant_surcharge_permille}‰"
+        f"（已含在 total）",
+        file=out,
+    )
+    for form in report.variants:
+        sub = form.report
+        variant = skill.variant(form.id)
+        when = variant_condition_text(library, variant.when)
+        change = variant_change_text(library, skill, variant)
+        print(f"  【型態：{form.name_zh}】（{form.id}）{when} → {change}", file=out)
+        print(
+            f"    total {_num(sub.total)} ÷ 可用預算 {_num(sub.usable)} ＝ {_pct(sub.ratio)}"
+            f" → {_verdict(sub)}",
+            file=out,
+        )
 
 
 def _print_totals(report: BudgetReport, out: TextIO) -> None:
@@ -153,7 +179,13 @@ def _print_totals(report: BudgetReport, out: TextIO) -> None:
         print(f"  協同係數 {parts}", file=out)
     else:
         print("  協同係數 無", file=out)
-    if report.segments:
+    if report.variants:
+        print(
+            f"  total ＝ raw × 條件 × 協同 × (1000 + 變奏加價 {report.variant_surcharge_permille})"
+            f" ÷ 1000 ＝ {_num(report.total)}",
+            file=out,
+        )
+    elif report.segments:
         print(f"  total ＝ 兩段點數加總 × 複合加成 ＝ {_num(report.total)}", file=out)
     else:
         print(f"  total ＝ raw × 條件 × 協同 ＝ {_num(report.total)}", file=out)
@@ -177,6 +209,16 @@ def _print_totals(report: BudgetReport, out: TextIO) -> None:
     )
 
 
+def _row_cells(report: BudgetReport | None) -> tuple[str, str, str, str]:
+    """總表一列的 total、可用預算、比例與折抵；算不出預算時都是「—」。"""
+    if report is None:
+        return ("—", "—", "—", "—")
+    allow = f"+{report.allowance_permille}"
+    if report.allowance_capped:
+        allow = f"+{report.allowance_raw_permille}→{report.allowance_cap}"
+    return (_num(report.total), _num(report.usable), _pct(report.ratio), allow)
+
+
 def cmd_skills_budget_all(library: ContentLibrary, out: TextIO) -> int:
     skills = sorted(library.skills.values(), key=lambda s: s.id)
     print(f"技能預算總表（共 {len(skills)} 個；合格區間以 total ÷ 可用預算計）：", file=out)
@@ -190,13 +232,10 @@ def cmd_skills_budget_all(library: ContentLibrary, out: TextIO) -> int:
         violations = validate_skill(skill, library)
         bad += bool(violations)
         try:
-            report = skill_budget(skill, library)
-            allow = f"+{report.allowance_permille}"
-            if report.allowance_capped:
-                allow = f"+{report.allowance_raw_permille}→{report.allowance_cap}"
-            cells = (_num(report.total), _num(report.usable), _pct(report.ratio), allow)
+            report: BudgetReport | None = skill_budget(skill, library)
         except BudgetError:
-            cells = ("—", "—", "—", "—")
+            report = None
+        cells = _row_cells(report)
         rules = "、".join(v.rule for v in violations) or "—"
         print(
             f"  {pad(skill.id, 26)}{pad(skill.name_zh, 12)}{pad(str(skill.tier), 3)}"
@@ -205,5 +244,12 @@ def cmd_skills_budget_all(library: ContentLibrary, out: TextIO) -> int:
             f"{pad(cells[3], 11)}{pad(cells[2], 8)}{rules}",
             file=out,
         )
+        for form in report.variants if report is not None else ():  # 戰場變奏（3-25a）逐型態
+            sub = _row_cells(form.report)
+            print(
+                f"  {pad('  └ ' + form.id, 26)}{pad(form.name_zh, 12)}{pad('', 7)}"
+                f"{pad(sub[0], 8)}{pad(sub[1], 8)}{pad(sub[3], 11)}{pad(sub[2], 8)}",
+                file=out,
+            )
     print(f"通過 {len(skills) - bad} 個，違規 {bad} 個。", file=out)
     return 1 if bad else 0

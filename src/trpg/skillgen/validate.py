@@ -110,7 +110,22 @@ def _structure_violations(skill: SkillDef, library: ContentLibrary) -> list[Viol
     report, budget_out = _budget_violations(skill, library)
     out += _skeleton_violations(skill, library, report)
     out += _rarity_violations(skill, library)
-    return out + budget_out
+    return out + budget_out + _variant_violations(skill, library)
+
+
+def _variant_violations(skill: SkillDef, library: ContentLibrary) -> list[Violation]:
+    """戰場變奏（Phase 3-25a，PM 決定 #6）：每個變奏型態本身照一般技能完整檢查（骨架、互斥、
+    稀有度、預算窗……）；基礎型態的預算已含變奏加價（:func:`skill_budget`）。"""
+    out: list[Violation] = []
+    for variant in skill.variants:
+        form = skill.variant_form(variant.id)
+        out += [
+            Violation(
+                v.skill_id, f"variant.{variant.id}.{v.rule}", f"{variant.name_zh}：{v.message}"
+            )
+            for v in _structure_violations(form, library)
+        ]
+    return out
 
 
 # ---------------------------------------------------------------------------

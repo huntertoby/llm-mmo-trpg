@@ -22,6 +22,8 @@ from trpg.narrative.skills import (
     modifier_summary,
     scaling_detail,
     skill_shape_text,
+    variant_change_text,
+    variant_condition_text,
 )
 from trpg.shared.types import Attribute
 
@@ -103,6 +105,13 @@ def _print_body(library: ContentLibrary, skill: SkillDef, out: TextIO) -> None:
     print("  效果：", file=out)
     for i, spec in enumerate(skill.effects, start=1):
         print(f"    {i}. {effect_summary(library, skill, spec)}", file=out)
+    for variant in skill.variants:  # 戰場變奏（Phase 3-25a）
+        print(
+            f"  戰場變奏「{variant.name_zh}」（{variant.id}）："
+            f"{variant_condition_text(library, variant.when)} → "
+            f"{variant_change_text(library, skill, variant)}",
+            file=out,
+        )
     second = followup_text(library, skill)
     if second is not None:  # 複合技能（Phase 3F-3a）
         follow = skill.followup_skill()

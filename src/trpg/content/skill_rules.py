@@ -263,6 +263,9 @@ class BudgetRules(ContentModel):
     點數 × (1 ＋ 吸血‰ × 這個值 ÷ 10⁶)（初值，未經模擬）。"""
     pierce_bonus_permille: int = Field(default=150, ge=0, le=1000)
     """有 ``pierce`` 的技能，總點數再加這個比例（‰；Phase 3C-5b；初值，未經模擬）。"""
+    variant_surcharge_permille: int = Field(default=100, ge=0, le=1000)
+    """戰場變奏（Phase 3-25a，6.24）：每個變奏的加價（‰）。基礎型態的總點數 ×（1000 ＋ 這個值 ×
+    變奏數）÷ 1000；每個變奏型態另外照一般技能計算，各自落在預算窗內（初值，之後以模擬調整）。"""
     composite_tax_permille: int = Field(default=150, ge=0, le=1000)
     """複合技能（Phase 3F-3a，6.23）的加成：總點數 ＝（位移段點數 ＋ 動作段點數）×（1000 ＋ 這個值）
     ÷ 1000（省下一次行動的代價；初值，之後以模擬調整）。"""

@@ -25,6 +25,8 @@ from trpg.content.skills import (
     ModifierTarget,
     ShapeSpec,
     SkillDef,
+    VariantSpec,
+    VariantWhen,
     condition_text,
     default_affects,
     on_hit_carrier,
@@ -32,7 +34,7 @@ from trpg.content.skills import (
 from trpg.content.stacks import StackDef
 from trpg.narrative.skill_icon import SkillIcon, skill_icon
 from trpg.narrative.skill_levels import SkillLevelInfo
-from trpg.shared.types import rune_name
+from trpg.shared.types import Surface, rune_name
 from trpg.skillgen.keywords import SkillKeywords, derive_draft_keywords, derive_keywords
 
 __all__ = [
@@ -64,6 +66,8 @@ __all__ = [
     "skill_ap",
     "skill_card",
     "skill_shape_text",
+    "variant_change_text",
+    "variant_condition_text",
 ]
 
 _AFFECTS = {
@@ -700,6 +704,39 @@ def _effect_core(library: ContentLibrary, skill: SkillDef, spec: EffectSpec) -> 
     if describe is None:
         return library.ruleset.primitive_def(spec.type).name_zh
     return describe(library, skill, spec)
+
+
+def _surface_names(library: ContentLibrary, ids: tuple[str, ...]) -> str:
+    return "／".join(f"「{library.ruleset.surface_def(Surface(i)).name_zh}」" for i in ids)
+
+
+def variant_condition_text(library: ContentLibrary, when: VariantWhen) -> str:
+    """戰場變奏（Phase 3-25a）的條件，例如「施放者站在「水」上」。"""
+    if when.caster_surface is not None:
+        return f"施放者站在{_surface_names(library, when.caster_surface)}上"
+    if when.target_surface is not None:
+        return f"目標點在{_surface_names(library, when.target_surface)}上"
+    if when.caster_high_ground is not None:
+        return "施放者比目標點高至少 1 層"
+    return "施放者身旁（八方向）有牆壁或擋路物件"
+
+
+def variant_change_text(library: ContentLibrary, skill: SkillDef, variant: VariantSpec) -> str:
+    """戰場變奏（Phase 3-25a）的替換內容，例如「形狀改為直線（3 格）；傷害改為雷電」。"""
+    form = skill.variant_form(variant.id)
+    parts: list[str] = []
+    if variant.shape is not None or variant.range_delta is not None:
+        delta = "" if variant.range_delta is None else f"射程 {variant.range_delta:+d}，"
+        parts.append(f"{delta}形狀為{skill_shape_text(library, form)}")
+    if variant.replace_effect is not None:
+        swap = variant.replace_effect
+        text = effect_summary(library, form, form.effects[swap.index])
+        parts.append(f"第 {swap.index + 1} 個效果改為{text}")
+    if variant.add_effect is not None:
+        parts.append(f"加上{effect_summary(library, form, form.effects[-1])}")
+    if variant.element is not None:
+        parts.append(f"傷害改為{variant.element.display_name}")
+    return "；".join(parts)
 
 
 def effect_summary(library: ContentLibrary, skill: SkillDef, spec: EffectSpec) -> str:
