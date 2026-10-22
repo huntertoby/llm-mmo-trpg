@@ -40,6 +40,9 @@ class SkillKeywords:
 
     makes: tuple[str, ...] = ()
     uses: tuple[str, ...] = ()
+    variant: tuple[str, ...] = ()
+    """只由戰場變奏型態帶來的關鍵字（Phase 3-25a；``variant: true``，技能卡標「（特定地形）」）。
+    它們也列在 ``makes``／``uses`` 裡。"""
 
     def all(self) -> tuple[str, ...]:
         """製造或利用的關鍵字（依推導表的順序，不重複）。"""
@@ -186,5 +189,24 @@ def derive_keywords(
     skill: SkillDef, table: KeywordTable, *, exclusive_only: bool = False
 ) -> SkillKeywords:
     """``skill`` 製造與利用的關鍵字（純函式；依 ``table`` 的順序）。``exclusive_only`` 只看專屬規則
-    （``grade: exclusive``；開局技能池與候選產生器用，Phase 3-24b2 PM 決定）。"""
-    return derive_from_facts(facts_of(skill), table, exclusive_only=exclusive_only)
+    （``grade: exclusive``；開局技能池與候選產生器用，Phase 3-24b2 PM 決定）。
+
+    帶戰場變奏的技能（Phase 3-25a，PM 決定 #8）看所有型態的聯集；只由變奏型態帶來的關鍵字另外
+    列在 ``variant``。"""
+    base = derive_from_facts(facts_of(skill), table, exclusive_only=exclusive_only)
+    if not skill.variants:
+        return base
+    found = [base]
+    found += [
+        derive_from_facts(facts_of(skill.variant_form(v.id)), table, exclusive_only=exclusive_only)
+        for v in skill.variants
+    ]
+    makes = {k for f in found for k in f.makes}
+    uses = {k for f in found for k in f.uses}
+    own = set(base.all())
+    order = [k.id for k in table.keywords]
+    return SkillKeywords(
+        makes=tuple(k for k in order if k in makes),
+        uses=tuple(k for k in order if k in uses),
+        variant=tuple(k for k in order if (k in makes or k in uses) and k not in own),
+    )
