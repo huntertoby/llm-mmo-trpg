@@ -1,7 +1,7 @@
 # 開發 PM 交接文件
 
 > 給接手的 **開發 PM**（新對話中的 Claude）。最後更新：2026-10-22。**只讀本檔就能接手**；需要時再讀 `CLAUDE.md`、`docs/專案計畫.md`（總覽）與本檔指到的計畫檔。
-> 現況一句話：**Phase 3（網頁 ＋ roguelite）的功能、試玩回饋與畫面提升（3-1～3-17）全部完成並 push**；下一步是使用者的 🎮 戰鬥手感檢查與其回饋、Phase 3 收尾審查，再進 Phase 4 前的整理（3E-2、3E-3）。
+> 現況一句話（2026-10-22 晚）：**Phase 3 的 3-1～3-27（含 3-18a/b、3-19～3-24c、3-26a/b、3-27）與 Phase 3G（裝備詞條引擎 G1～G5c）全部完成並 push**；驗收紀錄在 `Phase3計畫.md` 第 19～29 節與 `Phase3G計畫.md` 第 6～13 節。下一步見 3.0：3-25 戰場變奏、累積的介面小修、Phase 3 結束審查，再進 Phase 4 前的整理（3E-2、3E-3）。
 
 ---
 
@@ -43,7 +43,7 @@ Phase 3 各段（`Phase3計畫.md` 節號；報告 `Phase3-*報告.md`）：
 | 3-17 | 組裝式技能圖示（`SkillCard.icon` 由 `trpg.narrative.skill_icon` 推導；`render/skillParts.ts`、`skillIcon.ts`，#21） | 18.3 |
 | 其他 | 白板主角 `build_blank_warrior`、`build_blank_mage`（`blank: true`，不進模擬） | commit c09c339 |
 
-- 測試：**3294 個 pytest ＋ 432 個 vitest**（`check.py` 一併跑，本機約 1–2 分鐘）；`LOG_FORMAT` 為 `trpg-battle-log/45`（3-20～3-26a、3G 之後；舊紀錄與戰鬥中存檔無法讀取，已接受）。
+- 測試：**約 4100 個 pytest ＋ 657 個 vitest**（3-27 後）（`check.py` 一併跑，本機約 1–2 分鐘）；`LOG_FORMAT` 為 `trpg-battle-log/45`（3-20～3-26a、3G 之後；舊紀錄與戰鬥中存檔無法讀取，已接受）。
 - 內容：22 個模擬用 build ＋ 2 個白板主角（`content/sim/builds.yaml`）；手寫技能 152 個；正式地圖 10 張 ＋ 靶場 `training_range` ＋ Boss 地圖 `bandit_lair`。
 - 主要指令：`trpg battle --map <id> --seed <n> [--log-json f]`、`trpg battle replay f`、`trpg map list`、`trpg sim maps|matrix|skills|completion`、`trpg skills list|budget|random`、`trpg run new|auto|show`、`uv run trpg serve`（網頁，預設 8000 埠）。
 - 一輪的平衡現況：AI 代打種子 1～10 勝 2 場（3-7 後）。
@@ -54,14 +54,13 @@ Phase 3 各段（`Phase3計畫.md` 節號；報告 `Phase3-*報告.md`）：
 
 1. **確認環境**：`git status` 乾淨；`uv run python scripts/check.py` 全過。使用者常自己開 `uv run trpg serve` 佔用 8000 埠：**不要關使用者的程序**，`preview_start` 會自動改用 8001。程式改動後要 `corepack pnpm -C client build` 並請使用者 **重開伺服器** 才看得到。
 2. **使用者的 🎮 戰鬥手感檢查**（`docs/專案計畫.md` 第 14 節；問題清單在 `docs/玩法PM交接.md`）：回饋中規則與玩法交給玩法 PM，介面問題排成下一個介面段（**編號從 3-18 起**）。
-3. **下一個介面小修段（3-18，已累積、尚未排）**：
-   - 美術 PM 3-16b 檢查（`docs/art/3-16b檢查.md`）：`bandit_warlord` 改鐵盔＋板甲＋深色披風 #3a2a4a、不加外光；`hero_stormcaller` 法袍與帽子改深藍 #2c4f8a、飾邊黃 #fff36b；`sim_companion_fighter` 改鎖甲＋鳶盾不披披風、`sim_companion_archer` 改皮背心不戴兜帽；倒地拿掉紅叉、徽章透明度 0.35→0.55。
-   - 3-16b #1：`UnitView` 加 `weapon_class`，未知武器依類別退回弓或杖。
-   - 3-17：元素配色 icon／vfx 合成一份（#2）；戰場狀態徽章、狀態列、表面說明改用部件庫（#4）；技能列浮動卡緊湊版（#5）；`add_tags`、`on_hit_effects` 部件（#6）；代價顯示數值（#7）。
-   - 3-15：地形資訊卡標籤濃縮成一行、只在有剩餘回合時寫持續時間、單位在格時地形卡可收起。
-   - 3-12：生成水表面的技能用水花配色、無傷害技能依狀態上色、傳送的消散／出現、傳說技能華麗蓄力。
-   - 一輪中英雄面板顯示武器（3-6 #9）。
-4. **Phase 3 結束審查**（6.5）：範圍 `2c42268..HEAD`（上一次審查到 3C／3D 結束；之後是 3E-1、3-5～3-17、3F）。前端改動很多，請審查者特別看 `client/src/render/` 與 `BattleScreen.tsx` 的複雜度。結論排進 3E-2／3E-3 或新的整理段。
+3. **下一步（2026-10-22 晚）**：
+   - **3-25 戰場變奏**（玩法 #25，`docs/design/06-技能.md` 6.24）：規格未寫，排程表在 `Phase3計畫.md` 第 21 節（排在 3-24 之後；6.24 的變奏可帶關鍵字）。
+   - **下一個介面小修**（累積清單在 `Phase3計畫.md` 24.4）：符文引爆特效、工坊換骨架改頁內確認、圖例加出口／守點、單場戰鬥主角選單改中性名稱、技能列招數多時可捲動或長高。
+   - 待玩法 PM 回覆：3-26b #1 是否補輔助類進化模板（47 招主動技沒有合格進化）。
+   - **已知問題**：多個 agent 同時跑全量 `check.py` 時，平行 pytest 會在 98% 停住（3-24c、3-27 都遇過，PM 單獨跑會過）→ 審查時查原因；一次最多平行 2～3 個 agent。
+   - 合併慣例：平行段落常同時遞增 `LOG_FORMAT`，合併時改成下一號、`runner.py` 文件字串兩段都保留、測試的 `trpg-battle-log/N` 與 `endswith("/N")` 一起改；產生檔 `client/src/render/fixtures/skill_icons.json`（`uv run python -m tests.narrative.icon_fixture`）、CLI 快照（`UPDATE_CLI_SNAPSHOTS=1`）、OpenAPI 重產。agent 回報後常不會自己結束，收到報告就 `TaskStop`。
+4. **Phase 3 結束審查**（6.5）：範圍 `2c42268..HEAD`（上一次審查到 3C／3D 結束；之後是 3E-1、3-5～3-27、3F、3G）。範圍很大，建議拆成 2～3 個審查 agent（引擎與內容／前端 `client/src/render/`、`BattleScreen.tsx`／roguelite 與裝備）。另請查：多 agent 時全量 pytest 卡在 98%、各段新增的 `PLR0917`／`PLC0415` noqa。結論排進 3E-2／3E-3 或新的整理段。
 5. **Phase 4（LLM 技能生成）之前**：3E-2（數值上下限以 YAML 為唯一來源、落點函式合併、`FieldSpec` 旗標、原語 `player_description`、效果／條件／觸發中文名進 glossary API）、3E-3（interpreter 拆成原語 handler 註冊表）；待決定 #5 的 **世界觀**（美術原型已決定：程式繪製）。隨機組合器目前不產生暫時障礙與煙霧（3-11 #8），Phase 4 生成時一併開放。工坊的選項推導（`trpg.skillgen` 的 `draft_options`）與 `icon_of`、`tile_info` 可直接給 LLM 流程用。
 
 ### 3.0.1 使用者已做的決定在哪裡
