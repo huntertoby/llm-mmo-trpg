@@ -726,6 +726,21 @@ class SummonPlatform(ContentModel):
     height: int = Field(default=1, ge=1, le=1)
 
 
+SUMMON_ROLES: tuple[str, ...] = (
+    "melee",
+    "ranged",
+    "support",
+    "totem",
+    "scout",
+    "assassin",
+    "bomber",
+)
+"""召喚物定位（Phase 3-33f1）：近戰擋路、遠程、治療輔助、不動型（圖騰、藤蔓、土牆）、斥候、刺殺、
+自爆。"""
+
+type SummonRole = Literal["melee", "ranged", "support", "totem", "scout", "assassin", "bomber"]
+
+
 class UnitTemplate(ContentModel):
     """``content/units/<id>.yaml``：一個單位範本（Phase 1 直接給定屬性與武器）。
 
@@ -770,6 +785,9 @@ class UnitTemplate(ContentModel):
     default_mode: Literal["guard", "follow", "hold"] = "follow"
     """召喚物剛召喚時的模式（Phase 3-33c；6.29.5「AI 預設」欄：守衛＝``guard``、不動＝``hold``，
     其餘與沒寫＝``follow``）。集火要指定目標，不能當預設。"""
+    role: SummonRole | None = None
+    """召喚物定位（Phase 3-33f1，6.29.5「定位」欄）：決定 HP 係數（``core.yaml`` 的
+    ``summon_role_hp_permille``）；召喚物必填，非召喚物不可填。"""
     look: SummonLook | None = None
     """召喚物外觀（Phase 3-33h1）：只有召喚物可以填；省略時前端退回人形骷髏。"""
     innate: str | None = Field(default=None, pattern=ID_PATTERN)
@@ -801,6 +819,14 @@ class UnitTemplate(ContentModel):
     def _check_totem(self) -> UnitTemplate:
         if self.totem is not None and not (self.summon and self.speed == 0):
             raise ValueError("圖騰必須是召喚物（summon: true）且 speed 為 0")
+        return self
+
+    @model_validator(mode="after")
+    def _check_role(self) -> UnitTemplate:
+        if self.summon and self.role is None:
+            raise ValueError("召喚物必須填 role（定位：" + "、".join(SUMMON_ROLES) + "）")
+        if self.role is not None and not self.summon:
+            raise ValueError("定位 role 只有召喚物（summon: true）可以填")
         return self
 
     @model_validator(mode="after")

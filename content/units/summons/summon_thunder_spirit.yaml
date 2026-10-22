@@ -12,6 +12,7 @@ element_mods: {}
 tags: [summoned, elemental, lightning]
 reactions: []
 summon: true
+role: ranged   # 定位（3-33f1；HP 係數見 rules/core.yaml summon_role_hp_permille）
 innate: charged   # 普攻帶雷：另加 1d4 雷電傷害
 hit_rules:
   - {when: self_in_water, chain_targets: 2, chain_radius: 2, chain_permille: 500}   # 站在水裡時攻擊沿水面連鎖

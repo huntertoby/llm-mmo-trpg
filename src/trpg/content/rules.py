@@ -22,7 +22,7 @@ from typing import Literal
 
 from pydantic import Field, model_validator
 
-from trpg.content.battle import Dice, UnitTemplate
+from trpg.content.battle import SUMMON_ROLES, Dice, UnitTemplate
 from trpg.content.schemas import ContentModel
 from trpg.shared.types import Attribute, Element, Surface
 
@@ -105,6 +105,10 @@ class SummonInfusion(ContentModel):
         ):
             raise ValueError("灌注關鍵字至少要有一項效果")
         return self
+
+
+_ROLE_HP_RANGE = (500, 3000)
+"""召喚物依定位的 HP 係數允許的範圍（‰）。"""
 
 
 class CoreRules(ContentModel):
@@ -277,6 +281,9 @@ class CoreRules(ContentModel):
     """同一召喚者同時存在的召喚物上限（Phase 3D-4a）；超過時最舊的消失。"""
     summon_hard_cap: int = Field(default=3, ge=1, le=6)
     """召喚物同時存在的硬上限（Phase 3-33b）：之後專精可提高上限，但不得超過這個值。"""
+    summon_role_hp_permille: dict[str, int] = Field(default_factory=dict)
+    """依定位的召喚物 HP 係數（‰；Phase 3-33f1）：召喚當下 ``(範本 HP ＋ 成長) ×`` 這個值；
+    定位見 ``battle.SUMMON_ROLES``，沒列出的定位視為 1000。近戰擋路與不動型調高、遠程維持。"""
     summon_max_duration: int = Field(default=4, ge=1, le=10)
     """召喚物持續輪數的上限（Phase 3-33b）：召喚技能的 ``duration`` 超過時以此為準。"""
     boss_summon_damage_permille: int = Field(default=2000, ge=1000, le=5000)
@@ -316,6 +323,12 @@ class CoreRules(ContentModel):
     def _check_summon_cap(self) -> CoreRules:
         if self.summon_limit_per_owner > self.summon_hard_cap:
             raise ValueError("summon_limit_per_owner 不可大於 summon_hard_cap")
+        bad = sorted(set(self.summon_role_hp_permille) - set(SUMMON_ROLES))
+        if bad:
+            raise ValueError("summon_role_hp_permille 有未知的定位：" + "、".join(bad))
+        low, high = _ROLE_HP_RANGE
+        if any(not low <= v <= high for v in self.summon_role_hp_permille.values()):
+            raise ValueError(f"summon_role_hp_permille 的係數必須在 {low}～{high}‰")
         return self
 
     @model_validator(mode="after")

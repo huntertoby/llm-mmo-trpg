@@ -6,7 +6,7 @@ import pytest
 
 from tests.engine.helpers import library
 from trpg.shared.types import Team
-from trpg.sim.summon_report import format_summons, run_summon_sim, summarize
+from trpg.sim.summon_report import downed_ratio, format_summons, run_summon_sim, summarize
 
 
 def test_summon_sim_is_deterministic_and_reports() -> None:
@@ -96,3 +96,17 @@ def test_the_new_summon_packs_summon_and_replay_identically(pack: str) -> None:
         assert state_to_json(again.state) == state_to_json(run.state)
         summoned = summoned or any(isinstance(e, UnitSummoned) for e in run.events)
     assert summoned
+
+
+def test_downed_ratio_is_reported_for_the_summon_threshold() -> None:
+    """3-33f1 門檻用：被打倒比例 ＝ 結束原因 downed ÷ 召喚物總數；沒有召喚物時為 None。"""
+    lib = library()
+    summaries = summarize(
+        run_summon_sim(lib, packs=["dev_summoner", "dev_blaze"], maps=["open_plain"], seeds=2)
+    )
+    summoner, blaze = summaries
+    assert downed_ratio(blaze) is None
+    ratio = downed_ratio(summoner)
+    assert ratio is not None and 0 <= ratio <= 1
+    assert ratio == summoner.ends.get("downed", 0) / summoner.summons_total
+    assert "被打倒" in format_summons(summaries, {})
