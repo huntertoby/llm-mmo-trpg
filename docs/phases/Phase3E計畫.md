@@ -86,3 +86,9 @@ R4 拆 `skills.py`、R6 `LOG_FORMAT` 版本策略（Phase 4 大量新增原語�
 
 見 3.1 表的 3E-2c 列。驗收：`scripts/check.py` 快速版與 `--full` 各跑一次全過並記時間；模擬子行程故意失敗時丟 `BrokenProcessPool` 而不是卡住（測試）；`docs/開發PM交接.md` 由 PM 更新。
 
+### 3.5 3E-2a、3E-2c 驗收（2026-10-23）
+
+- PM 合併兩段（無衝突）；`check.py --full` 全過（4 分 33 秒，pytest 含 slow；唯一失敗是 PM 改 `runner.py` 文件字串的一行過長，修正後 ruff 通過）。
+- **3E-2a**：`skill_primitives.yaml` 的 `zone`、`delayed_damage`、`copy_skill` 加 `lookup_by_skill_id: true`，跨檔案驗證檢查基礎型態與每個變奏型態（R1 實測案例回歸測試）；帶變奏的技能不能被 `copy_skill` 複製；命中後修正規則用實際施放型態；AI 召喚範本用生效型態；`SkillDef.iter_effects(...)`／`walk_effect` 取代四份走訪（`combo.py` 補 zone 子效果）。報告 `Phase3E-2a報告.md`。**PM 決定 `LOG_FORMAT` → `/57`**（複製與修正比對是引擎行為變更）。待 PM 決定：#1 旗標檢查只在跨檔案驗證（直接建 `SkillDef` 不擋）→ 接受，3E-2g 的 LLM 提議流程一定走驗證器；#2 帶變奏技能不能複製、#3 型態從最近的 `skill_used` 事件取得 → 接受；#5 `iter_effects` 預設不含反噬與修正命中後效果 → 接受（各呼叫端沿用原涵蓋範圍）。
+- **3E-2c**：`sim/parallel.py`（`ProcessPoolExecutor`，子行程失敗丟 `BrokenProcessPool`，有測試）；pytest-timeout 300 秒、slow 1800 秒（`tests/conftest.py`）；jobs>1 的 8 支測試 `xdist_group("sim_pool")`＋`--dist loadgroup`；`check.py` 在 pytest 前清 `*.pyc.<pid>`。實作者量測：快速版約 113 秒、`--full` 約 336 秒（另一 agent 同時跑）。報告 `Phase3E-2c報告.md`。待 PM 決定：#1～#4 → 接受；#5 `_relabel`、#6 `test_demo_balance` 自己的池 → 3E-3。
+
