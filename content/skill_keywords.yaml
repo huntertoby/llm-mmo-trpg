@@ -14,6 +14,10 @@
 #
 # 規則分三種：專屬（原語、條件本身就對應該關鍵字）、通用（沒有專屬機制的技能類型，依既有引擎規則歸類，註解寫「通用」）、
 # 暫定（沒有真實機制可接、為了「每招技能至少一個關鍵字」先歸類，註解寫「暫定」；之後應換成真實內容）。
+# 欄位 grade 標示種類：省略＝專屬（exclusive）、general＝通用、provisional＝暫定。開局技能池與候選產生器
+# （Phase 3-24b2）只看專屬規則推導的關鍵字；通用與暫定只用來滿足「每招至少一個關鍵字」的檢查與技能卡顯示。
+#
+# actions（選填）：和關鍵字相符的基本動作；候選產生器（trpg.skillgen.candidates）依玩家用過的次數偏向該關鍵字。
 #
 # 技能池（trpg.skillgen.keywords.keyword_pools）：技能製造或利用某關鍵字就歸入該池，一招可在多個池。
 keywords:
@@ -49,13 +53,13 @@ keywords:
       - {condition: target_on_surface, surface: water}
       - {trigger: on_enter_surface, surface: water}
       - {condition: cast_tag_this_turn, tag: water}
-      - {effect: heal}   # 通用：潮濕表面治療（08 8.21.4.2）——治療、護盾、淨化類技能利用潮濕
-      - {effect: shield}
-      - {effect: cleanse}
-      - {effect: damage, element: holy}   # 通用：神聖傷害（聖水、雙效治療）
-      - {change: allow_self_target}   # 通用：治療類修正（套用在治療技能上）
-      - {change: shape_to}
-      - {change: heal_permille}
+      - {effect: heal, grade: general}   # 通用：潮濕表面治療（08 8.21.4.2）——治療、護盾、淨化類技能利用潮濕
+      - {effect: shield, grade: general}
+      - {effect: cleanse, grade: general}
+      - {effect: damage, element: holy, grade: general}   # 通用：神聖傷害（聖水、雙效治療）
+      - {change: allow_self_target, grade: general}   # 通用：治療類修正（套用在治療技能上）
+      - {change: shape_to, grade: general}
+      - {change: heal_permille, grade: general}
   - id: charged
     name_zh: 帶電
     description_zh: 雷電讓目標帶電；帶電的目標會被連鎖、被雷擊得更重。
@@ -87,6 +91,7 @@ keywords:
   - id: prone
     name_zh: 倒地
     description_zh: 絆倒、撞擊、推倒讓目標倒地；倒地的目標更容易被背刺與處決。
+    actions: [trip]   # 行為紀錄提示（Phase 3-24b2）：常用這個動作的玩家，候選偏向這個關鍵字
     makes:
       - {effect: knock_prone}
       - {effect: topple}
@@ -95,62 +100,65 @@ keywords:
     uses:
       - {condition: target_has_status, status: prone}
       - {effect: consume_status, status: prone}
-      - {effect: damage, weapon_req: melee, category: weapon}   # 通用：近戰攻擊倒地者有優勢（statuses.yaml prone）
-      - {trigger: on_crit}   # 暫定：暴擊類（08 8.21.4.2「對倒地暴擊」），之後換成真實條件
-      - {effect: apply_status, status: stance_fury}   # 暫定：同上
+      - {effect: damage, weapon_req: melee, category: weapon, grade: general}   # 通用：近戰攻擊倒地者有優勢（statuses.yaml prone）
+      - {trigger: on_crit, grade: provisional}   # 暫定：暴擊類（08 8.21.4.2「對倒地暴擊」），之後換成真實條件
+      - {effect: apply_status, status: stance_fury, grade: provisional}   # 暫定：同上
   - id: collision
     name_zh: 撞擊
     description_zh: 推擊把人撞上牆或同伴，造成撞擊傷害；撞擊時可以觸發更多效果。
+    actions: [shove]   # 行為紀錄提示（Phase 3-24b2）：常用這個動作的玩家，候選偏向這個關鍵字
     makes:
       - {effect: push}
       - {effect: pull}
       - {effect: dash}
       - {effect: charge_through}
       - {change: push_distance_delta}
-      - {effect: create_obstacle}   # 通用：障礙物是讓人撞上的牆
-      - {effect: hurl_object}   # 通用：投擲物件（08 8.21.4.2：撞擊、投擲）
+      - {effect: create_obstacle, grade: general}   # 通用：障礙物是讓人撞上的牆
+      - {effect: hurl_object, grade: general}   # 通用：投擲物件（08 8.21.4.2：撞擊、投擲）
       - {effect: rule_change, rule: move_any_object}
     uses:
       - {trigger: on_collision}
-      - {trigger: on_damaged}   # 暫定：受傷（含撞擊傷害）時反擊
-      - {effect: apply_status, status: stance_bulwark}   # 暫定：堅壁姿態站穩腳步、不怕被推
+      - {trigger: on_damaged, grade: provisional}   # 暫定：受傷（含撞擊傷害）時反擊
+      - {effect: apply_status, status: stance_bulwark, grade: provisional}   # 暫定：堅壁姿態站穩腳步、不怕被推
   - id: marked
     name_zh: 標記
     description_zh: 咒印與揭露標記目標；標記可以被引爆，被標記者會被追擊。
+    actions: [aim]   # 行為紀錄提示（Phase 3-24b2）：常用這個動作的玩家，候選偏向這個關鍵字
     makes:
       - {effect: apply_status, status: marked}
       - {effect: inscribe}
       - {effect: reveal}
       - {effect: apply_status, status: overwatch}
-      - {effect: apply_status, status: silenced}   # 暫定：控制型的標記（被盯上的目標）：沉默、恐懼、嘲諷、中毒
-      - {effect: apply_status, status: feared}   # 暫定
-      - {effect: apply_status, status: taunted}   # 暫定
-      - {effect: apply_status, status: poison}   # 暫定
-      - {effect: rule_change, rule: bleeding_wake}   # 暫定：血痕標記路徑上的敵人
-      - {effect: copy_skill}   # 暫定
-      - {change: area_delta}   # 暫定：吼叫（嘲諷）範圍 +1
-      - {change: damage_permille, applies_to: all_attacks, unconditional: true}   # 暫定：無條件的全攻擊傷害修正
+      - {effect: apply_status, status: silenced, grade: provisional}   # 暫定：控制型的標記（被盯上的目標）：沉默、恐懼、嘲諷、中毒
+      - {effect: apply_status, status: feared, grade: provisional}   # 暫定
+      - {effect: apply_status, status: taunted, grade: provisional}   # 暫定
+      - {effect: apply_status, status: poison, grade: provisional}   # 暫定
+      - {effect: rule_change, rule: bleeding_wake, grade: provisional}   # 暫定：血痕標記路徑上的敵人
+      - {effect: copy_skill, grade: provisional}   # 暫定
+      - {change: area_delta, grade: provisional}   # 暫定：吼叫（嘲諷）範圍 +1
+      - {change: damage_permille, applies_to: all_attacks, unconditional: true, grade: provisional}   # 暫定：無條件的全攻擊傷害修正
     uses:
       - {condition: target_has_status, status: marked}
       - {effect: detonate_runes}
       - {condition: on_own_rune}
-      - {effect: consume_status}   # 通用：引爆任何狀態
+      - {effect: consume_status, grade: general}   # 通用：引爆任何狀態
   - id: high_ground
     name_zh: 高處
     description_zh: 升高平台、飛行與攀跳讓你站得更高；居高臨下命中更準。
+    actions: [vault]   # 行為紀錄提示（Phase 3-24b2）：常用這個動作的玩家，候選偏向這個關鍵字
     makes:
       - {effect: raise_terrain}
       - {effect: lower_terrain}
       - {effect: leap}
       - {effect: grant_skill, skill: skill_flight}
-      - {effect: teleport_target}   # 暫定：把人調到別的位置（高低差）
-      - {effect: swap_any}   # 暫定
-      - {trigger: on_move}   # 暫定
-      - {effect: grant_ap}   # 暫定
+      - {effect: teleport_target, grade: provisional}   # 暫定：把人調到別的位置（高低差）
+      - {effect: swap_any, grade: provisional}   # 暫定
+      - {trigger: on_move, grade: provisional}   # 暫定
+      - {effect: grant_ap, grade: provisional}   # 暫定
     uses:
       - {condition: height_advantage}
-      - {effect: damage, weapon_req: ranged, category: weapon}   # 通用：遠程攻擊吃高低差命中加成（core.yaml height_hit_bonus）
-      - {change: grant_pierce}   # 通用：遠程修正
+      - {effect: damage, weapon_req: ranged, category: weapon, grade: general}   # 通用：遠程攻擊吃高低差命中加成（core.yaml height_hit_bonus）
+      - {change: grant_pierce, grade: general}   # 通用：遠程修正
   - id: concealed
     name_zh: 隱蔽
     description_zh: 煙霧、黑暗與暗影讓你隱蔽；隱蔽中的偷襲與伏擊更致命。
@@ -159,7 +167,7 @@ keywords:
       - {effect: create_surface, surface: smoke}
       - {effect: create_surface, surface: darkness}
       - {effect: damage, element: shadow}
-      - {effect: place_trap}   # 通用：陷阱藏在落葉底下
+      - {effect: place_trap, grade: general}   # 通用：陷阱藏在落葉底下
     uses:
       - {condition: self_concealed}
       - {condition: from_behind}
@@ -170,17 +178,17 @@ keywords:
       - {effect: summon}
       - {effect: rule_change, rule: afterimage_double}
     uses:
-      - {condition: adjacent_ally}   # 通用：召喚物也是友方；以下是對友方生效的效果（召喚物也算友方）
-      - {effect: apply_status, affects: allies}   # 通用
-      - {effect: restore_resource, affects: allies}   # 通用
-      - {effect: reset_cooldown, affects: allies}   # 通用
-      - {effect: grant_skill, affects: allies}   # 通用
-      - {effect: redirect_damage}   # 通用
-      - {effect: extra_reaction, affects: allies}   # 通用
-      - {effect: cheat_death, affects: allies}   # 通用
-      - {effect: zone, affects: allies}   # 通用
-      - {effect: swap, affects: allies}   # 通用
-      - {effect: revive}   # 通用
+      - {condition: adjacent_ally, grade: general}   # 通用：召喚物也是友方；以下是對友方生效的效果（召喚物也算友方）
+      - {effect: apply_status, affects: allies, grade: general}   # 通用
+      - {effect: restore_resource, affects: allies, grade: general}   # 通用
+      - {effect: reset_cooldown, affects: allies, grade: general}   # 通用
+      - {effect: grant_skill, affects: allies, grade: general}   # 通用
+      - {effect: redirect_damage, grade: general}   # 通用
+      - {effect: extra_reaction, affects: allies, grade: general}   # 通用
+      - {effect: cheat_death, affects: allies, grade: general}   # 通用
+      - {effect: zone, affects: allies, grade: general}   # 通用
+      - {effect: swap, affects: allies, grade: general}   # 通用
+      - {effect: revive, grade: general}   # 通用
       - {change: summon_hp_permille}
       - {change: summon_attack_dice}
-      - {effect: intercept}   # 通用
+      - {effect: intercept, grade: general}   # 通用

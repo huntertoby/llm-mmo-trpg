@@ -733,6 +733,96 @@
         }
       }
     },
+    "/api/runs/start-options": {
+      "get": {
+        "tags": [
+          "runs"
+        ],
+        "summary": "Get Start Options",
+        "description": "開局可選的武器（``weapons.yaml`` 全部）與關鍵字（推導表順序）。",
+        "operationId": "get_start_options_api_runs_start_options_get",
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/StartOptions"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/runs/start-preview": {
+      "post": {
+        "tags": [
+          "runs"
+        ],
+        "summary": "Post Start Preview",
+        "description": "每個關鍵字的池會給哪一招（同種子確定）：已選的依選擇順序是實際會拿到的；沒選的是「下一個\n選它」時會拿到的。湊不到時 ``skill`` 為 ``None``（不可選）。",
+        "operationId": "post_start_preview_api_runs_start_preview_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/StartPreviewRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/StartPreview"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/runs/dev-packs": {
+      "get": {
+        "tags": [
+          "runs"
+        ],
+        "summary": "List Dev Packs",
+        "description": "開發者起始包（``dev_starters.yaml``；開發用，玩家介面不顯示）。",
+        "operationId": "list_dev_packs_api_runs_dev_packs_get",
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "items": {
+                    "$ref": "#/components/schemas/DevPackOut"
+                  },
+                  "type": "array",
+                  "title": "Response List Dev Packs Api Runs Dev Packs Get"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
     "/api/runs/rules": {
       "get": {
         "tags": [
@@ -2647,7 +2737,14 @@
       "CreateRunRequest": {
         "properties": {
           "build": {
-            "type": "string",
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
             "title": "Build"
           },
           "seed": {
@@ -2672,16 +2769,51 @@
               }
             ],
             "title": "Attributes"
+          },
+          "weapon": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Weapon"
+          },
+          "keywords": {
+            "anyOf": [
+              {
+                "items": {
+                  "type": "string"
+                },
+                "type": "array"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Keywords"
+          },
+          "dev_pack": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Dev Pack"
           }
         },
         "additionalProperties": false,
         "type": "object",
         "required": [
-          "build",
           "seed"
         ],
         "title": "CreateRunRequest",
-        "description": "開新一輪：起始 build、種子、開局配點（省略時全部點在技能最常用的縮放屬性）。"
+        "description": "開新一輪（Phase 3-24b2）：``weapon`` ＋ ``keywords``（一般開局），或 ``dev_pack``（開發者\n起始包），或 ``build``（回歸範本，開發與測試用）——三者擇一；種子；開局配點（省略時全部點在\n武器的縮放屬性，以 build 開局時為技能最常用的縮放屬性）。"
       },
       "DamageOut": {
         "properties": {
@@ -2823,6 +2955,44 @@
         ],
         "title": "Defend",
         "description": "守護（Phase 3-21a，玩法 #24；內部 ID 仍為 ``defend``）：防禦值 +25%，到自己的下回合開始。\n\n``target_id`` 為 ``None`` 時守護自己；給相鄰隊友時，敵人以單體攻擊該隊友、且自己仍與他相鄰\n時，改由自己承受（每輪上限 ``guard_transfers_per_round``，範圍技能不轉移）。"
+      },
+      "DevPackOut": {
+        "properties": {
+          "id": {
+            "type": "string",
+            "title": "Id"
+          },
+          "label_zh": {
+            "type": "string",
+            "title": "Label Zh"
+          },
+          "weapon": {
+            "type": "string",
+            "title": "Weapon"
+          },
+          "weapon_name_zh": {
+            "type": "string",
+            "title": "Weapon Name Zh"
+          },
+          "keywords": {
+            "items": {
+              "$ref": "#/components/schemas/KeywordRef"
+            },
+            "type": "array",
+            "title": "Keywords"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "id",
+          "label_zh",
+          "weapon",
+          "weapon_name_zh",
+          "keywords"
+        ],
+        "title": "DevPackOut",
+        "description": "開發者起始包（Phase 3-24b2，開發用；只在開發者選單顯示）。"
       },
       "Direction": {
         "type": "string",
@@ -3656,6 +3826,25 @@
             },
             "type": "array",
             "title": "Skills"
+          },
+          "start_keywords": {
+            "items": {
+              "$ref": "#/components/schemas/KeywordRef"
+            },
+            "type": "array",
+            "title": "Start Keywords",
+            "default": []
+          },
+          "dev_pack": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Dev Pack"
           }
         },
         "additionalProperties": false,
@@ -4569,6 +4758,14 @@
             },
             "type": "array",
             "title": "Off Route"
+          },
+          "tags": {
+            "items": {
+              "$ref": "#/components/schemas/OfferTagOut"
+            },
+            "type": "array",
+            "title": "Tags",
+            "default": []
           }
         },
         "additionalProperties": false,
@@ -4581,6 +4778,53 @@
           "off_route"
         ],
         "title": "OfferOut"
+      },
+      "OfferTagOut": {
+        "properties": {
+          "kind": {
+            "type": "string",
+            "enum": [
+              "deepen",
+              "bridge",
+              "new"
+            ],
+            "title": "Kind"
+          },
+          "label_zh": {
+            "type": "string",
+            "title": "Label Zh"
+          },
+          "keywords": {
+            "items": {
+              "$ref": "#/components/schemas/KeywordRef"
+            },
+            "type": "array",
+            "title": "Keywords"
+          },
+          "fallback": {
+            "type": "boolean",
+            "title": "Fallback"
+          },
+          "source": {
+            "type": "string",
+            "enum": [
+              "pool",
+              "composer"
+            ],
+            "title": "Source"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "kind",
+          "label_zh",
+          "keywords",
+          "fallback",
+          "source"
+        ],
+        "title": "OfferTagOut",
+        "description": "候選的標示（Phase 3-24b2）：加深／橋接／新方向與它帶的關鍵字。"
       },
       "OrderSet": {
         "properties": {
@@ -6340,6 +6584,167 @@
         ],
         "title": "SkillReasons",
         "description": "主角灰掉的技能 → 引擎的拒絕理由（繁體中文）；可以用的技能不在表內（Phase 3-5c-2）。"
+      },
+      "StartKeywordOption": {
+        "properties": {
+          "keyword": {
+            "$ref": "#/components/schemas/KeywordRef"
+          },
+          "selected": {
+            "type": "boolean",
+            "title": "Selected"
+          },
+          "skill": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/SkillCard"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "keyword",
+          "selected",
+          "skill"
+        ],
+        "title": "StartKeywordOption",
+        "description": "一個關鍵字的起始技能預覽：``skill`` 為 ``None`` 表示這把武器湊不到（不可選）。已選的關鍵字\n是實際會拿到的技能；沒選的是「下一個選它」時會拿到的技能。"
+      },
+      "StartOptions": {
+        "properties": {
+          "weapons": {
+            "items": {
+              "$ref": "#/components/schemas/StartWeaponOption"
+            },
+            "type": "array",
+            "title": "Weapons"
+          },
+          "keywords": {
+            "items": {
+              "$ref": "#/components/schemas/KeywordRef"
+            },
+            "type": "array",
+            "title": "Keywords"
+          },
+          "keyword_count": {
+            "type": "integer",
+            "title": "Keyword Count"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "weapons",
+          "keywords",
+          "keyword_count"
+        ],
+        "title": "StartOptions",
+        "description": "開局選項（Phase 3-24b2）：全部武器、全部關鍵字、要選幾個關鍵字。"
+      },
+      "StartPreview": {
+        "properties": {
+          "weapon": {
+            "type": "string",
+            "title": "Weapon"
+          },
+          "seed": {
+            "type": "integer",
+            "title": "Seed"
+          },
+          "options": {
+            "items": {
+              "$ref": "#/components/schemas/StartKeywordOption"
+            },
+            "type": "array",
+            "title": "Options"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "weapon",
+          "seed",
+          "options"
+        ],
+        "title": "StartPreview"
+      },
+      "StartPreviewRequest": {
+        "properties": {
+          "weapon": {
+            "type": "string",
+            "title": "Weapon"
+          },
+          "seed": {
+            "type": "integer",
+            "maximum": 1.8446744073709552e+19,
+            "minimum": 0.0,
+            "title": "Seed"
+          },
+          "keywords": {
+            "items": {
+              "type": "string"
+            },
+            "type": "array",
+            "title": "Keywords",
+            "default": []
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "weapon",
+          "seed"
+        ],
+        "title": "StartPreviewRequest",
+        "description": "開局預覽：武器、種子與目前已選的關鍵字（依選擇順序）。"
+      },
+      "StartWeaponOption": {
+        "properties": {
+          "id": {
+            "type": "string",
+            "title": "Id"
+          },
+          "name_zh": {
+            "type": "string",
+            "title": "Name Zh"
+          },
+          "weapon_class": {
+            "type": "string",
+            "title": "Weapon Class"
+          },
+          "traits_zh": {
+            "items": {
+              "type": "string"
+            },
+            "type": "array",
+            "title": "Traits Zh",
+            "default": []
+          },
+          "hp": {
+            "type": "integer",
+            "title": "Hp"
+          },
+          "mana": {
+            "type": "integer",
+            "title": "Mana"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "id",
+          "name_zh",
+          "weapon_class",
+          "hp",
+          "mana"
+        ],
+        "title": "StartWeaponOption",
+        "description": "開局可選的武器（Phase 3-24b2）。"
       },
       "StatusChanceOut": {
         "properties": {

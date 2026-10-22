@@ -10,7 +10,7 @@
 
 from __future__ import annotations
 
-from collections.abc import Iterator
+from collections.abc import Iterable, Iterator
 from dataclasses import dataclass
 
 from trpg.content.skill_keywords import KeywordRule, KeywordTable
@@ -161,17 +161,30 @@ def _change_matches(rule: KeywordRule, modifier: ModifierSpec) -> bool:
     return _params_match(plain, modifier.change)
 
 
-def derive_from_facts(facts: Facts, table: KeywordTable) -> SkillKeywords:
+def derive_from_facts(
+    facts: Facts, table: KeywordTable, *, exclusive_only: bool = False
+) -> SkillKeywords:
     makes: list[str] = []
     uses: list[str] = []
+
+    def hit(rules: Iterable[KeywordRule]) -> bool:
+        return any(
+            _rule_matches(rule, facts)
+            for rule in rules
+            if not exclusive_only or rule.grade == "exclusive"
+        )
+
     for keyword in table.keywords:
-        if any(_rule_matches(rule, facts) for rule in keyword.makes):
+        if hit(keyword.makes):
             makes.append(keyword.id)
-        if any(_rule_matches(rule, facts) for rule in keyword.uses):
+        if hit(keyword.uses):
             uses.append(keyword.id)
     return SkillKeywords(tuple(makes), tuple(uses))
 
 
-def derive_keywords(skill: SkillDef, table: KeywordTable) -> SkillKeywords:
-    """``skill`` 製造與利用的關鍵字（純函式；依 ``table`` 的順序）。"""
-    return derive_from_facts(facts_of(skill), table)
+def derive_keywords(
+    skill: SkillDef, table: KeywordTable, *, exclusive_only: bool = False
+) -> SkillKeywords:
+    """``skill`` 製造與利用的關鍵字（純函式；依 ``table`` 的順序）。``exclusive_only`` 只看專屬規則
+    （``grade: exclusive``；開局技能池與候選產生器用，Phase 3-24b2 PM 決定）。"""
+    return derive_from_facts(facts_of(skill), table, exclusive_only=exclusive_only)

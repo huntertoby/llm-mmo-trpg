@@ -12,8 +12,11 @@
 from __future__ import annotations
 
 import hashlib
+from collections import Counter
+from collections.abc import Mapping, Sequence
 
 from trpg.content.library import ContentLibrary
+from trpg.engine.actions import MANAGEMENT_ACTION_TYPES, Step
 from trpg.engine.results import battle_result
 from trpg.engine.setup import BattleSetup, UnitSpawn, build_setup
 from trpg.engine.state import BattleState, state_to_json
@@ -36,6 +39,7 @@ from trpg.roguelite.state import (
 from trpg.shared.types import Team, UnitId
 
 __all__ = [
+    "add_behavior",
     "apply_choice",
     "battle_setup",
     "finish_battle",
@@ -103,10 +107,30 @@ def level_for(library: ContentLibrary, xp: int) -> int:
     return 1 + sum(1 for t in library.roguelite.level_thresholds if xp >= t)
 
 
+def add_behavior(
+    behavior: Mapping[str, int], actions: Sequence[Step], hero: UnitId
+) -> dict[str, int]:
+    """行為紀錄（候選產生器用，Phase 3-24b2）：把主角在 ``actions`` 裡做過的動作類型累加進
+    ``behavior``（不含結束回合等管理操作與暫停中的決定；施放技能記為 ``use_skill``）。依類型
+    排序。"""
+    counts = Counter(behavior)
+    counts.update(
+        step.type
+        for step in actions
+        if step.unit_id == hero and step.type not in (*MANAGEMENT_ACTION_TYPES, "decision")
+    )
+    return {k: counts[k] for k in sorted(counts)}
+
+
 def finish_battle(
-    library: ContentLibrary, run: RunState, state: BattleState, steps: int
+    library: ContentLibrary,
+    run: RunState,
+    state: BattleState,
+    steps: int,
+    actions: Sequence[Step] = (),
 ) -> RunState:
-    """戰鬥結束後結算（``state`` 必須已結束）。主角在戰鬥中倒下但我方勝利時以 1 HP 繼續。"""
+    """戰鬥結束後結算（``state`` 必須已結束）。主角在戰鬥中倒下但我方勝利時以 1 HP 繼續。
+    ``actions`` 是這場的步驟（累加進行為紀錄 ``RunState.behavior``）。"""
     node = _battle_node(run)
     if not state.ended:
         raise NodeConflictError("戰鬥還沒結束")
@@ -133,9 +157,11 @@ def finish_battle(
         state_digest=hashlib.sha256(state_to_json(state).encode("utf-8")).hexdigest(),
     )
     history = (*run.history, record)
+    behavior = add_behavior(run.behavior, actions, hero_unit_id(state))
     if not won:
         return run.model_copy(
             update={
+                "behavior": behavior,
                 "hp": 0 if hero.downed else hero.hp,
                 "mana": hero.mana,
                 "source": hero.source,
@@ -154,6 +180,7 @@ def finish_battle(
             "levels_pending": run.levels_pending + gained,
             "battles_done": node.index,
             "history": history,
+            "behavior": behavior,
         }
     )
     return next_node(library, finished)

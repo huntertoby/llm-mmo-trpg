@@ -110,25 +110,32 @@ def is_starter_skill(skill: SkillDef) -> bool:
 
 
 def keyword_pools(
-    library: ContentLibrary, *, starter_only: bool = False
+    library: ContentLibrary, *, starter_only: bool = False, exclusive_only: bool = False
 ) -> dict[str, tuple[str, ...]]:
-    """每個關鍵字的技能池：關鍵字 ID → 技能 ID（排序）。``starter_only`` 只列可當起始技能的。"""
+    """每個關鍵字的技能池：關鍵字 ID → 技能 ID（排序）。``starter_only`` 只列可當起始技能的；
+    ``exclusive_only`` 只依專屬規則歸池（開局與候選產生器用）。"""
     table = library.keywords
     pools: dict[str, list[str]] = {k.id: [] for k in table.keywords}
     for skill_id in sorted(library.skills):
         skill = library.skills[skill_id]
         if starter_only and not is_starter_skill(skill):
             continue
-        for keyword_id in derive_keywords(skill, table).all():
+        for keyword_id in derive_keywords(skill, table, exclusive_only=exclusive_only).all():
             pools[keyword_id].append(skill_id)
     return {k: tuple(v) for k, v in pools.items()}
 
 
 def pool_skills(
-    library: ContentLibrary, keyword_id: str, *, starter_only: bool = True
+    library: ContentLibrary,
+    keyword_id: str,
+    *,
+    starter_only: bool = True,
+    exclusive_only: bool = False,
 ) -> tuple[SkillDef, ...]:
     """``keyword_id`` 技能池裡的技能（依 ID 排序；預設只列可當起始技能的）。"""
-    ids = keyword_pools(library, starter_only=starter_only)[keyword_id]
+    ids = keyword_pools(library, starter_only=starter_only, exclusive_only=exclusive_only)[
+        keyword_id
+    ]
     return tuple(library.skills[i] for i in ids)
 
 

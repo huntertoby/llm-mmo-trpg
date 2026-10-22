@@ -20,9 +20,10 @@ from trpg.sim.batch import (
     run_batches,
 )
 from trpg.sim.commanders import describe_commander
+from trpg.sim.keyword_sample import format_samples, keyword_samples, run_samples
 from trpg.sim.lineup import build_allies
 
-__all__ = ["cmd_sim_maps", "default_sim_maps"]
+__all__ = ["cmd_sim_keywords", "cmd_sim_maps", "default_sim_maps"]
 
 TEST_MAP_PREFIX = "test_"
 
@@ -97,4 +98,38 @@ def cmd_sim_maps(
         f"執行時間 {elapsed:.1f} 秒（{battles} 場，--jobs {jobs}）",
         file=err,
     )
+    return 0
+
+
+def cmd_sim_keywords(
+    library: ContentLibrary,
+    *,
+    samples: int,
+    seed_start: int,
+    battles: int,
+    maps: list[str] | None,
+    jobs: int,
+    out: TextIO,
+    err: TextIO,
+) -> int:
+    """``trpg sim keywords``：關鍵字組合抽樣（Phase 3-24b2，:mod:`trpg.sim.keyword_sample`）。"""
+    map_ids = default_sim_maps(library) if maps is None else maps
+    try:
+        sample_list = keyword_samples(
+            library, samples=samples, seed_start=seed_start, maps=map_ids, battles=battles
+        )
+    except (ValueError, KeyError) as exc:
+        print(f"錯誤：{exc}", file=err)
+        return 2
+    started = time.perf_counter()
+    results = run_samples(sample_list, jobs=jobs)
+    elapsed = time.perf_counter() - started
+    last = seed_start + samples - 1
+    print(
+        f"關鍵字組合抽樣：樣本種子 {seed_start}–{last}（{samples} 個樣本，每個 {battles} 場），"
+        "效用 AI；我方＝測試角色＋標準隊友，敵方＝地圖預設陣容",
+        file=out,
+    )
+    print(format_samples(library, results), file=out)
+    print(f"（{elapsed:.1f} 秒）", file=err)
     return 0

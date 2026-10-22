@@ -23,6 +23,7 @@ from trpg.content.battle import (
     WeaponTable,
 )
 from trpg.content.composer_rules import ComposerRules
+from trpg.content.dev_starters import DevStarterTable
 from trpg.content.environment import (
     AiProfileTable,
     InteractionTable,
@@ -414,6 +415,8 @@ class ContentLibrary:
     """物品（``items.yaml``，Phase 3G-G1；目前只有測試用物品）。"""
     appearance: AppearanceTable | None = None
     """裝備外觀清單（``equipment/appearance.yaml``，Phase 3G-G5a）。"""
+    dev_starters: DevStarterTable = field(default_factory=DevStarterTable)
+    """開發者起始包（``dev_starters.yaml``，Phase 3-24b2；不是設計規則，玩家介面不顯示）。"""
     files: list[tuple[Path, ContentModel]] = field(default_factory=list)
 
     def loadout_of(self, template: UnitTemplate) -> Loadout:
@@ -602,6 +605,12 @@ def load_library(  # noqa: PLR0915
     problems = workshop_problems(workshop, maps, units)
     if problems:
         raise ContentError(root / "workshop.yaml", "；".join(problems))
+    dev_starters = DevStarterTable()
+    if (root / "dev_starters.yaml").exists():
+        dev_starters = load("dev_starters.yaml", DevStarterTable)
+        problems = _dev_starter_problems(dev_starters, weapon_map, keywords, skills)
+        if problems:
+            raise ContentError(root / "dev_starters.yaml", "；".join(problems))
 
     return ContentLibrary(
         root=root,
@@ -625,8 +634,30 @@ def load_library(  # noqa: PLR0915
         affixes=affixes,
         items=items,
         appearance=appearance,
+        dev_starters=dev_starters,
         files=files,
     )
+
+
+def _dev_starter_problems(
+    table: DevStarterTable,
+    weapons: Mapping[str, WeaponDef],
+    keywords: KeywordTable,
+    skills: Mapping[str, SkillDef],
+) -> list[str]:
+    """開發者起始包的引用：武器、關鍵字、技能都要存在（Phase 3-24b2）。"""
+    known = set(keywords.ids())
+    problems: list[str] = []
+    for pack in table.packs:
+        if pack.weapon not in weapons:
+            problems.append(f"起始包 {pack.id}：未知的武器 {pack.weapon}")
+        bad = sorted(set(pack.keywords) - known)
+        if bad:
+            problems.append(f"起始包 {pack.id}：未知的關鍵字 {', '.join(bad)}")
+        missing = sorted(s for s in pack.skills if s not in skills)
+        if missing:
+            problems.append(f"起始包 {pack.id}：未知的技能 {', '.join(missing)}")
+    return problems
 
 
 def _load_summons(

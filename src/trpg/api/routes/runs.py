@@ -1,7 +1,10 @@
 """roguelite 一輪的端點（Phase 3-5a；``docs/phases/Phase3計畫.md`` 7.1）。
 
-- ``POST /api/runs``：開新一輪（build、種子、開局配點）。
+- ``POST /api/runs``：開新一輪（起始武器 ＋ 關鍵字，或開發者起始包；種子、開局配點）。
 - ``GET /api/runs/rules``：開局規則（配點數、基礎屬性）。
+- ``GET /api/runs/start-options``：開局可選的武器與關鍵字（Phase 3-24b2）。
+- ``POST /api/runs/start-preview``：開局預覽——每個關鍵字的池會給哪一招起始技能（Phase 3-24b2）。
+- ``GET /api/runs/dev-packs``：開發者起始包（Phase 3-24b2；開發用，網頁只在 ``?dev=1`` 顯示）。
 - ``GET /api/runs/saves``：存檔列表。
 - ``POST /api/runs/load``：讀檔（``run_id``）；戰鬥中的存檔重播到存檔當下。
 - ``GET /api/runs/{run_id}``：一輪的狀態（戰鬥已結束時先結算）。
@@ -20,18 +23,27 @@ from __future__ import annotations
 from fastapi import APIRouter, Request
 
 from trpg.api.presenter import battle_response
-from trpg.api.run_presenter import run_response, save_summary
+from trpg.api.run_presenter import keyword_refs, run_response, save_summary
 from trpg.api.run_schemas import (
     CreateRunRequest,
+    DevPackOut,
     LoadRunRequest,
     RunBattleResponse,
     RunResponse,
     RunRules,
     SaveOut,
     SaveSummary,
+    StartKeywordOption,
+    StartOptions,
+    StartPreview,
+    StartPreviewRequest,
+    StartWeaponOption,
 )
 from trpg.api.runs import RunSession, RunStore
 from trpg.api.state import runs_of
+from trpg.content.skills import SkillDef
+from trpg.narrative.skills import skill_card
+from trpg.roguelite.start import start_weapons, starter_pools, starting_skill
 from trpg.roguelite.state import Choice
 
 __all__ = ["router"]
@@ -47,9 +59,91 @@ def _respond(store: RunStore, session: RunSession) -> RunResponse:
 @router.post("", status_code=201)
 def create_run(body: CreateRunRequest, request: Request) -> RunResponse:
     store = runs_of(request)
-    session = store.create(body.build, body.seed, body.attributes)
+    session = store.create(
+        body.seed,
+        body.attributes,
+        weapon=body.weapon,
+        keywords=body.keywords,
+        dev_pack=body.dev_pack,
+        build=body.build,
+    )
     with session.lock:
         return _respond(store, session)
+
+
+@router.get("/start-options")
+def get_start_options(request: Request) -> StartOptions:
+    """開局可選的武器（``weapons.yaml`` 全部）與關鍵字（推導表順序）。"""
+    library = runs_of(request).library
+    rules = library.roguelite
+    core = library.ruleset.core
+    weapons = []
+    for weapon_id in start_weapons(library):
+        weapon = library.weapons[weapon_id]
+        hero = rules.start.heroes[weapon.weapon_class]
+        hp = core.run_max_hp(hero.max_hp, rules.base_attribute, 1)
+        weapons.append(
+            StartWeaponOption(
+                id=weapon.id,
+                name_zh=weapon.name_zh,
+                weapon_class=weapon.weapon_class,
+                traits_zh=weapon.trait_lines_zh(),
+                hp=hp,
+                mana=hero.max_mana,
+            )
+        )
+    return StartOptions(
+        weapons=tuple(weapons),
+        keywords=keyword_refs(library, library.keywords.ids()),
+        keyword_count=rules.start.keywords,
+    )
+
+
+@router.post("/start-preview")
+def post_start_preview(body: StartPreviewRequest, request: Request) -> StartPreview:
+    """每個關鍵字的池會給哪一招（同種子確定）：已選的依選擇順序是實際會拿到的；沒選的是「下一個
+    選它」時會拿到的。湊不到時 ``skill`` 為 ``None``（不可選）。"""
+    library = runs_of(request).library
+    pools = starter_pools(library)
+    chosen: dict[str, SkillDef | None] = {}
+    taken: list[str] = []
+    for keyword in body.keywords:
+        found = starting_skill(library, body.weapon, keyword, body.seed, taken=taken, pools=pools)
+        chosen[keyword] = found
+        if found is not None:
+            taken.append(found.id)
+    options = []
+    for ref in keyword_refs(library, library.keywords.ids()):
+        selected = ref.id in chosen
+        skill = (
+            chosen[ref.id]
+            if selected
+            else starting_skill(library, body.weapon, ref.id, body.seed, taken=taken, pools=pools)
+        )
+        options.append(
+            StartKeywordOption(
+                keyword=ref,
+                selected=selected,
+                skill=None if skill is None else skill_card(library, skill),
+            )
+        )
+    return StartPreview(weapon=body.weapon, seed=body.seed, options=tuple(options))
+
+
+@router.get("/dev-packs")
+def list_dev_packs(request: Request) -> list[DevPackOut]:
+    """開發者起始包（``dev_starters.yaml``；開發用，玩家介面不顯示）。"""
+    library = runs_of(request).library
+    return [
+        DevPackOut(
+            id=p.id,
+            label_zh=p.label_zh,
+            weapon=p.weapon,
+            weapon_name_zh=library.weapons[p.weapon].name_zh,
+            keywords=keyword_refs(library, p.keywords),
+        )
+        for p in library.dev_starters.packs
+    ]
 
 
 @router.get("/rules")

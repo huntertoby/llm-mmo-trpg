@@ -7,13 +7,14 @@ from trpg.api.run_schemas import (
     HeroOut,
     NodeOut,
     OfferOut,
+    OfferTagOut,
     RunResponse,
     SaveSummary,
 )
 from trpg.api.runs import RunSession
 from trpg.content.library import ContentLibrary
 from trpg.content.skills import SkillDef
-from trpg.narrative.skills import SkillCard, skill_card
+from trpg.narrative.skills import KeywordRef, SkillCard, skill_card
 from trpg.roguelite import RunSave, RunState
 from trpg.roguelite.offers import skill_defs
 from trpg.roguelite.state import (
@@ -24,7 +25,28 @@ from trpg.roguelite.state import (
     SkillOffer,
 )
 
-__all__ = ["run_response", "save_summary"]
+__all__ = ["keyword_refs", "run_response", "save_summary", "start_label"]
+
+_TAG_LABELS = {"deepen": "加深", "bridge": "橋接", "new": "新方向"}
+
+
+def keyword_refs(library: ContentLibrary, ids: tuple[str, ...]) -> tuple[KeywordRef, ...]:
+    defs = library.keywords.by_id()
+    return tuple(
+        KeywordRef(id=k, name_zh=defs[k].name_zh, description_zh=defs[k].description_zh)
+        for k in ids
+    )
+
+
+def start_label(library: ContentLibrary, run: RunState) -> str:
+    """一輪的開局說明（存檔列表用；不含任何流派名稱）：「單手劍・點燃＋倒地」。以 build 開局時用
+    build 的名稱（回歸範本，開發用）。"""
+    if run.start is None:
+        build = next((b for b in library.builds.builds if b.id == run.build_id), None)
+        return build.name_zh if build is not None else (run.build_id or "")
+    weapon = library.weapons.get(run.start.weapon)
+    names = "＋".join(r.name_zh for r in keyword_refs(library, run.start.keywords))
+    return f"{weapon.name_zh if weapon is not None else run.start.weapon}・{names}"
 
 
 def _card(library: ContentLibrary, run: RunState, skill: SkillDef) -> SkillCard:
@@ -46,6 +68,16 @@ def _offer(library: ContentLibrary, run: RunState, offer: SkillOffer | None) -> 
         top_attribute=offer.top_attribute,
         candidates=tuple(_card(library, run, s) for s in offer.candidates),
         off_route=offer.off_route,
+        tags=tuple(
+            OfferTagOut(
+                kind=t.kind,
+                label_zh=_TAG_LABELS[t.kind],
+                keywords=keyword_refs(library, t.keywords),
+                fallback=t.fallback,
+                source=t.source,
+            )
+            for t in offer.tags
+        ),
     )
 
 
@@ -75,7 +107,7 @@ def _hero(library: ContentLibrary, run: RunState) -> HeroOut:
     thresholds = library.roguelite.level_thresholds
     weapon = library.weapons.get(run.hero.weapon)
     return HeroOut(
-        build_id=run.build_id,
+        build_id=run.build_id or "",
         name_zh=run.hero.name_zh,
         level=run.level,
         xp=run.xp,
@@ -94,6 +126,8 @@ def _hero(library: ContentLibrary, run: RunState) -> HeroOut:
         weapon_class=weapon.weapon_class if weapon is not None else "",
         weapon_traits_zh=weapon.trait_lines_zh() if weapon is not None else (),
         skills=tuple(_card(library, run, s) for s in skill_defs(library, run, run.hero.skills)),
+        start_keywords=() if run.start is None else keyword_refs(library, run.start.keywords),
+        dev_pack=None if run.start is None else run.start.dev_pack,
     )
 
 
@@ -125,11 +159,10 @@ def run_response(session: RunSession) -> RunResponse:
 
 def save_summary(library: ContentLibrary, save: RunSave) -> SaveSummary:
     run = save.run
-    build_name = next((b.name_zh for b in library.builds.builds if b.id == run.build_id), None)
     return SaveSummary(
         run_id=save.run_id,
-        build_id=run.build_id,
-        build_name_zh=build_name or run.build_id,
+        build_id=run.build_id or "",
+        build_name_zh=start_label(library, run),
         seed=run.seed,
         level=run.level,
         battles_done=run.battles_done,

@@ -19,16 +19,20 @@ def _offer(run: RunState) -> SkillOffer:
 
 
 @pytest.mark.parametrize("build", BUILDS)
-def test_offer_has_three_candidates_with_one_off_route(build: str) -> None:
+def test_offer_has_deepen_bridge_new_candidates(build: str) -> None:
+    """Phase 3-24b2：候選來自共用產生器（加深、橋接、新方向），與武器相容、主角沒有、階級相符；
+    off_route 仍標示縮放屬性與最高屬性不同的候選。"""
     lib = library()
-    for seed in range(4):
+    for seed in range(3):
         run = new_run(lib, build, seed)
         offer = _offer(run)
         top = top_attribute(run.hero.attributes)
         assert offer.top_attribute is top
         assert len(offer.candidates) == 3
-        assert offer.off_route == (2,)
-        assert [s.scaling_attr == top for s in offer.candidates] == [True, True, False]
+        assert [t.kind for t in offer.tags] == ["deepen", "bridge", "new"]
+        assert offer.off_route == tuple(
+            i for i, s in enumerate(offer.candidates) if s.scaling_attr != top
+        )
         weapon = lib.weapons[run.hero.weapon].weapon_class
         for skill in offer.candidates:
             assert weapon_problem(skill, weapon) is None
@@ -62,14 +66,41 @@ def _with_free_slots(run: RunState) -> RunState:
     return run.model_copy(update={"hero": hero})
 
 
+def _composed_offer(run: RunState) -> tuple[RunState, SkillOffer, int]:
+    """找一組有「組合器」來源候選的候選（回傳該組的一輪狀態、候選與索引）。"""
+    for n in range(20):
+        current = run.model_copy(update={"offers_made": n})
+        offer = _offer(current)
+        for i, tag in enumerate(offer.tags):
+            if tag.source == "composer":
+                return current, offer, i
+    raise AssertionError("找不到組合器來源的候選")
+
+
 def test_pick_adds_the_skill_and_its_definition() -> None:
     lib = library()
+    run, offer, index = _composed_offer(_with_free_slots(new_run(lib, "build_fire", 2)))
+    after = take_candidate(lib, run, offer, index, None)
+    assert after.hero.skills == (*run.hero.skills, offer.candidates[index].id)
+    assert after.generated_skills == (offer.candidates[index],)
+    assert lib.ruleset.with_skills(after.generated_skills).skill_def(offer.candidates[index].id)
+
+
+def test_picking_a_pool_skill_stores_no_definition() -> None:
+    """Phase 3-24b2：候選可以是技能池的手寫技能；裝上時不存定義（內容庫就有）。"""
+    lib = library()
     run = _with_free_slots(new_run(lib, "build_fire", 2))
-    offer = _offer(run)
-    after = take_candidate(lib, run, offer, 0, None)
-    assert after.hero.skills == (*run.hero.skills, offer.candidates[0].id)
-    assert after.generated_skills == (offer.candidates[0],)
-    assert lib.ruleset.with_skills(after.generated_skills).skill_def(offer.candidates[0].id)
+    for n in range(20):
+        current = run.model_copy(update={"offers_made": n})
+        offer = _offer(current)
+        pool = [i for i, t in enumerate(offer.tags) if t.source == "pool"]
+        if pool:
+            after = take_candidate(lib, current, offer, pool[0], None)
+            assert offer.candidates[pool[0]].id in lib.skills
+            assert after.hero.skills[-1] == offer.candidates[pool[0]].id
+            assert after.generated_skills == ()
+            return
+    raise AssertionError("找不到技能池來源的候選")
 
 
 def test_full_slots_require_a_replacement() -> None:
@@ -110,12 +141,18 @@ def test_equip_limits_are_six_three_one() -> None:
 
 def test_replaced_generated_skills_are_dropped() -> None:
     lib = library()
-    run = _with_free_slots(new_run(lib, "build_fire", 2))
-    first = take_candidate(lib, run, _offer(run), 0, None)
+    run, offer, index = _composed_offer(_with_free_slots(new_run(lib, "build_fire", 2)))
+    first = take_candidate(lib, run, offer, index, None)
     gen = first.generated_skills[0]
-    second_offer = _offer(first.model_copy(update={"offers_made": 1}))
-    pick = next(
-        i for i, s in enumerate(second_offer.candidates) if s.kind == gen.kind and s.id != gen.id
-    )
-    second = take_candidate(lib, first, second_offer, pick, gen.id)
-    assert [s.id for s in second.generated_skills] == [second_offer.candidates[pick].id]
+    for n in range(run.offers_made + 1, run.offers_made + 30):
+        second_offer = _offer(first.model_copy(update={"offers_made": n}))
+        picks = [
+            i
+            for i, (s, t) in enumerate(zip(second_offer.candidates, second_offer.tags, strict=True))
+            if s.kind == gen.kind and s.id != gen.id and t.source == "composer"
+        ]
+        if picks:
+            second = take_candidate(lib, first, second_offer, picks[0], gen.id)
+            assert [s.id for s in second.generated_skills] == [second_offer.candidates[picks[0]].id]
+            return
+    raise AssertionError("找不到可替換的生成技能候選")

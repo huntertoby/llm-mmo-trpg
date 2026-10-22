@@ -2519,3 +2519,49 @@ button.selected {
   align-items: center;
   gap: 2px;
 }
+
+/* Phase 3-24b2：新開局（武器 ＋ 2 個關鍵字）與三選一的「加深／橋接／新方向」標示 */
+.run-weapon-list,
+.run-keyword-list {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  margin: 4px 0 8px;
+}
+.run-weapon,
+.run-keyword {
+  text-align: left;
+}
+.run-keyword.unavailable {
+  opacity: 0.45;
+}
+.run-start-preview {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+  margin: 6px 0 10px;
+}
+.run-start-preview-card {
+  flex: 1 1 260px;
+  max-width: 360px;
+}
+.run-dev-packs {
+  margin-top: 12px;
+  border-style: dashed;
+}
+.offer-kind-tag {
+  padding: 2px 6px;
+  margin-bottom: 4px;
+  border-radius: 4px;
+  border-left: 4px solid #8a8a8a;
+  background: rgba(255, 255, 255, 0.05);
+}
+.offer-kind-deepen {
+  border-left-color: #d9822b;
+}
+.offer-kind-bridge {
+  border-left-color: #3fa7d6;
+}
+.offer-kind-new {
+  border-left-color: #59b36b;
+}

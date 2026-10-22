@@ -1,0 +1,19 @@
+# 開發者起始包（Phase 3-24b2，docs/design/06-技能.md 6.27.6）：先前和使用者一起想的 12 個測試組合，方便一鍵重現
+# 有趣的組合、作為對照組。**不是設計規則**：遊戲不定義流派，玩家介面不顯示這裡的名稱；只有開發者選單（網頁加
+# ?dev=1）、CLI（trpg run auto --dev-pack）與模擬會用到。
+#
+# 每個起始包＝起始武器＋2 個關鍵字（與一般開局相同的規則：從兩個池子各給 1 招，同種子確定）。
+# skills（選填）直接指定兩招起始技能（依 keywords 的順序，必須在該關鍵字的專屬技能池裡、與武器相容）。
+packs:
+  - {id: dev_blaze,      label_zh: 烈焰, weapon: fire_staff,       keywords: [ignite, marked]}
+  - {id: dev_tidestorm,  label_zh: 潮雷, weapon: lightning_staff,  keywords: [wet, charged]}
+  - {id: dev_frost,      label_zh: 霜寒, weapon: frost_staff,      keywords: [frozen, wet]}
+  - {id: dev_quake,      label_zh: 撼地, weapon: hammer,           keywords: [collision, prone]}
+  - {id: dev_bulwark,    label_zh: 鐵壁, weapon: one_handed_sword, keywords: [prone, collision]}
+  - {id: dev_shadow,     label_zh: 影刃, weapon: dagger,           keywords: [concealed, prone]}
+  - {id: dev_hawkeye,    label_zh: 鷹眼, weapon: bow,              keywords: [high_ground, marked]}
+  - {id: dev_holy,       label_zh: 聖光, weapon: scepter,          keywords: [wet, marked]}
+  - {id: dev_spirit,     label_zh: 喚靈, weapon: totem_staff,      keywords: [summon, ignite]}
+  - {id: dev_gadget,     label_zh: 機關, weapon: crossbow,         keywords: [ignite, collision]}
+  - {id: dev_telekinesis, label_zh: 念動, weapon: fire_staff,      keywords: [prone, high_ground]}
+  - {id: dev_bloodrage,  label_zh: 血怒, weapon: axe,              keywords: [prone, ignite]}

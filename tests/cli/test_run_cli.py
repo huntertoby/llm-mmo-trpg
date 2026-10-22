@@ -30,11 +30,11 @@ def test_run_new_writes_a_save_and_show_reads_it(
     assert "力量 13" in out and "體質 11" in out
     assert "第 6 場 Boss" in out
     raw = json.loads(saves[0].read_text(encoding="utf-8"))
-    assert raw["format"] == "trpg-run/2"
+    assert raw["format"] == "trpg-run/3"
     assert raw["run"]["seed"] == 4
     code, shown, _ = _run(["run", "show", str(saves[0])], capsys)
     assert code == 0
-    assert "trpg-run/2" in shown and "build_push" in shown and "目前：戰鬥" in shown
+    assert "trpg-run/3" in shown and "build_push" in shown and "目前：戰鬥" in shown
 
 
 @pytest.mark.parametrize(
@@ -104,3 +104,55 @@ def test_run_auto_ten_seeds_without_exceptions(capsys: pytest.CaptureFixture[str
         code, out, err = _run(["run", "auto", "--seed", str(seed)], capsys)
         assert code == 0, err
         assert out.splitlines()[-1].startswith("結果：")
+
+
+# ---------------------------------------------------------------------------
+# Phase 3-24b2：新開局（武器 ＋ 關鍵字）、開發者起始包、沒有指定時以種子抽
+# ---------------------------------------------------------------------------
+
+
+def test_run_new_with_weapon_and_keywords(
+    tmp_path: Path, capsys: pytest.CaptureFixture[str]
+) -> None:
+    argv = ["run", "new", "--seed", "4", "--weapon", "bow", "--keywords", "marked,ignite"]
+    code, out, _ = _run([*argv, "--save-dir", str(tmp_path)], capsys)
+    assert code == 0
+    assert "弓（bow）＋標記、點燃" in out
+    raw = json.loads(next(tmp_path.glob("run-*.json")).read_text(encoding="utf-8"))
+    start = raw["run"]["start"]
+    assert start == {"weapon": "bow", "keywords": ["marked", "ignite"], "dev_pack": None}
+
+
+@pytest.mark.parametrize(
+    ("argv", "message"),
+    [
+        (["--weapon", "bow", "--keywords", "wet,marked"], "沒有弓能用的起始技能"),
+        (["--weapon", "bow", "--keywords", "marked"], "2 個不同的關鍵字"),
+        (["--dev-pack", "dev_nobody"], "未知的開發者起始包"),
+        (["--dev-pack", "dev_blaze", "--build", "build_push"], "只能擇一"),
+    ],
+)
+def test_run_new_rejects_bad_starts(
+    argv: list[str], message: str, tmp_path: Path, capsys: pytest.CaptureFixture[str]
+) -> None:
+    code, _, err = _run(["run", "new", "--seed", "1", *argv, "--save-dir", str(tmp_path)], capsys)
+    assert code == 2
+    assert message in err
+
+
+@pytest.mark.parametrize("seed", [1, 2, 3])
+def test_run_auto_without_a_start_draws_weapon_and_keywords(
+    seed: int, capsys: pytest.CaptureFixture[str]
+) -> None:
+    """驗收：``trpg run auto`` 3 個種子能跑完（沒有指定開局時以種子抽武器與 2 個關鍵字）。"""
+    code, out, _ = _run(["run", "auto", "--seed", str(seed)], capsys)
+    assert code == 0
+    first = out.splitlines()[0]
+    assert first.startswith(f"一輪：種子 {seed}，") and "＋" in first
+    assert out.splitlines()[-1].startswith("結果：")
+
+
+def test_run_auto_with_a_dev_pack(capsys: pytest.CaptureFixture[str]) -> None:
+    code, out, _ = _run(["run", "auto", "--seed", "1", "--dev-pack", "dev_tidestorm"], capsys)
+    assert code == 0
+    assert "〔起始包 dev_tidestorm〕" in out and "潮雷" not in out

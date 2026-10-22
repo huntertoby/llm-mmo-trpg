@@ -109,7 +109,7 @@ def auto_play(
             battle.auto(None if stop is None else _battle_stop(stop, run))
             if not current.state.ended:
                 return run, current
-            run = finish_battle(library, run, current.state, len(current.steps))
+            run = finish_battle(library, run, current.state, len(current.steps), current.steps)
             battle = None
         else:
             run = apply_choice(library, run, auto_choice(library, run))

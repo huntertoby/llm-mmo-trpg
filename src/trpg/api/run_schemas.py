@@ -4,11 +4,11 @@ from __future__ import annotations
 
 from typing import Literal
 
-from pydantic import BaseModel, ConfigDict, Field
+from pydantic import BaseModel, ConfigDict, Field, model_validator
 
 from trpg.api.schemas import BattleResponse
 from trpg.content.maps import Objective
-from trpg.narrative.skills import SkillCard
+from trpg.narrative.skills import KeywordRef, SkillCard
 from trpg.roguelite.save import RUN_ID_PATTERN
 from trpg.roguelite.state import BattleRecord
 from trpg.shared.rng import MASK64
@@ -17,15 +17,22 @@ from trpg.shared.types import Attribute
 __all__ = [
     "BattlePlanOut",
     "CreateRunRequest",
+    "DevPackOut",
     "HeroOut",
     "LoadRunRequest",
     "NodeOut",
     "OfferOut",
+    "OfferTagOut",
     "RunBattleResponse",
     "RunResponse",
     "RunRules",
     "SaveOut",
     "SaveSummary",
+    "StartKeywordOption",
+    "StartOptions",
+    "StartPreview",
+    "StartPreviewRequest",
+    "StartWeaponOption",
 ]
 
 
@@ -34,11 +41,85 @@ class _ApiModel(BaseModel):
 
 
 class CreateRunRequest(_ApiModel):
-    """開新一輪：起始 build、種子、開局配點（省略時全部點在技能最常用的縮放屬性）。"""
+    """開新一輪（Phase 3-24b2）：``weapon`` ＋ ``keywords``（一般開局），或 ``dev_pack``（開發者
+    起始包），或 ``build``（回歸範本，開發與測試用）——三者擇一；種子；開局配點（省略時全部點在
+    武器的縮放屬性，以 build 開局時為技能最常用的縮放屬性）。"""
 
-    build: str
+    build: str | None = None
     seed: int = Field(ge=0, le=MASK64)
     attributes: dict[Attribute, int] | None = None
+    weapon: str | None = None
+    """起始武器（Phase 3-24b2）。"""
+    keywords: tuple[str, ...] | None = None
+    """選的關鍵字（Phase 3-24b2；``roguelite.yaml`` 的 ``start.keywords`` 個）。"""
+    dev_pack: str | None = None
+    """開發者起始包 ID（Phase 3-24b2，開發用）。"""
+
+    @model_validator(mode="after")
+    def _one_start(self) -> CreateRunRequest:
+        given = [
+            self.build is not None,
+            self.dev_pack is not None,
+            self.weapon is not None or self.keywords is not None,
+        ]
+        if sum(given) != 1:
+            raise ValueError("開局必須擇一：weapon＋keywords、dev_pack 或 build")
+        if (self.weapon is None) != (self.keywords is None):
+            raise ValueError("weapon 與 keywords 必須一起給")
+        return self
+
+
+class StartWeaponOption(_ApiModel):
+    """開局可選的武器（Phase 3-24b2）。"""
+
+    id: str
+    name_zh: str
+    weapon_class: str
+    traits_zh: tuple[str, ...] = ()
+    hp: int
+    """選這把武器時主角的最大 HP（未配點）。"""
+    mana: int
+
+
+class StartOptions(_ApiModel):
+    """開局選項（Phase 3-24b2）：全部武器、全部關鍵字、要選幾個關鍵字。"""
+
+    weapons: tuple[StartWeaponOption, ...]
+    keywords: tuple[KeywordRef, ...]
+    keyword_count: int
+
+
+class StartPreviewRequest(_ApiModel):
+    """開局預覽：武器、種子與目前已選的關鍵字（依選擇順序）。"""
+
+    weapon: str
+    seed: int = Field(ge=0, le=MASK64)
+    keywords: tuple[str, ...] = ()
+
+
+class StartKeywordOption(_ApiModel):
+    """一個關鍵字的起始技能預覽：``skill`` 為 ``None`` 表示這把武器湊不到（不可選）。已選的關鍵字
+    是實際會拿到的技能；沒選的是「下一個選它」時會拿到的技能。"""
+
+    keyword: KeywordRef
+    selected: bool
+    skill: SkillCard | None
+
+
+class StartPreview(_ApiModel):
+    weapon: str
+    seed: int
+    options: tuple[StartKeywordOption, ...]
+
+
+class DevPackOut(_ApiModel):
+    """開發者起始包（Phase 3-24b2，開發用；只在開發者選單顯示）。"""
+
+    id: str
+    label_zh: str
+    weapon: str
+    weapon_name_zh: str
+    keywords: tuple[KeywordRef, ...]
 
 
 class LoadRunRequest(_ApiModel):
@@ -82,6 +163,10 @@ class HeroOut(_ApiModel):
     weapon_traits_zh: tuple[str, ...] = ()
     """武器小特性的說明，每個特性一行（Phase 3-24a1）。"""
     skills: tuple[SkillCard, ...]
+    start_keywords: tuple[KeywordRef, ...] = ()
+    """開局選的關鍵字（Phase 3-24b2；以 build 開局時為空）。"""
+    dev_pack: str | None = None
+    """開發者起始包 ID（Phase 3-24b2，開發用）。"""
 
 
 class BattlePlanOut(_ApiModel):
@@ -96,6 +181,18 @@ class BattlePlanOut(_ApiModel):
     """本場的勝利條件（Phase 3-22）：全滅、撤離（出口格＋輪數）或守點（守點格＋輪數）。"""
 
 
+class OfferTagOut(_ApiModel):
+    """候選的標示（Phase 3-24b2）：加深／橋接／新方向與它帶的關鍵字。"""
+
+    kind: Literal["deepen", "bridge", "new"]
+    label_zh: str
+    """「加深」「橋接」「新方向」。"""
+    keywords: tuple[KeywordRef, ...]
+    fallback: bool
+    """定義做不到而退回（例：只持有 1 個關鍵字時的橋接改成「持有的 ＋ 新的」）。"""
+    source: Literal["pool", "composer"]
+
+
 class OfferOut(_ApiModel):
     reason: Literal["level_up", "reroll"]
     tier: int
@@ -103,6 +200,8 @@ class OfferOut(_ApiModel):
     candidates: tuple[SkillCard, ...]
     off_route: tuple[int, ...]
     """「偏離路線」候選的索引。"""
+    tags: tuple[OfferTagOut, ...] = ()
+    """與 ``candidates`` 一一對應的標示（Phase 3-24b2）。"""
 
 
 class NodeOut(_ApiModel):

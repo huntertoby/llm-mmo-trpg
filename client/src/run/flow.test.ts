@@ -43,6 +43,7 @@ function offer(count = 3, offRoute: number[] = [2]): RunOffer {
     top_attribute: "int",
     candidates: Array.from({ length: count }, (_, i) => card(`new${i}`, "active")),
     off_route: offRoute,
+    tags: [],
   };
 }
 

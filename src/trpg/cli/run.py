@@ -1,8 +1,10 @@
 """``trpg run``：roguelite 一輪（Phase 3-5a）。
 
-- ``trpg run new --seed N --build X [--attrs str=2,con=2] [--save-dir D]``：開新一輪並存檔。
-- ``trpg run auto --seed N [--build X] [--save] [--save-dir D]``：AI 代打整輪（測試與模擬用）；
-  ``--from <存檔>`` 從存檔接續（含戰鬥中）。
+- ``trpg run new --seed N --weapon W --keywords a,b [--attrs str=2,con=2] [--save-dir D]``：開新一輪
+  並存檔（Phase 3-24b2；也可用 ``--dev-pack P`` 開發者起始包，或 ``--build X`` 回歸範本）。
+- ``trpg run auto --seed N [--weapon W --keywords a,b | --dev-pack P | --build X] [--save]
+  [--save-dir D]``：AI 代打整輪（測試與模擬用）；都省略時以種子抽武器與關鍵字。``--from <存檔>``
+  從存檔接續（含戰鬥中）。
 - ``trpg run show <存檔>``：顯示存檔內容。
 """
 
@@ -12,28 +14,42 @@ import argparse
 import secrets
 import sys
 from collections.abc import Callable, Mapping
+from dataclasses import dataclass
 from pathlib import Path
 from typing import TextIO
 
 from trpg.content.library import ContentLibrary
 from trpg.roguelite import (
+    ChoiceError,
     RunError,
     RunSave,
     RunState,
     auto_play,
     load_save,
+    new_dev_run,
+    new_keyword_run,
     new_run,
     restore_battle,
     write_save,
 )
 from trpg.roguelite.offers import skill_defs
 from trpg.roguelite.save import default_save_dir
-from trpg.roguelite.start import default_build
+from trpg.roguelite.start import default_start
 from trpg.roguelite.state import BattleNode, BattleRecord, CampfireNode, LevelUpNode
 from trpg.shared.rng import MASK64
 from trpg.shared.types import Attribute
 
-__all__ = ["add_run_parser", "cmd_run_auto", "cmd_run_new", "cmd_run_show", "parse_attrs"]
+__all__ = [
+    "StartArgs",
+    "add_run_parser",
+    "cmd_run_auto",
+    "cmd_run_new",
+    "cmd_run_show",
+    "parse_attrs",
+    "parse_keywords",
+    "start_run",
+    "start_text",
+]
 
 type WithLibrary = Callable[[Callable[[ContentLibrary], int]], int]
 
@@ -53,6 +69,22 @@ def parse_attrs(text: str) -> dict[Attribute, int]:
     return result
 
 
+def parse_keywords(text: str) -> tuple[str, ...]:
+    """``ignite,prone`` → 關鍵字 ID。"""
+    return tuple(p.strip() for p in text.split(",") if p.strip())
+
+
+def _add_start_args(parser: argparse.ArgumentParser, *, build_help: str) -> None:
+    parser.add_argument("--weapon", default=None, help="起始武器（weapons.yaml 的 ID）")
+    parser.add_argument(
+        "--keywords", type=parse_keywords, default=None, help="選的關鍵字，例如 ignite,prone"
+    )
+    parser.add_argument(
+        "--dev-pack", default=None, help="開發者起始包（content/dev_starters.yaml）"
+    )
+    parser.add_argument("--build", default=None, help=build_help)
+
+
 def _seed(text: str) -> int:
     value = int(text)
     if not 0 <= value <= MASK64:
@@ -67,19 +99,24 @@ def add_run_parser(
     sub = run.add_subparsers(dest="run_command", metavar="<subcommand>", required=True)
     new = sub.add_parser("new", help="開新一輪並存檔")
     new.add_argument("--seed", type=_seed, required=True, help="一輪的種子")
-    new.add_argument("--build", required=True, help="起始 build（content/sim/builds.yaml）")
+    _add_start_args(new, build_help="回歸範本 build（content/sim/builds.yaml；開發用）")
     new.add_argument("--attrs", type=parse_attrs, default=None, help="開局配點，例如 str=2,con=2")
     new.add_argument("--save-dir", type=Path, default=None, help="存檔資料夾（預設 saves/）")
     new.set_defaults(
         func=lambda a: with_library(
             lambda lib: cmd_run_new(
-                lib, seed=a.seed, build=a.build, attrs=a.attrs, save_dir=_dir(a), out=sys.stdout
+                lib,
+                seed=a.seed,
+                start=_start_of(a),
+                attrs=a.attrs,
+                save_dir=_dir(a),
+                out=sys.stdout,
             )
         )
     )
     auto = sub.add_parser("auto", help="AI 代打整輪（測試與模擬用）")
     auto.add_argument("--seed", type=_seed, default=None, help="一輪的種子（--from 時省略）")
-    auto.add_argument("--build", default=None, help="起始 build；省略時以種子抽一個")
+    _add_start_args(auto, build_help="回歸範本 build（開發用）；開局都省略時以種子抽武器與關鍵字")
     auto.add_argument("--from", dest="from_path", type=Path, default=None, help="從存檔接續")
     auto.add_argument("--save", action="store_true", help="結束後把一輪存檔")
     auto.add_argument("--save-dir", type=Path, default=None, help="存檔資料夾（預設 saves/）")
@@ -88,6 +125,50 @@ def add_run_parser(
     show.add_argument("path", type=Path, help="存檔路徑（saves/run-<id>.json）")
     show.set_defaults(
         func=lambda a: with_library(lambda lib: cmd_run_show(lib, a.path, sys.stdout))
+    )
+
+
+@dataclass(frozen=True, slots=True)
+class StartArgs:
+    """命令列的開局選擇（擇一；都沒有時 ``trpg run auto`` 以種子抽武器與關鍵字）。"""
+
+    weapon: str | None = None
+    keywords: tuple[str, ...] | None = None
+    dev_pack: str | None = None
+    build: str | None = None
+
+
+def _start_of(args: argparse.Namespace) -> StartArgs:
+    return StartArgs(
+        weapon=args.weapon, keywords=args.keywords, dev_pack=args.dev_pack, build=args.build
+    )
+
+
+def start_run(
+    library: ContentLibrary,
+    seed: int,
+    start: StartArgs,
+    attrs: Mapping[Attribute, int] | None = None,
+) -> RunState:
+    """依命令列的開局選擇開新一輪；選擇不合法時拋出 :class:`RunError`。"""
+    given = [
+        start.build is not None,
+        start.dev_pack is not None,
+        start.weapon is not None or start.keywords is not None,
+    ]
+    if sum(given) > 1:
+        raise ChoiceError("--weapon／--keywords、--dev-pack、--build 只能擇一")
+    if start.build is not None:
+        return new_run(library, start.build, seed, attrs)
+    if start.dev_pack is not None:
+        return new_dev_run(library, start.dev_pack, seed, attrs)
+    weapon, keywords = default_start(library, seed)
+    return new_keyword_run(
+        library,
+        start.weapon if start.weapon is not None else weapon,
+        start.keywords if start.keywords is not None else keywords,
+        seed,
+        attrs,
     )
 
 
@@ -103,7 +184,7 @@ def _auto(library: ContentLibrary, args: argparse.Namespace) -> int:
         library,
         sys.stdout,
         seed=args.seed,
-        build=args.build,
+        start=_start_of(args),
         from_path=args.from_path,
         save_dir=_dir(args) if args.save else None,
     )
@@ -117,13 +198,13 @@ def cmd_run_new(
     library: ContentLibrary,
     *,
     seed: int,
-    build: str,
+    start: StartArgs,
     attrs: Mapping[Attribute, int] | None,
     save_dir: Path,
     out: TextIO,
 ) -> int:
     try:
-        run = new_run(library, build, seed, attrs)
+        run = start_run(library, seed, start, attrs)
     except RunError as exc:
         print(f"錯誤：{exc}", file=sys.stderr)
         return 2
@@ -139,7 +220,7 @@ def cmd_run_auto(
     out: TextIO,
     *,
     seed: int | None = None,
-    build: str | None = None,
+    start: StartArgs | None = None,
     from_path: Path | None = None,
     save_dir: Path | None = None,
 ) -> int:
@@ -151,7 +232,7 @@ def cmd_run_auto(
             print(f"從存檔接續：{from_path}", file=out)
         else:
             assert seed is not None
-            run = new_run(library, build or default_build(library, seed), seed)
+            run = start_run(library, seed, start if start is not None else StartArgs())
             run_id, battle = _new_run_id(), None
         _print_header(library, run, out)
         final, _ = auto_play(
@@ -205,9 +286,21 @@ def _resources(library: ContentLibrary, run: RunState) -> str:
     )
 
 
+def start_text(library: ContentLibrary, run: RunState) -> str:
+    """開局說明：「單手劍（one_handed_sword）＋點燃、倒地」；開發者起始包附上 ID；以回歸範本開局時為
+    build ID 與名稱。"""
+    if run.start is None:
+        build = library.builds.by_id().get(run.build_id or "")
+        return f"{run.build_id}（{build.name_zh if build is not None else '?'}）"
+    defs = library.keywords.by_id()
+    weapon = library.weapons[run.start.weapon].name_zh
+    names = "、".join(defs[k].name_zh for k in run.start.keywords)
+    pack = f"〔起始包 {run.start.dev_pack}〕" if run.start.dev_pack else ""
+    return f"{weapon}（{run.start.weapon}）＋{names}{pack}"
+
+
 def _print_header(library: ContentLibrary, run: RunState, out: TextIO) -> None:
-    build = library.builds.by_id()[run.build_id]
-    print(f"一輪：種子 {run.seed}，{run.build_id}（{build.name_zh}），{_attrs_text(run)}", file=out)
+    print(f"一輪：種子 {run.seed}，{start_text(library, run)}，{_attrs_text(run)}", file=out)
 
 
 def _print_summary(library: ContentLibrary, run: RunState, out: TextIO) -> None:
