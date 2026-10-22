@@ -1149,6 +1149,11 @@ const TRIG: Readonly<Record<string, Draw>> = {
     arrow(c, 0, -10, 0, -3, 3);
   },
   on_enter_surface: (c) => drop(c, 0, 0, 0.9),
+  on_summon_downed: (c) => {
+    ring(c, 0, -2, 6);
+    dot(c, 0, -2, 2.4);
+    arrow(c, 0, 5, 0, 10, 3);
+  },
   every_n_hits: (c) => {
     for (let i = 0; i < 3; i++) dot(c, -6 + i * 6, 0, 2.6);
   },
@@ -1215,6 +1220,7 @@ export const TRIGGER_NAMES: Readonly<Record<string, string>> = {
   on_status_applied: "施加狀態後",
   on_collision: "造成撞擊後",
   on_enter_surface: "敵人進入你的表面時",
+  on_summon_downed: "召喚物倒下時",
   enemy_enters_adjacent: "敵人靠近時",
   enemy_leaves_adjacent: "敵人離開時",
   hit_by_spell: "被法術擊中時",
