@@ -1,4 +1,5 @@
 // 單位資訊：滑過或點選單位時顯示（文字即可）。
+import { ChargeChips } from "./ChargeChips";
 import type { BattleView, StatusView, UnitView } from "../api/types";
 import { ammoText, hasMagazine } from "../battle/ammo";
 import { bombStatusText, TIME_BOMB } from "../battle/bombs";
@@ -92,6 +93,11 @@ export function UnitInfo({ unit, names, heroId, skills, view }: Props) {
           {unit.equipment.map((e) => (
             <GearIcon key={e.slot} look={e.appearance} slot={e.slot} size={32} title={`${e.slot_zh}：${e.name_zh}${e.affixes.length > 0 ? `（${e.affixes.map((a) => a.text_zh).join("；")}）` : ""}`} />
           ))}
+        </div>
+      )}
+      {(unit.charges ?? []).length > 0 && (
+        <div className="unit-line charge-line">
+          充能：<ChargeChips charges={unit.charges ?? []} />
         </div>
       )}
       {stacks.length > 0 && (

@@ -3,6 +3,7 @@ import type { Action, AttackAction, BattleView, MoveAction, Pos } from "../api/t
 import { DIRECTIONS, objectStyle, reactionName } from "./glossary";
 import { REACTION_MODE_LABELS } from "./reactions";
 import { posKey, samePos } from "./geometry";
+import { chargeLabel } from "./targeting";
 import { unitNames, type UnitNames } from "./units";
 
 export interface LabeledAction {
@@ -74,6 +75,11 @@ export function actionLabel(
       return "裝填";
     case "vault":
       return `攀跳到 ${posText(action.dest)}`;
+    case "activate_charge": {
+      const charge = view.units.find((u) => u.id === action.unit_id)?.charges?.find((c) => c.affix_id === action.affix_id);
+      const label = chargeLabel(charge, action.affix_id);
+      return action.target_id != null ? `${label} → ${names.label(action.target_id)}` : label;
+    }
     case "run":
       return "跑步";
     case "shove":

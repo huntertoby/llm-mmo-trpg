@@ -7,6 +7,7 @@ export type BattleResponse = Schemas["BattleResponse"];
 export type BattleView = Schemas["BattleView"];
 export type TileView = Schemas["TileView"];
 export type UnitView = Schemas["UnitView"];
+export type ChargeView = Schemas["ChargeView"];
 export type ObjectView = Schemas["ObjectView"];
 export type TrapView = Schemas["TrapView"];
 export type ZoneView = Schemas["ZoneView"];

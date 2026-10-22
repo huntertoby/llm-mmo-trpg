@@ -251,8 +251,8 @@ export function BattleScreen({ initial, onExit, exitLabel, runMode }: Props) {
     [hero, response.legal_actions, cards, skillReasons],
   );
   const basic = useMemo(
-    () => withPushReasons(basicModes(response.legal_actions), response.interact_options, view),
-    [response.legal_actions, response.interact_options, view],
+    () => withPushReasons(basicModes(response.legal_actions, hero?.charges ?? []), response.interact_options, view),
+    [response.legal_actions, response.interact_options, view, hero?.charges],
   );
   const modes = useMemo(() => {
     const map = new Map<string, ActionMode>();
