@@ -15,7 +15,6 @@ from pydantic.fields import FieldInfo
 
 from trpg.content.library import ContentLibrary
 from trpg.content.skills import (
-    MAX_LIFESTEAL_PERMILLE,
     SCALE_BY_VALUES,
     ConditionDef,
     PrimitiveDef,
@@ -395,17 +394,12 @@ def _choices_for(kind: str, primitive: PrimitiveDef, ctx: ParamContext) -> tuple
 def primitive_param_fields(primitive: PrimitiveDef, ctx: ParamContext) -> tuple[FieldSpec, ...]:
     """原語的參數欄位（``skill_primitives.yaml`` 的 ``params``，依資料檔順序）。
 
-    依技能類別省略不適用的參數（武器技的傷害骰、法術技的倍率）；``lifesteal_permille`` 的上限沿用
-    schema（``MAX_LIFESTEAL_PERMILLE``）。"""
-    out: list[FieldSpec] = []
-    for name, spec in primitive.params.items():
-        if _skip_param(primitive, name, ctx.category):
-            continue
-        field = _param_field(primitive, name, spec, ctx)
-        if name == "lifesteal_permille":
-            field = field.model_copy(update={"max": min(spec.max or 0, MAX_LIFESTEAL_PERMILLE)})
-        out.append(field)
-    return tuple(out)
+    依技能類別省略不適用的參數（武器技的傷害骰、法術技的倍率）；範圍一律取自資料檔。"""
+    return tuple(
+        _param_field(primitive, name, spec, ctx)
+        for name, spec in primitive.params.items()
+        if not _skip_param(primitive, name, ctx.category)
+    )
 
 
 # ---------------------------------------------------------------------------

@@ -23,11 +23,14 @@ import re
 from collections import Counter
 from collections.abc import Callable, Collection, Iterable, Iterator, Mapping
 from dataclasses import dataclass
+from functools import cache
+from pathlib import Path
 from typing import TYPE_CHECKING, Any, Literal
 
 from pydantic import Field, ValidationError, field_validator, model_validator
 
 from trpg.content.battle import ID_PATTERN, Dice
+from trpg.content.loader import default_content_dir, load_content_file
 from trpg.content.rules import SkillSlots
 from trpg.content.schemas import ContentModel
 from trpg.shared.types import Attribute, Element, Surface, rune_name
@@ -80,7 +83,6 @@ __all__ = [
     "LEAP",
     "LEGACY_REACTION_EVENTS",
     "MAX_GRANT_DURATION",
-    "MAX_LIFESTEAL_PERMILLE",
     "MAX_MODIFIERS",
     "MAX_SUMMON_COUNT",
     "MAX_VARIANTS",
@@ -806,8 +808,6 @@ SCALE_BY_VALUES: tuple[str, ...] = (
 )
 """依情況縮放（Phase 3D-7b，6.17 E、6.18 G）的依據：施放者每少 10% 最大 HP、與目標的距離（格）、
 目標相鄰的敵方數、施放者相鄰的敵方數。"""
-MAX_LIFESTEAL_PERMILLE = 500
-"""吸血（``lifesteal_permille``，Phase 3D-8a）的上限（‰）。"""
 MIN_SKILL_CRIT_RANGE = 15
 """技能 ``crit_range`` 的下限（Phase 3D-7b，6.17 B）。"""
 ON_MISS_MIN_RARITY = "rare"
@@ -833,7 +833,7 @@ class EffectSpec(ContentModel):
     type: str = Field(pattern=ID_PATTERN)
     affects: Affects | None = None
     dice: Dice | None = None
-    multiplier_permille: int | None = Field(default=None, ge=1, le=_MAX_MULTIPLIER_PERMILLE)
+    multiplier_permille: int | None = None
     element: Element | None = None
     distance: int | None = None
     collision_dice: Dice | None = None
@@ -853,7 +853,7 @@ class EffectSpec(ContentModel):
     """``consume_status`` 專用：``then`` 的骰數倍率（Phase 3C-3b）。``remaining_rounds``＝被消耗
     狀態的剩餘回合（永久狀態為 1）；``stacks``＝同時消耗目標身上 ``stack`` 的層數
     （``stack`` 必填）。"""
-    splash: int | None = Field(default=None, ge=1, le=1)
+    splash: int | None = None
     """``consume_status`` 專用：``then`` 也作用在被消耗者周圍這麼遠（曼哈頓距離）的敵方單位。"""
     which: Literal["all", "tag"] | None = None
     """``reset_cooldown`` 專用（Phase 3C-4a）：``all`` 全部技能、``tag`` 只有帶 ``tag`` 標籤的
@@ -880,10 +880,10 @@ class EffectSpec(ContentModel):
     """``summon`` 專用（Phase 3D-4a）：一次召喚的數量（1；數量型分歧進化 3-33f2 可為 2，此時必須
     填 ``power_permille``）。``dispel`` 專用（Phase 3D-8a）：驅散的增益個數（1）或
     ``all``（全部）。"""
-    power_permille: int | None = Field(default=None, ge=100, le=_PERMILLE - 1)
+    power_permille: int | None = None
     """``summon`` 專用（Phase 3-33f2，數量型分歧進化）：每隻召喚物的最大 HP 與傷害只有一般的這麼多
     ‰（例如 600 ＝ 60%）；一次召喚 2 隻（``count: 2``）時必填，只有一隻時不可填。"""
-    max_hp_permille: int | None = Field(default=None, ge=1, le=1000)
+    max_hp_permille: int | None = None
     """``summon`` 專用（Phase 3-33f2，加深分歧進化）：召喚物的最大 HP 多 ‰（召喚時結算，在成長與
     修正規則之後相乘）。"""
     trait: str | None = Field(default=None, pattern=ID_PATTERN)
@@ -920,7 +920,7 @@ class EffectSpec(ContentModel):
     ``core.explode_max`` 次。只有主技能效果（不含賭注分支與 ``then``）可以用。"""
     scaling: ScaleSpec | None = None
     """``damage`` 專用（Phase 3D-7b，6.17 E、6.18 G）：依情況縮放傷害。"""
-    lifesteal_permille: int | None = Field(default=None, ge=1, le=MAX_LIFESTEAL_PERMILLE)
+    lifesteal_permille: int | None = None
     """``damage`` 專用（Phase 3D-8a，6.18 A）：吸血——施放者回復「這個效果實際造成的傷害（扣掉護盾
     吸收）」的 n‰（無條件捨去，不超過最大 HP）。只有技能自己的傷害效果可以用。"""
     split_heal: bool | None = None
@@ -933,10 +933,10 @@ class EffectSpec(ContentModel):
     hp_permille: int | None = Field(default=None, ge=1, le=_PERMILLE)
     """``revive`` 專用（Phase 3D-8b，6.18 C）：被復活的單位站起來時的 HP（最大 HP 的 n‰，至少
     1）。"""
-    rounds: int | None = Field(default=None, ge=1, le=3)
+    rounds: int | None = None
     """``delayed_damage`` 專用（Phase 3D-8b，6.18 H）：定時炸彈的倒數輪數（每次環境回合 −1，歸零時
     爆炸）。"""
-    radius: int | None = Field(default=None, ge=0, le=2)
+    radius: int | None = None
     """``delayed_damage`` 專用：爆炸半徑（曼哈頓距離；0 只波及目標自己）。"""
     scope: Literal["target_cell"] | None = None
     """``detonate_runes`` 專用（Phase 3-31，修正規則 ``on_hit_effects`` 與普攻詞條）：
@@ -950,10 +950,65 @@ class EffectSpec(ContentModel):
     不可自帶 ``affects``／``condition``；對象由區域的 ``affects`` 決定）。"""
     condition: ConditionSpec | None = None
 
+    @model_validator(mode="after")
+    def _check_yaml_ranges(self) -> EffectSpec:
+        """:data:`YAML_RANGED_FIELDS` 的範圍取自 ``skill_primitives.yaml`` 的 ``min``／``max``
+        （Phase 3E-2f，唯一來源）；其他整數欄位的細緻範圍由跨檔案驗證（:func:`skill_problems`）
+        檢查。不在該檔的效果類型（``refund_ap`` 等）沒有範圍。"""
+        for name, spec in _yaml_ranged_params().get(self.type, {}).items():
+            value = getattr(self, name, None)
+            if isinstance(value, bool) or not isinstance(value, int):
+                continue
+            if (spec.min is not None and value < spec.min) or (
+                spec.max is not None and value > spec.max
+            ):
+                raise ValueError(
+                    f"效果 {self.type} 的 {name} 必須在 {spec.min}–{spec.max}，收到 {value}"
+                )
+        return self
+
     def param_values(self) -> dict[str, Any]:
         """已填寫的原語參數（不含 ``type``、``affects``、``condition``；欄位清單由
         :data:`EFFECT_PARAM_FIELDS` 從 model 推導，依名稱排序）。"""
         return {n: getattr(self, n) for n in EFFECT_PARAM_FIELDS if getattr(self, n) is not None}
+
+
+YAML_RANGED_FIELDS = frozenset(
+    {
+        "lifesteal_permille",
+        "max_hp_permille",
+        "multiplier_permille",
+        "power_permille",
+        "radius",
+        "rounds",
+        "splash",
+    }
+)
+"""``EffectSpec`` 中只宣告型別、範圍完全取自 ``skill_primitives.yaml`` 的整數欄位（建構時就檢查）。
+其餘整數欄位仍有較寬的 schema 範圍（健全性檢查）或只在跨檔案驗證時檢查細緻範圍。"""
+
+
+@cache
+def _ranged_params_of(path: Path) -> dict[str, dict[str, PrimitiveParam]]:
+    if not path.is_file():  # 沒有這個檔的內容資料夾由載入器自己報錯
+        return {}
+    table = load_content_file(path, PrimitiveTable)
+    return {
+        p.id: {
+            n: s
+            for n, s in p.params.items()
+            if n in YAML_RANGED_FIELDS
+            and s.type == "int"
+            and (s.min is not None or s.max is not None)
+        }
+        for p in table.primitives
+    }
+
+
+def _yaml_ranged_params() -> dict[str, dict[str, PrimitiveParam]]:
+    """各原語「範圍只在 YAML」的整數參數（內容資料夾見
+    :func:`~trpg.content.loader.default_content_dir`，每個路徑只讀一次）。"""
+    return _ranged_params_of(default_content_dir() / "skill_primitives.yaml")
 
 
 EFFECT_NON_PARAM_FIELDS = frozenset({"type", "affects", "condition"})
