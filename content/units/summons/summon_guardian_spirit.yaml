@@ -16,5 +16,3 @@ reactions: []
 summon: true
 role: support   # 定位（3-33f1；HP 係數見 rules/core.yaml summon_role_hp_permille）
 pulse: {shield_dice: 1d4, shield_flat: 2}   # 每個自己的回合開始：最虛弱的友方獲得護盾
-# 外觀（Phase 3-33h1，docs/art/召喚物外觀.md）：純顯示資料。
-look: {body: humanoid, variant: guardian, element: summon, size: medium, trait: glow}

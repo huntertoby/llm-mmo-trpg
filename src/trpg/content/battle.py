@@ -35,6 +35,7 @@ __all__ = [
     "SummonLook",
     "SummonLookBody",
     "SummonLookSize",
+    "SummonLookTrait",
     "SummonMode",
     "SummonPlatform",
     "SummonPulse",
@@ -619,20 +620,25 @@ class TotemSpec(ContentModel):
 SummonLookBody = Literal["humanoid", "spirit", "construct", "beast", "plant", "totem"]
 """召喚物體型（Phase 3-33h1，``docs/art/召喚物外觀.md``）：人形用紙娃娃，其餘由前端程式繪製。"""
 SummonLookSize = Literal["small", "medium", "large"]
+SummonLookTrait = Literal[
+    "shield", "translucent", "glow", "puddle", "fuse", "no_ring", "flying", "ground", "aura"
+]
+"""前端認得的 9 種特徵（Phase 3-33h2）；新增值由美術 PM 補畫法並同步 ``docs/art/召喚物外觀.md``。"""
 
 
 class SummonLook(ContentModel):
     """召喚物外觀欄位（Phase 3-33h1）：純顯示資料，不進引擎結算。
 
     ``element`` 是關鍵字 ID（點燃、冰凍…，決定配色）；實際顯示以召喚物的灌注關鍵字為先，沒有灌注
-    才用這裡的預設。``variant``、``trait`` 的合法值由前端渲染器決定，不認得的值退回預設畫法。
+    才用這裡的預設。``variant`` 的合法值由前端渲染器決定，不認得的值退回預設畫法；``trait`` 限前端
+    認得的 9 個值。
     """
 
     body: SummonLookBody
     variant: str | None = Field(default=None, pattern=ID_PATTERN)
     element: str | None = Field(default=None, pattern=ID_PATTERN)
     size: SummonLookSize = "medium"
-    trait: str | None = Field(default=None, pattern=ID_PATTERN)
+    trait: SummonLookTrait | None = None
 
 
 HitCondition = Literal["always", "target_in_water", "self_in_water"]
@@ -789,7 +795,8 @@ class UnitTemplate(ContentModel):
     """召喚物定位（Phase 3-33f1，6.29.5「定位」欄）：決定 HP 係數（``core.yaml`` 的
     ``summon_role_hp_permille``）；召喚物必填，非召喚物不可填。"""
     look: SummonLook | None = None
-    """召喚物外觀（Phase 3-33h1）：只有召喚物可以填；省略時前端退回人形骷髏。"""
+    """召喚物外觀（Phase 3-33h1）：**不寫在範本檔裡**——唯一來源是 ``content/summon_looks.yaml``，
+    載入內容庫時依範本 ID 查表填入（Phase 3-33h2）；嵌入規則包，重播不依賴資料檔。"""
     innate: str | None = Field(default=None, pattern=ID_PATTERN)
     """固有的灌注關鍵字（Phase 3-33e1，6.29.5「關鍵字」欄）：召喚物一律帶有，效果見 ``core.yaml`` 的
     ``summon_infusions``；與召喚時施放者選的灌注關鍵字並存（相同時只算一次）。"""

@@ -17,5 +17,3 @@ summon: true
 role: totem   # 定位（3-33f1；HP 係數見 rules/core.yaml summon_role_hp_permille）
 inert: true
 platform: {height: 1}
-# 外觀（Phase 3-33h1，docs/art/召喚物外觀.md）：純顯示資料。
-look: {body: totem, variant: plateau, element: high_ground, size: medium}

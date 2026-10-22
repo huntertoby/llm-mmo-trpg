@@ -16,6 +16,7 @@ from trpg.content.appearance import AppearanceTable, item_appearance_problems
 from trpg.content.battle import (
     StatusDef,
     StatusTable,
+    SummonLook,
     TerrainDef,
     TerrainTable,
     UnitTemplate,
@@ -92,7 +93,7 @@ from trpg.content.skills import (
     weapon_problem,
 )
 from trpg.content.stacks import StackDef, StackTable
-from trpg.content.summons import SummonDef, SummonTable
+from trpg.content.summons import SummonDef, SummonTable, load_summon_looks
 from trpg.content.weapon_params import set_weapon_param
 from trpg.content.workshop import WorkshopRules, workshop_problems
 from trpg.shared.errors import ContentError
@@ -715,12 +716,20 @@ def _load_summons(
     if not directory.is_dir():
         return SummonTable()
     templates = _load_dir(directory, UnitTemplate, files)
+    looks = load_summon_looks(root).looks
     defs: list[SummonDef] = []
     for summon_id in sorted(templates):
         template = templates[summon_id]
         path = directory / f"{summon_id}.yaml"
         if not template.summon:
             raise ContentError(path, "召喚物範本必須寫 summon: true")
+        if template.look is not None:
+            raise ContentError(path, "外觀只寫在 summon_looks.yaml，範本不要填 look")
+        entry = looks.get(summon_id.removeprefix("summon_"))
+        if entry is None:
+            raise ContentError(path, f"summon_looks.yaml 沒有 {summon_id} 的外觀")
+        look = SummonLook.model_validate(entry.model_dump(exclude={"zh"}))
+        template = template.model_copy(update={"look": look})
         weapon = weapons.get(template.weapon)
         if weapon is None:
             raise ContentError(path, f"未知的武器：{template.weapon}")
