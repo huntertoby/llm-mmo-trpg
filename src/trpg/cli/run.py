@@ -353,6 +353,8 @@ def _print_node(library: ContentLibrary, before: RunState, after: RunState, out:
             f"{_skill_change(library, before, after)}{spent}",
             file=out,
         )
+        for line in _evolution_lines(library, before, after):
+            print(f"      {line}", file=out)
     elif isinstance(node, CampfireNode) and isinstance(after.node, CampfireNode):
         print(
             f"    營火重骰：{len(after.node.offer.candidates) if after.node.offer else 0} 個候選",
@@ -367,9 +369,29 @@ def _print_node(library: ContentLibrary, before: RunState, after: RunState, out:
         )
 
 
+_BRANCH_TEXT = {"deepen": "加深", "bridge": "橋接"}
+
+
+def _evolution_lines(library: ContentLibrary, before: RunState, after: RunState) -> list[str]:
+    """這次新增的分歧進化（Phase 3-26b）：「分歧進化：火焰箭 → 灼燃・火焰箭（加深）」。"""
+    lines = []
+    for evolved in sorted(set(after.evolutions) - set(before.evolutions)):
+        record = after.evolutions[evolved]
+        branch = _BRANCH_TEXT[record.branch] + ("（退回）" if record.fallback else "")
+        lines.append(
+            f"分歧進化：{record.base_name_zh} → {_skill_name(library, after, evolved)}（{branch}）"
+        )
+    return lines
+
+
 def _skill_change(library: ContentLibrary, before: RunState, after: RunState) -> str:
-    added = [s for s in after.hero.skills if s not in before.hero.skills]
-    removed = [s for s in before.hero.skills if s not in after.hero.skills]
+    evolved = {r.base_id for k, r in after.evolutions.items() if k not in before.evolutions}
+    added = [
+        s
+        for s in after.hero.skills
+        if s not in before.hero.skills and after.evolutions.get(s) is None
+    ]
+    removed = [s for s in before.hero.skills if s not in after.hero.skills and s not in evolved]
     if not added:
         return "跳過技能"
     text = "選 " + "、".join(_skill_name(library, after, s) for s in added)

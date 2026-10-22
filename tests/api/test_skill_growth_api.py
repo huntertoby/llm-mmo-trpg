@@ -64,6 +64,7 @@ def test_the_hero_reports_points_levels_and_growth_rules(
         "points_per_level": 2,
         "trait_level": 5,
         "evolve_level": 3,
+        "evolve_uses": 3,
     }
     first = next(c for c in hero["skills"] if c["growth"] is not None)
     assert first["growth"]["level"] == 1 and first["growth"]["next_level"] == 2
@@ -79,14 +80,16 @@ def test_spend_points_over_the_api_updates_cards_and_stays_on_the_node(
     hero = _ok(client.get(f"/api/runs/{run_id}"))["hero"]
     skill = next(c["id"] for c in hero["skills"] if c["growth"] is not None)
     reply = _ok(
-        client.post(f"/api/runs/{run_id}/choice", json={"kind": "spend", "levels": {skill: 3}})
+        client.post(f"/api/runs/{run_id}/choice", json={"kind": "spend", "levels": {skill: 2}})
     )
     assert reply["node"]["kind"] == "level_up"
     card = next(c for c in reply["hero"]["skills"] if c["id"] == skill)
-    assert card["growth"]["level"] == 3 and card["growth"]["bonus_permille"] == 100
-    assert "Lv.3" in card["growth"]["current_text"] and reply["hero"]["skill_points"] == 0
-    bad = client.post(f"/api/runs/{run_id}/choice", json={"kind": "spend", "levels": {skill: 4}})
-    assert bad.status_code == 422 and "技能點不足" in bad.json()["detail"]
+    assert card["growth"]["level"] == 2 and card["growth"]["bonus_permille"] == 100
+    assert "Lv.2" in card["growth"]["current_text"] and reply["hero"]["skill_points"] == 1
+    bad = client.post(f"/api/runs/{run_id}/choice", json={"kind": "spend", "levels": {skill: 3}})
+    # 3-26b：3 級是分歧進化，這一輪還沒用夠次數（顯示原因）
+    assert bad.status_code == 422 and "要在這一輪用過 3 次" in bad.json()["detail"]
+    assert card["growth"]["blocked_text"] == bad.json()["detail"]
 
 
 def test_campfire_respec_and_loadout_over_the_api(

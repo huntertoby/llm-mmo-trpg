@@ -162,6 +162,7 @@ class EvolutionRecord(_Model):
     ``fallback`` 表示橋接做不出來、改用第二個加深模板。進化後的技能定義在 ``generated_skills``。"""
 
     base_id: str
+    base_name_zh: str
     branch: Literal["deepen", "bridge"]
     template: str
     keyword: str | None = None

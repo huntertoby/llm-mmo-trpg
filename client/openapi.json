@@ -3365,6 +3365,93 @@
         "title": "EquipmentSlotView",
         "description": "一個裝備欄位（Phase 3G-G1，唯讀）：欄位、物品名與詞條文字。"
       },
+      "EvolutionChoiceOut": {
+        "properties": {
+          "skill_id": {
+            "type": "string",
+            "title": "Skill Id"
+          },
+          "name_zh": {
+            "type": "string",
+            "title": "Name Zh"
+          },
+          "options": {
+            "items": {
+              "$ref": "#/components/schemas/EvolutionOptionOut"
+            },
+            "type": "array",
+            "title": "Options"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "skill_id",
+          "name_zh",
+          "options"
+        ],
+        "title": "EvolutionChoiceOut",
+        "description": "一個升到分歧進化那一級時要二選一的技能（已達門檻、還沒進化）。"
+      },
+      "EvolutionOptionOut": {
+        "properties": {
+          "index": {
+            "type": "integer",
+            "title": "Index"
+          },
+          "branch": {
+            "type": "string",
+            "enum": [
+              "deepen",
+              "bridge"
+            ],
+            "title": "Branch"
+          },
+          "label_zh": {
+            "type": "string",
+            "title": "Label Zh"
+          },
+          "template": {
+            "type": "string",
+            "title": "Template"
+          },
+          "keyword": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/KeywordRef"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "summary_zh": {
+            "type": "string",
+            "title": "Summary Zh"
+          },
+          "fallback": {
+            "type": "boolean",
+            "title": "Fallback"
+          },
+          "card": {
+            "$ref": "#/components/schemas/SkillCard"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "index",
+          "branch",
+          "label_zh",
+          "template",
+          "keyword",
+          "summary_zh",
+          "fallback",
+          "card"
+        ],
+        "title": "EvolutionOptionOut",
+        "description": "一支分歧進化（Phase 3-26b）：``index`` 是送 ``evolve`` 時的索引。"
+      },
       "Facing": {
         "type": "string",
         "enum": [
@@ -4667,6 +4754,14 @@
             "type": "array",
             "title": "Bench",
             "default": []
+          },
+          "evolutions": {
+            "items": {
+              "$ref": "#/components/schemas/EvolutionChoiceOut"
+            },
+            "type": "array",
+            "title": "Evolutions",
+            "default": []
           }
         },
         "additionalProperties": false,
@@ -5205,6 +5300,13 @@
             },
             "type": "object",
             "title": "Levels"
+          },
+          "evolve": {
+            "additionalProperties": {
+              "type": "integer"
+            },
+            "type": "object",
+            "title": "Evolve"
           }
         },
         "additionalProperties": false,
@@ -7353,6 +7455,11 @@
           "evolve_level": {
             "type": "integer",
             "title": "Evolve Level"
+          },
+          "evolve_uses": {
+            "type": "integer",
+            "title": "Evolve Uses",
+            "default": 0
           }
         },
         "additionalProperties": false,
@@ -7541,6 +7648,38 @@
           "cost": {
             "type": "integer",
             "title": "Cost"
+          },
+          "uses": {
+            "type": "integer",
+            "title": "Uses",
+            "default": 0
+          },
+          "evolve_uses": {
+            "type": "integer",
+            "title": "Evolve Uses",
+            "default": 0
+          },
+          "evolved_from_zh": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Evolved From Zh"
+          },
+          "blocked_text": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Blocked Text"
           }
         },
         "additionalProperties": false,
@@ -7614,6 +7753,13 @@
             },
             "type": "object",
             "title": "Levels"
+          },
+          "evolve": {
+            "additionalProperties": {
+              "type": "integer"
+            },
+            "type": "object",
+            "title": "Evolve"
           }
         },
         "additionalProperties": false,

@@ -140,7 +140,9 @@ def _picked_evolutions(
     return picked
 
 
-def _apply_evolutions(run: RunState, picked: Mapping[str, Evolution]) -> RunState:
+def _apply_evolutions(
+    run: RunState, picked: Mapping[str, Evolution], names: Mapping[str, str]
+) -> RunState:
     """把技能換成進化後的定義：裝備位置不變，等級、用法統計換到新 ID，記下進化紀錄。"""
     if not picked:
         return run
@@ -155,6 +157,7 @@ def _apply_evolutions(run: RunState, picked: Mapping[str, Evolution]) -> RunStat
     for old, e in picked.items():
         records[e.skill.id] = EvolutionRecord(
             base_id=old,
+            base_name_zh=names[old],
             branch=e.branch,
             template=e.template,
             keyword=e.keyword,
@@ -199,7 +202,7 @@ def spend_points(
             "skill_levels": {k: merged[k] for k in sorted(merged)},
         }
     )
-    return _apply_evolutions(spent, picked)
+    return _apply_evolutions(spent, picked, {k: defs[k].name_zh for k in picked})
 
 
 def respec(library: ContentLibrary, run: RunState) -> RunState:

@@ -146,6 +146,34 @@ class SkillGrowthOut(_ApiModel):
     points_per_level: int
     trait_level: int
     evolve_level: int
+    evolve_uses: int = 0
+    """升到 ``evolve_level`` 前要用過的次數（Phase 3-26b）。"""
+
+
+class EvolutionOptionOut(_ApiModel):
+    """一支分歧進化（Phase 3-26b）：``index`` 是送 ``evolve`` 時的索引。"""
+
+    index: int
+    branch: Literal["deepen", "bridge"]
+    label_zh: str
+    """「加深」或「橋接」。"""
+    template: str
+    keyword: KeywordRef | None
+    """帶的關鍵字（換形狀等不看關鍵字的模板為 ``None``）。"""
+    summary_zh: str
+    fallback: bool
+    """橋接做不出來、改用第二個加深模板。"""
+    card: SkillCard
+    """進化後的技能卡（等級沿用目前的等級＋升上去的級數，由前端顯示）。"""
+
+
+class EvolutionChoiceOut(_ApiModel):
+    """一個升到分歧進化那一級時要二選一的技能（已達門檻、還沒進化）。"""
+
+    skill_id: str
+    name_zh: str
+    options: tuple[EvolutionOptionOut, ...]
+    """0～2 支；沒有任何合格的進化時為空（照常升級，不進化）。"""
 
 
 class HeroOut(_ApiModel):
@@ -183,6 +211,8 @@ class HeroOut(_ApiModel):
     skill_growth: SkillGrowthOut | None = None
     bench: tuple[SkillCard, ...] = ()
     """備用技能（Phase 3-26a；卸下的技能，等級保留，卡片的 ``growth`` 帶實際等級）。"""
+    evolutions: tuple[EvolutionChoiceOut, ...] = ()
+    """升到分歧進化那一級時可選的兩支（Phase 3-26b；只列已達門檻、還沒進化的裝備中主動技能）。"""
 
 
 class BattlePlanOut(_ApiModel):

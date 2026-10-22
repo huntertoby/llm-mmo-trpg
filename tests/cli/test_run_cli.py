@@ -162,6 +162,17 @@ def test_run_auto_spends_skill_points_and_shows_levels(
     assert out.splitlines()[-1].startswith("結果：")
 
 
+@pytest.mark.parametrize("seed", [1, 4])
+def test_run_auto_reaches_a_branching_evolution(
+    seed: int, capsys: pytest.CaptureFixture[str]
+) -> None:
+    """Phase 3-26b：``trpg run auto`` 跑到至少一次分歧進化，進度印出進化前後的技能。"""
+    code, out, _ = _run(["run", "auto", "--seed", str(seed)], capsys)
+    assert code == 0
+    lines = [line for line in out.splitlines() if "分歧進化：" in line]
+    assert lines and "_evo_" in lines[0] and "（加深）" in lines[0]
+
+
 def test_run_auto_with_a_dev_pack(capsys: pytest.CaptureFixture[str]) -> None:
     code, out, _ = _run(["run", "auto", "--seed", "1", "--dev-pack", "dev_tidestorm"], capsys)
     assert code == 0
