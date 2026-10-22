@@ -9,6 +9,7 @@ import type { Ctx } from "./artDraw";
 import type { Facing } from "../api/types";
 import { dollKey, type DollSpec } from "./appearance";
 import { renderFigureCanvas } from "./paperdoll";
+import { renderSummonCanvas, summonKey, type ResolvedLook } from "./summonArt";
 
 /** 貼圖解析度倍率（相對 TILE_SIZE）。 */
 export const ART_RESOLUTION = 2;
@@ -72,6 +73,20 @@ export class ArtTextures {
     const hit = this.cache.get(key);
     if (hit !== undefined) return hit;
     const canvas = renderFigureCanvas(spec, facing, downed, FIGURE_RESOLUTION);
+    if (canvas === null) return null;
+    const tex = Texture.from(canvas);
+    this.cache.set(key, tex);
+    return tex;
+  }
+
+  /** 召喚物貼圖（Phase 3-33h1；鍵 ＝ 外觀＋朝向，殘影另加召喚者外觀）；人形傳入 `humanoid` 紙娃娃規格。 */
+  summon(look: ResolvedLook, facing: Facing, humanoid: DollSpec | null): Texture | null {
+    const owner = look.variant === "afterimage" && humanoid !== null ? dollKey(humanoid, facing, false) : "";
+    const key = `s|${summonKey(look, facing, owner)}`;
+    this.used.add(key);
+    const hit = this.cache.get(key);
+    if (hit !== undefined) return hit;
+    const canvas = renderSummonCanvas(look, facing, humanoid, FIGURE_RESOLUTION);
     if (canvas === null) return null;
     const tex = Texture.from(canvas);
     this.cache.set(key, tex);

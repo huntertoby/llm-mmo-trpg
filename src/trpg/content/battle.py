@@ -30,6 +30,9 @@ __all__ = [
     "StatusTickDamage",
     "StatusTickHeal",
     "SummonMode",
+    "SummonLook",
+    "SummonLookBody",
+    "SummonLookSize",
     "TerrainDef",
     "TerrainTable",
     "TotemSpec",
@@ -604,6 +607,25 @@ class TotemSpec(ContentModel):
     duration: int = Field(default=2, ge=1, le=4)
 
 
+SummonLookBody = Literal["humanoid", "spirit", "construct", "beast", "plant", "totem"]
+"""召喚物體型（Phase 3-33h1，``docs/art/召喚物外觀.md``）：人形用紙娃娃，其餘由前端程式繪製。"""
+SummonLookSize = Literal["small", "medium", "large"]
+
+
+class SummonLook(ContentModel):
+    """召喚物外觀欄位（Phase 3-33h1）：純顯示資料，不進引擎結算。
+
+    ``element`` 是關鍵字 ID（點燃、冰凍…，決定配色）；實際顯示以召喚物的灌注關鍵字為先，沒有灌注
+    才用這裡的預設。``variant``、``trait`` 的合法值由前端渲染器決定，不認得的值退回預設畫法。
+    """
+
+    body: SummonLookBody
+    variant: str | None = Field(default=None, pattern=ID_PATTERN)
+    element: str | None = Field(default=None, pattern=ID_PATTERN)
+    size: SummonLookSize = "medium"
+    trait: str | None = Field(default=None, pattern=ID_PATTERN)
+
+
 class UnitTemplate(ContentModel):
     """``content/units/<id>.yaml``：一個單位範本（Phase 1 直接給定屬性與武器）。
 
@@ -648,6 +670,8 @@ class UnitTemplate(ContentModel):
     default_mode: Literal["guard", "follow", "hold"] = "follow"
     """召喚物剛召喚時的模式（Phase 3-33c；6.29.5「AI 預設」欄：守衛＝``guard``、不動＝``hold``，
     其餘與沒寫＝``follow``）。集火要指定目標，不能當預設。"""
+    look: SummonLook | None = None
+    """召喚物外觀（Phase 3-33h1）：只有召喚物可以填；省略時前端退回人形骷髏。"""
     equipment: dict[Slot, str] = Field(default_factory=dict)
     """裝備（Phase 3G-G1）：欄位 → 物品 id（``content/items.yaml``）。"""
     level: int = Field(default=1, ge=1, le=99)
@@ -661,6 +685,12 @@ class UnitTemplate(ContentModel):
     def _check_totem(self) -> UnitTemplate:
         if self.totem is not None and not (self.summon and self.speed == 0):
             raise ValueError("圖騰必須是召喚物（summon: true）且 speed 為 0")
+        return self
+
+    @model_validator(mode="after")
+    def _check_look(self) -> UnitTemplate:
+        if self.look is not None and not self.summon:
+            raise ValueError("外觀欄位 look 只有召喚物（summon: true）可以填")
         return self
 
     @field_validator("skill_levels")

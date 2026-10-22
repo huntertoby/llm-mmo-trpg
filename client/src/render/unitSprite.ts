@@ -6,12 +6,13 @@ import type { UnitDraw } from "../battle/drawModel";
 import { ringArrow } from "../battle/facing";
 import { TILE_SIZE } from "../battle/geometry";
 import { HIGHLIGHT } from "../battle/glossary";
-import { resolveDoll } from "./appearance";
+import { resolveDoll, type DollSpec } from "./appearance";
 import { RING } from "./artPalette";
 import type { ArtTextures } from "./artTextures";
 import { label } from "./labels";
 import { DOLL_FOOT_Y, DOLL_H, DOLL_W } from "./paperdoll";
 import { statusTile, tileCanvas } from "./skillIcon";
+import { hasNoRing, humanoidSpec, resolveSummonLook, type ResolvedLook } from "./summonArt";
 import { downedLook, pulseAlpha, statusBadges, type DownedLook, type StatusBadge } from "./unitLook";
 
 const T = TILE_SIZE;
@@ -106,9 +107,24 @@ function statusBadge(badge: StatusBadge): Container {
   return c;
 }
 
+/** 召喚物的外觀（Phase 3-33h1）：有外觀欄位的召喚物才有；一般單位與舊資料回傳 `null`（走原本的紙娃娃）。 */
+function summonLookOf(u: UnitDraw): ResolvedLook | null {
+  return u.summon && u.summonLook != null ? resolveSummonLook(u.summonLook) : null;
+}
+
+/** 人形召喚物用的紙娃娃規格：骷髏沿用範本外觀，殘影複製召喚者（找不到時用預設戰士）。 */
+function summonHumanoidSpec(u: UnitDraw, look: ResolvedLook): DollSpec {
+  const skeleton = resolveDoll({ template: "summon_skeleton_warrior", team: u.team, summon: true, weaponId: u.weaponId, weaponClass: u.weaponClass });
+  const owner = u.copyOf !== undefined ? resolveDoll(u.copyOf) : resolveDoll({ template: "hero_fighter", team: "ally", summon: false });
+  return humanoidSpec(look, skeleton, owner);
+}
+
 function doll(art: ArtTextures, u: UnitDraw, look: DownedLook, feet: number, r: number): Sprite | Graphics {
+  const sl = summonLookOf(u);
+  // 倒地的人形召喚物沿用紙娃娃的躺下姿勢；其他體型（圖騰、構造體、植物…）不躺下
+  const useSummonArt = sl !== null && !(u.downed && sl.body === "humanoid");
   const spec = resolveDoll({ template: u.template, team: u.team, summon: u.summon, totem: u.totem, weaponId: u.weaponId, weaponClass: u.weaponClass, equipment: u.equipment });
-  const texture = art.figure(spec, u.facing, u.downed);
+  const texture = useSummonArt ? art.summon(sl, u.facing, sl.body === "humanoid" ? summonHumanoidSpec(u, sl) : null) : art.figure(spec, u.facing, u.downed);
   if (texture === null) return new Graphics().circle(0, 0, r).fill(u.fill); // 無法產生貼圖：退回色塊
   const sprite = new Sprite(texture);
   const k = T / 52; // 身高約 46px 在 52px 格子裡縮放 1.0
@@ -157,7 +173,9 @@ export function buildUnitSprite(art: ArtTextures, pulses: Pulses, u: UnitDraw): 
   const rx = T * 0.36;
   const ry = T * 0.15;
   const g = new Graphics();
-  g.ellipse(0, cy, rx, ry).fill({ color: ring.fill, alpha: 0.8 }).stroke({ width: 1.5, color: ring.stroke });
+  const sl = summonLookOf(u);
+  const noRing = sl !== null && hasNoRing(sl); // 土牆沒有底圈
+  if (!noRing) g.ellipse(0, cy, rx, ry).fill({ color: ring.fill, alpha: 0.8 }).stroke({ width: 1.5, color: ring.stroke });
   if (u.hero) g.ellipse(0, cy, rx + 2.5, ry + 2).stroke({ width: 2, color: HIGHLIGHT.hero });
   c.addChild(g);
   if (look.dashed !== null) {
@@ -165,7 +183,7 @@ export function buildUnitSprite(art: ArtTextures, pulses: Pulses, u: UnitDraw): 
     c.addChild(dashed);
     pulses.add(dashed, look.dashed);
   }
-  if (!u.downed) c.addChild(new Graphics().poly(ringArrow(u.facing, 0, cy, rx, ry, 5)).fill(0xffffff).stroke({ width: 1, color: 0x000000 }));
+  if (!u.downed && !noRing) c.addChild(new Graphics().poly(ringArrow(u.facing, 0, cy, rx, ry, 5)).fill(0xffffff).stroke({ width: 1, color: 0x000000 }));
   if (u.active) c.addChild(dashedEllipse(cy, rx + 6, ry + 4, HIGHLIGHT.active));
   c.addChild(doll(art, u, look, feet, r));
   if (u.summon) c.addChild(summonBadge(u));

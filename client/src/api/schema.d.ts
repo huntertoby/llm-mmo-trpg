@@ -3511,6 +3511,27 @@ export interface components {
             }[];
             view: components["schemas"]["BattleView"];
         };
+        /**
+         * SummonLookView
+         * @description 召喚物外觀（Phase 3-33h1，唯讀）：體型、款式、元素、大小與特徵；前端不認得的值退回人形骷髏。
+         *
+         *     ``element`` 已套用灌注：有灌注關鍵字時為該關鍵字，否則為範本預設。
+         */
+        SummonLookView: {
+            /** Body */
+            body: string;
+            /** Variant */
+            variant?: string | null;
+            /** Element */
+            element?: string | null;
+            /**
+             * Size
+             * @default medium
+             */
+            size: string;
+            /** Trait */
+            trait?: string | null;
+        };
         /** @enum {string} */
         SummonMode: "focus" | "guard" | "follow" | "hold";
         /**
@@ -3808,6 +3829,7 @@ export interface components {
              * @default false
              */
             commanded: boolean;
+            summon_look?: components["schemas"]["SummonLookView"] | null;
             /**
              * Infusion Options
              * @default []

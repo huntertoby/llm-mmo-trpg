@@ -1,6 +1,8 @@
 // 視圖 → 繪製模型（純函式；PixiJS 只負責照著畫）。
 import type { BattleView, Facing, Pos, Surface } from "../api/types";
+import type { DollInput } from "../render/appearance";
 import type { GearLook } from "../render/gearIcon";
+import type { SummonLookDraw } from "../render/summonArt";
 import {
   HIGHLIGHT,
   SURFACES,
@@ -16,6 +18,21 @@ import { auraTiles, isTotem, remainingRounds } from "./summons";
 import { onField, unitMarkers } from "./units";
 import { runeDraws, type RuneDraw } from "./runes";
 import { zoneDraws, type ZoneDraw } from "./zones";
+
+/** 殘影分身（外觀款式 afterimage）複製召喚者的外觀：回傳召喚者的紙娃娃輸入；其他單位或找不到召喚者為 `undefined`。 */
+function copyTarget(view: BattleView, u: BattleView["units"][number]): DollInput | undefined {
+  if (u.summon_look?.variant !== "afterimage") return undefined;
+  const owner = view.units.find((x) => x.id === u.owner_id);
+  if (owner === undefined) return undefined;
+  return {
+    template: owner.template_id,
+    team: owner.team,
+    summon: false,
+    weaponId: owner.weapon_id,
+    weaponClass: owner.weapon_class,
+    equipment: (owner.equipment ?? []).map((e) => ({ slot: e.slot, appearance: e.appearance })),
+  };
+}
 
 export interface TileDraw {
   x: number;
@@ -86,6 +103,10 @@ export interface UnitDraw {
   weaponId: string;
   /** 武器大類（melee、ranged、focus）：不認得 `weaponId` 時依此退回武器圖。 */
   weaponClass: string;
+  /** 召喚物外觀（Phase 3-33h1）：沒有時（一般單位、舊資料）為 `null`，召喚物退回人形骷髏。 */
+  summonLook?: SummonLookDraw | null;
+  /** 殘影分身複製的對象（召喚者）的紙娃娃輸入（Phase 3-33h1）；其他單位為 `undefined`。 */
+  copyOf?: DollInput | undefined;
   /** 身上穿的裝備（Phase 3G-G5b，紙娃娃依各欄位外觀畫）；舊資料沒有時視為沒穿。 */
   equipment?: ReadonlyArray<{ slot: string; appearance?: GearLook | null }>;
 }
@@ -233,6 +254,8 @@ export function buildDrawModel(
       facing: u.facing,
       weaponId: u.weapon_id,
       weaponClass: u.weapon_class,
+      summonLook: u.summon_look ?? null,
+      copyOf: copyTarget(view, u),
       equipment: (u.equipment ?? []).map((e) => ({ slot: e.slot, appearance: e.appearance })),
     }))
     // 倒下的先畫（在底層），其餘依 y 由上往下排序（下面的人蓋住上面的人）
