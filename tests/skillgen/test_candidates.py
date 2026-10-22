@@ -106,6 +106,7 @@ def test_every_keyword_held_new_direction_falls_back_to_the_least_held() -> None
     assert new.kind == "new" and new.fallback
 
 
+@pytest.mark.slow
 def test_behavior_tilts_the_new_direction() -> None:
     """常用推擊（shove）的玩家，新方向較常出撞擊（skill_keywords.yaml 的 actions）。"""
     lib = library()

@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import os
 from collections.abc import Sequence
 from typing import cast
 
@@ -30,7 +31,9 @@ from trpg.shared.rng import Rng
 from trpg.shared.types import Team
 
 PROPERTY_SETTINGS = settings(
-    max_examples=12, deadline=None, suppress_health_check=[HealthCheck.too_slow]
+    max_examples=12 if os.environ.get("TRPG_FULL") == "1" else 3,
+    deadline=None,
+    suppress_health_check=[HealthCheck.too_slow],
 )
 FLAT = "\n".join(["00000000"] * 8)
 

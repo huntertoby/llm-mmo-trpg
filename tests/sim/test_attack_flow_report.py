@@ -2,6 +2,8 @@
 
 from __future__ import annotations
 
+import pytest
+
 from tests.engine.helpers import library
 from trpg.sim.attack_flow_report import (
     BUILDS,
@@ -32,6 +34,7 @@ def test_attack_flow_sim_is_deterministic_and_covers_every_cell() -> None:
     assert "未完成（例外或動作上限）：0 場" in text
 
 
+@pytest.mark.slow
 def test_new_metrics_and_diagnosis_fields_are_filled_and_deterministic() -> None:
     """3-32d：擊殺輪數、清場輪數、打不出技能的回合、傷害來源與範圍技命中數。"""
     lib = library()

@@ -133,6 +133,7 @@ def test_a_real_small_skill_report_is_deterministic_and_independent_of_jobs() ->
     assert all(r.completed == 2 for r in first.rows)
 
 
+@pytest.mark.slow
 def test_skills_cli_runs_with_demo_and_random(capsys: pytest.CaptureFixture[str]) -> None:
     assert main(["sim", "skills", "--random", "2", "--seeds", "1"]) == 0
     captured = capsys.readouterr()

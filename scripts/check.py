@@ -2,7 +2,10 @@
 
 通常用法（Windows、macOS、Linux 皆同）::
 
-    uv run python scripts/check.py
+    uv run python scripts/check.py          # 快速版（不跑標 slow 的測試、前端抽樣）
+    uv run python scripts/check.py --full   # 完整版（pytest -m ""、TRPG_FULL=1）
+
+pytest 平行數預設 8，可用環境變數 ``TRPG_PYTEST_WORKERS`` 覆寫（數字或 ``auto``）。
 
 每個步驟都會執行（方便一次看到全部問題），最後印出各步驟結果摘要；
 任一步失敗時以非零代碼結束。``lint-imports`` 未安裝時只印出警告並略過，不算失敗
@@ -35,6 +38,14 @@ class Step:
     optional: bool = False
 
 
+def pytest_workers() -> str:
+    """pytest 的平行數：環境變數 ``TRPG_PYTEST_WORKERS``（數字或 ``auto``），預設 8。"""
+    value = os.environ.get("TRPG_PYTEST_WORKERS", "").strip() or "8"
+    if value != "auto" and not (value.isdigit() and int(value) >= 0):
+        raise SystemExit(f"TRPG_PYTEST_WORKERS 必須是非負整數或 auto，收到：{value!r}")
+    return value
+
+
 def _client_step(title: str, *args: str) -> Step:
     """``corepack pnpm -C client <args>``；找不到 corepack 時略過（不算失敗）。"""
     return Step(title, None, "corepack", ("pnpm", "-C", "client", *args), optional=True)
@@ -45,7 +56,7 @@ STEPS: tuple[Step, ...] = (
     Step("ruff format --check", "ruff", "ruff", ("format", "--check", ".")),
     Step("mypy", "mypy", "mypy", ()),
     Step("lint-imports", None, "lint-imports", (), optional=True),
-    Step("pytest", "pytest", "pytest", ("-q", "-n", "auto")),
+    Step("pytest", "pytest", "pytest", ("-q", "-n", pytest_workers())),
     # 前端（Phase 3-3）：找不到 corepack（沒有安裝 Node）時印出警告並略過，不算失敗。
     _client_step("client install", "install", "--frozen-lockfile"),
     _client_step("client typecheck", "typecheck"),
@@ -94,6 +105,12 @@ def find_command(step: Step) -> list[str] | None:
     return [found] if found else None
 
 
+def _full_step(step: Step) -> Step:
+    if step.title != "pytest":
+        return step
+    return Step(step.title, step.module, step.executable, (*step.args, "-m", ""), step.optional)
+
+
 def run_step(step: Step) -> str:
     """執行一個步驟，回傳 ``"通過"``、``"失敗"`` 或 ``"略過"``。"""
     print(f"\n=== {step.title} ===", flush=True)
@@ -108,10 +125,18 @@ def run_step(step: Step) -> str:
     return "通過" if completed.returncode == 0 else "失敗"
 
 
-def main() -> int:
+def main(argv: list[str] | None = None) -> int:
     if hasattr(sys.stdout, "reconfigure"):
         sys.stdout.reconfigure(errors="replace")
-    results = [(step.title, run_step(step)) for step in STEPS]
+    args = sys.argv[1:] if argv is None else argv
+    if any(a not in ("--full",) for a in args):
+        print("用法：scripts/check.py [--full]")
+        return 2
+    full = "--full" in args
+    if full:
+        # 完整版：包含標 slow 的測試（後面的 -m "" 覆蓋 addopts 的 -m 'not slow'）與前端完整組合。
+        os.environ["TRPG_FULL"] = "1"
+    results = [(step.title, run_step(_full_step(step) if full else step)) for step in STEPS]
 
     print("\n=== 檢查結果摘要 ===")
     for title, result in results:

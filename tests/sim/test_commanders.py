@@ -133,6 +133,7 @@ def test_registry_and_pickling() -> None:
         CommandedPolicyFactory(library().ai_profiles, "nope")
 
 
+@pytest.mark.slow
 def test_commanded_batch_is_deterministic_and_jobs_independent() -> None:
     lib = library()
     spec = map_spec(lib, "oil_depot", range(3), enemy_commander="focus_lowest_hp")
@@ -144,6 +145,7 @@ def test_commanded_batch_is_deterministic_and_jobs_independent() -> None:
     assert all(a.kind != "exception" for a in one.anomalies)
 
 
+@pytest.mark.slow
 def test_commanders_change_the_battle() -> None:
     """指揮官確實影響結果（同一種子、不同指揮官 → 動作不同）。"""
     lib = library()

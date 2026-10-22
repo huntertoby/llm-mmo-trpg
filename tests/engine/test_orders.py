@@ -349,6 +349,7 @@ def _battle_scores(setup_args: tuple[str, int], factory: object) -> list[list[tu
 
 
 @pytest.mark.parametrize("map_id", ["bridge_chasm", "oil_depot", "swamp", "ruined_fort"])
+@pytest.mark.slow
 def test_no_orders_scores_match_plain_utility_ai_per_action(map_id: str) -> None:
     """沒有指令（或指揮官回傳空指令）時，整場戰鬥每個決策的每個動作分數完全相同。"""
     profiles = library().ai_profiles

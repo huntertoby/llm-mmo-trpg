@@ -48,6 +48,7 @@ def test_offer_is_deterministic_and_depends_on_the_counter() -> None:
     assert _offer(later) != _offer(run)
 
 
+@pytest.mark.slow
 def test_offer_tier_follows_the_level() -> None:
     run = new_run(library(), "build_push", 5).model_copy(update={"level": 5})
     assert {s.tier for s in _offer(run).candidates} == {library().roguelite.offer_tier(5)}

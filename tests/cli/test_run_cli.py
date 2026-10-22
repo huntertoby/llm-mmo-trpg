@@ -58,6 +58,7 @@ def test_bad_attrs_format_is_a_usage_error(capsys: pytest.CaptureFixture[str]) -
     assert "--attrs" in err
 
 
+@pytest.mark.slow
 def test_run_auto_is_deterministic_and_matches_the_library_run(
     capsys: pytest.CaptureFixture[str],
 ) -> None:
@@ -99,6 +100,7 @@ def test_run_auto_needs_exactly_one_of_seed_and_from(capsys: pytest.CaptureFixtu
     assert "--seed 或 --from" in err
 
 
+@pytest.mark.slow
 def test_run_auto_ten_seeds_without_exceptions(capsys: pytest.CaptureFixture[str]) -> None:
     for seed in range(10):
         code, out, err = _run(["run", "auto", "--seed", str(seed)], capsys)
@@ -140,6 +142,7 @@ def test_run_new_rejects_bad_starts(
 
 
 @pytest.mark.parametrize("seed", [1, 2, 3])
+@pytest.mark.slow
 def test_run_auto_without_a_start_draws_weapon_and_keywords(
     seed: int, capsys: pytest.CaptureFixture[str]
 ) -> None:
@@ -152,6 +155,7 @@ def test_run_auto_without_a_start_draws_weapon_and_keywords(
 
 
 @pytest.mark.parametrize("seed", [1, 2])
+@pytest.mark.slow
 def test_run_auto_spends_skill_points_and_shows_levels(
     seed: int, capsys: pytest.CaptureFixture[str]
 ) -> None:
@@ -165,6 +169,7 @@ def test_run_auto_spends_skill_points_and_shows_levels(
 @pytest.mark.parametrize(
     "seed", [5, 6]
 )  # 3-33e1／e2a／e2b：技能池多了召喚技，種子 1、4 的一輪不再進化
+@pytest.mark.slow
 def test_run_auto_reaches_a_branching_evolution(
     seed: int, capsys: pytest.CaptureFixture[str]
 ) -> None:

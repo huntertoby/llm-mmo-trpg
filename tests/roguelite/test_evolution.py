@@ -155,6 +155,7 @@ def test_respec_keeps_the_evolution_and_it_never_evolves_twice() -> None:
     assert level_of(again, evolved) == 3 and again.evolutions == after.evolutions
 
 
+@pytest.mark.slow
 def test_the_save_round_trips_and_a_full_run_is_deterministic() -> None:
     run = full_run(*VICTORY)
     assert run.evolutions, "AI 代打這一輪應該至少進化一次"
@@ -169,6 +170,7 @@ def test_the_save_round_trips_and_a_full_run_is_deterministic() -> None:
     assert again == run
 
 
+@pytest.mark.slow
 def test_a_mid_battle_save_after_an_evolution_replays_bit_for_bit() -> None:
     lib = library()
 

@@ -275,6 +275,7 @@ def test_replay_is_deterministic_with_levels_and_the_save_round_trips() -> None:
     assert loads_save(json.dumps(raw)).run == a
 
 
+@pytest.mark.slow
 def test_a_mid_battle_save_with_levels_replays_to_the_same_state() -> None:
     lib = library()
 

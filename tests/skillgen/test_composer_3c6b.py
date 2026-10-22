@@ -2,6 +2,8 @@
 
 from __future__ import annotations
 
+import pytest
+
 from tests.skillgen.helpers import lib
 from trpg.content.skills import SkillDef
 from trpg.skillgen.random_composer import compose_random_skill
@@ -22,6 +24,7 @@ def test_the_composer_uses_the_combo_conditions() -> None:
     assert {"moved_this_turn", "adjacent_ally", "first_round", "target_isolated"} <= seen
 
 
+@pytest.mark.slow
 def test_the_composer_uses_the_new_structural_primitives() -> None:
     library = lib()
     seen: set[str] = set()
