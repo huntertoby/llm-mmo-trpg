@@ -28,6 +28,7 @@
   （腳本指揮官，見 ``trpg.sim.commanders``）。
 - ``trpg battle --ally-build <build_id>[,…]``：我方用 build 英雄（不足 3 人以標準隊友補齊）。
 - ``trpg battle replay <path>``：讀取 ``--log-json`` 的輸出，重播並驗證最終狀態一致。
+- ``trpg llm ping [--config path]``：檢查本機 LLM（config/llm.toml）是否可用。
 - ``trpg serve [--host 127.0.0.1] [--port 8000]``：以 uvicorn 啟動本機 API（``trpg.api``）。
 - ``trpg run new|auto|show``：roguelite 一輪（``trpg.cli.run``，Phase 3-5a）。
 """
@@ -43,6 +44,7 @@ from pathlib import Path
 from trpg import __version__
 from trpg.cli.battle import cmd_battle, cmd_map_list, cmd_map_show, cmd_replay
 from trpg.cli.budget import cmd_skills_budget, cmd_skills_budget_all, library_violations
+from trpg.cli.llm import cmd_llm_ping
 from trpg.cli.run import add_run_parser
 from trpg.cli.serve import DEFAULT_HOST, DEFAULT_PORT, cmd_serve
 from trpg.cli.sim import cmd_sim_keywords, cmd_sim_maps
@@ -225,6 +227,7 @@ def build_parser() -> argparse.ArgumentParser:  # noqa: PLR0915
     replay.add_argument("path", type=Path, help="戰鬥紀錄 JSON")
     _add_sim_report_parsers(sim_commands)
     _add_serve_parser(commands)
+    _add_llm_parser(commands)
     add_run_parser(commands, _with_library)
     rng_parser.set_defaults(func=_run_rng)
     skills_show.set_defaults(func=_run_skills_show)
@@ -371,6 +374,20 @@ def _add_serve_parser(commands: argparse._SubParsersAction[argparse.ArgumentPars
         "--port", type=_port, default=DEFAULT_PORT, help=f"埠號（預設 {DEFAULT_PORT}）"
     )
     serve.set_defaults(func=_run_serve)
+
+
+def _add_llm_parser(commands: argparse._SubParsersAction[argparse.ArgumentParser]) -> None:
+    llm = commands.add_parser("llm", help="本機 LLM 工具")
+    llm_commands = llm.add_subparsers(dest="llm_command", required=True)
+    ping = llm_commands.add_parser("ping", help="送一則最小請求，檢查本機模型（config/llm.toml）")
+    ping.add_argument(
+        "--config", type=Path, default=None, help="設定檔路徑（預設 config/llm.toml）"
+    )
+    ping.set_defaults(func=_run_llm_ping)
+
+
+def _run_llm_ping(args: argparse.Namespace) -> int:
+    return cmd_llm_ping(sys.stdout, sys.stderr, config_path=args.config)
 
 
 def _port(text: str) -> int:
