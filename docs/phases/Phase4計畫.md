@@ -60,3 +60,8 @@
 - PM 合併（無衝突）；ruff、mypy、`tests/llm`＋`test_architecture`＋`tests/cli/test_cli.py` 36 全過；`trpg llm ping` 在模型未啟動時給中文提示（連不上 `http://localhost:8001/v1`，請用 `F:\WSL\start.bat` 啟動、確認連接埠與 `config/llm.toml` 一致），不丟 traceback。`src/trpg/llm/`（`client.py`、`config.py`、`errors.py`）、`config/llm.toml`（`base_url` 8001、`model=swift`、`api_key=local`、`timeout_s=120`、`max_retries=3`、`json_schema_mode=auto`、`fallback_alert_permille=200`）、環境變數 `TRPG_LLM_*`、`TRPG_LLM_CONFIG`；JSON schema 約束先送 `response_format: json_schema`（strict），HTTP 400／422 時退回 `guided_json`；`llm` 標記預設排除（`--full` 也排除）；`httpx` 移到執行期依賴。報告 `Phase4-L1報告.md`。
 - 待 PM 決定：#1 client 不做網路層重試（4-L5 處理）、#2 vLLM 回 200 但忽略約束時靠 4-L5 驗證擋下、#4 `httpx` 執行期依賴、#5 `content: null` 視為壞回應 → 接受；#3 strict 與巢狀 `$ref`／`oneOf` 支援度 → 使用者啟動模型後跑 `uv run pytest -m llm` 或 4-L9 驗證；#6 PORT → 已請專案 PM 轉達。
 
+### 4.2 4-L2 驗收（2026-10-23）
+
+- PM 合併（無衝突）；ruff、mypy、`tests/llm`＋`test_architecture`＋`tests/content` 941 全過。`src/trpg/llm/prompts/`（`builder.py`：`PROMPT_VERSION="skill-proposal/1"`、`build_skill_proposal_messages` 回傳 `[system, user]`、`prompt_record` 帶 `prompt_version`＋`system_hash`；`escape.py`：`escape_text`、`wrap_player_input`；`world.py`）；`content/llm/world_shattered.yaml`（碎界語氣、5 界域、名詞表，換世界觀只換此檔）。system 只放固定指令；user 資料區依序 `<request>`、`<available>`、`<previous_proposal>`、`<errors>`、`<player_input>`；跳脫 `&<>` 為實體、移除控制與零寬字元、玩家文字截斷 500 字；11 筆惡意字串測試與 SHA-256 快照（改 prompt 沒改版本號會失敗）。報告 `Phase4-L2報告.md`。
+- 待 PM 決定：#1 世界觀檔未登記進 `content/registry.py` → **4-L4 一併登記**；#2 玩家文字 500 字、#3 指令字樣不過濾只隔離、#5 重試回饋放同一則 user 訊息、#6 回饋 JSON 也跳脫 → 接受；#4 `available` 格式 → 4-L4 定。
+
