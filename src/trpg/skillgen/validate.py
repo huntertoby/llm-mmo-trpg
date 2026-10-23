@@ -49,8 +49,8 @@ from trpg.skillgen.mechanics import affect_set, resolved_affects
 from trpg.skillgen.scaling import attr_names_zh, scaling_basis_zh
 
 __all__ = [
-    "RARITY_STATUS_PRIMITIVES",
     "EFFECT_PARAM_RULES",
+    "RARITY_STATUS_PRIMITIVES",
     "RarityNeed",
     "Violation",
     "effect_count",

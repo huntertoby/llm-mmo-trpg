@@ -14,8 +14,8 @@ import pytest
 
 from tests.engine.helpers import library
 from trpg.skillgen.draft import DraftError, build_skill
-from trpg.skillgen.option_fill import variants
 from trpg.skillgen.option_effect_rules import PAIR_RULES, sensible_affects
+from trpg.skillgen.option_fill import variants
 from trpg.skillgen.option_models import Choice
 from trpg.skillgen.option_player import fill_placeholders
 from trpg.skillgen.options import draft_options
@@ -37,7 +37,8 @@ AURA_SELF: dict[str, Any] = {
 
 def _effects_choices(options: Any) -> tuple[Choice, ...]:
     step = next(s for s in options.steps if s.id == "effects")
-    return next(f for f in step.fields if f.field == "effects").choices
+    choices: tuple[Choice, ...] = next(f for f in step.fields if f.field == "effects").choices
+    return choices
 
 
 def _choice(options: Any, primitive: str) -> Choice:
@@ -134,7 +135,10 @@ def test_shape_change_makes_a_chosen_target_illegal_and_a_fix_is_suggested() -> 
 
 
 def test_a_legal_choice_is_never_overridden() -> None:
-    draft = {**AURA_SELF, "effects": [{"type": "apply_status", "status": "rallied", "affects": "self"}]}
+    draft = {
+        **AURA_SELF,
+        "effects": [{"type": "apply_status", "status": "rallied", "affects": "self"}],
+    }
     assert draft_options(draft, LIB).effect_fixes == ()
 
 
@@ -163,7 +167,8 @@ def _draft_from(seed: int) -> dict[str, Any] | None:
     cost["cooldown"] = (seed * 7) % 6 + 1  # 代價已填：冷卻是明確的值
     data["cost"] = cost
     data["rarity"] = "epic"
-    return data
+    result: dict[str, Any] = data
+    return result
 
 
 def _full_rules(draft: dict[str, Any], effects: list[dict[str, Any]]) -> list[str] | None:
@@ -187,7 +192,9 @@ def _oracle_blocked(
         return None
     if any(rule in _SINGLE_RULES for rule in alone):
         return True
-    gained = Counter(r for r in after if r in PAIR_RULES) - Counter(r for r in before if r in PAIR_RULES)
+    gained = Counter(r for r in after if r in PAIR_RULES) - Counter(
+        r for r in before if r in PAIR_RULES
+    )
     return bool(gained)
 
 
@@ -207,7 +214,11 @@ def _compare(seed: int) -> Counter[bool] | None:
         if not fills:
             continue
         base = fills[0]
-        names = [p.field for p in choice.params if p.field in ("affects", "status") and p.type == "choice"]
+        names = [
+            p.field
+            for p in choice.params
+            if p.field in ("affects", "status") and p.type == "choice"
+        ]
         for name in names:
             for value, item in _param(choice, name).items():
                 candidate = {**base, name: value}
@@ -280,7 +291,10 @@ def _trap_field(options: Any) -> Any:
 def test_trap_settings_explain_what_resolves_when_stepped_on() -> None:
     empty = _trap_field(draft_options(TRAP, LIB)).description_zh
     assert "請新增一個效果" in empty and "踩到後" in empty
-    with_damage = {**TRAP, "effects": [{"type": "place_trap"}, {"type": "damage", "dice": "1d6", "element": "fire"}]}
+    with_damage = {
+        **TRAP,
+        "effects": [{"type": "place_trap"}, {"type": "damage", "dice": "1d6", "element": "fire"}],
+    }
     text = _trap_field(draft_options(with_damage, LIB)).description_zh
     assert "踩到後會結算" in text and "傷害" in text
 

@@ -56,9 +56,9 @@ def _mutations(skill_id: str) -> Iterator[tuple[tuple[Any, ...], Any, dict[str, 
         base.pop(key, None)
     for index, path in enumerate(_leaves(base)):
         original = _get(base, path)
-        wrong = [w for w in WRONG if type(w) is not type(original) and not isinstance(w, str | dict)] + [
-            w for w in WRONG if isinstance(w, dict) and not isinstance(original, dict)
-        ]
+        wrong = [
+            w for w in WRONG if type(w) is not type(original) and not isinstance(w, str | dict)
+        ] + [w for w in WRONG if isinstance(w, dict) and not isinstance(original, dict)]
         if not isinstance(original, str):  # 字串欄位的「錯誤型別」是數字、布林、列表
             wrong += ["x"]
         value = wrong[index % len(wrong)]
@@ -120,7 +120,10 @@ def test_nested_trap_error_is_linked_to_the_effects_step() -> None:
     [
         ("trap.rounds：Extra inputs are not permitted", "不能填"),
         ("effects[0].dice：Input should be a valid dictionary or instance of Dice", "格式不對"),
-        ("cost.mana：Input should be a valid integer, unable to parse string as an integer", "必須是整數"),
+        (
+            "cost.mana：Input should be a valid integer, unable to parse string as an integer",
+            "必須是整數",
+        ),
         ("followup.effects：Input should be a valid list", "必須是列表"),
         ("name_zh：String should have at least 1 character", "至少要 1 個字"),
     ],

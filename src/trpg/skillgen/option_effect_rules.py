@@ -30,7 +30,7 @@ from trpg.content.skills import PrimitiveDef, SkillCost, SkillDef, default_affec
 from trpg.skillgen.draft import Draft, DraftError, build_skill
 from trpg.skillgen.option_fill import variants
 from trpg.skillgen.option_models import Choice, EffectFix, FieldSpec
-from trpg.skillgen.option_params import AFFECTS_TEXT, model_range
+from trpg.skillgen.option_params import model_range
 from trpg.skillgen.validate import Violation, effect_param_violations
 
 __all__ = [
@@ -120,42 +120,43 @@ class EffectProbe:
         return explain(found[0], skill, candidate, self.library)
 
 
+_FIXED_REASON: dict[str, str] = {
+    "exclusion.self_shape_no_enemy_effect": (
+        "自身形狀不能對敵方出手：把對象改成自己或友方，或回到「形狀」步驟換成別的形狀"
+    ),
+    "exclusion.no_damage_with_ally_heal": (
+        "同一招不能同時有對敵人的傷害和對友方的治療：改選別的對象，或先移除另一邊的效果"
+    ),
+    "passive.affects": "這個被動作用在持有者自己，效果的對象只能是自己",
+    "stance.misuse": "姿態狀態只能由姿態技能施加：回到「基本設定」把種類改成姿態，或改選別的狀態",
+    "stance.status": "姿態技能施加的狀態必須是姿態狀態：改選姿態狀態",
+    "stance.duration": "姿態狀態會一直持續到取消，不能設定持續回合",
+    "on_kill.beneficial": "擊殺時的效果作用在你自己身上，只能施加有益的狀態",
+}
+
+
 def explain(
     violation: Violation, skill: SkillDef, effect: Mapping[str, Any], library: ContentLibrary
 ) -> str:
     """違規 → 白話原因；能改別的欄位解決的，說明回到哪一步改什麼。"""
     rule = violation.rule
-    statuses = library.ruleset.statuses.by_id()
-    status = statuses.get(str(effect.get("status")))
+    if rule in _FIXED_REASON:
+        return _FIXED_REASON[rule]
+    status = library.ruleset.statuses.by_id().get(str(effect.get("status")))
     name = status.name_zh if status is not None else str(effect.get("type"))
-    if rule == "exclusion.self_shape_no_enemy_effect":
-        return "自身形狀不能對敵方出手：把對象改成自己或友方，或回到「形狀」步驟換成別的形狀"
+    skeleton = library.skeletons[skill.skeleton]
     if rule == "exclusion.stun_single_long_cooldown":
         return _stun_reason(name, skill, library)
     if rule == "exclusion.no_repeated_control_group":
         return f"已經有同類型的控制效果，同一招不能再放「{name}」：先移除那個效果"
-    if rule == "exclusion.no_damage_with_ally_heal":
-        return "同一招不能同時有對敵人的傷害和對友方的治療：改選別的對象，或先移除另一邊的效果"
     if rule == "skeleton.forbidden_affects":
-        skeleton = library.skeletons[skill.skeleton]
         sides = "、".join(_SIDE_ZH.get(s, s) for s in skeleton.forbid_affects)
         return (
             f"「{skeleton.name_zh}」骨架不能有對{sides}的效果：改選自己或友方，"
             "或回到「骨架」步驟換一個骨架"
         )
     if rule == "skeleton.core_beneficial":
-        skeleton = library.skeletons[skill.skeleton]
         return f"「{skeleton.name_zh}」骨架的核心效果只能是有益的狀態：改選有益的狀態"
-    if rule == "passive.affects":
-        return "這個被動作用在持有者自己，效果的對象只能是自己"
-    if rule == "stance.misuse":
-        return "姿態狀態只能由姿態技能施加：回到「基本設定」把種類改成姿態，或改選別的狀態"
-    if rule == "stance.status":
-        return "姿態技能施加的狀態必須是姿態狀態：改選姿態狀態"
-    if rule == "stance.duration":
-        return "姿態狀態會一直持續到取消，不能設定持續回合"
-    if rule == "on_kill.beneficial":
-        return "擊殺時的效果作用在你自己身上，只能施加有益的狀態"
     return violation.message
 
 
@@ -228,13 +229,16 @@ def with_param_blocks(
         if primitive is None or base is None:
             out.append(choice)
             continue
-        out.append(_checked_choice(choice, primitive, base, probe, context, shape))
+        out.append(
+            _checked_choice(choice, primitive, base=base, probe=probe, context=context, shape=shape)
+        )
     return out
 
 
 def _checked_choice(
     choice: Choice,
     primitive: PrimitiveDef,
+    *,
     base: dict[str, Any],
     probe: EffectProbe,
     context: list[dict[str, Any]],
@@ -251,7 +255,7 @@ def _checked_choice(
         params[params.index(affects)] = marked_affects
     if status is not None:
         params[params.index(status)] = _mark_statuses(
-            status, marked_affects, primitive, base, probe, context, shape
+            status, marked_affects, primitive, base=base, probe=probe, context=context, shape=shape
         )
     updated = choice.model_copy(update={"params": tuple(params)})
     if marked_affects is None or status is not None or "unavailable_zh" in choice.info:
@@ -261,7 +265,9 @@ def _checked_choice(
     if any(side in legal for side in sensible):
         return updated
     # 合理的對象全被擋（例：光環骨架或自身形狀的傷害，敵方出不去）：整個原語事前停用
-    reason = probe.why({**base, "affects": sensible[0]}, context) or next(iter(reasons.values()), None)
+    reason = probe.why({**base, "affects": sensible[0]}, context) or next(
+        iter(reasons.values()), None
+    )
     return _with_info(updated, reason or "目前沒有合適的對象可以選")
 
 
@@ -297,6 +303,7 @@ def _mark_statuses(
     spec: FieldSpec,
     affects: FieldSpec | None,
     primitive: PrimitiveDef,
+    *,
     base: dict[str, Any],
     probe: EffectProbe,
     context: list[dict[str, Any]],
@@ -333,7 +340,8 @@ def effect_fixes(
     draft: Draft, library: ContentLibrary, choices: Sequence[Choice]
 ) -> tuple[EffectFix, ...]:
     """草稿裡已有的效果，對象會讓驗證器報錯（例：光環骨架的效果還是預設的敵方）→ 建議改成合法的
-    對象（前端照 ``conformScaling`` 的做法自動套用）。對象已合法、或根本沒有合理的合法對象時不建議。"""
+    對象（前端照 ``conformScaling`` 的做法自動套用）。對象已合法時不建議；沒有合理的合法對象時
+    ``value`` 為 ``None``（只附原因）。"""
     effects = [dict(_mapping(e)) for e in draft.get("effects") or ()]
     if not effects:
         return ()
@@ -352,7 +360,15 @@ def effect_fixes(
         found = probe.why(effect, context)
         status = statuses.get(str(effect.get("status")))
         beneficial = None if status is None else status.beneficial
-        wanted = _first_legal(affects, effect, primitive, probe, context, shape, beneficial)
+        wanted = _first_legal(
+            affects,
+            effect,
+            primitive,
+            probe=probe,
+            context=context,
+            shape=shape,
+            beneficial=beneficial,
+        )
         if effect.get("affects") is None and wanted is not None and status is not None:
             # 還沒選對象：施加狀態時預設依狀態的有益／有害（有益 → 友方／自己，有害 → 敵方）
             current = effect.get("affects") or sensible_affects(primitive, shape)[0]
@@ -368,6 +384,7 @@ def _first_legal(
     affects: FieldSpec,
     effect: dict[str, Any],
     primitive: PrimitiveDef,
+    *,
     probe: EffectProbe,
     context: list[dict[str, Any]],
     shape: str,
@@ -380,9 +397,7 @@ def _first_legal(
     return None
 
 
-def cooldown_requirement(
-    draft: Draft, library: ContentLibrary
-) -> tuple[int, str] | None:
+def cooldown_requirement(draft: Draft, library: ContentLibrary) -> tuple[int, str] | None:
     """已選的效果牽涉的冷卻下限：``(回合數, 原因)``（互斥規則的 ``require.min_cooldown``，例：暈眩
     與冰凍至少 4 回合）；沒有時回傳 ``None``。代價步驟用它標出冷卻欄位的下限。"""
     effects = [dict(_mapping(e)) for e in draft.get("effects") or ()]
@@ -392,7 +407,7 @@ def cooldown_requirement(
     skill = probe.skill(effects)
     if skill is None:
         return None
-    statuses = {e.get("status") for e in effects if e.get("type") == "apply_status"}
+    statuses = {str(e.get("status")) for e in effects if e.get("type") == "apply_status"}
     best: tuple[int, str] | None = None
     for rule in library.exclusions.rules:
         need = None if rule.require is None else rule.require.min_cooldown
@@ -402,7 +417,7 @@ def cooldown_requirement(
         if statuses & set(when.statuses) and (best is None or need > best[0]):
             names = "、".join(
                 library.ruleset.statuses.by_id()[s].name_zh
-                for s in sorted(statuses & set(when.statuses), key=str)
+                for s in sorted(statuses & set(when.statuses))
             )
             best = (need, f"{names}是硬控，冷卻至少 {need} 回合")
     return best

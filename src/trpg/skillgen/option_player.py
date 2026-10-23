@@ -25,8 +25,8 @@ from trpg.skillgen.option_models import Choice, FieldSpec
 from trpg.skillgen.player_text import plainify
 
 __all__ = [
-    "fill_placeholders",
     "content_dev_texts",
+    "fill_placeholders",
     "has_dev_text",
     "localize",
     "option_dev_texts",

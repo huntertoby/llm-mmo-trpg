@@ -7,6 +7,7 @@ import pytest
 
 from tests.engine.helpers import library, make_skill
 from tests.engine.skill_helpers import U2, battle, cast, of
+from trpg.content.skills import SkillDef
 from trpg.engine.events import StatusRemoved
 from trpg.engine.state import StatusInstance
 
@@ -14,7 +15,7 @@ SID = "skill_t_prim"
 _ALL_STATUSES = sorted(s.id for s in library().ruleset.statuses.statuses)
 
 
-def _cleanse_skill():  # type: ignore[no-untyped-def]
+def _cleanse_skill() -> SkillDef:
     return make_skill(
         SID, {"type": "single", "range": 4}, [{"type": "cleanse", "affects": "allies"}]
     )

@@ -53,8 +53,8 @@ from trpg.content.skills import (
 from trpg.shared.types import Attribute
 from trpg.skillgen.draft import Draft, DraftError, build_skill, draft_skeleton, step_complete
 from trpg.skillgen.option_conform import field_problems
-from trpg.skillgen.option_fill import variants
 from trpg.skillgen.option_effect_rules import cooldown_requirement, effect_fixes, with_param_blocks
+from trpg.skillgen.option_fill import variants
 from trpg.skillgen.option_followup import (
     FOLLOWUP_SKELETON,
     followup_fields,
@@ -846,7 +846,9 @@ def _effects_step(draft: Draft, library: ContentLibrary, skeleton: SkeletonDef) 
     if draft.get("kind") == "modifier":
         return _modifier_step(draft, library)
     choices = _with_availability(_effect_choices(draft, library, skeleton), draft, library)
-    choices = with_param_blocks(choices, draft, library, skeleton)  # 3-48h：違規的對象與狀態事前停用
+    choices = with_param_blocks(
+        choices, draft, library, skeleton
+    )  # 3-48h：違規的對象與狀態事前停用
     fields = [
         FieldSpec(
             field="effects",
@@ -1237,7 +1239,7 @@ _NAME = re.compile(r"[a-z_]{3,}")
 def _owner_step(raw: str, owner: dict[str, int]) -> int | None:
     """試組錯誤（原始訊息）屬於哪一步：先看訊息開頭的欄位路徑（``trap.shape``、``effects[0].dice``、
     ``variants[1].shape`` 都算它的第一段），沒有的話找訊息裡第一個出現的欄位名（3-48h）。"""
-    head = raw.split("：")[0].split(" ")[0]
+    head = raw.split("：", maxsplit=1)[0].split(" ", maxsplit=1)[0]
     candidates = [head.split(".")[0].split("[")[0], *_NAME.findall(raw)]
     for name in candidates:
         step = owner.get(_FIELD_ALIAS.get(name, name))
@@ -1376,8 +1378,7 @@ def _with_step_links(steps: list[StepOptions], library: ContentLibrary) -> list[
         fields = playerize(step.fields, library)  # 說明換成玩家版（原文在 dev_description_zh）
         out.append(step.model_copy(update={"notes_zh": tuple(notes), "fields": fields}))
     return [
-        s.model_copy(update={"complete": False}) if n in broken else s
-        for n, s in enumerate(out, 1)
+        s.model_copy(update={"complete": False}) if n in broken else s for n, s in enumerate(out, 1)
     ]
 
 

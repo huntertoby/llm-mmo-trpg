@@ -472,9 +472,7 @@ def _cleanse(ctx: Ctx, effect: EffectBase) -> list[EventBase]:
     if unit is None or not unit.alive:
         return []
     removable = [
-        s.status_id
-        for s in unit.statuses
-        if ctx.rules.status_def(s.status_id).polarity == "debuff"
+        s.status_id for s in unit.statuses if ctx.rules.status_def(s.status_id).polarity == "debuff"
     ]  # 只移除減益；增益與中性（隱蔽、姿態、免死、靈魂連結、蓄力）保留（玩法決定 #60）
     if not removable:
         return []

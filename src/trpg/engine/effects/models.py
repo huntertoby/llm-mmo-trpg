@@ -258,8 +258,8 @@ class ShieldEffect(EffectBase):
 
 
 class CleanseEffect(EffectBase):
-    """淨化（Phase 2D-1）：移除目標身上所有減益（``polarity: debuff``）的狀態；增益與中性狀態保留（玩法決定 #60），依狀態 ID 排序
-    逐一發出 ``status_removed``（原因 ``cleansed``）。"""
+    """淨化（Phase 2D-1）：移除目標身上所有減益（``polarity: debuff``）的狀態；增益與中性狀態保留
+    （玩法決定 #60），依狀態 ID 排序逐一發出 ``status_removed``（原因 ``cleansed``）。"""
 
     kind: Literal["cleanse"] = "cleanse"
     target_id: UnitId
