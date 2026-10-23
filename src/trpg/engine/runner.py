@@ -38,8 +38,11 @@ __all__ = [
     "run_battle",
 ]
 
-LOG_FORMAT = "trpg-battle-log/59"
-"""``/59``（Phase 3H-1）：屬性的常駐數值（力量：撞擊傷害 ±、智力：表面與持續區域 +回合、
+LOG_FORMAT = "trpg-battle-log/60"
+"""``/60``（Phase 3H-2）：武器技花耐力（``cost.stamina``）、主角的法力與耐力上限依屬性
+（``core.yaml`` 的 ``resources``）；``skill_used``／``skill_triggered``／``skill_infused`` 多了
+``stamina``／``stamina_after``。同一份輸入的結算可能不同，因此 ``/59`` 的紀錄無法重播。
+``/59``（Phase 3H-1）：屬性的常駐數值（力量：撞擊傷害 ±、智力：表面與持續區域 +回合、
 感知：反應攻擊命中 +、看見隱蔽單位的距離 +、自動看見附近敵方陷阱（可能多出 ``trap_revealed``）、
 意志：控制的抵抗 +）、雙屬性武器的取法（``attr_mode``：輕武器取較高、重武器取平均）、
 易傷的抵抗屬性改智力；同一份輸入的結算可能不同，因此 ``/58`` 的紀錄無法重播。

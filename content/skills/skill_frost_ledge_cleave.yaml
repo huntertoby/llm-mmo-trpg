@@ -16,7 +16,7 @@ shape: {type: single, range: weapon}
 effects:
   - {type: damage, multiplier_permille: 1650}
 condition: null
-cost: {mana: 5, cooldown: 2}
+cost: {stamina: 10, cooldown: 2}
 tags: [physical, melee]
 variants:
   - id: frost_edge

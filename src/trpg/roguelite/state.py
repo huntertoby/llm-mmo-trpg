@@ -6,8 +6,9 @@
   回歸範本（``content/sim/builds.yaml``）開局時有值（開發與測試用，玩家介面不提供）。
 - ``behavior``：主角在這一輪用過的動作類型與次數（候選產生器的行為紀錄）。
 - 主角：目前的單位範本 ``hero``（屬性與技能清單隨升級改變；其餘欄位沿用開局時的主角）、
-  等級與經驗、**目前 HP、法力、源力**（戰鬥之間不回復，0.11 G、K）。技能清單就是裝備（主動 ≤ 6、
-  被動 ≤ 3、反應 ≤ 1、姿態 ≤ 1，``core.yaml`` 的 ``skill_slots``）；欄位滿時要替換或放棄。
+  等級與經驗、**目前 HP、法力、耐力（3H-2）、源力**（戰鬥之間不回復，0.11 G、K）。技能清單就是
+  裝備（主動 ≤ 6、被動 ≤ 3、反應 ≤ 1、姿態 ≤ 1，``core.yaml`` 的 ``skill_slots``）；欄位滿時要
+  替換或放棄。
 - 技能成長（Phase 3-26a）：``skill_points`` 未花的技能點、``skill_levels`` 技能等級、``bench``
   備用技能（卸下的技能，等級保留）；規則在 ``content/skill_growth.yaml``，邏輯在
   ``trpg.roguelite.growth``。
@@ -90,6 +91,8 @@ class BattleRecord(_Model):
     mana: int
     source: int
     hero_downed: bool
+    stamina: int | None = None
+    """戰後的耐力（Phase 3H-2）；舊存檔沒有此欄位。"""
     """主角在戰鬥中倒下（我方仍勝利時以 1 HP 繼續）。"""
     state_digest: str
 
@@ -275,6 +278,9 @@ class RunState(_Model):
     xp: int = Field(ge=0)
     hp: int = Field(ge=0)
     mana: int = Field(ge=0)
+    stamina: int | None = Field(default=None, ge=0)
+    """目前耐力（Phase 3H-2：武器技與格擋共用；和法力一樣戰鬥之間不回復，營火回滿）。``None`` ＝ 滿
+    （舊存檔沒有此欄位；讀檔時以上限計，見 :meth:`stamina_in`）。"""
     source: int = Field(ge=0)
     generated_skills: tuple[SkillDef, ...] = ()
     plan: tuple[BattlePlan, ...]
@@ -319,9 +325,20 @@ class RunState(_Model):
         基礎是 ``hero.max_hp``，不隨升級與配點改變）。"""
         return core.run_max_hp(self.hero.max_hp, self.hero.attributes[Attribute.CON], self.level)
 
-    @property
-    def max_mana(self) -> int:
-        return self.hero.max_mana
+    def max_mana_in(self, core: CoreRules) -> int:
+        """法力上限 ＝ 基礎（``hero.max_mana``，依武器大類）＋ 屬性加成（Phase 3H-2，
+        ``core.yaml`` 的 ``resources``；不含裝備詞條，戰鬥中的上限另含裝備的屬性）。"""
+        return core.resources.max_for("mana", self.hero.max_mana, self.hero.attributes)
+
+    def max_stamina_in(self, core: CoreRules) -> int:
+        """耐力上限 ＝ 基礎（``hero.stamina``，省略時 ``default_stamina``）＋ 屬性加成
+        （Phase 3H-2）。"""
+        base = core.template_stamina(self.hero)
+        return core.resources.max_for("stamina", base, self.hero.attributes)
+
+    def stamina_in(self, core: CoreRules) -> int:
+        """目前耐力（``stamina`` 為 ``None`` 時 ＝ 上限）。"""
+        return self.max_stamina_in(core) if self.stamina is None else self.stamina
 
     @property
     def ended(self) -> bool:

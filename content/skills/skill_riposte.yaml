@@ -17,7 +17,7 @@ effects:
 condition: null
 trigger: null
 reaction: {event: hit_by_melee}
-cost: {mana: 0}
+cost: {}
 tags: [counter, reaction, physical]
 narrative:
   concept: 格開刀鋒的同時順勢反刺，讓貼身攻擊的人自己付出代價

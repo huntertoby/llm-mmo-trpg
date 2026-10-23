@@ -1,4 +1,4 @@
-// 主角的一輪狀態：等級與經驗、HP／法力／源力、屬性、技能（點開看卡片）。
+// 主角的一輪狀態：等級與經驗、HP／法力／耐力／源力、屬性、技能（點開看卡片）。
 import type { RunHero } from "../api/types";
 import { SkillCardView } from "../ui/SkillCardView";
 import { WeaponIcon } from "../ui/WeaponIcon";
@@ -58,6 +58,7 @@ export function RunHeroPanel({ hero }: { hero: RunHero }) {
       </div>
       <Bar label="HP" value={hero.hp} max={hero.max_hp} kind="hp" />
       <Bar label="法力" value={hero.mana} max={hero.max_mana} kind="mana" />
+      <Bar label="耐力" value={hero.stamina} max={hero.max_stamina} kind="stamina" />
       <div className="run-bar">
         <span className="run-bar-label">源力</span>
         <span className="run-source">

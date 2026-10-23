@@ -19,7 +19,7 @@ effects:
     multiplier_permille: 1200
     condition: {type: target_has_status, status: burning}
 condition: null
-cost: {mana: 5, cooldown: 2}
+cost: {stamina: 10, cooldown: 2}
 tags: [physical, melee, combo]
 narrative:
   concept: 趁敵人身上的火還沒熄，再補一刀

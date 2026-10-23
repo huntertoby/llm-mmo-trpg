@@ -106,7 +106,7 @@ export function TestModePanel({ enabled, onEnabled, selection, onSelection, star
       <label className="run-test-mode-toggle">
         <input type="checkbox" checked={enabled} disabled={disabled} onChange={(e) => onEnabled(e.target.checked)} /> 測試模式
       </label>
-      <div className="muted small">每場戰鬥結束後 HP、法力自動回滿，並可從現有測試物品為各部位挑裝備（可以不挑）。這一輪會標記為測試模式，不計入任何統計。</div>
+      <div className="muted small">每場戰鬥結束後 HP、法力、耐力自動回滿，並可從現有測試物品為各部位挑裝備（可以不挑）。這一輪會標記為測試模式，不計入任何統計。</div>
       {enabled && error !== null && <div className="error-text">{error}</div>}
       {enabled && pickable !== null && slot !== undefined && (
         <div className="run-test-gear gear-layout">

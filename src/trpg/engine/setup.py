@@ -45,8 +45,8 @@ class UnitSpawn(BaseModel):
     clamp(max(值, ``source_min_at_start``), 0, ``source_max``)，``None`` 等同 0（即保底值）；
     敵方一律 0。見 :func:`starting_source`。
 
-    ``hp``／``mana``：開場 HP／法力（Phase 3-5a：一輪中戰鬥之間不回復，由存檔帶入）。``None`` 為
-    滿；超過上限時以上限計。
+    ``hp``／``mana``／``stamina``：開場 HP／法力／耐力（Phase 3-5a、3H-2：一輪中戰鬥之間不回復，
+    由存檔帶入）。``None`` 為滿；超過上限時以上限計。
 
     ``equipment``：裝備快照（Phase 3G-G1，內嵌物品與詞條定義，重播不依賴資料檔）；空 ＝ 沒有裝備，
     ``weapon`` 就是主手。由 :meth:`~trpg.content.library.ContentLibrary.loadout_of` 從範本的
@@ -63,6 +63,7 @@ class UnitSpawn(BaseModel):
     source: int | None = None
     hp: int | None = Field(default=None, ge=1)
     mana: int | None = Field(default=None, ge=0)
+    stamina: int | None = Field(default=None, ge=0)
 
 
 def starting_source(spawn: UnitSpawn, core: CoreRules) -> int:

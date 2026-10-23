@@ -20,7 +20,7 @@ effects:
     multiplier_permille: 500
     condition: {type: from_behind}
 condition: null
-cost: {mana: 5, cooldown: 3}
+cost: {stamina: 10, cooldown: 3}
 tags: [physical, melee, mobility, stealth]
 narrative:
   concept: 影子一閃，人已經在敵人背後，刀鋒比他回頭還快

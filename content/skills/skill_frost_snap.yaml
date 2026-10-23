@@ -19,7 +19,7 @@ effects:
     multiplier_permille: 1400
     condition: {type: target_has_status, status: frozen}
 condition: null
-cost: {mana: 5, cooldown: 2}
+cost: {stamina: 10, cooldown: 2}
 tags: [physical, ranged, combo]
 narrative:
   concept: 冰封的目標是最好的靶子

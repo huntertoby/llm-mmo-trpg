@@ -54,10 +54,10 @@ def test_test_mode_refills_hp_and_mana_after_every_won_battle() -> None:
     assert pairs
     for _, after in pairs:
         assert after.hp == after.max_hp_in(core)  # 升級後依最大 HP 的差補上
-        assert after.mana == after.max_mana
+        assert after.mana == after.max_mana_in(core)
     # 歷程仍記錄打完當下的真實剩餘（不是回滿後的數字）
     last = pairs[-1][1]
-    assert any(r.hp < last.max_hp_in(core) or r.mana < last.max_mana for r in last.history)
+    assert any(r.hp < last.max_hp_in(core) or r.mana < last.max_mana_in(core) for r in last.history)
 
 
 def test_test_mode_refills_to_the_gear_inclusive_maximum() -> None:
@@ -77,7 +77,9 @@ def test_normal_mode_does_not_refill_between_battles() -> None:
     core = lib.ruleset.core
     pairs = _after_battles(_run())
     assert any(
-        a.hp < a.max_hp_in(core) or a.mana < a.max_mana for b, a in pairs if a.battles_done == 1
+        a.hp < a.max_hp_in(core) or a.mana < a.max_mana_in(core)
+        for b, a in pairs
+        if a.battles_done == 1
     )
 
 

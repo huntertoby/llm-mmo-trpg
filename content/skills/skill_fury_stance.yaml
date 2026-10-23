@@ -15,7 +15,7 @@ shape: {type: self}
 effects:
   - {type: apply_status, status: stance_fury, affects: self}
 condition: null
-cost: {mana: 0}
+cost: {}
 tags: [stance, buff]
 narrative:
   concept: 放下防守，把全身的力氣押在下一擊

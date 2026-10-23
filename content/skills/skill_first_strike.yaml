@@ -18,7 +18,7 @@ effects:
     multiplier_permille: 1200
     condition: {type: first_round}
 condition: null
-cost: {mana: 5, cooldown: 2}
+cost: {stamina: 10, cooldown: 2}
 tags: [physical, melee, opening]
 narrative:
   concept: 搶在敵人反應過來之前的第一輪突襲

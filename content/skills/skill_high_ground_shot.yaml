@@ -18,7 +18,7 @@ effects:
     multiplier_permille: 800
     condition: {type: height_advantage}
 condition: null
-cost: {mana: 5, cooldown: 2}
+cost: {stamina: 10, cooldown: 2}
 tags: [physical, ranged, height]
 narrative:
   concept: 把地形優勢變成準頭與力道

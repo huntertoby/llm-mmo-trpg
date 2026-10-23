@@ -19,7 +19,7 @@ effects:
     multiplier_permille: 1300
     condition: {type: target_on_surface, surface: water}
 condition: null
-cost: {mana: 5, cooldown: 2}
+cost: {stamina: 10, cooldown: 2}
 tags: [physical, ranged, combo]
 narrative:
   concept: 跟著水面的漣漪瞄準

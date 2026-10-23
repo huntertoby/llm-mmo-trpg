@@ -919,6 +919,9 @@ class SkillUsed(EventBase):
     ap: int
     mana: int
     mana_after: int
+    stamina: int = 0
+    """花費的耐力（武器技，Phase 3H-2）；``stamina_after`` 為使用後的耐力。"""
+    stamina_after: int = 0
     hp_spent: int = 0
     cooldown: int | None = None
     tiles: tuple[Pos, ...]
@@ -987,6 +990,9 @@ class SkillTriggered(EventBase):
     trigger_depth: int
     mana: int = 0
     mana_after: int = 0
+    stamina: int = 0
+    """花費的耐力（武器技，Phase 3H-2）；``stamina_after`` 為使用後的耐力。"""
+    stamina_after: int = 0
     hp_spent: int = 0
     cooldown: int | None = None
 
@@ -1400,6 +1406,9 @@ class SkillInfused(EventBase):
     ap: int
     mana: int
     mana_after: int
+    stamina: int = 0
+    """花費的耐力（武器技，Phase 3H-2）；``stamina_after`` 為使用後的耐力。"""
+    stamina_after: int = 0
     hp_spent: int = 0
     cooldown: int | None = None
 

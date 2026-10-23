@@ -299,7 +299,7 @@ class PaidCost:
 
 
 def pay_skill_cost(caster: UnitState, skill: SkillDef, *, ap: int = 0) -> PaidCost:
-    """支付技能代價（AP、法力、HP、冷卻、每場次數）；主動技能、反應技與被動觸發共用
+    """支付技能代價（AP、法力、耐力、HP、冷卻、每場次數）；主動技能、反應技與被動觸發共用
     （Phase 2F-1 3.1，取代 ``skill_triggers._pay`` 與 ``interpreter._pay_costs`` 的重複邏輯）。
 
     不發出事件——呼叫端的事件型別不同（``SkillUsed``／``SkillTriggered``），且發出順序
@@ -308,6 +308,7 @@ def pay_skill_cost(caster: UnitState, skill: SkillDef, *, ap: int = 0) -> PaidCo
     hp = hp_cost(caster, skill)
     caster.ap -= ap
     caster.mana -= skill.cost.mana
+    caster.stamina -= skill.cost.stamina  # 武器技花耐力（3H-2）
     caster.hp -= hp
     if skill.cost.uses_per_battle is not None:
         caster.skill_uses[skill.id] = caster.skill_uses.get(skill.id, 0) + 1
@@ -321,7 +322,7 @@ def pay_skill_cost(caster: UnitState, skill: SkillDef, *, ap: int = 0) -> PaidCo
 def resource_problem(  # noqa: PLR0911
     state: BattleState, unit: UnitState, skill: SkillDef
 ) -> str | None:
-    """武器相容、沉默、法力、冷卻、每場次數、HP 代價與源力（Phase 3C-4a）（不含 AP）。"""
+    """武器相容、沉默、法力、耐力、冷卻、每場次數、HP 代價與源力（Phase 3C-4a）（不含 AP）。"""
     problem = weapon_problem(skill, unit.weapon.weapon_class)
     if problem is not None:
         return problem
@@ -331,6 +332,8 @@ def resource_problem(  # noqa: PLR0911
         return f"沉默中：不能使用法術技：{skill.name_zh}"
     if unit.mana < skill.cost.mana:
         return f"法力不足：需要 {skill.cost.mana}，剩餘 {unit.mana}"
+    if unit.stamina < skill.cost.stamina:
+        return f"耐力不足：需要 {skill.cost.stamina}，剩餘 {unit.stamina}"
     remaining = unit.cooldowns.get(skill.id, 0)
     if remaining > 0:
         return f"技能冷卻中：{skill.name_zh} 還要 {remaining} 回合"

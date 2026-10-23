@@ -16,7 +16,7 @@ shape: {type: single, range: weapon}
 effects:
   - {type: damage, multiplier_permille: 1500}
 condition: null
-cost: {mana: 4, cooldown: 2}
+cost: {stamina: 8, cooldown: 2}
 tags: [physical, melee]
 variants:
   - id: braced

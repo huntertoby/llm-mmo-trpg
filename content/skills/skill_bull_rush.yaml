@@ -15,7 +15,7 @@ shape: {type: ground_tile, range: 4}
 effects:
   - {type: charge_through, dice: 2d6, on_hit: knock_prone}
 condition: null
-cost: {mana: 5, cooldown: 3}
+cost: {stamina: 10, cooldown: 3}
 tags: [physical, melee, mobility, knockdown]
 narrative:
   concept: 低頭一路衝過敵陣，沿途的人被撞得東倒西歪

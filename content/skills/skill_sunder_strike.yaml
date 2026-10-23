@@ -16,7 +16,7 @@ effects:
   - {type: damage, multiplier_permille: 600}
   - {type: add_stack, stack: sunder, amount: 1}
 condition: null
-cost: {mana: 3}
+cost: {stamina: 6}
 tags: [physical, melee, builder]
 narrative:
   concept: 專挑甲縫下手，一擊比一擊更深

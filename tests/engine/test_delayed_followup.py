@@ -366,7 +366,7 @@ def _cleave_first(state: BattleState) -> Any:
     assert unit is not None
     if unit.template_id == "build_push" and unit.cooldowns.get(CLEAVE) is None:
         action = UseSkill(unit_id=unit.id, skill_id=CLEAVE)
-        if unit.ap >= 2 and unit.mana >= 5:
+        if unit.ap >= 2 and unit.stamina >= 10:
             return action
     return UtilityAI(library().ai_profiles)(state)
 

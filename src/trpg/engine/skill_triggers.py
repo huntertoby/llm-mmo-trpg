@@ -673,6 +673,8 @@ def _pay(ctx: Ctx, owner: UnitState, skill: SkillDef, fired: Fired) -> None:
         trigger_depth=fired.depth,
         mana=skill.cost.mana,
         mana_after=owner.mana,
+        stamina=skill.cost.stamina,
+        stamina_after=owner.stamina,
         hp_spent=paid.hp,
         cooldown=paid.cooldown,
     )

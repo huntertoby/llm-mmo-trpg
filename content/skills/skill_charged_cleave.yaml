@@ -23,7 +23,7 @@ followup:
   effects:
     - {type: damage, multiplier_permille: 1000}
 condition: null
-cost: {mana: 5, cooldown: 3}
+cost: {stamina: 10, cooldown: 3}
 tags: [physical, melee, aoe]
 narrative:
   concept: 沉腰蓄勁，把全身力量壓進刀鋒，下一刻爆發成一圈橫掃

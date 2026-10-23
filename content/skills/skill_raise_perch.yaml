@@ -16,7 +16,7 @@ effects:
   - {type: raise_terrain}
   - {type: apply_status, status: slow, duration: 1, affects: enemies}
 condition: null
-cost: {mana: 4, cooldown: 2}
+cost: {stamina: 8, cooldown: 2}
 tags: [earth, ranged, terrain, height]
 narrative:
   concept: 一箭釘進地面，掀起一塊土台，讓射手站得更高

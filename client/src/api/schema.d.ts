@@ -892,6 +892,8 @@ export interface components {
             source: number;
             /** Hero Downed */
             hero_downed: boolean;
+            /** Stamina */
+            stamina?: number | null;
             /** State Digest */
             state_digest: string;
         };
@@ -2253,6 +2255,16 @@ export interface components {
             mana: number;
             /** Max Mana */
             max_mana: number;
+            /**
+             * Stamina
+             * @default 0
+             */
+            stamina: number;
+            /**
+             * Max Stamina
+             * @default 0
+             */
+            max_stamina: number;
             /** Source */
             source: number;
             /** Source Max */

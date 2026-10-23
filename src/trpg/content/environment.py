@@ -633,6 +633,8 @@ class AiWeights(ContentModel):
     support: int = 0
     exposed: int = 0
     mana: int = 0
+    stamina_permille: int = 0
+    """（Phase 3H-2）技能的耐力機會成本：每點耐力 × 這個值 ÷ 1000（扣在技能的分數上）。"""
     cooldown: int = 0
     flank: int = 0
     backstab: int = 0

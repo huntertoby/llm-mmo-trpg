@@ -247,6 +247,10 @@ class HeroOut(_ApiModel):
     """屬性的常駐數值（Phase 3H-1）：面板每個屬性底下顯示（階數依有效屬性）。"""
     mana: int
     max_mana: int
+    stamina: int = 0
+    """目前耐力（Phase 3H-2：武器技與格擋共用；戰鬥之間不回復，營火回滿）。"""
+    max_stamina: int = 0
+    """耐力上限（基礎 ＋（力量、敏捷、體質最高者 − 10）× 2，07 7.2）。"""
     source: int
     source_max: int
     weapon: str

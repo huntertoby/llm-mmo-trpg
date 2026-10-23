@@ -17,7 +17,7 @@ pierce: true
 effects:
   - {type: damage, multiplier_permille: 1400}
 condition: null
-cost: {mana: 5, cooldown: 2}
+cost: {stamina: 10, cooldown: 2}
 tags: [physical, ranged, pierce]
 narrative:
   concept: 箭頭細長帶倒鉤，躲在木箱、倒木後面也不安全

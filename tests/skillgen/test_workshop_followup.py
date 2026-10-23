@@ -56,7 +56,7 @@ def test_the_followup_step_lists_the_kinds_the_first_part_allows() -> None:
 
 def test_the_followup_step_can_be_skipped() -> None:
     lib = library()
-    draft = {**_teleport_draft(), "cost": {"mana": 2}, "rarity": "rare"}
+    draft = {**_teleport_draft(), "cost": {"stamina": 4}, "rarity": "rare"}
     options = draft_options(draft, lib)
     assert options.next_step is None
     assert _step(options, "followup").complete
@@ -100,7 +100,7 @@ def test_walking_teleport_then_cone_builds_a_legal_composite() -> None:
         "shape": {"type": "cone", "size": 2},
         "effects": [{"type": "damage", "multiplier_permille": 900}],
     }
-    draft["cost"] = {"mana": 6, "cooldown": 3}
+    draft["cost"] = {"stamina": 12, "cooldown": 3}
     draft["rarity"] = "rare"
     options = draft_options(draft, lib)
     assert options.next_step is None and options.problems == ()
@@ -127,7 +127,7 @@ def test_a_common_composite_is_flagged_by_the_check() -> None:
             "shape": {"type": "cone", "size": 2},
             "effects": [{"type": "damage", "multiplier_permille": 900}],
         },
-        "cost": {"mana": 6, "cooldown": 3},
+        "cost": {"stamina": 12, "cooldown": 3},
         "rarity": "common",
     }
     check = check_draft(draft, lib)
@@ -151,7 +151,7 @@ def test_the_leap_then_cross_slam_walks_to_a_legal_skill() -> None:
                 {"type": "knock_prone"},
             ],
         },
-        "cost": {"mana": 6, "cooldown": 3},
+        "cost": {"stamina": 12, "cooldown": 3},
         "rarity": "rare",
     }
     options = draft_options(draft, lib)

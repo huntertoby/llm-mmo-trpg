@@ -22,7 +22,7 @@ followup:
   effects:
     - {type: leap}
 condition: null
-cost: {mana: 5, cooldown: 3}
+cost: {stamina: 10, cooldown: 3}
 tags: [physical, melee, aoe, leap, mobility]
 narrative:
   concept: 一刀橫掃逼退眼前的敵人，順勢向後躍開，不給對手還手的機會

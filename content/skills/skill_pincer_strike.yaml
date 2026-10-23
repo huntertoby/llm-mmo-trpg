@@ -19,7 +19,7 @@ effects:
     multiplier_permille: 800
     condition: {type: flanked}
 condition: null
-cost: {mana: 5, cooldown: 2}
+cost: {stamina: 10, cooldown: 2}
 tags: [physical, melee, flank]
 narrative:
   concept: 同伴在前面牽制，你繞到另一側補上致命的一刀

@@ -334,7 +334,9 @@ def test_after_action_bad_choice_keeps_the_pause_and_decline_skips_the_move(
     assert declined.pending is None
     assert fizzles(declined.events) == ["followup_declined"]
     assert declined.state.units[U1].xy == (3, 3)
-    assert declined.state.units[U1].mana < arena(SLASH).units[U1].mana  # 代價照付
+    assert (
+        declined.state.units[U1].stamina < arena(SLASH).units[U1].stamina
+    )  # 代價照付（武器技花耐力）
     assert any("放棄了第二段" in (describe_event(e, declined.state) or "") for e in declined.events)
 
 

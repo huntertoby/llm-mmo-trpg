@@ -37,6 +37,9 @@ __all__ = [
     "HitThreshold",
     "PerkKind",
     "PerkLine",
+    "ResourceKind",
+    "ResourcePool",
+    "ResourceRules",
     "SkillSlots",
     "SummonGrowth",
     "SummonInfusion",
@@ -83,6 +86,48 @@ class PerkLine:
     per_tier_zh: str
     now_zh: str | None
     next_at: int
+
+
+ResourceKind = Literal["mana", "stamina"]
+"""可依屬性決定上限的資源（Phase 3H-2）：法力（法術技）與耐力（武器技、格擋）。"""
+
+
+class ResourcePool(ContentModel):
+    """一種資源的上限加成：``attrs`` 裡最高的屬性每高於基準 1 點，上限 + ``per_point``。"""
+
+    attrs: tuple[Attribute, ...] = Field(min_length=1)
+    per_point: int = Field(ge=0)
+
+
+class ResourceRules(ContentModel):
+    """法力與耐力上限（Phase 3H-2，``docs/design/07-角色成長.md`` 7.2；初值，平衡待辦）::
+
+        上限 ＝ 基礎 ＋（attrs 最高者 − base）× per_point（至少 0）
+
+    基礎是範本的 ``max_mana``／``stamina``（主角依武器大類，``roguelite.yaml`` 的
+    ``start.heroes``）。只套用在 ``scaled_resources`` 的範本（主角）；敵人、隊友與召喚物照範本的
+    固定值。"""
+
+    base: int = Field(default=10, ge=0)
+    mana: ResourcePool = ResourcePool(
+        attrs=(Attribute.INT, Attribute.WIS, Attribute.WIL), per_point=2
+    )
+    stamina: ResourcePool = ResourcePool(
+        attrs=(Attribute.STR, Attribute.DEX, Attribute.CON), per_point=2
+    )
+
+    def pool(self, kind: ResourceKind) -> ResourcePool:
+        return self.mana if kind == "mana" else self.stamina
+
+    def bonus(self, kind: ResourceKind, attributes: Mapping[Attribute, int]) -> int:
+        """屬性帶來的上限加成（可為負：最高者低於基準時）。"""
+        pool = self.pool(kind)
+        best = max(attributes.get(a, self.base) for a in pool.attrs)
+        return (best - self.base) * pool.per_point
+
+    def max_for(self, kind: ResourceKind, base: int, attributes: Mapping[Attribute, int]) -> int:
+        """上限 ＝ max(0, ``base`` ＋ :meth:`bonus`)。"""
+        return max(0, base + self.bonus(kind, attributes))
 
 
 class AttributePerks(ContentModel):
@@ -346,6 +391,9 @@ class CoreRules(ContentModel):
     reactions_per_round: int = Field(ge=0)
     default_stamina: int = Field(ge=0)
 
+    # 資源上限（3H-2，07 7.2）：主角的法力與耐力上限依屬性
+    resources: ResourceRules = ResourceRules()
+
     # 視線與隱蔽（1B）
     base_sight_range: int = Field(ge=1)
     concealed_ranged_max_distance: int = Field(ge=0)
@@ -474,6 +522,18 @@ class CoreRules(ContentModel):
     def template_max_hp(self, template: UnitTemplate) -> int:
         """範本建立出的單位的最大 HP（引擎對敵我所有單位用同一公式）。"""
         return self.max_hp_for(template.max_hp, template.attributes[Attribute.CON])
+
+    def template_stamina(self, template: UnitTemplate) -> int:
+        """範本的基礎耐力：``stamina``，省略時 ``default_stamina``。"""
+        return self.default_stamina if template.stamina is None else template.stamina
+
+    def template_max_resource(self, kind: ResourceKind, template: UnitTemplate) -> int:
+        """範本建立出的單位的法力／耐力上限：``scaled_resources`` 的範本（主角）依屬性加成
+        （:class:`ResourceRules`），其他照範本的固定值。"""
+        base = template.max_mana if kind == "mana" else self.template_stamina(template)
+        if not template.scaled_resources:
+            return base
+        return self.resources.max_for(kind, base, template.attributes)
 
     def run_max_hp(self, base_hp: int, con: int, level: int) -> int:
         """roguelite 主角的最大 HP：``max_hp_for(基礎 HP ＋ 等級加成, 體質)``。戰鬥中的主角單位

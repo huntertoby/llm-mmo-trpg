@@ -15,7 +15,7 @@ effects:
   - {type: damage, multiplier_permille: 400}
   - {type: pull, distance: 2}
 condition: null
-cost: {mana: 3, cooldown: 2}
+cost: {stamina: 6, cooldown: 2}
 tags: [physical, ranged, pull]
 narrative:
   concept: 箭尾拖著細索，把躲在遠處的敵人拖到面前

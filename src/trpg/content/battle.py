@@ -861,6 +861,10 @@ class UnitTemplate(ContentModel):
     ai_profile: str | None = Field(default=None, pattern=ID_PATTERN)
     skills: tuple[str, ...] = Field(default=(), max_length=32)
     max_mana: int = Field(default=0, ge=0)
+    scaled_resources: bool = False
+    """法力與耐力上限依屬性（Phase 3H-2，07 7.2；主角）：``max_mana``／``stamina`` 是基礎值，引擎依
+    ``core.yaml`` 的 ``resources`` 加上屬性加成。一輪的主角與 build 英雄為 ``True``，其他單位照
+    固定值。"""
     summon: bool = False
     totem: TotemSpec | None = None
     """圖騰（Phase 3D-4b）：必須是召喚物、速度 0；沒有行動，只在自己的回合開始時給光環。"""

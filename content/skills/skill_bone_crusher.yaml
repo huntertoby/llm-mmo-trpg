@@ -15,7 +15,7 @@ effects:
   - {type: damage, multiplier_permille: 1500}
   - {type: knock_prone}
 condition: null
-cost: {mana: 4, cooldown: 2}
+cost: {stamina: 8, cooldown: 2}
 tags: [physical, melee, control]
 narrative:
   concept: 把全身的重量灌進一擊，連骨頭帶站姿一起砸碎

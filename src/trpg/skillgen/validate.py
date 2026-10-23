@@ -85,7 +85,9 @@ def validate_skill(skill: SkillDef, library: ContentLibrary) -> list[Violation]:
     reference = _reference_violations(skill, library)
     if reference:
         return reference
-    return [*_structure_violations(skill, library), *_keyword_violations(skill, library)]
+    resource = library.budget.cost_problem(skill.category, skill.cost)  # 3H-2，06 6.10
+    out = [] if resource is None else [Violation(skill.id, "cap.resource", resource)]
+    return [*out, *_structure_violations(skill, library), *_keyword_violations(skill, library)]
 
 
 def _keyword_violations(skill: SkillDef, library: ContentLibrary) -> list[Violation]:

@@ -65,6 +65,8 @@ class AllyResult(BaseModel):
     """剩餘源力（0～``source_max``）。"""
     mana: int
     max_mana: int
+    stamina: int = 0
+    max_stamina: int = 0
 
 
 class BattleResult(BaseModel):
@@ -133,6 +135,8 @@ def battle_result(state: BattleState) -> BattleResult:
             source=u.source,
             mana=u.mana,
             max_mana=u.max_mana,
+            stamina=u.stamina,
+            max_stamina=u.max_stamina,
         )
         for u in state.units_sorted()
         if u.team is Team.ALLY and not u.is_summon  # 召喚物不帶出戰鬥（Phase 3D-4a）

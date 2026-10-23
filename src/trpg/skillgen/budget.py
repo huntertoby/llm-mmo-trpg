@@ -1144,6 +1144,9 @@ def _allowance_parts(
         parts.append(
             (f"法力 {cost.mana}", min(cost.mana * allowance.mana_per_point, allowance.mana_cap))
         )
+    if cost.stamina:  # 3H-2：耐力與法力預算點數等價（stamina_per_mana 點耐力 ＝ 1 點法力）
+        value = cost.stamina * allowance.mana_per_point // allowance.stamina_per_mana
+        parts.append((f"耐力 {cost.stamina}", min(value, allowance.mana_cap)))
     if cost.hp_percent is not None:
         parts.append(
             (

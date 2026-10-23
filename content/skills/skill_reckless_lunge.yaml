@@ -14,7 +14,7 @@ shape: {type: single, range: weapon}
 effects:
   - {type: damage, multiplier_permille: 2800}
 condition: null
-cost: {mana: 4, cooldown: 2, self_status: {status: vulnerable, duration: 2}}
+cost: {stamina: 8, cooldown: 2, self_status: {status: vulnerable, duration: 2}}
 tags: [physical, melee, sacrifice]
 narrative:
   concept: 不顧防禦的全力一擊，換來短暫的破綻

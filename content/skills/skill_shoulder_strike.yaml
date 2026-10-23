@@ -18,7 +18,7 @@ effects:
     multiplier_permille: 800
     condition: {type: adjacent_ally}
 condition: null
-cost: {mana: 5, cooldown: 2}
+cost: {stamina: 10, cooldown: 2}
 tags: [physical, melee, formation]
 narrative:
   concept: 與同伴並肩作戰時才發揮的陣型斬擊

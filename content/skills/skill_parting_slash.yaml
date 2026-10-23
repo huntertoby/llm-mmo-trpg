@@ -17,7 +17,7 @@ effects:
 condition: null
 trigger: null
 reaction: {event: enemy_leaves_adjacent}
-cost: {mana: 0}
+cost: {}
 tags: [physical, reaction, melee]
 narrative:
   concept: 想從貼身的距離抽身，就得背對著刀鋒

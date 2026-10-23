@@ -54,11 +54,21 @@ export function skillMana(check: WorkshopCheck | null): number {
   return typeof mana === "number" ? mana : 0;
 }
 
-/** 戰鬥建立後檢查：主角的法力上限不夠施放時回傳中文提醒（不改主角的法力，見 3F-1 待決定 #9）。 */
+/** 技能的耐力代價（武器技，Phase 3H-2；沒有就是 0）。 */
+export function skillStamina(check: WorkshopCheck | null): number {
+  const stamina = getPath(check?.skill ?? null, "cost.stamina");
+  return typeof stamina === "number" ? stamina : 0;
+}
+
+/** 戰鬥建立後檢查：主角的法力（或耐力）上限不夠施放時回傳中文提醒（不改主角的資源，見 3F-1 待決定 #9）。 */
 export function manaWarning(check: WorkshopCheck, response: BattleResponse): string | null {
+  const hero = response.view.units.find((u) => u.id === response.hero_id);
+  const stamina = skillStamina(check);
+  if (hero !== undefined && stamina > 0 && hero.max_stamina < stamina) {
+    return `主角的耐力上限只有 ${hero.max_stamina}，這個技能需要 ${stamina} 點耐力：進了戰鬥也放不出來。可以把技能的耐力代價調低，或仍然進入（只能試其他部分）。`;
+  }
   const need = skillMana(check);
   if (need <= 0) return null;
-  const hero = response.view.units.find((u) => u.id === response.hero_id);
   if (hero === undefined || hero.max_mana >= need) return null;
   return `主角的法力上限只有 ${hero.max_mana}，這個技能需要 ${need} 點法力：進了戰鬥也放不出來。可以改選法力較多的武器、把技能的法力代價調低，或仍然進入（只能試其他部分）。`;
 }

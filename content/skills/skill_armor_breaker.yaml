@@ -16,7 +16,7 @@ effects:
   - {type: damage, multiplier_permille: 1500}
   - {type: consume_stack, stack: sunder, per_stack_permille: 300}
 condition: null
-cost: {mana: 4, cooldown: 2}
+cost: {stamina: 8, cooldown: 2}
 tags: [physical, melee, finisher]
 narrative:
   concept: 把先前撬鬆的甲片一口氣砸碎

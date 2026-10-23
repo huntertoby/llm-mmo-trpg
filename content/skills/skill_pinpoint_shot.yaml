@@ -19,7 +19,7 @@ effects:
     multiplier_permille: 1300
     condition: {type: target_has_status, status: marked}
 condition: null
-cost: {mana: 5, cooldown: 2}
+cost: {stamina: 10, cooldown: 2}
 tags: [physical, ranged, combo]
 narrative:
   concept: 把標記變成靶心

@@ -16,7 +16,7 @@ effects:
   - {type: damage, multiplier_permille: 800}
   - {type: push, distance: 2, collision_dice: 2d6}
 condition: null
-cost: {mana: 4, cooldown: 3}
+cost: {stamina: 8, cooldown: 3}
 tags: [physical, melee, push]
 narrative:
   concept: 整個人當成攻城錘撞出去，擋在後面的東西一起遭殃

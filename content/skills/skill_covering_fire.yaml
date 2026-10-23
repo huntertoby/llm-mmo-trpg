@@ -18,7 +18,7 @@ effects:
 condition: null
 trigger: null
 reaction: {event: ally_targeted}
-cost: {mana: 0, cooldown: 1}
+cost: {cooldown: 1}
 tags: [physical, reaction, ranged]
 narrative:
   concept: 同伴剛被盯上，你的箭已經先到了攻擊者的腳邊

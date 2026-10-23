@@ -18,7 +18,7 @@ effects:
 condition: null
 crit_range: 17
 damage_permille: 750
-cost: {mana: 4, cooldown: 1}
+cost: {stamina: 8, cooldown: 1}
 tags: [physical, melee]
 narrative:
   concept: 不講章法的亂砍，砍歪了就算了，砍中了就是一場風暴

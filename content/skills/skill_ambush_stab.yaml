@@ -17,7 +17,7 @@ effects:
 condition: null
 trigger: null
 reaction: {event: enemy_enters_adjacent}
-cost: {mana: 0, cooldown: 1}
+cost: {cooldown: 1}
 tags: [physical, reaction, melee]
 narrative:
   concept: 想貼上來？得先過了你這一刀

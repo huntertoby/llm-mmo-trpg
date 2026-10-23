@@ -212,6 +212,7 @@ def _pending(
             skill_id=picked.id,
             trigger_event_seq=_trigger_event_seq(ctx, unit, rule.when.event, trigger),
             mana_cost=picked.cost.mana,
+            stamina_cost=picked.cost.stamina,
             hp_cost_permille=picked.cost.hp_percent or 0,
         )
     return Pending(

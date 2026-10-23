@@ -156,7 +156,7 @@ def test_try_out_a_custom_skill_cast_it_and_replay_the_log(
 
 
 def test_illegal_custom_skills_are_rejected_in_chinese(client: TestClient) -> None:
-    weak = {**CHARGE, "cost": {"cooldown": 6, "mana": 20}}
+    weak = {**CHARGE, "cost": {"cooldown": 6, "stamina": 40}}
     response = _create(client, custom_skills=[weak], replace_skills=["skill_bull_rush"])
     assert response.status_code == 422
     assert "不合法" in response.json()["detail"] and "過弱" in response.json()["detail"]
@@ -225,7 +225,7 @@ TELEPORT_CONE: dict[str, Any] = {
         "shape": {"type": "cone", "size": 2},
         "effects": [{"type": "damage", "multiplier_permille": 900}],
     },
-    "cost": {"mana": 6, "cooldown": 3},
+    "cost": {"stamina": 12, "cooldown": 3},
     "rarity": "rare",
 }
 """瞬移 → 錐形打擊（3F-3b 驗收 2）。"""

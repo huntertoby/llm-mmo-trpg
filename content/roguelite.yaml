@@ -53,9 +53,11 @@ off_route_per_offer: 1        # 其中 1 個「偏離路線」：縮放屬性與
 offer_tier_by_level: [1, 1, 2, 2, 3, 3]       # 主角等級 → 候選的階級
 offer_max_attempts: 200       # 湊齊候選最多試幾個組合器種子
 
-# 營火（0.11 G）：HP、法力回滿，源力 +campfire，並提供重骰（0.2 F）。中段（第 3 場後）與 Boss 前（第 5 場後）。
+# 營火（0.11 G）：HP、法力、耐力（3H-2）回滿，源力 +campfire，並提供重骰（0.2 F）。中段（第 3 場後）與 Boss 前（第 5 場後）。
 campfire_after: [3, 5]
 rerolls_per_campfire: 1
+# 每場打贏後回滿的資源（Phase 3H-2 設定點；mana／stamina）。「每場法力回滿」（B 選項）待使用者決定，目前不開：[]
+refill_after_battle: []
 
 # 源力（0.11 K；上限 3、每場開場至少 1 在 rules/core.yaml）
 source:
@@ -67,13 +69,14 @@ source:
 # 技能池（只看專屬規則推導的關鍵字）各給 1 招 1 階起始技能（以一輪的種子抽；亂數標籤 start/skill/<關鍵字>）。
 # 池裡沒有與武器相容的技能時，以隨機組合器（指定該關鍵字）補，最多試 composer_tries 個種子；仍湊不到就不能選這個關鍵字。
 # 主角的基礎數值依武器大類（比照先前的白板戰士、白板射手、白板法師）；所有人起始預算相同。
+# 法力與耐力上限（3H-2，07 7.2）＝ 這裡的基礎（max_mana、stamina）＋ 屬性加成（rules/core.yaml 的 resources）。
 start:
   keywords: 2
   composer_tries: 16
   heroes:
-    melee:  {name_zh: 冒險者, max_hp: 60, armor_bonus: 4, max_mana: 20, resist: {physical: 100}}
-    ranged: {name_zh: 冒險者, max_hp: 50, armor_bonus: 2, max_mana: 20, resist: {physical: 50}}
-    focus:  {name_zh: 冒險者, max_hp: 40, armor_bonus: 1, max_mana: 40, resist: {elemental: 150}}
+    melee:  {name_zh: 冒險者, max_hp: 60, armor_bonus: 4, max_mana: 20, stamina: 30, resist: {physical: 100}}
+    ranged: {name_zh: 冒險者, max_hp: 50, armor_bonus: 2, max_mana: 20, stamina: 30, resist: {physical: 50}}
+    focus:  {name_zh: 冒險者, max_hp: 40, armor_bonus: 1, max_mana: 40, stamina: 30, resist: {elemental: 150}}
 
 # 共用候選產生器（Phase 3-24b2，06 6.27.4；trpg.skillgen.candidates）：升級與營火三選一＝加深、橋接、新方向。
 # 每個候選先以 composer_share_permille 的機率決定先從隨機組合器（指定關鍵字）或技能池找，找不到再換另一個來源；

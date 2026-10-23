@@ -14,7 +14,7 @@ shape: {type: square3, range: 5}
 effects:
   - {type: create_surface, surface: darkness, duration: 5}
 condition: null
-cost: {mana: 4, cooldown: 3}
+cost: {stamina: 8, cooldown: 3}
 tags: [shadow, ranged, area, utility]
 narrative:
   concept: 用濃煙切斷敵人的視線，換取撤退或換位的空檔

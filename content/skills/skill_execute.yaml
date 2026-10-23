@@ -15,7 +15,7 @@ effects:
   - {type: damage, multiplier_permille: 2000}
 # 只能對血量低於 40% 的目標使用
 condition: {type: target_hp_below, permille: 400}
-cost: {mana: 5, cooldown: 2}
+cost: {stamina: 10, cooldown: 2}
 tags: [physical, melee, finisher]
 narrative:
   concept: 對已經站不穩的敵人補上決定性的一擊

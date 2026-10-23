@@ -1415,12 +1415,14 @@ def skill_cost(
     w: AiWeights,
     status_values: dict[str, int] | None = None,
 ) -> Fraction:
-    """技能的機會成本：法力（不回復）、冷卻（這幾回合不能再用）、HP 代價（算作對自己的傷害）與
-    自身狀態代價（Phase 2H-1：``damage`` 權重 × 狀態價值 × 有效回合 ``duration − 1``，價值取
-    ``status_values``，沒列出的狀態用 ``status`` 權重，與對敵人施加同一狀態的收益對稱）。"""
+    """技能的機會成本：法力（不回復）、耐力（3H-2）、冷卻（這幾回合不能再用）、HP 代價（算作對
+    自己的傷害）與自身狀態代價（Phase 2H-1：``damage`` 權重 × 狀態價值 × 有效回合
+    ``duration − 1``，價值取 ``status_values``，沒列出的狀態用 ``status`` 權重，與對敵人施加
+    同一狀態的收益對稱）。"""
     skill = state.ruleset.skill_def(action.skill_id)
     cost = Fraction(
         w.mana * skill.cost.mana
+        + Fraction(w.stamina_permille * skill.cost.stamina, 1000)
         + w.cooldown * (skill.cost.cooldown or 0)
         + w.friendly_fire * hp_cost(actor, skill)
     )

@@ -18,7 +18,7 @@ effects:
     multiplier_permille: 800
     condition: {type: moved_this_turn}
 condition: null
-cost: {mana: 5, cooldown: 2}
+cost: {stamina: 10, cooldown: 2}
 tags: [physical, melee, momentum]
 narrative:
   concept: 把助跑的衝勢全壓進這一刀

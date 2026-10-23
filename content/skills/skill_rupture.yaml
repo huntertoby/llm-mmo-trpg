@@ -20,7 +20,7 @@ effects:
     then:
       - {type: damage, multiplier_permille: 1200}
 condition: null
-cost: {mana: 3, cooldown: 2}
+cost: {stamina: 6, cooldown: 2}
 tags: [physical, melee, detonate]
 narrative:
   concept: 對準還在流血的傷口再補一刀，把剩下的血一次放乾

@@ -495,7 +495,9 @@ def _attempt_stance(
 
 
 def _finish(library: ContentLibrary, seed: int, base: dict[str, Any], ctx: Ctx) -> SkillDef:
-    """加上名稱、標籤與暫定的敘事文字。"""
+    """加上名稱、標籤與暫定的敘事文字；代價依類別換成該花的資源（3H-2：武器技的法力換成等價的
+    耐力，預算點數不變）。"""
+    base = {**base, "cost": library.budget.resource_cost(base["cost"], base["category"])}
     draft = SkillDef.model_validate({**base, "effects": ctx.effects})
     tags: list[str] = [ctx.theme.value, ctx.skeleton.id]
     tags += [t for t in mechanic_tags(draft, library.ruleset) if t not in tags]

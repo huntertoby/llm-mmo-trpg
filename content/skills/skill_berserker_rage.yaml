@@ -18,7 +18,7 @@ effects:
     multiplier_permille: 1600
     scaling: {by: missing_hp_10pct, per_step_permille: 80, cap_permille: 800}
 condition: null
-cost: {mana: 4, cooldown: 1}
+cost: {stamina: 8, cooldown: 1}
 tags: [physical, melee]
 narrative:
   concept: 傷得越重，砍得越狠

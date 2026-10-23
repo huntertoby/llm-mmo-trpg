@@ -14,7 +14,7 @@ shape: {type: ring, radius: 1}
 effects:
   - {type: damage, multiplier_permille: 1000}
 condition: null
-cost: {mana: 6, cooldown: 3}
+cost: {stamina: 12, cooldown: 3}
 tags: [physical, melee, area]
 narrative:
   concept: 被包圍時反而最安心，因為每個方向都有敵人

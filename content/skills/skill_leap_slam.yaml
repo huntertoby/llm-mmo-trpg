@@ -23,7 +23,7 @@ followup:
     - {type: damage, multiplier_permille: 600}
     - {type: knock_prone}
 condition: null
-cost: {mana: 6, cooldown: 3}
+cost: {stamina: 12, cooldown: 3}
 tags: [physical, melee, leap, mobility, aoe, control]
 narrative:
   concept: 騰空躍起，帶著全身重量砸向地面，震倒落點四周的敵人

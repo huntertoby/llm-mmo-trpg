@@ -201,7 +201,7 @@ def new_run(
         level=1,
         xp=0,
         hp=start_hp,
-        mana=hero.max_mana,
+        mana=core.resources.max_for("mana", hero.max_mana, hero.attributes),
         source=core.source_min_at_start,
         plan=make_plan(library, seed),
         attribute_spent=merge_spent({}, allocation),
@@ -299,6 +299,8 @@ def _start_hero(library: ContentLibrary, weapon: str, skills: Sequence[str]) -> 
         resist=dict(base.resist),
         tags=("hero",),
         max_mana=base.max_mana,
+        stamina=base.stamina,
+        scaled_resources=True,  # 法力與耐力上限依屬性（3H-2）
         skills=tuple(skills),
     )
 
@@ -399,7 +401,7 @@ def new_keyword_run(
         level=1,
         xp=0,
         hp=core.run_max_hp(hero.max_hp, hero.attributes[Attribute.CON], 1),
-        mana=hero.max_mana,
+        mana=core.resources.max_for("mana", hero.max_mana, hero.attributes),
         source=core.source_min_at_start,
         generated_skills=tuple(generated),
         plan=make_plan(library, seed),

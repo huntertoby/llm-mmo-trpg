@@ -17,7 +17,7 @@ effects:
   - {type: damage, multiplier_permille: 800}
   - {type: push, distance: 2}
 condition: null
-cost: {mana: 5, cooldown: 3}
+cost: {stamina: 10, cooldown: 3}
 tags: [physical, melee, push, mobility]
 narrative:
   concept: 一個箭步衝到敵人面前，借著衝勢把他撞飛出去

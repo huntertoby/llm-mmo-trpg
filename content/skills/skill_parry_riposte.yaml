@@ -23,7 +23,7 @@ followup:
   effects:
     - {type: damage, multiplier_permille: 900}
 condition: null
-cost: {mana: 4, cooldown: 2}
+cost: {stamina: 8, cooldown: 2}
 tags: [physical, melee, aoe]
 narrative:
   concept: 以刀身架住來勢，借對手的力道翻腕反斬，掃向身周的每一個敵人

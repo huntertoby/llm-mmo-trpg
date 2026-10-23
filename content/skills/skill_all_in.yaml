@@ -17,7 +17,7 @@ effects:
   - {type: damage, multiplier_permille: 1800}
 condition: null
 cost:
-  mana: 3
+  stamina: 6
   cooldown: 1
   on_miss:
     - {type: apply_status, status: prone}
