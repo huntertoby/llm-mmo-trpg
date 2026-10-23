@@ -1,7 +1,7 @@
 # 開發 PM 交接文件
 
-> 給接手的 **開發 PM**（新對話中的 Claude）。最後更新：2026-10-22。**只讀本檔就能接手**；需要時再讀 `CLAUDE.md`、`docs/專案計畫.md`（總覽）與本檔指到的計畫檔。
-> 現況一句話（2026-10-22 交接）：**Phase 3 的 3-1～3-29（3-25 除外）與 Phase 3G（裝備詞條引擎 G1～G5c）全部完成並 push**；驗收紀錄在 `Phase3計畫.md` 第 19～31 節與 `Phase3G計畫.md` 第 6～13 節。**排程（使用者選 A，「A」）：3-25 戰場變奏（新開發 PM 寫規格並派工）與使用者第二次試玩同時進行 → 試玩回饋小修 → Phase 3 結束審查 → 3E-2／3E-3 → Phase 4。**
+> 給接手的 **開發 PM**（新對話中的 Claude）。最後更新：**2026-10-23**。**只讀本檔就能接手**；需要時再讀 `CLAUDE.md`、`docs/專案計畫.md`（總覽）與本檔指到的計畫檔。
+> 現況一句話（2026-10-23 交接）：**Phase 3（3-1～3-34b）、Phase 3 結束審查、3E-2a～g 全部完成；Phase 4 已開工，4-L1、4-L2、4-L3 完成並 push，停在 4-L4 之前**（使用者：「讓正在跑的 4-L2、4-L3 做完就停」）。下一步見 **3.00**。
 
 ---
 
@@ -49,6 +49,33 @@ Phase 3 各段（`Phase3計畫.md` 節號；報告 `Phase3-*報告.md`）：
 - 一輪的平衡現況：AI 代打種子 1～10 勝 2 場（3-7 後）。
 
 ## 3. 下一步
+
+### 3.00 接手第一件事（2026-10-23 交接，最新，優先於下面各節）
+
+**目前停在哪**：Phase 4（LLM 技能生成，本機模型）的 4-L1～L3 已驗收合併並 push；**沒有任何 agent 在跑**。規格 `docs/phases/Phase4計畫.md`（0 節：使用者 5 題原話與決定；1 節：4-L1～L9 段表；4 節：驗收紀錄）。設計 `docs/phases/Phase4-LLM技能提議設計.md`。
+
+**下一段**：**4-L4 schema 子集**（依稀有度、骨架、題目關鍵字篩原語、形狀、條件；prompt＋schema ≤ 30k token；同時把 `content/llm/world_shattered.yaml` 登記進 `content/registry.py`，並定 4-L2 的 `available` 格式）→ **4-L5**（opus：重試＋退回＋預算器補數值；4-L3 報告列了預算器要補的項目與 `ap_cost`／`mana`／`cooldown`／`max_per_round` 預設）→ 4-L6／4-L7 → 4-L8 → 4-L9（真模型評估）。4-L4 的詳細規格要先寫進 `Phase4計畫.md`（照第 2、3 節的格式）再派。
+
+**待使用者／其他 PM**：
+- **`F:\WSL\settings.ini` 的 `PORT` 要改成 8001**（避開 `trpg serve` 的 8000；**使用者還沒改**）。我們的 `config/llm.toml` 預設 `http://localhost:8001/v1`、模型 `swift`。開發不改 `F:\WSL` 任何檔案，要改時請專案 PM 轉達使用者。
+- 本機模型吃約 88% VRAM：開發與測試一律用 `MockLLMClient`；真模型測試標 `@pytest.mark.llm`（預設不跑，`--full` 也不跑），使用者用 `F:\WSL\start.bat` 啟動後才跑 `uv run trpg llm ping`、`uv run pytest -m llm`、4-L9。
+- 4-L1～L3 留下的待驗證／待決定（`Phase4計畫.md` 4.1～4.3）：vLLM 0.27 是否接受 strict JSON schema 與巢狀 `$ref`／`oneOf`（要真模型）；形狀參數保留給 LLM 選；`ap_cost`／冷卻等是否在 4-L5 加旋鈕。
+
+**要先查的問題**：`check.py --full` 越跑越慢——3E-2b 後 4 分 32 秒、3E-2f 後 14 分 16 秒、4-L3 後 **28 分 5 秒**（都全過）。可能是機器負載，也可能有測試變慢（3E-2f 改 YAML 範圍驗證、4-L3 的提議模型產生）。先用 `UV_NO_SYNC=1 uv run pytest -q -n 8 -m "" --durations=30` 找出最慢的測試，必要時派小段修（標 slow 或快取）。
+
+**其他待辦位置**：
+- **3E-3**（可在 Phase 4 期間穿插，一次最多 2 個 agent）：`Phase3E計畫.md` 3.2。
+- **平衡階段清單 B1～B9**：本檔 3.3（使用者：平衡延後，驗收時仍判斷並記錄數值、不調）。
+- 審查全文：`docs/phases/Phase3審查-Python.md`、`Phase3審查-前端.md`。
+
+**常駐規則（都在本檔，照做）**：
+- 回報：PM 之間只在「某段驗收合併完成（附給使用者的檢查重點）」「卡住」「需要決定」時傳訊息；不傳告知類（6.2 開頭）。
+- 檢查：每段合併只跑快速檢查（ruff、format、mypy、相關測試、一場重播、有改前端才 `pnpm build`）；全量 `check.py --full` 每 2～3 段一次（6.2 第 5 點；CLAUDE.md 守則 11）。同時最多 2 個 agent；agent 不跑全量；長指令加 timeout 或背景執行；agent 在自己的 worktree 跑並用 `UV_NO_SYNC=1`。
+- git：共用資料夾只用 `git pull --ff-only`，不 rebase；push 前 `git log origin/main..HEAD` 確認沒有別人的 commit（6.6 第一條）。
+- 直接打 `python` 可能是 Windows 商店空殼，一律 `uv run python`；臨時腳本放 scratchpad 或 `$TEMP`，不要放在專案資料夾（會被 ruff 掃到）。
+- `LOG_FORMAT` 目前 `/57`；平行段落同時遞增時，合併者改成下一號、`runner.py` 文件字串都保留、測試的 `trpg-battle-log/N` 一起改。
+- 前端彈出 UI 一律用共用浮動卡元件（6.5.1）。
+- agent 回報後若顯示「waiting on its own background work」，用 `TaskStop` 停掉。
 
 ### 3.0 接手後要做的（2026-10-22）
 

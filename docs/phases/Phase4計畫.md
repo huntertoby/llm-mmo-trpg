@@ -65,3 +65,10 @@
 - PM 合併（無衝突）；ruff、mypy、`tests/llm`＋`test_architecture`＋`tests/content` 941 全過。`src/trpg/llm/prompts/`（`builder.py`：`PROMPT_VERSION="skill-proposal/1"`、`build_skill_proposal_messages` 回傳 `[system, user]`、`prompt_record` 帶 `prompt_version`＋`system_hash`；`escape.py`：`escape_text`、`wrap_player_input`；`world.py`）；`content/llm/world_shattered.yaml`（碎界語氣、5 界域、名詞表，換世界觀只換此檔）。system 只放固定指令；user 資料區依序 `<request>`、`<available>`、`<previous_proposal>`、`<errors>`、`<player_input>`；跳脫 `&<>` 為實體、移除控制與零寬字元、玩家文字截斷 500 字；11 筆惡意字串測試與 SHA-256 快照（改 prompt 沒改版本號會失敗）。報告 `Phase4-L2報告.md`。
 - 待 PM 決定：#1 世界觀檔未登記進 `content/registry.py` → **4-L4 一併登記**；#2 玩家文字 500 字、#3 指令字樣不過濾只隔離、#5 重試回饋放同一則 user 訊息、#6 回饋 JSON 也跳脫 → 接受；#4 `available` 格式 → 4-L4 定。
 
+### 4.3 4-L3 驗收（2026-10-23）
+
+- PM 合併（無衝突）；**`check.py --full` 全過（28 分 5 秒，比前兩次慢很多 → 交接 3.00 列為先查）**；`swamp` 種子 60 `--log-json` ＋ `replay` 一致。`llm_hint` 196 條（原語、形狀、條件、觸發與參數；一句、不含欄位名與世界觀名詞，有測試）；`required_when` 進 YAML（取代 `_filled_by_category`／`CONDITIONALLY_REQUIRED`）；觸發參數進 `skill_triggers.yaml` `params`；提議模型移除 53 個數值欄位；`skillgen/proposal_numbers.py`（`split_numbers`／`apply_numbers`／`fixed_filler`／`minimal_filler`）；`to_skill_def(proposal, ctx, fill)`。結構往返仍 163／217。報告 `Phase4-L3報告.md`（含 4-L5 預算器要補的項目）。
+- 待 PM 決定（留給接手的開發 PM 在 4-L4／4-L5 規格處理）：#1 形狀參數（`range`、`size`、`radius`、`jumps`、`jump_range`）保留給 LLM 選 → 暫接受；#2 `ap_cost`／`mana`／`cooldown`／`max_per_round` 全採預設、LLM 無法表達便宜／慢熱 → **建議 4-L5 加 AP／冷卻旋鈕**；#3 `range_delta` 移除、#5 `unless_filled` 舊行為 → 接受；#4 `minimal_filler` 只保證 schema 合法 → 4-L5 換成預算器；#6 `TriggerSpec` 驗證器仍寫死 → 3E-3。
+
+**Phase 4 暫停點（2026-10-23，使用者：「讓正在跑的 4-L2、4-L3 做完就停」）**：4-L1～L3 完成，下一段 4-L4（見 `docs/開發PM交接.md` 3.00）。
+
