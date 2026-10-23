@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+from trpg.api.attribute_text import attribute_affects
 from trpg.api.run_schemas import (
     AttributePerkOut,
     BattlePlanOut,
@@ -29,6 +30,7 @@ from trpg.roguelite.growth import (
     uses_of,
 )
 from trpg.roguelite.offers import skill_defs
+from trpg.roguelite.progress import hero_effective_attributes
 from trpg.roguelite.state import (
     BattleNode,
     CampfireNode,
@@ -166,6 +168,8 @@ def _hero(library: ContentLibrary, run: RunState) -> HeroOut:
     thresholds = library.roguelite.level_thresholds
     growth = library.ruleset.skill_growth
     weapon = library.weapons.get(run.hero.weapon)
+    effective = hero_effective_attributes(library, run)
+    equipped = skill_defs(library, run, run.hero.skills)
     return HeroOut(
         build_id=run.build_id or "",
         name_zh=run.hero.name_zh,
@@ -173,6 +177,10 @@ def _hero(library: ContentLibrary, run: RunState) -> HeroOut:
         xp=run.xp,
         xp_next=thresholds[run.level - 1] if run.level - 1 < len(thresholds) else None,
         attributes=dict(run.hero.attributes),
+        effective_attributes=effective,
+        attribute_points=run.attribute_points,
+        attribute_spent=dict(run.attribute_spent),
+        attribute_affects=attribute_affects(equipped, weapon),
         hp=run.hp,
         # 測試模式戰後回滿到含裝備的上限，可能高於一輪本身算的上限：顯示時不讓 HP／法力超過上限
         max_hp=max(run.max_hp_in(library.ruleset.core), run.hp if run.test_mode else 0),
@@ -186,7 +194,7 @@ def _hero(library: ContentLibrary, run: RunState) -> HeroOut:
                 now_zh=p.now_zh,
                 next_at=p.next_at,
             )
-            for p in library.ruleset.core.attribute_perks.lines(run.hero.attributes)
+            for p in library.ruleset.core.attribute_perks.lines(effective)
         ),
         mana=run.mana,
         max_mana=max(run.max_mana, run.mana if run.test_mode else 0),

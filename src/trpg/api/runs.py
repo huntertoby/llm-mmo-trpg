@@ -38,11 +38,13 @@ from trpg.roguelite import (
 )
 from trpg.roguelite.errors import NodeConflictError
 from trpg.roguelite.state import (
+    AllocateChoice,
     BattleNode,
     CampfireNode,
     Choice,
     LevelUpNode,
     LoadoutChoice,
+    RespecAttributesChoice,
     RespecChoice,
     SpendChoice,
 )
@@ -195,10 +197,11 @@ class RunStore:
     def choose(self, session: RunSession, choice: Choice) -> None:
         self.sync(session)
         if session.battle is not None and isinstance(
-            choice, SpendChoice | RespecChoice | LoadoutChoice
+            choice,
+            SpendChoice | RespecChoice | LoadoutChoice | RespecAttributesChoice | AllocateChoice,
         ):
             # 戰鬥進行中改主角的技能會讓存檔重播不一致：戰鬥結束後才能花點數
-            raise NodeConflictError("戰鬥進行中不能分配技能點或換裝")
+            raise NodeConflictError("戰鬥進行中不能分配技能點、屬性點或換裝")
         session.run = apply_choice(self.library, session.run, choice)
         self.autosave(session)
 

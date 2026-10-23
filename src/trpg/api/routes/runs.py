@@ -22,6 +22,7 @@ from __future__ import annotations
 
 from fastapi import APIRouter, Request
 
+from trpg.api.attribute_text import attribute_affects, attribute_suggestion
 from trpg.api.presenter import battle_response
 from trpg.api.run_presenter import keyword_refs, run_response, save_summary
 from trpg.api.run_schemas import (
@@ -129,7 +130,15 @@ def post_start_preview(body: StartPreviewRequest, request: Request) -> StartPrev
                 skill=None if skill is None else skill_card(library, skill),
             )
         )
-    return StartPreview(weapon=body.weapon, seed=body.seed, options=tuple(options))
+    picked = [c for c in chosen.values() if c is not None]
+    weapon = library.weapons.get(body.weapon)
+    return StartPreview(
+        weapon=body.weapon,
+        seed=body.seed,
+        options=tuple(options),
+        suggestion=attribute_suggestion(picked, weapon),
+        attribute_affects=attribute_affects(picked, weapon),
+    )
 
 
 @router.get("/dev-packs")

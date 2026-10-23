@@ -18,14 +18,17 @@ from collections.abc import Mapping, Sequence
 from trpg.content.equipment import Loadout, resolve_loadout
 from trpg.content.library import ContentLibrary
 from trpg.engine.actions import MANAGEMENT_ACTION_TYPES, Step
+from trpg.engine.gear import build_gear, geared_template
 from trpg.engine.results import battle_result
 from trpg.engine.setup import BattleSetup, UnitSpawn, build_setup
 from trpg.engine.state import BattleState, state_to_json
+from trpg.roguelite.attributes import allocate_attributes, merge_spent, respec_attributes
 from trpg.roguelite.errors import ChoiceError, NodeConflictError
 from trpg.roguelite.growth import battle_levels, respec, set_loadout, spend_points
 from trpg.roguelite.offers import make_offer, take_candidate
 from trpg.roguelite.start import allocation_problems, apply_allocation
 from trpg.roguelite.state import (
+    AllocateChoice,
     BattleNode,
     BattleRecord,
     CampfireNode,
@@ -37,11 +40,12 @@ from trpg.roguelite.state import (
     LoadoutChoice,
     PickChoice,
     RerollChoice,
+    RespecAttributesChoice,
     RespecChoice,
     RunState,
     SpendChoice,
 )
-from trpg.shared.types import Team, UnitId
+from trpg.shared.types import Attribute, Team, UnitId
 from trpg.skillgen.usage import SkillUsage, collect_usage, merge_usage
 
 __all__ = [
@@ -50,6 +54,7 @@ __all__ = [
     "battle_setup",
     "battle_usage",
     "finish_battle",
+    "hero_effective_attributes",
     "hero_spawn",
     "hero_unit_id",
     "level_for",
@@ -71,6 +76,14 @@ def run_loadout(library: ContentLibrary, run: RunState) -> Loadout:
     if run.test_equipment:
         return resolve_loadout(run.test_equipment, library.items, library.affixes)
     return library.loadout_of(run.hero)
+
+
+def hero_effective_attributes(library: ContentLibrary, run: RunState) -> dict[Attribute, int]:
+    """主角的有效屬性（戰鬥之間沒有狀態）：基礎屬性＋裝備的屬性詞條，和引擎開戰時的
+    :func:`trpg.engine.gear.geared_template` 同一個算法（角色面板的常駐數值階數用）。"""
+    ruleset = library.ruleset
+    gear = build_gear(run_loadout(library, run), ruleset.equipment)
+    return dict(geared_template(run.hero, gear, ruleset).attributes)
 
 
 def hero_spawn(library: ContentLibrary, run: RunState) -> UnitSpawn:
@@ -279,6 +292,8 @@ def apply_choice(library: ContentLibrary, run: RunState, choice: Choice) -> RunS
     node = run.node
     if isinstance(choice, SpendChoice | RespecChoice | LoadoutChoice):
         return _manage_skills(library, run, choice)
+    if isinstance(choice, RespecAttributesChoice | AllocateChoice):
+        return _manage_attributes(library, run, choice)
     if isinstance(node, LevelUpNode):
         if not isinstance(choice, LevelUpChoice):
             raise NodeConflictError("目前在升級，請送出升級選擇（level_up）")
@@ -286,7 +301,10 @@ def apply_choice(library: ContentLibrary, run: RunState, choice: Choice) -> RunS
         if problems:
             raise ChoiceError("；".join(problems))
         hero = apply_allocation(run.hero, choice.attributes)
-        allocated = with_hp_change(library, run, run.model_copy(update={"hero": hero}))
+        spent = merge_spent(run.attribute_spent, choice.attributes)
+        allocated = with_hp_change(
+            library, run, run.model_copy(update={"hero": hero, "attribute_spent": spent})
+        )
         taken = take_candidate(library, allocated, node.offer, choice.pick, choice.replace)
         if choice.levels or choice.evolve:
             taken = spend_points(library, taken, choice.levels, choice.evolve)
@@ -310,6 +328,20 @@ def _manage_skills(
     if isinstance(choice, RespecChoice):
         return respec(library, run)
     return set_loadout(library, run, choice.skills)
+
+
+def _manage_attributes(
+    library: ContentLibrary, run: RunState, choice: RespecAttributesChoice | AllocateChoice
+) -> RunState:
+    """營火的免費屬性重配與重配後的分配（Phase 3H-3；不推進節點）：重配只在營火；分配在營火與
+    戰前都可以（戰鬥中由 API 擋下）。體質改變時最大 HP 與目前 HP 同步增減（和升級配點一樣）。"""
+    if isinstance(choice, RespecAttributesChoice):
+        if not isinstance(run.node, CampfireNode):
+            raise NodeConflictError(f"重配屬性點只能在營火（目前是{_NODE_TEXT[run.node.kind]}）")
+        return with_hp_change(library, run, respec_attributes(run))
+    if run.ended:
+        raise NodeConflictError(f"目前是{_NODE_TEXT[run.node.kind]}，不能分配屬性點")
+    return with_hp_change(library, run, allocate_attributes(run, choice.attributes))
 
 
 def _campfire(

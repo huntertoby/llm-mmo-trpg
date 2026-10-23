@@ -33,6 +33,7 @@ from trpg.content.battle import UnitTemplate
 from trpg.content.equipment import loadout_problems, resolve_loadout
 from trpg.content.library import ContentLibrary
 from trpg.content.skills import SkillDef, weapon_problem
+from trpg.roguelite.attributes import merge_spent
 from trpg.roguelite.errors import ChoiceError
 from trpg.roguelite.names import unique_skill_name
 from trpg.roguelite.state import BattleNode, BattlePlan, RunStart, RunState
@@ -203,6 +204,7 @@ def new_run(
         mana=hero.max_mana,
         source=core.source_min_at_start,
         plan=make_plan(library, seed),
+        attribute_spent=merge_spent({}, allocation),
         node=BattleNode(index=1),
     )
 
@@ -401,6 +403,7 @@ def new_keyword_run(
         source=core.source_min_at_start,
         generated_skills=tuple(generated),
         plan=make_plan(library, seed),
+        attribute_spent=merge_spent({}, allocation),
         node=BattleNode(index=1),
         test_mode=test_mode,
         test_equipment=equipment,
