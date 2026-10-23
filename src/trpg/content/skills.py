@@ -3272,14 +3272,37 @@ class SkillDef(ContentModel):
         """規則改變型傳說引用的規則改變 ID（Phase 3D-6）；其他技能為 ``None``。"""
         return next((e.rule for e in self.effects if e.type == RULE_CHANGE), None)
 
-    def scaling_value(self, get: Callable[[Attribute], int]) -> int:
+    def scaling_value(
+        self, get: Callable[[Attribute], int], weapon: WeaponDef | None = None
+    ) -> int:
         """技能縮放屬性的值（Phase 2H-2）：雙屬性為兩個屬性的平均（無條件捨去），否則為主屬性。
         ``get`` 讀屬性值（引擎傳有效屬性，卡片傳面板屬性）；引擎的 ``skill_scaling_value`` 與卡片的
-        「目前加成」都經過這裡。"""
+        「目前加成」都經過這裡。
+
+        **武器技看手上武器的屬性**（Phase 3H-6，玩法決定 #45）：``category: weapon`` 且給了
+        ``weapon`` 時改用 :meth:`WeaponDef.scaling_value`（雙屬性照取較高／取平均），技能自己的
+        ``scaling_attr`` 只當顯示提示。沒有武器時（工坊、三選一的泛稱）退回技能自己的。"""
+        if self.category == "weapon" and weapon is not None:
+            return weapon.scaling_value(get)
         primary = get(self.scaling_attr)
         if self.secondary_scaling_attr is None:
             return primary
         return (primary + get(self.secondary_scaling_attr)) // 2
+
+    def mastery_value(
+        self, get: Callable[[Attribute], int], weapon: WeaponDef | None = None
+    ) -> int:
+        """專精比較用的屬性值（和自己最高的屬性比）：一般技能為 ``scaling_attr`` 本身；武器技為
+        手上武器的縮放值（3H-6，雙屬性取較高／取平均）。"""
+        if self.category == "weapon" and weapon is not None:
+            return weapon.scaling_value(get)
+        return get(self.scaling_attr)
+
+    def contest_attr(self, weapon: WeaponDef | None = None) -> Attribute:
+        """對抗判定（擊倒、位移、狀態抵抗）和目標比的單一屬性；武器技為手上武器的主屬性。"""
+        if self.category == "weapon" and weapon is not None:
+            return weapon.scaling_attr
+        return self.scaling_attr
 
     def formula_lines_zh(
         self,
@@ -3293,10 +3316,13 @@ class SkillDef(ContentModel):
         屬性乘普攻倍率（效果的倍率、等級與修正規則另算，見效果句）。倍率取自 ``rules/core.yaml``，
         ``weapon`` 與 ``get`` 都省略時不附武器骰與目前加成。"""
         types = {e.type for e in self.effects}
-        names = self.scaling_attr.display_name
-        if self.secondary_scaling_attr is not None:
-            names += f"／{self.secondary_scaling_attr.display_name}（取平均）"
-        now = None if get is None else self.scaling_value(get)
+        if self.category == "weapon":  # 武器技看手上武器的屬性（3H-6）；沒有指定武器時寫泛稱
+            names = "武器的屬性" if weapon is None else weapon.scaling_names_zh()
+        else:
+            names = self.scaling_attr.display_name
+            if self.secondary_scaling_attr is not None:
+                names += f"／{self.secondary_scaling_attr.display_name}（取平均）"
+        now = None if get is None else self.scaling_value(get, weapon)
 
         def line(label: str, base: str, permille: int) -> str:
             text = f"{label}算法：{base}＋{names} × {permille / 1000:g}"

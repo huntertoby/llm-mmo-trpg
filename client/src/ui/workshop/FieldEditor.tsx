@@ -130,6 +130,15 @@ function ChoiceField({ spec, container, base, onChange }: FieldProps) {
   const paramBase = objectChoice ? path : parentPath(path);
   const pick = (c: Choice) => onChange(selectChoice(container, spec, c, base));
   const card = spec.card === true; // 用卡片排列：後端 `FieldSpec.card` 旗標
+  if (spec.locked === true) {
+    // 鎖定欄位（武器技的縮放屬性看武器）：唯讀顯示規則決定的那個值
+    return (
+      <div className="ws-field">
+        <Label spec={spec} />
+        <div className="ws-locked">{chosen !== undefined ? chosen.name_zh : "（先選武器需求）"}</div>
+      </div>
+    );
+  }
   return (
     <div className="ws-field">
       <Label spec={spec} />

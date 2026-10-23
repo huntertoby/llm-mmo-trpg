@@ -35,7 +35,7 @@ from trpg.engine.skills.charge import aside_direction
 from trpg.engine.skills.conditions import Subject
 from trpg.engine.skills.mobility import ChargeRoute, charge_route
 from trpg.engine.skills.primitives.base import Handler
-from trpg.engine.skills.scaling import skill_scaling_value
+from trpg.engine.skills.scaling import skill_scaling_attr, skill_scaling_value
 from trpg.engine.skills.targeting import (
     ResolvedEffect,
     shape_reach,
@@ -295,7 +295,7 @@ def _displace_check(
         kind,
         cast.caster,
         target,
-        cast.skill.scaling_attr,
+        skill_scaling_attr(cast.caster, cast.skill),
         skill_id=cast.skill.id,
         primary=False,
         attack_value=skill_scaling_value(cast.ctx.rules, cast.caster, cast.skill),

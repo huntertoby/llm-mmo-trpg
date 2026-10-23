@@ -4,6 +4,7 @@ from __future__ import annotations
 
 from typing import TextIO
 
+from trpg.content.battle import WeaponDef
 from trpg.content.library import ContentLibrary
 from trpg.content.skills import (
     SkillDef,
@@ -81,6 +82,18 @@ def _unit_attributes(library: ContentLibrary, unit_id: str) -> dict[Attribute, i
     raise KeyError(f"找不到單位或 build：{unit_id}")
 
 
+def _unit_weapon(library: ContentLibrary, unit_id: str | None) -> WeaponDef | None:
+    """單位範本或 build 英雄的武器（武器技看手上武器，3H-6）；沒指定單位時為 ``None``。"""
+    if unit_id is None:
+        return None
+    template = library.units.get(unit_id)
+    if template is None:
+        template = next(
+            (b.hero for b in library.builds.builds if unit_id in (b.id, b.hero.id)), None
+        )
+    return None if template is None else library.weapons.get(template.weapon)
+
+
 def _mastery_active_for(
     library: ContentLibrary, skill: SkillDef, unit_id: str | None
 ) -> bool | None:
@@ -88,7 +101,7 @@ def _mastery_active_for(
     if unit_id is None:
         return None
     attributes = _unit_attributes(library, unit_id)
-    mine = attributes[skill.scaling_attr]
+    mine = skill.mastery_value(attributes.__getitem__, _unit_weapon(library, unit_id))
     return all(mine >= value for value in attributes.values())
 
 
@@ -134,11 +147,12 @@ def cmd_skills_show(
     )
     print(
         f"  分類 {CATEGORY_TEXT[skill.category]}  武器需求 {WEAPON_REQ_TEXT[skill.weapon_req]}"
-        f"  縮放屬性 {scaling_detail(skill)}",
+        f"  縮放屬性 {scaling_detail(skill, _unit_weapon(library, unit_id))}",
         file=out,
     )
     if skill.mastery is not None:
-        print(f"  專精加成 {mastery_text(skill, active=active)}", file=out)
+        text = mastery_text(skill, active=active, weapon=_unit_weapon(library, unit_id))
+        print(f"  專精加成 {text}", file=out)
     if skill.is_modifier and not skill.is_activatable:
         print("  代價 無（裝在被動欄位、不花 AP）", file=out)
     else:

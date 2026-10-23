@@ -21,7 +21,7 @@ from dataclasses import dataclass, field
 
 from trpg.content.library import ContentLibrary
 from trpg.engine.actions import Step
-from trpg.engine.events import TurnStarted
+from trpg.engine.events import DamageDealt, TurnStarted
 from trpg.engine.results import ResolveResult
 from trpg.engine.runner import run_battle
 from trpg.engine.setup import BattleSetup, build_setup
@@ -68,6 +68,8 @@ class ResourceSample:
     mana_short: int = 0
     stamina_short: int = 0
     any_short: int = 0
+    damage: int = 0
+    """英雄這場造成的傷害總量（3H-6 加，量武器技縮放改動前後）。"""
     mana_left_permille: int | None = None
     stamina_left_permille: int | None = None
 
@@ -117,6 +119,8 @@ class _Tracker:
         if hero is None:
             return
         for event in result.events:
+            if isinstance(event, DamageDealt) and event.source_id == hero.id:
+                self.sample.damage += event.amount
             if not isinstance(event, TurnStarted) or event.unit_id != hero.id:
                 continue
             key = (result.state.round, hero.id)
@@ -195,6 +199,7 @@ class ResourceCell:
     mana_short: float
     stamina_short: float
     any_short: float
+    damage: float
     mana_left: float | None
     stamina_left: float | None
 
@@ -226,6 +231,7 @@ def summarize_resources(samples: Sequence[ResourceSample]) -> list[ResourceCell]
                 mana_short=ratio(sum(s.mana_short for s in done)),
                 stamina_short=ratio(sum(s.stamina_short for s in done)),
                 any_short=ratio(sum(s.any_short for s in done)),
+                damage=ratio(sum(s.damage for s in done), len(done)),
                 mana_left=_mean([s.mana_left_permille for s in done]),
                 stamina_left=_mean([s.stamina_left_permille for s in done]),
             )
@@ -243,7 +249,7 @@ def format_resources(
     """Markdown 表格：情境、build、場數、勝率、英雄回合數、各種不足回合比例、結束時剩餘資源。"""
     columns = (
         "情境", "build", "場數", "勝率", "英雄回合", "法力不足", "耐力不足", "任一不足",
-        "剩餘法力", "剩餘耐力",
+        "剩餘法力", "剩餘耐力", "平均傷害",
     )  # fmt: skip
     lines = ["| " + " | ".join(columns) + " |", "|" + "---|" * len(columns)]
     for c in cells:
@@ -251,6 +257,6 @@ def format_resources(
             f"| {scenarios.get(c.scenario, c.scenario)} | {builds.get(c.build, c.build)} "
             f"| {c.battles}{f'（失敗 {c.failed}）' if c.failed else ''} | {_pct(c.win_rate)} "
             f"| {c.turns} | {_pct(c.mana_short)} | {_pct(c.stamina_short)} | {_pct(c.any_short)} "
-            f"| {_pct(c.mana_left)} | {_pct(c.stamina_left)} |"
+            f"| {_pct(c.mana_left)} | {_pct(c.stamina_left)} | {c.damage:.0f} |"
         )
     return "\n".join(lines)

@@ -361,7 +361,7 @@ class WeaponDef(ContentModel):
         if self.secondary_scaling_attr is not None:
             names = f"{self.scaling_attr.display_name}、{self.secondary_scaling_attr.display_name}"
             how = "取較高者" if self.attr_mode == "max" else "取平均"
-            lines.append(f"雙屬性：普攻吃{names}，{how}；武器技看技能卡（在這把武器的屬性範圍內）")
+            lines.append(f"雙屬性：普攻與武器技吃{names}，{how}")
         if self.is_melee:
             lines.append(
                 f"背刺（近戰共用規則）：從目標背後攻擊，命中 +{core.backstab_hit_bonus}、"

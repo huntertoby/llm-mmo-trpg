@@ -881,9 +881,10 @@ def to_skill_def(
     ``stage="skill"`` 的錯誤）。"""
     data = _skill_data(proposal, ctx, fill)
     skill = SkillDef.model_validate(data)
-    if ctx.hero_attributes is None or library is None:
+    if library is None or (ctx.hero_attributes is None and skill.category != "weapon"):
         return skill
-    attr = retarget_scaling(skill, ctx.hero_attributes, library).scaling_attr
+    # 武器技一律看武器大類的主屬性（3H-6，不看主角屬性）；其他技能跟主角最高屬性（3H-3）
+    attr = retarget_scaling(skill, ctx.hero_attributes or {}, library).scaling_attr
     if attr == skill.scaling_attr:
         return skill
     data = {k: v for k, v in data.items() if k != "id"}

@@ -64,6 +64,7 @@ from trpg.engine.lifecycle import dismiss_summon, make_unit, summons_of
 from trpg.engine.rules.geometry import XY, manhattan, neighbors4
 from trpg.engine.rules.landing import landing_problem
 from trpg.engine.rules.statuses import effective_attribute
+from trpg.engine.skills.scaling import skill_scaling_attr
 from trpg.engine.skills.targeting import summon_site_problem
 from trpg.engine.state import BattleState, UnitState
 from trpg.engine.summon_variants import apply_summon_spec, trait_adjusted
@@ -111,7 +112,7 @@ def growth_of(state: BattleState, owner: UnitState, skill_id: str) -> Growth:
     growth = core.summon_growth
     mod = 0
     try:
-        attr = state.ruleset.skill_def(skill_id).scaling_attr
+        attr = skill_scaling_attr(owner, state.ruleset.skill_def(skill_id))
     except KeyError:
         pass
     else:

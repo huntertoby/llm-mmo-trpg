@@ -1,7 +1,9 @@
 # 技能縮放屬性的允許範圍（Phase 3H-1；docs/design/06-技能.md 6.10、07-角色成長.md 7.2；玩法決定 #45）。
 #
-# 武器技（category: weapon）：看武器——縮放屬性必須是某把同大類（weapon_req）、玩家可裝備的武器的
-#   縮放屬性（含第二縮放屬性，見 weapons.yaml），不在這裡列。
+# 武器技（category: weapon）：**看手上武器的屬性**（Phase 3H-6，玩法決定 #45）——命中與傷害用武器的縮放屬性
+#   （雙屬性武器取較高／取平均），技能自己的 scaling_attr 不生效，只當顯示提示。內建技能的 scaling_attr
+#   必須是某把同大類（weapon_req）、玩家可裝備的武器的縮放屬性（含第二縮放屬性，見 weapons.yaml）；
+#   隨機組合器、LLM 提議與工坊產生的武器技則一律設為 weapon_class_attrs 的武器大類主屬性（不帶第二屬性）。
 # 法術技（category: spell）：依主題。spell_themes 依 **先後順序** 比對，第一個符合的主題決定屬性
 #   （符合＝技能的標籤或效果類型命中 tags_any／effect_types_any，且沒有 tags_none 的標籤）。
 #   智力＝元素傷害與互動｜感知＝治療、護盾、輔助、偵測與標記｜意志＝召喚、獻祭、詛咒、心智控制、暗影。
@@ -31,6 +33,10 @@ spell_themes:
     tags_any: [fire, ice, lightning, earth, water, arcane, rune, rune_read, rune_make, rune_detonate, ash, poison, telekinesis, oil]
 
 body_attrs: [str, dex, con]
+
+# 武器技的武器大類主屬性（Phase 3H-6）：產生器與驗證器給武器技的 scaling_attr；每個值必須是該大類
+# 玩家可裝備武器的縮放屬性（載入時檢查）。武器技的 weapon_req 只有 melee、ranged。
+weapon_class_attrs: {melee: str, ranged: dex}
 
 # 組合主題（玩法 PM 2026-10-23，06 6.10）：法術同時帶元素和另一個主題時，可以看兩者之一，產生技能時取主角
 # 較高的那個（例：火焰詛咒、召喚火靈看智力或意志；聖水、治療之雨看智力或感知）。純元素傷害仍只看智力。

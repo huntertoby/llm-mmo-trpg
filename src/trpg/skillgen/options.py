@@ -356,6 +356,42 @@ def _category_field(skeleton: SkeletonDef) -> FieldSpec:
     )
 
 
+def _scaling_field(draft: Draft, library: ContentLibrary) -> FieldSpec:
+    """縮放屬性欄位。武器技（Phase 3H-6）命中與傷害看手上武器的屬性，欄位鎖成「看武器」：
+    選項只有所需武器大類（近戰、遠程）的主屬性；還沒選武器需求時沒有選項。"""
+    if draft.get("category") != "weapon":
+        return FieldSpec(
+            field="scaling_attr",
+            name_zh="縮放屬性",
+            description_zh="技能的數值隨這個屬性成長",
+            type="choice",
+            required=True,
+            choices=tuple(Choice(value=a.value, name_zh=a.display_name) for a in Attribute),
+        )
+    req = draft.get("weapon_req")
+    attr = library.skill_scaling.weapon_class_attr(str(req)) if req in _WEAPON_CLASSES else None
+    return FieldSpec(
+        field="scaling_attr",
+        name_zh="縮放屬性",
+        description_zh=(
+            "武器技的命中與傷害看手上武器的屬性（雙屬性武器取較高或取平均），不能另外選；"
+            "這裡只顯示武器需求對應的主屬性"
+            if attr is not None
+            else "武器技看手上武器的屬性；先選武器需求"
+        ),
+        type="choice",
+        required=True,
+        locked=True,
+        default=None if attr is None else attr.value,
+        choices=()
+        if attr is None
+        else (Choice(value=attr.value, name_zh=f"看手上武器（{attr.display_name}）"),),
+    )
+
+
+_WEAPON_CLASSES = ("melee", "ranged")
+
+
 def _basics_step(draft: Draft, library: ContentLibrary, skeleton: SkeletonDef) -> StepOptions:
     tiers = sorted(library.ruleset.core.tier_budget)
     fields = (
@@ -368,14 +404,7 @@ def _basics_step(draft: Draft, library: ContentLibrary, skeleton: SkeletonDef) -
             choices=tuple(_kind_choice(k, library) for k in skeleton.kinds),
         ),
         _category_field(skeleton),
-        FieldSpec(
-            field="scaling_attr",
-            name_zh="縮放屬性",
-            description_zh="技能的數值隨這個屬性成長",
-            type="choice",
-            required=True,
-            choices=tuple(Choice(value=a.value, name_zh=a.display_name) for a in Attribute),
-        ),
+        _scaling_field(draft, library),
         FieldSpec(
             field="tier",
             name_zh="階級",

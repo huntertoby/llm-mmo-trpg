@@ -112,7 +112,7 @@ from trpg.engine.rules.statuses import effective_attribute, shield_amount, weapo
 from trpg.engine.rules.weapons import weapon_hit_bonus
 from trpg.engine.skill_infusion import infused_pick
 from trpg.engine.skills.conditions import Subject, condition_met
-from trpg.engine.skills.scaling import skill_scaling_value
+from trpg.engine.skills.scaling import skill_scaling_attr, skill_scaling_value
 from trpg.engine.skills.targeting import (
     compute_area,
     damage_parameters,
@@ -892,7 +892,7 @@ def _knock_chance(
     )
     if not (prone or charge_prone):
         return None
-    attr = skill.scaling_attr
+    attr = skill_scaling_attr(actor, skill)
     rules = state.ruleset
     modifier = rules.hit_table.modifier(
         skill_scaling_value(rules, actor, skill), max(1, effective_attribute(rules, target, attr))
@@ -1205,7 +1205,7 @@ def _displace_checks(
     checks = [
         DisplaceCheck(
             unit_id=unit.id,
-            chance=contest_chance(state, unit, skill.scaling_attr, attack, bonus),
+            chance=contest_chance(state, unit, skill_scaling_attr(actor, skill), attack, bonus),
             resist_bonus=bonus,
             lethal=lethal,
         )

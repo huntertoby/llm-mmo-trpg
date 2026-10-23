@@ -90,7 +90,12 @@ from trpg.engine.skills.mobility import dash_route, shadowstep_behind
 from trpg.engine.skills.primitives import primitive_handler
 from trpg.engine.skills.primitives.base import TOUCHING_AFFECTS
 from trpg.engine.skills.primitives.summoning import sacrifice_blast
-from trpg.engine.skills.scaling import mastery_duration_bonus, skill_scaling_value
+from trpg.engine.skills.scaling import (
+    mastery_duration_bonus,
+    skill_scale_attr,
+    skill_scaling_attr,
+    skill_scaling_value,
+)
 from trpg.engine.skills.targeting import (
     ResolvedEffect,
     SkillArea,
@@ -711,9 +716,7 @@ class Cast:
             dice=dice,
             flat=flat,
             scaled_permille=scaled,
-            scale_attr=(
-                self.skill.scaling_attr if self.skill.secondary_scaling_attr is None else None
-            ),
+            scale_attr=skill_scale_attr(self.caster, self.skill),
             crit=roll is not None and roll.crit,
             min_damage=self.ctx.core.min_damage_on_hit,
             explode_max=explode_max,
@@ -801,7 +804,7 @@ class Cast:
             "knock_prone",
             self.caster,
             unit,
-            self.skill.scaling_attr,
+            skill_scaling_attr(self.caster, self.skill),
             skill_id=self.skill.id,
             primary=False,
             attack_value=skill_scaling_value(self.ctx.rules, self.caster, self.skill),
@@ -833,7 +836,7 @@ class Cast:
             target=unit,
             status_id=spec.status,
             duration=self.status_duration(spec),
-            attack_attr=self.skill.scaling_attr,
+            attack_attr=skill_scaling_attr(self.caster, self.skill),
             attack_value=skill_scaling_value(self.ctx.rules, self.caster, self.skill),
             skill_id=self.skill.id,
         )
