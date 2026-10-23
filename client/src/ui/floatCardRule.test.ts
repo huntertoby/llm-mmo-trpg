@@ -81,8 +81,8 @@ describe("浮動卡規則（6.5.1）", () => {
     expect(bad).toEqual([]);
   });
 
-  it("`role=tooltip` 只出現在共用浮動卡元件（Hint／PartTip 的卡片本體）", () => {
-    const bad = files.filter(([path, text]) => !SHARED.has(path) && /role=["']tooltip["']/.test(text)).map(([path]) => path);
+  it("`role=tooltip` 只出現在共用浮動卡元件（Hint／PartTip 的卡片本體；`[role=\"tooltip\"]` 查詢選擇器不算）", () => {
+    const bad = files.filter(([path, text]) => !SHARED.has(path) && /(?<!\[)role=["']tooltip["']/.test(text)).map(([path]) => path);
     expect(bad).toEqual([]);
   });
 
