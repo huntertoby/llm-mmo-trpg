@@ -32,7 +32,7 @@
 | 4-L1 | `trpg.llm`：`LLMClient` 介面（`complete(messages, *, json_schema=None) -> str`）、`MockLLMClient`（依序回傳預設回應、記錄收到的 messages）、`OpenAICompatClient`（httpx、`base_url`／`model`／`timeout` 讀設定檔、JSON schema 約束、錯誤分類：連不上／逾時／非 JSON）；設定檔與環境變數；`trpg llm ping` CLI（手動檢查本機模型） | Mock 行為；設定讀取與覆寫；HTTP 用假 transport 測（不需網路）；`@pytest.mark.llm` 的真模型 ping 測試（預設不跑）；依賴方向（`engine` 不匯入 `llm`） | sonnet | 現在派；與 4-L3 平行 |
 | 4-L2 | 版本化 prompt（`src/trpg/llm/prompts/`）：系統指令（碎界語氣與名詞表）、資料區、`<player_input>` 包裝與跳脫；prompt 版本號寫進 run 紀錄 | 玩家文字含 `</player_input>`、指令字樣時仍只在資料區；prompt 快照測試 | sonnet | 4-L1 後 |
 | 4-L3 | 提議模型正式化：`required_when` 搬進 YAML（取代原型的 `CONDITIONALLY_REQUIRED`）、觸發參數搬進 `skill_triggers.yaml` 的 `params`、**原語／形狀／條件／觸發與參數加給 LLM 的短說明**（`llm_hint`，碎界無關的中性描述）；**提議模型移除數值欄位**（只留結構與列舉），數值交給 4-L5 的預算器 | 模型由 YAML 產生、與現有驗證一致的表格測試；`llm_hint` 全覆蓋測試 | sonnet | 現在派；與 4-L1 平行（只動 `content/`、`skillgen/proposal.py`） |
-| 4-L4 | schema 子集：依稀有度、骨架、題目關鍵字篩原語、形狀、條件；prompt＋schema 總長 ≤ 30k token（字元估算） | 大小上限測試；篩掉的原語提議得到 `union_tag_invalid` | sonnet | 4-L2、4-L3 後 |
+| 4-L4 | schema 子集：依稀有度、骨架、題目關鍵字篩原語、形狀、條件；prompt＋schema 總長 ≤ 30k token（字元估算）（詳見 3A 節） | 大小上限測試；篩掉的原語提議得到 `union_tag_invalid` | sonnet | 4-L2、4-L3 後 |
 | 4-L5 | 重試迴圈＋退回＋**數值補齊**：`propose_skill(client, request) -> (SkillDef, source, attempts)`；結構合格後由預算器（`composer_tuning.tune`）補數值；3 次上限；退回 組合器 → 技能池 → 工坊選項；統計退回率 | Mock「壞 → 壞 → 好」「壞 ×3 → 組合器」；數值一律來自預算器 | **opus** | 4-L4 後 |
 | 4-L6 | 接進候選產生器：`llm` 來源、結果寫進 run 紀錄、重播不呼叫 LLM；Mock 失敗時候選仍有 3 個；設定關閉 LLM 時照舊 | 存檔重播一致 | sonnet | 4-L5 後 |
 | 4-L7 | 名稱與敘事（同一個本機模型；只寫文字；長度、禁字、碎界名詞；失敗時組合式名稱） | Mock 輸出過長／空字串／含指令字樣 | sonnet | 4-L5 後；可與 4-L6 平行 |
@@ -52,6 +52,37 @@
 ## 3. 4-L3 規格
 
 見上表 4-L3 列。補充：`llm_hint` 每條一句中文、不含階段編號與欄位名；提議模型去掉數值後，3E-2g 的往返測試改為「結構往返」（數值由測試用的固定預算器補或比對結構）；`proposal.py` 的公開 API 變更寫進報告。驗收：pytest（YAML 產生的模型與現有驗證一致、`required_when` 取代常數、觸發 `params`、`llm_hint` 全覆蓋、提議不含數值欄位）；`ruff`、`mypy`。
+
+## 3A. 4-L4 規格（schema 子集；開發 PM 2026-10-23）
+
+見上表 4-L4 列。目標：給定一個「題目」，產生 **只含相關結構** 的提議模型、JSON schema 與 prompt 的 `available` 資料區，總長控制在本機模型上下文內。數值不在範圍（4-L3 已移除；4-L5 由預算器補）。
+
+1. **題目** `ProposalRequest`（`src/trpg/skillgen/proposal_subset.py`，frozen dataclass）：`tier`、`rarity`、`kind`（`active`／`passive`／`stance`，可省略＝依骨架）、`skeleton`（可省略）、`keywords`（0–2 個，`skill_keywords.yaml` 的 ID）。未知 ID 丟 `ValueError`（中文訊息）。
+2. **篩選** `select_subset(library, request) -> ProposalSubset`（純函式、確定性、結果欄位一律排序後的 tuple）。依序：
+   - **骨架**：有指定就只用它；沒指定時取 `enabled`、`kinds` 含 `kind`、且不是提議模型排除的骨架（`reaction`／`modifier`／`trap`）的全部骨架。
+   - **稀有度**：去掉 `min_rarity` 高於 `rarity` 的原語（形狀、條件若 YAML 有同類欄位也照做）。
+   - **骨架範圍**：原語 ⊆ 所選骨架的 `core.primitives` ∪ `secondary.primitives`（被動／架式骨架若沒有 `core`，照現有驗證器對該骨架允許的原語）；形狀 ⊆ 骨架的 `shapes`。
+   - **關鍵字**：只看 **專屬** 規則（`grade` 省略者，與候選產生器一致）。`makes`／`uses` 的 `effect` 來源 → 必收原語；`condition` → 必收條件；`trigger` → 必收觸發；`shape` → 必收形狀（都要先通過上面兩道，過不了就不收，記進 `dropped`）。
+   - **補足**：必收集合 ＋ 骨架核心原語之外，依 YAML 順序補其他合法原語／條件，直到第 4 點的大小上限為止（先砍條件、再砍附帶原語；核心與必收永不砍）。
+   - 沒有任何合法骨架或核心原語時丟 `SubsetError`（4-L5 會退回組合器）。
+   - `ProposalSubset` 帶 `skeletons`、`primitives`、`shapes`、`conditions`、`triggers`、`keywords` 與 `dropped: tuple[tuple[str, str], ...]`（ID、中文原因），供報告與除錯。
+3. **模型**：`build_proposal_models(library, *, primitives=…, shapes=…, conditions=…, triggers=…, skeletons=…)`——新增後四個篩選參數（預設 `None`＝全部，現有呼叫不變）；`skeleton`、`shape`、`condition`、`trigger` 的 union／`Literal` 只含子集。篩掉的值被提議時在 ① 得到 `union_tag_invalid`（形狀、條件、觸發）或 `literal_error`（骨架），且 `allowed` 只列子集內的值。`build_subset_models(library, subset)` 為便利包裝。
+4. **大小**：`trpg.llm.prompts` 加 `estimate_tokens(text) -> int`（保守估算：ASCII 字元 ÷ 3 ＋ 非 ASCII 字元 × 1，向上取整），及 `PROMPT_TOKEN_BUDGET = 30_000`（32768 上下文扣掉 `max_tokens` 2048 與餘裕）。**system ＋ user 訊息 ＋ `json.dumps(schema)` 的估算合計 ≤ 30k**。第 2 點的「補足」用同一個估算決定停在哪裡（`select_subset` 收一個 `token_budget` 參數，預設 `PROMPT_TOKEN_BUDGET` 扣掉固定 prompt 的估算；skillgen 不得匯入 `trpg.llm`，常數以參數傳入或在 skillgen 自己定義同值常數並有測試確認兩者一致）。
+5. **`available` 格式**（定 4-L2 待決 #4）：`available_payload(library, subset) -> dict`，結構
+   `{"skeletons": [{id, hint}], "primitives": [{id, hint, params: {name: hint}}], "shapes": [{id, hint}], "conditions": [{id, hint}], "triggers": [{id, hint}], "keywords": [{id, name_zh, hint}]}`；
+   `hint` 一律用 4-L3 的 `llm_hint`（骨架沒有 `llm_hint` 時用 `description_zh`；若該欄含欄位名或階段編號，補 `llm_hint` 到骨架 YAML，並擴充 4-L3 的覆蓋測試）；不放數值、`min`／`max`。只列子集內的項目，依 ID 排序。
+6. **組裝**：`trpg.llm.prompts` 加 `build_proposal_prompt(library, request, *, player_text=None, previous_proposal=None, errors=None) -> ProposalPrompt(messages, json_schema, models, subset)`，內部呼叫 `select_subset`、`build_subset_models`、`available_payload`、`build_skill_proposal_messages`；`request` 區塊放 `tier`、`rarity`、`kind`、`skeleton`、`keywords`（ID ＋ 中文名）。prompt 內容有變就照 4-L2 規則升 `PROMPT_VERSION` 並更新快照。
+7. **登記**：`content/llm/world_shattered.yaml` 登記進 `content/registry.py`（4-L2 待決 #1），`trpg content validate`（或現有的全內容驗證測試）會驗到它。
+8. **範圍外**：不呼叫 LLM、不寫重試迴圈（4-L5）、不接候選產生器（4-L6）、不改引擎與 `LOG_FORMAT`。
+
+驗收（4-L4）：pytest——
+- 大小：**矩陣測試**（每個稀有度 × 每個可用骨架 × 不指定骨架，各配 0／1／2 個關鍵字的固定抽樣，至少 100 組）每組估算 ≤ 30k，並在報告列出最大值與平均；
+- 篩選：稀有度擋下的原語、骨架外的原語、篩掉的形狀與條件，提議時分別得到 `union_tag_invalid`／`literal_error` 且 `allowed` 不含它；
+- 關鍵字：每個有專屬 `effect` 規則的關鍵字，在至少一個合法骨架下其原語出現在子集中（表格測試）；不合法時進 `dropped`；
+- 確定性：同一題目兩次產生的 schema 與 `available` 位元組相同；
+- 往返：子集包含某手寫技能所需的全部結構時，`proposal_from_skill` 的提議仍能通過 ①②（抽 10 個可表達的手寫技能）；
+- `available` 格式快照、`hint` 不含欄位名；`registry` 含世界觀檔；**新增依賴規則「`trpg.skillgen` 不得匯入 `trpg.llm`」**（`pyproject.toml` import-linter ＋ `tests/test_architecture.py`）。
+- `ruff`、`mypy`。報告 `Phase4-L4報告.md`（含大小統計、`dropped` 常見原因、待 PM 決定）。
 
 ## 4. 驗收紀錄
 

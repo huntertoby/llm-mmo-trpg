@@ -57,11 +57,11 @@ Phase 3 各段（`Phase3計畫.md` 節號；報告 `Phase3-*報告.md`）：
 **下一段**：**4-L4 schema 子集**（依稀有度、骨架、題目關鍵字篩原語、形狀、條件；prompt＋schema ≤ 30k token；同時把 `content/llm/world_shattered.yaml` 登記進 `content/registry.py`，並定 4-L2 的 `available` 格式）→ **4-L5**（opus：重試＋退回＋預算器補數值；4-L3 報告列了預算器要補的項目與 `ap_cost`／`mana`／`cooldown`／`max_per_round` 預設）→ 4-L6／4-L7 → 4-L8 → 4-L9（真模型評估）。4-L4 的詳細規格要先寫進 `Phase4計畫.md`（照第 2、3 節的格式）再派。
 
 **待使用者／其他 PM**：
-- **`F:\WSL\settings.ini` 的 `PORT` 要改成 8001**（避開 `trpg serve` 的 8000；**使用者還沒改**）。我們的 `config/llm.toml` 預設 `http://localhost:8001/v1`、模型 `swift`。開發不改 `F:\WSL` 任何檔案，要改時請專案 PM 轉達使用者。
+- **`F:\WSL\settings.ini` 的 `PORT` 已改成 8001**（使用者 2026-10-23：「我已經改好了」；避開 `trpg serve` 的 8000）。我們的 `config/llm.toml` 預設 `http://localhost:8001/v1`、模型 `swift`。開發不改 `F:\WSL` 任何檔案，要改時請專案 PM 轉達使用者。
 - 本機模型吃約 88% VRAM：開發與測試一律用 `MockLLMClient`；真模型測試標 `@pytest.mark.llm`（預設不跑，`--full` 也不跑），使用者用 `F:\WSL\start.bat` 啟動後才跑 `uv run trpg llm ping`、`uv run pytest -m llm`、4-L9。
 - 4-L1～L3 留下的待驗證／待決定（`Phase4計畫.md` 4.1～4.3）：vLLM 0.27 是否接受 strict JSON schema 與巢狀 `$ref`／`oneOf`（要真模型）；形狀參數保留給 LLM 選；`ap_cost`／冷卻等是否在 4-L5 加旋鈕。
 
-**要先查的問題**：`check.py --full` 越跑越慢——3E-2b 後 4 分 32 秒、3E-2f 後 14 分 16 秒、4-L3 後 **28 分 5 秒**（都全過）。可能是機器負載，也可能有測試變慢（3E-2f 改 YAML 範圍驗證、4-L3 的提議模型產生）。先用 `UV_NO_SYNC=1 uv run pytest -q -n 8 -m "" --durations=30` 找出最慢的測試，必要時派小段修（標 slow 或快取）。
+**`check.py --full` 變慢（已解決，2026-10-23，`dabb5a9`）**：原因是 3E-2f 起每次建構 `EffectSpec` 都經 `default_content_dir()` 做 `Path.resolve()`（Windows 很慢，`run auto` 一半時間在這）；`bundled_content_dir()` 加 `@cache`、`run auto` 十種子測試改參數化。`--full` 28 分 → **6 分 38 秒**（5007 pytest＋766 vitest 全過）。之後若再變慢，先用 `--durations=30` 加 cProfile 單跑 `trpg run auto --seed 1` 找熱點。
 
 **其他待辦位置**：
 - **3E-3**（可在 Phase 4 期間穿插，一次最多 2 個 agent）：`Phase3E計畫.md` 3.2。
