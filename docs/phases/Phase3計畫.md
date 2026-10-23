@@ -1834,6 +1834,7 @@ PM 驗收後請使用者試玩一整輪（`docs/專案計畫.md` 第 14 節 🎮
 
 - PM 合併（無衝突，`cf14e35`）；ruff、format、mypy、`tests/api` 269、typecheck、vitest 781、`pnpm build` 全過。glossary statuses 加 `status_look`（`polarity`、`control_group`、`dot_element`、`skip_turn`、`removed_by_element`、`absorbs_damage`、`prevents_move`），OpenAPI 與前端快照重產；開發用樣張頁 `client/status-gallery.html`（不進正式 build）。報告 `Phase3-36a報告.md`（無附圖：內建截圖工具無法存檔）。
 - 待 PM 決定 → 暫定（**美術 PM 實機驗收時確認**）：#1 頭頂列不畫 `time_bomb`／`charging`（已有數字徽章）、#2 有「灌」徽章的召喚物狀態列縮成 2 格、#4 暈眩星星靜止、#5 狀態列中心 +5.5px（+1px 會蓋上一格血條）、#6 資訊欄圖示縮到 84 → 接受；#3 `taunted` 沒有 `control_group`（紅不是紫）→ 內容資料，**交玩法 PM 決定**。
+- **美術 PM 驗收通過（2026-10-23）**：5 點差異全部接受；嘲諷維持紅色（美術不要求改資料，要不要加控制類別由玩法 PM 決定）；字型在圖示與徽章上清楚。檢查紀錄 `docs/art/3-36a檢查.md`、截圖 `docs/art/3-36a-gallery.png`。對戰中的資訊欄併入 3-36b 驗收。
 
 ### 40.2 3-36b 戰場效果（sonnet；3-36a 合併後）
 
