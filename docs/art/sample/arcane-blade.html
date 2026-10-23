@@ -1,0 +1,84 @@
+<!doctype html>
+<html lang="zh-Hant">
+<head>
+<meta charset="utf-8">
+<title>魔導劍樣張</title>
+<style>
+  body { margin: 0; padding: 16px 20px; background: #1b1e24; color: #e8e8ea; font-family: "Microsoft JhengHei", sans-serif; }
+  h1 { font-size: 20px; margin: 0 0 4px; }
+  h2 { font-size: 15px; margin: 14px 0 6px; }
+  .sub { color: #a0a4ad; font-size: 13px; margin-bottom: 8px; line-height: 1.5; }
+  .row { display: flex; gap: 10px; flex-wrap: wrap; align-items: flex-end; }
+  .cell { background: #232730; border-radius: 6px; padding: 6px; text-align: center; font-size: 12px; color: #c8ccd4; }
+  canvas { display: block; margin: 0 auto 4px; }
+</style>
+</head>
+<body>
+<h1>魔導劍（#46）：單手劍的新形制 <code>form: arcane</code></h1>
+<div class="sub">規則：<b>kind: sword ＋ form: arcane</b>。劍身中線一道源晶槽（預設藍紫光 #9a86ff；有 element 時換元素色）＋三個符文刻點，護手是黃銅齒輪（中心一顆源晶）。不認得 arcane 的地方退回一般單手劍。<br>
+樣張依玩法 PM：無元素色、單手、可搭副手（法書、法器珠）。</div>
+
+<h2>① 武器本身（放大；左＝一般單手劍對照）</h2>
+<div class="row" id="alone"></div>
+
+<h2>② 紙娃娃手持（實際比例放大 2 倍；三個方向）</h2>
+<div class="row" id="dolls"></div>
+
+<h2>③ 戰場實際大小（每格 52px）</h2>
+<div class="row" id="field"></div>
+
+<script src="paperdoll.js"></script>
+<script>
+const D = PaperDoll, DPR = 3;
+function cv(w, h) {
+  const c = document.createElement("canvas");
+  c.width = w * DPR; c.height = h * DPR; c.style.width = `${w}px`; c.style.height = `${h}px`;
+  const ctx = c.getContext("2d"); ctx.scale(DPR, DPR); return [c, ctx];
+}
+function cell(parent, label, c) { const d = document.createElement("div"); d.className = "cell"; d.append(c); d.insertAdjacentHTML("beforeend", label); parent.append(d); }
+
+const PLAIN = { slot: "main_hand", kind: "sword", material: "steel" };
+const ARCANE = { slot: "main_hand", kind: "sword", form: "arcane", material: "steel", color: "#8a93a8" };
+const VARIANTS = [
+  ["一般單手劍（對照）", PLAIN],
+  ["魔導劍（無元素，樣張主圖）", ARCANE],
+  ["魔導劍＋火（之後若依元素變色）", { ...ARCANE, element: "fire" }],
+  ["魔導劍＋冰", { ...ARCANE, element: "ice" }],
+  ["魔導劍＋雷", { ...ARCANE, element: "lightning" }],
+];
+const alone = document.getElementById("alone");
+for (const [label, it] of VARIANTS) {
+  const [c, ctx] = cv(110, 120);
+  ctx.fillStyle = "#2d323c"; ctx.fillRect(0, 0, 110, 120);
+  ctx.translate(46, 114); ctx.scale(3.8, 3.8); ctx.rotate(0.25);
+  D.drawWeapon(ctx, it, 0, true);
+  cell(alone, label, c);
+}
+
+const look = { skin: D.SKIN[0], hair: "short", hairColor: "#3a2a4a", trim: "#9a86ff" };
+const OUTFITS = [
+  ["魔劍士：魔導劍＋法書", { main_hand: ARCANE, off_hand: { kind: "tome", color: "#4a3a8a" }, body: { kind: "coat", color: "#3a3550" }, hands: { kind: "gauntlets", material: "steel" }, feet: { kind: "boots", material: "leather" } }],
+  ["魔劍士：魔導劍＋法器珠", { main_hand: ARCANE, off_hand: { kind: "orb" }, body: { kind: "mail", material: "steel" }, feet: { kind: "greaves", material: "steel" } }],
+  ["對照：一般劍＋圓盾", { main_hand: PLAIN, off_hand: { kind: "shield_round", material: "steel" }, body: { kind: "mail", material: "steel" }, feet: { kind: "greaves", material: "steel" } }],
+];
+const dolls = document.getElementById("dolls");
+for (const [label, gear] of OUTFITS) {
+  for (const facing of ["south", "east", "north"]) {
+    const [c, ctx] = cv(130, 150);
+    ctx.fillStyle = "#2d323c"; ctx.fillRect(0, 0, 130, 150);
+    ctx.fillStyle = "#5aa0ff44"; ctx.beginPath(); ctx.ellipse(65, 136, 34, 11, 0, 0, Math.PI * 2); ctx.fill();
+    D.stamp(ctx, { look, gear }, facing, 65, 138, 1.85, { dpr: DPR });
+    cell(dolls, `${label}<br><span style="color:#8a909a">${{ south: "正面", east: "側面", north: "背面" }[facing]}</span>`, c);
+  }
+}
+
+const field = document.getElementById("field");
+for (const [label, gear] of OUTFITS) {
+  const [c, ctx] = cv(52 * 2, 52);
+  for (let i = 0; i < 2; i++) { ctx.fillStyle = i ? "#8a8a84" : "#6f9c4c"; ctx.fillRect(i * 52, 0, 52, 52); }
+  for (let i = 0; i < 2; i++) D.stamp(ctx, { look, gear }, "south", i * 52 + 26, 52 * 0.82, 0.78, { dpr: DPR });
+  cell(field, label, c);
+}
+</script>
+</body>
+</html>
