@@ -38,8 +38,11 @@ __all__ = [
     "run_battle",
 ]
 
-LOG_FORMAT = "trpg-battle-log/64"
-"""``/64``（Phase 3I-2）：副手——物品多了 ``offhand``/``offhand_def``（圓盾強化格擋；
+LOG_FORMAT = "trpg-battle-log/65"
+"""``/65``（Phase 3-48e）：刻印 ``inscribe`` 只刻在影響的格子（``affects: tiles``）；其他對象
+不再刻在單位腳下，改發 ``effect_fizzled``（``inscribe_needs_tiles``）；規則包的原語 ``inscribe``
+多了 ``forbid_affects``。``/64`` 的紀錄無法重播。
+``/64``（Phase 3I-2）：副手——物品多了 ``offhand``/``offhand_def``（圓盾強化格擋；
 塔盾：遠程攻擊打持有者時命中同半掩護、持有者移動 −1；法書：法術技傷害 +10%；法器珠：法術技施放距離
 +1），裝備快照內容不同。同一份輸入的結算可能不同，因此 ``/63`` 的紀錄無法重播。
 ``/63``（Phase 3I-1）：錘的雙屬性改取較高（同類取較高、一物理一心智取平均，#46）；新武器拳套
