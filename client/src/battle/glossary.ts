@@ -2,7 +2,7 @@
 // 中文名與旗標（可燃、致命、不可通行……）不手寫：啟動時讀 /api/glossary（由 content 產生）。
 // 內容新增種類時找不到的鍵會退回預設值（顯示 ID），不會壞掉。
 
-import type { Glossary, GlossaryEntry, Surface, WeaponLookEntry } from "../api/types";
+import type { Glossary, GlossaryEntry, StatusLook, Surface, WeaponLookEntry } from "../api/types";
 
 // ---- 名詞對照（由 /api/glossary 提供；啟動時載入）-------------------------------------------
 
@@ -63,6 +63,8 @@ export function glossaryHasTag(category: GlossaryCategory, id: string, tag: stri
 }
 
 export const statusName = (id: string): string => glossaryName("statuses", id);
+/** 狀態圖示與身上特效用的欄位（`/api/glossary` 的 `status_look`）；沒有資料時為 `undefined`。 */
+export const statusLook = (id: string): StatusLook | undefined => glossaryEntry("statuses", id)?.status_look ?? undefined;
 export const stackName = (id: string): string => glossaryName("stacks", id);
 export const reactionName = (id: string): string => glossaryName("reactions", id);
 export const surfaceName = (id: string): string => glossaryName("surfaces", id);
