@@ -39,14 +39,15 @@ def _rarity_fields(draft: dict[str, Any]) -> dict[str, FieldSpec]:
 def test_spell_epic_shows_second_attribute_menu_within_allowed_range() -> None:
     lib = library()
     fields = _rarity_fields({**SPELL, "rarity": "epic"})
-    secondary = fields["secondary_scaling_attr"]
-    values = {c.value for c in secondary.choices}
+    secondary = fields.get("secondary_scaling_attr")
+    values = set() if secondary is None else {c.value for c in secondary.choices}
     assert "int" not in values  # 不含主屬性
-    assert values  # 有選項
 
+    # 選單＝允許範圍減主屬性（3H-7 後純火焰法術只允許智力，所以第二屬性沒有選項；
+    # 組合主題的法術才有，例：元素＋意志主題）
     skill = build_skill({**SPELL, "rarity": "epic"})
     allowed = {a.value for a in lib.skill_scaling.allowed_attrs(skill, lib.weapons)}
-    assert values <= allowed
+    assert values == allowed - {skill.scaling_attr.value}
 
 
 def test_second_attribute_hidden_below_epic_and_for_weapon_skills() -> None:

@@ -178,8 +178,6 @@ def test_random_skills_fit_the_options() -> None:
         skill = compose_random_skill(seed, library=lib)
         data = skill.model_dump(mode="json", exclude_none=True)
         step, problems = _fits(lib, data)
-        # 第二屬性限縮放範圍（3H-8）；組合器改從允許範圍抽是 3H-7，併入後這個過濾可以拿掉
-        problems = tuple(p for p in problems if not p.startswith("secondary_scaling_attr"))
         assert (step, problems) == (None, ()), seed
 
 
