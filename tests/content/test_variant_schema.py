@@ -229,24 +229,28 @@ def test_budget_adds_the_surcharge_per_variant_and_reports_each_form() -> None:
     assert report.variant_surcharge_permille == 2 * surcharge
     assert report.total == plain.total * Fraction(1000 + 2 * surcharge, 1000)
     assert [v.id for v in report.variants] == ["tide_pierce", "high_tide"]
-    step = lib.budget.variant_range_step_permille
-    assert step == 50
     for form in report.variants:
         expected = skill_budget(spear.variant_form(form.id), lib)
-        # 射程 +2 的型態另加基礎型態點數的 2 × 5%（3-25b）；其他型態不變
-        extra = plain.total * Fraction(2 * step, 1000) if form.id == "high_tide" else 0
-        assert form.report.total == expected.total + extra and form.report.ok
-    assert report.variants[1].report.variant_range_permille == 2 * step
-    assert report.variants[0].report.variant_range_permille == 0
+        # 射程變化直接算在型態本身的射程係數上（3-49，不再另外加價）
+        assert form.report.total == expected.total and form.report.ok
+    base_range = report.range_value
+    assert base_range is not None
+    assert report.variants[1].report.range_value == base_range + 2
+    assert report.variants[1].report.range_coefficient == report.range_coefficient + Fraction(
+        2 * lib.budget.range_step_permille, 1000
+    )
 
 
-def test_range_minus_is_not_refunded() -> None:
+def test_range_minus_lowers_the_range_coefficient() -> None:
     lib = library()
     shorter = SkillDef.model_validate(
         _data(variants=[{**_WATER, "range_delta": -1, "id": "short"}])
     )
-    form = skill_budget(shorter, lib).variants[0].report
-    assert form.variant_range_permille == 0
+    report = skill_budget(shorter, lib)
+    form = report.variants[0].report
+    assert form.range_value is not None and report.range_value is not None
+    assert form.range_value == report.range_value - 1
+    assert form.range_coefficient < report.range_coefficient
     assert form.total == skill_budget(shorter.variant_form("short"), lib).total
 
 

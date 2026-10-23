@@ -10,6 +10,7 @@ from types import ModuleType
 
 import pytest
 
+from tests.known_budget_exceptions import RANGE_BUDGET_EXCEPTIONS
 from tests.skillgen.helpers import lib
 
 SCRIPT = Path(__file__).resolve().parents[2] / "scripts" / "calibrate_tier_budget.py"
@@ -33,7 +34,11 @@ def test_every_shipped_skill_is_inside_its_tier_window() -> None:
     core = lib().ruleset.core.tier_budget
     for tier, all_entries in windows.items():
         # 裝備授予的技能（3G-G3b，標籤 gear）的預算算在詞條上，不參與階級預算校準
-        entries = [e for e in all_entries if not e[0].startswith("skill_gear_")]
+        entries = [
+            e
+            for e in all_entries
+            if not e[0].startswith("skill_gear_") and e[0] not in RANGE_BUDGET_EXCEPTIONS
+        ]
         assert script.count_ok(entries, core[tier]) == len(entries)
 
 

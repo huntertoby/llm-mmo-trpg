@@ -43,11 +43,11 @@ def variants_visible(draft: Draft, library: ContentLibrary) -> bool:
 def variant_notes(draft: Draft, library: ContentLibrary) -> tuple[str, ...]:
     cap = library.ruleset.core.variant_max_by_rarity.get(str(draft.get("rarity")), 0)
     rate = library.budget.variant_surcharge_permille
-    step = library.budget.variant_range_step_permille
+    step = library.budget.range_step_permille
     return (
         f"這個稀有度最多 {cap} 個變奏（稀有 1 個、史詩以上 2 個）",
         f"基礎型態每多一個變奏預算多算 {rate / 10:g}%；每個型態各自都要落在預算窗內",
-        f"變奏的射程每 +1 格，該型態多算基礎點數的 {step / 10:g}%（−1 不折抵）",
+        f"變奏的射程每 +1 格，該型態的射程係數多算 {step / 10:g}%（−1 則少算）",
         "替換內容填 1～2 項；不能改 AP、冷卻、代價；帶變奏的技能不能含區域、延遲傷害、複製技能",
         "替換既有附帶效果請用進階 YAML",
     )

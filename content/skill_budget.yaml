@@ -8,6 +8,21 @@
 min_ratio_permille: 700      # 過弱下限（0.7）
 max_ratio_permille: 1000     # 超預算上限（1.0）
 
+# 射程係數（Phase 3-49，玩法決定 #53）：固定射程 N（整數 ≥ 1）的技能，形狀倍率再乘
+# (1000 ＋ (N − range_baseline) × range_step_permille) ÷ 1000（射程 1＝0.85、4＝1.00、10＝1.30）。
+# 射程寫「武器射程」的武器技、射程 0（以施放者／落點為中心）與沒有射程的形狀（自身、光環等）為 ×1.0。
+range_baseline: 4
+# 已知超出預算範圍（70～100%）的內建技能（Phase 3-49 射程係數上線後；不改技能數值，交玩法 PM 決定怎麼調，
+# 調整後從這裡移除）。trpg content check 不把它們的 budget.over／budget.weak 算成錯誤。
+# 重算報表：uv run python scripts/range_budget_report.py。
+known_budget_exceptions:
+  - skill_arc_follow_up        # 射程 5：98.9% -> 103.8%（超出）
+  - skill_armor_break_combo    # 射程 1：74.5% -> 66.3%（過弱）
+  - skill_deep_freeze          # 射程 5：97.9% -> 102.8%（超出）
+  - skill_flare_sight          # 射程 6：97.7% -> 107.4%（超出）
+  - skill_quake_topple         # 射程 2：76.9% -> 69.2%（過弱）
+range_step_permille: 50
+
 ap_coefficient_permille: {1: 500, 2: 1000, 3: 1600}   # 主動技能依 ap_cost
 reaction_coefficient_permille: 600                     # 反應技（2E-2 起可生成；初值，未經模擬）
 # 姿態技能（Phase 2E-2）：可用預算 ＝ tier_budget × 這個係數 × (1000 ＋ 代價折抵) ÷ 1000。
@@ -111,8 +126,7 @@ pierce_bonus_permille: 150
 # 戰場變奏（Phase 3-25a，docs/design/06-技能.md 6.24）：基礎型態的總點數 ×（1000 ＋ 這個值 × 變奏數）÷ 1000；
 # 每個變奏型態另外照一般技能計算，各自落在預算窗內。初值 10%，之後以模擬調整。
 variant_surcharge_permille: 100
-# 變奏的射程 +1 格（Phase 3-25b）：該型態的點數加基礎型態點數的這個比例（‰）；−1 不折抵。初值 5%。
-variant_range_step_permille: 50
+# 變奏的射程 ±：Phase 3-49 起由射程係數（range_step_permille）直接算在型態本身的形狀上，不再另外加價。
 # 複合技能（Phase 3F-3a，docs/design/06-技能.md 6.23「位移 → 動作」）：總點數 ＝（位移段點數 ＋ 動作段點數）
 # ×（1000 ＋ 這個值）÷ 1000；兩段各自依自己的骨架與形狀計算。省下一次行動的代價；初值，之後以模擬調整。
 composite_tax_permille: 150

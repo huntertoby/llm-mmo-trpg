@@ -15,6 +15,7 @@ function LinesTable({ lines }: { lines: BudgetLine[] }) {
           <th>說明</th>
           <th>基礎</th>
           <th>形狀×</th>
+          <th>射程×</th>
           <th>對象×</th>
           <th>條件×</th>
           <th>點數</th>
@@ -27,6 +28,7 @@ function LinesTable({ lines }: { lines: BudgetLine[] }) {
             <td>{l.note}</td>
             <td>{l.base}</td>
             <td>{l.shape}</td>
+            <td>{l.range}</td>
             <td>{l.target}</td>
             <td>{l.condition}</td>
             <td>{l.points}</td>
@@ -77,7 +79,7 @@ function BudgetBar({ check }: { check: WorkshopCheck }) {
             {b.variants.map((f) => (
               <li key={f.id}>
                 <span className={`ws-verdict ${f.verdict}`}>{f.ratio_text}</span> {f.name_zh}（{f.verdict_zh}，點數 {f.total} ／ 可用 {f.usable}
-                {f.range_permille > 0 ? `，含射程加價 ${f.range_permille / 10}%` : ""}）
+                {f.range_text !== "" ? `，${f.range_text}` : ""}）
               </li>
             ))}
           </ul>
@@ -94,7 +96,7 @@ function BudgetBar({ check }: { check: WorkshopCheck }) {
                 </div>
                 <LinesTable lines={seg.lines} />
                 <div className="small">
-                  原始點數 {seg.raw}，條件倍率 ×{seg.condition_multiplier}，該段點數 {seg.total}
+                  {seg.range_text !== "" ? `${seg.range_text}，` : ""}原始點數 {seg.raw}，條件倍率 ×{seg.condition_multiplier}，該段點數 {seg.total}
                   {seg.synergies.length > 0 ? `，協同：${seg.synergies.join("、")}` : ""}
                 </div>
               </div>
@@ -108,7 +110,7 @@ function BudgetBar({ check }: { check: WorkshopCheck }) {
           <LinesTable lines={b.lines} />
         )}
         <div className="small">
-          原始點數 {b.raw}，條件倍率 ×{b.condition_multiplier}，合計 {b.total}。階級預算 {b.tier_budget} × {b.coefficient_label}{" "}
+          {b.range_text !== "" ? `${b.range_text}（已乘在作用於單位的效果點數上），` : ""}原始點數 {b.raw}，條件倍率 ×{b.condition_multiplier}，合計 {b.total}。階級預算 {b.tier_budget} × {b.coefficient_label}{" "}
           {b.coefficient}
           {b.allowance_parts.length > 0 ? `，加成：${b.allowance_parts.join("、")}` : ""}，可用 {b.usable}。
         </div>

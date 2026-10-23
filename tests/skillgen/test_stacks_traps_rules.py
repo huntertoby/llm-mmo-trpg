@@ -121,7 +121,9 @@ def test_consume_stack_adds_expected_bonus_points() -> None:
     report = skill_budget(skill, lib())
     damage, consume = report.effects
     # 2d10 平均 11；期望消耗 5 × 500‰ ＝ 2.5 層；每層 250‰ → 11 × 2.5 × 0.25
-    assert damage.points == 11 and consume.points == Fraction(11) * Fraction(5, 2) * Fraction(1, 4)
+    reach = report.range_coefficient  # 射程係數（3-49）
+    assert damage.points == 11 * reach
+    assert consume.points == Fraction(11) * reach * Fraction(5, 2) * Fraction(1, 4)
 
 
 def test_a_trap_uses_the_trap_shape_and_the_trap_coefficient() -> None:

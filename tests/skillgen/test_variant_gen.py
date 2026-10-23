@@ -105,7 +105,7 @@ def test_the_workshop_shows_a_budget_per_form() -> None:
     check = check_draft(draft, lib)
     assert check.budget is not None and len(check.budget.variants) == 1
     form = check.budget.variants[0]
-    assert form.id == "high_reach" and form.range_permille == lib.budget.variant_range_step_permille
+    assert form.id == "high_reach" and form.range_text.startswith("射程 ")
     assert check.budget.variant_surcharge_permille == lib.budget.variant_surcharge_permille
     assert check.skill is not None
     SkillDef.model_validate(check.skill)

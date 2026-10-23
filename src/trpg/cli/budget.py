@@ -34,11 +34,17 @@ def _pct(value: Fraction) -> str:
     return f"{float(value) * 100:.1f}%"
 
 
+_BUDGET_RANGE_RULES = frozenset({"budget.over", "budget.weak"})
+
+
 def library_violations(library: ContentLibrary) -> list[Violation]:
     """全部技能的違規（依技能 ID 排序）。"""
     out: list[Violation] = []
     for skill_id in sorted(library.skills):
-        out += validate_skill(library.skills[skill_id], library)
+        found = validate_skill(library.skills[skill_id], library)
+        if skill_id in library.budget.known_budget_exceptions:  # 3-49 已知例外：不計預算範圍
+            found = [v for v in found if v.rule not in _BUDGET_RANGE_RULES]
+        out += found
     return out
 
 
@@ -173,6 +179,12 @@ def _print_variants(
 def _print_totals(report: BudgetReport, out: TextIO) -> None:
     cond = "無" if report.condition_multiplier == 1 else _mult(report.condition_multiplier)
     print(f"  技能條件倍率 {cond}", file=out)
+    if report.range_value is not None:
+        print(
+            f"  射程 {report.range_value}：×{float(report.range_coefficient):g}"
+            f"（已乘在作用於單位的效果點數上）",
+            file=out,
+        )
     print(f"  機制標籤 {'、'.join(report.tags) or '（無）'}", file=out)
     if report.synergies:
         parts = "、".join(f"{'+'.join(tags)} {_mult(c)}" for tags, c in report.synergies)
@@ -227,16 +239,22 @@ def cmd_skills_budget_all(library: ContentLibrary, out: TextIO) -> int:
         f"{pad('可用', 8)}{pad('折抵‰', 11)}{pad('比例', 8)}違規",
         file=out,
     )
-    bad = 0
+    bad = known = 0
     for skill in skills:
         violations = validate_skill(skill, library)
-        bad += bool(violations)
+        is_known = skill.id in library.budget.known_budget_exceptions
+        if is_known and all(v.rule in _BUDGET_RANGE_RULES for v in violations):
+            known += bool(violations)  # 3-49 已知例外：只有預算範圍違規，另計
+        else:
+            bad += bool(violations)
         try:
             report: BudgetReport | None = skill_budget(skill, library)
         except BudgetError:
             report = None
         cells = _row_cells(report)
         rules = "、".join(v.rule for v in violations) or "—"
+        if is_known and violations:
+            rules += "（已知例外）"
         print(
             f"  {pad(skill.id, 26)}{pad(skill.name_zh, 12)}{pad(str(skill.tier), 3)}"
             f"{pad(_AP_LABEL.get(skill.kind) or str(skill.ap_cost), 4)}"
@@ -251,5 +269,6 @@ def cmd_skills_budget_all(library: ContentLibrary, out: TextIO) -> int:
                 f"{pad(sub[0], 8)}{pad(sub[1], 8)}{pad(sub[3], 11)}{pad(sub[2], 8)}",
                 file=out,
             )
-    print(f"通過 {len(skills) - bad} 個，違規 {bad} 個。", file=out)
+    tail = f"，已知例外 {known} 個（射程係數，見 Phase3-49報告）" if known else ""
+    print(f"通過 {len(skills) - bad - known} 個，違規 {bad} 個{tail}。", file=out)
     return 1 if bad else 0

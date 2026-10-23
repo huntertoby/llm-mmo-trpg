@@ -209,6 +209,15 @@ class BudgetRules(ContentModel):
     """姿態技能的預算係數（‰；2E-2）：可用預算 ＝ tier_budget × 係數 ×（1000 ＋ 折抵）÷ 1000。"""
     passive_extra_trigger_permille: int = Field(default=800, ge=1, le=1000)
     """被動技能的 ``trigger.max_per_round`` 每多 1 次，可用預算 × 這個值（‰）。"""
+    known_budget_exceptions: tuple[str, ...] = ()
+    """已知超出預算範圍（70～100%）的內建技能 ID（Phase 3-49：射程係數上線後，依規格不改技能數值，
+    先標記，交玩法 PM 決定）。``trpg content check`` 不把它們的 ``budget.over``／``budget.weak``
+    算成錯誤（``trpg skills budget`` 仍標出）；調整技能後從 ``content/skill_budget.yaml`` 移除。"""
+    range_baseline: int = Field(default=4, ge=1)
+    """射程係數（Phase 3-49，玩法決定 #53）：固定射程 N 的技能，形狀倍率再乘
+    ``1000 ＋ (N − range_baseline) × range_step_permille``（‰）；射程 4＝×1.00。"""
+    range_step_permille: int = Field(default=50, ge=0, le=200)
+    """射程每多 1 格的係數增減（‰）：射程 1＝850、10＝1300。武器射程與沒有射程的形狀為 1000。"""
     trap_coefficient_permille: int = Field(default=800, ge=1, le=1000)
     """陷阱技能（Phase 2E-3）：觸發不確定，可用預算再 × 這個值（‰；初值，未經模擬）。"""
     consume_stack_expected_permille: int = Field(default=500, ge=1, le=1000)
@@ -335,8 +344,6 @@ class BudgetRules(ContentModel):
     variant_surcharge_permille: int = Field(default=100, ge=0, le=1000)
     """戰場變奏（Phase 3-25a，6.24）：每個變奏的加價（‰）。基礎型態的總點數 ×（1000 ＋ 這個值 ×
     變奏數）÷ 1000；每個變奏型態另外照一般技能計算，各自落在預算窗內（初值，之後以模擬調整）。"""
-    variant_range_step_permille: int = Field(default=50, ge=0, le=1000)
-    """變奏的射程 +1 格，該型態的點數加基礎型態點數的這個比例（‰；Phase 3-25b；射程 −1 不折抵）。"""
     composite_tax_permille: int = Field(default=150, ge=0, le=1000)
     """複合技能（Phase 3F-3a，6.23）的加成：總點數 ＝（位移段點數 ＋ 動作段點數）×（1000 ＋ 這個值）
     ÷ 1000（省下一次行動的代價；初值，之後以模擬調整）。"""

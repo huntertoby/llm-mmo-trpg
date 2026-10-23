@@ -8,11 +8,11 @@ from pathlib import Path
 import pytest
 
 from tests.engine.helpers import library
+from tests.known_budget_exceptions import RANGE_BUDGET_EXCEPTIONS, shipped_violations
 from trpg.content.library import load_library
 from trpg.content.sim_builds import BuildDef, BuildTable
 from trpg.shared.errors import ContentError
 from trpg.skillgen.budget import skill_budget
-from trpg.skillgen.validate import validate_skill
 
 BUILD_IDS = (
     "build_push",
@@ -57,8 +57,8 @@ def test_every_build_skill_exists_and_passes_budget_validation(build_id: str) ->
     assert build.hero.id == build_id and build.hero.skills
     for skill_id in build.hero.skills:
         skill = lib.skills[skill_id]
-        assert validate_skill(skill, lib) == []
-        assert skill_budget(skill, lib).ok
+        assert shipped_violations(skill_id, lib) == []
+        assert skill_budget(skill, lib).ok or skill_id in RANGE_BUDGET_EXCEPTIONS  # 3-49
     # 武器與技能相容、欄位數量在上限內（載入時已檢查，這裡確認 build 沒有被排除在檢查之外）
     assert build_id not in lib.units
 

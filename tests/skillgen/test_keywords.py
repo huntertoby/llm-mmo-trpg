@@ -11,6 +11,7 @@ import pytest
 import yaml
 
 from tests.engine.helpers import library
+from tests.known_budget_exceptions import shipped_violations
 from tests.skillgen.workshop_walks import MODIFIER, STRIKE, walk_draft
 from trpg.content.library import load_library
 from trpg.content.skill_keywords import KeywordRule
@@ -300,7 +301,7 @@ def test_every_shipped_skill_has_at_least_one_keyword() -> None:
 
 def test_every_shipped_skill_passes_the_validator_including_keywords() -> None:
     lib = library()
-    bad = {s.id: validate_skill(s, lib) for s in lib.skills.values()}
+    bad = {s.id: shipped_violations(s.id, lib) for s in lib.skills.values()}
     assert {k: v for k, v in bad.items() if v} == {}
 
 
@@ -376,7 +377,7 @@ def test_each_pool_has_at_least_three_tier_one_starter_skills(keyword: str) -> N
     assert all(s.tier == 1 and s.rarity != "legendary" and is_starter_skill(s) for s in pool)
     for skill in pool:
         assert keyword in derive_keywords(skill, lib.keywords).all()
-        assert validate_skill(skill, lib) == []  # 過預算
+        assert shipped_violations(skill.id, lib) == []  # 過預算
 
 
 def test_a_skill_can_be_in_several_pools_and_the_pools_are_derived_not_listed() -> None:

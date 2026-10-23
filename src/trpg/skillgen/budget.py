@@ -41,8 +41,8 @@ from trpg.content.skills import (
     ModifierSpec,
     PrimitiveDef,
     SelfStatusCost,
+    ShapeSpec,
     SkillDef,
-    VariantSpec,
     on_hit_carrier,
 )
 from trpg.content.summons import SummonDef, summon_dpr
@@ -86,6 +86,8 @@ class EffectBudget:
     target: Fraction
     condition: Fraction
     points: Fraction
+    range: Fraction = Fraction(1)
+    """射程係數（Phase 3-49）：只對有形狀倍率的效果生效，其他為 1；``points`` 已乘上它。"""
 
 
 @dataclass(frozen=True, slots=True)
@@ -105,6 +107,10 @@ class SegmentBudget:
     chance_permille: int = 1000
     """有條件的第二段（``on_kill``／``on_hit``，Phase 3F-4a）的觸發機率（‰）：加總時這段點數 ×
     它；其他段為 1000。"""
+    range_value: int | None = None
+    """這一段形狀的固定射程（沒有或武器射程為 ``None``）。"""
+    range_coefficient: Fraction = Fraction(1)
+    """這一段的射程係數（Phase 3-49）。"""
 
 
 @dataclass(frozen=True, slots=True)
@@ -151,9 +157,10 @@ class BudgetReport:
     """戰場變奏（Phase 3-25a）的加價合計（‰）：``variant_surcharge_permille`` × 變奏數；``total``
     已乘上 ×（1000 ＋ 它）÷ 1000。沒有變奏時為 0。"""
     variants: tuple[VariantBudget, ...] = ()
-    variant_range_permille: int = 0
-    """變奏型態的射程加價（‰，佔基礎型態點數；Phase 3-25b）：射程每 +1 格
-    ``variant_range_step_permille``；其他情況為 0。"""
+    range_value: int | None = None
+    """技能形狀的固定射程（Phase 3-49）；射程寫「武器射程」或形狀沒有射程時為 ``None``。"""
+    range_coefficient: Fraction = Fraction(1)
+    """射程係數（Phase 3-49，#53）：``1 ＋ (射程 − 4) × 5%``；已乘在作用於單位的各效果點數上。"""
     """各變奏型態自己的預算（依資料順序；型態本身照一般技能計算，不含加價）。"""
 
     @property
@@ -1042,21 +1049,42 @@ BUDGET_BASES: frozenset[str] = frozenset(
 ``budget_basis`` 都在這裡，見 :mod:`trpg.primitive_coverage`）。"""
 
 
-def _shape_multiplier(
+def range_coefficient(shape: ShapeSpec, budget: BudgetRules) -> tuple[int | None, Fraction]:
+    """形狀的射程係數（Phase 3-49，玩法決定 #53）：固定射程 N ≥ 1 時為
+    ``1 ＋ (N − range_baseline) × range_step_permille ÷ 1000``；武器射程、射程 0、無射程形狀為 1。
+    回傳（採用的射程, 係數）。"""
+    value = shape.range
+    if not isinstance(value, int) or value < 1:
+        return None, Fraction(1)
+    permille = _PERMILLE + (value - budget.range_baseline) * budget.range_step_permille
+    return value, Fraction(permille, _PERMILLE)
+
+
+def _shape_parts(
     skill: SkillDef, effect: EffectSpec, primitive: PrimitiveDef, library: ContentLibrary
-) -> Fraction:
-    """形狀倍率（只對作用在單位的效果）；陷阱技能取 ``trap.shape`` 的倍率（觸發時的影響範圍）。"""
+) -> tuple[Fraction, Fraction]:
+    """（形狀倍率, 射程係數）；只對作用在單位的效果，陷阱技能取 ``trap.shape`` 的倍率
+    （觸發時的影響範圍，沒有射程）。"""
     rules = library.ruleset
     affects = resolved_affects(rules, effect)
     if primitive.budget_basis in ("zone", "gamble"):  # 持續區域（3D-5）、賭注（3D-7a）：已含倍率
-        return Fraction(1)
+        return Fraction(1), Fraction(1)
     if not (affects in _SHAPED_AFFECTS and primitive.acts_on != "caster"):
-        return Fraction(1)
+        return Fraction(1), Fraction(1)
     if skill.trap is not None:
         shape = rules.shapes.by_id()[skill.trap.shape]
-        return Fraction(shape.budget.permille_for({}), _PERMILLE)
+        return Fraction(shape.budget.permille_for({}), _PERMILLE), Fraction(1)
     shape = rules.shapes.by_id()[skill.shape.type]
-    return Fraction(shape.budget.permille_for(skill.shape.param_values()), _PERMILLE)
+    multiplier = Fraction(shape.budget.permille_for(skill.shape.param_values()), _PERMILLE)
+    return multiplier, range_coefficient(skill.shape, library.budget)[1]
+
+
+def _shape_multiplier(
+    skill: SkillDef, effect: EffectSpec, primitive: PrimitiveDef, library: ContentLibrary
+) -> Fraction:
+    """形狀倍率 × 射程係數（只對作用在單位的效果）。"""
+    shape, reach = _shape_parts(skill, effect, primitive, library)
+    return shape * reach
 
 
 def _status_points(effect: EffectSpec, statuses: dict[str, StatusDef]) -> tuple[Fraction, str]:
@@ -1103,10 +1131,10 @@ def _effect_budget(
         base, note = overload_cost  # 超載層數沒有「消耗」的技能，累積它只有反噬的代價（3D-7b）
     affects = resolved_affects(rules, effect)
     # consume_stack 的加成點數已含傷害效果的形狀倍率
-    shape = (
-        Fraction(1)
+    shape, reach = (
+        (Fraction(1), Fraction(1))
         if primitive.budget_basis == "consume_stack"
-        else _shape_multiplier(skill, effect, primitive, library)
+        else _shape_parts(skill, effect, primitive, library)
     )
     target = Fraction(budget.all_target_permille, _PERMILLE) if affects == "all" else Fraction(1)
     condition = Fraction(1)
@@ -1120,7 +1148,8 @@ def _effect_budget(
         shape=shape,
         target=target,
         condition=condition,
-        points=base * shape * target * condition,
+        points=base * shape * reach * target * condition,
+        range=reach,
     )
 
 
@@ -1437,6 +1466,8 @@ def _segment(label: str, report: BudgetReport, skill: SkillDef, offset: int) -> 
         condition_multiplier=report.condition_multiplier,
         synergies=report.synergies,
         total=report.total,
+        range_value=report.range_value,
+        range_coefficient=report.range_coefficient,
     )
 
 
@@ -1503,31 +1534,14 @@ def _composite_budget(skill: SkillDef, library: ContentLibrary) -> BudgetReport:
     )
 
 
-def _form_budget(
-    skill: SkillDef, variant: VariantSpec, base: BudgetReport, step: int, library: ContentLibrary
-) -> BudgetReport:
-    """變奏型態的預算：型態本身照一般技能計算，射程每 +1 格再加基礎型態點數的
-    ``variant_range_step_permille`` ‰（Phase 3-25b，PM 追加；射程 −1 不折抵）。"""
-    report = skill_budget(skill.variant_form(variant.id), library)
-    extra = max(variant.range_delta or 0, 0) * step
-    if extra == 0:
-        return report
-    return replace(
-        report,
-        total=report.total + base.total * Fraction(extra, _PERMILLE),
-        variant_range_permille=extra,
-    )
-
-
 def _variant_budget(skill: SkillDef, library: ContentLibrary) -> BudgetReport:
     """帶戰場變奏的技能（Phase 3-25a，PM 決定 #6）：基礎型態照一般技能計算，總點數再 ×（1000 ＋
     ``variant_surcharge_permille`` × 變奏數）÷ 1000；各變奏型態另外照一般技能計算（列在
     ``variants``，驗證器要求每個型態都落在預算窗內）。"""
     base = skill_budget(skill.model_copy(update={"variants": ()}), library)
     surcharge = library.budget.variant_surcharge_permille * len(skill.variants)
-    step = library.budget.variant_range_step_permille
     forms = tuple(
-        VariantBudget(v.id, v.name_zh, _form_budget(skill, v, base, step, library))
+        VariantBudget(v.id, v.name_zh, skill_budget(skill.variant_form(v.id), library))
         for v in skill.variants
     )
     return replace(
@@ -1572,6 +1586,7 @@ def skill_budget(skill: SkillDef, library: ContentLibrary) -> BudgetReport:
     tier_budget = rules.core.tier_budget.get(skill.tier)
     if tier_budget is None:
         raise BudgetError(f"沒有階級 {skill.tier} 的預算（tier_budget）")
+    range_value, reach = range_coefficient(skill.shape, budget)
     if skill.is_activatable:
         coefficient, label = _activation_coefficient(skill, library)
     elif skill.kind == "passive":
@@ -1597,4 +1612,6 @@ def skill_budget(skill: SkillDef, library: ContentLibrary) -> BudgetReport:
         min_ratio=Fraction(budget.min_ratio_permille, _PERMILLE),
         max_ratio=Fraction(budget.max_ratio_permille, _PERMILLE),
         coefficient_label=label,
+        range_value=range_value,
+        range_coefficient=reach,
     )
