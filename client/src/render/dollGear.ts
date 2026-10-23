@@ -76,6 +76,11 @@ export function dollItem(look: GearLook | null | undefined, slot: string): { slo
   return { slot: target, item, paired: PAIRED_KINDS.has(r.kind) };
 }
 
+/** 成對武器造型（雙匕首、雙手槍）→ 單把武器的部件 kind（紙娃娃主手、副手各畫一把）；不是成對造型回傳 `null`。 */
+export function pairedPart(kind: string): string | null {
+  return PAIRED_KINDS.has(kind) ? partOf(kind, "") : null;
+}
+
 export interface DollGear {
   gear: Partial<Record<GearSlot, GearItem>>;
   /** 成對武器：副手也畫同一把。 */

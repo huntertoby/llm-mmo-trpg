@@ -44,10 +44,27 @@ items:
     kind: dual_dagger
     form: stiletto
     material: steel
-    weapon: dagger
+    weapon: dual_dagger
     paired: true
     affixes:
       - {affix: affix_attr_str, value: 1}
+  # --- Phase 3I-4 成對武器本體（沒有詞條；工坊「成對武器」勾選框由 paired 物品推導）---
+  - id: item_dual_dagger
+    name_zh: 雙匕首
+    slot_type: weapon
+    kind: dual_dagger
+    form: short
+    material: iron
+    weapon: dual_dagger
+    paired: true
+  - id: item_dual_pistol
+    name_zh: 雙手槍
+    slot_type: weapon
+    kind: dual_pistol
+    form: revolver
+    material: steel
+    weapon: dual_pistol
+    paired: true
   # --- 副手 ---
   - id: item_test_shield
     name_zh: 試煉圓盾

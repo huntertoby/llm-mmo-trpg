@@ -7,7 +7,7 @@ import type { DollLook } from "../api/types";
 import { weaponLookEntry } from "../battle/glossary";
 import { ELEMENT_VFX } from "../battle/vfxPalette";
 import { numToHex } from "./artPalette";
-import { dollGear, isTwoHandedPart, type DollEquipment } from "./dollGear";
+import { dollGear, isTwoHandedPart, pairedPart, type DollEquipment } from "./dollGear";
 
 export interface GearItem {
   kind: string;
@@ -180,8 +180,9 @@ export function resolveDoll(input: DollInput): DollSpec {
   if (input.totem === true) return { look: { skin: "#a8a49a" }, gear: {}, totem: true };
   const app = input.dollLook != null ? fromDollLook(input.dollLook) : input.summon ? skeletonLook() : factionDefault(input.team);
   const weapon = weaponLook(input.weaponId, input.weaponClass);
+  const pairedKind = pairedPart(weapon.kind); // 成對武器（3I-4）：主手、副手各一把單把造型
   const main: GearItem = {
-    kind: weapon.kind,
+    kind: pairedKind ?? weapon.kind,
     material: weapon.material,
     ...(weapon.element !== undefined ? { element: weapon.element } : {}),
     ...(weapon.form !== undefined ? { form: weapon.form } : {}),
@@ -195,6 +196,7 @@ export function resolveDoll(input: DollInput): DollSpec {
   const mainKnown = known("main_hand", main);
   if (mainKnown !== undefined) gear.main_hand = mainKnown;
   let twoHanded = weapon.twoHanded;
+  if (pairedKind !== null && mainKnown !== undefined) gear.off_hand = { ...mainKnown };
   const rarity = app.rarity; // 外光只來自範本（頭目記號）；裝備稀有度不影響小人
   if (input.equipment !== undefined && input.equipment.length > 0) {
     const worn = dollGear(input.equipment);

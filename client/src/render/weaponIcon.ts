@@ -2,6 +2,7 @@
 // 武器 ID 不認得時依武器大類退回（`appearance.weaponLook`）。畫好後量出實際佔用的範圍，等比放大填滿小圖示
 // （劍、匕首轉成斜放），所以匕首與法杖看起來一樣大。
 import { weaponLook, type GearItem } from "./appearance";
+import { pairedPart } from "./dollGear";
 import { drawWeaponAlone } from "./paperdoll";
 
 /** 暫時畫布的虛擬大小與解析度倍率（武器最長約 40 個虛擬單位）。 */
@@ -15,7 +16,7 @@ const PAD = 0.08;
 export function weaponIconItem(weaponId: string | null | undefined, weaponClass: string | null | undefined): GearItem {
   const look = weaponLook(weaponId, weaponClass);
   return {
-    kind: look.kind,
+    kind: pairedPart(look.kind) ?? look.kind, // 成對武器（3I-4）畫成單把的造型
     material: look.material,
     ...(look.element !== undefined ? { element: look.element } : {}),
     ...(look.form !== undefined ? { form: look.form } : {}),

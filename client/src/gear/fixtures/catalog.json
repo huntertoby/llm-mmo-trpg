@@ -146,8 +146,11 @@
    "id": "item_test_twin_daggers",
    "name_zh": "試煉雙匕首",
    "slot_type": "weapon",
-   "weapon": "dagger",
-   "weapon_name_zh": "匕首",
+   "weapon": "dual_dagger",
+   "weapon_name_zh": "雙匕首",
+   "offhand": null,
+   "offhand_name_zh": null,
+   "offhand_traits_zh": [],
    "two_handed": false,
    "paired": true,
    "tags": [],
@@ -434,6 +437,54 @@
     "kind": "ring",
     "form": "plain",
     "material": "copper",
+    "dye": null,
+    "style": null,
+    "rarity": "common",
+    "keywords": []
+   }
+  },
+  {
+   "id": "item_dual_dagger",
+   "name_zh": "雙匕首",
+   "slot_type": "weapon",
+   "weapon": "dual_dagger",
+   "weapon_name_zh": "雙匕首",
+   "offhand": null,
+   "offhand_name_zh": null,
+   "offhand_traits_zh": [],
+   "two_handed": false,
+   "paired": true,
+   "tags": [],
+   "legendary": false,
+   "affixes": [],
+   "appearance": {
+    "kind": "dual_dagger",
+    "form": "short",
+    "material": "iron",
+    "dye": null,
+    "style": null,
+    "rarity": "common",
+    "keywords": []
+   }
+  },
+  {
+   "id": "item_dual_pistol",
+   "name_zh": "雙手槍",
+   "slot_type": "weapon",
+   "weapon": "dual_pistol",
+   "weapon_name_zh": "雙手槍",
+   "offhand": null,
+   "offhand_name_zh": null,
+   "offhand_traits_zh": [],
+   "two_handed": false,
+   "paired": true,
+   "tags": [],
+   "legendary": false,
+   "affixes": [],
+   "appearance": {
+    "kind": "dual_pistol",
+    "form": "revolver",
+    "material": "steel",
     "dye": null,
     "style": null,
     "rarity": "common",
@@ -1121,7 +1172,35 @@
     "element": null,
     "form": null
    },
-   "pairable": true
+   "pairable": false
+  },
+  {
+   "id": "dual_dagger",
+   "name_zh": "雙匕首",
+   "weapon_class": "melee",
+   "weapon_class_zh": "近戰武器",
+   "two_handed": false,
+   "pairable": true,
+   "look": {
+    "kind": "dual_dagger",
+    "material": "iron",
+    "element": null,
+    "form": "short"
+   }
+  },
+  {
+   "id": "dual_pistol",
+   "name_zh": "雙手槍",
+   "weapon_class": "ranged",
+   "weapon_class_zh": "遠程武器",
+   "two_handed": false,
+   "pairable": true,
+   "look": {
+    "kind": "dual_pistol",
+    "material": "steel",
+    "element": null,
+    "form": "revolver"
+   }
   },
   {
    "id": "fangs",
@@ -1254,6 +1333,20 @@
    "pairable": false
   },
   {
+   "id": "pistol",
+   "name_zh": "手槍",
+   "weapon_class": "ranged",
+   "weapon_class_zh": "遠程武器",
+   "two_handed": false,
+   "pairable": false,
+   "look": {
+    "kind": "pistol",
+    "material": "steel",
+    "element": null,
+    "form": "revolver"
+   }
+  },
+  {
    "id": "scepter",
    "name_zh": "權杖",
    "weapon_class": "focus",
@@ -1289,6 +1382,20 @@
    "two_handed": false,
    "look": null,
    "pairable": false
+  },
+  {
+   "id": "shotgun",
+   "name_zh": "霰彈槍",
+   "weapon_class": "ranged",
+   "weapon_class_zh": "遠程武器",
+   "two_handed": true,
+   "pairable": false,
+   "look": {
+    "kind": "shotgun",
+    "material": "iron",
+    "element": null,
+    "form": "double"
+   }
   },
   {
    "id": "spark_staff",

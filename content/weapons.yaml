@@ -15,7 +15,8 @@
 #       lob（拋射：視線可越過幾層高的障礙）、
 #       counter（Phase 3I-1 反擊：相鄰敵人的近戰攻擊命中你時，以內建反應 counter_attack 回擊一次；佔本輪反應、不花 AP 與耐力）、
 #       reap {hp_permille, damage_permille}（3I-1 收割：目標當下 HP ≤ 最大 HP 的 hp_permille‰ 時，普攻與武器技傷害 +damage_permille‰）、
-#       entangle {move_penalty}（3I-1 纏繞：普攻命中後施加 entangled，目標下回合移動 −move_penalty；不疊加、不擲抵抗）。
+#       entangle {move_penalty}（3I-1 纏繞：普攻命中後施加 entangled，目標下回合移動 −move_penalty；不疊加、不擲抵抗）、
+#       paired（3I-4 成對武器：算一件、占雙手；two_handed 仍為 false）、strikes（3I-4 普攻連打幾下，預設 1）。
 # look（Phase 3E-2e）：預設外觀 {kind, material, element?, form?}，紙娃娃主手與武器小圖示用；沒寫的武器前端依 weapon_class 退回。
 #       kind／form／material 是 equipment/appearance.yaml 的造型；雙手與否看 two_handed。
 # 遠程武器小特性（Phase 3-24a2；同樣只是參數）：
@@ -267,6 +268,76 @@ weapons:
     crit_range: 20
     two_handed: false
     entangle: {move_penalty: 2}
+  # --- Phase 3I-4：第二批其他武器（08 8.11 #46；傷害骰為初值，未經模擬）---
+  # 雙匕首（成對，占雙手）：普攻打兩下 1d4（strikes: 2），背刺時兩下都吃背刺加成。
+  - id: dual_dagger
+    name_zh: 雙匕首
+    look: {kind: dual_dagger, form: short, material: iron}
+    weapon_class: melee
+    range: 1
+    dice: 1d4
+    flat: 0
+    attack_bonus: 0
+    scaling_attr: dex
+    element: physical
+    crit_range: 20
+    two_handed: false
+    paired: true
+    strikes: 2
+  # 霰彈槍（火器）：單體、射程 4、彈匣 1 發；傷害依距離 1／2／3／4 格 ＝ 100／75／50／25%；
+  # 沒有站定與遠距加成，可以邊走邊打。
+  - id: shotgun
+    name_zh: 霰彈槍
+    look: {kind: shotgun, form: double, material: iron}
+    weapon_class: ranged
+    range: 4
+    dice: 2d6
+    flat: 0
+    attack_bonus: 0
+    scaling_attr: dex
+    element: physical
+    crit_range: 20
+    two_handed: true
+    magazine: 1
+    reload_ap: 1
+    gunshot: true
+    range_mod:
+      - {min_distance: 2, max_distance: 2, damage_permille: 750}
+      - {min_distance: 3, max_distance: 3, damage_permille: 500}
+      - {min_distance: 4, max_distance: 4, damage_permille: 250}
+  # 手槍（火器，單手可搭副手）：射程 5、彈匣 2 發；移動後開火沒有懲罰，也沒有站定、遠距加成或距離修正。
+  - id: pistol
+    name_zh: 手槍
+    look: {kind: pistol, form: revolver, material: steel}
+    weapon_class: ranged
+    range: 5
+    dice: 1d8
+    flat: 0
+    attack_bonus: 0
+    scaling_attr: dex
+    element: physical
+    crit_range: 20
+    two_handed: false
+    magazine: 2
+    reload_ap: 1
+    gunshot: true
+  # 雙手槍（火器，成對占雙手）：彈匣 4 發（2＋2），1 AP 一次裝滿；開火用有子彈的那把。
+  - id: dual_pistol
+    name_zh: 雙手槍
+    look: {kind: dual_pistol, form: revolver, material: steel}
+    weapon_class: ranged
+    range: 5
+    dice: 1d6
+    flat: 0
+    attack_bonus: 0
+    scaling_attr: dex
+    element: physical
+    crit_range: 20
+    two_handed: false
+    paired: true
+    magazine: 4
+    reload_ap: 1
+    gunshot: true
   # --- Phase 3-33e1：召喚物專用武器（數值為初值，未經模擬；不給玩家裝備）---
   - id: spark_staff
     name_zh: 電火法杖

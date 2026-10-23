@@ -85,7 +85,7 @@ def _item_info(library: ContentLibrary, item: ItemDef) -> GearItemInfo:
             else item.offhand_def.trait_lines_zh(library.ruleset.core)
         ),
         two_handed=weapon is not None and weapon.two_handed,
-        paired=item.paired,
+        paired=item.paired or (weapon is not None and weapon.paired),
         tags=item.tags,
         legendary=item.legendary,
         affixes=tuple(

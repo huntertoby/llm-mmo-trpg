@@ -275,6 +275,14 @@ class WeaponDef(ContentModel):
     - ``reap``：收割（鐮刀），見 :class:`Reap`；
     - ``entangle``：纏繞（鞭），見 :class:`Entangle`。
 
+    第二批其他武器（Phase 3I-4，08 8.11 雙匕首與火器）：
+
+    - ``paired``：成對武器（雙匕首、雙手槍）——算一件武器、占雙手（副手欄位被占用）；握法欄位
+      ``two_handed`` 仍是 ``False``（成對武器的物品帶 ``paired: true``，工坊的「成對武器」勾選框
+      由此推導）；
+    - ``strikes``：普攻一次連打幾下（雙匕首 2）；每一下各自擲命中與傷害（背刺時每一下都吃加成），
+      目標在第一下倒下就不再打第二下；武器技不受影響（武器技仍只打一次）。
+
     遠程武器小特性（Phase 3-24a2；同樣只是參數，引擎只讀參數）：
 
     - ``pierce_line``：穿透一直線——普攻命中（結算）目標之後，子彈／弩箭沿同一直線繼續飛，最多再
@@ -307,6 +315,8 @@ class WeaponDef(ContentModel):
     element: Element = Element.PHYSICAL
     crit_range: int = Field(default=20, ge=2, le=20)
     two_handed: bool = False
+    paired: bool = False
+    strikes: int = Field(default=1, ge=1, le=3)
     armor_break: ArmorBreak | None = None
     knockback: int = Field(default=0, ge=0, le=3)
     reach: int = Field(default=1, ge=1)
@@ -346,6 +356,8 @@ class WeaponDef(ContentModel):
                     f"武器 {self.id}：雙屬性同類（都是物理或都是心智）要 attr_mode: max，"
                     "一物理一心智要 attr_mode: mean"
                 )
+        if self.paired and self.two_handed:
+            raise ValueError(f"武器 {self.id}：成對武器（paired）不可同時是雙手武器（two_handed）")
         if self.reach > self.range:
             raise ValueError(f"武器 {self.id}：reach（{self.reach}）不可超過 range（{self.range}）")
         return self
@@ -396,6 +408,8 @@ class WeaponDef(ContentModel):
             self.attack_formula_zh(core, get),
             "雙手：占用副手欄位，不能再裝備盾或副手物品"
             if self.two_handed
+            else "成對：算一件武器、占用雙手，不能再裝備盾或副手物品"
+            if self.paired
             else "單手：副手欄位可以放盾或副手物品",
         ]
         if self.secondary_scaling_attr is not None:
@@ -446,6 +460,11 @@ class WeaponDef(ContentModel):
 def _weapon_batch_two_lines(w: WeaponDef) -> list[str]:
     """第二批提前武器的常駐特性說明（Phase 3I-1）：反擊、收割（纏繞是命中特性，在呼叫端）。"""
     lines: list[str] = []
+    if w.strikes > 1:
+        lines.append(
+            f"連擊：普攻一次打 {w.strikes} 下，每一下各自擲命中與傷害；"
+            "背刺時每一下都吃背刺加成（武器技只打一次）"
+        )
     if w.counter:
         lines.append("反擊：相鄰敵人的近戰攻擊命中你時，自動回擊一次（佔本輪反應，不花 AP 與耐力）")
     if w.reap is not None:

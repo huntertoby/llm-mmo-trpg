@@ -265,7 +265,10 @@ def test_offhand_items_and_custom_offhands_are_checked(client: TestClient) -> No
 def test_catalog_marks_pairable_weapons_from_content(client: TestClient) -> None:
     """成對武器勾選資料驅動：單手、且有成對物品的武器才 pairable；雙手武器永遠不是。"""
     weapons = {w["id"]: w for w in client.get("/api/gear/catalog").json()["weapons"]}
-    assert weapons["dagger"]["pairable"] is True
+    assert weapons["dual_dagger"]["pairable"] is True  # 3I-4：雙匕首、雙手槍（成對物品）
+    assert weapons["dual_pistol"]["pairable"] is True
+    assert weapons["dagger"]["pairable"] is False
+    assert weapons["pistol"]["pairable"] is False
     assert weapons["one_handed_sword"]["pairable"] is False
     assert all(not (w["two_handed"] and w["pairable"]) for w in weapons.values())
     assert weapons["fire_staff"]["look"]["element"] == "fire"

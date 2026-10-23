@@ -197,7 +197,12 @@ def test_test_items_cover_every_slot_with_1_to_3_affixes() -> None:
     assert set(kinds) == set(SLOT_TYPE_OF.values())
     assert kinds["ring"] >= 2  # 兩個戒指欄需要兩枚不同的戒指
     # 副手本體（3I-2，offhands.yaml）只有常駐特性，可以沒有詞條
-    assert all(1 <= len(i.affixes) <= 3 or (i.offhand is not None and not i.affixes) for i in items)
+    # 成對武器本體（3I-4，item_dual_*）同理：只有武器的常駐特性
+    assert all(
+        1 <= len(i.affixes) <= 3
+        or (not i.affixes and (i.offhand is not None or i.id.startswith("item_dual_")))
+        for i in items
+    )
     implemented = {  # G1、G2、G3a、G3b
         "stat",
         "conditional",
