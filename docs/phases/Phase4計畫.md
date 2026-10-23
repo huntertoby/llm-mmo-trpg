@@ -52,3 +52,11 @@
 ## 3. 4-L3 規格
 
 見上表 4-L3 列。補充：`llm_hint` 每條一句中文、不含階段編號與欄位名；提議模型去掉數值後，3E-2g 的往返測試改為「結構往返」（數值由測試用的固定預算器補或比對結構）；`proposal.py` 的公開 API 變更寫進報告。驗收：pytest（YAML 產生的模型與現有驗證一致、`required_when` 取代常數、觸發 `params`、`llm_hint` 全覆蓋、提議不含數值欄位）；`ruff`、`mypy`。
+
+## 4. 驗收紀錄
+
+### 4.1 4-L1 驗收（2026-10-23）
+
+- PM 合併（無衝突）；ruff、mypy、`tests/llm`＋`test_architecture`＋`tests/cli/test_cli.py` 36 全過；`trpg llm ping` 在模型未啟動時給中文提示（連不上 `http://localhost:8001/v1`，請用 `F:\WSL\start.bat` 啟動、確認連接埠與 `config/llm.toml` 一致），不丟 traceback。`src/trpg/llm/`（`client.py`、`config.py`、`errors.py`）、`config/llm.toml`（`base_url` 8001、`model=swift`、`api_key=local`、`timeout_s=120`、`max_retries=3`、`json_schema_mode=auto`、`fallback_alert_permille=200`）、環境變數 `TRPG_LLM_*`、`TRPG_LLM_CONFIG`；JSON schema 約束先送 `response_format: json_schema`（strict），HTTP 400／422 時退回 `guided_json`；`llm` 標記預設排除（`--full` 也排除）；`httpx` 移到執行期依賴。報告 `Phase4-L1報告.md`。
+- 待 PM 決定：#1 client 不做網路層重試（4-L5 處理）、#2 vLLM 回 200 但忽略約束時靠 4-L5 驗證擋下、#4 `httpx` 執行期依賴、#5 `content: null` 視為壞回應 → 接受；#3 strict 與巢狀 `$ref`／`oneOf` 支援度 → 使用者啟動模型後跑 `uv run pytest -m llm` 或 4-L9 驗證；#6 PORT → 已請專案 PM 轉達。
+
