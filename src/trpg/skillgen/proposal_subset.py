@@ -406,6 +406,8 @@ def select_subset(
     final = make(n_prims, n_conds)
     models = build_subset_models(library, final)
     for item, why in models.excluded_primitives:
+        if item in models.primitive_ids:
+            continue  # 只是不能用在變奏
         sel.drop(item, why)
     final = replace(final, primitives=tuple(sorted(models.primitive_ids)))
     return replace(
