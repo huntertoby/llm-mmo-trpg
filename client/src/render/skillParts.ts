@@ -3,6 +3,7 @@
 // 技能圖示、組裝列、工坊選項、表面說明共用這一份；不認得的部件有預設：狀態畫「名稱第一個字」，
 // 其他畫「?」，永遠畫得出來（不丟例外）。
 import { conditionName, effectName, glossaryDescription, statusName, surfaceName, triggerName } from "../battle/glossary";
+import { FONT } from "./labels";
 import { elementGlyph, ELEMENT_ICON, starPath, type Ctx } from "./skillGlyphs";
 
 const TAU = Math.PI * 2;
@@ -122,7 +123,7 @@ function hourglass(ctx: Ctx): void {
   ctx.fill();
 }
 function text(ctx: Ctx, s: string, size = 11): void {
-  ctx.font = `800 ${size}px "Noto Sans TC","Microsoft JhengHei",sans-serif`;
+  ctx.font = `700 ${size}px ${FONT}`;
   ctx.textAlign = "center";
   ctx.textBaseline = "middle";
   ctx.fillText(s, 0, 0.5);
