@@ -22,6 +22,7 @@ _UNCOVERED: dict[str, dict[str, str]] = {
         "armor_broken": "只由斧的 armor_break 武器參數施加（3-24a1），沒有技能施加",
         "entangled": "只由鞭的 entangle 武器參數施加（3I-1），沒有技能施加",
         "rallied": "只由戰意圖騰的光環施加（3-33e1），沒有技能施加",
+        "overdrawn": "只由 cost.overdraft 施加（3-50，竭力一擊），不是效果原語",
     },
     "stack": {"fury": "只由裝備的充能詞條 affix_charge_fury 使用（3G-G3a），沒有手寫技能"},
 }
@@ -58,6 +59,11 @@ _POOL_ONLY = frozenset(
         "skill_kindle_pop",
         "skill_icebreaker",
         "skill_frost_snap",
+        # 3-50：代價換強度第一批的示範技能（builds.yaml 是模擬回歸範本，不為示範而改動）
+        "skill_frost_armor_seal",
+        "skill_all_in_chant",
+        "skill_blood_rage_slash",
+        "skill_overdraft_strike",
         "skill_thaw_blast",
         "skill_spark_chain",
         "skill_thunder_clap",

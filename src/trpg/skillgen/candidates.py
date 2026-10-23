@@ -163,7 +163,8 @@ class _Search:
 
     def usable(self, skill: SkillDef) -> bool:
         return (
-            skill.id not in self.taken
+            skill.rarity != "legendary"  # 傳說技能不當候選（組合器的隨機結果也一樣）
+            and skill.id not in self.taken
             and skill.id not in self.request.exclude
             and weapon_problem(skill, self.request.weapon_class) is None
         )

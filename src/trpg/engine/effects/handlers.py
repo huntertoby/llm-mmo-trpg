@@ -628,7 +628,7 @@ def apply_status(ctx: Ctx, effect: ApplyStatusEffect) -> list[EventBase]:
         return [
             ctx.emit(EffectFizzled, effect_kind="apply_status", pos=unit.pos, reason="revealed")
         ]
-    converted = boss_converted_status(ctx.rules, unit, status_id)
+    converted = status_id if effect.self_paid else boss_converted_status(ctx.rules, unit, status_id)
     if converted != status_id:  # Boss 硬控轉換：所有來源一致（技能路徑已先轉換，這裡不會再轉）
         events.append(
             ctx.emit(
@@ -687,7 +687,9 @@ def apply_status(ctx: Ctx, effect: ApplyStatusEffect) -> list[EventBase]:
         )
     others = [s for s in unit.statuses if s.status_id != status_id]
     unit.statuses = sorted([*others, instance], key=lambda s: s.status_id)
-    if definition.control_group is not None:  # 控制遞減：同類別在 R + control_dr_rounds 輪結束前
+    if (
+        definition.control_group is not None and not effect.self_paid
+    ):  # 控制遞減：同類別在 R + control_dr_rounds 輪結束前
         unit.control_dr[definition.control_group] = ctx.state.round + ctx.core.control_dr_rounds
     events.append(
         ctx.emit(

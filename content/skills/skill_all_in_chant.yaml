@@ -1,0 +1,24 @@
+# 自我沉默換範圍（Phase 3-50 示範，docs/design/06-技能.md 6.5；數值為初值，未經模擬）：
+# 把整個回合的魔力押在一次大範圍詠唱上；代價是自己沉默（接下來不能再施放法術技，武器技與普攻照常）。
+id: skill_all_in_chant
+schema_version: 1
+name_zh: 孤注詠唱
+tier: 2
+rank: 1
+rarity: rare
+kind: active
+skeleton: area
+category: spell
+weapon_req: focus
+ap_cost: 2
+scaling_attr: int
+shape: {type: square3, range: 4}
+effects:
+  - {type: damage, dice: 2d12, element: lightning}
+condition: null
+cost: {mana: 10, cooldown: 4, self_status: {status: silenced, duration: 2}}
+tags: [lightning, spell, area]
+narrative:
+  concept: 賭上接下來的每一句咒語，換這一發最大的
+  cast_flavor: 你把所有咒文壓進同一口氣裡吐出，天空裂開一道口子，而你的嗓子再也出不了聲
+provenance: {origin: builtin, owner_id: null, created_by: null, parents: [], bound: true, tradeable: false}

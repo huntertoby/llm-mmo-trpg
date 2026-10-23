@@ -109,6 +109,7 @@ from trpg.engine.ai.orders import (
 )
 from trpg.engine.ai.rune import is_inscribe_skill, read_gains, rune_estimate, rune_gains
 from trpg.engine.ai.scene_objects import SCENE_PRIMITIVES, has_fire_follow_up, scene_estimate
+from trpg.engine.ai.self_costs import self_cost_gate
 from trpg.engine.ai.summon import (
     auto_mode_action,
     blocker_gains,
@@ -147,7 +148,7 @@ from trpg.engine.events import (
     UnitRevived,
 )
 from trpg.engine.grants import granted_remaining
-from trpg.engine.ids import PRONE
+from trpg.engine.ids import OVERDRAWN, PRONE
 from trpg.engine.infusion import preferred_infusion, template_of
 from trpg.engine.preview import DamageRange, Preview, preview
 from trpg.engine.resources import restorable_cooldowns
@@ -1135,6 +1136,7 @@ def score_action(
         skill = state.ruleset.skill_def(action.skill_id)
         score -= on_miss_cost(actor, skill, p, profile)  # 失手反噬（Phase 3D-7a）
         score = cautious(state, actor, skill, score, profile)
+        score = self_cost_gate(state, actor, skill, p, profile, score=score)  # 自己付的代價（3-50）
     return ActionScore(action, score, p)
 
 
@@ -1431,6 +1433,9 @@ def skill_cost(
         points = (status_values or {}).get(self_status.status)
         value = w.status if points is None else w.damage * points
         cost += value * (self_status.duration - 1)
+    if skill.cost.overdraft is not None:  # 透支（3-50）：下回合少 overdraft AP，約等於少一次出手
+        points = (status_values or {}).get(OVERDRAWN)  # 少 1 AP 約等於少半個回合的行動
+        cost += (w.status if points is None else w.damage * points) * skill.cost.overdraft
     return cost
 
 

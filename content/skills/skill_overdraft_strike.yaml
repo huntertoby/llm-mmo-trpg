@@ -1,0 +1,24 @@
+# 透支換強度（Phase 3-50 示範，docs/design/06-技能.md 6.5；數值為初值，未經模擬）：
+# 榨乾體力的一擊，傷害比同類技能高；代價是施放後自己下一個回合少 1 AP。
+id: skill_overdraft_strike
+schema_version: 1
+name_zh: 竭力一擊
+tier: 2
+rank: 1
+rarity: common
+kind: active
+skeleton: strike
+category: weapon
+weapon_req: melee
+ap_cost: 2
+scaling_attr: str
+shape: {type: single, range: weapon}
+effects:
+  - {type: damage, multiplier_permille: 2800}
+condition: null
+cost: {stamina: 6, cooldown: 1, overdraft: 1}
+tags: [physical, melee, tempo]
+narrative:
+  concept: 把下一回合的力氣提前用掉，換這一擊更重
+  cast_flavor: 你把肺裡最後一口氣也擠進劍勢裡，這一劍快得連自己都收不住
+provenance: {origin: builtin, owner_id: null, created_by: null, parents: [], bound: true, tradeable: false}

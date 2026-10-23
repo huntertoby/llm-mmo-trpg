@@ -39,7 +39,7 @@ from trpg.engine.objectives import check_battle_end, check_round_end, end_battle
 from trpg.engine.results import ResolveResult
 from trpg.engine.rewrites import ap_cap
 from trpg.engine.rules.movement import is_flying
-from trpg.engine.rules.statuses import move_points_for_turn, skip_turn_status
+from trpg.engine.rules.statuses import ap_penalty, move_points_for_turn, skip_turn_status
 from trpg.engine.skill_infusion import release_infusion
 from trpg.engine.skill_triggers import (
     collect_turn_end,
@@ -80,6 +80,7 @@ def start_turn(ctx: Ctx, unit_id: UnitId) -> None:
         core.ap_per_turn + min(unit.ap_carry, core.ap_carry_max) + unit.ap_pending,
         ap_cap(core),
     )
+    unit.ap = max(0, unit.ap - ap_penalty(ctx.rules, unit))  # 透支（Phase 3-50）
     unit.ap_carry = 0
     unit.moved_this_turn = False  # 連段條件的「本回合」紀錄（Phase 3D-1）
     unit.ran_this_turn = False  # 跑步每回合限 1 次（Phase 3-20）

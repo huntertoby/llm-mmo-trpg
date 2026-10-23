@@ -61,8 +61,8 @@ move_candidates: 6
 # 虛弱與易傷約 25% 的傷害差，流血與中毒約 1d4 × 3 回合。
 # 2D-1：加上 taunted（嘲諷，約半個回合的行動被迫集中在施放者身上）。
 # 2D-2：加上 feared（恐懼，約一回合的走位加攻擊劣勢）、silenced（沉默，約半回合的法術輸出；目標沒有可用的
-# 法術技時價值為 0）、blinded（致盲，攻擊劣勢加射程縮短）、marked（被標記，友方對它的命中提高）。初值未經模擬。
-status_values: {stun: 12, frozen: 12, root: 6, slow: 4, weaken: 5, vulnerable: 6, bleed: 6, poison: 6, taunted: 5, feared: 6, silenced: 5, blinded: 5, marked: 4}
+# 法術技時價值為 0；3-50：自己沉默時價值取同一個值）、blinded（致盲，攻擊劣勢加射程縮短）、marked（被標記，友方對它的命中提高）。初值未經模擬。
+status_values: {stun: 12, frozen: 12, root: 6, slow: 4, weaken: 5, vulnerable: 6, bleed: 6, poison: 6, taunted: 5, feared: 6, silenced: 5, blinded: 5, marked: 4, overdrawn: 8}
 # ally_status_values（Phase 2D-1）：對友方（含自己）施加各增益的價值，同樣是「等值的傷害點數」，收益 =
 # 行為模式的 support 權重 × 價值 × 新增的持續比例。初值未經模擬（平衡階段再調）：再生約 1d4 × 3 回合的
 # 治療，護衛約 30% 的減傷、激昂與加速約一回合的額外輸出或走位。
@@ -150,6 +150,9 @@ zone: {likelihood_permille: 400, path_permille: 500}
 # 該分支的機率（賭注：成功率與失敗率；失手反噬：預覽本身只算命中的情形，反噬不計）。施放者 HP 低於最大 HP 的 hp_floor_permille‰
 # 時，反噬可能造成傷害的賭博技能（失敗分支或失手反噬有自傷）不在快死時亂賭：正分乘 low_hp_permille‰（大幅降低），負分不變。
 gamble: {hp_floor_permille: 300, low_hp_permille: 100}
+# self_cost（Phase 3-50；初值未經模擬）：自己付的代價的使用條件（06 6.5 共通規則 6）。自暈（會跳過回合的自身狀態）：HP 低於
+# stun_hp_below_permille‰ 且 stun_enemy_radius 格內有敵人才用；透支：這一擊能擊殺，或波及的敵人 ≥ overdraft_min_targets 才用。
+self_cost: {stun_hp_below_permille: 500, stun_enemy_radius: 6, overdraft_min_targets: 2}
 # rune（Phase 3-23；初值未經模擬）：刻印的評分，只在行動者有讀取技能（條件 on_own_rune 或 detonate_runes）時才主動刻。
 #   inscribe_points   在敵人腳下刻一個符文的價值（等值傷害點數，× damage 權重）；
 #   adjacent_permille / near_permille  符文離最近的敵人 1 格、2 格時相對於腳下的比例（更遠為 0）

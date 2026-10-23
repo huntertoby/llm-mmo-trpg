@@ -22,6 +22,7 @@ __all__ = [
     "ENTANGLED",
     "FLYING",
     "IMMOVABLE",
+    "OVERDRAWN",
     "PENETRABLE",
     "PRONE",
     "REVEALED",
@@ -45,6 +46,8 @@ PRONE = "prone"
 """倒地。"""
 REVEALED = "revealed"
 """``reveal`` 施加的狀態（``prevents_concealment``）。"""
+OVERDRAWN = "overdrawn"
+"""``cost.overdraft`` 施加的狀態（``ap_penalty``，Phase 3-50）。"""
 SHIELDED = "shielded"
 """``shield`` 原語施加的狀態（``absorbs_damage``）。"""
 

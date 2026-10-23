@@ -772,6 +772,20 @@ class GambleAiRules(ContentModel):
     low_hp_permille: int = Field(default=100, ge=0, le=1000)
 
 
+class SelfCostAiRules(ContentModel):
+    """自己付的代價的 AI 使用條件（Phase 3-50，06 6.5；ai_profiles.yaml 的 ``self_cost:``；
+    初值未經模擬）。
+
+    - ``stun_hp_below_permille``、``stun_enemy_radius``：自暈（會跳過回合的自身狀態）只在施放者 HP
+      低於最大 HP 的這個千分比、且這個格數內有敵人時使用。
+    - ``overdraft_min_targets``：透支只在這一擊能擊殺敵人、或波及至少這麼多敵人時使用。
+    """
+
+    stun_hp_below_permille: int = Field(default=500, ge=0, le=1000)
+    stun_enemy_radius: int = Field(default=6, ge=1)
+    overdraft_min_targets: int = Field(default=2, ge=1)
+
+
 class SummonAiRules(ContentModel):
     """召喚者 AI 的數值（Phase 3D-4a 寫在程式裡，3D-4b 搬進 ``content/ai_profiles.yaml`` 的
     ``summon:``；初值未經模擬）。
@@ -879,6 +893,8 @@ class AiProfile(ContentModel):
     """賭博型技能的 AI 數值（Phase 3D-7a）；由 :class:`AiProfileTable` 的同名欄位填入。"""
     rune: RuneAiRules = Field(default_factory=RuneAiRules)
     """刻印的 AI 數值（Phase 3-23）；由 :class:`AiProfileTable` 的同名欄位填入。"""
+    self_cost: SelfCostAiRules = Field(default_factory=SelfCostAiRules)
+    """自己付的代價的 AI 使用條件（Phase 3-50）；由 :class:`AiProfileTable` 的同名欄位填入。"""
 
 
 class OrderBonuses(ContentModel):
@@ -997,6 +1013,7 @@ class AiProfileTable(ContentModel):
     zone: ZoneAiRules = Field(default_factory=ZoneAiRules)
     gamble: GambleAiRules = Field(default_factory=GambleAiRules)
     rune: RuneAiRules = Field(default_factory=RuneAiRules)
+    self_cost: SelfCostAiRules = Field(default_factory=SelfCostAiRules)
     orders: OrderBonuses = Field(default_factory=OrderBonuses)
     basic: BasicActionAiRules = Field(default_factory=BasicActionAiRules)
     """守護隊友、換位、瞄準的 AI 數值（Phase 3-21a；敵我同一套，不分行為模式）。"""
@@ -1028,6 +1045,7 @@ class AiProfileTable(ContentModel):
                 "zone",
                 "gamble",
                 "rune",
+                "self_cost",
             )
             if key in data
         }

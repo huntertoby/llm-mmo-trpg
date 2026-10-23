@@ -49,6 +49,7 @@ from trpg.narrative.summon_info import (
     summon_innate_lines,
 )
 from trpg.shared.types import Attribute, Surface, rune_name
+from trpg.skillgen.budget import self_status_allowance_permille
 from trpg.skillgen.keywords import (
     SkillKeywords,
     derive_draft_keywords,
@@ -1034,7 +1035,14 @@ def cost_parts(library: ContentLibrary, skill: SkillDef, *, with_ap: bool = True
         parts.append(f"HP {cost.hp_percent / 10:g}%")
     if cost.self_status:
         name = library.ruleset.status_def(cost.self_status.status).name_zh
-        parts.append(f"施放後自身{name} {cost.self_status.duration} 回合")
+        percent = self_status_allowance_permille(cost.self_status, library) / 10
+        # 06 6.5：「代價：施放後自己暈眩 1 回合（換 32% 預算）」——回合數是有效回合（duration − 1）
+        parts.append(
+            f"代價：施放後自己{name} {cost.self_status.duration - 1} 回合（換 {percent:g}% 預算）"
+        )
+    if cost.overdraft:
+        percent = library.budget.allowance.overdraft_permille / 10
+        parts.append(f"代價：施放後自己下一個回合少 {cost.overdraft} AP（換 {percent:g}% 預算）")
     if cost.cooldown:
         parts.append(f"冷卻 {cost.cooldown} 回合")
     if cost.uses_per_battle:
