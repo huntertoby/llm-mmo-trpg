@@ -363,8 +363,8 @@ def new_keyword_run(
 ) -> RunState:
     """新開局（06 6.27.3）：起始武器 ＋ ``start.keywords`` 個不重複的關鍵字，每個關鍵字的池各給
     1 招（:func:`starting_skill`；``skills`` 直接指定時改用它們，但仍必須在該關鍵字的專屬起始技能池
-    裡、與武器相容）。``allocation`` 省略時全部點在武器的縮放屬性。不合法時拋出
-    :class:`ChoiceError`。
+    裡、與武器相容）。``allocation`` 省略時全部點在起始技能最常用的縮放屬性（沒有技能時為武器的縮放屬性；
+    Phase 3H-1，讓主屬性對得上招式）。不合法時拋出 :class:`ChoiceError`。
 
     ``test_mode``（Phase 3-39）：測試模式的一輪（戰後回滿）；``test_equipment`` 為挑的裝備
     （欄位 → 物品 ID，取代範本的裝備）；兩者都不影響亂數與其他規則。"""
@@ -380,13 +380,15 @@ def new_keyword_run(
         raise ChoiceError(f"未知的關鍵字：{', '.join(unknown)}")
     if len(keywords) != rules.start.keywords or len(set(keywords)) != len(keywords):
         raise ChoiceError(f"必須選 {rules.start.keywords} 個不同的關鍵字，收到 {list(keywords)}")
-    if allocation is None:
-        allocation = {library.weapons[weapon].scaling_attr: rules.start_free_points}
-    problems = allocation_problems(allocation, rules.start_free_points)
-    if problems:
-        raise ChoiceError("；".join(problems))
+    if allocation is not None:
+        problems = allocation_problems(allocation, rules.start_free_points)
+        if problems:
+            raise ChoiceError("；".join(problems))
     check_test_equipment(library, weapon, equipment)
     picked = _pick_starters(library, weapon, keywords, seed, skills)
+    if allocation is None:  # 省略時點在起始技能最常用的縮放屬性（沒有時用武器的；3H-1）
+        main = primary_attribute(picked, library.weapons[weapon].scaling_attr)
+        allocation = {main: rules.start_free_points}
     hero = apply_allocation(_start_hero(library, weapon, [s.id for s in picked]), allocation)
     core = library.ruleset.core
     named: list[SkillDef] = []

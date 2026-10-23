@@ -26,9 +26,18 @@ from trpg.content.slots import SLOT_TYPE_OF, SLOTS
 
 AFFIX = TypeAdapter[AffixDef](AffixDef)
 
-# docs/design/08-裝備.md 8.24 的 40 條（類別 → id；含 3-31 的普攻符文三條、3-32a 的普攻流六條）
+# docs/design/08-裝備.md 8.24 的 40 條（3H-1 起六種屬性詞條全有，共 51；類別 → id；含 3-31 的普攻符文三條、3-32a 的普攻流六條）
 WHITELIST: dict[str, tuple[str, ...]] = {
-    "stat": ("affix_attr_str", "affix_max_hp", "affix_resist_fire"),
+    "stat": (
+        "affix_attr_str",
+        "affix_attr_dex",
+        "affix_attr_con",
+        "affix_attr_int",
+        "affix_attr_wis",
+        "affix_attr_wil",
+        "affix_max_hp",
+        "affix_resist_fire",
+    ),
     "conditional": (
         "affix_cond_height_hit",
         "affix_cond_still_defense",
@@ -94,9 +103,9 @@ def _loadout(**slots: str) -> Loadout:
 # ---------------------------------------------------------------------------
 
 
-def test_whitelist_has_all_46_affixes_in_11_categories() -> None:
+def test_whitelist_has_all_51_affixes_in_11_categories() -> None:
     affixes = library().affixes
-    assert len(affixes) == 46
+    assert len(affixes) == 51
     by_category: dict[str, set[str]] = {}
     for affix in affixes.values():
         by_category.setdefault(affix.category, set()).add(affix.id)

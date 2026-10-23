@@ -50,6 +50,9 @@ companions: [sim_companion_fighter, sim_companion_archer]
 # Phase 3-32a：新增兩個對照 build（普攻流 vs 技能流弓手，08 8.25；供 scripts/sim_attack_flow.py，不列入矩陣的平衡結論）——
 # build_attack_archer（普攻流弓手）：普攻精通＋連擊／分裂／高處射程的長弓，主動欄只放 3 招（空 3 格 → 普攻 +18%）；
 # build_skill_archer（技能流弓手）：同屬性同武器，主動欄放滿 6 招、普通長弓。
+# Phase 3H-1：內建法術依心智三分改縮放屬性（召喚、獻祭、詛咒、暗影＝意志；治療、護盾、輔助、偵測與標記＝感知）後，
+# build_warlock（主屬性改意志）、build_seer（改感知）、build_summoner（改意志、智力次之）的配點跟著調整，
+# 屬性總和不變；其餘 build 的主屬性本來就對得上招式。
 builds:
   - id: build_push
     name_zh: 位移流
@@ -190,7 +193,7 @@ builds:
     hero:
       id: build_warlock
       name_zh: 術士英雄
-      attributes: {str: 8, dex: 12, con: 10, int: 16, wis: 12, wil: 12}
+      attributes: {str: 8, dex: 12, con: 10, int: 12, wis: 12, wil: 16}
       max_hp: 40
       speed: 5
       armor_bonus: 1
@@ -292,7 +295,7 @@ builds:
     hero:
       id: build_summoner
       name_zh: 召喚師英雄
-      attributes: {str: 8, dex: 12, con: 12, int: 16, wis: 14, wil: 12}
+      attributes: {str: 8, dex: 12, con: 12, int: 14, wis: 12, wil: 16}
       max_hp: 36
       speed: 5
       armor_bonus: 1
@@ -325,7 +328,7 @@ builds:
     hero:
       id: build_seer
       name_zh: 偵察破咒流英雄
-      attributes: {str: 8, dex: 12, con: 10, int: 16, wis: 12, wil: 12}
+      attributes: {str: 8, dex: 12, con: 10, int: 12, wis: 16, wil: 12}
       max_hp: 40
       speed: 5
       armor_bonus: 1
