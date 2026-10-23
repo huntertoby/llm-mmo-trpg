@@ -15,7 +15,7 @@ from pydantic import BaseModel, ConfigDict, Field, TypeAdapter
 
 from trpg.content.battle import Dice
 from trpg.engine.events import DamageCause, MoveMode, ObjectDestroyCause
-from trpg.shared.types import Element, ObjectId, Pos, Surface, Team, UnitId
+from trpg.shared.types import Attribute, Element, ObjectId, Pos, Surface, Team, UnitId
 
 __all__ = [
     "EFFECT_LIST_ADAPTER",
@@ -89,6 +89,10 @@ class DamageEffect(EffectBase):
     dice: Dice | None = None
     flat: int = 0
     scaled_permille: int = 0
+    block_permille: int = Field(default=1000, ge=0)
+    """格擋倍率（Phase 3-41b，僅供紀錄顯示）：已包含在 ``multiplier_permille`` 裡，不再乘。"""
+    scale_attr: Attribute | None = None
+    """屬性加成的來源屬性（僅供紀錄顯示；Phase 3-41b）。"""
     crit: bool = False
     permille: int = Field(default=0, ge=0)
     apply_element_mod: bool = True

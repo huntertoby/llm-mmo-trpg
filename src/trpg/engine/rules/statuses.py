@@ -125,6 +125,12 @@ def weapon_attribute(rules: Ruleset, unit: UnitState) -> int:
     return (value + effective_attribute(rules, unit, weapon.secondary_scaling_attr)) // 2
 
 
+def weapon_scale_attr(unit: UnitState) -> Attribute | None:
+    """武器縮放屬性（紀錄顯示用）：只有單一縮放屬性時回傳它；雙屬性（取平均）為 ``None``。"""
+    weapon = unit.weapon
+    return weapon.scaling_attr if weapon.secondary_scaling_attr is None else None
+
+
 def defense_break_permille(rules: Ruleset, unit: UnitState) -> int:
     """破甲（``defense_break`` 狀態）造成的防禦值降幅（‰；多個取最大，沒有時為 0）。"""
     best = 0

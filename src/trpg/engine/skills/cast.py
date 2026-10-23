@@ -711,6 +711,9 @@ class Cast:
             dice=dice,
             flat=flat,
             scaled_permille=scaled,
+            scale_attr=(
+                self.skill.scaling_attr if self.skill.secondary_scaling_attr is None else None
+            ),
             crit=roll is not None and roll.crit,
             min_damage=self.ctx.core.min_damage_on_hit,
             explode_max=explode_max,
@@ -721,6 +724,7 @@ class Cast:
             * behind
             // (PERMILLE * PERMILLE * PERMILLE),
             pierce_permille=behind,
+            block_permille=block,
         )
 
     def physical_element(self) -> Element:

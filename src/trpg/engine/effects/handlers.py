@@ -153,6 +153,10 @@ def _damage(ctx: Ctx, effect: EffectBase) -> list[EventBase]:
             absorbed=absorbed,
             redirected=redirected,
             exploded=exploded,
+            block_permille=effect.block_permille,
+            flat=effect.flat,
+            scaled_permille=effect.scaled_permille,
+            scale_attr=effect.scale_attr,
         )
     ]
     events += _redirect(ctx, unit, link, redirected, effect)
