@@ -6,7 +6,9 @@
 # G1 結算 stat、conditional、cost 三類；其餘類別先通過 schema 與白名單驗證，結算在 G2、G3。
 #
 # 共用欄位：
-#   name_zh      玩家看到的文字；{n} 換成擲出的數值（value_unit: permille 時顯示為百分比）
+#   name_zh      玩家看到的文字；{n} 換成擲出的數值（value_unit: permille 時顯示為百分比）。其餘數字與名稱
+#                不寫死，用 {欄位} 從詞條資料代入（Phase 3-41a；可用的欄位見 src/trpg/content/affix_names.py），
+#                例：{max_stacks}、{stack}、{effect.dice}、{up.move}、{skill_ap}、{rule}
 #   slots        可出現的物品種類：weapon 武、offhand 副、head 頭、body 身、hands 手、feet 腳、neck 項、ring 戒
 #   weapons      武器類物品限定的武器 id（其他種類不受影響）
 #   weapon_class 武器類物品限定的武器大類（其他種類不受影響）
@@ -57,7 +59,7 @@ affixes:
     value_unit: permille
   - id: affix_trait_longgun_still_crit
     category: conditional
-    name_zh: 長槍站定（本回合沒有移動）時傷害 +{n}
+    name_zh: 火槍站定（本回合沒有移動）時傷害 +{n}
     slots: [weapon]
     weapons: [longgun]
     effect: damage
@@ -77,7 +79,7 @@ affixes:
   # --- 3 技能強化（結算在 G2；keyword 的 id 暫定，以 3-24b1 的關鍵字推導為準）---
   - id: affix_kw_burn_duration
     category: keyword
-    name_zh: 你施加的燃燒 +1 回合
+    name_zh: 你施加的{status} +{amount} 回合
     slots: [weapon, offhand, neck, ring]
     keyword: ignite
     direction: create
@@ -96,7 +98,7 @@ affixes:
     value_unit: permille
   - id: affix_kw_shock_area
     category: keyword
-    name_zh: 製造帶電的技能範圍 +1
+    name_zh: 雷電技能範圍 +{amount}
     slots: [weapon, offhand, neck]
     keyword: charged
     direction: create
@@ -106,12 +108,12 @@ affixes:
   # --- 4 普攻附加（結算在 G2）---
   - id: affix_attack_lightning
     category: attack
-    name_zh: 普攻帶雷電（製造帶電）
+    name_zh: 普攻帶雷電
     slots: [weapon]
     add_element: lightning
   - id: affix_attack_mark
     category: attack
-    name_zh: 普攻命中時標記目標 1 回合
+    name_zh: 普攻命中時使目標「{on_hit_status}」{status_duration} 回合
     slots: [weapon]
     on_hit_status: marked
     status_duration: 1
@@ -131,7 +133,7 @@ affixes:
     dice: 1d6
   - id: affix_attack_rune_inscribe
     category: attack
-    name_zh: 普攻命中時，在目標格刻下雷紋（每回合 1 次，持續 2 輪）
+    name_zh: 普攻命中時，在目標格刻下{rune}（每回合 1 次，持續 {rune_rounds} 輪）
     slots: [weapon, hands]
     rune: inscribe
     rune_element: lightning
@@ -139,29 +141,29 @@ affixes:
   # --- 4 普攻附加：普攻流（Phase 3-32a，08 8.25；數值為初值，未經模擬）---
   - id: affix_attack_combo
     category: attack
-    name_zh: 每第 {n} 次普攻命中：多攻擊一次（40% 傷害；每回合 1 次）
+    name_zh: 每第 {n} 次普攻命中：多攻擊一次（{strike_permille} 傷害；每回合 1 次）
     slots: [weapon, hands]
     strike: combo
     strike_permille: 400
     value: {min: 3, max: 3}  # 3-32d：連擊只出「每第 3 次」（原 2～3）
   - id: affix_attack_cleave
     category: attack
-    name_zh: 普攻命中後，對目標相鄰的另一個敵人造成 30% 傷害（每回合 1 次）
+    name_zh: 普攻命中後，對目標相鄰的另一個敵人造成 {strike_permille} 傷害（每回合 1 次）
     slots: [weapon]
     strike: cleave
     strike_permille: 300  # 3-32d：400 → 300
 
-  # --- 5 武器特性強化（結算在 G2；長槍由 3-24a2 加入）---
+  # --- 5 武器特性強化（結算在 G2；火槍由 3-24a2 加入）---
   - id: affix_trait_hammer_knockback
     category: weapon_trait
-    name_zh: 錘的震退 +1 格
+    name_zh: 錘的震退 +{delta} 格
     slots: [weapon]
     weapons: [hammer]
     param: knockback
     delta: 1
   - id: affix_trait_longgun_pointblank
     category: weapon_trait
-    name_zh: 長槍的貼臉懲罰減半
+    name_zh: 火槍的貼臉懲罰減半
     slots: [weapon]
     weapons: [longgun]
     param: range_mod.penalty
@@ -175,21 +177,21 @@ affixes:
     delta: 1
   - id: affix_trait_bow_high_range
     category: weapon_trait
-    name_zh: 弓站在高處時射程 +1
+    name_zh: 弓站在高處時射程 +{delta}
     slots: [weapon]
     weapons: [bow]
     param: high_range
     delta: 1
   - id: affix_trait_dagger_backstab_die
     category: weapon_trait
-    name_zh: 匕首背刺的普攻傷害骰 +1 顆
+    name_zh: 匕首背刺的普攻傷害骰 +{delta} 顆
     slots: [weapon]
     weapons: [dagger]
     param: backstab_dice
     delta: 1
   - id: affix_trait_axe_sunder
     category: weapon_trait
-    name_zh: 斧的破甲持續 +1 回合
+    name_zh: 斧的破甲持續 +{delta} 回合
     slots: [weapon]
     weapons: [axe]
     param: armor_break.rounds
@@ -198,7 +200,7 @@ affixes:
   # --- 6 觸發（結算在 G3）---
   - id: affix_trig_every3_prone
     category: trigger
-    name_zh: 每第 3 次命中：目標倒地
+    name_zh: 每第 {every} 次命中：目標倒地
     slots: [weapon, hands]
     trigger: every_n_hits
     n: 3
@@ -206,7 +208,7 @@ affixes:
     effects: [{type: knock_prone}]
   - id: affix_trig_kill_ap
     category: trigger
-    name_zh: 擊殺時：回 1 AP（每回合 1 次）
+    name_zh: 擊殺時：回 {effect.amount} AP（每回合 1 次）
     slots: [weapon, neck, ring]
     trigger: on_kill
     effect_target: self
@@ -214,7 +216,7 @@ affixes:
     limit: per_turn
   - id: affix_trig_thorns_burn
     category: trigger
-    name_zh: 受到近戰傷害時：攻擊者燃燒 1 回合（每輪 1 次）
+    name_zh: 受到近戰傷害時：攻擊者「{effect.status}」{effect.duration} 回合（每輪 1 次）
     slots: [body, offhand]
     trigger: on_damaged
     melee_only: true
@@ -225,7 +227,7 @@ affixes:
   # --- 7 充能（Phase 3G-G3a；層數的定義在 stacks.yaml）---
   - id: affix_charge_static
     category: charge
-    name_zh: 命中時累積 1 層靜電（上限 3）；花 3 層＋1 AP：對目標造成 3d6 雷電
+    name_zh: "{gain}累積 1 層{stack}（上限 {max_stacks}）；花 {cost_stacks} 層＋{cost_ap} AP：對目標造成 {effect.dice} {effect.element}傷害"
     slots: [weapon, body]
     stack: static_charge
     max_stacks: 3
@@ -235,7 +237,7 @@ affixes:
     effects: [{type: damage, dice: 3d6, element: lightning}]
   - id: affix_charge_fury
     category: charge
-    name_zh: 受到傷害時累積 1 層怒氣（上限 4）；花 4 層：獲得強化 1 回合
+    name_zh: "{gain}累積 1 層{stack}（上限 {max_stacks}）；花 {cost_stacks} 層：獲得「{effect.status}」{effect.duration} 回合"
     slots: [body, weapon]
     stack: fury
     max_stacks: 4
@@ -248,19 +250,19 @@ affixes:
   # --- 8 代價型（全身最多 2 條；rules/equipment.yaml 的 caps.cost_affixes）---
   - id: affix_cost_glass
     category: cost
-    name_zh: 傷害 +20%；受到的傷害 +10%
+    name_zh: 傷害 +{up.damage_permille}；受到的傷害 +{down.damage_taken_permille}
     slots: [weapon, neck, ring]
     upside: [{stat: damage_permille, amount: 200}]
     downside: [{stat: damage_taken_permille, amount: 100}]
   - id: affix_cost_blood
     category: cost
-    name_zh: 回合開始時失去 2 HP（不會致死）；技能冷卻 −1
+    name_zh: 回合開始時失去 {down.turn_start_hp_loss} HP（不會致死）；技能冷卻 −{up.cooldown_delta}
     slots: [neck, ring, body]
     upside: [{stat: cooldown_delta, amount: -1}]
     downside: [{stat: turn_start_hp_loss, amount: 2}]
   - id: affix_cost_swift
     category: cost
-    name_zh: 移動 +2；防禦 −15%
+    name_zh: 移動 +{up.move}；防禦 −{down.defense_permille}
     slots: [feet, body]
     upside: [{stat: move, amount: 2}]
     downside: [{stat: defense_permille, amount: -150}]
@@ -268,17 +270,17 @@ affixes:
   # --- 9 動作（結算在 G3；技能由 G3 加入 content/skills/）---
   - id: affix_act_grapple
     category: action
-    name_zh: 解鎖「鉤爪」：1 AP、冷卻 3，把 4 格內的目標拉近 2 格
+    name_zh: 解鎖「{skill}」：{skill_ap} AP、冷卻 {skill_cooldown}，把 {skill_range} 格內的目標拉近 {skill_effect.distance} 格
     slots: [weapon, offhand, hands]
     skill: skill_gear_grapple
   - id: affix_act_smoke
     category: action
-    name_zh: 解鎖「煙霧彈」：1 AP、冷卻 4，3 格內一點產生半徑 1 的煙霧（2 回合）
+    name_zh: 解鎖「{skill}」：{skill_ap} AP、冷卻 {skill_cooldown}，{skill_range} 格內一點產生 3×3 的煙霧（{skill_effect.duration} 回合）
     slots: [offhand, hands, neck]
     skill: skill_gear_smoke_bomb
   - id: affix_act_shield_wall
     category: action
-    name_zh: 解鎖「盾牆」：1 AP、冷卻 3，在前方 1 格產生暫時障礙（2 回合）
+    name_zh: 解鎖「{skill}」：{skill_ap} AP、冷卻 {skill_cooldown}，在 {skill_range} 格內產生暫時障礙（{skill_effect.duration} 回合）
     slots: [offhand]
     item_tags: {offhand: [shield]}
     skill: skill_gear_shield_wall
@@ -294,7 +296,7 @@ affixes:
     event: targeted_by_attack
   - id: affix_react_guard_ally
     category: reaction
-    name_zh: 2 格內的隊友被攻擊時：替他承受（每輪 1 次）
+    name_zh: "{range} 格內的隊友被攻擊時：替他承受（每輪 1 次）"
     slots: [body, offhand]
     mode: grant
     reaction: redirect_damage
@@ -302,7 +304,7 @@ affixes:
     limit: per_round
   - id: affix_react_double_overwatch
     category: reaction
-    name_zh: 監視射擊每輪可以觸發 2 次
+    name_zh: 監視射擊每輪可以多觸發 {uses} 次
     slots: [weapon, head]
     weapon_class: ranged
     mode: extra_uses
@@ -312,19 +314,19 @@ affixes:
   # --- 11 改變規則（傳說；結算在 G3）---
   - id: affix_rule_fire_mends
     category: rule
-    name_zh: 你的火焰不會傷到隊友，反而治療他們
+    name_zh: "{rule}"
     slots: [weapon, offhand, head, body, hands, feet, neck, ring]
     legendary_only: true
     rule: fire_mends_allies
   - id: affix_rule_move_any_object
     category: rule
-    name_zh: 你可以推動任何物件，包括石柱
+    name_zh: "{rule}"
     slots: [weapon, offhand, head, body, hands, feet, neck, ring]
     legendary_only: true
     rule: move_any_object
   - id: affix_rule_bleeding_wake
     category: rule
-    name_zh: 你移動經過的格子留下流血表面
+    name_zh: "{rule}"
     slots: [weapon, offhand, head, body, hands, feet, neck, ring]
     legendary_only: true
     rule: bleeding_wake
@@ -334,7 +336,7 @@ affixes:
   # 技能強化類（keyword: summon）：遞減疊加與硬上限照 8.21.5.3；冷卻最低 1；獻祭傷害計入全身 +50% 上限。
   - id: affix_summon_cooldown
     category: keyword
-    name_zh: 你的召喚技能冷卻 −1（最低 1）
+    name_zh: 你的召喚技能冷卻 −{amount}（最低 1）
     slots: [offhand, neck]
     keyword: summon
     direction: create
@@ -342,7 +344,7 @@ affixes:
     amount: -1
   - id: affix_summon_duration
     category: keyword
-    name_zh: 你的召喚物持續 +1 輪
+    name_zh: 你的召喚物持續 +{amount} 輪
     slots: [offhand, neck]
     item_tags: {offhand: [orb]}   # 法器珠（副手）或項鍊
     keyword: summon
@@ -361,7 +363,7 @@ affixes:
   # 觸發類（新觸發「召喚物倒下時」，skill_triggers.yaml 的 on_summon_downed）：以倒下的召喚物為中心結算。
   - id: affix_trig_summon_blast
     category: trigger
-    name_zh: 召喚物倒下時：原地爆炸，對 1 格內的敵人造成 1d8 火焰傷害（每回合 1 次）
+    name_zh: 召喚物倒下時：原地爆炸，對 {effect.radius} 格內的敵人造成 {effect.dice} {effect.element}傷害（每回合 1 次）
     slots: [ring, neck]
     trigger: on_summon_downed
     effect_target: target
@@ -369,7 +371,7 @@ affixes:
     limit: per_turn
   - id: affix_trig_summon_mend
     category: trigger
-    name_zh: 召喚物倒下時：湧出治療的光，治療 1 格內的友方 1d8（每回合 1 次）
+    name_zh: 召喚物倒下時：湧出治療的光，治療 {effect.radius} 格內的友方 {effect.dice}（每回合 1 次）
     slots: [ring, neck]
     trigger: on_summon_downed
     effect_target: target

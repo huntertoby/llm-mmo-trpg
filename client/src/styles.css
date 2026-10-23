@@ -2580,6 +2580,45 @@ button.selected {
   cursor: help;
 }
 
+/* 只由通用規則歸類的關鍵字（Phase 3-41a）：標灰 */
+.keyword-chip.general {
+  color: var(--muted);
+}
+
+/* 召喚物資訊小卡（Phase 3-41a）：技能卡內可展開 */
+.summon-info {
+  margin: 4px 0;
+  padding: 4px 8px;
+  border: 1px solid var(--panel-border);
+  border-radius: 4px;
+  background: rgba(94, 234, 212, 0.06);
+}
+
+.summon-info > summary {
+  cursor: pointer;
+  color: #5eead4;
+}
+
+.summon-info dl {
+  display: grid;
+  grid-template-columns: max-content 1fr;
+  gap: 2px 8px;
+  margin: 4px 0 0;
+}
+
+.summon-info dt {
+  color: var(--muted);
+}
+
+.summon-info dd {
+  margin: 0;
+}
+
+.summon-info ul {
+  margin: 0;
+  padding-left: 16px;
+}
+
 .keyword-sep {
   margin: 0 6px;
   color: var(--muted);

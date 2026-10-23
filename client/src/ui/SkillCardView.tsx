@@ -4,6 +4,7 @@ import type { SkillCard } from "../api/types";
 import { kindLabel, sourceCostText } from "../battle/source";
 import { growthLines, levelBadge, levelOf } from "../run/skillGrowth";
 import { KeywordLine } from "./KeywordLine";
+import { SummonInfo } from "./SummonInfo";
 import { VariantList } from "./VariantList";
 import { AssemblyFormula, SkillIconView } from "./SkillIconView";
 
@@ -30,7 +31,8 @@ export function SkillCardView({ card, compact = false, activeVariantId = null }:
             {card.growth != null && <b className="skill-level-badge"> {levelBadge(levelOf(card))}</b>}
             <span className="muted small">
               {" "}
-              <span className="skill-card-rarity">{card.rarity}</span>・{kindLabel(card)}・{card.skeleton}
+              <span className="skill-card-rarity">{card.rarity}</span>・{kindLabel(card)}
+              {(card.skeleton_zh ?? "") !== "" && `・${card.skeleton_zh}`}
             </span>
           </div>
           <div className="small">{card.cost.join("，")}</div>
@@ -51,6 +53,9 @@ export function SkillCardView({ card, compact = false, activeVariantId = null }:
           <li key={`modifier:${i}:${m}`}>修正：{m}</li>
         ))}
       </ul>
+      {(card.summons ?? []).map((info, i) => (
+        <SummonInfo key={`${i}:${info.id}`} info={info} open={!compact} />
+      ))}
       <VariantList card={card} activeId={activeVariantId} />
       {!compact &&
         growthLines(card).map((line) => (

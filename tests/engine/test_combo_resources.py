@@ -252,7 +252,11 @@ def test_condition_text_for_the_new_conditions() -> None:
     assert condition_text(ConditionSpec(type="adjacent_ally")) == "身旁有友方"
     assert condition_text(ConditionSpec(type="target_isolated")) == "目標身邊沒有友方"
     assert condition_text(ConditionSpec(type="first_round")) == "第一輪"
-    assert "fire" in condition_text(ConditionSpec(type="cast_tag_this_turn", tag="fire"))
+    text = condition_text(
+        ConditionSpec(type="cast_tag_this_turn", tag="fire"), tag_name={"fire": "火焰"}.__getitem__
+    )
+    assert text == "本回合已施放過帶「火焰」標籤的技能"
+    assert "fire" not in condition_text(ConditionSpec(type="cast_tag_this_turn", tag="fire"))
 
 
 def test_a_modifier_rule_may_use_a_new_condition_but_not_for_pre_target_changes() -> None:

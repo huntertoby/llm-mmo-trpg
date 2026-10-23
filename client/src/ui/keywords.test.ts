@@ -2,7 +2,7 @@ import { describe, expect, it } from "vitest";
 import type { KeywordRef, SkillKeywords } from "../api/types";
 import { keywordSide, keywordSummary, noKeywords } from "./keywords";
 
-const ref = (id: string, name: string): KeywordRef => ({ id, name_zh: name, description_zh: `${name}的說明`, variant: false });
+const ref = (id: string, name: string): KeywordRef => ({ id, name_zh: name, description_zh: `${name}的說明`, variant: false, general: false });
 
 describe("技能的關鍵字顯示", () => {
   it("一邊一個：製造：點燃｜利用：倒地", () => {

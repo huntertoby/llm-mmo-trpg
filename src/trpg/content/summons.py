@@ -16,6 +16,7 @@ from pydantic import Field, model_validator
 
 from trpg.content.battle import ID_PATTERN, SummonLook, UnitTemplate, WeaponDef
 from trpg.content.loader import load_content_file
+from trpg.content.rules import CoreRules
 from trpg.content.schemas import ContentModel
 
 __all__ = [
@@ -25,7 +26,41 @@ __all__ = [
     "SummonTable",
     "load_summon_looks",
     "summon_dpr",
+    "summon_scaled_hp",
+    "summon_spec_hp",
 ]
+
+_PERMILLE = 1000
+
+
+def summon_scaled_hp(
+    core: CoreRules,
+    template: UnitTemplate,
+    base_max_hp: int,
+    *,
+    growth_hp: int = 0,
+    owner_hp_permille: int = _PERMILLE,
+    infusion_hp_permille: int = 0,
+) -> int:
+    """召喚物的最大 HP（Phase 3-33f1 的定位係數式；3-41a 抽成共用函式，引擎生成與技能卡顯示同一個
+    算法）：``(範本 HP ＋ 成長) × 定位係數‰`` → × 召喚者修正規則的 HP 倍率‰ → × (1 ＋ 灌注的 HP
+    加成‰)，每一步無條件捨去。分歧進化的 HP 另見 :func:`summon_spec_hp`。
+
+    ``base_max_hp`` 是範本建立出的單位的最大 HP（:meth:`CoreRules.template_max_hp`，含體質）。"""
+    role = core.summon_role_hp_permille.get(template.role or "", _PERMILLE)
+    hp = (base_max_hp + growth_hp) * role // _PERMILLE
+    hp = hp * owner_hp_permille // _PERMILLE
+    return hp * (_PERMILLE + infusion_hp_permille) // _PERMILLE
+
+
+def summon_spec_hp(max_hp: int, *, max_hp_permille: int | None, power_permille: int | None) -> int:
+    """召喚技能分歧進化（Phase 3-33f2）對最大 HP 的調整：加深 ``max_hp_permille``（＋‰），數量型
+    ``power_permille``（每隻只有這麼多‰，至少 1）。"""
+    if max_hp_permille:
+        max_hp = max_hp * (_PERMILLE + max_hp_permille) // _PERMILLE
+    if power_permille is not None:
+        max_hp = max(1, max_hp * power_permille // _PERMILLE)
+    return max_hp
 
 
 class SummonDef(ContentModel):

@@ -13,6 +13,7 @@ from pathlib import Path
 
 from pydantic import PrivateAttr, model_validator
 
+from trpg.content.affix_names import resolve_affix_names
 from trpg.content.appearance import AppearanceTable, item_appearance_problems
 from trpg.content.battle import (
     StatusDef,
@@ -77,6 +78,7 @@ from trpg.content.skill_rules import (
     SkillMatch,
     SynergyTable,
 )
+from trpg.content.skill_tags import SkillTagTable
 from trpg.content.skill_triggers import SkillTriggerDef, SkillTriggerTable
 from trpg.content.skills import (
     MODIFIER_CHANGES,
@@ -171,6 +173,8 @@ class Ruleset(ContentModel):
     skill_growth: SkillGrowthRules = SkillGrowthRules()
     """技能成長（Phase 3-26a，``content/skill_growth.yaml``）：技能等級的效果倍率與 5 級小特性。
     嵌入規則包，重播不依賴資料檔。"""
+    skill_tags: SkillTagTable = SkillTagTable()
+    """技能標籤的中文名（Phase 3-41a，``content/skill_tags.yaml``）：說明文字與刻印符文名用。"""
 
     _keyword_cache: dict[object, SkillKeywords] = PrivateAttr(default_factory=_CacheDict)
     _rule_change_index: dict[str, RuleChangeDef] = PrivateAttr(default_factory=dict)
@@ -551,6 +555,7 @@ def load_library(  # noqa: PLR0915
     keywords = load("skill_keywords.yaml", KeywordTable)
     exclusions = load("skill_exclusions.yaml", ExclusionTable)
     skill_growth = load("skill_growth.yaml", SkillGrowthRules)
+    skill_tags = load("skill_tags.yaml", SkillTagTable)
     skeletons = _load_dir(root / "skeletons", SkeletonDef, files)
     skills = _load_dir(root / "skills", SkillDef, files)
     summons = _load_summons(root, weapons.by_id(), files)
@@ -582,6 +587,7 @@ def load_library(  # noqa: PLR0915
             equipment=equipment_rules,
             keywords=keywords,
             skill_growth=skill_growth,
+            skill_tags=skill_tags,
         )
     except ValueError as exc:
         raise ContentError(root / "rules", str(exc)) from exc
@@ -589,6 +595,10 @@ def load_library(  # noqa: PLR0915
     items = item_table.by_id()
     weapon_map = weapons.by_id()
     _check_affixes(root, affixes, ruleset, weapon_map)
+    try:  # 詞條文字的欄位代入（Phase 3-41a）：數字與名稱從資料填，不寫死在 name_zh
+        affixes = resolve_affix_names(affixes, ruleset)
+    except (ValueError, KeyError) as exc:
+        raise ContentError(root / "affixes.yaml", str(exc)) from exc
     for item in item_table.items:
         problems = item_problems(item, affixes, weapon_map, equipment_rules)
         if problems:

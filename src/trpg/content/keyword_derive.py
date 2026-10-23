@@ -13,7 +13,7 @@ from __future__ import annotations
 from collections.abc import Iterable, Iterator
 from dataclasses import dataclass
 
-from trpg.content.skill_keywords import KeywordRule, KeywordTable
+from trpg.content.skill_keywords import KeywordRule, KeywordTable, RuleGrade
 from trpg.content.skills import (
     ConditionSpec,
     EffectSpec,
@@ -25,12 +25,15 @@ from trpg.content.skills import (
 
 __all__ = [
     "Facts",
+    "KeywordGrade",
     "SkillKeywords",
     "derive_from_facts",
     "derive_keywords",
+    "keyword_grades",
     "modifier_effects",
     "skill_condition_specs",
     "skill_effect_specs",
+    "skill_facts",
     "walk_effect",
 ]
 
@@ -169,6 +172,41 @@ def derive_from_facts(
         if hit(keyword.uses):
             uses.append(keyword.id)
     return SkillKeywords(tuple(makes), tuple(uses))
+
+
+_GRADE_ORDER: dict[RuleGrade, int] = {"exclusive": 0, "general": 1, "provisional": 2}
+
+
+@dataclass(frozen=True, slots=True)
+class KeywordGrade:
+    """一個關鍵字在某一側（製造或利用）成立的最強規則種類（Phase 3-41a，技能卡分級顯示）：
+    專屬 ＞ 通用 ＞ 暫定；通用時附上第一條符合的通用規則的理由。"""
+
+    grade: RuleGrade
+    reason_zh: str | None = None
+
+
+def keyword_grades(
+    facts: Iterable[Facts], table: KeywordTable
+) -> dict[tuple[str, str], KeywordGrade]:
+    """``(side, keyword_id)`` → 成立的最強規則種類；``side`` 為 ``makes``／``uses``。
+    ``facts`` 是技能
+    的所有型態（基礎型態加戰場變奏），任何一個型態符合就算。"""
+    found: dict[tuple[str, str], KeywordGrade] = {}
+    all_facts = tuple(facts)
+    for keyword in table.keywords:
+        for side, rules in (("makes", keyword.makes), ("uses", keyword.uses)):
+            matched = [r for r in rules if any(_rule_matches(r, f) for f in all_facts)]
+            if not matched:
+                continue
+            best = min(matched, key=lambda r: _GRADE_ORDER[r.grade])
+            found[(side, keyword.id)] = KeywordGrade(best.grade, best.reason_zh)
+    return found
+
+
+def skill_facts(skill: SkillDef) -> tuple[Facts, ...]:
+    """技能所有型態（基礎型態與每個戰場變奏型態）的推導事實。"""
+    return (facts_of(skill), *(facts_of(skill.variant_form(v.id)) for v in skill.variants))
 
 
 def derive_keywords(

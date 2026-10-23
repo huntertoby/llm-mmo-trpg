@@ -6075,6 +6075,22 @@
             "type": "boolean",
             "title": "Variant",
             "default": false
+          },
+          "general": {
+            "type": "boolean",
+            "title": "General",
+            "default": false
+          },
+          "reason_zh": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Reason Zh"
           }
         },
         "additionalProperties": false,
@@ -8322,6 +8338,19 @@
             "title": "Variants",
             "default": []
           },
+          "summons": {
+            "items": {
+              "$ref": "#/components/schemas/SummonInfoCard"
+            },
+            "type": "array",
+            "title": "Summons",
+            "default": []
+          },
+          "skeleton_zh": {
+            "type": "string",
+            "title": "Skeleton Zh",
+            "default": ""
+          },
           "growth": {
             "anyOf": [
               {
@@ -9325,6 +9354,77 @@
         ],
         "title": "StepOut",
         "description": "自動推進中結算的一步。``actor_id`` 與 ``step`` 在開場時為 ``None``。\n\n``events`` 已依我方視角過濾（:func:`trpg.engine.event_filter.filter_events`），每個事件是\n事件的 JSON 再加上 ``text``（繁體中文描述；沒有描述的事件不含此鍵）。``seq`` 保留原值，\n過濾後可能跳號。"
+      },
+      "SummonInfoCard": {
+        "properties": {
+          "id": {
+            "type": "string",
+            "title": "Id"
+          },
+          "name_zh": {
+            "type": "string",
+            "title": "Name Zh"
+          },
+          "count": {
+            "type": "integer",
+            "title": "Count",
+            "default": 1
+          },
+          "hp": {
+            "type": "integer",
+            "title": "Hp"
+          },
+          "hp_note": {
+            "type": "string",
+            "title": "Hp Note"
+          },
+          "move": {
+            "type": "string",
+            "title": "Move"
+          },
+          "defense": {
+            "type": "string",
+            "title": "Defense"
+          },
+          "attack": {
+            "type": "string",
+            "title": "Attack"
+          },
+          "innate": {
+            "items": {
+              "type": "string"
+            },
+            "type": "array",
+            "title": "Innate"
+          },
+          "behavior": {
+            "items": {
+              "type": "string"
+            },
+            "type": "array",
+            "title": "Behavior"
+          },
+          "infusion": {
+            "type": "string",
+            "title": "Infusion"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "id",
+          "name_zh",
+          "hp",
+          "hp_note",
+          "move",
+          "defense",
+          "attack",
+          "innate",
+          "behavior",
+          "infusion"
+        ],
+        "title": "SummonInfoCard",
+        "description": "技能卡可展開的「召喚物資訊」（清單 1.8）：全部由範本與規則產生的文字。"
       },
       "SummonLookView": {
         "properties": {

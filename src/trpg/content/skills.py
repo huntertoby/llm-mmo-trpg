@@ -33,6 +33,7 @@ from trpg.content.battle import ID_PATTERN, Dice
 from trpg.content.loader import default_content_dir, load_content_file
 from trpg.content.rules import SkillSlots
 from trpg.content.schemas import ContentModel
+from trpg.content.skill_tags import UNKNOWN_TAG_TEXT
 from trpg.content.yaml_sources import (
     mechanic_status,
     primitive_status,
@@ -867,11 +868,17 @@ _PLAIN_CONDITION_TEXT = {
 """沒有參數的條件的一句話（Phase 3D-1）。"""
 
 
-def _rune_condition_text(condition: ConditionSpec) -> str:
+def _rune_condition_text(
+    condition: ConditionSpec, tag_runes: Mapping[str, str] | None = None
+) -> str:
     """``on_own_rune`` 的一句話（Phase 3-23）：可帶元素或標籤篩選。"""
     if condition.element is None and condition.tag is None:
         return "目標站在自己的符文上"
-    return f"目標站在自己的{rune_name(condition.element, condition.tag)}上"
+    return f"目標站在自己的{rune_name(condition.element, condition.tag, tag_runes)}上"
+
+
+def _unknown_tag(_tag: str) -> str:
+    return UNKNOWN_TAG_TEXT
 
 
 def condition_text(
@@ -879,6 +886,8 @@ def condition_text(
     *,
     status_name: Callable[[str], str] = str,
     surface_name: Callable[[Surface], str] = lambda surface: surface.value,
+    tag_name: Callable[[str], str] = _unknown_tag,
+    tag_runes: Mapping[str, str] | None = None,
 ) -> str:
     """條件的一句話（繁體中文），例如「目標血量低於 40%」。"""
     kind = condition.type
@@ -892,10 +901,10 @@ def condition_text(
     if kind == "target_has_status" and condition.status is not None:
         return f"目標帶有狀態「{status_name(condition.status)}」"
     if kind == "cast_tag_this_turn" and condition.tag is not None:
-        return f"本回合已施放過「{condition.tag}」類技能"
+        return f"本回合已施放過帶「{tag_name(condition.tag)}」標籤的技能"
     plain = _PLAIN_CONDITION_TEXT.get(kind)
     if plain is None and kind == "on_own_rune":
-        plain = _rune_condition_text(condition)
+        plain = _rune_condition_text(condition, tag_runes)
     return plain or kind
 
 

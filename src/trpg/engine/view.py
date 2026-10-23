@@ -512,7 +512,7 @@ def _rune_views(state: BattleState) -> tuple[RuneView, ...]:
             pos=r.pos,
             element=r.element,
             tag=r.tag,
-            name_zh=rune_name(r.element, r.tag),
+            name_zh=rune_name(r.element, r.tag, state.ruleset.skill_tags.rune_names()),
             remaining=r.remaining,
         )
         for r in state.runes

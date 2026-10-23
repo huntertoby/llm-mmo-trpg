@@ -85,7 +85,7 @@ statuses:
   - id: burning
     polarity: debuff
     name_zh: 燃燒
-    description_zh: 回合開始時受到 1d6 火焰傷害，持續 2 回合；重複施加時刷新持續時間。
+    description_zh: 身上著火，每回合開始時受到火焰傷害；重複施加時刷新持續時間。
     duration: 2
     expires: turn_end
     stacking: refresh
@@ -106,7 +106,7 @@ statuses:
   - id: revealed
     polarity: debuff
     name_zh: 被揭露
-    description_zh: 不算隱蔽（黑暗與草叢也一樣），也不能再獲得隱蔽。只能由揭露（reveal）施加。
+    description_zh: 不算隱蔽（黑暗與草叢也一樣），也不能再獲得隱蔽。只能由揭露效果施加。
     duration: 2
     expires: turn_end
     stacking: refresh
@@ -123,7 +123,7 @@ statuses:
   - id: time_bomb
     polarity: debuff
     name_zh: 定時炸彈
-    description_zh: 身上綁著定時炸彈，剩餘回合就是倒數（每次環境回合 −1）：歸零時在身體當下的位置爆炸，波及周圍；倒下時也會立即爆炸。可被淨化移除，驅散不移除。只能由定時炸彈（delayed_damage）施加。
+    description_zh: 身上綁著定時炸彈，剩餘回合就是倒數（每次環境回合 −1）：歸零時在身體當下的位置爆炸，波及周圍；倒下時也會立即爆炸。可被淨化移除，驅散不移除。只能由定時炸彈效果施加。
     expires: never
     stacking: refresh
   - id: charging
@@ -171,7 +171,7 @@ statuses:
   - id: frozen
     polarity: debuff
     name_zh: 冰凍
-    description_zh: 跳過整個回合（同暈眩，與暈眩共用硬控的控制遞減）；受到火焰傷害時立即解除。
+    description_zh: 跳過整個回合（同暈眩，與暈眩共用硬控的控制遞減）。
     duration: 1
     expires: turn_end
     stacking: refresh
@@ -204,7 +204,7 @@ statuses:
   - id: armor_broken
     polarity: debuff
     name_zh: 破甲
-    description_zh: 防禦值降低（幅度由武器決定，斧為 10%）。
+    description_zh: 防禦值降低。
     duration: 1
     expires: turn_end
     stacking: refresh
@@ -213,7 +213,7 @@ statuses:
     polarity: debuff
     save_attr: con
     name_zh: 流血
-    description_zh: 回合開始時受到 1d4 物理傷害，持續 3 回合。
+    description_zh: 傷口流血，每回合開始時受到物理傷害。
     duration: 3
     expires: turn_end
     stacking: refresh
@@ -225,7 +225,7 @@ statuses:
     polarity: debuff
     save_attr: con
     name_zh: 中毒
-    description_zh: 回合開始時受到 1d4 毒素傷害，持續 3 回合；受到的治療減半。
+    description_zh: 中毒，每回合開始時受到毒素傷害；受到的治療減半。
     duration: 3
     expires: turn_end
     stacking: refresh
@@ -278,7 +278,7 @@ statuses:
   - id: regenerating
     polarity: buff
     name_zh: 再生
-    description_zh: 回合開始時恢復 1d4 HP，持續 3 回合。
+    description_zh: 每回合開始時恢復 HP。
     duration: 3
     expires: turn_end
     stacking: refresh

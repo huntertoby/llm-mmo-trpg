@@ -1,5 +1,6 @@
 // 「製造：點燃｜利用：倒地」一行（Phase 3-24b1）：每個關鍵字都是 PartTip，滑過或點一下看說明。
 // 技能卡、技能列的浮動卡、技能工坊的即時檢查共用。
+// Phase 3-41a：只由通用規則推導的關鍵字標灰，說明附上歸類理由（暫定的由後端過濾，不會出現）。
 import type { KeywordRef, SkillKeywords } from "../api/types";
 import { noKeywords } from "./keywords";
 import { PartTip } from "./PartTip";
@@ -12,7 +13,12 @@ function Side({ label, refs }: { label: string; refs: readonly KeywordRef[] }) {
       {refs.map((k, i) => (
         <span key={k.id}>
           {i > 0 && "、"}
-          <PartTip cat="關鍵字" label={k.name_zh} tip={k.description_zh} className="keyword-chip">
+          <PartTip
+            cat={k.general === true ? "關鍵字（通用歸類）" : "關鍵字"}
+            label={k.name_zh}
+            tip={k.general === true && k.reason_zh != null ? `${k.description_zh}（通用歸類：${k.reason_zh}）` : k.description_zh}
+            className={k.general === true ? "keyword-chip general" : "keyword-chip"}
+          >
             {k.name_zh}
             {k.variant === true && <span className="muted small">（特定地形）</span>}
           </PartTip>

@@ -251,7 +251,7 @@ def test_modifier_descriptions_are_in_chinese_and_on_the_skill_card() -> None:
     card = skill_card(lib, stomp)
     assert card.kind == "修正" and card.effects == ()
     assert card.modifiers == (
-        "推擊、帶標籤 push 的技能：推擊與拉扯距離 +1 格（最多 2 格，超過的每格改為一次撞擊傷害）",
-        "推擊、帶標籤 push 的技能：AP +1（最少 1）",
+        "推擊、帶「推擊」標籤的技能：推擊與拉扯距離 +1 格（最多 2 格，超過的每格改為一次撞擊傷害）",
+        "推擊、帶「推擊」標籤的技能：AP +1（最少 1）",
     )
     assert skill_card(lib, lib.skills["skill_fire_bolt"]).modifiers == ()

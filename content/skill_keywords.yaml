@@ -58,13 +58,13 @@ keywords:
       - {condition: target_on_surface, surface: water}
       - {trigger: on_enter_surface, surface: water}
       - {condition: cast_tag_this_turn, tag: water}
-      - {effect: heal, grade: general}   # 通用：潮濕表面治療（08 8.21.4.2）——治療、護盾、淨化類技能利用潮濕
-      - {effect: shield, grade: general}
-      - {effect: cleanse, grade: general}
-      - {effect: damage, element: holy, grade: general}   # 通用：神聖傷害（聖水、雙效治療）
-      - {change: allow_self_target, grade: general}   # 通用：治療類修正（套用在治療技能上）
-      - {change: shape_to, grade: general}
-      - {change: heal_permille, grade: general}
+      - {effect: heal, grade: general, reason_zh: 治療類技能常和水系技能搭配（不是直接的規則連動）}   # 通用：潮濕表面治療（08 8.21.4.2）——治療、護盾、淨化類技能利用潮濕
+      - {effect: shield, grade: general, reason_zh: 治療類技能常和水系技能搭配（不是直接的規則連動）}
+      - {effect: cleanse, grade: general, reason_zh: 治療類技能常和水系技能搭配（不是直接的規則連動）}
+      - {effect: damage, element: holy, grade: general, reason_zh: 神聖傷害多半搭配治療（聖水、雙效治療），常和治療搭配}   # 通用：神聖傷害（聖水、雙效治療）
+      - {change: allow_self_target, grade: general, reason_zh: 治療類技能常和水系技能搭配（不是直接的規則連動）}   # 通用：治療類修正（套用在治療技能上）
+      - {change: shape_to, grade: general, reason_zh: 治療類技能常和水系技能搭配（不是直接的規則連動）}
+      - {change: heal_permille, grade: general, reason_zh: 治療類技能常和水系技能搭配（不是直接的規則連動）}
   - id: charged
     name_zh: 帶電
     description_zh: 雷電沿水與連鎖擴散，靜電可以累積成更強的一擊。
@@ -113,7 +113,7 @@ keywords:
     uses:
       - {condition: target_has_status, status: prone}
       - {effect: consume_status, status: prone}
-      - {effect: damage, weapon_req: melee, category: weapon, grade: general}   # 通用：近戰攻擊倒地者有優勢（statuses.yaml prone）
+      - {effect: damage, weapon_req: melee, category: weapon, grade: general, reason_zh: 近戰攻擊倒地的目標有優勢}   # 通用：近戰攻擊倒地者有優勢（statuses.yaml prone）
       - {trigger: on_crit, grade: provisional}   # 暫定：暴擊類（08 8.21.4.2「對倒地暴擊」），之後換成真實條件
       - {effect: apply_status, status: stance_fury, grade: provisional}   # 暫定：同上
   - id: collision
@@ -130,8 +130,8 @@ keywords:
       - {effect: dash}
       - {effect: charge_through}
       - {change: push_distance_delta}
-      - {effect: create_obstacle, grade: general}   # 通用：障礙物是讓人撞上的牆
-      - {effect: hurl_object, grade: general}   # 通用：投擲物件（08 8.21.4.2：撞擊、投擲）
+      - {effect: create_obstacle, grade: general, reason_zh: 被推的人撞上障礙物會受到撞擊傷害}   # 通用：障礙物是讓人撞上的牆
+      - {effect: hurl_object, grade: general, reason_zh: 投擲物件砸人，和撞擊一樣是拿場上的東西打人}   # 通用：投擲物件（08 8.21.4.2：撞擊、投擲）
       - {effect: rule_change, rule: move_any_object}
     uses:
       - {trigger: on_collision}
@@ -162,7 +162,7 @@ keywords:
       - {condition: target_has_status, status: marked}
       - {effect: detonate_runes}
       - {condition: on_own_rune}
-      - {effect: consume_status, grade: general}   # 通用：引爆任何狀態
+      - {effect: consume_status, grade: general, reason_zh: 消耗目標身上的狀態，和標記一樣是先上狀態再引爆}   # 通用：引爆任何狀態
   - id: high_ground
     name_zh: 高處
     description_zh: 升高平台、飛行與攀跳讓你站得更高；居高臨下命中更準。
@@ -181,8 +181,8 @@ keywords:
       - {effect: grant_ap, grade: provisional}   # 暫定
     uses:
       - {condition: height_advantage}
-      - {effect: damage, weapon_req: ranged, category: weapon, grade: general}   # 通用：遠程攻擊吃高低差命中加成（core.yaml height_hit_bonus）
-      - {change: grant_pierce, grade: general}   # 通用：遠程修正
+      - {effect: damage, weapon_req: ranged, category: weapon, grade: general, reason_zh: 站得比目標高時遠程攻擊命中提高}   # 通用：遠程攻擊吃高低差命中加成（core.yaml height_hit_bonus）
+      - {change: grant_pierce, grade: general, reason_zh: 遠程攻擊的修正，搭配高處的射擊}   # 通用：遠程修正
   - id: concealed
     name_zh: 隱蔽
     description_zh: 煙霧、黑暗與暗影讓你隱蔽；隱蔽中的偷襲與伏擊更致命。
@@ -193,7 +193,7 @@ keywords:
       - {effect: create_surface, surface: smoke}
       - {effect: create_surface, surface: darkness}
       - {effect: damage, element: shadow}
-      - {effect: place_trap, grade: general}   # 通用：陷阱藏在落葉底下
+      - {effect: place_trap, grade: general, reason_zh: 陷阱是隱藏的，敵人看不到}   # 通用：陷阱藏在落葉底下
     uses:
       - {condition: self_concealed}
       - {condition: from_behind}
@@ -205,20 +205,20 @@ keywords:
       - {effect: rule_change, rule: afterimage_double}
     uses:
       - {effect: sacrifice_summon}   # 3-24c：獻祭召喚物（專屬）
-      - {condition: adjacent_ally, grade: general}   # 通用：召喚物也是友方；以下是對友方生效的效果（召喚物也算友方）
-      - {effect: apply_status, affects: allies, grade: general}   # 通用
-      - {effect: restore_resource, affects: allies, grade: general}   # 通用
-      - {effect: reset_cooldown, affects: allies, grade: general}   # 通用
-      - {effect: grant_skill, affects: allies, grade: general}   # 通用
-      - {effect: redirect_damage, grade: general}   # 通用
-      - {effect: extra_reaction, affects: allies, grade: general}   # 通用
-      - {effect: cheat_death, affects: allies, grade: general}   # 通用
-      - {effect: zone, affects: allies, grade: general}   # 通用
-      - {effect: swap, affects: allies, grade: general}   # 通用
-      - {effect: revive, grade: general}   # 通用
+      - {condition: adjacent_ally, grade: general, reason_zh: 召喚物也算友方：對友方生效的效果也能用在召喚物上}   # 通用：召喚物也是友方；以下是對友方生效的效果（召喚物也算友方）
+      - {effect: apply_status, affects: allies, grade: general, reason_zh: 召喚物也算友方：對友方生效的效果也能用在召喚物上}   # 通用
+      - {effect: restore_resource, affects: allies, grade: general, reason_zh: 召喚物也算友方：對友方生效的效果也能用在召喚物上}   # 通用
+      - {effect: reset_cooldown, affects: allies, grade: general, reason_zh: 召喚物也算友方：對友方生效的效果也能用在召喚物上}   # 通用
+      - {effect: grant_skill, affects: allies, grade: general, reason_zh: 召喚物也算友方：對友方生效的效果也能用在召喚物上}   # 通用
+      - {effect: redirect_damage, grade: general, reason_zh: 召喚物也算友方：對友方生效的效果也能用在召喚物上}   # 通用
+      - {effect: extra_reaction, affects: allies, grade: general, reason_zh: 召喚物也算友方：對友方生效的效果也能用在召喚物上}   # 通用
+      - {effect: cheat_death, affects: allies, grade: general, reason_zh: 召喚物也算友方：對友方生效的效果也能用在召喚物上}   # 通用
+      - {effect: zone, affects: allies, grade: general, reason_zh: 召喚物也算友方：對友方生效的效果也能用在召喚物上}   # 通用
+      - {effect: swap, affects: allies, grade: general, reason_zh: 召喚物也算友方：對友方生效的效果也能用在召喚物上}   # 通用
+      - {effect: revive, grade: general, reason_zh: 召喚物也算友方：對友方生效的效果也能用在召喚物上}   # 通用
       - {change: summon_hp_permille}
       - {change: summon_attack_dice}
       - {change: summon_limit_delta}
       - {change: summon_duration_delta}
       - {change: summon_damage_permille}
-      - {effect: intercept, grade: general}   # 通用
+      - {effect: intercept, grade: general, reason_zh: 召喚物也算友方：對友方生效的效果也能用在召喚物上}   # 通用
