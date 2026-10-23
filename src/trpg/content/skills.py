@@ -183,6 +183,7 @@ __all__ = [
     "rarity_rank",
     "skill_problems",
     "skill_slot_problems",
+    "true_only_params",
     "walk_effect",
     "weapon_problem",
 ]
@@ -617,6 +618,9 @@ class PrimitiveParam(ContentModel):
     max: int | None = None
     allowed_skeletons: tuple[str, ...] | None = None
     """只能用在這些骨架（``None`` ＝ 不限；``split_heal``，Phase 3E-2f）。"""
+    true_only: bool = False
+    """``type: bool`` 的參數只能填 ``true``（不啟用就省略；``explode``、``split_heal``，4-L5c）。
+    驗證器與 LLM 提議模型讀同一份資料。"""
     description_zh: str = ""
     llm_hint: str = ""
     """給 LLM 看的一句話說明（Phase 4-L3）：中性描述，不含世界觀名詞、階段編號與欄位名；
@@ -1177,6 +1181,20 @@ def composition_rules() -> dict[str, CompositionRule]:
     return _composition_of(default_content_dir() / "skill_primitives.yaml")
 
 
+@cache
+def _true_only_of(path: Path) -> dict[str, frozenset[str]]:
+    if not path.is_file():
+        return {}
+    table = load_content_file(path, PrimitiveTable)
+    out = {p.id: frozenset(n for n, s in p.params.items() if s.true_only) for p in table.primitives}
+    return {k: v for k, v in out.items() if v}
+
+
+def true_only_params() -> dict[str, frozenset[str]]:
+    """原語 ID → 只能填 ``true`` 的參數名稱（``skill_primitives.yaml`` 的 ``true_only``）。"""
+    return _true_only_of(default_content_dir() / "skill_primitives.yaml")
+
+
 def composition_shapes(primitive: str) -> tuple[str, ...]:
     """原語 YAML 的 ``allowed_shapes``（``SkillDef`` 結構檢查用；沒有限制時為空 tuple）。"""
     rule = composition_rules().get(primitive)
@@ -1188,9 +1206,12 @@ class SkillRuleError(ValueError):
 
     pydantic 會把它包進 ``value_error``，原本的例外留在錯誤的 ``ctx["error"]``。"""
 
-    def __init__(self, message: str, *, path: str = "") -> None:
+    def __init__(self, message: str, *, path: str = "", code: str = "") -> None:
         super().__init__(message)
         self.path = path
+        self.code = (
+            code  # 穩定的錯誤代碼（Phase 4-L5c，例 combo.position）；空字串＝沿用 value_error
+        )
 
 
 def _check_composition(kind: str, effects: tuple[EffectSpec, ...]) -> None:
@@ -1203,12 +1224,16 @@ def _check_composition(kind: str, effects: tuple[EffectSpec, ...]) -> None:
     for rule in used:
         if rule.active_only and kind != "active":
             raise SkillRuleError(
-                f"{rule.primitive} 只能用在主動技能，收到 kind: {kind}", path="kind"
+                f"{rule.primitive} 只能用在主動技能，收到 kind: {kind}",
+                path="kind",
+                code="combo.active_only",
             )
     moves = [t for t in types if t in SELF_MOVES]
     if len(moves) > 1 and any(t != "teleport" for t in moves):  # 跨原語的群組規則（留在程式）
         raise SkillRuleError(
-            f"一個技能最多一個改變自身位置的原語，收到 {'、'.join(moves)}", path="effects"
+            f"一個技能最多一個改變自身位置的原語，收到 {'、'.join(moves)}",
+            path="effects",
+            code="combo.max_per_skill",
         )
     for rule in used:
         _check_rule(rule, effects, types)
@@ -1220,17 +1245,25 @@ def _check_rule(rule: CompositionRule, effects: tuple[EffectSpec, ...], types: l
     if rule.max_per_skill is not None and len(where) > rule.max_per_skill:
         count = "一個" if rule.max_per_skill == 1 else f" {rule.max_per_skill} 個"
         raise SkillRuleError(
-            f"一個技能最多{count} {name} 效果", path=f"effects[{where[rule.max_per_skill]}]"
+            f"一個技能最多{count} {name} 效果",
+            path=f"effects[{where[rule.max_per_skill]}]",
+            code="combo.max_per_skill",
         )
     if rule.sole_effect and len(types) != 1:
-        raise SkillRuleError(f"{name} 必須是技能唯一的效果", path="effects")
+        raise SkillRuleError(
+            f"{name} 必須是技能唯一的效果", path="effects", code="combo.sole_effect"
+        )
     if rule.position == "first" and types[0] != name:
         raise SkillRuleError(
-            f"{name} 必須是技能的第一個效果（一律最先結算）", path=f"effects[{where[0]}]"
+            f"{name} 必須是技能的第一個效果（一律最先結算）",
+            path=f"effects[{where[0]}]",
+            code="combo.position",
         )
     if rule.position == "last" and types[-1] != name:
         raise SkillRuleError(
-            f"{name} 必須是技能的最後一個效果（一律最後結算）", path=f"effects[{where[-1]}]"
+            f"{name} 必須是技能的最後一個效果（一律最後結算）",
+            path=f"effects[{where[-1]}]",
+            code="combo.position",
         )
     if rule.others_affect is not None:
         for index, effect in enumerate(effects):
@@ -1238,6 +1271,7 @@ def _check_rule(rule: CompositionRule, effects: tuple[EffectSpec, ...], types: l
                 raise SkillRuleError(
                     f"{name} 以外的效果必須明寫 affects: {rule.others_affect}（只作用在施放者）",
                     path=f"effects[{index}].affects",
+                    code="combo.others_affect",
                 )
 
 
@@ -3114,16 +3148,12 @@ class SkillDef(ContentModel):
             raise ValueError(
                 f"{where}：explode、scaling、lifesteal、split_heal 只能用在技能自己的傷害效果"
             )
-        if effect.explode is False:
-            raise ValueError(f"{where}：explode 只能填 true（不爆骰就省略）")
         if effect.split_heal is not None:
             self._check_split_heal(where, effect)
 
     def _check_split_heal(self, where: str, effect: EffectSpec) -> None:
         """``split_heal``（聖光雙效）：只能填 true、``affects: all``、法術技、``aura``／``area``
         骨架、主動技能，不可與吸血、爆骰、縮放並用（治療與傷害要用同一個骰值）。"""
-        if effect.split_heal is False:
-            raise ValueError(f"{where}：split_heal 只能填 true（不分流就省略）")
         if effect.affects != "all":
             raise ValueError(f"{where}：split_heal 必須搭配 affects: all")
         if self.category != "spell" or self.kind != "active":
@@ -3133,6 +3163,17 @@ class SkillDef(ContentModel):
             raise ValueError(f"{where}：split_heal 只能用在 {allowed} 骨架，收到 {self.skeleton}")
         if effect.lifesteal_permille is not None or effect.explode or effect.scaling is not None:
             raise ValueError(f"{where}：split_heal 不能與 lifesteal、explode、scaling 並用")
+
+    @staticmethod
+    def _check_true_only(index: int, where: str, effect: EffectSpec) -> None:
+        """只能填 ``true`` 的開關（資料見 :func:`true_only_params`）：填 ``false`` 一律擋下。"""
+        for name in sorted(true_only_params().get(effect.type, ())):
+            if getattr(effect, name, None) is False:
+                raise SkillRuleError(
+                    f"{where}：{name} 只能填 true（不啟用就省略）",
+                    path=f"effects[{index}].{name}",
+                    code="flag.true_only",
+                )
 
     def _check_variance(self) -> None:
         """``crit_range``、``damage_permille`` 需要有傷害效果、只能用在主動技能。"""
@@ -3145,6 +3186,7 @@ class SkillDef(ContentModel):
 
     def _check_effect(self, index: int, effect: EffectSpec, *, top: bool = False) -> None:
         where = f"effects[{index}]（{effect.type}）"
+        self._check_true_only(index, where, effect)
         self._check_variable_damage(where, effect, top=top)
         self._check_on_kill(where, effect, top=top)
         self._check_consume_status(index, effect)

@@ -86,6 +86,7 @@ __all__ = [
     "ProposalError",
     "ProposalModels",
     "ProposalResult",
+    "budget_statuses",
     "build_proposal_models",
     "evaluate_proposal",
     "feedback_payload",
@@ -319,6 +320,8 @@ def _param_type(
         return _scaling_model(), {}
     if spec.type == "count":
         return _literal(COUNT_CHOICES), {}
+    if spec.type == "bool" and spec.true_only:
+        return _literal((True,)), {}  # 只能填 true 的開關（Phase 4-L5c）
     fixed = _FIXED_PARAM_TYPES.get(spec.type)
     if fixed is not None:
         return fixed[0], dict(fixed[1])
@@ -382,6 +385,7 @@ class _Builder:
         self.library = library
         self.refs = _Refs.of(library)
         self.statuses = statuses
+        self.budget_statuses = budget_statuses(library)
         self.trigger_ids = triggers
         self.condition = _alias("Condition", self._condition_union(conditions))
         self.shapes = self._shape_models(shapes)
@@ -479,14 +483,23 @@ class _Builder:
     def _param(
         self, primitive: PrimitiveDef, name: str, spec: PrimitiveParam
     ) -> tuple[Any, dict[str, Any]]:
-        """參數型別；稀有度檢查狀態的原語（``apply_status``）只列稀有度夠的狀態（Phase 4-L5b）。"""
-        if (
-            spec.type == "status"
-            and self.statuses is not None
-            and primitive.id in RARITY_STATUS_PRIMITIVES
-        ):
-            return _id_choice(self.statuses)
+        """參數型別；稀有度檢查狀態的原語（``apply_status``）只列稀有度夠的狀態（Phase 4-L5b）；
+        以狀態點數計預算的原語（``budget_basis: status``）只列有 ``budget_points`` 的狀態
+        （4-L5c）。"""
+        if spec.type == "status":
+            ids = self._status_choices(primitive)
+            if ids is not None:
+                return _id_choice(ids)
         return _param_type(name, spec, self.refs, EffectSpec.model_fields)
+
+    def _status_choices(self, primitive: PrimitiveDef) -> tuple[str, ...] | None:
+        """這個原語的狀態參數可用的 ID（``None`` ＝ 不限）。"""
+        ids: set[str] | None = None
+        if primitive.budget_basis == "status":
+            ids = set(self.budget_statuses)
+        if self.statuses is not None and primitive.id in RARITY_STATUS_PRIMITIVES:
+            ids = set(self.statuses) if ids is None else ids & set(self.statuses)
+        return None if ids is None else tuple(sorted(ids))
 
     def _condition_union(self, only: frozenset[str] | None) -> Any:
         """條件的 union；``only`` 篩選後沒有任何條件時回傳 ``None``（提議不開放條件欄位）。"""
@@ -619,6 +632,14 @@ def rarity_statuses(library: ContentLibrary, rarity: SkillRarity) -> tuple[str, 
     rank = rarity_rank(rarity)
     return tuple(
         sorted(s.id for s in library.ruleset.statuses.statuses if rarity_rank(s.min_rarity) <= rank)
+    )
+
+
+def budget_statuses(library: ContentLibrary) -> tuple[str, ...]:
+    """技能能施加的狀態 ID（有 ``budget_points``；規則與預算的 ``budget.unavailable`` 相同，
+    Phase 4-L5c；排序）。"""
+    return tuple(
+        sorted(s.id for s in library.ruleset.statuses.statuses if s.budget_points is not None)
     )
 
 
@@ -987,13 +1008,17 @@ def _pydantic_errors(exc: ValidationError, stage: Stage, data: object) -> list[P
     for error in exc.errors(include_url=False):
         message, allowed = _message_zh(error)
         path = _json_path(tuple(error["loc"]), data)
+        code = str(error["type"])
         if stage == "skill":
             path = _skill_path(error, path, message)
+            raw = (error.get("ctx") or {}).get("error")
+            if isinstance(raw, SkillRuleError) and raw.code:
+                code = raw.code
         out.append(
             ProposalError(
                 stage=stage,
                 path=path,
-                code=str(error["type"]),
+                code=code,
                 message=message,
                 allowed=allowed,
             )

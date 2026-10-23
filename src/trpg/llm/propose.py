@@ -25,7 +25,7 @@ from trpg.content.skills import SkillDef
 from trpg.llm.client import LLMClient
 from trpg.llm.errors import LLMBadResponse, LLMTimeout, LLMUnavailable
 from trpg.llm.prompts.proposal import build_proposal_prompt
-from trpg.llm.response import clean_response
+from trpg.llm.response import clean_response, drop_false_flags
 from trpg.skillgen.proposal import ProposalContext, feedback_payload
 from trpg.skillgen.proposal_budget import evaluate_with_repair
 from trpg.skillgen.proposal_fallback import fallback_skill
@@ -127,7 +127,7 @@ class _Loop:
             code = LLM_ERROR_CODES[type(exc)]
             self.records.append(AttemptRecord((code,), self.clock() - start))
             return f"{code}：{_error_text(exc)}" if isinstance(exc, LLMUnavailable) else None
-        text = clean_response(raw)
+        text = drop_false_flags(clean_response(raw))
         evaluation = evaluate_with_repair(
             text, prompt.models, self.library, self.ctx, seed=self.seed
         )
