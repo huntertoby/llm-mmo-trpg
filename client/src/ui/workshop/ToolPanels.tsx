@@ -142,9 +142,11 @@ interface ExportProps {
   /** 最近一次的即時檢查（玩家模式只有合法的技能能匯出）。 */
   check?: WorkshopCheck | null;
   dev?: boolean;
+  /** 即時檢查還在更新：卡片預覽是舊草稿的結果，先不讓匯出（避免看到的和匯出的不同）。 */
+  pending?: boolean;
 }
 
-export function ExportPanel({ draft, check = null, dev = false }: ExportProps) {
+export function ExportPanel({ draft, check = null, dev = false, pending = false }: ExportProps) {
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [done, setDone] = useState<WorkshopExport | null>(null);
@@ -174,7 +176,7 @@ export function ExportPanel({ draft, check = null, dev = false }: ExportProps) {
           : "把做好的技能下載成 YAML 檔備份。技能要完整而且通過即時檢查才能下載。"}
       </div>
       <ErrorBanner message={error} onClose={() => setError(null)} />
-      <button type="button" disabled={busy || isEmptyDraft(draft) || blocked} onClick={() => void run()}>
+      <button type="button" disabled={busy || isEmptyDraft(draft) || blocked || pending} onClick={() => void run()}>
         {busy ? "匯出中……" : "下載 YAML"}
       </button>
       {blocked && !isEmptyDraft(draft) && <div className="muted small">技能還不合法（見即時檢查），修好後才能下載。</div>}

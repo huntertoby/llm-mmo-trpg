@@ -182,7 +182,7 @@ function SkillWorkshop({ onHome, onStartBattle, onGear, store, dev = false }: Pr
         <div className="ws-col ws-col-side">
           <CheckPanel check={state.check} pending={checking} dev={dev} />
           <TryoutPanel dev={dev} check={state.check} pending={checking} prefs={prefs} onPrefs={setPrefs} onStart={onStartBattle} />
-          <ExportPanel draft={draft} check={state.check} dev={dev} />
+          <ExportPanel draft={draft} check={state.check} dev={dev} pending={checking} />
         </div>
       </div>
     </div>

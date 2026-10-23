@@ -181,7 +181,7 @@ export function CheckPanel({ check, pending, dev = false }: { check: WorkshopChe
         </div>
       )}
       {check?.card != null && (
-        <div>
+        <div style={pending ? { opacity: 0.45 } : undefined} data-stale={pending ? "true" : undefined}>
           <div className="section-title">技能卡片預覽</div>
           <SkillCardView card={check.card} hideConcept={!dev && check.concept_provisional === true} />
         </div>

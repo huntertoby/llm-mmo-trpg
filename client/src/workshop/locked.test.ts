@@ -48,8 +48,8 @@ const optionsWith = (primary: string[], secondary?: string[]): DraftOptions => {
 
 describe("conformScaling", () => {
   it("replaces a stale primary attribute with the first allowed one (spell wil -> holy wis)", () => {
-    const draft: Json = { category: "spell", scaling_attr: "wil" };
-    expect(conformScaling(draft, optionsWith(["wis"]))).toEqual({ category: "spell", scaling_attr: "wis" });
+    const draft: Json = { category: "spell", scaling_attr: "wil", effects: [{ type: "heal" }] };
+    expect(conformScaling(draft, optionsWith(["wis"]))).toEqual({ category: "spell", scaling_attr: "wis", effects: [{ type: "heal" }] });
   });
 
   it("switching spell -> weapon: primary follows the weapon class, secondary is dropped", () => {
