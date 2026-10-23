@@ -18,11 +18,15 @@ export function Hint({ text, children }: Props) {
   const wrap = useRef<HTMLSpanElement | null>(null);
   const { ref: _ref, ...handlers } = f.triggerProps;
   void _ref;
+  // 觸發元素自己的選單開著（`aria-expanded="true"`，例如「更多動作」）時不顯示說明卡，開著的也立刻關，
+  // 免得蓋住選單（使用者：「彈出的視窗會沒有辦法按裝填」；規則見 docs/開發PM交接.md 6.5.1）
+  const expanded = () => f.triggerRef.current?.getAttribute("aria-expanded") === "true";
   useLayoutEffect(() => {
     const first = wrap.current?.firstElementChild;
     f.triggerRef.current = first instanceof HTMLElement ? first : wrap.current;
+    if (f.open && expanded()) f.ctl.dismiss();
   });
-  const shown = text !== null && text !== undefined && text !== "";
+  const shown = text !== null && text !== undefined && text !== "" && !expanded();
   return (
     <span ref={wrap} className="hint-tip" {...(shown ? handlers : {})}>
       {children}
