@@ -77,7 +77,7 @@ from trpg.skillgen.proposal_numbers import (
     numeric_param_names,
     split_numbers,
 )
-from trpg.skillgen.scaling import retarget_scaling
+from trpg.skillgen.scaling import fit_scaling, retarget_scaling
 from trpg.skillgen.validate import RARITY_STATUS_PRIMITIVES, validate_skill
 
 __all__ = [
@@ -166,7 +166,8 @@ class ProposalContext:
 
     ``hero_attributes``（Phase 3H-3，07 7.2）：給主角的屬性時，技能的縮放屬性由引擎改成其中最高的、
     且在 ``skill_scaling.yaml`` 允許範圍內的屬性（LLM 填的 ``scaling_attr`` 只是提議，會被取代；
-    ID 以取代後的內容雜湊）。"""
+    ID 以取代後的內容雜湊）。沒有給時（3H-7）LLM 填的屬性在允許範圍內就保留，否則取範圍裡第一個；
+    第二屬性同樣限在範圍內。"""
 
     tier: int
     rarity: SkillRarity
@@ -881,14 +882,22 @@ def to_skill_def(
     ``stage="skill"`` 的錯誤）。"""
     data = _skill_data(proposal, ctx, fill)
     skill = SkillDef.model_validate(data)
-    if library is None or (ctx.hero_attributes is None and skill.category != "weapon"):
+    if library is None:
         return skill
-    # 武器技一律看武器大類的主屬性（3H-6，不看主角屬性）；其他技能跟主角最高屬性（3H-3）
-    attr = retarget_scaling(skill, ctx.hero_attributes or {}, library).scaling_attr
-    if attr == skill.scaling_attr:
+    # 武器技一律看武器大類的主屬性（3H-6，不看主角屬性）；其他技能跟主角最高屬性（3H-3）；
+    # 沒有主角屬性時收進允許範圍（3H-7：在範圍內不動，否則取範圍裡第一個）
+    fitted = (
+        fit_scaling(skill, library)
+        if ctx.hero_attributes is None
+        else retarget_scaling(skill, ctx.hero_attributes, library)
+    )
+    attr, second = fitted.scaling_attr, fitted.secondary_scaling_attr
+    if attr == skill.scaling_attr and second == skill.secondary_scaling_attr:
         return skill
-    data = {k: v for k, v in data.items() if k != "id"}
+    data = {k: v for k, v in data.items() if k not in ("id", "secondary_scaling_attr")}
     data["scaling_attr"] = attr.value
+    if second is not None:
+        data["secondary_scaling_attr"] = second.value
     data["id"] = _skill_id(data)
     return SkillDef.model_validate(data)
 

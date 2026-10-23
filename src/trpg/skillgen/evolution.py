@@ -45,6 +45,7 @@ from trpg.shared.rng import Rng
 from trpg.skillgen.budget import BudgetError
 from trpg.skillgen.composer_parts import Knob, dice_ladder
 from trpg.skillgen.composer_tuning import tune
+from trpg.skillgen.scaling import fit_scaling
 from trpg.skillgen.usage import SkillUsage
 from trpg.skillgen.validate import effect_count, rarity_requirements, validate_skill
 from trpg.skillgen.variant_gen import variant_specs, with_variant
@@ -418,7 +419,8 @@ def _tuned(
     try:
         if not tune(rng, library, attempt, trial, knobs):
             return None
-        evolved = SkillDef.model_validate({**attempt, "effects": trial})
+        # 縮放屬性收進允許範圍（3H-7；效果變了主題可能跟著變）
+        evolved = fit_scaling(SkillDef.model_validate({**attempt, "effects": trial}), library)
     except (ValidationError, BudgetError, ValueError):
         return None
     return None if validate_skill(evolved, library) else evolved

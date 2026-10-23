@@ -172,7 +172,7 @@ def test_equipment_limits_are_checked(client: TestClient) -> None:
     assert full.json()["detail"] == "主動技能超過欄位上限：7 個（上限 6）"
     unknown = _create(client, custom_skills=[CHARGE], replace_skills=["skill_fire_bolt"])
     assert unknown.status_code == 422 and "沒有裝備要替換的技能" in unknown.json()["detail"]
-    spell = {**CHARGE, "category": "spell", "weapon_req": "focus"}
+    spell = {**CHARGE, "category": "spell", "weapon_req": "focus", "scaling_attr": "int"}
     spell["effects"] = [
         {"type": "dash"},
         {"type": "damage", "dice": "2d6", "element": "fire"},

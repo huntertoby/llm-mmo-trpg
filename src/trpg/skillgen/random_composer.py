@@ -20,6 +20,7 @@ from pydantic import ValidationError
 from trpg.content.composer_rules import ComposerRules
 from trpg.content.library import ContentLibrary, load_library
 from trpg.content.skill_rules import SkeletonDef
+from trpg.content.skill_scaling import ScalingFacts
 from trpg.content.skill_triggers import EVERY_N_HITS
 from trpg.content.skills import SkillDef, SkillRarity, rarity_rank
 from trpg.shared.errors import TrpgError
@@ -333,16 +334,20 @@ def _attempt(
 def _with_scaling_extras(
     rng: Rng, library: ContentLibrary, base: dict[str, Any], ctx: Ctx
 ) -> dict[str, Any]:
-    """雙屬性縮放與專精加成（Phase 2H-2）：兩者預算都不計，所以強度調整之後才抽，只在合法時給。"""
+    """雙屬性縮放與專精加成（Phase 2H-2）：兩者預算都不計，所以強度調整之後才抽，只在合法時給。
+    第二屬性從允許範圍（主屬性以外）抽（3H-7，06 6.10：法術技的第二屬性限在組合主題允許的集合
+    內）；範圍裡沒有別的屬性時不給，改看專精。武器技不帶第二屬性（3H-6）。"""
     rules = library.composer.scaling
+    base = _fit_attr(library, base, ctx)
     primary = base["scaling_attr"]
     if (
         rarity_rank(base["rarity"]) >= rarity_rank(library.ruleset.core.dual_scaling_min_rarity)
         and rng.chance_permille(rules.dual_permille)
         and base["category"] != "weapon"  # 武器技看手上武器，沒有第二縮放屬性（3H-6）
     ):
-        others = sorted(a for a in rules.dual_attrs if a != primary)
-        return {**base, "secondary_scaling_attr": rng.choice(others)}
+        others = [a.value for a in _range(library, base, ctx) if a.value != primary]
+        if others:
+            return {**base, "secondary_scaling_attr": rng.choice(others)}
     options = []
     if ctx.shape_params.get("range") is not None:
         options.append("range")
@@ -351,6 +356,32 @@ def _with_scaling_extras(
     if options and rng.chance_permille(rules.mastery_permille):
         return {**base, "mastery": rng.choice(options)}
     return base
+
+
+def _tags(library: ContentLibrary, base: dict[str, Any], ctx: Ctx) -> list[str]:
+    """組合器技能的標籤：主題元素、骨架與機制標籤（:func:`mechanic_tags`）。"""
+    draft = SkillDef.model_validate({**base, "effects": ctx.effects})
+    tags: list[str] = [ctx.theme.value, ctx.skeleton.id]
+    return tags + [t for t in mechanic_tags(draft, library.ruleset) if t not in tags]
+
+
+def _range(library: ContentLibrary, base: dict[str, Any], ctx: Ctx) -> tuple[Attribute, ...]:
+    """組好的技能（含之後 :func:`_finish` 會加上的標籤）的縮放允許範圍（3H-7）。"""
+    facts = ScalingFacts.of_draft(
+        {**base, "effects": ctx.effects, "tags": _tags(library, base, ctx)}
+    )
+    return library.scaling_range(facts)
+
+
+def _fit_attr(library: ContentLibrary, base: dict[str, Any], ctx: Ctx) -> dict[str, Any]:
+    """法術技的縮放屬性收進允許範圍（3H-7）：抽到的在範圍內就不動，否則取範圍裡第一個（亂數串流
+    不變）。武器技已是武器大類的主屬性。"""
+    if base["category"] == "weapon":
+        return base
+    allowed = [a.value for a in _range(library, base, ctx)]
+    if not allowed or base["scaling_attr"] in allowed:
+        return base
+    return {**base, "scaling_attr": allowed[0]}
 
 
 def _attempt_passive(
@@ -499,18 +530,16 @@ def _attempt_stance(
 
 def _finish(library: ContentLibrary, seed: int, base: dict[str, Any], ctx: Ctx) -> SkillDef:
     """加上名稱、標籤與暫定的敘事文字；代價依類別換成該花的資源（3H-2：武器技的法力換成等價的
-    耐力，預算點數不變）。"""
+    耐力，預算點數不變）；縮放屬性收進允許範圍（3H-7）。"""
     base = {**base, "cost": library.budget.resource_cost(base["cost"], base["category"])}
-    draft = SkillDef.model_validate({**base, "effects": ctx.effects})
-    tags: list[str] = [ctx.theme.value, ctx.skeleton.id]
-    tags += [t for t in mechanic_tags(draft, library.ruleset) if t not in tags]
+    base = _fit_attr(library, base, ctx)
     data = {
         **base,
         "effects": ctx.effects,
         # 名稱不帶種子（2026-10-23 使用者：「組合技能名稱拿掉 #編號」）；
         # 同一輪撞名由 roguelite 加「（二）」
         "name_zh": f"{ctx.theme.display_name}・{ctx.skeleton.name_zh}",
-        "tags": tags,
+        "tags": _tags(library, base, ctx),
         "narrative": {
             "concept": f"隨機組合器產生的{ctx.skeleton.name_zh}技能（種子 {seed}，暫定）",
             "cast_flavor": "（暫定）力量依你的意志成形。",

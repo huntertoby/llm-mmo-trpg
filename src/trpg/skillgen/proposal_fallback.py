@@ -29,6 +29,7 @@ from trpg.skillgen.proposal_budget import budget_filler, is_repairable
 from trpg.skillgen.proposal_numbers import DEFAULT_ACTIVE_AP
 from trpg.skillgen.proposal_subset import ProposalRequest
 from trpg.skillgen.random_composer import ComposeError, compose_random_skill
+from trpg.skillgen.scaling import fit_draft_scaling
 from trpg.skillgen.validate import validate_skill
 
 __all__ = [
@@ -237,6 +238,7 @@ def _finish(library: ContentLibrary, draft: dict[str, Any], seed: int) -> SkillD
         data = budget_filler(library, seed=seed, repairs=repairs)(dict(draft))
         data.setdefault("name_zh", f"{library.skeletons[draft['skeleton']].name_zh}（保底）")
         data["provenance"] = {"origin": "level_up", "created_by": "workshop"}
+        data = fit_draft_scaling(data, library)  # 3H-7：效果填好後把縮放屬性收進允許範圍
         try:
             skill = build_skill(data, {"id": draft_id(data)})
         except DraftError:

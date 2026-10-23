@@ -22,6 +22,7 @@ from trpg.content.skills import SHAPE_TO_VALUES, SkillDef
 from trpg.shared.rng import Rng
 from trpg.shared.types import Element
 from trpg.skillgen.budget import BudgetError, skill_budget
+from trpg.skillgen.scaling import fit_scaling
 from trpg.skillgen.validate import validate_skill
 
 __all__ = ["compose_legendary", "compose_modifier"]
@@ -92,7 +93,7 @@ def _pick(rng: Rng, library: ContentLibrary, candidates: list[dict[str, Any]]) -
     fits: list[SkillDef] = []
     for data in candidates:
         try:
-            skill = SkillDef.model_validate(data)
+            skill = fit_scaling(SkillDef.model_validate(data), library)  # 3H-7
             report = skill_budget(skill, library)
         except (ValidationError, BudgetError):
             continue
