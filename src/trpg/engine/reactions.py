@@ -54,7 +54,11 @@ from trpg.engine.results import Pending
 from trpg.engine.rules.combat import ForcedOutcome, attack_problem, roll_attack
 from trpg.engine.rules.facing import face_toward
 from trpg.engine.rules.geometry import XY, has_line_of_sight, manhattan
-from trpg.engine.rules.statuses import skip_turn_status, weapon_attribute
+from trpg.engine.rules.statuses import (
+    skip_turn_status,
+    weapon_attribute,
+    weapon_scale_attr,
+)
 from trpg.engine.rules.weapons import range_damage_permille
 from trpg.engine.skill_triggers import check_trigger_depth, holding, redirect_fired
 from trpg.engine.skills.casting import use_reaction_skill
@@ -633,7 +637,8 @@ def _attack_once(
     subject = Subject(target, target.xy)
     bonus_permille = modifiers.damage_permille(state, attacker, use, subject)
     modifiers.spend_attack_limits(state, attacker, use, subject)  # 每回合 1 次的加傷（3-31）
-    multiplier = block_multiplier(ctx, attacker, target) * bonus_permille // PERMILLE
+    block = block_multiplier(ctx, attacker, target)
+    multiplier = block * bonus_permille // PERMILLE
     multiplier = (
         multiplier * range_damage_permille(attacker, manhattan(attacker.xy, target.xy)) // PERMILLE
     )
@@ -654,9 +659,11 @@ def _attack_once(
                 flat=weapon.flat,
                 scaled_permille=weapon_attribute(ctx.rules, attacker)
                 * ctx.core.basic_attack_attr_multiplier_permille,
+                scale_attr=weapon_scale_attr(attacker),
                 crit=roll.crit,
                 min_damage=ctx.core.min_damage_on_hit,
                 multiplier_permille=multiplier,
+                block_permille=block,
             )
         ],
     )

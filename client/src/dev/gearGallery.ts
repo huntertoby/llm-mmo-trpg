@@ -44,7 +44,7 @@ section("③ 染色 8 種（皮背心／布袍／鐵劍不變色）", appearance
 section("④ 關鍵字 10 種（劍／圓盾；晶石匕首遇元素換色）", appearance.keywords.flatMap((k) => [cell({ kind: "sword", keywords: [k] }, 64, `劍 ${k}`), cell({ kind: "round_shield", keywords: [k] }, 64, `盾 ${k}`), cell({ kind: "dagger", material: "crystal", keywords: [k] }, 64, `晶 ${k}`)]));
 section("④b 兩個關鍵字各畫一處", [cell({ kind: "sword", keywords: ["ignite", "marked"] }, 64, "劍 ignite+marked"), cell({ kind: "staff", form: "scepter", keywords: ["frozen", "summon"] }, 64, "權杖 frozen+summon"), cell({ kind: "mail", keywords: ["wet", "high_ground"] }, 64, "鎖甲 wet+high_ground")]);
 section("⑤ 稀有度 5 種", appearance.rarities.flatMap((r) => [cell({ kind: "axe", rarity: r }, 64, `斧 ${r}`), cell({ kind: "axe", rarity: r }, 32, `32px ${r}`)]));
-section("⑥ 成對武器與特殊", [cell({ kind: "dual_dagger" }, 64, "雙匕首"), cell({ kind: "dual_pistol", form: "revolver" }, 64, "雙手槍"), cell({ kind: "longgun", form: "sniper" }, 64, "狙擊長槍"), cell({ kind: "staff", form: "totem", material: "wood" }, 64, "圖騰杖"), cell({ kind: "???" }, 64, "不認得→劍")]);
+section("⑥ 成對武器與特殊", [cell({ kind: "dual_dagger" }, 64, "雙匕首"), cell({ kind: "dual_pistol", form: "revolver" }, 64, "雙手槍"), cell({ kind: "longgun", form: "sniper" }, 64, "狙擊火槍"), cell({ kind: "staff", form: "totem", material: "wood" }, 64, "圖騰杖"), cell({ kind: "???" }, 64, "不認得→劍")]);
 const mixed: GearLook = { kind: "plate", form: "full", material: "steel", rarity: "epic", keywords: ["ignite", "prone"] };
 const mixed2: GearLook = { kind: "bow", form: "recurve", rarity: "rare", keywords: ["charged"] };
 const mixed3: GearLook = { kind: "robe", dye: "purple", rarity: "legendary", keywords: ["frozen", "summon"] };

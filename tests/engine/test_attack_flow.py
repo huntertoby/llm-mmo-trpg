@@ -464,7 +464,7 @@ def test_longgun_still_damage_applies_only_when_standing_still_and_counts_to_the
     affix = lib.affixes[STILL]
     assert affix.category == "conditional" and affix.weapons == ("longgun",)
     stock = lib.weapons["longgun"]
-    assert stock.steady is not None and stock.steady.crit_range == 2  # 長槍基礎值不動
+    assert stock.steady is not None and stock.steady.crit_range == 2  # 火槍基礎值不動
     slots: dict[str, Rolls] = {"main_hand": [(STILL, 100)]}
     state = _fighting(slots, weapon="longgun")
     unit = state.units[U1]

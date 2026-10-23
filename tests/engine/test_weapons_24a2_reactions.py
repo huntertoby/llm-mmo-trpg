@@ -1,5 +1,5 @@
-"""長槍與弩在反應裡的行為（Phase 3-24a2）：藉機攻擊要求近戰武器（``requires_melee_weapon``），所以
-遠程的長槍與弩不會藉機攻擊，也就不會因此用掉子彈或吃貼臉懲罰。"""
+"""火槍與弩在反應裡的行為（Phase 3-24a2）：藉機攻擊要求近戰武器（``requires_melee_weapon``），所以
+遠程的火槍與弩不會藉機攻擊，也就不會因此用掉子彈或吃貼臉懲罰。"""
 
 from __future__ import annotations
 

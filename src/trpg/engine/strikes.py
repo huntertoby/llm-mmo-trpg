@@ -25,7 +25,7 @@ from trpg.engine.gear_enhance import strike_affixes
 from trpg.engine.gear_state import GearAffix
 from trpg.engine.modifiers import ATTACK, damage_element
 from trpg.engine.rules.geometry import manhattan
-from trpg.engine.rules.statuses import weapon_attribute
+from trpg.engine.rules.statuses import weapon_attribute, weapon_scale_attr
 from trpg.engine.state import UnitState
 from trpg.engine.weapon_traits import attack_dice
 
@@ -91,6 +91,7 @@ def _cleave(ctx: Ctx, attacker: UnitState, target: UnitState, entry: GearAffix) 
                 flat=weapon.flat,
                 scaled_permille=weapon_attribute(ctx.rules, attacker)
                 * ctx.core.basic_attack_attr_multiplier_permille,
+                scale_attr=weapon_scale_attr(attacker),
                 min_damage=ctx.core.min_damage_on_hit,
                 multiplier_permille=_permille(entry),
             )

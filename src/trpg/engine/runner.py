@@ -38,8 +38,11 @@ __all__ = [
     "run_battle",
 ]
 
-LOG_FORMAT = "trpg-battle-log/57"
-"""``/57``（Phase 3E-2a，接在 3-33f2 的 ``/56`` 之後）：帶變奏的技能不能被 ``copy_skill`` 複製、
+LOG_FORMAT = "trpg-battle-log/58"
+"""``/58``（Phase 3-41b）：``damage_dealt`` 事件多了 ``flat``／``scaled_permille``／
+``scale_attr``／``block_permille``（戰鬥紀錄把傷害組成分項顯示用），事件內容不同，
+因此 ``/57`` 的紀錄無法重播。
+``/57``（Phase 3E-2a，接在 3-33f2 的 ``/56`` 之後）：帶變奏的技能不能被 ``copy_skill`` 複製、
 命中後修正規則改用實際施放的型態比對；帶變奏技能的邊角情況結果可能不同，
 因此 ``/56`` 的紀錄無法重播。
 ``/56``（Phase 3-33f2，接在 3-33f1 的 ``/55`` 之後）：召喚技能分歧進化與

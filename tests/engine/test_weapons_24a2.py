@@ -1,7 +1,7 @@
 """武器擴充第一批的遠程（Phase 3-24a2，``docs/phases/Phase3計畫.md`` 25.2）。
 
 每個特性都是 ``content/weapons.yaml`` 武器資料上的參數：弩的穿透一直線 ``pierce_line``、不受高度影響
-``ignore_height``；長槍的彈匣 ``magazine``／``reload_ap``、槍聲 ``gunshot``、站定 ``steady``、
+``ignore_height``；火槍的彈匣 ``magazine``／``reload_ap``、槍聲 ``gunshot``、站定 ``steady``、
 直射穿甲 ``ignore_cover``／``armor_pierce_permille``、距離修正 ``range_mod``。每個特性一組測試，其中
 都有「資料改參數後行為跟著變」的案例。
 """
@@ -307,7 +307,7 @@ def test_crossbow_needs_no_reload_and_has_no_magazine(monkeypatch: pytest.Monkey
 
 
 # ---------------------------------------------------------------------------
-# 長槍：彈匣與裝填
+# 火槍：彈匣與裝填
 # ---------------------------------------------------------------------------
 
 
@@ -391,7 +391,7 @@ def test_attacking_an_object_also_spends_a_round(monkeypatch: pytest.MonkeyPatch
 
 
 # ---------------------------------------------------------------------------
-# 長槍：直射、槍聲
+# 火槍：直射、槍聲
 # ---------------------------------------------------------------------------
 
 
@@ -411,7 +411,7 @@ def test_gunshot_reveals_a_shooter_hiding_in_the_grass(monkeypatch: pytest.Monke
     result = resolve(state, Attack(unit_id=U1, target_id=U2))
     assert not is_concealed(result.state, result.state.units[U1])
     assert [e.status_id for e in kinds(result.events, StatusApplied)] == ["revealed"]
-    # 資料改參數：沒有槍聲的長槍開火後仍藏在草叢裡
+    # 資料改參數：沒有槍聲的火槍開火後仍藏在草叢裡
     quiet = gun_state(objects=[(1, 2, "grass")], gun=weapon("longgun", gunshot=False))
     still = resolve(quiet, Attack(unit_id=U1, target_id=U2)).state
     assert is_concealed(still, still.units[U1])
@@ -423,7 +423,7 @@ def test_gunshot_does_nothing_when_not_concealed(monkeypatch: pytest.MonkeyPatch
 
 
 # ---------------------------------------------------------------------------
-# 長槍：站定狙擊
+# 火槍：站定狙擊
 # ---------------------------------------------------------------------------
 
 
@@ -482,7 +482,7 @@ def test_preview_hit_chance_reflects_steady_and_point_blank() -> None:
 
 
 # ---------------------------------------------------------------------------
-# 長槍：直射穿甲
+# 火槍：直射穿甲
 # ---------------------------------------------------------------------------
 
 
@@ -496,7 +496,7 @@ def test_longgun_ignores_half_cover_and_a_bow_does_not(monkeypatch: pytest.Monke
     )
     (bow,) = kinds(shoot(bow_state), AttackRolled)
     assert bow.cover == -2
-    # 資料改參數：長槍不再 ignore_cover 就吃半掩護
+    # 資料改參數：火槍不再 ignore_cover 就吃半掩護
     soft = gun_state(objects=cover, gun=weapon("longgun", ignore_cover=False))
     (roll,) = kinds(shoot(soft), AttackRolled)
     assert roll.cover == -2
@@ -525,7 +525,7 @@ def test_armor_pierce_stacks_additively_with_armor_break() -> None:
 
 
 # ---------------------------------------------------------------------------
-# 長槍：貼臉懲罰與遠距加成
+# 火槍：貼臉懲罰與遠距加成
 # ---------------------------------------------------------------------------
 
 
@@ -646,3 +646,19 @@ def test_blank_heroes_for_the_new_weapons_exist() -> None:
     assert builds["build_blank_longgun"].hero.weapon == "longgun"
     assert builds["build_blank_crossbow"].blank and builds["build_blank_longgun"].blank
     assert not builds["build_blank_longgun"].hero.skills
+
+
+def test_weapon_rule_lines_show_grip_and_shared_backstab() -> None:
+    """武器卡的共用規則（Phase 3-41b，清單 7.2、7.3）：握法、近戰共用的背刺（數字取自 core）。"""
+    lib = library()
+    core = lib.ruleset.core
+    gun = lib.weapons["longgun"]
+    assert gun.name_zh == "火槍"
+    assert gun.rule_lines_zh(core)[0].startswith("雙手")
+    assert not any("背刺" in line for line in gun.rule_lines_zh(core))  # 遠程武器沒有背刺
+    dagger = lib.weapons["dagger"]
+    assert dagger.rule_lines_zh(core)[0].startswith("單手")
+    backstab = next(line for line in dagger.rule_lines_zh(core) if "背刺" in line)
+    assert f"命中 +{core.backstab_hit_bonus}" in backstab
+    bigger = core.model_copy(update={"backstab_hit_bonus": 5})
+    assert "命中 +5" in "".join(dagger.rule_lines_zh(bigger))

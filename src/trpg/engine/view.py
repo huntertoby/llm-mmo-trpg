@@ -759,7 +759,10 @@ def _unit_view(state: BattleState, unit: UnitState, team: Team) -> UnitView:
         weapon_name_zh=unit.weapon.name_zh,
         weapon_id=unit.weapon.id,
         weapon_class=unit.weapon.weapon_class,
-        weapon_traits_zh=unit.weapon.trait_lines_zh(),
+        weapon_traits_zh=(
+            *unit.weapon.trait_lines_zh(),
+            *unit.weapon.rule_lines_zh(state.ruleset.core),
+        ),
         ammo=unit.ammo,
         magazine=unit.weapon.magazine,
         tags=unit.tags,

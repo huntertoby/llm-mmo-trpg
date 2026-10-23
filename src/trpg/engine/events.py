@@ -482,6 +482,14 @@ class DamageDealt(EventBase):
     ``damage_redirected`` 事件。"""
     exploded: int = 0
     """爆骰（Phase 3D-7b）多擲的骰子數（``rolls`` 已包含它們）。"""
+    flat: int = 0
+    """固定值（武器的固定傷害等；Phase 3-41b 供紀錄把傷害組成分項顯示）。"""
+    scaled_permille: int = 0
+    """屬性加成（‰，屬性值 × 倍率；Phase 3-41b）。"""
+    block_permille: int = 1000
+    """格擋倍率（‰，已包含在 ``multiplier_permille`` 裡；Phase 3-41b 供紀錄分開顯示）。"""
+    scale_attr: Attribute | None = None
+    """屬性加成的來源屬性（單一屬性時；雙屬性平均或不明時為 ``None``；Phase 3-41b）。"""
 
 
 class Healed(EventBase):

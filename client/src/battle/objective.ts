@@ -1,6 +1,8 @@
 // 勝利條件的顯示文字與格子標記（Phase 3-22，純函式）：選路／下一場畫面、戰鬥開場、HUD、結算與地圖上的
-// 出口格／守點格都從這裡取文字，避免各處各寫一份。
+// 出口格／守點格都從這裡取文字，避免各處各寫一份。規則說明（判定時機、誰不計入）來自 /api/glossary 的
+// `objectives`（後端 `trpg.narrative.action_info` 對照 `engine/objectives.py` 產生），前端不手寫。
 import type { BattleView, Pos } from "../api/types";
+import { glossaryEntry } from "./glossary";
 
 /** 勝利條件的種類（後端 `Objective.kind`）。 */
 export type ObjectiveKind = "eliminate" | "escape" | "defend";
@@ -37,13 +39,24 @@ function kindOf(objective: ObjectiveLike): ObjectiveKind {
   return objective.kind;
 }
 
-/** 一行說明，例如「撤離：5 輪內全員抵達出口」。 */
+/** 把說明裡的 `{rounds}` 佔位換成該場的限時輪數；沒有輪數時改寫成不帶數字的說法。 */
+function fillRounds(text: string, rounds: number | null): string {
+  if (rounds !== null) return text.replaceAll("{rounds}", String(rounds));
+  return text.replaceAll("第 {rounds} 輪", "時限的最後一輪").replaceAll("{rounds} 輪", "時限");
+}
+
+/** 一行說明，例如「撤離：5 輪內，所有還活著的我方單位抵達出口」（文字來自對照表）。 */
 export function objectiveLine(objective: ObjectiveLike): string {
   const kind = kindOf(objective);
-  const rounds = objective.rounds ?? null;
-  if (kind === "escape") return `撤離：${rounds === null ? "限時內" : `${rounds} 輪內`}全員抵達出口`;
-  if (kind === "defend") return `守點：守住守點 ${rounds === null ? "到時限" : `${rounds} 輪`}，別讓敵人站上去`;
-  return "全滅：擊倒所有敵人";
+  const entry = glossaryEntry("objectives", kind);
+  if (entry === undefined) return OBJECTIVE_NAMES[kind];
+  return `${entry.name_zh}：${fillRounds(entry.description_zh ?? "", objective.rounds ?? null)}`;
+}
+
+/** 完整的規則列（勝利與失敗的判定時機、誰不計入）；對照表沒有時為空。 */
+export function objectiveRules(objective: ObjectiveLike): string[] {
+  const entry = glossaryEntry("objectives", kindOf(objective));
+  return (entry?.rules_zh ?? []).map((l) => fillRounds(l, objective.rounds ?? null));
 }
 
 /** 圖示加名稱，例如「➜ 撤離」。 */
@@ -92,26 +105,16 @@ export function markerCard(
   if (kind === null) return null;
   const left = roundsLeft(view.objective, view.round);
   const rounds = left === null ? "" : `（剩 ${left} 輪）`;
-  if (kind === "exit") {
-    return {
-      title: `出口格・撤離${rounds}`,
-      lines: ["我方單位站上出口格就撤離戰場。", "時限內全員撤離才算勝利；時限到仍有人留在場上即敗。"],
-    };
-  }
+  const entry = glossaryEntry("objectives", kind === "exit" ? "exit" : "point");
+  const name = entry?.name_zh ?? (kind === "exit" ? "出口格" : "守點格");
   return {
-    title: `守點格・守住${rounds}`,
-    lines: ["每輪結束時，若有敵方單位站在守點格上，守點失守（戰敗）。", "守到最後一輪結束即勝；我方單位站在上面可以擋住敵人。"],
+    title: `${name}${rounds}`,
+    lines: (entry?.rules_zh ?? []).map((l) => fillRounds(l, view.objective.rounds ?? null)),
   };
 }
 
-/** 結算畫面的原因說明（一句話）；沒有對應的原因時 `null`。 */
-const END_DETAIL: Readonly<Record<string, string>> = {
-  escaped: "撤離成功：全員抵達出口。",
-  escape_failed: "撤離超時：時限到了，仍有人留在戰場上。",
-  defended: "守住了：守點撐到最後一輪結束。",
-  point_lost: "守點失守：敵人占領了守點。",
-};
-
+/** 結算畫面的原因說明（一句話，來自對照表）；沒有對應的原因時 `null`。 */
 export function endDetail(reason: string | null): string | null {
-  return reason === null ? null : (END_DETAIL[reason] ?? null);
+  if (reason === null) return null;
+  return glossaryEntry("objectives", `result_${reason}`)?.description_zh ?? null;
 }

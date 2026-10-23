@@ -4,7 +4,8 @@
 import type { ReactNode } from "react";
 import type { Action } from "../api/types";
 import type { LabeledAction } from "../battle/actions";
-import type { ActionMode } from "../battle/targeting";
+import { actionCardText, actionHint, moreActionsSummary } from "../battle/actionInfo";
+import { MORE_KINDS, type ActionMode } from "../battle/targeting";
 import { Hint } from "./Hint";
 import { usePopupMenu } from "./usePopupMenu";
 
@@ -60,12 +61,12 @@ export function TurnControls({
   return (
     <div className="turn-controls" aria-label="回合操作">
       <div className="resident-actions" aria-label="常駐動作">
-        <Hint text={`移動：點亮起的格子（目前可到 ${moveCount} 格）`}>
+        <Hint text={actionHint("move", `移動：點亮起的格子（目前可到 ${moveCount} 格）`)}>
           <button type="button" className={`resident-button${moving ? " selected" : ""}`} disabled={!enabled} onClick={onMove}>
             移動
           </button>
         </Hint>
-        <Hint text={attack === null ? "普攻：目前沒有可攻擊的目標" : "普攻：花 1 AP，點選紅框的目標"}>
+        <Hint text={actionHint("attack", attack === null ? "普攻：目前沒有可攻擊的目標" : "普攻：點選紅框的目標")}>
           <button
             type="button"
             className={`resident-button${selectedKey === attack?.key && attack !== null ? " selected" : ""}`}
@@ -75,13 +76,7 @@ export function TurnControls({
             普攻
           </button>
         </Hint>
-        <Hint
-          text={
-            run === null && runReason !== null
-              ? `不能跑步：${runReason}`
-              : "跑步：花 1 AP，本回合移動點數 +3 格（每回合 1 次）"
-          }
-        >
+        <Hint text={run === null && runReason !== null ? actionHint("run", `不能跑步：${runReason}`) : actionHint("run")}>
           <button
             type="button"
             className={`resident-button run-button${selectedKey === run?.key && run !== null ? " selected" : ""}`}
@@ -95,7 +90,7 @@ export function TurnControls({
             跑步
           </button>
         </Hint>
-        <Hint text="守護：花 1 AP，防禦 +25% 到下回合開始；相鄰有隊友時可點他，改由你替他承受單體攻擊">
+        <Hint text={actionHint("defend")}>
           <button
             type="button"
             className={`resident-button${selectedKey === defend?.key && defend !== null ? " selected" : ""}`}
@@ -105,17 +100,19 @@ export function TurnControls({
             守護
           </button>
         </Hint>
-        <button
-          type="button"
-          className="resident-button primary end-turn-button"
-          disabled={!enabled || endTurn === null}
-          onClick={() => endTurn !== null && onAction(endTurn)}
-        >
-          結束回合
-        </button>
+        <Hint text={actionHint("end_turn")}>
+          <button
+            type="button"
+            className="resident-button primary end-turn-button"
+            disabled={!enabled || endTurn === null}
+            onClick={() => endTurn !== null && onAction(endTurn)}
+          >
+            結束回合
+          </button>
+        </Hint>
       </div>
       <div className="more-actions" ref={menu.rootRef}>
-        <Hint text={count === 0 ? "目前沒有其他可用的動作" : "推擊、絆倒、互動、換位、瞄準、攀跳、裝填（只列出現在合法的）"}>
+        <Hint text={count === 0 ? "目前沒有其他可用的動作" : moreActionsSummary(MORE_KINDS)}>
           <button type="button" aria-expanded={menu.open} disabled={count === 0} onClick={menu.toggle}>
             更多動作（{count}）
           </button>
@@ -124,17 +121,19 @@ export function TurnControls({
           <ul className="action-list more-list popup-menu" aria-label="更多動作">
             {more.map((m) => (
               <li key={m.key}>
-                <button
-                  type="button"
-                  className={selectedKey === m.key ? "selected" : ""}
-                  disabled={!enabled}
-                  onClick={() => {
-                    menu.setOpen(false);
-                    onPickMode(m);
-                  }}
-                >
-                  {m.label}
-                </button>
+                <Hint text={actionCardText(m.kind)}>
+                  <button
+                    type="button"
+                    className={selectedKey === m.key ? "selected" : ""}
+                    disabled={!enabled}
+                    onClick={() => {
+                      menu.setOpen(false);
+                      onPickMode(m);
+                    }}
+                  >
+                    {m.label}
+                  </button>
+                </Hint>
               </li>
             ))}
             {extra.map((o, i) => (

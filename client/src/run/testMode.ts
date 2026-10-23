@@ -36,8 +36,3 @@ export function withTestMode<T extends Partial<CreateRunRequest>>(
   if (!testMode) return body;
   return { ...body, test_mode: true, test_equipment: equipmentIds(selection) };
 }
-
-/** 一輪畫面上「戰鬥之間」的資源提示：測試模式戰後回滿。 */
-export function resourceRuleText(testMode: boolean): string {
-  return testMode ? "測試模式：每場戰鬥結束後 HP、法力自動回滿。" : "HP、法力不會在戰鬥之間回復，只有營火會回滿。";
-}

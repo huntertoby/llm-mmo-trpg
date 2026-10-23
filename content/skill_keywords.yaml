@@ -48,7 +48,7 @@ keywords:
       - {effect: rule_change, rule: fire_mends_allies}
   - id: wet
     name_zh: 潮濕
-    description_zh: 水讓目標與地面變得潮濕；潮濕的目標容易導電與凍結。
+    description_zh: 水讓地面積水；站在水上的單位會被雷電傳導、被冰霜凍結。
     makes:
       - {effect: summon, infusion: wet}   # 3-33f2：橋接進化的第二個灌注關鍵字
       - {effect: summon, unit: summon_water_sprite}   # 3-33e1：召喚物的固有關鍵字
@@ -67,7 +67,7 @@ keywords:
       - {change: heal_permille, grade: general}
   - id: charged
     name_zh: 帶電
-    description_zh: 雷電讓目標帶電；雷電能沿著水與連鎖擴散，靜電也能累積成更強的一擊。
+    description_zh: 雷電沿水與連鎖擴散，靜電可以累積成更強的一擊。
     makes:
       - {effect: summon, infusion: charged}   # 3-33f2：橋接進化的第二個灌注關鍵字
       - {effect: summon, unit: summon_thunder_spirit}   # 3-33e1：召喚物的固有關鍵字
@@ -84,7 +84,7 @@ keywords:
       - {condition: cast_tag_this_turn, tag: lightning}
   - id: frozen
     name_zh: 冰凍
-    description_zh: 寒冰凍結目標或水面；冰凍的目標可以被擊碎，冰面讓人滑倒。
+    description_zh: 寒冰凍結目標或水面；有些技能能消耗目標的冰凍，打出大傷害或加傷；冰面讓人滑倒。
     makes:
       - {effect: summon, infusion: frozen}   # 3-33f2：橋接進化的第二個灌注關鍵字
       - {effect: summon, unit: summon_ice_spirit}   # 3-33e1：召喚物的固有關鍵字

@@ -92,11 +92,11 @@ kinds:
     default_material: wood
   - id: longgun
     slot_type: weapon
-    name_zh: 長槍
+    name_zh: 火槍
     forms:
-      - {id: flintlock, name_zh: 燧發長槍}
+      - {id: flintlock, name_zh: 燧發火槍}
       - {id: hunting, name_zh: 獵槍}
-      - {id: sniper, name_zh: 狙擊長槍}
+      - {id: sniper, name_zh: 狙擊火槍}
     materials: [iron, steel, copper, silver, gold]
     default_material: steel
   - id: shotgun

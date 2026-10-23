@@ -1,5 +1,5 @@
-"""武器擴充第一批遠程（Phase 3-24a2）的 CLI 驗收：持弩、長槍的白板主角打整場，`--log-json` 的紀錄
-重播一致，而且武器特性真的在整場戰鬥裡發動（長槍空膛後裝填、弩一箭射中多名敵人）。"""
+"""武器擴充第一批遠程（Phase 3-24a2）的 CLI 驗收：持弩、火槍的白板主角打整場，`--log-json` 的紀錄
+重播一致，而且武器特性真的在整場戰鬥裡發動（火槍空膛後裝填、弩一箭射中多名敵人）。"""
 
 from __future__ import annotations
 
@@ -54,7 +54,7 @@ def test_blank_ranged_heroes_play_a_whole_battle_and_replay_exactly(
     assert main([*argv, "--log-json", str(log)]) == 0
     capsys.readouterr()
     data = json.loads(log.read_text(encoding="utf-8"))
-    assert data["format"] == "trpg-battle-log/57"
+    assert data["format"] == "trpg-battle-log/58"
     assert fired(data["events"]), f"{build} 沒有發動武器特性"
     assert main(["battle", "replay", str(log)]) == 0
     assert "重播驗證通過" in capsys.readouterr().out

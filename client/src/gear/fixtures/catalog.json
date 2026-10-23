@@ -1114,7 +1114,7 @@
   },
   {
    "id": "longgun",
-   "name_zh": "長槍",
+   "name_zh": "火槍",
    "weapon_class": "ranged",
    "two_handed": true
   },

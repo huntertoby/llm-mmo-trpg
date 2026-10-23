@@ -91,7 +91,7 @@ class Attack(_ActionBase):
 
 
 class Reload(_ActionBase):
-    """裝填（Phase 3-24a2，**武器動作**：只有帶彈匣的武器——長槍——才有，不算進基本動作的 10 個
+    """裝填（Phase 3-24a2，**武器動作**：只有帶彈匣的武器——火槍——才有，不算進基本動作的 10 個
     上限，見 :data:`WEAPON_ACTION_TYPES`）：花武器的 ``reload_ap`` AP 裝滿彈匣；空膛時才合法。"""
 
     type: Literal["reload"] = "reload"

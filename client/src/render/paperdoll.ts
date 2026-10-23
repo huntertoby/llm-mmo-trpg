@@ -438,8 +438,8 @@ function drawCrossbow(ctx: Ctx, it: GearItem, c: string, front: boolean): void {
   });
 }
 
-/** 長槍（火器，Phase 3-24a2；形制 `flintlock` 燧發長槍、`hunting` 獵槍、`sniper` 狙擊長槍）：槍口朝前下方，
- *  槍托在手後；槍身金屬色取材質，槍托固定木色（狙擊長槍的槍托是暗色金屬），燧發槍有擊錘、獵槍有木製護木、狙擊槍有瞄準鏡與腳架。 */
+/** 火槍（火器，Phase 3-24a2；形制 `flintlock` 燧發火槍、`hunting` 獵槍、`sniper` 狙擊火槍）：槍口朝前下方，
+ *  槍托在手後；槍身金屬色取材質，槍托固定木色（狙擊火槍的槍托是暗色金屬），燧發槍有擊錘、獵槍有木製護木、狙擊槍有瞄準鏡與腳架。 */
 function drawLongGun(ctx: Ctx, it: GearItem, c: string, d: string, front: boolean): void {
   ctx.rotate(front ? 0.35 : -0.35);
   const s = front ? -1 : 1;

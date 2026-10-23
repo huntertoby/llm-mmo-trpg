@@ -17,6 +17,8 @@ import type { UnitNames } from "../battle/units";
 import { GearIcon } from "./GearIcon";
 import { PartTip } from "./PartTip";
 import { GearTotals } from "./GearTotals";
+import { Hint } from "./Hint";
+import { actionCardText } from "../battle/actionInfo";
 
 interface Props {
   unit: UnitView | null;
@@ -77,7 +79,15 @@ export function UnitInfo({ unit, names, heroId, skills, view }: Props) {
         <tbody>
           {rows.map(([k, v]) => (
             <tr key={k}>
-              <th>{k}</th>
+              <th>
+                {k === "耐力" ? (
+                  <Hint text={actionCardText("stamina")}>
+                    <span className="has-hint">{k}</span>
+                  </Hint>
+                ) : (
+                  k
+                )}
+              </th>
               <td>{v}</td>
             </tr>
           ))}

@@ -224,6 +224,20 @@ def _rolls_text(rolls: tuple[int, ...] | list[int]) -> str:
     return f"［骰 {'+'.join(str(r) for r in rolls)}］" if rolls else ""
 
 
+def _damage_parts_text(e: DamageDealt) -> str:
+    """傷害組成（Phase 3-41b）：「［骰 4 ＋ 力量加成 4.8 ＋ 固定值 1］」；各項加總後再乘上後面列出的
+    倍率，最後無條件捨去成整數。沒有任何組成（百分比傷害、致命地形）時不顯示。"""
+    parts: list[str] = []
+    if e.rolls:
+        parts.append("骰 " + "+".join(str(r) for r in e.rolls))
+    if e.scaled_permille:
+        label = "屬性" if e.scale_attr is None else e.scale_attr.display_name
+        parts.append(f"{label}加成 {e.scaled_permille / _PERMILLE:.1f}".replace(".0", ""))
+    if e.flat:
+        parts.append(f"固定值 {e.flat}")
+    return f"［{' ＋ '.join(parts)}］" if parts else ""
+
+
 @dataclass(frozen=True)
 class _View:
     """描述一個事件所需的名稱查表（單位名稱、狀態名稱）與戰鬥狀態。"""
@@ -484,7 +498,12 @@ def _attack(e: AttackRolled, v: _View) -> str:
     else:
         label = "優勢" if e.advantage == "advantage" else "劣勢"
         dice = f"d20（{label} {e.rolls[0]}、{e.rolls[1]}）={e.natural}"
-    parts = [dice, f"修正 {_signed(e.hit_modifier)}", f"熟練 {_signed(e.proficiency)}"]
+    defense = f"{e.defense_value_permille / _PERMILLE:g}"
+    parts = [
+        dice,
+        f"攻防修正 {_signed(e.hit_modifier)}（攻擊 {e.attack_value} 對防禦 {defense}）",
+        f"熟練 {_signed(e.proficiency)}",
+    ]
     parts += _bonus_parts(e)
     cover_note = ""
     if e.cover:
@@ -506,7 +525,7 @@ def _attack(e: AttackRolled, v: _View) -> str:
         verb = f"從背後{verb}"
     return (
         f"  {v.name[e.attacker_id]} {verb} {v.name[e.target_id]}：{' '.join(parts)} = {e.total}"
-        f"（目標 {e.target_number}）→ {verdict}{cover_note}"
+        f"（需 ≥ {e.target_number}）→ {verdict}{cover_note}"
     )
 
 
@@ -583,9 +602,14 @@ def _damage(e: DamageDealt, v: _View) -> str:
         mod = f"（元素修正 ×{e.element_mod_ppm / _PPM:g}）"
     if e.weather_permille != _PERMILLE:
         mod += f"（天氣 ×{e.weather_permille / _PERMILLE:g}）"
-    rest = e.multiplier_permille * _PERMILLE // e.pierce_permille  # 扣掉穿透折扣後的格擋／加成
-    if rest != _PERMILLE:
-        mod += f"（格擋/加成 ×{rest / _PERMILLE:g}）"
+    if e.block_permille != _PERMILLE:
+        mod += f"（格擋 ×{e.block_permille / _PERMILLE:g}）"
+    # 扣掉穿透折扣與格擋後，剩下的是技能／裝備／狀態的傷害加成
+    divisor = e.pierce_permille * max(e.block_permille, 1)
+    bonus = e.multiplier_permille * _PERMILLE * _PERMILLE // divisor if e.block_permille else 0
+    bonus = bonus or _PERMILLE
+    if bonus != _PERMILLE:
+        mod += f"（加成 ×{bonus / _PERMILLE:g}）"
     if e.pierce_permille != _PERMILLE:
         mod += f"（穿透後方 ×{e.pierce_permille / _PERMILLE:g}）"
     if e.status_ppm != _PPM:
@@ -594,7 +618,7 @@ def _damage(e: DamageDealt, v: _View) -> str:
     linked = f"（{e.redirected} 點轉給連結者）" if e.redirected else ""
     burst = f"（爆骰 ×{e.exploded}）" if e.exploded else ""
     return (
-        f"    {v.name[e.target_id]} 受到 {e.amount} 點{kind}傷害{_rolls_text(e.rolls)}{burst}"
+        f"    {v.name[e.target_id]} 受到 {e.amount} 點{kind}傷害{_damage_parts_text(e)}{burst}"
         f"{mod}{shield}{linked}，HP {e.hp_before} → {e.hp_after}"
     )
 
@@ -652,10 +676,10 @@ def _status_save(e: StatusSaveRolled, v: _View) -> str:
     dr = "，遞減中" if e.diminished else ""
     return (
         f"  {v.name[e.attacker_id]} 對 {v.name[e.target_id]} 施加「{v.statuses[e.status_id]}」"
-        f"（{e.attack_attr.display_name} {e.attack_value} vs "
+        f"（{e.attack_attr.display_name} {e.attack_value} 對 "
         f"{e.save_attr.display_name} {e.defense_value}{dr}）：d20={e.natural} "
-        f"修正 {_signed(e.modifier)} 熟練 {_signed(e.proficiency)} = {e.total}"
-        f"（目標 {e.target_number}）→ {verdict}"
+        f"攻防修正 {_signed(e.modifier)} 熟練 {_signed(e.proficiency)} = {e.total}"
+        f"（需 ≥ {e.target_number}）→ {verdict}"
     )
 
 
@@ -1328,7 +1352,7 @@ def _check_rolled(e: CheckRolled, v: _View) -> str:
     verdict = "通過" if e.success else "失敗"
     return (
         f"  {v.name[e.unit_id]} {e.attr.display_name}檢定：d20={e.roll} "
-        f"{_signed(e.modifier)} = {e.total}（DC {e.dc}）→ {verdict}"
+        f"屬性修正 {_signed(e.modifier)} = {e.total}（需 ≥ {e.dc}）→ {verdict}"
     )
 
 
@@ -1345,8 +1369,8 @@ def _maneuver(e: ManeuverRolled, v: _View) -> str:
     resist = f" 抵抗 {_signed(-e.resist_bonus)}" if e.resist_bonus else ""
     return (
         f"  {v.name[e.attacker_id]} 對 {v.name[e.target_id]} 使出{kind}：d20={e.natural} "
-        f"修正 {_signed(e.modifier)} 熟練 {_signed(e.proficiency)}{resist} = {e.total}"
-        f"（目標 {e.target_number}）→ {verdict}"
+        f"攻防修正 {_signed(e.modifier)} 熟練 {_signed(e.proficiency)}{resist} = {e.total}"
+        f"（需 ≥ {e.target_number}）→ {verdict}"
     )
 
 
@@ -1366,7 +1390,7 @@ def reaction_name(state: BattleState, reaction_id: str) -> str:
 
 @_handles(ReactionTriggered)
 def _reaction_triggered(e: ReactionTriggered, v: _View) -> str:
-    cost = f"（耐力 −{e.stamina_spent}）" if e.stamina_spent else ""
+    cost = f"（消耗耐力 {e.stamina_spent}）" if e.stamina_spent else ""
     return f"  ⟳ {v.name[e.unit_id]} 反應：{reaction_name(v.state, e.reaction)}{cost}"
 
 

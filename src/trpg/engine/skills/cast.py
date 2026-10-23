@@ -699,7 +699,7 @@ class Cast:
         bonus += scale_bonus(self.ctx.state, self.caster, unit, spec.scaling)
         bonus = bonus * self.modifier(modifiers.damage_permille, unit) // PERMILLE
         bonus = bonus * gamble // PERMILLE
-        if self.gun:  # 火器：站在這個距離的傷害修正（長槍遠距 +25%、貼臉 −50%、霰彈槍衰減）
+        if self.gun:  # 火器：站在這個距離的傷害修正（火槍遠距 +25%、貼臉 −50%、霰彈槍衰減）
             bonus = bonus * range_damage_permille(self.caster, manhattan(self.caster.xy, unit.xy))
             bonus //= PERMILLE
         behind = self.behind_permille(unit)
@@ -711,6 +711,9 @@ class Cast:
             dice=dice,
             flat=flat,
             scaled_permille=scaled,
+            scale_attr=(
+                self.skill.scaling_attr if self.skill.secondary_scaling_attr is None else None
+            ),
             crit=roll is not None and roll.crit,
             min_damage=self.ctx.core.min_damage_on_hit,
             explode_max=explode_max,
@@ -721,6 +724,7 @@ class Cast:
             * behind
             // (PERMILLE * PERMILLE * PERMILLE),
             pierce_permille=behind,
+            block_permille=block,
         )
 
     def physical_element(self) -> Element:

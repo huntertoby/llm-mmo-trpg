@@ -288,6 +288,8 @@ class RunResponse(_ApiModel):
     """測試模式的一輪（Phase 3-39；不計入統計，介面要標記）。"""
     test_equipment: dict[str, str] = Field(default_factory=dict)
     """測試模式挑的裝備（欄位 → 物品 ID）。"""
+    resource_rule_zh: str = ""
+    """戰鬥之間 HP、法力怎麼回復的說明（Phase 3-41b，由 ``roguelite.yaml`` 的營火設定產生）。"""
 
 
 class RunBattleResponse(_ApiModel):

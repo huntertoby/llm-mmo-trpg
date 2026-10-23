@@ -558,7 +558,7 @@ builds:
       max_mana: 40
       skills: []
 
-  # Phase 3-24a2：武器擴充第一批的遠程白板主角（弩、長槍；屬性比照白板戰士，敏捷是縮放屬性所以配 4 點時偏敏捷）。
+  # Phase 3-24a2：武器擴充第一批的遠程白板主角（弩、火槍；屬性比照白板戰士，敏捷是縮放屬性所以配 4 點時偏敏捷）。
 
   - id: build_blank_crossbow
     name_zh: 白板弩手
@@ -580,7 +580,7 @@ builds:
   - id: build_blank_longgun
     name_zh: 白板槍手
     blank: true
-    theme_zh: 沒有任何技能、只拿長槍的射手（雙手）。單發傷害高：開火後要花 1 AP 裝填，站定開火更準，貼臉則大幅削弱。
+    theme_zh: 沒有任何技能、只拿火槍的射手（雙手）。單發傷害高：開火後要花 1 AP 裝填，站定開火更準，貼臉則大幅削弱。
     hero:
       id: build_blank_longgun
       name_zh: 白板槍手

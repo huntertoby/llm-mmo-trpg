@@ -294,7 +294,7 @@ export const BASIC_ACTION_KINDS: readonly string[] = [
   "vault",
 ];
 export const BASIC_ACTION_LIMIT = 10;
-/** 武器動作（Phase 3-24a2）：只有特定武器才有，不算進基本動作的上限；目前只有裝填（長槍空膛時才出現在「更多動作」）。 */
+/** 武器動作（Phase 3-24a2）：只有特定武器才有，不算進基本動作的上限；目前只有裝填（火槍空膛時才出現在「更多動作」）。 */
 export const WEAPON_ACTION_KINDS: readonly string[] = ["reload"];
 
 /** 裝備充能（Phase 3G-G3a）：每條充能詞條一個模式，放在「更多動作」選單最後（只在層數與 AP 足夠時伺服器才列出）。 */

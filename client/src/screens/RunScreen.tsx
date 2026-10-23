@@ -6,7 +6,6 @@ import { objectiveBadge } from "../battle/objective";
 import { battleName, runView, writeCurrentRun } from "../run/flow";
 import { RunHeroPanel } from "../run/RunHeroPanel";
 import { SkillPointsSection } from "../run/SkillPointsSection";
-import { resourceRuleText } from "../run/testMode";
 import { TestModeBadge } from "../ui/TestModeBadge";
 import { ErrorBanner } from "../ui/ErrorBanner";
 import { primeSkillCard } from "../ui/useSkillCards";
@@ -173,7 +172,7 @@ export function RunScreen({ initial, autoResume = false, onHome, onNewRun }: Pro
                   {view.goalBadge}：{view.goalLine}
                 </div>
                 <div className="muted small">敵人：{view.enemies.join("、")}</div>
-                <div className="muted small">隊友：標準隊友 2 名（滿狀態）；{resourceRuleText(run.test_mode)}</div>
+                <div className="muted small">隊友：標準隊友 2 名（滿狀態）；{run.resource_rule_zh}</div>
                 <div className="run-actions">
                   <button type="button" className="primary" disabled={busy} onClick={() => void enterBattle()}>
                     {busy ? "載入中……" : view.buttonLabel}
