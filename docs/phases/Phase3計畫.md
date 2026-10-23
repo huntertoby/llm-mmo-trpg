@@ -2140,6 +2140,13 @@ PM 驗收後請使用者試玩一整輪（`docs/專案計畫.md` 第 14 節 🎮
 4. 行為一致測試：工坊顯示的係數＝預算器實際用的係數；射程 1、4、10、武器射程、自身各一組。
 5. 驗收：pytest（skillgen、content、llm、api、roguelite、narrative、cli 含 slow）、vitest、build、ruff、format、mypy。報告 `Phase3-49報告.md`。
 
+### 58.1 3-49 驗收（2026-10-24，開發 PM）
+
+- 報告 `Phase3-49報告.md`。射程係數進 `content/skill_budget.yaml`（`range_baseline: 4`、`range_step_permille: 50`）；工坊明細與 `trpg skills budget` 多「射程 N：×係數」；組合器與 LLM 補數值自動照新預算；變奏的舊射程加價移除（玩法 PM 確認符合 #53）；射程 0 視為沒有射程（係數 1.0，玩法 PM 確認）。重算腳本 `scripts/range_budget_report.py`。
+- 內建 5 招超出範圍 → 玩法 PM 給數值，開發 PM 套用（`known_budget_exceptions` 清空）：連段雷光、凍結 射程 5→4（98.9%、97.9%）；照明彈 射程 6→4（97.7%）；震地推倒 射程 2→3（73.0%）；破甲連擊 追擊段 1d6→1d8（72.0%，不用改射程）。
+- 合併後全量：agent 沒跑 `tests/engine`，漏了 3 個寫死預算點數的測試（驅散、刻印、定時炸彈；測試草稿射程 5 → ×1.05）→ 改成乘 `e.range`。**教訓：預算或內容的變更，相關測試一定要含 `tests/engine`。** 技能總數測試合併 3-48f 後為 218。
+- 檢查（main）：pytest engine 2806、content／skillgen／sim 2799、narrative／api／roguelite 668、cli（含 slow）148；vitest 939、build、ruff、mypy、lint-imports。
+
 ## 59. Phase 3-48h｜工坊：違規的選項事前停用並附原因（使用者：「是按得出來但是不允許」；sonnet；約 0.3 段；3-48d 之後，同樣改 `trpg.skillgen.options`）
 
 起因：使用者做「自暈＋不死」（自身形狀、光環骨架、暈眩＋免死），每一步都選得出來，最後才紅框列出 4 條違規（暈眩限單體且冷卻 4、自身形狀不得打敵人、光環骨架不得有敵方效果、沒接關鍵字）。現況：3H-8 的 `_with_availability`／`composition_block` 只停用「整個原語」，沒有往下停用 **對象** 與 **狀態** 等參數選項。
