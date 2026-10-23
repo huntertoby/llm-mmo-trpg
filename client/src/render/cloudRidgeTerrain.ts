@@ -163,19 +163,19 @@ function cliffLip(ctx: Ctx, r: () => number, p: readonly [number, number, number
   ctx.stroke();
 }
 
-/** 雲海山谷：往下是流動的白霧，邊緣是青石崖。 */
+/** 雲海山谷：往下是流動的白霧，邊緣是青石崖。致命地形要比能走的地板暗（美術 PM 3-37b 驗收：底色加深、霧團減淡）。 */
 function cloudChasm(ctx: Ctx, s: TileArtSpec): void {
   const r = rng(s.x, s.y, 105);
   const g = ctx.createLinearGradient(0, 0, 0, T);
-  g.addColorStop(0, "#5c716e");
-  g.addColorStop(1, "#aebdb8");
+  g.addColorStop(0, "#26333a");
+  g.addColorStop(1, "#5f727a");
   ctx.fillStyle = g;
   ctx.fillRect(0, 0, T, T);
   // 流動的雲：幾道橫向的白霧
   for (let i = 0; i < 4; i++) {
     const cy = 6 + i * 12 + r() * 6;
     const rg = ctx.createRadialGradient(r() * T, cy, 1, r() * T, cy, 18 + r() * 10);
-    rg.addColorStop(0, "rgba(232,232,224,0.75)");
+    rg.addColorStop(0, "rgba(232,232,224,0.45)");
     rg.addColorStop(1, "rgba(232,232,224,0)");
     ctx.fillStyle = rg;
     ctx.fillRect(0, 0, T, T);

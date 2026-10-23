@@ -1876,6 +1876,7 @@ PM 驗收後請使用者試玩一整輪（`docs/專案計畫.md` 第 14 節 🎮
 
 - PM 合併（無衝突，`bfc2505`）；ruff、format、mypy、`tests/content`＋`cli`＋`api`＋`narrative`＋`skillgen`＋`llm` 2290、typecheck、vitest 816、`pnpm build` 全過；`bridge_chasm`、`dark_forest` 種子 1 重播一致。雲嶺 7 種地形、9 種物件畫法；`canyon_rock`、`plank_walk`、`paddy`、`water_tint: green`；霧天薄霧加濃；正式地圖 `bridge_chasm`／`dark_forest` 標雲嶺並改名「雲海吊橋」「竹林」；區域第三種樣式（不影響我方）與圖例；`trpg content check` 印出 `map_warnings`。開發樣張頁 `client/region-gallery.html`；截圖 `docs/art/3-37b-*.jpg`。報告 `Phase3-37b報告.md`。
 - 待 PM 決定 → 決定：#2「影響友方、我方施放但 `harmful`」判為有害 → 接受；#3 薄霧濃度與雲海漸層 → **美術 PM 驗收時可直接調**；#1、#4、#5 → 接受（竹林實戰畫面請美術 PM 驗收時看）。
+- **美術 PM 驗收通過（2026-10-23）**：region-gallery 原尺寸與實戰竹林 OK、第三種樣式與圖例 OK、薄霧不改；**小修（PM 已做）**：雲海山谷太亮像地板 → `cloudChasm` 底色 `#5c716e→#aebdb8` 改 `#26333a→#5f727a`、白霧團 alpha 0.75 → 0.45。紀錄 `docs/art/3-37b檢查.md`、`3-37b-cloud-chasm.png`。另一建議「可燃小火苗平時藏起來」→ 交專案 PM 問使用者。
 
 ### 41.3 3-37c 雲嶺服裝部件（sonnet；可後放）
 
