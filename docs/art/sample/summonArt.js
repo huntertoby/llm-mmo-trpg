@@ -122,6 +122,36 @@ window.SummonArt = (() => {
       ctx.restore();
       return;
     }
+    if (s.variant === "bear") {
+      // 熊（形態 #48）：厚重、圓背、粗腿、圓耳；熊爪露在前腳
+      shadow(ctx, 17, 5);
+      const c = "#6a4a32", d = "#4a3222";
+      for (const x of [-10, -5, 6, 11]) fill(ctx, x < 0 ? d : c, () => ctx.roundRect(x - 2.6, -11, 5.2, 11, 2));
+      for (const x of [6, 11]) fill(ctx, "#e8e0d0", () => { ctx.moveTo(x - 2, 0); ctx.lineTo(x - 1, 2); ctx.lineTo(x, 0); ctx.lineTo(x + 1, 2); ctx.lineTo(x + 2, 0); ctx.closePath(); });
+      fill(ctx, c, () => { ctx.moveTo(-15, -9); ctx.quadraticCurveTo(-16, -26, -2, -27); ctx.quadraticCurveTo(12, -27, 14, -12); ctx.lineTo(14, -8); ctx.lineTo(-15, -8); ctx.closePath(); });
+      fill(ctx, "#8a6648", () => ctx.ellipse(1, -11, 10, 3, 0, 0, TAU));
+      fill(ctx, c, () => ctx.ellipse(15, -19, 7, 6, 0, 0, TAU));
+      fill(ctx, "#a08060", () => ctx.ellipse(20, -17.5, 3.5, 2.6, 0, 0, TAU));
+      fill(ctx, "#1d1a22", () => ctx.arc(23, -18, 1.1, 0, TAU));
+      for (const x of [11, 17]) fill(ctx, d, () => ctx.arc(x, -25, 2.6, 0, TAU));
+      if (side !== null) fill(ctx, "#1d1a22", () => ctx.arc(17, -21, 1, 0, TAU));
+      ctx.restore();
+      return;
+    }
+    if (s.variant === "cat") {
+      // 貓（形態 #48）：細長、低姿態、長尾上翹、尖耳、亮黃眼
+      shadow(ctx, 14, 3.5);
+      const c = "#3a3440", d = "#26222c";
+      for (const x of [-9, -5, 7, 10]) fill(ctx, x < 0 ? d : c, () => ctx.roundRect(x - 1.3, -7, 2.6, 7, 1));
+      fill(ctx, c, () => ctx.ellipse(0, -9, 12, 4, -0.05, 0, TAU));
+      ctx.strokeStyle = c; ctx.lineWidth = 2.6; ctx.lineCap = "round"; ctx.beginPath(); ctx.moveTo(-11, -10); ctx.quadraticCurveTo(-20, -12, -18, -22); ctx.stroke(); ctx.lineCap = "butt";
+      fill(ctx, c, () => ctx.ellipse(13, -12, 4.6, 4, 0, 0, TAU));
+      for (const x of [11, 15]) fill(ctx, c, () => { ctx.moveTo(x - 2, -14.5); ctx.lineTo(x, -20); ctx.lineTo(x + 2, -14.5); ctx.closePath(); });
+      if (side !== null) fill(ctx, "#ffe14d", () => { ctx.ellipse(15, -12.5, 1.3, 0.9, 0, 0, TAU); });
+      for (const x of [7, 10]) fill(ctx, "#e8e0d0", () => { ctx.moveTo(x - 1.2, 0); ctx.lineTo(x, 1.6); ctx.lineTo(x + 1.2, 0); ctx.closePath(); });
+      ctx.restore();
+      return;
+    }
     // 狼
     shadow(ctx, 15, 4);
     const c = "#7a7a82", d = "#55555c";
@@ -180,6 +210,7 @@ window.SummonArt = (() => {
     if (s.variant === "shade") return { look: { skin: "#3a3448", eyes: "#d06aff", hair: "none" }, gear: { body: { kind: "leather", material: "leather", color: "#2a2632" }, head: { kind: "hood", material: "cloth", color: "#1f1c26" }, main_hand: { kind: "dagger", material: "steel" }, off_hand: { kind: "dagger", material: "steel" }, feet: { kind: "boots", material: "leather", color: "#1f1c26" } } };
     if (s.variant === "guardian") return { look: { skin: "#f4ecd0", hair: "long", hairColor: "#fff3c4", eyes: "#fffbe6" }, gear: { body: { kind: "robe", material: "cloth", color: "#f2e6c8" }, off_hand: { kind: "shield_round", material: "gold" }, feet: { kind: "shoes", material: "cloth", color: "#e8dcc0" } } };
     if (s.variant === "afterimage") return T.hero_fighter;
+    if (s.variant === "demon") return { look: { skin: "#5a3a6a", eyes: "#ff5a8a", hair: "none" }, gear: { body: { kind: "leather", material: "leather", color: "#2a1a30" }, head: { kind: "horned_helm", material: "iron", color: "#2a1a2a" }, main_hand: { kind: "sword", material: "steel", color: "#6a5a8a" }, off_hand: { kind: "dagger", material: "steel", color: "#6a5a8a" }, feet: { kind: "boots", material: "leather", color: "#1f1426" } } };
     const sk = T.summon_skeleton_warrior;
     return s.trait === "shield" ? { ...sk, gear: { ...sk.gear, off_hand: { kind: "shield_round", material: "wood", color: "#6a5a4a" } } } : sk;
   }
@@ -187,6 +218,7 @@ window.SummonArt = (() => {
     shade: { alpha: 0.72, glow: "#7a4ab0" },
     guardian: { alpha: 0.8, glow: "#ffe9a8" },
     afterimage: { alpha: 0.5, tint: "#8fc8ff", glow: "#8fc8ff" },
+    demon: { alpha: 1, glow: "#a77bff" },
   };
 
   const BODY = { spirit, construct, beast, plant, totem };
