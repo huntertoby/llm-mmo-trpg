@@ -106,3 +106,50 @@ def test_plainify_translates_fields_and_ids() -> None:
     text = plainify("骨架 strike：effects[1]（damage）的 weapon_req 只能是 melee、ranged", lib)
     assert "strike" not in text and "damage" not in text and "weapon_req" not in text
     assert "第 2 個效果" in text and "近戰武器" in text and "遠程武器" in text
+
+
+def _nested_drafts() -> list[dict[str, Any]]:
+    """3-48d：四種巢狀原語各一份草稿（內建示範技能的欄位），含正常的與故意寫錯的子效果。"""
+    keys = (
+        "skeleton",
+        "kind",
+        "category",
+        "weapon_req",
+        "scaling_attr",
+        "tier",
+        "ap_cost",
+        "name_zh",
+        "shape",
+        "effects",
+        "condition",
+        "cost",
+        "rarity",
+    )
+    lib = library()
+    out: list[dict[str, Any]] = []
+    for skill_id in (
+        "skill_detonate_burning",
+        "skill_fire_wall",
+        "skill_blood_sacrifice",
+        "skill_ash_harvest",
+    ):
+        dumped = lib.skills[skill_id].model_dump(mode="json", exclude_none=True)
+        draft = {k: dumped[k] for k in keys if k in dumped}
+        out.append(draft)
+        for group in ("then", "effects", "win", "lose", "on_kill"):
+            for bad in ({"type": "taunt"}, {"type": "zone"}, {"type": "damage"}, {}):
+                mutated = copy.deepcopy(draft)
+                for effect in mutated["effects"]:
+                    if group in effect:
+                        effect[group] = [bad]
+                out.append(mutated)
+    return out
+
+
+def test_nested_level_texts_have_no_english_identifiers() -> None:
+    found: dict[str, str] = {}
+    for draft in _nested_drafts():
+        for text in _player_texts(draft):
+            for word in _leaks(text):
+                found.setdefault(word, text)
+    assert found == {}, found

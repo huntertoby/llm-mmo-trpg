@@ -8,8 +8,7 @@
 2. 處理完仍含英文詞的，玩家版改用原語的 ``player_description``（只有原語選項有）；都沒有就留空
    （前端不顯示說明）。原文放在 ``dev_description_zh``，``?dev=1`` 才顯示。
 
-巢狀效果（``effects`` 型參數）在 3-48d 開放前，玩家模式隱藏（``later`` 旗標；前端依旗標過濾）。
-要開放時把 :data:`HIDE_NESTED_EFFECTS` 改成 ``False``。
+巢狀效果在 3-48d 開放（``option_nested``）；``later`` 旗標保留給之後還沒開放的選項。
 
 :func:`content_dev_texts`、:func:`option_dev_texts` 列出全部「含英文代號或開發者語氣」的說明
 （匯出給玩法 PM 改寫，``scripts/export_workshop_descriptions.py``）。
@@ -26,17 +25,12 @@ from trpg.skillgen.option_models import Choice, FieldSpec
 from trpg.skillgen.player_text import plainify
 
 __all__ = [
-    "HIDE_NESTED_EFFECTS",
     "content_dev_texts",
     "has_dev_text",
     "localize",
     "option_dev_texts",
     "playerize",
 ]
-
-HIDE_NESTED_EFFECTS = True
-"""巢狀效果（消耗狀態後的效果、賭注的贏／輸分支、持續區域的效果、擊殺時效果）先不開放（3-48c）；
-3-48d 開放一層巢狀時改成 ``False``。"""
 
 _ENGLISH = re.compile(r"(?<![A-Za-z0-9_])[A-Za-z_][A-Za-z0-9_]+")
 _ALLOWED = {"AP", "HP", "MP", "YAML"}
@@ -93,13 +87,6 @@ def _player_text(
     return (fallback or ""), text
 
 
-def _hide_nested(fields: tuple[FieldSpec, ...]) -> tuple[FieldSpec, ...]:
-    return tuple(
-        f.model_copy(update={"later": True}) if f.type == "effects" and HIDE_NESTED_EFFECTS else f
-        for f in fields
-    )
-
-
 def _choice(
     choice: Choice,
     library: ContentLibrary,
@@ -112,15 +99,11 @@ def _choice(
     primitive = None if primitives is None else primitives.get(str(choice.value))
     fallback = None if primitive is None else primitive.player_description
     text, dev = _player_text(choice.description_zh, library, own, fallback)
-    params = choice.params
-    if primitive is not None:  # 原語自己的巢狀效果參數（例：傷害的擊殺時效果）先不開放
-        params = _hide_nested(params)
     return choice.model_copy(
         update={
             "description_zh": text,
             "dev_description_zh": dev,
-            "params": playerize(params, library, own),
-            "later": HIDE_NESTED_EFFECTS and primitive is not None and primitive.nested_core,
+            "params": playerize(choice.params, library, own),
         }
     )
 
