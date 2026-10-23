@@ -71,7 +71,7 @@ export interface Highlights {
 
 const T = TILE_SIZE;
 /** 可燃小火苗平時的透明度（3-38）。 */
-export const FLAME_DIM = 0.28;
+export const FLAME_DIM = 0.4;
 const BACKGROUND = 0x15151c;
 
 const OVERLAY_COLORS: Readonly<Record<OverlayKind, number>> = {
