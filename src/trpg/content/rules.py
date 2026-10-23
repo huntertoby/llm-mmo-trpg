@@ -115,6 +115,10 @@ class ResourceRules(ContentModel):
     stamina: ResourcePool = ResourcePool(
         attrs=(Attribute.STR, Attribute.DEX, Attribute.CON), per_point=2
     )
+    stamina_regen: int = Field(default=5, ge=0)
+    """耐力每回合開始回復的點數（Phase 3H-5，07 7.2；初值，平衡待辦 B15）。只套用在
+    ``scaled_resources`` 的範本（主角）；不超過上限。戰後回滿見 ``roguelite.yaml`` 的
+    ``refill_after_battle``。"""
 
     def pool(self, kind: ResourceKind) -> ResourcePool:
         return self.mana if kind == "mana" else self.stamina
@@ -534,6 +538,10 @@ class CoreRules(ContentModel):
         if not template.scaled_resources:
             return base
         return self.resources.max_for(kind, base, template.attributes)
+
+    def template_stamina_regen(self, template: UnitTemplate) -> int:
+        """範本建立出的單位每回合開始回復的耐力：主角（``scaled_resources``）才有（3H-5）。"""
+        return self.resources.stamina_regen if template.scaled_resources else 0
 
     def run_max_hp(self, base_hp: int, con: int, level: int) -> int:
         """roguelite 主角的最大 HP：``max_hp_for(基礎 HP ＋ 等級加成, 體質)``。戰鬥中的主角單位

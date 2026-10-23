@@ -321,6 +321,7 @@ class UnitState:
     downed: bool = False
     stamina: int = 0
     max_stamina: int = 0
+    stamina_regen: int = 0  # 每回合開始回復的耐力（3H-5；只有主角）
     reactions: tuple[ReactionRule, ...] = ()
     reactions_used: int = 0
     escaped: bool = False
@@ -503,6 +504,7 @@ class UnitState:
             downed=self.downed,
             stamina=self.stamina,
             max_stamina=self.max_stamina,
+            stamina_regen=self.stamina_regen,
             reactions=self.reactions,
             reactions_used=self.reactions_used,
             escaped=self.escaped,

@@ -89,6 +89,8 @@ def start_turn(ctx: Ctx, unit_id: UnitId) -> None:
     unit.gear_turn_counts = {}  # 裝備觸發的每回合 1 次（3G-G3a）
     unit.ap_pending = 0  # grant_ap 給的、等到這個回合才加上的 AP（Phase 3C-4a）
     unit.move_points = move_points_for_turn(ctx.rules, unit)
+    gained = max(0, min(unit.stamina_regen, unit.max_stamina - unit.stamina))  # 耐力回復（3H-5）
+    unit.stamina += gained
     if summon_inert(state, unit):
         unit.ap = 0  # 圖騰（Phase 3D-4b）、土牆（3-33e2a）：不攻擊、不施放，只有回合開始的特性
     ctx.emit(
@@ -98,6 +100,9 @@ def start_turn(ctx: Ctx, unit_id: UnitId) -> None:
         move_points=unit.move_points,
         mana=unit.mana,
         max_mana=unit.max_mana,
+        stamina=unit.stamina,
+        max_stamina=unit.max_stamina,
+        stamina_gained=gained,
     )
     _tick_cooldowns(ctx, unit)
     expire_activations(ctx, unit)  # 限時傳說到期（Phase 3D-6）

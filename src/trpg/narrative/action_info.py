@@ -8,6 +8,7 @@
 
 from __future__ import annotations
 
+from collections.abc import Sequence
 from dataclasses import dataclass
 
 from trpg.content.rules import CoreRules
@@ -47,7 +48,7 @@ def _ap(core_cost: int) -> str:
     return f"花 {core_cost} AP"
 
 
-def _basic_actions(core: CoreRules) -> list[InfoText]:
+def _basic_actions(core: CoreRules, refill: Sequence[str] = ()) -> list[InfoText]:
     dice = core.collision_damage_dice
     return [
         InfoText(
@@ -203,8 +204,8 @@ def _basic_actions(core: CoreRules) -> list[InfoText]:
             (
                 "武器技花耐力、法術技花法力；格擋等反應也花耐力，共用同一個池。耐力不足就不能"
                 "施放武器技或反應",
-                f"每輪最多反應 {core.reactions_per_round} 次；戰鬥中不會自動回復。一輪中和法力一樣"
-                "在戰鬥之間不回復，營火回滿",
+                f"每輪最多反應 {core.reactions_per_round} 次",
+                _stamina_recovery(core, refill),
             ),
         ),
         InfoText(
@@ -219,9 +220,19 @@ def _basic_actions(core: CoreRules) -> list[InfoText]:
     ]
 
 
-def action_texts(core: CoreRules) -> tuple[InfoText, ...]:
+def _stamina_recovery(core: CoreRules, refill: Sequence[str]) -> str:
+    """耐力怎麼回復（3H-5）：每回合開始回復的點數取自 ``core.resources``，戰後回滿與否取自
+    ``roguelite.yaml`` 的 ``refill_after_battle``（資料，不寫死）。"""
+    regen = core.resources.stamina_regen
+    head = f"主角每回合開始回復 {regen} 點（不超過上限）；" if regen else "戰鬥中不會自動回復；"
+    after = "每場打贏後回滿" if "stamina" in refill else "戰鬥之間不回復"
+    mana = "法力每場打贏後回滿" if "mana" in refill else "法力只在營火回滿"
+    return f"{head}{after}；{mana}，HP 只在營火回滿"
+
+
+def action_texts(core: CoreRules, refill_after_battle: Sequence[str] = ()) -> tuple[InfoText, ...]:
     """基本動作（含常駐按鈕與「更多動作」選單）的規則說明，數字取自 ``core``。"""
-    return tuple(_basic_actions(core))
+    return tuple(_basic_actions(core, refill_after_battle))
 
 
 # ---------------------------------------------------------------------------

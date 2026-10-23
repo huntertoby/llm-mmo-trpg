@@ -145,3 +145,21 @@ def test_a_build_hero_battle_with_stamina_skills_replays_identically() -> None:
     assert hero.stamina < hero.max_stamina
     again = replay(setup, 3, run.actions)
     assert state_to_json(again.state) == state_to_json(run.state)
+
+
+def test_hero_stamina_regenerates_each_turn_up_to_the_cap_and_only_for_heroes() -> None:
+    from trpg.engine.ai.utility import UtilityAI  # noqa: PLC0415
+    from trpg.engine.events import TurnStarted  # noqa: PLC0415
+    from trpg.sim.matrix import library_with_builds  # noqa: PLC0415
+
+    lib = library_with_builds(library())
+    regen = lib.ruleset.core.resources.stamina_regen
+    assert regen == 5
+    setup = build_setup(lib, "open_plain", ["build_push"], ["bandit", "bandit"], max_rounds=8)
+    run = run_battle(setup, 3, UtilityAI(lib.ai_profiles))
+    turns = [e for e in run.events if isinstance(e, TurnStarted)]
+    hero_turns = [e for e in turns if e.unit_id == U1]
+    assert any(e.stamina_gained == regen for e in hero_turns), "有一個回合回復了耐力"
+    assert all(0 <= e.stamina_gained <= regen and e.stamina <= e.max_stamina for e in hero_turns)
+    assert all(e.stamina_gained == 0 for e in turns if e.unit_id != U1)  # 敵人、隊友不回復
+    assert run.state.units[U1].stamina_regen == regen

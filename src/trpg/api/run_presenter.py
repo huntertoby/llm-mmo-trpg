@@ -248,7 +248,9 @@ def resource_rule_text(library: ContentLibrary, *, test_mode: bool) -> str:
     refill = [names[k] for k in ("mana", "stamina") if k in library.roguelite.refill_after_battle]
     kept = "、".join(["HP", *(v for k, v in names.items() if v not in refill)])
     head = f"每場打贏後{'、'.join(refill)}回滿；" if refill else ""
-    return f"{head}{kept}不會在戰鬥之間回復，只有營火會回滿（{after}之後）。"
+    regen = library.ruleset.core.resources.stamina_regen
+    regen_text = f"戰鬥中主角的耐力每回合開始回復 {regen} 點；" if regen else ""
+    return f"{head}{regen_text}{kept}不會在戰鬥之間回復，只有營火會回滿（{after}之後）。"
 
 
 def run_response(session: RunSession) -> RunResponse:

@@ -7,6 +7,7 @@ import json
 from dataclasses import replace
 
 from tests.roguelite.helpers import library
+from trpg.content.library import ContentLibrary
 from trpg.engine import battle_result, begin_battle
 from trpg.roguelite import (
     ActiveBattle,
@@ -22,7 +23,7 @@ from trpg.roguelite import (
 )
 from trpg.roguelite.progress import hero_unit_id
 from trpg.roguelite.state import CampfireNode
-from trpg.shared.types import Attribute
+from trpg.shared.types import Attribute, Team
 
 
 def test_a_new_run_starts_with_full_resources_from_the_formula() -> None:
@@ -52,7 +53,8 @@ def test_stamina_carries_between_battles_and_into_the_next_battle() -> None:
     battle.auto()
     hero = battle_result(battle.state).ally(battle.hero_id)
     assert hero is not None
-    after = finish_battle(lib, first, battle.state, len(battle.steps))
+    off = replace(lib, roguelite=lib.roguelite.model_copy(update={"refill_after_battle": ()}))
+    after = finish_battle(off, first, battle.state, len(battle.steps))  # 不回滿時照剩餘帶入
     assert after.stamina == hero.stamina
     assert after.history[-1].stamina == hero.stamina
 
@@ -66,24 +68,37 @@ def test_the_campfire_refills_stamina() -> None:
     assert (camp.stamina, camp.mana) == (run.max_stamina_in(core), run.max_mana_in(core))
 
 
-def test_refill_after_battle_is_a_setting_and_off_by_default() -> None:
+def _won_battle(lib: ContentLibrary) -> tuple[ActiveBattle, RunState]:
+    """第一場打贏的 (戰鬥, 起始一輪)：試幾個種子直到主角贏（自動代打）。"""
+    for seed in range(40):
+        first = new_run(lib, "build_push", seed).model_copy(update={"stamina": 5, "mana": 2})
+        battle = ActiveBattle(lib, first)
+        battle.auto()
+        if battle_result(battle.state).winner == Team.ALLY:
+            return battle, first
+    raise AssertionError("no winning seed")
+
+
+def test_refill_after_battle_refills_stamina_but_not_mana() -> None:
     lib = library()
-    assert lib.roguelite.refill_after_battle == ()
-    first = new_run(lib, "build_push", 0).model_copy(update={"stamina": 5, "mana": 2})
-    battle = ActiveBattle(lib, first)
-    battle.auto()
+    assert lib.roguelite.refill_after_battle == ("stamina",)
+    battle, first = _won_battle(lib)
     hero = battle_result(battle.state).ally(battle.hero_id)
     assert hero is not None
-    assert hero.stamina < hero.max_stamina  # 以 5 點耐力開戰
-    plain = finish_battle(lib, first, battle.state, len(battle.steps))
-    assert (plain.mana, plain.stamina) == (hero.mana, hero.stamina)
-    rules = lib.roguelite.model_copy(update={"refill_after_battle": ("mana", "stamina")})
-    refilled = finish_battle(replace(lib, roguelite=rules), first, battle.state, len(battle.steps))
+    done = finish_battle(lib, first, battle.state, len(battle.steps))
     core = lib.ruleset.core
-    # 回滿到戰鬥中的上限（升級帶來的上限差再補上）
-    assert refilled.mana >= max(first.max_mana_in(core), hero.max_mana)
-    assert refilled.stamina is not None
-    assert refilled.stamina >= max(first.max_stamina_in(core), hero.max_stamina)
+    assert done.stamina is not None
+    assert done.stamina >= max(first.max_stamina_in(core), hero.max_stamina)  # 回滿
+    assert done.mana == hero.mana  # 法力只在營火回滿
+    # 設定點關掉時，耐力照戰鬥結束時的剩餘帶入
+    off = replace(lib, roguelite=lib.roguelite.model_copy(update={"refill_after_battle": ()}))
+    plain = finish_battle(off, first, battle.state, len(battle.steps))
+    assert plain.stamina == hero.stamina
+    both = replace(
+        lib, roguelite=lib.roguelite.model_copy(update={"refill_after_battle": ("mana", "stamina")})
+    )
+    full = finish_battle(both, first, battle.state, len(battle.steps))
+    assert full.mana >= max(first.max_mana_in(core), hero.max_mana)
 
 
 def test_raising_a_body_attribute_raises_current_stamina_with_the_cap() -> None:
