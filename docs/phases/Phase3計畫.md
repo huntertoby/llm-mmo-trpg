@@ -1807,3 +1807,16 @@ PM 驗收後請使用者試玩一整輪（`docs/專案計畫.md` 第 14 節 🎮
 - 結論：確定性守則與依賴方向良好；**R1 變奏可偷帶 `delayed_damage` 等禁用原語、執行時引擎崩潰（已實測）**；新增原語要改很多處且漏做不報錯（R2、R3）；pytest 卡住與 ImportError 的原因（spawn `Pool` 子行程失敗無限重開、多 agent 共用 checkout 的 `__pycache__`）；前端「更多動作」與頂端面板是自製彈出層、Esc 同時關卡片與取消瞄準。
 - 排程：`Phase3E計畫.md` 第 3 節（3E-2a～g Phase 4 前必做；其餘 3E-3）。**Phase 3 至此結束**，接 3E-2。
 
+
+## 39. Phase 3-35｜前端字型換成 Noto Sans TC（使用者決定，2026-10-23；sonnet）
+
+使用者原話（專案 PM 轉達）：「確定換成 Noto Sans TC，同意從 Google Fonts 下載」（3-13 驗收待決 #1，原本「先不換」）。**授權只限這一次、只限 Noto Sans TC**，不得下載其他字型或檔案。
+
+1. **下載（self-host，執行時不連 Google）**：用 Google Fonts CSS2 API 取 `https://fonts.googleapis.com/css2?family=Noto+Sans+TC:wght@<字重>&display=swap`（帶現代瀏覽器的 User-Agent，才會回 woff2 與 `unicode-range` 切片），只下載該 CSS 引用的 `fonts.gstatic.com` woff2 檔；授權檔 OFL 1.1 取自 `https://raw.githubusercontent.com/google/fonts/main/ofl/notosanstc/OFL.txt`。字重見下方「美術 PM 意見」（預設 400、700：前端 35 處用 700、1 處 400，600／800 共 3 處會落到 700）。
+2. **放置**：`client/src/assets/fonts/noto-sans-tc/`（woff2 ＋ `OFL.txt`），產生一份 `noto-sans-tc.css`（`@font-face` 改成相對路徑、保留 `unicode-range` 與 `font-display: swap`），由 `client/src/main.tsx` 或 `styles.css` 匯入，讓 Vite 打包。寫一個可重跑的下載腳本 `scripts/fetch_font.py`（只接受上面兩個網域，輸出檔案清單與總大小），報告記錄下載日期、檔數、總大小。
+3. **套用**：`styles.css:12` 與 `render/labels.ts` 的 `FONT` 都改成 `"Noto Sans TC", system-ui, "Microsoft JhengHei", "PingFang TC", sans-serif`（兩處共用同一個常數或註明須同步）。PixiJS 文字在字型載入前會用備用字型畫：開戰鬥畫面前 `await document.fonts.load('400 16px "Noto Sans TC"')`（和 700）或 `document.fonts.ready`，有逾時（例如 3 秒）不卡畫面。等寬字（`monospace` 兩處）不改。
+4. **檢查**：`pnpm build` 成功、`dist` 內有字型且沒有任何指向 `fonts.googleapis.com`／`fonts.gstatic.com` 的網址（加 vitest 或建置後檢查）；`typecheck`、`vitest` 全過；瀏覽器截圖（主選單、戰鬥畫面含浮動數字與技能卡）放報告。
+5. **美術 PM 意見（2026-10-23）**：字重只要 **400、700**（不要 500）；**全部換**，包括標題、數字、浮動數字、技能卡。字型清單改用 `"Noto Sans TC", "Microsoft JhengHei", system-ui, sans-serif`（取代第 3 點的順序）。畫布文字兩處：`render/labels.ts:4` 的 `FONT`、`render/skillParts.ts:125` 的 `ctx.font`（已寫 Noto Sans TC，字重 800 改 700）。**快取**：技能圖示、狀態圖示、Pixi 貼圖都有快取——要在 `document.fonts.ready`（或第 3 點的載入）之後才產生，或字型載入完成時清一次快取，避免快取存到備援字型。美術 PM 驗收看：戰場浮動數字、技能卡、頭頂徽章的字在 1600×900 清楚不跑版（截圖要含這三者）。
+6. **範圍外**：不改版面、字級、顏色；不加其他字型。
+
+驗收（3-35）：上述檢查；報告 `Phase3-35報告.md`（授權、檔案大小、截圖、待 PM 決定）。完成後請使用者重開伺服器。
