@@ -6,7 +6,8 @@
 import { numToHex, PAL, rgba, shade } from "./artPalette";
 import { flame, roundRect, TAU, type Ctx } from "./artDraw";
 import { rng } from "./artRandom";
-import { pickThemed, themeKey, type ArtTheme, type LookTable, type RegionTable } from "./regionArt";
+import { CLOUD_LOOK_TERRAIN, CLOUD_TERRAIN } from "./cloudRidgeTerrain";
+import { pickThemed, themeKey, waterTintOf, type ArtTheme, type LookTable, type RegionTable } from "./regionArt";
 
 /** 繪圖用的虛擬格邊長（樣張的尺寸；貼圖產生時再縮放到實際格子大小）。 */
 export const ART_T = 52;
@@ -294,11 +295,11 @@ export const TERRAIN_DRAW: Readonly<Record<string, TerrainDrawer>> = {
   ice_hole: drawIceHole,
 };
 
-/** 各區的地形畫法（區域 ID → 地形 ID → 畫法）；3-37a 只有預設區（不在表內），雲嶺等在 3-37b 加入。 */
-export const REGION_TERRAIN_DRAW: RegionTable<TerrainDrawer> = {};
+/** 各區的地形畫法（區域 ID → 地形 ID → 畫法）；預設區不在表內，雲嶺（3-37b）已加入，其他區之後加。 */
+export const REGION_TERRAIN_DRAW: RegionTable<TerrainDrawer> = { cloud_ridge: CLOUD_TERRAIN };
 
-/** `look` 覆寫的地形畫法（`"wall=canyon_rock"` → 地形 ID → 畫法）；3-37b 加入。 */
-export const LOOK_TERRAIN_DRAW: LookTable<TerrainDrawer> = {};
+/** `look` 覆寫的地形畫法（`"wall=canyon_rock"` → 地形 ID → 畫法）。 */
+export const LOOK_TERRAIN_DRAW: LookTable<TerrainDrawer> = CLOUD_LOOK_TERRAIN;
 
 export function hasTerrainArt(terrain: string): boolean {
   return terrain in TERRAIN_DRAW;
@@ -336,7 +337,8 @@ type SurfaceDrawer = (ctx: Ctx, s: TileArtSpec, r: () => number) => void;
 
 const SURFACE_DRAW: Readonly<Record<string, SurfaceDrawer>> = {
   water(ctx, s, r) {
-    surfaceBlob(ctx, s, PAL.water, 0.78);
+    // `look.water_tint`（雲嶺雨中梯田：green）只微調水底色；水面反光線不變
+    surfaceBlob(ctx, s, waterTintOf(s.look) ?? PAL.water, 0.78);
     ctx.strokeStyle = "rgba(220,240,255,0.7)";
     ctx.lineWidth = 1.5;
     for (let i = 0; i < 2; i++) {

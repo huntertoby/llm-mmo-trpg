@@ -152,6 +152,8 @@ export interface DrawModel {
   region: string;
   /** `look` 覆寫的正規化字串（`鍵=值,鍵=值`，無覆寫為空字串；Phase 3-37a）。 */
   look: string;
+  /** 天氣 ID（`fog` 時區域的裝飾薄霧加濃；Phase 3-37b）；省略或無天氣為空字串。純裝飾，不影響視線規則。 */
+  weather?: string;
   width: number;
   height: number;
   tiles: TileDraw[];
@@ -315,7 +317,7 @@ export function buildDrawModel(
   const zones = zoneDraws(view, skills);
   const runes = runeDraws(view);
   const goalMarkers = objectiveMarkers(view.objective);
-  return { ...themeOf(view), width: view.width, height: view.height, tiles, objects, units, traps, auras, zones, runes, wells, markers: goalMarkers };
+  return { ...themeOf(view), weather: view.weather_id ?? "", width: view.width, height: view.height, tiles, objects, units, traps, auras, zones, runes, wells, markers: goalMarkers };
 }
 
 export function tileAt(model: DrawModel, p: Pos): TileDraw | undefined {
