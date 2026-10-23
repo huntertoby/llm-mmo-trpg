@@ -16,7 +16,7 @@ effects:
   - {type: apply_status, status: infused_holy, affects: allies}
 condition: null
 cost: {mana: 4, cooldown: 2}
-tags: [holy, spell, buff, enchant, support]
+tags: [holy, spell, buff, support]
 narrative:
   concept: 把聖光灌進同伴的武器，讓他的每一擊都帶著審判
   cast_flavor: 你的手掌按上同伴的武器，一道白光沿著刃面流過，嗡嗡作響

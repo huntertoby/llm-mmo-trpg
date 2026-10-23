@@ -2,7 +2,9 @@
 
 from __future__ import annotations
 
+import io
 from collections.abc import Sequence
+from pathlib import Path
 
 import pytest
 
@@ -10,13 +12,16 @@ from tests.engine.helpers import (
     give_turn,
     library,
     make_map,
+    make_setup,
     make_state,
     no_reactions,
     spawn,
     template,
     with_rolls,
 )
-from trpg.engine import Attack, BattleState, UseSkill, resolve
+from trpg.cli.battle import cmd_replay
+from trpg.engine import Action, Attack, BattleState, UseSkill, legal_actions, resolve
+from trpg.engine.ai.simple import choose_action
 from trpg.engine.attack_element import (
     AttackElementSources,
     attack_element_sources,
@@ -24,6 +29,7 @@ from trpg.engine.attack_element import (
     resolve_attack_element,
 )
 from trpg.engine.events import DamageDealt, StatusApplied, StatusRemoved, SurfaceChanged
+from trpg.engine.runner import run_battle
 from trpg.engine.skills.targeting import damage_parameters
 from trpg.engine.state import StatusInstance
 from trpg.shared.types import Element, Team, UnitId
@@ -246,3 +252,30 @@ def test_recasting_the_same_enchant_refreshes_without_replacing() -> None:
     result = resolve(state, UseSkill(unit_id=U1, skill_id="skill_fire_enchant"))
     assert not [e for e in result.events if isinstance(e, StatusRemoved)]
     assert [s.status_id for s in result.state.units[U1].statuses] == ["infused_fire"]
+
+
+def test_a_battle_with_enchant_skills_is_deterministic_and_replays(tmp_path: Path) -> None:
+    hero_t = template("hero_fighter", max_mana=99, skills=["skill_fire_enchant", "skill_cleave"])
+    setup = make_setup(
+        make_map(FLAT, ally=[(1, 2)], enemy=[(5, 2)]),
+        [spawn(Team.ALLY, (1, 2), hero_t), spawn(Team.ENEMY, (5, 2))],
+        max_rounds=6,
+    )
+
+    def chooser(state: BattleState) -> Action:
+        unit = state.active
+        if unit is not None and unit.id == U1 and not unit.statuses and unit.ap >= 1:
+            cast = UseSkill(unit_id=U1, skill_id="skill_fire_enchant")
+            if cast in legal_actions(state):
+                return cast
+        return choose_action(state)
+
+    first = run_battle(setup, 11, chooser)
+    again = run_battle(setup, 11, chooser)
+    assert [e.model_dump() for e in first.events] == [e.model_dump() for e in again.events]
+    assert any(isinstance(e, StatusApplied) and e.status_id == "infused_fire" for e in first.events)
+    path = tmp_path / "log.json"
+    path.write_text(first.to_log().model_dump_json(), encoding="utf-8")
+    out = io.StringIO()
+    assert cmd_replay(path, out) == 0
+    assert "重播驗證通過" in out.getvalue()

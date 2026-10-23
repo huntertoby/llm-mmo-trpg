@@ -16,7 +16,7 @@ effects:
   - {type: apply_status, status: infused_fire, affects: self}
 condition: null
 cost: {mana: 4, cooldown: 2}
-tags: [fire, spell, buff, enchant]
+tags: [fire, spell, buff]
 narrative:
   concept: 讓火焰附在自己的武器上，接下來每一擊都帶著烈焰
   cast_flavor: 你抹過刃口，火舌順著武器蔓延開來，熱浪壓得空氣扭曲
