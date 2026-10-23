@@ -2040,6 +2040,13 @@ PM 驗收後請使用者試玩一整輪（`docs/專案計畫.md` 第 14 節 🎮
 - 合併後兩個 slow 測試要改（不是 3-48 造成）：CLI 快照 `skills_show_all` 因 d937339（驟雨、潑水瓶改智力）重產；`run auto` 分歧進化的種子 5 因 3I-1 新武器不再進化 → 改用種子 6、7。**教訓：改內容（縮放屬性）時要跑 `-m "slow or not slow" tests/cli`；3I-1 agent 也漏了 slow 的 run auto。**
 - 待決：#1 法術技 0 法力目前合法 → 問玩法 PM；#2 有主角時顯示手上武器實際屬性（`/api/workshop/options` 要帶主角／武器，改 OpenAPI）→ 排 **3-48b** 小修；#3 原語選項 `description_zh` 仍是開發者語氣 → 問玩法 PM（改寫或玩家模式隱藏）；#4 `?dev=1` 看不到預算明細原始 ID → 接受；#5 「YAML」一詞保留 → 接受。
 
+### 52.2 3-48b 驗收（2026-10-24，開發 PM）
+
+- 報告 `Phase3-48b報告.md`。`POST /api/workshop/options` 加選用 `weapon`：有傳且大類符合時顯示「看手上武器（目前：長劍＝力量）」，否則照 3-48 的通用寫法；前端 `heroWeapon` 管線接好，但**工坊目前沒有主角／run 上下文，還沒有呼叫端**。裝備分頁：預覽與格子圖示改用 `draftLook`（明確造型 → 所選武器的 look → 欄位預設），使用者「ui圖片不會變」修好；`focus` 等英文改中文（武器大類、盾標籤、限制原因、防呆文字）。
+- 檢查（main 合併後）：ruff、format、mypy、lint-imports；pytest api／skillgen／content／narrative／roguelite 3272、cli（含 slow）148；vitest 914、build。agent 在 worktree 看到的 `floatCardRule.test.ts` 失敗（抓到 `dev/layoutSmoke.ts` 的 role=tooltip）在 main 上不重現（3-48 也一樣），之後若再出現就查 worktree 路徑差異。
+- 待決：#2 工坊從一輪開啟時傳主角武器 → 等工坊有 run 上下文時一起做；#3 預覽圖示畫武器元素色（`look.element`）→ 記為美術待辦；#4 手上武器大類不合時不提示 → 接受。
+- 同批小修：物理符文改名「刃紋」（玩法 PM：「力紋」像力量屬性）。
+
 ## 53. Phase 3-48c｜工坊試玩回饋第二批（使用者 2026-10-24；sonnet；約 0.6～0.8 段；3-48b 或 3I-2 完成後派）
 
 來源：專案 PM 轉達的使用者試玩回饋（截圖在專案 PM 的 images 資料夾 22～26），以及玩法 PM 的決定。照流程 E：**全面掃描工坊每一步、每一種原語**，報告附清單。
