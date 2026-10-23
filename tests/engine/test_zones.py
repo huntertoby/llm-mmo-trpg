@@ -49,7 +49,7 @@ from trpg.engine.events import (
 from trpg.engine.lifecycle import down_unit
 from trpg.engine.turns import start_turn
 from trpg.engine.zones import next_zone_cells, zone_cells
-from trpg.shared.types import Pos, Surface, Team, UnitId
+from trpg.shared.types import Attribute, Pos, Surface, Team, UnitId
 
 U1, U2, U3, U4 = (UnitId(f"unit_000{i}") for i in range(1, 5))
 SID = "skill_t_zone"
@@ -109,7 +109,9 @@ def arena(
     core: dict[str, Any] = {}
     if max_trigger_depth is not None:
         core["max_trigger_depth"] = max_trigger_depth
-    return give_turn(make_state(m, spawns, skills=skills, **core), U1)
+    state = give_turn(make_state(m, spawns, skills=skills, **core), U1)
+    state.units[U1].attributes[Attribute.INT] = 13  # 智力 14 起區域 +1 回合（3H-1）
+    return state
 
 
 def of[E: EventBase](events: Sequence[EventBase] | ResolveResult, kind: type[E]) -> list[E]:

@@ -26,7 +26,7 @@ from trpg.content.slots import SLOT_TYPE_OF, SLOTS
 
 AFFIX = TypeAdapter[AffixDef](AffixDef)
 
-# docs/design/08-裝備.md 8.24 的 40 條（3H-1 起六種屬性詞條全有，共 51；類別 → id；含 3-31 的普攻符文三條、3-32a 的普攻流六條）
+# docs/design/08-裝備.md 8.24 的 40 條 + 3H-1 補齊的屬性詞條（共 51；含普攻符文三條、普攻流六條）
 WHITELIST: dict[str, tuple[str, ...]] = {
     "stat": (
         "affix_attr_str",

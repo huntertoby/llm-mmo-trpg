@@ -56,7 +56,7 @@ from trpg.engine.summons import (
     pulse_totem,
     summon_inert,
 )
-from trpg.engine.traps import tick_traps
+from trpg.engine.traps import detect_traps, tick_traps
 from trpg.engine.zones import expire_zones_at_turn_end, zones_turn_start
 from trpg.shared.types import Surface, UnitId
 
@@ -101,6 +101,7 @@ def start_turn(ctx: Ctx, unit_id: UnitId) -> None:
     )
     _tick_cooldowns(ctx, unit)
     expire_activations(ctx, unit)  # 限時傳說到期（Phase 3D-6）
+    detect_traps(ctx, unit)  # 感知的常駐數值（Phase 3H-1）
 
     expiring: list[EffectBase] = []
     ticking: list[EffectBase] = []

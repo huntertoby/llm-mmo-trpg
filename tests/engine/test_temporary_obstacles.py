@@ -24,7 +24,7 @@ from trpg.engine.events import (
 from trpg.engine.rules.geometry import blocks_sight_at
 from trpg.engine.view import project_for
 from trpg.narrative.telegraph import change_text
-from trpg.shared.types import Element, ObjectId, Pos, Surface, Team
+from trpg.shared.types import Attribute, Element, ObjectId, Pos, Surface, Team
 from trpg.skillgen.budget import skill_budget
 from trpg.skillgen.validate import validate_skill
 
@@ -238,7 +238,9 @@ def test_smoke_bomb_skill_creates_smoke_that_expires() -> None:
         {"type": "square3", "range": 5},
         [{"type": "create_surface", "surface": "smoke", "duration": 2}],
     )
-    result = cast(battle(skill), target_pos=Pos(x=3, y=1))
+    state = battle(skill)
+    state.units[U1].attributes[Attribute.INT] = 13  # 智力 14 起表面 +1 回合（3H-1）
+    result = cast(state, target_pos=Pos(x=3, y=1))
     smoke_tiles = [
         (c.pos.x, c.pos.y) for c in of(result, SurfaceChanged) if c.after is Surface.SMOKE
     ]

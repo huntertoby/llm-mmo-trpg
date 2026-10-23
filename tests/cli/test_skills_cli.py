@@ -32,7 +32,7 @@ def test_oil_depot_battle_uses_at_least_three_different_skills_and_replays(
     assert re.search(r"（AP 3，移動 \d+，法力 \d+/\d+）", out)  # 回合標頭顯示法力
     assert re.search(r"以「.+?」攻擊 .+?：d20=", out)  # 命中擲骰看得出技能
     data = json.loads(log.read_text(encoding="utf-8"))
-    assert data["format"] == "trpg-battle-log/58"
+    assert data["format"] == "trpg-battle-log/59"
     assert any(a.get("type") == "use_skill" for a in data["actions"])
     assert any(e["type"] == "skill_used" for e in data["events"])
     code, replayed, _ = _run(["battle", "replay", str(log)], capsys)
@@ -116,6 +116,6 @@ def test_skills_show_displays_dual_scaling_and_mastery(
     _, out, _ = _run(["skills", "show", "skill_shatter_blast"], capsys)
     assert "專精加成 施放距離 +1（智力為最高屬性時生效）" in out
     _, out, _ = _run(["skills", "show", "skill_dread_gaze", "--unit", "build_warlock"], capsys)
-    assert "專精加成 施加的狀態持續 +1 回合（智力為最高屬性，生效中）" in out
+    assert "專精加成 施加的狀態持續 +1 回合（意志為最高屬性，生效中）" in out
     _, out, _ = _run(["skills", "show", "skill_dread_gaze", "--unit", "build_healer"], capsys)
-    assert "智力不是最高屬性，未生效" in out
+    assert "意志不是最高屬性，未生效" in out

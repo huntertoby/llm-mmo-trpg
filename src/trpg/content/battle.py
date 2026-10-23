@@ -320,6 +320,10 @@ class WeaponDef(ContentModel):
             if self.two_handed
             else "單手：副手欄位可以放盾或副手物品"
         ]
+        if self.secondary_scaling_attr is not None:
+            names = f"{self.scaling_attr.display_name}、{self.secondary_scaling_attr.display_name}"
+            how = "取較高者" if self.attr_mode == "max" else "取平均"
+            lines.append(f"雙屬性：普攻與武器技吃{names}，{how}")
         if self.is_melee:
             lines.append(
                 f"背刺（近戰共用規則）：從目標背後攻擊，命中 +{core.backstab_hit_bonus}、"
@@ -346,10 +350,6 @@ class WeaponDef(ContentModel):
         if on_hit_only:
             return tuple(lines)
         lines.extend(_weapon_ranged_lines(self))
-        if self.secondary_scaling_attr is not None:
-            names = f"{self.scaling_attr.display_name}、{self.secondary_scaling_attr.display_name}"
-            how = "取較高者" if self.attr_mode == "max" else "取平均"
-            lines.append(f"雙屬性：普攻與武器技吃{names}，{how}")
         if self.summon_dice_bonus:
             lines.append(f"統御：你的召喚物攻擊 +{self.summon_dice_bonus} 顆傷害骰")
         if self.lob:

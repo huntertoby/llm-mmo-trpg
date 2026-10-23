@@ -38,7 +38,8 @@ from trpg.engine.events import (
 )
 from trpg.engine.ids import ELITE_TAG, PRONE
 from trpg.engine.rules.landing import nearest_free
-from trpg.shared.types import ObjectId
+from trpg.engine.rules.perks import attribute_perk
+from trpg.shared.types import ObjectId, UnitId
 
 __all__ = ["ELITE_TAG", "TriggerFn", "effects_for", "register_trigger"]
 
@@ -117,12 +118,25 @@ def _deadly_terrain(ctx: Ctx, event: EventBase, depth: int) -> list[EffectBase]:
     return effects
 
 
+def _collision_flats(ctx: Ctx, event: Collided, victims: list[UnitId]) -> dict[UnitId, int]:
+    """每次撞擊對各受害者的固定傷害修正：位移來源的 ``collision_dealt`` 減去受害者自己的
+    ``collision_taken``（屬性常駐數值，Phase 3H-1）。"""
+    units = ctx.state.units
+    source = None if event.source_id is None else units.get(event.source_id)
+    dealt = 0 if source is None else attribute_perk(ctx.rules, source, "collision_dealt")
+    return {
+        v: dealt - (attribute_perk(ctx.rules, units[v], "collision_taken") if v in units else 0)
+        for v in victims
+    }
+
+
 @register_trigger("collided")
 def _collision_damage(ctx: Ctx, event: EventBase, depth: int) -> list[EffectBase]:
     assert isinstance(event, Collided)
     dice = event.dice or ctx.core.collision_damage_dice
     effects: list[EffectBase] = []
     victims = [event.unit_id] + ([] if event.other_id is None else [event.other_id])
+    flats = _collision_flats(ctx, event, victims)  # 力量的常駐數值（3H-1）
     for _ in range(event.shortfall):
         effects.extend(
             DamageEffect(
@@ -131,6 +145,7 @@ def _collision_damage(ctx: Ctx, event: EventBase, depth: int) -> list[EffectBase
                 target_id=victim,
                 cause="collision",
                 dice=dice,
+                flat=flats[victim],
             )
             for victim in victims
         )

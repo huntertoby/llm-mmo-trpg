@@ -16,6 +16,7 @@ from trpg.engine.ids import CONCEALED, DEFENDING, PRONE
 from trpg.engine.modifiers import ATTACK, range_delta
 from trpg.engine.rules.facing import is_behind
 from trpg.engine.rules.geometry import XY, has_line_of_sight, manhattan
+from trpg.engine.rules.perks import attribute_perk
 from trpg.engine.rules.statuses import (
     attack_range_cap,
     defense_break_permille,
@@ -563,7 +564,9 @@ def concealment_problem(state: BattleState, attacker: UnitState, target: UnitSta
     """隱蔽的目標超過一定距離無法選為目標。"""
     if not is_concealed(state, target) or grants_advantage_against(state.ruleset, target):
         return None  # 被標記者不受隱蔽的選取限制
-    limit = concealed_max_distance(state)
+    limit = concealed_max_distance(state) + attribute_perk(
+        state.ruleset, attacker, "reveal_range"
+    )  # 感知的常駐數值（Phase 3H-1）
     distance = manhattan(attacker.xy, target.xy)
     if distance > limit:
         return f"目標隱蔽中：超過 {limit} 格無法選為目標（距離 {distance}）"

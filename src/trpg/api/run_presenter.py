@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 from trpg.api.run_schemas import (
+    AttributePerkOut,
     BattlePlanOut,
     EvolutionChoiceOut,
     EvolutionOptionOut,
@@ -177,6 +178,16 @@ def _hero(library: ContentLibrary, run: RunState) -> HeroOut:
         max_hp=max(run.max_hp_in(library.ruleset.core), run.hp if run.test_mode else 0),
         hp_per_con_point=library.ruleset.core.hp_per_con_point,
         hp_con_base=library.ruleset.core.hp_con_base,
+        attribute_perks=tuple(
+            AttributePerkOut(
+                attr=p.attr,
+                tier=p.tier,
+                per_tier_zh=p.per_tier_zh,
+                now_zh=p.now_zh,
+                next_at=p.next_at,
+            )
+            for p in library.ruleset.core.attribute_perks.lines(run.hero.attributes)
+        ),
         mana=run.mana,
         max_mana=max(run.max_mana, run.mana if run.test_mode else 0),
         source=run.source,

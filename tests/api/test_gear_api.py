@@ -30,7 +30,7 @@ def test_catalog_lists_slots_items_and_the_whitelist(client: TestClient) -> None
     body = client.get("/api/gear/catalog").json()
     assert [s["slot"] for s in body["slots"]][:2] == ["main_hand", "off_hand"]
     assert len(body["slots"]) == 9
-    assert len(body["affixes"]) == 46
+    assert len(body["affixes"]) == 51
     assert {a["category_number"] for a in body["affixes"]} == set(range(1, 12))
     strength = next(a for a in body["affixes"] if a["id"] == "affix_attr_str")
     assert (strength["value_min"], strength["value_max"]) == (1, 4)

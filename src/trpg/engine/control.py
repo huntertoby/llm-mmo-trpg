@@ -24,6 +24,7 @@ from trpg.engine.context import Ctx
 from trpg.engine.effects.models import ApplyStatusEffect
 from trpg.engine.events import StatusConverted, StatusResisted, StatusSaveRolled
 from trpg.engine.rules.combat import PERMILLE, is_hit
+from trpg.engine.rules.perks import attribute_perk
 from trpg.engine.rules.statuses import boss_converted_status, effective_attribute
 from trpg.engine.state import BattleState, UnitState
 from trpg.shared.types import Attribute
@@ -67,6 +68,8 @@ def plan_status(state: BattleState, target: UnitState, status_id: str) -> Status
         return StatusPlan(status_id, final, None, 0, False)
     value = effective_attribute(rules, target, attr)
     group = definition.control_group
+    if group is not None:  # 意志的常駐數值（Phase 3H-1）：所有控制的抵抗
+        value += attribute_perk(rules, target, "control_resist")
     diminished = group is not None and control_dr_active(state, target, group)
     if diminished:
         value = value * rules.core.control_dr_resist_permille // PERMILLE

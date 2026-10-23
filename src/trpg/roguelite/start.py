@@ -363,8 +363,8 @@ def new_keyword_run(
 ) -> RunState:
     """新開局（06 6.27.3）：起始武器 ＋ ``start.keywords`` 個不重複的關鍵字，每個關鍵字的池各給
     1 招（:func:`starting_skill`；``skills`` 直接指定時改用它們，但仍必須在該關鍵字的專屬起始技能池
-    裡、與武器相容）。``allocation`` 省略時全部點在起始技能最常用的縮放屬性（沒有技能時為武器的縮放屬性；
-    Phase 3H-1，讓主屬性對得上招式）。不合法時拋出 :class:`ChoiceError`。
+    裡、與武器相容）。``allocation`` 省略時全部點在起始技能最常用的縮放屬性（沒有技能時為
+    武器的縮放屬性；Phase 3H-1，讓主屬性對得上招式）。不合法時拋出 :class:`ChoiceError`。
 
     ``test_mode``（Phase 3-39）：測試模式的一輪（戰後回滿）；``test_equipment`` 為挑的裝備
     （欄位 → 物品 ID，取代範本的裝備）；兩者都不影響亂數與其他規則。"""

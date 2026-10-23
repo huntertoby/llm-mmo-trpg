@@ -117,10 +117,24 @@ def test_stat_affixes_merge_into_unit_totals() -> None:
     assert dict(unit.gear.merged) == {"attr:str": 2, "max_hp": 12, "resist:fire": 100}
 
 
+@pytest.mark.parametrize("attr", list(Attribute))
+def test_all_six_attribute_affixes_exist_and_raise_their_attribute(attr: Attribute) -> None:
+    """3H-1（08 8.24）：六種屬性詞條都有，部位同力量，範圍 1～4，合併進總屬性。"""
+    lib = library()
+    affix = lib.affixes[f"affix_attr_{attr.value}"]
+    assert affix.attribute is attr
+    assert affix.slots == lib.affixes["affix_attr_str"].slots
+    assert (affix.value.min, affix.value.max) == (1, 4)  # type: ignore[union-attr]
+    assert affix.name_zh == f"{attr.display_name} +{{n}}"
+    plain = _unit({})
+    unit = _unit({"ring_1": [(affix.id, 3)], "neck": [(affix.id, 3)]})
+    # 同 id 遞減疊加：100%＋50%（rules/equipment.yaml）
+    assert unit.attributes[attr] > plain.attributes[attr] + 3
+
+
 def test_constitution_from_gear_also_raises_hp() -> None:
     lib = library()
-    con = lib.affixes["affix_attr_str"].model_copy(update={"id": "affix_attr_con"})
-    con = con.model_copy(update={"attribute": Attribute.CON})
+    con = lib.affixes["affix_attr_con"]
     item = _item("ring_1", [])
     item = item.model_copy(update={"affixes": (EquippedAffix(affix=con, value=2),)})
     hero = spawn(Team.ALLY, (0, 0), no_reactions("hero_fighter"))
