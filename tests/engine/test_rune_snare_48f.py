@@ -16,7 +16,7 @@ from trpg.engine import BattleState
 from trpg.engine.effects import InscribeEffect, run_effects
 from trpg.engine.events import StatusApplied
 from trpg.narrative.skills import skill_card
-from trpg.shared.types import Element
+from trpg.shared.types import Element, UnitId
 from trpg.skillgen.budget import skill_budget
 from trpg.skillgen.validate import validate_skill
 
@@ -25,7 +25,7 @@ SNARE: SkillDef = LIB.skills["skill_rune_snare"]
 TEST_COPY = SNARE.model_copy(update={"id": "skill_t_rune_snare"})  # 場景會把技能加進規則集
 
 
-def _with_rune(state: BattleState, owner: str, xy: tuple[int, int]) -> BattleState:
+def _with_rune(state: BattleState, owner: UnitId, xy: tuple[int, int]) -> BattleState:
     team = state.units[owner].team
     return run_effects(
         state, [InscribeEffect(source_id=owner, team=team, pos=xy, element=Element.LIGHTNING)]

@@ -436,7 +436,7 @@ builds:
       resist: {elemental: 150}
       tags: [hero, sim]
       max_mana: 40
-      skills: [skill_thunder_sigil, skill_ember_trail, skill_hunt_sigil, skill_rune_thunderbolt, skill_rune_burst, skill_chain_lightning, skill_rune_resonance]
+      skills: [skill_thunder_sigil, skill_ember_trail, skill_hunt_sigil, skill_rune_thunderbolt, skill_rune_burst, skill_chain_lightning, skill_rune_resonance, skill_rune_snare]
 
   # 使用者要求（2026-10-20）：沒有任何技能的白板主角，從一輪的升級裡長出技能。屬性全 10（一輪開局再配 4 點）。
   # HP、法力比照戰士型（位移流）與法師型（火焰流）英雄的最終值。
