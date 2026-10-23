@@ -950,6 +950,12 @@ export interface components {
              * @default 1
              */
             summon_infuse_ap_cost: number;
+            /** Region */
+            region?: string | null;
+            /** Look */
+            look?: {
+                [key: string]: string;
+            };
         };
         /**
          * BombOut

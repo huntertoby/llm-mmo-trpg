@@ -602,6 +602,10 @@ class BattleState:
     """格子上的符文（Phase 3-23），依 ``id`` 排序；同一施放者在同一格最多一個。"""
     next_rune_id: int = 1
     """下一個符文的編號（Phase 3-23）。"""
+    region: str | None = None
+    """區域主題（Phase 3-37a；只影響外觀，不進結算）。"""
+    look: tuple[tuple[str, str], ...] = ()
+    """外觀覆寫（鍵排序；Phase 3-37a；只影響外觀）。"""
 
     # ------------------------------------------------------------------
     # 複製
@@ -645,6 +649,8 @@ class BattleState:
             next_zone_id=self.next_zone_id,
             runes=list(self.runes),
             next_rune_id=self.next_rune_id,
+            region=self.region,
+            look=self.look,
         )
 
     # ------------------------------------------------------------------

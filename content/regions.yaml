@@ -1,0 +1,18 @@
+# 區域主題（Phase 3-37a，docs/art/雲嶺移植需求.md 第 1 節）。純顯示資料，不進引擎結算。
+# - regions：碎界五區的 ID；地圖檔的選填欄位 region 只能填這裡的 ID。省略 region ＝ 預設畫法（等同 crystal_crown）。
+#   look 是該區自己的預設覆寫（目前都沒有）；地圖檔的 look 再蓋過它。
+# - look_keys：地圖檔 look 的鍵與允許的值（地板 floor、牆 wall、草地 grass、水底色 water_tint…）。
+#   值只列「不是預設」的畫法；沒列的值、沒列的鍵一律被忽略（載入時警告、不報錯），前端也照預設畫。
+# 新增一區或一種覆寫畫法：加一列即可，不用改程式；畫法本身在 client/src/render/regionArt.ts。
+default_region: crystal_crown
+regions:
+  - {id: cloud_ridge,   name_zh: 雲嶺}
+  - {id: crystal_crown, name_zh: 晶冠城邦}
+  - {id: arcane_hub,    name_zh: 魔導樞市}
+  - {id: ashen_waste,   name_zh: 灰燼荒原}
+  - {id: frost_tide,    name_zh: 霜潮海境}
+look_keys:
+  - {key: wall,       values: [canyon_rock]}
+  - {key: floor,      values: [plank_walk, paddy]}
+  - {key: grass,      values: []}
+  - {key: water_tint, values: [green]}

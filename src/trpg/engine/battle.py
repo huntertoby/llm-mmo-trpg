@@ -303,6 +303,8 @@ def begin_battle(setup: BattleSetup, seed: int) -> ResolveResult:
         objective=setup.effective_objective,
         map_events=map_def.events,
         spawn_templates=dict(setup.spawn_templates),
+        region=map_def.region,
+        look=tuple(sorted(map_def.look.items())),
     )
     positions = _place_units(setup, state)
     names = _unit_names(setup)

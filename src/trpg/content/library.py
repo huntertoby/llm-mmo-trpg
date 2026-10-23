@@ -6,6 +6,7 @@
 
 from __future__ import annotations
 
+import logging
 from collections.abc import Iterable, Mapping
 from dataclasses import dataclass, field
 from pathlib import Path
@@ -60,6 +61,7 @@ from trpg.content.equipment import (
 from trpg.content.keyword_derive import Facts, SkillKeywords, derive_from_facts, derive_keywords
 from trpg.content.loader import default_content_dir, load_content_file
 from trpg.content.maps import MapDef, SpawnUnitsEvent, check_map
+from trpg.content.regions import RegionTable, sanitize_map_theme
 from trpg.content.roguelite import RunRules, roguelite_problems
 from trpg.content.rule_changes import RuleChangeDef, RuleChangeTable
 from trpg.content.rules import CoreRules, HitTable
@@ -98,6 +100,8 @@ from trpg.content.weapon_params import set_weapon_param
 from trpg.content.workshop import WorkshopRules, workshop_problems
 from trpg.shared.errors import ContentError
 from trpg.shared.types import Surface
+
+_LOG = logging.getLogger(__name__)
 
 __all__ = [
     "REQUIRED_STATUSES",
@@ -444,6 +448,10 @@ class ContentLibrary:
     """開發者起始包（``dev_starters.yaml``，Phase 3-24b2；不是設計規則，玩家介面不顯示）。"""
     evolution: EvolutionTable = field(default_factory=EvolutionTable)
     """3 級分歧進化的模板（``skill_evolution.yaml``，Phase 3-26b）。"""
+    regions: RegionTable | None = None
+    """區域主題表（``regions.yaml``，Phase 3-37a；純顯示資料）。"""
+    map_warnings: tuple[str, ...] = ()
+    """地圖 ``region``／``look`` 的未知值警告（已丟棄、退回預設畫法；不是錯誤）。"""
     files: list[tuple[Path, ContentModel]] = field(default_factory=list)
 
     def loadout_of(self, template: UnitTemplate) -> Loadout:
@@ -492,6 +500,18 @@ def _load_dir[M: ContentModel](
         files.append((path, item))
         result[path.stem] = item
     return result
+
+
+def _apply_map_themes(maps: dict[str, MapDef], regions: RegionTable | None) -> list[str]:
+    """把區域表套到每張地圖（丟掉未知的 ``region``／``look``，併入區域預設）；回傳警告。"""
+    warnings: list[str] = []
+    if regions is not None:
+        for map_id in sorted(maps):
+            maps[map_id], found = sanitize_map_theme(maps[map_id], regions)
+            warnings += found
+    for warning in warnings:
+        _LOG.warning(warning)
+    return warnings
 
 
 def load_library(  # noqa: PLR0915
@@ -628,6 +648,9 @@ def load_library(  # noqa: PLR0915
         if problems:
             raise ContentError(root / "maps" / f"{map_id}.yaml", "；".join(problems))
 
+    regions = load("regions.yaml", RegionTable) if (root / "regions.yaml").exists() else None
+    map_warnings = _apply_map_themes(maps, regions)
+
     problems = roguelite_problems(roguelite, maps, units, core.tier_budget)
     if problems:
         raise ContentError(root / "roguelite.yaml", "；".join(problems))
@@ -668,6 +691,8 @@ def load_library(  # noqa: PLR0915
         appearance=appearance,
         dev_starters=dev_starters,
         evolution=evolution,
+        regions=regions,
+        map_warnings=tuple(map_warnings),
         files=files,
     )
 

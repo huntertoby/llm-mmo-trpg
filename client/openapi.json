@@ -2415,6 +2415,24 @@
             "type": "integer",
             "title": "Summon Infuse Ap Cost",
             "default": 1
+          },
+          "region": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Region"
+          },
+          "look": {
+            "additionalProperties": {
+              "type": "string"
+            },
+            "type": "object",
+            "title": "Look"
           }
         },
         "additionalProperties": false,
