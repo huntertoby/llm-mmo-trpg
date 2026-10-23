@@ -1,0 +1,25 @@
+# 世界觀資料：暫定「碎界」。只用於 LLM prompt 的語氣與名詞；換世界觀只換這個檔（或另指定檔案）。
+id: shattered
+name_zh: 碎界
+summary_zh: 源晶核心崩裂，世界碎成漂浮的界域；各界域保留不同的文明風格，技能的力量來自源晶的頻率。
+tone_zh: 語氣沉穩、帶一點殘破的詩意；用字精簡具體，不使用網路用語、現代梗或英文詞彙。
+realms:
+  - name_zh: 晶冠城邦
+    style_zh: 奇幻
+  - name_zh: 雲嶺
+    style_zh: 東方
+  - name_zh: 魔導樞市
+    style_zh: 魔導科技
+  - name_zh: 灰燼荒原
+    style_zh: 災變
+  - name_zh: 霜潮海境
+    style_zh: 海境
+glossary:
+  - term_zh: 源晶
+    meaning_zh: 世界崩裂前的核心，碎片仍散布各界域；技能的力量即源晶的頻率。
+  - term_zh: 界域
+    meaning_zh: 崩裂後漂浮的陸塊，各自保留一種文明風格。
+  - term_zh: 頻率
+    meaning_zh: 描述技能力量性質的詞，用來取代「元素屬性」一類的現代說法。
+  - term_zh: 遠征
+    meaning_zh: 玩家穿越界域的一輪冒險。
