@@ -205,7 +205,7 @@ _ELEMENT_NAMES: dict[Element, str] = {
 }
 
 _RUNE_ELEMENT_NAMES: dict[Element, str] = {
-    Element.PHYSICAL: "力",
+    Element.PHYSICAL: "刃",
     Element.FIRE: "火",
     Element.ICE: "冰",
     Element.LIGHTNING: "雷",
