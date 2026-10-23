@@ -82,6 +82,8 @@ Phase 3 各段（`Phase3計畫.md` 節號；報告 `Phase3-*報告.md`）：
 
 **待查（2026-10-23 發現）**：`tests/engine` 裡召喚物 HP 的兩個測試（石像 `summon_golem`、骷髏 `summon_skeleton_warrior` 的 max_hp 斷言）在 `tests/roguelite`～`tests/engine` 九個資料夾一起 `-n 8` 時偶發失敗、重跑通過；單獨或兩兩組合都過 → 疑似某測試改了共用狀態（3-41a 的 `content/summons.py` 或內容庫快取）沒還原。下次全量檢查若再出現就追。
 
+**驗收動畫的方法（2026-10-23 起）**：網址加 `?anim=0.1`（再慢 10 倍，可配播放列「極慢」再 ×5），內建瀏覽器每張截圖約 1 秒也能抓到移動中途的畫面。
+
 **這一輪學到的**：合併前「相關測試」範圍要含 `tests/skillgen`（嘲諷改動時漏跑 `test_budget` 寫死的點數）；`.claude/worktrees/` 舊資料夾會累積（2026-10-23 清過 42 個，約 3 GB），合併後記得 `git worktree remove` ＋ 刪分支；主資料夾有不明的 `tmp_x`（不是開發 PM 建立的，沒動）。
 
 **其他待辦位置**：

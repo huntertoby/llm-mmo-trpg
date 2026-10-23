@@ -1,11 +1,15 @@
 import { describe, expect, it } from "vitest";
 import type { BattleResponse } from "../api/types";
 import {
+  AI_PAUSE_MS,
+  CRAWL_FACTOR,
+  devAnimFactor,
   FEEDBACK_MS,
   frameOps,
   PLAY_SPEEDS,
   playbackPlan,
   remainingLines,
+  SPEED_SCALE,
   type Frame,
   type PlaySpeed,
 } from "./playback";
@@ -100,8 +104,8 @@ describe("playbackPlan", () => {
     expect(total("skip")).toBe(0);
   });
 
-  it("has four speeds in order, and slow takes twice the normal time", () => {
-    expect(PLAY_SPEEDS).toEqual(["slow", "normal", "fast", "skip"]);
+  it("has five speeds in order, and slow takes twice the normal time", () => {
+    expect(PLAY_SPEEDS).toEqual(["crawl", "slow", "normal", "fast", "skip"]);
     const frames = (speed: PlaySpeed) => playbackPlan(response, hero, speed).frames;
     const sum = (speed: PlaySpeed, pick: (f: Frame) => number) => frames(speed).reduce((a, f) => a + pick(f), 0);
     const moveMs = (f: Frame) => f.moves.reduce((a, m) => a + m.durationMs, 0);
@@ -110,5 +114,27 @@ describe("playbackPlan", () => {
     expect(sum("normal", (f) => f.pauseMs)).toBeGreaterThan(0);
     expect(sum("slow", (f) => f.pauseMs)).toBe(2 * sum("normal", (f) => f.pauseMs));
     expect(frames("slow").every((f) => f.feedbackMs === FEEDBACK_MS * 2)).toBe(true);
+  });
+});
+
+describe("極慢與開發用的 ?anim=（2026-10-23 使用者：「幫我搞個極慢的速度」）", () => {
+  it("極慢是正常的 5 倍時間（動畫倍率與停頓）", () => {
+    expect(SPEED_SCALE.crawl).toBe(CRAWL_FACTOR * SPEED_SCALE.normal);
+    expect(AI_PAUSE_MS.crawl).toBe(CRAWL_FACTOR * AI_PAUSE_MS.normal);
+    const plan = playbackPlan(response, hero, "crawl");
+    expect(plan.frames.every((f) => f.feedbackMs === FEEDBACK_MS * CRAWL_FACTOR)).toBe(true);
+  });
+
+  it.each([
+    ["", 1],
+    ["?anim=0.1", 10],
+    ["?anim=0.5&dev=1", 2],
+    ["?anim=1", 1],
+    ["?anim=2", 1], // 不會加快
+    ["?anim=0", 1], // 不合法
+    ["?anim=abc", 1],
+    ["?anim=0.001", 100], // 夾在 0.01
+  ])("網址 %s → 時間倍率 %i", (search, factor) => {
+    expect(devAnimFactor(search)).toBeCloseTo(factor);
   });
 });

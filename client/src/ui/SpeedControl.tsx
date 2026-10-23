@@ -1,7 +1,8 @@
-// 播放速度（慢／正常／快／略過）與播放中的「跳到結尾」按鈕。
+// 播放速度（極慢／慢／正常／快／略過）與播放中的「跳到結尾」按鈕。
 import { PLAY_SPEEDS, type PlaySpeed } from "../battle/playback";
 
 const LABELS: Readonly<Record<PlaySpeed, string>> = {
+  crawl: "極慢",
   slow: "慢",
   normal: "正常",
   fast: "快",
@@ -37,7 +38,8 @@ interface Props {
 export function SpeedControl({ speed, playing, onSpeed, onSkipNow }: Props) {
   return (
     <div className="speed-control" aria-label="播放速度">
-      <span className="muted">播放：</span>
+      {/* 播放中把「播放：」換成「跳到結尾」，五檔速度＋按鈕才排得下一行（右下欄寬 250px） */}
+      {!playing && <span className="muted">播放：</span>}
       {PLAY_SPEEDS.map((s) => (
         <button
           key={s}

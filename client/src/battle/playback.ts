@@ -10,25 +10,46 @@ import { logLines, type LogLine } from "./log";
 import { unitNames } from "./units";
 import { isEmptyVfx, scaleVfx, vfxFor, VFX_TIMING, type StepVfx, type VfxCards } from "./vfx";
 
-export type PlaySpeed = "slow" | "normal" | "fast" | "skip";
+export type PlaySpeed = "crawl" | "slow" | "normal" | "fast" | "skip";
 
-/** 顯示順序：慢、正常、快、略過。 */
-export const PLAY_SPEEDS: readonly PlaySpeed[] = ["slow", "normal", "fast", "skip"];
+/** 顯示順序：極慢、慢、正常、快、略過（「極慢」2026-10-23 使用者：「幫我搞個極慢的速度」）。 */
+export const PLAY_SPEEDS: readonly PlaySpeed[] = ["crawl", "slow", "normal", "fast", "skip"];
 
 /** 慢速的時間倍率（正常的 2 倍時間；動畫、地圖回饋與停頓都用它）。 */
 export const SLOW_FACTOR = 2;
+/** 極慢的時間倍率（正常的 5 倍時間）。 */
+export const CRAWL_FACTOR = 5;
 
-/** 動畫時間的倍率：慢 ＝ 2 倍；快 ＝ 一半；略過不播動畫。 */
-export const SPEED_SCALE: Readonly<Record<PlaySpeed, number>> = { slow: SLOW_FACTOR, normal: 1, fast: 0.5, skip: 0 };
+/**
+ * 開發用的額外放慢（網址 `?anim=0.1` ＝ 再慢 10 倍；PM／agent 逐格截圖驗收動畫用）：回傳時間倍率，
+ * 沒給或不合法時為 1。`anim` 夾在 0.01～1。
+ */
+export function devAnimFactor(search: string): number {
+  const raw = new URLSearchParams(search).get("anim");
+  const v = raw === null ? Number.NaN : Number(raw);
+  if (!Number.isFinite(v) || v <= 0) return 1;
+  return 1 / Math.min(1, Math.max(0.01, v));
+}
+
+const DEV_SLOW = devAnimFactor(typeof window === "undefined" ? "" : window.location.search);
+
+/** 動畫時間的倍率：極慢 ＝ 5 倍；慢 ＝ 2 倍；快 ＝ 一半；略過不播動畫（再乘上開發用的 `?anim=`）。 */
+export const SPEED_SCALE: Readonly<Record<PlaySpeed, number>> = {
+  crawl: CRAWL_FACTOR * DEV_SLOW,
+  slow: SLOW_FACTOR * DEV_SLOW,
+  normal: DEV_SLOW,
+  fast: 0.5 * DEV_SLOW,
+  skip: 0,
+};
 /** 地圖回饋（浮動數字、連線）的基準時間（毫秒），乘上 `SPEED_SCALE`。 */
 export const FEEDBACK_MS = 1000;
 
 /** 每個 AI 動作之後的停頓（毫秒）。 */
-export const AI_PAUSE_MS: Readonly<Record<PlaySpeed, number>> = { slow: 500 * SLOW_FACTOR, normal: 500, fast: 150, skip: 0 };
+export const AI_PAUSE_MS: Readonly<Record<PlaySpeed, number>> = { crawl: 500 * CRAWL_FACTOR * DEV_SLOW, slow: 500 * SLOW_FACTOR * DEV_SLOW, normal: 500 * DEV_SLOW, fast: 150 * DEV_SLOW, skip: 0 };
 /** AI 純移動之後的停頓（動畫本身已佔時間）。 */
-export const MOVE_PAUSE_MS: Readonly<Record<PlaySpeed, number>> = { slow: 150 * SLOW_FACTOR, normal: 150, fast: 0, skip: 0 };
+export const MOVE_PAUSE_MS: Readonly<Record<PlaySpeed, number>> = { crawl: 150 * CRAWL_FACTOR * DEV_SLOW, slow: 150 * SLOW_FACTOR * DEV_SLOW, normal: 150 * DEV_SLOW, fast: 0, skip: 0 };
 /** 主角自己的動作之後的停頓（短）。 */
-export const HERO_PAUSE_MS: Readonly<Record<PlaySpeed, number>> = { slow: 150 * SLOW_FACTOR, normal: 150, fast: 0, skip: 0 };
+export const HERO_PAUSE_MS: Readonly<Record<PlaySpeed, number>> = { crawl: 150 * CRAWL_FACTOR * DEV_SLOW, slow: 150 * SLOW_FACTOR * DEV_SLOW, normal: 150 * DEV_SLOW, fast: 0, skip: 0 };
 
 export interface Frame {
   /** 行動中的單位；開場那一步為 `null`。 */
