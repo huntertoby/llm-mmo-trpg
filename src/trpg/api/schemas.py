@@ -194,6 +194,11 @@ class Glossary(_ApiModel):
     effects: tuple[GlossaryEntry, ...] = ()
     conditions: tuple[GlossaryEntry, ...] = ()
     triggers: tuple[GlossaryEntry, ...] = ()
+    actions: tuple[GlossaryEntry, ...] = ()
+    """基本動作（Phase 3-41b）：``description_zh`` 是一句話摘要，``rules_zh`` 是完整規則列
+    （數字取自 ``core.yaml``）。"""
+    objectives: tuple[GlossaryEntry, ...] = ()
+    """勝利條件、目標格與結算原因的說明（Phase 3-41b）；``{rounds}`` 由前端填入限時輪數。"""
     weapon_looks: tuple[WeaponLookEntry, ...] = ()
 
 

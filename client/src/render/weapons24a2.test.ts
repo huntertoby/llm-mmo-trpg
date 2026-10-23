@@ -1,4 +1,4 @@
-// Phase 3-24a2：弩（輕、重、連弩）與長槍（燧發、獵槍、狙擊）的造型——外觀表、快取鍵與紙娃娃／小圖示的繪製資料。
+// Phase 3-24a2：弩（輕、重、連弩）與火槍（燧發、獵槍、狙擊）的造型——外觀表、快取鍵與紙娃娃／小圖示的繪製資料。
 import { describe, expect, it } from "vitest";
 import type { Facing } from "../api/types";
 import { dollKey, KNOWN_KINDS, weaponLook, type DollSpec } from "./appearance";
@@ -40,7 +40,7 @@ function drawn(kind: string, form: string, material: string): string[] {
 }
 
 describe("武器外觀表（Phase 3-24a2）", () => {
-  it("弩與長槍都有自己的造型，不再退回畫弓", () => {
+  it("弩與火槍都有自己的造型，不再退回畫弓", () => {
     expect(weaponLookEntry("crossbow")).toMatchObject({ look: { kind: "crossbow", material: "wood" }, two_handed: true });
     expect(weaponLookEntry("longgun")).toMatchObject({ look: { kind: "longgun", material: "steel" }, two_handed: true });
     expect(KNOWN_KINDS.main_hand).toEqual(expect.arrayContaining(["crossbow", "longgun"]));
@@ -67,7 +67,7 @@ describe("武器外觀表（Phase 3-24a2）", () => {
   });
 });
 
-describe("弩與長槍的繪製資料", () => {
+describe("弩與火槍的繪製資料", () => {
   it("三種弩（輕、重、連弩）的畫法各不相同、確定性，也不同於弓", () => {
     const [light, heavy, repeater] = CROSSBOWS.map((f) => drawn("crossbow", f, "wood"));
     expect(light!.length).toBeGreaterThan(10);
@@ -76,7 +76,7 @@ describe("弩與長槍的繪製資料", () => {
     expect(light!.join("|")).not.toBe(drawn("bow", "", "wood").join("|"));
   });
 
-  it("三種長槍（燧發、獵槍、狙擊）的畫法各不相同、確定性，也不同於弓", () => {
+  it("三種火槍（燧發、獵槍、狙擊）的畫法各不相同、確定性，也不同於弓", () => {
     const [flint, hunting, sniper] = LONGGUNS.map((f) => drawn("longgun", f, "steel"));
     expect(flint!.length).toBeGreaterThan(10);
     expect(new Set([flint!.join("|"), hunting!.join("|"), sniper!.join("|")]).size).toBe(3);
@@ -84,7 +84,7 @@ describe("弩與長槍的繪製資料", () => {
     expect(flint!.join("|")).not.toBe(drawn("bow", "", "wood").join("|"));
   });
 
-  it("材質改變會改變顏色（長槍的槍身取材質色）", () => {
+  it("材質改變會改變顏色（火槍的槍身取材質色）", () => {
     expect(drawn("longgun", "hunting", "steel").join("|")).not.toBe(drawn("longgun", "hunting", "iron").join("|"));
     expect(drawn("crossbow", "light", "wood").join("|")).not.toBe(drawn("crossbow", "light", "iron").join("|"));
   });

@@ -47,12 +47,12 @@ OBJECT_TAG_TEXT: Mapping[str, str] = {
     "blocks_move": TERM_BLOCKS_MOVE,
     "blocks_sight": f"{TERM_BLOCKS_SIGHT}（全掩護）",
     "half_cover": f"{TERM_HALF_COVER}（遠程攻擊其後的目標，命中 −{{penalty}}）",
-    "conceal": "站在同一格的單位隱蔽",
+    "conceal": "站在同一格的單位隱蔽（這是物件的效果，同名的地面不會隱蔽）",
     "over_chasm": "架在致命地形上，可以走；被打破後格上的單位會落下",
     "pushable": "可推動",
     "topplable": "可推倒（往推的方向倒下，壓住後面 {topple} 格）",
     "breakable": "可被破壞",
-    "penetrable": "可被穿透",
+    "penetrable": "穿透型攻擊可以穿過",
     "flammable": "可燃",
     "explosive": "碰火爆炸",
     "conductive": "導電",
@@ -133,6 +133,12 @@ def _trigger_text(rule: InteractionRule, names: _Names) -> str:
 
 
 def _interaction_line(rule: InteractionRule, names: _Names) -> str:
+    only_keep = all(o.op == "keep" for o in rule.then)
+    if only_keep and rule.trigger != "element":  # 「在上面產生火焰：維持原狀」→ 說清楚是產生不了
+        created = names.of(
+            names.surface, rule.surface_created.value if rule.surface_created else None
+        )
+        return f"{created}無法在上面形成"
     return f"{_trigger_text(rule, names)}：{_outcome_text(rule, names)}"
 
 
@@ -249,6 +255,9 @@ def object_rules(obj: ObjectDef, library: ContentLibrary) -> tuple[str, ...]:
     order = list(OBJECT_TAG_TEXT)
     tags = sorted(obj.tags, key=lambda t: (order.index(t) if t in order else len(order), t))
     lines = [_tag_text(t, ruleset) for t in tags]
+    if obj.max_hp is not None and "breakable" in obj.tags:  # 可被破壞的物件寫出 HP（6.4）
+        at = tags.index("breakable")
+        lines[at] = f"{lines[at]}（HP {obj.max_hp}）"
     if obj.explosion is not None:
         e = obj.explosion
         side = 2 * e.radius + 1

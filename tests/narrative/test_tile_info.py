@@ -95,7 +95,7 @@ def test_ice_water_oil_smoke(library: ContentLibrary) -> None:
 
 def test_crate_pillar_barrel_ice_wall(library: ContentLibrary) -> None:
     crate = _object(library, "crate")
-    for word in ("可推動", "半掩護", "可燃", "可被穿透", "風：被推動"):
+    for word in ("可推動", "半掩護", "可燃", "穿透型攻擊可以穿過", "風：被推動"):
         assert word in crate
     pillar = _object(library, "stone_pillar")
     assert "可推倒" in pillar and "擋視線" in pillar and "風：被推倒" in pillar
@@ -112,3 +112,26 @@ def test_legend_uses_the_same_terms(library: ContentLibrary) -> None:
     assert TERM_DEADLY in legend
     chasm = library.ruleset.terrain.by_id()["chasm"]
     assert TERM_DEADLY in "".join(terrain_rules(chasm, library.ruleset))
+
+
+def test_keep_rules_say_the_surface_cannot_form(library: ContentLibrary) -> None:
+    """6.1：「在上面產生火焰：維持原狀」改成說清楚是燒不起來。"""
+    water = _surface(library, "water")
+    assert "火焰無法在上面形成" in water and "維持原狀" not in water
+    fire = _surface(library, "fire")
+    assert "油無法在上面形成" in fire and "在上面產生油" not in fire
+
+
+def test_breakable_objects_show_hp(library: ContentLibrary) -> None:
+    """6.4：可被破壞的物件寫出 HP；其餘不寫。"""
+    for obj in library.ruleset.objects.objects:
+        text = "".join(object_rules(obj, library))
+        if "breakable" in obj.tags:
+            assert f"可被破壞（HP {obj.max_hp}）" in text
+        else:
+            assert "HP" not in text.replace("最大 HP", "")
+
+
+def test_grass_object_explains_it_is_not_the_ground(library: ContentLibrary) -> None:
+    """6.3：草叢（物件）會隱蔽，同名的地面不會。"""
+    assert "同名的地面不會隱蔽" in _object(library, "grass")

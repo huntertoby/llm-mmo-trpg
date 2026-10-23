@@ -11,7 +11,7 @@
 
 - 弩 ``pierce_line``：普攻之後，同一直線上的後方敵人也被擊中（:func:`pierce_line_targets`）；
   ``ignore_height`` 在 :func:`trpg.engine.rules.combat.situational_modifier`；
-- 長槍 ``magazine``：開火用掉子彈（:func:`spend_ammo`），裝填是 ``Reload`` 動作；
+- 火槍 ``magazine``：開火用掉子彈（:func:`spend_ammo`），裝填是 ``Reload`` 動作；
   ``gunshot``：開火讓隱蔽的自己被揭露（:func:`gunshot_reveals`）；``steady``、``range_mod``、
   ``ignore_cover``、``armor_pierce_permille`` 在 :mod:`trpg.engine.rules.weapons` 與命中判定。
 

@@ -8,13 +8,16 @@ from __future__ import annotations
 
 import re
 from collections import Counter
-from typing import Literal
+from typing import TYPE_CHECKING, Literal
 
 from pydantic import Field, field_validator, model_serializer, model_validator
 
 from trpg.content.schemas import ContentModel
 from trpg.content.slots import Slot
 from trpg.shared.types import Attribute, Element, ResistGroup, Surface
+
+if TYPE_CHECKING:
+    from trpg.content.rules import CoreRules
 
 __all__ = [
     "ID_PATTERN",
@@ -172,7 +175,7 @@ _NEUTRAL_PERMILLE = 1000
 
 
 class RangeMod(ContentModel):
-    """武器特性「距離修正」（Phase 3-24a2，長槍的貼臉懲罰與遠距加成）：攻擊距離在
+    """武器特性「距離修正」（Phase 3-24a2，火槍的貼臉懲罰與遠距加成）：攻擊距離在
     ``min_distance``～``max_distance``（含；省略 ＝ 不設上限）格時，普攻命中 ``hit``、傷害 ×
     ``damage_permille``‰。多條重疊時全部生效（命中相加、傷害相乘）。"""
 
@@ -205,7 +208,7 @@ class RangeMod(ContentModel):
 
 
 class Steady(ContentModel):
-    """武器特性「站定」（Phase 3-24a2，長槍的站定狙擊）：本回合還沒主動移動時開火，普攻命中
+    """武器特性「站定」（Phase 3-24a2，火槍的站定狙擊）：本回合還沒主動移動時開火，普攻命中
     ``+hit``、暴擊範圍擴大 ``crit_range``（可和瞄準、背刺疊加）。"""
 
     hit: int = Field(default=0, ge=0, le=10)
@@ -305,6 +308,21 @@ class WeaponDef(ContentModel):
     def is_melee(self) -> bool:
         """近戰類武器（含長柄）：看大類，不看射程（矛的射程是 2，仍是近戰）。"""
         return self.weapon_class == "melee"
+
+    def rule_lines_zh(self, core: CoreRules) -> tuple[str, ...]:
+        """武器卡的共用規則（Phase 3-41b，清單 7.2、7.3）：握法（單手／雙手）與近戰武器共用的背刺。
+        數字取自 ``rules/core.yaml``，改規則說明跟著變。"""
+        lines = [
+            "雙手：占用副手欄位，不能再裝備盾或副手物品"
+            if self.two_handed
+            else "單手：副手欄位可以放盾或副手物品"
+        ]
+        if self.is_melee:
+            lines.append(
+                f"背刺（近戰共用規則）：從目標背後攻擊，命中 +{core.backstab_hit_bonus}、"
+                f"暴擊範圍 +{core.backstab_crit_range_bonus}"
+            )
+        return tuple(lines)
 
     def trait_lines_zh(self, *, on_hit_only: bool = False) -> tuple[str, ...]:
         """武器小特性的說明（每個特性一行；資料欄位的數值直接帶入，改參數說明跟著變）。

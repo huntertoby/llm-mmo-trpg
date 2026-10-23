@@ -10,6 +10,7 @@ from __future__ import annotations
 from trpg.api.schemas import Glossary, GlossaryEntry, StatusLook, WeaponLookEntry
 from trpg.content.battle import StatusDef
 from trpg.content.library import ContentLibrary
+from trpg.narrative.action_info import action_texts, objective_texts
 from trpg.narrative.tile_info import object_rules, surface_rules, terrain_rules
 from trpg.shared.types import Attribute
 
@@ -126,6 +127,12 @@ def build_glossary(library: ContentLibrary) -> Glossary:
             _entry(c.id, c.name_zh, c.description_zh) for c in rules.conditions.conditions
         ),
         triggers=_triggers(library),
+        actions=tuple(
+            _entry(t.id, t.name_zh, t.summary_zh, (), t.lines_zh) for t in action_texts(rules.core)
+        ),
+        objectives=tuple(
+            _entry(t.id, t.name_zh, t.summary_zh, (), t.lines_zh) for t in objective_texts()
+        ),
         weapon_looks=tuple(
             WeaponLookEntry(
                 id=w.id, weapon_class=w.weapon_class, two_handed=w.two_handed, look=w.look

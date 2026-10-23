@@ -494,7 +494,7 @@
     {
       "id": "longgun",
       "slotType": "weapon",
-      "zh": "長槍",
+      "zh": "火槍",
       "paired": false,
       "materials": [
         "iron",
@@ -507,7 +507,7 @@
       "forms": [
         {
           "id": "flintlock",
-          "zh": "燧發長槍",
+          "zh": "燧發火槍",
           "materials": [
             "iron",
             "steel",
@@ -531,7 +531,7 @@
         },
         {
           "id": "sniper",
-          "zh": "狙擊長槍",
+          "zh": "狙擊火槍",
           "materials": [
             "iron",
             "steel",

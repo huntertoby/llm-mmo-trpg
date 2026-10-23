@@ -2534,7 +2534,7 @@ button.selected {
   font-weight: 700;
 }
 
-/* Phase 3-24a2：彈匣（長槍）——HUD 的彈匣格與空膛提示 */
+/* Phase 3-24a2：彈匣（火槍）——HUD 的彈匣格與空膛提示 */
 .ammo-pips {
   display: inline-flex;
   gap: 3px;

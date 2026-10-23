@@ -5054,6 +5054,22 @@
             "title": "Triggers",
             "default": []
           },
+          "actions": {
+            "items": {
+              "$ref": "#/components/schemas/GlossaryEntry"
+            },
+            "type": "array",
+            "title": "Actions",
+            "default": []
+          },
+          "objectives": {
+            "items": {
+              "$ref": "#/components/schemas/GlossaryEntry"
+            },
+            "type": "array",
+            "title": "Objectives",
+            "default": []
+          },
           "weapon_looks": {
             "items": {
               "$ref": "#/components/schemas/WeaponLookEntry"
@@ -7480,7 +7496,7 @@
           "unit_id"
         ],
         "title": "Reload",
-        "description": "裝填（Phase 3-24a2，**武器動作**：只有帶彈匣的武器——長槍——才有，不算進基本動作的 10 個\n上限，見 :data:`WEAPON_ACTION_TYPES`）：花武器的 ``reload_ap`` AP 裝滿彈匣；空膛時才合法。"
+        "description": "裝填（Phase 3-24a2，**武器動作**：只有帶彈匣的武器——火槍——才有，不算進基本動作的 10 個\n上限，見 :data:`WEAPON_ACTION_TYPES`）：花武器的 ``reload_ap`` AP 裝滿彈匣；空膛時才合法。"
       },
       "RerollChoice": {
         "properties": {

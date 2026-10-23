@@ -151,7 +151,7 @@ interface ObjectLook {
 export const OBJECTS: Readonly<Record<string, ObjectLook>> = {
   wooden_bridge: { glyph: "橋", color: 0x8a5a2b, floor: true },
   oil_barrel: { glyph: "油", color: 0x5a3a1a, floor: false },
-  thin_ice: { glyph: "冰", color: 0xaad8f0, floor: true },
+  thin_ice: { glyph: "薄", color: 0xaad8f0, floor: true },
   stone_pillar: { glyph: "柱", color: 0x6b6b6b, floor: false },
   grass: { glyph: "草", color: 0x3f7a2a, floor: true },
   crate: { glyph: "箱", color: 0xb07a3a, floor: false },

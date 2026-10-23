@@ -184,7 +184,11 @@ def _hero(library: ContentLibrary, run: RunState) -> HeroOut:
         weapon=run.hero.weapon,
         weapon_name_zh=weapon.name_zh if weapon is not None else "",
         weapon_class=weapon.weapon_class if weapon is not None else "",
-        weapon_traits_zh=weapon.trait_lines_zh() if weapon is not None else (),
+        weapon_traits_zh=(
+            (*weapon.trait_lines_zh(), *weapon.rule_lines_zh(library.ruleset.core))
+            if weapon is not None
+            else ()
+        ),
         skills=tuple(
             _card(library, run, s, owned=True) for s in skill_defs(library, run, run.hero.skills)
         ),

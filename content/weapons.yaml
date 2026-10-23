@@ -189,9 +189,9 @@ weapons:
     two_handed: true
     pierce_line: 5
     ignore_height: true
-  # 長槍（火器）：彈匣 1 發、裝填 1 AP；槍聲；直射（沒有 lob）；站定狙擊；直射穿甲；貼臉懲罰與遠距加成。
+  # 火槍（火器）：彈匣 1 發、裝填 1 AP；槍聲；直射（沒有 lob）；站定狙擊；直射穿甲；貼臉懲罰與遠距加成。
   - id: longgun
-    name_zh: 長槍
+    name_zh: 火槍
     look: {kind: longgun, material: steel, form: flintlock}
     weapon_class: ranged
     range: 8

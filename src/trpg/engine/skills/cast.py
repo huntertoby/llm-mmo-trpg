@@ -699,7 +699,7 @@ class Cast:
         bonus += scale_bonus(self.ctx.state, self.caster, unit, spec.scaling)
         bonus = bonus * self.modifier(modifiers.damage_permille, unit) // PERMILLE
         bonus = bonus * gamble // PERMILLE
-        if self.gun:  # 火器：站在這個距離的傷害修正（長槍遠距 +25%、貼臉 −50%、霰彈槍衰減）
+        if self.gun:  # 火器：站在這個距離的傷害修正（火槍遠距 +25%、貼臉 −50%、霰彈槍衰減）
             bonus = bonus * range_damage_permille(self.caster, manhattan(self.caster.xy, unit.xy))
             bonus //= PERMILLE
         behind = self.behind_permille(unit)
