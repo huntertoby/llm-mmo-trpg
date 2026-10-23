@@ -2,7 +2,7 @@
 import { useEffect, useRef, useState } from "react";
 import { api, ApiError } from "../api/client";
 import type { BattleResponse, RunChoice, RunResponse } from "../api/types";
-import { objectiveBadge } from "../battle/objective";
+import { OBJECTIVE_ICONS, objectiveBadge } from "../battle/objective";
 import { battleName, runView, writeCurrentRun } from "../run/flow";
 import { RunHeroPanel } from "../run/RunHeroPanel";
 import { SkillPointsSection } from "../run/SkillPointsSection";
@@ -169,7 +169,8 @@ export function RunScreen({ initial, autoResume = false, onHome, onNewRun }: Pro
                   下一場：{battleName(view.index, view.boss)}　{view.mapName}
                 </h2>
                 <div className={`run-next-goal ${view.goalKind}`}>
-                  {view.goalBadge}：{view.goalLine}
+                  {/* goalLine 本身已是「名稱：說明」（3-41b），前面只放圖示，避免「全滅：全滅：」 */}
+                  {OBJECTIVE_ICONS[view.goalKind]} {view.goalLine}
                 </div>
                 <div className="muted small">敵人：{view.enemies.join("、")}</div>
                 <div className="muted small">隊友：標準隊友 2 名（滿狀態）；{run.resource_rule_zh}</div>
