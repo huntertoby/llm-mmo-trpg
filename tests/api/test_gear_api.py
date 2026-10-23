@@ -222,3 +222,41 @@ def test_custom_gear_battle_log_replays(client: TestClient, tmp_path: Path) -> N
     out = io.StringIO()
     assert cmd_replay(path, out) == 0
     assert "重播驗證通過" in out.getvalue()
+
+
+def test_catalog_offhand_items_carry_card_lines_from_the_data(client: TestClient) -> None:
+    """副手卡的特性行（Phase 3I-2）：數值取自 offhands.yaml 與 core 規則，不寫死。"""
+    body = client.get("/api/gear/catalog").json()
+    items = {i["id"]: i for i in body["items"]}
+    tower = items["item_offhand_tower_shield"]
+    assert tower["offhand"] == "tower_shield" and tower["offhand_name_zh"] == "塔盾"
+    assert tower["offhand_traits_zh"][0] == "縮放屬性：體質"
+    assert any("命中 −2（同半掩護" in line for line in tower["offhand_traits_zh"])
+    assert any("移動 −1" in line for line in tower["offhand_traits_zh"])
+    assert any(
+        "法術技傷害 +10%" in line for line in items["item_offhand_tome"]["offhand_traits_zh"]
+    )
+    assert any("施放距離 +1" in line for line in items["item_offhand_orb"]["offhand_traits_zh"])
+    assert "取較高" in items["item_offhand_round_shield"]["offhand_traits_zh"][0]
+    assert items["item_test_shield"]["offhand_traits_zh"] == []  # 舊的副手物品沒有基礎特性
+
+
+def test_offhand_items_and_custom_offhands_are_checked(client: TestClient) -> None:
+    for item in ("round_shield", "tower_shield", "tome", "orb"):
+        body = _check(client, {"off_hand": {"item_id": f"item_offhand_{item}"}})
+        assert body["legal"] is True, body
+        assert body["hero"]["offhand_name_zh"] != ""
+    affix = {"affix": "affix_max_hp", "value": 4}
+    custom = _check(client, {"off_hand": _custom(affix, offhand="orb")})
+    assert custom["legal"] is True, custom
+    assert custom["hero"]["offhand_name_zh"] == "法器珠"
+    bad = _check(client, {"off_hand": _custom(affix, offhand="nope")})
+    assert bad["legal"] is False and any("未知的副手" in p for p in bad["problems"])
+    two_handed = _check(
+        client,
+        {
+            "main_hand": {"item_id": "item_test_hammer"},
+            "off_hand": {"item_id": "item_offhand_tome"},
+        },
+    )
+    assert two_handed["legal"] is False and "副手被占用" in "；".join(two_handed["problems"])
