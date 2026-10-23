@@ -68,7 +68,8 @@ def test_inscribe_places_a_rune_with_default_duration_and_both_teams_see_it() ->
     for team in (Team.ALLY, Team.ENEMY):  # 敵我都看得到
         (view,) = project_for(result.state, team).runes
         assert (view.owner_id, view.name_zh, view.remaining) == (U1, "雷紋", 3)
-    assert rune_name(None, "hunt") == "hunt紋"
+    assert rune_name(None, "hunt") == "符紋"  # 查不到刻印單字時不拼英文（3-41a）
+    assert rune_name(None, "hunt", {"hunt": "獵"}) == "獵紋"
 
 
 def test_inscribe_covers_every_tile_of_the_shape_and_takes_explicit_duration() -> None:

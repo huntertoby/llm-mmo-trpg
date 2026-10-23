@@ -43,6 +43,7 @@ from trpg.engine.state import BattleState, UnitState
 from trpg.shared.types import Attribute, Surface
 
 __all__ = [
+    "TRIP_ATTR",
     "apply_hit_traits",
     "attack_dice",
     "blessing_target",
@@ -132,12 +133,16 @@ def height_permille(state: BattleState, attacker: UnitState, target: UnitState) 
     return sum(i.height_permille for i in active_infusions(state, attacker))
 
 
+TRIP_ATTR = Attribute.DEX
+"""倒地灌注的絆倒對抗用的屬性（Phase 3-41a 抽成常數，技能卡說明引用同一個值）。"""
+
+
 def _try_trip(ctx: Ctx, attacker: UnitState, target: UnitState) -> bool:
     """倒地關鍵字的絆倒：每隻召喚物每輪 1 次、目標還沒倒地時，擲敏捷對抗；成功才倒地。"""
     if attacker.trip_round == ctx.state.round or target.has_status(PRONE):
         return False
     attacker.trip_round = ctx.state.round
-    return contest(ctx, "trip", attacker, target, Attribute.DEX)
+    return contest(ctx, "trip", attacker, target, TRIP_ATTR)
 
 
 def _in_water(state: BattleState, unit: UnitState) -> bool:

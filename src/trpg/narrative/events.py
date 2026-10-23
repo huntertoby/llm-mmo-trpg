@@ -1297,10 +1297,8 @@ def _zone_expired(e: ZoneExpired, v: _View) -> str:
 @_handles(RuneInscribed)
 def _rune_inscribed(e: RuneInscribed, v: _View) -> str:
     owner = v.name.get(e.owner_id, e.owner_id)
-    return (
-        f"  {owner} 在 {xy_text(e.pos)} 刻下{rune_name(e.element, e.tag)}"
-        f"（剩 {e.remaining} 輪；只有 {owner} 讀得到）"
-    )
+    rune = rune_name(e.element, e.tag, v.state.ruleset.skill_tags.rune_names())
+    return f"  {owner} 在 {xy_text(e.pos)} 刻下{rune}（剩 {e.remaining} 輪；只有 {owner} 讀得到）"
 
 
 _RUNE_REMOVAL_TEXT = {
@@ -1314,7 +1312,7 @@ _RUNE_REMOVAL_TEXT = {
 @_handles(RuneRemoved)
 def _rune_removed(e: RuneRemoved, v: _View) -> str:
     owner = v.name.get(e.owner_id, e.owner_id)
-    name = rune_name(e.element, e.tag)
+    name = rune_name(e.element, e.tag, v.state.ruleset.skill_tags.rune_names())
     return f"  {owner} 的{name}（{xy_text(e.pos)}）{_RUNE_REMOVAL_TEXT[e.reason]}"
 
 

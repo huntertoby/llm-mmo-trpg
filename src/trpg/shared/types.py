@@ -5,6 +5,7 @@
 
 from __future__ import annotations
 
+from collections.abc import Mapping
 from enum import StrEnum
 from typing import NewType
 
@@ -198,11 +199,19 @@ _RUNE_ELEMENT_NAMES: dict[Element, str] = {
 }
 
 
-def rune_name(element: Element | None, tag: str | None) -> str:
-    """符文的名稱（Phase 3-23），例如「雷紋」「火紋」；標籤符文為「<標籤>紋」。"""
+UNKNOWN_RUNE_NAME = "符紋"
+"""標籤符文查不到刻印單字時的名稱（Phase 3-41a：不把英文代號拼進名稱）。"""
+
+
+def rune_name(
+    element: Element | None, tag: str | None, tag_runes: Mapping[str, str] | None = None
+) -> str:
+    """符文的名稱（Phase 3-23），例如「雷紋」「火紋」；標籤符文為「<單字>紋」，單字取
+    ``tag_runes``（``content/skill_tags.yaml`` 的 ``rune_zh``），查不到時為「符紋」。"""
     if element is not None:
         return f"{_RUNE_ELEMENT_NAMES[element]}紋"
-    return f"{tag or ''}紋"
+    rune = (tag_runes or {}).get(tag or "")
+    return UNKNOWN_RUNE_NAME if rune is None else f"{rune}紋"
 
 
 # 對應 docs/專案計畫.md 5.1.1 的「抗性分組」欄

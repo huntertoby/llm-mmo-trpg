@@ -12,6 +12,7 @@
 from __future__ import annotations
 
 from trpg.content.skills import EffectSpec
+from trpg.content.summons import summon_spec_hp
 from trpg.engine.rules.geometry import XY
 from trpg.engine.skills.targeting import summon_site_problem
 from trpg.engine.state import BattleState, UnitState
@@ -29,12 +30,11 @@ def apply_summon_spec(state: BattleState, unit: UnitState, spec: EffectSpec | No
     ``hp`` 補滿）。"""
     if spec is None:
         return
-    if spec.max_hp_permille:
-        unit.max_hp = unit.max_hp * (_PERMILLE + spec.max_hp_permille) // _PERMILLE
-    power = spec.power_permille
-    if power is not None:
-        unit.max_hp = max(1, unit.max_hp * power // _PERMILLE)
-        unit.summon_power_permille = power
+    unit.max_hp = summon_spec_hp(
+        unit.max_hp, max_hp_permille=spec.max_hp_permille, power_permille=spec.power_permille
+    )  # 和技能卡同一個函式（3-41a）
+    if spec.power_permille is not None:
+        unit.summon_power_permille = spec.power_permille
     trait = None if spec.trait is None else state.ruleset.core.summon_traits.get(spec.trait)
     if trait is not None:
         unit.armor_bonus += trait.armor_bonus

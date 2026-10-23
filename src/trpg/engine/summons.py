@@ -31,6 +31,7 @@ from trpg.content.battle import Dice, SummonPulse, TotemSpec, WeaponDef
 from trpg.content.maps import MAX_HEIGHT
 from trpg.content.rules import CoreRules
 from trpg.content.skills import EffectSpec
+from trpg.content.summons import summon_scaled_hp
 from trpg.engine import modifiers
 from trpg.engine.context import Ctx
 from trpg.engine.effects import execute
@@ -226,9 +227,6 @@ def summon_unit(  # noqa: PLR0917
         facing=owner.facing,  # 召喚物與召喚者同向（Phase 3D-8d）
     )
     unit.owner_id = owner.id
-    role_permille = ctx.core.summon_role_hp_permille.get(summon.template.role or "", PERMILLE)
-    base_hp = (unit.max_hp + grown.hp) * role_permille // PERMILLE  # 依定位的 HP 係數（3-33f1）
-    unit.max_hp = base_hp * _hp_permille(state, owner, skill_id) // PERMILLE
     unit.level = owner.level
     unit.summon_bonus_permille = grown.bonus_permille + (
         0 if use is None else modifiers.summon_damage_permille(state, owner, use)
@@ -236,7 +234,15 @@ def summon_unit(  # noqa: PLR0917
     unit.infusion = infusion
     unit.bonus_infusion = None if spec is None else spec.infusion  # 橋接進化（3-33f2）
     infusions = active_infusions(state, unit)  # 固有與施放時選的灌注（3-33e1）
-    unit.max_hp = unit.max_hp * (PERMILLE + sum(i.hp_permille for i in infusions)) // PERMILLE
+    # 依定位的 HP 係數（3-33f1）、召喚者的 HP 修正、灌注的 HP 加成：和技能卡同一個函式（3-41a）
+    unit.max_hp = summon_scaled_hp(
+        ctx.core,
+        summon.template,
+        unit.max_hp,
+        growth_hp=grown.hp,
+        owner_hp_permille=_hp_permille(state, owner, skill_id),
+        infusion_hp_permille=sum(i.hp_permille for i in infusions),
+    )
     apply_summon_spec(state, unit, spec)  # 加深與數量型進化（3-33f2）
     unit.gear = inherit_attack_gear(owner, unit.gear)  # 繼承 1 條普攻附加詞條（3-33f2）
     unit.hp = unit.max_hp

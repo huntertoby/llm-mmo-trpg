@@ -7,13 +7,15 @@
 
 from __future__ import annotations
 
-from collections.abc import Callable, Mapping
+from collections.abc import Callable, Iterable, Mapping
 from typing import Any
 
 from pydantic import BaseModel, ConfigDict
 
 from trpg.content.battle import Dice
-from trpg.content.library import ContentLibrary
+from trpg.content.keyword_derive import KeywordGrade, keyword_grades, skill_facts
+from trpg.content.library import ContentLibrary, Ruleset
+from trpg.content.rule_changes import RuleChangeDef, rule_change_sentence
 from trpg.content.skills import (
     CHEAT_DEATH_STATUS,
     DAMAGE_MULTIPLIER,
@@ -25,6 +27,7 @@ from trpg.content.skills import (
     ModifierTarget,
     ShapeSpec,
     SkillDef,
+    TriggerSpec,
     VariantSpec,
     VariantWhen,
     condition_text,
@@ -32,10 +35,24 @@ from trpg.content.skills import (
     on_hit_carrier,
 )
 from trpg.content.stacks import StackDef
+from trpg.engine.ids import SHIELDED as SHIELD_STATUS
 from trpg.narrative.skill_icon import SkillIcon, skill_icon
 from trpg.narrative.skill_levels import SkillLevelInfo
+from trpg.narrative.summon_info import (
+    SummonInfoCard,
+    infusion_hint,
+    summon_acts,
+    summon_card_hp,
+    summon_info,
+    summon_innate_lines,
+)
 from trpg.shared.types import Surface, rune_name
-from trpg.skillgen.keywords import SkillKeywords, derive_draft_keywords, derive_keywords
+from trpg.skillgen.keywords import (
+    SkillKeywords,
+    derive_draft_keywords,
+    derive_keywords,
+    draft_facts,
+)
 
 __all__ = [
     "CATEGORY_TEXT",
@@ -202,6 +219,12 @@ def scaling_text(spec: EffectSpec) -> str | None:
 
 
 def _damage(lib: ContentLibrary, skill: SkillDef, spec: EffectSpec) -> str:
+    head, extras = _damage_parts(lib, skill, spec)
+    return head + "".join(f"，{e}" for e in extras)
+
+
+def _damage_parts(lib: ContentLibrary, skill: SkillDef, spec: EffectSpec) -> tuple[str, list[str]]:
+    """傷害句（骰值、元素）與附加句（吸血、爆骰、擊殺時……）分開，讓對象後綴接在傷害句後面。"""
     discount = skill.damage_permille or 1000
     if skill.category == "spell":
         assert spec.dice is not None and spec.element is not None
@@ -228,7 +251,7 @@ def _damage(lib: ContentLibrary, skill: SkillDef, spec: EffectSpec) -> str:
     if spec.on_kill:
         kill = "、".join(_on_kill_text(lib, skill, sub) for sub in spec.on_kill)
         extras.append(f"若這一招讓敵人倒下：{kill}")
-    return text + "".join(f"，{e}" for e in extras)
+    return text, extras
 
 
 def _on_kill_text(lib: ContentLibrary, skill: SkillDef, sub: EffectSpec) -> str:
@@ -277,25 +300,31 @@ def _shadowstep(_lib: ContentLibrary, _skill: SkillDef, spec: EffectSpec) -> str
 
 
 def _summon(lib: ContentLibrary, _skill: SkillDef, spec: EffectSpec) -> str:
+    """召喚的一句話（清單 1.1～1.7）：HP 用和引擎同一個算法；自帶能力、圖騰類的「不移動、不攻擊」
+    與灌注都由範本與 ``summon_infusions`` 產生。"""
     try:
         summon = lib.ruleset.summon_def(spec.unit or "")
     except KeyError:
-        name = spec.unit or "召喚物"
+        return f"在目標空格召喚召喚物，持續 {spec.duration} 輪"
+    template = summon.template
+    hp = summon_card_hp(lib, summon, spec)
+    if not summon_acts(summon.template):
+        text = (
+            f"在目標空格立起{template.name_zh}（HP {hp}），持續 {spec.duration} 輪"
+            "（緊接在你之後行動；不移動、不攻擊）"
+        )
     else:
-        template, weapon = summon.template, summon.weapon
-        hp = lib.ruleset.core.template_max_hp(template)
-        totem = template.totem
-        if totem is not None:  # 圖騰（3D-4b）
-            status = lib.ruleset.status_def(totem.status).name_zh
-            return (
-                f"在目標空格立起{template.name_zh}（HP {hp}），持續 {spec.duration} 輪"
-                f"（緊接在你之後行動；不移動、不攻擊，每次行動開始時讓 {totem.radius} 格內的"
-                f"友方獲得「{status}」{totem.duration} 回合）"
-            )
-        name = f"{template.name_zh}（HP {hp}，{weapon.name_zh}）"
-    text = f"在目標空格召喚{name}，持續 {spec.duration} 輪（緊接在你之後行動，由 AI 控制）"
+        text = (
+            f"在目標空格召喚{template.name_zh}（HP {hp}），持續 {spec.duration} 輪"
+            "（緊接在你之後行動，由 AI 控制）"
+        )
+    innate = summon_innate_lines(lib, summon)
+    if innate:
+        text += f"；自帶：{'；'.join(innate)}"
     extra = _summon_variant_text(lib, spec)
-    return f"{text}；{extra}" if extra else text
+    if extra:
+        text += f"；{extra}"
+    return f"{text}；{infusion_hint(lib, acts=summon_acts(template))}"
 
 
 def _summon_variant_text(lib: ContentLibrary, spec: EffectSpec) -> str:
@@ -324,30 +353,22 @@ def rule_change_text(library: ContentLibrary, rule_id: str) -> str:
     try:
         rule = rules.rule_change_def(rule_id)
     except KeyError:
-        return f"規則改變 {rule_id}"
-    if rule.kind == "element_heals_allies":
-        assert rule.element is not None and rule.permille is not None
-        text = (
-            f"你造成的{rule.element.display_name}傷害打到友方（不含自己）時，改為治療"
-            f"（原本傷害的 {rule.permille / 10:g}%）"
-        )
-    elif rule.kind == "push_any_object":
-        text = "你可以推動任何擋路的物件（例如土牆、矮牆、倒木），可推倒的照樣倒下；地形與橋面不行"
-    elif rule.kind == "pass_through_apply":
-        assert rule.status is not None
-        status = rules.status_def(rule.status).name_zh
-        text = (
-            f"你步行經過敵人的相鄰格時，對他施加「{status}」{rule.duration} 回合"
-            "（每次移動每個敵人一次）"
-        )
-    else:
-        assert rule.unit is not None
+        return "規則改變"
+    return f"規則改變「{rule.name_zh}」：{rule_change_sentence_for(rules, rule)}"
+
+
+def rule_change_sentence_for(rules: Ruleset, rule: RuleChangeDef) -> str:
+    """規則改變的規則句，名稱從規則包查（:func:`trpg.content.rule_changes.rule_change_sentence`）。"""
+
+    def summon_name(unit: str) -> str:
         try:
-            name = rules.summon_def(rule.unit).template.name_zh
+            return rules.summon_def(unit).template.name_zh
         except KeyError:
-            name = rule.unit
-        text = f"你倒下時，在原地留下{name}（接替你的行動順序），持續 {rule.duration} 輪"
-    return f"規則改變「{rule.name_zh}」：{text}"
+            return "召喚物"
+
+    return rule_change_sentence(
+        rule, status_name=lambda sid: rules.status_def(sid).name_zh, summon_name=summon_name
+    )
 
 
 def _rule_change(lib: ContentLibrary, _skill: SkillDef, spec: EffectSpec) -> str:
@@ -433,10 +454,38 @@ def _swap_any(_lib: ContentLibrary, skill: SkillDef, _spec: EffectSpec) -> str:
     return f"讓射程內的兩個單位互換位置（含敵人時每個敵人各過{scaling_label(skill)}對抗）"
 
 
+def status_duration_text(lib: ContentLibrary, status_id: str, duration: int | None) -> str:
+    """施加狀態的持續時間（Phase 3-41a 清單 3.7）：效果有寫回合數就用它，否則用狀態的預設
+    （``statuses.yaml`` 的 ``duration``／``expires``）。"""
+    if duration:
+        return f" {duration} 回合"
+    status = lib.ruleset.status_def(status_id)
+    if status.expires == "own_turn_start":
+        return "（到帶有者的下回合開始）"
+    if status.duration is not None:
+        return f" {status.duration} 回合"
+    return "（直到被移除）"
+
+
 def _apply_status(lib: ContentLibrary, _skill: SkillDef, spec: EffectSpec) -> str:
     assert spec.status is not None
-    turns = f" {spec.duration} 回合" if spec.duration else ""
-    return f"狀態「{lib.ruleset.status_def(spec.status).name_zh}」{turns}"
+    name = lib.ruleset.status_def(spec.status).name_zh
+    return f"狀態「{name}」{status_duration_text(lib, spec.status, spec.duration)}"
+
+
+def _shield(lib: ContentLibrary, skill: SkillDef, spec: EffectSpec) -> str:
+    """護盾（清單 3.6）：吸收量與持續時間（``shielded`` 狀態的預設回合）。"""
+    status = lib.ruleset.status_def(SHIELD_STATUS)
+    amount = "" if spec.dice is None else f"{_dice(spec.dice)}＋"
+    return (
+        f"護盾：吸收 {amount}{scaling_label(skill)}加成 點傷害，持續 {status.duration} 回合"
+        "（已有護盾時取較大值）"
+    )
+
+
+def _cleanse(_lib: ContentLibrary, _skill: SkillDef, _spec: EffectSpec) -> str:
+    """淨化（清單 3.6）：移除的是所有不利的狀態（引擎移除非有益、非姿態的狀態）。"""
+    return "淨化：移除身上所有不利的狀態（增益與姿態不受影響）"
 
 
 def _create_surface(lib: ContentLibrary, _skill: SkillDef, spec: EffectSpec) -> str:
@@ -453,8 +502,9 @@ def _create_obstacle(lib: ContentLibrary, _skill: SkillDef, spec: EffectSpec) ->
 
 def _inscribe(lib: ContentLibrary, _skill: SkillDef, spec: EffectSpec) -> str:
     rounds = spec.duration or lib.ruleset.core.rune_default_rounds
+    rune = rune_name(spec.element, spec.tag, lib.ruleset.skill_tags.rune_names())
     return (
-        f"在影響格刻下你專屬的「{rune_name(spec.element, spec.tag)}」，持續 {rounds} 輪"
+        f"在影響格刻下你專屬的「{rune}」，持續 {rounds} 輪"
         "（符文本身沒有效果，敵我都看得到；之後由你的技能讀取）"
     )
 
@@ -504,7 +554,7 @@ def _overload_text(lib: ContentLibrary, stack: StackDef) -> str:
             assert sub.status is not None
             backlash.append(f"獲得「{lib.ruleset.status_def(sub.status).name_zh}」")
     return (
-        f"。超載：你帶「{overload.tag}」標籤的技能每層傷害"
+        f"。超載：你帶{tag_text(lib, (overload.tag,))}標籤的技能每層傷害"
         f" +{overload.per_stack_damage_permille / 10:g}%；"
         f"累積到 {overload.threshold} 層時，你{'、'.join(backlash)}並清空層數"
     )
@@ -578,8 +628,8 @@ def _grant_ap(_lib: ContentLibrary, _skill: SkillDef, spec: EffectSpec) -> str:
     return f"立刻獲得 {spec.amount or 1} AP（不超過本回合上限，每輪限一次）"
 
 
-def _reset_cooldown(_lib: ContentLibrary, _skill: SkillDef, spec: EffectSpec) -> str:
-    which = "全部技能" if spec.which == "all" else f"帶「{spec.tag}」標籤的技能"
+def _reset_cooldown(lib: ContentLibrary, _skill: SkillDef, spec: EffectSpec) -> str:
+    which = "全部技能" if spec.which == "all" else f"帶{tag_text(lib, (spec.tag or '',))}標籤的技能"
     return f"{which}的冷卻歸零（花源力的技能除外）"
 
 
@@ -687,8 +737,8 @@ def _name_only(lib: ContentLibrary, _skill: SkillDef, spec: EffectSpec) -> str:
 _EFFECT_TEXT: dict[str, _EffectText] = {
     "damage": _damage,
     "heal": _heal,
-    "shield": _name_only,
-    "cleanse": _name_only,
+    "shield": _shield,
+    "cleanse": _cleanse,
     "intercept": _name_only,
     "push": _push_pull,
     "pull": _push_pull,
@@ -781,13 +831,39 @@ def variant_change_text(library: ContentLibrary, skill: SkillDef, variant: Varia
     return "；".join(parts)
 
 
+_OWN_TARGET_TEXT: frozenset[str] = frozenset(
+    {
+        "summon",
+        "zone",
+        "rule_change",
+        "gamble",
+        "sacrifice_summon",
+        "place_trap",
+        "teleport_target",
+        "swap_any",
+        "revive",
+        "topple",
+        "teleport",
+        "dash",
+        "leap",
+        "shadowstep",
+        "charge_through",
+        "copy_skill",
+    }
+)
+"""句子本身已寫明對象（或對象就是施放者自己的位移）的原語：不再加「（敵方）」等後綴（清單 3.5）。"""
+
+
 def effect_summary(library: ContentLibrary, skill: SkillDef, spec: EffectSpec) -> str:
     """一個效果的一句話，含對象，例如「2d6＋智力加成的火焰傷害（敵方）」。"""
     primitive = library.ruleset.primitive_def(spec.type)
     affects = spec.affects or default_affects(primitive)
-    text = _effect_core(library, skill, spec)
-    if spec.type not in ("summon", "zone", "rule_change", "gamble"):  # 對象已寫在句中
-        text += f"（{_AFFECTS[affects]}）"
+    suffix = "" if spec.type in _OWN_TARGET_TEXT else f"（{_AFFECTS[affects]}）"
+    if spec.type == "damage":  # 對象接在傷害句後面，擊殺時等附加句放在對象之後（清單 3.5）
+        head, extras = _damage_parts(library, skill, spec)
+        text = head + suffix + "".join(f"，{e}" for e in extras)
+    else:
+        text = _effect_core(library, skill, spec) + suffix
     if spec.condition is not None:
         text += f"，若{condition_summary(library, spec.condition)}"
     return text
@@ -800,6 +876,8 @@ def condition_summary(library: ContentLibrary, condition: ConditionSpec) -> str:
         condition,
         status_name=lambda sid: rules.status_def(sid).name_zh,
         surface_name=lambda surface: rules.surface_def(surface).name_zh,
+        tag_name=rules.skill_tags.name,
+        tag_runes=rules.skill_tags.rune_names(),
     )
 
 
@@ -808,8 +886,15 @@ def condition_summary(library: ContentLibrary, condition: ConditionSpec) -> str:
 # ---------------------------------------------------------------------------
 
 
-def _targets_text(target: ModifierTarget) -> str:
-    """套用對象，例如「你的所有攻擊」「推擊、帶標籤 push 的技能」。"""
+def tag_text(library: ContentLibrary, tags: Iterable[str]) -> str:
+    """技能標籤的中文名（``content/skill_tags.yaml``），例如「「推擊」／「控制」」；查不到的標籤
+    顯示「特定」，不顯示英文代號（Phase 3-41a）。"""
+    names = library.ruleset.skill_tags
+    return "／".join(f"「{names.name(t)}」" for t in tags)
+
+
+def _targets_text(library: ContentLibrary, target: ModifierTarget) -> str:
+    """套用對象，例如「你的所有攻擊」「推擊、帶「推擊」標籤的技能」。"""
     parts: list[str] = []
     if target.all_attacks:
         parts.append("你的所有攻擊（普攻與攻擊技能）")
@@ -817,7 +902,7 @@ def _targets_text(target: ModifierTarget) -> str:
         parts.append("你施放的所有技能")
     parts += [_ACTION_TEXT[a] for a in target.actions if not (a == "attack" and target.all_attacks)]
     if target.skill_tags and not target.all_skills:
-        parts.append(f"帶標籤 {'／'.join(target.skill_tags)} 的技能")
+        parts.append(f"帶{tag_text(library, target.skill_tags)}標籤的技能")
     return "、".join(parts)
 
 
@@ -883,7 +968,7 @@ def _other_change_text(library: ContentLibrary, skill: SkillDef, rule: ModifierS
     if change.add_element is not None:
         return f"物理傷害改為{change.add_element.display_name}（已有元素的不變）"
     if change.add_tags is not None:
-        return f"獲得標籤 {'、'.join(change.add_tags)}"
+        return f"獲得{tag_text(library, change.add_tags)}標籤"
     if change.shape_to is not None:
         return _shape_to_text(library, change.shape_to)
     assert change.on_hit_effects is not None
@@ -895,7 +980,7 @@ def _other_change_text(library: ContentLibrary, skill: SkillDef, rule: ModifierS
 def modifier_summary(library: ContentLibrary, skill: SkillDef, rule: ModifierSpec) -> str:
     """一條修正規則的一句話，例如「你的所有攻擊（普攻與攻擊技能）：傷害 +10%，若目標帶有狀態
     「燃燒」」。"""
-    text = f"{_targets_text(rule.applies_to)}：{_change_text(library, skill, rule)}"
+    text = f"{_targets_text(library, rule.applies_to)}：{_change_text(library, skill, rule)}"
     if rule.condition is not None:
         text += f"，若{condition_summary(library, rule.condition)}"
     if rule.per_turn_limit is not None:
@@ -966,8 +1051,24 @@ def timing_text(library: ContentLibrary, skill: SkillDef) -> str | None:
         event = skill.reaction.event
         return f"反應時機：{REACTION_TIMING_TEXT.get(event, event)}"
     if skill.trigger is not None:
-        return f"觸發時機：{library.ruleset.trigger_def(skill.trigger.event).name_zh}"
+        return f"觸發時機：{trigger_timing_text(library, skill.trigger)}"
     return None
+
+
+def trigger_timing_text(library: ContentLibrary, trigger: TriggerSpec) -> str:
+    """被動觸發時機的一句話，帶參數的時機寫出參數（Phase 3-41a），例如「每命中 2 次」
+    「施放帶「火焰」標籤的技能後」「敵人進入你的「水」表面時」。"""
+    rules = library.ruleset
+    name = rules.trigger_def(trigger.event).name_zh
+    if trigger.n is not None:
+        return name.replace(" n ", f" {trigger.n} ")
+    if trigger.tag is not None:
+        return f"施放帶{tag_text(library, (trigger.tag,))}標籤的技能後"
+    if trigger.surface is not None:
+        return f"敵人進入你的「{rules.surface_def(trigger.surface).name_zh}」表面時"
+    if trigger.status is not None:
+        return f"施加「{rules.status_def(trigger.status).name_zh}」後"
+    return name
 
 
 class KeywordRef(BaseModel):
@@ -980,6 +1081,10 @@ class KeywordRef(BaseModel):
     description_zh: str
     variant: bool = False
     """只有特定地形的戰場變奏型態才有這個關鍵字（Phase 3-25b；技能卡標「（特定地形）」）。"""
+    general: bool = False
+    """只由通用規則推導（Phase 3-41a，清單 2.1）：技能卡標灰並附上 ``reason_zh``。"""
+    reason_zh: str | None = None
+    """通用歸類的一句理由（``skill_keywords.yaml`` 的 ``reason_zh``）；專屬的為 ``None``。"""
 
 
 class SkillCardKeywords(BaseModel):
@@ -992,32 +1097,52 @@ class SkillCardKeywords(BaseModel):
     uses: tuple[KeywordRef, ...] = ()
 
 
-def keywords_card(library: ContentLibrary, found: SkillKeywords) -> SkillCardKeywords:
-    """推導結果（關鍵字 ID）附上顯示名稱。"""
+def keywords_card(
+    library: ContentLibrary,
+    found: SkillKeywords,
+    grades: Mapping[tuple[str, str], KeywordGrade] | None = None,
+) -> SkillCardKeywords:
+    """推導結果（關鍵字 ID）附上顯示名稱。``grades``（:func:`keyword_grades`，Phase 3-41a 清單
+    2.1）：只由暫定規則推導的關鍵字不顯示，只由通用規則推導的標 ``general`` 並附理由；省略時全部照
+    專屬顯示。"""
     defs = library.keywords.by_id()
+    grades = grades or {}
 
-    def ref(keyword_id: str) -> KeywordRef:
+    def ref(side: str, keyword_id: str) -> KeywordRef | None:
         d = defs[keyword_id]
+        grade = grades.get((side, keyword_id))
+        if grade is not None and grade.grade == "provisional":
+            return None
+        general = grade is not None and grade.grade == "general"
         return KeywordRef(
             id=d.id,
             name_zh=d.name_zh,
             description_zh=d.description_zh,
             variant=keyword_id in found.variant,
+            general=general,
+            reason_zh=grade.reason_zh if general and grade is not None else None,
         )
 
+    def side_refs(side: str, ids: tuple[str, ...]) -> tuple[KeywordRef, ...]:
+        return tuple(r for k in ids if (r := ref(side, k)) is not None)
+
     return SkillCardKeywords(
-        makes=tuple(ref(k) for k in found.makes), uses=tuple(ref(k) for k in found.uses)
+        makes=side_refs("makes", found.makes), uses=side_refs("uses", found.uses)
     )
 
 
 def skill_card_keywords(library: ContentLibrary, skill: SkillDef) -> SkillCardKeywords:
-    """``skill`` 的製造與利用關鍵字（附顯示名稱）。"""
-    return keywords_card(library, derive_keywords(skill, library.keywords))
+    """``skill`` 的製造與利用關鍵字（附顯示名稱與分級）。"""
+    table = library.keywords
+    grades = keyword_grades(skill_facts(skill), table)
+    return keywords_card(library, derive_keywords(skill, table), grades)
 
 
 def draft_card_keywords(library: ContentLibrary, draft: Mapping[str, Any]) -> SkillCardKeywords:
-    """組到一半的技能草稿（技能工坊）目前製造與利用的關鍵字。"""
-    return keywords_card(library, derive_draft_keywords(draft, library.keywords))
+    """組到一半的技能草稿（技能工坊）目前製造與利用的關鍵字（附分級）。"""
+    table = library.keywords
+    grades = keyword_grades((draft_facts(draft),), table)
+    return keywords_card(library, derive_draft_keywords(draft, table), grades)
 
 
 class SkillVariantCard(BaseModel):
@@ -1098,6 +1223,10 @@ class SkillCard(BaseModel):
     """製造與利用的關鍵字（Phase 3-24b1，:func:`skill_card_keywords`）。"""
     variants: tuple[SkillVariantCard, ...] = ()
     """戰場變奏的所有型態（Phase 3-25b；資料順序，多個成立時取前面的）；沒有變奏為空。"""
+    summons: tuple[SummonInfoCard, ...] = ()
+    """召喚技能可展開的「召喚物資訊」（Phase 3-41a，清單 1.8；每個召喚效果一張）；其他技能為空。"""
+    skeleton_zh: str = ""
+    """骨架的中文名（Phase 3-41a：技能卡標題列不顯示骨架 ID）。"""
     growth: SkillLevelInfo | None = None
     """技能等級的顯示資料（Phase 3-26a）：只有一輪中主角持有（裝備或備用）的主動技能卡片帶它，
     由 ``trpg.api.run_presenter`` 帶入實際等級；候選、技能庫與工坊的卡片為 ``None``。"""
@@ -1162,4 +1291,16 @@ def skill_card(
         icon=skill_icon(skill),
         keywords=skill_card_keywords(library, skill),
         variants=tuple(_variant_card(library, skill, v) for v in skill.variants),
+        summons=tuple(
+            info
+            for e in skill.effects
+            if e.type == "summon" and (info := summon_info(library, skill, e)) is not None
+        ),
+        skeleton_zh=skeleton_name(library, skill.skeleton),
     )
+
+
+def skeleton_name(library: ContentLibrary, skeleton_id: str) -> str:
+    """骨架的中文名（``content/skeletons/`` 的 ``name_zh``）；查不到時為空字串。"""
+    found = library.skeletons.get(skeleton_id)
+    return "" if found is None else found.name_zh

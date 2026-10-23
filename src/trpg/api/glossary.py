@@ -10,6 +10,7 @@ from __future__ import annotations
 from trpg.api.schemas import Glossary, GlossaryEntry, StatusLook, WeaponLookEntry
 from trpg.content.battle import StatusDef
 from trpg.content.library import ContentLibrary
+from trpg.narrative.status_info import stack_rules, status_rules
 from trpg.narrative.tile_info import object_rules, surface_rules, terrain_rules
 from trpg.shared.types import Attribute
 
@@ -103,7 +104,7 @@ def build_glossary(library: ContentLibrary) -> Glossary:
                 s.name_zh,
                 s.description_zh,
                 ("beneficial",) if s.beneficial else (),
-                (),
+                status_rules(s, library),
                 status_look=_status_look(s),
             )
             for s in rules.statuses.statuses
@@ -112,7 +113,8 @@ def build_glossary(library: ContentLibrary) -> Glossary:
             _entry(r.id, r.name_zh, r.description_zh) for r in rules.reactions.reactions
         ),
         stacks=tuple(
-            _entry(k.id, k.name_zh, k.description_zh, (k.owner,)) for k in rules.stacks.stacks
+            _entry(k.id, k.name_zh, k.description_zh, (k.owner,), stack_rules(k, library))
+            for k in rules.stacks.stacks
         ),
         elements=tuple(
             _entry(e.id.value, e.name_zh, e.description_zh) for e in library.elements.elements

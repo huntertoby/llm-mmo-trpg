@@ -88,6 +88,15 @@ class KeywordRule(ContentModel):
     category: Literal["weapon", "spell"] | None = None
     grade: RuleGrade = "exclusive"
     """規則的種類（:data:`RuleGrade`；省略＝專屬）。"""
+    reason_zh: str | None = Field(default=None, min_length=1)
+    """通用規則的一句理由（Phase 3-41a，清單 2.1）：技能卡把只由通用規則推導的關鍵字標灰並附上這句；
+    ``grade: general`` 必填，其他種類不可填。"""
+
+    @model_validator(mode="after")
+    def _reason(self) -> KeywordRule:
+        if (self.grade == "general") != (self.reason_zh is not None):
+            raise ValueError("reason_zh 只在 grade: general 時填寫（且必填）")
+        return self
 
     @model_validator(mode="after")
     def _one_source(self) -> KeywordRule:

@@ -1,0 +1,115 @@
+# 技能標籤的中文名（Phase 3-41a，說明整修清單 3.1～3.4、3.2、5.7）。
+#
+# 技能的 tags（content/skills/*.yaml）是自由字串，被修正規則（applies_to.skill_tags）、條件
+# （cast_tag_this_turn）、觸發（on_cast_tag）、超載層數（stacks.yaml overload.tag）與刻印（inscribe 的
+# tag 符文）引用。玩家看到的文字一律用這裡的中文名，查不到時說明文字用「特定標籤」帶過，不顯示英文。
+#
+# 欄位：
+#   name_zh  顯示名稱（例：「帶「治療」標籤的技能」）
+#   rune_zh  刻印符文的單字（選填；inscribe 用標籤刻符文時顯示為「<單字>紋」，例：獵紋）
+#
+# 測試（tests/narrative/test_card_text_scan.py）檢查 content/skills/ 用到的每個標籤都在這裡。
+tags:
+  - {id: aoe, name_zh: 範圍}
+  - {id: arcane, name_zh: 奧術}
+  - {id: area, name_zh: 範圍}
+  - {id: ash, name_zh: 灰燼}
+  - {id: aura, name_zh: 光環}
+  - {id: bleed, name_zh: 流血}
+  - {id: blind, name_zh: 致盲}
+  - {id: bomb, name_zh: 炸彈}
+  - {id: buff, name_zh: 增益}
+  - {id: builder, name_zh: 蓄能}
+  - {id: burn, name_zh: 燃燒}
+  - {id: chain, name_zh: 連鎖}
+  - {id: cleanse, name_zh: 淨化}
+  - {id: combo, name_zh: 連段}
+  - {id: control, name_zh: 控制}
+  - {id: counter, name_zh: 反擊}
+  - {id: crit, name_zh: 暴擊}
+  - {id: debuff, name_zh: 減益}
+  - {id: defense, name_zh: 防禦}
+  - {id: detonate, name_zh: 引爆}
+  - {id: dispel, name_zh: 驅散}
+  - {id: displace, name_zh: 位移}
+  - {id: drain, name_zh: 吸取}
+  - {id: earth, name_zh: 大地}
+  - {id: fear, name_zh: 恐懼}
+  - {id: finisher, name_zh: 終結}
+  - {id: fire, name_zh: 火焰}
+  - {id: flank, name_zh: 包夾}
+  - {id: flight, name_zh: 飛行}
+  - {id: formation, name_zh: 陣形}
+  - {id: gamble, name_zh: 賭注}
+  - {id: gear, name_zh: 裝備}
+  - {id: guard, name_zh: 守護}
+  - {id: heal, name_zh: 治療}
+  - {id: height, name_zh: 高處}
+  - {id: holy, name_zh: 神聖}
+  - {id: hunt, name_zh: 狩獵, rune_zh: 獵}
+  - {id: hunter, name_zh: 獵手}
+  - {id: ice, name_zh: 冰霜}
+  - {id: intercept, name_zh: 攔截}
+  - {id: kill, name_zh: 擊殺}
+  - {id: knockdown, name_zh: 擊倒}
+  - {id: leap, name_zh: 跳躍}
+  - {id: legendary, name_zh: 傳說}
+  - {id: light, name_zh: 光}
+  - {id: lightning, name_zh: 雷電}
+  - {id: line, name_zh: 直線}
+  - {id: luck, name_zh: 運氣}
+  - {id: mana, name_zh: 法力}
+  - {id: mark, name_zh: 標記}
+  - {id: martial, name_zh: 武技}
+  - {id: melee, name_zh: 近戰}
+  - {id: mimic, name_zh: 模仿}
+  - {id: mobility, name_zh: 機動}
+  - {id: modifier, name_zh: 修正}
+  - {id: momentum, name_zh: 衝勁}
+  - {id: nature, name_zh: 自然}
+  - {id: obstacle, name_zh: 障礙}
+  - {id: oil, name_zh: 油}
+  - {id: opening, name_zh: 起手}
+  - {id: overcurrent, name_zh: 過載}
+  - {id: overwatch, name_zh: 監視}
+  - {id: passive, name_zh: 被動}
+  - {id: physical, name_zh: 物理}
+  - {id: pierce, name_zh: 穿透}
+  - {id: poison, name_zh: 毒素}
+  - {id: pull, name_zh: 拉扯}
+  - {id: push, name_zh: 推擊}
+  - {id: rage, name_zh: 怒氣}
+  - {id: ranged, name_zh: 遠程}
+  - {id: reaction, name_zh: 反應}
+  - {id: reveal, name_zh: 揭露}
+  - {id: revive, name_zh: 復活}
+  - {id: rune, name_zh: 符文}
+  - {id: rune_detonate, name_zh: 引爆符文}
+  - {id: rune_make, name_zh: 刻印}
+  - {id: rune_read, name_zh: 讀取符文}
+  - {id: sacrifice, name_zh: 獻祭}
+  - {id: scout, name_zh: 偵查}
+  - {id: shadow, name_zh: 暗影}
+  - {id: shield, name_zh: 護盾}
+  - {id: shout, name_zh: 吶喊}
+  - {id: silence, name_zh: 沉默}
+  - {id: smoke, name_zh: 煙霧}
+  - {id: spell, name_zh: 法術}
+  - {id: spirit, name_zh: 靈體}
+  - {id: stance, name_zh: 姿態}
+  - {id: stance_like, name_zh: 類姿態}
+  - {id: stealth, name_zh: 潛行}
+  - {id: steal, name_zh: 奪取}
+  - {id: summon, name_zh: 召喚}
+  - {id: support, name_zh: 支援}
+  - {id: swap, name_zh: 換位}
+  - {id: taunt, name_zh: 嘲諷}
+  - {id: telekinesis, name_zh: 念動}
+  - {id: teleport, name_zh: 傳送}
+  - {id: tempo, name_zh: 節奏}
+  - {id: terrain, name_zh: 地形}
+  - {id: trap, name_zh: 陷阱}
+  - {id: utility, name_zh: 輔助}
+  - {id: water, name_zh: 水}
+  - {id: wind, name_zh: 風}
+  - {id: zone, name_zh: 區域}

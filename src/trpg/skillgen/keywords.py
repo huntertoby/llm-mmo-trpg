@@ -40,6 +40,7 @@ __all__ = [
     "SkillKeywords",
     "derive_draft_keywords",
     "derive_keywords",
+    "draft_facts",
     "is_starter_skill",
     "keyword_pools",
     "pool_skills",
@@ -66,6 +67,11 @@ def _parsed_list[T: BaseModel](model: type[T], raw: object) -> list[T]:
 def derive_draft_keywords(draft: Mapping[str, Any], table: KeywordTable) -> SkillKeywords:
     """組到一半的技能草稿（工坊的 JSON）製造與利用的關鍵字：逐一解析能解析的部分
     （效果、條件、觸發、形狀、修正規則），解析不了的略過，所以草稿每多一步就多顯示一點。"""
+    return derive_from_facts(draft_facts(draft), table)
+
+
+def draft_facts(draft: Mapping[str, Any]) -> Facts:
+    """技能草稿能解析的部分整理成推導事實（:func:`derive_draft_keywords` 與技能卡分級顯示共用）。"""
     effects = _parsed_list(EffectSpec, draft.get("effects"))
     followup = draft.get("followup")
     if isinstance(followup, Mapping):
@@ -78,7 +84,7 @@ def derive_draft_keywords(draft: Mapping[str, Any], table: KeywordTable) -> Skil
     conditions += [e.condition for e in expanded if e.condition is not None]
     conditions += [r.condition for r in modifiers if r.condition is not None]
     shape = _parsed(ShapeSpec, draft.get("shape"))
-    facts = Facts(
+    return Facts(
         effects=tuple(expanded),
         conditions=tuple(conditions),
         trigger=_parsed(TriggerSpec, draft.get("trigger")),
@@ -87,7 +93,6 @@ def derive_draft_keywords(draft: Mapping[str, Any], table: KeywordTable) -> Skil
         weapon_req=_text(draft.get("weapon_req")),
         category=_text(draft.get("category")),
     )
-    return derive_from_facts(facts, table)
 
 
 def _text(value: object) -> str | None:

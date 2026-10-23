@@ -21,6 +21,7 @@
 
 from __future__ import annotations
 
+from collections.abc import Callable
 from typing import Literal
 
 from pydantic import Field, model_validator
@@ -39,6 +40,7 @@ __all__ = [
     "RuleChangeKind",
     "RuleChangeKindDef",
     "RuleChangeTable",
+    "rule_change_sentence",
 ]
 
 type RuleChangeKind = Literal[
@@ -130,3 +132,31 @@ class RuleChangeTable(ContentModel):
 
     def summary(self) -> str:
         return f"{len(self.rule_changes)} 條規則改變（{len(self.kinds)} 類）"
+
+
+def rule_change_sentence(
+    rule: RuleChangeDef,
+    *,
+    status_name: Callable[[str], str],
+    summon_name: Callable[[str], str],
+) -> str:
+    """一條規則改變的規則句（不含名稱；Phase 3-41a 從 ``trpg.narrative.skills`` 搬來，讓傳說技能卡
+    與改變規則類裝備詞條用同一句，清單 5.1）。"""
+    if rule.kind == ELEMENT_HEALS_ALLIES:
+        assert rule.element is not None and rule.permille is not None
+        return (
+            f"你造成的{rule.element.display_name}傷害打到友方（不含自己）時，改為治療"
+            f"（原本傷害的 {rule.permille / 10:g}%）"
+        )
+    if rule.kind == PUSH_ANY_OBJECT:
+        return "你可以推動任何擋路的物件（例如土牆、矮牆、倒木），可推倒的照樣倒下；地形與橋面不行"
+    if rule.kind == PASS_THROUGH_APPLY:
+        assert rule.status is not None
+        return (
+            f"你步行經過敵人的相鄰格時，對他施加「{status_name(rule.status)}」{rule.duration} 回合"
+            "（每次移動每個敵人一次）"
+        )
+    assert rule.unit is not None
+    return (
+        f"你倒下時，在原地留下{summon_name(rule.unit)}（接替你的行動順序），持續 {rule.duration} 輪"
+    )

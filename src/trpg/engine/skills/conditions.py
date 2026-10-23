@@ -192,5 +192,7 @@ def skill_condition_problem(
         skill.condition,
         status_name=lambda sid: rules.status_def(sid).name_zh,
         surface_name=lambda surface: rules.surface_def(surface).name_zh,
+        tag_name=rules.skill_tags.name,
+        tag_runes=rules.skill_tags.rune_names(),
     )
     return f"技能條件不成立：{skill.name_zh} 需要「{text}」"

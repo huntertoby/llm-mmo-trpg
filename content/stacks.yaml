@@ -7,13 +7,13 @@
 stacks:
   - id: static_charge
     name_zh: 靜電
-    description_zh: 累積在施放者自己身上的蓄能；雷霆終結消耗全部靜電，每層提高傷害。
+    description_zh: 累積在施放者自己身上的蓄能；消耗靜電的技能每層提高傷害。
     owner: self
     max: 5
     ai_value: 3
   - id: sunder
     name_zh: 破甲印
-    description_zh: 疊在被命中的目標身上的印記；碎甲重擊消耗目標身上的全部破甲印，每層提高傷害。3 輪沒有再疊就清空。
+    description_zh: 疊在被命中的目標身上的印記；消耗破甲印的技能每層提高傷害。
     owner: target
     max: 3
     expires_after_rounds: 3
@@ -22,7 +22,7 @@ stacks:
   # 累積到 5 層時立刻承受 2d6 雷電反噬（不致命，最多留 1 HP）並清空。
   - id: overload_surge
     name_zh: 過載電流
-    description_zh: 累積在施放者自己身上的電流；每層讓你帶「overcurrent」標籤的技能傷害 +20%，累積到 5 層時你立刻被雷擊（2d6 雷電傷害，不致命）並清空全部層數。
+    description_zh: 累積在施放者自己身上的電流；層數越多過載類技能越強，但累積太多會反噬自己。
     owner: self
     max: 5
     ai_value: 2
@@ -35,7 +35,7 @@ stacks:
   # 怒氣（Phase 3G-G3a，裝備詞條 affix_charge_fury 用；數值為初值）：受到傷害時累積，花滿層啟動強化。
   - id: fury
     name_zh: 怒氣
-    description_zh: 累積在持有者自己身上的怒氣（受到傷害時 +1 層）；裝備的充能詞條花滿層啟動強化。
+    description_zh: 累積在持有者自己身上的怒氣；裝備的充能詞條花掉層數啟動效果。
     owner: self
     max: 4
     ai_value: 2
