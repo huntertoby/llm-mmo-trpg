@@ -65,6 +65,7 @@ __all__ = [
     "heal_permille",
     "hit_bonus",
     "is_attack_skill",
+    "offhand_spell_permille",
     "on_hit_rules",
     "range_delta",
     "reap_permille",
@@ -307,6 +308,15 @@ def reap_permille(unit: UnitState, use: Use, subject: Subject) -> int:
     return reap.damage_permille
 
 
+def offhand_spell_permille(unit: UnitState, use: Use) -> int:
+    """副手的法術增幅（Phase 3I-2，08 8.11，法書）：施放者的法術技（``category: spell``）傷害加成
+    （‰）；普攻、武器技與其他技能為 0。和其他正向加成一起套全身 +50% 上限。"""
+    offhand = unit.gear.offhand
+    if offhand is None or use.skill is None or use.skill.category != "spell":
+        return 0
+    return offhand.spell_damage_permille
+
+
 def damage_permille(state: BattleState, unit: UnitState, use: Use, subject: Subject) -> int:
     """對 ``subject`` 的傷害倍率（‰）：1000 ＋ 傷害加成 ＋ 減益，下限 0。
 
@@ -320,7 +330,10 @@ def damage_permille(state: BattleState, unit: UnitState, use: Use, subject: Subj
     rune = gear_rune_read_permille(state, unit, use, subject)  # 普攻讀取符文（3-31）
     summon = summon_damage_bonus(state, unit, use, subject)  # 召喚物成長的加成（3-33b）
     reap = reap_permille(unit, use, subject)  # 鐮刀的收割（3I-1）
-    capped = cap_damage_bonus(state.ruleset, gain + gear_gain + keyword + rune + summon + reap)
+    book = offhand_spell_permille(unit, use)  # 法書的法術增幅（3I-2）
+    capped = cap_damage_bonus(
+        state.ruleset, gain + gear_gain + keyword + rune + summon + reap + book
+    )
     total = max(0, _PERMILLE + capped + loss + gear_loss)
     # 數量型分歧進化（3-33f2）：每隻只有一般的 power_permille ‰ 傷害
     power = unit.summon_power_permille

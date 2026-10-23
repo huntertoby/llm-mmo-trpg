@@ -290,6 +290,10 @@ class UnitView(_ViewModel):
     """武器大類（Phase 3-18b）：melee、ranged、focus；不認得 weapon_id 時前端依此退回。"""
     weapon_traits_zh: tuple[str, ...] = ()
     """武器小特性的說明，每個特性一行（Phase 3-24a1；取自武器資料的參數）。"""
+    offhand_name_zh: str = ""
+    """副手（圓盾、塔盾、法書、法器珠；Phase 3I-2）的中文名；沒有副手特性時為空字串。"""
+    offhand_traits_zh: tuple[str, ...] = ()
+    """副手特性的說明，每個特性一行（Phase 3I-2；取自副手資料，圓盾附目前的格擋強化）。"""
     ammo: int = 0
     """彈匣裡的子彈數（Phase 3-24a2；HUD 顯示用，沒有彈匣的武器為 0）。"""
     magazine: int = 0
@@ -738,6 +742,16 @@ def _summon_look(state: BattleState, unit: UnitState) -> SummonLookView | None:
     )
 
 
+def _offhand_lines(state: BattleState, unit: UnitState) -> tuple[str, ...]:
+    """副手特性行（沒有副手特性為空）；圓盾的格擋強化附目前值（用單位的有效屬性）。"""
+    offhand = unit.gear.offhand
+    if offhand is None:
+        return ()
+    return offhand.trait_lines_zh(
+        state.ruleset.core, lambda attr: effective_attribute(state.ruleset, unit, attr)
+    )
+
+
 def _unit_view(state: BattleState, unit: UnitState, team: Team) -> UnitView:
     infused = unit.infused_skill if unit.alive else None
     return UnitView(
@@ -767,6 +781,8 @@ def _unit_view(state: BattleState, unit: UnitState, team: Team) -> UnitView:
                 lambda attr: effective_attribute(state.ruleset, unit, attr),
             ),
         ),
+        offhand_name_zh="" if unit.gear.offhand is None else unit.gear.offhand.name_zh,
+        offhand_traits_zh=_offhand_lines(state, unit),
         ammo=unit.ammo,
         magazine=unit.weapon.magazine,
         tags=unit.tags,

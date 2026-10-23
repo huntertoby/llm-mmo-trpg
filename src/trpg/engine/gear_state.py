@@ -16,6 +16,7 @@ from __future__ import annotations
 from dataclasses import dataclass
 from typing import Literal
 
+from trpg.content.battle import OffhandDef
 from trpg.content.equipment import AffixDef
 from trpg.content.skills import ConditionSpec
 
@@ -95,6 +96,8 @@ class GearState:
     merged: tuple[tuple[str, int], ...] = ()
     uncapped: tuple[tuple[str, int], ...] = ()
     cooldown_min: int = 1
+    offhand: OffhandDef | None = None
+    """副手的基礎特性（Phase 3I-2：圓盾、塔盾、法書、法器珠；副手沒有這種物品時為 ``None``）。"""
 
     def active_affixes(self, category: str | None = None) -> tuple[GearAffix, ...]:
         """生效中的詞條（``category`` 篩選類別）。"""

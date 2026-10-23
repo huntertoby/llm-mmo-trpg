@@ -166,7 +166,8 @@ class Cover:
     """半掩護（``docs/phases/Phase1C計畫.md`` 3.2）：命中 ``−penalty``，來源為 ``object_id``。"""
 
     penalty: int
-    object_id: ObjectId
+    object_id: ObjectId | None
+    """提供掩護的物件；塔盾（Phase 3I-2）的自身掩護沒有物件，為 ``None``。"""
     kind: str
     name_zh: str
     pos: XY
@@ -236,7 +237,7 @@ def half_cover(
         return None
     found = cover_object_between(state, attacker.xy, target.xy)
     if found is None:
-        return None
+        return _shield_cover(state, attacker, target, penalty)
     oid, pos = found
     obj = state.objects[oid]
     return Cover(
@@ -245,6 +246,22 @@ def half_cover(
         kind=obj.kind,
         name_zh=state.ruleset.object_def(obj.kind).name_zh,
         pos=pos,
+    )
+
+
+def _shield_cover(
+    state: BattleState, attacker: UnitState, target: UnitState, penalty: int
+) -> Cover | None:
+    """塔盾的自身半掩護（Phase 3I-2，08 8.11）：目標副手有 ``ranged_cover`` 時，遠程攻擊（呼叫端已
+    排除近戰與穿透）命中同半掩護；攻擊者站得比目標高 1 層以上時無視。場上的掩護物已經成立時不會
+    走到這裡（兩者不疊加）。"""
+    offhand = target.gear.offhand
+    if offhand is None or not offhand.ranged_cover:
+        return None
+    if state.tile(*attacker.xy).height > state.tile(*target.xy).height:
+        return None
+    return Cover(
+        penalty=penalty, object_id=None, kind=offhand.id, name_zh=offhand.name_zh, pos=target.xy
     )
 
 

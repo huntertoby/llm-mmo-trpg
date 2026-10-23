@@ -27,11 +27,14 @@ __all__ = [
     "SUMMON_MODES",
     "ArmorBreak",
     "Blessing",
+    "BlockBonus",
     "Dice",
     "DollGear",
     "DollLook",
     "Entangle",
     "HitCondition",
+    "OffhandDef",
+    "OffhandTable",
     "ReactionRule",
     "ReactionUnless",
     "ReactionWhen",
@@ -501,6 +504,133 @@ class WeaponTable(ContentModel):
 
     def summary(self) -> str:
         return f"{len(self.weapons)} 把武器"
+
+
+# ---------------------------------------------------------------------------
+# 副手（Phase 3I-2，08 8.11）
+# ---------------------------------------------------------------------------
+
+
+class BlockBonus(ContentModel):
+    """圓盾「格擋反應強化」（Phase 3I-2，08 8.11）：持有者的格擋反應多減傷 ``permille_per_point``‰ ×
+    副手縮放屬性值，最多 ``max_permille``‰（再加上格擋反應本身的減傷，總減傷不超過 100%）。
+    確切數值設計未定，初值保守（見 Phase3I-2 報告「待 PM 決定」）。"""
+
+    permille_per_point: int = Field(ge=1, le=100)
+    max_permille: int = Field(ge=1, le=500)
+
+
+class OffhandDef(ContentModel):
+    """一種副手（``content/offhands.yaml``，Phase 3I-2，08 8.11 副手表）。
+
+    - ``scaling_attr``／``secondary_scaling_attr``／``attr_mode``：縮放屬性，規則同武器——同類
+      （都是物理或都是心智）取較高 ``max``、一物理一心智取平均 ``mean``（schema 檢查）。
+    - ``block_bonus``：格擋反應強化（圓盾），依縮放屬性值，見 :class:`BlockBonus`；
+    - ``ranged_cover``：自身半掩護（塔盾）——遠程攻擊打持有者時命中修正同半掩護
+      （``core.half_cover_hit_penalty``）；攻擊者站得比持有者高 1 層以上時無視；與場上掩護物不疊加；
+    - ``move_penalty``：持有者的移動點數 −N（塔盾）；
+    - ``spell_damage_permille``：持有者的法術技傷害 +N‰（法書；計入全身 +50% 上限）；
+    - ``spell_range_bonus``：持有者的法術技施放距離 +N（法器珠；不加範圍大小，
+      射程為自身的技能不受影響）。
+    """
+
+    id: str = Field(pattern=ID_PATTERN)
+    name_zh: str = Field(min_length=1)
+    scaling_attr: Attribute
+    secondary_scaling_attr: Attribute | None = None
+    attr_mode: Literal["mean", "max"] = "max"
+    block_bonus: BlockBonus | None = None
+    ranged_cover: bool = False
+    move_penalty: int = Field(default=0, ge=0, le=3)
+    spell_damage_permille: int = Field(default=0, ge=0, le=500)
+    spell_range_bonus: int = Field(default=0, ge=0, le=3)
+
+    @model_validator(mode="after")
+    def _check(self) -> OffhandDef:
+        second = self.secondary_scaling_attr
+        if second is not None:
+            if second == self.scaling_attr:
+                raise ValueError(f"副手 {self.id}：secondary_scaling_attr 不可和 scaling_attr 相同")
+            same = second.is_physical == self.scaling_attr.is_physical
+            if self.attr_mode != ("max" if same else "mean"):
+                raise ValueError(
+                    f"副手 {self.id}：雙屬性同類（都是物理或都是心智）要 attr_mode: max，"
+                    "一物理一心智要 attr_mode: mean"
+                )
+        return self
+
+    def scaling_value(self, get: Callable[[Attribute], int]) -> int:
+        """副手的縮放屬性值（規則同 :meth:`WeaponDef.scaling_value`）。"""
+        value = get(self.scaling_attr)
+        if self.secondary_scaling_attr is None:
+            return value
+        other = get(self.secondary_scaling_attr)
+        return max(value, other) if self.attr_mode == "max" else (value + other) // 2
+
+    def scaling_names_zh(self) -> str:
+        """縮放屬性的中文：單屬性「體質」，雙屬性「力量／體質（取較高）」。"""
+        if self.secondary_scaling_attr is None:
+            return self.scaling_attr.display_name
+        names = f"{self.scaling_attr.display_name}／{self.secondary_scaling_attr.display_name}"
+        return f"{names}（{'取較高' if self.attr_mode == 'max' else '取平均'}）"
+
+    def block_extra_permille(self, get: Callable[[Attribute], int]) -> int:
+        """圓盾的格擋強化（‰）：縮放屬性值 × 每點‰，最多 ``max_permille``；沒有強化為 0。"""
+        bonus = self.block_bonus
+        if bonus is None:
+            return 0
+        return min(bonus.max_permille, self.scaling_value(get) * bonus.permille_per_point)
+
+    def trait_lines_zh(
+        self, core: CoreRules, get: Callable[[Attribute], int] | None = None
+    ) -> tuple[str, ...]:
+        """副手卡的特性行（縮放屬性與每個常駐特性一行；數值取自資料與規則）。``get`` 有值時，
+        格擋強化附「目前 +N%」。"""
+        lines = [f"縮放屬性：{self.scaling_names_zh()}"]
+        if self.block_bonus is not None:
+            cap = self.block_bonus.max_permille / 10
+            text = (
+                f"格擋強化：格擋反應多減傷 縮放屬性 × {self.block_bonus.permille_per_point / 10:g}%"
+                f"（最多 {cap:g}%）"
+            )
+            if get is not None:
+                text += f"（目前 +{self.block_extra_permille(get) / 10:g}%）"
+            lines.append(text)
+        if self.ranged_cover:
+            lines.append(
+                f"遠程掩護：遠程攻擊打你時命中 −{core.half_cover_hit_penalty}（同半掩護；"
+                "攻擊者站得高 1 層以上時無視）"
+            )
+        if self.move_penalty:
+            lines.append(f"笨重：你的移動 −{self.move_penalty}")
+        if self.spell_damage_permille:
+            lines.append(
+                f"法術增幅：你的法術技傷害 +{self.spell_damage_permille / 10:g}%"
+                "（計入全身傷害加成上限）"
+            )
+        if self.spell_range_bonus:
+            lines.append(
+                f"法術延伸：你的法術技施放距離 +{self.spell_range_bonus}"
+                "（不加範圍大小；射程為自身的技能不受影響）"
+            )
+        return tuple(lines)
+
+
+class OffhandTable(ContentModel):
+    """``content/offhands.yaml``。"""
+
+    offhands: tuple[OffhandDef, ...] = Field(min_length=1)
+
+    @model_validator(mode="after")
+    def _check(self) -> OffhandTable:
+        _unique_ids([o.id for o in self.offhands], "副手")
+        return self
+
+    def by_id(self) -> dict[str, OffhandDef]:
+        return {o.id: o for o in self.offhands}
+
+    def summary(self) -> str:
+        return f"{len(self.offhands)} 種副手"
 
 
 # ---------------------------------------------------------------------------

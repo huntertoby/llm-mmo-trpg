@@ -33,7 +33,7 @@ from trpg.roguelite.growth import (
     uses_of,
 )
 from trpg.roguelite.offers import skill_defs
-from trpg.roguelite.progress import hero_effective_attributes
+from trpg.roguelite.progress import hero_effective_attributes, run_loadout
 from trpg.roguelite.start import apply_allocation
 from trpg.roguelite.state import (
     BattleNode,
@@ -178,6 +178,8 @@ def _hero(library: ContentLibrary, run: RunState) -> HeroOut:
     thresholds = library.roguelite.level_thresholds
     growth = library.ruleset.skill_growth
     weapon = library.weapons.get(run.hero.weapon)
+    off_item = run_loadout(library, run).item_in("off_hand")
+    offhand = None if off_item is None else off_item.item.offhand_def
     effective = hero_effective_attributes(library, run)
     equipped = skill_defs(library, run, run.hero.skills)
     core = library.ruleset.core
@@ -223,6 +225,12 @@ def _hero(library: ContentLibrary, run: RunState) -> HeroOut:
             )
             if weapon is not None
             else ()
+        ),
+        offhand_name_zh="" if offhand is None else offhand.name_zh,
+        offhand_traits_zh=(
+            ()
+            if offhand is None
+            else offhand.trait_lines_zh(library.ruleset.core, effective.__getitem__)
         ),
         skills=tuple(
             _card(library, run, s, owned=True) for s in skill_defs(library, run, run.hero.skills)

@@ -295,6 +295,10 @@ class HeroOut(_ApiModel):
     """武器大類（melee、ranged、focus）；前端不認得 ``weapon`` 時依此退回武器小圖示。"""
     weapon_traits_zh: tuple[str, ...] = ()
     """武器小特性的說明，每個特性一行（Phase 3-24a1）。"""
+    offhand_name_zh: str = ""
+    """副手（圓盾、塔盾、法書、法器珠；測試模式挑的裝備，Phase 3I-2）的中文名；沒有時為空。"""
+    offhand_traits_zh: tuple[str, ...] = ()
+    """副手特性的說明，每個特性一行（Phase 3I-2；圓盾附目前的格擋強化）。"""
     skills: tuple[SkillCard, ...]
     start_keywords: tuple[KeywordRef, ...] = ()
     """開局選的關鍵字（Phase 3-24b2；以 build 開局時為空）。"""

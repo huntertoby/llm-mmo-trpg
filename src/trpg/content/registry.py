@@ -9,7 +9,7 @@ from __future__ import annotations
 from dataclasses import dataclass
 from pathlib import Path
 
-from trpg.content.battle import StatusTable, TerrainTable, WeaponTable
+from trpg.content.battle import OffhandTable, StatusTable, TerrainTable, WeaponTable
 from trpg.content.composer_rules import ComposerRules
 from trpg.content.environment import (
     AiProfileTable,
@@ -50,6 +50,7 @@ KNOWN_CONTENT_FILES: tuple[ContentFile, ...] = (
     ContentFile("rules/hit_table.yaml", HitTable),
     ContentFile("terrain.yaml", TerrainTable),
     ContentFile("weapons.yaml", WeaponTable),
+    ContentFile("offhands.yaml", OffhandTable),
     ContentFile("statuses.yaml", StatusTable),
     ContentFile("objects.yaml", ObjectTable),
     ContentFile("surfaces.yaml", SurfaceTable),

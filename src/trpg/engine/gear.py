@@ -213,6 +213,10 @@ def build_gear(loadout: Loadout, rules: EquipmentRules) -> GearState:
     uncapped = tuple(sorted((k, v) for k, v in merged.items() if v))
     if "move" in merged:
         merged["move"] = cap_move_bonus(rules, merged["move"])
+    off = loadout.item_in("off_hand")
+    offhand = None if off is None else off.item.offhand_def
+    # 塔盾的移動 −N（上限之後，不被吃掉；3I-2）；沒有時減 0（merged 之後會濾掉 0）
+    merged["move"] = merged.get("move", 0) - (0 if offhand is None else offhand.move_penalty)
     return GearState(
         items=tuple(_gear_item(e) for e in loadout.items),
         affixes=affixes,
@@ -220,6 +224,7 @@ def build_gear(loadout: Loadout, rules: EquipmentRules) -> GearState:
         merged=tuple(sorted((k, v) for k, v in merged.items() if v)),
         uncapped=uncapped,
         cooldown_min=rules.caps.cooldown_min,
+        offhand=offhand,
     )
 
 
