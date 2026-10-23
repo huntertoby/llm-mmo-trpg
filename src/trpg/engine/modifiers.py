@@ -30,7 +30,10 @@ from trpg.content.skills import (
 )
 from trpg.engine.actions import UseSkill
 from trpg.engine.activations import is_active
-from trpg.engine.attack_element import effective_attack_element
+from trpg.engine.attack_element import (
+    attack_element_sources,
+    resolve_attack_element,
+)
 from trpg.engine.gear import cap_damage_bonus, gear_damage_parts, gear_hit_bonus
 from trpg.engine.gear_enhance import (
     gear_area_delta,
@@ -394,19 +397,32 @@ def summon_damage_permille(state: BattleState, unit: UnitState, use: Use) -> int
 def damage_element(state: BattleState, unit: UnitState, use: Use, base: Element) -> Element:
     """傷害的元素：物理傷害改為第一條成立的 ``add_element``；已有元素的不覆寫。
 
-    普攻（Phase 3I-6）先依 :func:`trpg.engine.attack_element.resolve_attack_element` 的優先順序
-    （附魔 ＞ 普攻附加 ＞ 武器元素詞條 ＞ 武器本身；``base`` 被忽略）；結果仍是物理時才輪到
-    修正規則。
+    普攻（Phase 3I-6）：附魔最優先。修正技能 ``add_element`` 與元素詞條的先後 #52 沒有規定，待使用者
+    決定前（玩法 PM 2026-10-24）採不改舊行為的暫定做法：**有元素詞條時** 修正技能 ＞ 普攻附加詞條 ＞
+    武器元素詞條 ＞ 武器本身；**沒有詞條時** 照舊——武器本身有元素就不覆寫，物理才輪到修正技能。
     """
     if use.action == "attack":
-        base = effective_attack_element(state.ruleset, unit, is_basic=True)
+        sources = attack_element_sources(state.ruleset, unit)
+        if sources.enchant is not None and sources.enchant is not Element.PHYSICAL:
+            return sources.enchant
+        if sources.basic_affix is None and sources.weapon_affix is None:
+            base = sources.weapon
+        else:
+            added = _added_element(state, unit, use)
+            return added if added is not None else resolve_attack_element(sources, is_basic=True)
     if base is not Element.PHYSICAL:
         return base
+    added = _added_element(state, unit, use)
+    return base if added is None else added
+
+
+def _added_element(state: BattleState, unit: UnitState, use: Use) -> Element | None:
+    """第一條成立的修正規則 ``add_element``；沒有為 ``None``。"""
     for rule in _applicable(state, unit, use, "add_element"):
         if _self_holds(state, unit, rule):
             assert rule.change.add_element is not None
             return rule.change.add_element
-    return base
+    return None
 
 
 def grants_pierce(state: BattleState, unit: UnitState, use: Use) -> bool:
