@@ -2074,6 +2074,13 @@ PM 驗收後請使用者試玩一整輪（`docs/專案計畫.md` 第 14 節 🎮
 4. 行為一致測試：每種巢狀原語各組一招，工坊產生的 YAML 通過驗證器、預算與載入後實戰結算一致（子效果真的會觸發）。
 5. 驗收：pytest（skillgen、content、api、engine、cli 含 slow）、vitest、build、ruff、format、mypy、`test_player_text.py`、排版煙霧檢查。報告 `Phase3-48d報告.md`。
 
+### 54.1 3-48d 驗收（2026-10-24，開發 PM）
+
+- 報告 `Phase3-48d報告.md`。新模組 `trpg.skillgen.option_nested`：消耗狀態 `then`、持續區域 `effects`（傷害、治療、護盾、施加狀態，1～2 個）、賭注 `win`／`lose`（再加賭注專用「傷害倍率」「反噬自傷」，各 0～2 個）、擊殺時效果（返還 AP、重置冷卻、治療、護盾、施加狀態，對象一律施放者）；類型清單取自 `skills.py` 常數（與驗證器同源）；預算沿用現有算法。撤掉 3-48c 的 `HIDE_NESTED_EFFECTS`。行為一致測試 `test_workshop_48d.py`（每種原語：草稿 → 檢查 → 匯出 → 驗證 → 實戰觸發）；瀏覽器實組一招「消耗燃燒 → 3d6 火焰」，預算 72.3%。
+- 順手改：`ScalingTheme.matches_effect` 也看賭注 `win`／`lose` 與區域 `effects`（內建技能的允許屬性不變）；`plainify` 補 then／win／lose／dice／type 中文。
+- 檢查（main 合併後，等同全量）：pytest（除 `llm`）6598、vitest 936、build（修 `nested48d.test.ts` 缺 `plain_value`——與 `b69c78e` 同時開發造成）、ruff、mypy、lint-imports。
+- 待決（玩法 PM 2026-10-24 已回覆）：賭注專用效果的說明改寫、數值不顯示 ‰、「返還行動點」→「返還 AP」；擊殺時效果只給有益狀態，驗證器也加限制 → **併入 3-48f**。
+
 ## 55. Phase 3-48e｜刻印技能實戰沒刻出符文＋卡片／關鍵字不一致（使用者 2026-10-24：「這個沒有刻印」；sonnet；約 0.3～0.5 段；可與 3-48c 平行，檔案以引擎／敘事為主）
 
 使用者的工坊技能（`skill_ws_c61379c350`）：`skeleton: rune`、`category: weapon`、`shape: {type: square3, range: 5}`、效果 `{type: inscribe, affects: self, element: physical, duration: 4}` ＋ `{type: apply_status, affects: allies, status: rallied, duration: 3}`、`cost: {mana: 0, stamina: 0, cooldown: 1}`。
