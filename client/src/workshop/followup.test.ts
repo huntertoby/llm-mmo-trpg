@@ -8,11 +8,11 @@ import { smallView, unit } from "../battle/testFixtures";
 import { unitNames } from "../battle/units";
 import type { PreviewOut } from "../api/types";
 
-const choice = (value: string, params: FieldSpec[] = []): Choice => ({ value, name_zh: value, description_zh: "", params, info: {} });
+const choice = (value: string, params: FieldSpec[] = []): Choice => ({ value, name_zh: value, description_zh: "", dev_description_zh: "", later: false, params, info: {} });
 const skeleton: FieldSpec = {
   field: "followup.skeleton",
   name_zh: "接一個動作段",
-  description_zh: "",
+  description_zh: "", dev_description_zh: "", later: false,
   type: "choice",
   required: false,
   choices: [choice("area"), choice("strike")],
@@ -20,13 +20,14 @@ const skeleton: FieldSpec = {
   dice_sides: [],
   allow_weapon: false,
   locked: false,
+  show_when: {},
   card: true,
   object_choice: false,
 };
 const sizeParam: FieldSpec = {
   field: "size",
   name_zh: "大小",
-  description_zh: "",
+  description_zh: "", dev_description_zh: "", later: false,
   type: "int",
   required: true,
   min: 2,
@@ -36,6 +37,7 @@ const sizeParam: FieldSpec = {
   dice_sides: [],
   allow_weapon: false,
   locked: false,
+  show_when: {},
   card: false,
   object_choice: false,
 };

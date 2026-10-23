@@ -336,6 +336,7 @@ primitives:
       per_stack_permille: {llm_hint: "每一層帶來的威力。", type: int, required: true, min: 50, max: 500, description_zh: 每層的傷害加成（‰）}
   # --- Phase 3C-3b：狀態當燃料（docs/design/06-技能.md 6.14.2 管道 1；點數為初值，未經模擬）---
   - id: consume_status
+    nested_core: true
     name_zh: 消耗狀態
     llm_hint: "移除目標身上的某個狀態，並依此引爆後續的效果。"
     description_zh: 目標（affects，預設敵方，需命中）身上有 status 時先移除它，再對同一個單位結算 then 的效果（1–2 個，只能是 damage／heal／shield／apply_status，自動命中；施加狀態照常擲抵抗）。沒有該狀態的單位不受影響，全部都沒有時整個效果不結算（effect_fizzled）。scale 把 then 的傷害、治療、護盾骰數乘上倍率（上限見 rules/core.yaml 的 consume_status_max_scale）：remaining_rounds＝被消耗狀態的剩餘回合（永久狀態為 1）、stacks＝同時消耗目標身上 stack 的層數。splash 設為 1 時 then 也作用在被消耗者周圍 1 格內的敵方單位。
@@ -347,9 +348,9 @@ primitives:
     params:
       status: {llm_hint: "要被移除的狀態。", type: status, required: true, description_zh: 要消耗的狀態}
       then: {llm_hint: "移除狀態之後接著結算的效果。", type: effects, required: true, description_zh: 移除狀態後結算的效果（1–2 個）}
-      scale: {llm_hint: "後續效果的威力依剩餘回合數或層數放大。", type: scale, description_zh: remaining_rounds 或 stacks（省略＝不倍增）}
-      stack: {llm_hint: "同時消耗的層數種類。", type: stack, description_zh: scale 為 stacks 時消耗的目標型層數}
-      splash: {llm_hint: "後續效果也波及被消耗者周圍的敵人，範圍是幾格。", type: int, min: 1, max: 1, description_zh: then 也作用在被消耗者周圍這麼遠的敵方單位}
+      scale: {llm_hint: "後續效果的威力依剩餘回合數或層數放大。", type: scale, description_zh: 後續效果依狀態的剩餘回合數或層數放大威力（省略＝不放大）}
+      stack: {llm_hint: "同時消耗的層數種類。", type: stack, show_when: {scale: stacks}, description_zh: 後續效果依層數放大時，要消耗的層數種類}
+      splash: {llm_hint: "後續效果也波及被消耗者周圍的敵人，範圍是幾格。", type: int, min: 1, max: 1, description_zh: 後續效果也作用在被消耗者周圍這麼遠（格）的敵方單位}
   - id: place_trap
     name_zh: 放置陷阱
     llm_hint: "在格子上設下陷阱，敵人踏入時才發動。"
@@ -390,8 +391,8 @@ primitives:
     base_points: 7
     forbid_affects: [enemies, all, self]
     params:
-      which: {llm_hint: "重置全部技能，還是只重置帶指定標籤的技能。", type: which, required: true, description_zh: all 或 tag}
-      tag: {llm_hint: "只重置帶這個標籤的技能。", type: tag, description_zh: which 為 tag 時必填：要重置的技能標籤}
+      which: {llm_hint: "重置全部技能，還是只重置帶指定標籤的技能。", type: which, required: true, description_zh: 重置全部技能，或只重置帶指定標籤的技能}
+      tag: {llm_hint: "只重置帶這個標籤的技能。", type: tag, show_when: {which: tag}, description_zh: 選「標籤」時，要重置的技能標籤}
   - id: cheat_death
     status: undying
     name_zh: 免死
@@ -587,13 +588,14 @@ primitives:
       unit: {llm_hint: "要召喚的單位種類。", type: summon, required: true, description_zh: 召喚物範本 ID（content/units/summons/）}
       duration: {llm_hint: "召喚物停留的回合數。", type: int, required: true, min: 1, max: 4, description_zh: 召喚物存在的輪數}
       count: {llm_hint: "一次召喚的隻數。", type: int, min: 1, max: 2, description_zh: 一次召喚的數量（1 或 2；2 是數量型分歧進化，必須同時填 power_permille；省略為 1）}
-      power_permille: {llm_hint: "多隻召喚物時，每隻相對於一般強度的比例。", type: int, min: 100, max: 999, description_zh: 數量型分歧進化：每隻召喚物的最大 HP 與傷害只有一般的這麼多‰（count 為 2 時必填）}
+      power_permille: {llm_hint: "多隻召喚物時，每隻相對於一般強度的比例。", type: int, show_when: {count: "2"}, min: 100, max: 999, description_zh: 數量型分歧進化：每隻召喚物的最大 HP 與傷害只有一般的這麼多‰（count 為 2 時必填）}
       max_hp_permille: {llm_hint: "召喚物額外增加的最大生命比例。", type: int, min: 1, max: 1000, description_zh: 加深分歧進化：召喚物的最大 HP 多這麼多‰}
       trait: {llm_hint: "召喚物擁有的小特性。", type: summon_trait, description_zh: 加深分歧進化：召喚物的小特性（core.yaml 的 summon_traits）}
       infusion: {llm_hint: "召喚物固有的灌注元素。", type: infusion, description_zh: 橋接分歧進化：召喚物固有的第二個灌注關鍵字（core.yaml 的 summon_infusions）}
 
   # --- Phase 3D-5：持續區域（docs/design/06-技能.md 6.16 G；點數為初值，未經模擬）---
   - id: zone
+    nested_core: true
     name_zh: 持續區域
     llm_hint: "在地面留下一塊持續的區域，單位進入或停留時受到效果。"
     description_zh: 在技能形狀的格子上建立持續 duration 輪的區域（施放者第 duration 次回合結束時消失，施放當回合不算；施放者不在場時於那一輪的環境回合消失）。anchor：tile 固定在施放時的格子、caster 跟隨施放者（形狀 self／ring／allies_in_radius，每次施放者移動就以新位置重新展開；施放者倒下或離場時消失）、moving 每次環境回合沿施放方向前進 speed 格（形狀 line／cone；前進到牆壁或地圖外的格子消失，全部消失時區域消失）。單位進入區域（區域建立、移動或跟隨到他身上也算；在區域內移動不算）或回合開始時站在區域內（when：enter／turn_start／both），依 affects（enemies／allies／all）對他結算 effects（1–2 個 damage／heal／shield／apply_status；自動命中，狀態照常擲抵抗，施放者屬性在建立時快照；施放者自己不受 all 的有害效果）。surface：區域新覆蓋的格子留下表面。同一施放者同時存在的區域超過 zone_limit_per_owner（core.yaml）時最舊的消失。必須是主動技能唯一的效果。
@@ -608,11 +610,11 @@ primitives:
     forbid_affects: [self, tiles]
     allowed_shapes: [self, ground_tile, cross, square3, line, cone, ring, allies_in_radius]
     params:
-      anchor: {llm_hint: "區域固定在施放處、跟著施放者，還是會往前移動。", type: anchor, required: true, description_zh: tile 固定、caster 跟隨施放者、moving 沿施放方向移動}
-      when: {llm_hint: "區域的效果在單位進入時、回合開始時，或兩者都結算。", type: zone_when, required: true, description_zh: enter 進入時、turn_start 回合開始時、both 兩者}
+      anchor: {llm_hint: "區域固定在施放處、跟著施放者，還是會往前移動。", type: anchor, required: true, description_zh: 固定在施放時的格子、跟隨施放者，或沿施放方向移動}
+      when: {llm_hint: "區域的效果在單位進入時、回合開始時，或兩者都結算。", type: zone_when, required: true, description_zh: 單位進入區域時、回合開始時站在區域內時，或兩者都結算}
       duration: {llm_hint: "區域持續的回合數。", type: int, required: true, min: 1, max: 4, description_zh: 區域持續的輪數}
       effects: {llm_hint: "區域對單位結算的效果。", type: effects, required: true, description_zh: 區域結算的效果（1–2 個）}
-      speed: {llm_hint: "移動型區域每輪前進的格數。", type: int, min: 1, max: 2, description_zh: anchor moving 每次環境回合前進的格數}
+      speed: {llm_hint: "移動型區域每輪前進的格數。", type: int, show_when: {anchor: moving}, min: 1, max: 2, description_zh: 區域每個環境回合沿施放方向前進的格數}
       surface: {llm_hint: "區域留下的表面種類。", type: surface, description_zh: 區域新覆蓋的格子留下的表面（省略＝不留）}
 
   # --- Phase 3D-6：規則改變（docs/design/06-技能.md 6.16 F、6.14.4；點數在 rule_changes.yaml 的 kinds）---
@@ -637,6 +639,7 @@ primitives:
   # damage_multiplier（本次傷害 × damage_multiplier_permille‰）與 self_damage_of_hit（施放者受本次
   # 傷害的 self_damage_permille_of_hit‰）；後兩者不是原語，沒有獨立的條目。
   - id: gamble
+    nested_core: true
     name_zh: 賭注
     llm_hint: "賭一把：成功時結算一組效果，失敗時結算另一組。"
     description_zh: 命中判定之後（未命中則整個不結算；技能沒有對敵方的效果時直接擲）擲一次 d1000，不超過 chance_permille 結算 win 的效果，否則結算 lose 的效果（各 0–2 個，至少一邊有效果）。win／lose 可以對施放者自己（affects self，例如失敗的反噬）；damage_multiplier 讓本次施放的傷害效果乘上倍率，self_damage_of_hit 讓施放者受到本次造成傷害的 n‰。施放者受到的反噬傷害不會讓他的 HP 低於 1，反噬狀態不能是硬控、跳過回合或持續傷害。必須是主動技能的最後一個效果。預算以期望值計（成功率 × win ＋ 失敗率 × lose），對自己的有害效果打折（gamble_self_harm_permille）。
@@ -685,9 +688,10 @@ primitives:
     budget_basis: inscribe
     base_points: 5
     acts_on: tile
+    forbid_affects: [self, enemies, allies, all]   # 刻印只作用在格子（3-48c）；要刻在腳下用「自身」形狀
     params:
-      element: {llm_hint: "符文的元素。", type: element, required: true, required_when: {unless_filled: tag}, description_zh: 符文的元素（填了 tag 就不用填；兩者恰好填一個）}
-      tag: {llm_hint: "符文帶有的標籤，供其他技能辨識。", type: tag, description_zh: 符文的標籤（與 element 恰好填一個）}
+      element: {llm_hint: "符文的元素。", type: element, required: true, required_when: {unless_filled: tag}, description_zh: 符文的元素（選了標籤就不用選；元素和標籤恰好選一個）}
+      tag: {llm_hint: "符文帶有的標籤，供其他技能辨識。", type: tag, description_zh: 符文的標籤（只能選已定義的符文標籤；元素和標籤恰好選一個）}
       duration: {llm_hint: "符文持續的回合數。", type: int, min: 1, max: 5, description_zh: 符文持續的環境回合數}
   - id: detonate_runes
     name_zh: 引爆符文

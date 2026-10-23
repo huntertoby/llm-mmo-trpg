@@ -1339,6 +1339,16 @@ export interface components {
              */
             description_zh: string;
             /**
+             * Dev Description Zh
+             * @default
+             */
+            dev_description_zh: string;
+            /**
+             * Later
+             * @default false
+             */
+            later: boolean;
+            /**
              * Params
              * @default []
              */
@@ -1770,6 +1780,23 @@ export interface components {
              * @default
              */
             description_zh: string;
+            /**
+             * Dev Description Zh
+             * @default
+             */
+            dev_description_zh: string;
+            /**
+             * Later
+             * @default false
+             */
+            later: boolean;
+            /**
+             * Show When
+             * @default {}
+             */
+            show_when: {
+                [key: string]: string;
+            };
             type: components["schemas"]["FieldType"];
             /**
              * Required

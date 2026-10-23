@@ -74,6 +74,7 @@ from trpg.skillgen.option_params import (
     primitive_param_fields,
     shape_param_fields,
 )
+from trpg.skillgen.option_player import playerize
 from trpg.skillgen.option_rules import (
     composition_block,
     composition_info,
@@ -1133,7 +1134,7 @@ def _rarity_max_effects(library: ContentLibrary, rarity: str) -> int:
 
 
 _STEP_NO_MARK = "\0"
-"""``_definition_errors`` 在備註後面留下欄位名的記號，由 :func:`_with_step_links` 換成「回到第 N 步修改」。"""
+"""``_definition_errors`` 留在備註後面的欄位名記號，由 ``_with_step_links`` 換成步驟編號。"""
 
 
 _FIELD_ALIAS = {"secondary_scaling_attr": "scaling_attr", "mastery": "scaling_attr"}
@@ -1236,11 +1237,12 @@ def _with_step_links(steps: list[StepOptions], library: ContentLibrary) -> list[
         for note in step.notes_zh:
             text, mark, field = note.partition(_STEP_NO_MARK)
             text = plainify(text, library)
-            number = owner.get(_FIELD_ALIAS.get(field, field))
-            if mark and number is not None:
-                text += f"（回到第 {number} 步修改）"
+            step_no = owner.get(_FIELD_ALIAS.get(field, field))
+            if mark and step_no is not None:
+                text += f"（回到第 {step_no} 步修改）"
             notes.append(text)
-        out.append(step.model_copy(update={"notes_zh": tuple(notes)}))
+        fields = playerize(step.fields, library)  # 說明換成玩家版（原文在 dev_description_zh）
+        out.append(step.model_copy(update={"notes_zh": tuple(notes), "fields": fields}))
     return out
 
 

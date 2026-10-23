@@ -616,6 +616,9 @@ class PrimitiveParam(ContentModel):
         "scope",
     ]
     required: bool = False
+    show_when: dict[str, str] | None = None
+    """工坊的條件顯示（3-48c）：同一個原語的另一個參數（鍵）填了指定的值（值）才顯示這個參數
+    （例：持續區域的 ``speed`` 只在 ``anchor: moving`` 時有意義）。只影響畫面，不影響驗證。"""
     required_when: RequiredWhen | None = None
     """``required: true`` 時，只在條件成立才必填（``None`` ＝ 一律必填）。"""
     min: int | None = None
@@ -690,6 +693,9 @@ class PrimitiveDef(ContentModel):
     """組合規則：必須是技能唯一的效果。"""
     others_affect: Literal["self"] | None = None
     """組合規則：同一技能的其他效果必須明寫這個 ``affects``（``self``：只作用在施放者）。"""
+    nested_core: bool = False
+    """這個原語的內容就是一組巢狀效果（消耗狀態後的效果、賭注的贏／輸分支、持續區域的效果）：
+    工坊在 3-48d 開放巢狀效果之前，玩家模式不列出（``option_player.HIDE_NESTED_EFFECTS``）。"""
     max_per_skill: int | None = Field(default=None, ge=1)
     """組合規則：一個技能最多幾個這個效果。"""
     active_only: bool = False

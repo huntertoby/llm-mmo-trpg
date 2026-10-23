@@ -275,6 +275,17 @@ def _ref_choices(kind: str, library: ContentLibrary) -> tuple[Choice, ...]:
     return builders[kind]()
 
 
+def tag_choices(library: ContentLibrary, primitive_id: str) -> tuple[Choice, ...]:
+    """標籤欄位的選單（中文名）。刻印（``inscribe``）只列有符文單字的標籤，顯示成「獵紋」；
+    其他（重置冷卻）列全部技能標籤。"""
+    tags = sorted(library.ruleset.skill_tags.tags, key=lambda t: t.id)
+    if primitive_id == "inscribe":
+        return tuple(
+            Choice(value=t.id, name_zh=f"{t.rune_zh}紋") for t in tags if t.rune_zh is not None
+        )
+    return tuple(Choice(value=t.id, name_zh=t.name_zh) for t in tags)
+
+
 def _scaling_field(library: ContentLibrary, spec: PrimitiveParam) -> FieldSpec:
     fields = ScaleSpec.model_fields
     step_low, step_high = model_range(fields["per_step_permille"])
@@ -369,9 +380,12 @@ def _param_field(
         "name_zh": PARAM_TEXT.get(name, name),
         "description_zh": spec.description_zh,
         "required": required,
+        "show_when": spec.show_when or {},
     }
     kind = spec.type
-    plain: dict[str, FieldType] = {"bool": "bool", "tag": "text", "effects": "effects"}
+    if kind == "tag":  # 只能選已定義的標籤（3-48c；刻印只列符文標籤，新標籤由內容資料新增）
+        return FieldSpec(**base, type="choice", choices=tag_choices(library, primitive.id))
+    plain: dict[str, FieldType] = {"bool": "bool", "effects": "effects"}
     if kind in plain:
         return FieldSpec(**base, type=plain[kind])
     if kind in ("int", "count"):

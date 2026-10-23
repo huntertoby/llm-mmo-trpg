@@ -192,6 +192,7 @@ def test_equipment_limits_are_checked(client: TestClient) -> None:
     unknown = _create(client, custom_skills=[CHARGE], replace_skills=["skill_fire_bolt"])
     assert unknown.status_code == 422 and "沒有裝備要替換的技能" in unknown.json()["detail"]
     spell = {**CHARGE, "category": "spell", "weapon_req": "focus", "scaling_attr": "int"}
+    spell["cost"] = {"mana": 4}
     spell["effects"] = [
         {"type": "dash"},
         {"type": "damage", "dice": "2d6", "element": "fire"},

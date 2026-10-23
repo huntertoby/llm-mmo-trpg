@@ -3272,6 +3272,16 @@
             "title": "Description Zh",
             "default": ""
           },
+          "dev_description_zh": {
+            "type": "string",
+            "title": "Dev Description Zh",
+            "default": ""
+          },
+          "later": {
+            "type": "boolean",
+            "title": "Later",
+            "default": false
+          },
           "params": {
             "items": {
               "$ref": "#/components/schemas/FieldSpec"
@@ -4313,6 +4323,24 @@
             "type": "string",
             "title": "Description Zh",
             "default": ""
+          },
+          "dev_description_zh": {
+            "type": "string",
+            "title": "Dev Description Zh",
+            "default": ""
+          },
+          "later": {
+            "type": "boolean",
+            "title": "Later",
+            "default": false
+          },
+          "show_when": {
+            "additionalProperties": {
+              "type": "string"
+            },
+            "type": "object",
+            "title": "Show When",
+            "default": {}
           },
           "type": {
             "$ref": "#/components/schemas/FieldType"
