@@ -1846,6 +1846,11 @@ PM 驗收後請使用者試玩一整輪（`docs/專案計畫.md` 第 14 節 🎮
 - PM 合併（無衝突，`c787c6f`）；`typecheck`、vitest 768、`pnpm build` 全過；`dist` 無 `googleapis`／`gstatic` 網址；ruff、mypy 過。字型 400、700 各 108 個 unicode-range 切片（216 個 woff2、約 8.2 MiB，瀏覽器只載用到的切片），`OFL.txt` 一併放在 `client/src/assets/fonts/noto-sans-tc/`；下載腳本 `scripts/fetch_font.py`（只允許三個來源）。`render/fontLoad.ts`：開畫面前等 400／700（3 秒逾時），切片晚到時清技能圖示快取並重畫。報告 `Phase3-35報告.md`。
 - 待 PM 決定：#1 內建截圖工具無法存檔、報告無附圖 → 接受，美術 PM 驗收時實機看；#2 8.2 MiB → 接受（只載用到的切片）；#3 使用者重開伺服器 → 已轉達。
 
+#### 40.2.1 3-36b 驗收（2026-10-23）
+
+- PM 合併（無衝突，`5ba9cbb`；合併後重產 `skill_icons.json`）；ruff、format、mypy、`tests/api`＋`tests/narrative` 306、typecheck、vitest 795、`pnpm build` 全過。`render/fieldFx.ts`（裂痕、`turnsBadge`、`sightVeil`、陷阱、區域）、四種物件新畫法（`turnsLeft`／`hpStage` 級距進快取鍵）、`RowLayer.veil`、`battle/fxSkills.ts`；開發樣張頁 `client/fx-gallery.html`。報告 `Phase3-36b報告.md`（無附圖）。
+- 待 PM 決定 → 決定：#1 `SkillIcon` 加 `trap_trigger`、`zone_element`（只讀）、#2 有害／有益判斷（以目前玩家視角：自己的火牆對我顯示有益）、#3 區域元素色順序、#5 技能卡載入前陷阱暫畫灰、#6 有畫法的暫時物件不整體淡化 → **接受，美術 PM 實機驗收時確認**；#4 暈眩星星靜止 → 3-36a 已接受。
+
 ## 41. Phase 3-37｜區域主題與第一區「雲嶺」換皮（美術 PM；使用者 2026-10-23「戰場配對 2 題和碎界 4 題都採用 A」「好 寫入」；玩法決定 #42、#43；拆三段，依序）
 
 > 需求與檢查清單：`docs/art/雲嶺移植需求.md`（**以它為準**）；換法 `docs/art/區域外觀換法.md`；畫法與色票 `docs/art/sample/realms.js`、`docs/art/realms.png`（雲嶺那張）。美術 PM 驗收。
