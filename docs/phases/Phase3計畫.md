@@ -1901,3 +1901,4 @@ PM 驗收後請使用者試玩一整輪（`docs/專案計畫.md` 第 14 節 🎮
 
 - PM 合併（無衝突，`46ba307`）；typecheck、vitest 827、`pnpm build`、ruff 全過；沒改 API。可燃火苗從物件貼圖拆成獨立一層（全場一張火苗貼圖，物件快取鍵不再含可燃），淡化／明顯只改透明度；判斷是純函式 `client/src/battle/flameMarks.ts`（技能卡 `keywords.makes` 含 `ignite` 或 `icon.elements` 含 `fire`；場上有 `fire` 表面、燃燒中的物件或帶 `burning` 的單位）。實機竹林三種情況符合。報告 `Phase3-38報告.md`。
 - 待 PM 決定 → 暫定（**美術 PM 驗收時確認**）：淡化透明度 `FLAME_DIM` 0.4（0.28 幾乎看不見）、燃燒中的單位也算「場上有火」、瞬間切換不做淡入淡出 → 接受。
+- **美術 PM 驗收通過（2026-10-23）**：竹林實戰確認；三點全部接受（`FLAME_DIM` 0.4、燃燒單位算有火、瞬間切換）；雲海山谷調暗確認。紀錄 `docs/art/3-38檢查.md`。
