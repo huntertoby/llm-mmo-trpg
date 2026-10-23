@@ -1988,12 +1988,14 @@ button.selected {
 }
 
 .turn-controls .speed-control {
-  flex-wrap: wrap;
+  /* 一行放得下「播放：慢 正常 快 略過 跳到結尾」（約 216px／欄寬 250），播放中也不會折成兩行被底部切掉 */
+  flex-wrap: nowrap;
+  gap: 3px;
   font-size: 12px;
 }
 
 .turn-controls .speed-control button {
-  padding: 2px 8px;
+  padding: 2px 5px;
 }
 
 /* 詢問視窗：水平置中、靠上；「移到下方」時靠下（在技能列上方） */
@@ -3066,6 +3068,12 @@ button.selected {
 .skill-gear {
   font-size: 12px;
   color: #e8c46a;
+  /* 「來自裝備・副手：壁壘塔盾」太長時省略（完整文字在說明卡與 aria-label） */
+  display: block;
+  max-width: 100%;
+  overflow: hidden;
+  white-space: nowrap;
+  text-overflow: ellipsis;
 }
 .skill-button.from-gear {
   border-color: #b8923f;
@@ -3473,4 +3481,30 @@ button.selected {
 .unit-float.pinned .tile-pin-icon {
   color: #ffd04a;
   opacity: 1;
+}
+
+/* 底部列拉矮（低於預設高度）時右側回合操作改緊湊排法，播放速度永遠看得到（使用者：「黃拉桿拉到最下面快慢會不見」） */
+.battle-bottom.short .turn-controls {
+  gap: 4px;
+}
+
+.battle-bottom.short .resident-actions {
+  gap: 4px;
+}
+
+.battle-bottom.short .resident-actions > .resident-button,
+.battle-bottom.short .resident-actions > .hint-tip > .resident-button {
+  padding: 3px 6px;
+  font-size: 13px;
+}
+
+.battle-bottom.short .resident-actions > .end-turn-button,
+.battle-bottom.short .resident-actions > .hint-tip > .end-turn-button {
+  padding: 4px 12px;
+  font-size: 15px;
+}
+
+.battle-bottom.short .turn-controls .fallback > button,
+.battle-bottom.short .turn-controls .fallback > .hint-tip > button {
+  padding: 2px 6px;
 }

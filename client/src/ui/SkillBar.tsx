@@ -83,7 +83,7 @@ function SkillSlot({
             </span>
           )}
           {b.gearSource != null && (
-            <span className="skill-gear" aria-label="來自裝備">
+            <span className="skill-gear" aria-label={gearSkillBadge(b.gearSource)}>
               {gearSkillBadge(b.gearSource)}
             </span>
           )}
