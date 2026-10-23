@@ -2105,6 +2105,13 @@ PM 驗收後請使用者試玩一整輪（`docs/專案計畫.md` 第 14 節 🎮
 3a. **武器外觀的元素色**（使用者更正原意：「我是指 武器外觀 各屬性的」）：查證——`weapons.yaml` 法杖有 `look.element`，`/api/gear/catalog` 也帶 `element`，紙娃娃（法杖寶珠 `elementTint`）與 `weaponIcon` 都支援元素色；**只是 3-48b 的 `draftLook` 沒把 `element` 傳下去**，所以裝備分頁的預覽與格子圖示看不出火焰／冰霜／雷電法杖的差別。修：`draftLook` 帶 `element`；外觀造型下拉若有「依所選武器」以外的造型，元素沿用所選武器。掃描：戰鬥中的紙娃娃、開局選單、單位資訊的武器圖示都要有元素色（有缺就一起接上）；元素灌注後的武器外觀是否變色，查現況並寫進報告（沒有就列待決，不新增美術）。
 4. 驗收：vitest、build、相關 pytest（api、content）、ruff、mypy；排版煙霧檢查。報告 `Phase3-48g報告.md`。
 
+### 57.1 3-48g 驗收（2026-10-24，開發 PM）
+
+- 報告 `Phase3-48g報告.md`。屬性詞條那列可換屬性（數值保留並夾在新範圍）；成對勾選資料驅動（API `GearWeaponInfo.pairable`＝單手且有 `paired` 物品，目前只有匕首）；伺服器加「雙手武器不能是成對武器」；`draftLook` 帶 `element`，火焰／冰霜／雷電法杖預覽顏色不同（agent 以像素統計確認）。掃描：戰鬥紙娃娃、單位資訊、開局選單本來就有元素色。
+- 檢查（main）：vitest 919、build、ruff、format、mypy、pytest api／content／roguelite 1586、cli（含 slow）148。
+- 順帶修：`floatCardRule.test.ts` 的 `role=tooltip` 規則誤判 `layoutSmoke.ts` 的 `[role="tooltip"]` 查詢選擇器（worktree 每次報失敗、main 偶爾通過）→ 規則排除 `[` 開頭的選擇器。
+- 待決：#2 元素灌注後的武器外觀變色 → 美術待辦（需美術 PM 定色）；#3 `pairable` 由物品推導 → 3I-4 若要明示再改欄位。
+
 ## 58. Phase 3-49｜射程計入預算（玩法決定 #53；使用者：「這兩個點數一樣?」「A」「好 寫入」；06 6.5 `28d8df5`；sonnet；約 0.3 段；3-48g 之後、3I-3 之前）
 
 1. 預算加射程係數：固定射程的技能，shaped 再乘 **1＋（射程 −4）× 5%**（射程 1＝0.85……10＝1.30）；「武器射程」的武器技與沒有射程的形狀（自身、光環等）係數 1.0；戰場變奏的射程 +1 照算在變奏型態上。係數寫在 `content/skill_budget.yaml`（資料，不寫死）。
