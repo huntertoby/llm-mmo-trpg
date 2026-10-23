@@ -2809,6 +2809,26 @@ export interface components {
         };
         JsonValue: unknown;
         /**
+         * KeywordHint
+         * @description 一個關鍵字的建議：製造或利用它可以加哪些效果、條件或觸發。
+         */
+        KeywordHint: {
+            /** Id */
+            id: string;
+            /** Name Zh */
+            name_zh: string;
+            /**
+             * Makes
+             * @default []
+             */
+            makes: string[];
+            /**
+             * Uses
+             * @default []
+             */
+            uses: string[];
+        };
+        /**
          * KeywordRef
          * @description 技能卡上的一個關鍵字（Phase 3-24b1）：代碼、顯示名稱與一句話說明（給部件說明框）。
          */
@@ -3766,7 +3786,8 @@ export interface components {
             /**
              * @default {
              *       "makes": [],
-             *       "uses": []
+             *       "uses": [],
+             *       "basic": false
              *     }
              */
             keywords: components["schemas"]["SkillCardKeywords"];
@@ -3813,6 +3834,11 @@ export interface components {
              * @default []
              */
             uses: components["schemas"]["KeywordRef"][];
+            /**
+             * Basic
+             * @default false
+             */
+            basic: boolean;
         };
         /**
          * SkillGrowthOut
@@ -4879,10 +4905,16 @@ export interface components {
             /**
              * @default {
              *       "makes": [],
-             *       "uses": []
+             *       "uses": [],
+             *       "basic": false
              *     }
              */
             keywords: components["schemas"]["SkillCardKeywords"];
+            /**
+             * Keyword Hints
+             * @default []
+             */
+            keyword_hints: components["schemas"]["KeywordHint"][];
         };
         /** WorkshopExport */
         WorkshopExport: {

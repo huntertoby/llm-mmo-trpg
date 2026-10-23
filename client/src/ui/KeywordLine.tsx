@@ -2,7 +2,7 @@
 // 技能卡、技能列的浮動卡、技能工坊的即時檢查共用。
 // Phase 3-41a：只由通用規則推導的關鍵字標灰，說明附上歸類理由（暫定的由後端過濾，不會出現）。
 import type { KeywordRef, SkillKeywords } from "../api/types";
-import { noKeywords } from "./keywords";
+import { BASIC_SKILL_NOTE, noKeywords } from "./keywords";
 import { PartTip } from "./PartTip";
 
 function Side({ label, refs }: { label: string; refs: readonly KeywordRef[] }) {
@@ -30,12 +30,21 @@ function Side({ label, refs }: { label: string; refs: readonly KeywordRef[] }) {
 
 interface Props {
   keywords: SkillKeywords;
-  /** 沒有任何關鍵字時顯示的字（工坊草稿剛開始）；省略就整行不顯示。 */
+  /** 沒有任何關鍵字時顯示的字（工坊草稿還沒完成）；省略就整行不顯示。 */
   empty?: string;
+  /** 沒有任何關鍵字時是否標「基礎技能」（預設 true；工坊草稿還沒完成時傳 false）。 */
+  showBasic?: boolean;
 }
 
-export function KeywordLine({ keywords, empty }: Props) {
+export function KeywordLine({ keywords, empty, showBasic = true }: Props) {
   if (noKeywords(keywords)) {
+    if (showBasic && keywords.basic === true) {
+      return (
+        <div className="small keyword-line keyword-basic" aria-label="關鍵字">
+          {BASIC_SKILL_NOTE}
+        </div>
+      );
+    }
     return empty === undefined ? null : <div className="small muted keyword-line">{empty}</div>;
   }
   return (

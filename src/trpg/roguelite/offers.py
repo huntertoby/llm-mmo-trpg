@@ -69,6 +69,7 @@ def make_offer(library: ContentLibrary, run: RunState, reason: str) -> SkillOffe
         CandidateRules(
             composer_share_permille=settings.composer_share_permille,
             composer_tries=settings.composer_tries,
+            general_share_permille=settings.general_share_permille,
         ),
     )
     top = top_attribute(run.hero.attributes)

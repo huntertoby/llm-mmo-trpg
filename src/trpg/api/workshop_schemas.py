@@ -12,6 +12,7 @@ from pydantic import BaseModel, ConfigDict, Field
 
 from trpg.api.schemas import MapSummary
 from trpg.content.skills import SkillRarity
+from trpg.narrative.keyword_hints import KeywordHint
 from trpg.narrative.skill_icon import SkillIcon
 from trpg.narrative.skills import SkillCard, SkillCardKeywords
 from trpg.shared.rng import MASK64
@@ -64,6 +65,8 @@ class WorkshopCheck(DraftCheck):
     """卡片的 ``concept`` 是隨機組合器的暫定句（玩家模式不顯示，Phase 3H-8）。"""
     keywords: SkillCardKeywords = SkillCardKeywords()
     """目前製造與利用的關鍵字（Phase 3-24b1；草稿每多一步就多顯示一點，沒完成也有）。"""
+    keyword_hints: tuple[KeywordHint, ...] = ()
+    """還沒接上的關鍵字與「加哪種效果或條件能接上」的建議（Phase 3-51；提示，不擋）。"""
 
 
 class WorkshopRandomRequest(_ApiModel):

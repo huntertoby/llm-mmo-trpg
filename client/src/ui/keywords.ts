@@ -13,7 +13,10 @@ export function keywordSummary(keywords: SkillKeywords): string {
   return `製造：${keywordSide(keywords.makes)}｜利用：${keywordSide(keywords.uses)}`;
 }
 
-/** 製造與利用都沒有關鍵字（工坊草稿剛開始時）。 */
+/** 基礎技能的卡片標示（玩法決定 #55）：沒有任何關鍵字、不和其他技能協同。 */
+export const BASIC_SKILL_NOTE = "基礎技能：不和其他技能協同";
+
+/** 製造與利用都沒有關鍵字（工坊草稿剛開始時，或基礎技能）。 */
 export function noKeywords(keywords: SkillKeywords): boolean {
   return keywords.makes.length === 0 && keywords.uses.length === 0;
 }

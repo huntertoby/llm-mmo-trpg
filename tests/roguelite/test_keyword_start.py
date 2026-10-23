@@ -117,7 +117,9 @@ def test_bow_can_start_with_wet_thanks_to_any_weapon_skills() -> None:
     assert len(set(run.hero.skills)) == 2
 
 
-def test_a_pool_without_compatible_starters_is_rejected() -> None:
+def test_a_pool_without_compatible_starters_is_rejected(monkeypatch: pytest.MonkeyPatch) -> None:
+    # 組合器碰巧能做出弓用的潮濕技能時結果會隨種子變動：這裡只測「池裡沒有」的路徑
+    monkeypatch.setattr("trpg.roguelite.start._composed_starter", lambda *args, **kw: None)
     lib = library()
     starters = {s.id for s in pool_skills(lib, "wet", exclusive_only=True)}
     kept = {i: s for i, s in lib.skills.items() if i not in starters or s.weapon_req == "focus"}

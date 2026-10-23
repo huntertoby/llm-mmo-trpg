@@ -1,10 +1,30 @@
 // 即時檢查面板：預算條、違反的規則、最低稀有度、技能卡片預覽。
-import type { BudgetLine, WorkshopCheck } from "../../api/types";
+import type { BudgetLine, KeywordHint, WorkshopCheck } from "../../api/types";
+import { noKeywords } from "../keywords";
 import { budgetView, checkHeadline, missingStepNames, rarityName } from "../../workshop/state";
 import { KeywordLine } from "../KeywordLine";
 import { SkillCardView } from "../SkillCardView";
 import { AssemblyFormula, SkillIconView } from "../SkillIconView";
 import { Hint } from "../Hint";
+
+/** 想接上關鍵字的建議（玩法決定 #55）：加哪一種效果或條件就能製造或利用哪個關鍵字。只是提示，不擋。 */
+function KeywordHints({ hints, open }: { hints: readonly KeywordHint[]; open: boolean }) {
+  if (hints.length === 0) return null;
+  return (
+    <details className="ws-details ws-keyword-hints" open={open}>
+      <summary>想和其他技能協同？加這些就能接上關鍵字</summary>
+      <ul className="small">
+        {hints.map((h) => (
+          <li key={h.id}>
+            <strong>{h.name_zh}</strong>
+            {h.makes.length > 0 && <div>製造：加{h.makes.join("、")}</div>}
+            {h.uses.length > 0 && <div>利用：加{h.uses.join("、")}</div>}
+          </li>
+        ))}
+      </ul>
+    </details>
+  );
+}
 
 function LinesTable({ lines }: { lines: BudgetLine[] }) {
   return (
@@ -151,7 +171,10 @@ export function CheckPanel({ check, pending, dev = false }: { check: WorkshopChe
           <AssemblyFormula icon={check.icon} />
         </div>
       )}
-      {check !== null && <KeywordLine keywords={check.keywords} empty="關鍵字：還沒有（技能至少要製造或利用一個）" />}
+      {check !== null && (
+        <KeywordLine keywords={check.keywords} showBasic={check.complete} empty="關鍵字：還沒有（沒有關鍵字也可以，就是基礎技能）" />
+      )}
+      {check !== null && <KeywordHints hints={check.keyword_hints ?? []} open={check.complete && noKeywords(check.keywords)} />}
       <div className={`ws-headline ${head.tone}`}>{head.text}</div>
       {missing.length > 0 && <div className="small">還沒填完：{missing.join("、")}</div>}
       {check !== null && <BudgetBar check={check} />}

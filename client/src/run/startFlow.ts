@@ -34,12 +34,14 @@ export function canStart(
 /** 三選一卡片的標示文字：「加深：點燃」「橋接：點燃＋標記」「新方向：撞擊」。 */
 export function offerTagText(tag: OfferTag): string {
   const names = tag.keywords.map((k) => k.name_zh).join("＋");
-  return names === "" ? tag.label_zh : `${tag.label_zh}：${names}`;
+  if (names === "") return tag.kind === "new" && !tag.fallback ? `${tag.label_zh}：基礎技能` : tag.label_zh;
+  return `${tag.label_zh}：${names}`;
 }
 
 /** 標示的補充說明（退回時說明原因）。 */
 export function offerTagHint(tag: OfferTag): string {
   if (!tag.fallback) {
+    if (tag.kind === "new" && tag.keywords.length === 0) return "基礎技能：不和其他技能協同，單純好用";
     if (tag.kind === "deepen") return "帶你持有最多的關鍵字";
     if (tag.kind === "bridge") return "同時接上你已持有的兩個關鍵字";
     return "你還沒有的關鍵字";

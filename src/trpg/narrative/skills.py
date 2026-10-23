@@ -1130,6 +1130,13 @@ class SkillCardKeywords(BaseModel):
 
     makes: tuple[KeywordRef, ...] = ()
     uses: tuple[KeywordRef, ...] = ()
+    basic: bool = False
+    """沒有任何關鍵字（含通用歸類）＝基礎技能（Phase 3-51，玩法決定 #55）：技能卡標「基礎技能：不和
+    其他技能協同」。工坊草稿還沒完成時也是 ``True``，由介面決定要不要顯示。"""
+
+
+BASIC_SKILL_NOTE_ZH = "基礎技能：不和其他技能協同"
+"""基礎技能的卡片標示（玩法決定 #55）。"""
 
 
 def keywords_card(
@@ -1137,18 +1144,19 @@ def keywords_card(
     found: SkillKeywords,
     grades: Mapping[tuple[str, str], KeywordGrade] | None = None,
 ) -> SkillCardKeywords:
-    """推導結果（關鍵字 ID）附上顯示名稱。``grades``（:func:`keyword_grades`，Phase 3-41a 清單
-    2.1）：只由暫定規則推導的關鍵字不顯示，只由通用規則推導的標 ``general`` 並附理由；省略時全部照
-    專屬顯示。"""
+    """推導結果（關鍵字 ID）附上顯示名稱。``grades``（:func:`keyword_grades`）：技能有專屬關鍵字時
+    不顯示通用歸類（玩法決定 #54）；只有通用規則時標 ``general`` 並附理由；省略時全部照專屬顯示。
+    沒有任何關鍵字的技能 ``basic`` 為真（玩法決定 #55）。"""
     defs = library.keywords.by_id()
     grades = grades or {}
+    has_exclusive = any(g.grade == "exclusive" for g in grades.values())
 
     def ref(side: str, keyword_id: str) -> KeywordRef | None:
         d = defs[keyword_id]
         grade = grades.get((side, keyword_id))
-        if grade is not None and grade.grade == "provisional":
-            return None
         general = grade is not None and grade.grade == "general"
+        if general and has_exclusive:
+            return None
         return KeywordRef(
             id=d.id,
             name_zh=d.name_zh,
@@ -1162,7 +1170,9 @@ def keywords_card(
         return tuple(r for k in ids if (r := ref(side, k)) is not None)
 
     return SkillCardKeywords(
-        makes=side_refs("makes", found.makes), uses=side_refs("uses", found.uses)
+        makes=side_refs("makes", found.makes),
+        uses=side_refs("uses", found.uses),
+        basic=not found,
     )
 
 

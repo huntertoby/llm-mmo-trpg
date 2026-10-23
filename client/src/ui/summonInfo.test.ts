@@ -53,9 +53,25 @@ describe("關鍵字分級", () => {
 
   it("通用歸類的關鍵字標灰", () => {
     const html = renderToStaticMarkup(
-      createElement(KeywordLine, { keywords: { makes: [ref("ignite", false)], uses: [ref("prone", true)] } }),
+      createElement(KeywordLine, { keywords: { makes: [ref("ignite", false)], uses: [ref("prone", true)], basic: false } }),
     );
     expect(html).toContain('class="part-tip keyword-chip general"');
     expect(html).toContain('class="part-tip keyword-chip"');
+  });
+});
+
+
+describe("基礎技能標示（Phase 3-51）", () => {
+  it("沒有關鍵字的技能卡標「基礎技能：不和其他技能協同」", () => {
+    const html = renderToStaticMarkup(createElement(KeywordLine, { keywords: { makes: [], uses: [], basic: true } }));
+    expect(html).toContain("基礎技能：不和其他技能協同");
+  });
+
+  it("工坊草稿還沒完成時不標基礎技能，改顯示提示", () => {
+    const html = renderToStaticMarkup(
+      createElement(KeywordLine, { keywords: { makes: [], uses: [], basic: true }, showBasic: false, empty: "關鍵字：還沒有" }),
+    );
+    expect(html).not.toContain("基礎技能");
+    expect(html).toContain("關鍵字：還沒有");
   });
 });

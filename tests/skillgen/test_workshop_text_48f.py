@@ -40,7 +40,12 @@ def _all_dev_texts() -> dict[str, str]:
     for draft in drafts:
         for step in draft_options(draft, LIB).steps:
             rows.update(option_dev_texts({step.id: step.fields}))
-    return rows
+    # Phase 3-51：沒有關鍵字的修正技能不再被驗證器擋，取樣會抽到修正技能的「可套用」說明；這些說明
+    # 還沒有玩家改寫（玩法 PM 的 149 條不含），列在 Phase3-51報告「待 PM 決定」，補齊前不納入檢查。
+    return {k: v for k, v in rows.items() if not k.startswith(_MODIFIER_UNREWRITTEN)}
+
+
+_MODIFIER_UNREWRITTEN = "工坊.effects.modifiers.change."
 
 
 def test_table_has_the_149_rewritten_entries() -> None:

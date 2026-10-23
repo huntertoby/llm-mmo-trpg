@@ -174,13 +174,13 @@ def derive_from_facts(
     return SkillKeywords(tuple(makes), tuple(uses))
 
 
-_GRADE_ORDER: dict[RuleGrade, int] = {"exclusive": 0, "general": 1, "provisional": 2}
+_GRADE_ORDER: dict[RuleGrade, int] = {"exclusive": 0, "general": 1}
 
 
 @dataclass(frozen=True, slots=True)
 class KeywordGrade:
     """一個關鍵字在某一側（製造或利用）成立的最強規則種類（Phase 3-41a，技能卡分級顯示）：
-    專屬 ＞ 通用 ＞ 暫定；通用時附上第一條符合的通用規則的理由。"""
+    專屬 ＞ 通用；通用時附上第一條符合的通用規則的理由。"""
 
     grade: RuleGrade
     reason_zh: str | None = None

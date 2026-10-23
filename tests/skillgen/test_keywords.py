@@ -277,7 +277,7 @@ def test_modifier_rules_are_read_too() -> None:
     assert derive_keywords(scar, lib.keywords).uses == ("ignite",)
     avatar = lib.skills["skill_war_avatar"]  # 無條件的 damage_permille 不會被有條件的規則誤判
     assert derive_keywords(avatar, lib.keywords).uses == ()
-    assert derive_keywords(avatar, lib.keywords).makes == ("marked",)
+    assert derive_keywords(avatar, lib.keywords).makes == ()  # 暫定規則已移除（Phase 3-51）
 
 
 def test_derivation_is_deterministic_and_ordered_by_the_table() -> None:
@@ -293,10 +293,14 @@ def test_derivation_is_deterministic_and_ordered_by_the_table() -> None:
 # ---------------------------------------------------------------------------
 
 
-def test_every_shipped_skill_has_at_least_one_keyword() -> None:
+def test_keywordless_shipped_skills_are_basic_skills_and_legal() -> None:
+    """玩法決定 #55：沒有關鍵字的內建技能是基礎技能，驗證器不擋。"""
     lib = library()
-    missing = skills_without_keywords(lib.skills.values(), lib.keywords)
-    assert [s.id for s in missing] == []
+    basic = skills_without_keywords(lib.skills.values(), lib.keywords)
+    assert basic  # 移除暫定規則後確實有基礎技能
+    assert {
+        s.id: shipped_violations(s.id, lib) for s in basic if shipped_violations(s.id, lib)
+    } == {}
 
 
 def test_every_shipped_skill_passes_the_validator_including_keywords() -> None:
@@ -306,25 +310,24 @@ def test_every_shipped_skill_passes_the_validator_including_keywords() -> None:
 
 
 @pytest.mark.parametrize("seed", range(50))
-def test_composer_seeds_0_to_49_all_have_a_keyword(seed: int) -> None:
+def test_composer_seeds_0_to_49_are_legal_with_or_without_a_keyword(seed: int) -> None:
     lib = library()
     skill = compose_random_skill(seed, library=lib)
-    assert derive_keywords(skill, lib.keywords)
     assert validate_skill(skill, lib) == []
 
 
-def test_a_keywordless_skill_is_rejected_by_the_validator() -> None:
+def test_a_keywordless_skill_passes_the_validator() -> None:
     lib = library()
     plain = _skill(
         id="skill_t_plain",
         cost={"mana": 6},
         effects=[{"type": "damage", "dice": "2d6", "element": "physical"}],
     )
-    rules = {v.rule for v in validate_skill(plain, lib)}
-    assert "keyword.required" in rules
+    assert not derive_keywords(plain, lib.keywords)
+    assert "keyword.required" not in {v.rule for v in validate_skill(plain, lib)}
 
 
-def test_workshop_marks_a_keywordless_complete_draft_illegal() -> None:
+def test_workshop_accepts_a_keywordless_complete_draft() -> None:
     lib = library()
     draft = walk_draft(STRIKE)
     ok = check_draft(draft, lib)
@@ -334,8 +337,7 @@ def test_workshop_marks_a_keywordless_complete_draft_illegal() -> None:
     plain["scaling_attr"] = "int"
     plain["effects"] = [{"type": "damage", "dice": "2d6", "element": "physical"}]
     result = check_draft(plain, lib)
-    assert not result.legal
-    assert any(p.rule == "keyword.required" for p in result.problems)
+    assert not any(p.rule == "keyword.required" for p in result.problems)
 
 
 def test_workshop_draft_keywords_appear_as_the_draft_grows() -> None:
@@ -509,14 +511,10 @@ def test_rule_grades_are_data_and_match_the_comments() -> None:
             continue
         if "# 通用" in stripped:
             assert "grade: general" in stripped, stripped
-        if "# 暫定" in stripped:
-            assert "grade: provisional" in stripped, stripped
+        assert "provisional" not in stripped, stripped  # Phase 3-51：暫定規則全部移除
     rules = [r for k in library().keywords.keywords for r in (*k.makes, *k.uses)]
-    grades = {g: sum(1 for r in rules if r.grade == g) for g in ("general", "provisional")}
-    assert grades == {
-        "general": 19,
-        "provisional": 24,
-    }  # 2026-10-23：潮濕的 7 條通用改暫定（玩法 PM）
+    assert sum(1 for r in rules if r.grade == "general") == 19
+    assert {r.grade for r in rules} == {"exclusive", "general"}
 
 
 def test_exclusive_only_derivation_drops_general_and_provisional_rules() -> None:
@@ -524,9 +522,8 @@ def test_exclusive_only_derivation_drops_general_and_provisional_rules() -> None
     cleave = lib.skills["skill_cleave"]  # 近戰武器技：只靠通用規則利用倒地
     assert "prone" in derive_keywords(cleave, lib.keywords).all()
     assert not derive_keywords(cleave, lib.keywords, exclusive_only=True)
-    hush = lib.skills["skill_hush"]  # 沉默：暫定規則製造標記
-    assert "marked" in derive_keywords(hush, lib.keywords).makes
-    assert "marked" not in derive_keywords(hush, lib.keywords, exclusive_only=True).makes
+    hush = lib.skills["skill_hush"]  # 沉默：暫定規則移除後沒有關鍵字（基礎技能）
+    assert not derive_keywords(hush, lib.keywords)
     fire = lib.skills["skill_fire_bolt"]
     assert derive_keywords(fire, lib.keywords, exclusive_only=True) == derive_keywords(
         fire, lib.keywords

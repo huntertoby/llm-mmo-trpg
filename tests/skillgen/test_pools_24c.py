@@ -95,16 +95,23 @@ def test_new_keyword_descriptions_follow_the_gameplay_wording() -> None:
     assert "近戰" in table["prone"]
 
 
-def test_the_keywordless_message_lists_all_ten_keywords() -> None:
+def test_a_keywordless_skill_is_a_basic_skill_with_no_validator_complaint() -> None:
     lib = library()
     plain = _skill(
         id="skill_t_plain",
         cost={"mana": 6},
         effects=[{"type": "damage", "dice": "2d6", "element": "physical"}],
     )
-    (problem,) = [p for p in validate_skill(plain, lib) if p.rule == "keyword.required"]
-    assert "這招還沒有接上任何關鍵字，無法和其他技能協同。" in problem.message
-    assert "附加燃燒、對倒地目標加傷" in problem.message
-    assert len(lib.keywords.keywords) == 10
-    for keyword in lib.keywords.keywords:
-        assert keyword.name_zh in problem.message
+    assert not derive_keywords(plain, lib.keywords)
+    assert [p for p in validate_skill(plain, lib) if p.rule == "keyword.required"] == []
+
+
+def test_every_keyword_pool_has_at_least_three_active_exploiters() -> None:
+    """06 6.27.2：每個池至少 3 招主動利用者（只算專屬規則；Phase 3-51 移除暫定規則後的檢查）。"""
+    lib = library()
+    short = {
+        k: len(_exclusive_users(k, starter=False))
+        for k in lib.keywords.ids()
+        if len(_exclusive_users(k, starter=False)) < 3
+    }
+    assert short == {}

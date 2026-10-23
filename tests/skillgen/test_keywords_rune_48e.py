@@ -22,12 +22,22 @@ def test_physical_inscribe_makes_only_marked_and_has_no_element_keyword() -> Non
     assert [k.id for k in card.uses] == []
 
 
-def test_ally_buff_adds_summon_use_only_as_general_with_a_reason() -> None:
+def test_general_summon_use_is_hidden_when_the_skill_has_an_exclusive_keyword() -> None:
+    """玩法決定 #54：有專屬關鍵字（標記）時不顯示通用歸類（召喚物）。"""
     card = skill_card_keywords(library(), make_skill(SID, _SHAPE, [_INSCRIBE, _RALLY]))
     assert [k.id for k in card.makes] == ["marked"]
+    assert card.uses == ()
+    assert not card.basic
+
+
+def test_ally_buff_alone_shows_summon_use_as_general_with_a_reason() -> None:
+    """沒有專屬關鍵字時，通用歸類照舊標灰並附理由。"""
+    card = skill_card_keywords(library(), make_skill(SID, _SHAPE, [_RALLY]))
+    assert card.makes == ()
     (use,) = card.uses
     assert (use.id, use.general) == ("summon", True)
     assert use.reason_zh  # 通用歸類一定要寫理由，client 才能說明為什麼出現
+    assert not card.basic
 
 
 def test_elemental_inscribe_also_makes_its_element_keyword() -> None:

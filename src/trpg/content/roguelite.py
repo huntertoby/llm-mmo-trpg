@@ -132,6 +132,8 @@ class CandidateSettings(ContentModel):
     """每個候選先從隨機組合器找的機率（‰）；其餘先從技能池找。找不到時換另一個來源。"""
     composer_tries: int = Field(default=8, ge=0)
     """組合器每個候選最多試幾個種子。"""
+    general_share_permille: int = Field(default=100, ge=0, le=1000)
+    """「新方向」那一格從通用池（基礎技能，沒有專屬關鍵字；玩法決定 #55）抽的機率（‰）。"""
 
 
 class RunRules(ContentModel):
