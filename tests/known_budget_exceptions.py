@@ -7,22 +7,15 @@
 
 from __future__ import annotations
 
+from tests.engine.helpers import library
 from trpg.content.library import ContentLibrary
 from trpg.skillgen.draft_check import DraftCheck
 from trpg.skillgen.validate import Violation, validate_skill
 
 __all__ = ["RANGE_BUDGET_EXCEPTIONS", "legal_or_known", "shipped_violations"]
 
-RANGE_BUDGET_EXCEPTIONS: frozenset[str] = frozenset(
-    {
-        "skill_arc_follow_up",  # 射程 5：98.9% -> 103.8%（超出）
-        "skill_armor_break_combo",  # 射程 1：74.5% -> 66.3%（過弱）
-        "skill_deep_freeze",  # 射程 5：97.9% -> 102.8%（超出）
-        "skill_flare_sight",  # 射程 6：97.7% -> 107.4%（超出）
-        "skill_quake_topple",  # 射程 2：76.9% -> 69.2%（過弱）
-    }
-)
-"""交玩法 PM 重新調整的內建技能 ID。"""
+RANGE_BUDGET_EXCEPTIONS: frozenset[str] = frozenset(library().budget.known_budget_exceptions)
+"""交玩法 PM 重新調整的內建技能 ID（資料：skill_budget.yaml 的 known_budget_exceptions）。"""
 
 _BUDGET_RULES = frozenset({"budget.over", "budget.weak"})
 

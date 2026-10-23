@@ -209,6 +209,10 @@ class BudgetRules(ContentModel):
     """姿態技能的預算係數（‰；2E-2）：可用預算 ＝ tier_budget × 係數 ×（1000 ＋ 折抵）÷ 1000。"""
     passive_extra_trigger_permille: int = Field(default=800, ge=1, le=1000)
     """被動技能的 ``trigger.max_per_round`` 每多 1 次，可用預算 × 這個值（‰）。"""
+    known_budget_exceptions: tuple[str, ...] = ()
+    """已知超出預算範圍（70～100%）的內建技能 ID（Phase 3-49：射程係數上線後，依規格不改技能數值，
+    先標記，交玩法 PM 決定）。``trpg content check`` 不把它們的 ``budget.over``／``budget.weak``
+    算成錯誤（``trpg skills budget`` 仍標出）；調整技能後從 ``content/skill_budget.yaml`` 移除。"""
     range_baseline: int = Field(default=4, ge=1)
     """射程係數（Phase 3-49，玩法決定 #53）：固定射程 N 的技能，形狀倍率再乘
     ``1000 ＋ (N − range_baseline) × range_step_permille``（‰）；射程 4＝×1.00。"""

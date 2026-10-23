@@ -1153,6 +1153,11 @@ export interface components {
             condition: number;
             /** Points */
             points: number;
+            /**
+             * Range
+             * @default 1
+             */
+            range: number;
         };
         /**
          * BudgetSummary
@@ -1224,6 +1229,16 @@ export interface components {
              * @default 0
              */
             variant_surcharge_permille: number;
+            /**
+             * Range Text
+             * @default
+             */
+            range_text: string;
+            /**
+             * Range Coefficient
+             * @default 1
+             */
+            range_coefficient: number;
         };
         /** BuildSummary */
         BuildSummary: {
@@ -3576,6 +3591,11 @@ export interface components {
              * @default 1000
              */
             chance_permille: number;
+            /**
+             * Range Text
+             * @default
+             */
+            range_text: string;
         };
         /**
          * SetReactionMode
@@ -4719,10 +4739,10 @@ export interface components {
             /** Verdict Zh */
             verdict_zh: string;
             /**
-             * Range Permille
-             * @default 0
+             * Range Text
+             * @default
              */
-            range_permille: number;
+            range_text: string;
         };
         /**
          * VariantStateOut

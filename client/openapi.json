@@ -2887,6 +2887,11 @@
           "points": {
             "type": "number",
             "title": "Points"
+          },
+          "range": {
+            "type": "number",
+            "title": "Range",
+            "default": 1.0
           }
         },
         "additionalProperties": false,
@@ -3021,6 +3026,16 @@
             "type": "integer",
             "title": "Variant Surcharge Permille",
             "default": 0
+          },
+          "range_text": {
+            "type": "string",
+            "title": "Range Text",
+            "default": ""
+          },
+          "range_coefficient": {
+            "type": "number",
+            "title": "Range Coefficient",
+            "default": 1.0
           }
         },
         "additionalProperties": false,
@@ -8567,6 +8582,11 @@
             "type": "integer",
             "title": "Chance Permille",
             "default": 1000
+          },
+          "range_text": {
+            "type": "string",
+            "title": "Range Text",
+            "default": ""
           }
         },
         "additionalProperties": false,
@@ -11500,10 +11520,10 @@
             "type": "string",
             "title": "Verdict Zh"
           },
-          "range_permille": {
-            "type": "integer",
-            "title": "Range Permille",
-            "default": 0
+          "range_text": {
+            "type": "string",
+            "title": "Range Text",
+            "default": ""
           }
         },
         "additionalProperties": false,

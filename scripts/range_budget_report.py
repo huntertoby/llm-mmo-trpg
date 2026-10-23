@@ -19,11 +19,11 @@ from trpg.skillgen.budget import BudgetError, skill_budget
 @contextmanager
 def _no_range() -> Iterator[None]:
     original = budget_module.range_coefficient
-    budget_module.range_coefficient = lambda shape, budget: (None, Fraction(1))  # type: ignore[assignment]
+    budget_module.range_coefficient = lambda shape, budget: (None, Fraction(1))
     try:
         yield
     finally:
-        budget_module.range_coefficient = original  # type: ignore[assignment]
+        budget_module.range_coefficient = original
 
 
 def _ratio(skill_id: str, library: ContentLibrary) -> Fraction | None:
