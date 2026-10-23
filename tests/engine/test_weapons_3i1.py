@@ -27,11 +27,14 @@ from trpg.engine.events import (
     StatusRemoved,
     StatusSaveRolled,
 )
+from trpg.engine.gear import cap_damage_bonus
 from trpg.engine.lifecycle import weapon_reaction_rules
 from trpg.engine.modifiers import ATTACK, reap_permille, skill_use
 from trpg.engine.rules.statuses import effective_attribute, move_points_for_turn
 from trpg.engine.skills.conditions import Subject
 from trpg.engine.state import StatusInstance, UnitState
+from trpg.engine.weapon_traits import entangle_effect
+from trpg.narrative.status_info import status_rules
 from trpg.shared.bonus_text import plain_text
 from trpg.shared.types import Attribute, Team
 
@@ -374,7 +377,6 @@ def test_reap_raises_the_basic_attack_damage_by_a_quarter(monkeypatch: pytest.Mo
 def test_reap_counts_toward_the_whole_body_damage_bonus_cap() -> None:
     state = _attack_state("scythe", {})
     caps = state.ruleset.equipment.caps.damage_bonus_permille
-    from trpg.engine.gear import cap_damage_bonus  # noqa: PLC0415
 
     assert cap_damage_bonus(state.ruleset, caps + 250) == caps
 
@@ -472,7 +474,6 @@ def test_entangle_lasts_through_the_target_next_turn_only(monkeypatch: pytest.Mo
 
 def test_entangle_applied_during_the_target_own_turn_waits_for_its_next_turn() -> None:
     """反應攻擊（例如藉機攻擊）在目標自己的回合命中：持續 2，下一個回合才作用。"""
-    from trpg.engine.weapon_traits import entangle_effect  # noqa: PLC0415
 
     state = _whip_state()
     effect = entangle_effect(state, state.units[U1], state.units[U2], 2)
@@ -482,7 +483,6 @@ def test_entangle_applied_during_the_target_own_turn_waits_for_its_next_turn() -
 
 
 def test_the_entangled_status_card_names_the_weapon_amount() -> None:
-    from trpg.narrative.status_info import status_rules  # noqa: PLC0415
 
     lib = library()
     lines = status_rules(lib.ruleset.status_def("entangled"), lib)
