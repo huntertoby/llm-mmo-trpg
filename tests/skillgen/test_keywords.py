@@ -512,7 +512,10 @@ def test_rule_grades_are_data_and_match_the_comments() -> None:
             assert "grade: provisional" in stripped, stripped
     rules = [r for k in library().keywords.keywords for r in (*k.makes, *k.uses)]
     grades = {g: sum(1 for r in rules if r.grade == g) for g in ("general", "provisional")}
-    assert grades == {"general": 26, "provisional": 17}
+    assert grades == {
+        "general": 19,
+        "provisional": 24,
+    }  # 2026-10-23：潮濕的 7 條通用改暫定（玩法 PM）
 
 
 def test_exclusive_only_derivation_drops_general_and_provisional_rules() -> None:

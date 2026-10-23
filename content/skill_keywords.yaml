@@ -58,13 +58,13 @@ keywords:
       - {condition: target_on_surface, surface: water}
       - {trigger: on_enter_surface, surface: water}
       - {condition: cast_tag_this_turn, tag: water}
-      - {effect: heal, grade: general, reason_zh: 治療類技能常和水系技能搭配（不是直接的規則連動）}   # 通用：潮濕表面治療（08 8.21.4.2）——治療、護盾、淨化類技能利用潮濕
-      - {effect: shield, grade: general, reason_zh: 治療類技能常和水系技能搭配（不是直接的規則連動）}
-      - {effect: cleanse, grade: general, reason_zh: 治療類技能常和水系技能搭配（不是直接的規則連動）}
-      - {effect: damage, element: holy, grade: general, reason_zh: 神聖傷害多半搭配治療（聖水、雙效治療），常和治療搭配}   # 通用：神聖傷害（聖水、雙效治療）
-      - {change: allow_self_target, grade: general, reason_zh: 治療類技能常和水系技能搭配（不是直接的規則連動）}   # 通用：治療類修正（套用在治療技能上）
-      - {change: shape_to, grade: general, reason_zh: 治療類技能常和水系技能搭配（不是直接的規則連動）}
-      - {change: heal_permille, grade: general, reason_zh: 治療類技能常和水系技能搭配（不是直接的規則連動）}
+      - {effect: heal, grade: provisional}   # 暫定（玩法 PM 2026-10-23：沒有直接的規則連動，卡上不顯示；要不要補真的機制記在玩法待辦）：潮濕表面治療（08 8.21.4.2）——治療、護盾、淨化類技能利用潮濕
+      - {effect: shield, grade: provisional}
+      - {effect: cleanse, grade: provisional}
+      - {effect: damage, element: holy, grade: provisional}   # 暫定：神聖傷害（聖水、雙效治療）；玩法 PM 2026-10-23 改暫定
+      - {change: allow_self_target, grade: provisional}   # 暫定：治療類修正（套用在治療技能上）；玩法 PM 2026-10-23 改暫定
+      - {change: shape_to, grade: provisional}
+      - {change: heal_permille, grade: provisional}
   - id: charged
     name_zh: 帶電
     description_zh: 雷電沿水與連鎖擴散，靜電可以累積成更強的一擊。
