@@ -101,11 +101,13 @@ def test_run_auto_needs_exactly_one_of_seed_and_from(capsys: pytest.CaptureFixtu
 
 
 @pytest.mark.slow
-def test_run_auto_ten_seeds_without_exceptions(capsys: pytest.CaptureFixture[str]) -> None:
-    for seed in range(10):
-        code, out, err = _run(["run", "auto", "--seed", str(seed)], capsys)
-        assert code == 0, err
-        assert out.splitlines()[-1].startswith("結果：")
+@pytest.mark.parametrize("seed", range(10))  # 每個種子一個測試，平行時分散到各 worker
+def test_run_auto_ten_seeds_without_exceptions(
+    seed: int, capsys: pytest.CaptureFixture[str]
+) -> None:
+    code, out, err = _run(["run", "auto", "--seed", str(seed)], capsys)
+    assert code == 0, err
+    assert out.splitlines()[-1].startswith("結果：")
 
 
 # ---------------------------------------------------------------------------

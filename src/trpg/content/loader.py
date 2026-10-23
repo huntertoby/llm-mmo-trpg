@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import json
 import os
+from functools import cache
 from pathlib import Path
 
 import yaml
@@ -21,8 +22,12 @@ _JSON_SUFFIXES = frozenset({".json"})
 _MAX_REPORTED_ERRORS = 10
 
 
+@cache
 def bundled_content_dir() -> Path:
-    """專案內建的 ``content/`` 資料夾（不受 ``TRPG_CONTENT_DIR`` 影響；schema 匯入時讀清單用）。"""
+    """專案內建的 ``content/`` 資料夾（不受 ``TRPG_CONTENT_DIR`` 影響；schema 匯入時讀清單用）。
+
+    位置固定，只算一次：``EffectSpec`` 每次建構都會經 :func:`default_content_dir` 查範圍表，
+    每次 ``Path.resolve()`` 在 Windows 很慢（3E-2f 後 ``run auto`` 一半時間花在這裡）。"""
     return Path(__file__).resolve().parents[3] / "content"
 
 
