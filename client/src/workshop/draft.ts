@@ -1,7 +1,7 @@
 // 技能工坊：編輯「組到一半的技能」的純函式。
 // 技能草稿就是技能定義 JSON（與 content/skills/*.yaml 同欄位）；選項（FieldSpec／Choice）由後端
 // `/api/workshop/options` 推導，這裡只負責「把使用者的選擇寫進草稿」，不重寫任何規則。
-import type { Choice, FieldSpec } from "../api/types";
+import type { Choice, DraftOptions, FieldSpec } from "../api/types";
 
 export type Json = Record<string, unknown>;
 
@@ -284,6 +284,39 @@ export function autoSingles(container: Json, fields: readonly FieldSpec[], base 
     const current = getPath(out, joinPath(base, spec.field));
     if (current !== undefined && !(spec.locked === true && chosenValue(current) !== only.value)) continue;
     out = selectChoice(out, spec, only, base);
+  }
+  return out;
+}
+
+function findField(options: DraftOptions, name: string): FieldSpec | undefined {
+  for (const step of options.steps) {
+    const hit = step.fields.find((f) => f.field === name);
+    if (hit !== undefined) return hit;
+  }
+  return undefined;
+}
+
+/** 縮放屬性的允許範圍會隨類別、武器需求、主要效果改變（3H-6／3H-7）：草稿裡不在範圍內的主屬性
+ * 改成範圍內第一個合法值，第二屬性不合法（不在範圍、與主屬性相同、武器技）就清掉，玩家不會卡在違規狀態。
+ * 選項由後端推導，這裡只對齊；沒有任何變動時回傳原物件。 */
+export function conformScaling(draft: Json, options: DraftOptions): Json {
+  let out = draft;
+  const primary = findField(options, "scaling_attr");
+  const current = out["scaling_attr"];
+  if (primary !== undefined && primary.choices.length > 0 && current !== undefined) {
+    const first = primary.choices[0];
+    if (first !== undefined && !primary.choices.some((c) => c.value === current)) {
+      out = setPath(out, "scaling_attr", first.value);
+    }
+  }
+  const second = out["secondary_scaling_attr"];
+  if (second !== undefined) {
+    const field = findField(options, "secondary_scaling_attr");
+    const bad =
+      out["category"] === "weapon" ||
+      second === out["scaling_attr"] ||
+      (field !== undefined && !field.choices.some((c) => c.value === second));
+    if (bad) out = setPath(out, "secondary_scaling_attr", undefined);
   }
   return out;
 }
