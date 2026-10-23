@@ -6,13 +6,16 @@
 # summon_only（Phase 3-33e1）：true ＝ 召喚物專用的武器，不列入開局可選的武器。
 # 武器小特性（Phase 3-24a1；全部是下列選填參數，引擎只讀參數、不寫死數值）：
 #       secondary_scaling_attr（第二縮放屬性）與 attr_mode（Phase 3H-1，08 8.11 雙屬性取法：
-#         mean 取平均＝重武器，要兩個都點；max 取較高者＝輕武器，靈巧；預設 mean）、
+#         同類（都是物理或都是心智）max 取較高者；一物理一心智 mean 取平均，要兩個都點；3I-1 依 #46，schema 檢查）、
 #       armor_break {defense_permille: -100, rounds: 1}（破甲：普攻命中後目標防禦 ‰ 變化與回合數）、
 #       knockback（震退：普攻命中後沿攻擊方向推幾格，沿用推擊與撞擊）、
 #       reach（觸及：藉機攻擊範圍，不可超過 range）、
 #       blessing {flat, dice}（祝禱：普攻命中時最近的隊友回復量）、
 #       summon_dice_bonus（統御：自己的召喚物普攻多幾顆傷害骰）、
-#       lob（拋射：視線可越過幾層高的障礙）。
+#       lob（拋射：視線可越過幾層高的障礙）、
+#       counter（Phase 3I-1 反擊：相鄰敵人的近戰攻擊命中你時，以內建反應 counter_attack 回擊一次；佔本輪反應、不花 AP 與耐力）、
+#       reap {hp_permille, damage_permille}（3I-1 收割：目標當下 HP ≤ 最大 HP 的 hp_permille‰ 時，普攻與武器技傷害 +damage_permille‰）、
+#       entangle {move_penalty}（3I-1 纏繞：普攻命中後施加 entangled，目標下回合移動 −move_penalty；不疊加、不擲抵抗）。
 # look（Phase 3E-2e）：預設外觀 {kind, material, element?, form?}，紙娃娃主手與武器小圖示用；沒寫的武器前端依 weapon_class 退回。
 #       kind／form／material 是 equipment/appearance.yaml 的造型；雙手與否看 two_handed。
 # 遠程武器小特性（Phase 3-24a2；同樣只是參數）：
@@ -133,7 +136,7 @@ weapons:
     attack_bonus: 0
     scaling_attr: con
     secondary_scaling_attr: str
-    attr_mode: mean
+    attr_mode: max
     element: physical
     crit_range: 20
     two_handed: true
@@ -215,6 +218,55 @@ weapons:
     range_mod:
       - {min_distance: 1, max_distance: 1, hit: -2, damage_permille: 500}
       - {min_distance: 4, damage_permille: 1250}
+  # --- Phase 3I-1：補平六屬性的第二批主武器（08 8.11 #46；傷害骰為初值，未經模擬）---
+  # 拳套：體質／敏捷（同類取較高）；反擊。
+  - id: fist
+    name_zh: 拳套
+    look: {kind: fist, form: knuckle, material: iron}
+    weapon_class: melee
+    range: 1
+    dice: 1d8
+    flat: 0
+    attack_bonus: 0
+    scaling_attr: con
+    secondary_scaling_attr: dex
+    attr_mode: max
+    element: physical
+    crit_range: 20
+    two_handed: true
+    counter: true
+  # 鐮刀：意志／力量（一物理一心智取平均）；收割（HP ≤ 30% 時傷害 +25%）。
+  - id: scythe
+    name_zh: 鐮刀
+    look: {kind: scythe, form: long, material: iron}
+    weapon_class: melee
+    range: 1
+    dice: 1d10
+    flat: 0
+    attack_bonus: 0
+    scaling_attr: wil
+    secondary_scaling_attr: str
+    attr_mode: mean
+    element: physical
+    crit_range: 20
+    two_handed: true
+    reap: {hp_permille: 300, damage_permille: 250}
+  # 鞭：敏捷／感知（一物理一心智取平均）；射程 2；纏繞（下回合移動 −2）。不拉近（05 5.1）。
+  - id: whip
+    name_zh: 鞭
+    look: {kind: whip, form: leather, material: leather}
+    weapon_class: melee
+    range: 2
+    dice: 1d6
+    flat: 0
+    attack_bonus: 0
+    scaling_attr: dex
+    secondary_scaling_attr: wis
+    attr_mode: mean
+    element: physical
+    crit_range: 20
+    two_handed: false
+    entangle: {move_penalty: 2}
   # --- Phase 3-33e1：召喚物專用武器（數值為初值，未經模擬；不給玩家裝備）---
   - id: spark_staff
     name_zh: 電火法杖

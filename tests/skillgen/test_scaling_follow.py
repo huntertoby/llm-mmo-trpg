@@ -58,7 +58,10 @@ def test_composed_skill_follows_highest_allowed_attribute(seed: int) -> None:
     ) == base.model_dump(exclude={"scaling_attr", "secondary_scaling_attr"})
     allowed = _allowed(follows)
     assert follows.scaling_attr in allowed
-    assert follows.scaling_attr is pick_scaling_attr(allowed, mind)
+    if follows.category == "weapon":  # 武器技固定大類主屬性（3H-7），不看主角屬性
+        assert follows.scaling_attr is lib.skill_scaling.weapon_class_attr(follows.weapon_req)
+    else:
+        assert follows.scaling_attr is pick_scaling_attr(allowed, mind)
     assert follows.secondary_scaling_attr != follows.scaling_attr
     assert not validate_skill(follows, lib)
 

@@ -30,10 +30,12 @@ __all__ = [
     "Dice",
     "DollGear",
     "DollLook",
+    "Entangle",
     "HitCondition",
     "ReactionRule",
     "ReactionUnless",
     "ReactionWhen",
+    "Reap",
     "StatusDef",
     "StatusTable",
     "StatusTickDamage",
@@ -160,6 +162,22 @@ class ArmorBreak(ContentModel):
     rounds: int = Field(ge=1, le=5)
 
 
+class Reap(ContentModel):
+    """武器特性「收割」（Phase 3I-1，08 8.11）：結算傷害前，目標 **當下** HP ≤ 最大 HP 的
+    ``hp_permille``‰ 時，這次傷害 +``damage_permille``‰；適用普攻與武器技，計入全身傷害加成上限。"""
+
+    hp_permille: int = Field(ge=1, le=1000)
+    damage_permille: int = Field(ge=1, le=1000)
+
+
+class Entangle(ContentModel):
+    """武器特性「纏繞」（Phase 3I-1，08 8.11）：普攻命中後施加狀態 ``entangled``——目標下一個回合
+    開始時移動點數 −``move_penalty``（最低 0），持續到該回合結束；重複施加只刷新、不疊加；不擲抵抗、
+    不算控制類別。"""
+
+    move_penalty: int = Field(ge=1, le=6)
+
+
 class Blessing(ContentModel):
     """武器特性「祝禱」（Phase 3-24a1）：普攻命中時，最近的隊友（不含自己與召喚物）回復
     ``dice`` ＋ ``flat`` 點 HP；沒有可回復的隊友時不發動。"""
@@ -236,8 +254,9 @@ class WeaponDef(ContentModel):
     詞條改這些參數即可）：
 
     - ``secondary_scaling_attr``：第二縮放屬性；有值時攻擊值與傷害用兩屬性合成一個值，取法由
-      ``attr_mode`` 決定（Phase 3H-1，08 8.11）：``mean`` 取平均（無條件捨去；重武器，要兩個都點）、
-      ``max`` 取較高者（輕武器，靈巧）。沒有第二屬性時 ``attr_mode`` 不影響結果。
+      ``attr_mode`` 決定（Phase 3H-1；3I-1 依 08 8.11、玩法決定 #46 改）：兩個屬性同類（都是物理或
+      都是心智）為 ``max`` 取較高者；一物理一心智為 ``mean`` 取平均（無條件捨去，兩個都要點）。
+      schema 檢查兩者一致。沒有第二屬性時 ``attr_mode`` 不影響結果。
     - ``armor_break``：破甲，見 :class:`ArmorBreak`。
     - ``knockback``：震退——普攻命中後把目標沿攻擊方向推這麼多格（沿用推擊與撞擊規則）。
     - ``reach``：觸及——藉機攻擊的範圍（目標從 ``reach`` 格內走到 ``reach`` 格外時可以反應）；
@@ -245,6 +264,13 @@ class WeaponDef(ContentModel):
     - ``blessing``：祝禱，見 :class:`Blessing`。
     - ``summon_dice_bonus``：統御——持有者召喚物的普攻多加這麼多顆傷害骰。
     - ``lob``：拋射——視線可以越過這麼多層高的障礙（物件、地形高差；牆壁與黑暗不行）。
+
+    第二批提前的武器小特性（Phase 3I-1，08 8.11「提前武器的特性細節」）：
+
+    - ``counter``：反擊（拳套）——相鄰敵人的近戰攻擊命中持有者、持有者沒倒下時，以內建反應
+      ``counter_attack`` 自動對攻擊者普攻一次（佔本輪反應，不花 AP、不花耐力）；
+    - ``reap``：收割（鐮刀），見 :class:`Reap`；
+    - ``entangle``：纏繞（鞭），見 :class:`Entangle`。
 
     遠程武器小特性（Phase 3-24a2；同樣只是參數，引擎只讀參數）：
 
@@ -284,6 +310,9 @@ class WeaponDef(ContentModel):
     blessing: Blessing | None = None
     summon_dice_bonus: int = Field(default=0, ge=0, le=3)
     lob: int = Field(default=0, ge=0, le=2)
+    counter: bool = False
+    reap: Reap | None = None
+    entangle: Entangle | None = None
     pierce_line: int = Field(default=0, ge=0, le=8)
     ignore_height: bool = False
     magazine: int = Field(default=0, ge=0, le=6)
@@ -306,6 +335,14 @@ class WeaponDef(ContentModel):
             raise ValueError(f"武器 {self.id}：有彈匣的武器是直射，不可同時有 lob（拋射）")
         if self.secondary_scaling_attr == self.scaling_attr:
             raise ValueError(f"武器 {self.id}：secondary_scaling_attr 不可和 scaling_attr 相同")
+        second = self.secondary_scaling_attr
+        if second is not None:  # 08 8.11（#46）：同類取較高、一物理一心智取平均
+            same = second.is_physical == self.scaling_attr.is_physical
+            if self.attr_mode != ("max" if same else "mean"):
+                raise ValueError(
+                    f"武器 {self.id}：雙屬性同類（都是物理或都是心智）要 attr_mode: max，"
+                    "一物理一心智要 attr_mode: mean"
+                )
         if self.reach > self.range:
             raise ValueError(f"武器 {self.id}：reach（{self.reach}）不可超過 range（{self.range}）")
         return self
@@ -317,7 +354,7 @@ class WeaponDef(ContentModel):
 
     def scaling_value(self, get: Callable[[Attribute], int]) -> int:
         """武器的縮放屬性值（Phase 3H-1，08 8.11）：單屬性為該屬性，雙屬性依 ``attr_mode``——
-        ``mean`` 取平均（無條件捨去；重武器），``max`` 取較高者（輕武器）。``get`` 讀屬性值；
+        ``mean`` 取平均（無條件捨去；一物理一心智），``max`` 取較高者（同類）。``get`` 讀屬性值；
         引擎傳入有效屬性（含狀態加值），卡片傳入面板的屬性。普攻與反應攻擊的傷害加成、技能卡的
         「目前 +N」都經過這裡。"""
         value = get(self.scaling_attr)
@@ -385,8 +422,12 @@ class WeaponDef(ContentModel):
             if self.blessing.flat:
                 amount += f"{'+' if amount else ''}{self.blessing.flat}"
             lines.append(f"祝禱：普攻命中時，最近的隊友回復 {amount} HP")
+        if self.entangle is not None:
+            penalty = self.entangle.move_penalty
+            lines.append(f"纏繞：普攻命中後，目標下回合移動 −{penalty}（不疊加、不擲抵抗）")
         if on_hit_only:
             return tuple(lines)
+        lines.extend(_weapon_batch_two_lines(self))
         lines.extend(_weapon_ranged_lines(self))
         if self.summon_dice_bonus:
             lines.append(f"統御：你的召喚物攻擊 +{self.summon_dice_bonus} 顆傷害骰")
@@ -397,6 +438,19 @@ class WeaponDef(ContentModel):
         if self.backstab_dice:
             lines.append(f"背刺強化：從背後攻擊時，傷害骰 +{self.backstab_dice} 顆")
         return tuple(lines)
+
+
+def _weapon_batch_two_lines(w: WeaponDef) -> list[str]:
+    """第二批提前武器的常駐特性說明（Phase 3I-1）：反擊、收割（纏繞是命中特性，在呼叫端）。"""
+    lines: list[str] = []
+    if w.counter:
+        lines.append("反擊：相鄰敵人的近戰攻擊命中你時，自動回擊一次（佔本輪反應，不花 AP 與耐力）")
+    if w.reap is not None:
+        lines.append(
+            f"收割：目標 HP ≤ {w.reap.hp_permille / 10:g}% 時，普攻與武器技傷害 "
+            f"+{w.reap.damage_permille / 10:g}%"
+        )
+    return lines
 
 
 def _signed(value: int) -> str:
@@ -479,6 +533,8 @@ class StatusDef(ContentModel):
     無條件捨去）：
 
     - ``move_permille``：回合開始時的移動點數倍率（緩速 500、加速 1500）。
+    - ``move_reduction``（Phase 3I-1）：回合開始時移動點數再減狀態的數值
+      （``StatusInstance.amount``），最低 0；多個時取最大（鞭的纏繞）。
     - ``prevents_move``：不能主動移動（定身；強制位移照常）。
     - ``skip_turn``：回合開始時跳過整個回合，且不能執行反應（暈眩）。
     - ``damage_dealt_permille``：自己造成的攻擊傷害（``cause: attack``）倍率（虛弱 750）。
@@ -569,6 +625,7 @@ class StatusDef(ContentModel):
     defense_break: bool = False
     attack_bonus: int = Field(default=0, ge=0, le=10)
     move_permille: int = Field(default=1000, ge=0, le=10000)
+    move_reduction: bool = False
     prevents_move: bool = False
     skip_turn: bool = False
     damage_dealt_permille: int = Field(default=1000, ge=0, le=10000)

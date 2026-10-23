@@ -67,6 +67,7 @@ __all__ = [
     "is_attack_skill",
     "on_hit_rules",
     "range_delta",
+    "reap_permille",
     "rule_limit_key",
     "rule_limit_reached",
     "shaped_skill",
@@ -291,6 +292,21 @@ def summon_damage_bonus(state: BattleState, unit: UnitState, use: Use, subject: 
     return min(unit.summon_bonus_permille, room)
 
 
+def reap_permille(unit: UnitState, use: Use, subject: Subject) -> int:
+    """武器的收割（Phase 3I-1，08 8.11，鐮刀）：普攻或武器技、目標 **當下** HP ≤ 最大 HP 的
+    ``hp_permille``‰ 時的傷害加成（‰）；其他情況 0。和其他正向加成一起套全身 +50% 上限。"""
+    reap = unit.weapon.reap
+    target = subject.unit
+    if reap is None or target is None or not target.alive or target.max_hp <= 0:
+        return 0
+    weapon_use = use.action == "attack" or (
+        use.skill is not None and use.skill.category == "weapon"
+    )
+    if not weapon_use or target.hp * _PERMILLE > reap.hp_permille * target.max_hp:
+        return 0
+    return reap.damage_permille
+
+
 def damage_permille(state: BattleState, unit: UnitState, use: Use, subject: Subject) -> int:
     """對 ``subject`` 的傷害倍率（‰）：1000 ＋ 傷害加成 ＋ 減益，下限 0。
 
@@ -303,7 +319,8 @@ def damage_permille(state: BattleState, unit: UnitState, use: Use, subject: Subj
     keyword = gear_keyword_damage_permille(state, unit, use.skill, use.action == "attack")
     rune = gear_rune_read_permille(state, unit, use, subject)  # 普攻讀取符文（3-31）
     summon = summon_damage_bonus(state, unit, use, subject)  # 召喚物成長的加成（3-33b）
-    capped = cap_damage_bonus(state.ruleset, gain + gear_gain + keyword + rune + summon)
+    reap = reap_permille(unit, use, subject)  # 鐮刀的收割（3I-1）
+    capped = cap_damage_bonus(state.ruleset, gain + gear_gain + keyword + rune + summon + reap)
     total = max(0, _PERMILLE + capped + loss + gear_loss)
     # 數量型分歧進化（3-33f2）：每隻只有一般的 power_permille ‰ 傷害
     power = unit.summon_power_permille

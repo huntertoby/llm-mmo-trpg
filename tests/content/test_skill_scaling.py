@@ -49,9 +49,12 @@ def test_builtin_weapon_skill_hints_match_their_weapon_class() -> None:
 
 def test_weapon_skills_follow_the_weapons_of_their_class() -> None:
     melee = weapon_attrs("melee", LIB.weapons)
-    assert {Attribute.STR, Attribute.DEX, Attribute.CON} <= melee  # 劍、匕首、錘
+    # 劍、匕首、錘、拳套、鐮刀（意志）、鞭（感知）（3I-1 補平六屬性；智力等 3I-3 魔導劍）
+    assert melee == {Attribute.STR, Attribute.DEX, Attribute.CON, Attribute.WIS, Attribute.WIL}
     assert weapon_attrs("ranged", LIB.weapons) == {Attribute.DEX}
-    assert Attribute.WIL not in melee  # 召喚物專用武器不算
+    shade = LIB.weapons["shade_blades"]  # 召喚物專用武器不算
+    assert shade.summon_only
+    assert weapon_attrs("melee", [shade]) == frozenset()
     weapon_skills = [s for s in BUILTIN if s.category == "weapon"]
     assert weapon_skills
     for skill in weapon_skills:

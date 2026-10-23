@@ -6,6 +6,8 @@
 # 數值型的規則效果（防禦 +25%、倒地站起的移動消耗）放在 rules/core.yaml。
 # 2B-1 的數值效果欄位（‰：1000 = ×1，省略為 1000；同一欄位有多個狀態時依序相乘、逐步無條件捨去）：
 #   move_permille              回合開始時的移動點數倍率（緩速 500）
+#   move_reduction（3I-1）     true：回合開始時移動點數再減狀態的數值（StatusInstance.amount，例：鞭的纏繞 2），最低 0；
+#                              多個時取最大（不疊加）
 #   prevents_move              true：不能主動移動（強制位移照常）
 #   skip_turn                  true：回合開始時跳過整個回合（沒有 AP、移動點數與反應），發出 turn_skipped
 #   damage_dealt_permille      自己造成的攻擊傷害（cause: attack）倍率
@@ -209,6 +211,16 @@ statuses:
     expires: turn_end
     stacking: refresh
     defense_break: true
+  # Phase 3I-1：鞭的纏繞（08 8.11）。不擲抵抗、不算控制類別、不能由技能施加（沒有 budget_points）。
+  # 由帶有者自己的回合施加時（例如反應攻擊）持續 2，確保作用在「下一個」回合。
+  - id: entangled
+    polarity: debuff
+    name_zh: 纏繞
+    description_zh: 被鞭纏住，下一個回合開始時移動點數減少（不疊加）。
+    duration: 1
+    expires: turn_end
+    stacking: refresh
+    move_reduction: true
   - id: bleed
     polarity: debuff
     save_attr: con

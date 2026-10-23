@@ -106,7 +106,7 @@ def test_new_weapons_are_data_with_the_specified_parameters() -> None:
     assert w["axe"].armor_break.defense_permille == -100 and w["axe"].armor_break.rounds == 1
     assert (w["hammer"].two_handed, w["hammer"].knockback) == (True, 1)
     assert (w["hammer"].scaling_attr, w["hammer"].secondary_scaling_attr) == ("con", "str")
-    assert w["hammer"].attr_mode == "mean"
+    assert w["hammer"].attr_mode == "max"  # 3I-1：同類（體質、力量都是物理）取較高（#46）
     assert (w["spear"].range, w["spear"].reach, w["spear"].two_handed) == (2, 2, True)
     assert (w["scepter"].weapon_class, w["scepter"].range, w["scepter"].two_handed) == (
         "focus",
@@ -287,12 +287,15 @@ def test_changing_knockback_changes_the_push_distance(monkeypatch: pytest.Monkey
     assert none.state.units[U2].xy == (3, 2)
 
 
-def test_hammer_attack_value_averages_strength_and_constitution() -> None:
+def test_hammer_attack_value_takes_the_higher_of_strength_and_constitution() -> None:
+    """3I-1（#46）：錘的體質、力量都是物理屬性 → 取較高。"""
     state = hammer_state()
     unit = state.units[U1]
     unit.attributes[Attribute.STR] = 18
     unit.attributes[Attribute.CON] = 10
-    assert attack_value(unit, state.ruleset) == 14 + unit.weapon.attack_bonus
+    assert attack_value(unit, state.ruleset) == 18 + unit.weapon.attack_bonus
+    unit.attributes[Attribute.CON] = 21
+    assert attack_value(unit, state.ruleset) == 21 + unit.weapon.attack_bonus
     unit.weapon = weapon("hammer", scaling_attr=Attribute.STR, secondary_scaling_attr=None)
     assert attack_value(unit, state.ruleset) == 18 + unit.weapon.attack_bonus
 
@@ -307,12 +310,14 @@ def _dual_state(**changes: Any) -> BattleState:
 
 
 def test_dual_attribute_weapons_take_the_average_or_the_higher_by_attr_mode() -> None:
-    """3H-1（08 8.11）：重武器（錘）取平均、輕武器（匕首）取較高；取法是武器資料 ``attr_mode``。"""
-    mean = _dual_state()
-    assert mean.units[U1].weapon.attr_mode == "mean"
-    assert weapon_attribute(mean.ruleset, mean.units[U1]) == 14  # (con 10 + str 18) // 2
-    high = _dual_state(attr_mode="max")
+    """3H-1／3I-1（08 8.11，#46）：同類取較高（錘、匕首）、一物理一心智取平均；取法是武器資料
+    ``attr_mode``。"""
+    high = _dual_state()
+    assert high.units[U1].weapon.attr_mode == "max"
     assert weapon_attribute(high.ruleset, high.units[U1]) == 18  # 取較高：力量 18
+    mixed = _dual_state(attr_mode="mean", scaling_attr=Attribute.WIL)  # 意志 10／力量 18
+    mixed.units[U1].attributes[Attribute.WIL] = 10
+    assert weapon_attribute(mixed.ruleset, mixed.units[U1]) == 14  # (10 + 18) // 2
     dagger = weapon("dagger")
     assert (dagger.scaling_attr, dagger.secondary_scaling_attr, dagger.attr_mode) == (
         Attribute.DEX,
@@ -328,7 +333,8 @@ def test_attr_mode_only_matters_with_a_second_attribute() -> None:
 
 def test_the_dual_attribute_line_follows_the_data() -> None:
     core = library().ruleset.core
-    assert "雙屬性：普攻與武器技吃體質、力量，取平均" in weapon("hammer").rule_lines_zh(core)
+    assert "雙屬性：普攻與武器技吃體質、力量，取較高者" in weapon("hammer").rule_lines_zh(core)
+    assert "雙屬性：普攻與武器技吃意志、力量，取平均" in weapon("scythe").rule_lines_zh(core)
     assert "雙屬性：普攻與武器技吃敏捷、力量，取較高者" in weapon("dagger").rule_lines_zh(core)
     assert not any("雙屬性" in line for line in weapon("axe").rule_lines_zh(core))
 

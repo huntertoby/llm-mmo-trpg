@@ -300,6 +300,7 @@ def test_status_and_surface_points_match_the_spec() -> None:
         "time_bomb": None,  # 3D-8b：只能由 delayed_damage 原語施加
         "overwatch": 6,  # 3D-8c：監視（反應 overwatch_shot 需要它）
         "armor_broken": None,  # 3-24a1：只能由斧的 armor_break 武器參數施加
+        "entangled": None,  # 3I-1：只能由鞭的 entangle 武器參數施加
     }
     surfaces = {s.id.value: s.budget_points for s in rules.surfaces.surfaces}
     assert surfaces == {

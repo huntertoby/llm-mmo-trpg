@@ -6,6 +6,9 @@
 - 錘 ``knockback``：普攻命中後沿攻擊方向把目標推 N 格（沿用推擊與撞擊規則）。
 - 權杖 ``blessing``：普攻命中時，最近的隊友（不含自己與召喚物）回復 HP。
 - 圖騰杖 ``summon_dice_bonus``：召喚者的召喚物普攻多加 N 顆傷害骰（:func:`attack_dice`）。
+- 鞭 ``entangle``（Phase 3I-1）：普攻命中後，目標帶 ``entangled``（下回合移動點數減少，
+  :func:`entangle_effect`）。鐮刀 ``reap`` 在 :func:`trpg.engine.modifiers.damage_permille`，
+  拳套 ``counter`` 在 :func:`trpg.engine.reactions.hit_reactions`。
 
 遠程武器（Phase 3-24a2）：
 
@@ -34,7 +37,7 @@ from trpg.engine.effects.models import (
     PushEffect,
 )
 from trpg.engine.gear_enhance import gear_on_hit_statuses
-from trpg.engine.ids import ARMOR_BROKEN, PRONE, REVEALED
+from trpg.engine.ids import ARMOR_BROKEN, ENTANGLED, PRONE, REVEALED
 from trpg.engine.infusion import active_infusions, template_of
 from trpg.engine.maneuvers import contest
 from trpg.engine.rules.combat import attack_reach, is_concealed
@@ -48,6 +51,7 @@ __all__ = [
     "attack_dice",
     "blessing_target",
     "chain_targets",
+    "entangle_effect",
     "gunshot_reveals",
     "height_permille",
     "pierce_line_targets",
@@ -208,6 +212,23 @@ def _hit_rule_effects(ctx: Ctx, attacker: UnitState, target: UnitState) -> list[
     return batch
 
 
+def entangle_effect(
+    state: BattleState, attacker: UnitState, target: UnitState, penalty: int
+) -> ApplyStatusEffect:
+    """鞭的纏繞（Phase 3I-1）：``entangled``（數值＝移動點數減少量）。命中發生在目標自己的回合
+    （例如反應攻擊）時持續 2，讓它作用在目標的「下一個」回合；不擲抵抗（狀態沒有
+    ``save_attr``）。"""
+    own_turn = state.active_unit == target.id
+    rounds = state.ruleset.status_def(ENTANGLED).duration or 1
+    return ApplyStatusEffect(
+        source_id=attacker.id,
+        target_id=target.id,
+        status_id=ENTANGLED,
+        duration=rounds + 1 if own_turn else rounds,
+        amount=penalty,
+    )
+
+
 def apply_hit_traits(ctx: Ctx, attacker: UnitState, target: UnitState) -> None:
     """``attacker`` 的普攻命中 ``target``、傷害結算之後：依武器參數結算命中特性。"""
     weapon = attacker.weapon
@@ -224,6 +245,8 @@ def apply_hit_traits(ctx: Ctx, attacker: UnitState, target: UnitState) -> None:
                 amount=-weapon.armor_break.defense_permille,
             )
         )
+    if weapon.entangle is not None and target.alive:
+        batch.append(entangle_effect(ctx.state, attacker, target, weapon.entangle.move_penalty))
     if weapon.blessing is not None:
         ally = blessing_target(ctx.state, attacker)
         if ally is not None:
