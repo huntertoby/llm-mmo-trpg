@@ -3361,8 +3361,20 @@ button.selected {
   gap: 6px;
 }
 
+.start-form .run-test-mode-toggle,
 .run-test-mode-toggle {
+  display: flex;
+  flex-direction: row; /* 蓋過 .start-form label 的直排 */
+  align-items: center;
+  gap: 6px;
   font-weight: 600;
+}
+
+/* 勾選框和「測試模式」同一行（全站 input 預設會撐滿整行）。 */
+.run-test-mode-toggle input {
+  width: auto;
+  margin: 0;
+  flex: none;
 }
 
 /* 測試模式的挑裝備放在開局表單裡，表單比視窗窄：兩欄依面板自己的寬度換行（共用的 .gear-layout 依視窗寬度，
