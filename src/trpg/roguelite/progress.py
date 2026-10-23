@@ -212,8 +212,9 @@ def finish_battle(
     xp = run.xp + library.roguelite.xp_per_battle
     gained = level_for(library, xp) - run.level
     mana = hero.mana
-    if run.test_mode:  # 測試模式（Phase 3-39）：戰後回滿到目前上限（升級再依最大 HP 的差補上）
-        hp, mana = run.max_hp_in(core), run.max_mana
+    if run.test_mode:
+        # 測試模式（Phase 3-39）：戰後回滿到戰鬥中的實際上限（含裝備加成；升級再依最大 HP 的差補上）
+        hp, mana = max(run.max_hp_in(core), hero.max_hp), max(run.max_mana, hero.max_mana)
     finished = run.model_copy(
         update={
             "hp": hp,

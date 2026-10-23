@@ -16,7 +16,8 @@ from trpg.roguelite import (
     loads_save,
     new_keyword_run,
 )
-from trpg.roguelite.progress import battle_setup
+from trpg.roguelite.battle import ActiveBattle
+from trpg.roguelite.progress import battle_setup, hero_unit_id
 from trpg.roguelite.state import BattleNode, EndedNode
 
 WEAPON = "one_handed_sword"
@@ -57,6 +58,18 @@ def test_test_mode_refills_hp_and_mana_after_every_won_battle() -> None:
     # 歷程仍記錄打完當下的真實剩餘（不是回滿後的數字）
     last = pairs[-1][1]
     assert any(r.hp < last.max_hp_in(core) or r.mana < last.max_mana for r in last.history)
+
+
+def test_test_mode_refills_to_the_gear_inclusive_maximum() -> None:
+    """裝備加最大 HP 時，回滿是回到戰鬥中的實際上限（下一場開戰時是滿的）。"""
+    lib = library()
+    pairs = _after_battles(_run(test_mode=True, test_equipment=GEAR))
+    _, after = pairs[0]
+    assert after.hp > after.max_hp_in(lib.ruleset.core)
+    if isinstance(after.node, BattleNode):
+        state = ActiveBattle(lib, after).state
+        hero = next(u for u in state.units_sorted() if u.id == hero_unit_id(state))
+        assert hero.hp == hero.max_hp
 
 
 def test_normal_mode_does_not_refill_between_battles() -> None:
