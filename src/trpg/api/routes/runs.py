@@ -66,6 +66,8 @@ def create_run(body: CreateRunRequest, request: Request) -> RunResponse:
         keywords=body.keywords,
         dev_pack=body.dev_pack,
         build=body.build,
+        test_mode=body.test_mode,
+        test_equipment=body.test_equipment,
     )
     with session.lock:
         return _respond(store, session)

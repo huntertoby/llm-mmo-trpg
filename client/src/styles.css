@@ -3341,3 +3341,26 @@ button.selected {
 .summon-infuse-preview {
   color: #c8f0c0;
 }
+
+/* 一輪的測試模式（Phase 3-39） */
+.test-mode-badge {
+  display: inline-block;
+  margin-left: 8px;
+  padding: 1px 8px;
+  border: 1px solid var(--accent);
+  border-radius: 10px;
+  color: var(--accent);
+  font-size: 12px;
+  font-weight: 600;
+  vertical-align: middle;
+}
+
+.run-test-mode {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.run-test-mode-toggle {
+  font-weight: 600;
+}

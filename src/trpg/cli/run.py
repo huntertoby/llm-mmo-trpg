@@ -69,6 +69,20 @@ def parse_attrs(text: str) -> dict[Attribute, int]:
     return result
 
 
+def parse_equipment(text: str) -> dict[str, str]:
+    """``main_hand=iron_sword,ring_1=ring_a`` → 欄位 → 物品 ID（格式錯誤拋出
+    ``argparse.ArgumentTypeError``）。"""
+    result: dict[str, str] = {}
+    for part in (p.strip() for p in text.split(",") if p.strip()):
+        slot, sep, item = part.partition("=")
+        if not sep or not slot.strip() or not item.strip():
+            raise argparse.ArgumentTypeError(
+                f"--test-equipment 格式應為 main_hand=物品ID,ring_1=物品ID，收到 {text!r}"
+            )
+        result[slot.strip()] = item.strip()
+    return result
+
+
 def parse_keywords(text: str) -> tuple[str, ...]:
     """``ignite,prone`` → 關鍵字 ID。"""
     return tuple(p.strip() for p in text.split(",") if p.strip())
@@ -102,6 +116,15 @@ def add_run_parser(
     _add_start_args(new, build_help="回歸範本 build（content/sim/builds.yaml；開發用）")
     new.add_argument("--attrs", type=parse_attrs, default=None, help="開局配點，例如 str=2,con=2")
     new.add_argument("--save-dir", type=Path, default=None, help="存檔資料夾（預設 saves/）")
+    new.add_argument(
+        "--test-mode", action="store_true", help="測試模式：戰後 HP、法力回滿；不計入統計"
+    )
+    new.add_argument(
+        "--test-equipment",
+        type=parse_equipment,
+        default=None,
+        help="測試模式挑的裝備（欄位=物品ID，逗號分隔；需 --test-mode）",
+    )
     new.set_defaults(
         func=lambda a: with_library(
             lambda lib: cmd_run_new(
@@ -136,11 +159,18 @@ class StartArgs:
     keywords: tuple[str, ...] | None = None
     dev_pack: str | None = None
     build: str | None = None
+    test_mode: bool = False
+    test_equipment: Mapping[str, str] | None = None
 
 
 def _start_of(args: argparse.Namespace) -> StartArgs:
     return StartArgs(
-        weapon=args.weapon, keywords=args.keywords, dev_pack=args.dev_pack, build=args.build
+        weapon=args.weapon,
+        keywords=args.keywords,
+        dev_pack=args.dev_pack,
+        build=args.build,
+        test_mode=getattr(args, "test_mode", False),
+        test_equipment=getattr(args, "test_equipment", None),
     )
 
 
@@ -158,6 +188,9 @@ def start_run(
     ]
     if sum(given) > 1:
         raise ChoiceError("--weapon／--keywords、--dev-pack、--build 只能擇一")
+    testing = start.test_mode or bool(start.test_equipment)
+    if testing and (start.build is not None or start.dev_pack is not None):
+        raise ChoiceError("--test-mode／--test-equipment 只能和 --weapon／--keywords 一起用")
     if start.build is not None:
         return new_run(library, start.build, seed, attrs)
     if start.dev_pack is not None:
@@ -169,6 +202,8 @@ def start_run(
         start.keywords if start.keywords is not None else keywords,
         seed,
         attrs,
+        test_mode=start.test_mode,
+        test_equipment=start.test_equipment,
     )
 
 
@@ -302,6 +337,9 @@ def start_text(library: ContentLibrary, run: RunState) -> str:
 
 def _print_header(library: ContentLibrary, run: RunState, out: TextIO) -> None:
     print(f"一輪：種子 {run.seed}，{start_text(library, run)}，{_attrs_text(run)}", file=out)
+    if run.test_mode:
+        gear = "、".join(f"{s}={i}" for s, i in sorted(run.test_equipment.items())) or "無"
+        print(f"  〔測試模式：戰後回滿，不計入統計；挑的裝備：{gear}〕", file=out)
 
 
 def _print_summary(library: ContentLibrary, run: RunState, out: TextIO) -> None:

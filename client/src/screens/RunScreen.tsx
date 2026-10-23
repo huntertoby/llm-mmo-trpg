@@ -6,6 +6,8 @@ import { objectiveBadge } from "../battle/objective";
 import { battleName, runView, writeCurrentRun } from "../run/flow";
 import { RunHeroPanel } from "../run/RunHeroPanel";
 import { SkillPointsSection } from "../run/SkillPointsSection";
+import { resourceRuleText } from "../run/testMode";
+import { TestModeBadge } from "../ui/TestModeBadge";
 import { ErrorBanner } from "../ui/ErrorBanner";
 import { primeSkillCard } from "../ui/useSkillCards";
 import { BattleScreen } from "./BattleScreen";
@@ -138,7 +140,10 @@ export function RunScreen({ initial, autoResume = false, onHome, onNewRun }: Pro
   return (
     <div className="run-screen">
       <header className="run-header">
-        <h1>一輪　<span className="muted small">種子 {run.seed}</span></h1>
+        <h1>
+          一輪　<span className="muted small">種子 {run.seed}</span>
+          {run.test_mode && <TestModeBadge />}
+        </h1>
         <div className="run-header-buttons">
           {view.screen !== "ended" && (
             <button type="button" disabled={busy} onClick={() => void saveFromMenu()}>
@@ -168,7 +173,7 @@ export function RunScreen({ initial, autoResume = false, onHome, onNewRun }: Pro
                   {view.goalBadge}：{view.goalLine}
                 </div>
                 <div className="muted small">敵人：{view.enemies.join("、")}</div>
-                <div className="muted small">隊友：標準隊友 2 名（滿狀態）；HP、法力不會在戰鬥之間回復，只有營火會回滿。</div>
+                <div className="muted small">隊友：標準隊友 2 名（滿狀態）；{resourceRuleText(run.test_mode)}</div>
                 <div className="run-actions">
                   <button type="button" className="primary" disabled={busy} onClick={() => void enterBattle()}>
                     {busy ? "載入中……" : view.buttonLabel}

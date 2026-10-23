@@ -283,6 +283,12 @@ class RunState(_Model):
     evolutions: dict[str, EvolutionRecord] = Field(default_factory=dict)
     """分歧進化（Phase 3-26b）：進化後的技能 ID → 紀錄。進化結果跟著技能走（卸下、重配都保留）。"""
     node: Node
+    test_mode: bool = False
+    """測試模式（Phase 3-39）：每場戰鬥結束後 HP、法力回滿，並可在開局挑裝備。**只存在這一輪的設定
+    裡**，不進模擬、不計入任何統計；舊存檔沒有此欄位時為 ``False``。"""
+    test_equipment: dict[str, str] = Field(default_factory=dict)
+    """測試模式開局挑的裝備（Phase 3-39）：欄位 → 物品 ID；非空時取代主角範本的裝備。只有
+    ``test_mode`` 時才可非空。"""
 
     def max_hp_in(self, core: CoreRules) -> int:
         """最大 HP ＝ 基礎 ＋（體質 − 10）× 3 ＋ 基礎 × 50‰ ×（等級 − 1）（係數在 ``core.yaml``；

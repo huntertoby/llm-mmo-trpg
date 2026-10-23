@@ -173,11 +173,12 @@ def _hero(library: ContentLibrary, run: RunState) -> HeroOut:
         xp_next=thresholds[run.level - 1] if run.level - 1 < len(thresholds) else None,
         attributes=dict(run.hero.attributes),
         hp=run.hp,
-        max_hp=run.max_hp_in(library.ruleset.core),
+        # 測試模式戰後回滿到含裝備的上限，可能高於一輪本身算的上限：顯示時不讓 HP／法力超過上限
+        max_hp=max(run.max_hp_in(library.ruleset.core), run.hp if run.test_mode else 0),
         hp_per_con_point=library.ruleset.core.hp_per_con_point,
         hp_con_base=library.ruleset.core.hp_con_base,
         mana=run.mana,
-        max_mana=run.max_mana,
+        max_mana=max(run.max_mana, run.mana if run.test_mode else 0),
         source=run.source,
         source_max=library.ruleset.core.source_max,
         weapon=run.hero.weapon,
@@ -228,6 +229,8 @@ def run_response(session: RunSession) -> RunResponse:
         plan=plan,
         history=run.history,
         battle_id=None if session.battle is None else session.battle.battle_id,
+        test_mode=run.test_mode,
+        test_equipment=dict(run.test_equipment),
     )
 
 
@@ -244,4 +247,5 @@ def save_summary(library: ContentLibrary, save: RunSave) -> SaveSummary:
         node=run.node.kind,
         in_battle=save.battle is not None,
         victory=run.node.victory if isinstance(run.node, EndedNode) else None,
+        test_mode=run.test_mode,
     )

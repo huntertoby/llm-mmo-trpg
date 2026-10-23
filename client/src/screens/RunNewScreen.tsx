@@ -7,6 +7,9 @@ import { AttributeAllocator } from "../run/AttributeAllocator";
 import { DevPackSelect, StartPickerView, useStartPicker } from "../run/StartPicker";
 import { allocationComplete, baseAttributes, cleanAllocation, conHpGain, type Allocation } from "../run/flow";
 import { isDevMode } from "../run/startFlow";
+import { TestModePanel } from "../run/TestModePanel";
+import { withTestMode } from "../run/testMode";
+import type { Selection } from "../gear/gearDraft";
 import { ErrorBanner } from "../ui/ErrorBanner";
 import { parseSeed, randomSeed } from "./StartScreen";
 
@@ -22,6 +25,9 @@ export function RunNewScreen({ onCreated, onHome }: Props) {
   const [seedText, setSeedText] = useState(() => String(randomSeed()));
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [testMode, setTestMode] = useState(false);
+  const [gear, setGear] = useState<Selection>({});
+  const [gearLegal, setGearLegal] = useState(true);
   const dev = isDevMode(window.location.search);
   const seed = parseSeed(seedText);
   const picker = useStartPicker(seed, dev);
@@ -40,14 +46,15 @@ export function RunNewScreen({ onCreated, onHome }: Props) {
   const { weapon, selected, weaponDef } = picker;
   const points = rules?.start_points ?? 0;
   const complete = rules !== null && allocationComplete(alloc, points);
-  const ready = seed !== null && picker.body !== null;
+  const ready = seed !== null && picker.body !== null && gearLegal;
 
   async function create(auto: boolean) {
     if (!ready || seed === null || (!auto && !complete)) return;
     setBusy(true);
     setError(null);
     try {
-      const body = { weapon, keywords: selected, seed, ...(auto ? {} : { attributes: cleanAllocation(alloc) }) };
+      const base = { weapon, keywords: selected, seed, ...(auto ? {} : { attributes: cleanAllocation(alloc) }) };
+      const body = withTestMode(base, testMode, gear);
       onCreated(await api.createRun(body));
     } catch (err) {
       setError(err instanceof Error ? err.message : String(err));
@@ -92,6 +99,15 @@ export function RunNewScreen({ onCreated, onHome }: Props) {
             <AttributeAllocator base={baseAttributes(rules.base_attribute)} points={points} alloc={alloc} onChange={setAlloc} disabled={busy} hpPerCon={rules.hp_per_con_point} />
           </>
         )}
+        <TestModePanel
+          enabled={testMode}
+          onEnabled={setTestMode}
+          selection={gear}
+          onSelection={setGear}
+          start={picker.body}
+          onLegal={setGearLegal}
+          disabled={busy}
+        />
         <label>
           種子
           <span className="seed-row">
@@ -119,7 +135,9 @@ export function RunNewScreen({ onCreated, onHome }: Props) {
           </button>
         </div>
         <div className="muted small">
-          共 5 場戰鬥加 Boss；HP、法力不會在戰鬥之間回復，只有營火（中段與 Boss 前）會回滿。隊友為 2 名標準隊友。
+          共 5 場戰鬥加 Boss；
+          {testMode ? "測試模式：每場戰鬥結束後 HP、法力自動回滿。" : "HP、法力不會在戰鬥之間回復，只有營火（中段與 Boss 前）會回滿。"}
+          隊友為 2 名標準隊友。
         </div>
       </form>
       <DevPackSelect picker={picker} disabled={busy || seed === null} onGo={() => void createDev()} />
