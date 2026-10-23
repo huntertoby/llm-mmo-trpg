@@ -101,5 +101,10 @@
 - PM 合併（無衝突）；**`check.py --full` 全過（28 分 5 秒，比前兩次慢很多 → 交接 3.00 列為先查）**；`swamp` 種子 60 `--log-json` ＋ `replay` 一致。`llm_hint` 196 條（原語、形狀、條件、觸發與參數；一句、不含欄位名與世界觀名詞，有測試）；`required_when` 進 YAML（取代 `_filled_by_category`／`CONDITIONALLY_REQUIRED`）；觸發參數進 `skill_triggers.yaml` `params`；提議模型移除 53 個數值欄位；`skillgen/proposal_numbers.py`（`split_numbers`／`apply_numbers`／`fixed_filler`／`minimal_filler`）；`to_skill_def(proposal, ctx, fill)`。結構往返仍 163／217。報告 `Phase4-L3報告.md`（含 4-L5 預算器要補的項目）。
 - 待 PM 決定（留給接手的開發 PM 在 4-L4／4-L5 規格處理）：#1 形狀參數（`range`、`size`、`radius`、`jumps`、`jump_range`）保留給 LLM 選 → 暫接受；#2 `ap_cost`／`mana`／`cooldown`／`max_per_round` 全採預設、LLM 無法表達便宜／慢熱 → **建議 4-L5 加 AP／冷卻旋鈕**；#3 `range_delta` 移除、#5 `unless_filled` 舊行為 → 接受；#4 `minimal_filler` 只保證 schema 合法 → 4-L5 換成預算器；#6 `TriggerSpec` 驗證器仍寫死 → 3E-3。
 
+### 4.4 4-L4 驗收（2026-10-23）
+
+- PM 合併（無衝突，`77a234c`）；ruff、format、mypy、lint-imports（7 契約，新增「skillgen 不得匯入 llm」）、`tests/llm`＋`tests/skillgen`＋`tests/content`＋`tests/cli`＋`test_architecture` 1878 全過；`swamp` 種子 60 重播一致。`skillgen/proposal_subset.py`（`ProposalRequest`、`select_subset`、`ProposalSubset`、`SubsetError`、`build_subset_models`、`available_payload`）；`build_proposal_models` 加 `shapes`／`conditions`／`triggers`／`skeletons` 篩選；`llm/prompts/proposal.py` 的 `build_proposal_prompt`；`shared/tokens.py`（`estimate_tokens`、`PROMPT_TOKEN_BUDGET=30000`）；世界觀模型移到 `content/world.py` 並登記進 registry；`PROMPT_VERSION` 不變。大小：138 組可行題目最大 24,999、平均 16,540 估算 token。PM 實測 rare／不指定骨架／`ignite`：41 個原語、11 個骨架、25,475。報告 `Phase4-L4報告.md`。
+- 待 PM 決定 → 決定：#1 估算放 `trpg.shared.tokens`、#2 只有核心永不砍（關鍵字原語最後才砍）、#4 緊湊 JSON 估算、#7 `kind` 隨骨架收斂、#8 骨架不可用丟 `SubsetError` → **接受**；#3 補足填滿約 24k、#5 「省略 `primitives`＝不限」的骨架子集偏大 → **4-L9 用真實 tokenizer 與通過率實測後再決定是否縮小**（`token_budget` 可調）；#6 巢狀才用的原語出現在頂層選項 → **4-L5 規格處理**（分開巢狀與頂層可用原語，或靠重試回饋）；#9 `unit_then_tile`／`object_then_tile` 只給手寫技能 → **4-L8 在形狀 YAML 加旗標排除**。
+
 **Phase 4 暫停點（2026-10-23，使用者：「讓正在跑的 4-L2、4-L3 做完就停」）**：4-L1～L3 完成，下一段 4-L4（見 `docs/開發PM交接.md` 3.00）。
 

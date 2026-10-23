@@ -54,7 +54,7 @@ Phase 3 各段（`Phase3計畫.md` 節號；報告 `Phase3-*報告.md`）：
 
 **目前停在哪**：Phase 4（LLM 技能生成，本機模型）的 4-L1～L3 已驗收合併並 push；**沒有任何 agent 在跑**。規格 `docs/phases/Phase4計畫.md`（0 節：使用者 5 題原話與決定；1 節：4-L1～L9 段表；4 節：驗收紀錄）。設計 `docs/phases/Phase4-LLM技能提議設計.md`。
 
-**下一段**：**4-L4 schema 子集**（依稀有度、骨架、題目關鍵字篩原語、形狀、條件；prompt＋schema ≤ 30k token；同時把 `content/llm/world_shattered.yaml` 登記進 `content/registry.py`，並定 4-L2 的 `available` 格式）→ **4-L5**（opus：重試＋退回＋預算器補數值；4-L3 報告列了預算器要補的項目與 `ap_cost`／`mana`／`cooldown`／`max_per_round` 預設）→ 4-L6／4-L7 → 4-L8 → 4-L9（真模型評估）。4-L4 的詳細規格要先寫進 `Phase4計畫.md`（照第 2、3 節的格式）再派。
+**4-L4 已完成（2026-10-23，`77a234c`，驗收 `Phase4計畫.md` 4.4）。下一段 4-L5**（規格要先寫；4.4 列了 4-L5 要處理的 #6 巢狀原語在頂層選項）。原下一段說明：**4-L4 schema 子集**（依稀有度、骨架、題目關鍵字篩原語、形狀、條件；prompt＋schema ≤ 30k token；同時把 `content/llm/world_shattered.yaml` 登記進 `content/registry.py`，並定 4-L2 的 `available` 格式）→ **4-L5**（opus：重試＋退回＋預算器補數值；4-L3 報告列了預算器要補的項目與 `ap_cost`／`mana`／`cooldown`／`max_per_round` 預設）→ 4-L6／4-L7 → 4-L8 → 4-L9（真模型評估）。4-L4 的詳細規格要先寫進 `Phase4計畫.md`（照第 2、3 節的格式）再派。
 
 **待使用者／其他 PM**：
 - **`F:\WSL\settings.ini` 的 `PORT` 已改成 8001**（使用者 2026-10-23：「我已經改好了」；避開 `trpg serve` 的 8000）。我們的 `config/llm.toml` 預設 `http://localhost:8001/v1`、模型 `swift`。開發不改 `F:\WSL` 任何檔案，要改時請專案 PM 轉達使用者。
