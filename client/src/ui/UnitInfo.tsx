@@ -6,7 +6,7 @@ import { ammoText, hasMagazine } from "../battle/ammo";
 import { bombStatusText, TIME_BOMB } from "../battle/bombs";
 import { CHARGING, chargeStatusText } from "../battle/followup";
 import { facingText } from "../battle/facing";
-import { statusTile } from "../render/skillIcon";
+import { statusIconTile } from "../render/skillIcon";
 import { TipGlyph } from "./SkillIconView";
 import { stackName, statusName } from "../battle/glossary";
 import type { SkillNames } from "../battle/actions";
@@ -90,7 +90,7 @@ export function UnitInfo({ unit, names, heroId, skills, view }: Props) {
         ) : (
           <span className="status-chips">
             {unit.statuses.map((s, i) => (
-              <TipGlyph key={`${i}:${s.status_id}`} tile={statusTile(s.status_id)} text={statusText(s, skills)} />
+              <TipGlyph key={`${i}:${s.status_id}`} tile={statusIconTile(s.status_id)} text={statusText(s, skills)} />
             ))}
           </span>
         )}

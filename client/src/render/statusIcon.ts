@@ -380,6 +380,10 @@ export function clearStatusIconCache(): void {
 }
 export const statusIconCacheSize = (): number => iconCache.size;
 
+export function statusIconKey(id: string, size: number): string {
+  return `${lookKey(id)}|${size}`;
+}
+
 function lookKey(id: string): string {
   const l = statusLook(id);
   const first = GLYPH[id] === undefined ? [...statusName(id)][0] ?? "?" : "";
@@ -389,7 +393,7 @@ function lookKey(id: string): string {
 /** 一個狀態圖示的離屏 canvas（邊長 `size` px，內部解析度 ×2）；沒有 DOM 時回傳 `null`。 */
 export function statusIconCanvas(id: string, size: number): HTMLCanvasElement | null {
   if (typeof document === "undefined") return null;
-  const key = `${lookKey(id)}|${size}`;
+  const key = statusIconKey(id, size);
   const hit = iconCache.get(key);
   if (hit !== undefined) return hit;
   const canvas = document.createElement("canvas");
