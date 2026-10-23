@@ -17,6 +17,7 @@ from trpg.engine.effects.models import (
     LowerTerrainEffect,
     RaiseTerrainEffect,
 )
+from trpg.engine.events import EffectFizzled
 from trpg.engine.rules.perks import attribute_perk
 from trpg.engine.skills.primitives.base import Handler
 
@@ -75,6 +76,13 @@ def create_obstacle(cast: Cast, effect: ResolvedEffect, spec: EffectSpec) -> lis
 
 
 def inscribe(cast: Cast, effect: ResolvedEffect, spec: EffectSpec) -> list[EffectBase]:
+    """符文只刻在影響的格子（``affects: tiles``，玩法 PM 2026-10-24）；其他對象不靜默失敗，
+    發出 ``effect_fizzled``（``inscribe_needs_tiles``）。驗證器本來就會擋，這裡處理讀入的舊技能。"""
+    if effect.affects != "tiles":
+        cast.ctx.emit(
+            EffectFizzled, effect_kind="inscribe", pos=None, reason="inscribe_needs_tiles"
+        )
+        return []
     return [
         InscribeEffect(
             source_id=cast.caster.id,

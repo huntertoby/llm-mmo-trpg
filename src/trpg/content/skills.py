@@ -3498,6 +3498,12 @@ def _condition_problems(where: str, condition: ConditionSpec, refs: _Refs) -> li
     return problems
 
 
+def _forbidden_affects_message(where: str, primitive_id: str, affects: str) -> str:
+    if primitive_id == INSCRIBE:  # 刻印的對象只有影響的格子（玩法 PM 2026-10-24）
+        return f"{where}.affects：刻印只能刻在影響的格子上，對象要選「格子」（tiles）"
+    return f"{where}.affects：{primitive_id} 不能搭配 affects: {affects}"
+
+
 def _effect_problems(
     skill: SkillDef, index: int, effect: EffectSpec, refs: _Refs, *, on_hit: bool = False
 ) -> list[str]:
@@ -3531,7 +3537,7 @@ def _effect_problems(
     if primitive.acts_on != "tile" and affects == "tiles":
         problems.append(f"{where}.affects：{primitive.id} 是對單位的效果，不能用 tiles")
     if affects in primitive.forbid_affects:
-        problems.append(f"{where}.affects：{primitive.id} 不能搭配 affects: {affects}")
+        problems.append(_forbidden_affects_message(where, primitive.id, affects))
     if (
         primitive.allowed_shapes is not None
         and skill.shape.type not in primitive.allowed_shapes

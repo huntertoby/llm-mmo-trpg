@@ -685,6 +685,7 @@ primitives:
     budget_basis: inscribe
     base_points: 5
     acts_on: tile
+    forbid_affects: [self, allies, enemies, all]  # 符文只刻在影響的格子（玩法 PM 2026-10-24）
     params:
       element: {llm_hint: "符文的元素。", type: element, required: true, required_when: {unless_filled: tag}, description_zh: 符文的元素（填了 tag 就不用填；兩者恰好填一個）}
       tag: {llm_hint: "符文帶有的標籤，供其他技能辨識。", type: tag, description_zh: 符文的標籤（與 element 恰好填一個）}

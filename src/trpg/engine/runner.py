@@ -38,8 +38,11 @@ __all__ = [
     "run_battle",
 ]
 
-LOG_FORMAT = "trpg-battle-log/63"
-"""``/63``（Phase 3I-1）：錘的雙屬性改取較高（同類取較高、一物理一心智取平均，#46）；新武器拳套
+LOG_FORMAT = "trpg-battle-log/64"
+"""``/64``（Phase 3-48e）：刻印 ``inscribe`` 只刻在影響的格子（``affects: tiles``）；其他對象
+不再刻在單位腳下，改發 ``effect_fizzled``（``inscribe_needs_tiles``）；規則包的原語 ``inscribe``
+多了 ``forbid_affects``。``/63`` 的紀錄無法重播。
+``/63``（Phase 3I-1）：錘的雙屬性改取較高（同類取較高、一物理一心智取平均，#46）；新武器拳套
 （內建反應「反擊」``counter_attack``，事件 ``hit_by_melee``；手上武器有 ``counter`` 的單位用預設規則
 時格擋規則預設 ``off``）、鐮刀（收割：目標當下 HP ≤ 30% 時普攻與武器技傷害 +25%）、鞭（射程 2；
 纏繞：狀態 ``entangled``，下回合移動點數減少）。同一份輸入的結算可能不同，
