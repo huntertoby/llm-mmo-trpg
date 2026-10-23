@@ -10,7 +10,7 @@ skeleton: sacrifice
 category: spell
 weapon_req: any
 ap_cost: 1
-scaling_attr: int
+scaling_attr: wil
 shape: {type: single, range: 5}
 effects:
   - {type: sacrifice_summon, dice: 2d8, radius: 1, element: fire}

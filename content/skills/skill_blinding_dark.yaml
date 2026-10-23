@@ -9,7 +9,7 @@ skeleton: control
 category: spell
 weapon_req: focus
 ap_cost: 2
-scaling_attr: int
+scaling_attr: wil
 shape: {type: square3, range: 4}
 effects:
   - {type: apply_status, status: blinded, duration: 1}

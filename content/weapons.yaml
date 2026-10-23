@@ -5,7 +5,8 @@
 #       element（元素）、crit_range（暴擊最低自然骰值，20 表示只有自然 20）、two_handed（雙手）。
 # summon_only（Phase 3-33e1）：true ＝ 召喚物專用的武器，不列入開局可選的武器。
 # 武器小特性（Phase 3-24a1；全部是下列選填參數，引擎只讀參數、不寫死數值）：
-#       secondary_scaling_attr（第二縮放屬性，與 scaling_attr 取平均）、
+#       secondary_scaling_attr（第二縮放屬性）與 attr_mode（Phase 3H-1，08 8.11 雙屬性取法：
+#         mean 取平均＝重武器，要兩個都點；max 取較高者＝輕武器，靈巧；預設 mean）、
 #       armor_break {defense_permille: -100, rounds: 1}（破甲：普攻命中後目標防禦 ‰ 變化與回合數）、
 #       knockback（震退：普攻命中後沿攻擊方向推幾格，沿用推擊與撞擊）、
 #       reach（觸及：藉機攻擊範圍，不可超過 range）、
@@ -54,6 +55,8 @@ weapons:
     flat: 0
     attack_bonus: 0
     scaling_attr: dex
+    secondary_scaling_attr: str
+    attr_mode: max
     element: physical
     crit_range: 19
     two_handed: false
@@ -128,8 +131,9 @@ weapons:
     dice: 1d12
     flat: 0
     attack_bonus: 0
-    scaling_attr: str
-    secondary_scaling_attr: con
+    scaling_attr: con
+    secondary_scaling_attr: str
+    attr_mode: mean
     element: physical
     crit_range: 20
     two_handed: true

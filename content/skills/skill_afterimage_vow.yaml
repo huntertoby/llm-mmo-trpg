@@ -10,7 +10,7 @@ skeleton: aura
 category: spell
 weapon_req: any
 ap_cost: 1
-scaling_attr: int
+scaling_attr: wil
 shape: {type: self}
 effects:
   - {type: rule_change, rule: afterimage_double, affects: self}

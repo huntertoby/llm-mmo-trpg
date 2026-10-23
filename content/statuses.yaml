@@ -200,7 +200,7 @@ statuses:
     stacking: refresh
     budget_points: 4
     damage_taken_permille: 1250
-    save_attr: wil
+    save_attr: int
   - id: armor_broken
     polarity: debuff
     name_zh: 破甲

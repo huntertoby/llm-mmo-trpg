@@ -9,7 +9,7 @@ skeleton: aura
 category: spell
 weapon_req: focus
 ap_cost: 2
-scaling_attr: int
+scaling_attr: wis
 shape: {type: allies_in_radius, radius: 2}
 effects:
   - {type: heal, dice: 1d10}

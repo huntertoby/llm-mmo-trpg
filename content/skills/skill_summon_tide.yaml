@@ -9,7 +9,7 @@ skeleton: control
 category: spell
 weapon_req: focus
 ap_cost: 1
-scaling_attr: int
+scaling_attr: wis
 shape: {type: cross, range: 4}
 effects:
   - {type: create_surface, surface: water}

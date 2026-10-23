@@ -78,6 +78,7 @@ from trpg.content.skill_rules import (
     SkillMatch,
     SynergyTable,
 )
+from trpg.content.skill_scaling import SkillScalingRules, scaling_problems
 from trpg.content.skill_tags import SkillTagTable
 from trpg.content.skill_triggers import SkillTriggerDef, SkillTriggerTable
 from trpg.content.skills import (
@@ -452,6 +453,12 @@ class ContentLibrary:
     """開發者起始包（``dev_starters.yaml``，Phase 3-24b2；不是設計規則，玩家介面不顯示）。"""
     evolution: EvolutionTable = field(default_factory=EvolutionTable)
     """3 級分歧進化的模板（``skill_evolution.yaml``，Phase 3-26b）。"""
+    skill_scaling: SkillScalingRules = field(
+        default_factory=lambda: SkillScalingRules.model_construct(
+            spell_themes=(), body_attrs=(), overrides=()
+        )
+    )
+    """技能縮放屬性的允許範圍（``skill_scaling.yaml``，Phase 3H-1；武器技看武器、法術技依主題）。"""
     regions: RegionTable | None = None
     """區域主題表（``regions.yaml``，Phase 3-37a；純顯示資料）。"""
     map_warnings: tuple[str, ...] = ()
@@ -676,6 +683,8 @@ def load_library(  # noqa: PLR0915
     has_evolution = (root / "skill_evolution.yaml").exists()
     evolution = load("skill_evolution.yaml", EvolutionTable) if has_evolution else EvolutionTable()
     _check_evolution(root, evolution, keywords, skeletons)
+    skill_scaling = load("skill_scaling.yaml", SkillScalingRules)
+    _check_scaling(root, skill_scaling, skills, weapon_map)
 
     return ContentLibrary(
         root=root,
@@ -701,10 +710,23 @@ def load_library(  # noqa: PLR0915
         appearance=appearance,
         dev_starters=dev_starters,
         evolution=evolution,
+        skill_scaling=skill_scaling,
         regions=regions,
         map_warnings=tuple(map_warnings),
         files=files,
     )
+
+
+def _check_scaling(
+    root: Path,
+    rules: SkillScalingRules,
+    skills: dict[str, SkillDef],
+    weapons: dict[str, WeaponDef],
+) -> None:
+    """內建技能的縮放屬性都在允許範圍內（武器技看武器、法術技依主題，Phase 3H-1）。"""
+    problems = scaling_problems(rules, skills, weapons)
+    if problems:
+        raise ContentError(root / "skill_scaling.yaml", "；".join(problems))
 
 
 def _check_evolution(
