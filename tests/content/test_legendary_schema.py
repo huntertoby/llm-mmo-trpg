@@ -36,7 +36,7 @@ def _data(**over: Any) -> dict[str, Any]:
         "scaling_attr": "wis",
         "shape": {"type": "self"},
         "effects": [GRANT],
-        "cost": {"cooldown": 2, "source": 1},
+        "cost": {"mana": 1, "cooldown": 2, "source": 1},
     }
     data.update(over)
     return data

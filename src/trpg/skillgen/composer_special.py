@@ -230,7 +230,7 @@ def _lasting_candidates(
     out: list[dict[str, Any]] = []
     for tier in tiers:
         for source in (1, 2):
-            for mana in (0, 4, 8, 12):
+            for mana in (1, 4, 8, 12):  # 主動法術技至少 1 法力（06 6.10）
                 for cooldown in (None,) if rule_change else (2, 3, 4, 5, 6):
                     cost: dict[str, Any] = {"mana": mana, "source": source}
                     if cooldown is not None:

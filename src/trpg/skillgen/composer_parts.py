@@ -794,7 +794,7 @@ def build_cost(ctx: Ctx) -> dict[str, Any]:
     else:
         mana_range = rules.weapon_mana_per_ap
         mana = (
-            0
+            1  # 主動武器技至少 1 耐力（06 6.10 最低花費；「不花資源」那一檔改成最低花費）
             if ctx.chance(rules.weapon_free_permille)
             else rng.randint(mana_range.min, mana_range.max) * ap
         )

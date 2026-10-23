@@ -90,6 +90,14 @@ def validate_skill(skill: SkillDef, library: ContentLibrary) -> list[Violation]:
         return reference
     resource = library.budget.cost_problem(skill.category, skill.cost)  # 3H-2，06 6.10
     out = [] if resource is None else [Violation(skill.id, "cap.resource", resource)]
+    # 最低花費（3-48c）：內建技能的既有數值不動（違反的清單在 Phase3-48c報告），只檢查產生與提議的技能
+    least = (
+        None
+        if skill.provenance.origin == "builtin" and skill.id in library.skills
+        else library.budget.min_cost_problem(skill.kind, skill.category, skill.cost)
+    )
+    if least is not None:
+        out.append(Violation(skill.id, "cap.min_cost", least))
     weapon = _weapon_scaling_violations(skill, library)
     out += weapon + _scaling_range_violations(skill, library, already=bool(weapon))
     return [*out, *_structure_violations(skill, library), *_keyword_violations(skill, library)]

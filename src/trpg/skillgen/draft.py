@@ -161,7 +161,7 @@ def step_complete(step: StepId, draft: Draft, library: ContentLibrary) -> bool:
         "effects": lambda: _effects_complete(draft),
         "followup": lambda: _followup_complete(draft, library),
         "condition": lambda: _condition_complete(draft, skeleton),
-        "cost": lambda: True,  # 代價全部可省略
+        "cost": lambda: True,  # 代價全部可省略（主動技能的最低花費由檢查提示，3-48c）
         "rarity": lambda: draft.get("rarity") is not None,
         "variants": lambda: True,  # 戰場變奏全部可省略（Phase 3-25b）
     }

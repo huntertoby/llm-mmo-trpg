@@ -5,9 +5,11 @@ from __future__ import annotations
 from typing import Any
 
 from tests.engine.helpers import library
-from tests.skillgen.workshop_walks import STRIKE
+from tests.skillgen.workshop_walks import STRIKE, walk_draft
+from trpg.skillgen.draft_check import check_draft
 from trpg.skillgen.option_models import FieldSpec, StepOptions
 from trpg.skillgen.options import draft_options
+from trpg.skillgen.random_composer import compose_random_skill
 
 LIB = library()
 
@@ -52,3 +54,26 @@ def test_spell_shape_range_has_no_weapon_range_option() -> None:
         shape = _field(_step(draft, "shape"), "shape")
         single = next(c for c in shape.choices if c.value == "single")
         assert any(p.allow_weapon for p in single.params) is expected
+
+
+# ---------------------------------------------------------------------------
+# 最低花費（06 6.10，2026-10-24）
+# ---------------------------------------------------------------------------
+
+
+def test_workshop_check_rejects_an_active_skill_without_the_minimum_cost() -> None:
+    draft = walk_draft(STRIKE)
+    assert check_draft(draft, LIB).legal
+    result = check_draft({**draft, "cost": {}}, LIB)
+    assert not result.legal
+    assert any(p.rule == "cap.min_cost" and "1 點耐力" in p.message_zh for p in result.problems)
+    spell = {**draft, "category": "spell", "weapon_req": "focus", "scaling_attr": "int"}
+    spell["effects"] = [{"type": "damage", "dice": "2d6", "element": "fire"}]
+    spell["cost"] = {}
+    assert any("1 點法力" in p.message_zh for p in check_draft(spell, LIB).problems)
+
+
+def test_random_composer_always_pays_the_minimum_cost() -> None:
+    for seed in range(300):
+        skill = compose_random_skill(seed, library=LIB, tier=1 + seed % 3)
+        assert LIB.budget.min_cost_problem(skill.kind, skill.category, skill.cost) is None, seed

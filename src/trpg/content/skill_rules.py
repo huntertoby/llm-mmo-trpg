@@ -417,6 +417,20 @@ class BudgetRules(ContentModel):
         kind = "武器技" if category == "weapon" else "法術技"
         return f"{kind}花{names[want]}，不能花{names[other]}"
 
+    def min_cost_problem(
+        self, kind: str, category: SkillCategory, cost: SkillCost
+    ) -> str | None:
+        """最低花費（06 6.10，2026-10-24）：主動的法術技至少 1 法力、主動的武器技至少 1 耐力；
+        被動、反應、姿態、修正照各自的規則。"""
+        if kind != "active":
+            return None
+        want = self.resource_of(category)
+        if getattr(cost, want) >= 1:
+            return None
+        names = {"mana": "法力", "stamina": "耐力"}
+        label = "武器技" if category == "weapon" else "法術技"
+        return f"主動的{label}至少要花 1 點{names[want]}"
+
     def stamina_for_mana(self, mana: int) -> int:
         """法力代價換成等價的耐力代價（預算點數相同）。"""
         return mana * self.allowance.stamina_per_mana

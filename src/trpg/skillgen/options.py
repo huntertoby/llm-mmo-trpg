@@ -1055,8 +1055,14 @@ def _resource_field(draft: Draft, library: ContentLibrary) -> FieldSpec:
     """費用欄位依類別（3H-2，06 6.10）：武器技花耐力、法術技花法力。"""
     category = draft.get("category")
     if category in ("weapon", "spell") and library.budget.resource_of(category) == "stamina":
-        return _cost_int("stamina", "耐力", resource_cost_text(library, "stamina"))
-    return _cost_int("mana", "法力", resource_cost_text(library, "mana"))
+        field = _cost_int("stamina", "耐力", resource_cost_text(library, "stamina"))
+    else:
+        field = _cost_int("mana", "法力", resource_cost_text(library, "mana"))
+    if draft.get("kind") != "active":
+        return field
+    # 最低花費（3-48c）：欄位範圍不收緊（內建技能有 0 的），由檢查回報違規
+    desc = f"{field.description_zh}。主動技能至少要花 1 點（空白或 0 檢查會不通過）"
+    return field.model_copy(update={"description_zh": desc})
 
 
 def _cost_step(draft: Draft, library: ContentLibrary) -> StepOptions:
