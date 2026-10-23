@@ -5,6 +5,8 @@
 - **法術技**（``category: spell``）：依主題，由 :class:`ScalingTheme` 依 **先後順序** 比對，第一個
   符合的主題決定屬性（智力＝元素傷害與互動；感知＝治療、護盾、輔助、偵測與標記；意志＝召喚、獻祭、
   詛咒、心智控制、暗影）；都不符合的（物理、裝備動作等）屬於身體類，允許 ``body_attrs``。
+- ``combos``：組合主題（玩法 PM 2026-10-23，06 6.10）：法術同時符合組合裡的每個主題時，可以看其中
+  任一個主題的屬性（例：元素＋意志主題＝智力或意志）；產生技能時取主角較高的那個。純元素仍只看智力。
 - ``overrides``：個別技能的例外（要寫理由）。
 
 規則是資料（``content/skill_scaling.yaml``），內建技能的檢查與之後的隨機組合器、LLM 提議（3H-3）
@@ -27,6 +29,7 @@ __all__ = [
     "ScalingOverride",
     "ScalingTheme",
     "SkillScalingRules",
+    "ThemeCombo",
     "scaling_problems",
 ]
 
@@ -53,6 +56,13 @@ class ScalingTheme(ContentModel):
         return bool(tags & set(self.tags_any) or effect_types & set(self.effect_types_any))
 
 
+class ThemeCombo(ContentModel):
+    """組合主題：技能同時符合 ``themes`` 的每一個時，允許這些主題的屬性任選其一。"""
+
+    themes: tuple[str, ...] = Field(min_length=2)
+    reason_zh: str = Field(min_length=1)
+
+
 class ScalingOverride(ContentModel):
     """個別技能的例外：這招允許的屬性（取代主題推導），並寫明理由。"""
 
@@ -67,10 +77,16 @@ class SkillScalingRules(ContentModel):
     spell_themes: tuple[ScalingTheme, ...] = Field(min_length=1)
     body_attrs: tuple[Attribute, ...] = Field(min_length=1)
     """沒有任何法術主題的法術技（物理、裝備動作等）允許的屬性。"""
+    combos: tuple[ThemeCombo, ...] = ()
     overrides: tuple[ScalingOverride, ...] = ()
 
     @model_validator(mode="after")
     def _unique(self) -> SkillScalingRules:
+        known = {t.id for t in self.spell_themes}
+        for combo in self.combos:
+            unknown = sorted(set(combo.themes) - known)
+            if unknown:
+                raise ValueError(f"組合主題引用了未知的主題：{', '.join(unknown)}")
         for label, ids in (
             ("主題", [t.id for t in self.spell_themes]),
             ("例外", [o.skill for o in self.overrides]),
@@ -96,7 +112,16 @@ class SkillScalingRules(ContentModel):
         if skill.category == "weapon":
             return weapon_attrs(skill.weapon_req, weapons)
         theme = self.spell_theme(skill)
-        return frozenset(self.body_attrs) if theme is None else frozenset({theme.attr})
+        if theme is None:
+            return frozenset(self.body_attrs)
+        tags = frozenset(skill.tags)
+        types = frozenset(str(getattr(e, "type", "")) for e in skill.effects)
+        matched = {t.id: t for t in self.spell_themes if t.matches(tags, types)}
+        allowed = {theme.attr}
+        for combo in self.combos:
+            if all(tid in matched for tid in combo.themes):
+                allowed |= {matched[tid].attr for tid in combo.themes}
+        return frozenset(allowed)
 
     def primary_attr(
         self, skill: SkillDef, weapons: Mapping[str, WeaponDef] | Iterable[WeaponDef]

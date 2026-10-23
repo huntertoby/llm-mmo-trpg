@@ -85,6 +85,27 @@ def test_the_first_matching_theme_wins() -> None:
     assert RULES.spell_theme(_spell(["physical"])) is None  # 身體類
 
 
+def test_element_combined_with_another_theme_allows_either_attribute() -> None:
+    """組合主題（玩法 PM 2026-10-23，06 6.10）：元素＋意志主題看智力或意志、
+    元素＋感知主題看智力或感知；純元素仍只看智力。"""
+
+    def allowed(tags: list[str]) -> frozenset[Attribute]:
+        return RULES.allowed_attrs(_spell(tags), LIB.weapons)
+
+    assert allowed(["fire", "curse"]) == {Attribute.INT, Attribute.WIL}
+    assert allowed(["fire", "summon"]) == {Attribute.INT, Attribute.WIL}
+    assert allowed(["water", "heal"]) == {Attribute.INT, Attribute.WIS}
+    assert allowed(["fire"]) == {Attribute.INT}
+    assert allowed(["shadow"]) == {Attribute.WIL}  # 沒有元素，不放寬
+
+
+def test_a_combo_with_an_unknown_theme_is_rejected() -> None:
+    data = RULES.model_dump(mode="json")
+    data["combos"] = [{"themes": ["elemental", "nope"], "reason_zh": "測試"}]
+    with pytest.raises(ValueError, match="未知的主題"):
+        SkillScalingRules.model_validate(data)
+
+
 def test_an_unknown_override_skill_is_a_problem() -> None:
     bad = SkillScalingRules.model_validate(
         {
@@ -98,14 +119,15 @@ def test_an_unknown_override_skill_is_a_problem() -> None:
 def test_a_wrong_attribute_is_reported_in_chinese() -> None:
     moved = {
         **LIB.skills,
-        "skill_summon_spirit": LIB.skills["skill_summon_spirit"].model_copy(
+        # 純召喚（沒有元素）不能看智力；元素之靈這類「元素＋召喚」照組合主題可以看智力
+        "skill_raise_skeleton": LIB.skills["skill_raise_skeleton"].model_copy(
             update={"scaling_attr": Attribute.INT}
         ),
     }
     problems = scaling_problems(RULES, moved, LIB.weapons)
     assert (
         len(problems) == 1
-        and "skill_summon_spirit" in problems[0]
+        and "skill_raise_skeleton" in problems[0]
         and "不在允許範圍" in problems[0]
     )
 
