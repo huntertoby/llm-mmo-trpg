@@ -1,0 +1,71 @@
+<!doctype html>
+<html lang="zh-Hant">
+<head>
+<meta charset="utf-8">
+<title>種族真側面樣張</title>
+<style>
+  body { margin: 0; padding: 16px 20px; background: #1b1e24; color: #e8e8ea; font-family: "Microsoft JhengHei", sans-serif; }
+  h1 { font-size: 20px; margin: 0 0 4px; }
+  h2 { font-size: 15px; margin: 16px 0 6px; }
+  .sub { color: #a0a4ad; font-size: 13px; margin-bottom: 8px; line-height: 1.55; }
+  table { border-collapse: separate; border-spacing: 5px; }
+  th { font-size: 13px; color: #e8e8ea; padding: 2px 4px; }
+  td { background: #232730; border-radius: 6px; padding: 3px; text-align: center; font-size: 12px; color: #c8ccd4; }
+  td.lab { background: none; text-align: right; font-size: 13px; color: #e8e8ea; white-space: nowrap; }
+  td.lab small { display: block; color: #8a909a; font-size: 11px; }
+  canvas { display: block; margin: 0 auto; }
+</style>
+</head>
+<body>
+<h1>10 族 × 真側面（使用者選定側面 A）</h1>
+<div class="sub">使用者：「A」（真側面 90°）。龍裔採甲＋乙＋丙＋戊（大龍角＋龍鱗、豎瞳＋鱗脊、粗龍尾＋背刺、鱗色）。<br>
+每格三個：正面／<b>真側面（朝東）</b>／背面。正面、背面沿用現在的紙娃娃；側面是新的真側面畫法（樣張版）。</div>
+<table id="grid"></table>
+<h2>戰場實際大小（每格 52px）：上排朝東、下排朝西</h2>
+<div id="field"></div>
+<script src="raceArt.js"></script>
+<script src="paperdoll.js"></script>
+<script src="sideArt.js"></script>
+<script>
+const D = PaperDoll, R = RaceArt, SA = SideArt, I = D.ITEMS, DPR = 3;
+const SIDE = { bodyTurn: 1, headTurn: 1 };
+const DRAGON = { skin: "#d8a878", hair: "short", hairColor: "#3a2418", horns: "dragon", hornColor: "#5a1a14", pattern: "dragonscale", slitEyes: true, ridge: true, scaleColor: "#c8402a", tail: "dragon", tailColor: "#c8402a", spines: true };
+const RACES = Object.entries(R.RACES).map(([id, r]) => [r.zh, r.realm, id === "dragonkin" ? DRAGON : r.look]);
+const OUT = [
+  ["布衣", { body: I.tunic, feet: I.boots }],
+  ["板甲＋頭盔＋劍盾", { body: I.plate_armor, feet: I.greaves, head: I.helmet, main_hand: I.sword, off_hand: I.round_shield }],
+  ["皮甲＋兜帽＋弓＋披風", { body: I.green_leather, feet: I.boots, head: I.hood_brown, main_hand: I.bow, cloak: I.red_cape }],
+];
+function cv(w, h) {
+  const c = document.createElement("canvas");
+  c.width = w * DPR; c.height = h * DPR; c.style.width = `${w}px`; c.style.height = `${h}px`;
+  const ctx = c.getContext("2d"); ctx.scale(DPR, DPR); return [c, ctx];
+}
+const grid = document.getElementById("grid");
+grid.insertAdjacentHTML("beforeend", `<tr><th></th>${OUT.map(([t]) => `<th>${t}</th>`).join("")}</tr>`);
+for (const [zh, realm, look] of RACES) {
+  const tr = document.createElement("tr");
+  tr.insertAdjacentHTML("beforeend", `<td class="lab">${zh}<small>${realm}</small></td>`);
+  for (const [, gear] of OUT) {
+    const td = document.createElement("td"); const [c, ctx] = cv(198, 92);
+    ctx.fillStyle = "#2d323c"; ctx.fillRect(0, 0, 198, 92);
+    D.stamp(ctx, { look, gear }, "south", 33, 86, 1.3, { dpr: DPR });
+    SA.stamp(ctx, { look, gear }, SIDE, 99, 86, 1.3);
+    D.stamp(ctx, { look, gear }, "north", 165, 86, 1.3, { dpr: DPR });
+    td.append(c); tr.append(td);
+  }
+  grid.append(tr);
+}
+const T = 52, field = document.getElementById("field");
+const [c, ctx] = cv(T * 10, T * 2);
+RACES.forEach(([, , look], i) => {
+  for (let y = 0; y < 2; y++) { ctx.fillStyle = (i + y) % 2 ? "#8a8a84" : "#7d8a7a"; ctx.fillRect(i * T, y * T, T, T); }
+  const gear = OUT[i % 3][1];
+  SA.stamp(ctx, { look, gear }, SIDE, i * T + T / 2, T * 0.82, 0.78, false);
+  SA.stamp(ctx, { look, gear }, SIDE, i * T + T / 2, T + T * 0.82, 0.78, true);
+});
+field.append(c);
+field.insertAdjacentHTML("beforeend", `<div class="sub" style="margin-top:4px">由左到右：${RACES.map((r) => r[0]).join("、")}</div>`);
+</script>
+</body>
+</html>

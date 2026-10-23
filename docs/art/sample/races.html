@@ -1,0 +1,120 @@
+<!doctype html>
+<html lang="zh-Hant">
+<head>
+<meta charset="utf-8">
+<title>可玩種族樣張</title>
+<style>
+  body { margin: 0; padding: 16px 20px; background: #1b1e24; color: #e8e8ea; font-family: "Microsoft JhengHei", sans-serif; }
+  h1 { font-size: 20px; margin: 0 0 4px; }
+  h2 { font-size: 15px; margin: 16px 0 6px; }
+  .sub { color: #a0a4ad; font-size: 13px; margin-bottom: 8px; line-height: 1.55; }
+  table { border-collapse: separate; border-spacing: 5px; }
+  th { font-size: 13px; color: #e8e8ea; padding: 2px 4px; }
+  td { background: #232730; border-radius: 6px; padding: 3px; text-align: center; font-size: 12px; color: #c8ccd4; }
+  td.lab { background: none; text-align: right; font-size: 13px; color: #e8e8ea; white-space: nowrap; }
+  td.lab small { display: block; color: #8a909a; font-size: 11px; }
+  .row { display: flex; gap: 8px; flex-wrap: wrap; }
+  .cell { background: #232730; border-radius: 6px; padding: 5px; text-align: center; font-size: 12px; color: #c8ccd4; }
+  canvas { display: block; margin: 0 auto 2px; }
+  .ok { color: #7dffb0; } .bad { color: #ff8a8a; }
+</style>
+</head>
+<body>
+<h1>可玩種族：同一副紙娃娃＋種族部件（方案乙）</h1>
+<div class="sub">使用者：「種族 A、美術乙，好 寫入，開始畫樣張」。10 族＝人類、精靈、狐族、龍裔、矮人、晶能義體人、獸人、角魔、鱗族、海民（出身地對應碎界五區）。<br>
+部件：膚色、耳（尖耳／鰭耳／獸耳）、角（小角／彎角）、尾（狐尾／鱗尾／魔尾）、臉部紋路（鱗片／刺青／義體）、鬍子、獠牙、體型（矮壯／高大，適度）。裝備照常疊上；頭部裝備的衝突由「頭部裝備遮住哪裡」一條規則處理。</div>
+
+<h2>① 10 族 × 4 套裝備（每格：正面／側面／背面）</h2>
+<table id="grid"></table>
+
+<h2>② 衝突特寫</h2>
+<div class="row" id="conf"></div>
+
+<h2>③ 戰場實際大小（每格 52px）：10 族穿一般冒險裝</h2>
+<div id="field"></div>
+
+<h2>④ 全組合自測</h2>
+<div id="test" class="sub"></div>
+
+<script src="raceArt.js"></script>
+<script src="paperdoll.js"></script>
+<script>
+const D = PaperDoll, R = RaceArt, I = D.ITEMS, DPR = 3;
+const OUTFITS = [
+  ["不穿裝備（布衣）", { body: I.tunic, feet: I.boots }],
+  ["板甲＋頭盔＋劍盾", { body: I.plate_armor, feet: I.greaves, head: I.helmet, main_hand: I.sword, off_hand: I.round_shield }],
+  ["長袍＋巫師帽＋法杖", { body: I.mage_robe, feet: I.boots, head: I.wizard_hat, main_hand: I.fire_staff }],
+  ["皮甲＋兜帽＋弓＋披風", { body: I.green_leather, feet: I.boots, head: I.hood_brown, main_hand: I.bow, cloak: I.red_cape }],
+];
+function cv(w, h) {
+  const c = document.createElement("canvas");
+  c.width = w * DPR; c.height = h * DPR; c.style.width = `${w}px`; c.style.height = `${h}px`;
+  const ctx = c.getContext("2d"); ctx.scale(DPR, DPR); return [c, ctx];
+}
+const unitOf = (race, gear) => ({ look: { ...R.RACES[race].look }, gear });
+// ①
+const grid = document.getElementById("grid");
+grid.insertAdjacentHTML("beforeend", `<tr><th></th>${OUTFITS.map(([t]) => `<th>${t}</th>`).join("")}</tr>`);
+for (const [id, r] of Object.entries(R.RACES)) {
+  const tr = document.createElement("tr");
+  tr.insertAdjacentHTML("beforeend", `<td class="lab">${r.zh}<small>${r.realm}</small></td>`);
+  for (const [, gear] of OUTFITS) {
+    const td = document.createElement("td");
+    const [c, ctx] = cv(186, 92);
+    ctx.fillStyle = "#2d323c"; ctx.fillRect(0, 0, 186, 92);
+    ["south", "east", "north"].forEach((f, i) => D.stamp(ctx, unitOf(id, gear), f, 31 + i * 62, 86, 1.25, { dpr: DPR }));
+    td.append(c); tr.append(td);
+  }
+  grid.append(tr);
+}
+// ②
+const CONF = [
+  ["角魔＋寬帽：帽子抬高、架在角上", "fiend", { body: I.leather_vest, feet: I.boots, head: { slot: "head", kind: "wide_hat", material: "cloth", color: "#3a3040" } }],
+  ["角魔＋皮帽：帽子變窄、戴在兩角之間", "fiend", { body: I.leather_vest, feet: I.boots, head: { slot: "head", kind: "cap", material: "leather" } }],
+  ["角魔＋角盔：種族角取代裝飾角", "fiend", { body: I.plate_armor, feet: I.greaves, head: { slot: "head", kind: "horned_helm", material: "iron" } }],
+  ["狐族＋兜帽：有耳朵的兜帽", "fox", { body: I.green_leather, feet: I.boots, head: I.hood_brown }],
+  ["狐族＋頭盔：獸耳藏起來", "fox", { body: I.plate_armor, feet: I.greaves, head: I.helmet }],
+  ["狐族＋長袍：尾巴從下襬露出", "fox", { body: I.mage_robe, feet: I.boots }],
+  ["角魔＋披風（背面）：尾巴在披風上", "fiend", { body: I.leather_vest, feet: I.boots, cloak: I.red_cape }],
+  ["精靈＋頭盔：尖耳從兩側伸出", "elf", { body: I.plate_armor, feet: I.greaves, head: I.helmet }],
+  ["鱗族＋兜帽：鰭耳藏起來", "scalefolk", { body: I.green_leather, feet: I.boots, head: I.hood_brown }],
+  ["矮人＋板甲＋大盾", "dwarf", { body: I.plate_armor, feet: I.greaves, head: I.helmet, main_hand: { slot: "main_hand", kind: "axe", material: "steel" }, off_hand: { slot: "off_hand", kind: "shield_kite", form: "tower", material: "steel" } }],
+];
+const conf = document.getElementById("conf");
+for (const [label, race, gear] of CONF) {
+  const [c, ctx] = cv(150, 112);
+  ctx.fillStyle = "#2d323c"; ctx.fillRect(0, 0, 150, 112);
+  const back = label.includes("背面");
+  D.stamp(ctx, unitOf(race, gear), back ? "north" : "south", 42, 106, 1.6, { dpr: DPR });
+  D.stamp(ctx, unitOf(race, gear), back ? "south" : "east", 112, 106, 1.6, { dpr: DPR });
+  const d = document.createElement("div"); d.className = "cell"; d.style.width = "150px"; d.append(c); d.insertAdjacentHTML("beforeend", label); conf.append(d);
+}
+// ③
+const T = 52, field = document.getElementById("field");
+const [fc, fx] = cv(T * 12, T);
+for (let i = 0; i < 12; i++) { fx.fillStyle = i % 2 ? "#8a8a84" : "#7d8a7a"; fx.fillRect(i * T, 0, T, T); }
+const ADV = [OUTFITS[1][1], OUTFITS[3][1], OUTFITS[2][1], OUTFITS[3][1], OUTFITS[1][1], OUTFITS[0][1], OUTFITS[1][1], OUTFITS[0][1], OUTFITS[3][1], OUTFITS[0][1]];
+Object.keys(R.RACES).forEach((id, i) => {
+  const cx = i * T + T / 2;
+  fx.save(); fx.beginPath(); fx.ellipse(cx, T * 0.8, T * 0.34, T * 0.12, 0, 0, Math.PI * 2); fx.fillStyle = "#5aa0ff44"; fx.fill(); fx.lineWidth = 2; fx.strokeStyle = "#5aa0ff"; fx.stroke(); fx.restore();
+  D.stamp(fx, unitOf(id, ADV[i]), "south", cx, T * 0.82, 0.78, { dpr: DPR });
+});
+D.stamp(fx, D.TEMPLATES.bandit, "south", 10 * T + T / 2, T * 0.82, 0.78, { dpr: DPR });
+D.stamp(fx, D.TEMPLATES.summon_skeleton_warrior, "south", 11 * T + T / 2, T * 0.82, 0.78, { dpr: DPR });
+field.append(fc);
+field.insertAdjacentHTML("beforeend", `<div class="sub" style="margin-top:4px">由左到右：${Object.values(R.RACES).map((r) => r.zh).join("、")}｜對照：敵方盜賊、召喚骷髏</div>`);
+// ④ 全組合自測：每族 × 每種頭部裝備（含沒戴、未知 kind）× 三個方向；再加上未知的種族欄位值
+const HEADS = [undefined, ...Object.keys(R.COVERS).map((k) => ({ slot: "head", kind: k, material: "steel" })), { slot: "head", kind: "mystery_hat", material: "cloth" }];
+let n = 0, fails = 0;
+const [tc, tx] = cv(64, 64);
+const looks = Object.values(R.RACES).map((r) => r.look).concat([{ skin: "#ccbbaa", ears: "???", horns: "???", tail: "???", pattern: "???", build: "???", hair: "short" }, { skin: "#ccbbaa" }]);
+for (const look of looks) for (const head of HEADS) for (const f of ["south", "east", "west", "north"]) {
+  n++;
+  try { D.stamp(tx, { look, gear: { body: I.tunic, head } }, f, 32, 60, 0.5, { dpr: 1 }); } catch (e) { fails++; console.error(e); }
+}
+document.getElementById("test").innerHTML = fails === 0
+  ? `<span class="ok">全組合自測通過</span>：${looks.length} 種外觀（10 族＋未知值＋只有膚色）× ${HEADS.length} 種頭部裝備（含沒戴、未知 kind）× 4 個方向 ＝ ${n} 組，全部畫得出來。`
+  : `<span class="bad">自測失敗 ${fails} / ${n}</span>`;
+</script>
+</body>
+</html>

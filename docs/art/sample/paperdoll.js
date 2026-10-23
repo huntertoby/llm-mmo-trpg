@@ -509,6 +509,7 @@ window.PaperDoll = (() => {
     if (side !== 0) [mainX, offX] = [side * 8.5, -side * 8.5];
     const offInFront = gear.off_hand && gear.off_hand.kind?.startsWith("shield");
     ctx.save();
+    if (window.RaceArt) window.RaceArt.build(ctx, look);
     if (side !== 0) ctx.scale(0.9, 1);
     if (gear.cloak && view !== "back") drawCloak(ctx, gear.cloak, view);
     if (view === "back") {
@@ -517,13 +518,22 @@ window.PaperDoll = (() => {
     } else if (gear.main_hand?.kind === "bow" || gear.main_hand?.kind === "staff") {
       // 長武器畫在身體後面一點
     }
+    // 種族部件（可玩種族樣張，raceArt.js；沒有載入或沒有種族欄位時完全不影響）
+    const R = window.RaceArt;
+    if (R && view !== "back") R.tail(ctx, look, view, side);
     drawLegs(ctx, look, gear.feet);
     drawBody(ctx, gear.body, look);
     drawHands(ctx, look, gear.hands);
     if (gear.cloak && view === "back") drawCloak(ctx, gear.cloak, view);
+    if (R && view === "back") R.tail(ctx, look, view, side);
     drawHead(ctx, look, view, side);
+    if (R) R.face(ctx, look, view, side);
     drawHair(ctx, look, view, gear.head);
-    drawHeadgear(ctx, gear.head, view);
+    if (R) R.ears(ctx, look, view, side, gear.head, "under");
+    if (R) R.hat(ctx, look, gear.head, (it) => drawHeadgear(ctx, it, view));
+    else drawHeadgear(ctx, gear.head, view);
+    if (R) R.ears(ctx, look, view, side, gear.head, "over");
+    if (R) R.horns(ctx, look, view, side);
     if (view !== "back") {
       drawWeapon(ctx, gear.main_hand, mainX, true);
       if (gear.off_hand) drawWeapon(ctx, gear.off_hand, offX + (offInFront ? side * 2 : 0), true);
@@ -538,7 +548,7 @@ window.PaperDoll = (() => {
   function stamp(ctx, unit, facing, cx, cy, size = 1, opts = {}) {
     const dpr = opts.dpr ?? 2;
     const W = 64;
-    const H = 64;
+    const H = 72; // 種族樣張：角＋抬高的帽子＋高大體型需要頭上多一點空間
     const off = document.createElement("canvas");
     off.width = W * size * dpr;
     off.height = H * size * dpr;
