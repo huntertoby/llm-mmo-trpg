@@ -3,7 +3,7 @@ import { buildDrawModel } from "../battle/drawModel";
 import { smallView } from "../battle/testFixtures";
 import { DEFAULT_THEME, lookKey, lookValue, mistLevel, pickThemed, themeKey, themeOf, waterTintOf } from "./regionArt";
 import { drawMistTile } from "./cloudRidgeTerrain";
-import { drawObject, objectArtKey, OBJECT_DRAW, type ObjectArtSpec } from "./objectArt";
+import { drawFlammableMark, drawObject, objectArtKey, OBJECT_DRAW, type ObjectArtSpec } from "./objectArt";
 import { drawTile, tileArtKey, TERRAIN_DRAW, type TileArtSpec } from "./terrainArt";
 import { objectArtSpec, tileArtSpec } from "./artSpecs";
 
@@ -205,12 +205,17 @@ describe("雲嶺換皮", () => {
     expect(OBJECTS).toEqual(expect.arrayContaining([...RESKINNED_OBJECTS, ...SKILL_OBJECTS]));
   });
 
-  it("功能特徵保留：可燃物仍有小火苗、受損仍有裂痕（薄冰自己畫裂痕）、橋可橫可直", () => {
+  it("功能特徵保留：可燃小火苗獨立成貼圖、受損仍有裂痕（薄冰自己畫裂痕）、橋可橫可直", () => {
     const plain = mockCtx();
     drawObject(plain.ctx, objSpec({ kind: "crate", flammable: false, ...CLOUD }));
     const burnable = mockCtx();
     drawObject(burnable.ctx, objSpec({ kind: "crate", flammable: true, ...CLOUD }));
-    expect(burnable.calls.length).toBeGreaterThan(plain.calls.length);
+    // 3-38：小火苗是獨立貼圖，不再畫進物件貼圖
+    expect(burnable.calls).toEqual(plain.calls);
+    expect(objectArtKey(objSpec({ kind: "crate", flammable: true }))).toBe(objectArtKey(objSpec({ kind: "crate", flammable: false })));
+    const mark = mockCtx();
+    drawFlammableMark(mark.ctx);
+    expect(mark.calls.length).toBeGreaterThan(3);
     const hurt = mockCtx();
     drawObject(hurt.ctx, objSpec({ kind: "crate", flammable: false, hpStage: 2, ...CLOUD }));
     expect(hurt.calls.length).toBeGreaterThan(plain.calls.length);

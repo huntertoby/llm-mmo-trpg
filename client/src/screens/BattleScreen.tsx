@@ -88,6 +88,7 @@ import {
 } from "../battle/skillTray";
 import { cardPlacement, dialogStartsLow, fitScale } from "../battle/stageLayout";
 import { hasOrders, orderButton } from "../battle/orders";
+import { flameEmphasis } from "../battle/flameMarks";
 import { BattleCanvas } from "../ui/BattleCanvas";
 import { BattleLog, type LogHover } from "../ui/BattleLog";
 import { HoverFloat } from "../ui/HoverFloat";
@@ -308,6 +309,11 @@ export function BattleScreen({ initial, onExit, exitLabel, runMode }: Props) {
     [hero, response.legal_actions, view, skillNames, liveNames],
   );
   const model = useMemo(() => buildDrawModel(shown, heroId, acting, fxSkillsOf(cards)), [shown, heroId, acting, cards]);
+  // 可燃小火苗（3-38）：選取（瞄準中）的技能會點火，或場上已有火時才明顯
+  const flameOn = useMemo(
+    () => flameEmphasis(model, mode?.skillId == null ? null : cards[mode.skillId]),
+    [model, mode, cards],
+  );
   const marks = useMemo(
     () => (busy || view.ended ? [] : telegraphMarks(response.telegraph, view)),
     [busy, view, response.telegraph],
@@ -985,6 +991,7 @@ export function BattleScreen({ initial, onExit, exitLabel, runMode }: Props) {
         <BattleCanvas
           model={model}
           highlights={highlights}
+          flameOn={flameOn}
           scale={scale}
           onTileClick={onTileClick}
           onTileHover={onTileHover}
