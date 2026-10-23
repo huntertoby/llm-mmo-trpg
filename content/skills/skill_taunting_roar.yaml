@@ -16,7 +16,7 @@ effects:
   # 3-24c：被吼的敵人同時被標記（標記的真實製造；隊友對其攻擊有優勢）；3-27：AP 1、冷卻 2；標記與嘲諷都縮成 1 回合才過預算
   - {type: apply_status, status: marked, duration: 1}
 condition: null
-cost: {mana: 0, cooldown: 2}
+cost: {mana: 1, cooldown: 2}
 tags: [taunt, control, shout]
 narrative:
   concept: 用一聲怒吼逼所有靠近的敵人把目光放在自己身上
