@@ -330,15 +330,17 @@ button.primary {
   cursor: row-resize;
 }
 
-.battle-board > .resize-handle.vertical {
+/* 拖曳線外層包著共用說明卡（`.hint-tip`，display: contents），選擇器要穿過它（3-37 前修：
+   10-22 改用共用說明卡後，底部列的拖曳線失去 bottom: 0、跑到畫面中間）。 */
+.battle-board > .hint-tip > .resize-handle.vertical {
   right: 0;
 }
 
-.battle-board > .resize-handle.horizontal {
+.battle-board > .hint-tip > .resize-handle.horizontal {
   bottom: 0;
 }
 
-.battle-hero > .resize-handle.vertical {
+.battle-hero > .hint-tip > .resize-handle.vertical {
   right: -7px;
 }
 
