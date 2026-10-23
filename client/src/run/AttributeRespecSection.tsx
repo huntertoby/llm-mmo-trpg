@@ -63,7 +63,7 @@ export function AttributeRespecSection({ hero, busy, onChoose, campfire = false 
               data-testid="attr-allocate-button"
               onClick={() => void allocate()}
             >
-              確認分配
+              確認分配屬性點
             </button>
             <span className="muted small">還沒分配的點數可以之後再分（營火或下一場戰鬥前）。</span>
           </div>

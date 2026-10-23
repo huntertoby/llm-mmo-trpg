@@ -104,14 +104,14 @@ describe("營火屬性重配", () => {
   it("營火有免費重配按鈕，寫出會退回幾點", () => {
     const html = renderToStaticMarkup(createElement(AttributeRespecSection, { hero, busy: false, onChoose: noop, campfire: true }));
     expect(html).toContain("免費重配屬性點（退回 6 點）");
-    expect(html).not.toContain("確認分配");
+    expect(html).not.toContain("確認分配屬性點");
   });
 
   it("重配後有未分配的點數才出現分配區；非營火且沒有點數時不顯示", () => {
     const refunded = { ...hero, attribute_points: 6, attribute_spent: {} } as unknown as RunHero;
     const html = renderToStaticMarkup(createElement(AttributeRespecSection, { hero: refunded, busy: false, onChoose: noop, campfire: true }));
     expect(html).toContain("分配屬性點");
-    expect(html).toContain("確認分配");
+    expect(html).toContain("確認分配屬性點");
     expect(renderToStaticMarkup(createElement(AttributeRespecSection, { hero, busy: false, onChoose: noop }))).toBe("");
   });
 });
