@@ -49,6 +49,20 @@ describe("composition rules", () => {
     expect(next["effects"]).toEqual([{ type: "charge_through" }, { type: "damage", affects: "self" }]);
   });
 
+  it("puts a must-be-first effect at the front and a must-be-last effect at the end (3-47)", () => {
+    const dash = choice("dash", { composition: { position: "first" } });
+    const gamble = choice("gamble", { composition: { position: "last" } });
+    const damage = choice("damage");
+    const all: FieldSpec = { ...effects, choices: [dash, gamble, damage] };
+    let d: Json = addEffect({}, all, damage);
+    d = addEffect(d, all, dash);
+    d = addEffect(d, all, gamble);
+    expect((d["effects"] as Json[]).map((e) => e["type"])).toEqual(["dash", "damage", "gamble"]);
+    // 之後再加一般效果：夾在「第一個」與「最後一個」之間，不會排到賭注後面
+    d = addEffect(d, all, damage);
+    expect((d["effects"] as Json[]).map((e) => e["type"])).toEqual(["dash", "damage", "damage", "gamble"]);
+  });
+
   it("adds a plain effect without a target when nothing forces one", () => {
     const next = addEffect({}, effects, choice("damage"));
     expect(next["effects"]).toEqual([{ type: "damage" }]);

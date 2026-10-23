@@ -104,3 +104,18 @@ def test_builtin_weapon_skills_that_disagree_with_their_class_are_only_hints() -
     listed = weapon_class_mismatches(RULES, LIB.skills)
     assert listed == sorted(listed)
     assert all(LIB.skills[s].category == "weapon" for s in listed)
+
+
+def _basics_notes(draft: dict[str, Any]) -> tuple[str, ...]:
+    options = draft_options(draft, LIB)
+    return next(s for s in options.steps if s.id == "basics").notes_zh
+
+
+def test_spell_scaling_warns_until_an_effect_is_chosen() -> None:
+    """3-47：縮放屬性的範圍看主要效果，效果沒選時基本設定步驟提示（武器技不需要）。"""
+    spell = {"skeleton": "strike", "category": "spell"}
+    assert any("縮放屬性" in n for n in _basics_notes(spell))
+    with_effect = {**spell, "effects": [{"type": "damage"}]}
+    assert not any("縮放屬性" in n for n in _basics_notes(with_effect))
+    weapon = {"skeleton": "strike", "category": "weapon", "weapon_req": "melee"}
+    assert not any("縮放屬性" in n for n in _basics_notes(weapon))

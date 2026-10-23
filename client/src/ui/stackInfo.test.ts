@@ -86,7 +86,7 @@ describe("戰鬥中主角的技能卡", () => {
 describe("層數名稱元件", () => {
   it("用共用的說明卡包住名稱", () => {
     const html = renderToStaticMarkup(createElement(StackTip, { id: "static_charge" }));
-    expect(html).toContain("hint-tip");
+    expect(html).not.toContain("hint-tip");
     expect(html).toContain("靜電");
   });
 });

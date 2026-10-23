@@ -330,17 +330,17 @@ button.primary {
   cursor: row-resize;
 }
 
-/* 拖曳線外層包著共用說明卡（`.hint-tip`，display: contents），選擇器要穿過它（3-37 前修：
-   10-22 改用共用說明卡後，底部列的拖曳線失去 bottom: 0、跑到畫面中間）。 */
-.battle-board > .hint-tip > .resize-handle.vertical {
+/* 拖曳線貼齊戰場／主角面板的邊（3-47 起 `Hint` 不再外包一層，直接子選擇器可用；
+   排版煙霧檢查會量「拖曳線貼齊底緣／右緣」）。 */
+.battle-board > .resize-handle.vertical {
   right: 0;
 }
 
-.battle-board > .hint-tip > .resize-handle.horizontal {
+.battle-board > .resize-handle.horizontal {
   bottom: 0;
 }
 
-.battle-hero > .hint-tip > .resize-handle.vertical {
+.battle-hero > .resize-handle.vertical {
   right: -7px;
 }
 
@@ -2023,8 +2023,7 @@ button.selected {
   gap: 6px;
 }
 
-.turn-controls-row > button,
-.turn-controls-row > .hint-tip > button {
+.turn-controls-row > button {
   flex: 0 0 auto;
 }
 
@@ -2034,8 +2033,7 @@ button.selected {
   margin-top: 0;
 }
 
-.turn-controls .fallback > button,
-.turn-controls .fallback > .hint-tip > button {
+.turn-controls .fallback > button {
   width: 100%;
   font-size: 12px;
   padding: 4px 6px;
@@ -2049,7 +2047,17 @@ button.selected {
 }
 
 .turn-controls .speed-control button {
+  white-space: nowrap; /* 窄螢幕（欄寬 220）時按鈕文字不折成兩行 */
   padding: 2px 5px;
+}
+
+/* 窄螢幕右欄只有 220px：六顆播放按鈕再緊一點，才不會超出欄寬與視窗右緣（3-47 煙霧檢查發現） */
+.battle-screen.narrow .turn-controls .speed-control {
+  gap: 2px;
+}
+
+.battle-screen.narrow .turn-controls .speed-control button {
+  padding: 2px 3px;
 }
 
 /* 詢問視窗：水平置中、靠上；「移到下方」時靠下（在技能列上方） */
@@ -2471,14 +2479,12 @@ button.selected {
   gap: 6px;
 }
 
-.resident-actions > .resident-button,
-.resident-actions > .hint-tip > .resident-button {
+.resident-actions > .resident-button {
   padding: 8px 6px;
   font-size: 14px;
 }
 
-.resident-actions > .end-turn-button,
-.resident-actions > .hint-tip > .end-turn-button {
+.resident-actions > .end-turn-button {
   grid-column: 1 / -1;
   font-size: 18px;
   padding: 10px 12px;
@@ -2492,8 +2498,7 @@ button.selected {
   position: relative;
 }
 
-.more-actions > button,
-.more-actions > .hint-tip > button {
+.more-actions > button {
   width: 100%;
   font-size: 12px;
   padding: 4px 6px;
@@ -3398,11 +3403,7 @@ button.selected {
   color: #7fd08a;
 }
 
-/* 一句話說明（3-32b，`Hint`）：外框不參與版面；卡片是只有文字的小浮動卡 */
-.hint-tip {
-  display: contents;
-}
-
+/* 一句話說明（3-32b，`Hint`）：3-47 起不產生外層元素；卡片是只有文字的小浮動卡 */
 .hint-tip-text {
   white-space: pre-line;
 }
@@ -3546,20 +3547,17 @@ button.selected {
   gap: 4px;
 }
 
-.battle-bottom.short .resident-actions > .resident-button,
-.battle-bottom.short .resident-actions > .hint-tip > .resident-button {
+.battle-bottom.short .resident-actions > .resident-button {
   padding: 3px 6px;
   font-size: 13px;
 }
 
-.battle-bottom.short .resident-actions > .end-turn-button,
-.battle-bottom.short .resident-actions > .hint-tip > .end-turn-button {
+.battle-bottom.short .resident-actions > .end-turn-button {
   padding: 4px 12px;
   font-size: 15px;
 }
 
-.battle-bottom.short .turn-controls .fallback > button,
-.battle-bottom.short .turn-controls .fallback > .hint-tip > button {
+.battle-bottom.short .turn-controls .fallback > button {
   padding: 2px 6px;
 }
 
