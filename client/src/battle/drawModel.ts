@@ -17,6 +17,7 @@ import { chargeCountdown } from "./followup";
 import { auraTiles, isTotem, remainingRounds } from "./summons";
 import { onField, unitMarkers } from "./units";
 import { runeDraws, type RuneDraw } from "./runes";
+import type { FxSkills } from "./fxSkills";
 import { zoneDraws, type ZoneDraw } from "./zones";
 
 /** 殘影分身（外觀款式 afterimage）複製召喚者的外觀：回傳召喚者的紙娃娃輸入；其他單位或找不到召喚者為 `undefined`。 */
@@ -124,6 +125,14 @@ export interface TrapDraw {
   color: number;
   /** 被揭露的敵方陷阱（Phase 3C-6a；和我方陷阱用不同記號與顏色）。 */
   revealed: boolean;
+  /** 放置者是不是目前玩家的陣營（3-36b：外圈我方藍實線、敵方紅虛線加「!」）。 */
+  mine: boolean;
+  /** 觸發方式（3-36b）：`enter` 踩到觸發、`delay` 倒數；技能表查不到或不認得一律 `enter`。 */
+  trigger: "enter" | "delay";
+  /** 陷阱技能的元素（顏色）；查不到為 `null`（灰色）。 */
+  element: string | null;
+  /** 剩餘回合（`delay` 時畫徽章）。 */
+  remaining: number;
 }
 
 /** 尚未被取用的源泉格（Phase 3C-4a；3C-6a 畫在地圖上）。 */
@@ -198,6 +207,7 @@ export function buildDrawModel(
   view: BattleView,
   heroId: string,
   activeId: string | null | undefined = undefined,
+  skills?: FxSkills,
 ): DrawModel {
   const acting = activeId === undefined ? view.active_unit : activeId;
   const tiles: TileDraw[] = view.tiles.map((t) => {
@@ -272,7 +282,17 @@ export function buildDrawModel(
     .sort((a, b) => Number(b.downed) - Number(a.downed) || a.y - b.y);
   const traps: TrapDraw[] = view.traps.map((t) => {
     const revealed = t.team !== view.team;
-    return { x: t.pos.x, y: t.pos.y, color: revealed ? HIGHLIGHT.trap_revealed : HIGHLIGHT.trap, revealed };
+    const fx = skills?.(t.skill_id);
+    return {
+      x: t.pos.x,
+      y: t.pos.y,
+      color: revealed ? HIGHLIGHT.trap_revealed : HIGHLIGHT.trap,
+      revealed,
+      mine: !revealed,
+      trigger: fx?.trapTrigger === "delay" ? "delay" : "enter",
+      element: fx?.element ?? null,
+      remaining: t.remaining,
+    };
   });
   const wells: WellDraw[] = (view.source_wells ?? []).map((p) => ({ x: p.x, y: p.y }));
   const seen = new Set<string>();
@@ -287,7 +307,7 @@ export function buildDrawModel(
       }
     }
   }
-  const zones = zoneDraws(view);
+  const zones = zoneDraws(view, skills);
   const runes = runeDraws(view);
   const goalMarkers = objectiveMarkers(view.objective);
   return { width: view.width, height: view.height, tiles, objects, units, traps, auras, zones, runes, wells, markers: goalMarkers };

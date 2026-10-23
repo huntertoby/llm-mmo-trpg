@@ -12,6 +12,8 @@ export interface RowLayer {
   badges: Container;
   traps: Container;
   units: Container;
+  /** 擋視線表面（煙霧、黑暗）的上層霧：在單位之上（Phase 3-36b）。 */
+  veil: Container;
 }
 
 function makeRow(): RowLayer {
@@ -23,8 +25,9 @@ function makeRow(): RowLayer {
     badges: new Container(),
     traps: new Container(),
     units: new Container(),
+    veil: new Container(),
   };
-  row.root.addChild(row.ground, row.deco, row.objects, row.badges, row.traps, row.units);
+  row.root.addChild(row.ground, row.deco, row.objects, row.badges, row.traps, row.units, row.veil);
   return row;
 }
 

@@ -3457,6 +3457,10 @@ export interface components {
              * @default false
              */
             partial: boolean;
+            /** Trap Trigger */
+            trap_trigger?: string | null;
+            /** Zone Element */
+            zone_element?: string | null;
         };
         /**
          * SkillLevelInfo

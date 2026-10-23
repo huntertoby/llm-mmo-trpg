@@ -156,10 +156,14 @@ describe("程式繪製（假 Canvas）", () => {
     const kinds = [...Object.keys(OBJECT_DRAW), "brand_new_object"];
     for (const kind of kinds) {
       for (const flammable of [false, true]) {
-        const spec: ObjectArtSpec = { kind, x: 3, y: 4, joinL: true, joinR: false, vertical: true, flammable };
-        const { ctx, calls } = mockCtx();
-        expect(() => drawObject(ctx, spec)).not.toThrow();
-        expect(calls.length).toBeGreaterThan(3);
+        for (const turnsLeft of [null, 1, 3]) {
+          for (const hpStage of [0, 1, 2] as const) {
+            const spec: ObjectArtSpec = { kind, x: 3, y: 4, joinL: true, joinR: false, vertical: true, flammable, turnsLeft, hpStage };
+            const { ctx, calls } = mockCtx();
+            expect(() => drawObject(ctx, spec)).not.toThrow();
+            expect(calls.length).toBeGreaterThan(3);
+          }
+        }
       }
     }
     // 內建的 13 種物件都有畫法，未知的退回灰色六角形
@@ -180,7 +184,7 @@ describe("程式繪製（假 Canvas）", () => {
     expect(run(1)).not.toEqual(run(7));
     const o = (): string[] => {
       const { ctx, calls } = mockCtx();
-      drawObject(ctx, { kind: "rubble", x: 2, y: 2, joinL: false, joinR: false, vertical: false, flammable: false });
+      drawObject(ctx, { kind: "rubble", x: 2, y: 2, joinL: false, joinR: false, vertical: false, flammable: false, turnsLeft: null, hpStage: 0 });
       return calls;
     };
     expect(o()).toEqual(o());

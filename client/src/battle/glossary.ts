@@ -68,7 +68,9 @@ export const statusLook = (id: string): StatusLook | undefined => glossaryEntry(
 export const stackName = (id: string): string => glossaryName("stacks", id);
 export const reactionName = (id: string): string => glossaryName("reactions", id);
 export const surfaceName = (id: string): string => glossaryName("surfaces", id);
-export const objectName = (id: string): string => glossaryName("objects", id);
+/** 擋視線的表面（煙霧、黑暗…；內容資料的 `blocks_sight`）：單位之上多畫一層霧。 */
+export const surfaceBlocksSight = (id: string): boolean => glossaryHasTag("surfaces", id, "blocks_sight");
+export const objectName =(id: string): string => glossaryName("objects", id);
 export const elementName = (id: string): string => glossaryName("elements", id);
 export const effectName = (id: string): string => glossaryName("effects", id);
 export const conditionName = (id: string): string => glossaryName("conditions", id);

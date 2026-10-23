@@ -27,7 +27,7 @@ function record(spec: Partial<ObjectArtSpec>): Rec {
       return true;
     },
   }) as unknown as CanvasRenderingContext2D;
-  drawObject(ctx, { kind: "low_wall", x: 0, y: 0, joinL: false, joinR: false, vertical: false, flammable: false, ...spec });
+  drawObject(ctx, { kind: "low_wall", x: 0, y: 0, joinL: false, joinR: false, vertical: false, flammable: false, turnsLeft: null, hpStage: 0, ...spec });
   return rec;
 }
 

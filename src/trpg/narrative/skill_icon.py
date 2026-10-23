@@ -125,6 +125,10 @@ class SkillIcon(_Model):
     """被動的 ``trigger.event`` 或反應的 ``reaction.event``。"""
     modifier: IconModifier | None
     partial: bool = False
+    trap_trigger: str | None = None
+    """陷阱技能的觸發方式（``trap.trigger``：``enter``／``delay``）；非陷阱技能為 ``None``。"""
+    zone_element: str | None = None
+    """持續區域技能的區域效果（``zone`` 效果裡的子效果）的第一個元素；沒有時為 ``None``。"""
 
 
 # ---- 容錯的取值 ----------------------------------------------------------------------------
@@ -308,6 +312,17 @@ def _trigger(skill: Mapping[str, Any], kind: str) -> str | None:
     return None
 
 
+def _zone_element(raw_effects: Any) -> str | None:
+    for raw in _seq(raw_effects):
+        e = _map(raw)
+        if e.get("type") != "zone":
+            continue
+        found = _elements_of(e.get("effects"))
+        if found:
+            return found[0]
+    return None
+
+
 def icon_of(skill: Mapping[str, Any]) -> SkillIcon:
     """技能定義 JSON（可以缺欄位）→ 圖示資料；永遠回傳，不認得的欄位退回預設。"""
     kind = _choice(skill.get("kind"), _KINDS, "active")
@@ -338,6 +353,8 @@ def icon_of(skill: Mapping[str, Any]) -> SkillIcon:
         trigger=_trigger(skill, kind),
         modifier=_modifier(modifiers),
         partial=partial and kind != "modifier" and not modifiers,
+        trap_trigger=_text(_map(skill.get("trap")).get("trigger")),
+        zone_element=_zone_element(skill.get("effects")),
     )
 
 

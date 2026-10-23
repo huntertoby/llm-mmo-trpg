@@ -3,6 +3,7 @@
 import type { DrawModel, ObjectDraw, TileDraw } from "../battle/drawModel";
 import { tileAt } from "../battle/drawModel";
 import { terrainStyle } from "../battle/glossary";
+import { hpStageOf } from "./fieldFx";
 import type { ObjectArtSpec } from "./objectArt";
 import { hasTerrainArt, type Sides, type TileArtSpec } from "./terrainArt";
 
@@ -52,6 +53,8 @@ export function objectArtSpec(o: ObjectDraw, kinds: ReadonlyMap<string, string>)
     joinR: at(1, 0),
     vertical: (at(0, -1) || at(0, 1)) && !at(-1, 0) && !at(1, 0),
     flammable: o.flammable,
+    turnsLeft: o.expiresIn,
+    hpStage: hpStageOf(o.hpRatio),
   };
 }
 
