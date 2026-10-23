@@ -4104,6 +4104,14 @@
             "type": "array",
             "title": "Problems",
             "default": []
+          },
+          "effect_fixes": {
+            "items": {
+              "$ref": "#/components/schemas/EffectFix"
+            },
+            "type": "array",
+            "title": "Effect Fixes",
+            "default": []
           }
         },
         "additionalProperties": false,
@@ -4114,6 +4122,38 @@
         ],
         "title": "DraftOptions",
         "description": ":func:`~trpg.skillgen.options.draft_options` 的結果：前置步驟都完成的步驟（依序），以及\n第一個還沒完成的步驟 ``next_step``（全部完成時為 ``None``）。"
+      },
+      "EffectFix": {
+        "properties": {
+          "index": {
+            "type": "integer",
+            "title": "Index"
+          },
+          "value": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Value"
+          },
+          "reason_zh": {
+            "type": "string",
+            "title": "Reason Zh",
+            "default": ""
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "index",
+          "value"
+        ],
+        "title": "EffectFix",
+        "description": "草稿裡已加入的效果，對象不合法時的修正建議（3-48h）：第 ``index`` 個效果的對象改成 ``value``\n（沒有合理的合法對象時為 ``None``）。前端照縮放屬性的做法自動套用。"
       },
       "Element": {
         "type": "string",
@@ -4464,6 +4504,11 @@
           "plain_value": {
             "type": "boolean",
             "title": "Plain Value",
+            "default": false
+          },
+          "auto_generated": {
+            "type": "boolean",
+            "title": "Auto Generated",
             "default": false
           },
           "locked": {

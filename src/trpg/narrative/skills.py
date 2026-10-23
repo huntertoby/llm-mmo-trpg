@@ -636,16 +636,16 @@ def _zone(lib: ContentLibrary, skill: SkillDef, spec: EffectSpec) -> str:
     return text
 
 
-def _place_trap(_lib: ContentLibrary, skill: SkillDef, _spec: EffectSpec) -> str:
+def _place_trap(lib: ContentLibrary, skill: SkillDef, _spec: EffectSpec) -> str:
+    """放置陷阱（3-48h）：寫出「踩到時」實際會結算的效果，例如「放置陷阱：敵人踩到時，造成 …」。"""
     trap = skill.trap
     assert trap is not None
-    trigger = (
-        f"敵人踩上時觸發（{trap.rounds} 輪後消失）"
-        if trap.trigger == "enter"
-        else (f"{trap.rounds} 輪後引爆")
-    )
     shape = {"single": "該格", "cross": "十字範圍", "square3": "3×3 範圍"}[trap.shape]
-    return f"放置隱藏陷阱：{trigger}，以{shape}結算其餘效果"
+    then = "、".join(effect_summary(lib, skill, e) for e in skill.effects if e.type != "place_trap")
+    result = f"以{shape}為中心，{then}" if then else "（還沒有踩到後的效果）"
+    if trap.trigger == "enter":
+        return f"放置隱藏陷阱（{trap.rounds} 輪後消失）：敵人踩到時，{result}"
+    return f"放置隱藏陷阱：{trap.rounds} 輪後引爆，{result}"
 
 
 def _grant_ap(_lib: ContentLibrary, _skill: SkillDef, spec: EffectSpec) -> str:

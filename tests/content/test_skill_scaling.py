@@ -33,7 +33,7 @@ def test_every_builtin_skill_scales_with_an_allowed_attribute(skill: SkillDef) -
 
 
 def test_the_builtin_table_covers_every_skill() -> None:
-    assert len(BUILTIN) == 218
+    assert len(BUILTIN) == 219
     sources = {LIB.scaling_basis(s).source for s in BUILTIN if s.category == "spell"}
     assert sources == {"effect", "tags", "override", "body"}
 

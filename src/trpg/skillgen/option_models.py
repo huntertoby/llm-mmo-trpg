@@ -32,6 +32,7 @@ __all__ = [
     "STEP_IDS",
     "Choice",
     "DraftOptions",
+    "EffectFix",
     "FieldSpec",
     "FieldType",
     "StepId",
@@ -142,6 +143,9 @@ class FieldSpec(_Model):
     plain_value: bool = False
     """單選欄位的值一律是純值（不是 ``{"type": ...}`` 物件），即使欄位名在 ``OBJECT_CHOICE_FIELDS``
     裡（例：陷阱的觸發範圍 ``trap.shape`` 是形狀 ID 字串，不是技能的形狀物件；3-48c 後修）。"""
+    auto_generated: bool = False
+    """玩家模式自動產生值、不顯示這個欄位（例：戰場變奏的型態代碼；開發者模式照舊顯示讓人填；
+    3-48h）。前端新增列表項目時產生唯一的值。"""
     locked: bool = False
     """鎖定（Phase 3H-6）：這個欄位的值由規則決定、玩家不能改（例：武器技的縮放屬性看手上武器）。
     ``choices`` 只有規則決定的那一個；畫面唯讀顯示，並把草稿的值對齊它。"""
@@ -183,6 +187,15 @@ class StepOptions(_Model):
     notes_zh: tuple[str, ...] = ()
 
 
+class EffectFix(_Model):
+    """草稿裡已加入的效果，對象不合法時的修正建議（3-48h）：第 ``index`` 個效果的對象改成 ``value``
+    （沒有合理的合法對象時為 ``None``）。前端照縮放屬性的做法自動套用。"""
+
+    index: int
+    value: str | None
+    reason_zh: str = ""
+
+
 class DraftOptions(_Model):
     """:func:`~trpg.skillgen.options.draft_options` 的結果：前置步驟都完成的步驟（依序），以及
     第一個還沒完成的步驟 ``next_step``（全部完成時為 ``None``）。"""
@@ -191,3 +204,5 @@ class DraftOptions(_Model):
     next_step: StepId | None
     problems: tuple[str, ...] = ()
     """已填的內容不在合法選項內的地方（中文；例如形狀不是骨架允許的形狀）。"""
+    effect_fixes: tuple[EffectFix, ...] = ()
+    """已加入的效果裡，對象會讓驗證器報錯的修正建議（3-48h；前端自動套用）。"""

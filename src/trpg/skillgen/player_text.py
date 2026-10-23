@@ -43,6 +43,7 @@ _LIST_ZH = {"effects": "效果", "modifiers": "修正規則", "variants": "變�
 _WORD = re.compile(r"(?<![A-Za-z0-9_])[A-Za-z_][A-Za-z0-9_]*(?:\.[A-Za-z_][A-Za-z0-9_]*)*")
 _MODIFIER = re.compile(r"\bmodifier\.([A-Za-z_]+)")
 _VARIANT_PATH = re.compile(r"\bvariants\.[A-Za-z0-9_]+\.")
+_VARIANT_ID = re.compile(r"變奏 [A-Za-z0-9_]+")
 
 # 片語（含空白或標點，先換）
 _PHRASES: tuple[tuple[str, str], ...] = (
@@ -57,7 +58,29 @@ _PHRASES: tuple[tuple[str, str], ...] = (
     ("Input should be a valid string", "必須是文字"),
     ("Input should be a valid boolean", "必須是是／否"),
 )
+_PYDANTIC_PHRASES: tuple[tuple[str, str], ...] = (
+    (", unable to parse string as an integer", ""),
+    (", unable to interpret input", ""),
+    ("Extra inputs are not permitted", "這個欄位在這裡不能填"),
+    ("Input should be a valid number", "必須是數字"),
+    ("Input should be a valid decimal", "必須是數字"),
+    ("Input should be a valid list", "必須是列表"),
+    ("Input should be a valid array", "必須是列表"),
+    ("Input should be a valid tuple", "必須是列表"),
+    ("Input should be a valid dictionary", "格式不對"),
+    ("Input should be None", "這裡不能填"),
+    ("Unable to extract tag using discriminator", "缺少類型 "),
+    ("Input should be a valid", "格式不對"),
+)
+"""pydantic 的英文錯誤訊息（先於 :data:`_PYDANTIC` 換，3-48h）。"""
+_DICT_OR_INSTANCE = re.compile(r"Input should be a valid dictionary or instance of \w+")
 _PYDANTIC = (
+    (re.compile(r"Input tag '[^']*' found using '[^']*' does not match any of the expected tags[^；。]*"), "類型不在可選範圍內"),
+    (re.compile(r"String should have at least (\d+) characters?"), r"至少要 \1 個字"),
+    (re.compile(r"String should have at most (\d+) characters?"), r"最多 \1 個字"),
+    (re.compile(r"String should match pattern [^；。]*"), "格式不對"),
+    (re.compile(r"(?:Tuple|List|Set) should have at least (\d+) items?[^；。]*"), r"至少要 \1 項"),
+    (re.compile(r"(?:Tuple|List|Set) should have at most (\d+) items?[^；。]*"), r"最多 \1 項"),
     (re.compile(r"Input should be less than or equal to (\d+)"), r"不能大於 \1"),
     (re.compile(r"Input should be greater than or equal to (\d+)"), r"不能小於 \1"),
     (re.compile(r"Input should be less than (\d+)"), r"必須小於 \1"),
@@ -130,6 +153,49 @@ _WORDS_ZH = {
 }
 
 
+_FIELD_ZH: dict[str, str] = {
+    "actions": "基本動作", "activation": "啟動方式", "add_effect": "加一個效果",
+    "add_element": "加元素", "add_tags": "加標籤", "all": "敵我雙方", "all_attacks": "所有攻擊",
+    "all_skills": "所有技能", "allow_self_target": "包含自己", "amount": "數量", "anchor": "錨點",
+    "ap_delta": "AP 調整", "applies_to": "套用對象", "area_delta": "範圍調整", "bound": "綁定",
+    "by": "依據", "cap_permille": "上限", "cast_flavor": "施放描述",
+    "caster_adjacent_blocker": "施放者身旁有牆", "caster_high_ground": "施放者居高",
+    "caster_surface": "施放者所在表面", "chance_permille": "成功率", "change": "改變",
+    "collision_dice": "撞擊骰", "concept": "概念", "condition": "條件", "cooldown_delta": "冷卻調整",
+    "count": "顆數", "created_by": "建立者", "crit_range": "暴擊範圍",
+    "damage_multiplier_permille": "傷害倍率", "damage_permille": "傷害加成",
+    "description_zh": "說明", "distance": "距離", "effect": "效果", "effects": "效果",
+    "empty_slots_cap": "空欄位上限", "event": "時機", "exclusive_group": "互斥群組",
+    "explode": "爆骰", "followup": "第二段", "grant_pierce": "獲得穿透",
+    "heal_permille": "治療加成", "hit_bonus": "命中加成", "hp_percent": "生命代價",
+    "hp_permille": "生命比例", "id": "代號", "include_caster": "包含施放者", "index": "順序",
+    "infusion": "灌注", "jump_range": "跳躍距離", "jumps": "跳躍次數", "k": "取高顆數",
+    "knock_prone": "擊倒", "landing": "落點", "lifesteal_permille": "吸血", "mana": "法力",
+    "max_distance": "最大距離", "max_hp_permille": "最大生命比例", "max_per_round": "每輪上限",
+    "modifiers": "修正規則", "multiplier_permille": "倍率", "n": "次數", "name_zh": "名稱",
+    "narrative": "敘述", "object": "物件", "on_hit": "命中後", "on_hit_effects": "命中後效果",
+    "on_kill": "擊殺時", "on_miss": "失手時", "origin": "來源", "owner_id": "擁有者",
+    "parents": "親代", "per_stack_permille": "每層加成", "per_step_permille": "每步加成",
+    "per_turn_limit": "每回合上限", "permille": "比例", "pierce": "穿透", "power_permille": "威力",
+    "provenance": "出處", "push_distance_delta": "推擊距離調整", "radius": "半徑", "rank": "等第",
+    "release": "釋放時機", "resource": "資源", "rule": "規則", "scale": "倍率來源",
+    "scaling": "縮放", "schema_version": "資料版本", "scope": "範圍",
+    "self_damage_permille_of_hit": "反噬自傷", "self_status": "自身狀態", "shape_to": "形狀轉換",
+    "sides": "面數", "size": "大小", "skill": "技能", "skill_tags": "技能標籤", "source": "源力",
+    "speed": "速度", "splash": "波及", "split_heal": "聖光雙效", "stack": "層數", "stacks": "層數",
+    "stamina": "耐力", "status": "狀態", "summon_attack_dice": "召喚物攻擊骰",
+    "summon_damage_permille": "召喚物傷害", "summon_duration_delta": "召喚物持續調整",
+    "summon_hp_permille": "召喚物生命", "summon_limit_delta": "召喚物上限調整",
+    "surface": "表面", "tag": "標籤", "tags": "標籤", "target": "目標",
+    "target_surface": "目標點所在表面", "tradeable": "可交易", "trait": "特性", "trap": "陷阱",
+    "trigger": "觸發", "unit": "單位", "when": "時機", "which": "範圍", "name": "名稱",
+    "hp": "生命", "max": "最大", "min": "最小", "weapon": "武器",
+    "caster": "施放者", "moving": "移動", "fixed": "固定", "tile": "格子", "delay": "延遲",
+    "enter": "踩到時",
+}
+"""技能定義的欄位名 → 中文（schema 錯誤訊息的位置用；3-48h：不露欄位代號）。"""
+
+
 def _key(value: Any) -> str:
     return str(getattr(value, "value", value))
 
@@ -162,6 +228,8 @@ def _tables(library: ContentLibrary) -> dict[str, str]:
         for item in group:
             if hasattr(item, "name_zh"):
                 names[_key(item.id)] = item.name_zh
+    for key, zh in _FIELD_ZH.items():
+        names.setdefault(key, zh)  # 欄位名（schema 錯誤的位置用）：不蓋掉 ID 的中文名
     names.update(_WORDS_ZH)  # 固定用語優先（例：melee 一律是「近戰武器」）
     return names
 
@@ -176,9 +244,14 @@ def plainify(text: str, library: ContentLibrary) -> str:
     """把一段檢查文字裡的欄位名、ID、列舉值換成中文。"""
     names = _tables(library)
     out = _VARIANT_PATH.sub("變奏：", text)
+    out = _VARIANT_ID.sub("這個變奏", out)  # 型態代碼玩家模式自動產生、不顯示（3-48h）
+    out = out.replace("NdM", "「顆數d面數」")
     out = _MODIFIER.sub(lambda m: names.get(m.group(1), m.group(1)), out)
     out = _INDEXED.sub(lambda m: f"第 {int(m.group(2)) + 1} 個{_LIST_ZH[m.group(1)]}", out)
     for phrase, zh in _PHRASES:
+        out = out.replace(phrase, zh)
+    out = _DICT_OR_INSTANCE.sub("格式不對", out)
+    for phrase, zh in _PYDANTIC_PHRASES:
         out = out.replace(phrase, zh)
     for pattern, zh in _PYDANTIC:
         out = pattern.sub(zh, out)

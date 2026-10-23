@@ -222,7 +222,21 @@ export function addModifier(container: Json, spec: FieldSpec, base = ""): Json {
   const path = joinPath(base, spec.field);
   const list = listOf(container, path);
   if (spec.max_count != null && list.length >= spec.max_count) return container;
-  return setPath(container, path, [...list, prefill({}, spec.fields)]);
+  return setPath(container, path, [...list, withAutoValues(prefill({}, spec.fields), spec.fields, list)]);
+}
+
+/** `auto_generated` 的文字欄位（例：戰場變奏的型態代碼）：玩家模式不顯示，新增項目時自動產生
+ * 同一列表內不重複的值（`form_1`、`form_2`……）；開發者模式仍可自己改。 */
+export function withAutoValues(item: Json, fields: readonly FieldSpec[], siblings: readonly Json[]): Json {
+  let out = item;
+  for (const f of fields) {
+    if (f.auto_generated !== true || f.type !== "text" || out[f.field] !== undefined) continue;
+    const used = new Set(siblings.map((s) => s[f.field]));
+    let n = 1;
+    while (used.has(`form_${n}`)) n += 1;
+    out = { ...out, [f.field]: `form_${n}` };
+  }
+  return out;
 }
 
 export function replaceItem(container: Json, spec: FieldSpec, index: number, item: Json, base = ""): Json {
@@ -286,6 +300,24 @@ export function autoSingles(container: Json, fields: readonly FieldSpec[], base 
     out = selectChoice(out, spec, only, base);
   }
   return out;
+}
+
+/** 已加入的效果，對象會讓驗證器報錯時（骨架禁止、自身形狀不打敵人……）改成後端建議的合法對象
+ * （3-48h；照 `conformScaling` 的做法，每次選項更新都套用）。沒有建議（沒有合理的合法對象）就維持原樣，
+ * 由檢查面板說明。沒有任何變動時回傳原物件。 */
+export function conformAffects(draft: Json, options: DraftOptions): Json {
+  const fixes = options.effect_fixes ?? [];
+  const effects = draft["effects"];
+  if (fixes.length === 0 || !Array.isArray(effects)) return draft;
+  let changed = false;
+  const next = effects.map((effect, index) => {
+    const fix = fixes.find((f) => f.index === index);
+    if (fix === undefined || fix.value === null || fix.value === undefined || !isJson(effect)) return effect;
+    if (effect["affects"] === fix.value) return effect;
+    changed = true;
+    return { ...effect, affects: fix.value };
+  });
+  return changed ? { ...draft, effects: next } : draft;
 }
 
 function findField(options: DraftOptions, name: string): FieldSpec | undefined {

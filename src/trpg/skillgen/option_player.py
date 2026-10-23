@@ -25,6 +25,7 @@ from trpg.skillgen.option_models import Choice, FieldSpec
 from trpg.skillgen.player_text import plainify
 
 __all__ = [
+    "fill_placeholders",
     "content_dev_texts",
     "has_dev_text",
     "localize",
@@ -52,6 +53,18 @@ def _core_values(library: ContentLibrary) -> dict[str, str]:
         if isinstance(value, int) and not isinstance(value, bool):
             out[name] = str(value)
     return out
+
+
+def fill_placeholders(text: str, library: ContentLibrary) -> str:
+    """玩家語氣說明裡的 ``{名稱}`` 由程式依核心規則填入（3-48h：數值與清單不寫死）：
+    ``{rune_max_rounds}`` 符文持續上限、``{summon_traits}`` 召喚物小特性的中文名；
+    ``{<core 的整數欄位>}`` 也可用。"""
+    if "{" not in text:
+        return text
+    core = library.ruleset.core
+    values = _core_values(library)
+    values["summon_traits"] = "、".join(t.name_zh for t in core.summon_traits.values())
+    return re.sub(r"\{([a-z_]+)\}", lambda m: values.get(m.group(1), m.group(0)), text)
 
 
 def localize(text: str, library: ContentLibrary, names: dict[str, str] | None = None) -> str:
@@ -90,7 +103,7 @@ def _player_text(
         return text, ""
     rewritten = library.workshop_text.lookup(text, scope)
     if rewritten is not None:
-        return rewritten, text
+        return fill_placeholders(rewritten, library), text
     if not has_dev_text(text):
         return text, ""
     cleaned = localize(text, library, names)
