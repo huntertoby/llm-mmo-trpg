@@ -38,6 +38,8 @@ export function unit(id: string, team: "ally" | "enemy", x: number, y: number, o
     weapon_id: "one_handed_sword",
     weapon_class: "melee",
     weapon_traits_zh: [],
+    offhand_name_zh: "",
+    offhand_traits_zh: [],
     ammo: 0,
     magazine: 0,
     tags: [],

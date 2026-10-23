@@ -32,9 +32,10 @@ from trpg.engine.setup import UnitSpawn
 from trpg.engine.skills.conditions import Subject
 from trpg.engine.skills.targeting import compute_area, shape_reach
 from trpg.engine.view import project_for
-from trpg.roguelite.start import ChoiceError, check_test_equipment
+from trpg.roguelite import ChoiceError
+from trpg.roguelite.start import check_test_equipment
 from trpg.shared.errors import IllegalActionError
-from trpg.shared.types import Attribute, Pos, Team
+from trpg.shared.types import Attribute, Pos, Team, UnitId
 
 SHIELD_ITEM = {
     "round_shield": "item_offhand_round_shield",
@@ -60,7 +61,7 @@ def holding(spawn: UnitSpawn, offhand_id: str) -> UnitSpawn:
     return spawn.model_copy(update={"equipment": loadout_of(offhand_id)})
 
 
-def give_offhand(state: BattleState, unit_id: str, offhand_id: str) -> None:
+def give_offhand(state: BattleState, unit_id: UnitId, offhand_id: str) -> None:
     """直接把副手寫進單位的裝備狀態（改資料參數的測試用）。"""
     unit = state.units[unit_id]
     unit.gear = dataclasses.replace(unit.gear, offhand=library().offhands[offhand_id])

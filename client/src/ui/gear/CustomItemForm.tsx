@@ -78,6 +78,26 @@ export function CustomItemForm({ catalog, slot, draft, onChange, onEquip, equipp
             </label>
           )}
           {slot.slot_type === "offhand" && (
+            <label>
+              副手種類
+              <select value={draft.offhand} onChange={(e) => patch({ offhand: e.target.value })}>
+                <option value="">（只有詞條，沒有基礎特性）</option>
+                {catalog.offhands.map((o) => (
+                  <option key={o.id} value={o.id}>
+                    {o.name_zh}
+                  </option>
+                ))}
+              </select>
+            </label>
+          )}
+          {slot.slot_type === "offhand" && draft.offhand !== "" && (
+            <div className="gear-offhand-traits muted small" data-testid="custom-offhand-traits">
+              {(catalog.offhands.find((o) => o.id === draft.offhand)?.traits_zh ?? []).map((line) => (
+                <div key={line}>{line}</div>
+              ))}
+            </div>
+          )}
+          {slot.slot_type === "offhand" && (
             <label className="gear-check">
               <input type="checkbox" checked={draft.shield} onChange={(e) => patch({ shield: e.target.checked })} />
               是盾（標籤 shield，才能掛「限盾」詞條）

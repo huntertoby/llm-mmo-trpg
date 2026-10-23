@@ -22,6 +22,7 @@ __all__ = [
     "GearCustomItem",
     "GearItemInfo",
     "GearItemLine",
+    "GearOffhandInfo",
     "GearSlotInfo",
     "GearWeaponInfo",
 ]
@@ -91,6 +92,14 @@ class GearWeaponInfo(_ApiModel):
     two_handed: bool
 
 
+class GearOffhandInfo(_ApiModel):
+    """副手種類（Phase 3I-2，``offhands.yaml``）：手動組副手時的選單。"""
+
+    id: str
+    name_zh: str
+    traits_zh: tuple[str, ...] = ()
+
+
 class GearAffixInfo(_ApiModel):
     """白名單的一條詞條。``name_zh`` 含 ``{n}``（數值）；沒有 ``value_min`` 的是固定效果。"""
 
@@ -139,6 +148,7 @@ class GearCatalog(_ApiModel):
     items: tuple[GearItemInfo, ...]
     affixes: tuple[GearAffixInfo, ...]
     weapons: tuple[GearWeaponInfo, ...]
+    offhands: tuple[GearOffhandInfo, ...] = ()
     max_affixes_per_item: int
     max_cost_affixes: int
     diminishing_permille: tuple[int, ...]

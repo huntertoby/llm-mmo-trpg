@@ -1419,7 +1419,7 @@ export interface components {
             /** Penalty */
             penalty: number;
             /** Object Id */
-            object_id: string;
+            object_id?: string | null;
             /** Kind */
             kind: string;
             /** Name Zh */
@@ -1972,6 +1972,11 @@ export interface components {
             affixes: components["schemas"]["GearAffixInfo"][];
             /** Weapons */
             weapons: components["schemas"]["GearWeaponInfo"][];
+            /**
+             * Offhands
+             * @default []
+             */
+            offhands: components["schemas"]["GearOffhandInfo"][];
             /** Max Affixes Per Item */
             max_affixes_per_item: number;
             /** Max Cost Affixes */
@@ -2024,13 +2029,16 @@ export interface components {
          * GearCustomItem
          * @description 手動組的物品（欄位的物品種類由欄位決定，所以不必填）。
          *
-         *     ``weapon``：主手的武器 id；``paired``：成對武器；``kind``：外觀造型（只影響圖示，選填）。
+         *     ``weapon``：主手的武器 id；``offhand``：副手的種類 id（``offhands.yaml``，Phase 3I-2）；
+         *     ``paired``：成對武器；``kind``：外觀造型（只影響圖示，選填）。
          */
         GearCustomItem: {
             /** Name Zh */
             name_zh: string;
             /** Weapon */
             weapon?: string | null;
+            /** Offhand */
+            offhand?: string | null;
             /**
              * Paired
              * @default false
@@ -2065,6 +2073,15 @@ export interface components {
             weapon?: string | null;
             /** Weapon Name Zh */
             weapon_name_zh?: string | null;
+            /** Offhand */
+            offhand?: string | null;
+            /** Offhand Name Zh */
+            offhand_name_zh?: string | null;
+            /**
+             * Offhand Traits Zh
+             * @default []
+             */
+            offhand_traits_zh: string[];
             /**
              * Two Handed
              * @default false
@@ -2104,6 +2121,21 @@ export interface components {
             affix_id: string;
             /** Text Zh */
             text_zh: string;
+        };
+        /**
+         * GearOffhandInfo
+         * @description 副手種類（Phase 3I-2，``offhands.yaml``）：手動組副手時的選單。
+         */
+        GearOffhandInfo: {
+            /** Id */
+            id: string;
+            /** Name Zh */
+            name_zh: string;
+            /**
+             * Traits Zh
+             * @default []
+             */
+            traits_zh: string[];
         };
         /**
          * GearSkillView
@@ -2391,6 +2423,16 @@ export interface components {
              * @default []
              */
             weapon_traits_zh: string[];
+            /**
+             * Offhand Name Zh
+             * @default
+             */
+            offhand_name_zh: string;
+            /**
+             * Offhand Traits Zh
+             * @default []
+             */
+            offhand_traits_zh: string[];
             /** Skills */
             skills: components["schemas"]["SkillCard"][];
             /**
@@ -4347,6 +4389,16 @@ export interface components {
              * @default []
              */
             weapon_traits_zh: string[];
+            /**
+             * Offhand Name Zh
+             * @default
+             */
+            offhand_name_zh: string;
+            /**
+             * Offhand Traits Zh
+             * @default []
+             */
+            offhand_traits_zh: string[];
             /**
              * Ammo
              * @default 0

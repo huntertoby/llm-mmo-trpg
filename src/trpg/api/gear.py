@@ -21,6 +21,7 @@ from trpg.api.gear_schemas import (
     GearCustomItem,
     GearItemInfo,
     GearItemLine,
+    GearOffhandInfo,
     GearSlotInfo,
     GearWeaponInfo,
 )
@@ -113,6 +114,12 @@ def gear_catalog(library: ContentLibrary) -> GearCatalog:
                 id=w.id, name_zh=w.name_zh, weapon_class=w.weapon_class, two_handed=w.two_handed
             )
             for w in sorted(library.weapons.values(), key=lambda w: w.id)
+        ),
+        offhands=tuple(
+            GearOffhandInfo(
+                id=o.id, name_zh=o.name_zh, traits_zh=o.trait_lines_zh(library.ruleset.core)
+            )
+            for o in sorted(library.offhands.values(), key=lambda o: o.id)
         ),
         max_affixes_per_item=rules.max_affixes_per_item,
         max_cost_affixes=rules.caps.cost_affixes,

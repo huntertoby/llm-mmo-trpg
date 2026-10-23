@@ -9,7 +9,7 @@ const catalog = {
 
 describe("測試模式的裝備", () => {
   it("只收內容庫物品，自訂物品略過", () => {
-    const custom = { name: "x", weapon: "", paired: false, shield: false, legendary: false, kind: "", affixes: [] };
+    const custom = { name: "x", weapon: "", paired: false, shield: false, offhand: "", legendary: false, kind: "", affixes: [] };
     expect(equipmentIds({ body: { item_id: "armor" }, head: { custom } })).toEqual({ body: "armor" });
   });
 

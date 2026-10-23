@@ -245,3 +245,13 @@ describe("加成來源的數值顯示（後端的真實回應）", () => {
     }
   });
 });
+
+describe("副手種類（3I-2）", () => {
+  it("自訂副手送出 offhand，其他欄位不送", () => {
+    const affixes = [{ affix: "affix_max_hp", value: 4 }];
+    const sel: Selection = { off_hand: { custom: draft("副手", { offhand: "tower_shield", affixes }) } };
+    expect((toEquipment(sel, catalog).off_hand?.custom as { offhand?: string | null }).offhand).toBe("tower_shield");
+    const head: Selection = { head: { custom: draft("頭", { offhand: "tome", affixes }) } };
+    expect((toEquipment(head, catalog).head?.custom as { offhand?: string | null }).offhand).toBeNull();
+  });
+});

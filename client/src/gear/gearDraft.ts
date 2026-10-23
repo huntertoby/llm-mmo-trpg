@@ -11,6 +11,8 @@ export interface CustomDraft {
   paired: boolean;
   /** 副手：是不是盾（詞條有「限盾」）。 */
   shield: boolean;
+  /** 副手的種類 id（offhands.yaml：圓盾、塔盾、法書、法器珠）；空字串 ＝ 只有詞條、沒有基礎特性。 */
+  offhand: string;
   legendary: boolean;
   /** 外觀造型；空字串 ＝ 依欄位預設。 */
   kind: string;
@@ -30,7 +32,7 @@ export type Selection = Partial<Record<string, Pick>>;
 export const SHIELD_TAG = "shield";
 
 export function emptyDraft(slotTypeZh: string): CustomDraft {
-  return { name: `自訂${slotTypeZh}`, weapon: "", paired: false, shield: false, legendary: false, kind: "", affixes: [] };
+  return { name: `自訂${slotTypeZh}`, weapon: "", paired: false, shield: false, offhand: "", legendary: false, kind: "", affixes: [] };
 }
 
 /** 詞條的玩家文字（`{n}` 換成數值；千分比顯示為百分比）。 */
@@ -185,6 +187,7 @@ export function toCustomItem(draft: CustomDraft, slotType: string): GearChoice["
   return {
     name_zh: draft.name.trim() || "自訂物品",
     weapon: slotType === "weapon" && draft.weapon !== "" ? draft.weapon : null,
+    offhand: slotType === "offhand" && draft.offhand !== "" ? draft.offhand : null,
     paired: slotType === "weapon" && draft.paired,
     tags: slotType === "offhand" && draft.shield ? [SHIELD_TAG] : [],
     legendary: draft.legendary,

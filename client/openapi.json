@@ -3431,7 +3431,14 @@
             "title": "Penalty"
           },
           "object_id": {
-            "type": "string",
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
             "title": "Object Id"
           },
           "kind": {
@@ -3450,7 +3457,6 @@
         "type": "object",
         "required": [
           "penalty",
-          "object_id",
           "kind",
           "name_zh",
           "pos"
@@ -4807,6 +4813,14 @@
             "type": "array",
             "title": "Weapons"
           },
+          "offhands": {
+            "items": {
+              "$ref": "#/components/schemas/GearOffhandInfo"
+            },
+            "type": "array",
+            "title": "Offhands",
+            "default": []
+          },
           "max_affixes_per_item": {
             "type": "integer",
             "title": "Max Affixes Per Item"
@@ -4973,6 +4987,17 @@
             ],
             "title": "Weapon"
           },
+          "offhand": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Offhand"
+          },
           "paired": {
             "type": "boolean",
             "title": "Paired",
@@ -5018,7 +5043,7 @@
           "name_zh"
         ],
         "title": "GearCustomItem",
-        "description": "手動組的物品（欄位的物品種類由欄位決定，所以不必填）。\n\n``weapon``：主手的武器 id；``paired``：成對武器；``kind``：外觀造型（只影響圖示，選填）。"
+        "description": "手動組的物品（欄位的物品種類由欄位決定，所以不必填）。\n\n``weapon``：主手的武器 id；``offhand``：副手的種類 id（``offhands.yaml``，Phase 3I-2）；\n``paired``：成對武器；``kind``：外觀造型（只影響圖示，選填）。"
       },
       "GearItemInfo": {
         "properties": {
@@ -5054,6 +5079,36 @@
               }
             ],
             "title": "Weapon Name Zh"
+          },
+          "offhand": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Offhand"
+          },
+          "offhand_name_zh": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Offhand Name Zh"
+          },
+          "offhand_traits_zh": {
+            "items": {
+              "type": "string"
+            },
+            "type": "array",
+            "title": "Offhand Traits Zh",
+            "default": []
           },
           "two_handed": {
             "type": "boolean",
@@ -5121,6 +5176,34 @@
           "text_zh"
         ],
         "title": "GearItemLine"
+      },
+      "GearOffhandInfo": {
+        "properties": {
+          "id": {
+            "type": "string",
+            "title": "Id"
+          },
+          "name_zh": {
+            "type": "string",
+            "title": "Name Zh"
+          },
+          "traits_zh": {
+            "items": {
+              "type": "string"
+            },
+            "type": "array",
+            "title": "Traits Zh",
+            "default": []
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "id",
+          "name_zh"
+        ],
+        "title": "GearOffhandInfo",
+        "description": "副手種類（Phase 3I-2，``offhands.yaml``）：手動組副手時的選單。"
       },
       "GearSkillView": {
         "properties": {
@@ -5723,6 +5806,19 @@
             },
             "type": "array",
             "title": "Weapon Traits Zh",
+            "default": []
+          },
+          "offhand_name_zh": {
+            "type": "string",
+            "title": "Offhand Name Zh",
+            "default": ""
+          },
+          "offhand_traits_zh": {
+            "items": {
+              "type": "string"
+            },
+            "type": "array",
+            "title": "Offhand Traits Zh",
             "default": []
           },
           "skills": {
@@ -10644,6 +10740,19 @@
             },
             "type": "array",
             "title": "Weapon Traits Zh",
+            "default": []
+          },
+          "offhand_name_zh": {
+            "type": "string",
+            "title": "Offhand Name Zh",
+            "default": ""
+          },
+          "offhand_traits_zh": {
+            "items": {
+              "type": "string"
+            },
+            "type": "array",
+            "title": "Offhand Traits Zh",
             "default": []
           },
           "ammo": {
