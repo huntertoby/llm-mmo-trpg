@@ -68,7 +68,7 @@
 
 | 項目 | 何時 | 說明 |
 |---|---|---|
-| 世界觀定案後：色票與風格包 | 等使用者定世界觀（待決定 #5，目前暫緩） | 美術意見在 `世界觀美術意見.md`（五區視覺方向、魔導科技建議）；風格包示意在 `gear-styles-guns.png`（東方、魔導、科技、現代）。每個風格約 0.5～1 段 |
+| 世界觀定案後：色票與風格包 | 五區比較圖已交（10-23，`碎界五區比較.md`、`realms.png`），等使用者選 4 題 | 美術意見在 `世界觀美術意見.md`（五區視覺方向、魔導科技建議）；風格包示意在 `gear-styles-guns.png`（東方、魔導、科技、現代）。每個風格約 0.5～1 段 |
 | 戰場效果與狀態圖示 | 3-36a／3-36b 完成後驗收 | 樣張與移植需求：`戰場效果與狀態圖示.md`、`battlefield-fx.png`、`status-icons.png`。選定後交開發 PM（建議拆 2 段） |
 | 冰橋（召喚物） | 玩法 PM 之後評估 | 不在 17 種內 |
 | 召喚物新增 `trait` 值 | 有新召喚物時 | 前端目前認得 9 個；新增前由美術 PM 補畫法並更新 `召喚物外觀.md` |
@@ -88,4 +88,5 @@
 | `gear2～5.html` | 裝備範例、風格包＋槍、#34 武器、數值卡 |
 | `summonArt.js`、`summons.html` | 召喚物 17 種 |
 | `fx.js`、`battlefield-fx.html`、`status-icons.html` | 戰場效果、狀態圖示提案（10-23） |
+| `realms.js`、`realms.html` | 碎界五區比較（＋霓虹另案） |
 | `current.js` | 遊戲現況畫法的打包（client/src/render → IIFE），樣張「現況」欄用；重打包方法：用 main 的 vite 以 lib 模式打包 terrainArt／objectArt／skillIcon |
