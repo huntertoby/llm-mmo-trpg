@@ -285,7 +285,7 @@ def test_status_and_surface_points_match_the_spec() -> None:
         "hasted": 3,
         "regenerating": 4,
         "shielded": None,  # 只能由 shield 原語施加
-        "taunted": 4,
+        "taunted": 3,  # 2026-10-23 玩法 PM：加 mental 控制類別後 4 → 3
         # 2D-2
         "feared": 5,
         "silenced": 5,
