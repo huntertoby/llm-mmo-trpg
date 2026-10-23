@@ -29,7 +29,7 @@
 | 段 | 內容 | 估計 | 模型 |
 |---|---|---|---|
 | 3J-1 形態系統 | 資料 schema（`content/forms.yaml`：天生武器、屬性加減、移動、防禦、HP 比例、地形規則、外觀 id）；技能原語或技能欄位「進入形態 X」（照姿態的互斥、取消、解除規則）；引擎：普攻改用天生武器、有效屬性與移動／防禦／HP 調整、鳥的地形規則、惡魔兩下；AI 會進入與維持形態（簡單權重）；存檔與重播；說明與卡片由資料產生（#44） | 1.5～2 | opus |
-| 3J-2 第一批 4 種內容＋外觀 | 4 種形態資料、4 招「化身為〇」技能（姿態骨架）、開發起始包或靶場可試；**外觀（美術 PM 2026-10-24 建議）**：整身替換、沿用召喚物外觀系統（`summon_looks.yaml` 同格式 body／variant／element／size／trait，新開 `form_looks` 或同表加列，形態資料的外觀 id 指向它）；熊 beast／bear（新）／large、貓 beast／cat（新）／medium 低姿態、鳥 beast／bird／medium＋flying（沿用鷹隼放大）、惡魔 humanoid／demon（新，角、雙刃、暗影色，translucent 或 glow 擇一）——新畫法只有 bear、cat、demon 三個 variant；保留陣營環與字母徽章，另加元素色淡光環表示變身中；不認得的外觀 id 退回原角色紙娃娃＋光環。美術 PM 先畫小樣張（約 0.25 段）再排 | 0.3＋0.5（外觀） | sonnet |
+| 3J-2 第一批 4 種內容＋外觀 | 4 種形態資料、4 招「化身為〇」技能（姿態骨架）、開發起始包或靶場可試；**外觀（美術 PM 2026-10-24 建議）**：整身替換、沿用召喚物外觀系統（`summon_looks.yaml` 同格式 body／variant／element／size／trait，新開 `form_looks` 或同表加列，形態資料的外觀 id 指向它）；熊 beast／bear（新）／large、貓 beast／cat（新）／medium 低姿態、鳥 beast／bird／medium＋flying（沿用鷹隼放大）、惡魔 humanoid／demon（新，角、雙刃、暗影色，translucent 或 glow 擇一）——新畫法只有 bear、cat、demon 三個 variant；保留陣營環與字母徽章，另加元素色淡光環表示變身中；不認得的外觀 id 退回原角色紙娃娃＋光環。**樣張與移植需求已交**（`docs/art/形態外觀.md`、`docs/art/forms.png`）：`summonArt` 的 beast 加 bear、cat，humanoid 加 demon，鳥沿用 bird（size medium）；形態光環用元素色、無元素 `#9a86ff`；注意熊 large 時頭頂狀態列要上移、影子照正式版畫在外框層之外（樣張腳下黑影不要照抄） | 0.3＋0.5（外觀） | sonnet |
 
 ## 3. 受影響的既有功能（初步盤點，流程改善 A）
 
