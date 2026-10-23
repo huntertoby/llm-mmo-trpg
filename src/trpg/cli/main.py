@@ -29,6 +29,8 @@
 - ``trpg battle --ally-build <build_id>[,…]``：我方用 build 英雄（不足 3 人以標準隊友補齊）。
 - ``trpg battle replay <path>``：讀取 ``--log-json`` 的輸出，重播並驗證最終狀態一致。
 - ``trpg llm ping [--config path]``：檢查本機 LLM（config/llm.toml）是否可用。
+- ``trpg llm propose [--tier N] [--rarity R] [--skeleton S] [--keyword K]... [--seed N] [-n N]
+  [--mock]``：請 LLM 提議技能（重試＋退回），印出每題結果與統計摘要（Phase 4-L5）。
 - ``trpg serve [--host 127.0.0.1] [--port 8000]``：以 uvicorn 啟動本機 API（``trpg.api``）。
 - ``trpg run new|auto|show``：roguelite 一輪（``trpg.cli.run``，Phase 3-5a）。
 """
@@ -44,7 +46,7 @@ from pathlib import Path
 from trpg import __version__
 from trpg.cli.battle import cmd_battle, cmd_map_list, cmd_map_show, cmd_replay
 from trpg.cli.budget import cmd_skills_budget, cmd_skills_budget_all, library_violations
-from trpg.cli.llm import cmd_llm_ping
+from trpg.cli.llm import ProposeArgs, cmd_llm_ping, cmd_llm_propose
 from trpg.cli.run import add_run_parser
 from trpg.cli.serve import DEFAULT_HOST, DEFAULT_PORT, cmd_serve
 from trpg.cli.sim import cmd_sim_keywords, cmd_sim_maps
@@ -384,10 +386,50 @@ def _add_llm_parser(commands: argparse._SubParsersAction[argparse.ArgumentParser
         "--config", type=Path, default=None, help="設定檔路徑（預設 config/llm.toml）"
     )
     ping.set_defaults(func=_run_llm_ping)
+    propose = llm_commands.add_parser(
+        "propose", help="請 LLM 提議技能（重試＋退回），印出每題結果與統計摘要"
+    )
+    propose.add_argument("--tier", type=int, choices=range(1, 6), default=1, help="階級（預設 1）")
+    propose.add_argument(
+        "--rarity",
+        choices=("common", "rare", "epic", "legendary"),
+        default=None,
+        help="稀有度（預設依種子輪替 common／rare／epic）",
+    )
+    propose.add_argument("--skeleton", choices=SKELETON_IDS, default=None, help="骨架（預設輪替）")
+    propose.add_argument(
+        "--keyword", action="append", default=None, help="題目關鍵字（可重複，最多 2 個）"
+    )
+    propose.add_argument("--seed", type=_non_negative_int, default=0, help="種子（預設 0）")
+    propose.add_argument("-n", type=_positive_int, default=1, help="題目數（預設 1）")
+    propose.add_argument(
+        "--mock", action="store_true", help="不連模型：Mock 回傳手寫技能轉成的提議（測試與示範）"
+    )
+    propose.add_argument(
+        "--config", type=Path, default=None, help="設定檔路徑（預設 config/llm.toml）"
+    )
+    propose.set_defaults(func=_run_llm_propose)
 
 
 def _run_llm_ping(args: argparse.Namespace) -> int:
     return cmd_llm_ping(sys.stdout, sys.stderr, config_path=args.config)
+
+
+def _run_llm_propose(args: argparse.Namespace) -> int:
+    options = ProposeArgs(
+        count=args.n,
+        seed=args.seed,
+        tier=args.tier,
+        rarity=args.rarity,
+        skeleton=args.skeleton,
+        keywords=tuple(args.keyword or ()),
+        mock=args.mock,
+    )
+    return _with_library(
+        lambda library: cmd_llm_propose(
+            library, options, sys.stdout, sys.stderr, config_path=args.config
+        )
+    )
 
 
 def _port(text: str) -> int:

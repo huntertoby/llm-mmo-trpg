@@ -9,6 +9,7 @@ import pytest
 from fastapi.testclient import TestClient
 
 from tests.api.conftest import store_of
+from trpg.content.library import ContentLibrary
 from trpg.engine.runner import replay
 from trpg.engine.view import project_for
 from trpg.shared.types import Attribute, Element, Surface, Team
@@ -96,3 +97,27 @@ def test_glossary_has_static_rules_for_tiles(client: TestClient) -> None:
         assert all(e["rules_zh"] for e in data[key]), key
     by_id = {e["id"]: e for e in data["objects"]}
     assert any("半掩護" in line for line in by_id["crate"]["rules_zh"])
+
+
+def test_glossary_status_look_covers_all_statuses(
+    client: TestClient, library: ContentLibrary
+) -> None:
+    """Phase 3-36a：statuses 每一項都帶 ``status_look``，欄位與 statuses.yaml 一致。"""
+    lib = library
+    glossary = client.get("/api/glossary").json()
+    by_id = {e["id"]: e for e in glossary["statuses"]}
+    assert set(by_id) == {s.id for s in lib.ruleset.statuses.statuses}
+    for s in lib.ruleset.statuses.statuses:
+        look = by_id[s.id]["status_look"]
+        assert look["polarity"] == s.polarity
+        assert look["control_group"] == s.control_group
+        assert look["skip_turn"] is s.skip_turn
+        assert look["absorbs_damage"] is s.absorbs_damage
+        assert look["prevents_move"] is s.prevents_move
+        assert look["removed_by_element"] == sorted(e.value for e in s.removed_by_element)
+        dot = None if s.on_turn_start_damage is None else s.on_turn_start_damage.element.value
+        assert look["dot_element"] == dot
+    assert by_id["frozen"]["status_look"]["removed_by_element"] == ["fire"]
+    assert by_id["stun"]["status_look"]["skip_turn"] is True
+    assert by_id["poison"]["status_look"]["dot_element"] == "poison"
+    assert glossary["terrain"][0]["status_look"] is None

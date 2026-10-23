@@ -1,3 +1,4 @@
+@import "./assets/fonts/noto-sans-tc/noto-sans-tc.css";
 :root {
   --bg: #101016;
   --panel: #1c1c26;
@@ -9,7 +10,7 @@
   --enemy: #d23c3c;
   --danger: #ff5a5a;
   color-scheme: dark;
-  font-family: system-ui, "Microsoft JhengHei", "PingFang TC", "Noto Sans TC", sans-serif;
+  font-family: "Noto Sans TC", "Microsoft JhengHei", system-ui, sans-serif;
   font-size: 14px;
 }
 
@@ -240,7 +241,7 @@ button.primary {
   top: 38%;
   text-align: center;
   font-size: 44px;
-  font-weight: 800;
+  font-weight: 700;
   letter-spacing: 8px;
   color: var(--accent);
   text-shadow: 0 2px 12px #000;
@@ -2109,7 +2110,7 @@ button.selected {
 }
 
 .log-head {
-  font-weight: 600;
+  font-weight: 700;
   border-left: 3px solid transparent;
   padding-left: 4px;
 }
@@ -2772,7 +2773,7 @@ button.selected {
 }
 
 .gear-row-name {
-  font-weight: 600;
+  font-weight: 700;
 }
 
 .gear-row-action {

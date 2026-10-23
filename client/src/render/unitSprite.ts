@@ -11,7 +11,11 @@ import { RING } from "./artPalette";
 import type { ArtTextures } from "./artTextures";
 import { label } from "./labels";
 import { DOLL_FOOT_Y, DOLL_H, DOLL_W } from "./paperdoll";
+import { CHARGING } from "../battle/followup";
+import { TIME_BOMB } from "../battle/bombs";
 import { statusTile, tileCanvas } from "./skillIcon";
+import { bodyEffects, bodyOver, bodyUnder, CONCEALED, CONCEALED_ALPHA, effectsKey, hasOverEffect, hasUnderEffect, ROW_ICON, statusIconCanvas, statusIconKey, statusRowLayout, type BodyEffects } from "./statusIcon";
+import { fontEpoch } from "./fontLoad";
 import { hasNoRing, humanoidSpec, resolveSummonLook, type ResolvedLook } from "./summonArt";
 import { SUMMON_BADGE_FONT, SUMMON_BADGE_RADIUS, downedLook, infusedBadge, pulseAlpha, statusBadges, summonBadgeOffset, type DownedLook, type InfusedBadge, type StatusBadge } from "./unitLook";
 
@@ -143,7 +147,7 @@ function doll(art: ArtTextures, u: UnitDraw, look: DownedLook, feet: number, r: 
   sprite.width = DOLL_W * k;
   sprite.height = DOLL_H * k;
   sprite.position.set(0, feet);
-  sprite.alpha = look.dollAlpha;
+  sprite.alpha = look.dollAlpha * (u.statusIds?.includes(CONCEALED) === true ? CONCEALED_ALPHA : 1);
   if (look.grayscale) {
     const gray = new ColorMatrixFilter();
     gray.desaturate();
@@ -173,6 +177,94 @@ function hpBar(u: UnitDraw): Graphics {
   return bar;
 }
 
+// ---- 身上特效與頭頂狀態列（Phase 3-36a）----
+
+const FX_W = 80;
+const FX_H = 90;
+const FX_FEET = 70; // 特效畫布裡腳底的 y（虛擬格 52px 為單位）
+const FX_DPR = 2;
+const effectTextures = new Map<string, Texture>();
+
+/** 身上特效的貼圖（`under` ＝ 腳下、`over` ＝ 身上；同一組特效共用一張）。沒有 DOM 時回傳 `null`。 */
+function effectTexture(kind: "under" | "over", e: BodyEffects): Texture | null {
+  if (typeof document === "undefined") return null;
+  const key = `${kind}|${effectsKey(e)}`;
+  const hit = effectTextures.get(key);
+  if (hit !== undefined) return hit;
+  const canvas = document.createElement("canvas");
+  canvas.width = FX_W * FX_DPR;
+  canvas.height = FX_H * FX_DPR;
+  const ctx = canvas.getContext("2d");
+  if (ctx === null) return null;
+  ctx.scale(FX_DPR, FX_DPR);
+  if (kind === "under") bodyUnder(ctx, e, FX_W / 2, FX_FEET);
+  else bodyOver(ctx, e, FX_W / 2, FX_FEET);
+  const tex = Texture.from(canvas);
+  effectTextures.set(key, tex);
+  return tex;
+}
+
+function effectSprite(kind: "under" | "over", e: BodyEffects, feet: number): Sprite | null {
+  const tex = effectTexture(kind, e);
+  if (tex === null) return null;
+  const k = T / 52;
+  const s = new Sprite(tex);
+  s.anchor.set(0.5, FX_FEET / FX_H);
+  s.width = FX_W * k;
+  s.height = FX_H * k;
+  s.position.set(0, feet);
+  return s;
+}
+
+const rowTextures = new Map<string, Texture>();
+
+function rowIconTexture(id: string): Texture | null {
+  const canvas = statusIconCanvas(id, ROW_ICON);
+  if (canvas === null) return null;
+  const key = `${statusIconKey(id, ROW_ICON)}|${fontEpoch()}`;
+  const hit = rowTextures.get(key);
+  if (hit !== undefined) return hit;
+  const tex = Texture.from(canvas);
+  rowTextures.set(key, tex);
+  return tex;
+}
+
+/** 頭頂狀態列的圖示中心（相對格子中心）：略低於格子頂端，圖示上緣不蓋住上一格單位的血條。 */
+const ROW_Y = -T / 2 + 5.5;
+/** 有「灌」徽章（左上）時，狀態列最多 2 格並右移，避免重疊。 */
+const ROW_INFUSED_SHIFT = 9;
+
+/** 頭頂狀態列：最多 3 個圖示（超過時 2 個加「+N」），倒下的單位不畫。炸彈與蓄力已有自己的徽章，不重複。 */
+function statusRow(u: UnitDraw): Container | null {
+  if (u.downed) return null;
+  const ids = (u.statusIds ?? []).filter((id) => id !== TIME_BOMB && id !== CHARGING);
+  const infused = u.infused === true;
+  const items = statusRowLayout(ids, infused ? 2 : 3, ROW_ICON);
+  if (items.length === 0) return null;
+  const row = new Container();
+  row.position.set(infused ? ROW_INFUSED_SHIFT : 0, ROW_Y);
+  for (const item of items) {
+    if (item.kind === "icon") {
+      const tex = rowIconTexture(item.id);
+      if (tex === null) continue;
+      const icon = new Sprite(tex);
+      icon.anchor.set(0.5);
+      icon.width = ROW_ICON;
+      icon.height = ROW_ICON;
+      icon.position.set(item.x, 0);
+      row.addChild(icon);
+    } else {
+      const half = ROW_ICON / 2;
+      row.addChild(new Graphics().roundRect(item.x - half, -half, ROW_ICON, ROW_ICON, 4).fill({ color: 0x0c0c10, alpha: 0.88 }).stroke({ width: 1.5, color: 0x9aa0aa }));
+      const more = label(`+${item.extra}`, 9, 0xffffff, true);
+      more.anchor.set(0.5);
+      more.position.set(item.x, 0.5);
+      row.addChild(more);
+    }
+  }
+  return row;
+}
+
 /** 一個單位的所有圖層（圖層順序見檔頭）；位置由呼叫端放到格子中心。 */
 export function buildUnitSprite(art: ArtTextures, pulses: Pulses, u: UnitDraw): Container {
   const c = new Container();
@@ -197,7 +289,16 @@ export function buildUnitSprite(art: ArtTextures, pulses: Pulses, u: UnitDraw): 
   }
   if (!u.downed && !noRing) c.addChild(new Graphics().poly(ringArrow(u.facing, 0, cy, rx, ry, 5)).fill(0xffffff).stroke({ width: 1, color: 0x000000 }));
   if (u.active) c.addChild(dashedEllipse(cy, rx + 6, ry + 4, HIGHLIGHT.active));
+  const effects = u.downed ? null : bodyEffects(u.statusIds ?? []);
+  if (effects !== null && hasUnderEffect(effects)) {
+    const under = effectSprite("under", effects, feet);
+    if (under !== null) c.addChild(under);
+  }
   c.addChild(doll(art, u, look, feet, r));
+  if (effects !== null && hasOverEffect(effects)) {
+    const over = effectSprite("over", effects, feet);
+    if (over !== null) c.addChild(over);
+  }
   if (u.summon) c.addChild(summonBadge(u));
   const tag = new Graphics().circle(-T * 0.37, T * 0.22, 8).fill({ color: 0x000000, alpha: 0.78 }).stroke({ width: 1.5, color: ring.stroke });
   const marker = label(u.marker, 12, 0xffffff, true);
@@ -213,5 +314,7 @@ export function buildUnitSprite(art: ArtTextures, pulses: Pulses, u: UnitDraw): 
   const infused = infusedBadge(u);
   if (infused !== null) c.addChild(infusedMark(infused));
   c.addChild(hpBar(u));
+  const row = statusRow(u);
+  if (row !== null) c.addChild(row);
   return c;
 }

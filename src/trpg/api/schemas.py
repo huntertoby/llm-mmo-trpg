@@ -143,11 +143,26 @@ class CommandOptionsOut(_ApiModel):
     options: tuple[CommandOptionOut, ...]
 
 
+class StatusLook(_ApiModel):
+    """狀態圖示與身上特效需要的欄位（Phase 3-36a）；只讀 ``statuses.yaml``，前端不寫死狀態 ID。"""
+
+    polarity: str
+    control_group: str | None = None
+    dot_element: str | None = None
+    """``on_turn_start_damage.element``（持續傷害的元素）。"""
+    skip_turn: bool = False
+    removed_by_element: tuple[str, ...] = ()
+    absorbs_damage: bool = False
+    prevents_move: bool = False
+
+
 class GlossaryEntry(_ApiModel):
     id: str
     name_zh: str
     description_zh: str | None = None
     tags: tuple[str, ...] = ()
+    status_look: StatusLook | None = None
+    """只有 ``statuses`` 的項目會有（Phase 3-36a）。"""
     rules_zh: tuple[str, ...] = ()
     """靜態規則說明（Phase 3-15）：地形、表面、物件「會怎樣」的中文短句，由內容資料產生。"""
 

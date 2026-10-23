@@ -1,8 +1,9 @@
 // 組裝式技能圖示（Phase 3-17）：把 `render/skillIcon.ts` 快取好的離屏 canvas 貼到畫面上。
 // 技能列 40px／28px、技能卡 88px、工坊預覽 96px 都用這一個元件；邊長 ≤ 40px 自動用小圖。
-import { useEffect, useRef } from "react";
+import { useEffect, useRef, useSyncExternalStore } from "react";
 import type { SkillIconData } from "../api/types";
 import { assemblyFormula, iconCacheKey, optionTile, skillIconCanvas, tileCanvas, type AssemblyTile } from "../render/skillIcon";
+import { fontEpoch, subscribeFonts } from "../render/fontLoad";
 import { PartTip } from "./PartTip";
 
 interface IconProps {
@@ -16,8 +17,11 @@ interface IconProps {
   label?: string;
 }
 
+const useFontEpoch = (): number => useSyncExternalStore(subscribeFonts, fontEpoch);
+
 export function SkillIconView({ icon, size, small, className, label }: IconProps) {
   const ref = useRef<HTMLCanvasElement>(null);
+  const epoch = useFontEpoch();
   const key = icon == null ? null : iconCacheKey(icon, size, small);
   useEffect(() => {
     const canvas = ref.current;
@@ -26,7 +30,7 @@ export function SkillIconView({ icon, size, small, className, label }: IconProps
     ctx.clearRect(0, 0, canvas.width, canvas.height);
     ctx.drawImage(skillIconCanvas(icon, size, small), 0, 0);
     // 圖示由 key 決定；icon 物件換了但內容相同時不必重畫
-  }, [key, size, small]);
+  }, [key, size, small, epoch]);
   if (icon == null) return null;
   return (
     <canvas
@@ -43,13 +47,14 @@ export function SkillIconView({ icon, size, small, className, label }: IconProps
 
 function TileCanvas({ tile, px }: { tile: AssemblyTile; px: number }) {
   const ref = useRef<HTMLCanvasElement>(null);
+  const epoch = useFontEpoch();
   useEffect(() => {
     const canvas = ref.current;
     const ctx = canvas?.getContext("2d");
     if (canvas == null || ctx == null) return;
     ctx.clearRect(0, 0, canvas.width, canvas.height);
     ctx.drawImage(tileCanvas(tile, px), 0, 0);
-  }, [tile.id, px]);
+  }, [tile.id, px, epoch]);
   return <canvas ref={ref} width={px * 2} height={px * 2} style={{ width: px, height: px }} aria-hidden="true" />;
 }
 

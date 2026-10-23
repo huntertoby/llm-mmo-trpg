@@ -1,11 +1,12 @@
 // React 包裝：建立／銷毀 PixiJS 繪製器，模型、高亮或縮放改變時重畫。
 // 滑鼠事件（Phase 3-8）：在 DOM 上接，以畫布實際的矩形把 client 座標換算成格子（`clientToTile`），
 // 不論畫布被縮放多少都對得上。`children` 是疊在畫布上、以畫布左上角為原點的浮動元素（浮動資訊卡等）。
-import { useEffect, useLayoutEffect, useRef, type MouseEvent, type MutableRefObject, type ReactNode } from "react";
+import { useEffect, useLayoutEffect, useRef, useSyncExternalStore, type MouseEvent, type MutableRefObject, type ReactNode } from "react";
 import type { Pos } from "../api/types";
 import type { DrawModel } from "../battle/drawModel";
 import { clientToTile, scaledSize } from "../battle/stageLayout";
 import { BattleRenderer, type Highlights } from "../render/BattleRenderer";
+import { fontEpoch, subscribeFonts, waitForFonts } from "../render/fontLoad";
 
 interface Props {
   model: DrawModel;
@@ -37,7 +38,9 @@ export function BattleCanvas({ model, highlights, scale, onTileClick, onTileHove
     if (host === null) return undefined;
     const renderer = new BattleRenderer();
     rendererRef.current = renderer;
-    void renderer.init(host).then(() => {
+    void renderer.init(host).then(async () => {
+      await waitForFonts();
+      if (rendererRef.current !== renderer) return;
       if (rendererRef.current !== renderer) return;
       renderer.setScale(latest.current.scale);
       renderer.draw(latest.current.model);
@@ -59,6 +62,13 @@ export function BattleCanvas({ model, highlights, scale, onTileClick, onTileHove
   useLayoutEffect(() => {
     rendererRef.current?.setHighlights(highlights);
   }, [highlights, rendererRef]);
+
+  // 字型載入完成後重畫（Pixi 文字已用備援字型畫過）
+  const epoch = useSyncExternalStore(subscribeFonts, fontEpoch);
+  useLayoutEffect(() => {
+    rendererRef.current?.draw(latest.current.model);
+    rendererRef.current?.setHighlights(latest.current.highlights);
+  }, [epoch, rendererRef]);
 
   useLayoutEffect(() => {
     rendererRef.current?.setScale(scale);

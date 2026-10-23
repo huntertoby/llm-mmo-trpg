@@ -3,7 +3,7 @@ import type { BattleView, StatusView, UnitView } from "../api/types";
 import { ammoPips, ammoText, hasMagazine } from "../battle/ammo";
 import { chargeText } from "../battle/charges";
 import { sourcePips } from "../battle/source";
-import { statusTile, surfaceTile } from "../render/skillIcon";
+import { statusIconTile, surfaceTile } from "../render/skillIcon";
 import { ChargeChips } from "./ChargeChips";
 import { TipGlyph } from "./SkillIconView";
 import { glossaryName, stackName, statusName, surfaceName } from "../battle/glossary";
@@ -167,7 +167,7 @@ export function Hud({ view, hero, skills, compact = false }: Props) {
         ) : (
           <span className="status-chips">
             {hero.statuses.map((s, i) => (
-              <TipGlyph key={`${i}:${s.status_id}`} tile={statusTile(s.status_id)} text={statusLine(s)} />
+              <TipGlyph key={`${i}:${s.status_id}`} tile={statusIconTile(s.status_id)} text={statusLine(s)} />
             ))}
           </span>
         )}

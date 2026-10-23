@@ -34,10 +34,11 @@
 | 4-L3 | 提議模型正式化：`required_when` 搬進 YAML（取代原型的 `CONDITIONALLY_REQUIRED`）、觸發參數搬進 `skill_triggers.yaml` 的 `params`、**原語／形狀／條件／觸發與參數加給 LLM 的短說明**（`llm_hint`，碎界無關的中性描述）；**提議模型移除數值欄位**（只留結構與列舉），數值交給 4-L5 的預算器 | 模型由 YAML 產生、與現有驗證一致的表格測試；`llm_hint` 全覆蓋測試 | sonnet | 現在派；與 4-L1 平行（只動 `content/`、`skillgen/proposal.py`） |
 | 4-L4 | schema 子集：依稀有度、骨架、題目關鍵字篩原語、形狀、條件；prompt＋schema 總長 ≤ 30k token（字元估算）（詳見 3A 節） | 大小上限測試；篩掉的原語提議得到 `union_tag_invalid` | sonnet | 4-L2、4-L3 後 |
 | 4-L5 | （詳見 3B 節）重試迴圈＋退回＋**數值補齊**：`propose_skill(client, request) -> (SkillDef, source, attempts)`；結構合格後由預算器（`composer_tuning.tune`）補數值；3 次上限；退回 組合器 → 技能池 → 工坊選項；統計退回率 | Mock「壞 → 壞 → 好」「壞 ×3 → 組合器」；數值一律來自預算器 | **opus** | 4-L4 後 |
-| 4-L6 | 接進候選產生器：`llm` 來源、結果寫進 run 紀錄、重播不呼叫 LLM；Mock 失敗時候選仍有 3 個；設定關閉 LLM 時照舊 | 存檔重播一致 | sonnet | 4-L5 後 |
+| 4-L5b | 小測試後修正（詳見 3D 節）：組合規則進 schema、稀有度篩列舉、錯誤 path、先修可修再回報、骨架資訊進 `available` | 見 3D | **opus** | 4-L5 後 |
+| 4-L6 | 接進候選產生器（**另含 3C 節原語多樣性 1～3**）：`llm` 來源、結果寫進 run 紀錄、重播不呼叫 LLM；Mock 失敗時候選仍有 3 個；設定關閉 LLM 時照舊 | 存檔重播一致 | sonnet | 4-L5 後 |
 | 4-L7 | 名稱與敘事（同一個本機模型；只寫文字；長度、禁字、碎界名詞；失敗時組合式名稱） | Mock 輸出過長／空字串／含指令字樣 | sonnet | 4-L5 後；可與 4-L6 平行 |
 | 4-L8 | 開放更多結構：`followup`（複合）、`reaction`、只能巢狀的原語、代價類欄位 | 往返覆蓋率從 163／217 提高 | sonnet | 4-L6 後 |
-| 4-L9 | 真實模型評估腳本：50 組升級候選的通過率、各錯誤 `code` 的重試次數、退回率（> 20% 警示）、主題一致性抽樣；**需使用者先啟動本機模型** | 只在 PM 指定時跑（`@pytest.mark.llm`／腳本） | sonnet | 4-L8 後；Phase 4 🎯 好玩檢查點前 |
+| 4-L9 | 真實模型評估腳本（**另含 3C 節的強制與自由測試**）：50 組升級候選的通過率、各錯誤 `code` 的重試次數、退回率（> 20% 警示）、主題一致性抽樣；**需使用者先啟動本機模型** | 只在 PM 指定時跑（`@pytest.mark.llm`／腳本） | sonnet | 4-L8 後；Phase 4 🎯 好玩檢查點前 |
 
 ## 2. 4-L1 規格
 
@@ -108,6 +109,43 @@
 
 驗收（4-L5）：pytest（全部用 `MockLLMClient`）——「壞 → 壞 → 好」得 `llm`、`attempts=3`，第 2、3 次的 user 訊息含上一份提議與錯誤；「壞 ×3」→ `composer`；`LLMUnavailable` → 一次就退回；只剩 `budget.weak` 的提議不回 LLM 就通過（Mock 只收到 1 次呼叫）；`exclusion.no_cooldown_*` 由引擎補冷卻；數值一律來自 `budget_filler`（同提議同 seed 兩次結果相同、比例在 `[low, high]`）；回應帶 ```` ``` ```` 或 `<think>` 仍解析；`enable_thinking` 寫進請求（`httpx.MockTransport`）；退回三層各自觸發；`ProposalStats` 與 alert；CLI `--mock -n 3` 輸出快照。另加 `@pytest.mark.llm` 一個真模型測試（1 個題目、結果是 `llm` 或退回皆可，只驗流程不丟例外）。`ruff`、`mypy`、`lint-imports`。報告 `Phase4-L5報告.md`。
 
+## 3C. 原語多樣性（使用者決定，2026-10-23）
+
+使用者問「如何解決模型只選特定詞條、偏遠或模型不偏好的詞條；怎麼驗證每個詞條都有機率被選到」，開發 PM 說明後使用者原話：「好，把題目指定核心原語、輪替選單、run 內配額寫進 4-L6，強制與自由測試寫進 4-L9」。
+
+原則：**結構的多樣性由引擎決定，不交給模型的偏好**；模型只在給定結構下組合、命名。三點都必須確定性（種子決定），結果寫進 run 紀錄，重播不重抽。
+
+**4-L6 加做**
+1. **題目指定核心原語**：`ProposalRequest` 加 `core_primitive`（可省略）。候選產生器出題時，用 run 的種子在「該骨架與稀有度合法的核心原語」中加權抽一個；`select_subset` 收到時只開放它當核心（核心位置的 union 只有它；附帶原語照舊）。抽不到合法組合就省略（退回 4-L4 行為）。
+2. **輪替選單**：附帶原語、條件不全給——由種子從合法集合抽一部分（數量為設定值，例如附帶 6 個、條件 4 個；關鍵字必收的照收），並且 `available` 與 schema 的列舉 **順序由種子打亂**（避免模型偏好排在前面的項目）。打亂只影響呈現，驗證結果不變。
+3. **run 內配額**：run 狀態記錄已出現在候選中的原語次數；第 1 點的加權對「本 run 沒出現過或出現少」的原語提高權重（權重表放 `content/`，例如 `skill_composer.yaml` 新增區塊；不寫死在程式）。和現有關鍵字的 `behavior_weights` 並存：先依關鍵字定題目，再在題目合法範圍內依配額選核心原語。
+- 測試：同種子同 run 狀態得同題目；1000 個種子下每個合法核心原語都被抽到過、分布不偏離設定權重太多（表格測試）；配額讓第二次出現的機率下降；打亂順序不改變 `evaluate_proposal` 結果。
+
+**4-L9 加做（真模型，需使用者開模型）**
+4. **強制測試（會不會用）**：每個開放的原語各出 3 題，題目把它設為 `core_primitive`，量通過率（一次通過、重試後通過、退回）與錯誤 `code`。通過率低的原語列出，原因分「說明不清」（改 `llm_hint`）或「格式難」（改 schema／子集）。
+5. **自由測試（會不會選）**：不指定 `core_primitive`、依第 2 點輪替選單跑約 300 題，統計每個原語「出現在選單次數、被選次數、選中率」；0 次或低於平均三分之一的列出。以隨機組合器的分布當基準對照。
+6. 兩項用平行請求（`MAX_SEQS=8`），報表輸出成表格（Markdown＋CSV），寫進 4-L9 報告；調整建議（`llm_hint`、權重、選單大小）由 PM 決定，不在評估腳本內自動改。
+
+## 3D. 4-L5b 規格（小測試後修正：讓隱藏規則看得見；開發 PM 2026-10-23；opus）
+
+**來由**：4-L5 後真模型小測試（`trpg llm propose -n 10 --seed 0`，見 4.5）一次通過 0%、退回 50%。錯誤分析：
+- `value_error` 15 次：`SkillDef`／`EffectSpec` 的 model_validator 裡的組合規則（例：「`charge_through` 的形狀必須是 `ground_tile`」「`charge_through` 以外的效果必須明寫 `affects: self`」），schema 與 `llm_hint` 都沒寫，模型只能靠重試猜；錯誤 `path` 空白。
+- `rarity.status` 3 次：狀態的稀有度限制沒反映在 schema 的列舉。
+- `skeleton.core`／`core_share`：`available` 的骨架只有一句說明，沒寫核心原語與占比、附帶原語上限。
+- `exclusion.stun_single_long_cooldown`：引擎能補冷卻，但不在可修清單；且 **引擎修補 0 次**——現在只有「全部錯誤都可修」時才修。
+
+順序照「schema → 引擎修補 → 題目資訊 → prompt 措辭」：
+
+1. **組合規則進 schema（優先）**：盤點 `SkillDef`／`EffectSpec` 的 model_validator 中「某原語要求特定形狀／位置／其他效果 `affects`」這類規則，能變成資料的搬進 YAML（例如原語的 `requires_shape`、`must_be_first`、`others_affect`），提議模型依此產生：例如帶 `charge_through` 的提議走專用分支（形狀只有 `ground_tile`、其他效果 `affects` 只有 `self`）。若 discriminated union 難以表達「依效果決定形狀」，可改成在 `select_subset`／題目層處理（題目指定核心原語時直接帶入限制），擇一並寫進報告。引擎驗證器改讀同一份資料（唯一來源），行為不變（現有測試全過）。**可先參考工坊 `skillgen/options.py`、`option_conform.py`，它們已經依骨架推導合法選項。**
+2. **稀有度篩列舉**：`select_subset` 依 `rarity` 篩掉該稀有度不可用的狀態（及其他有稀有度限制的 ID 列舉），規則來源與 `rarity.status` 驗證相同。
+3. **錯誤 path**：`stage: skill` 的錯誤盡量帶 path（至少指出是哪個效果 `effects[i]` 或 `shape`）；做不到的保持空白。
+4. **引擎修補改為「先修可修的，再回報其餘」**：補數值後先套用所有可修代碼的修補，再驗證；剩下的錯誤（修補後的）才回給 LLM（4-L5 待決 #5）。可修清單加 `exclusion.stun_single_long_cooldown`（補到規則要求的冷卻）與其他「補冷卻即可」的 `exclusion.*`，以及 `skeleton.secondary_share`（4-L5 待決 #4）。清單仍是資料。
+5. **骨架資訊進 `available`**：每個骨架加 `core`（原語清單與最低占比）、`secondary`（清單與最多幾個）、`shapes`；文字用中性中文短句。`PROMPT_VERSION` 升號、快照更新。
+6. **重跑小測試**：完成後以 `MockLLMClient` 測試覆蓋上面每一條（例：帶 `charge_through` 的提議只能選 `ground_tile`、普通稀有度的狀態列舉不含高稀有度狀態、混合錯誤時引擎仍先修冷卻）。**真模型由 PM 跑**（不要執行 `-m llm`）。
+7. **範圍外**：關鍵字強制（4-L5 待決 #1 → 4-L6）、AP／冷卻旋鈕與無旋鈕結構（#2、#3 → 4-L8／4-L9）。
+
+驗收（4-L5b）：上述測試；所有手寫技能仍通過驗證、`proposal_from_skill` 往返數不下降（163／217 以上）；`ruff`、`mypy`、`lint-imports`；報告 `Phase4-L5b報告.md`（盤點出的規則清單：搬進 YAML 的／留在程式的與理由）。PM 驗收後重跑 `trpg llm propose -n 10 --seed 0` 與另一個種子比較。
+
 ## 4. 驗收紀錄
 
 ### 4.1 4-L1 驗收（2026-10-23）
@@ -129,6 +167,12 @@
 
 - PM 合併（無衝突，`77a234c`）；ruff、format、mypy、lint-imports（7 契約，新增「skillgen 不得匯入 llm」）、`tests/llm`＋`tests/skillgen`＋`tests/content`＋`tests/cli`＋`test_architecture` 1878 全過；`swamp` 種子 60 重播一致。`skillgen/proposal_subset.py`（`ProposalRequest`、`select_subset`、`ProposalSubset`、`SubsetError`、`build_subset_models`、`available_payload`）；`build_proposal_models` 加 `shapes`／`conditions`／`triggers`／`skeletons` 篩選；`llm/prompts/proposal.py` 的 `build_proposal_prompt`；`shared/tokens.py`（`estimate_tokens`、`PROMPT_TOKEN_BUDGET=30000`）；世界觀模型移到 `content/world.py` 並登記進 registry；`PROMPT_VERSION` 不變。大小：138 組可行題目最大 24,999、平均 16,540 估算 token。PM 實測 rare／不指定骨架／`ignite`：41 個原語、11 個骨架、25,475。報告 `Phase4-L4報告.md`。
 - 待 PM 決定 → 決定：#1 估算放 `trpg.shared.tokens`、#2 只有核心永不砍（關鍵字原語最後才砍）、#4 緊湊 JSON 估算、#7 `kind` 隨骨架收斂、#8 骨架不可用丟 `SubsetError` → **接受**；#3 補足填滿約 24k、#5 「省略 `primitives`＝不限」的骨架子集偏大 → **4-L9 用真實 tokenizer 與通過率實測後再決定是否縮小**（`token_budget` 可調）；#6 巢狀才用的原語出現在頂層選項 → **4-L5 規格處理**（分開巢狀與頂層可用原語，或靠重試回饋）；#9 `unit_then_tile`／`object_then_tile` 只給手寫技能 → **4-L8 在形狀 YAML 加旗標排除**。
+
+### 4.5 4-L5 驗收與真模型小測試（2026-10-23）
+
+- PM 合併（無衝突，`4f3ebdd`）；ruff、format、mypy、lint-imports（7 契約）、`tests/llm`＋`skillgen`＋`cli`＋`roguelite`＋`test_architecture` 1126 全過。`trpg.llm.propose`（`propose_skill`、`ProposalOutcome`、`ProposalStats`）、`budget_filler`、引擎修補（`REPAIRABLE_CODES`）、三層退回（`FallbackError`）、`enable_thinking=false`、回應清理、`trpg llm propose`。隨機組合器改用共用 `effect_knobs`，400 種子＋關鍵字輸出雜湊不變。手寫結構以預算器補數值：合格 37 → 110／161。報告 `Phase4-L5報告.md`。
+- **真模型小測試**（`trpg llm propose -n 10 --seed 0`，126 秒）：一次通過 0%、平均嘗試 2.70、**退回 50%（超過 20% 提醒）**、平均 11.8 秒／題；來源 llm 5、composer 4、workshop 1；錯誤 `value_error` 15、`rarity.status` 3、`reference` 3、`exclusion.stun_single_long_cooldown` 2、`skeleton.core_share` 2；引擎修補 0 次。原因與修正見 **3D 節（4-L5b）**。
+- 待 PM 決定 → 決定：#4 `skeleton.secondary_share` 列可修、#5 修補後才回報 → **4-L5b 做**；#1 LLM 技能不強制帶題目關鍵字 → **4-L6 做**（和 3C 節一起）；#2 `budget.over` 難修、#3 無旋鈕結構（召喚、`topple` 等 44／161）→ **4-L8／4-L9 決定**；#6 工坊保底不保證關鍵字、#7 退回欄位來源、#8 CLI 稀有度輪替與 mock 耗時、#9 `chat_template_kwargs` 一律送、#10 `attempts` 計法 → **接受**。
 
 **Phase 4 暫停點（2026-10-23，使用者：「讓正在跑的 4-L2、4-L3 做完就停」）**：4-L1～L3 完成，下一段 4-L4（見 `docs/開發PM交接.md` 3.00）。
 

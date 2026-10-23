@@ -7,6 +7,7 @@
 import type { SkillIconData } from "../api/types";
 import { glossaryEntry, statusName, surfaceName } from "../battle/glossary";
 import { SHAPE_NAMES } from "../battle/vfx";
+import { paintStatusIcon } from "./statusIcon";
 import {
   drawMotif,
   elementGlyph,
@@ -474,6 +475,14 @@ export function statusTile(id: string): AssemblyTile {
     id: `status|${id}`,
     draw: (ctx) => drawChip(ctx, { cat: "effect", key: `status:${id}`, color: statusColor(id), draw: (c) => statusGlyph(c, id), label: id, note: "" }, 50, 50, 42, { ring: FAINT_RING }),
   };
+}
+
+/**
+ * 狀態圖示本身（資訊欄、狀態列）：外框依 polarity（增益圓、減益方、中性六角）＋圖樣。
+ * 技能圖示的組裝部件（`statusTile`）維持原本的圓形部件框。
+ */
+export function statusIconTile(id: string): AssemblyTile {
+  return { ...statusTile(id), id: `statusicon|${id}`, draw: (ctx) => paintStatusIcon(ctx, id, 50, 50, 84) };
 }
 
 /** 表面的部件小圖（說明取名詞對照表的描述與規則）。 */
