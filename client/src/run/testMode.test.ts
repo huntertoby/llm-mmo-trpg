@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 import type { GearCatalog } from "../api/types";
-import { equipmentIds, keepPickable, pickableCatalog, resourceRuleText, withTestMode } from "./testMode";
+import { equipmentIds, keepPickable, pickableCatalog, withTestMode } from "./testMode";
 
 const item = (id: string, slot_type: string, weapon: string | null = null) => ({ id, slot_type, weapon }) as GearCatalog["items"][number];
 const catalog = {
@@ -33,10 +33,5 @@ describe("開局請求", () => {
     const body = { weapon: "bow", keywords: ["a", "b"], seed: 1 };
     expect(withTestMode(body, true, { body: { item_id: "armor" } })).toEqual({ ...body, test_mode: true, test_equipment: { body: "armor" } });
     expect(withTestMode(body, true, {})).toEqual({ ...body, test_mode: true, test_equipment: {} });
-  });
-
-  it("提示文字依模式不同", () => {
-    expect(resourceRuleText(true)).toContain("回滿");
-    expect(resourceRuleText(false)).toContain("不會在戰鬥之間回復");
   });
 });

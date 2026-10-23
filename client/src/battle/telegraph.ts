@@ -140,6 +140,26 @@ export function telegraphLines(t: TelegraphOut): string[] {
   ];
 }
 
+export interface TelegraphEntry {
+  text: string;
+  /** 這一項涉及的格子（滑過側欄項目時在地圖上標出來；找不到位置時為空）。 */
+  tiles: Pos[];
+}
+
+/** 側欄的每一項附上涉及的格子（9.1）：玩家不必拿「(6, 3) 火焰→無」去對座標。順序與 `telegraphLines` 相同。 */
+export function telegraphEntries(t: TelegraphOut, view: BattleView): TelegraphEntry[] {
+  const at = (...tiles: Pos[]): Pos[] => tiles;
+  return [
+    ...t.changes.map((c) => ({ text: c.text, tiles: changePositions(c, view) })),
+    ...(t.bombs ?? [])
+      .filter((b) => bombChange(t, b) === undefined)
+      .map((b) => ({ text: b.text, tiles: at(b.pos, ...b.tiles) })),
+    ...t.burning.map((b) => ({ text: b.text, tiles: at(b.pos) })),
+    ...t.upcoming.map((u) => ({ text: u.text, tiles: u.tiles.map(([x, y]): Pos => ({ x: x as number, y: y as number })) })),
+    ...(t.charges ?? []).map((c) => ({ text: c.text, tiles: at(c.pos, ...c.tiles) })),
+  ];
+}
+
 export function telegraphIsEmpty(t: TelegraphOut): boolean {
   return (
     t.changes.length === 0 &&

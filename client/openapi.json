@@ -7705,6 +7705,11 @@
             },
             "type": "object",
             "title": "Test Equipment"
+          },
+          "resource_rule_zh": {
+            "type": "string",
+            "title": "Resource Rule Zh",
+            "default": ""
           }
         },
         "additionalProperties": false,

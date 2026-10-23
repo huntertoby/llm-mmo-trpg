@@ -31,6 +31,7 @@ def test_test_mode_run_is_marked_listed_and_loadable(client: TestClient) -> None
     body = {**_BODY, "test_mode": True, "test_equipment": _GEAR}
     run = _ok(client.post("/api/runs", json=body))
     assert run["test_mode"] is True and run["test_equipment"] == _GEAR
+    assert "自動回滿" in run["resource_rule_zh"]
     assert [s["test_mode"] for s in _ok(client.get("/api/runs/saves"))] == [True]
     assert _ok(client.get(f"/api/runs/{run['run_id']}"))["test_mode"] is True
     loaded = _ok(client.post("/api/runs/load", json={"run_id": run["run_id"]}))
@@ -48,6 +49,11 @@ def test_test_mode_equipment_reaches_the_battle(client: TestClient) -> None:
 def test_normal_run_is_not_test_mode(client: TestClient) -> None:
     run = _ok(client.post("/api/runs", json=_BODY))
     assert run["test_mode"] is False and run["test_equipment"] == {}
+    # 營火的場次取自 roguelite.yaml，不寫死在前端（Phase 3-41b，清單 12.2）
+    assert (
+        "只有營火會回滿" in run["resource_rule_zh"]
+        and "第 3 場、第 5 場" in run["resource_rule_zh"]
+    )
     assert [s["test_mode"] for s in _ok(client.get("/api/runs/saves"))] == [False]
 
 

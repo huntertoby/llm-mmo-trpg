@@ -3163,6 +3163,11 @@ export interface components {
             test_equipment?: {
                 [key: string]: string;
             };
+            /**
+             * Resource Rule Zh
+             * @default
+             */
+            resource_rule_zh: string;
         };
         /**
          * RunRules

@@ -182,6 +182,7 @@ export function BattleScreen({ initial, onExit, exitLabel, runMode }: Props) {
   const [acting, setActing] = useState<string | undefined>(undefined);
   const [lines, setLines] = useState<LogLine[]>([]);
   const [logHover, setLogHover] = useState<LogHover | null>(null);
+  const [telegraphHover, setTelegraphHover] = useState<readonly Pos[] | null>(null);
   const [busy, setBusy] = useState(true);
   const [playing, setPlaying] = useState(false);
   const [banner, setBanner] = useState(false);
@@ -430,11 +431,14 @@ export function BattleScreen({ initial, onExit, exitLabel, runMode }: Props) {
   ]);
 
   // 滑過戰鬥紀錄的一組：高亮相關單位目前所在的格子與事件指出的格子（疊在預覽範圍的橘色上）。
+  // 滑過環境預告的項目（9.1）：把它涉及的格子標在地圖上（同樣疊在預覽範圍的橘色上）。
   const highlights = useMemo<Highlights>(() => {
-    if (logHover === null) return baseHighlights;
+    let out = baseHighlights;
+    if (telegraphHover !== null) out = { ...out, preview: [...out.preview, ...telegraphHover] };
+    if (logHover === null) return out;
     const unitTiles = shown.units.filter((u) => logHover.unitIds.includes(u.id) && onField(u)).map((u) => u.pos);
-    return { ...baseHighlights, preview: [...baseHighlights.preview, ...unitTiles, ...logHover.tiles] };
-  }, [baseHighlights, logHover, shown]);
+    return { ...out, preview: [...out.preview, ...unitTiles, ...logHover.tiles] };
+  }, [baseHighlights, logHover, telegraphHover, shown]);
 
   const legend = useMemo(() => legendEntries(highlights.overlays, mode), [highlights.overlays, mode]);
 
@@ -1138,7 +1142,13 @@ export function BattleScreen({ initial, onExit, exitLabel, runMode }: Props) {
       <SidePanel
         collapsed={collapsed}
         onToggle={toggleSide}
-        telegraph={<TelegraphPanel telegraph={response.telegraph} marks={marks} hoverTexts={hoverTexts} />}
+        telegraph={<TelegraphPanel
+            telegraph={response.telegraph}
+            marks={marks}
+            hoverTexts={hoverTexts}
+            view={view}
+            onHoverTiles={setTelegraphHover}
+          />}
         log={<BattleLog lines={lines} onHover={setLogHover} />}
       />
       <div className="battle-bottom">
@@ -1229,7 +1239,6 @@ export function BattleScreen({ initial, onExit, exitLabel, runMode }: Props) {
       )}
       {copyPaused && response.pending !== null && (
         <CopyDialog
-          pending={response.pending}
           skillName={copyName}
           optionCount={response.copy_options.length}
           enabled={!busy}

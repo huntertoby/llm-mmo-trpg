@@ -888,6 +888,16 @@ button.selected {
   color: var(--accent);
 }
 
+/* Phase 3-41b：環境預告的項目可以滑過（在地圖上標出涉及的格子） */
+.telegraph-item {
+  cursor: default;
+}
+.telegraph-item:hover,
+.telegraph-item:focus-visible {
+  color: var(--accent);
+  outline: none;
+}
+
 .order-ignored {
   color: var(--danger);
 }

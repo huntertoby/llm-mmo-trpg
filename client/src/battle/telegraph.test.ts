@@ -1,7 +1,7 @@
 import { describe, expect, it } from "vitest";
 import type { TelegraphChange, TelegraphOut } from "../api/types";
 import { smallView } from "./testFixtures";
-import { marksTextAt, telegraphIsEmpty, telegraphLines, telegraphMarks } from "./telegraph";
+import { marksTextAt, telegraphEntries, telegraphIsEmpty, telegraphLines, telegraphMarks } from "./telegraph";
 
 function change(kind: string, text: string, over: Partial<TelegraphChange> = {}): TelegraphChange {
   return {
@@ -53,6 +53,19 @@ describe("telegraph marks", () => {
     expect(telegraphMarks(t, view).map((m) => [m.pos.x, m.pos.y])).toEqual([[2, 1]]);
     const lost = telegraph([change("unit_downed", "？", { unit_id: "nobody" })]);
     expect(telegraphMarks(lost, view)).toEqual([]);
+  });
+
+  it("side panel entries carry their tiles so hovering can mark the map (3-41b 9.1)", () => {
+    const t = telegraph(
+      [change("surface", "(2, 2) 火焰→無", { pos: { x: 2, y: 2 } }), change("unit_downed", "A 將倒下", { unit_id: "unit_0003" })],
+      {
+        burning: [{ object_id: "obj_0002", pos: { x: 1, y: 2 }, remaining: 2, text: "木箱還能燃燒 2 次" }],
+        upcoming: [{ round: 2, kind: "spawn_units", tiles: [[0, 0]], text: "援軍出現" }],
+      },
+    );
+    const entries = telegraphEntries(t, view);
+    expect(entries.map((e) => e.text)).toEqual(telegraphLines(t));
+    expect(entries.map((e) => e.tiles)).toEqual([[{ x: 2, y: 2 }], [{ x: 2, y: 1 }], [{ x: 1, y: 2 }], [{ x: 0, y: 0 }]]);
   });
 
   it("summarises everything for the side panel", () => {

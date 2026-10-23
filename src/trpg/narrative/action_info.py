@@ -197,6 +197,16 @@ def _basic_actions(core: CoreRules) -> list[InfoText]:
             ),
         ),
         InfoText(
+            "stamina",
+            "耐力",
+            "反應（例如格擋）要消耗的資源",
+            (
+                "格擋等反應要消耗耐力；耐力不足就不能反應",
+                f"每輪最多反應 {core.reactions_per_round} 次；耐力在每場戰鬥開始時回滿，"
+                "戰鬥中不會自動回復",
+            ),
+        ),
+        InfoText(
             "end_turn",
             "結束回合",
             f"結束這個回合；最多保留 {core.ap_carry_max} AP 到下回合",

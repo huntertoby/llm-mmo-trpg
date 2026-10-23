@@ -23,8 +23,8 @@ const ELIMINATE: ObjectiveLike = { kind: "eliminate", rounds: null, tiles: [] };
 
 describe("勝利條件文字", () => {
   it("一行說明", () => {
-    expect(objectiveLine(ESCAPE)).toBe("撤離：5 輪內全員抵達出口");
-    expect(objectiveLine(DEFEND)).toBe("守點：守住守點 6 輪，別讓敵人站上去");
+    expect(objectiveLine(ESCAPE)).toBe("撤離：5 輪內，所有還活著的我方單位抵達出口");
+    expect(objectiveLine(DEFEND)).toBe("守點：守住守點 6 輪，別讓敵人站在上面");
     expect(objectiveLine(ELIMINATE)).toBe("全滅：擊倒所有敵人");
   });
 
@@ -69,12 +69,12 @@ describe("目標格標記", () => {
     expect(markerAt(view, { x: 2, y: 0 })).toBe("exit");
     expect(markerAt(view, { x: 0, y: 0 })).toBeNull();
     const card = markerCard(view, { x: 2, y: 0 });
-    expect(card?.title).toBe("出口格・撤離（剩 4 輪）");
+    expect(card?.title).toBe("出口格（剩 4 輪）");
     const sections = tileSections(view, { x: 2, y: 0 }, {});
     expect(sections.some((s) => s.kind === "objective")).toBe(true);
     expect(tileSections(view, { x: 1, y: 0 }, {}).some((s) => s.kind === "objective")).toBe(false);
     const defend = smallView({ objective: { kind: "defend", rounds: 6, tiles: [[0, 0]] } });
-    expect(markerCard(defend, { x: 0, y: 0 })?.title).toBe("守點格・守住（剩 6 輪）");
+    expect(markerCard(defend, { x: 0, y: 0 })?.title).toBe("守點格（剩 6 輪）");
   });
 });
 
@@ -108,7 +108,7 @@ describe("選路／下一場畫面", () => {
       screen: "progress",
       goalKind: "escape",
       goalBadge: "➜ 撤離",
-      goalLine: "撤離：5 輪內全員抵達出口",
+      goalLine: "撤離：5 輪內，所有還活著的我方單位抵達出口",
     });
     const second = runView({ ...base, node: { kind: "battle", battle_index: 2, boss: false } });
     expect(second).toMatchObject({ goalKind: "defend" });

@@ -17,7 +17,9 @@ export type GlossaryCategory =
   | "attributes"
   | "effects"
   | "conditions"
-  | "triggers";
+  | "triggers"
+  | "actions"
+  | "objectives";
 
 const index = new Map<GlossaryCategory, Map<string, GlossaryEntry>>();
 
@@ -36,6 +38,8 @@ export function setGlossary(g: Glossary): void {
     "effects",
     "conditions",
     "triggers",
+    "actions",
+    "objectives",
   ];
   for (const c of categories) index.set(c, new Map((g[c] ?? []).map((e) => [e.id, e])));
   weaponLooks.clear();

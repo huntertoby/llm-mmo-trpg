@@ -26,6 +26,7 @@ ALL_ACTIONS = {
     "end_stance",
     "stand",
     "end_turn",
+    "stamina",
 }
 
 

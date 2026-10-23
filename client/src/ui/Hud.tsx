@@ -16,6 +16,7 @@ import { summonLine, summonsOf } from "../battle/summons";
 import { unitNames } from "../battle/units";
 import { zoneLine, zoneNextText, zonesOf } from "../battle/zones";
 import { Hint } from "./Hint";
+import { actionCardText } from "../battle/actionInfo";
 
 interface Props {
   view: BattleView;
@@ -109,7 +110,9 @@ export function Hud({ view, hero, skills, compact = false }: Props) {
         extra={hero.shield > 0 ? `（護盾 ${hero.shield}）` : ""}
       />
       <Bar label="法力" value={hero.mana} max={hero.max_mana} className="mana" />
-      <Bar label="耐力" value={hero.stamina} max={hero.max_stamina} className="stamina" />
+      <Hint text={actionCardText("stamina")}>
+        <Bar label="耐力" value={hero.stamina} max={hero.max_stamina} className="stamina" />
+      </Hint>
       <div className="hud-row">
         <Hint text="剩餘行動點數（自己的回合已含上回合保留的 AP）">
           <span className="hud-chip">
