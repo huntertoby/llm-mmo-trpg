@@ -324,6 +324,26 @@ window.PaperDoll = (() => {
           ctx.moveTo(-W / 2, -3); ctx.lineTo(-W / 2, -L); ctx.lineTo(0, -L - 3); ctx.lineTo(W / 2, -L); ctx.lineTo(W / 2, -3);
           ctx.closePath();
         });
+        if (it.form === "arcane") {
+          // 魔導劍（#46）：劍身中線一道源晶槽（藍紫光，有元素時換元素色）＋三個符文刻點；護手是黃銅齒輪
+          const glow = (it.element && ELEMENT_TINT[it.element]) || "#9a86ff";
+          ctx.save();
+          ctx.shadowColor = glow;
+          ctx.shadowBlur = 4;
+          ctx.fillStyle = glow;
+          ctx.fillRect(-0.55, -L + 1, 1.1, L - 5);
+          ctx.restore();
+          ctx.fillStyle = "#e8e2ff";
+          for (const ry of [-6.5, -10, -13.5]) ctx.fillRect(-1.1, ry, 2.2, 0.8);
+          fill(ctx, "#b08a4a", () => {
+            ctx.beginPath();
+            for (let i = 0; i < 12; i++) { const a = (i / 12) * TAU; const r = i % 2 ? 3.2 : 4.3; ctx.lineTo(Math.cos(a) * r, -3 + Math.sin(a) * r * 0.55); }
+            ctx.closePath();
+          });
+          fill(ctx, glow, () => { ctx.beginPath(); ctx.arc(0, -3, 1.2, 0, TAU); });
+          fill(ctx, "#4a3020", () => ctx.rect(-1, -1.5, 2, 3.5));
+          break;
+        }
         fill(ctx, "rgba(255,255,255,0.45)", () => ctx.rect(-W / 2 + 0.6, -L, 0.9, L - 4));
         fill(ctx, it.hilt ?? "#8a6a2a", () => rr(ctx, -4.5, -4, 9, 2, 1));
         fill(ctx, "#4a3020", () => ctx.rect(-1, -2, 2, 4));
@@ -620,5 +640,5 @@ window.PaperDoll = (() => {
   };
   TEMPLATES.summon_skeleton_warrior.gear.body = { kind: "ribs" };
 
-  return { drawFigure, stamp, ITEMS, TEMPLATES, build, SKIN, itemColors };
+  return { drawFigure, drawWeapon, stamp, ITEMS, TEMPLATES, build, SKIN, itemColors };
 })();
