@@ -1,4 +1,4 @@
-"""玩家看得到的檢查文字：把欄位名、ID、列舉值換成中文（3-48，玩法決定 #44：玩家看到的文字不露代號）。
+"""玩家看得到的檢查文字：把欄位名、ID、列舉值換成中文（3-48，玩法決定 #44：不露代號）。
 
 ``validate_skill`` 等規則檢查的訊息同時給 CLI、模擬與內容驗證用（開發者要看欄位名），所以不改來源，
 在給工坊玩家看之前才過 :func:`plainify`：先換固定的片語與 pydantic 的英文訊息，
@@ -14,7 +14,29 @@ from typing import Any
 from trpg.content.library import ContentLibrary
 from trpg.shared.types import Attribute
 
-__all__ = ["plain_name", "plainify"]
+__all__ = ["CHANGE_TEXT", "plain_name", "plainify"]
+
+CHANGE_TEXT: dict[str, str] = {
+    "damage_permille": "傷害 ±‰",
+    "hit_bonus": "命中 ±",
+    "cooldown_delta": "命中後冷卻 −1／−2",
+    "push_distance_delta": "推擊距離 +1／+2",
+    "ap_delta": "AP 成本 ±1",
+    "range_delta": "射程 −1～＋2",
+    "add_element": "傷害獲得元素",
+    "add_tags": "技能獲得標籤",
+    "on_hit_effects": "命中後附加效果",
+    "grant_pierce": "獲得穿透",
+    "area_delta": "範圍 +1",
+    "shape_to": "形狀轉換",
+    "allow_self_target": "範圍包含自己",
+    "heal_permille": "治療量 ±‰",
+    "summon_hp_permille": "召喚物最大 HP +‰",
+    "summon_attack_dice": "召喚物攻擊 +1 顆傷害骰",
+    "summon_limit_delta": "召喚物同時上限 ±1",
+    "summon_duration_delta": "召喚物持續 +輪數",
+    "summon_damage_permille": "召喚物傷害 +‰",
+}
 
 _INDEXED = re.compile(r"\b(effects|modifiers|variants)\[(\d+)\]")
 _LIST_ZH = {"effects": "效果", "modifiers": "修正規則", "variants": "變奏"}
@@ -105,8 +127,6 @@ def _key(value: Any) -> str:
 
 def _tables(library: ContentLibrary) -> dict[str, str]:
     """ID → 中文名：內容資料裡有 ``id`` 與 ``name_zh`` 的各種定義。後面的覆蓋前面的。"""
-    from trpg.skillgen.options import CHANGE_TEXT  # 延遲匯入：options 也用本模組
-
     rules = library.ruleset
     names: dict[str, str] = {}
     for attr in Attribute:

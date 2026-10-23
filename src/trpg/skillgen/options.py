@@ -51,7 +51,6 @@ from trpg.content.skills import (
 from trpg.shared.types import Attribute
 from trpg.skillgen.draft import Draft, DraftError, build_skill, draft_skeleton, step_complete
 from trpg.skillgen.option_conform import field_problems
-from trpg.skillgen.player_text import plainify
 from trpg.skillgen.option_fill import variants
 from trpg.skillgen.option_followup import (
     FOLLOWUP_SKELETON,
@@ -83,6 +82,7 @@ from trpg.skillgen.option_rules import (
 )
 from trpg.skillgen.option_scaling import scaling_extra_fields
 from trpg.skillgen.option_variant import variant_fields, variant_notes, variants_visible
+from trpg.skillgen.player_text import CHANGE_TEXT, plainify
 from trpg.skillgen.scaling import attr_names_zh, scaling_basis_zh
 from trpg.skillgen.validate import rarity_requirements
 
@@ -138,27 +138,6 @@ STEP_TEXT: dict[StepId, tuple[str, str]] = {
     ),
 }
 _ACTION_TEXT = {"attack": "普攻", "shove": "推擊", "trip": "絆倒", "interact": "互動"}
-CHANGE_TEXT: dict[str, str] = {
-    "damage_permille": "傷害 ±‰",
-    "hit_bonus": "命中 ±",
-    "cooldown_delta": "命中後冷卻 −1／−2",
-    "push_distance_delta": "推擊距離 +1／+2",
-    "ap_delta": "AP 成本 ±1",
-    "range_delta": "射程 −1～＋2",
-    "add_element": "傷害獲得元素",
-    "add_tags": "技能獲得標籤",
-    "on_hit_effects": "命中後附加效果",
-    "grant_pierce": "獲得穿透",
-    "area_delta": "範圍 +1",
-    "shape_to": "形狀轉換",
-    "allow_self_target": "範圍包含自己",
-    "heal_permille": "治療量 ±‰",
-    "summon_hp_permille": "召喚物最大 HP +‰",
-    "summon_attack_dice": "召喚物攻擊 +1 顆傷害骰",
-    "summon_limit_delta": "召喚物同時上限 ±1",
-    "summon_duration_delta": "召喚物持續 +輪數",
-    "summon_damage_permille": "召喚物傷害 +‰",
-}
 _TRAP_SHAPES = ("single", "cross", "square3")
 """陷阱觸發範圍可用的形狀（``skill_budget.yaml`` 的陷阱預算以這三種形狀的倍率計算）。"""
 
@@ -379,8 +358,8 @@ def _scaling_field(draft: Draft, library: ContentLibrary) -> FieldSpec:
         field="scaling_attr",
         name_zh="縮放屬性",
         description_zh=(
-            "武器技的命中與傷害看手上武器的屬性（雙屬性武器取較高或取平均），不能另外選；"
-            "這裡只顯示武器需求對應的主屬性"
+            "武器技的命中與傷害看手上武器的屬性（雙屬性武器取較高或取平均），不能另外選。"
+            "武器技一定要拿近戰或遠程武器；不限武器的是法術技"
             if attr is not None
             else "武器技看手上武器的屬性；先選武器需求"
         ),
@@ -390,8 +369,22 @@ def _scaling_field(draft: Draft, library: ContentLibrary) -> FieldSpec:
         default=None if attr is None else attr.value,
         choices=()
         if attr is None
-        else (Choice(value=attr.value, name_zh=f"看手上武器（{attr.display_name}）"),),
+        else (Choice(value=attr.value, name_zh=_weapon_scaling_name(str(req), library)),),
     )
+
+
+def _weapon_scaling_name(weapon_req: str, library: ContentLibrary) -> str:
+    """武器技縮放屬性的顯示：實際看的是手上武器的屬性，例子從武器資料產生（每種屬性組合取一把，
+    優先取玩家能裝備的武器，依 ID 排序，最多 3 種），不寫死。"""
+    equipped = {i.weapon for i in library.items.values() if i.weapon is not None}
+    pool = sorted(w for w in library.weapons if w in equipped) or sorted(library.weapons)
+    examples: dict[str, str] = {}
+    for weapon_id in pool:
+        weapon = library.weapons[weapon_id]
+        if weapon.weapon_class == weapon_req:
+            examples.setdefault(weapon.scaling_names_zh(), weapon.name_zh)
+    shown = "、".join(f"{name}＝{attrs}" for attrs, name in list(examples.items())[:3])
+    return f"依手上武器而定（例：{shown}）" if shown else "依手上武器而定"
 
 
 _WEAPON_CLASSES = ("melee", "ranged")
@@ -446,7 +439,7 @@ def _basics_step(draft: Draft, library: ContentLibrary, skeleton: SkeletonDef) -
         FieldSpec(
             field="tier",
             name_zh="階級",
-            description_zh="階級越高，可用預算越多（點數表在 rules/core.yaml 的 tier_budget）",
+            description_zh="階級越高，可用預算越多",
             type="int",
             required=True,
             min=tiers[0],

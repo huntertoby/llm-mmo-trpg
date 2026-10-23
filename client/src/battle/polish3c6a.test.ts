@@ -2,7 +2,7 @@
 import { describe, expect, it } from "vitest";
 import type { TelegraphChange, TelegraphOut } from "../api/types";
 import { buildDrawModel } from "./drawModel";
-import { kindLabel, sourceCostText, sourcePips } from "./source";
+import { categoryLabel, kindLabel, sourceCostText, sourcePips } from "./source";
 import { remainingRounds } from "./summons";
 import { telegraphLines, telegraphMarks } from "./telegraph";
 import { smallView, unit } from "./testFixtures";
@@ -25,6 +25,11 @@ describe("source pips", () => {
   it("labels modifier skills as 改造／修正", () => {
     expect(kindLabel({ kind: "修正", kind_id: "modifier", modifiers: [] })).toBe("修正（改造／修正）");
     expect(kindLabel({ kind: "主動", kind_id: "active", modifiers: [] })).toBe("主動");
+    // 3-48：卡片標題標示武器技／法術技
+    expect(categoryLabel({ category_id: "spell", kind_id: "active" })).toBe("法術技・花法力");
+    expect(categoryLabel({ category_id: "weapon", kind_id: "active" })).toBe("武器技・花耐力・看手上武器");
+    expect(categoryLabel({ category_id: "spell", kind_id: "passive" })).toBe("法術技");
+    expect(categoryLabel({ category_id: "weapon", kind_id: "modifier" })).toBe("武器技・看手上武器");
   });
 });
 

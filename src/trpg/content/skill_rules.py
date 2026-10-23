@@ -415,7 +415,7 @@ class BudgetRules(ContentModel):
             return None
         names = {"mana": "法力", "stamina": "耐力"}
         kind = "武器技" if category == "weapon" else "法術技"
-        return f"{kind}花{names[want]}，不能花{names[other]}（cost.{other}，06 6.10）"
+        return f"{kind}花{names[want]}，不能花{names[other]}"
 
     def stamina_for_mana(self, mana: int) -> int:
         """法力代價換成等價的耐力代價（預算點數相同）。"""

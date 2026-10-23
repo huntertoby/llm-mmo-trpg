@@ -15,6 +15,15 @@ export function sourceCostText(card: Pick<SkillCard, "source_cost">, max: number
   return `源力 ${cost}　${pips}`;
 }
 
+/** 技能卡片標題的類別字樣（3-48）：「武器技・花耐力・看手上武器」「法術技・花法力」。
+ * 花費資源只寫在要花資源的種類（主動、反應、姿態）；被動與修正只寫類別。 */
+export function categoryLabel(card: Pick<SkillCard, "category_id" | "kind_id">): string {
+  const weapon = card.category_id === "weapon";
+  const pays = card.kind_id === "active" || card.kind_id === "reaction" || card.kind_id === "stance";
+  if (weapon) return pays ? "武器技・花耐力・看手上武器" : "武器技・看手上武器";
+  return pays ? "法術技・花法力" : "法術技";
+}
+
 /** 技能卡片標題的種類字樣：「主動」「被動」「反應」「姿態」；修正技能一併註明是「改造／修正」。 */
 export function kindLabel(card: Pick<SkillCard, "kind" | "kind_id" | "modifiers">): string {
   if (card.kind_id === "modifier") return `${card.kind}（改造／修正）`;
