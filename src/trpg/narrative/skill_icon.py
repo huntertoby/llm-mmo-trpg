@@ -126,9 +126,9 @@ class SkillIcon(_Model):
     modifier: IconModifier | None
     partial: bool = False
     trap_trigger: str | None = None
-    """陷阱技能的觸發方式（``trap.trigger``：``enter``／``delay``）；非陷阱技能為 ``None``（Phase 3-36b）。"""
+    """陷阱技能的觸發方式（``trap.trigger``：``enter``／``delay``）；非陷阱技能為 ``None``。"""
     zone_element: str | None = None
-    """持續區域技能的區域效果（``zone`` 效果裡的子效果）上的第一個元素；沒有時為 ``None``（Phase 3-36b）。"""
+    """持續區域技能的區域效果（``zone`` 效果裡的子效果）的第一個元素；沒有時為 ``None``。"""
 
 
 # ---- 容錯的取值 ----------------------------------------------------------------------------
