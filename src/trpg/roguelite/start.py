@@ -37,7 +37,7 @@ from trpg.roguelite.errors import ChoiceError
 from trpg.roguelite.names import unique_skill_name
 from trpg.roguelite.state import BattleNode, BattlePlan, RunStart, RunState
 from trpg.shared.rng import MASK64, Rng
-from trpg.shared.types import Attribute
+from trpg.shared.types import Attribute, top_attribute
 from trpg.skillgen.keywords import derive_keywords, is_starter_skill, keyword_pools
 from trpg.skillgen.random_composer import ComposeError, compose_random_skill
 
@@ -57,12 +57,6 @@ __all__ = [
     "starting_skill",
     "top_attribute",
 ]
-
-
-def top_attribute(attributes: Mapping[Attribute, int]) -> Attribute:
-    """最高的屬性；並列時取六屬性順序（力量、敏捷、體質、智力、感知、意志）的第一個。"""
-    best = max(attributes[a] for a in Attribute)
-    return next(a for a in Attribute if attributes[a] == best)
 
 
 def primary_attribute(skills: Iterable[SkillDef], fallback: Attribute = Attribute.STR) -> Attribute:

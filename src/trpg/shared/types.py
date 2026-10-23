@@ -5,7 +5,7 @@
 
 from __future__ import annotations
 
-from collections.abc import Mapping
+from collections.abc import Iterable, Mapping
 from enum import StrEnum
 from typing import NewType
 
@@ -27,6 +27,7 @@ __all__ = [
     "Team",
     "UnitId",
     "rune_name",
+    "top_attribute",
 ]
 
 # ---------------------------------------------------------------------------
@@ -158,6 +159,17 @@ class Attribute(StrEnum):
     @property
     def display_name(self) -> str:
         return _ATTRIBUTE_NAMES[self]
+
+
+def top_attribute(
+    attributes: Mapping[Attribute, int], *, exclude: Iterable[Attribute] = ()
+) -> Attribute:
+    """最高的屬性；**並列時固定取六屬性順序（力量、敏捷、體質、智力、感知、意志）的第一個**
+    （Phase 3H-3，``docs/design/07-角色成長.md`` 7.2；確定性）。``exclude`` 內的屬性不參與。"""
+    skip = set(exclude)
+    pool = [a for a in Attribute if a not in skip]
+    best = max(attributes[a] for a in pool)
+    return next(a for a in pool if attributes[a] == best)
 
 
 class Rarity(StrEnum):

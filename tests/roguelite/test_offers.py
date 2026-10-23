@@ -10,6 +10,7 @@ from trpg.roguelite import ChoiceError, RunState, new_run
 from trpg.roguelite.offers import equip_problems, make_offer, skill_defs, take_candidate
 from trpg.roguelite.start import top_attribute
 from trpg.roguelite.state import SkillOffer
+from trpg.shared.types import Attribute
 
 BUILDS = ("build_push", "build_fire", "build_ranged", "build_healer", "build_tank")
 
@@ -160,3 +161,18 @@ def test_replaced_generated_skills_go_to_the_bench() -> None:
             assert second.bench == (gen.id,) and gen.id not in second.hero.skills
             return
     raise AssertionError("找不到可替換的生成技能候選")
+
+
+def test_offer_follows_top_attribute_and_keeps_one_new_direction() -> None:
+    """Phase 3H-3：升級三選一的加深優先同屬性、新方向保留不同屬性；同狀態同結果。"""
+    lib = library()
+    run = new_run(lib, "build_fire", 3)
+    first = _offer(run)
+    assert first == _offer(run)
+    top = top_attribute(run.hero.attributes)
+    assert first.candidates[2].scaling_attr is not top
+    attrs = {**run.hero.attributes, Attribute.WIL: 30}
+    heavy = run.model_copy(update={"hero": run.hero.model_copy(update={"attributes": attrs})})
+    again = _offer(heavy)
+    assert again.top_attribute is Attribute.WIL
+    assert again.candidates[2].scaling_attr is not Attribute.WIL
