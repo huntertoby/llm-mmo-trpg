@@ -404,7 +404,8 @@ def _print_node(library: ContentLibrary, before: RunState, after: RunState, out:
         print(f"    離開營火：{_skill_change(library, before, after)}", file=out)
     if isinstance(after.node, CampfireNode) and not isinstance(node, CampfireNode):
         print(
-            f"    營火（第 {after.node.after_battle} 場後）：HP、法力回滿，源力 {after.source}",
+            f"    營火（第 {after.node.after_battle} 場後）：HP、法力、耐力回滿，"
+            f"源力 {after.source}",
             file=out,
         )
 

@@ -227,9 +227,13 @@ def _hero(library: ContentLibrary, run: RunState) -> HeroOut:
 def resource_rule_text(library: ContentLibrary, *, test_mode: bool) -> str:
     """戰鬥之間的資源規則（Phase 3-41b）：營火的場次取自 ``roguelite.yaml``，不寫死在前端。"""
     if test_mode:
-        return "測試模式：每場戰鬥結束後 HP、法力自動回滿。"
+        return "測試模式：每場戰鬥結束後 HP、法力、耐力自動回滿。"
     after = "、".join(f"第 {n} 場" for n in library.roguelite.campfire_after)
-    return f"HP、法力不會在戰鬥之間回復，只有營火會回滿（{after}之後）。"
+    names = {"mana": "法力", "stamina": "耐力"}
+    refill = [names[k] for k in ("mana", "stamina") if k in library.roguelite.refill_after_battle]
+    kept = "、".join(["HP", *(v for k, v in names.items() if v not in refill)])
+    head = f"每場打贏後{'、'.join(refill)}回滿；" if refill else ""
+    return f"{head}{kept}不會在戰鬥之間回復，只有營火會回滿（{after}之後）。"
 
 
 def run_response(session: RunSession) -> RunResponse:

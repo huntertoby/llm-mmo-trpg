@@ -136,7 +136,7 @@ export function RunNewScreen({ onCreated, onHome }: Props) {
         </div>
         <div className="muted small">
           共 5 場戰鬥加 Boss；
-          {testMode ? "測試模式：每場戰鬥結束後 HP、法力自動回滿。" : "HP、法力不會在戰鬥之間回復，只有營火（中段與 Boss 前）會回滿。"}
+          {testMode ? "測試模式：每場戰鬥結束後 HP、法力、耐力自動回滿。" : "HP、法力、耐力不會在戰鬥之間回復，只有營火（中段與 Boss 前）會回滿。"}
           隊友為 2 名標準隊友。
         </div>
       </form>

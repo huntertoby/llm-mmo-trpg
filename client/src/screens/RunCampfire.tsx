@@ -1,4 +1,4 @@
-// 營火畫面：HP、法力已回滿（源力 +1）；可重骰一組新的技能候選（中段與 Boss 前各一次），選一張或放棄後離開。
+// 營火畫面：HP、法力、耐力已回滿（源力 +1）；可重骰一組新的技能候選（中段與 Boss 前各一次），選一張或放棄後離開。
 // Phase 3-26a：也可以分配技能點、免費重配點數與換裝。
 import { useState } from "react";
 import type { RunChoice, RunResponse } from "../api/types";
