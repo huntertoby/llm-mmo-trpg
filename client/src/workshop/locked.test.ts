@@ -16,6 +16,7 @@ const scaling = (locked: boolean): FieldSpec => ({
   allow_weapon: false,
   locked,
   plain_value: false,
+  auto_generated: false,
   show_when: {},
   card: false,
   object_choice: false,

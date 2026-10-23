@@ -185,7 +185,6 @@ function ChoiceField({ spec, container, base, onChange }: FieldProps) {
               className={`ws-card${chosen?.value === c.value ? " selected" : ""}${blockedReason(c, chosen) !== null ? " unavailable" : ""}`}
               aria-pressed={chosen?.value === c.value}
               disabled={blockedReason(c, chosen) !== null}
-              title={blockedReason(c, chosen) ?? undefined}
               onClick={() => pick(c)}
             >
               <span className="ws-card-title">
