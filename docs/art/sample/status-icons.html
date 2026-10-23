@@ -1,0 +1,146 @@
+<!doctype html>
+<html lang="zh-Hant">
+<head>
+<meta charset="utf-8">
+<title>狀態圖示樣張</title>
+<style>
+  body { margin: 0; padding: 16px 20px; background: #1b1e24; color: #e8e8ea; font-family: "Microsoft JhengHei", sans-serif; }
+  h1 { font-size: 20px; margin: 0 0 4px; }
+  h2 { font-size: 15px; margin: 16px 0 6px; }
+  .sub { color: #a0a4ad; font-size: 13px; margin-bottom: 8px; }
+  table.rule { border-collapse: collapse; font-size: 12.5px; margin-bottom: 6px; }
+  table.rule td, table.rule th { border: 1px solid #3a3f48; padding: 4px 8px; text-align: left; }
+  table.rule th { background: #262a32; }
+  .grid { display: flex; flex-wrap: wrap; gap: 6px; }
+  .st { width: 112px; background: #232730; border-radius: 6px; padding: 5px 4px; text-align: center; font-size: 12px; }
+  .st.dup { outline: 2px solid #ff8a3a; }
+  .st .n { color: #e8e8ea; } .st .m { color: #8a909a; font-size: 10.5px; }
+  .st canvas { display: inline-block; vertical-align: middle; }
+  .row { display: flex; gap: 6px; align-items: center; justify-content: center; }
+  .lab { font-size: 10px; color: #8a909a; }
+  .test { font-size: 12px; margin: 4px 0 0; }
+  .ok { color: #7dffb0; } .bad { color: #ff8a8a; }
+  .cell { display: inline-block; vertical-align: top; margin: 0 8px 8px 0; text-align: center; font-size: 12px; color: #c8ccd4; }
+</style>
+</head>
+<body>
+<h1>狀態圖示統一規則</h1>
+<div class="sub">32 個現有狀態（content/statuses.yaml）。每格：左＝現況、中＝提案 26px（資訊欄）、右＝提案 14px（戰場上頭頂的實際大小）。橘框＝現況裡長得太像的組合。</div>
+
+<table class="rule">
+  <tr><th>看哪裡</th><th>由哪個欄位決定</th><th>規則</th></tr>
+  <tr><td>外框形狀＋框色</td><td><code>polarity</code></td><td>增益 buff＝<b style="color:#3fbf6a">綠色圓形</b>、減益 debuff＝<b style="color:#e04848">紅色圓角方形</b>、中性 neutral（含姿態）＝<b style="color:#c8a048">金色六角形</b>。色盲也能靠形狀分。</td></tr>
+  <tr><td>圖樣顏色</td><td><code>control_group</code> → <code>on_turn_start_damage.element</code> → <code>polarity</code></td><td>控制類：硬控（暈眩、冰凍）<b style="color:#ffd84a">黃</b>、移動（緩速、定身）<b style="color:#6ac8ff">藍</b>、心智（恐懼、沉默、嘲諷）<b style="color:#c890ff">紫</b>；持續傷害用元素色；其餘依 polarity（少數保留原本的專屬色）。</td></tr>
+  <tr><td>圖樣</td><td>狀態 ID 查表</td><td>一個狀態一個圖樣，不再重複（下面四組改掉）。不認得的狀態：外框照 polarity，中間畫名稱第一個字。</td></tr>
+  <tr><td>戰場上</td><td>排序規則</td><td>頭頂一排最多 3 個，超過時顯示 2 個＋「+N」。順序：硬控 → 移動／心智控制 → 持續傷害 → 其他減益 → 增益 → 中性；同一級依 ID 排。</td></tr>
+  <tr><td>身上特效</td><td><code>skip_turn</code>、<code>removed_by_element</code>、<code>absorbs_damage</code>、<code>prevents_move</code>、<code>on_turn_start_damage</code></td><td>只有 5 類：冰凍＝冰塊、暈眩＝頭上轉星、護盾＝泡泡、定身＝腳下藤蔓、持續傷害＝腳邊元素粒子。其餘只靠圖示，避免畫面太亂。</td></tr>
+</table>
+
+<h2>增益（buff）</h2><div class="grid" id="buff"></div>
+<h2>減益（debuff）</h2><div class="grid" id="debuff"></div>
+<h2>中性（neutral）</h2><div class="grid" id="neutral"></div>
+
+<h2>不認得的狀態（自測）</h2>
+<div class="grid" id="unknown"></div>
+<div class="test" id="selftest"></div>
+
+<h2>戰場上的樣子（實際大小 ／ 放大 2 倍）</h2>
+<div id="field"></div>
+
+<script src="current.js"></script>
+<script src="paperdoll.js"></script>
+<script src="fx.js"></script>
+<script>
+const DPR = 2, T = 52;
+const DUP = { revealed: "被揭露＝監視", overwatch: "被揭露＝監視", guarded: "護衛≈護盾≈守護", shielded: "護衛≈護盾≈守護", defending: "護衛≈護盾≈守護", empowered: "強化≈戰意", rallied: "強化≈戰意", stance_fury: "兩個姿態一樣", stance_bulwark: "兩個姿態一樣" };
+function cv(w, h) {
+  const c = document.createElement("canvas");
+  c.width = w * DPR; c.height = h * DPR; c.style.width = `${w}px`; c.style.height = `${h}px`;
+  const ctx = c.getContext("2d"); ctx.scale(DPR, DPR); return [c, ctx];
+}
+for (const [id, s] of Object.entries(FX.STATUS)) {
+  const div = document.createElement("div");
+  div.className = "st" + (DUP[id] ? " dup" : "");
+  const row = document.createElement("div"); row.className = "row";
+  const [c0, x0] = cv(30, 30); x0.drawImage(CUR.tileCanvas(CUR.statusTile(id), 44), 0, 0, 30, 30);
+  const [c1, x1] = cv(30, 30); FX.statusIcon(x1, id, 15, 15, 26);
+  const [c2, x2] = cv(18, 18); FX.statusIcon(x2, id, 9, 9, 14);
+  row.append(c0, c1, c2);
+  div.append(row);
+  div.insertAdjacentHTML("beforeend", `<div class="n">${s.zh}</div><div class="m">${id}${DUP[id] ? `<br><span style="color:#ff8a3a">${DUP[id]}</span>` : ""}</div>`);
+  document.getElementById(s.pol).append(div);
+}
+// 不認得的狀態：不得出錯，外框照 polarity
+const unknown = [
+  ["new_buff", { pol: "buff", zh: "祝福" }],
+  ["new_debuff", { pol: "debuff", zh: "詛咒" }],
+  ["new_neutral", { pol: "neutral", zh: "共鳴" }],
+  ["no_polarity", { pol: undefined, zh: "謎" }],
+  ["bad_polarity", { pol: "weird", zh: "怪" }],
+  ["", { pol: "debuff", zh: "" }],
+];
+let fails = 0;
+for (const [id, o] of unknown) {
+  const div = document.createElement("div"); div.className = "st";
+  const row = document.createElement("div"); row.className = "row";
+  const [c1, x1] = cv(30, 30); const [c2, x2] = cv(18, 18);
+  try { FX.statusIcon(x1, id, 15, 15, 26, o); FX.statusIcon(x2, id, 9, 9, 14, o); } catch (e) { fails++; }
+  row.append(c1, c2); div.append(row);
+  div.insertAdjacentHTML("beforeend", `<div class="n">${o.zh || "（空名稱）"}</div><div class="m">${id || "（空 ID）"} / ${o.pol ?? "無 polarity"}</div>`);
+  document.getElementById("unknown").append(div);
+}
+// 排序與溢出自測：全部 32 個＋未知狀態一起排，不得出錯、結果穩定
+try {
+  const all = Object.keys(FX.STATUS).concat(["zzz_unknown"]);
+  const a = FX.sortStatuses(all).join(), b = FX.sortStatuses([...all].reverse()).join();
+  if (a !== b) fails++;
+  const [, ctx] = cv(60, 20); FX.statusRow(ctx, all, 30, 10, 14); FX.statusRow(ctx, [], 30, 10, 14);
+} catch (e) { fails++; }
+document.getElementById("selftest").innerHTML = fails === 0
+  ? `<span class="ok">全組合自測通過</span>：32 個狀態＋6 種不認得的寫法都畫得出來；排序與輸入順序無關；0 個、33 個狀態的頭頂列都不出錯。`
+  : `<span class="bad">自測失敗 ${fails} 項</span>`;
+
+// 戰場範例
+const field = document.getElementById("field");
+const NO = { n: false, s: false, w: false, e: false };
+const cases = [
+  ["沒有狀態", "hero_fighter", "player", []],
+  ["1 個：中毒", "bandit", "enemy", ["poison"]],
+  ["3 個", "bandit", "enemy", ["slow", "weaken", "marked"]],
+  ["5 個 → 2＋「+3」", "bandit_shieldbearer", "enemy", ["burning", "stun", "vulnerable", "hasted", "marked"]],
+  ["暈眩", "bandit", "enemy", ["stun"]],
+  ["冰凍", "hero_mage", "player", ["frozen"]],
+  ["護盾＋加速", "hero_fighter", "player", ["shielded", "hasted"]],
+  ["定身＋流血", "hero_archer", "player", ["root", "bleed"]],
+  ["燃燒＋中毒", "bandit_archer", "enemy", ["burning", "poison"]],
+  ["隱蔽（半透明）", "bandit_archer", "enemy", ["concealed"]],
+];
+function unitTile(ctx, tpl, team, st) {
+  ctx.save(); ctx.translate(0, 14); CUR.drawTile(ctx, { terrain: "stone", x: 2, y: 5, height: 0, surface: "none", surfSame: NO, lip: NO, wallFace: false, blocked: false, tint: null }); ctx.restore();
+  // 上方一格的底部（看狀態列會不會壓到上一格）
+  const cx = T / 2, feet = T * 0.82 + 14;
+  ctx.save(); ctx.translate(0, 14);
+  const col = FX.TEAM[team];
+  ctx.beginPath(); ctx.ellipse(cx, T * 0.8, T * 0.34, T * 0.12, 0, 0, Math.PI * 2); ctx.fillStyle = col + "55"; ctx.fill(); ctx.lineWidth = 2; ctx.strokeStyle = col; ctx.stroke();
+  ctx.restore();
+  FX.bodyUnder(ctx, st, cx, feet);
+  ctx.save(); ctx.globalAlpha = st.includes("concealed") ? 0.55 : 1;
+  PaperDoll.stamp(ctx, PaperDoll.TEMPLATES[tpl], "south", cx, feet, 0.78, { dpr: 4 });
+  ctx.restore();
+  FX.bodyOver(ctx, st, cx, feet, 0.4);
+  const w = T * 0.62, y = 14 + T / 2 + T * 0.36;
+  ctx.fillStyle = "rgba(0,0,0,0.7)"; ctx.fillRect(cx - w / 2 - 1, y - 1, w + 2, 7);
+  ctx.fillStyle = team === "player" ? "#5fd07a" : "#e05050"; ctx.fillRect(cx - w / 2, y, w * 0.7, 5);
+  FX.statusRow(ctx, st, cx, 14 + 1, 14);
+}
+for (const [label, tpl, team, st] of cases) {
+  const div = document.createElement("div"); div.className = "cell";
+  const [a, xa] = cv(T, T + 14); xa.fillStyle = "#3a3d44"; xa.fillRect(0, 0, T, 14); xa.save(); xa.translate(0, 0); unitTile(xa, tpl, team, st); xa.restore();
+  const [b, xb] = cv(T * 2, (T + 14) * 2); xb.scale(2, 2); xb.fillStyle = "#3a3d44"; xb.fillRect(0, 0, T, 14); unitTile(xb, tpl, team, st);
+  div.append(a, b);
+  div.insertAdjacentHTML("beforeend", `<div>${label}</div>`);
+  field.append(div);
+}
+</script>
+</body>
+</html>
