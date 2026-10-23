@@ -99,6 +99,7 @@ def _item_info(library: ContentLibrary, item: ItemDef) -> GearItemInfo:
 def gear_catalog(library: ContentLibrary) -> GearCatalog:
     """欄位、測試物品、詞條白名單與武器（測試介面的選單）。"""
     rules = library.ruleset.equipment
+    paired_weapons = {i.weapon for i in library.items.values() if i.paired and i.weapon is not None}
     return GearCatalog(
         slots=tuple(
             GearSlotInfo(
@@ -118,6 +119,7 @@ def gear_catalog(library: ContentLibrary) -> GearCatalog:
                 weapon_class=w.weapon_class,
                 weapon_class_zh=WEAPON_REQ_TEXT[w.weapon_class],
                 two_handed=w.two_handed,
+                pairable=not w.two_handed and w.id in paired_weapons,
                 look=None
                 if w.look is None
                 else GearWeaponLook(

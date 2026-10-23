@@ -20,10 +20,11 @@ export function weaponOptionText(w: GearCatalog["weapons"][number]): string {
  */
 export function draftLook(draft: CustomDraft, catalog: GearCatalog): GearLook & { rarity: string } {
   const rarity = draft.legendary ? "legendary" : "common";
-  if (draft.kind !== "") return { kind: draft.kind, rarity };
   const look = draft.weapon === "" ? undefined : catalog.weapons.find((w) => w.id === draft.weapon)?.look;
+  const element = look?.element ?? null; // 元素沿用所選武器，換造型也不變
+  if (draft.kind !== "") return { kind: draft.kind, element, rarity };
   if (look == null) return { kind: null, rarity };
-  return { kind: look.kind, form: look.form ?? null, material: look.material, rarity };
+  return { kind: look.kind, form: look.form ?? null, material: look.material, element, rarity };
 }
 
 /** 手動組的物品（草稿）。 */
@@ -112,6 +113,11 @@ export function draftProblems(draft: CustomDraft, slotType: string, catalog: Gea
   const name = draft.name.trim() === "" ? "自訂物品" : draft.name.trim();
   if (draft.name.trim() === "") problems.push("物品需要一個名稱");
   if (slotType === "weapon" && draft.weapon === "") problems.push("主手物品要選一種武器");
+  if (slotType === "weapon" && draft.paired) {
+    const w = catalog.weapons.find((x) => x.id === draft.weapon);
+    if (w?.two_handed === true) problems.push(`雙手武器（${w.name_zh}）不能是成對武器`);
+    else if (w !== undefined && !w.pairable) problems.push(`${w.name_zh}沒有成對的版本，不能勾「成對武器」`);
+  }
   if (draft.affixes.length === 0) problems.push(`${name}：至少要掛 1 條詞條`);
   if (draft.affixes.length > catalog.max_affixes_per_item) {
     problems.push(`${name}：詞條最多 ${catalog.max_affixes_per_item} 條（有 ${draft.affixes.length} 條）`);
@@ -243,6 +249,27 @@ export function draftSummary(draft: CustomDraft, catalog: GearCatalog): string {
       return info === undefined ? a.affix : affixText(info, a.value);
     })
     .join("；");
+}
+
+/** 屬性詞條（力量、敏捷……）：同一類的詞條可以互換屬性。 */
+export const ATTR_AFFIX_PREFIX = "affix_attr_";
+
+export function isAttrAffix(id: string): boolean {
+  return id.startsWith(ATTR_AFFIX_PREFIX);
+}
+
+/** 這個武器可不可以勾「成對武器」（單手、且內容庫有成對版本）。 */
+export function canPair(catalog: GearCatalog, weaponId: string): boolean {
+  return catalog.weapons.find((w) => w.id === weaponId)?.pairable === true;
+}
+
+/** 把第 `index` 條屬性詞條換成另一種屬性：數值保留，並夾在新詞條的範圍內。 */
+export function swapAffix(draft: CustomDraft, index: number, to: GearAffixInfo): CustomDraft {
+  const cur = draft.affixes[index];
+  if (cur === undefined) return draft;
+  const value = to.value_min == null ? null : clampValue(to, cur.value ?? to.value_min);
+  const affixes = draft.affixes.map((a, i) => (i === index ? { affix: to.id, value } : a));
+  return { ...draft, affixes };
 }
 
 /** 手動組物品時可選的詞條（依物品種類篩出可用的，不可用的附原因）。 */

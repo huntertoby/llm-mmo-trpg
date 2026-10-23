@@ -2212,6 +2212,11 @@ export interface components {
             weapon_class_zh: string;
             /** Two Handed */
             two_handed: boolean;
+            /**
+             * Pairable
+             * @default false
+             */
+            pairable: boolean;
             look?: components["schemas"]["GearWeaponLook"] | null;
         };
         /**

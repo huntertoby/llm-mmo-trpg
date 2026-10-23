@@ -260,3 +260,12 @@ def test_offhand_items_and_custom_offhands_are_checked(client: TestClient) -> No
         },
     )
     assert two_handed["legal"] is False and "副手被占用" in "；".join(two_handed["problems"])
+
+
+def test_catalog_marks_pairable_weapons_from_content(client: TestClient) -> None:
+    """成對武器勾選資料驅動：單手、且有成對物品的武器才 pairable；雙手武器永遠不是。"""
+    weapons = {w["id"]: w for w in client.get("/api/gear/catalog").json()["weapons"]}
+    assert weapons["dagger"]["pairable"] is True
+    assert weapons["one_handed_sword"]["pairable"] is False
+    assert all(not (w["two_handed"] and w["pairable"]) for w in weapons.values())
+    assert weapons["fire_staff"]["look"]["element"] == "fire"

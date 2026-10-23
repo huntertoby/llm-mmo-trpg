@@ -102,6 +102,8 @@ class GearWeaponInfo(_ApiModel):
     weapon_class_zh: str
     """武器大類的中文（近戰武器、遠程武器、法器），玩家看的文字不露英文代號。"""
     two_handed: bool
+    pairable: bool = False
+    """能不能做成對武器（占用副手）：單手，且內容庫有以它為武器的成對物品（3I-4 後自動出現）。"""
     look: GearWeaponLook | None = None
 
 
