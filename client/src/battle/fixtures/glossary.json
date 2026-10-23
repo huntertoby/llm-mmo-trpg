@@ -5,6 +5,7 @@
    "name_zh": "石地",
    "description_zh": null,
    "tags": [],
+   "status_look": null,
    "rules_zh": [
     "可通行"
    ]
@@ -14,6 +15,7 @@
    "name_zh": "草地",
    "description_zh": null,
    "tags": [],
+   "status_look": null,
    "rules_zh": [
     "可通行"
    ]
@@ -23,6 +25,7 @@
    "name_zh": "泥土",
    "description_zh": null,
    "tags": [],
+   "status_look": null,
    "rules_zh": [
     "可通行"
    ]
@@ -35,6 +38,7 @@
     "blocked",
     "deadly"
    ],
+   "status_look": null,
    "rules_zh": [
     "不可通行",
     "致命地形：被推進去的單位死亡（精英與 Boss 改受 30% 最大 HP 傷害）"
@@ -48,6 +52,7 @@
     "blocked",
     "deadly"
    ],
+   "status_look": null,
    "rules_zh": [
     "不可通行",
     "致命地形：被推進去的單位死亡（精英與 Boss 改受 30% 最大 HP 傷害）"
@@ -61,6 +66,7 @@
     "blocked",
     "deadly"
    ],
+   "status_look": null,
    "rules_zh": [
     "不可通行",
     "致命地形：被推進去的單位死亡（精英與 Boss 改受 30% 最大 HP 傷害）"
@@ -74,6 +80,7 @@
     "blocked",
     "blocks_sight"
    ],
+   "status_look": null,
    "rules_zh": [
     "不可通行",
     "擋視線（全掩護）；一般攻擊無法破壞"
@@ -88,6 +95,7 @@
    "tags": [
     "flammable"
    ],
+   "status_look": null,
    "rules_zh": [
     "可燃：火勢會蔓延過來",
     "火焰：變成火焰"
@@ -98,6 +106,7 @@
    "name_zh": "水",
    "description_zh": null,
    "tags": [],
+   "status_look": null,
    "rules_zh": [
     "由技能產生時持續 3 回合",
     "雷電：沿相連的水與導電物傳導，波及其上的其他單位",
@@ -111,6 +120,7 @@
    "name_zh": "火焰",
    "description_zh": null,
    "tags": [],
+   "status_look": null,
    "rules_zh": [
     "由技能產生時持續 2 回合",
     "帶有火焰元素（產生時會觸及格上的物件）",
@@ -126,6 +136,7 @@
    "name_zh": "冰",
    "description_zh": null,
    "tags": [],
+   "status_look": null,
    "rules_zh": [
     "由技能產生時持續 3 回合，之後變成水",
     "帶有冰霜元素（產生時會觸及格上的物件）",
@@ -139,6 +150,7 @@
    "name_zh": "毒",
    "description_zh": null,
    "tags": [],
+   "status_look": null,
    "rules_zh": [
     "由技能產生時持續 3 回合",
     "帶有毒素元素（產生時會觸及格上的物件）",
@@ -154,6 +166,7 @@
    "tags": [
     "beneficial"
    ],
+   "status_look": null,
    "rules_zh": [
     "由技能產生時持續 3 回合",
     "帶有神聖元素（產生時會觸及格上的物件）",
@@ -170,6 +183,7 @@
     "blocks_sight",
     "conceal"
    ],
+   "status_look": null,
    "rules_zh": [
     "由技能產生時持續 3 回合",
     "帶有暗影元素（產生時會觸及格上的物件）",
@@ -186,6 +200,7 @@
     "blocks_sight",
     "conceal"
    ],
+   "status_look": null,
    "rules_zh": [
     "由技能產生時持續 3 回合",
     "擋視線",
@@ -204,6 +219,7 @@
     "flammable",
     "over_chasm"
    ],
+   "status_look": null,
    "rules_zh": [
     "架在致命地形上，可以走；被打破後格上的單位會落下",
     "可被破壞",
@@ -223,6 +239,7 @@
     "half_cover",
     "pushable"
    ],
+   "status_look": null,
    "rules_zh": [
     "半掩護（遠程攻擊其後的目標，命中 −2）",
     "可推動",
@@ -243,6 +260,7 @@
     "breakable",
     "over_chasm"
    ],
+   "status_look": null,
    "rules_zh": [
     "架在致命地形上，可以走；被打破後格上的單位會落下",
     "可被破壞",
@@ -259,6 +277,7 @@
     "breakable",
     "topplable"
    ],
+   "status_look": null,
    "rules_zh": [
     "不可通行",
     "擋視線（全掩護）",
@@ -275,6 +294,7 @@
     "conceal",
     "flammable"
    ],
+   "status_look": null,
    "rules_zh": [
     "站在同一格的單位隱蔽",
     "可燃",
@@ -293,6 +313,7 @@
     "penetrable",
     "pushable"
    ],
+   "status_look": null,
    "rules_zh": [
     "不可通行",
     "半掩護（遠程攻擊其後的目標，命中 −2）",
@@ -313,6 +334,7 @@
     "blocks_sight",
     "breakable"
    ],
+   "status_look": null,
    "rules_zh": [
     "不可通行",
     "擋視線（全掩護）",
@@ -328,6 +350,7 @@
     "breakable",
     "half_cover"
    ],
+   "status_look": null,
    "rules_zh": [
     "不可通行",
     "半掩護（遠程攻擊其後的目標，命中 −2）",
@@ -345,6 +368,7 @@
     "half_cover",
     "penetrable"
    ],
+   "status_look": null,
    "rules_zh": [
     "不可通行",
     "半掩護（遠程攻擊其後的目標，命中 −2）",
@@ -365,6 +389,7 @@
     "flammable",
     "topplable"
    ],
+   "status_look": null,
    "rules_zh": [
     "不可通行",
     "擋視線（全掩護）",
@@ -384,6 +409,7 @@
     "breakable",
     "half_cover"
    ],
+   "status_look": null,
    "rules_zh": [
     "不可通行",
     "半掩護（遠程攻擊其後的目標，命中 −2）",
@@ -400,6 +426,7 @@
     "breakable",
     "meltable"
    ],
+   "status_look": null,
    "rules_zh": [
     "不可通行",
     "擋視線（全掩護）",
@@ -417,6 +444,7 @@
     "breakable",
     "flammable"
    ],
+   "status_look": null,
    "rules_zh": [
     "不可通行",
     "可被破壞",
@@ -433,6 +461,15 @@
    "tags": [
     "beneficial"
    ],
+   "status_look": {
+    "polarity": "buff",
+    "control_group": null,
+    "dot_element": null,
+    "skip_turn": false,
+    "removed_by_element": [],
+    "absorbs_damage": false,
+    "prevents_move": false
+   },
    "rules_zh": []
   },
   {
@@ -440,6 +477,15 @@
    "name_zh": "倒地",
    "description_zh": "移動前要先站起來（消耗一半移動點數）；近戰攻擊倒地者有優勢，遠程攻擊有劣勢。",
    "tags": [],
+   "status_look": {
+    "polarity": "debuff",
+    "control_group": null,
+    "dot_element": null,
+    "skip_turn": false,
+    "removed_by_element": [],
+    "absorbs_damage": false,
+    "prevents_move": false
+   },
    "rules_zh": []
   },
   {
@@ -447,6 +493,15 @@
    "name_zh": "燃燒",
    "description_zh": "回合開始時受到 1d6 火焰傷害，持續 2 回合；重複施加時刷新持續時間。",
    "tags": [],
+   "status_look": {
+    "polarity": "debuff",
+    "control_group": null,
+    "dot_element": "fire",
+    "skip_turn": false,
+    "removed_by_element": [],
+    "absorbs_damage": false,
+    "prevents_move": false
+   },
    "rules_zh": []
   },
   {
@@ -456,6 +511,15 @@
    "tags": [
     "beneficial"
    ],
+   "status_look": {
+    "polarity": "neutral",
+    "control_group": null,
+    "dot_element": null,
+    "skip_turn": false,
+    "removed_by_element": [],
+    "absorbs_damage": false,
+    "prevents_move": false
+   },
    "rules_zh": []
   },
   {
@@ -463,6 +527,15 @@
    "name_zh": "被揭露",
    "description_zh": "不算隱蔽（黑暗與草叢也一樣），也不能再獲得隱蔽。只能由揭露（reveal）施加。",
    "tags": [],
+   "status_look": {
+    "polarity": "debuff",
+    "control_group": null,
+    "dot_element": null,
+    "skip_turn": false,
+    "removed_by_element": [],
+    "absorbs_damage": false,
+    "prevents_move": false
+   },
    "rules_zh": []
   },
   {
@@ -472,6 +545,15 @@
    "tags": [
     "beneficial"
    ],
+   "status_look": {
+    "polarity": "buff",
+    "control_group": null,
+    "dot_element": null,
+    "skip_turn": false,
+    "removed_by_element": [],
+    "absorbs_damage": false,
+    "prevents_move": false
+   },
    "rules_zh": []
   },
   {
@@ -479,6 +561,15 @@
    "name_zh": "定時炸彈",
    "description_zh": "身上綁著定時炸彈，剩餘回合就是倒數（每次環境回合 −1）：歸零時在身體當下的位置爆炸，波及周圍；倒下時也會立即爆炸。可被淨化移除，驅散不移除。只能由定時炸彈（delayed_damage）施加。",
    "tags": [],
+   "status_look": {
+    "polarity": "debuff",
+    "control_group": null,
+    "dot_element": null,
+    "skip_turn": false,
+    "removed_by_element": [],
+    "absorbs_damage": false,
+    "prevents_move": false
+   },
    "rules_zh": []
   },
   {
@@ -488,6 +579,15 @@
    "tags": [
     "beneficial"
    ],
+   "status_look": {
+    "polarity": "neutral",
+    "control_group": null,
+    "dot_element": null,
+    "skip_turn": false,
+    "removed_by_element": [],
+    "absorbs_damage": false,
+    "prevents_move": false
+   },
    "rules_zh": []
   },
   {
@@ -495,6 +595,15 @@
    "name_zh": "緩速",
    "description_zh": "回合開始時的移動點數減半（無條件捨去）。",
    "tags": [],
+   "status_look": {
+    "polarity": "debuff",
+    "control_group": "movement",
+    "dot_element": null,
+    "skip_turn": false,
+    "removed_by_element": [],
+    "absorbs_damage": false,
+    "prevents_move": false
+   },
    "rules_zh": []
   },
   {
@@ -502,6 +611,15 @@
    "name_zh": "定身",
    "description_zh": "不能主動移動（仍可被推擊、拉扯等強制位移）。",
    "tags": [],
+   "status_look": {
+    "polarity": "debuff",
+    "control_group": "movement",
+    "dot_element": null,
+    "skip_turn": false,
+    "removed_by_element": [],
+    "absorbs_damage": false,
+    "prevents_move": true
+   },
    "rules_zh": []
   },
   {
@@ -509,6 +627,15 @@
    "name_zh": "暈眩",
    "description_zh": "跳過整個回合：沒有 AP、移動點數與反應。",
    "tags": [],
+   "status_look": {
+    "polarity": "debuff",
+    "control_group": "hard",
+    "dot_element": null,
+    "skip_turn": true,
+    "removed_by_element": [],
+    "absorbs_damage": false,
+    "prevents_move": false
+   },
    "rules_zh": []
   },
   {
@@ -516,6 +643,17 @@
    "name_zh": "冰凍",
    "description_zh": "跳過整個回合（同暈眩，與暈眩共用硬控的控制遞減）；受到火焰傷害時立即解除。",
    "tags": [],
+   "status_look": {
+    "polarity": "debuff",
+    "control_group": "hard",
+    "dot_element": null,
+    "skip_turn": true,
+    "removed_by_element": [
+     "fire"
+    ],
+    "absorbs_damage": false,
+    "prevents_move": false
+   },
    "rules_zh": []
   },
   {
@@ -523,6 +661,15 @@
    "name_zh": "虛弱",
    "description_zh": "自己造成的攻擊傷害 ×75%。",
    "tags": [],
+   "status_look": {
+    "polarity": "debuff",
+    "control_group": null,
+    "dot_element": null,
+    "skip_turn": false,
+    "removed_by_element": [],
+    "absorbs_damage": false,
+    "prevents_move": false
+   },
    "rules_zh": []
   },
   {
@@ -530,6 +677,15 @@
    "name_zh": "易傷",
    "description_zh": "受到的骰值傷害 ×125%（不含墜落、致命地形等百分比傷害）。",
    "tags": [],
+   "status_look": {
+    "polarity": "debuff",
+    "control_group": null,
+    "dot_element": null,
+    "skip_turn": false,
+    "removed_by_element": [],
+    "absorbs_damage": false,
+    "prevents_move": false
+   },
    "rules_zh": []
   },
   {
@@ -537,6 +693,15 @@
    "name_zh": "破甲",
    "description_zh": "防禦值降低（幅度由武器決定，斧為 10%）。",
    "tags": [],
+   "status_look": {
+    "polarity": "debuff",
+    "control_group": null,
+    "dot_element": null,
+    "skip_turn": false,
+    "removed_by_element": [],
+    "absorbs_damage": false,
+    "prevents_move": false
+   },
    "rules_zh": []
   },
   {
@@ -544,6 +709,15 @@
    "name_zh": "流血",
    "description_zh": "回合開始時受到 1d4 物理傷害，持續 3 回合。",
    "tags": [],
+   "status_look": {
+    "polarity": "debuff",
+    "control_group": null,
+    "dot_element": "physical",
+    "skip_turn": false,
+    "removed_by_element": [],
+    "absorbs_damage": false,
+    "prevents_move": false
+   },
    "rules_zh": []
   },
   {
@@ -551,6 +725,15 @@
    "name_zh": "中毒",
    "description_zh": "回合開始時受到 1d4 毒素傷害，持續 3 回合；受到的治療減半。",
    "tags": [],
+   "status_look": {
+    "polarity": "debuff",
+    "control_group": null,
+    "dot_element": "poison",
+    "skip_turn": false,
+    "removed_by_element": [],
+    "absorbs_damage": false,
+    "prevents_move": false
+   },
    "rules_zh": []
   },
   {
@@ -560,6 +743,15 @@
    "tags": [
     "beneficial"
    ],
+   "status_look": {
+    "polarity": "buff",
+    "control_group": null,
+    "dot_element": null,
+    "skip_turn": false,
+    "removed_by_element": [],
+    "absorbs_damage": false,
+    "prevents_move": false
+   },
    "rules_zh": []
   },
   {
@@ -569,6 +761,15 @@
    "tags": [
     "beneficial"
    ],
+   "status_look": {
+    "polarity": "buff",
+    "control_group": null,
+    "dot_element": null,
+    "skip_turn": false,
+    "removed_by_element": [],
+    "absorbs_damage": false,
+    "prevents_move": false
+   },
    "rules_zh": []
   },
   {
@@ -578,6 +779,15 @@
    "tags": [
     "beneficial"
    ],
+   "status_look": {
+    "polarity": "buff",
+    "control_group": null,
+    "dot_element": null,
+    "skip_turn": false,
+    "removed_by_element": [],
+    "absorbs_damage": false,
+    "prevents_move": false
+   },
    "rules_zh": []
   },
   {
@@ -587,6 +797,15 @@
    "tags": [
     "beneficial"
    ],
+   "status_look": {
+    "polarity": "buff",
+    "control_group": null,
+    "dot_element": null,
+    "skip_turn": false,
+    "removed_by_element": [],
+    "absorbs_damage": false,
+    "prevents_move": false
+   },
    "rules_zh": []
   },
   {
@@ -596,6 +815,15 @@
    "tags": [
     "beneficial"
    ],
+   "status_look": {
+    "polarity": "buff",
+    "control_group": null,
+    "dot_element": null,
+    "skip_turn": false,
+    "removed_by_element": [],
+    "absorbs_damage": false,
+    "prevents_move": false
+   },
    "rules_zh": []
   },
   {
@@ -605,6 +833,15 @@
    "tags": [
     "beneficial"
    ],
+   "status_look": {
+    "polarity": "buff",
+    "control_group": null,
+    "dot_element": null,
+    "skip_turn": false,
+    "removed_by_element": [],
+    "absorbs_damage": true,
+    "prevents_move": false
+   },
    "rules_zh": []
   },
   {
@@ -614,6 +851,15 @@
    "tags": [
     "beneficial"
    ],
+   "status_look": {
+    "polarity": "neutral",
+    "control_group": null,
+    "dot_element": null,
+    "skip_turn": false,
+    "removed_by_element": [],
+    "absorbs_damage": false,
+    "prevents_move": false
+   },
    "rules_zh": []
   },
   {
@@ -623,6 +869,15 @@
    "tags": [
     "beneficial"
    ],
+   "status_look": {
+    "polarity": "neutral",
+    "control_group": null,
+    "dot_element": null,
+    "skip_turn": false,
+    "removed_by_element": [],
+    "absorbs_damage": false,
+    "prevents_move": false
+   },
    "rules_zh": []
   },
   {
@@ -630,6 +885,15 @@
    "name_zh": "嘲諷",
    "description_zh": "對嘲諷者以外的目標發動攻擊時有劣勢；嘲諷者倒下時消失。",
    "tags": [],
+   "status_look": {
+    "polarity": "debuff",
+    "control_group": null,
+    "dot_element": null,
+    "skip_turn": false,
+    "removed_by_element": [],
+    "absorbs_damage": false,
+    "prevents_move": false
+   },
    "rules_zh": []
   },
   {
@@ -637,6 +901,15 @@
    "name_zh": "恐懼",
    "description_zh": "主動移動時不能靠近恐懼的來源；攻擊有劣勢。來源倒下時消失。",
    "tags": [],
+   "status_look": {
+    "polarity": "debuff",
+    "control_group": "mental",
+    "dot_element": null,
+    "skip_turn": false,
+    "removed_by_element": [],
+    "absorbs_damage": false,
+    "prevents_move": false
+   },
    "rules_zh": []
   },
   {
@@ -644,6 +917,15 @@
    "name_zh": "沉默",
    "description_zh": "不能使用法術技（武器技與基本攻擊照常）。",
    "tags": [],
+   "status_look": {
+    "polarity": "debuff",
+    "control_group": "mental",
+    "dot_element": null,
+    "skip_turn": false,
+    "removed_by_element": [],
+    "absorbs_damage": false,
+    "prevents_move": false
+   },
    "rules_zh": []
   },
   {
@@ -651,6 +933,15 @@
    "name_zh": "致盲",
    "description_zh": "攻擊與以單位為目標的技能只能選擇 2 格以內的單位；攻擊有劣勢。",
    "tags": [],
+   "status_look": {
+    "polarity": "debuff",
+    "control_group": null,
+    "dot_element": null,
+    "skip_turn": false,
+    "removed_by_element": [],
+    "absorbs_damage": false,
+    "prevents_move": false
+   },
    "rules_zh": []
   },
   {
@@ -658,6 +949,15 @@
    "name_zh": "被標記",
    "description_zh": "對其攻擊有優勢；隱蔽也無法讓它免於被選為目標。",
    "tags": [],
+   "status_look": {
+    "polarity": "debuff",
+    "control_group": null,
+    "dot_element": null,
+    "skip_turn": false,
+    "removed_by_element": [],
+    "absorbs_damage": false,
+    "prevents_move": false
+   },
    "rules_zh": []
   },
   {
@@ -667,6 +967,15 @@
    "tags": [
     "beneficial"
    ],
+   "status_look": {
+    "polarity": "neutral",
+    "control_group": null,
+    "dot_element": null,
+    "skip_turn": false,
+    "removed_by_element": [],
+    "absorbs_damage": false,
+    "prevents_move": false
+   },
    "rules_zh": []
   },
   {
@@ -676,6 +985,15 @@
    "tags": [
     "beneficial"
    ],
+   "status_look": {
+    "polarity": "neutral",
+    "control_group": null,
+    "dot_element": null,
+    "skip_turn": false,
+    "removed_by_element": [],
+    "absorbs_damage": false,
+    "prevents_move": false
+   },
    "rules_zh": []
   }
  ],
@@ -687,6 +1005,7 @@
    "tags": [
     "self"
    ],
+   "status_look": null,
    "rules_zh": []
   },
   {
@@ -696,6 +1015,7 @@
    "tags": [
     "target"
    ],
+   "status_look": null,
    "rules_zh": []
   },
   {
@@ -705,6 +1025,7 @@
    "tags": [
     "self"
    ],
+   "status_look": null,
    "rules_zh": []
   },
   {
@@ -714,6 +1035,7 @@
    "tags": [
     "self"
    ],
+   "status_look": null,
    "rules_zh": []
   }
  ],
@@ -723,6 +1045,7 @@
    "name_zh": "格擋",
    "description_zh": "被近戰攻擊命中後，傷害減半，消耗 10 耐力。",
    "tags": [],
+   "status_look": null,
    "rules_zh": []
   },
   {
@@ -730,6 +1053,7 @@
    "name_zh": "藉機攻擊",
    "description_zh": "敵人離開武器的觸及範圍（一般近戰為相鄰格，矛為 2 格）時，以近戰武器攻擊一次（不花 AP）。",
    "tags": [],
+   "status_look": null,
    "rules_zh": []
   },
   {
@@ -737,6 +1061,7 @@
    "name_zh": "監視射擊",
    "description_zh": "帶有「監視」狀態時，敵人在武器射程與視線內完成一步移動，就自動普攻一次（不花 AP）；射擊後監視結束。",
    "tags": [],
+   "status_look": null,
    "rules_zh": []
   },
   {
@@ -744,6 +1069,7 @@
    "name_zh": "替隊友承受",
    "description_zh": "範圍內的隊友被敵人單體攻擊命中時，改由你承受這次攻擊（來自裝備，每輪最多一次）。",
    "tags": [],
+   "status_look": null,
    "rules_zh": []
   }
  ],
@@ -753,6 +1079,7 @@
    "name_zh": "物理",
    "description_zh": "刀劍、拳腳、鈍器與墜落等不帶元素的傷害，擅長破壞物件。",
    "tags": [],
+   "status_look": null,
    "rules_zh": []
   },
   {
@@ -760,6 +1087,7 @@
    "name_zh": "火焰",
    "description_zh": "點燃易燃物與油表面，引爆爆炸物，造成持續燃燒；遇水熄滅。",
    "tags": [],
+   "status_look": null,
    "rules_zh": []
   },
   {
@@ -767,6 +1095,7 @@
    "name_zh": "冰霜",
    "description_zh": "把水凍成冰表面，冰上的單位可能滑倒。",
    "tags": [],
+   "status_look": null,
    "rules_zh": []
   },
   {
@@ -774,6 +1103,7 @@
    "name_zh": "雷電",
    "description_zh": "沿著導電物與相連的水面擴散、連鎖。",
    "tags": [],
+   "status_look": null,
    "rules_zh": []
   },
   {
@@ -781,6 +1111,7 @@
    "name_zh": "毒素",
    "description_zh": "造成持續傷害，可形成毒表面或毒霧。",
    "tags": [],
+   "status_look": null,
    "rules_zh": []
   },
   {
@@ -788,6 +1119,7 @@
    "name_zh": "風",
    "description_zh": "推擊單位與物件，讓火勢蔓延、吹散毒霧。",
    "tags": [],
+   "status_look": null,
    "rules_zh": []
   },
   {
@@ -795,6 +1127,7 @@
    "name_zh": "大地",
    "description_zh": "產生障礙物，讓地形隆起或下陷而改變高度。",
    "tags": [],
+   "status_look": null,
    "rules_zh": []
   },
   {
@@ -802,6 +1135,7 @@
    "name_zh": "神聖",
    "description_zh": "淨化與治癒之力，可形成聖光表面治療友方、傷害不死者。",
    "tags": [],
+   "status_look": null,
    "rules_zh": []
   },
   {
@@ -809,6 +1143,7 @@
    "name_zh": "暗影",
    "description_zh": "侵蝕心智與視線，可形成阻擋視線的黑暗表面，擅長隱匿與恐懼。",
    "tags": [],
+   "status_look": null,
    "rules_zh": []
   }
  ],
@@ -818,6 +1153,7 @@
    "name_zh": "力量",
    "description_zh": null,
    "tags": [],
+   "status_look": null,
    "rules_zh": []
   },
   {
@@ -825,6 +1161,7 @@
    "name_zh": "敏捷",
    "description_zh": null,
    "tags": [],
+   "status_look": null,
    "rules_zh": []
   },
   {
@@ -832,6 +1169,7 @@
    "name_zh": "體質",
    "description_zh": null,
    "tags": [],
+   "status_look": null,
    "rules_zh": []
   },
   {
@@ -839,6 +1177,7 @@
    "name_zh": "智力",
    "description_zh": null,
    "tags": [],
+   "status_look": null,
    "rules_zh": []
   },
   {
@@ -846,6 +1185,7 @@
    "name_zh": "感知",
    "description_zh": null,
    "tags": [],
+   "status_look": null,
    "rules_zh": []
   },
   {
@@ -853,6 +1193,7 @@
    "name_zh": "意志",
    "description_zh": null,
    "tags": [],
+   "status_look": null,
    "rules_zh": []
   }
  ],
@@ -864,6 +1205,7 @@
    "tags": [
     "numeric"
    ],
+   "status_look": null,
    "rules_zh": []
   },
   {
@@ -873,6 +1215,7 @@
    "tags": [
     "numeric"
    ],
+   "status_look": null,
    "rules_zh": []
   },
   {
@@ -882,6 +1225,7 @@
    "tags": [
     "numeric"
    ],
+   "status_look": null,
    "rules_zh": []
   },
   {
@@ -891,6 +1235,7 @@
    "tags": [
     "numeric"
    ],
+   "status_look": null,
    "rules_zh": []
   },
   {
@@ -900,6 +1245,7 @@
    "tags": [
     "structural"
    ],
+   "status_look": null,
    "rules_zh": []
   },
   {
@@ -909,6 +1255,7 @@
    "tags": [
     "structural"
    ],
+   "status_look": null,
    "rules_zh": []
   },
   {
@@ -918,6 +1265,7 @@
    "tags": [
     "structural"
    ],
+   "status_look": null,
    "rules_zh": []
   },
   {
@@ -927,6 +1275,7 @@
    "tags": [
     "structural"
    ],
+   "status_look": null,
    "rules_zh": []
   },
   {
@@ -936,6 +1285,7 @@
    "tags": [
     "structural"
    ],
+   "status_look": null,
    "rules_zh": []
   },
   {
@@ -945,6 +1295,7 @@
    "tags": [
     "structural"
    ],
+   "status_look": null,
    "rules_zh": []
   },
   {
@@ -954,6 +1305,7 @@
    "tags": [
     "structural"
    ],
+   "status_look": null,
    "rules_zh": []
   },
   {
@@ -963,6 +1315,7 @@
    "tags": [
     "structural"
    ],
+   "status_look": null,
    "rules_zh": []
   },
   {
@@ -972,6 +1325,7 @@
    "tags": [
     "structural"
    ],
+   "status_look": null,
    "rules_zh": []
   },
   {
@@ -981,6 +1335,7 @@
    "tags": [
     "structural"
    ],
+   "status_look": null,
    "rules_zh": []
   },
   {
@@ -990,6 +1345,7 @@
    "tags": [
     "structural"
    ],
+   "status_look": null,
    "rules_zh": []
   },
   {
@@ -999,6 +1355,7 @@
    "tags": [
     "numeric"
    ],
+   "status_look": null,
    "rules_zh": []
   },
   {
@@ -1008,6 +1365,7 @@
    "tags": [
     "structural"
    ],
+   "status_look": null,
    "rules_zh": []
   },
   {
@@ -1017,6 +1375,7 @@
    "tags": [
     "structural"
    ],
+   "status_look": null,
    "rules_zh": []
   },
   {
@@ -1026,6 +1385,7 @@
    "tags": [
     "structural"
    ],
+   "status_look": null,
    "rules_zh": []
   },
   {
@@ -1035,6 +1395,7 @@
    "tags": [
     "structural"
    ],
+   "status_look": null,
    "rules_zh": []
   },
   {
@@ -1044,6 +1405,7 @@
    "tags": [
     "structural"
    ],
+   "status_look": null,
    "rules_zh": []
   },
   {
@@ -1053,6 +1415,7 @@
    "tags": [
     "structural"
    ],
+   "status_look": null,
    "rules_zh": []
   },
   {
@@ -1062,6 +1425,7 @@
    "tags": [
     "structural"
    ],
+   "status_look": null,
    "rules_zh": []
   },
   {
@@ -1071,6 +1435,7 @@
    "tags": [
     "structural"
    ],
+   "status_look": null,
    "rules_zh": []
   },
   {
@@ -1080,6 +1445,7 @@
    "tags": [
     "structural"
    ],
+   "status_look": null,
    "rules_zh": []
   },
   {
@@ -1089,6 +1455,7 @@
    "tags": [
     "structural"
    ],
+   "status_look": null,
    "rules_zh": []
   },
   {
@@ -1098,6 +1465,7 @@
    "tags": [
     "rule_rewrite"
    ],
+   "status_look": null,
    "rules_zh": []
   },
   {
@@ -1107,6 +1475,7 @@
    "tags": [
     "rule_rewrite"
    ],
+   "status_look": null,
    "rules_zh": []
   },
   {
@@ -1116,6 +1485,7 @@
    "tags": [
     "rule_rewrite"
    ],
+   "status_look": null,
    "rules_zh": []
   },
   {
@@ -1125,6 +1495,7 @@
    "tags": [
     "rule_rewrite"
    ],
+   "status_look": null,
    "rules_zh": []
   },
   {
@@ -1134,6 +1505,7 @@
    "tags": [
     "rule_rewrite"
    ],
+   "status_look": null,
    "rules_zh": []
   },
   {
@@ -1143,6 +1515,7 @@
    "tags": [
     "rule_rewrite"
    ],
+   "status_look": null,
    "rules_zh": []
   },
   {
@@ -1152,6 +1525,7 @@
    "tags": [
     "structural"
    ],
+   "status_look": null,
    "rules_zh": []
   },
   {
@@ -1161,6 +1535,7 @@
    "tags": [
     "structural"
    ],
+   "status_look": null,
    "rules_zh": []
   },
   {
@@ -1170,6 +1545,7 @@
    "tags": [
     "structural"
    ],
+   "status_look": null,
    "rules_zh": []
   },
   {
@@ -1179,6 +1555,7 @@
    "tags": [
     "structural"
    ],
+   "status_look": null,
    "rules_zh": []
   },
   {
@@ -1188,6 +1565,7 @@
    "tags": [
     "structural"
    ],
+   "status_look": null,
    "rules_zh": []
   },
   {
@@ -1197,6 +1575,7 @@
    "tags": [
     "structural"
    ],
+   "status_look": null,
    "rules_zh": []
   },
   {
@@ -1206,6 +1585,7 @@
    "tags": [
     "structural"
    ],
+   "status_look": null,
    "rules_zh": []
   },
   {
@@ -1215,6 +1595,7 @@
    "tags": [
     "structural"
    ],
+   "status_look": null,
    "rules_zh": []
   },
   {
@@ -1224,6 +1605,7 @@
    "tags": [
     "structural"
    ],
+   "status_look": null,
    "rules_zh": []
   },
   {
@@ -1233,6 +1615,7 @@
    "tags": [
     "structural"
    ],
+   "status_look": null,
    "rules_zh": []
   },
   {
@@ -1242,6 +1625,7 @@
    "tags": [
     "rule_change"
    ],
+   "status_look": null,
    "rules_zh": []
   },
   {
@@ -1251,6 +1635,7 @@
    "tags": [
     "structural"
    ],
+   "status_look": null,
    "rules_zh": []
   },
   {
@@ -1260,6 +1645,7 @@
    "tags": [
     "structural"
    ],
+   "status_look": null,
    "rules_zh": []
   },
   {
@@ -1269,6 +1655,7 @@
    "tags": [
     "structural"
    ],
+   "status_look": null,
    "rules_zh": []
   },
   {
@@ -1278,6 +1665,7 @@
    "tags": [
     "structural"
    ],
+   "status_look": null,
    "rules_zh": []
   },
   {
@@ -1287,6 +1675,7 @@
    "tags": [
     "structural"
    ],
+   "status_look": null,
    "rules_zh": []
   }
  ],
@@ -1296,6 +1685,7 @@
    "name_zh": "目標血量低於",
    "description_zh": "目標的目前 HP ÷ 最大 HP 低於 permille ‰。",
    "tags": [],
+   "status_look": null,
    "rules_zh": []
   },
   {
@@ -1303,6 +1693,7 @@
    "name_zh": "自身血量低於",
    "description_zh": "施放者的目前 HP ÷ 最大 HP 低於 permille ‰。",
    "tags": [],
+   "status_look": null,
    "rules_zh": []
   },
   {
@@ -1310,6 +1701,7 @@
    "name_zh": "居高臨下",
    "description_zh": "施放者所在格的高度大於目標所在格的高度。",
    "tags": [],
+   "status_look": null,
    "rules_zh": []
   },
   {
@@ -1317,6 +1709,7 @@
    "name_zh": "目標站在表面上",
    "description_zh": "目標腳下的格子是指定的表面（例如水、油、火）。",
    "tags": [],
+   "status_look": null,
    "rules_zh": []
   },
   {
@@ -1324,6 +1717,7 @@
    "name_zh": "目標帶有狀態",
    "description_zh": "目標身上有指定的狀態（例如燃燒、倒地）。",
    "tags": [],
+   "status_look": null,
    "rules_zh": []
   },
   {
@@ -1331,6 +1725,7 @@
    "name_zh": "本回合移動過",
    "description_zh": "施放者本回合做過主動移動（步行；傳送與被強制位移不算）。",
    "tags": [],
+   "status_look": null,
    "rules_zh": []
   },
   {
@@ -1338,6 +1733,7 @@
    "name_zh": "身旁有友方",
    "description_zh": "施放者相鄰（上下左右）有存活的友方。",
    "tags": [],
+   "status_look": null,
    "rules_zh": []
   },
   {
@@ -1345,6 +1741,7 @@
    "name_zh": "目標落單",
    "description_zh": "目標相鄰（上下左右）沒有它的存活友方。",
    "tags": [],
+   "status_look": null,
    "rules_zh": []
   },
   {
@@ -1352,6 +1749,7 @@
    "name_zh": "第一輪",
    "description_zh": "目前是戰鬥的第 1 輪。",
    "tags": [],
+   "status_look": null,
    "rules_zh": []
   },
   {
@@ -1359,6 +1757,7 @@
    "name_zh": "本回合施放過同類技能",
    "description_zh": "施放者本回合已經施放過帶指定標籤的技能（不含這次施放）。",
    "tags": [],
+   "status_look": null,
    "rules_zh": []
   },
   {
@@ -1366,6 +1765,7 @@
    "name_zh": "夾擊",
    "description_zh": "以目標為中心，施放者所在的那一側（上下左右四個方向中，與施放者位置軸向相同、離施放者較近的一側；距離相同時以左右優先）的對面格，站著施放者的存活友方（不含施放者自己）。相鄰攻擊就是目標正對面的那一格；遠程攻擊也看目標背對施放者的那一格。",
    "tags": [],
+   "status_look": null,
    "rules_zh": []
   },
   {
@@ -1373,6 +1773,7 @@
    "name_zh": "背刺",
    "description_zh": "施放者站在目標的背後格（目標朝向的反方向相鄰格；只算相鄰）。單位的朝向由引擎自動更新：主動移動後面向移動方向，攻擊或對單位施放技能後面向目標。",
    "tags": [],
+   "status_look": null,
    "rules_zh": []
   },
   {
@@ -1380,6 +1781,7 @@
    "name_zh": "潛行偷襲",
    "description_zh": "施放者帶有「隱蔽」狀態（concealed；站在黑暗或草叢中不算）。隱蔽中發動攻擊另有通用的命中加成，攻擊結算完後脫離隱蔽。",
    "tags": [],
+   "status_look": null,
    "rules_zh": []
   },
   {
@@ -1387,6 +1789,7 @@
    "name_zh": "目標站在自己的符文上",
    "description_zh": "目標所在的格子上有施放者自己（用 inscribe）刻下的符文；可用 element 或 tag 篩選符文（省略＝任何符文）。別人的符文不算；對格子判斷，所以也可以用在沒有單位的格子。",
    "tags": [],
+   "status_look": null,
    "rules_zh": []
   },
   {
@@ -1394,6 +1797,7 @@
    "name_zh": "目標本回合受過撞擊",
    "description_zh": "目標在這一輪內受過撞擊（被推擊擋下撞上牆壁、物件、其他單位，或推擊距離超過上限；撞到的另一個單位也算）。輪數結束後失效。",
    "tags": [],
+   "status_look": null,
    "rules_zh": []
   }
  ],
@@ -1403,6 +1807,7 @@
    "name_zh": "命中時",
    "description_zh": "持有者的攻擊（普攻或技能）命中一個單位，在該次傷害結算之後。另一方為被命中的單位。",
    "tags": [],
+   "status_look": null,
    "rules_zh": []
   },
   {
@@ -1410,6 +1815,7 @@
    "name_zh": "暴擊時",
    "description_zh": "同「命中時」，且為暴擊。另一方為被命中的單位。",
    "tags": [],
+   "status_look": null,
    "rules_zh": []
   },
   {
@@ -1417,6 +1823,7 @@
    "name_zh": "擲出自然 20 時",
    "description_zh": "持有者的攻擊擲出自然 20（不論是否命中，只計單位目標）。另一方為攻擊目標。",
    "tags": [],
+   "status_look": null,
    "rules_zh": []
   },
   {
@@ -1424,6 +1831,7 @@
    "name_zh": "擊倒時",
    "description_zh": "持有者造成的傷害（任何來源歸給持有者）讓單位倒下。另一方為倒下的單位（對它的傷害與狀態無效）。",
    "tags": [],
+   "status_look": null,
    "rules_zh": []
   },
   {
@@ -1431,6 +1839,7 @@
    "name_zh": "受傷時",
    "description_zh": "持有者受到傷害（數值大於 0，任何原因）。另一方為傷害來源（沒有來源時無）。",
    "tags": [],
+   "status_look": null,
    "rules_zh": []
   },
   {
@@ -1438,6 +1847,7 @@
    "name_zh": "回合開始時",
    "description_zh": "持有者回合開始，在狀態與表面的回合開始效果之後（被跳過的回合不觸發）。",
    "tags": [],
+   "status_look": null,
    "rules_zh": []
   },
   {
@@ -1445,6 +1855,7 @@
    "name_zh": "回合結束時",
    "description_zh": "持有者回合結束，在狀態倒數之前（被跳過的回合不觸發）。",
    "tags": [],
+   "status_look": null,
    "rules_zh": []
   },
   {
@@ -1452,6 +1863,7 @@
    "name_zh": "移動後",
    "description_zh": "持有者的一次主動移動動作完成後（不是每一步；強制位移不算）。",
    "tags": [],
+   "status_look": null,
    "rules_zh": []
   },
   {
@@ -1459,6 +1871,7 @@
    "name_zh": "每命中 n 次",
    "description_zh": "持有者累計命中第 n、2n、3n…次時（計數方式同「命中時」；n 由技能指定，2 或 3）。另一方為被命中的單位。",
    "tags": [],
+   "status_look": null,
    "rules_zh": []
   },
   {
@@ -1466,6 +1879,7 @@
    "name_zh": "施放帶標籤的技能後",
    "description_zh": "持有者施放一個帶 trigger.tag 標籤的技能（含修正規則加上的標籤；不含被動觸發與陷阱），在該技能結算之後。沒有另一方，效果作用在持有者。",
    "tags": [],
+   "status_look": null,
    "rules_zh": []
   },
   {
@@ -1473,6 +1887,7 @@
    "name_zh": "施加狀態後",
    "description_zh": "持有者成功對其他單位施加狀態（抵抗成功、對自己施加都不算；刷新持續時間算）。trigger.status 省略時任何狀態都算。另一方為被施加的單位。",
    "tags": [],
+   "status_look": null,
    "rules_zh": []
   },
   {
@@ -1480,6 +1895,7 @@
    "name_zh": "造成撞擊後",
    "description_zh": "持有者造成的撞擊（被持有者推、拉、擊退的單位因障礙提前停下，或距離超過上限的撞擊）。另一方為被推的單位。",
    "tags": [],
+   "status_look": null,
    "rules_zh": []
   },
   {
@@ -1487,6 +1903,7 @@
    "name_zh": "敵人進入你的表面時",
    "description_zh": "敵方單位步行或被強制位移（傳送不算）進入持有者造出的表面；回合開始站在上面、表面出現在腳下都不算。trigger.surface 省略時任何表面都算。另一方為進入的單位。",
    "tags": [],
+   "status_look": null,
    "rules_zh": []
   },
   {
@@ -1494,6 +1911,7 @@
    "name_zh": "召喚物倒下時",
    "description_zh": "持有者的召喚物被打倒（時效到期、被獻祭、召喚者倒下而消失都不算）。另一方為倒下的召喚物；效果以牠倒下的位置為中心結算。目前只有裝備詞條使用，被動技能與隨機組合器不使用。",
    "tags": [],
+   "status_look": null,
    "rules_zh": []
   },
   {
@@ -1501,6 +1919,7 @@
    "name_zh": "被近戰攻擊時",
    "description_zh": "被近戰攻擊命中之後、傷害結算之前。",
    "tags": [],
+   "status_look": null,
    "rules_zh": []
   },
   {
@@ -1508,6 +1927,7 @@
    "name_zh": "被攻擊時",
    "description_zh": "被任何攻擊命中之後、傷害結算之前。",
    "tags": [],
+   "status_look": null,
    "rules_zh": []
   },
   {
@@ -1515,6 +1935,7 @@
    "name_zh": "敵人離開時",
    "description_zh": "敵人離開你的觸及範圍時。",
    "tags": [],
+   "status_look": null,
    "rules_zh": []
   },
   {
@@ -1522,6 +1943,7 @@
    "name_zh": "被近戰擊中時",
    "description_zh": "被近戰攻擊命中、傷害結算之後。",
    "tags": [],
+   "status_look": null,
    "rules_zh": []
   },
   {
@@ -1529,6 +1951,7 @@
    "name_zh": "被攻擊時",
    "description_zh": "被任何攻擊命中、傷害結算之後。",
    "tags": [],
+   "status_look": null,
    "rules_zh": []
   },
   {
@@ -1536,6 +1959,7 @@
    "name_zh": "身旁隊友受擊時",
    "description_zh": "相鄰的友方被攻擊命中、傷害結算之前。",
    "tags": [],
+   "status_look": null,
    "rules_zh": []
   },
   {
@@ -1543,6 +1967,7 @@
    "name_zh": "被法術擊中時",
    "description_zh": "被法術技命中、傷害結算之前；另一方是施放者。",
    "tags": [],
+   "status_look": null,
    "rules_zh": []
   },
   {
@@ -1550,6 +1975,7 @@
    "name_zh": "隊友倒下時",
    "description_zh": "視野內的友方倒下之後。",
    "tags": [],
+   "status_look": null,
    "rules_zh": []
   },
   {
@@ -1557,6 +1983,7 @@
    "name_zh": "敵人靠近時",
    "description_zh": "敵人主動移動進入你的相鄰格之後；被強制位移不算。",
    "tags": [],
+   "status_look": null,
    "rules_zh": []
   },
   {
@@ -1564,6 +1991,7 @@
    "name_zh": "隊友被瞄準時",
    "description_zh": "相鄰友方被敵人的單體技能或普攻選為目標、命中判定之前。",
    "tags": [],
+   "status_look": null,
    "rules_zh": []
   },
   {
@@ -1571,6 +1999,7 @@
    "name_zh": "敵人在射程內移動時",
    "description_zh": "敵人主動移動一步後，位置在你的武器射程與視線內。",
    "tags": [],
+   "status_look": null,
    "rules_zh": []
   },
   {
@@ -1578,6 +2007,7 @@
    "name_zh": "範圍內隊友受擊時",
    "description_zh": "範圍內的友方被敵人單體攻擊命中、傷害結算之前。",
    "tags": [],
+   "status_look": null,
    "rules_zh": []
   }
  ],

@@ -3,6 +3,7 @@
 // 所以：開畫面前先等 400／700 載入（有逾時，不卡畫面）；之後只要又有字型載入完成（`loadingdone`），
 // 就清掉技能圖示快取並把 `fontEpoch` 加一，讓畫布與圖示元件重畫。
 import { clearSkillIconCache } from "./skillIcon";
+import { clearStatusIconCache } from "./statusIcon";
 
 export const FONT_LOAD_TIMEOUT_MS = 3000;
 /** 先預載的常用字（其餘切片在畫到時才載入，載入完成會觸發重畫）。 */
@@ -14,6 +15,7 @@ let hooked = false;
 
 function bump(): void {
   clearSkillIconCache();
+  clearStatusIconCache();
   epoch += 1;
   for (const l of [...listeners]) l();
 }

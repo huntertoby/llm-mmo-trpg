@@ -7,7 +7,8 @@
 
 from __future__ import annotations
 
-from trpg.api.schemas import Glossary, GlossaryEntry, WeaponLookEntry
+from trpg.api.schemas import Glossary, GlossaryEntry, StatusLook, WeaponLookEntry
+from trpg.content.battle import StatusDef
 from trpg.content.library import ContentLibrary
 from trpg.narrative.tile_info import object_rules, surface_rules, terrain_rules
 from trpg.shared.types import Attribute
@@ -21,9 +22,29 @@ def _entry(
     description_zh: str | None = None,
     tags: tuple[str, ...] = (),
     rules_zh: tuple[str, ...] = (),
+    *,
+    status_look: StatusLook | None = None,
 ) -> GlossaryEntry:
     return GlossaryEntry(
-        id=id_, name_zh=name_zh, description_zh=description_zh, tags=tags, rules_zh=rules_zh
+        id=id_,
+        name_zh=name_zh,
+        description_zh=description_zh,
+        tags=tags,
+        rules_zh=rules_zh,
+        status_look=status_look,
+    )
+
+
+def _status_look(s: StatusDef) -> StatusLook:
+    dot = s.on_turn_start_damage
+    return StatusLook(
+        polarity=s.polarity,
+        control_group=s.control_group,
+        dot_element=None if dot is None else dot.element.value,
+        skip_turn=s.skip_turn,
+        removed_by_element=tuple(sorted(e.value for e in s.removed_by_element)),
+        absorbs_damage=s.absorbs_damage,
+        prevents_move=s.prevents_move,
     )
 
 
@@ -82,6 +103,8 @@ def build_glossary(library: ContentLibrary) -> Glossary:
                 s.name_zh,
                 s.description_zh,
                 ("beneficial",) if s.beneficial else (),
+                (),
+                status_look=_status_look(s),
             )
             for s in rules.statuses.statuses
         ),

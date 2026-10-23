@@ -4,6 +4,7 @@
 // 其他畫「?」，永遠畫得出來（不丟例外）。
 import { conditionName, effectName, glossaryDescription, statusName, surfaceName, triggerName } from "../battle/glossary";
 import { FONT } from "./labels";
+import { drawGlyph, GLYPH, glyphColor } from "./statusIcon";
 import { elementGlyph, ELEMENT_ICON, starPath, type Ctx } from "./skillGlyphs";
 
 const TAU = Math.PI * 2;
@@ -207,231 +208,22 @@ function ghost(ctx: Ctx, alpha: number, draw: () => void): void {
 
 type Draw = (ctx: Ctx) => void;
 
-// ---- 狀態（顏色：負面偏紅紫、正面偏綠金藍）----
+// ---- 狀態（Phase 3-36a：圖樣查 `statusIcon.GLYPH`、顏色由 glossary 欄位決定；外框只畫在狀態圖示本身）----
 
-const bleedGlyph: Draw = (c) => {
-  drop(c, -3, -1, 0.75);
-  drop(c, 4, 3, 0.6);
-};
+/** 圖樣表（id → [預設色, 畫法]）；顏色以 `statusColor` 為準，這裡的色只給少數不經 `statusColor` 的舊用法。 */
+const STATUS: Readonly<Record<string, readonly [string, Draw]>> = Object.fromEntries(Object.entries(GLYPH).map(([id, draw]) => [id, ["#d8d8e0", draw] as const]));
 
-const STATUS: Readonly<Record<string, readonly [string, Draw]>> = {
-  burning: ["#ff8a2a", (c) => elementGlyph(c, "fire", 0, 0, 0.95, c.fillStyle as string)],
-  frozen: ["#9fe6ff", (c) => elementGlyph(c, "ice", 0, 0, 0.95, c.fillStyle as string)],
-  poison: ["#8fdc4a", (c) => elementGlyph(c, "poison", 0, 0, 0.95, c.fillStyle as string)],
-  bleed: ["#ff5a5a", bleedGlyph],
-  root: [
-    "#b8d07a",
-    (c) => {
-      c.beginPath();
-      c.moveTo(0, -8);
-      c.lineTo(0, 4);
-      c.moveTo(0, 4);
-      c.lineTo(-6, 8);
-      c.moveTo(0, 4);
-      c.lineTo(6, 8);
-      c.moveTo(0, 0);
-      c.lineTo(-5, 3);
-      c.stroke();
-    },
-  ],
-  slow: [
-    "#a8b4ff",
-    (c) => {
-      ring(c, 0, 0, 8);
-      c.beginPath();
-      c.moveTo(0, -5);
-      c.lineTo(0, 0);
-      c.lineTo(3.5, 3);
-      c.stroke();
-    },
-  ],
-  stun: [
-    "#ffe14d",
-    (c) => {
-      for (const [x, y] of [
-        [-5, -3],
-        [5, -3],
-        [0, 5],
-      ] as const) {
-        c.save();
-        c.translate(x, y);
-        star(c, 5, 4, 1.7);
-        c.restore();
-      }
-    },
-  ],
-  prone: [
-    "#e0c49a",
-    (c) => {
-      dot(c, -7, 2, 2.6);
-      c.fillRect(-4, 0, 12, 4.5);
-    },
-  ],
-  blinded: ["#c8c8d8", (c) => eye(c, true)],
-  vulnerable: [
-    "#ff6a6a",
-    (c) => {
-      shieldPath(c);
-      c.stroke();
-      c.beginPath();
-      c.moveTo(-2, -8);
-      c.lineTo(2, -2);
-      c.lineTo(-2, 2);
-      c.lineTo(1, 8);
-      c.stroke();
-    },
-  ],
-  armor_broken: [
-    "#d8a060",
-    (c) => {
-      shieldPath(c);
-      c.stroke();
-      arrow(c, 0, -5, 0, 6, 3.2);
-    },
-  ],
-  weaken: [
-    "#e09a9a",
-    (c) => {
-      c.beginPath();
-      c.moveTo(-6, -7);
-      c.lineTo(4, 3);
-      c.stroke();
-      arrow(c, 6, -6, 6, 6, 3.5);
-    },
-  ],
-  feared: ["#c890ff", (c) => text(c, "!", 15)],
-  taunted: [
-    "#ff7a4a",
-    (c) => {
-      ring(c, 0, 0, 7.5);
-      ring(c, 0, 0, 3.5);
-      dot(c, 0, 0, 1.4);
-    },
-  ],
-  silenced: [
-    "#d0a0ff",
-    (c) => {
-      c.beginPath();
-      c.roundRect(-8, -7, 16, 11, 4);
-      c.moveTo(-3, 4);
-      c.lineTo(-5, 8);
-      c.lineTo(1, 4);
-      c.stroke();
-      c.beginPath();
-      c.moveTo(-4, -4);
-      c.lineTo(4, 2);
-      c.moveTo(4, -4);
-      c.lineTo(-4, 2);
-      c.stroke();
-    },
-  ],
-  marked: [
-    "#ff5a5a",
-    (c) => {
-      ring(c, 0, 0, 7);
-      c.beginPath();
-      c.moveTo(-10, 0);
-      c.lineTo(-4, 0);
-      c.moveTo(4, 0);
-      c.lineTo(10, 0);
-      c.moveTo(0, -10);
-      c.lineTo(0, -4);
-      c.moveTo(0, 4);
-      c.lineTo(0, 10);
-      c.stroke();
-    },
-  ],
-  concealed: [
-    "#a0a8b8",
-    (c) => {
-      ghost(c, 0.55, () => person(c, 0, 0, 1.4));
-      c.beginPath();
-      c.arc(0, 0, 9, -2.4, -0.7);
-      c.stroke();
-    },
-  ],
-  revealed: ["#ffd04a", (c) => eye(c, false)],
-  hasted: ["#7dffb0", (c) => chevrons(c, "right")],
-  empowered: ["#ffb03a", (c) => chevrons(c, "up")],
-  rallied: ["#ff6a4a", (c) => chevrons(c, "up")],
-  guarded: [
-    "#7fc0ff",
-    (c) => {
-      shieldPath(c);
-      c.fill();
-    },
-  ],
-  shielded: [
-    "#8fd0ff",
-    (c) => {
-      shieldPath(c);
-      c.fill();
-    },
-  ],
-  defending: [
-    "#7fc0ff",
-    (c) => {
-      shieldPath(c);
-      c.stroke();
-    },
-  ],
-  regenerating: [
-    "#7cf29a",
-    (c) => {
-      ring(c, 0, 0, 8.5);
-      c.fillRect(-1.5, -5, 3, 10);
-      c.fillRect(-5, -1.5, 10, 3);
-    },
-  ],
-  overwatch: ["#ffd04a", (c) => eye(c, false)],
-  undying: [
-    "#ff7a7a",
-    (c) => {
-      heart(c);
-      c.fill();
-    },
-  ],
-  soul_link: [
-    "#d8b8ff",
-    (c) => {
-      ring(c, -4, 0, 5);
-      ring(c, 4, 0, 5);
-    },
-  ],
-  time_bomb: ["#ffb03a", hourglass],
-  charging: [
-    "#ffd04a",
-    (c) => {
-      ring(c, 0, 0, 8);
-      dot(c, 0, 0, 3.5);
-    },
-  ],
-};
-
-const STANCE_COLOR = "#ffd04a";
 const UNKNOWN_COLOR = "#d8d8e0";
 
-/** 狀態圖示（`stance_*` 為六角，不認得的狀態畫名稱第一個字）。 */
+/** 狀態圖樣（技能部件、組裝列用；不認得的狀態畫名稱第一個字）。 */
 export function statusGlyph(ctx: Ctx, id: string | null | undefined): void {
-  const known = id == null ? undefined : STATUS[id];
-  if (known !== undefined) {
-    known[1](ctx);
-    return;
-  }
-  if (id?.startsWith("stance_") === true) {
-    ctx.beginPath();
-    for (let i = 0; i < 6; i++) ctx.lineTo(Math.cos((i / 6) * TAU) * 8, Math.sin((i / 6) * TAU) * 8);
-    ctx.closePath();
-    ctx.stroke();
-    return;
-  }
-  const name = id == null || id === "" ? "?" : statusName(id);
-  text(ctx, [...name][0] ?? "?", 12);
+  drawGlyph(ctx, id);
 }
 
+/** 狀態的圖樣顏色：`control_group` → 持續傷害元素 → 專屬色 → `polarity`（見 `statusIcon.glyphColor`）。 */
 export function statusColor(id: string | null | undefined): string {
-  if (id == null) return UNKNOWN_COLOR;
-  return STATUS[id]?.[0] ?? (id.startsWith("stance_") ? STANCE_COLOR : UNKNOWN_COLOR);
+  if (id == null || id === "") return UNKNOWN_COLOR;
+  return glyphColor(id);
 }
 
 // ---- 表面：落在地上的一滴，顏色是表面色 ----

@@ -2076,6 +2076,7 @@ export interface components {
              * @default []
              */
             tags: string[];
+            status_look?: components["schemas"]["StatusLook"] | null;
             /**
              * Rules Zh
              * @default []
@@ -3629,6 +3630,38 @@ export interface components {
             apply_permille: number;
             /** Diminished */
             diminished: boolean;
+        };
+        /**
+         * StatusLook
+         * @description 狀態圖示與身上特效需要的欄位（Phase 3-36a）；只讀 ``statuses.yaml``，前端不寫死狀態 ID。
+         */
+        StatusLook: {
+            /** Polarity */
+            polarity: string;
+            /** Control Group */
+            control_group?: string | null;
+            /** Dot Element */
+            dot_element?: string | null;
+            /**
+             * Skip Turn
+             * @default false
+             */
+            skip_turn: boolean;
+            /**
+             * Removed By Element
+             * @default []
+             */
+            removed_by_element: string[];
+            /**
+             * Absorbs Damage
+             * @default false
+             */
+            absorbs_damage: boolean;
+            /**
+             * Prevents Move
+             * @default false
+             */
+            prevents_move: boolean;
         };
         /** StatusView */
         StatusView: {
