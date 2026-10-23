@@ -44,6 +44,8 @@ class AttackElementSources:
 
     enchant: Element | None = None
     """臨時附魔（狀態 ``attack_element``）。"""
+    modifier: Element | None = None
+    """修正技能的元素轉換（``add_element``；只在這次施放受修正規則影響時才有）。"""
     basic_affix: Element | None = None
     """普攻附加元素詞條（只管普攻）。"""
     weapon_affix: Element | None = None
@@ -55,18 +57,22 @@ class AttackElementSources:
 def resolve_attack_element(
     sources: AttackElementSources, *, is_basic: bool, skill_element: Element | None = None
 ) -> Element:
-    """一次攻擊最後生效的元素（純函式）。
+    """一次攻擊最後生效的元素（純函式；06 6.10，#52 與補充一、二）。
 
-    ``is_basic``：普攻（True）或武器技（False）；``skill_element``：武器技本身帶的元素（普攻為
-    ``None``）。武器技本身已有元素（不是物理）時不受任何來源影響。
+    - 已有元素（不是物理）的武器技：不受任何來源影響。
+    - 武器本身的元素（法杖等）**只有臨時附魔能覆寫**；修正技能、普攻附加詞條、武器元素詞條
+      只改物理傷害。
+    - 普攻：附魔 ＞ 武器本身元素 ＞ 修正技能 ＞ 普攻附加詞條 ＞ 武器元素詞條 ＞ 物理。
+    - 無元素武器技：附魔 ＞ 武器本身元素 ＞ 修正技能 ＞ 武器元素詞條 ＞ 物理。
     """
     if skill_element is not None and skill_element is not Element.PHYSICAL:
         return skill_element
     chain = (
         sources.enchant,
+        sources.weapon,
+        sources.modifier,
         sources.basic_affix if is_basic else None,
         sources.weapon_affix,
-        sources.weapon,
     )
     for element in chain:
         if element is not None and element is not Element.PHYSICAL:

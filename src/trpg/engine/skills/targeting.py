@@ -42,7 +42,7 @@ from trpg.content.skills import (
 from trpg.engine import modifiers
 from trpg.engine.actions import Direction, FollowupTarget, UseSkill
 from trpg.engine.activations import activation_problem
-from trpg.engine.attack_element import effective_attack_element
+from trpg.engine.attack_element import attack_element_sources, resolve_attack_element
 from trpg.engine.gear import gear_cooldown
 from trpg.engine.gear_summon import gear_summon_cooldown
 from trpg.engine.ids import BOSS_TAG
@@ -1323,9 +1323,14 @@ def damage_parameters(
         multiplier = _PERMILLE
     else:
         weapon = caster.weapon
-        element = effective_attack_element(
-            state.ruleset, caster, is_basic=False, skill_element=spec.element
-        )
+        sources = attack_element_sources(state.ruleset, caster)
+        if modified:  # 修正技能的 add_element 排在武器本身元素之後、武器元素詞條之前（06 6.10）
+            added = modifiers.damage_element(
+                state, caster, modifiers.skill_use(skill), Element.PHYSICAL
+            )
+            if added is not Element.PHYSICAL:
+                sources = replace(sources, modifier=added)
+        element = resolve_attack_element(sources, is_basic=False, skill_element=spec.element)
         dice, flat, scaled = (
             weapon.dice,
             weapon.flat,
@@ -1335,6 +1340,6 @@ def damage_parameters(
     if skill.damage_permille is not None:  # 高變異（3D-7b）：基礎傷害折扣
         multiplier = multiplier * skill.damage_permille // _PERMILLE
     multiplier = multiplier * level_multiplier(state.ruleset, caster, skill) // _PERMILLE  # 3-26a
-    if modified:
+    if modified and skill.category == "spell":
         element = modifiers.damage_element(state, caster, modifiers.skill_use(skill), element)
     return DamageParameters(dice, flat, scaled, multiplier, element)

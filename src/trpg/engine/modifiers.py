@@ -18,7 +18,7 @@
 from __future__ import annotations
 
 from collections.abc import Iterable, Iterator
-from dataclasses import dataclass
+from dataclasses import dataclass, replace
 
 from trpg.content.skills import (
     SHAPE_CHANGES,
@@ -397,19 +397,14 @@ def summon_damage_permille(state: BattleState, unit: UnitState, use: Use) -> int
 def damage_element(state: BattleState, unit: UnitState, use: Use, base: Element) -> Element:
     """傷害的元素：物理傷害改為第一條成立的 ``add_element``；已有元素的不覆寫。
 
-    普攻（Phase 3I-6）：附魔最優先。修正技能 ``add_element`` 與元素詞條的先後 #52 沒有規定，待使用者
-    決定前（玩法 PM 2026-10-24）採不改舊行為的暫定做法：**有元素詞條時** 修正技能 ＞ 普攻附加詞條 ＞
-    武器元素詞條 ＞ 武器本身；**沒有詞條時** 照舊——武器本身有元素就不覆寫，物理才輪到修正技能。
+    普攻（Phase 3I-6）依 :func:`trpg.engine.attack_element.resolve_attack_element` 的優先順序
+    （附魔 ＞ 武器本身元素 ＞ 修正技能 ＞ 普攻附加詞條 ＞ 武器元素詞條；06 6.10 #52 補充二；
+    ``base`` 被忽略）。
     """
     if use.action == "attack":
         sources = attack_element_sources(state.ruleset, unit)
-        if sources.enchant is not None and sources.enchant is not Element.PHYSICAL:
-            return sources.enchant
-        if sources.basic_affix is None and sources.weapon_affix is None:
-            base = sources.weapon
-        else:
-            added = _added_element(state, unit, use)
-            return added if added is not None else resolve_attack_element(sources, is_basic=True)
+        sources = replace(sources, modifier=_added_element(state, unit, use))
+        return resolve_attack_element(sources, is_basic=True)
     if base is not Element.PHYSICAL:
         return base
     added = _added_element(state, unit, use)

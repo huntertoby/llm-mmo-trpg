@@ -50,34 +50,41 @@ def src(
     basic: Element | None = None,
     affix: Element | None = None,
     weapon: Element = P,
+    mod: Element | None = None,
 ) -> AttackElementSources:
-    return AttackElementSources(enchant, basic, affix, weapon)
+    return AttackElementSources(
+        enchant=enchant, modifier=mod, basic_affix=basic, weapon_affix=affix, weapon=weapon
+    )
 
 
 # (來源, 是普攻, 武器技自己的元素, 期望) —— 全部規則的表格（詞條來源用測試資料模擬，3K-1 接上）
 PRIORITY_TABLE: list[tuple[AttackElementSources, bool, Element | None, Element]] = [
-    # 普攻：附魔 ＞ 普攻附加 ＞ 武器元素詞條 ＞ 武器本身 ＞ 物理
+    # 06 6.10（#52 補充二，使用者「是」）：武器本身的元素（法杖）只有附魔能覆寫；
+    # 普攻：附魔 ＞ 武器本身元素 ＞ 修正技能 ＞ 普攻附加詞條 ＞ 武器元素詞條 ＞ 物理
     (src(), True, None, P),
     (src(weapon=ICE), True, None, ICE),
-    (src(affix=L, weapon=ICE), True, None, L),
-    (src(basic=H, affix=L, weapon=ICE), True, None, H),
-    (src(enchant=F, basic=H, affix=L, weapon=ICE), True, None, F),
+    (src(affix=L, weapon=ICE), True, None, ICE),  # 法杖元素不被詞條覆寫
+    (src(basic=H, affix=L, weapon=ICE), True, None, ICE),
+    (src(mod=L, weapon=F), True, None, F),  # 火焰法杖＋雷擊之手 → 仍是火
+    (src(enchant=F, basic=H, affix=L, weapon=ICE, mod=L), True, None, F),
+    (src(enchant=H, weapon=ICE), True, None, H),  # 附魔能覆寫法杖
     (src(enchant=F), True, None, F),
-    (src(basic=H), True, None, H),
-    (src(basic=H, weapon=ICE), True, None, H),
+    (src(mod=L, basic=H, affix=ICE), True, None, L),  # 物理武器：修正 ＞ 普攻附加 ＞ 武器詞條
+    (src(basic=H, affix=ICE), True, None, H),
     (src(affix=L), True, None, L),
-    (src(enchant=F, weapon=ICE), True, None, F),
-    # 無元素的武器技：附魔 ＞ 武器元素詞條 ＞ 武器本身 ＞ 物理（不看普攻附加）
+    (src(basic=H), True, None, H),
+    # 無元素武器技：附魔 ＞ 武器本身元素 ＞ 修正技能 ＞ 武器元素詞條 ＞ 物理（不看普攻附加）
     (src(), False, None, P),
     (src(weapon=ICE), False, None, ICE),
-    (src(affix=L, weapon=ICE), False, None, L),
-    (src(basic=H, affix=L, weapon=ICE), False, None, L),
-    (src(basic=H, weapon=ICE), False, None, ICE),
+    (src(affix=L, weapon=ICE), False, None, ICE),
+    (src(mod=L, weapon=F), False, None, F),
+    (src(mod=L, affix=ICE), False, None, L),
+    (src(affix=L), False, None, L),
     (src(basic=H), False, None, P),
-    (src(enchant=F, basic=H, affix=L, weapon=ICE), False, None, F),
-    (src(enchant=F), False, None, F),
+    (src(basic=H, affix=L), False, None, L),
+    (src(enchant=F, mod=L, affix=L, weapon=ICE), False, None, F),
     # 本身已有元素的武器技：不受任何來源影響
-    (src(enchant=F, basic=H, affix=L, weapon=ICE), False, Element.POISON, Element.POISON),
+    (src(enchant=F, basic=H, affix=L, weapon=ICE, mod=L), False, Element.POISON, Element.POISON),
     (src(enchant=F), False, Element.EARTH, Element.EARTH),
     (src(), False, Element.EARTH, Element.EARTH),
     # 技能自己的元素寫成物理 ＝ 沒有元素
