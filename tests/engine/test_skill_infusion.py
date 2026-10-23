@@ -463,7 +463,9 @@ def test_an_ai_battle_with_infusions_replays_identically() -> None:
 
     lib = library()
     found = False
-    for plan_seed in range(1, 9):
+    # 3H（武器技花耐力、心智三分）後 AI 灌注變少（40 場約 2 場）：
+    # 這裡驗重播一致，不驗頻率（頻率見平衡待辦 B5）
+    for plan_seed in range(1, 41):
         spec, _ = _spec(lib, "dev_summoner", "bandit_lair", plan_seed, 30)
         seed = spec.seeds[0]
         run = run_battle(spec.setup, seed, UtilityAI(lib.ai_profiles))
