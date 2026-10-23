@@ -50,9 +50,11 @@ def _evaluate(data: str | dict[str, Any], ctx: ProposalContext | None = None) ->
 
 def _same(a: SkillDef, b: SkillDef) -> bool:
     """除了 ID 與來源（呼叫端決定）以外完全相同；武器技的縮放屬性由引擎設為武器大類主屬性
-    （看手上武器，3H-6），不比對。"""
+    （看手上武器，3H-6），不比對。``skill_scaling.yaml`` 例外清單裡的內建技能（3H-7）：提議出來的
+    技能沒有那個 ID，縮放屬性依效果推導的主題收進允許範圍，也不比對。"""
     skip = {"id", "provenance"}
-    if b.category == "weapon":
+    excepted = {o.skill for o in _lib().skill_scaling.overrides}
+    if b.category == "weapon" or b.id in excepted:
         skip |= {"scaling_attr", "secondary_scaling_attr"}
     return a.model_dump(exclude=skip) == b.model_dump(exclude=skip)
 

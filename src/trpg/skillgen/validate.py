@@ -11,6 +11,8 @@
 5. ``rarity.*``：稀有度限制（4.6）。
 6. ``budget.*``：預算區間（4.2）。
 7. ``keyword.required``：每招技能至少製造或利用一個關鍵字（Phase 3-24b1，6.27.1）。
+8. ``scaling.weapon``／``scaling.range``：縮放屬性（含第二屬性）在 ``skill_scaling.yaml`` 的
+   允許範圍內（Phase 3H-6、3H-7，06 6.10）。
 
 修正技能（``kind: modifier``，Phase 3C-2）沒有效果原語，只檢查引用、骨架（啟用、kind、形狀）、
 稀有度（骨架、規則條件與命中後效果的原語、狀態）與預算（見 :func:`_modifier_violations`）。
@@ -44,6 +46,7 @@ from trpg.content.skills import (
 from trpg.skillgen.budget import BudgetError, BudgetReport, skill_budget
 from trpg.skillgen.keywords import derive_keywords
 from trpg.skillgen.mechanics import affect_set, resolved_affects
+from trpg.skillgen.scaling import attr_names_zh, scaling_basis_zh
 
 __all__ = [
     "RARITY_STATUS_PRIMITIVES",
@@ -87,7 +90,8 @@ def validate_skill(skill: SkillDef, library: ContentLibrary) -> list[Violation]:
         return reference
     resource = library.budget.cost_problem(skill.category, skill.cost)  # 3H-2，06 6.10
     out = [] if resource is None else [Violation(skill.id, "cap.resource", resource)]
-    out += _weapon_scaling_violations(skill, library)
+    weapon = _weapon_scaling_violations(skill, library)
+    out += weapon + _scaling_range_violations(skill, library, already=bool(weapon))
     return [*out, *_structure_violations(skill, library), *_keyword_violations(skill, library)]
 
 
@@ -110,6 +114,37 @@ def _weapon_scaling_violations(skill: SkillDef, library: ContentLibrary) -> list
             "scaling.weapon",
             f"武器技的命中與傷害看手上武器的屬性：縮放屬性要設為 {attr.display_name}"
             f"（{skill.weapon_req} 武器的主屬性），且不能有第二縮放屬性",
+        )
+    ]
+
+
+def _scaling_range_violations(
+    skill: SkillDef, library: ContentLibrary, *, already: bool
+) -> list[Violation]:
+    """``scaling.range``（Phase 3H-7，06 6.10）：主屬性與第二屬性都要在允許範圍內（法術技依效果
+    推導的主題）；武器技不帶第二屬性。``already``：``scaling.weapon`` 已經報過（不重複）。"""
+    if skill.category == "weapon":
+        if already or skill.secondary_scaling_attr is None:
+            return []
+        message = "武器技的命中與傷害看手上武器的屬性，不能有第二縮放屬性"
+        return [Violation(skill.id, "scaling.range", message)]
+    allowed = library.scaling_range(skill)
+    if not allowed:  # 沒有載入縮放規則（測試用的內容庫）
+        return []
+    used = [skill.scaling_attr]
+    if skill.secondary_scaling_attr is not None:
+        used.append(skill.secondary_scaling_attr)
+    bad = tuple(a for a in used if a not in allowed)
+    if not bad:
+        return []
+    second = skill.secondary_scaling_attr
+    which = "、".join(f"{'第二' if a is second else ''}縮放屬性 {a.display_name}" for a in bad)
+    return [
+        Violation(
+            skill.id,
+            "scaling.range",
+            f"{which} 不在這招的允許範圍：{scaling_basis_zh(skill, library)}，"
+            f"只能看 {attr_names_zh(allowed)}",
         )
     ]
 

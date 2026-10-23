@@ -28,6 +28,7 @@ from trpg.content.keyword_derive import derive_keywords
 from trpg.content.library import ContentLibrary
 from trpg.content.skills import EffectSpec, SkillDef
 from trpg.skillgen.evolution import Evolution, EvolutionRequest, cost_attempts, evolved_id
+from trpg.skillgen.scaling import fit_scaling
 from trpg.skillgen.validate import validate_skill
 
 __all__ = ["is_summon_skill", "summon_evolution_options"]
@@ -89,6 +90,7 @@ def _fit(
         for cost in cost_attempts(skill):
             try:
                 evolved = SkillDef.model_validate({**base, "cost": cost, "effects": trial})
+                evolved = fit_scaling(evolved, library)  # 3H-7
             except ValueError:
                 continue
             if validate_skill(evolved, library):

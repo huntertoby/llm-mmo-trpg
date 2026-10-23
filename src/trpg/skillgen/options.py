@@ -24,6 +24,7 @@ from typing import Any
 
 from trpg.content.library import ContentLibrary
 from trpg.content.skill_rules import SkeletonDef
+from trpg.content.skill_scaling import ScalingFacts
 from trpg.content.skills import (
     AFFECTS_VALUES,
     BASIC_ACTIONS,
@@ -81,6 +82,7 @@ from trpg.skillgen.option_rules import (
 )
 from trpg.skillgen.option_scaling import scaling_extra_fields
 from trpg.skillgen.option_variant import variant_fields, variant_notes, variants_visible
+from trpg.skillgen.scaling import attr_names_zh, scaling_basis_zh
 from trpg.skillgen.validate import rarity_requirements
 
 __all__ = ["RarityFloor", "draft_options", "minimum_rarity"]
@@ -369,14 +371,7 @@ def _scaling_field(draft: Draft, library: ContentLibrary) -> FieldSpec:
     """縮放屬性欄位。武器技（Phase 3H-6）命中與傷害看手上武器的屬性，欄位鎖成「看武器」：
     選項只有所需武器大類（近戰、遠程）的主屬性；還沒選武器需求時沒有選項。"""
     if draft.get("category") != "weapon":
-        return FieldSpec(
-            field="scaling_attr",
-            name_zh="縮放屬性",
-            description_zh="技能的數值隨這個屬性成長",
-            type="choice",
-            required=True,
-            choices=tuple(Choice(value=a.value, name_zh=a.display_name) for a in Attribute),
-        )
+        return _spell_scaling_field(draft, library)
     req = draft.get("weapon_req")
     attr = library.skill_scaling.weapon_class_attr(str(req)) if req in _WEAPON_CLASSES else None
     return FieldSpec(
@@ -399,6 +394,39 @@ def _scaling_field(draft: Draft, library: ContentLibrary) -> FieldSpec:
 
 
 _WEAPON_CLASSES = ("melee", "ranged")
+
+
+def _spell_scaling_field(draft: Draft, library: ContentLibrary) -> FieldSpec:
+    """法術技（與還沒選類別）的縮放屬性（Phase 3H-7，06 6.10）：只列允許範圍（主題由主要效果推導，
+    ``skill_scaling.yaml``），預設範圍裡第一個；說明寫出範圍的由來。還沒選效果時主題未定，列出
+    六個屬性並提醒之後會依效果限縮（選錯時檢查列出中文原因）。"""
+    facts = ScalingFacts.of_draft(draft)
+    if not facts.effects and draft.get("kind") != "modifier":
+        return FieldSpec(
+            field="scaling_attr",
+            name_zh="縮放屬性",
+            description_zh=(
+                "技能的數值隨這個屬性成長。法術看主要效果的主題（智力＝元素傷害與互動；感知＝治療、"
+                "護盾、輔助、偵測與標記；意志＝召喚、獻祭、詛咒、心智控制、暗影），選好效果後只列"
+                "允許的屬性"
+            ),
+            type="choice",
+            required=True,
+            choices=tuple(Choice(value=a.value, name_zh=a.display_name) for a in Attribute),
+        )
+    allowed = library.scaling_range(facts) or tuple(Attribute)
+    return FieldSpec(
+        field="scaling_attr",
+        name_zh="縮放屬性",
+        description_zh=(
+            f"技能的數值隨這個屬性成長。{scaling_basis_zh(facts, library)}，"
+            f"只能看 {attr_names_zh(allowed)}"
+        ),
+        type="choice",
+        required=True,
+        default=allowed[0].value,
+        choices=tuple(Choice(value=a.value, name_zh=a.display_name) for a in allowed),
+    )
 
 
 def _basics_step(draft: Draft, library: ContentLibrary, skeleton: SkeletonDef) -> StepOptions:

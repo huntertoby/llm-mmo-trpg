@@ -283,12 +283,12 @@ class ScalingRules(ContentModel):
     """雙屬性縮放與專精加成的抽選（Phase 2H-2；主動技能，強度調整成功之後才抽）。
 
     ``dual_permille``：稀有度夠（``core.yaml`` 的 ``dual_scaling_min_rarity``）時加第二縮放屬性的
-    機率；第二屬性從 ``dual_attrs`` 中抽一個和主屬性不同的。``mastery_permille``：沒有第二屬性、
-    且有合法專精時給 ``mastery`` 的機率（``range`` 需要施放距離、``duration`` 需要施加狀態）。
+    機率；第二屬性從技能的縮放允許範圍（``skill_scaling.yaml``，主屬性以外）抽一個（3H-7；範圍
+    裡沒有別的屬性時不給）。``mastery_permille``：沒有第二屬性、且有合法專精時給 ``mastery`` 的
+    機率（``range`` 需要施放距離、``duration`` 需要施加狀態）。
     """
 
     dual_permille: int = _PERMILLE
-    dual_attrs: tuple[str, ...] = Field(min_length=2)
     mastery_permille: int = _PERMILLE
 
 

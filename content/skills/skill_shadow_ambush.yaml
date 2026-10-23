@@ -10,7 +10,7 @@ skeleton: strike
 category: weapon
 weapon_req: melee
 ap_cost: 2
-scaling_attr: dex
+scaling_attr: str
 shape: {type: unit_then_tile, range: 4}
 effects:
   - {type: shadowstep, landing: choose}

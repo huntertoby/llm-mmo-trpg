@@ -78,7 +78,12 @@ from trpg.content.skill_rules import (
     SkillMatch,
     SynergyTable,
 )
-from trpg.content.skill_scaling import SkillScalingRules, scaling_problems
+from trpg.content.skill_scaling import (
+    ScalingBasis,
+    ScalingFacts,
+    SkillScalingRules,
+    scaling_problems,
+)
 from trpg.content.skill_tags import SkillTagTable
 from trpg.content.skill_triggers import SkillTriggerDef, SkillTriggerTable
 from trpg.content.skills import (
@@ -102,7 +107,7 @@ from trpg.content.summons import SummonDef, SummonTable, load_summon_looks
 from trpg.content.weapon_params import set_weapon_param
 from trpg.content.workshop import WorkshopRules, workshop_problems
 from trpg.shared.errors import ContentError
-from trpg.shared.types import Surface
+from trpg.shared.types import Attribute, Element, Surface
 
 _LOG = logging.getLogger(__name__)
 
@@ -495,6 +500,18 @@ class ContentLibrary:
     def weapon_of(self, template: UnitTemplate) -> WeaponDef:
         return self.weapons[template.weapon]
 
+    def summon_elements(self) -> dict[str, Element]:
+        """召喚物範本 ID → 召喚物武器的元素（縮放主題的效果訊號，Phase 3H-7）。"""
+        return summon_elements(self.ruleset.summons)
+
+    def scaling_basis(self, skill: SkillDef | ScalingFacts) -> ScalingBasis:
+        """技能（或工坊草稿）的縮放屬性允許範圍與由來（``skill_scaling.yaml``，Phase 3H-7）。"""
+        return self.skill_scaling.basis(skill, self.weapons, self.summon_elements())
+
+    def scaling_range(self, skill: SkillDef | ScalingFacts) -> tuple[Attribute, ...]:
+        """允許的縮放屬性（有順序；沒有主角屬性時取第一個）。"""
+        return self.scaling_basis(skill).attrs
+
     def weather_def(self, weather_id: str) -> WeatherDef:
         try:
             return self.weather[weather_id]
@@ -690,7 +707,7 @@ def load_library(  # noqa: PLR0915
     evolution = load("skill_evolution.yaml", EvolutionTable) if has_evolution else EvolutionTable()
     _check_evolution(root, evolution, keywords, skeletons)
     skill_scaling = load("skill_scaling.yaml", SkillScalingRules)
-    _check_scaling(root, skill_scaling, skills, weapon_map)
+    _check_scaling(root, skill_scaling, skills, weapon_map, summon_elements(summons))
 
     return ContentLibrary(
         root=root,
@@ -728,11 +745,17 @@ def _check_scaling(
     rules: SkillScalingRules,
     skills: dict[str, SkillDef],
     weapons: dict[str, WeaponDef],
+    summons: Mapping[str, Element],
 ) -> None:
     """內建技能的縮放屬性都在允許範圍內（武器技看武器、法術技依主題，Phase 3H-1）。"""
-    problems = scaling_problems(rules, skills, weapons)
+    problems = scaling_problems(rules, skills, weapons, summons)
     if problems:
         raise ContentError(root / "skill_scaling.yaml", "；".join(problems))
+
+
+def summon_elements(summons: SummonTable) -> dict[str, Element]:
+    """召喚物範本 ID → 召喚物武器的元素（物理不算主題訊號，但照樣列出）。"""
+    return {s.id: s.weapon.element for s in summons.summons}
 
 
 def _check_evolution(

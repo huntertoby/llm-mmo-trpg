@@ -355,16 +355,25 @@ def test_random_reactions_and_stances_appear_without_changing_common_seeds() -> 
 
 
 def test_the_composer_sometimes_adds_a_valid_dual_attribute_or_mastery() -> None:
-    """Phase 2H-2：400 個種子中有雙屬性（史詩以上）與專精的技能，且組合都合法、兩者不並存。"""
+    """Phase 2H-2：有雙屬性（史詩以上）與專精的技能，且組合都合法、兩者不並存。3H-7：第二屬性
+    限在允許範圍內（法術的組合主題，例如元素獻祭＝意志或智力），一般種子幾乎不會有，所以另外
+    從獻祭骨架抽。"""
     library = lib()
     rules = library.ruleset
     found = [compose_random_skill(seed, library=library) for seed in range(400)]
-    dual = [s for s in found if s.secondary_scaling_attr is not None]
+    sacrifices = [
+        compose_random_skill(seed, rarity="epic", skeleton="sacrifice", library=library)
+        for seed in range(80)
+    ]
+    dual = [s for s in (*found, *sacrifices) if s.secondary_scaling_attr is not None]
     mastered = [s for s in found if s.mastery is not None]
     assert dual and {m.mastery for m in mastered} == {"range", "duration"}
     for skill in dual:
         assert skill.rarity in ("epic", "legendary")
+        assert skill.category == "spell"
         assert skill.secondary_scaling_attr != skill.scaling_attr
+        allowed = library.scaling_range(skill)
+        assert {skill.scaling_attr, skill.secondary_scaling_attr} <= set(allowed), skill.id
         assert skill.mastery is None
     for skill in mastered:
         assert skill.secondary_scaling_attr is None

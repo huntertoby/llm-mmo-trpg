@@ -4,10 +4,14 @@
 #   （雙屬性武器取較高／取平均），技能自己的 scaling_attr 不生效，只當顯示提示。內建技能的 scaling_attr
 #   必須是某把同大類（weapon_req）、玩家可裝備的武器的縮放屬性（含第二縮放屬性，見 weapons.yaml）；
 #   隨機組合器、LLM 提議與工坊產生的武器技則一律設為 weapon_class_attrs 的武器大類主屬性（不帶第二屬性）。
-# 法術技（category: spell）：依主題。spell_themes 依 **先後順序** 比對，第一個符合的主題決定屬性
-#   （符合＝技能的標籤或效果類型命中 tags_any／effect_types_any，且沒有 tags_none 的標籤）。
+# 法術技（category: spell）：依主題，**主題由效果推導**（Phase 3H-7，玩法 PM 2026-10-24）。依序看技能的效果（主要效果
+#   在前；複合技能接著看第二段），第一個帶有主題訊號的效果是「主要效果」：訊號＝原語 effect_types_any、元素
+#   elements_any（召喚看召喚物武器的元素）、表面 surfaces_any、狀態 statuses_any（consume_status 的 then 一起看）。
+#   主要效果符合的主題中，spell_themes 順序第一個決定主屬性；同一個效果也符合組合主題的另一個主題時可看其一
+#   （附帶效果不算）。物理傷害、拉扯、障礙、減速等沒有主題訊號，跳過看下一個效果。
+#   **標籤只當輔助**：每個效果都沒有訊號時（物理傷害、修正規則、規則改變…）才看 tags_any／tags_none；
+#   標籤不能改掉效果推導出的主題。都不符合的（物理、裝備動作等）是身體類，允許 body_attrs。
 #   智力＝元素傷害與互動｜感知＝治療、護盾、輔助、偵測與標記｜意志＝召喚、獻祭、詛咒、心智控制、暗影。
-#   都不符合的（物理、裝備動作等）是身體類，允許 body_attrs。
 # overrides：個別技能的例外，要寫理由。
 # 內建技能由 `trpg content check` 與 tests/content/test_skill_scaling.py 檢查；
 # 3H-3 的隨機組合器與 LLM 提議也從這份規則取得允許的屬性。
@@ -17,19 +21,30 @@ spell_themes:
   - id: mind
     attr: wil
     label_zh: 召喚、獻祭、詛咒、心智控制、暗影
-    tags_any: [summon, sacrifice, shadow, curse, fear, silence, taunt]
-    tags_none: [mark]          # 標記屬於偵測與標記（感知），即使是暗影系
     effect_types_any: [summon, sacrifice_summon]
+    elements_any: [shadow]
+    surfaces_any: [darkness]
+    statuses_any: [feared, silenced, taunted]
+    tags_any: [summon, sacrifice, shadow, curse, fear, silence, taunt]
+    tags_none: [mark]          # 標記屬於偵測與標記（感知），即使是暗影系（只在看標籤時）
   # 感知：治療、護盾、輔助、偵測與標記
   - id: support
     attr: wis
     label_zh: 治療、護盾、輔助、偵測與標記
+    effect_types_any: [heal, shield, cleanse, revive, reveal, restore_resource, redirect_damage, cheat_death, extra_reaction, grant_skill, grant_ap, reset_cooldown]
+    elements_any: [holy]
+    surfaces_any: [holy]
+    statuses_any: [marked, revealed, guarded, regenerating, defending, shielded, undying, soul_link, rallied]
     tags_any: [heal, shield, support, reveal, scout, mark, cleanse, guard, utility, luck, holy, nature, buff]
-    tags_none: [physical, gear, rage]   # 物理與裝備動作、怒氣增益屬於身體類
-  # 智力：元素傷害與互動
+    tags_none: [physical, gear, rage]   # 物理與裝備動作、怒氣增益屬於身體類（只在看標籤時）
+  # 智力：元素傷害與互動（含奧術位移、念力、符文引爆、複製法術）
   - id: elemental
     attr: int
     label_zh: 元素傷害與互動
+    effect_types_any: [teleport, teleport_target, swap_any, hurl_object, topple, detonate_runes, copy_skill]
+    elements_any: [fire, ice, lightning, earth, poison, wind]
+    surfaces_any: [fire, ice, oil, poison]
+    statuses_any: [burning, frozen, poison]
     tags_any: [fire, ice, lightning, earth, water, arcane, rune, rune_read, rune_make, rune_detonate, ash, poison, telekinesis, oil]
 
 body_attrs: [str, dex, con]
@@ -46,13 +61,15 @@ combos:
   - {themes: [elemental, support], reason_zh: 元素＋感知主題（治療、護盾、輔助、標記）看智力或感知}
 
 overrides:
-  - {skill: skill_arcane_blade, attrs: [str, int], reason_zh: 魔劍斬是力量＋智力的雙屬性技能（混搭 build 的範例）}
-  - {skill: skill_flight, attrs: [int], reason_zh: 飛行是奧術位移，維持智力}
+  - {skill: skill_arcane_blade, attrs: [str, int], reason_zh: 魔劍斬是力量＋智力的雙屬性法術（混搭 build 的範例；魔劍士方案 A 決定前維持特例）}
   - {skill: skill_fracture_mark, attrs: [int], reason_zh: 裂骨印記是物理弱點標記，原本看智力，效果與數值不變}
   - {skill: skill_hunt_sigil, attrs: [wis], reason_zh: 獵印是標記獵物（偵測與標記），不是元素符文}
-  - {skill: skill_hex_bolt, attrs: [wil], reason_zh: 主要效果是暗影傷害（標記只是附帶），暗影歸意志（玩法 PM 2026-10-23：主要效果決定屬性）}
-  - {skill: skill_mark_detonation, attrs: [wil], reason_zh: 主要效果是暗影傷害（標記是條件），暗影歸意志（玩法 PM 2026-10-23）}
   - {skill: skill_summon_tide, attrs: [int], reason_zh: 造水加緩速是元素互動，不是治療輔助（玩法 PM 2026-10-23）}
   - {skill: skill_mountain_mover, attrs: [str], reason_zh: 移山之力是力量傳說（位移改造），不看元素}
   - {skill: skill_summon_elite, attrs: [wil], reason_zh: 召喚物強化修正技能，跟著召喚走意志}
   - {skill: skill_summon_swarm, attrs: [wil], reason_zh: 召喚物強化修正技能，跟著召喚走意志}
+  # 3H-7：主題改由效果推導後，下列內建技能的主要效果（治療、護盾、毒表面）會落到別的主題；維持現值並附理由
+  - {skill: skill_bloodlust, attrs: [str, dex, con], reason_zh: 嗜血是擊殺回血的身體被動（物理、怒氣），治療只是結果，不是感知系的治療法術}
+  - {skill: skill_grief_rage, attrs: [str, dex, con], reason_zh: 悲憤是怒氣反應（增傷加護盾），屬於身體類，不是感知系的護盾法術}
+  - {skill: skill_ember_ward, attrs: [int], reason_zh: 餘燼護盾是火焰系被動（火焰法師的防身），維持智力}
+  - {skill: skill_thorn_wall, attrs: [wis], reason_zh: 荊棘牆是自然系的屏障（毒只是荊棘的附帶），歸感知}

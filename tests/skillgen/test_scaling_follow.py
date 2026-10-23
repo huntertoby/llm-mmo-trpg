@@ -28,7 +28,7 @@ def _attrs(**kw: int) -> dict[Attribute, int]:
 
 def _allowed(skill: SkillDef) -> frozenset[Attribute]:
     lib = library()
-    return lib.skill_scaling.allowed_attrs(skill, lib.weapons)
+    return frozenset(lib.scaling_range(skill))
 
 
 def test_top_attribute_tie_breaks_by_fixed_order() -> None:

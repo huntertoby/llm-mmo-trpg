@@ -60,6 +60,7 @@ __all__ = [
     "CandidateRequest",
     "CandidateRules",
     "behavior_weights",
+    "follows_attr",
     "generate_candidates",
     "keyword_distribution",
     "skill_has_keywords",
@@ -99,6 +100,9 @@ class CandidateRequest:
     技能（同分依六屬性順序），新方向優先取不同屬性的技能；找不到再放寬。隨機組合器產生的技能
     縮放屬性直接跟著最高屬性（:func:`trpg.skillgen.scaling.retarget_scaling`）。空 ＝ 不看屬性
     （與 3H-3 之前完全相同）。"""
+    weapon_attrs: tuple[Attribute, ...] = ()
+    """主角手上武器的縮放屬性（含第二縮放屬性；Phase 3H-7）。武器技看手上武器（3H-6），所以比對
+    屬性偏好時武器技用這個，不用技能自己的 ``scaling_attr``（只是顯示提示）；空 ＝ 退回技能的。"""
 
 
 @dataclass(frozen=True, slots=True)
@@ -127,6 +131,14 @@ def behavior_weights(library: ContentLibrary, behavior: Mapping[str, int]) -> di
         k.id: sum(behavior.get(action, 0) for action in k.actions)
         for k in library.keywords.keywords
     }
+
+
+def follows_attr(skill: SkillDef, attr: Attribute, weapon_attrs: Sequence[Attribute] = ()) -> bool:
+    """技能實際吃 ``attr``：武器技看手上武器的縮放屬性（``weapon_attrs``，含第二屬性；3H-6、
+    3H-7），空時與法術技一樣看技能的 ``scaling_attr``。"""
+    if skill.category == "weapon" and weapon_attrs:
+        return attr in weapon_attrs
+    return skill.scaling_attr == attr
 
 
 def skill_has_keywords(skill: SkillDef, keywords: Sequence[str], library: ContentLibrary) -> bool:
@@ -160,7 +172,7 @@ class _Search:
         if want is None:
             return True
         top = top_attribute(self.request.hero_attributes)
-        return (skill.scaling_attr == top) == (want == "same")
+        return follows_attr(skill, top, self.request.weapon_attrs) == (want == "same")
 
     def from_pool(
         self, rng: Rng, keywords: Sequence[str], want: AttrWant | None
