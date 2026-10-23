@@ -58,6 +58,15 @@ export function movePlan(steps: readonly StepOut[], scale = 1): MoveAnim[] {
 }
 
 /** 線性內插（`t` 0–1）。 */
+/**
+ * 移動動畫途中單位該放在哪一排的圖層（戰場由北往南一排一排畫，南邊的排蓋住北邊）：取單位當下跨過的兩排中
+ * **較南** 的那一排，腳下的地板與崖面才不會蓋住人（使用者回報「移動中陷進地板」）。`t` 為 0～1。
+ */
+export function rowDuringMove(fromY: number, toY: number, t: number): number {
+  const k = Math.max(0, Math.min(1, t));
+  return Math.ceil(fromY + (toY - fromY) * k - 1e-9);
+}
+
 export function lerpPos(from: { x: number; y: number }, to: { x: number; y: number }, t: number) {
   const k = Math.max(0, Math.min(1, t));
   return { x: from.x + (to.x - from.x) * k, y: from.y + (to.y - from.y) * k };

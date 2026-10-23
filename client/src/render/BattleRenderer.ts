@@ -8,7 +8,7 @@
 import { Application, Container, Graphics, Sprite, type Text, type Ticker } from "pixi.js";
 import type { Pos } from "../api/types";
 import type { FeedbackItem, FloatTone } from "../battle/feedback";
-import { lerpPos, type MoveAnim, type MoveStyle } from "../battle/animation";
+import { lerpPos, rowDuringMove, type MoveAnim, type MoveStyle } from "../battle/animation";
 import type { DrawModel, ObjectDraw, TileDraw, TrapDraw, UnitDraw } from "../battle/drawModel";
 import { zoneBadgeCell, zoneCellSpecs } from "../battle/zones";
 import { TILE_SIZE } from "../battle/geometry";
@@ -731,12 +731,19 @@ export class BattleRenderer {
       const outline = this.silhouetteOf.get(m.unitId);
       if (outline !== undefined) outline.visible = false; // 剪影留在原位會誤導；重畫時再依新位置判斷
       const to = this.center(m.to);
+      // 途中跟著當下所在的排換圖層（較南的那排），結束時回到終點那排
+      const toRow = (t: number) => {
+        const units = this.rows.row(rowDuringMove(m.from.y, m.to.y, t)).units;
+        if (!sprite.destroyed && sprite.parent !== units) units.addChild(sprite);
+      };
       if (m.durationMs <= 0 || skip()) {
         sprite.position.set(to.x, to.y);
+        toRow(1);
         continue;
       }
       this.launch(warpEffects(warpPlan(m), this.effectClock, (p) => this.center(p))); // 傳送：起點消散、終點出現
-      await this.tween(sprite, this.center(m.from), to, m.durationMs, skip, m.style);
+      toRow(0);
+      await this.tween(sprite, this.center(m.from), to, m.durationMs, skip, m.style, toRow);
     }
   }
 
@@ -747,6 +754,7 @@ export class BattleRenderer {
     durationMs: number,
     skip: () => boolean,
     style: MoveStyle,
+    onProgress?: (t: number) => void,
   ): Promise<void> {
     return new Promise((resolve) => {
       let elapsed = 0;
@@ -760,11 +768,13 @@ export class BattleRenderer {
         const t = elapsed / durationMs;
         if (style === "fade") {
           // 前半在原地淡出，後半在新位置淡入
+          onProgress?.(t < 0.5 ? 0 : 1);
           sprite.position.set(t < 0.5 ? from.x : to.x, t < 0.5 ? from.y : to.y);
           sprite.alpha = Math.abs(t - 0.5) * 2;
           return;
         }
         const p = lerpPos(from, to, t);
+        onProgress?.(t);
         sprite.position.set(p.x, p.y);
       };
       const finish = () => {
@@ -772,6 +782,7 @@ export class BattleRenderer {
         done = true;
         this.app.ticker.remove(tick);
         if (!sprite.destroyed) {
+          onProgress?.(1);
           sprite.position.set(to.x, to.y);
           sprite.alpha = 1;
         }
