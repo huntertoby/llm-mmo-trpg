@@ -136,7 +136,8 @@ class FieldSpec(_Model):
     max_count: int | None = None
     default: str | int | bool | None = None
     display: Literal["multiplier", "percent"] | None = None
-    """玩家看到的數值格式（內部仍存千分比）：``multiplier``＝倍率（2000 顯示 ×2）、``percent``＝百分比
+    """玩家看到的數值格式（內部仍存千分比）：``multiplier``＝倍率（2000 顯示 ×2）、
+    ``percent``＝百分比
     （250 顯示 25%）。前端依此換算顯示與輸入（3-48f）。"""
     plain_value: bool = False
     """單選欄位的值一律是純值（不是 ``{"type": ...}`` 物件），即使欄位名在 ``OBJECT_CHOICE_FIELDS``
