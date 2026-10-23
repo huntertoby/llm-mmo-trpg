@@ -184,9 +184,22 @@ export function FloatCard({ float: f, className, align = "start", role, children
     place();
     window.addEventListener("resize", place);
     window.addEventListener("scroll", place, true);
+    // 卡片內容展開／收合（例如技能卡的「召喚物資訊」）會改變高度：重新貼齊，避免長出視窗（3-41 美術 PM 驗收）
+    const card = f.cardRef.current;
+    let last = card?.offsetHeight ?? 0;
+    const ro =
+      typeof ResizeObserver === "undefined" || card === null
+        ? null
+        : new ResizeObserver(() => {
+            if (card.offsetHeight === last) return;
+            last = card.offsetHeight;
+            place();
+          });
+    if (card !== null) ro?.observe(card);
     return () => {
       window.removeEventListener("resize", place);
       window.removeEventListener("scroll", place, true);
+      ro?.disconnect();
     };
   }, [f, align]);
 
