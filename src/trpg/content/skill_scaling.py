@@ -6,11 +6,12 @@
   武器大類主屬性。武器技 **不帶第二屬性**（3H-7；魔劍士方案 A 決定前）。
 - **法術技**（``category: spell``）：依主題，**主題由效果推導**（3H-7，玩法 PM 2026-10-24）：
   依序看技能的效果（主要效果在前；複合技能接著看第二段），第一個帶有主題訊號的效果是 **主要
-  效果**——訊號是效果的原語（``effect_types_any``）、元素（``elements_any``；召喚看召喚物武器的
-  元素）、表面（``surfaces_any``）或狀態（``statuses_any``；``consume_status`` 的 ``then``
-  一起看）。
+  效果**——訊號是效果的原語（``effect_types_any``）、元素（``elements_any``）、表面
+  （``surfaces_any``）或狀態（``statuses_any``；``consume_status`` 的 ``then`` 一起看）。
+  召喚物 **自帶** 的元素或灌注（召喚物武器）不算技能的元素主題（玩法 PM 2026-10-24）。
   主要效果符合的主題中，``spell_themes`` 順序第一個決定主屬性；同一個效果也符合組合主題的另一個
-  主題時，可以看其中任一個（附帶效果不算）。
+  主題時，可以看其中任一個。附帶效果一般不算；只有組合主題的 ``anywhere`` 主題（元素）可以由
+  其他效果補上，例：聖水的主要效果是神聖傷害（感知），造水表面補上元素 → 感知或智力。
   **標籤只當輔助**：只有每個效果都沒有主題訊號時（物理傷害、拉扯、障礙、修正規則、規則改變…），才
   依標籤（``tags_any``／``tags_none``）判斷；標籤不能改掉效果推導出的主題。都不符合的屬於身體類，
   允許 ``body_attrs``。
@@ -51,9 +52,6 @@ __all__ = [
     "weapon_attrs",
     "weapon_class_mismatches",
 ]
-
-SummonElements = Mapping[str, Element]
-"""召喚物範本 ID → 召喚物武器的元素（``summon`` 效果的元素訊號）。"""
 
 
 def _get(effect: Any, name: str) -> Any:
@@ -149,28 +147,27 @@ class ScalingTheme(ContentModel):
             return False
         return bool(tags & set(self.tags_any))
 
-    def matches_effect(self, effect: Any, summons: SummonElements) -> bool:
-        """一個效果（含 ``consume_status`` 的 ``then``）帶有這個主題的訊號。"""
+    def matches_effect(self, effect: Any) -> bool:
+        """一個效果（含 ``consume_status`` 的 ``then``）帶有這個主題的訊號。召喚物自帶的元素
+        不算（``summon`` 效果本身沒有 ``element``）。"""
         if _text(_get(effect, "type")) in self.effect_types_any:
             return True
         element = _text(_get(effect, "element"))
-        if element is None and _get(effect, "type") == "summon":
-            unit = summons.get(str(_get(effect, "unit")))
-            element = None if unit is None else unit.value
         if element is not None and element in {e.value for e in self.elements_any}:
             return True
         if _text(_get(effect, "surface")) in self.surfaces_any:
             return True
         if _text(_get(effect, "status")) in self.statuses_any:
             return True
-        return any(self.matches_effect(e, summons) for e in _seq(_get(effect, "then")))
+        return any(self.matches_effect(e) for e in _seq(_get(effect, "then")))
 
 
 class ThemeCombo(ContentModel):
     """組合主題：主要效果同時符合 ``themes`` 的每一個時（只有標籤可看時則是標籤都符合），允許
-    這些主題的屬性任選其一。"""
+    這些主題的屬性任選其一。``anywhere`` 裡的主題也可以由技能的其他效果符合（例：元素表面）。"""
 
     themes: tuple[str, ...] = Field(min_length=2)
+    anywhere: tuple[str, ...] = ()
     reason_zh: str = Field(min_length=1)
 
 
@@ -224,7 +221,7 @@ class SkillScalingRules(ContentModel):
             raise ValueError("weapon_class_attrs 必須有 melee（未列出的大類取近戰的）")
         known = {t.id for t in self.spell_themes}
         for combo in self.combos:
-            unknown = sorted(set(combo.themes) - known)
+            unknown = sorted((set(combo.themes) | set(combo.anywhere)) - known)
             if unknown:
                 raise ValueError(f"組合主題引用了未知的主題：{', '.join(unknown)}")
         for label, ids in (
@@ -243,20 +240,22 @@ class SkillScalingRules(ContentModel):
     def theme(self, theme_id: str) -> ScalingTheme:
         return next(t for t in self.spell_themes if t.id == theme_id)
 
-    def _themed(self, matched: Sequence[ScalingTheme]) -> tuple[Attribute, ...]:
-        """符合的主題（依主題順序）→ 範圍：第一個主題的屬性，加上組合主題的其他屬性。"""
+    def _themed(
+        self, matched: Sequence[ScalingTheme], elsewhere: frozenset[str] = frozenset()
+    ) -> tuple[Attribute, ...]:
+        """符合的主題（依主題順序）→ 範圍：第一個主題的屬性，加上組合主題的其他屬性。
+        ``elsewhere`` 是其他效果符合的主題，只補組合主題的 ``anywhere``。"""
         ids = {t.id for t in matched}
         out = [matched[0].attr]
         for combo in self.combos:
-            if matched[0].id in combo.themes and all(tid in ids for tid in combo.themes):
+            have = ids | (elsewhere & set(combo.anywhere))
+            if matched[0].id in combo.themes and all(tid in have for tid in combo.themes):
                 out += [self.theme(tid).attr for tid in combo.themes]
         return tuple(dict.fromkeys(out))
 
-    def _main_effect(
-        self, facts: ScalingFacts, summons: SummonElements
-    ) -> tuple[int, list[ScalingTheme]] | None:
+    def _main_effect(self, facts: ScalingFacts) -> tuple[int, list[ScalingTheme]] | None:
         for index, effect in enumerate(facts.effects):
-            matched = [t for t in self.spell_themes if t.matches_effect(effect, summons)]
+            matched = [t for t in self.spell_themes if t.matches_effect(effect)]
             if matched:
                 return index, matched
         return None
@@ -265,7 +264,6 @@ class SkillScalingRules(ContentModel):
         self,
         skill: SkillDef | ScalingFacts,
         weapons: Mapping[str, WeaponDef] | Iterable[WeaponDef],
-        summons: SummonElements | None = None,
     ) -> ScalingBasis:
         """允許範圍（有順序）與由來；見模組說明。"""
         facts = skill if isinstance(skill, ScalingFacts) else ScalingFacts.of_skill(skill)
@@ -276,11 +274,18 @@ class SkillScalingRules(ContentModel):
             first = self.weapon_class_attr(facts.weapon_req)
             rest = sorted(weapon_attrs(facts.weapon_req, weapons), key=list(Attribute).index)
             return ScalingBasis(tuple(dict.fromkeys([first, *rest])), "weapon")
-        main = self._main_effect(facts, summons or {})
+        main = self._main_effect(facts)
         if main is not None:
             index, matched = main
+            elsewhere = frozenset(
+                t.id
+                for i, effect in enumerate(facts.effects)
+                if i != index
+                for t in self.spell_themes
+                if t.matches_effect(effect)
+            )
             return ScalingBasis(
-                self._themed(matched), "effect", tuple(t.id for t in matched), index
+                self._themed(matched, elsewhere), "effect", tuple(t.id for t in matched), index
             )
         tagged = [t for t in self.spell_themes if t.matches_tags(facts.tags)]
         if tagged:
@@ -291,16 +296,13 @@ class SkillScalingRules(ContentModel):
         self,
         skill: SkillDef | ScalingFacts,
         weapons: Mapping[str, WeaponDef] | Iterable[WeaponDef],
-        summons: SummonElements | None = None,
     ) -> tuple[Attribute, ...]:
         """允許的縮放屬性（有順序：沒有主角屬性時取第一個）。"""
-        return self.basis(skill, weapons, summons).attrs
+        return self.basis(skill, weapons).attrs
 
-    def spell_theme(
-        self, skill: SkillDef | ScalingFacts, summons: SummonElements | None = None
-    ) -> ScalingTheme | None:
+    def spell_theme(self, skill: SkillDef | ScalingFacts) -> ScalingTheme | None:
         """法術技的主題（主要效果推導；沒有效果訊號時看標籤）；身體類或例外為 ``None``。"""
-        basis = self.basis(skill, (), summons)
+        basis = self.basis(skill, ())
         if basis.source not in ("effect", "tags"):
             return None
         return self.theme(basis.themes[0])
@@ -309,10 +311,9 @@ class SkillScalingRules(ContentModel):
         self,
         skill: SkillDef | ScalingFacts,
         weapons: Mapping[str, WeaponDef] | Iterable[WeaponDef],
-        summons: SummonElements | None = None,
     ) -> frozenset[Attribute]:
         """這招技能可以用的縮放屬性集合（主屬性與法術技的第二屬性都限在這裡）。"""
-        return frozenset(self.scaling_range(skill, weapons, summons))
+        return frozenset(self.scaling_range(skill, weapons))
 
 
 def weapon_attrs(
@@ -349,7 +350,6 @@ def scaling_problems(
     rules: SkillScalingRules,
     skills: Mapping[str, SkillDef],
     weapons: Mapping[str, WeaponDef],
-    summons: SummonElements | None = None,
 ) -> list[str]:
     """內建技能的縮放屬性（含第二屬性）是否都在允許範圍內；回傳問題清單。"""
     problems: list[str] = []
@@ -362,7 +362,7 @@ def scaling_problems(
     ]
     for sid in sorted(skills):
         skill = skills[sid]
-        allowed = rules.scaling_range(skill, weapons, summons)
+        allowed = rules.scaling_range(skill, weapons)
         used = [skill.scaling_attr]
         if skill.secondary_scaling_attr is not None:
             used.append(skill.secondary_scaling_attr)

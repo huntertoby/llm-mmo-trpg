@@ -43,7 +43,7 @@ spell_themes:
     label_zh: 元素傷害與互動
     effect_types_any: [teleport, teleport_target, swap_any, hurl_object, topple, detonate_runes, copy_skill]
     elements_any: [fire, ice, lightning, earth, poison, wind]
-    surfaces_any: [fire, ice, oil, poison]
+    surfaces_any: [fire, ice, oil, poison, water]
     statuses_any: [burning, frozen, poison]
     tags_any: [fire, ice, lightning, earth, water, arcane, rune, rune_read, rune_make, rune_detonate, ash, poison, telekinesis, oil]
 
@@ -57,14 +57,13 @@ weapon_class_attrs: {melee: str, ranged: dex}
 # 較高的那個（例：火焰詛咒、召喚火靈看智力或意志；聖水、治療之雨看智力或感知）。純元素傷害仍只看智力。
 # 內建技能不重新指定（它們目前的屬性本來就在允許範圍內），這條只放寬隨機組合器與 LLM 提議的選擇範圍。
 combos:
-  - {themes: [elemental, mind], reason_zh: 元素＋意志主題（暗影、詛咒、恐懼、召喚、獻祭）看智力或意志}
-  - {themes: [elemental, support], reason_zh: 元素＋感知主題（治療、護盾、輔助、標記）看智力或感知}
+  - {themes: [elemental, mind], anywhere: [elemental], reason_zh: 元素＋意志主題（暗影、詛咒、恐懼、召喚、獻祭）看智力或意志}
+  - {themes: [elemental, support], anywhere: [elemental], reason_zh: 元素＋感知主題（治療、護盾、輔助、標記）看智力或感知}
 
 overrides:
   - {skill: skill_arcane_blade, attrs: [str, int], reason_zh: 魔劍斬是力量＋智力的雙屬性法術（混搭 build 的範例；魔劍士方案 A 決定前維持特例）}
   - {skill: skill_fracture_mark, attrs: [int], reason_zh: 裂骨印記是物理弱點標記，原本看智力，效果與數值不變}
   - {skill: skill_hunt_sigil, attrs: [wis], reason_zh: 獵印是標記獵物（偵測與標記），不是元素符文}
-  - {skill: skill_summon_tide, attrs: [int], reason_zh: 造水加緩速是元素互動，不是治療輔助（玩法 PM 2026-10-23）}
   - {skill: skill_mountain_mover, attrs: [str], reason_zh: 移山之力是力量傳說（位移改造），不看元素}
   - {skill: skill_summon_elite, attrs: [wil], reason_zh: 召喚物強化修正技能，跟著召喚走意志}
   - {skill: skill_summon_swarm, attrs: [wil], reason_zh: 召喚物強化修正技能，跟著召喚走意志}
@@ -73,3 +72,6 @@ overrides:
   - {skill: skill_grief_rage, attrs: [str, dex, con], reason_zh: 悲憤是怒氣反應（增傷加護盾），屬於身體類，不是感知系的護盾法術}
   - {skill: skill_ember_ward, attrs: [int], reason_zh: 餘燼護盾是火焰系被動（火焰法師的防身），維持智力}
   - {skill: skill_thorn_wall, attrs: [wis], reason_zh: 荊棘牆是自然系的屏障（毒只是荊棘的附帶），歸感知}
+  # 造水表面算元素主題（玩法 PM 2026-10-24）後，下列兩招和喚潮同樣是「造水＋緩速」會推導成只看智力；維持原本的範圍待玩法 PM 決定
+  - {skill: skill_downpour, attrs: [wis, int], reason_zh: 驟雨原本可看感知或智力（輔助＋造水），範圍不變；是否比照喚潮只看智力待玩法 PM 決定}
+  - {skill: skill_splash_flask, attrs: [wis, int], reason_zh: 潑水瓶原本可看感知或智力（輔助＋造水），範圍不變；是否比照喚潮只看智力待玩法 PM 決定}

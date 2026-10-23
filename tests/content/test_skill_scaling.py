@@ -39,7 +39,7 @@ def test_the_builtin_table_covers_every_skill() -> None:
 
 
 def test_the_library_check_reports_no_problem() -> None:
-    assert scaling_problems(RULES, LIB.skills, LIB.weapons, LIB.summon_elements()) == []
+    assert scaling_problems(RULES, LIB.skills, LIB.weapons) == []
 
 
 def test_builtin_weapon_skill_hints_match_their_weapon_class() -> None:
@@ -60,9 +60,8 @@ def test_weapon_skills_follow_the_weapons_of_their_class() -> None:
 
 def test_spell_themes_split_into_the_three_mind_attributes() -> None:
     by_attr: dict[Attribute, list[str]] = {}
-    summons = LIB.summon_elements()
     for skill in BUILTIN:
-        theme = RULES.spell_theme(skill, summons) if skill.category == "spell" else None
+        theme = RULES.spell_theme(skill) if skill.category == "spell" else None
         if theme is not None and theme.attr == skill.scaling_attr:
             by_attr.setdefault(skill.scaling_attr, []).append(skill.id)
     assert set(by_attr) == {Attribute.INT, Attribute.WIS, Attribute.WIL}
@@ -137,12 +136,36 @@ def test_element_combined_with_another_theme_allows_either_attribute() -> None:
     sacrifice = {"type": "sacrifice_summon", "dice": "2d8", "radius": 1, "element": "fire"}
     assert _range([sacrifice]) == (Attribute.WIL, Attribute.INT)
     spirit = {"type": "summon", "unit": "summon_fire_spirit", "duration": 2}
-    assert _range([spirit]) == (Attribute.WIL, Attribute.INT)  # 召喚看召喚物武器的元素
+    assert _range([spirit]) == (Attribute.WIL,)  # 召喚物自帶的元素不算（玩法 PM 2026-10-24）
     skeleton = {"type": "summon", "unit": "summon_skeleton_warrior", "duration": 2}
     assert _range([skeleton], ("fire",)) == (Attribute.WIL,)  # 標籤不能放寬
     assert _range([FIRE, HEAL]) == (Attribute.INT,)  # 附帶的治療不算
     assert _range([], ("fire", "curse")) == (Attribute.WIL, Attribute.INT)
     assert _range([], ("water", "heal")) == (Attribute.WIS, Attribute.INT)
+
+
+def test_summoned_units_own_element_is_not_the_skills_theme() -> None:
+    """玩法 PM 2026-10-24（06 6.10）：召喚物自帶的元素或灌注不算技能的元素主題。"""
+    for sid in (
+        "skill_summon_vine",
+        "skill_summon_fire_spirit",
+        "skill_summon_ice_spirit",
+        "skill_summon_thunder_spirit",
+        "skill_summon_spirit",
+    ):
+        assert LIB.scaling_range(LIB.skills[sid]) == (Attribute.WIL,), sid
+
+
+def test_holy_damage_with_a_water_surface_is_a_combo() -> None:
+    """聖水：神聖傷害（感知）是主要效果，造水表面補上元素 → 感知或智力；附帶的治療仍不補感知。"""
+    assert LIB.scaling_range(LIB.skills["skill_holy_water"]) == (Attribute.WIS, Attribute.INT)
+    holy = {"type": "damage", "dice": "1d4", "element": "holy"}
+    water = {"type": "create_surface", "surface": "water"}
+    assert _range([holy, water]) == (Attribute.WIS, Attribute.INT)
+    assert _range([water]) == (Attribute.INT,)  # 造水算元素主題
+    assert _range([SHADOW, FIRE]) == (Attribute.WIL, Attribute.INT)
+    assert _range([FIRE, HEAL]) == (Attribute.INT,)  # 元素在前、附帶治療不算
+    assert _range([HEAL, {"type": "pull", "distance": 1}]) == (Attribute.WIS,)
 
 
 def test_overrides_also_apply_to_evolved_skills() -> None:
@@ -168,7 +191,7 @@ def test_a_weapon_skill_with_a_second_attribute_is_a_problem() -> None:
             update={"scaling_attr": Attribute.STR, "secondary_scaling_attr": Attribute.INT}
         )
     }
-    problems = scaling_problems(RULES, moved, LIB.weapons, LIB.summon_elements())
+    problems = scaling_problems(RULES, moved, LIB.weapons)
     assert any("不帶第二縮放屬性" in p for p in problems), problems
 
 
@@ -192,12 +215,12 @@ def test_an_unknown_override_skill_is_a_problem() -> None:
 def test_a_wrong_attribute_is_reported_in_chinese() -> None:
     moved = {
         **LIB.skills,
-        # 純召喚（沒有元素）不能看智力；元素之靈這類「元素＋召喚」照組合主題可以看智力
+        # 純召喚不能看智力（召喚物自帶的元素也不算，玩法 PM 2026-10-24）
         "skill_raise_skeleton": LIB.skills["skill_raise_skeleton"].model_copy(
             update={"scaling_attr": Attribute.INT}
         ),
     }
-    problems = scaling_problems(RULES, moved, LIB.weapons, LIB.summon_elements())
+    problems = scaling_problems(RULES, moved, LIB.weapons)
     assert (
         len(problems) == 1
         and "skill_raise_skeleton" in problems[0]

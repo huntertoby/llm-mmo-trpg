@@ -155,7 +155,8 @@ def test_llm_proposal_weapon_skill_scaling_is_the_weapon_class_attribute(skill_i
 def test_llm_proposal_scaling_follows_highest_attribute() -> None:
     """LLM 提議（法術技）：縮放屬性由引擎改成主角最高的允許屬性（提議的 scaling_attr 只是提議）。"""
     lib = library()
-    original = lib.skills["skill_downpour"]
+    # 聖水是組合主題（神聖傷害＋造水）：感知或智力；沒有主角屬性時取感知
+    original = lib.skills["skill_holy_water"]
     _, removed = split_numbers(original.model_dump(mode="json", exclude_defaults=True), lib)
     proposal = proposal_from_skill(original, lib)
     models = build_proposal_models(lib)
