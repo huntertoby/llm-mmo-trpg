@@ -213,6 +213,10 @@ def effect_knobs(
         "damage": (("dice", dice, weight),),
         "heal": (("dice", dice, weight),),
         "shield": (("dice", dice, weight),),
+        # 只給手寫技能、組合器不會產生的骰子原語（LLM 提議的預算器用；3E-2g 之後）
+        "charge_through": (("dice", dice, weight),),
+        "hurl_object": (("dice", dice, weight),),
+        "detonate_runes": (("dice", dice, weight),),
         "push": (("distance", tuple(structure.push_pull_distances), 1),),
         "pull": (("distance", tuple(structure.push_pull_distances), 1),),
         "sacrifice_summon": (("dice", dice, structure.knob_weight_core),),
