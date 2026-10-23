@@ -1,5 +1,5 @@
 // 戰鬥 HUD（設計文件 7.3）：固定顯示主角當下需要的資訊。
-import type { BattleView, StatusView, UnitView } from "../api/types";
+import type { BattleView, SkillCard, StatusView, UnitView } from "../api/types";
 import { ammoPips, ammoText, hasMagazine } from "../battle/ammo";
 import { chargeText } from "../battle/charges";
 import { sourcePips } from "../battle/source";
@@ -16,12 +16,15 @@ import { summonLine, summonsOf } from "../battle/summons";
 import { unitNames } from "../battle/units";
 import { zoneLine, zoneNextText, zonesOf } from "../battle/zones";
 import { Hint } from "./Hint";
+import { StackTip } from "./StackTip";
 import { actionCardText } from "../battle/actionInfo";
 
 interface Props {
   view: BattleView;
   hero: UnitView | null;
   skills: SkillNames;
+  /** 技能卡（技能 ID → 卡片）：層數說明框用它列出「你的技能」中會累積／消耗該層數的（3-41c）。 */
+  cards?: Readonly<Record<string, SkillCard | undefined>>;
   /** 縮成一行（窄螢幕，Phase 3-8）。 */
   compact?: boolean;
 }
@@ -84,7 +87,7 @@ export function compactHudText(view: BattleView, hero: UnitView): string {
   return parts.join("｜");
 }
 
-export function Hud({ view, hero, skills, compact = false }: Props) {
+export function Hud({ view, hero, skills, cards, compact = false }: Props) {
   if (hero === null) return null;
   if (compact) {
     const text = compactHudText(view, hero);
@@ -161,7 +164,16 @@ export function Hud({ view, hero, skills, compact = false }: Props) {
       </div>
       <div className="hud-line">
         <span className="muted">層數：</span>
-        {stacks.length === 0 ? "無" : stacks.map(([k, n]) => `${stackName(k)} ×${n}`).join("、")}
+        {stacks.length === 0
+          ? "無"
+          : stacks.map(([k, n], i) => (
+              <span key={k}>
+                {i > 0 && "、"}
+                <StackTip id={k} cards={cards} owned={hero.skills}>
+                  {stackName(k)} ×{n}
+                </StackTip>
+              </span>
+            ))}
       </div>
       <div className="hud-line">
         <span className="muted">狀態：</span>

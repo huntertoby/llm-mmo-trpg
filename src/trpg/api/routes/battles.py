@@ -8,6 +8,7 @@ from __future__ import annotations
 
 from fastapi import APIRouter, Request, Response
 
+from trpg.api.hero_cards import hero_cards
 from trpg.api.presenter import battle_response, history_response, preview_response
 from trpg.api.schemas import (
     BattleHistory,
@@ -16,6 +17,7 @@ from trpg.api.schemas import (
     CommandOptionsOut,
     CreateBattleRequest,
     DecisionRequest,
+    HeroCards,
     InfuseOptionsOut,
     InfuseSkillOptionOut,
     PreviewOut,
@@ -124,6 +126,16 @@ def get_skill_reasons(battle_id: str, request: Request) -> SkillReasons:
     session = store_of(request).get(battle_id)
     with session.lock:
         return skill_reasons(session.state, session.hero_id)
+
+
+@router.get("/{battle_id}/hero-cards")
+def get_hero_cards(battle_id: str, request: Request) -> HeroCards:
+    """主角的技能卡（附施放者當下的實際值：傷害算法的目前加成、召喚物資訊；3-41c）。不改變狀態、
+    不推進戰鬥。"""
+    store = store_of(request)
+    session = store.get(battle_id)
+    with session.lock:
+        return hero_cards(session.state, store.library, session.hero_id)
 
 
 @router.put("/{battle_id}/orders")

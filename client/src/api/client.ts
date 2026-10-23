@@ -17,6 +17,7 @@ import type {
   InfuseOptions,
   MapSummary,
   OrderSet,
+  HeroCards,
   PreviewOut,
   RunBattleResponse,
   RunChoice,
@@ -28,6 +29,7 @@ import type {
   SkillReasons,
   StartOptions,
   StartPreview,
+  StartResources,
   UseSkill,
   WorkshopArena,
   WorkshopCheck,
@@ -96,6 +98,8 @@ export const api = {
     ),
   /** 主角灰掉的技能 → 引擎的拒絕理由（Phase 3-5c-2）。 */
   skillReasons: (battleId: string) => request<SkillReasons>("GET", `/battles/${battleId}/skill-reasons`),
+  /** 主角的技能卡（附施放者當下的實際值：傷害算法的目前加成、召喚物資訊；Phase 3-41c）。 */
+  heroCards: (battleId: string) => request<HeroCards>("GET", `/battles/${battleId}/hero-cards`),
   /** 指揮主角的一隻召喚物時可選的終點與目標（Phase 3-33c）。 */
   commandOptions: (battleId: string, summonId: string) =>
     request<CommandOptions>("GET", `/battles/${battleId}/summons/${encodeURIComponent(summonId)}/command-options`),
@@ -135,6 +139,9 @@ export const api = {
   startOptions: () => request<StartOptions>("GET", "/runs/start-options"),
   startPreview: (weapon: string, seed: number, keywords: string[]) =>
     request<StartPreview>("POST", "/runs/start-preview", { weapon, seed, keywords }),
+  /** 開局畫面的資源預覽（Phase 3-41c）：選了武器、配了點之後的最大 HP、法力、耐力（後端算）。 */
+  startResources: (weapon: string, attributes: Record<string, number>) =>
+    request<StartResources>("POST", "/runs/start-resources", { weapon, attributes }),
   devPacks: () => request<DevPack[]>("GET", "/runs/dev-packs"),
   runSaves: () => request<RunSaveSummary[]>("GET", "/runs/saves"),
   loadRun: (runId: string) => request<RunResponse>("POST", "/runs/load", { run_id: runId }),

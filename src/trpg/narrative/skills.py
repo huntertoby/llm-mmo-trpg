@@ -8,11 +8,12 @@
 from __future__ import annotations
 
 from collections.abc import Callable, Iterable, Mapping
-from typing import Any
+from dataclasses import dataclass
+from typing import Any, Literal
 
 from pydantic import BaseModel, ConfigDict
 
-from trpg.content.battle import Dice
+from trpg.content.battle import Dice, WeaponDef
 from trpg.content.keyword_derive import KeywordGrade, keyword_grades, skill_facts
 from trpg.content.library import ContentLibrary, Ruleset
 from trpg.content.rule_changes import RuleChangeDef, rule_change_sentence
@@ -36,6 +37,7 @@ from trpg.content.skills import (
 )
 from trpg.content.stacks import StackDef
 from trpg.engine.ids import SHIELDED as SHIELD_STATUS
+from trpg.engine.summons import SummonStats
 from trpg.narrative.skill_icon import SkillIcon, skill_icon
 from trpg.narrative.skill_levels import SkillLevelInfo
 from trpg.narrative.summon_info import (
@@ -46,7 +48,7 @@ from trpg.narrative.summon_info import (
     summon_info,
     summon_innate_lines,
 )
-from trpg.shared.types import Surface, rune_name
+from trpg.shared.types import Attribute, Surface, rune_name
 from trpg.skillgen.keywords import (
     SkillKeywords,
     derive_draft_keywords,
@@ -60,10 +62,12 @@ __all__ = [
     "KIND_TEXT",
     "RARITY_TEXT",
     "WEAPON_REQ_TEXT",
+    "CardOwner",
     "KeywordRef",
     "SkillCard",
     "SkillCardKeywords",
     "SkillLevelInfo",
+    "SkillStackRef",
     "SkillVariantCard",
     "activation_text",
     "branch_text",
@@ -299,15 +303,18 @@ def _shadowstep(_lib: ContentLibrary, _skill: SkillDef, spec: EffectSpec) -> str
     return where + "，不觸發藉機攻擊，落地後面向目標"
 
 
-def _summon(lib: ContentLibrary, _skill: SkillDef, spec: EffectSpec) -> str:
+def _summon(
+    lib: ContentLibrary, _skill: SkillDef, spec: EffectSpec, stats: SummonStats | None = None
+) -> str:
     """召喚的一句話（清單 1.1～1.7）：HP 用和引擎同一個算法；自帶能力、圖騰類的「不移動、不攻擊」
-    與灌注都由範本與 ``summon_infusions`` 產生。"""
+    與灌注都由範本與 ``summon_infusions`` 產生。``stats`` 是戰鬥中施放者的實際值（3-41c），省略時
+    為 1 級基準值。"""
     try:
         summon = lib.ruleset.summon_def(spec.unit or "")
     except KeyError:
         return f"在目標空格召喚召喚物，持續 {spec.duration} 輪"
     template = summon.template
-    hp = summon_card_hp(lib, summon, spec)
+    hp = summon_card_hp(lib, summon, spec) if stats is None else stats.max_hp
     if not summon_acts(summon.template):
         text = (
             f"在目標空格立起{template.name_zh}（HP {hp}），持續 {spec.duration} 輪"
@@ -854,14 +861,23 @@ _OWN_TARGET_TEXT: frozenset[str] = frozenset(
 """句子本身已寫明對象（或對象就是施放者自己的位移）的原語：不再加「（敵方）」等後綴（清單 3.5）。"""
 
 
-def effect_summary(library: ContentLibrary, skill: SkillDef, spec: EffectSpec) -> str:
-    """一個效果的一句話，含對象，例如「2d6＋智力加成的火焰傷害（敵方）」。"""
+def effect_summary(
+    library: ContentLibrary,
+    skill: SkillDef,
+    spec: EffectSpec,
+    *,
+    summon_stats: SummonStats | None = None,
+) -> str:
+    """一個效果的一句話，含對象，例如「2d6＋智力加成的火焰傷害（敵方）」。``summon_stats``：戰鬥中
+    召喚效果用施放者的實際值（3-41c）。"""
     primitive = library.ruleset.primitive_def(spec.type)
     affects = spec.affects or default_affects(primitive)
     suffix = "" if spec.type in _OWN_TARGET_TEXT else f"（{_AFFECTS[affects]}）"
     if spec.type == "damage":  # 對象接在傷害句後面，擊殺時等附加句放在對象之後（清單 3.5）
         head, extras = _damage_parts(library, skill, spec)
         text = head + suffix + "".join(f"，{e}" for e in extras)
+    elif spec.type == "summon" and summon_stats is not None:
+        text = _summon(library, skill, spec, summon_stats) + suffix
     else:
         text = _effect_core(library, skill, spec) + suffix
     if spec.condition is not None:
@@ -1166,6 +1182,32 @@ class SkillVariantCard(BaseModel):
     icon: SkillIcon
 
 
+class SkillStackRef(BaseModel):
+    """技能卡上的一個層數（3-41c）：製造（``add_stack``）或消耗（``consume_stack``、``scale:
+    stacks``）。"""
+
+    model_config = ConfigDict(frozen=True, extra="forbid")
+
+    id: str
+    name_zh: str
+    role: Literal["makes", "uses"]
+
+
+def skill_stacks(library: ContentLibrary, skill: SkillDef) -> tuple[SkillStackRef, ...]:
+    """``skill`` 製造與消耗的層數（依效果順序、同一層數同一種用途只列一次）。"""
+    found: dict[tuple[str, str], SkillStackRef] = {}
+    for spec in skill.effects:
+        if spec.stack is None:
+            continue
+        role: Literal["makes", "uses"] = "makes" if spec.type == "add_stack" else "uses"
+        try:
+            name = library.ruleset.stack_def(spec.stack).name_zh
+        except KeyError:
+            continue
+        found.setdefault((spec.stack, role), SkillStackRef(id=spec.stack, name_zh=name, role=role))
+    return tuple(found.values())
+
+
 class SkillCard(BaseModel):
     """一張技能卡片的顯示內容（繁體中文文字，給網頁技能卡片用）。
 
@@ -1229,6 +1271,11 @@ class SkillCard(BaseModel):
     """召喚技能可展開的「召喚物資訊」（Phase 3-41a，清單 1.8；每個召喚效果一張）；其他技能為空。"""
     skeleton_zh: str = ""
     """骨架的中文名（Phase 3-41a：技能卡標題列不顯示骨架 ID）。"""
+    formula_lines: tuple[str, ...] = ()
+    """傷害、治療、護盾的算法（3-41c，:meth:`SkillDef.formula_lines_zh`）：「傷害算法：骰值＋智力 ×
+    0.5（目前 +6.5）」。有持有者（一輪主角、戰鬥中）時附「目前」加成與武器骰；其他卡片只有算式。"""
+    stacks: tuple[SkillStackRef, ...] = ()
+    """這張卡製造或消耗的層數（3-41c）：前端用它在卡片上提供層數說明框。"""
     growth: SkillLevelInfo | None = None
     """技能等級的顯示資料（Phase 3-26a）：只有一輪中主角持有（裝備或備用）的主動技能卡片帶它，
     由 ``trpg.api.run_presenter`` 帶入實際等級；候選、技能庫與工坊的卡片為 ``None``。"""
@@ -1248,10 +1295,43 @@ def _variant_card(
     )
 
 
+@dataclass(frozen=True)
+class CardOwner:
+    """技能卡的持有者（3-41c）：一輪主角或戰鬥中的單位。有它時卡片附「目前」加成與實際值。"""
+
+    weapon: WeaponDef | None = None
+    attr_get: Callable[[Attribute], int] | None = None
+    """讀持有者目前的屬性值（一輪為基礎＋裝備，戰鬥中為有效屬性）。"""
+    summon_stats: Callable[[EffectSpec], SummonStats | None] | None = None
+    """召喚效果 → 施放者當下的召喚物實際值（:func:`trpg.engine.summons.summon_stats`）。"""
+
+
+def _summon_stats(owner: CardOwner | None, spec: EffectSpec) -> SummonStats | None:
+    if owner is None or owner.summon_stats is None or spec.type != "summon":
+        return None
+    return owner.summon_stats(spec)
+
+
+def _summon_cards(
+    library: ContentLibrary, skill: SkillDef, owner: CardOwner | None
+) -> tuple[SummonInfoCard, ...]:
+    return tuple(
+        info
+        for e in skill.effects
+        if e.type == "summon"
+        and (info := summon_info(library, skill, e, stats=_summon_stats(owner, e))) is not None
+    )
+
+
 def skill_card(
-    library: ContentLibrary, skill: SkillDef, *, mastery_active: bool | None = None
+    library: ContentLibrary,
+    skill: SkillDef,
+    *,
+    mastery_active: bool | None = None,
+    owner: CardOwner | None = None,
 ) -> SkillCard:
-    """``skill`` 的卡片內容；``mastery_active`` 見 :func:`mastery_text`。"""
+    """``skill`` 的卡片內容；``mastery_active`` 見 :func:`mastery_text`；``owner`` 見
+    :class:`CardOwner`（召喚物資訊與傷害算法的「目前」值；省略時為 1 級基準值與純算式）。"""
     return SkillCard(
         id=skill.id,
         name_zh=skill.name_zh,
@@ -1270,7 +1350,10 @@ def skill_card(
         condition=(
             None if skill.condition is None else condition_summary(library, skill.condition)
         ),
-        effects=tuple(effect_summary(library, skill, e) for e in skill.effects),
+        effects=tuple(
+            effect_summary(library, skill, e, summon_stats=_summon_stats(owner, e))
+            for e in skill.effects
+        ),
         modifiers=tuple(modifier_summary(library, skill, r) for r in skill.modifiers),
         activation=activation_text(library, skill),
         activation_id=skill.activation,
@@ -1293,12 +1376,14 @@ def skill_card(
         icon=skill_icon(skill),
         keywords=skill_card_keywords(library, skill),
         variants=tuple(_variant_card(library, skill, v) for v in skill.variants),
-        summons=tuple(
-            info
-            for e in skill.effects
-            if e.type == "summon" and (info := summon_info(library, skill, e)) is not None
-        ),
+        summons=_summon_cards(library, skill, owner),
         skeleton_zh=skeleton_name(library, skill.skeleton),
+        formula_lines=skill.formula_lines_zh(
+            library.ruleset.core,
+            None if owner is None else owner.weapon,
+            None if owner is None else owner.attr_get,
+        ),
+        stacks=skill_stacks(library, skill),
     )
 
 

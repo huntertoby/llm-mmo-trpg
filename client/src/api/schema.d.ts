@@ -253,6 +253,27 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/battles/{battle_id}/hero-cards": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Get Hero Cards
+         * @description 主角的技能卡（附施放者當下的實際值：傷害算法的目前加成、召喚物資訊；3-41c）。不改變狀態、
+         *     不推進戰鬥。
+         */
+        get: operations["get_hero_cards_api_battles__battle_id__hero_cards_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/battles/{battle_id}/orders": {
         parameters: {
             query?: never;
@@ -345,6 +366,27 @@ export interface paths {
          *     選它」時會拿到的。湊不到時 ``skill`` 為 ``None``（不可選）。
          */
         post: operations["post_start_preview_api_runs_start_preview_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/runs/start-resources": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Post Start Resources
+         * @description 開局畫面的資源預覽（3-41c）：選了武器、配了點之後主角的最大 HP、法力、耐力。和開新一輪建立
+         *     出的主角用同一個函式（:func:`trpg.roguelite.start.hero_resources`），不寫死在前端。
+         */
+        post: operations["post_start_resources_api_runs_start_resources_post"];
         delete?: never;
         options?: never;
         head?: never;
@@ -2204,6 +2246,17 @@ export interface components {
             /** Maximum */
             maximum: number;
         };
+        /**
+         * HeroCards
+         * @description 戰鬥中主角的技能卡（3-41c）：附施放者當下的實際值（傷害算法的「目前」加成、召喚物資訊）。
+         *     只列有算式或召喚物的技能；技能列把它蓋在 ``/api/skills/{id}`` 的基本卡片上。
+         */
+        HeroCards: {
+            /** Cards */
+            cards: {
+                [key: string]: components["schemas"]["SkillCard"];
+            };
+        };
         /** HeroOut */
         HeroOut: {
             /** Build Id */
@@ -3536,6 +3589,16 @@ export interface components {
              * @default
              */
             skeleton_zh: string;
+            /**
+             * Formula Lines
+             * @default []
+             */
+            formula_lines: string[];
+            /**
+             * Stacks
+             * @default []
+             */
+            stacks: components["schemas"]["SkillStackRef"][];
             growth?: components["schemas"]["SkillLevelInfo"] | null;
         };
         /**
@@ -3673,6 +3736,22 @@ export interface components {
             };
         };
         /**
+         * SkillStackRef
+         * @description 技能卡上的一個層數（3-41c）：製造（``add_stack``）或消耗（``consume_stack``、``scale:
+         *     stacks``）。
+         */
+        SkillStackRef: {
+            /** Id */
+            id: string;
+            /** Name Zh */
+            name_zh: string;
+            /**
+             * Role
+             * @enum {string}
+             */
+            role: "makes" | "uses";
+        };
+        /**
          * SkillVariantCard
          * @description 技能卡上的一個戰場變奏型態（Phase 3-25b，6.24）：型態名、條件與替換內容的中文說明、
          *     型態自己的圖示（技能列在這個型態生效時換成它）。
@@ -3766,6 +3845,30 @@ export interface components {
              * @default []
              */
             keywords: string[];
+        };
+        /**
+         * StartResourcesOut
+         * @description 開局的 1 級主角最大 HP、法力、耐力（含配點加成；和開新一輪建立出的主角同一個函式）。
+         */
+        StartResourcesOut: {
+            /** Hp */
+            hp: number;
+            /** Mana */
+            mana: number;
+            /** Stamina */
+            stamina: number;
+        };
+        /**
+         * StartResourcesRequest
+         * @description 開局資源預覽（3-41c）：武器與目前的配點（不必配滿；省略的屬性為 0 點）。
+         */
+        StartResourcesRequest: {
+            /** Weapon */
+            weapon: string;
+            /** Attributes */
+            attributes?: {
+                [key: string]: number;
+            };
         };
         /**
          * StartWeaponOption
@@ -3925,6 +4028,17 @@ export interface components {
             behavior: string[];
             /** Infusion */
             infusion: string;
+            /**
+             * Basis
+             * @default base
+             * @enum {string}
+             */
+            basis: "base" | "actual";
+            /**
+             * Basis Zh
+             * @default 基準值（1 級）
+             */
+            basis_zh: string;
         };
         /**
          * SummonLookView
@@ -5043,6 +5157,37 @@ export interface operations {
             };
         };
     };
+    get_hero_cards_api_battles__battle_id__hero_cards_get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                battle_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HeroCards"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
     put_orders_api_battles__battle_id__orders_put: {
         parameters: {
             query?: never;
@@ -5182,6 +5327,39 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["StartPreview"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    post_start_resources_api_runs_start_resources_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["StartResourcesRequest"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["StartResourcesOut"];
                 };
             };
             /** @description Validation Error */

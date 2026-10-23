@@ -30,10 +30,7 @@ MASTERY_BONUS = 1
 
 def skill_scaling_value(rules: Ruleset, unit: UnitState, skill: SkillDef) -> int:
     """技能縮放屬性的值：雙屬性為兩個有效屬性的平均（無條件捨去），否則為主屬性的有效屬性。"""
-    primary = effective_attribute(rules, unit, skill.scaling_attr)
-    if skill.secondary_scaling_attr is None:
-        return primary
-    return (primary + effective_attribute(rules, unit, skill.secondary_scaling_attr)) // 2
+    return skill.scaling_value(lambda attr: effective_attribute(rules, unit, attr))
 
 
 def mastery_active(unit: UnitState, skill: SkillDef) -> bool:

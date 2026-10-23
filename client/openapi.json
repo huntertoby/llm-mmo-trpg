@@ -734,6 +734,49 @@
         }
       }
     },
+    "/api/battles/{battle_id}/hero-cards": {
+      "get": {
+        "tags": [
+          "battles"
+        ],
+        "summary": "Get Hero Cards",
+        "description": "主角的技能卡（附施放者當下的實際值：傷害算法的目前加成、召喚物資訊；3-41c）。不改變狀態、\n不推進戰鬥。",
+        "operationId": "get_hero_cards_api_battles__battle_id__hero_cards_get",
+        "parameters": [
+          {
+            "name": "battle_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Battle Id"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HeroCards"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
     "/api/battles/{battle_id}/orders": {
       "put": {
         "tags": [
@@ -916,6 +959,48 @@
               "application/json": {
                 "schema": {
                   "$ref": "#/components/schemas/StartPreview"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/runs/start-resources": {
+      "post": {
+        "tags": [
+          "runs"
+        ],
+        "summary": "Post Start Resources",
+        "description": "開局畫面的資源預覽（3-41c）：選了武器、配了點之後主角的最大 HP、法力、耐力。和開新一輪建立\n出的主角用同一個函式（:func:`trpg.roguelite.start.hero_resources`），不寫死在前端。",
+        "operationId": "post_start_resources_api_runs_start_resources_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/StartResourcesRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/StartResourcesOut"
                 }
               }
             }
@@ -5372,6 +5457,24 @@
         ],
         "title": "HealOut"
       },
+      "HeroCards": {
+        "properties": {
+          "cards": {
+            "additionalProperties": {
+              "$ref": "#/components/schemas/SkillCard"
+            },
+            "type": "object",
+            "title": "Cards"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "cards"
+        ],
+        "title": "HeroCards",
+        "description": "戰鬥中主角的技能卡（3-41c）：附施放者當下的實際值（傷害算法的「目前」加成、召喚物資訊）。\n只列有算式或召喚物的技能；技能列把它蓋在 ``/api/skills/{id}`` 的基本卡片上。"
+      },
       "HeroOut": {
         "properties": {
           "build_id": {
@@ -8541,6 +8644,22 @@
             "title": "Skeleton Zh",
             "default": ""
           },
+          "formula_lines": {
+            "items": {
+              "type": "string"
+            },
+            "type": "array",
+            "title": "Formula Lines",
+            "default": []
+          },
+          "stacks": {
+            "items": {
+              "$ref": "#/components/schemas/SkillStackRef"
+            },
+            "type": "array",
+            "title": "Stacks",
+            "default": []
+          },
           "growth": {
             "anyOf": [
               {
@@ -8925,6 +9044,35 @@
         "title": "SkillReasons",
         "description": "主角灰掉的技能 → 引擎的拒絕理由（繁體中文）；可以用的技能不在表內（Phase 3-5c-2）。"
       },
+      "SkillStackRef": {
+        "properties": {
+          "id": {
+            "type": "string",
+            "title": "Id"
+          },
+          "name_zh": {
+            "type": "string",
+            "title": "Name Zh"
+          },
+          "role": {
+            "type": "string",
+            "enum": [
+              "makes",
+              "uses"
+            ],
+            "title": "Role"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "id",
+          "name_zh",
+          "role"
+        ],
+        "title": "SkillStackRef",
+        "description": "技能卡上的一個層數（3-41c）：製造（``add_stack``）或消耗（``consume_stack``、``scale:\nstacks``）。"
+      },
       "SkillVariantCard": {
         "properties": {
           "id": {
@@ -9145,6 +9293,56 @@
         ],
         "title": "StartPreviewRequest",
         "description": "開局預覽：武器、種子與目前已選的關鍵字（依選擇順序）。"
+      },
+      "StartResourcesOut": {
+        "properties": {
+          "hp": {
+            "type": "integer",
+            "title": "Hp"
+          },
+          "mana": {
+            "type": "integer",
+            "title": "Mana"
+          },
+          "stamina": {
+            "type": "integer",
+            "title": "Stamina"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "hp",
+          "mana",
+          "stamina"
+        ],
+        "title": "StartResourcesOut",
+        "description": "開局的 1 級主角最大 HP、法力、耐力（含配點加成；和開新一輪建立出的主角同一個函式）。"
+      },
+      "StartResourcesRequest": {
+        "properties": {
+          "weapon": {
+            "type": "string",
+            "title": "Weapon"
+          },
+          "attributes": {
+            "additionalProperties": {
+              "type": "integer"
+            },
+            "propertyNames": {
+              "$ref": "#/components/schemas/Attribute"
+            },
+            "type": "object",
+            "title": "Attributes"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "weapon"
+        ],
+        "title": "StartResourcesRequest",
+        "description": "開局資源預覽（3-41c）：武器與目前的配點（不必配滿；省略的屬性為 0 點）。"
       },
       "StartWeaponOption": {
         "properties": {
@@ -9615,6 +9813,20 @@
           "infusion": {
             "type": "string",
             "title": "Infusion"
+          },
+          "basis": {
+            "type": "string",
+            "enum": [
+              "base",
+              "actual"
+            ],
+            "title": "Basis",
+            "default": "base"
+          },
+          "basis_zh": {
+            "type": "string",
+            "title": "Basis Zh",
+            "default": "基準值（1 級）"
           }
         },
         "additionalProperties": false,

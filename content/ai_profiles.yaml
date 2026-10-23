@@ -178,32 +178,39 @@ profiles:
   - id: brute
     name_zh: 莽夫
     description_zh: 重視傷害與接近目標。
+    player_description_zh: 衝向最近的敵人，專挑能造成最多傷害、能擊倒的目標下手。
     weights: {damage: 10, env_damage: 3, kill: 40, env_kill: 40, push: 4, surface: 5, expose: 10, friendly_fire: 4, approach: 6, threat: 4, objective: 8, hazard: 8, defend: 1, heal: 8, shield: 6, support: 3, mana: 1, stamina_permille: 500, cooldown: 1, reach_spacing: 7, knock_angle: 2}
   - id: flanker
     name_zh: 夾擊者
     description_zh: 同莽夫，但移動時偏好能與友方夾擊敵人的位置（3D-8c；其餘權重與 brute 相同，初值未經模擬）。
+    player_description_zh: 衝向敵人，並且找機會和隊友一前一後夾擊同一個敵人。
     weights: {damage: 10, env_damage: 3, kill: 40, env_kill: 40, push: 4, surface: 5, expose: 10, friendly_fire: 4, approach: 6, threat: 4, objective: 8, hazard: 8, defend: 1, heal: 8, shield: 6, support: 3, mana: 1, stamina_permille: 500, cooldown: 1, flank: 3, reach_spacing: 7, knock_angle: 2}
   - id: archer
     name_zh: 弓手
     description_zh: 重視距離、高處與視線。
+    player_description_zh: 和敵人保持距離，找高處與視線好的位置遠遠射擊。
     weights: {damage: 6, env_damage: 2, kill: 20, env_kill: 20, push: 3, surface: 5, expose: 15, friendly_fire: 8, approach: 1, threat: 10, keep_distance: 40, height: 15, objective: 8, hazard: 10, defend: 1, cover: 12, heal: 6, shield: 5, support: 3, exposed: 20, mana: 1, stamina_permille: 500, cooldown: 2, line_up: 3}
   - id: cunning
     name_zh: 狡猾
     description_zh: 重視環境擊殺、推擊與表面。
+    player_description_zh: 愛用環境：優先把敵人推下深淵、推進火裡或炸死，其次才是直接攻擊。
     weights: {damage: 5, env_damage: 8, kill: 30, env_kill: 120, friendly_fire: 8, push: 15, status: 10, surface: 15, approach: 3, threat: 4, keep_distance: 10, objective: 8, hazard: 12, defend: 1, cover: 6, expose: 35, cover_damage: 1, heal: 6, shield: 5, support: 4, mana: 1, stamina_permille: 500, cooldown: 1}
   - id: guard
     name_zh: 守衛
     description_zh: 重視保護同伴與守點。
+    player_description_zh: 留在被保護的隊友（或守點）附近，必要時舉盾防禦，不會衝太前面。
     weights: {damage: 3, env_damage: 1, kill: 15, env_kill: 15, push: 4, surface: 4, expose: 5, friendly_fire: 10, approach: 1, threat: 2, protect: 12, objective: 25, hazard: 8, defend: 6, heal: 10, shield: 8, support: 6, mana: 1, stamina_permille: 500, cooldown: 1}
   - id: support
     name_zh: 支援
     description_zh: 重視治療、護盾、增益，並保持距離（2D-1；權重初值未經模擬）。
+    player_description_zh: 跟在隊友身邊保持距離，優先治療、加護盾與補增益，其次才攻擊。
     weights: {damage: 4, env_damage: 1, kill: 20, env_kill: 15, push: 3, surface: 3, expose: 5, friendly_fire: 10, approach: 1, threat: 2, keep_distance: 20, protect: 15, objective: 10, hazard: 10, defend: 2, heal: 12, shield: 10, support: 12, status: 3, mana: 1, stamina_permille: 500, cooldown: 1}
   # Phase 3F-1：靶場的木樁（training_dummy）。所有權重為 0（含 facing 的背刺權重；木樁沒有技能，衝撞與
   # 瞬步的固定加分用不到），沒有正分的動作，所以每回合直接結束：不移動、不攻擊、不防禦。
   - id: idle
     name_zh: 原地不動
     description_zh: 什麼都不做（靶場的木樁）。
+    player_description_zh: 站在原地不動，什麼都不做。
     weights: {backstab: 0, back_exposed: 0}
 # run（Phase 3-20，玩法 #22；初值未經模擬，平衡階段再調）：AI 的跑步只在移動點數用完（先走再跑）、且符合下列兩種情況時考慮，其餘 0 分（不會跑）：
 #   pursue_points         追擊：目前移動點數走不到攻擊距離，但跑步（+3 格）後能 → 這個分數（比防禦大、比大多數攻擊小）

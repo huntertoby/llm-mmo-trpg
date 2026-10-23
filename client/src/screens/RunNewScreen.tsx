@@ -5,7 +5,8 @@ import { api } from "../api/client";
 import type { RunResponse, RunRules } from "../api/types";
 import { AttributeAllocator } from "../run/AttributeAllocator";
 import { DevPackSelect, StartPickerView, useStartPicker } from "../run/StartPicker";
-import { allocationComplete, baseAttributes, cleanAllocation, conHpGain, type Allocation } from "../run/flow";
+import { allocationComplete, baseAttributes, cleanAllocation, type Allocation } from "../run/flow";
+import { resourceText, useStartResources } from "../run/startResources";
 import { isDevMode } from "../run/startFlow";
 import { TestModePanel } from "../run/TestModePanel";
 import { withTestMode } from "../run/testMode";
@@ -44,6 +45,7 @@ export function RunNewScreen({ onCreated, onHome }: Props) {
   }, []);
 
   const { weapon, selected, weaponDef } = picker;
+  const resources = useStartResources(weapon, alloc);
   const points = rules?.start_points ?? 0;
   const complete = rules !== null && allocationComplete(alloc, points);
   const ready = seed !== null && picker.body !== null && gearLegal;
@@ -87,7 +89,7 @@ export function RunNewScreen({ onCreated, onHome }: Props) {
         <StartPickerView picker={picker} disabled={busy} />
         {weaponDef !== undefined && (
           <div className="muted small">
-            主角：HP {weaponDef.hp + (rules === null ? 0 : conHpGain(alloc, rules.hp_per_con_point))}・法力 {weaponDef.mana}・武器 {weaponDef.name_zh}
+            <span data-testid="start-resources">主角：{resourceText(resources)}</span>・武器 {weaponDef.name_zh}
             {weaponDef.traits_zh.length > 0 && <span data-testid="start-weapon-traits">（{weaponDef.traits_zh.join("；")}）</span>}
           </div>
         )}

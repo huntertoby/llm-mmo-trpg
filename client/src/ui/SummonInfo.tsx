@@ -25,7 +25,7 @@ export function SummonInfo({ info, open = false }: Props) {
     <details className="summon-info small" open={open}>
       <summary>
         召喚物資訊：{info.name_zh}
-        {count}（HP {info.hp}）
+        {count}（HP {info.hp}・{info.basis_zh}）
       </summary>
       <dl>
         <dt>HP</dt>

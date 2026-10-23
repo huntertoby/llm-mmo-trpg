@@ -848,6 +848,9 @@ class AiProfile(ContentModel):
     id: str = Field(pattern=ID_PATTERN)
     name_zh: str = Field(min_length=1)
     description_zh: str = Field(min_length=1)
+    """開發者說明（可寫權重、階段代號）；不顯示給玩家。"""
+    player_description_zh: str = Field(min_length=1)
+    """玩家用短句（3-41c）：召喚物資訊小卡的「行為」用它，不含權重或開發代號。"""
     weights: AiWeights
     status_values: dict[str, int] = Field(default_factory=dict)
     """對敵人施加各狀態的價值（等值傷害點數）；由 :class:`AiProfileTable` 的 ``status_values``

@@ -18,12 +18,14 @@ const ICE: SummonInfoCard = {
   innate: ["普攻命中時施加「緩速」2 回合", "普攻命中站在水上的目標時施加「冰凍」1 回合"],
   behavior: ["預設模式「跟隨」"],
   infusion: "灌注：施放時從你持有的關鍵字選一個帶上",
+  basis: "base",
+  basis_zh: "基準值（1 級）",
 };
 
 describe("召喚物資訊小卡", () => {
   it("寫出 HP、攻擊與自帶能力（後端產生的文字照排）", () => {
     const html = renderToStaticMarkup(createElement(SummonInfo, { info: ICE, open: true }));
-    expect(html).toContain("召喚物資訊：冰靈（HP 14）");
+    expect(html).toContain("召喚物資訊：冰靈（HP 14・基準值（1 級））");
     expect(html).toContain("<details");
     expect(html).toContain("open");
     expect(html).toContain("普攻命中站在水上的目標時施加「冰凍」1 回合");

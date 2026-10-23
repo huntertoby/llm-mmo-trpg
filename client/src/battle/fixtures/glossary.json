@@ -457,7 +457,7 @@
   {
    "id": "defending",
    "name_zh": "守護",
-   "description_zh": "防禦值 +25%，持續到自己的下回合開始；若守護著相鄰隊友，敵人的單體攻擊會改由自己承受（每輪 1 次）。",
+   "description_zh": "防禦值提高，持續到自己的下回合開始；若守護著相鄰隊友，敵人的單體攻擊會改由自己承受（每輪 1 次）。",
    "tags": [
     "beneficial"
    ],
@@ -470,12 +470,14 @@
     "absorbs_damage": false,
     "prevents_move": false
    },
-   "rules_zh": []
+   "rules_zh": [
+    "防禦值 +25%"
+   ]
   },
   {
    "id": "prone",
    "name_zh": "倒地",
-   "description_zh": "移動前要先站起來（消耗一半移動點數）；近戰攻擊倒地者有優勢，遠程攻擊有劣勢。",
+   "description_zh": "移動前要先站起來（消耗部分移動點數）；近戰攻擊倒地者有優勢，遠程攻擊有劣勢。",
    "tags": [],
    "status_look": {
     "polarity": "debuff",
@@ -486,7 +488,9 @@
     "absorbs_damage": false,
     "prevents_move": false
    },
-   "rules_zh": []
+   "rules_zh": [
+    "站起來要消耗 50% 的移動點數（進位）"
+   ]
   },
   {
    "id": "burning",
@@ -509,7 +513,7 @@
   {
    "id": "concealed",
    "name_zh": "隱蔽",
-   "description_zh": "對其攻擊有劣勢；超過 2 格的遠程攻擊無法選為目標。站在黑暗表面或草叢中的單位也視為隱蔽。",
+   "description_zh": "對其攻擊有劣勢；太遠的遠程攻擊無法選為目標。站在黑暗表面或草叢中的單位也視為隱蔽。",
    "tags": [
     "beneficial"
    ],
@@ -522,7 +526,9 @@
     "absorbs_damage": false,
     "prevents_move": false
    },
-   "rules_zh": []
+   "rules_zh": [
+    "超過 2 格的遠程攻擊無法選為目標"
+   ]
   },
   {
    "id": "revealed",
@@ -561,7 +567,7 @@
   {
    "id": "time_bomb",
    "name_zh": "定時炸彈",
-   "description_zh": "身上綁著定時炸彈，剩餘回合就是倒數（每次環境回合 −1）：歸零時在身體當下的位置爆炸，波及周圍；倒下時也會立即爆炸。可被淨化移除，驅散不移除。只能由定時炸彈效果施加。",
+   "description_zh": "身上綁著定時炸彈，剩餘回合就是倒數（每次環境回合倒數一次）：歸零時在身體當下的位置爆炸，波及周圍；倒下時也會立即爆炸。可被淨化移除，驅散不移除。只能由定時炸彈效果施加。",
    "tags": [],
    "status_look": {
     "polarity": "debuff",
@@ -595,7 +601,7 @@
   {
    "id": "slow",
    "name_zh": "緩速",
-   "description_zh": "回合開始時的移動點數減半（無條件捨去）。",
+   "description_zh": "回合開始時的移動點數減少。",
    "tags": [],
    "status_look": {
     "polarity": "debuff",
@@ -607,6 +613,7 @@
     "prevents_move": false
    },
    "rules_zh": [
+    "回合開始時的移動點數（無條件捨去） ×50%",
     "抵抗：由技能或動作施加在敵人身上時，目標以敏捷對抗施放者的技能屬性，成功就不會被施加（對友方、表面與環境造成的不擲抵抗）",
     "控制遞減（移動類）：成功施加後 2 輪內，同類控制的抵抗判定中目標的屬性 ×1.5"
    ]
@@ -676,7 +683,7 @@
   {
    "id": "weaken",
    "name_zh": "虛弱",
-   "description_zh": "自己造成的攻擊傷害 ×75%。",
+   "description_zh": "自己造成的攻擊傷害降低。",
    "tags": [],
    "status_look": {
     "polarity": "debuff",
@@ -688,13 +695,14 @@
     "prevents_move": false
    },
    "rules_zh": [
+    "自己造成的攻擊傷害 ×75%",
     "抵抗：由技能或動作施加在敵人身上時，目標以體質對抗施放者的技能屬性，成功就不會被施加（對友方、表面與環境造成的不擲抵抗）"
    ]
   },
   {
    "id": "vulnerable",
    "name_zh": "易傷",
-   "description_zh": "受到的骰值傷害 ×125%（不含墜落、致命地形等百分比傷害）。",
+   "description_zh": "受到的骰值傷害增加（不含墜落、致命地形等百分比傷害）。",
    "tags": [],
    "status_look": {
     "polarity": "debuff",
@@ -706,6 +714,7 @@
     "prevents_move": false
    },
    "rules_zh": [
+    "受到的骰值傷害（不含墜落、致命地形等百分比傷害） ×125%",
     "抵抗：由技能或動作施加在敵人身上時，目標以智力對抗施放者的技能屬性，成功就不會被施加（對友方、表面與環境造成的不擲抵抗）"
    ]
   },
@@ -749,7 +758,7 @@
   {
    "id": "poison",
    "name_zh": "中毒",
-   "description_zh": "中毒，每回合開始時受到毒素傷害；受到的治療減半。",
+   "description_zh": "中毒，每回合開始時受到毒素傷害；受到的治療降低。",
    "tags": [],
    "status_look": {
     "polarity": "debuff",
@@ -761,6 +770,7 @@
     "prevents_move": false
    },
    "rules_zh": [
+    "受到的治療 ×50%",
     "回合開始時受到 1d4 毒素傷害",
     "抵抗：由技能或動作施加在敵人身上時，目標以體質對抗施放者的技能屬性，成功就不會被施加（對友方、表面與環境造成的不擲抵抗）"
    ]
@@ -768,7 +778,7 @@
   {
    "id": "guarded",
    "name_zh": "護衛",
-   "description_zh": "受到的骰值傷害 ×70%（不含墜落、致命地形等百分比傷害）。",
+   "description_zh": "受到的骰值傷害降低（不含墜落、致命地形等百分比傷害）。",
    "tags": [
     "beneficial"
    ],
@@ -781,12 +791,14 @@
     "absorbs_damage": false,
     "prevents_move": false
    },
-   "rules_zh": []
+   "rules_zh": [
+    "受到的骰值傷害（不含墜落、致命地形等百分比傷害） ×70%"
+   ]
   },
   {
    "id": "empowered",
    "name_zh": "激昂",
-   "description_zh": "六個屬性各 +2（命中、抵抗、傷害與治療的縮放都用加值後的屬性；先攻不變）。",
+   "description_zh": "屬性提高（命中、抵抗、傷害與治療的縮放都用加值後的屬性；先攻不變）。",
    "tags": [
     "beneficial"
    ],
@@ -799,12 +811,14 @@
     "absorbs_damage": false,
     "prevents_move": false
    },
-   "rules_zh": []
+   "rules_zh": [
+    "六個屬性各 +2（命中、抵抗、傷害與治療的縮放都用加值後的屬性；先攻不變）"
+   ]
   },
   {
    "id": "rallied",
    "name_zh": "戰意",
-   "description_zh": "攻擊值 +1（戰意圖騰的光環）。",
+   "description_zh": "攻擊值提高（戰意圖騰的光環）。",
    "tags": [
     "beneficial"
    ],
@@ -817,12 +831,14 @@
     "absorbs_damage": false,
     "prevents_move": false
    },
-   "rules_zh": []
+   "rules_zh": [
+    "攻擊值 +1"
+   ]
   },
   {
    "id": "hasted",
    "name_zh": "加速",
-   "description_zh": "回合開始時的移動點數 ×150%（無條件捨去）。",
+   "description_zh": "回合開始時的移動點數增加。",
    "tags": [
     "beneficial"
    ],
@@ -835,7 +851,9 @@
     "absorbs_damage": false,
     "prevents_move": false
    },
-   "rules_zh": []
+   "rules_zh": [
+    "回合開始時的移動點數（無條件捨去） ×150%"
+   ]
   },
   {
    "id": "regenerating",
@@ -971,7 +989,7 @@
   {
    "id": "blinded",
    "name_zh": "致盲",
-   "description_zh": "攻擊與以單位為目標的技能只能選擇 2 格以內的單位；攻擊有劣勢。",
+   "description_zh": "攻擊與以單位為目標的技能只能選擇近距離的單位；攻擊有劣勢。",
    "tags": [],
    "status_look": {
     "polarity": "debuff",
@@ -983,6 +1001,7 @@
     "prevents_move": false
    },
    "rules_zh": [
+    "攻擊與以單位為目標的技能只能選擇 2 格以內的單位",
     "抵抗：由技能或動作施加在敵人身上時，目標以感知對抗施放者的技能屬性，成功就不會被施加（對友方、表面與環境造成的不擲抵抗）"
    ]
   },
@@ -1007,7 +1026,7 @@
   {
    "id": "stance_fury",
    "name_zh": "狂怒姿態",
-   "description_zh": "力量 +2，但受到的骰值傷害 ×120%；持續到取消。",
+   "description_zh": "力量提高，但受到的骰值傷害增加；持續到取消。",
    "tags": [
     "beneficial"
    ],
@@ -1020,12 +1039,15 @@
     "absorbs_damage": false,
     "prevents_move": false
    },
-   "rules_zh": []
+   "rules_zh": [
+    "受到的骰值傷害（不含墜落、致命地形等百分比傷害） ×120%",
+    "力量 +2"
+   ]
   },
   {
    "id": "stance_bulwark",
    "name_zh": "堅壁姿態",
-   "description_zh": "受到的骰值傷害 ×75%，但回合開始時的移動點數減半；持續到取消。",
+   "description_zh": "受到的骰值傷害降低，但回合開始時的移動點數減少；持續到取消。",
    "tags": [
     "beneficial"
    ],
@@ -1038,7 +1060,10 @@
     "absorbs_damage": false,
     "prevents_move": false
    },
-   "rules_zh": []
+   "rules_zh": [
+    "受到的骰值傷害（不含墜落、致命地形等百分比傷害） ×75%",
+    "回合開始時的移動點數（無條件捨去） ×50%"
+   ]
   }
  ],
  "stacks": [

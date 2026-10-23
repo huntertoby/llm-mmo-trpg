@@ -33,6 +33,7 @@ from trpg.engine.preview import (
 )
 from trpg.engine.results import Pending
 from trpg.engine.view import BattleView
+from trpg.narrative.skills import SkillCard
 from trpg.shared.rng import MASK64
 from trpg.shared.types import ObjectId, Pos, Team, UnitId
 
@@ -55,6 +56,7 @@ __all__ = [
     "GlossaryEntry",
     "GrantPreviewOut",
     "HealOut",
+    "HeroCards",
     "HistoryStepOut",
     "HurlOut",
     "InfuseOptionsOut",
@@ -124,6 +126,13 @@ class SkillReasons(_ApiModel):
     """主角灰掉的技能 → 引擎的拒絕理由（繁體中文）；可以用的技能不在表內（Phase 3-5c-2）。"""
 
     reasons: dict[str, str]
+
+
+class HeroCards(_ApiModel):
+    """戰鬥中主角的技能卡（3-41c）：附施放者當下的實際值（傷害算法的「目前」加成、召喚物資訊）。
+    只列有算式或召喚物的技能；技能列把它蓋在 ``/api/skills/{id}`` 的基本卡片上。"""
+
+    cards: dict[str, SkillCard]
 
 
 class CommandOptionOut(_ApiModel):

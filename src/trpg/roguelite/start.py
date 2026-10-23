@@ -27,11 +27,12 @@ from __future__ import annotations
 
 from collections import Counter
 from collections.abc import Iterable, Mapping, Sequence
-from typing import Literal
+from typing import Literal, NamedTuple
 
 from trpg.content.battle import UnitTemplate
 from trpg.content.equipment import loadout_problems, resolve_loadout
 from trpg.content.library import ContentLibrary
+from trpg.content.rules import CoreRules
 from trpg.content.skills import SkillDef, weapon_problem
 from trpg.roguelite.attributes import merge_spent
 from trpg.roguelite.errors import ChoiceError
@@ -43,16 +44,19 @@ from trpg.skillgen.keywords import derive_keywords, is_starter_skill, keyword_po
 from trpg.skillgen.random_composer import ComposeError, compose_random_skill
 
 __all__ = [
+    "StartResources",
     "allocation_problems",
     "apply_allocation",
     "check_test_equipment",
     "default_build",
     "default_start",
+    "hero_resources",
     "make_plan",
     "new_dev_run",
     "new_keyword_run",
     "new_run",
     "primary_attribute",
+    "start_resources",
     "start_weapons",
     "starter_pools",
     "starting_skill",
@@ -82,6 +86,41 @@ def allocation_problems(allocation: Mapping[Attribute, int], points: int) -> lis
 def apply_allocation(hero: UnitTemplate, allocation: Mapping[Attribute, int]) -> UnitTemplate:
     attributes = {a: hero.attributes[a] + allocation.get(a, 0) for a in Attribute}
     return hero.model_copy(update={"attributes": attributes})
+
+
+class StartResources(NamedTuple):
+    """主角開局的最大 HP、法力與耐力（1 級、不含裝備）。"""
+
+    hp: int
+    mana: int
+    stamina: int
+
+
+def hero_resources(core: CoreRules, hero: UnitTemplate) -> StartResources:
+    """1 級主角的最大 HP、法力、耐力上限：開新一輪（:func:`new_keyword_run`、:func:`new_run`）與開局
+    畫面的預覽（:func:`start_resources`）共用的唯一算式——體質算 HP（``run_max_hp``）、法力與耐力依
+    屬性（``core.resources``，3H-2）。"""
+    attrs = hero.attributes
+    return StartResources(
+        hp=core.run_max_hp(hero.max_hp, attrs[Attribute.CON], 1),
+        mana=core.resources.max_for("mana", hero.max_mana, attrs),
+        stamina=core.resources.max_for("stamina", core.template_stamina(hero), attrs),
+    )
+
+
+def start_resources(
+    library: ContentLibrary, weapon: str, allocation: Mapping[Attribute, int] | None = None
+) -> StartResources:
+    """開局預覽（3-41c）：選了 ``weapon``、配了 ``allocation`` 之後主角的最大 HP、法力、耐力。
+    和開新一輪建立出的主角用同一個函式（:func:`hero_resources`），配點不必配滿。武器不存在時拋出
+    :class:`ChoiceError`。"""
+    problems = [
+        f"{a.display_name} 的配點不可為負：{v}" for a, v in (allocation or {}).items() if v < 0
+    ]
+    if problems:
+        raise ChoiceError("；".join(problems))
+    hero = apply_allocation(_start_hero(library, weapon, ()), allocation or {})
+    return hero_resources(library.ruleset.core, hero)
 
 
 def default_build(library: ContentLibrary, seed: int) -> str:
@@ -193,15 +232,15 @@ def new_run(
     hero = apply_allocation(
         build.hero.model_copy(update={"attributes": base, "max_hp": authored_hp}), allocation
     )
-    start_hp = core.run_max_hp(hero.max_hp, hero.attributes[Attribute.CON], 1)
+    start = hero_resources(core, hero)
     return RunState(
         seed=seed,
         build_id=build_id,
         hero=hero,
         level=1,
         xp=0,
-        hp=start_hp,
-        mana=core.resources.max_for("mana", hero.max_mana, hero.attributes),
+        hp=start.hp,
+        mana=start.mana,
         source=core.source_min_at_start,
         plan=make_plan(library, seed),
         attribute_spent=merge_spent({}, allocation),
@@ -389,6 +428,7 @@ def new_keyword_run(
         allocation = {main: rules.start_free_points}
     hero = apply_allocation(_start_hero(library, weapon, [s.id for s in picked]), allocation)
     core = library.ruleset.core
+    start = hero_resources(core, hero)
     named: list[SkillDef] = []
     for s in picked:  # 生成技能和前面的起始技能撞名時加「（二）」
         taken = (n.name_zh for n in named)
@@ -400,8 +440,8 @@ def new_keyword_run(
         hero=hero,
         level=1,
         xp=0,
-        hp=core.run_max_hp(hero.max_hp, hero.attributes[Attribute.CON], 1),
-        mana=core.resources.max_for("mana", hero.max_mana, hero.attributes),
+        hp=start.hp,
+        mana=start.mana,
         source=core.source_min_at_start,
         generated_skills=tuple(generated),
         plan=make_plan(library, seed),

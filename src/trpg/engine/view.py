@@ -30,6 +30,7 @@ from trpg.engine.delayed import charge_infos
 from trpg.engine.gear_state import GearAffix, GearState
 from trpg.engine.gear_view import GearTotalView, gear_totals
 from trpg.engine.infusion import infusion_options
+from trpg.engine.rules.statuses import effective_attribute
 from trpg.engine.skills.revive import revivable
 from trpg.engine.state import (
     Activation,
@@ -761,7 +762,10 @@ def _unit_view(state: BattleState, unit: UnitState, team: Team) -> UnitView:
         weapon_class=unit.weapon.weapon_class,
         weapon_traits_zh=(
             *unit.weapon.trait_lines_zh(),
-            *unit.weapon.rule_lines_zh(state.ruleset.core),
+            *unit.weapon.rule_lines_zh(
+                state.ruleset.core,
+                lambda attr: effective_attribute(state.ruleset, unit, attr),
+            ),
         ),
         ammo=unit.ammo,
         magazine=unit.weapon.magazine,
