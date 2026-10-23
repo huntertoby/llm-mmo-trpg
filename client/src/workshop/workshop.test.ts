@@ -364,6 +364,18 @@ describe("try it out", () => {
     expect(manaNote(withMana)).toContain("8 點法力");
     expect(manaNote(check)).toBeNull();
   });
+
+  it("warns when the hero's stamina limit is below a weapon skill's stamina cost (3H-2)", () => {
+    const withStamina = {
+      ...check,
+      skill: { ...(check.skill as Json), cost: { stamina: 12, cooldown: 2 } },
+    } as WorkshopCheck;
+    const response = (maxStamina: number) =>
+      ({ hero_id: "u1", view: { units: [{ id: "u1", max_mana: 0, max_stamina: maxStamina }] } }) as unknown as BattleResponse;
+    expect(manaWarning(withStamina, response(10))).toContain("耐力上限只有 10");
+    expect(manaWarning(withStamina, response(10))).toContain("需要 12 點耐力");
+    expect(manaWarning(withStamina, response(30))).toBeNull();
+  });
 });
 
 describe("advanced YAML editing", () => {
