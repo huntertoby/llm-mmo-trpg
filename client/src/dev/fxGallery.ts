@@ -89,6 +89,8 @@ function board(): BattleView {
       expires_round: 4,
       cells: [0, 1, 2].flatMap((x) => [3, 4, 5].map((y) => ({ x, y }))),
     }),
+    // 我方的火牆只打敵人：不影響我方（3-37b 第三種樣式）
+    zone(3, { skill_id: "z_fire", expires_round: 3, cells: [4, 5].flatMap((x) => [4, 5].map((y) => ({ x, y }))) }),
   ];
   return {
     team: "ally",

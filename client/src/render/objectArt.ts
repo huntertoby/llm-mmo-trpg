@@ -5,6 +5,8 @@ import { PAL, rgba } from "./artPalette";
 import { flame, roundRect, shadowEllipse, TAU, type Ctx } from "./artDraw";
 import { rng } from "./artRandom";
 import { cracks, type HpStage } from "./fieldFx";
+import { drawLowWall } from "./lowWallArt";
+import { CLOUD_OBJECTS } from "./cloudRidgeObjects";
 import { pickThemed, themeKey, type ArtTheme, type LookTable, type RegionTable } from "./regionArt";
 import { ART_T } from "./terrainArt";
 
@@ -142,74 +144,8 @@ function stonePillar(ctx: Ctx): void {
   ctx.stroke();
 }
 
-/** 矮牆（美術 PM docs/art/矮牆.md）：暖色石塊——頂面亮、正面錯縫磚、2px 深色外框（相連的一側不畫）、較深的投影。 */
-const LOW_WALL = { top: "#d8c7a2", topEdge: "#f2e6c8", face: "#86704f", mortar: "#4c3d2a", outline: "#241c13" } as const;
-
 function lowWall(ctx: Ctx, s: ObjectArtSpec): void {
-  const x0 = s.joinL ? 0 : 4;
-  const x1 = s.joinR ? T : T - 4;
-  const capY = T * 0.3;
-  const capH = T * 0.16;
-  const faceH = T * 0.26;
-  const faceY = capY + capH;
-  const w = x1 - x0;
-  // 投影（落向右下）
-  ctx.fillStyle = "rgba(0,0,0,0.42)";
-  ctx.fillRect(x0 + 4, faceY + faceH, w, 7);
-  // 正面：兩排錯縫磚
-  ctx.fillStyle = LOW_WALL.face;
-  ctx.fillRect(x0, faceY, w, faceH);
-  ctx.strokeStyle = LOW_WALL.mortar;
-  ctx.lineWidth = 1.5;
-  ctx.beginPath();
-  const rowH = faceH / 2;
-  ctx.moveTo(x0, faceY + rowH);
-  ctx.lineTo(x1, faceY + rowH);
-  for (let r = 0; r < 2; r++) {
-    for (let bx = r ? 8 : 17; bx < x1 - 1; bx += 17) {
-      if (bx <= x0 + 1) continue;
-      ctx.moveTo(bx, faceY + r * rowH);
-      ctx.lineTo(bx, faceY + (r + 1) * rowH);
-    }
-  }
-  ctx.stroke();
-  // 壓頂石（頂面）：最上面 2px 亮邊，每 26px 一條縫
-  ctx.fillStyle = LOW_WALL.top;
-  ctx.fillRect(x0, capY, w, capH);
-  ctx.fillStyle = LOW_WALL.topEdge;
-  ctx.fillRect(x0, capY, w, 2);
-  ctx.strokeStyle = "rgba(76,61,42,0.6)";
-  ctx.lineWidth = 1;
-  ctx.beginPath();
-  for (let bx = 13; bx < x1 - 1; bx += 26) {
-    if (bx <= x0 + 1) continue;
-    ctx.moveTo(bx, capY);
-    ctx.lineTo(bx, capY + capH);
-  }
-  ctx.stroke();
-  // 外框：只框外輪廓，相連的那一側不畫；壓頂石與正面之間一條 1px 線
-  ctx.strokeStyle = LOW_WALL.outline;
-  ctx.lineWidth = 2;
-  ctx.beginPath();
-  ctx.moveTo(x0, capY);
-  ctx.lineTo(x1, capY);
-  ctx.moveTo(x0, faceY + faceH);
-  ctx.lineTo(x1, faceY + faceH);
-  if (!s.joinL) {
-    ctx.moveTo(x0, capY);
-    ctx.lineTo(x0, faceY + faceH);
-  }
-  if (!s.joinR) {
-    ctx.moveTo(x1, capY);
-    ctx.lineTo(x1, faceY + faceH);
-  }
-  ctx.stroke();
-  ctx.strokeStyle = "rgba(36,28,19,0.7)";
-  ctx.lineWidth = 1;
-  ctx.beginPath();
-  ctx.moveTo(x0, faceY);
-  ctx.lineTo(x1, faceY);
-  ctx.stroke();
+  drawLowWall(ctx, s);
 }
 
 function woodenBridge(ctx: Ctx, s: ObjectArtSpec): void {
@@ -556,8 +492,8 @@ export const OBJECT_DRAW: Readonly<Record<string, ObjectDrawer>> = {
   grass: grassFloor,
 };
 
-/** 各區的物件畫法（區域 ID → 物件 ID → 畫法）；3-37a 只有預設區（不在表內），雲嶺等在 3-37b 加入。 */
-export const REGION_OBJECT_DRAW: RegionTable<ObjectDrawer> = {};
+/** 各區的物件畫法（區域 ID → 物件 ID → 畫法）；預設區不在表內，雲嶺（3-37b）已加入，其他區之後加。 */
+export const REGION_OBJECT_DRAW: RegionTable<ObjectDrawer> = { cloud_ridge: CLOUD_OBJECTS };
 
 /** `look` 覆寫的物件畫法（`"鍵=值"` → 物件 ID → 畫法）；目前沒有。 */
 export const LOOK_OBJECT_DRAW: LookTable<ObjectDrawer> = {};

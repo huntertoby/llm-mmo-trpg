@@ -39,6 +39,7 @@ export const BASE_LEGEND: readonly LegendEntry[] = [
   { color: HIGHLIGHT.trap, label: "我方陷阱 ^（被揭露的敵方陷阱 × 為紅色）" },
   { color: HIGHLIGHT.zone_harmful, label: "有害的持續區域" },
   { color: HIGHLIGHT.zone_helpful, label: "有益的持續區域" },
+  { color: HIGHLIGHT.zone_neutral, label: "不影響我方的持續區域（虛線、淡底色）" },
 ];
 
 export function cssColor(color: number): string {

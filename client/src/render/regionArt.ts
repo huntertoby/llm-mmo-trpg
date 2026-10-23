@@ -54,6 +54,36 @@ export function pickThemed<D>(
   return theme.region === "" ? undefined : own(own(regions, theme.region), id);
 }
 
+/** 取 `look` 正規化字串裡某個鍵的值（沒有為 undefined）；供表面這類「微調顏色而非換整個畫法」的覆寫使用。 */
+export function lookValue(look: string, key: string): string | undefined {
+  for (const pair of look.split(",")) {
+    const i = pair.indexOf("=");
+    if (i > 0 && pair.slice(0, i) === key) return pair.slice(i + 1);
+  }
+  return undefined;
+}
+
+/** 水底色微調（`look.water_tint` → 水面底色）；值不認得 → undefined（用預設的水色）。 */
+export const WATER_TINT: Readonly<Record<string, string>> = { green: "#4f9a62" };
+
+/** 水底色：依 `look.water_tint` 查表；沒有或不認得 → undefined。 */
+export function waterTintOf(look: string): string | undefined {
+  const v = lookValue(look, "water_tint");
+  return v !== undefined && Object.hasOwn(WATER_TINT, v) ? WATER_TINT[v] : undefined;
+}
+
+/** 區域的裝飾薄霧：平常與霧天的濃度（0–1）。只是裝飾層，不影響視線規則；沒列的區域沒有薄霧。 */
+export const REGION_MIST: Readonly<Record<string, { normal: number; fog: number }>> = {
+  cloud_ridge: { normal: 0.2, fog: 0.4 },
+};
+
+/** 這張地圖該不該畫薄霧、多濃（`weather` 為天氣 ID，空字串 ＝ 無天氣）。 */
+export function mistLevel(region: string, weather: string): { level: "normal" | "fog"; alpha: number } | null {
+  const m = Object.hasOwn(REGION_MIST, region) ? REGION_MIST[region] : undefined;
+  if (m === undefined) return null;
+  return weather === "fog" ? { level: "fog", alpha: m.fog } : { level: "normal", alpha: m.normal };
+}
+
 /** 只讀自己的屬性（"constructor" 之類的鍵不當成畫法）。 */
 function own<V>(table: Readonly<Record<string, V>> | undefined, key: string): V | undefined {
   return table !== undefined && Object.hasOwn(table, key) ? table[key] : undefined;

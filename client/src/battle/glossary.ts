@@ -236,6 +236,8 @@ export const HIGHLIGHT = {
   /** 持續區域（Phase 3D-5）：有害（傷害、減益）與有益的底色。 */
   zone_harmful: 0xff6a3d,
   zone_helpful: 0xffd54a,
+  /** 不影響我方的持續區域（3-37b）：虛線外框＋淡底色。 */
+  zone_neutral: 0xb0b8c4,
   /** 定時炸彈（Phase 3D-8b）：預覽的爆炸範圍與倒數；倒地的友方（可復活）與復活的位置。 */
   bomb: 0xff7a1a,
   downed: 0xff3b30,

@@ -34,7 +34,8 @@ import { drawCasterRing, drawTrapPad, drawZoneCell, fxColor, sightVeil, turnsBad
 import { fontEpoch } from "./fontLoad";
 import { ArtTextures } from "./artTextures";
 import { heightBadgeText, objectArtSpec, objectKinds, tileArtSpec } from "./artSpecs";
-import type { ArtTheme } from "./regionArt";
+import { drawMistTile } from "./cloudRidgeTerrain";
+import { mistLevel, type ArtTheme } from "./regionArt";
 import { hasObjectArt } from "./objectArt";
 import { blastEffect, castEffects, hitEffects, shakeEffect, warpEffects, type Effect } from "./vfxEffects";
 import { drawCliff, drawEdges, liftEffects, silhouette } from "./heightArt";
@@ -250,6 +251,7 @@ export class BattleRenderer {
     for (const trap of model.traps) this.drawTrap(trap);
     for (const u of model.units) this.drawUnit(model, u);
     this.drawVeils(model);
+    this.drawMist(model);
     this.art.endFrame();
     this.resumeLifts(model);
   }
@@ -373,9 +375,9 @@ export class BattleRenderer {
     for (const z of model.zones) {
       const color = fxColor(z.element, z.surface);
       for (const c of zoneCellSpecs(z)) {
-        const key = `zone|${color}|${+z.harmful}|${c.sides.join("")}|${c.arrow ?? "-"}|${c.phase}`;
+        const key = `zone|${color}|${z.effect}|${c.sides.join("")}|${c.arrow ?? "-"}|${c.phase}`;
         const sprite = this.fxSprite(key, (ctx) =>
-          drawZoneCell(ctx, { color, harmful: z.harmful, sides: c.sides, arrow: c.arrow, phase: c.phase }),
+          drawZoneCell(ctx, { color, harmful: z.harmful, neutral: z.effect === "none", sides: c.sides, arrow: c.arrow, phase: c.phase }),
         );
         if (sprite === null) continue;
         this.rows.row(c.y).deco.addChild(sprite);
@@ -410,6 +412,18 @@ export class BattleRenderer {
     if (badge === null) return;
     this.rows.row(trap.y).traps.addChild(badge);
     this.place(badge, trap, trap.x * T, trap.y * T);
+  }
+
+  /** 區域的裝飾薄霧（3-37b；雲嶺）：每格一團淡淡的霧白，霧天加濃。只是裝飾，不影響視線規則。 */
+  private drawMist(model: DrawModel): void {
+    const mist = mistLevel(model.region, model.weather ?? "");
+    if (mist === null) return;
+    for (const t of model.tiles) {
+      const sprite = this.fxSprite(`mist|${mist.level}|${t.x}|${t.y}`, (ctx) => drawMistTile(ctx, t.x, t.y, mist.alpha));
+      if (sprite === null) continue;
+      this.rows.row(t.y).veil.addChild(sprite);
+      this.place(sprite, t, t.x * T, t.y * T);
+    }
   }
 
   /** 擋視線的表面（`blocks_sight`，煙霧、黑暗…）：每格在單位之上多畫一層霧，蓋住單位下半身。 */
