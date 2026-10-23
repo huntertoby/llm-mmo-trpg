@@ -103,7 +103,11 @@ def skill_ban(state: BattleState, skill: SkillDef) -> str | None:
         (skill.rarity == "legendary", "傳說技能不能灌注"),
         (any(e.type in (SUMMON, SACRIFICE_SUMMON) for e in specs), "召喚技能不能灌注"),
         (
-            any(rules.primitive_def(e.type).category in _RULE_CATEGORIES for e in specs),
+            # iter_effects 含巢狀效果（on_kill 的 refund_ap 等不是原語，查不到就略過）
+            any(
+                p is not None and p.category in _RULE_CATEGORIES
+                for p in (rules.find_primitive(e.type) for e in specs)
+            ),
             "改變規則類技能不能灌注",
         ),
         (skill.followup is not None, "複合技能（多段）不能灌注"),

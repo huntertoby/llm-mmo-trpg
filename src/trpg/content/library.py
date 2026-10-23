@@ -366,6 +366,12 @@ class Ruleset(ContentModel):
         index: dict[str, PrimitiveDef] = self.__pydantic_private__["_primitive_index"]  # type: ignore[index]
         return index[primitive_id]
 
+    def find_primitive(self, primitive_id: str) -> PrimitiveDef | None:
+        """同 :meth:`primitive_def`，但查不到時回傳 ``None``：巢狀位置有不是原語的效果類型
+        （``on_kill`` 的 ``refund_ap``、``refund_cooldown``，賭注的 ``damage_multiplier`` 等）。"""
+        index: dict[str, PrimitiveDef] = self.__pydantic_private__["_primitive_index"]  # type: ignore[index]
+        return index.get(primitive_id)
+
     def condition_def(self, condition_id: str) -> ConditionDef:
         index: dict[str, ConditionDef] = self.__pydantic_private__["_condition_index"]  # type: ignore[index]
         return index[condition_id]

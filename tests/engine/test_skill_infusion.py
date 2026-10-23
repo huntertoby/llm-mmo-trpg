@@ -321,6 +321,17 @@ def test_needs_ap_mana_and_an_own_live_summon() -> None:
         infuse(state, foe)
 
 
+def test_every_builtin_skill_can_be_checked_for_infusion_without_crashing() -> None:
+    """巢狀位置有不是原語的效果（灰燼收割 on_kill 的 refund_ap 等）也能判斷能不能灌注
+    （3H-3 代打整輪撞到 KeyError: 'refund_ap'）。"""
+    rules = library().ruleset
+    state, _ = arena(extra=[bolt()])
+    ash = next(s for s in rules.skills.skills if s.id == "skill_ash_harvest")
+    assert any(e.type == "refund_ap" for e in ash.iter_effects())
+    for skill in rules.skills.skills:
+        skill_ban(state, skill)  # 不丟例外
+
+
 def test_forbidden_skill_kinds_are_greyed_with_reasons() -> None:
     lib = library()
     rules = lib.ruleset
