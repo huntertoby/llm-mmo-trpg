@@ -1,0 +1,74 @@
+<!doctype html>
+<html lang="zh-Hant">
+<head>
+<meta charset="utf-8">
+<title>側面畫法比較</title>
+<style>
+  body { margin: 0; padding: 16px 20px; background: #1b1e24; color: #e8e8ea; font-family: "Microsoft JhengHei", sans-serif; }
+  h1 { font-size: 20px; margin: 0 0 4px; }
+  .sub { color: #a0a4ad; font-size: 13px; margin-bottom: 8px; line-height: 1.55; }
+  table { border-collapse: separate; border-spacing: 5px; }
+  th { font-size: 13px; color: #e8e8ea; padding: 2px 4px; }
+  td { background: #232730; border-radius: 6px; padding: 3px; text-align: center; font-size: 12px; color: #c8ccd4; vertical-align: middle; }
+  td.lab { background: none; text-align: right; font-size: 13px; color: #e8e8ea; width: 150px; }
+  td.lab small { display: block; color: #8a909a; font-size: 11px; line-height: 1.4; }
+  canvas { display: block; margin: 0 auto; }
+</style>
+</head>
+<body>
+<h1>側面畫法：現行 vs 4 種新畫法</h1>
+<div class="sub">使用者：「所有側面完全都不像側面 重新設計側面 演示方式 多給我幾個樣本挑」。<br>
+現行的側面＝正面整張左右壓窄 10%、眼睛往前移，身體、雙手、雙腳仍左右對稱，所以看起來像「瘦一點的正面」。<br>
+每列一種畫法：左＝同一角色的正面（對照），右＝人類、角魔、狐族、龍裔 × 兩套裝備（板甲＋頭盔＋劍盾／皮甲＋兜帽＋弓＋披風）面向右；最右＝戰場實際大小（52px 格，朝東、朝西各一）。</div>
+<table id="grid"></table>
+<script src="raceArt.js"></script>
+<script src="paperdoll.js"></script>
+<script src="sideArt.js"></script>
+<script>
+const D = PaperDoll, R = RaceArt, SA = SideArt, I = D.ITEMS, DPR = 3;
+const DRAGON = { skin: "#d8a878", hair: "short", hairColor: "#3a2418", horns: "dragon", hornColor: "#5a1a14", pattern: "dragonscale", slitEyes: true, ridge: true, scaleColor: "#c8402a", tail: "dragon", tailColor: "#c8402a", spines: true };
+const UNITS = [["人類", R.RACES.human.look], ["角魔", R.RACES.fiend.look], ["狐族", R.RACES.fox.look], ["龍裔", DRAGON]];
+const GEARS = [
+  { body: I.plate_armor, feet: I.greaves, head: I.helmet, main_hand: I.sword, off_hand: I.round_shield },
+  { body: I.green_leather, feet: I.boots, head: I.hood_brown, main_hand: I.bow, cloak: I.red_cape },
+];
+const STYLES = [
+  ["現行", "正面壓窄 10%", null],
+  ["A 真側面 90°", "身體、臉都轉 90 度；鼻子突出、只看到一隻眼、兩腳前後重疊", { bodyTurn: 1, headTurn: 1 }],
+  ["B 3/4 斜側面", "轉一半：近側看得到身體側面的厚度、兩隻眼睛一大一小、鼻子微露", { bodyTurn: 0.5, headTurn: 0.55 }],
+  ["C 側身＋臉朝鏡頭", "身體轉 90 度、臉只轉一半（兩眼都看得到），表情讀得清楚", { bodyTurn: 1, headTurn: 0.45 }],
+  ["D 步行側面", "A 加跨步：兩腳張開、雙手前後擺；移動時用，站著時接近 A", { bodyTurn: 1, headTurn: 1, stride: 1 }],
+];
+function cv(w, h) {
+  const c = document.createElement("canvas");
+  c.width = w * DPR; c.height = h * DPR; c.style.width = `${w}px`; c.style.height = `${h}px`;
+  const ctx = c.getContext("2d"); ctx.scale(DPR, DPR); return [c, ctx];
+}
+function side(ctx, look, gear, opt, cx, cy, k, west = false) {
+  if (opt) SA.stamp(ctx, { look, gear }, opt, cx, cy, k, west);
+  else D.stamp(ctx, { look, gear }, west ? "west" : "east", cx, cy, k, { dpr: DPR });
+}
+const grid = document.getElementById("grid");
+grid.insertAdjacentHTML("beforeend", `<tr><th></th><th>正面（對照）</th><th>板甲＋頭盔＋劍盾</th><th>皮甲＋兜帽＋弓＋披風</th><th>戰場實際大小</th></tr>`);
+for (const [name, note, opt] of STYLES) {
+  const tr = document.createElement("tr");
+  tr.insertAdjacentHTML("beforeend", `<td class="lab">${name}<small>${note}</small></td>`);
+  // 正面對照
+  { const td = document.createElement("td"); const [c, ctx] = cv(70, 86); ctx.fillStyle = "#2d323c"; ctx.fillRect(0, 0, 70, 86); D.stamp(ctx, { look: UNITS[1][1], gear: GEARS[0] }, "south", 35, 80, 1.25, { dpr: DPR }); td.append(c); tr.append(td); }
+  for (const gear of GEARS) {
+    const td = document.createElement("td"); const [c, ctx] = cv(250, 86);
+    ctx.fillStyle = "#2d323c"; ctx.fillRect(0, 0, 250, 86);
+    UNITS.forEach(([, look], i) => side(ctx, look, gear, opt, 32 + i * 62, 80, 1.25));
+    td.append(c); tr.append(td);
+  }
+  const T = 52, td = document.createElement("td"); const [c, ctx] = cv(T * 4, T);
+  UNITS.forEach(([, look], i) => {
+    ctx.fillStyle = i % 2 ? "#8a8a84" : "#7d8a7a"; ctx.fillRect(i * T, 0, T, T);
+    side(ctx, look, GEARS[i % 2], opt, i * T + T / 2, T * 0.82, 0.78, i % 2 === 1);
+  });
+  td.append(c); tr.append(td);
+  grid.append(tr);
+}
+</script>
+</body>
+</html>
