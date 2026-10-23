@@ -10,6 +10,11 @@ LLM 容易填錯又難以定位），而是填「提議」：效果、形狀、�
 依序做「提議驗證（``proposal``）→ 轉成 ``SkillDef``（``skill``）→ 跨檔案驗證與預算（``rules``）」，
 任一階段失敗就回傳結構化的 :class:`ProposalError`（路徑、代碼、中文原因、可用值），給 LLM 重試。
 
+**提議不含數值**（Phase 4-L3，使用者決定 #3）：骰子、倍率、持續回合、距離、AP、法力、冷卻、條件門檻
+等一律不在模型裡，只留結構與列舉選擇（見 :mod:`trpg.skillgen.proposal_numbers`）。轉成 ``SkillDef``
+時由 :data:`~trpg.skillgen.proposal_numbers.NumberFiller` 補數值（預設是保守的最小補值，正式流程由
+4-L5 的預算器補）。模型的說明文字取自內容資料的 ``llm_hint``。
+
 ID、稀有度、階級、來源由呼叫端（:class:`ProposalContext`）決定，LLM 不能填。原型不涵蓋的部分
 （複合技能第二段、反應、陷阱、修正規則、非原語的巢狀效果等）見設計文件。
 """
@@ -21,6 +26,7 @@ import json
 import re
 from collections.abc import Callable, Iterable, Mapping, Sequence
 from dataclasses import dataclass
+from functools import cache
 from typing import Annotated, Any, Literal, Union, get_args
 
 from pydantic import BaseModel, ConfigDict, Field, TypeAdapter, ValidationError, create_model
@@ -38,15 +44,24 @@ from trpg.content.skills import (
     Origin,
     PrimitiveDef,
     PrimitiveParam,
+    ScaleBy,
     SkillDef,
     SkillRarity,
+    TriggerSpec,
     VariantWhen,
 )
 from trpg.shared.types import Element, Surface
+from trpg.skillgen.proposal_numbers import (
+    NumberFiller,
+    minimal_filler,
+    numeric_param_names,
+    split_numbers,
+)
 from trpg.skillgen.validate import validate_skill
 
 __all__ = [
     "LLM_ID_PREFIX",
+    "NumberFiller",
     "ProposalContext",
     "ProposalError",
     "ProposalModels",
@@ -59,7 +74,6 @@ __all__ = [
 ]
 
 LLM_ID_PREFIX = "skill_llm_"
-DICE_PATTERN = r"^[1-9][0-9]*d[1-9][0-9]*$"
 
 PROPOSAL_KINDS: tuple[str, ...] = ("active", "passive", "stance")
 """原型開放的技能種類（反應、修正型需要 ``reaction``／``modifiers``，原型不開放）。"""
@@ -79,8 +93,6 @@ _MAX_NESTED = 2
 _MAX_EFFECTS = 4
 _MAX_VARIANTS = 2
 _MAX_TAGS = 8
-_MAX_AP = 3
-_MAX_COOLDOWN = 6
 
 # 提議中「由呼叫端或引擎決定、LLM 不能填」的 SkillDef 欄位（文件化用；模型本來就沒有這些欄位）。
 CALLER_FIELDS: tuple[str, ...] = ("id", "tier", "rank", "rarity", "provenance", "schema_version")
@@ -236,22 +248,26 @@ class _Refs:
 
 
 _FIXED_PARAM_TYPES: dict[str, tuple[Any, dict[str, Any]]] = {
-    "dice": (str, {"pattern": DICE_PATTERN}),
     "bool": (bool, {}),
     "element": (Element, {}),
     "surface": (Surface, {}),
     "tag": (str, {"pattern": ID_PATTERN}),
     "skill": (str, {"pattern": SKILL_ID_PATTERN}),
 }
-"""與內容庫無關的參數型別。"""
+"""與內容庫無關的參數型別（數值型別 ``int``、``dice`` 不開放，見 :func:`_is_numeric`）。"""
+
+COUNT_CHOICES: tuple[int | str, ...] = (1, "all")
+"""``count`` 型參數（驅散的增益個數）：1 個或全部。"""
 
 
 def _param_type(
     name: str, spec: PrimitiveParam, refs: _Refs, fallback: Mapping[str, Any]
 ) -> tuple[Any, dict[str, Any]]:
-    """一個參數的型別與 ``Field`` 限制（範圍、格式、可用值）。"""
-    if spec.type == "int":
-        return int, {"ge": spec.min, "le": spec.max}
+    """一個參數的型別與 ``Field`` 限制（格式、可用值）；呼叫端已排除數值型別（``_is_numeric``）。"""
+    if spec.type == "scaling":
+        return _scaling_model(), {}
+    if spec.type == "count":
+        return _literal(COUNT_CHOICES), {}
     fixed = _FIXED_PARAM_TYPES.get(spec.type)
     if fixed is not None:
         return fixed[0], dict(fixed[1])
@@ -261,6 +277,17 @@ def _param_type(
     # 其餘型別（which、scale、resource、on_hit、landing、anchor、zone_when、scope、scaling、count）
     # 沿用 EffectSpec 欄位的型別：可用值寫在 schema 的 Literal 或子模型裡。
     return _strip_none(fallback[name].annotation), {}
+
+
+def _is_numeric(spec: PrimitiveParam) -> bool:
+    """數值參數（``int``、``dice``）：提議模型不開放，由預算器補。"""
+    return bool(numeric_param_names({"x": spec}))
+
+
+@cache
+def _scaling_model() -> Any:
+    """``scaling`` 只留「依什麼縮放」，步進與上限是數值。"""
+    return create_model("Scaling", __base__=_Proposal, by=(ScaleBy, ...))
 
 
 def _field(annotation: Any, limits: Mapping[str, Any], *, required: bool, doc: str) -> Any:
@@ -277,17 +304,10 @@ def _affects_type(primitive: PrimitiveDef) -> Any:
     return _literal(v for v in AFFECTS_VALUES if v not in forbid)
 
 
-CONDITIONALLY_REQUIRED: frozenset[tuple[str, str]] = frozenset(
-    {("damage", "dice"), ("inscribe", "element")}
-)
-"""YAML 標 ``required: true``、但實際上依情況才必填的參數（照抄
-``trpg.content.skills._filled_by_category``：武器技的傷害骰來自武器、符文填了 ``tag`` 可省略
-元素）。提議模型讓它們可省略，缺了由 ``rules`` 階段的跨檔案驗證報錯；Phase 4 建議改成 YAML 的
-``required_when`` 宣告，讓兩邊同源。"""
-
-
-def _required(primitive_id: str, name: str, spec: PrimitiveParam) -> bool:
-    return spec.required and (primitive_id, name) not in CONDITIONALLY_REQUIRED
+def _required(spec: PrimitiveParam) -> bool:
+    """提議中必填：YAML 的 ``required``，但有 ``required_when`` 的依情況才必填，提議中可省略、
+    缺了由 ``rules`` 階段的跨檔案驗證報錯。"""
+    return spec.required and spec.required_when is None
 
 
 def _has_nested(primitive: PrimitiveDef) -> bool:
@@ -342,7 +362,9 @@ class _Builder:
             "condition": (self.condition | None, None),
         }
         for name, spec in sorted(primitive.params.items()):
-            doc = spec.description_zh
+            doc = spec.llm_hint
+            if _is_numeric(spec):
+                continue
             if spec.type == "effects":
                 if nested is None or nested[name] is None:
                     continue
@@ -350,13 +372,13 @@ class _Builder:
                 fields[name] = _field(nested[name], limits, required=spec.required, doc=doc)
                 continue
             annotation, limits = _param_type(name, spec, self.refs, EffectSpec.model_fields)
-            required = _required(primitive.id, name, spec)
+            required = _required(spec)
             fields[name] = _field(annotation, limits, required=required, doc=doc)
         prefix = "NestedEffect" if nested is None and _has_nested(primitive) else "Effect"
         model = create_model(
             f"{prefix}_{primitive.id}",
             __base__=_Proposal,
-            __doc__=primitive.player_description or primitive.description_zh,
+            __doc__=primitive.llm_hint,
             **fields,
         )
         return model
@@ -366,15 +388,15 @@ class _Builder:
         for cond in self.library.ruleset.conditions.conditions:
             fields: dict[str, Any] = {"type": (_literal((cond.id,)), ...)}
             for name, spec in sorted(cond.params.items()):
+                if _is_numeric(spec):
+                    continue
                 annotation, limits = _param_type(name, spec, self.refs, EffectSpec.model_fields)
-                fields[name] = _field(
-                    annotation, limits, required=spec.required, doc=spec.description_zh
-                )
+                fields[name] = _field(annotation, limits, required=spec.required, doc=spec.llm_hint)
             models.append(
                 create_model(
                     f"Condition_{cond.id}",
                     __base__=_Proposal,
-                    __doc__=cond.description_zh,
+                    __doc__=cond.llm_hint,
                     **fields,
                 )
             )
@@ -389,52 +411,47 @@ class _Builder:
                 if spec.allow_weapon:
                     annotation = Union[int, Literal["weapon"]]  # noqa: UP007
                 limits = {} if spec.allow_weapon else {"ge": spec.min, "le": spec.max}
-                fields[name] = _field(annotation, limits, required=spec.required, doc="")
+                fields[name] = _field(
+                    annotation, limits, required=spec.required, doc=shape.params[name].llm_hint
+                )
             models.append(
                 create_model(
                     f"Shape_{shape.id}",
                     __base__=_Proposal,
-                    __doc__=shape.description_zh,
+                    __doc__=shape.llm_hint,
                     **fields,
                 )
             )
         return _union(models, "type")
 
     def trigger_union(self) -> Any:
-        """觸發時機（``skill_triggers.yaml``）：只有「有另一方」的時機能填 ``target: other`` 與
-        ``max_distance``；帶參數的時機（``n``、``tag``、``status``、``surface``）的規則目前寫在
-        ``TriggerSpec`` 的驗證器裡，原型照抄（Phase 4 建議搬到 YAML 的 ``params``）。"""
+        """觸發時機（``skill_triggers.yaml``）：只有「有另一方」的時機能填 ``target: other``；
+        時機自己的參數（``n``、``tag``、``status``、``surface``）取自該時機的 ``params``。
+        每輪觸發次數、距離上限是數值，不開放（預設每輪 1 次、不限距離）。"""
         models = []
         for trig in self.library.ruleset.skill_triggers.triggers:
-            fields: dict[str, Any] = {
-                "event": (_literal((trig.id,)), ...),
-                "max_per_round": (int, Field(default=1, ge=1, le=3)),
-            }
+            fields: dict[str, Any] = {"event": (_literal((trig.id,)), ...)}
             if trig.has_other:
                 fields["target"] = (Literal["self", "other"], "self")
-                fields["max_distance"] = (int | None, Field(default=None, ge=1))
-            fields.update(self._trigger_params(trig.id))
+            for name, spec in sorted(trig.params.items()):
+                annotation, limits = self._trigger_param(name, spec)
+                fields[name] = _field(annotation, limits, required=spec.required, doc=spec.llm_hint)
             models.append(
                 create_model(
                     f"Trigger_{trig.id}",
                     __base__=_Proposal,
-                    __doc__=trig.description_zh,
+                    __doc__=trig.llm_hint,
                     **fields,
                 )
             )
         return _union(models, "event")
 
-    def _trigger_params(self, event: str) -> dict[str, Any]:
-        if event == "every_n_hits":
-            return {"n": (Literal[2, 3], ...)}
-        if event == "on_cast_tag":
-            return {"tag": (str, Field(pattern=ID_PATTERN))}
-        if event == "on_status_applied":
-            status, limits = _id_choice(self.refs.statuses)
-            return {"status": (status | None, Field(default=None, **limits))}
-        if event == "on_enter_surface":
-            return {"surface": (Surface | None, None)}
-        return {}
+    def _trigger_param(self, name: str, spec: PrimitiveParam) -> tuple[Any, dict[str, Any]]:
+        if spec.type == "int":
+            # 觸發的整數參數（每幾次命中）是少數幾個列舉值，當成選擇而不是數值。
+            assert spec.min is not None and spec.max is not None
+            return _literal(range(spec.min, spec.max + 1)), {}
+        return _param_type(name, spec, self.refs, TriggerSpec.model_fields)
 
 
 def _variant_model(effect: Any | None, shape: Any) -> Any:
@@ -445,7 +462,6 @@ def _variant_model(effect: Any | None, shape: Any) -> Any:
         "name_zh": (str, Field(min_length=1, max_length=12)),
         "when": (VariantWhen, ...),
         "shape": (shape | None, None),
-        "range_delta": (int | None, None),
         "element": (Element | None, None),
     }
     if effect is not None:
@@ -460,8 +476,8 @@ def _variant_model(effect: Any | None, shape: Any) -> Any:
     return create_model(
         "Variant",
         __base__=_Proposal,
-        __doc__="戰場變奏：when 條件成立時套用 1～2 項替換（shape、range_delta、element、"
-        "add_effect、replace_effect）。",
+        __doc__="戰場變奏：when 條件成立時套用 1～2 項替換（shape、element、add_effect、"
+        "replace_effect）。",
         **fields,
     )
 
@@ -482,12 +498,6 @@ def build_proposal_models(
         _union([builder.effects[i] for i in variant_ids], "type") if variant_ids else None
     )
     skeletons = sorted(set(library.skeletons) - CLOSED_SKELETONS)
-    cost = create_model(
-        "Cost",
-        __base__=_Proposal,
-        mana=(int, Field(default=0, ge=0)),
-        cooldown=(int | None, Field(default=None, ge=1, le=_MAX_COOLDOWN)),
-    )
     sk = SkillDef.model_fields
     variant = _variant_model(variant_effect, builder.shape)
     fields: dict[str, Any] = {
@@ -500,12 +510,10 @@ def build_proposal_models(
         "category": (sk["category"].annotation, ...),
         "weapon_req": (sk["weapon_req"].annotation, ...),
         "scaling_attr": (sk["scaling_attr"].annotation, ...),
-        "ap_cost": (int | None, Field(default=None, ge=1, le=_MAX_AP)),
         "shape": (builder.shape, ...),
         "effects": (_list_of(effect), Field(min_length=1, max_length=_MAX_EFFECTS)),
         "condition": (builder.condition | None, None),
         "trigger": (builder.trigger_union() | None, None),
-        "cost": (cost, Field(default_factory=cost)),
         "tags": (
             list[Annotated[str, Field(pattern=ID_PATTERN)]],
             Field(default_factory=list, max_length=_MAX_TAGS),
@@ -541,21 +549,24 @@ def _skill_id(body: Mapping[str, Any]) -> str:
     return LLM_ID_PREFIX + hashlib.sha256(text.encode("utf-8")).hexdigest()[:10]
 
 
-def _skill_data(proposal: BaseModel, ctx: ProposalContext) -> dict[str, Any]:
+def _skill_data(proposal: BaseModel, ctx: ProposalContext, fill: NumberFiller) -> dict[str, Any]:
     data = proposal.model_dump(mode="json", exclude_none=True)
     data["narrative"] = {"concept": data.pop("concept"), "cast_flavor": data.pop("cast_flavor")}
     data.update(tier=ctx.tier, rarity=ctx.rarity, rank=ctx.rank)
     data["provenance"] = {"origin": ctx.origin, "created_by": "llm"}
+    data = fill(data)
     data["id"] = _skill_id(data)
     return data
 
 
-def to_skill_def(proposal: BaseModel, ctx: ProposalContext) -> SkillDef:
-    """已驗證的提議 → :class:`SkillDef`（ID 由內容雜湊而來；同一份提議永遠得到相同 ID）。
+def to_skill_def(proposal: BaseModel, ctx: ProposalContext, fill: NumberFiller) -> SkillDef:
+    """已驗證的提議（只有結構）→ :class:`SkillDef`：``fill`` 補上數值（骰子、倍率、持續、AP、法力、
+    冷卻等；見 :mod:`trpg.skillgen.proposal_numbers`）。ID 由補完數值後的內容雜湊而來；同一份
+    提議加同一份數值永遠得到相同 ID。
 
     schema 層級的錯誤丟 :class:`pydantic.ValidationError`（:func:`evaluate_proposal` 轉成
     ``stage="skill"`` 的錯誤）。"""
-    return SkillDef.model_validate(_skill_data(proposal, ctx))
+    return SkillDef.model_validate(_skill_data(proposal, ctx, fill))
 
 
 _SUPPORTED_SKILL_KEYS = frozenset(
@@ -586,10 +597,12 @@ _SUPPORTED_SKILL_KEYS = frozenset(
 )
 
 
-def proposal_from_skill(skill: SkillDef) -> dict[str, Any]:
-    """手寫技能 → 提議 JSON（few-shot 範例與往返測試用）。用到提議模型沒有的欄位時丟
-    ``ValueError``。"""
+def proposal_from_skill(skill: SkillDef, library: ContentLibrary) -> dict[str, Any]:
+    """手寫技能 → 提議 JSON（few-shot 範例與結構往返測試用；數值欄位已移除）。用到提議模型沒有的
+    欄位時丟 ``ValueError``。要連同數值一起取得時用
+    :func:`~trpg.skillgen.proposal_numbers.split_numbers`。"""
     data = skill.model_dump(mode="json", exclude_defaults=True)
+    data, _ = split_numbers(data, library)
     unsupported = sorted(set(data) - _SUPPORTED_SKILL_KEYS)
     if unsupported:
         raise ValueError(f"{skill.id} 用到提議格式沒有的欄位：{', '.join(unsupported)}")
@@ -695,8 +708,13 @@ def evaluate_proposal(
     models: ProposalModels,
     library: ContentLibrary,
     ctx: ProposalContext,
+    *,
+    fill: NumberFiller | None = None,
 ) -> ProposalResult:
-    """驗證一份提議：提議格式 → 轉成技能 → 跨檔案驗證與預算（``validate_skill``）。"""
+    """驗證一份提議：提議格式 → 補數值並轉成技能 → 跨檔案驗證與預算（``validate_skill``）。
+
+    ``fill`` 補數值；省略時用保守的最小補值（``proposal_numbers.minimal_filler``，不保證通過預算；
+    正式流程由 4-L5 傳入預算器）。"""
     try:
         data: object = json.loads(raw) if isinstance(raw, str) else dict(raw)
     except json.JSONDecodeError as exc:
@@ -707,7 +725,7 @@ def evaluate_proposal(
     except ValidationError as exc:
         return ProposalResult(None, tuple(_pydantic_errors(exc, "proposal", data)))
     try:
-        skill = to_skill_def(proposal, ctx)
+        skill = to_skill_def(proposal, ctx, fill or minimal_filler(library))
     except ValidationError as exc:
         return ProposalResult(None, tuple(_pydantic_errors(exc, "skill", data)))
     violations = validate_skill(skill, library)
