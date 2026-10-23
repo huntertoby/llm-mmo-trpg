@@ -727,13 +727,13 @@ class StatusDef(ContentModel):
 
     Phase 3C-4a 的欄位：
 
-    - ``prevents_death``：不死——帶有者受到傷害、HP 會降到 0 時改為 1 並移除此狀態（墜落與致命
+    - ``prevents_death``：免死——帶有者受到傷害、HP 會降到 0 時改為 1 並移除此狀態（墜落與致命
       地形照樣生效）。
 
     Phase 3D-1 的欄位：
 
     - ``polarity``：增益／減益／中性分類（必填）。``steal_buff`` 只能奪取 ``buff``；``neutral``
-      （姿態、隱蔽、不死、靈魂連結）帶有來源或唯一性語意，不能被奪取。
+      （姿態、隱蔽、免死、靈魂連結）帶有來源或唯一性語意，不能被奪取。
 
     Phase 3D-8a 的欄位：
 

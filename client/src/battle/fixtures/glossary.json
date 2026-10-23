@@ -913,7 +913,7 @@
   },
   {
    "id": "undying",
-   "name_zh": "不死",
+   "name_zh": "免死",
    "description_zh": "受到致命傷害時 HP 留在 1，然後此狀態消失（墜落與致命地形除外）。",
    "tags": [
     "beneficial"

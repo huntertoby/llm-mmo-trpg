@@ -271,7 +271,7 @@ def _mend_ally(
 
 
 _UNPREVENTABLE_CAUSES = ("fall", "deadly_terrain")
-"""不死（``prevents_death``）擋不下、靈魂連結（``redirects_damage``）也不轉移的傷害：墜落與致命
+"""免死（``prevents_death``）擋不下、靈魂連結（``redirects_damage``）也不轉移的傷害：墜落與致命
 地形（Phase 3C-4a，保守）。"""
 
 
@@ -298,7 +298,7 @@ def _redirect(
     amount: int,
     effect: DamageEffect,
 ) -> list[EventBase]:
-    """把 ``amount`` 點傷害轉給連結者：直接扣 HP（不經護盾、抗性與元素修正）；連結者的不死照常
+    """把 ``amount`` 點傷害轉給連結者：直接扣 HP（不經護盾、抗性與元素修正）；連結者的免死照常
     生效，HP 歸零則倒下（連結者倒下時，連結立即消失）。沒有連結或沒有轉移時什麼都不做。"""
     if link is None or amount <= 0:
         return []
@@ -327,7 +327,7 @@ def _redirect(
 
 
 def _undying_status(ctx: Ctx, unit: UnitState, effect: DamageEffect) -> str | None:
-    """這次傷害讓 HP 降到 0、且身上有擋得下它的不死狀態時，回傳該狀態 ID（依狀態順序取第一個）。"""
+    """這次傷害讓 HP 降到 0、且身上有擋得下它的免死狀態時，回傳該狀態 ID（依狀態順序取第一個）。"""
     if unit.hp > 0 or effect.mode == "lethal" or effect.cause in _UNPREVENTABLE_CAUSES:
         return None
     for status in unit.statuses:
@@ -337,7 +337,7 @@ def _undying_status(ctx: Ctx, unit: UnitState, effect: DamageEffect) -> str | No
 
 
 def _cheat_death(ctx: Ctx, unit: UnitState, status_id: str, prevented: int) -> list[EventBase]:
-    """不死擋下致命傷害：發出 ``death_cheated``，移除該狀態（原因 ``spent``）。"""
+    """免死擋下致命傷害：發出 ``death_cheated``，移除該狀態（原因 ``spent``）。"""
     unit.statuses = [s for s in unit.statuses if s.status_id != status_id]
     return [
         ctx.emit(DeathCheated, unit_id=unit.id, status_id=status_id, prevented=max(prevented, 0)),
@@ -474,8 +474,8 @@ def _cleanse(ctx: Ctx, effect: EffectBase) -> list[EventBase]:
     removable = [
         s.status_id
         for s in unit.statuses
-        if not (d := ctx.rules.status_def(s.status_id)).beneficial and not d.stance
-    ]  # 姿態不被淨化移除（2E-2）
+        if ctx.rules.status_def(s.status_id).polarity == "debuff"
+    ]  # 只移除減益；增益與中性（隱蔽、姿態、免死、靈魂連結、蓄力）保留（玩法決定 #60）
     if not removable:
         return []
     unit.statuses = [s for s in unit.statuses if s.status_id not in removable]

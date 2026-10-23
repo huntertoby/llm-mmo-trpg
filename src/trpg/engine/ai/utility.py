@@ -1755,7 +1755,7 @@ def _supports(
         if _rewrite_supports(state, caster, skill, spec, target):
             return True
         if resolved.type == "cleanse" and any(
-            not state.ruleset.status_def(s.status_id).beneficial for s in target.statuses
+            state.ruleset.status_def(s.status_id).polarity == "debuff" for s in target.statuses
         ):
             return True
         if resolved.type == "apply_status" and spec.status is not None:
@@ -1823,7 +1823,7 @@ def _rewrite_supports(
     state: BattleState, caster: UnitState, skill: SkillDef, spec: EffectSpec, target: UnitState
 ) -> bool:
     """改寫規則型與資源原語（Phase 3C-4a、3D-1）對友方 ``target`` 有沒有用：這一輪還沒被給過 AP、
-    有可以重置或縮短的冷卻、還沒有不死、法力有空間……。"""
+    有可以重置或縮短的冷卻、還沒有免死、法力有空間……。"""
     check = _SUPPORT_CHECKS.get(spec.type)
     return check is not None and check(state, caster, skill, spec, target)
 

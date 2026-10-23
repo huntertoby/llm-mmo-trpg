@@ -1,4 +1,4 @@
-"""改寫規則型與資源原語：給 AP、重置冷卻、不死、靈魂連結、複製施放、額外反應、回復資源、
+"""改寫規則型與資源原語：給 AP、重置冷卻、免死、靈魂連結、複製施放、額外反應、回復資源、
 暫時給技能。"""
 
 from __future__ import annotations
@@ -49,7 +49,7 @@ if TYPE_CHECKING:
 def _rewrite_status(
     cast: Cast, kind: str, spec: EffectSpec, targets: list[UnitState]
 ) -> list[EffectBase]:
-    """``cheat_death``（不死）與 ``redirect_damage``（靈魂連結；對象不含施放者自己）。"""
+    """``cheat_death``（免死）與 ``redirect_damage``（靈魂連結；對象不含施放者自己）。"""
     if kind == CHEAT_DEATH:
         return [
             ApplyStatusEffect(

@@ -508,8 +508,8 @@ def _shield(lib: ContentLibrary, skill: SkillDef, spec: EffectSpec) -> str:
 
 
 def _cleanse(_lib: ContentLibrary, _skill: SkillDef, _spec: EffectSpec) -> str:
-    """淨化（清單 3.6）：移除的是所有不利的狀態（引擎移除非有益、非姿態的狀態）。"""
-    return "淨化：移除身上所有不利的狀態（增益與姿態不受影響）"
+    """淨化（玩法決定 #60）：只移除減益（``polarity: debuff``）；增益與中性狀態保留。"""
+    return "淨化：移除身上所有負面狀態（增益、姿態與其他中性狀態不受影響）"
 
 
 def _create_surface(lib: ContentLibrary, _skill: SkillDef, spec: EffectSpec) -> str:

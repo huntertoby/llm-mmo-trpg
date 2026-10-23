@@ -80,7 +80,7 @@ def test_shield_cleanse_and_default_durations() -> None:
     shield = _card("skill_charged_cleave").effects[0]
     assert shield.startswith("護盾（吸收量 1d4＋武器屬性加成，持續 2 回合")
     purify = _card("skill_purify").effects
-    assert purify[0].startswith("淨化：移除身上所有不利的狀態")
+    assert purify[0].startswith("淨化：移除身上所有負面狀態")
     assert purify[1] == "狀態「守護」（到帶有者的下回合開始）（友方）"
     assert _card("skill_tailwind").effects[0] == "狀態「加速」 2 回合（友方）"
     assert _card("skill_fury_stance").effects[0] == "狀態「狂怒姿態」（持續到取消）（自己）"

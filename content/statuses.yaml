@@ -48,13 +48,13 @@
 #   removed_by_element  元素清單：帶有者受到這些元素的傷害（數值 > 0）時立即移除此狀態
 #                       （StatusRemoved 原因 thawed）。冰凍用 [fire]。引擎不寫死狀態 ID，全由此欄位驅動
 # 3C-4a（改寫規則型原語；初值，未經模擬）：
-#   prevents_death  不死：帶有者受到傷害、HP 會降到 0 時改為 1，並移除此狀態（StatusRemoved 原因 spent，
+#   prevents_death  免死：帶有者受到傷害、HP 會降到 0 時改為 1，並移除此狀態（StatusRemoved 原因 spent，
 #                   事件 death_cheated）。墜落與致命地形照樣生效。只能由 cheat_death 原語施加（無 budget_points）
 # 3C-4b（redirect_damage；初值，未經模擬）：
 #   redirects_damage  靈魂連結：帶有者受到的傷害有 StatusInstance.amount‰ 轉給狀態來源（施放者，直接扣 HP），
 #                     來源倒下或離場時立即移除。只能由 redirect_damage 原語施加（無 budget_points）
 # 3D-1（資源互動）：
-#   polarity  分類：buff 增益（steal_buff 可奪取、dispel 可驅散）／debuff 減益／neutral 中性（姿態、隱蔽、不死、
+#   polarity  分類：buff 增益（steal_buff 可奪取、dispel 可驅散）／debuff 減益／neutral 中性（姿態、隱蔽、免死、
 #             靈魂連結等帶有來源或唯一性語意的狀態，不能被奪取或驅散）。每個狀態都必須填；buff 必須 beneficial: true、
 #             debuff 不可 beneficial。
 # 3D-8a（揭露）：
@@ -309,7 +309,7 @@ statuses:
     absorbs_damage: true
   - id: undying
     polarity: neutral
-    name_zh: 不死
+    name_zh: 免死
     description_zh: 受到致命傷害時 HP 留在 1，然後此狀態消失（墜落與致命地形除外）。
     duration: 2
     expires: turn_end
