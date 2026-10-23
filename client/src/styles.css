@@ -2047,7 +2047,17 @@ button.selected {
 }
 
 .turn-controls .speed-control button {
+  white-space: nowrap; /* 窄螢幕（欄寬 220）時按鈕文字不折成兩行 */
   padding: 2px 5px;
+}
+
+/* 窄螢幕右欄只有 220px：六顆播放按鈕再緊一點，才不會超出欄寬與視窗右緣（3-47 煙霧檢查發現） */
+.battle-screen.narrow .turn-controls .speed-control {
+  gap: 2px;
+}
+
+.battle-screen.narrow .turn-controls .speed-control button {
+  padding: 2px 3px;
 }
 
 /* 詢問視窗：水平置中、靠上；「移到下方」時靠下（在技能列上方） */

@@ -35,7 +35,9 @@ describe("排版煙霧檢查 evaluate", () => {
 
   it("播放列被擠出畫面或折成兩行 → FAIL", () => {
     expect(failedIds({ ...good(), speed: bx(1342, 890, 1592, 913) })).toEqual(["speed-visible"]);
-    const wrapped = { ...good(), speedButtons: [bx(0, 871, 36, 894), bx(40, 895, 76, 918)] };
+    // 容器在畫面內，但最後一顆按鈕超出播放列／視窗右緣
+    expect(failedIds({ ...good(), speedButtons: [bx(1342, 871, 1378, 894), bx(1560, 871, 1620, 894)] })).toEqual(["speed-visible"]);
+    const wrapped ={ ...good(), speedButtons: [bx(1342, 871, 1378, 894), bx(1380, 880, 1416, 894)] };
     expect(failedIds(wrapped)).toEqual(["speed-one-row"]);
   });
 
@@ -57,6 +59,12 @@ describe("排版煙霧檢查 evaluate", () => {
     // 滑過時說明卡根本沒出現：這項檢查沒有意義，不算通過
     expect(failedIds({ ...good(), moreMenu: { open: true, tooltips: 0, hintBefore: 0 } })).toEqual(["more-menu"]);
     expect(failedIds({ ...good(), hintWrappers: 40 })).toEqual(["no-hint-wrapper"]);
+  });
+
+  it("窄螢幕不顯示拖曳線：沒有才 PASS，出現反而 FAIL", () => {
+    const narrow: LayoutSnapshot = { ...good(), viewport: { width: 800, height: 600 }, speed: bx(572, 540, 792, 563), speedButtons: [572, 610, 648, 686, 724, 756].map((l) => bx(l, 540, l + 34, 563)), tileCard: { float: bx(108, 189, 378, 296), bar: bx(108, 270, 378, 296), barAlpha: 0.96 }, bottomHandle: null, sideHandle: null, heroHandle: null };
+    expect(failedIds(narrow)).toEqual([]);
+    expect(failedIds({ ...narrow, sideHandle: bx(1, 1, 9, 9) })).toEqual(["side-handle"]);
   });
 
   it("量不到元件時 FAIL，不當作通過", () => {

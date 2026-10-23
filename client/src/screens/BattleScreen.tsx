@@ -1152,7 +1152,7 @@ export function BattleScreen({ initial, onExit, exitLabel, runMode }: Props) {
           />}
         log={<BattleLog lines={lines} onHover={setLogHover} />}
       />
-      <div className={`battle-bottom${layout.bottomHeight < DEFAULT_LAYOUT.bottomHeight ? " short" : ""}`}>
+      <div className={`battle-bottom${layout.bottomHeight < DEFAULT_LAYOUT.bottomHeight || narrow ? " short" : ""}`}>
         <div className="battle-hero">
           <Hud view={shown} hero={shownHero} skills={skillNames} cards={cards} compact={narrow} />
           {!narrow && (

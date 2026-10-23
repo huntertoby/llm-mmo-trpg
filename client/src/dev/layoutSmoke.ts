@@ -8,6 +8,8 @@
 // 用內建瀏覽器（`mcp__Claude_Browser__*`）的 `javascript_tool` 呼叫；步驟見 docs/開發PM交接.md 6.2 第 5 點。
 // 不需要安裝任何套件。
 
+import { NARROW_WIDTH } from "../battle/skillTray";
+
 export interface Box {
   left: number;
   top: number;
@@ -65,10 +67,12 @@ function endTurnWide(s: LayoutSnapshot): CheckResult {
 }
 
 function speedVisible(s: LayoutSnapshot): CheckResult {
-  const label = "播放列在畫面內";
+  const label = "播放列與每顆按鈕都在畫面內、沒超出播放列";
   if (s.speed === null) return result("speed-visible", label, false, "找不到播放列");
   const view: Box = { left: 0, top: 0, right: s.viewport.width, bottom: s.viewport.height };
-  return result("speed-visible", label, inside(s.speed, view), `${fmt(s.speed)} 視窗 ${s.viewport.width}×${s.viewport.height}`);
+  const spill = s.speedButtons.filter((b) => !inside(b, view) || !inside(b, s.speed as Box)).length;
+  const detail = `${fmt(s.speed)} 視窗 ${s.viewport.width}×${s.viewport.height}，超出的按鈕 ${spill} 顆`;
+  return result("speed-visible", label, inside(s.speed, view) && spill === 0, detail);
 }
 
 function speedOneRow(s: LayoutSnapshot): CheckResult {
@@ -123,15 +127,22 @@ function noWrapper(s: LayoutSnapshot): CheckResult {
   return result("no-hint-wrapper", "說明卡不外包元素（.hint-tip 數量 0）", s.hintWrappers === 0, `${s.hintWrappers} 個`);
 }
 
+/** 窄螢幕（視窗寬 < `NARROW_WIDTH`）不顯示拖曳線：沒有才對，不是「找不到」。 */
+function handleCheck(s: LayoutSnapshot, check: (s: LayoutSnapshot) => CheckResult, handle: Box | null): CheckResult {
+  const r = check(s);
+  if (s.viewport.width >= NARROW_WIDTH) return r;
+  return { ...r, pass: handle === null, detail: handle === null ? "窄螢幕不顯示拖曳線（略過）" : "窄螢幕卻出現拖曳線" };
+}
+
 /** 純函式：把量測結果轉成逐項 PASS／FAIL。 */
 export function evaluate(s: LayoutSnapshot): CheckResult[] {
   return [
     endTurnWide(s),
     speedVisible(s),
     speedOneRow(s),
-    bottomHandleFlush(s),
-    sideHandleFlush(s),
-    heroHandleFlush(s),
+    handleCheck(s, bottomHandleFlush, s.bottomHandle),
+    handleCheck(s, sideHandleFlush, s.sideHandle),
+    handleCheck(s, heroHandleFlush, s.heroHandle),
     tileHint(s),
     moreMenu(s),
     noWrapper(s),
@@ -245,10 +256,25 @@ export interface CaseOptions {
 }
 
 const LAYOUT_KEY = "trpg.battleLayout";
+/** 固定種子：每次開同一場戰鬥，量測才可比較（「更多動作」有沒有可用的動作也看種子）。 */
+export const SMOKE_SEED = 20261024;
+/** 起始武器：弓（遠程）一開場就有「瞄準」可放進「更多動作」，選單測得到。 */
+export const SMOKE_WEAPON = "弓";
+
+/** 開始畫面的種子欄（React 受控輸入：要用原生 setter 再送 input 事件）。 */
+function setSeed(doc: Document, seed: number): void {
+  const input = doc.querySelector<HTMLInputElement>(".seed-row input");
+  if (input === null) return;
+  Object.getOwnPropertyDescriptor(HTMLInputElement.prototype, "value")?.set?.call(input, String(seed));
+  input.dispatchEvent(new Event("input", { bubbles: true }));
+}
 
 /** 從開始畫面進入一場戰鬥（選前兩個關鍵字）。 */
-export async function startBattle(doc: Document = document): Promise<void> {
+export async function startBattle(doc: Document = document, seed = SMOKE_SEED, weapon = SMOKE_WEAPON): Promise<void> {
   for (let i = 0; i < 30 && doc.querySelector(".run-keyword") === null; i++) await sleep(200);
+  setSeed(doc, seed);
+  [...doc.querySelectorAll<HTMLElement>(".run-weapon")].find((b) => (b.textContent ?? "").startsWith(weapon))?.click();
+  await sleep(300);
   const keywords = doc.querySelectorAll<HTMLElement>(".run-keyword");
   keywords[0]?.click();
   await sleep(200);
@@ -276,10 +302,10 @@ export async function runCase(title: string, options: CaseOptions = {}): Promise
 
 declare global {
   interface Window {
-    __layoutSmoke?: { runCase: typeof runCase; evaluate: typeof evaluate; formatTable: typeof formatTable };
+    __layoutSmoke?: { runCase: typeof runCase; startBattle: typeof startBattle; evaluate: typeof evaluate; formatTable: typeof formatTable };
   }
 }
 
 export function installLayoutSmoke(win: Window): void {
-  win.__layoutSmoke = { runCase, evaluate, formatTable };
+  win.__layoutSmoke = { runCase, startBattle, evaluate, formatTable };
 }
