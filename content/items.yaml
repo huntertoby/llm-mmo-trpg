@@ -59,6 +59,39 @@ items:
     affixes:
       - {affix: affix_max_hp, value: 8}
       - {affix: affix_attr_str, value: 1}
+  # --- Phase 3I-2 副手本體（offhands.yaml；沒有詞條，只有副手的常駐特性）---
+  - id: item_offhand_round_shield
+    name_zh: 圓盾
+    slot_type: offhand
+    offhand: round_shield
+    kind: round_shield
+    form: wood
+    material: wood
+    tags: [shield]
+  - id: item_offhand_tower_shield
+    name_zh: 塔盾
+    slot_type: offhand
+    offhand: tower_shield
+    kind: kite_shield
+    form: tower
+    material: iron
+    tags: [shield]
+  - id: item_offhand_tome
+    name_zh: 法書
+    slot_type: offhand
+    offhand: tome
+    kind: tome
+    form: book
+    material: leather
+    tags: [tome]
+  - id: item_offhand_orb
+    name_zh: 法器珠
+    slot_type: offhand
+    offhand: orb
+    kind: orb
+    form: ball
+    material: crystal
+    tags: [orb]
   # --- 頭 ---
   - id: item_test_helm
     name_zh: 試煉頭盔

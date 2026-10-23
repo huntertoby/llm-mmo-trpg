@@ -21,6 +21,7 @@ from trpg.api.gear_schemas import (
     GearCustomItem,
     GearItemInfo,
     GearItemLine,
+    GearOffhandInfo,
     GearSlotInfo,
     GearWeaponInfo,
     GearWeaponLook,
@@ -76,6 +77,13 @@ def _item_info(library: ContentLibrary, item: ItemDef) -> GearItemInfo:
         slot_type=item.slot_type,
         weapon=item.weapon,
         weapon_name_zh=None if weapon is None else weapon.name_zh,
+        offhand=item.offhand,
+        offhand_name_zh=None if item.offhand_def is None else item.offhand_def.name_zh,
+        offhand_traits_zh=(
+            ()
+            if item.offhand_def is None
+            else item.offhand_def.trait_lines_zh(library.ruleset.core)
+        ),
         two_handed=weapon is not None and weapon.two_handed,
         paired=item.paired,
         tags=item.tags,
@@ -121,6 +129,12 @@ def gear_catalog(library: ContentLibrary) -> GearCatalog:
             )
             for w in sorted(library.weapons.values(), key=lambda w: w.id)
         ),
+        offhands=tuple(
+            GearOffhandInfo(
+                id=o.id, name_zh=o.name_zh, traits_zh=o.trait_lines_zh(library.ruleset.core)
+            )
+            for o in sorted(library.offhands.values(), key=lambda o: o.id)
+        ),
         max_affixes_per_item=rules.max_affixes_per_item,
         max_cost_affixes=rules.caps.cost_affixes,
         diminishing_permille=rules.diminishing_permille,
@@ -150,13 +164,15 @@ def _affix_info(affix: AffixDef) -> GearAffixInfo:
 # ---------------------------------------------------------------------------
 
 
-def _custom_item(slot: Slot, custom: GearCustomItem) -> ItemDef:
+def _custom_item(library: ContentLibrary, slot: Slot, custom: GearCustomItem) -> ItemDef:
     """自訂物品 → :class:`ItemDef`（schema 不合法時拋出 :class:`ValidationError`）。"""
     return ItemDef(
         id=f"custom_{slot}",
         name_zh=custom.name_zh.strip() or "自訂物品",
         slot_type=SLOT_TYPE_OF[slot],
         weapon=custom.weapon,
+        offhand=custom.offhand,
+        offhand_def=library.offhands.get(custom.offhand) if custom.offhand is not None else None,
         paired=custom.paired,
         tags=custom.tags,
         legendary=custom.legendary,
@@ -184,12 +200,14 @@ def _build_custom(
 ) -> ItemDef | None:
     label = f"{SLOT_ZH[slot]}的自訂物品「{custom.name_zh}」"
     try:
-        item = _custom_item(slot, custom)
+        item = _custom_item(library, slot, custom)
     except ValidationError as exc:
         problems += [f"{label}：{e['msg'].removeprefix('Value error, ')}" for e in exc.errors()]
         return None
     affixes = library.affixes
-    found = item_problems(item, affixes, library.weapons, library.ruleset.equipment)
+    found = item_problems(
+        item, affixes, library.weapons, library.ruleset.equipment, library.offhands
+    )
     if not item.affixes:
         found.append(f"{item.name_zh}：至少要掛 1 條詞條")
     if library.appearance is not None:

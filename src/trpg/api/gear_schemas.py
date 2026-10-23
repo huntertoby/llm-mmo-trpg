@@ -22,6 +22,7 @@ __all__ = [
     "GearCustomItem",
     "GearItemInfo",
     "GearItemLine",
+    "GearOffhandInfo",
     "GearSlotInfo",
     "GearWeaponInfo",
     "GearWeaponLook",
@@ -42,11 +43,13 @@ class GearAffixPick(_ApiModel):
 class GearCustomItem(_ApiModel):
     """手動組的物品（欄位的物品種類由欄位決定，所以不必填）。
 
-    ``weapon``：主手的武器 id；``paired``：成對武器；``kind``：外觀造型（只影響圖示，選填）。
+    ``weapon``：主手的武器 id；``offhand``：副手的種類 id（``offhands.yaml``，Phase 3I-2）；
+    ``paired``：成對武器；``kind``：外觀造型（只影響圖示，選填）。
     """
 
     name_zh: str = Field(min_length=1, max_length=20)
     weapon: str | None = None
+    offhand: str | None = None
     paired: bool = False
     tags: tuple[str, ...] = ()
     legendary: bool = False
@@ -102,6 +105,14 @@ class GearWeaponInfo(_ApiModel):
     look: GearWeaponLook | None = None
 
 
+class GearOffhandInfo(_ApiModel):
+    """副手種類（Phase 3I-2，``offhands.yaml``）：手動組副手時的選單。"""
+
+    id: str
+    name_zh: str
+    traits_zh: tuple[str, ...] = ()
+
+
 class GearAffixInfo(_ApiModel):
     """白名單的一條詞條。``name_zh`` 含 ``{n}``（數值）；沒有 ``value_min`` 的是固定效果。"""
 
@@ -131,6 +142,10 @@ class GearItemInfo(_ApiModel):
     slot_type: SlotType
     weapon: str | None = None
     weapon_name_zh: str | None = None
+    offhand: str | None = None
+    offhand_name_zh: str | None = None
+    offhand_traits_zh: tuple[str, ...] = ()
+    """副手物品的特性行（Phase 3I-2；數值取自副手資料，圓盾的「目前」值要進戰鬥才有）。"""
     two_handed: bool = False
     paired: bool = False
     tags: tuple[str, ...] = ()
@@ -146,6 +161,7 @@ class GearCatalog(_ApiModel):
     items: tuple[GearItemInfo, ...]
     affixes: tuple[GearAffixInfo, ...]
     weapons: tuple[GearWeaponInfo, ...]
+    offhands: tuple[GearOffhandInfo, ...] = ()
     max_affixes_per_item: int
     max_cost_affixes: int
     diminishing_permille: tuple[int, ...]

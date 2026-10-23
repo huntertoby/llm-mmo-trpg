@@ -28,7 +28,7 @@ from typing import Annotated, Literal
 
 from pydantic import Field, field_validator, model_validator
 
-from trpg.content.battle import ID_PATTERN, Dice, WeaponDef
+from trpg.content.battle import ID_PATTERN, Dice, OffhandDef, WeaponDef
 from trpg.content.schemas import ContentModel
 from trpg.content.skills import (
     ON_CAST_TAG,
@@ -748,6 +748,9 @@ class ItemDef(ContentModel):
     - ``slot_type``：物品種類，決定能放的欄位（8.23）。
     - ``weapon``：武器類物品（``slot_type: weapon``）引用 ``weapons.yaml``，基礎數值沿用武器資料；
       其他種類不可填。
+    - ``offhand``：副手類物品（``slot_type: offhand``）引用 ``offhands.yaml``（圓盾、塔盾、法書、
+      法器珠；Phase 3I-2）；``offhand_def`` 是載入時嵌進去的定義（資料檔不要寫），讓裝備快照與戰鬥
+      紀錄自成一體。沒有 ``offhand`` 的副手物品只有詞條，沒有副手基礎特性。
     - ``paired``：成對武器（雙匕首、雙手槍）：和雙手武器一樣占用副手。
     - ``tags``：物品標籤（例如盾 ``shield``，給「限盾」的詞條用）。
     - ``legendary``：傳說物品（可掛改變規則類詞條）。
@@ -762,6 +765,8 @@ class ItemDef(ContentModel):
     name_zh: str = Field(min_length=1)
     slot_type: SlotType
     weapon: str | None = Field(default=None, pattern=ID_PATTERN)
+    offhand: str | None = Field(default=None, pattern=ID_PATTERN)
+    offhand_def: OffhandDef | None = None
     paired: bool = False
     tags: tuple[str, ...] = ()
     legendary: bool = False
@@ -777,6 +782,10 @@ class ItemDef(ContentModel):
     def _check(self) -> ItemDef:
         if (self.slot_type == "weapon") != (self.weapon is not None):
             raise ValueError(f"物品 {self.id}：weapon 只在 slot_type: weapon 時填寫（且必填）")
+        if self.offhand is not None and self.slot_type != "offhand":
+            raise ValueError(f"物品 {self.id}：只有副手類物品能填 offhand")
+        if self.offhand_def is not None and self.offhand_def.id != self.offhand:
+            raise ValueError(f"物品 {self.id}：offhand_def 必須是 offhand（{self.offhand}）的定義")
         if self.paired and self.slot_type != "weapon":
             raise ValueError(f"物品 {self.id}：只有武器能是成對武器（paired）")
         _unique([r.affix for r in self.affixes], f"物品 {self.id} 的詞條")
@@ -968,9 +977,12 @@ def item_problems(
     affixes: Mapping[str, AffixDef],
     weapons: Mapping[str, WeaponDef],
     rules: EquipmentRules,
+    offhands: Mapping[str, OffhandDef] | None = None,
 ) -> list[str]:
-    """物品本身的問題（跨檔案：詞條存在、可掛、數值在範圍內、條數上限、武器存在）。"""
+    """物品本身的問題（跨檔案：詞條存在、可掛、數值在範圍內、條數上限、武器與副手存在）。"""
     problems: list[str] = []
+    if item.offhand is not None and offhands is not None and item.offhand not in offhands:
+        problems.append(f"物品 {item.id}：未知的副手 {item.offhand}")
     weapon: WeaponDef | None = None
     if item.weapon is not None:
         weapon = weapons.get(item.weapon)

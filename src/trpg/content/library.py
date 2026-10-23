@@ -16,6 +16,8 @@ from pydantic import PrivateAttr, model_validator
 from trpg.content.affix_names import resolve_affix_names
 from trpg.content.appearance import AppearanceTable, item_appearance_problems
 from trpg.content.battle import (
+    OffhandDef,
+    OffhandTable,
     StatusDef,
     StatusTable,
     SummonLook,
@@ -456,6 +458,8 @@ class ContentLibrary:
     """技能工坊「裝上試玩」的設定（``workshop.yaml``，Phase 3F-1）。"""
     affixes: dict[str, AffixDef] = field(default_factory=dict)
     """詞條白名單（``affixes.yaml``，Phase 3G-G1）。"""
+    offhands: dict[str, OffhandDef] = field(default_factory=dict)
+    """副手定義（``offhands.yaml``，Phase 3I-2）；物品的 ``offhand_def`` 由這裡嵌入。"""
     items: dict[str, ItemDef] = field(default_factory=dict)
     """物品（``items.yaml``，Phase 3G-G1；目前只有測試用物品）。"""
     appearance: AppearanceTable | None = None
@@ -562,6 +566,7 @@ def load_library(  # noqa: PLR0915
     hit_table = load("rules/hit_table.yaml", HitTable)
     terrain = load("terrain.yaml", TerrainTable)
     weapons = load("weapons.yaml", WeaponTable)
+    offhands = load("offhands.yaml", OffhandTable)
     statuses = load("statuses.yaml", StatusTable)
     objects = load("objects.yaml", ObjectTable)
     surfaces = load("surfaces.yaml", SurfaceTable)
@@ -618,7 +623,13 @@ def load_library(  # noqa: PLR0915
     except ValueError as exc:
         raise ContentError(root / "rules", str(exc)) from exc
     affixes = affix_table.by_id()
-    items = item_table.by_id()
+    offhand_map = offhands.by_id()
+    items = {
+        i.id: i
+        if i.offhand is None
+        else i.model_copy(update={"offhand_def": offhand_map.get(i.offhand)})
+        for i in item_table.items
+    }
     weapon_map = weapons.by_id()
     _check_affixes(root, affixes, ruleset, weapon_map)
     try:  # 詞條文字的欄位代入（Phase 3-41a）：數字與名稱從資料填，不寫死在 name_zh
@@ -626,7 +637,7 @@ def load_library(  # noqa: PLR0915
     except (ValueError, KeyError) as exc:
         raise ContentError(root / "affixes.yaml", str(exc)) from exc
     for item in item_table.items:
-        problems = item_problems(item, affixes, weapon_map, equipment_rules)
+        problems = item_problems(item, affixes, weapon_map, equipment_rules, offhand_map)
         if problems:
             raise ContentError(root / "items.yaml", "；".join(problems))
     _check_appearance(root, appearance, item_table, keywords)
@@ -725,6 +736,7 @@ def load_library(  # noqa: PLR0915
         roguelite=roguelite,
         workshop=workshop,
         affixes=affixes,
+        offhands=offhand_map,
         items=items,
         appearance=appearance,
         dev_starters=dev_starters,

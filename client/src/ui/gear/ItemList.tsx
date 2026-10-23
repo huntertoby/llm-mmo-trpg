@@ -37,6 +37,11 @@ export function ItemList({ catalog, slot, selection, onPick }: Props) {
                 {item.weapon_name_zh != null && <span className="muted small">（{item.weapon_name_zh}{item.two_handed ? "・雙手" : ""}{item.paired ? "・成對" : ""}）</span>}
                 {item.legendary && <span className="gear-legend">傳說</span>}
               </span>
+              {item.offhand_name_zh != null && (
+                <span className="gear-row-affixes muted small" data-testid="item-offhand-traits">
+                  {item.offhand_name_zh}：{item.offhand_traits_zh.join("；")}
+                </span>
+              )}
               <span className="gear-row-affixes muted small">{itemSummary(item)}</span>
               {changes.map((c, i) => (
                 <span key={i} className={`gear-row-change ${c.kind}`}>

@@ -17,6 +17,7 @@ function candidate(affixIds: string[]): GearItemInfo {
     name_zh: "測試物",
     slot_type: "head",
     two_handed: false,
+    offhand_traits_zh: [],
     paired: false,
     tags: [],
     legendary: false,

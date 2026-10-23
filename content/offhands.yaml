@@ -1,0 +1,33 @@
+# 副手表（Phase 3I-2，docs/design/08-裝備.md 8.11 副手表；數值為初值，未經模擬）。
+# 欄位：id、name_zh、scaling_attr（縮放屬性）、secondary_scaling_attr 與 attr_mode（雙屬性規則同武器：
+#   同類取較高 max、一物理一心智取平均 mean，schema 檢查）。
+# 常駐特性（全部選填，引擎只讀參數）：
+#   block_bonus {permille_per_point, max_permille}   圓盾：格擋反應多減傷（‰）＝ 縮放屬性值 × permille_per_point，最多 max_permille
+#   ranged_cover                                     塔盾：遠程攻擊打你時命中修正同半掩護（rules/core.yaml 的 half_cover_hit_penalty）；
+#                                                    攻擊者站得比你高 1 層以上時無視；與場上掩護物不疊加
+#   move_penalty                                     塔盾：你的移動點數 −N
+#   spell_damage_permille                            法書：你的法術技傷害 +N‰（計入全身 +50% 上限）
+#   spell_range_bonus                                法器珠：你的法術技施放距離 +N（不加範圍大小；射程為自身的技能不受影響）
+# 物品（items.yaml）用 offhand: <id> 引用；載入時把定義嵌進物品，戰鬥紀錄的快照因此自成一體。
+offhands:
+  - id: round_shield
+    name_zh: 圓盾
+    scaling_attr: str
+    secondary_scaling_attr: con
+    attr_mode: max
+    block_bonus: {permille_per_point: 5, max_permille: 100}
+  - id: tower_shield
+    name_zh: 塔盾
+    scaling_attr: con
+    ranged_cover: true
+    move_penalty: 1
+  - id: tome
+    name_zh: 法書
+    scaling_attr: int
+    spell_damage_permille: 100
+  - id: orb
+    name_zh: 法器珠
+    scaling_attr: int
+    secondary_scaling_attr: wil
+    attr_mode: max
+    spell_range_bonus: 1

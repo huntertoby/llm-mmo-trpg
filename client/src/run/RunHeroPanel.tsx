@@ -79,6 +79,18 @@ export function RunHeroPanel({ hero }: { hero: RunHero }) {
           ))}
         </div>
       )}
+      {(hero.offhand_traits_zh ?? []).length > 0 && (
+        <div className="weapon-traits small muted" data-testid="run-offhand-traits">
+          <div>
+            <b>副手：{hero.offhand_name_zh}</b>
+          </div>
+          {(hero.offhand_traits_zh ?? []).map((line) => (
+            <div key={line}>
+              <RuleText text={line} />
+            </div>
+          ))}
+        </div>
+      )}
       <div className="run-attrs small">
         {ATTRIBUTES.map((a) => (
           <span key={a.id}>

@@ -59,6 +59,8 @@ export function UnitInfo({ unit, names, heroId, skills, cards, view }: Props) {
     ["武器", unit.weapon_name_zh],
     ...unit.weapon_traits_zh.map((line): [string, ReactNode] => ["　特性", <RuleText key={line} text={line} />]),
     ...(hasMagazine(unit) ? [["　彈匣", ammoText(unit).replace("彈匣 ", "")] as [string, ReactNode]] : []),
+    ...(unit.offhand_name_zh === "" ? [] : [["副手", unit.offhand_name_zh] as [string, ReactNode]]),
+    ...unit.offhand_traits_zh.map((line): [string, ReactNode] => ["　特性", <RuleText key={line} text={line} />]),
     ["位置", `(${unit.pos.x}, ${unit.pos.y})`],
     ["朝向", facingText(unit)],
   ];

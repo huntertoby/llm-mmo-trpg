@@ -196,7 +196,8 @@ def test_test_items_cover_every_slot_with_1_to_3_affixes() -> None:
     kinds = Counter(i.slot_type for i in items)
     assert set(kinds) == set(SLOT_TYPE_OF.values())
     assert kinds["ring"] >= 2  # 兩個戒指欄需要兩枚不同的戒指
-    assert all(1 <= len(i.affixes) <= 3 for i in items)
+    # 副手本體（3I-2，offhands.yaml）只有常駐特性，可以沒有詞條
+    assert all(1 <= len(i.affixes) <= 3 or (i.offhand is not None and not i.affixes) for i in items)
     implemented = {  # G1、G2、G3a、G3b
         "stat",
         "conditional",

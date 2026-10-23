@@ -508,7 +508,7 @@ class TargetOut(_ApiModel):
 
 class CoverOut(_ApiModel):
     penalty: int
-    object_id: ObjectId
+    object_id: ObjectId | None = None
     kind: str
     name_zh: str
     pos: XY

@@ -58,6 +58,7 @@ from trpg.engine.rules.facing import face_toward
 from trpg.engine.rules.geometry import XY, has_line_of_sight, manhattan
 from trpg.engine.rules.perks import attribute_perk
 from trpg.engine.rules.statuses import (
+    effective_attribute,
     skip_turn_status,
     weapon_attribute,
     weapon_scale_attr,
@@ -97,6 +98,8 @@ __all__ = [
 ]
 
 PERMILLE = 1000
+BLOCK_REACTION = "block"
+"""格擋反應的 ID（圓盾的格擋強化只作用在它身上，Phase 3I-2）。"""
 
 
 class PauseForDecision(TrpgError):
@@ -334,7 +337,12 @@ def block_multiplier(
     definition = _react(ctx, target, events, attacker, effect="reduce_damage")
     if not isinstance(definition, ReactionDef):
         return PERMILLE
-    return PERMILLE - definition.damage_reduction_permille
+    reduction = definition.damage_reduction_permille
+    offhand = target.gear.offhand
+    if definition.id == BLOCK_REACTION and offhand is not None:  # 圓盾的格擋強化（3I-2）
+        rules = ctx.state.ruleset
+        reduction += offhand.block_extra_permille(lambda a: effective_attribute(rules, target, a))
+    return max(0, PERMILLE - reduction)
 
 
 def hit_reactions(ctx: Ctx, attacker: UnitState, target: UnitState, *, melee: bool) -> None:

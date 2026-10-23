@@ -175,6 +175,11 @@ def shape_reach(state: BattleState, skill: SkillDef, caster: UnitState) -> int:
         return 0
     base = _base_reach(skill, caster)
     delta = modifiers.range_delta(state, caster, modifiers.skill_use(skill))
+    orb = caster.gear.offhand
+    if (
+        orb is not None and skill.category == "spell" and reach != 0
+    ):  # 法器珠（3I-2）：射程 0＝以自身為中心，不受影響
+        delta += orb.spell_range_bonus
     return max(1, base + delta) if delta else base
 
 
