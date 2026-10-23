@@ -137,6 +137,8 @@ def test_prompt_record() -> None:
 # 快照：改 prompt（系統指令、區塊格式、世界觀資料）必須同時改 PROMPT_VERSION 並新增一筆快照。
 SNAPSHOTS = {
     "skill-proposal/1": "d3fd8e0311a738001661089c87839459f6666cf882b9d014b3fe3f77d088fd66",
+    # 4-L5b：系統指令說明 form（型態）與 available 的骨架結構
+    "skill-proposal/2": "bddf7bbb943b2a3e769a1a9bf384488dec4de4e23d97213ed66dbed018601546",
 }
 
 

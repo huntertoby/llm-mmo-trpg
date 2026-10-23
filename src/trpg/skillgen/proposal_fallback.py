@@ -241,7 +241,7 @@ def _finish(library: ContentLibrary, draft: dict[str, Any], seed: int) -> SkillD
         if not violations:
             return skill
         codes = tuple(sorted({v.rule for v in violations}))
-        if repairs or not all(is_repairable(c) for c in codes):
+        if repairs or not all(is_repairable(c, library) for c in codes):
             return None
         repairs = codes
     return None  # pragma: no cover - 迴圈最多兩次，第二次一定 return

@@ -10,6 +10,7 @@ from typing import Any
 import pytest
 
 from tests.engine.helpers import library
+from tests.skillgen.helpers import general_effect_tags, standard_form, union_tags
 from trpg.content.library import ContentLibrary
 from trpg.content.skills import SkillDef
 from trpg.skillgen.proposal import (
@@ -53,10 +54,12 @@ def _same(a: SkillDef, b: SkillDef) -> bool:
     return a.model_dump(exclude=skip) == b.model_dump(exclude=skip)
 
 
-def _effect_branches(schema: dict[str, Any], key: str = "effects") -> dict[str, str]:
-    items = schema["properties"][key]["items"]
-    mapping: dict[str, str] = items["discriminator"]["mapping"]
-    return mapping
+def _special_ids() -> set[str]:
+    return {
+        p.id
+        for p in _lib().ruleset.primitives.primitives
+        if p.allowed_shapes is not None or p.position or p.sole_effect or p.others_affect
+    }
 
 
 # ---------------------------------------------------------------------------
@@ -68,7 +71,9 @@ def test_one_branch_per_primitive_from_yaml() -> None:
     lib = _lib()
     schema = _models().json_schema()
     primitives = lib.ruleset.primitives.by_id()
-    assert set(_effect_branches(schema)) == set(primitives)
+    # 一般型態只有沒有組合規則的原語；有組合規則的原語在自己的型態（Phase 4-L5b）
+    assert general_effect_tags(schema) == set(primitives) - _special_ids()
+    assert {f"Effect_{i}" for i in primitives} <= set(schema["$defs"])
     for primitive in primitives.values():
         model = schema["$defs"][f"Effect_{primitive.id}"]
         # 每一支只有該原語自己的非數值參數（加上 type、affects、condition）
@@ -103,7 +108,7 @@ def test_proposal_has_no_numeric_fields() -> None:
         assert numeric.isdisjoint(schema["$defs"][key]["properties"]), key
     assert {"dice", "duration", "distance", "permille", "multiplier_permille"} <= all_numeric
     assert set(schema["$defs"]["Scaling"]["properties"]) == {"by"}
-    assert set(schema["properties"]).isdisjoint({"ap_cost", "cost"})
+    assert set(standard_form(schema)["properties"]).isdisjoint({"ap_cost", "cost"})
     assert "range_delta" not in schema["$defs"]["Variant"]["properties"]
     for key, definition in schema["$defs"].items():
         if key.startswith("Trigger_"):
@@ -159,8 +164,10 @@ def test_variant_effects_exclude_lookup_by_skill_id() -> None:
     assert flagged == {"copy_skill", "delayed_damage", "zone"}
     assert flagged.isdisjoint(models.variant_primitive_ids)
     assert flagged <= set(models.primitive_ids)
-    variant = models.json_schema()["$defs"]["Variant"]["properties"]["add_effect"]["anyOf"][0]
-    assert flagged.isdisjoint(variant["discriminator"]["mapping"])
+    schema = models.json_schema()
+    variant = schema["$defs"]["Variant"]["properties"]["add_effect"]["anyOf"][0]
+    name = str(variant["$ref"]).rsplit("/", 1)[-1]
+    assert flagged.isdisjoint(union_tags(schema["$defs"][name]))
 
 
 def test_primitive_subset_shrinks_schema() -> None:
@@ -178,6 +185,7 @@ def test_primitive_subset_shrinks_schema() -> None:
 # ---------------------------------------------------------------------------
 
 CLEAVE = {
+    "form": "standard",
     "name_zh": "橫掃劈砍",
     "concept": "巨劍掃出一道弧，把前方的人一起削倒",
     "cast_flavor": "盜賊頭目雙手揮動巨劍，朝面前橫掃",

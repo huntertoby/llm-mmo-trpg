@@ -28,7 +28,9 @@ from trpg.skillgen.proposal import (
     PROPOSAL_KINDS,
     ProposalModels,
     build_proposal_models,
+    kind_choices,
 )
+from trpg.skillgen.proposal_forms import form_hint, plan_forms
 from trpg.skillgen.proposal_numbers import numeric_param_names
 
 __all__ = [
@@ -85,7 +87,8 @@ class ProposalSubset:
     """:func:`select_subset` 的結果（欄位都是排序後的 tuple）。
 
     ``kind`` 是解析後的技能種類；``dropped`` 是（ID，中文原因）：題目要的或候選的東西沒進子集的
-    原因，供報告與除錯；``tokens`` 是 schema ＋ ``available`` 的估算。
+    原因，供報告與除錯；``tokens`` 是 schema ＋ ``available`` 的估算；``rarity`` 是題目的稀有度
+    （Phase 4-L5b：``apply_status`` 只列這個稀有度能用的狀態；``None`` 為不篩）。
     """
 
     kind: str
@@ -97,6 +100,7 @@ class ProposalSubset:
     keywords: tuple[str, ...]
     dropped: tuple[tuple[str, str], ...] = ()
     tokens: int = 0
+    rarity: SkillRarity | None = None
 
 
 # ---------------------------------------------------------------------------
@@ -113,6 +117,7 @@ def build_subset_models(library: ContentLibrary, subset: ProposalSubset) -> Prop
         conditions=subset.conditions,
         triggers=subset.triggers,
         skeletons=subset.skeletons,
+        rarity=subset.rarity,
     )
 
 
@@ -129,8 +134,9 @@ def available_payload(library: ContentLibrary, subset: ProposalSubset) -> dict[s
     triggers = rules.skill_triggers.by_id()
     keywords = rules.keywords.by_id()
     return {
+        "forms": _form_entries(library, subset),
         "skeletons": [
-            {"id": i, "hint": library.skeletons[i].description_zh} for i in sorted(subset.skeletons)
+            _skeleton_entry(library, library.skeletons[i], subset) for i in sorted(subset.skeletons)
         ],
         "primitives": [_primitive_entry(primitives[i]) for i in sorted(subset.primitives)],
         "shapes": [{"id": i, "hint": shapes[i].llm_hint} for i in sorted(subset.shapes)],
@@ -143,6 +149,73 @@ def available_payload(library: ContentLibrary, subset: ProposalSubset) -> dict[s
             for i in sorted(subset.keywords)
         ],
     }
+
+
+def _form_entries(library: ContentLibrary, subset: ProposalSubset) -> list[dict[str, str]]:
+    """型態（Phase 4-L5b）：``form`` 的可用值與說明（schema 不進 prompt，模型只看得到這裡）。"""
+    plans, _ = plan_forms(
+        library,
+        primitives=subset.primitives,
+        shapes=subset.shapes,
+        kinds=kind_choices(library, subset.skeletons),
+    )
+    return [{"id": p.id, "hint": form_hint(library, p)} for p in plans]
+
+
+def _percent(permille: int) -> str:
+    return f"{permille / 10:g}%"
+
+
+def _skeleton_entry(
+    library: ContentLibrary, skeleton: SkeletonDef, subset: ProposalSubset
+) -> dict[str, Any]:
+    """骨架的說明與結構（Phase 4-L5b）：核心原語與最低占比、附帶原語與數量上限、形狀；清單只列
+    子集內的項目。"""
+    available = set(subset.primitives)
+    core = [i for i in skeleton.core.primitives if i in available]
+    core_note = "至少要有一個核心效果"
+    if skeleton.core.min_share_permille:
+        core_note += (
+            f"，核心效果的強度至少占全部效果的 {_percent(skeleton.core.min_share_permille)}"
+        )
+    if skeleton.core.affects:
+        core_note += f"；核心效果的對象只能是 {'、'.join(skeleton.core.affects)}"
+    if skeleton.core.beneficial_only:
+        core_note += "；核心施加的狀態與表面必須是有益的"
+    return {
+        "id": skeleton.id,
+        "hint": library.skeletons[skeleton.id].description_zh,
+        "core": {"primitives": core, "note": core_note + "。"},
+        "secondary": _secondary_entry(library, skeleton, available),
+        "shapes": [s for s in skeleton.shapes if s in set(subset.shapes)],
+    }
+
+
+def _secondary_entry(
+    library: ContentLibrary, skeleton: SkeletonDef, available: set[str]
+) -> dict[str, Any]:
+    rules = skeleton.secondary
+    if rules.max_count <= 0:
+        return {"primitives": [], "note": "不能有附帶效果。"}
+    defs = library.ruleset.primitives.by_id()
+    allowed: list[str] | str = "不限"
+    if rules.primitives is not None:
+        allowed = [
+            i
+            for i in rules.primitives
+            if i in available and (not rules.harmful_only or defs[i].harmful)
+        ]
+    note = f"附帶效果（核心以外的效果）最多 {rules.max_count} 個"
+    if rules.harmful_only:
+        note += "，只能是有害的效果"
+    caps = [
+        f"{i} 的強度最多占 {_percent(limit)}"
+        for i, limit in sorted(rules.max_share_permille.items())
+        if i in available
+    ]
+    if caps:
+        note += "；" + "、".join(caps)
+    return {"primitives": allowed, "note": note + "。"}
 
 
 def _primitive_entry(primitive: PrimitiveDef) -> dict[str, Any]:
@@ -196,6 +269,7 @@ class _Selector:
         self.condition_defs = rules.conditions.by_id()
         self.trigger_defs = rules.skill_triggers.by_id()
         self.dropped: dict[str, str] = {}
+        self.kind = "active"
 
     def drop(self, key: str, reason: str) -> None:
         self.dropped.setdefault(key, reason)
@@ -263,11 +337,14 @@ class _Selector:
     # -- 合法清單（依 YAML 順序）---------------------------------------------------
 
     def legal_primitives(self, ids: Iterable[str]) -> list[str]:
+        """稀有度夠、而且（非主動技能的題目）不是只能用在主動技能的原語（依 YAML 順序）。"""
         wanted = set(ids)
         return [
             p.id
             for p in self.library.ruleset.primitives.primitives
-            if p.id in wanted and _rarity_ok(p.min_rarity, self.rarity)
+            if p.id in wanted
+            and _rarity_ok(p.min_rarity, self.rarity)
+            and (self.kind == "active" or not p.active_only)
         ]
 
     def core_primitives(self, skeleton: SkeletonDef) -> list[str]:
@@ -373,6 +450,7 @@ def select_subset(
     """
     sel = _Selector(library, request)
     kind = sel.resolve_kind()
+    sel.kind = kind
     wants = sel.keyword_wants()
     skeletons = [s for s in sel.candidate_skeletons(kind) if sel.viable(s, kind)]
     if not skeletons:
@@ -392,6 +470,7 @@ def select_subset(
             ),
             triggers=tuple(sorted(plan.triggers)),
             keywords=tuple(sorted(request.keywords)),
+            rarity=request.rarity,
         )
 
     def fits(n_prims: int, n_conds: int) -> bool:

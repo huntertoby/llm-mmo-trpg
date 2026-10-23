@@ -5,12 +5,14 @@
   共用 :func:`~trpg.skillgen.composer_parts.effect_knobs`），以
   :func:`~trpg.skillgen.composer_tuning.tune` 把預算比例調進 ``[low, high]``。LLM 選的形狀參數
   （``range`` 等）不調；確定性：同一份提議＋同一個 ``seed`` 必得相同數值。
-- :data:`REPAIRABLE_CODES`：補數值後仍出現、但屬於「數值問題」的驗證代碼——由引擎修一次再驗，
-  不回給 LLM（:func:`evaluate_with_repair`）。
+- :data:`REPAIRABLE_CODES` 與 :func:`cooldown_repairs`：補數值後仍出現、但屬於「數值問題」的驗證
+  代碼——由引擎修一次再驗，不回給 LLM（:func:`evaluate_with_repair`）。Phase 4-L5b 起「先修可修的、
+  再回報其餘」：錯誤裡只要有可修的代碼就先修，修補後剩下的錯誤才回給 LLM。
 
 旋鈕只建在頂層效果上（與組合器相同）；巢狀效果（``then``、``win``／``lose``、``effects`` 等）的
 數值維持最小值。AP 與冷卻不是旋鈕（4-L3 待決 #2，留給 4-L8）：AP 補 2、沒有冷卻；唯一的例外是
-修 ``exclusion.no_cooldown_*`` 時補最小合法冷卻。
+修「補冷卻即可」的互斥規則（``exclusion.*``，由 ``skill_exclusions.yaml`` 推導）時補到規則要求的
+冷卻。
 """
 
 from __future__ import annotations
@@ -41,8 +43,10 @@ __all__ = [
     "REPAIRABLE_CODES",
     "RepairedEvaluation",
     "budget_filler",
+    "cooldown_repairs",
     "evaluate_with_repair",
     "is_repairable",
+    "repairable_codes",
     "repairable_errors",
 ]
 
@@ -50,32 +54,61 @@ REPAIRABLE_CODES: tuple[str, ...] = (
     "budget.over",
     "budget.weak",
     "skeleton.core_share",
-    "exclusion.no_cooldown_*",
+    "skeleton.secondary_share",
 )
 """引擎可修的驗證代碼（``fnmatch`` 樣式）。``budget.over``／``budget.weak``：換一條亂數串流重調
-旋鈕（核心優先、全部旋鈕交替）；``skeleton.core_share``：只調核心效果的旋鈕（附帶效果停在最小值）；
-``exclusion.no_cooldown_*``：補最小合法冷卻（:data:`REPAIR_COOLDOWN`）後重調。
+旋鈕（核心優先、全部旋鈕交替）；``skeleton.core_share``、``skeleton.secondary_share``：先只調核心效果的旋鈕（附帶效果停在最小值）。
+互斥規則（``exclusion.*``）中「補冷卻即可」的由 :func:`cooldown_repairs` 從 YAML 推導。
 ``budget.unavailable``（預算無法計算）是結構問題，不在清單內。"""
 
 REPAIR_COOLDOWN = 1
-"""修「沒有冷卻的大範圍」時補的冷卻回合（任何冷卻都滿足規則；預算折抵照 ``skill_budget.yaml``）。"""
+"""「有冷卻就不適用」的互斥規則（例：沒有冷卻的大範圍）補的冷卻回合（預算折抵照
+``skill_budget.yaml``）。"""
+EXCLUSION_PREFIX = "exclusion."
 REPAIR_TUNES = 4
 """修補時最多重調幾次（每次換一條亂數串流，核心優先與全部旋鈕交替）。"""
 _PROBE_ID = "skill_llm_probe"
 _PROBE_NAME = "試算"
-_COOLDOWN_PATTERN = "exclusion.no_cooldown_*"
-_CORE_SHARE = "skeleton.core_share"
+_CORE_FIRST = frozenset({"skeleton.core_share", "skeleton.secondary_share"})
 
 
-def is_repairable(code: str) -> bool:
-    """``code`` 是否屬於 :data:`REPAIRABLE_CODES`。"""
+def cooldown_repairs(library: ContentLibrary) -> dict[str, int]:
+    """「補冷卻即可」的互斥規則代碼 → 要補到的冷卻回合（由 ``skill_exclusions.yaml`` 推導，唯一
+    來源）：``when: {has_cooldown: false}`` 的規則補 :data:`REPAIR_COOLDOWN`（有冷卻就不適用）；
+    ``require`` 有 ``min_cooldown``（或 ``has_cooldown: true``）的規則補到該值。規則若還要求別的
+    （例：形狀），補冷卻後仍可能違反，剩下的錯誤照常回給 LLM。"""
+    out: dict[str, int] = {}
+    for rule in library.exclusions.rules:
+        need = 0
+        if rule.when is not None and rule.when.has_cooldown is False:
+            need = REPAIR_COOLDOWN
+        if rule.require is not None:
+            if rule.require.min_cooldown is not None:
+                need = max(need, rule.require.min_cooldown)
+            elif rule.require.has_cooldown:
+                need = max(need, REPAIR_COOLDOWN)
+        if need:
+            out[EXCLUSION_PREFIX + rule.id] = need
+    return out
+
+
+def is_repairable(code: str, library: ContentLibrary) -> bool:
+    """``code`` 是否可由引擎修（:data:`REPAIRABLE_CODES` 或 :func:`cooldown_repairs`）。"""
+    if code.startswith(EXCLUSION_PREFIX):
+        return code in cooldown_repairs(library)
     return any(fnmatchcase(code, pattern) for pattern in REPAIRABLE_CODES)
 
 
-def repairable_errors(errors: Iterable[ProposalError]) -> bool:
+def repairable_codes(errors: Iterable[ProposalError], library: ContentLibrary) -> tuple[str, ...]:
+    """錯誤中規則層、可由引擎修的代碼（排序、去重）。"""
+    found = {e.code for e in errors if e.stage == "rules" and is_repairable(e.code, library)}
+    return tuple(sorted(found))
+
+
+def repairable_errors(errors: Iterable[ProposalError], library: ContentLibrary) -> bool:
     """錯誤全部是規則層、且全部可由引擎修（空的不算）。"""
     items = list(errors)
-    return bool(items) and all(e.stage == "rules" and is_repairable(e.code) for e in items)
+    return bool(items) and all(e.stage == "rules" and is_repairable(e.code, library) for e in items)
 
 
 # ---------------------------------------------------------------------------
@@ -125,7 +158,7 @@ def _tune(
     if not repairs:
         _tune_once(library, data, root, core_only=False)
         return
-    core_first = _CORE_SHARE in repairs
+    core_first = bool(_CORE_FIRST & repairs)
     for attempt in range(REPAIR_TUNES):
         core_only = (attempt % 2 == 0) == core_first
         if _tune_once(library, data, root.fork(f"repair.{attempt}"), core_only=core_only):
@@ -139,14 +172,16 @@ def budget_filler(
     :data:`REPAIRABLE_CODES`）；調不進區間時照樣回傳（交給驗證器報錯）。"""
     minimal = minimal_filler(library)
     wanted = frozenset(repairs)
+    needs = cooldown_repairs(library)
+    cooldown = max((needs[c] for c in wanted if c in needs), default=0)
 
     def fill(data: dict[str, Any]) -> dict[str, Any]:
         out = minimal(data)
         if not isinstance(out.get("effects"), list) or not out["effects"]:
             return out
-        if any(fnmatchcase(code, _COOLDOWN_PATTERN) for code in wanted):
+        if cooldown:
             cost = dict(out.get("cost") or {})
-            cost["cooldown"] = max(int(cost.get("cooldown") or 0), REPAIR_COOLDOWN)
+            cost["cooldown"] = max(int(cost.get("cooldown") or 0), cooldown)
             out["cost"] = cost
         _tune(library, out, seed, wanted)
         return out
@@ -161,8 +196,8 @@ def budget_filler(
 
 @dataclass(frozen=True, slots=True)
 class RepairedEvaluation:
-    """:func:`evaluate_with_repair` 的結果。``result``：最終結果（修補失敗時是修補前的錯誤，讓 LLM
-    看到自己提議的原始問題）；``repaired``：引擎修好的代碼（排序；沒有修補時為空）。"""
+    """:func:`evaluate_with_repair` 的結果。``result``：最終結果（有修補時是修補後的結果：剩下的
+    錯誤才回給 LLM，Phase 4-L5b）；``repaired``：引擎修好的代碼（修補前有、修補後沒有；排序）。"""
 
     result: ProposalResult
     repaired: tuple[str, ...] = ()
@@ -180,14 +215,13 @@ def evaluate_with_repair(
     *,
     seed: int,
 ) -> RepairedEvaluation:
-    """``evaluate_proposal``（數值由 :func:`budget_filler` 補）；若錯誤只剩
-    :data:`REPAIRABLE_CODES`，由引擎修一次再驗。"""
+    """``evaluate_proposal``（數值由 :func:`budget_filler` 補）；錯誤中有可修的代碼時，
+    **先修可修的**（一次），再回報修補後剩下的錯誤（Phase 4-L5b，4-L5 待決 #5）。"""
     first = evaluate_proposal(raw, models, library, ctx, fill=budget_filler(library, seed=seed))
-    if first.ok or not repairable_errors(first.errors):
+    codes = () if first.ok else repairable_codes(first.errors, library)
+    if not codes:
         return RepairedEvaluation(first)
-    codes = tuple(sorted({e.code for e in first.errors}))
     fill = budget_filler(library, seed=seed, repairs=codes)
     second = evaluate_proposal(raw, models, library, ctx, fill=fill)
-    if second.ok:
-        return RepairedEvaluation(second, codes)
-    return RepairedEvaluation(first)
+    left = {e.code for e in second.errors}
+    return RepairedEvaluation(second, tuple(c for c in codes if c not in left))

@@ -10,7 +10,17 @@ from trpg.content.library import ContentLibrary, Ruleset
 from trpg.content.skills import PrimitiveDef, PrimitiveTable, SkillDef
 from trpg.skillgen.validate import Violation, validate_skill
 
-__all__ = ["lib", "lib_with_rewrite_primitive", "rules_of", "skill", "skill_raw", "violations"]
+__all__ = [
+    "general_effect_tags",
+    "lib",
+    "lib_with_rewrite_primitive",
+    "rules_of",
+    "skill",
+    "skill_raw",
+    "standard_form",
+    "union_tags",
+    "violations",
+]
 
 
 def lib() -> ContentLibrary:
@@ -77,3 +87,23 @@ def lib_with_rewrite_primitive() -> ContentLibrary:
     fields = {name: getattr(base.ruleset, name) for name in Ruleset.model_fields}
     fields["primitives"] = PrimitiveTable(primitives=(*base.ruleset.primitives.primitives, fake))
     return replace(base, ruleset=Ruleset(**fields))
+
+
+def standard_form(schema: dict[str, Any]) -> dict[str, Any]:
+    """提議 schema 的一般型態（Phase 4-L5b：頂層是以 ``form`` 區分的型態；只有一個型態時
+    就是根）。"""
+    if "properties" in schema:
+        return schema
+    found: dict[str, Any] = schema["$defs"]["SkillProposal"]
+    return found
+
+
+def general_effect_tags(schema: dict[str, Any]) -> set[str]:
+    """一般型態效果 union 的原語 ID（``GeneralEffect`` 的 ``oneOf``）。"""
+    return union_tags(schema["$defs"]["GeneralEffect"])
+
+
+def union_tags(union: dict[str, Any], prefix: str = "Effect_") -> set[str]:
+    """``oneOf`` 各支 ``$ref`` 的 ID（去掉 ``#/$defs/<prefix>``）。"""
+    refs = [str(item["$ref"]).rsplit("/", 1)[-1] for item in union["oneOf"]]
+    return {r.removeprefix(prefix) for r in refs}

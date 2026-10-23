@@ -22,8 +22,10 @@ from trpg.skillgen.proposal_budget import (
     REPAIR_COOLDOWN,
     REPAIRABLE_CODES,
     budget_filler,
+    cooldown_repairs,
     evaluate_with_repair,
     is_repairable,
+    repairable_codes,
     repairable_errors,
 )
 from trpg.skillgen.proposal_numbers import split_numbers
@@ -116,27 +118,88 @@ def test_core_share_repair_only_raises_core(
     assert evaluation.ok and "skeleton.core_share" in evaluation.repaired
 
 
-def test_unrepairable_errors_are_returned(library: ContentLibrary, models: ProposalModels) -> None:
+def test_cooldown_part_is_repaired_and_the_rest_is_returned(
+    library: ContentLibrary, models: ProposalModels
+) -> None:
+    """4-L5b：硬控規則要求「形狀 single ＋ 冷卻至少 4」。引擎先把冷卻補到 4，形狀不對的部分
+    仍回報。"""
     proposal, ctx = _proposal(library, "skill_deep_freeze")
+    proposal = {**proposal, "shape": {"type": "cross", "range": 3}}  # 硬控但不是單體
     evaluation = evaluate_with_repair(proposal, models, library, ctx, seed=3)
-    assert not evaluation.ok and evaluation.repaired == ()
+    assert not evaluation.ok
     assert "exclusion.stun_single_long_cooldown" in [e.code for e in evaluation.result.errors]
+    filled = budget_filler(library, seed=3, repairs=["exclusion.stun_single_long_cooldown"])
+    data = filled({**proposal, "tier": ctx.tier, "rarity": ctx.rarity})
+    assert data["cost"]["cooldown"] == 4  # 補到規則要求的冷卻（skill_exclusions.yaml）
 
 
-def test_repairable_codes() -> None:
+def test_stun_on_single_target_is_repaired_by_the_engine(
+    library: ContentLibrary, models: ProposalModels
+) -> None:
+    """形狀已經是 single 的硬控提議：缺的只有冷卻，引擎補到 4 後通過，不必回 LLM。"""
+    proposal = {
+        "form": "standard",
+        "name_zh": "冰封",
+        "kind": "active",
+        "skeleton": "control",
+        "category": "spell",
+        "weapon_req": "any",
+        "scaling_attr": "int",
+        "shape": {"type": "single", "range": 4},
+        "effects": [{"type": "apply_status", "status": "stun"}],
+    }
+    ctx = ProposalContext(tier=2, rarity="rare")
+    plain = evaluate_proposal(proposal, models, library, ctx, fill=budget_filler(library, seed=5))
+    assert "exclusion.stun_single_long_cooldown" in [e.code for e in plain.errors]
+    evaluation = evaluate_with_repair(proposal, models, library, ctx, seed=5)
+    assert "exclusion.stun_single_long_cooldown" in evaluation.repaired
+    assert "exclusion.stun_single_long_cooldown" not in [e.code for e in evaluation.result.errors]
+    if evaluation.ok:
+        assert evaluation.result.skill is not None
+        assert evaluation.result.skill.cost.cooldown >= 4
+
+
+def test_mixed_errors_repair_what_can_be_repaired_first(
+    library: ContentLibrary, models: ProposalModels
+) -> None:
+    """可修與不可修的錯誤混在一起時，引擎仍先修可修的（冷卻），只回報剩下的。"""
+    proposal, ctx = _proposal(library, "skill_blinding_dark")
+    bad = {**proposal, "skeleton": "strike"}  # 骨架不合（不可修）＋ 沒有冷卻的大範圍（可修）
+    plain = evaluate_proposal(bad, models, library, ctx, fill=budget_filler(library, seed=3))
+    codes = {e.code for e in plain.errors}
+    assert "exclusion.no_cooldown_big_area" in codes
+    assert codes - {"exclusion.no_cooldown_big_area"}  # 還有不可修的
+    evaluation = evaluate_with_repair(bad, models, library, ctx, seed=3)
+    assert not evaluation.ok
+    assert "exclusion.no_cooldown_big_area" in evaluation.repaired
+    left = {e.code for e in evaluation.result.errors}
+    assert "exclusion.no_cooldown_big_area" not in left
+    assert left  # 不可修的照樣回報
+
+
+def test_repairable_codes(library: ContentLibrary) -> None:
     assert REPAIRABLE_CODES == (
         "budget.over",
         "budget.weak",
         "skeleton.core_share",
-        "exclusion.no_cooldown_*",
+        "skeleton.secondary_share",
     )
-    assert is_repairable("exclusion.no_cooldown_big_area")
-    assert not is_repairable("budget.unavailable")
-    assert not is_repairable("exclusion.stun_single_long_cooldown")
-    assert not is_repairable("variant.x.budget.weak")
+    # 補冷卻即可的互斥規則由 skill_exclusions.yaml 推導
+    assert cooldown_repairs(library) == {
+        "exclusion.no_cooldown_big_area": REPAIR_COOLDOWN,
+        "exclusion.stun_single_long_cooldown": 4,
+    }
+    assert is_repairable("exclusion.no_cooldown_big_area", library)
+    assert is_repairable("exclusion.stun_single_long_cooldown", library)
+    assert is_repairable("skeleton.secondary_share", library)
+    assert not is_repairable("budget.unavailable", library)
+    assert not is_repairable("exclusion.no_push_with_pull", library)
+    assert not is_repairable("variant.x.budget.weak", library)
     rules = ProposalError("rules", "", "budget.weak", "過弱")
     shape = ProposalError("proposal", "shape", "budget.weak", "x")
-    assert repairable_errors([rules])
-    assert not repairable_errors([])
-    assert not repairable_errors([rules, shape])
-    assert not repairable_errors([rules, ProposalError("rules", "", "skeleton.core", "x")])
+    core = ProposalError("rules", "", "skeleton.core", "x")
+    assert repairable_errors([rules], library)
+    assert not repairable_errors([], library)
+    assert not repairable_errors([rules, shape], library)
+    assert not repairable_errors([rules, core], library)
+    assert repairable_codes([rules, shape, core, rules], library) == ("budget.weak",)

@@ -46,6 +46,7 @@ from trpg.skillgen.keywords import derive_keywords
 from trpg.skillgen.mechanics import affect_set, resolved_affects
 
 __all__ = [
+    "RARITY_STATUS_PRIMITIVES",
     "RarityNeed",
     "Violation",
     "effect_count",
@@ -57,6 +58,9 @@ __all__ = [
 
 _PERMILLE = 1000
 _MAX_EFFECTS = 4
+RARITY_STATUS_PRIMITIVES: tuple[str, ...] = ("apply_status",)
+"""施加的狀態要檢查稀有度（``rarity.status``）的原語；LLM 提議模型依同一份清單篩狀態的列舉
+（Phase 4-L5b）。"""
 _WEAPON_REQ = {"weapon": ("melee", "ranged"), "spell": ("focus", "any")}
 
 
@@ -784,7 +788,7 @@ def rarity_requirements(skill: SkillDef, library: ContentLibrary) -> list[Rarity
         needs.append(
             RarityNeed("primitive", f"原語 {effect.type}", primitives[effect.type].min_rarity)
         )
-        if effect.type == "apply_status" and effect.status in statuses:
+        if effect.type in RARITY_STATUS_PRIMITIVES and effect.status in statuses:
             needs.append(
                 RarityNeed("status", f"狀態 {effect.status}", statuses[effect.status].min_rarity)
             )

@@ -118,6 +118,7 @@ __all__ = [
     "SELF_DAMAGE_OF_HIT",
     "SELF_ONLY_CHANGES",
     "SHADOWSTEP",
+    "SHAPE_REQUIRED_PRIMITIVES",
     "SKELETON_IDS",
     "SKILL_ID_PATTERN",
     "SKILL_REACTION_EVENTS",
@@ -1454,6 +1455,14 @@ SWAP_ANY = "swap_any"
 （形狀 ``unit_pair``）。"""
 PAIR_MOVES: tuple[str, ...] = (TELEPORT_TARGET, SWAP_ANY)
 PAIR_SHAPES: dict[str, str] = {TELEPORT_TARGET: "unit_then_tile", SWAP_ANY: "unit_pair"}
+SHAPE_REQUIRED_PRIMITIVES: dict[str, tuple[str, ...]] = {
+    "unit_then_tile": (TELEPORT_TARGET, SHADOWSTEP),
+    "unit_pair": (SWAP_ANY,),
+    "object_then_tile": ("hurl_object",),
+}
+"""形狀這一側的組合規則（Phase 4-L5b 整理；驗證見 ``SkillDef._check_pair_moves``、
+``_check_hurl_object``）：這些形狀必須搭配其中一個原語（``shadowstep`` 要 ``landing: choose``）。
+LLM 提議模型的一般型態不開放這些形狀。"""
 CHARGE_THROUGH = "charge_through"
 """Phase 3D-2c 的直線衝撞原語 ID（6.22）：形狀 ``ground_tile`` 選終點格，沿直線衝過去。"""
 SUMMON = "summon"

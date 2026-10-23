@@ -25,11 +25,20 @@ import hashlib
 import json
 import re
 from collections.abc import Callable, Iterable, Mapping, Sequence
-from dataclasses import dataclass
+from dataclasses import dataclass, replace
 from functools import cache
-from typing import Annotated, Any, Literal, Union, get_args
+from typing import Annotated, Any, Literal, TypeAliasType, Union, get_args
 
-from pydantic import BaseModel, ConfigDict, Field, TypeAdapter, ValidationError, create_model
+from pydantic import (
+    BaseModel,
+    ConfigDict,
+    Discriminator,
+    Field,
+    Tag,
+    TypeAdapter,
+    ValidationError,
+    create_model,
+)
 
 from trpg.content.battle import ID_PATTERN
 from trpg.content.library import ContentLibrary
@@ -40,6 +49,7 @@ from trpg.content.skills import (
     ON_KILL_TYPES,
     SKILL_ID_PATTERN,
     ZONE_EFFECT_TYPES,
+    CompositionRule,
     EffectSpec,
     Origin,
     PrimitiveDef,
@@ -47,17 +57,27 @@ from trpg.content.skills import (
     ScaleBy,
     SkillDef,
     SkillRarity,
+    SkillRuleError,
     TriggerSpec,
     VariantWhen,
+    rarity_rank,
 )
 from trpg.shared.types import Element, Surface
+from trpg.skillgen.proposal_forms import (
+    STANDARD_FORM,
+    FormPlan,
+    form_hint,
+    is_special,
+    plan_forms,
+    skill_form,
+)
 from trpg.skillgen.proposal_numbers import (
     NumberFiller,
     minimal_filler,
     numeric_param_names,
     split_numbers,
 )
-from trpg.skillgen.validate import validate_skill
+from trpg.skillgen.validate import RARITY_STATUS_PRIMITIVES, validate_skill
 
 __all__ = [
     "LLM_ID_PREFIX",
@@ -69,7 +89,9 @@ __all__ = [
     "build_proposal_models",
     "evaluate_proposal",
     "feedback_payload",
+    "kind_choices",
     "proposal_from_skill",
+    "rarity_statuses",
     "to_skill_def",
 ]
 
@@ -160,17 +182,46 @@ class ProposalResult:
 
 @dataclass(frozen=True, slots=True)
 class ProposalModels:
-    """由內容庫產生的提議模型。``skill`` 是頂層模型；``excluded_primitives`` 是沒有開放或限制用途的
-    原語（與原因）。"""
+    """由內容庫產生的提議模型。``skill`` 是頂層型別（只有一個型態時是模型本身，否則是以 ``form``
+    區分的 union）；``excluded_primitives`` 是沒有開放或限制用途的原語（與原因）；``forms`` 是型態
+    （ID、中文說明）。"""
 
-    skill: type[BaseModel]
+    skill: Any
     primitive_ids: tuple[str, ...]
     variant_primitive_ids: tuple[str, ...]
     excluded_primitives: tuple[tuple[str, str], ...]
+    forms: tuple[tuple[str, str], ...] = ()
 
     def json_schema(self) -> dict[str, Any]:
-        """給 LLM（structured output／tool input schema）的 JSON Schema。"""
-        return self.skill.model_json_schema()
+        """給 LLM（structured output／tool input schema）的 JSON Schema。
+
+        只影響說明、不影響「哪些 JSON 合法」的註記關鍵字（pydantic 自動產生的 ``title``、與
+        ``oneOf`` 重複的 OpenAPI ``discriminator`` 對照表、``default``）去掉以縮小 schema
+        （Phase 4-L5b；約束解碼不使用它們）。驗證一律用 pydantic 模型本身，不看這份 schema。"""
+        schema: dict[str, Any] = _compact(TypeAdapter(self.skill).json_schema())
+        return schema
+
+
+_ANNOTATION_KEYS = frozenset({"title", "discriminator", "default"})
+""":func:`_compact` 去掉的註記關鍵字。"""
+
+
+def _compact(node: Any) -> Any:
+    """遞迴去掉 schema 節點上的 :data:`_ANNOTATION_KEYS`；``properties``／``$defs`` 的鍵是欄位名或
+    定義名，不去。"""
+    if isinstance(node, list):
+        return [_compact(v) for v in node]
+    if not isinstance(node, dict):
+        return node
+    out: dict[str, Any] = {}
+    for key, value in node.items():
+        if key in _ANNOTATION_KEYS:
+            continue
+        if key in ("properties", "$defs") and isinstance(value, dict):
+            out[key] = {name: _compact(sub) for name, sub in value.items()}
+        else:
+            out[key] = _compact(value)
+    return out
 
 
 # ---------------------------------------------------------------------------
@@ -314,6 +365,9 @@ def _has_nested(primitive: PrimitiveDef) -> bool:
     return any(p.type == "effects" for p in primitive.params.values())
 
 
+_SELF_AFFECTS_DOC = "這個型態的其他效果只作用在施放者。"
+
+
 class _Builder:
     def __init__(
         self,
@@ -322,19 +376,25 @@ class _Builder:
         shapes: frozenset[str] | None = None,
         conditions: frozenset[str] | None = None,
         triggers: frozenset[str] | None = None,
+        *,
+        statuses: tuple[str, ...] | None = None,
     ) -> None:
         self.library = library
         self.refs = _Refs.of(library)
+        self.statuses = statuses
         self.trigger_ids = triggers
-        self.condition = self._condition_union(conditions)
-        self.shape = self._shape_union(shapes)
+        self.condition = _alias("Condition", self._condition_union(conditions))
+        self.shapes = self._shape_models(shapes)
         primitives = [
             p for p in library.ruleset.primitives.primitives if only is None or p.id in only
         ]
+        self.defs = {p.id: p for p in primitives}
         # 巢狀位置（then、win／lose、on_kill、zone 的 effects）不能再巢狀：用去掉巢狀參數的模型。
         leaves = {p.id: self._effect_model(p, None) for p in primitives}
         self.effects: dict[str, Any] = {}
+        self.nested: dict[str, dict[str, Any]] = {}
         self.excluded: list[tuple[str, str]] = []
+        self._self_models: dict[str, Any] = {}
         for p in primitives:
             nested = {
                 name: self._nested_type(name, leaves)
@@ -348,12 +408,26 @@ class _Builder:
             if empty:
                 self.excluded.append((p.id, f"巢狀參數 {', '.join(empty)} 沒有可用的原語"))
             elif nested:
+                self.nested[p.id] = nested
                 self.effects[p.id] = self._effect_model(p, nested)
             else:
                 self.effects[p.id] = leaves[p.id]
         self.lookup_ids = {
             p.id for p in primitives if p.lookup_by_skill_id and p.id in self.effects
         }
+        self.trigger = _alias("Trigger", self._trigger_union())
+
+    def self_effect(self, primitive_id: str) -> Any:
+        """只作用在施放者的版本（``affects`` 只能是 ``self``，預設 ``self``）。"""
+        model = self._self_models.get(primitive_id)
+        if model is None:
+            primitive = self.defs[primitive_id]
+            model = self._effect_model(primitive, self.nested.get(primitive_id), self_only=True)
+            self._self_models[primitive_id] = model
+        return model
+
+    def shape_union(self, ids: Iterable[str]) -> Any:
+        return _union([self.shapes[i] for i in ids], "type")
 
     def _nested_type(self, name: str, leaves: Mapping[str, Any]) -> Any:
         allowed = [t for t in NESTED_EFFECT_TYPES.get(name, ()) if t in leaves]
@@ -362,14 +436,22 @@ class _Builder:
         item = _union([leaves[t] for t in allowed], "type")
         return _list_of(item)
 
-    def _effect_model(self, primitive: PrimitiveDef, nested: Mapping[str, Any] | None) -> Any:
-        """一個原語的提議模型；``nested`` 為 ``None`` 時是巢狀位置用的版本（沒有巢狀參數）。"""
+    def _effect_model(
+        self, primitive: PrimitiveDef, nested: Mapping[str, Any] | None, *, self_only: bool = False
+    ) -> Any:
+        """一個原語的提議模型；``nested`` 為 ``None`` 時是巢狀位置用的版本（沒有巢狀參數）；
+        ``self_only`` 是「其他效果只作用在施放者」的型態用的版本。"""
+        affects: Any = (
+            (Literal["self"], Field(default="self", description=_SELF_AFFECTS_DOC))
+            if self_only
+            else (_affects_type(primitive) | None, None)
+        )
         fields: dict[str, Any] = {
             "type": (_literal((primitive.id,)), Field(description=primitive.name_zh)),
-            "affects": (_affects_type(primitive) | None, None),
+            "affects": affects,
         }
         if self.condition is not None:
-            fields["condition"] = (self.condition | None, None)
+            fields["condition"] = (Union[self.condition, None], None)  # noqa: UP007
         for name, spec in sorted(primitive.params.items()):
             doc = spec.llm_hint
             if _is_numeric(spec):
@@ -380,17 +462,31 @@ class _Builder:
                 limits = {"min_length": 1, "max_length": _MAX_NESTED}
                 fields[name] = _field(nested[name], limits, required=spec.required, doc=doc)
                 continue
-            annotation, limits = _param_type(name, spec, self.refs, EffectSpec.model_fields)
+            annotation, limits = self._param(primitive, name, spec)
             required = _required(spec)
             fields[name] = _field(annotation, limits, required=required, doc=doc)
-        prefix = "NestedEffect" if nested is None and _has_nested(primitive) else "Effect"
-        model = create_model(
+        if self_only:
+            prefix = "SelfEffect"
+        else:
+            prefix = "NestedEffect" if nested is None and _has_nested(primitive) else "Effect"
+        return create_model(
             f"{prefix}_{primitive.id}",
             __base__=_Proposal,
             __doc__=primitive.llm_hint,
             **fields,
         )
-        return model
+
+    def _param(
+        self, primitive: PrimitiveDef, name: str, spec: PrimitiveParam
+    ) -> tuple[Any, dict[str, Any]]:
+        """參數型別；稀有度檢查狀態的原語（``apply_status``）只列稀有度夠的狀態（Phase 4-L5b）。"""
+        if (
+            spec.type == "status"
+            and self.statuses is not None
+            and primitive.id in RARITY_STATUS_PRIMITIVES
+        ):
+            return _id_choice(self.statuses)
+        return _param_type(name, spec, self.refs, EffectSpec.model_fields)
 
     def _condition_union(self, only: frozenset[str] | None) -> Any:
         """條件的 union；``only`` 篩選後沒有任何條件時回傳 ``None``（提議不開放條件欄位）。"""
@@ -414,8 +510,9 @@ class _Builder:
             )
         return _union(models, "type") if models else None
 
-    def _shape_union(self, only: frozenset[str] | None) -> Any:
-        models = []
+    def _shape_models(self, only: frozenset[str] | None) -> dict[str, Any]:
+        """形狀 ID → 模型（YAML 順序）。"""
+        models: dict[str, Any] = {}
         for shape in self.library.ruleset.shapes.shapes:
             if only is not None and shape.id not in only:
                 continue
@@ -428,17 +525,17 @@ class _Builder:
                 fields[name] = _field(
                     annotation, limits, required=spec.required, doc=shape.params[name].llm_hint
                 )
-            models.append(
-                create_model(
-                    f"Shape_{shape.id}",
-                    __base__=_Proposal,
-                    __doc__=shape.llm_hint,
-                    **fields,
-                )
+            models[shape.id] = create_model(
+                f"Shape_{shape.id}",
+                __base__=_Proposal,
+                __doc__=shape.llm_hint,
+                **fields,
             )
-        return _union(models, "type")
+        if not models:
+            raise ValueError("提議模型沒有任何可用的類型（篩選後的形狀清單是空的）")
+        return models
 
-    def trigger_union(self) -> Any:
+    def _trigger_union(self) -> Any:
         """觸發時機（``skill_triggers.yaml``）：只有「有另一方」的時機能填 ``target: other``；
         時機自己的參數（``n``、``tag``、``status``、``surface``）取自該時機的 ``params``。
         每輪觸發次數、距離上限是數值，不開放（預設每輪 1 次、不限距離）。"""
@@ -487,7 +584,7 @@ def _variant_model(effect: Any | None, shape: Any) -> Any:
             index=(int, Field(ge=0)),
             effect=(effect, ...),
         )
-        fields["add_effect"] = (effect | None, None)
+        fields["add_effect"] = (Union[effect, None], None)  # noqa: UP007
         fields["replace_effect"] = (swap | None, None)
     return create_model(
         "Variant",
@@ -508,13 +605,147 @@ def _skeleton_choices(library: ContentLibrary, skeletons: Iterable[str] | None) 
     return chosen
 
 
-def _kind_choices(library: ContentLibrary, skeletons: Sequence[str]) -> tuple[str, ...]:
+def kind_choices(library: ContentLibrary, skeletons: Sequence[str]) -> tuple[str, ...]:
     kinds = {k for s in skeletons for k in library.skeletons[s].kinds}
     return tuple(k for k in PROPOSAL_KINDS if k in kinds)
 
 
 def _only(values: Iterable[str] | None) -> frozenset[str] | None:
     return None if values is None else frozenset(values)
+
+
+def rarity_statuses(library: ContentLibrary, rarity: SkillRarity) -> tuple[str, ...]:
+    """這個稀有度能施加的狀態 ID（排序；規則與驗證器的 ``rarity.status`` 相同）。"""
+    rank = rarity_rank(rarity)
+    return tuple(
+        sorted(s.id for s in library.ruleset.statuses.statuses if rarity_rank(s.min_rarity) <= rank)
+    )
+
+
+_SKILL_DOC = "LLM 提議的技能（ID、稀有度、階級與來源由遊戲決定，不要填）。"
+_GENERAL_TAG = "~general"
+"""型態的效果 union 中「一般原語」那一支的標籤（不是原語 ID；錯誤路徑會略過它）。"""
+
+
+def _alias(name: str, annotation: Any) -> Any:
+    """具名的型別（JSON Schema 中只出現一次、各處以 ``$ref`` 引用）；``None`` 原樣回傳。"""
+    if annotation is None:
+        return None
+    return TypeAliasType(name, annotation)
+
+
+@dataclass(frozen=True, slots=True)
+class _Shared:
+    """各型態共用的具名型別：一般原語的 union、只作用在施放者的版本、一般型態的形狀與變奏。"""
+
+    general_ids: frozenset[str]
+    general: Any
+    self_general: Any
+    standard_shape: Any
+    variant: Any
+    variant_ids: tuple[str, ...]
+
+
+def _shared_types(library: ContentLibrary, builder: _Builder, plans: Sequence[FormPlan]) -> _Shared:
+    rules = {p.id: CompositionRule.of(p) for p in library.ruleset.primitives.primitives}
+    general_ids = [i for i in builder.effects if not is_special(rules[i])]
+    used = {i for p in plans for i in p.effects}
+    general_ids = [i for i in general_ids if i in used]
+    selfish = sorted({i for p in plans for i in p.self_effects}, key=list(builder.effects).index)
+    general = _alias("GeneralEffect", _union_or_none([builder.effects[i] for i in general_ids]))
+    self_general = _alias("SelfEffect", _union_or_none([builder.self_effect(i) for i in selfish]))
+    standard = next((p for p in plans if p.id == STANDARD_FORM), None)
+    if standard is None:
+        return _Shared(frozenset(general_ids), general, self_general, None, None, ())
+    variant_ids = tuple(i for i in standard.effects if i not in builder.lookup_ids)
+    if variant_ids == tuple(general_ids):
+        variant_effect = general  # 不能用在變奏的原語都在特殊型態裡：與一般原語同一個 union
+    else:
+        variant_effect = _alias(
+            "VariantEffect", _union_or_none([builder.effects[i] for i in variant_ids])
+        )
+    shape = _alias("StandardShape", builder.shape_union(standard.shapes))
+    variant = _variant_model(variant_effect, shape)
+    return _Shared(frozenset(general_ids), general, self_general, shape, variant, variant_ids)
+
+
+def _union_or_none(models: Sequence[Any]) -> Any:
+    return _union(models, "type") if models else None
+
+
+def _effect_tag(value: Any) -> str | None:
+    raw = value.get("type") if isinstance(value, dict) else getattr(value, "type", None)
+    return raw if isinstance(raw, str) else None
+
+
+def _form_effects(builder: _Builder, plan: FormPlan, shared: _Shared) -> Any:
+    """型態的效果 union：特殊原語各一支（標籤是原語 ID），一般原語共用一個具名 union。"""
+    if plan.self_effects:
+        members = list(plan.effects)
+        general = shared.self_general
+    else:
+        members = [i for i in plan.effects if i not in shared.general_ids]
+        has_general = any(i in shared.general_ids for i in plan.effects)
+        general = shared.general if has_general else None
+    if not members:
+        return general
+    if general is None and len(members) == 1:
+        return builder.effects[members[0]]
+    tags = frozenset(members)
+
+    def pick(value: Any) -> str | None:
+        tag = _effect_tag(value)
+        if tag in tags or general is None:
+            return tag
+        return _GENERAL_TAG
+
+    choices: list[Any] = [Annotated[builder.effects[i], Tag(i)] for i in members]
+    if general is not None:
+        choices.append(Annotated[general, Tag(_GENERAL_TAG)])
+    return Annotated[Union[tuple(choices)], Discriminator(pick)]  # noqa: UP007
+
+
+def _form_model(
+    builder: _Builder,
+    plan: FormPlan,
+    common: Mapping[str, Any],
+    shared: _Shared,
+) -> Any:
+    """一個型態的頂層模型（欄位順序：``form`` 最先，讓模型先決定型態）。"""
+    if plan.id == STANDARD_FORM and shared.standard_shape is not None:
+        shape = shared.standard_shape
+    else:
+        shape = builder.shape_union(plan.shapes)
+    fields: dict[str, Any] = {
+        "form": (_literal((plan.id,)), ...),
+        **common,
+        "kind": (_literal(plan.kinds), ...),
+        "shape": (shape, ...),
+        "effects": (
+            _list_of(_form_effects(builder, plan, shared)),
+            Field(min_length=1, max_length=plan.max_effects),
+        ),
+        "tags": (
+            list[Annotated[str, Field(pattern=ID_PATTERN)]],
+            Field(default_factory=list, max_length=_MAX_TAGS),
+        ),
+    }
+    if plan.variants and shared.variant is not None:
+        fields["variants"] = (
+            _list_of(shared.variant),
+            Field(default_factory=list, max_length=_MAX_VARIANTS),
+        )
+    if builder.condition is not None:
+        fields["condition"] = (Union[builder.condition, None], None)  # noqa: UP007
+    if builder.trigger is not None:
+        fields["trigger"] = (Union[builder.trigger, None], None)  # noqa: UP007
+    name = "SkillProposal" if plan.id == STANDARD_FORM else f"SkillProposal_{plan.id}"
+    return create_model(
+        name,
+        __base__=_Proposal,
+        __doc__=_SKILL_DOC if plan.id == STANDARD_FORM else None,
+        **fields,
+    )
 
 
 def build_proposal_models(
@@ -525,6 +756,7 @@ def build_proposal_models(
     conditions: Iterable[str] | None = None,
     triggers: Iterable[str] | None = None,
     skeletons: Iterable[str] | None = None,
+    rarity: SkillRarity | None = None,
 ) -> ProposalModels:
     """由內容庫產生提議模型（原語的參數、範圍與可用值全部取自內容資料，不寫死在這裡）。
 
@@ -532,58 +764,57 @@ def build_proposal_models(
     稀有度、骨架與題目先篩選，縮小 JSON Schema；``None`` 為全部，Phase 4-L4）。篩掉的值被提議時在
     提議格式階段得到 ``union_tag_invalid``（形狀、條件、觸發）或 ``literal_error``（骨架）。
     條件（或觸發）全部篩掉時，提議不再有 ``condition``（或 ``trigger``）欄位；``kind`` 也只留
-    所選骨架適用的種類。巢狀參數沒有可用原語的原語會被排除並記在 ``excluded_primitives``。"""
+    所選骨架適用的種類。巢狀參數沒有可用原語的原語會被排除並記在 ``excluded_primitives``。
+
+    頂層是以 ``form`` 區分的型態（Phase 4-L5b，見 :mod:`trpg.skillgen.proposal_forms`）：有組合
+    規則的原語各自一個型態，形狀與其他效果依 ``skill_primitives.yaml`` 的組合規則限制。``rarity``
+    有給時，``apply_status`` 只列這個稀有度能用的狀態。"""
+    statuses = None if rarity is None else rarity_statuses(library, rarity)
     builder = _Builder(
-        library, _only(primitives), _only(shapes), _only(conditions), _only(triggers)
-    )
-    primitive_ids = tuple(builder.effects)
-    variant_ids = tuple(i for i in primitive_ids if i not in builder.lookup_ids)
-    effect = _union([builder.effects[i] for i in primitive_ids], "type")
-    variant_effect = (
-        _union([builder.effects[i] for i in variant_ids], "type") if variant_ids else None
+        library,
+        _only(primitives),
+        _only(shapes),
+        _only(conditions),
+        _only(triggers),
+        statuses=statuses,
     )
     skeleton_ids = _skeleton_choices(library, skeletons)
+    plans, form_excluded = plan_forms(
+        library,
+        primitives=builder.effects,
+        shapes=builder.shapes,
+        kinds=kind_choices(library, skeleton_ids),
+    )
+    if not plans:
+        raise ValueError("提議模型沒有任何可用的型態（篩選後沒有可以組成技能的原語與形狀）")
+    shared = _shared_types(library, builder, plans)
     sk = SkillDef.model_fields
-    variant = _variant_model(variant_effect, builder.shape)
-    fields: dict[str, Any] = {
+    common: dict[str, Any] = {
         "name_zh": (str, Field(min_length=1, max_length=12)),
         "description_zh": (str | None, None),
         "concept": (str, Field(default="", max_length=80)),
         "cast_flavor": (str, Field(default="", max_length=80)),
-        "kind": (_literal(_kind_choices(library, skeleton_ids)), ...),
-        "skeleton": (_literal(skeleton_ids), ...),
+        "skeleton": (_alias("Skeleton", _literal(skeleton_ids)), ...),
         "category": (sk["category"].annotation, ...),
         "weapon_req": (sk["weapon_req"].annotation, ...),
         "scaling_attr": (sk["scaling_attr"].annotation, ...),
-        "shape": (builder.shape, ...),
-        "effects": (_list_of(effect), Field(min_length=1, max_length=_MAX_EFFECTS)),
-        "tags": (
-            list[Annotated[str, Field(pattern=ID_PATTERN)]],
-            Field(default_factory=list, max_length=_MAX_TAGS),
-        ),
-        "variants": (_list_of(variant), Field(default_factory=list, max_length=_MAX_VARIANTS)),
     }
-    if builder.condition is not None:
-        fields["condition"] = (builder.condition | None, None)
-    trigger = builder.trigger_union()
-    if trigger is not None:
-        fields["trigger"] = (trigger | None, None)
-    skill = create_model(
-        "SkillProposal",
-        __base__=_Proposal,
-        __doc__="LLM 提議的技能（ID、稀有度、階級與來源由遊戲決定，不要填）。",
-        **fields,
-    )
-    lookup = sorted(builder.lookup_ids)
+    hints = {p.id: form_hint(library, p) for p in plans}
+    forms = [_form_model(builder, p, common, shared) for p in plans]
+    skill = forms[0] if len(forms) == 1 else _union(forms, "form")
+    used = {i for p in plans for i in (*p.effects, *p.self_effects)}
+    lookup = sorted(i for i in builder.lookup_ids if i in used)
     excluded = (
         *builder.excluded,
+        *form_excluded,
         *((i, "lookup_by_skill_id：只能用在主效果，不能用在變奏") for i in lookup),
     )
     return ProposalModels(
         skill=skill,
-        primitive_ids=primitive_ids,
-        variant_primitive_ids=variant_ids,
+        primitive_ids=tuple(i for i in builder.effects if i in used),
+        variant_primitive_ids=shared.variant_ids,
         excluded_primitives=excluded,
+        forms=tuple((p.id, hints[p.id]) for p in plans),
     )
 
 
@@ -599,6 +830,7 @@ def _skill_id(body: Mapping[str, Any]) -> str:
 
 def _skill_data(proposal: BaseModel, ctx: ProposalContext, fill: NumberFiller) -> dict[str, Any]:
     data = proposal.model_dump(mode="json", exclude_none=True)
+    data.pop("form", None)
     data["narrative"] = {"concept": data.pop("concept"), "cast_flavor": data.pop("cast_flavor")}
     data.update(tier=ctx.tier, rarity=ctx.rarity, rank=ctx.rank)
     data["provenance"] = {"origin": ctx.origin, "created_by": "llm"}
@@ -660,7 +892,7 @@ def proposal_from_skill(skill: SkillDef, library: ContentLibrary) -> dict[str, A
     data["concept"] = narrative.get("concept", "")
     data["cast_flavor"] = narrative.get("cast_flavor", "")
     data["kind"] = skill.kind
-    return data
+    return {"form": skill_form(library, skill), **data}
 
 
 # ---------------------------------------------------------------------------
@@ -688,6 +920,8 @@ def _json_path(loc: Sequence[int | str], data: object) -> str:
             in (
                 node.get("type"),
                 node.get("event"),
+                node.get("form"),
+                _GENERAL_TAG,
             )
         ):
             continue  # union 標籤
@@ -728,14 +962,37 @@ def _message_zh(error: Mapping[str, Any]) -> tuple[str, tuple[str, ...]]:
     return message, allowed
 
 
+_EFFECT_REF = re.compile(r"(?:followup\.)?effects\[\d+\](?:\.[A-Za-z_]\w*)?")
+
+
+def _skill_path(error: Mapping[str, Any], loc_path: str, message: str) -> str:
+    """``SkillDef`` 自己的檢查（``stage: skill``）的路徑（Phase 4-L5b）：驗證器以
+    :class:`~trpg.content.skills.SkillRuleError` 帶出的路徑優先；否則從訊息找 ``effects[i]``；
+    訊息講形狀時指向 ``shape``；都沒有就只用 pydantic 的位置（技能層級為空字串）。"""
+    raw = (error.get("ctx") or {}).get("error")
+    found = ""
+    if isinstance(raw, SkillRuleError):
+        found = raw.path
+    elif (match := _EFFECT_REF.search(message)) is not None:
+        found = match.group(0)
+    elif "形狀" in message:
+        found = "shape"
+    if not found:
+        return loc_path
+    return f"{loc_path}.{found}" if loc_path else found
+
+
 def _pydantic_errors(exc: ValidationError, stage: Stage, data: object) -> list[ProposalError]:
     out: list[ProposalError] = []
     for error in exc.errors(include_url=False):
         message, allowed = _message_zh(error)
+        path = _json_path(tuple(error["loc"]), data)
+        if stage == "skill":
+            path = _skill_path(error, path, message)
         out.append(
             ProposalError(
                 stage=stage,
-                path=_json_path(tuple(error["loc"]), data),
+                path=path,
                 code=str(error["type"]),
                 message=message,
                 allowed=allowed,
@@ -749,6 +1006,17 @@ def _rule_error(rule: str, message: str) -> ProposalError:
     if match is None:
         return ProposalError(stage="rules", path="", code=rule, message=message)
     return ProposalError(stage="rules", path=match.group(1), code=rule, message=match.group(2))
+
+
+def _form_hints(errors: list[ProposalError], models: ProposalModels) -> list[ProposalError]:
+    """頂層缺 ``form`` 時，``allowed`` 列出可用的型態（pydantic 的錯誤不帶這份清單）。"""
+    forms = tuple(f for f, _ in models.forms)
+    return [
+        replace(e, path="form", message="缺少型態欄位 form", allowed=forms)
+        if e.code == "union_tag_not_found" and e.path == "" and forms
+        else e
+        for e in errors
+    ]
 
 
 def evaluate_proposal(
@@ -771,7 +1039,8 @@ def evaluate_proposal(
     try:
         proposal = TypeAdapter(models.skill).validate_python(data)
     except ValidationError as exc:
-        return ProposalResult(None, tuple(_pydantic_errors(exc, "proposal", data)))
+        errors = _form_hints(_pydantic_errors(exc, "proposal", data), models)
+        return ProposalResult(None, tuple(errors))
     try:
         skill = to_skill_def(proposal, ctx, fill or minimal_filler(library))
     except ValidationError as exc:
