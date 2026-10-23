@@ -6,7 +6,7 @@ import { addEffect, selectChoice, type Json } from "./draft";
 const spec = (field: string, choices: Choice[]): FieldSpec => ({
   field,
   name_zh: field,
-  description_zh: "",
+  description_zh: "", dev_description_zh: "", later: false,
   type: "choice",
   required: false,
   choices,
@@ -14,13 +14,14 @@ const spec = (field: string, choices: Choice[]): FieldSpec => ({
   dice_sides: [],
   allow_weapon: false,
   locked: false,
+  show_when: {},
   card: false,
   object_choice: false,
 });
 const choice = (value: string, info: Record<string, unknown> = {}): Choice => ({
   value,
   name_zh: value,
-  description_zh: "",
+  description_zh: "", dev_description_zh: "", later: false,
   params: [],
   info,
 });

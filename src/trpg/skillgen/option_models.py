@@ -101,6 +101,11 @@ class Choice(_Model):
     value: str | int | bool
     name_zh: str
     description_zh: str = ""
+    dev_description_zh: str = ""
+    """開發者語氣的原文（含英文代號、檔名、階段編號）；``description_zh`` 是玩家看的版本（可能由規則
+    產生，或因為沒有玩家版本而是空字串）。只有開發者模式（``?dev=1``）顯示原文（3-48c）。"""
+    later: bool = False
+    """這類選項之後才開放（3-48c；巢狀效果在 3-48d 開放前，玩家模式隱藏）。"""
     params: tuple[FieldSpec, ...] = ()
     info: dict[str, Any] = {}
 
@@ -112,6 +117,13 @@ class FieldSpec(_Model):
     field: str
     name_zh: str
     description_zh: str = ""
+    dev_description_zh: str = ""
+    """開發者語氣的原文，見 :attr:`Choice.dev_description_zh`。"""
+    later: bool = False
+    """這個欄位之後才開放（3-48c；巢狀效果在 3-48d 開放前，玩家模式隱藏）。"""
+    show_when: dict[str, str] = {}
+    """條件顯示：同一層的另一個欄位（鍵）選了指定的值（值）才顯示這個欄位（例：持續區域的速度只在
+    錨點是「移動」時有意義）。空表示一直顯示。資料來源是 ``PrimitiveParam.show_when``。"""
     type: FieldType
     required: bool = False
     min: int | None = None

@@ -150,7 +150,7 @@ def kind_data(
             "shape": follow_shape,
             "effects": list(follow_effects),
         },
-        "cost": {"mana": 0, "cooldown": 2},
+        "cost": {"stamina": 1, "cooldown": 2},
     }
 
 

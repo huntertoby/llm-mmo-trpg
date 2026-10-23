@@ -19,6 +19,7 @@ import {
   setPath,
   type Json,
 } from "../../workshop/draft";
+import { descOf, fieldShown, hiddenCount, shownChoices } from "../../workshop/playerView";
 import { rarityName } from "../../workshop/state";
 import { OptionGlyph } from "../SkillIconView";
 import { Hint } from "../Hint";
@@ -44,7 +45,7 @@ const COMPACT_MAX = 8;
 export function FieldList({ fields, container, base, onChange }: ListProps) {
   return (
     <>
-      {fields.map((spec) => (
+      {fields.filter((spec) => fieldShown(spec, container, base)).map((spec) => (
         <FieldEditor key={`${base}|${spec.field}`} spec={spec} container={container} base={base} onChange={onChange} />
       ))}
     </>
@@ -75,7 +76,7 @@ function Label({ spec }: { spec: FieldSpec }) {
         )}
       </span>
       {hint !== "" && <span className="muted small"> {hint}</span>}
-      {spec.description_zh !== "" && <div className="muted small">{spec.description_zh}</div>}
+      {descOf(spec) !== "" && <div className="muted small">{descOf(spec)}</div>}
     </div>
   );
 }
@@ -174,14 +175,14 @@ function ChoiceField({ spec, container, base, onChange }: FieldProps) {
                   {b}
                 </span>
               ))}
-              {c.description_zh !== "" && <span className="ws-card-desc">{c.description_zh}</span>}
+              {descOf(c) !== "" && <span className="ws-card-desc">{descOf(c)}</span>}
             </button>
           ))}
         </div>
       ) : spec.choices.length <= COMPACT_MAX ? (
         <div className="ws-chips">
           {spec.choices.map((c) => (
-            <Hint key={String(c.value)} text={c.description_zh}>
+            <Hint key={String(c.value)} text={descOf(c)}>
               <button
                 type="button"
                 className={`ws-chip${chosen?.value === c.value ? " selected" : ""}`}
@@ -212,8 +213,8 @@ function ChoiceField({ spec, container, base, onChange }: FieldProps) {
           ))}
         </select>
       )}
-      {!card && chosen !== undefined && chosen.description_zh !== "" && (
-        <div className="muted small">{chosen.description_zh}</div>
+      {!card && chosen !== undefined && descOf(chosen) !== "" && (
+        <div className="muted small">{descOf(chosen)}</div>
       )}
       {!spec.required && raw !== undefined && (
         <button type="button" className="ws-link" onClick={() => onChange(clearChoice(container, spec, base))}>
@@ -242,7 +243,7 @@ function MultiChoiceField({ spec, container, base, onChange }: FieldProps) {
       <Label spec={spec} />
       <div className="ws-chips">
         {spec.choices.map((c) => (
-          <Hint key={String(c.value)} text={c.description_zh}>
+          <Hint key={String(c.value)} text={descOf(c)}>
             <label className={`ws-chip${value.includes(String(c.value)) ? " selected" : ""}`}>
               <input type="checkbox" checked={value.includes(String(c.value))} onChange={() => toggle(String(c.value))} />
               {c.name_zh}
@@ -260,7 +261,7 @@ function NumberField({ spec, container, base, onChange }: FieldProps) {
   const path = joinPath(base, spec.field);
   const raw = getPath(container, path);
   const special = spec.allow_weapon ? "weapon" : spec.type === "count" ? "all" : null;
-  const specialLabel = spec.allow_weapon ? "用武器骰" : "全部";
+  const specialLabel = spec.allow_weapon ? "用武器射程" : "全部";
   const isSpecial = special !== null && raw === special;
   return (
     <div className="ws-field">
@@ -348,7 +349,7 @@ function BoolField({ spec, container, base, onChange }: FieldProps) {
         <input type="checkbox" checked={on} onChange={(e) => onChange(setPath(container, path, e.target.checked ? true : undefined))} />
         <span className="ws-label-name">{spec.name_zh}</span>
       </label>
-      {spec.description_zh !== "" && <div className="muted small">{spec.description_zh}</div>}
+      {descOf(spec) !== "" && <div className="muted small">{descOf(spec)}</div>}
     </div>
   );
 }
@@ -365,7 +366,7 @@ function ObjectField({ spec, container, base, onChange }: FieldProps) {
         {spec.name_zh}
         {spec.required && <span className="ws-required">*</span>}
       </legend>
-      {spec.description_zh !== "" && <div className="muted small">{spec.description_zh}</div>}
+      {descOf(spec) !== "" && <div className="muted small">{descOf(spec)}</div>}
       {!spec.required && (
         <label className="ws-inline">
           <input
@@ -425,7 +426,7 @@ function EffectsField({ spec, container, base, onChange }: FieldProps) {
                 </button>
               </span>
             </div>
-            {choice !== undefined && choice.description_zh !== "" && <div className="muted small">{choice.description_zh}</div>}
+            {choice !== undefined && descOf(choice) !== "" && <div className="muted small">{descOf(choice)}</div>}
             {choice === undefined ? (
               <div className="error-text small">這個效果不在目前的選項內，請移除。</div>
             ) : (
@@ -440,9 +441,10 @@ function EffectsField({ spec, container, base, onChange }: FieldProps) {
         );
       })}
       <div className="ws-add">{full ? "已達效果數量上限。" : "新增一個效果："}</div>
+      {!full && hiddenCount(spec.choices) > 0 && <div className="muted small">這類效果之後開放：{spec.choices.filter((c) => c.later === true).map((c) => c.name_zh).join("、")}。</div>}
       {!full && (
         <div className="ws-cards">
-          {spec.choices.map((c) => {
+          {shownChoices(spec.choices).map((c) => {
             const blocked = unavailableReason(c);
             return (
               <button
@@ -461,7 +463,7 @@ function EffectsField({ spec, container, base, onChange }: FieldProps) {
                     {b}
                   </span>
                 ))}
-                {c.description_zh !== "" && <span className="ws-card-desc">{c.description_zh}</span>}
+                {descOf(c) !== "" && <span className="ws-card-desc">{descOf(c)}</span>}
                 {ruleLines(c).map((r) => (
                   <span key={r} className="ws-card-rule">
                     {r}

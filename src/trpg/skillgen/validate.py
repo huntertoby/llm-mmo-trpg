@@ -90,9 +90,34 @@ def validate_skill(skill: SkillDef, library: ContentLibrary) -> list[Violation]:
         return reference
     resource = library.budget.cost_problem(skill.category, skill.cost)  # 3H-2，06 6.10
     out = [] if resource is None else [Violation(skill.id, "cap.resource", resource)]
+    # 最低花費（3-48c）：內建技能的既有數值不動（違反清單見 Phase3-48c報告），只查產生與提議的
+    least = (
+        None
+        if skill.provenance.origin == "builtin" and skill.id in library.skills
+        else library.budget.min_cost_problem(skill.kind, skill.category, skill.cost)
+    )
+    if least is not None:
+        out.append(Violation(skill.id, "cap.min_cost", least))
+    out += _rune_tag_violations(skill, library)
     weapon = _weapon_scaling_violations(skill, library)
     out += weapon + _scaling_range_violations(skill, library, already=bool(weapon))
     return [*out, *_structure_violations(skill, library), *_keyword_violations(skill, library)]
+
+
+def _rune_tag_violations(skill: SkillDef, library: ContentLibrary) -> list[Violation]:
+    """``rune.tag``（3-48c，06 6.25）：刻印的標籤只能用已定義的符文標籤（``skill_tags.yaml`` 有
+    ``rune_zh`` 的）；新標籤由內容資料新增，不開放自訂（沒有技能能讀取或引爆）。"""
+    runes = library.ruleset.skill_tags.rune_names()
+    names = "、".join(f"{runes[t]}紋" for t in sorted(runes))
+    return [
+        Violation(
+            skill.id,
+            "rune.tag",
+            f"刻印的標籤只能選已定義的符文標籤（{names}），收到「{effect.tag}」",
+        )
+        for effect in skill.iter_effects(include_followup=True)
+        if effect.type == "inscribe" and effect.tag is not None and effect.tag not in runes
+    ]
 
 
 def _weapon_scaling_violations(skill: SkillDef, library: ContentLibrary) -> list[Violation]:

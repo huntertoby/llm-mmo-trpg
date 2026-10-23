@@ -219,6 +219,13 @@ def minimal_filler(library: ContentLibrary) -> NumberFiller:
                     cond[name] = _min_value(definition.params[name])
         if out.get("kind") == "active" and out.get("ap_cost") is None:
             out["ap_cost"] = DEFAULT_ACTIVE_AP
+        if out.get("kind") == "active" and category in ("weapon", "spell"):
+            # 最低花費（06 6.10）：主動法術技至少 1 法力、主動武器技至少 1 耐力
+            resource = library.budget.resource_of(category)  # type: ignore[arg-type]
+            cost = dict(out.get("cost") or {})
+            if not isinstance(cost.get(resource), int) or cost[resource] < 1:
+                cost[resource] = 1
+            out["cost"] = cost
         return out
 
     return fill

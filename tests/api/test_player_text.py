@@ -21,14 +21,16 @@ TRUNCATE = (
 )
 
 
-def _texts(node: Any, key: str = "") -> list[str]:
-    """選項樹裡所有給玩家看的字串（說明、備註、名稱、問題）。"""
+def _texts(node: Any, key: str = "", *, raw: bool = False) -> list[str]:
+    """選項樹裡所有給玩家看的字串（說明、備註、名稱、問題）；``raw``：改收開發者原文
+    （3-48c：``draft_options`` 已把說明換成玩家版，原文在 ``dev_description_zh``）。"""
     if isinstance(node, str):
-        return [node] if key in TEXT_KEYS else []
+        wanted = ("dev_description_zh",) if raw else TEXT_KEYS
+        return [node] if key in wanted else []
     if isinstance(node, dict):
-        return [t for k, v in node.items() for t in _texts(v, k)]
+        return [t for k, v in node.items() for t in _texts(v, k, raw=raw)]
     if isinstance(node, list):
-        return [t for v in node for t in _texts(v, key)]
+        return [t for v in node for t in _texts(v, key, raw=raw)]
     return []
 
 
@@ -66,7 +68,7 @@ def test_the_scan_catches_the_raw_texts(library: ContentLibrary) -> None:
     raw = [
         t
         for d in _drafts(library)
-        for t in _texts(draft_options(d, library).model_dump(mode="json"))
+        for t in _texts(draft_options(d, library).model_dump(mode="json"), raw=True)
     ]
     assert any(PHASE_MARK.search(t) for t in raw)
     assert any(IDENTIFIER.search(t) for t in raw)

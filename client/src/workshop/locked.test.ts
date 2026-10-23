@@ -3,11 +3,11 @@ import { describe, expect, it } from "vitest";
 import type { Choice, DraftOptions, FieldSpec } from "../api/types";
 import { autoSingles, conformScaling, type Json } from "./draft";
 
-const only: Choice = { value: "str", name_zh: "看手上武器（力量）", description_zh: "", params: [], info: {} };
+const only: Choice = { value: "str", name_zh: "看手上武器（力量）", description_zh: "", dev_description_zh: "", later: false, params: [], info: {} };
 const scaling = (locked: boolean): FieldSpec => ({
   field: "scaling_attr",
   name_zh: "縮放屬性",
-  description_zh: "",
+  description_zh: "", dev_description_zh: "", later: false,
   type: "choice",
   required: true,
   choices: [only],
@@ -15,6 +15,7 @@ const scaling = (locked: boolean): FieldSpec => ({
   dice_sides: [],
   allow_weapon: false,
   locked,
+  show_when: {},
   card: false,
   object_choice: false,
 });
@@ -38,7 +39,7 @@ describe("locked single-choice field", () => {
 });
 
 // 3-48：允許範圍改變（類別、武器需求、效果）後，草稿裡不合法的縮放屬性自動對齊
-const choice = (value: string): Choice => ({ value, name_zh: value, description_zh: "", params: [], info: {} });
+const choice = (value: string): Choice => ({ value, name_zh: value, description_zh: "", dev_description_zh: "", later: false, params: [], info: {} });
 const optionsWith = (primary: string[], secondary?: string[]): DraftOptions => {
   const field = (name: string, values: string[]): FieldSpec => ({ ...scaling(false), field: name, choices: values.map(choice) });
   const fields = [field("scaling_attr", primary), ...(secondary === undefined ? [] : [field("secondary_scaling_attr", secondary)])];
@@ -47,8 +48,8 @@ const optionsWith = (primary: string[], secondary?: string[]): DraftOptions => {
 
 describe("conformScaling", () => {
   it("replaces a stale primary attribute with the first allowed one (spell wil -> holy wis)", () => {
-    const draft: Json = { category: "spell", scaling_attr: "wil" };
-    expect(conformScaling(draft, optionsWith(["wis"]))).toEqual({ category: "spell", scaling_attr: "wis" });
+    const draft: Json = { category: "spell", scaling_attr: "wil", effects: [{ type: "heal" }] };
+    expect(conformScaling(draft, optionsWith(["wis"]))).toEqual({ category: "spell", scaling_attr: "wis", effects: [{ type: "heal" }] });
   });
 
   it("switching spell -> weapon: primary follows the weapon class, secondary is dropped", () => {

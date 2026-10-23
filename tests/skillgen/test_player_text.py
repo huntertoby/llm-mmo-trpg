@@ -23,11 +23,14 @@ def _leaks(text: str) -> list[str]:
 
 def _field_texts(field: Any) -> list[str]:
     """欄位與選項的顯示文字（名稱、說明；遞迴）。"""
-    out = [field.name_zh]
+    out = [
+        field.name_zh,
+        field.description_zh,
+    ]  # 3-48c：說明也是玩家文字（原文在 dev_description_zh）
     for sub in field.fields:
         out += _field_texts(sub)
     for choice in field.choices:
-        out.append(choice.name_zh)
+        out += [choice.name_zh, choice.description_zh]
         for param in choice.params:
             out += _field_texts(param)
     return out
@@ -39,7 +42,7 @@ def _player_texts(draft: dict[str, Any]) -> list[str]:
     check = check_draft(draft, lib)
     texts = list(options.problems)
     for step in options.steps:
-        texts += [step.name_zh, *step.notes_zh]
+        texts += [step.name_zh, step.description_zh, *step.notes_zh]
         for field in step.fields:
             texts += _field_texts(field)
     texts += [p.message_zh for p in check.problems]

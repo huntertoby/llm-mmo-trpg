@@ -306,8 +306,15 @@ export function conformScaling(draft: Json, options: DraftOptions): Json {
   if (primary !== undefined && primary.choices.length > 0 && current !== undefined) {
     const first = primary.choices[0];
     if (first !== undefined && !primary.choices.some((c) => c.value === current)) {
-      out = setPath(out, "scaling_attr", first.value);
+      // 法術技還沒選效果時範圍未定（沒有預設值）：不合法的舊值（例：武器技換過來的力量）直接清掉讓玩家重選
+      const noEffects = !Array.isArray(out["effects"]) || out["effects"].length === 0;
+      out = setPath(out, "scaling_attr", out["category"] === "spell" && noEffects ? undefined : first.value);
     }
+  }
+  // 武器需求也會隨類別改變（法術技只有法器、任何武器）：不在選項內就清掉，改由玩家重選
+  const req = findField(options, "weapon_req");
+  if (req !== undefined && out["weapon_req"] !== undefined && !req.choices.some((c) => c.value === out["weapon_req"])) {
+    out = setPath(out, "weapon_req", undefined);
   }
   const second = out["secondary_scaling_attr"];
   if (second !== undefined) {

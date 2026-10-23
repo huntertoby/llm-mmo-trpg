@@ -178,13 +178,15 @@ def dice_field(
     )
 
 
-def shape_param_fields(shape: ShapeDef) -> tuple[FieldSpec, ...]:
-    """形狀的參數（``skill_shapes.yaml`` 的 ``params``：範圍與是否可填 ``weapon``）。"""
+def shape_param_fields(shape: ShapeDef, *, weapon_ok: bool = True) -> tuple[FieldSpec, ...]:
+    """形狀的參數（``skill_shapes.yaml`` 的 ``params``：範圍與是否可填「用武器射程」）。
+    ``weapon_ok`` 為假（法術技）時不提供「用武器射程」（只有武器技有手上的武器）。"""
     out: list[FieldSpec] = []
     for name, spec in shape.params.items():
         name_zh, desc = _SHAPE_PARAM_TEXT.get(name, (name, ""))
-        if spec.allow_weapon:
-            desc += "；也可以填 weapon（用武器射程）"
+        allow_weapon = spec.allow_weapon and weapon_ok
+        if allow_weapon:
+            desc += "；也可以勾選「用武器射程」"
         out.append(
             FieldSpec(
                 field=name,
@@ -194,7 +196,7 @@ def shape_param_fields(shape: ShapeDef) -> tuple[FieldSpec, ...]:
                 required=spec.required,
                 min=spec.min,
                 max=spec.max,
-                allow_weapon=spec.allow_weapon,
+                allow_weapon=allow_weapon,
             )
         )
     return tuple(out)
@@ -271,6 +273,17 @@ def _ref_choices(kind: str, library: ContentLibrary) -> tuple[Choice, ...]:
         ),
     }
     return builders[kind]()
+
+
+def tag_choices(library: ContentLibrary, primitive_id: str) -> tuple[Choice, ...]:
+    """標籤欄位的選單（中文名）。刻印（``inscribe``）只列有符文單字的標籤，顯示成「獵紋」；
+    其他（重置冷卻）列全部技能標籤。"""
+    tags = sorted(library.ruleset.skill_tags.tags, key=lambda t: t.id)
+    if primitive_id == "inscribe":
+        return tuple(
+            Choice(value=t.id, name_zh=f"{t.rune_zh}紋") for t in tags if t.rune_zh is not None
+        )
+    return tuple(Choice(value=t.id, name_zh=t.name_zh) for t in tags)
 
 
 def _scaling_field(library: ContentLibrary, spec: PrimitiveParam) -> FieldSpec:
@@ -367,9 +380,12 @@ def _param_field(
         "name_zh": PARAM_TEXT.get(name, name),
         "description_zh": spec.description_zh,
         "required": required,
+        "show_when": spec.show_when or {},
     }
     kind = spec.type
-    plain: dict[str, FieldType] = {"bool": "bool", "tag": "text", "effects": "effects"}
+    if kind == "tag":  # 只能選已定義的標籤（3-48c；刻印只列符文標籤，新標籤由內容資料新增）
+        return FieldSpec(**base, type="choice", choices=tag_choices(library, primitive.id))
+    plain: dict[str, FieldType] = {"bool": "bool", "effects": "effects"}
     if kind in plain:
         return FieldSpec(**base, type=plain[kind])
     if kind in ("int", "count"):

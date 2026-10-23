@@ -50,6 +50,36 @@ def test_check_endpoint_returns_budget_rarity_and_card(client: TestClient) -> No
     assert any(p["rule"] == "rarity.primitive" for p in bad["problems"])
 
 
+def test_rune_duration_card_and_export_follow_the_draft_in_both_edit_orders(
+    client: TestClient,
+) -> None:
+    """3-48c 調查：刻印持續回合數 4→1、1→4 兩種順序，卡片預覽與匯出的 YAML 都跟著草稿走
+    （伺服器無狀態；每次請求都由草稿重算）。"""
+    base = {
+        **CHARGE,
+        "category": "spell",
+        "weapon_req": "focus",
+        "scaling_attr": "int",
+        "cost": {"mana": 4, "cooldown": 2},
+        "rarity": "rare",
+        "shape": {"type": "ground_tile", "range": 3},
+        "skeleton": "rune",
+    }
+    for order in ((4, 1), (1, 4)):
+        for duration in order:
+            draft = {
+                **base,
+                "effects": [{"type": "inscribe", "element": "fire", "duration": duration}],
+            }
+            check = client.post("/api/workshop/check", json={"skill": draft}).json()
+            export = client.post(
+                "/api/workshop/export", json={"skill": draft, "allow_illegal": True}
+            ).json()
+            assert f"duration: {duration}" in export["yaml"]
+            card_text = str(check["card"])
+            assert f"持續 {duration} 輪" in card_text, (order, duration, check["problems"])
+
+
 def test_check_endpoint_returns_an_icon_even_for_partial_drafts(client: TestClient) -> None:
     full = client.post("/api/workshop/check", json={"skill": CHARGE}).json()
     assert full["icon"]["partial"] is False
@@ -192,6 +222,7 @@ def test_equipment_limits_are_checked(client: TestClient) -> None:
     unknown = _create(client, custom_skills=[CHARGE], replace_skills=["skill_fire_bolt"])
     assert unknown.status_code == 422 and "沒有裝備要替換的技能" in unknown.json()["detail"]
     spell = {**CHARGE, "category": "spell", "weapon_req": "focus", "scaling_attr": "int"}
+    spell["cost"] = {"mana": 4}
     spell["effects"] = [
         {"type": "dash"},
         {"type": "damage", "dice": "2d6", "element": "fire"},
