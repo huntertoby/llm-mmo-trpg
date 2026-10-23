@@ -18,7 +18,7 @@ from trpg.content.library import ContentLibrary
 from trpg.content.rules import SummonInfusion
 from trpg.content.skills import EffectSpec, SkillDef
 from trpg.content.summons import SummonDef, summon_scaled_hp, summon_spec_hp
-from trpg.engine.ids import CONCEALED, IMMOVABLE, PRONE
+from trpg.engine.ids import BLOCKS_SIGHT_TAG, CONCEALED, IMMOVABLE, PRONE
 from trpg.engine.weapon_traits import TRIP_ATTR
 
 __all__ = [
@@ -53,15 +53,21 @@ def _status(lib: ContentLibrary, status_id: str) -> str:
     return lib.ruleset.status_def(status_id).name_zh
 
 
-def summon_card_hp(lib: ContentLibrary, summon: SummonDef, spec: EffectSpec | None = None) -> int:
+def summon_card_hp(
+    lib: ContentLibrary,
+    summon: SummonDef,
+    spec: EffectSpec | None = None,
+    *,
+    chosen_infusion: str | None = None,
+) -> int:
     """技能卡上的召喚物最大 HP：和引擎同一個算法（定位係數、固有灌注與分歧進化的 HP），以 1 級、
-    縮放屬性修正 0、沒有修正規則與裝備、施放時不選灌注的施放者計算。"""
+    縮放屬性修正 0、沒有修正規則與裝備的施放者計算；``chosen_infusion`` 是施放時選的灌注（技能卡
+    不選，測試用來和引擎生成的值對照）。"""
     core = lib.ruleset.core
     template = summon.template
     table = core.summon_infusions
-    keywords = dict.fromkeys(
-        k for k in (template.innate, None if spec is None else spec.infusion) if k in table
-    )
+    bonus = None if spec is None else spec.infusion
+    keywords = dict.fromkeys(k for k in (template.innate, bonus, chosen_infusion) if k in table)
     hp = summon_scaled_hp(
         core,
         template,
@@ -75,8 +81,20 @@ def summon_card_hp(lib: ContentLibrary, summon: SummonDef, spec: EffectSpec | No
     )
 
 
-def infusion_phrases(lib: ContentLibrary, infusion: SummonInfusion) -> list[str]:
-    """一個灌注關鍵字的效果（``summon_infusions``），例：「普攻命中時施加「燃燒」2 回合」。"""
+def infusion_phrases(
+    lib: ContentLibrary, infusion: SummonInfusion, *, attacks: bool = True
+) -> list[str]:
+    """一個灌注關鍵字的效果（``summon_infusions``），例：「普攻命中時施加「燃燒」2 回合」。
+    ``attacks`` 為假（不攻擊的召喚物）時只列召喚當下生效的部分（隱蔽、HP）。"""
+    parts = _attack_phrases(lib, infusion) if attacks else []
+    if infusion.conceal_rounds:
+        parts.append(f"召喚時獲得「{_status(lib, CONCEALED)}」{infusion.conceal_rounds} 回合")
+    if infusion.hp_permille:
+        parts.append(f"最大 HP +{infusion.hp_permille / 10:g}%")
+    return parts
+
+
+def _attack_phrases(lib: ContentLibrary, infusion: SummonInfusion) -> list[str]:
     parts: list[str] = []
     if infusion.status is not None:
         parts.append(f"普攻命中時施加「{_status(lib, infusion.status)}」{infusion.duration} 回合")
@@ -95,10 +113,6 @@ def infusion_phrases(lib: ContentLibrary, infusion: SummonInfusion) -> list[str]
         )
     if infusion.height_permille:
         parts.append(f"站得比目標高時普攻傷害 +{infusion.height_permille / 10:g}%")
-    if infusion.conceal_rounds:
-        parts.append(f"召喚時獲得「{_status(lib, CONCEALED)}」{infusion.conceal_rounds} 回合")
-    if infusion.hp_permille:
-        parts.append(f"最大 HP +{infusion.hp_permille / 10:g}%")
     return parts
 
 
@@ -145,7 +159,7 @@ def summon_innate_lines(lib: ContentLibrary, summon: SummonDef) -> tuple[str, ..
     lines: list[str] = []
     infusion = rules.core.summon_infusions.get(template.innate or "")
     if infusion is not None:
-        lines += infusion_phrases(lib, infusion)
+        lines += infusion_phrases(lib, infusion, attacks=summon_acts(template))
     lines += [_hit_rule_text(lib, rule) for rule in template.hit_rules]
     if template.snare is not None:
         snare = template.snare
@@ -176,6 +190,8 @@ def summon_innate_lines(lib: ContentLibrary, summon: SummonDef) -> tuple[str, ..
     lines += _pulse_lines(lib, template)
     if IMMOVABLE in template.tags:
         lines.append("不會被推動或傳送")
+    if BLOCKS_SIGHT_TAG in template.tags:
+        lines.append("擋住視線")
     return tuple(lines)
 
 

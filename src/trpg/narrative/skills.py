@@ -464,7 +464,7 @@ def status_duration_text(lib: ContentLibrary, status_id: str, duration: int | No
         return "（到帶有者的下回合開始）"
     if status.duration is not None:
         return f" {status.duration} 回合"
-    return "（直到被移除）"
+    return "（持續到取消）" if status.stance else "（直到被移除）"
 
 
 def _apply_status(lib: ContentLibrary, _skill: SkillDef, spec: EffectSpec) -> str:
@@ -478,8 +478,8 @@ def _shield(lib: ContentLibrary, skill: SkillDef, spec: EffectSpec) -> str:
     status = lib.ruleset.status_def(SHIELD_STATUS)
     amount = "" if spec.dice is None else f"{_dice(spec.dice)}＋"
     return (
-        f"護盾：吸收 {amount}{scaling_label(skill)}加成 點傷害，持續 {status.duration} 回合"
-        "（已有護盾時取較大值）"
+        f"護盾（吸收量 {amount}{scaling_label(skill)}加成，持續 {status.duration} 回合；"
+        "已有護盾時取較大值）"
     )
 
 
