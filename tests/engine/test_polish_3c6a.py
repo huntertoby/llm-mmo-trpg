@@ -75,7 +75,12 @@ def test_a_hit_pierced_shot_still_reports_the_back_discount_separately_from_bloc
     (dealt,) = [d for d in of(result, DamageDealt) if d.target_id == U2]
     assert dealt.pierce_permille == 700 and dealt.multiplier_permille == 980  # 穿透箭 ×1.4 再 ×0.7
     text = describe_event(dealt, result.state) or ""
-    assert "格擋/加成 ×1.4" in text and "穿透後方 ×0.7" in text and "×0.98" not in text
+    assert (
+        "加成 ×1.4" in text
+        and "格擋/加成" not in text
+        and "穿透後方 ×0.7" in text
+        and "×0.98" not in text
+    )
 
 
 def test_a_pierce_discount_alone_is_not_shown_as_a_block(monkeypatch: pytest.MonkeyPatch) -> None:
