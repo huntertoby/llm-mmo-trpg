@@ -19,7 +19,9 @@ USER_AGENT = (
     "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 "
     "(KHTML, like Gecko) Chrome/124.0.0.0 Safari/537.36"
 )
-OUT_DIR = Path(__file__).resolve().parent.parent / "client" / "src" / "assets" / "fonts" / "noto-sans-tc"
+OUT_DIR = (
+    Path(__file__).resolve().parent.parent / "client" / "src" / "assets" / "fonts" / "noto-sans-tc"
+)
 
 
 def fetch(url: str) -> bytes:
@@ -28,8 +30,8 @@ def fetch(url: str) -> bytes:
         raise ValueError(f"不允許的來源：{url}")
     if host == "raw.githubusercontent.com" and url != OFL_URL:
         raise ValueError(f"不允許的來源：{url}")
-    req = urllib.request.Request(url, headers={"User-Agent": USER_AGENT})  # noqa: S310
-    with urllib.request.urlopen(req, timeout=60) as resp:  # noqa: S310
+    req = urllib.request.Request(url, headers={"User-Agent": USER_AGENT})
+    with urllib.request.urlopen(req, timeout=60) as resp:
         data: bytes = resp.read()
     return data
 
@@ -61,7 +63,8 @@ def main() -> int:
             "}\n"
         )
     (OUT_DIR / "noto-sans-tc.css").write_text(
-        "/* 由 scripts/fetch_font.py 產生；Noto Sans TC，SIL OFL 1.1（見 OFL.txt）。 */\n" + "\n".join(out_css),
+        "/* scripts/fetch_font.py 產生；Noto Sans TC，OFL 1.1（見 OFL.txt）。 */\n"
+        + "\n".join(out_css),
         encoding="utf-8",
     )
     (OUT_DIR / "OFL.txt").write_bytes(fetch(OFL_URL))
