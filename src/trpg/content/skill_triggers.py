@@ -12,17 +12,22 @@ from pydantic import Field, model_validator
 
 from trpg.content.battle import ID_PATTERN
 from trpg.content.schemas import ContentModel
-from trpg.content.skills import SkillRarity
+from trpg.content.skills import PrimitiveParam, SkillRarity
 
 __all__ = [
     "EVERY_N_HITS",
     "REQUIRED_TRIGGERS",
+    "TRIGGER_PARAM_NAMES",
     "SkillTriggerDef",
     "SkillTriggerTable",
 ]
 
 EVERY_N_HITS = "every_n_hits"
 """唯一帶參數 ``n`` 的時機。"""
+
+TRIGGER_PARAM_NAMES = frozenset({"n", "tag", "status", "surface"})
+"""``trigger`` 上與時機有關的參數欄位（``TriggerSpec`` 的 ``n``、``tag``、``status``、
+``surface``）。"""
 
 REQUIRED_TRIGGERS: tuple[str, ...] = (
     "on_hit",
@@ -57,6 +62,12 @@ class SkillTriggerDef(ContentModel):
     id: str = Field(pattern=ID_PATTERN)
     name_zh: str = Field(min_length=1)
     description_zh: str = Field(min_length=1)
+    llm_hint: str = ""
+    """給 LLM 看的一句話說明（Phase 4-L3）：中性描述，不含世界觀名詞、階段編號與欄位名。"""
+    params: dict[str, PrimitiveParam] = Field(default_factory=dict)
+    """這個時機在 ``trigger`` 上可填的參數（Phase 4-L3；格式沿用原語參數）：``n``（``int``，
+    ``every_n_hits``）、``tag``、``status``、``surface``。必填與否、範圍與 ``TriggerSpec`` 的檢查
+    一致    （``tests/content/test_trigger_params.py``）。"""
     has_other: bool
     budget_coefficient_permille: int | None = Field(default=None, ge=1)
     budget_by_n_permille: dict[int, int] | None = None
@@ -65,6 +76,9 @@ class SkillTriggerDef(ContentModel):
 
     @model_validator(mode="after")
     def _check(self) -> SkillTriggerDef:
+        unknown = sorted(set(self.params) - TRIGGER_PARAM_NAMES)
+        if unknown:
+            raise ValueError(f"觸發時機 {self.id} 有未知的參數：{', '.join(unknown)}")
         if self.id == EVERY_N_HITS:
             table = self.budget_by_n_permille
             if table is None or sorted(table) != [2, 3] or any(v < 1 for v in table.values()):
