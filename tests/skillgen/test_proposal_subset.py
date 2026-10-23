@@ -11,6 +11,7 @@ import pytest
 
 from tests.content.test_llm_hint import IDENTIFIER
 from tests.engine.helpers import library
+from tests.skillgen.helpers import standard_form
 from trpg.content.library import ContentLibrary
 from trpg.content.skills import rarity_rank
 from trpg.shared.tokens import PROMPT_TOKEN_BUDGET
@@ -46,6 +47,7 @@ def _evaluate(models: ProposalModels, data: dict[str, Any]) -> Any:
 
 
 BASE: dict[str, Any] = {
+    "form": "standard",
     "name_zh": "測試技",
     "kind": "active",
     "skeleton": "area",
@@ -152,12 +154,12 @@ def test_filtered_trigger_is_union_tag_invalid_with_subset_allowed() -> None:
 
 def test_empty_conditions_or_triggers_remove_the_fields() -> None:
     models = build_proposal_models(_lib(), conditions=[], triggers=[])
-    schema = models.json_schema()
+    schema = standard_form(models.json_schema())
     assert "condition" not in schema["properties"]
     assert "trigger" not in schema["properties"]
     errors = _errors(models, {**BASE, "condition": {"type": "x"}})
     assert errors["condition"].code == "extra_forbidden"
-    full = build_proposal_models(_lib()).json_schema()
+    full = standard_form(build_proposal_models(_lib()).json_schema())
     assert "condition" in full["properties"]
     assert "trigger" in full["properties"]
 
@@ -503,6 +505,7 @@ def _handmade_subset() -> ProposalSubset:
 def test_available_payload_format_snapshot() -> None:
     payload = available_payload(_lib(), _handmade_subset())
     assert list(payload) == [
+        "forms",
         "skeletons",
         "primitives",
         "shapes",
@@ -511,7 +514,16 @@ def test_available_payload_format_snapshot() -> None:
         "keywords",
     ]
     assert [e["id"] for e in payload["primitives"]] == ["apply_status", "damage"]  # 依 ID 排序
-    assert all(set(e) == {"id", "hint"} for e in payload["skeletons"])
+    # 骨架帶核心、附帶與形狀（Phase 4-L5b）
+    assert all(
+        set(e) == {"id", "hint", "core", "secondary", "shapes"} for e in payload["skeletons"]
+    )
+    passive = payload["skeletons"][0]
+    assert set(passive["core"]) == {"primitives", "note"}
+    assert set(passive["secondary"]) == {"primitives", "note"}
+    assert passive["shapes"] == ["self"]
+    assert [e["id"] for e in payload["forms"]] == ["standard"]
+    assert all(set(e) == {"id", "hint"} for e in payload["forms"])
     assert all(set(e) == {"id", "hint"} for e in payload["shapes"])
     assert all(set(e) == {"id", "hint"} for e in payload["conditions"])
     assert all(set(e) == {"id", "hint"} for e in payload["triggers"])

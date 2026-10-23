@@ -99,7 +99,11 @@ def test_prompt_works_with_mock_client_and_models_validate() -> None:
     assert client.calls == [prompt.messages]
     result = evaluate_proposal("{}", prompt.models, _lib(), ProposalContext(tier=2, rarity="rare"))
     assert result.skill is None
-    assert {e.code for e in result.errors} == {"missing"}
+    # 頂層是以 form 區分的型態（Phase 4-L5b）：沒有 form 時先報缺少型態
+    assert {e.code for e in result.errors} == {"union_tag_not_found"}
+    ctx = ProposalContext(tier=2, rarity="rare")
+    standard = evaluate_proposal({"form": "standard"}, prompt.models, _lib(), ctx)
+    assert {e.code for e in standard.errors} == {"missing"}
 
 
 def test_player_text_stays_in_its_block_and_subset_ignores_retries() -> None:
