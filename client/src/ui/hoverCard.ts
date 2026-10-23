@@ -4,7 +4,7 @@
 // 純邏輯、不碰 React 與 DOM（計時器可用 vitest fake timers 測）。
 import type { Pos } from "../api/types";
 import { posKey } from "../battle/geometry";
-import { CLOSE_GRACE_MS, claim, release, type Dismissable, type Holdable } from "./floatCard";
+import { CLOSE_GRACE_MS, TILE_SWITCH_MS, claim, release, type Dismissable, type Holdable } from "./floatCard";
 
 const same = (a: Pos | null, b: Pos | null): boolean => (a === null || b === null ? a === b : posKey(a) === posKey(b));
 
@@ -44,13 +44,16 @@ export class TileCardController implements Dismissable, Holdable {
     return same(this.hover, this.suppressed) ? null : this.hover;
   }
 
-  private scheduleSwitch(): void {
+  /** 換到另一個有內容的格子用短延遲（``TILE_SWITCH_MS``）；離開卡片或滑到沒有內容的地方用寬限。 */
+  private scheduleSwitch(grace = false): void {
     this.clearTimer();
+    const next = this.target();
+    const delay = !grace && next !== null && this.hasContent(next) ? TILE_SWITCH_MS : CLOSE_GRACE_MS;
     this.timer = setTimeout(() => {
       this.timer = null;
       if (this.overCard || this.holds > 0 || this.pinned) return;
       if (!same(this.shown, this.target())) this.update(() => (this.shown = this.target()));
-    }, CLOSE_GRACE_MS);
+    }, delay);
   }
 
   setHover(tile: Pos | null): void {
@@ -77,7 +80,7 @@ export class TileCardController implements Dismissable, Holdable {
 
   cardLeave(): void {
     this.overCard = false;
-    if (!this.pinned) this.scheduleSwitch();
+    if (!this.pinned) this.scheduleSwitch(true);
   }
 
   /** 點卡片：釘住。 */

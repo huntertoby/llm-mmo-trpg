@@ -1,5 +1,5 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
-import { CLOSE_GRACE_MS, FloatController, OPEN_DELAY_MS, resetFloatRegistry } from "./floatCard";
+import { CLOSE_GRACE_MS, FloatController, OPEN_DELAY_MS, TILE_SWITCH_MS, resetFloatRegistry } from "./floatCard";
 import { gearFoldLabel } from "./gearFold";
 import { TileCardController, cardMaxHeight } from "./hoverCard";
 
@@ -14,24 +14,47 @@ beforeEach(() => {
 afterEach(() => vi.useRealTimers());
 
 describe("單位資訊卡：滑過格子", () => {
-  it("滑過有內容的格子立即顯示；離開後 250ms 寬限才換成新格子", () => {
+  it("滑過有內容的格子立即顯示；換到另一個有內容的格子，停留 80ms 就換卡", () => {
     const c = new TileCardController();
     c.setHover(A);
     expect(c.visible).toBe(true);
     expect(c.shown).toEqual(A);
     c.setHover(B);
-    vi.advanceTimersByTime(CLOSE_GRACE_MS - 1);
+    vi.advanceTimersByTime(TILE_SWITCH_MS - 1);
     expect(c.shown).toEqual(A);
     vi.advanceTimersByTime(1);
     expect(c.shown).toEqual(B);
   });
 
-  it("滑向卡片途中經過其他格子，寬限期內保持原卡；進入卡片後不換", () => {
+  it("一路掃過多格：每格停不到 80ms 不換，停下來 80ms 後換成最後一格（不必等 250ms）", () => {
+    const c = new TileCardController();
+    c.setHover(A);
+    c.setHover(B);
+    vi.advanceTimersByTime(40);
+    c.setHover(C);
+    vi.advanceTimersByTime(TILE_SWITCH_MS - 1);
+    expect(c.shown).toEqual(A);
+    vi.advanceTimersByTime(1);
+    expect(c.shown).toEqual(C);
+  });
+
+  it("滑到沒有內容的地方仍有 250ms 寬限", () => {
+    const c = new TileCardController();
+    c.hasContent = (t) => t.x === A.x && t.y === A.y;
+    c.setHover(A);
+    c.setHover(B);
+    vi.advanceTimersByTime(CLOSE_GRACE_MS - 1);
+    expect(c.shown).toEqual(A);
+    vi.advanceTimersByTime(1);
+    expect(c.visible).toBe(false);
+  });
+
+  it("滑向卡片途中快速經過其他格子保持原卡；進入卡片後不換", () => {
     const c = new TileCardController();
     c.setHover(A);
     c.setHover(B);
     c.setHover(C);
-    vi.advanceTimersByTime(100);
+    vi.advanceTimersByTime(TILE_SWITCH_MS - 10);
     expect(c.shown).toEqual(A);
     c.cardEnter();
     vi.advanceTimersByTime(5000);
@@ -56,7 +79,7 @@ describe("單位資訊卡：滑過格子", () => {
     const c = new TileCardController();
     c.setHover(A);
     c.setHover(B);
-    vi.advanceTimersByTime(100);
+    vi.advanceTimersByTime(TILE_SWITCH_MS - 10);
     c.setHover(A);
     vi.advanceTimersByTime(1000);
     expect(c.shown).toEqual(A);
