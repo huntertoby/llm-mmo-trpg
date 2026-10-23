@@ -5,11 +5,12 @@ import { PAL, rgba } from "./artPalette";
 import { flame, roundRect, shadowEllipse, TAU, type Ctx } from "./artDraw";
 import { rng } from "./artRandom";
 import { cracks, type HpStage } from "./fieldFx";
+import { pickThemed, themeKey, type ArtTheme, type LookTable, type RegionTable } from "./regionArt";
 import { ART_T } from "./terrainArt";
 
 const T = ART_T;
 
-export interface ObjectArtSpec {
+export interface ObjectArtSpec extends ArtTheme {
   kind: string;
   x: number;
   y: number;
@@ -29,7 +30,7 @@ export interface ObjectArtSpec {
 const turnsLevel = (s: ObjectArtSpec): number => (s.turnsLeft === null ? 0 : s.turnsLeft <= 1 ? 2 : 1);
 
 export function objectArtKey(s: ObjectArtSpec): string {
-  return [s.kind, s.x, s.y, +s.joinL, +s.joinR, +s.vertical, +s.flammable, turnsLevel(s), s.hpStage].join("|");
+  return [s.kind, s.x, s.y, +s.joinL, +s.joinR, +s.vertical, +s.flammable, turnsLevel(s), s.hpStage, themeKey(s)].join("|");
 }
 
 type ObjectDrawer = (ctx: Ctx, s: ObjectArtSpec) => void;
@@ -555,6 +556,12 @@ export const OBJECT_DRAW: Readonly<Record<string, ObjectDrawer>> = {
   grass: grassFloor,
 };
 
+/** 各區的物件畫法（區域 ID → 物件 ID → 畫法）；3-37a 只有預設區（不在表內），雲嶺等在 3-37b 加入。 */
+export const REGION_OBJECT_DRAW: RegionTable<ObjectDrawer> = {};
+
+/** `look` 覆寫的物件畫法（`"鍵=值"` → 物件 ID → 畫法）；目前沒有。 */
+export const LOOK_OBJECT_DRAW: LookTable<ObjectDrawer> = {};
+
 export function hasObjectArt(kind: string): boolean {
   return kind in OBJECT_DRAW;
 }
@@ -591,7 +598,7 @@ const CRACKS: Readonly<Record<string, { color: string; box?: readonly [number, n
 };
 
 export function drawObject(ctx: Ctx, s: ObjectArtSpec): void {
-  (OBJECT_DRAW[s.kind] ?? drawGenericObject)(ctx, s);
+  (pickThemed(s, s.kind, REGION_OBJECT_DRAW, LOOK_OBJECT_DRAW) ?? OBJECT_DRAW[s.kind] ?? drawGenericObject)(ctx, s);
   if (s.hpStage > 0 && s.kind !== "thin_ice") {
     const style = CRACKS[s.kind];
     cracks(ctx, s.hpStage, s.x, s.y, style?.color, style?.box);

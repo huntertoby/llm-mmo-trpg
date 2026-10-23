@@ -23,6 +23,8 @@ import { drawObject, objectArtKey, OBJECT_DRAW, type ObjectArtSpec } from "./obj
 import { objectArtSpec } from "./artSpecs";
 
 const artSpecDefaults = (over: Partial<ObjectArtSpec>): ObjectArtSpec => ({
+  region: "",
+  look: "",
   kind: "crate",
   x: 2,
   y: 3,

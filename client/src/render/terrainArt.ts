@@ -6,6 +6,7 @@
 import { numToHex, PAL, rgba, shade } from "./artPalette";
 import { flame, roundRect, TAU, type Ctx } from "./artDraw";
 import { rng } from "./artRandom";
+import { pickThemed, themeKey, type ArtTheme, type LookTable, type RegionTable } from "./regionArt";
 
 /** 繪圖用的虛擬格邊長（樣張的尺寸；貼圖產生時再縮放到實際格子大小）。 */
 export const ART_T = 52;
@@ -20,7 +21,7 @@ export interface Sides {
 }
 
 /** 一個格子的繪圖規格：純資料，決定貼圖的內容與快取鍵。 */
-export interface TileArtSpec {
+export interface TileArtSpec extends ArtTheme {
   terrain: string;
   x: number;
   y: number;
@@ -54,6 +55,7 @@ export function tileArtKey(s: TileArtSpec): string {
     +s.wallFace,
     +s.blocked,
     s.tint ?? "-",
+    themeKey(s),
   ].join("|");
 }
 
@@ -292,6 +294,12 @@ export const TERRAIN_DRAW: Readonly<Record<string, TerrainDrawer>> = {
   ice_hole: drawIceHole,
 };
 
+/** 各區的地形畫法（區域 ID → 地形 ID → 畫法）；3-37a 只有預設區（不在表內），雲嶺等在 3-37b 加入。 */
+export const REGION_TERRAIN_DRAW: RegionTable<TerrainDrawer> = {};
+
+/** `look` 覆寫的地形畫法（`"wall=canyon_rock"` → 地形 ID → 畫法）；3-37b 加入。 */
+export const LOOK_TERRAIN_DRAW: LookTable<TerrainDrawer> = {};
+
 export function hasTerrainArt(terrain: string): boolean {
   return terrain in TERRAIN_DRAW;
 }
@@ -462,7 +470,7 @@ export function hasSurfaceArt(surface: string): boolean {
 
 /** 畫一個格子（座標以 ART_T 為單位；呼叫端負責縮放與裁切）。 */
 export function drawTile(ctx: Ctx, s: TileArtSpec): void {
-  const draw = TERRAIN_DRAW[s.terrain] ?? drawStone;
+  const draw = pickThemed(s, s.terrain, REGION_TERRAIN_DRAW, LOOK_TERRAIN_DRAW) ?? TERRAIN_DRAW[s.terrain] ?? drawStone;
   draw(ctx, s);
   if (s.tint !== null) {
     // 未知地形：石地畫法，再依 glossary 的地形色調上色
