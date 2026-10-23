@@ -21,6 +21,7 @@ from trpg.content.equipment import (
     EquippedItem,
     ItemDef,
     Loadout,
+    StatAffix,
     resolve_loadout,
 )
 from trpg.content.slots import SLOT_TYPE_OF
@@ -122,6 +123,7 @@ def test_all_six_attribute_affixes_exist_and_raise_their_attribute(attr: Attribu
     """3H-1（08 8.24）：六種屬性詞條都有，部位同力量，範圍 1～4，合併進總屬性。"""
     lib = library()
     affix = lib.affixes[f"affix_attr_{attr.value}"]
+    assert isinstance(affix, StatAffix)
     assert affix.attribute is attr
     assert affix.slots == lib.affixes["affix_attr_str"].slots
     assert (affix.value.min, affix.value.max) == (1, 4)  # type: ignore[union-attr]
