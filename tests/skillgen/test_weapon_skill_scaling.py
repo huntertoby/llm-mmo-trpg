@@ -41,14 +41,18 @@ def test_the_lock_waits_for_the_weapon_requirement() -> None:
     assert field.choices == ()
 
 
-def test_spell_skills_and_empty_drafts_keep_the_free_choice() -> None:
-    for draft in (
-        {"skeleton": "strike", "category": "spell", "weapon_req": "focus"},
-        {"skeleton": "strike"},
-    ):
-        field = _scaling_field(draft)
-        assert not field.locked
-        assert {c.value for c in field.choices} == {a.value for a in Attribute}
+def test_empty_drafts_keep_the_free_choice() -> None:
+    field = _scaling_field({"skeleton": "strike"})
+    assert not field.locked
+    assert {c.value for c in field.choices} == {a.value for a in Attribute}
+
+
+def test_a_spell_before_its_effects_does_not_offer_body_attributes() -> None:
+    """3-48c：法術技在選效果前不列力量、敏捷、體質，也沒有預設值。"""
+    field = _scaling_field({"skeleton": "strike", "category": "spell", "weapon_req": "focus"})
+    assert not field.locked
+    assert {c.value for c in field.choices} == {"int", "wis", "wil"}
+    assert field.default is None
 
 
 def test_a_stale_value_in_a_locked_field_is_not_reported_as_a_player_mistake() -> None:

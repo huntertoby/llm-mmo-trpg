@@ -406,7 +406,12 @@ def _spell_scaling_field(draft: Draft, library: ContentLibrary) -> FieldSpec:
             ),
             type="choice",
             required=True,
-            choices=tuple(Choice(value=a.value, name_zh=a.display_name) for a in Attribute),
+            # 法術不看力量、敏捷、體質（身體類的法術要先選好物理效果才會列出），也不預設任何一個
+            choices=tuple(
+                Choice(value=a.value, name_zh=a.display_name)
+                for a in Attribute
+                if draft.get("category") != "spell" or a not in library.skill_scaling.body_attrs
+            ),
         )
     allowed = library.scaling_range(facts) or tuple(Attribute)
     return FieldSpec(
@@ -478,6 +483,7 @@ def _fits_shape(primitive: PrimitiveDef, shape: str) -> bool:
 def _shape_step(draft: Draft, library: ContentLibrary, skeleton: SkeletonDef) -> StepOptions:
     shapes = library.ruleset.shapes.by_id()
     cores = _core_primitives(skeleton, library)
+    weapon_ok = draft.get("category") != "spell"  # 「用武器射程」只有武器技有
     choices: list[Choice] = []
     gather = [g for g in GATHER_SHAPES if g not in skeleton.shapes]
     if skeleton.id != FOLLOWUP_SKELETON:
@@ -493,7 +499,7 @@ def _shape_step(draft: Draft, library: ContentLibrary, skeleton: SkeletonDef) ->
                     name_zh=shape.name_zh,
                     description_zh=f"{shape.description_zh}（只能當聚集段：效果只有一個拉扯，"
                     "並在第二段選「聚集 → 範圍打擊」）",
-                    params=shape_param_fields(shape),
+                    params=shape_param_fields(shape, weapon_ok=weapon_ok),
                     info={"min_rarity": shape.min_rarity, "targeting": shape.targeting},
                 )
             )
@@ -505,7 +511,7 @@ def _shape_step(draft: Draft, library: ContentLibrary, skeleton: SkeletonDef) ->
                 value=shape_id,
                 name_zh=shape.name_zh,
                 description_zh=shape.description_zh,
-                params=shape_param_fields(shape),
+                params=shape_param_fields(shape, weapon_ok=weapon_ok),
                 info={"min_rarity": shape.min_rarity, "targeting": shape.targeting},
             )
         )
@@ -1120,6 +1126,26 @@ def _rarity_max_effects(library: ContentLibrary, rarity: str) -> int:
     return {str(r): v.max_effects for r, v in library.budget.rarity.items()}[rarity]
 
 
+_STEP_NO_MARK = "\0"
+"""``_definition_errors`` 在備註後面留下欄位名的記號，由 :func:`_with_step_links` 換成「回到第 N 步修改」。"""
+
+
+_FIELD_ALIAS = {"secondary_scaling_attr": "scaling_attr", "mastery": "scaling_attr"}
+"""第二屬性與專精出錯多半是前面的縮放屬性或類別改了：指回基本設定。"""
+
+
+def _definition_errors(draft: Draft, rarity: str, library: ContentLibrary) -> list[str]:
+    """試組失敗的原因（每條一行，尾端帶 ``_STEP_NO_MARK`` ＋ 欄位名）。"""
+    try:
+        build_skill(draft, {"rarity": rarity})
+    except DraftError as exc:
+        return [
+            f"．{plainify(m, library)}{_STEP_NO_MARK}{m.split('：')[0].split(' ')[0]}"
+            for m in exc.messages
+        ]
+    return []
+
+
 def _rarity_step(draft: Draft, library: ContentLibrary) -> StepOptions:
     paid = _mapping(draft.get("cost")).get("source") is not None
     candidates = ("legendary",) if paid else tuple(r for r in RARITY_ORDER if r != "legendary")
@@ -1151,7 +1177,8 @@ def _rarity_step(draft: Draft, library: ContentLibrary) -> StepOptions:
         notes.append(f"最低稀有度：{RARITY_TEXT[floor.minimum]}")
         notes += floor.reasons
     else:
-        notes.append("技能定義還有錯誤，無法推導稀有度（見檢查結果的問題清單）")
+        notes.append("技能定義還有錯誤，無法推導稀有度：")
+        notes += _definition_errors(draft, candidates[0], library)
     if not paid:
         notes.append("傳說技能要在代價步驟填源力")
     dual = library.ruleset.core.dual_scaling_min_rarity
@@ -1191,6 +1218,26 @@ def _build_step(
     return builders[step]()
 
 
+def _with_step_links(steps: list[StepOptions], library: ContentLibrary) -> list[StepOptions]:
+    """備註換成中文，並把試組錯誤附上「回到第 N 步修改」（編號同步驟列）。"""
+    owner: dict[str, int] = {}
+    for number, step in enumerate(steps, 1):
+        for spec in step.fields:
+            owner.setdefault(spec.field.split(".")[0], number)
+    out: list[StepOptions] = []
+    for step in steps:
+        notes: list[str] = []
+        for note in step.notes_zh:
+            text, mark, field = note.partition(_STEP_NO_MARK)
+            text = plainify(text, library)
+            number = owner.get(_FIELD_ALIAS.get(field, field))
+            if mark and number is not None:
+                text += f"（回到第 {number} 步修改）"
+            notes.append(text)
+        out.append(step.model_copy(update={"notes_zh": tuple(notes)}))
+    return out
+
+
 def draft_options(draft: Draft, library: ContentLibrary) -> DraftOptions:
     """組到一半的技能 → 每個前置步驟都完成的步驟與其合法選項（純函式；相同輸入必得相同結果）。"""
     skeleton = draft_skeleton(draft, library)
@@ -1203,13 +1250,13 @@ def draft_options(draft: Draft, library: ContentLibrary) -> DraftOptions:
         if step_id == "variants" and not variants_visible(draft, library):
             continue  # 只有稀有以上的主動技能能帶變奏
         step = _build_step(step_id, draft, library, skeleton)
+        found = field_problems(step.fields, draft)
         steps.append(step)
-        problems += field_problems(step.fields, draft)
+        problems += found
         if not step.complete:
             next_step = step_id
             break
-    steps = [
-        s.model_copy(update={"notes_zh": tuple(plainify(n, library) for n in s.notes_zh)})
-        for s in steps
-    ]
+        if found:  # 已填的值不在選項內：步驟列不打勾（流程照舊，錯誤列在「已填的內容和選項不符」）
+            steps[-1] = step.model_copy(update={"complete": False})
+    steps = _with_step_links(steps, library)
     return DraftOptions(steps=tuple(steps), next_step=next_step, problems=tuple(problems))

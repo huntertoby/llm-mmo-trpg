@@ -260,7 +260,7 @@ function NumberField({ spec, container, base, onChange }: FieldProps) {
   const path = joinPath(base, spec.field);
   const raw = getPath(container, path);
   const special = spec.allow_weapon ? "weapon" : spec.type === "count" ? "all" : null;
-  const specialLabel = spec.allow_weapon ? "用武器骰" : "全部";
+  const specialLabel = spec.allow_weapon ? "用武器射程" : "全部";
   const isSpecial = special !== null && raw === special;
   return (
     <div className="ws-field">

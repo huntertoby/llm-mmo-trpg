@@ -178,13 +178,15 @@ def dice_field(
     )
 
 
-def shape_param_fields(shape: ShapeDef) -> tuple[FieldSpec, ...]:
-    """形狀的參數（``skill_shapes.yaml`` 的 ``params``：範圍與是否可填 ``weapon``）。"""
+def shape_param_fields(shape: ShapeDef, *, weapon_ok: bool = True) -> tuple[FieldSpec, ...]:
+    """形狀的參數（``skill_shapes.yaml`` 的 ``params``：範圍與是否可填「用武器射程」）。
+    ``weapon_ok`` 為假（法術技）時不提供「用武器射程」（只有武器技有手上的武器）。"""
     out: list[FieldSpec] = []
     for name, spec in shape.params.items():
         name_zh, desc = _SHAPE_PARAM_TEXT.get(name, (name, ""))
-        if spec.allow_weapon:
-            desc += "；也可以填 weapon（用武器射程）"
+        allow_weapon = spec.allow_weapon and weapon_ok
+        if allow_weapon:
+            desc += "；也可以勾選「用武器射程」"
         out.append(
             FieldSpec(
                 field=name,
@@ -194,7 +196,7 @@ def shape_param_fields(shape: ShapeDef) -> tuple[FieldSpec, ...]:
                 required=spec.required,
                 min=spec.min,
                 max=spec.max,
-                allow_weapon=spec.allow_weapon,
+                allow_weapon=allow_weapon,
             )
         )
     return tuple(out)
