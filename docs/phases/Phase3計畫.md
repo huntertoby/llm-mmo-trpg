@@ -2110,6 +2110,11 @@ PM 驗收後請使用者試玩一整輪（`docs/專案計畫.md` 第 14 節 🎮
 3a. **套用玩法 PM 改寫的工坊說明**（149 筆）：`C:\Users\tobby\AppData\Local\Claude-Data\claude_pzs8sxrjxfjjc\side-session-notes\local_46ffc72c-28dd-48aa-9eb7-f1724ef32432\workshop_descriptions_rewritten.csv`（三欄：id、原文、玩家語氣）。玩家模式顯示「玩家語氣」，開發者模式照舊顯示原文；資料放進 `content/`（例如原語與選項的 `player_description`，或一份對照表 YAML），程式不要讀共用資料夾；數值與對象照 3-48c 的 `option_player.py` 由程式補。預算公式不在說明裡，改在預算面板顯示（已有就確認）。**句子和實際規則對不上的，列表交玩法 PM，不要改寫規則或句子**。`test_player_text.py` 涵蓋新文字。
 4. 驗收：pytest（content、skillgen、engine、narrative、api、cli 含 slow）、vitest、build、ruff、format、mypy、一場重播。報告 `Phase3-48f報告.md`。
 
+### 56.1 3-48f 驗收（2026-10-24，開發 PM）
+
+- 報告 `Phase3-48f報告.md`。工坊符文提示（刻印＋友方增益＋沒有讀取符文的條件）；示範技能 **符紋絆腳** `skill_rune_snare`（被動 `on_hit`＋`on_own_rune`＋緩速 4 輪，預算 79.6%；加進 `build_runeweaver`，技能 217→218）；**守護符陣組不出來**（被動效果只能對自己、`on_turn_start` 沒有另一方、被動形狀只能自身）→ 玩法 PM 選改成主動技能，併入 3-48h。149 筆玩家語氣說明進 `content/workshop_text.yaml`（玩家模式顯示、`?dev=1` 顯示原文）。賭注專用效果 `FieldSpec.display`（×2、25%，內部仍存 ‰）；「返還 AP」；驗證器 `on_kill.beneficial`。8 處說明與規則對不上 → 玩法 PM 回覆，併入 3-48h（淨化改規則 #60 使用者已同意）。
+- 檢查（main 合併後，等同全量）：pytest（除 `llm`）6621、vitest 939、build、ruff、mypy、lint-imports、重播 `training_range` 種子 7（`build_runeweaver`）一致。
+
 ## 57. Phase 3-48g｜裝備分頁：屬性詞條可換屬性＋成對武器勾選（使用者：「現在其他屬性是還沒做好嗎 為什麼不能選屬性」；sonnet；約 0.1 段；3-48e 之後）
 
 查證（開發 PM）：六個屬性詞條都在白名單、各部位可掛、加入沒有被擋；問題是已加入的屬性詞條那列只能改數值，不能換屬性，畫面沒說明。
