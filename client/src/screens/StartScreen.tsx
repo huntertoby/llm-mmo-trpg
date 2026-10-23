@@ -6,6 +6,7 @@ import { saveLabel } from "../run/flow";
 import { DevPackSelect, StartPickerView, useStartPicker } from "../run/StartPicker";
 import { isDevMode, startBody, type StartChoiceBody } from "../run/startFlow";
 import { ErrorBanner } from "../ui/ErrorBanner";
+import { TestModeBadge } from "../ui/TestModeBadge";
 
 interface Props {
   onStart(response: BattleResponse): void;
@@ -122,6 +123,7 @@ export function StartScreen({ onStart, onWorkshop, onNewRun, onLoadRun, notice =
               <div key={s.run_id} className="run-save-row">
                 <span>
                   {s.build_name_zh}・種子 {s.seed}
+                  {s.test_mode && <TestModeBadge />}
                   <span className="muted small">　{saveLabel(s)}</span>
                 </span>
                 <button type="button" disabled={s.node === "ended"} onClick={() => void loadSave(s.run_id)}>

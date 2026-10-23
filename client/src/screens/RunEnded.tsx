@@ -2,6 +2,7 @@
 import type { RunResponse } from "../api/types";
 import { battleName, recordText } from "../run/flow";
 import { RunHeroPanel } from "../run/RunHeroPanel";
+import { TestModeBadge } from "../ui/TestModeBadge";
 
 interface Props {
   run: RunResponse;
@@ -15,7 +16,11 @@ export function RunEnded({ run, victory, onNewRun, onHome }: Props) {
   return (
     <div className="run-ended">
       <div className={`panel run-result ${victory ? "victory" : "defeat"}`}>
-        <h2>{victory ? "一輪通關！" : "一輪失敗"}</h2>
+        <h2>
+          {victory ? "一輪通關！" : "一輪失敗"}
+          {run.test_mode && <TestModeBadge />}
+        </h2>
+        {run.test_mode && <div className="muted small">測試模式的一輪，不計入任何統計。</div>}
         <div className="muted">
           打完 {run.battles_done} / {run.plan.length} 場・共 {totalRounds} 輪・種子 {run.seed}
         </div>

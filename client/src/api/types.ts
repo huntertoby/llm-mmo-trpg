@@ -167,8 +167,12 @@ export type RunChoice =
   | Schemas["RespecChoice"]
   | Schemas["LoadoutChoice"];
 /** 開新一輪：`weapon` ＋ `keywords`（一般開局）或 `dev_pack`（開發者起始包）；`attributes` 省略時伺服器把開局點數全部點在武器的縮放屬性。 */
-export type CreateRunRequest = Omit<Schemas["CreateRunRequest"], "attributes"> & {
+export type CreateRunRequest = Omit<Schemas["CreateRunRequest"], "attributes" | "test_mode" | "test_equipment"> & {
   attributes?: Partial<Record<AttributeId, number>>;
+  /** 測試模式（3-39）：戰後 HP、法力回滿；省略 ＝ 正式模式。 */
+  test_mode?: boolean;
+  /** 測試模式挑的裝備（欄位 → 物品 ID）。 */
+  test_equipment?: Record<string, string>;
 };
 // 裝備測試（Phase 3G-G4）
 export type GearCatalog = Schemas["GearCatalog"];
