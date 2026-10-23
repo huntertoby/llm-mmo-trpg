@@ -33,7 +33,7 @@
 | 4-L2 | 版本化 prompt（`src/trpg/llm/prompts/`）：系統指令（碎界語氣與名詞表）、資料區、`<player_input>` 包裝與跳脫；prompt 版本號寫進 run 紀錄 | 玩家文字含 `</player_input>`、指令字樣時仍只在資料區；prompt 快照測試 | sonnet | 4-L1 後 |
 | 4-L3 | 提議模型正式化：`required_when` 搬進 YAML（取代原型的 `CONDITIONALLY_REQUIRED`）、觸發參數搬進 `skill_triggers.yaml` 的 `params`、**原語／形狀／條件／觸發與參數加給 LLM 的短說明**（`llm_hint`，碎界無關的中性描述）；**提議模型移除數值欄位**（只留結構與列舉），數值交給 4-L5 的預算器 | 模型由 YAML 產生、與現有驗證一致的表格測試；`llm_hint` 全覆蓋測試 | sonnet | 現在派；與 4-L1 平行（只動 `content/`、`skillgen/proposal.py`） |
 | 4-L4 | schema 子集：依稀有度、骨架、題目關鍵字篩原語、形狀、條件；prompt＋schema 總長 ≤ 30k token（字元估算）（詳見 3A 節） | 大小上限測試；篩掉的原語提議得到 `union_tag_invalid` | sonnet | 4-L2、4-L3 後 |
-| 4-L5 | 重試迴圈＋退回＋**數值補齊**：`propose_skill(client, request) -> (SkillDef, source, attempts)`；結構合格後由預算器（`composer_tuning.tune`）補數值；3 次上限；退回 組合器 → 技能池 → 工坊選項；統計退回率 | Mock「壞 → 壞 → 好」「壞 ×3 → 組合器」；數值一律來自預算器 | **opus** | 4-L4 後 |
+| 4-L5 | （詳見 3B 節）重試迴圈＋退回＋**數值補齊**：`propose_skill(client, request) -> (SkillDef, source, attempts)`；結構合格後由預算器（`composer_tuning.tune`）補數值；3 次上限；退回 組合器 → 技能池 → 工坊選項；統計退回率 | Mock「壞 → 壞 → 好」「壞 ×3 → 組合器」；數值一律來自預算器 | **opus** | 4-L4 後 |
 | 4-L6 | 接進候選產生器：`llm` 來源、結果寫進 run 紀錄、重播不呼叫 LLM；Mock 失敗時候選仍有 3 個；設定關閉 LLM 時照舊 | 存檔重播一致 | sonnet | 4-L5 後 |
 | 4-L7 | 名稱與敘事（同一個本機模型；只寫文字；長度、禁字、碎界名詞；失敗時組合式名稱） | Mock 輸出過長／空字串／含指令字樣 | sonnet | 4-L5 後；可與 4-L6 平行 |
 | 4-L8 | 開放更多結構：`followup`（複合）、`reaction`、只能巢狀的原語、代價類欄位 | 往返覆蓋率從 163／217 提高 | sonnet | 4-L6 後 |
@@ -83,6 +83,30 @@
 - 往返：子集包含某手寫技能所需的全部結構時，`proposal_from_skill` 的提議仍能通過 ①②（抽 10 個可表達的手寫技能）；
 - `available` 格式快照、`hint` 不含欄位名；`registry` 含世界觀檔；**新增依賴規則「`trpg.skillgen` 不得匯入 `trpg.llm`」**（`pyproject.toml` import-linter ＋ `tests/test_architecture.py`）。
 - `ruff`、`mypy`。報告 `Phase4-L4報告.md`（含大小統計、`dropped` 常見原因、待 PM 決定）。
+
+## 3B. 4-L5 規格（重試＋退回＋數值補齊；開發 PM 2026-10-23）
+
+**真模型實測（4-L5 前，PM 2026-10-23；`F:\WSL` PORT 8001、CTX 32768）**：
+- `trpg llm ping` 3.5 秒；`pytest -m llm` 1 過。
+- **strict `response_format`（含巢狀 `$ref`／`oneOf`）vLLM 0.27 接受**，輸出一律符合 schema（4-L1 待決 #3 結案）。
+- **schema 不佔 prompt token**（只用於約束解碼）：最大題目（rare、不指定骨架、`ignite`）實際 `prompt_tokens` 2,525（4-L4 估算 23,988 是把 schema 算進去了）。上下文不是問題，`token_budget` 不必縮。
+- **Qwen3 預設會思考**：`max_tokens` 2048 全被思考用掉，`content` 為空（`finish_reason=length`，約 45 秒）。關掉思考（`chat_template_kwargs: {enable_thinking: false}`）約 6 秒、輸出約 170 token、結構全合格；剩下的錯誤都是規則層：`budget.weak`、`exclusion.no_cooldown_big_area`、`skeleton.core_share`。
+
+規格（模組依賴：`skillgen` 不匯入 `llm`；迴圈放 `trpg.llm`，數值補齊與退回放 `trpg.skillgen`）：
+
+1. **client**：`LLMConfig` 加 `enable_thinking: bool = false`（`config/llm.toml` 寫明；`TRPG_LLM_ENABLE_THINKING` 覆寫），有設定時請求帶 `chat_template_kwargs: {"enable_thinking": …}`。回應若被 ```` ``` ```` 包住或前面有 `<think>…</think>`，解析前去掉（`evaluate_proposal` 前做，函式放 `trpg.llm`）。`finish_reason == "length"` 且內容空 → `LLMBadResponse`（中文訊息提示思考用光輸出）。
+2. **預算補數值** `budget_filler(library, *, seed) -> NumberFiller`（`trpg.skillgen`，取代 `minimal_filler` 在正式流程的角色）：先補必填最小值（沿用 `minimal_filler` 的規則），再以提議的效果建立旋鈕（重用隨機組合器建旋鈕的程式，不要另寫一套），呼叫 `composer_tuning.tune` 把預算比例調進 `[low, high]`；確定性（同提議＋同 seed → 同數值）。LLM 給的形狀參數（`range` 等）保留不調。
+3. **規則層的數值錯誤由引擎修，不回 LLM**：補數值後跑 `validate_skill`，若錯誤只剩「數值可修」的代碼——`budget.*`、`skeleton.core_share`（調高核心旋鈕／降附帶）、`exclusion.no_cooldown_*`（補最小合法冷卻，冷卻的預算折抵照現有規則）——就在引擎內修一次再驗；修不好才把錯誤回給 LLM。可修代碼清單是資料（模組常數或 YAML），報告列出。AP／冷卻當「便宜／慢熱」旋鈕（4-L3 待決 #2）**這段不做**，記待決，4-L8 再議。
+4. **迴圈** `propose_skill(client, library, request, ctx, *, seed, max_attempts=config.max_retries) -> ProposalOutcome`（`trpg.llm.propose`）：每次用 `build_proposal_prompt`（重試時帶 `previous_proposal` 與 `feedback_payload`）→ `client.complete(messages, json_schema=…)` → 清理 → `evaluate_proposal(..., fill=budget_filler(...))` ＋ 第 3 點。`ProposalOutcome`：`skill`、`source`（`llm`／`composer`／`pool`／`workshop`）、`attempts`、每次的錯誤 `code` 清單、每次耗時（秒，只供報表，不進確定性狀態）。
+   - `LLMUnavailable` → 立即退回（不再重試）；`LLMTimeout`／`LLMBadResponse` 算一次嘗試。
+   - `SubsetError` → 立即退回。
+   - 4-L4 待決 #6（巢狀才用的原語出現在頂層選項）：這段 **只靠重試回饋**，報表統計 `skeleton.secondary` 次數，4-L9 再決定是否分開。
+5. **退回** `fallback_skill(library, request, ctx, *, seed) -> (SkillDef, source)`（`trpg.skillgen`）：① 隨機組合器帶題目關鍵字（現有 `from_composer` 的做法）② 技能池 ③ 工坊選項推導（`skillgen/options.py`）取第一組可行值；三者都失敗才丟例外。確定性。
+6. **統計** `ProposalStats`（累加多個 `ProposalOutcome`）：一次通過率、平均嘗試次數、退回率、各 `code` 次數、各來源次數、平均耗時；退回率 > `fallback_alert_permille` 時 `alert=True`。
+7. **CLI** `trpg llm propose [--tier N] [--rarity R] [--skeleton S] [--keyword K]... [--seed N] [-n 次數] [--mock]`：跑 n 個題目（題目由 seed 確定性輪替稀有度／骨架／關鍵字，參數有給就固定），印出每個結果一行（來源、嘗試次數、錯誤 code、耗時、技能名）與 `ProposalStats` 摘要表（中文）。`--mock` 用 `MockLLMClient` 回傳 `proposal_from_skill` 產生的提議（給測試與 demo）。這就是 PM 的「4-L5 後小測試」工具。
+8. **範圍外**：不接候選產生器、不寫 run 紀錄（4-L6）；不寫名稱／敘事（4-L7，提議裡的 `name_zh` 照用）。
+
+驗收（4-L5）：pytest（全部用 `MockLLMClient`）——「壞 → 壞 → 好」得 `llm`、`attempts=3`，第 2、3 次的 user 訊息含上一份提議與錯誤；「壞 ×3」→ `composer`；`LLMUnavailable` → 一次就退回；只剩 `budget.weak` 的提議不回 LLM 就通過（Mock 只收到 1 次呼叫）；`exclusion.no_cooldown_*` 由引擎補冷卻；數值一律來自 `budget_filler`（同提議同 seed 兩次結果相同、比例在 `[low, high]`）；回應帶 ```` ``` ```` 或 `<think>` 仍解析；`enable_thinking` 寫進請求（`httpx.MockTransport`）；退回三層各自觸發；`ProposalStats` 與 alert；CLI `--mock -n 3` 輸出快照。另加 `@pytest.mark.llm` 一個真模型測試（1 個題目、結果是 `llm` 或退回皆可，只驗流程不丟例外）。`ruff`、`mypy`、`lint-imports`。報告 `Phase4-L5報告.md`。
 
 ## 4. 驗收紀錄
 
