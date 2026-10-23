@@ -108,7 +108,7 @@ def test_schema_errors_are_reported_in_chinese() -> None:
     result = check_draft(draft, library())
     assert not result.legal
     messages = [p.message_zh for p in result.problems if p.rule == "schema"]
-    assert any("武器技的傷害骰來自武器，不可指定 dice" in m for m in messages), messages
+    assert any("武器技的傷害骰來自武器，不可指定 骰子" in m for m in messages), messages
 
 
 def test_draft_id_is_stable_and_ignores_the_given_id() -> None:
