@@ -1,7 +1,7 @@
 模型：Mock（proposal_from_skill）；每題最多 3 次
   1. common／strike／prone｜llm｜嘗試 1｜通過｜0.00 秒｜火焰箭
   2. rare／不限骨架／collision｜llm｜嘗試 1｜通過｜0.00 秒｜汲命術
-  3. epic／不限骨架／marked｜composer｜嘗試 3｜value_error；value_error；value_error｜0.00 秒｜暗影・光環 #1430544302
+  3. epic／不限骨架／marked｜composer｜嘗試 3｜value_error；value_error；value_error｜0.00 秒｜暗影・光環
 
 題目數　　　　3
 一次通過率　　66.6%（2）

@@ -500,7 +500,9 @@ def _finish(library: ContentLibrary, seed: int, base: dict[str, Any], ctx: Ctx) 
     data = {
         **base,
         "effects": ctx.effects,
-        "name_zh": f"{ctx.theme.display_name}・{ctx.skeleton.name_zh} #{seed}",
+        # 名稱不帶種子（2026-10-23 使用者：「組合技能名稱拿掉 #編號」）；
+        # 同一輪撞名由 roguelite 加「（二）」
+        "name_zh": f"{ctx.theme.display_name}・{ctx.skeleton.name_zh}",
         "tags": tags,
         "narrative": {
             "concept": f"隨機組合器產生的{ctx.skeleton.name_zh}技能（種子 {seed}，暫定）",

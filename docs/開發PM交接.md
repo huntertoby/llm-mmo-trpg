@@ -80,6 +80,8 @@ Phase 3 各段（`Phase3計畫.md` 節號；報告 `Phase3-*報告.md`）：
 
 **`check.py --full` 變慢（已解決，2026-10-23，`dabb5a9`）**：原因是 3E-2f 起每次建構 `EffectSpec` 都經 `default_content_dir()` 做 `Path.resolve()`（Windows 很慢，`run auto` 一半時間在這）；`bundled_content_dir()` 加 `@cache`、`run auto` 十種子測試改參數化。`--full` 28 分 → **6 分 38 秒**。之後若再變慢，先用 `--durations=30` 加 cProfile 單跑 `trpg run auto --seed 1` 找熱點。
 
+**待查（2026-10-23 發現）**：`tests/engine` 裡召喚物 HP 的兩個測試（石像 `summon_golem`、骷髏 `summon_skeleton_warrior` 的 max_hp 斷言）在 `tests/roguelite`～`tests/engine` 九個資料夾一起 `-n 8` 時偶發失敗、重跑通過；單獨或兩兩組合都過 → 疑似某測試改了共用狀態（3-41a 的 `content/summons.py` 或內容庫快取）沒還原。下次全量檢查若再出現就追。
+
 **這一輪學到的**：合併前「相關測試」範圍要含 `tests/skillgen`（嘲諷改動時漏跑 `test_budget` 寫死的點數）；`.claude/worktrees/` 舊資料夾會累積（2026-10-23 清過 42 個，約 3 GB），合併後記得 `git worktree remove` ＋ 刪分支；主資料夾有不明的 `tmp_x`（不是開發 PM 建立的，沒動）。
 
 **其他待辦位置**：

@@ -34,6 +34,7 @@ from trpg.content.equipment import loadout_problems, resolve_loadout
 from trpg.content.library import ContentLibrary
 from trpg.content.skills import SkillDef, weapon_problem
 from trpg.roguelite.errors import ChoiceError
+from trpg.roguelite.names import unique_skill_name
 from trpg.roguelite.state import BattleNode, BattlePlan, RunStart, RunState
 from trpg.shared.rng import MASK64, Rng
 from trpg.shared.types import Attribute
@@ -388,7 +389,11 @@ def new_keyword_run(
     picked = _pick_starters(library, weapon, keywords, seed, skills)
     hero = apply_allocation(_start_hero(library, weapon, [s.id for s in picked]), allocation)
     core = library.ruleset.core
-    generated = sorted((s for s in picked if s.id not in library.skills), key=lambda s: s.id)
+    named: list[SkillDef] = []
+    for s in picked:  # 生成技能和前面的起始技能撞名時加「（二）」
+        taken = (n.name_zh for n in named)
+        named.append(s if s.id in library.skills else unique_skill_name(s, taken))
+    generated = sorted((s for s in named if s.id not in library.skills), key=lambda s: s.id)
     return RunState(
         seed=seed,
         start=RunStart(weapon=weapon, keywords=keywords, dev_pack=dev_pack),

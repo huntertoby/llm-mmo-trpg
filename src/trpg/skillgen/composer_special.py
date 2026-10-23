@@ -70,7 +70,7 @@ def _data(seed: int, label: str, rarity: str, theme: str, extra: dict[str, Any])
     """技能資料的共同欄位（名稱、標籤、敘事文字都是暫定的）。"""
     return {
         "id": f"skill_rand_{seed}",
-        "name_zh": f"{label} #{seed}",
+        "name_zh": label,  # 不帶種子（2026-10-23 使用者）；同一輪撞名由 roguelite 加「（二）」
         "rarity": rarity,
         "category": "spell",
         "weapon_req": "any",

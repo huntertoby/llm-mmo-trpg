@@ -422,7 +422,7 @@ def test_composer_can_require_each_keyword(keyword: str) -> None:
         skill = compose_random_skill(seed, library=lib, keyword=keyword)
         assert keyword in derive_keywords(skill, lib.keywords).all()
         assert validate_skill(skill, lib) == []
-        assert skill.id == f"skill_rand_{seed}" and skill.name_zh.endswith(f"#{seed}")
+        assert skill.id == f"skill_rand_{seed}" and "#" not in skill.name_zh  # 名稱不帶種子
 
 
 def test_composer_with_a_keyword_is_deterministic_and_leaves_plain_seeds_alone() -> None:

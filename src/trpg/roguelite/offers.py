@@ -20,6 +20,7 @@ from collections.abc import Sequence
 from trpg.content.library import ContentLibrary
 from trpg.content.skills import SkillDef, skill_slot_problems
 from trpg.roguelite.errors import ChoiceError
+from trpg.roguelite.names import unique_skill_name
 from trpg.roguelite.start import top_attribute
 from trpg.roguelite.state import OfferTag, RunState, SkillOffer
 from trpg.shared.rng import Rng
@@ -105,6 +106,9 @@ def take_candidate(
     if not 0 <= pick < len(offer.candidates):
         raise ChoiceError(f"候選索引必須是 0～{len(offer.candidates) - 1}，收到 {pick}")
     skill = offer.candidates[pick]
+    if skill.id not in library.skills:  # 生成技能：和這一輪已有的技能撞名時加「（二）」
+        owned = skill_defs(library, run, [*run.hero.skills, *run.bench])
+        skill = unique_skill_name(skill, (s.name_zh for s in owned if s.id != skill.id))
     skills = list(run.hero.skills)
     if replace is None:
         skills.append(skill.id)

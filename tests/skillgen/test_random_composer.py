@@ -57,7 +57,7 @@ def test_every_fast_seed_composes_a_valid_skill_in_the_budget_window() -> None:
     for seed in FAST_SEEDS:
         skill = compose_random_skill(seed)
         assert validate_skill(skill, library) == []
-        assert skill.id == f"skill_rand_{seed}" and skill.name_zh.endswith(f"#{seed}")
+        assert skill.id == f"skill_rand_{seed}" and "#" not in skill.name_zh  # 名稱不帶種子
         assert skill.provenance.origin == "level_up"
         expected = {
             "passive": "passive",
