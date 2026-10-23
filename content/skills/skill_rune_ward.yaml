@@ -1,0 +1,24 @@
+# 主動（Phase 3-48h，玩法 PM 2026-10-24 回覆 3-48f 的「守護符陣組不出來」；數值照預算，未經模擬）：
+# 半徑 2 內、站在你自己符文上的友方獲得護盾（讀取符文的防守向，和被動的符紋絆腳對稱）。
+id: skill_rune_ward
+schema_version: 1
+name_zh: 守護符陣
+tier: 1
+rank: 1
+rarity: epic
+kind: active
+skeleton: aura
+category: spell
+weapon_req: any
+ap_cost: 1
+scaling_attr: wis
+shape: {type: allies_in_radius, radius: 2}
+effects:
+  - {type: shield, dice: 2d6, affects: allies, condition: {type: on_own_rune}}
+condition: null
+cost: {mana: 6, cooldown: 3}
+tags: [spell, shield, support, rune]
+narrative:
+  concept: 你刻下的符紋會替站在上面的同伴撐起一層護盾
+  cast_flavor: 符紋依序亮起，站在紋上的同伴身前浮出一層半透明的光盾
+provenance: {origin: builtin, owner_id: null, created_by: null, parents: [], bound: true, tradeable: false}
