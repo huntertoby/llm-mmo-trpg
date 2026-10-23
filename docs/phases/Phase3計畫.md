@@ -2059,6 +2059,13 @@ PM 驗收後請使用者試玩一整輪（`docs/專案計畫.md` 第 14 節 🎮
 6. **刻印的「標籤」**（使用者：「標籤 符文的標籤（與 element 恰好填一個） 要填什麼」）：空白文字框改成下拉選單，列出已定義的符文標籤並用中文名稱（目前內建只有 `hunt`＝獵紋）。**不開放自訂新標籤**（玩法 PM 2026-10-24，依 06 6.25：「只能選已定義的標籤，新標籤由內容資料新增」——自訂標籤沒有技能能讀取或引爆）；選單用中文（`hunt`＝獵紋）。說明文字缺字（「超過 （初值 6）」「預算： ×」——變數名被拿掉後沒補文字）要補完整，並去掉 element、tag、duration 等英文。對象選項出現「自己」等作用在格子上沒有意義的選項，**刻印的對象只有「影響的格子」**（玩法 PM：「自己、敵方、友方這些對象選項對刻印沒有意義，請在工坊和驗證器拿掉，只留格子。要刻在自己腳下，就用『自身』形狀」）——工坊與驗證器都改；內建技能若違反，列入報告。
 7. 驗收：pytest（skillgen、content、api、narrative、llm、cli 含 slow）、vitest、build、ruff、format、mypy；`tests/skillgen/test_player_text.py` 擴大到涵蓋上面所有文字；排版煙霧檢查。報告 `Phase3-48c報告.md`，附全面掃描清單（每一步、每一種原語：改了什麼、確認沒問題的）。
 
+### 53.1 3-48c 驗收（2026-10-24，開發 PM）
+
+- 報告 `Phase3-48c報告.md`（附全面掃描清單）。稀有度卡住：根因是法術技仍留近戰武器需求、或第二屬性與主屬性相同 → 稀有度步驟列白話原因＋「（回到第 N 步修改）」，有錯的步驟不打勾，前端 `conformScaling` 也清不合法的武器需求。最低花費 `cap.min_cost`（工坊、組合器、LLM、驗證器）。玩家模式說明：`option_player.py`（程式補值 → `player_description` → 留空；原文在 `dev_description_zh`）；API 加 `dev_description_zh`、`later`、`show_when`；CSV 149 筆交玩法 PM（`scripts/export_workshop_descriptions.py` 可重跑）。巢狀 4 原語玩家模式隱藏（`option_player.HIDE_NESTED_EFFECTS`；副作用：「消耗狀態」骨架暫時組不出，3-48d 恢復）。法術技縮放只列智力／感知／意志、無預設；「用武器射程」只給武器技。刻印標籤下拉、對象只剩格子。條件顯示 `show_when`（持續區域的速度等）。「持續 1 輪」：重現不出永久不同步，卡片預覽約落後 250ms → 更新中卡片變淡、暫停匯出。
+- 合併衝突：`options.py`（3-48b 的 `weapon` 參數與 3-48c 的 `_with_step_links` 兩邊保留）、`skill_primitives.yaml`（`inscribe.forbid_affects`，3-48e 與 3-48c 重複，取一）。
+- 檢查（main 合併後，等同全量）：pytest（除 `llm`）6495、vitest 929、build、ruff、format、mypy、lint-imports。
+- 待決：**內建 13 招違反最低花費**（afterimage_vow、bloodwake_stride、gear_grapple、gear_shield_wall、gear_smoke_bomb、kindred_flame、mirror_cast、mountain_mover、overwatch、rallying_cry、taunting_roar、time_surge、undying_oath）→ 交玩法 PM；最低花費不設成代價步驟必填、只由即時檢查擋 → 接受；`floatCardRule` 已在 3-48g 驗收時修好。
+
 ## 54. Phase 3-48d｜工坊開放一層巢狀效果（使用者 2026-10-24：「兩步都做」；sonnet；約 0.4 段；緊接 3-48c）
 
 1. 4 種有巢狀子效果的原語——消耗狀態後的效果（`consume_status.then`）、賭注的贏／輸分支、持續區域、擊殺時效果——在工坊可以設定一層子效果：後端 `trpg.skillgen` 工坊選項在巢狀那一層提供選項（目前是空的，前端 `EffectsField` 才顯示「這一層的巢狀效果在這裡不展開」）；**子效果只能選不含巢狀的原語**（不能再巢狀）。
