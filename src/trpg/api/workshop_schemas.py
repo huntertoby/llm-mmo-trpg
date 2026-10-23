@@ -22,6 +22,7 @@ __all__ = [
     "WorkshopArena",
     "WorkshopCheck",
     "WorkshopExport",
+    "WorkshopExportRequest",
     "WorkshopRandom",
     "WorkshopRandomRequest",
     "WorkshopSkillRequest",
@@ -38,12 +39,21 @@ class WorkshopSkillRequest(_ApiModel):
     skill: dict[str, Any] = Field(default_factory=dict)
 
 
+class WorkshopExportRequest(WorkshopSkillRequest):
+    """匯出（Phase 3H-8）：預設只有合法的技能能匯出（玩家模式）；開發者模式（``?dev=1``）傳
+    ``allow_illegal: true`` 才能匯出不合法的半成品。"""
+
+    allow_illegal: bool = False
+
+
 class WorkshopCheck(DraftCheck):
     """:class:`~trpg.skillgen.draft_check.DraftCheck` ＋ 技能卡片（完整且通過 schema 時才有）。"""
 
     card: SkillCard | None = None
     icon: SkillIcon
     """組裝式圖示（Phase 3-17）：草稿組到哪一步就有哪些部件（沒完成也有，``partial`` 為真）。"""
+    concept_provisional: bool = False
+    """卡片的 ``concept`` 是隨機組合器的暫定句（玩家模式不顯示，Phase 3H-8）。"""
     keywords: SkillCardKeywords = SkillCardKeywords()
     """目前製造與利用的關鍵字（Phase 3-24b1；草稿每多一步就多顯示一點，沒完成也有）。"""
 

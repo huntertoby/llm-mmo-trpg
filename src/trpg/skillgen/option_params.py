@@ -335,6 +335,8 @@ class ParamContext:
         status = self.library.ruleset.statuses.by_id()[status_id]
         if self.beneficial_only and not status.beneficial:
             return False
+        if status.budget_points is None:  # 技能不能施加的狀態（沒有預算點數；3H-8）
+            return False
         return status.stance == self.stance
 
 

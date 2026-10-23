@@ -95,6 +95,25 @@ def test_export_yaml_reloads_as_the_same_skill(client: TestClient) -> None:
 STRIKE_DRAFT = walk_draft(STRIKE)
 
 
+def test_export_refuses_illegal_skills_unless_dev_mode(client: TestClient) -> None:
+    """玩家模式（預設）不合法技能不能匯出；開發者模式傳 ``allow_illegal`` 才能（Phase 3H-8）。"""
+    illegal = {**CHARGE, "rarity": "common"}
+    blocked = client.post("/api/workshop/export", json={"skill": illegal})
+    assert blocked.status_code == 422 and "不合法" in blocked.json()["detail"]
+    dev = client.post("/api/workshop/export", json={"skill": illegal, "allow_illegal": True}).json()
+    assert dev["legal"] is False and dev["problems"]
+    legal = client.post("/api/workshop/export", json={"skill": CHARGE}).json()
+    assert legal["legal"] is True
+
+
+def test_random_skill_marks_its_provisional_concept(client: TestClient) -> None:
+    random = client.post("/api/workshop/random", json={"seed": 42, "skeleton": "strike"}).json()
+    assert random["check"]["concept_provisional"] is True
+    assert "暫定" in random["check"]["card"]["concept"]
+    plain = client.post("/api/workshop/check", json={"skill": CHARGE}).json()
+    assert plain["concept_provisional"] is False
+
+
 def test_arena_lists_the_training_range_first(client: TestClient) -> None:
     arena = client.get("/api/workshop/arena").json()
     assert arena["default_map"] == "training_range"

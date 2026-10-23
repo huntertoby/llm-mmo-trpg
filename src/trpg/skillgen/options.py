@@ -73,6 +73,13 @@ from trpg.skillgen.option_params import (
     primitive_param_fields,
     shape_param_fields,
 )
+from trpg.skillgen.option_rules import (
+    composition_block,
+    composition_info,
+    cost_step_text,
+    resource_cost_text,
+)
+from trpg.skillgen.option_scaling import scaling_extra_fields
 from trpg.skillgen.option_variant import variant_fields, variant_notes, variants_visible
 from trpg.skillgen.validate import rarity_requirements
 
@@ -163,12 +170,14 @@ def _step(
     library: ContentLibrary,
     fields: tuple[FieldSpec, ...],
     notes: tuple[str, ...] = (),
+    *,
+    description: str | None = None,
 ) -> StepOptions:
     name, desc = STEP_TEXT[step]
     return StepOptions(
         id=step,
         name_zh=name,
-        description_zh=desc,
+        description_zh=desc if description is None else description,
         complete=step_complete(step, draft, library),
         fields=fields,
         notes_zh=notes,
@@ -572,6 +581,7 @@ def _primitive_choice(
             "min_rarity": primitive.min_rarity,
             "category": primitive.category,
             "harmful": primitive.harmful,
+            **composition_info(primitive),
         },
     )
 
@@ -723,10 +733,39 @@ def _effects_notes(skeleton: SkeletonDef, library: ContentLibrary) -> tuple[str,
     return tuple(notes)
 
 
+def _with_availability(
+    choices: list[Choice], draft: Draft, library: ContentLibrary
+) -> list[Choice]:
+    """依已填的效果與種類標示組合規則下現在不能加的效果（3H-8）：``info.unavailable_zh`` 是原因；
+    已有「其他效果限自己」的效果時，新加的效果 ``info.forced_affects`` 是必須用的對象。"""
+    by_id = library.ruleset.primitives.by_id()
+    existing = [_mapping(e) for e in draft.get("effects") or ()]
+    out: list[Choice] = []
+    for choice in choices:
+        primitive = by_id.get(str(choice.value))
+        if primitive is None:
+            out.append(choice)
+            continue
+        affects = next((p for p in choice.params if p.field == "affects"), None)
+        allowed = tuple(str(c.value) for c in affects.choices) if affects is not None else ()
+        reason, forced = composition_block(
+            primitive, existing, library, kind=draft.get("kind"), allowed_affects=allowed
+        )
+        extra: dict[str, Any] = {}
+        if reason is not None:
+            extra["unavailable_zh"] = reason
+        if forced is not None:
+            extra["forced_affects"] = forced
+        out.append(
+            choice.model_copy(update={"info": {**choice.info, **extra}}) if extra else choice
+        )
+    return out
+
+
 def _effects_step(draft: Draft, library: ContentLibrary, skeleton: SkeletonDef) -> StepOptions:
     if draft.get("kind") == "modifier":
         return _modifier_step(draft, library)
-    choices = _effect_choices(draft, library, skeleton)
+    choices = _with_availability(_effect_choices(draft, library, skeleton), draft, library)
     fields = [
         FieldSpec(
             field="effects",
@@ -975,8 +1014,8 @@ def _resource_field(draft: Draft, library: ContentLibrary) -> FieldSpec:
     """費用欄位依類別（3H-2，06 6.10）：武器技花耐力、法術技花法力。"""
     category = draft.get("category")
     if category in ("weapon", "spell") and library.budget.resource_of(category) == "stamina":
-        return _cost_int("stamina", "耐力", "施放花的耐力（武器技；與格擋共用，戰鬥中不回復）")
-    return _cost_int("mana", "法力", "施放花的法力（戰鬥中不回復）")
+        return _cost_int("stamina", "耐力", resource_cost_text(library, "stamina"))
+    return _cost_int("mana", "法力", resource_cost_text(library, "mana"))
 
 
 def _cost_step(draft: Draft, library: ContentLibrary) -> StepOptions:
@@ -996,7 +1035,14 @@ def _cost_step(draft: Draft, library: ContentLibrary) -> StepOptions:
         f"合計最多 +{allowance.total_cap}‰",
         "沒有冷卻的技能不能用大範圍形狀（互斥規則）",
     )
-    return _step("cost", draft, library, tuple(fields), notes)
+    return _step(
+        "cost",
+        draft,
+        library,
+        tuple(fields),
+        notes,
+        description=cost_step_text(draft.get("category")),
+    )
 
 
 # ---------------------------------------------------------------------------
@@ -1073,7 +1119,10 @@ def _rarity_step(draft: Draft, library: ContentLibrary) -> StepOptions:
         notes.append("技能定義還有錯誤，無法推導稀有度（見 problems）")
     if not paid:
         notes.append("傳說技能要在代價步驟填源力")
-    return _step("rarity", draft, library, (field,), tuple(notes))
+    dual = library.ruleset.core.dual_scaling_min_rarity
+    notes.append(f"第二縮放屬性（法術技）至少{RARITY_TEXT[dual]}；專精與第二屬性只能擇一")
+    extras = scaling_extra_fields(draft, library)
+    return _step("rarity", draft, library, (field, *extras), tuple(notes))
 
 
 # ---------------------------------------------------------------------------

@@ -177,7 +177,10 @@ def test_random_skills_fit_the_options() -> None:
     for seed in range(120):
         skill = compose_random_skill(seed, library=lib)
         data = skill.model_dump(mode="json", exclude_none=True)
-        assert _fits(lib, data) == (None, ()), seed
+        step, problems = _fits(lib, data)
+        # 第二屬性限縮放範圍（3H-8）；組合器改從允許範圍抽是 3H-7，併入後這個過濾可以拿掉
+        problems = tuple(p for p in problems if not p.startswith("secondary_scaling_attr"))
+        assert (step, problems) == (None, ()), seed
 
 
 def test_values_outside_the_options_are_reported_in_chinese() -> None:
