@@ -104,6 +104,7 @@ class OpenAICompatClient:
             "messages": [{"role": m["role"], "content": m["content"]} for m in messages],
             "temperature": self.config.temperature,
             "max_tokens": self.config.max_tokens,
+            "chat_template_kwargs": {"enable_thinking": self.config.enable_thinking},
         }
         if mode == "response_format":
             body["response_format"] = {
@@ -146,9 +147,15 @@ def _extract_content(response: httpx.Response) -> str:
     except ValueError as exc:
         raise LLMBadResponse("本機模型的回應不是 JSON。") from exc
     try:
-        content = payload["choices"][0]["message"]["content"]
+        choice = payload["choices"][0]
+        content = choice["message"]["content"]
     except (KeyError, IndexError, TypeError) as exc:
         raise LLMBadResponse("本機模型的回應缺少 choices[0].message.content。") from exc
+    if choice.get("finish_reason") == "length" and not (isinstance(content, str) and content):
+        raise LLMBadResponse(
+            "本機模型在產生內容前就用完了輸出長度（finish_reason=length、內容為空）：多半是"
+            "「思考」把 max_tokens 用光了，請確認 config/llm.toml 的 enable_thinking = false。"
+        )
     if not isinstance(content, str):
         raise LLMBadResponse("本機模型的回應內容不是文字（content 為空）。")
     return content
