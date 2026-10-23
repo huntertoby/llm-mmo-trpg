@@ -222,8 +222,10 @@ export type Side = "n" | "s" | "w" | "e";
 export interface ZoneCell {
   /** 區域元素色（色碼）。 */
   color: string;
-  /** 對看的人有害：實線外框＋斜紋；否則虛線外框＋光點。 */
+  /** 對看的人有害：實線外框＋斜紋；否則虛線外框＋光點（有益）。 */
   harmful: boolean;
+  /** 不影響看的人（3-37b）：虛線外框、只有淡底色，不畫紋理。優先於 `harmful`。 */
+  neutral?: boolean;
   /** 要描外框的邊（鄰格不在同一區域的邊）。 */
   sides: readonly Side[];
   /** 移動型：前進方向沒有鄰格的那一格，在這一側畫三角箭頭。 */
@@ -237,13 +239,16 @@ const SIDE_VEC: Readonly<Record<Side, readonly [number, number]>> = { n: [0, -1]
 /** 區域單格：底色＋（斜紋｜光點）＋只描外緣的外框＋移動型的箭頭。 */
 export function drawZoneCell(ctx: Ctx, c: ZoneCell): void {
   ctx.save();
-  ctx.fillStyle = rgba(c.color, c.harmful ? 0.2 : 0.16);
+  const neutral = c.neutral === true;
+  ctx.fillStyle = rgba(c.color, neutral ? 0.1 : c.harmful ? 0.2 : 0.16);
   ctx.fillRect(0, 0, T, T);
   ctx.save();
   ctx.beginPath();
   ctx.rect(0, 0, T, T);
   ctx.clip();
-  if (c.harmful) {
+  if (neutral) {
+    // 不影響我方：不畫紋理
+  } else if (c.harmful) {
     ctx.strokeStyle = rgba(c.color, 0.45);
     ctx.lineWidth = 2;
     ctx.beginPath();
@@ -266,7 +271,7 @@ export function drawZoneCell(ctx: Ctx, c: ZoneCell): void {
   ctx.strokeStyle = c.color;
   ctx.lineWidth = 2.5;
   ctx.lineCap = "round";
-  if (!c.harmful) ctx.setLineDash([6, 4]);
+  if (neutral || !c.harmful) ctx.setLineDash([6, 4]);
   ctx.beginPath();
   const inset = 1.5;
   for (const s of c.sides) {

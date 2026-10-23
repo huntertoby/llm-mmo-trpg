@@ -9,6 +9,7 @@ import {
   zoneBadgeCell,
   zoneCellSpecs,
   zoneDraws,
+  zoneEffectOn,
   zoneHarmfulTo,
   zoneLine,
   zoneLinesAt,
@@ -81,13 +82,13 @@ describe("zones", () => {
     const model = buildDrawModel(zoneView(), "unit_0001", undefined, skills);
     expect(model.zones).toHaveLength(2);
     const [wall, song] = model.zones;
-    expect(wall).toMatchObject({ id: 1, element: "fire", surface: "fire", harmful: false, side: "e", anchor: "moving", turns: 2 });
+    expect(wall).toMatchObject({ id: 1, element: "fire", surface: "fire", harmful: false, effect: "none", side: "e", anchor: "moving", turns: 2 });
     expect(wall?.cells).toEqual([
       { x: 1, y: 1 },
       { x: 1, y: 2 },
     ]);
     // 沒有技能資料：元素與表面都是 null（顏色退回灰色）
-    expect(song).toMatchObject({ id: 2, element: null, surface: null, harmful: false, side: null, turns: 3 });
+    expect(song).toMatchObject({ id: 2, element: null, surface: null, harmful: false, effect: "help", side: null, turns: 3 });
     expect(song?.caster).toEqual({ x: 0, y: 0 }); // 跟隨型：施放者 unit_0001 所在的格子
     expect(wall?.caster).toBeNull();
     expect(zoneSide(fireWall({ direction: "north" }))).toBe("n");
@@ -103,6 +104,15 @@ describe("zones", () => {
     expect(zoneHarmfulTo(fireWall({ affects: "all", harmful: true }), "ally")).toBe(true);
     expect(zoneHarmfulTo(fireWall({ affects: "all", harmful: false }), "ally")).toBe(false);
     expect(zoneHarmfulTo(fireWall({ affects: "allies", team: "enemy" }), "ally")).toBe(false);
+  });
+
+  it("splits into harm / help / none for the viewer's team", () => {
+    expect(zoneEffectOn(fireWall({ team: "enemy" }), "ally")).toBe("harm");
+    expect(zoneEffectOn(fireWall({ team: "ally" }), "ally")).toBe("none"); // 我方的火牆只打敵人
+    expect(zoneEffectOn(fireWall({ affects: "allies", team: "ally", harmful: false }), "ally")).toBe("help");
+    expect(zoneEffectOn(fireWall({ affects: "allies", team: "enemy", harmful: false }), "ally")).toBe("none"); // 敵方的增益區
+    expect(zoneEffectOn(fireWall({ affects: "all", harmful: true }), "ally")).toBe("harm");
+    expect(zoneEffectOn(fireWall({ affects: "all", harmful: false }), "ally")).toBe("help");
   });
 
   it("outlines only the outer edge and puts the arrow where the zone ends", () => {

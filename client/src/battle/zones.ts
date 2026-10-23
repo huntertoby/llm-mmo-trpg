@@ -5,13 +5,18 @@ import type { UnitNames } from "./units";
 
 export type ZoneSide = "n" | "s" | "w" | "e";
 
+/** 區域對某陣營的影響（3-37b 起分三種樣式）。 */
+export type ZoneEffect = "harm" | "help" | "none";
+
 /** 一整塊區域（同一個區域編號的格子一組）。 */
 export interface ZoneDraw {
   id: number;
   /** 依 `(y, x)` 排序。 */
   cells: Pos[];
-  /** 對「目前玩家陣營」有害（會打到我方）：實線＋斜紋；否則虛線＋光點。 */
+  /** 對「目前玩家陣營」有害（會打到我方）：實線＋斜紋。 */
   harmful: boolean;
+  /** 對目前玩家陣營的影響：有害（實線＋斜紋）、有益（虛線＋光點）、不影響（虛線＋淡底色，不畫紋理）。 */
+  effect: ZoneEffect;
   /** 區域效果的元素；查不到為 `null`（顏色退回表面色、再退回灰色）。 */
   element: string | null;
   /** 區域產生的表面（元素色的備案）；沒有為 `null`。 */
@@ -62,13 +67,20 @@ export function zoneSide(z: ZoneView): ZoneSide | null {
 }
 
 /**
- * 區域對「目前玩家陣營」是不是有害：影響施放者的敵人 → 施放者是敵方才有害；影響所有人 → 看區域效果有沒有
- * 傷害或有害狀態（伺服器的 `harmful`）；影響施放者的友方 → 不會打到我方，一律有益（不論誰放的）。
+ * 區域對「目前玩家陣營」的影響：不會影響到我方單位 → `none`（例：我方的火牆只打敵人、敵方的增益區）；
+ * 會影響，且有傷害或有害狀態 → `harm`；只有治療、護盾或增益 → `help`。
+ * 影響施放者的敵人 → 施放者是敵方才會打到我方；影響施放者的友方 → 施放者是我方才會影響我方；
+ * 影響所有人 → 一定影響我方，看伺服器的 `harmful`。
  */
+export function zoneEffectOn(z: ZoneView, viewerTeam: string): ZoneEffect {
+  if (z.affects === "enemies") return z.team !== viewerTeam ? "harm" : "none";
+  if (z.affects === "allies") return z.team === viewerTeam ? (z.harmful ? "harm" : "help") : "none";
+  return z.harmful ? "harm" : "help";
+}
+
+/** 區域對「目前玩家陣營」是不是有害（會打到我方）。 */
 export function zoneHarmfulTo(z: ZoneView, viewerTeam: string): boolean {
-  if (z.affects === "enemies") return z.team !== viewerTeam;
-  if (z.affects === "all") return z.harmful;
-  return false;
+  return zoneEffectOn(z, viewerTeam) === "harm";
 }
 
 /** 視圖的區域；舊的錄製回應（3D-5 之前）沒有 `zones` 欄位，視為沒有區域。 */
@@ -85,6 +97,7 @@ export function zoneDraws(view: BattleView, skills?: FxSkills): ZoneDraw[] {
       id: z.id,
       cells: [...z.cells].sort((a, b) => a.y - b.y || a.x - b.x).map((c) => ({ x: c.x, y: c.y })),
       harmful: zoneHarmfulTo(z, view.team),
+      effect: zoneEffectOn(z, view.team),
       element: fx?.zoneElement ?? fx?.element ?? null,
       surface: fx?.surface ?? null,
       anchor: z.anchor,

@@ -373,9 +373,9 @@ export class BattleRenderer {
     for (const z of model.zones) {
       const color = fxColor(z.element, z.surface);
       for (const c of zoneCellSpecs(z)) {
-        const key = `zone|${color}|${+z.harmful}|${c.sides.join("")}|${c.arrow ?? "-"}|${c.phase}`;
+        const key = `zone|${color}|${z.effect}|${c.sides.join("")}|${c.arrow ?? "-"}|${c.phase}`;
         const sprite = this.fxSprite(key, (ctx) =>
-          drawZoneCell(ctx, { color, harmful: z.harmful, sides: c.sides, arrow: c.arrow, phase: c.phase }),
+          drawZoneCell(ctx, { color, harmful: z.harmful, neutral: z.effect === "none", sides: c.sides, arrow: c.arrow, phase: c.phase }),
         );
         if (sprite === null) continue;
         this.rows.row(c.y).deco.addChild(sprite);

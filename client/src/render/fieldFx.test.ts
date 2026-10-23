@@ -201,6 +201,17 @@ describe("區域單格與施放者環", () => {
       drawZoneCell(ctx, { color: "#ff7a1a", harmful, sides: ["n", "s", "w", "e"], arrow: "e", phase: 4 });
       return { dash, lines: calls.filter((c) => c === "lineTo").length };
     };
+    // 不影響我方：虛線、沒有紋理（斜紋用 lineTo；光點用 arc）
+    const neutral = ((): { dash: boolean; arcs: number; lines: number } => {
+      const { ctx, calls } = mockCtx();
+      let dash = false;
+      ctx.setLineDash = (d: number[]) => {
+        if (d.length > 0) dash = true;
+      };
+      drawZoneCell(ctx, { color: "#ff7a1a", harmful: true, neutral: true, sides: ["n"], arrow: null, phase: 4 });
+      return { dash, arcs: calls.filter((c) => c === "arc").length, lines: calls.filter((c) => c === "lineTo").length };
+    })();
+    expect(neutral).toEqual({ dash: true, arcs: 0, lines: 1 });
     expect(run(true).dash).toBe(false);
     expect(run(false).dash).toBe(true);
     for (const arrow of ["n", "s", "w", "e", null] as const) {
