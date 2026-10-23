@@ -135,6 +135,9 @@ class FieldSpec(_Model):
     min_count: int | None = None
     max_count: int | None = None
     default: str | int | bool | None = None
+    plain_value: bool = False
+    """單選欄位的值一律是純值（不是 ``{"type": ...}`` 物件），即使欄位名在 ``OBJECT_CHOICE_FIELDS``
+    裡（例：陷阱的觸發範圍 ``trap.shape`` 是形狀 ID 字串，不是技能的形狀物件；3-48c 後修）。"""
     locked: bool = False
     """鎖定（Phase 3H-6）：這個欄位的值由規則決定、玩家不能改（例：武器技的縮放屬性看手上武器）。
     ``choices`` 只有規則決定的那一個；畫面唯讀顯示，並把草稿的值對齊它。"""
@@ -157,7 +160,11 @@ class FieldSpec(_Model):
     @property
     def object_choice(self) -> bool:
         """單選欄位的值是物件 ``{"type": ...}``，選項專屬參數寫在該物件裡（Phase 3E-2e）。"""
-        return self.type == "choice" and self.field.rsplit(".", 1)[-1] in OBJECT_CHOICE_FIELDS
+        return (
+            self.type == "choice"
+            and not self.plain_value
+            and self.field.rsplit(".", 1)[-1] in OBJECT_CHOICE_FIELDS
+        )
 
 
 class StepOptions(_Model):

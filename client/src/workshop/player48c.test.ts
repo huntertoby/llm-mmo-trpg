@@ -28,6 +28,7 @@ const spec = (field: string, extra: Partial<FieldSpec> = {}): FieldSpec => ({
   dice_sides: [],
   allow_weapon: false,
   locked: false,
+  plain_value: false,
   card: false,
   object_choice: false,
   ...extra,

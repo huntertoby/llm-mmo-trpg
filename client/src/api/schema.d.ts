@@ -1834,6 +1834,11 @@ export interface components {
             /** Default */
             default?: string | number | boolean | null;
             /**
+             * Plain Value
+             * @default false
+             */
+            plain_value: boolean;
+            /**
              * Locked
              * @default false
              */

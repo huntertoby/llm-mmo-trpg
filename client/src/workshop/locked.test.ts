@@ -15,6 +15,7 @@ const scaling = (locked: boolean): FieldSpec => ({
   dice_sides: [],
   allow_weapon: false,
   locked,
+  plain_value: false,
   show_when: {},
   card: false,
   object_choice: false,

@@ -746,6 +746,7 @@ def _trap_field(library: ContentLibrary) -> FieldSpec:
                     for s in _TRAP_SHAPES
                 ),
                 default="single",
+                plain_value=True,  # 形狀 ID 字串（TrapSpec.shape），不是 {"type": ...}
             ),
         ),
     )

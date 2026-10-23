@@ -4446,6 +4446,11 @@
             ],
             "title": "Default"
           },
+          "plain_value": {
+            "type": "boolean",
+            "title": "Plain Value",
+            "default": false
+          },
           "locked": {
             "type": "boolean",
             "title": "Locked",
