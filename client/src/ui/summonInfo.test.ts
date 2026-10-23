@@ -12,6 +12,7 @@ const ICE: SummonInfoCard = {
   count: 1,
   hp: 14,
   hp_note: "施放者 1 級時",
+  hp_infusion_zh: "選「召喚物」灌注時 HP +20%",
   move: "5 格",
   defense: "護甲 +0",
   attack: "冰霜法杖：1d6 冰霜傷害（射程 5）",
@@ -30,6 +31,7 @@ describe("召喚物資訊小卡", () => {
     expect(html).toContain("open");
     expect(html).toContain("普攻命中站在水上的目標時施加「冰凍」1 回合");
     expect(html).toContain("施放時從你持有的關鍵字選一個帶上");
+    expect(html).toContain("選「召喚物」灌注時 HP +20%");
     expect(html).not.toContain("灌注：施放時");
   });
 

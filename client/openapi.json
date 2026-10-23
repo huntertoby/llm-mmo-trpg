@@ -1132,6 +1132,59 @@
         }
       }
     },
+    "/api/runs/{run_id}/allocation-preview": {
+      "post": {
+        "tags": [
+          "runs"
+        ],
+        "summary": "Post Allocation Preview",
+        "description": "升級配點與營火重配的資源預覽（3H-5）：把配點加到主角目前的屬性上，回傳新的最大 HP、法力、\n耐力與變化文字；算式與一輪面板、開新一輪相同（後端算，前端不寫公式）。",
+        "operationId": "post_allocation_preview_api_runs__run_id__allocation_preview_post",
+        "parameters": [
+          {
+            "name": "run_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Run Id"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/AllocationPreviewRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AllocationPreviewOut"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
     "/api/runs/{run_id}": {
       "get": {
         "tags": [
@@ -1881,6 +1934,54 @@
         "title": "AllocateChoice",
         "description": "分配未分配的屬性點（Phase 3H-3；重配之後用）：``attributes`` 是屬性 → 加幾點，總數不可超過\n``RunState.attribute_points``。營火、戰前都可以送；不推進節點。"
       },
+      "AllocationPreviewOut": {
+        "properties": {
+          "hp": {
+            "type": "integer",
+            "title": "Hp"
+          },
+          "mana": {
+            "type": "integer",
+            "title": "Mana"
+          },
+          "stamina": {
+            "type": "integer",
+            "title": "Stamina"
+          },
+          "summary_zh": {
+            "type": "string",
+            "title": "Summary Zh"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "hp",
+          "mana",
+          "stamina",
+          "summary_zh"
+        ],
+        "title": "AllocationPreviewOut",
+        "description": "配點後主角的最大 HP、法力、耐力（不含裝備；和一輪面板同一個函式）與一句話的變化\n（例「最大 HP ＋6、耐力 ＋4」，沒變時為空字串）。"
+      },
+      "AllocationPreviewRequest": {
+        "properties": {
+          "attributes": {
+            "additionalProperties": {
+              "type": "integer"
+            },
+            "propertyNames": {
+              "$ref": "#/components/schemas/Attribute"
+            },
+            "type": "object",
+            "title": "Attributes"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "title": "AllocationPreviewRequest",
+        "description": "升級配點與營火重配的資源預覽（3H-5）：目前的配點（不必配滿；省略的屬性為 0 點）。"
+      },
       "AppearanceView": {
         "properties": {
           "kind": {
@@ -2065,7 +2166,7 @@
           "lines_zh"
         ],
         "title": "AttributeAffectsOut",
-        "description": "一個屬性影響的東西（Phase 3H-3）：武器的普攻與武器技、縮放這個屬性的技能名；由程式依技能\n與武器的縮放屬性產生。"
+        "description": "一個屬性影響的東西（Phase 3H-3）：武器的普攻、縮放這個屬性的技能名；由程式依技能\n與武器的縮放屬性產生。"
       },
       "AttributePerkOut": {
         "properties": {
@@ -9783,6 +9884,11 @@
           "hp_note": {
             "type": "string",
             "title": "Hp Note"
+          },
+          "hp_infusion_zh": {
+            "type": "string",
+            "title": "Hp Infusion Zh",
+            "default": ""
           },
           "move": {
             "type": "string",

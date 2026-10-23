@@ -234,6 +234,9 @@ class TurnStarted(EventBase):
     move_points: int
     mana: int = 0
     max_mana: int = 0
+    stamina: int = 0
+    max_stamina: int = 0
+    stamina_gained: int = 0  # 這個回合開始回復的耐力（3H-5；0 ＝ 沒有回復或已滿）
 
 
 class TurnSkipped(EventBase):

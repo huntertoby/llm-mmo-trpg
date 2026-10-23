@@ -3,6 +3,7 @@ import { useState } from "react";
 import type { RunChoice, RunResponse } from "../api/types";
 import { allocationComplete, offerGroupKey, pickChoice, levelUpReady, type Allocation, type RunView } from "../run/flow";
 import { AttributeAllocator } from "../run/AttributeAllocator";
+import { useAllocationPreview } from "../run/allocationPreview";
 import { OfferPicker } from "../run/OfferPicker";
 import { SkillGrowthPanel } from "../run/SkillGrowthPanel";
 import { draftEvolve, draftLevels, missingEvolutions, type EvolveDraft, type LevelDraft } from "../run/skillGrowth";
@@ -17,6 +18,7 @@ type Props = {
 
 export function RunLevelUp({ run, view, busy, onChoose }: Props) {
   const [alloc, setAlloc] = useState<Allocation>({});
+  const preview = useAllocationPreview(run.run_id, alloc);
   const [pick, setPick] = useState<number | null>(null);
   const [replace, setReplace] = useState<string | null>(null);
   const [force, setForce] = useState(false);
@@ -48,7 +50,7 @@ export function RunLevelUp({ run, view, busy, onChoose }: Props) {
         alloc={alloc}
         onChange={setAlloc}
         disabled={busy}
-        hpPerCon={run.hero.hp_per_con_point}
+        preview={preview}
         affects={run.hero.attribute_affects}
       />
       <SkillGrowthPanel

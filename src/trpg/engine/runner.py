@@ -38,8 +38,11 @@ __all__ = [
     "run_battle",
 ]
 
-LOG_FORMAT = "trpg-battle-log/60"
-"""``/60``（Phase 3H-2）：武器技花耐力（``cost.stamina``）、主角的法力與耐力上限依屬性
+LOG_FORMAT = "trpg-battle-log/61"
+"""``/61``（Phase 3H-5）：主角的耐力每回合開始回復（``core.yaml`` 的 ``resources.stamina_regen``，
+不超過上限），``turn_started`` 多了 ``stamina``／``max_stamina``／``stamina_gained``；單位狀態多了
+``stamina_regen``。同一份輸入的結算可能不同，因此 ``/60`` 的紀錄無法重播。
+``/60``（Phase 3H-2）：武器技花耐力（``cost.stamina``）、主角的法力與耐力上限依屬性
 （``core.yaml`` 的 ``resources``）；``skill_used``／``skill_triggered``／``skill_infused`` 多了
 ``stamina``／``stamina_after``。同一份輸入的結算可能不同，因此 ``/59`` 的紀錄無法重播。
 ``/59``（Phase 3H-1）：屬性的常駐數值（力量：撞擊傷害 ±、智力：表面與持續區域 +回合、

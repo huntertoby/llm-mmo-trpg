@@ -130,7 +130,8 @@ def build_glossary(library: ContentLibrary) -> Glossary:
         ),
         triggers=_triggers(library),
         actions=tuple(
-            _entry(t.id, t.name_zh, t.summary_zh, (), t.lines_zh) for t in action_texts(rules.core)
+            _entry(t.id, t.name_zh, t.summary_zh, (), t.lines_zh)
+            for t in action_texts(rules.core, library.roguelite.refill_after_battle)
         ),
         objectives=tuple(
             _entry(t.id, t.name_zh, t.summary_zh, (), t.lines_zh) for t in objective_texts()

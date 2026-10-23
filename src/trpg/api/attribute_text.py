@@ -1,7 +1,7 @@
 """建議屬性與「這個屬性影響你的哪些招」（Phase 3H-3，``docs/design/07-角色成長.md`` 7.2；#44 原則：
 說明文字一律由程式依規則與資料產生）。
 
-- :func:`attribute_affects`：每個屬性影響的東西——武器（普攻與武器技吃武器的縮放屬性）與技能
+- :func:`attribute_affects`：每個屬性影響的東西——武器（普攻吃武器的縮放屬性；武器技看技能卡）與技能
   （縮放屬性與第二縮放屬性）。
 - :func:`attribute_suggestion`：開局建議的主屬性＝起始技能最常用的縮放屬性（沒有技能時為武器的），
   和「自動配點」同一個規則（:func:`trpg.roguelite.start.primary_attribute`）。
@@ -32,7 +32,7 @@ def _weapon_attrs(weapon: WeaponDef | None) -> tuple[Attribute, ...]:
 
 
 def _weapon_line(weapon: WeaponDef) -> str:
-    return f"{weapon.name_zh}的普攻與武器技"
+    return f"{weapon.name_zh}的普攻"
 
 
 def attribute_affects(

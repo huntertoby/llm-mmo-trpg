@@ -4,6 +4,7 @@ import type { SkillCard } from "../api/types";
 import { kindLabel, sourceCostText } from "../battle/source";
 import { growthLines, levelBadge, levelOf } from "../run/skillGrowth";
 import { KeywordLine } from "./KeywordLine";
+import { RuleText } from "./ruleText";
 import { StackTip } from "./StackTip";
 import { SummonInfo } from "./SummonInfo";
 import { VariantList } from "./VariantList";
@@ -56,7 +57,7 @@ export function SkillCardView({ card, compact = false, activeVariantId = null }:
       </ul>
       {(card.formula_lines ?? []).map((line) => (
         <div key={line} className="small skill-card-formula" data-testid="skill-formula">
-          {line}
+          <RuleText text={line} />
         </div>
       ))}
       {(card.stacks ?? []).length > 0 && (

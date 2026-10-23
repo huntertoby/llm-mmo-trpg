@@ -9,13 +9,13 @@ import { RunHeroPanel } from "./RunHeroPanel";
 import { affectsOf, affectsText, baseAttributes, suggestionText } from "./flow";
 
 const affects = [
-  { attr: "str", lines_zh: ["單手劍的普攻與武器技", "烈焰斬"] },
+  { attr: "str", lines_zh: ["單手劍的普攻", "烈焰斬"] },
   { attr: "wil", lines_zh: [] },
 ] as const;
 
 describe("affectsOf / affectsText / suggestionText", () => {
   it("取出某屬性影響的招，沒有資料時為空", () => {
-    expect(affectsOf(affects, "str")).toEqual(["單手劍的普攻與武器技", "烈焰斬"]);
+    expect(affectsOf(affects, "str")).toEqual(["單手劍的普攻", "烈焰斬"]);
     expect(affectsOf(affects, "dex")).toEqual([]);
     expect(affectsOf(undefined, "str")).toEqual([]);
   });
@@ -47,7 +47,7 @@ describe("配點畫面", () => {
     );
     expect(html).toContain("建議主屬性：力量（武器吃力量）");
     expect(html).toContain('data-testid="attr-affects-str"');
-    expect(html).toContain("影響：單手劍的普攻與武器技、烈焰斬");
+    expect(html).toContain("影響：單手劍的普攻、烈焰斬");
     expect(html).not.toContain('data-testid="attr-affects-wil"');
     expect(html).toContain("run-alloc-row suggested");
   });
@@ -81,7 +81,7 @@ describe("角色面板的有效屬性", () => {
     const html = renderToStaticMarkup(createElement(RunHeroPanel, { hero: { ...hero, attribute_perks: [{ attr: "str", tier: 1, per_tier_zh: "撞擊 +1／階", now_zh: "撞擊 +1", next_at: 18 }] as RunHero["attribute_perks"] } }));
     expect(html).toContain("<b>14</b>");
     expect(html).toContain("基礎 12，裝備 +2");
-    expect(html).toContain("影響：單手劍的普攻與武器技、烈焰斬");
+    expect(html).toContain("影響：單手劍的普攻、烈焰斬");
   });
 
   it("舊回應沒有有效屬性時退回基礎屬性", () => {

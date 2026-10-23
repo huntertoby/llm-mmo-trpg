@@ -151,6 +151,7 @@ export type StartOptions = Schemas["StartOptions"];
 export type StartWeaponOption = Schemas["StartWeaponOption"];
 export type StartPreview = Schemas["StartPreview"];
 export type StartResources = Schemas["StartResourcesOut"];
+export type AllocationPreview = Schemas["AllocationPreviewOut"];
 export type StartKeywordOption = Schemas["StartKeywordOption"];
 export type DevPack = Schemas["DevPackOut"];
 export type OfferTag = Schemas["OfferTagOut"];

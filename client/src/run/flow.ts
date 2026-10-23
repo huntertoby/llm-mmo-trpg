@@ -190,11 +190,6 @@ export function allocationTotal(alloc: Allocation): number {
   return ATTRIBUTES.reduce((sum, a) => sum + (alloc[a.id] ?? 0), 0);
 }
 
-/** 體質配點帶來的最大 HP 增量（每點 `hpPerCon`；Phase 3-7）。 */
-export function conHpGain(alloc: Allocation, hpPerCon: number): number {
-  return (alloc.con ?? 0) * hpPerCon;
-}
-
 /** 體質高於（低於）基準 `conBase` 帶來的最大 HP 加成（主角面板用）。 */
 export function conHpBonus(con: number, conBase: number, hpPerCon: number): number {
   return (con - conBase) * hpPerCon;

@@ -467,6 +467,27 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/runs/{run_id}/allocation-preview": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Post Allocation Preview
+         * @description 升級配點與營火重配的資源預覽（3H-5）：把配點加到主角目前的屬性上，回傳新的最大 HP、法力、
+         *     耐力與變化文字；算式與一輪面板、開新一輪相同（後端算，前端不寫公式）。
+         */
+        post: operations["post_allocation_preview_api_runs__run_id__allocation_preview_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/runs/{run_id}": {
         parameters: {
             query?: never;
@@ -778,6 +799,31 @@ export interface components {
             };
         };
         /**
+         * AllocationPreviewOut
+         * @description 配點後主角的最大 HP、法力、耐力（不含裝備；和一輪面板同一個函式）與一句話的變化
+         *     （例「最大 HP ＋6、耐力 ＋4」，沒變時為空字串）。
+         */
+        AllocationPreviewOut: {
+            /** Hp */
+            hp: number;
+            /** Mana */
+            mana: number;
+            /** Stamina */
+            stamina: number;
+            /** Summary Zh */
+            summary_zh: string;
+        };
+        /**
+         * AllocationPreviewRequest
+         * @description 升級配點與營火重配的資源預覽（3H-5）：目前的配點（不必配滿；省略的屬性為 0 點）。
+         */
+        AllocationPreviewRequest: {
+            /** Attributes */
+            attributes?: {
+                [key: string]: number;
+            };
+        };
+        /**
          * AppearanceView
          * @description 物品外觀（Phase 3G-G5a，只給圖示用）：欄位同 ``content/equipment/appearance.yaml``；
          *     物品沒寫的欄位為 ``None``（前端依欄位退回預設）；``keywords`` 由詞條推導（前 2 個）；
@@ -843,7 +889,7 @@ export interface components {
         Attribute: "str" | "dex" | "con" | "int" | "wis" | "wil";
         /**
          * AttributeAffectsOut
-         * @description 一個屬性影響的東西（Phase 3H-3）：武器的普攻與武器技、縮放這個屬性的技能名；由程式依技能
+         * @description 一個屬性影響的東西（Phase 3H-3）：武器的普攻、縮放這個屬性的技能名；由程式依技能
          *     與武器的縮放屬性產生。
          */
         AttributeAffectsOut: {
@@ -4016,6 +4062,11 @@ export interface components {
             hp: number;
             /** Hp Note */
             hp_note: string;
+            /**
+             * Hp Infusion Zh
+             * @default
+             */
+            hp_infusion_zh: string;
             /** Move */
             move: string;
             /** Defense */
@@ -5453,6 +5504,41 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["RunResponse"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    post_allocation_preview_api_runs__run_id__allocation_preview_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                run_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["AllocationPreviewRequest"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["AllocationPreviewOut"];
                 };
             };
             /** @description Validation Error */

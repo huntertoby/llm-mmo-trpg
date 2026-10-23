@@ -29,7 +29,7 @@ export function RunCampfire({ run, view, busy, onChoose }: Props) {
     <div className="panel run-campfire">
       <h2>營火（第 {view.afterBattle} 場後）</h2>
       <p>
-        HP 與法力已回滿，源力 +1。
+        HP、法力與耐力已回滿，源力 +1。
         {offer === null
           ? view.rerollsLeft > 0
             ? "可以重骰一次，得到一組新的技能候選。"
@@ -37,7 +37,7 @@ export function RunCampfire({ run, view, busy, onChoose }: Props) {
           : "選一張新技能，或放棄後離開營火。"}
       </p>
       <SkillPointsSection hero={run.hero} busy={busy} onChoose={onChoose} campfire />
-      <AttributeRespecSection hero={run.hero} busy={busy} onChoose={onChoose} campfire />
+      <AttributeRespecSection hero={run.hero} busy={busy} onChoose={onChoose} campfire runId={run.run_id} />
       {offer !== null && (
         <>
           <OfferPicker

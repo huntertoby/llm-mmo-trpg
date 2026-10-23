@@ -40,6 +40,7 @@ from trpg.content.yaml_sources import (
     shape_role,
     split_heal_skeletons,
 )
+from trpg.shared.bonus_text import bonus_text
 from trpg.shared.types import Attribute, Element, Surface, rune_name
 
 if TYPE_CHECKING:
@@ -3299,7 +3300,7 @@ class SkillDef(ContentModel):
 
         def line(label: str, base: str, permille: int) -> str:
             text = f"{label}算法：{base}＋{names} × {permille / 1000:g}"
-            return text if now is None else f"{text}（目前 +{now * permille / 1000:g}）"
+            return text if now is None else f"{text}（{bonus_text(now, permille)}）"
 
         out: list[str] = []
         if "damage" in types:

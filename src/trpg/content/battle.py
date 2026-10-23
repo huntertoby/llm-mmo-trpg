@@ -14,6 +14,7 @@ from pydantic import Field, field_validator, model_serializer, model_validator
 
 from trpg.content.schemas import ContentModel
 from trpg.content.slots import Slot
+from trpg.shared.bonus_text import bonus_text
 from trpg.shared.types import Attribute, Element, ResistGroup, Surface
 
 if TYPE_CHECKING:
@@ -342,7 +343,7 @@ class WeaponDef(ContentModel):
         dice = f"{self.dice}＋{self.flat}" if self.flat else str(self.dice)
         text = f"普攻：{dice}＋{self.scaling_names_zh()} × {permille / 1000:g}"
         if get is not None:
-            text += f"（目前 +{self.scaling_value(get) * permille / 1000:g}）"
+            text += f"（{bonus_text(self.scaling_value(get), permille)}）"
         return text
 
     def rule_lines_zh(
@@ -360,7 +361,7 @@ class WeaponDef(ContentModel):
         if self.secondary_scaling_attr is not None:
             names = f"{self.scaling_attr.display_name}、{self.secondary_scaling_attr.display_name}"
             how = "取較高者" if self.attr_mode == "max" else "取平均"
-            lines.append(f"雙屬性：普攻與武器技吃{names}，{how}")
+            lines.append(f"雙屬性：普攻吃{names}，{how}；武器技看技能卡（在這把武器的屬性範圍內）")
         if self.is_melee:
             lines.append(
                 f"背刺（近戰共用規則）：從目標背後攻擊，命中 +{core.backstab_hit_bonus}、"

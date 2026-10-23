@@ -57,7 +57,7 @@ def test_hero_lists_which_skills_each_attribute_affects(client: TestClient) -> N
     names = {c["name_zh"] for c in hero["skills"]}
     listed = {line for lines in affects.values() for line in lines}
     assert names <= listed  # 每一招都至少出現在一個屬性底下
-    assert any("普攻與武器技" in line for lines in affects.values() for line in lines)
+    assert any("的普攻" in line for lines in affects.values() for line in lines)
 
 
 def test_start_preview_suggests_the_attribute_most_skills_scale_with(

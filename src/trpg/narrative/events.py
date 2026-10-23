@@ -317,7 +317,9 @@ def _turn_order(e: TurnOrderSet, v: _View) -> str:
 @_handles(TurnStarted)
 def _turn_started(e: TurnStarted, v: _View) -> str:
     mana = f"，法力 {e.mana}/{e.max_mana}" if e.max_mana else ""
-    return f"— {v.name[e.unit_id]} 的回合（AP {e.ap}，移動 {e.move_points}{mana}）"
+    gained = e.stamina_gained
+    stamina = f"，耐力 +{gained}（{e.stamina}/{e.max_stamina}）" if gained else ""
+    return f"— {v.name[e.unit_id]} 的回合（AP {e.ap}，移動 {e.move_points}{mana}{stamina}）"
 
 
 @_handles(TurnEnded)

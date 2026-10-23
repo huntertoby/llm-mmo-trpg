@@ -56,8 +56,8 @@ offer_max_attempts: 200       # 湊齊候選最多試幾個組合器種子
 # 營火（0.11 G）：HP、法力、耐力（3H-2）回滿，源力 +campfire，並提供重骰（0.2 F）。中段（第 3 場後）與 Boss 前（第 5 場後）。
 campfire_after: [3, 5]
 rerolls_per_campfire: 1
-# 每場打贏後回滿的資源（Phase 3H-2 設定點；mana／stamina）。「每場法力回滿」（B 選項）待使用者決定，目前不開：[]
-refill_after_battle: []
+# 每場打贏後回滿的資源（Phase 3H-2 設定點；mana／stamina）。耐力每場回滿（3H-5，使用者決定 #45）；法力只在營火回滿。
+refill_after_battle: [stamina]
 
 # 源力（0.11 K；上限 3、每場開場至少 1 在 rules/core.yaml）
 source:

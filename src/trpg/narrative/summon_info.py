@@ -28,6 +28,7 @@ _PERMILLE = 1000
 
 __all__ = [
     "SummonInfoCard",
+    "hp_infusion_text",
     "infusion_hint",
     "infusion_phrases",
     "summon_acts",
@@ -263,6 +264,18 @@ def _on_cast_only(infusion: SummonInfusion) -> bool:
     return bool(infusion.hp_permille or infusion.conceal_rounds)
 
 
+def hp_infusion_text(lib: ContentLibrary) -> str:
+    """灌注會改召喚物 HP 的關鍵字（``summon_infusions`` 中 ``hp_permille`` 不為 0 的）各一句：
+    「選「召喚物」灌注時 HP +20%」（3H-5）。小卡顯示的是預設 HP；之後有別的灌注會動 HP 時
+    自動多列。沒有這種灌注時為空字串。"""
+    names = {k.id: k.name_zh for k in lib.keywords.keywords}
+    return "；".join(
+        f"選「{names[key]}」灌注時 HP +{i.hp_permille / 10:g}%"
+        for key, i in lib.ruleset.core.summon_infusions.items()
+        if i.hp_permille and key in names
+    )
+
+
 def infusion_hint(lib: ContentLibrary, *, acts: bool = True) -> str:
     """召喚時灌注的一句話（清單 1.7）。例子取 ``summon_infusions`` 第一個帶狀態的關鍵字；不攻擊的
     召喚物（``acts`` 為假）只有召喚當下生效的灌注有用，例子改取那一類。"""
@@ -296,6 +309,8 @@ class SummonInfoCard(BaseModel):
     hp: int
     """最大 HP（:func:`summon_card_hp`，和引擎同一個算法）。"""
     hp_note: str
+    hp_infusion_zh: str = ""
+    """灌注會改 HP 時的補充句（:func:`hp_infusion_text`）；顯示的 HP 是預設值。"""
     move: str
     defense: str
     attack: str
@@ -359,6 +374,7 @@ def summon_info(
             if stats is None
             else _actual_note(lib, skill, role, stats)
         ),
+        hp_infusion_zh=hp_infusion_text(lib),
         move="不移動" if not acts or speed == 0 else f"{speed} 格",
         defense=summon_defense_text(summon, stats),
         attack=summon_attack_text(summon, stats, power_permille=spec.power_permille),

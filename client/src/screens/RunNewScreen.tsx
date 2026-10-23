@@ -98,7 +98,7 @@ export function RunNewScreen({ onCreated, onHome }: Props) {
             <div className="muted small">
               六項屬性起始都是 {rules.base_attribute}；另有 {rules.start_points} 點自由分配。
             </div>
-            <AttributeAllocator base={baseAttributes(rules.base_attribute)} points={points} alloc={alloc} onChange={setAlloc} disabled={busy} hpPerCon={rules.hp_per_con_point} suggestion={picker.suggestion} affects={picker.attributeAffects} />
+            <AttributeAllocator base={baseAttributes(rules.base_attribute)} points={points} alloc={alloc} onChange={setAlloc} disabled={busy} suggestion={picker.suggestion} affects={picker.attributeAffects} />
           </>
         )}
         <TestModePanel

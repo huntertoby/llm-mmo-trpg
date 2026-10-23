@@ -322,6 +322,7 @@ def make_unit(
         tags=template.tags,
         stamina=stamina,
         max_stamina=stamina,
+        stamina_regen=rules.core.template_stamina_regen(template),
         reactions=tuple(reactions),
         ai_profile=default_ai_profile(template, weapon),
         mana=max_mana,

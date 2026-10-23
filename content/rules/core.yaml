@@ -89,6 +89,7 @@ resources:
   base: 10
   mana:    {attrs: [int, wis, wil], per_point: 2}   # 法力：法術技
   stamina: {attrs: [str, dex, con], per_point: 2}   # 耐力：武器技、格擋（反應）共用同一個池
+  stamina_regen: 5          # 耐力每回合開始回復（3H-5，初值；只套用主角，不超過上限；戰後回滿見 roguelite.yaml）
 
 # --- 視線與隱蔽（Phase 1B）---
 base_sight_range: 24          # 基準視線距離（曼哈頓）；濃霧等天氣以倍率縮短
