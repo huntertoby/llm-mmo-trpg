@@ -1,0 +1,103 @@
+<!doctype html>
+<html lang="zh-Hant">
+<head>
+<meta charset="utf-8">
+<title>形態十種樣張</title>
+<style>
+  body { margin: 0; padding: 16px 20px; background: #1b1e24; color: #e8e8ea; font-family: "Microsoft JhengHei", sans-serif; }
+  h1 { font-size: 20px; margin: 0 0 4px; }
+  h2 { font-size: 15px; margin: 14px 0 6px; }
+  .sub { color: #a0a4ad; font-size: 13px; margin-bottom: 8px; line-height: 1.55; }
+  .row { display: flex; gap: 8px; flex-wrap: wrap; align-items: flex-end; }
+  .cell { background: #232730; border-radius: 6px; padding: 5px; text-align: center; font-size: 12px; color: #c8ccd4; }
+  .cell .m { color: #8a909a; font-size: 11px; }
+  canvas { display: block; margin: 0 auto 3px; }
+</style>
+</head>
+<body>
+<h1>形態（變身）第一批 10 種：全部另畫、帶主角主色、比召喚物大一號</h1>
+<div class="sub">使用者：「整身替換 而且要跟召喚物有區別性」「第一批 + 龍 + 狼人姿態 就好」。規則：① 另畫（不沿用召喚物，鳥也另畫）② 主角服裝主色當毛色或紋路 ③ 比同類召喚物大一號＋形態光環。<br>
+腳下：藍色陣營環＋字母徽章（召喚物是青綠環＋剩餘回合數）＋藍紫形態光環與刻點。元素化身、龍的配色跟進入時選的元素。</div>
+
+<h2>① 10 種（主角主色：藍）</h2>
+<div class="row" id="all"></div>
+
+<h2>② 同一形態、不同主角：主色跟著換（藍＝戰士、綠＝弓手、紅＝法師）</h2>
+<div class="row" id="heroes"></div>
+
+<h2>③ 元素化身、龍：火／冰／雷</h2>
+<div class="row" id="elems"></div>
+
+<h2>④ 戰場實際大小（每格 52px）：形態和相近的召喚物並排</h2>
+<div id="field"></div>
+
+<script src="paperdoll.js"></script>
+<script src="summonArt.js"></script>
+<script src="formArt.js"></script>
+<script>
+const F = FormArt, S = SummonArt, D = PaperDoll, DPR = 3;
+const BLUE = "#2c4f8a", GREEN = "#3f7a34", RED = "#9a2a3a";
+function cv(w, h) {
+  const c = document.createElement("canvas");
+  c.width = w * DPR; c.height = h * DPR; c.style.width = `${w}px`; c.style.height = `${h}px`;
+  const ctx = c.getContext("2d"); ctx.scale(DPR, DPR); return [c, ctx];
+}
+function rings(ctx, cx, cy, k, summon) {
+  ctx.save();
+  ctx.beginPath(); ctx.ellipse(cx, cy, 18 * k, 6.5 * k, 0, 0, Math.PI * 2);
+  ctx.fillStyle = summon ? "#1f9e8f55" : "#5aa0ff44"; ctx.fill(); ctx.lineWidth = 2; ctx.strokeStyle = summon ? "#8ff0e2" : "#5aa0ff"; ctx.stroke();
+  if (!summon) {
+    ctx.beginPath(); ctx.ellipse(cx, cy, 22 * k, 8 * k, 0, 0, Math.PI * 2);
+    ctx.shadowColor = "#9a86ff"; ctx.shadowBlur = 6 * k; ctx.lineWidth = 1.6; ctx.strokeStyle = "#9a86ffcc"; ctx.stroke();
+    ctx.fillStyle = "#d8ccff";
+    for (const a of [0.35, 1.25, 2.2, 3.1, 4.1, 5.0]) { ctx.save(); ctx.translate(cx + Math.cos(a) * 20 * k, cy + Math.sin(a) * 7.2 * k); ctx.rotate(Math.PI / 4); ctx.fillRect(-1.3 * k, -1.3 * k, 2.6 * k, 2.6 * k); ctx.restore(); }
+  }
+  ctx.restore();
+}
+function badge(ctx, x, y, k, text, color) {
+  ctx.save(); ctx.beginPath(); ctx.arc(x, y, 6 * k, 0, Math.PI * 2); ctx.fillStyle = "#1d1a22"; ctx.fill(); ctx.lineWidth = 1.2; ctx.strokeStyle = color; ctx.stroke();
+  ctx.fillStyle = color === "#5aa0ff" ? "#fff" : color; ctx.font = `bold ${8 * k}px sans-serif`; ctx.textAlign = "center"; ctx.textBaseline = "middle"; ctx.fillText(text, x, y + 0.5); ctx.restore();
+}
+function form(ctx, id, hero, cx, cy, k, element, facing = "east") {
+  rings(ctx, cx, cy - 2 * k, k, false);
+  F.stamp(ctx, { id, hero, element }, facing, cx, cy, k);
+  badge(ctx, cx - 17 * k, cy - 2 * k, k, "A", "#5aa0ff");
+}
+function summon(ctx, sid, cx, cy, k) {
+  rings(ctx, cx, cy - 2 * k, k, true);
+  S.stamp(ctx, sid, "east", cx, cy, k);
+  badge(ctx, cx + 17 * k, cy - 20 * k, k, "3", "#8ff0e2");
+}
+function cell(parent, label, meta, w, h, draw) {
+  const [c, ctx] = cv(w, h); ctx.fillStyle = "#2d323c"; ctx.fillRect(0, 0, w, h); draw(ctx);
+  const d = document.createElement("div"); d.className = "cell"; d.append(c);
+  d.insertAdjacentHTML("beforeend", `${label}${meta ? `<div class="m">${meta}</div>` : ""}`); parent.append(d);
+}
+const all = document.getElementById("all");
+for (const [id, f] of Object.entries(F.FORMS)) {
+  cell(all, f.zh, `大小 ${f.size}｜對照 ${f.vs}`, 122, 140, (ctx) => form(ctx, id, BLUE, 61, 130, 1.15, id === "avatar" || id === "dragon" ? "fire" : undefined));
+}
+cell(all, "不認得的形態", "退回原角色＋光環", 122, 140, (ctx) => { rings(ctx, 61, 128, 1.15, false); D.stamp(ctx, D.TEMPLATES.hero_fighter, "south", 61, 130, 1.15, { dpr: DPR }); badge(ctx, 61 - 19.5, 128, 1.15, "A", "#5aa0ff"); });
+
+const heroes = document.getElementById("heroes");
+for (const id of ["bear", "werewolf", "roc", "demon"]) {
+  cell(heroes, F.FORMS[id].zh, "藍／綠／紅", 300, 110, (ctx) => { [BLUE, GREEN, RED].forEach((h, i) => form(ctx, id, h, 50 + i * 100, 100, 1)); });
+}
+const elems = document.getElementById("elems");
+for (const id of ["avatar", "dragon"]) {
+  cell(elems, F.FORMS[id].zh, "火／冰／雷", 330, 135, (ctx) => { ["fire", "ice", "lightning"].forEach((e, i) => form(ctx, id, BLUE, 55 + i * 110, 125, 1, e)); });
+}
+// 戰場實際大小
+const T = 52, field = document.getElementById("field");
+const PAIRS = [["werewolf", "war_wolf"], ["cat", "war_wolf"], ["roc", "hawk"], ["demon", "shade"], ["shadow", "shade"], ["giant", "golem"], ["treant", "vine"], ["avatar", "fire_spirit"], ["bear", null], ["dragon", null]];
+const [c, ctx] = cv(T * 10, T * 2);
+for (let y = 0; y < 2; y++) for (let x = 0; x < 10; x++) { ctx.fillStyle = (x + y) % 2 ? "#8a8a84" : "#7d8a7a"; ctx.fillRect(x * T, y * T, T, T); }
+PAIRS.forEach(([fid, sid], i) => {
+  form(ctx, fid, BLUE, i * T + T / 2, T * 0.82, 0.78, fid === "avatar" || fid === "dragon" ? "fire" : undefined, "south");
+  if (sid) summon(ctx, sid, i * T + T / 2, T + T * 0.82, 0.78);
+});
+field.append(c);
+field.insertAdjacentHTML("beforeend", `<div class="sub" style="margin-top:4px">上排：玩家形態（狼人、貓、鳥、惡魔、暗影、巨人、樹人、元素化身、熊、龍）｜下排：相近的召喚物（戰狼、戰狼、鷹隼、影魅、影魅、石像、藤蔓、火靈）</div>`);
+</script>
+</body>
+</html>
