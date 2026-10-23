@@ -37,6 +37,9 @@ overrides:
   - {skill: skill_flight, attrs: [int], reason_zh: 飛行是奧術位移，維持智力}
   - {skill: skill_fracture_mark, attrs: [int], reason_zh: 裂骨印記是物理弱點標記，原本看智力，效果與數值不變}
   - {skill: skill_hunt_sigil, attrs: [wis], reason_zh: 獵印是標記獵物（偵測與標記），不是元素符文}
+  - {skill: skill_hex_bolt, attrs: [wil], reason_zh: 主要效果是暗影傷害（標記只是附帶），暗影歸意志（玩法 PM 2026-10-23：主要效果決定屬性）}
+  - {skill: skill_mark_detonation, attrs: [wil], reason_zh: 主要效果是暗影傷害（標記是條件），暗影歸意志（玩法 PM 2026-10-23）}
+  - {skill: skill_summon_tide, attrs: [int], reason_zh: 造水加緩速是元素互動，不是治療輔助（玩法 PM 2026-10-23）}
   - {skill: skill_mountain_mover, attrs: [str], reason_zh: 移山之力是力量傳說（位移改造），不看元素}
   - {skill: skill_summon_elite, attrs: [wil], reason_zh: 召喚物強化修正技能，跟著召喚走意志}
   - {skill: skill_summon_swarm, attrs: [wil], reason_zh: 召喚物強化修正技能，跟著召喚走意志}
