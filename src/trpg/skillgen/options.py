@@ -457,6 +457,13 @@ def _basics_step(draft: Draft, library: ContentLibrary, skeleton: SkeletonDef) -
         notes.append(
             f"骨架「{skeleton.name_zh}」只能是 {CATEGORY_TEXT[skeleton.required_category][0]}"
         )
+    if (
+        draft.get("category") != "weapon"
+        and draft.get("kind") != "modifier"
+        and not ScalingFacts.of_draft(draft).effects
+    ):
+        # 縮放屬性的允許範圍看主要效果的主題（3H-7）：效果還沒選時先提示，別等到檢查才被打槍（3-47）
+        notes.append("縮放屬性的允許範圍要看主要效果的主題；選好「效果」後再回來確認這一欄")
     return _step("basics", draft, library, fields, tuple(notes))
 
 

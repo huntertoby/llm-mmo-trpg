@@ -196,7 +196,26 @@ export function addEffect(container: Json, spec: FieldSpec, choice: Choice, base
   const forced = choice.info["forced_affects"];
   if (typeof forced === "string") base0["affects"] = forced;
   const item = prefill(base0, choice.params);
-  return setPath(container, path, [...list, item]);
+  return setPath(container, path, insertEffect(list, item, spec, choice));
+}
+
+/** 原語的位置限制（`first`／`last`；選項 `info.composition.position`）。 */
+function positionOf(choice: Choice | undefined): "first" | "last" | null {
+  const comp = choice?.info["composition"];
+  const pos = typeof comp === "object" && comp !== null ? (comp as Record<string, unknown>)["position"] : null;
+  return pos === "first" || pos === "last" ? pos : null;
+}
+
+/** 把新效果放到合法位置（3-47）：「必須第一個」放最前、「必須最後一個」放最後，
+ * 一般效果夾在已有的「第一個」與「最後一個」效果之間（不排到它們外面）。 */
+export function insertEffect(list: readonly Json[], item: Json, spec: FieldSpec, choice: Choice): Json[] {
+  const at = (x: Json) => positionOf(spec.choices.find((c) => c.value === x["type"]));
+  const own = positionOf(choice);
+  if (own === "first") return [item, ...list];
+  if (own === "last") return [...list, item];
+  const lastIndex = list.findIndex((x) => at(x) === "last");
+  if (lastIndex < 0) return [...list, item];
+  return [...list.slice(0, lastIndex), item, ...list.slice(lastIndex)];
 }
 
 export function addModifier(container: Json, spec: FieldSpec, base = ""): Json {

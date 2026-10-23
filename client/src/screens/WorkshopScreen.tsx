@@ -177,7 +177,7 @@ function SkillWorkshop({ onHome, onStartBattle, onGear, store, dev = false }: Pr
             onNext={() => dispatch({ type: "next" })}
           />
           <RandomPanel dev={dev} skeletons={skeletons} draft={draft} onResult={(d) => dispatch({ type: "replace", draft: d })} />
-          <YamlPanel draft={draft} onDraft={setDraft} />
+          {dev && <YamlPanel draft={draft} onDraft={setDraft} />}
         </div>
         <div className="ws-col ws-col-side">
           <CheckPanel check={state.check} pending={checking} dev={dev} />

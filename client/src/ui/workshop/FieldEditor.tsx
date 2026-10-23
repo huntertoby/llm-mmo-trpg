@@ -389,7 +389,7 @@ function EffectsField({ spec, container, base, onChange }: FieldProps) {
       <div className="ws-field">
         <Label spec={spec} />
         <div className="ws-note">
-          這一層的巢狀效果在這裡不展開，請用頁面最下方的「進階：直接編輯 YAML」。
+          這一層的巢狀效果在這裡不展開。
           {list.length > 0 && <code className="ws-json">{JSON.stringify(list)}</code>}
         </div>
       </div>
@@ -427,7 +427,7 @@ function EffectsField({ spec, container, base, onChange }: FieldProps) {
             </div>
             {choice !== undefined && choice.description_zh !== "" && <div className="muted small">{choice.description_zh}</div>}
             {choice === undefined ? (
-              <div className="error-text small">這個效果不在目前的選項內，請移除或用進階 YAML 修改。</div>
+              <div className="error-text small">這個效果不在目前的選項內，請移除。</div>
             ) : (
               <FieldList
                 fields={choice.params}

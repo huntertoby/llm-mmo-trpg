@@ -159,7 +159,7 @@ export function CheckPanel({ check, pending, dev = false }: { check: WorkshopChe
           <ul>
             {check.problems.map((p) => (
               <li key={`${p.rule}:${p.message_zh}`}>
-                <span className="ws-rule">{p.rule}</span> {p.message_zh}
+                {dev && <span className="ws-rule">{p.rule}</span>} {p.message_zh}
               </li>
             ))}
           </ul>
