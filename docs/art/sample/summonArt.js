@@ -102,6 +102,23 @@ window.SummonArt = (() => {
     ctx.shadowColor = c; ctx.shadowBlur = 4; eyes(ctx, side, -31, c, 2.4); ctx.shadowBlur = 0;
   }
 
+  // ---- 形態標記（#48 使用者：「整身替換 而且要跟召喚物有區別性」）----
+  // s.scarf：玩家色的圍巾／披風（保留玩家部件）；s.runes：源晶紋（身上的藍紫符文線，不是外光——外光只給頭目）
+  function scarf(ctx, s, x, y, w) {
+    if (!s.scarf) return;
+    fill(ctx, s.scarf, () => ctx.roundRect(x - w / 2, y - 1.6, w, 3.4, 1.4));
+    fill(ctx, s.scarf, () => { ctx.moveTo(x - w / 2 + 1, y + 1); ctx.lineTo(x - w / 2 - 4, y + 7); ctx.lineTo(x - w / 2 + 1.5, y + 6); ctx.closePath(); });
+    fill(ctx, "#ffffff55", () => ctx.rect(x - w / 2, y - 1.6, w, 1));
+  }
+  function runes(ctx, s, pts) {
+    if (!s.runes) return;
+    ctx.save();
+    ctx.strokeStyle = "#b8a8ff"; ctx.lineWidth = 1.1; ctx.lineCap = "round";
+    ctx.shadowColor = "#9a86ff"; ctx.shadowBlur = 3;
+    for (const p of pts) { ctx.beginPath(); p.forEach(([x, y], i) => (i ? ctx.lineTo(x, y) : ctx.moveTo(x, y))); ctx.stroke(); }
+    ctx.restore();
+  }
+
   // ---- 野獸（側面骨架；朝南北時用左右鏡像的側面）----
   function beast(ctx, s, facing, side) {
     const dir = side === -1 ? -1 : 1;
@@ -118,7 +135,9 @@ window.SummonArt = (() => {
       fill(ctx, "#e8bb48", () => { ctx.moveTo(11, -3); ctx.lineTo(14, -1.5); ctx.lineTo(11, -0.5); ctx.closePath(); });
       fill(ctx, d, () => { ctx.moveTo(-8, 0); ctx.lineTo(-14, -2); ctx.lineTo(-14, 3); ctx.closePath(); });
       if (side !== null) fill(ctx, "#1d1a22", () => ctx.arc(9, -2.6, 0.9, 0, TAU));
-      fill(ctx, KW.mark, () => ctx.arc(8, -9, 1.6, 0, TAU));
+      if (!s.form) fill(ctx, KW.mark, () => ctx.arc(8, -9, 1.6, 0, TAU));
+      runes(ctx, s, [[[-14, -9], [-10, -7], [-6, -10]], [[12, -11], [16, -10]]]);
+      scarf(ctx, s, 6, 1, 4);
       ctx.restore();
       return;
     }
@@ -135,6 +154,8 @@ window.SummonArt = (() => {
       fill(ctx, "#1d1a22", () => ctx.arc(23, -18, 1.1, 0, TAU));
       for (const x of [11, 17]) fill(ctx, d, () => ctx.arc(x, -25, 2.6, 0, TAU));
       if (side !== null) fill(ctx, "#1d1a22", () => ctx.arc(17, -21, 1, 0, TAU));
+      runes(ctx, s, [[[-9, -22], [-5, -17], [-1, -22], [3, -17]], [[-12, -14], [-8, -12]]]);
+      scarf(ctx, s, 10, -16, 9);
       ctx.restore();
       return;
     }
@@ -149,6 +170,8 @@ window.SummonArt = (() => {
       for (const x of [11, 15]) fill(ctx, c, () => { ctx.moveTo(x - 2, -14.5); ctx.lineTo(x, -20); ctx.lineTo(x + 2, -14.5); ctx.closePath(); });
       if (side !== null) fill(ctx, "#ffe14d", () => { ctx.ellipse(15, -12.5, 1.3, 0.9, 0, 0, TAU); });
       for (const x of [7, 10]) fill(ctx, "#e8e0d0", () => { ctx.moveTo(x - 1.2, 0); ctx.lineTo(x, 1.6); ctx.lineTo(x + 1.2, 0); ctx.closePath(); });
+      runes(ctx, s, [[[-7, -11], [-4, -8], [-1, -11], [2, -8]]]);
+      scarf(ctx, s, 10, -9.5, 5);
       ctx.restore();
       return;
     }
@@ -210,9 +233,15 @@ window.SummonArt = (() => {
     if (s.variant === "shade") return { look: { skin: "#3a3448", eyes: "#d06aff", hair: "none" }, gear: { body: { kind: "leather", material: "leather", color: "#2a2632" }, head: { kind: "hood", material: "cloth", color: "#1f1c26" }, main_hand: { kind: "dagger", material: "steel" }, off_hand: { kind: "dagger", material: "steel" }, feet: { kind: "boots", material: "leather", color: "#1f1c26" } } };
     if (s.variant === "guardian") return { look: { skin: "#f4ecd0", hair: "long", hairColor: "#fff3c4", eyes: "#fffbe6" }, gear: { body: { kind: "robe", material: "cloth", color: "#f2e6c8" }, off_hand: { kind: "shield_round", material: "gold" }, feet: { kind: "shoes", material: "cloth", color: "#e8dcc0" } } };
     if (s.variant === "afterimage") return T.hero_fighter;
-    if (s.variant === "demon") return { look: { skin: "#5a3a6a", eyes: "#ff5a8a", hair: "none" }, gear: { body: { kind: "leather", material: "leather", color: "#2a1a30" }, head: { kind: "horned_helm", material: "iron", color: "#2a1a2a" }, main_hand: { kind: "sword", material: "steel", color: "#6a5a8a" }, off_hand: { kind: "dagger", material: "steel", color: "#6a5a8a" }, feet: { kind: "boots", material: "leather", color: "#1f1426" } } };
+    if (s.variant === "demon") return demonUnit(s);
+    if (s.variant === "demon_base") return { look: { skin: "#5a3a6a", eyes: "#ff5a8a", hair: "none" }, gear: { body: { kind: "leather", material: "leather", color: "#2a1a30" }, head: { kind: "horned_helm", material: "iron", color: "#2a1a2a" }, main_hand: { kind: "sword", material: "steel", color: "#6a5a8a" }, off_hand: { kind: "dagger", material: "steel", color: "#6a5a8a" }, feet: { kind: "boots", material: "leather", color: "#1f1426" } } };
     const sk = T.summon_skeleton_warrior;
     return s.trait === "shield" ? { ...sk, gear: { ...sk.gear, off_hand: { kind: "shield_round", material: "wood", color: "#6a5a4a" } } } : sk;
+  }
+  function demonUnit(s) {
+    const g = { body: { kind: "leather", material: "leather", color: "#2a1a30" }, head: { kind: "horned_helm", material: "iron", color: "#2a1a2a" }, main_hand: { kind: "sword", material: "steel", color: "#6a5a8a" }, off_hand: { kind: "dagger", material: "steel", color: "#6a5a8a" }, feet: { kind: "boots", material: "leather", color: "#1f1426" } };
+    if (s.scarf) g.cloak = { kind: "cape", color: s.scarf };
+    return { look: { skin: "#5a3a6a", eyes: "#ff5a8a", hair: "none", trim: s.runes ? "#b8a8ff" : undefined }, gear: g };
   }
   const HUMANOID_STYLE = {
     shade: { alpha: 0.72, glow: "#7a4ab0" },
@@ -235,7 +264,7 @@ window.SummonArt = (() => {
     const size = SIZE[s.size] * k;
     const side = facing === "north" ? null : facing === "east" ? 1 : facing === "west" ? -1 : 0;
     if (s.body === "humanoid") {
-      const st = HUMANOID_STYLE[s.variant] ?? {};
+      const st = s.form ? {} : HUMANOID_STYLE[s.variant] ?? {};
       // 先畫到離屏，再依 alpha、tint、glow 合成
       const L = 64 * size, off = document.createElement("canvas"); off.width = L * 2; off.height = L * 2;
       const o2 = off.getContext("2d"); o2.scale(2, 2);
