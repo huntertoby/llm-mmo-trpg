@@ -71,8 +71,9 @@ Phase 3 各段（`Phase3計畫.md` 節號；報告 `Phase3-*報告.md`）：
 **恢復後的下一段（依序）**：
 1. **4-L6**：接進候選產生器（`llm` 來源、寫進 run 紀錄、重播不呼叫 LLM、Mock 失敗仍 3 個候選、設定可關 LLM）＋ **3C 節原語多樣性 1～3**（題目指定核心原語、輪替選單、run 內配額；使用者 2026-10-23 決定）＋ **LLM 技能強制帶題目關鍵字**（4-L5 待決 #1；小測試的 `keyword.required`）。規格要先寫進 `Phase4計畫.md`（照 3A～3E 格式）。可與 4-L7（名稱與敘事）平行。
 2. 4-L8（開放更多結構；`budget.over`／無旋鈕結構 44／161、AP／冷卻旋鈕、`unit_then_tile` 等旗標）→ 4-L9（真模型評估＋3C 節強制／自由測試）。
-3. 介面／美術：**3-37c 雲嶺服裝部件**（`Phase3計畫.md` 41.3，後放）；五區其他區等美術 PM。
-4. **3E-3**（`Phase3E計畫.md` 3.2）可穿插；平衡 B1～B9（本檔 3.3）延後。
+3. **3-41a／b 說明文字整修**（玩法決定 #44，規格已寫好在 `Phase3計畫.md` 第 45 節，清單 `Phase3-41說明整修清單.md`；冰靈與「長槍」改名待定），可和 Phase 4 主線平行。
+4. 介面／美術：**3-37c 雲嶺服裝部件**（`Phase3計畫.md` 41.3，後放）；五區其他區等美術 PM。
+5. **3E-3**（`Phase3E計畫.md` 3.2）可穿插；平衡 B1～B9（本檔 3.3）延後。
 
 **本機模型（真模型測試）**：`F:\WSL\settings.ini` PORT 已改 8001（使用者 2026-10-23）；`config/llm.toml` → `http://localhost:8001/v1`、`swift`、**`enable_thinking=false`**（Qwen3 預設思考會用光 2048 輸出、回空）。strict JSON schema（含 `$ref`／`oneOf`，根層 `oneOf` 也可）vLLM 接受；schema 不佔 prompt token（最大題目實際 2,525）。關思考約 4～13 秒／次。測試：`uv run trpg llm ping`、`uv run trpg llm propose -n 10 --seed 0`（小測試）、`uv run pytest -m llm`。開發與自動測試一律 Mock；模型由使用者用 `F:\WSL\start.bat` 啟動，連不上或顯存不足時回報專案 PM，不要請使用者改 settings.ini。**預覽伺服器不要用 8000（使用者）或 8001（模型）**：`.claude/launch.json` 有 `trpg-serve-verify`（8011）。
 
