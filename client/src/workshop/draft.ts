@@ -247,13 +247,15 @@ export function resetStep(draft: Json, confirming: boolean): "clear" | "ask" {
 }
 
 /** 必填、而且只有一個選項的單選欄位（例：被動技的形狀只能是「自己」）直接幫使用者選好。
+ * 鎖定欄位（`locked`，例：武器技的縮放屬性看武器）的值由規則決定：已填的值不同就對齊成唯一的選項。
  * 沒有任何變動時回傳原物件（呼叫端可用 `===` 判斷）。 */
 export function autoSingles(container: Json, fields: readonly FieldSpec[], base = ""): Json {
   let out = container;
   for (const spec of fields) {
     const only = spec.choices[0];
     if (!spec.required || spec.type !== "choice" || spec.choices.length !== 1 || only === undefined) continue;
-    if (getPath(out, joinPath(base, spec.field)) !== undefined) continue;
+    const current = getPath(out, joinPath(base, spec.field));
+    if (current !== undefined && !(spec.locked === true && chosenValue(current) !== only.value)) continue;
     out = selectChoice(out, spec, only, base);
   }
   return out;

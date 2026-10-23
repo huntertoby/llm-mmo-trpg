@@ -123,6 +123,9 @@ class FieldSpec(_Model):
     min_count: int | None = None
     max_count: int | None = None
     default: str | int | bool | None = None
+    locked: bool = False
+    """鎖定（Phase 3H-6）：這個欄位的值由規則決定、玩家不能改（例：武器技的縮放屬性看手上武器）。
+    ``choices`` 只有規則決定的那一個；畫面唯讀顯示，並把草稿的值對齊它。"""
 
     @model_validator(mode="before")
     @classmethod

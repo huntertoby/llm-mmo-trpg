@@ -241,17 +241,18 @@ def result_alive(result: Any, uid: str) -> bool:
     return bool(result.state.units[uid].alive)
 
 
-@pytest.mark.parametrize("seed", [12, 28])
+@pytest.mark.parametrize("seed", [6, 77])
 def test_an_ai_battle_with_the_gambler_build_bets_and_replays_exactly(seed: int) -> None:
     """build_gambler 在 open_plain：種子 28 賭注失敗一次、種子 12 失手反噬一次（3D-7b 加了狂野之刃
     等技能後 AI 的選擇改變，所以拆成兩個種子）；紀錄重播的狀態與事件一致。
+    3H-6 武器技改看手上武器的屬性、AI 軌跡改變，種子 12、28 換成 6、77。
 
     3-20 跑步改變 AI 軌跡，種子原為 4、3（換成 24、5）；3-21a 守護、換位、瞄準後 5 換成 12。"""
     from tests.engine.test_zone_ai import _run  # noqa: PLC0415
     from trpg.engine.runner import replay  # noqa: PLC0415
 
     setup, run = _run("build_gambler", "open_plain", seed)
-    if seed == 28:
+    if seed == 77:
         assert [e.success for e in of(run, GambleRolled)] == [False]
         assert any(e.cause == "backlash" for e in of(run, DamageDealt))
     else:

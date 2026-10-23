@@ -66,8 +66,9 @@ __all__ = [
 
 def primary_attribute(skills: Iterable[SkillDef], fallback: Attribute = Attribute.STR) -> Attribute:
     """技能最常用的縮放屬性（自動配點用；並列時取六屬性順序的第一個）。沒有技能時（白板主角）用
-    ``fallback``，呼叫端傳武器的縮放屬性（法杖 → 智力）。"""
-    counts = Counter(s.scaling_attr for s in skills)
+    ``fallback``，呼叫端傳武器的縮放屬性（法杖 → 智力）。武器技看手上武器（3H-6），算在
+    ``fallback``（武器的主屬性）上。"""
+    counts = Counter(fallback if s.category == "weapon" else s.scaling_attr for s in skills)
     if not counts:
         return fallback
     best = max(counts.values())

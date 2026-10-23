@@ -1806,6 +1806,11 @@ export interface components {
             /** Default */
             default?: string | number | boolean | null;
             /**
+             * Locked
+             * @default false
+             */
+            locked: boolean;
+            /**
              * Card
              * @description 單選欄位用卡片排列（Phase 3E-2e）；前端不再依欄位名猜。
              */

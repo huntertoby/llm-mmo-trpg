@@ -78,7 +78,7 @@ def test_target_suffix_sits_on_the_damage_sentence() -> None:
 def test_shield_cleanse_and_default_durations() -> None:
     """清單 3.6、3.7：護盾寫吸收量；淨化寫移除什麼；沒寫回合數的狀態用預設。"""
     shield = _card("skill_charged_cleave").effects[0]
-    assert shield.startswith("護盾（吸收量 1d4＋力量加成，持續 2 回合")
+    assert shield.startswith("護盾（吸收量 1d4＋武器屬性加成，持續 2 回合")
     purify = _card("skill_purify").effects
     assert purify[0].startswith("淨化：移除身上所有不利的狀態")
     assert purify[1] == "狀態「守護」（到帶有者的下回合開始）（友方）"

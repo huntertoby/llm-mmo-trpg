@@ -1090,6 +1090,15 @@ button.selected {
   background: #2a2a38;
 }
 
+.ws-locked {
+  display: inline-block;
+  padding: 4px 10px;
+  border: 1px dashed #44445a;
+  border-radius: 4px;
+  background: #22222e;
+  color: #c8c8d8;
+}
+
 .ws-chip input[type="checkbox"] {
   margin: 0;
 }

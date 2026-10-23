@@ -251,7 +251,8 @@ def _weapon_and_attr(rng: Rng, category: str, rules: ComposerRules) -> tuple[str
         w = rules.spell_attr_weights
         return req, _weighted(rng, ("int", "wis", "wil"), (w.int_, w.wis, w.wil))
     if rng.chance_permille(rules.melee_permille):
-        return "melee", "dex" if rng.chance_permille(rules.melee_dex_permille) else "str"
+        rng.chance_permille(rules.melee_dex_permille)  # 亂數串流不變；武器技一律 str（3H-6）
+        return "melee", "str"
     return "ranged", "dex"
 
 
@@ -335,9 +336,11 @@ def _with_scaling_extras(
     """雙屬性縮放與專精加成（Phase 2H-2）：兩者預算都不計，所以強度調整之後才抽，只在合法時給。"""
     rules = library.composer.scaling
     primary = base["scaling_attr"]
-    if rarity_rank(base["rarity"]) >= rarity_rank(
-        library.ruleset.core.dual_scaling_min_rarity
-    ) and rng.chance_permille(rules.dual_permille):
+    if (
+        rarity_rank(base["rarity"]) >= rarity_rank(library.ruleset.core.dual_scaling_min_rarity)
+        and rng.chance_permille(rules.dual_permille)
+        and base["category"] != "weapon"  # 武器技看手上武器，沒有第二縮放屬性（3H-6）
+    ):
         others = sorted(a for a in rules.dual_attrs if a != primary)
         return {**base, "secondary_scaling_attr": rng.choice(others)}
     options = []
@@ -651,7 +654,7 @@ def compose_with_stats(
     )
     if hero_attributes is None:
         return found
-    # 新技能跟主屬性（Phase 3H-3）：亂數串流不變，組完之後才改縮放屬性
+    # 新技能跟主屬性（Phase 3H-3）：亂數串流不變，組完之後才改縮放屬性（武器技一律看武器大類）
     skill = retarget_scaling(found.skill, hero_attributes, lib, avoid=avoid_attr)
     return found if skill is found.skill else ComposeResult(skill, found.attempts)
 

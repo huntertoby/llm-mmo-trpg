@@ -170,6 +170,9 @@ def _basics(
     if filled is None:
         return None
     draft.update(filled, kind=kind, tier=ctx.tier, rarity=ctx.rarity)
+    if draft.get("category") == "weapon":  # 武器技看手上武器：縮放屬性鎖成武器大類主屬性（3H-6）
+        attr = library.skill_scaling.weapon_class_attr(str(draft.get("weapon_req")))
+        draft["scaling_attr"] = attr.value
     if kind == "active":
         draft["ap_cost"] = DEFAULT_ACTIVE_AP
     elif kind == "passive":

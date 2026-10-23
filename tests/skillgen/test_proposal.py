@@ -49,8 +49,11 @@ def _evaluate(data: str | dict[str, Any], ctx: ProposalContext | None = None) ->
 
 
 def _same(a: SkillDef, b: SkillDef) -> bool:
-    """除了 ID 與來源（呼叫端決定）以外完全相同。"""
+    """除了 ID 與來源（呼叫端決定）以外完全相同；武器技的縮放屬性由引擎設為武器大類主屬性
+    （看手上武器，3H-6），不比對。"""
     skip = {"id", "provenance"}
+    if b.category == "weapon":
+        skip |= {"scaling_attr", "secondary_scaling_attr"}
     return a.model_dump(exclude=skip) == b.model_dump(exclude=skip)
 
 

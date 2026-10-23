@@ -170,25 +170,42 @@ _DELAYED_LEADS = {
 """複合技能第二段一句話的開頭（依 ``followup.when``；Phase 3F-4a）。"""
 
 
+WEAPON_ATTR_LABEL = "武器屬性"
+"""武器技（看手上武器的屬性，Phase 3H-6）在效果句裡的縮放屬性簡稱。"""
+
+
 def scaling_label(skill: SkillDef) -> str:
-    """縮放屬性的簡稱：單屬性為「智力」，雙屬性為「力量／智力」（Phase 2H-2）。"""
+    """縮放屬性的簡稱：單屬性為「智力」，雙屬性為「力量／智力」（Phase 2H-2）；武器技看手上武器，
+    寫「武器屬性」（3H-6）。"""
+    if skill.category == "weapon":
+        return WEAPON_ATTR_LABEL
     names = [skill.scaling_attr.display_name]
     if skill.secondary_scaling_attr is not None:
         names.append(skill.secondary_scaling_attr.display_name)
     return "／".join(names)
 
 
-def scaling_detail(skill: SkillDef) -> str:
-    """縮放屬性的完整說明：雙屬性為「力量 50%＋智力 50%」。"""
+def scaling_detail(skill: SkillDef, weapon: WeaponDef | None = None) -> str:
+    """縮放屬性的完整說明：雙屬性為「力量 50%＋智力 50%」。武器技（3H-6）看手上武器：有武器時寫
+    武器的屬性（例「敏捷／力量（取較高）」），沒有時寫「武器的屬性」。"""
+    if skill.category == "weapon":
+        return "武器的屬性" if weapon is None else weapon.scaling_names_zh()
     if skill.secondary_scaling_attr is None:
         return skill.scaling_attr.display_name
     return f"{skill.scaling_attr.display_name} 50%＋{skill.secondary_scaling_attr.display_name} 50%"
 
 
-def mastery_text(skill: SkillDef, *, active: bool | None = None) -> str:
-    """專精加成的說明；``active`` 為 ``None`` 表示不知道單位（只顯示加成內容）。"""
+def mastery_text(
+    skill: SkillDef, *, active: bool | None = None, weapon: WeaponDef | None = None
+) -> str:
+    """專精加成的說明；``active`` 為 ``None`` 表示不知道單位（只顯示加成內容）。武器技（3H-6）
+    看手上武器的屬性。"""
     effect = "施放距離 +1" if skill.mastery == "range" else "施加的狀態持續 +1 回合"
-    attr = skill.scaling_attr.display_name
+    attr = (
+        scaling_detail(skill, weapon)
+        if skill.category == "weapon"
+        else (skill.scaling_attr.display_name)
+    )
     note = f"（{attr}為最高屬性時生效）"
     if active is not None:
         note = f"（{attr}為最高屬性，生效中）" if active else f"（{attr}不是最高屬性，未生效）"
@@ -1306,6 +1323,16 @@ class CardOwner:
     """召喚效果 → 施放者當下的召喚物實際值（:func:`trpg.engine.summons.summon_stats`）。"""
 
 
+def _scaling_attr_ids(skill: SkillDef, weapon: WeaponDef | None) -> tuple[str, ...]:
+    """卡片 ``scaling_attrs``（給前端上色與篩選）：武器技有持有者武器時是武器的屬性（3H-6），
+    其他是技能自己的縮放屬性（武器技沒有武器時是顯示提示）。"""
+    if skill.category == "weapon" and weapon is not None:
+        attrs = (weapon.scaling_attr, weapon.secondary_scaling_attr)
+    else:
+        attrs = (skill.scaling_attr, skill.secondary_scaling_attr)
+    return tuple(a.value for a in attrs if a is not None)
+
+
 def _summon_stats(owner: CardOwner | None, spec: EffectSpec) -> SummonStats | None:
     if owner is None or owner.summon_stats is None or spec.type != "summon":
         return None
@@ -1342,7 +1369,7 @@ def skill_card(
         kind=KIND_TEXT[skill.kind],
         category=CATEGORY_TEXT[skill.category],
         weapon_req=WEAPON_REQ_TEXT[skill.weapon_req],
-        scaling=scaling_detail(skill),
+        scaling=scaling_detail(skill, None if owner is None else owner.weapon),
         ap_cost=skill_ap(library, skill),
         cost=tuple(cost_parts(library, skill, with_ap=skill_ap(library, skill) is not None)),
         source_cost=skill.cost.source,
@@ -1357,7 +1384,13 @@ def skill_card(
         modifiers=tuple(modifier_summary(library, skill, r) for r in skill.modifiers),
         activation=activation_text(library, skill),
         activation_id=skill.activation,
-        mastery=(None if skill.mastery is None else mastery_text(skill, active=mastery_active)),
+        mastery=(
+            None
+            if skill.mastery is None
+            else mastery_text(
+                skill, active=mastery_active, weapon=None if owner is None else owner.weapon
+            )
+        ),
         tags=tuple(skill.tags),
         concept=skill.narrative.concept,
         cast_flavor=skill.narrative.cast_flavor,
@@ -1365,9 +1398,7 @@ def skill_card(
         kind_id=skill.kind,
         category_id=skill.category,
         weapon_req_id=skill.weapon_req,
-        scaling_attrs=tuple(
-            a.value for a in (skill.scaling_attr, skill.secondary_scaling_attr) if a is not None
-        ),
+        scaling_attrs=_scaling_attr_ids(skill, None if owner is None else owner.weapon),
         mastery_id=skill.mastery,
         timing=timing_text(library, skill),
         effect_ids=tuple(e.type for e in skill.effects),

@@ -8,6 +8,8 @@
   迭代順序。
 - ``avoid``：候選產生器的「新方向」要和主角最高屬性不同的屬性；允許範圍只剩 ``avoid`` 時不改，
   由呼叫者決定要不要換技能。
+- **武器技**（3H-6）：引擎看手上武器，技能的 ``scaling_attr`` 只是顯示提示；一律設為所需武器大類
+  的主屬性（``skill_scaling.yaml`` 的 ``weapon_class_attrs``），不帶第二屬性，不看主角屬性。
 - 雙屬性技能（``secondary_scaling_attr``）：第二屬性若和新的主屬性相同就拿掉（技能退回單屬性）；
   專精加成跟著主屬性走，不受影響。
 """
@@ -20,7 +22,7 @@ from trpg.content.library import ContentLibrary
 from trpg.content.skills import SkillDef
 from trpg.shared.types import Attribute
 
-__all__ = ["pick_scaling_attr", "retarget_scaling"]
+__all__ = ["fix_weapon_scaling", "pick_scaling_attr", "retarget_scaling"]
 
 
 def pick_scaling_attr(
@@ -36,6 +38,14 @@ def pick_scaling_attr(
     return next(a for a in pool if attributes[a] == best)
 
 
+def fix_weapon_scaling(skill: SkillDef, library: ContentLibrary) -> SkillDef:
+    """武器技的 ``scaling_attr`` 設為所需武器大類的主屬性、拿掉第二屬性（3H-6）。"""
+    attr = library.skill_scaling.weapon_class_attr(skill.weapon_req)
+    if skill.scaling_attr == attr and skill.secondary_scaling_attr is None:
+        return skill
+    return skill.model_copy(update={"scaling_attr": attr, "secondary_scaling_attr": None})
+
+
 def retarget_scaling(
     skill: SkillDef,
     attributes: Mapping[Attribute, int],
@@ -45,6 +55,8 @@ def retarget_scaling(
 ) -> SkillDef:
     """把 ``skill`` 的縮放屬性改成 ``attributes`` 中最高、且在允許範圍內的屬性（見模組說明）。
     不需要改（或沒有可用的屬性）時回傳原技能。內容庫的技能（手寫技能池）不會經過這裡。"""
+    if skill.category == "weapon":
+        return fix_weapon_scaling(skill, library)
     allowed = library.skill_scaling.allowed_attrs(skill, library.weapons)
     attr = pick_scaling_attr(allowed, attributes, avoid)
     if attr is None or attr == skill.scaling_attr:

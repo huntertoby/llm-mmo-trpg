@@ -87,7 +87,31 @@ def validate_skill(skill: SkillDef, library: ContentLibrary) -> list[Violation]:
         return reference
     resource = library.budget.cost_problem(skill.category, skill.cost)  # 3H-2，06 6.10
     out = [] if resource is None else [Violation(skill.id, "cap.resource", resource)]
+    out += _weapon_scaling_violations(skill, library)
     return [*out, *_structure_violations(skill, library), *_keyword_violations(skill, library)]
+
+
+def _weapon_scaling_violations(skill: SkillDef, library: ContentLibrary) -> list[Violation]:
+    """``scaling.weapon``（Phase 3H-6，玩法決定 #45）：產生的武器技看手上武器的屬性，
+    ``scaling_attr`` 必須是所需武器大類的主屬性、不帶第二縮放屬性。內建技能（欄位只當顯示提示）
+    與進化而來的技能（有 ``parents``）不檢查。"""
+    if (
+        skill.category != "weapon"
+        or skill.provenance.origin == "builtin"
+        or skill.provenance.parents
+    ):
+        return []
+    attr = library.skill_scaling.weapon_class_attr(skill.weapon_req)
+    if skill.scaling_attr == attr and skill.secondary_scaling_attr is None:
+        return []
+    return [
+        Violation(
+            skill.id,
+            "scaling.weapon",
+            f"武器技的命中與傷害看手上武器的屬性：縮放屬性要設為 {attr.display_name}"
+            f"（{skill.weapon_req} 武器的主屬性），且不能有第二縮放屬性",
+        )
+    ]
 
 
 def _keyword_violations(skill: SkillDef, library: ContentLibrary) -> list[Violation]:

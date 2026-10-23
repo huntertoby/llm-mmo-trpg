@@ -19,6 +19,7 @@ const skeleton: FieldSpec = {
   fields: [],
   dice_sides: [],
   allow_weapon: false,
+  locked: false,
   card: true,
   object_choice: false,
 };
@@ -34,6 +35,7 @@ const sizeParam: FieldSpec = {
   fields: [],
   dice_sides: [],
   allow_weapon: false,
+  locked: false,
   card: false,
   object_choice: false,
 };

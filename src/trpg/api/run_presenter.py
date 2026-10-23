@@ -73,15 +73,16 @@ def _card(
 ) -> SkillCard:
     """技能卡；``owned``（主角持有的技能）才帶技能等級的顯示資料（Phase 3-26a）。"""
     attrs = run.hero.attributes
-    mastery = (
+    weapon = library.weapons.get(run.hero.weapon)
+    mastery = (  # 專精看縮放屬性是不是自己最高；武器技看手上武器（3H-6）
         None
         if skill.mastery is None
-        else all(attrs[skill.scaling_attr] >= v for v in attrs.values())
+        else skill.mastery_value(attrs.__getitem__, weapon) >= max(attrs.values())
     )
     # 傷害算法的「目前」加成：主角的有效屬性（基礎＋裝備）與武器（3-41c）；戰鬥之間沒有戰鬥狀態，
     # 召喚物資訊維持 1 級基準值（標明「基準值」）
     effective = hero_effective_attributes(library, run)
-    owner = CardOwner(weapon=library.weapons.get(run.hero.weapon), attr_get=effective.__getitem__)
+    owner = CardOwner(weapon=weapon, attr_get=effective.__getitem__)
     card = skill_card(library, skill, mastery_active=mastery, owner=owner)
     if not owned:
         return card

@@ -1,7 +1,9 @@
 """技能縮放屬性的允許範圍（Phase 3H-1；``docs/design/06-技能.md`` 6.10、``07-角色成長.md`` 7.2）。
 
-- **武器技**（``category: weapon``）：看武器——縮放屬性必須是某把同武器大類（``weapon_req``）、
-  可裝備的武器的縮放屬性（含第二縮放屬性）。
+- **武器技**（``category: weapon``）：**看手上武器的屬性**（3H-6，玩法決定 #45）——引擎不讀技能
+  自己的 ``scaling_attr``。內建技能的欄位只當顯示提示，必須是某把同武器大類（``weapon_req``）、
+  可裝備的武器的縮放屬性（含第二縮放屬性）；產生器（隨機組合器、LLM 提議、工坊）一律設為
+  ``weapon_class_attrs`` 的武器大類主屬性。
 - **法術技**（``category: spell``）：依主題，由 :class:`ScalingTheme` 依 **先後順序** 比對，第一個
   符合的主題決定屬性（智力＝元素傷害與互動；感知＝治療、護盾、輔助、偵測與標記；意志＝召喚、獻祭、
   詛咒、心智控制、暗影）；都不符合的（物理、裝備動作等）屬於身體類，允許 ``body_attrs``。
@@ -31,6 +33,8 @@ __all__ = [
     "SkillScalingRules",
     "ThemeCombo",
     "scaling_problems",
+    "weapon_attrs",
+    "weapon_class_mismatches",
 ]
 
 
@@ -77,11 +81,17 @@ class SkillScalingRules(ContentModel):
     spell_themes: tuple[ScalingTheme, ...] = Field(min_length=1)
     body_attrs: tuple[Attribute, ...] = Field(min_length=1)
     """沒有任何法術主題的法術技（物理、裝備動作等）允許的屬性。"""
+    weapon_class_attrs: Mapping[str, Attribute] = Field(
+        default_factory=lambda: {"melee": Attribute.STR, "ranged": Attribute.DEX}
+    )
+    """武器技的武器大類主屬性（3H-6）：產生器與驗證器給武器技的 ``scaling_attr``。"""
     combos: tuple[ThemeCombo, ...] = ()
     overrides: tuple[ScalingOverride, ...] = ()
 
     @model_validator(mode="after")
     def _unique(self) -> SkillScalingRules:
+        if "melee" not in self.weapon_class_attrs:
+            raise ValueError("weapon_class_attrs 必須有 melee（未列出的大類取近戰的）")
         known = {t.id for t in self.spell_themes}
         for combo in self.combos:
             unknown = sorted(set(combo.themes) - known)
@@ -95,6 +105,10 @@ class SkillScalingRules(ContentModel):
             if dup:
                 raise ValueError(f"縮放屬性{label}重複：{', '.join(dup)}")
         return self
+
+    def weapon_class_attr(self, weapon_req: str) -> Attribute:
+        """武器技所需武器大類的主屬性（3H-6）；``any`` 與未列出的大類取近戰的。"""
+        return self.weapon_class_attrs.get(weapon_req, self.weapon_class_attrs["melee"])
 
     def spell_theme(self, skill: SkillDef) -> ScalingTheme | None:
         """法術技的主題（依先後順序第一個符合的）；沒有時為 ``None``（身體類）。"""
@@ -149,6 +163,20 @@ def weapon_attrs(
     return frozenset(out)
 
 
+def weapon_class_mismatches(rules: SkillScalingRules, skills: Mapping[str, SkillDef]) -> list[str]:
+    """內建武器技中，``scaling_attr`` 或第二屬性和武器大類主屬性不一致的技能 ID（排序）。
+    引擎不再使用這個欄位（武器技看手上武器），只當顯示提示；清單供報告與測試用。"""
+    return sorted(
+        s.id
+        for s in skills.values()
+        if s.category == "weapon"
+        and (
+            s.scaling_attr != rules.weapon_class_attr(s.weapon_req)
+            or s.secondary_scaling_attr is not None
+        )
+    )
+
+
 def scaling_problems(
     rules: SkillScalingRules,
     skills: Mapping[str, SkillDef],
@@ -156,6 +184,9 @@ def scaling_problems(
 ) -> list[str]:
     """內建技能的縮放屬性（含第二屬性）是否都在允許範圍內；回傳問題清單。"""
     problems: list[str] = []
+    for req, attr in rules.weapon_class_attrs.items():
+        if attr not in weapon_attrs(req, weapons):
+            problems.append(f"武器大類 {req} 的主屬性 {attr.value} 不是該大類任何武器的縮放屬性")
     known = set(skills)
     problems += [
         f"例外引用了未知的技能：{o.skill}" for o in rules.overrides if o.skill not in known

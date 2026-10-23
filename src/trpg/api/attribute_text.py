@@ -1,8 +1,8 @@
 """建議屬性與「這個屬性影響你的哪些招」（Phase 3H-3，``docs/design/07-角色成長.md`` 7.2；#44 原則：
 說明文字一律由程式依規則與資料產生）。
 
-- :func:`attribute_affects`：每個屬性影響的東西——武器（普攻吃武器的縮放屬性；武器技看技能卡）與技能
-  （縮放屬性與第二縮放屬性）。
+- :func:`attribute_affects`：每個屬性影響的東西——武器（普攻吃武器的縮放屬性）與技能（縮放屬性與
+  第二縮放屬性；武器技看手上武器，3H-6，所以算在武器的屬性上）。
 - :func:`attribute_suggestion`：開局建議的主屬性＝起始技能最常用的縮放屬性（沒有技能時為武器的），
   和「自動配點」同一個規則（:func:`trpg.roguelite.start.primary_attribute`）。
 """
@@ -31,6 +31,13 @@ def _weapon_attrs(weapon: WeaponDef | None) -> tuple[Attribute, ...]:
     return (weapon.scaling_attr, weapon.secondary_scaling_attr)
 
 
+def _skill_attrs(skill: SkillDef, weapon: WeaponDef | None) -> tuple[Attribute | None, ...]:
+    """技能吃的屬性：武器技看手上武器（3H-6），其他是技能自己的縮放屬性與第二縮放屬性。"""
+    if skill.category == "weapon" and weapon is not None:
+        return _weapon_attrs(weapon)
+    return (skill.scaling_attr, skill.secondary_scaling_attr)
+
+
 def _weapon_line(weapon: WeaponDef) -> str:
     return f"{weapon.name_zh}的普攻"
 
@@ -45,9 +52,7 @@ def attribute_affects(
         lines: list[str] = []
         if weapon is not None and attr in _weapon_attrs(weapon):
             lines.append(_weapon_line(weapon))
-        lines.extend(
-            s.name_zh for s in skills if attr in (s.scaling_attr, s.secondary_scaling_attr)
-        )
+        lines.extend(s.name_zh for s in skills if attr in _skill_attrs(s, weapon))
         out.append(AttributeAffectsOut(attr=attr, lines_zh=tuple(lines)))
     return tuple(out)
 
@@ -66,7 +71,7 @@ def attribute_suggestion(
     fallback = weapon.scaling_attr if weapon is not None else Attribute.STR
     attr = primary_attribute(skills, fallback)
     name = attr.display_name
-    users = [s.name_zh for s in skills if attr in (s.scaling_attr, s.secondary_scaling_attr)]
+    users = [s.name_zh for s in skills if attr in _skill_attrs(s, weapon)]
     parts: list[str] = []
     if users:
         parts.append(f"你的起始技能 {_listed(users)} 吃{name}")
@@ -74,7 +79,7 @@ def attribute_suggestion(
         parts.append(
             f"{_weapon_line(weapon)}也吃{name}" if users else f"{_weapon_line(weapon)}吃{name}"
         )
-    counts = Counter(s.scaling_attr for s in skills)
+    counts = Counter(a for s in skills for a in _skill_attrs(s, weapon)[:1] if a is not None)
     others = [a for a in Attribute if a is not attr and counts[a] > 0]
     if others:
         parts.append(f"其他招吃{'、'.join(a.display_name for a in others)}，可當副屬性")

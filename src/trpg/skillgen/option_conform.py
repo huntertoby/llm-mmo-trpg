@@ -120,7 +120,7 @@ def field_problems(
     out: list[str] = []
     for field in fields:
         value = _get(container, field.field)
-        if value is None:
+        if value is None or field.locked:  # 鎖定欄位的值由規則決定（3H-6），不算玩家填錯
             continue
         here = f"{where}.{field.field}" if where else field.field
         out += _one(field, value, container, here)

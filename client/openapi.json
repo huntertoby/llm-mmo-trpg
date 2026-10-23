@@ -4412,6 +4412,11 @@
             ],
             "title": "Default"
           },
+          "locked": {
+            "type": "boolean",
+            "title": "Locked",
+            "default": false
+          },
           "card": {
             "type": "boolean",
             "title": "Card",

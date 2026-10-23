@@ -75,6 +75,9 @@ def test_highest_attribute_change_moves_new_skills() -> None:
             for top in (A.STR, A.DEX, A.INT, A.WIS, A.WIL)
         }
         for top, skill in by_top.items():
+            if skill.category == "weapon":  # 武器技看手上武器：固定武器大類主屬性（3H-6）
+                assert skill.scaling_attr is lib.skill_scaling.weapon_class_attr(skill.weapon_req)
+                continue
             allowed = _allowed(skill)
             assert skill.scaling_attr is (
                 top if top in allowed else min(allowed, key=list(A).index)
@@ -125,10 +128,34 @@ def test_candidates_are_deterministic_and_unchanged_without_attributes() -> None
     assert len(generate_candidates(lib, with_attrs)) == 3
 
 
-def test_llm_proposal_scaling_follows_highest_attribute() -> None:
-    """LLM 提議：縮放屬性由引擎改成主角最高的允許屬性（提議的 scaling_attr 只是提議）。"""
+@pytest.mark.parametrize("skill_id", ["skill_cleave", "skill_fire_arrow"])
+def test_llm_proposal_weapon_skill_scaling_is_the_weapon_class_attribute(skill_id: str) -> None:
+    """LLM 提議的武器技：縮放屬性一律是武器大類主屬性，不看主角屬性、也不看提議填的值（3H-6）。"""
     lib = library()
-    original = lib.skills["skill_cleave"]
+    original = lib.skills[skill_id]
+    assert original.category == "weapon"
+    _, removed = split_numbers(original.model_dump(mode="json", exclude_defaults=True), lib)
+    proposal = proposal_from_skill(original, lib)
+    models = build_proposal_models(lib)
+    expect = lib.skill_scaling.weapon_class_attr(original.weapon_req)
+    ids = set()
+    for attrs in (None, _attrs(wil=18), _attrs(dex=18), _attrs(int=18)):
+        ctx = ProposalContext(
+            tier=original.tier, rarity=original.rarity, rank=original.rank, hero_attributes=attrs
+        )
+        result = evaluate_proposal(proposal, models, lib, ctx, fill=fixed_filler(removed))
+        assert result.skill is not None, result.errors
+        assert result.skill.scaling_attr is expect
+        assert result.skill.secondary_scaling_attr is None
+        assert not validate_skill(result.skill, lib)
+        ids.add(result.skill.id)
+    assert len(ids) == 1
+
+
+def test_llm_proposal_scaling_follows_highest_attribute() -> None:
+    """LLM 提議（法術技）：縮放屬性由引擎改成主角最高的允許屬性（提議的 scaling_attr 只是提議）。"""
+    lib = library()
+    original = lib.skills["skill_downpour"]
     _, removed = split_numbers(original.model_dump(mode="json", exclude_defaults=True), lib)
     proposal = proposal_from_skill(original, lib)
     models = build_proposal_models(lib)
@@ -136,10 +163,10 @@ def test_llm_proposal_scaling_follows_highest_attribute() -> None:
     plain_ctx = ProposalContext(tier=tier, rarity=rarity, rank=rank)
     plain = evaluate_proposal(proposal, models, lib, plain_ctx, fill=fixed_filler(removed))
     assert plain.skill is not None
-    dex_ctx = ProposalContext(tier=tier, rarity=rarity, rank=rank, hero_attributes=_attrs(dex=18))
+    dex_ctx = ProposalContext(tier=tier, rarity=rarity, rank=rank, hero_attributes=_attrs(int=18))
     followed = evaluate_proposal(proposal, models, lib, dex_ctx, fill=fixed_filler(removed))
     assert followed.skill is not None
-    assert followed.skill.scaling_attr is A.DEX
+    assert followed.skill.scaling_attr is A.INT
     assert followed.skill.scaling_attr in _allowed(followed.skill)
     assert followed.skill.id != plain.skill.id  # ID 以取代後的內容雜湊
     skip = {"id", "scaling_attr"}
