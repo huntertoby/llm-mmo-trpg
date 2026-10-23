@@ -23,6 +23,7 @@ from trpg.api.gear_schemas import (
     GearItemLine,
     GearSlotInfo,
     GearWeaponInfo,
+    GearWeaponLook,
 )
 from trpg.content.appearance import derive_keywords, item_appearance_problems
 from trpg.content.equipment import (
@@ -44,6 +45,7 @@ from trpg.engine.setup import BattleSetup
 from trpg.engine.view import AppearanceView
 from trpg.shared.errors import TrpgError
 from trpg.shared.types import Team
+from trpg.skillgen.options import WEAPON_REQ_TEXT
 
 __all__ = ["GearRequestError", "equip_gear", "gear_catalog", "gear_problems"]
 
@@ -103,7 +105,19 @@ def gear_catalog(library: ContentLibrary) -> GearCatalog:
         affixes=tuple(_affix_info(a) for a in library.affixes.values()),
         weapons=tuple(
             GearWeaponInfo(
-                id=w.id, name_zh=w.name_zh, weapon_class=w.weapon_class, two_handed=w.two_handed
+                id=w.id,
+                name_zh=w.name_zh,
+                weapon_class=w.weapon_class,
+                weapon_class_zh=WEAPON_REQ_TEXT[w.weapon_class],
+                two_handed=w.two_handed,
+                look=None
+                if w.look is None
+                else GearWeaponLook(
+                    kind=w.look.kind,
+                    material=w.look.material,
+                    element=w.look.element,
+                    form=w.look.form,
+                ),
             )
             for w in sorted(library.weapons.values(), key=lambda w: w.id)
         ),

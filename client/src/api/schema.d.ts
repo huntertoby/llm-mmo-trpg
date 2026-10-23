@@ -2176,8 +2176,25 @@ export interface components {
             name_zh: string;
             /** Weapon Class */
             weapon_class: string;
+            /** Weapon Class Zh */
+            weapon_class_zh: string;
             /** Two Handed */
             two_handed: boolean;
+            look?: components["schemas"]["GearWeaponLook"] | null;
+        };
+        /**
+         * GearWeaponLook
+         * @description 武器的預設外觀（``weapons.yaml`` 的 ``look``），預覽圖示用。
+         */
+        GearWeaponLook: {
+            /** Kind */
+            kind: string;
+            /** Material */
+            material: string;
+            /** Element */
+            element?: string | null;
+            /** Form */
+            form?: string | null;
         };
         /**
          * Glossary
@@ -4755,6 +4772,19 @@ export interface components {
              */
             allow_illegal: boolean;
         };
+        /**
+         * WorkshopOptionsRequest
+         * @description 下一步選項（Phase 3-48b）：``weapon`` 選填，主角目前手上武器的 ID；有值時武器技的縮放屬性
+         *     顯示「看手上武器（目前：長劍＝力量）」，沒有時維持「依手上武器而定（例：……）」。
+         */
+        WorkshopOptionsRequest: {
+            /** Skill */
+            skill?: {
+                [key: string]: unknown;
+            };
+            /** Weapon */
+            weapon?: string | null;
+        };
         /** WorkshopRandom */
         WorkshopRandom: {
             /** Skill */
@@ -5736,7 +5766,7 @@ export interface operations {
         };
         requestBody: {
             content: {
-                "application/json": components["schemas"]["WorkshopSkillRequest"];
+                "application/json": components["schemas"]["WorkshopOptionsRequest"];
             };
         };
         responses: {

@@ -24,6 +24,7 @@ __all__ = [
     "GearItemLine",
     "GearSlotInfo",
     "GearWeaponInfo",
+    "GearWeaponLook",
 ]
 
 
@@ -82,11 +83,23 @@ class GearSlotInfo(_ApiModel):
     slot_type_zh: str
 
 
+class GearWeaponLook(_ApiModel):
+    """武器的預設外觀（``weapons.yaml`` 的 ``look``），預覽圖示用。"""
+
+    kind: str
+    material: str
+    element: str | None = None
+    form: str | None = None
+
+
 class GearWeaponInfo(_ApiModel):
     id: str
     name_zh: str
     weapon_class: str
+    weapon_class_zh: str
+    """武器大類的中文（近戰武器、遠程武器、法器），玩家看的文字不露英文代號。"""
     two_handed: bool
+    look: GearWeaponLook | None = None
 
 
 class GearAffixInfo(_ApiModel):
