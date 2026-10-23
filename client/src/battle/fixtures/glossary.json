@@ -887,7 +887,7 @@
    "tags": [],
    "status_look": {
     "polarity": "debuff",
-    "control_group": null,
+    "control_group": "mental",
     "dot_element": null,
     "skip_turn": false,
     "removed_by_element": [],

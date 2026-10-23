@@ -134,7 +134,7 @@ describe("不認得的狀態", () => {
 
 describe("頭頂狀態列", () => {
   it("排序：硬控 → 移動／心智控制 → 持續傷害 → 其他減益 → 增益 → 中性，與輸入順序無關", () => {
-    const expected = ["frozen", "stun", "root", "slow", "feared", "silenced", "burning", "poison", "bleed"];
+    const expected = ["frozen", "stun", "root", "slow", "feared", "silenced", "taunted", "burning", "poison", "bleed"];
     const ids = [...STATUS_IDS];
     const sorted = sortStatuses(ids);
     expect(sorted.slice(0, expected.length).sort()).toEqual([...expected].sort());

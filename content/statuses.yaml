@@ -64,7 +64,7 @@
 # 3-24a1（武器擴充）：
 #   attack_bonus   戰意（3-33e1）：帶有者的攻擊值加這麼多（戰意；戰意圖騰的光環狀態）
 #   defense_break  破甲：帶有者的防禦值降低 StatusInstance.amount ‰（斧的普攻命中帶入；沒有 budget_points，只能由武器施加）
-# control_group 新增 mental（心智：恐懼、沉默）：適用控制遞減，不是 hard，對 Boss 不轉換。
+# control_group 新增 mental（心智：恐懼、沉默；2026-10-23 加嘲諷）：適用控制遞減，不是 hard，對 Boss 不轉換。
 statuses:
   - id: defending
     polarity: buff
@@ -320,8 +320,9 @@ statuses:
     duration: 2
     expires: turn_end
     stacking: refresh
-    budget_points: 4
+    budget_points: 3   # 玩法 PM 2026-10-23：加 mental 後由 4 降 3，控制遞減就是代價、不再用預算加價
     save_attr: wil
+    control_group: mental   # 玩法 PM 2026-10-23：適用控制遞減，防止嘲諷無限連鎖鎖住 Boss
     forces_target: true
   - id: feared
     polarity: debuff
