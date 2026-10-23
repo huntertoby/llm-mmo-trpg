@@ -1,7 +1,7 @@
 // 工坊的輔助面板：隨機一個、匯出 YAML、進階直接編輯 YAML。
 import { useEffect, useRef, useState } from "react";
 import { api } from "../../api/client";
-import type { Choice, SkillRarity, WorkshopExport } from "../../api/types";
+import type { Choice, SkillRarity, WorkshopCheck, WorkshopExport } from "../../api/types";
 import { isEmptyDraft, type Json } from "../../workshop/draft";
 import { RARITY_NAMES } from "../../workshop/state";
 import { parseSeed, randomSeed } from "../../screens/StartScreen";
@@ -30,9 +30,11 @@ interface RandomProps {
   skeletons: readonly Choice[];
   draft: Json;
   onResult(draft: Json): void;
+  /** 開發者模式（`?dev=1`）才顯示並可指定種子；玩家模式每次按都由程式抽一個。 */
+  dev?: boolean;
 }
 
-export function RandomPanel({ skeletons, draft, onResult }: RandomProps) {
+export function RandomPanel({ skeletons, draft, onResult, dev = false }: RandomProps) {
   const [tier, setTier] = useState("");
   const [rarity, setRarity] = useState("");
   const [skeleton, setSkeleton] = useState("");
@@ -41,7 +43,7 @@ export function RandomPanel({ skeletons, draft, onResult }: RandomProps) {
   const [error, setError] = useState<string | null>(null);
   /** 草稿有內容時，第一下按鈕先要求確認（頁內確認；`window.confirm` 在內嵌瀏覽器會直接回傳否而什麼都不發生）。 */
   const [confirming, setConfirming] = useState(false);
-  const seed = parseSeed(seedText);
+  const seed = dev ? parseSeed(seedText) : 0; // 玩家模式的種子在按下去時才抽
   useEffect(() => setConfirming(false), [draft]); // 草稿被別處改了：確認作廢
 
   async function roll() {
@@ -55,13 +57,13 @@ export function RandomPanel({ skeletons, draft, onResult }: RandomProps) {
     setError(null);
     try {
       const result = await api.workshopRandom({
-        seed,
+        seed: dev ? seed : randomSeed(),
         tier: tier === "" ? null : Number(tier),
         rarity: rarity === "" ? null : (rarity as SkillRarity),
         skeleton: skeleton === "" ? null : skeleton,
       });
       onResult(withoutId(result.skill));
-      setSeedText(String(randomSeed()));
+      if (dev) setSeedText(String(randomSeed()));
     } catch (e) {
       setError(e instanceof Error ? e.message : String(e));
     } finally {
@@ -72,7 +74,7 @@ export function RandomPanel({ skeletons, draft, onResult }: RandomProps) {
   return (
     <div className="panel ws-panel">
       <div className="section-title">隨機一個</div>
-      <div className="muted small">讓隨機組合器先組出一個合法的技能，再拿來修改。不指定的欄位由種子決定。</div>
+      <div className="muted small">讓隨機組合器先組出一個合法的技能，再拿來修改。{dev ? "不指定的欄位由種子決定。" : "不指定的欄位隨機決定。"}</div>
       <ErrorBanner message={error} onClose={() => setError(null)} />
       <div className="ws-tryout-form">
         <label>
@@ -108,15 +110,17 @@ export function RandomPanel({ skeletons, draft, onResult }: RandomProps) {
             ))}
           </select>
         </label>
-        <label>
-          種子
-          <span className="seed-row">
-            <input value={seedText} inputMode="numeric" onChange={(e) => setSeedText(e.target.value)} aria-invalid={seed === null} />
-            <button type="button" onClick={() => setSeedText(String(randomSeed()))}>
-              換一個
-            </button>
-          </span>
-        </label>
+        {dev && (
+          <label>
+            種子
+            <span className="seed-row">
+              <input value={seedText} inputMode="numeric" onChange={(e) => setSeedText(e.target.value)} aria-invalid={seed === null} />
+              <button type="button" onClick={() => setSeedText(String(randomSeed()))}>
+                換一個
+              </button>
+            </span>
+          </label>
+        )}
       </div>
       {confirming && <div className="muted small">隨機產生的技能會取代目前正在編輯的內容，確定嗎？</div>}
       <div className="layout-actions">
@@ -133,7 +137,14 @@ export function RandomPanel({ skeletons, draft, onResult }: RandomProps) {
   );
 }
 
-export function ExportPanel({ draft }: { draft: Json }) {
+interface ExportProps {
+  draft: Json;
+  /** 最近一次的即時檢查（玩家模式只有合法的技能能匯出）。 */
+  check?: WorkshopCheck | null;
+  dev?: boolean;
+}
+
+export function ExportPanel({ draft, check = null, dev = false }: ExportProps) {
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [done, setDone] = useState<WorkshopExport | null>(null);
@@ -143,7 +154,7 @@ export function ExportPanel({ draft }: { draft: Json }) {
     setError(null);
     setDone(null);
     try {
-      const result = await api.workshopExport(draft);
+      const result = await api.workshopExport(draft, dev);
       downloadText(result.filename, result.yaml);
       setDone(result);
     } catch (e) {
@@ -153,17 +164,20 @@ export function ExportPanel({ draft }: { draft: Json }) {
     }
   }
 
+  const blocked = !dev && check?.legal !== true;
   return (
     <div className="panel ws-panel">
       <div className="section-title">匯出</div>
       <div className="muted small">
-        下載成 YAML 檔（和 content/skills 裡的技能同格式，來源標為「工坊」）。工坊的技能只存在這個瀏覽器；要收進正式內容請把檔案交給 PM。
-        還沒組完整或不合法也能匯出，方便先存半成品。
+        {dev
+          ? "下載成 YAML 檔（和 content/skills 裡的技能同格式，來源標為「工坊」）。工坊的技能只存在這個瀏覽器；要收進正式內容請把檔案交給 PM。還沒組完整或不合法也能匯出，方便先存半成品。"
+          : "把做好的技能下載成 YAML 檔備份。技能要完整而且通過即時檢查才能下載。"}
       </div>
       <ErrorBanner message={error} onClose={() => setError(null)} />
-      <button type="button" disabled={busy || isEmptyDraft(draft)} onClick={() => void run()}>
+      <button type="button" disabled={busy || isEmptyDraft(draft) || blocked} onClick={() => void run()}>
         {busy ? "匯出中……" : "下載 YAML"}
       </button>
+      {blocked && !isEmptyDraft(draft) && <div className="muted small">技能還不合法（見即時檢查），修好後才能下載。</div>}
       {done !== null && (
         <div className="small">
           已下載 <code>{done.filename}</code>。

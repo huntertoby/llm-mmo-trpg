@@ -127,8 +127,9 @@ export const api = {
     request<WorkshopCheck>("POST", "/workshop/check", { skill }),
   workshopRandom: (body: WorkshopRandomRequest) =>
     request<WorkshopRandom>("POST", "/workshop/random", body),
-  workshopExport: (skill: Record<string, unknown>) =>
-    request<WorkshopExport>("POST", "/workshop/export", { skill }),
+  /** 匯出 YAML；`allowIllegal`（開發者模式）才能匯出不合法的技能。 */
+  workshopExport: (skill: Record<string, unknown>, allowIllegal = false) =>
+    request<WorkshopExport>("POST", "/workshop/export", { skill, allow_illegal: allowIllegal }),
   /** 裝備測試（Phase 3G-G4）：選單與穿戴檢查。 */
   gearCatalog: () => request<GearCatalog>("GET", "/gear/catalog"),
   gearCheck: (body: GearCheckRequest) => request<GearCheck>("POST", "/gear/check", body),

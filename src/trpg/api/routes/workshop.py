@@ -11,7 +11,7 @@ from __future__ import annotations
 
 from typing import Any
 
-from fastapi import APIRouter, Request
+from fastapi import APIRouter, HTTPException, Request
 
 from trpg.api.player_text import player_options
 from trpg.api.schemas import MapSummary
@@ -22,6 +22,7 @@ from trpg.api.workshop_schemas import (
     WorkshopArena,
     WorkshopCheck,
     WorkshopExport,
+    WorkshopExportRequest,
     WorkshopRandom,
     WorkshopRandomRequest,
     WorkshopSkillRequest,
@@ -38,6 +39,9 @@ from trpg.skillgen.skill_yaml import skill_to_yaml
 
 __all__ = ["router"]
 
+PROVISIONAL_MARK = "暫定"
+"""隨機組合器的暫定敘事句都含這個字；玩家模式的卡片不顯示（Phase 3H-8）。"""
+
 router = APIRouter(prefix="/api/workshop", tags=["workshop"])
 
 
@@ -49,6 +53,7 @@ def _check(library: ContentLibrary, skill: dict[str, Any]) -> WorkshopCheck:
     return WorkshopCheck(
         **result.model_dump(),
         card=card,
+        concept_provisional=card is not None and PROVISIONAL_MARK in card.concept,
         icon=icon_of(skill),
         keywords=draft_card_keywords(library, skill),
     )
@@ -107,14 +112,18 @@ def post_random(body: WorkshopRandomRequest, request: Request) -> WorkshopRandom
 
 
 @router.post("/export")
-def post_export(body: WorkshopSkillRequest, request: Request) -> WorkshopExport:
+def post_export(body: WorkshopExportRequest, request: Request) -> WorkshopExport:
     """匯出 YAML（``provenance.origin: workshop``）。技能必須能通過 schema（否則 422）；規則上不合法
-    的技能也可以匯出，``legal`` 與 ``problems`` 標示問題。"""
+    的技能預設也擋下（422，列出問題）；``allow_illegal: true``（開發者模式）才能匯出，``legal`` 與
+    ``problems`` 標示問題。"""
     library = store_of(request).library
     skill = build_skill(body.skill)
     provenance = skill.provenance.model_copy(update={"origin": "workshop"})
     skill = skill.model_copy(update={"provenance": provenance})
     result = check_draft(skill.model_dump(mode="json", exclude_none=True), library)
+    if not result.legal and not body.allow_illegal:
+        problems = "；".join(p.message_zh for p in result.problems)
+        raise HTTPException(status_code=422, detail=f"技能不合法，不能匯出：{problems}")
     return WorkshopExport(
         yaml=skill_to_yaml(skill),
         filename=f"{skill.id}.yaml",

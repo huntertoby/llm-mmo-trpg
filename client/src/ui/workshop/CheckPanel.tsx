@@ -118,7 +118,7 @@ function BudgetBar({ check }: { check: WorkshopCheck }) {
   );
 }
 
-export function CheckPanel({ check, pending }: { check: WorkshopCheck | null; pending: boolean }) {
+export function CheckPanel({ check, pending, dev = false }: { check: WorkshopCheck | null; pending: boolean; dev?: boolean }) {
   const head = checkHeadline(check);
   const missing = check !== null && !check.complete ? missingStepNames(check) : [];
   const chosenRarity = check?.skill != null && typeof check.skill["rarity"] === "string" ? check.skill["rarity"] : null;
@@ -179,7 +179,7 @@ export function CheckPanel({ check, pending }: { check: WorkshopCheck | null; pe
       {check?.card != null && (
         <div>
           <div className="section-title">技能卡片預覽</div>
-          <SkillCardView card={check.card} />
+          <SkillCardView card={check.card} hideConcept={!dev && check.concept_provisional === true} />
         </div>
       )}
     </div>
