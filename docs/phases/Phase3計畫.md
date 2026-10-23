@@ -1820,3 +1820,16 @@ PM 驗收後請使用者試玩一整輪（`docs/專案計畫.md` 第 14 節 🎮
 6. **範圍外**：不改版面、字級、顏色；不加其他字型。
 
 驗收（3-35）：上述檢查；報告 `Phase3-35報告.md`（授權、檔案大小、截圖、待 PM 決定）。完成後請使用者重開伺服器。
+
+## 40. Phase 3-36｜戰場效果與狀態圖示（美術 PM；使用者 2026-10-23「4 題都採用 A」；拆兩段，依序）
+
+> 移植需求與檢查清單：`docs/art/戰場效果與狀態圖示.md` **第 4 節（以它為準）**；畫法以 `docs/art/sample/fx.js` 為準（Canvas 2D、52px 虛擬格，比照 3-16a 的 `terrainArt`／`objectArt` 移植方式）；對照圖 `docs/art/battlefield-fx.png`、`status-icons.png`；樣張頁 `docs/art/sample/battlefield-fx.html`、`status-icons.html`。美術 PM 驗收。
+> 共同規則：只動前端與 glossary API（只讀內容資料、不改引擎、`LOG_FORMAT` 不變）；前端不寫死狀態／物件 ID 清單（圖樣查表除外，不認得的走灰色預設）；快取鍵用級距不用原始比例；字型沿用 3-35（`FONT` 常數，快取在字型載入後產生）；OpenAPI 有變就重產；`pnpm build`、`typecheck`、`vitest` 全過；1600×900 截圖附報告。
+
+### 40.1 3-36a 狀態圖示（sonnet；3-35 合併後）
+
+第 4 節「段 1」第 1～5 點：`skillParts.ts` 的 `STATUS` 改用 `GLYPH`／`glyphColor()`、外框依 `polarity`（只用在狀態圖示，技能圖示部件框不變）；glossary 的 statuses 補 `polarity`、`control_group`、`on_turn_start_damage.element`、`skip_turn`、`removed_by_element`、`absorbs_damage`、`prevents_move`（缺的才補，pytest 覆蓋）；頭頂狀態列（14px、最多 3 個＋「+N」、倒下不畫、不壓上一格 HP 條、和既有徽章不衝突）；身上特效 5 類（`bodyUnder`／`bodyOver`、`concealed` alpha 0.55）；第 5 點的測試。報告 `Phase3-36a報告.md`（含檢查清單前 3 項的截圖）。
+
+### 40.2 3-36b 戰場效果（sonnet；3-36a 合併後）
+
+第 4 節「段 2」第 1～7 點：`objectArt.ts` 四種物件新畫法＋`turnsLeft`／`hpStage`；通用裂痕；`turnsBadge()`；`blocks_sight` 表面的 `sightVeil()` 上層（glossary 缺就補）；陷阱踏板（trigger／元素由前端技能表查 `skill_id`，查不到退回 `enter`＋灰）；區域整塊畫、外框只描外緣、有害／有益依目前玩家陣營判斷、`caster` 虛線環；未知值測試。報告 `Phase3-36b報告.md`（含檢查清單其餘項目與「9×6 場景重現」截圖，場景可用靶場或測試用 fixture 擺出）。
