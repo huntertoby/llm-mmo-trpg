@@ -32,7 +32,7 @@ export interface ObjectArtSpec extends ArtTheme {
 const turnsLevel = (s: ObjectArtSpec): number => (s.turnsLeft === null ? 0 : s.turnsLeft <= 1 ? 2 : 1);
 
 export function objectArtKey(s: ObjectArtSpec): string {
-  return [s.kind, s.x, s.y, +s.joinL, +s.joinR, +s.vertical, +s.flammable, turnsLevel(s), s.hpStage, themeKey(s)].join("|");
+  return [s.kind, s.x, s.y, +s.joinL, +s.joinR, +s.vertical, turnsLevel(s), s.hpStage, themeKey(s)].join("|");
 }
 
 type ObjectDrawer = (ctx: Ctx, s: ObjectArtSpec) => void;
@@ -514,8 +514,14 @@ function drawGenericObject(ctx: Ctx): void {
   ctx.fill();
 }
 
-/** 可燃物右上角的小火苗。 */
-function flammableMark(ctx: Ctx): void {
+/** 哪些物件會有可燃小火苗（橋不畫）。 */
+export const hasFlammableMark = (kind: string, flammable: boolean): boolean => flammable && kind !== "wooden_bridge";
+
+/**
+ * 可燃物右上角的小火苗（3-38：獨立一張全場共用的貼圖，由繪製器疊在物件上並整批切換淡化／明顯；
+ * 不再畫進每個物件的貼圖，所以物件貼圖的快取鍵不含可燃）。
+ */
+export function drawFlammableMark(ctx: Ctx): void {
   ctx.save();
   ctx.translate(T - 9, 12);
   ctx.fillStyle = "rgba(20,12,6,0.65)";
@@ -539,5 +545,4 @@ export function drawObject(ctx: Ctx, s: ObjectArtSpec): void {
     const style = CRACKS[s.kind];
     cracks(ctx, s.hpStage, s.x, s.y, style?.color, style?.box);
   }
-  if (s.flammable && s.kind !== "wooden_bridge") flammableMark(ctx);
 }

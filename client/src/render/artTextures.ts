@@ -3,7 +3,7 @@
 // 本輪沒用到的貼圖會被銷毀，不洩漏。繪圖以 2 倍解析度產生，場景縮放時仍清晰。
 import { Texture } from "pixi.js";
 import { TILE_SIZE } from "../battle/geometry";
-import { drawObject, objectArtKey, type ObjectArtSpec } from "./objectArt";
+import { drawFlammableMark, drawObject, objectArtKey, type ObjectArtSpec } from "./objectArt";
 import { ART_T, drawTile, tileArtKey, type TileArtSpec } from "./terrainArt";
 import type { Ctx } from "./artDraw";
 import type { Facing } from "../api/types";
@@ -64,6 +64,11 @@ export class ArtTextures {
 
   object(spec: ObjectArtSpec): Texture | null {
     return this.get(`o|${objectArtKey(spec)}`, (ctx) => drawObject(ctx, spec));
+  }
+
+  /** 可燃小火苗貼圖（3-38）：全場只有一張，所有可燃物件共用。 */
+  flammableMark(): Texture | null {
+    return this.get("m|flammable", drawFlammableMark);
   }
 
   /** 戰場效果貼圖（陷阱、區域單格、霧、徽章、施放者環…，Phase 3-36b）：一格大小；`key` 由呼叫端用級距組成。 */

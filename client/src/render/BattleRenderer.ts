@@ -36,7 +36,7 @@ import { ArtTextures } from "./artTextures";
 import { heightBadgeText, objectArtSpec, objectKinds, tileArtSpec } from "./artSpecs";
 import { drawMistTile } from "./cloudRidgeTerrain";
 import { mistLevel, type ArtTheme } from "./regionArt";
-import { hasObjectArt } from "./objectArt";
+import { hasFlammableMark, hasObjectArt } from "./objectArt";
 import { blastEffect, castEffects, hitEffects, shakeEffect, warpEffects, type Effect } from "./vfxEffects";
 import { drawCliff, drawEdges, liftEffects, silhouette } from "./heightArt";
 import { RowStack } from "./rowLayers";
@@ -70,6 +70,8 @@ export interface Highlights {
 }
 
 const T = TILE_SIZE;
+/** 可燃小火苗平時的透明度（3-38）。 */
+export const FLAME_DIM = 0.4;
 const BACKGROUND = 0x15151c;
 
 const OVERLAY_COLORS: Readonly<Record<OverlayKind, number>> = {
@@ -128,6 +130,9 @@ export class BattleRenderer {
   /** 高亮（移動、預覽、目標框…）：畫在所有排之上，仍跟著所在格抬高，不被南邊的高格蓋住（3-18b）。 */
   private readonly marks = new Container();
   private readonly pulses = new Pulses();
+  /** 可燃小火苗的節點（3-38；每次重畫重建）與目前是否明顯。 */
+  private flameMarks: Container[] = [];
+  private flameOn = false;
   private readonly hover = new Container();
   private readonly effects = new Container();
   private effectList: Effect[] = [];
@@ -231,6 +236,7 @@ export class BattleRenderer {
     this.unitSprites.clear();
     this.pulses.clear();
     this.art.beginFrame();
+    this.flameMarks = [];
     for (const t of model.tiles) this.tileSprite(model, t);
     for (const a of model.auras) {
       const aura = new Graphics().rect(2, 2, T - 4, T - 4).fill({ color: HIGHLIGHT.summon, alpha: 0.14 });
@@ -492,6 +498,34 @@ export class BattleRenderer {
     }
   }
 
+  /** 可燃小火苗（3-38）：獨立一層，平時淡化、`flameOn` 時明顯；全場一起切換（不重畫）。 */
+  private addFlammableMark(c: Container, o: ObjectDraw, hasSprite: boolean): void {
+    if (!hasFlammableMark(o.kind, o.flammable)) return;
+    let node: Container | null = null;
+    if (hasSprite) {
+      const tex = this.art.flammableMark();
+      if (tex !== null) {
+        const sprite = new Sprite(tex);
+        sprite.width = T;
+        sprite.height = T;
+        node = sprite;
+      }
+    } else {
+      node = new Graphics().circle(T - 8, 8, 4).fill(HIGHLIGHT.flammable);
+    }
+    if (node === null) return;
+    node.alpha = this.flameOn ? 1 : FLAME_DIM;
+    this.flameMarks.push(node);
+    c.addChild(node);
+  }
+
+  /** 設定可燃標記明顯（`true`）或淡化（`false`）；只改透明度。 */
+  setFlameEmphasis(on: boolean): void {
+    this.flameOn = on;
+    const alpha = on ? 1 : FLAME_DIM;
+    for (const n of this.flameMarks) if (!n.destroyed) n.alpha = alpha;
+  }
+
   private objectSprite(o: ObjectDraw, kinds: ReadonlyMap<string, string>, theme: ArtTheme): Container {
     const c = new Container();
     const g = new Graphics();
@@ -511,10 +545,9 @@ export class BattleRenderer {
     }
     if (o.burning) {
       g.rect(1, 1, T - 2, T - 2).stroke({ width: 3, color: HIGHLIGHT.burning });
-    } else if (o.flammable && !hasSprite) {
-      g.circle(T - 8, 8, 4).fill(HIGHLIGHT.flammable);
     }
     c.addChild(g);
+    this.addFlammableMark(c, o, hasSprite);
     if (o.expiresIn !== null) {
       // 暫時障礙（Phase 3-11）：右上角剩餘回合徽章（3-36b：黑底圓形，最後 1 回合橘色）；
       // 有畫法的物件（冰牆、荊棘…）最後 1 回合的樣子由貼圖自己改（融化、枯萎），沒有畫法的才淡化。

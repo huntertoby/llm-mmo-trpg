@@ -11,6 +11,8 @@ import { fontEpoch, subscribeFonts, waitForFonts } from "../render/fontLoad";
 interface Props {
   model: DrawModel;
   highlights: Highlights;
+  /** 可燃小火苗明顯（true）或淡化（false；Phase 3-38）。 */
+  flameOn: boolean;
   /** 畫面上的縮放比例（`fitScale` 算出）。 */
   scale: number;
   onTileClick(tile: Pos): void;
@@ -28,10 +30,10 @@ function tileFromEvent(e: MouseEvent<HTMLDivElement>, model: DrawModel) {
   return clientToTile(e.clientX, e.clientY, canvas.getBoundingClientRect(), model);
 }
 
-export function BattleCanvas({ model, highlights, scale, onTileClick, onTileHover, onCancel, rendererRef, children }: Props) {
+export function BattleCanvas({ model, highlights, flameOn, scale, onTileClick, onTileHover, onCancel, rendererRef, children }: Props) {
   const hostRef = useRef<HTMLDivElement>(null);
-  const latest = useRef({ model, highlights, scale });
-  latest.current = { model, highlights, scale };
+  const latest = useRef({ model, highlights, flameOn, scale });
+  latest.current = { model, highlights, flameOn, scale };
 
   useEffect(() => {
     const host = hostRef.current;
@@ -44,6 +46,7 @@ export function BattleCanvas({ model, highlights, scale, onTileClick, onTileHove
       if (rendererRef.current !== renderer) return;
       renderer.setScale(latest.current.scale);
       renderer.draw(latest.current.model);
+      renderer.setFlameEmphasis(latest.current.flameOn);
       renderer.setHighlights(latest.current.highlights);
     });
     return () => {
@@ -56,6 +59,7 @@ export function BattleCanvas({ model, highlights, scale, onTileClick, onTileHove
   // 版面效果：逐步播放時用 flushSync 換畫面，需要同步重畫（動畫才找得到單位）。
   useLayoutEffect(() => {
     rendererRef.current?.draw(model);
+    rendererRef.current?.setFlameEmphasis(latest.current.flameOn);
     rendererRef.current?.setHighlights(latest.current.highlights);
   }, [model, rendererRef]);
 
@@ -67,8 +71,13 @@ export function BattleCanvas({ model, highlights, scale, onTileClick, onTileHove
   const epoch = useSyncExternalStore(subscribeFonts, fontEpoch);
   useLayoutEffect(() => {
     rendererRef.current?.draw(latest.current.model);
+    rendererRef.current?.setFlameEmphasis(latest.current.flameOn);
     rendererRef.current?.setHighlights(latest.current.highlights);
   }, [epoch, rendererRef]);
+
+  useLayoutEffect(() => {
+    rendererRef.current?.setFlameEmphasis(flameOn);
+  }, [flameOn, rendererRef]);
 
   useLayoutEffect(() => {
     rendererRef.current?.setScale(scale);
