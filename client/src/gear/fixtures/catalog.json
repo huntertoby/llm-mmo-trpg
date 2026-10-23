@@ -1069,7 +1069,8 @@
     "material": "iron",
     "element": null,
     "form": null
-   }
+   },
+   "pairable": false
   },
   {
    "id": "bomb_casing",
@@ -1077,7 +1078,8 @@
    "weapon_class": "melee",
    "weapon_class_zh": "近戰武器",
    "two_handed": false,
-   "look": null
+   "look": null,
+   "pairable": false
   },
   {
    "id": "bow",
@@ -1090,7 +1092,8 @@
     "material": "wood",
     "element": null,
     "form": null
-   }
+   },
+   "pairable": false
   },
   {
    "id": "crossbow",
@@ -1103,7 +1106,8 @@
     "material": "wood",
     "element": null,
     "form": "light"
-   }
+   },
+   "pairable": false
   },
   {
    "id": "dagger",
@@ -1116,7 +1120,8 @@
     "material": "iron",
     "element": null,
     "form": null
-   }
+   },
+   "pairable": true
   },
   {
    "id": "fangs",
@@ -1124,7 +1129,8 @@
    "weapon_class": "melee",
    "weapon_class_zh": "近戰武器",
    "two_handed": false,
-   "look": null
+   "look": null,
+   "pairable": false
   },
   {
    "id": "fire_staff",
@@ -1137,7 +1143,8 @@
     "material": "wood",
     "element": "fire",
     "form": null
-   }
+   },
+   "pairable": false
   },
   {
    "id": "fist",
@@ -1150,7 +1157,8 @@
     "material": "iron",
     "element": null,
     "form": "knuckle"
-   }
+   },
+   "pairable": false
   },
   {
    "id": "frost_staff",
@@ -1163,7 +1171,8 @@
     "material": "wood",
     "element": "ice",
     "form": null
-   }
+   },
+   "pairable": false
   },
   {
    "id": "greatsword",
@@ -1176,7 +1185,8 @@
     "material": "steel",
     "element": null,
     "form": null
-   }
+   },
+   "pairable": false
   },
   {
    "id": "guardian_rod",
@@ -1184,7 +1194,8 @@
    "weapon_class": "focus",
    "weapon_class_zh": "法器",
    "two_handed": true,
-   "look": null
+   "look": null,
+   "pairable": false
   },
   {
    "id": "hammer",
@@ -1197,7 +1208,8 @@
     "material": "iron",
     "element": null,
     "form": null
-   }
+   },
+   "pairable": false
   },
   {
    "id": "lightning_staff",
@@ -1210,7 +1222,8 @@
     "material": "wood",
     "element": "lightning",
     "form": null
-   }
+   },
+   "pairable": false
   },
   {
    "id": "longgun",
@@ -1223,7 +1236,8 @@
     "material": "steel",
     "element": null,
     "form": "flintlock"
-   }
+   },
+   "pairable": false
   },
   {
    "id": "one_handed_sword",
@@ -1236,7 +1250,8 @@
     "material": "steel",
     "element": null,
     "form": null
-   }
+   },
+   "pairable": false
   },
   {
    "id": "scepter",
@@ -1249,7 +1264,8 @@
     "material": "wood",
     "element": null,
     "form": "scepter"
-   }
+   },
+   "pairable": false
   },
   {
    "id": "scythe",
@@ -1262,7 +1278,8 @@
     "material": "iron",
     "element": null,
     "form": "long"
-   }
+   },
+   "pairable": false
   },
   {
    "id": "shade_blades",
@@ -1270,7 +1287,8 @@
    "weapon_class": "melee",
    "weapon_class_zh": "近戰武器",
    "two_handed": false,
-   "look": null
+   "look": null,
+   "pairable": false
   },
   {
    "id": "spark_staff",
@@ -1278,7 +1296,8 @@
    "weapon_class": "focus",
    "weapon_class_zh": "法器",
    "two_handed": true,
-   "look": null
+   "look": null,
+   "pairable": false
   },
   {
    "id": "spear",
@@ -1291,7 +1310,8 @@
     "material": "iron",
     "element": null,
     "form": null
-   }
+   },
+   "pairable": false
   },
   {
    "id": "stone_fist",
@@ -1299,7 +1319,8 @@
    "weapon_class": "melee",
    "weapon_class_zh": "近戰武器",
    "two_handed": false,
-   "look": null
+   "look": null,
+   "pairable": false
   },
   {
    "id": "talons",
@@ -1307,7 +1328,8 @@
    "weapon_class": "melee",
    "weapon_class_zh": "近戰武器",
    "two_handed": false,
-   "look": null
+   "look": null,
+   "pairable": false
   },
   {
    "id": "totem_staff",
@@ -1320,7 +1342,8 @@
     "material": "wood",
     "element": null,
     "form": "totem"
-   }
+   },
+   "pairable": false
   },
   {
    "id": "totem_stone",
@@ -1328,7 +1351,8 @@
    "weapon_class": "melee",
    "weapon_class_zh": "近戰武器",
    "two_handed": false,
-   "look": null
+   "look": null,
+   "pairable": false
   },
   {
    "id": "vine_lash",
@@ -1336,7 +1360,8 @@
    "weapon_class": "melee",
    "weapon_class_zh": "近戰武器",
    "two_handed": false,
-   "look": null
+   "look": null,
+   "pairable": false
   },
   {
    "id": "water_jet",
@@ -1344,7 +1369,8 @@
    "weapon_class": "focus",
    "weapon_class_zh": "法器",
    "two_handed": true,
-   "look": null
+   "look": null,
+   "pairable": false
   },
   {
    "id": "whip",
@@ -1357,7 +1383,8 @@
     "material": "leather",
     "element": null,
     "form": "leather"
-   }
+   },
+   "pairable": false
   }
  ],
  "max_affixes_per_item": 4,

@@ -406,3 +406,10 @@ def test_attack_flow_strike_affixes_after_3_32d() -> None:
     assert (combo.strike_permille, cleave.strike_permille) == (400, 300)
     mastery = library().skills["skill_attack_mastery"]
     assert mastery.modifiers[0].change.damage_permille == 50
+
+
+def test_two_handed_weapon_cannot_be_paired() -> None:
+    lib = library()
+    loadout = _loadout(main_hand="item_test_twin_daggers")
+    problems = loadout_problems(loadout, lib.weapons["greatsword"], _rules())
+    assert any("不能是成對武器" in p for p in problems)

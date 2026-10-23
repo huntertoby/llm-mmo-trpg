@@ -5364,6 +5364,11 @@
             "type": "boolean",
             "title": "Two Handed"
           },
+          "pairable": {
+            "type": "boolean",
+            "title": "Pairable",
+            "default": false
+          },
           "look": {
             "anyOf": [
               {

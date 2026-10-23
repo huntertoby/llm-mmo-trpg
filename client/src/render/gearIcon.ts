@@ -26,6 +26,8 @@ export interface GearLook {
   style?: string | null;
   rarity?: string | null;
   keywords?: readonly string[] | null;
+  /** 武器的元素（`weapons.yaml` 的 `look.element`）：火焰、冰霜、雷電、水會換成對應的元素關鍵字（混色）。 */
+  element?: string | null;
 }
 interface Pal {
   a: string;
@@ -73,6 +75,9 @@ export function gearKinds(): readonly KindEntry[] {
   return appearance.kinds as unknown as KindEntry[];
 }
 
+/** 武器元素 → 元素關鍵字（與 `dollGear.ELEMENT_OF_KEYWORD` 相反）；物理、神聖等沒有對應色的元素不套色。 */
+const KEYWORD_OF_ELEMENT: Readonly<Record<string, string>> = { fire: "ignite", water: "wet", lightning: "charged", ice: "frozen" };
+
 /** 驗證＋補預設：任何輸入都回傳畫得出來的外觀。`slot`：物品所在欄位，`kind` 缺漏時用來選預設造型。 */
 export function resolveGear(it: GearLook | null | undefined, slot?: string): Resolved {
   const src = it ?? {};
@@ -83,7 +88,9 @@ export function resolveGear(it: GearLook | null | undefined, slot?: string): Res
   const mats = form.materials ?? K.materials;
   const material = src.material != null && mats.includes(src.material) ? src.material : (form.defaultMaterial ?? K.defaultMaterial);
   const dye = (appearance.dyeMaterials as string[]).includes(material) && src.dye != null && GEAR_DYE[src.dye] !== undefined ? src.dye : null;
-  const keywords = (src.keywords ?? []).filter((k) => GEAR_KEYWORD[k] !== undefined).slice(0, MAX_KEYWORDS);
+  const fromElement = src.element != null ? KEYWORD_OF_ELEMENT[src.element] : undefined;
+  const given = (src.keywords ?? []).filter((k) => GEAR_KEYWORD[k] !== undefined);
+  const keywords = (fromElement !== undefined && !given.includes(fromElement) ? [fromElement, ...given] : given).slice(0, MAX_KEYWORDS);
   const rarity = src.rarity != null && GEAR_RARITY[src.rarity] !== undefined ? src.rarity : "common";
   return { kind, form: form.id, material, dye, keywords, rarity, style: "common" };
 }

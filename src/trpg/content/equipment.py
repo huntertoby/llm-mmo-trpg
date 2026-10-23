@@ -1081,6 +1081,8 @@ def loadout_problems(loadout: Loadout, weapon: WeaponDef, rules: EquipmentRules)
             f"（{weapon.id}）相同"
         )
     paired = main is not None and main.item.paired
+    if paired and weapon.two_handed:
+        problems.append(f"雙手武器（{weapon.name_zh}）不能是成對武器")
     if (weapon.two_handed or paired) and "off_hand" in by_slot:
         kind = "成對武器" if paired and not weapon.two_handed else "雙手武器"
         blocked = by_slot["off_hand"].item.name_zh

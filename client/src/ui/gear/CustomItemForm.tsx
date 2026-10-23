@@ -11,6 +11,9 @@ import {
   draftLook,
   draftProblems,
   rangeText,
+  canPair,
+  isAttrAffix,
+  swapAffix,
   weaponOptionText,
   type CustomDraft,
 } from "../../gear/gearDraft";
@@ -63,7 +66,7 @@ export function CustomItemForm({ catalog, slot, draft, onChange, onEquip, equipp
           {isWeapon && (
             <label>
               武器
-              <select value={draft.weapon} onChange={(e) => patch({ weapon: e.target.value, kind: "" })}>
+              <select value={draft.weapon} onChange={(e) => patch({ weapon: e.target.value, kind: "", paired: draft.paired && canPair(catalog, e.target.value) })}>
                 <option value="">（選一種武器）</option>
                 {catalog.weapons.map((w) => (
                   <option key={w.id} value={w.id}>
@@ -73,7 +76,7 @@ export function CustomItemForm({ catalog, slot, draft, onChange, onEquip, equipp
               </select>
             </label>
           )}
-          {isWeapon && (
+          {isWeapon && canPair(catalog, draft.weapon) && (
             <label className="gear-check">
               <input type="checkbox" checked={draft.paired} onChange={(e) => patch({ paired: e.target.checked, kind: "" })} />
               成對武器（占用副手）
@@ -128,6 +131,7 @@ export function CustomItemForm({ catalog, slot, draft, onChange, onEquip, equipp
           詞條（{draft.affixes.length} / {catalog.max_affixes_per_item}，只能從白名單選）
         </div>
         {draft.affixes.length === 0 && <div className="muted small">還沒有詞條。</div>}
+        {draft.affixes.length > 0 && <div className="muted small">屬性詞條可直接換屬性、數值可調；其他詞條要換種類，請先移除再從下方重新加入。</div>}
         {draft.affixes.map((pick, index) => {
           const info = catalog.affixes.find((a) => a.id === pick.affix);
           if (info === undefined) return null;
@@ -135,6 +139,27 @@ export function CustomItemForm({ catalog, slot, draft, onChange, onEquip, equipp
             <div key={`${pick.affix}:${index}`} className="gear-affix-row">
               <span className="gear-affix-cat">{info.category_zh}</span>
               <span className="gear-affix-text">{affixText(info, pick.value)}</span>
+              {isAttrAffix(info.id) && (
+                <label className="gear-affix-value">
+                  <span className="muted small">屬性</span>
+                  <select
+                    value={info.id}
+                    aria-label={`${info.name_zh} 換成別的屬性`}
+                    onChange={(e) => {
+                      const to = catalog.affixes.find((a) => a.id === e.target.value);
+                      if (to !== undefined) onChange(swapAffix(draft, index, to));
+                    }}
+                  >
+                    {catalog.affixes
+                      .filter((a) => isAttrAffix(a.id) && (a.id === info.id || !used.has(a.id)))
+                      .map((a) => (
+                        <option key={a.id} value={a.id}>
+                          {a.name_zh.replace(/\s*\+?\{n\}/, "")}
+                        </option>
+                      ))}
+                  </select>
+                </label>
+              )}
               {info.value_min != null && (
                 <label className="gear-affix-value">
                   <span className="muted small">數值 {rangeText(info)}</span>
