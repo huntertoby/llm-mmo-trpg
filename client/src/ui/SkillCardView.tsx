@@ -4,6 +4,7 @@ import type { SkillCard } from "../api/types";
 import { kindLabel, sourceCostText } from "../battle/source";
 import { growthLines, levelBadge, levelOf } from "../run/skillGrowth";
 import { KeywordLine } from "./KeywordLine";
+import { StackTip } from "./StackTip";
 import { SummonInfo } from "./SummonInfo";
 import { VariantList } from "./VariantList";
 import { AssemblyFormula, SkillIconView } from "./SkillIconView";
@@ -53,6 +54,24 @@ export function SkillCardView({ card, compact = false, activeVariantId = null }:
           <li key={`modifier:${i}:${m}`}>修正：{m}</li>
         ))}
       </ul>
+      {(card.formula_lines ?? []).map((line) => (
+        <div key={line} className="small skill-card-formula" data-testid="skill-formula">
+          {line}
+        </div>
+      ))}
+      {(card.stacks ?? []).length > 0 && (
+        <div className="small skill-card-stacks">
+          層數：
+          {(card.stacks ?? []).map((ref, i) => (
+            <span key={`${ref.id}:${ref.role}`}>
+              {i > 0 && "、"}
+              <StackTip id={ref.id}>
+                {ref.name_zh}（{ref.role === "makes" ? "累積" : "消耗／利用"}）
+              </StackTip>
+            </span>
+          ))}
+        </div>
+      )}
       {(card.summons ?? []).map((info, i) => (
         <SummonInfo key={`${i}:${info.id}`} info={info} open={!compact} />
       ))}

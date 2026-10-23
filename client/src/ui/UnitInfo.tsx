@@ -1,7 +1,7 @@
 // 單位資訊：滑過或點選單位時顯示（文字即可）。
 import { tipLines } from "../gear/affixStatus";
 import { ChargeChips } from "./ChargeChips";
-import type { BattleView, StatusView, UnitView } from "../api/types";
+import type { BattleView, SkillCard, StatusView, UnitView } from "../api/types";
 import { ammoText, hasMagazine } from "../battle/ammo";
 import { bombStatusText, TIME_BOMB } from "../battle/bombs";
 import { CHARGING, chargeStatusText } from "../battle/followup";
@@ -18,6 +18,7 @@ import { GearIcon } from "./GearIcon";
 import { PartTip } from "./PartTip";
 import { GearTotals } from "./GearTotals";
 import { Hint } from "./Hint";
+import { StackTip } from "./StackTip";
 import { actionCardText } from "../battle/actionInfo";
 
 interface Props {
@@ -25,6 +26,8 @@ interface Props {
   names: UnitNames;
   heroId: string;
   skills: SkillNames;
+  /** 技能卡（層數說明框列出「你的技能」用；3-41c）。 */
+  cards?: Readonly<Record<string, SkillCard | undefined>>;
   /** 召喚物的剩餘輪數要用目前輪數計算。 */
   view?: BattleView;
 }
@@ -37,7 +40,7 @@ function statusText(s: StatusView, skills?: SkillNames): string {
   return `${statusName(s.status_id)}${amount}${left}`;
 }
 
-export function UnitInfo({ unit, names, heroId, skills, view }: Props) {
+export function UnitInfo({ unit, names, heroId, skills, cards, view }: Props) {
   if (unit === null) {
     return <div className="panel unit-info muted">滑過或點選單位以查看資訊</div>;
   }
@@ -122,7 +125,17 @@ export function UnitInfo({ unit, names, heroId, skills, view }: Props) {
         </div>
       )}
       {stacks.length > 0 && (
-        <div className="unit-line">層數：{stacks.map(([k, v]) => `${stackName(k)} ×${v}`).join("、")}</div>
+        <div className="unit-line">
+          層數：
+          {stacks.map(([k, v], i) => (
+            <span key={k}>
+              {i > 0 && "、"}
+              <StackTip id={k} cards={cards} owned={unit.id === heroId ? unit.skills : null}>
+                {stackName(k)} ×{v}
+              </StackTip>
+            </span>
+          ))}
+        </div>
       )}
       {cooldowns.length > 0 && (
         <div className="unit-line">冷卻：{cooldowns.map(([k, v]) => `${skills[k] ?? k} ${v}`).join("、")}</div>

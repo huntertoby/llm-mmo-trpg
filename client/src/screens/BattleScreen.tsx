@@ -1024,7 +1024,7 @@ export function BattleScreen({ initial, onExit, exitLabel, runMode }: Props) {
           {cardTile !== null && (hoverUnit !== null || tileCardSections.length > 0) && (
             <HoverFloat placement={cardPlacement(cardTile, model, scale)} card={tileCard}>
               {hoverUnit !== null && (
-                <UnitInfo unit={hoverUnit} names={names} heroId={heroId} skills={skillNames} view={view} />
+                <UnitInfo unit={hoverUnit} names={names} heroId={heroId} skills={skillNames} cards={cards} view={view} />
               )}
               <TileCard sections={tileCardSections} />
             </HoverFloat>
@@ -1154,7 +1154,7 @@ export function BattleScreen({ initial, onExit, exitLabel, runMode }: Props) {
       />
       <div className={`battle-bottom${layout.bottomHeight < DEFAULT_LAYOUT.bottomHeight ? " short" : ""}`}>
         <div className="battle-hero">
-          <Hud view={shown} hero={shownHero} skills={skillNames} compact={narrow} />
+          <Hud view={shown} hero={shownHero} skills={skillNames} cards={cards} compact={narrow} />
           {!narrow && (
             <ResizeHandle
               orientation="vertical"

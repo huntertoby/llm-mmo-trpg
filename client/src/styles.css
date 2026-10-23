@@ -3538,3 +3538,13 @@ button.selected {
 .battle-bottom.short .turn-controls .fallback > .hint-tip > button {
   padding: 2px 6px;
 }
+
+/* 層數名稱的說明框觸發處（Phase 3-41c）：虛底線提示可滑過 */
+.stack-tip {
+  border-bottom: 1px dotted var(--muted);
+  cursor: help;
+}
+
+.skill-card-formula {
+  color: var(--muted);
+}
