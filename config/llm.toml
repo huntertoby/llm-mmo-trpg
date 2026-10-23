@@ -1,0 +1,17 @@
+# 本機 LLM（vLLM，OpenAI 相容 API）設定。此檔進版控，不放金鑰。
+# 環境變數可覆寫：TRPG_LLM_BASE_URL、TRPG_LLM_MODEL、TRPG_LLM_TIMEOUT_S、TRPG_LLM_API_KEY；
+# 另可用 TRPG_LLM_CONFIG 指定其他設定檔路徑。
+
+# vLLM 的 settings.ini 預設 PORT=8000 會和 `trpg serve` 衝突，所以這裡預設 8001
+# （請把 F:\WSL\settings.ini 的 PORT 改成 8001，或改這裡的埠號）。
+base_url = "http://localhost:8001/v1"
+model = "swift"
+api_key = "local"          # 本機模型任意字串即可；真正的金鑰請用環境變數，不要寫進版控
+timeout_s = 120.0
+max_retries = 3            # 每個候選最多嘗試次數（由 4-L5 的重試迴圈使用）
+temperature = 0.7
+max_tokens = 2048
+# JSON schema 約束寫法：auto（先 response_format，被拒絕時退回 guided_json）、
+# response_format、guided_json、none（不附約束）
+json_schema_mode = "auto"
+fallback_alert_permille = 200   # 退回率超過 20% 就提醒
