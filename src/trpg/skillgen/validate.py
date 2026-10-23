@@ -49,6 +49,7 @@ __all__ = [
     "RarityNeed",
     "Violation",
     "effect_count",
+    "is_core_effect",
     "rarity_requirements",
     "share_violations",
     "validate_skill",
@@ -595,6 +596,11 @@ def _skeleton_violations(
 
 def _has_condition(skill: SkillDef) -> bool:
     return skill.condition is not None or any(e.condition is not None for e in skill.effects)
+
+
+def is_core_effect(library: ContentLibrary, skeleton: SkeletonDef, effect: EffectSpec) -> bool:
+    """``effect`` 是不是骨架的核心效果（核心占比與預算器的旋鈕權重共用）。"""
+    return _is_core(library, skeleton, effect)
 
 
 def _is_core(library: ContentLibrary, skeleton: SkeletonDef, effect: EffectSpec) -> bool:

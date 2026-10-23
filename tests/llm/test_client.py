@@ -123,7 +123,35 @@ def test_request_format() -> None:
         "messages": [{"role": "user", "content": "哈囉"}],
         "temperature": 0.2,
         "max_tokens": 77,
+        "chat_template_kwargs": {"enable_thinking": False},
     }
+
+
+def test_enable_thinking_in_request_and_env() -> None:
+    bodies: list[dict[str, Any]] = []
+
+    def handler(request: httpx.Request) -> httpx.Response:
+        bodies.append(json.loads(request.content))
+        return httpx.Response(200, json=ok_body())
+
+    client_with(handler, enable_thinking=True).complete(MSGS, json_schema=SCHEMA)
+    assert bodies[0]["chat_template_kwargs"] == {"enable_thinking": True}
+    assert load_llm_config(DEFAULT_CONFIG_PATH, env={}).enable_thinking is False
+    env = {"TRPG_LLM_ENABLE_THINKING": "true"}
+    assert load_llm_config(DEFAULT_CONFIG_PATH, env=env).enable_thinking is True
+
+
+def test_length_with_empty_content_is_bad_response() -> None:
+    def body(content: str | None) -> dict[str, Any]:
+        return {"choices": [{"finish_reason": "length", "message": {"content": content}}]}
+
+    for content in ("", None):
+        client = client_with(lambda r, c=content: httpx.Response(200, json=body(c)))
+        with pytest.raises(LLMBadResponse, match="enable_thinking"):
+            client.complete(MSGS)
+    # 有內容的截斷照常回傳（由呼叫端的驗證擋下）
+    client = client_with(lambda r: httpx.Response(200, json=body('{"a"')))
+    assert client.complete(MSGS) == '{"a"'
 
 
 def test_json_schema_uses_response_format() -> None:

@@ -9,6 +9,7 @@
 
 from __future__ import annotations
 
+from collections.abc import Callable, Mapping
 from dataclasses import dataclass, field
 from functools import cache
 from typing import Any
@@ -31,6 +32,7 @@ __all__ = [
     "NON_INTERCEPT_EVENTS",
     "Ctx",
     "Knob",
+    "KnobSpec",
     "Retry",
     "build_condition",
     "build_cost",
@@ -43,6 +45,7 @@ __all__ = [
     "build_stance_effects",
     "choose_core",
     "dice_ladder",
+    "effect_knobs",
 ]
 
 # 抽選機率與範圍在 ``content/skill_composer.yaml``（``library.composer``）；這裡只留結構判斷。
@@ -119,6 +122,12 @@ class Ctx:
             self.knobs.append(Knob(index, name, values, weight))
             spec[name] = values[0]
 
+    def add_knobbed(self, spec: dict[str, Any], weight: int | None = None) -> None:
+        """加入效果，旋鈕取 :func:`effect_knobs`（與 LLM 提議的預算器共用）；``weight`` 只影響
+        傷害、治療、護盾（省略＝附帶效果的權重）。"""
+        weight = self.rules.structure.knob_weight_other if weight is None else weight
+        self.add(spec, effect_knobs(self.library, spec, category=self.category, weight=weight))
+
 
 # ---------------------------------------------------------------------------
 # 旋鈕的階梯
@@ -139,6 +148,87 @@ def dice_ladder(rules: DiceRules) -> tuple[str, ...]:
 @cache
 def _multiplier_ladder(ranges: tuple[LadderRange, ...]) -> tuple[int, ...]:
     return tuple(v for r in ranges for v in range(r.start, r.stop, r.step))
+
+
+type KnobSpec = tuple[str, tuple[Any, ...], int]
+"""一個旋鈕的定義：（欄位, 由弱到強的值, 抽中權重）。"""
+
+_GAMBLE_CHANCES = tuple(range(300, 951, 50))
+
+
+def _status_knobs(library: ContentLibrary, status_id: object) -> tuple[KnobSpec, ...]:
+    status = library.ruleset.statuses.by_id().get(str(status_id))
+    if status is None:
+        return ()
+    rules = library.composer.duration
+    values = _duration_values(status.duration, status.control_group, rules)
+    return (("duration", values, rules.status_weight),) if len(values) > 1 else ()
+
+
+def _surface_knobs(library: ContentLibrary, surface_id: object) -> tuple[KnobSpec, ...]:
+    surface = next((s for s in library.ruleset.surfaces.surfaces if s.id.value == surface_id), None)
+    if surface is None or surface.duration is None:
+        return ()
+    rules = library.composer.duration
+    values = tuple(range(1, min(surface.duration + rules.surface_extra, rules.cap) + 1))
+    return (("duration", values, rules.surface_weight),)
+
+
+def _stack_knobs(library: ContentLibrary, effect: Mapping[str, Any]) -> tuple[KnobSpec, ...]:
+    rules = library.composer.builder
+    other = library.composer.structure.knob_weight_other
+    if effect["type"] == "consume_stack":
+        ladder = tuple(range(rules.per_stack.start, rules.per_stack.stop, rules.per_stack.step))
+        return (("per_stack_permille", ladder, other),)
+    stack = next((s for s in library.ruleset.stacks.stacks if s.id == effect.get("stack")), None)
+    if stack is None:
+        return ()
+    return (("amount", tuple(range(1, min(stack.max, rules.max_amount) + 1)), other),)
+
+
+def effect_knobs(
+    library: ContentLibrary, effect: Mapping[str, Any], *, category: str, weight: int
+) -> tuple[KnobSpec, ...]:
+    """一個效果（``SkillDef`` 形狀的字典，至少有 ``type`` 與決定階梯的欄位，例如 ``status``）的
+    強度旋鈕。隨機組合器與 LLM 提議的預算器（:mod:`trpg.skillgen.proposal_budget`）共用。
+
+    ``weight`` 用於傷害、治療、護盾（呼叫端依核心或附帶傳入）；其他原語的權重固定（與組合器
+    相同）。沒有旋鈕的原語回傳空 tuple。"""
+    rules = library.composer
+    structure = rules.structure
+    kind = effect["type"]
+    dice = dice_ladder(rules.dice)
+    if kind == "damage" and category != "spell":
+        return (("multiplier_permille", _multiplier_ladder(rules.multipliers), weight),)
+    lookups: dict[str, Callable[[], tuple[KnobSpec, ...]]] = {
+        "apply_status": lambda: _status_knobs(library, effect.get("status")),
+        "create_surface": lambda: _surface_knobs(library, effect.get("surface")),
+        "add_stack": lambda: _stack_knobs(library, effect),
+        "consume_stack": lambda: _stack_knobs(library, effect),
+    }
+    if kind in lookups:
+        return lookups[kind]()
+    mana = effect.get("resource") == "mana"
+    fixed: dict[str, tuple[KnobSpec, ...]] = {
+        "damage": (("dice", dice, weight),),
+        "heal": (("dice", dice, weight),),
+        "shield": (("dice", dice, weight),),
+        # 只給手寫技能、組合器不會產生的骰子原語（LLM 提議的預算器用；3E-2g 之後）
+        "charge_through": (("dice", dice, weight),),
+        "hurl_object": (("dice", dice, weight),),
+        "detonate_runes": (("dice", dice, weight),),
+        "push": (("distance", tuple(structure.push_pull_distances), 1),),
+        "pull": (("distance", tuple(structure.push_pull_distances), 1),),
+        "sacrifice_summon": (("dice", dice, structure.knob_weight_core),),
+        "inscribe": (("duration", (1, 2, 3, 4, 5), structure.knob_weight_core),),
+        "reveal": (("duration", (1, 2, 3), structure.knob_weight_other),),
+        "delayed_damage": (("dice", dice, structure.knob_weight_other),),
+        "gamble": (("chance_permille", _GAMBLE_CHANCES, structure.knob_weight_other),),
+        "restore_resource": (
+            (("amount", tuple(range(1, 11)), structure.knob_weight_other),) if mana else ()
+        ),
+    }
+    return fixed.get(kind, ())
 
 
 # ---------------------------------------------------------------------------
@@ -289,8 +379,7 @@ def _status_effect(ctx: Ctx, *, beneficial: bool) -> None:
     if status.control_group == "hard":
         ctx.min_cooldown = max(ctx.min_cooldown, ctx.rules.structure.stun_min_cooldown)
     values = _duration_values(status.duration, status.control_group, ctx.rules.duration)
-    weight = ctx.rules.duration.status_weight
-    ctx.add(spec, (("duration", values, weight),) if len(values) > 1 else ())
+    ctx.add_knobbed(spec)
     if values:
         spec["duration"] = values[0]
 
@@ -307,29 +396,24 @@ def _surface_effect(ctx: Ctx, *, beneficial_only: bool) -> None:
     spec: dict[str, Any] = {"type": "create_surface", "surface": surface.id.value}
     if beneficial_only:
         spec["affects"] = _beneficial_affects(ctx)
-    if surface.duration is None:
-        ctx.add(spec, ())
-        return
-    duration = ctx.rules.duration
-    values = tuple(range(1, min(surface.duration + duration.surface_extra, duration.cap) + 1))
-    ctx.add(spec, (("duration", values, duration.surface_weight),))
+    ctx.add_knobbed(spec)
 
 
 def _damage_effect(ctx: Ctx, weight: int) -> None:
     if ctx.category == "spell":
         spec: dict[str, Any] = {"type": "damage", "element": ctx.theme.value}
-        ctx.add(spec, (("dice", dice_ladder(ctx.rules.dice), weight),))
+        ctx.add_knobbed(spec, weight)
         return
     spec = {"type": "damage"}
     if ctx.theme is not Element.PHYSICAL:
         spec["element"] = ctx.theme.value
-    ctx.add(spec, (("multiplier_permille", _multiplier_ladder(ctx.rules.multipliers), weight),))
+    ctx.add_knobbed(spec, weight)
 
 
 def _heal_effect(ctx: Ctx, weight: int, primitive_id: str = "heal") -> None:
     """治療與護盾（骰子強度旋鈕相同）。"""
     spec = {"type": primitive_id, "affects": "self" if ctx.shape == "self" else "allies"}
-    ctx.add(spec, (("dice", dice_ladder(ctx.rules.dice), weight),))
+    ctx.add_knobbed(spec, weight)
 
 
 def _cleanse_effect(ctx: Ctx) -> None:
@@ -343,8 +427,7 @@ def _sacrifice_effect(ctx: Ctx, spec: dict[str, Any]) -> None:
     spec["radius"] = ctx.rng.randint(0, 2)
     if not ctx.chance(ctx.rules.sacrifice.heal_permille):
         spec["element"] = ctx.theme.value
-    weight = ctx.rules.structure.knob_weight_core
-    ctx.add(spec, (("dice", dice_ladder(ctx.rules.dice), weight),))
+    ctx.add_knobbed(spec)
 
 
 def _fixed_effect(ctx: Ctx, primitive_id: str) -> None:
@@ -365,16 +448,16 @@ def _fixed_effect(ctx: Ctx, primitive_id: str) -> None:
         spec["amount"] = 1
     elif primitive_id == "inscribe":  # 3-23：符文元素取技能的主題元素，持續輪數是強度旋鈕
         spec["element"] = ctx.theme.value
-        ctx.add(spec, (("duration", (1, 2, 3, 4, 5), ctx.rules.structure.knob_weight_core),))
+        ctx.add_knobbed(spec)
         return
     elif primitive_id == "dispel":
         spec["count"] = 1
     elif primitive_id == "reveal":
-        ctx.add(spec, (("duration", (1, 2, 3), ctx.rules.structure.knob_weight_other),))
+        ctx.add_knobbed(spec)
         return
     elif primitive_id == "restore_resource":  # 3C-6b：回復法力（冷卻版另有每回合點數，不組合）
         spec["resource"] = "mana"
-        ctx.add(spec, (("amount", tuple(range(1, 11)), ctx.rules.structure.knob_weight_other),))
+        ctx.add_knobbed(spec)
         return
     elif primitive_id == "delayed_damage":  # 3C-6b：定時炸彈只能用在法術技
         if ctx.category != "spell":
@@ -382,9 +465,7 @@ def _fixed_effect(ctx: Ctx, primitive_id: str) -> None:
         spec["element"] = ctx.theme.value
         spec["rounds"] = ctx.rng.randint(1, 3)
         spec["radius"] = ctx.rng.randint(0, 2)
-        ctx.add(
-            spec, (("dice", dice_ladder(ctx.rules.dice), ctx.rules.structure.knob_weight_other),)
-        )
+        ctx.add_knobbed(spec)
         return
     elif primitive_id == "gamble":
         _gamble_effect(ctx, spec)
@@ -414,8 +495,7 @@ def _gamble_effect(ctx: Ctx, spec: dict[str, Any]) -> None:
         if ctx.chance(700)
         else []
     )
-    chances = tuple(range(300, 951, 50))
-    ctx.add(spec, (("chance_permille", chances, ctx.rules.structure.knob_weight_other),))
+    ctx.add_knobbed(spec)
 
 
 def _make_effect(ctx: Ctx, primitive_id: str, *, core: bool, beneficial_only: bool) -> None:
@@ -428,8 +508,7 @@ def _make_effect(ctx: Ctx, primitive_id: str, *, core: bool, beneficial_only: bo
     elif primitive_id == "cleanse":
         _cleanse_effect(ctx)
     elif primitive_id in ("push", "pull"):
-        distances = tuple(ctx.rules.structure.push_pull_distances)
-        ctx.add({"type": primitive_id}, (("distance", distances, 1),))
+        ctx.add_knobbed({"type": primitive_id})
     elif primitive_id == "apply_status":
         _status_effect(ctx, beneficial=beneficial_only or _wants_buff(ctx, core))
     elif primitive_id == "create_surface":
@@ -533,13 +612,11 @@ def _stack_effect(ctx: Ctx) -> None:
     stack = ctx.rng.choice(stacks)
     affects = "self" if stack.owner == "self" else "enemies"
     if ctx.chance(rules.builder_permille):
-        amounts = tuple(range(1, min(stack.max, rules.max_amount) + 1))
         spec: dict[str, Any] = {"type": "add_stack", "stack": stack.id, "affects": affects}
-        ctx.add(spec, (("amount", amounts, ctx.rules.structure.knob_weight_other),))
+        ctx.add_knobbed(spec)
         return
-    ladder = tuple(range(rules.per_stack.start, rules.per_stack.stop, rules.per_stack.step))
     spec = {"type": "consume_stack", "stack": stack.id, "affects": affects}
-    ctx.add(spec, (("per_stack_permille", ladder, ctx.rules.structure.knob_weight_other),))
+    ctx.add_knobbed(spec)
     if stack.owner == "self" and ctx.chance(rules.required_permille):
         ctx.required_stacks = ctx.rng.randint(1, min(stack.max, rules.max_required_stacks))
 
