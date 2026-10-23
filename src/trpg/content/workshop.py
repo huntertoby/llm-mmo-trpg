@@ -15,7 +15,13 @@ from trpg.content.maps import TRAINING_ARCHETYPE, MapDef
 from trpg.content.schemas import ContentModel
 from trpg.shared.types import Team
 
-__all__ = ["WorkshopOpponents", "WorkshopRules", "workshop_problems"]
+__all__ = [
+    "WorkshopOpponents",
+    "WorkshopRules",
+    "WorkshopTextEntry",
+    "WorkshopTextTable",
+    "workshop_problems",
+]
 
 
 class WorkshopOpponents(ContentModel):
@@ -72,3 +78,50 @@ def workshop_problems(
     if len(map_def.start_zones[Team.ENEMY]) < most:
         problems.append(f"地圖 {rules.map} 的敵方起始區放不下 {most} 名敵人")
     return problems
+
+
+class WorkshopTextEntry(ContentModel):
+    """玩法 PM 改寫的一筆工坊說明（3-48f）：source＝程式裡的原文，player＝玩家語氣。"""
+
+    id: str = Field(min_length=1)
+    """來源檔的編號（例：``原語.zone``、``工坊.effects.effects=push``），只供對照。"""
+    source: str = Field(min_length=1)
+    player: str = Field(min_length=1)
+    scope: str | None = None
+    """同一段原文在不同欄位要用不同說法時填欄位範圍（例 add_stack.stack）。"""
+
+
+class WorkshopTextTable(ContentModel):
+    """``content/workshop_text.yaml``：工坊說明的玩家語氣對照表。玩家模式顯示 ``player``，
+    ``?dev=1`` 顯示原文 ``source``。程式依原文（與選填的欄位範圍）查表；沒有對到的說明維持
+    3-48c 的程式化處理。"""
+
+    texts: tuple[WorkshopTextEntry, ...] = ()
+
+    @model_validator(mode="after")
+    def _consistent(self) -> WorkshopTextTable:
+        seen: dict[tuple[str, str | None], str] = {}
+        by_text: dict[str, set[str]] = {}
+        for entry in self.texts:
+            key = (entry.source, entry.scope)
+            if key in seen and seen[key] != entry.player:
+                raise ValueError(f"同一段原文與範圍有兩種玩家語氣：{entry.id}")
+            seen[key] = entry.player
+            if entry.scope is None:
+                by_text.setdefault(entry.source, set()).add(entry.player)
+        clashing = sorted(t[:20] for t, p in by_text.items() if len(p) > 1)
+        if clashing:
+            raise ValueError(f"原文相同但玩家語氣不同，需要填 scope：{'、'.join(clashing)}")
+        return self
+
+    def lookup(self, source: str, scope: str | None = None) -> str | None:
+        """原文對應的玩家語氣；先找指定範圍，再找不分範圍的。"""
+        plain: str | None = None
+        for entry in self.texts:
+            if entry.source != source:
+                continue
+            if scope is not None and entry.scope == scope:
+                return entry.player
+            if entry.scope is None:
+                plain = entry.player
+        return plain

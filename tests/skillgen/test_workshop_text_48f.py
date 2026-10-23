@@ -1,0 +1,92 @@
+"""Phase 3-48f：玩法 PM 改寫的工坊說明（content/workshop_text.yaml）套用到玩家模式。"""
+
+from __future__ import annotations
+
+import pytest
+from pydantic import ValidationError
+
+from tests.engine.helpers import library
+from trpg.content.workshop import WorkshopTextEntry, WorkshopTextTable
+from trpg.skillgen.option_models import FieldSpec
+from trpg.skillgen.option_player import content_dev_texts, option_dev_texts
+from trpg.skillgen.options import draft_options
+from trpg.skillgen.random_composer import ComposeError, compose_random_skill
+
+LIB = library()
+TABLE = LIB.workshop_text
+
+
+def _walk(fields: tuple[FieldSpec, ...]) -> list[FieldSpec]:
+    out: list[FieldSpec] = []
+    for f in fields:
+        out.append(f)
+        out += _walk(f.fields)
+        for c in f.choices:
+            out += _walk(c.params)
+    return out
+
+
+def _all_dev_texts() -> dict[str, str]:
+    rows = dict(content_dev_texts(LIB))
+    drafts: list[dict[str, object]] = [{}]
+    for seed, skeleton in enumerate(sorted(LIB.skeletons), start=1):
+        try:
+            skill = compose_random_skill(seed, skeleton=skeleton, library=LIB)
+        except ComposeError:
+            continue
+        full = skill.model_dump(mode="json", exclude_none=True)
+        for drop in ((), ("effects", "cost", "rarity", "condition", "followup")):
+            drafts.append({k: v for k, v in full.items() if k not in drop})
+    for draft in drafts:
+        for step in draft_options(draft, LIB).steps:
+            rows.update(option_dev_texts({step.id: step.fields}))
+    return rows
+
+
+def test_table_has_the_149_rewritten_entries() -> None:
+    assert len(TABLE.texts) == 149
+    assert len({e.id for e in TABLE.texts}) == 149
+
+
+def test_every_dev_text_has_a_player_rewrite_and_every_rewrite_is_used() -> None:
+    rows = _all_dev_texts()
+    sources = {e.source for e in TABLE.texts}
+    assert sorted({t for t in rows.values() if t not in sources}) == []
+    assert sorted(sources - set(rows.values())) == []
+
+
+def test_player_mode_shows_the_rewrite_and_dev_mode_keeps_the_original() -> None:
+    skill = compose_random_skill(1, skeleton="strike", library=LIB)
+    draft = skill.model_dump(mode="json", exclude_none=True)
+    found = 0
+    for step in draft_options(draft, LIB).steps:
+        for f in _walk(step.fields):
+            for text, dev in [(f.description_zh, f.dev_description_zh)] + [
+                (c.description_zh, c.dev_description_zh) for c in f.choices
+            ]:
+                if dev:
+                    found += 1
+                    assert text == TABLE.lookup(dev, None) or TABLE.lookup(dev, None) is None
+                    assert text != dev
+    assert found > 0
+
+
+def test_same_source_different_scope_texts() -> None:
+    assert TABLE.lookup("層數 ID（stacks.yaml）", "add_stack.stack") == "要累積哪一種層數。"
+    assert TABLE.lookup("層數 ID（stacks.yaml）", "consume_stack.stack") == "要消耗哪一種層數。"
+    assert TABLE.lookup("層數 ID（stacks.yaml）", "other.stack") is None
+
+
+def test_clashing_texts_need_a_scope() -> None:
+    a = WorkshopTextEntry(id="a", source="x", player="1")
+    b = WorkshopTextEntry(id="b", source="x", player="2")
+    with pytest.raises(ValidationError):
+        WorkshopTextTable(texts=(a, b))
+    scoped = WorkshopTextEntry(id="b", source="x", player="2", scope="f.g")
+    assert WorkshopTextTable(texts=(a, scoped)).lookup("x", "f.g") == "2"
+
+
+def test_rewritten_texts_do_not_leak_internal_ids() -> None:
+    for entry in TABLE.texts:
+        assert "‰" not in entry.player or entry.id.startswith("工坊") or entry.id.startswith("原語")
+        assert ".yaml" not in entry.player

@@ -135,6 +135,10 @@ class FieldSpec(_Model):
     min_count: int | None = None
     max_count: int | None = None
     default: str | int | bool | None = None
+    display: Literal["multiplier", "percent"] | None = None
+    """玩家看到的數值格式（內部仍存千分比）：``multiplier``＝倍率（2000 顯示 ×2）、
+    ``percent``＝百分比
+    （250 顯示 25%）。前端依此換算顯示與輸入（3-48f）。"""
     plain_value: bool = False
     """單選欄位的值一律是純值（不是 ``{"type": ...}`` 物件），即使欄位名在 ``OBJECT_CHOICE_FIELDS``
     裡（例：陷阱的觸發範圍 ``trap.shape`` 是形狀 ID 字串，不是技能的形狀物件；3-48c 後修）。"""

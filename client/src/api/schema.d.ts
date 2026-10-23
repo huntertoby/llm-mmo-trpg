@@ -1833,6 +1833,8 @@ export interface components {
             max_count?: number | null;
             /** Default */
             default?: string | number | boolean | null;
+            /** Display */
+            display?: ("multiplier" | "percent") | null;
             /**
              * Plain Value
              * @default false

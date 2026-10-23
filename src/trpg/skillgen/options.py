@@ -827,7 +827,40 @@ def _effects_step(draft: Draft, library: ContentLibrary, skeleton: SkeletonDef) 
     ]
     if any(c.value == "place_trap" for c in choices):
         fields.append(_trap_field(library))
-    return _step("effects", draft, library, tuple(fields), _effects_notes(skeleton, library))
+    notes = (*_effects_notes(skeleton, library), *_rune_hint(draft, library))
+    return _step("effects", draft, library, tuple(fields), notes)
+
+
+RUNE_HINT_ZH = (
+    "符文本身沒有效果。想要站上去就有效果，請用持續區域；"
+    "或加一招讀取符文（目標站在自己的符文上）的技能。"
+)
+"""草稿有刻印、又給友方增益，卻沒有任何讀取符文的條件時的提示（3-48f，玩法決定 #51）。"""
+
+
+def _rune_hint(draft: Draft, library: ContentLibrary) -> tuple[str, ...]:
+    effects = [e for e in draft.get("effects") or () if isinstance(e, Mapping)]
+    if not any(e.get("type") == "inscribe" for e in effects):
+        return ()
+    statuses = library.ruleset.statuses.by_id()
+
+    def buff_for_allies(effect: Mapping[str, Any]) -> bool:
+        if effect.get("affects") not in ("allies", "all") or effect.get("type") == "inscribe":
+            return False
+        if effect.get("type") == "apply_status":
+            status = statuses.get(str(effect.get("status")))
+            return status is not None and status.beneficial
+        return effect.get("type") in ("shield", "heal", "grant_ap", "cheat_death", "cleanse")
+
+    def reads_runes(effect: Mapping[str, Any]) -> bool:
+        return effect.get("type") == "detonate_runes" or (
+            _mapping(effect.get("condition")).get("type") == "on_own_rune"
+        )
+
+    top = _mapping(draft.get("condition")).get("type") == "on_own_rune"
+    if top or any(reads_runes(e) for e in effects):
+        return ()
+    return (RUNE_HINT_ZH,) if any(buff_for_allies(e) for e in effects) else ()
 
 
 def _change_field(name: str, library: ContentLibrary, category: str | None) -> FieldSpec:

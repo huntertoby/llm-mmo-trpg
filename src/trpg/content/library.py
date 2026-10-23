@@ -107,7 +107,7 @@ from trpg.content.skills import (
 from trpg.content.stacks import StackDef, StackTable
 from trpg.content.summons import SummonDef, SummonTable, load_summon_looks
 from trpg.content.weapon_params import set_weapon_param
-from trpg.content.workshop import WorkshopRules, workshop_problems
+from trpg.content.workshop import WorkshopRules, WorkshopTextTable, workshop_problems
 from trpg.shared.errors import ContentError
 from trpg.shared.types import Attribute, Surface
 
@@ -468,6 +468,8 @@ class ContentLibrary:
     """開發者起始包（``dev_starters.yaml``，Phase 3-24b2；不是設計規則，玩家介面不顯示）。"""
     evolution: EvolutionTable = field(default_factory=EvolutionTable)
     """3 級分歧進化的模板（``skill_evolution.yaml``，Phase 3-26b）。"""
+    workshop_text: WorkshopTextTable = field(default_factory=WorkshopTextTable)
+    """工坊說明的玩家語氣對照表（``workshop_text.yaml``，Phase 3-48f）；不屬於規則。"""
     skill_scaling: SkillScalingRules = field(
         default_factory=lambda: SkillScalingRules.model_construct(
             spell_themes=(), body_attrs=(), overrides=()
@@ -593,6 +595,7 @@ def load_library(  # noqa: PLR0915
     rule_changes = load("rule_changes.yaml", RuleChangeTable)
     roguelite = load("roguelite.yaml", RunRules)
     workshop = load("workshop.yaml", WorkshopRules)
+    workshop_text = load("workshop_text.yaml", WorkshopTextTable)
     equipment_rules = load("rules/equipment.yaml", EquipmentRules)
     affix_table = load("affixes.yaml", AffixTable)
     item_table = load("items.yaml", ItemTable)
@@ -735,6 +738,7 @@ def load_library(  # noqa: PLR0915
         skeletons=skeletons,
         roguelite=roguelite,
         workshop=workshop,
+        workshop_text=workshop_text,
         affixes=affixes,
         offhands=offhand_map,
         items=items,

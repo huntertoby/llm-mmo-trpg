@@ -95,6 +95,7 @@ def validate_skill(skill: SkillDef, library: ContentLibrary) -> list[Violation]:
     if least is not None:
         out.append(Violation(skill.id, "cap.min_cost", least))
     out += _rune_tag_violations(skill, library)
+    out += _on_kill_status_violations(skill, library)
     weapon = _weapon_scaling_violations(skill, library)
     out += weapon + _scaling_range_violations(skill, library, already=bool(weapon))
     return [*out, *_structure_violations(skill, library), *_keyword_violations(skill, library)]
@@ -114,6 +115,26 @@ def _rune_tag_violations(skill: SkillDef, library: ContentLibrary) -> list[Viola
         for effect in skill.iter_effects(include_followup=True)
         if effect.type == "inscribe" and effect.tag is not None and effect.tag not in runes
     ]
+
+
+def _on_kill_status_violations(skill: SkillDef, library: ContentLibrary) -> list[Violation]:
+    """``on_kill.beneficial``（3-48f，06 6.18）：擊殺時效果一律作用在施放者自己身上，施加的狀態
+    只能是有益狀態（工坊已只列有益狀態；LLM 提議與 YAML 匯入也在這裡擋下）。"""
+    statuses = library.ruleset.statuses.by_id()
+    out: list[Violation] = []
+    for effect in skill.iter_effects(include_followup=True):
+        for sub in effect.on_kill or ():
+            status = statuses.get(sub.status) if sub.type == "apply_status" and sub.status else None
+            if status is not None and not status.beneficial:
+                out.append(
+                    Violation(
+                        skill.id,
+                        "on_kill.beneficial",
+                        f"擊殺時效果會作用在你自己身上，只能施加有益的狀態；"
+                        f"「{status.name_zh}」是負面狀態",
+                    )
+                )
+    return out
 
 
 def _weapon_scaling_violations(skill: SkillDef, library: ContentLibrary) -> list[Violation]:

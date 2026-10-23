@@ -4446,6 +4446,21 @@
             ],
             "title": "Default"
           },
+          "display": {
+            "anyOf": [
+              {
+                "type": "string",
+                "enum": [
+                  "multiplier",
+                  "percent"
+                ]
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Display"
+          },
           "plain_value": {
             "type": "boolean",
             "title": "Plain Value",
