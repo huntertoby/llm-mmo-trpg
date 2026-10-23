@@ -2,6 +2,29 @@
 // 規則的裁決在伺服器（沿用引擎的驗證函式）；這裡只做同樣規則的即時提示（讓人不必等請求就看到原因），
 // 兩邊的中文原因用語盡量一致。
 import type { GearAffixInfo, GearCatalog, GearChoice, GearItemInfo, GearTotalView } from "../api/types";
+import type { GearLook } from "../render/gearIcon";
+
+/** 武器大類（`melee`／`ranged`／`focus`）的中文；用目錄裡武器帶的中文名，不寫死。 */
+export function weaponClassZh(catalog: GearCatalog, weaponClass: string): string {
+  return catalog.weapons.find((w) => w.weapon_class === weaponClass)?.weapon_class_zh ?? "指定類型的武器";
+}
+
+/** 武器下拉選項的玩家文字：「冰霜法杖（法器・雙手）」，不露英文代號。 */
+export function weaponOptionText(w: GearCatalog["weapons"][number]): string {
+  return `${w.name_zh}（${w.weapon_class_zh}${w.two_handed ? "・雙手" : ""}）`;
+}
+
+/**
+ * 手動組裝的預覽圖示（只影響圖示）：明確選了外觀造型就用它；否則「依欄位預設」——選了武器時依
+ * 武器的外觀（`weapons.yaml` 的 `look`），沒選武器才交給欄位（`GearIcon` 的 `slot`）。
+ */
+export function draftLook(draft: CustomDraft, catalog: GearCatalog): GearLook & { rarity: string } {
+  const rarity = draft.legendary ? "legendary" : "common";
+  if (draft.kind !== "") return { kind: draft.kind, rarity };
+  const look = draft.weapon === "" ? undefined : catalog.weapons.find((w) => w.id === draft.weapon)?.look;
+  if (look == null) return { kind: null, rarity };
+  return { kind: look.kind, form: look.form ?? null, material: look.material, rarity };
+}
 
 /** 手動組的物品（草稿）。 */
 export interface CustomDraft {
@@ -66,13 +89,13 @@ function draftTags(draft: CustomDraft): string[] {
 /** 這條詞條能不能掛在這件物品上；不能時回傳原因（與引擎的 `_affix_slot_problems` 同規則）。 */
 export function affixBlocked(info: GearAffixInfo, slotType: string, draft: CustomDraft, catalog: GearCatalog): string | null {
   if (!info.slot_types.includes(slotType as GearAffixInfo["slot_types"][number])) {
-    return `不能出現在${catalog.slots.find((s) => s.slot_type === slotType)?.slot_type_zh ?? slotType}`;
+    return `不能出現在${catalog.slots.find((s) => s.slot_type === slotType)?.slot_type_zh ?? "這個欄位"}`;
   }
   const weapon = catalog.weapons.find((w) => w.id === draft.weapon);
   if (slotType === "weapon") {
     if (info.weapons.length > 0 && !info.weapons.includes(draft.weapon)) return "只能出現在特定武器上";
     if (info.weapon_class != null && weapon !== undefined && weapon.weapon_class !== info.weapon_class) {
-      return `只能出現在 ${info.weapon_class} 類武器上`;
+      return `只能出現在${weaponClassZh(catalog, info.weapon_class)}上`;
     }
   }
   const needed = info.item_tags?.[slotType] ?? [];
@@ -95,7 +118,7 @@ export function draftProblems(draft: CustomDraft, slotType: string, catalog: Gea
   for (const pick of draft.affixes) {
     const info = catalog.affixes.find((a) => a.id === pick.affix);
     if (info === undefined) {
-      problems.push(`${name}：詞條 ${pick.affix} 不在白名單`);
+      problems.push(`${name}：有不在白名單的詞條`);
       continue;
     }
     const label = info.name_zh.replace("{n}", "N");
