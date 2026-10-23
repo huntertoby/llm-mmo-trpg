@@ -1,0 +1,23 @@
+# 臨時附魔（Phase 3I-6 示範，玩法決定 #52，數值為初值，未經模擬）：把神聖之力灌進同伴的武器，他的普攻與沒有自己元素的武器技改成神聖傷害。
+id: skill_holy_weapon
+schema_version: 1
+name_zh: 神聖武器
+tier: 1
+rank: 1
+rarity: rare
+kind: active
+skeleton: aura
+category: spell
+weapon_req: any
+ap_cost: 1
+scaling_attr: wis
+shape: {type: single, range: 4}
+effects:
+  - {type: apply_status, status: infused_holy, affects: allies}
+condition: null
+cost: {mana: 4, cooldown: 2}
+tags: [holy, spell, buff, support]
+narrative:
+  concept: 把聖光灌進同伴的武器，讓他的每一擊都帶著審判
+  cast_flavor: 你的手掌按上同伴的武器，一道白光沿著刃面流過，嗡嗡作響
+provenance: {origin: builtin, owner_id: null, created_by: null, parents: [], bound: true, tradeable: false}

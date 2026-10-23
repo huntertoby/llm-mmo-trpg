@@ -1082,6 +1082,42 @@
     "受到的骰值傷害（不含墜落、致命地形等百分比傷害） ×75%",
     "回合開始時的移動點數（無條件捨去） ×50%"
    ]
+  },
+  {
+   "id": "infused_fire",
+   "name_zh": "火焰附魔",
+   "description_zh": "普攻與沒有自己元素的武器技，物理傷害改成火焰（可點燃油與易燃物）；與其他附魔不並存，後施放的覆蓋先施放的。",
+   "tags": [
+    "beneficial"
+   ],
+   "status_look": {
+    "polarity": "buff",
+    "control_group": null,
+    "dot_element": null,
+    "skip_turn": false,
+    "removed_by_element": [],
+    "absorbs_damage": false,
+    "prevents_move": false
+   },
+   "rules_zh": []
+  },
+  {
+   "id": "infused_holy",
+   "name_zh": "神聖附魔",
+   "description_zh": "普攻與沒有自己元素的武器技，物理傷害改成神聖；與其他附魔不並存，後施放的覆蓋先施放的。",
+   "tags": [
+    "beneficial"
+   ],
+   "status_look": {
+    "polarity": "buff",
+    "control_group": null,
+    "dot_element": null,
+    "skip_turn": false,
+    "removed_by_element": [],
+    "absorbs_damage": false,
+    "prevents_move": false
+   },
+   "rules_zh": []
   }
  ],
  "stacks": [

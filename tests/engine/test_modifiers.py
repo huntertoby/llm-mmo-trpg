@@ -303,7 +303,11 @@ def test_add_element_does_not_override_an_existing_element() -> None:
     state = arena(["skill_thunder_hand"], hero="hero_mage", weapon="fire_staff", foes=[(4, 2)])
     hero = state.units[U1]
     assert mods.damage_element(state, hero, mods.ATTACK, Element.FIRE) is Element.FIRE
-    assert mods.damage_element(state, hero, mods.ATTACK, Element.PHYSICAL) is Element.LIGHTNING
+    plain_state = arena(["skill_thunder_hand"], foes=[(4, 2)])  # 物理武器：修正規則才生效
+    plain = plain_state.units[U1]
+    assert (
+        mods.damage_element(plain_state, plain, mods.ATTACK, Element.PHYSICAL) is Element.LIGHTNING
+    )
 
 
 # ---------------------------------------------------------------------------

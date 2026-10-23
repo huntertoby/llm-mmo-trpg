@@ -25,6 +25,7 @@ from trpg.content.equipment import (
 from trpg.content.maps import Objective
 from trpg.content.skills import CHARGING, TIME_BOMB
 from trpg.content.slots import SLOT_ZH
+from trpg.engine.attack_element import effective_attack_element
 from trpg.engine.bombs import bomb_spec
 from trpg.engine.delayed import charge_infos
 from trpg.engine.gear_state import GearAffix, GearState
@@ -344,6 +345,9 @@ class UnitView(_ViewModel):
     """待施放的灌注技能的名稱。"""
     infused: bool = False
     """本輪已被灌注過（Phase 3-33d；每隻每輪最多灌注 1 次）。"""
+    attack_element: str | None = None
+    """目前生效的普攻元素（Phase 3I-6；附魔 ＞ 普攻附加 ＞ 武器元素詞條 ＞ 武器本身）；物理為
+    ``None``。前端紙娃娃的主手改用這個元素色。"""
     doll_look: DollLook | None = None
     """紙娃娃外觀（Phase 3E-2e，頭身手腳披風、膚色髮型）；範本沒有外觀資料時為 ``None``（前端依陣營
     退回預設外觀）。主手由 glossary 的武器外觀表決定。"""
@@ -752,6 +756,11 @@ def _offhand_lines(state: BattleState, unit: UnitState) -> tuple[str, ...]:
     )
 
 
+def _attack_element_name(state: BattleState, unit: UnitState) -> str | None:
+    element = effective_attack_element(state.ruleset, unit, is_basic=True)
+    return None if element is Element.PHYSICAL else element.value
+
+
 def _unit_view(state: BattleState, unit: UnitState, team: Team) -> UnitView:
     infused = unit.infused_skill if unit.alive else None
     return UnitView(
@@ -816,6 +825,7 @@ def _unit_view(state: BattleState, unit: UnitState, team: Team) -> UnitView:
         if infused is None
         else state.ruleset.skill_def(infused.skill_id).name_zh,
         infused=unit.is_summon and unit.infused_round == state.round,
+        attack_element=_attack_element_name(state, unit),
         doll_look=unit.doll,
         summon_look=_summon_look(state, unit),
         infusion_options=_infusion_views(state, unit) if unit.team is team else (),

@@ -29,6 +29,7 @@ keywords:
       - {effect: summon, unit: summon_fire_spirit}   # 3-33e1：召喚物的固有關鍵字
       - {effect: summon, unit: summon_bomb_puppet}   # 3-33e2a：召喚物的固有關鍵字
       - {effect: apply_status, status: burning}
+      - {effect: apply_status, status: infused_fire}   # 3I-6：火焰附魔讓普攻帶火
       - {effect: damage, element: fire}
       - {effect: create_surface, surface: fire}
       - {effect: create_surface, surface: oil}
@@ -61,6 +62,7 @@ keywords:
       - {effect: heal, grade: provisional}   # 暫定（玩法 PM 2026-10-23：沒有直接的規則連動，卡上不顯示；要不要補真的機制記在玩法待辦）：潮濕表面治療（08 8.21.4.2）——治療、護盾、淨化類技能利用潮濕
       - {effect: shield, grade: provisional}
       - {effect: cleanse, grade: provisional}
+      - {effect: apply_status, status: infused_holy, grade: provisional}   # 暫定（3I-6）：神聖附魔，同神聖傷害
       - {effect: damage, element: holy, grade: provisional}   # 暫定：神聖傷害（聖水、雙效治療）；玩法 PM 2026-10-23 改暫定
       - {change: allow_self_target, grade: provisional}   # 暫定：治療類修正（套用在治療技能上）；玩法 PM 2026-10-23 改暫定
       - {change: shape_to, grade: provisional}

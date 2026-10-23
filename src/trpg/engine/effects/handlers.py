@@ -658,6 +658,22 @@ def apply_status(ctx: Ctx, effect: ApplyStatusEffect) -> list[EventBase]:
                 events.append(
                     ctx.emit(StatusRemoved, target_id=unit.id, status_id=old, reason="replaced")
                 )
+    if definition.attack_element is not None:  # 同時只能有一個附魔：後施放的覆蓋先施放的（3I-6）
+        for other in unit.statuses:
+            if (
+                other.status_id != status_id
+                and ctx.rules.status_def(other.status_id).attack_element is not None
+            ):
+                unit.statuses = [s for s in unit.statuses if s.status_id != other.status_id]
+                events.append(
+                    ctx.emit(
+                        StatusRemoved,
+                        target_id=unit.id,
+                        status_id=other.status_id,
+                        reason="replaced",
+                    )
+                )
+                break
     # 重複施加：不疊加，剩餘回合取較長者（None＝永久最長），見 docs/design/06-技能.md 6.6
     if (
         existing is not None

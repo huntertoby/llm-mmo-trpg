@@ -4552,6 +4552,8 @@ export interface components {
              * @default false
              */
             infused: boolean;
+            /** Attack Element */
+            attack_element?: string | null;
             doll_look?: components["schemas"]["DollLook"] | null;
             summon_look?: components["schemas"]["SummonLookView"] | null;
             /**

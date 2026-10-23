@@ -749,6 +749,12 @@ class StatusDef(ContentModel):
 
     - ``defense_break``：破甲——帶有者的防禦值降低 ``StatusInstance.amount``‰（武器的
       ``armor_break`` 施加時帶入；``amount`` 省略時為 100‰）；多個破甲取最大的一個，不疊加。
+
+    Phase 3I-6 的欄位：
+
+    - ``attack_element``：攻擊元素（臨時附魔）——帶有者的普攻與沒有自己元素的武器技，物理傷害改成這個
+      元素（優先順序見 :mod:`trpg.engine.attack_element`）。同時只會有一個這種狀態：施加新的會先移除
+      舊的（原因 ``replaced``，後施放的覆蓋先施放的）。
     """
 
     id: str = Field(pattern=ID_PATTERN)
@@ -772,6 +778,7 @@ class StatusDef(ContentModel):
     redirects_damage: bool = False
     prevents_concealment: bool = False
     defense_break: bool = False
+    attack_element: Element | None = None
     attack_bonus: int = Field(default=0, ge=0, le=10)
     move_permille: int = Field(default=1000, ge=0, le=10000)
     move_reduction: bool = False
@@ -795,6 +802,8 @@ class StatusDef(ContentModel):
             raise ValueError(f"狀態 {self.id}：polarity: debuff 不可 beneficial: true")
         if self.stance and (self.expires != "never" or self.duration is not None):
             raise ValueError(f"狀態 {self.id}：姿態（stance）必須 expires: never 且不設 duration")
+        if self.attack_element is Element.PHYSICAL:
+            raise ValueError(f"狀態 {self.id}：attack_element 不能是 physical")
         if self.control_group is not None and self.save_attr is None:
             raise ValueError(f"狀態 {self.id}：有 control_group 的狀態必須設定 save_attr")
         if self.expires == "turn_end" and self.duration is None:

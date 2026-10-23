@@ -77,6 +77,9 @@ _POOL_ONLY = frozenset(
         "skill_pinning_shot",
         "skill_veiled_shot",
         "skill_glacier_offering",
+        # 3I-6：臨時附魔的示範技能（由池給出）
+        "skill_fire_enchant",
+        "skill_holy_weapon",
         # 3-31：普攻符文的修正型被動（不是起始技能；由升級候選與戰利品給出，尚無 build 裝備）
         "skill_rune_sight",
         "skill_rune_breaker",
