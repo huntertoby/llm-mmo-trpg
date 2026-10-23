@@ -2100,7 +2100,8 @@ PM 驗收後請使用者試玩一整輪（`docs/專案計畫.md` 第 14 節 🎮
    - 守護符陣（被動）：回合開始時，2 格內站在你符文上的友方獲得護盾。
    - 進攻向（開發 PM 定）：**敵人站在你的符文上時，你對他施加緩速**（控制類，和守護符陣的防守向對稱；若緩速組不出來，改為技能傷害提高）。
 3. 行為一致測試：友方／敵方站在符文上與不站在符文上，效果有／沒有觸發；卡片文字與實戰一致。
-4. 驗收：pytest（content、skillgen、engine、narrative、cli 含 slow）、ruff、format、mypy、一場重播。報告 `Phase3-48f報告.md`。
+3a. **套用玩法 PM 改寫的工坊說明**（149 筆）：`C:\Users\tobby\AppData\Local\Claude-Data\claude_pzs8sxrjxfjjc\side-session-notes\local_46ffc72c-28dd-48aa-9eb7-f1724ef32432\workshop_descriptions_rewritten.csv`（三欄：id、原文、玩家語氣）。玩家模式顯示「玩家語氣」，開發者模式照舊顯示原文；資料放進 `content/`（例如原語與選項的 `player_description`，或一份對照表 YAML），程式不要讀共用資料夾；數值與對象照 3-48c 的 `option_player.py` 由程式補。預算公式不在說明裡，改在預算面板顯示（已有就確認）。**句子和實際規則對不上的，列表交玩法 PM，不要改寫規則或句子**。`test_player_text.py` 涵蓋新文字。
+4. 驗收：pytest（content、skillgen、engine、narrative、api、cli 含 slow）、vitest、build、ruff、format、mypy、一場重播。報告 `Phase3-48f報告.md`。
 
 ## 57. Phase 3-48g｜裝備分頁：屬性詞條可換屬性＋成對武器勾選（使用者：「現在其他屬性是還沒做好嗎 為什麼不能選屬性」；sonnet；約 0.1 段；3-48e 之後）
 
@@ -2139,6 +2140,7 @@ PM 驗收後請使用者試玩一整輪（`docs/專案計畫.md` 第 14 節 🎮
 5. 「自暈換保命」→ 使用者已決定（#54），在 **3-50** 做，這段不做。
 5a. ~~關鍵字顯示（#54）~~ → 移到 **3-51**。
 5b. **放置陷阱看不出「踩到後的效果」**（使用者：「為啥不能寫 採到後要受什麼傷害」）：陷阱帶的是同一技能其餘的效果。① 陷阱設定區明確寫「踩到後會結算：下方其他效果」，並列出目前會結算的效果；沒有其他效果時提示「請新增一個效果（例如傷害），它就是踩到後的效果」（並在驗證器／檢查面板同樣說明）；② 技能卡預覽寫成「放置陷阱：敵人踩到時，造成…」（`trpg.narrative` 效果句）；③ 說明缺字（「以陷阱格為中心依 結算」）與英文（delay、trap）照 3-48c 的玩家文字規則補完並列入改寫清單；④ 對象選項：放置陷阱若只作用在格子，照刻印的做法只留格子（驗證器同步，內建技能違反就列出）。
+5c. **錯誤訊息仍是欄位路徑語氣**（專案 PM：陷阱 bug 時稀有度步驟寫「・陷阱.形狀：必須是文字」，沒附「回到第 N 步」，「代價」「效果」步驟仍打勾）：陷阱觸發範圍的格式 bug 已由開發 PM 修好（`b69c78e`，`FieldSpec.plain_value`）；這段要讓 **schema 錯誤**（pydantic 的「必須是文字」「Extra inputs are not permitted」等）也照 `plainify` 改寫成白話，`_with_step_links` 對巢狀欄位（`trap.*`、`followup.*`、`variants.*`）也能找到所屬步驟並附「回到第 N 步」，所屬步驟不打勾。用「把錯誤型別的值塞進每一種欄位」做掃描測試。
 6. 驗收：pytest（skillgen、content、api、narrative、cli 含 slow）、vitest、build、ruff、format、mypy、`test_player_text.py`、排版煙霧檢查。報告 `Phase3-48h報告.md`。
 
 ## 60. Phase 3-50｜代價換強度第一批（玩法決定 #54；使用者：「自暈換護盾 A、第一批代價 A、關鍵字顯示 A，好 寫入」；06 6.5 `4a974b8`；sonnet；約 0.7 段；3-49 之後、3I-3 之前）
