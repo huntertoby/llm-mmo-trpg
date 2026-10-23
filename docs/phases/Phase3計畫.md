@@ -1952,3 +1952,10 @@ PM 驗收後請使用者試玩一整輪（`docs/專案計畫.md` 第 14 節 🎮
 
 兩段依序（3-41a 先），可和 Phase 4 主線平行（一次最多 2 個 agent）。
 - **美術 PM 看過（2026-10-23）**：雲海吊橋實戰 1600×900，點深淵格釘住、移開仍在、Esc 取消；底部提示 12px 淡灰靠右，不用改。
+
+### 45.3 3-41a／b 驗收（2026-10-23）
+
+- 兩段平行，PM 依序合併：3-41b（`2673cb1`）→ 修 `tests/engine` 3 個舊紀錄文字斷言（`20f5120`，agent 沒跑到 engine）→ 3-41a（`1ddf067`；`api/glossary.py` 匯入衝突兩邊保留，OpenAPI／`schema.d.ts`／`glossary.json`／`skill_icons.json` 重產）→ CLI 快照更新（`7023b55`，只有紀錄文字變、重播一致）。合併後 ruff、format、mypy、lint-imports、`tests/api`＋`content`＋`cli`＋`narrative`＋`skillgen`＋`roguelite`＋`engine`＋`llm`＋`test_architecture` 5080、typecheck、vitest 843、`pnpm build` 全過；`swamp` 種子 60 重播一致。**`LOG_FORMAT` `/57` → `/58`**（3-41b：`damage_dealt` 加 `flat`／`scaled_permille`／`scale_attr`／`block_permille`，只供顯示）；3-41a 改了規則包文字 → `ruleset_hash` 變，舊存檔會出現既有的「規則已更新」提示（規則與數值沒變）。
+- 3-41a：召喚物 HP 改由共用函式（`content/summons.py`）計算，17 種與引擎生成值逐一對過（例：骷髏 20→44、石像 24→52）；召喚物資訊小卡（`client/src/ui/SummonInfo.tsx`）；冰靈卡寫「普攻命中時施加緩速 2 回合；普攻命中站在水上的目標時施加冰凍 1 回合」；通用關鍵字標灰＋`reason_zh`、暫定不顯示；`content/skill_tags.yaml` 技能標籤中文名、`skeleton_zh`；217 張卡英文片段 0（白名單「Boss」）；狀態 `rules_zh`（抵抗、控制遞減、Boss 轉換、持續傷害骰、破甲依武器）；詞條名改模板（`content/affix_names.py`）、血痕正確、「火槍站定」「火槍的貼臉懲罰減半」。報告 `Phase3-41a報告.md`。
+- 3-41b：地形卡用詞與物件 HP、薄冰「薄」；武器顯示名「火槍」（id `longgun`）、單手／雙手、近戰共用背刺行；勝利條件由 `narrative/action_info.py` 產生經 glossary `objectives`；環境預告滑過標格；戰鬥紀錄傷害分項、格擋與加成分開、判定「需 ≥ 11」、攻防修正、耐力說明；開局關鍵字三條改寫；「更多動作」每項浮動卡、按鈕數字取自 glossary `actions`、營火說明取自 run 的 `resource_rule_zh`、複製施法不顯示技能 ID。報告 `Phase3-41b報告.md`。
+- 待決定：3-41b #1～#8 → 接受（10.3 用「需 ≥ 11」比清單正確；`/api/rules` 不存在改用 glossary；勝利條件文字靠測試與引擎一致；HUD 彈匣與隊友數仍手寫，記為後續）。3-41a 沒做的：5.6 列出持有者擁有的技能（glossary 是全域資料）、5.3 解鎖動作的句型仍手寫只代入數字 → 接受。3-41a 待決 #1～#6（淨化移除全部不利狀態、潮濕的通用歸類、層數說明框、召喚物 HP 以 1 級計、行為欄文字、其他寫死數字的狀態說明）→ **交玩法 PM 抽查時一併決定**。
