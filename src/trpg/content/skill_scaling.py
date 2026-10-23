@@ -114,6 +114,9 @@ class ScalingFacts:
         )
 
 
+_NESTED_GROUPS = ("then", "win", "lose", "effects")
+
+
 class ScalingTheme(ContentModel):
     """一個法術主題。效果訊號（原語、元素、表面、狀態）決定主題；標籤（``tags_any``，且沒有
     ``tags_none``）只在每個效果都沒有訊號時才看。"""
@@ -148,7 +151,8 @@ class ScalingTheme(ContentModel):
         return bool(tags & set(self.tags_any))
 
     def matches_effect(self, effect: Any) -> bool:
-        """一個效果（含 ``consume_status`` 的 ``then``）帶有這個主題的訊號。召喚物自帶的元素
+        """一個效果（含巢狀的子效果：``then``、賭注的 ``win``／``lose``、區域的 ``effects``；
+        3-48d 起工坊可以組出這些）帶有這個主題的訊號。召喚物自帶的元素
         不算（``summon`` 效果本身沒有 ``element``）。"""
         if _text(_get(effect, "type")) in self.effect_types_any:
             return True
@@ -159,7 +163,9 @@ class ScalingTheme(ContentModel):
             return True
         if _text(_get(effect, "status")) in self.statuses_any:
             return True
-        return any(self.matches_effect(e) for e in _seq(_get(effect, "then")))
+        return any(
+            self.matches_effect(e) for name in _NESTED_GROUPS for e in _seq(_get(effect, name))
+        )
 
 
 class ThemeCombo(ContentModel):
