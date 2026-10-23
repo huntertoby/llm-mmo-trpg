@@ -750,7 +750,14 @@ export function BattleScreen({ initial, onExit, exitLabel, runMode }: Props) {
   );
 
   const onTileClick = useCallback(
-    (tile: Pos) => {
+    (tile: Pos, shift: boolean) => {
+      // 資訊卡釘住（3-40，使用者選 C）：Shift＋左鍵任何格子都釘；沒有動作的格子左鍵點就釘；不是自己的回合時點任何格子都釘。
+      // 已釘住時點同一格取消；有動作的點擊照常行動並關掉釘住的卡。
+      const pin = tileCard.ctl;
+      if (shift) {
+        pin.pinAt(tile);
+        return;
+      }
       if (command !== null && canAct && hero !== null) {
         // 指揮召喚物：點藍格選終點；選好終點後點紅框的敵人 ＝ 移動並攻擊
         if (command.dest !== null) {
@@ -770,6 +777,10 @@ export function BattleScreen({ initial, onExit, exitLabel, runMode }: Props) {
         if (order !== null) issueOrders(withOrder(response.orders, order));
         return;
       }
+      if (!((canAct || copying) && hero !== null)) {
+        pin.pinAt(tile);
+        return;
+      }
       if ((canAct || copying) && hero !== null) {
         if (mode !== null) {
           if (mode.kind === "shove_aside") return; // 撥開要用面板選方向
@@ -787,17 +798,22 @@ export function BattleScreen({ initial, onExit, exitLabel, runMode }: Props) {
           }
           const a = actionAtTile(mode, view, hero, tile);
           if (a !== null) {
+            if (pin.pinned) pin.dismiss();
             if (copying) decideCopy(a);
             else act(a);
             return;
           }
           const why = blockedPushAt(mode, view, tile);
           if (why !== null) setHint(why);
+          else pin.pinAt(tile);
           return;
         }
         const action = actionForClick(classified, view, tile);
         if (action !== null) {
+          if (pin.pinned) pin.dismiss();
           act(action);
+        } else {
+          pin.pinAt(tile);
         }
       }
     },
@@ -815,6 +831,7 @@ export function BattleScreen({ initial, onExit, exitLabel, runMode }: Props) {
       mode,
       orderPick,
       response.orders,
+      tileCard,
       view,
     ],
   );
@@ -1004,6 +1021,7 @@ export function BattleScreen({ initial, onExit, exitLabel, runMode }: Props) {
                 <UnitInfo unit={hoverUnit} names={names} heroId={heroId} skills={skillNames} view={view} />
               )}
               <TileCard sections={tileCardSections} />
+              {!tileCard.ctl.pinned && <div className="muted small tile-pin-hint">左鍵點空格或 Shift＋左鍵可釘住</div>}
             </HoverFloat>
           )}
         </BattleCanvas>

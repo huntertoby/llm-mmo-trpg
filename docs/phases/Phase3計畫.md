@@ -1922,3 +1922,10 @@ PM 驗收後請使用者試玩一整輪（`docs/專案計畫.md` 第 14 節 🎮
 
 - PM 合併（無衝突，`21b34ff`）；ruff、format、mypy、`tests/roguelite`＋`api`＋`cli`＋`test_architecture` 527、typecheck、vitest 833、`pnpm build` 全過；`run auto --seed 7` 與改動前逐字相同（正式模式不變）。`RunState.test_mode`／`test_equipment`（欄位 → 物品 ID），存檔仍 `trpg-run/5`、舊檔視為正式模式；測試模式勝場後 HP／法力回滿到含裝備的上限；開局畫面「測試模式」勾選＋挑裝備；進度標題、結束摘要、存檔列表有「測試模式」徽章；API `RunResponse.test_mode`、`SaveSummary.test_mode`；CLI `--test-mode`／`--test-equipment`。實機 8011 埠確認。報告 `Phase3-39報告.md`。
 - 待 PM 決定 → 決定：#1 只在勝場回滿（輸了一輪就結束）、#2 `test_equipment` 用欄位對照（戒指兩格）、#3 回滿到含裝備上限（Phase 5 再統一「上限是否含裝備」）、#4 勾選區在一般開局畫面也看得到（使用者要用它測試，不藏到 `?dev=1`）、#5 只支援武器＋關鍵字開局與內容庫現有物品 → **接受**。
+
+## 44. Phase 3-40｜左鍵釘住格子資訊卡（使用者 2026-10-23 選 C；暫停中的例外，PM 小修）
+
+使用者原話：「現在戰場地形 腳色字卡是滑鼠往左滑會可以常駐顯示 改成按左鍵可以嗎」；PM 給 A／B／C 後選 C：「沒有動作的格子左鍵點就釘，Shift＋左鍵任何格子都能釘，不是我的回合時點任何格子都釘」。
+
+- 做法（PM 自己改，`client/src/ui/hoverCard.ts` 的 `TileCardController.pinAt`、`BattleCanvas` 傳 `shiftKey`、`BattleScreen` 的 `onTileClick`、`useTileCard` 點戰場不在 pointerdown 關卡）：Shift＋左鍵任何格子釘住；沒有動作的格子（包含選了技能時點到非目標格）釘住；不是自己的回合點任何格子釘住；再點同格或 Esc 取消；有動作的點擊照常行動並關卡；點卡片本身釘住照舊；未釘住時卡片底部提示「左鍵點空格或 Shift＋左鍵可釘住」。投擲物件、指揮召喚物、隊友指令的點擊不變。規則記在 `docs/開發PM交接.md` 6.5.1。
+- 驗收：typecheck、vitest 835（新增 `pinAt` 2 項）、`pnpm build`；實機 8011 埠 1600×900：點牆釘住→滑走仍常駐→再點取消；Shift＋點敵人只釘不攻擊、主角狀態不變；Esc 取消；釘住時點可走格照常移動（移動 5→4）並關卡。

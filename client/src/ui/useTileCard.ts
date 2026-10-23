@@ -35,6 +35,7 @@ export function useTileCard(): TileCardApi {
       const t = e.target;
       if (!(t instanceof Element)) return;
       if (cardRef.current?.contains(t) === true || t.closest(".float-card") !== null) return;
+      if (t.closest(".battle-canvas") !== null) return; // 點戰場格子由 BattleScreen 的 onTileClick 處理（3-40）
       ctl.dismiss();
     };
     document.addEventListener("keydown", onKey);

@@ -85,6 +85,33 @@ describe("單位資訊卡：滑過格子", () => {
     expect(c.shown).toEqual(A);
   });
 
+  it("左鍵點格子釘住（3-40）：再點同一格取消，點別格改釘那一格", () => {
+    const c = new TileCardController();
+    c.setHover(A);
+    c.pinAt(A);
+    expect(c.pinned).toBe(true);
+    expect(c.shown).toEqual(A);
+    c.setHover(B);
+    vi.advanceTimersByTime(5000);
+    expect(c.shown).toEqual(A); // 釘住後滑鼠移開不換
+    c.pinAt(B);
+    expect(c.pinned).toBe(true);
+    expect(c.shown).toEqual(B);
+    c.pinAt(B);
+    expect(c.pinned).toBe(false);
+    expect(c.visible).toBe(false);
+  });
+
+  it("釘住沒有內容的格子：不顯示；原本釘住的卡被取消", () => {
+    const c = new TileCardController();
+    c.hasContent = (t) => t.x === A.x && t.y === A.y;
+    c.pinAt(A);
+    expect(c.visible).toBe(true);
+    c.pinAt(B);
+    expect(c.pinned).toBe(false);
+    expect(c.visible).toBe(false);
+  });
+
   it("沒有內容的格子不顯示卡片", () => {
     const c = new TileCardController();
     c.hasContent = (t) => t.x === 1;

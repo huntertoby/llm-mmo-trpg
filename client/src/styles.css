@@ -3382,3 +3382,9 @@ button.selected {
 .run-test-gear.gear-layout {
   grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
 }
+
+/* 資訊卡釘住的操作提示（3-40） */
+.tile-pin-hint {
+  margin-top: 6px;
+  text-align: right;
+}

@@ -15,7 +15,8 @@ interface Props {
   flameOn: boolean;
   /** 畫面上的縮放比例（`fitScale` 算出）。 */
   scale: number;
-  onTileClick(tile: Pos): void;
+  /** ``shift``：按住 Shift 點擊（3-40：釘住資訊卡）。 */
+  onTileClick(tile: Pos, shift: boolean): void;
   onTileHover(tile: Pos | null): void;
   /** 右鍵（取消選取）。 */
   onCancel(): void;
@@ -93,7 +94,7 @@ export function BattleCanvas({ model, highlights, flameOn, scale, onTileClick, o
       onPointerLeave={() => onTileHover(null)}
       onClick={(e) => {
         const tile = tileFromEvent(e, model);
-        if (tile !== null) onTileClick(tile);
+        if (tile !== null) onTileClick(tile, e.shiftKey);
       }}
       onContextMenu={(e) => {
         e.preventDefault();

@@ -97,6 +97,25 @@ export class TileCardController implements Dismissable, Holdable {
     if (this.holds === 0 && !this.overCard && !this.pinned) this.scheduleSwitch();
   }
 
+  /** 左鍵點格子釘住（3-40）：已釘在同一格就取消；釘在別格就改釘這一格；沒有內容的格子只取消。 */
+  pinAt(tile: Pos): void {
+    if (this.pinned && same(this.shown, tile)) {
+      this.dismiss();
+      return;
+    }
+    this.clearTimer();
+    this.hover = tile;
+    this.suppressed = null;
+    if (!this.hasContent(tile)) {
+      if (this.visible) this.dismiss();
+      return;
+    }
+    this.update(() => {
+      this.shown = tile;
+      this.pinned = true;
+    });
+  }
+
   /** Esc、點外面、被另一張卡片取代：全部關掉（滑鼠沒換格子之前不再自己跳出來）。 */
   dismiss(): void {
     this.clearTimer();
