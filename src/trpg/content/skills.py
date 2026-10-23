@@ -138,6 +138,7 @@ __all__ = [
     "Activation",
     "Affects",
     "BasicAction",
+    "CompositionRule",
     "ConditionDef",
     "ConditionSpec",
     "ConditionTable",
@@ -163,12 +164,15 @@ __all__ = [
     "ShapeTable",
     "SkillCost",
     "SkillDef",
+    "SkillRuleError",
     "SkillTable",
     "TrapSpec",
     "TriggerSpec",
     "VariantEffectSwap",
     "VariantSpec",
     "VariantWhen",
+    "composition_rules",
+    "composition_shapes",
     "condition_text",
     "default_affects",
     "granted_skill_problems",
@@ -671,6 +675,20 @@ class PrimitiveDef(ContentModel):
     acts_on: Literal["unit", "tile", "caster"] = "unit"
     allowed_shapes: tuple[str, ...] | None = None
     forbid_affects: tuple[Affects, ...] = ()
+    position: Literal["first", "last"] | None = None
+    """組合規則（Phase 4-L5b）：必須是技能的第一個（``first``）或最後一個（``last``）效果。"""
+    sole_effect: bool = False
+    """組合規則：必須是技能唯一的效果。"""
+    others_affect: Literal["self"] | None = None
+    """組合規則：同一技能的其他效果必須明寫這個 ``affects``（``self``：只作用在施放者）。"""
+    max_per_skill: int | None = Field(default=None, ge=1)
+    """組合規則：一個技能最多幾個這個效果。"""
+    active_only: bool = False
+    """組合規則：只能用在主動技能（``kind: active``）。
+
+    以上五個欄位與 ``allowed_shapes`` 是「原語對整招技能的組合規則」的唯一來源：
+    ``SkillDef`` 的驗證器（:func:`composition_rules`）與 LLM 提議模型（``trpg.skillgen.proposal``）
+    都讀它們。"""
     status: str | None = Field(default=None, pattern=ID_PATTERN)
     """這個原語固定施加的狀態 ID（``statuses.yaml``；Phase 3E-2f）。引擎常數
     :data:`CHEAT_DEATH_STATUS`、:data:`REDIRECT_STATUS`、:data:`TIME_BOMB` 從這裡讀取。"""
@@ -1113,6 +1131,113 @@ def _yaml_ranged_params() -> dict[str, dict[str, PrimitiveParam]]:
     """各原語「範圍只在 YAML」的整數參數（內容資料夾見
     :func:`~trpg.content.loader.default_content_dir`，每個路徑只讀一次）。"""
     return _ranged_params_of(default_content_dir() / "skill_primitives.yaml")
+
+
+@dataclass(frozen=True, slots=True)
+class CompositionRule:
+    """一個原語對整招技能的組合規則（Phase 4-L5b；欄位意義見 :class:`PrimitiveDef`）。"""
+
+    primitive: str
+    allowed_shapes: tuple[str, ...] | None = None
+    position: Literal["first", "last"] | None = None
+    sole_effect: bool = False
+    others_affect: Literal["self"] | None = None
+    max_per_skill: int | None = None
+    active_only: bool = False
+
+    @classmethod
+    def of(cls, primitive: PrimitiveDef) -> CompositionRule:
+        return cls(
+            primitive=primitive.id,
+            allowed_shapes=primitive.allowed_shapes,
+            position=primitive.position,
+            sole_effect=primitive.sole_effect,
+            others_affect=primitive.others_affect,
+            max_per_skill=primitive.max_per_skill,
+            active_only=primitive.active_only,
+        )
+
+    @property
+    def cross_effect(self) -> bool:
+        """有牽涉其他效果的規則（位置、唯一效果、其他效果的對象）。"""
+        return self.position is not None or self.sole_effect or self.others_affect is not None
+
+
+@cache
+def _composition_of(path: Path) -> dict[str, CompositionRule]:
+    if not path.is_file():  # 沒有這個檔的內容資料夾由載入器自己報錯
+        return {}
+    table = load_content_file(path, PrimitiveTable)
+    return {p.id: CompositionRule.of(p) for p in table.primitives}
+
+
+def composition_rules() -> dict[str, CompositionRule]:
+    """各原語的組合規則（``skill_primitives.yaml``，唯一來源；每個路徑只讀一次）。"""
+    return _composition_of(default_content_dir() / "skill_primitives.yaml")
+
+
+def composition_shapes(primitive: str) -> tuple[str, ...]:
+    """原語 YAML 的 ``allowed_shapes``（``SkillDef`` 結構檢查用；沒有限制時為空 tuple）。"""
+    rule = composition_rules().get(primitive)
+    return () if rule is None or rule.allowed_shapes is None else rule.allowed_shapes
+
+
+class SkillRuleError(ValueError):
+    """``SkillDef`` 結構檢查的錯誤，帶出錯的 JSON 路徑（Phase 4-L5b：給 LLM 的回饋可定位）。
+
+    pydantic 會把它包進 ``value_error``，原本的例外留在錯誤的 ``ctx["error"]``。"""
+
+    def __init__(self, message: str, *, path: str = "") -> None:
+        super().__init__(message)
+        self.path = path
+
+
+def _check_composition(kind: str, effects: tuple[EffectSpec, ...]) -> None:
+    """技能頂層效果的組合規則（Phase 4-L5b；資料見 :func:`composition_rules`）：只能用在主動技能、
+    每技能數量上限、唯一的效果、第一個／最後一個、其他效果的對象。形狀限制（``allowed_shapes``）
+    由各原語自己的檢查與跨檔案驗證處理（:func:`skill_problems`）。"""
+    rules = composition_rules()
+    types = [e.type for e in effects]
+    used = [rules[t] for t in dict.fromkeys(types) if t in rules]
+    for rule in used:
+        if rule.active_only and kind != "active":
+            raise SkillRuleError(
+                f"{rule.primitive} 只能用在主動技能，收到 kind: {kind}", path="kind"
+            )
+    moves = [t for t in types if t in SELF_MOVES]
+    if len(moves) > 1 and any(t != "teleport" for t in moves):  # 跨原語的群組規則（留在程式）
+        raise SkillRuleError(
+            f"一個技能最多一個改變自身位置的原語，收到 {'、'.join(moves)}", path="effects"
+        )
+    for rule in used:
+        _check_rule(rule, effects, types)
+
+
+def _check_rule(rule: CompositionRule, effects: tuple[EffectSpec, ...], types: list[str]) -> None:
+    name = rule.primitive
+    where = [i for i, t in enumerate(types) if t == name]
+    if rule.max_per_skill is not None and len(where) > rule.max_per_skill:
+        count = "一個" if rule.max_per_skill == 1 else f" {rule.max_per_skill} 個"
+        raise SkillRuleError(
+            f"一個技能最多{count} {name} 效果", path=f"effects[{where[rule.max_per_skill]}]"
+        )
+    if rule.sole_effect and len(types) != 1:
+        raise SkillRuleError(f"{name} 必須是技能唯一的效果", path="effects")
+    if rule.position == "first" and types[0] != name:
+        raise SkillRuleError(
+            f"{name} 必須是技能的第一個效果（一律最先結算）", path=f"effects[{where[0]}]"
+        )
+    if rule.position == "last" and types[-1] != name:
+        raise SkillRuleError(
+            f"{name} 必須是技能的最後一個效果（一律最後結算）", path=f"effects[{where[-1]}]"
+        )
+    if rule.others_affect is not None:
+        for index, effect in enumerate(effects):
+            if effect.type != name and effect.affects != rule.others_affect:
+                raise SkillRuleError(
+                    f"{name} 以外的效果必須明寫 affects: {rule.others_affect}（只作用在施放者）",
+                    path=f"effects[{index}].affects",
+                )
 
 
 EFFECT_NON_PARAM_FIELDS = frozenset({"type", "affects", "condition"})
@@ -2211,6 +2336,7 @@ class SkillDef(ContentModel):
             raise ValueError(f"{self.kind} 技能的 ap_cost 必須為 null（不花 AP）")
         if self.cost.self_status is not None and self.kind != "active":
             raise ValueError(f"只有主動技能可以有 cost.self_status，收到 kind: {self.kind}")
+        _check_composition(self.kind, self.effects)
         self._check_legendary()
         self._check_copy_skill()
         self._check_hurl_object()
@@ -2465,142 +2591,102 @@ class SkillDef(ContentModel):
             raise ValueError("只有修正型與規則改變型傳說可以寫 activation")
         self._check_rule_change()
 
+    def _require_shape(self, primitive: str, label: str | None = None) -> None:
+        """形狀必須在原語 YAML 的 ``allowed_shapes`` 內（Phase 4-L5b：資料的唯一來源）。"""
+        shapes = composition_shapes(primitive)
+        if shapes and self.shape.type not in shapes:
+            subject = label or f"{primitive} 的"
+            allowed = "、".join(shapes)
+            raise SkillRuleError(
+                f"{subject}形狀必須是 {allowed}，收到 {self.shape.type}", path="shape.type"
+            )
+
     def _check_rule_change(self) -> None:
         """``rule_change``（Phase 3D-6）：主動技能、形狀 ``self``、技能唯一的效果、對象 ``self``，
-        而且是傳說（``activation`` 由 :meth:`_check_legendary` 檢查）。"""
+        而且是傳說（``activation`` 由 :meth:`_check_legendary` 檢查）。主動、唯一效果與形狀的資料在
+        ``skill_primitives.yaml``（:func:`_check_composition`）。"""
         changes = [e for e in self.effects if e.type == RULE_CHANGE]
         if not changes:
             return
-        if self.kind != "active":
-            raise ValueError(f"rule_change 只能用在主動技能，收到 kind: {self.kind}")
         if self.rarity != "legendary":
             raise ValueError(f"rule_change 只能用在傳說技能，收到稀有度 {self.rarity}")
-        if self.shape.type != "self":
-            raise ValueError(f"rule_change 技能的形狀必須是 self，收到 {self.shape.type}")
-        if len(self.effects) != 1:
-            raise ValueError("rule_change 必須是技能唯一的效果")
+        self._require_shape(RULE_CHANGE, "rule_change 技能的")
 
     def _check_copy_skill(self) -> None:
         """``copy_skill``（Phase 3C-4b）：主動技能、形狀 ``self``，而且是唯一的效果（複製的技能自己
-        有目標，由玩家或 AI 在施放時另選）。"""
-        if not any(e.type == COPY_SKILL for e in self.effects):
-            return
-        if self.kind != "active":
-            raise ValueError(f"copy_skill 只能用在主動技能，收到 kind: {self.kind}")
-        if self.shape.type != "self":
-            raise ValueError(f"copy_skill 技能的形狀必須是 self，收到 {self.shape.type}")
-        if len(self.effects) != 1:
-            raise ValueError("copy_skill 必須是技能唯一的效果")
+        有目標，由玩家或 AI 在施放時另選）。資料在 ``skill_primitives.yaml``。"""
+        if any(e.type == COPY_SKILL for e in self.effects):
+            self._require_shape(COPY_SKILL, "copy_skill 技能的")
 
     def _check_hurl_object(self) -> None:
         """``hurl_object``（Phase 3C-5a）與形狀 ``object_then_tile`` 必須一起出現：主動技能、
-        恰好一個投擲效果（物件只有一個）。"""
+        恰好一個投擲效果（物件只有一個）。原語這一側（主動、最多一個、形狀）的資料在
+        ``skill_primitives.yaml``；形狀這一側（形狀要求這個原語）留在程式。"""
         hurls = sum(1 for e in self.effects if e.type == HURL_OBJECT)
         if self.shape.type == "object_then_tile" and hurls != 1:
             raise ValueError("形狀 object_then_tile 的技能必須恰好有一個 hurl_object 效果")
-        if hurls == 0:
-            return
-        if self.kind != "active":
-            raise ValueError(f"hurl_object 只能用在主動技能，收到 kind: {self.kind}")
-        if self.shape.type != "object_then_tile":
-            raise ValueError(f"hurl_object 的形狀必須是 object_then_tile，收到 {self.shape.type}")
+        if hurls:
+            self._require_shape(HURL_OBJECT)
 
     def _check_self_moves(self) -> None:
-        """自身位移（Phase 3D-2）：``dash``、``leap``、``swap`` 只能用在主動技能（反應技、姿態、
-        被動與陷阱沒有可選的目標或落點）；位移原語最多一個；``dash`` 一律最先結算，必須是第一個
-        效果。"""
+        """自身位移（Phase 3D-2）：``charge_through`` 的形狀、``shadowstep`` 的落點。
+        只能用在主動技能、``dash``／``charge_through``／``shadowstep`` 必須是第一個效果的資料在
+        ``skill_primitives.yaml``；位移原語最多一個是跨原語的群組規則（都在
+        :func:`_check_composition`）。"""
         types = [e.type for e in self.effects]
-        moves = [t for t in types if t in SELF_MOVES]
-        if not any(t in (DASH, LEAP, SWAP, CHARGE_THROUGH, SHADOWSTEP) for t in moves):
-            return
-        if self.kind != "active":
-            raise ValueError(f"{'、'.join(moves)} 只能用在主動技能，收到 kind: {self.kind}")
-        if len(moves) > 1:
-            raise ValueError(f"一個技能最多一個改變自身位置的原語，收到 {'、'.join(moves)}")
-        if DASH in types and types[0] != DASH:
-            raise ValueError("dash 必須是技能的第一個效果（衝鋒一律最先結算）")
         if CHARGE_THROUGH in types:
-            self._check_charge_through(types)
+            self._require_shape(CHARGE_THROUGH)
         if SHADOWSTEP in types:
-            self._check_shadowstep(types)
+            self._check_shadowstep()
 
-    def _check_shadowstep(self, types: list[str]) -> None:
-        """``shadowstep``（Phase 3D-8d）：第一個效果、``landing`` 必填，``choose`` 搭配形狀
-        ``unit_then_tile``、``behind`` 搭配形狀 ``single``。"""
-        if types[0] != SHADOWSTEP:
-            raise ValueError("shadowstep 必須是技能的第一個效果（瞬步一律最先結算）")
+    def _check_shadowstep(self) -> None:
+        """``shadowstep``（Phase 3D-8d）：``landing`` 必填，``choose`` 搭配形狀 ``unit_then_tile``、
+        ``behind`` 搭配形狀 ``single``（依參數決定形狀，留在程式）。"""
         landing = self.effects[0].landing
         if landing is None:
-            raise ValueError("shadowstep 必須填 landing（choose 或 behind）")
+            raise SkillRuleError(
+                "shadowstep 必須填 landing（choose 或 behind）", path="effects[0].landing"
+            )
         shape = SHADOWSTEP_SHAPES[landing]
         if self.shape.type != shape:
-            raise ValueError(
-                f"shadowstep 的 landing: {landing} 必須搭配形狀 {shape}，收到 {self.shape.type}"
+            raise SkillRuleError(
+                f"shadowstep 的 landing: {landing} 必須搭配形狀 {shape}，收到 {self.shape.type}",
+                path="shape.type",
             )
 
-    def _check_charge_through(self, types: list[str]) -> None:
-        """``charge_through``（Phase 3D-2c）：形狀 ``ground_tile``、第一個效果；其餘效果只能作用在
-        施放者自己（沿途的敵人由衝撞自己結算，隊友不受影響）。"""
-        if types[0] != CHARGE_THROUGH:
-            raise ValueError("charge_through 必須是技能的第一個效果（衝撞一律最先結算）")
-        if self.shape.type != "ground_tile":
-            raise ValueError(f"charge_through 的形狀必須是 ground_tile，收到 {self.shape.type}")
-        for effect in self.effects[1:]:
-            if effect.affects != "self":
-                raise ValueError(
-                    "charge_through 以外的效果必須明寫 affects: self（只作用在施放者）"
-                )
-
     def _check_summon(self) -> None:
-        """召喚（Phase 3D-4a）：只能用在主動技能（形狀 ``ground_tile`` 由原語表限制）；每個技能最多
-        一個召喚效果，``count`` 目前只能是 1；其餘效果必須明寫 ``affects: self``（選的格子是召喚
-        位置，必須是空格，不另外對它結算效果）。"""
+        """召喚（Phase 3D-4a）：``count`` 目前只能是 1（或數量型分歧進化的 2）。只能用在主動技能、
+        最多一個、形狀 ``ground_tile``、其餘效果必須明寫 ``affects: self``（選的格子是召喚位置，
+        必須是空格）的資料在 ``skill_primitives.yaml``。"""
         summons = [e for e in self.effects if e.type == SUMMON]
         if not summons:
             return
-        if self.kind != "active":
-            raise ValueError(f"summon 只能用在主動技能，收到 kind: {self.kind}")
-        if len(summons) > 1:
-            raise ValueError("一個技能最多一個 summon 效果")
         count = summons[0].count or 1
         if count not in (1, MAX_SUMMON_COUNT):
             raise ValueError(f"summon 的 count 只能是 1 或 {MAX_SUMMON_COUNT}，收到 {count}")
         if (count > 1) != (summons[0].power_permille is not None):
             raise ValueError("summon 的 power_permille 與 count: 2 必須一起填（數量型分歧進化）")
-        for effect in self.effects:
-            if effect.type != SUMMON and effect.affects != "self":
-                raise ValueError("summon 以外的效果必須明寫 affects: self（只作用在施放者）")
 
     def _check_revive(self) -> None:
-        """復活（Phase 3D-8b）：只能用在主動技能、形狀 ``single``（選一個倒下的友方）；每個技能最多
-        一個 ``revive`` 效果；其餘效果必須明寫 ``affects: self``（被復活的單位不另外結算效果）。
+        """復活（Phase 3D-8b）：必須填 ``hp_permille``。只能用在主動技能、最多一個、形狀
+        ``single``（選一個倒下的友方）、其餘效果必須明寫 ``affects: self`` 的資料在
+        ``skill_primitives.yaml``。
         「每場限一次或冷卻至少幾回合」是跨檔案檢查（``skillgen.validate``）。"""
         revives = [e for e in self.effects if e.type == REVIVE]
         if not revives:
             return
-        if self.kind != "active":
-            raise ValueError(f"revive 只能用在主動技能，收到 kind: {self.kind}")
-        if len(revives) > 1:
-            raise ValueError("一個技能最多一個 revive 效果")
-        if self.shape.type != "single":
-            raise ValueError(f"revive 的形狀必須是 single，收到 {self.shape.type}")
+        self._require_shape(REVIVE)
         if revives[0].hp_permille is None:
             raise ValueError("revive 必須填 hp_permille")
-        for effect in self.effects:
-            if effect.type != REVIVE and effect.affects != "self":
-                raise ValueError("revive 以外的效果必須明寫 affects: self（只作用在施放者）")
 
     def _check_grant_skill(self) -> None:
-        """暫時獲得技能（Phase 3D-8c）：只能用在主動技能；每個技能最多一個 ``grant_skill`` 效果，
-        ``skill`` 與 ``duration`` 必填。被給技能本身的限制（一般主動技能、不是傳說、不含改寫規則型
-        原語、不是 ``grant_skill``）是跨檔案檢查（:func:`granted_skill_problems`）。"""
+        """暫時獲得技能（Phase 3D-8c）：``skill`` 與 ``duration`` 必填（只能用在主動技能、
+        最多一個的資料在 ``skill_primitives.yaml``）。被給技能本身的限制（一般主動技能、不是傳說、
+        不含改寫規則型原語、不是 ``grant_skill``）是跨檔案檢查
+        （:func:`granted_skill_problems`）。"""
         grants = [e for e in self.effects if e.type == GRANT_SKILL]
         if not grants:
             return
-        if self.kind != "active":
-            raise ValueError(f"grant_skill 只能用在主動技能，收到 kind: {self.kind}")
-        if len(grants) > 1:
-            raise ValueError("一個技能最多一個 grant_skill 效果")
         grant = grants[0]
         if grant.skill is None or grant.duration is None:
             raise ValueError("grant_skill 必須填 skill 與 duration")
@@ -2612,15 +2698,13 @@ class SkillDef(ContentModel):
             )
 
     def _check_delayed_damage(self) -> None:
-        """定時炸彈（Phase 3D-8b）：只能用在主動的法術技；每個技能最多一個 ``delayed_damage``，
-        ``dice``、``element``、``rounds``、``radius`` 都必填。"""
+        """定時炸彈（Phase 3D-8b）：只能用在法術技；``dice``、``element``、``rounds``、
+        ``radius`` 都必填（只能用在主動技能、最多一個的資料在 ``skill_primitives.yaml``）。"""
         bombs = [e for e in self.effects if e.type == DELAYED_DAMAGE]
         if not bombs:
             return
-        if self.kind != "active" or self.category != "spell":
-            raise ValueError("delayed_damage 只能用在主動的法術技")
-        if len(bombs) > 1:
-            raise ValueError("一個技能最多一個 delayed_damage 效果")
+        if self.category != "spell":
+            raise SkillRuleError("delayed_damage 只能用在主動的法術技", path="category")
         bomb = bombs[0]
         if bomb.dice is None or bomb.element is None or bomb.rounds is None or bomb.radius is None:
             raise ValueError("delayed_damage 必須填 dice、element、rounds、radius")
@@ -2661,14 +2745,12 @@ class SkillDef(ContentModel):
             self._check_effect(0, sub)
 
     def _check_runes(self) -> None:
-        """刻印（Phase 3-23）：``inscribe``、``detonate_runes`` 只能用在主動技能；``inscribe`` 恰好
-        填 ``element`` 或 ``tag`` 其中一個（標籤符文不可同時帶元素）。"""
+        """刻印（Phase 3-23）：``inscribe`` 恰好填 ``element`` 或 ``tag`` 其中一個（標籤符文不可同時
+        帶元素）。兩者只能用在主動技能的資料在 ``skill_primitives.yaml``。"""
         for index, effect in enumerate(self.effects):
             if effect.type not in (INSCRIBE, DETONATE_RUNES):
                 continue
             where = f"effects[{index}]（{effect.type}）"
-            if self.kind != "active":
-                raise ValueError(f"{where}：只能用在主動技能，收到 kind: {self.kind}")
             if effect.type == INSCRIBE and (effect.element is None) == (effect.tag is None):
                 raise ValueError(f"{where}：必須恰好填 element 或 tag 其中一個")
             if effect.type == INSCRIBE and effect.dice is not None:
@@ -2677,17 +2759,18 @@ class SkillDef(ContentModel):
                 raise ValueError(f"{where}：scope 只能用在修正規則的命中後效果")
 
     def _check_sacrifice(self) -> None:
-        """獻祭召喚物（Phase 3-24c）：只能用在主動技能，形狀是 ``single``（選自己的一個召喚物），
-        必須填 ``dice`` 與 ``radius``；填了 ``element`` 是爆炸（傷害範圍內的敵人），省略是治療
-        範圍內的友方。"""
+        """獻祭召喚物（Phase 3-24c）：形狀是 ``single``（選自己的一個召喚物），必須填 ``dice`` 與
+        ``radius``；填了 ``element`` 是爆炸（傷害範圍內的敵人），省略是治療範圍內的友方。只能用在
+        主動技能與形狀的資料在 ``skill_primitives.yaml``。"""
         for index, effect in enumerate(self.effects):
             if effect.type != SACRIFICE_SUMMON:
                 continue
             where = f"effects[{index}]（{SACRIFICE_SUMMON}）"
-            if self.kind != "active":
-                raise ValueError(f"{where}：只能用在主動技能，收到 kind: {self.kind}")
-            if self.shape.type != "single":
-                raise ValueError(f"{where}：形狀必須是 single（選自己的召喚物）")
+            shapes = composition_shapes(SACRIFICE_SUMMON)
+            if shapes and self.shape.type not in shapes:
+                raise SkillRuleError(
+                    f"{where}：形狀必須是 {'、'.join(shapes)}（選自己的召喚物）", path="shape.type"
+                )
             if effect.dice is None or effect.radius is None:
                 raise ValueError(f"{where}：必須填 dice 與 radius")
 
@@ -2701,13 +2784,8 @@ class SkillDef(ContentModel):
                 getattr(effect, f) is not None for f in _ZONE_ONLY_FIELDS
             ):
                 raise ValueError(f"effects[{index}]：只有 zone 使用 anchor、when、speed、effects")
-        if not zones:
-            return
-        if self.kind != "active":
-            raise ValueError(f"zone 只能用在主動技能，收到 kind: {self.kind}")
-        if len(self.effects) != 1:
-            raise ValueError("zone 必須是技能唯一的效果")
-        self._check_zone_effect(zones[0])
+        if zones:  # 只能用在主動技能、唯一的效果：skill_primitives.yaml（_check_composition）
+            self._check_zone_effect(zones[0])
 
     def _check_zone_effect(self, zone: EffectSpec) -> None:
         where = "effects[0]（zone）"
@@ -2742,8 +2820,9 @@ class SkillDef(ContentModel):
             self._check_effect(0, sub)
 
     def _check_gamble(self) -> None:
-        """賭博型（Phase 3D-7a）：``gamble`` 只能用在主動技能、每個技能一個而且是最後一個效果；
-        ``cost.on_miss`` 只有主動技能可以有。分支與反噬的內容見 :meth:`_check_branch`。"""
+        """賭博型（Phase 3D-7a）：``gamble`` 只能用在主動技能、每個技能一個而且是最後一個效果
+        （資料在 ``skill_primitives.yaml``）；``cost.on_miss`` 只有主動技能可以有。分支與反噬的
+        內容見 :meth:`_check_branch`。"""
         gambles = [e for e in self.effects if e.type == GAMBLE]
         for index, effect in enumerate(self.effects):
             if effect.type != GAMBLE and any(
@@ -2755,12 +2834,7 @@ class SkillDef(ContentModel):
         self._check_on_miss()
         if not gambles:
             return
-        if self.kind != "active":
-            raise ValueError(f"gamble 只能用在主動技能，收到 kind: {self.kind}")
-        if len(gambles) > 1:
-            raise ValueError("一個技能最多一個 gamble 效果")
-        if self.effects[-1].type != GAMBLE:
-            raise ValueError("gamble 必須是技能的最後一個效果（成敗分支最後結算）")
+        # 只能用在主動技能、最多一個、最後一個效果：skill_primitives.yaml（_check_composition）
         self._check_gamble_effect(gambles[0], f"effects[{len(self.effects) - 1}]（gamble）")
 
     def _check_on_miss(self) -> None:
@@ -2851,17 +2925,11 @@ class SkillDef(ContentModel):
             and not self._chooses_shadowstep_landing()
         ):
             raise ValueError(f"形狀 {self.shape.type} 的技能必須有對應的位移他人效果")
+        # 原語這一側（主動、唯一的效果、形狀）的資料在 skill_primitives.yaml；
+        # 形狀這一側（形狀要求對應的原語，上面）留在程式。
         for effect in self.effects:
-            if effect.type not in PAIR_MOVES:
-                continue
-            if self.kind != "active":
-                raise ValueError(f"{effect.type} 只能用在主動技能，收到 kind: {self.kind}")
-            if self.shape.type != PAIR_SHAPES[effect.type]:
-                raise ValueError(
-                    f"{effect.type} 的形狀必須是 {PAIR_SHAPES[effect.type]}，收到 {self.shape.type}"
-                )
-            if len(self.effects) != 1:
-                raise ValueError(f"{effect.type} 必須是技能唯一的效果")
+            if effect.type in PAIR_MOVES:
+                self._require_shape(effect.type)
 
     def _chooses_shadowstep_landing(self) -> bool:
         """一般瞬步（``shadowstep`` 的 ``landing: choose``，Phase 3D-8d）也用形狀

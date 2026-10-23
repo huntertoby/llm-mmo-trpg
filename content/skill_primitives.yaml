@@ -10,6 +10,10 @@
 # acts_on：unit（對單位）／tile（對格子；affects 為單位類別時作用在這些單位腳下的格子）／caster
 # allowed_shapes：只能搭配這些形狀
 # forbid_affects：不可搭配的 affects（2D-1：cleanse 不能對敵方使用；驅散不在本階段）
+# 組合規則（Phase 4-L5b；SkillDef 驗證器與 LLM 提議模型共用的唯一來源）：
+#   position: first／last（必須是技能的第一個／最後一個效果）、sole_effect（必須是唯一的效果）、
+#   others_affect: self（其他效果必須明寫 affects: self）、max_per_skill（一個技能最多幾個）、
+#   active_only（只能用在主動技能）
 # params：可填的參數（type：dice／int／status／surface／object／element）
 #   int 參數的 min／max 是唯一的範圍來源（Phase 3E-2f）；allowed_skeletons：只能用在這些骨架
 # status：這個原語固定施加的狀態 ID（Phase 3E-2f；引擎的常數 CHEAT_DEATH_STATUS 等從這裡讀）
@@ -122,6 +126,8 @@ primitives:
     category: structural
     harmful: true
     min_rarity: rare
+    position: first
+    active_only: true
     budget_basis: fixed
     base_points: 3
     acts_on: caster
@@ -134,6 +140,9 @@ primitives:
     category: structural
     harmful: true
     min_rarity: rare
+    position: first
+    others_affect: self
+    active_only: true
     budget_basis: charge_through
     acts_on: caster
     allowed_shapes: [ground_tile]
@@ -149,6 +158,8 @@ primitives:
     category: structural
     harmful: true
     min_rarity: rare
+    position: first
+    active_only: true
     budget_basis: fixed
     base_points: 4
     acts_on: caster
@@ -163,6 +174,7 @@ primitives:
     category: structural
     harmful: false
     min_rarity: rare
+    active_only: true
     budget_basis: fixed
     base_points: 3
     acts_on: caster
@@ -175,6 +187,7 @@ primitives:
     category: structural
     harmful: false
     min_rarity: rare
+    active_only: true
     budget_basis: fixed
     base_points: 4
     forbid_affects: [self, all, tiles]
@@ -188,6 +201,8 @@ primitives:
     category: structural
     harmful: false
     min_rarity: rare
+    sole_effect: true
+    active_only: true
     budget_basis: fixed
     base_points: 11
     acts_on: caster
@@ -200,6 +215,8 @@ primitives:
     category: structural
     harmful: false
     min_rarity: rare
+    sole_effect: true
+    active_only: true
     budget_basis: fixed
     base_points: 12
     acts_on: caster
@@ -414,6 +431,8 @@ primitives:
     lookup_by_skill_id: true
     harmful: false
     min_rarity: epic
+    sole_effect: true
+    active_only: true
     budget_basis: fixed
     base_points: 9
     acts_on: caster
@@ -440,6 +459,8 @@ primitives:
     category: structural
     harmful: true
     min_rarity: rare
+    max_per_skill: 1
+    active_only: true
     budget_basis: hurl_object
     allowed_shapes: [object_then_tile]
     params:
@@ -518,6 +539,9 @@ primitives:
     category: structural
     harmful: false
     min_rarity: rare
+    others_affect: self
+    max_per_skill: 1
+    active_only: true
     budget_basis: revive
     allowed_shapes: [single]
     forbid_affects: [enemies, all, self]
@@ -533,6 +557,8 @@ primitives:
     lookup_by_skill_id: true
     harmful: true
     min_rarity: rare
+    max_per_skill: 1
+    active_only: true
     budget_basis: delayed_damage
     allowed_shapes: [single]
     forbid_affects: [allies, all, self]
@@ -551,6 +577,9 @@ primitives:
     category: structural
     harmful: false
     min_rarity: rare
+    others_affect: self
+    max_per_skill: 1
+    active_only: true
     budget_basis: summon
     acts_on: caster
     allowed_shapes: [ground_tile]
@@ -573,6 +602,8 @@ primitives:
     lookup_by_skill_id: true
     harmful: false
     min_rarity: rare
+    sole_effect: true
+    active_only: true
     budget_basis: zone
     forbid_affects: [self, tiles]
     allowed_shapes: [self, ground_tile, cross, square3, line, cone, ring, allies_in_radius]
@@ -593,6 +624,8 @@ primitives:
     category: rule_change
     harmful: false
     min_rarity: legendary
+    sole_effect: true
+    active_only: true
     budget_basis: rule_change
     acts_on: caster
     allowed_shapes: [self]
@@ -611,6 +644,9 @@ primitives:
     category: structural
     harmful: true
     min_rarity: rare
+    position: last
+    max_per_skill: 1
+    active_only: true
     budget_basis: gamble
     acts_on: caster
     params:
@@ -627,6 +663,8 @@ primitives:
     category: structural
     harmful: false
     min_rarity: rare
+    max_per_skill: 1
+    active_only: true
     budget_basis: grant_skill
     allowed_shapes: [self, single]
     forbid_affects: [enemies, all]
@@ -643,6 +681,7 @@ primitives:
     category: structural
     harmful: false
     min_rarity: rare
+    active_only: true
     budget_basis: inscribe
     base_points: 5
     acts_on: tile
@@ -658,6 +697,7 @@ primitives:
     category: structural
     harmful: true
     min_rarity: rare
+    active_only: true
     budget_basis: detonate_runes
     forbid_affects: [self, allies, tiles]
     allowed_shapes: [cross, square3, ring, allies_in_radius]
@@ -675,6 +715,7 @@ primitives:
     category: structural
     harmful: false
     min_rarity: rare
+    active_only: true
     budget_basis: sacrifice_summon
     forbid_affects: [self, enemies, all, tiles]
     allowed_shapes: [single]
