@@ -54,6 +54,7 @@
 | 碎界五區世界觀美術（色票、五區換皮規則、地圖覆寫） | 使用者 10-23 全選 A；戰場配對與外觀換法和玩法 PM 定案（共用筆記 `美術PM-五區戰場外觀.md`，蒸汽改為可破的黃銅蒸汽管線） | `碎界五區比較.md`、`區域外觀換法.md`、`雲嶺移植需求.md`、`realms.png` |
 | 魔導劍（#46） | 10-24 樣張完成、交開發 PM（第二批武器） | `魔導劍.md`、`arcane-blade.png` |
 | 形態外觀（#48，熊／貓／鳥／惡魔） | 10-24 樣張完成、交開發 PM（3I 之後） | `形態外觀.md`、`forms.png` |
+| 可玩種族外觀（方案乙，10 族，龍裔甲乙丙戊）＋真側面 A | 使用者 10-24 確認，已交開發 PM（dev-pm-2） | `種族與側面移植需求.md`、`可玩種族評估.md`、`側面畫法.md`、`races.png`、`races-side.png`、`dragonkin.png` |
 | 字型 Noto Sans TC（400、700） | 使用者 10-23 同意，開發 PM 實作中 | 等快取與畫布字一併換 |
 | 組裝式裝備外觀：9 格全部造型，通用版 | 使用者採用（命名選 A），G5a 圖示／G5b 紙娃娃／G5c 小修 | `組裝式裝備.md`、`裝備外觀移植需求.md`、`3G-5a檢查.md`、`3G-5b檢查.md`、`gear-all.png` |
 | 武器擴充 #34 的造型（弩、槍、拳套、鐮刀、鞭、成對武器、圖騰杖） | 已併進裝備外觀 | `組裝式裝備.md`「武器擴充」、`weapons-34.png` |
@@ -94,4 +95,7 @@
 | `realms.js`、`realms.html` | 碎界五區比較（＋霓虹另案） |
 | `arcane-blade.html` | 魔導劍（#46，sword 的 form: arcane） |
 | `forms.html` | 形態（變身，#48）：bear、cat、demon（summonArt.js 新 variant） |
+| `raceArt.js`、`races.html`、`dragonkin.html` | 可玩種族部件與衝突規則 |
+| `sideArt.js`、`side-views.html`、`races-side.html` | 真側面畫法（可調轉向） |
+| `formArt.js`、`forms10.html` | 形態 10 種（定稿） |
 | `current.js` | 遊戲現況畫法的打包（client/src/render → IIFE），樣張「現況」欄用；重打包方法：用 main 的 vite 以 lib 模式打包 terrainArt／objectArt／skillIcon |
