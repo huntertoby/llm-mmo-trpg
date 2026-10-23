@@ -32,9 +32,17 @@ def test_region_table_has_five_regions(library: ContentLibrary) -> None:
     assert library.regions.default_region == "crystal_crown"
 
 
-def test_existing_maps_have_no_theme(library: ContentLibrary) -> None:
+def test_only_cloud_ridge_maps_have_a_theme(library: ContentLibrary) -> None:
+    # 3-37b：玩法 PM 決定只把 bridge_chasm、dark_forest 標雲嶺；其他維持預設，look 不覆寫
     assert library.map_warnings == ()
-    assert all(m.region is None and m.look == {} for m in library.maps.values())
+    assert {k for k, m in library.maps.items() if m.region is not None} == {
+        "bridge_chasm",
+        "dark_forest",
+    }
+    assert {m.region for m in library.maps.values()} == {None, "cloud_ridge"}
+    assert all(m.look == {} for m in library.maps.values())
+    assert library.maps["bridge_chasm"].name_zh == "雲海吊橋"
+    assert library.maps["dark_forest"].name_zh == "竹林"
 
 
 def test_valid_theme_kept(library: ContentLibrary) -> None:

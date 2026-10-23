@@ -2,7 +2,8 @@
 # 倒木提供半掩護。草叢讓人容易躲藏伏擊，但一把火就能燒出一條路——火焰系、潛行系（消失、煙幕箭）、
 # 近身刺殺有利；視線被樹幹切斷，站著不動的遠程與長射程範圍技不利。敵方沒有頭目，靠人多與弓手。
 id: dark_forest
-name_zh: 幽暗森林
+name_zh: 竹林
+region: cloud_ridge  # 雲嶺（3-37b）：只換外觀，機制不動
 archetype: forest
 size: [10, 10]
 heights: |

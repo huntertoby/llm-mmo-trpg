@@ -364,6 +364,11 @@ def _cmd_content_check() -> int:
         f"共 {len(files)} 個檔案；跨檔案檢查（武器引用、地圖地形與連通性）通過；"
         f"{len(library.skills)} 個技能通過預算與結構驗證。"
     )
+    # 地圖的 region／look 寫錯只是警告（載入時已丟棄未知值、退回預設畫法），不算失敗
+    if library.map_warnings:
+        print(f"地圖外觀警告（{len(library.map_warnings)} 項，不影響通過）：")
+        for warning in library.map_warnings:
+            print(f"  - {warning}")
     return 0
 
 

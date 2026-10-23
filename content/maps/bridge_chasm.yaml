@@ -3,7 +3,8 @@
 # Phase 1C：深淵兩端（第 0、9 列）可以繞行；兩岸角落各有一段牆壁擋住斜向的視線；橋頭的矮牆、
 # 木箱與倒木提供半掩護（遠程攻擊命中 −2）。
 id: bridge_chasm
-name_zh: 吊橋深淵
+name_zh: 雲海吊橋
+region: cloud_ridge  # 雲嶺（3-37b）：只換外觀，機制不動
 archetype: bridge_chasm
 size: [10, 10]
 heights: |

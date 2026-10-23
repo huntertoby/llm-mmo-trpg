@@ -99,7 +99,7 @@ describe("選路／下一場畫面", () => {
       battle_id: null,
       node: { kind: "battle", battle_index: 1, boss: false },
       plan: [
-        { index: 1, map_id: "m", map_name_zh: "吊橋深淵", boss: false, enemies: ["盜賊"], done: false, objective: ESCAPE },
+        { index: 1, map_id: "m", map_name_zh: "雲海吊橋", boss: false, enemies: ["盜賊"], done: false, objective: ESCAPE },
         { index: 2, map_id: "m2", map_name_zh: "油庫", boss: false, enemies: ["盜賊"], done: false, objective: DEFEND },
       ],
     } as unknown as RunResponse;

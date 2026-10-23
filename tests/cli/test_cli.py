@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import os
+import shutil
 import subprocess
 import sys
 from pathlib import Path
@@ -73,6 +74,23 @@ def test_content_check_success(
     out = capsys.readouterr().out
     assert "內容檢查通過" in out
     assert "elements.yaml：9 種元素" in out
+
+
+def test_content_check_prints_map_warnings_without_failing(
+    capsys: pytest.CaptureFixture[str], monkeypatch: pytest.MonkeyPatch, tmp_path: Path
+) -> None:
+    content = tmp_path / "content"
+    shutil.copytree(PROJECT_ROOT / "content", content)
+    path = content / "maps" / "open_plain.yaml"
+    extra = "\nregion: nowhere\nlook: {wall: marble}\n"
+    path.write_text(path.read_text(encoding="utf-8") + extra, encoding="utf-8")
+    monkeypatch.setenv(CONTENT_DIR_ENV, str(content))
+    assert main(["content", "check"]) == 0  # 警告不算失敗
+    out = capsys.readouterr().out
+    assert "內容檢查通過" in out
+    assert "地圖外觀警告（2 項" in out
+    assert "nowhere" in out
+    assert "marble" in out
 
 
 def test_content_check_failure(
