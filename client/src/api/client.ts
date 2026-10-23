@@ -30,6 +30,7 @@ import type {
   StartOptions,
   StartPreview,
   StartResources,
+  AllocationPreview,
   UseSkill,
   WorkshopArena,
   WorkshopCheck,
@@ -142,6 +143,9 @@ export const api = {
   /** 開局畫面的資源預覽（Phase 3-41c）：選了武器、配了點之後的最大 HP、法力、耐力（後端算）。 */
   startResources: (weapon: string, attributes: Record<string, number>) =>
     request<StartResources>("POST", "/runs/start-resources", { weapon, attributes }),
+  /** 升級配點與營火重配的資源預覽（Phase 3H-5）：配點後的最大 HP、法力、耐力變化（後端算）。 */
+  allocationPreview: (runId: string, attributes: Record<string, number>) =>
+    request<AllocationPreview>("POST", `/runs/${encodeURIComponent(runId)}/allocation-preview`, { attributes }),
   devPacks: () => request<DevPack[]>("GET", "/runs/dev-packs"),
   runSaves: () => request<RunSaveSummary[]>("GET", "/runs/saves"),
   loadRun: (runId: string) => request<RunResponse>("POST", "/runs/load", { run_id: runId }),

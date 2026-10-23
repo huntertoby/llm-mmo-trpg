@@ -32,6 +32,7 @@ export function SummonInfo({ info, open = false }: Props) {
         <dd>
           {info.hp}
           <span className="muted">（{info.hp_note}）</span>
+          {(info.hp_infusion_zh ?? "") !== "" && <div className="muted">{info.hp_infusion_zh}</div>}
         </dd>
         <dt>移動</dt>
         <dd>{info.move}</dd>

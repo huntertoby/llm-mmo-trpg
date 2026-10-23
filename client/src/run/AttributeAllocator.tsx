@@ -6,8 +6,6 @@ import {
   affectsText,
   allocationTotal,
   ATTRIBUTES,
-  conHpGain,
-  hpDeltaText,
   suggestionText,
   type Allocation,
 } from "./flow";
@@ -19,8 +17,8 @@ interface Props {
   alloc: Allocation;
   onChange(next: Allocation): void;
   disabled?: boolean;
-  /** 每點體質的最大 HP（有值時，體質旁即時顯示配點帶來的「＋N HP」）。 */
-  hpPerCon?: number;
+  /** 配點後最大 HP、法力、耐力的變化文字（後端算，Phase 3H-5）；空字串或省略時不顯示。 */
+  preview?: string;
   /** 建議的主屬性（開局，Phase 3H-3）。 */
   suggestion?: { attr: string; reason_zh: string } | null;
   /** 每個屬性影響你的哪些招（Phase 3H-3）。 */
@@ -28,7 +26,7 @@ interface Props {
   heading?: string;
 }
 
-export function AttributeAllocator({ base, points, alloc, onChange, disabled = false, hpPerCon, suggestion, affects, heading = "屬性配點" }: Props) {
+export function AttributeAllocator({ base, points, alloc, onChange, disabled = false, preview, suggestion, affects, heading = "屬性配點" }: Props) {
   const left = points - allocationTotal(alloc);
   return (
     <div className="run-alloc">
@@ -41,6 +39,11 @@ export function AttributeAllocator({ base, points, alloc, onChange, disabled = f
       {suggestionText(suggestion) !== null && (
         <div className="small run-alloc-suggestion" data-testid="attr-suggestion">
           {suggestionText(suggestion)}
+        </div>
+      )}
+      {(preview ?? "") !== "" && (
+        <div className="small run-alloc-preview" data-testid="alloc-preview">
+          配點後：{preview}
         </div>
       )}
       <div className="run-alloc-grid">
@@ -73,11 +76,6 @@ export function AttributeAllocator({ base, points, alloc, onChange, disabled = f
               >
                 ＋
               </button>
-              {a.id === "con" && hpPerCon !== undefined && add > 0 && (
-                <span className="run-alloc-hp small" data-testid="con-hp-preview">
-                  最大 HP {hpDeltaText(conHpGain(alloc, hpPerCon))}
-                </span>
-              )}
               {affected !== null && (
                 <span className="run-alloc-affects muted small" data-testid={`attr-affects-${a.id}`}>
                   {affected}

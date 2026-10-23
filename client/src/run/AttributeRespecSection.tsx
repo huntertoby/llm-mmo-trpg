@@ -3,6 +3,7 @@
 import { useState } from "react";
 import type { RunChoice, RunHero } from "../api/types";
 import { AttributeAllocator } from "./AttributeAllocator";
+import { useAllocationPreview } from "./allocationPreview";
 import { allocationTotal, cleanAllocation, type Allocation } from "./flow";
 
 interface Props {
@@ -12,10 +13,13 @@ interface Props {
   onChoose(choice: RunChoice): Promise<number | null>;
   /** 營火：多了「免費重配屬性點」。 */
   campfire?: boolean;
+  /** 這一輪的編號（配點預覽用；省略時不顯示預覽）。 */
+  runId?: string;
 }
 
-export function AttributeRespecSection({ hero, busy, onChoose, campfire = false }: Props) {
+export function AttributeRespecSection({ hero, busy, onChoose, campfire = false, runId }: Props) {
   const [alloc, setAlloc] = useState<Allocation>({});
+  const preview = useAllocationPreview(runId, alloc);
   const points = hero.attribute_points ?? 0;
   const spent = Object.values(hero.attribute_spent ?? {}).reduce((a, b) => a + (b ?? 0), 0);
   if (points <= 0 && !(campfire && spent > 0)) return null;
@@ -52,7 +56,7 @@ export function AttributeRespecSection({ hero, busy, onChoose, campfire = false 
             alloc={alloc}
             onChange={setAlloc}
             disabled={busy}
-            hpPerCon={hero.hp_per_con_point}
+            preview={preview}
             affects={hero.attribute_affects}
           />
           <div className="run-actions">

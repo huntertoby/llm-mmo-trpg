@@ -187,7 +187,7 @@ export function RunScreen({ initial, autoResume = false, onHome, onNewRun }: Pro
             )}
             {view.screen === "progress" && (run.hero.attribute_points ?? 0) > 0 && (
               <div className="panel">
-                <AttributeRespecSection hero={run.hero} busy={busy} onChoose={choose} />
+                <AttributeRespecSection hero={run.hero} busy={busy} onChoose={choose} runId={run.run_id} />
               </div>
             )}
             {view.screen === "level_up" && (

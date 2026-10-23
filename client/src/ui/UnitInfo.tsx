@@ -1,4 +1,6 @@
 // 單位資訊：滑過或點選單位時顯示（文字即可）。
+import type { ReactNode } from "react";
+import { RuleText } from "./ruleText";
 import { tipLines } from "../gear/affixStatus";
 import { ChargeChips } from "./ChargeChips";
 import type { BattleView, SkillCard, StatusView, UnitView } from "../api/types";
@@ -49,14 +51,14 @@ export function UnitInfo({ unit, names, heroId, skills, cards, view }: Props) {
   const tags = [team, unit.id === heroId ? "主角" : "", kind ?? "", unit.downed ? (unit.revivable ? "倒下・可復活" : "倒下") : ""].filter(Boolean);
   const stacks = Object.entries(unit.stacks);
   const cooldowns = Object.entries(unit.cooldowns);
-  const rows: [string, string][] = [
+  const rows: [string, ReactNode][] = [
     ["HP", `${unit.hp} / ${unit.max_hp}${unit.shield > 0 ? `（護盾 ${unit.shield}）` : ""}`],
     ["法力", `${unit.mana} / ${unit.max_mana}`],
     ["耐力", `${unit.stamina} / ${unit.max_stamina}`],
     ["AP／移動", `${unit.ap}／${unit.move_points}（速度 ${unit.speed}）`],
     ["武器", unit.weapon_name_zh],
-    ...unit.weapon_traits_zh.map((line): [string, string] => ["　特性", line]),
-    ...(hasMagazine(unit) ? [["　彈匣", ammoText(unit).replace("彈匣 ", "")] as [string, string]] : []),
+    ...unit.weapon_traits_zh.map((line): [string, ReactNode] => ["　特性", <RuleText key={line} text={line} />]),
+    ...(hasMagazine(unit) ? [["　彈匣", ammoText(unit).replace("彈匣 ", "")] as [string, ReactNode]] : []),
     ["位置", `(${unit.pos.x}, ${unit.pos.y})`],
     ["朝向", facingText(unit)],
   ];

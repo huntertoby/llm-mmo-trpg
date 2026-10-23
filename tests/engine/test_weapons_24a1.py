@@ -328,8 +328,12 @@ def test_attr_mode_only_matters_with_a_second_attribute() -> None:
 
 def test_the_dual_attribute_line_follows_the_data() -> None:
     core = library().ruleset.core
-    assert "雙屬性：普攻與武器技吃體質、力量，取平均" in weapon("hammer").rule_lines_zh(core)
-    assert "雙屬性：普攻與武器技吃敏捷、力量，取較高者" in weapon("dagger").rule_lines_zh(core)
+    assert "雙屬性：普攻吃體質、力量，取平均；武器技看技能卡（在這把武器的屬性範圍內）" in weapon(
+        "hammer"
+    ).rule_lines_zh(core)
+    assert "雙屬性：普攻吃敏捷、力量，取較高者；武器技看技能卡（在這把武器的屬性範圍內）" in weapon(
+        "dagger"
+    ).rule_lines_zh(core)
     assert not any("雙屬性" in line for line in weapon("axe").rule_lines_zh(core))
 
 

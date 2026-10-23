@@ -5,12 +5,10 @@ import { describe, expect, it } from "vitest";
 import type { RunHero } from "../api/types";
 import { AttributeAllocator } from "./AttributeAllocator";
 import { RunHeroPanel } from "./RunHeroPanel";
-import { baseAttributes, conHpBonus, conHpGain, hpDeltaText, perkText, type AttributePerk } from "./flow";
+import { baseAttributes, conHpBonus, hpDeltaText, perkText, type AttributePerk } from "./flow";
 
 describe("conHpGain / conHpBonus / hpDeltaText", () => {
   it("每點體質 3 HP", () => {
-    expect(conHpGain({ con: 2, str: 1 }, 3)).toBe(6);
-    expect(conHpGain({ str: 4 }, 3)).toBe(0);
   });
 
   it("體質相對基準的加成可以是負的", () => {
@@ -67,26 +65,20 @@ describe("屬性常駐數值（3H-1）", () => {
   });
 });
 
-describe("配點時的 HP 預覽", () => {
+describe("配點後的資源預覽（後端算，3H-5）", () => {
   const base = baseAttributes(10);
-  const render = (alloc: Record<string, number>) =>
+  const render = (alloc: Record<string, number>, preview?: string) =>
     renderToStaticMarkup(
-      createElement(AttributeAllocator, { base, points: 4, alloc, onChange: () => undefined, hpPerCon: 3 }),
+      createElement(AttributeAllocator, { base, points: 4, alloc, onChange: () => undefined, preview }),
     );
 
-  it("體質配點後即時顯示最大 HP 增量", () => {
-    expect(render({ con: 2 })).toContain("最大 HP ＋6 HP");
+  it("有預覽文字時顯示（前端不算公式）", () => {
+    expect(render({ con: 2 }, "最大 HP ＋6、耐力 ＋4")).toContain("配點後：最大 HP ＋6、耐力 ＋4");
   });
 
-  it("沒配體質時不顯示", () => {
-    expect(render({ str: 2 })).not.toContain("con-hp-preview");
-  });
-
-  it("沒給 hpPerCon 時不顯示（舊呼叫方式）", () => {
-    const html = renderToStaticMarkup(
-      createElement(AttributeAllocator, { base, points: 4, alloc: { con: 2 }, onChange: () => undefined }),
-    );
-    expect(html).not.toContain("con-hp-preview");
+  it("沒有預覽文字時不顯示", () => {
+    expect(render({ str: 2 })).not.toContain("alloc-preview");
+    expect(render({ str: 2 }, "")).not.toContain("alloc-preview");
   });
 });
 

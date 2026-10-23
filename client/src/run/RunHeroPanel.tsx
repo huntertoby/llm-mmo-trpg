@@ -1,6 +1,7 @@
 // 主角的一輪狀態：等級與經驗、HP／法力／耐力／源力、屬性、技能（點開看卡片）。
 import type { RunHero } from "../api/types";
 import { SkillCardView } from "../ui/SkillCardView";
+import { RuleText } from "../ui/ruleText";
 import { WeaponIcon } from "../ui/WeaponIcon";
 import { levelBadge, levelOf } from "./skillGrowth";
 import {
@@ -72,7 +73,9 @@ export function RunHeroPanel({ hero }: { hero: RunHero }) {
       {traits.length > 0 && (
         <div className="weapon-traits small muted" data-testid="run-weapon-traits">
           {traits.map((line) => (
-            <div key={line}>{line}</div>
+            <div key={line}>
+              <RuleText text={line} />
+            </div>
           ))}
         </div>
       )}

@@ -31,6 +31,7 @@ from trpg.narrative.skills import CardOwner, skill_card
 from trpg.narrative.status_info import status_rules
 from trpg.narrative.summon_info import summon_behavior_lines
 from trpg.roguelite.start import hero_resources, new_keyword_run, start_resources
+from trpg.shared.bonus_text import plain_text
 from trpg.shared.types import Attribute, Pos, Team, UnitId
 
 U1 = UnitId("unit_0001")
@@ -211,7 +212,8 @@ def test_basic_attack_formula_matches_engine_bonus(weapon_id: str, attrs: dict[s
     assert now == weapon_attribute(lib.ruleset, unit)
     line = weapon.attack_formula_zh(core, lambda a: effective_attribute(lib.ruleset, unit, a))
     permille = now * core.basic_attack_attr_multiplier_permille
-    assert line.endswith(f"（目前 +{permille / 1000:g}）"), line
+    assert plain_text(line).endswith(f"（目前 +{permille // 1000}）"), line
+    assert ("實際" in line) == (permille % 1000 != 0), line  # 帶小數才有說明標記
     assert line.startswith(f"普攻：{weapon.dice}")
     assert weapon.scaling_names_zh() in line
     # 引擎：實際普攻的傷害事件記錄的骰外加成（只供顯示的欄位）與卡片寫的一致
@@ -259,7 +261,7 @@ def test_skill_formula_matches_engine_scaled_value(attr_value: int) -> None:
         mine = {a: effective_attribute(state.ruleset, unit, a) for a in Attribute}
         lines = skill.formula_lines_zh(core, unit.weapon, mine.__getitem__)
         damage_line = next(line for line in lines if line.startswith("傷害算法"))
-        assert f"（目前 +{params.scaled_permille / 1000:g}）" in damage_line, (
+        assert f"（目前 +{params.scaled_permille // 1000}）" in plain_text(damage_line), (
             skill.id,
             damage_line,
         )

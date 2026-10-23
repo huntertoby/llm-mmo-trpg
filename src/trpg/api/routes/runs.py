@@ -24,8 +24,10 @@ from fastapi import APIRouter, Request
 
 from trpg.api.attribute_text import attribute_affects, attribute_suggestion
 from trpg.api.presenter import battle_response
-from trpg.api.run_presenter import keyword_refs, run_response, save_summary
+from trpg.api.run_presenter import allocation_preview, keyword_refs, run_response, save_summary
 from trpg.api.run_schemas import (
+    AllocationPreviewOut,
+    AllocationPreviewRequest,
     CreateRunRequest,
     DevPackOut,
     LoadRunRequest,
@@ -197,6 +199,18 @@ def load_run(body: LoadRunRequest, request: Request) -> RunResponse:
     session = store.load(body.run_id)
     with session.lock:
         return _respond(store, session)
+
+
+@router.post("/{run_id}/allocation-preview")
+def post_allocation_preview(
+    run_id: str, body: AllocationPreviewRequest, request: Request
+) -> AllocationPreviewOut:
+    """升級配點與營火重配的資源預覽（3H-5）：把配點加到主角目前的屬性上，回傳新的最大 HP、法力、
+    耐力與變化文字；算式與一輪面板、開新一輪相同（後端算，前端不寫公式）。"""
+    store = runs_of(request)
+    session = store.get(run_id)
+    with session.lock:
+        return allocation_preview(session.library, session.run, body.attributes)
 
 
 @router.get("/{run_id}")

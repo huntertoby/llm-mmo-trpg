@@ -15,6 +15,8 @@ from trpg.shared.rng import MASK64
 from trpg.shared.types import Attribute
 
 __all__ = [
+    "AllocationPreviewOut",
+    "AllocationPreviewRequest",
     "AttributeAffectsOut",
     "AttributeSuggestionOut",
     "BattlePlanOut",
@@ -109,6 +111,22 @@ class StartResourcesOut(_ApiModel):
     stamina: int
 
 
+class AllocationPreviewRequest(_ApiModel):
+    """升級配點與營火重配的資源預覽（3H-5）：目前的配點（不必配滿；省略的屬性為 0 點）。"""
+
+    attributes: dict[Attribute, int] = Field(default_factory=dict)
+
+
+class AllocationPreviewOut(_ApiModel):
+    """配點後主角的最大 HP、法力、耐力（不含裝備；和一輪面板同一個函式）與一句話的變化
+    （例「最大 HP ＋6、耐力 ＋4」，沒變時為空字串）。"""
+
+    hp: int
+    mana: int
+    stamina: int
+    summary_zh: str
+
+
 class StartOptions(_ApiModel):
     """開局選項（Phase 3-24b2）：全部武器、全部關鍵字、要選幾個關鍵字。"""
 
@@ -135,7 +153,7 @@ class StartKeywordOption(_ApiModel):
 
 
 class AttributeAffectsOut(_ApiModel):
-    """一個屬性影響的東西（Phase 3H-3）：武器的普攻與武器技、縮放這個屬性的技能名；由程式依技能
+    """一個屬性影響的東西（Phase 3H-3）：武器的普攻、縮放這個屬性的技能名；由程式依技能
     與武器的縮放屬性產生。"""
 
     attr: Attribute

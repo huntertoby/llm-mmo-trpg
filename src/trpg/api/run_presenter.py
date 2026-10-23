@@ -2,8 +2,11 @@
 
 from __future__ import annotations
 
+from collections.abc import Mapping
+
 from trpg.api.attribute_text import attribute_affects
 from trpg.api.run_schemas import (
+    AllocationPreviewOut,
     AttributePerkOut,
     BattlePlanOut,
     EvolutionChoiceOut,
@@ -31,6 +34,7 @@ from trpg.roguelite.growth import (
 )
 from trpg.roguelite.offers import skill_defs
 from trpg.roguelite.progress import hero_effective_attributes
+from trpg.roguelite.start import apply_allocation
 from trpg.roguelite.state import (
     BattleNode,
     CampfireNode,
@@ -38,6 +42,7 @@ from trpg.roguelite.state import (
     LevelUpNode,
     SkillOffer,
 )
+from trpg.shared.types import Attribute
 
 __all__ = ["keyword_refs", "run_response", "save_summary", "start_label"]
 
@@ -251,6 +256,25 @@ def resource_rule_text(library: ContentLibrary, *, test_mode: bool) -> str:
     regen = library.ruleset.core.resources.stamina_regen
     regen_text = f"戰鬥中主角的耐力每回合開始回復 {regen} 點；" if regen else ""
     return f"{head}{regen_text}{kept}不會在戰鬥之間回復，只有營火會回滿（{after}之後）。"
+
+
+def allocation_preview(
+    library: ContentLibrary, run: RunState, allocation: Mapping[Attribute, int]
+) -> AllocationPreviewOut:
+    """配點後的最大 HP、法力、耐力（3H-5）：把 ``allocation`` 加到主角目前的屬性上，用
+    ``RunState.max_*_in``（一輪面板、升級同步上限的同一組函式）算；負數的配點視為 0。"""
+    core = library.ruleset.core
+    added = {a: max(0, n) for a, n in allocation.items()}
+    after = run.model_copy(update={"hero": apply_allocation(run.hero, added)})
+    now = (run.max_hp_in(core), run.max_mana_in(core), run.max_stamina_in(core))
+    new = (after.max_hp_in(core), after.max_mana_in(core), after.max_stamina_in(core))
+    names = ("最大 HP", "法力", "耐力")
+    parts = [
+        f"{name} {'＋' if b > a else '−'}{abs(b - a)}"
+        for name, a, b in zip(names, now, new, strict=True)
+        if a != b
+    ]
+    return AllocationPreviewOut(hp=new[0], mana=new[1], stamina=new[2], summary_zh="、".join(parts))
 
 
 def run_response(session: RunSession) -> RunResponse:
