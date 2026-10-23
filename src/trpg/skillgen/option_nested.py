@@ -12,6 +12,7 @@
 from __future__ import annotations
 
 from dataclasses import dataclass
+from typing import Literal
 
 from trpg.content.library import ContentLibrary
 from trpg.content.skills import (
@@ -61,23 +62,23 @@ NESTED_PARAMS: dict[tuple[str, str], _Rule] = {
 _SPECIAL: dict[str, tuple[str, str, str, str, int, int]] = {
     DAMAGE_MULTIPLIER: (
         "傷害倍率",
-        "這一次施放的傷害乘上倍率（2000＝加倍）。",
+        "這一次施放的所有傷害乘上倍率（×2＝加倍）。",
         "damage_multiplier_permille",
-        "傷害倍率（‰）",
+        "倍率",
         100,
         10_000,
     ),
     SELF_DAMAGE_OF_HIT: (
         "反噬自傷",
-        "施放者受到這一次造成傷害的一部分（不致命，生命不會低於 1）。",
+        "你自己也受到這一次造成傷害的一部分（不會致命，HP 至少留 1）。",
         "self_damage_permille_of_hit",
-        "自傷比例（‰）",
+        "反噬比例（%）",
         1,
         1000,
     ),
     REFUND_AP: (
-        "返還行動點",
-        f"讓你立刻拿回 1～{MAX_REFUND_AP} 點行動點。",
+        "返還 AP",
+        f"讓你立刻拿回 1～{MAX_REFUND_AP} 點 AP。",
         "amount",
         "返還點數",
         1,
@@ -87,6 +88,13 @@ _SPECIAL: dict[str, tuple[str, str, str, str, int, int]] = {
 """不是原語、只能出現在巢狀裡的專用效果：``(名稱, 說明, 欄位, 欄位名, 最小, 最大)``。"""
 
 
+_DISPLAY: dict[str, Literal["multiplier", "percent"]] = {
+    DAMAGE_MULTIPLIER: "multiplier",
+    SELF_DAMAGE_OF_HIT: "percent",
+}
+"""玩家看到的數值格式（倍率 ×2、百分比），內部仍存千分比。"""
+
+
 def _special_choice(effect_type: str) -> Choice:
     name, desc, field, field_zh, low, high = _SPECIAL[effect_type]
     return Choice(
@@ -94,7 +102,15 @@ def _special_choice(effect_type: str) -> Choice:
         name_zh=name,
         description_zh=desc,
         params=(
-            FieldSpec(field=field, name_zh=field_zh, type="int", required=True, min=low, max=high),
+            FieldSpec(
+                field=field,
+                name_zh=field_zh,
+                type="int",
+                required=True,
+                min=low,
+                max=high,
+                display=_DISPLAY.get(effect_type),
+            ),
         ),
     )
 

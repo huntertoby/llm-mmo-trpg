@@ -52,14 +52,28 @@ export function FieldList({ fields, container, base, onChange }: ListProps) {
   );
 }
 
+/** 千分比欄位的顯示換算：倍率 ×2（÷1000）、百分比 25%（÷10）；其他欄位不換算（3-48f）。 */
+export function displayFactor(spec: FieldSpec): number {
+  return spec.display === "multiplier" ? 1000 : spec.display === "percent" ? 10 : 1;
+}
+
+export function formatDisplay(spec: FieldSpec, stored: number): string {
+  const factor = displayFactor(spec);
+  const shown = Number((stored / factor).toFixed(2));
+  if (spec.display === "multiplier") return `×${shown}`;
+  if (spec.display === "percent") return `${shown}%`;
+  return String(shown);
+}
+
 function rangeHint(spec: FieldSpec): string {
   if (spec.type === "dice") {
     const sides = spec.dice_sides.length > 0 ? `，面數 ${spec.dice_sides.join("／")}` : "";
     return `格式 NdM（例 2d6）${sides}`;
   }
-  if (spec.min != null && spec.max != null) return `範圍 ${spec.min}–${spec.max}`;
-  if (spec.min != null) return `至少 ${spec.min}`;
-  if (spec.max != null) return `最多 ${spec.max}`;
+  const f = (n: number) => formatDisplay(spec, n);
+  if (spec.min != null && spec.max != null) return `範圍 ${f(spec.min)}–${f(spec.max)}`;
+  if (spec.min != null) return `至少 ${f(spec.min)}`;
+  if (spec.max != null) return `最多 ${f(spec.max)}`;
   return "";
 }
 
@@ -263,6 +277,8 @@ function NumberField({ spec, container, base, onChange }: FieldProps) {
   const special = spec.allow_weapon ? "weapon" : spec.type === "count" ? "all" : null;
   const specialLabel = spec.allow_weapon ? "用武器射程" : "全部";
   const isSpecial = special !== null && raw === special;
+  const factor = displayFactor(spec);
+  const step = factor === 1 ? undefined : factor === 1000 ? 0.1 : 1;
   return (
     <div className="ws-field">
       <Label spec={spec} />
@@ -270,14 +286,17 @@ function NumberField({ spec, container, base, onChange }: FieldProps) {
         <input
           type="number"
           inputMode="numeric"
-          min={spec.min ?? undefined}
-          max={spec.max ?? undefined}
+          min={spec.min != null ? spec.min / factor : undefined}
+          max={spec.max != null ? spec.max / factor : undefined}
+          step={step}
           disabled={isSpecial}
-          value={typeof raw === "number" ? raw : ""}
+          value={typeof raw === "number" ? Number((raw / factor).toFixed(2)) : ""}
           onChange={(e) => {
             const text = e.target.value.trim();
             const n = Number(text);
-            onChange(setPath(container, path, text === "" || !Number.isFinite(n) ? undefined : Math.trunc(n)));
+            onChange(
+              setPath(container, path, text === "" || !Number.isFinite(n) ? undefined : Math.round(n * factor)),
+            );
           }}
         />
         {special !== null && (

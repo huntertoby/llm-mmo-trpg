@@ -101,7 +101,7 @@ _WORDS_ZH = {
     "type": "類型",
     "damage_multiplier": "傷害倍率",
     "self_damage_of_hit": "反噬自傷",
-    "refund_ap": "返還行動點",
+    "refund_ap": "返還 AP",
     "refund_cooldown": "重置本技能冷卻",
     "replace_effect": "替換效果",
     "range_delta": "射程調整",
