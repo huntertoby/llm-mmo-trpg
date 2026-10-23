@@ -9,9 +9,6 @@
 
 export const OPEN_DELAY_MS = 150;
 export const CLOSE_GRACE_MS = 250;
-/** 格子資訊卡：從一格換到另一個有內容的格子時，滑鼠停留這麼久才換卡（夠短，掃過戰場時跟得上；
- * 快速滑向卡片時經過的格子通常停不到這麼久，不會把卡片換掉）。離開到沒有內容的地方仍用 ``CLOSE_GRACE_MS``。 */
-export const TILE_SWITCH_MS = 80;
 /** 卡片與觸發元素之間的透明橋接區高度（像素）；視覺上的間距就是它。 */
 export const BRIDGE_PX = 6;
 

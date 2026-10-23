@@ -1,5 +1,5 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
-import { CLOSE_GRACE_MS, FloatController, OPEN_DELAY_MS, TILE_SWITCH_MS, resetFloatRegistry } from "./floatCard";
+import { CLOSE_GRACE_MS, FloatController, OPEN_DELAY_MS, resetFloatRegistry } from "./floatCard";
 import { gearFoldLabel } from "./gearFold";
 import { TileCardController, cardMaxHeight } from "./hoverCard";
 
@@ -14,74 +14,38 @@ beforeEach(() => {
 afterEach(() => vi.useRealTimers());
 
 describe("單位資訊卡：滑過格子", () => {
-  it("滑過有內容的格子立即顯示；換到另一個有內容的格子，停留 80ms 就換卡", () => {
+  it("沒釘住時（3-40b）：滑過立即顯示，換格子立即換卡、離開格子立即關卡（不能滑進卡片）", () => {
     const c = new TileCardController();
     c.setHover(A);
     expect(c.visible).toBe(true);
     expect(c.shown).toEqual(A);
     c.setHover(B);
-    vi.advanceTimersByTime(TILE_SWITCH_MS - 1);
-    expect(c.shown).toEqual(A);
-    vi.advanceTimersByTime(1);
     expect(c.shown).toEqual(B);
-  });
-
-  it("一路掃過多格：每格停不到 80ms 不換，停下來 80ms 後換成最後一格（不必等 250ms）", () => {
-    const c = new TileCardController();
-    c.setHover(A);
-    c.setHover(B);
-    vi.advanceTimersByTime(40);
     c.setHover(C);
-    vi.advanceTimersByTime(TILE_SWITCH_MS - 1);
-    expect(c.shown).toEqual(A);
-    vi.advanceTimersByTime(1);
     expect(c.shown).toEqual(C);
+    c.setHover(null);
+    expect(c.visible).toBe(false);
   });
 
-  it("滑到沒有內容的地方仍有 250ms 寬限", () => {
+  it("滑到沒有內容的格子立即關卡，滑回有內容的格子立即出現", () => {
     const c = new TileCardController();
     c.hasContent = (t) => t.x === A.x && t.y === A.y;
     c.setHover(A);
     c.setHover(B);
-    vi.advanceTimersByTime(CLOSE_GRACE_MS - 1);
-    expect(c.shown).toEqual(A);
-    vi.advanceTimersByTime(1);
     expect(c.visible).toBe(false);
-  });
-
-  it("滑向卡片途中快速經過其他格子保持原卡；進入卡片後不換", () => {
-    const c = new TileCardController();
     c.setHover(A);
-    c.setHover(B);
-    c.setHover(C);
-    vi.advanceTimersByTime(TILE_SWITCH_MS - 10);
-    expect(c.shown).toEqual(A);
-    c.cardEnter();
-    vi.advanceTimersByTime(5000);
-    expect(c.shown).toEqual(A);
     expect(c.visible).toBe(true);
   });
 
-  it("離開卡片後有寬限，之後換成滑鼠所在的格子；離開戰場則關閉", () => {
+  it("釘住的卡片可以滑進；離開卡片後仍釘住", () => {
     const c = new TileCardController();
     c.setHover(A);
+    c.pinAt(A);
     c.cardEnter();
-    c.setHover(null);
+    c.setHover(B);
     c.cardLeave();
-    vi.advanceTimersByTime(CLOSE_GRACE_MS - 1);
-    expect(c.visible).toBe(true);
-    vi.advanceTimersByTime(1);
-    expect(c.shown).toBeNull();
-    expect(c.visible).toBe(false);
-  });
-
-  it("寬限期內又滑回原格子就保持原卡", () => {
-    const c = new TileCardController();
-    c.setHover(A);
-    c.setHover(B);
-    vi.advanceTimersByTime(TILE_SWITCH_MS - 10);
-    c.setHover(A);
-    vi.advanceTimersByTime(1000);
+    vi.advanceTimersByTime(5000);
+    expect(c.pinned).toBe(true);
     expect(c.shown).toEqual(A);
   });
 
@@ -157,8 +121,8 @@ describe("單位資訊卡：釘住與關閉", () => {
   it("卡片裡的說明框開著（hold）時不換卡，關掉後才開始計時", () => {
     const c = new TileCardController();
     c.setHover(A);
-    c.setHover(B);
     c.hold(1);
+    c.setHover(B);
     vi.advanceTimersByTime(5000);
     expect(c.shown).toEqual(A);
     c.hold(-1);

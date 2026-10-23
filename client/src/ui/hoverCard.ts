@@ -4,7 +4,7 @@
 // 純邏輯、不碰 React 與 DOM（計時器可用 vitest fake timers 測）。
 import type { Pos } from "../api/types";
 import { posKey } from "../battle/geometry";
-import { CLOSE_GRACE_MS, TILE_SWITCH_MS, claim, release, type Dismissable, type Holdable } from "./floatCard";
+import { CLOSE_GRACE_MS, claim, release, type Dismissable, type Holdable } from "./floatCard";
 
 const same = (a: Pos | null, b: Pos | null): boolean => (a === null || b === null ? a === b : posKey(a) === posKey(b));
 
@@ -44,16 +44,14 @@ export class TileCardController implements Dismissable, Holdable {
     return same(this.hover, this.suppressed) ? null : this.hover;
   }
 
-  /** 換到另一個有內容的格子用短延遲（``TILE_SWITCH_MS``）；離開卡片或滑到沒有內容的地方用寬限。 */
-  private scheduleSwitch(grace = false): void {
+  /** 寬限後換成滑鼠所在的格子（只剩「釘住的卡被取消、或卡內說明框關掉」時用到）。 */
+  private scheduleSwitch(): void {
     this.clearTimer();
-    const next = this.target();
-    const delay = !grace && next !== null && this.hasContent(next) ? TILE_SWITCH_MS : CLOSE_GRACE_MS;
     this.timer = setTimeout(() => {
       this.timer = null;
       if (this.overCard || this.holds > 0 || this.pinned) return;
       if (!same(this.shown, this.target())) this.update(() => (this.shown = this.target()));
-    }, delay);
+    }, CLOSE_GRACE_MS);
   }
 
   setHover(tile: Pos | null): void {
@@ -65,12 +63,11 @@ export class TileCardController implements Dismissable, Holdable {
       this.clearTimer();
       return;
     }
-    if (!this.visible) {
-      this.clearTimer();
-      this.update(() => (this.shown = this.target()));
-      return;
-    }
-    if (!this.overCard) this.scheduleSwitch();
+    // 3-40b（使用者：「滑鼠往左滑到彈出視窗固定的功能就不要了」）：沒釘住的卡片滑不進去，
+    // 所以換格子、離開格子都立刻換卡或關卡；要停留就點擊釘住。卡片裡的說明框開著時不換（關掉後寬限再換）。
+    if (this.holds > 0) return;
+    this.clearTimer();
+    this.update(() => (this.shown = this.target()));
   }
 
   cardEnter(): void {
@@ -80,7 +77,7 @@ export class TileCardController implements Dismissable, Holdable {
 
   cardLeave(): void {
     this.overCard = false;
-    if (!this.pinned) this.scheduleSwitch(true);
+    if (!this.pinned) this.scheduleSwitch();
   }
 
   /** 點卡片：釘住。 */

@@ -3432,8 +3432,40 @@ button.selected {
   grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
 }
 
-/* 資訊卡釘住的操作提示（3-40） */
-.tile-pin-hint {
-  margin-top: 6px;
-  text-align: right;
+/* 資訊卡釘住（3-40b，美術 PM）：沒釘住時卡片不接滑鼠；底部一行提示在卡片底色內；標題列右側圖釘，釘住時金色。 */
+.unit-float:not(.pinned) {
+  pointer-events: none;
+}
+
+.unit-float .tile-pin-bar {
+  margin-top: -4px; /* 接上上一塊（.unit-float 的 gap 4px），看起來是同一張卡 */
+  padding: 4px 10px;
+  border-top: 1px solid rgb(46 46 60 / 50%);
+  background: rgb(28 28 38 / 96%);
+  box-shadow: 0 4px 16px rgb(0 0 0 / 55%);
+  color: var(--muted);
+  font-size: 12px;
+  text-align: left;
+}
+
+.tile-pin-glyph {
+  vertical-align: -2px;
+}
+
+.unit-float .tile-pin-icon {
+  position: absolute;
+  top: 8px;
+  right: 10px;
+  color: var(--muted);
+  opacity: 0.5;
+  pointer-events: none;
+}
+
+.unit-float.bridge-right .tile-pin-icon {
+  right: 18px;
+}
+
+.unit-float.pinned .tile-pin-icon {
+  color: #ffd04a;
+  opacity: 1;
 }

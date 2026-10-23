@@ -1025,7 +1025,6 @@ export function BattleScreen({ initial, onExit, exitLabel, runMode }: Props) {
                 <UnitInfo unit={hoverUnit} names={names} heroId={heroId} skills={skillNames} view={view} />
               )}
               <TileCard sections={tileCardSections} />
-              {!tileCard.ctl.pinned && <div className="muted small tile-pin-hint">左鍵點空格或 Shift＋左鍵可釘住</div>}
             </HoverFloat>
           )}
         </BattleCanvas>

@@ -18,6 +18,15 @@ interface Props {
   children: ReactNode;
 }
 
+/** 圖釘（3-40b，美術 PM：標題列右側＋底部提示共用同一個圖示）。 */
+function PinIcon({ className }: { className: string }) {
+  return (
+    <svg className={className} viewBox="0 0 16 16" width="13" height="13" aria-hidden="true">
+      <path d="M10.5 1.5 14.5 5.5 12 6.5 9.5 9 9.8 12.2 8.6 13.4 6 10.8 2.5 14.3 1.7 13.5 5.2 10 2.6 7.4 3.8 6.2 7 6.5 9.5 4Z" fill="currentColor" />
+    </svg>
+  );
+}
+
 const clamp = (v: number, lo: number, hi: number) => Math.max(lo, Math.min(v, Math.max(lo, hi)));
 
 export function HoverFloat({ placement, card, children }: Props) {
@@ -82,8 +91,9 @@ export function HoverFloat({ placement, card, children }: Props) {
           <div
             ref={setRef}
             className={`unit-float ${side}${ctl.pinned ? " pinned" : ""}`}
+            // 3-40b：沒釘住時卡片不接滑鼠（CSS pointer-events: none），只有釘住的卡片能滑進、點、捲動
             onPointerEnter={(e) => {
-              if (e.pointerType !== "touch") ctl.cardEnter();
+              if (e.pointerType !== "touch" && ctl.pinned) ctl.cardEnter();
             }}
             onPointerLeave={(e) => {
               if (e.pointerType !== "touch") ctl.cardLeave();
@@ -96,7 +106,17 @@ export function HoverFloat({ placement, card, children }: Props) {
               ctl.pin();
             }}
           >
+            <PinIcon className="tile-pin-icon" />
             {children}
+            <div className="tile-pin-bar">
+              {ctl.pinned ? (
+                "Esc 或再點一次：取消"
+              ) : (
+                <>
+                  <PinIcon className="tile-pin-glyph" /> 點擊釘住・Shift＋點：任何格
+                </>
+              )}
+            </div>
           </div>
         </ParentFloat.Provider>,
         document.body,
