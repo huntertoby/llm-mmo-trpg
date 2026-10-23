@@ -2039,3 +2039,15 @@ PM 驗收後請使用者試玩一整輪（`docs/專案計畫.md` 第 14 節 🎮
 - 檢查（main 合併後）：ruff、format、mypy；pytest skillgen／content／api／narrative／cli／architecture 通過（含 slow 的 CLI 快照與 run auto）；vitest 910、build。agent 回報的 `floatCardRule` vitest 失敗在 main 上不重現。
 - 合併後兩個 slow 測試要改（不是 3-48 造成）：CLI 快照 `skills_show_all` 因 d937339（驟雨、潑水瓶改智力）重產；`run auto` 分歧進化的種子 5 因 3I-1 新武器不再進化 → 改用種子 6、7。**教訓：改內容（縮放屬性）時要跑 `-m "slow or not slow" tests/cli`；3I-1 agent 也漏了 slow 的 run auto。**
 - 待決：#1 法術技 0 法力目前合法 → 問玩法 PM；#2 有主角時顯示手上武器實際屬性（`/api/workshop/options` 要帶主角／武器，改 OpenAPI）→ 排 **3-48b** 小修；#3 原語選項 `description_zh` 仍是開發者語氣 → 問玩法 PM（改寫或玩家模式隱藏）；#4 `?dev=1` 看不到預算明細原始 ID → 接受；#5 「YAML」一詞保留 → 接受。
+
+## 53. Phase 3-48c｜工坊試玩回饋第二批（使用者 2026-10-24；sonnet；約 0.6～0.8 段；3-48b 或 3I-2 完成後派）
+
+來源：專案 PM 轉達的使用者試玩回饋（截圖在專案 PM 的 images 資料夾 22～26），以及玩法 PM 的決定。照流程 E：**全面掃描工坊每一步、每一種原語**，報告附清單。
+
+1. **稀有度步驟卡住**（使用者：「會有不給選稀有度的情況不知道為什麼」）：畫面寫「技能定義還有錯誤，無法推導稀有度（見 problems）」，但沒列出錯誤。① 這一步直接列出白話錯誤，並附「回到第 N 步修改」；② 查出這次是哪個錯誤（可能是殘留的縮放屬性或第二屬性），如果是前面步驟沒擋住的違規，就在那一步擋下；③ 前面步驟有錯時不打勾；④ 「problems」改中文。
+2. **最低花費**（玩法 PM，06 6.10 `3be7440`）：主動法術技至少 1 法力、主動武器技至少 1 耐力；工坊、隨機組合器、LLM 提議、驗證器都要檢查。被動、反應、姿態照各自的規則。內建技能違反時列入報告，不要自行改數值，交 PM。
+3. **玩家模式隱藏開發者語氣的說明**（玩法 PM 選 B，之後再 A）：原語、選項、形狀等 `description_zh` 中，含英文代號或開發者語氣的，在玩家模式隱藏（`?dev=1` 照舊）。匯出清單到共用筆記資料夾 `C:\Users\tobby\AppData\Local\Claude-Data\claude_pzs8sxrjxfjjc\side-session-notes\local_46ffc72c-28dd-48aa-9eb7-f1724ef32432\workshop_descriptions.csv`（兩欄：id、原文），交給玩法 PM 改寫。能由規則產生的數值、對象照 #44 用程式產生。包括形狀說明（square3、ring、cone、weapon）與「消耗狀態」的說明（affects、status、then、damage／heal／shield、scale、stacks、splash）。
+4. **巢狀效果原語先在玩家模式隱藏**：消耗狀態後的效果、賭注的贏／輸分支、持續區域、擊殺時效果——玩家模式在效果選單中隱藏這 4 種，附一句「這類效果之後開放」（3-48d 會真正開放一層巢狀，待使用者決定）。
+5. **法術技在選效果前**：縮放屬性不要預設力量（法術不能看力量），也不要列出不合法的屬性；不顯示「用武器骰」勾選（只有武器技才有）。
+6. **刻印的「標籤」**（使用者：「標籤 符文的標籤（與 element 恰好填一個） 要填什麼」）：空白文字框改成下拉選單，列出已定義的符文標籤並用中文名稱（目前內建只有 `hunt`＝獵紋）。是否開放自訂新標籤，等玩法 PM 回覆；在回覆前，玩家模式只給下拉選單。說明文字缺字（「超過 （初值 6）」「預算： ×」——變數名被拿掉後沒補文字）要補完整，並去掉 element、tag、duration 等英文。對象選項出現「自己」等作用在格子上沒有意義的選項，請確認刻印的合法對象，不合法的不要列出。
+7. 驗收：pytest（skillgen、content、api、narrative、llm、cli 含 slow）、vitest、build、ruff、format、mypy；`tests/skillgen/test_player_text.py` 擴大到涵蓋上面所有文字；排版煙霧檢查。報告 `Phase3-48c報告.md`，附全面掃描清單（每一步、每一種原語：改了什麼、確認沒問題的）。
