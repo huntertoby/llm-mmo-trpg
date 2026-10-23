@@ -1,0 +1,81 @@
+<!doctype html>
+<html lang="zh-Hant">
+<head>
+<meta charset="utf-8">
+<title>龍裔外觀選項</title>
+<style>
+  body { margin: 0; padding: 16px 20px; background: #1b1e24; color: #e8e8ea; font-family: "Microsoft JhengHei", sans-serif; }
+  h1 { font-size: 20px; margin: 0 0 4px; }
+  h2 { font-size: 15px; margin: 16px 0 6px; }
+  .sub { color: #a0a4ad; font-size: 13px; margin-bottom: 8px; line-height: 1.55; }
+  table { border-collapse: separate; border-spacing: 5px; }
+  th { font-size: 13px; color: #e8e8ea; padding: 2px 4px; }
+  td { background: #232730; border-radius: 6px; padding: 3px; text-align: center; font-size: 12px; color: #c8ccd4; }
+  td.lab { background: none; text-align: right; font-size: 13px; color: #e8e8ea; max-width: 170px; }
+  td.lab small { display: block; color: #8a909a; font-size: 11px; }
+  tr.rec td.lab { color: #ffd04a; }
+  canvas { display: block; margin: 0 auto 2px; }
+</style>
+</head>
+<body>
+<h1>龍裔外觀選項（使用者：「龍裔不明顯 多給幾個選項」）</h1>
+<div class="sub">仍是方案乙：人形骨架、裝備照穿、不換頭型。每列一個選項，三套裝備（不穿／板甲＋頭盔／長袍＋披風），每格正面、側面、背面。最後一區是戰場實際大小，和角魔、鱗族、人類擺在一起。</div>
+<table id="grid"></table>
+
+<h2>戰場實際大小（每格 52px）：每個選項穿板甲＋頭盔、穿布衣各一，最右是角魔、鱗族、人類對照</h2>
+<div id="field"></div>
+
+<script src="raceArt.js"></script>
+<script src="paperdoll.js"></script>
+<script>
+const D = PaperDoll, R = RaceArt, I = D.ITEMS, DPR = 3;
+const BASE = { skin: "#d8a878", hair: "short", hairColor: "#3a2418" };
+const OPTS = [
+  ["現行", "小角＋臉頰幾片鱗＋鱗尾", { ...R.RACES.dragonkin.look }],
+  ["甲 大龍角＋龍鱗", "後彎的大雙叉角、臉頰到頸側滿鱗", { ...BASE, horns: "dragon", hornColor: "#e8d8b8", pattern: "dragonscale", scaleColor: "#a8784a", tail: "scaled", tailColor: "#a8784a" }],
+  ["乙 豎瞳＋鱗脊", "金色發光豎瞳、鼻樑到額頭一排鱗脊（小角）", { ...BASE, horns: "small", hornColor: "#e8d8b8", slitEyes: true, ridge: true, scaleColor: "#a8784a", tail: "scaled", tailColor: "#a8784a" }],
+  ["丙 粗龍尾＋背刺", "比其他族粗、有鱗刺的尾巴＋肩後骨刺（小角）", { ...BASE, horns: "small", hornColor: "#e8d8b8", tail: "dragon", spines: true, scaleColor: "#a8784a" }],
+  ["丁 小龍翼", "收在背後的小翼，從肩後與身側露出（小角）", { ...BASE, horns: "small", hornColor: "#e8d8b8", wings: true, scaleColor: "#a8784a", tail: "scaled", tailColor: "#a8784a" }],
+  ["建議：甲＋乙", "大龍角、龍鱗、豎瞳、鱗脊＋鱗尾", { ...BASE, horns: "dragon", hornColor: "#e8d8b8", pattern: "dragonscale", slitEyes: true, ridge: true, scaleColor: "#a8784a", tail: "scaled", tailColor: "#a8784a" }],
+  ["戊 鱗色：紅", "甲＋乙，鱗與角換成元素色（可和元素對應）", { ...BASE, horns: "dragon", hornColor: "#5a1a14", pattern: "dragonscale", slitEyes: true, ridge: true, scaleColor: "#c8402a", tail: "scaled", tailColor: "#c8402a" }],
+  ["戊 鱗色：藍", "", { ...BASE, skin: "#e0c0a8", horns: "dragon", hornColor: "#1a2a4a", pattern: "dragonscale", slitEyes: true, ridge: true, scaleColor: "#3a78c8", tail: "scaled", tailColor: "#3a78c8" }],
+  ["戊 鱗色：金", "", { ...BASE, horns: "dragon", hornColor: "#6a4a10", pattern: "dragonscale", slitEyes: true, ridge: true, scaleColor: "#d8a830", tail: "scaled", tailColor: "#d8a830" }],
+];
+const OUT = [
+  ["不穿裝備", { body: I.tunic, feet: I.boots }],
+  ["板甲＋頭盔", { body: I.plate_armor, feet: I.greaves, head: I.helmet, main_hand: I.sword, off_hand: I.round_shield }],
+  ["長袍＋披風", { body: I.mage_robe, feet: I.boots, cloak: I.red_cape, main_hand: I.fire_staff }],
+];
+function cv(w, h) {
+  const c = document.createElement("canvas");
+  c.width = w * DPR; c.height = h * DPR; c.style.width = `${w}px`; c.style.height = `${h}px`;
+  const ctx = c.getContext("2d"); ctx.scale(DPR, DPR); return [c, ctx];
+}
+const grid = document.getElementById("grid");
+grid.insertAdjacentHTML("beforeend", `<tr><th></th>${OUT.map(([t]) => `<th>${t}</th>`).join("")}</tr>`);
+for (const [name, note, look] of OPTS) {
+  const tr = document.createElement("tr"); if (name.startsWith("建議")) tr.className = "rec";
+  tr.insertAdjacentHTML("beforeend", `<td class="lab">${name}<small>${note}</small></td>`);
+  for (const [, gear] of OUT) {
+    const td = document.createElement("td");
+    const [c, ctx] = cv(198, 96);
+    ctx.fillStyle = "#2d323c"; ctx.fillRect(0, 0, 198, 96);
+    ["south", "east", "north"].forEach((f, i) => D.stamp(ctx, { look, gear }, f, 33 + i * 66, 90, 1.35, { dpr: DPR }));
+    td.append(c); tr.append(td);
+  }
+  grid.append(tr);
+}
+const T = 52, field = document.getElementById("field");
+const items = [];
+for (const [, , look] of OPTS.slice(0, 6)) { items.push({ look, gear: OUT[1][1] }); items.push({ look, gear: OUT[0][1] }); }
+items.push({ look: R.RACES.fiend.look, gear: OUT[0][1] }, { look: R.RACES.scalefolk.look, gear: OUT[0][1] }, { look: R.RACES.human.look, gear: OUT[0][1] });
+const [c, ctx] = cv(T * items.length, T);
+items.forEach((u, i) => {
+  ctx.fillStyle = Math.floor(i / 2) % 2 ? "#8a8a84" : "#7d8a7a"; ctx.fillRect(i * T, 0, T, T);
+  D.stamp(ctx, u, "south", i * T + T / 2, T * 0.82, 0.78, { dpr: DPR });
+});
+field.append(c);
+field.insertAdjacentHTML("beforeend", `<div class="sub" style="margin-top:4px">兩格一組：現行、甲、乙、丙、丁、建議（左＝板甲頭盔、右＝布衣）｜最右三格：角魔、鱗族、人類</div>`);
+</script>
+</body>
+</html>

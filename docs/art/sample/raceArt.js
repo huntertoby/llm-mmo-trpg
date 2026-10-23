@@ -33,6 +33,11 @@ window.RaceArt = (() => {
 
   // ---- 尾巴：正面、側面畫在身體後面（從腰側露出）；背面畫在披風之上 ----
   const TAIL = {
+    dragon: (ctx, look) => {
+      const c = look.scaleColor ?? "#a8784a";
+      fill(ctx, c, () => { ctx.moveTo(0, -15); ctx.quadraticCurveTo(12, -13, 17, -2); ctx.lineTo(20, 1); ctx.lineTo(15, 0); ctx.quadraticCurveTo(9, -6, 0, -8); ctx.closePath(); });
+      for (const t of [0.3, 0.55, 0.78]) fill(ctx, mix(c, "#ffffff", 0.3), () => { const x = 17 * t, y = -14 + 12 * t; ctx.moveTo(x - 1.5, y); ctx.lineTo(x + 0.5, y - 3.5); ctx.lineTo(x + 1.8, y + 0.5); ctx.closePath(); });
+    },
     fox: (ctx, look) => {
       const c = look.tailColor ?? look.hairColor ?? "#d8762a";
       fill(ctx, c, () => { ctx.moveTo(0, -13); ctx.quadraticCurveTo(10, -14, 14, -6); ctx.quadraticCurveTo(17, 2, 11, 0); ctx.quadraticCurveTo(8, -6, 0, -9); ctx.closePath(); });
@@ -51,7 +56,23 @@ window.RaceArt = (() => {
       fill(ctx, c, () => { ctx.moveTo(13, -2); ctx.lineTo(10.5, 1.5); ctx.lineTo(13, 4.5); ctx.lineTo(15.5, 1.5); ctx.closePath(); });
     },
   };
+  // 龍裔選項：龍翼（收在背後）與背刺；正面、側面畫在身體後面，背面畫在披風之上
+  function wings(ctx, look, view) {
+    if (!look.wings) return;
+    const c = look.scaleColor ?? "#a8784a", m = mix(c, "#ffffff", 0.25);
+    for (const s of [-1, 1]) {
+      fill(ctx, dark(c, 0.15), () => { ctx.moveTo(s * 4, -22); ctx.lineTo(s * 15, -34); ctx.lineTo(s * 16, -22); ctx.lineTo(s * 13, -16); ctx.lineTo(s * 9, -19); ctx.lineTo(s * 6, -15); ctx.closePath(); });
+      ctx.strokeStyle = m; ctx.lineWidth = 0.9; ctx.beginPath(); ctx.moveTo(s * 5, -21); ctx.lineTo(s * 15, -33); ctx.moveTo(s * 9, -25); ctx.lineTo(s * 13, -16); ctx.stroke();
+    }
+  }
+  function spines(ctx, look) {
+    if (!look.spines) return;
+    const c = look.scaleColor ?? "#a8784a";
+    for (const [x, y] of [[-5, -24], [0, -25], [5, -24]]) fill(ctx, mix(c, "#ffffff", 0.2), () => { ctx.moveTo(x - 1.8, y + 2); ctx.lineTo(x, y - 4); ctx.lineTo(x + 1.8, y + 2); ctx.closePath(); });
+  }
   function tail(ctx, look, view, side) {
+    wings(ctx, look, view);
+    spines(ctx, look);
     const draw = TAIL[look.tail];
     if (!draw) return;
     ctx.save();
@@ -80,6 +101,22 @@ window.RaceArt = (() => {
       ctx.save(); ctx.strokeStyle = "#4ae0d0"; ctx.lineWidth = 0.9; ctx.shadowColor = "#4ae0d0"; ctx.shadowBlur = 2;
       ctx.beginPath(); ctx.moveTo(s * 1, -36); ctx.lineTo(s * 4, -33); ctx.lineTo(s * 4, -25); ctx.lineTo(s * 7, -23); ctx.stroke();
       fill(ctx, "#4ae0d0", () => ctx.arc(ex + s * 2.9, -28.5, 1.5, 0, TAU));
+      ctx.restore();
+    }
+    if (look.pattern === "dragonscale") {
+      const c = look.scaleColor ?? "#a8784a";
+      fill(ctx, c, () => { for (const [x, y] of [[-7, -27], [-6, -24.5], [-4.5, -22.5], [7, -27], [6, -24.5], [4.5, -22.5], [-7.5, -30], [7.5, -30]]) { ctx.moveTo(ex + x + 1.5, y); ctx.arc(ex + x, y, 1.5, 0, Math.PI); } });
+    }
+    if (look.ridge) {
+      const c = look.scaleColor ?? "#a8784a";
+      for (const y of [-35.5, -33, -30.5]) fill(ctx, c, () => { ctx.moveTo(ex - 1.3, y + 1.2); ctx.lineTo(ex, y - 1.2); ctx.lineTo(ex + 1.3, y + 1.2); ctx.closePath(); });
+    }
+    if (look.slitEyes) {
+      ctx.save(); ctx.shadowColor = "#ffcf4a"; ctx.shadowBlur = 3;
+      for (const [x, ok] of [[ex + 2.9, side === 0 || side === 1], [ex - 2.9, side === 0 || side === -1]]) if (ok) {
+        fill(ctx, "#ffcf4a", () => ctx.ellipse(x, -28.5, 1.5, 1.9, 0, 0, TAU));
+        fill(ctx, "#1d1a22", () => ctx.rect(x - 0.35, -30.2, 0.7, 3.4));
+      }
       ctx.restore();
     }
     if (look.tusks) for (const s of [-1, 1]) fill(ctx, "#f4ecd8", () => { ctx.moveTo(ex + s * 2.5, -24); ctx.lineTo(ex + s * 3.4, -27); ctx.lineTo(ex + s * 4, -24); ctx.closePath(); });
@@ -142,6 +179,11 @@ window.RaceArt = (() => {
     if (!kind || kind === "none") return;
     const c = look.hornColor ?? "#efe6cc";
     for (const s of [-1, 1]) {
+      if (kind === "dragon") {
+        fill(ctx, c, () => { ctx.moveTo(s * 3.5, -36); ctx.quadraticCurveTo(s * 9, -44, s * 17, -45); ctx.quadraticCurveTo(s * 11, -41, s * 8.5, -35); ctx.closePath(); });
+        fill(ctx, c, () => { ctx.moveTo(s * 6.5, -34); ctx.quadraticCurveTo(s * 11, -37, s * 14, -36); ctx.quadraticCurveTo(s * 10, -34, s * 8, -32); ctx.closePath(); });
+        continue;
+      }
       if (kind === "small") fill(ctx, c, () => { ctx.moveTo(s * 3.5, -36); ctx.quadraticCurveTo(s * 6, -42, s * 9.5, -43); ctx.quadraticCurveTo(s * 7, -39, s * 6.5, -35.5); ctx.closePath(); });
       else fill(ctx, c, () => { ctx.moveTo(s * 5, -35); ctx.quadraticCurveTo(s * 14, -38, s * 12, -47); ctx.quadraticCurveTo(s * 10.5, -41, s * 7.5, -38.5); ctx.quadraticCurveTo(s * 7, -36, s * 7, -33); ctx.closePath(); });
     }
