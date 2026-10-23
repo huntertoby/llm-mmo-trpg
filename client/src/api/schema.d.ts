@@ -720,6 +720,22 @@ export interface components {
             type: "aim";
         };
         /**
+         * AllocateChoice
+         * @description 分配未分配的屬性點（Phase 3H-3；重配之後用）：``attributes`` 是屬性 → 加幾點，總數不可超過
+         *     ``RunState.attribute_points``。營火、戰前都可以送；不推進節點。
+         */
+        AllocateChoice: {
+            /**
+             * @description discriminator enum property added by openapi-typescript
+             * @enum {string}
+             */
+            kind: "allocate";
+            /** Attributes */
+            attributes?: {
+                [key: string]: number;
+            };
+        };
+        /**
          * AppearanceView
          * @description 物品外觀（Phase 3G-G5a，只給圖示用）：欄位同 ``content/equipment/appearance.yaml``；
          *     物品沒寫的欄位為 ``None``（前端依欄位退回預設）；``keywords`` 由詞條推導（前 2 個）；
@@ -784,6 +800,16 @@ export interface components {
          */
         Attribute: "str" | "dex" | "con" | "int" | "wis" | "wil";
         /**
+         * AttributeAffectsOut
+         * @description 一個屬性影響的東西（Phase 3H-3）：武器的普攻與武器技、縮放這個屬性的技能名；由程式依技能
+         *     與武器的縮放屬性產生。
+         */
+        AttributeAffectsOut: {
+            attr: components["schemas"]["Attribute"];
+            /** Lines Zh */
+            lines_zh: string[];
+        };
+        /**
          * AttributePerkOut
          * @description 屬性的常駐數值（Phase 3H-1，``core.yaml`` 的 ``attribute_perks``）：說明由資料產生。
          */
@@ -797,6 +823,15 @@ export interface components {
             now_zh: string | null;
             /** Next At */
             next_at: number;
+        };
+        /**
+         * AttributeSuggestionOut
+         * @description 開局建議的主屬性（Phase 3H-3）：起始技能最常用的縮放屬性（和自動配點同一個規則）。
+         */
+        AttributeSuggestionOut: {
+            attr: components["schemas"]["Attribute"];
+            /** Reason Zh */
+            reason_zh: string;
         };
         /**
          * BattleHistory
@@ -2191,6 +2226,24 @@ export interface components {
             hp_per_con_point: number;
             /** Hp Con Base */
             hp_con_base: number;
+            /** Effective Attributes */
+            effective_attributes?: {
+                [key: string]: number;
+            };
+            /**
+             * Attribute Points
+             * @default 0
+             */
+            attribute_points: number;
+            /** Attribute Spent */
+            attribute_spent?: {
+                [key: string]: number;
+            };
+            /**
+             * Attribute Affects
+             * @default []
+             */
+            attribute_affects: components["schemas"]["AttributeAffectsOut"][];
             /**
              * Attribute Perks
              * @default []
@@ -3096,6 +3149,18 @@ export interface components {
             kind: "reroll";
         };
         /**
+         * RespecAttributesChoice
+         * @description 營火：免費重配屬性點（Phase 3H-3）——分配出去的屬性點全部退回（屬性回到基礎），之後再用
+         *     ``allocate`` 重新分配。和技能點的 ``respec`` 同一個畫面、同樣免費、不推進節點。
+         */
+        RespecAttributesChoice: {
+            /**
+             * @description discriminator enum property added by openapi-typescript
+             * @enum {string}
+             */
+            kind: "respec_attributes";
+        };
+        /**
          * RespecChoice
          * @description 營火：免費重配（Phase 3-26a）——全部技能退回 1 級，花掉的點數退回，之後再用 ``spend`` 重新
          *     分配。不推進節點。
@@ -3668,6 +3733,12 @@ export interface components {
             seed: number;
             /** Options */
             options: components["schemas"]["StartKeywordOption"][];
+            suggestion?: components["schemas"]["AttributeSuggestionOut"] | null;
+            /**
+             * Attribute Affects
+             * @default []
+             */
+            attribute_affects: components["schemas"]["AttributeAffectsOut"][];
         };
         /**
          * StartPreviewRequest
@@ -5278,7 +5349,7 @@ export interface operations {
         };
         requestBody: {
             content: {
-                "application/json": components["schemas"]["LevelUpChoice"] | components["schemas"]["RerollChoice"] | components["schemas"]["PickChoice"] | components["schemas"]["LeaveChoice"] | components["schemas"]["SpendChoice"] | components["schemas"]["RespecChoice"] | components["schemas"]["LoadoutChoice"];
+                "application/json": components["schemas"]["LevelUpChoice"] | components["schemas"]["RerollChoice"] | components["schemas"]["PickChoice"] | components["schemas"]["LeaveChoice"] | components["schemas"]["SpendChoice"] | components["schemas"]["RespecChoice"] | components["schemas"]["RespecAttributesChoice"] | components["schemas"]["AllocateChoice"] | components["schemas"]["LoadoutChoice"];
             };
         };
         responses: {

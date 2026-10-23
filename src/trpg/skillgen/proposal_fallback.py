@@ -92,6 +92,7 @@ def _from_composer(
                 skeleton=skeleton,
                 library=library,
                 keyword=keyword,
+                hero_attributes=ctx.hero_attributes,
             )
         except ComposeError:
             continue

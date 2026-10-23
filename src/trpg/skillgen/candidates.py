@@ -29,6 +29,12 @@
 **行為紀錄**：關鍵字的 ``actions``（``skill_keywords.yaml``，例如攀跳 → 高處）與玩家用過的動作次數
 相乘當權重：加深在持有數並列時偏向行為相符的關鍵字；新方向抽關鍵字時，行為相符的權重較高。
 
+**跟主屬性**（Phase 3H-3，07 7.2）：``CandidateRequest.hero_attributes`` 有值時，加深與橋接優先取
+縮放屬性＝主角最高屬性的技能（技能池只看 ``scaling_attr``；隨機組合器的技能縮放屬性直接跟著最高
+屬性，限在 ``skill_scaling.yaml`` 允許範圍內），**新方向保留給不同屬性**（組合器取允許範圍內次高
+的）；偏好湊不到時放寬（取同來源的備選），所以候選數量不變。最高屬性同分依六屬性順序
+（:func:`trpg.shared.types.top_attribute`）。
+
 確定性：亂數只來自 ``Rng(request.seed).fork(<種類>)``；同樣的輸入必得同樣的候選。
 """
 
@@ -43,6 +49,7 @@ from typing import Literal
 from trpg.content.library import ContentLibrary
 from trpg.content.skills import SkillDef, weapon_problem
 from trpg.shared.rng import Rng
+from trpg.shared.types import Attribute, top_attribute
 from trpg.skillgen.keywords import derive_keywords
 from trpg.skillgen.random_composer import ComposeError, compose_random_skill
 
@@ -57,6 +64,10 @@ __all__ = [
     "keyword_distribution",
     "skill_has_keywords",
 ]
+
+type AttrWant = Literal["same", "other"]
+"""候選對縮放屬性的偏好（Phase 3H-3）：``same`` ＝ 主角最高的屬性（加深、橋接），``other`` ＝ 不同的
+屬性（新方向）。"""
 
 type CandidateKind = Literal["deepen", "bridge", "new"]
 CANDIDATE_KINDS: tuple[CandidateKind, ...] = ("deepen", "bridge", "new")
@@ -83,6 +94,11 @@ class CandidateRequest:
     behavior: Mapping[str, int] = field(default_factory=dict)
     exclude: frozenset[str] = frozenset()
     """不能出現的技能 ID（玩家已持有的）。"""
+    hero_attributes: Mapping[Attribute, int] = field(default_factory=dict)
+    """主角目前的六屬性（Phase 3H-3，07 7.2）。有值時：加深與橋接的候選優先取縮放屬性＝最高屬性的
+    技能（同分依六屬性順序），新方向優先取不同屬性的技能；找不到再放寬。隨機組合器產生的技能
+    縮放屬性直接跟著最高屬性（:func:`trpg.skillgen.scaling.retarget_scaling`）。空 ＝ 不看屬性
+    （與 3H-3 之前完全相同）。"""
 
 
 @dataclass(frozen=True, slots=True)
@@ -140,16 +156,35 @@ class _Search:
             and weapon_problem(skill, self.request.weapon_class) is None
         )
 
-    def from_pool(self, rng: Rng, keywords: Sequence[str]) -> SkillDef | None:
+    def _want_ok(self, skill: SkillDef, want: AttrWant | None) -> bool:
+        if want is None:
+            return True
+        top = top_attribute(self.request.hero_attributes)
+        return (skill.scaling_attr == top) == (want == "same")
+
+    def from_pool(
+        self, rng: Rng, keywords: Sequence[str], want: AttrWant | None
+    ) -> tuple[SkillDef | None, SkillDef | None]:
+        """（符合屬性偏好的技能，偏好放寬後的備選）；沒有偏好時只有第一個。"""
         options = [
             s for s, found in self.pool if all(k in found for k in keywords) and self.usable(s)
         ]
-        return rng.choice(options) if options else None
+        if not options:
+            return None, None
+        liked = [s for s in options if self._want_ok(s, want)]
+        if liked:
+            return rng.choice(liked), None
+        return None, rng.choice(options)
 
-    def from_composer(self, rng: Rng, keywords: Sequence[str]) -> SkillDef | None:
+    def from_composer(
+        self, rng: Rng, keywords: Sequence[str], want: AttrWant | None
+    ) -> tuple[SkillDef | None, SkillDef | None]:
         if not keywords:
-            return None
+            return None, None
         hint = "spell" if self.request.weapon_class == "focus" else None
+        attrs = self.request.hero_attributes or None
+        avoid = top_attribute(self.request.hero_attributes) if want == "other" else None
+        spare: SkillDef | None = None
         for _ in range(self.rules.composer_tries):
             seed = rng.next_u32()
             try:
@@ -159,29 +194,40 @@ class _Search:
                     category=hint,
                     library=self.library,
                     keyword=keywords[0],
+                    hero_attributes=attrs,
+                    avoid_attr=avoid,
                 )
             except ComposeError:
                 continue
             if self.usable(skill) and skill_has_keywords(skill, keywords, self.library):
-                return skill
-        return None
+                if self._want_ok(skill, want):
+                    return skill, None
+                spare = spare if spare is not None else skill
+        return None, spare
 
     def find(
-        self, rng: Rng, keywords: Sequence[str]
+        self, rng: Rng, keywords: Sequence[str], want: AttrWant | None = None
     ) -> tuple[SkillDef, Literal["pool", "composer"]] | None:
+        want = want if self.request.hero_attributes else None
         composer_first = rng.chance_permille(self.rules.composer_share_permille)
         order: tuple[Literal["pool", "composer"], ...] = (
             ("composer", "pool") if composer_first else ("pool", "composer")
         )
+        spares: list[tuple[SkillDef, Literal["pool", "composer"]]] = []
         for source in order:
-            skill = (
-                self.from_composer(rng, keywords)
+            skill, spare = (
+                self.from_composer(rng, keywords, want)
                 if source == "composer"
-                else self.from_pool(rng, keywords)
+                else self.from_pool(rng, keywords, want)
             )
             if skill is not None:
                 self.taken.add(skill.id)
                 return skill, source
+            if spare is not None:
+                spares.append((spare, source))
+        if spares:  # 偏好的屬性湊不到：放寬，仍取第一個來源的備選
+            self.taken.add(spares[0][0].id)
+            return spares[0]
         return None
 
 
@@ -227,10 +273,10 @@ def _weighted_order(rng: Rng, keywords: Sequence[str], behavior: Mapping[str, in
 
 
 def _first(
-    search: _Search, rng: Rng, options: Iterable[tuple[str, ...]]
+    search: _Search, rng: Rng, options: Iterable[tuple[str, ...]], want: AttrWant | None = None
 ) -> tuple[tuple[str, ...], SkillDef, Literal["pool", "composer"]] | None:
     for keywords in options:
-        found = search.find(rng, keywords)
+        found = search.find(rng, keywords, want)
         if found is not None:
             return keywords, found[0], found[1]
     return None
@@ -241,10 +287,10 @@ def _deepen(
 ) -> Candidate | None:
     rng = Rng(search.request.seed).fork("deepen")
     if held:
-        hit = _first(search, rng, ((k,) for k in held))
+        hit = _first(search, rng, ((k,) for k in held), "same")
         if hit is not None:
             return Candidate("deepen", hit[0], hit[1], hit[2], fallback=hit[0][0] != held[0])
-    hit = _first(search, rng, ((k,) for k in _weighted_order(rng, unheld, behavior)))
+    hit = _first(search, rng, ((k,) for k in _weighted_order(rng, unheld, behavior)), "same")
     return None if hit is None else Candidate("deepen", hit[0], hit[1], hit[2], fallback=True)
 
 
@@ -253,14 +299,14 @@ def _bridge(
 ) -> Candidate | None:
     rng = Rng(search.request.seed).fork("bridge")
     pairs = [tuple(sorted(p, key=held.index)) for p in combinations(held, 2)]
-    hit = _first(search, rng, rng.shuffled(pairs))
+    hit = _first(search, rng, rng.shuffled(pairs), "same")
     if hit is not None:
         return Candidate("bridge", hit[0], hit[1], hit[2])
     if held:
         outward = [(k, n) for k in held for n in _weighted_order(rng, unheld, behavior)]
-        hit = _first(search, rng, [*outward, *((k,) for k in held)])
+        hit = _first(search, rng, [*outward, *((k,) for k in held)], "same")
     else:
-        hit = _first(search, rng, ((k,) for k in _weighted_order(rng, unheld, behavior)))
+        hit = _first(search, rng, ((k,) for k in _weighted_order(rng, unheld, behavior)), "same")
     return None if hit is None else Candidate("bridge", hit[0], hit[1], hit[2], fallback=True)
 
 
@@ -268,11 +314,11 @@ def _new(
     search: _Search, unheld: list[str], held: list[str], behavior: Mapping[str, int]
 ) -> Candidate | None:
     rng = Rng(search.request.seed).fork("new")
-    hit = _first(search, rng, ((k,) for k in _weighted_order(rng, unheld, behavior)))
+    hit = _first(search, rng, ((k,) for k in _weighted_order(rng, unheld, behavior)), "other")
     if hit is not None:
         return Candidate("new", hit[0], hit[1], hit[2])
     # 每個關鍵字都有了（或還沒有的都找不到技能）：退回持有最少的關鍵字
-    hit = _first(search, rng, ((k,) for k in reversed(held)))
+    hit = _first(search, rng, ((k,) for k in reversed(held)), "other")
     return None if hit is None else Candidate("new", hit[0], hit[1], hit[2], fallback=True)
 
 

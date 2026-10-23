@@ -8,6 +8,9 @@
 種子是 ``Rng(一輪的種子).fork("offer/<n>").next_u32()``，``n`` 是 ``RunState.offers_made``（第幾組
 候選），所以同一輪同一時點的候選固定。
 
+新技能跟主屬性（Phase 3H-3）：候選產生器拿到主角目前的屬性，加深與橋接優先取縮放屬性＝最高屬性的
+技能，新方向保留給不同屬性（見 ``trpg.skillgen.candidates``）。
+
 ``off_route``（偏離路線，0.2 C）仍照舊標示：候選的縮放屬性與主角目前最高屬性不同的索引（只是標示，
 不再刻意湊一個）。``roguelite.yaml`` 的 ``offer_size``、``off_route_per_offer``、
 ``offer_max_attempts`` 從 3-24b2 起不再使用（保留欄位，見報告待決）。
@@ -21,9 +24,9 @@ from trpg.content.library import ContentLibrary
 from trpg.content.skills import SkillDef, skill_slot_problems
 from trpg.roguelite.errors import ChoiceError
 from trpg.roguelite.names import unique_skill_name
-from trpg.roguelite.start import top_attribute
 from trpg.roguelite.state import OfferTag, RunState, SkillOffer
 from trpg.shared.rng import Rng
+from trpg.shared.types import top_attribute
 from trpg.skillgen.candidates import (
     CandidateRequest,
     CandidateRules,
@@ -43,6 +46,7 @@ def candidate_request(library: ContentLibrary, run: RunState) -> CandidateReques
         seed=Rng(run.seed).fork(f"offer/{run.offers_made}").next_u32(),
         tier=library.roguelite.offer_tier(run.level),
         behavior=dict(run.behavior),
+        hero_attributes=dict(run.hero.attributes),  # 新技能跟主屬性（Phase 3H-3）
         # 進化前的技能也排除（Phase 3-26b：進化後原技能不再出現在候選）
         exclude=frozenset(
             (*run.hero.skills, *run.bench, *(r.base_id for r in run.evolutions.values()))

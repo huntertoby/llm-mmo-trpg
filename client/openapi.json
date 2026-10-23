@@ -1174,6 +1174,12 @@
                     "$ref": "#/components/schemas/RespecChoice"
                   },
                   {
+                    "$ref": "#/components/schemas/RespecAttributesChoice"
+                  },
+                  {
+                    "$ref": "#/components/schemas/AllocateChoice"
+                  },
+                  {
                     "$ref": "#/components/schemas/LoadoutChoice"
                   }
                 ],
@@ -1186,6 +1192,8 @@
                     "leave": "#/components/schemas/LeaveChoice",
                     "spend": "#/components/schemas/SpendChoice",
                     "respec": "#/components/schemas/RespecChoice",
+                    "respec_attributes": "#/components/schemas/RespecAttributesChoice",
+                    "allocate": "#/components/schemas/AllocateChoice",
                     "loadout": "#/components/schemas/LoadoutChoice"
                   }
                 },
@@ -1764,6 +1772,30 @@
         "title": "Aim",
         "description": "瞄準（Phase 3-21a）：本回合下一次需要擲命中的攻擊（普攻或技能）命中 ``+aim_hit_bonus``；\n不疊加，回合結束或用掉即失效。"
       },
+      "AllocateChoice": {
+        "properties": {
+          "kind": {
+            "type": "string",
+            "const": "allocate",
+            "title": "Kind",
+            "default": "allocate"
+          },
+          "attributes": {
+            "additionalProperties": {
+              "type": "integer"
+            },
+            "propertyNames": {
+              "$ref": "#/components/schemas/Attribute"
+            },
+            "type": "object",
+            "title": "Attributes"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "title": "AllocateChoice",
+        "description": "分配未分配的屬性點（Phase 3H-3；重配之後用）：``attributes`` 是屬性 → 加幾點，總數不可超過\n``RunState.attribute_points``。營火、戰前都可以送；不推進節點。"
+      },
       "AppearanceView": {
         "properties": {
           "kind": {
@@ -1928,6 +1960,28 @@
         "title": "Attribute",
         "description": "角色的六屬性（成員名稱用大寫縮寫，避開 ``str``、``int`` 等內建名稱）。"
       },
+      "AttributeAffectsOut": {
+        "properties": {
+          "attr": {
+            "$ref": "#/components/schemas/Attribute"
+          },
+          "lines_zh": {
+            "items": {
+              "type": "string"
+            },
+            "type": "array",
+            "title": "Lines Zh"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "attr",
+          "lines_zh"
+        ],
+        "title": "AttributeAffectsOut",
+        "description": "一個屬性影響的東西（Phase 3H-3）：武器的普攻與武器技、縮放這個屬性的技能名；由程式依技能\n與武器的縮放屬性產生。"
+      },
       "AttributePerkOut": {
         "properties": {
           "attr": {
@@ -1968,6 +2022,25 @@
         ],
         "title": "AttributePerkOut",
         "description": "屬性的常駐數值（Phase 3H-1，``core.yaml`` 的 ``attribute_perks``）：說明由資料產生。"
+      },
+      "AttributeSuggestionOut": {
+        "properties": {
+          "attr": {
+            "$ref": "#/components/schemas/Attribute"
+          },
+          "reason_zh": {
+            "type": "string",
+            "title": "Reason Zh"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "attr",
+          "reason_zh"
+        ],
+        "title": "AttributeSuggestionOut",
+        "description": "開局建議的主屬性（Phase 3H-3）：起始技能最常用的縮放屬性（和自動配點同一個規則）。"
       },
       "BattleHistory": {
         "properties": {
@@ -5343,6 +5416,39 @@
             "type": "integer",
             "title": "Hp Con Base"
           },
+          "effective_attributes": {
+            "additionalProperties": {
+              "type": "integer"
+            },
+            "propertyNames": {
+              "$ref": "#/components/schemas/Attribute"
+            },
+            "type": "object",
+            "title": "Effective Attributes"
+          },
+          "attribute_points": {
+            "type": "integer",
+            "title": "Attribute Points",
+            "default": 0
+          },
+          "attribute_spent": {
+            "additionalProperties": {
+              "type": "integer"
+            },
+            "propertyNames": {
+              "$ref": "#/components/schemas/Attribute"
+            },
+            "type": "object",
+            "title": "Attribute Spent"
+          },
+          "attribute_affects": {
+            "items": {
+              "$ref": "#/components/schemas/AttributeAffectsOut"
+            },
+            "type": "array",
+            "title": "Attribute Affects",
+            "default": []
+          },
           "attribute_perks": {
             "items": {
               "$ref": "#/components/schemas/AttributePerkOut"
@@ -7577,6 +7683,20 @@
         "title": "RerollChoice",
         "description": "營火：重骰（產生一組新的候選）。"
       },
+      "RespecAttributesChoice": {
+        "properties": {
+          "kind": {
+            "type": "string",
+            "const": "respec_attributes",
+            "title": "Kind",
+            "default": "respec_attributes"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "title": "RespecAttributesChoice",
+        "description": "營火：免費重配屬性點（Phase 3H-3）——分配出去的屬性點全部退回（屬性回到基礎），之後再用\n``allocate`` 重新分配。和技能點的 ``respec`` 同一個畫面、同樣免費、不推進節點。"
+      },
       "RespecChoice": {
         "properties": {
           "kind": {
@@ -8946,6 +9066,24 @@
             },
             "type": "array",
             "title": "Options"
+          },
+          "suggestion": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/AttributeSuggestionOut"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "attribute_affects": {
+            "items": {
+              "$ref": "#/components/schemas/AttributeAffectsOut"
+            },
+            "type": "array",
+            "title": "Attribute Affects",
+            "default": []
           }
         },
         "additionalProperties": false,

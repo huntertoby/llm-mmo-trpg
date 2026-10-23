@@ -35,6 +35,7 @@ from trpg.shared.types import Attribute
 from trpg.skillgen.usage import SkillUsage
 
 __all__ = [
+    "AllocateChoice",
     "BattleNode",
     "BattlePlan",
     "BattleRecord",
@@ -50,6 +51,7 @@ __all__ = [
     "OfferTag",
     "PickChoice",
     "RerollChoice",
+    "RespecAttributesChoice",
     "RespecChoice",
     "RunStart",
     "RunState",
@@ -223,6 +225,21 @@ class RespecChoice(_Model):
     kind: Literal["respec"] = "respec"
 
 
+class RespecAttributesChoice(_Model):
+    """營火：免費重配屬性點（Phase 3H-3）——分配出去的屬性點全部退回（屬性回到基礎），之後再用
+    ``allocate`` 重新分配。和技能點的 ``respec`` 同一個畫面、同樣免費、不推進節點。"""
+
+    kind: Literal["respec_attributes"] = "respec_attributes"
+
+
+class AllocateChoice(_Model):
+    """分配未分配的屬性點（Phase 3H-3；重配之後用）：``attributes`` 是屬性 → 加幾點，總數不可超過
+    ``RunState.attribute_points``。營火、戰前都可以送；不推進節點。"""
+
+    kind: Literal["allocate"] = "allocate"
+    attributes: dict[Attribute, int] = Field(default_factory=dict)
+
+
 class LoadoutChoice(_Model):
     """營火：換裝（Phase 3-26a）——``skills`` 是新的裝備清單（必須是目前裝備與備用技能的子集，符合
     欄位上限）；沒裝上的進備用，技能等級保留。不推進節點。"""
@@ -238,6 +255,8 @@ type Choice = Annotated[
     | LeaveChoice
     | SpendChoice
     | RespecChoice
+    | RespecAttributesChoice
+    | AllocateChoice
     | LoadoutChoice,
     Field(discriminator="kind"),
 ]
@@ -282,6 +301,11 @@ class RunState(_Model):
     技能 ID → 統計，依 ID 排序。進化的門檻與兩支的推導都讀它。"""
     evolutions: dict[str, EvolutionRecord] = Field(default_factory=dict)
     """分歧進化（Phase 3-26b）：進化後的技能 ID → 紀錄。進化結果跟著技能走（卸下、重配都保留）。"""
+    attribute_points: int = Field(default=0, ge=0)
+    """還沒分配的屬性點（Phase 3H-3；營火重配退回的點數，用 ``allocate`` 分配）。"""
+    attribute_spent: dict[Attribute, int] = Field(default_factory=dict)
+    """分配出去（營火重配時退回）的屬性點（Phase 3H-3）：開局自由配點＋升級配點＋重配後再分配的點
+    數，依六屬性順序存入。舊存檔沒有此欄位時為空（重配只退之後分配的點數）。"""
     node: Node
     test_mode: bool = False
     """測試模式（Phase 3-39）：每場戰鬥結束後 HP、法力回滿，並可在開局挑裝備。**只存在這一輪的設定

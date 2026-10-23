@@ -15,6 +15,8 @@ from trpg.shared.rng import MASK64
 from trpg.shared.types import Attribute
 
 __all__ = [
+    "AttributeAffectsOut",
+    "AttributeSuggestionOut",
     "BattlePlanOut",
     "CreateRunRequest",
     "DevPackOut",
@@ -115,10 +117,30 @@ class StartKeywordOption(_ApiModel):
     skill: SkillCard | None
 
 
+class AttributeAffectsOut(_ApiModel):
+    """一個屬性影響的東西（Phase 3H-3）：武器的普攻與武器技、縮放這個屬性的技能名；由程式依技能
+    與武器的縮放屬性產生。"""
+
+    attr: Attribute
+    lines_zh: tuple[str, ...]
+    """影響的項目（沒有時為空）。"""
+
+
+class AttributeSuggestionOut(_ApiModel):
+    """開局建議的主屬性（Phase 3H-3）：起始技能最常用的縮放屬性（和自動配點同一個規則）。"""
+
+    attr: Attribute
+    reason_zh: str
+
+
 class StartPreview(_ApiModel):
     weapon: str
     seed: int
     options: tuple[StartKeywordOption, ...]
+    suggestion: AttributeSuggestionOut | None = None
+    """建議的主屬性（Phase 3H-3；依武器＋已選的關鍵字給的起始技能）。"""
+    attribute_affects: tuple[AttributeAffectsOut, ...] = ()
+    """每個屬性影響你的哪些招（Phase 3H-3；起始技能與武器）。"""
 
 
 class DevPackOut(_ApiModel):
@@ -212,8 +234,17 @@ class HeroOut(_ApiModel):
     """每點體質的最大 HP（``core.yaml``；前端的「＋N HP」預覽用）。"""
     hp_con_base: int
     """體質的基準值（高於它才有 HP 加成）。"""
+    effective_attributes: dict[Attribute, int] = Field(default_factory=dict)
+    """有效屬性（Phase 3H-3）：基礎屬性＋裝備的屬性詞條（戰鬥之間沒有狀態）；和引擎同一個算法。
+    常駐數值的階數依它算，``attributes`` 仍是基礎值（配點用）。"""
+    attribute_points: int = 0
+    """營火重配後還沒分配的屬性點（Phase 3H-3）。"""
+    attribute_spent: dict[Attribute, int] = Field(default_factory=dict)
+    """分配出去、營火重配時會退回的屬性點（Phase 3H-3）。"""
+    attribute_affects: tuple[AttributeAffectsOut, ...] = ()
+    """每個屬性影響你的哪些招（Phase 3H-3；裝備中的技能與武器）。"""
     attribute_perks: tuple[AttributePerkOut, ...] = ()
-    """屬性的常駐數值（Phase 3H-1）：面板每個屬性底下顯示。"""
+    """屬性的常駐數值（Phase 3H-1）：面板每個屬性底下顯示（階數依有效屬性）。"""
     mana: int
     max_mana: int
     source: int

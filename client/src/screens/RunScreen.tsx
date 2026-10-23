@@ -5,6 +5,7 @@ import type { BattleResponse, RunChoice, RunResponse } from "../api/types";
 import { OBJECTIVE_ICONS, objectiveBadge } from "../battle/objective";
 import { battleName, runView, writeCurrentRun } from "../run/flow";
 import { RunHeroPanel } from "../run/RunHeroPanel";
+import { AttributeRespecSection } from "../run/AttributeRespecSection";
 import { SkillPointsSection } from "../run/SkillPointsSection";
 import { TestModeBadge } from "../ui/TestModeBadge";
 import { ErrorBanner } from "../ui/ErrorBanner";
@@ -183,6 +184,11 @@ export function RunScreen({ initial, autoResume = false, onHome, onNewRun }: Pro
             )}
             {view.screen === "progress" && (run.hero.skill_points ?? 0) > 0 && (
               <SkillPointsSection hero={run.hero} busy={busy} onChoose={choose} />
+            )}
+            {view.screen === "progress" && (run.hero.attribute_points ?? 0) > 0 && (
+              <div className="panel">
+                <AttributeRespecSection hero={run.hero} busy={busy} onChoose={choose} />
+              </div>
             )}
             {view.screen === "level_up" && (
               <RunLevelUp key={view.level} run={run} view={view} busy={busy} onChoose={choose} />

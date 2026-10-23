@@ -2,7 +2,7 @@
 // 一輪開局、首頁單場戰鬥、技能工坊試玩、裝備測試共用。遊戲不定義流派：這裡不出現任何流派名稱。
 import { useEffect, useState } from "react";
 import { api } from "../api/client";
-import type { DevPack, SkillCard, StartOptions, StartPreview, StartWeaponOption, StartKeywordOption } from "../api/types";
+import type { AttributeAffects, AttributeSuggestion, DevPack, SkillCard, StartOptions, StartPreview, StartWeaponOption, StartKeywordOption } from "../api/types";
 import { SkillCardView } from "../ui/SkillCardView";
 import { canStart, keepAvailable, keywordAvailable, startBody, toggleKeyword, type StartChoiceBody } from "./startFlow";
 import { Hint } from "../ui/Hint";
@@ -26,6 +26,9 @@ export interface StartPicker {
   body: StartChoiceBody | null;
   /** 開局給的技能卡（依選擇順序）；開發者起始包時為空（起始技能由後端決定）。 */
   skills: SkillCard[];
+  /** 建議的主屬性與每個屬性影響的招（Phase 3H-3；預覽還沒回來或開發者起始包時為空）。 */
+  suggestion: AttributeSuggestion | null;
+  attributeAffects: AttributeAffects[];
   error: string | null;
 }
 
@@ -104,6 +107,8 @@ export function useStartPicker(seed: number | null, dev: boolean, useDevPack = f
     dev,
     body,
     skills: useDevPack ? [] : skills,
+    suggestion: useDevPack || preview === null || preview.weapon !== weapon ? null : (preview.suggestion ?? null),
+    attributeAffects: useDevPack || preview === null || preview.weapon !== weapon ? [] : (preview.attribute_affects ?? []),
     error,
   };
 }

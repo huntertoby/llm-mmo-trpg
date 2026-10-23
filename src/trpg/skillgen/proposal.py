@@ -62,7 +62,7 @@ from trpg.content.skills import (
     VariantWhen,
     rarity_rank,
 )
-from trpg.shared.types import Element, Surface
+from trpg.shared.types import Attribute, Element, Surface
 from trpg.skillgen.proposal_forms import (
     STANDARD_FORM,
     FormPlan,
@@ -77,6 +77,7 @@ from trpg.skillgen.proposal_numbers import (
     numeric_param_names,
     split_numbers,
 )
+from trpg.skillgen.scaling import retarget_scaling
 from trpg.skillgen.validate import RARITY_STATUS_PRIMITIVES, validate_skill
 
 __all__ = [
@@ -161,12 +162,17 @@ class ProposalError:
 
 @dataclass(frozen=True, slots=True)
 class ProposalContext:
-    """呼叫端決定的欄位（LLM 不能填）：階級、稀有度、等級、來源。"""
+    """呼叫端決定的欄位（LLM 不能填）：階級、稀有度、等級、來源。
+
+    ``hero_attributes``（Phase 3H-3，07 7.2）：給主角的屬性時，技能的縮放屬性由引擎改成其中最高的、
+    且在 ``skill_scaling.yaml`` 允許範圍內的屬性（LLM 填的 ``scaling_attr`` 只是提議，會被取代；
+    ID 以取代後的內容雜湊）。"""
 
     tier: int
     rarity: SkillRarity
     rank: int = 1
     origin: Origin = "level_up"
+    hero_attributes: Mapping[Attribute, int] | None = None
 
 
 @dataclass(frozen=True, slots=True)
@@ -860,14 +866,30 @@ def _skill_data(proposal: BaseModel, ctx: ProposalContext, fill: NumberFiller) -
     return data
 
 
-def to_skill_def(proposal: BaseModel, ctx: ProposalContext, fill: NumberFiller) -> SkillDef:
+def to_skill_def(
+    proposal: BaseModel,
+    ctx: ProposalContext,
+    fill: NumberFiller,
+    library: ContentLibrary | None = None,
+) -> SkillDef:
     """已驗證的提議（只有結構）→ :class:`SkillDef`：``fill`` 補上數值（骰子、倍率、持續、AP、法力、
     冷卻等；見 :mod:`trpg.skillgen.proposal_numbers`）。ID 由補完數值後的內容雜湊而來；同一份
-    提議加同一份數值永遠得到相同 ID。
+    提議加同一份數值永遠得到相同 ID。``ctx.hero_attributes`` 有值（且給了 ``library``）時縮放屬性
+    改取主角最高的允許屬性（見 :class:`ProposalContext`）。
 
     schema 層級的錯誤丟 :class:`pydantic.ValidationError`（:func:`evaluate_proposal` 轉成
     ``stage="skill"`` 的錯誤）。"""
-    return SkillDef.model_validate(_skill_data(proposal, ctx, fill))
+    data = _skill_data(proposal, ctx, fill)
+    skill = SkillDef.model_validate(data)
+    if ctx.hero_attributes is None or library is None:
+        return skill
+    attr = retarget_scaling(skill, ctx.hero_attributes, library).scaling_attr
+    if attr == skill.scaling_attr:
+        return skill
+    data = {k: v for k, v in data.items() if k != "id"}
+    data["scaling_attr"] = attr.value
+    data["id"] = _skill_id(data)
+    return SkillDef.model_validate(data)
 
 
 _SUPPORTED_SKILL_KEYS = frozenset(
@@ -1067,7 +1089,7 @@ def evaluate_proposal(
         errors = _form_hints(_pydantic_errors(exc, "proposal", data), models)
         return ProposalResult(None, tuple(errors))
     try:
-        skill = to_skill_def(proposal, ctx, fill or minimal_filler(library))
+        skill = to_skill_def(proposal, ctx, fill or minimal_filler(library), library)
     except ValidationError as exc:
         return ProposalResult(None, tuple(_pydantic_errors(exc, "skill", data)))
     violations = validate_skill(skill, library)
