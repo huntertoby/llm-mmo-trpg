@@ -8,8 +8,10 @@ import {
   affixText,
   clampValue,
   defaultValue,
+  draftLook,
   draftProblems,
   rangeText,
+  weaponOptionText,
   type CustomDraft,
 } from "../../gear/gearDraft";
 import { GearIcon } from "../GearIcon";
@@ -52,7 +54,7 @@ export function CustomItemForm({ catalog, slot, draft, onChange, onEquip, equipp
   return (
     <div className="gear-custom">
       <div className="gear-custom-head">
-        <GearIcon look={{ kind: draft.kind === "" ? null : draft.kind, rarity: draft.legendary ? "legendary" : "common" }} slot={slot.slot} size={64} />
+        <GearIcon look={draftLook(draft, catalog)} slot={slot.slot} size={64} />
         <div className="gear-custom-fields">
           <label>
             名稱
@@ -65,7 +67,7 @@ export function CustomItemForm({ catalog, slot, draft, onChange, onEquip, equipp
                 <option value="">（選一種武器）</option>
                 {catalog.weapons.map((w) => (
                   <option key={w.id} value={w.id}>
-                    {w.name_zh}（{w.weapon_class}{w.two_handed ? "・雙手" : ""}）
+                    {weaponOptionText(w)}
                   </option>
                 ))}
               </select>
@@ -80,7 +82,7 @@ export function CustomItemForm({ catalog, slot, draft, onChange, onEquip, equipp
           {slot.slot_type === "offhand" && (
             <label className="gear-check">
               <input type="checkbox" checked={draft.shield} onChange={(e) => patch({ shield: e.target.checked })} />
-              是盾（標籤 shield，才能掛「限盾」詞條）
+              是盾（才能掛「限盾」詞條）
             </label>
           )}
           <label className="gear-check">
@@ -90,7 +92,7 @@ export function CustomItemForm({ catalog, slot, draft, onChange, onEquip, equipp
           <label>
             外觀造型（只影響圖示）
             <select value={draft.kind} onChange={(e) => patch({ kind: e.target.value })}>
-              <option value="">依欄位預設</option>
+              <option value="">{draft.weapon === "" ? "依欄位預設" : "依所選武器"}</option>
               {kinds.map((k) => (
                 <option key={k.id} value={k.id}>
                   {k.zh}

@@ -27,6 +27,8 @@ interface Props {
   store?: KeyValueStore | null;
   /** 開發者模式（網址 `?dev=1`）：顯示種子、可匯出不合法的技能；預設是玩家模式。 */
   dev?: boolean;
+  /** 主角目前手上武器的 ID（有主角的情境才傳，Phase 3-48b）；沒有時縮放屬性維持「依手上武器而定」。 */
+  heroWeapon?: string;
 }
 
 const OPTIONS_DELAY_MS = 120;
@@ -64,7 +66,7 @@ export function WorkshopScreen(props: Props) {
   return <SkillWorkshop {...props} dev={dev} onGear={() => choose("gear")} />;
 }
 
-function SkillWorkshop({ onHome, onStartBattle, onGear, store, dev = false }: Props & { onGear(): void }) {
+function SkillWorkshop({ onHome, onStartBattle, onGear, store, dev = false, heroWeapon }: Props & { onGear(): void }) {
   const storage = store === undefined ? browserStore() : store;
   const [state, dispatch] = useReducer(editorReducer, undefined, () => {
     const saved = loadSaved(storage);
@@ -79,7 +81,7 @@ function SkillWorkshop({ onHome, onStartBattle, onGear, store, dev = false }: Pr
     let cancelled = false;
     const timer = setTimeout(() => {
       api
-        .workshopOptions(draft)
+        .workshopOptions(draft, heroWeapon)
         .then((options) => {
           if (!cancelled) dispatch({ type: "options", options });
         })
@@ -91,7 +93,7 @@ function SkillWorkshop({ onHome, onStartBattle, onGear, store, dev = false }: Pr
       cancelled = true;
       clearTimeout(timer);
     };
-  }, [draft]);
+  }, [draft, heroWeapon]);
 
   useEffect(() => {
     let cancelled = false;

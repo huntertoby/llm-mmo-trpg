@@ -1191,8 +1191,37 @@ def _build_step(
     return builders[step]()
 
 
-def draft_options(draft: Draft, library: ContentLibrary) -> DraftOptions:
-    """組到一半的技能 → 每個前置步驟都完成的步驟與其合法選項（純函式；相同輸入必得相同結果）。"""
+def _held_weapon_name(weapon_id: str, weapon_req: object, library: ContentLibrary) -> str | None:
+    """有主角時的縮放屬性顯示（Phase 3-48b）：「看手上武器（目前：長劍＝力量）」，雙屬性照武器的
+    ``attr_mode`` 寫（取較高／取平均）。武器不存在、或武器大類與技能的武器需求不合時回 ``None``
+    （退回沒有主角的寫法）。"""
+    weapon = library.weapons.get(weapon_id)
+    if weapon is None or weapon.weapon_class != weapon_req:
+        return None
+    return f"看手上武器（目前：{weapon.name_zh}＝{weapon.scaling_names_zh()}）"
+
+
+def _with_held_weapon(
+    steps: list[StepOptions], draft: Draft, weapon_id: str, library: ContentLibrary
+) -> list[StepOptions]:
+    name = _held_weapon_name(weapon_id, draft.get("weapon_req"), library)
+    if name is None or draft.get("category") != "weapon":
+        return steps
+
+    def fix(field: FieldSpec) -> FieldSpec:
+        if field.field != "scaling_attr" or not field.choices:
+            return field
+        choice = field.choices[0].model_copy(update={"name_zh": name})
+        return field.model_copy(update={"choices": (choice,)})
+
+    return [s.model_copy(update={"fields": tuple(fix(f) for f in s.fields)}) for s in steps]
+
+
+def draft_options(
+    draft: Draft, library: ContentLibrary, *, weapon: str | None = None
+) -> DraftOptions:
+    """組到一半的技能 → 每個前置步驟都完成的步驟與其合法選項（純函式；相同輸入必得相同結果）。
+    ``weapon``（選填，Phase 3-48b）：主角目前手上武器的 ID；有值時武器技的縮放屬性顯示手上武器。"""
     skeleton = draft_skeleton(draft, library)
     steps: list[StepOptions] = []
     problems: list[str] = []
@@ -1208,6 +1237,8 @@ def draft_options(draft: Draft, library: ContentLibrary) -> DraftOptions:
         if not step.complete:
             next_step = step_id
             break
+    if weapon is not None:
+        steps = _with_held_weapon(steps, draft, weapon, library)
     steps = [
         s.model_copy(update={"notes_zh": tuple(plainify(n, library) for n in s.notes_zh)})
         for s in steps

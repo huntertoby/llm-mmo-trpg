@@ -23,6 +23,7 @@ from trpg.api.workshop_schemas import (
     WorkshopCheck,
     WorkshopExport,
     WorkshopExportRequest,
+    WorkshopOptionsRequest,
     WorkshopRandom,
     WorkshopRandomRequest,
     WorkshopSkillRequest,
@@ -88,10 +89,10 @@ def get_arena(request: Request) -> WorkshopArena:
 
 
 @router.post("/options")
-def post_options(body: WorkshopSkillRequest, request: Request) -> DraftOptions:
+def post_options(body: WorkshopOptionsRequest, request: Request) -> DraftOptions:
     """下一步的合法選項：前置步驟都完成的每一步的欄位與選項，以及第一個未完成的步驟。"""
     library = store_of(request).library
-    return player_options(draft_options(body.skill, library), library)
+    return player_options(draft_options(body.skill, library, weapon=body.weapon), library)
 
 
 @router.post("/check")

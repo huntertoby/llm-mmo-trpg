@@ -909,7 +909,16 @@ class Loadout(ContentModel):
         return self.by_slot().get(slot)
 
 
-def _affix_slot_problems(item: ItemDef, affix: AffixDef, weapon: WeaponDef | None) -> list[str]:
+_WEAPON_CLASS_ZH = {"melee": "近戰武器", "ranged": "遠程武器", "focus": "法器"}
+_ITEM_TAG_ZH = {"shield": "盾"}
+
+
+def _affix_slot_problems(
+    item: ItemDef,
+    affix: AffixDef,
+    weapon: WeaponDef | None,
+    weapons: Mapping[str, WeaponDef] | None = None,
+) -> list[str]:
     """詞條能不能掛在這件物品上（種類、限定武器、標籤、傳說、法杖元素）。"""
     where = f"物品 {item.id} 的詞條 {affix.id}"
     problems: list[str] = []
@@ -918,17 +927,22 @@ def _affix_slot_problems(item: ItemDef, affix: AffixDef, weapon: WeaponDef | Non
         problems.append(f"{where} 不能出現在{SLOT_TYPE_ZH[item.slot_type]}（可用：{allowed}）")
     is_weapon = item.slot_type == "weapon"
     if is_weapon and affix.weapons and item.weapon not in affix.weapons:
-        problems.append(f"{where} 只能出現在 {', '.join(affix.weapons)} 上")
+        names = "、".join(
+            w.name_zh if (w := (weapons or {}).get(i)) is not None else i for i in affix.weapons
+        )
+        problems.append(f"{where} 只能出現在 {names} 上")
     if (
         is_weapon
         and affix.weapon_class is not None
         and weapon is not None
         and weapon.weapon_class != affix.weapon_class
     ):
-        problems.append(f"{where} 只能出現在 {affix.weapon_class} 類武器上")
+        class_zh = _WEAPON_CLASS_ZH.get(affix.weapon_class, affix.weapon_class)
+        problems.append(f"{where} 只能出現在{class_zh}上")
     needed = affix.item_tags.get(item.slot_type, ())
     if needed and not set(needed) & set(item.tags):
-        problems.append(f"{where} 需要物品標籤：{', '.join(needed)}")
+        tags = "、".join(_ITEM_TAG_ZH.get(t, t) for t in needed)
+        problems.append(f"{where} 需要物品標籤：{tags}")
     if affix.legendary_only and not item.legendary:
         problems.append(f"{where} 只能出現在傳說物品上")
     if (
@@ -971,7 +985,7 @@ def item_problems(
         if affix is None:
             problems.append(f"物品 {item.id}：未知的詞條 {roll.affix}（不在白名單）")
             continue
-        problems += _affix_slot_problems(item, affix, weapon)
+        problems += _affix_slot_problems(item, affix, weapon, weapons)
         problems += _value_problems(item, affix, roll.value)
     known = [a for roll in item.affixes if (a := affixes.get(roll.affix)) is not None]
     return problems + rune_pair_problems(f"物品 {item.id}", known)

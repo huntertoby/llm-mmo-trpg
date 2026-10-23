@@ -1062,85 +1062,302 @@
    "id": "axe",
    "name_zh": "斧",
    "weapon_class": "melee",
-   "two_handed": false
+   "weapon_class_zh": "近戰武器",
+   "two_handed": false,
+   "look": {
+    "kind": "axe",
+    "material": "iron",
+    "element": null,
+    "form": null
+   }
+  },
+  {
+   "id": "bomb_casing",
+   "name_zh": "炸藥殼",
+   "weapon_class": "melee",
+   "weapon_class_zh": "近戰武器",
+   "two_handed": false,
+   "look": null
   },
   {
    "id": "bow",
    "name_zh": "弓",
    "weapon_class": "ranged",
-   "two_handed": true
+   "weapon_class_zh": "遠程武器",
+   "two_handed": true,
+   "look": {
+    "kind": "bow",
+    "material": "wood",
+    "element": null,
+    "form": null
+   }
   },
   {
    "id": "crossbow",
    "name_zh": "弩",
    "weapon_class": "ranged",
-   "two_handed": true
+   "weapon_class_zh": "遠程武器",
+   "two_handed": true,
+   "look": {
+    "kind": "crossbow",
+    "material": "wood",
+    "element": null,
+    "form": "light"
+   }
   },
   {
    "id": "dagger",
    "name_zh": "匕首",
    "weapon_class": "melee",
-   "two_handed": false
+   "weapon_class_zh": "近戰武器",
+   "two_handed": false,
+   "look": {
+    "kind": "dagger",
+    "material": "iron",
+    "element": null,
+    "form": null
+   }
+  },
+  {
+   "id": "fangs",
+   "name_zh": "利齒",
+   "weapon_class": "melee",
+   "weapon_class_zh": "近戰武器",
+   "two_handed": false,
+   "look": null
   },
   {
    "id": "fire_staff",
    "name_zh": "火焰法杖",
    "weapon_class": "focus",
-   "two_handed": true
+   "weapon_class_zh": "法器",
+   "two_handed": true,
+   "look": {
+    "kind": "staff",
+    "material": "wood",
+    "element": "fire",
+    "form": null
+   }
+  },
+  {
+   "id": "fist",
+   "name_zh": "拳套",
+   "weapon_class": "melee",
+   "weapon_class_zh": "近戰武器",
+   "two_handed": true,
+   "look": {
+    "kind": "fist",
+    "material": "iron",
+    "element": null,
+    "form": "knuckle"
+   }
   },
   {
    "id": "frost_staff",
    "name_zh": "冰霜法杖",
    "weapon_class": "focus",
-   "two_handed": true
+   "weapon_class_zh": "法器",
+   "two_handed": true,
+   "look": {
+    "kind": "staff",
+    "material": "wood",
+    "element": "ice",
+    "form": null
+   }
   },
   {
    "id": "greatsword",
    "name_zh": "雙手劍",
    "weapon_class": "melee",
-   "two_handed": true
+   "weapon_class_zh": "近戰武器",
+   "two_handed": true,
+   "look": {
+    "kind": "greatsword",
+    "material": "steel",
+    "element": null,
+    "form": null
+   }
+  },
+  {
+   "id": "guardian_rod",
+   "name_zh": "守護之杖",
+   "weapon_class": "focus",
+   "weapon_class_zh": "法器",
+   "two_handed": true,
+   "look": null
   },
   {
    "id": "hammer",
    "name_zh": "錘",
    "weapon_class": "melee",
-   "two_handed": true
+   "weapon_class_zh": "近戰武器",
+   "two_handed": true,
+   "look": {
+    "kind": "hammer",
+    "material": "iron",
+    "element": null,
+    "form": null
+   }
   },
   {
    "id": "lightning_staff",
    "name_zh": "雷電法杖",
    "weapon_class": "focus",
-   "two_handed": true
+   "weapon_class_zh": "法器",
+   "two_handed": true,
+   "look": {
+    "kind": "staff",
+    "material": "wood",
+    "element": "lightning",
+    "form": null
+   }
   },
   {
    "id": "longgun",
    "name_zh": "火槍",
    "weapon_class": "ranged",
-   "two_handed": true
+   "weapon_class_zh": "遠程武器",
+   "two_handed": true,
+   "look": {
+    "kind": "longgun",
+    "material": "steel",
+    "element": null,
+    "form": "flintlock"
+   }
   },
   {
    "id": "one_handed_sword",
    "name_zh": "單手劍",
    "weapon_class": "melee",
-   "two_handed": false
+   "weapon_class_zh": "近戰武器",
+   "two_handed": false,
+   "look": {
+    "kind": "sword",
+    "material": "steel",
+    "element": null,
+    "form": null
+   }
   },
   {
    "id": "scepter",
    "name_zh": "權杖",
    "weapon_class": "focus",
-   "two_handed": false
+   "weapon_class_zh": "法器",
+   "two_handed": false,
+   "look": {
+    "kind": "staff",
+    "material": "wood",
+    "element": null,
+    "form": "scepter"
+   }
+  },
+  {
+   "id": "scythe",
+   "name_zh": "鐮刀",
+   "weapon_class": "melee",
+   "weapon_class_zh": "近戰武器",
+   "two_handed": true,
+   "look": {
+    "kind": "scythe",
+    "material": "iron",
+    "element": null,
+    "form": "long"
+   }
+  },
+  {
+   "id": "shade_blades",
+   "name_zh": "影刃",
+   "weapon_class": "melee",
+   "weapon_class_zh": "近戰武器",
+   "two_handed": false,
+   "look": null
+  },
+  {
+   "id": "spark_staff",
+   "name_zh": "電火法杖",
+   "weapon_class": "focus",
+   "weapon_class_zh": "法器",
+   "two_handed": true,
+   "look": null
   },
   {
    "id": "spear",
    "name_zh": "矛",
    "weapon_class": "melee",
-   "two_handed": true
+   "weapon_class_zh": "近戰武器",
+   "two_handed": true,
+   "look": {
+    "kind": "spear",
+    "material": "iron",
+    "element": null,
+    "form": null
+   }
+  },
+  {
+   "id": "stone_fist",
+   "name_zh": "石拳",
+   "weapon_class": "melee",
+   "weapon_class_zh": "近戰武器",
+   "two_handed": false,
+   "look": null
+  },
+  {
+   "id": "talons",
+   "name_zh": "利爪",
+   "weapon_class": "melee",
+   "weapon_class_zh": "近戰武器",
+   "two_handed": false,
+   "look": null
   },
   {
    "id": "totem_staff",
    "name_zh": "圖騰杖",
    "weapon_class": "focus",
-   "two_handed": true
+   "weapon_class_zh": "法器",
+   "two_handed": true,
+   "look": {
+    "kind": "staff",
+    "material": "wood",
+    "element": null,
+    "form": "totem"
+   }
+  },
+  {
+   "id": "totem_stone",
+   "name_zh": "圖騰石",
+   "weapon_class": "melee",
+   "weapon_class_zh": "近戰武器",
+   "two_handed": false,
+   "look": null
+  },
+  {
+   "id": "vine_lash",
+   "name_zh": "藤鞭",
+   "weapon_class": "melee",
+   "weapon_class_zh": "近戰武器",
+   "two_handed": false,
+   "look": null
+  },
+  {
+   "id": "water_jet",
+   "name_zh": "水流",
+   "weapon_class": "focus",
+   "weapon_class_zh": "法器",
+   "two_handed": true,
+   "look": null
+  },
+  {
+   "id": "whip",
+   "name_zh": "鞭",
+   "weapon_class": "melee",
+   "weapon_class_zh": "近戰武器",
+   "two_handed": false,
+   "look": {
+    "kind": "whip",
+    "material": "leather",
+    "element": null,
+    "form": "leather"
+   }
   }
  ],
  "max_affixes_per_item": 4,

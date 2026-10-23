@@ -23,6 +23,7 @@ __all__ = [
     "WorkshopCheck",
     "WorkshopExport",
     "WorkshopExportRequest",
+    "WorkshopOptionsRequest",
     "WorkshopRandom",
     "WorkshopRandomRequest",
     "WorkshopSkillRequest",
@@ -37,6 +38,13 @@ class WorkshopSkillRequest(_ApiModel):
     """組到一半（或完整）的技能。"""
 
     skill: dict[str, Any] = Field(default_factory=dict)
+
+
+class WorkshopOptionsRequest(WorkshopSkillRequest):
+    """下一步選項（Phase 3-48b）：``weapon`` 選填，主角目前手上武器的 ID；有值時武器技的縮放屬性
+    顯示「看手上武器（目前：長劍＝力量）」，沒有時維持「依手上武器而定（例：……）」。"""
+
+    weapon: str | None = None
 
 
 class WorkshopExportRequest(WorkshopSkillRequest):

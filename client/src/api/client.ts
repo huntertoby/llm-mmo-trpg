@@ -121,8 +121,9 @@ export const api = {
   /** 回答暫停中的結算：反應詢問（`accept`），或複製技能的選目標（`copyCast` 為選取，`accept: false` 放棄）。 */
   /** 技能工坊（Phase 3F-1）：skill 是組到一半（或完整）的技能定義。 */
   workshopArena: () => request<WorkshopArena>("GET", "/workshop/arena"),
-  workshopOptions: (skill: Record<string, unknown>) =>
-    request<DraftOptions>("POST", "/workshop/options", { skill }),
+  /** `weapon`（選填）：主角目前手上武器的 ID，武器技的縮放屬性會顯示手上武器（Phase 3-48b）。 */
+  workshopOptions: (skill: Record<string, unknown>, weapon?: string) =>
+    request<DraftOptions>("POST", "/workshop/options", weapon === undefined ? { skill } : { skill, weapon }),
   workshopCheck: (skill: Record<string, unknown>) =>
     request<WorkshopCheck>("POST", "/workshop/check", { skill }),
   workshopRandom: (body: WorkshopRandomRequest) =>

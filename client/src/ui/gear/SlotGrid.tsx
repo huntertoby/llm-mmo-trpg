@@ -1,6 +1,6 @@
 // 裝備欄位格（Phase 3G-G4）：9 個欄位排成 3×3，每格 64px 圖示；點格子選欄位，右側換成該欄位的物品清單。
 import type { GearCatalog, GearItemInfo } from "../../api/types";
-import { draftSummary, type CustomDraft, type Selection } from "../../gear/gearDraft";
+import { draftLook, draftSummary, type CustomDraft, type Selection } from "../../gear/gearDraft";
 import { GearIcon } from "../GearIcon";
 import { PartTip } from "../PartTip";
 
@@ -19,11 +19,11 @@ interface Props {
 function pickLook(pick: NonNullable<Selection[string]>, catalog: GearCatalog): { name: string; look: GearItemInfo["appearance"] | null; tip: string } {
   if ("custom" in pick) {
     const d: CustomDraft = pick.custom;
-    const look = { kind: d.kind === "" ? null : d.kind, rarity: d.legendary ? "legendary" : "common", keywords: [] as string[] };
+    const look = { ...draftLook(d, catalog), keywords: [] as string[] };
     return { name: d.name, look, tip: `${d.name}（自訂）：${draftSummary(d, catalog)}` };
   }
   const item = catalog.items.find((i) => i.id === pick.item_id);
-  if (item === undefined) return { name: pick.item_id, look: null, tip: pick.item_id };
+  if (item === undefined) return { name: "（未知物品）", look: null, tip: "目錄裡找不到這件物品" };
   return { name: item.name_zh, look: item.appearance, tip: `${item.name_zh}：${item.affixes.map((a) => a.text_zh).join("；")}` };
 }
 
