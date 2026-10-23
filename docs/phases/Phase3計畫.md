@@ -1872,6 +1872,11 @@ PM 驗收後請使用者試玩一整輪（`docs/專案計畫.md` 第 14 節 🎮
 
 **玩法 PM 決定（2026-10-23，3-37b 開工前）**：① 正式地圖只把 `bridge_chasm` 與 `dark_forest` 標 `region: cloud_ridge`，`name_zh` 改為「雲海吊橋」「竹林」（05 5.1 區域地圖池）；地圖 id 與機制不動，其他地圖維持預設（取代上段「本段不改正式地圖」）。② 石燈籠、竹林不做新物件 ID，只換皮；石燈籠點燃當光源等 Phase 5 再定。
 
+#### 41.2.1 3-37b 驗收（2026-10-23）
+
+- PM 合併（無衝突，`bfc2505`）；ruff、format、mypy、`tests/content`＋`cli`＋`api`＋`narrative`＋`skillgen`＋`llm` 2290、typecheck、vitest 816、`pnpm build` 全過；`bridge_chasm`、`dark_forest` 種子 1 重播一致。雲嶺 7 種地形、9 種物件畫法；`canyon_rock`、`plank_walk`、`paddy`、`water_tint: green`；霧天薄霧加濃；正式地圖 `bridge_chasm`／`dark_forest` 標雲嶺並改名「雲海吊橋」「竹林」；區域第三種樣式（不影響我方）與圖例；`trpg content check` 印出 `map_warnings`。開發樣張頁 `client/region-gallery.html`；截圖 `docs/art/3-37b-*.jpg`。報告 `Phase3-37b報告.md`。
+- 待 PM 決定 → 決定：#2「影響友方、我方施放但 `harmful`」判為有害 → 接受；#3 薄霧濃度與雲海漸層 → **美術 PM 驗收時可直接調**；#1、#4、#5 → 接受（竹林實戰畫面請美術 PM 驗收時看）。
+
 ### 41.3 3-37c 雲嶺服裝部件（sonnet；可後放）
 
 需求第 5 節：交領長袍、短褂、髮髻，沿用紙娃娃「種類＋材質＋顏色」規則與東方風格包，不認得退回通用版；雲嶺敵人範本外觀。排在 Phase 4 主線與其他介面段之後，由開發 PM 視空檔派。

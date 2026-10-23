@@ -35,6 +35,7 @@
 | 4-L4 | schema 子集：依稀有度、骨架、題目關鍵字篩原語、形狀、條件；prompt＋schema 總長 ≤ 30k token（字元估算）（詳見 3A 節） | 大小上限測試；篩掉的原語提議得到 `union_tag_invalid` | sonnet | 4-L2、4-L3 後 |
 | 4-L5 | （詳見 3B 節）重試迴圈＋退回＋**數值補齊**：`propose_skill(client, request) -> (SkillDef, source, attempts)`；結構合格後由預算器（`composer_tuning.tune`）補數值；3 次上限；退回 組合器 → 技能池 → 工坊選項；統計退回率 | Mock「壞 → 壞 → 好」「壞 ×3 → 組合器」；數值一律來自預算器 | **opus** | 4-L4 後 |
 | 4-L5b | 小測試後修正（詳見 3D 節）：組合規則進 schema、稀有度篩列舉、錯誤 path、先修可修再回報、骨架資訊進 `available` | 見 3D | **opus** | 4-L5 後 |
+| 4-L5c | 第二次小測試後小修（詳見 3E 節）：開關只能 true、列舉去掉不能施加的狀態、估算不算 schema、專屬錯誤代碼、CLI 不出不可能題目 | 見 3E | sonnet | 4-L5b 後 |
 | 4-L6 | 接進候選產生器（**另含 3C 節原語多樣性 1～3**）：`llm` 來源、結果寫進 run 紀錄、重播不呼叫 LLM；Mock 失敗時候選仍有 3 個；設定關閉 LLM 時照舊 | 存檔重播一致 | sonnet | 4-L5 後 |
 | 4-L7 | 名稱與敘事（同一個本機模型；只寫文字；長度、禁字、碎界名詞；失敗時組合式名稱） | Mock 輸出過長／空字串／含指令字樣 | sonnet | 4-L5 後；可與 4-L6 平行 |
 | 4-L8 | 開放更多結構：`followup`（複合）、`reaction`、只能巢狀的原語、代價類欄位 | 往返覆蓋率從 163／217 提高 | sonnet | 4-L6 後 |
@@ -146,6 +147,23 @@
 
 驗收（4-L5b）：上述測試；所有手寫技能仍通過驗證、`proposal_from_skill` 往返數不下降（163／217 以上）；`ruff`、`mypy`、`lint-imports`；報告 `Phase4-L5b報告.md`（盤點出的規則清單：搬進 YAML 的／留在程式的與理由）。PM 驗收後重跑 `trpg llm propose -n 10 --seed 0` 與另一個種子比較。
 
+## 3E. 4-L5c 規格（第二次小測試後的小修；開發 PM 2026-10-23；sonnet）
+
+**來由**：4-L5b 後真模型小測試（見 4.6）退回率從 50% 降到 10%／33%；剩下的錯誤抓實際訊息後都是小洞：
+- `value_error`（14 次）大多是 **只能填 true 的開關欄位**（`explode`、`split_heal` 等）：schema 允許 `false`，模型填 `false` 就被驗證器擋（「explode 只能填 true（不爆骰就省略）」）。
+- `budget.unavailable`（5 次）：**沒有預算點數的狀態**（例：`charging` 蓄力）出現在 `apply_status` 的列舉裡，技能不能施加。
+- `keyword.required`：技能沒接上關鍵字 → 4-L6 處理（4-L5 待決 #1）。
+- CLI 題目輪替會出不可能的題目（例：普通稀有度範圍裡的 `epic／stance／marked`），三層退回都失敗。
+
+1. **只能填 true 的開關**：提議模型中這類欄位只能是 `true`（`Literal[True]`／`const: true`，可省略）；清理步驟另把 `false` 視為省略（雙保險）。清單由資料推導（YAML 參數型別或旗標），不寫死。
+2. **列舉只放技能能用的 ID**：`apply_status` 等列舉去掉沒有 `budget_points`（或其他規則禁止技能施加）的狀態；規則來源與 `budget.unavailable` 相同。巢狀位置一樣。
+3. **token 估算不算 schema**（4-L5b 待決 #6；真模型實測 schema 不佔 prompt）：`select_subset` 的補足改以「訊息」估算為準（≤ `PROMPT_TOKEN_BUDGET`），schema 另設字元上限（健全性檢查，數值由實作者以現況最大值 ×2 定，報告列出）；4-L4 的大小矩陣測試照新算法更新。
+4. **專屬錯誤代碼**（4-L5b 待決 #11）：4-L5b 搬進 YAML 的組合規則與第 1 點的開關，`stage: skill` 的錯誤給穩定代碼（例：`combo.position`、`combo.sole_effect`、`combo.others_affect`、`combo.max_per_skill`、`combo.active_only`、`flag.true_only`）；其他驗證器維持 `value_error`。
+5. **CLI 不出不可能的題目**：`trpg llm propose` 的輪替在出題時先檢查可行（`select_subset` 不丟 `SubsetError` 且退回至少一層可行），不可行就依種子換下一組；明確用參數指定的題目照跑。
+6. 範圍外：關鍵字強制（4-L6）、旋鈕與 AP（4-L8／4-L9）。
+
+驗收（4-L5c）：Mock 測試覆蓋 1～5；`proposal_from_skill` 往返數不下降；`ruff`、`mypy`、`lint-imports`；`PROMPT_VERSION` 有改 prompt 才升。報告 `Phase4-L5c報告.md`。PM 驗收後重跑種子 0、1 的小測試。
+
 ## 4. 驗收紀錄
 
 ### 4.1 4-L1 驗收（2026-10-23）
@@ -173,6 +191,12 @@
 - PM 合併（無衝突，`4f3ebdd`）；ruff、format、mypy、lint-imports（7 契約）、`tests/llm`＋`skillgen`＋`cli`＋`roguelite`＋`test_architecture` 1126 全過。`trpg.llm.propose`（`propose_skill`、`ProposalOutcome`、`ProposalStats`）、`budget_filler`、引擎修補（`REPAIRABLE_CODES`）、三層退回（`FallbackError`）、`enable_thinking=false`、回應清理、`trpg llm propose`。隨機組合器改用共用 `effect_knobs`，400 種子＋關鍵字輸出雜湊不變。手寫結構以預算器補數值：合格 37 → 110／161。報告 `Phase4-L5報告.md`。
 - **真模型小測試**（`trpg llm propose -n 10 --seed 0`，126 秒）：一次通過 0%、平均嘗試 2.70、**退回 50%（超過 20% 提醒）**、平均 11.8 秒／題；來源 llm 5、composer 4、workshop 1；錯誤 `value_error` 15、`rarity.status` 3、`reference` 3、`exclusion.stun_single_long_cooldown` 2、`skeleton.core_share` 2；引擎修補 0 次。原因與修正見 **3D 節（4-L5b）**。
 - 待 PM 決定 → 決定：#4 `skeleton.secondary_share` 列可修、#5 修補後才回報 → **4-L5b 做**；#1 LLM 技能不強制帶題目關鍵字 → **4-L6 做**（和 3C 節一起）；#2 `budget.over` 難修、#3 無旋鈕結構（召喚、`topple` 等 44／161）→ **4-L8／4-L9 決定**；#6 工坊保底不保證關鍵字、#7 退回欄位來源、#8 CLI 稀有度輪替與 mock 耗時、#9 `chat_template_kwargs` 一律送、#10 `attempts` 計法 → **接受**。
+
+### 4.6 4-L5b 驗收與第二次小測試（2026-10-23）
+
+- PM 合併（無衝突，`1bbbae0`）；ruff、format、mypy、lint-imports、`tests/skillgen`＋`llm`＋`content`＋`engine`＋`cli`＋`api`＋`test_architecture` 4803 全過（合併時發現 `test_budget` 寫死嘲諷 4 點 → 改 3，`81b4c9d`；是 PM 改嘲諷時漏跑的測試）；重播一致。組合規則進 `skill_primitives.yaml`（`position`、`sole_effect`、`others_affect`、`max_per_skill`、`active_only`，19 個原語），驗證器讀同一份；提議頂層以 `form` 區分（`charge_through` 專用型態等）；狀態依稀有度篩；`stage: skill` 帶 path；先修可修再回報；可修清單加 `skeleton.secondary_share` 與補冷卻類 `exclusion.*`；`available` 加型態與骨架核心／附帶／形狀；`PROMPT_VERSION` → `skill-proposal/2`。報告 `Phase4-L5b報告.md`。
+- **第二次真模型小測試**：種子 0——一次通過 40%、平均嘗試 1.8、**退回 10%**、8.0 秒／題（4-L5 後同種子：0%、2.7、50%、11.8 秒）；種子 1（9 題，1 題是 CLI 出的不可能題目）——一次通過 33%、2.1、退回 33%、10.7 秒；引擎修補用到 2 次。剩下錯誤與修法見 **3E 節（4-L5c）**。schema 根層 `oneOf` 真模型接受（待決 #1 結案）。
+- 待 PM 決定 → 決定：#6 schema 移出 token 估算、#11 專屬錯誤代碼 → **4-L5c 做**；#2、#3、#4、#5、#7、#8、#9、#10、#12、#13、#14 → **接受**。
 
 **Phase 4 暫停點（2026-10-23，使用者：「讓正在跑的 4-L2、4-L3 做完就停」）**：4-L1～L3 完成，下一段 4-L4（見 `docs/開發PM交接.md` 3.00）。
 
