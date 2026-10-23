@@ -179,7 +179,12 @@ def test_run_auto_reaches_a_branching_evolution(
     code, out, _ = _run(["run", "auto", "--seed", str(seed)], capsys)
     assert code == 0
     lines = [line for line in out.splitlines() if "分歧進化：" in line]
-    assert lines and "_evo_" in lines[0] and "（加深）" in lines[0]
+    # 3-51：新方向可能抽到基礎技能，第一次進化不一定是加深：任何一行是加深即可
+    assert (
+        lines
+        and all("_evo_" in line for line in lines)
+        and any("（加深）" in line for line in lines)
+    )
 
 
 def test_run_auto_with_a_dev_pack(capsys: pytest.CaptureFixture[str]) -> None:
