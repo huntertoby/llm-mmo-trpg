@@ -1,0 +1,47 @@
+<!doctype html>
+<html lang="zh-Hant">
+<head>
+<meta charset="utf-8">
+<title>碎界五區比較</title>
+<style>
+  body { margin: 0; padding: 16px 20px; background: #1b1e24; color: #e8e8ea; font-family: "Microsoft JhengHei", sans-serif; }
+  h1 { font-size: 20px; margin: 0 0 4px; }
+  .sub { color: #a0a4ad; font-size: 13px; margin-bottom: 12px; }
+  .grid { display: grid; grid-template-columns: repeat(3, 332px); gap: 14px; }
+  .card { background: #232730; border-radius: 8px; padding: 10px; }
+  .card.alt { outline: 2px dashed #ff3fa8; }
+  .card h2 { font-size: 16px; margin: 0; }
+  .card h2 small { font-size: 12px; color: #a0a4ad; font-weight: normal; margin-left: 6px; }
+  .line { font-size: 12px; color: #c8ccd4; line-height: 1.5; margin: 4px 0 6px; min-height: 36px; }
+  .sw { display: flex; gap: 4px; margin-bottom: 6px; }
+  .sw div { flex: 1; font-size: 10.5px; color: #c8ccd4; text-align: center; }
+  .sw i { display: block; height: 16px; border-radius: 3px; border: 1px solid #0006; margin-bottom: 2px; }
+  canvas { display: block; border-radius: 4px; }
+  .foot { color: #a0a4ad; font-size: 12px; margin-top: 12px; line-height: 1.6; }
+</style>
+</head>
+<body>
+<h1>「碎界」五區：色調、地形、物件、居民（每區一張 6×4 小戰場）</h1>
+<div class="sub">同一套畫法（光從左上、深色外框、紙娃娃比例），只換配色與造型。科技城另外畫了一個「霓虹」方向（洋紅虛線框）給你比較。全部程式繪製，沒有下載素材。</div>
+<div class="grid" id="grid"></div>
+<div class="foot">技能圖示、狀態圖示、元素色、稀有度外框五區共用，不隨區域改變。服裝是用現有的紙娃娃部件換色湊的示意（斗笠、長袍、外套、槍都已有）；正式版每區再補專屬服裝部件。</div>
+<script src="paperdoll.js"></script>
+<script src="realms.js"></script>
+<script>
+const DPR = 2, { T, REALMS, scene } = Realms;
+const grid = document.getElementById("grid");
+for (const r of REALMS) {
+  const card = document.createElement("div");
+  card.className = "card" + (r.id === "neon_hub" ? " alt" : "");
+  card.innerHTML = `<h2>${r.name}<small>${r.style}</small></h2><div class="line">${r.line}</div>` +
+    `<div class="sw">${r.swatch.map(([c, n]) => `<div><i style="background:${c}"></i>${n}</div>`).join("")}</div>`;
+  const c = document.createElement("canvas");
+  c.width = 6 * T * DPR; c.height = 4 * T * DPR; c.style.width = `${6 * T}px`; c.style.height = `${4 * T}px`;
+  const ctx = c.getContext("2d"); ctx.scale(DPR, DPR);
+  scene(ctx, r);
+  card.appendChild(c);
+  grid.appendChild(card);
+}
+</script>
+</body>
+</html>
