@@ -80,9 +80,9 @@ def test_prompt_structure() -> None:
     # available 與 schema 一致：只列子集內的原語
     for primitive in prompt.subset.primitives:
         assert f'"id":"{primitive}"' in user
-    assert prompt.tokens == estimate_messages_tokens(prompt.messages) + proposal_subset.json_tokens(
-        prompt.json_schema
-    )
+    # schema 只用於約束解碼，不佔 prompt token（4-L5c）：token 估算只算訊息
+    assert prompt.tokens == estimate_messages_tokens(prompt.messages)
+    assert prompt.schema_chars == proposal_subset.json_chars(prompt.json_schema)
 
 
 def test_prompt_without_skeleton_omits_the_key() -> None:

@@ -41,14 +41,18 @@ __all__ = [
     "SubsetError",
     "available_payload",
     "build_subset_models",
+    "json_chars",
     "json_tokens",
     "select_subset",
     "subset_tokens",
 ]
 
 MAX_KEYWORDS = 2
+SCHEMA_CHAR_LIMIT = 125_000
+"""JSON schema 字元數的健全性上限（Phase 4-L5c；schema 只用於約束解碼、不佔 prompt token，所以不算
+進 token 估算，但太大的 schema 仍會拖慢解碼）。數值 ＝ 現況最大值 × 2，見 4-L5c 報告。"""
 DEFAULT_SUBSET_TOKEN_BUDGET = PROMPT_TOKEN_BUDGET - 6_000
-"""schema ＋ ``available`` 的預設上限：總上限扣掉固定 prompt（系統指令、題目、玩家文字、重試回饋）
+"""``available`` 的預設上限：總上限扣掉固定 prompt（系統指令、題目、玩家文字、重試回饋）
 的預留。:func:`trpg.llm.prompts.build_proposal_prompt` 會用實際的固定 prompt 大小算出更精確的值。"""
 _KINDS = frozenset(PROPOSAL_KINDS)
 
@@ -87,7 +91,8 @@ class ProposalSubset:
     """:func:`select_subset` 的結果（欄位都是排序後的 tuple）。
 
     ``kind`` 是解析後的技能種類；``dropped`` 是（ID，中文原因）：題目要的或候選的東西沒進子集的
-    原因，供報告與除錯；``tokens`` 是 schema ＋ ``available`` 的估算；``rarity`` 是題目的稀有度
+    原因，供報告與除錯；``tokens`` 是 ``available`` 的估算（schema 不佔 prompt，4-L5c）；
+    ``rarity`` 是題目的稀有度
     （Phase 4-L5b：``apply_status`` 只列這個稀有度能用的狀態；``None`` 為不篩）。
     """
 
@@ -232,9 +237,14 @@ def _primitive_entry(primitive: PrimitiveDef) -> dict[str, Any]:
 
 
 def subset_tokens(library: ContentLibrary, subset: ProposalSubset) -> int:
-    """子集的 schema ＋ ``available`` 的 token 估算。"""
-    schema = build_subset_models(library, subset).json_schema()
-    return json_tokens(schema) + json_tokens(available_payload(library, subset))
+    """子集的 ``available`` 的 token 估算（Phase 4-L5c：schema 只用於約束解碼，不佔 prompt token，
+    不算在內；schema 另以 :func:`json_chars` 與 :data:`SCHEMA_CHAR_LIMIT` 檢查）。"""
+    return json_tokens(available_payload(library, subset))
+
+
+def json_chars(value: object) -> int:
+    """JSON 值（緊湊、鍵排序、不跳脫中文）的字元數。"""
+    return len(json.dumps(value, ensure_ascii=False, sort_keys=True, separators=(",", ":")))
 
 
 def json_tokens(value: object) -> int:
@@ -442,7 +452,7 @@ def select_subset(
     """依題目篩出 schema 子集（純函式、確定性）。
 
     順序：骨架 → 稀有度 → 骨架範圍（原語、形狀）→ 題目關鍵字（專屬規則的原語與條件優先收）
-    → 補足（依 YAML 順序補其他合法原語與條件，直到 schema ＋ ``available`` 的估算達
+    → 補足（依 YAML 順序補其他合法原語與條件，直到 ``available`` 的估算達
     ``token_budget``；先砍條件、再砍附帶原語，優先收的最後砍，核心原語永不砍）。
 
     未知的骨架或關鍵字 ID 丟 ``ValueError``；沒有任何合法骨架或核心原語、或連核心結構都放不進

@@ -211,7 +211,7 @@ def test_no_valid_skeleton_raises_subset_error() -> None:
 def test_subset_error_when_core_does_not_fit() -> None:
     request = ProposalRequest(tier=1, rarity="rare", skeleton="strike")
     with pytest.raises(SubsetError, match="token"):
-        select_subset(_lib(), request, token_budget=500)
+        select_subset(_lib(), request, token_budget=100)
 
 
 # ---------------------------------------------------------------------------
@@ -357,17 +357,17 @@ def test_keyword_primitives_appear_under_some_skeleton(keyword_id: str) -> None:
 def test_keyword_primitives_survive_a_tight_budget() -> None:
     """預算很緊時，題目關鍵字的專屬原語比其他附帶原語先收。"""
     request = ProposalRequest(tier=1, rarity="legendary", skeleton="control", keywords=("wet",))
-    tight = select_subset(_lib(), request, token_budget=11_000)
+    tight = select_subset(_lib(), request, token_budget=1_500)
     plain = select_subset(
-        _lib(), ProposalRequest(tier=1, rarity="legendary", skeleton="control"), token_budget=11_000
+        _lib(), ProposalRequest(tier=1, rarity="legendary", skeleton="control"), token_budget=1_500
     )
     wanted = {
         p for p in _exclusive_effects("wet") if p in _subset("legendary", "control").primitives
     }
     assert wanted
     assert wanted <= set(tight.primitives)
-    assert tight.tokens <= 11_000
-    assert plain.tokens <= 11_000
+    assert tight.tokens <= 1_500
+    assert plain.tokens <= 1_500
 
 
 def test_keyword_condition_and_trigger_are_collected_or_dropped() -> None:
@@ -421,9 +421,9 @@ def test_subset_fits_within_the_token_budget() -> None:
     assert subset.tokens <= DEFAULT_SUBSET_TOKEN_BUDGET
     assert DEFAULT_SUBSET_TOKEN_BUDGET < PROMPT_TOKEN_BUDGET
     small = select_subset(
-        _lib(), ProposalRequest(tier=1, rarity="legendary", skeleton="control"), token_budget=9000
+        _lib(), ProposalRequest(tier=1, rarity="legendary", skeleton="control"), token_budget=1_500
     )
-    assert small.tokens <= 9000
+    assert small.tokens <= 1_500
     assert len(small.conditions) < len(subset.conditions)
 
 

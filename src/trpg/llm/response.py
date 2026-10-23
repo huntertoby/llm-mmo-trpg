@@ -7,9 +7,13 @@
 
 from __future__ import annotations
 
+import json
 import re
+from typing import Any
 
-__all__ = ["clean_response"]
+from trpg.content.skills import true_only_params
+
+__all__ = ["clean_response", "drop_false_flags"]
 
 _THINK = re.compile(r"<think>.*?</think>", re.DOTALL | re.IGNORECASE)
 _UNCLOSED_THINK = re.compile(r"^\s*<think>.*", re.DOTALL | re.IGNORECASE)
@@ -27,3 +31,35 @@ def clean_response(text: str) -> str:
     if match is not None:
         out = match.group(1).strip()
     return out
+
+
+def _drop(node: Any, flags: dict[str, frozenset[str]]) -> tuple[Any, bool]:
+    """遞迴去掉「只能填 true」的開關裡值為 ``false`` 的鍵；回傳（新節點, 是否有改）。"""
+    if isinstance(node, list):
+        items = [_drop(v, flags) for v in node]
+        return [v for v, _ in items], any(changed for _, changed in items)
+    if not isinstance(node, dict):
+        return node, False
+    names = flags.get(str(node.get("type")), frozenset())
+    out: dict[str, Any] = {}
+    changed = False
+    for key, value in node.items():
+        if key in names and value is False:
+            changed = True
+            continue
+        new, sub = _drop(value, flags)
+        out[key] = new
+        changed = changed or sub
+    return out, changed
+
+
+def drop_false_flags(text: str) -> str:
+    """把「只能填 true」的開關（資料見 ``true_only_params``）中填 ``false`` 的鍵視為省略
+    （4-L5c；schema 已限制為 ``true``，這是約束解碼之外的雙保險）。
+    不是合法 JSON 時原樣回傳。"""
+    try:
+        data = json.loads(text)
+    except json.JSONDecodeError:
+        return text
+    new, changed = _drop(data, true_only_params())
+    return json.dumps(new, ensure_ascii=False) if changed else text

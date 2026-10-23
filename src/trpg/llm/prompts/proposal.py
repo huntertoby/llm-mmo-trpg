@@ -2,7 +2,8 @@
 
 ``build_proposal_prompt`` 把 :mod:`trpg.skillgen.proposal_subset`（篩選、模型、``available``）與
 :func:`~trpg.llm.prompts.builder.build_skill_proposal_messages`（資料區、跳脫）接起來，並確認
-system ＋ user 訊息 ＋ JSON schema 的估算不超過 :data:`PROMPT_TOKEN_BUDGET`。
+system ＋ user 訊息的估算不超過 :data:`PROMPT_TOKEN_BUDGET`；JSON schema 只用於約束解碼、不佔
+prompt token（4-L5c），另以字元數上限 :data:`SCHEMA_CHAR_LIMIT` 做健全性檢查。
 """
 
 from __future__ import annotations
@@ -17,17 +18,19 @@ from trpg.llm.prompts.world import WorldStyle, load_world_style
 from trpg.shared.tokens import PROMPT_TOKEN_BUDGET, estimate_tokens
 from trpg.skillgen.proposal import ProposalModels
 from trpg.skillgen.proposal_subset import (
+    SCHEMA_CHAR_LIMIT,
     ProposalRequest,
     ProposalSubset,
     SubsetError,
     available_payload,
     build_subset_models,
-    json_tokens,
+    json_chars,
     select_subset,
 )
 
 __all__ = [
     "PROMPT_TOKEN_BUDGET",
+    "SCHEMA_CHAR_LIMIT",
     "USER_RESERVE_TOKENS",
     "ProposalPrompt",
     "build_proposal_prompt",
@@ -52,8 +55,13 @@ class ProposalPrompt:
 
     @property
     def tokens(self) -> int:
-        """system ＋ user 訊息 ＋ JSON schema 的估算。"""
-        return estimate_messages_tokens(self.messages) + json_tokens(self.json_schema)
+        """system ＋ user 訊息的估算（JSON schema 不佔 prompt token）。"""
+        return estimate_messages_tokens(self.messages)
+
+    @property
+    def schema_chars(self) -> int:
+        """JSON schema 的字元數。"""
+        return json_chars(self.json_schema)
 
 
 def estimate_messages_tokens(messages: list[ChatMessage]) -> int:
@@ -86,7 +94,8 @@ def build_proposal_prompt(
     """依題目組出提議 prompt。
 
     子集大小的預算 = :data:`PROMPT_TOKEN_BUDGET` − 系統指令 − :data:`USER_RESERVE_TOKENS`；組好後
-    再檢查整體估算（含玩家文字與重試回饋）仍不超過上限，否則丟
+    再檢查整體訊息估算（含玩家文字與重試回饋）仍不超過上限、schema 字元數不超過
+    :data:`SCHEMA_CHAR_LIMIT`，否則丟
     :class:`~trpg.skillgen.proposal_subset.SubsetError`。未知的骨架或關鍵字 ID 丟 ``ValueError``。
     """
     style = world if world is not None else load_world_style()
@@ -106,4 +115,6 @@ def build_proposal_prompt(
     prompt = ProposalPrompt(messages, models.json_schema(), models, subset)
     if prompt.tokens > PROMPT_TOKEN_BUDGET:
         raise SubsetError(f"提議 prompt 估算 {prompt.tokens} token，超過上限 {PROMPT_TOKEN_BUDGET}")
+    if prompt.schema_chars > SCHEMA_CHAR_LIMIT:
+        raise SubsetError(f"提議 schema {prompt.schema_chars} 字元，超過上限 {SCHEMA_CHAR_LIMIT}")
     return prompt

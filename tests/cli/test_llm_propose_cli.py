@@ -14,7 +14,7 @@ from pathlib import Path
 
 import pytest
 
-from trpg.cli.llm import ProposeArgs, cmd_llm_propose, propose_requests
+from trpg.cli.llm import ProposeArgs, _feasible, cmd_llm_propose, propose_requests
 from trpg.cli.main import main
 from trpg.content.library import ContentLibrary
 from trpg.llm import LLMUnavailable, MockLLMClient
@@ -74,3 +74,24 @@ def test_bad_keyword_and_config(tmp_path: Path, capsys: pytest.CaptureFixture[st
     assert "未知的關鍵字" in capsys.readouterr().err
     assert main(["llm", "propose", "--mock", "--config", str(tmp_path / "x.toml")]) == 1
     assert "找不到 LLM 設定檔" in capsys.readouterr().err
+
+
+def test_rotated_requests_are_always_feasible(library: ContentLibrary) -> None:
+    """4-L5c：輪替出的題目不會是 select_subset 失敗或三層退回都做不出的題目。"""
+    for seed in (0, 1):
+        for request, request_seed in propose_requests(library, ProposeArgs(count=6, seed=seed)):
+            assert _feasible(library, request, request_seed), (seed, request)
+
+
+def test_explicit_requests_are_not_replaced(library: ContentLibrary) -> None:
+    # 普通稀有度的被動骨架：select_subset 會丟 SubsetError，但全部由參數指定就照跑
+    args = ProposeArgs(count=2, rarity="common", skeleton="passive", keywords=("marked",))
+    requests = propose_requests(library, args)
+    assert all(
+        (r.rarity, r.skeleton, r.keywords) == ("common", "passive", ("marked",))
+        for r, _ in requests
+    )
+    assert not _feasible(library, requests[0][0], requests[0][1])
+    # 只指定骨架時，其餘依種子換到可行的題目
+    partial = propose_requests(library, ProposeArgs(count=4, seed=3, skeleton="passive"))
+    assert all(_feasible(library, r, s) for r, s in partial)

@@ -5,6 +5,7 @@ from __future__ import annotations
 import json
 import time
 from collections import Counter
+from collections.abc import Sequence
 from dataclasses import dataclass
 from pathlib import Path
 from typing import TextIO
@@ -31,13 +32,15 @@ from trpg.skillgen.proposal import (
     ProposalContext,
     proposal_from_skill,
 )
-from trpg.skillgen.proposal_fallback import FallbackError, wanted_kind
-from trpg.skillgen.proposal_subset import ProposalRequest
+from trpg.skillgen.proposal_fallback import FallbackError, fallback_skill, wanted_kind
+from trpg.skillgen.proposal_subset import ProposalRequest, SubsetError, select_subset
 
 __all__ = ["PROPOSE_RARITIES", "ProposeArgs", "cmd_llm_ping", "cmd_llm_propose", "propose_requests"]
 
 PROPOSE_RARITIES: tuple[SkillRarity, ...] = ("common", "rare", "epic")
 """沒有指定稀有度時輪替的稀有度（傳說要源力代價等提議模型沒有的欄位，只在指定時使用）。"""
+ROTATION_TRIES = 12
+"""輪替出的題目不可行時，最多換幾組（依種子確定性）；都不可行就用第一組。"""
 MOCK_EMPTY = "{}"
 """Mock 找不到合適的手寫技能時回傳的空提議（會一路失敗、走退回）。"""
 
@@ -102,27 +105,59 @@ def _open_skeletons(library: ContentLibrary, rarity: SkillRarity) -> list[str]:
     )
 
 
+def _feasible(library: ContentLibrary, request: ProposalRequest, seed: int) -> bool:
+    """題目可行：``select_subset`` 不丟 ``SubsetError``，且三層退回至少一層做得出技能。"""
+    try:
+        select_subset(library, request)
+        fallback_skill(library, request, ProposalContext(request.tier, request.rarity), seed=seed)
+    except (SubsetError, FallbackError):
+        return False
+    return True
+
+
+def _rotated_request(
+    library: ContentLibrary, args: ProposeArgs, keywords: Sequence[str], index: int, attempt: int
+) -> tuple[ProposalRequest, int]:
+    """第 ``index`` 題的第 ``attempt`` 組輪替（第 0 組與 4-L5 的輸出相同）。"""
+    label = f"llm.propose.{index}" if attempt == 0 else f"llm.propose.{index}.{attempt}"
+    rng = Rng(args.seed).fork(label)
+    rarity = args.rarity or PROPOSE_RARITIES[(args.seed + index + attempt) % len(PROPOSE_RARITIES)]
+    skeleton = args.skeleton
+    if skeleton is None and rng.chance_permille(500):
+        skeleton = rng.choice(_open_skeletons(library, rarity))
+    picked = args.keywords
+    if not picked and rng.chance_permille(500):
+        picked = (rng.choice(keywords),)
+    return ProposalRequest(args.tier, rarity, skeleton=skeleton, keywords=picked), rng.next_u32()
+
+
 def propose_requests(
     library: ContentLibrary, args: ProposeArgs
 ) -> list[tuple[ProposalRequest, int]]:
     """``count`` 個題目與各自的種子：沒指定的稀有度、骨架、關鍵字依 ``seed`` 確定性輪替
-    （稀有度依序輪流；骨架半數不指定；關鍵字 0 或 1 個）。"""
+    （稀有度依序輪流；骨架半數不指定；關鍵字 0 或 1 個）。輪替出的題目先檢查可行
+    （:func:`_feasible`），不可行就依種子換下一組（最多 :data:`ROTATION_TRIES` 組）；
+    稀有度、骨架、關鍵字都由參數指定的題目照跑。"""
     keywords = library.keywords.ids()
     unknown = [k for k in args.keywords if k not in keywords]
     if unknown:
         raise ValueError(f"未知的關鍵字：{'、'.join(unknown)}（可用：{'、'.join(keywords)}）")
+    explicit = args.rarity is not None and args.skeleton is not None and bool(args.keywords)
     out: list[tuple[ProposalRequest, int]] = []
     for index in range(args.count):
-        rng = Rng(args.seed).fork(f"llm.propose.{index}")
-        rarity = args.rarity or PROPOSE_RARITIES[(args.seed + index) % len(PROPOSE_RARITIES)]
-        skeleton = args.skeleton
-        if skeleton is None and rng.chance_permille(500):
-            skeleton = rng.choice(_open_skeletons(library, rarity))
-        picked = args.keywords
-        if not picked and rng.chance_permille(500):
-            picked = (rng.choice(keywords),)
-        request = ProposalRequest(args.tier, rarity, skeleton=skeleton, keywords=picked)
-        out.append((request, rng.next_u32()))
+        first = _rotated_request(library, args, keywords, index, 0)
+        chosen = first
+        if not explicit:
+            for attempt in range(ROTATION_TRIES):
+                candidate = (
+                    first
+                    if attempt == 0
+                    else _rotated_request(library, args, keywords, index, attempt)
+                )
+                if _feasible(library, *candidate):
+                    chosen = candidate
+                    break
+        out.append(chosen)
     return out
 
 

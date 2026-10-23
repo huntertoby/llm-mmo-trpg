@@ -34,11 +34,11 @@ primitives:
       dice: {llm_hint: "法術傷害的骰子（幾顆幾面）。", type: dice, required: true, required_when: {category: spell}, description_zh: 法術技必填；武器技不可填（用武器骰）}
       multiplier_permille: {llm_hint: "武器傷害的倍率。", type: int, min: 1, max: 10000, description_zh: 武器技的倍率（‰），預設 1000}
       element: {llm_hint: "傷害的元素。", type: element, description_zh: 法術技必填；武器技省略時繼承武器元素}
-      explode: {llm_hint: "擲到骰子最大值時再追加擲一次。", type: bool, description_zh: "爆骰（Phase 3D-7b）：擲到最大值再加擲一次，每顆骰最多再擲 core.explode_max 次；只能填 true"}
+      explode: {llm_hint: "擲到骰子最大值時再追加擲一次。", type: bool, true_only: true, description_zh: "爆骰（Phase 3D-7b）：擲到最大值再加擲一次，每顆骰最多再擲 core.explode_max 次；只能填 true"}
       scaling: {llm_hint: "傷害會隨某種情況逐步增加，並有上限。", type: scaling, description_zh: "依情況縮放（Phase 3D-7b）：by／per_step_permille／cap_permille 三個欄位；每一步傷害 +n‰（無條件捨去）、cap_permille 必填且不超過 core.scale_cap_max_permille；by 可為 missing_hp_10pct（施放者每少 10% 最大 HP）、distance（與目標每距 1 格）、enemies_adjacent_target（目標相鄰的敵方數）、enemies_adjacent_self（施放者相鄰的敵方數）"}
       lifesteal_permille: {llm_hint: "施放者依造成的傷害比例回復生命。", type: int, min: 1, max: 500, description_zh: "吸血（Phase 3D-8a）：施放者回復這個效果對敵人實際造成的傷害（扣掉護盾吸收，含溢出）× n‰（無條件捨去，不超過最大 HP）；用 heal 事件、原因 lifesteal；只有技能自己的傷害效果可以用；預算：傷害點數 × (1 ＋ n‰ × lifesteal_value_permille)"}
       on_kill: {llm_hint: "這個傷害讓敵人倒下時，施放者額外獲得的效果。", type: effects, description_zh: "技能內的擊殺時效果（Phase 3D-8b）：這個傷害效果讓敵人倒下時才結算的 1–2 個效果，對象一律是施放者。可用類型：refund_ap（返還 amount 點 AP，1–2，用專用效果、不受改寫規則限制）、refund_cooldown（本技能冷卻歸零，技能必須有 cost.cooldown）、heal、shield、apply_status（一般原語）。同一個傷害效果讓一個以上的敵人倒下只結算一次；施放者自己在結算中倒下則不結算。只有主動技能自己的傷害效果可以用。預算：on_kill 各效果的點數 × on_kill_expected_permille（預估擊殺率）"}
-      split_heal: {llm_hint: "對敵人造成傷害的同時，用同樣的數值治療友方。", type: bool, allowed_skeletons: [aura, area], description_zh: "聖光雙效（Phase 3D-8a）：必須搭配 affects: all、主動法術技、aura 或 area 骨架，不可與 lifesteal、explode、scaling 並用。敵方依一般命中判定受到傷害、友方（含自己）不擲命中而治療同樣的骰值（骰一次，治療量 ＝ 骰值 ＋ 縮放屬性 × 0.5，受治療倍率影響）；預算傷害與治療兩邊都計；只能填 true"}
+      split_heal: {llm_hint: "對敵人造成傷害的同時，用同樣的數值治療友方。", type: bool, true_only: true, allowed_skeletons: [aura, area], description_zh: "聖光雙效（Phase 3D-8a）：必須搭配 affects: all、主動法術技、aura 或 area 骨架，不可與 lifesteal、explode、scaling 並用。敵方依一般命中判定受到傷害、友方（含自己）不擲命中而治療同樣的骰值（骰一次，治療量 ＝ 骰值 ＋ 縮放屬性 × 0.5，受治療倍率影響）；預算傷害與治療兩邊都計；只能填 true"}
   - id: heal
     name_zh: 治療
     llm_hint: "回復目標的生命。"
