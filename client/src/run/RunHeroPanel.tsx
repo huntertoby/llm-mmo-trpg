@@ -5,6 +5,8 @@ import { WeaponIcon } from "../ui/WeaponIcon";
 import { levelBadge, levelOf } from "./skillGrowth";
 import {
   ATTRIBUTES,
+  affectsOf,
+  affectsText,
   attributeLabel,
   conHpBonus,
   hpDeltaText,
@@ -14,6 +16,16 @@ import {
   slotUsage,
   type SlotKind,
 } from "./flow";
+
+/** 有效屬性（含裝備；常駐數值的階數依它算）。舊回應沒有時退回基礎屬性。 */
+function effectiveOf(hero: RunHero, id: string): number {
+  const eff = (hero.effective_attributes ?? {}) as Record<string, number>;
+  return eff[id] ?? (hero.attributes as Record<string, number>)[id] ?? 0;
+}
+
+function signed(n: number): string {
+  return n >= 0 ? `+${n}` : `${n}`;
+}
 
 function Bar({ label, value, max, kind }: { label: string; value: number; max: number; kind: string }) {
   const pct = max <= 0 ? 0 : Math.max(0, Math.min(100, Math.round((value / max) * 100)));
@@ -66,7 +78,13 @@ export function RunHeroPanel({ hero }: { hero: RunHero }) {
       <div className="run-attrs small">
         {ATTRIBUTES.map((a) => (
           <span key={a.id}>
-            {a.label} <b>{hero.attributes[a.id]}</b>
+            {a.label} <b>{effectiveOf(hero, a.id)}</b>
+            {effectiveOf(hero, a.id) !== hero.attributes[a.id] && (
+              <span className="muted" data-testid={`attr-gear-${a.id}`}>
+                {" "}
+                （基礎 {hero.attributes[a.id]}，裝備 {signed(effectiveOf(hero, a.id) - (hero.attributes[a.id] ?? 0))}）
+              </span>
+            )}
             {a.id === "con" && (
               <span className="muted" data-testid="con-hp-bonus">
                 {" "}
@@ -81,6 +99,11 @@ export function RunHeroPanel({ hero }: { hero: RunHero }) {
           {(hero.attribute_perks ?? []).map((p) => (
             <li key={`${p.attr}-${p.per_tier_zh}`} className={p.tier > 0 ? "" : "muted"}>
               <b>{attributeLabel(p.attr)}</b>　{perkText(p)}
+              {affectsText(affectsOf(hero.attribute_affects, p.attr)) !== null && (
+                <div className="muted" data-testid={`panel-affects-${p.attr}`}>
+                  {affectsText(affectsOf(hero.attribute_affects, p.attr))}
+                </div>
+              )}
             </li>
           ))}
         </ul>

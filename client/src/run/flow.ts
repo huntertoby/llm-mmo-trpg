@@ -27,6 +27,21 @@ export function perkText(p: AttributePerk): string {
   return p.now_zh !== null ? `${p.now_zh}（${p.tier} 階）` : `${p.per_tier_zh}（屬性 ${p.next_at} 起）`;
 }
 
+/** 某屬性影響的招（Phase 3H-3；由後端依技能與武器的縮放屬性產生）。沒有資料時為空。 */
+export function affectsOf(affects: readonly { attr: string; lines_zh: readonly string[] }[] | undefined, id: string): readonly string[] {
+  return affects?.find((a) => a.attr === id)?.lines_zh ?? [];
+}
+
+/** 「影響：…」一行；沒有影響任何招時回傳 `null`。 */
+export function affectsText(lines: readonly string[]): string | null {
+  return lines.length === 0 ? null : `影響：${lines.join("、")}`;
+}
+
+/** 建議主屬性的一行文字（原因由後端依技能與武器產生）。 */
+export function suggestionText(s: { attr: string; reason_zh: string } | null | undefined): string | null {
+  return s == null ? null : `建議主屬性：${attributeLabel(s.attr)}（${s.reason_zh}）`;
+}
+
 export function attributeLabel(id: string): string {
   return ATTRIBUTES.find((a) => a.id === id)?.label ?? id;
 }

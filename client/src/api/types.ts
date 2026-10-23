@@ -159,6 +159,9 @@ export type EvolutionChoice = Schemas["EvolutionChoiceOut"];
 export type EvolutionOption = Schemas["EvolutionOptionOut"];
 export type BattleHistory = Schemas["BattleHistory"];
 export type AttributeId = Schemas["Attribute"];
+// 建議屬性與「這個屬性影響你的哪些招」（Phase 3H-3）
+export type AttributeAffects = Schemas["AttributeAffectsOut"];
+export type AttributeSuggestion = Schemas["AttributeSuggestionOut"];
 /** `POST /api/runs/{id}/choice` 的請求（工坊另有同名的 `Choice`，所以加前綴）。 */
 export type RunChoice =
   | Schemas["LevelUpChoice"]
@@ -167,6 +170,8 @@ export type RunChoice =
   | Schemas["LeaveChoice"]
   | Schemas["SpendChoice"]
   | Schemas["RespecChoice"]
+  | Schemas["RespecAttributesChoice"]
+  | Schemas["AllocateChoice"]
   | Schemas["LoadoutChoice"];
 /** 開新一輪：`weapon` ＋ `keywords`（一般開局）或 `dev_pack`（開發者起始包）；`attributes` 省略時伺服器把開局點數全部點在武器的縮放屬性。 */
 export type CreateRunRequest = Omit<Schemas["CreateRunRequest"], "attributes" | "test_mode" | "test_equipment"> & {

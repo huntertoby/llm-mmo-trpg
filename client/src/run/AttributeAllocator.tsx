@@ -1,6 +1,16 @@
 // 屬性配點：每項可加減，總點數固定（開局 4 點、每級 2 點；可全部點在同一項）。
 import type { AttributeId } from "../api/types";
-import { adjustAllocation, allocationTotal, ATTRIBUTES, conHpGain, hpDeltaText, type Allocation } from "./flow";
+import {
+  adjustAllocation,
+  affectsOf,
+  affectsText,
+  allocationTotal,
+  ATTRIBUTES,
+  conHpGain,
+  hpDeltaText,
+  suggestionText,
+  type Allocation,
+} from "./flow";
 
 interface Props {
   /** 目前的屬性值（配點前）。 */
@@ -11,24 +21,38 @@ interface Props {
   disabled?: boolean;
   /** 每點體質的最大 HP（有值時，體質旁即時顯示配點帶來的「＋N HP」）。 */
   hpPerCon?: number;
+  /** 建議的主屬性（開局，Phase 3H-3）。 */
+  suggestion?: { attr: string; reason_zh: string } | null;
+  /** 每個屬性影響你的哪些招（Phase 3H-3）。 */
+  affects?: readonly { attr: string; lines_zh: readonly string[] }[];
+  heading?: string;
 }
 
-export function AttributeAllocator({ base, points, alloc, onChange, disabled = false, hpPerCon }: Props) {
+export function AttributeAllocator({ base, points, alloc, onChange, disabled = false, hpPerCon, suggestion, affects, heading = "屬性配點" }: Props) {
   const left = points - allocationTotal(alloc);
   return (
     <div className="run-alloc">
       <div className="section-title run-alloc-title">
-        <span>屬性配點</span>
+        <span>{heading}</span>
         <span className="muted small">
           剩餘 {left} / {points} 點（可全部加在同一項）
         </span>
       </div>
+      {suggestionText(suggestion) !== null && (
+        <div className="small run-alloc-suggestion" data-testid="attr-suggestion">
+          {suggestionText(suggestion)}
+        </div>
+      )}
       <div className="run-alloc-grid">
         {ATTRIBUTES.map((a) => {
           const add = alloc[a.id] ?? 0;
+          const affected = affectsText(affectsOf(affects, a.id));
           return (
-            <div key={a.id} className="run-alloc-row">
-              <span className="run-alloc-name">{a.label}</span>
+            <div key={a.id} className={`run-alloc-row${suggestion?.attr === a.id ? " suggested" : ""}`}>
+              <span className="run-alloc-name">
+                {a.label}
+                {suggestion?.attr === a.id && <span className="run-alloc-star"> ★建議</span>}
+              </span>
               <button
                 type="button"
                 aria-label={`${a.label} 減一點`}
@@ -52,6 +76,11 @@ export function AttributeAllocator({ base, points, alloc, onChange, disabled = f
               {a.id === "con" && hpPerCon !== undefined && add > 0 && (
                 <span className="run-alloc-hp small" data-testid="con-hp-preview">
                   最大 HP {hpDeltaText(conHpGain(alloc, hpPerCon))}
+                </span>
+              )}
+              {affected !== null && (
+                <span className="run-alloc-affects muted small" data-testid={`attr-affects-${a.id}`}>
+                  {affected}
                 </span>
               )}
             </div>

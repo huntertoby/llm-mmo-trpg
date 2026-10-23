@@ -49,6 +49,7 @@ export function RunLevelUp({ run, view, busy, onChoose }: Props) {
         onChange={setAlloc}
         disabled={busy}
         hpPerCon={run.hero.hp_per_con_point}
+        affects={run.hero.attribute_affects}
       />
       <SkillGrowthPanel
         hero={run.hero}
