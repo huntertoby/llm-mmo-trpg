@@ -144,6 +144,8 @@ class RunStore:
         keywords: tuple[str, ...] | None = None,
         dev_pack: str | None = None,
         build: str | None = None,
+        test_mode: bool = False,
+        test_equipment: dict[str, str] | None = None,
     ) -> RunSession:
         """開新一輪（Phase 3-24b2）：``weapon`` ＋ ``keywords``、``dev_pack`` 或 ``build`` 擇一。"""
         if build is not None:
@@ -152,7 +154,15 @@ class RunStore:
             run = new_dev_run(self.library, dev_pack, seed, attributes)
         else:
             assert weapon is not None and keywords is not None
-            run = new_keyword_run(self.library, weapon, keywords, seed, attributes)
+            run = new_keyword_run(
+                self.library,
+                weapon,
+                keywords,
+                seed,
+                attributes,
+                test_mode=test_mode,
+                test_equipment=test_equipment,
+            )
         with self._lock:
             run_id = self._new_id()
             while run_id in self._runs:  # pragma: no cover - 機率極低

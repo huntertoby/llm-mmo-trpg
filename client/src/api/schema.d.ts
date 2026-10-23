@@ -1353,6 +1353,15 @@ export interface components {
             keywords?: string[] | null;
             /** Dev Pack */
             dev_pack?: string | null;
+            /**
+             * Test Mode
+             * @default false
+             */
+            test_mode: boolean;
+            /** Test Equipment */
+            test_equipment?: {
+                [key: string]: string;
+            };
         };
         /** DamageOut */
         DamageOut: {
@@ -3135,6 +3144,15 @@ export interface components {
             history: components["schemas"]["BattleRecord"][];
             /** Battle Id */
             battle_id: string | null;
+            /**
+             * Test Mode
+             * @default false
+             */
+            test_mode: boolean;
+            /** Test Equipment */
+            test_equipment?: {
+                [key: string]: string;
+            };
         };
         /**
          * RunRules
@@ -3205,6 +3223,11 @@ export interface components {
             in_battle: boolean;
             /** Victory */
             victory?: boolean | null;
+            /**
+             * Test Mode
+             * @default false
+             */
+            test_mode: boolean;
         };
         /**
          * SegmentLine

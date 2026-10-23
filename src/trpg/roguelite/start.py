@@ -30,6 +30,7 @@ from collections.abc import Iterable, Mapping, Sequence
 from typing import Literal
 
 from trpg.content.battle import UnitTemplate
+from trpg.content.equipment import loadout_problems, resolve_loadout
 from trpg.content.library import ContentLibrary
 from trpg.content.skills import SkillDef, weapon_problem
 from trpg.roguelite.errors import ChoiceError
@@ -42,6 +43,7 @@ from trpg.skillgen.random_composer import ComposeError, compose_random_skill
 __all__ = [
     "allocation_problems",
     "apply_allocation",
+    "check_test_equipment",
     "default_build",
     "default_start",
     "make_plan",
@@ -355,14 +357,22 @@ def new_keyword_run(
     *,
     dev_pack: str | None = None,
     skills: Sequence[str] = (),
+    test_mode: bool = False,
+    test_equipment: Mapping[str, str] | None = None,
 ) -> RunState:
     """新開局（06 6.27.3）：起始武器 ＋ ``start.keywords`` 個不重複的關鍵字，每個關鍵字的池各給
     1 招（:func:`starting_skill`；``skills`` 直接指定時改用它們，但仍必須在該關鍵字的專屬起始技能池
     裡、與武器相容）。``allocation`` 省略時全部點在武器的縮放屬性。不合法時拋出
-    :class:`ChoiceError`。"""
+    :class:`ChoiceError`。
+
+    ``test_mode``（Phase 3-39）：測試模式的一輪（戰後回滿）；``test_equipment`` 為挑的裝備
+    （欄位 → 物品 ID，取代範本的裝備）；兩者都不影響亂數與其他規則。"""
     _check_seed(seed)
     rules = library.roguelite
     _weapon_class(library, weapon)
+    equipment = dict(test_equipment or {})
+    if equipment and not test_mode:
+        raise ChoiceError("挑選裝備只能在測試模式使用")
     keywords = tuple(keywords)
     unknown = sorted(set(keywords) - set(library.keywords.ids()))
     if unknown:
@@ -374,6 +384,7 @@ def new_keyword_run(
     problems = allocation_problems(allocation, rules.start_free_points)
     if problems:
         raise ChoiceError("；".join(problems))
+    check_test_equipment(library, weapon, equipment)
     picked = _pick_starters(library, weapon, keywords, seed, skills)
     hero = apply_allocation(_start_hero(library, weapon, [s.id for s in picked]), allocation)
     core = library.ruleset.core
@@ -390,7 +401,25 @@ def new_keyword_run(
         generated_skills=tuple(generated),
         plan=make_plan(library, seed),
         node=BattleNode(index=1),
+        test_mode=test_mode,
+        test_equipment=equipment,
     )
+
+
+def check_test_equipment(
+    library: ContentLibrary, weapon: str, equipment: Mapping[str, str]
+) -> None:
+    """測試模式挑的裝備不合法時拋出 :class:`ChoiceError`（中文，多個原因以「；」連接）：未知的欄位
+    或物品，以及穿戴規則（種類、占用、同一枚戒指、代價型條數、主手武器必須是起始武器）。"""
+    if not equipment:
+        return
+    try:
+        loadout = resolve_loadout(equipment, library.items, library.affixes)
+    except ValueError as exc:
+        raise ChoiceError(str(exc)) from exc
+    problems = loadout_problems(loadout, library.weapons[weapon], library.ruleset.equipment)
+    if problems:
+        raise ChoiceError("；".join(problems))
 
 
 def new_dev_run(

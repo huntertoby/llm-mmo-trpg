@@ -3336,6 +3336,18 @@
               }
             ],
             "title": "Dev Pack"
+          },
+          "test_mode": {
+            "type": "boolean",
+            "title": "Test Mode",
+            "default": false
+          },
+          "test_equipment": {
+            "additionalProperties": {
+              "type": "string"
+            },
+            "type": "object",
+            "title": "Test Equipment"
           }
         },
         "additionalProperties": false,
@@ -7665,6 +7677,18 @@
               }
             ],
             "title": "Battle Id"
+          },
+          "test_mode": {
+            "type": "boolean",
+            "title": "Test Mode",
+            "default": false
+          },
+          "test_equipment": {
+            "additionalProperties": {
+              "type": "string"
+            },
+            "type": "object",
+            "title": "Test Equipment"
           }
         },
         "additionalProperties": false,
@@ -7850,6 +7874,11 @@
               }
             ],
             "title": "Victory"
+          },
+          "test_mode": {
+            "type": "boolean",
+            "title": "Test Mode",
+            "default": false
           }
         },
         "additionalProperties": false,

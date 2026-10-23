@@ -55,9 +55,17 @@ class CreateRunRequest(_ApiModel):
     """選的關鍵字（Phase 3-24b2；``roguelite.yaml`` 的 ``start.keywords`` 個）。"""
     dev_pack: str | None = None
     """開發者起始包 ID（Phase 3-24b2，開發用）。"""
+    test_mode: bool = False
+    """測試模式（Phase 3-39）：戰後回滿，可挑裝備；只能用 ``weapon`` ＋ ``keywords`` 開局。"""
+    test_equipment: dict[str, str] = Field(default_factory=dict)
+    """測試模式挑的裝備（欄位 → 物品 ID，Phase 3-39）；只有 ``test_mode`` 時可非空。"""
 
     @model_validator(mode="after")
     def _one_start(self) -> CreateRunRequest:
+        if (self.test_mode or self.test_equipment) and self.weapon is None:
+            raise ValueError("測試模式只能用 weapon＋keywords 開局")
+        if self.test_equipment and not self.test_mode:
+            raise ValueError("挑選裝備只能在測試模式使用")
         given = [
             self.build is not None,
             self.dev_pack is not None,
@@ -276,6 +284,10 @@ class RunResponse(_ApiModel):
     history: tuple[BattleRecord, ...]
     battle_id: str | None
     """進行中的戰鬥（用 ``/api/battles/{battle_id}`` 操作）；沒有時為 ``None``。"""
+    test_mode: bool = False
+    """測試模式的一輪（Phase 3-39；不計入統計，介面要標記）。"""
+    test_equipment: dict[str, str] = Field(default_factory=dict)
+    """測試模式挑的裝備（欄位 → 物品 ID）。"""
 
 
 class RunBattleResponse(_ApiModel):
@@ -303,3 +315,5 @@ class SaveSummary(_ApiModel):
     in_battle: bool
     victory: bool | None = None
     """已結束的一輪是否勝利；未結束為 ``None``。"""
+    test_mode: bool = False
+    """測試模式的一輪（Phase 3-39）。"""

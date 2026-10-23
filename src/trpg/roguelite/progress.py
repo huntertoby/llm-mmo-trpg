@@ -15,6 +15,7 @@ import hashlib
 from collections import Counter
 from collections.abc import Mapping, Sequence
 
+from trpg.content.equipment import Loadout, resolve_loadout
 from trpg.content.library import ContentLibrary
 from trpg.engine.actions import MANAGEMENT_ACTION_TYPES, Step
 from trpg.engine.results import battle_result
@@ -53,6 +54,7 @@ __all__ = [
     "hero_unit_id",
     "level_for",
     "next_node",
+    "run_loadout",
 ]
 
 _NODE_TEXT = {"battle": "戰鬥", "level_up": "升級", "campfire": "營火", "ended": "一輪已結束"}
@@ -62,6 +64,13 @@ def _battle_node(run: RunState) -> BattleNode:
     if not isinstance(run.node, BattleNode):
         raise NodeConflictError(f"目前不是戰鬥（{_NODE_TEXT[run.node.kind]}）")
     return run.node
+
+
+def run_loadout(library: ContentLibrary, run: RunState) -> Loadout:
+    """主角這一輪的裝備：測試模式挑了裝備（``test_equipment``）就用它，否則取範本的裝備。"""
+    if run.test_equipment:
+        return resolve_loadout(run.test_equipment, library.items, library.affixes)
+    return library.loadout_of(run.hero)
 
 
 def hero_spawn(library: ContentLibrary, run: RunState) -> UnitSpawn:
@@ -78,7 +87,7 @@ def hero_spawn(library: ContentLibrary, run: RunState) -> UnitSpawn:
     return UnitSpawn(
         template=leveled,
         weapon=library.weapons[run.hero.weapon],
-        equipment=library.loadout_of(run.hero),
+        equipment=run_loadout(library, run),
         team=Team.ALLY,
         source=run.source,
         hp=run.hp,
@@ -202,10 +211,13 @@ def finish_battle(
         )
     xp = run.xp + library.roguelite.xp_per_battle
     gained = level_for(library, xp) - run.level
+    mana = hero.mana
+    if run.test_mode:  # 測試模式（Phase 3-39）：戰後回滿到目前上限（升級再依最大 HP 的差補上）
+        hp, mana = run.max_hp_in(core), run.max_mana
     finished = run.model_copy(
         update={
             "hp": hp,
-            "mana": hero.mana,
+            "mana": mana,
             "source": source,
             "xp": xp,
             "levels_pending": run.levels_pending + gained,

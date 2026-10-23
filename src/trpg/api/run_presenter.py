@@ -228,6 +228,8 @@ def run_response(session: RunSession) -> RunResponse:
         plan=plan,
         history=run.history,
         battle_id=None if session.battle is None else session.battle.battle_id,
+        test_mode=run.test_mode,
+        test_equipment=dict(run.test_equipment),
     )
 
 
@@ -244,4 +246,5 @@ def save_summary(library: ContentLibrary, save: RunSave) -> SaveSummary:
         node=run.node.kind,
         in_battle=save.battle is not None,
         victory=run.node.victory if isinstance(run.node, EndedNode) else None,
+        test_mode=run.test_mode,
     )
