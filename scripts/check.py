@@ -113,7 +113,9 @@ def find_command(step: Step) -> list[str] | None:
 def _full_step(step: Step) -> Step:
     if step.title != "pytest":
         return step
-    return Step(step.title, step.module, step.executable, (*step.args, "-m", ""), step.optional)
+    return Step(
+        step.title, step.module, step.executable, (*step.args, "-m", "not llm"), step.optional
+    )
 
 
 def clean_stale_pyc() -> int:
@@ -153,7 +155,8 @@ def main(argv: list[str] | None = None) -> int:
         return 2
     full = "--full" in args
     if full:
-        # 完整版：包含標 slow 的測試（後面的 -m "" 覆蓋 addopts 的 -m 'not slow'）與前端完整組合。
+        # 完整版：包含標 slow 的測試與前端完整組合；後面的 -m "not llm" 覆蓋 addopts 的 -m，
+        # 但仍排除需要真模型的 llm 測試。
         os.environ["TRPG_FULL"] = "1"
     results = [(step.title, run_step(_full_step(step) if full else step)) for step in STEPS]
 

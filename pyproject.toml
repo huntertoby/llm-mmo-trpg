@@ -5,6 +5,7 @@ description = "LLM 說書人開放世界 MMO-TRPG（第一里程碑：單人 rog
 readme = "README.md"
 requires-python = ">=3.12"
 dependencies = [
+    "httpx>=0.28.1",
     "fastapi>=0.146.0",
     "pydantic>=2.7",
     "pyyaml>=6",
@@ -23,7 +24,6 @@ dev = [
     "import-linter",
     "types-PyYAML",
     "pytest-xdist>=3.8.0",
-    "httpx>=0.28.1",
     "pytest-timeout>=2.4.0",
 ]
 
@@ -102,7 +102,7 @@ warn_required_dynamic_aliases = true
 # ---------------------------------------------------------------------------
 [tool.pytest.ini_options]
 testpaths = ["tests"]
-addopts = "-ra -m 'not slow' --dist loadgroup"
+addopts = "-ra -m 'not slow and not llm' --dist loadgroup"
 pythonpath = ["src"]
 # 單一測試逾時（秒）；標 slow 的測試在 tests/conftest.py 放寬為 1800。逾時用 thread 方法，Windows 也有效。
 timeout = 300
@@ -112,6 +112,7 @@ filterwarnings = [
     "ignore:Using `httpx` with `starlette.testclient` is deprecated",
 ]
 markers = [
+    "llm: 需要真的本機模型（先用 F:\\WSL\\start.bat 啟動）；預設與 --full 都不跑，用 `-m llm` 手動執行",
     "slow: 耗時的批次模擬（平衡檢查）；預設不跑，用 `-m slow` 執行，勝率報表改由 scripts/sim_demo_maps.py 檢查",
 ]
 
