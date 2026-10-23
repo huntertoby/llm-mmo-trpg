@@ -5077,6 +5077,16 @@
             "title": "Tags",
             "default": []
           },
+          "status_look": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/StatusLook"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
           "rules_zh": {
             "items": {
               "type": "string"
@@ -8880,6 +8890,66 @@
           "diminished"
         ],
         "title": "StatusChanceOut"
+      },
+      "StatusLook": {
+        "properties": {
+          "polarity": {
+            "type": "string",
+            "title": "Polarity"
+          },
+          "control_group": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Control Group"
+          },
+          "dot_element": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Dot Element"
+          },
+          "skip_turn": {
+            "type": "boolean",
+            "title": "Skip Turn",
+            "default": false
+          },
+          "removed_by_element": {
+            "items": {
+              "type": "string"
+            },
+            "type": "array",
+            "title": "Removed By Element",
+            "default": []
+          },
+          "absorbs_damage": {
+            "type": "boolean",
+            "title": "Absorbs Damage",
+            "default": false
+          },
+          "prevents_move": {
+            "type": "boolean",
+            "title": "Prevents Move",
+            "default": false
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "polarity"
+        ],
+        "title": "StatusLook",
+        "description": "狀態圖示與身上特效需要的欄位（Phase 3-36a）；只讀 ``statuses.yaml``，前端不寫死狀態 ID。"
       },
       "StatusView": {
         "properties": {

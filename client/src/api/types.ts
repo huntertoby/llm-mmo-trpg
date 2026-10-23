@@ -71,6 +71,7 @@ export type WorkshopExport = Schemas["WorkshopExport"];
 export type SkillRarity = Schemas["SkillRarity"];
 export type Glossary = Schemas["Glossary"];
 export type GlossaryEntry = Schemas["GlossaryEntry"];
+export type StatusLook = Schemas["StatusLook"];
 export type WeaponLookEntry = Schemas["WeaponLookEntry"];
 export type DollLook = Schemas["DollLook"];
 export type PreviewOut = Schemas["PreviewOut"];
