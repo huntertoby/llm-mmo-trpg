@@ -74,7 +74,7 @@ from trpg.skillgen.option_params import (
     primitive_param_fields,
     shape_param_fields,
 )
-from trpg.skillgen.option_player import playerize
+from trpg.skillgen.option_player import HIDE_NESTED_EFFECTS, playerize
 from trpg.skillgen.option_rules import (
     composition_block,
     composition_info,
@@ -756,7 +756,9 @@ def _max_effects(library: ContentLibrary) -> int:
 
 
 def _effects_notes(skeleton: SkeletonDef, library: ContentLibrary) -> tuple[str, ...]:
-    core = "、".join(skeleton.core.primitives) or "（無）"
+    nested = {p.id for p in library.ruleset.primitives.primitives if p.nested_core}
+    shown = [p for p in skeleton.core.primitives if not (HIDE_NESTED_EFFECTS and p in nested)]
+    core = "、".join(shown) or "（無）"
     notes = [
         f"至少 1 個核心效果（{core}）；附帶效果最多 {skeleton.secondary.max_count} 個",
         f"效果總數最多 {_max_effects(library)} 個；普通稀有度最多 "
