@@ -12,7 +12,7 @@ category: weapon
 weapon_req: melee
 ap_cost: 1
 scaling_attr: str
-shape: {type: single, range: 2}
+shape: {type: single, range: 3}
 effects:
   - {type: topple}
 condition: null

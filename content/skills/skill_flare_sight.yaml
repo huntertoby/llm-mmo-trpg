@@ -12,7 +12,7 @@ category: spell
 weapon_req: focus
 ap_cost: 1
 scaling_attr: wis
-shape: {type: square3, range: 6}
+shape: {type: square3, range: 4}
 effects:
   - {type: reveal, duration: 2}
 condition: null

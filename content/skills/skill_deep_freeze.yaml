@@ -10,7 +10,7 @@ category: spell
 weapon_req: focus
 ap_cost: 2
 scaling_attr: int
-shape: {type: single, range: 5}
+shape: {type: single, range: 4}
 effects:
   - {type: damage, dice: 2d6, element: ice}
   - {type: apply_status, status: frozen, duration: 1}

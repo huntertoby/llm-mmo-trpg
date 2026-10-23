@@ -10,7 +10,7 @@ category: spell
 weapon_req: focus
 ap_cost: 1
 scaling_attr: int
-shape: {type: single, range: 5}
+shape: {type: single, range: 4}
 effects:
   - {type: damage, dice: 1d8, element: lightning}
   # 3D-1 連段條件：本回合已施放過雷電類技能才補上第二道電光

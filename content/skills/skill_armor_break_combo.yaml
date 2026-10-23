@@ -21,7 +21,7 @@ followup:
   skeleton: area
   shape: {type: cone, size: 2}
   effects:
-    - {type: damage, dice: 1d6, element: lightning}
+    - {type: damage, dice: 1d8, element: lightning}
 condition: null
 cost: {mana: 5, cooldown: 2}
 tags: [lightning, spell, aoe, debuff]

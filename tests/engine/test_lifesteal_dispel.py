@@ -396,8 +396,9 @@ def test_dispel_budget_counts_one_and_all_differently() -> None:
     lib = library()
     one = spell(SINGLE5, DISPEL_ONE, skeleton="control")
     everything = spell(SINGLE5, DISPEL_ALL, skeleton="control")
-    assert skill_budget(one, lib).effects[0].points == lib.budget.dispel_one_points == 3
-    assert skill_budget(everything, lib).effects[0].points == lib.budget.dispel_all_points == 6
+    e1, e2 = skill_budget(one, lib).effects[0], skill_budget(everything, lib).effects[0]
+    assert lib.budget.dispel_one_points == 3 and lib.budget.dispel_all_points == 6
+    assert e1.points == 3 * e1.range and e2.points == 6 * e2.range  # 3-49 射程係數
 
 
 # ---------------------------------------------------------------------------

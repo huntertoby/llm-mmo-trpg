@@ -354,9 +354,10 @@ def test_inscribe_budget_scales_with_duration() -> None:
     assert list(permille) == sorted(permille) and permille[2] == 1000  # 預設 3 輪 ＝ 基礎
     for n in (1, 2, 3, 4, 5):
         skill = _inscribe_skill(duration=n)
-        assert skill_budget(skill, lib).effects[0].points == Fraction(5 * permille[n - 1], 1000)
-    default = skill_budget(_inscribe_skill(), lib).effects[0].points
-    assert default == 5  # 省略 duration ＝ 預設輪數 3
+        e = skill_budget(skill, lib).effects[0]
+        assert e.points == Fraction(5 * permille[n - 1], 1000) * e.range  # 3-49 射程係數
+    default = skill_budget(_inscribe_skill(), lib).effects[0]
+    assert default.points == 5 * default.range  # 省略 duration ＝ 預設輪數 3
 
 
 def test_detonate_budget_uses_dice_average_and_shape_multiplier() -> None:

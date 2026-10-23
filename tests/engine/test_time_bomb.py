@@ -399,9 +399,8 @@ def test_the_budget_scales_with_the_dice_and_the_radius() -> None:
     assert small.total < skill_budget(bomb_skill(radius=1), lib).total < big.total
     rules = lib.budget
     expected = 10.5 * (rules.delayed_damage_base_targets_permille + 400 * 1) / 1000
-    assert float(skill_budget(bomb_skill(radius=1), lib).effects[0].points) == pytest.approx(
-        expected
-    )
+    e = skill_budget(bomb_skill(radius=1), lib).effects[0]
+    assert float(e.points) == pytest.approx(expected * float(e.range))  # 3-49 射程係數
 
 
 def test_the_demo_skill_is_valid_in_budget_and_equipped() -> None:
