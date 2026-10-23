@@ -172,6 +172,12 @@ source_modules = ["trpg.content"]
 forbidden_modules = ["trpg.skillgen"]
 
 [[tool.importlinter.contracts]]
+name = "skillgen 不得匯入 llm"
+type = "forbidden"
+source_modules = ["trpg.skillgen"]
+forbidden_modules = ["trpg.llm"]
+
+[[tool.importlinter.contracts]]
 name = "shared 不得匯入其他 trpg 子套件"
 type = "forbidden"
 source_modules = ["trpg.shared"]
