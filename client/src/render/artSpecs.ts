@@ -5,6 +5,7 @@ import { tileAt } from "../battle/drawModel";
 import { terrainStyle } from "../battle/glossary";
 import { hpStageOf } from "./fieldFx";
 import type { ObjectArtSpec } from "./objectArt";
+import { DEFAULT_THEME, type ArtTheme } from "./regionArt";
 import { hasTerrainArt, type Sides, type TileArtSpec } from "./terrainArt";
 
 function neighbor(model: DrawModel, t: { x: number; y: number }, dx: number, dy: number): TileDraw | undefined {
@@ -15,6 +16,7 @@ function neighbor(model: DrawModel, t: { x: number; y: number }, dx: number, dy:
 }
 
 export function tileArtSpec(model: DrawModel, t: TileDraw): TileArtSpec {
+  const theme: ArtTheme = { region: model.region, look: model.look };
   const n = neighbor(model, t, 0, -1);
   const s = neighbor(model, t, 0, 1);
   const w = neighbor(model, t, -1, 0);
@@ -23,6 +25,7 @@ export function tileArtSpec(model: DrawModel, t: TileDraw): TileArtSpec {
   const same = (nb: TileDraw | undefined): boolean => nb !== undefined && nb.surface === t.surface && t.surface !== "none";
   const surfSame: Sides = { n: same(n), s: same(s), w: same(w), e: same(e) };
   return {
+    ...theme,
     terrain: t.terrain,
     x: t.x,
     y: t.y,
@@ -43,9 +46,14 @@ export function objectKinds(model: DrawModel): Map<string, string> {
   return m;
 }
 
-export function objectArtSpec(o: ObjectDraw, kinds: ReadonlyMap<string, string>): ObjectArtSpec {
+export function objectArtSpec(
+  o: ObjectDraw,
+  kinds: ReadonlyMap<string, string>,
+  theme: ArtTheme = DEFAULT_THEME,
+): ObjectArtSpec {
   const at = (dx: number, dy: number): boolean => kinds.get(`${o.x + dx},${o.y + dy}`) === o.kind;
   return {
+    ...theme,
     kind: o.kind,
     x: o.x,
     y: o.y,

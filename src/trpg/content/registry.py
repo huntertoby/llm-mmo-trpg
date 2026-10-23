@@ -20,6 +20,7 @@ from trpg.content.environment import (
     WeatherTable,
 )
 from trpg.content.loader import default_content_dir, load_content_file
+from trpg.content.regions import RegionTable
 from trpg.content.roguelite import RunRules
 from trpg.content.rules import CoreRules, HitTable
 from trpg.content.schemas import ContentModel, ElementTable
@@ -66,6 +67,7 @@ KNOWN_CONTENT_FILES: tuple[ContentFile, ...] = (
     ContentFile("skill_synergies.yaml", SynergyTable),
     ContentFile("skill_keywords.yaml", KeywordTable),
     ContentFile("skill_exclusions.yaml", ExclusionTable),
+    ContentFile("regions.yaml", RegionTable),
     ContentFile("roguelite.yaml", RunRules),
     ContentFile("llm/world_shattered.yaml", WorldStyle),
 )

@@ -233,6 +233,11 @@ class MapDef(ContentModel):
     weather: str = Field(default="clear", pattern=ID_PATTERN)
     encounter: Encounter | None = None
     events: tuple[MapEvent, ...] = ()
+    region: str | None = Field(default=None, pattern=ID_PATTERN)
+    """區域主題（Phase 3-37a，``content/regions.yaml``）：只影響外觀；省略 ＝ 預設畫法。未知值由
+    :func:`trpg.content.regions.sanitize_map_theme` 在載入時丟棄並警告。"""
+    look: dict[str, str] = Field(default_factory=dict)
+    """單張地圖的外觀覆寫（鍵與值見 ``regions.yaml`` 的 ``look_keys``；載入後已併入區域預設）。"""
     source_wells: tuple[tuple[int, int], ...] = ()
     """源泉格（Phase 3C-4a）：我方單位進入時 +1 源力（不超過上限），源泉消失。不可與物件、
     起始區重疊，不可重複。"""

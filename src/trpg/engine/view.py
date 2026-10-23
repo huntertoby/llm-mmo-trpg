@@ -11,7 +11,7 @@ from __future__ import annotations
 
 from typing import Literal
 
-from pydantic import BaseModel, ConfigDict
+from pydantic import BaseModel, ConfigDict, Field
 
 from trpg.content.battle import DollLook, ReactionRule, SummonMode
 from trpg.content.equipment import (
@@ -466,6 +466,10 @@ class BattleView(_ViewModel):
     """指揮召喚物的 AP 花費（Phase 3-33c；切換模式免費）。"""
     summon_infuse_ap_cost: int = 1
     """灌注技能的 AP 花費（Phase 3-33d；法力與冷卻照技能）。"""
+    region: str | None = None
+    """區域主題 ID（Phase 3-37a；省略 ＝ 預設畫法）。只影響外觀。"""
+    look: dict[str, str] = Field(default_factory=dict)
+    """外觀覆寫（已併入區域預設；Phase 3-37a）。只影響外觀。"""
 
 
 def _pos(cells: tuple[tuple[int, int], ...]) -> tuple[Pos, ...]:
@@ -892,6 +896,8 @@ def project_for(state: BattleState, team: Team) -> BattleView:
         active_unit=state.active_unit,
         round=state.round,
         max_rounds=state.max_rounds,
+        region=state.region,
+        look=dict(state.look),
         weather_id=None if state.weather is None else state.weather.id,
         weather_name_zh=None if state.weather is None else state.weather.name_zh,
         objective=state.objective,

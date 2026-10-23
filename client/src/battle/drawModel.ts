@@ -2,6 +2,7 @@
 import type { BattleView, DollLook, Facing, Pos, Surface } from "../api/types";
 import type { DollInput } from "../render/appearance";
 import type { GearLook } from "../render/gearIcon";
+import { themeOf } from "../render/regionArt";
 import type { SummonLookDraw } from "../render/summonArt";
 import {
   HIGHLIGHT,
@@ -147,6 +148,10 @@ export interface AuraDraw {
 }
 
 export interface DrawModel {
+  /** 區域主題 ID（空字串 ＝ 預設畫法；Phase 3-37a）。 */
+  region: string;
+  /** `look` 覆寫的正規化字串（`鍵=值,鍵=值`，無覆寫為空字串；Phase 3-37a）。 */
+  look: string;
   width: number;
   height: number;
   tiles: TileDraw[];
@@ -310,7 +315,7 @@ export function buildDrawModel(
   const zones = zoneDraws(view, skills);
   const runes = runeDraws(view);
   const goalMarkers = objectiveMarkers(view.objective);
-  return { width: view.width, height: view.height, tiles, objects, units, traps, auras, zones, runes, wells, markers: goalMarkers };
+  return { ...themeOf(view), width: view.width, height: view.height, tiles, objects, units, traps, auras, zones, runes, wells, markers: goalMarkers };
 }
 
 export function tileAt(model: DrawModel, p: Pos): TileDraw | undefined {

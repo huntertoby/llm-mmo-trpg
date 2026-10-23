@@ -49,7 +49,7 @@ function tile(x: number, y: number, over: Partial<TileDraw> = {}): TileDraw {
 function model(rows: Array<Array<Partial<TileDraw>>>, objects: ObjectDraw[] = []): DrawModel {
   const tiles: TileDraw[] = [];
   rows.forEach((row, y) => row.forEach((o, x) => tiles.push(tile(x, y, o))));
-  return { width: rows[0]?.length ?? 0, height: rows.length, tiles, objects, units: [], traps: [], auras: [], zones: [], runes: [], wells: [], markers: [] };
+  return { width: rows[0]?.length ?? 0, height: rows.length, tiles, objects, units: [], traps: [], auras: [], zones: [], runes: [], wells: [], markers: [], region: "", look: "" };
 }
 
 function obj(kind: string, x: number, y: number): ObjectDraw {
@@ -158,7 +158,7 @@ describe("程式繪製（假 Canvas）", () => {
       for (const flammable of [false, true]) {
         for (const turnsLeft of [null, 1, 3]) {
           for (const hpStage of [0, 1, 2] as const) {
-            const spec: ObjectArtSpec = { kind, x: 3, y: 4, joinL: true, joinR: false, vertical: true, flammable, turnsLeft, hpStage };
+            const spec: ObjectArtSpec = { region: "", look: "", kind, x: 3, y: 4, joinL: true, joinR: false, vertical: true, flammable, turnsLeft, hpStage };
             const { ctx, calls } = mockCtx();
             expect(() => drawObject(ctx, spec)).not.toThrow();
             expect(calls.length).toBeGreaterThan(3);
@@ -184,7 +184,7 @@ describe("程式繪製（假 Canvas）", () => {
     expect(run(1)).not.toEqual(run(7));
     const o = (): string[] => {
       const { ctx, calls } = mockCtx();
-      drawObject(ctx, { kind: "rubble", x: 2, y: 2, joinL: false, joinR: false, vertical: false, flammable: false, turnsLeft: null, hpStage: 0 });
+      drawObject(ctx, { region: "", look: "", kind: "rubble", x: 2, y: 2, joinL: false, joinR: false, vertical: false, flammable: false, turnsLeft: null, hpStage: 0 });
       return calls;
     };
     expect(o()).toEqual(o());

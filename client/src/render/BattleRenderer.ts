@@ -34,6 +34,7 @@ import { drawCasterRing, drawTrapPad, drawZoneCell, fxColor, sightVeil, turnsBad
 import { fontEpoch } from "./fontLoad";
 import { ArtTextures } from "./artTextures";
 import { heightBadgeText, objectArtSpec, objectKinds, tileArtSpec } from "./artSpecs";
+import type { ArtTheme } from "./regionArt";
 import { hasObjectArt } from "./objectArt";
 import { blastEffect, castEffects, hitEffects, shakeEffect, warpEffects, type Effect } from "./vfxEffects";
 import { drawCliff, drawEdges, liftEffects, silhouette } from "./heightArt";
@@ -241,7 +242,7 @@ export class BattleRenderer {
     this.drawMarkers(model);
     const kinds = objectKinds(model);
     for (const o of model.objects) {
-      const node = this.objectSprite(o, kinds);
+      const node = this.objectSprite(o, kinds, { region: model.region, look: model.look });
       this.rows.row(o.y).objects.addChild(node);
       this.place(node, o, o.x * T, o.y * T);
     }
@@ -477,11 +478,11 @@ export class BattleRenderer {
     }
   }
 
-  private objectSprite(o: ObjectDraw, kinds: ReadonlyMap<string, string>): Container {
+  private objectSprite(o: ObjectDraw, kinds: ReadonlyMap<string, string>, theme: ArtTheme): Container {
     const c = new Container();
     const g = new Graphics();
     const known = hasObjectArt(o.kind);
-    const texture = this.art.object(objectArtSpec(o, kinds));
+    const texture = this.art.object(objectArtSpec(o, kinds, theme));
     const hasSprite = texture !== null;
     if (hasSprite) {
       const node = new Sprite(texture);
