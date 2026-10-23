@@ -208,6 +208,55 @@ def test_stats_and_alert(library: ContentLibrary) -> None:
     assert ProposalStats().summary_lines()[0].endswith("0")
 
 
+# ---------------------------------------------------------------------------
+# 4-L5b：先修可修的、再回報其餘；型態與骨架結構進 prompt
+# ---------------------------------------------------------------------------
+
+
+def test_mixed_errors_engine_repairs_cooldown_first(library: ContentLibrary) -> None:
+    """可修（沒有冷卻的大範圍）與不可修（骨架不合）混在一起：引擎先補冷卻，回給 LLM 的錯誤
+    只剩不可修的；第二次 LLM 改對後通過。"""
+    skill = library.skills["skill_blinding_dark"]
+    request = ProposalRequest(skill.tier, skill.rarity)
+    ctx = ProposalContext(skill.tier, skill.rarity)
+    good = proposal_from_skill(skill, library)
+    bad = {**good, "skeleton": "strike"}
+    client = MockLLMClient([json.dumps(bad, ensure_ascii=False), json.dumps(good)])
+    outcome = propose_skill(client, library, request, ctx, seed=3)
+    assert outcome.source == "llm" and outcome.attempts == 2
+    first = outcome.records[0]
+    assert "exclusion.no_cooldown_big_area" in first.repaired
+    assert "exclusion.no_cooldown_big_area" not in first.codes
+    assert first.codes  # 不可修的錯誤照樣回報
+    feedback = _user(client.calls[1])
+    assert "no_cooldown_big_area" not in feedback.split("<errors>")[1]
+
+
+def test_charge_through_form_in_prompt_and_schema(library: ContentLibrary) -> None:
+    """帶 charge_through 的提議走自己的型態：available 有它的說明、形狀只有 ground_tile。"""
+    request = ProposalRequest(1, "rare", skeleton="displace")
+    prompt = build_proposal_prompt(library, request)
+    forms = dict(prompt.models.forms)
+    assert "charge_through" in forms and "ground_tile" in forms["charge_through"]
+    user = _user(prompt.messages)
+    assert "charge_through" in user and '"forms"' in user
+    shape = prompt.json_schema["$defs"]["SkillProposal_charge_through"]["properties"]["shape"]
+    assert shape == {"$ref": "#/$defs/Shape_ground_tile"}
+    rush = _proposal_text(library, "skill_bull_rush")
+    assert json.loads(rush)["form"] == "charge_through"
+    outcome = propose_skill(
+        MockLLMClient([rush]), library, request, ProposalContext(1, "rare"), seed=3
+    )
+    assert outcome.source == "llm" and outcome.skill.shape.type == "ground_tile"
+
+
+def test_common_request_status_enum_excludes_rare_statuses(library: ContentLibrary) -> None:
+    prompt = build_proposal_prompt(library, STRIKE)
+    status = prompt.json_schema["$defs"]["Effect_apply_status"]["properties"]["status"]["enum"]
+    rare = {s.id for s in library.ruleset.statuses.statuses if s.min_rarity != "common"}
+    assert rare and rare.isdisjoint(status)
+
+
 @pytest.mark.llm
 def test_real_model_propose_one(library: ContentLibrary) -> None:
     r"""真模型（需先用 F:\WSL\start.bat 啟動，連接埠與 config/llm.toml 一致）：一個題目跑完整

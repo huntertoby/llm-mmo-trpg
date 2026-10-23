@@ -156,7 +156,7 @@ def test_stun_on_single_target_is_repaired_by_the_engine(
     assert "exclusion.stun_single_long_cooldown" not in [e.code for e in evaluation.result.errors]
     if evaluation.ok:
         assert evaluation.result.skill is not None
-        assert evaluation.result.skill.cost.cooldown >= 4
+        assert (evaluation.result.skill.cost.cooldown or 0) >= 4
 
 
 def test_mixed_errors_repair_what_can_be_repaired_first(
