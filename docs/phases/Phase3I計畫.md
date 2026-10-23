@@ -28,7 +28,7 @@
 |---|---|---|---|
 | 3I-1 主武器補平六屬性 | `weapons.yaml` 加拳套（體質／敏捷，取較高）、鐮刀（意志／力量，取平均）、鞭（敏捷／感知，取平均）＋特性（照 08 細節表）；**錘改取較高**；`weaponIcon.ts` `DIAGONAL` 加 scythe、whip；開局武器池、起始技能相容、AI、紙娃娃 kind 對應；模擬只量 | 1～1.5 | opus（反擊是新反應） |
 | 3I-2 副手 | 副手縮放屬性欄位與副手特性（塔盾半掩護／移動 −1、法書法術傷害 +10%、法器珠法術射程 +1、圓盾格擋強化依縮放）；裝備欄與相容性、卡片 | 1 | sonnet |
-| 3I-3 魔劍士方案 A＋魔導劍 | 稀有以上武器技可帶一個心智第二屬性（取平均、費用不雙扣）；組合器與 LLM 依「第二高與最高差 ≤ 4、機率 30%」產生；魔劍斬改近戰武器技＋智力（移除 `skill_scaling.yaml` 例外）；驗證器接 3H-7 的範圍檢查（允許武器技＋心智第二屬性）；工坊第二屬性選單（3H-8）開放心智屬性；卡片算法句；魔導劍武器資料（無特性）與 `form: arcane` 外觀：照 `docs/art/魔導劍.md`（樣張 `docs/art/arcane-blade.png`、`sample/paperdoll.js`）——`render/paperdoll.ts` 的 sword 分支加 arcane 一段（源晶槽有外光，無元素藍紫 `#9a86ff`、有 element 換元素色；三個符文刻點；黃銅齒輪護手），不認得 arcane 退回一般單手劍；`weapons.yaml` `look: {kind: sword, form: arcane, material: steel}` | 0.5～0.8 | sonnet |
+| 3I-3 魔劍士方案 A＋魔導劍 | 稀有以上武器技可帶一個心智第二屬性（取平均、費用不雙扣）；組合器與 LLM 依「第二高與最高差 ≤ 4、機率 30%」產生；魔劍斬改近戰武器技＋智力（移除 `skill_scaling.yaml` 例外）；驗證器接 3H-7 的範圍檢查（允許武器技＋心智第二屬性）；工坊第二屬性選單（3H-8）開放心智屬性；卡片算法句；**武器技效果句（護盾、治療等）寫出實際屬性名**（例「＋力量加成」，玩法 PM 2026-10-24：武器技所有數值都看手上武器，不加例外）；魔導劍武器資料（無特性）與 `form: arcane` 外觀：照 `docs/art/魔導劍.md`（樣張 `docs/art/arcane-blade.png`、`sample/paperdoll.js`）——`render/paperdoll.ts` 的 sword 分支加 arcane 一段（源晶槽有外光，無元素藍紫 `#9a86ff`、有 element 換元素色；三個符文刻點；黃銅齒輪護手），不認得 arcane 退回一般單手劍；`weapons.yaml` `look: {kind: sword, form: arcane, material: steel}` | 0.5～0.8 | sonnet |
 | 3I-4 第二批其他武器（**要做**） | 雙匕首（成對、普攻兩下）、手槍、霰彈槍、雙手槍（火器規則見 08） | 約 1 | sonnet |
 
 **合計**：3I-1～4 約 3.5～4.3 段。順序 3I-1 → 3I-2 → 3I-3（3I-3 依賴 3H-7 的縮放範圍檢查與 3I-1 的武器）；3I-2 可和 3I-1 平行（不同檔案為主）。
