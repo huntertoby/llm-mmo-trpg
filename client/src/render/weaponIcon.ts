@@ -8,7 +8,7 @@ import { drawWeaponAlone } from "./paperdoll";
 const WORK = 120;
 const WORK_RES = 3;
 /** 這些武器斜放（-45 度）；弓與杖直立。 */
-const DIAGONAL: ReadonlySet<string> = new Set(["sword", "greatsword", "dagger", "axe", "hammer", "spear"]);
+const DIAGONAL: ReadonlySet<string> = new Set(["sword", "greatsword", "dagger", "axe", "hammer", "spear", "scythe", "whip"]);
 const PAD = 0.08;
 
 /** 武器小圖示要畫的那一件裝備（供測試與繪製共用）。 */

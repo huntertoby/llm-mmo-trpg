@@ -41,9 +41,9 @@ function fakeCtx(): { ctx: CanvasRenderingContext2D; calls: string[]; props: Rec
 
 const STATUS_IDS = real.statuses.map((s) => s.id);
 
-describe("32 個狀態", () => {
+describe("33 個狀態", () => {
   it("每個狀態都有 status_look、圖樣，且畫得出來", () => {
-    expect(STATUS_IDS.length).toBe(32);
+    expect(STATUS_IDS.length).toBe(33);
     for (const id of STATUS_IDS) {
       const entry = real.statuses.find((s) => s.id === id);
       expect(entry?.status_look, id).toBeTruthy();
@@ -166,7 +166,7 @@ describe("頭頂狀態列", () => {
     expect(statusRowLayout(["a", "b", "c"], 2).map((i) => i.kind)).toEqual(["icon", "more"]);
   });
 
-  it("32 個狀態同時存在也畫得出來", () => {
+  it("33 個狀態同時存在也畫得出來", () => {
     for (const item of statusRowLayout(STATUS_IDS)) {
       if (item.kind === "icon") expect(() => paintStatusIcon(fakeCtx().ctx, item.id, 0, 0, 14)).not.toThrow();
     }

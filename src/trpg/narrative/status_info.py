@@ -36,6 +36,20 @@ def _armor_break_line(library: ContentLibrary) -> str:
     return "防禦值降低的幅度依武器：" + "、".join(parts) if parts else "防禦值降低的幅度依來源"
 
 
+def _entangle_line(library: ContentLibrary) -> str:
+    """纏繞的移動點數減少量依武器（``weapons.yaml`` 的 ``entangle``，Phase 3I-1）。"""
+    parts = [
+        f"{w.name_zh} −{w.entangle.move_penalty}"
+        for w in sorted(library.weapons.values(), key=lambda w: w.id)
+        if w.entangle is not None
+    ]
+    amount = "、".join(parts) if parts else "依來源"
+    return (
+        f"下一個回合開始時移動點數減少（{amount}；最低 0），持續到該回合結束；"
+        "重複施加只刷新、不疊加，不擲抵抗"
+    )
+
+
 NEUTRAL_PERMILLE = 1000
 """倍率欄位的中性值（×100%，不寫說明）。"""
 
@@ -106,6 +120,8 @@ def status_rules(status: StatusDef, library: ContentLibrary) -> tuple[str, ...]:
         lines.append(f"受到{names}傷害時立即解除")
     if status.defense_break:
         lines.append(_armor_break_line(library))
+    if status.move_reduction:
+        lines.append(_entangle_line(library))
     if status.save_attr is not None:
         lines.append(
             f"抵抗：由技能或動作施加在敵人身上時，目標以{status.save_attr.display_name}對抗施放者的"

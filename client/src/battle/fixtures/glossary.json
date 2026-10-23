@@ -737,6 +737,24 @@
    ]
   },
   {
+   "id": "entangled",
+   "name_zh": "纏繞",
+   "description_zh": "被鞭纏住，下一個回合開始時移動點數減少（不疊加）。",
+   "tags": [],
+   "status_look": {
+    "polarity": "debuff",
+    "control_group": null,
+    "dot_element": null,
+    "skip_turn": false,
+    "removed_by_element": [],
+    "absorbs_damage": false,
+    "prevents_move": false
+   },
+   "rules_zh": [
+    "下一個回合開始時移動點數減少（鞭 −2；最低 0），持續到該回合結束；重複施加只刷新、不疊加，不擲抵抗"
+   ]
+  },
+  {
    "id": "bleed",
    "name_zh": "流血",
    "description_zh": "傷口流血，每回合開始時受到物理傷害。",
@@ -1139,6 +1157,14 @@
    "id": "overwatch_shot",
    "name_zh": "監視射擊",
    "description_zh": "帶有「監視」狀態時，敵人在武器射程與視線內完成一步移動，就自動普攻一次（不花 AP）；射擊後監視結束。",
+   "tags": [],
+   "status_look": null,
+   "rules_zh": []
+  },
+  {
+   "id": "counter_attack",
+   "name_zh": "反擊",
+   "description_zh": "相鄰敵人的近戰攻擊命中你、你還站著時，自動對攻擊者普攻一次（拳套；不花 AP 與耐力）。",
    "tags": [],
    "status_look": null,
    "rules_zh": []
@@ -2421,6 +2447,17 @@
    }
   },
   {
+   "id": "fist",
+   "weapon_class": "melee",
+   "two_handed": true,
+   "look": {
+    "kind": "fist",
+    "material": "iron",
+    "element": null,
+    "form": "knuckle"
+   }
+  },
+  {
    "id": "frost_staff",
    "weapon_class": "focus",
    "two_handed": true,
@@ -2498,6 +2535,17 @@
    }
   },
   {
+   "id": "scythe",
+   "weapon_class": "melee",
+   "two_handed": true,
+   "look": {
+    "kind": "scythe",
+    "material": "iron",
+    "element": null,
+    "form": "long"
+   }
+  },
+  {
    "id": "spear",
    "weapon_class": "melee",
    "two_handed": true,
@@ -2517,6 +2565,17 @@
     "material": "wood",
     "element": null,
     "form": "totem"
+   }
+  },
+  {
+   "id": "whip",
+   "weapon_class": "melee",
+   "two_handed": false,
+   "look": {
+    "kind": "whip",
+    "material": "leather",
+    "element": null,
+    "form": "leather"
    }
   }
  ]

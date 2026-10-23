@@ -479,3 +479,12 @@ def test_entangle_applied_during_the_target_own_turn_waits_for_its_next_turn() -
     assert (effect.duration, effect.amount) == (1, 2)
     state.active_unit = U2
     assert entangle_effect(state, state.units[U1], state.units[U2], 2).duration == 2
+
+
+def test_the_entangled_status_card_names_the_weapon_amount() -> None:
+    from trpg.narrative.status_info import status_rules  # noqa: PLC0415
+
+    lib = library()
+    lines = status_rules(lib.ruleset.status_def("entangled"), lib)
+    assert any("鞭 −2" in line and "不擲抵抗" in line for line in lines)
+    assert not any("抵抗：" in line for line in lines)
