@@ -1,7 +1,7 @@
 // 技能卡片（滑過技能按鈕時顯示；升級與營火候選卡、工坊也用）。
 // Phase 3-18a：大圖示用小圖模式；部件區是「組裝算式」，每個部件都能滑過或點一下看說明。
 import type { SkillCard } from "../api/types";
-import { kindLabel, sourceCostText } from "../battle/source";
+import { categoryLabel, kindLabel, sourceCostText } from "../battle/source";
 import { growthLines, levelBadge, levelOf } from "../run/skillGrowth";
 import { KeywordLine } from "./KeywordLine";
 import { RuleText } from "./ruleText";
@@ -36,7 +36,7 @@ export function SkillCardView({ card, compact = false, activeVariantId = null, h
             <span className="muted small">
               {" "}
               <span className="skill-card-rarity">{card.rarity}</span>・{kindLabel(card)}
-              {(card.skeleton_zh ?? "") !== "" && `・${card.skeleton_zh}`}
+              {(card.skeleton_zh ?? "") !== "" && `・${card.skeleton_zh}`}・{categoryLabel(card)}
             </span>
           </div>
           <div className="small">{card.cost.join("，")}</div>

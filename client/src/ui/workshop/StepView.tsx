@@ -1,7 +1,7 @@
 // 一步步組：步驟列（可回上一步）＋ 目前這一步的說明與欄位。
 import { useEffect, useState } from "react";
 import type { DraftOptions, StepId, StepOptions } from "../../api/types";
-import { autoSingles, changeSkeleton, getPath, type Json } from "../../workshop/draft";
+import { autoSingles, changeSkeleton, conformScaling, getPath, type Json } from "../../workshop/draft";
 import { availableSteps, canBack, canNext, currentStep, STEP_NAMES, type EditorState } from "../../workshop/state";
 import { FieldList } from "./FieldEditor";
 import { Hint } from "../Hint";
@@ -52,9 +52,10 @@ interface BodyProps {
 function StepBody({ step, draft, options, onDraft }: BodyProps) {
   // 只有一個選項的必填欄位（例：被動技的形狀只能是「自己」）自動選好。
   useEffect(() => {
-    const next = autoSingles(draft, step.fields);
+    // 縮放屬性的允許範圍會隨類別、武器需求、效果改變：不在範圍內的值對齊成合法值（不論目前在哪一步）
+    const next = conformScaling(autoSingles(draft, step.fields), options);
     if (next !== draft) onDraft(next);
-  }, [draft, step, onDraft]);
+  }, [draft, step, options, onDraft]);
 
   // 換骨架會清掉其他欄位：先在頁內問一次（不用 window.confirm；內嵌瀏覽器會直接回傳否）
   const [pendingSkeleton, setPendingSkeleton] = useState<{ next: Json; after: string } | null>(null);

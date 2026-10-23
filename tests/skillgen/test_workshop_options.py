@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import re
 from typing import Any
 
 import pytest
@@ -199,12 +200,34 @@ def test_values_outside_the_options_are_reported_in_chinese() -> None:
         ],
     }
     problems = draft_options(draft, lib).problems
-    assert "ap_cost：AP必須在 1–3，收到 5" in problems
-    assert "weapon_req：武器需求「focus」不是合法的選項" in problems
-    assert "shape：形狀「cone」不是合法的選項" in problems
-    assert "effects[1].distance：距離（格）必須在 1–2，收到 5" in problems
-    assert "effects[1].affects：對象「tiles」不是合法的選項" in problems
-    assert "effects[2]：效果「heal」不是合法的選項" in problems
+    assert "AP必須在 1–3，收到 5" in problems
+    assert "武器需求不在可選範圍內（可選：近戰武器、遠程武器）" in problems
+    assert "形狀不在可選範圍內（可選：單體、單位與落點）" in problems
+    assert "第 2 個效果：距離（格）必須在 1–2，收到 5" in problems
+    assert any(p.startswith("第 2 個效果：對象不在可選範圍內") for p in problems)
+    assert any(p.startswith("第 3 個效果：效果不在可選範圍內") for p in problems)
+    for p in problems:  # 玩家看不到欄位名、代號（玩法決定 #44）
+        assert not re.search(r"[A-Za-z_]{3,}", p), p
+
+
+def test_stale_scaling_attr_message_is_plain_chinese() -> None:
+    """神聖傷害的法術技不能看意志：訊息用中文屬性名並說明原因，不露 draft／scaling_attr／wil。"""
+    lib = library()
+    draft = {
+        "skeleton": "strike",
+        "kind": "active",
+        "category": "spell",
+        "weapon_req": "any",
+        "scaling_attr": "wil",
+        "tier": 1,
+        "shape": {"type": "single"},
+        "effects": [{"type": "damage", "element": "holy", "dice": "2d6"}],
+    }
+    result = check_draft(draft, lib)
+    texts = [p.message_zh for p in result.problems]
+    assert any("縮放屬性「意志」不在可選範圍內" in t and "只能看" in t for t in texts), texts
+    for t in texts:
+        assert "scaling_attr" not in t and "wil" not in t and "draft" not in t, t
 
 
 def test_options_start_from_the_skeleton_and_are_deterministic() -> None:
@@ -226,7 +249,7 @@ def test_rarity_step_derives_the_minimum_rarity() -> None:
     rarity = _step(draft_options(draft, lib), "rarity")
     assert [c.value for c in _field(rarity, "rarity").choices] == ["rare", "epic"]
     assert "最低稀有度：稀有" in rarity.notes_zh
-    assert "原語 knock_prone：至少稀有" in rarity.notes_zh
+    assert "原語 擊倒：至少稀有" in rarity.notes_zh
 
 
 def test_legendary_source_is_offered_only_with_a_legendary_core() -> None:

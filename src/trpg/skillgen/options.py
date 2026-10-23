@@ -82,6 +82,7 @@ from trpg.skillgen.option_rules import (
 )
 from trpg.skillgen.option_scaling import scaling_extra_fields
 from trpg.skillgen.option_variant import variant_fields, variant_notes, variants_visible
+from trpg.skillgen.player_text import CHANGE_TEXT, plainify
 from trpg.skillgen.scaling import attr_names_zh, scaling_basis_zh
 from trpg.skillgen.validate import rarity_requirements
 
@@ -137,27 +138,6 @@ STEP_TEXT: dict[StepId, tuple[str, str]] = {
     ),
 }
 _ACTION_TEXT = {"attack": "普攻", "shove": "推擊", "trip": "絆倒", "interact": "互動"}
-_CHANGE_TEXT: dict[str, str] = {
-    "damage_permille": "傷害 ±‰",
-    "hit_bonus": "命中 ±",
-    "cooldown_delta": "命中後冷卻 −1／−2",
-    "push_distance_delta": "推擊距離 +1／+2",
-    "ap_delta": "AP 成本 ±1",
-    "range_delta": "射程 −1～＋2",
-    "add_element": "傷害獲得元素",
-    "add_tags": "技能獲得標籤",
-    "on_hit_effects": "命中後附加效果",
-    "grant_pierce": "獲得穿透",
-    "area_delta": "範圍 +1",
-    "shape_to": "形狀轉換",
-    "allow_self_target": "範圍包含自己",
-    "heal_permille": "治療量 ±‰",
-    "summon_hp_permille": "召喚物最大 HP +‰",
-    "summon_attack_dice": "召喚物攻擊 +1 顆傷害骰",
-    "summon_limit_delta": "召喚物同時上限 ±1",
-    "summon_duration_delta": "召喚物持續 +輪數",
-    "summon_damage_permille": "召喚物傷害 +‰",
-}
 _TRAP_SHAPES = ("single", "cross", "square3")
 """陷阱觸發範圍可用的形狀（``skill_budget.yaml`` 的陷阱預算以這三種形狀的倍率計算）。"""
 
@@ -378,8 +358,8 @@ def _scaling_field(draft: Draft, library: ContentLibrary) -> FieldSpec:
         field="scaling_attr",
         name_zh="縮放屬性",
         description_zh=(
-            "武器技的命中與傷害看手上武器的屬性（雙屬性武器取較高或取平均），不能另外選；"
-            "這裡只顯示武器需求對應的主屬性"
+            "武器技的命中與傷害看手上武器的屬性（雙屬性武器取較高或取平均），不能另外選。"
+            "武器技一定要拿近戰或遠程武器；不限武器的是法術技"
             if attr is not None
             else "武器技看手上武器的屬性；先選武器需求"
         ),
@@ -389,8 +369,22 @@ def _scaling_field(draft: Draft, library: ContentLibrary) -> FieldSpec:
         default=None if attr is None else attr.value,
         choices=()
         if attr is None
-        else (Choice(value=attr.value, name_zh=f"看手上武器（{attr.display_name}）"),),
+        else (Choice(value=attr.value, name_zh=_weapon_scaling_name(str(req), library)),),
     )
+
+
+def _weapon_scaling_name(weapon_req: str, library: ContentLibrary) -> str:
+    """武器技縮放屬性的顯示：實際看的是手上武器的屬性，例子從武器資料產生（每種屬性組合取一把，
+    優先取玩家能裝備的武器，依 ID 排序，最多 3 種），不寫死。"""
+    equipped = {i.weapon for i in library.items.values() if i.weapon is not None}
+    pool = sorted(w for w in library.weapons if w in equipped) or sorted(library.weapons)
+    examples: dict[str, str] = {}
+    for weapon_id in pool:
+        weapon = library.weapons[weapon_id]
+        if weapon.weapon_class == weapon_req:
+            examples.setdefault(weapon.scaling_names_zh(), weapon.name_zh)
+    shown = "、".join(f"{name}＝{attrs}" for attrs, name in list(examples.items())[:3])
+    return f"依手上武器而定（例：{shown}）" if shown else "依手上武器而定"
 
 
 _WEAPON_CLASSES = ("melee", "ranged")
@@ -445,7 +439,7 @@ def _basics_step(draft: Draft, library: ContentLibrary, skeleton: SkeletonDef) -
         FieldSpec(
             field="tier",
             name_zh="階級",
-            description_zh="階級越高，可用預算越多（點數表在 rules/core.yaml 的 tier_budget）",
+            description_zh="階級越高，可用預算越多",
             type="int",
             required=True,
             min=tiers[0],
@@ -703,7 +697,7 @@ def _effect_choices(draft: Draft, library: ContentLibrary, skeleton: SkeletonDef
             candidates.append(choice)
     base = _probe_base(draft)
     if not _base_accepts_something(base, candidates):
-        return candidates  # 前面的步驟本身就組不起來（見 problems），不再試組
+        return candidates  # 前面的步驟本身就組不起來（見檢查結果的問題清單），不再試組
     existing = [dict(_mapping(e)) for e in draft.get("effects") or ()]
     out: list[Choice] = []
     for choice in candidates:
@@ -716,7 +710,7 @@ def _effect_choices(draft: Draft, library: ContentLibrary, skeleton: SkeletonDef
     return out
 
 
-def _trap_field() -> FieldSpec:
+def _trap_field(library: ContentLibrary) -> FieldSpec:
     fields = TrapSpec.model_fields
     low, high = model_range(fields["rounds"])
     return FieldSpec(
@@ -740,7 +734,10 @@ def _trap_field() -> FieldSpec:
                 field="shape",
                 name_zh="觸發範圍",
                 type="choice",
-                choices=tuple(Choice(value=s, name_zh=s) for s in _TRAP_SHAPES),
+                choices=tuple(
+                    Choice(value=s, name_zh=library.ruleset.shapes.by_id()[s].name_zh)
+                    for s in _TRAP_SHAPES
+                ),
                 default="single",
             ),
         ),
@@ -814,7 +811,7 @@ def _effects_step(draft: Draft, library: ContentLibrary, skeleton: SkeletonDef) 
         )
     ]
     if any(c.value == "place_trap" for c in choices):
-        fields.append(_trap_field())
+        fields.append(_trap_field(library))
     return _step("effects", draft, library, tuple(fields), _effects_notes(skeleton, library))
 
 
@@ -825,7 +822,7 @@ def _change_field(name: str, library: ContentLibrary, category: str | None) -> F
     when = "；選目標之前就決定，條件只能是自身血量" if name in SELF_ONLY_CHANGES else ""
     base: dict[str, Any] = {
         "field": name,
-        "name_zh": _CHANGE_TEXT[name],
+        "name_zh": CHANGE_TEXT[name],
         "description_zh": f"可套用：{targets}{when}",
     }
     if name == "add_element":
@@ -839,7 +836,10 @@ def _change_field(name: str, library: ContentLibrary, category: str | None) -> F
         value = FieldSpec(
             **base,
             type="choice",
-            choices=tuple(Choice(value=s, name_zh=s) for s in ("line", "chain", "cone")),
+            choices=tuple(
+                Choice(value=s, name_zh=library.ruleset.shapes.by_id()[s].name_zh)
+                for s in ("line", "chain", "cone")
+            ),
         )
     elif name == "add_tags":
         value = FieldSpec(**base, type="tags", min_count=1, max_count=3)
@@ -1151,7 +1151,7 @@ def _rarity_step(draft: Draft, library: ContentLibrary) -> StepOptions:
         notes.append(f"最低稀有度：{RARITY_TEXT[floor.minimum]}")
         notes += floor.reasons
     else:
-        notes.append("技能定義還有錯誤，無法推導稀有度（見 problems）")
+        notes.append("技能定義還有錯誤，無法推導稀有度（見檢查結果的問題清單）")
     if not paid:
         notes.append("傳說技能要在代價步驟填源力")
     dual = library.ruleset.core.dual_scaling_min_rarity
@@ -1208,4 +1208,8 @@ def draft_options(draft: Draft, library: ContentLibrary) -> DraftOptions:
         if not step.complete:
             next_step = step_id
             break
+    steps = [
+        s.model_copy(update={"notes_zh": tuple(plainify(n, library) for n in s.notes_zh)})
+        for s in steps
+    ]
     return DraftOptions(steps=tuple(steps), next_step=next_step, problems=tuple(problems))
