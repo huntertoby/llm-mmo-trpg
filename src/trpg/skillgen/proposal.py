@@ -315,11 +315,19 @@ def _has_nested(primitive: PrimitiveDef) -> bool:
 
 
 class _Builder:
-    def __init__(self, library: ContentLibrary, only: frozenset[str] | None) -> None:
+    def __init__(
+        self,
+        library: ContentLibrary,
+        only: frozenset[str] | None,
+        shapes: frozenset[str] | None = None,
+        conditions: frozenset[str] | None = None,
+        triggers: frozenset[str] | None = None,
+    ) -> None:
         self.library = library
         self.refs = _Refs.of(library)
-        self.condition = self._condition_union()
-        self.shape = self._shape_union()
+        self.trigger_ids = triggers
+        self.condition = self._condition_union(conditions)
+        self.shape = self._shape_union(shapes)
         primitives = [
             p for p in library.ruleset.primitives.primitives if only is None or p.id in only
         ]
@@ -359,8 +367,9 @@ class _Builder:
         fields: dict[str, Any] = {
             "type": (_literal((primitive.id,)), Field(description=primitive.name_zh)),
             "affects": (_affects_type(primitive) | None, None),
-            "condition": (self.condition | None, None),
         }
+        if self.condition is not None:
+            fields["condition"] = (self.condition | None, None)
         for name, spec in sorted(primitive.params.items()):
             doc = spec.llm_hint
             if _is_numeric(spec):
@@ -383,9 +392,12 @@ class _Builder:
         )
         return model
 
-    def _condition_union(self) -> Any:
+    def _condition_union(self, only: frozenset[str] | None) -> Any:
+        """條件的 union；``only`` 篩選後沒有任何條件時回傳 ``None``（提議不開放條件欄位）。"""
         models = []
         for cond in self.library.ruleset.conditions.conditions:
+            if only is not None and cond.id not in only:
+                continue
             fields: dict[str, Any] = {"type": (_literal((cond.id,)), ...)}
             for name, spec in sorted(cond.params.items()):
                 if _is_numeric(spec):
@@ -400,11 +412,13 @@ class _Builder:
                     **fields,
                 )
             )
-        return _union(models, "type")
+        return _union(models, "type") if models else None
 
-    def _shape_union(self) -> Any:
+    def _shape_union(self, only: frozenset[str] | None) -> Any:
         models = []
         for shape in self.library.ruleset.shapes.shapes:
+            if only is not None and shape.id not in only:
+                continue
             fields: dict[str, Any] = {"type": (_literal((shape.id,)), ...)}
             for name, spec in sorted(shape.params.items()):
                 annotation: Any = int
@@ -430,6 +444,8 @@ class _Builder:
         每輪觸發次數、距離上限是數值，不開放（預設每輪 1 次、不限距離）。"""
         models = []
         for trig in self.library.ruleset.skill_triggers.triggers:
+            if self.trigger_ids is not None and trig.id not in self.trigger_ids:
+                continue
             fields: dict[str, Any] = {"event": (_literal((trig.id,)), ...)}
             if trig.has_other:
                 fields["target"] = (Literal["self", "other"], "self")
@@ -444,7 +460,7 @@ class _Builder:
                     **fields,
                 )
             )
-        return _union(models, "event")
+        return _union(models, "event") if models else None
 
     def _trigger_param(self, name: str, spec: PrimitiveParam) -> tuple[Any, dict[str, Any]]:
         if spec.type == "int":
@@ -482,22 +498,51 @@ def _variant_model(effect: Any | None, shape: Any) -> Any:
     )
 
 
+def _skeleton_choices(library: ContentLibrary, skeletons: Iterable[str] | None) -> list[str]:
+    available = set(library.skeletons) - CLOSED_SKELETONS
+    if skeletons is None:
+        return sorted(available)
+    chosen = sorted(set(skeletons) & available)
+    if not chosen:
+        raise ValueError("提議模型沒有任何可用的骨架（篩選後的骨架清單是空的）")
+    return chosen
+
+
+def _kind_choices(library: ContentLibrary, skeletons: Sequence[str]) -> tuple[str, ...]:
+    kinds = {k for s in skeletons for k in library.skeletons[s].kinds}
+    return tuple(k for k in PROPOSAL_KINDS if k in kinds)
+
+
+def _only(values: Iterable[str] | None) -> frozenset[str] | None:
+    return None if values is None else frozenset(values)
+
+
 def build_proposal_models(
-    library: ContentLibrary, *, primitives: Iterable[str] | None = None
+    library: ContentLibrary,
+    *,
+    primitives: Iterable[str] | None = None,
+    shapes: Iterable[str] | None = None,
+    conditions: Iterable[str] | None = None,
+    triggers: Iterable[str] | None = None,
+    skeletons: Iterable[str] | None = None,
 ) -> ProposalModels:
     """由內容庫產生提議模型（原語的參數、範圍與可用值全部取自內容資料，不寫死在這裡）。
 
-    ``primitives`` 只開放這些原語（呼叫端依稀有度、骨架與這次升級的主題先篩選，縮小 JSON Schema；
-    ``None`` 為全部）。巢狀參數沒有可用原語的原語會被排除並記在 ``excluded_primitives``。"""
-    only = None if primitives is None else frozenset(primitives)
-    builder = _Builder(library, only)
+    ``primitives``、``shapes``、``conditions``、``triggers``、``skeletons`` 只開放這些值（呼叫端依
+    稀有度、骨架與題目先篩選，縮小 JSON Schema；``None`` 為全部，Phase 4-L4）。篩掉的值被提議時在
+    提議格式階段得到 ``union_tag_invalid``（形狀、條件、觸發）或 ``literal_error``（骨架）。
+    條件（或觸發）全部篩掉時，提議不再有 ``condition``（或 ``trigger``）欄位；``kind`` 也只留
+    所選骨架適用的種類。巢狀參數沒有可用原語的原語會被排除並記在 ``excluded_primitives``。"""
+    builder = _Builder(
+        library, _only(primitives), _only(shapes), _only(conditions), _only(triggers)
+    )
     primitive_ids = tuple(builder.effects)
     variant_ids = tuple(i for i in primitive_ids if i not in builder.lookup_ids)
     effect = _union([builder.effects[i] for i in primitive_ids], "type")
     variant_effect = (
         _union([builder.effects[i] for i in variant_ids], "type") if variant_ids else None
     )
-    skeletons = sorted(set(library.skeletons) - CLOSED_SKELETONS)
+    skeleton_ids = _skeleton_choices(library, skeletons)
     sk = SkillDef.model_fields
     variant = _variant_model(variant_effect, builder.shape)
     fields: dict[str, Any] = {
@@ -505,21 +550,24 @@ def build_proposal_models(
         "description_zh": (str | None, None),
         "concept": (str, Field(default="", max_length=80)),
         "cast_flavor": (str, Field(default="", max_length=80)),
-        "kind": (_literal(PROPOSAL_KINDS), ...),
-        "skeleton": (_literal(skeletons), ...),
+        "kind": (_literal(_kind_choices(library, skeleton_ids)), ...),
+        "skeleton": (_literal(skeleton_ids), ...),
         "category": (sk["category"].annotation, ...),
         "weapon_req": (sk["weapon_req"].annotation, ...),
         "scaling_attr": (sk["scaling_attr"].annotation, ...),
         "shape": (builder.shape, ...),
         "effects": (_list_of(effect), Field(min_length=1, max_length=_MAX_EFFECTS)),
-        "condition": (builder.condition | None, None),
-        "trigger": (builder.trigger_union() | None, None),
         "tags": (
             list[Annotated[str, Field(pattern=ID_PATTERN)]],
             Field(default_factory=list, max_length=_MAX_TAGS),
         ),
         "variants": (_list_of(variant), Field(default_factory=list, max_length=_MAX_VARIANTS)),
     }
+    if builder.condition is not None:
+        fields["condition"] = (builder.condition | None, None)
+    trigger = builder.trigger_union()
+    if trigger is not None:
+        fields["trigger"] = (trigger | None, None)
     skill = create_model(
         "SkillProposal",
         __base__=_Proposal,
