@@ -650,6 +650,75 @@ builds:
       max_mana: 20
       skills: []
 
+  # Phase 3I-4：第二批其他武器的白板主角（雙匕首、霰彈槍、手槍、雙手槍；遠程的血量與防禦比照白板槍手）。
+  - id: build_blank_dual_dagger
+    name_zh: 白板雙刀手
+    blank: true
+    theme_zh: 沒有任何技能、只拿雙匕首的戰士（成對、占雙手）。普攻打兩下 1d4，背刺時兩下都吃加成。
+    hero:
+      id: build_blank_dual_dagger
+      name_zh: 白板雙刀手
+      attributes: {str: 10, dex: 10, con: 10, int: 10, wis: 10, wil: 10}
+      max_hp: 60
+      speed: 5
+      armor_bonus: 4
+      weapon: dual_dagger
+      resist: {physical: 100}
+      tags: [hero, sim]
+      max_mana: 20
+      skills: []
+
+  - id: build_blank_shotgun
+    name_zh: 白板霰彈手
+    blank: true
+    theme_zh: 沒有任何技能、只拿霰彈槍的射手（雙手、彈匣 1 發）。射程 4，傷害隨距離遞減（100／75／50／25%）。
+    hero:
+      id: build_blank_shotgun
+      name_zh: 白板霰彈手
+      attributes: {str: 10, dex: 10, con: 10, int: 10, wis: 10, wil: 10}
+      max_hp: 50
+      speed: 5
+      armor_bonus: 2
+      weapon: shotgun
+      resist: {physical: 50}
+      tags: [hero, sim]
+      max_mana: 20
+      skills: []
+
+  - id: build_blank_pistol
+    name_zh: 白板手槍手
+    blank: true
+    theme_zh: 沒有任何技能、只拿手槍的射手（單手、彈匣 2 發）。射程 5，移動後開火沒有懲罰。
+    hero:
+      id: build_blank_pistol
+      name_zh: 白板手槍手
+      attributes: {str: 10, dex: 10, con: 10, int: 10, wis: 10, wil: 10}
+      max_hp: 50
+      speed: 5
+      armor_bonus: 2
+      weapon: pistol
+      resist: {physical: 50}
+      tags: [hero, sim]
+      max_mana: 20
+      skills: []
+
+  - id: build_blank_dual_pistol
+    name_zh: 白板雙槍手
+    blank: true
+    theme_zh: 沒有任何技能、只拿雙手槍的射手（成對、彈匣 4 發）。射程 5，裝填 1 AP 一次裝滿。
+    hero:
+      id: build_blank_dual_pistol
+      name_zh: 白板雙槍手
+      attributes: {str: 10, dex: 10, con: 10, int: 10, wis: 10, wil: 10}
+      max_hp: 50
+      speed: 5
+      armor_bonus: 2
+      weapon: dual_pistol
+      resist: {physical: 50}
+      tags: [hero, sim]
+      max_mana: 20
+      skills: []
+
   - id: build_attack_archer
     name_zh: 普攻流弓手
     reference: true

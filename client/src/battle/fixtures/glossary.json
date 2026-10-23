@@ -2436,6 +2436,28 @@
    }
   },
   {
+   "id": "dual_dagger",
+   "weapon_class": "melee",
+   "two_handed": false,
+   "look": {
+    "kind": "dual_dagger",
+    "material": "iron",
+    "element": null,
+    "form": "short"
+   }
+  },
+  {
+   "id": "dual_pistol",
+   "weapon_class": "ranged",
+   "two_handed": false,
+   "look": {
+    "kind": "dual_pistol",
+    "material": "steel",
+    "element": null,
+    "form": "revolver"
+   }
+  },
+  {
    "id": "fire_staff",
    "weapon_class": "focus",
    "two_handed": true,
@@ -2524,6 +2546,17 @@
    }
   },
   {
+   "id": "pistol",
+   "weapon_class": "ranged",
+   "two_handed": false,
+   "look": {
+    "kind": "pistol",
+    "material": "steel",
+    "element": null,
+    "form": "revolver"
+   }
+  },
+  {
    "id": "scepter",
    "weapon_class": "focus",
    "two_handed": false,
@@ -2543,6 +2576,17 @@
     "material": "iron",
     "element": null,
     "form": "long"
+   }
+  },
+  {
+   "id": "shotgun",
+   "weapon_class": "ranged",
+   "two_handed": true,
+   "look": {
+    "kind": "shotgun",
+    "material": "iron",
+    "element": null,
+    "form": "double"
    }
   },
   {

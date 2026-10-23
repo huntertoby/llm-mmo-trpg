@@ -576,6 +576,10 @@ def perform_unit_attack(
         for extra in behind:  # 穿透：各自擲命中與傷害
             if attacker.alive and extra.alive:
                 _attack_once(ctx, attacker, extra, primary=False, reaction=reaction)
+        for _ in range(attacker.weapon.strikes - 1):  # 連擊武器（雙匕首，3I-4）：每一下各自結算
+            if not (attacker.alive and target.alive):
+                break
+            _attack_once(ctx, attacker, target, primary=False, reaction=reaction)
         turns = [(victim, attacker_xy)] if rolled and attacker.weapon.is_melee else []
         after_attack(ctx, attacker, target_xy, ambushed=ambushed, turns=turns)
         if reveal:

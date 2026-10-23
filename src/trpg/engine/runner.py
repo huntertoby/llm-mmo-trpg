@@ -38,8 +38,11 @@ __all__ = [
     "run_battle",
 ]
 
-LOG_FORMAT = "trpg-battle-log/65"
-"""``/65``（Phase 3-48e）：刻印 ``inscribe`` 只刻在影響的格子（``affects: tiles``）；其他對象
+LOG_FORMAT = "trpg-battle-log/66"
+"""``/66``（Phase 3I-4）：第二批其他武器——武器多了 ``paired``、``strikes``（雙匕首普攻打兩下）；
+新武器雙匕首、霰彈槍、手槍、雙手槍；成對武器占雙手。
+同一份輸入的結算可能不同，因此 ``/65`` 的紀錄無法重播。
+``/65``（Phase 3-48e）：刻印 ``inscribe`` 只刻在影響的格子（``affects: tiles``）；其他對象
 不再刻在單位腳下，改發 ``effect_fizzled``（``inscribe_needs_tiles``）；規則包的原語 ``inscribe``
 多了 ``forbid_affects``。``/64`` 的紀錄無法重播。
 ``/64``（Phase 3I-2）：副手——物品多了 ``offhand``/``offhand_def``（圓盾強化格擋；
