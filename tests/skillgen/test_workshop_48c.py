@@ -141,7 +141,7 @@ def test_validator_rejects_a_custom_rune_tag_and_a_non_tile_target() -> None:
     assert not result.legal
 
 
-def test_nested_primitives_are_flagged_for_hiding_and_conditional_fields_carry_show_when() -> None:
+def test_conditional_fields_carry_show_when_and_nested_primitives_are_no_longer_hidden() -> None:
 
     ctx = ParamContext(LIB, category="spell")
     choices = tuple(
@@ -157,9 +157,9 @@ def test_nested_primitives_are_flagged_for_hiding_and_conditional_fields_carry_s
         (FieldSpec(field="effects", name_zh="效果", type="effects", choices=choices),), LIB
     )
     by_id = {c.value: c for c in effects[0].choices}
-    assert {c.value for c in effects[0].choices if c.later} == {"consume_status", "gamble", "zone"}
+    assert not any(c.later for c in effects[0].choices)
     damage = by_id["damage"]
-    assert not damage.later and any(p.field == "on_kill" and p.later for p in damage.params)
+    assert not damage.later and not any(p.later for p in damage.params)
     assert {p.field: p.show_when for p in by_id["zone"].params}["speed"] == {"anchor": "moving"}
     assert {p.field: p.show_when for p in by_id["consume_status"].params}["stack"] == {
         "scale": "stacks"

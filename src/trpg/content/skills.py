@@ -695,7 +695,7 @@ class PrimitiveDef(ContentModel):
     """組合規則：同一技能的其他效果必須明寫這個 ``affects``（``self``：只作用在施放者）。"""
     nested_core: bool = False
     """這個原語的內容就是一組巢狀效果（消耗狀態後的效果、賭注的贏／輸分支、持續區域的效果）：
-    工坊在 3-48d 開放巢狀效果之前，玩家模式不列出（``option_player.HIDE_NESTED_EFFECTS``）。"""
+    工坊在 3-48d 起開放（子效果的選項見 ``trpg.skillgen.option_nested``）。"""
     max_per_skill: int | None = Field(default=None, ge=1)
     """組合規則：一個技能最多幾個這個效果。"""
     active_only: bool = False
