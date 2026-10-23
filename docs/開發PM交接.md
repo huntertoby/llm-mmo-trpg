@@ -1,7 +1,7 @@
 # 開發 PM 交接文件
 
 > 給接手的 **開發 PM**（新對話中的 Claude）。最後更新：**2026-10-23**。**只讀本檔就能接手**；需要時再讀 `CLAUDE.md`、`docs/專案計畫.md`（總覽）與本檔指到的計畫檔。
-> 現況一句話（2026-10-23 交接）：**Phase 3（3-1～3-34b）、Phase 3 結束審查、3E-2a～g 全部完成；Phase 4 已開工，4-L1、4-L2、4-L3 完成並 push，停在 4-L4 之前**（使用者：「讓正在跑的 4-L2、4-L3 做完就停」）。下一步見 **3.00**。
+> 現況一句話（2026-10-23 第二次交接）：**Phase 4 完成 4-L1～4-L5c，介面完成 3-35～3-38（字型、狀態圖示、戰場效果、區域主題、雲嶺、可燃淡化）；使用者暫停，沒有 agent 在跑**。下一步見 **3.00**。
 
 ---
 
@@ -50,18 +50,35 @@ Phase 3 各段（`Phase3計畫.md` 節號；報告 `Phase3-*報告.md`）：
 
 ## 3. 下一步
 
-### 3.00 接手第一件事（2026-10-23 交接，最新，優先於下面各節）
+### 3.00 接手第一件事（2026-10-23 第二次交接，最新，優先於下面各節）
 
-**目前停在哪**：Phase 4（LLM 技能生成，本機模型）的 4-L1～L3 已驗收合併並 push；**沒有任何 agent 在跑**。規格 `docs/phases/Phase4計畫.md`（0 節：使用者 5 題原話與決定；1 節：4-L1～L9 段表；4 節：驗收紀錄）。設計 `docs/phases/Phase4-LLM技能提議設計.md`。
+**目前停在哪（使用者暫停）**：使用者：「做完這些後就先停」（專案 PM 轉達）。**沒有任何 agent 在跑**；main 與 origin 一致、`check.py --full` 在 3-37b 後跑過（5178 pytest＋816 vitest，唯一失敗是雲嶺改名造成的 CLI 快照，已更新 `75b8a95`）。**恢復前不要派新段**，等專案 PM 轉達使用者恢復。
 
-**4-L4 已完成（2026-10-23，`77a234c`，驗收 `Phase4計畫.md` 4.4）。下一段 4-L5**（規格要先寫；4.4 列了 4-L5 要處理的 #6 巢狀原語在頂層選項）。原下一段說明：**4-L4 schema 子集**（依稀有度、骨架、題目關鍵字篩原語、形狀、條件；prompt＋schema ≤ 30k token；同時把 `content/llm/world_shattered.yaml` 登記進 `content/registry.py`，並定 4-L2 的 `available` 格式）→ **4-L5**（opus：重試＋退回＋預算器補數值；4-L3 報告列了預算器要補的項目與 `ap_cost`／`mana`／`cooldown`／`max_per_round` 預設）→ 4-L6／4-L7 → 4-L8 → 4-L9（真模型評估）。4-L4 的詳細規格要先寫進 `Phase4計畫.md`（照第 2、3 節的格式）再派。
+**這一輪完成的（2026-10-23）**：
+| 段 | 內容 | 驗收紀錄 |
+|---|---|---|
+| — | `check --full` 28 分 → 6 分 38 秒（`bundled_content_dir` 快取） | 本節下方 |
+| 4-L4 | schema 子集、`available` 格式、`build_proposal_prompt` | `Phase4計畫.md` 4.4 |
+| 4-L5 | 重試迴圈、預算器補數值、引擎修補、三層退回、`trpg llm propose` | 4.5（第一次真模型小測試：退回 50%） |
+| 4-L5b | 隱藏組合規則進 YAML／schema（`form`）、狀態依稀有度篩、先修可修再回報、骨架資訊進 `available` | 4.6（第二次小測試：種子 0 退回 10%） |
+| 4-L5c | 開關只能 true、列舉去掉不能施加的狀態、估算不算 schema、專屬錯誤代碼、CLI 不出不可能題目 | 4.7 |
+| 3-35 | 前端字型 Noto Sans TC（400／700 自帶） | `Phase3計畫.md` 39.1 |
+| 3-36a／b | 狀態圖示、戰場效果（美術 PM 驗收通過） | 40.1.1、40.2.1 |
+| 3-37a／b | 區域主題底層、雲嶺換皮（`bridge_chasm`→雲海吊橋、`dark_forest`→竹林） | 41.1.1、41.2.1 |
+| 3-38 | 可燃標記平時淡化（使用者選 C） | 42.1 |
+| 小修 | 嘲諷 `control_group: mental`＋`budget_points` 3（玩法 PM）；拖曳線位置（`358a43a`）；格子資訊卡換格 80ms（`f64bb3b`，規則見 6.5.1）；雲海山谷調暗 | 各自 commit |
 
-**待使用者／其他 PM**：
-- **`F:\WSL\settings.ini` 的 `PORT` 已改成 8001**（使用者 2026-10-23：「我已經改好了」；避開 `trpg serve` 的 8000）。我們的 `config/llm.toml` 預設 `http://localhost:8001/v1`、模型 `swift`。開發不改 `F:\WSL` 任何檔案，要改時請專案 PM 轉達使用者。
-- 本機模型吃約 88% VRAM：開發與測試一律用 `MockLLMClient`；真模型測試標 `@pytest.mark.llm`（預設不跑，`--full` 也不跑），使用者用 `F:\WSL\start.bat` 啟動後才跑 `uv run trpg llm ping`、`uv run pytest -m llm`、4-L9。
-- 4-L1～L3 留下的待驗證／待決定（`Phase4計畫.md` 4.1～4.3）：vLLM 0.27 是否接受 strict JSON schema 與巢狀 `$ref`／`oneOf`（要真模型）；形狀參數保留給 LLM 選；`ap_cost`／冷卻等是否在 4-L5 加旋鈕。
+**恢復後的下一段（依序）**：
+1. **4-L6**：接進候選產生器（`llm` 來源、寫進 run 紀錄、重播不呼叫 LLM、Mock 失敗仍 3 個候選、設定可關 LLM）＋ **3C 節原語多樣性 1～3**（題目指定核心原語、輪替選單、run 內配額；使用者 2026-10-23 決定）＋ **LLM 技能強制帶題目關鍵字**（4-L5 待決 #1；小測試的 `keyword.required`）。規格要先寫進 `Phase4計畫.md`（照 3A～3E 格式）。可與 4-L7（名稱與敘事）平行。
+2. 4-L8（開放更多結構；`budget.over`／無旋鈕結構 44／161、AP／冷卻旋鈕、`unit_then_tile` 等旗標）→ 4-L9（真模型評估＋3C 節強制／自由測試）。
+3. 介面／美術：**3-37c 雲嶺服裝部件**（`Phase3計畫.md` 41.3，後放）；五區其他區等美術 PM。
+4. **3E-3**（`Phase3E計畫.md` 3.2）可穿插；平衡 B1～B9（本檔 3.3）延後。
 
-**`check.py --full` 變慢（已解決，2026-10-23，`dabb5a9`）**：原因是 3E-2f 起每次建構 `EffectSpec` 都經 `default_content_dir()` 做 `Path.resolve()`（Windows 很慢，`run auto` 一半時間在這）；`bundled_content_dir()` 加 `@cache`、`run auto` 十種子測試改參數化。`--full` 28 分 → **6 分 38 秒**（5007 pytest＋766 vitest 全過）。之後若再變慢，先用 `--durations=30` 加 cProfile 單跑 `trpg run auto --seed 1` 找熱點。
+**本機模型（真模型測試）**：`F:\WSL\settings.ini` PORT 已改 8001（使用者 2026-10-23）；`config/llm.toml` → `http://localhost:8001/v1`、`swift`、**`enable_thinking=false`**（Qwen3 預設思考會用光 2048 輸出、回空）。strict JSON schema（含 `$ref`／`oneOf`，根層 `oneOf` 也可）vLLM 接受；schema 不佔 prompt token（最大題目實際 2,525）。關思考約 4～13 秒／次。測試：`uv run trpg llm ping`、`uv run trpg llm propose -n 10 --seed 0`（小測試）、`uv run pytest -m llm`。開發與自動測試一律 Mock；模型由使用者用 `F:\WSL\start.bat` 啟動，連不上或顯存不足時回報專案 PM，不要請使用者改 settings.ini。**預覽伺服器不要用 8000（使用者）或 8001（模型）**：`.claude/launch.json` 有 `trpg-serve-verify`（8011）。
+
+**`check.py --full` 變慢（已解決，2026-10-23，`dabb5a9`）**：原因是 3E-2f 起每次建構 `EffectSpec` 都經 `default_content_dir()` 做 `Path.resolve()`（Windows 很慢，`run auto` 一半時間在這）；`bundled_content_dir()` 加 `@cache`、`run auto` 十種子測試改參數化。`--full` 28 分 → **6 分 38 秒**。之後若再變慢，先用 `--durations=30` 加 cProfile 單跑 `trpg run auto --seed 1` 找熱點。
+
+**這一輪學到的**：合併前「相關測試」範圍要含 `tests/skillgen`（嘲諷改動時漏跑 `test_budget` 寫死的點數）；`.claude/worktrees/` 舊資料夾會累積（2026-10-23 清過 42 個，約 3 GB），合併後記得 `git worktree remove` ＋ 刪分支；主資料夾有不明的 `tmp_x`（不是開發 PM 建立的，沒動）。
 
 **其他待辦位置**：
 - **3E-3**（可在 Phase 4 期間穿插，一次最多 2 個 agent）：`Phase3E計畫.md` 3.2。
