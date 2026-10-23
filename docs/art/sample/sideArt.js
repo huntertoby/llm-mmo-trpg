@@ -72,7 +72,7 @@ window.SideArt = (() => {
     if (ht > 0.35) fill(ctx, look.skin, () => { ctx.moveTo(lerp(6.5, 8, ht), -28.5); ctx.lineTo(lerp(8.2, 10.2, ht), -26.3); ctx.lineTo(lerp(6.8, 8.3, ht), -25.5); ctx.closePath(); }); // 鼻子
     ctx.fillStyle = "rgba(220,90,90,0.35)";
     ctx.fillRect(nearEye - 0.5, -26.5, 2, 1.2);
-    if (ht > 0.25) fill(ctx, dark(look.skin, 0.15), () => ctx.ellipse(lerp(6, -1.5, ht), -28.5, 1.6, 2.4, 0, 0, TAU)); // 近側耳朵
+    if (ht > 0.25 && !look.ears) fill(ctx, dark(look.skin, 0.15), () => ctx.ellipse(lerp(6, -1.5, ht), -28.5, 1.6, 2.4, 0, 0, TAU)); // 近側耳朵（有種族耳時由種族部件畫）
     return fx;
   }
   function hair(ctx, look, ht, covered) {
@@ -116,6 +116,17 @@ window.SideArt = (() => {
     const covered = headItem && ["helmet", "hood"].includes(headItem.kind);
     if (look.pattern === "dragonscale") fill(ctx, look.scaleColor ?? "#a8784a", () => { for (const [x, y] of [[lerp(-6, 1, ht), -24.5], [lerp(-4.5, 3, ht), -22.5], [lerp(6, 2.5, ht), -26.5], [lerp(7, 0, ht), -30]]) { ctx.moveTo(x + 1.5, y); ctx.arc(x, y, 1.5, 0, Math.PI); } });
     if (look.slitEyes) { const ex = lerp(0, 4.2, ht) + lerp(2.6, 1.8, ht) + 0.9; fill(ctx, "#ffcf4a", () => ctx.ellipse(ex, -28.5, 1.4, 1.9, 0, 0, TAU)); fill(ctx, "#1d1a22", () => ctx.rect(ex - 0.35, -30.2, 0.7, 3.4)); }
+    const earX = lerp(6, -1.5, ht);
+    const sideCovered = headItem?.kind === "hood";
+    if (look.ears === "pointed" && !sideCovered) { fill(ctx, dark(look.skin, 0.12), () => { ctx.moveTo(earX + 1.5, -31); ctx.lineTo(earX - 8.5, -38.5); ctx.lineTo(earX + 1, -26.5); }); fill(ctx, dark(look.skin, 0.3), () => { ctx.moveTo(earX + 0.5, -30); ctx.lineTo(earX - 5, -34.5); ctx.lineTo(earX, -28); }); } // 尖耳往後上方伸（比膚色暗一點，和淺色頭髮分開）
+    if (look.ears === "fin" && !sideCovered) { fill(ctx, mix(look.skin, "#9fe6ff", 0.25), () => { ctx.moveTo(earX + 1.5, -32); ctx.lineTo(earX - 5, -36); ctx.lineTo(earX - 6.5, -31); ctx.lineTo(earX - 5, -26.5); ctx.lineTo(earX + 1, -26.5); }); ctx.strokeStyle = dark(look.skin, 0.35); ctx.lineWidth = 0.7; for (const [x, y] of [[-5, -35], [-6, -31], [-4.5, -27.5]]) { ctx.beginPath(); ctx.moveTo(earX + 1, -29.5); ctx.lineTo(earX + x, y); ctx.stroke(); } }
+    const fx = lerp(0, 4.2, ht);
+    if (look.pattern === "scales") fill(ctx, dark(look.skin, 0.22), () => { for (const [x, y] of [[fx + 1, -25], [fx - 0.5, -23], [fx + 2.5, -23]]) { ctx.moveTo(x + 1.1, y); ctx.arc(x, y, 1.1, 0, Math.PI); } });
+    if (look.pattern === "marks") { ctx.strokeStyle = look.markColor ?? "#2a8ac8"; ctx.lineWidth = 1.1; ctx.beginPath(); ctx.moveTo(fx, -27); ctx.quadraticCurveTo(fx + 2, -25, fx + 1, -23); ctx.stroke(); }
+    if (look.pattern === "circuit") { fill(ctx, "#9aa4b0", () => { ctx.arc(lerp(0, 1, ht), -29, 8.5, -Math.PI / 2, Math.PI / 2); ctx.closePath(); }); ctx.save(); ctx.strokeStyle = "#4ae0d0"; ctx.shadowColor = "#4ae0d0"; ctx.shadowBlur = 2; ctx.lineWidth = 0.9; ctx.beginPath(); ctx.moveTo(2, -36); ctx.lineTo(4, -33); ctx.lineTo(4, -25); ctx.stroke(); fill(ctx, "#4ae0d0", () => ctx.arc(fx + 2.7, -28.5, 1.5, 0, TAU)); ctx.restore(); }
+    if (look.tusks) fill(ctx, "#f4ecd8", () => { ctx.moveTo(fx + 3, -24); ctx.lineTo(fx + 4.4, -27.5); ctx.lineTo(fx + 4.8, -24); });
+    if (look.beard) { const c = look.hairColor ?? "#8a4a22"; fill(ctx, c, () => { ctx.moveTo(fx - 4, -27); ctx.quadraticCurveTo(fx - 3, -17, fx + 3, -16); ctx.quadraticCurveTo(fx + 7, -19, fx + 7, -25); ctx.quadraticCurveTo(fx + 2, -23, fx - 4, -27); }); }
+    if (look.horns === "small") for (const far of [true, false]) fill(ctx, far ? dark(look.hornColor ?? "#efe6cc", 0.25) : look.hornColor ?? "#efe6cc", () => { const ox = far ? -3 : 1; ctx.moveTo(ox + 2, -36); ctx.quadraticCurveTo(ox - 2, -42, ox - 6, -43); ctx.quadraticCurveTo(ox - 2, -39, ox - 1, -35.5); });
     // 狐耳：兩隻都看得到，遠側那隻偏後、較暗
     if (look.ears === "beast" && !(headItem?.kind === "helmet")) {
       const c = headItem?.kind === "hood" ? colors(headItem)[0] : look.hairColor ?? "#d8762a";
