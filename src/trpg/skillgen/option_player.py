@@ -76,10 +76,22 @@ def localize(text: str, library: ContentLibrary, names: dict[str, str] | None = 
 
 
 def _player_text(
-    text: str, library: ContentLibrary, names: dict[str, str], fallback: str | None
+    text: str,
+    library: ContentLibrary,
+    names: dict[str, str],
+    fallback: str | None,
+    scope: str | None = None,
 ) -> tuple[str, str]:
-    """``(玩家版, 原文)``；原文為空表示這段說明本來就可以給玩家看。"""
-    if text == "" or not has_dev_text(text):
+    """``(玩家版, 原文)``；原文為空表示這段說明本來就可以給玩家看。
+
+    玩法 PM 改寫過的說明（``content/workshop_text.yaml``，3-48f）優先，依原文（與欄位範圍）查表。
+    """
+    if text == "":
+        return text, ""
+    rewritten = library.workshop_text.lookup(text, scope)
+    if rewritten is not None:
+        return rewritten, text
+    if not has_dev_text(text):
         return text, ""
     cleaned = localize(text, library, names)
     if not has_dev_text(cleaned):
@@ -93,6 +105,7 @@ def _choice(
     names: dict[str, str],
     *,
     primitives: dict[str, PrimitiveDef] | None,
+    owner: str = "",
 ) -> Choice:
     """``primitives`` 不是 ``None`` 時，這個選項是效果原語。"""
     own = {**names, **{p.field: p.name_zh for p in choice.params}}
@@ -103,36 +116,43 @@ def _choice(
         update={
             "description_zh": text,
             "dev_description_zh": dev,
-            "params": playerize(choice.params, library, own),
+            "params": playerize(choice.params, library, own, str(choice.value)),
         }
     )
 
 
-def _field(field: FieldSpec, library: ContentLibrary, names: dict[str, str]) -> FieldSpec:
+def _field(
+    field: FieldSpec, library: ContentLibrary, names: dict[str, str], owner: str = ""
+) -> FieldSpec:
     primitives = (
         {p.id: p for p in library.ruleset.primitives.primitives}
         if field.type == "effects"
         else None
     )
     own = {**names, **{f.field: f.name_zh for f in field.fields}}
-    text, dev = _player_text(field.description_zh, library, own, None)
+    scope = f"{owner}.{field.field}" if owner else field.field
+    text, dev = _player_text(field.description_zh, library, own, None, scope)
     return field.model_copy(
         update={
             "description_zh": text,
             "dev_description_zh": dev,
-            "fields": playerize(field.fields, library, own),
+            "fields": playerize(field.fields, library, own, field.field),
             "choices": tuple(
-                _choice(c, library, own, primitives=primitives) for c in field.choices
+                _choice(c, library, own, primitives=primitives, owner=field.field)
+                for c in field.choices
             ),
         }
     )
 
 
 def playerize(
-    fields: tuple[FieldSpec, ...], library: ContentLibrary, names: dict[str, str] | None = None
+    fields: tuple[FieldSpec, ...],
+    library: ContentLibrary,
+    names: dict[str, str] | None = None,
+    owner: str = "",
 ) -> tuple[FieldSpec, ...]:
-    """欄位與選項（遞迴）的說明換成玩家版，並標記之後才開放的巢狀效果。"""
-    return tuple(_field(f, library, names or {}) for f in fields)
+    """欄位與選項（遞迴）的說明換成玩家版（``owner``：這些欄位所屬的選項或欄位，查對照表的範圍用）。"""
+    return tuple(_field(f, library, names or {}, owner) for f in fields)
 
 
 # ---------------------------------------------------------------------------

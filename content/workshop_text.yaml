@@ -1,0 +1,456 @@
+# 工坊說明的玩家語氣對照表（Phase 3-48f；玩法 PM 改寫，來源 workshop_descriptions_rewritten.csv）。
+# source＝程式裡的原文（開發者模式 ?dev=1 顯示），player＝玩家模式顯示的說明。
+# 程式依 source 查表（同一段原文要用不同說法時填 scope）；沒有對到的維持程式化處理。
+# id 只供對照：原語.<ID>[.<參數>]、形狀./條件./觸發.<ID>，或 工坊.<步驟>.<欄位>[=<選項>]。
+texts:
+- id: 原語.add_stack
+  source: 依該層數（stacks.yaml）的 owner 把 amount 層加在施放者自己（affects 只能是 self；技能有對敵方的效果時，至少命中一名敵人才累積）或命中的目標（affects 只能是 enemies）身上，超過上限截斷。
+  player: 在自己或命中的目標身上累積層數（看這種層數是累積在誰身上）。對自己累積時，如果這招有打敵人，至少要命中一個才會累積；超過上限的部分不算。
+- id: 原語.add_stack.stack
+  source: 層數 ID（stacks.yaml）
+  player: 要累積哪一種層數。
+  scope: add_stack.stack
+- id: 原語.apply_status
+  source: 施加 statuses.yaml 中的狀態，重複施加時刷新持續時間。
+  player: 施加一個狀態。同一個狀態重複施加時，只刷新持續時間、不疊加。
+- id: 原語.charge_through
+  source: 選一個目標格（形狀 ground_tile；與施放者同一列或同一行、距離不超過形狀射程；可以是站著敵人的格子、牆前或地圖邊的任何格）；施放者沿直線衝過去，被牆、不可走地形或 blocks_move 物件擋住時停在擋住前最後一個能站的空格（第一格就過不去才不能施放）。目標格上的敵人若背後走不過去（牆、地圖邊、擋路物件），命中後另受一次撞擊傷害（collided，接上撞擊關鍵字與 target_collided）。沿途經過的每個敵人依路徑順序各擲一次命中；命中受 dice 物理傷害（不加屬性，暴擊與格擋照常），再依 on_hit 擊倒（對抗判定）或推到路徑旁一格（push_aside：先左後右選可站的一側，兩側都不行就往左撞，照常觸發撞擊）。隊友讓路、敵人不阻擋，一律被穿過。不觸發藉機攻擊；沿途與終點的陷阱、表面照常結算，被定身或倒地就停下。算「本回合移動過」，也觸發 on_move 被動。定身或倒地時不能施放。必須是技能的第一個效果，其餘效果只能作用在施放者自己。
+  player: 朝同一直線上的一格直衝過去，穿過沿途所有單位（隊友讓路、敵人擋不住）。撞到牆、不能走的地形或擋路物件就停在前一格。沿途每個敵人各擲一次命中，命中就受到骰值物理傷害（不加屬性），再依設定擊倒或推到路旁；終點的敵人背後被擋住時，另外受一次撞擊傷害。不會引發藉機攻擊；被定身或倒地就停下。算「本回合移動過」。定身或倒地時不能用。必須放在第一個效果，其他效果只能作用在自己身上。
+- id: 原語.charge_through.on_hit
+  source: 命中後的額外效果（knock_prone 擊倒、push_aside 推到路徑旁）
+  player: 命中沿途敵人後的額外效果：擊倒，或推到路徑旁邊一格。
+- id: 原語.cheat_death
+  source: 目標（自己或友方）獲得狀態「不死」（undying）duration 回合（省略時用狀態的預設持續）：期間 HP 會降到 0 時改為 1 並移除此狀態（墜落與致命地形照樣生效）。
+  player: 目標（自己或友方）獲得「免死」：持續期間受到致命傷害時 HP 留在 1，然後免死消失。墜落和致命地形照樣會死。
+- id: 原語.cleanse
+  source: 移除影響單位身上所有非有益的狀態（依狀態 ID 排序逐一移除）。不能對敵方使用。
+  player: 移除目標身上所有負面狀態。只能用在自己或友方。
+- id: 原語.consume_stack
+  source: 消耗全部該層數（self 型從施放者、target 型從每個被命中的目標）；同一技能的傷害效果依消耗的層數 × per_stack_permille 加成（200 ＝ 每層 +20%）。沒有層數也可施放（加成 0）。預算以期望消耗＝上限的一半估算加成點數。
+  player: 消耗全部的這種層數（自己身上的，或被命中目標身上的），每層讓這招的傷害提高一定比例。沒有層數也可以施放，只是沒有加成。
+- id: 原語.consume_stack.stack
+  source: 層數 ID（stacks.yaml）
+  player: 要消耗哪一種層數。
+  scope: consume_stack.stack
+- id: 原語.consume_status
+  source: 目標（affects，預設敵方，需命中）身上有 status 時先移除它，再對同一個單位結算 then 的效果（1–2 個，只能是 damage／heal／shield／apply_status，自動命中；施加狀態照常擲抵抗）。沒有該狀態的單位不受影響，全部都沒有時整個效果不結算（effect_fizzled）。scale 把 then 的傷害、治療、護盾骰數乘上倍率（上限見 rules/core.yaml 的 consume_status_max_scale）：remaining_rounds＝被消耗狀態的剩餘回合（永久狀態為 1）、stacks＝同時消耗目標身上 stack 的層數。splash 設為 1 時 then 也作用在被消耗者周圍 1 格內的敵方單位。
+  player: 命中的目標身上有指定的狀態時，先移除它，再對他結算後面的效果（傷害、治療、護盾或狀態，自動命中）。沒有那個狀態的目標不受影響。可以讓後面的骰數依「被移除狀態的剩餘回合」或「同時消耗的層數」加倍，也可以波及周圍 1 格的敵人。
+- id: 原語.copy_skill
+  source: 立即施放「本輪內最後一個被其他單位施放、且施放者看得到的主動技能」，由自己當施放者重新選目標；不能複製傳說、改寫規則型技能與有層數需求的技能。複製的技能不扣法力與 AP、不進冷卻，不檢查武器需求（傷害與射程照自己的武器算），但射程、視線與目標都要合法。沒有可以複製的技能時不能施放。必須是技能唯一的效果，形狀為 self。
+  player: 立刻照抄這一輪最後一個別人施放、你看得到的主動技能，由你重新選目標。不扣法力與 AP、不進冷卻；射程、視線、目標仍要合法。傳說、改寫規則和需要層數的技能不能抄。沒有能抄的技能時不能用。這招只能有這一個效果、形狀為自身。
+- id: 原語.create_obstacle
+  source: 在影響格中的空格產生物件；可選 duration（1–10 個環境回合）讓它到期自動消失（不算摧毀：不觸發破壞效果、不掉落、不算擊殺），省略為永久。預算：基礎點數 × obstacle_duration_permille（永久 ＝ 基礎）。
+  player: 在影響範圍的空格產生物件。可以設定幾回合後自動消失（自然消失不算被打壞），不設定就是永久。
+- id: 原語.damage.explode
+  source: 爆骰（Phase 3D-7b）：擲到最大值再加擲一次，每顆骰最多再擲 core.explode_max 次；只能填 true
+  player: 爆骰：擲出最大值時再加擲一次（有次數上限）。
+- id: 原語.damage.lifesteal_permille
+  source: 吸血（Phase 3D-8a）：施放者回復這個效果對敵人實際造成的傷害（扣掉護盾吸收，含溢出）× n‰（無條件捨去，不超過最大 HP）；用 heal 事件、原因 lifesteal；只有技能自己的傷害效果可以用；預算：傷害點數 × (1 ＋ n‰ × lifesteal_value_permille)
+  player: 吸血：你回復這次對敵人實際造成傷害的一定比例（不超過最大 HP）。
+- id: 原語.damage.on_kill
+  source: 技能內的擊殺時效果（Phase 3D-8b）：這個傷害效果讓敵人倒下時才結算的 1–2 個效果，對象一律是施放者。可用類型：refund_ap（返還 amount 點 AP，1–2，用專用效果、不受改寫規則限制）、refund_cooldown（本技能冷卻歸零，技能必須有 cost.cooldown）、heal、shield、apply_status（一般原語）。同一個傷害效果讓一個以上的敵人倒下只結算一次；施放者自己在結算中倒下則不結算。只有主動技能自己的傷害效果可以用。預算：on_kill 各效果的點數 × on_kill_expected_permille（預估擊殺率）
+  player: 擊殺時：這個傷害讓敵人倒下時，對你自己結算 1～2 個效果（返還 AP、本招冷卻歸零、治療、護盾或狀態）。一次打倒多個敵人也只結算一次。
+- id: 原語.damage.scaling
+  source: 依情況縮放（Phase 3D-7b）：by／per_step_permille／cap_permille 三個欄位；每一步傷害 +n‰（無條件捨去）、cap_permille 必填且不超過 core.scale_cap_max_permille；by 可為 missing_hp_10pct（施放者每少 10% 最大 HP）、distance（與目標每距 1 格）、enemies_adjacent_target（目標相鄰的敵方數）、enemies_adjacent_self（施放者相鄰的敵方數）
+  player: 依情況加傷：依「你少了多少 HP」「和目標的距離」「目標或你身邊的敵人數」每一步提高一定比例的傷害，有上限。
+- id: 原語.damage.split_heal
+  source: '聖光雙效（Phase 3D-8a）：必須搭配 affects: all、主動法術技、aura 或 area 骨架，不可與 lifesteal、explode、scaling 並用。敵方依一般命中判定受到傷害、友方（含自己）不擲命中而治療同樣的骰值（骰一次，治療量 ＝ 骰值 ＋ 縮放屬性 × 0.5，受治療倍率影響）；預算傷害與治療兩邊都計；只能填 true'
+  player: 聖光雙效：同一次骰值，打到的敵人受到傷害、範圍內的友方（含自己）改為治療同樣的量。只能用在範圍或光環的主動法術，不能和吸血、爆骰、依情況加傷一起用。
+- id: 原語.dash
+  source: 施放者沿最短可走路徑（步行規則；不經過任何單位）移到目標單位的相鄰格（路徑成本不超過技能射程；不消耗移動點數），再結算同技能的其餘效果。一律最先結算，必須是技能的第一個效果。途中會觸發藉機攻擊與陷阱；被擋下（定身、倒地、倒下）或停下時目標不在相鄰格，其餘效果不結算。算「本回合移動過」，也觸發 on_move 被動。只能搭配形狀 single（目標單位）。
+  player: 先沿最短的路走到目標身邊（不花移動點數，不能穿過單位），再結算這招其他效果。路上會引發藉機攻擊和陷阱；被擋下或走不到目標身邊時，其他效果不結算。算「本回合移動過」。必須放在第一個效果，只能搭配單體形狀。
+- id: 原語.delayed_damage
+  source: 命中的敵方目標身上附加狀態 time_bomb（不擲抵抗；已有定時炸彈的目標不能再附加，發出 effect_fizzled）：每次環境回合倒數 −1，歸零時在 **目標當下位置** 爆炸——目標與 radius 格（曼哈頓距離）內的所有存活單位（敵我不分，包含施放者）受到 dice ＋ 縮放屬性 × 0.5 的 element 傷害（自動命中、不暴擊、沒有格擋），空格依元素觸及；帶元素的傷害照常與表面、物件互動。目標在倒數中倒下時，立即在倒下的位置爆炸（目標已倒下，不算受傷者）。可被淨化（cleanse）移除；驅散（dispel）不移除（time_bomb 不是增益）。環境預告顯示倒數與爆炸範圍。只能用在主動的法術技。預算：骰子平均 × 預期波及的敵人數（delayed_damage_expected_targets_permille）。
+  player: 在命中的敵人身上綁一顆定時炸彈（不能抵抗；已經有炸彈的不能再綁）。每次環境回合倒數 1，歸零時在他當下的位置爆炸，範圍內的所有單位（敵我不分，包括你）都受到傷害；他提前倒下會立刻爆炸。可以被淨化移除，驅散不會移除。只能用在主動法術。
+- id: 原語.detonate_runes
+  source: 引爆影響範圍內施放者自己的符文（依編號）：每格移除符文，並對該格上符合 affects 的單位自動命中（不擲命中）造成一次傷害＝骰值＋縮放屬性×0.5（法術公式）；元素取 element、省略時取符文的元素（標籤符文為物理）。施放者自己不受傷害；沒有符文的格子沒有效果。預算：骰子平均 × detonate_runes_permille（需要先刻印的折扣）。
+  player: 引爆範圍內你自己的符文：每格的符文消失，站在上面的對象自動受到一次傷害（元素可指定，不指定就用符文的元素）。你自己不受傷；沒有符文的格子沒有效果。
+- id: 原語.detonate_runes.scope
+  source: 填 target_cell 只引爆被命中目標所在的那 1 格（只能用在修正規則的命中後效果與普攻詞條；主動技能不可填）
+  player: 只引爆被命中目標腳下那一格（只能用在修正規則與普攻詞條）。
+- id: 原語.dispel
+  source: 移除敵方目標身上的 count 個增益（statuses.yaml 中 polarity 為 buff；依剩餘回合最長者先，永久最長，同長依狀態 ID 排序；all 為全部）。中性狀態（姿態、隱蔽、不死、靈魂連結）與減益不是增益，不會被驅散。目標沒有增益時發出 effect_fizzled（no_buff）。預算：1 個 dispel_one_points 點、全部 dispel_all_points 點（skill_budget.yaml）。
+  player: 移除敵人身上的增益（一個或全部，剩餘回合最長的先）。姿態、隱蔽、免死、靈魂連結不算增益，不會被移除。
+- id: 原語.dispel.count
+  source: 驅散的增益個數（1）或 all（全部）
+  player: 要移除幾個增益：1 個或全部。
+- id: 原語.extra_reaction
+  source: 目標（自己或友方）本輪的反應次數上限 +amount（1），到下一輪開始為止。
+  player: 目標（自己或友方）這一輪可以多反應 1 次，到下一輪開始為止。
+- id: 原語.gamble
+  source: 命中判定之後（未命中則整個不結算；技能沒有對敵方的效果時直接擲）擲一次 d1000，不超過 chance_permille 結算 win 的效果，否則結算 lose 的效果（各 0–2 個，至少一邊有效果）。win／lose 可以對施放者自己（affects self，例如失敗的反噬）；damage_multiplier 讓本次施放的傷害效果乘上倍率，self_damage_of_hit 讓施放者受到本次造成傷害的 n‰。施放者受到的反噬傷害不會讓他的 HP 低於 1，反噬狀態不能是硬控、跳過回合或持續傷害。必須是主動技能的最後一個效果。預算以期望值計（成功率 × win ＋ 失敗率 × lose），對自己的有害效果打折（gamble_self_harm_permille）。
+  player: 賭一把：命中後擲機率，成功結算「贏」的效果、失敗結算「輸」的效果。可以設定成功時傷害加倍、失敗時自己受到反噬。反噬不會讓你的 HP 低於 1，也不能是暈眩、跳過回合或持續傷害。必須放在主動技能的最後一個效果。
+- id: 原語.gamble.chance_permille
+  source: 成功（結算 win）的機率（‰）
+  player: 成功的機率。
+- id: 原語.grant_ap
+  source: 目標（自己或友方）立刻獲得 amount AP（1–2），超過本回合上限（ap_per_turn ＋ ap_carry_max）的部分不保留；目標不在自己的回合時，在它下次回合開始時加上。同一單位每輪最多被給一次（之後的給予不結算，effect_fizzled）。
+  player: 目標（自己或友方）立刻多得 AP（1～2 點），超過上限的不保留；不在他的回合時，下次回合開始才加上。每個單位每輪最多被給一次。
+- id: 原語.grant_skill
+  source: 目標（施放者自己，或形狀 single 選的友方）的技能列暫時多出 skill 指定的技能，持續 duration 輪：在目標自己的回合結束時倒數，歸零時消失（事件 skill_granted、skill_grant_expired），冷卻與使用次數紀錄一併清除。被給的技能是一般的主動技能（content/skills/），不佔技能欄位；不能是傳說、不含改寫規則型原語、不能是 grant_skill 技能或自己。同一個被給的技能不疊加，重新施放只刷新剩餘輪數；目標原本就裝備了該技能時不結算（effect_fizzled：already_equipped）。被給的技能照它自己的規則施放（AP、法力、冷卻、武器需求）。預算：被給技能的總點數 × 預期使用次數（grant_skill_expected_uses_per_round_permille × duration ÷ 1000）。
+  player: 讓目標（自己或一個友方）暫時多一個技能，持續幾輪（在他的回合結束時倒數），不佔技能欄位。這個技能照它自己的規則施放（AP、法力、冷卻、武器）。不能給傳說、改寫規則的技能或同類技能；重複給只刷新輪數；已經裝備那招就沒效果。
+- id: 原語.grant_skill.skill
+  source: 暫時給出的技能 ID（content/skills/）
+  player: 要暫時給的技能。
+- id: 原語.hurl_object
+  source: 舉起 range 格內看得到的一個 pushable 物件，丟到落點格（形狀 object_then_tile；飛行路徑不檢查阻擋，落點要在視線內）。命中判定照技能，落點被命中的單位受 dice 物理傷害（不加屬性），knock_prone 為 true 時再以對抗判定擊倒。物件落地後依標籤結算：explosive 在落點爆炸、breakable 碎掉（摧毀）、其他放在落點；落點有單位或物件時放在 hurl_scatter_radius（rules/core.yaml）內最近的空格（同距離依 (y, x)），沒有空格或落點是致命地形就摧毀。預算為骰子平均 × 「需要附近有物件」折扣（skill_budget.yaml 的 hurl_object_discount_permille），擊倒另加 knock_prone 的點數。
+  player: 舉起射程內看得到的一個可推動物件，丟到落點：落點的單位被命中就受到骰值物理傷害（可設定再以對抗判定擊倒）。物件落地後：會爆的爆炸、易碎的碎掉、其他的放在落點附近；落點是致命地形就消失。附近要有物件才能用。
+- id: 原語.inscribe
+  source: 在影響格（可站立的格子）留下施放者專屬的符文：恰好帶一個 element（元素，例如雷紋、火紋）或 tag（標籤），持續 duration 個環境回合（省略為 core.yaml 的 rune_default_rounds，初值 3；上限 5）。符文本身沒有任何效果，敵我都看得到；只有刻下它的施放者讀得到（條件 on_own_rune、消耗型原語 detonate_runes）。同一施放者在同一格再刻一次是更新；同一施放者同時存在的符文格超過 rune_limit_per_owner（core.yaml，初值 6）時最舊的消失。施放者倒下時符文保留到時效結束。預算：base_points × inscribe_duration_permille（依 duration；省略＝預設 3 輪）。
+  player: 在範圍內可站立的格子刻下你專屬的符文（一種元素，或一個標籤），持續幾輪（最多 5）。符文本身沒有效果，敵我都看得到，只有你自己的技能能讀取或引爆它。同一格再刻一次會更新；你的符文超過上限時最舊的消失；你倒下時符文仍保留到時效結束。
+- id: 原語.intercept
+  source: 只能出現在 event 為 ally_hit_adjacent 的反應技。相鄰友方被單體攻擊命中後、傷害與其他效果結算之前，這次攻擊的所有效果改為作用在持有者身上（不重擲命中；位移方向重新計算；範圍技能不攔截）。守護者的護盾、減傷、抗性照常結算。點數為初值，未經模擬。
+  player: 替身：相鄰的友方被單體攻擊命中時，這次攻擊改由你承受（不重擲命中；範圍技能不能攔）。你的護盾、減傷、抗性照常有效。只能用在「相鄰友方被打」的反應技。
+- id: 原語.knock_prone
+  source: 對抗判定（技能的縮放屬性 vs 目標同屬性），成功才倒地。
+  player: 對抗判定（你這招的屬性對目標的同一屬性），成功就讓目標倒地。
+- id: 原語.leap
+  source: 施放者跳到射程內的指定空格：無視中間的單位與低矮（落差不超過 1 層）的地形，不能越過同時擋住行動與視線的物件（石柱）與牆；落點須可站立、沒有單位、與起點的高度差不超過 1 層。不觸發藉機攻擊，不算「本回合移動過」，也不觸發 on_move 被動；落點的陷阱與表面照常結算。定身或倒地時不能跳。
+  player: 跳到射程內的一個空格：可以越過中間的單位和 1 層以內的高低差，不能越過牆和石柱這類又擋路又擋視線的東西。落點高度差不超過 1 層。不會引發藉機攻擊，不算「本回合移動過」；落點的陷阱和表面照常結算。定身或倒地時不能跳。
+- id: 原語.place_trap
+  source: 在目標格放一個對放置者陣營以外隱藏的陷阱，同一格只能有一個。陷阱帶著同一技能其餘的效果（自動命中，狀態照常擲抵抗；施放者的屬性在放置時快照），敵人進入（trap.trigger enter）或延遲回合數到了（delay）時，以陷阱格為中心依 trap.shape 結算。需要技能的 trap 欄位。
+  player: 在目標格放一個敵人看不到的陷阱（一格只能有一個）。敵人踩到、或設定的回合數到了時，以陷阱為中心結算這招其他效果（自動命中，狀態照常可以抵抗；用放置時你的屬性）。
+- id: 原語.pull.collision_dice
+  source: 撞擊傷害骰（省略時用核心規則 collision_damage_dice，初值 1d6）；預算每顆骰加 collision_die_points
+  player: 撞上東西時的撞擊傷害骰（不填就用通用的 1d6）。
+- id: 原語.push
+  source: 以施放者（中心格型為中心）為原點往外推；被擋住時停在擋住前的格子，steadfast 減半。
+  player: 以你（或範圍中心）為起點把目標往外推。被擋住就停在前一格；穩固的目標只被推一半距離。
+- id: 原語.push.collision_dice
+  source: 撞擊傷害骰（省略時用核心規則 collision_damage_dice，初值 1d6）；預算每顆骰加 collision_die_points
+  player: 撞上東西時的撞擊傷害骰（不填就用通用的 1d6）。
+- id: 原語.redirect_damage
+  source: 目標友方（不含施放者自己）獲得狀態「靈魂連結」（soul_link）duration 回合：它受到的傷害有 permille‰（≤ 500）轉給施放者，直接扣施放者的 HP。與替隊友擋下整次攻擊（intercept）不同；兩者同時存在時先攔截，傷害落在守護者身上之後才看守護者有沒有連結。施放者倒下或離場時連結消失。
+  player: 和一個友方（不能是自己）建立「靈魂連結」：持續期間他受到的傷害有一部分（最多一半）轉到你身上。你倒下或離場時連結消失。和「替身」不同：替身是整次攻擊改打你。
+- id: 原語.reset_cooldown
+  source: 目標友方（不含施放者自己）的技能冷卻歸零：which 為 all 時全部技能、tag 時只有帶 tag 標籤的技能；花源力的技能（cost.source）與這個技能本身不會被重置。沒有可重置的冷卻時不結算（effect_fizzled）。
+  player: 讓一個友方（不能是自己）的技能冷卻歸零：全部技能，或只限帶某個標籤的技能。花源力的技能和這招本身不受影響。
+- id: 原語.restore_resource
+  source: resource 為 mana：目標（自己或友方）回復 amount 點法力，不超過法力上限；為 cooldown：目標所有技能的冷卻 −amount（最多 2，下限 0）。冷卻不影響花源力的技能（cost.source），也不影響施放中的這個技能。目標沒有法力空間或沒有冷卻中的技能時發出 effect_fizzled。預算：法力每點 restore_mana_point_permille‰、冷卻每回合 restore_cooldown_points 點（skill_budget.yaml）。
+  player: 回復資源：回復目標（自己或友方）的法力，不超過上限；或讓目標所有技能的冷卻減少（最多 2 回合）。花源力的技能和這招本身的冷卻不受影響。
+- id: 原語.restore_resource.resource
+  source: mana 回復法力、cooldown 縮短冷卻
+  player: 要回復什麼：法力，或縮短冷卻。
+- id: 原語.reveal
+  source: 揭露技能範圍內的敵人與陷阱（自動命中，不擲命中判定）：敵人失去 concealed 狀態（原因 revealed），並獲得 revealed 狀態 duration 回合——期間不算隱蔽（黑暗表面與草叢也不算）、不能再獲得 concealed；範圍內的敵方陷阱對施放者的陣營顯示（事件 trap_revealed，只給施放者的陣營）。範圍內沒有敵人也沒有敵方陷阱時發出 effect_fizzled（nothing_hidden）。預算：reveal_base_points ＋ reveal_round_points × duration。
+  player: 揭露範圍內的敵人和陷阱（自動命中）：敵人失去隱蔽，並在幾回合內不能再隱蔽（黑暗和草叢也沒用）；範圍內的敵方陷阱會讓你這邊看得到。
+- id: 原語.revive
+  source: '目標必須是射程內倒下的友方（倒下的單位留在戰鬥狀態、保留位置，但不占格子）：目標以 hp_permille‰ 的最大 HP（至少 1）站起來，站回原位置；原格被占用、不能站立或是致命地形時，站到 core.yaml revive_landing_radius 格內最近的空格（距離相同依 (y, x) 順序），範圍內沒有空格就不能施放。每個單位每場最多被復活 1 次；召喚物不能被復活；倒下時已移除的狀態（姿態、以來源為依據的狀態）、陷阱、區域與召喚物不會恢復。事件 unit_revived。技能必須每場限一次（uses_per_battle: 1）或冷卻至少 rule_rewrite_min_cooldown 回合。只能搭配 single 形狀，其餘效果必須是 affects: self。預算：revive_base_points ＋ hp_permille × revive_hp_point_permille ÷ 1000。'
+  player: 讓射程內一個倒下的友方以一定比例的最大 HP 站起來（站回原位，被占住就站到附近的空格）。每個單位每場最多被復活一次；召喚物不能復活；倒下時失去的姿態、陷阱、區域和召喚物不會回來。這招必須每場限用一次或有長冷卻，只能搭配單體形狀。
+- id: 原語.rule_change
+  source: 傳說的第三種核心：引用 rule_changes.yaml 的一條規則改變（只影響施放者自己）。技能必須寫 activation（timed 持續 legendary_timed_rounds 輪、battle 本場剩餘時間），施放＝以 legendary_activation_ap AP ＋ 源力啟動；生效中不能再啟動。每個單位最多裝 1 個、同時最多 1 個生效中的規則改變。必須是主動技能唯一的效果、形狀 self。
+  player: 傳說專用：改寫一條遊戲規則（只對你自己有效）。要花 AP 和源力啟動，持續幾輪或整場；同時只能有一個規則改變生效。這招只能有這一個效果、形狀為自身。
+- id: 原語.rule_change.rule
+  source: rule_changes.yaml 的規則改變 ID
+  player: 要改寫哪一條規則。
+- id: 原語.sacrifice_summon
+  source: 選射程內自己的一個召喚物（含圖騰；別人的、敵人的不行）作為獻祭：它立刻消失（原因「被獻祭」，不算倒下），並在它所在的位置以 radius 格（曼哈頓距離）為半徑結算一次——填了 element 是爆炸：範圍內所有敵人自動命中（不擲命中、不暴擊）受到 dice ＋ 縮放屬性 × 0.5 的 element 傷害（帶元素的傷害照常與表面、物件互動）；省略 element 是治療：範圍內的友方（含施放者，不含被獻祭的召喚物）回復 dice ＋ 縮放屬性 × 0.5 的 HP（受治療量修正）。只能用在主動技能，形狀 single。預算：骰子平均 × sacrifice_summon_permille（需要先有召喚物、且召喚物會消失的折扣）。
+  player: 獻祭射程內你自己的一個召喚物：它立刻消失，並在它的位置爆發——選了元素就是爆炸（範圍內的敵人自動受到傷害），沒選元素就是治療（範圍內的友方回復 HP，含你自己）。只能用在主動技能、單體形狀。
+- id: 原語.shadowstep
+  source: 以射程內看得到的一個敵方單位為目標，施放者瞬間出現在他相鄰的格子（不經過中間的格子、不觸發藉機攻擊，也不觸發「敵人走進相鄰格」與監視射擊；不墜落），落地後面向目標。landing：choose 一般瞬步（形狀 unit_then_tile，兩段選取：敵人 → 他相鄰的空格，玩家自選）；behind 瞬步背刺類（形狀 single，固定落在目標的背後格；被占住或不可站立時改為目標相鄰的其他空格——先左右兩側、再正面，同距離依上、右、下、左的順序；都沒有就不能施放）。落點須可站立、沒有單位、不是致命地形，與目標的高度差不超過近戰上限。落點的陷阱與表面照常結算。之後的效果以落點結算，所以接在後面的近戰傷害會吃到背刺加成。不算「本回合移動過」，不觸發 on_move 被動。必須是技能的第一個效果；定身或倒地時不能施放。
+  player: 瞬步：瞬間出現在射程內一個敵人的身邊，不經過中間的格子、不會引發藉機攻擊或監視射擊，落地後面向他。可以自選他身邊的格子，或固定落在他背後（背後被占住就改到側面）。之後的效果從落點結算，所以接在後面的近戰攻擊會吃到背刺加成。不算「本回合移動過」。必須放在第一個效果；定身或倒地時不能用。
+- id: 原語.shadowstep.landing
+  source: choose 玩家自選目標相鄰的空格；behind 固定落在目標的背後格
+  player: 落點：自選他身邊的空格，或固定落在他背後。
+- id: 原語.shield
+  source: 目標獲得吸收量＝骰值＋縮放屬性×0.5（與治療同一公式）的護盾（狀態 shielded，持續 2 回合）；骰值傷害先扣護盾。已有護盾時取較大值並刷新持續時間。
+  player: 目標獲得護盾，吸收量＝骰值＋屬性加成（和治療同一個算法），持續 2 回合；受到的傷害先扣護盾。已經有護盾時取較大的一個並刷新時間。
+- id: 原語.steal_buff
+  source: 移除目標身上一個增益狀態（statuses.yaml 中 polarity 為 buff；有多個時取剩餘回合最長、同長依狀態 ID 排序），並以相同的剩餘回合與數值施加到施放者身上（已有同狀態時取較長者）。目標沒有增益時發出 effect_fizzled（no_buff）。
+  player: 偷走目標身上一個增益（剩餘回合最長的那個），以同樣的剩餘回合和數值加到你自己身上。
+- id: 原語.summon
+  source: 在目標格（形狀 ground_tile；必須可站立、不是致命地形、沒有單位）召喚 unit 範本（content/units/summons/）的召喚物，屬於施放者陣營，由效用 AI 控制。召喚物緊接在召喚者之後行動（插入先攻順序，不擲先攻；同一召喚者的召喚物依召喚順序排在一起），持續 duration 輪：在召喚者第 duration 次回合結束時消失（施放當回合不算）；召喚者倒下或撤離時一併消失。同一召喚者同時存在的召喚物超過 summon_limit_per_owner（core.yaml）時，最舊的消失。召喚物沒有源力、不取用源泉、不計入勝負條件、不能撤離。必須是主動技能，其餘效果只能作用在施放者自己。
+  player: 在目標空格召喚一個召喚物，站在你這一邊、由 AI 控制，緊接在你之後行動，持續幾輪；你倒下或撤離時它也消失。召喚物超過上限時最舊的消失。召喚物沒有源力、不算勝負條件、不能撤離。這招其他效果只能作用在你自己身上。
+- id: 原語.summon.count
+  source: 一次召喚的數量（1 或 2；2 是數量型分歧進化，必須同時填 power_permille；省略為 1）
+  player: 一次召喚幾隻（1 或 2；2 隻時每隻比較弱）。
+- id: 原語.summon.infusion
+  source: 橋接分歧進化：召喚物固有的第二個灌注關鍵字（core.yaml 的 summon_infusions）
+  player: 這個召喚物天生多帶一個關鍵字灌注。
+- id: 原語.summon.power_permille
+  source: 數量型分歧進化：每隻召喚物的最大 HP 與傷害只有一般的這麼多‰（count 為 2 時必填）
+  player: 一次召喚 2 隻時，每隻的 HP 與傷害只有一般的多少比例。
+- id: 原語.summon.trait
+  source: 加深分歧進化：召喚物的小特性（core.yaml 的 summon_traits）
+  player: 召喚物的小特性（堅韌、迅捷、銳利）。
+- id: 原語.summon.unit
+  source: 召喚物範本 ID（content/units/summons/）
+  player: 要召喚哪一種召喚物。
+- id: 原語.swap
+  source: 施放者與目標單位（敵我皆可）交換位置。對敵人（affects 為 enemies）要過一般位移檢定（對抗判定：技能的縮放屬性 vs 目標同屬性；抵抗成功則不交換），不再另外擲命中；對友方（affects 為 allies）自動成功。不能和自己交換。交換後雙方的落點互動（表面、陷阱、致命地形、墜落）照常結算。不算「本回合移動過」，不觸發 on_move 被動。
+  player: 和一個單位（敵我都可以）交換位置。對敵人要過對抗判定（你這招的屬性對他的同一屬性），他抵抗成功就不換；對友方一定成功。換完後兩邊的落點效果（表面、陷阱、致命地形、墜落）照常結算。不算「本回合移動過」。
+- id: 原語.swap_any
+  source: 選射程內的兩個單位（敵我皆可，不必包含施放者），互換位置；兩格都要能讓對方站上去。含敵人時每個敵方各自過一般位移檢定（對抗判定：技能的縮放屬性 vs 目標同屬性），任一個抵抗成功則整個互換失敗；全是友方時不檢定。落點的陷阱、表面與墜落照常結算。必須搭配形狀 unit_pair，而且是技能唯一的效果。
+  player: 選射程內的兩個單位（不一定包括你）互換位置；每個敵人都要過對抗判定，任一個抵抗成功就整個失敗；全是友方則一定成功。這招只能有這一個效果。
+- id: 原語.teleport_target
+  source: 兩段選取：射程內的一個單位（不能是自己）→ 射程內的落點（可站立、沒有單位的格子，或致命地形）。友方不檢定、一定成功；敵方要過抵抗（對抗判定：技能的縮放屬性 vs 目標同屬性，目標再加 teleport_enemy_resist_bonus）；落點是致命地形（深淵、岩漿）時目標再加 teleport_lethal_resist_bonus，成功率極低，失敗時目標不移動。Boss 對傳送到致命地形免疫（不能選）；傳送到一般格照常檢定。落點的陷阱、表面與致命地形照常結算，不觸發離開相鄰格的反應。必須搭配形狀 unit_then_tile，而且是技能唯一的效果。
+  player: 把射程內的一個單位（不能是你）傳送到落點。友方一定成功；敵人可以抵抗，而且比一般控制更難；落點是深淵、岩漿這類致命地形時幾乎不可能成功，Boss 不能被傳送到致命地形。這招只能有這一個效果。
+- id: 原語.topple
+  source: 推倒目標（射程內看得到的 topplable 物件，技能只能以物件為目標），往遠離施放者的方向倒下：從下一格起壓住 topple_length 格（rules/core.yaml），壓到的單位受 topple_damage_dice 物理傷害並倒地、壓到的 breakable 物件受同樣傷害，其他物件擋住倒下；原物件移除，最後一格產生倒塌物。互動的推、技能的推擊與風推到 topplable 物件時也一樣會推倒它（通用規則）。
+  player: 推倒射程內一根可推倒的物件（石柱、枯樹），往遠離你的方向倒下，壓住後面幾格：被壓到的單位受傷並倒地，被壓到的易碎物件也受損；原物件變成一堆倒塌物。
+- id: 原語.zone
+  source: 在技能形狀的格子上建立持續 duration 輪的區域（施放者第 duration 次回合結束時消失，施放當回合不算；施放者不在場時於那一輪的環境回合消失）。anchor：tile 固定在施放時的格子、caster 跟隨施放者（形狀 self／ring／allies_in_radius，每次施放者移動就以新位置重新展開；施放者倒下或離場時消失）、moving 每次環境回合沿施放方向前進 speed 格（形狀 line／cone；前進到牆壁或地圖外的格子消失，全部消失時區域消失）。單位進入區域（區域建立、移動或跟隨到他身上也算；在區域內移動不算）或回合開始時站在區域內（when：enter／turn_start／both），依 affects（enemies／allies／all）對他結算 effects（1–2 個 damage／heal／shield／apply_status；自動命中，狀態照常擲抵抗，施放者屬性在建立時快照；施放者自己不受 all 的有害效果）。surface：區域新覆蓋的格子留下表面。同一施放者同時存在的區域超過 zone_limit_per_owner（core.yaml）時最舊的消失。必須是主動技能唯一的效果。
+  player: 在範圍內建立持續幾輪的區域。區域可以固定在原地、跟著你移動，或每回合往施放方向前進。單位走進區域、或回合開始時站在裡面，依設定對敵人或友方結算 1～2 個效果（傷害、治療、護盾或狀態；自動命中，狀態照常可以抵抗），也可以讓區域經過的格子留下表面。你自己不會被自己區域的有害效果打到。你的區域超過上限時最舊的消失。這招只能有這一個效果。
+- id: 工坊.basics.kind=passive.trigger.event=on_cast_tag
+  source: 持有者施放一個帶 trigger.tag 標籤的技能（含修正規則加上的標籤；不含被動觸發與陷阱），在該技能結算之後。沒有另一方，效果作用在持有者。
+  player: 你施放帶某個標籤的技能、結算完之後觸發（被動觸發和陷阱不算）。效果作用在你自己身上。
+- id: 工坊.basics.kind=passive.trigger.event=on_enter_surface
+  source: 敵方單位步行或被強制位移（傳送不算）進入持有者造出的表面；回合開始站在上面、表面出現在腳下都不算。trigger.surface 省略時任何表面都算。另一方為進入的單位。
+  player: 敵人走進、或被推進你造出來的表面時觸發（傳送不算；回合開始站在上面、表面出現在腳下都不算）。可以限定某種表面。
+- id: 工坊.basics.kind=passive.trigger.event=on_status_applied
+  source: 持有者成功對其他單位施加狀態（抵抗成功、對自己施加都不算；刷新持續時間算）。trigger.status 省略時任何狀態都算。另一方為被施加的單位。
+  player: 你成功對別人施加狀態時觸發（被抵抗、對自己施加都不算；刷新持續時間也算）。可以限定某種狀態。
+- id: 工坊.condition.condition
+  source: 不成立時整個技能不生效；也可以寫在個別效果的 condition（只影響該效果）
+  player: 條件：不成立時整招都不生效；也可以只寫在某個效果上，只影響那個效果。
+- id: 工坊.condition.condition=on_own_rune
+  source: 目標所在的格子上有施放者自己（用 inscribe）刻下的符文；可用 element 或 tag 篩選符文（省略＝任何符文）。別人的符文不算；對格子判斷，所以也可以用在沒有單位的格子。
+  player: 目標所在的格子上有你自己刻的符文（可以限定某種元素或標籤）。別人的符文不算；沒有單位的空格也能判斷。
+- id: 工坊.condition.condition=self_concealed
+  source: 施放者帶有「隱蔽」狀態（concealed；站在黑暗或草叢中不算）。隱蔽中發動攻擊另有通用的命中加成，攻擊結算完後脫離隱蔽。
+  player: 你處於「隱蔽」狀態時才成立（站在黑暗或草叢裡不算）。
+- id: 工坊.condition.condition=self_hp_below
+  source: 施放者的目前 HP ÷ 最大 HP 低於 permille ‰。
+  player: 你目前的 HP 低於最大 HP 的某個比例時才成立。
+- id: 工坊.condition.condition=target_hp_below
+  source: 目標的目前 HP ÷ 最大 HP 低於 permille ‰。
+  player: 目標目前的 HP 低於最大 HP 的某個比例時才成立。
+- id: 工坊.effects.effects=add_stack
+  source: 依該層數（stacks.yaml）的 owner 把 amount 層加在施放者自己（affects 只能是 self；技能有對敵方的效果時，至少命中一名敵人才累積）或命中的目標（affects 只能是 enemies）身上，超過上限截斷。
+  player: 在自己或命中的目標身上累積層數（看這種層數是累積在誰身上）。對自己累積時，如果這招有打敵人，至少要命中一個才會累積；超過上限的部分不算。
+- id: 工坊.effects.effects=add_stack.stack
+  source: 層數 ID（stacks.yaml）
+  player: 要累積哪一種層數。
+  scope: add_stack.stack
+- id: 工坊.effects.effects=apply_status
+  source: 施加 statuses.yaml 中的狀態，重複施加時刷新持續時間。
+  player: 施加一個狀態。同一個狀態重複施加時，只刷新持續時間、不疊加。
+- id: 工坊.effects.effects=charge_through
+  source: 選一個目標格（形狀 ground_tile；與施放者同一列或同一行、距離不超過形狀射程；可以是站著敵人的格子、牆前或地圖邊的任何格）；施放者沿直線衝過去，被牆、不可走地形或 blocks_move 物件擋住時停在擋住前最後一個能站的空格（第一格就過不去才不能施放）。目標格上的敵人若背後走不過去（牆、地圖邊、擋路物件），命中後另受一次撞擊傷害（collided，接上撞擊關鍵字與 target_collided）。沿途經過的每個敵人依路徑順序各擲一次命中；命中受 dice 物理傷害（不加屬性，暴擊與格擋照常），再依 on_hit 擊倒（對抗判定）或推到路徑旁一格（push_aside：先左後右選可站的一側，兩側都不行就往左撞，照常觸發撞擊）。隊友讓路、敵人不阻擋，一律被穿過。不觸發藉機攻擊；沿途與終點的陷阱、表面照常結算，被定身或倒地就停下。算「本回合移動過」，也觸發 on_move 被動。定身或倒地時不能施放。必須是技能的第一個效果，其餘效果只能作用在施放者自己。
+  player: 朝同一直線上的一格直衝過去，穿過沿途所有單位（隊友讓路、敵人擋不住）。撞到牆、不能走的地形或擋路物件就停在前一格。沿途每個敵人各擲一次命中，命中就受到骰值物理傷害（不加屬性），再依設定擊倒或推到路旁；終點的敵人背後被擋住時，另外受一次撞擊傷害。不會引發藉機攻擊；被定身或倒地就停下。算「本回合移動過」。定身或倒地時不能用。必須放在第一個效果，其他效果只能作用在自己身上。
+- id: 工坊.effects.effects=charge_through.on_hit
+  source: 命中後的額外效果（knock_prone 擊倒、push_aside 推到路徑旁）
+  player: 命中沿途敵人後的額外效果：擊倒，或推到路徑旁邊一格。
+- id: 工坊.effects.effects=cheat_death
+  source: 目標（自己或友方）獲得狀態「不死」（undying）duration 回合（省略時用狀態的預設持續）：期間 HP 會降到 0 時改為 1 並移除此狀態（墜落與致命地形照樣生效）。
+  player: 目標（自己或友方）獲得「免死」：持續期間受到致命傷害時 HP 留在 1，然後免死消失。墜落和致命地形照樣會死。
+- id: 工坊.effects.effects=cleanse
+  source: 移除影響單位身上所有非有益的狀態（依狀態 ID 排序逐一移除）。不能對敵方使用。
+  player: 移除目標身上所有負面狀態。只能用在自己或友方。
+- id: 工坊.effects.effects=consume_stack
+  source: 消耗全部該層數（self 型從施放者、target 型從每個被命中的目標）；同一技能的傷害效果依消耗的層數 × per_stack_permille 加成（200 ＝ 每層 +20%）。沒有層數也可施放（加成 0）。預算以期望消耗＝上限的一半估算加成點數。
+  player: 消耗全部的這種層數（自己身上的，或被命中目標身上的），每層讓這招的傷害提高一定比例。沒有層數也可以施放，只是沒有加成。
+- id: 工坊.effects.effects=consume_stack.stack
+  source: 層數 ID（stacks.yaml）
+  player: 要消耗哪一種層數。
+  scope: consume_stack.stack
+- id: 工坊.effects.effects=consume_status
+  source: 目標（affects，預設敵方，需命中）身上有 status 時先移除它，再對同一個單位結算 then 的效果（1–2 個，只能是 damage／heal／shield／apply_status，自動命中；施加狀態照常擲抵抗）。沒有該狀態的單位不受影響，全部都沒有時整個效果不結算（effect_fizzled）。scale 把 then 的傷害、治療、護盾骰數乘上倍率（上限見 rules/core.yaml 的 consume_status_max_scale）：remaining_rounds＝被消耗狀態的剩餘回合（永久狀態為 1）、stacks＝同時消耗目標身上 stack 的層數。splash 設為 1 時 then 也作用在被消耗者周圍 1 格內的敵方單位。
+  player: 命中的目標身上有指定的狀態時，先移除它，再對他結算後面的效果（傷害、治療、護盾或狀態，自動命中）。沒有那個狀態的目標不受影響。可以讓後面的骰數依「被移除狀態的剩餘回合」或「同時消耗的層數」加倍，也可以波及周圍 1 格的敵人。
+- id: 工坊.effects.effects=consume_status.scale=stacks
+  source: 倍率＝同時消耗目標身上的層數（另填 stack）
+  player: 加倍的倍率＝同時消耗掉目標身上的層數（要另外選層數種類）。
+- id: 工坊.effects.effects=create_obstacle
+  source: 在影響格中的空格產生物件；可選 duration（1–10 個環境回合）讓它到期自動消失（不算摧毀：不觸發破壞效果、不掉落、不算擊殺），省略為永久。預算：基礎點數 × obstacle_duration_permille（永久 ＝ 基礎）。
+  player: 在影響範圍的空格產生物件。可以設定幾回合後自動消失（自然消失不算被打壞），不設定就是永久。
+- id: 工坊.effects.effects=damage.explode
+  source: 爆骰（Phase 3D-7b）：擲到最大值再加擲一次，每顆骰最多再擲 core.explode_max 次；只能填 true
+  player: 爆骰：擲出最大值時再加擲一次（有次數上限）。
+- id: 工坊.effects.effects=damage.lifesteal_permille
+  source: 吸血（Phase 3D-8a）：施放者回復這個效果對敵人實際造成的傷害（扣掉護盾吸收，含溢出）× n‰（無條件捨去，不超過最大 HP）；用 heal 事件、原因 lifesteal；只有技能自己的傷害效果可以用；預算：傷害點數 × (1 ＋ n‰ × lifesteal_value_permille)
+  player: 吸血：你回復這次對敵人實際造成傷害的一定比例（不超過最大 HP）。
+- id: 工坊.effects.effects=damage.on_kill
+  source: 技能內的擊殺時效果（Phase 3D-8b）：這個傷害效果讓敵人倒下時才結算的 1–2 個效果，對象一律是施放者。可用類型：refund_ap（返還 amount 點 AP，1–2，用專用效果、不受改寫規則限制）、refund_cooldown（本技能冷卻歸零，技能必須有 cost.cooldown）、heal、shield、apply_status（一般原語）。同一個傷害效果讓一個以上的敵人倒下只結算一次；施放者自己在結算中倒下則不結算。只有主動技能自己的傷害效果可以用。預算：on_kill 各效果的點數 × on_kill_expected_permille（預估擊殺率）
+  player: 擊殺時：這個傷害讓敵人倒下時，對你自己結算 1～2 個效果（返還 AP、本招冷卻歸零、治療、護盾或狀態）。一次打倒多個敵人也只結算一次。
+- id: 工坊.effects.effects=damage.scaling
+  source: 依情況縮放（Phase 3D-7b）：by／per_step_permille／cap_permille 三個欄位；每一步傷害 +n‰（無條件捨去）、cap_permille 必填且不超過 core.scale_cap_max_permille；by 可為 missing_hp_10pct（施放者每少 10% 最大 HP）、distance（與目標每距 1 格）、enemies_adjacent_target（目標相鄰的敵方數）、enemies_adjacent_self（施放者相鄰的敵方數）
+  player: 依情況加傷：依「你少了多少 HP」「和目標的距離」「目標或你身邊的敵人數」每一步提高一定比例的傷害，有上限。
+- id: 工坊.effects.effects=damage.split_heal
+  source: '聖光雙效（Phase 3D-8a）：必須搭配 affects: all、主動法術技、aura 或 area 骨架，不可與 lifesteal、explode、scaling 並用。敵方依一般命中判定受到傷害、友方（含自己）不擲命中而治療同樣的骰值（骰一次，治療量 ＝ 骰值 ＋ 縮放屬性 × 0.5，受治療倍率影響）；預算傷害與治療兩邊都計；只能填 true'
+  player: 聖光雙效：同一次骰值，打到的敵人受到傷害、範圍內的友方（含自己）改為治療同樣的量。只能用在範圍或光環的主動法術，不能和吸血、爆骰、依情況加傷一起用。
+- id: 工坊.effects.effects=dash
+  source: 施放者沿最短可走路徑（步行規則；不經過任何單位）移到目標單位的相鄰格（路徑成本不超過技能射程；不消耗移動點數），再結算同技能的其餘效果。一律最先結算，必須是技能的第一個效果。途中會觸發藉機攻擊與陷阱；被擋下（定身、倒地、倒下）或停下時目標不在相鄰格，其餘效果不結算。算「本回合移動過」，也觸發 on_move 被動。只能搭配形狀 single（目標單位）。
+  player: 先沿最短的路走到目標身邊（不花移動點數，不能穿過單位），再結算這招其他效果。路上會引發藉機攻擊和陷阱；被擋下或走不到目標身邊時，其他效果不結算。算「本回合移動過」。必須放在第一個效果，只能搭配單體形狀。
+- id: 工坊.effects.effects=dispel
+  source: 移除敵方目標身上的 count 個增益（statuses.yaml 中 polarity 為 buff；依剩餘回合最長者先，永久最長，同長依狀態 ID 排序；all 為全部）。中性狀態（姿態、隱蔽、不死、靈魂連結）與減益不是增益，不會被驅散。目標沒有增益時發出 effect_fizzled（no_buff）。預算：1 個 dispel_one_points 點、全部 dispel_all_points 點（skill_budget.yaml）。
+  player: 移除敵人身上的增益（一個或全部，剩餘回合最長的先）。姿態、隱蔽、免死、靈魂連結不算增益，不會被移除。
+- id: 工坊.effects.effects=dispel.count
+  source: 驅散的增益個數（1）或 all（全部）
+  player: 要移除幾個增益：1 個或全部。
+- id: 工坊.effects.effects=extra_reaction
+  source: 目標（自己或友方）本輪的反應次數上限 +amount（1），到下一輪開始為止。
+  player: 目標（自己或友方）這一輪可以多反應 1 次，到下一輪開始為止。
+- id: 工坊.effects.effects=gamble
+  source: 命中判定之後（未命中則整個不結算；技能沒有對敵方的效果時直接擲）擲一次 d1000，不超過 chance_permille 結算 win 的效果，否則結算 lose 的效果（各 0–2 個，至少一邊有效果）。win／lose 可以對施放者自己（affects self，例如失敗的反噬）；damage_multiplier 讓本次施放的傷害效果乘上倍率，self_damage_of_hit 讓施放者受到本次造成傷害的 n‰。施放者受到的反噬傷害不會讓他的 HP 低於 1，反噬狀態不能是硬控、跳過回合或持續傷害。必須是主動技能的最後一個效果。預算以期望值計（成功率 × win ＋ 失敗率 × lose），對自己的有害效果打折（gamble_self_harm_permille）。
+  player: 賭一把：命中後擲機率，成功結算「贏」的效果、失敗結算「輸」的效果。可以設定成功時傷害加倍、失敗時自己受到反噬。反噬不會讓你的 HP 低於 1，也不能是暈眩、跳過回合或持續傷害。必須放在主動技能的最後一個效果。
+- id: 工坊.effects.effects=gamble.chance_permille
+  source: 成功（結算 win）的機率（‰）
+  player: 成功的機率。
+- id: 工坊.effects.effects=grant_ap
+  source: 目標（自己或友方）立刻獲得 amount AP（1–2），超過本回合上限（ap_per_turn ＋ ap_carry_max）的部分不保留；目標不在自己的回合時，在它下次回合開始時加上。同一單位每輪最多被給一次（之後的給予不結算，effect_fizzled）。
+  player: 目標（自己或友方）立刻多得 AP（1～2 點），超過上限的不保留；不在他的回合時，下次回合開始才加上。每個單位每輪最多被給一次。
+- id: 工坊.effects.effects=grant_skill
+  source: 目標（施放者自己，或形狀 single 選的友方）的技能列暫時多出 skill 指定的技能，持續 duration 輪：在目標自己的回合結束時倒數，歸零時消失（事件 skill_granted、skill_grant_expired），冷卻與使用次數紀錄一併清除。被給的技能是一般的主動技能（content/skills/），不佔技能欄位；不能是傳說、不含改寫規則型原語、不能是 grant_skill 技能或自己。同一個被給的技能不疊加，重新施放只刷新剩餘輪數；目標原本就裝備了該技能時不結算（effect_fizzled：already_equipped）。被給的技能照它自己的規則施放（AP、法力、冷卻、武器需求）。預算：被給技能的總點數 × 預期使用次數（grant_skill_expected_uses_per_round_permille × duration ÷ 1000）。
+  player: 讓目標（自己或一個友方）暫時多一個技能，持續幾輪（在他的回合結束時倒數），不佔技能欄位。這個技能照它自己的規則施放（AP、法力、冷卻、武器）。不能給傳說、改寫規則的技能或同類技能；重複給只刷新輪數；已經裝備那招就沒效果。
+- id: 工坊.effects.effects=grant_skill.skill
+  source: 暫時給出的技能 ID（content/skills/）
+  player: 要暫時給的技能。
+- id: 工坊.effects.effects=inscribe
+  source: 在影響格（可站立的格子）留下施放者專屬的符文：恰好帶一個 element（元素，例如雷紋、火紋）或 tag（標籤），持續 duration 個環境回合（省略為 core.yaml 的 rune_default_rounds，初值 3；上限 5）。符文本身沒有任何效果，敵我都看得到；只有刻下它的施放者讀得到（條件 on_own_rune、消耗型原語 detonate_runes）。同一施放者在同一格再刻一次是更新；同一施放者同時存在的符文格超過 rune_limit_per_owner（core.yaml，初值 6）時最舊的消失。施放者倒下時符文保留到時效結束。預算：base_points × inscribe_duration_permille（依 duration；省略＝預設 3 輪）。
+  player: 在範圍內可站立的格子刻下你專屬的符文（一種元素，或一個標籤），持續幾輪（最多 5）。符文本身沒有效果，敵我都看得到，只有你自己的技能能讀取或引爆它。同一格再刻一次會更新；你的符文超過上限時最舊的消失；你倒下時符文仍保留到時效結束。
+- id: 工坊.effects.effects=knock_prone
+  source: 對抗判定（技能的縮放屬性 vs 目標同屬性），成功才倒地。
+  player: 對抗判定（你這招的屬性對目標的同一屬性），成功就讓目標倒地。
+- id: 工坊.effects.effects=leap
+  source: 施放者跳到射程內的指定空格：無視中間的單位與低矮（落差不超過 1 層）的地形，不能越過同時擋住行動與視線的物件（石柱）與牆；落點須可站立、沒有單位、與起點的高度差不超過 1 層。不觸發藉機攻擊，不算「本回合移動過」，也不觸發 on_move 被動；落點的陷阱與表面照常結算。定身或倒地時不能跳。
+  player: 跳到射程內的一個空格：可以越過中間的單位和 1 層以內的高低差，不能越過牆和石柱這類又擋路又擋視線的東西。落點高度差不超過 1 層。不會引發藉機攻擊，不算「本回合移動過」；落點的陷阱和表面照常結算。定身或倒地時不能跳。
+- id: 工坊.effects.effects=place_trap
+  source: 在目標格放一個對放置者陣營以外隱藏的陷阱，同一格只能有一個。陷阱帶著同一技能其餘的效果（自動命中，狀態照常擲抵抗；施放者的屬性在放置時快照），敵人進入（trap.trigger enter）或延遲回合數到了（delay）時，以陷阱格為中心依 trap.shape 結算。需要技能的 trap 欄位。
+  player: 在目標格放一個敵人看不到的陷阱（一格只能有一個）。敵人踩到、或設定的回合數到了時，以陷阱為中心結算這招其他效果（自動命中，狀態照常可以抵抗；用放置時你的屬性）。
+- id: 工坊.effects.effects=pull.collision_dice
+  source: 撞擊傷害骰（省略時用核心規則 collision_damage_dice，初值 1d6）；預算每顆骰加 collision_die_points
+  player: 撞上東西時的撞擊傷害骰（不填就用通用的 1d6）。
+- id: 工坊.effects.effects=push
+  source: 以施放者（中心格型為中心）為原點往外推；被擋住時停在擋住前的格子，steadfast 減半。
+  player: 以你（或範圍中心）為起點把目標往外推。被擋住就停在前一格；穩固的目標只被推一半距離。
+- id: 工坊.effects.effects=push.collision_dice
+  source: 撞擊傷害骰（省略時用核心規則 collision_damage_dice，初值 1d6）；預算每顆骰加 collision_die_points
+  player: 撞上東西時的撞擊傷害骰（不填就用通用的 1d6）。
+- id: 工坊.effects.effects=redirect_damage
+  source: 目標友方（不含施放者自己）獲得狀態「靈魂連結」（soul_link）duration 回合：它受到的傷害有 permille‰（≤ 500）轉給施放者，直接扣施放者的 HP。與替隊友擋下整次攻擊（intercept）不同；兩者同時存在時先攔截，傷害落在守護者身上之後才看守護者有沒有連結。施放者倒下或離場時連結消失。
+  player: 和一個友方（不能是自己）建立「靈魂連結」：持續期間他受到的傷害有一部分（最多一半）轉到你身上。你倒下或離場時連結消失。和「替身」不同：替身是整次攻擊改打你。
+- id: 工坊.effects.effects=reset_cooldown
+  source: 目標友方（不含施放者自己）的技能冷卻歸零：which 為 all 時全部技能、tag 時只有帶 tag 標籤的技能；花源力的技能（cost.source）與這個技能本身不會被重置。沒有可重置的冷卻時不結算（effect_fizzled）。
+  player: 讓一個友方（不能是自己）的技能冷卻歸零：全部技能，或只限帶某個標籤的技能。花源力的技能和這招本身不受影響。
+- id: 工坊.effects.effects=reset_cooldown.which=tag
+  source: 只重置帶某個標籤的技能（另填 tag）
+  player: 只重置帶某個標籤的技能（要另外選標籤）。
+- id: 工坊.effects.effects=restore_resource
+  source: resource 為 mana：目標（自己或友方）回復 amount 點法力，不超過法力上限；為 cooldown：目標所有技能的冷卻 −amount（最多 2，下限 0）。冷卻不影響花源力的技能（cost.source），也不影響施放中的這個技能。目標沒有法力空間或沒有冷卻中的技能時發出 effect_fizzled。預算：法力每點 restore_mana_point_permille‰、冷卻每回合 restore_cooldown_points 點（skill_budget.yaml）。
+  player: 回復資源：回復目標（自己或友方）的法力，不超過上限；或讓目標所有技能的冷卻減少（最多 2 回合）。花源力的技能和這招本身的冷卻不受影響。
+- id: 工坊.effects.effects=restore_resource.resource
+  source: mana 回復法力、cooldown 縮短冷卻
+  player: 要回復什麼：法力，或縮短冷卻。
+- id: 工坊.effects.effects=restore_resource.resource=cooldown
+  source: 所有技能的冷卻 −amount 回合（最多 2）
+  player: 所有技能的冷卻減少幾回合（最多 2）。
+- id: 工坊.effects.effects=restore_resource.resource=mana
+  source: 回復 amount 點法力
+  player: 回復幾點法力。
+- id: 工坊.effects.effects=reveal
+  source: 揭露技能範圍內的敵人與陷阱（自動命中，不擲命中判定）：敵人失去 concealed 狀態（原因 revealed），並獲得 revealed 狀態 duration 回合——期間不算隱蔽（黑暗表面與草叢也不算）、不能再獲得 concealed；範圍內的敵方陷阱對施放者的陣營顯示（事件 trap_revealed，只給施放者的陣營）。範圍內沒有敵人也沒有敵方陷阱時發出 effect_fizzled（nothing_hidden）。預算：reveal_base_points ＋ reveal_round_points × duration。
+  player: 揭露範圍內的敵人和陷阱（自動命中）：敵人失去隱蔽，並在幾回合內不能再隱蔽（黑暗和草叢也沒用）；範圍內的敵方陷阱會讓你這邊看得到。
+- id: 工坊.effects.effects=revive
+  source: '目標必須是射程內倒下的友方（倒下的單位留在戰鬥狀態、保留位置，但不占格子）：目標以 hp_permille‰ 的最大 HP（至少 1）站起來，站回原位置；原格被占用、不能站立或是致命地形時，站到 core.yaml revive_landing_radius 格內最近的空格（距離相同依 (y, x) 順序），範圍內沒有空格就不能施放。每個單位每場最多被復活 1 次；召喚物不能被復活；倒下時已移除的狀態（姿態、以來源為依據的狀態）、陷阱、區域與召喚物不會恢復。事件 unit_revived。技能必須每場限一次（uses_per_battle: 1）或冷卻至少 rule_rewrite_min_cooldown 回合。只能搭配 single 形狀，其餘效果必須是 affects: self。預算：revive_base_points ＋ hp_permille × revive_hp_point_permille ÷ 1000。'
+  player: 讓射程內一個倒下的友方以一定比例的最大 HP 站起來（站回原位，被占住就站到附近的空格）。每個單位每場最多被復活一次；召喚物不能復活；倒下時失去的姿態、陷阱、區域和召喚物不會回來。這招必須每場限用一次或有長冷卻，只能搭配單體形狀。
+- id: 工坊.effects.effects=sacrifice_summon
+  source: 選射程內自己的一個召喚物（含圖騰；別人的、敵人的不行）作為獻祭：它立刻消失（原因「被獻祭」，不算倒下），並在它所在的位置以 radius 格（曼哈頓距離）為半徑結算一次——填了 element 是爆炸：範圍內所有敵人自動命中（不擲命中、不暴擊）受到 dice ＋ 縮放屬性 × 0.5 的 element 傷害（帶元素的傷害照常與表面、物件互動）；省略 element 是治療：範圍內的友方（含施放者，不含被獻祭的召喚物）回復 dice ＋ 縮放屬性 × 0.5 的 HP（受治療量修正）。只能用在主動技能，形狀 single。預算：骰子平均 × sacrifice_summon_permille（需要先有召喚物、且召喚物會消失的折扣）。
+  player: 獻祭射程內你自己的一個召喚物：它立刻消失，並在它的位置爆發——選了元素就是爆炸（範圍內的敵人自動受到傷害），沒選元素就是治療（範圍內的友方回復 HP，含你自己）。只能用在主動技能、單體形狀。
+- id: 工坊.effects.effects=shadowstep
+  source: 以射程內看得到的一個敵方單位為目標，施放者瞬間出現在他相鄰的格子（不經過中間的格子、不觸發藉機攻擊，也不觸發「敵人走進相鄰格」與監視射擊；不墜落），落地後面向目標。landing：choose 一般瞬步（形狀 unit_then_tile，兩段選取：敵人 → 他相鄰的空格，玩家自選）；behind 瞬步背刺類（形狀 single，固定落在目標的背後格；被占住或不可站立時改為目標相鄰的其他空格——先左右兩側、再正面，同距離依上、右、下、左的順序；都沒有就不能施放）。落點須可站立、沒有單位、不是致命地形，與目標的高度差不超過近戰上限。落點的陷阱與表面照常結算。之後的效果以落點結算，所以接在後面的近戰傷害會吃到背刺加成。不算「本回合移動過」，不觸發 on_move 被動。必須是技能的第一個效果；定身或倒地時不能施放。
+  player: 瞬步：瞬間出現在射程內一個敵人的身邊，不經過中間的格子、不會引發藉機攻擊或監視射擊，落地後面向他。可以自選他身邊的格子，或固定落在他背後（背後被占住就改到側面）。之後的效果從落點結算，所以接在後面的近戰攻擊會吃到背刺加成。不算「本回合移動過」。必須放在第一個效果；定身或倒地時不能用。
+- id: 工坊.effects.effects=shadowstep.landing
+  source: choose 玩家自選目標相鄰的空格；behind 固定落在目標的背後格
+  player: 落點：自選他身邊的空格，或固定落在他背後。
+- id: 工坊.effects.effects=shadowstep.landing=behind
+  source: 形狀 single：固定落在目標背後
+  player: 固定落在目標背後。
+- id: 工坊.effects.effects=shadowstep.landing=choose
+  source: 形狀 unit_then_tile：先選敵人，再選他相鄰的空格
+  player: 先選敵人，再選他身邊的一個空格。
+- id: 工坊.effects.effects=shield
+  source: 目標獲得吸收量＝骰值＋縮放屬性×0.5（與治療同一公式）的護盾（狀態 shielded，持續 2 回合）；骰值傷害先扣護盾。已有護盾時取較大值並刷新持續時間。
+  player: 目標獲得護盾，吸收量＝骰值＋屬性加成（和治療同一個算法），持續 2 回合；受到的傷害先扣護盾。已經有護盾時取較大的一個並刷新時間。
+- id: 工坊.effects.effects=steal_buff
+  source: 移除目標身上一個增益狀態（statuses.yaml 中 polarity 為 buff；有多個時取剩餘回合最長、同長依狀態 ID 排序），並以相同的剩餘回合與數值施加到施放者身上（已有同狀態時取較長者）。目標沒有增益時發出 effect_fizzled（no_buff）。
+  player: 偷走目標身上一個增益（剩餘回合最長的那個），以同樣的剩餘回合和數值加到你自己身上。
+- id: 工坊.effects.effects=swap
+  source: 施放者與目標單位（敵我皆可）交換位置。對敵人（affects 為 enemies）要過一般位移檢定（對抗判定：技能的縮放屬性 vs 目標同屬性；抵抗成功則不交換），不再另外擲命中；對友方（affects 為 allies）自動成功。不能和自己交換。交換後雙方的落點互動（表面、陷阱、致命地形、墜落）照常結算。不算「本回合移動過」，不觸發 on_move 被動。
+  player: 和一個單位（敵我都可以）交換位置。對敵人要過對抗判定（你這招的屬性對他的同一屬性），他抵抗成功就不換；對友方一定成功。換完後兩邊的落點效果（表面、陷阱、致命地形、墜落）照常結算。不算「本回合移動過」。
+- id: 工坊.effects.effects=topple
+  source: 推倒目標（射程內看得到的 topplable 物件，技能只能以物件為目標），往遠離施放者的方向倒下：從下一格起壓住 topple_length 格（rules/core.yaml），壓到的單位受 topple_damage_dice 物理傷害並倒地、壓到的 breakable 物件受同樣傷害，其他物件擋住倒下；原物件移除，最後一格產生倒塌物。互動的推、技能的推擊與風推到 topplable 物件時也一樣會推倒它（通用規則）。
+  player: 推倒射程內一根可推倒的物件（石柱、枯樹），往遠離你的方向倒下，壓住後面幾格：被壓到的單位受傷並倒地，被壓到的易碎物件也受損；原物件變成一堆倒塌物。
+- id: 工坊.effects.effects=zone
+  source: 在技能形狀的格子上建立持續 duration 輪的區域（施放者第 duration 次回合結束時消失，施放當回合不算；施放者不在場時於那一輪的環境回合消失）。anchor：tile 固定在施放時的格子、caster 跟隨施放者（形狀 self／ring／allies_in_radius，每次施放者移動就以新位置重新展開；施放者倒下或離場時消失）、moving 每次環境回合沿施放方向前進 speed 格（形狀 line／cone；前進到牆壁或地圖外的格子消失，全部消失時區域消失）。單位進入區域（區域建立、移動或跟隨到他身上也算；在區域內移動不算）或回合開始時站在區域內（when：enter／turn_start／both），依 affects（enemies／allies／all）對他結算 effects（1–2 個 damage／heal／shield／apply_status；自動命中，狀態照常擲抵抗，施放者屬性在建立時快照；施放者自己不受 all 的有害效果）。surface：區域新覆蓋的格子留下表面。同一施放者同時存在的區域超過 zone_limit_per_owner（core.yaml）時最舊的消失。必須是主動技能唯一的效果。
+  player: 在範圍內建立持續幾輪的區域。區域可以固定在原地、跟著你移動，或每回合往施放方向前進。單位走進區域、或回合開始時站在裡面，依設定對敵人或友方結算 1～2 個效果（傷害、治療、護盾或狀態；自動命中，狀態照常可以抵抗），也可以讓區域經過的格子留下表面。你自己不會被自己區域的有害效果打到。你的區域超過上限時最舊的消失。這招只能有這一個效果。
+- id: 工坊.effects.effects=zone.anchor=moving
+  source: 每次環境回合沿施放方向前進 speed 格
+  player: 區域每次環境回合往施放的方向前進幾格。
+- id: 工坊.effects.trap.trigger=delay
+  source: rounds 輪後觸發
+  player: 幾輪後自動觸發。
+- id: 工坊.shape.shape=allies_in_radius
+  source: 影響與施放者曼哈頓距離不超過 radius 的格子（含自己），不需要選取。
+  player: 以你為中心，一定距離內的所有格子（含你自己），不用選目標。
+- id: 工坊.shape.shape=chain
+  source: 選第一個目標，之後每跳選距上一個目標 jump_range 格內、看得到、尚未被擊中的最近同陣營單位（同距離依單位 ID），最多 jumps 跳。
+  player: 先選第一個目標，之後每一跳選上一個目標附近、看得到、還沒被打到的最近同陣營單位，最多跳幾次。
+- id: 工坊.shape.shape=line
+  source: 選一個方向，影響正前方 size 格；遇到牆壁停在它之前，遇到阻擋視線的物件則包含該格後停止。
+  player: 選一個方向，影響正前方幾格；碰到牆停在牆前，碰到擋視線的物件則包含那一格後停下。
+- id: 工坊.shape.shape=ring
+  source: 影響與施放者切比雪夫距離恰為 radius 的格子，不需要選取。
+  player: 以你為中心、剛好一定距離的一圈格子，不用選目標。
+- id: 工坊.variants.variants.add_effect=apply_status
+  source: 施加 statuses.yaml 中的狀態，重複施加時刷新持續時間。
+  player: 施加一個狀態。同一個狀態重複施加時，只刷新持續時間、不疊加。
+- id: 工坊.variants.variants.add_effect=knock_prone
+  source: 對抗判定（技能的縮放屬性 vs 目標同屬性），成功才倒地。
+  player: 對抗判定（你這招的屬性對目標的同一屬性），成功就讓目標倒地。
+- id: 工坊.variants.variants.add_effect=pull.collision_dice
+  source: 撞擊傷害骰（省略時用核心規則 collision_damage_dice，初值 1d6）；預算每顆骰加 collision_die_points
+  player: 撞上東西時的撞擊傷害骰（不填就用通用的 1d6）。
+- id: 工坊.variants.variants.add_effect=push
+  source: 以施放者（中心格型為中心）為原點往外推；被擋住時停在擋住前的格子，steadfast 減半。
+  player: 以你（或範圍中心）為起點把目標往外推。被擋住就停在前一格；穩固的目標只被推一半距離。
+- id: 工坊.variants.variants.add_effect=push.collision_dice
+  source: 撞擊傷害骰（省略時用核心規則 collision_damage_dice，初值 1d6）；預算每顆骰加 collision_die_points
+  player: 撞上東西時的撞擊傷害骰（不填就用通用的 1d6）。
+- id: 工坊.variants.variants.id
+  source: 小寫英文與底線，技能內不可重複（例：tide_pierce）
+  player: 這個型態的代號：小寫英文和底線，同一招裡不能重複（例：tide_pierce）。
+- id: 工坊.variants.variants.shape=allies_in_radius
+  source: 影響與施放者曼哈頓距離不超過 radius 的格子（含自己），不需要選取。
+  player: 以你為中心，一定距離內的所有格子（含你自己），不用選目標。
+- id: 工坊.variants.variants.shape=chain
+  source: 選第一個目標，之後每跳選距上一個目標 jump_range 格內、看得到、尚未被擊中的最近同陣營單位（同距離依單位 ID），最多 jumps 跳。
+  player: 先選第一個目標，之後每一跳選上一個目標附近、看得到、還沒被打到的最近同陣營單位，最多跳幾次。
+- id: 工坊.variants.variants.shape=line
+  source: 選一個方向，影響正前方 size 格；遇到牆壁停在它之前，遇到阻擋視線的物件則包含該格後停止。
+  player: 選一個方向，影響正前方幾格；碰到牆停在牆前，碰到擋視線的物件則包含那一格後停下。
+- id: 工坊.variants.variants.shape=ring
+  source: 影響與施放者切比雪夫距離恰為 radius 的格子，不需要選取。
+  player: 以你為中心、剛好一定距離的一圈格子，不用選目標。
+- id: 形狀.allies_in_radius
+  source: 影響與施放者曼哈頓距離不超過 radius 的格子（含自己），不需要選取。
+  player: 以你為中心，一定距離內的所有格子（含你自己），不用選目標。
+- id: 形狀.chain
+  source: 選第一個目標，之後每跳選距上一個目標 jump_range 格內、看得到、尚未被擊中的最近同陣營單位（同距離依單位 ID），最多 jumps 跳。
+  player: 先選第一個目標，之後每一跳選上一個目標附近、看得到、還沒被打到的最近同陣營單位，最多跳幾次。
+- id: 形狀.line
+  source: 選一個方向，影響正前方 size 格；遇到牆壁停在它之前，遇到阻擋視線的物件則包含該格後停止。
+  player: 選一個方向，影響正前方幾格；碰到牆停在牆前，碰到擋視線的物件則包含那一格後停下。
+- id: 形狀.ring
+  source: 影響與施放者切比雪夫距離恰為 radius 的格子，不需要選取。
+  player: 以你為中心、剛好一定距離的一圈格子，不用選目標。
+- id: 條件.on_own_rune
+  source: 目標所在的格子上有施放者自己（用 inscribe）刻下的符文；可用 element 或 tag 篩選符文（省略＝任何符文）。別人的符文不算；對格子判斷，所以也可以用在沒有單位的格子。
+  player: 目標所在的格子上有你自己刻的符文（可以限定某種元素或標籤）。別人的符文不算；沒有單位的空格也能判斷。
+- id: 條件.self_concealed
+  source: 施放者帶有「隱蔽」狀態（concealed；站在黑暗或草叢中不算）。隱蔽中發動攻擊另有通用的命中加成，攻擊結算完後脫離隱蔽。
+  player: 你處於「隱蔽」狀態時才成立（站在黑暗或草叢裡不算）。
+- id: 條件.self_hp_below
+  source: 施放者的目前 HP ÷ 最大 HP 低於 permille ‰。
+  player: 你目前的 HP 低於最大 HP 的某個比例時才成立。
+- id: 條件.target_hp_below
+  source: 目標的目前 HP ÷ 最大 HP 低於 permille ‰。
+  player: 目標目前的 HP 低於最大 HP 的某個比例時才成立。
+- id: 觸發.on_cast_tag
+  source: 持有者施放一個帶 trigger.tag 標籤的技能（含修正規則加上的標籤；不含被動觸發與陷阱），在該技能結算之後。沒有另一方，效果作用在持有者。
+  player: 你施放帶某個標籤的技能、結算完之後觸發（被動觸發和陷阱不算）。效果作用在你自己身上。
+- id: 觸發.on_enter_surface
+  source: 敵方單位步行或被強制位移（傳送不算）進入持有者造出的表面；回合開始站在上面、表面出現在腳下都不算。trigger.surface 省略時任何表面都算。另一方為進入的單位。
+  player: 敵人走進、或被推進你造出來的表面時觸發（傳送不算；回合開始站在上面、表面出現在腳下都不算）。可以限定某種表面。
+- id: 觸發.on_status_applied
+  source: 持有者成功對其他單位施加狀態（抵抗成功、對自己施加都不算；刷新持續時間算）。trigger.status 省略時任何狀態都算。另一方為被施加的單位。
+  player: 你成功對別人施加狀態時觸發（被抵抗、對自己施加都不算；刷新持續時間也算）。可以限定某種狀態。
