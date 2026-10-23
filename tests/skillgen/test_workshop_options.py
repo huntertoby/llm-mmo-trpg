@@ -249,7 +249,7 @@ def test_rarity_step_derives_the_minimum_rarity() -> None:
     rarity = _step(draft_options(draft, lib), "rarity")
     assert [c.value for c in _field(rarity, "rarity").choices] == ["rare", "epic"]
     assert "最低稀有度：稀有" in rarity.notes_zh
-    assert "原語 knock_prone：至少稀有" in rarity.notes_zh
+    assert "原語 擊倒：至少稀有" in rarity.notes_zh
 
 
 def test_legendary_source_is_offered_only_with_a_legendary_core() -> None:

@@ -30,6 +30,7 @@ from trpg.skillgen.option_followup import followup_visible
 from trpg.skillgen.option_models import STEP_IDS, StepId
 from trpg.skillgen.option_variant import variants_visible
 from trpg.skillgen.options import draft_options, minimum_rarity
+from trpg.skillgen.player_text import plain_name, plainify
 from trpg.skillgen.validate import validate_skill
 
 __all__ = [
@@ -160,11 +161,18 @@ def _verdict(report: BudgetReport) -> tuple[str, str]:
     return "ok", "合格"
 
 
-def _line(e: EffectBudget) -> BudgetLine:
+def _zh(text: str, library: ContentLibrary | None, *, name: bool = False) -> str:
+    """玩家看的文字換成中文（3-48）；沒有內容庫（CLI 等）時原樣。"""
+    if library is None:
+        return text
+    return plain_name(text, library) if name else plainify(text, library)
+
+
+def _line(e: EffectBudget, library: ContentLibrary | None = None) -> BudgetLine:
     return BudgetLine(
         index=e.index,
-        type=e.type,
-        note=e.note,
+        type=_zh(e.type, library, name=True),
+        note=_zh(e.note, library),
         base=_f(e.base),
         shape=_f(e.shape),
         target=_f(e.target),
@@ -173,19 +181,24 @@ def _line(e: EffectBudget) -> BudgetLine:
     )
 
 
-def _synergy_text(synergies: tuple[tuple[tuple[str, ...], Fraction], ...]) -> tuple[str, ...]:
-    return tuple(f"{'+'.join(tags)} ×{float(c):g}" for tags, c in synergies)
+def _synergy_text(
+    synergies: tuple[tuple[tuple[str, ...], Fraction], ...], library: ContentLibrary | None = None
+) -> tuple[str, ...]:
+    return tuple(
+        f"{'+'.join(_zh(t, library, name=True) for t in tags)} ×{float(c):g}"
+        for tags, c in synergies
+    )
 
 
-def _segment_line(segment: SegmentBudget) -> SegmentLine:
+def _segment_line(segment: SegmentBudget, library: ContentLibrary | None = None) -> SegmentLine:
     return SegmentLine(
         label=segment.label,
-        skeleton=segment.skeleton,
-        shape=segment.shape,
-        lines=tuple(_line(e) for e in segment.effects),
+        skeleton=_zh(segment.skeleton, library, name=True),
+        shape=_zh(segment.shape, library, name=True),
+        lines=tuple(_line(e, library) for e in segment.effects),
         raw=_f(segment.raw),
         condition_multiplier=_f(segment.condition_multiplier),
-        synergies=_synergy_text(segment.synergies),
+        synergies=_synergy_text(segment.synergies, library),
         total=_f(segment.total),
         chance_permille=segment.chance_permille,
     )
@@ -206,13 +219,13 @@ def _variant_line(v: VariantBudget) -> VariantLine:
     )
 
 
-def budget_summary(report: BudgetReport) -> BudgetSummary:
+def budget_summary(report: BudgetReport, library: ContentLibrary | None = None) -> BudgetSummary:
     verdict, verdict_zh = _verdict(report)
     return BudgetSummary(
-        lines=tuple(_line(e) for e in report.effects),
+        lines=tuple(_line(e, library) for e in report.effects),
         raw=_f(report.raw),
         condition_multiplier=_f(report.condition_multiplier),
-        synergies=_synergy_text(report.synergies),
+        synergies=_synergy_text(report.synergies, library),
         total=_f(report.total),
         tier_budget=report.tier_budget,
         coefficient_label=report.coefficient_label,
@@ -226,10 +239,10 @@ def budget_summary(report: BudgetReport) -> BudgetSummary:
         max_ratio=_f(report.max_ratio),
         verdict=verdict,
         verdict_zh=verdict_zh,
-        segments=tuple(_segment_line(s) for s in report.segments),
+        segments=tuple(_segment_line(s, library) for s in report.segments),
         composite_tax_permille=report.composite_tax_permille,
         self_combo_permille=report.self_combo_permille,
-        self_combo_reasons=report.self_combo_reasons,
+        self_combo_reasons=tuple(_zh(r, library) for r in report.self_combo_reasons),
         variants=tuple(_variant_line(v) for v in report.variants),
         variant_surcharge_permille=report.variant_surcharge_permille,
     )
@@ -237,10 +250,11 @@ def budget_summary(report: BudgetReport) -> BudgetSummary:
 
 def _complete_check(skill: SkillDef, library: ContentLibrary) -> DraftCheck:
     problems = tuple(
-        Problem(rule=v.rule, message_zh=v.message) for v in validate_skill(skill, library)
+        Problem(rule=v.rule, message_zh=plainify(v.message, library))
+        for v in validate_skill(skill, library)
     )
     try:
-        budget: BudgetSummary | None = budget_summary(skill_budget(skill, library))
+        budget: BudgetSummary | None = budget_summary(skill_budget(skill, library), library)
     except BudgetError:
         budget = None
     floor = minimum_rarity(skill, library)
@@ -251,7 +265,7 @@ def _complete_check(skill: SkillDef, library: ContentLibrary) -> DraftCheck:
         problems=problems,
         budget=budget,
         minimum_rarity=floor.minimum,
-        rarity_reasons=floor.reasons,
+        rarity_reasons=tuple(plainify(r, library) for r in floor.reasons),
         skill=skill.model_dump(mode="json", exclude_none=True),
     )
 
@@ -280,7 +294,9 @@ def check_draft(draft: Draft, library: ContentLibrary) -> DraftCheck:
     try:
         skill = build_skill(draft)
     except DraftError as exc:
-        problems = tuple(Problem(rule="schema", message_zh=m) for m in exc.messages)
+        problems = tuple(
+            Problem(rule="schema", message_zh=plainify(m, library)) for m in exc.messages
+        )
         extra = tuple(Problem(rule="draft", message_zh=p) for p in options.problems)
         return DraftCheck(
             complete=True,

@@ -51,6 +51,7 @@ from trpg.content.skills import (
 from trpg.shared.types import Attribute
 from trpg.skillgen.draft import Draft, DraftError, build_skill, draft_skeleton, step_complete
 from trpg.skillgen.option_conform import field_problems
+from trpg.skillgen.player_text import plainify
 from trpg.skillgen.option_fill import variants
 from trpg.skillgen.option_followup import (
     FOLLOWUP_SKELETON,
@@ -137,7 +138,7 @@ STEP_TEXT: dict[StepId, tuple[str, str]] = {
     ),
 }
 _ACTION_TEXT = {"attack": "普攻", "shove": "推擊", "trip": "絆倒", "interact": "互動"}
-_CHANGE_TEXT: dict[str, str] = {
+CHANGE_TEXT: dict[str, str] = {
     "damage_permille": "傷害 ±‰",
     "hit_bonus": "命中 ±",
     "cooldown_delta": "命中後冷卻 −1／−2",
@@ -703,7 +704,7 @@ def _effect_choices(draft: Draft, library: ContentLibrary, skeleton: SkeletonDef
             candidates.append(choice)
     base = _probe_base(draft)
     if not _base_accepts_something(base, candidates):
-        return candidates  # 前面的步驟本身就組不起來（見 problems），不再試組
+        return candidates  # 前面的步驟本身就組不起來（見檢查結果的問題清單），不再試組
     existing = [dict(_mapping(e)) for e in draft.get("effects") or ()]
     out: list[Choice] = []
     for choice in candidates:
@@ -716,7 +717,7 @@ def _effect_choices(draft: Draft, library: ContentLibrary, skeleton: SkeletonDef
     return out
 
 
-def _trap_field() -> FieldSpec:
+def _trap_field(library: ContentLibrary) -> FieldSpec:
     fields = TrapSpec.model_fields
     low, high = model_range(fields["rounds"])
     return FieldSpec(
@@ -740,7 +741,10 @@ def _trap_field() -> FieldSpec:
                 field="shape",
                 name_zh="觸發範圍",
                 type="choice",
-                choices=tuple(Choice(value=s, name_zh=s) for s in _TRAP_SHAPES),
+                choices=tuple(
+                    Choice(value=s, name_zh=library.ruleset.shapes.by_id()[s].name_zh)
+                    for s in _TRAP_SHAPES
+                ),
                 default="single",
             ),
         ),
@@ -814,7 +818,7 @@ def _effects_step(draft: Draft, library: ContentLibrary, skeleton: SkeletonDef) 
         )
     ]
     if any(c.value == "place_trap" for c in choices):
-        fields.append(_trap_field())
+        fields.append(_trap_field(library))
     return _step("effects", draft, library, tuple(fields), _effects_notes(skeleton, library))
 
 
@@ -825,7 +829,7 @@ def _change_field(name: str, library: ContentLibrary, category: str | None) -> F
     when = "；選目標之前就決定，條件只能是自身血量" if name in SELF_ONLY_CHANGES else ""
     base: dict[str, Any] = {
         "field": name,
-        "name_zh": _CHANGE_TEXT[name],
+        "name_zh": CHANGE_TEXT[name],
         "description_zh": f"可套用：{targets}{when}",
     }
     if name == "add_element":
@@ -839,7 +843,10 @@ def _change_field(name: str, library: ContentLibrary, category: str | None) -> F
         value = FieldSpec(
             **base,
             type="choice",
-            choices=tuple(Choice(value=s, name_zh=s) for s in ("line", "chain", "cone")),
+            choices=tuple(
+                Choice(value=s, name_zh=library.ruleset.shapes.by_id()[s].name_zh)
+                for s in ("line", "chain", "cone")
+            ),
         )
     elif name == "add_tags":
         value = FieldSpec(**base, type="tags", min_count=1, max_count=3)
@@ -1151,7 +1158,7 @@ def _rarity_step(draft: Draft, library: ContentLibrary) -> StepOptions:
         notes.append(f"最低稀有度：{RARITY_TEXT[floor.minimum]}")
         notes += floor.reasons
     else:
-        notes.append("技能定義還有錯誤，無法推導稀有度（見 problems）")
+        notes.append("技能定義還有錯誤，無法推導稀有度（見檢查結果的問題清單）")
     if not paid:
         notes.append("傳說技能要在代價步驟填源力")
     dual = library.ruleset.core.dual_scaling_min_rarity
@@ -1208,4 +1215,8 @@ def draft_options(draft: Draft, library: ContentLibrary) -> DraftOptions:
         if not step.complete:
             next_step = step_id
             break
+    steps = [
+        s.model_copy(update={"notes_zh": tuple(plainify(n, library) for n in s.notes_zh)})
+        for s in steps
+    ]
     return DraftOptions(steps=tuple(steps), next_step=next_step, problems=tuple(problems))

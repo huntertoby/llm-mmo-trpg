@@ -68,7 +68,7 @@ def test_skeleton_violation_names_the_skeleton_rule() -> None:
     draft = _draft(STRIKE) | {"shape": {"type": "cone", "size": 3}}
     rules = _rules(draft)
     assert "skeleton.shape" in rules
-    assert rules["skeleton.shape"].startswith("骨架 strike：形狀只能是 single、unit_then_tile")
+    assert rules["skeleton.shape"].startswith("骨架 打擊：形狀只能是 單體、單位與落點")
 
 
 def test_exclusion_violation_names_the_exclusion_rule() -> None:
@@ -81,17 +81,17 @@ def test_exclusion_violation_names_the_exclusion_rule() -> None:
     }
     rules = _rules(draft)
     assert rules["exclusion.no_push_with_pull"].startswith(
-        "互斥規則「推拉不並存」：同一技能不得同時有 push 與 pull"
+        "互斥規則「推拉不並存」：同一技能不得同時有 推擊 與 拉扯"
     )
 
 
 def test_minimum_rarity_violation_and_reasons() -> None:
     draft = _draft(STRIKE) | {"rarity": "common"}
     rules = _rules(draft)
-    assert rules["rarity.primitive"] == "稀有度 common 不能使用原語 knock_prone（至少需要 rare）"
+    assert rules["rarity.primitive"] == "稀有度 普通 不能使用原語 擊倒（至少需要 稀有）"
     result = check_draft(draft, library())
     assert result.minimum_rarity == "rare"
-    assert result.rarity_reasons == ("原語 knock_prone：至少稀有",)
+    assert result.rarity_reasons == ("原語 擊倒：至少稀有",)
 
 
 def test_partial_skill_reports_the_missing_steps() -> None:

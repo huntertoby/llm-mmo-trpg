@@ -49,7 +49,7 @@ def variant_notes(draft: Draft, library: ContentLibrary) -> tuple[str, ...]:
         f"基礎型態每多一個變奏預算多算 {rate / 10:g}%；每個型態各自都要落在預算窗內",
         f"變奏的射程每 +1 格，該型態多算基礎點數的 {step / 10:g}%（−1 不折抵）",
         "替換內容填 1～2 項；不能改 AP、冷卻、代價；帶變奏的技能不能含區域、延遲傷害、複製技能",
-        "替換既有附帶效果（replace_effect）請用進階 YAML",
+        "替換既有附帶效果請用進階 YAML",
     )
 
 

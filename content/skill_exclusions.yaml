@@ -36,7 +36,7 @@ rules:
     name_zh: 傷害與友方治療不並存
     # 3D-8a 放寬：吸血（damage 的 lifesteal_permille）與聖光雙效（damage 的 split_heal，affects: all）是傷害效果自己的欄位、
     # 不是 heal 效果，所以不受此規則限制；其他「對敵傷害 ＋ 對友治療」的組合仍然禁止。
-    message_zh: 同一技能不得同時有對敵方的 damage 與對友方的 heal（屬於不同骨架）；吸血（lifesteal_permille）與聖光雙效（split_heal）不在此限
+    message_zh: 同一技能不得同時有對敵方的 damage 與對友方的 heal（屬於不同骨架）；吸血與聖光雙效不在此限
     forbid:
       effects_all:
         - {type: damage, affects: [enemies]}

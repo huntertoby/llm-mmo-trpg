@@ -2453,7 +2453,7 @@ class SkillDef(ContentModel):
             try:
                 self.variant_form(variant.id)
             except ValueError as exc:
-                raise ValueError(f"變奏 {variant.id}：{exc}") from None
+                raise ValueError(f"變奏「{variant.name_zh}」：{exc}") from None
 
     def iter_effects(
         self,
@@ -2495,21 +2495,21 @@ class SkillDef(ContentModel):
         swap = variant.replace_effect
         if swap is not None:
             if len(self.effects) == 1:
-                raise ValueError(f"變奏 {variant.id}：唯一的效果不能被 replace_effect 換掉")
+                raise ValueError(f"變奏「{variant.name_zh}」：唯一的效果不能被 replace_effect 換掉")
             if swap.index >= len(self.effects):
                 raise ValueError(
-                    f"變奏 {variant.id}：replace_effect.index {swap.index} 超出效果數"
+                    f"變奏「{variant.name_zh}」：replace_effect.index {swap.index} 超出效果數"
                     f" {len(self.effects)}"
                 )
             if swap.index == main:
-                raise ValueError(f"變奏 {variant.id}：主傷害（第 {main} 個效果）不能被換掉")
+                raise ValueError(f"變奏「{variant.name_zh}」：主傷害（第 {main} 個效果）不能被換掉")
         if variant.element is not None and main is None:
-            raise ValueError(f"變奏 {variant.id}：沒有傷害效果，不能換元素（element）")
+            raise ValueError(f"變奏「{variant.name_zh}」：沒有傷害效果，不能換元素（element）")
         if variant.range_delta is not None:
             shape = variant.shape or self.shape
             if not isinstance(shape.range, int):
                 raise ValueError(
-                    f"變奏 {variant.id}：range_delta 只能用在射程是數字的形狀，"
+                    f"變奏「{variant.name_zh}」：range_delta 只能用在射程是數字的形狀，"
                     f"收到 {shape.type} 的射程 {shape.range!r}"
                 )
 
