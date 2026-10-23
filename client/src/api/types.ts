@@ -34,6 +34,8 @@ export type IconSegment = Schemas["IconSegment"];
 /** 技能製造與利用的關鍵字（Phase 3-24b1；`SkillCard.keywords`、`WorkshopCheck.keywords`）。 */
 export type SkillKeywords = Schemas["SkillCardKeywords"];
 export type KeywordRef = Schemas["KeywordRef"];
+/** 召喚技能卡可展開的「召喚物資訊」（Phase 3-41a；`SkillCard.summons`）。 */
+export type SummonInfoCard = Schemas["SummonInfoCard"];
 /** 戰場變奏（Phase 3-25b）：技能卡上的一個型態、技能列目前生效的型態、預覽的型態、工坊的各型態預算。 */
 export type SkillVariantCard = Schemas["SkillVariantCard"];
 export type VariantState = Schemas["VariantStateOut"];

@@ -2485,6 +2485,13 @@ export interface components {
              * @default false
              */
             variant: boolean;
+            /**
+             * General
+             * @default false
+             */
+            general: boolean;
+            /** Reason Zh */
+            reason_zh?: string | null;
         };
         /**
          * LeaveChoice
@@ -3407,6 +3414,16 @@ export interface components {
              * @default []
              */
             variants: components["schemas"]["SkillVariantCard"][];
+            /**
+             * Summons
+             * @default []
+             */
+            summons: components["schemas"]["SummonInfoCard"][];
+            /**
+             * Skeleton Zh
+             * @default
+             */
+            skeleton_zh: string;
             growth?: components["schemas"]["SkillLevelInfo"] | null;
         };
         /**
@@ -3759,6 +3776,37 @@ export interface components {
                 [key: string]: unknown;
             }[];
             view: components["schemas"]["BattleView"];
+        };
+        /**
+         * SummonInfoCard
+         * @description 技能卡可展開的「召喚物資訊」（清單 1.8）：全部由範本與規則產生的文字。
+         */
+        SummonInfoCard: {
+            /** Id */
+            id: string;
+            /** Name Zh */
+            name_zh: string;
+            /**
+             * Count
+             * @default 1
+             */
+            count: number;
+            /** Hp */
+            hp: number;
+            /** Hp Note */
+            hp_note: string;
+            /** Move */
+            move: string;
+            /** Defense */
+            defense: string;
+            /** Attack */
+            attack: string;
+            /** Innate */
+            innate: string[];
+            /** Behavior */
+            behavior: string[];
+            /** Infusion */
+            infusion: string;
         };
         /**
          * SummonLookView

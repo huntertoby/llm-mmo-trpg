@@ -491,7 +491,7 @@
   {
    "id": "burning",
    "name_zh": "燃燒",
-   "description_zh": "回合開始時受到 1d6 火焰傷害，持續 2 回合；重複施加時刷新持續時間。",
+   "description_zh": "身上著火，每回合開始時受到火焰傷害；重複施加時刷新持續時間。",
    "tags": [],
    "status_look": {
     "polarity": "debuff",
@@ -502,7 +502,9 @@
     "absorbs_damage": false,
     "prevents_move": false
    },
-   "rules_zh": []
+   "rules_zh": [
+    "回合開始時受到 1d6 火焰傷害"
+   ]
   },
   {
    "id": "concealed",
@@ -525,7 +527,7 @@
   {
    "id": "revealed",
    "name_zh": "被揭露",
-   "description_zh": "不算隱蔽（黑暗與草叢也一樣），也不能再獲得隱蔽。只能由揭露（reveal）施加。",
+   "description_zh": "不算隱蔽（黑暗與草叢也一樣），也不能再獲得隱蔽。只能由揭露效果施加。",
    "tags": [],
    "status_look": {
     "polarity": "debuff",
@@ -559,7 +561,7 @@
   {
    "id": "time_bomb",
    "name_zh": "定時炸彈",
-   "description_zh": "身上綁著定時炸彈，剩餘回合就是倒數（每次環境回合 −1）：歸零時在身體當下的位置爆炸，波及周圍；倒下時也會立即爆炸。可被淨化移除，驅散不移除。只能由定時炸彈（delayed_damage）施加。",
+   "description_zh": "身上綁著定時炸彈，剩餘回合就是倒數（每次環境回合 −1）：歸零時在身體當下的位置爆炸，波及周圍；倒下時也會立即爆炸。可被淨化移除，驅散不移除。只能由定時炸彈效果施加。",
    "tags": [],
    "status_look": {
     "polarity": "debuff",
@@ -604,7 +606,10 @@
     "absorbs_damage": false,
     "prevents_move": false
    },
-   "rules_zh": []
+   "rules_zh": [
+    "抵抗：由技能或動作施加在敵人身上時，目標以敏捷對抗施放者的技能屬性，成功就不會被施加（對友方、表面與環境造成的不擲抵抗）",
+    "控制遞減（移動類）：成功施加後 2 輪內，同類控制的抵抗判定中目標的屬性 ×1.5"
+   ]
   },
   {
    "id": "root",
@@ -620,7 +625,10 @@
     "absorbs_damage": false,
     "prevents_move": true
    },
-   "rules_zh": []
+   "rules_zh": [
+    "抵抗：由技能或動作施加在敵人身上時，目標以力量對抗施放者的技能屬性，成功就不會被施加（對友方、表面與環境造成的不擲抵抗）",
+    "控制遞減（移動類）：成功施加後 2 輪內，同類控制的抵抗判定中目標的屬性 ×1.5"
+   ]
   },
   {
    "id": "stun",
@@ -636,12 +644,16 @@
     "absorbs_damage": false,
     "prevents_move": false
    },
-   "rules_zh": []
+   "rules_zh": [
+    "抵抗：由技能或動作施加在敵人身上時，目標以體質對抗施放者的技能屬性，成功就不會被施加（對友方、表面與環境造成的不擲抵抗）",
+    "控制遞減（硬控）：成功施加後 2 輪內，同類控制的抵抗判定中目標的屬性 ×1.5",
+    "對 Boss：改為施加「緩速」（持續時間不變）"
+   ]
   },
   {
    "id": "frozen",
    "name_zh": "冰凍",
-   "description_zh": "跳過整個回合（同暈眩，與暈眩共用硬控的控制遞減）；受到火焰傷害時立即解除。",
+   "description_zh": "跳過整個回合（同暈眩，與暈眩共用硬控的控制遞減）。",
    "tags": [],
    "status_look": {
     "polarity": "debuff",
@@ -654,7 +666,12 @@
     "absorbs_damage": false,
     "prevents_move": false
    },
-   "rules_zh": []
+   "rules_zh": [
+    "受到火焰傷害時立即解除",
+    "抵抗：由技能或動作施加在敵人身上時，目標以體質對抗施放者的技能屬性，成功就不會被施加（對友方、表面與環境造成的不擲抵抗）",
+    "控制遞減（硬控）：成功施加後 2 輪內，同類控制的抵抗判定中目標的屬性 ×1.5",
+    "對 Boss：改為施加「緩速」（持續時間不變）"
+   ]
   },
   {
    "id": "weaken",
@@ -670,7 +687,9 @@
     "absorbs_damage": false,
     "prevents_move": false
    },
-   "rules_zh": []
+   "rules_zh": [
+    "抵抗：由技能或動作施加在敵人身上時，目標以體質對抗施放者的技能屬性，成功就不會被施加（對友方、表面與環境造成的不擲抵抗）"
+   ]
   },
   {
    "id": "vulnerable",
@@ -686,12 +705,14 @@
     "absorbs_damage": false,
     "prevents_move": false
    },
-   "rules_zh": []
+   "rules_zh": [
+    "抵抗：由技能或動作施加在敵人身上時，目標以意志對抗施放者的技能屬性，成功就不會被施加（對友方、表面與環境造成的不擲抵抗）"
+   ]
   },
   {
    "id": "armor_broken",
    "name_zh": "破甲",
-   "description_zh": "防禦值降低（幅度由武器決定，斧為 10%）。",
+   "description_zh": "防禦值降低。",
    "tags": [],
    "status_look": {
     "polarity": "debuff",
@@ -702,12 +723,14 @@
     "absorbs_damage": false,
     "prevents_move": false
    },
-   "rules_zh": []
+   "rules_zh": [
+    "防禦值降低的幅度依武器：斧 10%（1 回合）"
+   ]
   },
   {
    "id": "bleed",
    "name_zh": "流血",
-   "description_zh": "回合開始時受到 1d4 物理傷害，持續 3 回合。",
+   "description_zh": "傷口流血，每回合開始時受到物理傷害。",
    "tags": [],
    "status_look": {
     "polarity": "debuff",
@@ -718,12 +741,15 @@
     "absorbs_damage": false,
     "prevents_move": false
    },
-   "rules_zh": []
+   "rules_zh": [
+    "回合開始時受到 1d4 物理傷害",
+    "抵抗：由技能或動作施加在敵人身上時，目標以體質對抗施放者的技能屬性，成功就不會被施加（對友方、表面與環境造成的不擲抵抗）"
+   ]
   },
   {
    "id": "poison",
    "name_zh": "中毒",
-   "description_zh": "回合開始時受到 1d4 毒素傷害，持續 3 回合；受到的治療減半。",
+   "description_zh": "中毒，每回合開始時受到毒素傷害；受到的治療減半。",
    "tags": [],
    "status_look": {
     "polarity": "debuff",
@@ -734,7 +760,10 @@
     "absorbs_damage": false,
     "prevents_move": false
    },
-   "rules_zh": []
+   "rules_zh": [
+    "回合開始時受到 1d4 毒素傷害",
+    "抵抗：由技能或動作施加在敵人身上時，目標以體質對抗施放者的技能屬性，成功就不會被施加（對友方、表面與環境造成的不擲抵抗）"
+   ]
   },
   {
    "id": "guarded",
@@ -811,7 +840,7 @@
   {
    "id": "regenerating",
    "name_zh": "再生",
-   "description_zh": "回合開始時恢復 1d4 HP，持續 3 回合。",
+   "description_zh": "每回合開始時恢復 HP。",
    "tags": [
     "beneficial"
    ],
@@ -824,7 +853,9 @@
     "absorbs_damage": false,
     "prevents_move": false
    },
-   "rules_zh": []
+   "rules_zh": [
+    "回合開始時恢復 1d4 HP"
+   ]
   },
   {
    "id": "shielded",
@@ -894,7 +925,10 @@
     "absorbs_damage": false,
     "prevents_move": false
    },
-   "rules_zh": []
+   "rules_zh": [
+    "抵抗：由技能或動作施加在敵人身上時，目標以意志對抗施放者的技能屬性，成功就不會被施加（對友方、表面與環境造成的不擲抵抗）",
+    "控制遞減（心智類）：成功施加後 2 輪內，同類控制的抵抗判定中目標的屬性 ×1.5"
+   ]
   },
   {
    "id": "feared",
@@ -910,7 +944,10 @@
     "absorbs_damage": false,
     "prevents_move": false
    },
-   "rules_zh": []
+   "rules_zh": [
+    "抵抗：由技能或動作施加在敵人身上時，目標以感知對抗施放者的技能屬性，成功就不會被施加（對友方、表面與環境造成的不擲抵抗）",
+    "控制遞減（心智類）：成功施加後 2 輪內，同類控制的抵抗判定中目標的屬性 ×1.5"
+   ]
   },
   {
    "id": "silenced",
@@ -926,7 +963,10 @@
     "absorbs_damage": false,
     "prevents_move": false
    },
-   "rules_zh": []
+   "rules_zh": [
+    "抵抗：由技能或動作施加在敵人身上時，目標以意志對抗施放者的技能屬性，成功就不會被施加（對友方、表面與環境造成的不擲抵抗）",
+    "控制遞減（心智類）：成功施加後 2 輪內，同類控制的抵抗判定中目標的屬性 ×1.5"
+   ]
   },
   {
    "id": "blinded",
@@ -942,7 +982,9 @@
     "absorbs_damage": false,
     "prevents_move": false
    },
-   "rules_zh": []
+   "rules_zh": [
+    "抵抗：由技能或動作施加在敵人身上時，目標以感知對抗施放者的技能屬性，成功就不會被施加（對友方、表面與環境造成的不擲抵抗）"
+   ]
   },
   {
    "id": "marked",
@@ -958,7 +1000,9 @@
     "absorbs_damage": false,
     "prevents_move": false
    },
-   "rules_zh": []
+   "rules_zh": [
+    "抵抗：由技能或動作施加在敵人身上時，目標以感知對抗施放者的技能屬性，成功就不會被施加（對友方、表面與環境造成的不擲抵抗）"
+   ]
   },
   {
    "id": "stance_fury",
@@ -1001,42 +1045,52 @@
   {
    "id": "static_charge",
    "name_zh": "靜電",
-   "description_zh": "累積在施放者自己身上的蓄能；雷霆終結消耗全部靜電，每層提高傷害。",
+   "description_zh": "累積在施放者自己身上的蓄能；消耗靜電的技能每層提高傷害。",
    "tags": [
     "self"
    ],
    "status_look": null,
-   "rules_zh": []
+   "rules_zh": [
+    "上限依來源（技能卡與裝備詞條各自寫明；最多 5 層）"
+   ]
   },
   {
    "id": "sunder",
    "name_zh": "破甲印",
-   "description_zh": "疊在被命中的目標身上的印記；碎甲重擊消耗目標身上的全部破甲印，每層提高傷害。3 輪沒有再疊就清空。",
+   "description_zh": "疊在被命中的目標身上的印記；消耗破甲印的技能每層提高傷害。",
    "tags": [
     "target"
    ],
    "status_look": null,
-   "rules_zh": []
+   "rules_zh": [
+    "上限依來源（技能卡與裝備詞條各自寫明；最多 3 層）",
+    "3 輪沒有再累積就清空"
+   ]
   },
   {
    "id": "overload_surge",
    "name_zh": "過載電流",
-   "description_zh": "累積在施放者自己身上的電流；每層讓你帶「overcurrent」標籤的技能傷害 +20%，累積到 5 層時你立刻被雷擊（2d6 雷電傷害，不致命）並清空全部層數。",
+   "description_zh": "累積在施放者自己身上的電流；層數越多過載類技能越強，但累積太多會反噬自己。",
    "tags": [
     "self"
    ],
    "status_look": null,
-   "rules_zh": []
+   "rules_zh": [
+    "上限依來源（技能卡與裝備詞條各自寫明；最多 5 層）",
+    "超載：每層讓你帶「過載」標籤的技能傷害 +20%；累積到 5 層時你受到 2d6 雷電傷害（不致命）並清空層數"
+   ]
   },
   {
    "id": "fury",
    "name_zh": "怒氣",
-   "description_zh": "累積在持有者自己身上的怒氣（受到傷害時 +1 層）；裝備的充能詞條花滿層啟動強化。",
+   "description_zh": "累積在持有者自己身上的怒氣；裝備的充能詞條花掉層數啟動效果。",
    "tags": [
     "self"
    ],
    "status_look": null,
-   "rules_zh": []
+   "rules_zh": [
+    "上限依來源（技能卡與裝備詞條各自寫明；最多 4 層）"
+   ]
   }
  ],
  "reactions": [
