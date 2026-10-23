@@ -74,7 +74,7 @@ export function RandomPanel({ skeletons, draft, onResult, dev = false }: RandomP
   return (
     <div className="panel ws-panel">
       <div className="section-title">隨機一個</div>
-      <div className="muted small">讓隨機組合器先組出一個合法的技能，再拿來修改。不指定的欄位由種子決定。</div>
+      <div className="muted small">讓隨機組合器先組出一個合法的技能，再拿來修改。{dev ? "不指定的欄位由種子決定。" : "不指定的欄位隨機決定。"}</div>
       <ErrorBanner message={error} onClose={() => setError(null)} />
       <div className="ws-tryout-form">
         <label>

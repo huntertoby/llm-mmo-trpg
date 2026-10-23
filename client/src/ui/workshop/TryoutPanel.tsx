@@ -17,13 +17,15 @@ interface Props {
   prefs: TryoutPrefs;
   onPrefs(prefs: TryoutPrefs): void;
   onStart(response: BattleResponse): void;
+  /** 開發者模式（`?dev=1`）才顯示並可指定種子；玩家模式用開啟時抽好的種子。 */
+  dev?: boolean;
 }
 
-export function TryoutPanel({ check, pending, prefs, onPrefs, onStart }: Props) {
+export function TryoutPanel({ check, pending, prefs, onPrefs, onStart, dev = isDevMode(window.location.search) }: Props) {
   const [arena, setArena] = useState<WorkshopArena | null>(null);
   const [seedText, setSeedText] = useState(() => String(randomSeed()));
   const [usePack, setUsePack] = useState(false);
-  const picker = useStartPicker(parseSeed(seedText), isDevMode(window.location.search), usePack);
+  const picker = useStartPicker(parseSeed(seedText), dev, usePack);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [warning, setWarning] = useState<{ text: string; response: BattleResponse } | null>(null);
@@ -124,16 +126,18 @@ export function TryoutPanel({ check, pending, prefs, onPrefs, onStart }: Props) 
         )}
         {training && opponent !== undefined && <div className="muted small">{opponent.description_zh}</div>}
         {!training && <div className="muted small">一般地圖的敵人會正常行動；想安心練習請選「靶場」。</div>}
-        <label>
-          種子
-          <span className="seed-row">
-            <input value={seedText} inputMode="numeric" onChange={(e) => setSeedText(e.target.value)} aria-invalid={seed === null} />
-            <button type="button" onClick={() => setSeedText(String(randomSeed()))}>
-              隨機
-            </button>
-          </span>
-        </label>
-        {seed === null && <div className="error-text">種子必須是非負整數</div>}
+        {dev && (
+          <label>
+            種子
+            <span className="seed-row">
+              <input value={seedText} inputMode="numeric" onChange={(e) => setSeedText(e.target.value)} aria-invalid={seed === null} />
+              <button type="button" onClick={() => setSeedText(String(randomSeed()))}>
+                隨機
+              </button>
+            </span>
+          </label>
+        )}
+        {dev && seed === null && <div className="error-text">種子必須是非負整數</div>}
       </div>
       {note !== null && <div className="ws-note">{note}</div>}
       {!playable && <div className="muted small">技能要先組完整、而且檢查合法（預算 70–100%、沒有違反規則）才能裝上試玩。</div>}

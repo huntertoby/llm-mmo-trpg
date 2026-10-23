@@ -20,11 +20,12 @@ __all__ = ["composition_block", "composition_info", "cost_step_text", "resource_
 _NAMES: dict[str, str] = {"mana": "法力", "stamina": "耐力"}
 
 
-def _after_battle(library: ContentLibrary, resource: str) -> str:
+def _after_battle(library: ContentLibrary, resource: str, *, regen: int) -> str:
     if resource in library.roguelite.refill_after_battle:
         return "每場打贏後回滿"
     after = "、".join(f"第 {n} 場" for n in library.roguelite.campfire_after)
-    return f"戰鬥之間不回復，只有營火回滿（{after}之後）"
+    only = f"只有營火回滿（{after}之後）"
+    return f"戰鬥之間不回復，{only}" if regen else only
 
 
 def resource_cost_text(library: ContentLibrary, resource: Literal["mana", "stamina"]) -> str:
@@ -32,7 +33,8 @@ def resource_cost_text(library: ContentLibrary, resource: Literal["mana", "stami
     regen = library.ruleset.core.resources.stamina_regen if resource == "stamina" else 0
     during = f"戰鬥中每回合開始回復 {regen} 點" if regen else "戰鬥中不回復"
     share = "武器技；與格擋共用" if resource == "stamina" else "法術技"
-    return f"施放花的{_NAMES[resource]}（{share}）；{during}；{_after_battle(library, resource)}"
+    after = _after_battle(library, resource, regen=regen)
+    return f"施放花的{_NAMES[resource]}（{share}）；{during}；{after}"
 
 
 def cost_step_text(category: object) -> str:
@@ -47,10 +49,7 @@ def composition_info(primitive: PrimitiveDef) -> dict[str, Any]:
     ``rules_zh``（說明句）。沒有任何規則時回傳空 dict。"""
     badges: list[str] = []
     rules: list[str] = []
-    if (
-        primitive.active_only
-    ):  # 幾乎每個原語都是，不當標章；種類不符時由 composition_block 標示不可用
-        rules.append("只能用在主動技")
+    # active_only 幾乎每個原語都是：不當標章也不寫說明，種類不符時由 composition_block 標示不可用
     if primitive.sole_effect:
         badges.append("唯一效果")
         rules.append("必須是技能唯一的效果")
