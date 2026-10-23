@@ -709,7 +709,7 @@ class RewriteAiRules(ContentModel):
     - ``ap_points``：獲得的每點 AP（≈ 多一次動作的價值）。
     - ``ally_ap_permille``：給友方的 AP 相對給自己的價值（‰）。
     - ``cooldown_points``：被重置的每一回合冷卻。
-    - ``undying_points``：不死的價值 × 目標已損失 HP 的比例（滿血 0，HP 越低越值得）。
+    - ``undying_points``：免死的價值 × 目標已損失 HP 的比例（滿血 0，HP 越低越值得）。
     - ``source_points``：每花一點源力的機會成本（扣分）。
     - ``redirect_points``：靈魂連結的價值 × 目標已損失 HP 的比例（施放者 HP 不到一半時為 0）
       （Phase 3C-4b）。

@@ -12,6 +12,7 @@ from __future__ import annotations
 
 import hashlib
 import json
+import re
 from collections.abc import Callable, Mapping
 from typing import Any
 
@@ -57,9 +58,17 @@ def draft_id(draft: Draft) -> str:
     return WORKSHOP_ID_PREFIX + hashlib.sha256(text.encode("utf-8")).hexdigest()[:10]
 
 
+_UNION_TAG = re.compile(
+    r"^(?:int|str|float|bool|dict|list|tuple|none|literal\[.*|function-.*|.*\[.*)$"
+)
+"""pydantic 聯集（``int | Literal["weapon"]``）的分支標記：不是欄位名，不顯示在位置裡。"""
+
+
 def _location(loc: tuple[int | str, ...]) -> str:
     parts: list[str] = []
     for item in loc:
+        if isinstance(item, str) and _UNION_TAG.match(item):
+            continue
         if isinstance(item, int):
             parts.append(f"[{item}]")
         else:

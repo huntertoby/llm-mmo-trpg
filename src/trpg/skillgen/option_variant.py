@@ -123,6 +123,7 @@ def variant_fields(
             description_zh="小寫英文與底線，技能內不可重複（例：tide_pierce）",
             type="text",
             required=True,
+            auto_generated=True,
         ),
         FieldSpec(
             field="name_zh",

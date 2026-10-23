@@ -1684,6 +1684,27 @@ export interface components {
              * @default []
              */
             problems: string[];
+            /**
+             * Effect Fixes
+             * @default []
+             */
+            effect_fixes: components["schemas"]["EffectFix"][];
+        };
+        /**
+         * EffectFix
+         * @description 草稿裡已加入的效果，對象不合法時的修正建議（3-48h）：第 ``index`` 個效果的對象改成 ``value``
+         *     （沒有合理的合法對象時為 ``None``）。前端照縮放屬性的做法自動套用。
+         */
+        EffectFix: {
+            /** Index */
+            index: number;
+            /** Value */
+            value: string | null;
+            /**
+             * Reason Zh
+             * @default
+             */
+            reason_zh: string;
         };
         /**
          * Element
@@ -1855,6 +1876,11 @@ export interface components {
              * @default false
              */
             plain_value: boolean;
+            /**
+             * Auto Generated
+             * @default false
+             */
+            auto_generated: boolean;
             /**
              * Locked
              * @default false

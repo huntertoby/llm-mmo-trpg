@@ -913,7 +913,7 @@
   },
   {
    "id": "undying",
-   "name_zh": "不死",
+   "name_zh": "免死",
    "description_zh": "受到致命傷害時 HP 留在 1，然後此狀態消失（墜落與致命地形除外）。",
    "tags": [
     "beneficial"
@@ -1372,7 +1372,7 @@
   {
    "id": "cleanse",
    "name_zh": "淨化",
-   "description_zh": "移除目標身上所有不利的狀態，不能對敵人使用。",
+   "description_zh": "移除目標身上所有負面狀態，不能對敵人使用。",
    "tags": [
     "numeric"
    ],
@@ -1601,8 +1601,8 @@
   },
   {
    "id": "grant_ap",
-   "name_zh": "給予行動點",
-   "description_zh": "讓自己或友方立刻獲得行動點。",
+   "name_zh": "給予 AP",
+   "description_zh": "讓自己或友方立刻獲得 AP。",
    "tags": [
     "rule_rewrite"
    ],

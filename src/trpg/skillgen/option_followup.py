@@ -114,13 +114,16 @@ def followup_visible(draft: Draft) -> bool:
     return draft.get("followup") is not None or followup_eligible(draft)
 
 
+_KNOWN_WHEN = ("after_move", "after_action", "after_gather", "on_kill", "on_hit", "delayed")
+
+
 def followup_when(draft: Draft) -> str | None:
     """草稿第二段的種類；沒有 ``when`` 但已選骨架的舊草稿視為「位移 → 動作」。"""
     follow = _mapping(draft.get("followup"))
     when = follow.get("when")
     if when is None and follow.get("skeleton") is not None:
         return "after_move"
-    return None if when is None else str(when)
+    return when if isinstance(when, str) and when in _KNOWN_WHEN else None  # 垃圾值視為還沒選
 
 
 def _move_shapes(library: ContentLibrary) -> tuple[str, ...]:
@@ -142,7 +145,7 @@ def _kind_shapes(when: str, library: ContentLibrary) -> tuple[str, ...]:
         "on_hit": FOLLOWUP_SHAPES,
         "delayed": DELAYED_SHAPES,
     }
-    return table[when]
+    return table.get(str(when), ())
 
 
 def _fits(library: ContentLibrary, skeleton: SkeletonDef, shape_id: str) -> bool:

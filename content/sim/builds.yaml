@@ -27,8 +27,8 @@ companions: [sim_companion_fighter, sim_companion_archer]
 # Phase 3C-6a：build_striker 加聚雷（依目標相鄰的敵方數縮放 enemies_adjacent_target）。
 # Phase 3D-8a：build_support 以汲命術（吸血）換下專注湧流、build_healer 以聖光爆發（聖光雙效）換下疾時之潮（兩者主動欄位已滿）；新增 build_seer
 # （偵察破咒流）：破魔（驅散）、照明彈（揭露）搭配竊取祝福、咒印，並接收被換下的專注湧流與疾時之潮（3C-6 再整理）。
-# Phase 3D-8b：build_healer 以返魂術（復活）換下不死誓約（主動欄位已滿）；新增 build_bomber（定時炸彈流）：定時炸彈符、灰燼收割
-# （擊殺時返還 AP 並重置冷卻），並接收被換下的不死誓約（3C-6 再整理）。
+# Phase 3D-8b：build_healer 以返魂術（復活）換下不滅誓約（主動欄位已滿）；新增 build_bomber（定時炸彈流）：定時炸彈符、灰燼收割
+# （擊殺時返還 AP 並重置冷卻），並接收被換下的不滅誓約（3C-6 再整理）。
 # Phase 3D-7a：新增 build_gambler（賭徒／狂戰士流）：血祭重擊（賭注）、孤注一擲（失手反噬）搭配捨身突刺、狂怒姿態與嗜血（3C-6 再整理）。
 # Phase 3D-8c：build_ranged 以監視射擊（overwatch）換下升高平台（主動欄位已滿；升高平台改由 build_winged 接收）、build_assassin 以前後夾擊
 # （flanked）換下魯莽突刺（魯莽突刺仍在 build_gambler）；新增 build_winged（飛翼流）：展翼、賜予羽翼（grant_skill，暫時獲得「飛行」），
@@ -341,7 +341,7 @@ builds:
 
   - id: build_bomber
     name_zh: 定時炸彈流
-    theme_zh: 在敵人身上綁定時炸彈，逼他們走進自己人堆裡；爆炸敵我不分，所以要用寒鎖定住目標、用瞬移與不死誓約保住自己。敵人成群、擠在窄路時最有用，被淨化、或炸彈綁在貼著自己人的敵人身上時不利（Phase 3D-8b，初值未經模擬）。
+    theme_zh: 在敵人身上綁定時炸彈，逼他們走進自己人堆裡；爆炸敵我不分，所以要用寒鎖定住目標、用瞬移與不滅誓約保住自己。敵人成群、擠在窄路時最有用，被淨化、或炸彈綁在貼著自己人的敵人身上時不利（Phase 3D-8b，初值未經模擬）。
     hero:
       id: build_bomber
       name_zh: 定時炸彈流英雄
@@ -436,7 +436,7 @@ builds:
       resist: {elemental: 150}
       tags: [hero, sim]
       max_mana: 40
-      skills: [skill_thunder_sigil, skill_ember_trail, skill_hunt_sigil, skill_rune_thunderbolt, skill_rune_burst, skill_chain_lightning, skill_rune_resonance, skill_rune_snare]
+      skills: [skill_thunder_sigil, skill_ember_trail, skill_hunt_sigil, skill_rune_thunderbolt, skill_rune_burst, skill_rune_resonance, skill_rune_snare, skill_rune_ward]
 
   # 使用者要求（2026-10-20）：沒有任何技能的白板主角，從一輪的升級裡長出技能。屬性全 10（一輪開局再配 4 點）。
   # HP、法力比照戰士型（位移流）與法師型（火焰流）英雄的最終值。

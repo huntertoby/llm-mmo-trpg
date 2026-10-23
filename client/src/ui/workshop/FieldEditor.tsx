@@ -149,6 +149,12 @@ function unavailableReason(choice: Choice): string | null {
   return typeof reason === "string" && reason !== "" ? reason : null;
 }
 
+/** 對象、狀態等參數選項的停用（3-48h）：驗證器會擋的選項不能選，原因顯示在選項旁；
+ * 目前已選的那一項不停用（讓玩家看得到自己選了什麼，違規由檢查面板說明）。 */
+function blockedReason(choice: Choice, chosen: Choice | undefined): string | null {
+  return chosen?.value === choice.value ? null : unavailableReason(choice);
+}
+
 function ChoiceField({ spec, container, base, onChange }: FieldProps) {
   const path = joinPath(base, spec.field);
   const raw = getPath(container, path);
@@ -176,8 +182,9 @@ function ChoiceField({ spec, container, base, onChange }: FieldProps) {
             <button
               type="button"
               key={String(c.value)}
-              className={`ws-card${chosen?.value === c.value ? " selected" : ""}`}
+              className={`ws-card${chosen?.value === c.value ? " selected" : ""}${blockedReason(c, chosen) !== null ? " unavailable" : ""}`}
               aria-pressed={chosen?.value === c.value}
+              disabled={blockedReason(c, chosen) !== null}
               onClick={() => pick(c)}
             >
               <span className="ws-card-title">
@@ -190,17 +197,19 @@ function ChoiceField({ spec, container, base, onChange }: FieldProps) {
                 </span>
               ))}
               {descOf(c) !== "" && <span className="ws-card-desc">{descOf(c)}</span>}
+              {blockedReason(c, chosen) !== null && <span className="ws-card-block">不能選：{blockedReason(c, chosen)}</span>}
             </button>
           ))}
         </div>
       ) : spec.choices.length <= COMPACT_MAX ? (
         <div className="ws-chips">
           {spec.choices.map((c) => (
-            <Hint key={String(c.value)} text={descOf(c)}>
+            <Hint key={String(c.value)} text={blockedReason(c, chosen) !== null ? `不能選：${blockedReason(c, chosen)}` : descOf(c)}>
               <button
                 type="button"
-                className={`ws-chip${chosen?.value === c.value ? " selected" : ""}`}
+                className={`ws-chip${chosen?.value === c.value ? " selected" : ""}${blockedReason(c, chosen) !== null ? " unavailable" : ""}`}
                 aria-pressed={chosen?.value === c.value}
+                disabled={blockedReason(c, chosen) !== null}
                 onClick={() => pick(c)}
               >
                 <OptionGlyph field={spec.field} value={c.value} px={20} />
@@ -221,14 +230,25 @@ function ChoiceField({ spec, container, base, onChange }: FieldProps) {
             請選擇……
           </option>
           {spec.choices.map((c) => (
-            <option key={String(c.value)} value={String(c.value)}>
-              {c.name_zh}
+            <option key={String(c.value)} value={String(c.value)} disabled={blockedReason(c, chosen) !== null}>
+              {blockedReason(c, chosen) !== null ? `${c.name_zh}（不能選：${blockedReason(c, chosen)}）` : c.name_zh}
             </option>
           ))}
         </select>
       )}
       {!card && chosen !== undefined && descOf(chosen) !== "" && (
         <div className="muted small">{descOf(chosen)}</div>
+      )}
+      {!card && spec.choices.some((c) => blockedReason(c, chosen) !== null) && (
+        <ul className="ws-notes ws-unavailable-list" aria-label="不能選的選項">
+          {spec.choices
+            .filter((c) => blockedReason(c, chosen) !== null)
+            .map((c) => (
+              <li key={String(c.value)}>
+                {c.name_zh}：{blockedReason(c, chosen)}
+              </li>
+            ))}
+        </ul>
       )}
       {!spec.required && raw !== undefined && (
         <button type="button" className="ws-link" onClick={() => onChange(clearChoice(container, spec, base))}>

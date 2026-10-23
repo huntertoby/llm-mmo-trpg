@@ -19,7 +19,8 @@
 
 from __future__ import annotations
 
-from collections.abc import Mapping
+import re
+from collections.abc import Iterator, Mapping
 from typing import Any
 
 from trpg.content.library import ContentLibrary
@@ -34,6 +35,7 @@ from trpg.content.skills import (
     MAX_MODIFIERS,
     MODIFIER_CHANGES,
     ON_HIT_PRIMITIVES,
+    PLACE_TRAP,
     RARITY_ORDER,
     SELF_CONDITIONS,
     SELF_ONLY_CHANGES,
@@ -51,6 +53,7 @@ from trpg.content.skills import (
 from trpg.shared.types import Attribute
 from trpg.skillgen.draft import Draft, DraftError, build_skill, draft_skeleton, step_complete
 from trpg.skillgen.option_conform import field_problems
+from trpg.skillgen.option_effect_rules import cooldown_requirement, effect_fixes, with_param_blocks
 from trpg.skillgen.option_fill import variants
 from trpg.skillgen.option_followup import (
     FOLLOWUP_SKELETON,
@@ -62,6 +65,7 @@ from trpg.skillgen.option_models import (
     STEP_IDS,
     Choice,
     DraftOptions,
+    EffectFix,
     FieldSpec,
     StepId,
     StepOptions,
@@ -312,7 +316,7 @@ def _kind_choice(kind: str, library: ContentLibrary) -> Choice:
             FieldSpec(
                 field="ap_cost",
                 name_zh="AP",
-                description_zh="施放花的行動點（AP 越多，可用預算越多）",
+                description_zh="施放花的 AP（AP 越多，可用預算越多）",
                 type="int",
                 required=True,
                 min=aps[0],
@@ -550,6 +554,21 @@ def _allowed_affects(
 
 
 def _affects_field(primitive: PrimitiveDef, allowed: tuple[str, ...]) -> FieldSpec:
+    if primitive.id == PLACE_TRAP:  # 3-48h：陷阱只作用在格子（刻印的做法）；唯一的選項寫成「格子」
+        return FieldSpec(
+            field="affects",
+            name_zh="對象",
+            description_zh="陷阱放在你選的那一格；敵人踩到時結算的是同一招的其他效果",
+            type="choice",
+            choices=(
+                Choice(
+                    value="self",
+                    name_zh="格子",
+                    description_zh="陷阱放在你選的那一格",
+                ),
+            ),
+            default="self",
+        )
     default = "tiles" if primitive.acts_on == "tile" else None
     if primitive.acts_on == "caster":
         default = "self"
@@ -724,13 +743,27 @@ def _effect_choices(draft: Draft, library: ContentLibrary, skeleton: SkeletonDef
     return out
 
 
-def _trap_field(library: ContentLibrary) -> FieldSpec:
+def trap_effects_text(draft: Draft, library: ContentLibrary) -> str:
+    """陷阱設定區的說明（3-48h）：踩到後會結算的是同一招的其他效果——列出目前會結算的效果，
+    還沒有時提示要新增一個。"""
+    by_id = library.ruleset.primitives.by_id()
+    names = [
+        by_id[t].name_zh if (t := str(_mapping(e).get("type"))) in by_id else t
+        for e in draft.get("effects") or ()
+        if _mapping(e).get("type") != PLACE_TRAP
+    ]
+    if not names:
+        return "請新增一個效果（例如傷害），它就是踩到後的效果"
+    return "踩到後會結算：下方其他效果（目前：" + "、".join(names) + "）"
+
+
+def _trap_field(draft: Draft, library: ContentLibrary) -> FieldSpec:
     fields = TrapSpec.model_fields
     low, high = model_range(fields["rounds"])
     return FieldSpec(
         field="trap",
         name_zh="陷阱設定",
-        description_zh="效果有「放置陷阱」時必填",
+        description_zh="效果有「放置陷阱」時必填。" + trap_effects_text(draft, library),
         type="object",
         fields=(
             FieldSpec(
@@ -813,6 +846,9 @@ def _effects_step(draft: Draft, library: ContentLibrary, skeleton: SkeletonDef) 
     if draft.get("kind") == "modifier":
         return _modifier_step(draft, library)
     choices = _with_availability(_effect_choices(draft, library, skeleton), draft, library)
+    choices = with_param_blocks(
+        choices, draft, library, skeleton
+    )  # 3-48h：違規的對象與狀態事前停用
     fields = [
         FieldSpec(
             field="effects",
@@ -826,7 +862,7 @@ def _effects_step(draft: Draft, library: ContentLibrary, skeleton: SkeletonDef) 
         )
     ]
     if any(c.value == "place_trap" for c in choices):
-        fields.append(_trap_field(library))
+        fields.append(_trap_field(draft, library))
     notes = (*_effects_notes(skeleton, library), *_rune_hint(draft, library))
     return _step("effects", draft, library, tuple(fields), notes)
 
@@ -1108,9 +1144,15 @@ def _resource_field(draft: Draft, library: ContentLibrary) -> FieldSpec:
 
 
 def _cost_step(draft: Draft, library: ContentLibrary) -> StepOptions:
+    required = cooldown_requirement(draft, library)  # 硬控（暈眩、冰凍）要求冷卻下限（3-48h）
     fields: list[FieldSpec] = [
         _resource_field(draft, library),
-        _cost_int("cooldown", "冷卻", "施放後幾回合不能再用"),
+        _cost_int(
+            "cooldown",
+            "冷卻",
+            "施放後幾回合不能再用" + ("" if required is None else f"（{required[1]}）"),
+            min_=None if required is None else required[0],
+        ),
         _cost_int("uses_per_battle", "每場次數", "每場最多施放幾次"),
         _cost_int("hp_percent", "生命代價（‰）", "施放花最大 HP 的千分比"),
     ]
@@ -1187,11 +1229,23 @@ def _definition_errors(draft: Draft, rarity: str, library: ContentLibrary) -> li
     try:
         build_skill(draft, {"rarity": rarity})
     except DraftError as exc:
-        return [
-            f"．{plainify(m, library)}{_STEP_NO_MARK}{m.split('：')[0].split(' ')[0]}"
-            for m in exc.messages
-        ]
+        return [f"．{plainify(m, library)}{_STEP_NO_MARK}{m}" for m in exc.messages]
     return []
+
+
+_NAME = re.compile(r"[a-z_]{3,}")
+
+
+def _owner_step(raw: str, owner: dict[str, int]) -> int | None:
+    """試組錯誤（原始訊息）屬於哪一步：先看訊息開頭的欄位路徑（``trap.shape``、``effects[0].dice``、
+    ``variants[1].shape`` 都算它的第一段），沒有的話找訊息裡第一個出現的欄位名（3-48h）。"""
+    head = raw.split("：", maxsplit=1)[0].split(" ", maxsplit=1)[0]
+    candidates = [head.split(".")[0].split("[")[0], *_NAME.findall(raw)]
+    for name in candidates:
+        step = owner.get(_FIELD_ALIAS.get(name, name))
+        if step is not None:
+            return step
+    return None
 
 
 def _rarity_step(draft: Draft, library: ContentLibrary) -> StepOptions:
@@ -1292,25 +1346,51 @@ def _with_held_weapon(
     return [s.model_copy(update={"fields": tuple(fix(f) for f in s.fields)}) for s in steps]
 
 
+def _field_names(fields: tuple[FieldSpec, ...]) -> Iterator[str]:
+    """步驟欄位的第一段欄位名，含選項專屬的參數（例：``weapon_req`` 是類別的參數）。"""
+    for spec in fields:
+        yield spec.field.split(".")[0]
+        yield from _field_names(spec.fields)
+        for choice in spec.choices:
+            if choice.params and spec.type != "effects":
+                yield from _field_names(choice.params)
+
+
 def _with_step_links(steps: list[StepOptions], library: ContentLibrary) -> list[StepOptions]:
     """備註換成中文，並把試組錯誤附上「回到第 N 步修改」（編號同步驟列）。"""
     owner: dict[str, int] = {}
     for number, step in enumerate(steps, 1):
-        for spec in step.fields:
-            owner.setdefault(spec.field.split(".")[0], number)
+        for name in _field_names(step.fields):
+            owner.setdefault(name, number)
     out: list[StepOptions] = []
-    for step in steps:
+    broken: set[int] = set()  # 有試組錯誤的所屬步驟（不打勾）
+    for number, step in enumerate(steps, 1):
         notes: list[str] = []
         for note in step.notes_zh:
-            text, mark, field = note.partition(_STEP_NO_MARK)
+            text, mark, raw = note.partition(_STEP_NO_MARK)
             text = plainify(text, library)
-            step_no = owner.get(_FIELD_ALIAS.get(field, field))
-            if mark and step_no is not None:
+            step_no = _owner_step(raw, owner) if mark else None
+            if step_no is not None:
                 text += f"（回到第 {step_no} 步修改）"
+                if step_no != number:
+                    broken.add(step_no)
             notes.append(text)
         fields = playerize(step.fields, library)  # 說明換成玩家版（原文在 dev_description_zh）
         out.append(step.model_copy(update={"notes_zh": tuple(notes), "fields": fields}))
-    return out
+    return [
+        s.model_copy(update={"complete": False}) if n in broken else s for n, s in enumerate(out, 1)
+    ]
+
+
+def _effect_fixes(
+    steps: list[StepOptions], draft: Draft, library: ContentLibrary
+) -> tuple[EffectFix, ...]:
+    """已加入的效果對象不合法時的修正建議（3-48h）；效果步驟還沒出現時沒有。"""
+    for step in steps:
+        for spec in step.fields:
+            if spec.field == "effects" and spec.type == "effects":
+                return effect_fixes(draft, library, spec.choices)
+    return ()
 
 
 def draft_options(
@@ -1338,5 +1418,8 @@ def draft_options(
             steps[-1] = step.model_copy(update={"complete": False})
     if weapon is not None:
         steps = _with_held_weapon(steps, draft, weapon, library)
+    fixes = _effect_fixes(steps, draft, library)
     steps = _with_step_links(steps, library)
-    return DraftOptions(steps=tuple(steps), next_step=next_step, problems=tuple(problems))
+    return DraftOptions(
+        steps=tuple(steps), next_step=next_step, problems=tuple(problems), effect_fixes=fixes
+    )

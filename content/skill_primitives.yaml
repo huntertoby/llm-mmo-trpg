@@ -61,9 +61,9 @@ primitives:
       dice: {llm_hint: "護盾吸收量的骰子（幾顆幾面）。", type: dice, required: true}
   - id: cleanse
     name_zh: 淨化
-    llm_hint: "移除目標身上所有不利的狀態。"
-    description_zh: 移除影響單位身上所有非有益的狀態（依狀態 ID 排序逐一移除）。不能對敵方使用。
-    player_description: "移除目標身上所有不利的狀態，不能對敵人使用。"
+    llm_hint: "移除目標身上所有負面狀態（減益）；增益與中性狀態保留。"
+    description_zh: 移除影響單位身上所有減益（polarity 為 debuff）狀態，依狀態 ID 排序逐一移除；增益與中性狀態（隱蔽、姿態、免死、靈魂連結、蓄力等）保留。不能對敵方使用。
+    player_description: "移除目標身上所有負面狀態，不能對敵人使用。"
     category: numeric
     harmful: false
     budget_basis: fixed
@@ -367,10 +367,10 @@ primitives:
   # 每個技能最多 1 個（skill_budget.yaml 的 max_rule_rewrite）；必須每場限一次或冷卻至少
   # rule_rewrite_min_cooldown 回合，花源力（cost.source，傳說技能）時改為冷卻至少 rule_rewrite_min_cooldown_with_source。
   - id: grant_ap
-    name_zh: 給予行動點
-    llm_hint: "讓施放者獲得額外的行動點。"
+    name_zh: 給予 AP
+    llm_hint: "讓施放者獲得額外的 AP。"
     description_zh: 目標（自己或友方）立刻獲得 amount AP（1–2），超過本回合上限（ap_per_turn ＋ ap_carry_max）的部分不保留；目標不在自己的回合時，在它下次回合開始時加上。同一單位每輪最多被給一次（之後的給予不結算，effect_fizzled）。
-    player_description: "讓自己或友方立刻獲得行動點。"
+    player_description: "讓自己或友方立刻獲得 AP。"
     category: rule_rewrite
     harmful: false
     min_rarity: epic
@@ -378,7 +378,7 @@ primitives:
     base_points: 4
     forbid_affects: [enemies, all]
     params:
-      amount: {llm_hint: "獲得的行動點數。", type: int, required: true, min: 1, max: 2, description_zh: 給予的 AP}
+      amount: {llm_hint: "獲得的 AP 點數。", type: int, required: true, min: 1, max: 2, description_zh: 給予的 AP}
   - id: reset_cooldown
     name_zh: 重置冷卻
     llm_hint: "讓技能的冷卻重新歸零。"
@@ -397,7 +397,7 @@ primitives:
     status: undying
     name_zh: 免死
     llm_hint: "在受到致命傷害時保住一條命。"
-    description_zh: 目標（自己或友方）獲得狀態「不死」（undying）duration 回合（省略時用狀態的預設持續）：期間 HP 會降到 0 時改為 1 並移除此狀態（墜落與致命地形照樣生效）。
+    description_zh: 目標（自己或友方）獲得狀態「免死」（undying）duration 回合（省略時用狀態的預設持續）：期間 HP 會降到 0 時改為 1 並移除此狀態（墜落與致命地形照樣生效）。
     player_description: "讓自己或友方在一段時間內，致命傷害改為剩下 1 點生命。"
     category: rule_rewrite
     harmful: false
@@ -406,7 +406,7 @@ primitives:
     base_points: 8
     forbid_affects: [enemies, all]
     params:
-      duration: {llm_hint: "效果持續的回合數。", type: int, min: 1, max: 2, description_zh: 不死的持續回合}
+      duration: {llm_hint: "效果持續的回合數。", type: int, min: 1, max: 2, description_zh: 免死的持續回合}
   # --- Phase 3C-4b：另外三個改寫規則型原語（同上：每技能最多 1 個、冷卻或源力規則；點數為初值，未經模擬）---
   - id: redirect_damage
     status: soul_link

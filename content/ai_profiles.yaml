@@ -85,7 +85,7 @@ trap:
 # （× 行為模式的 damage 權重）。最簡單的近似，初值未經模擬：
 #   ap_points         獲得的每點 AP（≈ 多一次動作；與其他動作一樣不扣這次花的 AP）；給友方的 AP × ally_ap_permille
 #   cooldown_points   被重置的每一回合冷卻
-#   undying_points    不死 × 目標已損失 HP 的比例（滿血為 0，所以只在 HP 低時才值得）
+#   undying_points    免死 × 目標已損失 HP 的比例（滿血為 0，所以只在 HP 低時才值得）
 #   source_points     每花一點源力的扣分
 # Phase 3C-4b（初值，未經模擬）：
 #   redirect_points   靈魂連結 × 目標已損失 HP 的比例（施放者 HP 不到一半不連結）

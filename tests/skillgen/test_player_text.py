@@ -18,8 +18,7 @@ _ALLOWED = {
     "HP",
     "MP",
     "YAML",
-    "tide_pierce",
-}  # tide_pierce：變奏代號欄位的輸入範例（3-48f 玩法 PM 改寫保留）
+}
 _ENGLISH = re.compile(r"(?<![A-Za-z0-9_])[A-Za-z_][A-Za-z0-9_]{2,}")
 
 

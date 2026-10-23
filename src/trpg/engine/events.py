@@ -609,7 +609,7 @@ class StatusRemoved(EventBase):
     ``fired``：監視（``overwatch``）射擊後結束（Phase 3D-8c）；
     ``dispelled``：被 ``dispel`` 驅散；``revealed``：被 ``reveal`` 移除隱蔽（Phase 3D-8a）；
     ``stolen``：被 ``steal_buff`` 奪走（Phase 3D-1；緊接著對施放者的 ``status_applied``）；
-    ``spent``：不死（``undying``）擋下致命傷害後移除（Phase 3C-4a）；
+    ``spent``：免死（``undying``）擋下致命傷害後移除（Phase 3C-4a）；
     ``thawed``：受到 ``removed_by_element`` 的元素傷害而解除（冰凍遇火，Phase 2H-1）；
     ``consumed``：被 ``consume_status`` 消耗（Phase 3C-3b）；``replaced``：被新的姿態取代；
     ``stance_ended``：``EndStance`` 取消姿態；``downed``：單位倒下或撤離時移除姿態
@@ -1183,7 +1183,7 @@ class BombExploded(EventBase):
 
 
 class DeathCheated(EventBase):
-    """不死（``cheat_death`` 的狀態）擋下致命傷害：HP 留在 1，之後移除該狀態（``spent``）。"""
+    """免死（``cheat_death`` 的狀態）擋下致命傷害：HP 留在 1，之後移除該狀態（``spent``）。"""
 
     type: Literal["death_cheated"] = "death_cheated"
     unit_id: UnitId
@@ -1194,7 +1194,7 @@ class DeathCheated(EventBase):
 
 class DamageRedirected(EventBase):
     """``redirect_damage`` 的連結：``from_id`` 受到的傷害有 ``amount`` 點轉給 ``to_id``（施放者）。
-    ``to_id`` 直接扣 HP（不經護盾、抗性與元素修正）；不死狀態照常生效。"""
+    ``to_id`` 直接扣 HP（不經護盾、抗性與元素修正）；免死狀態照常生效。"""
 
     type: Literal["damage_redirected"] = "damage_redirected"
     from_id: UnitId

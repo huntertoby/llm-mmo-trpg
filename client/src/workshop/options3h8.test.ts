@@ -15,6 +15,7 @@ const spec = (field: string, choices: Choice[]): FieldSpec => ({
   allow_weapon: false,
   locked: false,
   plain_value: false,
+  auto_generated: false,
   show_when: {},
   card: false,
   object_choice: false,

@@ -20,10 +20,10 @@ texts:
   source: 命中後的額外效果（knock_prone 擊倒、push_aside 推到路徑旁）
   player: 命中沿途敵人後的額外效果：擊倒，或推到路徑旁邊一格。
 - id: 原語.cheat_death
-  source: 目標（自己或友方）獲得狀態「不死」（undying）duration 回合（省略時用狀態的預設持續）：期間 HP 會降到 0 時改為 1 並移除此狀態（墜落與致命地形照樣生效）。
+  source: 目標（自己或友方）獲得狀態「免死」（undying）duration 回合（省略時用狀態的預設持續）：期間 HP 會降到 0 時改為 1 並移除此狀態（墜落與致命地形照樣生效）。
   player: 目標（自己或友方）獲得「免死」：持續期間受到致命傷害時 HP 留在 1，然後免死消失。墜落和致命地形照樣會死。
 - id: 原語.cleanse
-  source: 移除影響單位身上所有非有益的狀態（依狀態 ID 排序逐一移除）。不能對敵方使用。
+  source: 移除影響單位身上所有減益（polarity 為 debuff）狀態，依狀態 ID 排序逐一移除；增益與中性狀態（隱蔽、姿態、免死、靈魂連結、蓄力等）保留。不能對敵方使用。
   player: 移除目標身上所有負面狀態。只能用在自己或友方。
 - id: 原語.consume_stack
   source: 消耗全部該層數（self 型從施放者、target 型從每個被命中的目標）；同一技能的傷害效果依消耗的層數 × per_stack_permille 加成（200 ＝ 每層 +20%）。沒有層數也可施放（加成 0）。預算以期望消耗＝上限的一半估算加成點數。
@@ -49,7 +49,7 @@ texts:
   player: 吸血：你回復這次對敵人實際造成傷害的一定比例（不超過最大 HP）。
 - id: 原語.damage.on_kill
   source: 技能內的擊殺時效果（Phase 3D-8b）：這個傷害效果讓敵人倒下時才結算的 1–2 個效果，對象一律是施放者。可用類型：refund_ap（返還 amount 點 AP，1–2，用專用效果、不受改寫規則限制）、refund_cooldown（本技能冷卻歸零，技能必須有 cost.cooldown）、heal、shield、apply_status（一般原語）。同一個傷害效果讓一個以上的敵人倒下只結算一次；施放者自己在結算中倒下則不結算。只有主動技能自己的傷害效果可以用。預算：on_kill 各效果的點數 × on_kill_expected_permille（預估擊殺率）
-  player: 擊殺時：這個傷害讓敵人倒下時，對你自己結算 1～2 個效果（返還 AP、本招冷卻歸零、治療、護盾或狀態）。一次打倒多個敵人也只結算一次。
+  player: 擊殺時：這個傷害讓敵人倒下時，對你自己結算 1～2 個效果（返還 AP、本招冷卻歸零、治療、護盾或狀態）。一次打倒多個敵人也只結算一次。施加的狀態只能是有益狀態。
 - id: 原語.damage.scaling
   source: 依情況縮放（Phase 3D-7b）：by／per_step_permille／cap_permille 三個欄位；每一步傷害 +n‰（無條件捨去）、cap_permille 必填且不超過 core.scale_cap_max_permille；by 可為 missing_hp_10pct（施放者每少 10% 最大 HP）、distance（與目標每距 1 格）、enemies_adjacent_target（目標相鄰的敵方數）、enemies_adjacent_self（施放者相鄰的敵方數）
   player: 依情況加傷：依「你少了多少 HP」「和目標的距離」「目標或你身邊的敵人數」每一步提高一定比例的傷害，有上限。
@@ -79,7 +79,7 @@ texts:
   player: 目標（自己或友方）這一輪可以多反應 1 次，到下一輪開始為止。
 - id: 原語.gamble
   source: 命中判定之後（未命中則整個不結算；技能沒有對敵方的效果時直接擲）擲一次 d1000，不超過 chance_permille 結算 win 的效果，否則結算 lose 的效果（各 0–2 個，至少一邊有效果）。win／lose 可以對施放者自己（affects self，例如失敗的反噬）；damage_multiplier 讓本次施放的傷害效果乘上倍率，self_damage_of_hit 讓施放者受到本次造成傷害的 n‰。施放者受到的反噬傷害不會讓他的 HP 低於 1，反噬狀態不能是硬控、跳過回合或持續傷害。必須是主動技能的最後一個效果。預算以期望值計（成功率 × win ＋ 失敗率 × lose），對自己的有害效果打折（gamble_self_harm_permille）。
-  player: 賭一把：命中後擲機率，成功結算「贏」的效果、失敗結算「輸」的效果。可以設定成功時傷害加倍、失敗時自己受到反噬。反噬不會讓你的 HP 低於 1，也不能是暈眩、跳過回合或持續傷害。必須放在主動技能的最後一個效果。
+  player: 賭一把：命中後擲機率，成功結算「贏」的效果、失敗結算「輸」的效果。可以設定成功時傷害乘上倍率（例：×2）、失敗時自己受到反噬。反噬不會讓你的 HP 低於 1，也不能是硬控（暈眩、冰凍）、跳過回合或持續傷害。必須放在主動技能的最後一個效果。
 - id: 原語.gamble.chance_permille
   source: 成功（結算 win）的機率（‰）
   player: 成功的機率。
@@ -97,10 +97,10 @@ texts:
   player: 舉起射程內看得到的一個可推動物件，丟到落點：落點的單位被命中就受到骰值物理傷害（可設定再以對抗判定擊倒）。物件落地後：會爆的爆炸、易碎的碎掉、其他的放在落點附近；落點是致命地形就消失。附近要有物件才能用。
 - id: 原語.inscribe
   source: 在影響格（可站立的格子）留下施放者專屬的符文：恰好帶一個 element（元素，例如雷紋、火紋）或 tag（標籤），持續 duration 個環境回合（省略為 core.yaml 的 rune_default_rounds，初值 3；上限 5）。符文本身沒有任何效果，敵我都看得到；只有刻下它的施放者讀得到（條件 on_own_rune、消耗型原語 detonate_runes）。同一施放者在同一格再刻一次是更新；同一施放者同時存在的符文格超過 rune_limit_per_owner（core.yaml，初值 6）時最舊的消失。施放者倒下時符文保留到時效結束。預算：base_points × inscribe_duration_permille（依 duration；省略＝預設 3 輪）。
-  player: 在範圍內可站立的格子刻下你專屬的符文（一種元素，或一個標籤），持續幾輪（最多 5）。符文本身沒有效果，敵我都看得到，只有你自己的技能能讀取或引爆它。同一格再刻一次會更新；你的符文超過上限時最舊的消失；你倒下時符文仍保留到時效結束。
+  player: 在範圍內可站立的格子刻下你專屬的符文（一種元素，或一個標籤），持續幾輪（最多 {rune_max_rounds}）。符文本身沒有效果，敵我都看得到，只有你自己的技能能讀取或引爆它。同一格再刻一次會更新；你的符文超過上限時最舊的消失；你倒下時符文仍保留到時效結束。
 - id: 原語.intercept
   source: 只能出現在 event 為 ally_hit_adjacent 的反應技。相鄰友方被單體攻擊命中後、傷害與其他效果結算之前，這次攻擊的所有效果改為作用在持有者身上（不重擲命中；位移方向重新計算；範圍技能不攔截）。守護者的護盾、減傷、抗性照常結算。點數為初值，未經模擬。
-  player: 替身：相鄰的友方被單體攻擊命中時，這次攻擊改由你承受（不重擲命中；範圍技能不能攔）。你的護盾、減傷、抗性照常有效。只能用在「相鄰友方被打」的反應技。
+  player: 替隊友擋下：相鄰的友方被單體攻擊命中時，這次攻擊改由你承受（不重擲命中；範圍技能不能攔）。你的護盾、減傷、抗性照常有效。只能用在「相鄰友方被打」的反應技。
 - id: 原語.knock_prone
   source: 對抗判定（技能的縮放屬性 vs 目標同屬性），成功才倒地。
   player: 對抗判定（你這招的屬性對目標的同一屬性），成功就讓目標倒地。
@@ -121,7 +121,7 @@ texts:
   player: 撞上東西時的撞擊傷害骰（不填就用通用的 1d6）。
 - id: 原語.redirect_damage
   source: 目標友方（不含施放者自己）獲得狀態「靈魂連結」（soul_link）duration 回合：它受到的傷害有 permille‰（≤ 500）轉給施放者，直接扣施放者的 HP。與替隊友擋下整次攻擊（intercept）不同；兩者同時存在時先攔截，傷害落在守護者身上之後才看守護者有沒有連結。施放者倒下或離場時連結消失。
-  player: 和一個友方（不能是自己）建立「靈魂連結」：持續期間他受到的傷害有一部分（最多一半）轉到你身上。你倒下或離場時連結消失。和「替身」不同：替身是整次攻擊改打你。
+  player: 和一個友方（不能是自己）建立「靈魂連結」：持續期間他受到的傷害有一部分（最多一半）轉到你身上。你倒下或離場時連結消失。和「替隊友擋下」不同：替隊友擋下是整次攻擊改打你。
 - id: 原語.reset_cooldown
   source: 目標友方（不含施放者自己）的技能冷卻歸零：which 為 all 時全部技能、tag 時只有帶 tag 標籤的技能；花源力的技能（cost.source）與這個技能本身不會被重置。沒有可重置的冷卻時不結算（effect_fizzled）。
   player: 讓一個友方（不能是自己）的技能冷卻歸零：全部技能，或只限帶某個標籤的技能。花源力的技能和這招本身不受影響。
@@ -172,7 +172,7 @@ texts:
   player: 一次召喚 2 隻時，每隻的 HP 與傷害只有一般的多少比例。
 - id: 原語.summon.trait
   source: 加深分歧進化：召喚物的小特性（core.yaml 的 summon_traits）
-  player: 召喚物的小特性（堅韌、迅捷、銳利）。
+  player: 召喚物的小特性（{summon_traits}）。
 - id: 原語.summon.unit
   source: 召喚物範本 ID（content/units/summons/）
   player: 要召喚哪一種召喚物。
@@ -232,10 +232,10 @@ texts:
   source: 命中後的額外效果（knock_prone 擊倒、push_aside 推到路徑旁）
   player: 命中沿途敵人後的額外效果：擊倒，或推到路徑旁邊一格。
 - id: 工坊.effects.effects=cheat_death
-  source: 目標（自己或友方）獲得狀態「不死」（undying）duration 回合（省略時用狀態的預設持續）：期間 HP 會降到 0 時改為 1 並移除此狀態（墜落與致命地形照樣生效）。
+  source: 目標（自己或友方）獲得狀態「免死」（undying）duration 回合（省略時用狀態的預設持續）：期間 HP 會降到 0 時改為 1 並移除此狀態（墜落與致命地形照樣生效）。
   player: 目標（自己或友方）獲得「免死」：持續期間受到致命傷害時 HP 留在 1，然後免死消失。墜落和致命地形照樣會死。
 - id: 工坊.effects.effects=cleanse
-  source: 移除影響單位身上所有非有益的狀態（依狀態 ID 排序逐一移除）。不能對敵方使用。
+  source: 移除影響單位身上所有減益（polarity 為 debuff）狀態，依狀態 ID 排序逐一移除；增益與中性狀態（隱蔽、姿態、免死、靈魂連結、蓄力等）保留。不能對敵方使用。
   player: 移除目標身上所有負面狀態。只能用在自己或友方。
 - id: 工坊.effects.effects=consume_stack
   source: 消耗全部該層數（self 型從施放者、target 型從每個被命中的目標）；同一技能的傷害效果依消耗的層數 × per_stack_permille 加成（200 ＝ 每層 +20%）。沒有層數也可施放（加成 0）。預算以期望消耗＝上限的一半估算加成點數。
@@ -261,7 +261,7 @@ texts:
   player: 吸血：你回復這次對敵人實際造成傷害的一定比例（不超過最大 HP）。
 - id: 工坊.effects.effects=damage.on_kill
   source: 技能內的擊殺時效果（Phase 3D-8b）：這個傷害效果讓敵人倒下時才結算的 1–2 個效果，對象一律是施放者。可用類型：refund_ap（返還 amount 點 AP，1–2，用專用效果、不受改寫規則限制）、refund_cooldown（本技能冷卻歸零，技能必須有 cost.cooldown）、heal、shield、apply_status（一般原語）。同一個傷害效果讓一個以上的敵人倒下只結算一次；施放者自己在結算中倒下則不結算。只有主動技能自己的傷害效果可以用。預算：on_kill 各效果的點數 × on_kill_expected_permille（預估擊殺率）
-  player: 擊殺時：這個傷害讓敵人倒下時，對你自己結算 1～2 個效果（返還 AP、本招冷卻歸零、治療、護盾或狀態）。一次打倒多個敵人也只結算一次。
+  player: 擊殺時：這個傷害讓敵人倒下時，對你自己結算 1～2 個效果（返還 AP、本招冷卻歸零、治療、護盾或狀態）。一次打倒多個敵人也只結算一次。施加的狀態只能是有益狀態。
 - id: 工坊.effects.effects=damage.scaling
   source: 依情況縮放（Phase 3D-7b）：by／per_step_permille／cap_permille 三個欄位；每一步傷害 +n‰（無條件捨去）、cap_permille 必填且不超過 core.scale_cap_max_permille；by 可為 missing_hp_10pct（施放者每少 10% 最大 HP）、distance（與目標每距 1 格）、enemies_adjacent_target（目標相鄰的敵方數）、enemies_adjacent_self（施放者相鄰的敵方數）
   player: 依情況加傷：依「你少了多少 HP」「和目標的距離」「目標或你身邊的敵人數」每一步提高一定比例的傷害，有上限。
@@ -282,7 +282,7 @@ texts:
   player: 目標（自己或友方）這一輪可以多反應 1 次，到下一輪開始為止。
 - id: 工坊.effects.effects=gamble
   source: 命中判定之後（未命中則整個不結算；技能沒有對敵方的效果時直接擲）擲一次 d1000，不超過 chance_permille 結算 win 的效果，否則結算 lose 的效果（各 0–2 個，至少一邊有效果）。win／lose 可以對施放者自己（affects self，例如失敗的反噬）；damage_multiplier 讓本次施放的傷害效果乘上倍率，self_damage_of_hit 讓施放者受到本次造成傷害的 n‰。施放者受到的反噬傷害不會讓他的 HP 低於 1，反噬狀態不能是硬控、跳過回合或持續傷害。必須是主動技能的最後一個效果。預算以期望值計（成功率 × win ＋ 失敗率 × lose），對自己的有害效果打折（gamble_self_harm_permille）。
-  player: 賭一把：命中後擲機率，成功結算「贏」的效果、失敗結算「輸」的效果。可以設定成功時傷害加倍、失敗時自己受到反噬。反噬不會讓你的 HP 低於 1，也不能是暈眩、跳過回合或持續傷害。必須放在主動技能的最後一個效果。
+  player: 賭一把：命中後擲機率，成功結算「贏」的效果、失敗結算「輸」的效果。可以設定成功時傷害乘上倍率（例：×2）、失敗時自己受到反噬。反噬不會讓你的 HP 低於 1，也不能是硬控（暈眩、冰凍）、跳過回合或持續傷害。必須放在主動技能的最後一個效果。
 - id: 工坊.effects.effects=gamble.chance_permille
   source: 成功（結算 win）的機率（‰）
   player: 成功的機率。
@@ -297,7 +297,7 @@ texts:
   player: 要暫時給的技能。
 - id: 工坊.effects.effects=inscribe
   source: 在影響格（可站立的格子）留下施放者專屬的符文：恰好帶一個 element（元素，例如雷紋、火紋）或 tag（標籤），持續 duration 個環境回合（省略為 core.yaml 的 rune_default_rounds，初值 3；上限 5）。符文本身沒有任何效果，敵我都看得到；只有刻下它的施放者讀得到（條件 on_own_rune、消耗型原語 detonate_runes）。同一施放者在同一格再刻一次是更新；同一施放者同時存在的符文格超過 rune_limit_per_owner（core.yaml，初值 6）時最舊的消失。施放者倒下時符文保留到時效結束。預算：base_points × inscribe_duration_permille（依 duration；省略＝預設 3 輪）。
-  player: 在範圍內可站立的格子刻下你專屬的符文（一種元素，或一個標籤），持續幾輪（最多 5）。符文本身沒有效果，敵我都看得到，只有你自己的技能能讀取或引爆它。同一格再刻一次會更新；你的符文超過上限時最舊的消失；你倒下時符文仍保留到時效結束。
+  player: 在範圍內可站立的格子刻下你專屬的符文（一種元素，或一個標籤），持續幾輪（最多 {rune_max_rounds}）。符文本身沒有效果，敵我都看得到，只有你自己的技能能讀取或引爆它。同一格再刻一次會更新；你的符文超過上限時最舊的消失；你倒下時符文仍保留到時效結束。
 - id: 工坊.effects.effects=knock_prone
   source: 對抗判定（技能的縮放屬性 vs 目標同屬性），成功才倒地。
   player: 對抗判定（你這招的屬性對目標的同一屬性），成功就讓目標倒地。
@@ -318,7 +318,7 @@ texts:
   player: 撞上東西時的撞擊傷害骰（不填就用通用的 1d6）。
 - id: 工坊.effects.effects=redirect_damage
   source: 目標友方（不含施放者自己）獲得狀態「靈魂連結」（soul_link）duration 回合：它受到的傷害有 permille‰（≤ 500）轉給施放者，直接扣施放者的 HP。與替隊友擋下整次攻擊（intercept）不同；兩者同時存在時先攔截，傷害落在守護者身上之後才看守護者有沒有連結。施放者倒下或離場時連結消失。
-  player: 和一個友方（不能是自己）建立「靈魂連結」：持續期間他受到的傷害有一部分（最多一半）轉到你身上。你倒下或離場時連結消失。和「替身」不同：替身是整次攻擊改打你。
+  player: 和一個友方（不能是自己）建立「靈魂連結」：持續期間他受到的傷害有一部分（最多一半）轉到你身上。你倒下或離場時連結消失。和「替隊友擋下」不同：替隊友擋下是整次攻擊改打你。
 - id: 工坊.effects.effects=reset_cooldown
   source: 目標友方（不含施放者自己）的技能冷卻歸零：which 為 all 時全部技能、tag 時只有帶 tag 標籤的技能；花源力的技能（cost.source）與這個技能本身不會被重置。沒有可重置的冷卻時不結算（effect_fizzled）。
   player: 讓一個友方（不能是自己）的技能冷卻歸零：全部技能，或只限帶某個標籤的技能。花源力的技能和這招本身不受影響。
@@ -408,7 +408,7 @@ texts:
   player: 撞上東西時的撞擊傷害骰（不填就用通用的 1d6）。
 - id: 工坊.variants.variants.id
   source: 小寫英文與底線，技能內不可重複（例：tide_pierce）
-  player: 這個型態的代號：小寫英文和底線，同一招裡不能重複（例：tide_pierce）。
+  player: 這個型態的代號（玩家模式自動產生，不用填）。
 - id: 工坊.variants.variants.shape=allies_in_radius
   source: 影響與施放者曼哈頓距離不超過 radius 的格子（含自己），不需要選取。
   player: 以你為中心，一定距離內的所有格子（含你自己），不用選目標。

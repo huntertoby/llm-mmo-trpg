@@ -1070,6 +1070,16 @@ button.selected {
   cursor: not-allowed;
 }
 
+.ws-chip.unavailable {
+  opacity: 0.5;
+  cursor: not-allowed;
+  text-decoration: line-through;
+}
+
+.ws-unavailable-list {
+  color: #e08a8a;
+}
+
 .ws-card-rule {
   font-size: 12px;
   color: #c9b97a;

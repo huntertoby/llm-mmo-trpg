@@ -49,10 +49,13 @@ from trpg.skillgen.mechanics import affect_set, resolved_affects
 from trpg.skillgen.scaling import attr_names_zh, scaling_basis_zh
 
 __all__ = [
+    "EFFECT_PARAM_RULES",
     "RARITY_STATUS_PRIMITIVES",
     "RarityNeed",
     "Violation",
     "effect_count",
+    "effect_param_violations",
+    "forbidden_affects_violations",
     "is_core_effect",
     "rarity_requirements",
     "share_violations",
@@ -362,6 +365,11 @@ def _cap_violations(skill: SkillDef, library: ContentLibrary) -> list[Violation]
             "cap.weapon_req",
             f"weapon_req 只能是大類 {'、'.join(allowed)}（{skill.category}），"
             f"收到 {skill.weapon_req}",
+        )
+    if skill.trap is not None and all(e.type == "place_trap" for e in skill.effects):
+        add(
+            "trap.effects",
+            "放置陷阱要有踩到後的效果：請新增一個效果（例如傷害），它就是踩到後的效果",
         )
     self_status = skill.cost.self_status
     allowed_self = library.budget.allowance.self_status.allowed
@@ -687,18 +695,73 @@ def _skeleton_violations(
     needed = skeleton.require_any_primitives
     if needed and not any(e.type in needed for e in skill.effects):
         add("required_primitive", f"效果至少要有 {'、'.join(needed)} 其中之一")
+    return out + forbidden_affects_violations(skill, library, skeleton)
+
+
+def forbidden_affects_violations(
+    skill: SkillDef, library: ContentLibrary, skeleton: SkeletonDef
+) -> list[Violation]:
+    """``skeleton.forbidden_affects``：效果的對象在骨架的 ``forbid_affects`` 內。驗證器與工坊的
+    對象選項停用（:func:`effect_param_violations`）共用這一個函式。"""
+    out: list[Violation] = []
     forbidden = set(skeleton.forbid_affects)
     for index, effect in enumerate(skill.effects):
         if effect.split_heal and skeleton.id in SPLIT_SKELETONS:
             continue  # 聖光雙效（3D-8a）：對敵傷害、對友治療是同一個效果，光環骨架也允許
         actual = affect_set(resolved_affects(library.ruleset, effect))
         if actual & forbidden:
-            add(
-                "forbidden_affects",
-                f"effects[{index}]（{effect.type}）的對象 {sorted(actual & forbidden)} 不被允許"
-                f"（不得有對 {'、'.join(skeleton.forbid_affects)} 的效果）",
+            out.append(
+                Violation(
+                    skill.id,
+                    "skeleton.forbidden_affects",
+                    f"骨架 {skeleton.id}：effects[{index}]（{effect.type}）的對象 "
+                    f"{sorted(actual & forbidden)} 不被允許"
+                    f"（不得有對 {'、'.join(skeleton.forbid_affects)} 的效果）",
+                )
             )
     return out
+
+
+EFFECT_PARAM_EXCLUSIONS: tuple[str, ...] = (
+    "self_shape_no_enemy_effect",
+    "stun_single_long_cooldown",
+    "no_repeated_control_group",
+    "no_damage_with_ally_heal",
+)
+"""互斥規則裡，由「效果的對象或狀態」決定會不會違規的幾條（``skill_exclusions.yaml`` 的 id）。"""
+EFFECT_PARAM_RULES: tuple[str, ...] = (
+    *(f"exclusion.{rule}" for rule in EFFECT_PARAM_EXCLUSIONS),
+    "skeleton.forbidden_affects",
+    "skeleton.core_beneficial",
+    "passive.affects",
+    "stance.misuse",
+    "stance.status",
+    "stance.duration",
+    "on_kill.beneficial",
+)
+"""效果參數（對象、狀態）會牽涉的規則代碼。工坊在選項上事前停用這些規則會擋的選項
+（:mod:`trpg.skillgen.option_effect_rules`，3-48h）。"""
+
+
+def effect_param_violations(skill: SkillDef, library: ContentLibrary) -> list[Violation]:
+    """:data:`EFFECT_PARAM_RULES` 的違規。呼叫的是 :func:`validate_skill` 用的同一批規則函式，
+    所以驗證器與工坊的選項停用不可能各說各話（3-48h：同源）。"""
+    known = library.ruleset.primitives.by_id()
+    if (
+        skill.is_modifier
+        or skill.skeleton not in library.skeletons
+        or any(e.type not in known for e in skill.effects)
+    ):
+        return []
+    out = _exclusion_violations(skill, library)
+    out += _passive_violations(skill, library)
+    out += _stance_violations(skill, library)
+    skeleton = library.skeletons[skill.skeleton]
+    out += forbidden_affects_violations(skill, library, skeleton)
+    if skeleton.core.beneficial_only:
+        out += _beneficial_core_violations(skill, library, skeleton)
+    out += _on_kill_status_violations(skill, library)
+    return [v for v in out if v.rule in EFFECT_PARAM_RULES]
 
 
 def _has_condition(skill: SkillDef) -> bool:

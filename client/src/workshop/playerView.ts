@@ -38,6 +38,7 @@ export function hiddenCount(choices: readonly Choice[], dev: boolean = isDev()):
 /** 欄位現在要不要顯示：玩家模式隱藏 `later`；`show_when`（同一層另一個欄位的值）不符就隱藏。 */
 export function fieldShown(spec: FieldSpec, container: Json, base: string, dev: boolean = isDev()): boolean {
   if (!dev && spec.later === true) return false;
+  if (!dev && spec.auto_generated === true) return false; // 玩家模式自動產生（例：變奏的型態代碼）
   const when = spec.show_when ?? {};
   return Object.entries(when).every(([key, want]) => String(getPath(container, joinPath(base, key)) ?? "") === want);
 }

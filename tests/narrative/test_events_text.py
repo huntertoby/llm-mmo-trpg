@@ -27,7 +27,7 @@ def test_every_event_type_has_a_handler_or_is_explicitly_silent() -> None:
 
 
 def test_source_and_rewrite_events_read_in_chinese() -> None:
-    """Phase 3C-4a：源力、給予 AP、不死的紀錄文字。"""
+    """Phase 3C-4a：源力、給予 AP、免死的紀錄文字。"""
     from tests.engine.test_source import _well_state  # noqa: PLC0415
     from trpg.engine.events import ApGranted, DeathCheated, SourceChanged  # noqa: PLC0415
     from trpg.narrative.events import describe_event  # noqa: PLC0415
@@ -53,4 +53,4 @@ def test_source_and_rewrite_events_read_in_chinese() -> None:
     later = ApGranted(seq=0, round=1, unit_id=u1, source_id=u1, amount=1, ap_after=1, deferred=True)
     assert "下次回合開始時加上" in (describe_event(later, state) or "")
     cheated = DeathCheated(seq=0, round=1, unit_id=u1, status_id="undying", prevented=3)
-    assert describe_event(cheated, state) == f"  ✦ {name} 的「不死」擋下了致命傷害，HP 留在 1"
+    assert describe_event(cheated, state) == f"  ✦ {name} 的「免死」擋下了致命傷害，HP 留在 1"
