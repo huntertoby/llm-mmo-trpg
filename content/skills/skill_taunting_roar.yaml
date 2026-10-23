@@ -9,7 +9,7 @@ skeleton: control
 category: spell
 weapon_req: any
 ap_cost: 1
-scaling_attr: str
+scaling_attr: wil
 shape: {type: ring, radius: 1}
 effects:
   - {type: apply_status, status: taunted, duration: 1}

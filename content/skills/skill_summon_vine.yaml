@@ -10,7 +10,7 @@ skeleton: summon
 category: spell
 weapon_req: any
 ap_cost: 1
-scaling_attr: wis
+scaling_attr: wil
 shape: {type: ground_tile, range: 4}
 effects:
   - {type: summon, unit: summon_vine, duration: 4}

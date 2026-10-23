@@ -18,12 +18,48 @@
 # 遞減疊加：同 id 的數值部分依大到小 100／50／25／0%（rules/equipment.yaml）；非數值類同 id 只生效 1 條。
 affixes:
   # --- 1 數值 ---
+  # 六種屬性詞條（Phase 3H-1，玩法決定 #45）：力量、敏捷、體質、智力、感知、意志，部位與範圍相同。
   - id: affix_attr_str
     category: stat
     name_zh: 力量 +{n}
     slots: [weapon, offhand, head, body, hands, feet, neck, ring]
     stat: attribute
     attribute: str
+    value: {min: 1, max: 4}
+  - id: affix_attr_dex
+    category: stat
+    name_zh: 敏捷 +{n}
+    slots: [weapon, offhand, head, body, hands, feet, neck, ring]
+    stat: attribute
+    attribute: dex
+    value: {min: 1, max: 4}
+  - id: affix_attr_con
+    category: stat
+    name_zh: 體質 +{n}
+    slots: [weapon, offhand, head, body, hands, feet, neck, ring]
+    stat: attribute
+    attribute: con
+    value: {min: 1, max: 4}
+  - id: affix_attr_int
+    category: stat
+    name_zh: 智力 +{n}
+    slots: [weapon, offhand, head, body, hands, feet, neck, ring]
+    stat: attribute
+    attribute: int
+    value: {min: 1, max: 4}
+  - id: affix_attr_wis
+    category: stat
+    name_zh: 感知 +{n}
+    slots: [weapon, offhand, head, body, hands, feet, neck, ring]
+    stat: attribute
+    attribute: wis
+    value: {min: 1, max: 4}
+  - id: affix_attr_wil
+    category: stat
+    name_zh: 意志 +{n}
+    slots: [weapon, offhand, head, body, hands, feet, neck, ring]
+    stat: attribute
+    attribute: wil
     value: {min: 1, max: 4}
   - id: affix_max_hp
     category: stat

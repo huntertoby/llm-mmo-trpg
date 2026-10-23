@@ -179,3 +179,17 @@ rune_max_rounds: 5            # inscribe 的 duration 上限
 # --- 常駐類傳說的啟動（Phase 3D-6，docs/design/06-技能.md 6.14.4；初值，以模擬調整）---
 legendary_activation_ap: 1    # 啟動修正型與規則改變型傳說（activation: timed | battle）花的 AP（另花技能的源力）
 legendary_timed_rounds: 3     # activation: timed 的持續輪數：持有者連同啟動那一回合共 3 個回合，第 4 個回合開始時結束
+
+# --- 屬性的常駐數值（Phase 3H-1，docs/design/07-角色成長.md 7.2，玩法決定 #45；初值，平衡待辦 B13）---
+# 屬性高於 base 每 step 點升一階（14＝1 階、18＝2 階、22＝3 階）；角色面板直接顯示，說明文字由這裡產生。
+# 敏捷（防禦、先攻）、體質（HP）本來就有常駐數值，不另加。kind 對應引擎的結算點（content/rules.py AttributePerks）。
+attribute_perks:
+  base: 10
+  step: 4
+  perks:
+    - {attr: str, kind: collision_dealt,   per_tier: 1, text_zh: "你造成的撞擊傷害 +{n}"}
+    - {attr: str, kind: collision_taken,   per_tier: 1, text_zh: "你受到的撞擊傷害 −{n}"}
+    - {attr: int, kind: surface_duration,  per_tier: 1, text_zh: "你產生的表面與持續區域 +{n} 回合"}
+    - {attr: wis, kind: reaction_hit,      per_tier: 1, text_zh: "反應攻擊命中 +{n}"}
+    - {attr: wis, kind: reveal_range,      per_tier: 1, text_zh: "看見隱蔽單位與陷阱的距離 +{n} 格"}
+    - {attr: wil, kind: control_resist,    per_tier: 1, text_zh: "所有控制的抵抗 +{n}"}

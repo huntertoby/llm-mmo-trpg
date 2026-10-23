@@ -35,6 +35,7 @@ from trpg.engine.events import (
     ZoneTriggered,
 )
 from trpg.engine.rules.geometry import XY
+from trpg.engine.rules.perks import attribute_perk
 from trpg.engine.rules.statuses import effective_attribute
 from trpg.engine.skill_triggers import check_trigger_depth
 from trpg.engine.skills import shapes
@@ -173,7 +174,9 @@ def create_zone(  # noqa: PLR0917
         skill_id=skill.id,
         anchor=spec.anchor,
         cells=() if caster_anchor else tuple(Pos(x=x, y=y) for x, y in _sorted(tiles)),
-        expires_round=state.round + spec.duration,
+        expires_round=state.round
+        + spec.duration
+        + attribute_perk(ctx.rules, caster, "surface_duration"),  # 智力（3H-1）
         attributes=tuple(
             (attr, effective_attribute(ctx.rules, caster, attr)) for attr in Attribute
         ),

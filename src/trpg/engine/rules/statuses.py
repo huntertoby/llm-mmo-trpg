@@ -117,16 +117,20 @@ def status_attack_bonus(rules: Ruleset, unit: UnitState) -> int:
 
 
 def weapon_attribute(rules: Ruleset, unit: UnitState) -> int:
-    """武器的縮放屬性值（有效屬性）：有第二縮放屬性（錘：力量／體質）時取兩者平均（無條件捨去）。"""
+    """武器的縮放屬性值（有效屬性）。
+
+    有第二縮放屬性時依 ``attr_mode``：``mean`` 取平均（無條件捨去；重武器，例：錘），
+    ``max`` 取較高者（輕武器，例：匕首）。"""
     weapon = unit.weapon
     value = effective_attribute(rules, unit, weapon.scaling_attr)
     if weapon.secondary_scaling_attr is None:
         return value
-    return (value + effective_attribute(rules, unit, weapon.secondary_scaling_attr)) // 2
+    other = effective_attribute(rules, unit, weapon.secondary_scaling_attr)
+    return max(value, other) if weapon.attr_mode == "max" else (value + other) // 2
 
 
 def weapon_scale_attr(unit: UnitState) -> Attribute | None:
-    """武器縮放屬性（紀錄顯示用）：只有單一縮放屬性時回傳它；雙屬性（取平均）為 ``None``。"""
+    """武器縮放屬性（紀錄顯示用）：只有單一縮放屬性時回傳它；雙屬性（取平均或較高）為 ``None``。"""
     weapon = unit.weapon
     return weapon.scaling_attr if weapon.secondary_scaling_attr is None else None
 

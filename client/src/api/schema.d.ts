@@ -784,6 +784,21 @@ export interface components {
          */
         Attribute: "str" | "dex" | "con" | "int" | "wis" | "wil";
         /**
+         * AttributePerkOut
+         * @description 屬性的常駐數值（Phase 3H-1，``core.yaml`` 的 ``attribute_perks``）：說明由資料產生。
+         */
+        AttributePerkOut: {
+            attr: components["schemas"]["Attribute"];
+            /** Tier */
+            tier: number;
+            /** Per Tier Zh */
+            per_tier_zh: string;
+            /** Now Zh */
+            now_zh: string | null;
+            /** Next At */
+            next_at: number;
+        };
+        /**
          * BattleHistory
          * @description 到目前為止戰鬥發生過的事件（依序；重新整理或讀檔後還原戰鬥紀錄用）。
          */
@@ -2176,6 +2191,11 @@ export interface components {
             hp_per_con_point: number;
             /** Hp Con Base */
             hp_con_base: number;
+            /**
+             * Attribute Perks
+             * @default []
+             */
+            attribute_perks: components["schemas"]["AttributePerkOut"][];
             /** Mana */
             mana: number;
             /** Max Mana */

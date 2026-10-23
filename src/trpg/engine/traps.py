@@ -25,6 +25,7 @@ from trpg.engine.events import (
     TrapRevealed,
     TrapTriggered,
 )
+from trpg.engine.rules.perks import attribute_perk
 from trpg.engine.rules.statuses import effective_attribute
 from trpg.engine.skill_triggers import check_trigger_depth
 from trpg.engine.skills.casting import use_trap_skill
@@ -33,6 +34,7 @@ from trpg.engine.state import BattleState, TrapState, UnitState
 from trpg.shared.types import Attribute, Pos, Team, UnitId
 
 __all__ = [
+    "detect_traps",
     "flush_trap_entries",
     "own_traps",
     "place_trap",
@@ -73,6 +75,22 @@ def reveal_traps(ctx: Ctx, caster: UnitState, tiles: Iterable[tuple[int, int]]) 
             pos=trap.pos,
             skill_id=trap.skill_id,
         )
+
+
+def detect_traps(ctx: Ctx, unit: UnitState) -> None:
+    """感知的常駐數值（Phase 3H-1）：``unit`` 自動看見 ``reveal_range`` 格內的敵方陷阱（移動抵達、
+    回合開始時檢查；沒有階數就什麼也不做）。"""
+    radius = attribute_perk(ctx.rules, unit, "reveal_range")
+    if radius <= 0:
+        return
+    near = [
+        (t.pos.x, t.pos.y)
+        for t in ctx.state.traps
+        if t.team is not unit.team
+        and unit.team not in t.revealed_to
+        and abs(t.pos.x - unit.pos.x) + abs(t.pos.y - unit.pos.y) <= radius
+    ]
+    reveal_traps(ctx, unit, near)
 
 
 def strip_hidden_traps(state: BattleState, team: Team) -> BattleState:

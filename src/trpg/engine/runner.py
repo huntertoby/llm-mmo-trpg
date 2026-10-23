@@ -38,8 +38,12 @@ __all__ = [
     "run_battle",
 ]
 
-LOG_FORMAT = "trpg-battle-log/58"
-"""``/58``（Phase 3-41b）：``damage_dealt`` 事件多了 ``flat``／``scaled_permille``／
+LOG_FORMAT = "trpg-battle-log/59"
+"""``/59``（Phase 3H-1）：屬性的常駐數值（力量：撞擊傷害 ±、智力：表面與持續區域 +回合、
+感知：反應攻擊命中 +、看見隱蔽單位的距離 +、自動看見附近敵方陷阱（可能多出 ``trap_revealed``）、
+意志：控制的抵抗 +）、雙屬性武器的取法（``attr_mode``：輕武器取較高、重武器取平均）、
+易傷的抵抗屬性改智力；同一份輸入的結算可能不同，因此 ``/58`` 的紀錄無法重播。
+``/58``（Phase 3-41b）：``damage_dealt`` 事件多了 ``flat``／``scaled_permille``／
 ``scale_attr``／``block_permille``（戰鬥紀錄把傷害組成分項顯示用），事件內容不同，
 因此 ``/57`` 的紀錄無法重播。
 ``/57``（Phase 3E-2a，接在 3-33f2 的 ``/56`` 之後）：帶變奏的技能不能被 ``copy_skill`` 複製、

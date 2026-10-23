@@ -9,7 +9,7 @@ skeleton: strike
 category: spell
 weapon_req: focus
 ap_cost: 1
-scaling_attr: int
+scaling_attr: wis
 shape: {type: single, range: 5}
 effects:
   - {type: damage, dice: 1d8, element: shadow}

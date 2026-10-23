@@ -29,9 +29,9 @@ def test_open_plain_battle_uses_guard_swap_and_aim_and_replays(
     tmp_path: Path, capsys: pytest.CaptureFixture[str]
 ) -> None:
     data, out = _log(
-        "open_plain", 98, tmp_path, capsys
-    )  # 3-24a1：弓有拋射，AI 軌跡改變，種子 3 → 98
-    assert data["format"] == "trpg-battle-log/58"
+        "open_plain", 222, tmp_path, capsys
+    )  # 3-24a1：弓有拋射，AI 軌跡改變，種子 3 → 98；3H-1 常駐數值後 → 222
+    assert data["format"] == "trpg-battle-log/59"
     kinds = {a["type"] for a in data["actions"]}
     assert {"swap", "aim"} <= kinds
     assert any(a["type"] == "defend" and a.get("target_id") for a in data["actions"])

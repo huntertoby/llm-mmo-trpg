@@ -17,6 +17,7 @@ from trpg.engine.effects.models import (
     LowerTerrainEffect,
     RaiseTerrainEffect,
 )
+from trpg.engine.rules.perks import attribute_perk
 from trpg.engine.skills.primitives.base import Handler
 
 if TYPE_CHECKING:
@@ -29,6 +30,13 @@ __all__ = ["HANDLERS"]
 
 def create_surface(cast: Cast, effect: ResolvedEffect, spec: EffectSpec) -> list[EffectBase]:
     batch: list[EffectBase] = []
+    duration = spec.duration
+    bonus = attribute_perk(cast.ctx.rules, cast.caster, "surface_duration")  # 智力（3H-1）
+    if bonus and spec.surface is not None:
+        base = (
+            duration if duration is not None else cast.ctx.rules.surface_def(spec.surface).duration
+        )
+        duration = None if base is None else base + bonus  # 永久的表面不變
     for xy in cast.tiles(effect.affects, spec.condition):
         assert spec.surface is not None
         batch.append(
@@ -36,7 +44,7 @@ def create_surface(cast: Cast, effect: ResolvedEffect, spec: EffectSpec) -> list
                 source_id=cast.caster.id,
                 pos=xy,
                 surface=spec.surface,
-                duration=spec.duration,
+                duration=duration,
                 team=cast.caster.team,
             )
         )

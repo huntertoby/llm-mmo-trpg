@@ -323,3 +323,20 @@ def test_rules_and_hero_expose_the_hp_per_constitution_point(
         core.hp_con_base,
     )
     assert hero["max_hp"] == hero["hp"]
+
+
+def test_hero_exposes_the_attribute_perks_generated_from_the_data(
+    runs_client: TestClient, library: ContentLibrary
+) -> None:
+    """Phase 3H-1：面板的常駐數值說明由 core.yaml 的 attribute_perks 產生，階數依主角的屬性。"""
+    perks = library.ruleset.core.attribute_perks
+    hero = _create(runs_client)["hero"]
+    shown = hero["attribute_perks"]
+    assert len(shown) == len(perks.perks) == 6
+    by_attr = {p["attr"]: p for p in shown if p["attr"] in ("str", "wil")}
+    for attr in ("str", "wil"):
+        tier = perks.tier(hero["attributes"][attr])
+        assert by_attr[attr]["tier"] == tier
+        assert (by_attr[attr]["now_zh"] is None) == (tier == 0)
+        assert by_attr[attr]["next_at"] == perks.base + perks.step * (tier + 1)
+    assert all(p["per_tier_zh"].endswith("／階") and "{n}" not in p["per_tier_zh"] for p in shown)

@@ -10,7 +10,7 @@ skeleton: reaction
 category: spell
 weapon_req: focus
 ap_cost: null
-scaling_attr: int
+scaling_attr: wil
 shape: {type: single, range: 6}
 effects:
   - {type: damage, dice: 2d6, element: shadow}

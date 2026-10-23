@@ -184,6 +184,20 @@ class EvolutionChoiceOut(_ApiModel):
     """0～2 支；沒有任何合格的進化時為空（照常升級，不進化）。"""
 
 
+class AttributePerkOut(_ApiModel):
+    """屬性的常駐數值（Phase 3H-1，``core.yaml`` 的 ``attribute_perks``）：說明由資料產生。"""
+
+    attr: Attribute
+    tier: int
+    """目前階數（屬性高於 10 每 4 點一階；0 為還沒有）。"""
+    per_tier_zh: str
+    """每階的效果，例：「你造成的撞擊傷害 +1／階」。"""
+    now_zh: str | None
+    """目前階數的總效果（0 階為 ``None``）。"""
+    next_at: int
+    """下一階需要的屬性值。"""
+
+
 class HeroOut(_ApiModel):
     build_id: str
     name_zh: str
@@ -198,6 +212,8 @@ class HeroOut(_ApiModel):
     """每點體質的最大 HP（``core.yaml``；前端的「＋N HP」預覽用）。"""
     hp_con_base: int
     """體質的基準值（高於它才有 HP 加成）。"""
+    attribute_perks: tuple[AttributePerkOut, ...] = ()
+    """屬性的常駐數值（Phase 3H-1）：面板每個屬性底下顯示。"""
     mana: int
     max_mana: int
     source: int

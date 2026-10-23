@@ -17,6 +17,8 @@
 from __future__ import annotations
 
 import itertools
+from collections.abc import Callable, Mapping
+from dataclasses import dataclass
 from decimal import ROUND_CEILING, Decimal, localcontext
 from typing import Literal
 
@@ -28,9 +30,13 @@ from trpg.shared.types import Attribute, Element, Surface
 
 __all__ = [
     "HIT_TABLE_SCALE",
+    "AttributePerk",
+    "AttributePerks",
     "CoreRules",
     "HitTable",
     "HitThreshold",
+    "PerkKind",
+    "PerkLine",
     "SkillSlots",
     "SummonGrowth",
     "SummonInfusion",
@@ -42,6 +48,95 @@ HIT_TABLE_SCALE = 1_000_000
 """門檻比例的放大倍數（10⁶）。"""
 
 _DECIMAL_PRECISION = 60
+
+
+PerkKind = Literal[
+    "collision_dealt",
+    "collision_taken",
+    "surface_duration",
+    "reaction_hit",
+    "reveal_range",
+    "control_resist",
+]
+"""常駐數值的種類（Phase 3H-1）；每一種由引擎的一個結算點讀取（見 :class:`AttributePerks`）。"""
+
+
+class AttributePerk(ContentModel):
+    """一條屬性常駐數值：``attr`` 每升一階，``kind`` 的效果加 ``per_tier``。
+
+    ``text_zh`` 是面板說明，``{n}`` 換成「每階數值」（面板另外寫出目前階數與總和）。"""
+
+    attr: Attribute
+    kind: PerkKind
+    per_tier: int = Field(ge=1)
+    text_zh: str = Field(min_length=1)
+
+
+@dataclass(frozen=True)
+class PerkLine:
+    """面板上的一行常駐數值：``now_zh`` 是目前階數的總效果（0 階為 ``None``）；``next_at`` 是
+    下一階需要的屬性值。"""
+
+    attr: Attribute
+    kind: PerkKind
+    tier: int
+    per_tier_zh: str
+    now_zh: str | None
+    next_at: int
+
+
+class AttributePerks(ContentModel):
+    """屬性的常駐數值（Phase 3H-1，``docs/design/07-角色成長.md`` 7.2；初值，平衡待辦 B13）。
+
+    屬性高於 ``base`` 每 ``step`` 點升一階（``base``＋``step``＝1 階，＋2×``step``＝2 階）。結算點：
+
+    - ``collision_dealt``／``collision_taken``：撞擊傷害（``cause == "collision"``）每次 +／−；
+    - ``surface_duration``：自己的技能產生的表面、持續區域的持續回合 +；
+    - ``reaction_hit``：反應攻擊（藉機攻擊、監視射擊）的命中 +；
+    - ``reveal_range``：能鎖定隱蔽單位的距離 +，也是自動看見敵方陷阱的距離；
+    - ``control_resist``：有 ``control_group`` 的狀態（控制）的抵抗屬性值 +。
+    """
+
+    base: int = Field(default=10, ge=0)
+    step: int = Field(default=4, ge=1)
+    perks: tuple[AttributePerk, ...] = ()
+
+    @model_validator(mode="after")
+    def _unique(self) -> AttributePerks:
+        keys = [(p.attr, p.kind) for p in self.perks]
+        if len(set(keys)) != len(keys):
+            raise ValueError("attribute_perks：同一屬性的同一種常駐數值重複")
+        return self
+
+    def tier(self, value: int) -> int:
+        """屬性值 ``value`` 的階數（不高於 ``base`` 為 0）。"""
+        return max(0, (value - self.base) // self.step)
+
+    def of_attr(self, attr: Attribute) -> tuple[AttributePerk, ...]:
+        return tuple(p for p in self.perks if p.attr is attr)
+
+    def lines(self, attributes: Mapping[Attribute, int]) -> tuple[PerkLine, ...]:
+        """角色面板的常駐數值說明（依資料產生，不寫死）：每條常駐數值一行，含目前階數。"""
+        out: list[PerkLine] = []
+        for perk in self.perks:
+            value = attributes.get(perk.attr, self.base)
+            tier = self.tier(value)
+            total = perk.per_tier * tier
+            out.append(
+                PerkLine(
+                    attr=perk.attr,
+                    kind=perk.kind,
+                    tier=tier,
+                    per_tier_zh=perk.text_zh.replace("{n}", str(perk.per_tier)) + "／階",
+                    now_zh=perk.text_zh.replace("{n}", str(total)) if tier else None,
+                    next_at=self.base + self.step * (tier + 1),
+                )
+            )
+        return tuple(out)
+
+    def total(self, kind: PerkKind, attributes: Callable[[Attribute], int]) -> int:
+        """``kind`` 的總加成：每條符合的常駐數值 ``per_tier × 階數``；``attributes`` 回傳屬性值。"""
+        return sum(p.per_tier * self.tier(attributes(p.attr)) for p in self.perks if p.kind == kind)
 
 
 class SkillSlots(ContentModel):
@@ -180,6 +275,9 @@ class CoreRules(ContentModel):
     hp_con_base: int = Field(ge=0)
     hp_per_con_point: int = Field(ge=0)
     level_hp_permille: int = Field(ge=0)
+
+    # 屬性的常駐數值（Phase 3H-1，07 7.2）：每高於基準 4 點升一階
+    attribute_perks: AttributePerks = AttributePerks()
 
     # 傷害
     basic_attack_attr_multiplier_permille: int = Field(ge=0)

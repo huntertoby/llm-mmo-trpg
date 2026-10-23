@@ -27,6 +27,7 @@ from trpg.content.schemas import ContentModel, ElementTable
 from trpg.content.sim_builds import BuildTable
 from trpg.content.skill_keywords import KeywordTable
 from trpg.content.skill_rules import BudgetRules, ExclusionTable, SynergyTable
+from trpg.content.skill_scaling import SkillScalingRules
 from trpg.content.skill_triggers import SkillTriggerTable
 from trpg.content.skills import ConditionTable, PrimitiveTable, ShapeTable
 from trpg.content.stacks import StackTable
@@ -67,6 +68,7 @@ KNOWN_CONTENT_FILES: tuple[ContentFile, ...] = (
     ContentFile("skill_synergies.yaml", SynergyTable),
     ContentFile("skill_keywords.yaml", KeywordTable),
     ContentFile("skill_exclusions.yaml", ExclusionTable),
+    ContentFile("skill_scaling.yaml", SkillScalingRules),
     ContentFile("regions.yaml", RegionTable),
     ContentFile("roguelite.yaml", RunRules),
     ContentFile("llm/world_shattered.yaml", WorldStyle),

@@ -1,0 +1,42 @@
+# 技能縮放屬性的允許範圍（Phase 3H-1；docs/design/06-技能.md 6.10、07-角色成長.md 7.2；玩法決定 #45）。
+#
+# 武器技（category: weapon）：看武器——縮放屬性必須是某把同大類（weapon_req）、玩家可裝備的武器的
+#   縮放屬性（含第二縮放屬性，見 weapons.yaml），不在這裡列。
+# 法術技（category: spell）：依主題。spell_themes 依 **先後順序** 比對，第一個符合的主題決定屬性
+#   （符合＝技能的標籤或效果類型命中 tags_any／effect_types_any，且沒有 tags_none 的標籤）。
+#   智力＝元素傷害與互動｜感知＝治療、護盾、輔助、偵測與標記｜意志＝召喚、獻祭、詛咒、心智控制、暗影。
+#   都不符合的（物理、裝備動作等）是身體類，允許 body_attrs。
+# overrides：個別技能的例外，要寫理由。
+# 內建技能由 `trpg content check` 與 tests/content/test_skill_scaling.py 檢查；
+# 3H-3 的隨機組合器與 LLM 提議也從這份規則取得允許的屬性。
+
+spell_themes:
+  # 意志：召喚、獻祭、詛咒、心智控制、暗影（先比對，因為「召喚＋輔助」「暗影＋治療」仍算意志）
+  - id: mind
+    attr: wil
+    label_zh: 召喚、獻祭、詛咒、心智控制、暗影
+    tags_any: [summon, sacrifice, shadow, curse, fear, silence, taunt]
+    tags_none: [mark]          # 標記屬於偵測與標記（感知），即使是暗影系
+    effect_types_any: [summon, sacrifice_summon]
+  # 感知：治療、護盾、輔助、偵測與標記
+  - id: support
+    attr: wis
+    label_zh: 治療、護盾、輔助、偵測與標記
+    tags_any: [heal, shield, support, reveal, scout, mark, cleanse, guard, utility, luck, holy, nature, buff]
+    tags_none: [physical, gear, rage]   # 物理與裝備動作、怒氣增益屬於身體類
+  # 智力：元素傷害與互動
+  - id: elemental
+    attr: int
+    label_zh: 元素傷害與互動
+    tags_any: [fire, ice, lightning, earth, water, arcane, rune, rune_read, rune_make, rune_detonate, ash, poison, telekinesis, oil]
+
+body_attrs: [str, dex, con]
+
+overrides:
+  - {skill: skill_arcane_blade, attrs: [str, int], reason_zh: 魔劍斬是力量＋智力的雙屬性技能（混搭 build 的範例）}
+  - {skill: skill_flight, attrs: [int], reason_zh: 飛行是奧術位移，維持智力}
+  - {skill: skill_fracture_mark, attrs: [int], reason_zh: 裂骨印記是物理弱點標記，原本看智力，效果與數值不變}
+  - {skill: skill_hunt_sigil, attrs: [wis], reason_zh: 獵印是標記獵物（偵測與標記），不是元素符文}
+  - {skill: skill_mountain_mover, attrs: [str], reason_zh: 移山之力是力量傳說（位移改造），不看元素}
+  - {skill: skill_summon_elite, attrs: [wil], reason_zh: 召喚物強化修正技能，跟著召喚走意志}
+  - {skill: skill_summon_swarm, attrs: [wil], reason_zh: 召喚物強化修正技能，跟著召喚走意志}

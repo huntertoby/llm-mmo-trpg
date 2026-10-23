@@ -3,7 +3,17 @@ import type { RunHero } from "../api/types";
 import { SkillCardView } from "../ui/SkillCardView";
 import { WeaponIcon } from "../ui/WeaponIcon";
 import { levelBadge, levelOf } from "./skillGrowth";
-import { ATTRIBUTES, conHpBonus, hpDeltaText, SLOT_LABELS, SLOT_LIMITS, slotUsage, type SlotKind } from "./flow";
+import {
+  ATTRIBUTES,
+  attributeLabel,
+  conHpBonus,
+  hpDeltaText,
+  perkText,
+  SLOT_LABELS,
+  SLOT_LIMITS,
+  slotUsage,
+  type SlotKind,
+} from "./flow";
 
 function Bar({ label, value, max, kind }: { label: string; value: number; max: number; kind: string }) {
   const pct = max <= 0 ? 0 : Math.max(0, Math.min(100, Math.round((value / max) * 100)));
@@ -66,6 +76,15 @@ export function RunHeroPanel({ hero }: { hero: RunHero }) {
           </span>
         ))}
       </div>
+      {(hero.attribute_perks ?? []).length > 0 && (
+        <ul className="run-attr-perks small" data-testid="run-attr-perks">
+          {(hero.attribute_perks ?? []).map((p) => (
+            <li key={`${p.attr}-${p.per_tier_zh}`} className={p.tier > 0 ? "" : "muted"}>
+              <b>{attributeLabel(p.attr)}</b>　{perkText(p)}
+            </li>
+          ))}
+        </ul>
+      )}
       <div className="section-title">
         技能
         <span className="muted small">

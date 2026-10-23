@@ -232,7 +232,9 @@ class WeaponDef(ContentModel):
     武器小特性（Phase 3-24a1）一律是下列參數，引擎只讀參數、不寫死數值（之後的「武器特性強化」
     詞條改這些參數即可）：
 
-    - ``secondary_scaling_attr``：第二縮放屬性；有值時攻擊值與傷害用兩屬性的平均（無條件捨去）。
+    - ``secondary_scaling_attr``：第二縮放屬性；有值時攻擊值與傷害用兩屬性合成一個值，取法由
+      ``attr_mode`` 決定（Phase 3H-1，08 8.11）：``mean`` 取平均（無條件捨去；重武器，要兩個都點）、
+      ``max`` 取較高者（輕武器，靈巧）。沒有第二屬性時 ``attr_mode`` 不影響結果。
     - ``armor_break``：破甲，見 :class:`ArmorBreak`。
     - ``knockback``：震退——普攻命中後把目標沿攻擊方向推這麼多格（沿用推擊與撞擊規則）。
     - ``reach``：觸及——藉機攻擊的範圍（目標從 ``reach`` 格內走到 ``reach`` 格外時可以反應）；
@@ -269,6 +271,7 @@ class WeaponDef(ContentModel):
     attack_bonus: int = 0
     scaling_attr: Attribute
     secondary_scaling_attr: Attribute | None = None
+    attr_mode: Literal["mean", "max"] = "mean"
     element: Element = Element.PHYSICAL
     crit_range: int = Field(default=20, ge=2, le=20)
     two_handed: bool = False
@@ -317,6 +320,10 @@ class WeaponDef(ContentModel):
             if self.two_handed
             else "單手：副手欄位可以放盾或副手物品"
         ]
+        if self.secondary_scaling_attr is not None:
+            names = f"{self.scaling_attr.display_name}、{self.secondary_scaling_attr.display_name}"
+            how = "取較高者" if self.attr_mode == "max" else "取平均"
+            lines.append(f"雙屬性：普攻與武器技吃{names}，{how}")
         if self.is_melee:
             lines.append(
                 f"背刺（近戰共用規則）：從目標背後攻擊，命中 +{core.backstab_hit_bonus}、"

@@ -10,7 +10,7 @@ skeleton: passive
 category: spell
 weapon_req: any
 ap_cost: null
-scaling_attr: int
+scaling_attr: wil
 shape: {type: self}
 effects:
   - {type: damage, dice: 1d8, element: shadow, affects: enemies}

@@ -54,6 +54,7 @@ from trpg.engine.results import Pending
 from trpg.engine.rules.combat import ForcedOutcome, attack_problem, roll_attack
 from trpg.engine.rules.facing import face_toward
 from trpg.engine.rules.geometry import XY, has_line_of_sight, manhattan
+from trpg.engine.rules.perks import attribute_perk
 from trpg.engine.rules.statuses import (
     skip_turn_status,
     weapon_attribute,
@@ -514,7 +515,7 @@ def enemy_moves_in_range_reactions(ctx: Ctx, mover: UnitState) -> None:
         picked = _react(ctx, reactor, ("enemy_moves_in_range",), mover, effect="basic_attack")
         if not isinstance(picked, ReactionDef):
             continue
-        perform_unit_attack(ctx, reactor, mover, primary=False)
+        perform_unit_attack(ctx, reactor, mover, primary=False, reaction=True)
         status_id = picked.requires_status
         if extra_uses_left(reactor, picked.id) > 0:
             continue  # 裝備給了額外次數（3G-G3b）：還能再觸發一次，監視狀態保留到最後一次
@@ -525,11 +526,19 @@ def enemy_moves_in_range_reactions(ctx: Ctx, mover: UnitState) -> None:
             )
 
 
-def perform_unit_attack(ctx: Ctx, attacker: UnitState, target: UnitState, *, primary: bool) -> None:
+def perform_unit_attack(
+    ctx: Ctx,
+    attacker: UnitState,
+    target: UnitState,
+    *,
+    primary: bool,
+    reaction: bool = False,
+) -> None:
     """一次普攻：命中判定 → （命中時）格擋反應 → 傷害。
 
     ``primary``：是否為動作本身的攻擊（預覽時主要攻擊視為命中，次要攻擊如藉機攻擊在
     ``min`` 模式視為失手、``max`` 模式視為暴擊）。被動技能的觸發等傷害結算完才處理。
+    ``reaction``：這是反應攻擊（藉機攻擊、監視射擊）——命中加上感知的常駐數值（Phase 3H-1）。
     """
     with holding(ctx):
         target_xy, attacker_xy = target.xy, attacker.xy
@@ -538,10 +547,12 @@ def perform_unit_attack(ctx: Ctx, attacker: UnitState, target: UnitState, *, pri
         reveal = gunshot_reveals(ctx.state, attacker)
         behind = pierce_line_targets(ctx.state, attacker, target)  # 開火前的直線（弩，3-24a2）
         spend_ammo(attacker)
-        ambushed, rolled, victim = _attack_once(ctx, attacker, target, primary=primary)
+        ambushed, rolled, victim = _attack_once(
+            ctx, attacker, target, primary=primary, reaction=reaction
+        )
         for extra in behind:  # 穿透：各自擲命中與傷害
             if attacker.alive and extra.alive:
-                _attack_once(ctx, attacker, extra, primary=False)
+                _attack_once(ctx, attacker, extra, primary=False, reaction=reaction)
         turns = [(victim, attacker_xy)] if rolled and attacker.weapon.is_melee else []
         after_attack(ctx, attacker, target_xy, ambushed=ambushed, turns=turns)
         if reveal:
@@ -584,6 +595,7 @@ def _attack_once(
     *,
     primary: bool,
     extra_permille: int | None = None,
+    reaction: bool = False,
 ) -> tuple[bool, bool, UnitState]:
     """回傳（這次攻擊是不是在隱蔽中發動——潛行偷襲，結算完要移除隱蔽；有沒有擲命中；承受這次
     攻擊的單位——被守護者擋下時是守護者，3C-6b：轉身的是它）。
@@ -602,6 +614,8 @@ def _attack_once(
             forced = "miss" if ctx.preview == "min" else "crit"
     state = ctx.state
     bonus = modifiers.hit_bonus(state, attacker, modifiers.ATTACK, Subject(target, target.xy))
+    if reaction:  # 感知的常駐數值（Phase 3H-1）
+        bonus += attribute_perk(ctx.rules, attacker, "reaction_hit")
     if attacker.aimed:  # 瞄準（Phase 3-21a）：下一次需要擲命中的攻擊，用掉即失效
         bonus += ctx.core.aim_hit_bonus
         attacker.aimed = False
@@ -707,4 +721,4 @@ def opportunity_attacks(ctx: Ctx, mover: UnitState, from_xy: XY, to_xy: XY) -> N
         if isinstance(picked, SkillDef):
             _run_skill(ctx, reactor, picked, mover)
         elif picked is not None:
-            perform_unit_attack(ctx, reactor, mover, primary=False)
+            perform_unit_attack(ctx, reactor, mover, primary=False, reaction=True)

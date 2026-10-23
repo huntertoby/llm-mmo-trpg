@@ -19,6 +19,14 @@ export function baseAttributes(value: number): Record<AttributeId, number> {
   return Object.fromEntries(ATTRIBUTES.map((a) => [a.id, value])) as Record<AttributeId, number>;
 }
 
+/** 屬性的常駐數值（Phase 3H-1；說明文字由後端依 `core.yaml` 的 `attribute_perks` 產生，這裡只決定怎麼排）。 */
+export type AttributePerk = RunHero["attribute_perks"][number];
+
+/** 面板上的一行：有階數時寫目前的總效果與階數，還沒有階數時寫每階效果與要幾點才升到 1 階。 */
+export function perkText(p: AttributePerk): string {
+  return p.now_zh !== null ? `${p.now_zh}（${p.tier} 階）` : `${p.per_tier_zh}（屬性 ${p.next_at} 起）`;
+}
+
 export function attributeLabel(id: string): string {
   return ATTRIBUTES.find((a) => a.id === id)?.label ?? id;
 }

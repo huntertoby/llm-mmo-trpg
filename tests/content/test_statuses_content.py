@@ -21,7 +21,7 @@ EXPECTED = {
     "stun": (1, Attribute.CON, "hard"),
     "frozen": (1, Attribute.CON, "hard"),
     "weaken": (2, Attribute.CON, None),
-    "vulnerable": (2, Attribute.WIL, None),
+    "vulnerable": (2, Attribute.INT, None),
     "bleed": (3, Attribute.CON, None),
     "poison": (3, Attribute.CON, None),
 }

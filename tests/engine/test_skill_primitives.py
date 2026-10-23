@@ -22,7 +22,7 @@ from trpg.engine.events import (
     TerrainChanged,
     UnitMoved,
 )
-from trpg.shared.types import Pos, Surface, Team, UnitId
+from trpg.shared.types import Attribute, Pos, Surface, Team, UnitId
 
 FIRE: dict[str, Any] = {"type": "damage", "dice": "2d6", "element": "fire"}
 SINGLE5: dict[str, Any] = {"type": "single", "range": 5}
@@ -244,7 +244,11 @@ def test_create_surface_records_the_caster_team_and_duration() -> None:
         {"type": "cross", "range": 4},
         [{"type": "create_surface", "surface": "oil", "duration": 3}],
     )
-    result = cast(battle(skill), target_pos=Pos(x=2, y=2))
+    state = battle(skill)
+    state.units[U1].attributes[Attribute.INT] = (
+        13  # 智力 14 起表面 +1 回合（3H-1），這裡量原本的持續回合
+    )
+    result = cast(state, target_pos=Pos(x=2, y=2))
     tiles = {(c.pos.x, c.pos.y) for c in of(result, SurfaceChanged)}
     assert tiles == {(2, 2), (2, 1), (2, 3), (1, 2), (3, 2)}
     tile = result.state.tile(2, 2)

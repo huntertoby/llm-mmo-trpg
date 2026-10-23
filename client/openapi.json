@@ -1928,6 +1928,47 @@
         "title": "Attribute",
         "description": "角色的六屬性（成員名稱用大寫縮寫，避開 ``str``、``int`` 等內建名稱）。"
       },
+      "AttributePerkOut": {
+        "properties": {
+          "attr": {
+            "$ref": "#/components/schemas/Attribute"
+          },
+          "tier": {
+            "type": "integer",
+            "title": "Tier"
+          },
+          "per_tier_zh": {
+            "type": "string",
+            "title": "Per Tier Zh"
+          },
+          "now_zh": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Now Zh"
+          },
+          "next_at": {
+            "type": "integer",
+            "title": "Next At"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "attr",
+          "tier",
+          "per_tier_zh",
+          "now_zh",
+          "next_at"
+        ],
+        "title": "AttributePerkOut",
+        "description": "屬性的常駐數值（Phase 3H-1，``core.yaml`` 的 ``attribute_perks``）：說明由資料產生。"
+      },
       "BattleHistory": {
         "properties": {
           "steps": {
@@ -5301,6 +5342,14 @@
           "hp_con_base": {
             "type": "integer",
             "title": "Hp Con Base"
+          },
+          "attribute_perks": {
+            "items": {
+              "$ref": "#/components/schemas/AttributePerkOut"
+            },
+            "type": "array",
+            "title": "Attribute Perks",
+            "default": []
           },
           "mana": {
             "type": "integer",

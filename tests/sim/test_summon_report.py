@@ -12,8 +12,8 @@ from trpg.sim.summon_report import downed_ratio, format_summons, run_summon_sim,
 def test_summon_sim_is_deterministic_and_reports() -> None:
     lib = library()
     packs = ["dev_spirit", "dev_blaze"]
-    a = run_summon_sim(lib, packs=packs, maps=["open_plain"], seeds=2)
-    b = run_summon_sim(lib, packs=packs, maps=["open_plain"], seeds=2)
+    a = run_summon_sim(lib, packs=packs, maps=["open_plain"], seeds=5)
+    b = run_summon_sim(lib, packs=packs, maps=["open_plain"], seeds=5)
     assert [x.metrics for x in a] == [x.metrics for x in b]
     assert all(x.metrics is not None for x in a)
     summaries = summarize(a)
@@ -102,7 +102,7 @@ def test_downed_ratio_is_reported_for_the_summon_threshold() -> None:
     """3-33f1 門檻用：被打倒比例 ＝ 結束原因 downed ÷ 召喚物總數；沒有召喚物時為 None。"""
     lib = library()
     summaries = summarize(
-        run_summon_sim(lib, packs=["dev_summoner", "dev_blaze"], maps=["open_plain"], seeds=2)
+        run_summon_sim(lib, packs=["dev_summoner", "dev_blaze"], maps=["open_plain"], seeds=5)
     )
     summoner, blaze = summaries
     assert downed_ratio(blaze) is None

@@ -42,6 +42,7 @@ U1, U2, U3 = UnitId("unit_0001"), UnitId("unit_0002"), UnitId("unit_0003")
 ROW = "0000000"
 FLAT = "\n".join([ROW] * 7)
 FOE = (2, 3)
+NO_PERK = {"str": 10}  # 3H-1：力量 14 起有撞擊傷害的常駐數值；這些測試量的是預設撞擊骰
 
 
 def of[E: EventBase](events: Sequence[EventBase], kind: type[E]) -> list[E]:
@@ -68,7 +69,7 @@ def arena(
     """U1 我方戰士（在 (0, 0)）；U2 敵人（不反應、HP 200）；``second`` 為另一個敵人 U3。"""
     enemies = [foe] + ([] if second is None else [second])
     m = make_map(heights, terrain, ally=[(0, 0)], enemy=enemies, objects=objects)
-    spawns = [spawn(Team.ALLY, (0, 0), "hero_fighter")]
+    spawns = [spawn(Team.ALLY, (0, 0), template("hero_fighter", attributes=NO_PERK))]
     spawns += [spawn(Team.ENEMY, xy, no_reactions(max_hp=200)) for xy in enemies]
     return give_turn(make_state(m, spawns), U1)
 
@@ -209,7 +210,12 @@ def test_push_distance_over_the_cap_becomes_collision_damage(
 ) -> None:
     """颶風踢（推 2 格，已達上限）＋重踏（+1）：多出的 1 格改為一次撞擊，就算沒撞到東西。"""
     always(monkeypatch)
-    hero = template("hero_fighter", reactions=[], skills=["skill_gale_kick", "skill_heavy_stomp"])
+    hero = template(
+        "hero_fighter",
+        attributes=NO_PERK,
+        reactions=[],
+        skills=["skill_gale_kick", "skill_heavy_stomp"],
+    )
     m = make_map(FLAT, ally=[(1, 3)], enemy=[FOE])
     state = give_turn(
         make_state(
@@ -233,7 +239,7 @@ def test_push_distance_over_the_cap_becomes_collision_damage(
 
 def test_basic_shove_collides_too() -> None:
     """基本動作的推擊也適用：推 2 格，第二步被牆擋住，少走 1 格。"""
-    hero = template("hero_fighter", reactions=[], skills=["skill_heavy_stomp"])
+    hero = template("hero_fighter", attributes=NO_PERK, reactions=[], skills=["skill_heavy_stomp"])
     m = make_map(FLAT, terrain_with("#", 4), ally=[(1, 3)], enemy=[FOE])
     state = give_turn(
         make_state(
@@ -268,7 +274,7 @@ def shove_scene(
     """U1 我方戰士在 ``shover`` 推 U2（不反應、HP 200）；``second`` 為 U3（擋在身後）。"""
     enemies = [foe] + ([] if second is None else [second])
     m = make_map(FLAT, terrain, ally=[shover], enemy=enemies, objects=objects)
-    spawns = [spawn(Team.ALLY, shover, "hero_fighter")]
+    spawns = [spawn(Team.ALLY, shover, template("hero_fighter", attributes=NO_PERK))]
     spawns += [spawn(Team.ENEMY, xy, no_reactions(max_hp=200)) for xy in enemies]
     return give_turn(make_state(m, spawns), U1)
 
@@ -333,7 +339,11 @@ def test_a_halved_distance_of_zero_is_still_illegal() -> None:
     m = make_map(FLAT, terrain_with("#", 3), ally=[SHOVER], enemy=[PUSHED])
     state = give_turn(
         make_state(
-            m, [spawn(Team.ALLY, SHOVER, "hero_fighter"), spawn(Team.ENEMY, PUSHED, steady)]
+            m,
+            [
+                spawn(Team.ALLY, SHOVER, template("hero_fighter", attributes=NO_PERK)),
+                spawn(Team.ENEMY, PUSHED, steady),
+            ],
         ),
         U1,
     )
@@ -367,7 +377,7 @@ def test_the_ai_scores_a_wall_shove_higher_than_a_shove_in_the_open() -> None:
 
 def test_gale_kick_into_a_wall_deals_collision_damage(monkeypatch: pytest.MonkeyPatch) -> None:
     always(monkeypatch)
-    hero = template("hero_fighter", reactions=[], skills=["skill_gale_kick"])
+    hero = template("hero_fighter", attributes=NO_PERK, reactions=[], skills=["skill_gale_kick"])
     m = make_map(FLAT, terrain_with("#", 3), ally=[(1, 3)], enemy=[FOE])
     state = give_turn(
         make_state(
@@ -383,7 +393,13 @@ def test_gale_kick_into_a_wall_deals_collision_damage(monkeypatch: pytest.Monkey
 
 def test_battering_ram_uses_its_own_collision_dice(monkeypatch: pytest.MonkeyPatch) -> None:
     always(monkeypatch)
-    hero = template("hero_fighter", reactions=[], skills=["skill_battering_ram"], max_mana=99)
+    hero = template(
+        "hero_fighter",
+        attributes=NO_PERK,
+        reactions=[],
+        skills=["skill_battering_ram"],
+        max_mana=99,
+    )
     m = make_map(FLAT, terrain_with("#", 3), ally=[(1, 3)], enemy=[FOE])
     state = give_turn(
         make_state(
@@ -402,7 +418,7 @@ def test_battering_ram_uses_its_own_collision_dice(monkeypatch: pytest.MonkeyPat
 
 
 def test_preview_shows_the_possible_collision_damage() -> None:
-    hero = template("hero_fighter", reactions=[], skills=["skill_gale_kick"])
+    hero = template("hero_fighter", attributes=NO_PERK, reactions=[], skills=["skill_gale_kick"])
     m = make_map(FLAT, terrain_with("#", 3), ally=[(1, 3)], enemy=[FOE])
     state = give_turn(
         make_state(
@@ -445,7 +461,9 @@ def test_ai_scores_a_push_into_a_wall_higher_than_the_same_push_in_the_open() ->
     from trpg.engine.ai.utility import UtilityAI, score_action  # noqa: PLC0415
 
     def kick_score(terrain: str | None) -> object:
-        hero = template("hero_fighter", reactions=[], skills=["skill_gale_kick"])
+        hero = template(
+            "hero_fighter", attributes=NO_PERK, reactions=[], skills=["skill_gale_kick"]
+        )
         m = make_map(FLAT, terrain, ally=[(1, 3)], enemy=[FOE])
         state = give_turn(
             make_state(

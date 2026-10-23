@@ -11,7 +11,7 @@ skeleton: summon
 category: spell
 weapon_req: any
 ap_cost: 1
-scaling_attr: int
+scaling_attr: wil
 shape: {type: ground_tile, range: 3}
 effects:
   - {type: summon, unit: summon_skeleton_warrior, duration: 2}

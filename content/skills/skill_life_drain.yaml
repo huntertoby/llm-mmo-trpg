@@ -11,7 +11,7 @@ skeleton: strike
 category: spell
 weapon_req: focus
 ap_cost: 1
-scaling_attr: wis
+scaling_attr: wil
 shape: {type: single, range: 4}
 effects:
   - {type: damage, dice: 1d10, element: shadow, lifesteal_permille: 400}
