@@ -20,6 +20,7 @@ _UNCOVERED: dict[str, dict[str, str]] = {
     "primitive": {},
     "status": {
         "armor_broken": "只由斧的 armor_break 武器參數施加（3-24a1），沒有技能施加",
+        "entangled": "只由鞭的 entangle 武器參數施加（3I-1），沒有技能施加",
         "rallied": "只由戰意圖騰的光環施加（3-33e1），沒有技能施加",
     },
     "stack": {"fury": "只由裝備的充能詞條 affix_charge_fury 使用（3G-G3a），沒有手寫技能"},

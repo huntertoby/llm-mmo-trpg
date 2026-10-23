@@ -15,6 +15,8 @@
   Phase 3D-8c 新增內建反應事件 ``enemy_moves_in_range``（監視射擊 ``overwatch_shot``，需要狀態
   ``overwatch``：敵人主動移動的一步結束後位在持有者的武器射程與視線內，自動普攻一次並移除
   ``overwatch``，見 :func:`enemy_moves_in_range_reactions`）。
+  Phase 3I-1 新增內建反應 ``counter_attack``（反擊，拳套的武器特性 ``counter``）：事件
+  ``hit_by_melee``，相鄰敵人的近戰攻擊命中、傷害之後，對攻擊者普攻一次（見 :func:`hit_reactions`）。
   反應技不花 AP，立刻施放一次技能（:func:`trpg.engine.skills.casting.use_reaction_skill`）。
 
 普攻的結算（:func:`perform_unit_attack`）也放在這裡，因為格擋會在命中後、傷害前介入，
@@ -123,9 +125,16 @@ def _usable(ctx: Ctx, unit: UnitState, rule: ReactionRule) -> ReactionDef | None
         status is not None and not unit.has_status(status)
     ):
         return None
-    if definition.requires_melee_weapon and not is_melee_attack(ctx, unit):
+    if not _weapon_allows(ctx, unit, definition):
         return None
     return definition
+
+
+def _weapon_allows(ctx: Ctx, unit: UnitState, definition: ReactionDef) -> bool:
+    """內建反應對手上武器的要求：近戰武器（藉機攻擊），或有 ``counter``（反擊，拳套，3I-1）。"""
+    if definition.requires_melee_weapon and not is_melee_attack(ctx, unit):
+        return False
+    return not definition.requires_counter_weapon or unit.weapon.counter
 
 
 def _unless(unit: UnitState, rule: ReactionRule) -> bool:
@@ -330,13 +339,18 @@ def block_multiplier(
 
 def hit_reactions(ctx: Ctx, attacker: UnitState, target: UnitState, *, melee: bool) -> None:
     """``target`` 被 ``attacker`` 的攻擊命中、傷害結算之後（仍存活）：``hit_by_melee``／
-    ``hit_by_attack`` 反應技（例如反擊）。``melee``：這次攻擊是否算近戰。"""
+    ``hit_by_attack`` 反應技（例如反擊技），或內建的反擊 ``counter_attack``（Phase 3I-1，拳套：
+    只對相鄰攻擊者的近戰攻擊，普攻一次）。``melee``：這次攻擊是否算近戰。"""
     if not target.alive or not attacker.alive:
         return
     events = ("hit_by_melee", "hit_by_attack") if melee else ("hit_by_attack",)
-    picked = _react(ctx, target, events, attacker, skills=True)
+    adjacent = melee and manhattan(target.xy, attacker.xy) == 1
+    effect = "basic_attack" if adjacent else None
+    picked = _react(ctx, target, events, attacker, effect=effect, skills=True)
     if isinstance(picked, SkillDef):
         _run_skill(ctx, target, picked, attacker)
+    elif picked is not None:
+        perform_unit_attack(ctx, target, attacker, primary=False, reaction=True)
 
 
 def _guard_transfer(

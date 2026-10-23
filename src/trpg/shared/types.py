@@ -160,6 +160,12 @@ class Attribute(StrEnum):
     def display_name(self) -> str:
         return _ATTRIBUTE_NAMES[self]
 
+    @property
+    def is_physical(self) -> bool:
+        """物理屬性（力量、敏捷、體質）；其餘三個是心智屬性（智力、感知、意志）。雙屬性武器
+        同類取較高、一物理一心智取平均（08 8.11，玩法決定 #46）。"""
+        return self in (Attribute.STR, Attribute.DEX, Attribute.CON)
+
 
 def top_attribute(
     attributes: Mapping[Attribute, int], *, exclude: Iterable[Attribute] = ()

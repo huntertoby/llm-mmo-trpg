@@ -41,6 +41,15 @@ reactions:
     effect: basic_attack
     events: [enemy_moves_in_range]
     requires_status: overwatch
+  # Phase 3I-1：拳套的反擊（08 8.11）。不在 default_rules：手上武器有 counter 時由引擎自動加上一條 auto 規則；
+  # 佔本輪反應（和格擋共用次數），不花 AP、不花耐力。
+  - id: counter_attack
+    name_zh: 反擊
+    description_zh: 相鄰敵人的近戰攻擊命中你、你還站著時，自動對攻擊者普攻一次（拳套；不花 AP 與耐力）。
+    effect: basic_attack
+    events: [hit_by_melee]
+    requires_melee_weapon: true
+    requires_counter_weapon: true
   - id: redirect_damage
     name_zh: 替隊友承受
     description_zh: 範圍內的隊友被敵人單體攻擊命中時，改由你承受這次攻擊（來自裝備，每輪最多一次）。

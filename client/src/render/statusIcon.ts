@@ -24,6 +24,7 @@ const OWN_COLOR: Readonly<Record<string, string>> = {
   shielded: "#8ac8ff",
   guarded: "#8ac8ff",
   defending: "#8ac8ff",
+  entangled: "#6ac8ff", // 纏繞（3I-1）：移動減少，不算控制類別，但用移動控制的藍
   regenerating: "#7dffb0",
   undying: "#ff8a9a",
   soul_link: "#c8a0ff",
@@ -260,6 +261,14 @@ export const GLYPH: Readonly<Record<string, Glyph>> = {
   vulnerable: (c) => {
     shield(c); // 裂開的盾
     line(c, [[-2, -8], [2, -2], [-2, 2], [2, 9]]);
+  },
+  entangled: (c) => {
+    c.beginPath(); // 纏繞（鞭，3I-1）：繞兩圈的繩＋往下的箭頭（移動減少）
+    c.moveTo(-9, -6);
+    c.bezierCurveTo(-2, -12, 6, -2, -1, 0);
+    c.bezierCurveTo(-8, 2, 0, 8, 9, 2);
+    c.stroke();
+    arrow(c, -5, 5, false);
   },
   armor_broken: (c) => {
     c.beginPath(); // 胸甲＋↓

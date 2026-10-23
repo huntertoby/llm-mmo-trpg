@@ -59,8 +59,12 @@ TABLE = [
     ("bow", {"str": 20, "dex": 11, "int": 30}, 11),  # 敏捷單屬性
     ("dagger", {"str": 10, "dex": 14, "int": 30}, 14),  # 敏捷／力量取較高
     ("dagger", {"str": 16, "dex": 14, "int": 30}, 16),
-    ("hammer", {"str": 10, "con": 15, "int": 30}, 12),  # 體質／力量取平均（15 + 10) // 2
-    ("hammer", {"str": 11, "con": 15, "int": 30}, 13),
+    ("hammer", {"str": 10, "con": 15, "int": 30}, 15),  # 體質／力量同類取較高（3I-1，#46）
+    ("hammer", {"str": 17, "con": 15, "int": 30}, 17),
+    ("fist", {"con": 12, "dex": 16, "int": 30}, 16),  # 拳套：體質／敏捷取較高
+    ("fist", {"con": 18, "dex": 9, "int": 30}, 18),
+    ("scythe", {"wil": 16, "str": 11, "int": 30}, 13),  # 鐮刀：意志／力量取平均 (16 + 11) // 2
+    ("whip", {"dex": 15, "wis": 10, "int": 30}, 12),  # 鞭：敏捷／感知取平均 (15 + 10) // 2
     ("fire_staff", {"str": 10, "int": 17}, 17),  # 法杖看智力
 ]
 
@@ -177,9 +181,9 @@ def test_mastery_for_a_weapon_skill_looks_at_the_weapon_attribute() -> None:
     state = _state(skill, "one_handed_sword", {"str": 10, "int": 18})
     assert not mastery_active(state.units[U1], skill)
     # 雙屬性取平均：兩個都要是最高（平均不低於最高）才生效
-    state = _state(skill, "hammer", {"str": 14, "con": 14})
+    state = _state(skill, "scythe", {"str": 14, "wil": 14})
     assert mastery_active(state.units[U1], skill)
-    state = _state(skill, "hammer", {"str": 10, "con": 16})
+    state = _state(skill, "scythe", {"str": 10, "wil": 16})
     assert not mastery_active(state.units[U1], skill)
     # 雙屬性取較高：任一個是最高即可
     state = _state(skill, "dagger", {"str": 10, "dex": 16})

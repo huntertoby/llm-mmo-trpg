@@ -279,6 +279,31 @@ def _status_reaction_rules(
     return auto
 
 
+def weapon_reaction_rules(
+    weapon: WeaponDef, rules: Ruleset, written: tuple[ReactionRule, ...], *, defaults: bool
+) -> tuple[ReactionRule, ...]:
+    """手上武器有 ``counter``（拳套的反擊，Phase 3I-1）時：沒有為反擊寫規則就在最前面加一條
+    ``auto`` 規則。``defaults``（範本沒寫反應規則、用預設規則）時，預設的格擋規則改成 ``off``——
+    格擋在傷害前就會用掉本輪唯一的反應，反擊永遠沒機會；玩家可以在反應設定改回來。"""
+    if not weapon.counter:
+        return written
+    found = [d for d in rules.reactions.reactions if d.requires_counter_weapon]
+    covered = {rule.reaction for rule in written}
+    auto = [
+        ReactionRule(reaction=d.id, when=ReactionWhen(event=d.events[0]))
+        for d in found
+        if d.id not in covered
+    ]
+    if not defaults:
+        return (*auto, *written)
+    block = {d.id for d in rules.reactions.reactions if d.effect == "reduce_damage"}
+    kept = tuple(
+        rule.model_copy(update={"mode": "off"}) if rule.reaction in block else rule
+        for rule in written
+    )
+    return (*auto, *kept)
+
+
 def make_unit(
     uid: UnitId,
     *,
@@ -303,6 +328,9 @@ def make_unit(
         template.reactions if template.reactions is not None else rules.reactions.default_rules
     )
     reactions = (*_auto_reaction_rules(template, rules, reactions), *reactions)
+    reactions = weapon_reaction_rules(
+        weapon, rules, tuple(reactions), defaults=template.reactions is None
+    )
     reactions = (*reactions, *gear_reaction_rules(gear, rules, tuple(reactions)))  # 3G-G3b
     max_hp = rules.core.template_max_hp(template)
     return UnitState(

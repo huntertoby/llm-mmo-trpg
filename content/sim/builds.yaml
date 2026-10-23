@@ -597,6 +597,59 @@ builds:
       max_mana: 20
       skills: []
 
+  # Phase 3I-1：補平六屬性的第二批主武器的白板主角（沒有任何技能；屬性、HP 比照白板戰士，供模擬量測與網頁試玩）。
+
+  - id: build_blank_fist
+    name_zh: 白板拳師
+    blank: true
+    theme_zh: 沒有任何技能、只拿拳套的戰士（雙手）。相鄰敵人的近戰攻擊命中時自動回擊一次（反擊，佔本輪反應）。
+    hero:
+      id: build_blank_fist
+      name_zh: 白板拳師
+      attributes: {str: 10, dex: 10, con: 10, int: 10, wis: 10, wil: 10}
+      max_hp: 60
+      speed: 5
+      armor_bonus: 4
+      weapon: fist
+      resist: {physical: 100}
+      tags: [hero, sim]
+      max_mana: 20
+      skills: []
+
+  - id: build_blank_scythe
+    name_zh: 白板鐮刀手
+    blank: true
+    theme_zh: 沒有任何技能、只拿鐮刀的戰士（雙手）。目標 HP 剩 30% 以下時傷害 +25%（收割）。
+    hero:
+      id: build_blank_scythe
+      name_zh: 白板鐮刀手
+      attributes: {str: 10, dex: 10, con: 10, int: 10, wis: 10, wil: 10}
+      max_hp: 60
+      speed: 5
+      armor_bonus: 4
+      weapon: scythe
+      resist: {physical: 100}
+      tags: [hero, sim]
+      max_mana: 20
+      skills: []
+
+  - id: build_blank_whip
+    name_zh: 白板鞭手
+    blank: true
+    theme_zh: 沒有任何技能、只拿鞭的戰士（單手）。2 格就能攻擊，命中後目標下回合移動 −2（纏繞）。
+    hero:
+      id: build_blank_whip
+      name_zh: 白板鞭手
+      attributes: {str: 10, dex: 10, con: 10, int: 10, wis: 10, wil: 10}
+      max_hp: 60
+      speed: 5
+      armor_bonus: 4
+      weapon: whip
+      resist: {physical: 100}
+      tags: [hero, sim]
+      max_mana: 20
+      skills: []
+
   - id: build_attack_archer
     name_zh: 普攻流弓手
     reference: true

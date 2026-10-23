@@ -33,6 +33,7 @@ __all__ = [
     "is_removed_with_source",
     "is_rooted",
     "move_points_for_turn",
+    "move_reduction",
     "prevents_concealment",
     "shield_amount",
     "skip_turn_status",
@@ -62,8 +63,19 @@ def _combined(rules: Ruleset, unit: UnitState, field: Callable[[StatusDef], int]
 
 
 def move_points_for_turn(rules: Ruleset, unit: UnitState) -> int:
-    """回合開始時的移動點數：速度 × 各狀態的 ``move_permille``，無條件捨去（緩速 ×50%）。"""
-    return unit.speed * _combined(rules, unit, lambda d: d.move_permille) // PERMILLE
+    """回合開始時的移動點數：速度 × 各狀態的 ``move_permille``，無條件捨去（緩速 ×50%）；再減
+    ``move_reduction`` 狀態的數值（多個取最大；鞭的纏繞，Phase 3I-1），最低 0。"""
+    points = unit.speed * _combined(rules, unit, lambda d: d.move_permille) // PERMILLE
+    return max(0, points - move_reduction(rules, unit))
+
+
+def move_reduction(rules: Ruleset, unit: UnitState) -> int:
+    """``move_reduction`` 狀態（纏繞）的移動點數減少量：多個取最大，沒有時為 0。"""
+    best = 0
+    for status in unit.statuses:
+        if rules.status_def(status.status_id).move_reduction:
+            best = max(best, status.amount or 0)
+    return best
 
 
 def is_rooted(rules: Ruleset, unit: UnitState) -> bool:
@@ -119,8 +131,8 @@ def status_attack_bonus(rules: Ruleset, unit: UnitState) -> int:
 def weapon_attribute(rules: Ruleset, unit: UnitState) -> int:
     """武器的縮放屬性值（有效屬性）。
 
-    有第二縮放屬性時依 ``attr_mode``：``mean`` 取平均（無條件捨去；重武器，例：錘），
-    ``max`` 取較高者（輕武器，例：匕首）。"""
+    有第二縮放屬性時依 ``attr_mode``：``mean`` 取平均（無條件捨去；一物理一心智，例：鐮刀），
+    ``max`` 取較高者（同類，例：匕首、錘）。"""
     return unit.weapon.scaling_value(lambda attr: effective_attribute(rules, unit, attr))
 
 

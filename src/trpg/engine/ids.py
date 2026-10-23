@@ -19,6 +19,7 @@ __all__ = [
     "CONCEALED",
     "DEFENDING",
     "ELITE_TAG",
+    "ENTANGLED",
     "FLYING",
     "IMMOVABLE",
     "PENETRABLE",
@@ -36,6 +37,8 @@ ARMOR_BROKEN = "armor_broken"
 """武器 ``armor_break`` 施加的狀態（``defense_break``，Phase 3-24a1）。"""
 CONCEALED = "concealed"
 """隱匿。"""
+ENTANGLED = "entangled"
+"""武器 ``entangle`` 施加的狀態（``move_reduction``，Phase 3I-1）。"""
 DEFENDING = "defending"
 """防禦姿態。"""
 PRONE = "prone"

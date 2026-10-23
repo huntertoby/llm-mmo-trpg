@@ -516,6 +516,8 @@ class ReactionDef(ContentModel):
     - ``basic_attack``：以武器普攻觸發者（不花 AP；需能攻擊到觸發者原本的位置）。
     - ``redirect_damage``（Phase 3G-G3b，只由裝備詞條授予）：``ally_hit_in_range`` 時，範圍內的友方
       被單體攻擊命中，改由持有者承受這次攻擊（距離由詞條的 ``range`` 決定）。
+    - ``basic_attack`` 配 ``hit_by_melee``（3I-1 反擊 ``counter_attack``）：相鄰敵人的近戰攻擊
+      命中持有者、傷害之後，持有者還站著就對攻擊者普攻一次。
 
     ``requires_status``（Phase 3D-8c）：持有者必須帶有這個狀態才能反應，反應用掉之後移除該狀態
     （監視射擊 ``overwatch_shot`` 用 ``overwatch``）。
@@ -532,6 +534,7 @@ class ReactionDef(ContentModel):
             "enemy_leaves_adjacent",
             "enemy_moves_in_range",
             "ally_hit_in_range",
+            "hit_by_melee",
         ],
         ...,
     ]
@@ -539,6 +542,9 @@ class ReactionDef(ContentModel):
     damage_reduction_permille: int = Field(default=0, ge=0, le=1000)
     requires_melee_weapon: bool = False
     requires_status: str | None = Field(default=None, pattern=ID_PATTERN)
+    requires_counter_weapon: bool = False
+    """Phase 3I-1：持有者手上的武器必須有 ``counter``（拳套的反擊）才能反應；持有這種武器的單位由
+    引擎自動加上一條 ``auto`` 規則。"""
 
 
 class ReactionEventDef(ContentModel):
