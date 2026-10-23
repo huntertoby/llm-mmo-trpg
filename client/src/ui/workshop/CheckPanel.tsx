@@ -135,10 +135,14 @@ export function CheckPanel({ check, pending, dev = false }: { check: WorkshopChe
             <SkillIconView icon={check.icon} size={96} />
             <div className="ws-preview-sizes">
               <Hint text="技能列的大小（40px）">
-                <SkillIconView icon={check.icon} size={40} />
+                <span className="ws-size-demo">
+                  <SkillIconView icon={check.icon} size={40} />
+                </span>
               </Hint>
               <Hint text="被動、反應等小圖示（28px）">
-                <SkillIconView icon={check.icon} size={28} />
+                <span className="ws-size-demo">
+                  <SkillIconView icon={check.icon} size={28} />
+                </span>
               </Hint>
             </div>
           </div>

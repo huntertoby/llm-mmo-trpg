@@ -29,9 +29,10 @@ interface Props {
   compact?: boolean;
 }
 
-function Bar({ label, value, max, className, extra }: { label: string; value: number; max: number; className: string; extra?: string }) {
+function Bar({ label, value, max, className, extra, hint }: { label: string; value: number; max: number; className: string; extra?: string; hint?: string | null }) {
   const ratio = max <= 0 ? 0 : Math.max(0, Math.min(1, value / max));
   return (
+    <Hint text={hint}>
     <div className="hud-bar">
       <span className="hud-bar-label">{label}</span>
       <div className="hud-bar-track">
@@ -42,6 +43,7 @@ function Bar({ label, value, max, className, extra }: { label: string; value: nu
         {extra ?? ""}
       </span>
     </div>
+    </Hint>
   );
 }
 
@@ -113,9 +115,7 @@ export function Hud({ view, hero, skills, cards, compact = false }: Props) {
         extra={hero.shield > 0 ? `（護盾 ${hero.shield}）` : ""}
       />
       <Bar label="法力" value={hero.mana} max={hero.max_mana} className="mana" />
-      <Hint text={actionCardText("stamina")}>
-        <Bar label="耐力" value={hero.stamina} max={hero.max_stamina} className="stamina" />
-      </Hint>
+      <Bar label="耐力" value={hero.stamina} max={hero.max_stamina} className="stamina" hint={actionCardText("stamina")} />
       <div className="hud-row">
         <Hint text="剩餘行動點數（自己的回合已含上回合保留的 AP）">
           <span className="hud-chip">
