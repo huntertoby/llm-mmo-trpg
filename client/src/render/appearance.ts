@@ -173,6 +173,8 @@ export interface DollInput {
   weaponClass?: string | null;
   /** 身上穿的裝備（`UnitView.equipment`，Phase 3G-G5b）：有穿的欄位依外觀欄位畫，沒穿的沿用範本外觀。 */
   equipment?: readonly DollEquipment[] | undefined;
+  /** 目前生效的普攻元素（`UnitView.attack_element`，Phase 3I-6；附魔、詞條或武器本身）：有值時主手改用該元素色，物理與缺漏沿用武器外觀。 */
+  attackElement?: string | null | undefined;
 }
 
 /** 單位 → 紙娃娃規格；永遠回傳畫得出來的規格（未知範本、武器、kind 都有退回）。 */
@@ -210,6 +212,12 @@ export function resolveDoll(input: DollInput): DollSpec {
     if (worn.paired) twoHanded = false; // 成對武器：副手格已經是第二把武器
   }
   if (twoHanded) delete gear.off_hand; // 雙手武器副手留空
+  const infused = input.attackElement;
+  if (infused != null && infused !== "physical") {
+    // 臨時附魔（3I-6）：外觀顯示目前生效的元素色；成對武器的第二把一起換
+    if (gear.main_hand !== undefined) gear.main_hand = { ...gear.main_hand, element: infused };
+    if (pairedKind !== null && gear.off_hand !== undefined) gear.off_hand = { ...gear.off_hand, element: infused };
+  }
   return { look: app.look, gear, ...(rarity !== undefined ? { rarity } : {}) };
 }
 

@@ -66,6 +66,10 @@
 # 3-24a1（武器擴充）：
 #   attack_bonus   戰意（3-33e1）：帶有者的攻擊值加這麼多（戰意；戰意圖騰的光環狀態）
 #   defense_break  破甲：帶有者的防禦值降低 StatusInstance.amount ‰（斧的普攻命中帶入；沒有 budget_points，只能由武器施加）
+# 3I-6（臨時附魔，玩法決定 #52；初值，未經模擬）：
+#   attack_element  攻擊元素：帶有者的普攻與沒有自己元素的武器技，物理傷害改成這個元素（優先順序見
+#                   trpg.engine.attack_element：附魔 ＞ 普攻附加詞條 ＞ 武器元素詞條 ＞ 武器本身元素 ＞ 物理）。
+#                   同時只會有一個附魔狀態：施加新的會先移除舊的（StatusRemoved 原因 replaced）；外觀顯示該元素色
 # control_group 新增 mental（心智：恐懼、沉默；2026-10-23 加嘲諷）：適用控制遞減，不是 hard，對 Boss 不轉換。
 statuses:
   - id: defending
@@ -405,3 +409,25 @@ statuses:
     stance: true
     damage_taken_permille: 750
     move_permille: 500
+  - id: infused_fire
+    polarity: buff
+    name_zh: 火焰附魔
+    description_zh: 普攻與沒有自己元素的武器技，物理傷害改成火焰（可點燃油與易燃物）；與其他附魔不並存，後施放的覆蓋先施放的。
+    duration: 3
+    expires: turn_end
+    stacking: refresh
+    beneficial: true
+    min_rarity: rare
+    budget_points: 6
+    attack_element: fire
+  - id: infused_holy
+    polarity: buff
+    name_zh: 神聖附魔
+    description_zh: 普攻與沒有自己元素的武器技，物理傷害改成神聖；與其他附魔不並存，後施放的覆蓋先施放的。
+    duration: 3
+    expires: turn_end
+    stacking: refresh
+    beneficial: true
+    min_rarity: rare
+    budget_points: 6
+    attack_element: holy

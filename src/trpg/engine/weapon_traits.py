@@ -26,6 +26,7 @@ from __future__ import annotations
 
 from trpg.content.battle import Dice, SummonHitRule
 from trpg.content.rules import SummonInfusion
+from trpg.engine.attack_element import effective_attack_element
 from trpg.engine.context import Ctx
 from trpg.engine.effects import execute
 from trpg.engine.effects.models import (
@@ -202,7 +203,7 @@ def _hit_rule_effects(ctx: Ctx, attacker: UnitState, target: UnitState) -> list[
                 DamageEffect(
                     source_id=attacker.id,
                     target_id=other.id,
-                    element=attacker.weapon.element,
+                    element=effective_attack_element(ctx.rules, attacker, is_basic=True),
                     dice=attacker.weapon.dice,
                     flat=attacker.weapon.flat,
                     multiplier_permille=rule.chain_permille,

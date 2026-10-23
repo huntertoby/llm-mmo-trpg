@@ -427,6 +427,8 @@ def test_beneficial_flags_in_content() -> None:
         # 2D-1
         "guarded",
         "empowered",
+        "infused_fire",  # 3I-6：臨時附魔
+        "infused_holy",
         "rallied",  # 3-33e1
         "hasted",
         "regenerating",

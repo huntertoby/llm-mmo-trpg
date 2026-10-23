@@ -33,6 +33,7 @@ function copyTarget(view: BattleView, u: BattleView["units"][number]): DollInput
     dollLook: owner.doll_look,
     weaponId: owner.weapon_id,
     weaponClass: owner.weapon_class,
+    attackElement: owner.attack_element ?? null,
     equipment: (owner.equipment ?? []).map((e) => ({ slot: e.slot, appearance: e.appearance })),
   };
 }
@@ -112,6 +113,8 @@ export interface UnitDraw {
   weaponId: string;
   /** 武器大類（melee、ranged、focus）：不認得 `weaponId` 時依此退回武器圖。 */
   weaponClass: string;
+  /** 目前生效的普攻元素（Phase 3I-6，`UnitView.attack_element`）：附魔期間主手顯示該元素色。 */
+  attackElement?: string | null;
   /** 召喚物外觀（Phase 3-33h1）：沒有時（一般單位、舊資料）為 `null`，召喚物退回人形骷髏。 */
   summonLook?: SummonLookDraw | null;
   /** 殘影分身複製的對象（召喚者）的紙娃娃輸入（Phase 3-33h1）；其他單位為 `undefined`。 */
@@ -281,6 +284,7 @@ export function buildDrawModel(
       dollLook: u.doll_look ?? null,
       weaponId: u.weapon_id,
       weaponClass: u.weapon_class,
+      attackElement: u.attack_element ?? null,
       summonLook: u.summon_look ?? null,
       copyOf: copyTarget(view, u),
       equipment: (u.equipment ?? []).map((e) => ({ slot: e.slot, appearance: e.appearance })),

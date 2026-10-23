@@ -42,6 +42,7 @@ from trpg.content.skills import (
 from trpg.engine import modifiers
 from trpg.engine.actions import Direction, FollowupTarget, UseSkill
 from trpg.engine.activations import activation_problem
+from trpg.engine.attack_element import effective_attack_element
 from trpg.engine.gear import gear_cooldown
 from trpg.engine.gear_summon import gear_summon_cooldown
 from trpg.engine.ids import BOSS_TAG
@@ -1322,7 +1323,9 @@ def damage_parameters(
         multiplier = _PERMILLE
     else:
         weapon = caster.weapon
-        element = spec.element or weapon.element
+        element = effective_attack_element(
+            state.ruleset, caster, is_basic=False, skill_element=spec.element
+        )
         dice, flat, scaled = (
             weapon.dice,
             weapon.flat,

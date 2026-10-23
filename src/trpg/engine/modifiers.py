@@ -30,10 +30,10 @@ from trpg.content.skills import (
 )
 from trpg.engine.actions import UseSkill
 from trpg.engine.activations import is_active
+from trpg.engine.attack_element import effective_attack_element
 from trpg.engine.gear import cap_damage_bonus, gear_damage_parts, gear_hit_bonus
 from trpg.engine.gear_enhance import (
     gear_area_delta,
-    gear_attack_element,
     gear_keyword_damage_permille,
     gear_rune_read_permille,
     gear_status_duration,
@@ -392,15 +392,20 @@ def summon_damage_permille(state: BattleState, unit: UnitState, use: Use) -> int
 
 
 def damage_element(state: BattleState, unit: UnitState, use: Use, base: Element) -> Element:
-    """傷害的元素：物理傷害改為第一條成立的 ``add_element``；已有元素的不覆寫。"""
+    """傷害的元素：物理傷害改為第一條成立的 ``add_element``；已有元素的不覆寫。
+
+    普攻（Phase 3I-6）先依 :func:`trpg.engine.attack_element.resolve_attack_element` 的優先順序
+    （附魔 ＞ 普攻附加 ＞ 武器元素詞條 ＞ 武器本身；``base`` 被忽略）；結果仍是物理時才輪到
+    修正規則。
+    """
+    if use.action == "attack":
+        base = effective_attack_element(state.ruleset, unit, is_basic=True)
     if base is not Element.PHYSICAL:
         return base
     for rule in _applicable(state, unit, use, "add_element"):
         if _self_holds(state, unit, rule):
             assert rule.change.add_element is not None
             return rule.change.add_element
-    if use.action == "attack":  # 裝備的普攻附加（Phase 3G-G2；修正技能優先）
-        return gear_attack_element(unit) or base
     return base
 
 

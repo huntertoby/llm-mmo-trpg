@@ -11075,6 +11075,17 @@
             "title": "Infused",
             "default": false
           },
+          "attack_element": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Attack Element"
+          },
           "doll_look": {
             "anyOf": [
               {

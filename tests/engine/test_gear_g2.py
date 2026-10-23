@@ -240,7 +240,8 @@ def test_attack_lightning_changes_physical_attacks_only() -> None:
     unit = state.units[U1]
     assert gear_attack_element(unit) is Element.LIGHTNING
     assert mods.damage_element(state, unit, mods.ATTACK, Element.PHYSICAL) is Element.LIGHTNING
-    assert mods.damage_element(state, unit, mods.ATTACK, Element.FIRE) is Element.FIRE
+    # 3I-6：普攻附加 ＞ 武器本身的元素（優先順序見 test_attack_element.py）；普攻忽略傳入的 base
+    assert mods.damage_element(state, unit, mods.ATTACK, Element.FIRE) is Element.LIGHTNING
     cleave = mods.skill_use(_skill("skill_cleave"))
     assert mods.damage_element(state, unit, cleave, Element.PHYSICAL) is Element.PHYSICAL
     assert "charged" in attack_keywords(state, unit).makes  # 普攻製造帶電
@@ -446,5 +447,5 @@ def test_g2_gear_battle_log_json_and_replay(tmp_path: Path) -> None:
     args += ["--enemies", "bandit,bandit", "--seed", "7", "--log-json", str(log)]
     assert cli_main(args) == 0
     text = log.read_text(encoding="utf-8")
-    assert "trpg-battle-log/66" in text and '"affix_trait_hammer_knockback"' in text
+    assert "trpg-battle-log/67" in text and '"affix_trait_hammer_knockback"' in text
     assert cli_main(["battle", "replay", str(log)]) == 0

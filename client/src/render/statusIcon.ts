@@ -31,6 +31,8 @@ const OWN_COLOR: Readonly<Record<string, string>> = {
   revealed: "#ffd04a",
   marked: "#ff6a4a",
   overwatch: "#ffd04a",
+  infused_fire: "#ff7a1a", // 臨時附魔（3I-6）：武器上纏著該元素的色
+  infused_holy: "#ffe9a0",
 };
 /** 元素色（持續傷害的圖樣色與腳邊粒子；與技能圖示、召喚物共用的關鍵字色）。 */
 const ELEMENT: Readonly<Record<string, string>> = {
@@ -248,6 +250,16 @@ export const GLYPH: Readonly<Record<string, Glyph>> = {
   empowered: (c) => {
     line(c, [[-8, 0], [0, -8], [8, 0]]); // 雙箭頭↑（全屬性提升）
     line(c, [[-8, 8], [0, 0], [8, 8]]);
+  },
+  infused_fire: (c) => {
+    sword(c); // 臨時附魔（3I-6）：劍＋火星
+    circle(c, 7, -7, 2.8, true);
+    circle(c, -7, 7, 1.6, true);
+  },
+  infused_holy: (c) => {
+    sword(c); // 劍＋十字光
+    line(c, [[7, -10], [7, -4]]);
+    line(c, [[4, -7], [10, -7]]);
   },
   rallied: (c) => {
     line(c, [[-6, 10], [-6, -9]]); // 戰旗

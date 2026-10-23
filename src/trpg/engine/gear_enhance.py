@@ -174,7 +174,11 @@ def spend_gear_rune_read(state: BattleState, unit: UnitState, subject: Subject) 
 
 def attack_keywords(state: BattleState, unit: UnitState) -> SkillKeywords:
     """普攻製造與利用的關鍵字：由普攻的元素傷害與命中附帶的狀態推導（和技能同一份推導表）。"""
-    element = attack_element(unit)
+    from trpg.engine.attack_element import (  # noqa: PLC0415  # 避免循環匯入
+        effective_attack_element,
+    )
+
+    element = effective_attack_element(state.ruleset, unit, is_basic=True)
     statuses = tuple(status for status, _ in _on_hit_entries(unit))
     effects = [EffectSpec.model_construct(type="apply_status", status=s) for s in statuses]
     if element is not Element.PHYSICAL:
