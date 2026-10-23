@@ -29,7 +29,7 @@ from collections import Counter
 from collections.abc import Iterable, Mapping, Sequence
 from typing import Literal, NamedTuple
 
-from trpg.content.battle import UnitTemplate
+from trpg.content.battle import UnitTemplate, WeaponDef
 from trpg.content.equipment import loadout_problems, resolve_loadout
 from trpg.content.library import ContentLibrary
 from trpg.content.rules import CoreRules
@@ -48,6 +48,7 @@ __all__ = [
     "allocation_problems",
     "apply_allocation",
     "check_test_equipment",
+    "default_allocation",
     "default_build",
     "default_start",
     "hero_resources",
@@ -73,6 +74,15 @@ def primary_attribute(skills: Iterable[SkillDef], fallback: Attribute = Attribut
         return fallback
     best = max(counts.values())
     return next(a for a in Attribute if counts[a] == best)
+
+
+def default_allocation(main: Attribute, weapon: WeaponDef, points: int) -> dict[Attribute, int]:
+    """開局自動配點：全點 ``main``；但 ``main`` 是取平均的雙屬性武器（鐮刀、鞭、魔導劍）的主屬性時，
+    平均分給兩個屬性（奇數時多的給主屬性；玩法 PM 2026-10-24，3I-1 待決 #6）。"""
+    second = weapon.secondary_scaling_attr
+    if second is None or weapon.attr_mode != "mean" or main != weapon.scaling_attr:
+        return {main: points}
+    return {main: points - points // 2, second: points // 2}
 
 
 def allocation_problems(allocation: Mapping[Attribute, int], points: int) -> list[str]:
@@ -220,8 +230,9 @@ def new_run(
     rules = library.roguelite
     if allocation is None:
         skills = [library.skills[s] for s in build.hero.skills]
-        weapon_attr = library.weapons[build.hero.weapon].scaling_attr
-        allocation = {primary_attribute(skills, weapon_attr): rules.start_free_points}
+        weapon_def = library.weapons[build.hero.weapon]
+        main = primary_attribute(skills, weapon_def.scaling_attr)
+        allocation = default_allocation(main, weapon_def, rules.start_free_points)
     problems = allocation_problems(allocation, rules.start_free_points)
     if problems:
         raise ChoiceError("；".join(problems))
@@ -425,8 +436,9 @@ def new_keyword_run(
     check_test_equipment(library, weapon, equipment)
     picked = _pick_starters(library, weapon, keywords, seed, skills)
     if allocation is None:  # 省略時點在起始技能最常用的縮放屬性（沒有時用武器的；3H-1）
-        main = primary_attribute(picked, library.weapons[weapon].scaling_attr)
-        allocation = {main: rules.start_free_points}
+        weapon_def = library.weapons[weapon]
+        main = primary_attribute(picked, weapon_def.scaling_attr)
+        allocation = default_allocation(main, weapon_def, rules.start_free_points)
     hero = apply_allocation(_start_hero(library, weapon, [s.id for s in picked]), allocation)
     core = library.ruleset.core
     start = hero_resources(core, hero)
