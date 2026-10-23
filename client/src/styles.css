@@ -1969,7 +1969,8 @@ button.selected {
   gap: 6px;
 }
 
-.turn-controls-row > button {
+.turn-controls-row > button,
+.turn-controls-row > .hint-tip > button {
   flex: 0 0 auto;
 }
 
@@ -1979,7 +1980,8 @@ button.selected {
   margin-top: 0;
 }
 
-.turn-controls .fallback > button {
+.turn-controls .fallback > button,
+.turn-controls .fallback > .hint-tip > button {
   width: 100%;
   font-size: 12px;
   padding: 4px 6px;
@@ -2413,12 +2415,14 @@ button.selected {
   gap: 6px;
 }
 
-.resident-actions > .resident-button {
+.resident-actions > .resident-button,
+.resident-actions > .hint-tip > .resident-button {
   padding: 8px 6px;
   font-size: 14px;
 }
 
-.resident-actions > .end-turn-button {
+.resident-actions > .end-turn-button,
+.resident-actions > .hint-tip > .end-turn-button {
   grid-column: 1 / -1;
   font-size: 18px;
   padding: 10px 12px;
@@ -2432,7 +2436,8 @@ button.selected {
   position: relative;
 }
 
-.more-actions > button {
+.more-actions > button,
+.more-actions > .hint-tip > button {
   width: 100%;
   font-size: 12px;
   padding: 4px 6px;
