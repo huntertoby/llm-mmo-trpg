@@ -18,6 +18,7 @@
 shapes:
   - id: self
     name_zh: 自身
+    llm_hint: "只影響施放者自己所在的格子。"
     description_zh: 只影響施放者所在的格子。
     targeting: self
     min_rarity: common
@@ -25,118 +26,130 @@ shapes:
     cell_count: {base: 1}
   - id: single
     name_zh: 單體
+    llm_hint: "選擇射程內看得到的一個目標。"
     description_zh: 選取射程內看得到的一個單位或可被攻擊的物件。
     targeting: unit
     min_rarity: common
     budget: {base_permille: 1000}
     cell_count: {base: 1}
     params:
-      range: {min: 1, max: 10, allow_weapon: true}
+      range: {llm_hint: "最遠可以選幾格外的目標。", min: 1, max: 10, allow_weapon: true}
   - id: line
     name_zh: 直線
+    llm_hint: "朝一個方向打出一條直線。"
     description_zh: 選一個方向，影響正前方 size 格；遇到牆壁停在它之前，遇到阻擋視線的物件則包含該格後停止。
     targeting: direction
     min_rarity: common
     budget: {base_permille: 800, param: size, per_unit_permille: 200}
     cell_count: {param: size, by_value: {2: 2, 3: 3, 4: 4, 5: 5, 6: 6}}
     params:
-      size: {min: 2, max: 6}
+      size: {llm_hint: "直線的長度。", min: 2, max: 6}
   - id: cone
     name_zh: 錐形
+    llm_hint: "朝一個方向打出一片向外展開的扇形。"
     description_zh: 選一個方向，第 k 排為正前方第 k 格及其左右各 k−1 格，只含施放者看得到的格子。
     targeting: direction
     min_rarity: common
     budget: {param: size, by_value_permille: {2: 1300, 3: 1600, 4: 2000}}
     cell_count: {param: size, by_value: {2: 4, 3: 9, 4: 16}}
     params:
-      size: {min: 2, max: 4}
+      size: {llm_hint: "扇形向外延伸的深度。", min: 2, max: 4}
   - id: cross
     name_zh: 十字
+    llm_hint: "選一個中心格，影響中心與上下左右四格。"
     description_zh: 選射程內的一個中心格（0 為施放者自己），影響中心與四方向相鄰格。
     targeting: tile
     min_rarity: rare
     budget: {base_permille: 1800}
     cell_count: {base: 5}
     params:
-      range: {min: 0, max: 6}
+      range: {llm_hint: "中心格最遠可以選幾格外。", min: 0, max: 6}
   - id: square3
     name_zh: 方陣
+    llm_hint: "選一個中心格，影響它周圍三乘三的方形範圍。"
     description_zh: 選射程內的一個中心格，影響以中心為準的 3×3。
     targeting: tile
     min_rarity: rare
     budget: {base_permille: 2000}
     cell_count: {base: 9}
     params:
-      range: {min: 0, max: 6}
+      range: {llm_hint: "中心格最遠可以選幾格外。", min: 0, max: 6}
   - id: ring
     name_zh: 環形
+    llm_hint: "以施放者為中心，影響周圍一圈的格子。"
     description_zh: 影響與施放者切比雪夫距離恰為 radius 的格子，不需要選取。
     targeting: none
     min_rarity: common
     budget: {param: radius, by_value_permille: {1: 1800, 2: 2200}}
     cell_count: {param: radius, by_value: {1: 8, 2: 16}}
     params:
-      radius: {min: 1, max: 2}
+      radius: {llm_hint: "圈的半徑。", min: 1, max: 2}
   - id: ground_tile
     name_zh: 指定格
+    llm_hint: "選射程內的一個格子，只影響那一格。"
     description_zh: 選射程內的一格，只影響該格。
     targeting: tile
     min_rarity: rare
     budget: {base_permille: 1000}
     cell_count: {base: 1}
     params:
-      range: {min: 1, max: 6}
+      range: {llm_hint: "最遠可以選幾格外。", min: 1, max: 6}
   - id: chain
     name_zh: 連鎖
+    llm_hint: "先選一個目標，效果再依序跳到附近的下一個目標。"
     description_zh: 選第一個目標，之後每跳選距上一個目標 jump_range 格內、看得到、尚未被擊中的最近同陣營單位（同距離依單位 ID），最多 jumps 跳。
     targeting: unit
     min_rarity: rare
     budget: {base_permille: 1000, param: jumps, per_unit_permille: 250}
     params:
-      range: {min: 1, max: 6}
-      jumps: {min: 1, max: 3}
-      jump_range: {min: 1, max: 3}
+      range: {llm_hint: "第一個目標最遠可以選幾格外。", min: 1, max: 6}
+      jumps: {llm_hint: "最多再跳幾次。", min: 1, max: 3}
+      jump_range: {llm_hint: "每次跳躍最遠跳幾格。", min: 1, max: 3}
   - id: allies_in_radius
     name_zh: 範圍光環
+    llm_hint: "以施放者為中心，影響周圍一定距離內的所有人。"
     description_zh: 影響與施放者曼哈頓距離不超過 radius 的格子（含自己），不需要選取。
     targeting: none
     min_rarity: common
     budget: {base_permille: 1000, param: radius, per_unit_permille: 400}
     cell_count: {param: radius, by_value: {1: 5, 2: 13, 3: 25}}
     params:
-      radius: {min: 1, max: 3}
+      radius: {llm_hint: "影響的半徑。", min: 1, max: 3}
   # Phase 3C-5a（docs/design/06-技能.md 6.15）：投擲物件專用。UseSkill 同時給 target_object_id（被舉起的
   # pushable 物件，距離上限是 hurl_object 效果的 range）與 target_pos（落點，距施放者 ≤ 這裡的 range）。
   - id: object_then_tile
     name_zh: 物件與落點
+    llm_hint: "先選一個可推動的物件，再選一個落點格。"
     description_zh: 先選射程內看得到的一個可推動物件，再選射程內看得到的落點格（不能是牆壁或物件原本的格子）；只影響落點。
     targeting: object_tile
     min_rarity: rare
     budget: {base_permille: 1000}
     cell_count: {base: 1}
     params:
-      range: {min: 1, max: 6}
+      range: {llm_hint: "物件與落點最遠可以選幾格外。", min: 1, max: 6}
   # Phase 3D-2b（docs/design/06-技能.md 6.19）：傳送他人。UseSkill 同時給 target_id（被傳送的單位）與
   # target_pos（落點）；兩者都必須在施放者的射程與視線內。
   - id: unit_then_tile
     name_zh: 單位與落點
+    llm_hint: "先選一個單位，再選一個落點格。"
     description_zh: 先選射程內看得到的一個單位（不能是自己），再選射程內看得到的落點格；影響原位置與落點兩格。
     targeting: unit_tile
     min_rarity: rare
     budget: {base_permille: 1000}
     cell_count: {base: 2}
     params:
-      range: {min: 1, max: 6}
+      range: {llm_hint: "單位與落點最遠可以選幾格外。", min: 1, max: 6}
   # 任意兩者互換：UseSkill 給 target_id 與 second_target_id（兩個不同的單位，順序不拘）。
   - id: unit_pair
     name_zh: 兩個單位
+    llm_hint: "選兩個不同的單位。"
     description_zh: 選射程內看得到的兩個不同單位（敵我皆可，不必包含自己）；影響這兩格。
     targeting: unit_pair
     min_rarity: rare
     budget: {base_permille: 1000}
     cell_count: {base: 2}
     params:
-      range: {min: 1, max: 6}
+      range: {llm_hint: "單位最遠可以選幾格外。", min: 1, max: 6}
 
 # Phase 3E-2f：形狀的用途清單（引擎與驗證器共用的唯一來源；順序即錯誤訊息裡的列舉順序）。
 #   followup        複合技第二段、擊殺後第二段可用的形狀

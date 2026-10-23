@@ -16,92 +16,107 @@
 conditions:
   - id: target_hp_below
     name_zh: 目標血量低於
+    llm_hint: "目標的生命比例低於指定值時才成立。"
     description_zh: 目標的目前 HP ÷ 最大 HP 低於 permille ‰。
     harshness: common
     min_rarity: rare
     params:
-      permille: {type: int, required: true, min: 1, max: 999}
+      permille: {llm_hint: "生命比例的門檻。", type: int, required: true, min: 1, max: 999}
   - id: self_hp_below
     name_zh: 自身血量低於
+    llm_hint: "施放者的生命比例低於指定值時才成立。"
     description_zh: 施放者的目前 HP ÷ 最大 HP 低於 permille ‰。
     harshness: harsh
     min_rarity: rare
     params:
-      permille: {type: int, required: true, min: 1, max: 999}
+      permille: {llm_hint: "生命比例的門檻。", type: int, required: true, min: 1, max: 999}
   - id: height_advantage
     name_zh: 居高臨下
+    llm_hint: "施放者站得比目標高時才成立。"
     description_zh: 施放者所在格的高度大於目標所在格的高度。
     harshness: common
     min_rarity: rare
   - id: target_on_surface
     name_zh: 目標站在表面上
+    llm_hint: "目標腳下是指定的表面時才成立。"
     description_zh: 目標腳下的格子是指定的表面（例如水、油、火）。
     harshness: common
     min_rarity: rare
     params:
-      surface: {type: surface, required: true}
+      surface: {llm_hint: "需要的表面種類。", type: surface, required: true}
   - id: target_has_status
     name_zh: 目標帶有狀態
+    llm_hint: "目標身上帶有指定的狀態時才成立。"
     description_zh: 目標身上有指定的狀態（例如燃燒、倒地）。
     harshness: common
     min_rarity: rare
     params:
-      status: {type: status, required: true}
+      status: {llm_hint: "需要的狀態。", type: status, required: true}
   - id: moved_this_turn
     name_zh: 本回合移動過
+    llm_hint: "施放者這個回合主動移動過才成立。"
     description_zh: 施放者本回合做過主動移動（步行；傳送與被強制位移不算）。
     harshness: common
     min_rarity: rare
   - id: adjacent_ally
     name_zh: 身旁有友方
+    llm_hint: "施放者身旁有存活的友方時才成立。"
     description_zh: 施放者相鄰（上下左右）有存活的友方。
     harshness: common
     min_rarity: rare
   - id: target_isolated
     name_zh: 目標落單
+    llm_hint: "目標身旁沒有它的友方時才成立。"
     description_zh: 目標相鄰（上下左右）沒有它的存活友方。
     harshness: common
     min_rarity: rare
   - id: first_round
     name_zh: 第一輪
+    llm_hint: "只有在戰鬥的第一輪才成立。"
     description_zh: 目前是戰鬥的第 1 輪。
     harshness: harsh
     min_rarity: rare
   - id: cast_tag_this_turn
     name_zh: 本回合施放過同類技能
+    llm_hint: "施放者這個回合已經施放過同類技能時才成立。"
     description_zh: 施放者本回合已經施放過帶指定標籤的技能（不含這次施放）。
     harshness: common
     min_rarity: rare
     params:
-      tag: {type: tag, required: true}
+      tag: {llm_hint: "同類技能的標籤。", type: tag, required: true}
   - id: flanked
     name_zh: 夾擊
+    llm_hint: "目標被施放者與另一位友方從兩側夾住時才成立。"
     description_zh: 以目標為中心，施放者所在的那一側（上下左右四個方向中，與施放者位置軸向相同、離施放者較近的一側；距離相同時以左右優先）的對面格，站著施放者的存活友方（不含施放者自己）。相鄰攻擊就是目標正對面的那一格；遠程攻擊也看目標背對施放者的那一格。
     harshness: common
     min_rarity: rare
   # 3D-8d（朝向與背刺；harshness 為初值，未經模擬）
   - id: from_behind
     name_zh: 背刺
+    llm_hint: "施放者站在目標背後時才成立。"
     description_zh: 施放者站在目標的背後格（目標朝向的反方向相鄰格；只算相鄰）。單位的朝向由引擎自動更新：主動移動後面向移動方向，攻擊或對單位施放技能後面向目標。
     harshness: common
     min_rarity: rare
   - id: self_concealed
     name_zh: 潛行偷襲
+    llm_hint: "施放者處於隱蔽狀態時才成立。"
     description_zh: 施放者帶有「隱蔽」狀態（concealed；站在黑暗或草叢中不算）。隱蔽中發動攻擊另有通用的命中加成，攻擊結算完後脫離隱蔽。
     harshness: harsh
     min_rarity: rare
   # 3-23 刻印（harshness 為初值，未經模擬）：需要先用 inscribe 刻下符文才成立，所以算嚴苛。
   - id: on_own_rune
     name_zh: 目標站在自己的符文上
+    llm_hint: "目標所在的格子有施放者自己刻下的符文時才成立。"
     description_zh: 目標所在的格子上有施放者自己（用 inscribe）刻下的符文；可用 element 或 tag 篩選符文（省略＝任何符文）。別人的符文不算；對格子判斷，所以也可以用在沒有單位的格子。
     harshness: harsh
     min_rarity: rare
     params:
-      element: {type: element}
-      tag: {type: tag}
+      element: {llm_hint: "只認這個元素的符文。", type: element}
+      tag: {llm_hint: "只認帶這個標籤的符文。", type: tag}
   # 3-24c 撞擊的真實利用者：需要先被推擊撞上障礙或其他單位，所以算嚴苛（初值，未經模擬）。
   - id: target_collided
     name_zh: 目標本回合受過撞擊
+    llm_hint: "目標這一輪內受過撞擊時才成立。"
     description_zh: 目標在這一輪內受過撞擊（被推擊擋下撞上牆壁、物件、其他單位，或推擊距離超過上限；撞到的另一個單位也算）。輪數結束後失效。
     harshness: harsh
     min_rarity: rare

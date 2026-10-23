@@ -154,6 +154,7 @@ __all__ = [
     "PrimitiveTable",
     "Provenance",
     "ReactionSpec",
+    "RequiredWhen",
     "ScaleSpec",
     "ShapeBudget",
     "ShapeCells",
@@ -173,6 +174,7 @@ __all__ = [
     "granted_skill_problems",
     "legendary_cores",
     "on_hit_carrier",
+    "param_required_for",
     "rarity_rank",
     "skill_problems",
     "skill_slot_problems",
@@ -304,6 +306,8 @@ class ParamDef(ContentModel):
     max: int
     required: bool = True
     allow_weapon: bool = False
+    llm_hint: str = ""
+    """給 LLM 看的一句話說明（Phase 4-L3）：中性描述，不含世界觀名詞、階段編號與欄位名。"""
 
     @model_validator(mode="after")
     def _range(self) -> ParamDef:
@@ -386,6 +390,8 @@ class ShapeDef(ContentModel):
     name_zh: str = Field(min_length=1)
     description_zh: str = Field(min_length=1)
     targeting: Targeting
+    llm_hint: str = ""
+    """給 LLM 看的一句話說明（Phase 4-L3）。"""
     params: dict[str, ParamDef] = Field(default_factory=dict)
     min_rarity: SkillRarity = "common"
     budget: ShapeBudget = Field(default_factory=ShapeBudget)
@@ -539,6 +545,31 @@ class ShapeTable(ContentModel):
 # ---------------------------------------------------------------------------
 
 
+class RequiredWhen(ContentModel):
+    """參數「依情況才必填」的條件（Phase 4-L3，取代原本寫死在驗證器裡的 ``_filled_by_category``）。
+
+    只能和 ``required: true`` 並用，且恰好填一種：``category`` ＝ 只有技能類別是這個才必填
+    （例如武器技的傷害骰來自武器，法術技才要填）；``unless_filled`` ＝ 同一技能內同類型的效果
+    只要有任何一個填了指定的另一個參數，這個參數就不必填（例如符文填了標籤就可以省略元素）。
+    """
+
+    category: SkillCategory | None = None
+    unless_filled: str | None = Field(default=None, pattern=ID_PATTERN)
+
+    @model_validator(mode="after")
+    def _one(self) -> RequiredWhen:
+        if (self.category is None) == (self.unless_filled is None):
+            raise ValueError("required_when 必須恰好填 category 或 unless_filled 其中一種")
+        return self
+
+    def applies(self, *, category: str, sibling_filled: Callable[[str], bool]) -> bool:
+        """條件成立（＝這個參數必填）。"""
+        if self.category is not None:
+            return category == self.category
+        assert self.unless_filled is not None
+        return not sibling_filled(self.unless_filled)
+
+
 class PrimitiveParam(ContentModel):
     """原語的一個參數。
 
@@ -575,11 +606,22 @@ class PrimitiveParam(ContentModel):
         "scope",
     ]
     required: bool = False
+    required_when: RequiredWhen | None = None
+    """``required: true`` 時，只在條件成立才必填（``None`` ＝ 一律必填）。"""
     min: int | None = None
     max: int | None = None
     allowed_skeletons: tuple[str, ...] | None = None
     """只能用在這些骨架（``None`` ＝ 不限；``split_heal``，Phase 3E-2f）。"""
     description_zh: str = ""
+    llm_hint: str = ""
+    """給 LLM 看的一句話說明（Phase 4-L3）：中性描述，不含世界觀名詞、階段編號與欄位名；
+    ``description_zh`` 是給開發者的。出貨的資料一律要寫（``tests/content/test_llm_hint.py``）。"""
+
+    @model_validator(mode="after")
+    def _check_required_when(self) -> PrimitiveParam:
+        if self.required_when is not None and not self.required:
+            raise ValueError("required_when 必須搭配 required: true")
+        return self
 
 
 class PrimitiveDef(ContentModel):
@@ -617,6 +659,8 @@ class PrimitiveDef(ContentModel):
     id: str = Field(pattern=ID_PATTERN)
     name_zh: str = Field(min_length=1)
     description_zh: str = Field(min_length=1)
+    llm_hint: str = ""
+    """給 LLM 看的一句話說明（Phase 4-L3；與 ``description_zh``、``player_description`` 分開）。"""
     player_description: str | None = Field(default=None, min_length=1)
     """給玩家看的一句話說明（Phase 3E-2e）：不含階段編號與程式識別字；glossary API 與部件說明框
     用它，省略時退回 ``description_zh``。出貨的原語一律要寫
@@ -734,6 +778,8 @@ class ConditionDef(ContentModel):
     id: str = Field(pattern=ID_PATTERN)
     name_zh: str = Field(min_length=1)
     description_zh: str = Field(min_length=1)
+    llm_hint: str = ""
+    """給 LLM 看的一句話說明（Phase 4-L3）。"""
     harshness: Literal["common", "harsh"]
     min_rarity: SkillRarity = "common"
     params: dict[str, PrimitiveParam] = Field(default_factory=dict)
@@ -3266,7 +3312,14 @@ def _effect_problems(
         elif (problem := _value_problem(where, primitive, name, value, refs)) is not None:
             problems.append(problem)
     for name, spec in primitive.params.items():
-        if spec.required and name not in values and not _filled_by_category(skill, primitive, name):
+        required = param_required_for(
+            spec,
+            category=skill.category,
+            sibling_filled=lambda n: any(
+                e.type == primitive.id and getattr(e, n, None) is not None for e in skill.effects
+            ),
+        )
+        if required and name not in values:
             problems.append(f"{where}.{name}：效果 {primitive.id} 缺少必要參數 {name}")
     affects = effect.affects or default_affects(primitive)
     if primitive.acts_on == "caster" and affects != "self":
@@ -3445,12 +3498,16 @@ def _cost_stack_problems(skill: SkillDef, stacks: dict[str, StackDef]) -> list[s
     return []
 
 
-def _filled_by_category(skill: SkillDef, primitive: PrimitiveDef, name: str) -> bool:
-    """法術技的傷害骰必填，武器技的傷害骰來自武器：``dice`` 對武器技的 damage 不是必要參數；
-    符文帶元素或標籤其中一個：填了 ``tag`` 時 ``inscribe`` 的 ``element`` 不是必要參數（3-23）。"""
-    if primitive.id == INSCRIBE and name == "element":
-        return any(e.type == INSCRIBE and e.tag is not None for e in skill.effects)
-    return primitive.id == "damage" and name == "dice" and skill.category == "weapon"
+def param_required_for(
+    spec: PrimitiveParam, *, category: str, sibling_filled: Callable[[str], bool]
+) -> bool:
+    """這個參數在這個技能裡是否必填：``required``，且 ``required_when`` 成立（沒有則一律必填）。
+    ``sibling_filled(name)``：技能內同類型的效果是否有任何一個填了參數 ``name``。"""
+    if not spec.required:
+        return False
+    if spec.required_when is None:
+        return True
+    return spec.required_when.applies(category=category, sibling_filled=sibling_filled)
 
 
 def _trigger_problems(
