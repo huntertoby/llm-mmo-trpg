@@ -2028,3 +2028,14 @@ PM 驗收後請使用者試玩一整輪（`docs/專案計畫.md` 第 14 節 🎮
 - **main 上實跑煙霧檢查**：1600×900、800×600 全 PASS。注意：分頁的 localStorage 若有 `trpg.currentRun`，頁面會接回舊的一輪，`runCase` 全部顯示「找不到」→ **先 `localStorage.clear()` 再 navigate**（已補進交接 6.2 第 5 點）。
 - 會 FAIL 的驗證：報告寫明改回舊 `Hint` 時 1600×900 有 6 項 FAIL。順帶修好窄螢幕播放列被切掉、按鈕折行（舊版本來就 FAIL）。
 - 待決處理：#1 窄螢幕用緊湊排法 → 接受；#2 縮放屬性只做提示、不搬步驟 → 接受（規格允許「或提示」）；#3 玩家模式不能編輯巢狀效果（賭注分支等）→ 記為待辦，3J 或之後的工坊段再議；#4 `layoutSmoke` 留在正式包 → 接受（數 KB、無副作用）；#5 不裝 Playwright，維持內建瀏覽器流程。
+
+## 52. Phase 3-48｜工坊縮放屬性自動對齊＋玩家訊息中文化＋卡片類別（使用者試玩回饋 2026-10-24；sonnet；小修）
+
+使用者原話：「為啥」（武器技草稿出現「`draft` scaling_attr：縮放屬性「wil」不是合法的選項」）、「ㄟ? 阿這樣是可以的?」（打擊骨架的感知法術技）、「現在只有這兩種是正常的嗎」（武器技縮放顯示「看手上武器（力量）」）。專案 PM 轉達。
+
+### 52.1 驗收（2026-10-24，開發 PM，合併 `Merge Phase 3-48`）
+
+- 報告 `Phase3-48報告.md`。根因：`autoSingles` 只在縮放欄位所在步驟跑，後面步驟改了允許範圍，舊值留著。修法：前端 `conformScaling` 每次選項更新都套用（不合法→範圍內第一個；第二屬性不合法／同主屬性／武器技→清掉）。訊息：`option_conform` 位置與值中文化並附原因；新 `trpg.skillgen.player_text.plainify` 套在玩家看到的違規、schema 錯誤、預算明細、步驟說明（CLI／模擬仍看原始訊息）；`?dev=1` 照舊。卡片標題加「法術技・花法力」「武器技・花耐力・看手上武器」（戰鬥技能列、營火候選、工坊共用）。武器技縮放沒有主角時顯示「依手上武器而定（例：…）」，例子由武器資料產生；說明補「武器技一定要拿近戰或遠程武器；不限武器的是法術技」。掃描：`tests/skillgen/test_player_text.py`（60 技能 × 約 20 變異，玩家文字不得有英文詞）。
+- 檢查（main 合併後）：ruff、format、mypy；pytest skillgen／content／api／narrative／cli／architecture 通過（含 slow 的 CLI 快照與 run auto）；vitest 910、build。agent 回報的 `floatCardRule` vitest 失敗在 main 上不重現。
+- 合併後兩個 slow 測試要改（不是 3-48 造成）：CLI 快照 `skills_show_all` 因 d937339（驟雨、潑水瓶改智力）重產；`run auto` 分歧進化的種子 5 因 3I-1 新武器不再進化 → 改用種子 6、7。**教訓：改內容（縮放屬性）時要跑 `-m "slow or not slow" tests/cli`；3I-1 agent 也漏了 slow 的 run auto。**
+- 待決：#1 法術技 0 法力目前合法 → 問玩法 PM；#2 有主角時顯示手上武器實際屬性（`/api/workshop/options` 要帶主角／武器，改 OpenAPI）→ 排 **3-48b** 小修；#3 原語選項 `description_zh` 仍是開發者語氣 → 問玩法 PM（改寫或玩家模式隱藏）；#4 `?dev=1` 看不到預算明細原始 ID → 接受；#5 「YAML」一詞保留 → 接受。
