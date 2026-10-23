@@ -14,7 +14,7 @@ shape: {type: cone, size: 2}
 effects:
   - {type: damage, multiplier_permille: 1400}
 condition: null
-cost: {mana: 4, cooldown: 2}
+cost: {stamina: 8, cooldown: 2}
 tags: [physical, melee, area]
 narrative:
   concept: 巨劍掃出一道弧，把前方的人一起削倒

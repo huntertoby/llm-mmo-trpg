@@ -22,7 +22,7 @@ followup:
   effects:
     - {type: damage, multiplier_permille: 900}
 condition: null
-cost: {mana: 6, cooldown: 3}
+cost: {stamina: 12, cooldown: 3}
 tags: [physical, melee, mobility, aoe]
 narrative:
   concept: 身影一閃出現在敵陣邊緣，順勢一記扇形斬擊

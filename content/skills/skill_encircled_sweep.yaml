@@ -18,7 +18,7 @@ effects:
     multiplier_permille: 900
     scaling: {by: enemies_adjacent_self, per_step_permille: 100, cap_permille: 300}
 condition: null
-cost: {mana: 6, cooldown: 3}
+cost: {stamina: 12, cooldown: 3}
 tags: [physical, melee, area]
 narrative:
   concept: 被包圍的時候，每個方向都有目標，每個方向都有刀鋒

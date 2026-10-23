@@ -82,6 +82,14 @@ ability_mod_divisor: 2
 reactions_per_round: 1        # 每輪反應次數
 default_stamina: 30           # 單位範本未指定耐力時的預設值
 
+# --- 資源上限（Phase 3H-2，docs/design/07-角色成長.md 7.2；初值，平衡階段調整）---
+# 主角（範本 scaled_resources: true）：上限 ＝ 基礎 ＋（attrs 最高者 − base）× per_point（至少 0）；
+# 基礎是範本的 max_mana／stamina（一輪的主角依武器大類，roguelite.yaml 的 start.heroes）。敵人與隊友照範本的固定值。
+resources:
+  base: 10
+  mana:    {attrs: [int, wis, wil], per_point: 2}   # 法力：法術技
+  stamina: {attrs: [str, dex, con], per_point: 2}   # 耐力：武器技、格擋（反應）共用同一個池
+
 # --- 視線與隱蔽（Phase 1B）---
 base_sight_range: 24          # 基準視線距離（曼哈頓）；濃霧等天氣以倍率縮短
 concealed_ranged_max_distance: 2   # 隱蔽的目標超過此距離無法被攻擊選為目標

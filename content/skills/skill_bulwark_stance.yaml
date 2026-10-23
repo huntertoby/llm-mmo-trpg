@@ -15,7 +15,7 @@ shape: {type: self}
 effects:
   - {type: apply_status, status: stance_bulwark, affects: self}
 condition: null
-cost: {mana: 0}
+cost: {}
 tags: [stance, defense]
 narrative:
   concept: 沉下重心、舉盾守住陣線，寸步不讓

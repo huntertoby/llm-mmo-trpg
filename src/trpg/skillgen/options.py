@@ -942,9 +942,17 @@ def _legendary_fields(draft: Draft, library: ContentLibrary) -> list[FieldSpec]:
     return out
 
 
+def _resource_field(draft: Draft, library: ContentLibrary) -> FieldSpec:
+    """費用欄位依類別（3H-2，06 6.10）：武器技花耐力、法術技花法力。"""
+    category = draft.get("category")
+    if category in ("weapon", "spell") and library.budget.resource_of(category) == "stamina":
+        return _cost_int("stamina", "耐力", "施放花的耐力（武器技；與格擋共用，戰鬥中不回復）")
+    return _cost_int("mana", "法力", "施放花的法力（戰鬥中不回復）")
+
+
 def _cost_step(draft: Draft, library: ContentLibrary) -> StepOptions:
     fields: list[FieldSpec] = [
-        _cost_int("mana", "法力", "施放花的法力（戰鬥中不回復）"),
+        _resource_field(draft, library),
         _cost_int("cooldown", "冷卻", "施放後幾回合不能再用"),
         _cost_int("uses_per_battle", "每場次數", "每場最多施放幾次"),
         _cost_int("hp_percent", "生命代價（‰）", "施放花最大 HP 的千分比"),
@@ -955,7 +963,8 @@ def _cost_step(draft: Draft, library: ContentLibrary) -> StepOptions:
     allowance = library.budget.allowance
     notes = (
         f"代價越重可用預算越多：冷卻每回合 +{allowance.cooldown_per_turn}‰、法力每點 "
-        f"+{allowance.mana_per_point}‰；合計最多 +{allowance.total_cap}‰",
+        f"+{allowance.mana_per_point}‰（耐力 {allowance.stamina_per_mana} 點折合法力 1 點）；"
+        f"合計最多 +{allowance.total_cap}‰",
         "沒有冷卻的技能不能用大範圍形狀（互斥規則）",
     )
     return _step("cost", draft, library, tuple(fields), notes)

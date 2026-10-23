@@ -989,12 +989,14 @@ def modifier_summary(library: ContentLibrary, skill: SkillDef, rule: ModifierSpe
 
 
 def cost_parts(library: ContentLibrary, skill: SkillDef, *, with_ap: bool = True) -> list[str]:
-    """代價的各段文字（AP、法力、HP、施放後狀態、冷卻、每場次數）。"""
+    """代價的各段文字（AP、法力、耐力、HP、施放後狀態、冷卻、每場次數）。"""
     cost = skill.cost
     ap = skill_ap(library, skill)
     parts = [f"AP {ap}"] if with_ap and ap is not None else []
     if cost.mana:
         parts.append(f"法力 {cost.mana}")
+    if cost.stamina:
+        parts.append(f"耐力 {cost.stamina}")
     if cost.hp_percent:
         parts.append(f"HP {cost.hp_percent / 10:g}%")
     if cost.self_status:

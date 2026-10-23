@@ -67,7 +67,7 @@ def test_content_check_fails_on_a_skill_that_breaks_the_rules(
     path = root / "skills" / "skill_cleave.yaml"
     data = yaml.safe_load(path.read_text("utf-8"))
     data["effects"][0]["multiplier_permille"] = 4000  # 超預算
-    data["cost"] = {"mana": 4}  # 錐形 2 沒有冷卻仍可，但再加一個互斥違規：
+    data["cost"] = {"stamina": 8}  # 錐形 2 沒有冷卻仍可，但再加一個互斥違規：
     data["shape"] = {"type": "cone", "size": 4}
     path.write_text(yaml.safe_dump(data, allow_unicode=True), encoding="utf-8")
     monkeypatch.setenv(CONTENT_DIR_ENV, str(root))
@@ -85,7 +85,7 @@ def test_budget_shows_when_the_allowance_is_capped(
     shutil.copytree(PROJECT_ROOT / "content", content)
     path = content / "skills" / "skill_bone_crusher.yaml"
     data = yaml.safe_load(path.read_text(encoding="utf-8"))
-    data["cost"] = {"mana": 40, "cooldown": 6, "uses_per_battle": 1}  # 150 + 300 + 400 ＝ 850
+    data["cost"] = {"stamina": 80, "cooldown": 6, "uses_per_battle": 1}  # 150 + 300 + 400 ＝ 850
     path.write_text(yaml.safe_dump(data, allow_unicode=True), encoding="utf-8")
     monkeypatch.setenv(CONTENT_DIR_ENV, str(content))
     _, out, _ = _run(["skills", "budget", "skill_bone_crusher"], capsys)

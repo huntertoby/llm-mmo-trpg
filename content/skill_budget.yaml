@@ -136,6 +136,9 @@ allowance:
   uses_default: 100         # 每場 3 次以上
   mana_per_point: 5         # 法力每點
   mana_cap: 150
+  # 耐力（Phase 3H-2，06 6.10：武器技花耐力；初值）：耐力 2 點 ＝ 法力 1 點，預算點數等價——
+  # 折抵 ＝ 耐力 × mana_per_point ÷ stamina_per_mana（向下取整），上限同 mana_cap。內建武器技一律「耐力 ＝ 原法力 × 2」，強度不變。
+  stamina_per_mana: 2
   hp_per_permille: 1        # hp_percent 每 1‰
   hp_cap: 200
   # 自身狀態代價（Phase 2H-1，初值，未經模擬）：折抵 ＝ 狀態 budget_points × 有效回合 × per_point_permille，
@@ -159,6 +162,10 @@ rarity:
   rare: {max_effects: 4}
   epic: {max_effects: 4}
   legendary: {max_effects: 4}
+
+# 技能的費用花哪種資源（Phase 3H-2，docs/design/06-技能.md 6.10）：武器技花耐力、法術技花法力。
+# 隨機組合器與 LLM 提議的數值以法力計，最後依類別換成等價的耐力（allowance.stamina_per_mana）。
+cost_resource: {weapon: stamina, spell: mana}
 
 # 修正技能（kind: modifier，Phase 3C-2；docs/design/06-技能.md 6.14.1）。全部為初值，未經模擬（3C-5 的 sim matrix 再看）。
 #   規則點數 ＝ 每場預估使用次數 ×（命中後才生效的再 × hit_rate）× 每次的價值 × 條件倍率（condition_permille）

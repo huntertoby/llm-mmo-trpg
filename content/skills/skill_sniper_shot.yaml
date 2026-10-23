@@ -18,7 +18,7 @@ effects:
     multiplier_permille: 1400
     scaling: {by: distance, per_step_permille: 80, cap_permille: 400}
 condition: null
-cost: {mana: 4, cooldown: 2}
+cost: {stamina: 8, cooldown: 2}
 tags: [physical, ranged]
 narrative:
   concept: 拉開距離才是狙擊手的本錢，越遠，那一箭越痛

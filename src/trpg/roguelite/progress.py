@@ -74,12 +74,13 @@ def run_loadout(library: ContentLibrary, run: RunState) -> Loadout:
 
 
 def hero_spawn(library: ContentLibrary, run: RunState) -> UnitSpawn:
-    """主角的出場設定：帶目前的 HP、法力、源力、等級加成與技能等級（一輪與單場戰鬥共用）。"""
+    """主角的出場設定：帶目前的 HP、法力、耐力、源力、等級加成與技能等級（一輪與單場戰鬥共用）。"""
     core = library.ruleset.core
     # 等級加成併入範本的基礎 HP，體質的部分由引擎加（與 RunState.max_hp_in 同一個式子）
     leveled = run.hero.model_copy(
         update={
             "max_hp": run.hero.max_hp + core.level_hp_bonus(run.hero.max_hp, run.level),
+            "scaled_resources": True,  # 法力與耐力上限依屬性（3H-2；舊存檔的主角範本沒有此旗標）
             "skill_levels": battle_levels(run),  # 技能等級（3-26a）：戰鬥設定帶入，重播一致
             "level": run.level,  # 角色等級（3-33b）：召喚物成長依施放者等級
         }
@@ -92,6 +93,7 @@ def hero_spawn(library: ContentLibrary, run: RunState) -> UnitSpawn:
         source=run.source,
         hp=run.hp,
         mana=run.mana,
+        stamina=run.stamina,
     )
 
 
@@ -115,12 +117,19 @@ def battle_setup(library: ContentLibrary, run: RunState) -> BattleSetup:
 
 def with_hp_change(library: ContentLibrary, before: RunState, after: RunState) -> RunState:
     """``after`` 的最大 HP 與 ``before`` 不同時（升級、配點加體質），目前 HP 同步增加（或減少，
-    不低於 1）相同的量。"""
+    不低於 1）相同的量；法力與耐力上限（3H-2，依屬性）也一樣（不低於 0；耐力為「滿」時維持滿）。"""
     core = library.ruleset.core
+    update: dict[str, int] = {}
     delta = after.max_hp_in(core) - before.max_hp_in(core)
-    if delta == 0:
-        return after
-    return after.model_copy(update={"hp": max(1, after.hp + delta)})
+    if delta:
+        update["hp"] = max(1, after.hp + delta)
+    delta = after.max_mana_in(core) - before.max_mana_in(core)
+    if delta:
+        update["mana"] = max(0, after.mana + delta)
+    delta = after.max_stamina_in(core) - before.max_stamina_in(core)
+    if delta and after.stamina is not None:
+        update["stamina"] = max(0, after.stamina + delta)
+    return after.model_copy(update=update) if update else after
 
 
 def hero_unit_id(state: BattleState) -> UnitId:
@@ -192,6 +201,7 @@ def finish_battle(
         mana=hero.mana,
         source=source if won else hero.source,
         hero_downed=hero.downed,
+        stamina=hero.stamina,
         state_digest=hashlib.sha256(state_to_json(state).encode("utf-8")).hexdigest(),
     )
     history = (*run.history, record)
@@ -204,6 +214,7 @@ def finish_battle(
                 "skill_usage": usage,
                 "hp": 0 if hero.downed else hero.hp,
                 "mana": hero.mana,
+                "stamina": hero.stamina,
                 "source": hero.source,
                 "history": history,
                 "node": EndedNode(victory=False),
@@ -211,14 +222,20 @@ def finish_battle(
         )
     xp = run.xp + library.roguelite.xp_per_battle
     gained = level_for(library, xp) - run.level
-    mana = hero.mana
+    mana, stamina = hero.mana, hero.stamina
+    refill = library.roguelite.refill_after_battle  # 每場回滿的資源（3H-2 設定點，預設不開）
+    if run.test_mode or "mana" in refill:
+        mana = max(run.max_mana_in(core), hero.max_mana)
+    if run.test_mode or "stamina" in refill:
+        stamina = max(run.max_stamina_in(core), hero.max_stamina)
     if run.test_mode:
         # 測試模式（Phase 3-39）：戰後回滿到戰鬥中的實際上限（含裝備加成；升級再依最大 HP 的差補上）
-        hp, mana = max(run.max_hp_in(core), hero.max_hp), max(run.max_mana, hero.max_mana)
+        hp = max(run.max_hp_in(core), hero.max_hp)
     finished = run.model_copy(
         update={
             "hp": hp,
             "mana": mana,
+            "stamina": stamina,
             "source": source,
             "xp": xp,
             "levels_pending": run.levels_pending + gained,
@@ -261,7 +278,8 @@ def next_node(library: ContentLibrary, run: RunState) -> RunState:
         return run.model_copy(
             update={
                 "hp": run.max_hp_in(core),
-                "mana": run.max_mana,
+                "mana": run.max_mana_in(core),
+                "stamina": run.max_stamina_in(core),
                 "source": min(core.source_max, run.source + rules.source.campfire),
                 "campfires_done": (*run.campfires_done, done),
                 "node": CampfireNode(after_battle=done, rerolls_left=rules.rerolls_per_campfire),

@@ -12,6 +12,7 @@ from pydantic import Field, model_validator
 
 from trpg.content.battle import ID_PATTERN, UnitTemplate
 from trpg.content.maps import TRAINING_ARCHETYPE, MapDef
+from trpg.content.rules import ResourceKind
 from trpg.content.schemas import ContentModel
 from trpg.shared.types import ResistGroup, Team
 
@@ -74,6 +75,9 @@ class StartHero(ContentModel):
     speed: int = Field(default=5, ge=0)
     armor_bonus: int = 0
     max_mana: int = Field(default=0, ge=0)
+    stamina: int | None = Field(default=None, ge=0)
+    """基礎耐力（Phase 3H-2）；省略時用 ``core.yaml`` 的 ``default_stamina``。法力與耐力上限再依
+    屬性加成（``core.yaml`` 的 ``resources``）。"""
     resist: dict[ResistGroup, int] = Field(default_factory=dict)
 
 
@@ -165,6 +169,9 @@ class RunRules(ContentModel):
     campfire_after: tuple[int, ...]
     """在第幾場（一般戰鬥）打完之後有營火。"""
     rerolls_per_campfire: int = Field(ge=0)
+    refill_after_battle: tuple[ResourceKind, ...] = ()
+    """每場戰鬥打贏後回滿的資源（Phase 3H-2 設定點）：例如 ``[mana]`` 就是「每場法力回滿」
+    （待使用者決定的 B 選項，目前不開）。沒列出的資源在戰鬥之間不回復，營火回滿。"""
     source: RunSourceRules
     start: StartRules = Field(default_factory=StartRules)
     """新開局（Phase 3-24b2）。"""

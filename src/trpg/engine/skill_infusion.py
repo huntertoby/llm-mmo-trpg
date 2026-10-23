@@ -227,6 +227,8 @@ def do_infuse_skill(ctx: Ctx, owner: UnitState, action: InfuseSkill) -> None:
         ap=paid.ap,
         mana=skill.cost.mana,
         mana_after=owner.mana,
+        stamina=skill.cost.stamina,
+        stamina_after=owner.stamina,
         hp_spent=paid.hp,
         cooldown=paid.cooldown,
     )

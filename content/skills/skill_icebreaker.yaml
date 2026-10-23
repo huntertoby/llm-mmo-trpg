@@ -19,7 +19,7 @@ effects:
     multiplier_permille: 1400
     condition: {type: target_has_status, status: frozen}
 condition: null
-cost: {mana: 5, cooldown: 2}
+cost: {stamina: 10, cooldown: 2}
 tags: [physical, melee, combo]
 narrative:
   concept: 專砸被凍住的敵人，連冰帶人一起碎

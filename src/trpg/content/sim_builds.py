@@ -11,7 +11,7 @@ from __future__ import annotations
 
 from collections import Counter
 
-from pydantic import Field, model_validator
+from pydantic import Field, field_validator, model_validator
 
 from trpg.content.battle import ID_PATTERN, UnitTemplate
 from trpg.content.schemas import ContentModel
@@ -35,6 +35,12 @@ class BuildDef(ContentModel):
     reference: bool = False
     """對照組 build（Phase 3-32a，例如普攻流弓手 vs 技能流弓手）：只給專用的對照腳本使用，不列入
     build 矩陣與 ``trpg run auto`` 的隨機抽選。"""
+
+    @field_validator("hero")
+    @classmethod
+    def _scaled(cls, hero: UnitTemplate) -> UnitTemplate:
+        """build 英雄是主角：法力與耐力上限依屬性（Phase 3H-2，07 7.2）。"""
+        return hero if hero.scaled_resources else hero.model_copy(update={"scaled_resources": True})
 
     @model_validator(mode="after")
     def _check(self) -> BuildDef:

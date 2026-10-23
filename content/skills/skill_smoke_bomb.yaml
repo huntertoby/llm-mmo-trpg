@@ -14,7 +14,7 @@ shape: {type: square3, range: 5}
 effects:
   - {type: create_surface, surface: smoke, duration: 5}
 condition: null
-cost: {mana: 4, cooldown: 3}
+cost: {stamina: 8, cooldown: 3}
 tags: [ranged, area, utility, smoke]
 narrative:
   concept: 射出煙霧彈，白煙擋住視線、讓站在裡面的人隱蔽；風一吹就散，聖光卻驅不走它

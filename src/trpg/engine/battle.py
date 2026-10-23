@@ -329,6 +329,8 @@ def begin_battle(setup: BattleSetup, seed: int) -> ResolveResult:
             unit.hp = min(spawn.hp, unit.max_hp)
         if spawn.mana is not None:
             unit.mana = min(spawn.mana, unit.max_mana)
+        if spawn.stamina is not None:  # 開場耐力（3H-2：一輪存檔帶入）
+            unit.stamina = min(spawn.stamina, unit.max_stamina)
     state.source_wells = tuple(sorted(map_def.source_wells, key=lambda xy: (xy[1], xy[0])))
     ctx = Ctx(state)
     core = ctx.core

@@ -16,7 +16,7 @@ shape: {type: single, range: 2}
 effects:
   - {type: topple}
 condition: null
-cost: {mana: 3, cooldown: 2}
+cost: {stamina: 6, cooldown: 2}
 tags: [physical, melee, push]
 narrative:
   concept: 對著石柱或枯樹的根部一記重擊，讓它朝敵人倒下

@@ -613,7 +613,7 @@ def load_library(  # noqa: PLR0915
     _check_appearance(root, appearance, item_table, keywords)
     gear = _GearCatalog(items=items, affixes=affixes, rules=equipment_rules)
 
-    _check_skills(root, skills, ruleset)
+    _check_skills(root, skills, ruleset, budget)
     _check_skill_rules(root, ruleset, exclusions, skeletons)
     _check_keywords(root, keywords, ruleset, skills)
     unknown_values = sorted(set(ai_profiles.status_values) - {s.id for s in statuses.statuses})
@@ -883,10 +883,15 @@ def _variant_reference_problems(
     return problems
 
 
-def _check_skills(root: Path, skills: dict[str, SkillDef], ruleset: Ruleset) -> None:
-    """技能引用的形狀、原語、狀態、物件都存在，參數在範圍內。"""
+def _check_skills(
+    root: Path, skills: dict[str, SkillDef], ruleset: Ruleset, budget: BudgetRules
+) -> None:
+    """技能引用的形狀、原語、狀態、物件都存在，參數在範圍內；費用花的資源與類別相符（3H-2）。"""
     for skill_id, skill in skills.items():
         problems = skill_reference_problems(skill, ruleset, skills)
+        cost = budget.cost_problem(skill.category, skill.cost)
+        if cost is not None:
+            problems.append(cost)
         if problems:
             raise ContentError(root / "skills" / f"{skill_id}.yaml", "；".join(problems))
 

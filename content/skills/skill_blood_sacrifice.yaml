@@ -22,7 +22,7 @@ effects:
     lose:
       - {type: self_damage_of_hit, self_damage_permille_of_hit: 500}
 condition: null
-cost: {mana: 4, cooldown: 2}
+cost: {stamina: 8, cooldown: 2}
 tags: [physical, melee]
 narrative:
   concept: 把自己的血獻給劍，賭這一擊的威力

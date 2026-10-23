@@ -18,7 +18,7 @@ effects:
 condition: null
 trigger: null
 reaction: {event: ally_hit_adjacent}
-cost: {mana: 0, cooldown: 1}
+cost: {cooldown: 1}
 tags: [guard, reaction, intercept]
 narrative:
   concept: 在同伴挨刀的瞬間擋到他身前，用自己的身體扛下這一擊

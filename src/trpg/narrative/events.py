@@ -534,6 +534,8 @@ def _skill_used(e: SkillUsed, v: _View) -> str:
     costs = [f"AP {e.ap}"]
     if e.mana:
         costs.append(f"法力 {e.mana}")
+    if e.stamina:
+        costs.append(f"耐力 {e.stamina}")
     if e.hp_spent:
         costs.append(f"HP {e.hp_spent}")
     if e.cooldown:
@@ -561,6 +563,8 @@ def _skill_triggered(e: SkillTriggered, v: _View) -> str:
     costs = []
     if e.mana:
         costs.append(f"法力 {e.mana}")
+    if e.stamina:
+        costs.append(f"耐力 {e.stamina}")
     if e.hp_spent:
         costs.append(f"HP {e.hp_spent}")
     if e.cooldown:
@@ -1156,6 +1160,8 @@ def _skill_infused(e: SkillInfused, v: _View) -> str:
     costs = [f"AP {e.ap}"]
     if e.mana:
         costs.append(f"法力 {e.mana}")
+    if e.stamina:
+        costs.append(f"耐力 {e.stamina}")
     if e.hp_spent:
         costs.append(f"HP {e.hp_spent}")
     if e.cooldown:

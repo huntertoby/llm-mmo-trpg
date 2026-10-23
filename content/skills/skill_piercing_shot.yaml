@@ -14,7 +14,7 @@ shape: {type: line, size: 5}
 effects:
   - {type: damage, multiplier_permille: 1000}
 condition: null
-cost: {mana: 6, cooldown: 2}
+cost: {stamina: 12, cooldown: 2}
 tags: [physical, ranged, line]
 narrative:
   concept: 敵人排成一列時，一支箭就夠了

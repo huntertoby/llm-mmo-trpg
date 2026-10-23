@@ -15,7 +15,7 @@ effects:
   - {type: damage, multiplier_permille: 400}
   - {type: push, distance: 2}
 condition: null
-cost: {mana: 3, cooldown: 2}
+cost: {stamina: 6, cooldown: 2}
 tags: [physical, melee, push]
 narrative:
   concept: 一腳把敵人踢出掩護，甚至踢下懸崖

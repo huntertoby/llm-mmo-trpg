@@ -65,6 +65,7 @@ def _cast_state(
     unit.skills = (skill_id,)
     unit.granted_skills = ()
     unit.mana = max(unit.mana, skill.cost.mana)
+    unit.stamina = max(unit.stamina, skill.cost.stamina)
     unit.cooldowns = {}
     unit.skill_uses = {}
     unit.ap = max(unit.ap, skill.ap_cost or 0, 1)

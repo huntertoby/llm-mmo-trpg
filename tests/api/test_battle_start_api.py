@@ -34,7 +34,7 @@ def test_weapon_and_keywords_start_matches_a_run_hero(
     data = reply.json()
     hero = next(u for u in data["view"]["units"] if u["id"] == data["hero_id"])
     assert hero["name_zh"] == "冒險者"
-    assert hero["max_mana"] == run.hero.max_mana
+    assert hero["max_mana"] == run.max_mana_in(library.ruleset.core)
     assert len(data["view"]["units"]) >= 4  # 主角＋2 名隊友＋敵人
 
 

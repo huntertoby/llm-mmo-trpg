@@ -46,8 +46,8 @@ NUMERIC_PARAM_TYPES = frozenset({"int", "dice"})
 SCALING_NUMBER_FIELDS = ("per_step_permille", "cap_permille")
 """``scaling``（依情況縮放）只留 ``by``（依什麼縮放），步進與上限是數值。"""
 TOP_LEVEL_NUMBER_FIELDS = ("ap_cost",)
-"""技能層級的數值欄位（另外還有 ``cost.mana``、``cost.cooldown``）。"""
-COST_NUMBER_FIELDS = ("mana", "cooldown")
+"""技能層級的數值欄位（另外還有 ``cost.mana``、``cost.stamina``、``cost.cooldown``）。"""
+COST_NUMBER_FIELDS = ("mana", "stamina", "cooldown")
 TRIGGER_NUMBER_FIELDS = ("max_per_round", "max_distance")
 VARIANT_NUMBER_FIELDS = ("range_delta",)
 NESTED_EFFECT_KEYS = ("then", "win", "lose", "on_kill", "effects")

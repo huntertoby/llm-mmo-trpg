@@ -16,7 +16,7 @@ shape: {type: self}
 effects:
   - {type: apply_status, status: overwatch, affects: self}
 condition: null
-cost: {mana: 0, cooldown: 1}
+cost: {cooldown: 1}
 tags: [physical, ranged, overwatch, stance_like]
 narrative:
   concept: 弓已拉滿，視線鎖住前方的空地，誰敢踏進射程就吃一箭

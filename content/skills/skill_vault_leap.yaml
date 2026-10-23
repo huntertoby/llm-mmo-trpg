@@ -16,7 +16,7 @@ effects:
   - {type: leap}
   - {type: apply_status, status: empowered, duration: 2, affects: self}
 condition: null
-cost: {mana: 3, cooldown: 3}
+cost: {stamina: 6, cooldown: 3}
 tags: [physical, leap, mobility]
 narrative:
   concept: 一躍越過人群與障礙，落地時氣勢更盛

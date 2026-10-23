@@ -568,6 +568,8 @@ def _pay_costs(
         ap=paid.ap,
         mana=skill.cost.mana,
         mana_after=caster.mana,
+        stamina=skill.cost.stamina,
+        stamina_after=caster.stamina,
         hp_spent=paid.hp,
         cooldown=paid.cooldown,
         tiles=tuple(Pos(x=x, y=y) for x, y in area.tiles),

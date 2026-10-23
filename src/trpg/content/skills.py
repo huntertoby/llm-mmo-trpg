@@ -1307,6 +1307,9 @@ class SkillCost(ContentModel):
     """技能代價（``docs/phases/Phase2A計畫.md`` 3.5）。``hp_percent`` 是最大 HP 的千分比（‰）。"""
 
     mana: int = Field(default=0, ge=0)
+    stamina: int = Field(default=0, ge=0)
+    """耐力代價（Phase 3H-2，06 6.10）：武器技花耐力、法術技花法力（依類別，``skill_budget.yaml`` 的
+    ``cost_resource``；內容庫與產生器檢查）。"""
     cooldown: int | None = Field(default=None, ge=1, le=_MAX_COOLDOWN)
     uses_per_battle: int | None = Field(default=None, ge=1)
     hp_percent: int | None = Field(default=None, ge=1, le=_PERMILLE - 1)

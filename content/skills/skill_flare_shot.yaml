@@ -19,7 +19,7 @@ effects:
     multiplier_permille: 1200
     condition: {type: target_has_status, status: burning}
 condition: null
-cost: {mana: 5, cooldown: 2}
+cost: {stamina: 10, cooldown: 2}
 tags: [physical, ranged, combo]
 narrative:
   concept: 借敵人身上的火光瞄準要害

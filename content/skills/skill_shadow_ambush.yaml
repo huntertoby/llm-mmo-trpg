@@ -20,7 +20,7 @@ effects:
     multiplier_permille: 800
     condition: {type: self_concealed}
 condition: null
-cost: {mana: 6, cooldown: 3}
+cost: {stamina: 12, cooldown: 3}
 tags: [physical, melee, mobility, stealth]
 narrative:
   concept: 從陰影裡踏出來，挑一個最刁鑽的角度下手；藏得越好，這一刀越狠

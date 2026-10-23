@@ -297,7 +297,8 @@ def make_unit(
     gear = build_gear(equipment if equipment is not None else Loadout(), rules.equipment)
     template = geared_template(template, gear, rules)
     weapon = geared_weapon(weapon, gear, rules.equipment)  # 武器特性強化（3G-G2）
-    stamina = template.stamina if template.stamina is not None else rules.core.default_stamina
+    stamina = rules.core.template_max_resource("stamina", template)  # 主角依屬性（3H-2）
+    max_mana = rules.core.template_max_resource("mana", template)
     reactions = (
         template.reactions if template.reactions is not None else rules.reactions.default_rules
     )
@@ -323,8 +324,8 @@ def make_unit(
         max_stamina=stamina,
         reactions=tuple(reactions),
         ai_profile=default_ai_profile(template, weapon),
-        mana=template.max_mana,
-        max_mana=template.max_mana,
+        mana=max_mana,
+        max_mana=max_mana,
         skills=template.skills,
         level=template.level,
         skill_levels=dict(template.skill_levels),

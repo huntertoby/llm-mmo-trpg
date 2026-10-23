@@ -2123,6 +2123,17 @@
             "type": "boolean",
             "title": "Hero Downed"
           },
+          "stamina": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Stamina"
+          },
           "state_digest": {
             "type": "string",
             "title": "State Digest"
@@ -5358,6 +5369,16 @@
           "max_mana": {
             "type": "integer",
             "title": "Max Mana"
+          },
+          "stamina": {
+            "type": "integer",
+            "title": "Stamina",
+            "default": 0
+          },
+          "max_stamina": {
+            "type": "integer",
+            "title": "Max Stamina",
+            "default": 0
           },
           "source": {
             "type": "integer",

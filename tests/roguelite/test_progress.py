@@ -149,7 +149,7 @@ def test_campfire_mid_run_restores_hp_and_mana_and_adds_source() -> None:
     assert camp.node == CampfireNode(after_battle=3, rerolls_left=1)
     assert (camp.hp, camp.mana, camp.source) == (
         run.max_hp_in(library().ruleset.core),
-        run.max_mana,
+        run.max_mana_in(library().ruleset.core),
         2,
     )
     capped = _after(run, 3, source=3)

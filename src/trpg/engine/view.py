@@ -551,7 +551,7 @@ def _rule_view(state: BattleState, unit: UnitState, rule: ReactionRule) -> React
     if rule.reaction in unit.skills:  # 反應技：規則的 reaction 是技能 ID
         skill = rules.skill_def(rule.reaction)
         name, description = skill.name_zh, skill.narrative.concept
-        stamina, mana, hp = 0, skill.cost.mana, skill.cost.hp_percent or 0
+        stamina, mana, hp = skill.cost.stamina, skill.cost.mana, skill.cost.hp_percent or 0
     else:
         definition = rules.reaction_def(rule.reaction)
         name, description = definition.name_zh, definition.description_zh

@@ -14,11 +14,12 @@
 
 from __future__ import annotations
 
-from typing import Literal
+from typing import Any, Literal
 
 from pydantic import Field, model_validator
 
 from trpg.content.battle import ID_PATTERN
+from trpg.content.rules import ResourceKind
 from trpg.content.schemas import ContentModel
 from trpg.content.skills import (
     AFFECTS_VALUES,
@@ -26,6 +27,7 @@ from trpg.content.skills import (
     SKELETON_IDS,
     Affects,
     SkillCategory,
+    SkillCost,
     SkillKind,
     SkillRarity,
     WeaponReq,
@@ -80,6 +82,11 @@ class CostAllowance(ContentModel):
     uses_default: int = Field(ge=0)
     mana_per_point: int = Field(ge=0)
     mana_cap: int = Field(ge=0)
+    stamina_per_mana: int = Field(default=2, ge=1)
+    """耐力與法力的預算換算（Phase 3H-2，06 6.10；初值）：耐力 ``stamina_per_mana`` 點 ＝ 法力
+    1 點，預算點數等價——耐力代價的折抵 ＝ 耐力 × ``mana_per_point`` ÷ ``stamina_per_mana``
+    （向下取整），上限同 ``mana_cap``。武器技由法力改花耐力時，耐力 ＝ 法力 × 這個值，折抵與
+    強度不變。"""
     hp_per_permille: int = Field(ge=0)
     """``hp_percent`` 每 1‰ 的折抵。"""
     hp_cap: int = Field(ge=0)
@@ -184,6 +191,10 @@ class RarityLimit(ContentModel):
     """各稀有度的結構上限。"""
 
     max_effects: int = Field(ge=1, le=4)
+
+
+def _default_cost_resource() -> dict[SkillCategory, ResourceKind]:
+    return {"weapon": "stamina", "spell": "mana"}
 
 
 class BudgetRules(ContentModel):
@@ -375,6 +386,8 @@ class BudgetRules(ContentModel):
     這麼多回合（Phase 3C-4a；初值）。"""
     modifier: ModifierBudget
     """修正技能的預算（Phase 3C-2）。"""
+    cost_resource: dict[SkillCategory, ResourceKind] = Field(default_factory=_default_cost_resource)
+    """技能的費用花哪種資源（Phase 3H-2，06 6.10）：武器技花耐力、法術技花法力。"""
 
     @model_validator(mode="after")
     def _check(self) -> BudgetRules:
@@ -386,7 +399,35 @@ class BudgetRules(ContentModel):
             raise ValueError("condition_permille 必須剛好有 none、common、harsh")
         if set(self.rarity) != set(RARITY_ORDER):
             raise ValueError(f"rarity 必須剛好有 {', '.join(RARITY_ORDER)}")
+        if sorted(self.cost_resource) != ["spell", "weapon"]:
+            raise ValueError("cost_resource 必須剛好有 weapon、spell")
         return self
+
+    def resource_of(self, category: SkillCategory) -> ResourceKind:
+        """``category`` 的技能花哪種資源。"""
+        return self.cost_resource[category]
+
+    def cost_problem(self, category: SkillCategory, cost: SkillCost) -> str | None:
+        """代價花的資源與類別不符（例：武器技花法力）時的說明；相符為 ``None``。"""
+        want = self.resource_of(category)
+        other: ResourceKind = "stamina" if want == "mana" else "mana"
+        if getattr(cost, other) == 0:
+            return None
+        names = {"mana": "法力", "stamina": "耐力"}
+        kind = "武器技" if category == "weapon" else "法術技"
+        return f"{kind}花{names[want]}，不能花{names[other]}（cost.{other}，06 6.10）"
+
+    def stamina_for_mana(self, mana: int) -> int:
+        """法力代價換成等價的耐力代價（預算點數相同）。"""
+        return mana * self.allowance.stamina_per_mana
+
+    def resource_cost(self, cost: dict[str, Any], category: SkillCategory) -> dict[str, Any]:
+        """把產生器的代價（一律以法力表示）換成 ``category`` 該花的資源：花耐力的類別把 ``mana``
+        換成等價的 ``stamina``（:meth:`stamina_for_mana`），其他欄位不變。"""
+        if self.resource_of(category) == "mana" or not cost.get("mana"):
+            return cost
+        out = {k: v for k, v in cost.items() if k != "mana"}
+        return {**out, "stamina": self.stamina_for_mana(int(cost["mana"]))}
 
     def summary(self) -> str:
         return f"合格區間 {self.min_ratio_permille / 10:g}%–{self.max_ratio_permille / 10:g}%"

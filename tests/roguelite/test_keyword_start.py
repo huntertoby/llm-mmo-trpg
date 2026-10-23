@@ -61,7 +61,9 @@ def test_keyword_start_is_deterministic_and_gives_one_skill_per_pool() -> None:
     assert first in pools["ignite"] and second in pools["marked"] and first != second
     assert run.hero.weapon == "fire_staff" and run.level == 1
     assert run.hero.attributes[Attribute.INT] == 14  # 預設配點：武器的縮放屬性
-    assert run.hp == run.max_hp_in(lib.ruleset.core) and run.mana == run.max_mana
+    assert run.hp == run.max_hp_in(lib.ruleset.core) and run.mana == run.max_mana_in(
+        lib.ruleset.core
+    )
     seeds = {
         new_keyword_run(lib, "fire_staff", ("ignite", "marked"), s).hero.skills for s in range(12)
     }

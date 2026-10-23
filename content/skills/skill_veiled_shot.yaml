@@ -19,7 +19,7 @@ effects:
     multiplier_permille: 1300
     condition: {type: self_concealed}
 condition: null
-cost: {mana: 5, cooldown: 2}
+cost: {stamina: 10, cooldown: 2}
 tags: [physical, ranged, combo]
 narrative:
   concept: 從暗處射出看不見的一箭

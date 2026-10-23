@@ -18,7 +18,7 @@ effects:
     multiplier_permille: 800
     condition: {type: target_isolated}
 condition: null
-cost: {mana: 5, cooldown: 2}
+cost: {stamina: 10, cooldown: 2}
 tags: [physical, melee, hunter]
 narrative:
   concept: 專挑離群的獵物下手

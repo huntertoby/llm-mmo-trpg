@@ -166,6 +166,7 @@ def _hero(library: ContentLibrary, run: RunState) -> HeroOut:
     thresholds = library.roguelite.level_thresholds
     growth = library.ruleset.skill_growth
     weapon = library.weapons.get(run.hero.weapon)
+    core = library.ruleset.core
     return HeroOut(
         build_id=run.build_id or "",
         name_zh=run.hero.name_zh,
@@ -189,7 +190,9 @@ def _hero(library: ContentLibrary, run: RunState) -> HeroOut:
             for p in library.ruleset.core.attribute_perks.lines(run.hero.attributes)
         ),
         mana=run.mana,
-        max_mana=max(run.max_mana, run.mana if run.test_mode else 0),
+        max_mana=max(run.max_mana_in(core), run.mana if run.test_mode else 0),
+        stamina=run.stamina_in(core),
+        max_stamina=max(run.max_stamina_in(core), run.stamina_in(core) if run.test_mode else 0),
         source=run.source,
         source_max=library.ruleset.core.source_max,
         weapon=run.hero.weapon,

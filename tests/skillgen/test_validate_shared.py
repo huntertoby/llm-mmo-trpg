@@ -69,7 +69,9 @@ def test_validator_and_content_library_agree_on_bad_skills(name: str, tmp_path: 
     from_validator = [v.message for v in violations(skill) if v.rule == "reference"]
     assert from_validator == expected
     with pytest.raises(ContentError) as raised:
-        _check_skills(tmp_path, {**library.skills, skill.id: skill}, library.ruleset)
+        _check_skills(
+            tmp_path, {**library.skills, skill.id: skill}, library.ruleset, library.budget
+        )
     assert "；".join(expected) in str(raised.value)
 
 

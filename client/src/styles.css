@@ -1429,6 +1429,10 @@ button.selected {
   background: #4b7fd2;
 }
 
+.run-bar-stamina {
+  background: #d2a03c;
+}
+
 .run-bar-num {
   min-width: 70px;
   text-align: right;
