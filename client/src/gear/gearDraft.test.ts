@@ -135,7 +135,7 @@ describe("整組穿戴", () => {
     expect(occupiesOffHand({ main_hand: item("item_test_twin_daggers") }, catalog)).toBe(true);
     const custom = draft("武器", { weapon: "hammer", affixes: [{ affix: "affix_attr_str", value: 1 }] });
     expect(occupiesOffHand({ main_hand: { custom } }, catalog)).toBe(true);
-    const paired = draft("武器", { weapon: "dagger", paired: true, affixes: [{ affix: "affix_attr_str", value: 1 }] });
+    const paired = draft("武器", { weapon: "dual_dagger", paired: true, affixes: [{ affix: "affix_attr_str", value: 1 }] });
     expect(occupiesOffHand({ main_hand: { custom: paired } }, catalog)).toBe(true);
   });
 

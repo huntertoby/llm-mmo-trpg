@@ -65,7 +65,10 @@ describe("元素色與成對／屬性詞條（Phase 3-48g）", () => {
   });
 
   it("成對勾選只對有成對版本的單手武器；雙手武器勾成對會被擋", () => {
-    expect(canPair(catalog, "dagger")).toBe(true);
+    expect(canPair(catalog, "dual_dagger")).toBe(true);
+    expect(canPair(catalog, "dual_pistol")).toBe(true);
+    expect(canPair(catalog, "dagger")).toBe(false);
+    expect(canPair(catalog, "pistol")).toBe(false);
     expect(canPair(catalog, "one_handed_sword")).toBe(false);
     expect(canPair(catalog, "frost_staff")).toBe(false);
     const problems = draftProblems(draft({ weapon: "frost_staff", paired: true }), "weapon", catalog);
