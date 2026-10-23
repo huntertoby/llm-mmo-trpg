@@ -1065,6 +1065,21 @@ button.selected {
   color: var(--muted);
 }
 
+.ws-card.unavailable {
+  opacity: 0.55;
+  cursor: not-allowed;
+}
+
+.ws-card-rule {
+  font-size: 12px;
+  color: #c9b97a;
+}
+
+.ws-card-block {
+  font-size: 12px;
+  color: #e08a8a;
+}
+
 .ws-badge {
   font-size: 11px;
   color: #101016;

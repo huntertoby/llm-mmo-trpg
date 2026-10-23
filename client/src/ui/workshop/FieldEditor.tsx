@@ -112,6 +112,8 @@ export function FieldEditor(props: FieldProps) {
 function badges(choice: Choice): string[] {
   const out: string[] = [];
   const info = choice.info;
+  const rules = info["badges_zh"]; // 組合規則的標章（後端由原語資料產生，Phase 3H-8）
+  if (Array.isArray(rules)) out.push(...rules.filter((r): r is string => typeof r === "string"));
   if (info["core"] === true) out.push("核心");
   else if (info["secondary"] === true) out.push("附帶");
   const min = info["min_rarity"];
@@ -119,6 +121,17 @@ function badges(choice: Choice): string[] {
   const kinds = info["kinds"]; // 骨架選項才有 `kinds`
   if (Array.isArray(kinds) && kinds.length > 0 && !kinds.includes("active")) out.push("非主動技");
   return out;
+}
+
+/** 組合規則的說明句與不可用原因（後端由資料產生）。 */
+function ruleLines(choice: Choice): string[] {
+  const rules = choice.info["rules_zh"];
+  return Array.isArray(rules) ? rules.filter((r): r is string => typeof r === "string") : [];
+}
+
+function unavailableReason(choice: Choice): string | null {
+  const reason = choice.info["unavailable_zh"];
+  return typeof reason === "string" && reason !== "" ? reason : null;
 }
 
 function ChoiceField({ spec, container, base, onChange }: FieldProps) {
@@ -429,20 +442,35 @@ function EffectsField({ spec, container, base, onChange }: FieldProps) {
       <div className="ws-add">{full ? "已達效果數量上限。" : "新增一個效果："}</div>
       {!full && (
         <div className="ws-cards">
-          {spec.choices.map((c) => (
-            <button type="button" key={String(c.value)} className="ws-card" onClick={() => onChange(addEffect(container, spec, c, base))}>
-              <span className="ws-card-title">
-                <OptionGlyph field="effects" value={c.value} />
-                {c.name_zh}
-              </span>
-              {badges(c).map((b) => (
-                <span key={b} className="ws-badge">
-                  {b}
+          {spec.choices.map((c) => {
+            const blocked = unavailableReason(c);
+            return (
+              <button
+                type="button"
+                key={String(c.value)}
+                className={`ws-card${blocked !== null ? " unavailable" : ""}`}
+                disabled={blocked !== null}
+                onClick={() => onChange(addEffect(container, spec, c, base))}
+              >
+                <span className="ws-card-title">
+                  <OptionGlyph field="effects" value={c.value} />
+                  {c.name_zh}
                 </span>
-              ))}
-              {c.description_zh !== "" && <span className="ws-card-desc">{c.description_zh}</span>}
-            </button>
-          ))}
+                {badges(c).map((b) => (
+                  <span key={b} className="ws-badge">
+                    {b}
+                  </span>
+                ))}
+                {c.description_zh !== "" && <span className="ws-card-desc">{c.description_zh}</span>}
+                {ruleLines(c).map((r) => (
+                  <span key={r} className="ws-card-rule">
+                    {r}
+                  </span>
+                ))}
+                {blocked !== null && <span className="ws-card-block">現在不能加：{blocked}</span>}
+              </button>
+            );
+          })}
         </div>
       )}
     </div>

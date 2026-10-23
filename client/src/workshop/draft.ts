@@ -124,6 +124,10 @@ function prefillOne(container: Json, spec: FieldSpec, base: string): Json {
  * `base` 是這個欄位所在物件的路徑（效果列表項目、巢狀物件內的欄位用）。 */
 export function selectChoice(container: Json, spec: FieldSpec, choice: Choice, base = ""): Json {
   const path = joinPath(base, spec.field);
+  if (path === "secondary_scaling_attr") {
+    // 第二縮放屬性與專精只能擇一（SkillDef 驗證）：選了第二屬性就拿掉專精
+    return setPath(setPath(container, "mastery", undefined), path, choice.value);
+  }
   if (path === FOLLOWUP_WHEN && getPath(container, path) !== choice.value) {
     // 換第二段的種類：骨架、形狀、效果、條件、釋放時機的限制都不同，整個第二段從頭選。
     return setPath(container, "followup", { when: choice.value });
@@ -187,7 +191,11 @@ export function addEffect(container: Json, spec: FieldSpec, choice: Choice, base
   const path = joinPath(base, spec.field);
   const list = listOf(container, path);
   if (spec.max_count != null && list.length >= spec.max_count) return container;
-  const item = prefill({ type: choice.value }, choice.params);
+  const base0: Json = { type: choice.value };
+  // 組合規則（3H-8）：同一技能已有「其他效果限自己」的效果時，新加的效果對象一律是自己
+  const forced = choice.info["forced_affects"];
+  if (typeof forced === "string") base0["affects"] = forced;
+  const item = prefill(base0, choice.params);
   return setPath(container, path, [...list, item]);
 }
 

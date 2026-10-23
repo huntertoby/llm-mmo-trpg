@@ -648,7 +648,8 @@ export interface paths {
         /**
          * Post Export
          * @description 匯出 YAML（``provenance.origin: workshop``）。技能必須能通過 schema（否則 422）；規則上不合法
-         *     的技能也可以匯出，``legal`` 與 ``problems`` 標示問題。
+         *     的技能預設也擋下（422，列出問題）；``allow_illegal: true``（開發者模式）才能匯出，``legal`` 與
+         *     ``problems`` 標示問題。
          */
         post: operations["post_export_api_workshop_export_post"];
         delete?: never;
@@ -4715,6 +4716,11 @@ export interface components {
             card?: components["schemas"]["SkillCard"] | null;
             icon: components["schemas"]["SkillIcon"];
             /**
+             * Concept Provisional
+             * @default false
+             */
+            concept_provisional: boolean;
+            /**
              * @default {
              *       "makes": [],
              *       "uses": []
@@ -4732,6 +4738,22 @@ export interface components {
             legal: boolean;
             /** Problems */
             problems: string[];
+        };
+        /**
+         * WorkshopExportRequest
+         * @description 匯出（Phase 3H-8）：預設只有合法的技能能匯出（玩家模式）；開發者模式（``?dev=1``）傳
+         *     ``allow_illegal: true`` 才能匯出不合法的半成品。
+         */
+        WorkshopExportRequest: {
+            /** Skill */
+            skill?: {
+                [key: string]: unknown;
+            };
+            /**
+             * Allow Illegal
+             * @default false
+             */
+            allow_illegal: boolean;
         };
         /** WorkshopRandom */
         WorkshopRandom: {
@@ -5813,7 +5835,7 @@ export interface operations {
         };
         requestBody: {
             content: {
-                "application/json": components["schemas"]["WorkshopSkillRequest"];
+                "application/json": components["schemas"]["WorkshopExportRequest"];
             };
         };
         responses: {

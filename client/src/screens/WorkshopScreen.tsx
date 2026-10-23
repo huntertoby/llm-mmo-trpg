@@ -8,6 +8,7 @@ import { StepView } from "../ui/workshop/StepView";
 import { GearScreen } from "./GearScreen";
 import { ExportPanel, RandomPanel, YamlPanel } from "../ui/workshop/ToolPanels";
 import { TryoutPanel } from "../ui/workshop/TryoutPanel";
+import { isDevMode } from "../run/startFlow";
 import { resetStep, type Json } from "../workshop/draft";
 import {
   browserStore,
@@ -24,6 +25,8 @@ interface Props {
   onStartBattle(response: BattleResponse): void;
   /** 測試或特殊環境可換掉儲存位置；預設用瀏覽器的 localStorage。 */
   store?: KeyValueStore | null;
+  /** 開發者模式（網址 `?dev=1`）：顯示種子、可匯出不合法的技能；預設是玩家模式。 */
+  dev?: boolean;
 }
 
 const OPTIONS_DELAY_MS = 120;
@@ -57,10 +60,11 @@ export function WorkshopScreen(props: Props) {
   if (tab === "gear") {
     return <GearScreen onHome={props.onHome} onSkills={() => choose("skills")} onStartBattle={props.onStartBattle} />;
   }
-  return <SkillWorkshop {...props} onGear={() => choose("gear")} />;
+  const dev = props.dev ?? (typeof window !== "undefined" && isDevMode(window.location.search));
+  return <SkillWorkshop {...props} dev={dev} onGear={() => choose("gear")} />;
 }
 
-function SkillWorkshop({ onHome, onStartBattle, onGear, store }: Props & { onGear(): void }) {
+function SkillWorkshop({ onHome, onStartBattle, onGear, store, dev = false }: Props & { onGear(): void }) {
   const storage = store === undefined ? browserStore() : store;
   const [state, dispatch] = useReducer(editorReducer, undefined, () => {
     const saved = loadSaved(storage);
@@ -172,13 +176,13 @@ function SkillWorkshop({ onHome, onStartBattle, onGear, store }: Props & { onGea
             onBack={() => dispatch({ type: "back" })}
             onNext={() => dispatch({ type: "next" })}
           />
-          <RandomPanel skeletons={skeletons} draft={draft} onResult={(d) => dispatch({ type: "replace", draft: d })} />
+          <RandomPanel dev={dev} skeletons={skeletons} draft={draft} onResult={(d) => dispatch({ type: "replace", draft: d })} />
           <YamlPanel draft={draft} onDraft={setDraft} />
         </div>
         <div className="ws-col ws-col-side">
-          <CheckPanel check={state.check} pending={checking} />
+          <CheckPanel check={state.check} pending={checking} dev={dev} />
           <TryoutPanel check={state.check} pending={checking} prefs={prefs} onPrefs={setPrefs} onStart={onStartBattle} />
-          <ExportPanel draft={draft} />
+          <ExportPanel draft={draft} check={state.check} dev={dev} />
         </div>
       </div>
     </div>

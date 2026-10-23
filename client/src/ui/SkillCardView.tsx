@@ -19,9 +19,11 @@ interface Props {
   compact?: boolean;
   /** 目前生效的戰場變奏型態 id（技能列的浮動卡傳入，Phase 3-25b）。 */
   activeVariantId?: string | null;
+  /** 不顯示設計概念（工坊玩家模式：隨機組合器的暫定句，Phase 3H-8）。 */
+  hideConcept?: boolean;
 }
 
-export function SkillCardView({ card, compact = false, activeVariantId = null }: Props) {
+export function SkillCardView({ card, compact = false, activeVariantId = null, hideConcept = false }: Props) {
   const source = sourceCostText(card, SOURCE_MAX);
   return (
     <div className={`skill-card rarity-${card.rarity_id}${compact ? " compact" : ""}`}>
@@ -85,7 +87,7 @@ export function SkillCardView({ card, compact = false, activeVariantId = null }:
         ))}
       {!compact && <div className="small muted">縮放：{card.scaling}</div>}
       {card.mastery !== null && !compact && <div className="small">專精：{card.mastery}</div>}
-      {card.concept !== "" && !compact && <div className="small muted">{card.concept}</div>}
+      {card.concept !== "" && !compact && !hideConcept && <div className="small muted">{card.concept}</div>}
     </div>
   );
 }
