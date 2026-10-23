@@ -3364,3 +3364,9 @@ button.selected {
 .run-test-mode-toggle {
   font-weight: 600;
 }
+
+/* 測試模式的挑裝備放在開局表單裡，表單比視窗窄：兩欄依面板自己的寬度換行（共用的 .gear-layout 依視窗寬度，
+   在這裡會把右欄擠到幾十 px、物品說明一字一行）。 */
+.run-test-gear.gear-layout {
+  grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+}
