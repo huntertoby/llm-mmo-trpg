@@ -338,7 +338,7 @@ def test_the_overload_skill_budget_counts_the_bonus_and_the_backlash_cost() -> N
     report = skill_budget(lib().skills["skill_overcurrent"], lib())
     damage, charge = report.effects
     # 1d8 平均 4.5 ×（1 ＋ 平均 2 層 × 200‰）＝ 6.3；反噬 2d6 ＝ 7 點 × 折合 0.5 ÷ 門檻 5 ＝ −0.7
-    assert damage.points == Fraction(9, 2) * Fraction(14, 10)
+    assert damage.points == Fraction(9, 2) * Fraction(14, 10) * report.range_coefficient
     assert charge.points == Fraction(-7, 10)
 
 

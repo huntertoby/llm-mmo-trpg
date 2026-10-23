@@ -77,7 +77,7 @@ function BudgetBar({ check }: { check: WorkshopCheck }) {
             {b.variants.map((f) => (
               <li key={f.id}>
                 <span className={`ws-verdict ${f.verdict}`}>{f.ratio_text}</span> {f.name_zh}（{f.verdict_zh}，點數 {f.total} ／ 可用 {f.usable}
-                {f.range_permille > 0 ? `，含射程加價 ${f.range_permille / 10}%` : ""}）
+                {f.range_text !== "" ? `，${f.range_text}` : ""}）
               </li>
             ))}
           </ul>

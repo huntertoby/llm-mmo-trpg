@@ -67,6 +67,8 @@ class BudgetLine(_Model):
     target: float
     condition: float
     points: float
+    range: float = 1.0
+    """射程係數（Phase 3-49）；``points`` 已乘上它。"""
 
 
 class SegmentLine(_Model):
@@ -83,6 +85,8 @@ class SegmentLine(_Model):
     total: float
     chance_permille: int = 1000
     """有條件的第二段（擊殺後、命中後，Phase 3F-4a）的觸發機率（‰）；其他段為 1000。"""
+    range_text: str = ""
+    """這一段的射程係數說明（例 ``射程 6：×1.1``）；沒有固定射程時為空字串。"""
 
 
 class VariantLine(_Model):
@@ -96,8 +100,8 @@ class VariantLine(_Model):
     ratio_text: str
     verdict: str
     verdict_zh: str
-    range_permille: int = 0
-    """射程加價（‰，佔基礎型態點數）。"""
+    range_text: str = ""
+    """射程係數說明（Phase 3-49，例 ``射程 5：×1.05``）；沒有固定射程時為空字串。"""
 
 
 class BudgetSummary(_Model):
@@ -133,6 +137,10 @@ class BudgetSummary(_Model):
     """戰場變奏（Phase 3-25b）：每個型態自己的預算；沒有變奏為空。"""
     variant_surcharge_permille: int = 0
     """基礎型態因變奏多算的比例（‰，已含在 ``total``）。"""
+    range_text: str = ""
+    """射程係數說明（Phase 3-49，例 ``射程 6：×1.1``，已乘在作用於單位的效果點數上）；
+    沒有固定射程（武器射程、自身、光環等）時為空字串。"""
+    range_coefficient: float = 1.0
 
 
 class DraftCheck(_Model):
@@ -178,7 +186,13 @@ def _line(e: EffectBudget, library: ContentLibrary | None = None) -> BudgetLine:
         target=_f(e.target),
         condition=_f(e.condition),
         points=_f(e.points),
+        range=_f(e.range),
     )
+
+
+def range_text(value: int | None, coefficient: Fraction) -> str:
+    """預算明細的射程一行（玩家文字，不含英文）：固定射程才有，例 ``射程 6：×1.1``。"""
+    return "" if value is None else f"射程 {value}：×{float(coefficient):g}"
 
 
 def _synergy_text(
@@ -201,6 +215,7 @@ def _segment_line(segment: SegmentBudget, library: ContentLibrary | None = None)
         synergies=_synergy_text(segment.synergies, library),
         total=_f(segment.total),
         chance_permille=segment.chance_permille,
+        range_text=range_text(segment.range_value, segment.range_coefficient),
     )
 
 
@@ -215,7 +230,7 @@ def _variant_line(v: VariantBudget) -> VariantLine:
         ratio_text=f"{float(v.report.ratio) * 100:.1f}%",
         verdict=verdict,
         verdict_zh=verdict_zh,
-        range_permille=v.report.variant_range_permille,
+        range_text=range_text(v.report.range_value, v.report.range_coefficient),
     )
 
 
@@ -245,6 +260,8 @@ def budget_summary(report: BudgetReport, library: ContentLibrary | None = None) 
         self_combo_reasons=tuple(_zh(r, library) for r in report.self_combo_reasons),
         variants=tuple(_variant_line(v) for v in report.variants),
         variant_surcharge_permille=report.variant_surcharge_permille,
+        range_text=range_text(report.range_value, report.range_coefficient),
+        range_coefficient=_f(report.range_coefficient),
     )
 
 

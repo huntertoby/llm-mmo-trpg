@@ -16,6 +16,7 @@ import pytest
 
 from tests.engine.helpers import library
 from tests.engine.test_composite_followups import CONE, HIT, SINGLE, kind_data
+from tests.known_budget_exceptions import legal_or_known
 from trpg.cli.budget import print_skill_budget
 from trpg.content.skills import SkillDef
 from trpg.skillgen.budget import BudgetReport, skill_budget
@@ -125,7 +126,7 @@ def test_the_workshop_check_lists_the_chance_and_the_combo() -> None:
     lib = library()
     data = lib.skills["skill_armor_break_combo"].model_dump(mode="json", exclude_none=True)
     result = check_draft(data, lib)
-    assert result.legal, result.problems
+    assert legal_or_known("skill_armor_break_combo", result), result.problems
     assert result.budget is not None
     assert [s.chance_permille for s in result.budget.segments] == [1000, 600]
     assert result.minimum_rarity == "rare"

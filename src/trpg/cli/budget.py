@@ -173,6 +173,12 @@ def _print_variants(
 def _print_totals(report: BudgetReport, out: TextIO) -> None:
     cond = "無" if report.condition_multiplier == 1 else _mult(report.condition_multiplier)
     print(f"  技能條件倍率 {cond}", file=out)
+    if report.range_value is not None:
+        print(
+            f"  射程 {report.range_value}：×{_num(report.range_coefficient)}"
+            f"（已乘在作用於單位的效果點數上）",
+            file=out,
+        )
     print(f"  機制標籤 {'、'.join(report.tags) or '（無）'}", file=out)
     if report.synergies:
         parts = "、".join(f"{'+'.join(tags)} {_mult(c)}" for tags, c in report.synergies)

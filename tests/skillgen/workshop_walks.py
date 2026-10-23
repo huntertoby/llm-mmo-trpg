@@ -26,7 +26,7 @@ STRIKE: Walk = [
     ("shape", {"shape": {"type": "single", "range": 1}}),
     (
         "effects",
-        {"effects": [{"type": "damage", "multiplier_permille": 1000}, {"type": "knock_prone"}]},
+        {"effects": [{"type": "damage", "multiplier_permille": 1400}, {"type": "knock_prone"}]},
     ),
     ("condition", {}),
     ("cost", {"cost": {"stamina": 2}}),

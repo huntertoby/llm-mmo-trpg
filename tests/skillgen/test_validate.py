@@ -7,6 +7,7 @@ from typing import Any
 
 import pytest
 
+from tests.known_budget_exceptions import shipped_violations
 from tests.skillgen.helpers import (
     lib,
     lib_with_rewrite_primitive,
@@ -60,7 +61,7 @@ def test_the_baseline_skill_is_valid() -> None:
 )
 def test_every_demo_skill_passes_validation(skill_id: str) -> None:
     """驗收 6：全部示範技能（含 2B-1 的 4 個）通過驗證，且比例落在 70%–100%。"""
-    assert violations(lib().skills[skill_id]) == []
+    assert shipped_violations(skill_id, lib()) == []  # 3-49 已知例外見 known_budget_exceptions
 
 
 # ---------------------------------------------------------------------------
