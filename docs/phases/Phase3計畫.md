@@ -1861,6 +1861,11 @@ PM 驗收後請使用者試玩一整輪（`docs/專案計畫.md` 第 14 節 🎮
 
 需求第 1 節第 1～4 點：地圖檔選填 `region`（五區 ID 為列舉，放 `content/` 的資料表而非寫死）與 `look` 覆寫（鍵與值也是資料）；pydantic 驗證（未知 region／look 值：載入時警告或退回預設，擇一並說明，**不得讓地圖載入失敗**）；API 地圖視圖帶出 `region` 與覆寫後的 `look`（重產 OpenAPI）；`TileArtSpec`／`ObjectArtSpec` 加 `region`、`look` 並進快取鍵；每區「ID → 畫法」表的骨架（本段只有預設區，雲嶺留給 3-37b）。測試：未知值不出錯、快取鍵區分 region、既有 12 張地圖畫面不變（前端快照）。報告 `Phase3-37a報告.md`。
 
+#### 41.1.1 3-37a 驗收（2026-10-23）
+
+- PM 合併（無衝突，`09e0e76`）；ruff、format、mypy、lint-imports、`tests/content`＋`api`＋`narrative`＋`test_architecture` 1222、typecheck、vitest 806、`pnpm build` 全過；重播一致。`content/regions.yaml`（五區、各區預設 `look`、`look_keys`）＋`trpg/content/regions.py`；`MapDef.region`／`look`（未知值丟棄並記 `ContentLibrary.map_warnings`，地圖照常載入）；`BattleState`／`BattleView` 帶 `region`、`look`（純顯示，`LOG_FORMAT` 不變）；前端 `render/regionArt.ts` 與四張空的畫法表、快取鍵含 `region`／`look`。報告 `Phase3-37a報告.md`。
+- 待 PM 決定 → 決定：#1 未知值 → **3-37b 讓 `trpg content check` 印出 `map_warnings`（不算失敗）**；#2 區預設 `look` 由 3-37b 填、#3 `crystal_crown` 暫同預設、#4 `look` 值前後端各登錄一次（前端缺則退回預設）、#5 `water_tint` 在表面繪圖處另讀 → **接受**。
+
 ### 41.2 3-37b 雲嶺換皮（sonnet；3-37a 合併後）
 
 需求第 2～4 節：雲嶺色票、7 種地形、9 種物件換皮（功能特徵：高矮、可燃、危險記號要看得出）；`look` 覆寫 `canyon_rock`、`plank_walk`、`paddy`、`water_tint: green`；霧天薄霧加濃（只是裝飾層）。驗證用開發樣張頁或測試地圖擺出雲嶺 7 種地圖類型的場景（**正式地圖要標哪一區由玩法 PM 決定，本段不改正式地圖的 `region`**；若玩法 PM 屆時已決定，照決定標）。「新增的裝飾物件」（石燈籠、竹林）等玩法 PM 決定是否做成新 ID，本段不做。檢查清單第 6 節全部。**另含 3-36b 小修**：區域第三種樣式「不影響我方」（見 40.2.1 與 `docs/art/3-36b檢查.md` 第 35～37 行）。報告 `Phase3-37b報告.md`。
