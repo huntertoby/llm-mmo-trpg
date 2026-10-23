@@ -11,13 +11,14 @@
 
 from __future__ import annotations
 
+from trpg.content.battle import WeaponDef
 from trpg.content.skills import EffectSpec
 from trpg.content.summons import summon_spec_hp
 from trpg.engine.rules.geometry import XY
 from trpg.engine.skills.targeting import summon_site_problem
 from trpg.engine.state import BattleState, UnitState
 
-__all__ = ["apply_summon_spec", "second_summon_site"]
+__all__ = ["apply_summon_spec", "second_summon_site", "trait_adjusted"]
 
 _PERMILLE = 1000
 _SITE_ORDER: tuple[XY, ...] = ((1, 0), (-1, 0), (0, 1), (0, -1))
@@ -35,13 +36,23 @@ def apply_summon_spec(state: BattleState, unit: UnitState, spec: EffectSpec | No
     )  # 和技能卡同一個函式（3-41a）
     if spec.power_permille is not None:
         unit.summon_power_permille = spec.power_permille
+    unit.speed, unit.armor_bonus, unit.weapon = trait_adjusted(
+        state, spec, speed=unit.speed, armor_bonus=unit.armor_bonus, weapon=unit.weapon
+    )
+
+
+def trait_adjusted(
+    state: BattleState, spec: EffectSpec, *, speed: int, armor_bonus: int, weapon: WeaponDef
+) -> tuple[int, int, WeaponDef]:
+    """加深進化的小特性（``core.summon_traits``）對移動、護甲與暴擊範圍的調整；引擎生成召喚物與
+    技能卡的「實際值」共用（3-41c）。"""
     trait = None if spec.trait is None else state.ruleset.core.summon_traits.get(spec.trait)
-    if trait is not None:
-        unit.armor_bonus += trait.armor_bonus
-        unit.speed += trait.speed_bonus
-        if trait.crit_range_delta:
-            crit = max(_MIN_CRIT, unit.weapon.crit_range - trait.crit_range_delta)
-            unit.weapon = unit.weapon.model_copy(update={"crit_range": crit})
+    if trait is None:
+        return speed, armor_bonus, weapon
+    if trait.crit_range_delta:
+        crit = max(_MIN_CRIT, weapon.crit_range - trait.crit_range_delta)
+        weapon = weapon.model_copy(update={"crit_range": crit})
+    return speed + trait.speed_bonus, armor_bonus + trait.armor_bonus, weapon
 
 
 def second_summon_site(state: BattleState, xy: XY) -> XY | None:

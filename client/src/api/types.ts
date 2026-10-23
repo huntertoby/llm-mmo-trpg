@@ -42,6 +42,8 @@ export type VariantState = Schemas["VariantStateOut"];
 export type PreviewVariant = Schemas["PreviewVariantOut"];
 export type VariantBudgetLine = Schemas["VariantLine"];
 export type SkillReasons = Schemas["SkillReasons"];
+export type HeroCards = Schemas["HeroCards"];
+export type SkillStackRef = Schemas["SkillStackRef"];
 /** openapi-typescript 把有預設值的欄位標成必填；建立戰鬥時 `max_rounds` 可省略（伺服器預設 30），
  * 技能工坊的 `custom_skills`、`replace_skills` 也可省略（預設空串列，Phase 3F-1）。 */
 export type CreateBattleRequest = Omit<
@@ -148,6 +150,7 @@ export type RunRules = Schemas["RunRules"];
 export type StartOptions = Schemas["StartOptions"];
 export type StartWeaponOption = Schemas["StartWeaponOption"];
 export type StartPreview = Schemas["StartPreview"];
+export type StartResources = Schemas["StartResourcesOut"];
 export type StartKeywordOption = Schemas["StartKeywordOption"];
 export type DevPack = Schemas["DevPackOut"];
 export type OfferTag = Schemas["OfferTagOut"];

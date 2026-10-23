@@ -38,13 +38,20 @@ from trpg.api.run_schemas import (
     StartOptions,
     StartPreview,
     StartPreviewRequest,
+    StartResourcesOut,
+    StartResourcesRequest,
     StartWeaponOption,
 )
 from trpg.api.runs import RunSession, RunStore
 from trpg.api.state import runs_of
 from trpg.content.skills import SkillDef
 from trpg.narrative.skills import skill_card
-from trpg.roguelite.start import start_weapons, starter_pools, starting_skill
+from trpg.roguelite.start import (
+    start_resources,
+    start_weapons,
+    starter_pools,
+    starting_skill,
+)
 from trpg.roguelite.state import Choice
 
 __all__ = ["router"]
@@ -139,6 +146,15 @@ def post_start_preview(body: StartPreviewRequest, request: Request) -> StartPrev
         suggestion=attribute_suggestion(picked, weapon),
         attribute_affects=attribute_affects(picked, weapon),
     )
+
+
+@router.post("/start-resources")
+def post_start_resources(body: StartResourcesRequest, request: Request) -> StartResourcesOut:
+    """開局畫面的資源預覽（3-41c）：選了武器、配了點之後主角的最大 HP、法力、耐力。和開新一輪建立
+    出的主角用同一個函式（:func:`trpg.roguelite.start.hero_resources`），不寫死在前端。"""
+    library = runs_of(request).library
+    out = start_resources(library, body.weapon, body.attributes)
+    return StartResourcesOut(hp=out.hp, mana=out.mana, stamina=out.stamina)
 
 
 @router.get("/dev-packs")

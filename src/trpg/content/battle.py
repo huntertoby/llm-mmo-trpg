@@ -17,6 +17,8 @@ from trpg.content.slots import Slot
 from trpg.shared.types import Attribute, Element, ResistGroup, Surface
 
 if TYPE_CHECKING:
+    from collections.abc import Callable
+
     from trpg.content.rules import CoreRules
 
 __all__ = [
@@ -312,13 +314,48 @@ class WeaponDef(ContentModel):
         """近戰類武器（含長柄）：看大類，不看射程（矛的射程是 2，仍是近戰）。"""
         return self.weapon_class == "melee"
 
-    def rule_lines_zh(self, core: CoreRules) -> tuple[str, ...]:
+    def scaling_value(self, get: Callable[[Attribute], int]) -> int:
+        """武器的縮放屬性值（Phase 3H-1，08 8.11）：單屬性為該屬性，雙屬性依 ``attr_mode``——
+        ``mean`` 取平均（無條件捨去；重武器），``max`` 取較高者（輕武器）。``get`` 讀屬性值；
+        引擎傳入有效屬性（含狀態加值），卡片傳入面板的屬性。普攻與反應攻擊的傷害加成、技能卡的
+        「目前 +N」都經過這裡。"""
+        value = get(self.scaling_attr)
+        if self.secondary_scaling_attr is None:
+            return value
+        other = get(self.secondary_scaling_attr)
+        return max(value, other) if self.attr_mode == "max" else (value + other) // 2
+
+    def scaling_names_zh(self) -> str:
+        """縮放屬性的中文：單屬性「力量」，雙屬性「敏捷／力量（取較高）」或「體質／力量（取平均）」。"""
+        if self.secondary_scaling_attr is None:
+            return self.scaling_attr.display_name
+        names = f"{self.scaling_attr.display_name}／{self.secondary_scaling_attr.display_name}"
+        return f"{names}（{'取較高' if self.attr_mode == 'max' else '取平均'}）"
+
+    def attack_formula_zh(
+        self, core: CoreRules, get: Callable[[Attribute], int] | None = None
+    ) -> str:
+        """普攻的傷害算法（3-41c，08 8.11）：「普攻：1d8＋力量 × 0.3」；``get`` 有值時附目前加成
+        「（目前 +4）」。倍率取自 ``rules/core.yaml``，加成用 :meth:`scaling_value`（和引擎同一個
+        算法：骰值＋固定傷害＋屬性值 × 倍率，之後才乘各種倍率並無條件捨去）。"""
+        permille = core.basic_attack_attr_multiplier_permille
+        dice = f"{self.dice}＋{self.flat}" if self.flat else str(self.dice)
+        text = f"普攻：{dice}＋{self.scaling_names_zh()} × {permille / 1000:g}"
+        if get is not None:
+            text += f"（目前 +{self.scaling_value(get) * permille / 1000:g}）"
+        return text
+
+    def rule_lines_zh(
+        self, core: CoreRules, get: Callable[[Attribute], int] | None = None
+    ) -> tuple[str, ...]:
         """武器卡的共用規則（Phase 3-41b，清單 7.2、7.3）：握法（單手／雙手）與近戰武器共用的背刺。
-        數字取自 ``rules/core.yaml``，改規則說明跟著變。"""
+        數字取自 ``rules/core.yaml``，改規則說明跟著變。第一行是普攻的傷害算法（3-41c；``get`` 見
+        :meth:`attack_formula_zh`）。"""
         lines = [
+            self.attack_formula_zh(core, get),
             "雙手：占用副手欄位，不能再裝備盾或副手物品"
             if self.two_handed
-            else "單手：副手欄位可以放盾或副手物品"
+            else "單手：副手欄位可以放盾或副手物品",
         ]
         if self.secondary_scaling_attr is not None:
             names = f"{self.scaling_attr.display_name}、{self.secondary_scaling_attr.display_name}"

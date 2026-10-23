@@ -69,7 +69,7 @@ statuses:
   - id: defending
     polarity: buff
     name_zh: 守護
-    description_zh: 防禦值 +25%，持續到自己的下回合開始；若守護著相鄰隊友，敵人的單體攻擊會改由自己承受（每輪 1 次）。
+    description_zh: 防禦值提高，持續到自己的下回合開始；若守護著相鄰隊友，敵人的單體攻擊會改由自己承受（每輪 1 次）。
     expires: own_turn_start
     stacking: refresh
     beneficial: true
@@ -77,7 +77,7 @@ statuses:
   - id: prone
     polarity: debuff
     name_zh: 倒地
-    description_zh: 移動前要先站起來（消耗一半移動點數）；近戰攻擊倒地者有優勢，遠程攻擊有劣勢。
+    description_zh: 移動前要先站起來（消耗部分移動點數）；近戰攻擊倒地者有優勢，遠程攻擊有劣勢。
     expires: never
     stacking: refresh
     budget_points: 3
@@ -96,7 +96,7 @@ statuses:
   - id: concealed
     polarity: neutral
     name_zh: 隱蔽
-    description_zh: 對其攻擊有劣勢；超過 2 格的遠程攻擊無法選為目標。站在黑暗表面或草叢中的單位也視為隱蔽。
+    description_zh: 對其攻擊有劣勢；太遠的遠程攻擊無法選為目標。站在黑暗表面或草叢中的單位也視為隱蔽。
     duration: 2
     expires: turn_end
     stacking: refresh
@@ -123,7 +123,7 @@ statuses:
   - id: time_bomb
     polarity: debuff
     name_zh: 定時炸彈
-    description_zh: 身上綁著定時炸彈，剩餘回合就是倒數（每次環境回合 −1）：歸零時在身體當下的位置爆炸，波及周圍；倒下時也會立即爆炸。可被淨化移除，驅散不移除。只能由定時炸彈效果施加。
+    description_zh: 身上綁著定時炸彈，剩餘回合就是倒數（每次環境回合倒數一次）：歸零時在身體當下的位置爆炸，波及周圍；倒下時也會立即爆炸。可被淨化移除，驅散不移除。只能由定時炸彈效果施加。
     expires: never
     stacking: refresh
   - id: charging
@@ -136,7 +136,7 @@ statuses:
   - id: slow
     polarity: debuff
     name_zh: 緩速
-    description_zh: 回合開始時的移動點數減半（無條件捨去）。
+    description_zh: 回合開始時的移動點數減少。
     duration: 2
     expires: turn_end
     stacking: refresh
@@ -184,7 +184,7 @@ statuses:
   - id: weaken
     polarity: debuff
     name_zh: 虛弱
-    description_zh: 自己造成的攻擊傷害 ×75%。
+    description_zh: 自己造成的攻擊傷害降低。
     duration: 2
     expires: turn_end
     stacking: refresh
@@ -194,7 +194,7 @@ statuses:
   - id: vulnerable
     polarity: debuff
     name_zh: 易傷
-    description_zh: 受到的骰值傷害 ×125%（不含墜落、致命地形等百分比傷害）。
+    description_zh: 受到的骰值傷害增加（不含墜落、致命地形等百分比傷害）。
     duration: 2
     expires: turn_end
     stacking: refresh
@@ -225,7 +225,7 @@ statuses:
     polarity: debuff
     save_attr: con
     name_zh: 中毒
-    description_zh: 中毒，每回合開始時受到毒素傷害；受到的治療減半。
+    description_zh: 中毒，每回合開始時受到毒素傷害；受到的治療降低。
     duration: 3
     expires: turn_end
     stacking: refresh
@@ -237,7 +237,7 @@ statuses:
   - id: guarded
     polarity: buff
     name_zh: 護衛
-    description_zh: 受到的骰值傷害 ×70%（不含墜落、致命地形等百分比傷害）。
+    description_zh: 受到的骰值傷害降低（不含墜落、致命地形等百分比傷害）。
     duration: 2
     expires: turn_end
     stacking: refresh
@@ -247,7 +247,7 @@ statuses:
   - id: empowered
     polarity: buff
     name_zh: 激昂
-    description_zh: 六個屬性各 +2（命中、抵抗、傷害與治療的縮放都用加值後的屬性；先攻不變）。
+    description_zh: 屬性提高（命中、抵抗、傷害與治療的縮放都用加值後的屬性；先攻不變）。
     duration: 2
     expires: turn_end
     stacking: refresh
@@ -257,7 +257,7 @@ statuses:
   - id: rallied
     polarity: buff
     name_zh: 戰意
-    description_zh: 攻擊值 +1（戰意圖騰的光環）。
+    description_zh: 攻擊值提高（戰意圖騰的光環）。
     duration: 2
     expires: turn_end
     stacking: refresh
@@ -268,7 +268,7 @@ statuses:
   - id: hasted
     polarity: buff
     name_zh: 加速
-    description_zh: 回合開始時的移動點數 ×150%（無條件捨去）。
+    description_zh: 回合開始時的移動點數增加。
     duration: 2
     expires: turn_end
     stacking: refresh
@@ -351,7 +351,7 @@ statuses:
   - id: blinded
     polarity: debuff
     name_zh: 致盲
-    description_zh: 攻擊與以單位為目標的技能只能選擇 2 格以內的單位；攻擊有劣勢。
+    description_zh: 攻擊與以單位為目標的技能只能選擇近距離的單位；攻擊有劣勢。
     duration: 1
     expires: turn_end
     stacking: refresh
@@ -372,7 +372,7 @@ statuses:
   - id: stance_fury
     polarity: neutral
     name_zh: 狂怒姿態
-    description_zh: 力量 +2，但受到的骰值傷害 ×120%；持續到取消。
+    description_zh: 力量提高，但受到的骰值傷害增加；持續到取消。
     expires: never
     stacking: refresh
     beneficial: true
@@ -384,7 +384,7 @@ statuses:
   - id: stance_bulwark
     polarity: neutral
     name_zh: 堅壁姿態
-    description_zh: 受到的骰值傷害 ×75%，但回合開始時的移動點數減半；持續到取消。
+    description_zh: 受到的骰值傷害降低，但回合開始時的移動點數減少；持續到取消。
     expires: never
     stacking: refresh
     beneficial: true

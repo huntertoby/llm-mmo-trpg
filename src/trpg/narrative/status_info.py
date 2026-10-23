@@ -11,7 +11,10 @@ from __future__ import annotations
 
 from trpg.content.battle import StatusDef
 from trpg.content.library import ContentLibrary
+from trpg.content.rules import CoreRules
 from trpg.content.stacks import StackDef
+from trpg.engine.ids import CONCEALED, DEFENDING, PRONE
+from trpg.shared.types import Attribute
 
 __all__ = ["CONTROL_GROUP_TEXT", "stack_rules", "status_rules"]
 
@@ -33,10 +36,63 @@ def _armor_break_line(library: ContentLibrary) -> str:
     return "防禦值降低的幅度依武器：" + "、".join(parts) if parts else "防禦值降低的幅度依來源"
 
 
-def status_rules(status: StatusDef, library: ContentLibrary) -> tuple[str, ...]:
-    """狀態的規則句（清單 4.1～4.4）：持續傷害與治療、元素解除、破甲、抵抗、控制遞減、Boss。"""
-    core = library.ruleset.core
+NEUTRAL_PERMILLE = 1000
+"""倍率欄位的中性值（×100%，不寫說明）。"""
+
+_PERMILLE_FIELDS = (
+    ("damage_dealt_permille", "自己造成的攻擊傷害"),
+    ("damage_taken_permille", "受到的骰值傷害（不含墜落、致命地形等百分比傷害）"),
+    ("healing_received_permille", "受到的治療"),
+    ("move_permille", "回合開始時的移動點數（無條件捨去）"),
+)
+"""狀態的倍率欄位 → 說明句開頭（3-41c 第 4 點，數字由欄位產生）。"""
+
+
+def _times(permille: int) -> str:
+    return f"×{permille / 10:g}%"
+
+
+def _attr_bonus_line(status: StatusDef) -> str | None:
+    """屬性加值句：六個屬性同值寫「六個屬性各 +N」，否則逐一列出。"""
+    bonus = status.attr_bonus
+    if not bonus:
+        return None
+    values = set(bonus.values())
+    if len(bonus) == len(Attribute) and len(values) == 1:
+        return (
+            f"六個屬性各 {next(iter(values)):+d}"
+            "（命中、抵抗、傷害與治療的縮放都用加值後的屬性；先攻不變）"
+        )
+    return "、".join(f"{a.display_name} {v:+d}" for a, v in sorted(bonus.items()))
+
+
+def _modifier_lines(status: StatusDef, core: CoreRules) -> list[str]:
+    """由狀態欄位與核心規則產生的數值句（3-41c 第 4 點）：說明裡不再寫死數字。"""
     lines: list[str] = []
+    for field, label in _PERMILLE_FIELDS:
+        permille: int = getattr(status, field)
+        if permille != NEUTRAL_PERMILLE:
+            lines.append(f"{label} {_times(permille)}")
+    if (attr := _attr_bonus_line(status)) is not None:
+        lines.append(attr)
+    if status.attack_bonus:
+        lines.append(f"攻擊值 +{status.attack_bonus}")
+    if status.attack_range_cap is not None:
+        lines.append(f"攻擊與以單位為目標的技能只能選擇 {status.attack_range_cap} 格以內的單位")
+    if status.id == DEFENDING:
+        lines.append(f"防禦值 +{core.defend_defense_bonus_permille / 10:g}%")
+    if status.id == PRONE:
+        lines.append(f"站起來要消耗 {core.prone_stand_up_move_permille / 10:g}% 的移動點數（進位）")
+    if status.id == CONCEALED:
+        lines.append(f"超過 {core.concealed_ranged_max_distance} 格的遠程攻擊無法選為目標")
+    return lines
+
+
+def status_rules(status: StatusDef, library: ContentLibrary) -> tuple[str, ...]:
+    """狀態的規則句（清單 4.1～4.4、3-41c 第 4 點）：數值修正、持續傷害與治療、元素解除、破甲、
+    抵抗、控制遞減、Boss。"""
+    core = library.ruleset.core
+    lines: list[str] = _modifier_lines(status, core)
     dot = status.on_turn_start_damage
     if dot is not None:
         lines.append(

@@ -654,10 +654,10 @@ def test_weapon_rule_lines_show_grip_and_shared_backstab() -> None:
     core = lib.ruleset.core
     gun = lib.weapons["longgun"]
     assert gun.name_zh == "火槍"
-    assert gun.rule_lines_zh(core)[0].startswith("雙手")
+    assert gun.rule_lines_zh(core)[1].startswith("雙手")  # [0] 是普攻算法（3-41c）
     assert not any("背刺" in line for line in gun.rule_lines_zh(core))  # 遠程武器沒有背刺
     dagger = lib.weapons["dagger"]
-    assert dagger.rule_lines_zh(core)[0].startswith("單手")
+    assert dagger.rule_lines_zh(core)[1].startswith("單手")
     backstab = next(line for line in dagger.rule_lines_zh(core) if "背刺" in line)
     assert f"命中 +{core.backstab_hit_bonus}" in backstab
     bigger = core.model_copy(update={"backstab_hit_bonus": 5})

@@ -20,7 +20,7 @@ from trpg.api.runs import RunSession
 from trpg.content.library import ContentLibrary
 from trpg.content.skills import SkillDef
 from trpg.narrative.skill_levels import skill_level_info
-from trpg.narrative.skills import KeywordRef, SkillCard, skill_card
+from trpg.narrative.skills import CardOwner, KeywordRef, SkillCard, skill_card
 from trpg.roguelite import RunSave, RunState
 from trpg.roguelite.growth import (
     crosses_evolution,
@@ -73,7 +73,11 @@ def _card(
         if skill.mastery is None
         else all(attrs[skill.scaling_attr] >= v for v in attrs.values())
     )
-    card = skill_card(library, skill, mastery_active=mastery)
+    # 傷害算法的「目前」加成：主角的有效屬性（基礎＋裝備）與武器（3-41c）；戰鬥之間沒有戰鬥狀態，
+    # 召喚物資訊維持 1 級基準值（標明「基準值」）
+    effective = hero_effective_attributes(library, run)
+    owner = CardOwner(weapon=library.weapons.get(run.hero.weapon), attr_get=effective.__getitem__)
+    card = skill_card(library, skill, mastery_active=mastery, owner=owner)
     if not owned:
         return card
     level = level_of(run, skill.id)
@@ -207,7 +211,10 @@ def _hero(library: ContentLibrary, run: RunState) -> HeroOut:
         weapon_name_zh=weapon.name_zh if weapon is not None else "",
         weapon_class=weapon.weapon_class if weapon is not None else "",
         weapon_traits_zh=(
-            (*weapon.trait_lines_zh(), *weapon.rule_lines_zh(library.ruleset.core))
+            (
+                *weapon.trait_lines_zh(),
+                *weapon.rule_lines_zh(library.ruleset.core, effective.__getitem__),
+            )
             if weapon is not None
             else ()
         ),

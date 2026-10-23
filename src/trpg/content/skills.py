@@ -43,6 +43,8 @@ from trpg.content.yaml_sources import (
 from trpg.shared.types import Attribute, Element, Surface, rune_name
 
 if TYPE_CHECKING:
+    from trpg.content.battle import WeaponDef
+    from trpg.content.rules import CoreRules
     from trpg.content.skill_triggers import SkillTriggerDef
     from trpg.content.stacks import StackDef
 
@@ -3268,6 +3270,50 @@ class SkillDef(ContentModel):
     def rule_change_id(self) -> str | None:
         """規則改變型傳說引用的規則改變 ID（Phase 3D-6）；其他技能為 ``None``。"""
         return next((e.rule for e in self.effects if e.type == RULE_CHANGE), None)
+
+    def scaling_value(self, get: Callable[[Attribute], int]) -> int:
+        """技能縮放屬性的值（Phase 2H-2）：雙屬性為兩個屬性的平均（無條件捨去），否則為主屬性。
+        ``get`` 讀屬性值（引擎傳有效屬性，卡片傳面板屬性）；引擎的 ``skill_scaling_value`` 與卡片的
+        「目前加成」都經過這裡。"""
+        primary = get(self.scaling_attr)
+        if self.secondary_scaling_attr is None:
+            return primary
+        return (primary + get(self.secondary_scaling_attr)) // 2
+
+    def formula_lines_zh(
+        self,
+        core: CoreRules,
+        weapon: WeaponDef | None = None,
+        get: Callable[[Attribute], int] | None = None,
+    ) -> tuple[str, ...]:
+        """傷害、治療、護盾的算法（3-41c，08 8.11）：「傷害算法：骰值＋智力 × 0.5（目前 +6.5）」。
+
+        法術技的傷害骰值來自效果自己、治療與護盾一律用法術倍率；武器技的傷害用武器的骰與固定傷害，
+        屬性乘普攻倍率（效果的倍率、等級與修正規則另算，見效果句）。倍率取自 ``rules/core.yaml``，
+        ``weapon`` 與 ``get`` 都省略時不附武器骰與目前加成。"""
+        types = {e.type for e in self.effects}
+        names = self.scaling_attr.display_name
+        if self.secondary_scaling_attr is not None:
+            names += f"／{self.secondary_scaling_attr.display_name}（取平均）"
+        now = None if get is None else self.scaling_value(get)
+
+        def line(label: str, base: str, permille: int) -> str:
+            text = f"{label}算法：{base}＋{names} × {permille / 1000:g}"
+            return text if now is None else f"{text}（目前 +{now * permille / 1000:g}）"
+
+        out: list[str] = []
+        if "damage" in types:
+            if self.category == "spell":
+                out.append(line("傷害", "骰值", core.spell_attr_multiplier_permille))
+            else:
+                base = "武器骰"
+                if weapon is not None:
+                    base += f" {weapon.dice}" + (f"＋{weapon.flat}" if weapon.flat else "")
+                out.append(line("傷害", base, core.basic_attack_attr_multiplier_permille))
+        for kind, label in (("heal", "治療"), ("shield", "護盾")):
+            if kind in types:
+                out.append(line(label, "骰值", core.spell_attr_multiplier_permille))
+        return tuple(out)
 
     @property
     def is_actionable(self) -> bool:

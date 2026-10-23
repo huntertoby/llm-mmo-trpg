@@ -129,6 +129,7 @@ import { loadSpeed, saveSpeed, SpeedControl } from "../ui/SpeedControl";
 import { TelegraphPanel } from "../ui/TelegraphPanel";
 import { TurnBar } from "../ui/TurnBar";
 import { UnitInfo } from "../ui/UnitInfo";
+import { useHeroCards } from "../ui/useHeroCards";
 import { useSkillCards, useSkillNames } from "../ui/useSkillCards";
 import { loadShake, saveShake } from "../battle/vfxPrefs";
 import { usePreview } from "../ui/usePreview";
@@ -259,7 +260,8 @@ export function BattleScreen({ initial, onExit, exitLabel, runMode }: Props) {
     for (const z of shown.zones ?? []) ids.add(z.skill_id); // 區域的元素色
     return [...ids].sort();
   }, [hero, response.legal_actions, response.pending, view, shown]);
-  const cards = useSkillCards(skillIds, battleId);
+  const baseCards = useSkillCards(skillIds, battleId);
+  const cards = useHeroCards(battleId, response, baseCards); // 主角的技能卡換成實際值版本（3-41c）
   const cardsRef = useRef(cards);
   cardsRef.current = cards;
   const skillNames = useSkillNames(cards);

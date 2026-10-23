@@ -31,7 +31,7 @@ from trpg.content.battle import Dice, SummonPulse, TotemSpec, WeaponDef
 from trpg.content.maps import MAX_HEIGHT
 from trpg.content.rules import CoreRules
 from trpg.content.skills import EffectSpec
-from trpg.content.summons import summon_scaled_hp
+from trpg.content.summons import summon_scaled_hp, summon_spec_hp
 from trpg.engine import modifiers
 from trpg.engine.context import Ctx
 from trpg.engine.effects import execute
@@ -66,13 +66,14 @@ from trpg.engine.rules.landing import landing_problem
 from trpg.engine.rules.statuses import effective_attribute
 from trpg.engine.skills.targeting import summon_site_problem
 from trpg.engine.state import BattleState, UnitState
-from trpg.engine.summon_variants import apply_summon_spec
+from trpg.engine.summon_variants import apply_summon_spec, trait_adjusted
 from trpg.engine.triggers import register_trigger
 from trpg.shared.rng import PERMILLE
 from trpg.shared.types import Pos, UnitId
 
 __all__ = [
     "Growth",
+    "SummonStats",
     "detonate_if_adjacent",
     "detonate_on_downed",
     "expire_summons",
@@ -81,6 +82,7 @@ __all__ = [
     "pulse_totem",
     "summon_inert",
     "summon_limit",
+    "summon_stats",
     "summon_unit",
     "totem_of",
 ]
@@ -92,6 +94,8 @@ class Growth(NamedTuple):
     hp: int
     flat: int
     bonus_permille: int
+    attr_mod: int = 0
+    """成長用的技能縮放屬性修正（技能不存在時 0）。"""
 
 
 def summon_limit(core: CoreRules, delta: int = 0) -> int:
@@ -120,6 +124,7 @@ def growth_of(state: BattleState, owner: UnitState, skill_id: str) -> Growth:
         // PERMILLE,
         bonus_permille=growth.bonus_per_level_permille * levels
         + growth.bonus_per_attr_mod_permille * mod,
+        attr_mod=mod,
     )
 
 
@@ -168,6 +173,73 @@ def _empowered_weapon(
     if flat > 0:
         update["flat"] = weapon.flat + flat
     return weapon.model_copy(update=update) if update else weapon
+
+
+class SummonStats(NamedTuple):
+    """``owner`` 以某個技能召喚某種召喚物時，召喚物的實際數值（3-41c；技能卡在戰鬥中顯示它）。"""
+
+    max_hp: int
+    weapon: WeaponDef
+    """含修正規則多的傷害骰、成長的固定傷害與進化小特性的暴擊範圍。"""
+    speed: int
+    armor_bonus: int
+    bonus_permille: int
+    """傷害加成（‰）：成長加上修正規則的召喚物傷害加成。"""
+    level: int
+    attr_mod: int
+    """成長用的技能縮放屬性修正（顯示用，和 :func:`growth_of` 同一個算式）。"""
+
+
+def summon_stats(
+    state: BattleState,
+    owner: UnitState,
+    template_id: str,
+    skill_id: str,
+    spec: EffectSpec | None = None,
+    *,
+    infusion: str | None = None,
+) -> SummonStats:
+    """召喚當下的實際數值：用 :func:`summon_unit` 同一批函式（:func:`growth_of`、修正規則的 HP 倍率
+    與武器骰、:func:`~trpg.content.summons.summon_scaled_hp`、分歧進化的 HP 與小特性）。
+    ``infusion`` 是施放時選的灌注；範本固有與橋接進化的灌注一併計入。"""
+    summon = state.ruleset.summon_def(template_id)
+    core = state.ruleset.core
+    template = summon.template
+    if infusion is None:  # 和 summon_unit 一樣：玩家省略時取第一個可選的
+        infusion = default_infusion(state, owner)
+    grown = growth_of(state, owner, skill_id)
+    weapon = _empowered_weapon(state, owner, skill_id, summon.weapon, grown.flat)
+    bonus = None if spec is None else spec.infusion
+    keywords = dict.fromkeys(
+        k for k in (template.innate, bonus, infusion) if k in core.summon_infusions
+    )
+    hp = summon_scaled_hp(
+        core,
+        template,
+        core.template_max_hp(template),
+        growth_hp=grown.hp,
+        owner_hp_permille=_hp_permille(state, owner, skill_id),
+        infusion_hp_permille=sum(core.summon_infusions[k].hp_permille for k in keywords if k),
+    )
+    speed, armor = template.speed, template.armor_bonus
+    use = _skill_use(state, skill_id)
+    extra = 0 if use is None else modifiers.summon_damage_permille(state, owner, use)
+    if spec is not None:
+        hp = summon_spec_hp(
+            hp, max_hp_permille=spec.max_hp_permille, power_permille=spec.power_permille
+        )
+        speed, armor, weapon = trait_adjusted(
+            state, spec, speed=speed, armor_bonus=armor, weapon=weapon
+        )
+    return SummonStats(
+        max_hp=hp,
+        weapon=weapon,
+        speed=speed,
+        armor_bonus=armor,
+        bonus_permille=grown.bonus_permille + extra,
+        level=owner.level,
+        attr_mod=grown.attr_mod,
+    )
 
 
 def summon_unit(  # noqa: PLR0917

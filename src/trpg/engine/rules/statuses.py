@@ -121,12 +121,7 @@ def weapon_attribute(rules: Ruleset, unit: UnitState) -> int:
 
     有第二縮放屬性時依 ``attr_mode``：``mean`` 取平均（無條件捨去；重武器，例：錘），
     ``max`` 取較高者（輕武器，例：匕首）。"""
-    weapon = unit.weapon
-    value = effective_attribute(rules, unit, weapon.scaling_attr)
-    if weapon.secondary_scaling_attr is None:
-        return value
-    other = effective_attribute(rules, unit, weapon.secondary_scaling_attr)
-    return max(value, other) if weapon.attr_mode == "max" else (value + other) // 2
+    return unit.weapon.scaling_value(lambda attr: effective_attribute(rules, unit, attr))
 
 
 def weapon_scale_attr(unit: UnitState) -> Attribute | None:

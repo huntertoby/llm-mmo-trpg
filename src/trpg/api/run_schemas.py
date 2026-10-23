@@ -35,6 +35,8 @@ __all__ = [
     "StartOptions",
     "StartPreview",
     "StartPreviewRequest",
+    "StartResourcesOut",
+    "StartResourcesRequest",
     "StartWeaponOption",
 ]
 
@@ -90,6 +92,21 @@ class StartWeaponOption(_ApiModel):
     hp: int
     """選這把武器時主角的最大 HP（未配點）。"""
     mana: int
+
+
+class StartResourcesRequest(_ApiModel):
+    """開局資源預覽（3-41c）：武器與目前的配點（不必配滿；省略的屬性為 0 點）。"""
+
+    weapon: str
+    attributes: dict[Attribute, int] = Field(default_factory=dict)
+
+
+class StartResourcesOut(_ApiModel):
+    """開局的 1 級主角最大 HP、法力、耐力（含配點加成；和開新一輪建立出的主角同一個函式）。"""
+
+    hp: int
+    mana: int
+    stamina: int
 
 
 class StartOptions(_ApiModel):

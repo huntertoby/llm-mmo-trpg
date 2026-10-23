@@ -11,6 +11,8 @@
 
 from __future__ import annotations
 
+from typing import Literal
+
 from pydantic import BaseModel, ConfigDict
 
 from trpg.content.battle import Dice, SummonHitRule, UnitTemplate
@@ -19,7 +21,10 @@ from trpg.content.rules import SummonInfusion
 from trpg.content.skills import EffectSpec, SkillDef
 from trpg.content.summons import SummonDef, summon_scaled_hp, summon_spec_hp
 from trpg.engine.ids import BLOCKS_SIGHT_TAG, CONCEALED, IMMOVABLE, PRONE
+from trpg.engine.summons import SummonStats
 from trpg.engine.weapon_traits import TRIP_ATTR
+
+_PERMILLE = 1000
 
 __all__ = [
     "SummonInfoCard",
@@ -210,26 +215,36 @@ def summon_behavior_lines(lib: ContentLibrary, summon: SummonDef) -> tuple[str, 
         lines.append("不移動；攻擊射程內的敵人")
     lines.append(f"預設模式「{_MODE_TEXT[template.default_mode]}」（可在召喚物面板切換）")
     profile = next((p for p in lib.ai_profiles.profiles if p.id == template.ai_profile), None)
-    if profile is not None:
-        lines.append(f"AI：{profile.name_zh}，{profile.description_zh}")
+    if profile is not None:  # 玩家用短句（3-41c）；不顯示開發者說明
+        lines.append(f"行動方式「{profile.name_zh}」：{profile.player_description_zh}")
     return tuple(lines)
 
 
-def summon_attack_text(summon: SummonDef) -> str:
-    """召喚物的普攻（武器名、傷害骰、元素、射程）；不攻擊的為「不攻擊」。"""
+def summon_attack_text(
+    summon: SummonDef, stats: SummonStats | None = None, *, power_permille: int | None = None
+) -> str:
+    """召喚物的普攻（武器名、傷害骰、元素、射程）；不攻擊的為「不攻擊」。``stats`` 是施放者的實際
+    值（含多的傷害骰、成長的固定傷害與傷害加成）。"""
     if not summon_acts(summon.template):
         return "不攻擊"
-    weapon = summon.weapon
-    return (
+    weapon = summon.weapon if stats is None else stats.weapon
+    text = (
         f"{weapon.name_zh}：{_dice(weapon.dice, weapon.flat)} {weapon.element.display_name}傷害"
         f"（射程 {weapon.range}）"
     )
+    bonus = 0 if stats is None else stats.bonus_permille
+    if bonus:
+        text += f"，傷害加成 +{bonus / 10:g}%"
+    if power_permille is not None and power_permille != _PERMILLE:
+        text += f"，每隻只有一般的 {power_permille / 10:g}%"
+    return text
 
 
-def summon_defense_text(summon: SummonDef) -> str:
+def summon_defense_text(summon: SummonDef, stats: SummonStats | None = None) -> str:
     """護甲、抗性與弱點。"""
     template = summon.template
-    parts = [f"護甲 {template.armor_bonus:+d}"]
+    armor = template.armor_bonus if stats is None else stats.armor_bonus
+    parts = [f"護甲 {armor:+d}"]
     for group, permille in sorted(template.resist.items()):
         if permille:
             parts.append(f"{group.display_name}抗性 {permille / 10:g}%")
@@ -289,33 +304,67 @@ class SummonInfoCard(BaseModel):
     behavior: tuple[str, ...]
     infusion: str
     """召喚時灌注的說明（:func:`infusion_hint`）。"""
+    basis: Literal["base", "actual"] = "base"
+    """數值依據：``base`` 是基準值（施放者 1 級、屬性修正 0；工坊、升級三選一），``actual`` 是戰鬥中
+    施放者當下的實際值（3-41c）。"""
+    basis_zh: str = "基準值（1 級）"
+    """依據的一句話（給小卡標題旁註明）。"""
 
 
-def summon_info(lib: ContentLibrary, skill: SkillDef, spec: EffectSpec) -> SummonInfoCard | None:
-    """``skill`` 的召喚效果 ``spec`` 的資訊小卡；範本不存在時 ``None``。"""
+def _baseline_note(lib: ContentLibrary, skill: SkillDef, role: int) -> str:
+    growth = lib.ruleset.core.summon_growth
+    attr = skill.scaling_attr.display_name
+    return (
+        f"施放者 1 級、{attr}修正 0 時；施放者每升 1 級 +{growth.hp_per_level}、"
+        f"{attr}修正每 +1 再 +{growth.hp_per_attr_mod}，再乘定位係數 ×{role / 1000:g}"
+    )
+
+
+def _actual_note(lib: ContentLibrary, skill: SkillDef, role: int, stats: SummonStats) -> str:
+    growth = lib.ruleset.core.summon_growth
+    attr = skill.scaling_attr.display_name
+    return (
+        f"你目前 {stats.level} 級、{attr}修正 {stats.attr_mod}："
+        f"施放者每升 1 級 +{growth.hp_per_level}、{attr}修正每 +1 再 +{growth.hp_per_attr_mod}，"
+        f"再乘定位係數 ×{role / 1000:g}"
+    )
+
+
+def summon_info(
+    lib: ContentLibrary,
+    skill: SkillDef,
+    spec: EffectSpec,
+    *,
+    stats: SummonStats | None = None,
+) -> SummonInfoCard | None:
+    """``skill`` 的召喚效果 ``spec`` 的資訊小卡；範本不存在時 ``None``。
+
+    ``stats`` 為 ``None`` 時是 1 級基準值（:func:`summon_card_hp`）；戰鬥中傳入施放者當下的實際值
+    （:func:`trpg.engine.summons.summon_stats`，和引擎生成召喚物同一個算法）。"""
     try:
         summon = lib.ruleset.summon_def(spec.unit or "")
     except KeyError:
         return None
     template = summon.template
-    growth = lib.ruleset.core.summon_growth
     role = lib.ruleset.core.summon_role_hp_permille.get(template.role or "", 1000)
-    attr = skill.scaling_attr.display_name
-    hp_note = (
-        f"施放者 1 級、{attr}修正 0 時；施放者每升 1 級 +{growth.hp_per_level}、"
-        f"{attr}修正每 +1 再 +{growth.hp_per_attr_mod}，再乘定位係數 ×{role / 1000:g}"
-    )
     acts = summon_acts(template)
+    speed = template.speed if stats is None else stats.speed
     return SummonInfoCard(
         id=template.id,
         name_zh=template.name_zh,
         count=spec.count if isinstance(spec.count, int) else 1,
-        hp=summon_card_hp(lib, summon, spec),
-        hp_note=hp_note,
-        move="不移動" if not acts or template.speed == 0 else f"{template.speed} 格",
-        defense=summon_defense_text(summon),
-        attack=summon_attack_text(summon),
+        hp=summon_card_hp(lib, summon, spec) if stats is None else stats.max_hp,
+        hp_note=(
+            _baseline_note(lib, skill, role)
+            if stats is None
+            else _actual_note(lib, skill, role, stats)
+        ),
+        move="不移動" if not acts or speed == 0 else f"{speed} 格",
+        defense=summon_defense_text(summon, stats),
+        attack=summon_attack_text(summon, stats, power_permille=spec.power_permille),
         innate=summon_innate_lines(lib, summon),
         behavior=summon_behavior_lines(lib, summon),
         infusion=infusion_hint(lib, acts=acts),
+        basis="base" if stats is None else "actual",
+        basis_zh="基準值（1 級）" if stats is None else f"你目前的實際值（{stats.level} 級）",
     )
