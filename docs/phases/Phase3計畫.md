@@ -2059,3 +2059,14 @@ PM 驗收後請使用者試玩一整輪（`docs/專案計畫.md` 第 14 節 🎮
 3. 3-48c 的「玩家模式隱藏這 4 種原語」撤掉，改為可用；說明文字照 3-48c 的玩家語氣規則（#44）。
 4. 行為一致測試：每種巢狀原語各組一招，工坊產生的 YAML 通過驗證器、預算與載入後實戰結算一致（子效果真的會觸發）。
 5. 驗收：pytest（skillgen、content、api、engine、cli 含 slow）、vitest、build、ruff、format、mypy、`test_player_text.py`、排版煙霧檢查。報告 `Phase3-48d報告.md`。
+
+## 55. Phase 3-48e｜刻印技能實戰沒刻出符文＋卡片／關鍵字不一致（使用者 2026-10-24：「這個沒有刻印」；sonnet；約 0.3～0.5 段；可與 3-48c 平行，檔案以引擎／敘事為主）
+
+使用者的工坊技能（`skill_ws_c61379c350`）：`skeleton: rune`、`category: weapon`、`shape: {type: square3, range: 5}`、效果 `{type: inscribe, affects: self, element: physical, duration: 4}` ＋ `{type: apply_status, affects: allies, status: rallied, duration: 3}`、`cost: {mana: 0, stamina: 0, cooldown: 1}`。
+
+1. **刻印對象**（玩法 PM 2026-10-24：刻印的對象只有影響的格子）：`affects: self` 讓實戰靜默不刻。驗證器要擋（中文原因）；**已存在的工坊技能**（存檔、匯入、run 裡的技能）讀入時要能處理——自動修正成格子並提示，或標示違規讓玩家修，採保守做法並寫進待決。引擎遇到不合法的刻印對象不能靜默失敗（至少有事件或驗證先擋）。查其他「只對格子有意義」的原語是否有同樣的漏洞（流程 E）。
+2. **卡片持續輪數**：卡片寫「持續 1 輪」，資料是 `duration: 4`。查卡片文字的來源（`trpg.narrative` 的效果句），修正並加行為一致測試：卡片持續輪數＝實戰符文存在的輪數。順帶掃描其他原語的持續輪數顯示。
+3. **關鍵字推導**：卡片關鍵字「製造：標記｜利用：召喚物」和這招無關。查 `trpg.skillgen.keywords` 對刻印（與 `rallied`）的推導，修正並加測試。
+4. 最低花費（法力／耐力至少 1）由 3-48c 處理，這段不重做。
+5. 物理符文名稱「力紋」→ 等玩法 PM 回覆，不在這段改。
+6. 驗收：pytest（engine、skillgen、narrative、content、api、cli 含 slow）、ruff、format、mypy、一場重播（含刻印技能）。報告 `Phase3-48e報告.md`。
