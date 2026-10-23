@@ -1844,3 +1844,20 @@ PM 驗收後請使用者試玩一整輪（`docs/專案計畫.md` 第 14 節 🎮
 
 - PM 合併（無衝突，`c787c6f`）；`typecheck`、vitest 768、`pnpm build` 全過；`dist` 無 `googleapis`／`gstatic` 網址；ruff、mypy 過。字型 400、700 各 108 個 unicode-range 切片（216 個 woff2、約 8.2 MiB，瀏覽器只載用到的切片），`OFL.txt` 一併放在 `client/src/assets/fonts/noto-sans-tc/`；下載腳本 `scripts/fetch_font.py`（只允許三個來源）。`render/fontLoad.ts`：開畫面前等 400／700（3 秒逾時），切片晚到時清技能圖示快取並重畫。報告 `Phase3-35報告.md`。
 - 待 PM 決定：#1 內建截圖工具無法存檔、報告無附圖 → 接受，美術 PM 驗收時實機看；#2 8.2 MiB → 接受（只載用到的切片）；#3 使用者重開伺服器 → 已轉達。
+
+## 41. Phase 3-37｜區域主題與第一區「雲嶺」換皮（美術 PM；使用者 2026-10-23「戰場配對 2 題和碎界 4 題都採用 A」「好 寫入」；玩法決定 #42、#43；拆三段，依序）
+
+> 需求與檢查清單：`docs/art/雲嶺移植需求.md`（**以它為準**）；換法 `docs/art/區域外觀換法.md`；畫法與色票 `docs/art/sample/realms.js`、`docs/art/realms.png`（雲嶺那張）。美術 PM 驗收。
+> 共同規則：只動地圖資料 schema（選填欄位）、前端繪圖與 API 的地圖視圖；**不改引擎規則**（`region`／`look` 只影響外觀，`LOG_FORMAT` 不變；若地圖 schema 變更會改到戰鬥紀錄雜湊，報告說明）；**不換皮**的項目照需求第 1 節第 5 點；查不到一律退回預設、不出錯；快取鍵含 `region` 與覆寫後的 `look`；`pnpm build`、`typecheck`、`vitest`、相關 pytest 全過；1600×900 實機檢查。
+
+### 41.1 3-37a 區域主題底層（sonnet；3-36b 合併後）
+
+需求第 1 節第 1～4 點：地圖檔選填 `region`（五區 ID 為列舉，放 `content/` 的資料表而非寫死）與 `look` 覆寫（鍵與值也是資料）；pydantic 驗證（未知 region／look 值：載入時警告或退回預設，擇一並說明，**不得讓地圖載入失敗**）；API 地圖視圖帶出 `region` 與覆寫後的 `look`（重產 OpenAPI）；`TileArtSpec`／`ObjectArtSpec` 加 `region`、`look` 並進快取鍵；每區「ID → 畫法」表的骨架（本段只有預設區，雲嶺留給 3-37b）。測試：未知值不出錯、快取鍵區分 region、既有 12 張地圖畫面不變（前端快照）。報告 `Phase3-37a報告.md`。
+
+### 41.2 3-37b 雲嶺換皮（sonnet；3-37a 合併後）
+
+需求第 2～4 節：雲嶺色票、7 種地形、9 種物件換皮（功能特徵：高矮、可燃、危險記號要看得出）；`look` 覆寫 `canyon_rock`、`plank_walk`、`paddy`、`water_tint: green`；霧天薄霧加濃（只是裝飾層）。驗證用開發樣張頁或測試地圖擺出雲嶺 7 種地圖類型的場景（**正式地圖要標哪一區由玩法 PM 決定，本段不改正式地圖的 `region`**；若玩法 PM 屆時已決定，照決定標）。「新增的裝飾物件」（石燈籠、竹林）等玩法 PM 決定是否做成新 ID，本段不做。檢查清單第 6 節全部。報告 `Phase3-37b報告.md`。
+
+### 41.3 3-37c 雲嶺服裝部件（sonnet；可後放）
+
+需求第 5 節：交領長袍、短褂、髮髻，沿用紙娃娃「種類＋材質＋顏色」規則與東方風格包，不認得退回通用版；雲嶺敵人範本外觀。排在 Phase 4 主線與其他介面段之後，由開發 PM 視空檔派。
