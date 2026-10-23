@@ -85,3 +85,5 @@ start:
 candidates:
   composer_share_permille: 500
   composer_tries: 8
+# 基礎技能（沒有專屬關鍵字，玩法決定 #55）：「新方向」那一格有這個機率（‰）從通用池抽；抽不到再走原本的新方向。
+  general_share_permille: 100

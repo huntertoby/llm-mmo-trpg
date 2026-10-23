@@ -48,6 +48,8 @@ describe("三選一卡片的標示", () => {
     expect(offerTagText(tag("new", "新方向", ["撞擊"]))).toBe("新方向：撞擊");
     expect(offerTagHint(tag("bridge", "橋接", ["點燃", "標記"]))).toContain("兩個");
     expect(offerTagHint(tag("bridge", "橋接", ["點燃", "撞擊"], true))).toContain("從持有的接到新的");
+    expect(offerTagText(tag("new", "新方向", []))).toBe("新方向：基礎技能");
+    expect(offerTagHint(tag("new", "新方向", []))).toContain("不和其他技能協同");
   });
 });
 

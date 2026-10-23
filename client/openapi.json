@@ -6708,6 +6708,42 @@
         "description": "主角相鄰的可推動物件的一種互動（推、往左撥、往右撥）及其是否合法（Phase 3C-1）。\n``legal_actions`` 只列合法的；這裡連不合法的也列出，讓介面灰掉並顯示原因。"
       },
       "JsonValue": {},
+      "KeywordHint": {
+        "properties": {
+          "id": {
+            "type": "string",
+            "title": "Id"
+          },
+          "name_zh": {
+            "type": "string",
+            "title": "Name Zh"
+          },
+          "makes": {
+            "items": {
+              "type": "string"
+            },
+            "type": "array",
+            "title": "Makes",
+            "default": []
+          },
+          "uses": {
+            "items": {
+              "type": "string"
+            },
+            "type": "array",
+            "title": "Uses",
+            "default": []
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "id",
+          "name_zh"
+        ],
+        "title": "KeywordHint",
+        "description": "一個關鍵字的建議：製造或利用它可以加哪些效果、條件或觸發。"
+      },
       "KeywordRef": {
         "properties": {
           "id": {
@@ -8997,7 +9033,8 @@
             "$ref": "#/components/schemas/SkillCardKeywords",
             "default": {
               "makes": [],
-              "uses": []
+              "uses": [],
+              "basic": false
             }
           },
           "variants": {
@@ -9100,6 +9137,11 @@
             "type": "array",
             "title": "Uses",
             "default": []
+          },
+          "basic": {
+            "type": "boolean",
+            "title": "Basic",
+            "default": false
           }
         },
         "additionalProperties": false,
@@ -11869,8 +11911,17 @@
             "$ref": "#/components/schemas/SkillCardKeywords",
             "default": {
               "makes": [],
-              "uses": []
+              "uses": [],
+              "basic": false
             }
+          },
+          "keyword_hints": {
+            "items": {
+              "$ref": "#/components/schemas/KeywordHint"
+            },
+            "type": "array",
+            "title": "Keyword Hints",
+            "default": []
           }
         },
         "additionalProperties": false,

@@ -29,6 +29,7 @@ from trpg.api.workshop_schemas import (
     WorkshopSkillRequest,
 )
 from trpg.content.library import ContentLibrary
+from trpg.narrative.keyword_hints import draft_keyword_hints
 from trpg.narrative.skill_icon import icon_of
 from trpg.narrative.skills import draft_card_keywords, skill_card
 from trpg.skillgen.draft import build_skill
@@ -57,6 +58,7 @@ def _check(library: ContentLibrary, skill: dict[str, Any]) -> WorkshopCheck:
         concept_provisional=card is not None and PROVISIONAL_MARK in card.concept,
         icon=icon_of(skill),
         keywords=draft_card_keywords(library, skill),
+        keyword_hints=draft_keyword_hints(library, skill),
     )
 
 

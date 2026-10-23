@@ -32,10 +32,10 @@ from trpg.shared.types import Element, Surface
 
 __all__ = ["KeywordDef", "KeywordRule", "KeywordTable", "RuleGrade"]
 
-RuleGrade = Literal["exclusive", "general", "provisional"]
+RuleGrade = Literal["exclusive", "general"]
 """規則的種類（Phase 3-24b2）：``exclusive`` 專屬（原語、條件本身就對應該關鍵字）、
-``general`` 通用（依既有引擎規則歸類）、``provisional`` 暫定（沒有真實機制，只為了「每招至少一個
-關鍵字」）。開局技能池與候選產生器只看專屬規則。"""
+``general`` 通用（依既有引擎規則歸類；Phase 3-51 起沒有暫定規則）。
+開局技能池與候選產生器只看專屬規則。"""
 
 RuleSource = Literal["effect", "condition", "trigger", "shape", "change"]
 RULE_SOURCES: tuple[RuleSource, ...] = ("effect", "condition", "trigger", "shape", "change")

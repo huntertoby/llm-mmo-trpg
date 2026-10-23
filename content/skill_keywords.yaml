@@ -12,10 +12,10 @@
 #   change     修正規則的改變種類（add_element 以 element 比對）
 # 參數：status、surface、element、object、stack、rule、on_hit、tag、skill、unit
 #
-# 規則分三種：專屬（原語、條件本身就對應該關鍵字）、通用（沒有專屬機制的技能類型，依既有引擎規則歸類，註解寫「通用」）、
-# 暫定（沒有真實機制可接、為了「每招技能至少一個關鍵字」先歸類，註解寫「暫定」；之後應換成真實內容）。
-# 欄位 grade 標示種類：省略＝專屬（exclusive）、general＝通用、provisional＝暫定。開局技能池與候選產生器
-# （Phase 3-24b2）只看專屬規則推導的關鍵字；通用與暫定只用來滿足「每招至少一個關鍵字」的檢查與技能卡顯示。
+# 規則分兩種：專屬（原語、條件本身就對應該關鍵字）、通用（沒有專屬機制的技能類型，依既有引擎規則歸類，註解寫「通用」，
+# 必填 reason_zh）。欄位 grade 省略＝專屬（exclusive）、general＝通用。開局技能池與候選產生器（Phase 3-24b2）只看專屬
+# 規則推導的關鍵字；技能有專屬關鍵字時卡片不顯示通用歸類，沒有專屬時通用的標灰附理由（玩法決定 #54）。
+# 沒有任何關鍵字的技能是「基礎技能」（玩法決定 #55），歸通用池，不是錯誤。暫定規則（provisional）已在 Phase 3-51 全部移除。
 #
 # actions（選填）：和關鍵字相符的基本動作；候選產生器（trpg.skillgen.candidates）依玩家用過的次數偏向該關鍵字。
 #
@@ -59,13 +59,6 @@ keywords:
       - {condition: target_on_surface, surface: water}
       - {trigger: on_enter_surface, surface: water}
       - {condition: cast_tag_this_turn, tag: water}
-      - {effect: heal, grade: provisional}   # 暫定（玩法 PM 2026-10-23：沒有直接的規則連動，卡上不顯示；要不要補真的機制記在玩法待辦）：潮濕表面治療（08 8.21.4.2）——治療、護盾、淨化類技能利用潮濕
-      - {effect: shield, grade: provisional}
-      - {effect: cleanse, grade: provisional}
-      - {effect: damage, element: holy, grade: provisional}   # 暫定：神聖傷害（聖水、雙效治療）；玩法 PM 2026-10-23 改暫定
-      - {change: allow_self_target, grade: provisional}   # 暫定：治療類修正（套用在治療技能上）；玩法 PM 2026-10-23 改暫定
-      - {change: shape_to, grade: provisional}
-      - {change: heal_permille, grade: provisional}
   - id: charged
     name_zh: 帶電
     description_zh: 雷電沿水與連鎖擴散，靜電可以累積成更強的一擊。
@@ -115,8 +108,6 @@ keywords:
       - {condition: target_has_status, status: prone}
       - {effect: consume_status, status: prone}
       - {effect: damage, weapon_req: melee, category: weapon, grade: general, reason_zh: 近戰攻擊倒地的目標有優勢}   # 通用：近戰攻擊倒地者有優勢（statuses.yaml prone）
-      - {trigger: on_crit, grade: provisional}   # 暫定：暴擊類（08 8.21.4.2「對倒地暴擊」），之後換成真實條件
-      - {effect: apply_status, status: stance_fury, grade: provisional}   # 暫定：同上
   - id: collision
     name_zh: 撞擊
     description_zh: 推擊把人撞上牆或同伴，造成撞擊傷害；撞擊時可以觸發更多效果。
@@ -137,8 +128,6 @@ keywords:
     uses:
       - {trigger: on_collision}
       - {condition: target_collided}   # 3-24c：對本回合撞過牆的目標加碼
-      - {trigger: on_damaged, grade: provisional}   # 暫定：受傷（含撞擊傷害）時反擊
-      - {effect: apply_status, status: stance_bulwark, grade: provisional}   # 暫定：堅壁姿態站穩腳步、不怕被推
   - id: marked
     name_zh: 標記
     description_zh: 咒印與揭露標記目標；標記可以被引爆，被標記者會被追擊。
@@ -150,15 +139,6 @@ keywords:
       - {effect: inscribe}
       - {effect: reveal}
       - {effect: apply_status, status: overwatch}
-      - {effect: apply_status, status: silenced, grade: provisional}   # 暫定：控制型的標記（被盯上的目標）：沉默、恐懼、嘲諷、中毒
-      - {effect: apply_status, status: feared, grade: provisional}   # 暫定
-      - {effect: apply_status, status: taunted, grade: provisional}   # 暫定
-      - {effect: apply_status, status: poison, grade: provisional}   # 暫定
-      - {effect: rule_change, rule: bleeding_wake, grade: provisional}   # 暫定：血痕標記路徑上的敵人
-      - {effect: copy_skill, grade: provisional}   # 暫定
-      - {change: area_delta, grade: provisional}   # 暫定：吼叫（嘲諷）範圍 +1
-      - {change: damage_permille, applies_to: all_attacks, unconditional: true, grade: provisional}   # 暫定：無條件的全攻擊傷害修正
-      - {change: damage_permille, applies_to: actions, unconditional: true, grade: provisional}   # 暫定：普攻的無條件傷害修正（普攻精通，3-32a）
     uses:
       - {condition: target_has_status, status: marked}
       - {effect: detonate_runes}
@@ -176,10 +156,6 @@ keywords:
       - {effect: lower_terrain}
       - {effect: leap}
       - {effect: grant_skill, skill: skill_flight}
-      - {effect: teleport_target, grade: provisional}   # 暫定：把人調到別的位置（高低差）
-      - {effect: swap_any, grade: provisional}   # 暫定
-      - {trigger: on_move, grade: provisional}   # 暫定
-      - {effect: grant_ap, grade: provisional}   # 暫定
     uses:
       - {condition: height_advantage}
       - {effect: damage, weapon_req: ranged, category: weapon, grade: general, reason_zh: 站得比目標高時遠程攻擊命中提高}   # 通用：遠程攻擊吃高低差命中加成（core.yaml height_hit_bonus）

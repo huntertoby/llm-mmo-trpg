@@ -10,7 +10,7 @@
 4. ``skeleton.*``：骨架結構（4.5）。
 5. ``rarity.*``：稀有度限制（4.6）。
 6. ``budget.*``：預算區間（4.2）。
-7. ``keyword.required``：每招技能至少製造或利用一個關鍵字（Phase 3-24b1，6.27.1）。
+7. （``keyword.required`` 已於 Phase 3-51 移除：沒有關鍵字的是「基礎技能」，不擋，06 6.27.1。）
 8. ``scaling.weapon``／``scaling.range``：縮放屬性（含第二屬性）在 ``skill_scaling.yaml`` 的
    允許範圍內（Phase 3H-6、3H-7，06 6.10）。
 
@@ -44,7 +44,6 @@ from trpg.content.skills import (
     rarity_rank,
 )
 from trpg.skillgen.budget import BudgetError, BudgetReport, skill_budget
-from trpg.skillgen.keywords import derive_keywords
 from trpg.skillgen.mechanics import affect_set, resolved_affects
 from trpg.skillgen.scaling import attr_names_zh, scaling_basis_zh
 
@@ -101,7 +100,7 @@ def validate_skill(skill: SkillDef, library: ContentLibrary) -> list[Violation]:
     out += _on_kill_status_violations(skill, library)
     weapon = _weapon_scaling_violations(skill, library)
     out += weapon + _scaling_range_violations(skill, library, already=bool(weapon))
-    return [*out, *_structure_violations(skill, library), *_keyword_violations(skill, library)]
+    return [*out, *_structure_violations(skill, library)]
 
 
 def _rune_tag_violations(skill: SkillDef, library: ContentLibrary) -> list[Violation]:
@@ -190,21 +189,6 @@ def _scaling_range_violations(
             "scaling.range",
             f"{which} 不在這招的允許範圍：{scaling_basis_zh(skill, library)}，"
             f"只能看 {attr_names_zh(allowed)}",
-        )
-    ]
-
-
-def _keyword_violations(skill: SkillDef, library: ContentLibrary) -> list[Violation]:
-    """``keyword.required``（Phase 3-24b1，6.27.1）：每招技能至少製造或利用一個關鍵字。"""
-    if derive_keywords(skill, library.keywords):
-        return []
-    return [
-        Violation(
-            skill.id,
-            "keyword.required",
-            "這招還沒有接上任何關鍵字，無法和其他技能協同。請加入一個會製造或利用關鍵字的效果、"
-            "條件或觸發（例如：附加燃燒、對倒地目標加傷）。可用的關鍵字："
-            + "、".join(k.name_zh for k in library.keywords.keywords),
         )
     ]
 

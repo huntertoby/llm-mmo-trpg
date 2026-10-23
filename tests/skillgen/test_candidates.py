@@ -27,6 +27,7 @@ def _generate(  # noqa: PLR0917 - 測試輔助：位置參數讓呼叫處簡短
     tier: int = 1,
     behavior: dict[str, int] | None = None,
     exclude: frozenset[str] = frozenset(),
+    rules: CandidateRules | None = None,
 ) -> tuple[Candidate, ...]:
     request = CandidateRequest(
         keyword_counts=counts,
@@ -36,7 +37,9 @@ def _generate(  # noqa: PLR0917 - 測試輔助：位置參數讓呼叫處簡短
         behavior=behavior or {},
         exclude=exclude,
     )
-    return generate_candidates(library(), request)
+    return generate_candidates(
+        library(), request, rules or CandidateRules(general_share_permille=0)
+    )
 
 
 def _exclusive(candidate: Candidate) -> tuple[str, ...]:
@@ -154,3 +157,27 @@ def test_composer_and_pool_sources_both_used() -> None:
 def test_unknown_keyword_is_rejected() -> None:
     with pytest.raises(ValueError, match="未知的關鍵字"):
         _generate({"nope": 1})
+
+
+def test_new_direction_can_draw_a_basic_skill_from_the_general_pool() -> None:
+    """玩法決定 #55：「新方向」有 general_share_permille 的機率從通用池（沒有專屬關鍵字）抽。"""
+    always = CandidateRules(general_share_permille=1000)
+    for seed in range(5):
+        found = _generate(HELD, seed=seed, rules=always)
+        new = found[-1]
+        assert new.kind == "new" and new.keywords == () and not new.fallback
+        assert _exclusive(new) == ()
+        assert len({c.skill.id for c in found}) == len(found)
+
+
+def test_general_share_zero_never_draws_a_basic_skill() -> None:
+    never = CandidateRules(general_share_permille=0)
+    for seed in range(12):
+        assert _generate(HELD, seed=seed, rules=never)[-1].keywords != ()
+
+
+def test_general_roll_does_not_disturb_the_other_candidates() -> None:
+    """通用池的擲骰用獨立的亂數：加深與橋接與沒有通用池時完全相同。"""
+    base = _generate(HELD, seed=7, rules=CandidateRules(general_share_permille=0))
+    with_pool = _generate(HELD, seed=7, rules=CandidateRules(general_share_permille=1000))
+    assert [c.skill.id for c in base[:2]] == [c.skill.id for c in with_pool[:2]]

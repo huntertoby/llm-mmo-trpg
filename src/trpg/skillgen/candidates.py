@@ -16,7 +16,10 @@
   每個候選以 ``composer_share_permille`` 決定先找哪個來源，找不到再換另一個。
 
 **只看專屬規則**（PM 決定，3-24b1 待決 #2）：關鍵字分布與「技能帶某關鍵字」都以
-``derive_keywords(..., exclusive_only=True)`` 判斷；通用與暫定規則只用來滿足「每招至少一個關鍵字」。
+``derive_keywords(..., exclusive_only=True)`` 判斷；通用規則只影響卡片顯示。
+
+**通用池**（Phase 3-51，玩法決定 #55）：沒有專屬關鍵字的手寫技能是基礎技能；「新方向」那一格有
+``general_share_permille`` 的機率從通用池抽（候選的 ``keywords`` 為空）。
 
 **退回**（定義做不到時，``Candidate.fallback`` 為真）：
 
@@ -80,6 +83,8 @@ class CandidateRules:
 
     composer_share_permille: int = 500
     composer_tries: int = 8
+    general_share_permille: int = 100
+    """「新方向」那一格從通用池（基礎技能）抽的機率（‰；Phase 3-51，玩法決定 #55）。"""
 
 
 @dataclass(frozen=True, slots=True)
@@ -163,7 +168,8 @@ class _Search:
 
     def usable(self, skill: SkillDef) -> bool:
         return (
-            skill.id not in self.taken
+            skill.rarity != "legendary"
+            and skill.id not in self.taken
             and skill.id not in self.request.exclude
             and weapon_problem(skill, self.request.weapon_class) is None
         )
@@ -334,6 +340,34 @@ def _new(
     return None if hit is None else Candidate("new", hit[0], hit[1], hit[2], fallback=True)
 
 
+def _general_pool(library: ContentLibrary, tier: int) -> tuple[SkillDef, ...]:
+    """通用池：階級相符、非傳說、沒有任何專屬關鍵字的手寫技能（基礎技能）。"""
+    found: list[SkillDef] = []
+    for skill_id in sorted(library.skills):
+        skill = library.skills[skill_id]
+        if skill.tier != tier or skill.rarity == "legendary":
+            continue
+        if not derive_keywords(skill, library.keywords, exclusive_only=True).all():
+            found.append(skill)
+    return tuple(found)
+
+
+def _general(search: _Search) -> Candidate | None:
+    """「新方向」有 ``general_share_permille`` 的機率從通用池抽（Phase 3-51，玩法決定 #55）。
+    擲骰用獨立的 ``fork("new_general")``，沒中時不影響其他候選的亂數；池空時回傳 ``None``。"""
+    rng = Rng(search.request.seed).fork("new_general")
+    if not rng.chance_permille(search.rules.general_share_permille):
+        return None
+    options = [s for s in _general_pool(search.library, search.request.tier) if search.usable(s)]
+    if not options:
+        return None
+    if search.request.hero_attributes:  # 新方向盡量取不同屬性；湊不到就放寬
+        options = [s for s in options if search._want_ok(s, "other")] or options
+    skill = rng.choice(options)
+    search.taken.add(skill.id)
+    return Candidate("new", (), skill, "pool")
+
+
 def generate_candidates(
     library: ContentLibrary, request: CandidateRequest, rules: CandidateRules | None = None
 ) -> tuple[Candidate, ...]:
@@ -354,7 +388,10 @@ def generate_candidates(
     found.append(deepen)
     bridge = _bridge(search, held, _without(unheld, deepen), behavior)
     found.append(bridge)
-    found.append(_new(search, _without(_without(unheld, deepen), bridge), held, behavior))
+    new = _general(search) or _new(
+        search, _without(_without(unheld, deepen), bridge), held, behavior
+    )
+    found.append(new)
     return tuple(c for c in found if c is not None)
 
 
