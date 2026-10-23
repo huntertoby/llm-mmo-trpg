@@ -24,6 +24,7 @@ import {
   fill,
   mix,
 } from "./paperdollGear";
+import { drawFigureSide } from "./paperdollSide";
 
 /** 離屏畫布的虛擬大小與腳底位置（虛擬像素）。 */
 export const DOLL_W = 64;
@@ -624,10 +625,30 @@ export function handSides(facing: Facing): { main: number; off: number; side: nu
   return view === "back" ? { main: 8.5, off: -8.5, side, view } : { main: -8.5, off: 8.5, side, view };
 }
 
-/** 畫一個小人（腳底中心在 (0, 0)）。facing：south ＝ 正面、north ＝ 背面、east／west ＝ 側面（寬度 × 0.9）。 */
+/** 真側面（Phase 3S-1）：東邊朝右畫，西邊整張左右鏡像。 */
+function drawFigureSideView(ctx: Ctx, spec: DollSpec, facing: Facing): void {
+  ctx.save();
+  if (facing === "west") ctx.scale(-1, 1);
+  drawFigureSide(ctx, spec, {
+    colors: itemColors,
+    weapon: (it, x) => drawWeapon(ctx, it, x, true),
+    headgearFront: (it) => drawHeadgear(ctx, it, "front"),
+    helmetBack: (it) => {
+      const [c, d] = itemColors(it);
+      drawHelmet(ctx, it, c, d, "back");
+    },
+  });
+  ctx.restore();
+}
+
+/** 畫一個小人（腳底中心在 (0, 0)）。facing：south ＝ 正面、north ＝ 背面、east／west ＝ 真側面（第三套畫法，paperdollSide.ts）。 */
 export function drawFigure(ctx: Ctx, spec: DollSpec, facing: Facing): void {
   if (spec.totem === true) {
     drawTotem(ctx);
+    return;
+  }
+  if (facing === "east" || facing === "west") {
+    drawFigureSideView(ctx, spec, facing);
     return;
   }
   const { look, gear } = spec;
@@ -641,7 +662,6 @@ export function drawFigure(ctx: Ctx, spec: DollSpec, facing: Facing): void {
   const mainX = main + Math.sign(main) * spread;
   const offX = off + Math.sign(off) * spread;
   ctx.save();
-  if (side !== 0) ctx.scale(0.9, 1);
   if (gear.cloak !== undefined && view !== "back") drawCloak(ctx, gear.cloak, view);
   if (view === "back") {
     drawWeapon(ctx, gear.main_hand, mainX, false); // 背面時武器畫在身體後面
