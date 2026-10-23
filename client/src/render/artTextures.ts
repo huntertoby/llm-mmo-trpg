@@ -66,6 +66,11 @@ export class ArtTextures {
     return this.get(`o|${objectArtKey(spec)}`, (ctx) => drawObject(ctx, spec));
   }
 
+  /** 戰場效果貼圖（陷阱、區域單格、霧、徽章、施放者環…，Phase 3-36b）：一格大小；`key` 由呼叫端用級距組成。 */
+  fx(key: string, draw: (ctx: Ctx) => void): Texture | null {
+    return this.get(`x|${key}`, draw);
+  }
+
   /** 紙娃娃小人貼圖（鍵 ＝ 裝備組合＋朝向＋姿勢）；沒有 DOM 時回傳 `null`。 */
   figure(spec: DollSpec, facing: Facing, downed: boolean): Texture | null {
     const key = `f|${dollKey(spec, facing, downed)}`;

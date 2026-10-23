@@ -8,6 +8,7 @@ import { api, ApiError } from "../api/client";
 import type { Action, BattleResponse, BattleView, OrderSet, Pos, ReactionMode } from "../api/types";
 import { actionForClick, actionLabel, classifyActions, type LabeledAction } from "../battle/actions";
 import { buildDrawModel } from "../battle/drawModel";
+import { fxSkillsOf } from "../battle/fxSkills";
 import { posKey, samePos } from "../battle/geometry";
 import type { LogLine } from "../battle/log";
 import {
@@ -252,8 +253,10 @@ export function BattleScreen({ initial, onExit, exitLabel, runMode }: Props) {
     const copied = response.pending?.copy_skill_id; // 複製技能暫停時，被複製的技能（要顯示名稱）
     if (copied != null) ids.add(copied);
     for (const u of view.units) for (const id of u.skills) ids.add(id); // 技能特效要所有單位的技能形狀（Phase 3-12）
+    for (const t of shown.traps) ids.add(t.skill_id); // 陷阱的觸發方式與元素色（Phase 3-36b）
+    for (const z of shown.zones ?? []) ids.add(z.skill_id); // 區域的元素色
     return [...ids].sort();
-  }, [hero, response.legal_actions, response.pending, view]);
+  }, [hero, response.legal_actions, response.pending, view, shown]);
   const cards = useSkillCards(skillIds, battleId);
   const cardsRef = useRef(cards);
   cardsRef.current = cards;
@@ -304,7 +307,7 @@ export function BattleScreen({ initial, onExit, exitLabel, runMode }: Props) {
           })),
     [hero, response.legal_actions, view, skillNames, liveNames],
   );
-  const model = useMemo(() => buildDrawModel(shown, heroId, acting), [shown, heroId, acting]);
+  const model = useMemo(() => buildDrawModel(shown, heroId, acting, fxSkillsOf(cards)), [shown, heroId, acting, cards]);
   const marks = useMemo(
     () => (busy || view.ended ? [] : telegraphMarks(response.telegraph, view)),
     [busy, view, response.telegraph],

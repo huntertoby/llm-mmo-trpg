@@ -9,7 +9,8 @@ import { Application, Container, Graphics, Sprite, type Text, type Ticker } from
 import type { Pos } from "../api/types";
 import type { FeedbackItem, FloatTone } from "../battle/feedback";
 import { lerpPos, type MoveAnim, type MoveStyle } from "../battle/animation";
-import type { DrawModel, ObjectDraw, TileDraw, UnitDraw } from "../battle/drawModel";
+import type { DrawModel, ObjectDraw, TileDraw, TrapDraw, UnitDraw } from "../battle/drawModel";
+import { zoneBadgeCell, zoneCellSpecs } from "../battle/zones";
 import { TILE_SIZE } from "../battle/geometry";
 import { scaledSize } from "../battle/stageLayout";
 import {
@@ -23,11 +24,14 @@ import {
   topReserve,
   type HeightShift,
 } from "../battle/elevation";
-import { HIGHLIGHT } from "../battle/glossary";
+import { HIGHLIGHT, surfaceBlocksSight } from "../battle/glossary";
 import type { Overlay, OverlayKind } from "../battle/scenePreview";
 import type { TelegraphMark } from "../battle/telegraph";
 import { warpPlan, type StepVfx } from "../battle/vfx";
 import { RING } from "./artPalette";
+import type { Ctx } from "./artDraw";
+import { drawCasterRing, drawTrapPad, drawZoneCell, fxColor, sightVeil, turnsBadge, veilKindOf } from "./fieldFx";
+import { fontEpoch } from "./fontLoad";
 import { ArtTextures } from "./artTextures";
 import { heightBadgeText, objectArtSpec, objectKinds, tileArtSpec } from "./artSpecs";
 import { hasObjectArt } from "./objectArt";
@@ -242,13 +246,9 @@ export class BattleRenderer {
       this.place(node, o, o.x * T, o.y * T);
     }
     this.drawBadges(model);
-    for (const trap of model.traps) {
-      const glyph = label(trap.revealed ? "×" : "^", 22, trap.color, true);
-      glyph.anchor.set(0.5);
-      this.rows.row(trap.y).traps.addChild(glyph);
-      this.place(glyph, trap, trap.x * T + T / 2 + T * 0.28, trap.y * T + T / 2 + T * 0.22);
-    }
+    for (const trap of model.traps) this.drawTrap(trap);
     for (const u of model.units) this.drawUnit(model, u);
+    this.drawVeils(model);
     this.art.endFrame();
     this.resumeLifts(model);
   }
@@ -348,25 +348,78 @@ export class BattleRenderer {
     }
   }
 
-  /** 持續區域（Phase 3D-5）：半透明底色加細框；移動型在格子左下角畫方向箭頭。 */
+  /** 一格大小的戰場效果貼圖（3-36b）；沒有 DOM 時為 `null`。 */
+  private fxSprite(key: string, draw: (ctx: Ctx) => void): Sprite | null {
+    const texture = this.art.fx(key, draw);
+    if (texture === null) return null;
+    const sprite = new Sprite(texture);
+    sprite.width = T;
+    sprite.height = T;
+    return sprite;
+  }
+
+  /** 剩餘回合徽章（暫時物件、區域、延遲陷阱共用）：黑底圓形白字，最後 1 回合橘色。 */
+  private badgeSprite(n: number, cx: number, cy: number): Sprite | null {
+    const turns = Math.max(0, Math.min(99, Math.trunc(n)));
+    return this.fxSprite(`badge|${turns}|${cx}|${cy}|${fontEpoch()}`, (ctx) => turnsBadge(ctx, cx, cy, turns));
+  }
+
+  /**
+   * 持續區域（Phase 3D-5；3-36b 整塊一起畫）：每格底色＋（有害＝斜紋｜有益＝光點），只描區域外緣，
+   * 移動型在前進側畫箭頭，跟隨型在施放者腳下畫虛線環，剩餘回合徽章在最左上那一格。
+   */
   private drawZones(model: DrawModel): void {
     for (const z of model.zones) {
-      const node = new Container();
-      node.addChild(
-        new Graphics()
-          .rect(1, 1, T - 2, T - 2)
-          .fill({ color: z.color, alpha: 0.22 })
-          .stroke({ width: 1, color: z.color, alpha: 0.7 }),
-      );
-      if (z.arrow !== null) {
-        const arrow = label(z.arrow, 16, z.color, true);
-        arrow.anchor.set(0.5);
-        arrow.position.set(11, T - 11);
-        arrow.style.stroke = { color: 0x000000, width: 3 };
-        node.addChild(arrow);
+      const color = fxColor(z.element, z.surface);
+      for (const c of zoneCellSpecs(z)) {
+        const key = `zone|${color}|${+z.harmful}|${c.sides.join("")}|${c.arrow ?? "-"}|${c.phase}`;
+        const sprite = this.fxSprite(key, (ctx) =>
+          drawZoneCell(ctx, { color, harmful: z.harmful, sides: c.sides, arrow: c.arrow, phase: c.phase }),
+        );
+        if (sprite === null) continue;
+        this.rows.row(c.y).deco.addChild(sprite);
+        this.place(sprite, c, c.x * T, c.y * T);
       }
-      this.rows.row(z.y).deco.addChild(node);
-      this.place(node, z, z.x * T, z.y * T);
+      if (z.caster !== null) {
+        const ring = this.fxSprite(`ring|${color}`, (ctx) => drawCasterRing(ctx, color));
+        if (ring !== null) {
+          this.rows.row(z.caster.y).deco.addChild(ring);
+          this.place(ring, z.caster, z.caster.x * T, z.caster.y * T);
+        }
+      }
+      const first = zoneBadgeCell(z);
+      const badge = first === null ? null : this.badgeSprite(z.turns, 9, 9);
+      if (first !== null && badge !== null) {
+        this.rows.row(first.y).deco.addChild(badge);
+        this.place(badge, first, first.x * T, first.y * T);
+      }
+    }
+  }
+
+  /** 陷阱（3-36b）：地上一個圓形踏板；外圈＝陣營色，中央＝元素色的捕獸夾（enter）或沙漏（delay＋徽章）。 */
+  private drawTrap(trap: TrapDraw): void {
+    const color = fxColor(trap.element);
+    const key = `trap|${+trap.mine}|${trap.trigger}|${color}|${fontEpoch()}`;
+    const pad = this.fxSprite(key, (ctx) => drawTrapPad(ctx, { mine: trap.mine, trigger: trap.trigger, color }));
+    if (pad === null) return;
+    this.rows.row(trap.y).traps.addChild(pad);
+    this.place(pad, trap, trap.x * T, trap.y * T);
+    if (trap.trigger !== "delay") return;
+    const badge = this.badgeSprite(trap.remaining, T - 9, 10);
+    if (badge === null) return;
+    this.rows.row(trap.y).traps.addChild(badge);
+    this.place(badge, trap, trap.x * T, trap.y * T);
+  }
+
+  /** 擋視線的表面（`blocks_sight`，煙霧、黑暗…）：每格在單位之上多畫一層霧，蓋住單位下半身。 */
+  private drawVeils(model: DrawModel): void {
+    for (const t of model.tiles) {
+      if (t.surface === "none" || !surfaceBlocksSight(t.surface)) continue;
+      const kind = veilKindOf(t.surface);
+      const sprite = this.fxSprite(`veil|${kind}|${t.x}|${t.y}`, (ctx) => sightVeil(ctx, kind, t.x, t.y));
+      if (sprite === null) continue;
+      this.rows.row(t.y).veil.addChild(sprite);
+      this.place(sprite, t, t.x * T, t.y * T);
     }
   }
 
@@ -448,13 +501,11 @@ export class BattleRenderer {
     }
     c.addChild(g);
     if (o.expiresIn !== null) {
-      // 暫時障礙（Phase 3-11）：淡化並在右上角顯示剩餘回合；最後一輪更淡
-      c.alpha = o.expiresIn <= 1 ? 0.5 : 0.8;
-      const badge = label(String(o.expiresIn), 12, 0xffffff, true);
-      badge.anchor.set(1, 0);
-      badge.position.set(T - 3, 2);
-      c.addChild(new Graphics().circle(T - 10, 10, 9).fill({ color: 0x1a2a3a, alpha: 0.85 }));
-      c.addChild(badge);
+      // 暫時障礙（Phase 3-11）：右上角剩餘回合徽章（3-36b：黑底圓形，最後 1 回合橘色）；
+      // 有畫法的物件（冰牆、荊棘…）最後 1 回合的樣子由貼圖自己改（融化、枯萎），沒有畫法的才淡化。
+      if (!hasSprite || !known) c.alpha = o.expiresIn <= 1 ? 0.5 : 0.8;
+      const badge = this.badgeSprite(o.expiresIn, T - 8, 8);
+      if (badge !== null) c.addChild(badge);
     }
     if (!hasSprite || !known || o.burning) {
       const glyph = label(o.burning ? (hasSprite && known ? "火" : `${o.glyph}火`) : o.glyph, o.floor ? 12 : 16, 0xffffff, true);

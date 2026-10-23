@@ -1,17 +1,41 @@
-// 持續區域（Phase 3D-5）：格子上的半透明底色與方向箭頭、HUD 清單、滑過格子的說明（純函式）。
+// 持續區域（Phase 3D-5）：整塊區域的繪圖資料（3-36b）、HUD 清單、滑過格子的說明（純函式）。
 import type { BattleView, Pos, ZoneView } from "../api/types";
-import { HIGHLIGHT } from "./glossary";
+import type { FxSkills } from "./fxSkills";
 import type { UnitNames } from "./units";
 
+export type ZoneSide = "n" | "s" | "w" | "e";
+
+/** 一整塊區域（同一個區域編號的格子一組）。 */
 export interface ZoneDraw {
-  x: number;
-  y: number;
-  color: number;
-  /** 移動型區域的方向箭頭（每格都畫）；其他區域為 `null`。 */
-  arrow: string | null;
+  id: number;
+  /** 依 `(y, x)` 排序。 */
+  cells: Pos[];
+  /** 對「目前玩家陣營」有害（會打到我方）：實線＋斜紋；否則虛線＋光點。 */
+  harmful: boolean;
+  /** 區域效果的元素；查不到為 `null`（顏色退回表面色、再退回灰色）。 */
+  element: string | null;
+  /** 區域產生的表面（元素色的備案）；沒有為 `null`。 */
+  surface: string | null;
+  anchor: ZoneView["anchor"];
+  /** 移動型的前進方向；其他為 `null`。 */
+  side: ZoneSide | null;
+  /** 跟隨型：施放者目前所在的格子；其他或不在場為 `null`。 */
+  caster: Pos | null;
+  /** 剩餘輪數（含本輪）。 */
+  turns: number;
 }
 
-const ARROWS: Readonly<Record<string, string>> = { north: "↑", east: "→", south: "↓", west: "←" };
+/** 區域單格的繪圖規格：要描外框的邊、移動型的箭頭側、斜紋相位。 */
+export interface ZoneCellSpec {
+  x: number;
+  y: number;
+  sides: ZoneSide[];
+  arrow: ZoneSide | null;
+  phase: number;
+}
+
+const SIDE_OF: Readonly<Record<string, ZoneSide>> = { north: "n", east: "e", south: "s", west: "w" };
+const SIDE_VEC: Readonly<Record<ZoneSide, readonly [number, number]>> = { n: [0, -1], s: [0, 1], w: [-1, 0], e: [1, 0] };
 const DIRECTION_TEXT: Readonly<Record<string, string>> = { north: "北", east: "東", south: "南", west: "西" };
 const AFFECTS_TEXT: Readonly<Record<ZoneView["affects"], string>> = {
   enemies: "影響施放者的敵人",
@@ -32,12 +56,19 @@ export function zoneRemaining(view: BattleView, z: ZoneView): number {
   return Math.max(0, z.expires_round - view.round + 1);
 }
 
-export function zoneColor(z: ZoneView): number {
-  return z.harmful ? HIGHLIGHT.zone_harmful : HIGHLIGHT.zone_helpful;
+/** 移動型區域的前進方向（不認得的方向為 `null`）。 */
+export function zoneSide(z: ZoneView): ZoneSide | null {
+  return z.anchor === "moving" && z.direction !== null ? (SIDE_OF[z.direction] ?? null) : null;
 }
 
-export function zoneArrow(z: ZoneView): string | null {
-  return z.anchor === "moving" && z.direction !== null ? (ARROWS[z.direction] ?? null) : null;
+/**
+ * 區域對「目前玩家陣營」是不是有害：影響施放者的敵人 → 施放者是敵方才有害；影響所有人 → 看區域效果有沒有
+ * 傷害或有害狀態（伺服器的 `harmful`）；影響施放者的友方 → 不會打到我方，一律有益（不論誰放的）。
+ */
+export function zoneHarmfulTo(z: ZoneView, viewerTeam: string): boolean {
+  if (z.affects === "enemies") return z.team !== viewerTeam;
+  if (z.affects === "all") return z.harmful;
+  return false;
 }
 
 /** 視圖的區域；舊的錄製回應（3D-5 之前）沒有 `zones` 欄位，視為沒有區域。 */
@@ -45,15 +76,39 @@ export function zonesOf(view: BattleView): readonly ZoneView[] {
   return view.zones ?? [];
 }
 
-/** 每個區域格一筆（同一格有多個區域時各畫一層，依區域編號）。 */
-export function zoneDraws(view: BattleView): ZoneDraw[] {
-  const out: ZoneDraw[] = [];
-  for (const z of zonesOf(view)) {
-    const color = zoneColor(z);
-    const arrow = zoneArrow(z);
-    for (const c of z.cells) out.push({ x: c.x, y: c.y, color, arrow });
-  }
-  return out;
+/** 每個區域一筆（依區域編號）。`skills` 查區域技能的元素與表面；沒有時顏色退回灰色。 */
+export function zoneDraws(view: BattleView, skills?: FxSkills): ZoneDraw[] {
+  return zonesOf(view).map((z) => {
+    const fx = skills?.(z.skill_id);
+    const owner = view.units.find((u) => u.id === z.owner_id);
+    return {
+      id: z.id,
+      cells: [...z.cells].sort((a, b) => a.y - b.y || a.x - b.x).map((c) => ({ x: c.x, y: c.y })),
+      harmful: zoneHarmfulTo(z, view.team),
+      element: fx?.zoneElement ?? fx?.element ?? null,
+      surface: fx?.surface ?? null,
+      anchor: z.anchor,
+      side: zoneSide(z),
+      caster: z.anchor === "caster" && owner !== undefined && !owner.downed ? { x: owner.pos.x, y: owner.pos.y } : null,
+      turns: zoneRemaining(view, z),
+    };
+  });
+}
+
+/** 區域每格的繪圖規格：只描外緣（鄰格同區域的邊不描）、移動型在前進側沒有鄰格的格子畫箭頭。 */
+export function zoneCellSpecs(z: ZoneDraw): ZoneCellSpec[] {
+  const has = new Set(z.cells.map((c) => `${c.x},${c.y}`));
+  const isIn = (x: number, y: number): boolean => has.has(`${x},${y}`);
+  return z.cells.map((c) => {
+    const sides = (["n", "s", "w", "e"] as const).filter((s) => !isIn(c.x + SIDE_VEC[s][0], c.y + SIDE_VEC[s][1]));
+    const arrow = z.side !== null && sides.includes(z.side) ? z.side : null;
+    return { x: c.x, y: c.y, sides, arrow, phase: (((-(c.x + c.y) * 2) % 10) + 10) % 10 };
+  });
+}
+
+/** 剩餘回合徽章所在的格子：區域最左上那一格。 */
+export function zoneBadgeCell(z: ZoneDraw): Pos | null {
+  return z.cells[0] ?? null;
 }
 
 function anchorText(z: ZoneView): string {

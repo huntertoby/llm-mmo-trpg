@@ -1,18 +1,21 @@
 import { describe, expect, it } from "vitest";
 import type { TelegraphChange, TelegraphOut, ZoneView } from "../api/types";
 import { buildDrawModel } from "./drawModel";
-import { HIGHLIGHT } from "./glossary";
+import type { FxSkills } from "./fxSkills";
 import { marksTextAt, telegraphMarks } from "./telegraph";
 import { smallView } from "./testFixtures";
 import { unitNames } from "./units";
 import {
-  zoneArrow,
+  zoneBadgeCell,
+  zoneCellSpecs,
   zoneDraws,
+  zoneHarmfulTo,
   zoneLine,
   zoneLinesAt,
   zoneNextText,
   zonePreviewLines,
   zoneRemaining,
+  zoneSide,
 } from "./zones";
 
 // 第 2 輪：主角的火牆（向東移動，到第 3 輪結束）與戰歌（跟隨主角，有益）。
@@ -72,16 +75,47 @@ describe("zones", () => {
     expect(zoneRemaining(view, hymn())).toBe(3);
   });
 
-  it("draws every zone cell with its colour and an arrow for moving zones", () => {
-    const model = buildDrawModel(zoneView(), "unit_0001");
-    expect(model.zones).toEqual([
-      { x: 1, y: 1, color: HIGHLIGHT.zone_harmful, arrow: "→" },
-      { x: 1, y: 2, color: HIGHLIGHT.zone_harmful, arrow: "→" },
-      { x: 0, y: 0, color: HIGHLIGHT.zone_helpful, arrow: null },
-      { x: 1, y: 0, color: HIGHLIGHT.zone_helpful, arrow: null },
+  it("draws each zone as one block: element and surface from the skill table, harmful from the viewer's side", () => {
+    const skills: FxSkills = (id) =>
+      id === "skill_fire_wall" ? { element: null, zoneElement: "fire", surface: "fire", trapTrigger: null } : undefined;
+    const model = buildDrawModel(zoneView(), "unit_0001", undefined, skills);
+    expect(model.zones).toHaveLength(2);
+    const [wall, song] = model.zones;
+    expect(wall).toMatchObject({ id: 1, element: "fire", surface: "fire", harmful: false, side: "e", anchor: "moving", turns: 2 });
+    expect(wall?.cells).toEqual([
+      { x: 1, y: 1 },
+      { x: 1, y: 2 },
     ]);
-    expect(zoneArrow(fireWall({ direction: "north" }))).toBe("↑");
+    // 沒有技能資料：元素與表面都是 null（顏色退回灰色）
+    expect(song).toMatchObject({ id: 2, element: null, surface: null, harmful: false, side: null, turns: 3 });
+    expect(song?.caster).toEqual({ x: 0, y: 0 }); // 跟隨型：施放者 unit_0001 所在的格子
+    expect(wall?.caster).toBeNull();
+    expect(zoneSide(fireWall({ direction: "north" }))).toBe("n");
+    expect(zoneSide(fireWall({ direction: "sideways" }))).toBeNull();
     expect(zoneDraws(smallView())).toEqual([]);
+  });
+
+  it("harmful means harmful to the viewer's team", () => {
+    const enemyWall = fireWall({ team: "enemy" });
+    expect(zoneHarmfulTo(enemyWall, "ally")).toBe(true);
+    expect(zoneHarmfulTo(enemyWall, "enemy")).toBe(false);
+    expect(zoneHarmfulTo(fireWall(), "ally")).toBe(false);
+    expect(zoneHarmfulTo(fireWall({ affects: "all", harmful: true }), "ally")).toBe(true);
+    expect(zoneHarmfulTo(fireWall({ affects: "all", harmful: false }), "ally")).toBe(false);
+    expect(zoneHarmfulTo(fireWall({ affects: "allies", team: "enemy" }), "ally")).toBe(false);
+  });
+
+  it("outlines only the outer edge and puts the arrow where the zone ends", () => {
+    const wall = buildDrawModel(zoneView(), "unit_0001").zones[0];
+    const specs = zoneCellSpecs(wall!);
+    expect(specs.map((c) => [c.x, c.y, c.sides.join(""), c.arrow])).toEqual([
+      [1, 1, "nwe", "e"],
+      [1, 2, "swe", "e"],
+    ]);
+    expect(zoneBadgeCell(wall!)).toEqual({ x: 1, y: 1 });
+    // 斜紋相位讓相鄰格的斜紋接起來：同一條斜線上 (x+y) 差 1 時相位差 2（52 ≡ 2 mod 10）
+    const phases = zoneCellSpecs({ ...wall!, cells: [{ x: 0, y: 0 }, { x: 1, y: 0 }, { x: 2, y: 0 }], side: null }).map((c) => c.phase);
+    expect(phases).toEqual([0, 8, 6]);
   });
 
   it("describes a zone with its owner, rounds left and next position", () => {
