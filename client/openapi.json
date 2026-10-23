@@ -8453,6 +8453,28 @@
             "type": "boolean",
             "title": "Partial",
             "default": false
+          },
+          "trap_trigger": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Trap Trigger"
+          },
+          "zone_element": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Zone Element"
           }
         },
         "additionalProperties": false,

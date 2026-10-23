@@ -222,6 +222,17 @@ def test_cost_values_follow_the_special_costs() -> None:
     assert icon_of({"cost": {"mana": 2, "cooldown": 2}}).cost_values == {}
 
 
+def test_placement_trigger_and_zone_element_for_battlefield_art() -> None:
+    assert _icon("bear_trap").trap_trigger == "enter"
+    assert _icon("cinder_mine").trap_trigger == "delay"
+    assert _icon("fire_wall").trap_trigger is None
+    assert _icon("fire_wall").zone_element == "fire"
+    assert _icon("bear_trap").zone_element is None
+    assert icon_of({}).trap_trigger is None and icon_of({}).zone_element is None
+    junk = icon_of({"trap": "oops", "effects": [{"type": "zone", "effects": "x"}]})
+    assert junk.trap_trigger is None and junk.zone_element is None
+
+
 def test_the_delay_value_comes_from_the_release_timing() -> None:
     for release in ("next_turn", "attacked"):
         icon = icon_of(
