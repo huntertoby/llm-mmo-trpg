@@ -1917,3 +1917,8 @@ PM 驗收後請使用者試玩一整輪（`docs/專案計畫.md` 第 14 節 🎮
 6. 範圍外：B、C；裝備掉落與經濟（Phase 5）。
 
 驗收（3-39）：上述測試；`ruff`、`mypy`、typecheck、`pnpm build`；實機（`trpg-serve-verify` 8011 埠）開一輪測試模式、挑一套裝備、打完第一場確認回滿與裝備生效；報告 `Phase3-39報告.md`。完成後請使用者重開伺服器。
+
+### 43.1 3-39 驗收（2026-10-23）
+
+- PM 合併（無衝突，`21b34ff`）；ruff、format、mypy、`tests/roguelite`＋`api`＋`cli`＋`test_architecture` 527、typecheck、vitest 833、`pnpm build` 全過；`run auto --seed 7` 與改動前逐字相同（正式模式不變）。`RunState.test_mode`／`test_equipment`（欄位 → 物品 ID），存檔仍 `trpg-run/5`、舊檔視為正式模式；測試模式勝場後 HP／法力回滿到含裝備的上限；開局畫面「測試模式」勾選＋挑裝備；進度標題、結束摘要、存檔列表有「測試模式」徽章；API `RunResponse.test_mode`、`SaveSummary.test_mode`；CLI `--test-mode`／`--test-equipment`。實機 8011 埠確認。報告 `Phase3-39報告.md`。
+- 待 PM 決定 → 決定：#1 只在勝場回滿（輸了一輪就結束）、#2 `test_equipment` 用欄位對照（戒指兩格）、#3 回滿到含裝備上限（Phase 5 再統一「上限是否含裝備」）、#4 勾選區在一般開局畫面也看得到（使用者要用它測試，不藏到 `?dev=1`）、#5 只支援武器＋關鍵字開局與內容庫現有物品 → **接受**。
