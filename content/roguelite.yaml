@@ -70,13 +70,14 @@ source:
 # 池裡沒有與武器相容的技能時，以隨機組合器（指定該關鍵字）補，最多試 composer_tries 個種子；仍湊不到就不能選這個關鍵字。
 # 主角的基礎數值依武器大類（比照先前的白板戰士、白板射手、白板法師）；所有人起始預算相同。
 # 法力與耐力上限（3H-2，07 7.2）＝ 這裡的基礎（max_mana、stamina）＋ 屬性加成（rules/core.yaml 的 resources）。
+# 耐力基礎依武器大類 近戰 40／遠程 30／法器 20，和法力 20／20／40 對稱（玩法 PM 2026-10-23，07 7.2）。
 start:
   keywords: 2
   composer_tries: 16
   heroes:
-    melee:  {name_zh: 冒險者, max_hp: 60, armor_bonus: 4, max_mana: 20, stamina: 30, resist: {physical: 100}}
+    melee:  {name_zh: 冒險者, max_hp: 60, armor_bonus: 4, max_mana: 20, stamina: 40, resist: {physical: 100}}
     ranged: {name_zh: 冒險者, max_hp: 50, armor_bonus: 2, max_mana: 20, stamina: 30, resist: {physical: 50}}
-    focus:  {name_zh: 冒險者, max_hp: 40, armor_bonus: 1, max_mana: 40, stamina: 30, resist: {elemental: 150}}
+    focus:  {name_zh: 冒險者, max_hp: 40, armor_bonus: 1, max_mana: 40, stamina: 20, resist: {elemental: 150}}
 
 # 共用候選產生器（Phase 3-24b2，06 6.27.4；trpg.skillgen.candidates）：升級與營火三選一＝加深、橋接、新方向。
 # 每個候選先以 composer_share_permille 的機率決定先從隨機組合器（指定關鍵字）或技能池找，找不到再換另一個來源；
