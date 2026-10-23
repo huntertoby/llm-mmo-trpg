@@ -34,7 +34,6 @@ from trpg.engine.activations import activate
 from trpg.engine.context import Ctx
 from trpg.engine.copying import copy_free_problem, copy_source, has_copy_effect
 from trpg.engine.delayed import charge
-from trpg.engine.effects import execute
 from trpg.engine.events import (
     EffectFizzled,
     SkillCooldownChanged,
@@ -47,7 +46,7 @@ from trpg.engine.reactions import (
 )
 from trpg.engine.results import Pending
 from trpg.engine.rules.geometry import XY
-from trpg.engine.self_costs import self_cost_effects
+from trpg.engine.self_costs import pay_self_costs
 from trpg.engine.skill_triggers import collect_cast, holding
 from trpg.engine.skills import casting
 from trpg.engine.skills.cast import Cast, GearCast, TriggeredCast
@@ -588,9 +587,7 @@ def _apply_self_status(ctx: Ctx, caster: UnitState, skill: SkillDef) -> None:
     放在結算之後而不是支付代價當下，這樣虛弱不會削弱這次施放本身的傷害；施放者在結算中倒下則
     不施加。
     """
-    effects = self_cost_effects(caster.id, skill)
-    if effects:
-        execute(ctx, effects)
+    pay_self_costs(ctx, caster, skill)
 
 
 class _Interpreter:

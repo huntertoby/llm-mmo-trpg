@@ -16,7 +16,7 @@ shape: {type: single, range: weapon}
 effects:
   - {type: damage, multiplier_permille: 3000}
 condition: null
-cost: {stamina: 8, cooldown: 2, self_status: {status: bleed, duration: 3}}
+cost: {stamina: 8, cooldown: 2, self_status: {status: bleed, duration: 2}}
 tags: [physical, melee, bleed, sacrifice]
 narrative:
   concept: 讓自己的傷口淌血，把痛楚全砸回敵人身上

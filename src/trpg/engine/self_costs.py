@@ -7,11 +7,15 @@
 from __future__ import annotations
 
 from trpg.content.skills import SkillDef
+from trpg.engine.context import Ctx
+from trpg.engine.effects import execute
 from trpg.engine.effects.models import ApplyStatusEffect, EffectBase
 from trpg.engine.ids import OVERDRAWN
+from trpg.engine.rules.statuses import skip_turn_status
+from trpg.engine.state import UnitState
 from trpg.shared.types import UnitId
 
-__all__ = ["OVERDRAFT_DURATION", "self_cost_effects"]
+__all__ = ["OVERDRAFT_DURATION", "pay_self_costs", "self_cost_effects"]
 
 OVERDRAFT_DURATION = 2
 """透支狀態的持續回合：施放當回合結束 −1，剩下的 1 在下一個回合開始時扣 AP、該回合結束移除。"""
@@ -42,3 +46,15 @@ def self_cost_effects(caster_id: UnitId, skill: SkillDef) -> list[EffectBase]:
             )
         )
     return out
+
+
+def pay_self_costs(ctx: Ctx, unit: UnitState, skill: SkillDef) -> None:
+    """施放結算完之後，施放者承受自己付的代價。自暈（``skip_turn`` 狀態）照暈眩規則「沒有 AP、
+    移動點數與反應」：本回合剩下的 AP 與移動點數立刻歸零（下一個回合會被跳過）。"""
+    effects = self_cost_effects(unit.id, skill)
+    if not effects:
+        return
+    execute(ctx, effects)
+    if unit.alive and skip_turn_status(ctx.rules, unit) is not None:
+        unit.ap = 0
+        unit.move_points = 0

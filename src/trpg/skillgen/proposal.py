@@ -78,6 +78,7 @@ from trpg.skillgen.proposal_numbers import (
     split_numbers,
 )
 from trpg.skillgen.scaling import fit_scaling, retarget_scaling
+from trpg.skillgen.self_penalty import penalty_choices, penalty_cost, penalty_of_cost
 from trpg.skillgen.validate import RARITY_STATUS_PRIMITIVES, validate_skill
 
 __all__ = [
@@ -235,6 +236,11 @@ def _compact(node: Any) -> Any:
 # ---------------------------------------------------------------------------
 # 模型產生
 # ---------------------------------------------------------------------------
+
+
+def _penalty_type(choices: Sequence[str]) -> Any:
+    """``cost_penalty`` 的型別：允許的代價之一，或 ``None``。"""
+    return Union[_literal(choices), None]  # noqa: UP007
 
 
 def _literal(values: Iterable[object]) -> Any:
@@ -650,6 +656,11 @@ def budget_statuses(library: ContentLibrary) -> tuple[str, ...]:
     )
 
 
+_PENALTY_DOC = (
+    "可省略。用自己的代價換更強的效果：填一個自身負面狀態（施放後自己獲得；stun 暈眩＝自己跳過"
+    "下一個回合、silenced 沉默＝只能用在法術技、bleed 流血等），或 overdraft（下一個回合少 1 AP）；"
+    "一招最多一個，數值由遊戲決定"
+)
 _SKILL_DOC = "LLM 提議的技能（ID、稀有度、階級與來源由遊戲決定，不要填）。"
 _GENERAL_TAG = "~general"
 """型態的效果 union 中「一般原語」那一支的標籤（不是原語 ID；錯誤路徑會略過它）。"""
@@ -826,6 +837,10 @@ def build_proposal_models(
         "category": (sk["category"].annotation, ...),
         "weapon_req": (sk["weapon_req"].annotation, ...),
         "scaling_attr": (sk["scaling_attr"].annotation, ...),
+        "cost_penalty": (
+            _penalty_type(penalty_choices(library, rarity)),
+            Field(default=None, description=_PENALTY_DOC),
+        ),
     }
     hints = {p.id: form_hint(library, p) for p in plans}
     forms = [_form_model(builder, p, common, shared) for p in plans]
@@ -856,9 +871,17 @@ def _skill_id(body: Mapping[str, Any]) -> str:
     return LLM_ID_PREFIX + hashlib.sha256(text.encode("utf-8")).hexdigest()[:10]
 
 
-def _skill_data(proposal: BaseModel, ctx: ProposalContext, fill: NumberFiller) -> dict[str, Any]:
+def _skill_data(
+    proposal: BaseModel,
+    ctx: ProposalContext,
+    fill: NumberFiller,
+    library: ContentLibrary | None = None,
+) -> dict[str, Any]:
     data = proposal.model_dump(mode="json", exclude_none=True)
     data.pop("form", None)
+    penalty = data.pop("cost_penalty", None)  # 自己付的代價（3-50）→ cost.self_status／overdraft
+    if penalty is not None:
+        data["cost"] = {**data.get("cost", {}), **penalty_cost(library, penalty)}
     data["narrative"] = {"concept": data.pop("concept"), "cast_flavor": data.pop("cast_flavor")}
     data.update(tier=ctx.tier, rarity=ctx.rarity, rank=ctx.rank)
     data["provenance"] = {"origin": ctx.origin, "created_by": "llm"}
@@ -880,7 +903,7 @@ def to_skill_def(
 
     schema 層級的錯誤丟 :class:`pydantic.ValidationError`（:func:`evaluate_proposal` 轉成
     ``stage="skill"`` 的錯誤）。"""
-    data = _skill_data(proposal, ctx, fill)
+    data = _skill_data(proposal, ctx, fill, library)
     skill = SkillDef.model_validate(data)
     if library is None:
         return skill
@@ -922,6 +945,7 @@ _SUPPORTED_SKILL_KEYS = frozenset(
         "condition",
         "trigger",
         "cost",
+        "cost_penalty",
         "tags",
         "narrative",
         "provenance",
@@ -936,6 +960,12 @@ def proposal_from_skill(skill: SkillDef, library: ContentLibrary) -> dict[str, A
     :func:`~trpg.skillgen.proposal_numbers.split_numbers`。"""
     data = skill.model_dump(mode="json", exclude_defaults=True)
     data, _ = split_numbers(data, library)
+    if isinstance(data.get("cost"), dict):  # 自己付的代價（3-50）→ cost_penalty
+        penalty = penalty_of_cost(data["cost"])
+        if penalty is not None:
+            data["cost_penalty"] = penalty
+        if not data["cost"]:
+            del data["cost"]
     unsupported = sorted(set(data) - _SUPPORTED_SKILL_KEYS)
     if unsupported:
         raise ValueError(f"{skill.id} 用到提議格式沒有的欄位：{', '.join(unsupported)}")
