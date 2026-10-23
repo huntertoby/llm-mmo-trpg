@@ -2167,6 +2167,13 @@ PM 驗收後請使用者試玩一整輪（`docs/專案計畫.md` 第 14 節 🎮
    - **變奏代號**：玩家模式自動產生代號並隱藏這個欄位（開發者模式照舊），拿掉 `test_player_text.py` 對 `tide_pierce` 的放行。
 6. 驗收：pytest（skillgen、content、api、narrative、engine、cli 含 slow）、vitest、build、ruff、format、mypy、`test_player_text.py`、排版煙霧檢查、一場含守護符陣的重播。報告 `Phase3-48h報告.md`。
 
+### 59.1 3-48h 驗收（2026-10-24，開發 PM）
+
+- 報告 `Phase3-48h報告.md`（規則對照表、免死改名盤點、淨化影響）。新模組 `trpg.skillgen.option_effect_rules`＋驗證器 `effect_param_violations`（與 `validate_skill` 同一批規則函式）：對象與狀態選項事前停用並附白話原因；已加入的效果對象不合法時後端回 `effect_fixes`、前端 `conformAffects` 自動改；暈眩／冰凍讓代價步驟的冷卻下限變 4。`undying`→「免死」（「不死系」不動）。陷阱：設定區與卡片「敵人踩到時，…」、驗證器 `trap.effects`、對象只剩「格子」。`plainify` 補 pydantic 訊息與 100 多個欄位名；巢狀欄位錯誤附「回到第 N 步」；錯誤型別掃描 167 例（順手修兩處會讓 `draft_options` 崩潰的垃圾值）。守護符陣（主動 aura 半徑 2、護盾 2d6、`on_own_rune`，91.5%）。淨化只移除減益（#60；內建狀態行為不變，只有 `skill_purify` 用、AI 不依賴）。說明句照玩法 PM 列表改完；變奏代號玩家模式自動 `form_N`。
+- 合併衝突：與 3I-6 同時加技能 → 技能總數 **221**；`skill_icons.json`、CLI 快照、`llm_propose_mock.txt`、OpenAPI 重產。
+- 檢查（main 合併後，**含 slow 的全量**）：pytest 6910、vitest 948、build、ruff、mypy、lint-imports、重播 `training_range` 種子 7 一致。
+- 待決：#1 放置陷阱 `acts_on` 不改成 tile（會動內建陷阱預算，例：灰燼地雷 90.5%→99.8%）→ 維持只顯示「格子」；#2 守護符陣換掉 `build_runeweaver` 的連鎖閃電 → 先接受，平衡時再看；#3 選項停用語意是「再加一個會不會違規」→ 接受；#4 冷卻未填時不停用硬控 → 接受；#5 仍只事後才報的規則（`cap.rule_rewrite*`、`cap.revive_cost`、推拉不並存、`keyword.required`、占比與預算）→ `keyword.required` 在 3-51 處理，其餘記為工坊待辦。
+
 ## 60. Phase 3-50｜代價換強度第一批（玩法決定 #54；使用者：「自暈換護盾 A、第一批代價 A、關鍵字顯示 A，好 寫入」；06 6.5 `4a974b8`；sonnet；約 0.7 段；3-49 之後、3I-3 之前）
 
 照 `docs/design/06-技能.md` 6.5 為準：
