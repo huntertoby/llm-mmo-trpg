@@ -1,0 +1,246 @@
+<!doctype html>
+<html lang="zh-Hant">
+<head>
+<meta charset="utf-8">
+<title>戰場效果樣張</title>
+<style>
+  body { margin: 0; padding: 16px 20px; background: #1b1e24; color: #e8e8ea; font-family: "Microsoft JhengHei", sans-serif; }
+  h1 { font-size: 20px; margin: 0 0 4px; }
+  h2 { font-size: 15px; margin: 14px 0 6px; }
+  .sub { color: #a0a4ad; font-size: 13px; margin-bottom: 8px; }
+  .cols { display: flex; gap: 22px; flex-wrap: wrap; }
+  .d { font-size: 12px; color: #a0a4ad; margin-top: 4px; line-height: 1.5; max-width: 470px; }
+  canvas { display: block; border-radius: 6px; }
+  .cell { display: inline-block; vertical-align: top; margin: 0 8px 8px 0; text-align: center; font-size: 12px; color: #c8ccd4; }
+  .cell canvas { margin: 0 auto 3px; }
+  .grp { margin-bottom: 6px; }
+  .grp b { display: block; font-size: 13px; color: #e8e8ea; margin-bottom: 4px; }
+</style>
+</head>
+<body>
+<h1>戰場效果：煙霧、冰牆、荊棘、倒塌物、薄冰、陷阱、持續區域</h1>
+<div class="sub">同一張 9×6 戰場。左＝遊戲現況（直接用遊戲的畫法程式），右＝提案。每格 52px，實際大小。</div>
+<div class="cols">
+  <div><h2>現況</h2><canvas id="old"></canvas>
+    <div class="d">陷阱只有一個「^」字；區域每格各畫一個方框，看不出整塊範圍，也分不出「打我的」還是「幫我的」；冰牆是一片平的玻璃；倒塌物太小；角色身上看不到任何狀態。</div></div>
+  <div><h2>提案</h2><canvas id="neu"></canvas>
+    <div class="d">左上煙霧蓋住單位下半身（看得出「躲在裡面」）；冰牆有高度，最後 1 回合開始融化；荊棘最後 1 回合枯萎；區域只描外框、有害＝實線斜紋、有益＝虛線光點；陷阱是地上的踏板；角色頭上有狀態列。</div></div>
+</div>
+
+<h2>各項細節（放大 2 倍）</h2>
+<div id="detail"></div>
+
+<script src="current.js"></script>
+<script src="paperdoll.js"></script>
+<script src="fx.js"></script>
+<script>
+const T = 52, W = 9, H = 6, DPR = 2;
+const D = PaperDoll;
+const NO = { n: false, s: false, w: false, e: false };
+
+// ---- 戰場資料（兩邊共用）----
+const terrain = (x, y) => (x === 8 && y >= 4 ? "ice_hole" : x <= 3 && y >= 3 ? "grass" : "stone");
+const SURF = { "0,0": "smoke", "1,0": "smoke", "0,1": "smoke", "1,1": "smoke", "2,0": "darkness", "2,1": "darkness" };
+const OBJ = [
+  { x: 4, y: 0, kind: "ice_wall", turns: 3 }, { x: 4, y: 1, kind: "ice_wall", turns: 3, hp: 0.5 }, { x: 4, y: 2, kind: "ice_wall", turns: 1 },
+  { x: 6, y: 0, kind: "thorn_wall", turns: 2 }, { x: 7, y: 0, kind: "thorn_wall", turns: 1 },
+  { x: 6, y: 5, kind: "rubble", hp: 1 }, { x: 7, y: 5, kind: "rubble", hp: 0.3 },
+  { x: 8, y: 4, kind: "thin_ice", hp: 0.5 }, { x: 8, y: 5, kind: "thin_ice", hp: 0.2 },
+];
+const ZONES = [
+  { cells: [[5, 2], [6, 2], [7, 2], [5, 3], [6, 3], [7, 3]], element: "fire", harmful: true, anchor: "moving", dir: [1, 0], turns: 2, team: "enemy" },
+  { cells: [[0, 3], [1, 3], [2, 3], [0, 4], [1, 4], [2, 4], [0, 5], [1, 5], [2, 5]], element: "holy", harmful: false, anchor: "caster", caster: [1, 4], turns: 3, team: "player" },
+];
+const TRAPS = [
+  { x: 3, y: 5, team: "player", trigger: "enter", element: "fire" },
+  { x: 4, y: 5, team: "player", trigger: "delay", element: "lightning", turns: 2 },
+  { x: 5, y: 5, team: "enemy", trigger: "enter", element: "poison", revealed: true },
+  { x: 3, y: 2, team: "enemy", trigger: "enter", element: "shadow", revealed: false },
+];
+const UNITS = [
+  { x: 1, y: 1, tpl: "bandit_archer", team: "enemy", st: ["concealed"] },
+  { x: 3, y: 1, tpl: "bandit", team: "enemy", st: ["stun", "poison"] },
+  { x: 6, y: 3, tpl: "bandit_shieldbearer", team: "enemy", st: ["burning", "slow", "vulnerable", "marked"] },
+  { x: 1, y: 4, tpl: "hero_fighter", team: "player", st: ["shielded", "hasted", "regenerating"] },
+  { x: 4, y: 3, tpl: "hero_archer", team: "player", st: ["root", "bleed"] },
+  { x: 7, y: 1, tpl: "hero_mage", team: "player", st: ["frozen"] },
+];
+
+function surfSame(x, y) {
+  const s = SURF[`${x},${y}`];
+  const same = (a, b) => SURF[`${a},${b}`] === s;
+  return { n: same(x, y - 1), s: same(x, y + 1), w: same(x - 1, y), e: same(x + 1, y) };
+}
+function lip(x, y) {
+  const t = terrain(x, y);
+  const diff = (a, b) => a >= 0 && a < W && b >= 0 && b < H && terrain(a, b) !== t;
+  return { n: diff(x, y - 1), s: diff(x, y + 1), w: diff(x - 1, y), e: diff(x + 1, y) };
+}
+function tiles(ctx) {
+  for (let y = 0; y < H; y++)
+    for (let x = 0; x < W; x++) {
+      ctx.save();
+      ctx.translate(x * T, y * T);
+      const t = terrain(x, y);
+      CUR.drawTile(ctx, { terrain: t, x, y, height: 0, surface: SURF[`${x},${y}`] ?? "none", surfSame: surfSame(x, y), lip: lip(x, y), wallFace: false, blocked: t === "ice_hole", tint: null });
+      ctx.restore();
+    }
+}
+function curObject(ctx, o) {
+  ctx.save();
+  ctx.translate(o.x * T, o.y * T);
+  CUR.drawObject(ctx, { kind: o.kind, x: o.x, y: o.y, joinL: false, joinR: false, vertical: false, flammable: false });
+  ctx.restore();
+  if (o.turns != null) {
+    // 現況：右上角白字剩餘回合
+    ctx.save();
+    ctx.font = "bold 12px sans-serif"; ctx.textAlign = "right"; ctx.textBaseline = "top";
+    ctx.lineWidth = 3; ctx.strokeStyle = "#000"; ctx.strokeText(o.turns, o.x * T + T - 3, o.y * T + 2);
+    ctx.fillStyle = "#fff"; ctx.fillText(o.turns, o.x * T + T - 3, o.y * T + 2);
+    ctx.restore();
+  }
+}
+function teamBase(ctx, u) {
+  const cx = u.x * T + T / 2, cy = u.y * T + T * 0.8;
+  const col = FX.TEAM[u.team];
+  ctx.save();
+  ctx.beginPath(); ctx.ellipse(cx, cy, T * 0.34, T * 0.12, 0, 0, Math.PI * 2);
+  ctx.fillStyle = col + "55"; ctx.fill(); ctx.lineWidth = 2; ctx.strokeStyle = col; ctx.stroke();
+  ctx.restore();
+}
+function doll(ctx, u, alpha = 1) {
+  const unit = D.TEMPLATES[u.tpl];
+  ctx.save();
+  ctx.globalAlpha = alpha;
+  D.stamp(ctx, unit, "south", u.x * T + T / 2, u.y * T + T * 0.82, 0.78, { dpr: DPR });
+  ctx.restore();
+}
+function hpBar(ctx, u) {
+  const cx = u.x * T + T / 2, y = u.y * T + T / 2 + T * 0.36, w = T * 0.62;
+  ctx.fillStyle = "rgba(0,0,0,0.7)"; ctx.fillRect(cx - w / 2 - 1, y - 1, w + 2, 7);
+  ctx.fillStyle = u.team === "player" ? "#5fd07a" : "#e05050"; ctx.fillRect(cx - w / 2, y, w * 0.7, 5);
+}
+function canvas(id, w, h) {
+  const c = typeof id === "string" ? document.getElementById(id) : id;
+  c.width = w * DPR; c.height = h * DPR; c.style.width = `${w}px`; c.style.height = `${h}px`;
+  const ctx = c.getContext("2d"); ctx.scale(DPR, DPR); return ctx;
+}
+
+// ---- 現況 ----
+(() => {
+  const ctx = canvas("old", W * T, H * T);
+  tiles(ctx);
+  for (const z of ZONES) {
+    const col = FX.elementColor(z.element);
+    for (const [x, y] of z.cells) {
+      ctx.fillStyle = col + "38"; ctx.fillRect(x * T + 1, y * T + 1, T - 2, T - 2);
+      ctx.strokeStyle = col + "b3"; ctx.lineWidth = 1; ctx.strokeRect(x * T + 1.5, y * T + 1.5, T - 3, T - 3);
+      if (z.anchor === "moving") { ctx.font = "bold 16px sans-serif"; ctx.fillStyle = col; ctx.textAlign = "center"; ctx.textBaseline = "middle"; ctx.lineWidth = 3; ctx.strokeStyle = "#000"; ctx.strokeText("→", x * T + 11, y * T + T - 11); ctx.fillText("→", x * T + 11, y * T + T - 11); }
+    }
+  }
+  for (let y = 0; y < H; y++) {
+    for (const o of OBJ.filter((o) => o.y === y)) curObject(ctx, o);
+    for (const tr of TRAPS.filter((t) => t.y === y && (t.team === "player" || t.revealed))) {
+      ctx.save();
+      ctx.font = "bold 22px sans-serif"; ctx.textAlign = "center"; ctx.textBaseline = "middle";
+      ctx.fillStyle = FX.TEAM[tr.team]; ctx.lineWidth = 3; ctx.strokeStyle = "#000";
+      const g = tr.revealed ? "×" : "^";
+      ctx.strokeText(g, tr.x * T + T / 2 + T * 0.28, tr.y * T + T / 2 + T * 0.22); ctx.fillText(g, tr.x * T + T / 2 + T * 0.28, tr.y * T + T / 2 + T * 0.22);
+      ctx.restore();
+    }
+    for (const u of UNITS.filter((u) => u.y === y)) { teamBase(ctx, u); doll(ctx, u); hpBar(ctx, u); }
+  }
+})();
+
+// ---- 提案 ----
+function proposedObject(ctx, o) {
+  const x = o.x * T, y = o.y * T;
+  ({ ice_wall: FX.iceWall, thorn_wall: FX.thornWall, rubble: FX.rubble, thin_ice: FX.thinIce })[o.kind](ctx, x, y, o);
+}
+function proposedUnit(ctx, u) {
+  const cx = u.x * T + T / 2, feet = u.y * T + T * 0.82;
+  teamBase(ctx, u);
+  FX.bodyUnder(ctx, u.st, cx, feet);
+  doll(ctx, u, u.st.includes("concealed") ? 0.55 : 1);
+  FX.bodyOver(ctx, u.st, cx, feet, 0.4);
+  hpBar(ctx, u);
+  FX.statusRow(ctx, u.st, cx, u.y * T + 1, 14);
+}
+(() => {
+  const ctx = canvas("neu", W * T, H * T);
+  tiles(ctx);
+  for (const z of ZONES) FX.zone(ctx, z.cells, z);
+  for (const tr of TRAPS) FX.trap(ctx, tr.x * T, tr.y * T, tr);
+  for (let y = 0; y < H; y++) {
+    for (const o of OBJ.filter((o) => o.y === y)) proposedObject(ctx, o);
+    for (const u of UNITS.filter((u) => u.y === y)) proposedUnit(ctx, u);
+    for (let x = 0; x < W; x++) {
+      const s = SURF[`${x},${y}`];
+      if (s === "smoke" || s === "darkness") FX.sightVeil(ctx, x * T, y * T, s, x, y);
+    }
+  }
+})();
+
+// ---- 細節 ----
+const detail = document.getElementById("detail");
+function group(title, items) {
+  const g = document.createElement("div"); g.className = "grp";
+  g.innerHTML = `<b>${title}</b>`;
+  for (const [label, draw, w = 1, h = 1] of items) {
+    const div = document.createElement("div"); div.className = "cell";
+    const c = document.createElement("canvas");
+    const ctx = canvas(c, w * T * 2, h * T * 2);
+    ctx.scale(2, 2);
+    draw(ctx);
+    div.appendChild(c); div.insertAdjacentHTML("beforeend", label);
+    g.appendChild(div);
+  }
+  detail.appendChild(g);
+}
+const floor = (ctx, t = "stone", s = "none", x = 0, y = 0) => { ctx.save(); ctx.translate(x * T, y * T); CUR.drawTile(ctx, { terrain: t, x: x + 3, y: y + 7, height: 0, surface: s, surfSame: NO, lip: NO, wallFace: false, blocked: t === "ice_hole", tint: null }); ctx.restore(); };
+const cur = (kind) => (ctx) => { floor(ctx, kind === "thin_ice" ? "ice_hole" : "stone"); CUR.drawObject(ctx, { kind, x: 3, y: 7, joinL: false, joinR: false, vertical: false, flammable: false }); };
+
+group("冰牆（剩餘回合 → 融化；HP → 裂痕）", [
+  ["現況", cur("ice_wall")],
+  ["3 回合", (c) => { floor(c); FX.iceWall(c, 0, 0, { turns: 3 }); }],
+  ["HP 50%", (c) => { floor(c); FX.iceWall(c, 0, 0, { turns: 2, hp: 0.5 }); }],
+  ["HP 25%", (c) => { floor(c); FX.iceWall(c, 0, 0, { turns: 2, hp: 0.25 }); }],
+  ["最後 1 回合", (c) => { floor(c); FX.iceWall(c, 0, 0, { turns: 1 }); }],
+]);
+group("荊棘叢（最後 1 回合枯萎）與倒塌物（HP → 裂痕）", [
+  ["荊棘 現況", cur("thorn_wall")],
+  ["荊棘 2 回合", (c) => { floor(c, "grass"); FX.thornWall(c, 0, 0, { turns: 2 }); }],
+  ["荊棘 最後 1 回合", (c) => { floor(c, "grass"); FX.thornWall(c, 0, 0, { turns: 1 }); }],
+  ["倒塌物 現況", cur("rubble")],
+  ["倒塌物", (c) => { floor(c); FX.rubble(c, 0, 0, {}); }],
+  ["倒塌物 HP 30%", (c) => { floor(c); FX.rubble(c, 0, 0, { hp: 0.3 }); }],
+]);
+group("薄冰（HP → 裂痕越來越多，最後露出黑水）", [
+  ["現況", cur("thin_ice")],
+  ["完整", (c) => FX.thinIce(c, 0, 0, { hp: 1 })],
+  ["HP 50%", (c) => FX.thinIce(c, 0, 0, { hp: 0.5 })],
+  ["HP 20%", (c) => FX.thinIce(c, 0, 0, { hp: 0.2 })],
+]);
+group("陷阱（外圈＝陣營、中間＝元素色＋觸發方式）", [
+  ["我方・踩到觸發・火", (c) => { floor(c, "grass"); FX.trap(c, 0, 0, { team: "player", trigger: "enter", element: "fire" }); }],
+  ["我方・倒數 2・雷", (c) => { floor(c); FX.trap(c, 0, 0, { team: "player", trigger: "delay", element: "lightning", turns: 2 }); }],
+  ["我方・倒數 1・冰", (c) => { floor(c); FX.trap(c, 0, 0, { team: "player", trigger: "delay", element: "ice", turns: 1 }); }],
+  ["敵方・已揭露・毒", (c) => { floor(c); FX.trap(c, 0, 0, { team: "enemy", trigger: "enter", element: "poison", revealed: true }); }],
+  ["敵方・未揭露（不畫）", (c) => { floor(c); FX.trap(c, 0, 0, { team: "enemy", revealed: false }); }],
+  ["未知元素", (c) => { floor(c); FX.trap(c, 0, 0, { team: "player", element: "???" }); }],
+]);
+group("持續區域（只描外框；有害＝實線＋斜紋、有益＝虛線＋光點）", [
+  ["有害・固定・毒", (c) => { for (let x = 0; x < 3; x++) for (let y = 0; y < 2; y++) floor(c, "stone", "none", x, y); FX.zone(c, [[0, 0], [1, 0], [2, 0], [1, 1]], { element: "poison", harmful: true, turns: 3 }); }, 3, 2],
+  ["有害・移動・雷", (c) => { for (let x = 0; x < 3; x++) for (let y = 0; y < 2; y++) floor(c, "stone", "none", x, y); FX.zone(c, [[0, 0], [1, 0], [0, 1], [1, 1]], { element: "lightning", harmful: true, anchor: "moving", dir: [1, 0], turns: 2 }); }, 3, 2],
+  ["有益・跟隨・聖光", (c) => { for (let x = 0; x < 3; x++) for (let y = 0; y < 2; y++) floor(c, "grass", "none", x, y); FX.zone(c, [[0, 0], [1, 0], [2, 0], [0, 1], [1, 1], [2, 1]], { element: "holy", harmful: false, anchor: "caster", caster: [1, 1], turns: 1 }); }, 3, 2],
+  ["未知元素", (c) => { for (let x = 0; x < 2; x++) for (let y = 0; y < 2; y++) floor(c, "stone", "none", x, y); FX.zone(c, [[0, 0], [1, 0], [0, 1]], { element: "???", harmful: true }); }, 2, 2],
+]);
+group("煙霧／黑暗：畫在單位之上的半透明上層（只有 blocks_sight 的表面才有）", [
+  ["現況：煙霧", (c) => { floor(c, "stone", "smoke"); D.stamp(c, D.TEMPLATES.bandit, "south", T / 2, T * 0.82, 0.78, { dpr: 4 }); }],
+  ["提案：煙霧", (c) => { floor(c, "stone", "smoke"); D.stamp(c, D.TEMPLATES.bandit, "south", T / 2, T * 0.82, 0.78, { dpr: 4 }); FX.sightVeil(c, 0, 0, "smoke", 1, 1); }],
+  ["現況：黑暗", (c) => { floor(c, "stone", "darkness"); D.stamp(c, D.TEMPLATES.bandit, "south", T / 2, T * 0.82, 0.78, { dpr: 4 }); }],
+  ["提案：黑暗", (c) => { floor(c, "stone", "darkness"); D.stamp(c, D.TEMPLATES.bandit, "south", T / 2, T * 0.82, 0.78, { dpr: 4 }); FX.sightVeil(c, 0, 0, "darkness", 1, 1); }],
+]);
+</script>
+</body>
+</html>
