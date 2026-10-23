@@ -142,3 +142,9 @@ PM 查證：引擎現在武器技讀的是 **技能自己的屬性**——`engin
 6. 測試與實機（1600×900，玩家模式與 `?dev=1` 各看一次）。報告 `Phase3H-8報告.md`。
 
 **依賴使用者的決定**：魔劍士方案 A（武器技可帶心智第二屬性）。選 A 時另開一小段（約 0.3 段）：武器技第二屬性限心智屬性、武器屬性值與心智屬性取平均、魔劍斬改武器技＋智力、組合器可產生、卡片算法句。
+
+### 8.3 3H-8 驗收（2026-10-24）
+
+- PM 合併（無衝突；3H-7 還在跑）；ruff、format、mypy、lint-imports、`tests/skillgen`＋`api`＋`cli`＋`content`＋`narrative`＋`roguelite`＋`llm`＋`test_architecture` 3257、typecheck、vitest 887、`pnpm build` 全過。新檔 `skillgen/option_scaling.py`（第二屬性只列法術技、史詩以上，選項＝`allowed_attrs` 減主屬性；武器技不列；無第二屬性時列專精、選第二屬性自動拿掉專精）、`skillgen/option_rules.py`（耗費資源與代價說明由規則產生）；組合規則進 `Choice.info` 並標「現在不能加」；狀態選單排除沒有 `budget_points` 的；玩家模式不顯示種子、不合法技能不能匯出（後端 `export` 預設 422，開發者 `allow_illegal`）、暫定 concept 不顯示；`?dev=1` 開發者模式。報告 `Phase3H-8報告.md`。
+- **合併 3H-7 時要處理**：`tests/skillgen/test_workshop_options.py::test_random_skills_fit_the_options` 暫時過濾 `secondary_scaling_attr` 問題 → 3H-7 讓組合器從允許範圍抽之後拿掉這個過濾；3H-7 之前第二屬性選項不準（無標籤火焰法術被當身體類），主題改由效果推導後自動正確。
+- 待決 → #1 玩家模式隱藏「直接編輯 YAML」與規則代碼（例 `budget.weak`，只留中文原因）→ **併進 3-47**；#2 `?dev=1` 只讀網址 → 接受（單人原型，之後帳號權限再說）；#3 位置規則（第一個／最後一個）加入時自動排好 → **併進 3-47**（約 0.1 段）；#4 暫定 concept 以「暫定」判斷 → 接受。
