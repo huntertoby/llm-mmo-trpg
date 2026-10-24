@@ -138,8 +138,8 @@ def derive_keywords(affixes: Iterable[AffixDef], limit: int = 2) -> tuple[str, .
     """由詞條推導外觀關鍵字（依詞條順序、去重、取前 ``limit`` 個）。
 
     - 第 3 類（技能強化）：詞條的 ``keyword``（暫定寫法先對照 :data:`KEYWORD_ALIASES`）；
-    - 第 4 類（普攻附加）：``add_element`` 對照 :data:`ELEMENT_KEYWORD`、``on_hit_status`` 對照
-      :data:`STATUS_KEYWORD`。
+    - 第 4 類（普攻附加）：``add_element``／``weapon_element``（3K-1）對照 :data:`ELEMENT_KEYWORD`、
+      ``on_hit_status`` 對照 :data:`STATUS_KEYWORD`。
     其他類別不產生關鍵字。結果可能含前端不認得的 id（前端會跳過）。
     """
     found: list[str] = []
@@ -148,8 +148,9 @@ def derive_keywords(affixes: Iterable[AffixDef], limit: int = 2) -> tuple[str, .
         if isinstance(affix, KeywordAffix):
             keyword = KEYWORD_ALIASES.get(affix.keyword, affix.keyword)
         elif isinstance(affix, AttackAffix):
-            if affix.add_element is not None:
-                keyword = ELEMENT_KEYWORD.get(affix.add_element)
+            element = affix.add_element or affix.weapon_element
+            if element is not None:
+                keyword = ELEMENT_KEYWORD.get(element)
             elif affix.on_hit_status is not None:
                 keyword = STATUS_KEYWORD.get(affix.on_hit_status)
         if keyword is not None and keyword not in found:

@@ -38,8 +38,11 @@ __all__ = [
     "run_battle",
 ]
 
-LOG_FORMAT = "trpg-battle-log/70"
-"""``/70``（3-50b 後小修，06 6.5）：自己付的沉默也改為「回合結束才生效」
+LOG_FORMAT = "trpg-battle-log/71"
+"""``/71``（Phase 3K-1）：物品（``ItemDef``）多了 ``item_level`` 與 ``base_bonus_permille``（普通
+物品的基礎加成，併進裝備加值）；普攻附加詞條多了 ``weapon_element``（武器元素詞條，接上攻擊元素的
+優先順序）。裝備快照的內容與結算因此改變，``/70`` 的紀錄無法重播。
+``/70``（3-50b 後小修，06 6.5）：自己付的沉默也改為「回合結束才生效」
 （``dormant``），本回合仍可施法。
 同一份輸入的結算可能不同，因此 ``/69`` 的紀錄無法重播。
 ``/69``（Phase 3-50b）：代價換強度修正——護盾原語多了 ``duration``（``ShieldEffect.duration``）；

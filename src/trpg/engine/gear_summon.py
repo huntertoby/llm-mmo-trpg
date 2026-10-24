@@ -30,8 +30,9 @@ _PERMILLE = 1000
 
 def _inheritable(affix: AttackAffix) -> bool:
     """可以被召喚物繼承的普攻附加：元素、命中附帶狀態、連擊與分裂（符文要靠施放者自己的符文，
-    召喚物沒有，所以不繼承；繼承詞條本身也不傳）。"""
-    return not affix.summon_inherit and affix.rune is None
+    召喚物沒有，所以不繼承；繼承詞條本身也不傳）。武器元素詞條（3K-1）屬於施放者的主手武器，
+    也不繼承。"""
+    return not affix.summon_inherit and affix.rune is None and affix.weapon_element is None
 
 
 def inherit_attack_gear(owner: UnitState, current: GearState) -> GearState:

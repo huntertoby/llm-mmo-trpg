@@ -4,8 +4,8 @@
 
 1. **臨時附魔**（狀態的 ``attack_element``，由附魔技能施加；同時只會有一個，後施放的覆蓋先施放的）；
 2. **普攻附加元素詞條**（只管普攻）；
-3. **武器元素詞條**（主手，管普攻與無元素武器技；詞條本身在 Phase 3K-1，這裡先留
-   :func:`weapon_affix_element` 介面，回傳 ``None``）；
+3. **武器元素詞條**（主手，管普攻與無元素武器技；Phase 3K-1，:func:`weapon_affix_element`
+   從主手物品生效中的 ``weapon_element`` 詞條讀出）；
 4. **武器本身的元素**（例如法杖）。
 
 - **普攻**：附魔 ＞ 普攻附加 ＞ 武器元素詞條 ＞ 武器本身 ＞ 物理。
@@ -21,6 +21,7 @@ from __future__ import annotations
 from dataclasses import dataclass
 from typing import TYPE_CHECKING
 
+from trpg.content.equipment import AttackAffix
 from trpg.engine.gear_enhance import gear_attack_element
 from trpg.engine.state import UnitState
 from trpg.shared.types import Element
@@ -80,9 +81,20 @@ def resolve_attack_element(
     return Element.PHYSICAL
 
 
+_MAIN_HAND = "main_hand"
+
+
 def weapon_affix_element(unit: UnitState) -> Element | None:
-    """武器元素詞條的元素。詞條本身在 Phase 3K-1，這裡先回傳 ``None``（3K-1 接上）。"""
-    del unit
+    """武器元素詞條的元素（Phase 3K-1，08 8.21.2.4 #52）：主手物品上生效中的第一條
+    ``weapon_element`` 普攻附加詞條（同一件最多 1 條，穿戴驗證擋住）；沒有時 ``None``。"""
+    for entry in unit.gear.active_affixes("attack"):
+        affix = entry.affix
+        if (
+            entry.slot == _MAIN_HAND
+            and isinstance(affix, AttackAffix)
+            and affix.weapon_element is not None
+        ):
+            return affix.weapon_element
     return None
 
 

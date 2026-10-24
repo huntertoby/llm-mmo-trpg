@@ -147,6 +147,85 @@ affixes:
     name_zh: 普攻帶雷電
     slots: [weapon]
     add_element: lightning
+  # 普攻附加元素的其他 7 種（Phase 3K-1，08 8.21.2.4 #52）：只管普攻；法杖等已有元素的武器不能掛。
+  - id: affix_attack_fire
+    category: attack
+    name_zh: 普攻帶{add_element}
+    slots: [weapon]
+    add_element: fire
+  - id: affix_attack_ice
+    category: attack
+    name_zh: 普攻帶{add_element}
+    slots: [weapon]
+    add_element: ice
+  - id: affix_attack_poison
+    category: attack
+    name_zh: 普攻帶{add_element}
+    slots: [weapon]
+    add_element: poison
+  - id: affix_attack_earth
+    category: attack
+    name_zh: 普攻帶{add_element}
+    slots: [weapon]
+    add_element: earth
+  - id: affix_attack_wind
+    category: attack
+    name_zh: 普攻帶{add_element}
+    slots: [weapon]
+    add_element: wind
+  - id: affix_attack_holy
+    category: attack
+    name_zh: 普攻帶{add_element}
+    slots: [weapon]
+    add_element: holy
+  - id: affix_attack_shadow
+    category: attack
+    name_zh: 普攻帶{add_element}
+    slots: [weapon]
+    add_element: shadow
+  # 武器元素詞條（Phase 3K-1，08 8.21.2.4 #52）：主手；普攻與無元素武器技的物理傷害改成該元素
+  # （優先順序見 06 6.10 與 src/trpg/engine/attack_element.py）；不出現在法杖等已有元素的武器上；
+  # 同一件最多 1 條；物品預算 15 點（item_gen.yaml）。
+  - id: affix_weapon_fire
+    category: attack
+    name_zh: 武器帶{weapon_element}：普攻與無元素武器技的物理傷害改成{weapon_element}
+    slots: [weapon]
+    weapon_element: fire
+  - id: affix_weapon_ice
+    category: attack
+    name_zh: 武器帶{weapon_element}：普攻與無元素武器技的物理傷害改成{weapon_element}
+    slots: [weapon]
+    weapon_element: ice
+  - id: affix_weapon_lightning
+    category: attack
+    name_zh: 武器帶{weapon_element}：普攻與無元素武器技的物理傷害改成{weapon_element}
+    slots: [weapon]
+    weapon_element: lightning
+  - id: affix_weapon_poison
+    category: attack
+    name_zh: 武器帶{weapon_element}：普攻與無元素武器技的物理傷害改成{weapon_element}
+    slots: [weapon]
+    weapon_element: poison
+  - id: affix_weapon_earth
+    category: attack
+    name_zh: 武器帶{weapon_element}：普攻與無元素武器技的物理傷害改成{weapon_element}
+    slots: [weapon]
+    weapon_element: earth
+  - id: affix_weapon_wind
+    category: attack
+    name_zh: 武器帶{weapon_element}：普攻與無元素武器技的物理傷害改成{weapon_element}
+    slots: [weapon]
+    weapon_element: wind
+  - id: affix_weapon_holy
+    category: attack
+    name_zh: 武器帶{weapon_element}：普攻與無元素武器技的物理傷害改成{weapon_element}
+    slots: [weapon]
+    weapon_element: holy
+  - id: affix_weapon_shadow
+    category: attack
+    name_zh: 武器帶{weapon_element}：普攻與無元素武器技的物理傷害改成{weapon_element}
+    slots: [weapon]
+    weapon_element: shadow
   - id: affix_attack_mark
     category: attack
     name_zh: 普攻命中時使目標「{on_hit_status}」{status_duration} 回合

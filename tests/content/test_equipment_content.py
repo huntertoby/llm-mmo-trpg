@@ -61,6 +61,21 @@ WHITELIST: dict[str, tuple[str, ...]] = {
         "affix_attack_combo",
         "affix_attack_cleave",
         "affix_summon_inherit_attack",
+        "affix_attack_fire",
+        "affix_attack_ice",
+        "affix_attack_poison",
+        "affix_attack_earth",
+        "affix_attack_wind",
+        "affix_attack_holy",
+        "affix_attack_shadow",
+        "affix_weapon_fire",
+        "affix_weapon_ice",
+        "affix_weapon_lightning",
+        "affix_weapon_poison",
+        "affix_weapon_earth",
+        "affix_weapon_wind",
+        "affix_weapon_holy",
+        "affix_weapon_shadow",
     ),
     "weapon_trait": (
         "affix_trait_hammer_knockback",
@@ -103,9 +118,10 @@ def _loadout(**slots: str) -> Loadout:
 # ---------------------------------------------------------------------------
 
 
-def test_whitelist_has_all_51_affixes_in_11_categories() -> None:
+def test_whitelist_has_all_66_affixes_in_11_categories() -> None:
+    """3K-1 加了 7 條普攻附加元素與 8 條武器元素詞條（#52）：51 → 66。"""
     affixes = library().affixes
-    assert len(affixes) == 51
+    assert len(affixes) == 66
     by_category: dict[str, set[str]] = {}
     for affix in affixes.values():
         by_category.setdefault(affix.category, set()).add(affix.id)

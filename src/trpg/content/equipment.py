@@ -89,6 +89,7 @@ __all__ = [
     "loadout_problems",
     "resolve_loadout",
     "rune_pair_problems",
+    "weapon_element_problems",
 ]
 
 AFFIX_ID_PATTERN = r"^affix_[a-z0-9_]+$"
@@ -373,6 +374,10 @@ class AttackAffix(_AffixBase):
     ``summon_inherit``（Phase 3-33f2，6.29.6；與其他恰好填一個）：你的召喚物繼承你身上 1 條普攻
     附加詞條（元素、命中附帶狀態、連擊、分裂；符文不繼承；依詞條 ID 取第一條），本身沒有其他效果。
 
+    ``weapon_element``（Phase 3K-1，08 8.21.2.4，玩法決定 #52；與其他恰好填一個）：**武器元素詞條**
+    ——主手的普攻與無元素武器技的物理傷害改成這個元素（優先順序見
+    :mod:`trpg.engine.attack_element`）；本身已有元素的武器（法杖等）不能掛；同一件最多 1 條。
+
     三種都 **每回合最多觸發 1 次**；同一件裝備不能同時有 ``inscribe`` 與 ``detonate``。
 
     ``strike``（Phase 3-32a，08 8.25 普攻流；與上面三者恰好填一個）：
@@ -394,6 +399,7 @@ class AttackAffix(_AffixBase):
     strike: Literal["combo", "cleave"] | None = None
     strike_permille: int | None = Field(default=None, ge=100, le=1000)
     summon_inherit: bool = False
+    weapon_element: Element | None = None
 
     @model_validator(mode="after")
     def _check(self) -> AttackAffix:
@@ -403,15 +409,20 @@ class AttackAffix(_AffixBase):
             self.rune is not None,
             self.strike is not None,
             self.summon_inherit,
+            self.weapon_element is not None,
         ]
         if sum(given) != 1:
             raise ValueError(
                 f"詞條 {self.id}：add_element、on_hit_status、rune、strike、"
-                "summon_inherit 恰好填一個"
+                "summon_inherit、weapon_element 恰好填一個"
             )
         self._check_strike()
         if self.add_element is Element.PHYSICAL:
             raise ValueError(f"詞條 {self.id}：add_element 不可是物理")
+        if self.weapon_element is Element.PHYSICAL:
+            raise ValueError(f"詞條 {self.id}：weapon_element 不可是物理")
+        if self.weapon_element is not None and self.slots != ("weapon",):
+            raise ValueError(f"詞條 {self.id}：武器元素詞條只能出現在主手（slots: [weapon]）")
         if (self.on_hit_status is None) != (self.status_duration is None):
             raise ValueError(f"詞條 {self.id}：on_hit_status 與 status_duration 要一起填")
         self._check_rune()
@@ -755,6 +766,10 @@ class ItemDef(ContentModel):
     - ``tags``：物品標籤（例如盾 ``shield``，給「限盾」的詞條用）。
     - ``legendary``：傳說物品（可掛改變規則類詞條）。
     - ``affixes``：1～``EquipmentRules.max_affixes_per_item`` 條（同一件不可重複同一 id）。
+    - ``item_level``：物品等級（Phase 3K-1；產生器產生的物品才有，物品預算檢查用；08 8.22.1）。
+    - ``base_bonus_permille``：普通稀有度沒有詞條時，詞條部分換成的基礎加成（Phase 3K-1，08 8.22.1
+      第 5 點）：武器是傷害 +‰、其他部位是防禦值 +‰（併進裝備的戰鬥中加值；傷害計入全身傷害加成
+      上限）。
     - 外觀（Phase 3G-G5a，只影響圖示，不影響任何規則；清單在
       ``content/equipment/appearance.yaml``，見 :mod:`trpg.content.appearance`）：
       ``kind`` 造型、``form`` 形制、``material`` 材質、
@@ -777,6 +792,8 @@ class ItemDef(ContentModel):
     dye: str | None = Field(default=None, pattern=ID_PATTERN)
     style: str | None = Field(default=None, pattern=ID_PATTERN)
     rarity: str | None = Field(default=None, pattern=ID_PATTERN)
+    item_level: int | None = Field(default=None, ge=1, le=99)
+    base_bonus_permille: int = Field(default=0, ge=0)
 
     @model_validator(mode="after")
     def _check(self) -> ItemDef:
@@ -961,7 +978,22 @@ def _affix_slot_problems(
         and weapon.element is not Element.PHYSICAL
     ):
         problems.append(f"{where}：{weapon.name_zh} 已有元素，不能再加普攻元素")
+    if (
+        isinstance(affix, AttackAffix)
+        and affix.weapon_element is not None
+        and weapon is not None
+        and weapon.element is not Element.PHYSICAL
+    ):
+        problems.append(f"{where}：{weapon.name_zh} 已有元素，不能掛武器元素詞條")
     return problems
+
+
+def weapon_element_problems(name: str, affixes: Iterable[AffixDef]) -> list[str]:
+    """同一件裝備最多 1 條武器元素詞條（Phase 3K-1，08 8.21.2.4 #52）。"""
+    count = sum(1 for a in affixes if isinstance(a, AttackAffix) and a.weapon_element is not None)
+    if count > 1:
+        return [f"{name}：武器元素詞條同一件最多 1 條（有 {count} 條）"]
+    return []
 
 
 def rune_pair_problems(name: str, affixes: Iterable[AffixDef]) -> list[str]:
@@ -1000,7 +1032,11 @@ def item_problems(
         problems += _affix_slot_problems(item, affix, weapon, weapons)
         problems += _value_problems(item, affix, roll.value)
     known = [a for roll in item.affixes if (a := affixes.get(roll.affix)) is not None]
-    return problems + rune_pair_problems(f"物品 {item.id}", known)
+    return (
+        problems
+        + rune_pair_problems(f"物品 {item.id}", known)
+        + weapon_element_problems(f"物品 {item.id}", known)
+    )
 
 
 def _value_problems(item: ItemDef, affix: AffixDef, value: int | None) -> list[str]:
@@ -1074,6 +1110,7 @@ def loadout_problems(loadout: Loadout, weapon: WeaponDef, rules: EquipmentRules)
         if len(entry.affixes) > rules.max_affixes_per_item:
             problems.append(f"{item.name_zh}：詞條最多 {rules.max_affixes_per_item} 條")
         problems += rune_pair_problems(item.name_zh, (e.affix for e in entry.affixes))
+        problems += weapon_element_problems(item.name_zh, (e.affix for e in entry.affixes))
     main = by_slot.get("main_hand")
     if main is not None and main.item.weapon is not None and main.item.weapon != weapon.id:
         problems.append(
