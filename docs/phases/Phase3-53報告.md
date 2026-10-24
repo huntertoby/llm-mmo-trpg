@@ -44,8 +44,15 @@
 
 ## 測試
 
-- pytest：skillgen、content、narrative 全過（3-53 變更後 skillgen／content／narrative 一起跑 5 項失敗均為上述三處測試對新關鍵字的假設，已修正）；roguelite 167 passed；api、sim、llm、engine、`-m "slow or not slow" tests/cli` 的結果見下節。
+- pytest（全部在 worktree 實跑）：skillgen、content、narrative 加入新關鍵字後有 5 項失敗，均為測試對「十個關鍵字」的假設，已修正（見上）；roguelite 167 passed；api 294 passed；sim 104 passed（含修正 `test_keyword_sample` 的種子，原種子下技能名「霜寒之觸」撞到開發者起始包標籤）；llm 89 passed；engine 3042 passed、1 failed；`-m "slow or not slow" tests/cli` 146 passed、1 failed 後已更新快照。
 - vitest 989 passed、build 成功；ruff、format、mypy、lint-imports 通過。
+
+### 測試補充
+
+- `tests/engine/test_summons_e1.py::test_the_infusion_table_covers_all_ten_keywords`：中毒沒有召喚灌注（規格沒要求，需要時另案），斷言改為「推導表扣掉 poisoned 後等於原本十個」。
+- `tests/cli/snapshots/llm_propose_mock.txt`：已用 `UPDATE_CLI_SNAPSHOTS=1` 重新產生。原因：Mock 提議依關鍵字清單輪替，清單從 10 個變 11 個，三題的關鍵字改變（prone／collision／marked → summon／summon／poisoned）。`cli_output_hashes.json`（技能清單與 7 場戰鬥）**沒有變**，`skill_icons.json` 沒有變。
+- **既有失敗，與 3-53 無關**：`tests/engine/test_self_costs.py::test_a_battle_with_the_four_demo_skills_replays_identically` 斷言 `LOG_FORMAT.endswith("/73")`，但 `LOG_FORMAT` 在 3-52 後已是 `/74`（3-52 沒更新這條斷言）。我沒有動它；建議開發 PM 順手改成 `/74`。
+- 備註：`tests/cli/test_output_snapshots.py` 單一測試約 300 秒，剛好貼著 pyproject 的 `timeout = 300`，在負載高的機器上會被 thread timeout 殺掉；我用 `--timeout=3000` 驗證通過。
 
 ## 待 PM 決定
 
