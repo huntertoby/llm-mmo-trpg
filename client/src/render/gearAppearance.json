@@ -46,7 +46,8 @@
     "marked",
     "high_ground",
     "concealed",
-    "summon"
+    "summon",
+    "poisoned"
   ],
   "elementKeywords": [
     "ignite",
