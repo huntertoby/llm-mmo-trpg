@@ -10,8 +10,8 @@
   雙手或成對武器會把副手收進背包。穿戴一律過 :func:`~trpg.content.equipment.loadout_problems`。
 - **目前裝備**（:func:`worn_items`、:func:`run_loadout`）：``RunState.equipment`` 非空就是全身裝備，
   否則用測試模式挑的裝備或範本的裝備（舊存檔與沒換過裝的一輪）。
-- **AI 挑法**（:func:`auto_gear_pick`）：預算分數（詞條點數＋基礎加成＋基礎強度，3K-2b 的 ``item_strength``）比
-  該部位目前裝備高最多的那件；沒有比較高的就跳過。
+- **AI 挑法**（:func:`auto_gear_pick`）：預算分數（詞條點數＋基礎加成＋基礎強度，``item_strength``）
+  比該部位目前裝備高最多的那件；沒有比較高的就跳過。
 
 純函式，亂數只用 :class:`~trpg.shared.rng.Rng`。
 """

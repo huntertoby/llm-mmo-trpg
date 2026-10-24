@@ -59,8 +59,8 @@ __all__ = [
     "affix_budget",
     "affix_points",
     "base_bonus_points",
-    "item_budget",
     "item_base_points",
+    "item_budget",
     "item_budget_problems",
     "item_gen_problems",
     "item_points",
@@ -133,12 +133,12 @@ class BaseBonusRule(ContentModel):
 
 
 class BaseStrengthRule(ContentModel):
-    """整件物品的基礎強度換算（Phase 3K-2b，08 8.21 單位價；只用在「預算分數」的比較，不是預算檢查）。
+    """整件物品的基礎強度換算（3K-2b，08 8.21 單位價；只用在「預算分數」比較，不是預算檢查）。
 
     - ``weapon_damage``：武器基礎傷害平均（骰平均＋固定傷害，乘每次普攻的打擊數）的單位價
       （8.21.2 表「傷害 1 點 ＝ 1」）；
     - ``armor_defense``：防具每 1 點基礎防禦的單位價（防禦值 +2% ＝ 3 點，8.21.2 表）；
-    - ``body_defense``：身體防具各類型（外觀造型 id）的基礎防禦（08 8.12 表：布袍 1、外套 2、皮甲 3、
+    - ``body_defense``：身體防具各類型（外觀造型 id）的基礎防禦（08 8.12：布袍 1、外套 2、皮甲 3、
       鎖甲 5、板甲 7）；
     - ``small_defense``：頭、手、腳（「小防禦＋詞條」）的基礎防禦。
     其他部位（副手、項鍊、戒指）沒有基礎防禦。
