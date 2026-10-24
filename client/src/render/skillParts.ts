@@ -740,6 +740,12 @@ const COND: Readonly<Record<string, Draw>> = {
     c.fillRect(4, -8, 3, 16);
     arrow(c, -9, -7, -4, -7, 3);
   },
+  // 手持某種武器時（3I-5）：一把直立的劍（劍身、護手、握柄）
+  wielding_weapon: (c) => {
+    c.fillRect(-1.5, -9, 3, 12);
+    c.fillRect(-5, 3, 10, 2.5);
+    c.fillRect(-1.5, 5.5, 3, 4);
+  },
 };
 
 const CONDITION_COLOR = "#ffe9a8";

@@ -93,6 +93,7 @@ __all__ = [
     "skill_shape_text",
     "variant_change_text",
     "variant_condition_text",
+    "weapon_only_text",
 ]
 
 _AFFECTS = {

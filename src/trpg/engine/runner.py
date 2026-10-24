@@ -38,8 +38,11 @@ __all__ = [
     "run_battle",
 ]
 
-LOG_FORMAT = "trpg-battle-log/69"
-"""``/69``（Phase 3-50b）：代價換強度修正——護盾原語多了 ``duration``（``ShieldEffect.duration``）；
+LOG_FORMAT = "trpg-battle-log/70"
+"""``/70``（Phase 3I-5）：武器親和與招牌技——條件多了 ``wielding_weapon``（手持某種武器時，看主手
+武器或副手的 ID）；技能多了 ``weapon_only``（限定武器，不符不能裝備、不能施放）；規則包多了
+``gear_names``。規則包內嵌的技能與條件表因此不同，``/69`` 的紀錄無法重播。
+``/69``（Phase 3-50b）：代價換強度修正——護盾原語多了 ``duration``（``ShieldEffect.duration``）；
 自己付的暈眩改為「本回合照常、回合結束才生效」（狀態 ``dormant``，不再歸零本回合 AP 與移動點數）。
 同一份輸入的結算可能不同，因此 ``/68`` 的紀錄無法重播。
 ``/68``（Phase 3-50）：代價換強度——自己付的代價（``cost.self_status``、新的 ``cost.overdraft``）

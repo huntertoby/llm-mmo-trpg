@@ -46,6 +46,11 @@ export function SkillCardView({ card, compact = false, activeVariantId = null, h
       </div>
       <AssemblyFormula icon={card.icon} />
       <KeywordLine keywords={card.keywords} />
+      {(card.weapon_only ?? null) !== null && (
+        <div className="small skill-card-weapon-only">
+          {card.weapon_only}（沒拿就不能裝備、不能施放）
+        </div>
+      )}
       {card.condition !== null && <div className="small">條件：{card.condition}</div>}
       {(card.timing ?? null) !== null && <div className="small">{card.timing}</div>}
       {(card.activation ?? null) !== null && <div className="small">啟動：{card.activation}（啟動前不生效）</div>}

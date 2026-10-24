@@ -8841,6 +8841,17 @@
             "type": "string",
             "title": "Weapon Req"
           },
+          "weapon_only": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Weapon Only"
+          },
           "scaling": {
             "type": "string",
             "title": "Scaling"

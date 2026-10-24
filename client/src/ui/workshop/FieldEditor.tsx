@@ -276,14 +276,19 @@ function MultiChoiceField({ spec, container, base, onChange }: FieldProps) {
     <div className="ws-field">
       <Label spec={spec} />
       <div className="ws-chips">
-        {spec.choices.map((c) => (
-          <Hint key={String(c.value)} text={descOf(c)}>
-            <label className={`ws-chip${value.includes(String(c.value)) ? " selected" : ""}`}>
-              <input type="checkbox" checked={value.includes(String(c.value))} onChange={() => toggle(String(c.value))} />
-              {c.name_zh}
-            </label>
-          </Hint>
-        ))}
+        {spec.choices.map((c) => {
+          const picked = value.includes(String(c.value));
+          // 事前停用（3I-5）：驗證器會擋的選項不能勾；已勾的不停用，讓玩家看得到自己選了什麼
+          const reason = picked ? null : unavailableReason(c);
+          return (
+            <Hint key={String(c.value)} text={reason !== null ? `不能選：${reason}` : descOf(c)}>
+              <label className={`ws-chip${picked ? " selected" : ""}${reason !== null ? " unavailable" : ""}`}>
+                <input type="checkbox" checked={picked} disabled={reason !== null} onChange={() => toggle(String(c.value))} />
+                {c.name_zh}
+              </label>
+            </Hint>
+          );
+        })}
       </div>
     </div>
   );
