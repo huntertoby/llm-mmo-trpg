@@ -21,3 +21,8 @@
 - 待決：`STRIDE` 是否太大、武器側面角度（3S-3）、走路動畫（不做）→ 交美術 PM 驗收時一起看。
 
 - **美術 PM 驗收通過**（`docs/art/3S-1檢查.md`，原尺寸重拍 `docs/art/port/3S-1/doll-gallery-artpm.png`）：`STRIDE` 0.28 不改；近側手臂固定前擺、不做走路動畫，接受。
+
+### 3S-2（2026-10-24，開發 PM 合併；待美術 PM 驗收）
+
+- 報告 `Phase3S-2報告.md`。新檔 `client/src/render/paperdollSideGear.ts`：頭部 9 種 kind 全部側面形狀（資料實際只有 9 種，規格寫 10 種有誤）；角盔兩角都往後彎、遠側較暗先畫（`drawHornSide` 匯出給 3R-3 種族角共用）；盾（圓盾、鳶盾、塔盾）、法書、披風的側面版，法器珠沿用球體。`SideHooks` 移除 `headgearFront`、`helmetBack`（3S-3／3I-3 合併時留意）。doll-gallery 新增「⑥ 側面」。截圖 `docs/art/port/3S-2/`。
+- 檢查（main）：vitest 958、build；開發 PM 看過朝東頭部截圖。
