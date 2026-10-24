@@ -25,8 +25,10 @@ from trpg.shared.types import Attribute
 SINGLE = {"type": "single", "range": 1}
 
 
-def _weapon_skill(second: str | None = None, **over: Any) -> SkillDef:
-    base = make_skill(SID, SINGLE, [{"type": "damage"}], category="weapon", attr="str")
+def _weapon_skill(
+    second: str | None = None, effects: list[dict[str, Any]] | None = None, **over: Any
+) -> SkillDef:
+    base = make_skill(SID, SINGLE, effects or [{"type": "damage"}], category="weapon", attr="str")
     data = {**base.model_dump(mode="json"), **over}
     if second is not None:
         data["secondary_scaling_attr"] = second
@@ -125,6 +127,21 @@ def test_card_current_bonus_equals_combat(
     result = cast(hit_with(state), target_id=U2)
     (dealt,) = [e for e in of(result, DamageDealt) if e.source_id == U1]
     assert dealt.scaled_permille // 1000 == shown
+
+
+def test_contest_text_follows_the_owner_weapon() -> None:
+    """擊倒的對抗屬性：有持有者寫那把武器實際的屬性（和引擎 ``contest_attr`` 同一個來源）。"""
+    lib = library()
+    skill = _weapon_skill(effects=[{"type": "damage"}, {"type": "knock_prone"}])
+    dagger = lib.weapons["dagger"]
+    plain = skill_card(lib, skill)
+    held = skill_card(lib, skill, owner=CardOwner(weapon=dagger, attr_get=lambda a: 10))
+    assert "擊倒（力量對抗）" in plain.effects[1]
+    assert "擊倒（敏捷／力量（取較高）對抗）" in held.effects[1]
+    both = skill_card(
+        lib, _weapon_skill("int", effects=[{"type": "knock_prone"}]), owner=CardOwner(weapon=dagger)
+    )
+    assert both.effects[0].count("取平均") == 1
 
 
 SPELLS = [

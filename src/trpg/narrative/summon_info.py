@@ -326,9 +326,15 @@ class SummonInfoCard(BaseModel):
     """依據的一句話（給小卡標題旁註明）。"""
 
 
+def _summon_attr_name(skill: SkillDef) -> str:
+    """召喚物成長看的屬性（3-55）：武器技看手上武器的屬性（引擎 ``skill_scaling_attr``），
+    不能寫技能自己的（只是顯示提示）縮放屬性。"""
+    return "武器屬性" if skill.category == "weapon" else skill.scaling_attr.display_name
+
+
 def _baseline_note(lib: ContentLibrary, skill: SkillDef, role: int) -> str:
     growth = lib.ruleset.core.summon_growth
-    attr = skill.scaling_attr.display_name
+    attr = _summon_attr_name(skill)
     return (
         f"施放者 1 級、{attr}修正 0 時；施放者每升 1 級 +{growth.hp_per_level}、"
         f"{attr}修正每 +1 再 +{growth.hp_per_attr_mod}，再乘定位係數 ×{role / 1000:g}"
@@ -337,7 +343,7 @@ def _baseline_note(lib: ContentLibrary, skill: SkillDef, role: int) -> str:
 
 def _actual_note(lib: ContentLibrary, skill: SkillDef, role: int, stats: SummonStats) -> str:
     growth = lib.ruleset.core.summon_growth
-    attr = skill.scaling_attr.display_name
+    attr = _summon_attr_name(skill)
     return (
         f"你目前 {stats.level} 級、{attr}修正 {stats.attr_mod}："
         f"施放者每升 1 級 +{growth.hp_per_level}、{attr}修正每 +1 再 +{growth.hp_per_attr_mod}，"
