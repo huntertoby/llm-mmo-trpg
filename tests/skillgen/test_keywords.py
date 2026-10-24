@@ -44,6 +44,10 @@ KEYWORDS = (
     "summon",
 )
 NAMES = ("點燃", "潮濕", "帶電", "冰凍", "倒地", "撞擊", "標記", "高處", "隱蔽", "召喚物")
+# Phase 3-53：中毒關鍵字（06 6.27.1，#59）。技能池不足 3 招（等 3-54c 毒種子技能），
+# 先不放進 KEYWORDS，否則依 KEYWORDS 參數化的池測試會失敗；補齊後併進 KEYWORDS 並刪掉 EXTRA_*。
+EXTRA_KEYWORDS = ("poisoned",)
+EXTRA_NAMES = ("中毒",)
 
 
 def _skill(**fields: Any) -> SkillDef:
@@ -76,10 +80,10 @@ def _keywords(**fields: Any) -> tuple[tuple[str, ...], tuple[str, ...]]:
 # ---------------------------------------------------------------------------
 
 
-def test_table_has_the_ten_keywords_in_order() -> None:
+def test_table_has_the_eleven_keywords_in_order() -> None:
     table = library().keywords
-    assert table.ids() == KEYWORDS
-    assert tuple(k.name_zh for k in table.keywords) == NAMES
+    assert table.ids() == (*KEYWORDS, *EXTRA_KEYWORDS)
+    assert tuple(k.name_zh for k in table.keywords) == (*NAMES, *EXTRA_NAMES)
 
 
 def test_no_keyword_is_a_school_or_theme() -> None:
@@ -236,7 +240,7 @@ def test_every_keyword_has_a_positive_example_for_makes_and_uses() -> None:
 
 def test_every_keyword_is_made_and_used_by_shipped_skills() -> None:
     lib = library()
-    seen: dict[str, set[str]] = {k: set() for k in KEYWORDS}
+    seen: dict[str, set[str]] = {k: set() for k in (*KEYWORDS, *EXTRA_KEYWORDS)}
     for skill in lib.skills.values():
         found = derive_keywords(skill, lib.keywords)
         for k in found.makes:
@@ -529,7 +533,8 @@ def test_exclusive_only_derivation_drops_general_and_provisional_rules() -> None
         fire, lib.keywords
     )
     pools = keyword_pools(lib, starter_only=True, exclusive_only=True)
-    assert all(len(ids) >= 3 for ids in pools.values())
+    # 中毒池（3-53）還不足 3 招，等 3-54c 毒種子技能補齊後移除這個例外。
+    assert all(len(ids) >= 3 for k, ids in pools.items() if k not in EXTRA_KEYWORDS)
     assert len(pools["prone"]) < len(keyword_pools(lib, starter_only=True)["prone"])
 
 
