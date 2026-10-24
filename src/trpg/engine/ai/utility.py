@@ -178,7 +178,7 @@ from trpg.engine.rules.movement import (
     step_cost,
 )
 from trpg.engine.rules.statuses import forced_target_sources, shield_amount, stance_status_ids
-from trpg.engine.skills.conditions import is_flanked
+from trpg.engine.skills.conditions import is_flanked, unit_held
 from trpg.engine.skills.mobility import shadowstep_behind
 from trpg.engine.skills.scaling import mastery_duration_bonus
 from trpg.engine.skills.targeting import (
@@ -1798,7 +1798,7 @@ def _grant_supports(
     if spec.skill in target.skills:
         return False
     granted = state.ruleset.skill_def(spec.skill)
-    if weapon_problem(granted, target.weapon.weapon_class) is not None:
+    if weapon_problem(granted, target.weapon.weapon_class, unit_held(target)) is not None:
         return False
     left = granted_remaining(target, spec.skill)
     return left is None or left <= 1

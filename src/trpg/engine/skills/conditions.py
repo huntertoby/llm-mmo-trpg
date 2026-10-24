@@ -17,10 +17,16 @@
 
 from __future__ import annotations
 
-from collections.abc import Iterable
+from collections.abc import Callable, Iterable
 from typing import NamedTuple
 
-from trpg.content.skills import CASTER_CONDITIONS, ConditionSpec, SkillDef, condition_text
+from trpg.content.skills import (
+    CASTER_CONDITIONS,
+    ConditionSpec,
+    SkillDef,
+    condition_text,
+    held_gear,
+)
 from trpg.engine.ids import CONCEALED
 from trpg.engine.rules.facing import is_behind
 from trpg.engine.rules.geometry import XY
@@ -35,6 +41,7 @@ __all__ = [
     "skill_condition_met",
     "skill_condition_problem",
     "subjects_of",
+    "unit_held",
 ]
 
 _PERMILLE = 1000
@@ -61,20 +68,28 @@ def _has_living_ally_beside(state: BattleState, unit: UnitState) -> bool:
     return False
 
 
+def unit_held(unit: UnitState) -> dict[str, str]:
+    """單位手上的主手武器與副手（ID → 中文名；Phase 3I-5）：``wielding_weapon`` 條件與技能的
+    限定武器（``weapon_only``）都看這份。"""
+    return held_gear(unit.weapon, unit.gear.offhand)
+
+
 def _caster_condition_met(state: BattleState, caster: UnitState, condition: ConditionSpec) -> bool:
     """只看施放者的條件（:data:`CASTER_CONDITIONS`）。"""
     kind = condition.type
     if kind == "self_hp_below":
         assert condition.permille is not None
         return _hp_below(caster, condition.permille)
-    if kind == "moved_this_turn":
-        return caster.moved_this_turn
-    if kind == "adjacent_ally":
-        return _has_living_ally_beside(state, caster)
-    if kind == "first_round":
-        return state.round == 1
-    if kind == "self_concealed":
-        return caster.has_status(CONCEALED)
+    simple: dict[str, Callable[[], bool]] = {
+        "moved_this_turn": lambda: caster.moved_this_turn,
+        "adjacent_ally": lambda: _has_living_ally_beside(state, caster),
+        "first_round": lambda: state.round == 1,
+        "self_concealed": lambda: caster.has_status(CONCEALED),
+        # 手持某種武器時（3I-5，6.10 #50）：主手武器或副手的 ID 相符
+        "wielding_weapon": lambda: condition.weapon in unit_held(caster),
+    }
+    if kind in simple:
+        return simple[kind]()
     assert kind == "cast_tag_this_turn" and condition.tag is not None
     return condition.tag in caster.turn_cast_tags
 
@@ -194,5 +209,6 @@ def skill_condition_problem(
         surface_name=lambda surface: rules.surface_def(surface).name_zh,
         tag_name=rules.skill_tags.name,
         tag_runes=rules.skill_tags.rune_names(),
+        weapon_name=lambda wid: rules.gear_names.get(wid, wid),
     )
     return f"技能條件不成立：{skill.name_zh} 需要「{text}」"

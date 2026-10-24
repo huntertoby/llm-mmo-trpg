@@ -108,6 +108,9 @@ class CandidateRequest:
     weapon_attrs: tuple[Attribute, ...] = ()
     """主角手上武器的縮放屬性（含第二縮放屬性；Phase 3H-7）。武器技看手上武器（3H-6），所以比對
     屬性偏好時武器技用這個，不用技能自己的 ``scaling_attr``（只是顯示提示）；空 ＝ 退回技能的。"""
+    held: Mapping[str, str] = field(default_factory=dict)
+    """主角手上的主手武器與副手（ID → 中文名；Phase 3I-5）：限定武器的招牌技只在拿著那種武器時
+    才會出現在候選裡；隨機組合器的武器親和條件也只挑拿著的那一種。空 ＝ 不給限定武器的技能。"""
 
 
 @dataclass(frozen=True, slots=True)
@@ -171,7 +174,7 @@ class _Search:
             skill.rarity != "legendary"  # 傳說技能不當候選（組合器的隨機結果也一樣）
             and skill.id not in self.taken
             and skill.id not in self.request.exclude
-            and weapon_problem(skill, self.request.weapon_class) is None
+            and weapon_problem(skill, self.request.weapon_class, self.request.held) is None
         )
 
     def _want_ok(self, skill: SkillDef, want: AttrWant | None) -> bool:

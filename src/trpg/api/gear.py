@@ -36,6 +36,7 @@ from trpg.content.equipment import (
     Loadout,
     affix_text,
     item_problems,
+    loadout_held,
     loadout_problems,
     resolve_loadout,
 )
@@ -259,9 +260,10 @@ def _equipped_hero(
         template = template.model_copy(update={"weapon": weapon.id})
     problems = loadout_problems(loadout, weapon, setup.ruleset.equipment)
     defs = setup.ruleset.skills.by_id()
+    held = loadout_held(weapon, loadout)
     for skill_id in template.skills:
         skill = defs.get(skill_id)
-        found = None if skill is None else weapon_problem(skill, weapon.weapon_class)
+        found = None if skill is None else weapon_problem(skill, weapon.weapon_class, held)
         if found is not None:
             problems.append(f"主手換成{weapon.name_zh}後：{found}")
     units = list(setup.units)

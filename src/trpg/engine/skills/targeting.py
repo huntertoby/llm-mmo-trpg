@@ -60,7 +60,7 @@ from trpg.engine.rules.statuses import (
 from trpg.engine.rules.weapons import crit_range_cut
 from trpg.engine.skill_levels import level_multiplier
 from trpg.engine.skills import shapes
-from trpg.engine.skills.conditions import skill_condition_problem
+from trpg.engine.skills.conditions import skill_condition_problem, unit_held
 from trpg.engine.skills.mobility import (
     ChargeRoute,
     charge_candidates,
@@ -339,7 +339,7 @@ def resource_problem(  # noqa: PLR0911
     state: BattleState, unit: UnitState, skill: SkillDef
 ) -> str | None:
     """武器相容、沉默、法力、耐力、冷卻、每場次數、HP 代價與源力（Phase 3C-4a）（不含 AP）。"""
-    problem = weapon_problem(skill, unit.weapon.weapon_class)
+    problem = weapon_problem(skill, unit.weapon.weapon_class, unit_held(unit))
     if problem is not None:
         return problem
     if fires_gun(unit, skill) and unit.ammo <= 0:  # 火器武器技要有子彈（3-24c）

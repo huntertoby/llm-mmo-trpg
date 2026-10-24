@@ -181,6 +181,7 @@ __all__ = [
     "condition_text",
     "default_affects",
     "granted_skill_problems",
+    "held_gear",
     "legendary_cores",
     "on_hit_carrier",
     "param_required_for",
@@ -255,8 +256,9 @@ REQUIRED_CONDITIONS: tuple[str, ...] = (
     "self_concealed",
     "on_own_rune",
     "target_collided",
+    "wielding_weapon",
 )
-"""引擎實作的 15 種條件（``trpg.engine.skills.conditions``），資料檔必須全部定義。"""
+"""引擎實作的 16 種條件（``trpg.engine.skills.conditions``），資料檔必須全部定義。"""
 
 type Targeting = Literal[
     "self", "unit", "tile", "direction", "none", "object_tile", "unit_tile", "unit_pair"
@@ -614,6 +616,7 @@ class PrimitiveParam(ContentModel):
         "count",
         "landing",
         "scope",
+        "weapon",
     ]
     required: bool = False
     show_when: dict[str, str] | None = None
@@ -857,10 +860,13 @@ class ConditionSpec(ContentModel):
     篩選（Phase 3-23）。"""
     element: Element | None = None
     """``on_own_rune`` 專用（Phase 3-23）：符文元素篩選（省略＝任何符文）。"""
+    weapon: str | None = Field(default=None, pattern=ID_PATTERN)
+    """``wielding_weapon`` 專用（Phase 3I-5，6.10 #50）：要手持的武器或副手 ID
+    （``weapons.yaml``、``offhands.yaml``）。"""
 
     def param_values(self) -> dict[str, Any]:
         """已填寫的參數（依名稱排序）。"""
-        names = ("element", "permille", "status", "surface", "tag")
+        names = ("element", "permille", "status", "surface", "tag", "weapon")
         return {n: getattr(self, n) for n in names if getattr(self, n) is not None}
 
 
@@ -897,6 +903,7 @@ def condition_text(
     surface_name: Callable[[Surface], str] = lambda surface: surface.value,
     tag_name: Callable[[str], str] = _unknown_tag,
     tag_runes: Mapping[str, str] | None = None,
+    weapon_name: Callable[[str], str] = str,
 ) -> str:
     """條件的一句話（繁體中文），例如「目標血量低於 40%」。"""
     kind = condition.type
@@ -914,6 +921,8 @@ def condition_text(
     plain = _PLAIN_CONDITION_TEXT.get(kind)
     if plain is None and kind == "on_own_rune":
         plain = _rune_condition_text(condition, tag_runes)
+    if plain is None and kind == "wielding_weapon" and condition.weapon is not None:
+        plain = f"手持{weapon_name(condition.weapon)}時"  # 3I-5
     return plain or kind
 
 
@@ -1890,10 +1899,12 @@ CASTER_CONDITIONS: frozenset[str] = frozenset(
         "first_round",
         "cast_tag_this_turn",
         "self_concealed",
+        "wielding_weapon",
     }
 )
-"""只看施放者的條件（Phase 3D-1）：技能層級的判斷不需要影響範圍內有對象。選目標之前就要決定的
-修正規則改變（:data:`SELF_ONLY_CHANGES`）仍只允許 :data:`SELF_CONDITIONS`（``self_hp_below``）。"""
+"""只看施放者的條件（Phase 3D-1；``wielding_weapon`` 為 3I-5）：技能層級的判斷不需要影響範圍內
+有對象。選目標之前就要決定的修正規則改變（:data:`SELF_ONLY_CHANGES`）仍只允許
+:data:`SELF_CONDITIONS`（``self_hp_below``）。"""
 
 ON_HIT_PRIMITIVES: tuple[str, ...] = (
     "damage",
@@ -2311,6 +2322,10 @@ class SkillDef(ContentModel):
     skeleton: str
     category: SkillCategory
     weapon_req: WeaponReq
+    weapon_only: tuple[str, ...] = ()
+    """限定武器（Phase 3I-5，6.10 #50 專屬招牌技）：非空時，只有主手武器或副手的 ID 在這份清單裡
+    （``weapons.yaml``、``offhands.yaml``）才能裝備、施放這個技能；空 ＝ 不限（照 ``weapon_req``）。
+    與 ``weapon_req`` 並存：兩者都要符合。只有火器、盾、成對武器、鞭的招牌技使用。"""
     ap_cost: int | None = None
     scaling_attr: Attribute
     secondary_scaling_attr: Attribute | None = None
@@ -3938,12 +3953,35 @@ def on_hit_carrier(skill: SkillDef, effects: tuple[EffectSpec, ...]) -> SkillDef
 # ---------------------------------------------------------------------------
 
 
-def weapon_problem(skill: SkillDef, weapon_class: str) -> str | None:
-    """技能的 ``weapon_req`` 與武器分類不相容時的原因。"""
-    if skill.weapon_req in ("any", weapon_class):
-        return None
-    need, have = _REQ_NAMES[skill.weapon_req], _REQ_NAMES[weapon_class]
-    return f"技能「{skill.name_zh}」需要{need}，但單位的武器是{have}"
+def weapon_problem(
+    skill: SkillDef,
+    weapon_class: str,
+    held: Mapping[str, str] | None = None,
+    *,
+    names: Mapping[str, str] | None = None,
+) -> str | None:
+    """技能的 ``weapon_req`` 與武器分類不相容、或不是限定武器（``weapon_only``，3I-5）時的原因。
+
+    ``held``：單位手上的主手武器與副手（ID → 中文名，見 :func:`held_gear`）；技能有 ``weapon_only``
+    而沒給 ``held`` 一律視為不符。``names``：ID → 中文名，只用來把限定武器寫成中文。"""
+    if skill.weapon_req not in ("any", weapon_class):
+        need, have = _REQ_NAMES[skill.weapon_req], _REQ_NAMES[weapon_class]
+        return f"技能「{skill.name_zh}」需要{need}，但單位的武器是{have}"
+    if skill.weapon_only and not (held and set(skill.weapon_only) & set(held)):
+        lookup = names or {}
+        need_text = "、".join(lookup.get(w, w) for w in skill.weapon_only)
+        have_text = "、".join(sorted(held.values())) if held else "空手"
+        return f"技能「{skill.name_zh}」限定手持{need_text}，但單位手上是{have_text}"
+    return None
+
+
+def held_gear(weapon: Any, offhand: Any = None) -> dict[str, str]:
+    """單位手上的主手武器與副手（ID → 中文名），給 :func:`weapon_problem` 與 ``wielding_weapon``
+    條件用；``weapon``／``offhand`` 是有 ``id``、``name_zh`` 的定義（副手可為 ``None``）。"""
+    held = {weapon.id: weapon.name_zh}
+    if offhand is not None:
+        held[offhand.id] = offhand.name_zh
+    return held
 
 
 _REQ_NAMES = {"melee": "近戰武器", "ranged": "遠程武器", "focus": "法器", "any": "任何武器"}

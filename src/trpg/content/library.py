@@ -11,7 +11,7 @@ from collections.abc import Iterable, Mapping
 from dataclasses import dataclass, field
 from pathlib import Path
 
-from pydantic import PrivateAttr, model_validator
+from pydantic import Field, PrivateAttr, model_validator
 
 from trpg.content.affix_names import resolve_affix_names
 from trpg.content.appearance import AppearanceTable, item_appearance_problems
@@ -61,7 +61,13 @@ from trpg.content.equipment import (
     loadout_problems,
     resolve_loadout,
 )
-from trpg.content.keyword_derive import Facts, SkillKeywords, derive_from_facts, derive_keywords
+from trpg.content.keyword_derive import (
+    Facts,
+    SkillKeywords,
+    derive_from_facts,
+    derive_keywords,
+    skill_condition_specs,
+)
 from trpg.content.loader import default_content_dir, load_content_file
 from trpg.content.maps import MapDef, SpawnUnitsEvent, check_map
 from trpg.content.regions import RegionTable, sanitize_map_theme
@@ -100,6 +106,7 @@ from trpg.content.skills import (
     SkillDef,
     SkillTable,
     granted_skill_problems,
+    held_gear,
     skill_problems,
     skill_slot_problems,
     weapon_problem,
@@ -117,6 +124,7 @@ __all__ = [
     "REQUIRED_STATUSES",
     "ContentLibrary",
     "Ruleset",
+    "gear_reference_problems",
     "load_library",
     "skill_reference_problems",
     "unit_skill_problems",
@@ -183,6 +191,9 @@ class Ruleset(ContentModel):
     嵌入規則包，重播不依賴資料檔。"""
     skill_tags: SkillTagTable = SkillTagTable()
     """技能標籤的中文名（Phase 3-41a，``content/skill_tags.yaml``）：說明文字與刻印符文名用。"""
+    gear_names: dict[str, str] = Field(default_factory=dict)
+    """武器與副手的中文名（ID → 名稱；Phase 3I-5）：引擎的限定武器與「手持某種武器」條件訊息用。
+    嵌入規則包，重播不依賴資料檔。"""
 
     _keyword_cache: dict[object, SkillKeywords] = PrivateAttr(default_factory=_CacheDict)
     _rule_change_index: dict[str, RuleChangeDef] = PrivateAttr(default_factory=dict)
@@ -627,6 +638,10 @@ def load_library(  # noqa: PLR0915
             keywords=keywords,
             skill_growth=skill_growth,
             skill_tags=skill_tags,
+            gear_names={
+                **{w.id: w.name_zh for w in weapons.weapons},
+                **{o.id: o.name_zh for o in offhands.offhands},
+            },
         )
     except ValueError as exc:
         raise ContentError(root / "rules", str(exc)) from exc
@@ -651,7 +666,7 @@ def load_library(  # noqa: PLR0915
     _check_appearance(root, appearance, item_table, keywords)
     gear = _GearCatalog(items=items, affixes=affixes, rules=equipment_rules)
 
-    _check_skills(root, skills, ruleset, budget)
+    _check_skills(root, skills, ruleset, budget, weapons=weapon_map, offhands=offhand_map)
     _check_skill_rules(root, ruleset, exclusions, skeletons)
     _check_keywords(root, keywords, ruleset, skills)
     unknown_values = sorted(set(ai_profiles.status_values) - {s.id for s in statuses.statuses})
@@ -923,12 +938,44 @@ def _variant_reference_problems(
     return problems
 
 
+def gear_reference_problems(
+    skill: SkillDef, weapons: Mapping[str, WeaponDef], offhands: Mapping[str, OffhandDef]
+) -> list[str]:
+    """技能的限定武器（``weapon_only``）與「手持某種武器」條件引用的武器或副手存在，而且武器的
+    大類符合技能的 ``weapon_req``（否則技能永遠不能裝，或加成永遠不會成立；Phase 3I-5）。"""
+    problems: list[str] = []
+    refs = [("weapon_only", w) for w in skill.weapon_only]
+    refs += [
+        ("wielding_weapon", c.weapon)
+        for c in skill_condition_specs(skill)
+        if c.type == "wielding_weapon" and c.weapon is not None
+    ]
+    for where, gear_id in refs:
+        weapon = weapons.get(gear_id)
+        if weapon is None and gear_id not in offhands:
+            problems.append(f"{where}：未知的武器或副手 {gear_id!r}")
+        elif weapon is not None and skill.weapon_req not in ("any", weapon.weapon_class):
+            problems.append(
+                f"{where}：{weapon.name_zh}是{weapon.weapon_class}武器，"
+                f"與技能的 weapon_req（{skill.weapon_req}）不符"
+            )
+    return problems
+
+
 def _check_skills(
-    root: Path, skills: dict[str, SkillDef], ruleset: Ruleset, budget: BudgetRules
+    root: Path,
+    skills: dict[str, SkillDef],
+    ruleset: Ruleset,
+    budget: BudgetRules,
+    *,
+    weapons: Mapping[str, WeaponDef],
+    offhands: Mapping[str, OffhandDef],
 ) -> None:
-    """技能引用的形狀、原語、狀態、物件都存在，參數在範圍內；費用花的資源與類別相符（3H-2）。"""
+    """技能引用的形狀、原語、狀態、物件都存在，參數在範圍內；費用花的資源與類別相符（3H-2）；
+    限定武器與手持條件引用的裝備存在且大類相符（3I-5）。"""
     for skill_id, skill in skills.items():
         problems = skill_reference_problems(skill, ruleset, skills)
+        problems += gear_reference_problems(skill, weapons, offhands)
         cost = budget.cost_problem(skill.category, skill.cost)
         if cost is not None:
             problems.append(cost)
@@ -1069,7 +1116,10 @@ def _check_units(
                 raise ContentError(path, str(exc)) from exc
             if rule.reaction in skills and rule.reaction not in template.skills:
                 raise ContentError(path, f"反應規則引用了沒有裝備的反應技：{rule.reaction}")
-        problems = unit_skill_problems(template, weapons[template.weapon], skills, ruleset.core)
+        offhand = None if gear is None else gear.offhand_of(template)
+        problems = unit_skill_problems(
+            template, weapons[template.weapon], skills, ruleset.core, offhand
+        )
         if problems:
             raise ContentError(path, "；".join(problems))
 
@@ -1123,6 +1173,13 @@ class _GearCatalog:
     items: dict[str, ItemDef]
     affixes: dict[str, AffixDef]
     rules: EquipmentRules
+
+    def offhand_of(self, template: UnitTemplate) -> OffhandDef | None:
+        """範本裝備的副手定義（沒有或解析失敗為 ``None``；解析失敗由 :meth:`problems` 回報）。"""
+        try:
+            return resolve_loadout(template.equipment, self.items, self.affixes).offhand_def()
+        except ValueError:
+            return None
 
     def problems(self, template: UnitTemplate, weapon: WeaponDef) -> list[str]:
         try:
@@ -1291,9 +1348,15 @@ def _check_affixes(
 
 
 def unit_skill_problems(
-    template: UnitTemplate, weapon: WeaponDef, skills: dict[str, SkillDef], core: CoreRules
+    template: UnitTemplate,
+    weapon: WeaponDef,
+    skills: dict[str, SkillDef],
+    core: CoreRules,
+    offhand: OffhandDef | None = None,
 ) -> list[str]:
-    """單位範本裝備的技能是否存在、與武器相容、沒有超過欄位上限（繁體中文，空串列為通過）。"""
+    """單位範本裝備的技能是否存在、與武器（含限定武器，3I-5）相容、沒有超過欄位上限（繁體中文，
+    空串列為通過）。``offhand``：範本裝備的副手。"""
+    held = held_gear(weapon, offhand)
     problems: list[str] = []
     equipped: list[SkillDef] = []
     for skill_id in template.skills:
@@ -1302,7 +1365,7 @@ def unit_skill_problems(
             problems.append(f"skills：未知的技能 {skill_id!r}")
             continue
         equipped.append(skill)
-        problem = weapon_problem(skill, weapon.weapon_class)
+        problem = weapon_problem(skill, weapon.weapon_class, held)
         if problem is not None:
             problems.append(f"skills：{problem}")
     problems += [f"skills：{p}" for p in skill_slot_problems(equipped, core.skill_slots)]

@@ -40,6 +40,7 @@ from trpg.content.skills import (
     ConditionSpec,
     EffectSpec,
     condition_text,
+    held_gear,
 )
 from trpg.content.slots import (
     SLOT_INDEX,
@@ -86,6 +87,7 @@ __all__ = [
     "affix_strength",
     "affix_text",
     "item_problems",
+    "loadout_held",
     "loadout_problems",
     "resolve_loadout",
     "rune_pair_problems",
@@ -916,6 +918,17 @@ class Loadout(ContentModel):
 
     def item_in(self, slot: str) -> EquippedItem | None:
         return self.by_slot().get(slot)
+
+    def offhand_def(self) -> OffhandDef | None:
+        """副手欄的副手定義（沒有副手物品或物品沒有副手基礎特性時為 ``None``）。"""
+        off = self.item_in("off_hand")
+        return None if off is None else off.item.offhand_def
+
+
+def loadout_held(weapon: WeaponDef, loadout: Loadout | None) -> dict[str, str]:
+    """單位手上的主手武器與副手（ID → 中文名，Phase 3I-5），給技能的限定武器檢查用。"""
+    offhand = None if loadout is None else loadout.offhand_def()
+    return held_gear(weapon, offhand)
 
 
 _WEAPON_CLASS_ZH = {"melee": "近戰武器", "ranged": "遠程武器", "focus": "法器"}
