@@ -1378,7 +1378,7 @@
   {
    "id": "shield",
    "name_zh": "護盾",
-   "description_zh": "替目標加上一層護盾，傷害會先扣護盾，持續 2 回合。",
+   "description_zh": "替目標加上一層護盾，傷害會先扣護盾，預設持續 2 回合，可延長到 3 回合。",
    "tags": [
     "numeric"
    ],
