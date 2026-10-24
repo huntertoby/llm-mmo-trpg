@@ -282,6 +282,11 @@ def _variance_factor(
         ratio = 1 + Fraction(effect.lifesteal_permille * value, _PERMILLE * _PERMILLE)
         factor *= ratio
         notes.append(f"吸血 {effect.lifesteal_permille / 10:g}% ×{_fmt(ratio)}")
+    if effect.spread is not None:  # 元素擴散 2 格較貴（3-54b）
+        permille = library.budget.wind_spread_permille[effect.spread - 1]
+        if permille != _PERMILLE:
+            factor *= Fraction(permille, _PERMILLE)
+            notes.append(f"擴散 {effect.spread} 格 ×{permille / _PERMILLE:g}")
     overload = _overload_ratio(skill, library)
     if overload != 1:
         factor *= overload

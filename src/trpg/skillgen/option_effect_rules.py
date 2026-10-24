@@ -31,7 +31,7 @@ from trpg.skillgen.draft import Draft, DraftError, build_skill
 from trpg.skillgen.option_fill import variants
 from trpg.skillgen.option_models import Choice, EffectFix, FieldSpec
 from trpg.skillgen.option_params import model_range
-from trpg.skillgen.validate import Violation, effect_param_violations
+from trpg.skillgen.validate import TERRAIN_PRIMITIVES, Violation, effect_param_violations
 
 __all__ = [
     "EffectProbe",
@@ -46,6 +46,7 @@ PAIR_RULES: frozenset[str] = frozenset(
     {
         "exclusion.no_repeated_control_group",
         "exclusion.no_damage_with_ally_heal",
+        "exclusion.terrain_needs_earth",
         "stance.status",
     }
 )
@@ -127,6 +128,9 @@ _FIXED_REASON: dict[str, str] = {
     ),
     "exclusion.no_damage_with_ally_heal": (
         "同一招不能同時有對敵人的傷害和對友方的治療：改選別的對象，或先移除另一邊的效果"
+    ),
+    "exclusion.terrain_needs_earth": (
+        "隆起、下陷地形只能搭配大地元素：先加入一個大地元素的效果（例如大地傷害），再選這個"
     ),
     "passive.affects": "這個被動作用在持有者自己，效果的對象只能是自己",
     "stance.misuse": "姿態狀態只能由姿態技能施加：回到「基本設定」把種類改成姿態，或改選別的狀態",
@@ -245,6 +249,10 @@ def _checked_choice(
     context: list[dict[str, Any]],
     shape: str,
 ) -> Choice:
+    if primitive.id in TERRAIN_PRIMITIVES:  # 升降地形限大地（3-54b）：草稿還沒有大地元素就事前停用
+        reason = probe.why(base, context)
+        if reason is not None:
+            return _with_info(choice, reason)
     affects = _param(choice, "affects")
     status = _param(choice, "status")
     params = list(choice.params)

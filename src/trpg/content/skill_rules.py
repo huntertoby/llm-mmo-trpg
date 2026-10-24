@@ -33,6 +33,7 @@ from trpg.content.skills import (
     SkillRarity,
     WeaponReq,
 )
+from trpg.shared.types import Element
 
 __all__ = [
     "MODIFIER_USE_KEYS",
@@ -210,6 +211,13 @@ def _default_cost_resource() -> dict[SkillCategory, ResourceKind]:
     return {"weapon": "stamina", "spell": "mana"}
 
 
+class TerrainAreaRarity(ContentModel):
+    """影響格數 ``min_cells`` 以上的升降地形，技能的稀有度至少要 ``rarity``。"""
+
+    min_cells: int = Field(ge=1)
+    rarity: SkillRarity
+
+
 class BudgetRules(ContentModel):
     """``content/skill_budget.yaml``。"""
 
@@ -328,6 +336,14 @@ class BudgetRules(ContentModel):
     )
     """``shield``（Phase 3-50b）：``duration`` 為 2 或 3 回合時，點數 ＝ 骰子平均 × 第 n 項（‰；
     省略 ＝ 2 回合 ＝ 1000‰ ＝ 現狀；初值，未經模擬）。"""
+    terrain_area_rarity: tuple[TerrainAreaRarity, ...] = ()
+    """升降地形（``raise_terrain``、``lower_terrain``）的影響格數對應的最低稀有度（Phase 3-54b，
+    06 6.33，#58）：形狀影響的格數 ≥ ``min_cells`` 的最高一項生效（資料依 ``min_cells`` 由小到大）。"""
+    wind_spread_permille: tuple[int, ...] = Field(
+        default=(1000, 1150), min_length=2, max_length=2
+    )
+    """風元素傷害的元素擴散格數（``spread``，Phase 3-54b）：擴散 n 格時，傷害效果的點數 × 第 n 項
+    （‰；1 格或省略 ＝ 1000‰ ＝ 現狀；初值，未經模擬）。"""
     detonate_runes_permille: int = Field(default=700, ge=1, le=3000)
     """``detonate_runes``（Phase 3-23）：點數 ＝ 骰子平均 × 此值 ÷ 1000（需要先刻印、且敵人要站在
     符文上的折扣；形狀倍率另外照一般效果計算；初值，未經模擬）。"""
@@ -426,6 +442,10 @@ class BudgetRules(ContentModel):
             raise ValueError(f"rarity 必須剛好有 {', '.join(RARITY_ORDER)}")
         if sorted(self.cost_resource) != ["spell", "weapon"]:
             raise ValueError("cost_resource 必須剛好有 weapon、spell")
+        cells = [t.min_cells for t in self.terrain_area_rarity]
+        ranks = [RARITY_ORDER.index(t.rarity) for t in self.terrain_area_rarity]
+        if cells != sorted(set(cells)) or ranks != sorted(ranks):
+            raise ValueError("terrain_area_rarity 必須依 min_cells 嚴格遞增、稀有度不遞減")
         return self
 
     def resource_of(self, category: SkillCategory) -> ResourceKind:
@@ -574,6 +594,9 @@ class SkillMatch(ContentModel):
     effects_any: tuple[EffectPattern, ...] | None = None
     effects_all: tuple[EffectPattern, ...] | None = None
     repeated_control_group: bool | None = None
+    elements_any: tuple[Element, ...] | None = None
+    """技能的元素（:func:`~trpg.content.skills.skill_elements`：標籤與效果自己寫的元素）有其中任一個
+    （Phase 3-54b：只有大地能升降地形）。"""
 
 
 class ExclusionRule(ContentModel):

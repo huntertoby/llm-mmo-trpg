@@ -278,7 +278,8 @@ def wind_spread_text(lib: ContentLibrary, spec: EffectSpec) -> str | None:
     wind, rules = lib.ruleset.core.wind, lib.ruleset
     surfaces = _names(rules.surface_def(s).name_zh for s in wind.spread_surfaces)
     zones = _names(e.display_name for e in wind.spread_zone_elements)
-    return f"風會讓範圍內的{surfaces}表面、以及{zones}區域往風向擴大 {wind.spread_distance} 格"
+    reach = spec.spread or wind.spread_distance
+    return f"風會讓範圍內的{surfaces}表面、以及{zones}區域往風向擴大 {reach} 格"
 
 
 def wind_collision_text(lib: ContentLibrary) -> str:
@@ -354,6 +355,11 @@ def _push_pull(lib: ContentLibrary, skill: SkillDef, spec: EffectSpec) -> str:
 
 def _knock_prone(lib: ContentLibrary, skill: SkillDef, _spec: EffectSpec) -> str:
     return f"擊倒（{contest_label(skill, lib)}對抗）"
+
+
+def _shockwave(_lib: ContentLibrary, _skill: SkillDef, _spec: EffectSpec) -> str:
+    """震波（Phase 3-54b）。"""
+    return "震波：直線上的單位直接倒地（不擲對抗；會飛的單位不受影響）"
 
 
 def _teleport(_lib: ContentLibrary, _skill: SkillDef, _spec: EffectSpec) -> str:
@@ -582,7 +588,7 @@ def _blow_surface(lib: ContentLibrary, _skill: SkillDef, spec: EffectSpec) -> st
     names = _names(lib.ruleset.surface_def(s).name_zh for s in lib.ruleset.core.wind.blow_surfaces)
     return (
         f"把範圍內的表面（{names}）整片往風向吹走 {spec.distance} 格"
-        "（遇到牆、擋路的物件或較高的地形就停下）"
+        "（遇到牆、擋路的物件或較高的地形就停下；推進深淵或岩漿的部分會消失）"
     )
 
 
@@ -839,6 +845,7 @@ _EFFECT_TEXT: dict[str, _EffectText] = {
     "push": _push_pull,
     "pull": _push_pull,
     "knock_prone": _knock_prone,
+    "shockwave": _shockwave,
     "teleport": _teleport,
     "dash": _dash,
     "leap": _leap,

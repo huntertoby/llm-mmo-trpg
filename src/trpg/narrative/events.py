@@ -390,6 +390,7 @@ _FIZZLE_TEXT = {
     "followup_no_target": "  第二段沒有合法的目標：第二段不結算",
     "followup_not_triggered": "  沒有達成條件（擊殺或命中）：第二段不結算",
     "followup_declined": "  放棄了第二段",
+    "shockwave_flying": "  震波打不到會飛的單位",
     "inscribe_needs_tiles": "  符文只能刻在影響的格子上（這招的刻印對象不是格子），沒有刻下",
 }
 

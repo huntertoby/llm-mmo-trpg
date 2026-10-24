@@ -36,7 +36,9 @@ from trpg.skillgen.option_params import (
 
 __all__ = ["NESTED_PARAMS", "nested_field"]
 
-_TOP_ONLY_PARAMS = frozenset({"explode", "scaling", "lifesteal_permille", "split_heal", "on_kill"})
+_TOP_ONLY_PARAMS = frozenset(
+    {"explode", "scaling", "lifesteal_permille", "split_heal", "on_kill", "spread"}
+)
 """只有技能自己（最上層）的傷害效果可以用的欄位，不放進子效果。"""
 
 

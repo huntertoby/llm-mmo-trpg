@@ -66,7 +66,7 @@ status_values: {stun: 12, frozen: 12, root: 6, slow: 4, weaken: 5, vulnerable: 6
 # ally_status_values（Phase 2D-1）：對友方（含自己）施加各增益的價值，同樣是「等值的傷害點數」，收益 =
 # 行為模式的 support 權重 × 價值 × 新增的持續比例。初值未經模擬（平衡階段再調）：再生約 1d4 × 3 回合的
 # 治療，護衛約 30% 的減傷、激昂與加速約一回合的額外輸出或走位。
-ally_status_values: {guarded: 5, empowered: 5, rallied: 5, hasted: 3, regenerating: 6, defending: 3, stance_fury: 8, stance_bulwark: 8}
+ally_status_values: {guarded: 5, stoneskin: 3, empowered: 5, rallied: 5, hasted: 3, regenerating: 6, defending: 3, stance_fury: 8, stance_bulwark: 8}
 # trap_likelihood_permille（Phase 2E-3）：AI 放置陷阱的收益 ＝ 陷阱觸發效果的價值 × 範圍波及的預期敵人數
 # （單體 1、十字 1.5、3×3 為 2）× 這個機率（‰）。放置本身在預覽裡沒有效果，收益完全來自這個粗估；
 # AI 只在最近的敵人 1–3 格內放、同時最多 2 個、範圍內不放友方。初值未經模擬（平衡階段再調）。

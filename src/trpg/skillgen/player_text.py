@@ -261,6 +261,7 @@ _FIELD_ZH: dict[str, str] = {
     "speed": "速度",
     "splash": "波及",
     "split_heal": "聖光雙效",
+    "spread": "擴散格數",
     "stack": "層數",
     "stacks": "層數",
     "stamina": "耐力",

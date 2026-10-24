@@ -95,6 +95,7 @@ PARAM_TEXT: dict[str, str] = {
     "speed": "速度（格）",
     "splash": "濺射距離",
     "split_heal": "聖光雙效",
+    "spread": "元素擴散格數",
     "stack": "層數",
     "status": "狀態",
     "surface": "表面",

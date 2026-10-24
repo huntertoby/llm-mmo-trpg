@@ -1555,6 +1555,7 @@ PRIMITIVE_PREVIEW: Mapping[str, str] = MappingProxyType(
         "push": f"collisions、topples、{_OUTCOMES}",
         "pull": f"collisions、{_OUTCOMES}",
         "knock_prone": "targets（擊倒對抗的成功率 _knock_chance）",
+        "shockwave": "targets（直接倒地，不擲對抗）",
         "teleport": "moves",
         "dash": "moves（衝鋒路線）",
         "charge_through": "moves、targets（擊倒對抗的成功率）",
