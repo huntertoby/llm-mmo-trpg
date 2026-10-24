@@ -1108,6 +1108,8 @@ def _surface_changed(e: SurfaceChanged, v: _View) -> str:
 def _surface_blown(e: SurfaceBlown, v: _View) -> str:
     """吹送（Phase 3-54a）。"""
     name = surface_name(v.state, e.surface)
+    if e.lost:
+        return f"  ≋ {xy_text(e.from_pos)} 的{name}被風吹進 {xy_text(e.to_pos)}，消失了"
     if e.from_pos == e.to_pos:
         return f"  ≋ {xy_text(e.from_pos)} 的{name}被風吹動，但被擋住留在原地"
     return f"  ≋ {xy_text(e.from_pos)} 的{name}被風吹到 {xy_text(e.to_pos)}"
