@@ -11,6 +11,7 @@ const bomb = (over: Partial<StatusView> = {}): StatusView => ({
   amount: null,
   blast_radius: 1,
   charge_tiles: [],
+  cost_status: false,
   ...over,
 });
 

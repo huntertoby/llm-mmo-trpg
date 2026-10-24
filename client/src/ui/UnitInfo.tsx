@@ -10,7 +10,7 @@ import { CHARGING, chargeStatusText } from "../battle/followup";
 import { facingText } from "../battle/facing";
 import { statusIconTile } from "../render/skillIcon";
 import { TipGlyph } from "./SkillIconView";
-import { stackName, statusName } from "../battle/glossary";
+import { COST_STATUS_NOTE, stackName, statusName } from "../battle/glossary";
 import type { SkillNames } from "../battle/actions";
 import { infusionName } from "../battle/infusion";
 import { remainingRounds, summonKind } from "../battle/summons";
@@ -39,7 +39,7 @@ function statusText(s: StatusView, skills?: SkillNames): string {
   if (s.status_id === CHARGING) return chargeStatusText(s, skills);
   const left = s.remaining === null ? "" : ` ${s.remaining} 回合`;
   const amount = s.amount === null ? "" : `（${s.amount}）`;
-  return `${statusName(s.status_id)}${amount}${left}`;
+  return `${statusName(s.status_id)}${amount}${left}${s.cost_status ? COST_STATUS_NOTE : ""}`;
 }
 
 export function UnitInfo({ unit, names, heroId, skills, cards, view }: Props) {

@@ -27,7 +27,11 @@ __all__ = [
 def _buffs_in_order(ctx: Ctx, target: UnitState) -> list[StatusInstance]:
     """``target`` 身上的增益（``polarity: buff``），依「永久最先、剩餘回合長者先、同長依狀態 ID」
     排序。"""
-    buffs = [s for s in target.statuses if ctx.rules.status_def(s.status_id).polarity == "buff"]
+    buffs = [
+        s
+        for s in target.statuses
+        if ctx.rules.status_def(s.status_id).polarity == "buff" and not s.cost_status
+    ]  # 代價狀態驅散、奪取不了（#62）
     return sorted(
         buffs, key=lambda s: (0 if s.remaining is None else 1, -(s.remaining or 0), s.status_id)
     )

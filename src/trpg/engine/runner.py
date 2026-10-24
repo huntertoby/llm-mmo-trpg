@@ -38,8 +38,10 @@ __all__ = [
     "run_battle",
 ]
 
-LOG_FORMAT = "trpg-battle-log/75"
-"""``/75``（Phase 3-54a）：風元素補強——新原語 ``blow_surface``（吹送）、新事件 ``surface_blown``、
+LOG_FORMAT = "trpg-battle-log/76"
+"""``/76``（Phase 3-50c）：代價狀態——狀態實例多了 ``cost_status``（技能代價自己付的狀態），
+淨化與驅散移除不了；``/75`` 的紀錄中自付的減益可以被淨化，無法由新版程式重播。
+``/75``（Phase 3-54a）：風元素補強——新原語 ``blow_surface``（吹送）、新事件 ``surface_blown``、
 ``zone_expanded``，``collided`` 多了 ``damage_permille``（風壓撞擊），規則包的核心規則多了
 ``wind``，互動表移除「風吹散毒」；風元素傷害會讓火、冰、毒表面與區域往風向擴大，
 ``/74`` 的紀錄無法重播。

@@ -67,6 +67,9 @@ export function glossaryHasTag(category: GlossaryCategory, id: string, tag: stri
 }
 
 export const statusName = (id: string): string => glossaryName("statuses", id);
+
+/** 代價狀態（技能代價自己付的狀態，3-50c）的註記。 */
+export const COST_STATUS_NOTE = "（代價狀態，無法淨化）";
 /** 狀態圖示與身上特效用的欄位（`/api/glossary` 的 `status_look`）；沒有資料時為 `undefined`。 */
 export const statusLook = (id: string): StatusLook | undefined => glossaryEntry("statuses", id)?.status_look ?? undefined;
 export const stackName = (id: string): string => glossaryName("stacks", id);

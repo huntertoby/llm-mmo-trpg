@@ -112,6 +112,8 @@ class StatusView(_ViewModel):
     """延遲段的釋放時機（``next_turn``／``attacked``）；其他狀態為 ``None``。"""
     charge_tiles: tuple[Pos, ...] = ()
     """延遲段以帶有者目前位置推算的預計範圍；其他狀態為空。"""
+    cost_status: bool = False
+    """代價狀態（Phase 3-50c）：技能代價自己付的狀態，淨化與驅散移除不了。"""
 
 
 REACTION_TRIGGER_TEXT: dict[str, str] = {
@@ -544,6 +546,7 @@ def _status_view(state: BattleState, unit: UnitState, status: StatusInstance) ->
         skill_id=None if charge is None else charge.skill_id,
         release=None if charge is None else charge.release,
         charge_tiles=() if charge is None else charge.tiles,
+        cost_status=status.cost_status,
     )
 
 

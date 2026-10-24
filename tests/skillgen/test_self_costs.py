@@ -209,13 +209,24 @@ def test_every_demo_skill_passes_the_validator_inside_the_budget_window() -> Non
 
 def test_the_card_shows_the_cost_line_with_the_discount() -> None:
     seal = LIB.skills["skill_frost_armor_seal"]
-    assert "代價：施放後自己暈眩，到你下個回合結束（換 32% 預算）" in cost_parts(LIB, seal)
+    assert (
+        "代價：施放後自己暈眩，到你下個回合結束（換 32% 預算；代價狀態，無法淨化）"
+        in cost_parts(LIB, seal)
+    )
     chant = LIB.skills["skill_all_in_chant"]
-    assert "代價：施放後自己沉默，到你下個回合結束（換 20% 預算）" in cost_parts(LIB, chant)
+    assert (
+        "代價：施放後自己沉默，到你下個回合結束（換 20% 預算；代價狀態，無法淨化）"
+        in cost_parts(LIB, chant)
+    )
     slash = LIB.skills["skill_blood_rage_slash"]
-    assert "代價：施放後自己流血，到你下個回合結束（換 12% 預算）" in cost_parts(LIB, slash)
+    assert (
+        "代價：施放後自己流血，到你下個回合結束（換 12% 預算；代價狀態，無法淨化）"
+        in cost_parts(LIB, slash)
+    )
     overdraft = LIB.skills["skill_overdraft_strike"]
-    assert "代價：施放後自己下一個回合少 1 AP（換 20% 預算）" in cost_parts(LIB, overdraft)
+    assert "代價：施放後自己下一個回合少 1 AP（換 20% 預算；代價狀態，無法淨化）" in cost_parts(
+        LIB, overdraft
+    )
     assert "換 32% 預算" in cost_summary(LIB, seal)
 
 
