@@ -2258,3 +2258,4 @@ PM 驗收後請使用者試玩一整輪（`docs/專案計畫.md` 第 14 節 🎮
 2. `content/skill_evolution.yaml` 加中毒的橋接嫁接（照 06 6.28「橋接＝附帶第二個關鍵字」，和其他 10 個關鍵字一致）。
 3. 毒元素的普攻附加詞條對應到中毒的外觀圖樣（`content/equipment/appearance.yaml` 等，顯示用）。
 4. 驗收：pytest（content、skillgen、roguelite、narrative、api、`-m "slow or not slow" tests/cli`）、vitest、build、ruff、mypy。報告 `Phase3-53b報告.md`。
+- **3-53b（2026-10-24，開發 PM 合併）**：`KeywordDef.start_hidden`（`poisoned` 先隱藏於開局選項，3-54c 補完刪掉那一行）；`skill_evolution.yaml` `grafts.poisoned`（前綴「劇毒」）；`ELEMENT_KEYWORD` 加毒→中毒（毒元素詞條帶中毒圖樣）。檢查：pytest content／skillgen／roguelite／narrative／api 4042、cli（含 slow）148、ruff、mypy。**3-54c 要拿掉 3-53 的保守測試標記**（`EXTRA_KEYWORDS`、`short == {"poisoned": 1}`、起始技能剛好 1 招）並刪 `start_hidden`。
