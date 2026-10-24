@@ -1,8 +1,11 @@
 // 主角的一輪狀態：等級與經驗、HP／法力／耐力／源力、屬性、技能（點開看卡片）。
 import type { RunHero } from "../api/types";
+import { GearIcon } from "../ui/GearIcon";
+import { PartTip } from "../ui/PartTip";
 import { SkillCardView } from "../ui/SkillCardView";
 import { RuleText } from "../ui/ruleText";
 import { WeaponIcon } from "../ui/WeaponIcon";
+import { itemTipLines, wornGear } from "./gearOffer";
 import { levelBadge, levelOf } from "./skillGrowth";
 import {
   ATTRIBUTES,
@@ -47,6 +50,8 @@ export function RunHeroPanel({ hero }: { hero: RunHero }) {
   const usage = slotUsage(hero.skills);
   const traits: readonly string[] = (hero as { weapon_traits_zh?: readonly string[] }).weapon_traits_zh ?? [];
   const kinds = Object.keys(SLOT_LIMITS) as SlotKind[];
+  // 主手沒換過時是主角原本的基礎武器（id 以 base_ 開頭；武器已在上面顯示），不算穿戴的裝備
+  const worn = wornGear(hero);
   return (
     <div className="panel run-hero">
       <div className="hud-title">
@@ -89,6 +94,20 @@ export function RunHeroPanel({ hero }: { hero: RunHero }) {
               <RuleText text={line} />
             </div>
           ))}
+        </div>
+      )}
+      {worn.length > 0 && (
+        <div className="run-gear" data-testid="run-gear">
+          <div className="section-title">
+            裝備<span className="muted small">　背包 {(hero.backpack ?? []).length} 件</span>
+          </div>
+          <div className="gear-row">
+            {worn.map(({ slot, slot_zh, item }) => (
+              <PartTip key={slot} cat={slot_zh} label={item.name_zh} tip="" lines={itemTipLines(item)}>
+                <GearIcon look={item.appearance} slot={slot} size={32} label={`${slot_zh}：${item.name_zh}`} />
+              </PartTip>
+            ))}
+          </div>
         </div>
       )}
       <div className="run-attrs small">

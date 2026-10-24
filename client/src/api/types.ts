@@ -142,6 +142,10 @@ export type RunBattleResponse = Schemas["RunBattleResponse"];
 export type RunHero = Schemas["HeroOut"];
 export type RunNode = Schemas["NodeOut"];
 export type RunOffer = Schemas["OfferOut"];
+// 戰後裝備三選一與背包（Phase 3K-2）
+export type GearCandidate = Schemas["GearCandidateOut"];
+export type GearOffer = Schemas["GearOfferOut"];
+export type HeroGearSlot = Schemas["HeroGearSlotOut"];
 export type RunPlan = Schemas["BattlePlanOut"];
 export type RunRecord = Schemas["BattleRecord"];
 export type RunSaveOut = Schemas["SaveOut"];
@@ -177,7 +181,9 @@ export type RunChoice =
   | Schemas["RespecChoice"]
   | Schemas["RespecAttributesChoice"]
   | Schemas["AllocateChoice"]
-  | Schemas["LoadoutChoice"];
+  | Schemas["LoadoutChoice"]
+  | Schemas["GearPickChoice"]
+  | Schemas["EquipChoice"];
 /** 開新一輪：`weapon` ＋ `keywords`（一般開局）或 `dev_pack`（開發者起始包）；`attributes` 省略時伺服器把開局點數全部點在武器的縮放屬性。 */
 export type CreateRunRequest = Omit<Schemas["CreateRunRequest"], "attributes" | "test_mode" | "test_equipment"> & {
   attributes?: Partial<Record<AttributeId, number>>;
