@@ -12,16 +12,25 @@ from typing import Any
 
 import pytest
 
-from tests.engine.helpers import make_skill
+from tests.engine.helpers import (
+    caster_template,
+    make_map,
+    make_setup,
+    make_skill,
+    no_reactions,
+    spawn,
+)
 from tests.engine.skill_helpers import SID, U1, U2, battle, cast, hit_with, of
 from tests.skillgen.helpers import lib
 from trpg.engine import EndTurn, UseSkill, resolve
 from trpg.engine.ai.self_costs import self_cost_gate
+from trpg.engine.ai.utility import UtilityAI
 from trpg.engine.context import Ctx
 from trpg.engine.effects import execute
 from trpg.engine.effects.models import ApplyStatusEffect, MoveUnitEffect
 from trpg.engine.events import (
     DamageDealt,
+    SkillUsed,
     StatusApplied,
     StatusConverted,
     StatusSaveRolled,
@@ -29,9 +38,10 @@ from trpg.engine.events import (
     TurnStarted,
 )
 from trpg.engine.preview import preview
-from trpg.engine.state import BattleState
+from trpg.engine.runner import LOG_FORMAT, replay, run_battle
+from trpg.engine.state import BattleState, state_to_json
 from trpg.shared.errors import IllegalActionError
-from trpg.shared.types import Pos
+from trpg.shared.types import Pos, Team
 
 SINGLE = {"type": "single", "range": 5}
 SPELL_DAMAGE = {"type": "damage", "dice": "1d6", "element": "fire"}
@@ -298,3 +308,35 @@ def test_skills_without_a_self_penalty_are_never_gated() -> None:
     plain = _strike({"stamina": 0})
     state = battle(plain, [(5, 3)], base="hero_fighter")
     assert _gate(state, plain, target_id=U2) == 10
+
+
+# ---------------------------------------------------------------------------
+# 重播：含四招示範技能的整場戰鬥
+# ---------------------------------------------------------------------------
+
+
+def test_a_battle_with_the_four_demo_skills_replays_identically() -> None:
+    ids = (
+        "skill_frost_armor_seal",
+        "skill_all_in_chant",
+        "skill_blood_rage_slash",
+        "skill_overdraft_strike",
+    )
+    demo = [lib().skills[i] for i in ids]
+    flat = "\n".join(["000000000"] * 9)
+    m = make_map(flat, None, ally=[(1, 2), (1, 5)], enemy=[(6, 2), (6, 4), (7, 3)])
+    spawns = [
+        spawn(Team.ALLY, (1, 2), caster_template([demo[0], demo[1]], max_hp=60)),
+        spawn(Team.ALLY, (1, 5), caster_template(demo[2:], base="hero_fighter", max_hp=80)),
+        spawn(Team.ENEMY, (6, 2), no_reactions(max_hp=90)),
+        spawn(Team.ENEMY, (6, 4), no_reactions(max_hp=90)),
+        spawn(Team.ENEMY, (7, 3), no_reactions(max_hp=90)),
+    ]
+    setup = make_setup(m, spawns, max_rounds=14)
+    policy = UtilityAI(lib().ai_profiles)
+    run = run_battle(setup, 11, policy)
+    again = replay(setup, 11, run.actions)
+    assert state_to_json(again.state) == state_to_json(run.state)
+    assert LOG_FORMAT.endswith("/68")
+    used = {e.skill_id for e in run.events if isinstance(e, SkillUsed)}
+    assert used & set(ids)  # AI 真的用到了示範技能

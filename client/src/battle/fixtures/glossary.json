@@ -774,6 +774,22 @@
    ]
   },
   {
+   "id": "overdrawn",
+   "name_zh": "透支",
+   "description_zh": "精力透支，下一個回合開始時 AP 少 1。",
+   "tags": [],
+   "status_look": {
+    "polarity": "debuff",
+    "control_group": null,
+    "dot_element": null,
+    "skip_turn": false,
+    "removed_by_element": [],
+    "absorbs_damage": false,
+    "prevents_move": false
+   },
+   "rules_zh": []
+  },
+  {
    "id": "poison",
    "name_zh": "中毒",
    "description_zh": "中毒，每回合開始時受到毒素傷害；受到的治療降低。",
