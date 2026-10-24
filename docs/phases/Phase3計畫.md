@@ -2283,3 +2283,10 @@ PM 驗收後請使用者試玩一整輪（`docs/專案計畫.md` 第 14 節 🎮
 4. **流程 E 全面掃描**：技能卡、裝備卡、召喚物小卡、狀態卡、HUD、營火候選、工坊預覽所有「屬性」顯示，列表（改了什麼、確認沒問題的）；玩家文字不露英文代號（`test_player_text.py`）。
 5. 行為一致測試：卡片顯示的「目前 +N」＝實戰。
 6. 驗收：pytest（narrative、api、engine、skillgen、roguelite、`-m "slow or not slow" tests/cli`）、vitest、build、ruff、mypy、排版煙霧檢查；**在內建瀏覽器看符文斬卡片**（有主角與沒有主角各一）。報告 `Phase3-55報告.md`。
+
+### 60c.1／64.2／65.1 驗收（2026-10-24，開發 PM，暫停前最後一批）
+
+- **3-50c**（報告 `Phase3-50c報告.md`）：`StatusInstance.cost_status`；淨化、驅散、奪取排除代價狀態；透支也不能被淨化；HUD／單位資訊／卡片代價行標「代價狀態，無法淨化」；AI 淨化判斷排除。與 3-54a 撞 `LOG_FORMAT` → `/76`。
+- **3-55**（報告 `Phase3-55報告.md`）：武器技算法句寫實際屬性與「目前 +N」，無持有者列例子（`weapon_attr_examples_zh`）；親和行寫明那把武器吃的屬性；`POST /api/workshop/check` 加選填 `weapon`；「條件：手持武器」→「手持指定武器」（效果層級親和條件）。
+- **3-54b**（報告 `Phase3-54b報告.md`）：3-54a 小修（吹進致命地形消失、`surface_blown.lost`；傷害參數 `spread` 1／2，`wind_spread_permille` [1000, 1150]；吹送說明換句）；互斥規則 `terrain_needs_earth`；`terrain_area_rarity`（4 格稀有、7 格史詩）；狀態石膚；原語震波（直線、倒地、`flying` 不受影響）。`LOG_FORMAT` `/77`。
+- 待決見 `docs/開發PM交接.md` 3.000。

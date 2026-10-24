@@ -50,14 +50,19 @@ Phase 3 各段（`Phase3計畫.md` 節號；報告 `Phase3-*報告.md`）：
 
 ## 3. 下一步
 
-### 3.000 最新進度（2026-10-24 深夜，開發 PM `local_e6fcf372`；優先於 3.00）
+### 3.000 暫停點（2026-10-24 深夜，開發 PM `local_e6fcf372`；最新，優先於 3.00）
 
-- **已完成並 push**：3-47、3-48～3-48h、3-49、3-50、3-50b（＋自我沉默）、3-51、3-52；3I-1～3I-6（3I-3b）；3K-1、3K-2；3S-1～3S-3（美術 PM 驗收）。驗收紀錄：`Phase3計畫.md` 51～62.1、`Phase3I計畫.md` 4.1～4.6、`Phase3K計畫.md` 5.1～5.2、`Phase3S計畫.md` 檔尾。技能 268；`LOG_FORMAT` `/73`；存檔 `trpg-run/6`。
-- **進行中**：3-52b（62b 節）、3K-2b（`Phase3K計畫.md` 5.2）。
-- **之後**：3-53（63 節，中毒關鍵字）→ 3-54a／b／c（64 節）→ 3J 形態（`Phase3J計畫.md`）→ 3R 種族（`Phase3R計畫.md`，3R-3 含 3S-3 成對武器小修）→ Phase 4（4-L6 起）。
-- **等使用者**：自付代價能否被淨化移除（玩法 PM 轉專案 PM）。
-- **流程經驗**：合併後一律在 main 跑「除 llm 的全量」（`-m "not llm"`，約 7～10 分）再 push；背景檢查跑時不改工作區；兩個 agent 同時加技能或遞增 `LOG_FORMAT` 必撞（`skill_icons.json`、CLI 快照取 `--theirs` 再重產；`LOG_FORMAT` 取較大＋1，runner 文件字串都保留，測試字面值一起改）；agent 要寫明 `-m "slow or not slow" tests/cli` 與 `tests/engine`；**刪 worktree 前確認 `client/node_modules` 不是連結**（曾刪到主資料夾的套件，用 `pnpm install --offline --frozen-lockfile --force` 還原）；agent 回報後若「waiting on its own background work」用 TaskStop。
-- 平衡待辦到 B23（本檔 3.3）。
+**使用者：「做到 3-54b 先停 token 要沒了」**。沒有 agent 在跑；main 已 push。**恢復前不要派新段**，等專案 PM 轉達。
+
+- **已完成並 push**：3-47、3-48～3-48h、3-49、3-50／3-50b／3-50c（#62 代價狀態不能淨化）、3-51、3-52／3-52b、3-53／3-53b、3-54a、3-54b（大地＋風小修）、3-55（卡片寫具體屬性）；3I-1～3I-6（含 3I-3b）；3K-1、3K-2／2b／2c；3S-1～3S-3。驗收紀錄：`Phase3計畫.md` 51～65 節、`Phase3I計畫.md` 4.x、`Phase3K計畫.md` 5.x、`Phase3S計畫.md` 檔尾。`LOG_FORMAT` `/77`；存檔 `trpg-run/6`。
+- **恢復順序**：
+  1. **3-54c 種子技能**（`Phase3計畫.md` 64 節）：風 6、毒 6、大地 4、神聖 2（06 6.33）；「清風」用清除表面效果（#63）；**補完毒種子後刪 `poisoned` 的 `start_hidden`、拿掉 3-53 的保守測試標記**（`EXTRA_KEYWORDS`、`short == {"poisoned": 1}`、起始技能剛好 1 招）。
+  2. 3J 形態（`Phase3J計畫.md`）→ 3R 種族（`Phase3R計畫.md`，3R-3a 含 3S-3 成對武器遠側錯開 3px 小修）→ Phase 4（4-L6 起）。
+- **待決（交玩法 PM，恢復時先看）**：
+  - 3-54b：「大地元素」定義（標籤 `earth` 或效果元素 `earth`）；純地形技能在工坊做不出來（工坊不能選標籤）；石膚、震波沒限大地；震波仍要命中；新原語預算初值；`workshop_text.yaml` 新增的震波與擴散格數說明是初稿待改寫。
+  - 3-55：工坊沒有主角手上武器來源（App 沒傳 `heroWeapon`，API 已支援）；無持有者卡片「縮放：武器的屬性」仍泛稱；「手持指定武器」命名。
+- **平衡待辦** B1～B25（本檔 3.3）。
+- **流程經驗**：合併後在 main 跑「除 llm 的全量」（`-m "not llm" --timeout=3000`，兩個 agent 同時跑時可達 20 分）再 push；其他 PM 會在 main 上 commit 並 push，可能把尚未全量檢查的合併一起推出去——合併後盡快跑全量；兩個 agent 同時加技能或遞增 `LOG_FORMAT` 必撞（快照／`skill_icons.json` 取 `--theirs` 再重產；`LOG_FORMAT` 取較大＋1、runner 文件字串都保留、測試字面值一起改）；agent 規格要寫明 `tests/engine` 與 `-m "slow or not slow" tests/cli --timeout=3000`、開工先 fast-forward 到 main、不要建 `node_modules` 連結；刪 worktree 前確認沒有連結；agent 回報後若「waiting on its own background work」用 TaskStop。
 
 ### 3.00 接手第一件事（2026-10-23 第二次交接，最新，優先於下面各節）
 
