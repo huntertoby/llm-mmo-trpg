@@ -77,7 +77,7 @@ from trpg.skillgen.proposal_numbers import (
     numeric_param_names,
     split_numbers,
 )
-from trpg.skillgen.scaling import fit_scaling, retarget_scaling
+from trpg.skillgen.scaling import fit_scaling, grant_dual, retarget_scaling
 from trpg.skillgen.self_penalty import penalty_choices, penalty_cost, penalty_of_cost
 from trpg.skillgen.validate import RARITY_STATUS_PRIMITIVES, validate_skill
 
@@ -912,7 +912,9 @@ def to_skill_def(
     fitted = (
         fit_scaling(skill, library)
         if ctx.hero_attributes is None
-        else retarget_scaling(skill, ctx.hero_attributes, library)
+        else grant_dual(  # 3I-3：稀有以上、主角第二高與最高差 ≤ 4 時，以 30% 機率加心智第二屬性
+            retarget_scaling(skill, ctx.hero_attributes, library), ctx.hero_attributes, library
+        )
     )
     attr, second = fitted.scaling_attr, fitted.secondary_scaling_attr
     if attr == skill.scaling_attr and second == skill.secondary_scaling_attr:

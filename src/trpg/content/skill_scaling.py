@@ -3,7 +3,8 @@
 - **武器技**（``category: weapon``）：**看手上武器的屬性**（3H-6，玩法決定 #45）——引擎不讀技能
   自己的 ``scaling_attr``。內建技能的欄位只當顯示提示，必須是某把同武器大類（``weapon_req``）、
   可裝備的武器的縮放屬性；產生器（隨機組合器、LLM 提議、工坊）一律設為 ``weapon_class_attrs`` 的
-  武器大類主屬性。武器技 **不帶第二屬性**（3H-7；魔劍士方案 A 決定前）。
+  武器大類主屬性。武器技 **可帶一個心智第二屬性**（3I-3，#46 魔劍士方案 A：
+  武器屬性＋智力／感知／意志之一，取平均；``weapon_second_attrs``）。
 - **法術技**（``category: spell``）：依主題，**主題由效果推導**（3H-7，玩法 PM 2026-10-24）：
   依序看技能的效果（主要效果在前；複合技能接著看第二段），第一個帶有主題訊號的效果是 **主要
   效果**——訊號是效果的原語（``effect_types_any``）、元素（``elements_any``）、表面
@@ -73,6 +74,20 @@ def _seq(value: Any) -> tuple[Any, ...]:
     return ()
 
 
+def _modifier_signals(rules: Iterable[Any]) -> tuple[Any, ...]:
+    """修正規則（``kind: modifier``）的主題訊號（3I-3，3H-7 留下的兩項）：``change.add_element``
+    算一個只帶元素的訊號（雷之手＝雷電＝智力）；``change.on_hit_effects`` 的命中後效果照一般效果算。
+    """
+    out: list[Any] = []
+    for rule in rules:
+        change = _get(rule, "change")
+        element = _text(_get(change, "add_element"))
+        if element is not None:
+            out.append({"element": element})
+        out.extend(_seq(_get(change, "on_hit_effects")))
+    return tuple(out)
+
+
 @dataclass(frozen=True, slots=True)
 class ScalingFacts:
     """判斷縮放範圍需要的技能資料（技能或工坊草稿都能轉成這個）。``effects`` 依序是技能本身的
@@ -93,7 +108,7 @@ class ScalingFacts:
             category=skill.category,
             weapon_req=skill.weapon_req,
             tags=frozenset(skill.tags),
-            effects=(*skill.effects, *followup),
+            effects=(*skill.effects, *followup, *_modifier_signals(skill.modifiers)),
             parents=tuple(skill.provenance.parents),
         )
 
@@ -109,7 +124,11 @@ class ScalingFacts:
             category=str(draft.get("category") or ""),
             weapon_req=str(draft.get("weapon_req") or ""),
             tags=frozenset(str(t) for t in _seq(draft.get("tags"))),
-            effects=(*_seq(draft.get("effects")), *more),
+            effects=(
+                *_seq(draft.get("effects")),
+                *more,
+                *_modifier_signals(_seq(draft.get("modifiers"))),
+            ),
             parents=tuple(str(p) for p in parents),
         )
 
@@ -218,6 +237,15 @@ class SkillScalingRules(ContentModel):
         default_factory=lambda: {"melee": Attribute.STR, "ranged": Attribute.DEX}
     )
     """武器技的武器大類主屬性（3H-6）：產生器與驗證器給武器技的 ``scaling_attr``。"""
+    weapon_second_attrs: tuple[Attribute, ...] = (
+        Attribute.INT,
+        Attribute.WIS,
+        Attribute.WIL,
+    )
+    """武器技的第二縮放屬性只能是心智屬性（3I-3，06 6.10 #46：武器屬性＋一個心智屬性，取平均）。"""
+    dual_max_gap: int = Field(default=4, ge=0)
+    """產生器只在主角第二高屬性與最高屬性的差不超過這個值時給第二屬性（3I-3，#46；機率在
+    ``skill_composer.yaml`` 的 ``scaling.dual_permille``）。"""
     combos: tuple[ThemeCombo, ...] = ()
     overrides: tuple[ScalingOverride, ...] = ()
 
@@ -313,6 +341,20 @@ class SkillScalingRules(ContentModel):
             return None
         return self.theme(basis.themes[0])
 
+    def secondary_range(
+        self,
+        skill: SkillDef | ScalingFacts,
+        weapons: Mapping[str, WeaponDef] | Iterable[WeaponDef],
+    ) -> tuple[Attribute, ...]:
+        """第二縮放屬性允許的集合（3I-3，#46；有順序，不含主屬性）：武器技只能是心智屬性；法術技
+        限在主題允許的集合內；**身體類法術不給第二屬性**。"""
+        basis = self.basis(skill, weapons)
+        if basis.source == "body":
+            return ()
+        if basis.source == "weapon":
+            return self.weapon_second_attrs
+        return basis.attrs
+
     def allowed_attrs(
         self,
         skill: SkillDef | ScalingFacts,
@@ -339,16 +381,13 @@ def weapon_attrs(
 
 
 def weapon_class_mismatches(rules: SkillScalingRules, skills: Mapping[str, SkillDef]) -> list[str]:
-    """內建武器技中，``scaling_attr`` 或第二屬性和武器大類主屬性不一致的技能 ID（排序）。
-    引擎不使用這個欄位（武器技看手上武器），只當顯示提示；清單供報告與測試用。"""
+    """內建武器技中，``scaling_attr`` 和武器大類主屬性不一致的技能 ID（排序）。引擎對武器技的
+    主屬性看手上武器（只當顯示提示）；第二屬性（3I-3）是技能自己的，由 :func:`scaling_problems`
+    檢查；清單供報告與測試用。"""
     return sorted(
         s.id
         for s in skills.values()
-        if s.category == "weapon"
-        and (
-            s.scaling_attr != rules.weapon_class_attr(s.weapon_req)
-            or s.secondary_scaling_attr is not None
-        )
+        if s.category == "weapon" and s.scaling_attr != rules.weapon_class_attr(s.weapon_req)
     )
 
 
@@ -369,15 +408,14 @@ def scaling_problems(
     for sid in sorted(skills):
         skill = skills[sid]
         allowed = rules.scaling_range(skill, weapons)
-        used = [skill.scaling_attr]
-        if skill.secondary_scaling_attr is not None:
-            used.append(skill.secondary_scaling_attr)
-        bad = [a for a in used if a not in allowed]
+        bad = [] if skill.scaling_attr in allowed else [skill.scaling_attr]
+        if skill.secondary_scaling_attr is not None and (
+            skill.secondary_scaling_attr not in rules.secondary_range(skill, weapons)
+        ):
+            bad.append(skill.secondary_scaling_attr)
         if bad:
             names = "、".join(a.value for a in allowed)
             problems.append(
                 f"技能 {sid}：縮放屬性 {'、'.join(a.value for a in bad)} 不在允許範圍（{names}）"
             )
-        if skill.category == "weapon" and skill.secondary_scaling_attr is not None:
-            problems.append(f"技能 {sid}：武器技不帶第二縮放屬性（看手上武器）")
     return problems

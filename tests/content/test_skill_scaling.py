@@ -28,8 +28,8 @@ def test_every_builtin_skill_scales_with_an_allowed_attribute(skill: SkillDef) -
     allowed = LIB.scaling_range(skill)
     assert skill.scaling_attr in allowed, (skill.id, skill.scaling_attr, allowed)
     if skill.secondary_scaling_attr is not None:
-        assert skill.secondary_scaling_attr in allowed, skill.id
-        assert skill.category == "spell", skill.id  # 武器技不帶第二屬性
+        assert skill.secondary_scaling_attr in LIB.secondary_range(skill), skill.id
+        assert LIB.secondary_range(skill), skill.id  # 身體類法術沒有第二屬性
 
 
 def test_the_builtin_table_covers_every_skill() -> None:
@@ -49,8 +49,8 @@ def test_builtin_weapon_skill_hints_match_their_weapon_class() -> None:
 
 def test_weapon_skills_follow_the_weapons_of_their_class() -> None:
     melee = weapon_attrs("melee", LIB.weapons)
-    # 劍、匕首、錘、拳套、鐮刀（意志）、鞭（感知）（3I-1 補平六屬性；智力等 3I-3 魔導劍）
-    assert melee == {Attribute.STR, Attribute.DEX, Attribute.CON, Attribute.WIS, Attribute.WIL}
+    # 劍、匕首、錘、拳套、鐮刀（意志）、鞭（感知）（3I-1 補平六屬性）、魔導劍（智力，3I-3）
+    assert melee == set(Attribute)
     assert weapon_attrs("ranged", LIB.weapons) == {Attribute.DEX}
     shade = LIB.weapons["shade_blades"]  # 召喚物專用武器不算
     assert shade.summon_only
@@ -187,15 +187,30 @@ def test_overrides_also_apply_to_evolved_skills() -> None:
         assert LIB.scaling_basis(facts).source == "override"
 
 
-def test_a_weapon_skill_with_a_second_attribute_is_a_problem() -> None:
+def test_a_weapon_skill_second_attribute_must_be_a_mind_attribute() -> None:
+    """3I-3（#46）：武器技的第二屬性只能是心智屬性；物理屬性是問題。"""
     sword = next(s for s in BUILTIN if s.category == "weapon" and s.weapon_req == "melee")
-    moved = {
-        sword.id: sword.model_copy(
-            update={"scaling_attr": Attribute.STR, "secondary_scaling_attr": Attribute.INT}
-        )
-    }
-    problems = scaling_problems(RULES, moved, LIB.weapons)
-    assert any("不帶第二縮放屬性" in p for p in problems), problems
+
+    def problems_with(second: Attribute) -> list[str]:
+        moved = {
+            sword.id: sword.model_copy(
+                update={"scaling_attr": Attribute.STR, "secondary_scaling_attr": second}
+            )
+        }
+        return [p for p in scaling_problems(RULES, moved, LIB.weapons) if sword.id in p]
+
+    assert problems_with(Attribute.INT) == []
+    assert problems_with(Attribute.WIS) == []
+    assert any("不在允許範圍" in p for p in problems_with(Attribute.DEX))
+
+
+def test_a_body_spell_has_no_second_attribute() -> None:
+    """3I-3：身體類法術（沒有法術主題）不給第二屬性（#46）。"""
+    body = next(
+        s for s in BUILTIN if s.category == "spell" and LIB.scaling_basis(s).source == "body"
+    )
+    assert LIB.secondary_range(body) == ()
+    assert LIB.secondary_range(LIB.skills["skill_arcane_blade"]) == RULES.weapon_second_attrs
 
 
 def test_a_combo_with_an_unknown_theme_is_rejected() -> None:

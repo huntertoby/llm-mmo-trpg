@@ -71,10 +71,16 @@ def test_the_validator_rejects_a_generated_weapon_skill_with_the_wrong_attribute
     good = skill(category="weapon", weapon_req="melee", scaling_attr="str")
     bad = good.model_copy(update={"scaling_attr": Attribute.INT})
     dual = good.model_copy(update={"secondary_scaling_attr": Attribute.DEX, "rarity": "epic"})
+    mind = good.model_copy(update={"secondary_scaling_attr": Attribute.INT, "rarity": "epic"})
     generated = {"provenance": good.provenance.model_copy(update={"origin": "level_up"})}
-    for skill_def, ok in ((good, True), (bad, False), (dual, False)):
+    for skill_def, ok in ((good, True), (bad, False), (dual, True), (mind, True)):
         found = validate_skill(skill_def.model_copy(update=generated), LIB)
         assert ("scaling.weapon" in {v.rule for v in found}) is not ok
+    # 第二屬性只能是心智屬性（3I-3）：物理屬性違反 scaling.range，心智屬性沒有任何縮放違規
+    rules = {v.rule for v in validate_skill(dual.model_copy(update=generated), LIB)}
+    assert "scaling.range" in rules
+    rules = {v.rule for v in validate_skill(mind.model_copy(update=generated), LIB)}
+    assert not rules & {"scaling.range", "scaling.weapon"}
     # 內建技能（欄位只當顯示提示）與進化而來的技能不檢查
     assert "scaling.weapon" not in {v.rule for v in validate_skill(bad, LIB)}
     evolved = bad.model_copy(
@@ -94,7 +100,7 @@ def test_composed_weapon_skills_use_the_weapon_class_attribute(seed: int) -> Non
     )
     assert found.category == "weapon"
     assert found.scaling_attr is RULES.weapon_class_attr(found.weapon_req)
-    assert found.secondary_scaling_attr is None
+    assert found.secondary_scaling_attr in (None, *RULES.weapon_second_attrs)  # 3I-3：心智第二屬性
     assert "scaling.weapon" not in {v.rule for v in validate_skill(found, LIB)}
 
 

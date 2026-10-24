@@ -1354,7 +1354,7 @@ def _rarity_step(draft: Draft, library: ContentLibrary) -> StepOptions:
     if not paid:
         notes.append("傳說技能要在代價步驟填源力")
     dual = library.ruleset.core.dual_scaling_min_rarity
-    notes.append(f"第二縮放屬性（法術技）至少{RARITY_TEXT[dual]}；專精與第二屬性只能擇一")
+    notes.append(f"第二縮放屬性（法術技與武器技）至少{RARITY_TEXT[dual]}；專精與第二屬性只能擇一")
     extras = scaling_extra_fields(draft, library)
     return _step("rarity", draft, library, (field, *extras), tuple(notes))
 

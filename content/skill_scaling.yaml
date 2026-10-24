@@ -3,7 +3,7 @@
 # 武器技（category: weapon）：**看手上武器的屬性**（Phase 3H-6，玩法決定 #45）——命中與傷害用武器的縮放屬性
 #   （雙屬性武器取較高／取平均），技能自己的 scaling_attr 不生效，只當顯示提示。內建技能的 scaling_attr
 #   必須是某把同大類（weapon_req）、玩家可裝備的武器的縮放屬性（含第二縮放屬性，見 weapons.yaml）；
-#   隨機組合器、LLM 提議與工坊產生的武器技則一律設為 weapon_class_attrs 的武器大類主屬性（不帶第二屬性）。
+#   隨機組合器、LLM 提議與工坊產生的武器技則一律設為 weapon_class_attrs 的武器大類主屬性；3I-3 起可另帶一個心智第二屬性（weapon_second_attrs）。
 # 法術技（category: spell）：依主題，**主題由效果推導**（Phase 3H-7，玩法 PM 2026-10-24）。依序看技能的效果（主要效果
 #   在前；複合技能接著看第二段），第一個帶有主題訊號的效果是「主要效果」：訊號＝原語 effect_types_any、元素
 #   elements_any（召喚看召喚物武器的元素）、表面 surfaces_any、狀態 statuses_any（consume_status 的 then 一起看）。
@@ -53,6 +53,12 @@ body_attrs: [str, dex, con]
 # 玩家可裝備武器的縮放屬性（載入時檢查）。武器技的 weapon_req 只有 melee、ranged。
 weapon_class_attrs: {melee: str, ranged: dex}
 
+# 雙屬性技能（3I-3，06 6.10 #46，魔劍士方案 A）：稀有以上；武器技的第二屬性只能是心智屬性（命中、傷害、控制抵抗用
+# 「武器的縮放值」與「心智屬性值」的平均，無條件捨去）；法術技的第二屬性限在上面主題允許的集合內，身體類法術不給。
+# 產生器只在主角第二高屬性與最高屬性的差不超過 dual_max_gap 時給（機率在 skill_composer.yaml 的 scaling.dual_permille）。
+weapon_second_attrs: [int, wis, wil]
+dual_max_gap: 4
+
 # 組合主題（玩法 PM 2026-10-23，06 6.10）：法術同時帶元素和另一個主題時，可以看兩者之一，產生技能時取主角
 # 較高的那個（例：火焰詛咒看智力或意志；聖水看智力或感知；召喚物自帶的元素不算，召喚一律看意志）。純元素傷害仍只看智力。
 # 內建技能不重新指定（它們目前的屬性本來就在允許範圍內），這條只放寬隨機組合器與 LLM 提議的選擇範圍。
@@ -61,7 +67,6 @@ combos:
   - {themes: [elemental, support], anywhere: [elemental], reason_zh: 元素＋感知主題（治療、護盾、輔助、標記）看智力或感知}
 
 overrides:
-  - {skill: skill_arcane_blade, attrs: [str, int], reason_zh: 魔劍斬是力量＋智力的雙屬性法術（混搭 build 的範例；魔劍士方案 A 決定前維持特例）}
   - {skill: skill_fracture_mark, attrs: [int], reason_zh: 裂骨印記是物理弱點標記，原本看智力，效果與數值不變}
   - {skill: skill_hunt_sigil, attrs: [wis], reason_zh: 獵印是標記獵物（偵測與標記），不是元素符文}
   - {skill: skill_mountain_mover, attrs: [str], reason_zh: 移山之力是力量傳說（位移改造），不看元素}

@@ -3297,7 +3297,11 @@ class SkillDef(ContentModel):
         ``weapon`` 時改用 :meth:`WeaponDef.scaling_value`（雙屬性照取較高／取平均），技能自己的
         ``scaling_attr`` 只當顯示提示。沒有武器時（工坊、三選一的泛稱）退回技能自己的。"""
         if self.category == "weapon" and weapon is not None:
-            return weapon.scaling_value(get)
+            # 魔劍士方案 A（3I-3，#46）：武器技可帶一個心智第二屬性，和武器的縮放值取平均
+            base = weapon.scaling_value(get)
+            if self.secondary_scaling_attr is None:
+                return base
+            return (base + get(self.secondary_scaling_attr)) // 2
         primary = get(self.scaling_attr)
         if self.secondary_scaling_attr is None:
             return primary
@@ -3332,6 +3336,8 @@ class SkillDef(ContentModel):
         types = {e.type for e in self.effects}
         if self.category == "weapon":  # 武器技看手上武器的屬性（3H-6）；沒有指定武器時寫泛稱
             names = "武器的屬性" if weapon is None else weapon.scaling_names_zh()
+            if self.secondary_scaling_attr is not None:  # 3I-3：武器屬性值與心智屬性值取平均
+                names += f"與{self.secondary_scaling_attr.display_name}（取平均）"
         else:
             names = self.scaling_attr.display_name
             if self.secondary_scaling_attr is not None:

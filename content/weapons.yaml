@@ -268,6 +268,22 @@ weapons:
     crit_range: 20
     two_handed: false
     entangle: {move_penalty: 2}
+  # 魔導劍（3I-3，#46）：力量／智力（一物理一心智取平均）；單手（可搭副手：法書、法器珠）；沒有主打元素、
+  # 小特性待定（08 8.11：之後提案、使用者決定），所以沒有任何特性欄位。外觀 form: arcane（docs/art/魔導劍.md）。
+  - id: arcane_blade
+    name_zh: 魔導劍
+    look: {kind: sword, form: arcane, material: steel}
+    weapon_class: melee
+    range: 1
+    dice: 1d8
+    flat: 0
+    attack_bonus: 0
+    scaling_attr: str
+    secondary_scaling_attr: int
+    attr_mode: mean
+    element: physical
+    crit_range: 20
+    two_handed: false
   # --- Phase 3I-4：第二批其他武器（08 8.11 #46；傷害骰為初值，未經模擬）---
   # 雙匕首（成對，占雙手）：普攻打兩下 1d4（strikes: 2），背刺時兩下都吃背刺加成。
   - id: dual_dagger

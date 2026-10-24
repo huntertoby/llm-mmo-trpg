@@ -2444,6 +2444,17 @@
  ],
  "weapon_looks": [
   {
+   "id": "arcane_blade",
+   "weapon_class": "melee",
+   "two_handed": false,
+   "look": {
+    "kind": "sword",
+    "material": "steel",
+    "element": null,
+    "form": "arcane"
+   }
+  },
+  {
    "id": "axe",
    "weapon_class": "melee",
    "two_handed": false,

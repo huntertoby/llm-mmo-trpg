@@ -142,7 +142,7 @@ tuning:
 # dual_permille：稀有度達 core.yaml 的 dual_scaling_min_rarity 時加第二縮放屬性的機率，第二屬性從技能的縮放允許範圍
 # （skill_scaling.yaml，主屬性以外）抽一個，範圍裡沒有別的屬性時不給（Phase 3H-7）；mastery_permille：沒有第二屬性、且有合法專精（range 需要施放距離、duration 需要施加狀態）時給 mastery 的機率。
 scaling:
-  dual_permille: 250
+  dual_permille: 300                   # 3I-3 依 #46：30%（主角第二高與最高屬性差 ≤ 4 時才給，見 skill_scaling.yaml 的 dual_max_gap）
   mastery_permille: 300
 
 # 修正技能與傳說（Phase 3C-6b，初值，未經模擬）：composer_special.py 以「列舉候選 → 預算比例在 tuning 區間內 → 亂數挑一個」組合。
