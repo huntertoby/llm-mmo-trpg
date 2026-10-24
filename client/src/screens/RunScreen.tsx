@@ -13,6 +13,7 @@ import { primeSkillCard } from "../ui/useSkillCards";
 import { BattleScreen } from "./BattleScreen";
 import { RunCampfire } from "./RunCampfire";
 import { RunEnded } from "./RunEnded";
+import { RunGearOffer } from "./RunGearOffer";
 import { RunLevelUp } from "./RunLevelUp";
 
 interface Props {
@@ -189,6 +190,9 @@ export function RunScreen({ initial, autoResume = false, onHome, onNewRun }: Pro
               <div className="panel">
                 <AttributeRespecSection hero={run.hero} busy={busy} onChoose={choose} runId={run.run_id} />
               </div>
+            )}
+            {view.screen === "gear_offer" && (
+              <RunGearOffer key={view.afterBattle} seed={run.seed} view={view} busy={busy} onChoose={choose} />
             )}
             {view.screen === "level_up" && (
               <RunLevelUp key={view.level} run={run} view={view} busy={busy} onChoose={choose} />

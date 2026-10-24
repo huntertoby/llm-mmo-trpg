@@ -1739,6 +1739,22 @@ export interface components {
             type: "end_turn";
         };
         /**
+         * EquipChoice
+         * @description 營火換裝（Phase 3K-2）：把背包裡的 ``item_id`` 換上；``slot`` 省略時依物品種類決定（戒指有
+         *     兩個欄位時，先放空的、都有裝備時換掉較弱的）。換下的進背包。不推進節點。
+         */
+        EquipChoice: {
+            /**
+             * @description discriminator enum property added by openapi-typescript
+             * @enum {string}
+             */
+            kind: "equip";
+            /** Item Id */
+            item_id: string;
+            /** Slot */
+            slot?: string | null;
+        };
+        /**
          * EquipmentSlotView
          * @description 一個裝備欄位（Phase 3G-G1，唯讀）：欄位、物品名與詞條文字。
          */
@@ -2035,6 +2051,24 @@ export interface components {
             value?: number | null;
         };
         /**
+         * GearCandidateOut
+         * @description 一件可以換上的裝備（戰後三選一的候選、背包裡的裝備；Phase 3K-2）：物品卡、換上會放進的欄位，
+         *     以及和該欄位目前裝備的比較（目前的物品卡與兩邊的預算分數、換上的連帶效果）。
+         */
+        GearCandidateOut: {
+            item: components["schemas"]["GearItemInfo"];
+            /** Slot */
+            slot: string;
+            /** Slot Zh */
+            slot_zh: string;
+            current?: components["schemas"]["GearItemInfo"] | null;
+            /**
+             * Notes Zh
+             * @default []
+             */
+            notes_zh: string[];
+        };
+        /**
          * GearCatalog
          * @description 測試介面的選單：欄位、測試物品、詞條白名單、武器。
          */
@@ -2189,6 +2223,16 @@ export interface components {
              *     }
              */
             appearance: components["schemas"]["AppearanceView"];
+            /** Rarity */
+            rarity?: string | null;
+            /** Rarity Zh */
+            rarity_zh?: string | null;
+            /** Item Level */
+            item_level?: number | null;
+            /** Base Bonus Zh */
+            base_bonus_zh?: string | null;
+            /** Points */
+            points?: number | null;
         };
         /** GearItemLine */
         GearItemLine: {
@@ -2196,6 +2240,16 @@ export interface components {
             affix_id: string;
             /** Text Zh */
             text_zh: string;
+        };
+        /**
+         * GearOfferOut
+         * @description 戰後裝備三選一（節點 ``gear_offer``）。
+         */
+        GearOfferOut: {
+            /** After Battle */
+            after_battle: number;
+            /** Candidates */
+            candidates: components["schemas"]["GearCandidateOut"][];
         };
         /**
          * GearOffhandInfo
@@ -2211,6 +2265,19 @@ export interface components {
              * @default []
              */
             traits_zh: string[];
+        };
+        /**
+         * GearPickChoice
+         * @description 戰後裝備三選一：``pick`` 為候選索引（``None`` ＝ 跳過）。
+         */
+        GearPickChoice: {
+            /**
+             * @description discriminator enum property added by openapi-typescript
+             * @enum {string}
+             */
+            kind: "gear_pick";
+            /** Pick */
+            pick?: number | null;
         };
         /**
          * GearSkillView
@@ -2438,6 +2505,17 @@ export interface components {
                 [key: string]: components["schemas"]["SkillCard"];
             };
         };
+        /**
+         * HeroGearSlotOut
+         * @description 主角一個裝備欄位目前的裝備（9 個欄位都列；空著 ``item`` 為 ``None``）。
+         */
+        HeroGearSlotOut: {
+            /** Slot */
+            slot: string;
+            /** Slot Zh */
+            slot_zh: string;
+            item?: components["schemas"]["GearItemInfo"] | null;
+        };
         /** HeroOut */
         HeroOut: {
             /** Build Id */
@@ -2555,6 +2633,16 @@ export interface components {
              * @default []
              */
             evolutions: components["schemas"]["EvolutionChoiceOut"][];
+            /**
+             * Equipment
+             * @default []
+             */
+            equipment: components["schemas"]["HeroGearSlotOut"][];
+            /**
+             * Backpack
+             * @default []
+             */
+            backpack: components["schemas"]["GearCandidateOut"][];
         };
         /**
          * HistoryStepOut
@@ -2959,7 +3047,8 @@ export interface components {
         };
         /**
          * NodeOut
-         * @description 目前節點：``battle``（``battle_index``）、``level_up``（``level``、``points``、
+         * @description 目前節點：``battle``（``battle_index``）、``gear_offer``（``gear``，Phase 3K-2）、
+         *     ``level_up``（``level``、``points``、
          *     ``offer``）、``campfire``（``after_battle``、``rerolls_left``、重骰後的 ``offer``）、
          *     ``ended``（``victory``）。
          */
@@ -2968,7 +3057,7 @@ export interface components {
              * Kind
              * @enum {string}
              */
-            kind: "battle" | "level_up" | "campfire" | "ended";
+            kind: "battle" | "gear_offer" | "level_up" | "campfire" | "ended";
             /** Battle Index */
             battle_index?: number | null;
             /** Boss */
@@ -2984,6 +3073,7 @@ export interface components {
             offer?: components["schemas"]["OfferOut"] | null;
             /** Victory */
             victory?: boolean | null;
+            gear?: components["schemas"]["GearOfferOut"] | null;
         };
         /** ObjectView */
         ObjectView: {
@@ -3601,7 +3691,7 @@ export interface components {
              * Node
              * @enum {string}
              */
-            node: "battle" | "level_up" | "campfire" | "ended";
+            node: "battle" | "gear_offer" | "level_up" | "campfire" | "ended";
             /** In Battle */
             in_battle: boolean;
             /** Victory */
@@ -5855,7 +5945,7 @@ export interface operations {
         };
         requestBody: {
             content: {
-                "application/json": components["schemas"]["LevelUpChoice"] | components["schemas"]["RerollChoice"] | components["schemas"]["PickChoice"] | components["schemas"]["LeaveChoice"] | components["schemas"]["SpendChoice"] | components["schemas"]["RespecChoice"] | components["schemas"]["RespecAttributesChoice"] | components["schemas"]["AllocateChoice"] | components["schemas"]["LoadoutChoice"];
+                "application/json": components["schemas"]["LevelUpChoice"] | components["schemas"]["RerollChoice"] | components["schemas"]["PickChoice"] | components["schemas"]["LeaveChoice"] | components["schemas"]["SpendChoice"] | components["schemas"]["RespecChoice"] | components["schemas"]["RespecAttributesChoice"] | components["schemas"]["AllocateChoice"] | components["schemas"]["LoadoutChoice"] | components["schemas"]["GearPickChoice"] | components["schemas"]["EquipChoice"];
             };
         };
         responses: {

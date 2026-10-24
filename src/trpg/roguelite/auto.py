@@ -4,6 +4,8 @@
 - 配點：全部點在主角技能最常用的縮放屬性。
 - 技能點：升級時全部花在主角裝備的第一個還沒滿級的主動技能（滿了換下一個）；分歧進化的門檻沒到的
   技能停在進化的前一級，經過進化時一律選第一支（加深，Phase 3-26b）。
+- 戰後裝備三選一（Phase 3K-2）：挑預算分數比該部位目前裝備高最多的一件（空部位算 0 分），沒有比較
+  高的就跳過（:func:`trpg.roguelite.gear.auto_gear_pick`）；營火不換裝。
 - 升級與重骰：依序找第一個不用替換就裝得下的候選；都裝不下時，用第一個裝得下的候選換掉主角同一種
   欄位的最後一個技能；還是不行就跳過。營火一律重骰。
 
@@ -18,6 +20,7 @@ from trpg.content.library import ContentLibrary
 from trpg.content.skills import SkillDef
 from trpg.roguelite.battle import ActiveBattle
 from trpg.roguelite.errors import ChoiceError
+from trpg.roguelite.gear import auto_gear_pick
 from trpg.roguelite.growth import crosses_evolution, evolution_choices, level_of, uses_of
 from trpg.roguelite.offers import skill_defs, take_candidate
 from trpg.roguelite.progress import apply_choice, finish_battle
@@ -26,6 +29,8 @@ from trpg.roguelite.state import (
     BattleNode,
     CampfireNode,
     Choice,
+    GearOfferNode,
+    GearPickChoice,
     LeaveChoice,
     LevelUpChoice,
     LevelUpNode,
@@ -115,6 +120,8 @@ def _battle_stop(stop: AutoStop, run: RunState) -> Callable[[ActiveBattle], bool
 def auto_choice(library: ContentLibrary, run: RunState) -> Choice:
     """升級或營火節點的自動選擇。"""
     node = run.node
+    if isinstance(node, GearOfferNode):
+        return GearPickChoice(pick=auto_gear_pick(library, run, node))
     if isinstance(node, LevelUpNode):
         weapon_attr = library.weapons[run.hero.weapon].scaling_attr
         attr = primary_attribute(skill_defs(library, run, run.hero.skills), weapon_attr)

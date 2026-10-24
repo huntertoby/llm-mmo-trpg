@@ -2,7 +2,7 @@
 // 以及升級畫面的配點、候選排列、欄位上限判斷。
 import { END_REASONS } from "../battle/glossary";
 import { objectiveBadge, objectiveLine, type ObjectiveKind, type ObjectiveLike } from "../battle/objective";
-import type { AttributeId, RunChoice, RunHero, RunOffer, RunResponse, SkillCard } from "../api/types";
+import type { AttributeId, GearCandidate, RunChoice, RunHero, RunOffer, RunResponse, SkillCard } from "../api/types";
 
 /** 六項屬性（與後端 `Attribute` 的順序相同）與中文名。 */
 export const ATTRIBUTES: readonly { id: AttributeId; label: string }[] = [
@@ -74,6 +74,7 @@ export type RunView =
       resume: boolean;
       buttonLabel: string;
     }
+  | { screen: "gear_offer"; afterBattle: number; candidates: readonly GearCandidate[] }
   | { screen: "level_up"; level: number; points: number; offer: RunOffer }
   | { screen: "campfire"; afterBattle: number; rerollsLeft: number; offer: RunOffer | null }
   | { screen: "ended"; victory: boolean };
@@ -82,6 +83,10 @@ export type RunView =
 export function runView(run: RunResponse): RunView {
   const node = run.node;
   if (node.kind === "ended") return { screen: "ended", victory: node.victory === true };
+  if (node.kind === "gear_offer") {
+    if (node.gear == null) throw new Error("裝備三選一節點缺少候選");
+    return { screen: "gear_offer", afterBattle: node.gear.after_battle, candidates: node.gear.candidates };
+  }
   if (node.kind === "level_up") {
     if (node.offer == null) throw new Error("升級節點缺少技能候選");
     return { screen: "level_up", level: node.level ?? run.hero.level, points: node.points ?? 0, offer: node.offer };
@@ -311,6 +316,7 @@ export function saveLabel(s: {
   const ended = s.victory === true ? "已結束（勝利）" : s.victory === false ? "已結束（失敗）" : "已結束";
   const where: Record<string, string> = {
     battle: s.in_battle ? "戰鬥中" : "戰鬥之間",
+    gear_offer: "裝備三選一",
     level_up: "升級",
     campfire: "營火",
     ended,

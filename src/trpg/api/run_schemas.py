@@ -6,6 +6,7 @@ from typing import Literal
 
 from pydantic import BaseModel, ConfigDict, Field, model_validator
 
+from trpg.api.gear_schemas import GearItemInfo
 from trpg.api.schemas import BattleResponse
 from trpg.content.maps import Objective
 from trpg.narrative.skills import KeywordRef, SkillCard
@@ -22,6 +23,9 @@ __all__ = [
     "BattlePlanOut",
     "CreateRunRequest",
     "DevPackOut",
+    "GearCandidateOut",
+    "GearOfferOut",
+    "HeroGearSlotOut",
     "HeroOut",
     "LoadRunRequest",
     "NodeOut",
@@ -255,6 +259,34 @@ class AttributePerkOut(_ApiModel):
     """下一階需要的屬性值。"""
 
 
+class GearCandidateOut(_ApiModel):
+    """一件可以換上的裝備（戰後三選一的候選、背包裡的裝備；Phase 3K-2）：物品卡、換上會放進的欄位，
+    以及和該欄位目前裝備的比較（目前的物品卡與兩邊的預算分數、換上的連帶效果）。"""
+
+    item: GearItemInfo
+    slot: str
+    slot_zh: str
+    current: GearItemInfo | None = None
+    """該欄位目前的裝備（主手沒有物品時是主角的基礎武器；欄位空著為 ``None``）。"""
+    notes_zh: tuple[str, ...] = ()
+    """換上的連帶效果（武器換了、副手收進背包）。"""
+
+
+class GearOfferOut(_ApiModel):
+    """戰後裝備三選一（節點 ``gear_offer``）。"""
+
+    after_battle: int
+    candidates: tuple[GearCandidateOut, ...]
+
+
+class HeroGearSlotOut(_ApiModel):
+    """主角一個裝備欄位目前的裝備（9 個欄位都列；空著 ``item`` 為 ``None``）。"""
+
+    slot: str
+    slot_zh: str
+    item: GearItemInfo | None = None
+
+
 class HeroOut(_ApiModel):
     build_id: str
     name_zh: str
@@ -311,6 +343,10 @@ class HeroOut(_ApiModel):
     """備用技能（Phase 3-26a；卸下的技能，等級保留，卡片的 ``growth`` 帶實際等級）。"""
     evolutions: tuple[EvolutionChoiceOut, ...] = ()
     """升到分歧進化那一級時可選的兩支（Phase 3-26b；只列已達門檻、還沒進化的裝備中主動技能）。"""
+    equipment: tuple[HeroGearSlotOut, ...] = ()
+    """目前穿戴的裝備（Phase 3K-2；依欄位固定順序，9 個欄位都列）。"""
+    backpack: tuple[GearCandidateOut, ...] = ()
+    """背包（Phase 3K-2）：換下的裝備與換上後的比較；營火可以換上（``equip``）。"""
 
 
 class BattlePlanOut(_ApiModel):
@@ -349,11 +385,12 @@ class OfferOut(_ApiModel):
 
 
 class NodeOut(_ApiModel):
-    """目前節點：``battle``（``battle_index``）、``level_up``（``level``、``points``、
+    """目前節點：``battle``（``battle_index``）、``gear_offer``（``gear``，Phase 3K-2）、
+    ``level_up``（``level``、``points``、
     ``offer``）、``campfire``（``after_battle``、``rerolls_left``、重骰後的 ``offer``）、
     ``ended``（``victory``）。"""
 
-    kind: Literal["battle", "level_up", "campfire", "ended"]
+    kind: Literal["battle", "gear_offer", "level_up", "campfire", "ended"]
     battle_index: int | None = None
     boss: bool | None = None
     level: int | None = None
@@ -362,6 +399,8 @@ class NodeOut(_ApiModel):
     rerolls_left: int | None = None
     offer: OfferOut | None = None
     victory: bool | None = None
+    gear: GearOfferOut | None = None
+    """戰後裝備三選一（``gear_offer``；Phase 3K-2）。"""
 
 
 class RunResponse(_ApiModel):
@@ -403,7 +442,7 @@ class SaveSummary(_ApiModel):
     level: int
     battles_done: int
     battles_total: int
-    node: Literal["battle", "level_up", "campfire", "ended"]
+    node: Literal["battle", "gear_offer", "level_up", "campfire", "ended"]
     in_battle: bool
     victory: bool | None = None
     """已結束的一輪是否勝利；未結束為 ``None``。"""

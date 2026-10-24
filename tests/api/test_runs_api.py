@@ -89,6 +89,7 @@ def test_create_run_returns_hero_plan_and_first_battle(runs_client: TestClient) 
         "rerolls_left": None,
         "offer": None,
         "victory": None,
+        "gear": None,
     }
     hero = run["hero"]
     assert hero["attributes"]["int"] == 13 and hero["attributes"]["wis"] == 11
@@ -166,7 +167,25 @@ def test_finished_battle_writes_back_and_levels_up(
     final = _play_battle(runs_client, library, started["battle"])
     assert final["awaiting"] == "ended" and final["outcome"]["winner"] == "ally"
     hero_view = _unit(final, final["hero_id"])
-    after = _ok(runs_client.get(url))
+    # 先裝備三選一（Phase 3K-2），還沒升級
+    offered = _ok(runs_client.get(url))
+    assert offered["battle_id"] is None and offered["node"]["kind"] == "gear_offer"
+    gear = offered["node"]["gear"]
+    assert gear["after_battle"] == 1 and len(gear["candidates"]) == 3
+    assert len({c["item"]["slot_type"] for c in gear["candidates"]}) == 3
+    assert all(
+        c["slot"] and c["slot_zh"] and c["item"]["points"] is not None for c in gear["candidates"]
+    )
+    assert (
+        offered["hero"]["level"] == 1
+        and runs_client.post(f"{url}/choice", json={"kind": "reroll"}).status_code == 409
+    )
+    assert all(slot["item"] is None for slot in offered["hero"]["equipment"][1:])
+    taken = _ok(runs_client.post(f"{url}/choice", json={"kind": "gear_pick", "pick": 0}))
+    worn = [s["item"] for s in taken["hero"]["equipment"] if s["item"] is not None]
+    assert gear["candidates"][0]["item"]["id"] in [i["id"] for i in worn]
+    # 回到沒選裝備的狀態再打一次，驗證跳過：重新讀檔（自動存檔在選擇之前不存在）所以直接用同一輪
+    after = taken
     assert after["battle_id"] is None
     level_gain = library.ruleset.core.level_hp_bonus(  # 升到 2 級，目前 HP 同步增加
         library.roguelite.start.heroes["focus"].max_hp, 2
@@ -207,7 +226,7 @@ def test_save_mid_battle_load_and_continue_matches(
     assert saved == {
         "run_id": run["run_id"],
         "file": f"run-{run['run_id']}.json",
-        "format": "trpg-run/5",
+        "format": "trpg-run/6",
         "in_battle": True,
     }
     assert (save_dir / saved["file"]).is_file()
@@ -235,7 +254,7 @@ def test_corrupt_save_is_422(runs_client: TestClient, save_dir: Path) -> None:
     (save_dir / "run-bad.json").write_text('{"format": "trpg-run/0"}', encoding="utf-8")
     reply = runs_client.post("/api/runs/load", json={"run_id": "bad"})
     assert reply.status_code == 422
-    assert "trpg-run/5" in reply.json()["detail"]
+    assert "trpg-run/6" in reply.json()["detail"]
     assert runs_client.get("/api/runs/saves").json() == []
 
 

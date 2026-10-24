@@ -40,16 +40,18 @@ from trpg.content.equipment import (
     loadout_problems,
     resolve_loadout,
 )
+from trpg.content.item_budget import RARITY_ZH
 from trpg.content.library import ContentLibrary
 from trpg.content.skills import weapon_problem
 from trpg.content.slots import SLOT_TYPE_OF, SLOT_TYPE_ZH, SLOT_ZH, SLOTS, Slot
 from trpg.engine.setup import BattleSetup
 from trpg.engine.view import AppearanceView
+from trpg.roguelite.gear import item_score
 from trpg.shared.errors import TrpgError
 from trpg.shared.types import Team
 from trpg.skillgen.options import WEAPON_REQ_TEXT
 
-__all__ = ["GearRequestError", "equip_gear", "gear_catalog", "gear_problems"]
+__all__ = ["GearRequestError", "equip_gear", "gear_catalog", "gear_problems", "item_info"]
 
 
 class GearRequestError(TrpgError):
@@ -69,7 +71,15 @@ def _appearance(item: ItemDef, affixes: Mapping[str, AffixDef]) -> AppearanceVie
     )
 
 
-def _item_info(library: ContentLibrary, item: ItemDef) -> GearItemInfo:
+def _base_bonus_zh(item: ItemDef) -> str | None:
+    if not item.base_bonus_permille:
+        return None
+    what = "傷害" if item.slot_type == "weapon" else "防禦值"
+    return f"基礎加成：{what} +{item.base_bonus_permille / 10:g}%"
+
+
+def item_info(library: ContentLibrary, item: ItemDef) -> GearItemInfo:
+    """一件物品的卡片資料（裝備測試介面與一輪的戰後三選一、背包共用）。"""
     affixes = library.affixes
     weapon = library.weapons.get(item.weapon) if item.weapon is not None else None
     return GearItemInfo(
@@ -94,6 +104,11 @@ def _item_info(library: ContentLibrary, item: ItemDef) -> GearItemInfo:
             for r in item.affixes
         ),
         appearance=_appearance(item, affixes),
+        rarity=item.rarity,
+        rarity_zh=None if item.rarity is None else RARITY_ZH.get(item.rarity),
+        item_level=item.item_level,
+        base_bonus_zh=_base_bonus_zh(item),
+        points=float(item_score(library, item)),
     )
 
 
@@ -111,7 +126,7 @@ def gear_catalog(library: ContentLibrary) -> GearCatalog:
             )
             for s in SLOTS
         ),
-        items=tuple(_item_info(library, i) for i in library.items.values()),
+        items=tuple(item_info(library, i) for i in library.items.values()),
         affixes=tuple(_affix_info(a) for a in library.affixes.values()),
         weapons=tuple(
             GearWeaponInfo(

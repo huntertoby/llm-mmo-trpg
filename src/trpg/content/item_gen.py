@@ -310,12 +310,12 @@ def _min_points(rules: ItemGenRules, affix: AffixDef) -> Fraction:
 
 
 def _attribute_weight(rules: ItemGenRules, base: _Base, attribute: Attribute | None) -> int:
-    weapon = base.weapon
-    if weapon is None or attribute is None:
+    source = base.weapon or base.offhand  # 武器與副手都有縮放屬性（副手比照武器，3K-2）
+    if source is None or attribute is None:
         return _PERMILLE
-    preferred = {weapon.scaling_attr}
-    if weapon.secondary_scaling_attr is not None:
-        preferred.add(weapon.secondary_scaling_attr)
+    preferred = {source.scaling_attr}
+    if source.secondary_scaling_attr is not None:
+        preferred.add(source.secondary_scaling_attr)
     share = rules.weapon_attribute_preference_permille
     others = len(Attribute) - len(preferred)
     if attribute in preferred:

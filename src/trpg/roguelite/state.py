@@ -30,6 +30,7 @@ from typing import Annotated, Literal
 from pydantic import BaseModel, ConfigDict, Field
 
 from trpg.content.battle import UnitTemplate
+from trpg.content.equipment import ItemDef
 from trpg.content.rules import CoreRules
 from trpg.content.skills import SkillDef
 from trpg.shared.types import Attribute
@@ -43,7 +44,10 @@ __all__ = [
     "CampfireNode",
     "Choice",
     "EndedNode",
+    "EquipChoice",
     "EvolutionRecord",
+    "GearOfferNode",
+    "GearPickChoice",
     "LeaveChoice",
     "LevelUpChoice",
     "LevelUpNode",
@@ -143,6 +147,15 @@ class LevelUpNode(_Model):
     offer: SkillOffer
 
 
+class GearOfferNode(_Model):
+    """戰後裝備三選一（Phase 3K-2，07 7.1）：``candidates`` 是 3 件產生的裝備（連同完整定義，
+    部位不重複）；選 1 件直接換上（換下的進背包）或跳過，之後才是升級。"""
+
+    kind: Literal["gear_offer"] = "gear_offer"
+    after_battle: int
+    candidates: tuple[ItemDef, ...]
+
+
 class CampfireNode(_Model):
     """營火（進入時已回滿 HP、法力並加源力）：可以重骰（得到 ``offer``）或離開。"""
 
@@ -158,7 +171,8 @@ class EndedNode(_Model):
 
 
 type Node = Annotated[
-    BattleNode | LevelUpNode | CampfireNode | EndedNode, Field(discriminator="kind")
+    BattleNode | GearOfferNode | LevelUpNode | CampfireNode | EndedNode,
+    Field(discriminator="kind"),
 ]
 
 
@@ -186,6 +200,22 @@ class LevelUpChoice(_Model):
     """選完候選之後順便花技能點（Phase 3-26a；同 ``SpendChoice.levels``，空 ＝ 先不花）。"""
     evolve: dict[str, int] = Field(default_factory=dict)
     """升到 3 級時選的進化分支（Phase 3-26b；同 ``SpendChoice.evolve``）。"""
+
+
+class GearPickChoice(_Model):
+    """戰後裝備三選一：``pick`` 為候選索引（``None`` ＝ 跳過）。"""
+
+    kind: Literal["gear_pick"] = "gear_pick"
+    pick: int | None = None
+
+
+class EquipChoice(_Model):
+    """營火換裝（Phase 3K-2）：把背包裡的 ``item_id`` 換上；``slot`` 省略時依物品種類決定（戒指有
+    兩個欄位時，先放空的、都有裝備時換掉較弱的）。換下的進背包。不推進節點。"""
+
+    kind: Literal["equip"] = "equip"
+    item_id: str
+    slot: str | None = None
 
 
 class RerollChoice(_Model):
@@ -260,7 +290,9 @@ type Choice = Annotated[
     | RespecChoice
     | RespecAttributesChoice
     | AllocateChoice
-    | LoadoutChoice,
+    | LoadoutChoice
+    | GearPickChoice
+    | EquipChoice,
     Field(discriminator="kind"),
 ]
 
@@ -312,6 +344,12 @@ class RunState(_Model):
     attribute_spent: dict[Attribute, int] = Field(default_factory=dict)
     """分配出去（營火重配時退回）的屬性點（Phase 3H-3）：開局自由配點＋升級配點＋重配後再分配的點
     數，依六屬性順序存入。舊存檔沒有此欄位時為空（重配只退之後分配的點數）。"""
+    equipment: dict[str, ItemDef] = Field(default_factory=dict)
+    """目前穿戴的裝備（Phase 3K-2）：欄位 → 物品（連同完整定義；產生器的物品不在內容庫裡）。**非空時
+    就是全身裝備**（第一次換裝時把範本或測試模式的裝備一併搬進來）；空 ＝ 用範本（或測試模式）的
+    裝備。舊存檔沒有此欄位時為空。"""
+    backpack: tuple[ItemDef, ...] = ()
+    """背包（Phase 3K-2）：換下與沒穿上的裝備，一輪內不限數量；營火可以換回。"""
     node: Node
     test_mode: bool = False
     """測試模式（Phase 3-39）：每場戰鬥結束後 HP、法力回滿，並可在開局挑裝備。**只存在這一輪的設定

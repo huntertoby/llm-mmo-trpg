@@ -5,6 +5,7 @@ import type { RunChoice, RunResponse } from "../api/types";
 import { offerGroupKey, pickChoice, pickReady, type RunView } from "../run/flow";
 import { OfferPicker } from "../run/OfferPicker";
 import { AttributeRespecSection } from "../run/AttributeRespecSection";
+import { BackpackSection } from "../run/BackpackSection";
 import { SkillPointsSection } from "../run/SkillPointsSection";
 
 type Props = {
@@ -38,6 +39,7 @@ export function RunCampfire({ run, view, busy, onChoose }: Props) {
       </p>
       <SkillPointsSection hero={run.hero} busy={busy} onChoose={onChoose} campfire />
       <AttributeRespecSection hero={run.hero} busy={busy} onChoose={onChoose} campfire runId={run.run_id} />
+      <BackpackSection hero={run.hero} busy={busy} onChoose={onChoose} />
       {offer !== null && (
         <>
           <OfferPicker
