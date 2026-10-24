@@ -351,16 +351,16 @@ def effect_fixes(
     shape = _shape_type(draft)
     out: list[EffectFix] = []
     for index, effect in enumerate(effects):
+        stack_fix = _stack_fix(index, effect, library)
+        if stack_fix is not None:  # 層數的對象由層數決定（3-52）
+            out.extend(stack_fix)
+            continue
         primitive = by_id.get(str(effect.get("type")))
         choice = next((c for c in choices if c.value == effect.get("type")), None)
         affects = None if choice is None else _param(choice, "affects")
         if primitive is None or affects is None or probe.skill([effect]) is None:
             continue
         context = effects[:index] + effects[index + 1 :]
-        stack_fix = _stack_fix(index, effect, library)
-        if stack_fix is not None:  # 層數的對象由層數決定（3-52）
-            out.extend(stack_fix)
-            continue
         found = probe.why(effect, context)
         status = statuses.get(str(effect.get("status")))
         beneficial = None if status is None else status.beneficial

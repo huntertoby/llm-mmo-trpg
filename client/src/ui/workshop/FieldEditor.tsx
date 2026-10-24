@@ -19,7 +19,7 @@ import {
   setPath,
   type Json,
 } from "../../workshop/draft";
-import { descOf, fieldShown, hiddenCount, shownChoices } from "../../workshop/playerView";
+import { descOf, fieldShown, groupChoices, hiddenCount, shownChoices } from "../../workshop/playerView";
 import { rarityName } from "../../workshop/state";
 import { OptionGlyph } from "../SkillIconView";
 import { Hint } from "../Hint";
@@ -142,19 +142,6 @@ function badges(choice: Choice): string[] {
 function ruleLines(choice: Choice): string[] {
   const rules = choice.info["rules_zh"];
   return Array.isArray(rules) ? rules.filter((r): r is string => typeof r === "string") : [];
-}
-
-/** 選項分組（3-52：層數依「累積在你身上」「疊在敵人身上」分組）：後端用 `info.group_zh` 標示，
- * 沒有分組名的選項（一般欄位）都在同一組、不顯示組名；組的順序照第一次出現。 */
-export function groupChoices(choices: readonly Choice[]): [string | null, Choice[]][] {
-  const groups: [string | null, Choice[]][] = [];
-  for (const c of choices) {
-    const label = typeof c.info["group_zh"] === "string" ? c.info["group_zh"] : null;
-    const found = groups.find((g) => g[0] === label);
-    if (found === undefined) groups.push([label, [c]]);
-    else found[1].push(c);
-  }
-  return groups;
 }
 
 function unavailableReason(choice: Choice): string | null {

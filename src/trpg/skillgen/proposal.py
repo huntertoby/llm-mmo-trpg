@@ -887,6 +887,17 @@ def _skill_id(body: Mapping[str, Any]) -> str:
     return LLM_ID_PREFIX + hashlib.sha256(text.encode("utf-8")).hexdigest()[:10]
 
 
+def _stack_target(effect: Any, library: ContentLibrary) -> Any:
+    """累積／消耗層數的效果：``affects`` 由層數的 ``owner`` 決定（累積在自己身上 → ``self``，疊在
+    敵人身上 → ``enemies``）；LLM 填的對象不採用。"""
+    if not isinstance(effect, dict) or effect.get("type") not in ("add_stack", "consume_stack"):
+        return effect
+    stack = library.ruleset.stacks.by_id().get(str(effect.get("stack")))
+    if stack is None:
+        return effect
+    return {**effect, "affects": "self" if stack.owner == "self" else "enemies"}
+
+
 def _skill_data(
     proposal: BaseModel,
     ctx: ProposalContext,
@@ -900,6 +911,8 @@ def _skill_data(
         data["cost"] = {**data.get("cost", {}), **penalty_cost(library, penalty)}
     if data.pop("cost_overdraft", None):  # 透支（3-50b）：不算自身狀態，可以並用
         data["cost"] = {**data.get("cost", {}), "overdraft": 1}
+    if library is not None:  # 層數的對象由層數決定（3-52），LLM 只挑層數
+        data["effects"] = [_stack_target(e, library) for e in data.get("effects", [])]
     data["narrative"] = {"concept": data.pop("concept"), "cast_flavor": data.pop("cast_flavor")}
     data.update(tier=ctx.tier, rarity=ctx.rarity, rank=ctx.rank)
     data["provenance"] = {"origin": ctx.origin, "created_by": "llm"}
