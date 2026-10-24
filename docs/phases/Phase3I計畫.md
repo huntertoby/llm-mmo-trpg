@@ -90,3 +90,4 @@
 - 報告 `Phase3I-3報告.md`（逐條對照）。`dual_scaling_min_rarity` epic→rare（法術技也一起降，玩法 PM 確認照 6.10 字面）；武器技心智第二屬性取平均（命中、傷害、控制抵抗；費用不雙扣）；產生器「差距 ≤ 4、機率 30%」（`dual_max_gap`、`weapon_second_attrs`、組合器 `dual_permille` 300、LLM `grant_dual`；沒有主角屬性時直接 30%，玩法 PM 確認）；魔劍斬改近戰武器技＋智力、移除例外；驗證器 `scaling.range` 檢查武器技第二屬性必為心智；工坊第二屬性選單開放心智；3H-7 留下兩項完成；武器技效果句寫實際屬性名；魔導劍 `arcane_blade`（1d8、力量／智力 mean、單手）、`form: arcane` 紙娃娃與圖示（側面沿用 `drawBlade`）。
 - 合併衝突（與 3-50）：`proposal.py` import 兩邊保留；`skill_icons.json`、CLI 快照重產。
 - 待決：魔劍斬耐力 10、倍率 2.4 → 平衡 B21；**對抗判定也要用平均**（玩法 PM：6.10「命中、傷害、控制抵抗用平均」，雙屬性技能的對抗也算）→ 小修 **3I-3b**（`contest`／`contest_chance` 改吃縮放值而非單一屬性，卡片 `contest_label` 同步；行為一致測試）。
+- **3I-3b（2026-10-24）**：盤點後引擎與預覽本來就用平均（擊倒、位移抵抗、狀態抵抗都走 `skill_scaling_value`）；只改卡片 `contest_label`（雙屬性寫「力量／智力（取平均）」）並加行為一致測試。玩法 PM 確認：只有攻方取平均，守方照一般規則比目標自己的那一個屬性。同批：自付沉默也改成「回合結束才生效」（06 6.5 `7f41830`），`LOG_FORMAT` `/70`。合併後全量 7059、vitest 973 通過。
