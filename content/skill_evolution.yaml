@@ -104,6 +104,10 @@ grafts:
     prefix_zh: 暗影
     makes: {type: create_surface, surface: smoke, duration: 2}
     uses: {type: damage, condition: {type: self_concealed}}
+  poisoned:
+    prefix_zh: 劇毒
+    makes: {type: apply_status, status: poison, duration: 2}
+    uses: {type: damage, condition: {type: target_has_status, status: poison}}
 
 # 召喚技能的三支分歧進化（Phase 3-33f2，docs/design/06-技能.md 6.29.4；數值為初值，未經模擬）。
 # 召喚技能沒有可調的骰子，進化直接改 summon 效果（見 trpg.skillgen.summon_evolution）：

@@ -210,6 +210,13 @@ def test_default_start_is_deterministic_and_valid() -> None:
     assert len(seen) > 3
 
 
+def test_start_hidden_poison_is_never_drawn_but_stays_a_keyword() -> None:
+    lib = library()
+    assert "poisoned" in lib.keywords.ids() and "poisoned" not in lib.keywords.start_ids()
+    for seed in range(40):
+        assert "poisoned" not in default_start(lib, seed)[1]
+
+
 def test_behavior_counts_the_heros_actions() -> None:
     hero, other = UnitId("u1"), UnitId("u2")
     steps: list[Step] = [

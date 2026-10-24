@@ -143,6 +143,9 @@ class KeywordDef(ContentModel):
     actions: tuple[str, ...] = ()
     """和這個關鍵字相符的基本動作（Phase 3-24b2）：候選產生器依玩家的行為紀錄（用過這些動作的次數）
     偏向這個關鍵字。只是提示，不影響推導。"""
+    start_hidden: bool = False
+    """開局的關鍵字選項暫時不顯示（Phase 3-53b：中毒池在 3-54c 補齊前先隱藏）；只影響開局選單與
+    ``run auto`` 的抽樣，三選一、工坊、關鍵字推導都照常。"""
 
 
 class KeywordTable(ContentModel):
@@ -163,6 +166,10 @@ class KeywordTable(ContentModel):
 
     def ids(self) -> tuple[str, ...]:
         return tuple(k.id for k in self.keywords)
+
+    def start_ids(self) -> tuple[str, ...]:
+        """開局可選的關鍵字（排除 ``start_hidden``）。"""
+        return tuple(k.id for k in self.keywords if not k.start_hidden)
 
     def by_id(self) -> dict[str, KeywordDef]:
         return {k.id: k for k in self.keywords}
