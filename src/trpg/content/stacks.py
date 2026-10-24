@@ -11,16 +11,28 @@
 
 from __future__ import annotations
 
-from typing import Literal
+from typing import TYPE_CHECKING, Literal
 
 from pydantic import Field, model_validator
 
 from trpg.content.battle import ID_PATTERN
 from trpg.content.schemas import ContentModel
-from trpg.content.skills import EffectSpec
+from trpg.content.skills import EffectSpec, SkillDef
 from trpg.shared.types import Element
 
-__all__ = ["ConsumerReq", "ConsumerSpec", "GainSpec", "OverloadSpec", "StackDef", "StackTable"]
+if TYPE_CHECKING:
+    from trpg.content.library import Ruleset
+
+__all__ = [
+    "AutoConsumeSpec",
+    "ConsumerReq",
+    "ConsumerSpec",
+    "GainSpec",
+    "OverloadSpec",
+    "StackDef",
+    "StackTable",
+    "auto_consumed",
+]
 
 type GainOn = Literal[
     "weapon_skill_hit",
@@ -121,12 +133,66 @@ class ConsumerSpec(ContentModel):
 
     boosts: tuple[BoostKind, ...] = ("damage",)
     requires_any: tuple[ConsumerReq, ...] = ()
+    heal_self_only: bool = False
+    """治療加成只算「治療自己」的效果（對象 ``self``；3-52b，氣）；``boosts`` 要含 ``heal``。"""
 
     @model_validator(mode="after")
     def _check(self) -> ConsumerSpec:
         if not self.boosts or len(set(self.boosts)) != len(self.boosts):
             raise ValueError("boosts 至少一種、不可重複")
+        if self.heal_self_only and "heal" not in self.boosts:
+            raise ValueError("heal_self_only 只能用在 boosts 含 heal 的層數")
         return self
+
+    def boosts_effect(self, effect: EffectSpec) -> bool:
+        """這個效果會被消耗層數的加成加成嗎（型別在 ``boosts`` 內；治療加成只算治療自己時，
+        治療的對象必須明寫 ``self``）。驗證器、預算與引擎都以這裡為準。"""
+        if effect.type not in self.boosts:
+            return False
+        return not (effect.type == "heal" and self.heal_self_only and effect.affects != "self")
+
+    def gaps(self, skill: SkillDef, *, tags_known: bool = True) -> tuple[bool, bool]:
+        """``skill`` 不能消耗這種層數的原因：``(缺少被加成的效果, 不符合 requires_any)``，兩者都
+        為假才能消耗。``tags_known`` 為假（工坊草稿還沒有標籤）時，標籤條件先視為符合。
+        驗證器與工坊的事前停用共用這裡（3-52b）。"""
+        no_boost = not any(self.boosts_effect(e) for e in skill.effects)
+        types = {e.type for e in skill.effects}
+        met = not self.requires_any or any(
+            (req.tag is not None and (req.tag in skill.tags or not tags_known))
+            or (
+                req.element is not None
+                and any(e.type == "damage" and e.element == req.element for e in skill.effects)
+            )
+            or (req.effect is not None and req.effect in types)
+            for req in self.requires_any
+        )
+        return no_boost, not met
+
+    def requirement_names(self, rules: Ruleset) -> list[str]:
+        """``requires_any`` 的白話名稱（說明與停用原因共用）。"""
+        names: list[str] = []
+        for req in self.requires_any:
+            if req.tag is not None:
+                names.append(f"帶「{rules.skill_tags.name(req.tag)}」標籤")
+            elif req.element is not None:
+                names.append(f"{req.element.display_name}傷害")
+            elif req.effect is not None:
+                names.append(f"「{rules.primitives.by_id()[req.effect].name_zh}」效果")
+        return names
+
+    def boost_names(self) -> str:
+        """被加成的效果種類的白話（治療只算自己時寫「治療自己」）。"""
+        text = {"damage": "傷害", "heal": "治療", "shield": "護盾"}
+        return "、".join(
+            "治療自己" if b == "heal" and self.heal_self_only else text[b] for b in self.boosts
+        )
+
+
+class AutoConsumeSpec(ContentModel):
+    """自動消耗（Phase 3-52b，專注）：施放者的下一個造成傷害的主動技能自動消耗全部這種層數，
+    每層傷害 +``per_stack_permille``‰（技能自己有 ``consume_stack`` 這種層數時，照技能的設定）。"""
+
+    per_stack_permille: int = Field(ge=1, le=1000)
 
 
 class StackDef(ContentModel):
@@ -152,6 +218,8 @@ class StackDef(ContentModel):
     """自動累積規則（Phase 3-52）；空＝只能靠技能的 ``add_stack`` 累積。"""
     consumer: ConsumerSpec | None = None
     """消耗規則（Phase 3-52）；省略＝沿用舊行為（``consume_stack`` 只加成傷害、不限技能）。"""
+    auto_consume: AutoConsumeSpec | None = None
+    """自動消耗（Phase 3-52b）：只有 ``owner: self`` 且 ``consumer.boosts`` 含傷害的層數可以。"""
     composer: bool = True
     """隨機組合器是否會抽到這種層數（Phase 3-52 的新層數由玩家與 LLM 搭配，組合器不使用）。"""
 
@@ -168,6 +236,10 @@ class StackDef(ContentModel):
             and self.consumer.boosts != ("damage",)
         ):
             raise ValueError("疊在敵人身上的層數只能加成傷害")
+        if self.auto_consume is not None and (
+            self.owner != "self" or self.consumer is None or "damage" not in self.consumer.boosts
+        ):
+            raise ValueError("auto_consume 只能用在 owner: self 且加成傷害的層數")
         for rule in self.gain:
             if (rule.when == "element_hit") != (self.owner == "target"):
                 raise ValueError("疊在敵人身上的層數只能用 element_hit 累積，反之亦然")
@@ -195,3 +267,12 @@ class StackTable(ContentModel):
 
     def summary(self) -> str:
         return f"{len(self.stacks)} 種層數"
+
+
+def auto_consumed(skill: SkillDef, stacks: tuple[StackDef, ...]) -> tuple[StackDef, ...]:
+    """``skill`` 施放時會自動消耗的層數（Phase 3-52b）：主動技能、有傷害效果、且自己沒有
+    ``consume_stack`` 這種層數（有就照技能自己的設定）。"""
+    if skill.kind != "active" or not any(e.type == "damage" for e in skill.effects):
+        return ()
+    own = {e.stack for e in skill.effects if e.type == "consume_stack"}
+    return tuple(s for s in stacks if s.auto_consume is not None and s.id not in own)

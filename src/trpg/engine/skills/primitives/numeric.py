@@ -120,14 +120,13 @@ def _pierced_tiles(cast: Cast) -> list[XY]:
 
 def heal(cast: Cast, effect: ResolvedEffect, spec: EffectSpec) -> list[EffectBase]:
     scaled = cast.spell_scaled()
-    multiplier = cast.heal_multiplier()
     return [
         HealEffect(
             target_id=unit.id,
             source_id=cast.caster.id,
             dice=spec.dice,
             scaled_permille=scaled,
-            multiplier_permille=multiplier,
+            multiplier_permille=cast.heal_multiplier(self_heal=effect.affects == "self"),
         )
         for unit in cast.targets(effect.affects, spec.condition)
     ]

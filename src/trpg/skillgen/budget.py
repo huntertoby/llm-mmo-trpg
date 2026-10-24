@@ -982,10 +982,10 @@ def _consume_stack_points(
     )
     primitives = rules.primitives.by_id()
     stack = rules.stack_def(effect.stack)
-    boosted = ("damage",) if stack.consumer is None else stack.consumer.boosts
+    consumer = stack.consumer
     damage = Fraction(0)
     for other in skill.effects:
-        if other.type in boosted:
+        if other.type == "damage" if consumer is None else consumer.boosts_effect(other):
             base, _ = _base_points(skill, other, primitives[other.type], library)
             damage += base * _shape_multiplier(skill, other, primitives[other.type], library)
     bonus = damage * expected * Fraction(effect.per_stack_permille, _PERMILLE)

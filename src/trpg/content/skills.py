@@ -3736,22 +3736,12 @@ def _consumer_problems(skill: SkillDef, where: str, stack: StackDef) -> list[str
     if consumer is None:
         return []
     problems: list[str] = []
-    types = {e.type for e in skill.effects}
-    if not types & set(consumer.boosts):
-        names = {"damage": "傷害", "heal": "治療", "shield": "護盾"}
+    no_boost, unmet = consumer.gaps(skill)
+    if no_boost:
         problems.append(
-            f"{where}.stack：消耗層數 {stack.id} 的技能至少要有"
-            f"{'、'.join(names[b] for b in consumer.boosts)}其中一種效果"
+            f"{where}.stack：消耗層數 {stack.id} 的技能至少要有{consumer.boost_names()}其中一種效果"
         )
-    if consumer.requires_any and not any(
-        (req.tag is not None and req.tag in skill.tags)
-        or (
-            req.element is not None
-            and any(e.type == "damage" and e.element == req.element for e in skill.effects)
-        )
-        or (req.effect is not None and req.effect in types)
-        for req in consumer.requires_any
-    ):
+    if unmet:
         problems.append(f"{where}.stack：層數 {stack.id} 只有符合條件的技能可以消耗（見層數說明）")
     return problems
 
