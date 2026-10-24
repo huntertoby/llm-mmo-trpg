@@ -895,7 +895,9 @@ def _stack_target(effect: Any, library: ContentLibrary) -> Any:
     stack = library.ruleset.stacks.by_id().get(str(effect.get("stack")))
     if stack is None:
         return effect
-    return {**effect, "affects": "self" if stack.owner == "self" else "enemies"}
+    if stack.owner == "target":  # 省略時預設就是敵方；有填才改成敵方
+        return {**effect, "affects": "enemies"} if "affects" in effect else effect
+    return {**effect, "affects": "self"}
 
 
 def _skill_data(
