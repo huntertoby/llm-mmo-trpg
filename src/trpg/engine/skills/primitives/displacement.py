@@ -164,7 +164,7 @@ SHOCKWAVE = "shockwave"
 
 def shockwave(cast: Cast, effect: ResolvedEffect, spec: EffectSpec) -> list[EffectBase]:
     """震波（Phase 3-54b）：影響格（直線）上的對象單位直接倒地，不擲對抗；帶 ``flying`` 標籤
-    （會飛）的單位不受影響（發出 ``effect_fizzled``，原因 ``shockwave_flying``）；已經倒地的略過。"""
+    （會飛）的單位不受影響（``effect_fizzled``，原因 ``shockwave_flying``）；已經倒地的略過。"""
     batch: list[EffectBase] = []
     for unit in cast.targets(effect.affects, spec.condition):
         if unit.has_status(PRONE):
@@ -174,7 +174,9 @@ def shockwave(cast: Cast, effect: ResolvedEffect, spec: EffectSpec) -> list[Effe
                 EffectFizzled, effect_kind=SHOCKWAVE, pos=unit.pos, reason="shockwave_flying"
             )
             continue
-        batch.append(ApplyStatusEffect(source_id=cast.caster.id, target_id=unit.id, status_id=PRONE))
+        batch.append(
+            ApplyStatusEffect(source_id=cast.caster.id, target_id=unit.id, status_id=PRONE)
+        )
     return batch
 
 

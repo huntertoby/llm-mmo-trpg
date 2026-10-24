@@ -31,7 +31,7 @@ from trpg.skillgen.draft import Draft, DraftError, build_skill
 from trpg.skillgen.option_fill import variants
 from trpg.skillgen.option_models import Choice, EffectFix, FieldSpec
 from trpg.skillgen.option_params import model_range
-from trpg.skillgen.validate import TERRAIN_PRIMITIVES, Violation, effect_param_violations
+from trpg.skillgen.validate import Violation, effect_param_violations
 
 __all__ = [
     "EffectProbe",
@@ -249,10 +249,6 @@ def _checked_choice(
     context: list[dict[str, Any]],
     shape: str,
 ) -> Choice:
-    if primitive.id in TERRAIN_PRIMITIVES:  # 升降地形限大地（3-54b）：草稿還沒有大地元素就事前停用
-        reason = probe.why(base, context)
-        if reason is not None:
-            return _with_info(choice, reason)
     affects = _param(choice, "affects")
     status = _param(choice, "status")
     params = list(choice.params)

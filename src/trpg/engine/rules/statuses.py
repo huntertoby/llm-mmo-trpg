@@ -109,7 +109,9 @@ def damage_taken_permille(rules: Ruleset, unit: UnitState, element: Element | No
     例如 ``affix_cost_glass`` 的 1100），無條件捨去。"""
     combined = _combined(rules, unit, lambda d: d.damage_taken_permille)
     if element is Element.PHYSICAL:
-        combined = combined * _combined(rules, unit, lambda d: d.physical_taken_permille) // PERMILLE
+        combined = (
+            combined * _combined(rules, unit, lambda d: d.physical_taken_permille) // PERMILLE
+        )
     if not unit.gear.bonuses:
         return combined
     return combined * gear_damage_taken_permille(unit) // PERMILLE

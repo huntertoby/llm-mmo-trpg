@@ -121,6 +121,7 @@ def spread_wind(
     caster: XY,
     tiles: Sequence[XY],
     source_id: UnitId,
+    *,
     distance: int | None = None,
 ) -> None:
     """元素擴散：風吹到 ``tiles``（技能的影響格）時，表面與區域往風向擴大 ``distance`` 格（技能的

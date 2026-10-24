@@ -829,6 +829,27 @@
    ]
   },
   {
+   "id": "stoneskin",
+   "name_zh": "石膚",
+   "description_zh": "皮膚像岩石一樣堅硬，但行動變得笨重。",
+   "tags": [
+    "beneficial"
+   ],
+   "status_look": {
+    "polarity": "buff",
+    "control_group": null,
+    "dot_element": null,
+    "skip_turn": false,
+    "removed_by_element": [],
+    "absorbs_damage": false,
+    "prevents_move": false
+   },
+   "rules_zh": [
+    "受到的物理骰值傷害 ×70%",
+    "回合開始時的移動點數 -1（最低 0）"
+   ]
+  },
+  {
    "id": "empowered",
    "name_zh": "激昂",
    "description_zh": "屬性提高（命中、抵抗、傷害與治療的縮放都用加值後的屬性；先攻不變）。",
@@ -1506,6 +1527,16 @@
    "id": "knock_prone",
    "name_zh": "擊倒",
    "description_zh": "屬性對抗成功時，讓目標倒地。",
+   "tags": [
+    "structural"
+   ],
+   "status_look": null,
+   "rules_zh": []
+  },
+  {
+   "id": "shockwave",
+   "name_zh": "震波",
+   "description_zh": "讓直線範圍內的單位直接倒地，不用對抗；會飛的單位不受影響。",
    "tags": [
     "structural"
    ],

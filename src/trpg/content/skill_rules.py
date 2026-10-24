@@ -338,10 +338,8 @@ class BudgetRules(ContentModel):
     省略 ＝ 2 回合 ＝ 1000‰ ＝ 現狀；初值，未經模擬）。"""
     terrain_area_rarity: tuple[TerrainAreaRarity, ...] = ()
     """升降地形（``raise_terrain``、``lower_terrain``）的影響格數對應的最低稀有度（Phase 3-54b，
-    06 6.33，#58）：形狀影響的格數 ≥ ``min_cells`` 的最高一項生效（資料依 ``min_cells`` 由小到大）。"""
-    wind_spread_permille: tuple[int, ...] = Field(
-        default=(1000, 1150), min_length=2, max_length=2
-    )
+    06 6.33，#58）：形狀影響格數 ≥ ``min_cells`` 的最高一項生效（依 ``min_cells`` 由小到大）。"""
+    wind_spread_permille: tuple[int, ...] = Field(default=(1000, 1150), min_length=2, max_length=2)
     """風元素傷害的元素擴散格數（``spread``，Phase 3-54b）：擴散 n 格時，傷害效果的點數 × 第 n 項
     （‰；1 格或省略 ＝ 1000‰ ＝ 現狀；初值，未經模擬）。"""
     detonate_runes_permille: int = Field(default=700, ge=1, le=3000)

@@ -56,6 +56,9 @@ texts:
 - id: 原語.damage.scaling
   source: 依情況縮放（Phase 3D-7b）：by／per_step_permille／cap_permille 三個欄位；每一步傷害 +n‰（無條件捨去）、cap_permille 必填且不超過 core.scale_cap_max_permille；by 可為 missing_hp_10pct（施放者每少 10% 最大 HP）、distance（與目標每距 1 格）、enemies_adjacent_target（目標相鄰的敵方數）、enemies_adjacent_self（施放者相鄰的敵方數）
   player: 依情況加傷：依「你少了多少 HP」「和目標的距離」「目標或你身邊的敵人數」每一步提高一定比例的傷害，有上限。
+- id: 原語.damage.spread
+  source: '元素擴散格數（Phase 3-54b）：只有風元素（element: wind）的技能自己的傷害效果可以填；風吹到的火、冰、毒表面與火、冰、毒、雷區域往風向擴大 1 或 2 格（省略＝core.yaml 的 wind.spread_distance，預設 1）；預算：傷害點數 × wind_spread_permille（2 格較貴）'
+  player: 風元素的傷害把範圍內的火、冰、毒（地面效果與區域）往風向擴大的格數，可以選 1 或 2 格（不填是 1 格）。2 格比較強，所以同一招的其他數值會被預算壓低一點。
 - id: 原語.damage.split_heal
   source: '聖光雙效（Phase 3D-8a）：必須搭配 affects: all、主動法術技、aura 或 area 骨架，不可與 lifesteal、explode、scaling 並用。敵方依一般命中判定受到傷害、友方（含自己）不擲命中而治療同樣的骰值（骰一次，治療量 ＝ 骰值 ＋ 縮放屬性 × 0.5，受治療倍率影響）；預算傷害與治療兩邊都計；只能填 true'
   player: 聖光雙效：同一次骰值，打到的敵人受到傷害、範圍內的友方（含自己）改為治療同樣的量。只能用在範圍或光環的主動法術，不能和吸血、爆骰、依情況加傷一起用。

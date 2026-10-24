@@ -104,7 +104,9 @@ def _damage(ctx: Ctx, effect: EffectBase) -> list[EventBase]:
         if effect.apply_weather:
             weather = weather_permille(ctx.state, effect.element)
         dealt = _dealt_permille(ctx, effect)  # 虛弱
-        status_ppm = dealt * damage_taken_permille(ctx.rules, unit, effect.element)  # 易傷、石膚；千分比 × 千分比
+        status_ppm = dealt * damage_taken_permille(
+            ctx.rules, unit, effect.element
+        )  # 易傷、石膚；千分比 × 千分比
         multiplier = effect.multiplier_permille * _boss_vs_summon_permille(ctx, unit, effect)
         multiplier //= PERMILLE
         amount = max(

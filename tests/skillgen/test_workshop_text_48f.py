@@ -60,10 +60,11 @@ def test_modifier_change_texts_are_generated() -> None:
         assert not any("a" <= c <= "z" for c in spec.description_zh.replace("HP", "").lower())
 
 
-def test_table_has_the_152_rewritten_entries() -> None:
-    # 149 ＋ 3I-5 的手持武器條件（工坊、條件各一）＋ 3-54a 的吹送（實作者初稿，待玩法 PM 改寫）
-    assert len(TABLE.texts) == 152
-    assert len({e.id for e in TABLE.texts}) == 152
+def test_table_has_the_154_rewritten_entries() -> None:
+    # 149 ＋ 3I-5 的手持武器條件（工坊、條件各一）＋ 3-54a 的吹送（說明 3-54b 改成玩法 PM 的句子）
+    # ＋ 3-54b 的震波與元素擴散格數（實作者初稿，待玩法 PM 改寫）
+    assert len(TABLE.texts) == 154
+    assert len({e.id for e in TABLE.texts}) == 154
 
 
 def test_every_dev_text_has_a_player_rewrite_and_every_rewrite_is_used() -> None:

@@ -186,11 +186,11 @@ __all__ = [
     "granted_skill_problems",
     "held_gear",
     "is_wind_skill",
-    "skill_elements",
     "legendary_cores",
     "on_hit_carrier",
     "param_required_for",
     "rarity_rank",
+    "skill_elements",
     "skill_problems",
     "skill_slot_problems",
     "true_only_params",
@@ -3224,10 +3224,10 @@ class SkillDef(ContentModel):
             )
         if not top:
             raise ValueError(
-                f"{where}：explode、scaling、lifesteal、split_heal、spread 只能用在技能自己的傷害效果"
+                f"{where}：explode、scaling、lifesteal、split_heal、spread 只能用在技能自己的傷害"
             )
         if effect.spread is not None and effect.element is not Element.WIND:
-            raise ValueError(f"{where}：spread（元素擴散格數）只有風元素（element: wind）的傷害能填")
+            raise ValueError(f"{where}：spread（擴散格數）只有風元素（element: wind）的傷害能填")
         if effect.split_heal is not None:
             self._check_split_heal(where, effect)
 

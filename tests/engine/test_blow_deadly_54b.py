@@ -70,9 +70,7 @@ def test_blow_into_deadly_terrain_removes_the_surface(
 def test_only_the_pieces_that_enter_are_lost() -> None:
     """兩格長的火往東吹 2 格：前端進深淵消失，後面的留在 (4, 3)。"""
     skill = _blow({"type": "line", "size": 3}, 2)
-    state = battle(
-        skill, caster=(1, 3), surfaces=((2, 3, "fire"), (3, 3, "fire")), foes=[(0, 0)]
-    )
+    state = battle(skill, caster=(1, 3), surfaces=((2, 3, "fire"), (3, 3, "fire")), foes=[(0, 0)])
     _terrain(state, (5, 3), "chasm")
     result = cast(state, direction="east")
     assert _surfaces(result.state) == {(4, 3): Surface.FIRE}

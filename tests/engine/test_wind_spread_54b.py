@@ -76,5 +76,5 @@ def test_spread_is_only_for_wind_damage() -> None:
 
 def test_spread_is_one_or_two() -> None:
     for bad in (0, 3):
-        with pytest.raises(ValueError):  # noqa: PT011
+        with pytest.raises(ValueError):
             _wind(bad)

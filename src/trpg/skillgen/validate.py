@@ -53,7 +53,6 @@ from trpg.skillgen.scaling import attr_names_zh, scaling_basis_zh
 __all__ = [
     "EFFECT_PARAM_RULES",
     "RARITY_STATUS_PRIMITIVES",
-    "TERRAIN_PRIMITIVES",
     "RarityNeed",
     "Violation",
     "effect_count",
@@ -772,7 +771,7 @@ EFFECT_PARAM_EXCLUSIONS: tuple[str, ...] = (
     "no_damage_with_ally_heal",
     "terrain_needs_earth",
 )
-"""互斥規則裡，由「效果的對象、狀態或元素」決定會不會違規的幾條（``skill_exclusions.yaml`` 的 id）。"""
+"""互斥規則裡，由「效果的對象、狀態或元素」決定會不會違規的幾條（``skill_exclusions.yaml``）。"""
 EFFECT_PARAM_RULES: tuple[str, ...] = (
     *(f"exclusion.{rule}" for rule in EFFECT_PARAM_EXCLUSIONS),
     "skeleton.forbidden_affects",
@@ -967,7 +966,7 @@ class RarityNeed:
     minimum: str
 
 
-TERRAIN_PRIMITIVES: tuple[str, ...] = ("raise_terrain", "lower_terrain")
+_TERRAIN_PRIMITIVES: tuple[str, ...] = ("raise_terrain", "lower_terrain")
 """升降地形原語（Phase 3-54b：只有大地能用；影響格數越大稀有度要求越高）。"""
 
 
@@ -975,7 +974,7 @@ def _terrain_area_needs(skill: SkillDef, library: ContentLibrary) -> list[Rarity
     """升降地形的影響格數對應的最低稀有度（``terrain_area_rarity``，Phase 3-54b，06 6.33）。
     形狀沒有固定格數（連鎖）時略過（形狀自己有稀有度要求）。"""
     tiers = library.budget.terrain_area_rarity
-    if not tiers or not any(e.type in TERRAIN_PRIMITIVES for e in skill.effects):
+    if not tiers or not any(e.type in _TERRAIN_PRIMITIVES for e in skill.effects):
         return []
     try:
         cells = zone_cell_count(skill, library)

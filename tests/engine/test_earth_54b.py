@@ -193,7 +193,9 @@ def test_shockwave_card_matches_what_happens() -> None:
 # ---------------------------------------------------------------------------
 
 
-def _terrain(primitive: str, shape: dict[str, Any], *, tags: tuple[str, ...] = (), **extra: Any) -> SkillDef:
+def _terrain(
+    primitive: str, shape: dict[str, Any], *, tags: tuple[str, ...] = (), **extra: Any
+) -> SkillDef:
     skill = _skill([{"type": primitive}], shape, tags=tags, rarity="epic", skeleton="control")
     return skill.model_copy(update=extra) if extra else skill
 
@@ -262,14 +264,16 @@ def test_terrain_area_sets_the_minimum_rarity(
     tiers = LIB.budget.terrain_area_rarity
     expected = next((t.rarity for t in reversed(tiers) if cells >= t.min_cells), None)
     assert [n.minimum for n in needs] == ([expected] if expected else [])
-    if cells >= 7:  # noqa: PLR2004 - 規格的 7 格以上
+    if cells >= 7:
         assert expected == "epic" == minimum
-    elif cells >= 4:  # noqa: PLR2004 - 規格的 4～6 格
+    elif cells >= 4:
         assert expected == "rare" == minimum
 
 
 def test_a_rare_skill_cannot_use_seven_cells_but_an_epic_one_can() -> None:
-    rare = _terrain("raise_terrain", {"type": "square3", "range": 3}, tags=("earth",), rarity="rare")
+    rare = _terrain(
+        "raise_terrain", {"type": "square3", "range": 3}, tags=("earth",), rarity="rare"
+    )
     assert "rarity.terrain_area" in _problems(rare)
     epic = rare.model_copy(update={"rarity": "epic"})
     assert "rarity.terrain_area" not in _problems(epic)
@@ -293,7 +297,12 @@ def test_shockwave_points_come_from_the_primitive_and_the_shape() -> None:
 
 def test_wind_spread_two_costs_more_than_one() -> None:
     def total(spread: int | None) -> Any:
-        hit: dict[str, Any] = {"type": "damage", "dice": "2d6", "element": "wind", "affects": "tiles"}
+        hit: dict[str, Any] = {
+            "type": "damage",
+            "dice": "2d6",
+            "element": "wind",
+            "affects": "tiles",
+        }
         if spread is not None:
             hit["spread"] = spread
         return skill_budget(make_skill(SID, {"type": "line", "size": 3}, [hit]), LIB).total
@@ -335,3 +344,55 @@ def test_a_battle_with_earth_test_skills_replays_identically() -> None:
     used = {e.skill_id for e in run.events if isinstance(e, SkillUsed)}
     assert used & {"skill_t_quake", "skill_t_skin"}
 
+
+# ---------------------------------------------------------------------------
+# 工坊：事前停用、說明
+# ---------------------------------------------------------------------------
+
+_DRAFT: dict[str, Any] = {
+    "skeleton": "control",
+    "kind": "active",
+    "category": "spell",
+    "weapon_req": "focus",
+    "scaling_attr": "int",
+    "tier": 1,
+    "ap_cost": 1,
+    "shape": {"type": "cross", "range": 4},
+}
+
+
+def _effects_choice(draft: dict[str, Any], primitive: str) -> Any:
+    from trpg.skillgen.options import draft_options  # noqa: PLC0415
+
+    options = draft_options(draft, LIB)
+    step = next(s for s in options.steps if s.id == "effects")
+    field = next(f for f in step.fields if f.field == "effects")
+    return next(c for c in field.choices if c.value == primitive)
+
+
+@pytest.mark.parametrize("primitive", ["raise_terrain", "lower_terrain"])
+def test_workshop_disables_terrain_until_the_draft_has_an_earth_effect(primitive: str) -> None:
+    empty = _effects_choice({**_DRAFT, "effects": []}, primitive)
+    assert "大地" in empty.info["unavailable_zh"]
+    fire = {"type": "damage", "dice": "1d6", "element": "fire"}
+    assert "unavailable_zh" in _effects_choice({**_DRAFT, "effects": [fire]}, primitive).info
+    earth = {"type": "damage", "dice": "1d6", "element": "earth"}
+    ok = _effects_choice({**_DRAFT, "effects": [earth]}, primitive)
+    assert "unavailable_zh" not in ok.info
+
+
+def test_workshop_shows_spread_only_for_wind_and_the_card_says_the_number() -> None:
+    choice = _effects_choice({**_DRAFT, "skeleton": "area", "effects": []}, "damage")
+    spread = next(p for p in choice.params if p.field == "spread")
+    assert (spread.min, spread.max) == (1, 2)
+    assert spread.show_when == {"element": "wind"}
+    wind = make_skill(
+        SID,
+        LINE3,
+        [{"type": "damage", "dice": "1d4", "element": "wind", "affects": "tiles", "spread": 2}],
+    )
+    assert "2 格" in effect_summary(LIB, wind, wind.effects[0])
+    default = make_skill(
+        SID, LINE3, [{"type": "damage", "dice": "1d4", "element": "wind", "affects": "tiles"}]
+    )
+    assert "1 格" in effect_summary(LIB, default, default.effects[0])

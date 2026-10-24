@@ -674,8 +674,8 @@ _SHOCKWAVE_SKELETONS = ("area",)
 
 def _shockwave_secondary(ctx: Ctx) -> None:
     """震波（Phase 3-54b，06 6.33）：大地主題、直線形狀的範圍骨架（稀有以上、附帶效果與效果數都還有
-    空位）以 ``structure.shockwave_permille`` 的機率加上一個震波附帶效果。用 ``composer.shockwave`` 的
-    獨立串流抽，沒抽中的種子得到與加入震波之前完全相同的技能。"""
+    空位）以 ``structure.shockwave_permille`` 的機率加上一個震波附帶效果。用 ``composer.shockwave``
+    的獨立串流抽，沒抽中的種子得到與加入震波之前完全相同的技能。"""
     if (
         ctx.skeleton.id not in _SHOCKWAVE_SKELETONS
         or ctx.theme is not Element.EARTH
@@ -934,7 +934,7 @@ def _composable(ctx: Ctx, name: str) -> bool:
 
 
 def _theme_allows(ctx: Ctx, name: str) -> bool:
-    """主題元素是否允許原語 ``name``：互斥規則表裡「帶這個原語就必須有某些元素」的規則（Phase 3-54b：
+    """主題元素是否允許原語 ``name``：互斥規則表裡「帶這個原語就必須有某些元素」的規則（3-54b：
     升降地形限大地）。組合器的技能以主題元素為標籤，所以只看主題。"""
     for rule in ctx.library.exclusions.rules:
         when, need = rule.when, rule.require
