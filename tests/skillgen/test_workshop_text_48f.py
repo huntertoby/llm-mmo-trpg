@@ -6,10 +6,11 @@ import pytest
 from pydantic import ValidationError
 
 from tests.engine.helpers import library
+from trpg.content.skills import ModifierChange
 from trpg.content.workshop import WorkshopTextEntry, WorkshopTextTable
 from trpg.skillgen.option_models import FieldSpec
 from trpg.skillgen.option_player import content_dev_texts, option_dev_texts
-from trpg.skillgen.options import draft_options
+from trpg.skillgen.options import _change_field, draft_options
 from trpg.skillgen.random_composer import ComposeError, compose_random_skill
 
 LIB = library()
@@ -40,12 +41,23 @@ def _all_dev_texts() -> dict[str, str]:
     for draft in drafts:
         for step in draft_options(draft, LIB).steps:
             rows.update(option_dev_texts({step.id: step.fields}))
-    # Phase 3-51：沒有關鍵字的修正技能不再被驗證器擋，取樣會抽到修正技能的「可套用」說明；這些說明
-    # 還沒有玩家改寫（玩法 PM 的 149 條不含），列在 Phase3-51報告「待 PM 決定」，補齊前不納入檢查。
-    return {k: v for k, v in rows.items() if not k.startswith(_MODIFIER_UNREWRITTEN)}
+    # 修正技能的「可套用」說明由程式依樣板產生玩家語氣（`options._change_field`；玩法 PM），
+    # 不放在對照表裡，另由 test_modifier_change_texts_are_generated 檢查。
+    return {k: v for k, v in rows.items() if not k.startswith(_MODIFIER_GENERATED)}
 
 
-_MODIFIER_UNREWRITTEN = "工坊.effects.modifiers.change."
+_MODIFIER_GENERATED = "工坊.effects.modifiers.change."
+
+
+def test_modifier_change_texts_are_generated() -> None:
+    for name in ModifierChange.model_fields:
+        try:
+            spec = _change_field(name, LIB, None)
+        except KeyError:
+            continue
+        assert spec.description_zh.startswith("可以套用在："), name
+        assert spec.dev_description_zh.startswith("可套用："), name
+        assert not any("a" <= c <= "z" for c in spec.description_zh.replace("HP", "").lower())
 
 
 def test_table_has_the_149_rewritten_entries() -> None:

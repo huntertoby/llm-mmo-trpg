@@ -899,15 +899,31 @@ def _rune_hint(draft: Draft, library: ContentLibrary) -> tuple[str, ...]:
     return (RUNE_HINT_ZH,) if any(buff_for_allies(e) for e in effects) else ()
 
 
+_APPLIES_TO_ZH: dict[str, str] = {
+    "all_attacks": "所有攻擊（普攻和攻擊技能）",
+    "all_skills": "所有技能",
+    "attack": "普攻",
+    "skill_tags": "帶某個標籤的技能",
+    "interact": "互動",
+    "shove": "推擊",
+    "trip": "絆倒",
+}
+"""修正規則「套用對象」的玩家用語（玩法 PM 2026-10-24）。"""
+
+
 def _change_field(name: str, library: ContentLibrary, category: str | None) -> FieldSpec:
     info = ModifierChange.model_fields[name]
     low, high = model_range(info)
-    targets = "、".join(sorted(CHANGE_TARGETS[name]))
+    targets = sorted(CHANGE_TARGETS[name])
     when = "；選目標之前就決定，條件只能是自身血量" if name in SELF_ONLY_CHANGES else ""
+    player = "可以套用在：" + "、".join(_APPLIES_TO_ZH.get(t, t) for t in targets) + "。"
+    if name in SELF_ONLY_CHANGES:
+        player += "這個改變在選目標之前就生效，所以條件只能看你自己的 HP。"
     base: dict[str, Any] = {
         "field": name,
         "name_zh": CHANGE_TEXT[name],
-        "description_zh": f"可套用：{targets}{when}",
+        "description_zh": player,  # 玩家語氣由程式產生（玩法 PM 2026-10-24 的樣板，#44）
+        "dev_description_zh": f"可套用：{'、'.join(targets)}{when}",
     }
     if name == "add_element":
         elements = tuple(
