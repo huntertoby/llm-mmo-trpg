@@ -59,6 +59,7 @@ __all__ = [
     "affix_budget",
     "affix_points",
     "base_bonus_points",
+    "base_pool",
     "item_base_points",
     "item_budget",
     "item_budget_problems",
@@ -133,21 +134,26 @@ class BaseBonusRule(ContentModel):
 
 
 class BaseStrengthRule(ContentModel):
-    """整件物品的基礎強度換算（3K-2b，08 8.21 單位價；只用在「預算分數」比較，不是預算檢查）。
+    """整件物品的基礎份額換算（3K-2b 起，3K-2c 改照 08 8.22 的「基礎：詞條」比例；只用在「預算分數」
+    比較，不是預算檢查）。
 
-    - ``weapon_damage``：武器基礎傷害平均（骰平均＋固定傷害，乘每次普攻的打擊數）的單位價
-      （8.21.2 表「傷害 1 點 ＝ 1」）；
-    - ``armor_defense``：防具每 1 點基礎防禦的單位價（防禦值 +2% ＝ 3 點，8.21.2 表）；
-    - ``body_defense``：身體防具各類型（外觀造型 id）的基礎防禦（08 8.12：布袍 1、外套 2、皮甲 3、
-      鎖甲 5、板甲 7）；
-    - ``small_defense``：頭、手、腳（「小防禦＋詞條」）的基礎防禦。
-    其他部位（副手、項鍊、戒指）沒有基礎防禦。
+    某部位、某等級的 **基礎份額池** ＝ 部位預算 − 詞條預算（即部位預算 ×（1 − 詞條比例）：
+    主手、身體、副手 60%，頭、手、腳 50%，項鍊、戒指 0）。
+    同部位不同底材照「基礎數值 ÷ 參考基礎數值」分配池：
+
+    - 武器：基礎數值＝骰平均＋固定傷害，乘每次普攻的打擊數；參考＝``weapon_reference_permille``‰
+      （4500＝1d8 的平均，單手劍剛好拿到整個池）；
+    - 身體防具：基礎數值＝``body_defense`` 的基礎防禦（08 8.12：布袍 1、外套 2、皮甲 3、鎖甲 5、
+      板甲 7）；參考＝``body_reference``；
+    - 頭、手、腳、副手（沒有基礎數值差異）：整個池；
+    - 項鍊、戒指：池是 0。
     """
 
-    weapon_damage: Price
-    armor_defense: Price
+    weapon_reference_permille: int = Field(ge=1)
     body_defense: dict[str, int] = Field(default_factory=dict)
-    small_defense: int = Field(default=0, ge=0)
+    body_reference: int = Field(ge=1)
+    fallback_level: int = Field(default=1, ge=1)
+    """沒有物品等級的物品（初始裝備、基礎武器）換算份額時用的等級。"""
 
 
 class ItemGenRules(ContentModel):
@@ -290,26 +296,38 @@ def item_points(rules: ItemGenRules, item: ItemDef, affixes: Mapping[str, AffixD
     return total
 
 
-def item_base_points(
-    rules: ItemGenRules, item: ItemDef, weapons: Mapping[str, WeaponDef]
+def base_pool(rules: ItemGenRules, item_level: int, slot_type: SlotType) -> int:
+    """基礎份額池 ＝ 部位預算 − 詞條預算（08 8.22 的「基礎：詞條」比例，項鍊、戒指為 0）。"""
+    return slot_budget(rules, item_level, slot_type) - affix_budget(rules, item_level, slot_type)
+
+
+def _base_ratio(
+    rule: BaseStrengthRule, item: ItemDef, weapons: Mapping[str, WeaponDef]
 ) -> Fraction:
-    """整件物品的基礎強度點數（3K-2b）：武器＝基礎傷害平均 × 打擊數，身體防具＝類型的基礎防禦，
-    頭、手、腳＝小防禦（照 ``base_strength`` 的單位價）；其他部位或沒有資料時為 0。"""
-    rule = rules.base_strength
-    if rule is None:
-        return Fraction(0)
+    """底材的基礎數值 ÷ 參考基礎數值（沒有基礎數值差異的部位為 1）。"""
     if item.slot_type == "weapon":
         weapon = weapons.get(item.weapon or "")
         if weapon is None:
             return Fraction(0)
         dice = weapon.dice
         average = Fraction(dice.count * (dice.sides + 1), 2) + weapon.flat
-        return rule.weapon_damage.of(1) * average * weapon.strikes
+        return average * weapon.strikes * _PERMILLE / rule.weapon_reference_permille
     if item.slot_type == "body":
-        return rule.armor_defense.of(rule.body_defense.get(item.kind or "", 0))
-    if item.slot_type in ("head", "hands", "feet"):
-        return rule.armor_defense.of(rule.small_defense)
-    return Fraction(0)
+        return Fraction(rule.body_defense.get(item.kind or "", 0), rule.body_reference)
+    return Fraction(1)
+
+
+def item_base_points(
+    rules: ItemGenRules, item: ItemDef, weapons: Mapping[str, WeaponDef]
+) -> Fraction:
+    """整件物品的基礎份額點數（3K-2c）：該部位、該物品等級的基礎份額池 × 底材比例
+    （見 :class:`BaseStrengthRule`）；沒有 ``base_strength`` 規則時為 0。"""
+    rule = rules.base_strength
+    if rule is None:
+        return Fraction(0)
+    level = item.item_level if item.item_level is not None else rule.fallback_level
+    pool = base_pool(rules, level, item.slot_type)
+    return pool * _base_ratio(rule, item, weapons) if pool else Fraction(0)
 
 
 def item_strength(
