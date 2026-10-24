@@ -214,6 +214,6 @@ def test_the_card_names_the_weapon_attribute_or_the_generic_text() -> None:
     lib = library()
     skill = _weapon_skill()
     (generic,) = skill.formula_lines_zh(lib.ruleset.core)
-    assert "武器的屬性" in generic
+    assert "武器屬性" in generic
     (named,) = skill.formula_lines_zh(lib.ruleset.core, lib.weapons["one_handed_sword"])
     assert "力量" in named and "智力" not in named

@@ -13,7 +13,7 @@ from typing import Any, Literal
 
 from pydantic import BaseModel, ConfigDict
 
-from trpg.content.battle import Dice, WeaponDef
+from trpg.content.battle import Dice, WeaponDef, weapon_attr_examples_zh
 from trpg.content.keyword_derive import KeywordGrade, keyword_grades, skill_facts
 from trpg.content.library import ContentLibrary, Ruleset
 from trpg.content.rule_changes import RuleChangeDef, rule_change_sentence
@@ -972,7 +972,23 @@ def effect_summary(
         text = _effect_core(library, skill, spec) + suffix
     if spec.condition is not None:
         text += f"，若{condition_summary(library, spec.condition)}"
+        text += _affinity_attr_text(library, skill, spec.condition)
     return text
+
+
+def _affinity_attr_text(library: ContentLibrary, skill: SkillDef, condition: ConditionSpec) -> str:
+    """武器親和效果（``wielding_weapon``，3I-5）那一行補上那把武器看的屬性（3-55）：武器技的命中與傷害
+    看手上武器，所以寫「（這把武器吃力量與智力（取平均））」；不是武器技、或條件是副手時為空。"""
+    if (
+        skill.category != "weapon"
+        or condition.type != "wielding_weapon"
+        or condition.weapon is None
+    ):
+        return ""
+    weapon = library.weapons.get(condition.weapon)
+    if weapon is None:
+        return ""
+    return f"，這把武器吃{weapon.skill_scaling_names_zh(skill.secondary_scaling_attr)}"
 
 
 def condition_summary(library: ContentLibrary, condition: ConditionSpec) -> str:
@@ -1526,6 +1542,7 @@ def skill_card(
             library.ruleset.core,
             None if owner is None else owner.weapon,
             None if owner is None else owner.attr_get,
+            weapon_examples=weapon_attr_examples_zh(library.weapons.values(), skill.weapon_req),
         ),
         stacks=skill_stacks(library, skill),
     )

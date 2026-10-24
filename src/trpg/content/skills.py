@@ -927,6 +927,8 @@ def condition_text(
         plain = _rune_condition_text(condition, tag_runes)
     if plain is None and kind == "wielding_weapon" and condition.weapon is not None:
         plain = f"手持{weapon_name(condition.weapon)}時"  # 3I-5
+    if plain is None and kind == "wielding_weapon":
+        plain = "手持指定的武器時"  # 3-55：沒帶武器 ID 時也不露出英文代號
     return plain or kind
 
 
@@ -3364,11 +3366,24 @@ class SkillDef(ContentModel):
             return weapon.scaling_attr
         return self.scaling_attr
 
+    def _formula_names_zh(self, weapon: WeaponDef | None) -> str:
+        """算法句裡的屬性名（3-55）。武器技看手上武器（3H-6）：有武器寫實際的屬性名（雙屬性寫取較高
+        ／取平均；3I-3 的心智第二屬性再取平均），沒有武器寫「武器屬性」（卡片另列由武器資料產生的
+        例子）；其他技能寫自己的縮放屬性。"""
+        second = self.secondary_scaling_attr
+        if self.category != "weapon":
+            names = self.scaling_attr.display_name
+            return names if second is None else f"{names}／{second.display_name}（取平均）"
+        if weapon is not None:
+            return weapon.skill_scaling_names_zh(second)
+        return "武器屬性" if second is None else f"武器屬性與{second.display_name}（取平均）"
+
     def formula_lines_zh(
         self,
         core: CoreRules,
         weapon: WeaponDef | None = None,
         get: Callable[[Attribute], int] | None = None,
+        weapon_examples: str = "",
     ) -> tuple[str, ...]:
         """傷害、治療、護盾的算法（3-41c，08 8.11）：「傷害算法：骰值＋智力 × 0.5（目前 +6.5）」。
 
@@ -3376,14 +3391,7 @@ class SkillDef(ContentModel):
         屬性乘普攻倍率（效果的倍率、等級與修正規則另算，見效果句）。倍率取自 ``rules/core.yaml``，
         ``weapon`` 與 ``get`` 都省略時不附武器骰與目前加成。"""
         types = {e.type for e in self.effects}
-        if self.category == "weapon":  # 武器技看手上武器的屬性（3H-6）；沒有指定武器時寫泛稱
-            names = "武器的屬性" if weapon is None else weapon.scaling_names_zh()
-            if self.secondary_scaling_attr is not None:  # 3I-3：武器屬性值與心智屬性值取平均
-                names += f"與{self.secondary_scaling_attr.display_name}（取平均）"
-        else:
-            names = self.scaling_attr.display_name
-            if self.secondary_scaling_attr is not None:
-                names += f"／{self.secondary_scaling_attr.display_name}（取平均）"
+        names = self._formula_names_zh(weapon)
         now = None if get is None else self.scaling_value(get, weapon)
 
         def line(label: str, base: str, permille: int) -> str:
@@ -3399,6 +3407,8 @@ class SkillDef(ContentModel):
                 if weapon is not None:
                     base += f" {weapon.dice}" + (f"＋{weapon.flat}" if weapon.flat else "")
                 out.append(line("傷害", base, core.basic_attack_attr_multiplier_permille))
+                if weapon is None and weapon_examples:  # 3-55：沒有主角時列例子
+                    out.append(f"武器屬性看手上的武器：{weapon_examples}")
         for kind, label in (("heal", "治療"), ("shield", "護盾")):
             if kind in types:
                 out.append(line(label, "骰值", core.spell_attr_multiplier_permille))

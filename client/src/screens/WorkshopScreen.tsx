@@ -100,7 +100,7 @@ function SkillWorkshop({ onHome, onStartBattle, onGear, store, dev = false, hero
     setChecking(true);
     const timer = setTimeout(() => {
       api
-        .workshopCheck(draft)
+        .workshopCheck(draft, heroWeapon)
         .then((check) => {
           if (cancelled) return;
           dispatch({ type: "check", check });
@@ -116,7 +116,7 @@ function SkillWorkshop({ onHome, onStartBattle, onGear, store, dev = false, hero
       cancelled = true;
       clearTimeout(timer);
     };
-  }, [draft]);
+  }, [draft, heroWeapon]);
 
   // 瀏覽器暫存：重新整理、進戰鬥再回來都不會遺失。
   useEffect(() => {

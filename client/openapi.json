@@ -1484,13 +1484,13 @@
           "workshop"
         ],
         "summary": "Post Check",
-        "description": "是否合法、違反的規則、預算明細、最低稀有度與技能卡片。",
+        "description": "是否合法、違反的規則、預算明細、最低稀有度與技能卡片（帶 ``weapon`` 時卡片寫實際屬性）。",
         "operationId": "post_check_api_workshop_check_post",
         "requestBody": {
           "content": {
             "application/json": {
               "schema": {
-                "$ref": "#/components/schemas/WorkshopSkillRequest"
+                "$ref": "#/components/schemas/WorkshopCheckRequest"
               }
             }
           },
@@ -12205,6 +12205,30 @@
         "title": "WorkshopCheck",
         "description": ":class:`~trpg.skillgen.draft_check.DraftCheck` ＋ 技能卡片（完整且通過 schema 時才有）。"
       },
+      "WorkshopCheckRequest": {
+        "properties": {
+          "skill": {
+            "additionalProperties": true,
+            "type": "object",
+            "title": "Skill"
+          },
+          "weapon": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Weapon"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "title": "WorkshopCheckRequest",
+        "description": "檢查（Phase 3-55）：和選項一樣可帶 ``weapon``（主角目前手上武器的 ID）；有值且大類和技能的\n武器需求相符時，卡片的算法寫那把武器實際的屬性，否則列由武器資料產生的例子。"
+      },
       "WorkshopExport": {
         "properties": {
           "yaml": {
@@ -12348,19 +12372,6 @@
         ],
         "title": "WorkshopRandomRequest",
         "description": "隨機組合器（``trpg skills random`` 同一個函式）：同種子同參數結果一致。"
-      },
-      "WorkshopSkillRequest": {
-        "properties": {
-          "skill": {
-            "additionalProperties": true,
-            "type": "object",
-            "title": "Skill"
-          }
-        },
-        "additionalProperties": false,
-        "type": "object",
-        "title": "WorkshopSkillRequest",
-        "description": "組到一半（或完整）的技能。"
       },
       "XY": {
         "prefixItems": [

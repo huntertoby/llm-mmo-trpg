@@ -124,8 +124,8 @@ export const api = {
   /** `weapon`（選填）：主角目前手上武器的 ID，武器技的縮放屬性會顯示手上武器（Phase 3-48b）。 */
   workshopOptions: (skill: Record<string, unknown>, weapon?: string) =>
     request<DraftOptions>("POST", "/workshop/options", weapon === undefined ? { skill } : { skill, weapon }),
-  workshopCheck: (skill: Record<string, unknown>) =>
-    request<WorkshopCheck>("POST", "/workshop/check", { skill }),
+  workshopCheck: (skill: Record<string, unknown>, weapon?: string) =>
+    request<WorkshopCheck>("POST", "/workshop/check", weapon === undefined ? { skill } : { skill, weapon }),
   workshopRandom: (body: WorkshopRandomRequest) =>
     request<WorkshopRandom>("POST", "/workshop/random", body),
   /** 匯出 YAML；`allowIllegal`（開發者模式）才能匯出不合法的技能。 */
