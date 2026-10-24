@@ -15,7 +15,7 @@ setGlossary(glossary as unknown as Glossary);
 await waitForFonts();
 
 const HERO = "unit_0001";
-const st = (...ids: string[]): StatusView[] => ids.map((status_id) => ({ status_id, remaining: 2, source_id: null, amount: null, charge_tiles: [] }));
+const st = (...ids: string[]): StatusView[] => ids.map((status_id) => ({ status_id, remaining: 2, source_id: null, amount: null, charge_tiles: [], cost_status: false }));
 
 const SURF: Record<string, string> = { "0,0": "smoke", "1,0": "smoke", "0,1": "smoke", "1,1": "smoke", "2,0": "darkness", "2,1": "darkness" };
 

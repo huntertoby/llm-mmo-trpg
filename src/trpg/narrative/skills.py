@@ -1083,11 +1083,14 @@ def cost_parts(library: ContentLibrary, skill: SkillDef, *, with_ap: bool = True
         # 3-50b：持續寫成「到你下個回合結束」（有效回合 ＝ duration − 1）
         parts.append(
             f"代價：施放後自己{name}，{self_status_until(cost.self_status.duration)}"
-            f"（換 {percent:g}% 預算）"
+            f"（換 {percent:g}% 預算；代價狀態，無法淨化）"  # 玩法決定 #62
         )
     if cost.overdraft:
         percent = library.budget.allowance.overdraft_permille / 10
-        parts.append(f"代價：施放後自己下一個回合少 {cost.overdraft} AP（換 {percent:g}% 預算）")
+        parts.append(
+            f"代價：施放後自己下一個回合少 {cost.overdraft} AP"
+            f"（換 {percent:g}% 預算；代價狀態，無法淨化）"
+        )
     if cost.cooldown:
         parts.append(f"冷卻 {cost.cooldown} 回合")
     if cost.uses_per_battle:

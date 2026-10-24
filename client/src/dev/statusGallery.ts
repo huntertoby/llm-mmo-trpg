@@ -40,7 +40,7 @@ function iconGrid(): void {
   document.body.appendChild(box);
 }
 
-const st = (...ids: string[]): StatusView[] => ids.map((status_id) => ({ status_id, remaining: 2, source_id: null, amount: null, charge_tiles: [] }));
+const st = (...ids: string[]): StatusView[] => ids.map((status_id) => ({ status_id, remaining: 2, source_id: null, amount: null, charge_tiles: [], cost_status: false }));
 
 function board(): BattleView {
   const tiles: TileView[] = [];

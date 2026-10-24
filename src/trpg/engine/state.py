@@ -69,8 +69,8 @@ class StatusInstance:
     """自己付的暈眩（Phase 3-50b）：在自己的回合中施放時，「本回合照常」——到這個回合結束才生效
     （``end_turn`` 清除），期間 :func:`~trpg.engine.rules.statuses.skip_turn_status` 視為沒有。"""
     cost_status: bool = False
-    """代價狀態（Phase 3-50c，玩法決定 #62）：技能代價施加在自己身上的狀態（``self_paid``）；淨化與驅散
-    都移除不了。敵人施加的同種狀態沒有這個標記，照常可以淨化。"""
+    """代價狀態（Phase 3-50c，玩法決定 #62）：技能代價施加在自己身上的狀態（``self_paid``），
+    淨化與驅散都移除不了。敵人施加的同種狀態沒有這個標記，照常可以淨化。"""
 
 
 @dataclass(slots=True, frozen=True)

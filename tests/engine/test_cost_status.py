@@ -14,7 +14,7 @@ from trpg.engine.events import StatusRemoved
 from trpg.engine.resources import dispelled_buffs, pick_stolen_buff
 from trpg.engine.state import BattleState, StatusInstance
 from trpg.engine.view import project_for
-from trpg.shared.types import Team
+from trpg.shared.types import Team, UnitId
 
 COST_STATUSES = ["stun", "silenced", "bleed", "vulnerable", "slow", "overdrawn"]
 
@@ -24,7 +24,7 @@ def _state() -> BattleState:
     return battle(skill, [(6, 6)])
 
 
-def _apply(state: BattleState, status_id: str, *, source: str, paid: bool) -> None:
+def _apply(state: BattleState, status_id: str, *, source: UnitId, paid: bool) -> None:
     execute(
         Ctx(state),
         [
@@ -131,3 +131,17 @@ def test_the_cost_mark_survives_the_end_of_turn_countdown_and_reaches_the_view()
     view = project_for(after, Team.ALLY)
     unit_view = next(u for u in view.units if u.id == U1)
     assert next(s for s in unit_view.statuses if s.status_id == "overdrawn").cost_status
+
+
+def test_the_ai_does_not_count_cleanse_as_support_for_a_cost_only_target() -> None:
+    from trpg.engine.ai.utility import _supports  # noqa: PLC0415
+    from trpg.engine.skills.targeting import resolve_effects  # noqa: PLC0415
+
+    state = _state()
+    skill = state.ruleset.skill_def(SID)
+    effects = resolve_effects(state, skill)
+    caster = state.units[U1]
+    _apply(state, "stun", source=U1, paid=True)
+    assert not _supports(state, caster, skill, effects, caster)  # 只有代價狀態：淨化沒有用
+    _apply(state, "slow", source=U2, paid=False)
+    assert _supports(state, caster, skill, effects, caster)  # 有敵人施加的減益：有用

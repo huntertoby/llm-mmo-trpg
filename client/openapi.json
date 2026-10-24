@@ -10239,6 +10239,11 @@
             "type": "array",
             "title": "Charge Tiles",
             "default": []
+          },
+          "cost_status": {
+            "type": "boolean",
+            "title": "Cost Status",
+            "default": false
           }
         },
         "additionalProperties": false,
