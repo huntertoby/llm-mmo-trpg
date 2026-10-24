@@ -728,3 +728,20 @@ primitives:
       dice: {llm_hint: "爆炸傷害的骰子。", type: dice, required: true, description_zh: 爆炸的傷害骰或治療骰}
       radius: {llm_hint: "爆炸波及的半徑。", type: int, required: true, min: 0, max: 2, description_zh: 結算半徑（曼哈頓距離，0 只波及召喚物所在的格子）}
       element: {llm_hint: "爆炸的元素。", type: element, description_zh: 填了＝爆炸（傷害敵人）；省略＝治療範圍內的友方}
+
+  # --- Phase 3-54a：風的吹送（docs/design/06-技能.md 6.33，#56；點數為初值，未經模擬）---
+  - id: blow_surface
+    name_zh: 吹送
+    llm_hint: "用風把範圍內的地面表面（火、毒、冰、水、油、煙霧）整片往風向吹走幾格。"
+    description_zh: 把影響格上可吹送的表面（rules/core.yaml 的 wind.blow_surfaces：火、毒、冰、水、油、煙霧）整片往風向平移 distance 格（2～3），保留剩餘回合與建立者。風向：方向型形狀為形狀的方向；中心格型為「施放者 → 中心格」的主要軸向；以施放者為中心的形狀為「施放者 → 該格」的主要軸向（往外吹）。表面一格一格前進，遇到地圖外、牆壁與致命地形（表面不能存在的格子）、blocks_move 物件、比目前高的格子就停在前一格；單位不阻擋。原格的表面移除；落點先查互動表（同產生表面，例如水熄滅火），帶元素的表面落在物件上照常觸及。多片落在同一格時，風向最前面的先放。只能用在主動技能、只作用在格子。預算：base_points × 距離。
+    player_description: "用風把範圍內的地面表面（火、毒、冰、水、油、煙霧）整片往風向吹走幾格；撞到牆或擋路的東西就停下。"
+    category: structural
+    harmful: false
+    min_rarity: rare
+    active_only: true
+    budget_basis: per_distance
+    base_points: 1
+    acts_on: tile
+    forbid_affects: [self, enemies, allies, all]   # 吹送只作用在格子
+    params:
+      distance: {llm_hint: "表面被吹走的格數。", type: int, required: true, min: 2, max: 3, description_zh: 表面往風向平移的格數}

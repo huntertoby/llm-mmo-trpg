@@ -5,7 +5,7 @@ kinds: [active]
 enabled: true
 shapes: [self, single, line, cone, cross, square3, ring, ground_tile, chain, allies_in_radius]
 core:
-  primitives: [apply_status, create_surface, create_obstacle, raise_terrain, lower_terrain, steal_buff, dispel, reveal, zone, delayed_damage]   # 3D-8b delayed_damage（定時炸彈）；3D-5 zone（持續區域）；3D-8a dispel（驅散）、reveal（揭露）
+  primitives: [apply_status, create_surface, create_obstacle, raise_terrain, lower_terrain, steal_buff, dispel, reveal, zone, delayed_damage, blow_surface]   # 3-54a blow_surface（吹送，隨機組合器不當核心）； 3D-8b delayed_damage（定時炸彈）；3D-5 zone（持續區域）；3D-8a dispel（驅散）、reveal（揭露）
 secondary:
   primitives: [damage]
   max_count: 1

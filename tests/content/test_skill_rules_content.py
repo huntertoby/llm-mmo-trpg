@@ -80,6 +80,7 @@ def test_the_initial_skeleton_structure_matches_the_spec() -> None:
         "push",
         "knock_prone",
         "destroy_object",
+        "blow_surface",  # 3-54a
     }
     assert set(sk["control"].core.primitives) == {
         "apply_status",
@@ -92,6 +93,7 @@ def test_the_initial_skeleton_structure_matches_the_spec() -> None:
         "reveal",  # 3D-8a
         "zone",  # 3D-5
         "delayed_damage",  # 3D-8b
+        "blow_surface",  # 3-54a
     }
     assert sk["control"].secondary.max_share_permille == {"damage": 400}
     # 3C-5a：場景物件原語（只給手寫技能，隨機組合器不使用）

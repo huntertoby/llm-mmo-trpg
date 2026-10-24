@@ -398,7 +398,8 @@ def _open(surface_list: list[tuple[int, int, str]], **kw: object) -> BattleState
     return make_state(m, [spawn(Team.ALLY, (0, 2)), spawn(Team.ENEMY, (3, 2))])
 
 
-def test_wind_spreads_fire_along_direction_and_disperses_poison() -> None:
+def test_wind_spreads_fire_along_direction_and_keeps_poison() -> None:
+    """3-54a：風不再吹散毒（06 6.33 改為元素擴散，由 trpg.engine.wind 結算）。"""
     state = _open([(1, 0, "fire"), (1, 1, "poison")])
     s = run_effects(
         state,
@@ -407,7 +408,7 @@ def test_wind_spreads_fire_along_direction_and_disperses_poison() -> None:
             ElementTouchEffect(pos=(1, 1), element=Element.WIND, direction=(1, 0), push_distance=1),
         ],
     ).state
-    assert surfaces(s) == {(1, 0): Surface.FIRE, (2, 0): Surface.FIRE}
+    assert surfaces(s) == {(1, 0): Surface.FIRE, (2, 0): Surface.FIRE, (1, 1): Surface.POISON}
 
 
 def test_wind_pushes_pushable_object() -> None:

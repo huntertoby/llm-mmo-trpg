@@ -29,6 +29,7 @@ from trpg.engine.effects.models import CreateSurfaceEffect
 from trpg.engine.events import (
     EventBase,
     ZoneCreated,
+    ZoneExpanded,
     ZoneExpired,
     ZoneExpiryReason,
     ZoneMoved,
@@ -41,11 +42,12 @@ from trpg.engine.skill_triggers import check_trigger_depth
 from trpg.engine.skills import shapes
 from trpg.engine.skills.casting import use_zone_effects
 from trpg.engine.state import BattleState, UnitState, ZoneState
-from trpg.shared.types import Attribute, Pos, Team, UnitId
+from trpg.shared.types import Attribute, Element, Pos, Team, UnitId
 
 __all__ = [
     "affects_team",
     "create_zone",
+    "expand_zone",
     "expire_zones_at_turn_end",
     "flush_zone_entries",
     "move_zones",
@@ -53,6 +55,7 @@ __all__ = [
     "note_unit_moved",
     "remove_caster_zones_of",
     "zone_cells",
+    "zone_elements",
     "zone_is_harmful",
     "zone_spec",
     "zones_at",
@@ -83,6 +86,17 @@ def zone_is_harmful(state: BattleState, spec: EffectSpec) -> bool:
         ):
             return True
     return False
+
+
+def zone_elements(state: BattleState, zone: ZoneState) -> frozenset[Element]:
+    """區域帶的元素（元素擴散用，Phase 3-54a）：區域效果中傷害的元素，加上區域留下的表面的元素。"""
+    spec = zone_spec(state, zone)
+    found = {sub.element for sub in spec.effects or () if sub.type == "damage" and sub.element}
+    if spec.surface is not None:
+        element = state.ruleset.surface_def(spec.surface).element
+        if element is not None:
+            found.add(element)
+    return frozenset(found)
 
 
 def _caster_cells(state: BattleState, zone: ZoneState, center: XY) -> tuple[XY, ...]:
@@ -316,6 +330,33 @@ def _advance(ctx: Ctx, zone: ZoneState, direction: str) -> None:
         cells=moved.cells,
     )
     _covered(ctx, moved, new, old)
+
+
+def expand_zone(ctx: Ctx, zone_id: int, added: tuple[XY, ...], source_id: UnitId | None) -> None:
+    """元素擴散（Phase 3-54a，06 6.33）：固定或移動型區域多出 ``added`` 這些格子（已在區域裡、地圖外
+    與牆壁的格子略過）；新覆蓋的格子照常留下表面、上面的單位算進入。跟隨型區域的格子由施放者位置
+    決定，不擴大。"""
+    state = ctx.state
+    zone = _find(state, zone_id)
+    if zone is None or zone.anchor == "caster":
+        return
+    old = zone_cells(state, zone)
+    fresh = [xy for xy in _sorted(added) if xy not in old and shapes.in_play(state, xy)]
+    if not fresh:
+        return
+    new = _sorted([*old, *fresh])
+    grown = replace(zone, cells=tuple(Pos(x=x, y=y) for x, y in new))
+    state.zones = [grown if z.id == zone.id else z for z in state.zones]
+    ctx.emit(
+        ZoneExpanded,
+        zone_id=zone.id,
+        owner_id=zone.owner_id,
+        skill_id=zone.skill_id,
+        source_id=source_id,
+        added=tuple(Pos(x=x, y=y) for x, y in fresh),
+        cells=grown.cells,
+    )
+    _covered(ctx, grown, new, old)
 
 
 def note_unit_moved(ctx: Ctx, unit: UnitState, before: XY, after: XY) -> None:

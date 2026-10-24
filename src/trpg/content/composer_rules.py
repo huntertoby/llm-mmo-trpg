@@ -103,6 +103,10 @@ class StructureRules(ContentModel):
     knob_weight_other: int = Field(ge=1)
     push_pull_distances: tuple[int, ...] = Field(min_length=1)
     """推拉距離旋鈕的階梯。"""
+    blow_distances: tuple[int, ...] = (2, 3)
+    """吹送距離旋鈕的階梯（Phase 3-54a）。"""
+    blow_surface_permille: int = Field(default=0, ge=0, le=1000)
+    """範圍骨架加上吹送附帶效果的機率（Phase 3-54a；獨立的亂數串流，沒抽中的種子結果不變）。"""
     displace_second_core_permille: int = _PERMILLE
     combo_double_damage_permille: int = _PERMILLE
     control_buff_permille: int = _PERMILLE

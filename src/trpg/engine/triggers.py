@@ -146,6 +146,7 @@ def _collision_damage(ctx: Ctx, event: EventBase, depth: int) -> list[EffectBase
                 cause="collision",
                 dice=dice,
                 flat=flats[victim],
+                multiplier_permille=event.damage_permille,  # 風壓撞擊（Phase 3-54a）
             )
             for victim in victims
         )
@@ -157,6 +158,7 @@ def _collision_damage(ctx: Ctx, event: EventBase, depth: int) -> list[EffectBase
                     object_id=event.object_id,
                     dice=dice,
                     cause="collision",
+                    multiplier_permille=event.damage_permille,
                 )
             )
     return effects

@@ -218,6 +218,7 @@ def effect_knobs(
         "hurl_object": (("dice", dice, weight),),
         "detonate_runes": (("dice", dice, weight),),
         "push": (("distance", tuple(structure.push_pull_distances), 1),),
+        "blow_surface": (("distance", tuple(structure.blow_distances), 1),),
         "pull": (("distance", tuple(structure.push_pull_distances), 1),),
         "sacrifice_summon": (("dice", dice, structure.knob_weight_core),),
         "inscribe": (("duration", (1, 2, 3, 4, 5), structure.knob_weight_core),),
@@ -640,8 +641,31 @@ def build_effects(ctx: Ctx, core: list[str]) -> None:
         if not pool:
             break
         _make_effect(ctx, ctx.rng.choice(pool), core=False, beneficial_only=False)
+    _blow_secondary(ctx)
     _dash_first(ctx)
     _gamble_last(ctx)
+
+
+_BLOW_SKELETONS = ("area",)
+
+
+def _blow_secondary(ctx: Ctx) -> None:
+    """吹送（Phase 3-54a）：範圍骨架（稀有以上、附帶效果與效果數都還有空位）以
+    ``structure.blow_surface_permille`` 的機率加上一個吹送附帶效果。用 ``composer.blow`` 的獨立
+    串流抽，沒抽中的種子得到與加入吹送之前完全相同的技能。"""
+    if ctx.skeleton.id not in _BLOW_SKELETONS or not _skeleton_allows(
+        ctx, "blow_surface", core=False
+    ):
+        return
+    if rarity_rank(ctx.primitive("blow_surface").min_rarity) > ctx.rank:
+        return
+    secondaries = len(ctx.effects) - ctx.core_count
+    room = ctx.library.budget.rarity[ctx.rarity].max_effects - len(ctx.effects)
+    if room <= 0 or secondaries >= ctx.skeleton.secondary.max_count:
+        return
+    if not ctx.rng.fork("composer.blow").chance_permille(ctx.rules.structure.blow_surface_permille):
+        return
+    ctx.add_knobbed({"type": "blow_surface"})
 
 
 def _dash_first(ctx: Ctx) -> None:
@@ -865,6 +889,7 @@ _HAND_WRITTEN_PRIMITIVES = frozenset(
         "shadowstep",
         "grant_skill",
         "detonate_runes",
+        "blow_surface",  # 3-54a：只由 _blow_secondary 的獨立串流加入（既有種子不變）
     }
 )
 """只給手寫技能的結構型原語（Phase 3C-5a 的場景物件原語：需要地圖上有對應的物件；3D-2 的
