@@ -50,13 +50,14 @@ Phase 3 各段（`Phase3計畫.md` 節號；報告 `Phase3-*報告.md`）：
 
 ## 3. 下一步
 
-### 3.000 最新進度（2026-10-24 晚，開發 PM `local_e6fcf372`；優先於 3.00）
+### 3.000 最新進度（2026-10-24 深夜，開發 PM `local_e6fcf372`；優先於 3.00）
 
-- **已完成並 push**：3H-7 修正、3-47、3-48、3-48b～h、3-49、3I-1、3I-2、3I-4、3I-6（元素順序 A′ 定稿）、最低花費例外、刃紋、陷阱觸發範圍 bug。驗收紀錄：`Phase3計畫.md` 51～59.1、`Phase3I計畫.md` 4.1～4.4。技能總數 221；`LOG_FORMAT` `/67`。
-- **進行中**：3-51（61 節，#55 基礎技能＋#54 關鍵字顯示）、3-50（60 節，#54 代價換強度）——兩段都碰 `trpg.skillgen` 驗證與組合器，合併時注意衝突、技能總數、`LOG_FORMAT`。
-- **之後**：3I-3（魔劍士）→ 3I-5（武器親和）→ 3K（3K-1 含屬性詞條機率偏好與 #52 元素詞條；武器元素詞條接 `attack_element.weapon_affix_element`）→ 3-52～3-54（62～64 節，#56～#59）→ 3J → 3R（種族 #61，`Phase3R計畫.md`）→ Phase 4。**平行美術軌**：3S 真側面（`Phase3S計畫.md`，3 段，只動前端繪圖），有空的 agent 位置就派；3R-3 種族外觀在 3S 之後。
-- **流程經驗**：合併後一律在 main 跑「含 slow、除 llm」的全量（`-m "(slow or not slow) and not llm"`，約 6～8 分）再 push；agent 常漏 `tests/engine`，規格要寫明；兩個 agent 同時加技能必撞技能總數、`skill_icons.json`、CLI 快照（以 `--theirs` 再重產）；背景檢查跑時不要改工作區檔案。worktree 資料夾常刪不乾淨（檔案被鎖），分支照刪。
-- 使用者的工坊試玩回饋由專案 PM 轉來，同類問題照流程 E 全面掃描。
+- **已完成並 push**：3-47、3-48～3-48h、3-49、3-50、3-50b（＋自我沉默）、3-51、3-52；3I-1～3I-6（3I-3b）；3K-1、3K-2；3S-1～3S-3（美術 PM 驗收）。驗收紀錄：`Phase3計畫.md` 51～62.1、`Phase3I計畫.md` 4.1～4.6、`Phase3K計畫.md` 5.1～5.2、`Phase3S計畫.md` 檔尾。技能 268；`LOG_FORMAT` `/73`；存檔 `trpg-run/6`。
+- **進行中**：3-52b（62b 節）、3K-2b（`Phase3K計畫.md` 5.2）。
+- **之後**：3-53（63 節，中毒關鍵字）→ 3-54a／b／c（64 節）→ 3J 形態（`Phase3J計畫.md`）→ 3R 種族（`Phase3R計畫.md`，3R-3 含 3S-3 成對武器小修）→ Phase 4（4-L6 起）。
+- **等使用者**：自付代價能否被淨化移除（玩法 PM 轉專案 PM）。
+- **流程經驗**：合併後一律在 main 跑「除 llm 的全量」（`-m "not llm"`，約 7～10 分）再 push；背景檢查跑時不改工作區；兩個 agent 同時加技能或遞增 `LOG_FORMAT` 必撞（`skill_icons.json`、CLI 快照取 `--theirs` 再重產；`LOG_FORMAT` 取較大＋1，runner 文件字串都保留，測試字面值一起改）；agent 要寫明 `-m "slow or not slow" tests/cli` 與 `tests/engine`；**刪 worktree 前確認 `client/node_modules` 不是連結**（曾刪到主資料夾的套件，用 `pnpm install --offline --frozen-lockfile --force` 還原）；agent 回報後若「waiting on its own background work」用 TaskStop。
+- 平衡待辦到 B23（本檔 3.3）。
 
 ### 3.00 接手第一件事（2026-10-23 第二次交接，最新，優先於下面各節）
 
