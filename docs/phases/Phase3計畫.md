@@ -2259,3 +2259,11 @@ PM 驗收後請使用者試玩一整輪（`docs/專案計畫.md` 第 14 節 🎮
 3. 毒元素的普攻附加詞條對應到中毒的外觀圖樣（`content/equipment/appearance.yaml` 等，顯示用）。
 4. 驗收：pytest（content、skillgen、roguelite、narrative、api、`-m "slow or not slow" tests/cli`）、vitest、build、ruff、mypy。報告 `Phase3-53b報告.md`。
 - **3-53b（2026-10-24，開發 PM 合併）**：`KeywordDef.start_hidden`（`poisoned` 先隱藏於開局選項，3-54c 補完刪掉那一行）；`skill_evolution.yaml` `grafts.poisoned`（前綴「劇毒」）；`ELEMENT_KEYWORD` 加毒→中毒（毒元素詞條帶中毒圖樣）。檢查：pytest content／skillgen／roguelite／narrative／api 4042、cli（含 slow）148、ruff、mypy。**3-54c 要拿掉 3-53 的保守測試標記**（`EXTRA_KEYWORDS`、`short == {"poisoned": 1}`、起始技能剛好 1 招）並刪 `start_hidden`。
+
+## 60c. Phase 3-50c｜代價狀態無法淨化或驅散（玩法決定 #62，修改 #60；使用者：「A」；06 6.3、6.5 共通規則第 8 條 `df94a6c`；sonnet；約 0.2 段）
+
+1. 技能代價施加在自己身上的狀態（`cost.self_status`：自暈、自我沉默、自我流血、易傷、虛弱、緩速、定身）在狀態實例上標記為「代價狀態」（3-50 已有 `ApplyStatusEffect.self_paid`，把它存進 `StatusInstance`）；**淨化與驅散都移除不了**；敵人施加的同種狀態照常可以淨化。透支本來就不是可移除的狀態，確認沒有效果能抵銷。
+2. 卡片（代價行）與狀態列（HUD、單位資訊、狀態浮動卡）標「代價狀態，無法淨化」。
+3. AI：不對只帶代價狀態的目標施放淨化（效用評估把代價狀態排除）。
+4. 引擎表格測試：自付 × 各代價狀態 × 淨化／驅散不移除；敵人施加的同種狀態照常移除；混合情況只移除非代價的減益。
+5. 驗收：pytest（engine、content、skillgen、narrative、api、`-m "slow or not slow" tests/cli`）、vitest、build、ruff、mypy、一場含代價技能與淨化的重播；改紀錄格式就遞增 `LOG_FORMAT`。報告 `Phase3-50c報告.md`。
