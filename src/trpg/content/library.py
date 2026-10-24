@@ -61,6 +61,7 @@ from trpg.content.equipment import (
     loadout_problems,
     resolve_loadout,
 )
+from trpg.content.item_budget import ItemGenRules, item_gen_problems
 from trpg.content.keyword_derive import Facts, SkillKeywords, derive_from_facts, derive_keywords
 from trpg.content.loader import default_content_dir, load_content_file
 from trpg.content.maps import MapDef, SpawnUnitsEvent, check_map
@@ -464,6 +465,8 @@ class ContentLibrary:
     """物品（``items.yaml``，Phase 3G-G1；目前只有測試用物品）。"""
     appearance: AppearanceTable | None = None
     """裝備外觀清單（``equipment/appearance.yaml``，Phase 3G-G5a）。"""
+    item_gen: ItemGenRules | None = None
+    """物品產生器與物品預算的係數（``item_gen.yaml``，Phase 3K-1）。"""
     dev_starters: DevStarterTable = field(default_factory=DevStarterTable)
     """開發者起始包（``dev_starters.yaml``，Phase 3-24b2；不是設計規則，玩家介面不顯示）。"""
     evolution: EvolutionTable = field(default_factory=EvolutionTable)
@@ -605,6 +608,7 @@ def load_library(  # noqa: PLR0915
     affix_table = load("affixes.yaml", AffixTable)
     item_table = load("items.yaml", ItemTable)
     appearance = load("equipment/appearance.yaml", AppearanceTable)
+    item_gen = load("item_gen.yaml", ItemGenRules)
     try:
         ruleset = Ruleset(
             core=core,
@@ -649,6 +653,7 @@ def load_library(  # noqa: PLR0915
         if problems:
             raise ContentError(root / "items.yaml", "；".join(problems))
     _check_appearance(root, appearance, item_table, keywords)
+    _check_item_gen(root, item_gen, affixes)
     gear = _GearCatalog(items=items, affixes=affixes, rules=equipment_rules)
 
     _check_skills(root, skills, ruleset, budget)
@@ -748,6 +753,7 @@ def load_library(  # noqa: PLR0915
         offhands=offhand_map,
         items=items,
         appearance=appearance,
+        item_gen=item_gen,
         dev_starters=dev_starters,
         evolution=evolution,
         skill_scaling=skill_scaling,
@@ -1272,6 +1278,13 @@ def _check_appearance(
     problems = [p for item in items.items for p in item_appearance_problems(item, appearance)]
     if problems:
         raise ContentError(root / "items.yaml", "；".join(problems))
+
+
+def _check_item_gen(root: Path, rules: ItemGenRules, affixes: Mapping[str, AffixDef]) -> None:
+    """物品產生器的係數和詞條白名單一致（Phase 3K-1）。"""
+    problems = item_gen_problems(rules, affixes)
+    if problems:
+        raise ContentError(root / "item_gen.yaml", "；".join(problems))
 
 
 def _check_affixes(
