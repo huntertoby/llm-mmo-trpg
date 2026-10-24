@@ -83,6 +83,7 @@ __all__ = [
     "TriggerAffix",
     "ValueRange",
     "WeaponTraitAffix",
+    "affix_slot_problems",
     "affix_strength",
     "affix_text",
     "item_problems",
@@ -986,6 +987,17 @@ def _affix_slot_problems(
     ):
         problems.append(f"{where}：{weapon.name_zh} 已有元素，不能掛武器元素詞條")
     return problems
+
+
+def affix_slot_problems(
+    item: ItemDef,
+    affix: AffixDef,
+    weapon: WeaponDef | None,
+    weapons: Mapping[str, WeaponDef] | None = None,
+) -> list[str]:
+    """詞條能不能掛在這件物品上（種類、限定武器、標籤、傳說、已有元素的武器；Phase 3K-1 的產生器
+    用來篩選候選詞條）。"""
+    return _affix_slot_problems(item, affix, weapon, weapons)
 
 
 def weapon_element_problems(name: str, affixes: Iterable[AffixDef]) -> list[str]:
