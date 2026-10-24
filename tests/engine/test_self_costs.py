@@ -38,9 +38,9 @@ from trpg.engine.events import (
     TurnStarted,
 )
 from trpg.engine.preview import preview
+from trpg.engine.rules.statuses import blocks_spells
 from trpg.engine.runner import LOG_FORMAT, replay, run_battle
 from trpg.engine.state import BattleState, state_to_json
-from trpg.shared.errors import IllegalActionError
 from trpg.shared.types import Pos, Team
 
 SINGLE = {"type": "single", "range": 5}
@@ -242,7 +242,8 @@ def test_a_longer_shield_is_not_shortened_by_a_shorter_one() -> None:
 # ---------------------------------------------------------------------------
 
 
-def test_self_silence_blocks_the_casters_next_spell_but_not_weapon_skills() -> None:
+def test_self_silence_waits_for_the_end_of_this_turn() -> None:
+    """自我沉默和自暈一樣「本回合照常、回合結束才生效」（06 6.5，玩法 PM 2026-10-24）。"""
     spell = make_skill(
         SID,
         SINGLE,
@@ -252,10 +253,13 @@ def test_self_silence_blocks_the_casters_next_spell_but_not_weapon_skills() -> N
     )
     state = hit_with(battle(spell, [(4, 3)]))
     result = cast(state, target_id=U2)
-    assert result.state.units[U1].get_status("silenced") is not None
-    assert result.state.units[U1].ap > 0  # 沉默不會讓本回合沒有 AP
-    with pytest.raises(IllegalActionError):
-        resolve(result.state, UseSkill(unit_id=U1, skill_id=SID, target_id=U2))
+    silence = result.state.units[U1].get_status("silenced")
+    assert silence is not None and silence.dormant
+    assert not blocks_spells(result.state.ruleset, result.state.units[U1])  # 本回合還能施法
+    after = resolve(result.state, EndTurn(unit_id=U1)).state
+    silence = after.units[U1].get_status("silenced")
+    assert silence is not None and not silence.dormant  # 回合結束才生效
+    assert blocks_spells(after.ruleset, after.units[U1])
 
 
 def test_self_bleed_hurts_at_the_start_of_the_casters_next_turn() -> None:
@@ -396,6 +400,6 @@ def test_a_battle_with_the_four_demo_skills_replays_identically() -> None:
     run = run_battle(setup, 11, policy)
     again = replay(setup, 11, run.actions)
     assert state_to_json(again.state) == state_to_json(run.state)
-    assert LOG_FORMAT.endswith("/69")
+    assert LOG_FORMAT.endswith("/70")
     used = {e.skill_id for e in run.events if isinstance(e, SkillUsed)}
     assert used & set(ids)  # AI 真的用到了示範技能

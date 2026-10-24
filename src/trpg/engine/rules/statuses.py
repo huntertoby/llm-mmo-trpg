@@ -191,7 +191,9 @@ def fear_sources(rules: Ruleset, unit: UnitState) -> frozenset[UnitId]:
 
 def blocks_spells(rules: Ruleset, unit: UnitState) -> bool:
     """是否帶有 ``blocks_spells`` 的狀態（沉默）：不能使用法術技。"""
-    return any(rules.status_def(s.status_id).blocks_spells for s in unit.statuses)
+    return any(
+        not s.dormant and rules.status_def(s.status_id).blocks_spells for s in unit.statuses
+    )  # 自我沉默在本回合結束前是休眠的（06 6.5，玩法 PM 2026-10-24）
 
 
 def attack_range_cap(rules: Ruleset, unit: UnitState) -> int | None:

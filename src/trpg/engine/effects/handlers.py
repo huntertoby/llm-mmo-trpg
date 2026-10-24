@@ -651,8 +651,8 @@ def apply_status(ctx: Ctx, effect: ApplyStatusEffect) -> list[EventBase]:
         amount=effect.amount,
         skill_id=effect.skill_id,
         dormant=effect.self_paid
-        and definition.skip_turn
-        and ctx.state.active_unit == unit.id,  # 自暈：本回合照常，回合結束才生效（3-50b）
+        and (definition.skip_turn or definition.blocks_spells)
+        and ctx.state.active_unit == unit.id,  # 自暈／自我沉默：本回合照常，回合結束才生效
     )
     if definition.stance:  # 同時只能有一個姿態：先移除其他姿態（2E-2）
         for old in stance_status_ids(ctx.rules, unit):
