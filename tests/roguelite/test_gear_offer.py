@@ -460,12 +460,13 @@ def test_base_weapon_score_is_not_zero_and_follows_the_base_damage() -> None:
     base = current_item(lib, run, "main_hand")
     assert base is not None and base.id == "base_one_handed_sword"
     sword = lib.weapons["one_handed_sword"]
-    average = Fraction(sword.dice.count * (sword.dice.sides + 1), 2) + sword.flat
-    assert item_score(lib, base) == average * sword.strikes > 0
+    assert sword.dice.sides == 8 and sword.dice.count == 1  # 參考底材：1d8
+    assert item_score(lib, base) == Fraction(18)  # 等級 1 主手基礎份額池 18，單手劍拿整個池
     greatsword = _weapon_item(lib, "greatsword")
     plain = greatsword.model_copy(update={"affixes": (), "base_bonus_permille": 0})
     assert item_score(lib, plain) > item_score(lib, base)  # 大劍的基礎傷害比較高
     body = generate_item(lib, Rng(2), "body", "common", 3).model_copy(
         update={"kind": "plate", "affixes": (), "base_bonus_permille": 0}
     )
-    assert item_score(lib, body) == Fraction(21)  # 板甲基礎防禦 7 × 3 點
+    assert body.item_level == 3
+    assert item_score(lib, body) == Fraction(42)  # 等級 3 身體池 18 × 板甲 7 ÷ 參考 3
