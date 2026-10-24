@@ -27,3 +27,7 @@
 - 報告 `Phase3S-2報告.md`。新檔 `client/src/render/paperdollSideGear.ts`：頭部 9 種 kind 全部側面形狀（資料實際只有 9 種，規格寫 10 種有誤）；角盔兩角都往後彎、遠側較暗先畫（`drawHornSide` 匯出給 3R-3 種族角共用）；盾（圓盾、鳶盾、塔盾）、法書、披風的側面版，法器珠沿用球體。`SideHooks` 移除 `headgearFront`、`helmetBack`（3S-3／3I-3 合併時留意）。doll-gallery 新增「⑥ 側面」。截圖 `docs/art/port/3S-2/`。
 - 檢查（main）：vitest 958、build；開發 PM 看過朝東頭部截圖。
 - **3S-2 美術 PM 驗收通過**（`docs/art/3S-2檢查.md`）：以實際 9 種頭部 kind 為準；角盔角 1.3 不調；盾、法書、法器珠、披風 OK。
+
+### 3S-3（2026-10-24，開發 PM 合併；美術 PM 驗收通過，`docs/art/3S-3檢查.md`）
+
+- 報告 `Phase3S-3報告.md`。新檔 `client/src/render/paperdollSideWeapon.ts`（各武器 kind 側面握法；長柄前傾、劍斜向前、槍口朝面向、成對副手遠側暗 30%）；`SideHooks.race`（`behind`／`face`／`head`）與 `SIDE_RACE_ANCHORS` 留給 3R-3。美術 PM：弓、槍抬到胸前接受；**小修**：成對武器遠側那把的手槍、斧、錘往前上方錯開約 3px，讓槍管或斧頭露出一截（匕首、劍、鞭不變）→ 併進 3R-3a。真側面三段全部驗收完成。
