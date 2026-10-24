@@ -43,6 +43,7 @@ from trpg.content.skills import (
     SelfStatusCost,
     ShapeSpec,
     SkillDef,
+    is_wind_skill,
     on_hit_carrier,
 )
 from trpg.content.summons import SummonDef, summon_dpr
@@ -327,6 +328,33 @@ def _overload_stack_cost(
     )
 
 
+def _per_distance_points(
+    skill: SkillDef, effect: EffectSpec, primitive: PrimitiveDef, library: ContentLibrary
+) -> tuple[Fraction, str]:
+    """``per_distance``：base_points × 距離，加上撞擊骰與風壓撞擊（3-54a）的點數。"""
+    assert primitive.base_points is not None
+    distance = effect.distance or 1
+    points = Fraction(primitive.base_points * distance)
+    note = f"{primitive.base_points}×{distance} 格"
+    if effect.collision_dice is not None:
+        extra = effect.collision_dice.count * library.budget.collision_die_points
+        points += extra
+        note += f" ＋ 撞擊 {effect.collision_dice}（{extra} 點）"
+    if primitive.id == "push" and is_wind_skill(skill):
+        bonus = _wind_collision_points(effect, library)
+        points += bonus
+        note += f" ＋ 風壓撞擊（{_fmt(bonus)} 點）"
+    return points, note
+
+
+def _wind_collision_points(effect: EffectSpec, library: ContentLibrary) -> Fraction:
+    """風壓撞擊（Phase 3-54a，06 6.33）：風元素技能的推擊，撞擊骰（省略為核心規則的撞擊骰）每顆
+    ``collision_die_points`` × 倍率多出的部分（1500‰ → ×0.5）。"""
+    dice = effect.collision_dice or library.ruleset.core.collision_damage_dice
+    extra = library.ruleset.core.wind.collision_permille - _PERMILLE
+    return Fraction(dice.count * library.budget.collision_die_points * extra, _PERMILLE)
+
+
 def _plain_base_points(  # noqa: PLR0911
     skill: SkillDef, effect: EffectSpec, primitive: PrimitiveDef, library: ContentLibrary
 ) -> tuple[Fraction, str]:
@@ -339,15 +367,7 @@ def _plain_base_points(  # noqa: PLR0911
         assert primitive.base_points is not None
         return Fraction(primitive.base_points), "固定"
     if basis == "per_distance":
-        assert primitive.base_points is not None
-        distance = effect.distance or 1
-        points = Fraction(primitive.base_points * distance)
-        note = f"{primitive.base_points}×{distance} 格"
-        if effect.collision_dice is not None:
-            extra = effect.collision_dice.count * library.budget.collision_die_points
-            points += extra
-            note += f" ＋ 撞擊 {effect.collision_dice}（{extra} 點）"
-        return points, note
+        return _per_distance_points(skill, effect, primitive, library)
     if basis == "per_amount":
         assert primitive.base_points is not None
         amount = effect.amount or 1

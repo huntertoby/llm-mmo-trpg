@@ -95,6 +95,7 @@ from trpg.engine.events import (
     SummonExpired,
     SummonModeSet,
     SummonPulled,
+    SurfaceBlown,
     SurfaceChanged,
     SurfaceEntered,
     TerrainChanged,
@@ -124,6 +125,7 @@ from trpg.engine.events import (
     WallToppled,
     WeaponReloaded,
     ZoneCreated,
+    ZoneExpanded,
     ZoneExpired,
     ZoneMoved,
     ZoneTriggered,
@@ -1102,6 +1104,15 @@ def _surface_changed(e: SurfaceChanged, v: _View) -> str:
     return f"  {xy_text(e.pos)} 的{before}變成了{after}"
 
 
+@_handles(SurfaceBlown)
+def _surface_blown(e: SurfaceBlown, v: _View) -> str:
+    """吹送（Phase 3-54a）。"""
+    name = surface_name(v.state, e.surface)
+    if e.from_pos == e.to_pos:
+        return f"  ≋ {xy_text(e.from_pos)} 的{name}被風吹動，但被擋住留在原地"
+    return f"  ≋ {xy_text(e.from_pos)} 的{name}被風吹到 {xy_text(e.to_pos)}"
+
+
 @_handles(TerrainChanged)
 def _terrain_changed(e: TerrainChanged, v: _View) -> str:
     if e.terrain_before != e.terrain_after:
@@ -1314,6 +1325,13 @@ def _zone_moved(e: ZoneMoved, v: _View) -> str:
     skill = _skill_name(v, e.skill_id)
     direction = DIRECTION_TEXT.get(e.direction, e.direction)
     return f"  「{skill}」區域向{direction}前進：{cells_text(e.cells)}"
+
+
+@_handles(ZoneExpanded)
+def _zone_expanded(e: ZoneExpanded, v: _View) -> str:
+    """元素擴散（Phase 3-54a）。"""
+    skill = _skill_name(v, e.skill_id)
+    return f"  ≋ 風讓「{skill}」區域擴大到 {cells_text(e.added)}"
 
 
 @_handles(ZoneTriggered)
