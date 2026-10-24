@@ -7,8 +7,8 @@
    （外觀與標籤沿用 ``items.yaml`` 裡沒有詞條的副手本體）；其他部位從外觀清單的造型
    （``equipment/appearance.yaml``；防具目前沒有基礎數值資料，只有詞條）。
 2. **詞條**：依稀有度（``item_gen.yaml`` 的 ``rarities``）決定條數與可用類別；稀有起第 1 條是
-   build 詞條（``required_picks``）。每一步從「放得進剩餘預算、且替後面每條留下至少 2 點」的詞條
-   中抽：同一族（六屬性、8 種普攻附加元素、8 種武器元素）先算一個候選，抽中再選成員；武器上的
+   build 詞條（``required_picks``）。每一步從「放得進剩餘預算、且替後面每條留下最便宜一條的點數」
+   的詞條中抽：同一族（六屬性、8 種普攻附加元素、8 種武器元素）先算一個候選，抽中再選成員；武器上的
    屬性依縮放屬性偏好。數值取放得進的最大值（8.22.1 第 4 點）。點數不到預算 70% 時重抽（最多
    ``max_attempts`` 次），再不行用「每步挑點數最高」的確定性方法；普通物品沒有詞條時，詞條部分
    換成基礎加成。
@@ -284,6 +284,8 @@ class _Context:
     """這件物品能掛、稀有度允許的詞條（依 id）。"""
     required: tuple[AffixDef, ...]
     """build 詞條的候選（稀有起；沒有時為空）。"""
+    reserve: Fraction
+    """替後面每一條預留的點數：一般候選裡最便宜的一條（至少每條最低點數）。"""
 
 
 def _context(library: ContentLibrary, base: _Base, rule: RarityRule) -> _Context:
@@ -297,7 +299,14 @@ def _context(library: ContentLibrary, base: _Base, rule: RarityRule) -> _Context
     pick = rules.required_picks.get(base.slot_type) if rule.required else None
     required = tuple(a for a in fits if pick is not None and pick.allows(a))
     pool = tuple(a for a in fits if a.category in rule.categories)
-    return _Context(rules=rules, base=base, pool=pool, required=required)
+    costs = [_min_points(rules, a) for a in pool]
+    reserve = max(Fraction(rules.min_affix_points), min(costs, default=Fraction(0)))
+    return _Context(rules=rules, base=base, pool=pool, required=required, reserve=reserve)
+
+
+def _min_points(rules: ItemGenRules, affix: AffixDef) -> Fraction:
+    """詞條最便宜時的點數（數值取範圍下限）。"""
+    return affix_points(rules, affix, None if affix.value is None else affix.value.min)
 
 
 def _attribute_weight(rules: ItemGenRules, base: _Base, attribute: Attribute | None) -> int:
@@ -334,14 +343,13 @@ def _fill(
     ],
     budget: int,
 ) -> list[_Pick]:
-    """依序挑 ``count`` 條詞條，每一步替後面每條留下最低點數。放不下時先減少條數（照「每條至少
-    2 點」下修，08 8.22）；第 1 條 build 詞條在只剩 1 條也放不下時，改從一般候選挑。"""
+    """依序挑 ``count`` 條詞條，每一步替後面每條預留 ``reserve`` 點。放不下時先減少條數（照
+    「每條至少 2 點」下修，08 8.22）；第 1 條 build 詞條在只剩 1 條也放不下時，改從一般候選挑。"""
     chosen: list[_Pick] = []
     remaining = Fraction(budget)
-    floor = ctx.rules.min_affix_points
     while len(chosen) < count:
         index = len(chosen)
-        allowance = remaining - floor * (count - index - 1)
+        allowance = remaining - ctx.reserve * (count - index - 1)
         want_required = index == 0 and bool(ctx.required)
         options = _options(ctx, ctx.required if want_required else ctx.pool, chosen, allowance)
         if not options and count > index + 1:
