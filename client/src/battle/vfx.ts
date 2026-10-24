@@ -393,6 +393,8 @@ function absorb(seg: Segment | null, e: EventBase, at: Locate): VfxHit | null {
   }
   if (seg === null) return null;
   if (e.type === "element_touched" && e.source_id === seg.caster && typeof e.element === "string") seg.touched ??= e.element;
+  // 吹送（3-54a）：沒有傷害的吹送技能也用風的特效
+  if (e.type === "surface_blown" && e.source_id === seg.caster) seg.touched ??= "wind";
   if (e.type === "healed" || e.type === "shield_gained") seg.support = true;
   if (e.type === "surface_changed" && e.cause === "effect" && e.after === "water") seg.water = true;
   if (e.type === "status_applied" && e.source_id === seg.caster && typeof e.status_id === "string") seg.status ??= e.status_id;

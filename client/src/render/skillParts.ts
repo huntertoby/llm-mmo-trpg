@@ -345,6 +345,14 @@ const EFFECT: Record<string, readonly [string, Draw]> = {
   ],
   apply_status: ["#ffffff", (c) => ring(c, 0, 0, 7)],
   create_surface: ["#ffffff", (c) => surfaceGlyph(c, null)],
+  // 吹送（3-54a）：表面＋往右的風
+  blow_surface: [
+    "#cfe8ff",
+    (c) => {
+      surfaceGlyph(c, null);
+      arrow(c, -9, -7, 8, -7, 3.5);
+    },
+  ],
   destroy_object: [
     "#e0c49a",
     (c) => {
