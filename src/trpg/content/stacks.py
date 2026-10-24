@@ -18,8 +18,33 @@ from pydantic import Field, model_validator
 from trpg.content.battle import ID_PATTERN
 from trpg.content.schemas import ContentModel
 from trpg.content.skills import EffectSpec
+from trpg.shared.types import Element
 
-__all__ = ["OverloadSpec", "StackDef", "StackTable"]
+__all__ = ["ConsumerReq", "ConsumerSpec", "GainSpec", "OverloadSpec", "StackDef", "StackTable"]
+
+type GainOn = Literal[
+    "weapon_skill_hit",
+    "basic_attack_hit",
+    "damaged",
+    "kill",
+    "summon_downed",
+    "heal_or_holy_cast",
+    "element_hit",
+    "turn_end_still",
+]
+"""自動累積的時機（Phase 3-52，06 6.32）：
+
+- ``weapon_skill_hit``：持有者的武器技命中（每個被命中的單位 +1）；
+- ``basic_attack_hit``：持有者的普攻命中；
+- ``damaged``：持有者受到傷害（數值大於 0）；
+- ``kill``：持有者造成的傷害讓敵人倒下；
+- ``summon_downed``：持有者的召喚物被打倒；
+- ``heal_or_holy_cast``：持有者施放治療（含 ``heal`` 效果）或神聖（標籤或元素）技能；
+- ``element_hit``：持有者的 ``element`` 元素攻擊傷害命中（``owner: target`` 的層數疊在被命中者
+  身上）；
+- ``turn_end_still``：持有者的回合結束，且這回合沒有主動移動。"""
+
+type BoostKind = Literal["damage", "heal", "shield"]
 
 _MAX_BACKLASH = 2
 
@@ -56,6 +81,54 @@ class OverloadSpec(ContentModel):
         return self
 
 
+class GainSpec(ContentModel):
+    """一條自動累積規則（Phase 3-52）：只有「身上帶有消耗這種層數的技能」的單位才會自動累積
+    （沒有人用得到的層數不會出現在畫面上）。"""
+
+    when: GainOn
+    amount: int = Field(default=1, ge=1, le=3)
+    element: Element | None = None
+    """只有 ``when: element_hit`` 使用（必填）。"""
+
+    @model_validator(mode="after")
+    def _check(self) -> GainSpec:
+        if (self.when == "element_hit") != (self.element is not None):
+            raise ValueError("element 只能、也必須用在 when: element_hit")
+        return self
+
+
+class ConsumerReq(ContentModel):
+    """消耗這種層數的技能必須滿足的條件之一（``tag``、``element``、``effect`` 三擇一）：技能帶該
+    標籤、有該元素的傷害效果、或有該原語的效果。"""
+
+    tag: str | None = Field(default=None, pattern=ID_PATTERN)
+    element: Element | None = None
+    effect: str | None = Field(default=None, pattern=ID_PATTERN)
+
+    @model_validator(mode="after")
+    def _check(self) -> ConsumerReq:
+        if sum(x is not None for x in (self.tag, self.element, self.effect)) != 1:
+            raise ValueError("tag、element、effect 必須恰好填一個")
+        return self
+
+
+class ConsumerSpec(ContentModel):
+    """消耗這種層數的規則（Phase 3-52）：``consume_stack`` 的加成作用在哪些效果，哪些技能可以消耗。
+
+    - ``boosts``：每層加成作用的效果種類（傷害、治療、護盾）；技能必須至少有其中一種效果。
+    - ``requires_any``：技能必須滿足其中至少一項（空＝不限）。
+    """
+
+    boosts: tuple[BoostKind, ...] = ("damage",)
+    requires_any: tuple[ConsumerReq, ...] = ()
+
+    @model_validator(mode="after")
+    def _check(self) -> ConsumerSpec:
+        if not self.boosts or len(set(self.boosts)) != len(self.boosts):
+            raise ValueError("boosts 至少一種、不可重複")
+        return self
+
+
 class StackDef(ContentModel):
     """一種層數。
 
@@ -75,6 +148,12 @@ class StackDef(ContentModel):
     ai_value: int = Field(default=0, ge=0)
     overload: OverloadSpec | None = None
     """超載（Phase 3D-7b）：只有 ``owner: self`` 的層數可以。"""
+    gain: tuple[GainSpec, ...] = ()
+    """自動累積規則（Phase 3-52）；空＝只能靠技能的 ``add_stack`` 累積。"""
+    consumer: ConsumerSpec | None = None
+    """消耗規則（Phase 3-52）；省略＝沿用舊行為（``consume_stack`` 只加成傷害、不限技能）。"""
+    composer: bool = True
+    """隨機組合器是否會抽到這種層數（Phase 3-52 的新層數由玩家與 LLM 搭配，組合器不使用）。"""
 
     @model_validator(mode="after")
     def _check(self) -> StackDef:
@@ -83,6 +162,15 @@ class StackDef(ContentModel):
                 raise ValueError("超載（overload）只能用在 owner: self 的層數")
             if self.overload.threshold > self.max:
                 raise ValueError(f"overload.threshold 不可超過 max（{self.max}）")
+        if (
+            self.owner == "target"
+            and self.consumer is not None
+            and self.consumer.boosts != ("damage",)
+        ):
+            raise ValueError("疊在敵人身上的層數只能加成傷害")
+        for rule in self.gain:
+            if (rule.when == "element_hit") != (self.owner == "target"):
+                raise ValueError("疊在敵人身上的層數只能用 element_hit 累積，反之亦然")
         return self
 
     def summary(self) -> str:

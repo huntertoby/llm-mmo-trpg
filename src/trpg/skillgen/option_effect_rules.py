@@ -357,6 +357,10 @@ def effect_fixes(
         if primitive is None or affects is None or probe.skill([effect]) is None:
             continue
         context = effects[:index] + effects[index + 1 :]
+        stack_fix = _stack_fix(index, effect, library)
+        if stack_fix is not None:  # 層數的對象由層數決定（3-52）
+            out.extend(stack_fix)
+            continue
         found = probe.why(effect, context)
         status = statuses.get(str(effect.get("status")))
         beneficial = None if status is None else status.beneficial
@@ -378,6 +382,25 @@ def effect_fixes(
         if found:
             out.append(EffectFix(index=index, value=wanted, reason_zh=found))
     return tuple(out)
+
+
+def _stack_fix(
+    index: int, effect: Mapping[str, Any], library: ContentLibrary
+) -> list[EffectFix] | None:
+    """累積／消耗層數的效果：對象由層數決定（累積在你身上 → 自己，疊在敵人身上 → 敵方；3-52）。
+    不是層數效果回傳 ``None``（走一般流程）；對象已經對的回傳空串列。"""
+    if effect.get("type") not in ("add_stack", "consume_stack"):
+        return None
+    stack = library.ruleset.stacks.by_id().get(str(effect.get("stack")))
+    if stack is None:
+        return []
+    wanted = "self" if stack.owner == "self" else "enemies"
+    if effect.get("affects") == wanted:
+        return []
+    where = "累積在你身上" if stack.owner == "self" else "疊在敵人身上"
+    return [
+        EffectFix(index=index, value=wanted, reason_zh=f"「{stack.name_zh}」{where}，對象自動決定")
+    ]
 
 
 def _first_legal(

@@ -35,7 +35,89 @@ stacks:
   # 怒氣（Phase 3G-G3a，裝備詞條 affix_charge_fury 用；數值為初值）：受到傷害時累積，花滿層啟動強化。
   - id: fury
     name_zh: 怒氣
-    description_zh: 累積在持有者自己身上的怒氣；裝備的充能詞條花掉層數啟動效果。
+    description_zh: 累積在持有者自己身上的怒氣；技能與裝備的充能詞條都可以花掉層數。
     owner: self
     max: 4
     ai_value: 2
+    # Phase 3-52（06 6.32）：開放給技能消耗；身上有消耗怒氣的技能時，受到傷害也會自動累積（裝備詞條照舊，不重複算）。
+    gain:
+      - {when: damaged}
+    consumer: {boosts: [damage]}
+
+  # --- Phase 3-52 層數擴充（玩法決定 #57，docs/design/06-技能.md 6.32；數值為初值，未經模擬）---
+  # gain：自動累積規則（只有身上帶有消耗這種層數的技能的單位才會累積）；技能的 add_stack 另外再加。
+  # consumer：consume_stack 的加成作用在哪些效果（boosts），以及哪些技能可以消耗（requires_any，至少滿足一項）。
+  # composer: false ＝ 隨機組合器不抽（玩家與 LLM 搭配使用）。
+  - id: combo_point
+    name_zh: 連擊點
+    description_zh: 累積在自己身上；武器技命中時自動累積，消耗連擊點的終結技每層提高傷害。
+    owner: self
+    max: 5
+    ai_value: 3
+    composer: false
+    gain:
+      - {when: weapon_skill_hit}
+    consumer:
+      boosts: [damage]
+      requires_any:
+        - {tag: finisher}
+  - id: focus
+    name_zh: 專注
+    description_zh: 累積在自己身上；回合結束時這回合沒有移動就自動累積，消耗專注的下一招每層提高傷害。
+    owner: self
+    max: 3
+    ai_value: 2
+    composer: false
+    gain:
+      - {when: turn_end_still}
+    consumer: {boosts: [damage]}
+  - id: holy_power
+    name_zh: 聖能
+    description_zh: 累積在自己身上；施放治療或神聖技能時自動累積，消耗聖能的技能每層提高治療與護盾。
+    owner: self
+    max: 3
+    ai_value: 3
+    composer: false
+    gain:
+      - {when: heal_or_holy_cast}
+    consumer: {boosts: [heal, shield]}
+  - id: soul_shard
+    name_zh: 靈魂碎片
+    description_zh: 累積在自己身上；擊倒敵人或自己的召喚物倒下時自動累積，消耗靈魂碎片的召喚、詛咒、暗影技能每層提高傷害。
+    owner: self
+    max: 5
+    ai_value: 3
+    composer: false
+    gain:
+      - {when: kill}
+      - {when: summon_downed}
+    consumer:
+      boosts: [damage]
+      requires_any:
+        - {tag: summon}
+        - {tag: curse}
+        - {element: shadow}
+  - id: hoarfrost
+    name_zh: 寒霜
+    description_zh: 疊在被命中的敵人身上；你的冰霜傷害命中時自動累積，3 輪沒有再疊就清空，消耗寒霜的冰霜傷害每層提高。
+    owner: target
+    max: 3
+    expires_after_rounds: 3
+    ai_value: 3
+    composer: false
+    gain:
+      - {when: element_hit, element: ice}
+    consumer:
+      boosts: [damage]
+      requires_any:
+        - {element: ice}
+  - id: ki
+    name_zh: 氣
+    description_zh: 累積在自己身上；普攻命中時自動累積，消耗氣的技能每層提高傷害或自己的治療。
+    owner: self
+    max: 3
+    ai_value: 2
+    composer: false
+    gain:
+      - {when: basic_attack_hit}
+    consumer: {boosts: [damage, heal]}

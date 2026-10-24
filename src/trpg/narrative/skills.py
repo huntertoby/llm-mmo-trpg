@@ -40,6 +40,7 @@ from trpg.engine.ids import SHIELDED as SHIELD_STATUS
 from trpg.engine.summons import SummonStats
 from trpg.narrative.skill_icon import SkillIcon, skill_icon
 from trpg.narrative.skill_levels import SkillLevelInfo
+from trpg.narrative.status_info import BOOST_TEXT
 from trpg.narrative.summon_info import (
     SummonInfoCard,
     infusion_hint,
@@ -616,7 +617,11 @@ def _stack(lib: ContentLibrary, skill: SkillDef, spec: EffectSpec) -> str:
         return text + (_overload_text(lib, stack) if stack.overload is not None else "")
     assert spec.per_stack_permille is not None
     need = f"（至少 {skill.cost.stacks} 層才能施放）" if skill.cost.stacks else ""
-    return f"消耗全部「{stack.name_zh}」，每層使本技能傷害 +{spec.per_stack_permille / 10:g}%{need}"
+    boosts = ("damage",) if stack.consumer is None else stack.consumer.boosts
+    what = "、".join(BOOST_TEXT[b] for b in boosts)
+    return (
+        f"消耗全部「{stack.name_zh}」，每層使本技能{what} +{spec.per_stack_permille / 10:g}%{need}"
+    )
 
 
 def _consume_status(lib: ContentLibrary, skill: SkillDef, spec: EffectSpec) -> str:

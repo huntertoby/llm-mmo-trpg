@@ -1,0 +1,24 @@
+# 層數擴充示範技能（Phase 3-52，06 6.32；數值為初值，未經模擬）：消耗專注，每層傷害 +15%。
+id: skill_focused_shot
+schema_version: 1
+name_zh: 專注一擊
+tier: 1
+rank: 1
+rarity: rare
+kind: active
+skeleton: builder_finisher
+category: weapon
+weapon_req: ranged
+ap_cost: 2
+scaling_attr: dex
+shape: {type: single, range: weapon}
+effects:
+  - {type: damage, multiplier_permille: 1500}
+  - {type: consume_stack, stack: focus, per_stack_permille: 150, affects: self}
+condition: null
+cost: {stamina: 10, cooldown: 2}
+tags: [physical, ranged, finisher]
+narrative:
+  concept: 一動不動的人，下一箭才會穿透一切
+  cast_flavor: 你吐出最後一口氣，箭矢帶著凝住的心神離弦
+provenance: {origin: builtin, owner_id: null, created_by: null, parents: [], bound: true, tradeable: false}

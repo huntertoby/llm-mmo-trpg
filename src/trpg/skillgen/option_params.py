@@ -238,6 +238,27 @@ def _keyword_name(library: ContentLibrary, keyword: str) -> str:
     return next((k.name_zh for k in library.keywords.keywords if k.id == keyword), keyword)
 
 
+STACK_GROUP_ZH = {"self": "累積在你身上", "target": "疊在敵人身上"}
+"""層數選單的分組名（3-52）：層數在誰身上由層數決定，對象自動跟著選（不能選錯）。"""
+
+
+def stack_choices(library: ContentLibrary) -> tuple[Choice, ...]:
+    """層數的選單（3-52）：依「累積在你身上」「疊在敵人身上」分組（自己的在前，組內維持資料表順序），
+    ``info.group_zh`` 是分組名、``info.owner`` 是 ``self``／``target``。"""
+    stacks = sorted(
+        enumerate(library.ruleset.stacks.stacks), key=lambda p: (p[1].owner != "self", p[0])
+    )
+    return tuple(
+        Choice(
+            value=k.id,
+            name_zh=k.name_zh,
+            description_zh=k.description_zh,
+            info={"owner": k.owner, "group_zh": STACK_GROUP_ZH[k.owner]},
+        )
+        for _, k in stacks
+    )
+
+
 def _ref_choices(kind: str, library: ContentLibrary) -> tuple[Choice, ...]:
     if kind in _LITERAL_CHOICES:
         return tuple(
@@ -252,10 +273,7 @@ def _ref_choices(kind: str, library: ContentLibrary) -> tuple[Choice, ...]:
         "object": lambda: tuple(
             Choice(value=o.id, name_zh=o.name_zh) for o in rules.objects.objects
         ),
-        "stack": lambda: tuple(
-            Choice(value=k.id, name_zh=k.name_zh, description_zh=k.description_zh)
-            for k in rules.stacks.stacks
-        ),
+        "stack": lambda: stack_choices(library),
         "summon": lambda: tuple(
             Choice(value=s.id, name_zh=s.template.name_zh) for s in rules.summons.summons
         ),

@@ -162,6 +162,10 @@ class Cast:
         """消耗施放者層數得到的傷害加成（‰，所有目標共用；``consume_stack`` 的結果）。"""
         self.target_bonus: dict[str, int] = {}
         """消耗目標層數得到的傷害加成（‰），單位 ID → 加成。"""
+        self.heal_bonus = 0
+        """消耗施放者層數得到的治療加成（‰；層數的 ``consumer.boosts`` 含 ``heal``；3-52）。"""
+        self.shield_bonus = 0
+        """消耗施放者層數得到的護盾加成（‰；``boosts`` 含 ``shield``，Phase 3-52）。"""
         self.use = modifiers.skill_use(skill)
         self.cooldown_delta = 0
         """修正規則的命中後冷卻修正（≤ 0；命中判定當下決定，全部效果結算後套用）。"""
@@ -645,9 +649,17 @@ class Cast:
                 continue
             spec = self.skill.effects[effect.spec_index]
             assert spec.stack is not None and spec.per_stack_permille is not None
-            if rules.stack_def(spec.stack).owner == "self":
+            definition = rules.stack_def(spec.stack)
+            if definition.owner == "self":
                 spent = consume_stacks(self.ctx, self.caster, spec.stack, source_id=self.caster.id)
-                self.caster_bonus += spent * spec.per_stack_permille
+                bonus = spent * spec.per_stack_permille
+                boosts = ("damage",) if definition.consumer is None else definition.consumer.boosts
+                if "damage" in boosts:
+                    self.caster_bonus += bonus
+                if "heal" in boosts:
+                    self.heal_bonus += bonus
+                if "shield" in boosts:
+                    self.shield_bonus += bonus
                 continue
             for unit in self.targets(effect.affects, spec.condition):
                 spent = consume_stacks(self.ctx, unit, spec.stack, source_id=self.caster.id)
@@ -793,7 +805,11 @@ class Cast:
         base = PERMILLE
         if self.modified:
             base = modifiers.heal_permille(self.ctx.state, self.caster, self.use)
-        return base * self.level_permille() // PERMILLE
+        return base * self.level_permille() // PERMILLE * (PERMILLE + self.heal_bonus) // PERMILLE
+
+    def shield_multiplier(self) -> int:
+        """護盾量倍率（‰）：技能等級的倍率，再乘消耗層數的加成（Phase 3-52）。"""
+        return self.level_permille() * (PERMILLE + self.shield_bonus) // PERMILLE
 
     def knock_down(self, unit: UnitState) -> list[EffectBase]:
         """對 ``unit`` 擲擊倒的對抗判定（技能的縮放屬性 vs 目標同屬性），成功才倒地。"""

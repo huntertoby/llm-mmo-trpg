@@ -135,7 +135,7 @@ def heal(cast: Cast, effect: ResolvedEffect, spec: EffectSpec) -> list[EffectBas
 
 def shield(cast: Cast, effect: ResolvedEffect, spec: EffectSpec) -> list[EffectBase]:
     scaled = cast.spell_scaled()
-    multiplier = cast.level_permille()
+    multiplier = cast.shield_multiplier()
     return [
         ShieldEffect(
             target_id=unit.id,

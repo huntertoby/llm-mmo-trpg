@@ -606,7 +606,9 @@ def _trap_setup(ctx: Ctx) -> None:
 def _stack_effect(ctx: Ctx) -> None:
     """蓄力與終結：一個 ``add_stack``（累積）或 ``consume_stack``（消耗），層數 ID 依資料表抽。"""
     rules = ctx.rules.builder
-    stacks = sorted(ctx.library.ruleset.stacks.stacks, key=lambda s: s.id)
+    stacks = sorted(
+        (s for s in ctx.library.ruleset.stacks.stacks if s.composer), key=lambda s: s.id
+    )
     if not stacks:
         raise Retry
     stack = ctx.rng.choice(stacks)

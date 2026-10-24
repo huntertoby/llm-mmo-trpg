@@ -144,6 +144,19 @@ function ruleLines(choice: Choice): string[] {
   return Array.isArray(rules) ? rules.filter((r): r is string => typeof r === "string") : [];
 }
 
+/** 選項分組（3-52：層數依「累積在你身上」「疊在敵人身上」分組）：後端用 `info.group_zh` 標示，
+ * 沒有分組名的選項（一般欄位）都在同一組、不顯示組名；組的順序照第一次出現。 */
+export function groupChoices(choices: readonly Choice[]): [string | null, Choice[]][] {
+  const groups: [string | null, Choice[]][] = [];
+  for (const c of choices) {
+    const label = typeof c.info["group_zh"] === "string" ? c.info["group_zh"] : null;
+    const found = groups.find((g) => g[0] === label);
+    if (found === undefined) groups.push([label, [c]]);
+    else found[1].push(c);
+  }
+  return groups;
+}
+
 function unavailableReason(choice: Choice): string | null {
   const reason = choice.info["unavailable_zh"];
   return typeof reason === "string" && reason !== "" ? reason : null;
@@ -229,11 +242,18 @@ function ChoiceField({ spec, container, base, onChange }: FieldProps) {
           <option value="" disabled>
             請選擇……
           </option>
-          {spec.choices.map((c) => (
-            <option key={String(c.value)} value={String(c.value)} disabled={blockedReason(c, chosen) !== null}>
-              {blockedReason(c, chosen) !== null ? `${c.name_zh}（不能選：${blockedReason(c, chosen)}）` : c.name_zh}
-            </option>
-          ))}
+          {groupChoices(spec.choices).map(([label, items]) => {
+            const options = items.map((c) => (
+              <option key={String(c.value)} value={String(c.value)} disabled={blockedReason(c, chosen) !== null}>
+                {blockedReason(c, chosen) !== null ? `${c.name_zh}（不能選：${blockedReason(c, chosen)}）` : c.name_zh}
+              </option>
+            ));
+            return label === null ? options : (
+              <optgroup key={label} label={label}>
+                {options}
+              </optgroup>
+            );
+          })}
         </select>
       )}
       {!card && chosen !== undefined && descOf(chosen) !== "" && (

@@ -24,7 +24,7 @@ _UNCOVERED: dict[str, dict[str, str]] = {
         "rallied": "只由戰意圖騰的光環施加（3-33e1），沒有技能施加",
         "overdrawn": "只由 cost.overdraft 施加（3-50，竭力一擊），不是效果原語",
     },
-    "stack": {"fury": "只由裝備的充能詞條 affix_charge_fury 使用（3G-G3a），沒有手寫技能"},
+    "stack": {},
 }
 
 # 只能由引擎原語間接產生的狀態：使用該原語就算「技能可施加」。
@@ -116,6 +116,21 @@ _POOL_ONLY = frozenset(
         "skill_trick_shot",
         "skill_twin_fang",
         "skill_whip_crack",
+        # 3-52：層數擴充的示範技能（每種層數一招累積、一招消耗；由池給出）
+        "skill_combo_finisher",
+        "skill_flurry_jab",
+        "skill_steady_aim",
+        "skill_focused_shot",
+        "skill_radiant_mend",
+        "skill_sanctified_ward",
+        "skill_soul_reap",
+        "skill_soul_torrent",
+        "skill_rime_touch",
+        "skill_shatter_frost",
+        "skill_palm_strike",
+        "skill_qi_breath",
+        "skill_seething_rage",
+        "skill_rage_unleashed",
         # 3-31：普攻符文的修正型被動（不是起始技能；由升級候選與戰利品給出，尚無 build 裝備）
         "skill_rune_sight",
         "skill_rune_breaker",

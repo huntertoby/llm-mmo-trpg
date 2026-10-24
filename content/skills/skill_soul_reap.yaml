@@ -1,0 +1,24 @@
+# 層數擴充示範技能（Phase 3-52，06 6.32；數值為初值，未經模擬）：累積靈魂碎片。
+id: skill_soul_reap
+schema_version: 1
+name_zh: 收割靈魂
+tier: 1
+rank: 1
+rarity: rare
+kind: active
+skeleton: builder_finisher
+category: spell
+weapon_req: focus
+ap_cost: 1
+scaling_attr: wil
+shape: {type: single, range: 3}
+effects:
+  - {type: damage, dice: 1d8, element: shadow}
+  - {type: add_stack, stack: soul_shard, amount: 1, affects: self}
+condition: null
+cost: {mana: 3}
+tags: [shadow, spell, builder, curse]
+narrative:
+  concept: 每一道傷口都逸出一縷不肯散去的魂
+  cast_flavor: 暗影的鐮刃劃過對手，一縷微光被吸進你的掌心
+provenance: {origin: builtin, owner_id: null, created_by: null, parents: [], bound: true, tradeable: false}

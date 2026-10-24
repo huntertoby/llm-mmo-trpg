@@ -1,0 +1,24 @@
+# 層數擴充示範技能（Phase 3-52，06 6.32；數值為初值，未經模擬）：消耗氣，每層治療自己 +15%。
+id: skill_qi_breath
+schema_version: 1
+name_zh: 運氣調息
+tier: 1
+rank: 1
+rarity: rare
+kind: active
+skeleton: aura
+category: spell
+weapon_req: any
+ap_cost: 2
+scaling_attr: wis
+shape: {type: self}
+effects:
+  - {type: heal, dice: 3d6, affects: self}
+  - {type: consume_stack, stack: ki, per_stack_permille: 150, affects: self}
+condition: null
+cost: {mana: 6, cooldown: 3}
+tags: [martial, spell, heal, finisher]
+narrative:
+  concept: 把攢下的氣沉進丹田，傷勢隨呼吸癒合
+  cast_flavor: 你閉目吐納，周身的真氣順著經脈流過每一處傷
+provenance: {origin: builtin, owner_id: null, created_by: null, parents: [], bound: true, tradeable: false}
