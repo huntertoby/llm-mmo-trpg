@@ -3224,7 +3224,8 @@ class SkillDef(ContentModel):
             )
         if not top:
             raise ValueError(
-                f"{where}：explode、scaling、lifesteal、split_heal、spread 只能用在技能自己的傷害"
+                f"{where}：explode、scaling、lifesteal、split_heal、spread "
+                "只能用在技能自己的傷害效果"
             )
         if effect.spread is not None and effect.element is not Element.WIND:
             raise ValueError(f"{where}：spread（擴散格數）只有風元素（element: wind）的傷害能填")

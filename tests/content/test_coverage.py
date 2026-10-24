@@ -18,7 +18,7 @@ _UNCOVERED: dict[str, dict[str, str]] = {
     "reaction_event": {},
     "condition": {},
     "primitive": {
-        "blow_surface": "吹送（3-54a）：種子技能在 3-54c 才寫；先由 test_wind_54a.py 的測試技能覆蓋",
+        "blow_surface": "吹送（3-54a）：種子技能在 3-54c 才寫；由 test_wind_54a.py 覆蓋",
         "shockwave": "震波（3-54b）：種子技能在 3-54c 才寫；由 test_earth_54b.py 覆蓋",
     },
     "status": {
