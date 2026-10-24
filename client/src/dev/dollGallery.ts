@@ -1,6 +1,7 @@
 // 開發用：紙娃娃一覽（Phase 3G-G5b）。開 `client/doll-gallery.html`（pnpm dev 後 /doll-gallery.html）。
 // 不屬於正式 build；供美術 PM 驗收與截圖：6 套整套穿上 × 4 朝向、各欄位換裝對照、成對武器、不認得的值退回預設。
 import type { Facing } from "../api/types";
+import type { DollSpec, GearItem } from "../render/appearance";
 import { resolveDollT } from "../render/testDolls";
 import type { DollEquipment } from "../render/dollGear";
 import { drawFigurePose } from "../render/paperdoll";
@@ -8,7 +9,10 @@ import { drawFigurePose } from "../render/paperdoll";
 const SCALE = 3;
 
 function figure(equipment: DollEquipment[], template: string, facing: Facing, label: string, downed = false): HTMLElement {
-  const spec = resolveDollT({ team: "ally", summon: false, template, weaponId: "", equipment });
+  return figureOf(resolveDollT({ team: "ally", summon: false, template, weaponId: "", equipment }), facing, label, downed);
+}
+
+function figureOf(spec: DollSpec, facing: Facing, label: string, downed = false): HTMLElement {
   const box = document.createElement("div");
   box.className = "cell";
   const c = document.createElement("canvas");
@@ -84,3 +88,12 @@ section("⑤ 不認得的值退回預設、倒地、元素與材質", [
   figure([e("main_hand", { kind: "sword", keywords: ["frozen"] }), e("body", { kind: "mail", material: "crystal", keywords: ["frozen"] })], "hero_fighter", "south", "冰＋晶石"),
   figure(SETS[0]![2], "hero_fighter", "south", "倒地", true),
 ]);
+
+// ⑥ 真側面（Phase 3S-2）：頭部裝備全部 kind（朝東、朝西）、盾／書／珠、披風（披風沒有對應的裝備類別，直接指定部件）
+const BASE = resolveDollT({ team: "ally", summon: false, template: "hero_fighter", weaponId: "one_handed_sword" });
+const withGear = (g: DollSpec["gear"]): DollSpec => ({ ...BASE, gear: { ...BASE.gear, ...g } });
+const HEADS: GearItem[] = [{ kind: "helmet", material: "steel" }, { kind: "horned_helm", material: "steel" }, { kind: "greathelm", material: "steel" }, { kind: "hood", material: "cloth" }, { kind: "wizard_hat", material: "cloth", color: "#8a2f3a" }, { kind: "wide_hat", material: "leather" }, { kind: "cap", material: "leather" }, { kind: "cap", form: "fur", material: "leather" }, { kind: "crown", material: "gold" }, { kind: "bandana", material: "cloth", color: "#3a6aa8" }];
+for (const f of ["east", "west"] as const) section(`⑥ 側面・頭部裝備（${f}）`, HEADS.map((h) => figureOf(withGear({ head: h }), f, `${h.kind}${h.form !== undefined ? `・${h.form}` : ""}`)));
+const CAPE: GearItem = { kind: "cape", material: "cloth", color: "#7a2a3a" };
+const OFFS: Array<[string, GearItem]> = [["圓盾", { kind: "shield_round", material: "iron" }], ["塔盾", { kind: "shield_kite", form: "tower", material: "steel" }], ["鳶盾", { kind: "shield_kite", material: "steel" }], ["法書", { kind: "tome", material: "leather" }], ["法器珠", { kind: "orb", form: "ball", element: "ice", material: "silver" }]];
+section("⑥ 側面・盾、書、珠、披風", [...OFFS.map(([n, it]) => figureOf(withGear({ off_hand: it }), "east", n)), figureOf(withGear({ cloak: CAPE }), "east", "披風"), figureOf(withGear({ cloak: CAPE, off_hand: OFFS[1]![1], head: HEADS[1]! }), "east", "披風＋塔盾＋角盔"), figureOf(withGear({ cloak: CAPE, off_hand: OFFS[0]![1], head: HEADS[4]! }), "west", "披風＋圓盾＋巫師帽（西）")]);

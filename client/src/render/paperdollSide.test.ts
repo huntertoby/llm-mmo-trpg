@@ -72,3 +72,51 @@ describe("真側面（3S-1）", () => {
     expect(run(spec, "east")).not.toEqual(run(spec, "north"));
   });
 });
+
+describe("真側面：頭部裝備、盾、披風（3S-2）", () => {
+  const HEADS = [...KNOWN_KINDS.head, "weird_kind"];
+  const OFFS = [...KNOWN_KINDS.off_hand, "weird_kind"];
+  const CAPE = { kind: "cape", material: "cloth" };
+  const skin = { skin: "#e8c8a0" };
+
+  it("每種頭部 kind（含未知）× 4 方向 × 有／沒有盾與披風都不出錯", () => {
+    for (const kind of HEADS) {
+      for (const form of [undefined, "fur", "tower"]) {
+        for (const withExtra of [false, true]) {
+          const gear: DollSpec["gear"] = { head: { kind, form, material: "steel" } };
+          if (withExtra) {
+            gear.off_hand = { kind: "shield_round", material: "iron" };
+            gear.cloak = CAPE;
+          }
+          for (const f of FACINGS) expect(() => run({ look: { ...skin, hair: "long" }, gear }, f)).not.toThrow();
+        }
+      }
+    }
+  });
+
+  it("每種副手（含未知、塔盾）× 披風 × 4 方向不出錯；披風有畫出東西", () => {
+    for (const kind of OFFS) {
+      for (const form of [undefined, "tower", "floating"]) {
+        const spec: DollSpec = { look: skin, gear: { off_hand: { kind, form, material: "iron" }, cloak: CAPE } };
+        for (const f of FACINGS) expect(() => run(spec, f)).not.toThrow();
+      }
+    }
+    expect(run({ look: skin, gear: { cloak: CAPE } }, "east")).not.toEqual(run({ look: skin, gear: {} }, "east"));
+  });
+
+  it("每種已知頭部 kind 的側面都和正面不同，朝西是朝東的鏡像", () => {
+    for (const kind of KNOWN_KINDS.head) {
+      const spec: DollSpec = { look: skin, gear: { head: { kind, material: "steel" } } };
+      const east = run(spec, "east");
+      expect(east).not.toEqual(run(spec, "south"));
+      expect(run(spec, "west").filter((c) => c !== MIRROR)).toEqual(east);
+    }
+  });
+
+  it("角盔：兩支角都往後彎，遠側那支較暗", () => {
+    const horned = run({ look: skin, gear: { head: { kind: "horned_helm", material: "steel" } } }, "east");
+    expect(horned).toContain("fillStyle=#efe6cc"); // 近側角
+    expect(horned).toContain("fillStyle=#a7a18f"); // 遠側角（暗 30%）
+    expect(horned.indexOf("fillStyle=#a7a18f")).toBeLessThan(horned.indexOf("fillStyle=#efe6cc")); // 遠側先畫
+  });
+});

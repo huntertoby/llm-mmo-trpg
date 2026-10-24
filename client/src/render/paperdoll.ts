@@ -632,11 +632,6 @@ function drawFigureSideView(ctx: Ctx, spec: DollSpec, facing: Facing): void {
   drawFigureSide(ctx, spec, {
     colors: itemColors,
     weapon: (it, x) => drawWeapon(ctx, it, x, true),
-    headgearFront: (it) => drawHeadgear(ctx, it, "front"),
-    helmetBack: (it) => {
-      const [c, d] = itemColors(it);
-      drawHelmet(ctx, it, c, d, "back");
-    },
   });
   ctx.restore();
 }
