@@ -38,8 +38,11 @@ __all__ = [
     "run_battle",
 ]
 
-LOG_FORMAT = "trpg-battle-log/74"
-"""``/74``（Phase 3-52b）：層數小修——層數定義多了 ``auto_consume``（專注：下一個造成傷害的主動技能
+LOG_FORMAT = "trpg-battle-log/75"
+"""``/75``（Phase 3-54a）：風元素補強——新原語 ``blow_surface``（吹送）、新事件 ``surface_blown``、
+``zone_expanded``，``collided`` 多了 ``damage_permille``（風壓撞擊），規則包的核心規則多了 ``wind``，
+互動表移除「風吹散毒」；風元素傷害會讓火、冰、毒表面與區域往風向擴大，``/74`` 的紀錄無法重播。
+``/74``（Phase 3-52b）：層數小修——層數定義多了 ``auto_consume``（專注：下一個造成傷害的主動技能
 自動消耗全部層數）與 ``consumer.heal_self_only``（氣的治療加成只算治療自己）；規則包內嵌的層數表因此
 不同，主動技能施放時會自動消耗專注，``/73`` 的紀錄無法重播。
 ``/73``（Phase 3-52）：層數擴充——層數定義多了 ``gain``（自動累積規則）、``consumer``（消耗

@@ -20,6 +20,7 @@ from trpg.shared.types import Attribute, Element, ObjectId, Pos, Surface, Team, 
 __all__ = [
     "EFFECT_LIST_ADAPTER",
     "ApplyStatusEffect",
+    "BlowSurfaceEffect",
     "BombBlastEffect",
     "CancelChargeEffect",
     "ChangeTileEffect",
@@ -305,6 +306,8 @@ class PushEffect(EffectBase):
     """物件被移動的方式（只影響 ``ObjectMoved`` 事件的說明；撥開為 ``shove_aside``）。"""
     collision_dice: Dice | None = None
     """單位被推時的撞擊骰（技能的 ``collision_dice``）；``None`` 用核心規則的預設。"""
+    collision_permille: int = Field(default=1000, ge=0)
+    """撞擊傷害倍率（‰；風壓撞擊 Phase 3-54a：風元素技能的推擊）。"""
     extra_collisions: int = Field(default=0, ge=0)
     """推完之後額外結算的撞擊次數（修正規則把距離加到超過 ``max_displace_distance`` 的部分，
     就算沒有撞到東西也算；Phase 3C-3a）。"""
@@ -348,6 +351,17 @@ class CreateSurfaceEffect(_AtPos):
     team: Team | None = None
     react: bool = True
     cause: str = "effect"
+
+
+class BlowSurfaceEffect(EffectBase):
+    """吹送（Phase 3-54a ``blow_surface``，06 6.33）：``tiles`` 每格的表面（限
+    ``core.wind.blow_surfaces``）往該格的風向（``directions``，與 ``tiles`` 一一對應）平移
+    ``distance`` 格，整片一起結算（先全部拿起，再依風向由前往後放下）。"""
+
+    kind: Literal["blow_surface"] = "blow_surface"
+    tiles: tuple[XY, ...]
+    directions: tuple[Direction, ...]
+    distance: int = Field(ge=1)
 
 
 class DamageObjectEffect(EffectBase):
@@ -496,6 +510,7 @@ type Effect = Annotated[
     | PushEffect
     | HurlObjectEffect
     | CreateSurfaceEffect
+    | BlowSurfaceEffect
     | DamageObjectEffect
     | DestroyObjectEffect
     | RaiseTerrainEffect

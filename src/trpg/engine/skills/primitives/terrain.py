@@ -1,4 +1,4 @@
-"""地形原語：建立表面、破壞物件、建立障礙物、刻印、抬高與降低地形。
+"""地形原語：建立表面、吹送表面、破壞物件、建立障礙物、刻印、抬高與降低地形。
 
 每個作用格（:meth:`~trpg.engine.skills.cast.Cast.tiles`，效果層級的條件對每格分別判斷）各產生
 一個效果。
@@ -20,6 +20,7 @@ from trpg.engine.effects.models import (
 from trpg.engine.events import EffectFizzled
 from trpg.engine.rules.perks import attribute_perk
 from trpg.engine.skills.primitives.base import Handler
+from trpg.engine.wind import blow_effect
 
 if TYPE_CHECKING:
     from trpg.content.skills import EffectSpec
@@ -50,6 +51,14 @@ def create_surface(cast: Cast, effect: ResolvedEffect, spec: EffectSpec) -> list
             )
         )
     return batch
+
+
+def blow_surface(cast: Cast, effect: ResolvedEffect, spec: EffectSpec) -> list[EffectBase]:
+    """吹送（Phase 3-54a）：影響格的表面整片往風向平移 ``distance`` 格（見 trpg.engine.wind）。"""
+    assert spec.distance is not None
+    tiles = cast.tiles(effect.affects, spec.condition)
+    blow = blow_effect(cast.area, cast.caster.xy, tiles, spec.distance, cast.caster.id)
+    return [] if blow is None else [blow]
 
 
 def destroy_object(cast: Cast, effect: ResolvedEffect, spec: EffectSpec) -> list[EffectBase]:
@@ -111,6 +120,7 @@ def lower_terrain(cast: Cast, effect: ResolvedEffect, spec: EffectSpec) -> list[
 
 
 HANDLERS: dict[str, Handler] = {
+    "blow_surface": blow_surface,
     "create_surface": create_surface,
     "destroy_object": destroy_object,
     "create_obstacle": create_obstacle,

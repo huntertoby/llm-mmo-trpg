@@ -37,6 +37,7 @@ PRIMITIVE_VALUATION: Mapping[str, str] = MappingProxyType(
         "apply_status": f"{_EVENTS}（行為模式的 status_values）；友方增益 _supports",
         "create_surface": f"{_EVENTS}（表面與位置價值）；陷阱估計 _trap_estimate",
         "destroy_object": f"{_EVENTS}（掩護與位置價值）",
+        "blow_surface": f"{_EVENTS}（表面移動後的位置價值）",
         "create_obstacle": f"{_EVENTS}（場地型技能：位置價值）",
         "raise_terrain": f"{_EVENTS}（高低差與位置價值）",
         "lower_terrain": f"{_EVENTS}（高低差與位置價值）",

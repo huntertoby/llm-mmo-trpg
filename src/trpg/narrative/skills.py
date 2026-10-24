@@ -33,6 +33,7 @@ from trpg.content.skills import (
     VariantWhen,
     condition_text,
     default_affects,
+    is_wind_skill,
     on_hit_carrier,
 )
 from trpg.content.stacks import StackDef
@@ -48,7 +49,7 @@ from trpg.narrative.summon_info import (
     summon_info,
     summon_innate_lines,
 )
-from trpg.shared.types import Attribute, Surface, rune_name
+from trpg.shared.types import Attribute, Element, Surface, rune_name
 from trpg.skillgen.budget import self_status_allowance_permille
 from trpg.skillgen.keywords import (
     SkillKeywords,
@@ -260,6 +261,32 @@ def scaling_text(spec: EffectSpec) -> str | None:
     )
 
 
+_WIND_TOUCHING = ("enemies", "all", "tiles")
+"""會吹到影響格（元素擴散）的傷害對象（同引擎的 ``TOUCHING_AFFECTS``）。"""
+
+
+def _names(items: Iterable[str]) -> str:
+    return "、".join(items)
+
+
+def wind_spread_text(lib: ContentLibrary, spec: EffectSpec) -> str | None:
+    """元素擴散（Phase 3-54a，06 6.33）的一句話：``element: wind`` 的傷害效果才有。"""
+    if spec.type != "damage" or spec.element is not Element.WIND:
+        return None
+    if (spec.affects or "enemies") not in _WIND_TOUCHING:
+        return None
+    wind, rules = lib.ruleset.core.wind, lib.ruleset
+    surfaces = _names(rules.surface_def(s).name_zh for s in wind.spread_surfaces)
+    zones = _names(e.display_name for e in wind.spread_zone_elements)
+    return f"風會讓範圍內的{surfaces}表面、以及{zones}區域往風向擴大 {wind.spread_distance} 格"
+
+
+def wind_collision_text(lib: ContentLibrary) -> str:
+    """風壓撞擊（Phase 3-54a）：風元素技能的推擊撞擊傷害加成。"""
+    bonus = lib.ruleset.core.wind.collision_permille - 1000
+    return f"風壓：撞擊傷害 +{bonus / 10:g}%"
+
+
 def _damage(lib: ContentLibrary, skill: SkillDef, spec: EffectSpec) -> str:
     head, extras = _damage_parts(lib, skill, spec)
     return head + "".join(f"，{e}" for e in extras)
@@ -290,6 +317,9 @@ def _damage_parts(lib: ContentLibrary, skill: SkillDef, spec: EffectSpec) -> tup
     scale = scaling_text(spec)
     if scale is not None:
         extras.append(scale)
+    spread = wind_spread_text(lib, spec)
+    if spread is not None:
+        extras.append(spread)
     if spec.on_kill:
         kill = "、".join(_on_kill_text(lib, skill, sub) for sub in spec.on_kill)
         extras.append(f"若這一招讓敵人倒下：{kill}")
@@ -310,10 +340,15 @@ def _heal(lib: ContentLibrary, skill: SkillDef, spec: EffectSpec) -> str:
     return f"治療 {_dice(spec.dice)}＋{scaling_label(skill, lib)}加成"
 
 
-def _push_pull(_lib: ContentLibrary, _skill: SkillDef, spec: EffectSpec) -> str:
+def _push_pull(lib: ContentLibrary, skill: SkillDef, spec: EffectSpec) -> str:
     text = f"{'推開' if spec.type == 'push' else '拉近'} {spec.distance} 格"
+    notes: list[str] = []
     if spec.collision_dice is not None:
-        text += f"（撞擊傷害 {_dice(spec.collision_dice)}）"
+        notes.append(f"撞擊傷害 {_dice(spec.collision_dice)}")
+    if spec.type == "push" and is_wind_skill(skill):
+        notes.append(wind_collision_text(lib))
+    if notes:
+        text += f"（{'；'.join(notes)}）"
     return text
 
 
@@ -540,6 +575,15 @@ def _create_surface(lib: ContentLibrary, _skill: SkillDef, spec: EffectSpec) -> 
     assert spec.surface is not None
     turns = f" {spec.duration} 回合" if spec.duration else ""
     return f"生成「{lib.ruleset.surface_def(spec.surface).name_zh}」表面{turns}"
+
+
+def _blow_surface(lib: ContentLibrary, _skill: SkillDef, spec: EffectSpec) -> str:
+    """吹送（Phase 3-54a）。"""
+    names = _names(lib.ruleset.surface_def(s).name_zh for s in lib.ruleset.core.wind.blow_surfaces)
+    return (
+        f"把範圍內的表面（{names}）整片往風向吹走 {spec.distance} 格"
+        "（遇到牆、擋路的物件或較高的地形就停下）"
+    )
 
 
 def _create_obstacle(lib: ContentLibrary, _skill: SkillDef, spec: EffectSpec) -> str:
@@ -806,6 +850,7 @@ _EFFECT_TEXT: dict[str, _EffectText] = {
     "swap_any": _swap_any,
     "apply_status": _apply_status,
     "create_surface": _create_surface,
+    "blow_surface": _blow_surface,
     "create_obstacle": _create_obstacle,
     "destroy_object": _destroy_object,
     "inscribe": _inscribe,

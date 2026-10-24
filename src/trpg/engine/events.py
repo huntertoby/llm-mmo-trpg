@@ -113,6 +113,7 @@ __all__ = [
     "SummonExpiryReason",
     "SummonModeSet",
     "SummonPulled",
+    "SurfaceBlown",
     "SurfaceChanged",
     "SurfaceEntered",
     "TerrainChanged",
@@ -142,6 +143,7 @@ __all__ = [
     "WallToppled",
     "WeaponReloaded",
     "ZoneCreated",
+    "ZoneExpanded",
     "ZoneExpired",
     "ZoneExpiryReason",
     "ZoneMoved",
@@ -387,6 +389,8 @@ class Collided(EventBase):
     object_id: ObjectId | None = None
     """撞到的物件。"""
     dice: Dice | None = None
+    damage_permille: int = Field(default=1000, ge=0)
+    """撞擊傷害倍率（‰）：風壓撞擊（Phase 3-54a）時為 ``core.wind.collision_permille``。"""
 
 
 class UnitFell(EventBase):
@@ -770,6 +774,19 @@ class SurfaceChanged(EventBase):
     after: Surface
     remaining: int | None
     cause: str
+
+
+class SurfaceBlown(EventBase):
+    """吹送（Phase 3-54a ``blow_surface``，06 6.33）：``from_pos`` 的表面被風往 ``direction`` 吹到
+    ``to_pos``（被擋住時可能少於技能的距離，甚至留在原地）。落點的表面改變另有 ``surface_changed``
+    （原因 ``blow``；落點查互動表後可能不是 ``surface``）。"""
+
+    type: Literal["surface_blown"] = "surface_blown"
+    source_id: UnitId | None = None
+    from_pos: Pos
+    to_pos: Pos
+    surface: Surface
+    direction: tuple[int, int]
 
 
 class TerrainChanged(EventBase):
@@ -1546,6 +1563,19 @@ class ZoneMoved(EventBase):
     cells: tuple[Pos, ...]
 
 
+class ZoneExpanded(EventBase):
+    """元素擴散（Phase 3-54a，06 6.33）：風元素的技能吹到區域，區域往風向多出 ``added`` 這些格子；
+    ``cells`` 是擴大後的全部格子。"""
+
+    type: Literal["zone_expanded"] = "zone_expanded"
+    zone_id: int
+    owner_id: UnitId
+    skill_id: str
+    source_id: UnitId | None = None
+    added: tuple[Pos, ...]
+    cells: tuple[Pos, ...]
+
+
 class ZoneTriggered(EventBase):
     """區域對 ``unit_id`` 結算效果（Phase 3D-5）：``enter`` 進入區域（含區域建立、移動或跟隨到他
     身上）、``turn_start`` 回合開始時站在區域內；之後是效果的事件。"""
@@ -1742,6 +1772,7 @@ type Event = Annotated[
     | ObjectCreated
     | ObjectExpired
     | SurfaceChanged
+    | SurfaceBlown
     | TerrainChanged
     | ElementTouched
     | SurfaceEntered
@@ -1797,6 +1828,7 @@ type Event = Annotated[
     | FollowupCancelled
     | ZoneCreated
     | ZoneMoved
+    | ZoneExpanded
     | ZoneTriggered
     | ZoneExpired
     | RuneInscribed

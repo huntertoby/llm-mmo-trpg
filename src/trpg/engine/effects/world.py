@@ -75,9 +75,11 @@ __all__ = [
     "creation_result",
     "hurl_landing",
     "object_push_block",
+    "place_surface",
     "push_distance",
     "remove_object",
     "set_surface",
+    "surface_allowed",
     "topple_line",
     "unit_push_block",
 ]
@@ -183,7 +185,7 @@ def creation_result(state: BattleState, xy: XY, surface: Surface) -> tuple[Surfa
     return surface, "effect"
 
 
-def _surface_allowed(state: BattleState, xy: XY) -> bool:
+def surface_allowed(state: BattleState, xy: XY) -> bool:
     """致命地形上（沒有木橋）與牆壁（不可進入、非致命的地形）上不能有表面。"""
     if is_deadly(state, xy):
         return False
@@ -198,41 +200,66 @@ def _create_surface(ctx: Ctx, effect: EffectBase) -> list[EventBase]:
     xy = effect.pos
     if not state.in_bounds(*xy):
         return [_fizzle(ctx, effect.kind, xy, "out_of_bounds")]
-    if not _surface_allowed(state, xy):
+    if not surface_allowed(state, xy):
         reason = "deadly_terrain" if is_deadly(state, xy) else "solid_terrain"
         return [_fizzle(ctx, effect.kind, xy, reason)]
-    final: Surface | None = effect.surface
-    cause = effect.cause
-    if effect.react:
-        final, rule_cause = creation_result(state, xy, effect.surface)
+    return place_surface(
+        ctx,
+        xy,
+        effect.surface,
+        cause=effect.cause,
+        duration=effect.duration,
+        team=effect.team,
+        creator=effect.source_id,
+        depth=effect.depth,
+        react=effect.react,
+    )
+
+
+def place_surface(
+    ctx: Ctx,
+    xy: XY,
+    surface: Surface,
+    *,
+    cause: str,
+    duration: int | None,
+    team: Team | None,
+    creator: UnitId | None,
+    depth: int,
+    react: bool = True,
+    permanent: bool = False,
+) -> list[EventBase]:
+    """在（已確認可以有表面的）``xy`` 放下 ``surface``：``react`` 時先查互動表的 ``surface_created``
+    規則，放下帶元素的表面後格上物件被該元素觸及。``permanent``（吹送移動永久表面，Phase 3-54a）時
+    ``duration`` 為 ``None`` 表示永久，而不是表面的預設持續。"""
+    state = ctx.state
+    final: Surface | None = surface
+    if react:
+        final, rule_cause = creation_result(state, xy, surface)
         if rule_cause != "effect":
             cause = rule_cause
     if final is None:
         return []
-    duration = effect.duration if final is effect.surface else None
+    kept = final is surface
     events = set_surface(
         ctx,
         xy,
         final,
         cause=cause,
-        duration=duration,
-        team=effect.team,
-        creator=effect.source_id,
-        depth=effect.depth,
+        duration=duration if kept else None,
+        team=team,
+        creator=creator,
+        use_default_duration=not (permanent and kept),
+        depth=depth,
     )
     element = ctx.rules.surface_def(final).element if final is not Surface.NONE else None
-    if (
-        effect.react
-        and final is effect.surface
-        and element is not None
-        and state.tile(*xy).object_id is not None
-    ):
+    if react and kept and element is not None and state.tile(*xy).object_id is not None:
         events.append(
             ctx.emit(
                 ElementTouched,
                 pos=_pos(xy),
                 element=element,
-                source_id=effect.source_id,
+                source_id=creator,
                 direction=None,
                 push_distance=0,
                 damage=0,
@@ -519,6 +546,7 @@ def _push_unit(ctx: Ctx, effect: PushEffect, unit_id: UnitId) -> list[EventBase]
                 pos=unit.pos,
                 source_id=effect.source_id,
                 dice=effect.collision_dice,
+                damage_permille=effect.collision_permille,
             )
         )
     return events
@@ -557,6 +585,7 @@ def _collide(
         other_id=None if other is None else other.id,
         object_id=object_id,
         dice=effect.collision_dice,
+        damage_permille=effect.collision_permille,
     )
 
 
@@ -910,7 +939,7 @@ def _change_tile(ctx: Ctx, effect: EffectBase) -> list[EventBase]:
                             terrain=effect.terrain,
                         )
                     )
-    if effect.surface is not None and _surface_allowed(state, xy):
+    if effect.surface is not None and surface_allowed(state, xy):
         final, cause = creation_result(state, xy, effect.surface)
         if final is not None:
             events.extend(

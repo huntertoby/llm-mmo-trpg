@@ -109,6 +109,7 @@ from trpg.engine.skills.targeting import (
 from trpg.engine.skills.variance import overload_bonus, scale_bonus
 from trpg.engine.stacks import consume_stacks
 from trpg.engine.state import BattleState, UnitState
+from trpg.engine.wind import spread_wind
 from trpg.shared.types import Element, Pos, UnitId
 
 _OWN_CHECK = (SWAP, SWAP_ANY, TELEPORT_TARGET, ZONE, REVEAL, DETONATE_RUNES)
@@ -375,6 +376,7 @@ class Cast:
             if effect.type == "damage":
                 if effect.affects in TOUCHING_AFFECTS:
                     self.touch_untouched_tiles(spec, start)
+                    self.spread_wind(spec)
                 if spec.lifesteal_permille is not None:
                     self.lifesteal(spec.lifesteal_permille, start)
                 if spec.on_kill:
@@ -804,6 +806,14 @@ class Cast:
         ]
         if remaining:
             execute(self.ctx, remaining)
+
+    def spread_wind(self, spec: EffectSpec) -> None:
+        """元素擴散（Phase 3-54a，06 6.33）：``element: wind`` 的傷害效果吹到影響格的表面與區域時，
+        往風向擴大（:func:`trpg.engine.wind.spread_wind`；只看效果自己寫的元素）。"""
+        if spec.element is not Element.WIND:
+            return
+        tiles = [xy for xy in self.area.tiles if self.tile_holds(spec.condition, xy)]
+        spread_wind(self.ctx, self.area, self.caster.xy, tiles, self.caster.id)
 
     def spell_scaled(self) -> int:
         """治療與護盾的屬性加成（‰）：有效縮放屬性 × ``spell_attr_multiplier_permille``。"""

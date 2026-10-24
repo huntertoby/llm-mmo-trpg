@@ -54,6 +54,7 @@ __all__ = [
     "AFFECTS_VALUES",
     "BACKLASH_TYPES",
     "BASIC_ACTIONS",
+    "BLOW_SURFACE",
     "CASTER_CONDITIONS",
     "CHANGE_TARGETS",
     "CHARGE_THROUGH",
@@ -184,6 +185,7 @@ __all__ = [
     "default_affects",
     "granted_skill_problems",
     "held_gear",
+    "is_wind_skill",
     "legendary_cores",
     "on_hit_carrier",
     "param_required_for",
@@ -1546,6 +1548,8 @@ INSCRIBE = "inscribe"
 DETONATE_RUNES = "detonate_runes"
 """Phase 3-23 的消耗型原語 ID（6.25）：引爆影響格內施放者自己的符文，每格對該格單位一次小傷害。"""
 RUNE_BOTH_MESSAGE = "不能同時刻下符文又引爆符文（要靠兩件東西搭配，不是單一被動或單一裝備自己完成）"
+BLOW_SURFACE = "blow_surface"
+"""Phase 3-54a 的吹送原語 ID（06 6.33，#56）：把影響格上的表面整片往風向平移 ``distance`` 格。"""
 SACRIFICE_SUMMON = "sacrifice_summon"
 """Phase 3-24c 的獻祭召喚物原語 ID（6.27.2）：移除自己的一個召喚物，在它的位置爆炸或治療。"""
 ZONE = "zone"
@@ -3990,6 +3994,14 @@ def on_hit_carrier(skill: SkillDef, effects: tuple[EffectSpec, ...]) -> SkillDef
     """把修正規則的命中後效果包成一個「技能」（同一個修正技能的複本，``effects`` 換成命中後
     效果），讓驗證、預算與引擎的自動命中施放沿用一般技能的程式。不經過 schema 驗證。"""
     return skill.model_copy(update={"effects": effects})
+
+
+def is_wind_skill(skill: SkillDef) -> bool:
+    """風元素的技能（Phase 3-54a，06 6.33）：頂層有 ``element: wind`` 的傷害效果。
+
+    風壓撞擊（推擊的撞擊傷害加成）用這個判斷；只看技能資料（卡片、預算與實戰同源），武器詞條或
+    修正規則在戰鬥中加上的風元素不算。"""
+    return any(e.type == "damage" and e.element is Element.WIND for e in skill.effects)
 
 
 # ---------------------------------------------------------------------------

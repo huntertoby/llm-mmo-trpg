@@ -66,8 +66,9 @@ def test_all_demo_skills_load_and_cover_shapes_and_primitives() -> None:
     assert {s.category for s in skills} == {"weapon", "spell"}
     assert {s.weapon_req for s in skills} == {"melee", "ranged", "focus", "any"}
     used = {e.type for s in skills for e in s.effects}
-    # destroy_object、raise_terrain、lower_terrain 由測試專用技能覆蓋
+    # destroy_object、raise_terrain、lower_terrain、blow_surface（3-54a）由測試專用技能覆蓋
     assert used >= set(lib.ruleset.primitives.by_id()) - {
+        "blow_surface",
         "destroy_object",
         "raise_terrain",
         "lower_terrain",

@@ -8,6 +8,7 @@ from trpg.content.skills import (
     CHARGE_THROUGH,
     ConditionSpec,
     EffectSpec,
+    is_wind_skill,
 )
 from trpg.engine import modifiers
 from trpg.engine.effects import execute
@@ -63,6 +64,9 @@ def _displace(
 ) -> list[EffectBase]:
     assert spec.distance is not None
     batch: list[EffectBase] = [] if pull else _topple_in_area(cast, spec)
+    # 風壓撞擊（Phase 3-54a，06 6.33）：風元素技能的推擊（拉扯不算）撞擊傷害 × collision_permille
+    wind = not pull and is_wind_skill(cast.skill)
+    collision_permille = cast.ctx.core.wind.collision_permille if wind else 1000
     for unit in cast.targets(effect.affects, spec.condition):
         direction = _displace_direction(cast, unit, pull=pull)
         if direction is None:
@@ -80,6 +84,7 @@ def _displace(
                 direction=direction,
                 distance=distance,
                 collision_dice=spec.collision_dice,
+                collision_permille=collision_permille,
                 extra_collisions=extra,
             )
         )
