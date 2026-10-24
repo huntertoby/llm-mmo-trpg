@@ -1760,7 +1760,8 @@ def _supports(
         if _rewrite_supports(state, caster, skill, spec, target):
             return True
         if resolved.type == "cleanse" and any(
-            state.ruleset.status_def(s.status_id).polarity == "debuff" for s in target.statuses
+            state.ruleset.status_def(s.status_id).polarity == "debuff" and not s.cost_status
+            for s in target.statuses  # 代價狀態淨化不掉（#62）
         ):
             return True
         if resolved.type == "apply_status" and spec.status is not None:

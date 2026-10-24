@@ -474,8 +474,10 @@ def _cleanse(ctx: Ctx, effect: EffectBase) -> list[EventBase]:
     if unit is None or not unit.alive:
         return []
     removable = [
-        s.status_id for s in unit.statuses if ctx.rules.status_def(s.status_id).polarity == "debuff"
-    ]  # 只移除減益；增益與中性（隱蔽、姿態、免死、靈魂連結、蓄力）保留（玩法決定 #60）
+        s.status_id
+        for s in unit.statuses
+        if ctx.rules.status_def(s.status_id).polarity == "debuff" and not s.cost_status
+    ]  # 只移除減益；增益與中性保留（#60）；代價狀態（自己付的）移除不了（#62）
     if not removable:
         return []
     unit.statuses = [s for s in unit.statuses if s.status_id not in removable]
@@ -653,6 +655,7 @@ def apply_status(ctx: Ctx, effect: ApplyStatusEffect) -> list[EventBase]:
         dormant=effect.self_paid
         and (definition.skip_turn or definition.blocks_spells)
         and ctx.state.active_unit == unit.id,  # 自暈／自我沉默：本回合照常，回合結束才生效
+        cost_status=effect.self_paid,  # 代價狀態：淨化與驅散移除不了（#62）
     )
     if definition.stance:  # 同時只能有一個姿態：先移除其他姿態（2E-2）
         for old in stance_status_ids(ctx.rules, unit):
@@ -689,6 +692,7 @@ def apply_status(ctx: Ctx, effect: ApplyStatusEffect) -> list[EventBase]:
             source_id=existing.source_id,
             amount=existing.amount,
             skill_id=existing.skill_id,
+            cost_status=existing.cost_status,
         )
     others = [s for s in unit.statuses if s.status_id != status_id]
     unit.statuses = sorted([*others, instance], key=lambda s: s.status_id)

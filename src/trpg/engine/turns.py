@@ -257,6 +257,7 @@ def end_turn(ctx: Ctx) -> None:
                     remaining=remaining,
                     source_id=status.source_id,
                     amount=status.amount,
+                    cost_status=status.cost_status,
                 )
             )
             continue
