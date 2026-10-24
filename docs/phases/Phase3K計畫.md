@@ -68,3 +68,9 @@ PM 查證：引擎 **沒有** 依「詞條白名單＋預算」產生物品的�
 2. 同部位不同底材照基礎數值比例分配（武器照骰子平均×打擊數；防具照 3K-2b 的基礎防禦表），換算係數放 `content/item_gen.yaml`。
 3. `item_strength`／`item_score`、比較行、`auto_gear_pick` 跟著變；物品預算檢查（`item_points`，只算詞條）不動。
 4. 驗收：pytest（content、roguelite、api、narrative、`-m "slow or not slow" tests/cli`）、vitest、build、ruff、mypy；表格測試（各部位、等級 1／5／10 的基礎份額）。報告 `Phase3K-2c報告.md`。
+
+### 5.4 3K-2c（2026-10-24，開發 PM 合併）
+
+- 報告 `Phase3K-2c報告.md`。`item_budget.base_pool`＝部位預算 − 詞條預算（8.22 比例）；`item_base_points`＝池 × 底材比例（武器：（骰平均＋固定）× 打擊數 ÷ 1d8 平均；身體：基礎防禦 ÷ 皮甲 3；副手、頭、手、腳：整池）；係數在 `item_gen.yaml`（`weapon_reference_permille: 4500`、`body_reference: 3`、`fallback_level: 1`）。基礎池（等級 1／5／10）：主手 18／36／63、身體 12／24／42、副手 6／12／21、頭手腳 4／8／14、飾品 0；等級 1 單手劍 18、匕首 10、大劍 28。
+- 檢查：pytest content／roguelite／api／narrative 2101、cli（含 slow）148、ruff、mypy。
+- 待決（交玩法 PM）：參考底材（單手劍、皮甲拿整池）、副手一律整池、大武器份額超過池（照比例）、初始裝備用等級 1 換算。
