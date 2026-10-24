@@ -74,3 +74,4 @@ PM 查證：引擎 **沒有** 依「詞條白名單＋預算」產生物品的�
 - 報告 `Phase3K-2c報告.md`。`item_budget.base_pool`＝部位預算 − 詞條預算（8.22 比例）；`item_base_points`＝池 × 底材比例（武器：（骰平均＋固定）× 打擊數 ÷ 1d8 平均；身體：基礎防禦 ÷ 皮甲 3；副手、頭、手、腳：整池）；係數在 `item_gen.yaml`（`weapon_reference_permille: 4500`、`body_reference: 3`、`fallback_level: 1`）。基礎池（等級 1／5／10）：主手 18／36／63、身體 12／24／42、副手 6／12／21、頭手腳 4／8／14、飾品 0；等級 1 單手劍 18、匕首 10、大劍 28。
 - 檢查：pytest content／roguelite／api／narrative 2101、cli（含 slow）148、ruff、mypy。
 - 待決（交玩法 PM）：參考底材（單手劍、皮甲拿整池）、副手一律整池、大武器份額超過池（照比例）、初始裝備用等級 1 換算。
+- **3K-2c 修正（玩法 PM 回覆，08 8.11「同一大類的總預算相同」、8.12「同等級總預算相同」）**：不照骰子或防禦比例分配——同部位底材都拿整個基礎池；雙手或成對武器另加副手池（等級 1：單手 18、雙手／成對 24）；身體防具都拿整個身體池；副手整池；沒有物品等級用等級 1。移除 `weapon_reference_permille`／`body_defense`／`body_reference`。
