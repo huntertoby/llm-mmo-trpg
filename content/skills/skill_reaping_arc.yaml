@@ -1,0 +1,43 @@
+# 3I-5 武器親和／招牌技示範（數值為初值，未經模擬）
+id: skill_reaping_arc
+schema_version: 1
+name_zh: 收割弧
+tier: 1
+rank: 1
+rarity: rare
+kind: active
+skeleton: combo
+category: weapon
+weapon_req: melee
+ap_cost: 2
+scaling_attr: str
+shape:
+  type: cone
+  size: 2
+effects:
+- type: damage
+  multiplier_permille: 1000
+- type: damage
+  condition:
+    type: wielding_weapon
+    weapon: scythe
+  multiplier_permille: 700
+condition: null
+cost:
+  stamina: 8
+  cooldown: 3
+tags:
+- physical
+- melee
+- area
+- combo
+narrative:
+  concept: 長柄鐮刀的弧形橫掃
+  cast_flavor: 彎刃劃出一道冷光，掃過面前所有人
+provenance:
+  origin: builtin
+  owner_id: null
+  created_by: null
+  parents: []
+  bound: true
+  tradeable: false

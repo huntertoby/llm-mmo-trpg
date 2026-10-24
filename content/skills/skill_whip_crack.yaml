@@ -1,0 +1,41 @@
+# 3I-5 武器親和／招牌技示範（數值為初值，未經模擬）
+id: skill_whip_crack
+schema_version: 1
+name_zh: 鞭梢爆響
+tier: 1
+rank: 1
+rarity: rare
+kind: active
+skeleton: strike
+category: weapon
+weapon_req: melee
+weapon_only:
+- whip
+ap_cost: 2
+scaling_attr: str
+shape:
+  type: single
+  range: 3
+effects:
+- type: damage
+  multiplier_permille: 1850
+- type: pull
+  distance: 1
+condition: null
+cost:
+  stamina: 8
+  cooldown: 3
+tags:
+- physical
+- melee
+- displace
+narrative:
+  concept: 鞭子的觸及比任何近戰武器都遠
+  cast_flavor: 鞭梢在遠處炸出一聲脆響，把人拽向你
+provenance:
+  origin: builtin
+  owner_id: null
+  created_by: null
+  parents: []
+  bound: true
+  tradeable: false

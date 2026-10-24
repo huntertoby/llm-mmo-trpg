@@ -1,0 +1,42 @@
+# 3I-5 武器親和／招牌技示範（數值為初值，未經模擬）
+id: skill_quick_draw
+schema_version: 1
+name_zh: 快拔連射
+tier: 1
+rank: 1
+rarity: rare
+kind: active
+skeleton: combo
+category: weapon
+weapon_req: ranged
+ap_cost: 2
+scaling_attr: dex
+shape:
+  type: single
+  range: weapon
+effects:
+- type: damage
+  multiplier_permille: 1200
+- type: damage
+  condition:
+    type: wielding_weapon
+    weapon: pistol
+  multiplier_permille: 900
+condition: null
+cost:
+  stamina: 8
+  cooldown: 2
+tags:
+- physical
+- ranged
+- combo
+narrative:
+  concept: 手槍拔得比誰都快
+  cast_flavor: 槍口還沒抬穩，第二聲槍響已經追了上去
+provenance:
+  origin: builtin
+  owner_id: null
+  created_by: null
+  parents: []
+  bound: true
+  tradeable: false

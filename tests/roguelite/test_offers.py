@@ -35,8 +35,9 @@ def test_offer_has_deepen_bridge_new_candidates(build: str) -> None:
             i for i, s in enumerate(offer.candidates) if s.scaling_attr != top
         )
         weapon = lib.weapons[run.hero.weapon].weapon_class
+        held = {run.hero.weapon: lib.weapons[run.hero.weapon].name_zh}
         for skill in offer.candidates:
-            assert weapon_problem(skill, weapon) is None
+            assert weapon_problem(skill, weapon, held) is None
             assert skill.id not in run.hero.skills
             assert skill.tier == lib.roguelite.offer_tier(run.level)
         assert len({s.id for s in offer.candidates}) == 3

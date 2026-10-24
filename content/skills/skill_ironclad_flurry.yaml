@@ -1,0 +1,42 @@
+# 3I-5 武器親和／招牌技示範（數值為初值，未經模擬）
+id: skill_ironclad_flurry
+schema_version: 1
+name_zh: 鐵拳連打
+tier: 1
+rank: 1
+rarity: rare
+kind: active
+skeleton: combo
+category: weapon
+weapon_req: melee
+ap_cost: 2
+scaling_attr: str
+shape:
+  type: single
+  range: weapon
+effects:
+- type: damage
+  multiplier_permille: 1100
+- type: damage
+  condition:
+    type: wielding_weapon
+    weapon: fist
+  multiplier_permille: 1000
+condition: null
+cost:
+  stamina: 8
+  cooldown: 2
+tags:
+- physical
+- melee
+- combo
+narrative:
+  concept: 拳套才打得出的第二拳
+  cast_flavor: 你的拳套連續兩次砸進對手的肋下
+provenance:
+  origin: builtin
+  owner_id: null
+  created_by: null
+  parents: []
+  bound: true
+  tradeable: false
