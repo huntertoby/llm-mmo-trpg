@@ -18,7 +18,7 @@
 **只看專屬規則**（PM 決定，3-24b1 待決 #2）：關鍵字分布與「技能帶某關鍵字」都以
 ``derive_keywords(..., exclusive_only=True)`` 判斷；通用規則只影響卡片顯示。
 
-**通用池**（Phase 3-51，玩法決定 #55）：沒有專屬關鍵字的手寫技能是基礎技能；「新方向」那一格有
+**通用池**（Phase 3-51，玩法決定 #55）：沒有任何關鍵字的手寫技能是基礎技能；「新方向」那一格有
 ``general_share_permille`` 的機率從通用池抽（候選的 ``keywords`` 為空）。
 
 **退回**（定義做不到時，``Candidate.fallback`` 為真）：
@@ -341,13 +341,14 @@ def _new(
 
 
 def _general_pool(library: ContentLibrary, tier: int) -> tuple[SkillDef, ...]:
-    """通用池：階級相符、非傳說、沒有任何專屬關鍵字的手寫技能（基礎技能）。"""
+    """通用池：階級相符、非傳說、**沒有任何關鍵字**（含通用歸類）的手寫技能＝基礎技能（06 6.27.1，
+    玩法 PM 2026-10-24 選 B：通用池與「基礎技能」同一個範圍）。"""
     found: list[SkillDef] = []
     for skill_id in sorted(library.skills):
         skill = library.skills[skill_id]
         if skill.tier != tier or skill.rarity == "legendary":
             continue
-        if not derive_keywords(skill, library.keywords, exclusive_only=True).all():
+        if not derive_keywords(skill, library.keywords).all():
             found.append(skill)
     return tuple(found)
 
