@@ -22,7 +22,7 @@ type Colors = readonly [string, string];
 // ---- 腳 ----
 
 /** 靴筒高度：布鞋 0、皮靴短 2.5／長 4、鐵靴 3、脛甲 4。 */
-function bootHeight(feet: GearItem): number {
+export function bootHeight(feet: GearItem): number {
   switch (feet.kind) {
     case "greaves":
       return 4;
