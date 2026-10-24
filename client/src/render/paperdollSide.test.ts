@@ -1,7 +1,8 @@
 // Phase 3S-1：真側面（第三套畫法）— 各方向 × 各裝備 kind（含未知）× 有／沒有裝備都畫得出來；朝西是朝東的鏡像。
 import { describe, expect, it } from "vitest";
 import type { Facing } from "../api/types";
-import { KNOWN_KINDS, type DollSpec, type GearSlot } from "./appearance";
+import { KNOWN_KINDS, type DollSpec, type GearItem, type GearSlot } from "./appearance";
+import { drawFigureSide } from "./paperdollSide";
 import { drawFigure } from "./paperdoll";
 import { resolveDollT, UNIT_DOLLS } from "./testDolls";
 
@@ -118,5 +119,38 @@ describe("真側面：頭部裝備、盾、披風（3S-2）", () => {
     expect(horned).toContain("fillStyle=#efe6cc"); // 近側角
     expect(horned).toContain("fillStyle=#a7a18f"); // 遠側角（暗 30%）
     expect(horned.indexOf("fillStyle=#a7a18f")).toBeLessThan(horned.indexOf("fillStyle=#efe6cc")); // 遠側先畫
+  });
+});
+
+describe("真側面：武器（3S-3）", () => {
+  const skin = { skin: "#e8c8a0" };
+  const FORMS = [undefined, "arcane", "mace", "flail", "warhammer", "halberd", "trident", "totem", "scepter", "light", "heavy", "repeater", "flintlock", "hunting", "sniper", "revolver", "derringer", "blunderbuss", "double", "pump", "katar", "claw", "knuckle", "chain", "bladed", "weird_form"];
+
+  it("每種主手 kind（含未知）× form × 4 方向 × 有／沒有副手都不出錯", () => {
+    const offs: Array<GearItem | undefined> = [undefined, { kind: "dagger", material: "steel" }, { kind: "shield_round", material: "iron" }, { kind: "orb", form: "ball", material: "silver" }, { kind: "weird_kind", material: "steel" }];
+    for (const kind of [...KNOWN_KINDS.main_hand, "weird_kind"]) {
+      for (const form of FORMS) {
+        for (const off of offs) {
+          const gear: DollSpec["gear"] = { main_hand: { kind, form, material: "steel", element: "fire" } };
+          if (off !== undefined) gear.off_hand = off;
+          for (const f of FACINGS) expect(() => run({ look: skin, gear }, f)).not.toThrow();
+        }
+      }
+    }
+  });
+
+  it("成對武器：副手那把畫在遠側，顏色比主手暗", () => {
+    const sword: GearItem = { kind: "sword", material: "steel" };
+    const solo = run({ look: skin, gear: { main_hand: sword } }, "east");
+    const pair = run({ look: skin, gear: { main_hand: sword, off_hand: sword } }, "east");
+    expect(pair.length).toBeGreaterThan(solo.length);
+    expect(pair.filter((c) => c.startsWith("fillStyle=#")).some((c) => !solo.includes(c))).toBe(true); // 出現遠側的暗色
+  });
+
+  it("種族部件介面：race hook 依層順序被呼叫（3R-3 用）", () => {
+    const layers: string[] = [];
+    const { ctx } = mockCtx();
+    drawFigureSide(ctx, { look: skin, gear: {} }, { colors: () => ["#fff", "#000"], weapon: () => undefined, race: (l) => layers.push(l) });
+    expect(layers).toEqual(["behind", "face", "head"]);
   });
 });
