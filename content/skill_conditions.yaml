@@ -107,7 +107,7 @@ conditions:
   # 「手持某種武器時多一個加成」；沒拿那種武器時技能照常可用、只是沒有加成。算常見（0.85）：
   # 主手武器或副手的 ID 相符就成立，開局就知道，不需要先做別的事。
   - id: wielding_weapon
-    name_zh: 手持武器
+    name_zh: 手持指定武器
     llm_hint: "施放者手上拿著指定的武器或副手時才成立。"
     description_zh: 施放者的主手武器或副手是指定的那一種（weapons.yaml、offhands.yaml 的 ID；成對武器算它自己那一種，雙匕首不算匕首）。只看施放者；用在效果的 condition 時是「拿著那種武器才多一個加成」，沒拿時技能照常可用。
     harshness: common

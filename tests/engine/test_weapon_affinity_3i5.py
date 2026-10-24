@@ -378,7 +378,7 @@ def test_the_card_names_the_weapon_for_the_conditional_effect_and_the_limit() ->
     chain = skill_card(LIB, LIB.skills["skill_chain_lash"])
     assert chain.weapon_only is None
     assert len(chain.effects) == 2
-    assert chain.effects[1].endswith("，若手持鞭時")
+    assert "，若手持鞭時，這把武器吃敏捷／感知（取平均）" in chain.effects[1]
     assert "若手持" not in chain.effects[0]
     crack = skill_card(LIB, LIB.skills["skill_whip_crack"])
     assert crack.weapon_only == "限定手持：鞭"

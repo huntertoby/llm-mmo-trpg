@@ -2040,7 +2040,7 @@
   },
   {
    "id": "wielding_weapon",
-   "name_zh": "手持武器",
+   "name_zh": "手持指定武器",
    "description_zh": "施放者的主手武器或副手是指定的那一種（weapons.yaml、offhands.yaml 的 ID；成對武器算它自己那一種，雙匕首不算匕首）。只看施放者；用在效果的 condition 時是「拿著那種武器才多一個加成」，沒拿時技能照常可用。",
    "tags": [],
    "status_look": null,
