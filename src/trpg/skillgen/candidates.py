@@ -217,6 +217,7 @@ class _Search:
                     keyword=keywords[0],
                     hero_attributes=attrs,
                     avoid_attr=avoid,
+                    held=self.request.held or None,
                 )
             except ComposeError:
                 continue

@@ -26,6 +26,7 @@ from trpg.content.skills import SkillDef, SkillRarity, rarity_rank
 from trpg.shared.errors import TrpgError
 from trpg.shared.rng import Rng
 from trpg.shared.types import Attribute, Element
+from trpg.skillgen.affinity import grant_affinity
 from trpg.skillgen.budget import BudgetError
 from trpg.skillgen.composer_parts import (
     NON_INTERCEPT_EVENTS,
@@ -669,6 +670,7 @@ def compose_with_stats(
     keyword: str | None = None,
     hero_attributes: Mapping[Attribute, int] | None = None,
     avoid_attr: Attribute | None = None,
+    held: Mapping[str, str] | None = None,
 ) -> ComposeResult:
     """:func:`compose_random_skill`，另外回傳重抽次數。"""
     lib = library if library is not None else default_library()
@@ -685,9 +687,18 @@ def compose_with_stats(
         else _compose_plain(seed, lib, **fixed)
     )
     if hero_attributes is None:
-        return found
+        return _with_affinity(found, held, lib)
     # 新技能跟主屬性（Phase 3H-3）：亂數串流不變，組完之後才改縮放屬性（武器技一律看武器大類）
     skill = retarget_scaling(found.skill, hero_attributes, lib, avoid=avoid_attr)
+    found = found if skill is found.skill else ComposeResult(skill, found.attempts)
+    return _with_affinity(found, held, lib)
+
+
+def _with_affinity(
+    found: ComposeResult, held: Mapping[str, str] | None, library: ContentLibrary
+) -> ComposeResult:
+    """武器親和（Phase 3I-5）：給了主角手上的裝備時，附帶效果上的常見條件換成手持武器條件。"""
+    skill = grant_affinity(found.skill, held, library)
     return found if skill is found.skill else ComposeResult(skill, found.attempts)
 
 
@@ -797,6 +808,7 @@ def compose_random_skill(
     keyword: str | None = None,
     hero_attributes: Mapping[Attribute, int] | None = None,
     avoid_attr: Attribute | None = None,
+    held: Mapping[str, str] | None = None,
 ) -> SkillDef:
     """依種子組出一個合格的隨機技能（``id`` 為 ``skill_rand_<seed>``）。
 
@@ -806,7 +818,10 @@ def compose_random_skill(
     ``hero_attributes``（Phase 3H-3，07 7.2）：給主角的屬性時，縮放屬性改取其中最高的、且在
     ``skill_scaling.yaml`` 允許範圍內的屬性（同分依六屬性順序；見
     :func:`trpg.skillgen.scaling.retarget_scaling`），``avoid_attr`` 為不要取的屬性（候選的
-    「新方向」）。其餘內容與沒給時完全相同。"""
+    「新方向」）。其餘內容與沒給時完全相同。
+
+    ``held``（Phase 3I-5，06 6.10 #50）：主角手上的主手武器與副手（ID → 中文名）；給了就可能把
+    附帶效果上的常見條件換成「手持某種武器時」（:func:`trpg.skillgen.affinity.grant_affinity`）。"""
     return compose_with_stats(
         seed,
         tier=tier,
@@ -818,4 +833,5 @@ def compose_random_skill(
         keyword=keyword,
         hero_attributes=hero_attributes,
         avoid_attr=avoid_attr,
+        held=held,
     ).skill
