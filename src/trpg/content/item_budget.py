@@ -152,6 +152,10 @@ class ItemGenRules(ContentModel):
     required_picks: dict[SlotType, RequiredPick]
     weapon_attribute_preference_permille: int = Field(ge=0, le=_PERMILLE)
     max_attempts: int = Field(default=30, ge=1, le=200)
+    offer_size: int = Field(default=3, ge=1, le=6)
+    """戰後裝備三選一的候選件數（Phase 3K-2，07 7.1）；部位不重複。"""
+    offer_attempts: int = Field(default=8, ge=1, le=50)
+    """候選的某一件穿不上時（例如傳說物品會超過全身上限）最多重抽幾次。"""
 
     @model_validator(mode="after")
     def _check(self) -> ItemGenRules:

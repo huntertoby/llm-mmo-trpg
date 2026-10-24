@@ -53,8 +53,9 @@ def test_test_mode_refills_hp_and_mana_after_every_won_battle() -> None:
     pairs = _after_battles(_run(test_mode=True))
     assert pairs
     for _, after in pairs:
-        assert after.hp == after.max_hp_in(core)  # 升級後依最大 HP 的差補上
-        assert after.mana == after.max_mana_in(core)
+        # 回滿到戰鬥中的實際上限（含裝備；3K-2 起戰後會拿到裝備，所以可能高於一輪算的上限）
+        assert after.hp >= after.max_hp_in(core)
+        assert after.mana >= after.max_mana_in(core)
     # 歷程仍記錄打完當下的真實剩餘（不是回滿後的數字）
     last = pairs[-1][1]
     assert any(r.hp < last.max_hp_in(core) or r.mana < last.max_mana_in(core) for r in last.history)
@@ -154,6 +155,6 @@ def test_old_save_without_the_fields_still_loads() -> None:
     raw = json.loads(dumps_save(RunSave(run_id="old", run=_run())))
     del raw["run"]["test_mode"], raw["run"]["test_equipment"]
     loaded = loads_save(json.dumps(raw))
-    assert loaded.format == "trpg-run/5"
+    assert loaded.format == "trpg-run/6"
     assert loaded.run.test_mode is False
     assert loaded.run.test_equipment == {}

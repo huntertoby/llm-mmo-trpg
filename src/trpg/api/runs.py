@@ -4,7 +4,7 @@
   戰鬥工作階段表裡，用既有的 ``/api/battles/{id}`` 端點操作）。
 - 戰鬥結束後，任何一輪的請求先 :meth:`RunSession.sync`：以 ``finish_battle`` 寫回主角並前進到下一個
   節點。
-- 存檔：``RunSave``（``trpg-run/5``），戰鬥中存的是 ``setup`` 以外的一切（種子、步驟、指令）；讀檔時
+- 存檔：``RunSave``（``trpg-run/6``），戰鬥中存的是 ``setup`` 以外的一切（種子、步驟、指令）；讀檔時
   重建 ``setup``、重播步驟、還原指令（:meth:`SessionStore.open`）。
 - 鎖的順序：一輪的鎖 → 戰鬥的鎖。
 """

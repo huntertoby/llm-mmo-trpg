@@ -339,6 +339,49 @@ def test_dual_attribute_weapons_split_the_preference() -> None:
     assert abs(others / total - 0.5) < 0.15
 
 
+def _offhand_attribute_share(offhand_id: str) -> Counter[str]:
+    lib = library()
+    counts: Counter[str] = Counter()
+    for seed in range(6000):
+        item = _gen(seed, "offhand", "uncommon", 4)
+        if item.offhand != offhand_id:
+            continue
+        for roll in item.affixes:
+            affix = lib.affixes[roll.affix]
+            if isinstance(affix, StatAffix) and affix.attribute is not None:
+                counts[affix.attribute.value] += 1
+    return counts
+
+
+def test_single_attribute_offhands_prefer_their_scaling_attribute() -> None:
+    """副手屬性詞條偏好比照武器（3K-2，玩法 PM 2026-10-24）：縮放屬性 50%，其餘平分。"""
+    counts = _offhand_attribute_share("tome")  # 法書：智力
+    total = sum(counts.values())
+    assert total > 150
+    assert abs(counts["int"] / total - 0.5) < 0.1
+    for attr in Attribute:
+        if attr is not Attribute.INT:
+            assert abs(counts[attr.value] / total - 0.1) < 0.07
+
+
+def test_dual_attribute_offhands_split_the_preference() -> None:
+    counts = _offhand_attribute_share("round_shield")  # 圓盾：力量／體質
+    total = sum(counts.values())
+    assert total > 150
+    assert abs(counts["str"] / total - 0.25) < 0.1
+    assert abs(counts["con"] / total - 0.25) < 0.1
+    others = sum(counts[a] for a in ("dex", "int", "wis", "wil"))
+    assert abs(others / total - 0.5) < 0.12
+
+
+def test_condition_rates_follow_8_21_2_2() -> None:
+    """條件數值的成立率：常見 0.6、偶爾 0.35、少見 0.2（08 8.21.2.2），逐條分類都在表內。"""
+    rules = library().item_gen
+    assert rules is not None
+    assert rules.condition_rates_permille == {"common": 600, "occasional": 350, "rare": 200}
+    assert set(rules.conditional_rates.values()) <= {"common", "occasional", "rare"}
+
+
 def test_weapon_element_affixes_appear_but_never_on_elemental_weapons() -> None:
     lib = library()
     seen: set[Element] = set()
