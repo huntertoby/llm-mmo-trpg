@@ -3317,7 +3317,8 @@ class SkillDef(ContentModel):
         return get(self.scaling_attr)
 
     def contest_attr(self, weapon: WeaponDef | None = None) -> Attribute:
-        """對抗判定（擊倒、位移、狀態抵抗）和目標比的單一屬性；武器技為手上武器的主屬性。"""
+        """對抗判定（擊倒、位移、狀態抵抗）守方被比的單一屬性；武器技為手上武器的主屬性。攻方的值是
+        :meth:`scaling_value`（雙屬性為平均，3I-3b）。"""
         if self.category == "weapon" and weapon is not None:
             return weapon.scaling_attr
         return self.scaling_attr
