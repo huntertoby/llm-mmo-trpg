@@ -16,6 +16,7 @@ from tests.engine.helpers import (
     give_turn,
     library,
     make_map,
+    make_setup,
     make_skill,
     make_state,
     no_reactions,
@@ -24,8 +25,10 @@ from tests.engine.helpers import (
 from tests.engine.skill_helpers import FLAT7, SID, U1, battle, cast, hit_with, of
 from trpg.content.skills import SkillDef, is_wind_skill
 from trpg.engine import BattleState
-from trpg.engine.events import Collided, DamageDealt, SurfaceBlown, ZoneExpanded
-from trpg.engine.state import ZoneState
+from trpg.engine.ai.utility import UtilityAI
+from trpg.engine.events import Collided, DamageDealt, SkillUsed, SurfaceBlown, ZoneExpanded
+from trpg.engine.runner import LOG_FORMAT, replay, run_battle
+from trpg.engine.state import ZoneState, state_to_json
 from trpg.engine.wind import SPREAD_CAUSE
 from trpg.shared.types import Attribute, Pos, Surface, Team, UnitId
 
@@ -380,3 +383,47 @@ def test_wind_pull_is_not_boosted() -> None:
 def test_is_wind_skill_reads_the_damage_element() -> None:
     assert is_wind_skill(_push_skill("wind"))
     assert not is_wind_skill(_push_skill("fire"))
+
+
+# ---------------------------------------------------------------------------
+# 重播：含風技能（測試用）的整場戰鬥
+# ---------------------------------------------------------------------------
+
+
+def _wind_kit() -> list[SkillDef]:
+    gust = make_skill(
+        "skill_t_gust",
+        {"type": "cone", "size": 3},
+        [
+            {"type": "damage", "dice": "2d6", "element": "wind"},
+            {"type": "blow_surface", "distance": 2},
+        ],
+    )
+    shove = make_skill(
+        "skill_t_shove",
+        {"type": "single", "range": 1},
+        [{"type": "damage", "dice": "1d6", "element": "wind"}, {"type": "push", "distance": 2}],
+    )
+    return [gust, shove]
+
+
+def test_a_battle_with_wind_test_skills_replays_identically() -> None:
+    kit = _wind_kit()
+    flat = "\n".join(["000000000"] * 9)
+    poison = [(x, y, "poison") for x in (4, 5) for y in (2, 3, 4)]
+    m = make_map(
+        flat, ally=[(1, 3), (1, 5)], enemy=[(6, 3), (7, 4)], surfaces=[*poison, (5, 5, "fire")]
+    )
+    spawns = [
+        spawn(Team.ALLY, (1, 3), caster_template(kit, max_hp=60)),
+        spawn(Team.ALLY, (1, 5), caster_template(kit, max_hp=60)),
+        spawn(Team.ENEMY, (6, 3), no_reactions(max_hp=80)),
+        spawn(Team.ENEMY, (7, 4), no_reactions(max_hp=80)),
+    ]
+    setup = make_setup(m, spawns, skills=kit, max_rounds=12)
+    run = run_battle(setup, 7, UtilityAI(library().ai_profiles))
+    again = replay(setup, 7, run.actions)
+    assert state_to_json(again.state) == state_to_json(run.state)
+    assert LOG_FORMAT.endswith("/75")
+    used = {e.skill_id for e in run.events if isinstance(e, SkillUsed)}
+    assert used & {"skill_t_gust", "skill_t_shove"}
