@@ -134,24 +134,14 @@ class BaseBonusRule(ContentModel):
 
 
 class BaseStrengthRule(ContentModel):
-    """整件物品的基礎份額換算（3K-2b 起，3K-2c 改照 08 8.22 的「基礎：詞條」比例；只用在「預算分數」
-    比較，不是預算檢查）。
+    """整件物品的基礎份額（3K-2b 起；3K-2c 照 08 8.22 的「基礎：詞條」比例；只用在「預算分數」比較，
+    不是預算檢查）。
 
-    某部位、某等級的 **基礎份額池** ＝ 部位預算 − 詞條預算（即部位預算 ×（1 − 詞條比例）：
-    主手、身體、副手 60%，頭、手、腳 50%，項鍊、戒指 0）。
-    同部位不同底材照「基礎數值 ÷ 參考基礎數值」分配池：
-
-    - 武器：基礎數值＝骰平均＋固定傷害，乘每次普攻的打擊數；參考＝``weapon_reference_permille``‰
-      （4500＝1d8 的平均，單手劍剛好拿到整個池）；
-    - 身體防具：基礎數值＝``body_defense`` 的基礎防禦（08 8.12：布袍 1、外套 2、皮甲 3、鎖甲 5、
-      板甲 7）；參考＝``body_reference``；
-    - 頭、手、腳、副手（沒有基礎數值差異）：整個池；
-    - 項鍊、戒指：池是 0。
+    某部位、某等級的 **基礎份額池** ＝ 部位預算 − 詞條預算（主手、身體、副手 60%，頭、手、腳 50%，
+    項鍊、戒指 0）。**同部位的底材都拿整個池**（08 8.11「同一大類的總預算相同」、8.12「同等級總預算
+    相同」，玩法 PM 2026-10-24）；雙手或成對武器佔掉副手，另加副手池。
     """
 
-    weapon_reference_permille: int = Field(ge=1)
-    body_defense: dict[str, int] = Field(default_factory=dict)
-    body_reference: int = Field(ge=1)
     fallback_level: int = Field(default=1, ge=1)
     """沒有物品等級的物品（初始裝備、基礎武器）換算份額時用的等級。"""
 
@@ -301,22 +291,6 @@ def base_pool(rules: ItemGenRules, item_level: int, slot_type: SlotType) -> int:
     return slot_budget(rules, item_level, slot_type) - affix_budget(rules, item_level, slot_type)
 
 
-def _base_ratio(
-    rule: BaseStrengthRule, item: ItemDef, weapons: Mapping[str, WeaponDef]
-) -> Fraction:
-    """底材的基礎數值 ÷ 參考基礎數值（沒有基礎數值差異的部位為 1）。"""
-    if item.slot_type == "weapon":
-        weapon = weapons.get(item.weapon or "")
-        if weapon is None:
-            return Fraction(0)
-        dice = weapon.dice
-        average = Fraction(dice.count * (dice.sides + 1), 2) + weapon.flat
-        return average * weapon.strikes * _PERMILLE / rule.weapon_reference_permille
-    if item.slot_type == "body":
-        return Fraction(rule.body_defense.get(item.kind or "", 0), rule.body_reference)
-    return Fraction(1)
-
-
 def item_base_points(
     rules: ItemGenRules, item: ItemDef, weapons: Mapping[str, WeaponDef]
 ) -> Fraction:
@@ -326,8 +300,12 @@ def item_base_points(
     if rule is None:
         return Fraction(0)
     level = item.item_level if item.item_level is not None else rule.fallback_level
-    pool = base_pool(rules, level, item.slot_type)
-    return pool * _base_ratio(rule, item, weapons) if pool else Fraction(0)
+    pool = Fraction(base_pool(rules, level, item.slot_type))
+    if item.slot_type == "weapon":  # 雙手或成對武器佔掉副手，另加副手池（08 8.11）
+        weapon = weapons.get(item.weapon or "")
+        if weapon is not None and (weapon.two_handed or weapon.paired or item.paired):
+            pool += base_pool(rules, level, "offhand")
+    return pool
 
 
 def item_strength(

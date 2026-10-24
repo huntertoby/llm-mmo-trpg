@@ -469,4 +469,4 @@ def test_base_weapon_score_is_not_zero_and_follows_the_base_damage() -> None:
         update={"kind": "plate", "affixes": (), "base_bonus_permille": 0}
     )
     assert body.item_level == 3
-    assert item_score(lib, body) == Fraction(42)  # 等級 3 身體池 18 × 板甲 7 ÷ 參考 3
+    assert item_score(lib, body) == Fraction(18)  # 等級 3 身體池 18（同部位底材都拿整池）

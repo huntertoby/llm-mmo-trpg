@@ -1,8 +1,6 @@
-"""物品基礎份額（Phase 3K-2c，08 8.22 的「基礎：詞條」比例）。"""
+"""物品基礎份額（3K-2c，08 8.22）：同部位底材都拿整池，雙手另加副手池。"""
 
 from __future__ import annotations
-
-from fractions import Fraction
 
 import pytest
 
@@ -64,23 +62,26 @@ def test_item_base_share_by_slot(index: int, level: int) -> None:
     empty_slots: tuple[SlotType, ...] = ("neck", "ring")
     for slot in empty_slots:
         assert item_base_points(_RULES, _item(slot, level), weapons) == 0
-    for kind, defense in (("robe", 1), ("coat", 2), ("leather", 3), ("mail", 5), ("plate", 7)):
+    for kind in ("robe", "coat", "leather", "mail", "plate"):  # 同等級總預算相同（08 8.12）
         body = _item("body", level, kind=kind)
-        expected = Fraction(_POOLS["body"][index] * defense, 3)
-        assert item_base_points(_RULES, body, weapons) == expected
+        assert item_base_points(_RULES, body, weapons) == _POOLS["body"][index]
 
 
-def test_weapon_share_follows_dice_average_times_strikes() -> None:
-    weapons = _LIB.weapons
-    ref = Fraction(9, 2)  # 1d8 平均
-    dagger = _item("weapon", 1, weapon="dagger")  # 1d4：2.5
-    assert item_base_points(_RULES, dagger, weapons) == 18 * Fraction(5, 2) / ref
-    great = _item("weapon", 1, weapon="greatsword")  # 2d6：7
-    assert item_base_points(_RULES, great, weapons) == 18 * Fraction(7) / ref
-    dual = weapons["dual_dagger"]
-    assert dual.strikes == 2 and dual.dice.sides == 4 and dual.dice.count == 1
-    pair = _item("weapon", 1, weapon="dual_dagger")  # 兩次打擊：2 × 2.5
-    assert item_base_points(_RULES, pair, weapons) == 18 * Fraction(5) / ref
+@pytest.mark.parametrize(
+    ("weapon", "expected"),
+    [
+        ("one_handed_sword", 18),
+        ("dagger", 18),
+        ("axe", 18),  # 單手：主手池
+        ("greatsword", 24),  # 雙手：主手池 18 ＋ 副手池 6（佔掉副手，08 8.11）
+        ("dual_dagger", 24),  # 成對：同上
+    ],
+)
+def test_one_handed_get_the_weapon_pool_two_handed_add_the_offhand_pool(
+    weapon: str, expected: int
+) -> None:
+    item = _item("weapon", 1, weapon=weapon)
+    assert item_base_points(_RULES, item, _LIB.weapons) == expected
 
 
 def test_missing_level_uses_fallback_level() -> None:
