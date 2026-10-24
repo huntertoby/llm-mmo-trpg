@@ -44,8 +44,8 @@ KEYWORDS = (
     "summon",
 )
 NAMES = ("點燃", "潮濕", "帶電", "冰凍", "倒地", "撞擊", "標記", "高處", "隱蔽", "召喚物")
-# Phase 3-53：中毒關鍵字（06 6.27.1，#59）。技能池還不足 3 招（等 3-54c 毒種子技能），先不放進 KEYWORDS，
-# 否則依 KEYWORDS 參數化的池測試會失敗；補齊後併進 KEYWORDS 並刪掉 EXTRA_*。
+# Phase 3-53：中毒關鍵字（06 6.27.1，#59）。技能池不足 3 招（等 3-54c 毒種子技能），
+# 先不放進 KEYWORDS，否則依 KEYWORDS 參數化的池測試會失敗；補齊後併進 KEYWORDS 並刪掉 EXTRA_*。
 EXTRA_KEYWORDS = ("poisoned",)
 EXTRA_NAMES = ("中毒",)
 
