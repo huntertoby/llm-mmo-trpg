@@ -355,15 +355,53 @@ def _cap_violations(skill: SkillDef, library: ContentLibrary) -> list[Violation]
             "trap.effects",
             "放置陷阱要有踩到後的效果：請新增一個效果（例如傷害），它就是踩到後的效果",
         )
-    self_status = skill.cost.self_status
-    allowed_self = library.budget.allowance.self_status.allowed
-    if self_status is not None and self_status.status not in allowed_self:
-        add(
-            "cap.self_status",
-            f"自身狀態代價只能是 {'、'.join(allowed_self)}，收到 {self_status.status}",
-        )
+    out += _self_cost_violations(skill, library)
     out += _rule_rewrite_violations(skill, library)
     out += _revive_violations(skill, library)
+    return out
+
+
+def _self_cost_violations(skill: SkillDef, library: ContentLibrary) -> list[Violation]:
+    """自己付的代價（3-50，06 6.5）：允許清單、固定持續時間、限骨架（沉默只能放法術技）、一招
+    最多 1 個自身負面（自身狀態與透支擇一）。整體上限 50% 由預算器的 ``total_cap`` 截斷。"""
+    out: list[Violation] = []
+    cost = skill.cost
+    rule = library.budget.allowance.self_status
+    status = cost.self_status
+    if status is not None:
+        if status.status not in rule.allowed:
+            out.append(
+                Violation(
+                    skill.id,
+                    "cap.self_status",
+                    f"自身狀態代價只能是 {'、'.join(rule.allowed)}，收到 {status.status}",
+                )
+            )
+        fixed = rule.fixed_duration.get(status.status)
+        if fixed is not None and status.duration != fixed:
+            out.append(
+                Violation(
+                    skill.id,
+                    "cap.self_status_duration",
+                    f"自身狀態 {status.status} 持續時間固定為 {fixed} 回合，收到 {status.duration}",
+                )
+            )
+        if status.status in rule.spell_only and skill.category != "spell":
+            out.append(
+                Violation(
+                    skill.id,
+                    "cap.self_status_category",
+                    f"自身狀態 {status.status} 只能放在法術技，收到 {skill.category}",
+                )
+            )
+        if cost.overdraft is not None:
+            out.append(
+                Violation(
+                    skill.id,
+                    "cap.self_penalty_single",
+                    "一招最多 1 個自身負面代價：自身狀態與透支不能同時使用",
+                )
+            )
     return out
 
 

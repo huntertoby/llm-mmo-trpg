@@ -1088,13 +1088,51 @@ def _cost_int(
     )
 
 
-def _self_status_field(library: ContentLibrary) -> FieldSpec:
+def _self_status_choice(status_id: str, draft: Draft, library: ContentLibrary) -> Choice:
+    """一個自身狀態選項（3-50）：附上這個狀態專屬的持續回合範圍（暈眩固定 2）、折抵（‰）；不能放的
+    （沉默只能放法術技）標 ``unavailable_zh``——與驗證器同源（``allowance.self_status``）。"""
+    rule = library.budget.allowance.self_status
+    status = library.ruleset.statuses.by_id()[status_id]
+    fixed = rule.fixed_duration.get(status_id)
+    low, high = (fixed, fixed) if fixed is not None else (2, 3)
+    info: dict[str, Any] = {"cap_permille": rule.cap_of(status_id)}
+    if status_id in rule.spell_only and draft.get("category") not in (None, "spell"):
+        info["unavailable_zh"] = (
+            f"{status.name_zh}只能放在法術技：沒有法術的人不能白拿折扣。"
+            "回到「基本設定」把類別改成法術，或改選別的狀態"
+        )
+    points = status.budget_points or 0
+    description = f"每個有效回合折抵 {points * rule.per_point_permille / 10:g}%"
+    if fixed is not None:
+        description += (
+            f"；固定 {fixed} 回合（跳過自己下一個回合），折抵上限 {rule.cap_of(status_id) / 10:g}%"
+        )
+    return Choice(
+        value=status_id,
+        name_zh=status.name_zh,
+        description_zh=description,
+        info=info,
+        params=(
+            FieldSpec(
+                field="duration",
+                name_zh="持續回合",
+                type="int",
+                required=True,
+                min=low,
+                max=high,
+                default=low,
+            ),
+        ),
+    )
+
+
+def _self_status_field(draft: Draft, library: ContentLibrary) -> FieldSpec:
     statuses = library.ruleset.statuses.by_id()
     allowed = library.budget.allowance.self_status.allowed
     return FieldSpec(
         field="cost.self_status",
         name_zh="自身狀態代價",
-        description_zh="施放後自己獲得這個負面狀態（只有主動技能）",
+        description_zh="施放後自己獲得這個負面狀態（只有主動技能；一招最多 1 個，與透支擇一）",
         type="object",
         fields=(
             FieldSpec(
@@ -1103,13 +1141,25 @@ def _self_status_field(library: ContentLibrary) -> FieldSpec:
                 type="choice",
                 required=True,
                 choices=tuple(
-                    Choice(value=s, name_zh=statuses[s].name_zh) for s in allowed if s in statuses
+                    _self_status_choice(s, draft, library) for s in allowed if s in statuses
                 ),
             ),
-            FieldSpec(
-                field="duration", name_zh="持續回合", type="int", required=True, min=2, max=3
-            ),
         ),
+    )
+
+
+def _overdraft_field(library: ContentLibrary) -> FieldSpec:
+    low, high = model_range(SkillCost.model_fields["overdraft"])
+    percent = library.budget.allowance.overdraft_permille / 10
+    return FieldSpec(
+        field="cost.overdraft",
+        name_zh="透支",
+        description_zh=(
+            f"施放後自己下一個回合少 {high} AP（換 {percent:g}% 預算；與自身狀態擇一）"
+        ),
+        type="int",
+        min=low,
+        max=high,
     )
 
 
@@ -1173,7 +1223,11 @@ def _cost_step(draft: Draft, library: ContentLibrary) -> StepOptions:
         _cost_int("hp_percent", "生命代價（‰）", "施放花最大 HP 的千分比"),
     ]
     if draft.get("kind") == "active":
-        fields.append(_self_status_field(library))
+        cost = _mapping(draft.get("cost"))
+        if cost.get("overdraft") is None or cost.get("self_status") is not None:
+            fields.append(_self_status_field(draft, library))
+        if cost.get("self_status") is None or cost.get("overdraft") is not None:
+            fields.append(_overdraft_field(library))
     fields += _legendary_fields(draft, library)
     allowance = library.budget.allowance
     notes = (

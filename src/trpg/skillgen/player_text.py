@@ -251,6 +251,7 @@ _FIELD_ZH: dict[str, str] = {
     "scope": "範圍",
     "self_damage_permille_of_hit": "反噬自傷",
     "self_status": "自身狀態",
+    "overdraft": "透支",
     "shape_to": "形狀轉換",
     "sides": "面數",
     "size": "大小",

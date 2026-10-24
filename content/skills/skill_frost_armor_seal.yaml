@@ -1,0 +1,24 @@
+# 自暈換護盾（Phase 3-50 示範，docs/design/06-技能.md 6.5 代價換強度第一批；數值為初值，未經模擬）：
+# 把自己封進一層厚冰甲，換來一大片護盾；代價是自己暈眩一個回合（沒有 AP、移動與反應，但仍可被推、拉、傳送）。
+id: skill_frost_armor_seal
+schema_version: 1
+name_zh: 冰甲封身
+tier: 2
+rank: 1
+rarity: rare
+kind: active
+skeleton: aura
+category: spell
+weapon_req: any
+ap_cost: 1
+scaling_attr: wis
+shape: {type: self}
+effects:
+  - {type: shield, dice: 3d8, affects: self}
+condition: null
+cost: {mana: 6, cooldown: 4, self_status: {status: stun, duration: 2}}
+tags: [ice, spell, shield, defense]
+narrative:
+  concept: 把自己整個封進冰裡，什麼都不能做，也什麼都打不穿
+  cast_flavor: 寒氣從你腳邊爬上全身，轉眼凝成一層厚實的冰甲，連呼吸都被封在裡面
+provenance: {origin: builtin, owner_id: null, created_by: null, parents: [], bound: true, tradeable: false}

@@ -74,6 +74,8 @@ cost:
   # allowance.self_status.allowed 抽（稀有度不夠的狀態不抽），持續時間在 self_status_duration 內抽（2–3）
   self_status_permille: 60
   self_status_duration: {min: 2, max: 3}
+  # 透支（Phase 3-50）：沒有抽到自身狀態的主動技能以這個機率加入透支（下回合少 1 AP，固定折抵）
+  overdraft_permille: 40
 
 # 被動（Phase 2E-1，初值）：稀有度 epic 以上、未指定骨架時改組被動的機率（獨立的亂數串流，不影響其他種子）
 passive:

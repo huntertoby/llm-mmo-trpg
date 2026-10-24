@@ -17,6 +17,7 @@ from trpg.engine.state import UnitState
 from trpg.shared.types import Attribute, UnitId
 
 __all__ = [
+    "ap_penalty",
     "attack_range_cap",
     "base_attribute",
     "blocks_spells",
@@ -76,6 +77,11 @@ def move_reduction(rules: Ruleset, unit: UnitState) -> int:
         if rules.status_def(status.status_id).move_reduction:
             best = max(best, status.amount or 0)
     return best
+
+
+def ap_penalty(rules: Ruleset, unit: UnitState) -> int:
+    """``ap_penalty`` 狀態（透支，Phase 3-50）在回合開始時少給的 AP：多個相加。"""
+    return sum(rules.status_def(s.status_id).ap_penalty for s in unit.statuses)
 
 
 def is_rooted(rules: Ruleset, unit: UnitState) -> bool:

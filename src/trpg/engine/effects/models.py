@@ -186,6 +186,9 @@ class ApplyStatusEffect(EffectBase):
     """狀態的數值（``StatusInstance.amount``）；``soul_link`` 的轉移千分比（Phase 3C-4b）。"""
     skill_id: str | None = None
     """施加狀態的技能（``StatusInstance.skill_id``；定時炸彈，Phase 3D-8b）。"""
+    self_paid: bool = False
+    """自己付的代價（``cost.self_status``／``cost.overdraft``，Phase 3-50）：不觸發控制遞減，也不受
+    Boss 硬控轉換影響。"""
 
     def sort_target(self) -> str:
         return self.target_id

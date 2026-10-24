@@ -71,6 +71,16 @@ class SelfStatusAllowance(ContentModel):
     allowed: tuple[str, ...] = Field(min_length=1)
     per_point_permille: int = Field(ge=0)
     cap: int = Field(ge=0)
+    status_caps: dict[str, int] = Field(default_factory=dict)
+    """個別狀態的專屬上限（‰；Phase 3-50，06 6.5：暈眩 400）；沒列出的用 ``cap``。"""
+    fixed_duration: dict[str, int] = Field(default_factory=dict)
+    """持續時間固定的狀態（Phase 3-50：暈眩固定 2，＝跳過自己下一個回合）；其他可在 2–3 選。"""
+    spell_only: tuple[str, ...] = ()
+    """只能放在法術技（``category: spell``）的狀態（Phase 3-50：沉默；沒有法術不能白拿折扣）。"""
+
+    def cap_of(self, status_id: str) -> int:
+        """這個狀態的折抵上限（‰）。"""
+        return self.status_caps.get(status_id, self.cap)
 
 
 class CostAllowance(ContentModel):
@@ -92,6 +102,8 @@ class CostAllowance(ContentModel):
     """``hp_percent`` 每 1‰ 的折抵。"""
     hp_cap: int = Field(ge=0)
     self_status: SelfStatusAllowance
+    overdraft_permille: int = Field(default=200, ge=0)
+    """透支（``cost.overdraft``，Phase 3-50，06 6.5）的固定折抵（‰）：下一個回合少 1 AP。"""
     source_per_point: int = Field(default=250, ge=0)
     """源力代價（``cost.source``，Phase 3C-4a）每點的折抵（‰；初值，未經模擬）。"""
     source_cap: int = Field(default=500, ge=0)

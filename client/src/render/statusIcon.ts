@@ -329,6 +329,14 @@ export const GLYPH: Readonly<Record<string, Glyph>> = {
     line(c, [[-8, -6], [-5, -3]]);
     line(c, [[8, -6], [5, -3]]);
   },
+  overdrawn: (c) => {
+    // 透支（3-50）：下回合少 1 AP——空掉的電池＋↓
+    c.beginPath();
+    c.roundRect(-8, -6, 14, 12, 2);
+    c.stroke();
+    line(c, [[6, -2], [9, -2], [9, 2], [6, 2]]);
+    arrow(c, -1, 0, false);
+  },
   silenced: (c) => {
     c.beginPath();
     c.roundRect(-9, -7, 18, 12, 4);

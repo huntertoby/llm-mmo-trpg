@@ -153,7 +153,21 @@ allowance:
   # 自身狀態代價（Phase 2H-1，初值，未經模擬）：折抵 ＝ 狀態 budget_points × 有效回合 × per_point_permille，
   # 有效回合 ＝ duration − 1（狀態在施放當回合結束就 −1，所以 duration 限制為 2–3）；先套用 cap，再和其他折抵一起截斷在 total_cap。
   # 狀態只能是 allowed 之內的自身負面狀態；只有主動技能可以使用。
-  self_status: {allowed: [vulnerable, weaken, slow, root], per_point_permille: 40, cap: 250}
+  #
+  # Phase 3-50（06 6.5 代價換強度第一批，玩法決定 #54）：允許清單加入 stun（暈眩）、silenced（沉默）、bleed（流血）。
+  # - status_caps：個別狀態的專屬上限（暈眩 400，其他用 cap 250）；
+  # - fixed_duration：持續時間固定（暈眩 2＝跳過自己下一個回合；其餘 2–3）；
+  # - spell_only：只能放在法術技（沉默；驗證器檢查）。
+  # 暈眩 8 點 ×（2−1）× 40 ＝ 320‰；沉默 5 點 ×（2−1）× 40 ＝ 200‰；流血 3 點 × 1 × 40 ＝ 120‰。
+  self_status:
+    allowed: [vulnerable, weaken, slow, root, stun, silenced, bleed]
+    per_point_permille: 40
+    cap: 250
+    status_caps: {stun: 400}
+    fixed_duration: {stun: 2}
+    spell_only: [silenced]
+  # 透支（cost.overdraft，Phase 3-50）：施放後自己下一個回合少 1 AP，固定折抵（一招最多 1 AP；與 self_status 擇一）。
+  overdraft_permille: 200
   # 源力代價（cost.source，傳說技能，Phase 3C-4a；初值，未經模擬）：每點折抵 source_per_point，上限 source_cap
   source_per_point: 250
   source_cap: 500

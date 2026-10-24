@@ -100,7 +100,7 @@ def test_only_active_skills_may_use_self_status(kind: str) -> None:
 
 
 def test_a_status_outside_the_allowed_list_is_rejected_by_the_validator() -> None:
-    bad = skill(cost={"mana": 4, "cooldown": 2, "self_status": {"status": "stun", "duration": 2}})
+    bad = skill(cost={"mana": 4, "cooldown": 2, "self_status": {"status": "frozen", "duration": 2}})
     assert "cap.self_status" in _rules(bad)
     good = skill(cost={"mana": 4, "cooldown": 2, "self_status": {"status": "root", "duration": 2}})
     assert "cap.self_status" not in _rules(good)
@@ -150,5 +150,13 @@ def test_the_self_status_allowance_is_truncated_by_the_total_cap() -> None:
 
 def test_budget_rules_come_from_skill_budget_yaml() -> None:
     rule = lib().budget.allowance.self_status
-    assert set(rule.allowed) == {"vulnerable", "weaken", "slow", "root"}
+    assert set(rule.allowed) == {  # 3-50：加入暈眩、沉默、流血
+        "vulnerable",
+        "weaken",
+        "slow",
+        "root",
+        "stun",
+        "silenced",
+        "bleed",
+    }
     assert (rule.per_point_permille, rule.cap) == (40, 250)

@@ -1327,6 +1327,9 @@ class SkillCost(ContentModel):
     不足時不可施放。需求本身不消耗層數（消耗由 ``consume_stack`` 負責）。"""
     self_status: SelfStatusCost | None = None
     """施放後施放者自己獲得的狀態（Phase 2H-1）；只有主動技能可以使用。"""
+    overdraft: int | None = Field(default=None, ge=1, le=1)
+    """透支（Phase 3-50，06 6.5）：施放後自己下一個回合少這麼多 AP（目前一招最多 1 AP，固定折抵見
+    ``skill_budget.yaml`` 的 ``allowance.overdraft_permille``）；只有主動技能可以使用。"""
     source: int | None = Field(default=None, ge=1, le=2)
     """花費的源力（Phase 3C-4a，1 或 2）：只有傳說技能可以、而且必須有；源力不足時不能施放。"""
     on_miss: tuple[EffectSpec, ...] = ()
@@ -2398,8 +2401,7 @@ class SkillDef(ContentModel):
                 )
         elif self.ap_cost is not None:
             raise ValueError(f"{self.kind} 技能的 ap_cost 必須為 null（不花 AP）")
-        if self.cost.self_status is not None and self.kind != "active":
-            raise ValueError(f"只有主動技能可以有 cost.self_status，收到 kind: {self.kind}")
+        self._check_self_costs()
         _check_composition(self.kind, self.effects)
         self._check_legendary()
         self._check_copy_skill()
@@ -2630,6 +2632,12 @@ class SkillDef(ContentModel):
         """帶賭博機制的技能自動加標籤 ``gamble``（傾向向量與「用法決定進化」用；Phase 3D-7a）。"""
         if self.is_gamble and GAMBLE_TAG not in self.tags:
             object.__setattr__(self, "tags", (*self.tags, GAMBLE_TAG))
+
+    def _check_self_costs(self) -> None:
+        """自己付的代價（``cost.self_status``、``cost.overdraft``，2H-1、3-50）只有主動技能可以用。"""
+        for name in ("self_status", "overdraft"):
+            if getattr(self.cost, name) is not None and self.kind != "active":
+                raise ValueError(f"只有主動技能可以有 cost.{name}，收到 kind: {self.kind}")
 
     def _check_legendary(self) -> None:
         """傳說技能（Phase 3C-4a、3D-6，6.14.4）必須花源力（``cost.source``），非傳說不能花。核心

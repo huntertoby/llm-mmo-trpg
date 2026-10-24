@@ -814,6 +814,8 @@ def build_cost(ctx: Ctx) -> dict[str, Any]:
     self_status = _self_status_cost(ctx)
     if self_status is not None:
         cost["self_status"] = self_status
+    elif ctx.chance(rules.overdraft_permille):  # 透支（3-50）：與自身狀態擇一
+        cost["overdraft"] = 1
     return cost
 
 
@@ -823,20 +825,21 @@ def _self_status_cost(ctx: Ctx) -> dict[str, Any] | None:
     if not ctx.chance(rules.self_status_permille):
         return None
     statuses = ctx.library.ruleset.statuses.by_id()
+    allowance = ctx.library.budget.allowance.self_status
     options = sorted(
         status_id
-        for status_id in ctx.library.budget.allowance.self_status.allowed
+        for status_id in allowance.allowed
         if (status := statuses.get(status_id)) is not None
         and status.budget_points is not None
         and rarity_rank(status.min_rarity) <= ctx.rank
+        and (status_id not in allowance.spell_only or ctx.category == "spell")  # 沉默：限法術技
     )
     if not options:
         return None
     span = rules.self_status_duration
-    return {
-        "status": ctx.rng.choice(options),
-        "duration": ctx.rng.randint(span.min, span.max),
-    }
+    chosen = ctx.rng.choice(options)
+    duration = ctx.rng.randint(span.min, span.max)
+    return {"status": chosen, "duration": allowance.fixed_duration.get(chosen, duration)}
 
 
 # ---------------------------------------------------------------------------

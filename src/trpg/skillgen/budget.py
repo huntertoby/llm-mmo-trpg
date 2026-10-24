@@ -56,6 +56,7 @@ __all__ = [
     "EffectBudget",
     "SegmentBudget",
     "VariantBudget",
+    "self_status_allowance_permille",
     "skill_budget",
 ]
 
@@ -1185,6 +1186,8 @@ def _allowance_parts(
         )
     if cost.self_status is not None:
         parts.append(_self_status_allowance(cost.self_status, budget, statuses))
+    if cost.overdraft is not None:  # 透支（3-50）：固定折抵
+        parts.append(("透支（下回合少 1 AP）", allowance.overdraft_permille))
     if cost.source is not None:
         parts.append(
             (
@@ -1204,7 +1207,12 @@ def _self_status_allowance(
     if status is None or status.budget_points is None:
         raise BudgetError(f"自身狀態代價 {cost.status!r} 沒有預算點數")
     value = status.budget_points * (cost.duration - 1) * rule.per_point_permille
-    return (f"自身{status.name_zh} {cost.duration} 回合", min(value, rule.cap))
+    return (f"自身{status.name_zh} {cost.duration} 回合", min(value, rule.cap_of(cost.status)))
+
+
+def self_status_allowance_permille(cost: SelfStatusCost, library: ContentLibrary) -> int:
+    """自身狀態代價換到的預算折抵（‰；已套用該狀態的上限，尚未和其他代價加總）。"""
+    return _self_status_allowance(cost, library.budget, library.ruleset.statuses.by_id())[1]
 
 
 def _passive_coefficient(skill: SkillDef, library: ContentLibrary) -> tuple[Fraction, str]:

@@ -684,6 +684,7 @@ class StatusDef(ContentModel):
     - ``move_permille``：回合開始時的移動點數倍率（緩速 500、加速 1500）。
     - ``move_reduction``（Phase 3I-1）：回合開始時移動點數再減狀態的數值
       （``StatusInstance.amount``），最低 0；多個時取最大（鞭的纏繞）。
+    - ``ap_penalty``（Phase 3-50）：回合開始時 AP 少這麼多（最低 0；透支）。
     - ``prevents_move``：不能主動移動（定身；強制位移照常）。
     - ``skip_turn``：回合開始時跳過整個回合，且不能執行反應（暈眩）。
     - ``damage_dealt_permille``：自己造成的攻擊傷害（``cause: attack``）倍率（虛弱 750）。
@@ -782,6 +783,7 @@ class StatusDef(ContentModel):
     attack_bonus: int = Field(default=0, ge=0, le=10)
     move_permille: int = Field(default=1000, ge=0, le=10000)
     move_reduction: bool = False
+    ap_penalty: int = Field(default=0, ge=0, le=3)
     prevents_move: bool = False
     skip_turn: bool = False
     damage_dealt_permille: int = Field(default=1000, ge=0, le=10000)

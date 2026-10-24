@@ -39,8 +39,6 @@ from trpg.content.skills import SACRIFICE_SUMMON, SUMMON, SkillDef
 from trpg.engine import modifiers
 from trpg.engine.actions import InfuseSkill, UseSkill
 from trpg.engine.context import Ctx
-from trpg.engine.effects import execute
-from trpg.engine.effects.models import ApplyStatusEffect
 from trpg.engine.events import (
     InfusedSkillCast,
     InfusionFizzled,
@@ -53,6 +51,7 @@ from trpg.engine.rules.statuses import (
     effective_attribute,
     skip_turn_status,
 )
+from trpg.engine.self_costs import pay_self_costs
 from trpg.engine.skill_levels import skill_level
 from trpg.engine.skills.casting import run_infused
 from trpg.engine.skills.mobility import self_move_problem
@@ -238,19 +237,7 @@ def do_infuse_skill(ctx: Ctx, owner: UnitState, action: InfuseSkill) -> None:
     )
     if paid.cooldown is not None:
         ctx.emit(SkillCooldownChanged, unit_id=owner.id, skill_id=skill.id, remaining=paid.cooldown)
-    cost = skill.cost.self_status
-    if cost is not None:
-        execute(
-            ctx,
-            [
-                ApplyStatusEffect(
-                    source_id=owner.id,
-                    target_id=owner.id,
-                    status_id=cost.status,
-                    duration=cost.duration,
-                )
-            ],
-        )
+    pay_self_costs(ctx, owner, skill)
 
 
 # ---------------------------------------------------------------------------
