@@ -2219,3 +2219,18 @@ PM 驗收後請使用者試玩一整輪（`docs/專案計畫.md` 第 14 節 🎮
 - 報告 `Phase3-51報告.md`。驗證器移除 `keyword.required`；卡片「基礎技能：不和其他技能協同」；三選一「新方向」`candidates.general_share_permille` 100‰（`content/roguelite.yaml`，獨立亂數分支，沒命中時候選與以前相同）；候選一律排除傳說（順手修）；刪 24 條暫定規則；有專屬就不顯示通用；`trpg.narrative.keyword_hints` 與 API `WorkshopCheck.keyword_hints`；每池主動利用者檢查做成測試（10 池都 ≥ 3）。
 - 合併後全量（含 slow）6924 通過。
 - 待決（玩法 PM 回覆）：**通用池選 B**——只收完全沒有關鍵字的技能（與「基礎技能」同範圍，照 #55 字面）→ 開發 PM 已改 `_general_pool`；19 條修正技能說明匯出到共用筆記 `workshop_modifier_texts.csv` 交玩法 PM 改寫，回來後補進 `content/workshop_text.yaml` 並恢復 `test_workshop_text_48f.py` 的檢查。
+
+### 60.1 3-50 驗收（2026-10-24，開發 PM）
+
+- 報告 `Phase3-50報告.md`。`cost.self_status` 加暈眩（固定 2、專屬上限 40%）、沉默（只限法術技）、流血；新代價透支 `cost.overdraft`（固定 20%，新狀態 `overdrawn` 的 `ap_penalty` 在 `start_turn` 扣 AP）；自付狀態走 `ApplyStatusEffect.self_paid`（不觸發控制遞減、不受 Boss 轉換）；預算器、驗證器、工坊、組合器、LLM（`cost_penalty`）、卡片、AI 都支援；示範：冰甲封身 100.0%、孤注詠唱 99.6%、血怒斬 94.1%、竭力一擊 86.1%。技能 225、`LOG_FORMAT` `/68`；組合器亂數串流改變（同種子技能不同）；順手修 `candidates.usable()` 漏出傳說。
+- 合併衝突：`candidates.py` 一行（兩邊同修）、`skill_icons.json` 重產。
+- 待決（玩法 PM 回覆，照 06 6.5 字面）→ **3-50b**：#1 選 B；#2 不歸零、改成「本回合照常、下一回合被跳過」；#3 透支不算自身狀態；#4 卡片寫「到你下個回合結束」；#5 自付代價能否被淨化 → 轉專案 PM 問使用者，決定前維持現狀；#6 → 平衡 B20。
+
+## 60b. Phase 3-50b｜代價換強度修正（玩法 PM 回覆 3-50；sonnet；約 0.3 段）
+
+照 06 6.5（#54）字面：
+1. **護盾持續時間**：`shield` 原語加持續時間參數（資料與預算：預算照持續時間算，係數放 `content/`）；冰甲封身的護盾 3 回合，讓「技能給的護盾在暈眩結束後照常存在」成立；冰甲封身若超出 100% 就縮護盾骰，數字寫進報告。行為一致測試：自暈 2 → 暈眩結束後下一回合護盾仍在。
+2. **自暈不歸零本回合**：拿掉 `pay_self_costs` 的 AP／移動歸零；暈眩改成「本回合照常、下一回合被跳過」（從本回合結束後生效，或照 duration 的計算方式）。表格測試：施放後本回合仍可移動／行動、下一回合被跳過、再下一回合恢復。
+3. **透支不算進「一招最多 1 個自身狀態」**：透支可和自身狀態同時用，受整體上限 50% 限制（驗證器、工坊、組合器、LLM 一致）。
+4. **卡片文字**：自身狀態的持續寫成「到你下個回合結束」這類說法，不寫「1 回合」。
+5. 驗收：pytest（engine、content、skillgen、llm、narrative、roguelite、api、`-m "slow or not slow" tests/cli`）、vitest、build、ruff、format、mypy、一場含示範技能的重播；改紀錄格式就遞增 `LOG_FORMAT`。報告 `Phase3-50b報告.md`。
