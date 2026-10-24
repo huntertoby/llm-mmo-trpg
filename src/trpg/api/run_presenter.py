@@ -31,7 +31,7 @@ from trpg.content.slots import SLOT_ZH, SLOTS
 from trpg.narrative.skill_levels import skill_level_info
 from trpg.narrative.skills import CardOwner, KeywordRef, SkillCard, skill_card
 from trpg.roguelite import RunSave, RunState
-from trpg.roguelite.gear import current_item, equip_notes, target_slot
+from trpg.roguelite.gear import current_item, equip_notes, target_slot, weapon_swap_prompt
 from trpg.roguelite.growth import (
     crosses_evolution,
     evolution_choices,
@@ -170,6 +170,9 @@ def _candidate(library: ContentLibrary, run: RunState, item: ItemDef) -> GearCan
         slot_zh=SLOT_ZH[slot],
         current=None if current is None else item_info(library, current),
         notes_zh=tuple(equip_notes(library, run, item, slot)),
+        weapon_swap_zh=weapon_swap_prompt(
+            library, run, item, slot, hero_effective_attributes(library, run)
+        ),
     )
 
 

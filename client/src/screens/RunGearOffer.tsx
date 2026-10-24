@@ -3,8 +3,9 @@
 import { useState } from "react";
 import type { RunChoice } from "../api/types";
 import { displayOrder, type RunView } from "../run/flow";
-import { gearPickChoice } from "../run/gearOffer";
+import { gearPickChoice, needsSwapConfirm } from "../run/gearOffer";
 import { GearCardView } from "../ui/gear/GearCardView";
+import { WeaponSwapConfirm } from "../ui/gear/WeaponSwapConfirm";
 
 type Props = {
   seed: number;
@@ -15,6 +16,7 @@ type Props = {
 
 export function RunGearOffer({ seed, view, busy, onChoose }: Props) {
   const [pick, setPick] = useState<number | null>(null);
+  const [asking, setAsking] = useState(false);
   const order = displayOrder(seed, `gear:${view.afterBattle}`, view.candidates.length);
   const chosen = pick === null ? undefined : view.candidates[pick];
   return (
@@ -34,7 +36,10 @@ export function RunGearOffer({ seed, view, busy, onChoose }: Props) {
                 type="button"
                 className={pick === index ? "primary" : ""}
                 disabled={busy}
-                onClick={() => setPick(pick === index ? null : index)}
+                onClick={() => {
+                  setAsking(false);
+                  setPick(pick === index ? null : index);
+                }}
               >
                 {pick === index ? "已選這個（再按一次取消）" : "選這個"}
               </button>
@@ -42,11 +47,28 @@ export function RunGearOffer({ seed, view, busy, onChoose }: Props) {
           );
         })}
       </div>
-      <div className="run-actions">
-        <button type="button" className="primary" disabled={busy} onClick={() => void onChoose(gearPickChoice(pick))}>
-          {chosen === undefined ? "跳過（不換裝備）" : `換上「${chosen.item.name_zh}」`}
-        </button>
-      </div>
+      {asking && chosen !== undefined ? (
+        <WeaponSwapConfirm
+          cand={chosen}
+          busy={busy}
+          onConfirm={() => void onChoose(gearPickChoice(pick))}
+          onCancel={() => setAsking(false)}
+        />
+      ) : (
+        <div className="run-actions">
+          <button
+            type="button"
+            className="primary"
+            disabled={busy}
+            onClick={() => {
+              if (chosen !== undefined && needsSwapConfirm(chosen)) setAsking(true);
+              else void onChoose(gearPickChoice(pick));
+            }}
+          >
+            {chosen === undefined ? "跳過（不換裝備）" : `換上「${chosen.item.name_zh}」`}
+          </button>
+        </div>
+      )}
     </div>
   );
 }

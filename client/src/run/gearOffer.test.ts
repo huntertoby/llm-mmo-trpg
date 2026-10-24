@@ -10,8 +10,10 @@ import {
   itemLines,
   itemSubtitle,
   itemTipLines,
+  needsSwapConfirm,
   noteLines,
   rarityClass,
+  swapQuestion,
   wornGear,
 } from "./gearOffer";
 
@@ -141,5 +143,12 @@ describe("runView：裝備三選一節點", () => {
     expect(saveLabel({ node: "gear_offer", battles_done: 2, battles_total: 6, in_battle: false, level: 1 })).toContain(
       "裝備三選一",
     );
+  });
+
+  it("換主手武器的確認：只有後端給了提示才問", () => {
+    expect(needsSwapConfirm(cand())).toBe(false);
+    const asked = cand({ weapon_swap_zh: "這把看敏捷、力量，你目前最高的是力量" });
+    expect(needsSwapConfirm(asked)).toBe(true);
+    expect(swapQuestion(asked)).toBe("這把看敏捷、力量，你目前最高的是力量。要把主手換成「稀有外套」嗎？");
   });
 });

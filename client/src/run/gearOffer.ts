@@ -60,6 +60,16 @@ export function compareTone(c: Pick<GearCandidate, "item" | "current">): "up" | 
   return diff > 0.05 ? "up" : diff < -0.05 ? "down" : "same";
 }
 
+/** 換上前要不要先問玩家（後端判斷：換主手武器且縮放屬性不同才有提示）。 */
+export function needsSwapConfirm(c: Pick<GearCandidate, "weapon_swap_zh">): boolean {
+  return c.weapon_swap_zh != null && c.weapon_swap_zh !== "";
+}
+
+/** 確認視窗的問句：「這把看力量，你目前最高的是敏捷。要把主手換成「名稱」嗎？」 */
+export function swapQuestion(c: Pick<GearCandidate, "item" | "weapon_swap_zh">): string {
+  return `${c.weapon_swap_zh ?? ""}。要把主手換成「${c.item.name_zh}」嗎？`;
+}
+
 /** 三選一送出的請求（`pick` 為 `null` ＝ 跳過）。 */
 export function gearPickChoice(pick: number | null): RunChoice {
   return { kind: "gear_pick", pick };

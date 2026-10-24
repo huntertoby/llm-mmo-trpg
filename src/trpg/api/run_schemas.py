@@ -270,6 +270,9 @@ class GearCandidateOut(_ApiModel):
     """該欄位目前的裝備（主手沒有物品時是主角的基礎武器；欄位空著為 ``None``）。"""
     notes_zh: tuple[str, ...] = ()
     """換上的連帶效果（武器換了、副手收進背包）。"""
+    weapon_swap_zh: str | None = None
+    """換主手武器且縮放屬性和目前武器不同時的提示（3K-2b）：「這把看〔屬性〕，你目前最高的是〔屬性〕」；
+    前端換上前要讓玩家確認。屬性相同、或不是換武器為 ``None``。"""
 
 
 class GearOfferOut(_ApiModel):

@@ -63,6 +63,16 @@ cost_min_points: 4
 # （武器是傷害、其他部位是防禦值；無條件捨去）。
 base_bonus: {points: 3, permille: 20}
 
+# 整件物品的基礎強度（3K-2b，08 8.21 單位價；只用在「預算分數」的比較，不進預算檢查）：
+# 武器＝基礎傷害平均（骰平均＋固定傷害，乘打擊數）× 傷害單位價（傷害 1 點 ＝ 1）；
+# 防具＝基礎防禦 × 防禦單位價（防禦值 +2% ＝ 3 點，故防禦 1 級 ＝ 3 點）。
+# 身體防具的基礎防禦照 08 8.12 表（以外觀造型 id 對應）；頭、手、腳是小防禦；副手、項鍊、戒指為 0。
+base_strength:
+  weapon_damage: {points: 1, per: 1}
+  armor_defense: {points: 3, per: 1}
+  body_defense: {robe: 1, coat: 2, leather: 3, mail: 5, plate: 7}
+  small_defense: 1
+
 # 稀有度 → 詞條條數與可用類別（08 8.7 與 8.21.6；8.21.6 優先）。required：要不要「1 條 build 詞條」
 # （稀有起 1 條技能強化；身體、頭、手、腳改成 1 條條件數值或防守型觸發，見 required_picks）。
 # 技能強化只透過 required 出現、每件最多 1 條（「含 1 條技能強化」照字面當成恰好 1 條，待 PM 確認），

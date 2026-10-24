@@ -27,6 +27,7 @@ from typing import Literal
 
 from pydantic import Field, model_validator
 
+from trpg.content.battle import WeaponDef
 from trpg.content.equipment import (
     AFFIX_CATEGORIES,
     AffixCategory,
@@ -47,6 +48,7 @@ __all__ = [
     "RARITIES",
     "RARITY_ZH",
     "BaseBonusRule",
+    "BaseStrengthRule",
     "BudgetAnchor",
     "ItemBudget",
     "ItemGenRules",
@@ -57,10 +59,12 @@ __all__ = [
     "affix_budget",
     "affix_points",
     "base_bonus_points",
+    "item_base_points",
     "item_budget",
     "item_budget_problems",
     "item_gen_problems",
     "item_points",
+    "item_strength",
     "slot_budget",
     "total_budget",
 ]
@@ -128,6 +132,24 @@ class BaseBonusRule(ContentModel):
     permille: int = Field(ge=1)
 
 
+class BaseStrengthRule(ContentModel):
+    """整件物品的基礎強度換算（3K-2b，08 8.21 單位價；只用在「預算分數」比較，不是預算檢查）。
+
+    - ``weapon_damage``：武器基礎傷害平均（骰平均＋固定傷害，乘每次普攻的打擊數）的單位價
+      （8.21.2 表「傷害 1 點 ＝ 1」）；
+    - ``armor_defense``：防具每 1 點基礎防禦的單位價（防禦值 +2% ＝ 3 點，8.21.2 表）；
+    - ``body_defense``：身體防具各類型（外觀造型 id）的基礎防禦（08 8.12：布袍 1、外套 2、皮甲 3、
+      鎖甲 5、板甲 7）；
+    - ``small_defense``：頭、手、腳（「小防禦＋詞條」）的基礎防禦。
+    其他部位（副手、項鍊、戒指）沒有基礎防禦。
+    """
+
+    weapon_damage: Price
+    armor_defense: Price
+    body_defense: dict[str, int] = Field(default_factory=dict)
+    small_defense: int = Field(default=0, ge=0)
+
+
 class ItemGenRules(ContentModel):
     """``content/item_gen.yaml``：物品產生器與物品預算的全部係數（欄位說明見資料檔）。"""
 
@@ -147,6 +169,8 @@ class ItemGenRules(ContentModel):
     cost_prices: dict[CostStat, Price]
     cost_min_points: int = Field(ge=1)
     base_bonus: BaseBonusRule
+    base_strength: BaseStrengthRule | None = None
+    """整件物品的基礎強度換算（3K-2b）；沒填時預算分數只算詞條與基礎加成。"""
     rarities: dict[str, RarityRule]
     """產生的稀有度（不含傳說：傳說從測試物品挑）。"""
     required_picks: dict[SlotType, RequiredPick]
@@ -264,6 +288,38 @@ def item_points(rules: ItemGenRules, item: ItemDef, affixes: Mapping[str, AffixD
     for roll in item.affixes:
         total += affix_points(rules, affixes[roll.affix], roll.value)
     return total
+
+
+def item_base_points(
+    rules: ItemGenRules, item: ItemDef, weapons: Mapping[str, WeaponDef]
+) -> Fraction:
+    """整件物品的基礎強度點數（3K-2b）：武器＝基礎傷害平均 × 打擊數，身體防具＝類型的基礎防禦，
+    頭、手、腳＝小防禦（照 ``base_strength`` 的單位價）；其他部位或沒有資料時為 0。"""
+    rule = rules.base_strength
+    if rule is None:
+        return Fraction(0)
+    if item.slot_type == "weapon":
+        weapon = weapons.get(item.weapon or "")
+        if weapon is None:
+            return Fraction(0)
+        dice = weapon.dice
+        average = Fraction(dice.count * (dice.sides + 1), 2) + weapon.flat
+        return rule.weapon_damage.of(1) * average * weapon.strikes
+    if item.slot_type == "body":
+        return rule.armor_defense.of(rule.body_defense.get(item.kind or "", 0))
+    if item.slot_type in ("head", "hands", "feet"):
+        return rule.armor_defense.of(rule.small_defense)
+    return Fraction(0)
+
+
+def item_strength(
+    rules: ItemGenRules,
+    item: ItemDef,
+    affixes: Mapping[str, AffixDef],
+    weapons: Mapping[str, WeaponDef],
+) -> Fraction:
+    """預算分數（3K-2b）：詞條點數（含基礎加成）＋整件物品的基礎強度。"""
+    return item_points(rules, item, affixes) + item_base_points(rules, item, weapons)
 
 
 @dataclass(frozen=True, slots=True)

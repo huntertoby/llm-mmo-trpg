@@ -36,10 +36,12 @@ from trpg.roguelite import (
 )
 from trpg.roguelite.gear import (
     auto_gear_pick,
+    current_item,
     equip,
     item_score,
     make_gear_offer,
     run_loadout,
+    weapon_swap_prompt,
     worn_items,
 )
 from trpg.roguelite.progress import hero_effective_attributes, hero_unit_id
@@ -53,7 +55,7 @@ from trpg.roguelite.state import (
     LevelUpNode,
 )
 from trpg.shared.rng import Rng
-from trpg.shared.types import Attribute
+from trpg.shared.types import Attribute, top_attribute
 
 KEYWORDS = ("ignite", "prone")
 
@@ -433,3 +435,37 @@ def test_legendary_rule_gear_from_the_offer_can_be_narrated() -> None:
     wake = lib.affixes["affix_rule_bleeding_wake"].name_zh
     assert _skill_name(view, "skill_gear_rule_bleeding_wake") == wake
     assert _skill_name(view, "skill_nope") == "skill_nope"
+
+
+# --- 3K-2b：換主手的提示與預算分數的基礎強度 ----------------------------------------------------
+
+
+def test_weapon_swap_prompt_only_when_the_scaling_attributes_differ() -> None:
+    lib = library()
+    run = _run("one_handed_sword")
+    attrs = hero_effective_attributes(lib, run)
+    top = top_attribute(attrs)
+    same = weapon_swap_prompt(lib, run, _weapon_item(lib, "spear"), "main_hand", attrs)
+    assert same is None  # 單手劍與長槍都看力量：直接換
+    text = weapon_swap_prompt(lib, run, _weapon_item(lib, "dagger"), "main_hand", attrs)
+    assert text == f"這把看敏捷、力量，你目前最高的是{top.display_name}"
+    # 不是主手欄位時沒有提示
+    ring = generate_item(lib, Rng(1), "ring", "common", 2)
+    assert weapon_swap_prompt(lib, run, ring, "ring_1", attrs) is None
+
+
+def test_base_weapon_score_is_not_zero_and_follows_the_base_damage() -> None:
+    lib = library()
+    run = _run("one_handed_sword")
+    base = current_item(lib, run, "main_hand")
+    assert base is not None and base.id == "base_one_handed_sword"
+    sword = lib.weapons["one_handed_sword"]
+    average = Fraction(sword.dice.count * (sword.dice.sides + 1), 2) + sword.flat
+    assert item_score(lib, base) == average * sword.strikes > 0
+    greatsword = _weapon_item(lib, "greatsword")
+    plain = greatsword.model_copy(update={"affixes": (), "base_bonus_permille": 0})
+    assert item_score(lib, plain) > item_score(lib, base)  # 大劍的基礎傷害比較高
+    body = generate_item(lib, Rng(2), "body", "common", 3).model_copy(
+        update={"kind": "plate", "affixes": (), "base_bonus_permille": 0}
+    )
+    assert item_score(lib, body) == Fraction(21)  # 板甲基礎防禦 7 × 3 點
