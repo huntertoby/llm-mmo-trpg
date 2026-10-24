@@ -369,11 +369,11 @@ def test_the_composer_sometimes_adds_a_valid_dual_attribute_or_mastery() -> None
     mastered = [s for s in found if s.mastery is not None]
     assert dual and {m.mastery for m in mastered} == {"range", "duration"}
     for skill in dual:
-        assert skill.rarity in ("epic", "legendary")
-        assert skill.category == "spell"
+        assert skill.rarity in ("rare", "epic", "legendary")  # 3I-3：稀有以上（#46）
         assert skill.secondary_scaling_attr != skill.scaling_attr
-        allowed = library.scaling_range(skill)
-        assert {skill.scaling_attr, skill.secondary_scaling_attr} <= set(allowed), skill.id
+        pool = library.secondary_range(skill)  # 武器技為心智屬性，身體類法術沒有
+        assert skill.secondary_scaling_attr in pool, skill.id
+        assert skill.scaling_attr in library.scaling_range(skill), skill.id
         assert skill.mastery is None
     for skill in mastered:
         assert skill.secondary_scaling_attr is None
@@ -381,7 +381,8 @@ def test_the_composer_sometimes_adds_a_valid_dual_attribute_or_mastery() -> None
             assert skill.shape.range is not None
         else:
             assert any(e.type == "apply_status" for e in skill.effects)
-    assert rules.core.dual_scaling_min_rarity == "epic"
+    assert rules.core.dual_scaling_min_rarity == "rare"
+    assert any(s.category == "weapon" for s in dual)  # 魔劍士方案 A：武器技也抽得到
 
 
 def test_rule_rewrite_primitives_are_hand_written_only() -> None:

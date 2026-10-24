@@ -340,12 +340,15 @@ def _with_scaling_extras(
     rules = library.composer.scaling
     base = _fit_attr(library, base, ctx)
     primary = base["scaling_attr"]
-    if (
-        rarity_rank(base["rarity"]) >= rarity_rank(library.ruleset.core.dual_scaling_min_rarity)
-        and rng.chance_permille(rules.dual_permille)
-        and base["category"] != "weapon"  # 武器技看手上武器，沒有第二縮放屬性（3H-6）
-    ):
-        others = [a.value for a in _range(library, base, ctx) if a.value != primary]
+    if rarity_rank(base["rarity"]) >= rarity_rank(
+        library.ruleset.core.dual_scaling_min_rarity
+    ) and rng.chance_permille(rules.dual_permille):
+        # 武器技的第二屬性是心智屬性（3I-3，#46）；身體類法術沒有第二屬性。給了主角屬性時，
+        # 之後的 retarget_scaling 才依「第二高與最高差 ≤ 4」決定留不留、並換成主角最高的心智屬性
+        facts = ScalingFacts.of_draft(
+            {**base, "effects": ctx.effects, "tags": _tags(library, base, ctx)}
+        )
+        others = [a.value for a in library.secondary_range(facts) if a.value != primary]
         if others:
             return {**base, "secondary_scaling_attr": rng.choice(others)}
     options = []

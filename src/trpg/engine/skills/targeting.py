@@ -55,6 +55,7 @@ from trpg.engine.rules.statuses import (
     attack_range_cap,
     blocks_spells,
     skip_turn_status,
+    status_attack_bonus,
 )
 from trpg.engine.rules.weapons import crit_range_cut
 from trpg.engine.skill_levels import level_multiplier
@@ -236,8 +237,17 @@ def skill_profile(state: BattleState, caster: UnitState, skill: SkillDef) -> Att
     height_limited = skill_is_height_limited(state, caster, skill)
     pierce = pierce_active(state, caster, skill)
     if skill.category == "weapon":
+        # 魔劍士方案 A（3I-3）：武器技有心智第二屬性時，命中也用「武器的縮放值」與它的平均
+        # （其餘同 attack_value：武器加值、狀態的攻擊加值）
+        value = (
+            attack_value(caster, state.ruleset)
+            if skill.secondary_scaling_attr is None
+            else skill_scaling_value(state.ruleset, caster, skill)
+            + caster.weapon.attack_bonus
+            + status_attack_bonus(state.ruleset, caster)
+        )
         profile = AttackProfile(
-            attack_value=attack_value(caster, state.ruleset),
+            attack_value=value,
             melee=caster.weapon.is_melee,
             height_limited=height_limited,
             crit_range=caster.weapon.crit_range,

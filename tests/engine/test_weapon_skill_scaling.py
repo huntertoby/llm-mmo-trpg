@@ -80,9 +80,9 @@ def test_the_skill_own_scaling_attr_does_not_matter_for_a_weapon_skill() -> None
     attrs = {"str": 13, "int": 25, "wil": 25}
     values = {a: _value(_weapon_skill(attr=a), "one_handed_sword", attrs) for a in ("int", "wil")}
     assert set(values.values()) == {13}
-    # 技能自己的第二屬性也不生效
+    # 3I-3（魔劍士方案 A）：技能的心智第二屬性和武器值取平均 (13 + 25) // 2 ＝ 19
     dual = _weapon_skill(rarity="epic", secondary_scaling_attr="wil")
-    assert _value(dual, "one_handed_sword", attrs) == 13
+    assert _value(dual, "one_handed_sword", attrs) == 19
 
 
 def test_a_spell_skill_still_reads_its_own_attribute() -> None:

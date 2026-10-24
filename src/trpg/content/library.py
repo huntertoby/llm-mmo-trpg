@@ -514,6 +514,11 @@ class ContentLibrary:
         """允許的縮放屬性（有順序；沒有主角屬性時取第一個）。"""
         return self.scaling_basis(skill).attrs
 
+    def secondary_range(self, skill: SkillDef | ScalingFacts) -> tuple[Attribute, ...]:
+        """允許的第二縮放屬性（3I-3，#46；武器技只能是心智屬性、身體類法術沒有；不含主屬性要
+        呼叫者自己排除）。"""
+        return self.skill_scaling.secondary_range(skill, self.weapons)
+
     def weather_def(self, weather_id: str) -> WeatherDef:
         try:
             return self.weather[weather_id]

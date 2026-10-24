@@ -104,6 +104,18 @@
             "gold"
           ],
           "defaultMaterial": "iron"
+        },
+        {
+          "id": "arcane",
+          "zh": "魔導劍",
+          "materials": [
+            "iron",
+            "steel",
+            "copper",
+            "silver",
+            "gold"
+          ],
+          "defaultMaterial": "iron"
         }
       ]
     },

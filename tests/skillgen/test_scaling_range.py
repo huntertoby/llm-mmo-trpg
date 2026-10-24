@@ -53,26 +53,44 @@ def test_a_second_attribute_outside_the_range_is_rejected() -> None:
     assert _range_violations(combo) == []
 
 
-def test_a_weapon_skill_never_carries_a_second_attribute() -> None:
-    """武器技不帶第二屬性（魔劍士方案 A 決定前）：進化而來的武器技也擋。"""
+def test_a_weapon_skill_second_attribute_must_be_a_mind_attribute() -> None:
+    """魔劍士方案 A（3I-3，#46）：武器技的第二屬性只能是心智屬性；進化而來的武器技也照檢查。"""
     sword = LIB.skills["skill_cleave"]
     provenance = sword.provenance.model_copy(update={"origin": "level_up", "parents": (sword.id,)})
-    evolved = sword.model_copy(
-        update={
-            "id": "skill_cleave_evo_x",
-            "provenance": provenance,
-            "rarity": "epic",
-            "secondary_scaling_attr": A.INT,
-        }
-    )
-    assert any("第二縮放屬性" in m for m in _range_violations(evolved))
+    base = {"id": "skill_cleave_evo_x", "provenance": provenance, "rarity": "epic"}
+    mind = sword.model_copy(update={**base, "secondary_scaling_attr": A.INT})
+    assert _range_violations(mind) == []
+    body = sword.model_copy(update={**base, "secondary_scaling_attr": A.DEX})
+    assert any("心智屬性" in m for m in _range_violations(body))
 
 
-def test_the_arcane_blade_exception_keeps_strength_and_intelligence() -> None:
+def test_the_arcane_blade_is_a_melee_weapon_skill_with_intelligence() -> None:
+    """魔劍斬（3I-3）：近戰武器技＋第二屬性智力，不再是 skill_scaling.yaml 的例外。"""
     blade = LIB.skills["skill_arcane_blade"]
-    assert blade.category == "spell"
-    assert LIB.scaling_range(blade) == (A.STR, A.INT)
+    assert blade.category == "weapon" and blade.weapon_req == "melee"
+    assert blade.secondary_scaling_attr is A.INT
+    assert not any(o.skill == blade.id for o in LIB.skill_scaling.overrides)
     assert validate_skill(blade, LIB) == []
+    # 力量 12、智力 20 的劍士：武器（單手劍，力量）12 與智力 20 取平均 ＝ 16
+    values = {A.STR: 12, A.INT: 20}
+    assert blade.scaling_value(lambda a: values.get(a, 10), LIB.weapons["one_handed_sword"]) == 16
+
+
+def test_body_spells_never_get_a_second_attribute() -> None:
+    """3H-7 留下：身體類法術不給第二屬性（#46）。"""
+    body = next(
+        s
+        for s in LIB.skills.values()
+        if s.category == "spell" and LIB.scaling_basis(s).source == "body"
+    )
+    draft = body.model_copy(update={"rarity": "epic", "secondary_scaling_attr": A.INT})
+    assert any("身體類" in m for m in _range_violations(draft))
+    assert (
+        fit_scaling(
+            _generated(body.id, secondary_scaling_attr=A.INT, rarity="epic"), LIB
+        ).secondary_scaling_attr
+        is None
+    )
 
 
 def _scaling_field(draft: dict[str, Any]) -> FieldSpec:
@@ -122,8 +140,7 @@ def test_random_skills_are_always_in_range(seed: int) -> None:
     allowed = LIB.scaling_range(skill)
     assert skill.scaling_attr in allowed, (seed, skill.scaling_attr, allowed)
     if skill.secondary_scaling_attr is not None:
-        assert skill.category == "spell"
-        assert skill.secondary_scaling_attr in allowed
+        assert skill.secondary_scaling_attr in LIB.secondary_range(skill)
     assert validate_skill(skill, LIB) == []
 
 

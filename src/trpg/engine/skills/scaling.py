@@ -52,7 +52,8 @@ def skill_scale_attr(unit: UnitState, skill: SkillDef) -> Attribute | None:
     手上武器。"""
     if skill.category == "weapon":
         weapon = unit.weapon
-        return weapon.scaling_attr if weapon.secondary_scaling_attr is None else None
+        single = weapon.secondary_scaling_attr is None and skill.secondary_scaling_attr is None
+        return weapon.scaling_attr if single else None
     return skill.scaling_attr if skill.secondary_scaling_attr is None else None
 
 

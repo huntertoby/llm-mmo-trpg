@@ -650,6 +650,24 @@ builds:
       max_mana: 20
       skills: []
 
+  # Phase 3I-3：魔導劍的白板主角（力量／智力取平均；單手，沒有特性）。
+  - id: build_blank_arcane_blade
+    name_zh: 白板魔劍士
+    blank: true
+    theme_zh: 沒有任何技能、只拿魔導劍的戰士（單手，可搭副手）。普攻吃力量與智力的平均，沒有小特性。
+    hero:
+      id: build_blank_arcane_blade
+      name_zh: 白板魔劍士
+      attributes: {str: 10, dex: 10, con: 10, int: 10, wis: 10, wil: 10}
+      max_hp: 60
+      speed: 5
+      armor_bonus: 4
+      weapon: arcane_blade
+      resist: {physical: 100}
+      tags: [hero, sim]
+      max_mana: 20
+      skills: []
+
   # Phase 3I-4：第二批其他武器的白板主角（雙匕首、霰彈槍、手槍、雙手槍；遠程的血量與防禦比照白板槍手）。
   - id: build_blank_dual_dagger
     name_zh: 白板雙刀手

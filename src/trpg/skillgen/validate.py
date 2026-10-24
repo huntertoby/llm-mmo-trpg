@@ -22,6 +22,7 @@
 
 from __future__ import annotations
 
+from collections.abc import Sequence
 from dataclasses import dataclass, replace
 from fractions import Fraction
 
@@ -43,6 +44,7 @@ from trpg.content.skills import (
     SkillDef,
     rarity_rank,
 )
+from trpg.shared.types import Attribute
 from trpg.skillgen.budget import BudgetError, BudgetReport, skill_budget
 from trpg.skillgen.mechanics import affect_set, resolved_affects
 from trpg.skillgen.scaling import attr_names_zh, scaling_basis_zh
@@ -98,8 +100,7 @@ def validate_skill(skill: SkillDef, library: ContentLibrary) -> list[Violation]:
         out.append(Violation(skill.id, "cap.min_cost", least))
     out += _rune_tag_violations(skill, library)
     out += _on_kill_status_violations(skill, library)
-    weapon = _weapon_scaling_violations(skill, library)
-    out += weapon + _scaling_range_violations(skill, library, already=bool(weapon))
+    out += _weapon_scaling_violations(skill, library) + _scaling_range_violations(skill, library)
     return [*out, *_structure_violations(skill, library)]
 
 
@@ -150,47 +151,68 @@ def _weapon_scaling_violations(skill: SkillDef, library: ContentLibrary) -> list
     ):
         return []
     attr = library.skill_scaling.weapon_class_attr(skill.weapon_req)
-    if skill.scaling_attr == attr and skill.secondary_scaling_attr is None:
+    if skill.scaling_attr == attr:
         return []
     return [
         Violation(
             skill.id,
             "scaling.weapon",
             f"武器技的命中與傷害看手上武器的屬性：縮放屬性要設為 {attr.display_name}"
-            f"（{skill.weapon_req} 武器的主屬性），且不能有第二縮放屬性",
+            f"（{skill.weapon_req} 武器的主屬性）；要加屬性請用第二縮放屬性（智力、感知、意志）",
         )
     ]
 
 
-def _scaling_range_violations(
-    skill: SkillDef, library: ContentLibrary, *, already: bool
-) -> list[Violation]:
-    """``scaling.range``（Phase 3H-7，06 6.10）：主屬性與第二屬性都要在允許範圍內（法術技依效果
-    推導的主題）；武器技不帶第二屬性。``already``：``scaling.weapon`` 已經報過（不重複）。"""
+def _scaling_range_violations(skill: SkillDef, library: ContentLibrary) -> list[Violation]:
+    """``scaling.range``（Phase 3H-7、3I-3，06 6.10）：主屬性與第二屬性都要在允許範圍內（法術技依
+    效果推導的主題）；武器技的第二屬性只能是心智屬性（武器屬性＋一個心智屬性，#46）；身體類
+    法術沒有第二屬性。``already``：``scaling.weapon`` 已經報過（不重複主屬性的問題）。"""
+    second = skill.secondary_scaling_attr
     if skill.category == "weapon":
-        if already or skill.secondary_scaling_attr is None:
+        pool = library.secondary_range(skill)
+        if second is None or second in pool:
             return []
-        message = "武器技的命中與傷害看手上武器的屬性，不能有第二縮放屬性"
+        message = (
+            f"武器技的第二縮放屬性只能是心智屬性（{attr_names_zh(pool)}，取武器屬性與它的平均），"
+            f"收到 {second.display_name}"
+        )
         return [Violation(skill.id, "scaling.range", message)]
     allowed = library.scaling_range(skill)
     if not allowed:  # 沒有載入縮放規則（測試用的內容庫）
         return []
-    used = [skill.scaling_attr]
-    if skill.secondary_scaling_attr is not None:
-        used.append(skill.secondary_scaling_attr)
-    bad = tuple(a for a in used if a not in allowed)
-    if not bad:
-        return []
-    second = skill.secondary_scaling_attr
-    which = "、".join(f"{'第二' if a is second else ''}縮放屬性 {a.display_name}" for a in bad)
-    return [
-        Violation(
-            skill.id,
-            "scaling.range",
-            f"{which} 不在這招的允許範圍：{scaling_basis_zh(skill, library)}，"
-            f"只能看 {attr_names_zh(allowed)}",
-        )
-    ]
+    out: list[Violation] = []
+    if skill.scaling_attr not in allowed:
+        out.append(_range_violation(skill, library, skill.scaling_attr, "縮放屬性", allowed))
+    if second is not None:
+        pool = library.secondary_range(skill)
+        if not pool:
+            out.append(
+                Violation(
+                    skill.id,
+                    "scaling.range",
+                    f"第二縮放屬性 {second.display_name} 不能用："
+                    f"{scaling_basis_zh(skill, library)}，"
+                    "身體類的法術沒有第二屬性",
+                )
+            )
+        elif second not in pool:
+            out.append(_range_violation(skill, library, second, "第二縮放屬性", pool))
+    return out
+
+
+def _range_violation(
+    skill: SkillDef,
+    library: ContentLibrary,
+    attr: Attribute,
+    label: str,
+    allowed: Sequence[Attribute],
+) -> Violation:
+    return Violation(
+        skill.id,
+        "scaling.range",
+        f"{label} {attr.display_name} 不在這招的允許範圍：{scaling_basis_zh(skill, library)}，"
+        f"只能看 {attr_names_zh(allowed)}",
+    )
 
 
 def _structure_violations(skill: SkillDef, library: ContentLibrary) -> list[Violation]:

@@ -34,7 +34,7 @@ def _weapon_attrs(weapon: WeaponDef | None) -> tuple[Attribute, ...]:
 def _skill_attrs(skill: SkillDef, weapon: WeaponDef | None) -> tuple[Attribute | None, ...]:
     """技能吃的屬性：武器技看手上武器（3H-6），其他是技能自己的縮放屬性與第二縮放屬性。"""
     if skill.category == "weapon" and weapon is not None:
-        return _weapon_attrs(weapon)
+        return (*_weapon_attrs(weapon), skill.secondary_scaling_attr)  # 3I-3：武器技的心智第二屬性
     return (skill.scaling_attr, skill.secondary_scaling_attr)
 
 

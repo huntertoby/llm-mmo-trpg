@@ -143,10 +143,11 @@ def test_a_dual_skill_must_not_repeat_the_primary_attribute() -> None:
         _skill(scaling_attr="int", secondary_scaling_attr="int")
 
 
-def test_dual_scaling_needs_epic_or_better() -> None:
+def test_dual_scaling_needs_rare_or_better() -> None:
+    """3I-3（#46）：雙屬性縮放的最低稀有度由史詩降為稀有。"""
     rules = lib().ruleset
-    assert rules.core.dual_scaling_min_rarity == "epic"
-    for rarity, ok in (("common", False), ("rare", False), ("epic", True), ("legendary", True)):
+    assert rules.core.dual_scaling_min_rarity == "rare"
+    for rarity, ok in (("common", False), ("rare", True), ("epic", True), ("legendary", True)):
         # 傳說必須花源力並含改寫規則型原語（Phase 3C-4a），這裡補上讓它只差雙屬性這一項
         legendary: dict[str, Any] = (
             {
@@ -168,9 +169,9 @@ def test_dual_scaling_needs_epic_or_better() -> None:
         assert (problems == []) is ok, (rarity, problems)
 
 
-def test_the_validator_rejects_a_dual_skill_below_epic() -> None:
-    assert "reference" in {v.rule for v in violations(_skill(rarity="rare", **DUAL))}
-    assert "reference" not in {v.rule for v in violations(_skill(rarity="epic", **DUAL))}
+def test_the_validator_rejects_a_dual_skill_below_rare() -> None:
+    assert "reference" in {v.rule for v in violations(_skill(rarity="common", **DUAL))}
+    assert "reference" not in {v.rule for v in violations(_skill(rarity="rare", **DUAL))}
 
 
 # ---------------------------------------------------------------------------

@@ -25,6 +25,7 @@ kinds:
       - {id: straight, name_zh: 直劍}
       - {id: curved, name_zh: 彎刀}
       - {id: broad, name_zh: 闊劍}
+      - {id: arcane, name_zh: 魔導劍}
     materials: [iron, steel, copper, silver, gold]
     default_material: iron
   - id: greatsword

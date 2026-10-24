@@ -72,6 +72,7 @@ __all__ = [
     "activation_text",
     "branch_text",
     "condition_summary",
+    "contest_label",
     "cost_parts",
     "cost_summary",
     "draft_card_keywords",
@@ -174,22 +175,40 @@ WEAPON_ATTR_LABEL = "武器屬性"
 """武器技（看手上武器的屬性，Phase 3H-6）在效果句裡的縮放屬性簡稱。"""
 
 
-def scaling_label(skill: SkillDef) -> str:
-    """縮放屬性的簡稱：單屬性為「智力」，雙屬性為「力量／智力」（Phase 2H-2）；武器技看手上武器，
-    寫「武器屬性」（3H-6）。"""
+def scaling_label(skill: SkillDef, lib: ContentLibrary | None = None) -> str:
+    """縮放屬性的簡稱：單屬性為「智力」，雙屬性為「力量／智力」（Phase 2H-2）。武器技看手上武器
+    （3H-6）：給了 ``lib`` 時寫實際的屬性名——所需武器大類的主屬性（例「力量」），帶心智第二屬性
+    時接在後面（「力量／智力」，3I-3；玩法 PM 2026-10-24：武器技所有數值都看手上武器，不加例外）；
+    沒有 ``lib`` 時寫「武器屬性」。"""
     if skill.category == "weapon":
-        return WEAPON_ATTR_LABEL
+        if lib is None:
+            return WEAPON_ATTR_LABEL
+        names = [lib.skill_scaling.weapon_class_attr(skill.weapon_req).display_name]
+        if skill.secondary_scaling_attr is not None:
+            names.append(skill.secondary_scaling_attr.display_name)
+        return "／".join(names)
     names = [skill.scaling_attr.display_name]
     if skill.secondary_scaling_attr is not None:
         names.append(skill.secondary_scaling_attr.display_name)
     return "／".join(names)
 
 
+def contest_label(skill: SkillDef, lib: ContentLibrary | None = None) -> str:
+    """對抗判定（擊倒、位移、狀態抵抗）的屬性簡稱：武器技只用武器的主屬性（第二屬性不參與對抗，
+    :meth:`SkillDef.contest_attr`），其他同 :func:`scaling_label`。"""
+    if skill.category == "weapon" and lib is not None:
+        return lib.skill_scaling.weapon_class_attr(skill.weapon_req).display_name
+    return scaling_label(skill, lib)
+
+
 def scaling_detail(skill: SkillDef, weapon: WeaponDef | None = None) -> str:
     """縮放屬性的完整說明：雙屬性為「力量 50%＋智力 50%」。武器技（3H-6）看手上武器：有武器時寫
     武器的屬性（例「敏捷／力量（取較高）」），沒有時寫「武器的屬性」。"""
     if skill.category == "weapon":
-        return "武器的屬性" if weapon is None else weapon.scaling_names_zh()
+        base = "武器的屬性" if weapon is None else weapon.scaling_names_zh()
+        if skill.secondary_scaling_attr is None:
+            return base
+        return f"{base}＋{skill.secondary_scaling_attr.display_name}（取平均）"
     if skill.secondary_scaling_attr is None:
         return skill.scaling_attr.display_name
     return f"{skill.scaling_attr.display_name} 50%＋{skill.secondary_scaling_attr.display_name} 50%"
@@ -249,7 +268,7 @@ def _damage_parts(lib: ContentLibrary, skill: SkillDef, spec: EffectSpec) -> tup
     discount = skill.damage_permille or 1000
     if skill.category == "spell":
         assert spec.dice is not None and spec.element is not None
-        attr, element = scaling_label(skill), spec.element.display_name
+        attr, element = scaling_label(skill, lib), spec.element.display_name
         text = f"{_dice(spec.dice)}＋{attr}加成的{element}傷害"
         if skill.damage_permille is not None:
             text += f"（基礎傷害 ×{discount / 1000:g}）"
@@ -284,9 +303,9 @@ def _on_kill_text(lib: ContentLibrary, skill: SkillDef, sub: EffectSpec) -> str:
     return f"你{_effect_core(lib, skill, sub)}"
 
 
-def _heal(_lib: ContentLibrary, skill: SkillDef, spec: EffectSpec) -> str:
+def _heal(lib: ContentLibrary, skill: SkillDef, spec: EffectSpec) -> str:
     assert spec.dice is not None
-    return f"治療 {_dice(spec.dice)}＋{scaling_label(skill)}加成"
+    return f"治療 {_dice(spec.dice)}＋{scaling_label(skill, lib)}加成"
 
 
 def _push_pull(_lib: ContentLibrary, _skill: SkillDef, spec: EffectSpec) -> str:
@@ -296,8 +315,8 @@ def _push_pull(_lib: ContentLibrary, _skill: SkillDef, spec: EffectSpec) -> str:
     return text
 
 
-def _knock_prone(_lib: ContentLibrary, skill: SkillDef, _spec: EffectSpec) -> str:
-    return f"擊倒（{scaling_label(skill)}對抗）"
+def _knock_prone(lib: ContentLibrary, skill: SkillDef, _spec: EffectSpec) -> str:
+    return f"擊倒（{contest_label(skill, lib)}對抗）"
 
 
 def _teleport(_lib: ContentLibrary, _skill: SkillDef, _spec: EffectSpec) -> str:
@@ -452,16 +471,18 @@ def miss_text(lib: ContentLibrary, skill: SkillDef) -> str | None:
     return "失手（含自然 1）時：" + "、".join(parts)
 
 
-def _charge_through(_lib: ContentLibrary, skill: SkillDef, spec: EffectSpec) -> str:
-    after = f"擊倒（{scaling_label(skill)}對抗）" if spec.on_hit == "knock_prone" else "推到路徑旁"
+def _charge_through(lib: ContentLibrary, skill: SkillDef, spec: EffectSpec) -> str:
+    after = (
+        f"擊倒（{contest_label(skill, lib)}對抗）" if spec.on_hit == "knock_prone" else "推到路徑旁"
+    )
     return (
         f"沿直線衝向目標格：沿途每個敵人各擲命中，命中受 {spec.dice} 物理傷害並{after}"
         "（隊友讓路；不觸發藉機攻擊；目標格的敵人背後被擋住時另受一次撞擊）"
     )
 
 
-def _swap(_lib: ContentLibrary, skill: SkillDef, spec: EffectSpec) -> str:
-    check = f"（{scaling_label(skill)}對抗）" if spec.affects == "enemies" else ""
+def _swap(lib: ContentLibrary, skill: SkillDef, spec: EffectSpec) -> str:
+    check = f"（{contest_label(skill, lib)}對抗）" if spec.affects == "enemies" else ""
     return "與目標交換位置" + check
 
 
@@ -469,13 +490,13 @@ def _teleport_target(lib: ContentLibrary, skill: SkillDef, _spec: EffectSpec) ->
     core = lib.ruleset.core
     lethal = core.teleport_enemy_resist_bonus + core.teleport_lethal_resist_bonus
     return (
-        f"把一個單位傳送到落點（友方必定成功；敵方{scaling_label(skill)}對抗，目標抵抗 "
+        f"把一個單位傳送到落點（友方必定成功；敵方{contest_label(skill, lib)}對抗，目標抵抗 "
         f"+{core.teleport_enemy_resist_bonus}；落點是致命地形時抵抗 +{lethal}，Boss 免疫）"
     )
 
 
-def _swap_any(_lib: ContentLibrary, skill: SkillDef, _spec: EffectSpec) -> str:
-    return f"讓射程內的兩個單位互換位置（含敵人時每個敵人各過{scaling_label(skill)}對抗）"
+def _swap_any(lib: ContentLibrary, skill: SkillDef, _spec: EffectSpec) -> str:
+    return f"讓射程內的兩個單位互換位置（含敵人時每個敵人各過{contest_label(skill, lib)}對抗）"
 
 
 def status_duration_text(lib: ContentLibrary, status_id: str, duration: int | None) -> str:
@@ -502,7 +523,7 @@ def _shield(lib: ContentLibrary, skill: SkillDef, spec: EffectSpec) -> str:
     status = lib.ruleset.status_def(SHIELD_STATUS)
     amount = "" if spec.dice is None else f"{_dice(spec.dice)}＋"
     return (
-        f"護盾（吸收量 {amount}{scaling_label(skill)}加成，持續 {status.duration} 回合；"
+        f"護盾（吸收量 {amount}{scaling_label(skill, lib)}加成，持續 {status.duration} 回合；"
         "已有護盾時取較大值）"
     )
 
@@ -533,31 +554,31 @@ def _inscribe(lib: ContentLibrary, _skill: SkillDef, spec: EffectSpec) -> str:
     )
 
 
-def _sacrifice_summon(_lib: ContentLibrary, skill: SkillDef, spec: EffectSpec) -> str:
+def _sacrifice_summon(lib: ContentLibrary, skill: SkillDef, spec: EffectSpec) -> str:
     assert spec.dice is not None and spec.radius is not None
     scope = "只有它所在的格子" if spec.radius == 0 else f"{spec.radius} 格內"
     if spec.element is not None:
         return (
             f"獻祭你的一個召喚物，在它的位置爆炸：{scope}的敵人自動命中，受到"
-            f" {_dice(spec.dice)}＋{scaling_label(skill)}加成的{spec.element.display_name}傷害"
+            f" {_dice(spec.dice)}＋{scaling_label(skill, lib)}加成的{spec.element.display_name}傷害"
         )
     return (
         f"獻祭你的一個召喚物，在它的位置化為治療：{scope}的友方回復"
-        f" {_dice(spec.dice)}＋{scaling_label(skill)}加成的 HP"
+        f" {_dice(spec.dice)}＋{scaling_label(skill, lib)}加成的 HP"
     )
 
 
-def _detonate_runes(_lib: ContentLibrary, skill: SkillDef, spec: EffectSpec) -> str:
+def _detonate_runes(lib: ContentLibrary, skill: SkillDef, spec: EffectSpec) -> str:
     assert spec.dice is not None
     element = f"{spec.element.display_name}" if spec.element is not None else "符文元素的"
     if spec.scope == "target_cell":
         return (
             f"引爆被命中目標所在格上你自己的符文（只引爆那 1 格）：移除符文，並對站在上面的單位"
-            f"自動命中，造成 {_dice(spec.dice)}＋{scaling_label(skill)}加成的{element}傷害"
+            f"自動命中，造成 {_dice(spec.dice)}＋{scaling_label(skill, lib)}加成的{element}傷害"
         )
     return (
         f"引爆影響範圍內你自己的符文：每格移除符文，並對站在上面的單位自動命中，造成"
-        f" {_dice(spec.dice)}＋{scaling_label(skill)}加成的{element}傷害"
+        f" {_dice(spec.dice)}＋{scaling_label(skill, lib)}加成的{element}傷害"
     )
 
 
@@ -727,16 +748,16 @@ def _delayed_damage(lib: ContentLibrary, skill: SkillDef, spec: EffectSpec) -> s
     return (
         f"在目標身上綁定時炸彈（{lib.ruleset.status_def('time_bomb').name_zh}）：{spec.rounds} 次"
         f"環境回合後在目標當下的位置爆炸{where}（敵我不分），{_dice(spec.dice)}＋"
-        f"{scaling_label(skill)}加成的{spec.element.display_name}傷害；目標倒下時立即爆炸；"
+        f"{scaling_label(skill, lib)}加成的{spec.element.display_name}傷害；目標倒下時立即爆炸；"
         "可被淨化移除"
     )
 
 
-def _hurl_object(_lib: ContentLibrary, skill: SkillDef, spec: EffectSpec) -> str:
+def _hurl_object(lib: ContentLibrary, skill: SkillDef, spec: EffectSpec) -> str:
     assert spec.dice is not None
     text = f"把 {spec.range} 格內的可推動物件丟到落點，落點單位受 {_dice(spec.dice)} 物理傷害"
     if spec.knock_prone:
-        text += f"並擊倒（{scaling_label(skill)}對抗）"
+        text += f"並擊倒（{contest_label(skill, lib)}對抗）"
     return text + "；油桶落地爆炸、可破壞的物件碎掉"
 
 
@@ -1336,11 +1357,12 @@ class CardOwner:
 def _scaling_attr_ids(skill: SkillDef, weapon: WeaponDef | None) -> tuple[str, ...]:
     """卡片 ``scaling_attrs``（給前端上色與篩選）：武器技有持有者武器時是武器的屬性（3H-6），
     其他是技能自己的縮放屬性（武器技沒有武器時是顯示提示）。"""
+    attrs: tuple[Attribute | None, ...]
     if skill.category == "weapon" and weapon is not None:
-        attrs = (weapon.scaling_attr, weapon.secondary_scaling_attr)
+        attrs = (weapon.scaling_attr, weapon.secondary_scaling_attr, skill.secondary_scaling_attr)
     else:
         attrs = (skill.scaling_attr, skill.secondary_scaling_attr)
-    return tuple(a.value for a in attrs if a is not None)
+    return tuple(dict.fromkeys(a.value for a in attrs if a is not None))
 
 
 def _summon_stats(owner: CardOwner | None, spec: EffectSpec) -> SummonStats | None:

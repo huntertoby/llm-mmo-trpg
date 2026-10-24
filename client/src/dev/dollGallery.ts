@@ -63,7 +63,7 @@ const SLOT_VARIANTS: Array<[string, string, L[]]> = [
   ["body", "身", [{ kind: "coat", form: "cape" }, { kind: "robe", form: "short" }, { kind: "mail", form: "scale" }, { kind: "plate", form: "half" }, { kind: "leather", form: "hunter" }]],
   ["hands", "手", [{ kind: "bracers", form: "leather" }, { kind: "cloth_gloves", form: "fingerless" }, { kind: "leather_gloves", form: "long" }, { kind: "gauntlets", form: "mail" }]],
   ["feet", "腳", [{ kind: "shoes", form: "wrapped" }, { kind: "boots", form: "tall" }, { kind: "iron_boots", form: "sabaton" }, { kind: "greaves", form: "knee" }]],
-  ["main_hand", "主手", [{ kind: "hammer", form: "mace" }, { kind: "spear", form: "trident" }, { kind: "spear", form: "halberd" }, { kind: "crossbow", form: "heavy" }, { kind: "pistol", form: "revolver" }, { kind: "shotgun", form: "double" }, { kind: "fist", form: "katar" }, { kind: "scythe", form: "long" }, { kind: "whip", form: "bladed" }]],
+  ["main_hand", "主手", [{ kind: "hammer", form: "mace" }, { kind: "spear", form: "trident" }, { kind: "spear", form: "halberd" }, { kind: "crossbow", form: "heavy" }, { kind: "pistol", form: "revolver" }, { kind: "shotgun", form: "double" }, { kind: "fist", form: "katar" }, { kind: "scythe", form: "long" }, { kind: "whip", form: "bladed" }, { kind: "sword", form: "arcane", material: "steel" }, { kind: "sword", form: "arcane", material: "steel", element: "fire" }]],
   ["off_hand", "副手", [{ kind: "kite_shield", form: "tower" }, { kind: "tome", form: "book" }, { kind: "orb", form: "ball", keywords: ["frozen"] }]],
 ];
 for (const [slot, zh, variants] of SLOT_VARIANTS) {

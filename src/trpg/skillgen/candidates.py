@@ -142,7 +142,7 @@ def follows_attr(skill: SkillDef, attr: Attribute, weapon_attrs: Sequence[Attrib
     """技能實際吃 ``attr``：武器技看手上武器的縮放屬性（``weapon_attrs``，含第二屬性；3H-6、
     3H-7），空時與法術技一樣看技能的 ``scaling_attr``。"""
     if skill.category == "weapon" and weapon_attrs:
-        return attr in weapon_attrs
+        return attr in weapon_attrs or attr == skill.secondary_scaling_attr  # 3I-3：心智第二屬性
     return skill.scaling_attr == attr
 
 

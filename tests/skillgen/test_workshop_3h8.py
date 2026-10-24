@@ -50,11 +50,19 @@ def test_spell_epic_shows_second_attribute_menu_within_allowed_range() -> None:
     assert values == allowed - {skill.scaling_attr.value}
 
 
-def test_second_attribute_hidden_below_epic_and_for_weapon_skills() -> None:
-    assert "secondary_scaling_attr" not in _rarity_fields({**SPELL, "rarity": "rare"})
+def test_second_attribute_hidden_below_rare_and_mind_only_for_weapon_skills() -> None:
+    """3I-3（#46）：稀有以上才列第二屬性；武器技列心智屬性，物理屬性不列。"""
     weapon = walk_draft(STRIKE)
-    fields = _rarity_fields({**weapon, "rarity": "epic"})
-    assert "secondary_scaling_attr" not in fields
+    assert "secondary_scaling_attr" not in _rarity_fields({**weapon, "rarity": "common"})
+    fields = _rarity_fields({**weapon, "rarity": "rare"})
+    assert {c.value for c in fields["secondary_scaling_attr"].choices} == {"int", "wis", "wil"}
+    assert all("unavailable_zh" not in c.info for c in fields["secondary_scaling_attr"].choices)
+
+
+def test_body_spells_have_no_second_attribute_menu() -> None:
+    """3I-3：身體類法術（沒有法術主題）不給第二屬性。"""
+    body = {**SPELL, "scaling_attr": "str", "effects": [{"type": "knock_prone"}]}
+    assert "secondary_scaling_attr" not in _rarity_fields({**body, "rarity": "epic"})
 
 
 def test_mastery_menu_only_when_no_second_attribute() -> None:

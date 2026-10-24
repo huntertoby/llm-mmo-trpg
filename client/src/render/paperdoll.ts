@@ -309,7 +309,8 @@ function drawBlade(ctx: Ctx, it: GearItem, c: string, front: boolean): void {
   const L = great ? 24 : 16;
   const W = great ? 4 : 2.6;
   ctx.rotate(front ? -0.25 : 0.25);
-  fill(ctx, c, () => {
+  const arcane = !great && it.form === ARCANE_FORM;
+  fill(ctx, arcane && it.color === undefined ? mix(c, ARCANE_BLADE, 0.7) : c, () => {
     ctx.beginPath();
     ctx.moveTo(-W / 2, -3);
     ctx.lineTo(-W / 2, -L);
@@ -318,9 +319,51 @@ function drawBlade(ctx: Ctx, it: GearItem, c: string, front: boolean): void {
     ctx.lineTo(W / 2, -3);
     ctx.closePath();
   });
+  if (arcane) {
+    drawArcaneParts(ctx, it, L);
+    return;
+  }
   fill(ctx, "rgba(255,255,255,0.45)", () => ctx.rect(-W / 2 + 0.6, -L, 0.9, L - 4));
   fill(ctx, it.hilt ?? "#8a6a2a", () => rr(ctx, -4.5, -4, 9, 2, 1));
   fill(ctx, "#4a3020", () => ctx.rect(-1, -2, 2, 4));
+}
+
+/** 魔導劍（#46，`docs/art/魔導劍.md`）：單手劍的形制 `arcane`。不認得這個形制的地方畫一般單手劍。 */
+export const ARCANE_FORM = "arcane";
+/** 源晶槽的預設顏色（沒有元素）；有元素時換元素色。 */
+export const ARCANE_GLOW = "#9a86ff";
+/** 黃銅齒輪護手。 */
+const ARCANE_BRASS = "#b08a4a";
+/** 魔導劍的預設劍身色：冷灰，比一般鋼劍暗一點，讓光槽更明顯（有 `color` 時照該顏色）。 */
+const ARCANE_BLADE = "#8a93a8";
+
+/** 魔導劍的源晶槽顏色：有元素換元素色，否則藍紫（供測試與圖示共用）。 */
+export function arcaneGlow(element: string | undefined): string {
+  return elementTint(element) ?? ARCANE_GLOW;
+}
+
+/** 魔導劍（劍身已畫好）：中線一道源晶槽（寬約劍身 40%、帶 4px 外光；小圖示也至少 1px）＋三個淡白符文刻點
+ * ＋黃銅齒輪護手（12 齒）與中心源晶。正面、背面、側面共用（側面沿用一般劍的側面畫法再加源晶槽色）。 */
+function drawArcaneParts(ctx: Ctx, it: GearItem, length: number): void {
+  const glow = arcaneGlow(it.element);
+  ctx.save();
+  ctx.shadowColor = glow;
+  ctx.shadowBlur = 4;
+  ctx.fillStyle = glow;
+  ctx.fillRect(-0.55, -length + 1, 1.1, length - 5);
+  ctx.restore();
+  ctx.fillStyle = "#e8e2ff";
+  for (const ry of [-6.5, -10, -13.5]) ctx.fillRect(-1.1, ry, 2.2, 0.8);
+  fill(ctx, ARCANE_BRASS, () => {
+    for (let i = 0; i < 12; i += 1) {
+      const a = (i / 12) * TAU;
+      const r = i % 2 === 1 ? 3.2 : 4.3;
+      ctx.lineTo(Math.cos(a) * r, -3 + Math.sin(a) * r * 0.55);
+    }
+    ctx.closePath();
+  });
+  fill(ctx, glow, () => ctx.arc(0, -3, 1.2, 0, TAU));
+  fill(ctx, "#4a3020", () => ctx.rect(-1, -1.5, 2, 3.5));
 }
 
 /** 權杖：短柄，頂端一個金環＋寶珠（美術樣張 `gearArt.js` 的 scepter 形制）。 */

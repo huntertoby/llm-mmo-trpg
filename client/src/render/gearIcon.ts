@@ -42,6 +42,8 @@ type Draw = (ctx: Ctx, r: Resolved, P: Pal) => Spots;
 
 const TAU = Math.PI * 2;
 const INK = GEAR_INK;
+/** 魔導劍源晶槽的預設顏色（無元素；有元素時紙娃娃畫法換成元素色，見 `paperdoll.ts`）。 */
+const ARCANE_GLOW = "#9a86ff";
 
 interface KindEntry {
   id: string;
@@ -173,10 +175,22 @@ D.sword = (ctx: Ctx, r: Resolved, P: Pal): Spots => {
       straight: () => { ctx.moveTo(-3.5, 8); ctx.lineTo(-3.5, -22); ctx.lineTo(0, -28); ctx.lineTo(3.5, -22); ctx.lineTo(3.5, 8); ctx.closePath(); },
       curved: () => { ctx.moveTo(-3, 8); ctx.quadraticCurveTo(-6, -12, 6, -28); ctx.quadraticCurveTo(4, -10, 4, 8); ctx.closePath(); },
       broad: () => { ctx.moveTo(-6, 8); ctx.lineTo(-6, -18); ctx.lineTo(0, -28); ctx.lineTo(6, -18); ctx.lineTo(6, 8); ctx.closePath(); },
+      // 魔導劍（#46）：直劍的劍身，中線改成源晶槽（見下）
+      arcane: () => { ctx.moveTo(-3.5, 8); ctx.lineTo(-3.5, -22); ctx.lineTo(0, -28); ctx.lineTo(3.5, -22); ctx.lineTo(3.5, 8); ctx.closePath(); },
     }[r.form];
-    shape(ctx, P.a, blade ?? (() => undefined)); if (r.form !== "curved") line(ctx, P.d, 1.2, [[0, 6], [0, -20]]);
+    shape(ctx, P.a, blade ?? (() => undefined));
+    if (r.form === "arcane") {
+      ctx.save(); ctx.shadowColor = ARCANE_GLOW; ctx.shadowBlur = 5;
+      line(ctx, ARCANE_GLOW, 2.4, [[0, 5], [0, -22]]); // 源晶槽：圖示上至少 2px 寬
+      ctx.restore();
+    } else if (r.form !== "curved") line(ctx, P.d, 1.2, [[0, 6], [0, -20]]);
     shine(ctx, P, [[-1.5, 4], [-1.5, -18]]);
-    guard(ctx, P, 8, r.form === "broad" ? 22 : 18); grip(ctx, P, 12, 10);
+    if (r.form === "arcane") {
+      // 黃銅齒輪護手（12 齒）＋中心源晶
+      shape(ctx, "#b08a4a", () => { for (let i = 0; i < 12; i += 1) { const a = (i / 12) * TAU; const k = i % 2 === 0 ? 7.5 : 5.6; ctx.lineTo(Math.cos(a) * k, 10 + Math.sin(a) * k * 0.6); } ctx.closePath(); }, 1.5);
+      ctx.fillStyle = ARCANE_GLOW; ctx.beginPath(); ctx.arc(0, 10, 2, 0, TAU); ctx.fill();
+    } else guard(ctx, P, 8, r.form === "broad" ? 22 : 18);
+    grip(ctx, P, 12, 10);
     shape(ctx, P.guard, () => ctx.arc(0, 24, 2.5, 0, TAU), 1.2);
   });
   return [[36, 26], [28, 36]];
