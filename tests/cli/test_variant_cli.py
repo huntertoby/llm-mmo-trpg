@@ -37,7 +37,7 @@ def test_a_variant_battle_logs_the_form_and_replays(
     assert code == 0 and log.is_file()
     assert "（借牆猛撞）" in out or "（寒霜刃）" in out
     data = json.loads(log.read_text(encoding="utf-8"))
-    assert data["format"] == "trpg-battle-log/68"
+    assert data["format"] == "trpg-battle-log/69"
     variants = [e["variant"] for e in data["events"] if e["type"] == "skill_used"]
     assert any(v is not None for v in variants)
     code, replay = _run(["battle", "replay", str(log)], capsys)

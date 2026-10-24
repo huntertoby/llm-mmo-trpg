@@ -658,8 +658,10 @@ def budget_statuses(library: ContentLibrary) -> tuple[str, ...]:
 
 _PENALTY_DOC = (
     "可省略。用自己的代價換更強的效果：填一個自身負面狀態（施放後自己獲得；stun 暈眩＝自己跳過"
-    "下一個回合、silenced 沉默＝只能用在法術技、bleed 流血等），或 overdraft（下一個回合少 1 AP）；"
-    "一招最多一個，數值由遊戲決定"
+    "下一個回合、silenced 沉默＝只能用在法術技、bleed 流血等）；一招最多一個，數值由遊戲決定"
+)
+_OVERDRAFT_DOC = (
+    "可省略。填 true＝施放後自己下一個回合少 1 AP（透支）；可以和 cost_penalty 同時使用"
 )
 _SKILL_DOC = "LLM 提議的技能（ID、稀有度、階級與來源由遊戲決定，不要填）。"
 _GENERAL_TAG = "~general"
@@ -841,6 +843,10 @@ def build_proposal_models(
             _penalty_type(penalty_choices(library, rarity)),
             Field(default=None, description=_PENALTY_DOC),
         ),
+        "cost_overdraft": (
+            Literal[True] | None,
+            Field(default=None, description=_OVERDRAFT_DOC),
+        ),
     }
     hints = {p.id: form_hint(library, p) for p in plans}
     forms = [_form_model(builder, p, common, shared) for p in plans]
@@ -882,6 +888,8 @@ def _skill_data(
     penalty = data.pop("cost_penalty", None)  # 自己付的代價（3-50）→ cost.self_status／overdraft
     if penalty is not None:
         data["cost"] = {**data.get("cost", {}), **penalty_cost(library, penalty)}
+    if data.pop("cost_overdraft", None):  # 透支（3-50b）：不算自身狀態，可以並用
+        data["cost"] = {**data.get("cost", {}), "overdraft": 1}
     data["narrative"] = {"concept": data.pop("concept"), "cast_flavor": data.pop("cast_flavor")}
     data.update(tier=ctx.tier, rarity=ctx.rarity, rank=ctx.rank)
     data["provenance"] = {"origin": ctx.origin, "created_by": "llm"}
@@ -948,6 +956,7 @@ _SUPPORTED_SKILL_KEYS = frozenset(
         "trigger",
         "cost",
         "cost_penalty",
+        "cost_overdraft",
         "tags",
         "narrative",
         "provenance",
@@ -963,9 +972,11 @@ def proposal_from_skill(skill: SkillDef, library: ContentLibrary) -> dict[str, A
     data = skill.model_dump(mode="json", exclude_defaults=True)
     data, _ = split_numbers(data, library)
     if isinstance(data.get("cost"), dict):  # 自己付的代價（3-50）→ cost_penalty
-        penalty = penalty_of_cost(data["cost"])
+        penalty, overdraft = penalty_of_cost(data["cost"])
         if penalty is not None:
             data["cost_penalty"] = penalty
+        if overdraft:
+            data["cost_overdraft"] = True
         if not data["cost"]:
             del data["cost"]
     unsupported = sorted(set(data) - _SUPPORTED_SKILL_KEYS)

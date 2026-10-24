@@ -359,6 +359,12 @@ def _plain_base_points(  # noqa: PLR0911
     if basis == "dice_average" or (basis == "damage" and skill.category == "spell"):
         if effect.dice is None:
             raise BudgetError(f"效果 {primitive.id} 缺少 dice，無法計算點數")
+        if primitive.id == "shield" and effect.duration is not None:  # 護盾持續時間係數（3-50b）
+            permille = library.budget.shield_duration_permille[min(max(effect.duration, 2), 3) - 2]
+            return (
+                _dice_average(effect.dice) * Fraction(permille, _PERMILLE),
+                f"{effect.dice} 平均 × 持續 {effect.duration} 回合 {permille}‰",
+            )
         return _dice_average(effect.dice), f"{effect.dice} 平均"
     if basis == "damage":
         permille = effect.multiplier_permille or _PERMILLE

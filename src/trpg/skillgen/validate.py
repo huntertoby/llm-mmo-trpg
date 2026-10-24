@@ -385,7 +385,8 @@ def _cap_violations(skill: SkillDef, library: ContentLibrary) -> list[Violation]
 
 def _self_cost_violations(skill: SkillDef, library: ContentLibrary) -> list[Violation]:
     """自己付的代價（3-50，06 6.5）：允許清單、固定持續時間、限骨架（沉默只能放法術技）、一招
-    最多 1 個自身負面（自身狀態與透支擇一）。整體上限 50% 由預算器的 ``total_cap`` 截斷。"""
+    最多 1 個自身狀態（透支不算，3-50b；``SkillCost.self_status`` 單一欄位即保證）。整體上限 50%
+    由預算器的 ``total_cap`` 截斷。"""
     out: list[Violation] = []
     cost = skill.cost
     rule = library.budget.allowance.self_status
@@ -414,14 +415,6 @@ def _self_cost_violations(skill: SkillDef, library: ContentLibrary) -> list[Viol
                     skill.id,
                     "cap.self_status_category",
                     f"自身狀態 {status.status} 只能放在法術技，收到 {skill.category}",
-                )
-            )
-        if cost.overdraft is not None:
-            out.append(
-                Violation(
-                    skill.id,
-                    "cap.self_penalty_single",
-                    "一招最多 1 個自身負面代價：自身狀態與透支不能同時使用",
                 )
             )
     return out

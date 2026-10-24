@@ -1132,7 +1132,7 @@ def _self_status_field(draft: Draft, library: ContentLibrary) -> FieldSpec:
     return FieldSpec(
         field="cost.self_status",
         name_zh="自身狀態代價",
-        description_zh="施放後自己獲得這個負面狀態（只有主動技能；一招最多 1 個，與透支擇一）",
+        description_zh="施放後自己獲得這個負面狀態（只有主動技能；一招最多 1 個，透支不算在內）",
         type="object",
         fields=(
             FieldSpec(
@@ -1155,7 +1155,7 @@ def _overdraft_field(library: ContentLibrary) -> FieldSpec:
         field="cost.overdraft",
         name_zh="透支",
         description_zh=(
-            f"施放後自己下一個回合少 {high} AP（換 {percent:g}% 預算；與自身狀態擇一）"
+            f"施放後自己下一個回合少 {high} AP（換 {percent:g}% 預算；可和自身狀態並用）"
         ),
         type="int",
         min=low,
@@ -1223,11 +1223,8 @@ def _cost_step(draft: Draft, library: ContentLibrary) -> StepOptions:
         _cost_int("hp_percent", "生命代價（‰）", "施放花最大 HP 的千分比"),
     ]
     if draft.get("kind") == "active":
-        cost = _mapping(draft.get("cost"))
-        if cost.get("overdraft") is None or cost.get("self_status") is not None:
-            fields.append(_self_status_field(draft, library))
-        if cost.get("self_status") is None or cost.get("overdraft") is not None:
-            fields.append(_overdraft_field(library))
+        fields.append(_self_status_field(draft, library))
+        fields.append(_overdraft_field(library))
     fields += _legendary_fields(draft, library)
     allowance = library.budget.allowance
     notes = (

@@ -323,6 +323,11 @@ class BudgetRules(ContentModel):
     )
     """``inscribe``（Phase 3-23）：``duration`` 為 n 輪時，點數 ＝ 基礎 × 第 n 項（‰）；共 5 項
     （1–5 輪），省略 ``duration`` 時取 ``core.rune_default_rounds`` 對應的項（初值，未經模擬）。"""
+    shield_duration_permille: tuple[int, ...] = Field(
+        default=(1000, 1300), min_length=2, max_length=2
+    )
+    """``shield``（Phase 3-50b）：``duration`` 為 2 或 3 回合時，點數 ＝ 骰子平均 × 第 n 項（‰；
+    省略 ＝ 2 回合 ＝ 1000‰ ＝ 現狀；初值，未經模擬）。"""
     detonate_runes_permille: int = Field(default=700, ge=1, le=3000)
     """``detonate_runes``（Phase 3-23）：點數 ＝ 骰子平均 × 此值 ÷ 1000（需要先刻印、且敵人要站在
     符文上的折扣；形狀倍率另外照一般效果計算；初值，未經模擬）。"""

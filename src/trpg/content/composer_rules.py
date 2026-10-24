@@ -157,7 +157,7 @@ class CostRules(ContentModel):
     """自身狀態代價的持續回合範圍（必須在 2–3 之內；持續時間固定的狀態，如暈眩，以
     ``allowance.self_status.fixed_duration`` 為準）。"""
     overdraft_permille: int = 0
-    """主動技能（沒有自身狀態代價時）加入透支（``cost.overdraft``）的機率（Phase 3-50）。"""
+    """主動技能加入透支（``cost.overdraft``）的機率（Phase 3-50；3-50b 起可和自身狀態並用）。"""
 
     @model_validator(mode="after")
     def _check_self_status_duration(self) -> CostRules:

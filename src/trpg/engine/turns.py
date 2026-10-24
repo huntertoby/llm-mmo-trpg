@@ -11,6 +11,8 @@
 
 from __future__ import annotations
 
+import dataclasses
+
 from trpg.content.skills import CHARGING
 from trpg.engine.activations import expire_activations
 from trpg.engine.context import Ctx
@@ -259,7 +261,7 @@ def end_turn(ctx: Ctx) -> None:
             )
             continue
         kept.append(status)
-    unit.statuses = kept
+    unit.statuses = [dataclasses.replace(s, dormant=False) if s.dormant else s for s in kept]
     for status_id in expired:
         ctx.emit(StatusRemoved, target_id=unit.id, status_id=status_id, reason="expired")
     unit.ap_carry = min(unit.ap, ctx.core.ap_carry_max)

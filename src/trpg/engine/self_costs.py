@@ -11,7 +11,6 @@ from trpg.engine.context import Ctx
 from trpg.engine.effects import execute
 from trpg.engine.effects.models import ApplyStatusEffect, EffectBase
 from trpg.engine.ids import OVERDRAWN
-from trpg.engine.rules.statuses import skip_turn_status
 from trpg.engine.state import UnitState
 from trpg.shared.types import UnitId
 
@@ -49,12 +48,8 @@ def self_cost_effects(caster_id: UnitId, skill: SkillDef) -> list[EffectBase]:
 
 
 def pay_self_costs(ctx: Ctx, unit: UnitState, skill: SkillDef) -> None:
-    """施放結算完之後，施放者承受自己付的代價。自暈（``skip_turn`` 狀態）照暈眩規則「沒有 AP、
-    移動點數與反應」：本回合剩下的 AP 與移動點數立刻歸零（下一個回合會被跳過）。"""
+    """施放結算完之後，施放者承受自己付的代價。自暈（``skip_turn`` 狀態）不影響本回合（3-50b）：
+    狀態帶 ``dormant``，回合結束才生效，下一個回合被跳過、再下一個回合恢復。"""
     effects = self_cost_effects(unit.id, skill)
-    if not effects:
-        return
-    execute(ctx, effects)
-    if unit.alive and skip_turn_status(ctx.rules, unit) is not None:
-        unit.ap = 0
-        unit.move_points = 0
+    if effects:
+        execute(ctx, effects)

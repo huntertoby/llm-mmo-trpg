@@ -523,8 +523,9 @@ def _shield(lib: ContentLibrary, skill: SkillDef, spec: EffectSpec) -> str:
     """護盾（清單 3.6）：吸收量與持續時間（``shielded`` 狀態的預設回合）。"""
     status = lib.ruleset.status_def(SHIELD_STATUS)
     amount = "" if spec.dice is None else f"{_dice(spec.dice)}＋"
+    rounds = spec.duration or status.duration
     return (
-        f"護盾（吸收量 {amount}{scaling_label(skill, lib)}加成，持續 {status.duration} 回合；"
+        f"護盾（吸收量 {amount}{scaling_label(skill, lib)}加成，持續 {rounds} 回合；"
         "已有護盾時取較大值）"
     )
 
@@ -1043,6 +1044,13 @@ def modifier_summary(library: ContentLibrary, skill: SkillDef, rule: ModifierSpe
     return text
 
 
+def self_status_until(duration: int) -> str:
+    """自身狀態的持續說法（3-50b）：狀態在施放當回合結束就 −1，所以 ``duration`` 2 ＝「到你下個回合
+    結束」、3 ＝「到你下 2 個回合結束」（從下個回合起算）。"""
+    nth = duration - 1
+    return "到你下個回合結束" if nth <= 1 else f"到你下 {nth} 個回合結束"
+
+
 def cost_parts(library: ContentLibrary, skill: SkillDef, *, with_ap: bool = True) -> list[str]:
     """代價的各段文字（AP、法力、耐力、HP、施放後狀態、冷卻、每場次數）。"""
     cost = skill.cost
@@ -1057,9 +1065,10 @@ def cost_parts(library: ContentLibrary, skill: SkillDef, *, with_ap: bool = True
     if cost.self_status:
         name = library.ruleset.status_def(cost.self_status.status).name_zh
         percent = self_status_allowance_permille(cost.self_status, library) / 10
-        # 06 6.5：「代價：施放後自己暈眩 1 回合（換 32% 預算）」——回合數是有效回合（duration − 1）
+        # 3-50b：持續寫成「到你下個回合結束」（有效回合 ＝ duration − 1）
         parts.append(
-            f"代價：施放後自己{name} {cost.self_status.duration - 1} 回合（換 {percent:g}% 預算）"
+            f"代價：施放後自己{name}，{self_status_until(cost.self_status.duration)}"
+            f"（換 {percent:g}% 預算）"
         )
     if cost.overdraft:
         percent = library.budget.allowance.overdraft_permille / 10

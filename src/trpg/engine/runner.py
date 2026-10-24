@@ -38,8 +38,11 @@ __all__ = [
     "run_battle",
 ]
 
-LOG_FORMAT = "trpg-battle-log/68"
-"""``/68``（Phase 3-50）：代價換強度——自己付的代價（``cost.self_status``、新的 ``cost.overdraft``）
+LOG_FORMAT = "trpg-battle-log/69"
+"""``/69``（Phase 3-50b）：代價換強度修正——護盾原語多了 ``duration``（``ShieldEffect.duration``）；
+自己付的暈眩改為「本回合照常、回合結束才生效」（狀態 ``dormant``，不再歸零本回合 AP 與移動點數）。
+同一份輸入的結算可能不同，因此 ``/68`` 的紀錄無法重播。
+``/68``（Phase 3-50）：代價換強度——自己付的代價（``cost.self_status``、新的 ``cost.overdraft``）
 改為不觸發控制遞減、不受 Boss 硬控轉換；自身狀態多了暈眩（施放後本回合剩下的 AP 與移動點數歸零）、
 沉默、流血；新狀態透支（``ap_penalty``：下一個回合開始時少 1 AP）。同一份輸入的結算可能不同，
 因此 ``/67`` 的紀錄無法重播。

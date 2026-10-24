@@ -52,13 +52,14 @@ primitives:
   - id: shield
     name_zh: 護盾
     llm_hint: "替目標加上一層護盾，之後的傷害先由護盾吸收。"
-    description_zh: 目標獲得吸收量＝骰值＋縮放屬性×0.5（與治療同一公式）的護盾（狀態 shielded，持續 2 回合）；骰值傷害先扣護盾。已有護盾時取較大值並刷新持續時間。
-    player_description: "替目標加上一層護盾，傷害會先扣護盾，持續 2 回合。"
+    description_zh: 目標獲得吸收量＝骰值＋縮放屬性×0.5（與治療同一公式）的護盾（狀態 shielded，持續 duration 回合，2–3，省略＝2）；骰值傷害先扣護盾。已有護盾時吸收量取較大值、剩餘回合取較長者。預算：骰子平均 × shield_duration_permille（持續 3 回合較貴）。
+    player_description: "替目標加上一層護盾，傷害會先扣護盾，預設持續 2 回合，可延長到 3 回合。"
     category: numeric
     harmful: false
     budget_basis: dice_average
     params:
       dice: {llm_hint: "護盾吸收量的骰子（幾顆幾面）。", type: dice, required: true}
+      duration: {llm_hint: "護盾持續的回合數（2–3；省略＝2）。", type: int, min: 2, max: 3, description_zh: 護盾持續回合}
   - id: cleanse
     name_zh: 淨化
     llm_hint: "移除目標身上所有負面狀態（減益）；增益與中性狀態保留。"

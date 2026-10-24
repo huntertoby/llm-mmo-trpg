@@ -10,6 +10,7 @@
 from __future__ import annotations
 
 import json
+from fractions import Fraction
 from typing import Any
 
 import pytest
@@ -19,7 +20,7 @@ from tests.skillgen.helpers import rules_of, skill
 from trpg.content.skills import SkillDef
 from trpg.llm import MockLLMClient
 from trpg.llm.propose import propose_skill
-from trpg.narrative.skills import cost_parts, cost_summary
+from trpg.narrative.skills import cost_parts, cost_summary, effect_summary
 from trpg.skillgen.budget import skill_budget
 from trpg.skillgen.option_models import Choice
 from trpg.skillgen.options import draft_options
@@ -30,7 +31,7 @@ from trpg.skillgen.proposal import (
 )
 from trpg.skillgen.proposal_subset import ProposalRequest
 from trpg.skillgen.random_composer import compose_random_skill
-from trpg.skillgen.self_penalty import OVERDRAFT_CHOICE, penalty_choices
+from trpg.skillgen.self_penalty import penalty_choices
 from trpg.skillgen.validate import validate_skill
 
 LIB = library()
@@ -125,7 +126,8 @@ def test_a_skill_can_have_only_one_self_status() -> None:
         )
 
 
-def test_self_status_and_overdraft_cannot_be_combined() -> None:
+def test_overdraft_is_not_a_self_status_and_can_be_combined_with_one() -> None:
+    """3-50b：透支不算進「一招最多 1 個自身狀態」；兩者並用時各自折抵，加總受整體 50% 上限。"""
     both = _spell(
         {
             "mana": 10,
@@ -133,10 +135,23 @@ def test_self_status_and_overdraft_cannot_be_combined() -> None:
             "overdraft": 1,
         }
     )
-    assert "cap.self_penalty_single" in _rules(both)
-    only_status = _spell({"mana": 10, "self_status": {"status": "bleed", "duration": 2}})
-    only_overdraft = _spell({"mana": 10, "overdraft": 1})
-    assert "cap.self_penalty_single" not in _rules(only_status) | _rules(only_overdraft)
+    assert not any(rule.startswith("cap.self_") for rule in _rules(both))
+    report = skill_budget(both, LIB)
+    parts = dict(report.allowance_parts)
+    assert parts["透支（下回合少 1 AP）"] == 200 and parts["自身流血 2 回合"] == 120
+    heavy = _spell(
+        {
+            "mana": 30,
+            "cooldown": 6,
+            "self_status": {"status": "stun", "duration": 2},
+            "overdraft": 1,
+        },
+        rarity="rare",
+    )
+    capped = skill_budget(heavy, LIB)
+    assert capped.allowance_raw_permille > 500 and capped.allowance_permille == 500
+    # 仍然只能有一個自身狀態（欄位本身是單一物件）
+    assert "cap.self_penalty_single" not in _rules(heavy)
 
 
 def test_only_active_skills_can_pay_self_costs() -> None:
@@ -194,11 +209,11 @@ def test_every_demo_skill_passes_the_validator_inside_the_budget_window() -> Non
 
 def test_the_card_shows_the_cost_line_with_the_discount() -> None:
     seal = LIB.skills["skill_frost_armor_seal"]
-    assert "代價：施放後自己暈眩 1 回合（換 32% 預算）" in cost_parts(LIB, seal)
+    assert "代價：施放後自己暈眩，到你下個回合結束（換 32% 預算）" in cost_parts(LIB, seal)
     chant = LIB.skills["skill_all_in_chant"]
-    assert "代價：施放後自己沉默 1 回合（換 20% 預算）" in cost_parts(LIB, chant)
+    assert "代價：施放後自己沉默，到你下個回合結束（換 20% 預算）" in cost_parts(LIB, chant)
     slash = LIB.skills["skill_blood_rage_slash"]
-    assert "代價：施放後自己流血 1 回合（換 12% 預算）" in cost_parts(LIB, slash)
+    assert "代價：施放後自己流血，到你下個回合結束（換 12% 預算）" in cost_parts(LIB, slash)
     overdraft = LIB.skills["skill_overdraft_strike"]
     assert "代價：施放後自己下一個回合少 1 AP（換 20% 預算）" in cost_parts(LIB, overdraft)
     assert "換 32% 預算" in cost_summary(LIB, seal)
@@ -247,15 +262,16 @@ def test_the_workshop_does_not_disable_silence_on_spells() -> None:
     assert "unavailable_zh" not in silenced.info
 
 
-def test_the_workshop_hides_the_other_penalty_once_one_is_chosen() -> None:
+def test_the_workshop_offers_overdraft_alongside_a_chosen_self_status() -> None:
+    """3-50b：選了自身狀態還是看得到透支（反之亦然），與驗證器一致。"""
     chosen_status = _cost_fields(
         _draft_of(
             "skill_blood_rage_slash", stamina=8, self_status={"status": "bleed", "duration": 2}
         )
     )
-    assert "cost.self_status" in chosen_status and "cost.overdraft" not in chosen_status
+    assert "cost.self_status" in chosen_status and "cost.overdraft" in chosen_status
     chosen_overdraft = _cost_fields(_draft_of("skill_overdraft_strike", stamina=6, overdraft=1))
-    assert "cost.overdraft" in chosen_overdraft and "cost.self_status" not in chosen_overdraft
+    assert "cost.overdraft" in chosen_overdraft and "cost.self_status" in chosen_overdraft
 
 
 def test_workshop_options_and_the_validator_agree_on_silence() -> None:
@@ -295,8 +311,8 @@ def test_the_proposal_schema_lists_exactly_the_allowed_penalties() -> None:
         "stun",
         "silenced",
         "bleed",
-        OVERDRAFT_CHOICE,
     }
+    assert "cost_overdraft" in text  # 透支另外一個可省略欄位（3-50b）
     enum_values: set[str] = set()
 
     def walk(node: Any) -> None:
@@ -318,7 +334,7 @@ def test_the_proposal_schema_lists_exactly_the_allowed_penalties() -> None:
 def test_a_common_proposal_cannot_pick_rare_only_penalties() -> None:
     common = set(penalty_choices(LIB, "common"))
     assert {"stun", "silenced"}.isdisjoint(common)
-    assert {"slow", "weaken", "vulnerable", "bleed", OVERDRAFT_CHOICE} <= common
+    assert {"slow", "weaken", "vulnerable", "bleed"} <= common
 
 
 def _proposal(skill_id: str, penalty: object) -> str:
@@ -342,7 +358,7 @@ def test_a_proposal_with_an_allowed_penalty_becomes_a_valid_skill() -> None:
 def test_an_overdraft_proposal_becomes_cost_overdraft() -> None:
     request = ProposalRequest(2, "common", skeleton="strike")
     outcome = propose_skill(
-        MockLLMClient([_proposal("skill_overdraft_strike", OVERDRAFT_CHOICE)]),
+        MockLLMClient([_proposal("skill_overdraft_strike", None)]),  # 範例本身帶 cost_overdraft
         LIB,
         request,
         ProposalContext(2, "common"),
@@ -350,6 +366,25 @@ def test_an_overdraft_proposal_becomes_cost_overdraft() -> None:
     )
     assert outcome.source == "llm", outcome.reason
     assert outcome.skill.cost.overdraft == 1 and outcome.skill.cost.self_status is None
+
+
+def test_a_proposal_may_combine_a_self_status_with_overdraft() -> None:
+    request = ProposalRequest(2, "rare", skeleton="area")
+    text = _proposal("skill_all_in_chant", "silenced")
+    data = json.loads(text)
+    data["cost_overdraft"] = True
+    outcome = propose_skill(
+        MockLLMClient([json.dumps(data, ensure_ascii=False)]),
+        LIB,
+        request,
+        ProposalContext(2, "rare"),
+        seed=3,
+    )
+    assert outcome.source == "llm", outcome.reason
+    assert outcome.skill.cost.overdraft == 1
+    assert outcome.skill.cost.self_status is not None
+    assert outcome.skill.cost.self_status.status == "silenced"
+    assert validate_skill(outcome.skill, LIB) == []
 
 
 @pytest.mark.parametrize("bad", ["frozen", "stun_forever", ["stun", "slow"], 3])
@@ -400,7 +435,65 @@ def test_the_composer_only_produces_valid_penalties() -> None:
                 assert status.duration == 2 and s.rarity != "common"
             if status.status == "silenced":
                 assert s.category == "spell"
-        assert s.cost.overdraft is None or s.cost.self_status is None
         if s.cost.overdraft is not None:
-            seen.add(OVERDRAFT_CHOICE)
-    assert OVERDRAFT_CHOICE in seen and seen & {"stun", "silenced", "bleed"}
+            seen.add("overdraft")
+    assert "overdraft" in seen and seen & {"stun", "silenced", "bleed"}
+
+
+# ---------------------------------------------------------------------------
+# 3-50b：護盾持續時間、卡片的自身狀態持續說法
+# ---------------------------------------------------------------------------
+
+_SHIELD_SKILL: dict[str, Any] = {
+    "category": "spell",
+    "weapon_req": "focus",
+    "scaling_attr": "wis",
+    "skeleton": "aura",
+    "tier": 2,
+    "ap_cost": 1,
+    "shape": {"type": "self"},
+}
+
+
+def _shield_skill(duration: int | None) -> SkillDef:
+    effect: dict[str, Any] = {"type": "shield", "dice": "4d4", "affects": "self"}
+    if duration is not None:
+        effect["duration"] = duration
+    return skill(**{**_SHIELD_SKILL, "effects": [effect]})
+
+
+def test_the_shield_budget_scales_with_the_duration() -> None:
+    base = skill_budget(_shield_skill(None), LIB).total
+    assert skill_budget(_shield_skill(2), LIB).total == base  # 省略 ＝ 2 回合 ＝ 現狀
+    assert skill_budget(_shield_skill(3), LIB).total == base * Fraction(13, 10)
+    assert LIB.budget.shield_duration_permille == (1000, 1300)
+
+
+def test_the_shield_duration_is_limited_to_two_or_three_rounds() -> None:
+    assert validate_skill(_shield_skill(4), LIB) != []
+    assert validate_skill(_shield_skill(1), LIB) != []
+
+
+def test_the_frost_armor_seal_stays_within_the_budget_with_its_three_round_shield() -> None:
+    seal = LIB.skills["skill_frost_armor_seal"]
+    assert seal.effects[0].duration == 3
+    report = skill_budget(seal, LIB)
+    available = (
+        report.tier_budget * report.ap_coefficient * (1 + Fraction(report.allowance_permille, 1000))
+    )
+    assert Fraction(7, 10) <= report.total / available <= 1
+    assert validate_skill(seal, LIB) == []
+    assert "持續 3 回合" in effect_summary(LIB, seal, seal.effects[0])
+
+
+@pytest.mark.parametrize(
+    ("status", "duration", "text"),
+    [("bleed", 2, "到你下個回合結束"), ("slow", 3, "到你下 2 個回合結束")],
+)
+def test_the_card_says_until_the_end_of_your_next_turn(
+    status: str, duration: int, text: str
+) -> None:
+    s = _spell({"mana": 10, "self_status": {"status": status, "duration": duration}})
+    parts = cost_parts(LIB, s)
+    assert any(text in part for part in parts)
+    assert not any("1 回合" in part for part in parts)

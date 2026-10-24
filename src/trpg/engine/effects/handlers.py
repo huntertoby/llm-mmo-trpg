@@ -449,7 +449,9 @@ def _shield(ctx: Ctx, effect: EffectBase) -> list[EventBase]:
     status_id = SHIELDED
     current = unit.get_status(status_id)
     total = max(amount, 0 if current is None or current.amount is None else current.amount)
-    duration = ctx.rules.status_def(status_id).duration
+    duration = effect.duration or ctx.rules.status_def(status_id).duration
+    if current is not None and duration is not None:  # 已有護盾：剩餘回合取較長者
+        duration = max(duration, current.remaining or 0)
     instance = StatusInstance(status_id, duration, effect.source_id, total)
     others = [s for s in unit.statuses if s.status_id != status_id]
     unit.statuses = sorted([*others, instance], key=lambda s: s.status_id)
@@ -648,6 +650,9 @@ def apply_status(ctx: Ctx, effect: ApplyStatusEffect) -> list[EventBase]:
         source_id=effect.source_id,
         amount=effect.amount,
         skill_id=effect.skill_id,
+        dormant=effect.self_paid
+        and definition.skip_turn
+        and ctx.state.active_unit == unit.id,  # 自暈：本回合照常，回合結束才生效（3-50b）
     )
     if definition.stance:  # 同時只能有一個姿態：先移除其他姿態（2E-2）
         for old in stance_status_ids(ctx.rules, unit):
