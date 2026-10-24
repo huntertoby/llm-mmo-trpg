@@ -10,3 +10,12 @@
 | 3S-3 武器 | 各武器 kind 的側面角度（含 3I 新武器：拳套、鐮刀、鞭、雙匕首、霰彈槍、手槍、雙手槍、魔導劍；副手）；種族部件的側面位置規則先留介面給 3R-3 | 約 0.7 | sonnet |
 
 共通要求：影響全部用紙娃娃的單位（英雄、敵人、人形召喚物）；形態、非人形召喚物、裝備圖示不受影響。每段 vitest（各方向 × 各裝備 kind × 未知 kind 不出錯）、build、排版煙霧檢查，並 **在內建瀏覽器實際截圖對照樣張**（戰場實際大小），截圖或描述寫進報告；交美術 PM 驗收（照檢查清單）。報告 `Phase3S-N報告.md`。
+
+## 驗收
+
+### 3S-1（2026-10-24，開發 PM 合併；待美術 PM 對照檢查清單驗收）
+
+- 報告 `Phase3S-1報告.md`。新檔 `client/src/render/paperdollSide.ts`（移植 `sideArt.js`）：身體變薄（15→10）＋背側暗面、兩腳錯開（`STRIDE` 0.28 弧度）、遠側手臂只露一點、近側手臂前擺持武器、頭有鼻子一隻眼；`drawFigure` 朝東／西走側面，朝西整張 `scale(-1,1)` 鏡像；南、北、倒地不變。3S-2／3S-3 的內容用最簡退回（頭盔、兜帽有簡易側面；其他頭部裝備沿用正面；盾窄橢圓；披風背後垂下；武器沿用現有畫法）。截圖 `docs/art/port/3S-1/`。
+- 檢查（main）：vitest 954、build、ruff、mypy、pytest api／narrative；排版煙霧 1600×900 全 PASS；開發 PM 看過朝東 300% 截圖（側面輪廓、鼻子、單眼、錯步都在）。
+- 合併時發現主資料夾 `client/node_modules` 被刪掉一部分（`.bin` 消失）：3-48h 的 worktree 用目錄連結指向主資料夾的 `node_modules`，`git worktree remove --force` 透過連結刪了內容 → 用 `corepack pnpm -C client install --offline --frozen-lockfile --force` 從本機快取還原（沒有下載）。**之後刪 worktree 前先檢查 `client/node_modules` 是不是連結，是就先移除連結。**
+- 待決：`STRIDE` 是否太大、武器側面角度（3S-3）、走路動畫（不做）→ 交美術 PM 驗收時一起看。
