@@ -289,6 +289,21 @@ const EFFECT: Record<string, readonly [string, Draw]> = {
     },
   ],
   knock_prone: ["#e0c49a", (c) => (STATUS["prone"] as readonly [string, Draw])[1](c)],
+  // 震波（3-54b）：倒地的人＋地面的震紋
+  shockwave: [
+    "#e0c49a",
+    (c) => {
+      (STATUS["prone"] as readonly [string, Draw])[1](c);
+      c.beginPath();
+      c.moveTo(-10, 11);
+      c.lineTo(-6, 9);
+      c.lineTo(-2, 11);
+      c.lineTo(2, 9);
+      c.lineTo(6, 11);
+      c.lineTo(10, 9);
+      c.stroke();
+    },
+  ],
   teleport: [
     "#d8b8ff",
     (c) => {

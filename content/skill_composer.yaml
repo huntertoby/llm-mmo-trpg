@@ -35,6 +35,7 @@ structure:
   push_pull_distances: [1, 2]
   blow_distances: [2, 3]              # 吹送（3-54a）距離旋鈕的階梯
   blow_surface_permille: 80           # 範圍骨架（稀有以上）加上吹送附帶效果的機率（3-54a；獨立亂數串流，沒抽中的種子不變）
+  shockwave_permille: 250             # 大地主題＋直線形狀的範圍骨架（稀有以上）加上震波附帶效果的機率（3-54b；獨立亂數串流）
   displace_second_core_permille: 250  # 位移骨架有第二個核心原語
   combo_double_damage_permille: 500   # 連段有第二段傷害
   control_buff_permille: 250          # 控場核心狀態為自我增益

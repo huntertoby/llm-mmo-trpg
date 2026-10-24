@@ -13,6 +13,7 @@ from trpg.content.skills import (
 from trpg.engine import modifiers
 from trpg.engine.effects import execute
 from trpg.engine.effects.models import (
+    ApplyStatusEffect,
     EffectBase,
     HurlObjectEffect,
     MoveUnitEffect,
@@ -23,14 +24,14 @@ from trpg.engine.events import (
     EffectFizzled,
     UnitCharged,
 )
-from trpg.engine.ids import TOPPLABLE
+from trpg.engine.ids import PRONE, TOPPLABLE
 from trpg.engine.maneuvers import contest
 from trpg.engine.reactions import (
     enemy_enters_adjacent_reactions,
     enemy_moves_in_range_reactions,
 )
 from trpg.engine.rules.geometry import XY, axis_direction
-from trpg.engine.rules.movement import is_deadly
+from trpg.engine.rules.movement import is_deadly, is_flying
 from trpg.engine.skill_triggers import collect_move
 from trpg.engine.skills.charge import aside_direction
 from trpg.engine.skills.conditions import Subject
@@ -154,6 +155,28 @@ def knock_prone(cast: Cast, effect: ResolvedEffect, spec: EffectSpec) -> list[Ef
     batch: list[EffectBase] = []
     for unit in cast.targets(effect.affects, spec.condition):
         batch += cast.knock_down(unit)
+    return batch
+
+
+SHOCKWAVE = "shockwave"
+"""震波原語 ID（Phase 3-54b，06 6.33，#58）。"""
+
+
+def shockwave(cast: Cast, effect: ResolvedEffect, spec: EffectSpec) -> list[EffectBase]:
+    """震波（Phase 3-54b）：影響格（直線）上的對象單位直接倒地，不擲對抗；帶 ``flying`` 標籤
+    （會飛）的單位不受影響（``effect_fizzled``，原因 ``shockwave_flying``）；已經倒地的略過。"""
+    batch: list[EffectBase] = []
+    for unit in cast.targets(effect.affects, spec.condition):
+        if unit.has_status(PRONE):
+            continue
+        if is_flying(unit):
+            cast.ctx.emit(
+                EffectFizzled, effect_kind=SHOCKWAVE, pos=unit.pos, reason="shockwave_flying"
+            )
+            continue
+        batch.append(
+            ApplyStatusEffect(source_id=cast.caster.id, target_id=unit.id, status_id=PRONE)
+        )
     return batch
 
 
@@ -387,6 +410,7 @@ HANDLERS: dict[str, Handler] = {
     "swap_any": swap_any,
     "charge_through": charge_through,
     "knock_prone": knock_prone,
+    SHOCKWAVE: shockwave,
     "topple": topple,
     "hurl_object": hurl_object,
 }

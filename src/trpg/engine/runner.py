@@ -38,8 +38,12 @@ __all__ = [
     "run_battle",
 ]
 
-LOG_FORMAT = "trpg-battle-log/76"
-"""``/76``（Phase 3-50c）：代價狀態——狀態實例多了 ``cost_status``（技能代價自己付的狀態），
+LOG_FORMAT = "trpg-battle-log/77"
+"""``/77``（Phase 3-54b）：大地補強與風小修——新原語 ``shockwave``（震波）、新狀態 ``stoneskin``
+（石膚；狀態多了 ``physical_taken_permille``、``move_delta`` 欄位）、傷害效果多了 ``spread``（擴散
+格數），``surface_blown`` 多了 ``lost``（吹進致命地形的表面消失），互動表／規則包的技能與狀態表因此
+不同；``/76`` 的紀錄無法重播（吹進深淵或岩漿的表面以前會停在邊緣）。
+``/76``（Phase 3-50c）：代價狀態——狀態實例多了 ``cost_status``（技能代價自己付的狀態），
 淨化與驅散移除不了；``/75`` 的紀錄中自付的減益可以被淨化，無法由新版程式重播。
 ``/75``（Phase 3-54a）：風元素補強——新原語 ``blow_surface``（吹送）、新事件 ``surface_blown``、
 ``zone_expanded``，``collided`` 多了 ``damage_permille``（風壓撞擊），規則包的核心規則多了

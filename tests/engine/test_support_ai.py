@@ -58,6 +58,7 @@ def test_the_support_profile_exists_and_values_support_over_damage() -> None:
     assert profiles["guard"].weights.shield == 8 and profiles["brute"].weights.support == 3
     assert profiles["support"].ally_status_values == {
         "guarded": 5,
+        "stoneskin": 3,  # 3-54b
         "empowered": 5,
         "rallied": 5,  # 3-33e1
         "hasted": 3,

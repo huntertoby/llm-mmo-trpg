@@ -70,7 +70,9 @@ def _line(state: BattleState, start: XY, direction: XY, distance: int) -> list[X
     return cells
 
 
-def _surface_spread(ctx: Ctx, area: SkillArea, caster: XY, tiles: Sequence[XY]) -> list[EffectBase]:
+def _surface_spread(
+    ctx: Ctx, area: SkillArea, caster: XY, tiles: Sequence[XY], distance: int
+) -> list[EffectBase]:
     state, wind = ctx.state, ctx.core.wind
     batch: list[EffectBase] = []
     for xy in tiles:
@@ -87,13 +89,13 @@ def _surface_spread(ctx: Ctx, area: SkillArea, caster: XY, tiles: Sequence[XY]) 
                 team=tile.surface_team,
                 cause=SPREAD_CAUSE,
             )
-            for cell in _line(state, xy, direction, wind.spread_distance)
+            for cell in _line(state, xy, direction, distance)
         )
     return batch
 
 
 def _zone_spread(
-    ctx: Ctx, area: SkillArea, caster: XY, tiles: Sequence[XY]
+    ctx: Ctx, area: SkillArea, caster: XY, tiles: Sequence[XY], distance: int
 ) -> list[tuple[int, tuple[XY, ...]]]:
     state, wind = ctx.state, ctx.core.wind
     blown = set(tiles)
@@ -107,19 +109,27 @@ def _zone_spread(
         for xy in zone_cells(state, zone):
             direction = wind_direction(area, caster, xy)
             if xy in blown and direction is not None:
-                added += _line(state, xy, direction, wind.spread_distance)
+                added += _line(state, xy, direction, distance)
         if added:
             plans.append((zone.id, tuple(added)))
     return plans
 
 
 def spread_wind(
-    ctx: Ctx, area: SkillArea, caster: XY, tiles: Sequence[XY], source_id: UnitId
+    ctx: Ctx,
+    area: SkillArea,
+    caster: XY,
+    tiles: Sequence[XY],
+    source_id: UnitId,
+    *,
+    distance: int | None = None,
 ) -> None:
-    """元素擴散：風吹到 ``tiles``（技能的影響格）時，表面與區域往風向擴大（先表面、再依區域編號）。
+    """元素擴散：風吹到 ``tiles``（技能的影響格）時，表面與區域往風向擴大 ``distance`` 格（技能的
+    ``spread`` 參數 1 或 2；省略為 ``core.wind.spread_distance``；先表面、再依區域編號）。
     全部依結算當下的狀態先算好再執行，同一次施放不會連鎖擴散。"""
-    surfaces = _surface_spread(ctx, area, caster, tiles)
-    zones = _zone_spread(ctx, area, caster, tiles)
+    reach = ctx.core.wind.spread_distance if distance is None else distance
+    surfaces = _surface_spread(ctx, area, caster, tiles, reach)
+    zones = _zone_spread(ctx, area, caster, tiles, reach)
     if surfaces:
         execute(ctx, surfaces)
     for zone_id, added in zones:

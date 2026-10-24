@@ -101,6 +101,7 @@ keywords:
       - {effect: summon, unit: summon_war_wolf}   # 3-33e2a：召喚物的固有關鍵字
       - {effect: summon, unit: summon_vine}   # 3-33e2b：藤蔓纏住（倒地）
       - {effect: knock_prone}
+      - {effect: shockwave}
       - {effect: topple}
       - {effect: charge_through, on_hit: knock_prone}
       - {effect: apply_status, status: prone}

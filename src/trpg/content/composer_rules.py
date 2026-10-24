@@ -107,6 +107,8 @@ class StructureRules(ContentModel):
     """吹送距離旋鈕的階梯（Phase 3-54a）。"""
     blow_surface_permille: int = Field(default=0, ge=0, le=1000)
     """範圍骨架加上吹送附帶效果的機率（Phase 3-54a；獨立的亂數串流，沒抽中的種子結果不變）。"""
+    shockwave_permille: int = Field(default=0, ge=0, le=1000)
+    """大地主題、直線形狀的範圍骨架加上震波附帶效果的機率（Phase 3-54b；獨立的亂數串流）。"""
     displace_second_core_permille: int = _PERMILLE
     combo_double_damage_permille: int = _PERMILLE
     control_buff_permille: int = _PERMILLE

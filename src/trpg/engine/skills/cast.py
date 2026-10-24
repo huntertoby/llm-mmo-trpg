@@ -813,7 +813,8 @@ class Cast:
         if spec.element is not Element.WIND:
             return
         tiles = [xy for xy in self.area.tiles if self.tile_holds(spec.condition, xy)]
-        spread_wind(self.ctx, self.area, self.caster.xy, tiles, self.caster.id)
+        caster = self.caster
+        spread_wind(self.ctx, self.area, caster.xy, tiles, caster.id, distance=spec.spread)
 
     def spell_scaled(self) -> int:
         """治療與護盾的屬性加成（‰）：有效縮放屬性 × ``spell_attr_multiplier_permille``。"""

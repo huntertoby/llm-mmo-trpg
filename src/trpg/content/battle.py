@@ -715,6 +715,9 @@ class StatusDef(ContentModel):
     - ``skip_turn``：回合開始時跳過整個回合，且不能執行反應（暈眩）。
     - ``damage_dealt_permille``：自己造成的攻擊傷害（``cause: attack``）倍率（虛弱 750）。
     - ``damage_taken_permille``：受到的骰值傷害倍率（易傷 1250；不含墜落、致命地形等百分比傷害）。
+    - ``physical_taken_permille``（Phase 3-54b）：受到的 **物理元素** 骰值傷害倍率（石膚 700）；
+      與 ``damage_taken_permille`` 相乘。
+    - ``move_delta``（Phase 3-54b）：回合開始時的移動點數加減（石膚 −1；只能是負數，最低 0）。
     - ``healing_received_permille``：受到的治療倍率（中毒 500）。
     - ``save_attr``：由技能或動作施加時，守方抵抗用的屬性（省略表示命中即施加）。
     - ``control_group``：控制類別（``movement``、``mental``、``hard``），成功施加後觸發控制遞減。
@@ -814,6 +817,8 @@ class StatusDef(ContentModel):
     skip_turn: bool = False
     damage_dealt_permille: int = Field(default=1000, ge=0, le=10000)
     damage_taken_permille: int = Field(default=1000, ge=0, le=10000)
+    physical_taken_permille: int = Field(default=1000, ge=0, le=10000)
+    move_delta: int = Field(default=0, ge=-3, le=0)
     healing_received_permille: int = Field(default=1000, ge=0, le=10000)
     save_attr: Attribute | None = None
     control_group: Literal["movement", "mental", "hard"] | None = None

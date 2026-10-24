@@ -26,6 +26,7 @@ PRIMITIVE_VALUATION: Mapping[str, str] = MappingProxyType(
         "push": f"{_EVENTS}（位移、撞擊、掩護與位置價值）",
         "pull": f"{_EVENTS}（位移、撞擊、掩護與位置價值）",
         "knock_prone": f"{_EVENTS}（擊倒對抗的成功率）",
+        "shockwave": f"{_EVENTS}（倒地的狀態價值）",
         "teleport": "候選估計 _special_estimate（落點的位置價值）",
         "dash": f"{_EVENTS}（衝到目標旁的位置與傷害）",
         "charge_through": "候選估計 _charge_estimate（路徑上的敵人數＋終點位置價值）",

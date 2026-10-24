@@ -23,6 +23,7 @@ const OWN_COLOR: Readonly<Record<string, string>> = {
   time_bomb: "#ffb03a",
   shielded: "#8ac8ff",
   guarded: "#8ac8ff",
+  stoneskin: "#c8a060", // 石膚（3-54b）：大地的土色
   defending: "#8ac8ff",
   entangled: "#6ac8ff", // 纏繞（3I-1）：移動減少，不算控制類別，但用移動控制的藍
   regenerating: "#7dffb0",
@@ -152,6 +153,12 @@ export const GLYPH: Readonly<Record<string, Glyph>> = {
   guarded: (c) => {
     shield(c);
     arrow(c, 0, 0.5, false); // 盾＋↓（受傷減少）
+  },
+  stoneskin: (c) => {
+    // 石膚（3-54b）：盾＋岩石的裂紋（受物理傷害減少、移動變慢）
+    shield(c);
+    line(c, [[-3, -4], [0, -1], [-2, 2], [1, 5]]);
+    line(c, [[0, -1], [4, 0]]);
   },
   shielded: (c) => {
     circle(c, 0, 0, 9); // 泡泡（吸收量）

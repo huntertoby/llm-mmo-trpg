@@ -34,7 +34,7 @@ spell_themes:
     effect_types_any: [heal, shield, cleanse, revive, reveal, restore_resource, redirect_damage, cheat_death, extra_reaction, grant_skill, grant_ap, reset_cooldown]
     elements_any: [holy]
     surfaces_any: [holy]
-    statuses_any: [marked, revealed, guarded, regenerating, defending, shielded, undying, soul_link, rallied]
+    statuses_any: [marked, revealed, guarded, stoneskin, regenerating, defending, shielded, undying, soul_link, rallied]
     tags_any: [heal, shield, support, reveal, scout, mark, cleanse, guard, utility, luck, holy, nature, buff]
     tags_none: [physical, gear, rage]   # 物理與裝備動作、怒氣增益屬於身體類（只在看標籤時）
   # 智力：元素傷害與互動（含奧術位移、念力、符文引爆、複製法術）

@@ -190,6 +190,7 @@ __all__ = [
     "on_hit_carrier",
     "param_required_for",
     "rarity_rank",
+    "skill_elements",
     "skill_problems",
     "skill_slot_problems",
     "true_only_params",
@@ -1083,6 +1084,10 @@ class EffectSpec(ContentModel):
     lifesteal_permille: int | None = None
     """``damage`` 專用（Phase 3D-8a，6.18 A）：吸血——施放者回復「這個效果實際造成的傷害（扣掉護盾
     吸收）」的 n‰（無條件捨去，不超過最大 HP）。只有技能自己的傷害效果可以用。"""
+    spread: int | None = Field(default=None, ge=1, le=2)
+    """``damage`` 專用（Phase 3-54b，06 6.33）：風元素傷害的元素擴散格數（1 或 2；省略＝
+    ``core.wind.spread_distance``，預設 1）。只有 ``element: wind`` 的技能自己的傷害效果可以填；
+    2 格的預算較貴（``wind_spread_permille``）。"""
     split_heal: bool | None = None
     """``damage`` 專用（Phase 3D-8a，6.18 B）：聖光雙效——必須搭配 ``affects: all``；敵方依一般命中
     判定受到傷害、友方（含施放者）不擲命中而改為治療同樣的骰值（骰一次）。只能用在 ``aura``、
@@ -3212,14 +3217,20 @@ class SkillDef(ContentModel):
             and effect.scaling is None
             and effect.lifesteal_permille is None
             and effect.split_heal is None
+            and effect.spread is None
         ):
             return
         if effect.type != "damage":
-            raise ValueError(f"{where}：只有 damage 使用 explode、scaling、lifesteal、split_heal")
+            raise ValueError(
+                f"{where}：只有 damage 使用 explode、scaling、lifesteal、split_heal、spread"
+            )
         if not top:
             raise ValueError(
-                f"{where}：explode、scaling、lifesteal、split_heal 只能用在技能自己的傷害效果"
+                f"{where}：explode、scaling、lifesteal、split_heal、spread "
+                "只能用在技能自己的傷害效果"
             )
+        if effect.spread is not None and effect.element is not Element.WIND:
+            raise ValueError(f"{where}：spread（擴散格數）只有風元素（element: wind）的傷害能填")
         if effect.split_heal is not None:
             self._check_split_heal(where, effect)
 
@@ -4004,6 +4015,21 @@ def on_hit_carrier(skill: SkillDef, effects: tuple[EffectSpec, ...]) -> SkillDef
     """把修正規則的命中後效果包成一個「技能」（同一個修正技能的複本，``effects`` 換成命中後
     效果），讓驗證、預算與引擎的自動命中施放沿用一般技能的程式。不經過 schema 驗證。"""
     return skill.model_copy(update={"effects": effects})
+
+
+def skill_elements(skill: SkillDef) -> frozenset[Element]:
+    """技能的元素（Phase 3-54b，06 6.33「只有大地能升降地形」用）：標籤裡的元素名稱（隨機組合器
+    的主題元素、手寫技能的主題標籤），加上所有層級的效果自己寫的元素（傷害、定時炸彈、刻印、
+    召喚物爆炸……）；物理不算（物理是沒有元素）。"""
+    found = {Element(t) for t in skill.tags if t in _ELEMENT_VALUES}
+    for effect in skill.iter_effects(include_followup=True):
+        if effect.element is not None:
+            found.add(effect.element)
+    found.discard(Element.PHYSICAL)
+    return frozenset(found)
+
+
+_ELEMENT_VALUES = frozenset(e.value for e in Element)
 
 
 def is_wind_skill(skill: SkillDef) -> bool:

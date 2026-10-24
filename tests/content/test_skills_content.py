@@ -69,6 +69,7 @@ def test_all_demo_skills_load_and_cover_shapes_and_primitives() -> None:
     # destroy_object、raise_terrain、lower_terrain、blow_surface（3-54a）由測試專用技能覆蓋
     assert used >= set(lib.ruleset.primitives.by_id()) - {
         "blow_surface",
+        "shockwave",
         "destroy_object",
         "raise_terrain",
         "lower_terrain",

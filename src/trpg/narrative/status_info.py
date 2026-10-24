@@ -62,6 +62,7 @@ NEUTRAL_PERMILLE = 1000
 _PERMILLE_FIELDS = (
     ("damage_dealt_permille", "自己造成的攻擊傷害"),
     ("damage_taken_permille", "受到的骰值傷害（不含墜落、致命地形等百分比傷害）"),
+    ("physical_taken_permille", "受到的物理骰值傷害"),
     ("healing_received_permille", "受到的治療"),
     ("move_permille", "回合開始時的移動點數（無條件捨去）"),
 )
@@ -93,6 +94,8 @@ def _modifier_lines(status: StatusDef, core: CoreRules) -> list[str]:
         permille: int = getattr(status, field)
         if permille != NEUTRAL_PERMILLE:
             lines.append(f"{label} {_times(permille)}")
+    if status.move_delta:
+        lines.append(f"回合開始時的移動點數 {status.move_delta:+d}（最低 0）")
     if (attr := _attr_bonus_line(status)) is not None:
         lines.append(attr)
     if status.attack_bonus:

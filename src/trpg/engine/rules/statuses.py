@@ -14,7 +14,7 @@ from trpg.content.library import Ruleset
 from trpg.engine.gear import gear_damage_taken_permille
 from trpg.engine.ids import BOSS_TAG
 from trpg.engine.state import UnitState
-from trpg.shared.types import Attribute, UnitId
+from trpg.shared.types import Attribute, Element, UnitId
 
 __all__ = [
     "ap_penalty",
@@ -67,7 +67,8 @@ def move_points_for_turn(rules: Ruleset, unit: UnitState) -> int:
     """回合開始時的移動點數：速度 × 各狀態的 ``move_permille``，無條件捨去（緩速 ×50%）；再減
     ``move_reduction`` 狀態的數值（多個取最大；鞭的纏繞，Phase 3I-1），最低 0。"""
     points = unit.speed * _combined(rules, unit, lambda d: d.move_permille) // PERMILLE
-    return max(0, points - move_reduction(rules, unit))
+    delta = sum(rules.status_def(s.status_id).move_delta for s in unit.statuses)  # 石膚 −1
+    return max(0, points + delta - move_reduction(rules, unit))
 
 
 def move_reduction(rules: Ruleset, unit: UnitState) -> int:
@@ -102,10 +103,15 @@ def damage_dealt_permille(rules: Ruleset, unit: UnitState) -> int:
     return _combined(rules, unit, lambda d: d.damage_dealt_permille)
 
 
-def damage_taken_permille(rules: Ruleset, unit: UnitState) -> int:
-    """受到的骰值傷害倍率（‰；易傷 1250）；再乘上裝備的受傷倍率（Phase 3G-G1，例如
-    ``affix_cost_glass`` 的 1100），無條件捨去。"""
+def damage_taken_permille(rules: Ruleset, unit: UnitState, element: Element | None = None) -> int:
+    """受到的骰值傷害倍率（‰；易傷 1250）；``element`` 是物理時再乘各狀態的
+    ``physical_taken_permille``（石膚 700，Phase 3-54b）；再乘上裝備的受傷倍率（Phase 3G-G1，
+    例如 ``affix_cost_glass`` 的 1100），無條件捨去。"""
     combined = _combined(rules, unit, lambda d: d.damage_taken_permille)
+    if element is Element.PHYSICAL:
+        combined = (
+            combined * _combined(rules, unit, lambda d: d.physical_taken_permille) // PERMILLE
+        )
     if not unit.gear.bonuses:
         return combined
     return combined * gear_damage_taken_permille(unit) // PERMILLE

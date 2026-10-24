@@ -787,6 +787,8 @@ class SurfaceBlown(EventBase):
     to_pos: Pos
     surface: Surface
     direction: tuple[int, int]
+    lost: bool = False
+    """被推進致命地形（深淵、岩漿；上面不能有表面）：``to_pos`` 是消失的那一格，沒有落點。"""
 
 
 class TerrainChanged(EventBase):
