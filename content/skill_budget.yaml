@@ -94,6 +94,8 @@ obstacle_duration_permille: [400, 500, 600, 700, 750, 800, 850, 900, 950, 1000]
 # 3-23 刻印（初值，未經模擬）：inscribe 的點數 ＝ 基礎 5 × 第 n 項（‰，n ＝ duration 1–5，省略取預設 3 輪）；
 # detonate_runes 的點數 ＝ 骰子平均 × detonate_runes_permille ÷ 1000（需要先刻印的折扣），形狀倍率照一般效果。
 inscribe_duration_permille: [600, 800, 1000, 1200, 1400]
+# 3-50b 護盾持續時間：shield 的點數 ＝ 骰子平均 × 第 n 項（‰；n ＝ duration 2、3 回合，省略 ＝ 2 回合 ＝ 1000‰）。初值，未經模擬。
+shield_duration_permille: [1000, 1300]
 detonate_runes_permille: 700
 # 3-24c 獻祭召喚物（初值，未經模擬）：點數 ＝ 骰子平均 × sacrifice_summon_permille ÷ 1000（需要先有召喚物、且召喚物會消失的折扣）。
 sacrifice_summon_permille: 800

@@ -22,12 +22,12 @@ from tests.engine.helpers import (
 )
 from tests.engine.skill_helpers import SID, U1, U2, battle, cast, hit_with, of
 from tests.skillgen.helpers import lib
-from trpg.engine import EndTurn, UseSkill, resolve
+from trpg.engine import EndTurn, Move, UseSkill, resolve
 from trpg.engine.ai.self_costs import self_cost_gate
 from trpg.engine.ai.utility import UtilityAI
 from trpg.engine.context import Ctx
 from trpg.engine.effects import execute
-from trpg.engine.effects.models import ApplyStatusEffect, MoveUnitEffect
+from trpg.engine.effects.models import ApplyStatusEffect, MoveUnitEffect, ShieldEffect
 from trpg.engine.events import (
     DamageDealt,
     SkillUsed,
@@ -47,7 +47,7 @@ SINGLE = {"type": "single", "range": 5}
 SPELL_DAMAGE = {"type": "damage", "dice": "1d6", "element": "fire"}
 SELF = {"type": "self"}
 DAMAGE = {"type": "damage", "multiplier_permille": 1000}
-SHIELD = {"type": "shield", "dice": "2d6", "affects": "self"}
+SHIELD = {"type": "shield", "dice": "2d6", "affects": "self", "duration": 3}
 
 
 def _stun_shield(**cost: Any) -> Any:
@@ -83,23 +83,59 @@ def _pass_turns_until_skipped(state: BattleState) -> list[Any]:
 # ---------------------------------------------------------------------------
 
 
-def test_self_stun_applies_without_a_save_and_empties_the_rest_of_the_turn() -> None:
+def test_self_stun_applies_without_a_save_and_keeps_the_rest_of_the_turn() -> None:
     state = battle(_stun_shield(), [(6, 6)])
+    before = state.units[U1]
+    ap_before, moves_before = before.ap, before.move_points
     result = cast(state)
     caster = result.state.units[U1]
     stun = caster.get_status("stun")
     assert stun is not None and stun.remaining == 2 and stun.source_id == U1
     assert not of(result, StatusSaveRolled)  # 不擲抵抗
-    assert caster.ap == 0 and caster.move_points == 0  # 暈眩規則：沒有 AP、移動
+    assert caster.ap == ap_before - 1  # 3-50b：只扣技能本身的 1 AP，不歸零
+    assert caster.move_points == moves_before  # 移動點數也不歸零
 
 
-def test_the_stunned_caster_loses_its_next_turn_only() -> None:
+def test_the_self_stun_timeline_this_turn_normal_next_skipped_then_recovered() -> None:
+    """表格測試（3-50b）：施放後本回合照常（還能移動、再施放）、下一個回合被跳過、再下一個回合恢復。"""
     result = cast(battle(_stun_shield(), [(6, 6)]))
-    events = _pass_turns_until_skipped(result.state)
-    skipped = [e for e in events if isinstance(e, TurnSkipped)]
-    assert [(e.unit_id, e.status_id) for e in skipped] == [(U1, "stun")]
-    after = resolve(result.state, EndTurn(unit_id=U1))  # 結束回合：暈眩 2 → 1
-    assert after.state.units[U1].get_status("stun") is not None
+    state = result.state
+    # 本回合照常：可以移動、可以再施放（暈眩尚未生效）
+    moved = resolve(state, Move(unit_id=U1, path=(Pos(x=3, y=3), Pos(x=4, y=3), Pos(x=5, y=3))))
+    assert moved.state.units[U1].pos == Pos(x=5, y=3)
+    again = resolve(moved.state, UseSkill(unit_id=U1, skill_id=SID))
+    assert again.state.units[U1].get_status("stun") is not None
+    state = again.state
+    timeline: list[str] = []  # U1 每個回合的結果
+    stun_left: list[int | None] = []
+    for _ in range(12):
+        active = state.active_unit
+        assert active is not None
+        step = resolve(state, EndTurn(unit_id=active))
+        state = step.state
+        skipped = any(isinstance(e, TurnSkipped) and e.unit_id == U1 for e in step.events)
+        started = any(isinstance(e, TurnStarted) and e.unit_id == U1 for e in step.events)
+        if skipped:  # 跳過的回合同樣會先發出 turn_started
+            timeline.append("skipped")
+        elif started:
+            timeline.append("acted")
+        stun = state.units[U1].get_status("stun")
+        stun_left.append(None if stun is None else stun.remaining)
+        if len(timeline) >= 3 and timeline[-1] == "acted" and timeline.count("skipped") == 1:
+            break
+    assert timeline[0] == "skipped"  # 下一個回合被跳過
+    assert timeline[-1] == "acted" and timeline.count("skipped") == 1  # 再下一個回合恢復
+    assert state.units[U1].get_status("stun") is None
+    assert state.units[U1].ap > 0
+
+
+def test_the_dormant_stun_does_not_block_reactions_or_moves_this_turn_but_does_after() -> None:
+    state = cast(battle(_stun_shield(), [(6, 6)])).state
+    stun = state.units[U1].get_status("stun")
+    assert stun is not None and stun.dormant
+    after_turn = resolve(state, EndTurn(unit_id=U1)).state
+    stun = after_turn.units[U1].get_status("stun")
+    assert stun is not None and not stun.dormant and stun.remaining == 1  # 回合結束才生效
 
 
 def test_self_paid_stun_does_not_trigger_control_diminishing() -> None:
@@ -166,16 +202,39 @@ def test_the_shield_from_the_skill_exists_while_stunned_and_absorbs_damage() -> 
     assert after is not None and after.amount is not None and after.amount < shield.amount
 
 
-def test_the_shield_is_not_removed_when_the_stun_is_applied_or_ends() -> None:
-    """護盾的存續只看它自己的持續回合（2）：暈眩的施加與結束都不會移除它。暈眩在被跳過的那個回合
-    結束時才結束，護盾恰好在同一刻到期（見報告「待 PM 決定」）。"""
+def test_the_shield_outlasts_the_self_stun() -> None:
+    """3-50b：護盾持續 3 回合、暈眩 2：暈眩結束（被跳過的回合結束）之後下一回合護盾仍在。"""
     state = cast(battle(_stun_shield(), [(6, 6)])).state
-    assert state.units[U1].get_status("shielded") is not None
+    shield = state.units[U1].get_status("shielded")
+    assert shield is not None and shield.remaining == 3
     done = resolve(state, EndTurn(unit_id=U1)).state
-    shield = done.units[U1].get_status("shielded")
-    stun = done.units[U1].get_status("stun")
-    assert shield is not None and shield.remaining == 1
-    assert stun is not None and stun.remaining == 1  # 兩者倒數同步
+    assert done.units[U1].get_status("shielded").remaining == 2  # type: ignore[union-attr]
+    assert done.units[U1].get_status("stun").remaining == 1  # type: ignore[union-attr]
+    # 一路結束回合到暈眩結束；那時護盾還在、而且到自己的下一個回合仍然有效
+    state = done
+    for _ in range(12):
+        active = state.active_unit
+        assert active is not None
+        state = resolve(state, EndTurn(unit_id=active)).state
+        if state.units[U1].get_status("stun") is None:
+            break
+    assert state.units[U1].get_status("stun") is None
+    left = state.units[U1].get_status("shielded")
+    assert left is not None and left.remaining == 1 and left.amount is not None
+
+
+def test_a_shield_without_duration_keeps_the_default_two_rounds() -> None:
+    plain = make_skill(SID, SELF, [{"type": "shield", "dice": "2d6", "affects": "self"}], ap_cost=1)
+    shield = cast(battle(plain, [(6, 6)])).state.units[U1].get_status("shielded")
+    assert shield is not None and shield.remaining == 2
+
+
+def test_a_longer_shield_is_not_shortened_by_a_shorter_one() -> None:
+    long = cast(battle(_stun_shield(), [(6, 6)])).state
+    execute(Ctx(long), [ShieldEffect(source_id=U1, target_id=U1, flat=1)])
+    state = long
+    shield = state.units[U1].get_status("shielded")
+    assert shield is not None and shield.remaining == 3
 
 
 # ---------------------------------------------------------------------------
@@ -337,6 +396,6 @@ def test_a_battle_with_the_four_demo_skills_replays_identically() -> None:
     run = run_battle(setup, 11, policy)
     again = replay(setup, 11, run.actions)
     assert state_to_json(again.state) == state_to_json(run.state)
-    assert LOG_FORMAT.endswith("/68")
+    assert LOG_FORMAT.endswith("/69")
     used = {e.skill_id for e in run.events if isinstance(e, SkillUsed)}
     assert used & set(ids)  # AI 真的用到了示範技能

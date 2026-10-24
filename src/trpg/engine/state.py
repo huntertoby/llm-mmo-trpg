@@ -65,6 +65,9 @@ class StatusInstance:
     source_id: UnitId | None = None
     amount: int | None = None
     skill_id: str | None = None
+    dormant: bool = False
+    """自己付的暈眩（Phase 3-50b）：在自己的回合中施放時，「本回合照常」——到這個回合結束才生效
+    （``end_turn`` 清除），期間 :func:`~trpg.engine.rules.statuses.skip_turn_status` 視為沒有。"""
 
 
 @dataclass(slots=True, frozen=True)

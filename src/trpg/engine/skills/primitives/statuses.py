@@ -159,6 +159,7 @@ def _then_effect(cast: Cast, spec: EffectSpec, target: UnitState) -> list[Effect
                 dice=spec.dice,
                 scaled_permille=cast.spell_scaled(),
                 multiplier_permille=cast.level_permille(),
+                duration=spec.duration,
             )
         ]
     return cast.status_effects(spec, target)

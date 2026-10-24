@@ -92,7 +92,7 @@ def is_rooted(rules: Ruleset, unit: UnitState) -> bool:
 def skip_turn_status(rules: Ruleset, unit: UnitState) -> str | None:
     """讓單位跳過回合的狀態 ID（暈眩）；沒有時為 ``None``。同時也代表不能執行反應。"""
     for status in unit.statuses:
-        if rules.status_def(status.status_id).skip_turn:
+        if not status.dormant and rules.status_def(status.status_id).skip_turn:
             return status.status_id
     return None
 

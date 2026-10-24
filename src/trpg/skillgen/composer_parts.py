@@ -814,7 +814,7 @@ def build_cost(ctx: Ctx) -> dict[str, Any]:
     self_status = _self_status_cost(ctx)
     if self_status is not None:
         cost["self_status"] = self_status
-    elif ctx.chance(rules.overdraft_permille):  # 透支（3-50）：與自身狀態擇一
+    if ctx.chance(rules.overdraft_permille):  # 透支（3-50）；3-50b 起可和自身狀態並用
         cost["overdraft"] = 1
     return cost
 
