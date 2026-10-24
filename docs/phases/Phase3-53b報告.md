@@ -11,7 +11,7 @@
 ## 測試
 
 - 新增：開局選單沒有中毒但 `ids()` 仍有（api）、`default_start` 40 個種子都不含中毒（roguelite）、橋接可嫁接中毒且嫁接表涵蓋全部關鍵字（除召喚）（skillgen）、毒詞條推導出 `poisoned`（content）。
-- pytest：content、skillgen、roguelite、narrative、api 共 4040 passed、1 skipped；`-m "slow or not slow" tests/cli --timeout=3000` 見下方「CLI」。
+- pytest：content、skillgen、roguelite、narrative、api 共 4040 passed、1 skipped；`-m "slow or not slow" tests/cli --timeout=3000` 148 passed（CLI 快照與 run auto 種子不需更新）。
 - vitest 990 passed、build 成功、ruff、format、mypy、lint-imports 通過。
 
 ## 待 PM 知悉
