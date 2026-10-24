@@ -56,3 +56,15 @@ PM 查證：引擎 **沒有** 依「詞條白名單＋預算」產生物品的�
 1. 換主手武器：新武器的縮放屬性和目前武器不同時才提示「這把看〔屬性〕，你目前最高的是〔屬性〕」並確認換不換；屬性相同直接換（前端三選一與營火換裝都要）。
 2. 預算分數加入整件物品的強度：武器用基礎傷害平均、防具用基礎防禦，照 08 8.21 單位價換算（係數放 `content/item_gen.yaml`）；基礎武器 `base_<武器>` 的分數因此不是 0，「→ N（±M）」顯示正確；AI 選擇跟著變，`run auto` 種子測試更新。
 3. 驗收：pytest（roguelite、content、api、narrative、`-m "slow or not slow" tests/cli`）、vitest、build、ruff、mypy。報告 `Phase3K-2b報告.md`。
+
+### 5.3 3K-2b（2026-10-24，開發 PM 合併）
+
+- 報告 `Phase3K-2b報告.md`。`weapon_swap_prompt`／`GearCandidateOut.weapon_swap_zh`（縮放屬性不同才提示確認，三選一與營火背包共用 `WeaponSwapConfirm.tsx`）；`item_gen.yaml` `base_strength`＋`item_budget.item_base_points`／`item_strength`（`item_score` 改用整件強度）。瀏覽器實測提示與「4.5 → 14.5（+10）」比較行。
+- 待決（玩法 PM 回覆）：(a) 防具基礎防禦初值確認（平衡 B24）；**(b) 基礎分要照 08 8.22 的「基礎：詞條」比例換算 → 3K-2c**。
+
+### 3K-2c｜物品基礎份額照 8.22 換算（玩法 PM 回覆 3K-2b；sonnet；約 0.15 段）
+
+1. 物品的基礎強度換算成「該部位、該等級的基礎份額」：08 8.22 的「基礎：詞條」比例——主手、身體、副手 60：40；頭、手、腳 50：50；項鍊、戒指 0：100。例：等級 1 主手基礎份額約 18 點、詞條約 12 點。
+2. 同部位不同底材照基礎數值比例分配（武器照骰子平均×打擊數；防具照 3K-2b 的基礎防禦表），換算係數放 `content/item_gen.yaml`。
+3. `item_strength`／`item_score`、比較行、`auto_gear_pick` 跟著變；物品預算檢查（`item_points`，只算詞條）不動。
+4. 驗收：pytest（content、roguelite、api、narrative、`-m "slow or not slow" tests/cli`）、vitest、build、ruff、mypy；表格測試（各部位、等級 1／5／10 的基礎份額）。報告 `Phase3K-2c報告.md`。
