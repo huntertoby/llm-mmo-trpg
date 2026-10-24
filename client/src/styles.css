@@ -3672,3 +3672,24 @@ button.selected {
 .run-gear .gear-row {
   gap: 4px;
 }
+
+/* 換主手武器的確認（3K-2b）：排在按鈕列的位置，不是彈出層 */
+.weapon-swap-confirm {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  padding: 8px;
+  border: 1px solid #e0b060;
+  border-radius: 4px;
+  background: #1c1a14;
+}
+
+.weapon-swap-text {
+  margin: 0;
+  color: #e0b060;
+}
+
+.weapon-swap-buttons {
+  display: flex;
+  gap: 8px;
+}
