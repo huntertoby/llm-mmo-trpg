@@ -124,6 +124,7 @@ __all__ = [
     "REQUIRED_STATUSES",
     "ContentLibrary",
     "Ruleset",
+    "gear_class_problem",
     "gear_reference_problems",
     "load_library",
     "skill_reference_problems",
@@ -943,23 +944,38 @@ def gear_reference_problems(
 ) -> list[str]:
     """技能的限定武器（``weapon_only``）與「手持某種武器」條件引用的武器或副手存在，而且武器的
     大類符合技能的 ``weapon_req``（否則技能永遠不能裝，或加成永遠不會成立；Phase 3I-5）。"""
-    problems: list[str] = []
     refs = [("weapon_only", w) for w in skill.weapon_only]
     refs += [
         ("wielding_weapon", c.weapon)
         for c in skill_condition_specs(skill)
         if c.type == "wielding_weapon" and c.weapon is not None
     ]
-    for where, gear_id in refs:
-        weapon = weapons.get(gear_id)
-        if weapon is None and gear_id not in offhands:
-            problems.append(f"{where}：未知的武器或副手 {gear_id!r}")
-        elif weapon is not None and skill.weapon_req not in ("any", weapon.weapon_class):
-            problems.append(
-                f"{where}：{weapon.name_zh}是{weapon.weapon_class}武器，"
-                f"與技能的 weapon_req（{skill.weapon_req}）不符"
-            )
-    return problems
+    found = (
+        (where, gear_class_problem(skill.weapon_req, g, weapons, offhands)) for where, g in refs
+    )
+    return [f"{where}：{p}" for where, p in found if p is not None]
+
+
+_CLASS_ZH = {"melee": "近戰", "ranged": "遠程", "focus": "法器"}
+
+
+def gear_class_problem(
+    weapon_req: str,
+    gear_id: str,
+    weapons: Mapping[str, WeaponDef],
+    offhands: Mapping[str, OffhandDef],
+) -> str | None:
+    """``gear_id``（武器或副手）不存在、或武器大類與技能的 ``weapon_req`` 不符時的原因。驗證器與
+    工坊的事前停用共用（Phase 3I-5）。副手不分大類，永遠相符。"""
+    weapon = weapons.get(gear_id)
+    if weapon is None:
+        return None if gear_id in offhands else f"未知的武器或副手 {gear_id!r}"
+    if weapon_req in ("any", weapon.weapon_class):
+        return None
+    return (
+        f"{weapon.name_zh}是{_CLASS_ZH[weapon.weapon_class]}武器，"
+        f"與技能的武器需求（{_CLASS_ZH.get(weapon_req, weapon_req)}）不符"
+    )
 
 
 def _check_skills(
@@ -968,14 +984,15 @@ def _check_skills(
     ruleset: Ruleset,
     budget: BudgetRules,
     *,
-    weapons: Mapping[str, WeaponDef],
-    offhands: Mapping[str, OffhandDef],
+    weapons: Mapping[str, WeaponDef] | None = None,
+    offhands: Mapping[str, OffhandDef] | None = None,
 ) -> None:
     """技能引用的形狀、原語、狀態、物件都存在，參數在範圍內；費用花的資源與類別相符（3H-2）；
     限定武器與手持條件引用的裝備存在且大類相符（3I-5）。"""
     for skill_id, skill in skills.items():
         problems = skill_reference_problems(skill, ruleset, skills)
-        problems += gear_reference_problems(skill, weapons, offhands)
+        if weapons is not None and offhands is not None:
+            problems += gear_reference_problems(skill, weapons, offhands)
         cost = budget.cost_problem(skill.category, skill.cost)
         if cost is not None:
             problems.append(cost)

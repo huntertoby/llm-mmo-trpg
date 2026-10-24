@@ -136,6 +136,8 @@ __all__ = [
     "VARIANT_CONDITIONS",
     "VARIANT_TARGET_CONDITIONS",
     "WEAPON_CLASSES",
+    "WIELDING_EFFECT_ONLY",
+    "WIELDING_WEAPON",
     "ZONE",
     "ZONE_CASTER_SHAPES",
     "ZONE_EFFECT_TYPES",
@@ -1890,6 +1892,14 @@ SELF_ONLY_CHANGES: frozenset[str] = frozenset(
 )
 """在選目標之前就要決定的修正：條件只能看持有者自己（``self_hp_below``）或省略。"""
 
+WIELDING_WEAPON = "wielding_weapon"
+"""武器親和條件（Phase 3I-5）。"""
+WIELDING_EFFECT_ONLY = (
+    "「手持某種武器時」只能寫在效果上（沒拿那種武器時技能照常可用，只是少那個加成）；"
+    "想限定武器才能用，請改用限定武器"
+)
+"""``wielding_weapon`` 寫在技能條件上時的訊息（schema 與工坊事前停用共用）。"""
+
 SELF_CONDITIONS: frozenset[str] = frozenset({"self_hp_below"})
 CASTER_CONDITIONS: frozenset[str] = frozenset(
     {
@@ -2439,6 +2449,7 @@ class SkillDef(ContentModel):
         self._check_reaction_and_stance()
         self._check_trap_and_stacks()
         self._check_scaling_and_mastery()
+        self._check_gear_limits()
         allowed = ("melee", "ranged") if self.category == "weapon" else ("focus", "any")
         if self.weapon_req not in allowed:
             name = "武器技" if self.category == "weapon" else "法術技"
@@ -3108,6 +3119,17 @@ class SkillDef(ContentModel):
                     self._check_effect(index, effect)
                 except ValueError as exc:
                     raise ValueError(f"modifiers[{rule_index}].change.on_hit_{exc}") from None
+
+    def _check_gear_limits(self) -> None:
+        """武器親和與限定武器的結構（3I-5，6.10 #50）：``wielding_weapon`` 只能寫在效果上（沒拿
+        那種武器時技能照常可用，只是少一個加成；寫在技能條件上就變成不能施放）；限定武器不重複。"""
+        gated = [self.condition]
+        if self.followup is not None:
+            gated.append(self.followup.condition)
+        if any(c is not None and c.type == WIELDING_WEAPON for c in gated):
+            raise ValueError(f"condition：{WIELDING_EFFECT_ONLY}")
+        if len(set(self.weapon_only)) != len(self.weapon_only):
+            raise ValueError("weapon_only 不可重複")
 
     def _check_scaling_and_mastery(self) -> None:
         """雙屬性縮放與專精加成的結構（2H-2；稀有度門檻是跨檔案檢查）。"""

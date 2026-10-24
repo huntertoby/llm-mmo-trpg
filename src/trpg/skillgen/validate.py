@@ -26,7 +26,7 @@ from collections.abc import Sequence
 from dataclasses import dataclass, replace
 from fractions import Fraction
 
-from trpg.content.library import ContentLibrary, skill_reference_problems
+from trpg.content.library import ContentLibrary, gear_reference_problems, skill_reference_problems
 from trpg.content.skill_rules import (
     EffectPattern,
     ShapePattern,
@@ -346,6 +346,8 @@ def _move_segment_violations(skill: SkillDef, library: ContentLibrary) -> list[V
 
 def _reference_violations(skill: SkillDef, library: ContentLibrary) -> list[Violation]:
     problems = skill_reference_problems(skill, library.ruleset, library.skills)
+    # 限定武器與「手持某種武器」條件（3I-5）：引用的裝備存在、武器大類符合 weapon_req
+    problems += gear_reference_problems(skill, library.weapons, library.offhands)
     if skill.skeleton not in library.skeletons:
         problems.append(f"skeleton：沒有骨架資料檔 {skill.skeleton!r}")
     return [Violation(skill.id, "reference", p) for p in problems]

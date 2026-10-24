@@ -215,6 +215,9 @@ texts:
 - id: 工坊.condition.condition=target_hp_below
   source: 目標的目前 HP ÷ 最大 HP 低於 permille ‰。
   player: 目標目前的 HP 低於最大 HP 的某個比例時才成立。
+- id: 工坊.condition.condition=wielding_weapon
+  source: 施放者的主手武器或副手是指定的那一種（weapons.yaml、offhands.yaml 的 ID；成對武器算它自己那一種，雙匕首不算匕首）。只看施放者；用在效果的 condition 時是「拿著那種武器才多一個加成」，沒拿時技能照常可用。
+  player: 你手上拿著指定的武器或副手時才成立（雙匕首算雙匕首，不算匕首）。要寫在效果上：拿著那種武器才多這個效果，沒拿時技能照常可以用。
 - id: 工坊.effects.effects=add_stack
   source: 依該層數（stacks.yaml）的 owner 把 amount 層加在施放者自己（affects 只能是 self；技能有對敵方的效果時，至少命中一名敵人才累積）或命中的目標（affects 只能是 enemies）身上，超過上限截斷。
   player: 在自己或命中的目標身上累積層數（看這種層數是累積在誰身上）。對自己累積時，如果這招有打敵人，至少要命中一個才會累積；超過上限的部分不算。
@@ -445,6 +448,9 @@ texts:
 - id: 條件.target_hp_below
   source: 目標的目前 HP ÷ 最大 HP 低於 permille ‰。
   player: 目標目前的 HP 低於最大 HP 的某個比例時才成立。
+- id: 條件.wielding_weapon
+  source: 施放者的主手武器或副手是指定的那一種（weapons.yaml、offhands.yaml 的 ID；成對武器算它自己那一種，雙匕首不算匕首）。只看施放者；用在效果的 condition 時是「拿著那種武器才多一個加成」，沒拿時技能照常可用。
+  player: 你手上拿著指定的武器或副手時才成立（雙匕首算雙匕首，不算匕首）。要寫在效果上：拿著那種武器才多這個效果，沒拿時技能照常可以用。
 - id: 觸發.on_cast_tag
   source: 持有者施放一個帶 trigger.tag 標籤的技能（含修正規則加上的標籤；不含被動觸發與陷阱），在該技能結算之後。沒有另一方，效果作用在持有者。
   player: 你施放帶某個標籤的技能、結算完之後觸發（被動觸發和陷阱不算）。效果作用在你自己身上。
