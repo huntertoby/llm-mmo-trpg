@@ -10,7 +10,7 @@
   雙手或成對武器會把副手收進背包。穿戴一律過 :func:`~trpg.content.equipment.loadout_problems`。
 - **目前裝備**（:func:`worn_items`、:func:`run_loadout`）：``RunState.equipment`` 非空就是全身裝備，
   否則用測試模式挑的裝備或範本的裝備（舊存檔與沒換過裝的一輪）。
-- **AI 挑法**（:func:`auto_gear_pick`）：預算分數（詞條點數＋基礎加成，3K-1 的 ``item_points``）比
+- **AI 挑法**（:func:`auto_gear_pick`）：預算分數（詞條點數＋基礎加成＋基礎強度，3K-2b 的 ``item_strength``）比
   該部位目前裝備高最多的那件；沒有比較高的就跳過。
 
 純函式，亂數只用 :class:`~trpg.shared.rng.Rng`。
@@ -18,17 +18,19 @@
 
 from __future__ import annotations
 
+from collections.abc import Mapping
 from fractions import Fraction
 
 from trpg.content.battle import WeaponDef
 from trpg.content.equipment import ItemDef, Loadout, loadout_problems, resolve_loadout
-from trpg.content.item_budget import item_points
+from trpg.content.item_budget import item_strength
 from trpg.content.item_gen import ItemGenError, WeaponClass, generate_item, roll_rarity
 from trpg.content.library import ContentLibrary
 from trpg.content.slots import SLOT_TYPE_OF, SLOT_TYPES, SLOTS, SlotType
 from trpg.roguelite.errors import ChoiceError
 from trpg.roguelite.state import GearOfferNode, RunState
 from trpg.shared.rng import Rng
+from trpg.shared.types import Attribute, top_attribute
 
 __all__ = [
     "auto_gear_pick",
@@ -75,12 +77,13 @@ def run_loadout(library: ContentLibrary, run: RunState) -> Loadout:
 
 
 def item_score(library: ContentLibrary, item: ItemDef | None) -> Fraction:
-    """預算分數：詞條點數＋基礎加成（3K-1 的 :func:`~trpg.content.item_budget.item_points`）；
+    """預算分數：詞條點數＋基礎加成＋整件物品的基礎強度（武器基礎傷害、防具基礎防禦；3K-2b 的
+    :func:`~trpg.content.item_budget.item_strength`）；
     沒有物品、或內容庫沒有產生器規則時為 0。"""
     if item is None or library.item_gen is None:
         return Fraction(0)
     try:
-        return item_points(library.item_gen, item, library.affixes)
+        return item_strength(library.item_gen, item, library.affixes, library.weapons)
     except KeyError:  # 沒有分類成立率的條件詞條：不計分
         return Fraction(0)
 
@@ -271,3 +274,31 @@ def equip_notes(library: ContentLibrary, run: RunState, item: ItemDef, slot: str
         if held.slot_type == "offhand" and held.id in before_ids:
             notes.append(f"副手「{held.name_zh}」被占用，收進背包")
     return notes
+
+
+def _scaling_attrs(weapon: WeaponDef) -> tuple[Attribute, ...]:
+    if weapon.secondary_scaling_attr is None:
+        return (weapon.scaling_attr,)
+    return (weapon.scaling_attr, weapon.secondary_scaling_attr)
+
+
+def weapon_swap_prompt(
+    library: ContentLibrary,
+    run: RunState,
+    item: ItemDef,
+    slot: str,
+    attributes: Mapping[Attribute, int],
+) -> str | None:
+    """換主手武器的提示（3K-2b，玩法 PM 回覆 07 7.1 #49）：換上後主角的武器縮放屬性和目前的不同時才
+    回傳「這把看〔屬性〕，你目前最高的是〔屬性〕」，讓玩家確認換不換；屬性相同（或不是換武器）為
+    ``None``。``attributes`` 是主角目前的有效屬性（判斷「最高」用）。"""
+    if slot != "main_hand":
+        return None
+    new_weapon = equip(library, run, item, slot).hero.weapon
+    if new_weapon == run.hero.weapon:
+        return None
+    old, new = library.weapons[run.hero.weapon], library.weapons[new_weapon]
+    if set(_scaling_attrs(old)) == set(_scaling_attrs(new)):
+        return None
+    mine = "、".join(a.display_name for a in _scaling_attrs(new))
+    return f"這把看{mine}，你目前最高的是{top_attribute(attributes).display_name}"

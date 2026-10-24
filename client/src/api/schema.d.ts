@@ -2067,6 +2067,8 @@ export interface components {
              * @default []
              */
             notes_zh: string[];
+            /** Weapon Swap Zh */
+            weapon_swap_zh?: string | null;
         };
         /**
          * GearCatalog
