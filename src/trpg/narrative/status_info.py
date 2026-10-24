@@ -180,18 +180,12 @@ def _consumer_line(stack: StackDef, library: ContentLibrary) -> str:
     consumer = stack.consumer
     if consumer is None:
         return ""
-    boosts = "、".join(BOOST_TEXT[b] for b in consumer.boosts)
-    line = f"消耗：技能每層提高{boosts}"
+    line = f"消耗：技能每層提高{consumer.boost_names()}"
     if consumer.requires_any:
-        names: list[str] = []
-        for req in consumer.requires_any:
-            if req.tag is not None:
-                names.append(f"帶「{library.ruleset.skill_tags.name(req.tag)}」標籤")
-            elif req.element is not None:
-                names.append(f"{req.element.display_name}傷害")
-            elif req.effect is not None:
-                names.append(f"「{library.ruleset.primitives.by_id()[req.effect].name_zh}」效果")
-        line += f"（限{'、'.join(names)}的技能）"
+        line += f"（限{'、'.join(consumer.requirement_names(library.ruleset))}的技能）"
+    if stack.auto_consume is not None:
+        per = stack.auto_consume.per_stack_permille / 10
+        line += f"；你下一個造成傷害的主動技能會自動消耗全部層數，每層傷害 +{per:g}%"
     return line
 
 

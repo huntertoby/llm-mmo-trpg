@@ -101,14 +101,13 @@ def sacrifice_blast(cast: Cast, xy: XY, spec: EffectSpec) -> list[EffectBase]:
             for u in near
             if u.team is not caster.team
         ]
-    multiplier = cast.heal_multiplier() * bonus // PERMILLE
     return [
         HealEffect(
             target_id=u.id,
             source_id=caster.id,
             dice=spec.dice,
             scaled_permille=scaled,
-            multiplier_permille=multiplier,
+            multiplier_permille=cast.heal_multiplier() * bonus // PERMILLE,
         )
         for u in near
         if u.team is caster.team

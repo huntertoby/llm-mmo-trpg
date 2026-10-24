@@ -36,6 +36,7 @@ from trpg.content.skills import (
     SkillDef,
     default_affects,
 )
+from trpg.content.stacks import auto_consumed
 from trpg.engine import modifiers
 from trpg.engine.actions import UseSkill
 from trpg.engine.context import Ctx
@@ -164,6 +165,8 @@ class Cast:
         """消耗目標層數得到的傷害加成（‰），單位 ID → 加成。"""
         self.heal_bonus = 0
         """消耗施放者層數得到的治療加成（‰；層數的 ``consumer.boosts`` 含 ``heal``；3-52）。"""
+        self.heal_self_only = False
+        """治療加成只算治療施放者自己的效果（層數的 ``consumer.heal_self_only``；3-52b）。"""
         self.shield_bonus = 0
         """消耗施放者層數得到的護盾加成（‰；``boosts`` 含 ``shield``，Phase 3-52）。"""
         self.use = modifiers.skill_use(skill)
@@ -658,6 +661,8 @@ class Cast:
                     self.caster_bonus += bonus
                 if "heal" in boosts:
                     self.heal_bonus += bonus
+                    if definition.consumer is not None and definition.consumer.heal_self_only:
+                        self.heal_self_only = True
                 if "shield" in boosts:
                     self.shield_bonus += bonus
                 continue
@@ -666,6 +671,15 @@ class Cast:
                 self.target_bonus[unit.id] = (
                     self.target_bonus.get(unit.id, 0) + spent * spec.per_stack_permille
                 )
+        self.auto_consume_stacks()
+
+    def auto_consume_stacks(self) -> None:
+        """自動消耗（3-52b，專注）：施放者的主動技能造成傷害時，吃掉全部該層數、每層加成傷害；
+        不造成傷害的技能不吃（層數留給下一個傷害技能）。"""
+        for stack in auto_consumed(self.skill, self.ctx.rules.stacks.stacks):
+            assert stack.auto_consume is not None
+            spent = consume_stacks(self.ctx, self.caster, stack.id, source_id=self.caster.id)
+            self.caster_bonus += spent * stack.auto_consume.per_stack_permille
 
     def react_to_hits(self) -> None:
         """全部效果結算之後：每個被命中的單位（依單位 ID）各自可以用 ``hit_by_*`` 反應技反應。"""
@@ -800,12 +814,16 @@ class Cast:
         """技能等級的效果倍率（‰；Phase 3-26a，傷害由 ``damage_parameters`` 處理）。"""
         return level_multiplier(self.ctx.rules, self.caster, self.skill)
 
-    def heal_multiplier(self) -> int:
-        """施放者的治療量倍率（‰；修正規則 ``heal_permille``，3-24b1；再乘技能等級的倍率）。"""
+    def heal_multiplier(self, *, self_heal: bool = False) -> int:
+        """施放者的治療量倍率（‰；修正規則 ``heal_permille``，3-24b1；再乘技能等級的倍率與消耗
+        層數的治療加成；加成只算治療自己時，``self_heal``（效果的對象是 ``self``）才加，3-52b）。"""
         base = PERMILLE
         if self.modified:
             base = modifiers.heal_permille(self.ctx.state, self.caster, self.use)
-        return base * self.level_permille() // PERMILLE * (PERMILLE + self.heal_bonus) // PERMILLE
+        bonus = self.heal_bonus
+        if self.heal_self_only and not self_heal:
+            bonus = 0
+        return base * self.level_permille() // PERMILLE * (PERMILLE + bonus) // PERMILLE
 
     def shield_multiplier(self) -> int:
         """護盾量倍率（‰）：技能等級的倍率，再乘消耗層數的加成（Phase 3-52）。"""

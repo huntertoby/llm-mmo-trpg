@@ -63,7 +63,7 @@ stacks:
         - {tag: finisher}
   - id: focus
     name_zh: 專注
-    description_zh: 累積在自己身上；回合結束時這回合沒有移動就自動累積，消耗專注的下一招每層提高傷害。
+    description_zh: 累積在自己身上；回合結束時這回合沒有移動就自動累積，你下一個造成傷害的主動技能會自動消耗全部專注，每層提高 15% 傷害。
     owner: self
     max: 3
     ai_value: 2
@@ -71,6 +71,9 @@ stacks:
     gain:
       - {when: turn_end_still}
     consumer: {boosts: [damage]}
+    # 3-52b（06 6.32「下一招：每層傷害 +15%」）：下一個造成傷害的主動技能自動吃掉全部專注；
+    # 技能自己有 consume_stack 專注時照技能的設定（示範的專注一擊）。
+    auto_consume: {per_stack_permille: 150}
   - id: holy_power
     name_zh: 聖能
     description_zh: 累積在自己身上；施放治療或神聖技能時自動累積，消耗聖能的技能每層提高治療與護盾。
@@ -113,11 +116,11 @@ stacks:
         - {element: ice}
   - id: ki
     name_zh: 氣
-    description_zh: 累積在自己身上；普攻命中時自動累積，消耗氣的技能每層提高傷害或自己的治療。
+    description_zh: 累積在自己身上；普攻命中時自動累積，消耗氣的技能每層提高傷害，或提高「治療自己」的效果（治療別人不加成）。
     owner: self
     max: 3
     ai_value: 2
     composer: false
     gain:
       - {when: basic_attack_hit}
-    consumer: {boosts: [damage, heal]}
+    consumer: {boosts: [damage, heal], heal_self_only: true}

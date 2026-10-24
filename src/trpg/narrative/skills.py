@@ -35,12 +35,11 @@ from trpg.content.skills import (
     default_affects,
     on_hit_carrier,
 )
-from trpg.content.stacks import StackDef
+from trpg.content.stacks import StackDef, auto_consumed
 from trpg.engine.ids import SHIELDED as SHIELD_STATUS
 from trpg.engine.summons import SummonStats
 from trpg.narrative.skill_icon import SkillIcon, skill_icon
 from trpg.narrative.skill_levels import SkillLevelInfo
-from trpg.narrative.status_info import BOOST_TEXT
 from trpg.narrative.summon_info import (
     SummonInfoCard,
     infusion_hint,
@@ -617,8 +616,8 @@ def _stack(lib: ContentLibrary, skill: SkillDef, spec: EffectSpec) -> str:
         return text + (_overload_text(lib, stack) if stack.overload is not None else "")
     assert spec.per_stack_permille is not None
     need = f"（至少 {skill.cost.stacks} 層才能施放）" if skill.cost.stacks else ""
-    boosts = ("damage",) if stack.consumer is None else stack.consumer.boosts
-    what = "、".join(BOOST_TEXT[b] for b in boosts)
+    consumer = stack.consumer
+    what = "傷害" if consumer is None else consumer.boost_names()
     return (
         f"消耗全部「{stack.name_zh}」，每層使本技能{what} +{spec.per_stack_permille / 10:g}%{need}"
     )
@@ -1286,6 +1285,10 @@ def skill_stacks(library: ContentLibrary, skill: SkillDef) -> tuple[SkillStackRe
         except KeyError:
             continue
         found.setdefault((spec.stack, role), SkillStackRef(id=spec.stack, name_zh=name, role=role))
+    for auto in auto_consumed(skill, library.ruleset.stacks.stacks):  # 自動消耗（3-52b，專注）
+        found.setdefault(
+            (auto.id, "uses"), SkillStackRef(id=auto.id, name_zh=auto.name_zh, role="uses")
+        )
     return tuple(found.values())
 
 

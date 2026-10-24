@@ -38,6 +38,7 @@ __all__ = [
     "cooldown_requirement",
     "effect_fixes",
     "sensible_affects",
+    "stack_unavailable_reason",
     "with_param_blocks",
 ]
 
@@ -257,6 +258,9 @@ def _checked_choice(
         params[params.index(status)] = _mark_statuses(
             status, marked_affects, primitive, base=base, probe=probe, context=context, shape=shape
         )
+    stack = _param(choice, "stack") if primitive.id == "consume_stack" else None
+    if stack is not None:  # 這招不能消耗的層數事前停用（3-52b）
+        params[params.index(stack)] = _mark_stacks(stack, base=base, probe=probe, context=context)
     updated = choice.model_copy(update={"params": tuple(params)})
     if marked_affects is None or status is not None or "unavailable_zh" in choice.info:
         return updated
@@ -297,6 +301,49 @@ def _legal_default(spec: FieldSpec, primitive: PrimitiveDef, shape: str) -> Fiel
         if value in legal:
             return spec.model_copy(update={"default": value, "required": required})
     return spec.model_copy(update={"required": required})
+
+
+def stack_unavailable_reason(skill: SkillDef, stack_id: str, library: ContentLibrary) -> str | None:
+    """``skill`` 不能消耗層數 ``stack_id`` 的白話原因（含怎麼改）；可以消耗為 ``None``。
+
+    與驗證器 **同源**：呼叫的是驗證器用的 :meth:`~trpg.content.stacks.ConsumerSpec.gaps`；
+    草稿還沒有標籤（工坊不讓玩家選標籤）時，標籤條件先視為符合。"""
+    stack = library.ruleset.stacks.by_id().get(stack_id)
+    if stack is None or stack.consumer is None:
+        return None
+    consumer = stack.consumer
+    no_boost, unmet = consumer.gaps(skill, tags_known=bool(skill.tags))
+    if no_boost:
+        if consumer.heal_self_only:
+            need = "傷害效果，或對象是自己的治療效果"
+        else:
+            need = "、".join(
+                {"damage": "傷害", "heal": "治療", "shield": "護盾"}[b] for b in consumer.boosts
+            )
+            need += "效果（任一種）" if len(consumer.boosts) > 1 else "效果"
+        return f"「{stack.name_zh}」只加成{consumer.boost_names()}：先加入{need}，再選這個層數"
+    if unmet:
+        names = "或".join(consumer.requirement_names(library.ruleset))
+        return f"「{stack.name_zh}」只有{names}的技能才能消耗：加入符合的效果，或改選別的層數"
+    return None
+
+
+def _mark_stacks(
+    spec: FieldSpec, *, base: dict[str, Any], probe: EffectProbe, context: list[dict[str, Any]]
+) -> FieldSpec:
+    """消耗層數的選單：這招（草稿已有的效果）不能消耗的層數標上 ``unavailable_zh``。"""
+    by_id = probe.library.ruleset.stacks.by_id()
+    marked: list[Choice] = []
+    for item in spec.choices:
+        stack = by_id.get(str(item.value))
+        reason = None
+        if stack is not None:
+            owner = "self" if stack.owner == "self" else "enemies"
+            skill = probe.skill([*context, {**base, "stack": item.value, "affects": owner}])
+            if skill is not None:
+                reason = stack_unavailable_reason(skill, stack.id, probe.library)
+        marked.append(_with_info(item, reason))
+    return spec.model_copy(update={"choices": tuple(marked)})
 
 
 def _mark_statuses(
