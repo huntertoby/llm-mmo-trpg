@@ -41,6 +41,7 @@ ELEMENT_KEYWORD: dict[Element, str] = {
     Element.FIRE: "ignite",
     Element.LIGHTNING: "charged",
     Element.ICE: "frozen",
+    Element.POISON: "poisoned",
 }
 """普攻附加元素 → 關鍵字（水不是元素，潮濕沒有對應的普攻附加）。"""
 

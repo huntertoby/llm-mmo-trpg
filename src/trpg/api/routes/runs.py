@@ -106,7 +106,7 @@ def get_start_options(request: Request) -> StartOptions:
         )
     return StartOptions(
         weapons=tuple(weapons),
-        keywords=keyword_refs(library, library.keywords.ids()),
+        keywords=keyword_refs(library, library.keywords.start_ids()),
         keyword_count=rules.start.keywords,
     )
 
@@ -125,7 +125,7 @@ def post_start_preview(body: StartPreviewRequest, request: Request) -> StartPrev
         if found is not None:
             taken.append(found.id)
     options = []
-    for ref in keyword_refs(library, library.keywords.ids()):
+    for ref in keyword_refs(library, library.keywords.start_ids()):
         selected = ref.id in chosen
         skill = (
             chosen[ref.id]

@@ -528,7 +528,7 @@ def default_start(library: ContentLibrary, seed: int) -> tuple[str, tuple[str, .
     pools = starter_pools(library)
     usable = [
         k
-        for k in library.keywords.ids()
+        for k in library.keywords.start_ids()
         if any(weapon_problem(library.skills[s], weapon_class, held) is None for s in pools[k])
     ]
     count = library.roguelite.start.keywords
