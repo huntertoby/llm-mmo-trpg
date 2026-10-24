@@ -83,7 +83,8 @@ def test_every_keyword_pool_gives_a_starter_for_some_weapon() -> None:
             if skill is None:
                 continue
             reachable[keyword] += 1
-            assert weapon_problem(skill, weapon_class) is None
+            held = {weapon: lib.weapons[weapon].name_zh}
+            assert weapon_problem(skill, weapon_class, held) is None  # 含限定武器（3I-5）
             assert is_starter_skill(skill)
             if skill.id in lib.skills:
                 assert skill.id in pools[keyword]

@@ -1,0 +1,43 @@
+# 3I-5 武器親和／招牌技示範（數值為初值，未經模擬）
+id: skill_rampart_jeer
+schema_version: 1
+name_zh: 壁壘挑釁
+tier: 1
+rank: 1
+rarity: rare
+kind: active
+skeleton: strike
+category: weapon
+weapon_req: melee
+ap_cost: 2
+scaling_attr: str
+shape:
+  type: single
+  range: weapon
+effects:
+- type: damage
+  multiplier_permille: 1700
+- type: apply_status
+  status: taunted
+  duration: 2
+  condition:
+    type: wielding_weapon
+    weapon: tower_shield
+condition: null
+cost:
+  stamina: 8
+  cooldown: 3
+tags:
+- physical
+- melee
+- control
+narrative:
+  concept: 躲在塔盾後面逼敵人來攻
+  cast_flavor: 你敲響盾面，所有敵人的目光都被吸了過來
+provenance:
+  origin: builtin
+  owner_id: null
+  created_by: null
+  parents: []
+  bound: true
+  tradeable: false

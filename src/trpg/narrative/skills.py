@@ -93,6 +93,7 @@ __all__ = [
     "skill_shape_text",
     "variant_change_text",
     "variant_condition_text",
+    "weapon_only_text",
 ]
 
 _AFFECTS = {
@@ -934,7 +935,17 @@ def condition_summary(library: ContentLibrary, condition: ConditionSpec) -> str:
         surface_name=lambda surface: rules.surface_def(surface).name_zh,
         tag_name=rules.skill_tags.name,
         tag_runes=rules.skill_tags.rune_names(),
+        weapon_name=lambda wid: rules.gear_names.get(wid, wid),
     )
+
+
+def weapon_only_text(library: ContentLibrary, skill: SkillDef) -> str | None:
+    """專屬招牌技的限定（Phase 3I-5）：「限定手持：鞭」；不限定的技能為 ``None``。沒手持時
+    不能裝備、也不能施放。"""
+    if not skill.weapon_only:
+        return None
+    names = library.ruleset.gear_names
+    return "限定手持：" + "、".join(names.get(w, w) for w in skill.weapon_only)
 
 
 # ---------------------------------------------------------------------------
@@ -1290,6 +1301,8 @@ class SkillCard(BaseModel):
     kind: str
     category: str
     weapon_req: str
+    weapon_only: str | None = None
+    """專屬招牌技的限定（Phase 3I-5），例如「限定手持：鞭」；不限定的技能為 ``None``。"""
     scaling: str
     ap_cost: int | None
     cost: tuple[str, ...]
@@ -1418,6 +1431,7 @@ def skill_card(
         kind=KIND_TEXT[skill.kind],
         category=CATEGORY_TEXT[skill.category],
         weapon_req=WEAPON_REQ_TEXT[skill.weapon_req],
+        weapon_only=weapon_only_text(library, skill),
         scaling=scaling_detail(skill, None if owner is None else owner.weapon),
         ap_cost=skill_ap(library, skill),
         cost=tuple(cost_parts(library, skill, with_ap=skill_ap(library, skill) is not None)),

@@ -1,0 +1,46 @@
+# 3I-5 武器親和／招牌技示範（數值為初值，未經模擬）
+id: skill_blazing_round
+schema_version: 1
+name_zh: 燃燒彈
+tier: 1
+rank: 1
+rarity: rare
+kind: active
+skeleton: strike
+category: weapon
+weapon_req: ranged
+weapon_only:
+- longgun
+- shotgun
+- pistol
+- dual_pistol
+ap_cost: 2
+scaling_attr: dex
+shape:
+  type: single
+  range: weapon
+effects:
+- type: damage
+  multiplier_permille: 1850
+- type: apply_status
+  status: burning
+  duration: 1
+condition: null
+cost:
+  stamina: 8
+  cooldown: 3
+tags:
+- physical
+- ranged
+- fire
+- burn
+narrative:
+  concept: 火藥的火星把彈丸變成燃燒彈
+  cast_flavor: 彈頭帶著火星飛出，在對手身上燒了起來
+provenance:
+  origin: builtin
+  owner_id: null
+  created_by: null
+  parents: []
+  bound: true
+  tradeable: false

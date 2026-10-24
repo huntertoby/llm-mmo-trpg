@@ -1,0 +1,43 @@
+# 3I-5 武器親和／招牌技示範（數值為初值，未經模擬）
+id: skill_suppressing_fire
+schema_version: 1
+name_zh: 壓制射擊
+tier: 1
+rank: 1
+rarity: rare
+kind: active
+skeleton: strike
+category: weapon
+weapon_req: ranged
+ap_cost: 2
+scaling_attr: dex
+shape:
+  type: single
+  range: weapon
+effects:
+- type: damage
+  multiplier_permille: 1700
+- type: apply_status
+  status: slow
+  duration: 2
+  condition:
+    type: wielding_weapon
+    weapon: dual_pistol
+condition: null
+cost:
+  stamina: 8
+  cooldown: 3
+tags:
+- physical
+- ranged
+- control
+narrative:
+  concept: 兩把槍的彈幕壓得人抬不起頭
+  cast_flavor: 彈幕在對手腳邊炸成一片，他只能縮著身子後退
+provenance:
+  origin: builtin
+  owner_id: null
+  created_by: null
+  parents: []
+  bound: true
+  tradeable: false

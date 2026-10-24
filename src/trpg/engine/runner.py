@@ -38,8 +38,11 @@ __all__ = [
     "run_battle",
 ]
 
-LOG_FORMAT = "trpg-battle-log/71"
-"""``/71``（Phase 3K-1）：物品（``ItemDef``）多了 ``item_level`` 與 ``base_bonus_permille``（普通
+LOG_FORMAT = "trpg-battle-log/72"
+"""``/72``（Phase 3I-5）：武器親和與招牌技——條件多了 ``wielding_weapon``（手持某種武器時，看主手
+武器或副手的 ID）；技能多了 ``weapon_only``（限定武器，不符不能裝備、不能施放）；規則包多了
+``gear_names``。規則包內嵌的技能與條件表因此不同，``/71`` 的紀錄無法重播。
+``/71``（Phase 3K-1）：物品（``ItemDef``）多了 ``item_level`` 與 ``base_bonus_permille``（普通
 物品的基礎加成，併進裝備加值）；普攻附加詞條多了 ``weapon_element``（武器元素詞條，接上攻擊元素的
 優先順序）。裝備快照的內容與結算因此改變，``/70`` 的紀錄無法重播。
 ``/70``（3-50b 後小修，06 6.5）：自己付的沉默也改為「回合結束才生效」

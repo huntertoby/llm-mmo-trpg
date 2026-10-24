@@ -41,6 +41,7 @@ from pydantic import (
 )
 
 from trpg.content.battle import ID_PATTERN
+from trpg.content.keyword_derive import skill_condition_specs
 from trpg.content.library import ContentLibrary
 from trpg.content.skills import (
     AFFECTS_VALUES,
@@ -48,6 +49,7 @@ from trpg.content.skills import (
     GAMBLE_BRANCH_TYPES,
     ON_KILL_TYPES,
     SKILL_ID_PATTERN,
+    WIELDING_WEAPON,
     ZONE_EFFECT_TYPES,
     CompositionRule,
     EffectSpec,
@@ -63,6 +65,7 @@ from trpg.content.skills import (
     rarity_rank,
 )
 from trpg.shared.types import Attribute, Element, Surface
+from trpg.skillgen.option_gear import gear_pool
 from trpg.skillgen.proposal_forms import (
     STANDARD_FORM,
     FormPlan,
@@ -175,6 +178,9 @@ class ProposalContext:
     rank: int = 1
     origin: Origin = "level_up"
     hero_attributes: Mapping[Attribute, int] | None = None
+    held: Mapping[str, str] | None = None
+    """主角手上的主手武器與副手（ID → 中文名；Phase 3I-5）。有值時，提議的「手持某種武器時」
+    條件只能指定這些裝備（否則加成永遠不會成立）；``None`` ＝ 不檢查。"""
 
 
 @dataclass(frozen=True, slots=True)
@@ -285,6 +291,8 @@ class _Refs:
     rule_changes: tuple[str, ...]
     summon_traits: tuple[str, ...]
     infusions: tuple[str, ...]
+    weapons: tuple[str, ...]
+    """玩家手上會出現的武器與副手 ID（``wielding_weapon`` 條件的 ``weapon``；3I-5）。"""
 
     @classmethod
     def of(cls, library: ContentLibrary) -> _Refs:
@@ -297,6 +305,7 @@ class _Refs:
             rule_changes=tuple(sorted(rules.rule_changes.by_id())),
             summon_traits=tuple(sorted(rules.core.summon_traits)),
             infusions=tuple(sorted(rules.core.summon_infusions)),
+            weapons=tuple(sorted(gear_id for gear_id, _, _ in gear_pool(library))),
         )
 
     def ids_for(self, param_type: str) -> tuple[str, ...] | None:
@@ -308,6 +317,7 @@ class _Refs:
             "rule_change": self.rule_changes,
             "summon_trait": self.summon_traits,
             "infusion": self.infusions,
+            "weapon": self.weapons,
         }
         return table.get(param_type)
 
@@ -1148,7 +1158,28 @@ def evaluate_proposal(
     violations = validate_skill(skill, library)
     if violations:
         return ProposalResult(None, tuple(_rule_error(v.rule, v.message) for v in violations))
+    unheld = _unheld_errors(skill, ctx)
+    if unheld:
+        return ProposalResult(None, tuple(unheld))
     return ProposalResult(skill, ())
+
+
+def _unheld_errors(skill: SkillDef, ctx: ProposalContext) -> list[ProposalError]:
+    """武器親和條件指定了主角沒拿的裝備（Phase 3I-5）：加成永遠不會成立，退回重提。"""
+    if ctx.held is None:
+        return []
+    allowed = tuple(sorted(ctx.held))
+    return [
+        ProposalError(
+            stage="rules",
+            path="effects",
+            code="gear.not_held",
+            message=f"武器親和只能指定主角手上的裝備，收到 {cond.weapon}",
+            allowed=allowed,
+        )
+        for cond in skill_condition_specs(skill)
+        if cond.type == WIELDING_WEAPON and cond.weapon not in ctx.held
+    ]
 
 
 def feedback_payload(errors: Sequence[ProposalError], attempt: int, max_attempts: int) -> str:

@@ -1,0 +1,42 @@
+# 3I-5 武器親和／招牌技示範（數值為初值，未經模擬）
+id: skill_scatter_shot
+schema_version: 1
+name_zh: 散彈驅離
+tier: 1
+rank: 1
+rarity: rare
+kind: active
+skeleton: strike
+category: weapon
+weapon_req: ranged
+ap_cost: 2
+scaling_attr: dex
+shape:
+  type: single
+  range: weapon
+effects:
+- type: damage
+  multiplier_permille: 1800
+- type: push
+  distance: 1
+  condition:
+    type: wielding_weapon
+    weapon: shotgun
+condition: null
+cost:
+  stamina: 8
+  cooldown: 3
+tags:
+- physical
+- ranged
+- displace
+narrative:
+  concept: 霰彈的衝擊力把人轟退
+  cast_flavor: 彈丸炸開，對手被轟得連退一步
+provenance:
+  origin: builtin
+  owner_id: null
+  created_by: null
+  parents: []
+  bound: true
+  tradeable: false

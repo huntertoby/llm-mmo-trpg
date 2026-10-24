@@ -3731,6 +3731,8 @@ export interface components {
             category: string;
             /** Weapon Req */
             weapon_req: string;
+            /** Weapon Only */
+            weapon_only?: string | null;
             /** Scaling */
             scaling: string;
             /** Ap Cost */

@@ -1,0 +1,43 @@
+# 3I-5 武器親和／招牌技示範（數值為初值，未經模擬）
+id: skill_blade_dance
+schema_version: 1
+name_zh: 刃舞
+tier: 1
+rank: 1
+rarity: rare
+kind: active
+skeleton: strike
+category: weapon
+weapon_req: melee
+ap_cost: 2
+scaling_attr: str
+shape:
+  type: single
+  range: weapon
+effects:
+- type: damage
+  multiplier_permille: 1800
+- type: apply_status
+  status: bleed
+  duration: 2
+  condition:
+    type: wielding_weapon
+    weapon: dual_dagger
+condition: null
+cost:
+  stamina: 8
+  cooldown: 3
+tags:
+- physical
+- melee
+- bleed
+narrative:
+  concept: 雙刃在對手身上留下細密的傷口
+  cast_flavor: 你在對手周圍旋轉，每一圈都留下幾道細傷
+provenance:
+  origin: builtin
+  owner_id: null
+  created_by: null
+  parents: []
+  bound: true
+  tradeable: false

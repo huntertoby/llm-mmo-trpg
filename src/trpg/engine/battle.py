@@ -15,7 +15,7 @@ from collections.abc import Callable
 from dataclasses import dataclass, replace
 from typing import Literal
 
-from trpg.content.equipment import loadout_problems
+from trpg.content.equipment import loadout_held, loadout_problems
 from trpg.content.skills import SkillDef, skill_slot_problems, weapon_problem
 from trpg.engine import modifiers
 from trpg.engine.actions import (
@@ -267,7 +267,8 @@ def _check_loadouts(setup: BattleSetup) -> None:
                 defs.append(rules.skill_def(skill_id))
             except KeyError:
                 raise BattleSetupError(f"{spawn.template.name_zh}：未知的技能 {skill_id}") from None
-        problems = [weapon_problem(s, spawn.weapon.weapon_class) for s in defs]
+        held = loadout_held(spawn.weapon, spawn.equipment)
+        problems = [weapon_problem(s, spawn.weapon.weapon_class, held) for s in defs]
         problems += skill_slot_problems(defs, rules.core.skill_slots)
         problems += loadout_problems(spawn.equipment, spawn.weapon, rules.equipment)  # 3G-G1
         found = next((p for p in problems if p is not None), None)

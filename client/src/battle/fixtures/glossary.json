@@ -1942,6 +1942,14 @@
    "rules_zh": []
   },
   {
+   "id": "wielding_weapon",
+   "name_zh": "手持武器",
+   "description_zh": "施放者的主手武器或副手是指定的那一種（weapons.yaml、offhands.yaml 的 ID；成對武器算它自己那一種，雙匕首不算匕首）。只看施放者；用在效果的 condition 時是「拿著那種武器才多一個加成」，沒拿時技能照常可用。",
+   "tags": [],
+   "status_look": null,
+   "rules_zh": []
+  },
+  {
    "id": "on_own_rune",
    "name_zh": "目標站在自己的符文上",
    "description_zh": "目標所在的格子上有施放者自己（用 inscribe）刻下的符文；可用 element 或 tag 篩選符文（省略＝任何符文）。別人的符文不算；對格子判斷，所以也可以用在沒有單位的格子。",

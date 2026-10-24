@@ -13,6 +13,7 @@ from __future__ import annotations
 from collections.abc import Mapping, Sequence
 from typing import Any
 
+from trpg.content.equipment import loadout_held
 from trpg.content.library import ContentLibrary
 from trpg.content.skills import SkillDef, skill_slot_problems, weapon_problem
 from trpg.engine.setup import BattleSetup
@@ -88,8 +89,9 @@ def equip_custom_skills(
     skills = _hero_skills(hero.template.skills, custom, replace)
     defs = ruleset.skills.by_id()
     problems = skill_slot_problems((defs[s] for s in skills), ruleset.core.skill_slots)
+    held = loadout_held(hero.weapon, hero.equipment)
     problems += [
-        p for s in custom if (p := weapon_problem(s, hero.weapon.weapon_class)) is not None
+        p for s in custom if (p := weapon_problem(s, hero.weapon.weapon_class, held)) is not None
     ]
     if problems:
         raise WorkshopRequestError("；".join(problems))

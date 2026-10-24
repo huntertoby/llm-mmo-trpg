@@ -103,6 +103,17 @@ conditions:
     description_zh: 施放者帶有「隱蔽」狀態（concealed；站在黑暗或草叢中不算）。隱蔽中發動攻擊另有通用的命中加成，攻擊結算完後脫離隱蔽。
     harshness: harsh
     min_rarity: rare
+  # 3I-5 武器親和（玩法決定 #50，06 6.10；harshness 為初值，未經模擬）：寫在效果的 condition 上＝
+  # 「手持某種武器時多一個加成」；沒拿那種武器時技能照常可用、只是沒有加成。算常見（0.85）：
+  # 主手武器或副手的 ID 相符就成立，開局就知道，不需要先做別的事。
+  - id: wielding_weapon
+    name_zh: 手持武器
+    llm_hint: "施放者手上拿著指定的武器或副手時才成立。"
+    description_zh: 施放者的主手武器或副手是指定的那一種（weapons.yaml、offhands.yaml 的 ID；成對武器算它自己那一種，雙匕首不算匕首）。只看施放者；用在效果的 condition 時是「拿著那種武器才多一個加成」，沒拿時技能照常可用。
+    harshness: common
+    min_rarity: rare
+    params:
+      weapon: {llm_hint: "要手持的武器或副手。", type: weapon, required: true}
   # 3-23 刻印（harshness 為初值，未經模擬）：需要先用 inscribe 刻下符文才成立，所以算嚴苛。
   - id: on_own_rune
     name_zh: 目標站在自己的符文上

@@ -282,8 +282,19 @@ def _weapon_class(library: ContentLibrary, weapon: str) -> str:
     return found.weapon_class
 
 
+def _held(library: ContentLibrary, weapon: str) -> dict[str, str]:
+    """開局時手上的裝備（只有起始武器，沒有副手；限定武器的技能用，Phase 3I-5）。"""
+    return {weapon: library.weapons[weapon].name_zh}
+
+
 def _composed_starter(
-    library: ContentLibrary, rng: Rng, keyword: str, weapon_class: str, taken: set[str]
+    library: ContentLibrary,
+    rng: Rng,
+    keyword: str,
+    weapon_class: str,
+    taken: set[str],
+    *,
+    held: Mapping[str, str],
 ) -> SkillDef | None:
     hint = "spell" if weapon_class == "focus" else None
     for _ in range(library.roguelite.start.composer_tries):
@@ -298,7 +309,7 @@ def _composed_starter(
             is_starter_skill(skill)
             and keyword in keywords
             and skill.id not in taken
-            and weapon_problem(skill, weapon_class) is None
+            and weapon_problem(skill, weapon_class, held) is None
         ):
             return skill
     return None
@@ -323,17 +334,18 @@ def starting_skill(
     if keyword not in library.keywords.ids():
         raise ChoiceError(f"未知的關鍵字：{keyword}（可用：{', '.join(library.keywords.ids())}）")
     weapon_class = _weapon_class(library, weapon)
+    held = _held(library, weapon)
     pools = pools if pools is not None else starter_pools(library)
     used = set(taken)
     rng = Rng(seed).fork(f"start/skill/{keyword}")
     options = [
         library.skills[s]
         for s in pools[keyword]
-        if s not in used and weapon_problem(library.skills[s], weapon_class) is None
+        if s not in used and weapon_problem(library.skills[s], weapon_class, held) is None
     ]
     if options:
         return rng.choice(options)
-    return _composed_starter(library, rng, keyword, weapon_class, used)
+    return _composed_starter(library, rng, keyword, weapon_class, used, held=held)
 
 
 def _start_hero(library: ContentLibrary, weapon: str, skills: Sequence[str]) -> UnitTemplate:
@@ -362,11 +374,13 @@ def _fixed_starter(
     skill_id: str,
     keyword: str,
     weapon_class: str,
+    *,
+    held: Mapping[str, str],
 ) -> SkillDef:
     if skill_id not in pools[keyword]:
         raise ChoiceError(f"技能 {skill_id} 不在「{keyword}」的起始技能池裡")
     skill = library.skills[skill_id]
-    problem = weapon_problem(skill, weapon_class)
+    problem = weapon_problem(skill, weapon_class, held, names=library.ruleset.gear_names)
     if problem is not None:
         raise ChoiceError(problem)
     return skill
@@ -380,12 +394,13 @@ def _pick_starters(
     skills: Sequence[str],
 ) -> list[SkillDef]:
     weapon_class = _weapon_class(library, weapon)
+    held = _held(library, weapon)
     pools = starter_pools(library)
     picked: list[SkillDef] = []
     for index, keyword in enumerate(keywords):
         skill: SkillDef | None
         if skills:
-            skill = _fixed_starter(library, pools, skills[index], keyword, weapon_class)
+            skill = _fixed_starter(library, pools, skills[index], keyword, weapon_class, held=held)
         else:
             skill = starting_skill(
                 library, weapon, keyword, seed, taken=[s.id for s in picked], pools=pools
@@ -509,11 +524,12 @@ def default_start(library: ContentLibrary, seed: int) -> tuple[str, tuple[str, .
     root = Rng(seed)
     weapon = root.fork("start/weapon").choice(start_weapons(library))
     weapon_class = library.weapons[weapon].weapon_class
+    held = _held(library, weapon)
     pools = starter_pools(library)
     usable = [
         k
         for k in library.keywords.ids()
-        if any(weapon_problem(library.skills[s], weapon_class) is None for s in pools[k])
+        if any(weapon_problem(library.skills[s], weapon_class, held) is None for s in pools[k])
     ]
     count = library.roguelite.start.keywords
     return weapon, tuple(root.fork("start/keywords").shuffled(usable)[:count])
