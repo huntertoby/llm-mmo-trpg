@@ -195,11 +195,11 @@ def scaling_label(skill: SkillDef, lib: ContentLibrary | None = None) -> str:
 
 
 def contest_label(skill: SkillDef, lib: ContentLibrary | None = None) -> str:
-    """對抗判定（擊倒、位移、狀態抵抗）的屬性簡稱：武器技只用武器的主屬性（第二屬性不參與對抗，
-    :meth:`SkillDef.contest_attr`），其他同 :func:`scaling_label`。"""
-    if skill.category == "weapon" and lib is not None:
-        return lib.skill_scaling.weapon_class_attr(skill.weapon_req).display_name
-    return scaling_label(skill, lib)
+    """對抗判定（擊倒、位移、狀態抵抗）的屬性簡稱。攻方的值和命中、傷害同一個（3I-3b，玩法 PM
+    2026-10-24）：單屬性同 :func:`scaling_label`；雙屬性寫「力量／智力（取平均）」，和算法句一致。
+    守方仍和攻方的單一主屬性比（:meth:`SkillDef.contest_attr`）。"""
+    label = scaling_label(skill, lib)
+    return f"{label}（取平均）" if skill.secondary_scaling_attr is not None else label
 
 
 def scaling_detail(skill: SkillDef, weapon: WeaponDef | None = None) -> str:

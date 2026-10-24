@@ -2,7 +2,7 @@
 
 - 魔導劍：單手近戰、1d8、力量／智力取平均、沒有特性；普攻吃平均。
 - 武器技可帶一個心智第二屬性：命中、傷害、控制抵抗用「武器的縮放值」與「心智屬性值」的平均
-  （無條件捨去）；對抗判定只用武器的主屬性。
+  （無條件捨去）；對抗判定的攻方值也用平均（3I-3b），守方仍比武器的主屬性。
 - 行為一致測試：每把武器 × 屬性組合 × 第二屬性，實際跑普攻與武器技，``damage_dealt`` 的骰外加成
   等於卡片的「目前 +N」。
 """
@@ -18,11 +18,12 @@ from tests.engine.helpers import library, make_skill
 from tests.engine.skill_helpers import SID, battle, cast, hit_with, of
 from tests.engine.test_weapons_24a1 import U1, U2, armed, dice, hit, kinds, state_of, weapon
 from trpg.content.skills import SkillDef
-from trpg.engine import BattleState
-from trpg.engine.events import AttackRolled, DamageDealt
+from trpg.engine import BattleState, UseSkill, preview
+from trpg.engine.events import AttackRolled, DamageDealt, ManeuverRolled, StatusSaveRolled
 from trpg.engine.rules.statuses import effective_attribute
 from trpg.engine.skills.scaling import skill_scale_attr, skill_scaling_attr, skill_scaling_value
 from trpg.engine.state import UnitState
+from trpg.narrative.skills import contest_label
 from trpg.roguelite.start import start_weapons
 from trpg.shared.bonus_text import plain_text
 from trpg.shared.types import Attribute, Team
@@ -210,3 +211,54 @@ def test_weapon_skill_damage_matches_the_card_current_bonus(
     assert skill.scaling_value(_getter(state, unit), unit.weapon) == skill_scaling_value(
         state.ruleset, unit, skill
     )
+
+
+# ---------------------------------------------------------------------------
+# 3I-3b：對抗判定也用平均（實際擲骰＝預覽機率＝卡片）
+# ---------------------------------------------------------------------------
+
+CONTEST_TABLE: list[tuple[str, str | None, dict[str, int]]] = [
+    ("one_handed_sword", "int", {"str": 12, "int": 30}),  # 平均 21，主屬性只有 12
+    ("one_handed_sword", None, {"str": 12, "int": 30}),  # 對照：單屬性不變
+    ("arcane_blade", "int", {"str": 12, "int": 20}),
+    ("hammer", "wis", {"con": 18, "str": 11, "wis": 6}),
+]
+
+
+@pytest.mark.parametrize(("weapon_id", "second", "attrs"), CONTEST_TABLE)
+def test_knock_prone_contest_uses_the_averaged_value(
+    weapon_id: str, second: str | None, attrs: dict[str, int]
+) -> None:
+    skill = _weapon_skill(second, effects=[{"type": "damage"}, {"type": "knock_prone"}])
+    state = hit_with(_state(skill, weapon_id, attrs))
+    unit, target = state.units[U1], state.units[U2]
+    value = skill_scaling_value(state.ruleset, unit, skill)
+    attr = skill_scaling_attr(unit, skill)
+    expected = state.ruleset.hit_table.modifier(
+        value, max(1, effective_attribute(state.ruleset, target, attr))
+    )
+    (rolled,) = of(cast(state, target_id=U2), ManeuverRolled)
+    assert rolled.modifier == expected
+    if second is None:  # 單屬性技能的對抗行為不變：就是武器縮放值
+        assert value == unit.weapon.scaling_value(_getter(state, unit))
+
+
+def test_status_save_and_preview_use_the_averaged_value() -> None:
+    effects: list[dict[str, Any]] = [{"type": "damage"}, {"type": "apply_status", "status": "slow"}]
+    chances = {}
+    for second in (None, "int"):
+        skill = _weapon_skill(second, effects=effects)
+        state = hit_with(_state(skill, "one_handed_sword", {"str": 12, "int": 30}))
+        view = preview(state, UseSkill(unit_id=U1, skill_id=SID, target_id=U2))
+        chances[second] = view.targets[0].status_chances[0].apply_chance
+        save = of(cast(state, target_id=U2), StatusSaveRolled)[0]
+        assert save.attack_value == skill_scaling_value(state.ruleset, state.units[U1], skill)
+    assert chances["int"] >= chances[None]  # 平均 21 不會比力量 12 更難
+
+
+def test_contest_label_says_average_only_for_dual_skills() -> None:
+    lib = library()
+    assert contest_label(_weapon_skill("int"), lib) == "力量／智力（取平均）"
+    assert contest_label(_weapon_skill(), lib) == "力量"
+    spell = make_skill(SID, {"type": "single", "range": 2}, [{"type": "knock_prone"}])
+    assert "取平均" not in contest_label(spell, lib)
