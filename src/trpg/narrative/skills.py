@@ -35,7 +35,7 @@ from trpg.content.skills import (
     default_affects,
     on_hit_carrier,
 )
-from trpg.content.stacks import StackDef, auto_consumed
+from trpg.content.stacks import StackDef
 from trpg.engine.ids import SHIELDED as SHIELD_STATUS
 from trpg.engine.summons import SummonStats
 from trpg.narrative.skill_icon import SkillIcon, skill_icon
@@ -1285,10 +1285,7 @@ def skill_stacks(library: ContentLibrary, skill: SkillDef) -> tuple[SkillStackRe
         except KeyError:
             continue
         found.setdefault((spec.stack, role), SkillStackRef(id=spec.stack, name_zh=name, role=role))
-    for auto in auto_consumed(skill, library.ruleset.stacks.stacks):  # 自動消耗（3-52b，專注）
-        found.setdefault(
-            (auto.id, "uses"), SkillStackRef(id=auto.id, name_zh=auto.name_zh, role="uses")
-        )
+    # 自動消耗的層數（專注）不在每張卡上標示，只在名詞說明與 HUD 寫（玩法 PM 2026-10-24）
     return tuple(found.values())
 
 

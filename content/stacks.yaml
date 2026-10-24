@@ -63,7 +63,7 @@ stacks:
         - {tag: finisher}
   - id: focus
     name_zh: 專注
-    description_zh: 累積在自己身上；回合結束時這回合沒有移動就自動累積，你下一個造成傷害的主動技能會自動消耗全部專注，每層提高 15% 傷害。
+    description_zh: 累積在自己身上；回合結束時這回合沒有移動就自動累積，你下一個造成傷害的主動技能會自動消耗全部專注，每層提高 15% 傷害（施放時消耗，打空也會用掉）。
     owner: self
     max: 3
     ai_value: 2

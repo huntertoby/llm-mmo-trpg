@@ -6,7 +6,7 @@ import { sourcePips } from "../battle/source";
 import { statusIconTile, surfaceTile } from "../render/skillIcon";
 import { ChargeChips } from "./ChargeChips";
 import { TipGlyph } from "./SkillIconView";
-import { glossaryName, stackName, statusName, surfaceName } from "../battle/glossary";
+import { glossaryHasTag, glossaryName, stackName, statusName, surfaceName } from "../battle/glossary";
 import type { SkillNames } from "../battle/actions";
 import { activationLine } from "../battle/activations";
 import { grantedLine } from "../battle/granted";
@@ -172,6 +172,9 @@ export function Hud({ view, hero, skills, cards, compact = false }: Props) {
                 <StackTip id={k} cards={cards} owned={hero.skills}>
                   {stackName(k)} ×{n}
                 </StackTip>
+                {glossaryHasTag("stacks", k, "auto_consume") && (
+                  <span className="muted small">（下一個傷害技能會吃掉）</span>
+                )}
               </span>
             ))}
       </div>
