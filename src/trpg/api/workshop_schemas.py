@@ -22,6 +22,7 @@ __all__ = [
     "ArenaOpponents",
     "WorkshopArena",
     "WorkshopCheck",
+    "WorkshopCheckRequest",
     "WorkshopExport",
     "WorkshopExportRequest",
     "WorkshopOptionsRequest",
@@ -46,6 +47,11 @@ class WorkshopOptionsRequest(WorkshopSkillRequest):
     顯示「看手上武器（目前：長劍＝力量）」，沒有時維持「依手上武器而定（例：……）」。"""
 
     weapon: str | None = None
+
+
+class WorkshopCheckRequest(WorkshopOptionsRequest):
+    """檢查（Phase 3-55）：和選項一樣可帶 ``weapon``（主角目前手上武器的 ID）；有值且大類和技能的
+    武器需求相符時，卡片的算法寫那把武器實際的屬性，否則列由武器資料產生的例子。"""
 
 
 class WorkshopExportRequest(WorkshopSkillRequest):

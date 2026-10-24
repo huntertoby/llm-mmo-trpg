@@ -607,7 +607,7 @@ export interface paths {
         put?: never;
         /**
          * Post Check
-         * @description 是否合法、違反的規則、預算明細、最低稀有度與技能卡片。
+         * @description 是否合法、違反的規則、預算明細、最低稀有度與技能卡片（帶 ``weapon`` 時卡片寫實際屬性）。
          */
         post: operations["post_check_api_workshop_check_post"];
         delete?: never;
@@ -5015,6 +5015,19 @@ export interface components {
              */
             keyword_hints: components["schemas"]["KeywordHint"][];
         };
+        /**
+         * WorkshopCheckRequest
+         * @description 檢查（Phase 3-55）：和選項一樣可帶 ``weapon``（主角目前手上武器的 ID）；有值且大類和技能的
+         *     武器需求相符時，卡片的算法寫那把武器實際的屬性，否則列由武器資料產生的例子。
+         */
+        WorkshopCheckRequest: {
+            /** Skill */
+            skill?: {
+                [key: string]: unknown;
+            };
+            /** Weapon */
+            weapon?: string | null;
+        };
         /** WorkshopExport */
         WorkshopExport: {
             /** Yaml */
@@ -5075,16 +5088,6 @@ export interface components {
             rarity?: components["schemas"]["SkillRarity"] | null;
             /** Skeleton */
             skeleton?: string | null;
-        };
-        /**
-         * WorkshopSkillRequest
-         * @description 組到一半（或完整）的技能。
-         */
-        WorkshopSkillRequest: {
-            /** Skill */
-            skill?: {
-                [key: string]: unknown;
-            };
         };
         XY: [
             number,
@@ -6069,7 +6072,7 @@ export interface operations {
         };
         requestBody: {
             content: {
-                "application/json": components["schemas"]["WorkshopSkillRequest"];
+                "application/json": components["schemas"]["WorkshopCheckRequest"];
             };
         };
         responses: {

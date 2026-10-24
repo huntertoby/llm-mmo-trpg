@@ -21,17 +21,17 @@ from trpg.api.workshop_schemas import (
     ArenaOpponents,
     WorkshopArena,
     WorkshopCheck,
+    WorkshopCheckRequest,
     WorkshopExport,
     WorkshopExportRequest,
     WorkshopOptionsRequest,
     WorkshopRandom,
     WorkshopRandomRequest,
-    WorkshopSkillRequest,
 )
 from trpg.content.library import ContentLibrary
 from trpg.narrative.keyword_hints import draft_keyword_hints
 from trpg.narrative.skill_icon import icon_of
-from trpg.narrative.skills import draft_card_keywords, skill_card
+from trpg.narrative.skills import CardOwner, draft_card_keywords, skill_card
 from trpg.skillgen.draft import build_skill
 from trpg.skillgen.draft_check import check_draft
 from trpg.skillgen.option_models import DraftOptions
@@ -47,11 +47,18 @@ PROVISIONAL_MARK = "暫定"
 router = APIRouter(prefix="/api/workshop", tags=["workshop"])
 
 
-def _check(library: ContentLibrary, skill: dict[str, Any]) -> WorkshopCheck:
+def _check(
+    library: ContentLibrary, skill: dict[str, Any], weapon: str | None = None
+) -> WorkshopCheck:
     result = check_draft(skill, library)
     card = None
     if result.skill is not None:
-        card = skill_card(library, build_skill(result.skill))
+        built = build_skill(result.skill)
+        held = None if weapon is None else library.weapons.get(weapon)
+        if held is not None and held.weapon_class != built.weapon_req:
+            held = None  # 大類不符（例如遠程技能配近戰武器）：不拿它當持有者
+        owner = None if held is None else CardOwner(weapon=held)
+        card = skill_card(library, built, owner=owner)
     return WorkshopCheck(
         **result.model_dump(),
         card=card,
@@ -98,9 +105,9 @@ def post_options(body: WorkshopOptionsRequest, request: Request) -> DraftOptions
 
 
 @router.post("/check")
-def post_check(body: WorkshopSkillRequest, request: Request) -> WorkshopCheck:
-    """是否合法、違反的規則、預算明細、最低稀有度與技能卡片。"""
-    return _check(store_of(request).library, body.skill)
+def post_check(body: WorkshopCheckRequest, request: Request) -> WorkshopCheck:
+    """是否合法、違反的規則、預算明細、最低稀有度與技能卡片（帶 ``weapon`` 時卡片寫實際屬性）。"""
+    return _check(store_of(request).library, body.skill, body.weapon)
 
 
 @router.post("/random")

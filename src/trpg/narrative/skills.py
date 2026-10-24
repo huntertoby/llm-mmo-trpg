@@ -8,12 +8,13 @@
 from __future__ import annotations
 
 from collections.abc import Callable, Iterable, Mapping
+from contextvars import ContextVar
 from dataclasses import dataclass
 from typing import Any, Literal
 
 from pydantic import BaseModel, ConfigDict
 
-from trpg.content.battle import Dice, WeaponDef
+from trpg.content.battle import Dice, WeaponDef, weapon_attr_examples_zh
 from trpg.content.keyword_derive import KeywordGrade, keyword_grades, skill_facts
 from trpg.content.library import ContentLibrary, Ruleset
 from trpg.content.rule_changes import RuleChangeDef, rule_change_sentence
@@ -178,12 +179,20 @@ WEAPON_ATTR_LABEL = "武器屬性"
 """武器技（看手上武器的屬性，Phase 3H-6）在效果句裡的縮放屬性簡稱。"""
 
 
+_CARD_WEAPON: ContextVar[WeaponDef | None] = ContextVar("card_weapon", default=None)
+"""正在組的技能卡的持有者武器（3-55）：效果句裡武器技的縮放屬性、對抗屬性寫手上武器實際的屬性，
+而不是武器大類的預設（例如匕首持有者寫「敏捷／力量（取較高）」而不是「力量」）。"""
+
+
 def scaling_label(skill: SkillDef, lib: ContentLibrary | None = None) -> str:
     """縮放屬性的簡稱：單屬性為「智力」，雙屬性為「力量／智力」（Phase 2H-2）。武器技看手上武器
     （3H-6）：給了 ``lib`` 時寫實際的屬性名——所需武器大類的主屬性（例「力量」），帶心智第二屬性
     時接在後面（「力量／智力」，3I-3；玩法 PM 2026-10-24：武器技所有數值都看手上武器，不加例外）；
     沒有 ``lib`` 時寫「武器屬性」。"""
     if skill.category == "weapon":
+        held = _CARD_WEAPON.get()
+        if held is not None:  # 3-55：有持有者就寫那把武器實際的屬性（已含第二屬性與取平均）
+            return held.skill_scaling_names_zh(skill.secondary_scaling_attr)
         if lib is None:
             return WEAPON_ATTR_LABEL
         names = [lib.skill_scaling.weapon_class_attr(skill.weapon_req).display_name]
@@ -201,7 +210,11 @@ def contest_label(skill: SkillDef, lib: ContentLibrary | None = None) -> str:
     2026-10-24）：單屬性同 :func:`scaling_label`；雙屬性寫「力量／智力（取平均）」，和算法句一致。
     守方仍和攻方的單一主屬性比（:meth:`SkillDef.contest_attr`）。"""
     label = scaling_label(skill, lib)
-    return f"{label}（取平均）" if skill.secondary_scaling_attr is not None else label
+    if skill.secondary_scaling_attr is None or (
+        skill.category == "weapon" and _CARD_WEAPON.get() is not None
+    ):  # 有持有者時 scaling_label 已寫出取平均
+        return label
+    return f"{label}（取平均）"
 
 
 def scaling_detail(skill: SkillDef, weapon: WeaponDef | None = None) -> str:
@@ -972,7 +985,23 @@ def effect_summary(
         text = _effect_core(library, skill, spec) + suffix
     if spec.condition is not None:
         text += f"，若{condition_summary(library, spec.condition)}"
+        text += _affinity_attr_text(library, skill, spec.condition)
     return text
+
+
+def _affinity_attr_text(library: ContentLibrary, skill: SkillDef, condition: ConditionSpec) -> str:
+    """武器親和效果（``wielding_weapon``，3I-5）那一行補上那把武器看的屬性（3-55）：武器技的命中與傷害
+    看手上武器，所以寫「（這把武器吃力量與智力（取平均））」；不是武器技、或條件是副手時為空。"""
+    if (
+        skill.category != "weapon"
+        or condition.type != "wielding_weapon"
+        or condition.weapon is None
+    ):
+        return ""
+    weapon = library.weapons.get(condition.weapon)
+    if weapon is None:
+        return ""
+    return f"，這把武器吃{weapon.skill_scaling_names_zh(skill.secondary_scaling_attr)}"
 
 
 def condition_summary(library: ContentLibrary, condition: ConditionSpec) -> str:
@@ -1474,6 +1503,16 @@ def skill_card(
 ) -> SkillCard:
     """``skill`` 的卡片內容；``mastery_active`` 見 :func:`mastery_text`；``owner`` 見
     :class:`CardOwner`（召喚物資訊與傷害算法的「目前」值；省略時為 1 級基準值與純算式）。"""
+    token = _CARD_WEAPON.set(None if owner is None else owner.weapon)
+    try:
+        return _build_card(library, skill, mastery_active, owner)
+    finally:
+        _CARD_WEAPON.reset(token)
+
+
+def _build_card(
+    library: ContentLibrary, skill: SkillDef, mastery_active: bool | None, owner: CardOwner | None
+) -> SkillCard:
     return SkillCard(
         id=skill.id,
         name_zh=skill.name_zh,
@@ -1529,6 +1568,7 @@ def skill_card(
             library.ruleset.core,
             None if owner is None else owner.weapon,
             None if owner is None else owner.attr_get,
+            weapon_examples=weapon_attr_examples_zh(library.weapons.values(), skill.weapon_req),
         ),
         stacks=skill_stacks(library, skill),
     )

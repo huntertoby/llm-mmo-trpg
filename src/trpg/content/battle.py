@@ -18,7 +18,7 @@ from trpg.shared.bonus_text import bonus_text
 from trpg.shared.types import Attribute, Element, ResistGroup, Surface
 
 if TYPE_CHECKING:
-    from collections.abc import Callable
+    from collections.abc import Callable, Iterable
 
     from trpg.content.rules import CoreRules
 
@@ -60,6 +60,7 @@ __all__ = [
     "WeaponDef",
     "WeaponLook",
     "WeaponTable",
+    "weapon_attr_examples_zh",
 ]
 
 ID_PATTERN = r"^[a-z][a-z0-9_]*$"
@@ -385,6 +386,12 @@ class WeaponDef(ContentModel):
         names = f"{self.scaling_attr.display_name}／{self.secondary_scaling_attr.display_name}"
         return f"{names}（{'取較高' if self.attr_mode == 'max' else '取平均'}）"
 
+    def skill_scaling_names_zh(self, secondary: Attribute | None = None) -> str:
+        """武器技實際吃的屬性（3-55）：武器自己的縮放屬性；技能帶心智第二屬性（3I-3）時再和它取平均，
+        例「力量與智力（取平均）」「敏捷／力量（取較高）與智力（取平均）」。"""
+        names = self.scaling_names_zh()
+        return names if secondary is None else f"{names}與{secondary.display_name}（取平均）"
+
     def attack_formula_zh(
         self, core: CoreRules, get: Callable[[Attribute], int] | None = None
     ) -> str:
@@ -506,6 +513,25 @@ def _weapon_ranged_lines(w: WeaponDef) -> list[str]:
             parts.append(f"傷害 {'+' if pct > 0 else '−'}{abs(pct):g}%")
         lines.append(f"{mod.label_zh()}：{'、'.join(parts)}")
     return lines
+
+
+def weapon_attr_examples_zh(
+    weapons: Iterable[WeaponDef], weapon_req: str, *, per_group: int = 2, max_groups: int = 5
+) -> str:
+    """沒有持有者時的武器屬性例子（3-55，由武器資料產生、不寫死）：「劍、斧＝力量；匕首＝敏捷／力量
+    （取較高）」。只列玩家用得到的武器（不含召喚物專用）、大類符合 ``weapon_req``（``any`` 不限）；
+    依 ID 排序，同屬性的武器合成一組（武器多的組在前），每組最多 ``per_group`` 把、最多
+    ``max_groups`` 組（超過接「…」）。"""
+    groups: dict[str, list[str]] = {}
+    for weapon in sorted(weapons, key=lambda w: w.id):
+        if weapon.summon_only or weapon_req not in ("any", weapon.weapon_class):
+            continue
+        groups.setdefault(weapon.scaling_names_zh(), []).append(weapon.name_zh)
+    parts = []
+    for attrs, names in sorted(groups.items(), key=lambda kv: -len(kv[1])):  # 穩定排序：同數量依 ID
+        more = "等" if len(names) > per_group else ""
+        parts.append("、".join(names[:per_group]) + more + f"＝{attrs}")
+    return "；".join(parts[:max_groups]) + ("…" if len(parts) > max_groups else "")
 
 
 class WeaponTable(ContentModel):
