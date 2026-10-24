@@ -40,7 +40,8 @@ export function itemSubtitle(item: GearItemInfo): string {
 }
 
 function fmtPoints(n: number): string {
-  return Number.isInteger(n) ? `${n}` : n.toFixed(1);
+  const rounded = Math.round(n * 10) / 10;
+  return Number.isInteger(rounded) ? `${rounded}` : rounded.toFixed(1);
 }
 
 /** 預算分數的比較：「預算分數 8 → 12（+4）」；目前欄位空著時寫「目前沒有裝備」。 */

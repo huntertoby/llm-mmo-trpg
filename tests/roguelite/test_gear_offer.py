@@ -16,7 +16,10 @@ import pytest
 from tests.roguelite.helpers import library
 from trpg.content.equipment import ItemDef, StatAffix, loadout_problems
 from trpg.content.item_gen import generate_item
+from trpg.content.library import ContentLibrary
+from trpg.engine import begin_battle
 from trpg.engine.gear import build_gear, geared_template
+from trpg.narrative.events import _skill_name, _View
 from trpg.roguelite import (
     ActiveBattle,
     ChoiceError,
@@ -183,7 +186,6 @@ def test_bad_gear_choices_are_rejected() -> None:
 
 
 def test_boss_battle_win_ends_the_run_without_a_gear_offer() -> None:
-    lib = library()
     run = _run()
     last = len(run.plan)
     boss = run.model_copy(
@@ -323,21 +325,21 @@ def test_battle_values_match_the_item_cards() -> None:
             hp = geared_template(
                 after.hero, build_gear(run_loadout(lib, after), lib.ruleset.equipment), lib.ruleset
             ).max_hp
-            card_hp = sum(
-                r.value or 0
-                for r in item.affixes
-                if isinstance(lib.affixes[r.affix], StatAffix)
-                and lib.affixes[r.affix].stat == "max_hp"  # type: ignore[attr-defined]
-            )
+            card_hp = 0
+            for r in item.affixes:
+                found = lib.affixes[r.affix]
+                if isinstance(found, StatAffix) and found.stat == "max_hp":
+                    card_hp += r.value or 0
             assert hp - base_hp == card_hp
             checked += 1
     assert checked > 100
 
 
-def generate_item_batch(lib, seed: int) -> list[ItemDef]:  # type: ignore[no-untyped-def]
+def generate_item_batch(lib: ContentLibrary, seed: int) -> list[ItemDef]:
     return [
-        generate_item(lib, Rng(seed), t, r, 4)
-        for t, r in (("neck", "uncommon"), ("body", "uncommon"), ("ring", "common"))
+        generate_item(lib, Rng(seed), "neck", "uncommon", 4),
+        generate_item(lib, Rng(seed), "body", "uncommon", 4),
+        generate_item(lib, Rng(seed), "ring", "common", 4),
     ]
 
 
@@ -419,3 +421,15 @@ def test_auto_pick_prefers_the_largest_gain_over_what_is_worn() -> None:
     assert auto_gear_pick(lib, run, GearOfferNode(after_battle=1, candidates=(weak,))) is None
     assert item_score(lib, strong) > item_score(lib, weak) > Fraction(0)
     assert worn_items(lib, run)["neck"] == strong
+
+
+def test_legendary_rule_gear_from_the_offer_can_be_narrated() -> None:
+    """傳說裝備的規則改變詞條沒有技能定義（``skill_gear_*``）；事件描述要找得到名稱（3K-2 起戰後會
+    拿到傳說物品，不能在描述事件時 KeyError）。"""
+    lib = library()
+    run = equip(lib, _run(), lib.items["item_g3b_legend_wake"])
+    setup = battle_setup(lib, run.model_copy(update={"node": BattleNode(index=1)}))
+    view = _View(begin_battle(setup, 0).state, {}, {})
+    wake = lib.affixes["affix_rule_bleeding_wake"].name_zh
+    assert _skill_name(view, "skill_gear_rule_bleeding_wake") == wake
+    assert _skill_name(view, "skill_nope") == "skill_nope"
