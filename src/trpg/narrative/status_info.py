@@ -16,7 +16,13 @@ from trpg.content.stacks import StackDef
 from trpg.engine.ids import CONCEALED, DEFENDING, PRONE
 from trpg.shared.types import Attribute
 
-__all__ = ["CONTROL_GROUP_TEXT", "stack_rules", "status_rules"]
+__all__ = [
+    "BOOST_TEXT",
+    "CONTROL_GROUP_TEXT",
+    "stack_gain_text",
+    "stack_rules",
+    "status_rules",
+]
 
 CONTROL_GROUP_TEXT = {"movement": "移動類", "mental": "心智類", "hard": "硬控"}
 """控制類別（``control_group``）的中文名。"""
@@ -140,9 +146,64 @@ def status_rules(status: StatusDef, library: ContentLibrary) -> tuple[str, ...]:
     return tuple(lines)
 
 
+BOOST_TEXT = {"damage": "傷害", "heal": "治療", "shield": "護盾"}
+"""層數消耗時加成的效果種類（``consumer.boosts``）的中文名。"""
+
+_GAIN_WHEN = {
+    "weapon_skill_hit": "你的武器技命中時",
+    "basic_attack_hit": "你的普攻命中時",
+    "damaged": "你受到傷害時",
+    "kill": "你擊倒敵人時",
+    "summon_downed": "你的召喚物倒下時",
+    "heal_or_holy_cast": "你施放治療或神聖技能時",
+    "turn_end_still": "你的回合結束且這回合沒有移動時",
+}
+
+
+def stack_gain_text(stack: StackDef) -> str:
+    """層數自動累積的白話說明（Phase 3-52，06 6.32）；沒有自動累積規則時為空字串。"""
+    parts: list[str] = []
+    for rule in stack.gain:
+        if rule.when == "element_hit":
+            assert rule.element is not None
+            when = f"你的{rule.element.display_name}傷害命中時"
+        else:
+            when = _GAIN_WHEN[rule.when]
+        parts.append(f"{when} +{rule.amount} 層")
+    if not parts:
+        return ""
+    where = "疊在被命中的敵人身上" if stack.owner == "target" else "累積在你身上"
+    return f"{where}：{'；'.join(parts)}（只有帶著消耗它的技能才會自動累積）"
+
+
+def _consumer_line(stack: StackDef, library: ContentLibrary) -> str:
+    consumer = stack.consumer
+    if consumer is None:
+        return ""
+    boosts = "、".join(BOOST_TEXT[b] for b in consumer.boosts)
+    line = f"消耗：技能每層提高{boosts}"
+    if consumer.requires_any:
+        names: list[str] = []
+        for req in consumer.requires_any:
+            if req.tag is not None:
+                names.append(f"帶「{library.ruleset.skill_tags.name(req.tag)}」標籤")
+            elif req.element is not None:
+                names.append(f"{req.element.display_name}傷害")
+            elif req.effect is not None:
+                names.append(f"「{library.ruleset.primitives.by_id()[req.effect].name_zh}」效果")
+        line += f"（限{'、'.join(names)}的技能）"
+    return line
+
+
 def stack_rules(stack: StackDef, library: ContentLibrary) -> tuple[str, ...]:
     """層數的規則句（清單 5.5～5.7）：上限依來源、清空時機、超載。"""
     lines = [f"上限依來源（技能卡與裝備詞條各自寫明；最多 {stack.max} 層）"]
+    gain = stack_gain_text(stack)
+    if gain:
+        lines.append(gain)
+    consumer = _consumer_line(stack, library)
+    if consumer:
+        lines.append(consumer)
     if stack.expires_after_rounds is not None:
         lines.append(f"{stack.expires_after_rounds} 輪沒有再累積就清空")
     overload = stack.overload

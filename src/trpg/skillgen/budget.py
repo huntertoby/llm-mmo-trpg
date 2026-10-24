@@ -971,8 +971,9 @@ def _on_miss_budget(skill: SkillDef, library: ContentLibrary, index: int) -> Eff
 def _consume_stack_points(
     skill: SkillDef, effect: EffectSpec, library: ContentLibrary
 ) -> tuple[Fraction, str]:
-    """``consume_stack`` 的加成點數：同技能傷害效果（含形狀與對象倍率）× 期望消耗層數 ×
-    ``per_stack_permille``；期望消耗＝層數上限 × ``consume_stack_expected_permille``。"""
+    """``consume_stack`` 的加成點數：同技能被加成的效果（傷害；層數的 ``consumer.boosts`` 還可以含
+    治療、護盾；含形狀與對象倍率）× 期望消耗層數 × ``per_stack_permille``；期望消耗＝層數上限 ×
+    ``consume_stack_expected_permille``。"""
     rules, budget = library.ruleset, library.budget
     if effect.stack is None or effect.per_stack_permille is None:
         raise BudgetError("consume_stack 缺少 stack 或 per_stack_permille")
@@ -980,11 +981,13 @@ def _consume_stack_points(
         rules.stack_def(effect.stack).max * budget.consume_stack_expected_permille, _PERMILLE
     )
     primitives = rules.primitives.by_id()
+    stack = rules.stack_def(effect.stack)
+    boosted = ("damage",) if stack.consumer is None else stack.consumer.boosts
     damage = Fraction(0)
     for other in skill.effects:
-        if other.type == "damage":
-            base, _ = _base_points(skill, other, primitives["damage"], library)
-            damage += base * _shape_multiplier(skill, other, primitives["damage"], library)
+        if other.type in boosted:
+            base, _ = _base_points(skill, other, primitives[other.type], library)
+            damage += base * _shape_multiplier(skill, other, primitives[other.type], library)
     bonus = damage * expected * Fraction(effect.per_stack_permille, _PERMILLE)
     return bonus, f"傷害 {_fmt(damage)} × 期望 {_fmt(expected)} 層 × {effect.per_stack_permille}‰"
 

@@ -19,7 +19,7 @@ import {
   setPath,
   type Json,
 } from "../../workshop/draft";
-import { descOf, fieldShown, hiddenCount, shownChoices } from "../../workshop/playerView";
+import { descOf, fieldShown, groupChoices, hiddenCount, shownChoices } from "../../workshop/playerView";
 import { rarityName } from "../../workshop/state";
 import { OptionGlyph } from "../SkillIconView";
 import { Hint } from "../Hint";
@@ -229,11 +229,18 @@ function ChoiceField({ spec, container, base, onChange }: FieldProps) {
           <option value="" disabled>
             請選擇……
           </option>
-          {spec.choices.map((c) => (
-            <option key={String(c.value)} value={String(c.value)} disabled={blockedReason(c, chosen) !== null}>
-              {blockedReason(c, chosen) !== null ? `${c.name_zh}（不能選：${blockedReason(c, chosen)}）` : c.name_zh}
-            </option>
-          ))}
+          {groupChoices(spec.choices).map(([label, items]) => {
+            const options = items.map((c) => (
+              <option key={String(c.value)} value={String(c.value)} disabled={blockedReason(c, chosen) !== null}>
+                {blockedReason(c, chosen) !== null ? `${c.name_zh}（不能選：${blockedReason(c, chosen)}）` : c.name_zh}
+              </option>
+            ));
+            return label === null ? options : (
+              <optgroup key={label} label={label}>
+                {options}
+              </optgroup>
+            );
+          })}
         </select>
       )}
       {!card && chosen !== undefined && descOf(chosen) !== "" && (

@@ -3603,7 +3603,7 @@ def _effect_problems(
     ):
         allowed = "、".join(primitive.allowed_shapes)
         problems.append(f"{where}：{primitive.id} 只能搭配形狀 {allowed}，收到 {skill.shape.type}")
-    problems += _stack_effect_problems(where, effect, affects, refs)
+    problems += _stack_effect_problems(skill, where, effect, affects, refs)
     problems += _consume_status_problems(skill, index, effect, refs)
     problems += _zone_problems(skill, index, effect, refs)
     problems += _gamble_problems(skill, index, effect, refs)
@@ -3729,9 +3729,38 @@ def _consume_status_problems(
     return problems
 
 
-def _stack_effect_problems(where: str, effect: EffectSpec, affects: str, refs: _Refs) -> list[str]:
+def _consumer_problems(skill: SkillDef, where: str, stack: StackDef) -> list[str]:
+    """``consume_stack`` 的消耗規則（Phase 3-52，``stacks.yaml`` 的 ``consumer``）：技能要有被加成
+    的效果（傷害、治療、護盾），並滿足 ``requires_any`` 的其中一項。"""
+    consumer = stack.consumer
+    if consumer is None:
+        return []
+    problems: list[str] = []
+    types = {e.type for e in skill.effects}
+    if not types & set(consumer.boosts):
+        names = {"damage": "傷害", "heal": "治療", "shield": "護盾"}
+        problems.append(
+            f"{where}.stack：消耗層數 {stack.id} 的技能至少要有"
+            f"{'、'.join(names[b] for b in consumer.boosts)}其中一種效果"
+        )
+    if consumer.requires_any and not any(
+        (req.tag is not None and req.tag in skill.tags)
+        or (
+            req.element is not None
+            and any(e.type == "damage" and e.element == req.element for e in skill.effects)
+        )
+        or (req.effect is not None and req.effect in types)
+        for req in consumer.requires_any
+    ):
+        problems.append(f"{where}.stack：層數 {stack.id} 只有符合條件的技能可以消耗（見層數說明）")
+    return problems
+
+
+def _stack_effect_problems(
+    skill: SkillDef, where: str, effect: EffectSpec, affects: str, refs: _Refs
+) -> list[str]:
     """層數原語的跨檔案檢查：層數的 ``owner`` 決定對象（``self`` 型只能對施放者自己、``target`` 型
-    只能對敵方），累積量不超過上限。"""
+    只能對敵方），累積量不超過上限；消耗還要符合層數的消耗規則。"""
     if effect.type not in (ADD_STACK, CONSUME_STACK) or refs.stacks is None:
         return []
     stack = refs.stacks.get(effect.stack or "")
@@ -3746,6 +3775,8 @@ def _stack_effect_problems(where: str, effect: EffectSpec, affects: str, refs: _
         )
     if effect.type == ADD_STACK and effect.amount is not None and effect.amount > stack.max:
         problems.append(f"{where}.amount：超過層數 {stack.id} 的上限 {stack.max}")
+    if effect.type == CONSUME_STACK:
+        problems += _consumer_problems(skill, where, stack)
     return problems
 
 

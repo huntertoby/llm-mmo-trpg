@@ -351,6 +351,10 @@ def effect_fixes(
     shape = _shape_type(draft)
     out: list[EffectFix] = []
     for index, effect in enumerate(effects):
+        stack_fix = _stack_fix(index, effect, library)
+        if stack_fix is not None:  # 層數的對象由層數決定（3-52）
+            out.extend(stack_fix)
+            continue
         primitive = by_id.get(str(effect.get("type")))
         choice = next((c for c in choices if c.value == effect.get("type")), None)
         affects = None if choice is None else _param(choice, "affects")
@@ -378,6 +382,25 @@ def effect_fixes(
         if found:
             out.append(EffectFix(index=index, value=wanted, reason_zh=found))
     return tuple(out)
+
+
+def _stack_fix(
+    index: int, effect: Mapping[str, Any], library: ContentLibrary
+) -> list[EffectFix] | None:
+    """累積／消耗層數的效果：對象由層數決定（累積在你身上 → 自己，疊在敵人身上 → 敵方；3-52）。
+    不是層數效果回傳 ``None``（走一般流程）；對象已經對的回傳空串列。"""
+    if effect.get("type") not in ("add_stack", "consume_stack"):
+        return None
+    stack = library.ruleset.stacks.by_id().get(str(effect.get("stack")))
+    if stack is None:
+        return []
+    wanted = "self" if stack.owner == "self" else "enemies"
+    if effect.get("affects") == wanted:
+        return []
+    where = "累積在你身上" if stack.owner == "self" else "疊在敵人身上"
+    return [
+        EffectFix(index=index, value=wanted, reason_zh=f"「{stack.name_zh}」{where}，對象自動決定")
+    ]
 
 
 def _first_legal(

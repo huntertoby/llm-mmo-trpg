@@ -27,6 +27,7 @@ tags:
   - {id: control, name_zh: 控制}
   - {id: counter, name_zh: 反擊}
   - {id: crit, name_zh: 暴擊}
+  - {id: curse, name_zh: 詛咒}
   - {id: debuff, name_zh: 減益}
   - {id: defense, name_zh: 防禦}
   - {id: detonate, name_zh: 引爆}
