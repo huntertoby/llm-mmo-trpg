@@ -20,7 +20,7 @@ export interface SidePose {
 type Row = Pick<SidePose, "front" | "inner" | "angle"> & Partial<Pick<SidePose, "dx" | "dy">>;
 
 /** 槍類（槍口朝 +x）。 */
-const GUN: Row = { front: false, inner: -0.35, angle: 0.04 };
+const GUN: Row = { front: false, inner: -0.35, angle: 0.04, dy: -2.5 }; // 抬到胸前
 
 /** 各 kind 的主手角度表。形狀內部旋轉：劍 ∓0.25、匕首 ∓0.6、斧錘 ∓0.3、矛鐮 ∓0.15、槍弩 ±0.35（front 為 true 取第一個符號）。 */
 const MAIN: Readonly<Record<string, Row>> = {
@@ -41,6 +41,9 @@ const MAIN: Readonly<Record<string, Row>> = {
   fist: { front: true, inner: 0, angle: 1.2 },
 };
 
+/** 圖騰杖頂端的羽毛向兩側張開約 10，要傾得更多、再往前一點，才不蓋住臉。 */
+const TOTEM: Row = { front: true, inner: 0, angle: 0.65, dx: 2 };
+
 const FALLBACK: Row = { front: true, inner: 0, angle: 0.3 };
 
 /** 槍類 kind（槍口方向測試與遠側處理用）。 */
@@ -48,16 +51,16 @@ export const GUN_KINDS: readonly string[] = ["longgun", "pistol", "shotgun", "cr
 
 /** 取一件手持物在側面的姿勢。`far`：成對武器的副手（畫在遠側）。不認得的 kind 用保守的前傾角度。 */
 export function sideWeaponPose(it: GearItem, far: boolean): SidePose {
-  const row = MAIN[it.kind] ?? FALLBACK;
+  const row = it.kind === "staff" && it.form === "totem" ? TOTEM : (MAIN[it.kind] ?? FALLBACK);
   const gun = GUN_KINDS.includes(it.kind);
   // 遠側那把：比主手更直一點（刃、柄），槍則略往下，才不會和主手那把完全疊在一起
-  const angle = far ? (gun ? row.angle + 0.2 : row.angle - 0.3) : row.angle;
+  const angle = far ? (gun ? row.angle + 0.35 : row.angle - 0.3) : row.angle;
   return {
     front: row.front,
     inner: row.inner,
     angle,
     dx: (row.dx ?? 0) + (far ? -1.5 : 0),
-    dy: (row.dy ?? 0) + (far && (gun || it.kind === "whip" || it.kind === "fist") ? 1.2 : 0),
+    dy: (row.dy ?? 0) + (far && (gun || it.kind === "whip" || it.kind === "fist") ? 2 : 0),
     shade: far ? 0.3 : 0,
   };
 }

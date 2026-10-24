@@ -124,11 +124,13 @@ describe("側面武器角度（3S-3）", () => {
 
   it("身體範圍內（臉的高度、x 在後腦到鼻尖之間）不會有長柄武器的頂端", () => {
     for (const kind of ["staff", "spear", "hammer", "scythe", "greatsword", "sword", "axe", "dagger"]) {
-      const { ctx, pts } = trackingCtx();
-      drawWeaponSide(ctx, { kind, material: "steel" }, HAND, false);
-      // 只看頭部高度（-37 ~ -21）：武器在這個高度的部分都要在鼻尖前面
-      const inFace = pts.filter(([x, y]) => y < -21 && y > -37 && x < NOSE_X - 1 && x > -8);
-      expect(inFace.length, kind).toBe(0);
+      for (const form of FORMS[kind] ?? [undefined]) {
+        const { ctx, pts } = trackingCtx();
+        drawWeaponSide(ctx, { kind, form, material: "steel" }, HAND, false);
+        // 只看頭部高度（-37 ~ -21）：武器在這個高度的部分都要在鼻尖前面
+        const inFace = pts.filter(([x, y]) => y < -21 && y > -37 && x < NOSE_X - 1 && x > -8);
+        expect(inFace.length, `${kind}/${String(form)}`).toBe(0);
+      }
     }
   });
 
