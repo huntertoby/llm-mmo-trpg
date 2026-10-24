@@ -2246,3 +2246,15 @@ PM 驗收後請使用者試玩一整輪（`docs/專案計畫.md` 第 14 節 🎮
 2. **氣的治療加成只算治療自己**：驗證器、預算、引擎一致；表格測試。
 3. **工坊事前停用**：選層數時停用「這招不能消耗的層數」並附白話原因（`trpg.skillgen.option_effect_rules` 同源）。
 4. 驗收：pytest（engine、content、skillgen、narrative、api、`-m "slow or not slow" tests/cli`）、vitest、build、ruff、format、mypy；改紀錄格式就遞增 `LOG_FORMAT`。報告 `Phase3-52b報告.md`。
+
+### 63.1 3-53 驗收（2026-10-24，開發 PM）
+
+- 報告 `Phase3-53報告.md`。第 11 個關鍵字 `poisoned`（製造：施加中毒、毒表面、毒區域；利用：目標中毒／站在毒表面、消耗中毒、被施加中毒時觸發）；外觀表、`gearAppearance.json`、前端顏色與圖樣；`llm_propose_mock.txt` 更新。其他 10 池檢查通過；**中毒池不足**（主動利用者 1、1 階起始技能 1）→ 測試先標記為已知，3-54c 補齊後拿掉。合併後全量 7540 通過。
+- 待決（玩法 PM 回覆）：毒種子名單已補進 06 6.33（`c616efb`）；**#1 3-54c 前先把中毒從開局關鍵字選項隱藏**、**#2 加中毒的橋接嫁接（6.28 套用到新關鍵字）**、**#3 毒元素普攻詞條對應中毒外觀圖樣** → 小修 **3-53b**。
+
+### 63b. Phase 3-53b｜中毒關鍵字小修（sonnet；約 0.15 段）
+
+1. 開局關鍵字選項暫時隱藏中毒（資料旗標，例如 `skill_keywords.yaml` 的關鍵字設 `start_hidden: true`；3-54c 補完毒種子技能後改回）；三選一與其他地方照常。
+2. `content/skill_evolution.yaml` 加中毒的橋接嫁接（照 06 6.28「橋接＝附帶第二個關鍵字」，和其他 10 個關鍵字一致）。
+3. 毒元素的普攻附加詞條對應到中毒的外觀圖樣（`content/equipment/appearance.yaml` 等，顯示用）。
+4. 驗收：pytest（content、skillgen、roguelite、narrative、api、`-m "slow or not slow" tests/cli`）、vitest、build、ruff、mypy。報告 `Phase3-53b報告.md`。
