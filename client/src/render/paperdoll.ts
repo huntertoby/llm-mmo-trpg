@@ -5,23 +5,18 @@ import type { Facing } from "../api/types";
 import { roundRect as rr, TAU, type Ctx } from "./artDraw";
 import { elementTint, MATERIAL, RARITY_GLOW, type DollSpec, type GearItem } from "./appearance";
 import {
-  drawCap,
   drawFist,
-  drawGreathelm,
   drawHammer,
-  drawOrb,
   drawPistol,
   drawScythe,
   drawShotgun,
   drawSpear,
-  drawTowerShield,
   drawWhip,
-  drawWideHat,
   fill,
   mix,
 } from "./paperdollGear";
 import { drawInkFigure, type InkHooks, type InkView } from "./inkDoll";
-import { dark, drawHeadgearSide, drawOffhandSide } from "./paperdollSideGear";
+const dark = (c: string, t = 0.3): string => (/^#[0-9a-f]{6}$/i.test(c) ? mix(c, "#000000", t) : c);
 import { sideWeaponPose } from "./paperdollSideWeapon";
 
 /** 離屏畫布的虛擬大小與腳底位置（虛擬像素）。 */
@@ -52,85 +47,6 @@ export function itemColors(item: GearItem): [string, string] {
 }
 
 type View = "front" | "back";
-
-function drawHelmet(ctx: Ctx, it: GearItem, c: string, d: string, view: View): void {
-  fill(ctx, c, () => {
-    ctx.beginPath();
-    ctx.arc(0, -30, 9.4, Math.PI, 0);
-    ctx.lineTo(9.4, -27);
-    ctx.lineTo(-9.4, -27);
-    ctx.closePath();
-  });
-  fill(ctx, d, () => ctx.rect(-9.4, -28, 18.8, 1.6));
-  if (view !== "back") fill(ctx, d, () => ctx.rect(-1, -28, 2, 5));
-  fill(ctx, mix(c, "#ffffff", 0.4), () => rr(ctx, -5, -37, 4, 3, 1.5));
-  if (it.kind !== "horned_helm") return;
-  for (const s of [-1, 1]) {
-    fill(ctx, "#efe6cc", () => {
-      ctx.beginPath();
-      ctx.moveTo(s * 8, -33);
-      ctx.quadraticCurveTo(s * 15, -35, s * 14, -42);
-      ctx.quadraticCurveTo(s * 11, -37, s * 6, -36);
-      ctx.closePath();
-    });
-  }
-}
-
-function drawBandana(ctx: Ctx, c: string, d: string, view: View): void {
-  fill(ctx, c, () => {
-    ctx.beginPath();
-    ctx.arc(0, -30, 9, Math.PI * 1.05, Math.PI * 1.95);
-    ctx.closePath();
-  });
-  fill(ctx, c, () => ctx.rect(-9, -31.5, 18, 3));
-  const tx = view === "back" ? 0 : 8;
-  fill(ctx, d, () => {
-    ctx.beginPath();
-    ctx.moveTo(tx, -30);
-    ctx.lineTo(tx + 5, -27);
-    ctx.lineTo(tx + 2, -25);
-    ctx.closePath();
-  });
-}
-
-function drawHeadgear(ctx: Ctx, it: GearItem | undefined, view: View): void {
-  if (it === undefined) return;
-  const [c, d] = itemColors(it);
-  switch (it.kind) {
-    case "helmet":
-    case "horned_helm":
-      drawHelmet(ctx, it, c, d, view);
-      break;
-    case "bandana":
-      drawBandana(ctx, c, d, view);
-      break;
-    case "wide_hat":
-      drawWideHat(ctx, it, [c, d]);
-      break;
-    case "cap":
-      drawCap(ctx, it, [c, d]);
-      break;
-    case "greathelm":
-      drawGreathelm(ctx, [c, d], view === "back");
-      break;
-    case "crown":
-      fill(ctx, c, () => {
-        ctx.beginPath();
-        ctx.moveTo(-6, -35);
-        ctx.lineTo(-6, -41);
-        ctx.lineTo(-3, -38);
-        ctx.lineTo(0, -42);
-        ctx.lineTo(3, -38);
-        ctx.lineTo(6, -41);
-        ctx.lineTo(6, -35);
-        ctx.closePath();
-      });
-      fill(ctx, "#d23c3c", () => ctx.arc(0, -37, 1.3, 0, TAU));
-      break;
-    default:
-      break;
-  }
-}
 
 function drawBlade(ctx: Ctx, it: GearItem, c: string, front: boolean): void {
   const great = it.kind === "greatsword";
@@ -349,35 +265,6 @@ function drawLongGun(ctx: Ctx, it: GearItem, c: string, d: string, front: boolea
   }
 }
 
-function drawShield(ctx: Ctx, it: GearItem, c: string, d: string): void {
-  if (it.kind === "shield_round") {
-    fill(ctx, d, () => ctx.arc(0, -4, 7.5, 0, TAU));
-    fill(ctx, c, () => ctx.arc(0, -4, 6, 0, TAU));
-    fill(ctx, it.trim ?? "#e8bb48", () => ctx.arc(0, -4, 2, 0, TAU));
-    return;
-  }
-  fill(ctx, d, () => {
-    ctx.beginPath();
-    ctx.moveTo(-7, -13);
-    ctx.lineTo(7, -13);
-    ctx.lineTo(6.5, -2);
-    ctx.lineTo(0, 6);
-    ctx.lineTo(-6.5, -2);
-    ctx.closePath();
-  });
-  fill(ctx, c, () => {
-    ctx.beginPath();
-    ctx.moveTo(-5.5, -11.5);
-    ctx.lineTo(5.5, -11.5);
-    ctx.lineTo(5, -2.5);
-    ctx.lineTo(0, 3.8);
-    ctx.lineTo(-5, -2.5);
-    ctx.closePath();
-  });
-  fill(ctx, it.trim ?? "#e8e0c8", () => ctx.rect(-0.9, -11, 1.8, 13));
-  fill(ctx, it.trim ?? "#e8e0c8", () => ctx.rect(-5, -7, 10, 1.8));
-}
-
 /** 一件手持物（主手或副手）；`mirror`：左右鏡像（成對武器的副手，兩把向外張開）。 */
 function drawWeapon(ctx: Ctx, it: GearItem | undefined, x: number, front: boolean, mirror = false, far = false, side = false): void {
   if (it === undefined) return;
@@ -441,9 +328,6 @@ function drawWeapon(ctx: Ctx, it: GearItem | undefined, x: number, front: boolea
     case "whip":
       drawWhip(ctx, [c, d], it, front);
       break;
-    case "orb":
-      drawOrb(ctx, it, [c, d]);
-      break;
     case "staff":
       drawStaff(ctx, it, c);
       break;
@@ -455,16 +339,6 @@ function drawWeapon(ctx: Ctx, it: GearItem | undefined, x: number, front: boolea
       break;
     case "longgun":
       drawLongGun(ctx, it, c, d, front);
-      break;
-    case "shield_round":
-    case "shield_kite":
-      if (it.kind === "shield_kite" && it.form === "tower") drawTowerShield(ctx, [c, d]);
-      else drawShield(ctx, it, c, d);
-      break;
-    case "tome":
-      fill(ctx, c, () => rr(ctx, -4.5, -6, 9, 8, 1));
-      fill(ctx, "#f2ead6", () => ctx.rect(-3.5, -5.5, 7, 1.2));
-      fill(ctx, it.trim ?? "#e8bb48", () => ctx.arc(0, -2, 1.6, 0, TAU));
       break;
     default:
       break;
@@ -512,26 +386,8 @@ function legacyHooks(ctx: Ctx): InkHooks {
       drawWeapon(ctx, it, 0, o.front, o.mirror, o.far, o.side);
       ctx.restore();
     },
-    headgear: (it, view) => {
-      ctx.save();
-      ctx.translate(0, -42); // 現行頭心 (0,-29) → C 頭心 (0,-42)
-      ctx.scale(HEAD_GEAR_SCALE, HEAD_GEAR_SCALE);
-      ctx.translate(0, 29);
-      if (view === "side") drawHeadgearSide(ctx, it, itemColors(it));
-      else drawHeadgear(ctx, it, view);
-      ctx.restore();
-    },
-    offhandSide: (it) => {
-      ctx.save();
-      ctx.scale(1.1, 1.4);
-      drawOffhandSide(ctx, it, itemColors(it));
-      ctx.restore();
-    },
   };
 }
-
-/** 現行頭部裝備（頭半徑 8.5）套到 C 的頭（約 9）的縮放。 */
-const HEAD_GEAR_SCALE = 1.06;
 
 /** 畫一個小人（腳底中心在 (0, 0)）。facing：south ＝ 正面、north ＝ 背面、east／west ＝ 側面（西 ＝ 東的左右鏡像）。C 畫風（Phase C-1a）。 */
 export function drawFigure(ctx: Ctx, spec: DollSpec, facing: Facing, ground = true): void {

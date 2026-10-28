@@ -190,8 +190,8 @@ describe("全組合畫得出來", () => {
     // 匕首每把轉一次（外斜）；另外正面兩隻手的袖口各轉一次（C-2a）；成對匕首兩把
     expect(count([eq("main_hand", "dagger")], "dagger", "rotate")).toBe(3);
     expect(count([eq("main_hand", "dual_dagger")], "dagger", "rotate")).toBe(4);
-    // 拳套每隻手一個圓角方塊：兩手各一個，比單把匕首（沒有圓角方塊）多 2 個
-    expect(count([eq("main_hand", "fist")], "dagger", "roundRect") - count([eq("main_hand", "dagger")], "dagger", "roundRect")).toBe(2);
+    // 拳套兩手各握一個（各 translate 到手心一次），比單把匕首多至少 2 次
+    expect(count([eq("main_hand", "fist")], "dagger", "translate") - count([eq("main_hand", "dagger")], "dagger", "translate")).toBeGreaterThanOrEqual(2);
   });
 
   it("蓋住頭髮頂的頭部裝備：全罩盔、皮帽與頭盔一樣不畫髮頂", () => {

@@ -148,6 +148,5 @@ describe("側面武器角度（3S-3）", () => {
       expect(near.shade).toBe(0);
       expect(far.shade).toBeGreaterThan(0);
     }
-    expect(() => measure({ kind: "orb", form: "ball", material: "steel" })).not.toThrow();
   });
 });

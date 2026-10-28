@@ -7,6 +7,7 @@ import type { DollSpec, GearItem, Look } from "./appearance";
 import { drawFootDetail, drawInkBodyArmor, drawInkHand, drawInkHeadgearMore, footTop } from "./inkArmor";
 import { drawInkHeadgear, drawInkShieldFront, drawInkShieldSide, drawInkWeapon } from "./inkGear";
 import { drawInkKiteBack, drawInkKiteSide, drawInkOffhand } from "./inkOffhand";
+import { drawInkWeaponMore } from "./inkWeapons";
 import { dot, ellPts, ink, INK, setShadeDir, shadow, stroke, type Pt } from "./inkStyle";
 
 export type InkView = "front" | "back" | "side";
@@ -16,10 +17,6 @@ export interface InkHooks {
   colors: (it: GearItem) => readonly [string, string];
   /** 現行畫法的手持物：(x, y) ＝ 手的位置；mirror ＝ 成對武器的副手鏡像；far ＝ 側面遠側那把。 */
   weapon: (it: GearItem, x: number, y: number, o: { front: boolean; mirror: boolean; far: boolean; side: boolean; scale: number }) => void;
-  /** 現行畫法的頭部裝備（front／back／side）。 */
-  headgear: (it: GearItem, view: InkView) => void;
-  /** 現行畫法的側面副手（盾、書）。 */
-  offhandSide: (it: GearItem) => void;
 }
 
 const MAT = { steel: "#c3ccd6", iron: "#8d969f", gold: "#e8bb48", wood: "#a06a36" } as const;
@@ -275,7 +272,8 @@ function legacyHeld(
   if (!o.side && drawInkShieldFront(t.ctx, it, x, y, t.hooks.colors)) return;
   if (drawInkOffhand(t.ctx, it, x, y, o.side, t.hooks.colors)) return;
   const k = inkOpt ?? { key: o.side ? (o.far ? "off-s" : "main-s") : o.mirror ? "off" : "main", mirror: o.mirror };
-  if (drawInkWeapon(t.ctx, it, k.key, x, y, { mirror: k.mirror, side: o.side, far: o.far, back: !o.front }, t.hooks.colors)) return;
+  const held = { mirror: k.mirror, side: o.side, far: o.far, back: !o.front };
+  if (drawInkWeapon(t.ctx, it, k.key, x, y, held, t.hooks.colors) || drawInkWeaponMore(t.ctx, it, k.key, x, y, held, t.hooks.colors)) return;
   const scale = heldNotMirrored(it) ? SHIELD_SCALE : WEAPON_SCALE;
   t.hooks.weapon(it, x, y, { ...o, scale });
 }
@@ -291,8 +289,8 @@ function drawWoodShieldBack(t: Ctxt, off: GearItem): void {
 
 function drawHeadgear(t: Ctxt, view: InkView): void {
   const it = t.spec.gear.head;
-  if (it === undefined || drawInkHeadgear(t.ctx, it, view, t.hooks.colors) || drawInkHeadgearMore(t.ctx, it, view, t.hooks.colors)) return;
-  t.hooks.headgear(it, view);
+  if (it === undefined || drawInkHeadgear(t.ctx, it, view, t.hooks.colors)) return;
+  drawInkHeadgearMore(t.ctx, it, view, t.hooks.colors);
 }
 
 // ============================== 組合 ==============================
@@ -363,7 +361,7 @@ function drawSide(t: Ctxt): void {
   }
   drawLegs(t, "side");
   drawBody(t, "side");
-  if (off !== undefined && isShield(off) && !drawInkShieldSide(ctx, off, t.hooks.colors) && !drawInkKiteSide(ctx, off, t.hooks.colors)) t.hooks.offhandSide(off);
+  if (off !== undefined && isShield(off) && !drawInkShieldSide(ctx, off, t.hooks.colors)) drawInkKiteSide(ctx, off, t.hooks.colors);
   drawHead(t, "side");
   drawHeadgear(t, "side");
   ink(ctx, "arm-s", [[-1.4, -31.5], [1.4, -31.8], [5, -25], [2.6, -23.6]], armColor(t));

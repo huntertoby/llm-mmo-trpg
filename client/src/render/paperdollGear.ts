@@ -1,7 +1,7 @@
 // 紙娃娃的裝備外觀新部件（Phase 3G-G5b；移植自美術 PM 樣張 docs/art/sample/paperdoll.js，九格新增的造型與形制）。
 // 座標同 paperdoll.ts：腳底中心為原點、往上為負；武器函式的原點在握把（手的位置），`front` ＝ 正面／側面（武器朝前）。
 import { roundRect as rr, TAU, type Ctx } from "./artDraw";
-import { elementTint, type GearItem, type Look } from "./appearance";
+import type { GearItem } from "./appearance";
 
 export function mix(a: string, b: string, t: number): string {
   const pa = parseInt(a.slice(1), 16);
@@ -18,141 +18,6 @@ export function fill(ctx: Ctx, color: string, path: () => void): void {
 }
 
 type Colors = readonly [string, string];
-
-// ---- 腳 ----
-
-/** 靴筒高度：布鞋 0、皮靴短 2.5／長 4、鐵靴 3、脛甲 4。 */
-export function bootHeight(feet: GearItem): number {
-  switch (feet.kind) {
-    case "greaves":
-      return 4;
-    case "boots":
-      return feet.form === "tall" ? 4 : 2.5;
-    case "iron_boots":
-      return 3;
-    default:
-      return 0;
-  }
-}
-
-/** 兩隻腳：靴筒、護膝、綁帶、鞋底（鐵靴鞋尖亮塊）；沒穿裝備時是預設的矮靴底。 */
-export function drawFeet(ctx: Ctx, feet: GearItem | undefined, b: string, bd: string): void {
-  const tall = feet === undefined ? 0 : bootHeight(feet);
-  const iron = feet?.kind === "iron_boots";
-  for (const sx of [-1, 1]) {
-    if (tall > 0) fill(ctx, b, () => rr(ctx, sx * 3 - 2.2, -2 - tall, 4.4, tall + 1, 1));
-    if (feet?.kind === "greaves" && feet.form === "knee") fill(ctx, mix(b, "#ffffff", 0.3), () => rr(ctx, sx * 3 - 2, -8, 4, 2.4, 1));
-    if (feet?.kind === "shoes" && feet.form === "wrapped") {
-      ctx.strokeStyle = bd;
-      ctx.lineWidth = 0.8;
-      for (const y of [-4, -6]) {
-        ctx.beginPath();
-        ctx.moveTo(sx * 3 - 2, y);
-        ctx.lineTo(sx * 3 + 2, y + 1);
-        ctx.stroke();
-      }
-    }
-    fill(ctx, bd, () => {
-      ctx.beginPath();
-      ctx.ellipse(sx * 3.2, -1.2, iron ? 3.6 : 3.2, 2, 0, 0, TAU);
-    });
-    if (iron) {
-      fill(ctx, mix(b, "#ffffff", 0.35), () => {
-        ctx.beginPath();
-        ctx.ellipse(sx * 3.2, -1.6, 1.6, 1, 0, 0, TAU);
-      });
-    }
-  }
-}
-
-// ---- 身 ----
-
-/** 外套：長下襬開衩、翻領、扣子；披風形制多一片肩披。 */
-export function drawCoat(ctx: Ctx, it: GearItem | undefined, c: string, d: string): void {
-  fill(ctx, c, () => {
-    ctx.beginPath();
-    ctx.moveTo(-7.5, -21);
-    ctx.lineTo(7.5, -21);
-    ctx.lineTo(8.5, -3);
-    ctx.lineTo(1, -3);
-    ctx.lineTo(0, -9);
-    ctx.lineTo(-1, -3);
-    ctx.lineTo(-8.5, -3);
-    ctx.closePath();
-  });
-  fill(ctx, d, () => {
-    ctx.beginPath();
-    ctx.moveTo(-4, -21);
-    ctx.lineTo(0, -15);
-    ctx.lineTo(4, -21);
-    ctx.closePath();
-  });
-  for (const y of [-17, -14, -11]) fill(ctx, "#e8bb48", () => ctx.arc(1.8, y, 0.7, 0, TAU));
-  if (it?.form === "cape") fill(ctx, d, () => rr(ctx, -9, -22, 18, 5, 2));
-}
-
-/** 鎖甲的紋路：鎖環小點，鱗甲形制畫成一片片小鱗。 */
-export function drawMailPattern(ctx: Ctx, form: string | undefined, d: string): void {
-  ctx.fillStyle = d;
-  if (form === "scale") {
-    ctx.strokeStyle = d;
-    ctx.lineWidth = 1.2;
-    for (let y = -19; y < -9; y += 2.6) {
-      for (let x = -6; x < 6.5; x += 3) {
-        ctx.beginPath();
-        ctx.arc(x + (Math.trunc(y) % 2 !== 0 ? 1.5 : 0), y, 1.3, 0, Math.PI);
-        ctx.stroke();
-      }
-    }
-    return;
-  }
-  for (let y = -19; y < -9; y += 2.4) for (let x = -6 + (Math.trunc(y) % 2); x < 6.5; x += 2.4) ctx.fillRect(x, y, 1, 1);
-}
-
-// ---- 手 ----
-
-/** 兩隻手：臂環只包前臂、手露膚色；露指手套露膚色；長手套多一截袖口（護手有袖口）。 */
-export function drawHandsGear(ctx: Ctx, look: Look, hands: GearItem | undefined, [c, d]: Colors): void {
-  const bracer = hands?.kind === "bracers";
-  // 護手的袖口只在指定形制時才畫（舊範本沒有形制，畫面維持原樣）
-  const cuff = bracer || (hands?.kind === "gauntlets" && hands.form !== undefined) || hands?.form === "long";
-  for (const x of [-8.5, 8.5]) {
-    if (hands !== undefined && cuff) fill(ctx, bracer ? c : d, () => rr(ctx, x - 2.2, -14, 4.4, hands.form === "ring" ? 1.8 : 3.4, 1));
-    fill(ctx, bracer || hands?.form === "fingerless" ? look.skin : hands !== undefined ? c : look.skin, () => ctx.arc(x, -9.5, 2.4, 0, TAU));
-    if (hands?.form === "fingerless") fill(ctx, c, () => rr(ctx, x - 2.4, -10.5, 4.8, 2, 0.8));
-  }
-}
-
-// ---- 頭 ----
-
-export function drawWideHat(ctx: Ctx, it: GearItem, [c, d]: Colors): void {
-  fill(ctx, d, () => {
-    ctx.beginPath();
-    ctx.ellipse(0, -34, 14, 3.4, 0, 0, TAU);
-  });
-  fill(ctx, c, () => rr(ctx, -7, -42, 14, 8, 3));
-  fill(ctx, it.trim ?? d, () => ctx.rect(-7, -36.5, 14, 1.6));
-}
-
-/** 皮帽／毛帽（形制 `fur`：毛邊白、較厚）。 */
-export function drawCap(ctx: Ctx, it: GearItem, [c, d]: Colors): void {
-  fill(ctx, c, () => {
-    ctx.beginPath();
-    ctx.arc(0, -31, 9.2, Math.PI, 0);
-    ctx.closePath();
-  });
-  fill(ctx, it.form === "fur" ? "#e9e3cf" : d, () => rr(ctx, -9.6, -32.5, 19.2, it.form === "fur" ? 4 : 2.4, 1.5));
-}
-
-/** 全罩盔：整顆頭包住，正面有細縫與鼻樑條。 */
-export function drawGreathelm(ctx: Ctx, [c, d]: Colors, back: boolean): void {
-  fill(ctx, c, () => rr(ctx, -9.6, -39, 19.2, 17, 4));
-  if (!back) {
-    fill(ctx, "#1d1a22", () => ctx.rect(-6.5, -31, 13, 1.8));
-    fill(ctx, d, () => ctx.rect(-0.8, -29, 1.6, 6));
-  }
-  fill(ctx, mix(c, "#ffffff", 0.4), () => rr(ctx, -6, -38, 4, 3, 1.5));
-}
 
 // ---- 主手 ----
 
@@ -305,32 +170,3 @@ export function drawShotgun(ctx: Ctx, it: GearItem, [c, d]: Colors, front: boole
   }
 }
 
-// ---- 副手 ----
-
-/** 法球（形制 `ball` 握在手裡、`floating` 浮在手上方）：球色取元素色，沒有就用材質色。 */
-export function drawOrb(ctx: Ctx, it: GearItem, [c]: Colors): void {
-  const orb = elementTint(it.element) ?? c;
-  const y = it.form === "floating" ? -9 : -6;
-  if (it.form === "floating") {
-    ctx.strokeStyle = "rgba(255,255,255,0.5)";
-    ctx.lineWidth = 0.8;
-    ctx.beginPath();
-    ctx.ellipse(0, -2, 4, 1.2, 0, 0, TAU);
-    ctx.stroke();
-  }
-  ctx.fillStyle = orb;
-  ctx.globalAlpha = 0.35;
-  ctx.beginPath();
-  ctx.arc(0, y, 6, 0, TAU);
-  ctx.fill();
-  ctx.globalAlpha = 1;
-  fill(ctx, orb, () => ctx.arc(0, y, 3.6, 0, TAU));
-  fill(ctx, "rgba(255,255,255,0.8)", () => ctx.arc(-1.2, y - 1.2, 1.1, 0, TAU));
-}
-
-/** 塔盾：長方形大盾（鳶盾的 `tower` 形制）。 */
-export function drawTowerShield(ctx: Ctx, [c, d]: Colors): void {
-  fill(ctx, d, () => rr(ctx, -7.5, -16, 15, 21, 2));
-  fill(ctx, c, () => rr(ctx, -6, -14.5, 12, 18, 1.5));
-  fill(ctx, "#e8e0c8", () => ctx.rect(-0.9, -14, 1.8, 17));
-}
