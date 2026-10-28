@@ -36,6 +36,14 @@ export function isInkWeapon(it: GearItem): boolean {
   }
 }
 
+/** 與白色混合（亮 t）；不是 #rrggbb 的值原樣回傳。 */
+export const lighten = (c: string, t: number): string => {
+  if (!/^#[0-9a-f]{6}$/i.test(c)) return c;
+  const n = parseInt(c.slice(1), 16);
+  const m = (s: number): number => Math.round(((n >> s) & 255) * (1 - t) + 255 * t);
+  return `#${((m(16) << 16) | (m(8) << 8) | m(0)).toString(16).padStart(6, "0")}`;
+};
+
 export const darken = (c: string, t: number): string => {
   if (!/^#[0-9a-f]{6}$/i.test(c)) return c;
   const n = parseInt(c.slice(1), 16);
@@ -109,11 +117,11 @@ export interface HeldOpt {
 /** 側面傾斜（弧度）；正面、背面豎直。 */
 const SIDE_TILT = 0.75;
 
-function drawBlade(ctx: Ctx, it: GearItem, key: string, metal: string): void {
+function drawBlade(ctx: Ctx, it: GearItem, key: string, metal: string, outward = 1): void {
   const L = it.kind === "sword" ? 21 : 10;
   const half = it.kind === "sword" && it.form === "broad" ? 1.7 : 1;
-  // curved（彎刀）、kris（彎匕）：刀身往前彎約 3px（越靠尖端彎越多）；其他形制筆直
-  const bow = it.form === "curved" || it.form === "kris" ? 3 : 0;
+  // curved（彎刀）、kris（彎匕）：刀身彎約 3px（越靠尖端彎越多）；其他形制筆直。彎刀正面往外彎（outward ＝ -1，3J-5 美術 PM 小修），側面、背面往前／往外
+  const bow = it.form === "curved" ? 3 * outward : it.form === "kris" ? 3 : 0;
   const bx = (y: number): number => bow * (y / L) ** 2;
   ink(ctx, `${key}-blade`, [[-1.1 * half, -2], [-1 * half + bx(L - 1.6), -L + 1.6], [bx(L), -L], [1 * half + bx(L - 1.6), -L + 1.6], [1.1 * half, -2]], metal, { shade: false, w: 0.7 });
   ink(ctx, `${key}-guard`, [[-3.4, -3.2], [3.4, -3.2], [3.4, -1.6], [-3.4, -1.6]], it.hilt ?? MAT.gold, { shade: false, w: 0.6 });
@@ -176,7 +184,7 @@ export function drawInkWeapon(ctx: Ctx, it: GearItem, key: string, x: number, y:
     case "sword":
     case "dagger":
       ctx.rotate(tilt);
-      drawBlade(ctx, it, key, metal);
+      drawBlade(ctx, it, key, metal, !o.side && o.back !== true ? -1 : 1);
       break;
     case "axe":
       ctx.rotate(tilt * 0.8);

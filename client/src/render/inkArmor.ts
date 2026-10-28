@@ -3,7 +3,7 @@
 // 不認得的 kind／form／材質退回預設，不出錯。座標同 inkDoll.ts（頭心 (0,-42)）。
 import type { Ctx } from "./artDraw";
 import type { GearItem } from "./appearance";
-import { darken, drawHelmet, metalOf, type ColorFn, type GearView } from "./inkGear";
+import { darken, drawHelmet, lighten, metalOf, type ColorFn, type GearView } from "./inkGear";
 import { dot, ellPts, ink, stroke, type Pt } from "./inkStyle";
 
 const GOLD = "#e8bb48";
@@ -203,7 +203,7 @@ export function footTop(feet: GearItem | undefined): number | undefined {
 }
 
 /** 鞋靴的額外細節（綁腿、鐵靴鞋尖與護片），畫在腿與靴之後。 */
-export function drawFootDetail(ctx: Ctx, feet: GearItem | undefined, view: GearView, colors: ColorFn): void {
+export function drawFootDetail(ctx: Ctx, feet: GearItem | undefined, view: GearView, colors: ColorFn, heavy = false): void {
   if (feet === undefined) return;
   const sides = view === "side" ? [1] : [-1, 1];
   if (feet.kind === "shoes" && feet.form === "wrapped") {
@@ -218,7 +218,7 @@ export function drawFootDetail(ctx: Ctx, feet: GearItem | undefined, view: GearV
     // 護膝（美術 PM C-2a 驗收）：膝蓋 y≈-9 的鋼色小橢圓 2.4×1.8；正面兩腿、側面近側腿，背面不畫
     for (const sx of sides) {
       const cx = view === "side" ? 1.6 : sx * 2.7;
-      ink(ctx, `knee-${view}-${sx}`, ellPts(cx, -9, 2.4, 1.8, 10), metalOf(feet, colors), { shade: false, w: 0.6 });
+      ink(ctx, `knee-${view}-${sx}`, ellPts(cx, -9, 2.4, 1.8, 10), heavy ? lighten(metalOf(feet, colors), 0.35) : metalOf(feet, colors), { shade: false, w: 0.6 });
     }
   } else if (feet.kind === "iron_boots") {
     for (const sx of sides) {
