@@ -961,6 +961,7 @@ def _rune_hint(draft: Draft, library: ContentLibrary) -> tuple[str, ...]:
 _APPLIES_TO_ZH: dict[str, str] = {
     "all_attacks": "所有攻擊（普攻和攻擊技能）",
     "all_skills": "所有技能",
+    "weapon_skills": "武器技（不含普攻）",
     "attack": "普攻",
     "skill_tags": "帶某個標籤的技能",
     "interact": "互動",
@@ -1056,6 +1057,7 @@ def _modifier_step(draft: Draft, library: ContentLibrary) -> StepOptions:
                     FieldSpec(field="skill_tags", name_zh="帶這些標籤的技能", type="tags"),
                     FieldSpec(field="all_attacks", name_zh="所有攻擊", type="bool"),
                     FieldSpec(field="all_skills", name_zh="所有技能", type="bool"),
+                    FieldSpec(field="weapon_skills", name_zh="武器技（不含普攻）", type="bool"),
                 ),
             ),
             FieldSpec(

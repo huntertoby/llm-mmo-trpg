@@ -1090,6 +1090,8 @@ def _targets_text(library: ContentLibrary, target: ModifierTarget) -> str:
         parts.append("你的所有攻擊（普攻與攻擊技能）")
     if target.all_skills:
         parts.append("你施放的所有技能")
+    if target.weapon_skills:
+        parts.append("你的武器技（不含普攻）")
     parts += [_ACTION_TEXT[a] for a in target.actions if not (a == "attack" and target.all_attacks)]
     if target.skill_tags and not target.all_skills:
         parts.append(f"帶{tag_text(library, target.skill_tags)}標籤的技能")
@@ -1155,6 +1157,10 @@ def _change_text(library: ContentLibrary, skill: SkillDef, rule: ModifierSpec) -
 
 def _other_change_text(library: ContentLibrary, skill: SkillDef, rule: ModifierSpec) -> str:
     change = rule.change
+    if change.form_upkeep_permille is not None:
+        return f"你的形態維持費 {change.form_upkeep_permille / 10:+g}%（無條件捨去）"
+    if change.form_entry_permille is not None:
+        return f"你的形態進入獎勵的數值 {change.form_entry_permille / 10:+g}%（無條件捨去）"
     if change.add_element is not None:
         return f"物理傷害改為{change.add_element.display_name}（已有元素的不變）"
     if change.add_tags is not None:

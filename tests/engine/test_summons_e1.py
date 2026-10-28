@@ -87,7 +87,10 @@ def test_the_infusion_table_covers_all_ten_keywords() -> None:
     table = library().ruleset.core.summon_infusions
     assert set(table) == TEN_KEYWORDS
     # 3-53：中毒關鍵字沒有召喚灌注（06 6.27.1 沒有要求）；其餘十個都有。
-    assert {k.id for k in library().ruleset.keywords.keywords} - {"poisoned"} == TEN_KEYWORDS
+    assert {k.id for k in library().ruleset.keywords.keywords} - {
+        "poisoned",
+        "form",
+    } == TEN_KEYWORDS
 
 
 def test_wet_creates_water_on_the_target_tile() -> None:

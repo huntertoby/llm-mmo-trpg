@@ -789,6 +789,17 @@ const COND: Readonly<Record<string, Draw>> = {
     c.fillRect(-5, 3, 10, 2.5);
     c.fillRect(-1.5, 5.5, 3, 4);
   },
+  // 在形態中（3J-3）：爪痕（三道斜線）
+  in_form: (c) => {
+    c.lineWidth = 2;
+    c.lineCap = "round";
+    c.beginPath();
+    for (let i = -1; i <= 1; i++) {
+      c.moveTo(i * 5 - 2, -8);
+      c.lineTo(i * 5 + 2, 8);
+    }
+    c.stroke();
+  },
 };
 
 const CONDITION_COLOR = "#ffe9a8";

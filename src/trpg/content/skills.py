@@ -30,6 +30,7 @@ from typing import TYPE_CHECKING, Any, Literal
 from pydantic import Field, ValidationError, field_validator, model_validator
 
 from trpg.content.battle import ID_PATTERN, Dice
+from trpg.content.forms import FormCategory
 from trpg.content.loader import default_content_dir, load_content_file
 from trpg.content.rules import SkillSlots
 from trpg.content.schemas import ContentModel
@@ -263,8 +264,9 @@ REQUIRED_CONDITIONS: tuple[str, ...] = (
     "on_own_rune",
     "target_collided",
     "wielding_weapon",
+    "in_form",
 )
-"""引擎實作的 16 種條件（``trpg.engine.skills.conditions``），資料檔必須全部定義。"""
+"""引擎實作的 17 種條件（``trpg.engine.skills.conditions``），資料檔必須全部定義。"""
 
 type Targeting = Literal[
     "self", "unit", "tile", "direction", "none", "object_tile", "unit_tile", "unit_pair"
@@ -624,6 +626,7 @@ class PrimitiveParam(ContentModel):
         "scope",
         "weapon",
         "form",
+        "form_category",
     ]
     required: bool = False
     show_when: dict[str, str] | None = None
@@ -870,12 +873,17 @@ class ConditionSpec(ContentModel):
     weapon: str | None = Field(default=None, pattern=ID_PATTERN)
     """``wielding_weapon`` 專用（Phase 3I-5，6.10 #50）：要手持的武器或副手 ID
     （``weapons.yaml``、``offhands.yaml``）。"""
+    form_category: FormCategory | None = None
+    """``in_form`` 專用（Phase 3J-3，6.30）：限定形態類別（物理／心智）；省略＝任何形態。"""
 
     def param_values(self) -> dict[str, Any]:
         """已填寫的參數（依名稱排序）。"""
-        names = ("element", "permille", "status", "surface", "tag", "weapon")
+        names = ("element", "form_category", "permille", "status", "surface", "tag", "weapon")
         return {n: getattr(self, n) for n in names if getattr(self, n) is not None}
 
+
+FORM_CATEGORY_TEXT: dict[str, str] = {"physical": "物理", "mental": "心智"}
+"""形態類別的中文（``in_form`` 條件句；3J-3）。"""
 
 _PLAIN_CONDITION_TEXT = {
     "moved_this_turn": "本回合移動過",
@@ -886,6 +894,7 @@ _PLAIN_CONDITION_TEXT = {
     "self_concealed": "潛行偷襲（自身隱蔽中）",
     "first_round": "第一輪",
     "target_collided": "目標本回合受過撞擊",
+    "in_form": "你在形態中",
 }
 """沒有參數的條件的一句話（Phase 3D-1）。"""
 
@@ -926,6 +935,8 @@ def condition_text(
     if kind == "cast_tag_this_turn" and condition.tag is not None:
         return f"本回合已施放過帶「{tag_name(condition.tag)}」標籤的技能"
     plain = _PLAIN_CONDITION_TEXT.get(kind)
+    if kind == "in_form" and condition.form_category is not None:
+        plain = f"你在{FORM_CATEGORY_TEXT[condition.form_category]}形態中"
     if plain is None and kind == "on_own_rune":
         plain = _rune_condition_text(condition, tag_runes)
     if plain is None and kind == "wielding_weapon" and condition.weapon is not None:
@@ -1862,6 +1873,8 @@ MODIFIER_CHANGES: tuple[str, ...] = (
     "summon_limit_delta",
     "summon_duration_delta",
     "summon_damage_permille",
+    "form_upkeep_permille",
+    "form_entry_permille",
 )
 """``change`` 的種類（每條規則恰好一種）。"""
 
@@ -1870,9 +1883,10 @@ SHAPE_CHANGES: frozenset[str] = frozenset({"area_delta", "shape_to", "allow_self
 :func:`trpg.engine.modifiers.shaped_skill` 產生變形後的技能。"""
 
 _ATTACK_TARGETS = frozenset({"attack", "all_attacks", "all_skills", "skill_tags"})
+_DAMAGE_TARGETS = frozenset({*_ATTACK_TARGETS, "weapon_skills"})
 _SKILL_TARGETS = frozenset({"all_skills", "skill_tags"})
 CHANGE_TARGETS: dict[str, frozenset[str]] = {
-    "damage_permille": _ATTACK_TARGETS,
+    "damage_permille": _DAMAGE_TARGETS,
     "hit_bonus": _ATTACK_TARGETS,
     "cooldown_delta": _SKILL_TARGETS,
     "push_distance_delta": frozenset({"shove", "all_skills", "skill_tags"}),
@@ -1891,6 +1905,8 @@ CHANGE_TARGETS: dict[str, frozenset[str]] = {
     "summon_limit_delta": _SKILL_TARGETS,
     "summon_duration_delta": _SKILL_TARGETS,
     "summon_damage_permille": _SKILL_TARGETS,
+    "form_upkeep_permille": _SKILL_TARGETS,
+    "form_entry_permille": _SKILL_TARGETS,
 }
 """每種 ``change`` 可以套用的對象（``applies_to`` 的每一項都必須在內）：推擊、絆倒、互動沒有傷害與
 命中骰，基本動作沒有冷卻與標籤。"""
@@ -1908,6 +1924,8 @@ SELF_ONLY_CHANGES: frozenset[str] = frozenset(
         "summon_limit_delta",
         "summon_duration_delta",
         "summon_damage_permille",
+        "form_upkeep_permille",
+        "form_entry_permille",
         *SHAPE_CHANGES,
     }
 )
@@ -1931,6 +1949,7 @@ CASTER_CONDITIONS: frozenset[str] = frozenset(
         "cast_tag_this_turn",
         "self_concealed",
         "wielding_weapon",
+        "in_form",
     }
 )
 """只看施放者的條件（Phase 3D-1；``wielding_weapon`` 為 3I-5）：技能層級的判斷不需要影響範圍內
@@ -1969,6 +1988,8 @@ class ModifierTarget(ContentModel):
     - ``skill_tags``：帶這些標籤（含其他修正規則用 ``add_tags`` 加上的）的技能。
     - ``all_attacks``：你的所有攻擊——普攻與「有對敵方傷害效果」的技能（修正型被動）。
     - ``all_skills``：你施放的所有技能（主動、姿態與反應技）。
+    - ``weapon_skills``（3J-3，化形專精）：你的武器技（``category: weapon`` 的技能；不含普攻）；
+      只有 ``damage_permille`` 可以用。
 
     被動觸發與陷阱觸發的效果不是「你的動作」，不受修正規則影響。
     """
@@ -1977,12 +1998,20 @@ class ModifierTarget(ContentModel):
     skill_tags: tuple[str, ...] = ()
     all_attacks: bool = False
     all_skills: bool = False
+    weapon_skills: bool = False
 
     @model_validator(mode="after")
     def _check(self) -> ModifierTarget:
-        if not (self.actions or self.skill_tags or self.all_attacks or self.all_skills):
+        if not (
+            self.actions
+            or self.skill_tags
+            or self.all_attacks
+            or self.all_skills
+            or self.weapon_skills
+        ):
             raise ValueError(
-                "applies_to 至少要有一項（actions、skill_tags、all_attacks、all_skills）"
+                "applies_to 至少要有一項（actions、skill_tags、all_attacks、all_skills、"
+                "weapon_skills）"
             )
         if len(set(self.actions)) != len(self.actions):
             raise ValueError("applies_to.actions 不可重複")
@@ -2000,6 +2029,8 @@ class ModifierTarget(ContentModel):
             keys.add("all_attacks")
         if self.all_skills:
             keys.add("all_skills")
+        if self.weapon_skills:
+            keys.add("weapon_skills")
         if self.skill_tags:
             keys.add("skill_tags")
         return frozenset(keys)
@@ -2038,6 +2069,10 @@ class ModifierChange(ContentModel):
       ``summon_max_duration`` 之後）。
     - ``summon_damage_permille``（3-33f1）：你召喚出來的召喚物傷害加成 +n‰（1～1000；召喚時快照，
       與成長加成一樣計入全身 +50% 上限）。
+    - ``form_upkeep_permille``（3J-3，化形專精）：你的形態維持費 −n‰（−1000～−1；−500＝減半，
+      無條件捨去）。
+    - ``form_entry_permille``（3J-3，化形專精）：你的形態進入獎勵的數值 +n‰（1～1000；+500＝×1.5，
+      無條件捨去；每次進入結算時套用）。
     """
 
     damage_permille: int | None = Field(default=None, ge=-500, le=1000)
@@ -2059,6 +2094,8 @@ class ModifierChange(ContentModel):
     summon_limit_delta: int | None = Field(default=None, ge=-1, le=1)
     summon_duration_delta: int | None = Field(default=None, ge=1, le=2)
     summon_damage_permille: int | None = Field(default=None, ge=1, le=1000)
+    form_upkeep_permille: int | None = Field(default=None, ge=-1000, le=-1)
+    form_entry_permille: int | None = Field(default=None, ge=1, le=1000)
 
     @model_validator(mode="after")
     def _check(self) -> ModifierChange:
@@ -4130,7 +4167,7 @@ def held_gear(weapon: Any, offhand: Any = None) -> dict[str, str]:
 _REQ_NAMES = {"melee": "近戰武器", "ranged": "遠程武器", "focus": "法器", "any": "任何武器"}
 
 
-_GROUP_NAMES = {"mastery": "專精（普攻精通、群召、精英召喚）"}
+_GROUP_NAMES = {"mastery": "專精（普攻精通、群召、精英召喚、化形專精）"}
 
 
 def skill_slot_problems(skills: Iterable[SkillDef], slots: SkillSlots) -> list[str]:

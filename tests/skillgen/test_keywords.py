@@ -45,6 +45,11 @@ KEYWORDS = (
     "poisoned",
 )
 NAMES = ("點燃", "潮濕", "帶電", "冰凍", "倒地", "撞擊", "標記", "高處", "隱蔽", "召喚物", "中毒")
+EXTRA_KEYWORDS = ("form",)
+"""3J-3 的第 12 個關鍵字「形態」：形態池的 1 階起始技能與主動利用者在 3J-4 補齊前不足（形態技能
+是姿態、利用者要等 3J-4 的「化形撲擊」等），所以池相關的參數化測試（``KEYWORDS``）先不含它；
+3J-4 補齊後併進 ``KEYWORDS`` 並刪掉 ``EXTRA_*``。"""
+EXTRA_NAMES = ("形態",)
 
 
 def _skill(**fields: Any) -> SkillDef:
@@ -77,10 +82,11 @@ def _keywords(**fields: Any) -> tuple[tuple[str, ...], tuple[str, ...]]:
 # ---------------------------------------------------------------------------
 
 
-def test_table_has_the_eleven_keywords_in_order() -> None:
+def test_table_has_the_twelve_keywords_in_order() -> None:
     table = library().keywords
-    assert table.ids() == KEYWORDS
-    assert tuple(k.name_zh for k in table.keywords) == NAMES
+    assert table.ids() == (*KEYWORDS, *EXTRA_KEYWORDS)
+    assert tuple(k.name_zh for k in table.keywords) == (*NAMES, *EXTRA_NAMES)
+    assert table.start_ids() == KEYWORDS  # 形態先不放進開局選項（3J-4 補齊池後再打開）
 
 
 def test_no_keyword_is_a_school_or_theme() -> None:
@@ -237,6 +243,33 @@ POSITIVE: list[tuple[str, str, dict[str, Any]]] = [
             ]
         },
     ),
+    # 3J-3 的形態（06 6.27.1、6.30）：製造＝進入形態；利用＝「在形態中」條件或化形專精的改變
+    (
+        "form",
+        "makes",
+        {
+            "kind": "stance",
+            "skeleton": "stance",
+            "ap_cost": None,
+            "shape": {"type": "self"},
+            "effects": [{"type": "enter_form", "form": "bear", "affects": "self"}],
+        },
+    ),
+    (
+        "form",
+        "uses",
+        {
+            "effects": [
+                {
+                    "type": "damage",
+                    "dice": "1d6",
+                    "element": "physical",
+                    "condition": {"type": "in_form", "form_category": "physical"},
+                }
+            ]
+        },
+    ),
+    ("form", "uses", {"condition": {"type": "in_form"}}),
     (
         "poisoned",
         "uses",
@@ -265,13 +298,13 @@ def test_derivation_positive_examples(keyword: str, role: str, fields: dict[str,
 
 def test_every_keyword_has_a_positive_example_for_makes_and_uses() -> None:
     covered = {(k, r) for k, r, _ in POSITIVE}
-    for keyword in KEYWORDS:
+    for keyword in (*KEYWORDS, *EXTRA_KEYWORDS):
         assert (keyword, "makes") in covered and (keyword, "uses") in covered, keyword
 
 
 def test_every_keyword_is_made_and_used_by_shipped_skills() -> None:
     lib = library()
-    seen: dict[str, set[str]] = {k: set() for k in KEYWORDS}
+    seen: dict[str, set[str]] = {k: set() for k in (*KEYWORDS, *EXTRA_KEYWORDS)}
     for skill in lib.skills.values():
         found = derive_keywords(skill, lib.keywords)
         for k in found.makes:
@@ -564,7 +597,8 @@ def test_exclusive_only_derivation_drops_general_and_provisional_rules() -> None
         fire, lib.keywords
     )
     pools = keyword_pools(lib, starter_only=True, exclusive_only=True)
-    assert all(len(ids) >= 3 for ids in pools.values())  # 3-54c 補齊中毒池後，11 池一致
+    assert all(len(ids) >= 3 for k, ids in pools.items() if k not in EXTRA_KEYWORDS)
+    assert pools["form"] == ()  # 形態技能是姿態，不是 1 階主動起始技能（3J-4 補「化形撲擊」等）
     assert len(pools["prone"]) < len(keyword_pools(lib, starter_only=True)["prone"])
 
 
@@ -572,3 +606,8 @@ def test_keyword_actions_are_basic_actions() -> None:
     for keyword in library().keywords.keywords:
         assert set(keyword.actions) <= set(BASIC_ACTION_TYPES), keyword.id
     assert library().keywords.by_id()["high_ground"].actions == ("vault",)
+
+
+def test_the_form_keyword_is_not_composable() -> None:
+    with pytest.raises(ComposeError, match="做不出"):
+        compose_random_skill(1, keyword="form")

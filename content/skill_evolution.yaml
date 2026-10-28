@@ -108,6 +108,10 @@ grafts:
     prefix_zh: 劇毒
     makes: {type: apply_status, status: poison, duration: 2}
     uses: {type: damage, condition: {type: target_has_status, status: poison}}
+  # 3J-3：形態沒有「橋接製造」——進入形態是姿態（唯一的效果），不能嫁接到別的技能上，所以只有 uses。
+  form:
+    prefix_zh: 化形
+    uses: {type: damage, condition: {type: in_form}}
 
 # 召喚技能的三支分歧進化（Phase 3-33f2，docs/design/06-技能.md 6.29.4；數值為初值，未經模擬）。
 # 召喚技能沒有可調的骰子，進化直接改 summon 效果（見 trpg.skillgen.summon_evolution）：

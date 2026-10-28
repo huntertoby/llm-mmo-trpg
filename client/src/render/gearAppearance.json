@@ -47,7 +47,8 @@
     "high_ground",
     "concealed",
     "summon",
-    "poisoned"
+    "poisoned",
+    "form"
   ],
   "elementKeywords": [
     "ignite",

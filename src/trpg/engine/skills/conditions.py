@@ -9,7 +9,7 @@
   ``cast_tag_this_turn``）只看施放者，與對象無關；``target_isolated`` 看對象單位的周圍；
   ``flanked``（Phase 3D-8c）看對象單位與施放者的相對位置：對象的對面有施放者的友方；
   ``from_behind``（Phase 3D-8d）：施放者站在對象的背後格；``self_concealed``（3D-8d）只看施放者
-  有沒有 ``concealed`` 狀態。
+  有沒有 ``concealed`` 狀態；``in_form``（3J-3）只看施放者有沒有在形態中（可限定類別）。
 
 技能層級的條件（:func:`skill_condition_met`）決定技能能否使用；效果層級的條件
 （:func:`condition_met`）由解譯器對每個對象分別判斷。
@@ -29,7 +29,7 @@ from trpg.content.skills import (
 )
 from trpg.engine.ids import CONCEALED
 from trpg.engine.rules.facing import is_behind
-from trpg.engine.rules.forms import held_weapon
+from trpg.engine.rules.forms import active_form, held_weapon
 from trpg.engine.rules.geometry import XY
 from trpg.engine.rune_queries import has_own_rune
 from trpg.engine.state import BattleState, UnitState
@@ -75,6 +75,12 @@ def unit_held(unit: UnitState) -> dict[str, str]:
     return held_gear(held_weapon(unit), unit.gear.offhand)
 
 
+def _in_form(state: BattleState, caster: UnitState, condition: ConditionSpec) -> bool:
+    """``in_form``（Phase 3J-3）：施放者在形態中；``form_category`` 限定物理或心智形態。"""
+    form = active_form(state.ruleset, caster)
+    return form is not None and condition.form_category in (None, form.category)
+
+
 def _caster_condition_met(state: BattleState, caster: UnitState, condition: ConditionSpec) -> bool:
     """只看施放者的條件（:data:`CASTER_CONDITIONS`）。"""
     kind = condition.type
@@ -86,6 +92,7 @@ def _caster_condition_met(state: BattleState, caster: UnitState, condition: Cond
         "adjacent_ally": lambda: _has_living_ally_beside(state, caster),
         "first_round": lambda: state.round == 1,
         "self_concealed": lambda: caster.has_status(CONCEALED),
+        "in_form": lambda: _in_form(state, caster, condition),
         # 手持某種武器時（3I-5，6.10 #50）：主手武器或副手的 ID 相符
         "wielding_weapon": lambda: condition.weapon in unit_held(caster),
     }

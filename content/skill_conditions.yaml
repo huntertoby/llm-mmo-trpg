@@ -103,6 +103,16 @@ conditions:
     description_zh: 施放者帶有「隱蔽」狀態（concealed；站在黑暗或草叢中不算）。隱蔽中發動攻擊另有通用的命中加成，攻擊結算完後脫離隱蔽。
     harshness: harsh
     min_rarity: rare
+  # 3J-3 在形態中（玩法決定 #48，06 6.30）：施放者目前在形態中，可限定物理或心智。形態要先花 1 AP
+  # 進入、佔一個主動欄位、每回合付維持費，所以算嚴苛（harshness 為初值，未經模擬）。
+  - id: in_form
+    name_zh: 在形態中
+    llm_hint: "施放者目前變身成某個形態（可限定物理或心智形態）時才成立。"
+    description_zh: 施放者目前在形態中（用 enter_form 進入；離開、倒下或戰鬥結束後不成立）。form_category 可以限定只算物理形態或只算心智形態，省略＝任何形態。只看施放者，與對象無關。
+    harshness: harsh
+    min_rarity: rare
+    params:
+      form_category: {llm_hint: "只認這一類的形態（物理或心智）；省略表示任何形態。", type: form_category}
   # 3I-5 武器親和（玩法決定 #50，06 6.10；harshness 為初值，未經模擬）：寫在效果的 condition 上＝
   # 「手持某種武器時多一個加成」；沒拿那種武器時技能照常可用、只是沒有加成。算常見（0.85）：
   # 主手武器或副手的 ID 相符就成立，開局就知道，不需要先做別的事。

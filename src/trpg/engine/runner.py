@@ -38,8 +38,12 @@ __all__ = [
     "run_battle",
 ]
 
-LOG_FORMAT = "trpg-battle-log/80"
-"""``/80``（Phase 3J-2）：定向蓄力與龍的蓄力吐息——``attack`` 動作多了 ``direction``（蓄力武器的普攻
+LOG_FORMAT = "trpg-battle-log/81"
+"""``/81``（Phase 3J-3）：形態身分——條件多了 ``in_form``（施放者在形態中，可限定物理／心智；
+``form_category``），修正規則多了 ``form_upkeep_permille``（形態維持費）、``form_entry_permille``
+（形態進入獎勵的數值）與套用對象 ``weapon_skills``（武器技），形態狀態多了 ``entry_permille``，
+新技能化形專精（互斥組 ``mastery``）；規則包的條件與技能表因此不同，``/80`` 的紀錄無法重播。
+``/80``（Phase 3J-2）：定向蓄力與龍的蓄力吐息——``attack`` 動作多了 ``direction``（蓄力武器的普攻
 選方向）、狀態實例多了 ``direction``、事件 ``followup_charged`` 多了 ``direction``，
 ``followup_cancelled`` 多了原因 ``form_left``，傷害效果多了 ``attr_permille``，龍的天生武器改成蓄力
 吐息（``charge``），規則包的形態表因此不同；``/79`` 的紀錄無法重播。

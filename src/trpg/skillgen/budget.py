@@ -1289,6 +1289,9 @@ def _modifier_uses(rule: ModifierSpec, budget: ModifierBudget) -> tuple[int, str
     if target.all_skills:
         total += uses["all_skills"]
         parts.append("所有技能")
+    if target.weapon_skills:
+        total += uses["weapon_skills"]
+        parts.append("武器技")
     for action in target.actions:
         if not (action == "attack" and target.all_attacks):
             total += uses[action]
@@ -1357,8 +1360,13 @@ def _modifier_value(
         "allow_self_target",
     )  # 沒有數值：每次 1 份
     magnitude = Fraction(abs(int(getattr(change, kind) or 0))) if kind not in flags else Fraction(1)
-    if kind in ("summon_hp_permille", "summon_damage_permille"):
-        magnitude /= 100  # 每 +100‰ 一份
+    if kind in (
+        "summon_hp_permille",
+        "summon_damage_permille",
+        "form_upkeep_permille",
+        "form_entry_permille",
+    ):
+        magnitude /= 100  # 每 ±100‰ 一份（維持費減少也是正價值）
     per = {
         "hit_bonus": points.hit_bonus,
         "cooldown_delta": points.cooldown_delta,
@@ -1372,6 +1380,8 @@ def _modifier_value(
         "summon_limit_delta": points.summon_limit,
         "summon_duration_delta": points.summon_duration,
         "summon_damage_permille": points.summon_damage_per_100,
+        "form_upkeep_permille": points.form_upkeep_per_100,
+        "form_entry_permille": points.form_entry_per_100,
     }[kind]
     sign = -1 if kind == "hit_bonus" and (change.hit_bonus or 0) < 0 else 1
     sign = -1 if kind == "range_delta" and (change.range_delta or 0) < 0 else sign

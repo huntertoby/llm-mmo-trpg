@@ -14,7 +14,7 @@ dyes: [red, blue, green, purple, black, white, brown, gold]
 dye_materials: [cloth, leather]
 rarities: [common, uncommon, rare, epic, legendary]
 max_keywords: 2
-keywords: [ignite, wet, charged, frozen, prone, collision, marked, high_ground, concealed, summon, poisoned]
+keywords: [ignite, wet, charged, frozen, prone, collision, marked, high_ground, concealed, summon, poisoned, form]
 # 元素關鍵字（混色）；其餘只加小圖樣
 element_keywords: [ignite, wet, charged, frozen]
 kinds:

@@ -65,6 +65,8 @@ __all__ = [
     "displace_split",
     "effective_tags",
     "empty_active_slots",
+    "form_entry_permille",
+    "form_upkeep_permille",
     "grants_pierce",
     "heal_permille",
     "hit_bonus",
@@ -152,6 +154,8 @@ def _matches(state: BattleState, rule: ModifierSpec, use: Use, tags: Iterable[st
     if target.all_skills:
         return True
     if target.all_attacks and is_attack_skill(state, use.skill):
+        return True
+    if target.weapon_skills and use.skill.category == "weapon":
         return True
     return bool(set(target.skill_tags) & set(tags))
 
@@ -382,6 +386,25 @@ def summon_hp_permille(state: BattleState, unit: UnitState, use: Use) -> int:
 def summon_attack_dice(state: BattleState, unit: UnitState, use: Use) -> int:
     """你召喚的召喚物攻擊傷害骰多出的顆數（``summon_attack_dice`` 加總；召喚時結算）。"""
     return _sum_self(state, unit, use, "summon_attack_dice")
+
+
+def _sum_unit(state: BattleState, unit: UnitState, change: str) -> int:
+    """持有者全部修正規則裡 ``change`` 種類的改變量加總（不看 ``applies_to``，條件看持有者）。"""
+    return sum(
+        getattr(active.rule.change, change)
+        for active in unit_rules(state, unit)
+        if getattr(active.rule.change, change) is not None and _self_holds(state, unit, active.rule)
+    )
+
+
+def form_upkeep_permille(state: BattleState, unit: UnitState) -> int:
+    """形態維持費的倍率改變（‰；``form_upkeep_permille`` 加總，不低於 −1000；化形專精，3J-3）。"""
+    return max(-_PERMILLE, _sum_unit(state, unit, "form_upkeep_permille"))
+
+
+def form_entry_permille(state: BattleState, unit: UnitState) -> int:
+    """形態進入獎勵的數值倍率改變（‰；``form_entry_permille`` 加總；化形專精，3J-3）。"""
+    return _sum_unit(state, unit, "form_entry_permille")
 
 
 def summon_limit_delta(state: BattleState, unit: UnitState, use: Use) -> int:
