@@ -1,0 +1,76 @@
+<!doctype html>
+<html lang="zh-Hant">
+<head>
+<meta charset="utf-8">
+<title>紙娃娃大改畫風樣張</title>
+<style>
+  body { margin: 0; padding: 16px 20px; background: #1b1e24; color: #e8e8ea; font-family: "Microsoft JhengHei", sans-serif; }
+  h1 { font-size: 20px; margin: 0 0 4px; }
+  .sub { color: #a0a4ad; font-size: 13px; margin-bottom: 10px; line-height: 1.55; }
+  table { border-collapse: separate; border-spacing: 6px; }
+  th { font-size: 13px; color: #c8ccd4; font-weight: 400; padding: 2px 4px; }
+  td { background: #232730; border-radius: 6px; padding: 4px; vertical-align: middle; }
+  td.lab { width: 210px; font-size: 15px; font-weight: 700; padding: 8px 10px; }
+  td.lab small { display: block; font-weight: 400; color: #a0a4ad; font-size: 12px; line-height: 1.5; margin-top: 4px; }
+  td.cur { outline: 2px solid #5a6170; }
+  canvas { display: block; }
+</style>
+</head>
+<body>
+<h1>紙娃娃大改畫風：同一個角色、同一套裝備</h1>
+<div class="sub">人類、短褐髮、綠皮甲、紅披風、劍＋圓盾、皮靴。每列：正面、真側面（朝東）放大；右邊是戰場實際大小（每格 52px：正面／朝東／朝西）。<br>
+第一列是現行畫風，用來對照。四種都是程式繪製，沒有外部素材。</div>
+<table id="grid"></table>
+<script src="raceArt.js"></script>
+<script src="paperdoll.js"></script>
+<script src="sideArt.js"></script>
+<script src="restyle.js"></script>
+<script>
+const D = PaperDoll, SA = SideArt, RS = Restyle, I = D.ITEMS, DPR = 2;
+const UNIT = { look: { skin: D.SKIN[0], hair: "short", hairColor: "#6a3a1e" }, gear: { body: I.green_leather, feet: I.boots, main_hand: I.sword, off_hand: I.round_shield, cloak: I.red_cape } };
+const SIDE = { bodyTurn: 1, headTurn: 1 };
+function cv(w, h, bg) {
+  const c = document.createElement("canvas");
+  c.width = w * DPR; c.height = h * DPR; c.style.width = `${w}px`; c.style.height = `${h}px`;
+  const ctx = c.getContext("2d"); ctx.scale(DPR, DPR);
+  if (bg) { ctx.fillStyle = bg; ctx.fillRect(0, 0, w, h); }
+  return [c, ctx];
+}
+const BIG_W = 190, BIG_H = 200, T = 52;
+const ROWS = [
+  ["現行（對照）", "粗黑外框、圓頭、二頭半身。", {
+    front: (ctx) => D.stamp(ctx, UNIT, "south", BIG_W / 2, BIG_H - 14, 4, { dpr: DPR }),
+    side: (ctx) => SA.stamp(ctx, UNIT, SIDE, BIG_W / 2, BIG_H - 14, 3.9),
+    field: (ctx, x, y, v, west) => (v === "front" ? D.stamp(ctx, UNIT, "south", x, y, 0.95, { dpr: DPR }) : SA.stamp(ctx, UNIT, SIDE, x, y, 0.78, west)),
+  }],
+  ...Object.entries(RS.STYLES).map(([id, s]) => [s.zh, {
+    pixel: "22×30 像素格、整數放大；輪廓清楚、復古 SRPG 感。",
+    tall: "約 6 頭身、細的同色描邊、柔和光影；比較成熟、像戰棋立繪。",
+    story: "抖動墨線＋水彩溢色＋排線陰影；像說書人手繪的冒險繪本。",
+    toy: "二頭身塑膠公仔、球形光影、站在隊伍色底座上；像桌遊模型。",
+  }[id], {
+    front: (ctx) => RS.stamp(ctx, id, "front", BIG_W / 2, BIG_H - 14, id === "tall" ? 2.75 : 3),
+    side: (ctx) => RS.stamp(ctx, id, "side", BIG_W / 2, BIG_H - 14, id === "tall" ? 2.75 : 3),
+    field: (ctx, x, y, v, west) => RS.stamp(ctx, id, v, x, y, id === "tall" ? 0.66 : 0.72, west),
+  }]),
+];
+const grid = document.getElementById("grid");
+grid.insertAdjacentHTML("beforeend", "<tr><th></th><th>正面</th><th>真側面（朝東）</th><th>戰場大小：正面／朝東／朝西</th></tr>");
+ROWS.forEach(([zh, note, f], ri) => {
+  const tr = document.createElement("tr");
+  tr.insertAdjacentHTML("beforeend", `<td class="lab${ri ? "" : " cur"}">${zh}<small>${note}</small></td>`);
+  for (const v of ["front", "side"]) {
+    const td = document.createElement("td"); const [c, ctx] = cv(BIG_W, BIG_H, "#2d323c");
+    f[v](ctx); td.append(c); tr.append(td);
+  }
+  const td = document.createElement("td"); const [c, ctx] = cv(T * 3, T + 8, "#232730");
+  for (let i = 0; i < 3; i++) { ctx.fillStyle = i % 2 ? "#8a8a84" : "#7d8a7a"; ctx.fillRect(i * T, 4, T, T); }
+  f.field(ctx, T / 2, 4 + T * 0.86, "front", false);
+  f.field(ctx, T * 1.5, 4 + T * 0.86, "side", false);
+  f.field(ctx, T * 2.5, 4 + T * 0.86, "side", true);
+  td.append(c); tr.append(td);
+  grid.append(tr);
+});
+</script>
+</body>
+</html>
