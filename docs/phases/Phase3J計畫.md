@@ -127,3 +127,6 @@
 
 ### 4.14 3J-4c｜解除形態原語＋解形爆發（sonnet；約 0.25 段；之後排）
 原語「解除形態」（照常冷卻、算代價折抵）；解形爆發（2 階、只能在形態中用：先解除形態，再對周圍 1 格造成較高傷害），照 06 6.30 名單與預算。
+
+### 4.15 3J-4b 驗收（2026-10-29，開發 PM）
+- 報告 `Phase3J-4b報告.md`。起始技能只為 1 階 `enter_form` 開放姿態；`starter_pools()["form"]` 只剩熊、貓、巨鵰、狼人；`EffectSpec.form_bonus_permille`（在形態中整體乘 1.3，屬性只算一次），三招利用者改用它（預算按 `in_form` harsh 0.6 計入，初值）。與 3R-2 撞 `LOG_FORMAT` → **`/83`**。合併後全量（除 llm，含 3R-2）：pytest 8498、vitest 1080、mypy、lint-imports、build、重播全過。

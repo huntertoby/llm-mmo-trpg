@@ -35,3 +35,12 @@
 4. 單位的種族來源：主角（一輪）與 reference build 可指定種族；開局選種族是 3R-3，本段先讓 `trpg battle` 等能指定（例如 build 欄位），沒指定時無種族。
 5. 行為一致測試：每項環境被動 × 有／無該種族的引擎表格測試；每招種族技卡片＝實戰；獸人被推 × 路徑上有無岩漿／深淵 × 推的來源（技能、風、衝撞）；拋錨被擋就停、不吃撞擊；重播一致。
 6. 驗收：pytest（engine、content、skillgen、narrative、roguelite、api、`-m "slow or not slow" tests/cli --timeout=3000`）、vitest、build、ruff、format、mypy、lint-imports、一場含種族技的重播。報告 `Phase3R-2報告.md`。
+
+### 4.3 3R-2 驗收（2026-10-29，開發 PM）
+- 報告 `Phase3R-2報告.md`。動作 `use_race_skill`（推、拉 `PushEffect`、投擲 `HurlObjectEffect`、表面 `CreateSurfaceEffect`；狀態 `race_adapt`、`race_stonewall`；狐火誘餌召喚物 `summon_foxfire_decoy`）；被動集中在 `engine/rules/race.py`；精靈被動改 `sight_bonus_on_map_tag`，`forest` 只加在 `dark_forest`；指定種族：`trpg battle --ally-race／--enemy-race`、`trpg run new|auto --race`、`POST /api/runs` 的 `race`、build `hero.race`；前端種族技按鈕列與 HUD。`LOG_FORMAT` `/83`（與 3J-4b 合併）。合併後全量通過（同 3J 4.15）。
+- 玩法 PM 回覆（07 7.7 實作細節 6～10，`9e9876fd`）：#2、#3、#5 照實作；鱗族「水與冰面不花額外點數」→ 專案 PM 問使用者，結果前維持現狀；**#1、#6 → 3R-2b**。
+
+### 4.4 3R-2b｜狐火誘餌修正（sonnet；約 0.15 段）
+1. 狐火誘餌照 07 7.7 實作細節：下一次敵方單體攻擊（不論原本打我方誰）在**擲命中之前**轉向誘餌，攻擊落空、誘餌消失，不論會不會命中都算用掉；敵人可以直接打誘餌。表格測試。
+2. 戰鬥紀錄：放出時「{施放者} 放出一團狐火誘餌」；攔下時「狐火誘餌引走了 {攻擊者} 的攻擊，隨即消散」。
+3. 驗收：pytest（engine、narrative、api、`-m "slow or not slow" tests/cli --timeout=3000`）、ruff、format、mypy、一場含狐火誘餌的重播；改紀錄格式就遞增 `LOG_FORMAT`。報告 `Phase3R-2b報告.md`。
