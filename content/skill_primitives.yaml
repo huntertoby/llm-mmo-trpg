@@ -300,7 +300,7 @@ primitives:
   - id: lower_terrain
     name_zh: 下陷地形
     llm_hint: "把格子的地形降低。"
-    description_zh: 影響格的高度 −1（下限 0），站在上面的單位跟著下降（落差達門檻時墜落）。
+    description_zh: 影響格的高度 −1（下限 0），站在上面的單位跟著下沉、不受傷（不會墜落；同一格下陷兩次成為 2 層深的坑，把單位推進去才會墜落，#66）。
     player_description: "讓範圍內的地面下降一層，落差太大的單位會摔落。"
     category: structural
     harmful: false
