@@ -45,9 +45,6 @@ def test_starter_pools_use_exclusive_rules_and_have_three_each() -> None:
     pools = starter_pools(lib)
     assert set(pools) == set(lib.keywords.ids())
     for keyword, ids in pools.items():
-        if keyword == "form":  # 3J-3：形態池要等 3J-4 補齊（開局先隱藏）
-            assert ids == ()
-            continue
         assert len(ids) >= 3, keyword
         assert all(is_starter_skill(lib.skills[i]) for i in ids)
     assert "skill_cleave" not in pools["prone"]  # 近戰武器技只靠通用規則利用倒地
@@ -91,7 +88,7 @@ def test_every_keyword_pool_gives_a_starter_for_some_weapon() -> None:
             assert is_starter_skill(skill)
             if skill.id in lib.skills:
                 assert skill.id in pools[keyword]
-    assert all(n > 0 for k, n in reachable.items() if k != "form"), reachable  # 形態：3J-4 補齊
+    assert all(n > 0 for n in reachable.values()), reachable
 
 
 def test_second_keyword_never_repeats_the_first_skill() -> None:

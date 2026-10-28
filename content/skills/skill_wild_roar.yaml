@@ -1,0 +1,30 @@
+# 野性怒吼（Phase 3J-4，06 6.30「形態池名單」；數值為初值，未經模擬）：自己周圍 1 格的敵人受傷並虛弱 1 回合；
+# 在形態中傷害 +30%（再追加一筆約 30% 的骰傷害：基礎平均 5、追加平均 1.5）。
+id: skill_wild_roar
+schema_version: 1
+name_zh: 野性怒吼
+tier: 1
+rank: 1
+rarity: rare
+kind: active
+skeleton: area
+category: spell
+weapon_req: any
+ap_cost: 2
+scaling_attr: con
+shape: {type: ring, radius: 1}
+effects:
+  - {type: damage, dice: 2d4, element: physical}
+  # 在形態中：額外一筆約 30% 的骰傷害
+  - type: damage
+    dice: 1d2
+    element: physical
+    condition: {type: in_form}
+  - {type: apply_status, status: weaken, duration: 1, affects: enemies}
+condition: null
+cost: {mana: 6, cooldown: 3}
+tags: [physical, area, debuff]
+narrative:
+  concept: 仰頭一聲咆哮，震得身邊的敵人手腳發軟
+  cast_flavor: 你張口發出野獸般的怒吼，聲浪把貼近的敵人逼得踉蹌後退
+provenance: {origin: builtin, owner_id: null, created_by: null, parents: [], bound: true, tradeable: false}

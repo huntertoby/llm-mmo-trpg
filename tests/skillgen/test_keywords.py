@@ -43,13 +43,24 @@ KEYWORDS = (
     "concealed",
     "summon",
     "poisoned",
+    "form",
 )
-NAMES = ("點燃", "潮濕", "帶電", "冰凍", "倒地", "撞擊", "標記", "高處", "隱蔽", "召喚物", "中毒")
-EXTRA_KEYWORDS = ("form",)
-"""3J-3 的第 12 個關鍵字「形態」：形態池的 1 階起始技能與主動利用者在 3J-4 補齊前不足（形態技能
-是姿態、利用者要等 3J-4 的「化形撲擊」等），所以池相關的參數化測試（``KEYWORDS``）先不含它；
-3J-4 補齊後併進 ``KEYWORDS`` 並刪掉 ``EXTRA_*``。"""
-EXTRA_NAMES = ("形態",)
+NAMES = (
+    "點燃",
+    "潮濕",
+    "帶電",
+    "冰凍",
+    "倒地",
+    "撞擊",
+    "標記",
+    "高處",
+    "隱蔽",
+    "召喚物",
+    "中毒",
+    "形態",
+)
+COMPOSABLE = tuple(k for k in KEYWORDS if k != "form")
+"""隨機組合器能產生的關鍵字（形態 ``composable: false``，6.30）。"""
 
 
 def _skill(**fields: Any) -> SkillDef:
@@ -84,9 +95,9 @@ def _keywords(**fields: Any) -> tuple[tuple[str, ...], tuple[str, ...]]:
 
 def test_table_has_the_twelve_keywords_in_order() -> None:
     table = library().keywords
-    assert table.ids() == (*KEYWORDS, *EXTRA_KEYWORDS)
-    assert tuple(k.name_zh for k in table.keywords) == (*NAMES, *EXTRA_NAMES)
-    assert table.start_ids() == KEYWORDS  # 形態先不放進開局選項（3J-4 補齊池後再打開）
+    assert table.ids() == KEYWORDS
+    assert tuple(k.name_zh for k in table.keywords) == NAMES
+    assert table.start_ids() == KEYWORDS
 
 
 def test_no_keyword_is_a_school_or_theme() -> None:
@@ -298,13 +309,13 @@ def test_derivation_positive_examples(keyword: str, role: str, fields: dict[str,
 
 def test_every_keyword_has_a_positive_example_for_makes_and_uses() -> None:
     covered = {(k, r) for k, r, _ in POSITIVE}
-    for keyword in (*KEYWORDS, *EXTRA_KEYWORDS):
+    for keyword in KEYWORDS:
         assert (keyword, "makes") in covered and (keyword, "uses") in covered, keyword
 
 
 def test_every_keyword_is_made_and_used_by_shipped_skills() -> None:
     lib = library()
-    seen: dict[str, set[str]] = {k: set() for k in (*KEYWORDS, *EXTRA_KEYWORDS)}
+    seen: dict[str, set[str]] = {k: set() for k in KEYWORDS}
     for skill in lib.skills.values():
         found = derive_keywords(skill, lib.keywords)
         for k in found.makes:
@@ -486,7 +497,7 @@ def test_added_pool_skills_exist_and_belong_to_the_expected_pools() -> None:
 # ---------------------------------------------------------------------------
 
 
-@pytest.mark.parametrize("keyword", KEYWORDS)
+@pytest.mark.parametrize("keyword", COMPOSABLE)
 def test_composer_can_require_each_keyword(keyword: str) -> None:
     lib = library()
     for seed in range(3):
@@ -597,8 +608,12 @@ def test_exclusive_only_derivation_drops_general_and_provisional_rules() -> None
         fire, lib.keywords
     )
     pools = keyword_pools(lib, starter_only=True, exclusive_only=True)
-    assert all(len(ids) >= 3 for k, ids in pools.items() if k not in EXTRA_KEYWORDS)
-    assert pools["form"] == ()  # 形態技能是姿態，不是 1 階主動起始技能（3J-4 補「化形撲擊」等）
+    assert all(len(ids) >= 3 for k, ids in pools.items())
+    assert pools["form"] == (  # 形態池的 1 階主動起始技能：三招利用者（3J-4）
+        "skill_form_pounce",
+        "skill_form_renewal",
+        "skill_wild_roar",
+    )
     assert len(pools["prone"]) < len(keyword_pools(lib, starter_only=True)["prone"])
 
 
