@@ -1,4 +1,4 @@
-"""地形原語：建立表面、吹送表面、破壞物件、建立障礙物、刻印、抬高與降低地形。
+"""地形原語：建立表面、吹送表面、清除表面、破壞物件、建立障礙物、刻印、抬高與降低地形。
 
 每個作用格（:meth:`~trpg.engine.skills.cast.Cast.tiles`，效果層級的條件對每格分別判斷）各產生
 一個效果。
@@ -9,6 +9,7 @@ from __future__ import annotations
 from typing import TYPE_CHECKING
 
 from trpg.engine.effects.models import (
+    ClearSurfaceEffect,
     CreateObstacleEffect,
     CreateSurfaceEffect,
     DestroyObjectEffect,
@@ -59,6 +60,15 @@ def blow_surface(cast: Cast, effect: ResolvedEffect, spec: EffectSpec) -> list[E
     tiles = cast.tiles(effect.affects, spec.condition)
     blow = blow_effect(cast.area, cast.caster.xy, tiles, spec.distance, cast.caster.id)
     return [] if blow is None else [blow]
+
+
+def clear_surface(cast: Cast, effect: ResolvedEffect, spec: EffectSpec) -> list[EffectBase]:
+    """清除表面（Phase 3-54c）：省略 ``surface`` 時清 ``core.clear_surfaces``（煙霧與毒）。"""
+    surfaces = cast.ctx.rules.core.clear_surfaces if spec.surface is None else (spec.surface,)
+    tiles = cast.tiles(effect.affects, spec.condition)
+    if not tiles:
+        return []
+    return [ClearSurfaceEffect(source_id=cast.caster.id, tiles=tuple(tiles), surfaces=surfaces)]
 
 
 def destroy_object(cast: Cast, effect: ResolvedEffect, spec: EffectSpec) -> list[EffectBase]:
@@ -121,6 +131,7 @@ def lower_terrain(cast: Cast, effect: ResolvedEffect, spec: EffectSpec) -> list[
 
 HANDLERS: dict[str, Handler] = {
     "blow_surface": blow_surface,
+    "clear_surface": clear_surface,
     "create_surface": create_surface,
     "destroy_object": destroy_object,
     "create_obstacle": create_obstacle,

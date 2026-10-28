@@ -388,6 +388,8 @@ class CoreRules(ContentModel):
     consume_status_max_scale: int = Field(default=3, ge=1)
     """``consume_status`` 的 ``scale`` 倍率上限（Phase 3C-3b；舊紀錄沒有此欄位）。"""
     wind: WindRules = Field(default_factory=WindRules)
+    clear_surfaces: tuple[Surface, ...] = (Surface.SMOKE, Surface.POISON)
+    """清除表面（``clear_surface`` 原語，3-54c）省略表面種類時清除的表面。"""
     """風元素的專屬機制（Phase 3-54a；吹送、元素擴散、風壓撞擊）。"""
     topple_length: int = Field(default=2, ge=1, le=4)
     """推倒（Phase 3C-5a）：``topplable`` 物件倒下時，從物件的下一格起壓住的格數。"""

@@ -18,7 +18,7 @@ from __future__ import annotations
 from dataclasses import dataclass
 
 from trpg.engine.context import Ctx
-from trpg.engine.effects.models import BlowSurfaceEffect, EffectBase
+from trpg.engine.effects.models import BlowSurfaceEffect, ClearSurfaceEffect, EffectBase
 from trpg.engine.effects.queue import register_effect
 from trpg.engine.effects.world import place_surface, set_surface, surface_allowed
 from trpg.engine.events import EventBase, SurfaceBlown
@@ -135,4 +135,21 @@ def _blow_surface(ctx: Ctx, effect: EffectBase) -> list[EventBase]:
             depth=effect.depth,
             permanent=True,
         )
+    return events
+
+
+CLEAR_CAUSE = "clear"
+
+
+@register_effect("clear_surface")
+def _clear_surface(ctx: Ctx, effect: EffectBase) -> list[EventBase]:
+    """清除表面（Phase 3-54c）：``tiles`` 上屬於 ``surfaces`` 的表面直接移除。
+
+    只改表面本身：不帶元素、不查互動表、不觸及物件、不觸發風的擴散（#63）。"""
+    assert isinstance(effect, ClearSurfaceEffect)
+    state = ctx.state
+    events: list[EventBase] = []
+    for xy in sorted(set(effect.tiles), key=lambda p: (p[1], p[0])):
+        if state.in_bounds(*xy) and state.tile(*xy).surface in effect.surfaces:
+            events += set_surface(ctx, xy, Surface.NONE, cause=CLEAR_CAUSE, depth=effect.depth)
     return events

@@ -1568,6 +1568,7 @@ PRIMITIVE_PREVIEW: Mapping[str, str] = MappingProxyType(
         "create_surface": f"affected_tiles、{_OUTCOMES}",
         "destroy_object": _OUTCOMES,
         "blow_surface": f"affected_tiles、{_OUTCOMES}",
+        "clear_surface": f"affected_tiles、{_OUTCOMES}",
         "create_obstacle": f"affected_tiles、{_OUTCOMES}",
         "raise_terrain": _OUTCOMES,
         "lower_terrain": _OUTCOMES,

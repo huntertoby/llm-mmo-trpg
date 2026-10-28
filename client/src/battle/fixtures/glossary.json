@@ -1962,6 +1962,16 @@
    ],
    "status_look": null,
    "rules_zh": []
+  },
+  {
+   "id": "clear_surface",
+   "name_zh": "清除表面",
+   "description_zh": "把範圍內指定種類的地面效果直接清掉（不選＝清掉煙霧與毒）；可以只清友方腳下的。不帶元素，也不會引發其他反應。",
+   "tags": [
+    "structural"
+   ],
+   "status_look": null,
+   "rules_zh": []
   }
  ],
  "conditions": [

@@ -917,6 +917,7 @@ _HAND_WRITTEN_PRIMITIVES = frozenset(
         "shadowstep",
         "grant_skill",
         "detonate_runes",
+        "clear_surface",  # 3-54c：手寫技能（清風）專用，隨機組合器不抽
         "blow_surface",  # 3-54a：只由 _blow_secondary 的獨立串流加入（既有種子不變）
         "shockwave",  # 3-54b：只由 _shockwave_secondary 的獨立串流加入
     }
