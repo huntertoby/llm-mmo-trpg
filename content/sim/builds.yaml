@@ -863,3 +863,21 @@ builds:
       tags: [hero, sim]
       max_mana: 30
       skills: [skill_form_demon, skill_form_giant, skill_form_shadow, skill_form_treant, skill_form_dragon]
+
+  # Phase 3J-4：形態利用者（06 6.30「形態池名單」）的對照組：熊、狼人兩種物理形態，加化形撲擊、野性怒吼、化形回春。
+  - id: build_form_user
+    name_zh: 形態利用者
+    reference: true
+    theme_zh: 3J-4 形態池（06 6.30）：熊與狼人輪替，在形態中用化形撲擊、野性怒吼、化形回春（傷害與治療 +30%）。
+    hero:
+      id: build_form_user
+      name_zh: 形態利用者
+      attributes: {str: 14, dex: 12, con: 14, int: 12, wis: 12, wil: 10}
+      max_hp: 44
+      speed: 5
+      armor_bonus: 1
+      weapon: one_handed_sword
+      resist: {physical: 50}
+      tags: [hero, sim]
+      max_mana: 30
+      skills: [skill_form_bear, skill_form_werewolf, skill_form_pounce, skill_wild_roar, skill_form_renewal]

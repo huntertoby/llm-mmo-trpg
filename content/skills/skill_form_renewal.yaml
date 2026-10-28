@@ -1,0 +1,28 @@
+# 化形回春（Phase 3J-4，06 6.30「形態池名單」；數值為初值，未經模擬）：治療自己；
+# 在形態中治療 +30%（再追加一筆約 30% 的骰治療：基礎平均 5、追加平均 1.5）。
+id: skill_form_renewal
+schema_version: 1
+name_zh: 化形回春
+tier: 1
+rank: 1
+rarity: rare
+kind: active
+skeleton: aura
+category: spell
+weapon_req: any
+ap_cost: 1
+scaling_attr: wis
+shape: {type: self}
+effects:
+  - {type: heal, dice: 2d4}
+  # 在形態中：額外一筆約 30% 的骰治療
+  - type: heal
+    dice: 1d2
+    condition: {type: in_form}
+condition: null
+cost: {mana: 5, cooldown: 2}
+tags: [nature, spell, heal]
+narrative:
+  concept: 野獸的身體癒合得比人快，變了身的時候更快
+  cast_flavor: 你深吸一口氣，傷口在血肉的蠕動中一點一點合攏
+provenance: {origin: builtin, owner_id: null, created_by: null, parents: [], bound: true, tradeable: false}

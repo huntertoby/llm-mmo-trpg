@@ -213,11 +213,10 @@ keywords:
       - {effect: consume_status, status: poison}
       - {trigger: on_status_applied, status: poison}
   # 3J-3（玩法決定 #48，06 6.27.1、6.30）：第 12 個關鍵字。製造＝進入形態；利用＝「在形態中」才生效或變強的技能，
-  # 以及化形專精（維持費、進入獎勵）。形態池的 1 階起始技能與主動利用者在 3J-4 補齊前不足，所以先不放進開局選項。
+  # 以及化形專精（維持費、進入獎勵）。3J-4 補齊形態池（化形撲擊、野性怒吼、化形回春），開局可選。
   - id: form
     name_zh: 形態
     description_zh: 變身成熊、貓、龍等形態，換用天生武器並獲得形態專屬的效果；有些技能只在形態中才生效或變強。
-    start_hidden: true
     composable: false
     makes:
       - {effect: enter_form}

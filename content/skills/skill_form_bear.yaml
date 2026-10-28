@@ -1,4 +1,4 @@
-# 測試用的「化身為熊」（Phase 3J-1a，06 6.30；只為測試與靶場試玩，正式技能在 3J-4）。
+# 化身為熊（Phase 3J-4 正式技能，06 6.30「形態池名單」）：花 1 AP 進入形態；法術類別、不需手持武器，費用只有姿態的 1 AP 與維持費；數值見 content/forms.yaml。
 id: skill_form_bear
 schema_version: 1
 name_zh: 化身為熊

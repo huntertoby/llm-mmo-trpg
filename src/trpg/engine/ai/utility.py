@@ -50,6 +50,7 @@ from trpg.content.environment import (
 )
 from trpg.content.skills import (
     CHARGE_THROUGH,
+    CHARGING,
     CHEAT_DEATH,
     CHEAT_DEATH_STATUS,
     DELAYED_DAMAGE,
@@ -1527,6 +1528,15 @@ def worth_previewing(state: BattleState, scene: _Scene, action: Attack) -> bool:
     return any(chebyshev(obj.xy, e.xy) <= _OBJECT_NEAR_ENEMY for e in scene.enemies)
 
 
+def _breath_locks_form(unit: UnitState, skill: SkillDef) -> bool:
+    """``unit`` 正在定向蓄力（龍的吐息）時，進入別的形態的技能不選（切換形態會取消蓄力，3J-4）。
+    AI 本來就不主動取消形態（``EndStance`` 不評分），所以只需擋進入。"""
+    if skill.form_id is None:
+        return False
+    charging = unit.get_status(CHARGING)
+    return charging is not None and charging.direction is not None
+
+
 def skill_estimate(  # noqa: PLR0917
     state: BattleState,
     unit: UnitState,
@@ -1560,10 +1570,11 @@ def skill_estimate(  # noqa: PLR0917
     """
     skill = effective_skill(state, action)
     in_form = unit.form is not None and skill.form_id is None
-    if skill.kind == "stance" and (in_form or stance_status_ids(state.ruleset, unit)):
-        return (
-            None  # 已經有姿態：AI 不主動換（也不主動取消，Phase 2E-2、3J-1a）；形態可輪替（3J-1b）
-        )
+    stance_locked = skill.kind == "stance" and (in_form or stance_status_ids(state.ruleset, unit))
+    if stance_locked or _breath_locks_form(unit, skill):
+        # 已經有姿態：AI 不主動換（也不主動取消，Phase 2E-2、3J-1a）；形態可輪替（3J-1b）；
+        # 定向蓄力中也不換形態（換形態會取消蓄力，3J-4）
+        return None
     if skill.followup is not None:
         return composite_estimate(state, unit, skill, area)
     placed = _placement_estimate(state, unit, skill, area, scene, trap=trap)
