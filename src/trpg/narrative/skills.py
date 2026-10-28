@@ -605,6 +605,13 @@ def _blow_surface(lib: ContentLibrary, _skill: SkillDef, spec: EffectSpec) -> st
     )
 
 
+def _clear_surface(lib: ContentLibrary, _skill: SkillDef, spec: EffectSpec) -> str:
+    """清除表面（Phase 3-54c）。"""
+    surfaces = lib.ruleset.core.clear_surfaces if spec.surface is None else (spec.surface,)
+    names = _names(lib.ruleset.surface_def(s).name_zh for s in surfaces)
+    return f"清除範圍內的表面（{names}），不帶元素、不引發其他反應"
+
+
 def _create_obstacle(lib: ContentLibrary, _skill: SkillDef, spec: EffectSpec) -> str:
     assert spec.object is not None
     turns = f"，{spec.duration} 回合後消失" if spec.duration else ""
@@ -871,6 +878,7 @@ _EFFECT_TEXT: dict[str, _EffectText] = {
     "apply_status": _apply_status,
     "create_surface": _create_surface,
     "blow_surface": _blow_surface,
+    "clear_surface": _clear_surface,
     "create_obstacle": _create_obstacle,
     "destroy_object": _destroy_object,
     "inscribe": _inscribe,

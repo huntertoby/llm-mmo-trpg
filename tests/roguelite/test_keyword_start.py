@@ -45,11 +45,7 @@ def test_starter_pools_use_exclusive_rules_and_have_three_each() -> None:
     pools = starter_pools(lib)
     assert set(pools) == set(lib.keywords.ids())
     for keyword, ids in pools.items():
-        if keyword == "poisoned":
-            # 3-53：中毒池只有 1 招起始技能（荊棘牆），等 3-54c 毒種子技能補；補齊後刪掉例外。
-            assert len(ids) == 1, keyword
-        else:
-            assert len(ids) >= 3, keyword
+        assert len(ids) >= 3, keyword
         assert all(is_starter_skill(lib.skills[i]) for i in ids)
     assert "skill_cleave" not in pools["prone"]  # 近戰武器技只靠通用規則利用倒地
 
@@ -210,11 +206,10 @@ def test_default_start_is_deterministic_and_valid() -> None:
     assert len(seen) > 3
 
 
-def test_start_hidden_poison_is_never_drawn_but_stays_a_keyword() -> None:
+def test_poisoned_is_a_normal_start_keyword_after_3_54c() -> None:
+    """3-54c 補齊毒種子技能後，中毒和其他 10 個關鍵字一樣可以當開局關鍵字。"""
     lib = library()
-    assert "poisoned" in lib.keywords.ids() and "poisoned" not in lib.keywords.start_ids()
-    for seed in range(40):
-        assert "poisoned" not in default_start(lib, seed)[1]
+    assert "poisoned" in lib.keywords.ids() and "poisoned" in lib.keywords.start_ids()
 
 
 def test_behavior_counts_the_heros_actions() -> None:

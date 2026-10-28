@@ -1,0 +1,23 @@
+# Phase 3-54c 種子技能（06 6.33，#56／#59／#63／#64；數值為初值，未經模擬，平衡階段 B25 再調）
+id: skill_wind_blade
+schema_version: 1
+name_zh: 風刃
+tier: 1
+rank: 1
+rarity: common
+kind: active
+skeleton: area
+category: spell
+weapon_req: focus
+ap_cost: 2
+scaling_attr: int
+shape: {type: line, size: 4}
+effects:
+  - {type: damage, dice: 2d6, element: wind}
+condition: null
+cost: {mana: 5, cooldown: 1}
+tags: [wind, spell, area]
+narrative:
+  concept: 一道壓縮的風，沿直線切開前方的所有敵人
+  cast_flavor: 你指尖一劃，一道看不見的風刃貼著地面飛了出去
+provenance: {origin: builtin, owner_id: null, created_by: null, parents: [], bound: true, tradeable: false}

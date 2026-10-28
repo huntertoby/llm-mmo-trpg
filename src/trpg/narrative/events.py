@@ -1099,6 +1099,8 @@ def _object_expired(e: ObjectExpired, v: _View) -> str:
 def _surface_changed(e: SurfaceChanged, v: _View) -> str:
     before, after = surface_name(v.state, e.before), surface_name(v.state, e.after)
     if e.after is Surface.NONE:
+        if e.cause == "clear":
+            return f"  {xy_text(e.pos)} 的{before}被清除了"
         return f"  {xy_text(e.pos)} 的{before}消失了"
     if e.before is Surface.NONE:
         return f"  {xy_text(e.pos)} 出現了{after}"

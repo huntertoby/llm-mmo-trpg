@@ -368,6 +368,17 @@ const EFFECT: Record<string, readonly [string, Draw]> = {
       arrow(c, -9, -7, 8, -7, 3.5);
     },
   ],
+  // 清除表面（3-54c）：表面加一條劃掉的斜線
+  clear_surface: [
+    "#cfe8ff",
+    (c) => {
+      surfaceGlyph(c, null);
+      c.beginPath();
+      c.moveTo(-8, 8);
+      c.lineTo(8, -8);
+      c.stroke();
+    },
+  ],
   destroy_object: [
     "#e0c49a",
     (c) => {

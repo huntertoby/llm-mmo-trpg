@@ -202,7 +202,6 @@ keywords:
       - {effect: intercept, grade: general, reason_zh: 召喚物也算友方：對友方生效的效果也能用在召喚物上}   # 通用
   - id: poisoned
     name_zh: 中毒
-    start_hidden: true   # 3-54c 補齊毒種子技能後改回（刪掉這行）
     description_zh: 毒讓目標中毒，每回合受到毒素傷害且治療降低；有些技能能消耗中毒，或對中毒的目標造成更重的傷害。
     makes:
       - {effect: apply_status, status: poison}

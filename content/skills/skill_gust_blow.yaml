@@ -1,0 +1,23 @@
+# Phase 3-54c 種子技能（06 6.33，#56／#59／#63／#64；數值為初值，未經模擬，平衡階段 B25 再調）
+id: skill_gust_blow
+schema_version: 1
+name_zh: 吹送
+tier: 1
+rank: 1
+rarity: rare
+kind: active
+skeleton: control
+category: spell
+weapon_req: focus
+ap_cost: 1
+scaling_attr: int
+shape: {type: cone, size: 4}
+effects:
+  - {type: blow_surface, distance: 3}
+condition: null
+cost: {mana: 4, cooldown: 1}
+tags: [wind, spell, control, area]
+narrative:
+  concept: 一陣風把地上的火、毒、水、油和煙霧整片往前推
+  cast_flavor: 你張開雙臂向前一揮，地面上的東西被一股風整片推著跑
+provenance: {origin: builtin, owner_id: null, created_by: null, parents: [], bound: true, tradeable: false}

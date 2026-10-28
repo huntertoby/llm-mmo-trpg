@@ -758,3 +758,19 @@ primitives:
     forbid_affects: [self, enemies, allies, all]   # 吹送只作用在格子
     params:
       distance: {llm_hint: "表面被吹走的格數。", type: int, required: true, min: 2, max: 3, description_zh: 表面往風向平移的格數}
+
+  # --- Phase 3-54c：清除表面（06 6.33 清風，#63；點數為初值，未經模擬）---
+  - id: clear_surface
+    name_zh: 清除表面
+    llm_hint: "清掉範圍內的地面表面。"
+    description_zh: 移除影響格上指定種類（surface）的表面；省略 surface 時移除 rules/core.yaml 的 clear_surfaces（煙霧、毒）。affects 為 allies 時只清有友方站著的格子，tiles 時清整個範圍。不帶元素、不查互動表、不觸及物件、不觸發風的擴散。只作用在格子、只能用在主動技能。預算：base_points 3（形狀與對象倍率照一般效果）。
+    player_description: "把範圍內指定種類的地面效果直接清掉（不選＝清掉煙霧與毒）；可以只清友方腳下的。不帶元素，也不會引發其他反應。"
+    category: structural
+    harmful: false
+    min_rarity: rare
+    active_only: true
+    budget_basis: fixed
+    base_points: 3
+    acts_on: tile
+    params:
+      surface: {llm_hint: "表面種類；省略＝煙霧與毒。", type: surface, description_zh: 要清除的表面種類；省略時清除煙霧與毒}

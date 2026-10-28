@@ -1,0 +1,23 @@
+# Phase 3-54c 種子技能（06 6.33，#56／#59／#63／#64；數值為初值，未經模擬，平衡階段 B25 再調）
+id: skill_holy_ground
+schema_version: 1
+name_zh: 聖光印地
+tier: 1
+rank: 1
+rarity: rare
+kind: active
+skeleton: control
+category: spell
+weapon_req: focus
+ap_cost: 1
+scaling_attr: wis
+shape: {type: ground_tile, range: 4}
+effects:
+  - {type: create_surface, surface: holy, duration: 5}
+condition: null
+cost: {mana: 4, cooldown: 2}
+tags: [holy, spell, control]
+narrative:
+  concept: 在地上留下一片聖光，友方站在上面會回血，不死系站上去會受傷
+  cast_flavor: 你把聖徽按向地面，一圈柔和的白光在腳下慢慢鋪開
+provenance: {origin: builtin, owner_id: null, created_by: null, parents: [], bound: true, tradeable: false}

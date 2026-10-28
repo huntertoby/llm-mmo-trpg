@@ -1,0 +1,23 @@
+# Phase 3-54c 種子技能（06 6.33，#56／#59／#63／#64；數值為初值，未經模擬，平衡階段 B25 再調）
+id: skill_venom_detonation
+schema_version: 1
+name_zh: 劇毒引爆
+tier: 2
+rank: 1
+rarity: rare
+kind: active
+skeleton: consume_status
+category: spell
+weapon_req: focus
+ap_cost: 2
+scaling_attr: int
+shape: {type: single, range: 5}
+effects:
+  - {type: consume_status, status: poison, scale: remaining_rounds, then: [{type: damage, dice: 2d10, element: poison}]}
+condition: null
+cost: {mana: 7, cooldown: 2}
+tags: [poison, spell, detonate]
+narrative:
+  concept: 把目標身上的毒一次催發，毒越深爆得越痛；沒有中毒就不生效
+  cast_flavor: 你對著中毒的對手一握拳，血管裡的毒同時發作
+provenance: {origin: builtin, owner_id: null, created_by: null, parents: [], bound: true, tradeable: false}

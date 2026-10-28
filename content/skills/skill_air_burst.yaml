@@ -1,0 +1,24 @@
+# Phase 3-54c 種子技能（06 6.33，#56／#59／#63／#64；數值為初值，未經模擬，平衡階段 B25 再調）
+id: skill_air_burst
+schema_version: 1
+name_zh: 氣爆
+tier: 1
+rank: 1
+rarity: rare
+kind: active
+skeleton: area
+category: spell
+weapon_req: focus
+ap_cost: 2
+scaling_attr: int
+shape: {type: ring, radius: 1}
+effects:
+  - {type: damage, dice: 1d8, element: wind}
+  - {type: push, distance: 1}
+condition: null
+cost: {mana: 6, cooldown: 2}
+tags: [wind, spell, push, area]
+narrative:
+  concept: 身邊的空氣猛然炸開，把貼上來的敵人轟開；撞到牆或同伴時更痛
+  cast_flavor: 你雙掌一合，周身的空氣被擠成一團，隨即向四面爆開
+provenance: {origin: builtin, owner_id: null, created_by: null, parents: [], bound: true, tradeable: false}

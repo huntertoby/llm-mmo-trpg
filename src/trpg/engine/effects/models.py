@@ -25,6 +25,7 @@ __all__ = [
     "CancelChargeEffect",
     "ChangeTileEffect",
     "CleanseEffect",
+    "ClearSurfaceEffect",
     "CreateObstacleEffect",
     "CreateSurfaceEffect",
     "DamageEffect",
@@ -364,6 +365,15 @@ class BlowSurfaceEffect(EffectBase):
     distance: int = Field(ge=1)
 
 
+class ClearSurfaceEffect(EffectBase):
+    """清除表面（Phase 3-54c ``clear_surface``，06 6.33）：``tiles`` 上表面在 ``surfaces`` 裡的格子
+    直接變成沒有表面（原因 ``clear``）。不帶元素、不查互動表、不觸發風的擴散。"""
+
+    kind: Literal["clear_surface"] = "clear_surface"
+    tiles: tuple[XY, ...]
+    surfaces: tuple[Surface, ...]
+
+
 class DamageObjectEffect(EffectBase):
     """對物件造成傷害（攻擊命中物件時一律命中，不擲命中骰，不暴擊，物件沒有抗性）。"""
 
@@ -511,6 +521,7 @@ type Effect = Annotated[
     | HurlObjectEffect
     | CreateSurfaceEffect
     | BlowSurfaceEffect
+    | ClearSurfaceEffect
     | DamageObjectEffect
     | DestroyObjectEffect
     | RaiseTerrainEffect

@@ -69,6 +69,7 @@ wind:                         # 風的專屬機制（Phase 3-54a，06 6.33，#56
   spread_zone_elements: [fire, ice, poison, lightning]    # 元素擴散：吹到帶這些元素的區域（固定、移動型）時往風向擴大
   spread_distance: 1                                      # 擴大的格數（6.33 寫 1～2 格；初值取保守的 1）
   collision_permille: 1500                                # 風壓撞擊：風元素技能推擊的撞擊傷害 ×1.5
+clear_surfaces: [smoke, poison]   # 清除表面（clear_surface，3-54c）省略 surface 時清除的表面（06 6.33 清風：煙霧與毒）
 topple_length: 2              # 推倒（Phase 3C-5a）：topplable 物件往推的方向倒下，從下一格起壓住的格數（初值，未經模擬）
 topple_damage_dice: 2d6       # 推倒壓到的單位受到的物理傷害（並倒地）；壓到的 breakable 物件受同樣傷害（初值）
 topple_rubble_object: rubble  # 推倒後在最後一格產生的物件（objects.yaml）

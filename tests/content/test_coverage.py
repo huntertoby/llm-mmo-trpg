@@ -18,7 +18,6 @@ _UNCOVERED: dict[str, dict[str, str]] = {
     "reaction_event": {},
     "condition": {},
     "primitive": {
-        "blow_surface": "吹送（3-54a）：種子技能在 3-54c 才寫；由 test_wind_54a.py 覆蓋",
         "shockwave": "震波（3-54b）：種子技能在 3-54c 才寫；由 test_earth_54b.py 覆蓋",
     },
     "status": {
@@ -160,6 +159,28 @@ _POOL_ONLY = frozenset(
 )
 
 
+# 3-54c：風、毒、神聖的種子技能（06 6.33）。沒有放進任何 build 或單位；毒的 6 招由中毒關鍵字池給出，
+# 風與神聖的種子技能目前只供技能圖鑑、工坊範例與 LLM 生成參考，之後隨獎勵／技能書給出。
+_SEEDS_54C = frozenset(
+    {
+        "skill_wind_blade",
+        "skill_air_burst",
+        "skill_gust_blow",
+        "skill_tempest",
+        "skill_hurricane_push",
+        "skill_clearing_breeze",
+        "skill_venom_blade",
+        "skill_poison_mist",
+        "skill_marrow_thorn",
+        "skill_venom_detonation",
+        "skill_corrosion",
+        "skill_venom_pit",
+        "skill_purging_light",
+        "skill_holy_ground",
+    }
+)
+
+
 def _skills() -> list[SkillDef]:
     return list(library().skills.values())
 
@@ -169,6 +190,7 @@ def _equipped() -> set[str]:
     ids = {s for b in lib.builds.builds for s in b.hero.skills}
     ids |= {s for unit in lib.units.values() for s in unit.skills}
     ids |= _POOL_ONLY
+    ids |= _SEEDS_54C
     # 3G-G3b：裝備的授予動作詞條授予的常駐技能也算被裝備
     ids |= {a.skill for a in lib.affixes.values() if a.category == "action"}
     # 3D-8c：裝備的 grant_skill 技能暫時給出的技能（不佔欄位）也算被裝備

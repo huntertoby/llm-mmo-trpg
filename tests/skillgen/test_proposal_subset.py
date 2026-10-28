@@ -354,20 +354,26 @@ def test_keyword_primitives_appear_under_some_skeleton(keyword_id: str) -> None:
     assert seen, f"{keyword_id} 的專屬原語沒有在任何骨架的子集中出現"
 
 
+# 3-54c：控場骨架的核心原語多了清除表面，核心結構約 1530 token，緊預算由 1_500 放寬到 1_600。
+TIGHT_BUDGET = 1_600
+
+
 def test_keyword_primitives_survive_a_tight_budget() -> None:
     """預算很緊時，題目關鍵字的專屬原語比其他附帶原語先收。"""
     request = ProposalRequest(tier=1, rarity="legendary", skeleton="control", keywords=("wet",))
-    tight = select_subset(_lib(), request, token_budget=1_500)
+    tight = select_subset(_lib(), request, token_budget=TIGHT_BUDGET)
     plain = select_subset(
-        _lib(), ProposalRequest(tier=1, rarity="legendary", skeleton="control"), token_budget=1_500
+        _lib(),
+        ProposalRequest(tier=1, rarity="legendary", skeleton="control"),
+        token_budget=TIGHT_BUDGET,
     )
     wanted = {
         p for p in _exclusive_effects("wet") if p in _subset("legendary", "control").primitives
     }
     assert wanted
     assert wanted <= set(tight.primitives)
-    assert tight.tokens <= 1_500
-    assert plain.tokens <= 1_500
+    assert tight.tokens <= TIGHT_BUDGET
+    assert plain.tokens <= TIGHT_BUDGET
 
 
 def test_keyword_condition_and_trigger_are_collected_or_dropped() -> None:

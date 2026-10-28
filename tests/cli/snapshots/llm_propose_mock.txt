@@ -1,6 +1,6 @@
 模型：Mock（proposal_from_skill）；每題最多 3 次
-  1. common／strike／summon｜llm｜嘗試 1｜通過｜0.00 秒｜火焰箭
-  2. rare／不限骨架／summon｜llm｜嘗試 1｜通過｜0.00 秒｜絆腿鞭
+  1. common／strike／summon｜llm｜嘗試 1｜通過｜0.00 秒｜毒刃
+  2. rare／不限骨架／summon｜llm｜嘗試 1｜通過｜0.00 秒｜過載電流
   3. epic／不限骨架／poisoned｜llm｜嘗試 1｜通過｜0.00 秒｜守護符陣
 
 題目數　　　　3

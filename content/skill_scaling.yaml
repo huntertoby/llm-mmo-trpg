@@ -31,7 +31,7 @@ spell_themes:
   - id: support
     attr: wis
     label_zh: 治療、護盾、輔助、偵測與標記
-    effect_types_any: [heal, shield, cleanse, revive, reveal, restore_resource, redirect_damage, cheat_death, extra_reaction, grant_skill, grant_ap, reset_cooldown]
+    effect_types_any: [heal, shield, cleanse, clear_surface, revive, reveal, restore_resource, redirect_damage, cheat_death, extra_reaction, grant_skill, grant_ap, reset_cooldown]
     elements_any: [holy]
     surfaces_any: [holy]
     statuses_any: [marked, revealed, guarded, stoneskin, regenerating, defending, shielded, undying, soul_link, rallied]
@@ -41,7 +41,7 @@ spell_themes:
   - id: elemental
     attr: int
     label_zh: 元素傷害與互動
-    effect_types_any: [teleport, teleport_target, swap_any, hurl_object, topple, detonate_runes, copy_skill]
+    effect_types_any: [teleport, teleport_target, swap_any, hurl_object, topple, detonate_runes, copy_skill, blow_surface]
     elements_any: [fire, ice, lightning, earth, poison, wind]
     surfaces_any: [fire, ice, oil, poison, water]
     statuses_any: [burning, frozen, poison]
