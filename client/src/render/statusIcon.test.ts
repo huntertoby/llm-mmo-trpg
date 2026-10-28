@@ -43,7 +43,7 @@ const STATUS_IDS = real.statuses.map((s) => s.id);
 
 describe("35 個狀態", () => {
   it("每個狀態都有 status_look、圖樣，且畫得出來", () => {
-    expect(STATUS_IDS.length).toBe(37);
+    expect(STATUS_IDS.length).toBe(39);
     for (const id of STATUS_IDS) {
       const entry = real.statuses.find((s) => s.id === id);
       expect(entry?.status_look, id).toBeTruthy();

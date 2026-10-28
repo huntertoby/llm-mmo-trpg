@@ -38,7 +38,7 @@ from trpg.engine.effects.models import (
     HurlObjectEffect,
     PushEffect,
 )
-from trpg.engine.events import RaceSkillUsed
+from trpg.engine.events import RaceSkillUsed, UnitSummoned
 from trpg.engine.ids import CONCEALED, DECOY_TAG, RACE_ADAPT, RACE_STONEWALL
 from trpg.engine.lifecycle import dismiss_summon, make_unit
 from trpg.engine.rules.combat import concealment_problem
@@ -326,7 +326,7 @@ def _cone_targets(
     return sorted(found, key=lambda u: (-manhattan(unit.xy, u.xy), u.id))
 
 
-def spawn_decoy(ctx: Ctx, owner: UnitState, xy: XY) -> UnitState:
+def spawn_decoy(ctx: Ctx, owner: UnitState, xy: XY, skill_id: str) -> UnitState:
     """在 ``xy`` 放狐火誘餌：同一個主人同時只有一個（舊的消失）；排在主人之後的先攻順序。"""
 
     state = ctx.state
@@ -351,7 +351,22 @@ def spawn_decoy(ctx: Ctx, owner: UnitState, xy: XY) -> UnitState:
     unit.summon_expires_round = state.round + DECOY_LIFETIME_ROUNDS
     unit.initiative = owner.initiative
     state.units[uid] = unit
-    _insert_in_order(state, uid, _order_index(state, owner.id))
+    index = _order_index(state, owner.id)
+    _insert_in_order(state, uid, index)
+    ctx.emit(
+        UnitSummoned,
+        unit_id=uid,
+        owner_id=owner.id,
+        template_id=DECOY_TEMPLATE,
+        team=owner.team,
+        pos=unit.pos,
+        skill_id=skill_id,
+        expires_round=unit.summon_expires_round,
+        order_index=index,
+        orphan=False,
+        max_hp=unit.max_hp,
+        infusion=None,
+    )
     return unit
 
 
@@ -369,7 +384,9 @@ def _do_conceal(ctx: Ctx, unit: UnitState, _e: RaceEffect, _a: UseRaceSkill) -> 
 
 def _do_decoy(ctx: Ctx, unit: UnitState, _e: RaceEffect, action: UseRaceSkill) -> None:
     assert action.target_pos is not None
-    spawn_decoy(ctx, unit, (action.target_pos.x, action.target_pos.y))
+    skill = race_skill_of(ctx.state, unit)
+    assert skill is not None
+    spawn_decoy(ctx, unit, (action.target_pos.x, action.target_pos.y), skill.id)
 
 
 def _do_push(ctx: Ctx, unit: UnitState, effect: RaceEffect, action: UseRaceSkill) -> None:

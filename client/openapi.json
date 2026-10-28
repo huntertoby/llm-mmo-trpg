@@ -3751,6 +3751,17 @@
             "title": "Test Mode",
             "default": false
           },
+          "race": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Race"
+          },
           "test_equipment": {
             "additionalProperties": {
               "type": "string"

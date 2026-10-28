@@ -445,6 +445,8 @@ def test_beneficial_flags_in_content() -> None:
         # 3D-8c
         "overwatch",
         "stoneskin",  # 3-54b
+        "race_adapt",  # 3R-2：種族技（neutral，不能被奪取或驅散）
+        "race_stonewall",
     }
     assert surfaces == {"holy"}
 

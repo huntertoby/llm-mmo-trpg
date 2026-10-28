@@ -67,6 +67,9 @@ class CreateRunRequest(_ApiModel):
     """開發者起始包 ID（Phase 3-24b2，開發用）。"""
     test_mode: bool = False
     """測試模式（Phase 3-39）：戰後回滿，可挑裝備；只能用 ``weapon`` ＋ ``keywords`` 開局。"""
+    race: str | None = None
+    """主角的種族（Phase 3R-2，``races.yaml`` 的 ID）；省略＝無種族。開局選種族的介面是 3R-3，這裡
+    先讓 API 與測試能指定；未知的種族回 422。"""
     test_equipment: dict[str, str] = Field(default_factory=dict)
     """測試模式挑的裝備（欄位 → 物品 ID，Phase 3-39）；只有 ``test_mode`` 時可非空。"""
 

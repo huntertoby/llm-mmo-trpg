@@ -1550,6 +1550,8 @@ export interface components {
              * @default false
              */
             test_mode: boolean;
+            /** Race */
+            race?: string | null;
             /** Test Equipment */
             test_equipment?: {
                 [key: string]: string;
