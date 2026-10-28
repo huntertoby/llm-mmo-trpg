@@ -60,6 +60,7 @@ window.StoryDoll = (() => {
     const r = rng(seedOf(key)); ctx.strokeStyle = color; ctx.lineWidth = w; ctx.lineCap = "round"; ctx.lineJoin = "round";
     smooth(ctx, wobble(pts, r, 0.35), false); ctx.stroke();
   }
+  function limb(ctx, key, pts, w, color) { stroke(ctx, key, pts, w + 1.4, INK); stroke(ctx, key, pts, w, color); }
   function dot(ctx, x, y, rx, ry, c) { ctx.fillStyle = c; ctx.beginPath(); ctx.ellipse(x, y, rx, ry, 0, 0, TAU); ctx.fill(); }
   function shadow(ctx, rx = 9) {
     const r = rng(7); ctx.strokeStyle = "rgba(43,30,22,0.5)"; ctx.lineWidth = 0.5; ctx.beginPath();
@@ -422,7 +423,7 @@ window.StoryDoll = (() => {
     ctx.restore(); ctx.save(); ctx.globalAlpha = 0.18; ctx.fillStyle = color; ctx.beginPath(); ctx.ellipse(0, 0, rx, rx * 0.3, 0, 0, TAU); ctx.fill(); ctx.restore();
   }
   const FORMS = {
-    bear: { zh: "熊", draw(ctx, h) {
+    bear: { zh: "熊", size: 1.3, draw(ctx, h) {
       const c = mix("#6a4a32", h, 0.3);
       for (const [x, far] of [[-11, 1], [6, 1]]) ink(ctx, `bear-legf-${x}`, [[x - 2.8, -12], [x + 2.8, -12], [x + 3, 0], [x - 3, 0]], dark(c, 0.25 * far));
       ink(ctx, "bear-body", [[-17, -9], [-17, -22], [-8, -29.6], [4, -29], [14, -22], [15, -9], [-2, -7]], c);
@@ -433,7 +434,7 @@ window.StoryDoll = (() => {
       ink(ctx, "bear-snout", ellPts(23.4, -22.2, 2.6, 2, 10), light(c, 0.3), { shade: false, w: 0.6 });
       dot(ctx, 25.2, -23, 0.9, 0.8, INK); dot(ctx, 18.6, -25.6, 0.8, 1.1, INK);
     } },
-    werewolf: { zh: "狼人", draw(ctx, h) {
+    werewolf: { zh: "狼人", size: 1.25, draw(ctx, h) {
       const c = mix("#5a5a66", h, 0.25);
       ink(ctx, "ww-legfar", [[-5, -16], [-1, -16], [-2, -6], [-6, 0], [-9.6, 0], [-5.6, -6]], dark(c, 0.25));
       ink(ctx, "ww-tail", [[-7, -18], [-16, -17], [-21, -11], [-17, -11.4], [-8, -13]], c);
@@ -450,7 +451,7 @@ window.StoryDoll = (() => {
       ink(ctx, "ww-arm", [[2, -34], [6, -36], [12, -27], [12.4, -22], [9.6, -23], [8, -27]], c);
       for (const d of [0, 1.4, 2.8]) stroke(ctx, `ww-claw-${d}`, [[10 + d * 0.6, -22.2], [10.6 + d * 0.6, -19.6]], 0.6, "#f4ecd8");
     } },
-    dragon: { zh: "龍", draw(ctx, h, el) {
+    dragon: { zh: "龍", size: 1.5, draw(ctx, h, el) {
       const c = mix("#8a3a2a", h, 0.3), e = { fire: "#ff7a1a", ice: "#8fe3ff", lightning: "#ffe14a" }[el] ?? "#ff7a1a";
       ink(ctx, "dr-wingfar", [[10, -29], [7, -40], [2, -49], [-7, -54], [-4.6, -46.4], [-6.4, -38.6], [-2, -40.4], [-1.6, -32.6], [2, -34], [2, -28]], dark(c, 0.3));
       for (const x of [-13, 4]) ink(ctx, `dr-legfar-${x}`, [[x - 2.6, -12], [x + 2.6, -12], [x + 2.4, 0], [x - 3, 0]], dark(c, 0.25));
@@ -468,6 +469,101 @@ window.StoryDoll = (() => {
       ctx.save(); ctx.globalAlpha = 0.85;
       ink(ctx, "dr-breath", [[29, -37.6], [36, -40.6], [34, -37.4], [38, -36], [33.6, -35.4], [36, -32.6], [29, -35.6]], e, { shade: false, w: 0.5 });
       ctx.restore();
+    } },
+    cat: { zh: "貓", size: 1.25, draw(ctx, h) {
+      const c = mix("#3a3440", h, 0.35), d = dark(c, 0.3);
+      for (const x of [-8, 10]) ink(ctx, `cat-legfar-${x}`, [[x - 1.6, -9], [x + 1.6, -9], [x + 1.8, 0], [x - 1.8, 0]], d, { shade: false, w: 0.6 });
+      ink(ctx, "cat-tail", [[-12, -12.4], [-21, -14.6], [-23.6, -22], [-21.6, -25.4], [-19.4, -22.6], [-18.6, -16.6], [-12, -9]], c);
+      ink(ctx, "cat-tailtip", [[-23.4, -21.6], [-21.6, -25.4], [-19.4, -22.6], [-21.2, -20.6]], h, { shade: false, w: 0.6 });
+      ink(ctx, "cat-body", ellPts(0, -11, 14, 5, 20), c);
+      for (const x of [-8, -3, 2]) stroke(ctx, "cat-spot" + x, [[x, -15], [x + 1.5, -10]], 1.6, h);
+      for (const x of [-11, 7]) ink(ctx, "cat-leg" + x, [[x - 1.7, -9], [x + 1.7, -9], [x + 2, 0], [x - 2, 0]], c, { shade: false, w: 0.6 });
+      for (const x of [13, 17.4]) ink(ctx, "cat-ear" + x, [[x - 2.2, -16.6], [x, -22.6], [x + 2.2, -16.6]], c, { w: 0.6, sharp: true });
+      ink(ctx, "cat-head", ellPts(15, -14.5, 5.4, 4.6, 16), c);
+      ink(ctx, "cat-muzzle", ellPts(19.2, -13, 2.2, 1.6, 10), light(c, 0.35), { shade: false, w: 0.5 });
+      dot(ctx, 17.2, -15.4, 1.3, 0.9, "#ffe14d"); dot(ctx, 17.3, -15.4, 0.3, 0.8, INK); dot(ctx, 21, -13.4, 0.6, 0.5, INK);
+    } },
+    roc: { zh: "鳥", size: 1.2, draw(ctx, h) {
+      const c = "#a07a4a", d = dark(c, 0.3);
+      ctx.save(); ctx.translate(0, -16);
+      ink(ctx, "roc-wingfar", [[-2, -4], [-12, -26], [-20, -30], [-16, -22], [-22, -24], [-14, -12], [-4, 2]], d, { sharp: true });
+      ink(ctx, "roc-wingfar-tip", [[-12, -26], [-20, -30], [-16, -22], [-22, -24], [-17, -18]], dark(h, 0.2), { sharp: true, shade: false, w: 0.6 });
+      ink(ctx, "roc-tail", [[-8, 2], [-18, 8], [-16, 2], [-20, 4], [-9, -1]], h, { sharp: true, shade: false, w: 0.6 });
+      ink(ctx, "roc-body", ellPts(0, 0, 9, 6, 16), c);
+      ink(ctx, "roc-belly", ellPts(1.5, 2, 6, 3, 12), "#f0e6d0", { shade: false, w: 0.5 });
+      ink(ctx, "roc-wing", [[2, -4], [10, -28], [18, -34], [15, -24], [22, -27], [14, -12], [4, 2]], c, { sharp: true });
+      ink(ctx, "roc-wing-tip", [[10, -28], [18, -34], [15, -24], [22, -27], [16, -19]], h, { sharp: true, shade: false, w: 0.6 });
+      ink(ctx, "roc-crest", [[6, -7], [4, -12], [8, -8.4], [9, -13], [10, -7.5]], h, { sharp: true, shade: false, w: 0.5 });
+      ink(ctx, "roc-head", ellPts(9, -4, 4.2, 4.2, 12), c);
+      ink(ctx, "roc-beak", [[12.5, -5.2], [17, -3], [12.5, -1]], "#e8bb48", { sharp: true, shade: false, w: 0.5 });
+      dot(ctx, 10.6, -5, 0.9, 0.9, INK);
+      for (const x of [-2, 3]) { stroke(ctx, "roc-claw" + x, [[x, 5], [x, 9]], 1.4, "#e8bb48"); stroke(ctx, "roc-claw2" + x, [[x - 1.2, 9.6], [x, 8.6], [x + 1.2, 9.6]], 0.6); }
+      ctx.restore();
+    } },
+    demon: { zh: "惡魔", size: 1.2, draw(ctx, h) {
+      const skin = "#6a3a7a", wing = "#3a1a40";
+      ink(ctx, "dm-wing-l", [[-3, -30], [-20, -42], [-17, -34], [-22, -32], [-16, -26], [-18, -20], [-4, -22]], wing, { sharp: true });
+      ink(ctx, "dm-wing-r", [[3, -30], [18, -44], [16, -36], [21, -33], [15, -27], [17, -21], [4, -22]], wing, { sharp: true });
+      limb(ctx, "dm-tail", [[-2, -14], [-8, -6], [-6, -2]], 1.4, skin);
+      for (const x of [-3, 3]) ink(ctx, "dm-leg" + x, [[x - 1.8, -14], [x + 1.8, -14], [x + 2, 0], [x - 2, 0]], skin, { w: 0.6 });
+      ink(ctx, "dm-torso", [[-7, -30], [7, -30], [7.4, -13], [-7.4, -13]], h);
+      ink(ctx, "dm-hem", [[-7, -15], [7, -15], [5, -11], [-5, -11]], dark(h, 0.35), { shade: false, w: 0.6 });
+      limb(ctx, "dm-arm-l", [[-7, -28], [-10, -19]], 2.6, skin); limb(ctx, "dm-arm-r", [[7, -28], [11, -20]], 2.6, skin);
+      ink(ctx, "dm-blade-l", [[-10.6, -19], [-14.6, -33.6], [-13, -33.2], [-9.4, -19.6]], "#c8c0e0", { shade: false, w: 0.5, sharp: true });
+      ink(ctx, "dm-blade-r", [[10.4, -20.4], [17.6, -33.6], [16, -33.4], [11.6, -19.6]], "#c8c0e0", { shade: false, w: 0.5, sharp: true });
+      ink(ctx, "dm-head", ellPts(0, -36, 6, 6, 14), skin);
+      for (const s of [-1, 1]) ink(ctx, "dm-horn" + s, [[s * 4, -40], [s * 8.6, -44], [s * 7, -50.4], [s * 6, -45], [s * 2, -41.4]], "#2a1a2a", { shade: false, w: 0.6 });
+      for (const x of [-2.2, 2.2]) dot(ctx, x, -36, 1.1, 1.1, "#ff5a8a");
+    } },
+    giant: { zh: "巨人", size: 1.45, draw(ctx, h) {
+      const skin = "#c89a78", sd = dark(skin, 0.25);
+      for (const x of [-5, 5]) ink(ctx, "gi-leg" + x, [[x - 3, -16], [x + 3, -16], [x + 3.2, 0], [x - 3.2, 0]], sd, { w: 0.7 });
+      limb(ctx, "gi-arm-far", [[-10, -35], [-13, -22]], 4.2, sd);
+      ink(ctx, "gi-torso", [[-10, -38], [10, -38], [10.4, -18], [-10.4, -18]], skin);
+      ink(ctx, "gi-cloth", [[-9, -20], [9, -20], [8, -12], [3, -14], [0, -11], [-4, -14], [-8, -12]], h);
+      ink(ctx, "gi-pauldron", ellPts(-9, -36, 4.5, 3, 12), h, { w: 0.7 });
+      ink(ctx, "gi-club", [[13, -21], [20, -38], [24.6, -40], [25.6, -46.4], [21, -47.6], [17.6, -40], [15.4, -23]], "#8a847e");
+      limb(ctx, "gi-arm", [[10, -35], [14, -24]], 4.2, skin);
+      ink(ctx, "gi-head", ellPts(0, -43, 6, 6, 14), skin);
+      stroke(ctx, "gi-band", [[-6, -46.4], [6, -46.4]], 2.4, "#5a3a20");
+      for (const x of [-2.2, 2.2]) dot(ctx, x, -43, 0.9, 1.2, INK);
+    } },
+    avatar: { zh: "元素化身", size: 1.2, draw(ctx, h, el) {
+      const [ec, el2] = { fire: ["#ff7a1a", "#ffd04a"], ice: ["#8fe3ff", "#e8fbff"], lightning: ["#ffe14a", "#fff7c0"] }[el] ?? ["#ff7a1a", "#ffd04a"];
+      ctx.save(); ctx.globalAlpha = 0.8;
+      for (const [x, y, s] of [[-6, -4, 3], [5, -2, 2.5], [0, 1, 2]]) ink(ctx, "av-wisp" + x, ellPts(x, y, s, s, 10), ec, { shade: false, w: 0.5 });
+      ctx.restore();
+      ink(ctx, "av-body", [[-8, -32], [-9.6, -20], [-6, -9], [-3, -4.6], [0, -2], [3, -5], [6, -9], [9.6, -20], [8, -32]], ec);
+      ink(ctx, "av-glow", [[-5, -30], [-5.6, -20], [-2, -12], [2, -12], [5.6, -20], [5, -30]], el2, { shade: false, line: false, alpha: 0.6 });
+      limb(ctx, "av-arm-l", [[-8, -30], [-13, -20]], 3, ec); limb(ctx, "av-arm-r", [[8, -30], [13, -20]], 3, ec);
+      if (el === "ice") for (const x of [-4, 0, 4]) ink(ctx, "av-ice" + x, [[x - 1.5, -42], [x, -48], [x + 1.5, -42]], "#ffffff", { sharp: true, shade: false, w: 0.5 });
+      else for (const x of [-3, 0, 3]) ink(ctx, "av-flame" + x, [[x - 2, -42], [x, -49.6], [x + 2, -42]], ec, { sharp: true, shade: false, w: 0.5 });
+      ink(ctx, "av-head", ellPts(0, -38, 6, 6, 14), el2);
+      ink(ctx, "av-core", [[0, -27], [3.5, -23], [0, -19], [-3.5, -23]], h, { sharp: true, shade: false, w: 0.6 });
+      for (const x of [-2.2, 2.2]) dot(ctx, x, -38, 1.1, 1.1, "#ffffff");
+    } },
+    shadow: { zh: "暗影形態", size: 1.2, draw(ctx, h) {
+      const c = "#3a3248";
+      ctx.save(); ctx.globalAlpha = 0.9;
+      ink(ctx, "sh-body", [[-9, -34], [-11, -20], [-7.6, -8], [-4, -2], [0, -5], [3, -1], [6.6, -6], [11, -20], [9, -34]], c);
+      ctx.restore();
+      for (const s of [-1, 1]) ink(ctx, "sh-spike" + s, [[s * 9, -34], [s * 14, -38], [s * 6, -36]], c, { sharp: true, shade: false, w: 0.6 });
+      limb(ctx, "sh-arm-l", [[-9, -30], [-14, -20], [-16, -14]], 2.4, c); limb(ctx, "sh-arm-r", [[9, -30], [14, -20], [17, -15]], 2.4, c);
+      stroke(ctx, "sh-rib-l", [[-2, -26], [-6, -16], [-3, -8], [-8, -2]], 1.8, h);
+      stroke(ctx, "sh-rib-r", [[2, -26], [5, -15], [2, -8], [6, -3]], 1.8, h);
+      ink(ctx, "sh-head", ellPts(0, -39, 6, 6.5, 14), c);
+      ctx.save(); ctx.shadowColor = h; ctx.shadowBlur = 3;
+      for (const x of [-2.4, 2.4]) dot(ctx, x, -39, 1.6, 0.9, light(h, 0.5));
+      ctx.restore();
+    } },
+    treant: { zh: "樹人", size: 1.3, draw(ctx, h) {
+      const bark = "#6a4a2a", bd = dark(bark, 0.3), leaf = mix("#4a8a3a", h, 0.35);
+      for (const x of [-5, 5]) ink(ctx, "tr-root" + x, [[x - 3, -14], [x + 3, -14], [x + 4, 0], [x + 1, -1.4], [x - 1.6, 0], [x - 4, 0]], bd, { w: 0.7 });
+      ink(ctx, "tr-trunk", [[-8, -38], [8, -38], [8.6, -12], [-8.6, -12]], bark);
+      for (const y of [-32, -25, -18]) stroke(ctx, "tr-bark" + y, [[-5, y], [-2, y + 3]], 0.6);
+      limb(ctx, "tr-arm-l", [[-8, -32], [-15, -26], [-16, -18]], 2.8, bark); limb(ctx, "tr-arm-r", [[8, -32], [15, -27], [17, -20]], 2.8, bark);
+      for (const [x, y, r] of [[-14, -28, 4], [16, -29, 4], [-6, -44, 7], [5, -45, 7.5], [0, -50, 6.5]]) ink(ctx, "tr-leaf" + x, ellPts(x, y, r, r * 0.92, 14), leaf);
+      for (const x of [-2.4, 2.4]) dot(ctx, x, -32, 1.2, 1.2, "#ffe9a0");
     } },
   };
   function drawForm(ctx, id, spec) {
