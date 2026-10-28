@@ -1,0 +1,49 @@
+# 形態（Phase 3J-1a，docs/design/06-技能.md 6.30；玩法決定 #48）。數值為初值（照 6.30 表），未經模擬。
+# 形態＝姿態的擴充：enter_form 原語（技能 kind: stance）進入，花 1 AP、和姿態互斥、自己回合取消免費、倒下或戰鬥結束解除。
+# 不加六屬性：只加天生武器、防禦、移動、最大 HP %、抗性與形態專屬效果。百分比一律寫千分比（‰）。
+#
+# upkeep_stamina／upkeep_mana：每回合開始的維持費（物理形態扣耐力、心智形態扣法力），不夠付就自動解除。
+# cooldown：離開一個形態（自己取消、被迫解除、切換）後「該形態」的冷卻回合；別的形態不受影響。
+#
+# 本段（3J-1a）先放 5 種：熊、貓、巨鵰、元素化身、狼人。天生武器特性（貓背刺暴擊、狼人流血……）、
+# 其餘 5 種（惡魔、巨人、暗影形態、樹人、龍）在 3J-1b 補。
+upkeep_stamina: 5
+upkeep_mana: 3
+cooldown: 2
+forms:
+  - id: bear
+    name_zh: 熊
+    category: physical
+    look: form_bear
+    natural_weapon: {name_zh: 熊爪, dice: 1d8, attack: melee, attrs: [str, con]}
+    effects: {max_hp_permille: 150, defense_permille: 100, move: -1}
+    entry: {shield_max_hp_permille: 100}
+  - id: cat
+    name_zh: 貓
+    category: physical
+    look: form_cat
+    natural_weapon: {name_zh: 貓爪, dice: 1d6, attack: melee, attrs: [dex]}
+    effects: {move: 1}
+    entry: {next_attack_crit: 2}
+  - id: roc
+    name_zh: 巨鵰
+    category: mental
+    look: form_roc
+    natural_weapon: {name_zh: 鳥喙, dice: 1d6, attack: ranged, range: 4, attrs: [wis]}
+    effects: {flat_height: 1, max_hp_permille: -100}
+    entry: {next_attack_hit: 2}
+  - id: elemental
+    name_zh: 元素化身
+    category: mental
+    look: form_elemental
+    natural_weapon:
+      {name_zh: 元素彈, dice: 1d6, attack: ranged, range: 4, attrs: [int], element_choices: [fire, ice, lightning], damage_permille: 100}
+    effects: {damage_taken: [{element: chosen, permille: 500}]}
+    entry: {burst: {radius: 1, dice: 1d6, element: chosen}}
+  - id: werewolf
+    name_zh: 狼人
+    category: physical
+    look: form_werewolf
+    natural_weapon: {name_zh: 狼人爪, dice: 1d8, attack: melee, attrs: [str, dex]}
+    effects: {move: 1, defense_permille: -100}
+    entry: {heal_max_hp_permille: 100}

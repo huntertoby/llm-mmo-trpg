@@ -36,6 +36,9 @@ from trpg.engine.events import (
     EventBase,
     FollowupCancelled,
     FollowupCharged,
+    FormEntered,
+    FormLeft,
+    FormUpkeepPaid,
     GambleRolled,
     GearHpLost,
     GearTriggered,
@@ -601,6 +604,50 @@ def _trigger_limit(e: TriggerLimitReached, v: _View) -> str:
     return (
         f"  （觸發深度達到上限，{v.name[e.unit_id]} 的被動「{e.skill_id}」沒有觸發"
         f"，深度 {e.depth}）"
+    )
+
+
+_FORM_LEAVE_TEXT = {
+    "cancelled": "取消了",
+    "switched": "切換到別的形態",
+    "stance": "改用姿態",
+    "downed": "倒下而解除",
+    "escaped": "撤離而解除",
+    "upkeep": "維持費不夠，自動解除",
+    "battle_end": "戰鬥結束而解除",
+}
+
+
+def _form_name(v: _View, form_id: str) -> str:
+    try:
+        return v.state.ruleset.form_def(form_id).name_zh
+    except KeyError:
+        return form_id
+
+
+@_handles(FormEntered)
+def _form_entered(e: FormEntered, v: _View) -> str:
+    element = "" if e.element is None else f"（{e.element.display_name}）"
+    return (
+        f"  {v.name[e.unit_id]} 化身為{_form_name(v, e.form_id)}{element}"
+        f"，最大 HP {e.max_hp}，HP {e.hp}"
+    )
+
+
+@_handles(FormLeft)
+def _form_left(e: FormLeft, v: _View) -> str:
+    return (
+        f"  {v.name[e.unit_id]} 的{_form_name(v, e.form_id)}形態{_FORM_LEAVE_TEXT[e.reason]}"
+        f"（冷卻 {e.cooldown} 回合），最大 HP {e.max_hp}，HP {e.hp}"
+    )
+
+
+@_handles(FormUpkeepPaid)
+def _form_upkeep(e: FormUpkeepPaid, v: _View) -> str:
+    name = "耐力" if e.resource == "stamina" else "法力"
+    return (
+        f"  {v.name[e.unit_id]} 維持{_form_name(v, e.form_id)}形態：−{e.amount} {name}"
+        f"（剩 {e.remaining}）"
     )
 
 

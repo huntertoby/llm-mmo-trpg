@@ -30,6 +30,7 @@ __all__ = [
     "Activation",
     "BattleState",
     "Facing",
+    "FormState",
     "GrantedSkill",
     "InfusedSkill",
     "LastCast",
@@ -225,6 +226,29 @@ class SpawnTemplate(BaseModel):
     weapon: WeaponDef
     equipment: Loadout = Loadout()
     """裝備快照（Phase 3G-G1；範本沒有裝備時為空）。"""
+
+
+@dataclass(slots=True, frozen=True)
+class FormState:
+    """單位目前的形態（Phase 3J-1a，``docs/design/06-技能.md`` 6.30）。
+
+    進入時把普攻武器換成天生武器（``UnitState.weapon``），手上的武器與主手普攻詞條另外保存在這裡，
+    離開時換回來：
+
+    - ``form_id``：``content/forms.yaml`` 的形態 ID；``element``：進入時選的元素（沒有選擇為
+      ``None``）；
+    - ``hand_weapon``：手上的武器（武器技、裝填等仍看它；離開時換回）；
+    - ``hand_gear``：進入前的裝備狀態（形態中主手的普攻詞條與武器特性強化詞條不生效，離開時換回）；
+    - ``max_hp_delta``：進入時最大 HP 的加減量（離開時減回）；
+    - ``skill_id``：進入用的技能（紀錄與顯示用）。
+    """
+
+    form_id: str
+    hand_weapon: WeaponDef
+    hand_gear: GearState
+    element: Element | None = None
+    max_hp_delta: int = 0
+    skill_id: str | None = None
 
 
 @dataclass(slots=True, frozen=True)
@@ -449,6 +473,14 @@ class UnitState:
     doll: DollLook | None = None
     """紙娃娃外觀（Phase 3E-2e，純顯示資料）：由範本帶入、戰鬥中不變，不參與任何結算；
     ``view.py`` 投影成 ``UnitView.doll_look``。"""
+    form: FormState | None = None
+    """目前的形態（Phase 3J-1a，:mod:`trpg.engine.forms`）；不在形態中為 ``None``。"""
+    form_cooldowns: dict[str, int] = field(default_factory=dict)
+    """形態 ID → 剩餘冷卻回合（Phase 3J-1a；離開形態時設定，自己的回合開始時 −1，歸零移除）。"""
+    next_attack_hit: int = 0
+    """下一次擲命中的攻擊的命中加值（Phase 3J-1a，形態的進入獎勵；用掉或離開形態時歸零）。"""
+    next_attack_crit: int = 0
+    """下一次擲命中的攻擊的暴擊範圍加值（同上）。"""
 
     @property
     def alive(self) -> bool:
@@ -564,6 +596,10 @@ class UnitState:
             facing=self.facing,
             gear=self.gear,
             doll=self.doll,
+            form=self.form,
+            form_cooldowns=dict(self.form_cooldowns),
+            next_attack_hit=self.next_attack_hit,
+            next_attack_crit=self.next_attack_crit,
         )
 
 

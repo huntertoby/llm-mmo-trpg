@@ -9,12 +9,14 @@ from __future__ import annotations
 from dataclasses import dataclass
 from typing import Literal
 
+from trpg.content.battle import WeaponDef
 from trpg.content.library import Ruleset
 from trpg.engine.events import AdvantageState
 from trpg.engine.gear import gear_defense_permille
 from trpg.engine.ids import CONCEALED, DEFENDING, PRONE
 from trpg.engine.modifiers import ATTACK, range_delta
 from trpg.engine.rules.facing import is_behind
+from trpg.engine.rules.forms import form_defense_permille
 from trpg.engine.rules.geometry import XY, has_line_of_sight, manhattan
 from trpg.engine.rules.perks import attribute_perk
 from trpg.engine.rules.statuses import (
@@ -26,7 +28,6 @@ from trpg.engine.rules.statuses import (
     has_attack_disadvantage_status,
     prevents_concealment,
     status_attack_bonus,
-    weapon_attribute,
 )
 from trpg.engine.rules.weapons import crit_range_cut, weapon_hit_bonus
 from trpg.engine.state import BattleState, UnitState
@@ -74,11 +75,14 @@ HALF_COVER = "half_cover"
 _COVER_DIRECTIONS: tuple[XY, ...] = ((0, -1), (1, 0), (0, 1), (-1, 0))
 
 
-def attack_value(unit: UnitState, rules: Ruleset) -> int:
-    """攻擊值 ＝ 縮放屬性值（有效屬性） ＋ 武器攻擊加值 ＋ 狀態的攻擊加值（戰意，3-33e1）。"""
-    return (
-        weapon_attribute(rules, unit) + unit.weapon.attack_bonus + status_attack_bonus(rules, unit)
-    )
+def attack_value(unit: UnitState, rules: Ruleset, weapon: WeaponDef | None = None) -> int:
+    """攻擊值 ＝ 縮放屬性值（有效屬性） ＋ 武器攻擊加值 ＋ 狀態的攻擊加值（戰意，3-33e1）。
+    ``weapon`` 省略時是普攻的武器（``unit.weapon``；形態中為天生武器，Phase 3J-1a）；武器技傳入
+    手上的武器。"""
+    if weapon is None:
+        weapon = unit.weapon
+    value = weapon.scaling_value(lambda attr: effective_attribute(rules, unit, attr))
+    return value + weapon.attack_bonus + status_attack_bonus(rules, unit)
 
 
 @dataclass(frozen=True, slots=True)
@@ -131,6 +135,7 @@ def defense_value_permille(unit: UnitState, rules: Ruleset, cut: int = 0) -> int
     bonus = rules.core.defend_defense_bonus_permille if unit.has_status(DEFENDING) else 0
     bonus -= defense_break_permille(rules, unit) + cut
     bonus += gear_defense_permille(unit)
+    bonus += form_defense_permille(rules, unit)  # 形態的防禦加減（Phase 3J-1a，直接相加）
     return max(1, base * (PERMILLE + bonus))
 
 
@@ -451,12 +456,13 @@ def roll_attack(  # noqa: PLR0917
     positional = positional_bonus(state, attacker, target, profile)
     if profile.weapon_attack:  # 站定與距離修正（Phase 3-24a2）
         bonus += weapon_hit_bonus(attacker, manhattan(attacker.xy, target.xy))
-    bonus += positional.hit
+    bonus += positional.hit + attacker.next_attack_hit  # 形態的進入獎勵（3J-1a；呼叫端用掉）
+    crit_range = max(2, positional.crit_range - attacker.next_attack_crit)
     if forced is not None:
         natural = _forced_natural(
             forced,
             modifier + proficiency + situational + cover_mod + bonus,
-            positional.crit_range,
+            crit_range,
             rules,
         )
         rolls: tuple[int, ...] = (natural,)
@@ -468,7 +474,7 @@ def roll_attack(  # noqa: PLR0917
         natural = max(rolls) if adv == "advantage" else min(rolls)
     total = natural + modifier + proficiency + situational + cover_mod + bonus
     hit = is_hit(natural, total, rules.core.hit_target)
-    crit = hit and natural >= positional.crit_range
+    crit = hit and natural >= crit_range
     if forced is not None:
         hit, crit = forced != "miss", forced == "crit"
     return AttackRoll(
@@ -486,7 +492,7 @@ def roll_attack(  # noqa: PLR0917
         target_number=rules.core.hit_target,
         hit=hit,
         crit=crit,
-        modifier_bonus=bonus - positional.hit,
+        modifier_bonus=bonus - positional.hit - attacker.next_attack_hit,
         backstab=positional.backstab,
         ambush=positional.ambush,
     )

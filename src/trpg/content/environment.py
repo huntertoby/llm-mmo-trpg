@@ -786,6 +786,17 @@ class SelfCostAiRules(ContentModel):
     overdraft_min_targets: int = Field(default=2, ge=1)
 
 
+class FormAiRules(ContentModel):
+    """形態的 AI 數值（Phase 3J-1a，06 6.30；ai_profiles.yaml 的 ``form:``；初值未經模擬）。
+
+    - ``enter_value``：進入形態的價值（等值傷害點數）：收益 ＝ 行為模式的 ``support`` 權重 × 這個值
+      （進入獎勵的護盾、治療、傷害另外照一般事件計分）。AI 沒在姿態或形態中、AP 夠時才考慮進入；
+      不主動取消（維持費不夠時由規則自動解除）。
+    """
+
+    enter_value: int = Field(default=8, ge=0)
+
+
 class SummonAiRules(ContentModel):
     """召喚者 AI 的數值（Phase 3D-4a 寫在程式裡，3D-4b 搬進 ``content/ai_profiles.yaml`` 的
     ``summon:``；初值未經模擬）。
@@ -894,6 +905,8 @@ class AiProfile(ContentModel):
     rune: RuneAiRules = Field(default_factory=RuneAiRules)
     """刻印的 AI 數值（Phase 3-23）；由 :class:`AiProfileTable` 的同名欄位填入。"""
     self_cost: SelfCostAiRules = Field(default_factory=SelfCostAiRules)
+    form: FormAiRules = Field(default_factory=FormAiRules)
+    """形態的 AI 數值（Phase 3J-1a）；由 :class:`AiProfileTable` 的同名欄位填入。"""
     """自己付的代價的 AI 使用條件（Phase 3-50）；由 :class:`AiProfileTable` 的同名欄位填入。"""
 
 
@@ -1014,6 +1027,7 @@ class AiProfileTable(ContentModel):
     gamble: GambleAiRules = Field(default_factory=GambleAiRules)
     rune: RuneAiRules = Field(default_factory=RuneAiRules)
     self_cost: SelfCostAiRules = Field(default_factory=SelfCostAiRules)
+    form: FormAiRules = Field(default_factory=FormAiRules)
     orders: OrderBonuses = Field(default_factory=OrderBonuses)
     basic: BasicActionAiRules = Field(default_factory=BasicActionAiRules)
     """守護隊友、換位、瞄準的 AI 數值（Phase 3-21a；敵我同一套，不分行為模式）。"""
@@ -1046,6 +1060,7 @@ class AiProfileTable(ContentModel):
                 "gamble",
                 "rune",
                 "self_cost",
+                "form",
             )
             if key in data
         }

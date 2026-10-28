@@ -60,6 +60,7 @@ from trpg.engine.events import (
     EnteredDeadlyTerrain,
     EventBase,
     FollowupCharged,
+    FormEntered,
     Healed,
     ObjectDamaged,
     ObjectDestroyed,
@@ -163,7 +164,8 @@ class Outcome:
     ``status``、``surface``、``terrain``、``object_damaged``、``object_destroyed``、
     ``object_exploded``、``object_ignited``、``object_moved``、``reaction``、``intercepted``
     （``unit_id`` 是守護者、``detail`` 是被保護的單位）、``stacks``（2E-3；``detail`` 是
-    ``層數:原因``）、``trap_placed``、``trap_triggered``。
+    ``層數:原因``）、``trap_placed``、``trap_triggered``、``form``（Phase 3J-1a，進入形態；
+    ``detail`` 是形態 ID）。
     """
 
     kind: str
@@ -567,6 +569,8 @@ def _outcome(e: EventBase) -> Outcome | None:  # noqa: C901, PLR0911, PLR0912
         return Outcome("trap_placed", unit_id=e.owner_id, pos=_xy(e.pos), detail=e.skill_id)
     if isinstance(e, TrapTriggered):
         return Outcome("trap_triggered", unit_id=e.unit_id, pos=_xy(e.pos), detail=e.skill_id)
+    if isinstance(e, FormEntered):
+        return Outcome("form", unit_id=e.unit_id, detail=e.form_id)
     return None
 
 
@@ -1592,6 +1596,7 @@ PRIMITIVE_PREVIEW: Mapping[str, str] = MappingProxyType(
         "revive": "revives",
         "delayed_damage": "bombs",
         "summon": "summons",
+        "enter_form": f"{_OUTCOMES}（form：進入形態；護盾、治療、範圍傷害等進入獎勵照一般事件）",
         "zone": f"affected_tiles、{_OUTCOMES}",
         "rule_change": _OUTCOMES,
         "gamble": "gamble（成功與失敗兩個分支）",

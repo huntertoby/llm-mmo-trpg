@@ -20,6 +20,7 @@ _COPIED = {
         "gear_round_counts",
         "stacks",
         "stack_expiry",
+        "form_cooldowns",
     },
     ObjectState: set(),
 }
@@ -61,6 +62,7 @@ def test_clone_is_independent_and_equal() -> None:
         assert copy.units[uid].gear_round_counts is not unit.gear_round_counts
         assert copy.units[uid].stacks is not unit.stacks
         assert copy.units[uid].stack_expiry is not unit.stack_expiry
+        assert copy.units[uid].form_cooldowns is not unit.form_cooldowns
     assert copy.traps is not state.traps
     for oid, obj in state.objects.items():
         assert copy.objects[oid] is not obj

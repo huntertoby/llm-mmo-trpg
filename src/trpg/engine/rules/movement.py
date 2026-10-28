@@ -14,6 +14,7 @@ import heapq
 
 from trpg.content.maps import standable
 from trpg.engine.ids import FLYING, PRONE
+from trpg.engine.rules.forms import form_flat_height
 from trpg.engine.rules.geometry import XY, manhattan, neighbors4
 from trpg.engine.rules.statuses import fear_sources, is_rooted
 from trpg.engine.state import BattleState, UnitState
@@ -84,7 +85,13 @@ def unit_step_cost(state: BattleState, unit: UnitState, a: XY, b: XY) -> int | N
     :func:`step_cost`。"""
     if is_flying(unit):
         return 1 if state.in_bounds(*b) else None
-    return step_cost(state, a, b)
+    cost = step_cost(state, a, b)
+    flat = form_flat_height(state.ruleset, unit)  # 形態：高度差 N 以內當平地走（Phase 3J-1a）
+    if flat and cost is not None and cost > 1:
+        rise = state.tile(*b).height - state.tile(*a).height
+        if rise <= flat:
+            return 1
+    return cost
 
 
 def stand_up_cost(state: BattleState, unit: UnitState) -> int:

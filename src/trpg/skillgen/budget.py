@@ -1444,6 +1444,8 @@ def _modifier_budgets(skill: SkillDef, library: ContentLibrary) -> tuple[EffectB
 def _ap_coefficient(skill: SkillDef, budget: BudgetRules) -> Fraction:
     if skill.kind == "reaction":
         return Fraction(budget.reaction_coefficient_permille, _PERMILLE)
+    if skill.kind == "stance" and skill.form_id is not None:  # 形態（3J-1a）照姿態計，係數另列
+        return Fraction(budget.form_coefficient_permille, _PERMILLE)
     if skill.kind == "stance":
         return Fraction(budget.stance_coefficient_permille, _PERMILLE)
     if skill.kind == "active" and skill.ap_cost is not None:
@@ -1476,6 +1478,8 @@ def _action_coefficient(skill: SkillDef, budget: BudgetRules) -> tuple[Fraction,
     賭博型（3D-7a）再 × 變異加成。"""
     coefficient = _ap_coefficient(skill, budget)
     label = {"reaction": "反應係數", "stance": "姿態係數"}.get(skill.kind, "AP 係數")
+    if skill.form_id is not None:
+        label = "形態係數"
     if skill.trap is not None:
         coefficient *= Fraction(budget.trap_coefficient_permille, _PERMILLE)
         label = "AP 係數 × 陷阱係數"

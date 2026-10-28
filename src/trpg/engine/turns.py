@@ -35,6 +35,7 @@ from trpg.engine.events import (
     TurnSkipped,
     TurnStarted,
 )
+from trpg.engine.forms import pay_upkeep, tick_form_cooldowns
 from trpg.engine.gear import gear_turn_start
 from trpg.engine.grants import expire_granted_skills
 from trpg.engine.objectives import check_battle_end, check_round_end, end_battle
@@ -108,6 +109,9 @@ def start_turn(ctx: Ctx, unit_id: UnitId) -> None:
         stamina_gained=gained,
     )
     _tick_cooldowns(ctx, unit)
+    tick_form_cooldowns(unit)  # 形態的冷卻（Phase 3J-1a）
+    if pay_upkeep(ctx, unit):  # 維持費不夠：自動解除，移動點數不再含形態的加減
+        unit.move_points = move_points_for_turn(ctx.rules, unit)
     expire_activations(ctx, unit)  # 限時傳說到期（Phase 3D-6）
     detect_traps(ctx, unit)  # 感知的常駐數值（Phase 3H-1）
 

@@ -15,6 +15,7 @@ from __future__ import annotations
 
 from trpg.content.library import Ruleset
 from trpg.content.skills import SkillDef
+from trpg.engine.rules.forms import held_weapon
 from trpg.engine.rules.statuses import base_attribute, effective_attribute
 from trpg.engine.state import UnitState
 from trpg.shared.types import Attribute
@@ -39,19 +40,19 @@ def skill_scaling_value(rules: Ruleset, unit: UnitState, skill: SkillDef) -> int
     def get(attr: Attribute) -> int:
         return effective_attribute(rules, unit, attr)
 
-    return skill.scaling_value(get, unit.weapon)
+    return skill.scaling_value(get, held_weapon(unit))
 
 
 def skill_scaling_attr(unit: UnitState, skill: SkillDef) -> Attribute:
     """對抗判定用的屬性（和目標同屬性比）：武器技為手上武器的主屬性，其他為 ``scaling_attr``。"""
-    return skill.contest_attr(unit.weapon)
+    return skill.contest_attr(held_weapon(unit))
 
 
 def skill_scale_attr(unit: UnitState, skill: SkillDef) -> Attribute | None:
     """傷害組成顯示用的縮放屬性：只有單一屬性時回傳它，雙屬性（平均或較高）為 ``None``。武器技看
     手上武器。"""
     if skill.category == "weapon":
-        weapon = unit.weapon
+        weapon = held_weapon(unit)
         single = weapon.secondary_scaling_attr is None and skill.secondary_scaling_attr is None
         return weapon.scaling_attr if single else None
     return skill.scaling_attr if skill.secondary_scaling_attr is None else None
@@ -62,7 +63,7 @@ def mastery_active(unit: UnitState, skill: SkillDef) -> bool:
     武器的縮放值（雙屬性取較高／取平均後，仍不低於自己最高的基礎屬性）。"""
     if skill.mastery is None:
         return False
-    mine = skill.mastery_value(lambda attr: base_attribute(unit, attr), unit.weapon)
+    mine = skill.mastery_value(lambda attr: base_attribute(unit, attr), held_weapon(unit))
     return all(mine >= base_attribute(unit, attr) for attr in Attribute)
 
 

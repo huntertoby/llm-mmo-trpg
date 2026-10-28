@@ -281,6 +281,7 @@ _FIELD_ZH: dict[str, str] = {
     "trap": "陷阱",
     "trigger": "觸發",
     "unit": "單位",
+    "form": "形態",
     "when": "時機",
     "which": "範圍",
     "name": "名稱",

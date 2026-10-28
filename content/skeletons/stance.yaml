@@ -9,5 +9,5 @@ kinds: [stance]
 enabled: true
 min_rarity: rare
 shapes: [self]
-core: {primitives: [apply_status]}
+core: {primitives: [apply_status, enter_form]}   # enter_form：形態（Phase 3J-1a，06 6.30）
 secondary: {max_count: 1}

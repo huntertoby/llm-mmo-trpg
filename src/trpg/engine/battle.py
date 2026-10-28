@@ -81,6 +81,7 @@ from trpg.engine.events import (
     UnitStoodUp,
     UnitVaulted,
 )
+from trpg.engine.forms import leave_form
 from trpg.engine.gear_charge import charge_actions, do_activate_charge
 from trpg.engine.ids import IMMOVABLE, PRONE, TOPPLABLE
 from trpg.engine.lifecycle import make_unit
@@ -934,8 +935,10 @@ def _do_interact(ctx: Ctx, unit: UnitState, action: Action) -> None:
 def _do_end_stance(ctx: Ctx, unit: UnitState, action: Action) -> None:
     assert isinstance(action, EndStance)
     stances = stance_status_ids(ctx.rules, unit)
-    if not stances:
+    if not stances and unit.form is None:
         raise IllegalActionError(f"{unit.name_zh} 目前沒有姿態可以取消")
+    if unit.form is not None:  # 形態是姿態的擴充：自己回合取消免費（Phase 3J-1a）
+        leave_form(ctx, unit, "cancelled")
     execute(
         ctx,
         [
@@ -1253,7 +1256,7 @@ def _legal_actions(
     actions.extend(_weapon_actions(state, unit))
     actions.extend(charge_actions(state, unit))
     actions.extend(vault_action(unit, plan) for plan in vault_destinations(state, unit))
-    if stance_status_ids(state.ruleset, unit):
+    if unit.form is not None or stance_status_ids(state.ruleset, unit):
         actions.append(EndStance(unit_id=unit.id))
     budget = available_move_budget(state, unit)
     if can_only_stand_up(state, unit):
@@ -1318,8 +1321,8 @@ def has_only_end_turn(state: BattleState) -> bool:
     unit = state.active
     if state.ended or unit is None or state.pending is not None:
         return False
-    if stance_status_ids(state.ruleset, unit):
-        return False  # 還可以取消姿態（EndStance）
+    if unit.form is not None or stance_status_ids(state.ruleset, unit):
+        return False  # 還可以取消姿態或形態（EndStance）
     return not (_has_ap_action(state, unit) or _can_move(state, unit))
 
 

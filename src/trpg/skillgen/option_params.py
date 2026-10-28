@@ -103,6 +103,7 @@ PARAM_TEXT: dict[str, str] = {
     "then": "消耗後的效果",
     "trait": "召喚物小特性",
     "unit": "召喚物",
+    "form": "形態",
     "when": "結算時機",
     "which": "哪些技能",
     "win": "成功時的效果",
@@ -281,6 +282,7 @@ def _ref_choices(kind: str, library: ContentLibrary) -> tuple[Choice, ...]:
         "rule_change": lambda: tuple(
             Choice(value=r.id, name_zh=r.name_zh) for r in rules.rule_changes.rule_changes
         ),
+        "form": lambda: tuple(Choice(value=f.id, name_zh=f.name_zh) for f in rules.forms.forms),
         "summon_trait": lambda: tuple(
             Choice(value=i, name_zh=t.name_zh, description_zh=t.description_zh)
             for i, t in sorted(rules.core.summon_traits.items())

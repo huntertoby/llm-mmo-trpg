@@ -132,6 +132,7 @@ from trpg.engine.events import (
     DamageDealt,
     EventBase,
     FollowupCharged,
+    FormEntered,
     ObjectDamaged,
     ReactionsGranted,
     ResourceRestored,
@@ -736,6 +737,8 @@ def _buff_gains(state: BattleState, actor: UnitState, p: Preview, profile: AiPro
             target = state.units.get(e.target_id)
             if target is not None and target.team is actor.team:
                 gains += w.support * profile.status_values.get(e.status_id, 3)
+        elif isinstance(e, FormEntered) and e.unit_id == actor.id:  # 進入形態（3J-1a）
+            gains += w.support * profile.form.enter_value
     return gains
 
 
@@ -1551,8 +1554,8 @@ def skill_estimate(  # noqa: PLR0917
     估計只決定「誰值得完整預覽」；值不值得施放由預覽的收益、位置價值的差與機會成本決定。
     """
     skill = effective_skill(state, action)
-    if skill.kind == "stance" and stance_status_ids(state.ruleset, unit):
-        return None  # 已經有姿態：AI 不主動換姿態（也不主動取消，Phase 2E-2）
+    if skill.kind == "stance" and (unit.form is not None or stance_status_ids(state.ruleset, unit)):
+        return None  # 已經有姿態或形態：AI 不主動換（也不主動取消，Phase 2E-2、3J-1a）
     if skill.followup is not None:
         return composite_estimate(state, unit, skill, area)
     placed = _placement_estimate(state, unit, skill, area, scene, trap=trap)
@@ -1614,10 +1617,12 @@ def _placement_estimate(
     trap: TrapAiRules,
 ) -> Fraction | _Unhandled | None:
     """放置類技能的估計：陷阱、召喚（3D-4a：位置越靠近敵人越好）、持續區域（3D-5：格內與移動
-    路徑上的對象數）、常駐類傳說的啟動（3D-6：有敵人就是候選）；其他技能回傳 ``_UNHANDLED``。"""
+    路徑上的對象數）、常駐類傳說的啟動（3D-6：有敵人就是候選）、進入形態（3J-1a：一律是候選）；
+    其他技能回傳 ``_UNHANDLED``。"""
     if skill.is_activatable:  # 常駐類傳說（Phase 3D-6）：場上還有敵人時才考慮啟動
         return Fraction(1) if scene.enemies else None
-    if any(e.type == REVIVE for e in skill.effects):  # 復活（3D-8b）：每個可復活的友方都是候選
+    # 復活（3D-8b）：每個可復活的友方都是候選；形態（3J-1a）：值不值得由預覽的 form_entered 收益決定
+    if skill.form_id is not None or any(e.type == REVIVE for e in skill.effects):
         return Fraction(1)
     if skill.trap is not None:
         return _trap_estimate(state, unit, skill, area, scene, rules=trap)

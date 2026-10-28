@@ -84,6 +84,8 @@ export function outcomeText(o: Outcome, names: UnitNames, view: BattleView): str
       return `放置陷阱${posText(o)}`;
     case "trap_triggered":
       return `${who} 觸發陷阱${posText(o)}`;
+    case "form":
+      return `${who} 進入形態`;
     default:
       return o.kind;
   }

@@ -48,6 +48,10 @@ __all__ = [
     "EventBase",
     "FollowupCancelled",
     "FollowupCharged",
+    "FormEntered",
+    "FormLeaveReason",
+    "FormLeft",
+    "FormUpkeepPaid",
     "GambleRolled",
     "GearHpLost",
     "GearTriggered",
@@ -1703,6 +1707,53 @@ class ActivationExpired(EventBase):
     skill_id: str
 
 
+class FormEntered(EventBase):
+    """進入形態（Phase 3J-1a，6.30）：``element`` 是進入時選的元素（沒有選擇為 ``None``）；
+    ``max_hp``／``hp`` 是進入後的最大 HP 與目前 HP。之後是進入獎勵的事件（護盾、治療、傷害……）。"""
+
+    type: Literal["form_entered"] = "form_entered"
+    unit_id: UnitId
+    form_id: str
+    skill_id: str | None = None
+    element: Element | None = None
+    max_hp: int
+    hp: int
+
+
+type FormLeaveReason = Literal[
+    "cancelled", "switched", "stance", "downed", "escaped", "upkeep", "battle_end"
+]
+"""離開形態的原因：``cancelled`` 自己取消（``end_stance``）、``switched`` 切換到別的形態、
+``stance`` 進入一般姿態、``downed`` 倒下、``escaped`` 撤離、``upkeep`` 維持費不夠自動解除、
+``battle_end`` 戰鬥結束。"""
+
+
+class FormLeft(EventBase):
+    """離開形態（Phase 3J-1a）：之後該形態冷卻 ``cooldown`` 回合；``max_hp``／``hp`` 是離開後的
+    最大 HP 與目前 HP（最大 HP 減回、目前 HP 不超過上限）。"""
+
+    type: Literal["form_left"] = "form_left"
+    unit_id: UnitId
+    form_id: str
+    reason: FormLeaveReason
+    cooldown: int
+    max_hp: int
+    hp: int
+
+
+class FormUpkeepPaid(EventBase):
+    """回合開始付形態的維持費（Phase 3J-1a）：``resource`` 是 ``stamina``（物理形態）或
+    ``mana``（心智形態），``remaining`` 是付完後剩下的量。付不起時不發出，改發 ``form_left``
+    （``reason: upkeep``）。"""
+
+    type: Literal["form_upkeep_paid"] = "form_upkeep_paid"
+    unit_id: UnitId
+    form_id: str
+    resource: Literal["stamina", "mana"]
+    amount: int
+    remaining: int
+
+
 type RuleChangeKindName = Literal[
     "element_heals_allies", "push_any_object", "pass_through_apply", "on_downed_spawn"
 ]
@@ -1805,6 +1856,9 @@ type Event = Annotated[
     | WallToppled
     | SkillUsed
     | SkillCooldownChanged
+    | FormEntered
+    | FormLeft
+    | FormUpkeepPaid
     | SkillTriggered
     | TriggerLimitReached
     | StacksChanged

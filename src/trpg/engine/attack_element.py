@@ -84,10 +84,14 @@ def resolve_attack_element(
 _MAIN_HAND = "main_hand"
 
 
-def weapon_affix_element(unit: UnitState) -> Element | None:
+def weapon_affix_element(unit: UnitState, *, held: bool = False) -> Element | None:
     """武器元素詞條的元素（Phase 3K-1，08 8.21.2.4 #52）：主手物品上生效中的第一條
-    ``weapon_element`` 普攻附加詞條（同一件最多 1 條，穿戴驗證擋住）；沒有時 ``None``。"""
-    for entry in unit.gear.active_affixes("attack"):
+    ``weapon_element`` 普攻附加詞條（同一件最多 1 條，穿戴驗證擋住）；沒有時 ``None``。
+
+    ``held``：看手上的武器（武器技；Phase 3J-1a 形態中普攻改用天生武器，主手詞條只對武器技
+    生效）。"""
+    gear = unit.form.hand_gear if held and unit.form is not None else unit.gear
+    for entry in gear.active_affixes("attack"):
         affix = entry.affix
         if (
             entry.slot == _MAIN_HAND
@@ -109,13 +113,17 @@ def enchant_element(rules: Ruleset, unit: UnitState) -> Element | None:
     return found
 
 
-def attack_element_sources(rules: Ruleset, unit: UnitState) -> AttackElementSources:
-    """蒐集 ``unit`` 的四種元素來源。"""
+def attack_element_sources(
+    rules: Ruleset, unit: UnitState, *, held: bool = False
+) -> AttackElementSources:
+    """蒐集 ``unit`` 的四種元素來源。``held``：武器技——看手上的武器（Phase 3J-1a：形態中
+    ``unit.weapon`` 是天生武器，武器技仍看手上武器與它的詞條）。"""
+    weapon = unit.form.hand_weapon if held and unit.form is not None else unit.weapon
     return AttackElementSources(
         enchant=enchant_element(rules, unit),
         basic_affix=gear_attack_element(unit),
-        weapon_affix=weapon_affix_element(unit),
-        weapon=unit.weapon.element,
+        weapon_affix=weapon_affix_element(unit, held=held),
+        weapon=weapon.element,
     )
 
 
