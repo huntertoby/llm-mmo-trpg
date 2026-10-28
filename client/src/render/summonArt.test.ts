@@ -130,30 +130,55 @@ describe("召喚物外觀渲染器", () => {
     expect(run("east")).not.toBe(run("west"));
   });
 
-  it("地面影子與水窪只由 drawSummonGround 畫（不在加外框的身體層）、不描邊、透明度 0.22～0.3", () => {
+  it("C 畫風：影子是一排短斜線（不是橢圓）、只由 drawSummonGround 畫", () => {
     for (const look of [
       { body: "spirit" }, { body: "construct", variant: "golem" }, { body: "construct", variant: "bomb" },
-      { body: "construct", variant: "wall" }, { body: "beast", variant: "wolf" }, { body: "beast", variant: "bird" }, { body: "totem" },
+      { body: "construct", variant: "wall" }, { body: "beast", variant: "wolf" }, { body: "beast", variant: "bird" }, { body: "totem" }, { body: "plant" },
     ] as const) {
       const r = resolveSummonLook(look);
-      const body = mockCtx();
-      drawSummonBody(body.ctx, r, "south");
-      expect(body.calls.some((c) => c.startsWith("ellipse(0.00,-1.00,"))).toBe(false);
       const ground = mockCtx();
       drawSummonGround(ground.ctx, r);
-      expect(ground.calls.some((c) => c.startsWith("ellipse(0.00,-1.00,"))).toBe(true);
-      expect(ground.calls.some((c) => c.startsWith("stroke"))).toBe(false);
-      const alphas = ground.calls.filter((c) => c.startsWith("fillStyle=rgba(0,0,0,")).map((c) => Number(/rgba\(0,0,0,([\d.]+)\)/.exec(c)?.[1]));
-      expect(alphas.length).toBe(1);
-      expect(alphas[0]).toBeGreaterThanOrEqual(0.22);
-      expect(alphas[0]).toBeLessThanOrEqual(0.3);
+      expect(ground.calls.filter((c) => c.startsWith("moveTo")).length, look.body).toBeGreaterThan(3);
+      expect(ground.calls.some((c) => c.startsWith("ellipse"))).toBe(false);
+      expect(ground.calls.some((c) => c.startsWith("fill()"))).toBe(false);
+      const body = mockCtx();
+      drawSummonBody(body.ctx, r, "south");
+      expect(body.calls.some((c) => c.includes("rgba(43,30,22,0.5)"))).toBe(false); // 影子的線色只在 ground 層
     }
-    const puddle = mockCtx();
-    drawSummonGround(puddle.ctx, resolveSummonLook({ body: "spirit", element: "wet", trait: "puddle" }));
-    expect(puddle.calls.some((c) => c.startsWith("ellipse(0.00,-1.00,13.00"))).toBe(true);
     const human = mockCtx();
     drawSummonGround(human.ctx, resolveSummonLook({ body: "humanoid" }));
     expect(human.calls.length).toBe(0);
+  });
+
+  it("水精的水窪與圖騰的光環（虛線＋18% 填色）在 ground 層；沒有特徵就沒有", () => {
+    const puddle = mockCtx();
+    drawSummonGround(puddle.ctx, resolveSummonLook({ body: "spirit", element: "wet", trait: "puddle" }));
+    expect(puddle.calls.some((c) => c.includes("#4aa8ff"))).toBe(true);
+    const plain = mockCtx();
+    drawSummonGround(plain.ctx, resolveSummonLook({ body: "spirit", element: "wet" }));
+    expect(plain.calls.some((c) => c.includes("#4aa8ff"))).toBe(false);
+    const aura = mockCtx();
+    drawSummonGround(aura.ctx, resolveSummonLook({ body: "totem", variant: "war", element: "summon", trait: "aura" }));
+    expect(aura.calls).toContain("setLineDash(object)");
+    expect(aura.calls.some((c) => c.startsWith("ellipse(0.00,0.00,20.00"))).toBe(true);
+    const noAura = mockCtx();
+    drawSummonGround(noAura.ctx, resolveSummonLook({ body: "totem", variant: "war", element: "summon" }));
+    expect(noAura.calls).not.toContain("setLineDash(object)");
+  });
+
+  it("用 ink() 畫、拿掉黑色剪影外框；同一個外觀每次畫出完全一樣（確定性抖動）", () => {
+    for (const [body, variant] of [["spirit", ""], ["construct", "golem"], ["beast", "wolf"], ["beast", "bird"], ["plant", ""], ["totem", "pull"]] as const) {
+      const look = resolveSummonLook({ body, variant, element: "frozen" });
+      const run = (): string => {
+        const { ctx, calls } = mockCtx();
+        drawSummonBody(ctx, look, "east");
+        return calls.join("|");
+      };
+      const calls = run();
+      expect(calls, body).toBe(run());
+      expect(calls, body).toContain("strokeStyle=#2b1e16"); // 墨線
+      expect(calls, body).not.toContain("#16121a"); // 舊的剪影外框色
+    }
   });
 
   it("鷹隼的身體抬高 22；藤蔓貼地（沒有往上畫超過 22）", () => {
