@@ -8,7 +8,8 @@ import { ART_T, drawTile, tileArtKey, type TileArtSpec } from "./terrainArt";
 import type { Ctx } from "./artDraw";
 import type { Facing } from "../api/types";
 import { dollKey, type DollSpec } from "./appearance";
-import { renderFigureCanvas } from "./paperdoll";
+import { formKey, renderAuraCanvas, renderFormCanvas } from "./inkForm";
+import { DOLL_SCALE, renderFigureCanvas } from "./paperdoll";
 import { renderSummonCanvas, summonKey, type ResolvedLook } from "./summonArt";
 
 /** 貼圖解析度倍率（相對 TILE_SIZE）。 */
@@ -97,6 +98,32 @@ export class ArtTextures {
     const hit = this.cache.get(key);
     if (hit !== undefined) return hit;
     const canvas = renderSummonCanvas(look, facing, humanoid, FIGURE_RESOLUTION);
+    if (canvas === null) return null;
+    const tex = Texture.from(canvas);
+    this.cache.set(key, tex);
+    return tex;
+  }
+
+  /** 形態貼圖（Phase 3J-5；鍵 ＝ 畫法＋主色＋元素＋朝向＋姿勢）；不認得的畫法或沒有 DOM 時回傳 `null`。 */
+  form(id: string, hero: string, element: string | null | undefined, facing: Facing, downed: boolean): Texture | null {
+    const key = `g|${formKey(id, hero, element, facing, downed)}`;
+    this.used.add(key);
+    const hit = this.cache.get(key);
+    if (hit !== undefined) return hit;
+    const canvas = renderFormCanvas(id, hero, element, facing, downed, FIGURE_RESOLUTION, DOLL_SCALE);
+    if (canvas === null) return null;
+    const tex = Texture.from(canvas);
+    this.cache.set(key, tex);
+    return tex;
+  }
+
+  /** 腳下的形態光環貼圖（鍵 ＝ 顏色＋半徑）。 */
+  formAura(color: string, rx: number): Texture | null {
+    const key = `a|${color}|${rx.toFixed(2)}`;
+    this.used.add(key);
+    const hit = this.cache.get(key);
+    if (hit !== undefined) return hit;
+    const canvas = renderAuraCanvas(color, rx, FIGURE_RESOLUTION);
     if (canvas === null) return null;
     const tex = Texture.from(canvas);
     this.cache.set(key, tex);
