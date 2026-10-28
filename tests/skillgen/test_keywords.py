@@ -606,3 +606,8 @@ def test_keyword_actions_are_basic_actions() -> None:
     for keyword in library().keywords.keywords:
         assert set(keyword.actions) <= set(BASIC_ACTION_TYPES), keyword.id
     assert library().keywords.by_id()["high_ground"].actions == ("vault",)
+
+
+def test_the_form_keyword_is_not_composable() -> None:
+    with pytest.raises(ComposeError, match="做不出"):
+        compose_random_skill(1, keyword="form")

@@ -646,6 +646,8 @@ def _compose_with_keyword(
     """依種子變體重抽，直到技能製造或利用 ``keyword``（確定性：同樣的參數必得同樣的技能）。"""
     if keyword not in lib.keywords.ids():
         raise ComposeError(f"未知的關鍵字 {keyword!r}（可用：{'、'.join(lib.keywords.ids())}）")
+    if not lib.keywords.by_id()[keyword].composable:
+        raise ComposeError(f"組合器做不出關鍵字 {keyword} 的技能（該關鍵字需要手寫技能）")
     for index in range(KEYWORD_TRIES):
         variant = seed + index * _VARIANT_STEP
         try:
