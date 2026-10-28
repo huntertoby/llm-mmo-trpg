@@ -160,9 +160,9 @@
 
 | 角色 | session id |
 |---|---|
-| 專案 PM | |
-| 玩法 PM | |
-| 開發 PM | |
-| 美術 PM | |
+| 專案 PM | `local_69ff6dd8-1a56-4d3a-950d-054825e07625`（2026-10-28 起） |
+| 玩法 PM | `local_9c79efb1-a93e-4b28-8a2f-7c97ec50b846` |
+| 開發 PM | `local_c5b3c3fe-98d7-47cb-bd52-9350812055cd` |
+| 美術 PM | `local_cb74dfda-1832-4c4b-bf87-d4dcb9fbf335`（worktree 分支 `claude/art-pm-fcab45`） |
 
 注意：使用者用遠端連線（Remote Control）時，`start_session` 會被拒；要在使用者於桌面 App 打字的那一輪才能開新對話。開發 PM 的開場 prompt 請加一句：先讀 `docs/開發PM交接.md` 3.00「接手第一件事」。
