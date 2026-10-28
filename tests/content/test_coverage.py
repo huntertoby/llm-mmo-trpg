@@ -16,7 +16,9 @@ _UNCOVERED: dict[str, dict[str, str]] = {
         "on_summon_downed": "只給裝備詞條用（3-33f2）：召喚物倒下時爆炸或治療，沒有被動技能"
     },
     "reaction_event": {},
-    "condition": {},
+    "condition": {
+        "in_form": "3J-3 新條件：利用形態的手寫技能（化形撲擊等）在 3J-4 才加；行為見 tests/engine"
+    },
     "primitive": {},
     "status": {
         "armor_broken": "只由斧的 armor_break 武器參數施加（3-24a1），沒有技能施加",

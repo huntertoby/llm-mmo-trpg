@@ -36,6 +36,8 @@ CHANGE_TEXT: dict[str, str] = {
     "summon_limit_delta": "召喚物同時上限 ±1",
     "summon_duration_delta": "召喚物持續 +輪數",
     "summon_damage_permille": "召喚物傷害 +‰",
+    "form_upkeep_permille": "形態維持費 −‰",
+    "form_entry_permille": "形態進入獎勵 +‰",
 }
 
 _INDEXED = re.compile(r"\b(effects|modifiers|variants)\[(\d+)\]")
@@ -271,6 +273,9 @@ _FIELD_ZH: dict[str, str] = {
     "summon_duration_delta": "召喚物持續調整",
     "summon_hp_permille": "召喚物生命",
     "summon_limit_delta": "召喚物上限調整",
+    "form_entry_permille": "形態進入獎勵",
+    "form_upkeep_permille": "形態維持費",
+    "weapon_skills": "武器技",
     "surface": "表面",
     "tag": "標籤",
     "tags": "標籤",
@@ -282,6 +287,7 @@ _FIELD_ZH: dict[str, str] = {
     "trigger": "觸發",
     "unit": "單位",
     "form": "形態",
+    "form_category": "形態類別",
     "when": "時機",
     "which": "範圍",
     "name": "名稱",

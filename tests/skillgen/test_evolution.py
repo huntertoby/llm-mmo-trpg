@@ -179,3 +179,15 @@ def test_bridge_can_graft_poison() -> None:
     _, bridge = _options(FIRE_BOLT, usage)
     assert bridge.keyword == "poisoned" and "poisoned" in _exclusive(bridge.skill)
     assert not bridge.fallback
+
+
+def test_bridge_can_graft_form_as_a_user_only() -> None:
+    """3J-3：形態的嫁接只有「利用」（在形態中加碼傷害）；進入形態是姿態，沒有橋接製造。"""
+    lib = library()
+    graft = lib.evolution.grafts["form"]
+    assert graft.makes is None and graft.uses is not None
+    assert graft.uses.condition is not None and graft.uses.condition.type == "in_form"
+    usage = _usage(target_keywords={"form": 3}, partner_makes={"form": 3})
+    _, bridge = _options(FIRE_BOLT, usage)
+    assert bridge.keyword == "form" and "form" in _exclusive(bridge.skill)
+    assert not bridge.fallback

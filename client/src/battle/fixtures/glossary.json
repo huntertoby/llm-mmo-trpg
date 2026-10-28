@@ -2090,6 +2090,14 @@
    "rules_zh": []
   },
   {
+   "id": "in_form",
+   "name_zh": "在形態中",
+   "description_zh": "施放者目前在形態中（用 enter_form 進入；離開、倒下或戰鬥結束後不成立）。form_category 可以限定只算物理形態或只算心智形態，省略＝任何形態。只看施放者，與對象無關。",
+   "tags": [],
+   "status_look": null,
+   "rules_zh": []
+  },
+  {
    "id": "wielding_weapon",
    "name_zh": "手持指定武器",
    "description_zh": "施放者的主手武器或副手是指定的那一種（weapons.yaml、offhands.yaml 的 ID；成對武器算它自己那一種，雙匕首不算匕首）。只看施放者；用在效果的 condition 時是「拿著那種武器才多一個加成」，沒拿時技能照常可用。",

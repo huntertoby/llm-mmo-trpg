@@ -52,6 +52,7 @@ from trpg.content.skills import (
     WIELDING_WEAPON,
     ZONE_EFFECT_TYPES,
     CompositionRule,
+    ConditionSpec,
     EffectSpec,
     Origin,
     PrimitiveDef,
@@ -331,6 +332,9 @@ _FIXED_PARAM_TYPES: dict[str, tuple[Any, dict[str, Any]]] = {
 }
 """與內容庫無關的參數型別（數值型別 ``int``、``dice`` 不開放，見 :func:`_is_numeric`）。"""
 
+_CONDITION_FIELDS = {**EffectSpec.model_fields, **ConditionSpec.model_fields}
+"""條件參數退回欄位型別時查的欄位（條件自己的欄位優先，如 ``form_category``）。"""
+
 COUNT_CHOICES: tuple[int | str, ...] = (1, "all")
 """``count`` 型參數（驅散的增益個數）：1 個或全部。"""
 
@@ -534,7 +538,7 @@ class _Builder:
             for name, spec in sorted(cond.params.items()):
                 if _is_numeric(spec):
                     continue
-                annotation, limits = _param_type(name, spec, self.refs, EffectSpec.model_fields)
+                annotation, limits = _param_type(name, spec, self.refs, _CONDITION_FIELDS)
                 fields[name] = _field(annotation, limits, required=spec.required, doc=spec.llm_hint)
             models.append(
                 create_model(

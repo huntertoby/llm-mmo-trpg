@@ -104,6 +104,7 @@ PARAM_TEXT: dict[str, str] = {
     "trait": "召喚物小特性",
     "unit": "召喚物",
     "form": "形態",
+    "form_category": "形態類別",
     "when": "結算時機",
     "which": "哪些技能",
     "win": "成功時的效果",
@@ -258,6 +259,17 @@ def stack_choices(library: ContentLibrary) -> tuple[Choice, ...]:
             info={"owner": k.owner, "group_zh": STACK_GROUP_ZH[k.owner]},
         )
         for _, k in stacks
+    )
+
+
+def _form_category_choices() -> tuple[Choice, ...]:
+    """形態類別（``in_form`` 條件的 ``form_category``，3J-3）：物理與心智。"""
+    return tuple(
+        Choice(value=value, name_zh=f"{name}形態", description_zh=text)
+        for value, name, text in (
+            ("physical", "物理", "維持費扣耐力的形態（熊、貓、狼人、惡魔、巨人）"),
+            ("mental", "心智", "維持費扣法力的形態（巨鵰、元素化身、暗影形態、樹人、龍）"),
+        )
     )
 
 
@@ -472,6 +484,8 @@ def condition_param_fields(
             out.append(FieldSpec(**base, type="choice", choices=choices))
         elif spec.type == "weapon":
             out.append(FieldSpec(**base, type="choice", choices=gear_choices(library, weapon_req)))
+        elif spec.type == "form_category":
+            out.append(FieldSpec(**base, type="choice", choices=_form_category_choices()))
         else:
             out.append(FieldSpec(**base, type="text"))
     return tuple(out)

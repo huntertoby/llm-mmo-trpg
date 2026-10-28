@@ -114,6 +114,7 @@ export const GEAR_KEYWORD: Readonly<Record<string, { c: string; tint?: boolean }
   concealed: { c: "#a0a0c8" },
   summon: { c: "#7dffb0" },
   poisoned: { c: "#7ad04a" },
+  form: { c: "#e0a35a" },
 };
 
 /** 稀有度外框色。 */

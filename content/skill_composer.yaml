@@ -53,7 +53,8 @@ condition:
   effect_level_permille: 500          # 有條件時掛在單一效果上
   target_conditions: [target_hp_below, height_advantage, target_on_surface, target_has_status, target_isolated]
   # 施放者條件（3C-6b）：技能層級的條件不需要影響範圍內有對象。flanked、from_behind、cast_tag_this_turn、
-  # self_concealed 需要特定站位或前一個動作，隨機組合器不產生（驗收的測試場面無法穩定成立）。
+  # self_concealed 需要特定站位或前一個動作，隨機組合器不產生（驗收的測試場面無法穩定成立）；in_form（3J-3）
+  # 需要先花 1 AP 進入形態，同樣不產生（形態關鍵字的組合器支援在 3J-4 評估）。
   self_conditions: [self_hp_below, moved_this_turn, adjacent_ally, first_round]
   # 低權重的額外目標型條件（3-24c；獨立的亂數串流，沒有被抽中的種子結果不變）：撞擊的真實利用者
   extra_conditions: [target_collided]
