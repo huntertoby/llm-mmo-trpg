@@ -7,9 +7,10 @@
 from __future__ import annotations
 
 import logging
-from collections.abc import Iterable, Mapping
+from collections.abc import Callable, Iterable, Mapping
 from dataclasses import dataclass, field
 from pathlib import Path
+from typing import Any
 
 from pydantic import Field, PrivateAttr, model_validator
 
@@ -72,6 +73,7 @@ from trpg.content.keyword_derive import (
 )
 from trpg.content.loader import default_content_dir, load_content_file
 from trpg.content.maps import MapDef, SpawnUnitsEvent, check_map
+from trpg.content.races import OriginTable, RaceTable, race_reference_problems
 from trpg.content.regions import RegionTable, sanitize_map_theme
 from trpg.content.roguelite import RunRules, roguelite_problems
 from trpg.content.rule_changes import RuleChangeDef, RuleChangeTable
@@ -503,6 +505,10 @@ class ContentLibrary:
     """技能縮放屬性的允許範圍（``skill_scaling.yaml``，Phase 3H-1；武器技看武器、法術技依主題）。"""
     regions: RegionTable | None = None
     """區域主題表（``regions.yaml``，Phase 3-37a；純顯示資料）。"""
+    races: RaceTable | None = None
+    """可玩種族（``races.yaml``，Phase 3R-1；已通過防最佳解驗證）。"""
+    origins: OriginTable | None = None
+    """出身（``origins.yaml``，Phase 3R-1；不影響戰鬥）。"""
     map_warnings: tuple[str, ...] = ()
     """地圖 ``region``／``look`` 的未知值警告（已丟棄、退回預設畫法；不是錯誤）。"""
     files: list[tuple[Path, ContentModel]] = field(default_factory=list)
@@ -738,6 +744,9 @@ def load_library(  # noqa: PLR0915
 
     regions = load("regions.yaml", RegionTable) if (root / "regions.yaml").exists() else None
     map_warnings = _apply_map_themes(maps, regions)
+    races, origins = _load_races(
+        root, load, regions, shapes=shapes.by_id(), weather=weather_map, terrain=terrain_map
+    )
 
     problems = roguelite_problems(roguelite, maps, units, core.tier_budget)
     if problems:
@@ -786,9 +795,44 @@ def load_library(  # noqa: PLR0915
         evolution=evolution,
         skill_scaling=skill_scaling,
         regions=regions,
+        races=races,
+        origins=origins,
         map_warnings=tuple(map_warnings),
         files=files,
     )
+
+
+def _load_races(
+    root: Path,
+    load: Callable[[str, type[Any]], Any],
+    regions: RegionTable | None,
+    *,
+    shapes: Mapping[str, object],
+    weather: Mapping[str, object],
+    terrain: Mapping[str, object],
+) -> tuple[RaceTable | None, OriginTable | None]:
+    """種族與出身（Phase 3R-1；兩個檔案可以都不存在，但要有就一起有）與跨檔案檢查。"""
+    has_races = (root / "races.yaml").exists()
+    has_origins = (root / "origins.yaml").exists()
+    if not has_races and not has_origins:
+        return None, None
+    if has_races != has_origins:
+        missing = "origins.yaml" if has_races else "races.yaml"
+        raise ContentError(root / missing, "races.yaml 與 origins.yaml 必須一起存在")
+    races: RaceTable = load("races.yaml", RaceTable)
+    origins: OriginTable = load("origins.yaml", OriginTable)
+    region_ids = frozenset(r.id for r in regions.regions) if regions is not None else frozenset()
+    problems = race_reference_problems(
+        races,
+        origins,
+        region_ids=region_ids,
+        shape_ids=frozenset(shapes),
+        weather_ids=frozenset(weather),
+        terrain_ids=frozenset(terrain),
+    )
+    if problems:
+        raise ContentError(root / "races.yaml", "；".join(problems))
+    return races, origins
 
 
 def _check_scaling(

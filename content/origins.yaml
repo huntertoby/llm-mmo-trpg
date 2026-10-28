@@ -1,0 +1,40 @@
+# 出身（Phase 3R-1，docs/design/07-角色成長.md 7.7、09 9.6.5 碎界五區）。出身**不影響戰鬥**：
+# 只決定預設外觀（疊在種族外觀上）、開場劇情鍵、NPC 態度與出身任務；不得出現任何戰鬥數值欄位（載入時擋）。
+# realm 是 regions.yaml 的區域 ID，五區各一個出身。opening_key 由敘事層對應開場劇情（LLM 只寫出身故事）。
+# npc_attitude：各界域 NPC 對玩家的態度（friendly 友善／neutral 中立／wary 戒備），預設中立；出身地一律友善。
+origins:
+  - id: origin_crystal_crown
+    realm: crystal_crown
+    name_zh: 晶冠城邦出身
+    description_zh: 在米白石材與藍紫晶光的城邦長大，習慣秩序、儀典與金飾。
+    default_look: {outfit_tint: "#d8d4c4", accent: "#d8b84a"}
+    opening_key: opening_crystal_crown
+    npc_attitude: {crystal_crown: friendly, cloud_ridge: neutral, arcane_hub: neutral, ashen_waste: wary, frost_tide: neutral}
+  - id: origin_cloud_ridge
+    realm: cloud_ridge
+    name_zh: 雲嶺出身
+    description_zh: 來自薄霧籠罩的青石山嶺，行事含蓄，衣著以墨灰與竹青為主，點一抹朱紅。
+    default_look: {outfit_tint: "#4a6a5a", accent: "#c0392b"}
+    opening_key: opening_cloud_ridge
+    npc_attitude: {crystal_crown: neutral, cloud_ridge: friendly, arcane_hub: neutral, ashen_waste: wary, frost_tide: neutral}
+  - id: origin_arcane_hub
+    realm: arcane_hub
+    name_zh: 魔導樞市出身
+    description_zh: 在黃銅、晶能與符文交織的工業城市中成長，擅長修補與改造。
+    default_look: {outfit_tint: "#8a6a3a", accent: "#2ab8b0"}
+    opening_key: opening_arcane_hub
+    npc_attitude: {crystal_crown: neutral, cloud_ridge: neutral, arcane_hub: friendly, ashen_waste: neutral, frost_tide: neutral}
+  - id: origin_ashen_waste
+    realm: ashen_waste
+    name_zh: 灰燼荒原出身
+    description_zh: 從焦土與熔岩的災變中活下來，習慣粗礪的生活與舊鐵武器。
+    default_look: {outfit_tint: "#3a3430", accent: "#e8742a"}
+    opening_key: opening_ashen_waste
+    npc_attitude: {crystal_crown: wary, cloud_ridge: wary, arcane_hub: neutral, ashen_waste: friendly, frost_tide: neutral}
+  - id: origin_frost_tide
+    realm: frost_tide
+    name_zh: 霜潮海境出身
+    description_zh: 生於浮冰與珊瑚之間的海境，熟悉潮汐、船與木托火槍。
+    default_look: {outfit_tint: "#7ab0c8", accent: "#e87a6a"}
+    opening_key: opening_frost_tide
+    npc_attitude: {crystal_crown: neutral, cloud_ridge: neutral, arcane_hub: neutral, ashen_waste: neutral, frost_tide: friendly}

@@ -1,0 +1,219 @@
+# 可玩種族（Phase 3R-1，docs/design/07-角色成長.md 7.7；玩法決定 #61）。數值為初值（照 7.7 表），未經模擬。
+# 每族 1 招種族技（主動、1 AP、每場限用 1～2 次、不佔技能欄、不加傷害）＋ 1 項環境被動＋預設外觀。
+# 載入時的防最佳解驗證（src/trpg/content/races.py）：資料中不得出現傷害、命中、暴擊、最大 HP、AP、屬性的欄位；
+# 種族技效果與被動規則都只能用封閉清單內的功能型類型（位移、環境互動、感知、防守一次）；違反即載入失敗並說明原因。
+# 引擎結算在 3R-2；這裡只描述資料。home_realm 是代表界域（regions.yaml），玩家實際出身另選（origins.yaml）。
+# 外觀 look 照 docs/art/sample/raceArt.js 的 RACES（駝峰改底線），龍裔用定案版（docs/art/種族與側面移植需求.md）。
+races:
+  - id: human
+    name_zh: 人類
+    home_realm: crystal_crown
+    skill:
+      id: race_adapt
+      name_zh: 應變
+      description_zh: 本回合多 2 點移動，且移動不觸發藉機攻擊。每場限用 1 次。
+      uses_per_battle: 1
+      shape: {type: self}
+      effects:
+        - {type: bonus_move, amount: 2}
+        - {type: ignore_opportunity_attack, duration: 1}
+    passive:
+      id: human_clear_eyes
+      name_zh: 明視
+      description_zh: 濃霧、夜晚造成的視線懲罰減半。
+      rule: sight_penalty_reduction
+      weathers: [fog, night]
+      permille: 500
+    look: {skin: "#f1c9a5", hair: short, hair_color: "#6a3d1e"}
+
+  - id: elf
+    name_zh: 精靈
+    home_realm: crystal_crown
+    skill:
+      id: race_woodhide
+      name_zh: 林隱
+      description_zh: 站在草叢或黑暗中時，立刻進入隱蔽。每場限用 2 次。
+      uses_per_battle: 2
+      shape: {type: self}
+      effects:
+        - {type: conceal_self, requires: [grass, darkness]}
+    passive:
+      id: elf_forest_sight
+      name_zh: 林間視野
+      description_zh: 在森林（草地）地圖上，視線 +1。
+      rule: sight_bonus_on_terrain
+      terrain: [grass]
+      amount: 1
+    look: {skin: "#f6e0cc", hair: long, hair_color: "#e8e0c8", ears: pointed, build: tall}
+
+  - id: fox
+    name_zh: 狐族
+    home_realm: cloud_ridge
+    skill:
+      id: race_foxfire_decoy
+      name_zh: 狐火誘餌
+      description_zh: 在 2 格內放一個誘餌，敵人的下一次單體攻擊會打向它。每場限用 1 次。
+      uses_per_battle: 1
+      shape: {type: ground_tile, range: 2}
+      effects:
+        - {type: decoy, range: 2}
+    passive:
+      id: fox_keen_senses
+      name_zh: 靈覺
+      description_zh: 看得見 2 格內的敵方陷阱與隱蔽單位。
+      rule: detect_hidden_nearby
+      radius: 2
+    look: {skin: "#f1d0b0", hair: short, hair_color: "#d8762a", ears: beast, tail: fox}
+
+  - id: dragonkin
+    name_zh: 龍裔
+    home_realm: cloud_ridge
+    skill:
+      id: race_dragon_breath
+      name_zh: 龍息震退
+      description_zh: 朝一個方向吐出氣浪，錐形 2 格內的目標被推開 1 格，不造成傷害。每場限用 1 次。
+      uses_per_battle: 1
+      shape: {type: cone, size: 2}
+      effects:
+        - {type: push, distance: 1, no_collision_damage: true}
+    passive:
+      id: dragonkin_fire_scales
+      name_zh: 耐火鱗
+      description_zh: 受到的火焰傷害 −20%。
+      rule: damage_taken_permille
+      element: fire
+      permille: -200
+    look:
+      skin: "#d8a878"
+      hair: short
+      hair_color: "#3a2418"
+      horns: dragon
+      horn_color: "#e8d8b8"
+      pattern: dragonscale
+      tail: dragon
+      scale_color: "#c8402a"
+      slit_eyes: true
+      ridge: true
+      spines: true
+
+  - id: dwarf
+    name_zh: 矮人
+    home_realm: arcane_hub
+    skill:
+      id: race_stonewall
+      name_zh: 穩若磐石
+      description_zh: 2 回合內不會被推、拉、擊倒。每場限用 1 次。
+      uses_per_battle: 1
+      shape: {type: self}
+      effects:
+        - {type: immovable, duration: 2}
+    passive:
+      id: dwarf_sure_footing
+      name_zh: 穩健步伐
+      description_zh: 走在冰面上不會滑倒。
+      rule: slip_immunity
+      surfaces: [ice]
+    look: {skin: "#e8b890", hair: short, hair_color: "#a8481e", beard: true, build: stout}
+
+  - id: cyborg
+    name_zh: 晶能義體人
+    home_realm: arcane_hub
+    skill:
+      id: race_overcharge
+      name_zh: 過充
+      description_zh: 立刻回復 10 點耐力或 10 點法力（擇一）。每場限用 1 次。
+      uses_per_battle: 1
+      shape: {type: self}
+      effects:
+        - {type: restore_choice, resources: [stamina, mana], amount: 10}
+    passive:
+      id: cyborg_insulated
+      name_zh: 絕緣
+      description_zh: 站在水上時不會被雷電導電。
+      rule: conduction_immunity
+      surfaces: [water]
+    look: {skin: "#e6c4a4", hair: short, hair_color: "#2a2a34", pattern: circuit}
+
+  - id: orc
+    name_zh: 獸人
+    home_realm: ashen_waste
+    skill:
+      id: race_brute_throw
+      name_zh: 蠻力投擲
+      description_zh: 舉起並丟出 2 格內一個可推動的物件，不造成傷害；油桶照樣會爆。每場限用 2 次。
+      uses_per_battle: 2
+      shape: {type: object_then_tile, range: 2}
+      effects:
+        - {type: hurl_object, range: 2, no_damage: true}
+    passive:
+      id: orc_heavy_stance
+      name_zh: 沉穩重心
+      description_zh: 在岩漿、深淵旁被推時，少被推 1 格。
+      rule: knockback_reduction_at_hazard
+      terrain: [lava, chasm]
+      amount: 1
+    look: {skin: "#86a060", hair: short, hair_color: "#1e1a14", tusks: true, build: tall}
+
+  - id: fiend
+    name_zh: 角魔
+    home_realm: ashen_waste
+    skill:
+      id: race_ember_mark
+      name_zh: 炎印
+      description_zh: 在自己腳下產生 1 格火焰表面。每場限用 2 次。
+      uses_per_battle: 2
+      shape: {type: self}
+      effects:
+        - {type: create_surface, surface: fire, duration: 3}
+    passive:
+      id: fiend_ember_skin
+      name_zh: 炎膚
+      description_zh: 走在火焰表面上不會燃燒。
+      rule: burn_immunity_on
+      surfaces: [fire]
+    look:
+      skin: "#b07a7a"
+      hair: long
+      hair_color: "#1e1418"
+      horns: curved
+      horn_color: "#3a2a2a"
+      tail: demon
+
+  - id: scalefolk
+    name_zh: 鱗族
+    home_realm: frost_tide
+    skill:
+      id: race_tide_breath
+      name_zh: 潮息
+      description_zh: 在 2 格內選一個 3×3 方陣，使其產生水表面。每場限用 1 次。
+      uses_per_battle: 1
+      shape: {type: square3, range: 2}
+      effects:
+        - {type: create_surface, surface: water, duration: 3}
+    passive:
+      id: scalefolk_sleek
+      name_zh: 流線身形
+      description_zh: 在水與冰面上移動不花額外點數、不滑倒。
+      rule: free_move_on
+      surfaces: [water, ice]
+    look: {skin: "#78b4aa", ears: fin, pattern: scales, eyes: "#103030"}
+
+  - id: seafolk
+    name_zh: 海民
+    home_realm: frost_tide
+    skill:
+      id: race_anchor_haul
+      name_zh: 拋錨
+      description_zh: 把 4 格內一個敵人拉近 2 格，不造成撞擊傷害。每場限用 1 次。
+      uses_per_battle: 1
+      shape: {type: single, range: 4}
+      effects:
+        - {type: pull, distance: 2, no_collision_damage: true}
+    passive:
+      id: seafolk_rain_legs
+      name_zh: 雨中海步
+      description_zh: 下雨天氣時，移動 +1。
+      rule: weather_move_bonus
+      weathers: [rain]
+      amount: 1
+    look: {skin: "#b07a52", hair: long, hair_color: "#2a8a9a", pattern: marks, mark_color: "#3aa8e0"}
