@@ -35,7 +35,7 @@ const run = (spec: DollSpec, f: Facing): string[] => {
   return calls;
 };
 const fills = (calls: string[]): string[] => calls.filter((c) => c.startsWith("fillStyle=#")).map((c) => c.slice(10));
-const draw = (it: GearItem, o: { mirror?: boolean; side?: boolean; far?: boolean } = {}): string[] => {
+const draw = (it: GearItem, o: { mirror?: boolean; side?: boolean; far?: boolean; back?: boolean } = {}): string[] => {
   const { ctx, calls } = recorder();
   drawInkWeapon(ctx, it, "main", 0, 0, { mirror: false, side: false, far: false, ...o }, itemColors);
   return calls;
@@ -83,10 +83,14 @@ describe("C 畫風的頭部裝備與手持物（C-1b）", () => {
 
   it("握點：武器在手的位置（translate），正面豎直，側面劍／匕首傾 0.75、斧 0.6，法杖與弓直立", () => {
     const rot = (calls: string[]): string | undefined => calls.find((c) => c.startsWith("rotate("));
-    for (const kind of ["sword", "dagger"]) {
-      expect(rot(draw({ kind }))).toBe("rotate(0.00)");
-      expect(rot(draw({ kind }, { side: true }))).toBe("rotate(0.75)");
-    }
+    expect(rot(draw({ kind: "sword" }))).toBe("rotate(0.00)");
+    expect(rot(draw({ kind: "dagger" }))).toBe("rotate(-0.50)"); // 正面匕首往外斜（C-1b 驗收）
+    expect(rot(draw({ kind: "dagger" }, { back: true }))).toBe("rotate(0.00)");
+    for (const kind of ["sword", "dagger"]) expect(rot(draw({ kind }, { side: true }))).toBe("rotate(0.75)");
+    // 正面、背面的斧頭左右翻轉（大刃朝外）；側面不翻
+    expect(draw({ kind: "axe" })).toContain("scale(-1.00,1.00)");
+    expect(draw({ kind: "axe" }, { mirror: true })).not.toContain("scale(-1.00,1.00)");
+    expect(draw({ kind: "axe" }, { side: true })).not.toContain("scale(-1.00,1.00)");
     expect(rot(draw({ kind: "axe" }, { side: true }))).toBe("rotate(0.60)");
     for (const kind of ["staff", "bow"]) {
       expect(rot(draw({ kind }, { side: true }))).toBeUndefined();

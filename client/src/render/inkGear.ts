@@ -36,7 +36,7 @@ export function isInkWeapon(it: GearItem): boolean {
   }
 }
 
-const darken = (c: string, t: number): string => {
+export const darken = (c: string, t: number): string => {
   if (!/^#[0-9a-f]{6}$/i.test(c)) return c;
   const n = parseInt(c.slice(1), 16);
   const m = (s: number): number => Math.round(((n >> s) & 255) * (1 - t));
@@ -44,13 +44,13 @@ const darken = (c: string, t: number): string => {
 };
 
 /** 金屬部分的顏色：指定顏色或材質色；沒有材質、木材或不認得 → 鋼色（元素仍混色）。 */
-function metalOf(it: GearItem, colors: ColorFn): string {
+export function metalOf(it: GearItem, colors: ColorFn): string {
   const bare = it.color === undefined && (it.material === undefined || it.material === "wood");
   return colors(bare ? { ...it, material: "steel" } : it)[0];
 }
 
 // ============================== 頭部裝備 ==============================
-function drawHelmet(ctx: Ctx, it: GearItem, view: GearView, colors: ColorFn): void {
+export function drawHelmet(ctx: Ctx, it: GearItem, view: GearView, colors: ColorFn): void {
   const m = metalOf(it, colors);
   if (view !== "side") {
     ink(ctx, "helm", [[-10, -42], [-9.6, -49], [-4.6, -53.6], [4.6, -53.6], [9.6, -49], [10, -42], [10.4, -40], [-10.4, -40]], m);
@@ -102,6 +102,8 @@ export interface HeldOpt {
   side: boolean;
   /** 側面遠側那把（畫在身體後面，顏色略暗）。 */
   far: boolean;
+  /** 背面（匕首不外斜）。 */
+  back?: boolean;
 }
 
 /** 側面傾斜（弧度）；正面、背面豎直。 */
@@ -163,8 +165,10 @@ export function drawInkWeapon(ctx: Ctx, it: GearItem, key: string, x: number, y:
   const wood = darken(MAT.wood, shade);
   ctx.save();
   ctx.translate(x, y);
-  if (o.mirror) ctx.scale(-1, 1);
-  const tilt = o.side ? SIDE_TILT : 0;
+  // 正面、背面的斧頭左右翻轉：大刃朝外、小刃朝內（C-1b 驗收）
+  if (o.mirror !== (it.kind === "axe" && !o.side)) ctx.scale(-1, 1);
+  // 正面匕首往外斜 0.5 rad，刀身落在身體外（C-1b 驗收）
+  const tilt = o.side ? SIDE_TILT : it.kind === "dagger" && o.back !== true ? -0.5 : 0;
   switch (it.kind) {
     case "sword":
     case "dagger":
