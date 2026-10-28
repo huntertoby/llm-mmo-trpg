@@ -16,7 +16,7 @@ from dataclasses import dataclass, replace
 from typing import Literal
 
 from trpg.content.equipment import loadout_held, loadout_problems
-from trpg.content.skills import SkillDef, skill_slot_problems, weapon_problem
+from trpg.content.skills import CHARGING, SkillDef, skill_slot_problems, weapon_problem
 from trpg.engine import modifiers
 from trpg.engine.actions import (
     ACTION_ADAPTER,
@@ -58,6 +58,7 @@ from trpg.engine.basics import (
 )
 from trpg.engine.context import Ctx, GambleBranch, PreviewMode
 from trpg.engine.copying import copy_selections, has_copy_effect
+from trpg.engine.delayed import start_directed_charge
 from trpg.engine.effects import execute
 from trpg.engine.effects.models import (
     ApplyStatusEffect,
@@ -97,6 +98,7 @@ from trpg.engine.results import ResolveResult
 from trpg.engine.rule_changes import pass_through
 from trpg.engine.rules.combat import attack_problem, reach_problem
 from trpg.engine.rules.facing import face_toward, opening_facing
+from trpg.engine.rules.forms import charge_direction, natural_charge
 from trpg.engine.rules.geometry import XY, manhattan
 from trpg.engine.rules.movement import (
     available_move_budget,
@@ -125,6 +127,7 @@ from trpg.engine.skills.conditions import Subject
 from trpg.engine.skills.followups import second_problem
 from trpg.engine.skills.forms import has_skill_selection, skill_selections
 from trpg.engine.skills.interpreter import use_skill
+from trpg.engine.skills.shapes import DIRECTION_ORDER, DIRECTIONS
 from trpg.engine.skills.targeting import (
     SkillArea,
     skill_problem,
@@ -787,6 +790,11 @@ def _do_attack(ctx: Ctx, unit: UnitState, action: Action) -> None:
     assert isinstance(action, Attack)
     cost = action_ap_cost(ctx.state, unit, modifiers.ATTACK)
     _require_ap(unit, cost)
+    if natural_charge(ctx.rules, unit) is not None:  # 蓄力武器（龍的吐息；3J-2）：普攻＝開始蓄力
+        _do_charge_attack(ctx, unit, action, cost)
+        return
+    if action.direction is not None:
+        raise IllegalActionError("只有蓄力武器（例如龍的吐息）的普攻可以指定方向")
     if action.target_object_id is not None:
         obj = _live_object(ctx.state, action.target_object_id)
         problem = object_attack_problem(ctx.state, unit, obj)
@@ -822,6 +830,27 @@ def _do_attack(ctx: Ctx, unit: UnitState, action: Action) -> None:
     target = _attack_target(ctx.state, unit, action.target_id)
     unit.ap -= cost
     perform_unit_attack(ctx, unit, target, primary=True)
+
+
+def _do_charge_attack(ctx: Ctx, unit: UnitState, action: Attack, cost: int) -> None:
+    """蓄力武器的普攻（Phase 3J-2）：朝 ``direction``（或目標單位、物件所在的方向）開始蓄力，下一個
+    自己的回合開始時釋放（:func:`trpg.engine.delayed.start_directed_charge`）。"""
+    if action.direction is not None:
+        direction: str = action.direction
+    elif action.target_object_id is not None:
+        obj = _live_object(ctx.state, action.target_object_id)
+        problem = object_attack_problem(ctx.state, unit, obj)
+        if problem is not None:
+            raise IllegalActionError(problem)
+        direction = charge_direction(unit, obj.xy)
+    else:
+        assert action.target_id is not None
+        target = _attack_target(ctx.state, unit, action.target_id)
+        direction = charge_direction(unit, target.xy)
+    unit.ap -= cost
+    dx, dy = DIRECTIONS[direction]
+    face_toward(unit, (unit.xy[0] + dx, unit.xy[1] + dy))
+    start_directed_charge(ctx, unit, direction)
 
 
 def _do_run(ctx: Ctx, unit: UnitState, action: Action) -> None:
@@ -1208,11 +1237,27 @@ def legal_actions_with_areas(
     return _legal_actions(state, unit, areas, expand_copy=expand_copy), areas
 
 
+def _charge_attacks(state: BattleState, unit: UnitState) -> list[Action]:
+    """蓄力武器（龍的吐息；3J-2）的普攻：四個方向。朝某個目標的快捷動作（``Attack(target_id)``）
+    沿用一般的攻擊清單。"""
+    if natural_charge(state.ruleset, unit) is None:
+        return []
+    return [Attack(unit_id=unit.id, direction=d) for d in DIRECTION_ORDER]  # type: ignore[arg-type]
+
+
+def _already_charging(state: BattleState, unit: UnitState) -> bool:
+    """蓄力武器已經在蓄力：再普攻只會取代舊的，不列入合法動作。"""
+    return natural_charge(state.ruleset, unit) is not None and unit.has_status(CHARGING)
+
+
 def _legal_actions(
     state: BattleState, unit: UnitState, areas: dict[int, SkillArea], *, expand_copy: bool = False
 ) -> list[Action]:
     actions: list[Action] = []
-    if unit.ap >= action_ap_cost(state, unit, modifiers.ATTACK):
+    if unit.ap >= action_ap_cost(state, unit, modifiers.ATTACK) and not _already_charging(
+        state, unit
+    ):
+        actions.extend(_charge_attacks(state, unit))
         actions.extend(
             Attack(unit_id=unit.id, target_id=target.id)
             for target in state.living_units()

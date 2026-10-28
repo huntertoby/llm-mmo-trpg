@@ -20,8 +20,10 @@
 from __future__ import annotations
 
 from dataclasses import replace
+from typing import Literal
 
 from trpg.content.forms import CHOSEN, FormEntry
+from trpg.content.skills import CHARGING
 from trpg.engine.context import Ctx
 from trpg.engine.effects.models import (
     ApplyStatusEffect,
@@ -32,6 +34,7 @@ from trpg.engine.effects.models import (
 )
 from trpg.engine.events import (
     EventBase,
+    FollowupCancelled,
     FormEntered,
     FormLeaveReason,
     FormLeft,
@@ -190,6 +193,7 @@ def leave_form(ctx: Ctx, unit: UnitState, reason: FormLeaveReason) -> list[Event
     if current is None:
         return []
     cooldown = ctx.rules.forms.cooldown
+    _cancel_breath(ctx, unit, current, "downed" if reason == "downed" else "form_left")
     unit.form = None
     unit.weapon = current.hand_weapon
     unit.gear = current.hand_gear
@@ -209,6 +213,24 @@ def leave_form(ctx: Ctx, unit: UnitState, reason: FormLeaveReason) -> list[Event
             hp=unit.hp,
         )
     ]
+
+
+def _cancel_breath(
+    ctx: Ctx, unit: UnitState, current: FormState, reason: Literal["downed", "form_left"]
+) -> None:
+    """離開形態時取消還在蓄力的吐息（定向蓄力，3J-2）；戰鬥結束時整場都結束了，不另外取消。"""
+    status = unit.get_status(CHARGING)
+    if status is None or status.direction is None:
+        return
+    unit.statuses = [s for s in unit.statuses if s.status_id != CHARGING]
+    weapon = ctx.rules.form_def(current.form_id).natural_weapon
+    ctx.emit(
+        FollowupCancelled,
+        unit_id=unit.id,
+        skill_id=status.skill_id or f"form_{current.form_id}",
+        name_zh=weapon.name_zh,
+        reason=reason,
+    )
 
 
 def leave_all_forms(ctx: Ctx, reason: FormLeaveReason) -> None:

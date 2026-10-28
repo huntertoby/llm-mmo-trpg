@@ -124,3 +124,13 @@ describe("actionLabel for shoving aside", () => {
     expect(actionLabel(aside("right"), view, {})).toBe("撥開：油桶 (2, 2)（往右）");
   });
 });
+
+describe("directed attack label (charged breath)", () => {
+  it("labels a directional basic attack as charging toward that direction", () => {
+    const action: Action = { type: "attack", unit_id: H, direction: "east" };
+    expect(actionLabel(action, smallView(), SKILLS)).toBe("攻擊：向東蓄力");
+    const c = classifyActions([action], smallView(), SKILLS);
+    expect(c.attacks.size).toBe(0);
+    expect(c.others.map((o) => o.label)).toEqual(["攻擊：向東蓄力"]);
+  });
+});

@@ -262,7 +262,7 @@ def run_delayed(
     """結算延遲段（Phase 3F-4b，:mod:`trpg.engine.delayed`）：``skill_followup``
     （``when: delayed``，原點是施放者當下的位置）之後是第二段的事件；不付代價（施放時已付）。
     被動觸發等第二段結算完才處理。"""
-    follow = skill.followup_skill()
+    follow = skill.followup_skill() if skill.followup is not None else skill  # 定向蓄力：吐息本身
     assert follow is not None
     with holding(ctx):
         ctx.emit(

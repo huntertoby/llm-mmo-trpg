@@ -887,12 +887,19 @@ _CANCEL_TEXT = {
     "controlled": "被控制（暈眩或冰凍）",
     "expired": "到下回合開始都沒被攻擊",
     "replaced": "改為蓄力另一招",
+    "form_left": "形態解除了",
 }
 
 
 @_handles(FollowupCharged)
 def _followup_charged(e: FollowupCharged, v: _View) -> str:
     release = _RELEASE_TEXT.get(e.release, e.release)
+    if e.direction is not None:  # 定向蓄力（3J-2）
+        way = DIRECTION_TEXT[e.direction]
+        return (
+            f"  ◷ {v.name[e.unit_id]} 朝{way}開始蓄力「{e.name_zh}」：{release}"
+            f"（錐形，目前預計影響 {len(e.tiles)} 格）"
+        )
     return (
         f"  ◷ {v.name[e.unit_id]} 開始蓄力「{e.name_zh}」：{release}"
         f"（以自己為中心，目前預計影響 {len(e.tiles)} 格）"

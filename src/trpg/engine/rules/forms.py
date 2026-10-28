@@ -7,14 +7,18 @@
 from __future__ import annotations
 
 from trpg.content.battle import WeaponDef
-from trpg.content.forms import CHOSEN, FormDef
+from trpg.content.form_breath import breath_skill
+from trpg.content.forms import CHOSEN, FormDef, NaturalCharge
 from trpg.content.library import Ruleset
 from trpg.content.skills import SkillDef
+from trpg.engine.actions import Direction
 from trpg.engine.state import BattleState, UnitState
 from trpg.shared.types import Element
 
 __all__ = [
     "active_form",
+    "breath_of",
+    "charge_direction",
     "form_backstab_crit",
     "form_collision_permille",
     "form_defense_permille",
@@ -27,6 +31,7 @@ __all__ = [
     "held_weapon",
     "is_spell_for_silence",
     "natural_bleed",
+    "natural_charge",
     "natural_damage_permille",
 ]
 
@@ -36,6 +41,29 @@ PERMILLE = 1000
 def active_form(rules: Ruleset, unit: UnitState) -> FormDef | None:
     """``unit`` 目前的形態定義；不在形態中為 ``None``。"""
     return None if unit.form is None else rules.form_def(unit.form.form_id)
+
+
+def natural_charge(rules: Ruleset, unit: UnitState) -> NaturalCharge | None:
+    """形態的天生武器若是蓄力武器（龍的吐息；3J-2）回傳它的定向蓄力資料，否則 ``None``。"""
+    form = active_form(rules, unit)
+    return None if form is None else form.natural_weapon.charge
+
+
+def breath_of(rules: Ruleset, unit: UnitState) -> SkillDef | None:
+    """``unit`` 目前形態的蓄力吐息技能（由形態資料組出，不登錄；見
+    :mod:`trpg.content.form_breath`）；不在形態中或天生武器不是蓄力武器時為 ``None``。"""
+    form = active_form(rules, unit)
+    if form is None or unit.form is None:
+        return None
+    return breath_skill(form, rules.core, unit.form.element)
+
+
+def charge_direction(unit: UnitState, xy: tuple[int, int]) -> Direction:
+    """朝 ``xy`` 的方向（四方向）：取較大的軸向，相等時取上下（北／南）；同格時為北。"""
+    dx, dy = xy[0] - unit.xy[0], xy[1] - unit.xy[1]
+    if abs(dx) > abs(dy):
+        return "east" if dx > 0 else "west"
+    return "south" if dy > 0 else "north"
 
 
 def held_weapon(unit: UnitState) -> WeaponDef:

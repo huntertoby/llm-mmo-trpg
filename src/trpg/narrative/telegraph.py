@@ -147,6 +147,10 @@ def charge_text(state: BattleState, charge: TelegraphCharge) -> str:
         if charge.release == "next_turn"
         else "下回合開始前被敵人攻擊就釋放（沒被攻擊就失效）"
     )
+    if charge.direction is not None:  # 定向蓄力（3J-2）
+        way = DIRECTION_TEXT[charge.direction]
+        count = len(charge.tiles)
+        return f"{name} 正在朝{way}蓄力「{charge.name_zh}」：{when}，錐形影響 {count} 格"
     return f"{name} 正在蓄力「{charge.name_zh}」：{when}，以自己為中心影響 {len(charge.tiles)} 格"
 
 

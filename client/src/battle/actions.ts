@@ -59,6 +59,7 @@ export function actionLabel(
       return target === "" ? `技能：${name}` : `技能：${name} → ${target}`;
     }
     case "attack":
+      if (action.direction != null) return `攻擊：向${DIRECTIONS[action.direction] ?? action.direction}蓄力`;
       return action.target_id != null
         ? `攻擊：${names.label(action.target_id)}`
         : `攻擊：${objectLabel(view, action.target_object_id ?? "")}`;

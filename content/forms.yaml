@@ -7,7 +7,8 @@
 #
 # 10 種：3J-1a 放熊、貓、巨鵰、元素化身、狼人；3J-1b 補天生武器特性（traits：strikes 打幾下、knockback 推擊、
 # reach 觸及、bleed 流血回合、backstab_crit 背刺暴擊範圍）與惡魔、巨人、暗影形態、樹人、龍。
-# 龍的天生武器是蓄力吐息（3J-2 的定向蓄力）；3J-1b 先用一般遠程普攻代替（暫），3J-2 換掉。
+# 龍的天生武器是蓄力吐息（3J-2 的定向蓄力，charge）：普攻＝選方向開始蓄力，下一個自己的回合開始時以錐形釋放
+# （1d8＋智力 × 0.3 的所選元素傷害）；range 只用來列出「朝某個敵人」的快捷動作。
 upkeep_stamina: 8                # #67（2026-10-29，使用者「A」）：5 → 8，耐力每回合回 5，淨扣 3
 upkeep_mana: 3
 cooldown: 2
@@ -82,6 +83,6 @@ forms:
     category: mental
     look: form_dragon
     natural_weapon:
-      {name_zh: 吐息, dice: 1d8, attack: ranged, range: 3, attrs: [int], element_choices: [fire, ice, lightning]}
+      {name_zh: 吐息, dice: 1d8, attack: ranged, range: 3, attrs: [int], element_choices: [fire, ice, lightning], charge: {size: 3}}
     effects: {max_hp_permille: 100, move: -1}
     entry: {shield_max_hp_permille: 50}

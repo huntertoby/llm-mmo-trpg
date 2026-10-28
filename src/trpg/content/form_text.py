@@ -60,6 +60,8 @@ def natural_weapon_text(
     附「目前 +N」（和普攻同一個算法：武器縮放值 × ``basic_attack_attr_multiplier_permille``）。"""
     weapon = form.natural_weapon
     reach = "近戰" if weapon.attack == "melee" else f"遠程 {weapon.range}"
+    if weapon.charge is not None:
+        reach = f"蓄力（錐形，大小 {weapon.charge.size}）"
     if weapon.attack == "melee" and weapon.range > 1:
         reach += f"（射程 {weapon.range}）"
     permille = core.basic_attack_attr_multiplier_permille
@@ -84,9 +86,13 @@ def natural_weapon_text(
 
 
 def natural_trait_lines(form: FormDef) -> list[str]:
-    """天生武器的特性（3J-1b；資料順序固定）：打幾下、推擊、觸及、流血、背刺暴擊。"""
+    """天生武器的特性（資料順序固定）：蓄力（3J-2）、打幾下、推擊、觸及、流血、背刺暴擊。"""
     t = form.natural_weapon.traits
     lines: list[str] = []
+    if form.natural_weapon.charge is not None:
+        lines.append(
+            "普攻＝選方向開始蓄力，下回合開始時朝該方向釋放（蓄力中倒下、暈眩、冰凍或離開形態就取消）"
+        )
     if t.strikes > 1:
         lines.append(f"普攻打 {t.strikes} 下（各自擲命中）")
     if t.knockback:

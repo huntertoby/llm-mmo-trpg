@@ -1353,7 +1353,10 @@ def damage_parameters(
     if skill.category == "spell":
         assert spec.element is not None
         element = spec.element
-        dice, flat, scaled = spec.dice, 0, attr * core.spell_attr_multiplier_permille
+        permille = spec.attr_permille
+        if permille is None:
+            permille = core.spell_attr_multiplier_permille
+        dice, flat, scaled = spec.dice, 0, attr * permille
         multiplier = _PERMILLE
     else:
         weapon = held_weapon(caster)
