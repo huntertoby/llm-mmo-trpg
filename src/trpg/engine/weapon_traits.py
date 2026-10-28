@@ -38,10 +38,11 @@ from trpg.engine.effects.models import (
     PushEffect,
 )
 from trpg.engine.gear_enhance import gear_on_hit_statuses
-from trpg.engine.ids import ARMOR_BROKEN, ENTANGLED, PRONE, REVEALED
+from trpg.engine.ids import ARMOR_BROKEN, BLEED, ENTANGLED, PRONE, REVEALED
 from trpg.engine.infusion import active_infusions, template_of
 from trpg.engine.maneuvers import contest
 from trpg.engine.rules.combat import attack_reach, is_concealed
+from trpg.engine.rules.forms import natural_bleed
 from trpg.engine.rules.geometry import XY, axis_direction, bresenham, has_line_of_sight, manhattan
 from trpg.engine.state import BattleState, UnitState
 from trpg.shared.types import Attribute, Surface
@@ -244,6 +245,13 @@ def apply_hit_traits(ctx: Ctx, attacker: UnitState, target: UnitState) -> None:
                 status_id=ARMOR_BROKEN,
                 duration=weapon.armor_break.rounds,
                 amount=-weapon.armor_break.defense_permille,
+            )
+        )
+    bleed = natural_bleed(ctx.rules, attacker)
+    if bleed > 0 and target.alive:  # 形態的天生武器：命中流血（狼人，3J-1b）
+        batch.append(
+            ApplyStatusEffect(
+                source_id=attacker.id, target_id=target.id, status_id=BLEED, duration=bleed
             )
         )
     if weapon.entangle is not None and target.alive:

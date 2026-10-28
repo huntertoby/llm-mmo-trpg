@@ -738,7 +738,10 @@ def _buff_gains(state: BattleState, actor: UnitState, p: Preview, profile: AiPro
             if target is not None and target.team is actor.team:
                 gains += w.support * profile.status_values.get(e.status_id, 3)
         elif isinstance(e, FormEntered) and e.unit_id == actor.id:  # 進入形態（3J-1a）
-            gains += w.support * profile.form.enter_value
+            rotating = state.units[actor.id].form is not None  # 形態輪替（3J-1b）
+            gains += w.support * (
+                profile.form.rotate_value if rotating else profile.form.enter_value
+            )
     return gains
 
 
@@ -1554,8 +1557,11 @@ def skill_estimate(  # noqa: PLR0917
     估計只決定「誰值得完整預覽」；值不值得施放由預覽的收益、位置價值的差與機會成本決定。
     """
     skill = effective_skill(state, action)
-    if skill.kind == "stance" and (unit.form is not None or stance_status_ids(state.ruleset, unit)):
-        return None  # 已經有姿態或形態：AI 不主動換（也不主動取消，Phase 2E-2、3J-1a）
+    in_form = unit.form is not None and skill.form_id is None
+    if skill.kind == "stance" and (in_form or stance_status_ids(state.ruleset, unit)):
+        return (
+            None  # 已經有姿態：AI 不主動換（也不主動取消，Phase 2E-2、3J-1a）；形態可輪替（3J-1b）
+        )
     if skill.followup is not None:
         return composite_estimate(state, unit, skill, area)
     placed = _placement_estimate(state, unit, skill, area, scene, trap=trap)

@@ -14,6 +14,7 @@ __all__ = [
     "form_effect_lines",
     "form_entry_lines",
     "form_sentence",
+    "natural_trait_lines",
     "natural_weapon_text",
     "upkeep_text",
 ]
@@ -78,7 +79,25 @@ def natural_weapon_text(
         )
     extra = f"，{element}傷害" if element else ""
     bonus = f"，天生武器傷害 {_percent(weapon.damage_permille)}" if weapon.damage_permille else ""
-    return f"{weapon.name_zh} {weapon.dice} {reach}（{scale}）{extra}{bonus}"
+    traits = "".join(f"，{line}" for line in natural_trait_lines(form))
+    return f"{weapon.name_zh} {weapon.dice} {reach}（{scale}）{extra}{bonus}{traits}"
+
+
+def natural_trait_lines(form: FormDef) -> list[str]:
+    """天生武器的特性（3J-1b；資料順序固定）：打幾下、推擊、觸及、流血、背刺暴擊。"""
+    t = form.natural_weapon.traits
+    lines: list[str] = []
+    if t.strikes > 1:
+        lines.append(f"普攻打 {t.strikes} 下（各自擲命中）")
+    if t.knockback:
+        lines.append(f"命中推擊 {t.knockback} 格")
+    if t.reach > 1:
+        lines.append(f"觸及 {t.reach}")
+    if t.bleed:
+        lines.append(f"命中流血 {t.bleed} 回合")
+    if t.backstab_crit:
+        lines.append(f"背刺暴擊範圍再 +{t.backstab_crit}")
+    return lines
 
 
 def form_effect_lines(form: FormDef, *, chosen: Element | None = None) -> list[str]:
@@ -122,6 +141,8 @@ def form_entry_lines(entry: FormEntry, *, chosen: Element | None = None) -> list
         b = entry.burst
         element = _element_text(b.element, chosen)
         lines.append(f"{b.radius} 格內的敵人受 {b.dice} {element}傷害")
+    if entry.collision_permille:
+        lines.append(f"本回合你造成的撞擊傷害 {_percent(entry.collision_permille)}")
     if entry.heal_adjacent is not None:
         h = entry.heal_adjacent
         lines.append(

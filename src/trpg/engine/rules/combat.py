@@ -16,7 +16,7 @@ from trpg.engine.gear import gear_defense_permille
 from trpg.engine.ids import CONCEALED, DEFENDING, PRONE
 from trpg.engine.modifiers import ATTACK, range_delta
 from trpg.engine.rules.facing import is_behind
-from trpg.engine.rules.forms import form_defense_permille
+from trpg.engine.rules.forms import form_backstab_crit, form_defense_permille
 from trpg.engine.rules.geometry import XY, has_line_of_sight, manhattan
 from trpg.engine.rules.perks import attribute_perk
 from trpg.engine.rules.statuses import (
@@ -98,6 +98,7 @@ class AttackProfile:
     - ``weapon_attack``：武器自己的攻擊（普攻；Phase 3-24c 起也包含火器的武器技）——站定與距離修正
       （Phase 3-24a2）只套用在這類攻擊。
     - ``ignore_cover``：無視半掩護，但不產生穿透射線（火器武器技的 ``ignore_cover``，3-24c）。
+    - ``backstab_crit``：背刺時暴擊範圍再多擴大這麼多（形態天生武器的特性，3J-1b；只有普攻有）。
     """
 
     attack_value: int
@@ -108,6 +109,7 @@ class AttackProfile:
     defense_cut_permille: int = 0
     weapon_attack: bool = False
     ignore_cover: bool = False
+    backstab_crit: int = 0
 
 
 def weapon_profile(state: BattleState, attacker: UnitState) -> AttackProfile:
@@ -121,6 +123,7 @@ def weapon_profile(state: BattleState, attacker: UnitState) -> AttackProfile:
         pierce=weapon.ignore_cover,
         defense_cut_permille=weapon.armor_pierce_permille,
         weapon_attack=True,
+        backstab_crit=form_backstab_crit(state.ruleset, attacker),
     )
 
 
@@ -418,7 +421,9 @@ def positional_bonus(
     behind = profile.melee and is_behind(attacker.xy, target)
     backstab = core.backstab_hit_bonus if behind else 0
     ambush = core.ambush_hit_bonus if attacker.has_status(CONCEALED) else 0
-    crit_range = profile.crit_range - (core.backstab_crit_range_bonus if behind else 0)
+    crit_range = profile.crit_range - (
+        core.backstab_crit_range_bonus + profile.backstab_crit if behind else 0
+    )
     return PositionalBonus(backstab, ambush, max(crit_range, 2))
 
 

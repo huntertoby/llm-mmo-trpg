@@ -1,0 +1,23 @@
+# 測試用的「化身為龍」（Phase 3J-1b，06 6.30；只為測試與靶場試玩，正式技能在 3J-4）。
+id: skill_form_dragon
+schema_version: 1
+name_zh: 化身為龍
+tier: 1
+rank: 1
+rarity: rare
+kind: stance
+skeleton: stance
+category: spell
+weapon_req: any
+ap_cost: null
+scaling_attr: int
+shape: {type: self}
+effects:
+  - {type: enter_form, form: dragon, affects: self}
+condition: null
+cost: {}
+tags: [stance]
+narrative:
+  concept: 喚醒血脈裡的龍，讓吐息撕開戰場
+  cast_flavor: 你的脊背隆起鱗甲，喉嚨深處亮起熾光
+provenance: {origin: builtin, owner_id: null, created_by: null, parents: [], bound: true, tradeable: false}

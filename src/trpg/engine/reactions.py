@@ -580,6 +580,9 @@ def perform_unit_attack(
             if not (attacker.alive and target.alive):
                 break
             _attack_once(ctx, attacker, target, primary=False, reaction=reaction)
+        attacker.next_attack_hit = attacker.next_attack_crit = (
+            0  # 形態的進入獎勵：整次攻擊用完才失效
+        )
         turns = [(victim, attacker_xy)] if rolled and attacker.weapon.is_melee else []
         after_attack(ctx, attacker, target_xy, ambushed=ambushed, turns=turns)
         if reveal:
@@ -647,7 +650,6 @@ def _attack_once(
         bonus += ctx.core.aim_hit_bonus
         attacker.aimed = False
     roll = roll_attack(state, ctx.rng, attacker, target, forced, bonus=bonus)
-    attacker.next_attack_hit = attacker.next_attack_crit = 0  # 形態的進入獎勵用掉（3J-1a）
     rolled_event = ctx.emit(
         AttackRolled,
         attacker_id=attacker.id,

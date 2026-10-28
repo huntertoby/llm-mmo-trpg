@@ -240,7 +240,8 @@ class FormState:
     - ``hand_weapon``：手上的武器（武器技、裝填等仍看它；離開時換回）；
     - ``hand_gear``：進入前的裝備狀態（形態中主手的普攻詞條與武器特性強化詞條不生效，離開時換回）；
     - ``max_hp_delta``：進入時最大 HP 的加減量（離開時減回）；
-    - ``skill_id``：進入用的技能（紀錄與顯示用）。
+    - ``skill_id``：進入用的技能（紀錄與顯示用）；
+    - ``entered_round``：進入的輪數（進入獎勵的「本回合」效果用，例：巨人的撞擊傷害 +50%）。
     """
 
     form_id: str
@@ -249,6 +250,7 @@ class FormState:
     element: Element | None = None
     max_hp_delta: int = 0
     skill_id: str | None = None
+    entered_round: int = 0
 
 
 @dataclass(slots=True, frozen=True)

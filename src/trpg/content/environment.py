@@ -792,9 +792,12 @@ class FormAiRules(ContentModel):
     - ``enter_value``：進入形態的價值（等值傷害點數）：收益 ＝ 行為模式的 ``support`` 權重 × 這個值
       （進入獎勵的護盾、治療、傷害另外照一般事件計分）。AI 沒在姿態或形態中、AP 夠時才考慮進入；
       不主動取消（維持費不夠時由規則自動解除）。
+    - ``rotate_value``（3J-1b）：已經在形態中、換成另一個形態（離開的形態冷卻、新形態的進入獎勵
+      另外照一般事件計分）的價值，比 ``enter_value`` 低，所以只有進入獎勵夠好時才輪替。
     """
 
     enter_value: int = Field(default=8, ge=0)
+    rotate_value: int = Field(default=4, ge=0)
 
 
 class SummonAiRules(ContentModel):

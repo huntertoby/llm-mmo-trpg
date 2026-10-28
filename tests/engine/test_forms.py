@@ -461,8 +461,9 @@ def test_the_ai_enters_a_form_when_it_has_nothing_better_and_never_cancels() -> 
     entered = enter(state, BEAR)
     ranked = ai.rank(give_turn(entered, U1))
     assert not any(isinstance(s.action, EndStance) for s in ranked)
+    # 一般姿態不換；形態可輪替到別的形態（3J-1b），但不重複進入同一個
     assert not any(
-        isinstance(s.action, UseSkill) and s.action.skill_id in (*FORM_SKILLS, FURY) for s in ranked
+        isinstance(s.action, UseSkill) and s.action.skill_id in (BEAR, FURY) for s in ranked
     )
 
 

@@ -5,8 +5,9 @@
 # upkeep_stamina／upkeep_mana：每回合開始的維持費（物理形態扣耐力、心智形態扣法力），不夠付就自動解除。
 # cooldown：離開一個形態（自己取消、被迫解除、切換）後「該形態」的冷卻回合；別的形態不受影響。
 #
-# 本段（3J-1a）先放 5 種：熊、貓、巨鵰、元素化身、狼人。天生武器特性（貓背刺暴擊、狼人流血……）、
-# 其餘 5 種（惡魔、巨人、暗影形態、樹人、龍）在 3J-1b 補。
+# 10 種：3J-1a 放熊、貓、巨鵰、元素化身、狼人；3J-1b 補天生武器特性（traits：strikes 打幾下、knockback 推擊、
+# reach 觸及、bleed 流血回合、backstab_crit 背刺暴擊範圍）與惡魔、巨人、暗影形態、樹人、龍。
+# 龍的天生武器是蓄力吐息（3J-2 的定向蓄力）；3J-1b 先用一般遠程普攻代替（暫），3J-2 換掉。
 upkeep_stamina: 5
 upkeep_mana: 3
 cooldown: 2
@@ -22,7 +23,7 @@ forms:
     name_zh: 貓
     category: physical
     look: form_cat
-    natural_weapon: {name_zh: 貓爪, dice: 1d6, attack: melee, attrs: [dex]}
+    natural_weapon: {name_zh: 貓爪, dice: 1d6, attack: melee, attrs: [dex], traits: {backstab_crit: 1}}
     effects: {move: 1}
     entry: {next_attack_crit: 2}
   - id: roc
@@ -44,6 +45,43 @@ forms:
     name_zh: 狼人
     category: physical
     look: form_werewolf
-    natural_weapon: {name_zh: 狼人爪, dice: 1d8, attack: melee, attrs: [str, dex]}
+    natural_weapon: {name_zh: 狼人爪, dice: 1d8, attack: melee, attrs: [str, dex], traits: {bleed: 1}}
     effects: {move: 1, defense_permille: -100}
     entry: {heal_max_hp_permille: 100}
+  - id: demon
+    name_zh: 惡魔
+    category: physical
+    look: form_demon
+    natural_weapon:
+      {name_zh: 雙刃, dice: 1d6, attack: melee, attrs: [dex], element: shadow, traits: {strikes: 2}}
+    effects: {move: 1}
+    entry: {move: 2}
+  - id: giant
+    name_zh: 巨人
+    category: physical
+    look: form_giant
+    natural_weapon: {name_zh: 巨拳, dice: 1d10, attack: melee, attrs: [str], traits: {knockback: 1}}
+    effects: {move: -1}
+    entry: {collision_permille: 500}
+  - id: shadow
+    name_zh: 暗影形態
+    category: mental
+    look: form_shadow
+    natural_weapon: {name_zh: 暗影觸, dice: 1d6, attack: ranged, range: 3, attrs: [wil]}
+    effects: {damage_taken: [{element: physical, permille: 800}, {element: holy, permille: 1500}]}
+    entry: {conceal: 1}
+  - id: treant
+    name_zh: 樹人
+    category: mental
+    look: form_treant
+    natural_weapon: {name_zh: 枝條, dice: 1d6, attack: melee, range: 2, attrs: [wis], traits: {reach: 2}}
+    effects: {heal_permille: 200, move: -2, damage_taken: [{element: fire, permille: 1500}]}
+    entry: {heal_adjacent: {dice: 1d8, attr: wis, attr_permille: 500}}
+  - id: dragon
+    name_zh: 龍
+    category: mental
+    look: form_dragon
+    natural_weapon:
+      {name_zh: 吐息, dice: 1d8, attack: ranged, range: 3, attrs: [int], element_choices: [fire, ice, lightning]}
+    effects: {max_hp_permille: 100, move: -1}
+    entry: {shield_max_hp_permille: 50}

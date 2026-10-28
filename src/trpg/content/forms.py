@@ -6,7 +6,7 @@
 - ``category``：``physical`` 物理（維持費扣耐力）、``mental`` 心智（扣法力）；
 - ``natural_weapon``：天生武器——形態內的普攻改用它（骰、近戰／遠程與射程、一或兩個屬性〔同類取
   較高、一物理一心智取平均，同 08 8.11〕、固定元素或「進入時選」的元素清單）。天生武器沒有詞條；
-  特性欄位 ``traits`` 預留給 3J-1b（惡魔兩下、巨人推擊 +1……），本段必須留空；
+  特性 ``traits``（3J-1b：惡魔兩下、巨人推擊 +1、狼人流血、樹人觸及 2、貓背刺暴擊）；
 - ``effects``：形態中的效果——防禦 %、移動、最大 HP %、受傷修正（依元素）、你施放的治療加成、
   高度差當平地；**不加六屬性**（6.30）；
 - ``entry``：進入獎勵（每次進入觸發一次）；
@@ -37,6 +37,7 @@ __all__ = [
     "FormEffects",
     "FormEntry",
     "FormTable",
+    "NaturalTraits",
     "NaturalWeapon",
     "TakenMod",
 ]
@@ -52,6 +53,23 @@ _MAX_MELEE_RANGE = 2
 _NATURAL_PREFIX = "form_"
 
 
+class NaturalTraits(ContentModel):
+    """天生武器的特性（3J-1b；全部是參數，引擎只讀參數）。
+
+    - ``strikes``：普攻一次打幾下，每一下各自擲命中與傷害（惡魔雙刃 2；同武器的 ``strikes``）；
+    - ``knockback``：普攻命中把目標沿攻擊方向推這麼多格（巨人推擊 +1；同武器的 ``knockback``）；
+    - ``reach``：觸及——藉機攻擊的範圍（樹人 2；同武器的 ``reach``，不可超過天生武器的射程）；
+    - ``bleed``：普攻命中施加流血這麼多回合（狼人 1）；
+    - ``backstab_crit``：背刺時暴擊範圍再多擴大這麼多（貓 1；疊在核心規則的背刺加成上）。
+    """
+
+    strikes: int = Field(default=1, ge=1, le=3)
+    knockback: int = Field(default=0, ge=0, le=3)
+    reach: int = Field(default=1, ge=1, le=_MAX_MELEE_RANGE)
+    bleed: int = Field(default=0, ge=0, le=3)
+    backstab_crit: int = Field(default=0, ge=0, le=3)
+
+
 class NaturalWeapon(ContentModel):
     """天生武器（6.30）。``element`` 與 ``element_choices`` 最多填一個（都不填＝物理）；
     ``element_choices`` 是「進入時選」的清單（第一個是省略時的預設）。``damage_permille``：天生武器
@@ -65,9 +83,8 @@ class NaturalWeapon(ContentModel):
     element: Element | None = None
     element_choices: tuple[Element, ...] = ()
     damage_permille: int = Field(default=0, ge=0, le=1000)
-    traits: tuple[str, ...] = ()
-    """天生武器特性（3J-1b 實作：惡魔兩下、巨人推擊 +1、狼人流血、樹人觸及 2、貓背刺暴擊）；本段
-    必須留空。"""
+    traits: NaturalTraits = NaturalTraits()
+    """天生武器特性（3J-1b）；沒有特性時全是預設值。"""
 
     @model_validator(mode="after")
     def _check(self) -> NaturalWeapon:
@@ -81,8 +98,8 @@ class NaturalWeapon(ContentModel):
             raise ValueError(f"天生武器 {self.name_zh}：element_choices 不可含物理")
         if self.attack == "melee" and self.range > _MAX_MELEE_RANGE:
             raise ValueError(f"天生武器 {self.name_zh}：近戰的射程最多 {_MAX_MELEE_RANGE}")
-        if self.traits:
-            raise ValueError(f"天生武器 {self.name_zh}：特性（traits）在 3J-1b 才實作，請留空")
+        if self.traits.reach > self.range:
+            raise ValueError(f"天生武器 {self.name_zh}：觸及（reach）不可超過射程")
         return self
 
     def weapon_def(self, form_id: str, element: Element | None) -> WeaponDef:
@@ -102,6 +119,9 @@ class NaturalWeapon(ContentModel):
             secondary_scaling_attr=second,
             attr_mode="max" if same else "mean",
             element=Element.PHYSICAL if chosen is None else chosen,
+            strikes=self.traits.strikes,
+            knockback=self.traits.knockback,
+            reach=self.traits.reach,
             summon_only=True,
         )
 
@@ -160,7 +180,8 @@ class FormEntry(ContentModel):
       離開形態時失效）；
     - ``move``：本回合移動點數 +N；
     - ``conceal``：隱蔽 N 回合；
-    - ``burst``：範圍傷害；``heal_adjacent``：治療相鄰友方。
+    - ``burst``：範圍傷害；``heal_adjacent``：治療相鄰友方；
+    - ``collision_permille``：本回合（進入的那個自己的回合）你造成的撞擊傷害 +N‰（巨人 500）。
     """
 
     shield_max_hp_permille: int | None = Field(default=None, ge=1, le=1000)
@@ -172,6 +193,7 @@ class FormEntry(ContentModel):
     conceal: int | None = Field(default=None, ge=1, le=3)
     burst: EntryBurst | None = None
     heal_adjacent: EntryHealAdjacent | None = None
+    collision_permille: int = Field(default=0, ge=0, le=2000)
 
 
 class FormDef(ContentModel):

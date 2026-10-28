@@ -37,6 +37,7 @@ from trpg.engine.events import (
     WallToppled,
 )
 from trpg.engine.ids import ELITE_TAG, PRONE
+from trpg.engine.rules.forms import form_collision_permille
 from trpg.engine.rules.landing import nearest_free
 from trpg.engine.rules.perks import attribute_perk
 from trpg.shared.types import ObjectId, UnitId
@@ -137,6 +138,10 @@ def _collision_damage(ctx: Ctx, event: EventBase, depth: int) -> list[EffectBase
     effects: list[EffectBase] = []
     victims = [event.unit_id] + ([] if event.other_id is None else [event.other_id])
     flats = _collision_flats(ctx, event, victims)  # 力量的常駐數值（3H-1）
+    source = None if event.source_id is None else ctx.state.units.get(event.source_id)
+    permille = event.damage_permille  # 風壓撞擊（Phase 3-54a）
+    if source is not None:  # 形態的進入獎勵：本回合撞擊傷害加成（巨人，3J-1b）
+        permille = permille * form_collision_permille(ctx.state, source) // 1000
     for _ in range(event.shortfall):
         effects.extend(
             DamageEffect(
@@ -146,7 +151,7 @@ def _collision_damage(ctx: Ctx, event: EventBase, depth: int) -> list[EffectBase
                 cause="collision",
                 dice=dice,
                 flat=flats[victim],
-                multiplier_permille=event.damage_permille,  # 風壓撞擊（Phase 3-54a）
+                multiplier_permille=permille,
             )
             for victim in victims
         )
@@ -158,7 +163,7 @@ def _collision_damage(ctx: Ctx, event: EventBase, depth: int) -> list[EffectBase
                     object_id=event.object_id,
                     dice=dice,
                     cause="collision",
-                    multiplier_permille=event.damage_permille,
+                    multiplier_permille=permille,
                 )
             )
     return effects

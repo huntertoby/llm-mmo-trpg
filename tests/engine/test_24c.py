@@ -365,4 +365,4 @@ def test_a_battle_with_gun_skills_and_sacrifice_replays_identically() -> None:
     run = run_battle(setup, 7, policy)
     again = replay(setup, 7, run.actions)
     assert state_to_json(again.state) == state_to_json(run.state)
-    assert LOG_FORMAT.endswith("/78")
+    assert LOG_FORMAT.endswith("/79")
