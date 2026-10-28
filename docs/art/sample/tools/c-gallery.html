@@ -1,0 +1,30 @@
+<!doctype html>
+<html lang="zh-Hant">
+<head>
+<meta charset="utf-8">
+<title>C 畫風驗收：doll-gallery 篩選</title>
+<style>
+  body { background: #1b1d22; color: #d8dbe0; font: 12px sans-serif; margin: 12px; }
+  h2 { font-size: 14px; margin: 14px 0 6px; }
+  .row { display: flex; flex-wrap: wrap; gap: 6px; }
+  .cell { text-align: center; width: 150px; }
+  .cell canvas { width: 150px; height: 150px; border-radius: 6px; }
+  .cell div { margin-top: 2px; word-break: break-all; }
+</style>
+</head>
+<body>
+<!-- 美術 PM 驗收用：經 client-check-5183 開 /@fs/<這個檔案的絕對路徑>?s=<標題關鍵字>，只留下標題含關鍵字的段落（正式 doll-gallery 太長，無頭 Chrome 拍不完）。 -->
+<script type="module">
+await import("/src/dev/dollGallery.ts");
+const want = new URLSearchParams(location.search).get("s") ?? "";
+await new Promise((r) => setTimeout(r, 500));
+for (const h of [...document.querySelectorAll("h2")]) {
+  if (h.textContent.includes(want)) continue;
+  const row = h.nextElementSibling;
+  h.remove();
+  if (row && row.tagName !== "H2") row.remove();
+}
+document.title += " ✓";
+</script>
+</body>
+</html>
