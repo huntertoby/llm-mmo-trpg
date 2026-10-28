@@ -18,6 +18,7 @@ from collections.abc import Iterator
 
 from trpg.content.skills import COPY_SKILL, SkillDef
 from trpg.engine.actions import UseSkill
+from trpg.engine.rules.forms import is_spell_for_silence
 from trpg.engine.rules.geometry import has_line_of_sight
 from trpg.engine.rules.statuses import blocks_spells
 from trpg.engine.skills.targeting import SkillArea, selections
@@ -77,7 +78,7 @@ def copy_source(state: BattleState, caster: UnitState) -> tuple[SkillDef, UnitSt
 def copy_free_problem(state: BattleState, caster: UnitState, skill: SkillDef) -> str | None:
     """複製 ``skill`` 時仍要滿足的條件：沉默（法術技）；法力、AP、冷卻、次數與 ``weapon_req`` 都
     不檢查。"""
-    if skill.category == "spell" and blocks_spells(state.ruleset, caster):
+    if is_spell_for_silence(state.ruleset, skill) and blocks_spells(state.ruleset, caster):
         return f"沉默中：不能使用法術技：{skill.name_zh}"
     return None
 

@@ -14,6 +14,7 @@ if TYPE_CHECKING:
 
 __all__ = [
     "ARMOR_BROKEN",
+    "BLEED",
     "BLOCKS_SIGHT_TAG",
     "BOSS_TAG",
     "CONCEALED",
@@ -36,6 +37,8 @@ __all__ = [
 
 ARMOR_BROKEN = "armor_broken"
 """武器 ``armor_break`` 施加的狀態（``defense_break``，Phase 3-24a1）。"""
+BLEED = "bleed"
+"""形態天生武器 ``bleed`` 施加的狀態（狼人，3J-1b）。"""
 CONCEALED = "concealed"
 """隱匿。"""
 ENTANGLED = "entangled"

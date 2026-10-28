@@ -75,6 +75,9 @@ overrides:
   # 3J-1a：測試用形態技能的縮放屬性只是顯示提示（天生武器的屬性看 forms.yaml）；身體類以外的兩招照天生武器的屬性
   - {skill: skill_form_roc, attrs: [wis], reason_zh: 化身為巨鵰的天生武器（鳥喙）看感知}
   - {skill: skill_form_elemental, attrs: [int], reason_zh: 化身為元素化身的天生武器（元素彈）看智力}
+  - {skill: skill_form_shadow, attrs: [wil], reason_zh: 化身為暗影形態的天生武器（暗影觸）看意志}
+  - {skill: skill_form_treant, attrs: [wis], reason_zh: 化身為樹人的天生武器（枝條）看感知}
+  - {skill: skill_form_dragon, attrs: [int], reason_zh: 化身為龍的天生武器（吐息）看智力}
   # 3H-7：主題改由效果推導後，下列內建技能的主要效果（治療、護盾、毒表面）會落到別的主題；維持現值並附理由
   - {skill: skill_bloodlust, attrs: [str, dex, con], reason_zh: 嗜血是擊殺回血的身體被動（物理、怒氣），治療只是結果，不是感知系的治療法術}
   - {skill: skill_grief_rage, attrs: [str, dex, con], reason_zh: 悲憤是怒氣反應（增傷加護盾），屬於身體類，不是感知系的護盾法術}

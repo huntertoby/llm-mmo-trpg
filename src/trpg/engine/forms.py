@@ -92,6 +92,7 @@ def enter_form(
         element=chosen,
         max_hp_delta=delta,
         skill_id=skill_id,
+        entered_round=ctx.state.round,
     )
     unit.weapon = form.natural_weapon.weapon_def(form.id, chosen)
     unit.gear = _strip_hand_affixes(unit.gear)

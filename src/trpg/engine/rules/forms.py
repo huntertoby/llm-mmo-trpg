@@ -9,11 +9,14 @@ from __future__ import annotations
 from trpg.content.battle import WeaponDef
 from trpg.content.forms import CHOSEN, FormDef
 from trpg.content.library import Ruleset
-from trpg.engine.state import UnitState
+from trpg.content.skills import SkillDef
+from trpg.engine.state import BattleState, UnitState
 from trpg.shared.types import Element
 
 __all__ = [
     "active_form",
+    "form_backstab_crit",
+    "form_collision_permille",
     "form_defense_permille",
     "form_element_problem",
     "form_flat_height",
@@ -22,6 +25,8 @@ __all__ = [
     "form_problem",
     "form_taken_permille",
     "held_weapon",
+    "is_spell_for_silence",
+    "natural_bleed",
     "natural_damage_permille",
 ]
 
@@ -82,6 +87,38 @@ def natural_damage_permille(rules: Ruleset, unit: UnitState) -> int:
     """天生武器造成的傷害加成（‰；只套在形態中的普攻）；不在形態中為 0。"""
     form = active_form(rules, unit)
     return 0 if form is None else form.natural_weapon.damage_permille
+
+
+def form_backstab_crit(rules: Ruleset, unit: UnitState) -> int:
+    """天生武器特性：背刺時普攻暴擊範圍再多擴大幾點（貓 1）；不在形態中為 0。"""
+    form = active_form(rules, unit)
+    return 0 if form is None else form.natural_weapon.traits.backstab_crit
+
+
+def natural_bleed(rules: Ruleset, unit: UnitState) -> int:
+    """天生武器特性：普攻命中施加流血的回合數（狼人 1）；沒有時為 0。"""
+    form = active_form(rules, unit)
+    return 0 if form is None else form.natural_weapon.traits.bleed
+
+
+def form_collision_permille(state: BattleState, unit: UnitState) -> int:
+    """進入獎勵的「本回合撞擊傷害 +N‰」（巨人 +500）：進入的那一輪、輪到自己行動時有效；回傳
+    撞擊傷害倍率（‰，沒有加成為 1000）。"""
+    form = active_form(state.ruleset, unit)
+    if form is None or unit.form is None or state.active_unit != unit.id:
+        return PERMILLE
+    if unit.form.entered_round != state.round:
+        return PERMILLE
+    return PERMILLE + form.entry.collision_permille
+
+
+def is_spell_for_silence(rules: Ruleset, skill: SkillDef) -> bool:
+    """沉默擋不擋這個技能：一般技能看 ``category``；進入形態的技能看形態類別——心智形態算法術
+    （沉默時不能用）、物理形態不算（沉默擋不住；6.30 實作細節 5）。"""
+    form_id = skill.form_id
+    if form_id is None:
+        return skill.category == "spell"
+    return rules.form_def(form_id).category == "mental"
 
 
 def form_problem(unit: UnitState, form_id: str) -> str | None:

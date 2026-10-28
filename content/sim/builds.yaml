@@ -827,3 +827,21 @@ builds:
       tags: [hero, sim]
       max_mana: 30
       skills: [skill_form_bear, skill_form_cat, skill_form_roc, skill_form_elemental, skill_form_werewolf]
+
+  # Phase 3J-1b：形態測試的第二組（其餘 5 種形態；一組最多 6 個主動技能欄位）。正式形態技能在 3J-4
+  - id: build_form_tester_2
+    name_zh: 形態測試二
+    reference: true
+    theme_zh: 3J-1b 形態（06 6.30）的測試 build：惡魔、巨人、暗影形態、樹人、龍五種形態輪替；天生武器特性（兩下、推擊、觸及 2、流血）。
+    hero:
+      id: build_form_tester_2
+      name_zh: 形態測試二
+      attributes: {str: 14, dex: 12, con: 14, int: 12, wis: 12, wil: 10}
+      max_hp: 44
+      speed: 5
+      armor_bonus: 1
+      weapon: one_handed_sword
+      resist: {physical: 50}
+      tags: [hero, sim]
+      max_mana: 30
+      skills: [skill_form_demon, skill_form_giant, skill_form_shadow, skill_form_treant, skill_form_dragon]

@@ -1,0 +1,23 @@
+# 測試用的「化身為樹人」（Phase 3J-1b，06 6.30；只為測試與靶場試玩，正式技能在 3J-4）。
+id: skill_form_treant
+schema_version: 1
+name_zh: 化身為樹人
+tier: 1
+rank: 1
+rarity: rare
+kind: stance
+skeleton: stance
+category: spell
+weapon_req: any
+ap_cost: null
+scaling_attr: wis
+shape: {type: self}
+effects:
+  - {type: enter_form, form: treant, affects: self}
+condition: null
+cost: {}
+tags: [stance]
+narrative:
+  concept: 扎根大地，用枝條守護身邊的人
+  cast_flavor: 你的雙腳生根，手臂抽出長長的枝條
+provenance: {origin: builtin, owner_id: null, created_by: null, parents: [], bound: true, tradeable: false}

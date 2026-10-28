@@ -48,7 +48,12 @@ from trpg.engine.gear_summon import gear_summon_cooldown
 from trpg.engine.ids import BOSS_TAG
 from trpg.engine.infusion import check_infusion
 from trpg.engine.rules.combat import AttackProfile, attack_value, concealment_problem
-from trpg.engine.rules.forms import form_element_problem, form_problem, held_weapon
+from trpg.engine.rules.forms import (
+    form_element_problem,
+    form_problem,
+    held_weapon,
+    is_spell_for_silence,
+)
 from trpg.engine.rules.geometry import XY, has_line_of_sight, manhattan
 from trpg.engine.rules.landing import LandingBlock, landing_problem
 from trpg.engine.rules.movement import is_deadly
@@ -347,7 +352,7 @@ def resource_problem(  # noqa: PLR0911
         return problem
     if fires_gun(unit, skill) and unit.ammo <= 0:  # 火器武器技要有子彈（3-24c）
         return f"空膛：{held_weapon(unit).name_zh}需要先裝填才能施放：{skill.name_zh}"
-    if skill.category == "spell" and blocks_spells(state.ruleset, unit):
+    if is_spell_for_silence(state.ruleset, skill) and blocks_spells(state.ruleset, unit):
         return f"沉默中：不能使用法術技：{skill.name_zh}"
     if unit.mana < skill.cost.mana:
         return f"法力不足：需要 {skill.cost.mana}，剩餘 {unit.mana}"

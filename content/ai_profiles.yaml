@@ -153,9 +153,9 @@ gamble: {hp_floor_permille: 300, low_hp_permille: 100}
 # self_cost（Phase 3-50；初值未經模擬）：自己付的代價的使用條件（06 6.5 共通規則 6）。自暈（會跳過回合的自身狀態）：HP 低於
 # stun_hp_below_permille‰ 且 stun_enemy_radius 格內有敵人才用；透支：這一擊能擊殺，或波及的敵人 ≥ overdraft_min_targets 才用。
 self_cost: {stun_hp_below_permille: 500, stun_enemy_radius: 6, overdraft_min_targets: 2}
-# form（Phase 3J-1a，06 6.30）：進入形態的價值（等值傷害點數；收益 ＝ support 權重 × enter_value）。AI 沒在姿態或形態中、
-# AP 夠時才考慮進入，不主動取消（維持費不夠時由規則自動解除）。進入獎勵的護盾、治療、傷害另外照一般事件計分。初值，未經模擬。
-form: {enter_value: 8}
+# form（Phase 3J-1a，06 6.30）：進入形態的價值（等值傷害點數；收益 ＝ support 權重 × enter_value）。AI 沒在姿態中、
+# AP 夠時才考慮進入（3J-1b：已在形態中也可輪替到另一個沒冷卻的形態，價值 rotate_value），不主動取消（維持費不夠時由規則自動解除）。進入獎勵的護盾、治療、傷害另外照一般事件計分。初值，未經模擬。
+form: {enter_value: 8, rotate_value: 4}
 # rune（Phase 3-23；初值未經模擬）：刻印的評分，只在行動者有讀取技能（條件 on_own_rune 或 detonate_runes）時才主動刻。
 #   inscribe_points   在敵人腳下刻一個符文的價值（等值傷害點數，× damage 權重）；
 #   adjacent_permille / near_permille  符文離最近的敵人 1 格、2 格時相對於腳下的比例（更遠為 0）

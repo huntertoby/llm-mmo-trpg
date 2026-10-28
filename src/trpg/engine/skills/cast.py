@@ -225,6 +225,8 @@ class Cast:
             rolled += [u for u in self.allies if u is not self.caster]  # 敵我不分也不打到自己
         for unit in sorted(rolled, key=lambda u: u.id):
             self.roll_one(unit)
+        # 形態的進入獎勵（3J-1a、3J-1b）：這次施放所有目標的命中擲骰都吃到，擲完才用掉
+        self.caster.next_attack_hit = self.caster.next_attack_crit = 0
         if self.modified:
             self.update_cooldown_delta()
 
@@ -248,7 +250,6 @@ class Cast:
         bonus = self.modifier(modifiers.hit_bonus, unit) + self.aim_bonus
         self.caster.aimed = self.caster.aimed and not self.aim_bonus  # 用掉瞄準
         roll = roll_attack(ctx.state, ctx.rng, self.caster, unit, forced, self.profile, bonus=bonus)
-        self.caster.next_attack_hit = self.caster.next_attack_crit = 0  # 形態的進入獎勵（3J-1a）
         rolled_event = ctx.emit(
             AttackRolled,
             attacker_id=self.caster.id,

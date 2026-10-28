@@ -292,6 +292,7 @@ def _charge_hit(
     assert spec.dice is not None
     route_cell = unit.xy
     roll = cast.roll_one(unit, force_block=True)
+    cast.caster.next_attack_hit = cast.caster.next_attack_crit = 0  # 形態的進入獎勵用掉
     if not roll.hit:
         return
     damage = cast.attack_damage(
