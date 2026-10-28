@@ -1,4 +1,4 @@
-"""Phase 3J-4：形態內容與形態池（Phase3J計畫.md 4.11、06-技能.md 6.30）。
+"""Phase 3J-4／3J-4b：形態內容與形態池（Phase3J計畫.md 4.11、06-技能.md 6.30）。
 
 - 10 招「化身為〇」的階級與類別、卡片＝實戰（維持費、進入）；
 - 3 招主動利用者（化形撲擊、野性怒吼、化形回春）：在形態中／不在形態中，卡片數字＝實戰；
@@ -146,78 +146,80 @@ def test_entering_and_upkeep_match_the_card(form_id: str) -> None:
 # ---------------------------------------------------------------------------
 
 
-def _card_dice(skill_id: str) -> list[tuple[int, str]]:
-    """卡片效果句裡每一筆傷害或治療的（骰數, 是否「若你在形態中」）。"""
+def _card_lines(skill_id: str) -> tuple[str, ...]:
     lib = library()
-    card = skill_card(lib, lib.ruleset.skill_def(skill_id))
-    found = []
-    for line in card.effects:
-        match = re.match(r"(?:治療 )?(\d+)d(\d+)", line)
-        if match:
-            found.append((int(match.group(1)), "若你在形態中" if "若你在形態中" in line else ""))
-    return found
+    return skill_card(lib, lib.ruleset.skill_def(skill_id)).effects
 
 
-def test_the_pounce_dashes_and_hits_once_outside_a_form_twice_inside(
+def _exact(rolls_sum: int, scaled_permille: int, multiplier: int) -> int:
+    """傷害或治療的精確值：（骰值＋屬性加成）整體乘倍率，一次無條件捨去（屬性加成只算一次）。"""
+    return (rolls_sum * 1000 + scaled_permille) * multiplier // 1_000_000
+
+
+def test_the_pounce_dashes_and_the_form_adds_exactly_thirty_percent(
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
     always(monkeypatch, d20=15, die=1)
-    assert _card_dice(POUNCE) == [(3, ""), (1, "若你在形態中")]
+    (line,) = [x for x in _card_lines(POUNCE) if "3d4" in x]
+    assert "若你在形態中，整體 +30%" in line and len(_card_lines(POUNCE)) == 2  # 衝鋒＋一筆傷害
     bonus = effective_attribute(library().ruleset, arena([POUNCE]).units[U1], Attribute.STR)
     foes = ((6, 3),)
     plain = use(arena([POUNCE, BEAR], foes=foes), POUNCE, target_id=U2)
     (dealt,) = of(plain, DamageDealt)  # type: ignore[arg-type]
-    assert dealt.rolls == (1, 1, 1) and dealt.amount == 3 + dealt.scaled_permille // 1000
-    assert dealt.scaled_permille == bonus * 500
+    assert dealt.rolls == (1, 1, 1) and dealt.scaled_permille == bonus * 500
+    assert dealt.multiplier_permille == 1000 and dealt.amount == _exact(3, bonus * 500, 1000)
     assert plain.state.units[U1].xy == (5, 3)  # type: ignore[attr-defined]  # 衝鋒到目標身旁
     inside = use(into_bear(arena([POUNCE, BEAR], foes=foes)), POUNCE, target_id=U2)
-    first, second = of(inside, DamageDealt)  # type: ignore[arg-type]
-    assert (first.rolls, second.rolls) == ((1, 1, 1), (1,))
-    assert first.scaled_permille == second.scaled_permille == bonus * 500
-    assert first.amount == 3 + bonus // 2 and second.amount == 1 + bonus // 2
+    (hit,) = of(inside, DamageDealt)  # type: ignore[arg-type]
+    assert hit.rolls == (1, 1, 1) and hit.scaled_permille == bonus * 500  # 屬性加成只算一次
+    assert hit.multiplier_permille == 1300 and hit.amount == _exact(3, bonus * 500, 1300)
     assert inside.state.units[U1].xy == (5, 3)  # type: ignore[attr-defined]
 
 
-def test_the_roar_hits_adjacent_enemies_only_and_the_form_adds_a_second_hit(
+def test_the_roar_hits_adjacent_enemies_only_and_the_form_adds_exactly_thirty_percent(
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
     always(monkeypatch, d20=15, die=1)
-    assert _card_dice(ROAR) == [(2, ""), (1, "若你在形態中")]
+    assert any("若你在形態中，整體 +30%" in x for x in _card_lines(ROAR))
+    bonus = effective_attribute(library().ruleset, arena([ROAR]).units[U1], Attribute.CON)
     foes = ((4, 3), (6, 3))  # 第二個不在自己周圍 1 格
     plain = use(arena([ROAR, BEAR], foes=foes), ROAR)
-    hits = of(plain, DamageDealt)  # type: ignore[arg-type]
-    assert [(h.target_id, h.rolls) for h in hits] == [(U2, (1, 1))]
+    (hit,) = of(plain, DamageDealt)  # type: ignore[arg-type]
+    assert (hit.target_id, hit.rolls) == (U2, (1, 1))
+    assert hit.amount == _exact(2, bonus * 500, 1000)
     weak = [e for e in of(plain, StatusApplied) if e.status_id == "weaken"]  # type: ignore[arg-type]
     assert [(e.target_id, e.duration) for e in weak] == [(U2, 1)]
     inside = use(into_bear(arena([ROAR, BEAR], foes=foes)), ROAR)
-    hits = of(inside, DamageDealt)  # type: ignore[arg-type]
-    assert [(h.target_id, h.rolls) for h in hits] == [(U2, (1, 1)), (U2, (1,))]
-    assert U3 not in {h.target_id for h in hits}
+    (hit,) = of(inside, DamageDealt)  # type: ignore[arg-type]
+    assert (hit.target_id, hit.rolls) == (U2, (1, 1)) and hit.multiplier_permille == 1300
+    assert hit.amount == _exact(2, bonus * 500, 1300)
+    assert U3 not in {h.target_id for h in of(inside, DamageDealt)}  # type: ignore[arg-type]
 
 
-def test_the_form_renewal_heals_once_outside_a_form_twice_inside(
+def test_the_form_renewal_heals_exactly_thirty_percent_more_inside_a_form(
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
     always(monkeypatch, d20=15, die=1)
-    assert _card_dice(RENEWAL) == [(2, ""), (1, "若你在形態中")]
+    assert any("若你在形態中，整體 +30%" in x for x in _card_lines(RENEWAL))
     state = arena([RENEWAL, BEAR], hp=200)
     state.units[U1].hp = 50
     plain = use(state, RENEWAL)
     (healed,) = of(plain, Healed)  # type: ignore[arg-type]
     assert healed.rolls == (1, 1) and healed.target_id == U1
-    extra = healed.amount - 2  # 屬性加成
+    wis = effective_attribute(library().ruleset, state.units[U1], Attribute.WIS)
+    assert healed.amount == _exact(2, wis * 500, 1000)
     inside_state = into_bear(state)
     inside_state.units[U1].hp = 50
     inside = use(inside_state, RENEWAL)
-    first, second = of(inside, Healed)  # type: ignore[arg-type]
-    assert (first.rolls, second.rolls) == ((1, 1), (1,))
-    assert first.amount == 2 + extra and second.amount == 1 + extra
+    (healed,) = of(inside, Healed)  # type: ignore[arg-type]
+    assert healed.rolls == (1, 1) and healed.amount == _exact(2, wis * 500, 1300)
 
 
 def test_the_exploiters_belong_to_the_form_pool() -> None:
     lib = library()
     exclusive = keyword_pools(lib, starter_only=True, exclusive_only=True)["form"]
-    assert exclusive == (POUNCE, RENEWAL, ROAR)
+    makers = tuple(f"skill_form_{f}" for f in ("bear", "cat", "roc", "werewolf"))
+    assert set(exclusive) == {*makers, POUNCE, RENEWAL, ROAR}  # 3J-4b：1 階化身也當起始技能
     assert all(is_starter_skill(lib.skills[i]) and lib.skills[i].tier == 1 for i in exclusive)
     everyone = keyword_pools(lib, exclusive_only=True)["form"]
     for form_id in TIERS:  # 十招進入技能是製造者（姿態不算起始技能）

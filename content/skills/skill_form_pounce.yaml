@@ -1,5 +1,5 @@
-# 化形撲擊（Phase 3J-4，06 6.30「形態池名單」；數值為初值，未經模擬）：衝到目標身邊再撲上去；
-# 在形態中傷害 +30%（再追加一筆約 30% 的骰傷害：基礎平均 7.5、追加平均 2）。
+# 化形撲擊（Phase 3J-4／3J-4b，06 6.30「形態池名單」；數值為初值，未經模擬）：衝到目標身邊再撲上去；
+# 在形態中傷害精確 +30%（form_bonus_permille：整體乘 1.3，屬性加成只算一次）。
 id: skill_form_pounce
 schema_version: 1
 name_zh: 化形撲擊
@@ -15,12 +15,7 @@ scaling_attr: str
 shape: {type: single, range: 4}
 effects:
   - {type: dash}
-  - {type: damage, dice: 3d4, element: physical}
-  # 在形態中：額外一筆約 30% 的骰傷害
-  - type: damage
-    dice: 1d3
-    element: physical
-    condition: {type: in_form}
+  - {type: damage, dice: 3d4, element: physical, form_bonus_permille: 300}
 condition: null
 cost: {mana: 6, cooldown: 3}
 tags: [physical, melee, mobility]

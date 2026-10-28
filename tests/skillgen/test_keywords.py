@@ -609,11 +609,15 @@ def test_exclusive_only_derivation_drops_general_and_provisional_rules() -> None
     )
     pools = keyword_pools(lib, starter_only=True, exclusive_only=True)
     assert all(len(ids) >= 3 for k, ids in pools.items())
-    assert pools["form"] == (  # 形態池的 1 階主動起始技能：三招利用者（3J-4）
+    assert set(pools["form"]) == {  # 形態池的 1 階起始技能：三招利用者（3J-4）與四招化身（3J-4b）
+        "skill_form_bear",
+        "skill_form_cat",
         "skill_form_pounce",
         "skill_form_renewal",
+        "skill_form_roc",
+        "skill_form_werewolf",
         "skill_wild_roar",
-    )
+    }
     assert len(pools["prone"]) < len(keyword_pools(lib, starter_only=True)["prone"])
 
 

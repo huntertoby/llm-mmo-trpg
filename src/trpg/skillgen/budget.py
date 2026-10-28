@@ -225,6 +225,11 @@ def _base_points(
 ) -> tuple[Fraction, str]:
     """基礎點數（含強度）與一句說明；傷害效果再乘高變異、縮放與超載的期望值係數（3D-7b）。"""
     points, note = _plain_base_points(skill, effect, primitive, library)
+    if effect.form_bonus_permille is not None:  # 在形態中的加成（3J-4b）：加成的部分乘條件倍率
+        harsh = _condition_multiplier("in_form", library.ruleset.conditions.by_id(), library.budget)
+        ratio = 1 + Fraction(effect.form_bonus_permille, _PERMILLE) * harsh
+        points *= ratio
+        note += f"，在形態中 +{effect.form_bonus_permille / 10:g}% ×{_fmt(ratio)}"
     if effect.type != "damage":
         return points, note
     factor, extra = _variance_factor(skill, effect, library)

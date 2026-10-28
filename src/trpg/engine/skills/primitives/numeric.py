@@ -126,7 +126,7 @@ def heal(cast: Cast, effect: ResolvedEffect, spec: EffectSpec) -> list[EffectBas
             source_id=cast.caster.id,
             dice=spec.dice,
             scaled_permille=scaled,
-            multiplier_permille=cast.heal_multiplier(self_heal=effect.affects == "self"),
+            multiplier_permille=cast.heal_multiplier(self_heal=effect.affects == "self", spec=spec),
         )
         for unit in cast.targets(effect.affects, spec.condition)
     ]

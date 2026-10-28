@@ -124,6 +124,12 @@ def _same(actual: object, expected: str) -> bool:
     return str(getattr(actual, "value", actual)) == expected
 
 
+def _condition_matches(rule: KeywordRule, facts: Facts) -> bool:
+    if rule.source_id == "in_form" and any(e.form_bonus_permille for e in facts.effects):
+        return True  # 效果的「在形態中」加成（3J-4b）等同「在形態中」條件
+    return any(c.type == rule.source_id and _params_match(rule, c) for c in facts.conditions)
+
+
 def _rule_matches(rule: KeywordRule, facts: Facts) -> bool:
     if any(getattr(facts, name) != value for name, value in rule.filters().items()):
         return False
@@ -131,7 +137,7 @@ def _rule_matches(rule: KeywordRule, facts: Facts) -> bool:
     if kind == "effect":
         return any(e.type == wanted and _params_match(rule, e) for e in facts.effects)
     if kind == "condition":
-        return any(c.type == wanted and _params_match(rule, c) for c in facts.conditions)
+        return _condition_matches(rule, facts)
     if kind == "trigger":
         trig = facts.trigger
         return trig is not None and trig.event == wanted and _params_match(rule, trig)

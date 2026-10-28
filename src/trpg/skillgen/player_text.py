@@ -203,6 +203,7 @@ _FIELD_ZH: dict[str, str] = {
     "explode": "爆骰",
     "followup": "第二段",
     "grant_pierce": "獲得穿透",
+    "form_bonus_permille": "形態加成",
     "heal_permille": "治療加成",
     "hit_bonus": "命中加成",
     "hp_percent": "生命代價",

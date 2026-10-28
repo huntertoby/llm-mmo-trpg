@@ -322,6 +322,8 @@ def _damage_parts(lib: ContentLibrary, skill: SkillDef, spec: EffectSpec) -> tup
         element = f"（{spec.element.display_name}）" if spec.element is not None else ""
         text = f"武器傷害 ×{permille / 1000:g}{element}"
     extras: list[str] = []
+    if spec.form_bonus_permille is not None:
+        extras.append(_form_bonus_text(spec))
     if spec.split_heal:
         extras.append("友方（含自己）改為治療同樣的骰值（不擲命中，只骰一次）")
     if spec.lifesteal_permille is not None:
@@ -353,7 +355,16 @@ def _on_kill_text(lib: ContentLibrary, skill: SkillDef, sub: EffectSpec) -> str:
 
 def _heal(lib: ContentLibrary, skill: SkillDef, spec: EffectSpec) -> str:
     assert spec.dice is not None
-    return f"治療 {_dice(spec.dice)}＋{scaling_label(skill, lib)}加成"
+    text = f"治療 {_dice(spec.dice)}＋{scaling_label(skill, lib)}加成"
+    if spec.form_bonus_permille is not None:
+        text += f"（{_form_bonus_text(spec)}）"
+    return text
+
+
+def _form_bonus_text(spec: EffectSpec) -> str:
+    """「在形態中」的倍率句（3J-4b）：卡片與預算、引擎一致，加成算在整個數值上。"""
+    assert spec.form_bonus_permille is not None
+    return f"若你在形態中，整體 +{spec.form_bonus_permille / 10:g}%"
 
 
 def _push_pull(lib: ContentLibrary, skill: SkillDef, spec: EffectSpec) -> str:
