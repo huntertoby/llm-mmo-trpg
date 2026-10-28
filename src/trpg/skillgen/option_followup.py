@@ -51,7 +51,7 @@ __all__ = [
 
 FOLLOWUP_SKELETON = "displace"
 """「位移 → 動作」的位移段（技能本身）與「動作 → 位移」的位移段的骨架。"""
-_CARRIED = ("kind", "category", "weapon_req", "scaling_attr", "tier", "ap_cost")
+_CARRIED = ("kind", "category", "weapon_req", "scaling_attr", "element", "tier", "ap_cost")
 """第二段沿用第一段的欄位（:meth:`~trpg.content.skills.SkillDef.followup_skill`）。"""
 
 type EffectChoices = Callable[[Draft, ContentLibrary, SkeletonDef], list[Choice]]

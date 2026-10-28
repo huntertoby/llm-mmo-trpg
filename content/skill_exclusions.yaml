@@ -45,9 +45,13 @@ rules:
     name_zh: 同類控制不重複
     message_zh: 同一技能不得施加兩個相同 control_group 的狀態
     forbid: {repeated_control_group: true}
-  # Phase 3-54b（06 6.33 大地，#58）：只有大地能升降地形——帶隆起或下陷的技能，元素（標籤或效果自己寫的元素）必須有大地。
+  # Phase 3-54b／3-54d（06 6.33 大地，#58、#64）：升降地形（隆起、下陷）、石膚、震波都只限大地技能。
+  # 「大地技能」以技能的元素欄為準（沒填時沿用標籤的元素），效果自己寫的元素不算。
   - id: terrain_needs_earth
-    name_zh: 升降地形限大地
-    message_zh: 隆起地形（raise_terrain）與下陷地形（lower_terrain）只能搭配大地元素（技能標籤有 earth，或效果的元素是 earth）
-    when: {primitives_any: [raise_terrain, lower_terrain]}
+    name_zh: 地形、石膚、震波限大地
+    message_zh: 隆起地形（raise_terrain）、下陷地形（lower_terrain）、震波（shockwave）與石膚（stoneskin）只有大地元素的技能能用（技能元素要是 earth）
+    when:
+      any_of:
+        - {primitives_any: [raise_terrain, lower_terrain, shockwave]}
+        - {statuses: [stoneskin]}
     require: {elements_any: [earth]}

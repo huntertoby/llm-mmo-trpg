@@ -50,7 +50,7 @@ from trpg.content.skills import (
     legendary_cores,
     rarity_rank,
 )
-from trpg.shared.types import Attribute
+from trpg.shared.types import Attribute, Element
 from trpg.skillgen.draft import Draft, DraftError, build_skill, draft_skeleton, step_complete
 from trpg.skillgen.option_conform import field_problems
 from trpg.skillgen.option_effect_rules import cooldown_requirement, effect_fixes, with_param_blocks
@@ -435,6 +435,26 @@ def _spell_scaling_field(draft: Draft, library: ContentLibrary) -> FieldSpec:
     )
 
 
+def _element_field() -> FieldSpec:
+    """技能元素（Phase 3-54d，06 6.33「大地元素的判定與限制」）：技能的主題元素，可以不選。選大地的
+    技能才能用隆起、下陷、石膚、震波（驗證器的互斥規則 ``terrain_needs_earth``，選項事前停用同源）；
+    所以可以做出沒有傷害、只有隆起或下陷的大地技能。"""
+    return FieldSpec(
+        field="element",
+        name_zh="技能元素",
+        description_zh=(
+            "技能的主題元素，可以不選。隆起地形、下陷地形、石膚、震波只有「大地」元素的技能能用；"
+            "效果自己的元素（例如一段火焰傷害）不會讓技能變成那個元素"
+        ),
+        type="choice",
+        choices=tuple(
+            Choice(value=e.value, name_zh=e.display_name)
+            for e in Element
+            if e is not Element.PHYSICAL
+        ),
+    )
+
+
 def _basics_step(draft: Draft, library: ContentLibrary, skeleton: SkeletonDef) -> StepOptions:
     tiers = sorted(library.ruleset.core.tier_budget)
     fields = (
@@ -449,6 +469,7 @@ def _basics_step(draft: Draft, library: ContentLibrary, skeleton: SkeletonDef) -
         _category_field(skeleton),
         _scaling_field(draft, library),
         weapon_only_field(draft, library),
+        _element_field(),
         FieldSpec(
             field="tier",
             name_zh="階級",
@@ -677,7 +698,16 @@ def _primitive_choice(
     )
 
 
-_PROBE_KEYS = ("skeleton", "kind", "category", "weapon_req", "scaling_attr", "tier", "ap_cost")
+_PROBE_KEYS = (
+    "skeleton",
+    "kind",
+    "category",
+    "weapon_req",
+    "scaling_attr",
+    "element",
+    "tier",
+    "ap_cost",
+)
 _PROBE_RARITIES: tuple[dict[str, Any], ...] = (
     {"rarity": "epic"},
     {"rarity": "legendary", "cost": {"source": 1}, "activation": "timed"},

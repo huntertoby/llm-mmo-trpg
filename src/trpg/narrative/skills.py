@@ -36,6 +36,7 @@ from trpg.content.skills import (
     default_affects,
     is_wind_skill,
     on_hit_carrier,
+    skill_elements,
 )
 from trpg.content.stacks import StackDef
 from trpg.engine.ids import SHIELDED as SHIELD_STATUS
@@ -372,7 +373,7 @@ def _knock_prone(lib: ContentLibrary, skill: SkillDef, _spec: EffectSpec) -> str
 
 def _shockwave(_lib: ContentLibrary, _skill: SkillDef, _spec: EffectSpec) -> str:
     """震波（Phase 3-54b）。"""
-    return "震波：直線上的單位直接倒地（不擲對抗；會飛的單位不受影響）"
+    return "震波：直線上的單位倒地（不擲對抗，對敵人仍要先命中；已經倒地和會飛的單位不受影響）"
 
 
 def _teleport(_lib: ContentLibrary, _skill: SkillDef, _spec: EffectSpec) -> str:
@@ -1409,6 +1410,11 @@ class SkillCard(BaseModel):
     """``timed``／``battle``（Phase 3D-6）；其他技能為 ``None``。"""
     mastery: str | None
     tags: tuple[str, ...]
+    element: str | None = None
+    """技能元素的中文名（Phase 3-54d，:func:`~trpg.content.skills.skill_elements`），例如「大地」；
+    沒有元素（物理或不填）為 ``None``。"""
+    element_id: str | None = None
+    """技能元素的代碼（``earth`` 等），給前端上色用。"""
     concept: str
     cast_flavor: str
     rarity_id: str
@@ -1554,6 +1560,8 @@ def _build_card(
             )
         ),
         tags=tuple(skill.tags),
+        element=_element_name(skill),
+        element_id=_element_id(skill),
         concept=skill.narrative.concept,
         cast_flavor=skill.narrative.cast_flavor,
         rarity_id=skill.rarity,
@@ -1579,6 +1587,16 @@ def _build_card(
         ),
         stacks=skill_stacks(library, skill),
     )
+
+
+def _element_id(skill: SkillDef) -> str | None:
+    found = sorted(e.value for e in skill_elements(skill))
+    return found[0] if found else None
+
+
+def _element_name(skill: SkillDef) -> str | None:
+    found = sorted(skill_elements(skill), key=lambda e: e.value)
+    return found[0].display_name if found else None
 
 
 def skeleton_name(library: ContentLibrary, skeleton_id: str) -> str:

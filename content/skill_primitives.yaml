@@ -110,7 +110,7 @@ primitives:
   - id: shockwave
     name_zh: 震波
     llm_hint: "讓直線上的單位直接倒地；會飛的單位不受影響。"
-    description_zh: 影響格（只能是直線形狀）上的對象單位直接倒地：不擲對抗，已經倒地的略過；帶 flying 標籤（會飛）的單位不受影響。對象可選敵方、友方或雙方（敵方需命中）。只能用在主動技能。預算：固定 base_points（形狀倍率另算；初值，未經模擬）。
+    description_zh: 影響格（只能是直線形狀）上的對象單位直接倒地：不擲對抗，已經倒地的略過；帶 flying 標籤（會飛）的單位不受影響。對象可選敵方、友方或雙方（敵方需命中，友方不擲命中）。只有大地元素的技能能用（互斥規則 terrain_needs_earth，3-54d）。只能用在主動技能。預算：固定 base_points（形狀倍率另算；初值，未經模擬）。
     player_description: "讓直線範圍內的單位直接倒地，不用對抗；會飛的單位不受影響。"
     category: structural
     harmful: true

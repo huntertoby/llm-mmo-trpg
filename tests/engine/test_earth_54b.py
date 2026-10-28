@@ -217,17 +217,16 @@ def test_terrain_with_the_earth_tag_passes_the_rule(primitive: str) -> None:
     assert skill_elements(skill) == {Element.EARTH}
 
 
-def test_terrain_with_an_earth_damage_effect_passes_the_rule() -> None:
-    skill = _skill(
-        [
-            {"type": "damage", "dice": "1d6", "element": "earth"},
-            {"type": "raise_terrain", "affects": "tiles"},
-        ],
-        {"type": "cross", "range": 3},
-        skeleton="control",
-        rarity="epic",
-    )
-    assert "exclusion.terrain_needs_earth" not in _problems(skill)
+def test_terrain_with_an_earth_damage_effect_alone_is_not_enough() -> None:
+    """3-54d：效果自己寫的元素不再決定技能算不算大地；要技能元素欄（或主題標籤）是大地。"""
+    effects = [
+        {"type": "damage", "dice": "1d6", "element": "earth"},
+        {"type": "raise_terrain", "affects": "tiles"},
+    ]
+    skill = _skill(effects, {"type": "cross", "range": 3}, skeleton="control", rarity="epic")
+    assert "exclusion.terrain_needs_earth" in _problems(skill)
+    earth = skill.model_copy(update={"element": Element.EARTH})
+    assert "exclusion.terrain_needs_earth" not in _problems(earth)
 
 
 def test_physical_or_other_elements_do_not_count_as_earth() -> None:
@@ -371,13 +370,14 @@ def _effects_choice(draft: dict[str, Any], primitive: str) -> Any:
 
 
 @pytest.mark.parametrize("primitive", ["raise_terrain", "lower_terrain"])
-def test_workshop_disables_terrain_until_the_draft_has_an_earth_effect(primitive: str) -> None:
+def test_workshop_disables_terrain_until_the_skill_element_is_earth(primitive: str) -> None:
     empty = _effects_choice({**_DRAFT, "effects": []}, primitive)
     assert "大地" in empty.info["unavailable_zh"]
-    fire = {"type": "damage", "dice": "1d6", "element": "fire"}
-    assert "unavailable_zh" in _effects_choice({**_DRAFT, "effects": [fire]}, primitive).info
-    earth = {"type": "damage", "dice": "1d6", "element": "earth"}
-    ok = _effects_choice({**_DRAFT, "effects": [earth]}, primitive)
+    earth_hit = {"type": "damage", "dice": "1d6", "element": "earth"}
+    assert "unavailable_zh" in _effects_choice({**_DRAFT, "effects": [earth_hit]}, primitive).info
+    fire = {**_DRAFT, "element": "fire"}
+    assert "unavailable_zh" in _effects_choice({**fire, "effects": []}, primitive).info
+    ok = _effects_choice({**_DRAFT, "element": "earth", "effects": []}, primitive)
     assert "unavailable_zh" not in ok.info
 
 

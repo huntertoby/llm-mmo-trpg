@@ -2385,6 +2385,10 @@ class SkillDef(ContentModel):
     """互斥群組（Phase 3-33f1，6.29.4）：同一群組的技能不能同時裝備（例如普攻精通、群召、精英召喚
     都是 ``mastery``）；只有修正型被動可以填。檢查在 :func:`skill_slot_problems`。"""
     tags: tuple[str, ...] = ()
+    element: Element | None = None
+    """技能元素（主題元素，Phase 3-54d，06 6.33「大地元素的判定與限制」）：填了就以它為準，不論有沒有
+    傷害效果（可以做出沒有傷害、只有隆起或下陷的大地技能）；省略時沿用 ``tags`` 裡的元素名稱
+    （手寫技能的主題標籤、組合器的主題元素）。見 :func:`skill_elements`。"""
     narrative: NarrativeDef = Field(default_factory=NarrativeDef)
     provenance: Provenance = Field(default_factory=Provenance)
     followup: FollowupSpec | None = None
@@ -2410,6 +2414,15 @@ class SkillDef(ContentModel):
         if len(set(value)) != len(value):
             raise ValueError("標籤不可重複")
         return value
+
+    @model_validator(mode="after")
+    def _check_element(self) -> SkillDef:
+        clash = [t for t in self.tags if t in _ELEMENT_VALUES and t != self.element]
+        if self.element is not None and any(t != Element.PHYSICAL.value for t in clash):
+            raise ValueError(
+                f"技能元素 {self.element.value} 與標籤的元素不一致：{', '.join(clash)}"
+            )
+        return self
 
     @model_validator(mode="after")
     def _check_exclusive_group(self) -> SkillDef:
@@ -4018,13 +4031,15 @@ def on_hit_carrier(skill: SkillDef, effects: tuple[EffectSpec, ...]) -> SkillDef
 
 
 def skill_elements(skill: SkillDef) -> frozenset[Element]:
-    """技能的元素（Phase 3-54b，06 6.33「只有大地能升降地形」用）：標籤裡的元素名稱（隨機組合器
-    的主題元素、手寫技能的主題標籤），加上所有層級的效果自己寫的元素（傷害、定時炸彈、刻印、
-    召喚物爆炸……）；物理不算（物理是沒有元素）。"""
-    found = {Element(t) for t in skill.tags if t in _ELEMENT_VALUES}
-    for effect in skill.iter_effects(include_followup=True):
-        if effect.element is not None:
-            found.add(effect.element)
+    """技能的元素（Phase 3-54d，06 6.33「大地元素的判定與限制」）：技能元素欄（``element``）有填就是它；
+    沒填時沿用 ``tags`` 裡的元素名稱（組合器的主題元素、手寫技能的主題標籤），有多個元素標籤時取
+    **第一個非物理的**（保守：只算一個元素）。物理不算（物理是沒有元素）。**效果自己寫的元素不算**：
+    一段大地傷害不會讓技能變成大地技能。"""
+    if skill.element is not None:
+        found = {skill.element}
+    else:
+        tagged = (Element(t) for t in skill.tags if t in _ELEMENT_VALUES)
+        found = {next((e for e in tagged if e is not Element.PHYSICAL), Element.PHYSICAL)}
     found.discard(Element.PHYSICAL)
     return frozenset(found)
 
