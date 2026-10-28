@@ -1,0 +1,23 @@
+# Phase 3-54c 種子技能（06 6.33，#56／#59／#63／#64；數值為初值，未經模擬，平衡階段 B25 再調）
+id: skill_purging_light
+schema_version: 1
+name_zh: 破邪聖光
+tier: 1
+rank: 1
+rarity: rare
+kind: active
+skeleton: area
+category: spell
+weapon_req: focus
+ap_cost: 2
+scaling_attr: wis
+shape: {type: cross, range: 4}
+effects:
+  - {type: damage, dice: 2d6, element: holy}
+condition: null
+cost: {mana: 6, cooldown: 2}
+tags: [holy, spell, area]
+narrative:
+  concept: 一道十字形的聖光，灼傷敵人，也淨化範圍內的毒與黑暗
+  cast_flavor: 你高舉聖徽，一道十字形的光落下，地上的毒氣與暗影一起退散
+provenance: {origin: builtin, owner_id: null, created_by: null, parents: [], bound: true, tradeable: false}

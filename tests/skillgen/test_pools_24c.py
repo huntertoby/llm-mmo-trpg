@@ -114,6 +114,4 @@ def test_every_keyword_pool_has_at_least_three_active_exploiters() -> None:
         for k in lib.keywords.ids()
         if len(_exclusive_users(k, starter=False)) < 3
     }
-    # 中毒（3-53，06 6.27.1）：只有 1 招主動利用者（毒爆），等 3-54c 毒種子技能補。
-    # 補齊後此斷言會失敗，屆時改回 {}。
-    assert short == {"poisoned": 1}
+    assert short == {}

@@ -1,0 +1,24 @@
+# Phase 3-54c 種子技能（06 6.33，#56／#59／#63／#64；數值為初值，未經模擬，平衡階段 B25 再調）
+id: skill_marrow_thorn
+schema_version: 1
+name_zh: 蝕骨刺
+tier: 1
+rank: 1
+rarity: rare
+kind: active
+skeleton: strike
+category: weapon
+weapon_req: melee
+ap_cost: 2
+scaling_attr: str
+shape: {type: single, range: weapon}
+effects:
+  - {type: damage, multiplier_permille: 1000}
+  - {type: damage, multiplier_permille: 1000, element: poison, condition: {type: target_has_status, status: poison}}
+condition: null
+cost: {stamina: 8, cooldown: 2}
+tags: [physical, melee, finisher]
+narrative:
+  concept: 對已經中毒的對手，一刺直達骨髓
+  cast_flavor: 你看準對手毒發的破綻，刺尖直奔骨縫而去
+provenance: {origin: builtin, owner_id: null, created_by: null, parents: [], bound: true, tradeable: false}

@@ -37,8 +37,8 @@ def test_start_options_list_every_weapon_and_keyword(
         w for w, d in library.weapons.items() if not d.summon_only
     )
     assert [k["id"] for k in options["keywords"]] == list(library.keywords.start_ids())
-    # 3-53b：中毒暫時不在開局選單，但仍是關鍵字
-    assert "poisoned" not in [k["id"] for k in options["keywords"]]
+    # 3-54c：毒種子補齊後，中毒和其他關鍵字一樣出現在開局選單
+    assert "poisoned" in [k["id"] for k in options["keywords"]]
     assert "poisoned" in library.keywords.ids()
     assert options["keyword_count"] == 2
     sword = next(w for w in options["weapons"] if w["id"] == "one_handed_sword")

@@ -1,0 +1,24 @@
+# Phase 3-54c 種子技能（06 6.33，#56／#59／#63／#64；數值為初值，未經模擬，平衡階段 B25 再調）
+id: skill_hurricane_push
+schema_version: 1
+name_zh: 颶風推
+tier: 2
+rank: 1
+rarity: rare
+kind: active
+skeleton: displace
+category: spell
+weapon_req: focus
+ap_cost: 2
+scaling_attr: int
+shape: {type: line, size: 3}
+effects:
+  - {type: damage, dice: 1d6, element: wind}
+  - {type: push, distance: 2, collision_dice: 2d6}
+condition: null
+cost: {mana: 8, cooldown: 3}
+tags: [wind, spell, push, area]
+narrative:
+  concept: 一股筆直的強風把敵人整排往後推，撞到東西時風壓讓撞擊更重
+  cast_flavor: 你雙手往前一推，一道颶風貼地捲過，敵人被推得雙腳離地
+provenance: {origin: builtin, owner_id: null, created_by: null, parents: [], bound: true, tradeable: false}

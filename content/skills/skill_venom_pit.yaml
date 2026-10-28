@@ -1,0 +1,26 @@
+# Phase 3-54c 種子技能（06 6.33，#56／#59／#63／#64；數值為初值，未經模擬，平衡階段 B25 再調）
+id: skill_venom_pit
+schema_version: 1
+name_zh: 毒池陷阱
+tier: 2
+rank: 1
+rarity: rare
+kind: active
+skeleton: trap
+category: spell
+weapon_req: focus
+ap_cost: 2
+scaling_attr: int
+shape: {type: ground_tile, range: 4}
+trap: {trigger: enter, rounds: 3, shape: cross}
+effects:
+  - {type: place_trap}
+  - {type: damage, dice: 1d6, element: poison}
+  - {type: create_surface, surface: poison, duration: 4}
+condition: null
+cost: {mana: 6, cooldown: 3}
+tags: [poison, spell, trap]
+narrative:
+  concept: 埋下一個毒囊，敵人踩上去就會破裂，在一片範圍留下毒池
+  cast_flavor: 你把一個鼓脹的毒囊埋進土裡，只在地面留下一道淺淺的凹痕
+provenance: {origin: builtin, owner_id: null, created_by: null, parents: [], bound: true, tradeable: false}
