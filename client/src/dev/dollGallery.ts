@@ -178,3 +178,11 @@ const C2_ROWS: Array<[string, Array<[string, DollSpec["gear"]]>]> = [
 for (const f of FACINGS) {
   for (const [row, items] of C2_ROWS) section(`⑨ C-2a・${row}（${f}）`, items.map(([n, g]) => figureOf(withGear(g), f, n)));
 }
+
+// ⑩ C-2a・整套代表（四方向）
+const C2_KITS: Array<[string, DollSpec["gear"]]> = [
+  ["重甲", { head: G("greathelm", "greathelm", { material: "steel" }), body: G("mail", "chain", { material: "steel" }), hands: G("gauntlets", "plate", { material: "steel" }), feet: G("iron_boots", "sabaton", { material: "steel" }), off_hand: G("shield_kite", "tower", { material: "iron" }), main_hand: W("axe") }],
+  ["旅人", { head: G("wide_hat", "wide", { color: "#6a4a2a" }), body: G("coat", "cape", { color: "#7a2f3a" }), hands: G("gloves", "long", { material: "leather" }), feet: G("shoes", "wrapped", { material: "cloth" }), off_hand: G("tome", "book", { material: "leather" }), main_hand: W("dagger") }],
+  ["術士", { head: G("crown", "crown", { material: "gold" }), body: G("robe", "long", { color: "#3a4a8a" }), hands: G("bracers", "ring", { material: "copper" }), feet: G("shoes", "slipper", { color: "#6a5a8a" }), off_hand: G("orb", "floating", { material: "crystal", element: "fire" }), main_hand: W("staff") }],
+];
+section("⑩ C-2a・整套代表（四方向）", C2_KITS.flatMap(([n, g]) => FACINGS.map((f) => figureOf(withGear(g), f, `${n}・${f}`))));
