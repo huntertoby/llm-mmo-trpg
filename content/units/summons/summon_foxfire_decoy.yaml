@@ -1,0 +1,19 @@
+# 召喚物（Phase 3R-2）：狐族種族技「狐火誘餌」放出的誘餌。不是由 summon 原語召喚，而是由種族技產生
+# （src/trpg/engine/race_skills.py）。1 點 HP、不行動（inert）、不擋路以外沒有任何作用：敵人的下一次
+# 單體攻擊命中時會被它攔下（reactions.try_intercept），被攔下後誘餌消失；沒被打到也會在 3 輪後消散。
+id: summon_foxfire_decoy
+name_zh: 狐火誘餌
+attributes: {str: 10, dex: 10, con: 10, int: 10, wis: 10, wil: 10}
+max_hp: 1
+speed: 0
+armor_bonus: 0
+weapon: stone_fist
+ai_profile: guard
+default_mode: hold
+resist: {}
+element_mods: {}
+tags: [summoned, decoy]
+reactions: []
+summon: true
+role: totem   # 定位（HP 係數見 rules/core.yaml summon_role_hp_permille；誘餌自己固定 1 HP，不經係數）
+inert: true

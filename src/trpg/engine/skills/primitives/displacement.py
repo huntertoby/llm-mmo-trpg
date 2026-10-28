@@ -87,6 +87,7 @@ def _displace(
                 collision_dice=spec.collision_dice,
                 collision_permille=collision_permille,
                 extra_collisions=extra,
+                pull=pull,
             )
         )
     return batch

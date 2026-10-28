@@ -107,6 +107,7 @@ from trpg.engine.ai.orders import (
     UseEnvironment,
     validate_order,
 )
+from trpg.engine.ai.race import race_ai_action
 from trpg.engine.ai.rune import is_inscribe_skill, read_gains, rune_estimate, rune_gains
 from trpg.engine.ai.scene_objects import SCENE_PRIMITIVES, has_fire_follow_up, scene_estimate
 from trpg.engine.ai.self_costs import self_cost_gate
@@ -586,7 +587,7 @@ def _covered_from(state: BattleState, xy: XY, enemies: list[UnitState]) -> int:
         for e in enemies
         if manhattan(e.xy, xy) <= e.weapon.range
         and cover_object_between(state, e.xy, xy) is not None
-        and has_line_of_sight(state, e.xy, xy, lob=e.weapon.lob)
+        and has_line_of_sight(state, e.xy, xy, lob=e.weapon.lob, viewer=e)
     )
 
 
@@ -2200,6 +2201,9 @@ class UtilityAI:
         switch = auto_mode_action(state, unit, self.profile_for(unit).summon)
         if switch is not None:  # 我方施放者切換召喚物的模式（0 AP；Phase 3-33c）
             return switch
+        racial = race_ai_action(state, unit)  # 種族技的使用條件（Phase 3R-2）
+        if racial is not None:
+            return racial
         ranked = self.rank(state)
         taunter = _taunter(state, unit)
         if taunter is not None:

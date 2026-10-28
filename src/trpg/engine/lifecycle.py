@@ -24,6 +24,7 @@ from trpg.engine.gear_enhance import geared_weapon
 from trpg.engine.gear_reactions import gear_reaction_rules
 from trpg.engine.heights import change_height
 from trpg.engine.rules.facing import default_facing
+from trpg.engine.rules.race import race_element_mods
 from trpg.engine.rules.statuses import is_removed_with_source, stance_status_ids
 from trpg.engine.state import Facing, UnitState
 from trpg.engine.traps import remove_traps_of
@@ -351,7 +352,7 @@ def make_unit(
         armor_bonus=template.armor_bonus,
         weapon=weapon,
         resist=dict(template.resist),
-        element_mods=dict(template.element_mods),
+        element_mods=race_element_mods(rules, template),
         tags=template.tags,
         stamina=stamina,
         max_stamina=stamina,
@@ -367,4 +368,5 @@ def make_unit(
         facing=default_facing(team) if facing is None else facing,
         gear=gear,
         doll=template.doll,
+        race=template.race,
     )

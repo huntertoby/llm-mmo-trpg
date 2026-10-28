@@ -40,9 +40,9 @@ races:
     passive:
       id: elf_forest_sight
       name_zh: 林間視野
-      description_zh: 在森林（草地）地圖上，視線 +1。
-      rule: sight_bonus_on_terrain
-      terrain: [grass]
+      description_zh: 在森林地圖（地圖標籤 forest）上，視線 +1。
+      rule: sight_bonus_on_map_tag
+      map_tags: [forest]
       amount: 1
     look: {skin: "#f6e0cc", hair: long, hair_color: "#e8e0c8", ears: pointed, build: tall}
 

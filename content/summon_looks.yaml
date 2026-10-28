@@ -16,6 +16,7 @@ looks:
   guardian_spirit:  {zh: 守護靈,     body: humanoid,  variant: guardian,    element: summon,      size: medium, trait: glow}
   golem:            {zh: 石像,       body: construct, variant: golem,       element: collision,   size: large}
   bomb_puppet:      {zh: 爆裂傀儡,   body: construct, variant: bomb,        element: ignite,      size: small,  trait: fuse}
+  foxfire_decoy:    {zh: 狐火誘餌,   body: spirit,    element: ignite,      size: small}
   earth_wall:       {zh: 土牆,       body: construct, variant: wall,        element: collision,   size: medium, trait: no_ring}
   war_wolf:         {zh: 戰狼,       body: beast,     variant: wolf,        element: prone,       size: medium}
   hawk:             {zh: 鷹隼,       body: beast,     variant: bird,        element: marked,      size: small,  trait: flying}

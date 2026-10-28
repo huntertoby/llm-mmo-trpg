@@ -38,6 +38,7 @@ from trpg.engine.actions import (
     Shove,
     Swap,
     Trip,
+    UseRaceSkill,
     UseSkill,
     Vault,
 )
@@ -87,6 +88,7 @@ from trpg.engine.gear_charge import charge_actions, do_activate_charge
 from trpg.engine.ids import IMMOVABLE, PRONE, TOPPLABLE
 from trpg.engine.lifecycle import make_unit
 from trpg.engine.maneuvers import contest
+from trpg.engine.race_skills import do_race_skill, race_skill_actions
 from trpg.engine.reactions import (
     PauseForDecision,
     enemy_enters_adjacent_reactions,
@@ -310,6 +312,7 @@ def begin_battle(setup: BattleSetup, seed: int) -> ResolveResult:
         spawn_templates=dict(setup.spawn_templates),
         region=map_def.region,
         look=tuple(sorted(map_def.look.items())),
+        map_tags=tuple(sorted(map_def.tags)),
     )
     positions = _place_units(setup, state)
     names = _unit_names(setup)
@@ -598,7 +601,9 @@ def shove_problem(state: BattleState, unit: UnitState, target: UnitState) -> str
     目標身後第一格被擋（牆、不可走地形、較高格、物件、單位、地圖邊緣）時推擊仍然合法：對抗成功
     則目標不移動、受 1 次撞擊（Phase 3C-3b，``docs/phases/Phase3C計畫.md`` 5.4）。
     """
-    distance = push_distance(state, target, shove_distance(state, unit, target))
+    distance = push_distance(
+        state, target, shove_distance(state, unit, target), _direction(unit.xy, target.xy)
+    )
     if distance <= 0 and target.has_tag(IMMOVABLE):
         return f"推不動：{target.name_zh}紋風不動（不會被推動、拉扯或傳送）"
     if distance <= 0:
@@ -1056,6 +1061,11 @@ def _do_end_turn(ctx: Ctx, unit: UnitState, action: Action) -> None:
     advance_turn(ctx)
 
 
+def _do_race_skill(ctx: Ctx, unit: UnitState, action: Action) -> None:
+    assert isinstance(action, UseRaceSkill)
+    do_race_skill(ctx, unit, action)
+
+
 def _do_use_skill(ctx: Ctx, unit: UnitState, action: Action) -> None:
     assert isinstance(action, UseSkill)
     use_skill(ctx, unit, action)
@@ -1075,6 +1085,7 @@ ACTION_HANDLERS: dict[str, ActionHandler] = {
     "trip": _do_trip,
     "interact": _do_interact,
     "use_skill": _do_use_skill,
+    "use_race_skill": _do_race_skill,
     "end_stance": _do_end_stance,
     "set_reaction_mode": _do_set_reaction_mode,
     "set_summon_mode": _do_set_summon_mode,
@@ -1283,6 +1294,7 @@ def _legal_actions(
                 Trip(unit_id=unit.id, target_id=t.id) for t in foes if not t.has_status(PRONE)
             )
     actions.extend(_skill_actions(state, unit, areas, expand_copy=expand_copy))
+    actions.extend(race_skill_actions(state, unit))  # 種族技（Phase 3R-2；不佔技能欄）
     actions.extend(interact_actions(state, unit))
     if guard_problem(state, unit, None) is None:
         actions.append(Defend(unit_id=unit.id))
@@ -1414,7 +1426,7 @@ def _has_ap_action(state: BattleState, unit: UnitState) -> bool:
         return True
     if any(has_skill_selection(state, unit, s) for s in _usable_skills(state, unit)):
         return True
-    return bool(interact_actions(state, unit))
+    return bool(interact_actions(state, unit)) or bool(race_skill_actions(state, unit))
 
 
 def _can_move(state: BattleState, unit: UnitState) -> bool:

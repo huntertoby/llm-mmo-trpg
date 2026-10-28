@@ -59,12 +59,13 @@ from trpg.engine.events import (
     WallToppled,
 )
 from trpg.engine.heights import change_height
-from trpg.engine.ids import IMMOVABLE, STEADFAST, TOPPLABLE, next_unit_id
+from trpg.engine.ids import IMMOVABLE, RACE_STONEWALL, STEADFAST, TOPPLABLE, next_unit_id
 from trpg.engine.lifecycle import dismiss_summon, make_unit
 from trpg.engine.rules.combat import PERMILLE
 from trpg.engine.rules.facing import facing_toward_enemies
 from trpg.engine.rules.landing import landing_problem, nearest_free
 from trpg.engine.rules.movement import is_deadly, is_standable
+from trpg.engine.rules.race import hazard_push_reduction
 from trpg.engine.runes import inscribe_rune, remove_rune
 from trpg.engine.state import BattleState, ObjectState, UnitState
 from trpg.shared.types import ObjectId, Pos, Surface, Team, UnitId
@@ -506,18 +507,16 @@ def _push_unit(ctx: Ctx, effect: PushEffect, unit_id: UnitId) -> list[EventBase]
     if unit.has_tag(TOPPLABLE):  # 土牆（Phase 3-33e2a）：不移動，往推的方向倒下
         return _topple_unit(ctx, unit, effect.direction, effect.source_id)
     events: list[EventBase] = []
-    distance = push_distance(state, unit, effect.distance)
-    if (unit.has_tag(STEADFAST) or unit.has_tag(IMMOVABLE)) and distance != effect.distance:
-        why: Literal["steadfast", "immovable"] = (
-            "immovable" if unit.has_tag(IMMOVABLE) else "steadfast"
-        )
+    direction = None if effect.pull else effect.direction  # 拉不吃獸人的減距（Phase 3R-2）
+    distance = push_distance(state, unit, effect.distance, direction)
+    if distance != effect.distance:
         events.append(
             ctx.emit(
                 PushResisted,
                 unit_id=unit.id,
                 requested=effect.distance,
                 distance=distance,
-                reason=why,
+                reason=_resist_reason(unit),
             )
         )
     dx, dy = effect.direction
@@ -529,7 +528,8 @@ def _push_unit(ctx: Ctx, effect: PushEffect, unit_id: UnitId) -> list[EventBase]
             events.append(
                 ctx.emit(MoveBlocked, unit_id=unit.id, to_pos=to_pos, reason=reason, forced=True)
             )
-            events.append(_collide(ctx, effect, unit, nxt, reason, shortfall=distance - step))
+            if not effect.harmless:  # 種族技的推拉被擋住只是停下，不算撞擊（Phase 3R-2）
+                events.append(_collide(ctx, effect, unit, nxt, reason, shortfall=distance - step))
             break
         moved = arrive(ctx, unit, nxt, "forced", source_id=effect.source_id)
         events.extend(moved)
@@ -589,16 +589,38 @@ def _collide(
     )
 
 
-def push_distance(state: BattleState, unit: UnitState, requested: int) -> int:
+type _ResistReason = Literal["steadfast", "immovable", "race_stonewall", "race_heavy"]
+
+
+def _resist_reason(unit: UnitState) -> _ResistReason:
+    if unit.has_status(RACE_STONEWALL):
+        return "race_stonewall"
+    if unit.has_tag(IMMOVABLE):
+        return "immovable"
+    return "steadfast" if unit.has_tag(STEADFAST) else "race_heavy"
+
+
+def push_distance(
+    state: BattleState, unit: UnitState, requested: int, direction: XY | None = None
+) -> int:
     """單位實際被推的格數：帶 ``steadfast`` 標籤者 × ``steadfast_push_permille``（無條件捨去）。
+
+    - 穩若磐石（矮人種族技，Phase 3R-2）中完全推不動。
+    - ``direction``（只有「推」會給，拉與傳送不給）：獸人的「沉穩重心」在推的路徑上（含落點）有岩漿
+      或深淵時距離 −1（最少 0）。
 
     技能的推擊效果（Phase 2）遇到 0 格時只是不移動；基本動作 ``Shove`` 遇到 0 格時不合法。
     """
+    if unit.has_status(RACE_STONEWALL):
+        return 0
     if unit.has_tag(IMMOVABLE):  # 石像（Phase 3-33e2a）：完全推不動
         return 0
+    distance = requested
     if unit.has_tag(STEADFAST):
-        return requested * state.ruleset.core.steadfast_push_permille // PERMILLE
-    return requested
+        distance = requested * state.ruleset.core.steadfast_push_permille // PERMILLE
+    if direction is not None:
+        distance -= hazard_push_reduction(state, unit, direction, distance)
+    return max(0, distance)
 
 
 def unit_push_block(state: BattleState, cur: XY, nxt: XY, unit_id: UnitId) -> str | None:

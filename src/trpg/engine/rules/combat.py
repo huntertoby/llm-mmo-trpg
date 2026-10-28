@@ -19,6 +19,7 @@ from trpg.engine.rules.facing import is_behind
 from trpg.engine.rules.forms import form_backstab_crit, form_defense_permille
 from trpg.engine.rules.geometry import XY, has_line_of_sight, manhattan
 from trpg.engine.rules.perks import attribute_perk
+from trpg.engine.rules.race import concealed_limit_for, reveal_radius
 from trpg.engine.rules.statuses import (
     attack_range_cap,
     defense_break_permille,
@@ -61,6 +62,7 @@ __all__ = [
     "positional_bonus",
     "reach_problem",
     "roll_attack",
+    "sees_hidden",
     "situational_modifier",
     "weapon_profile",
 ]
@@ -292,12 +294,21 @@ def is_concealed(state: BattleState, unit: UnitState) -> bool:
     return tile.object_id is not None and state.object_has_tag(*unit.xy, "conceal")
 
 
-def concealed_max_distance(state: BattleState) -> int:
-    """隱蔽的目標可被攻擊的最遠距離（夜晚由天氣覆寫）。"""
+def concealed_max_distance(state: BattleState, viewer: UnitState | None = None) -> int:
+    """隱蔽的目標可被攻擊的最遠距離（夜晚由天氣覆寫；``viewer`` 是人類時回復夜晚縮短的部分，
+    Phase 3R-2）。"""
     weather = state.weather
     if weather is not None and weather.concealed_ranged_max_distance is not None:
-        return weather.concealed_ranged_max_distance
-    return state.ruleset.core.concealed_ranged_max_distance
+        base = weather.concealed_ranged_max_distance
+    else:
+        base = state.ruleset.core.concealed_ranged_max_distance
+    return concealed_limit_for(state, viewer, base)
+
+
+def sees_hidden(state: BattleState, viewer: UnitState, target: UnitState) -> bool:
+    """狐族「靈覺」（Phase 3R-2）：``target`` 在 ``viewer`` 的 ``radius`` 格內時，隱蔽對他無效。"""
+    radius = reveal_radius(state.ruleset, viewer)
+    return radius > 0 and manhattan(viewer.xy, target.xy) <= radius
 
 
 def advantage_sources(
@@ -322,7 +333,7 @@ def advantage_sources(
             advantage = True
         else:
             disadvantage = True
-    if is_concealed(state, target):
+    if is_concealed(state, target) and not sees_hidden(state, attacker, target):
         disadvantage = True
     taunters = forced_target_sources(state.ruleset, attacker)
     if taunters and target.id not in taunters:
@@ -566,7 +577,9 @@ def reach_problem(state: BattleState, attacker: UnitState, target_xy: XY, what: 
     height_problem = melee_height_problem(state, attacker, target_xy)
     if height_problem is not None:
         return height_problem
-    if not has_line_of_sight(state, attacker.xy, target_xy, lob=attacker.weapon.lob):
+    if not has_line_of_sight(
+        state, attacker.xy, target_xy, lob=attacker.weapon.lob, viewer=attacker
+    ):
         return f"視線被阻擋：{attacker.name_zh} 看不到 {what}"
     return None
 
@@ -592,7 +605,9 @@ def concealment_problem(state: BattleState, attacker: UnitState, target: UnitSta
     """隱蔽的目標超過一定距離無法選為目標。"""
     if not is_concealed(state, target) or grants_advantage_against(state.ruleset, target):
         return None  # 被標記者不受隱蔽的選取限制
-    limit = concealed_max_distance(state) + attribute_perk(
+    if sees_hidden(state, attacker, target):
+        return None  # 狐族的靈覺（Phase 3R-2）
+    limit = concealed_max_distance(state, attacker) + attribute_perk(
         state.ruleset, attacker, "reveal_range"
     )  # 感知的常駐數值（Phase 3H-1）
     distance = manhattan(attacker.xy, target.xy)

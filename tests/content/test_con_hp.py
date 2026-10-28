@@ -62,6 +62,7 @@ OLD_HP = {
     "summon_afterimage": 14,
     "summon_bomb_puppet": 8,  # 3-33e2a 新增
     "summon_earth_wall": 20,
+    "summon_foxfire_decoy": 1,  # 3R-2 新增（種族技「狐火誘餌」）
     "summon_elemental_spirit": 14,
     "summon_fire_spirit": 14,  # 3-33e1 新增
     "summon_golem": 24,

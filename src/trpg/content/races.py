@@ -317,7 +317,7 @@ class PassiveRule:
 
 PASSIVE_RULE_SPECS: dict[str, PassiveRule] = {
     "sight_penalty_reduction": PassiveRule(("weathers", "permille")),
-    "sight_bonus_on_terrain": PassiveRule(("terrain", "amount")),
+    "sight_bonus_on_map_tag": PassiveRule(("map_tags", "amount")),
     "detect_hidden_nearby": PassiveRule(("radius",)),
     "damage_taken_permille": PassiveRule(("element", "permille")),
     "slip_immunity": PassiveRule(("surfaces",)),
@@ -331,6 +331,7 @@ PASSIVE_RULE_SPECS: dict[str, PassiveRule] = {
 
 _PASSIVE_PARAM_FIELDS = (
     "weathers",
+    "map_tags",
     "terrain",
     "surfaces",
     "element",
@@ -348,6 +349,8 @@ class RacePassive(_GuardedModel):
     description_zh: str = Field(min_length=1)
     rule: str = Field(pattern=ID_PATTERN)
     weathers: tuple[str, ...] | None = None
+    map_tags: tuple[str, ...] | None = None
+    """``sight_bonus_on_map_tag``：地圖標籤（地圖檔的 ``tags``，例如 ``forest``）。"""
     terrain: tuple[str, ...] | None = None
     surfaces: tuple[Surface, ...] | None = None
     element: Element | None = None

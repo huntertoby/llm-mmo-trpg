@@ -43,6 +43,7 @@ def test_the_summon_templates_are_loaded_into_the_ruleset() -> None:
         "summon_skeleton_warrior",
         "summon_war_totem",
         "summon_afterimage",  # 3D-6：規則改變「殘影」的分身
+        "summon_foxfire_decoy",  # 3R-2：狐族種族技「狐火誘餌」的誘餌
         # 3-33e1：召喚物（一）
         "summon_fire_spirit",
         "summon_ice_spirit",

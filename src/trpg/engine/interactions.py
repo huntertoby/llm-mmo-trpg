@@ -42,8 +42,10 @@ from trpg.engine.events import (
     ObjectExploded,
     SurfaceEntered,
 )
+from trpg.engine.ids import BURNING
 from trpg.engine.rules.geometry import XY, chebyshev
 from trpg.engine.rules.movement import is_flying
+from trpg.engine.rules.race import burn_immune, conduction_immune
 from trpg.engine.state import BattleState
 from trpg.engine.triggers import register_trigger
 from trpg.shared.types import Element, Surface, UnitId
@@ -225,7 +227,9 @@ def _outcome_effects(  # noqa: PLR0911
         targets = [
             unit
             for tile in conducting_tiles(state, xy)
-            if (unit := state.unit_at(*tile)) is not None and unit.id != exclude_unit
+            if (unit := state.unit_at(*tile)) is not None
+            and unit.id != exclude_unit
+            and not conduction_immune(state, unit)  # 晶能義體人站在水上不導電（Phase 3R-2）
         ]
         return [
             DamageEffect(
@@ -431,6 +435,13 @@ def _on_surface_entered(ctx: Ctx, event: EventBase, depth: int) -> list[EffectBa
     on_enter = ctx.rules.surface_def(event.surface).on_enter
     if on_enter is None or on_enter.apply_status is None:
         return []
+    unit = ctx.state.units.get(event.unit_id)
+    if (
+        unit is not None
+        and on_enter.apply_status == BURNING
+        and burn_immune(ctx.rules, unit, event.surface)
+    ):
+        return []  # 角魔走在火焰表面上不會燃燒（Phase 3R-2）
     return [
         ApplyStatusEffect(depth=depth, target_id=event.unit_id, status_id=on_enter.apply_status)
     ]

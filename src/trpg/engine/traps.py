@@ -26,6 +26,7 @@ from trpg.engine.events import (
     TrapTriggered,
 )
 from trpg.engine.rules.perks import attribute_perk
+from trpg.engine.rules.race import reveal_radius
 from trpg.engine.rules.statuses import effective_attribute
 from trpg.engine.skill_triggers import check_trigger_depth
 from trpg.engine.skills.casting import use_trap_skill
@@ -80,7 +81,10 @@ def reveal_traps(ctx: Ctx, caster: UnitState, tiles: Iterable[tuple[int, int]]) 
 def detect_traps(ctx: Ctx, unit: UnitState) -> None:
     """感知的常駐數值（Phase 3H-1）：``unit`` 自動看見 ``reveal_range`` 格內的敵方陷阱（移動抵達、
     回合開始時檢查；沒有階數就什麼也不做）。"""
-    radius = attribute_perk(ctx.rules, unit, "reveal_range")
+    radius = max(
+        attribute_perk(ctx.rules, unit, "reveal_range"),
+        reveal_radius(ctx.rules, unit),  # 狐族的靈覺（Phase 3R-2）
+    )
     if radius <= 0:
         return
     near = [
@@ -129,6 +133,9 @@ def place_trap(ctx: Ctx, caster: UnitState, skill: SkillDef, xy: tuple[int, int]
         trigger=spec.trigger,
         rounds=spec.rounds,
     )
+    for seer in state.living_units():  # 狐族的靈覺：陷阱放在他身邊就看得見（Phase 3R-2）
+        if seer.team is not caster.team and reveal_radius(ctx.rules, seer) > 0:
+            detect_traps(ctx, seer)
 
 
 def queue_trap_entry(ctx: Ctx, unit: UnitState, xy: tuple[int, int]) -> None:

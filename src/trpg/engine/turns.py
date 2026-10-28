@@ -38,10 +38,12 @@ from trpg.engine.events import (
 from trpg.engine.forms import pay_upkeep, tick_form_cooldowns
 from trpg.engine.gear import gear_turn_start
 from trpg.engine.grants import expire_granted_skills
+from trpg.engine.ids import BURNING
 from trpg.engine.objectives import check_battle_end, check_round_end, end_battle
 from trpg.engine.results import ResolveResult
 from trpg.engine.rewrites import ap_cap
 from trpg.engine.rules.movement import is_flying
+from trpg.engine.rules.race import burn_immune
 from trpg.engine.rules.statuses import ap_penalty, move_points_for_turn, skip_turn_status
 from trpg.engine.skill_infusion import release_infusion
 from trpg.engine.skill_triggers import (
@@ -51,7 +53,7 @@ from trpg.engine.skill_triggers import (
     settle,
 )
 from trpg.engine.stacks import expire_stacks
-from trpg.engine.state import StatusInstance, UnitState
+from trpg.engine.state import BattleState, StatusInstance, UnitState
 from trpg.engine.summons import (
     detonate_if_adjacent,
     expire_summons,
@@ -92,7 +94,7 @@ def start_turn(ctx: Ctx, unit_id: UnitId) -> None:
     unit.ap_gain_turn = unit.ap_pending  # 回合外存下的 AP 算在這個回合的 AP 回復上限內（3G-G3a）
     unit.gear_turn_counts = {}  # 裝備觸發的每回合 1 次（3G-G3a）
     unit.ap_pending = 0  # grant_ap 給的、等到這個回合才加上的 AP（Phase 3C-4a）
-    unit.move_points = move_points_for_turn(ctx.rules, unit)
+    unit.move_points = move_points_for_turn(ctx.rules, unit, _weather_id(state))
     gained = max(0, min(unit.stamina_regen, unit.max_stamina - unit.stamina))  # 耐力回復（3H-5）
     unit.stamina += gained
     if summon_inert(state, unit):
@@ -111,7 +113,7 @@ def start_turn(ctx: Ctx, unit_id: UnitId) -> None:
     _tick_cooldowns(ctx, unit)
     tick_form_cooldowns(unit)  # 形態的冷卻（Phase 3J-1a）
     if pay_upkeep(ctx, unit):  # 維持費不夠：自動解除，移動點數不再含形態的加減
-        unit.move_points = move_points_for_turn(ctx.rules, unit)
+        unit.move_points = move_points_for_turn(ctx.rules, unit, _weather_id(state))
     expire_activations(ctx, unit)  # 限時傳說到期（Phase 3D-6）
     detect_traps(ctx, unit)  # 感知的常駐數值（Phase 3H-1）
 
@@ -210,6 +212,10 @@ def _tick_cooldowns(ctx: Ctx, unit: UnitState) -> None:
         ctx.emit(SkillCooldownChanged, unit_id=unit.id, skill_id=skill_id, remaining=remaining)
 
 
+def _weather_id(state: BattleState) -> str | None:
+    return None if state.weather is None else state.weather.id
+
+
 def _surface_turn_start(ctx: Ctx, unit: UnitState) -> list[EffectBase]:
     """站在表面上的回合開始效果（``surfaces.yaml`` 的 ``on_turn_start``）。"""
     tile = ctx.state.tile(*unit.xy)
@@ -232,7 +238,10 @@ def _surface_turn_start(ctx: Ctx, unit: UnitState) -> list[EffectBase]:
                 target_id=unit.id, cause="surface", element=damage.element, dice=damage.dice
             )
         )
-    if on_start.apply_status is not None:
+    burn_proof = on_start.apply_status == BURNING and burn_immune(
+        ctx.rules, unit, tile.surface
+    )  # 角魔站在火焰表面上不會燃燒（Phase 3R-2）
+    if on_start.apply_status is not None and not burn_proof:
         effects.append(ApplyStatusEffect(target_id=unit.id, status_id=on_start.apply_status))
     return effects
 

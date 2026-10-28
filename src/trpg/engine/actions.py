@@ -21,6 +21,7 @@ __all__ = [
     "BASIC_ACTION_TYPES",
     "CHARGE_ACTION_TYPES",
     "MANAGEMENT_ACTION_TYPES",
+    "RACE_ACTION_TYPES",
     "STEP_ADAPTER",
     "STEP_LIST_ADAPTER",
     "SUMMON_ACTION_TYPES",
@@ -47,6 +48,7 @@ __all__ = [
     "Step",
     "Swap",
     "Trip",
+    "UseRaceSkill",
     "UseSkill",
     "Vault",
 ]
@@ -255,6 +257,28 @@ class UseSkill(_ActionBase):
     不能帶。"""
 
 
+class UseRaceSkill(_ActionBase):
+    """使用種族技（Phase 3R-2，``docs/design/07-角色成長.md`` 7.7）：種族技由單位的種族決定
+    （``content/races.yaml``），所以不帶技能 ID；1 AP、每場限用 1～2 次、不佔技能欄。依種族技的
+    形狀只允許對應的欄位：
+
+    - ``self``：都不給（過充另外要 ``choice``：``stamina`` 或 ``mana``）；
+    - ``ground_tile``（狐火誘餌）、``square3``（潮息）：``target_pos``；
+    - ``cone``（龍息震退）：``direction``；
+    - ``single``（拋錨）：``target_id``；
+    - ``object_then_tile``（蠻力投擲）：``target_object_id`` 與 ``target_pos``（落點）。
+
+    是否合法由 :func:`trpg.engine.race_skills.race_skill_problem` 判斷。
+    """
+
+    type: Literal["use_race_skill"] = "use_race_skill"
+    target_id: UnitId | None = None
+    target_object_id: ObjectId | None = None
+    target_pos: Pos | None = None
+    direction: Direction | None = None
+    choice: Literal["stamina", "mana"] | None = None
+
+
 class EndStance(_ActionBase):
     """取消目前的姿態（Phase 2E-2）：只能在自己的回合，免費（不花 AP）。"""
 
@@ -341,6 +365,7 @@ type Action = Annotated[
     Move
     | Attack
     | UseSkill
+    | UseRaceSkill
     | Defend
     | Run
     | Swap
@@ -379,6 +404,9 @@ WEAPON_ACTION_TYPES: tuple[str, ...] = ("reload",)
 
 CHARGE_ACTION_TYPES: tuple[str, ...] = ("activate_charge",)
 """裝備充能的啟動（Phase 3G-G3a）：只有裝備了充能詞條且層數足夠才有；不算進基本動作的上限。"""
+
+RACE_ACTION_TYPES: tuple[str, ...] = ("use_race_skill",)
+"""種族技（Phase 3R-2）：花 1 AP 但不佔技能欄，也不算基本動作的上限。"""
 
 MANAGEMENT_ACTION_TYPES: tuple[str, ...] = (
     "end_turn",
@@ -419,6 +447,7 @@ type Step = Annotated[
     Move
     | Attack
     | UseSkill
+    | UseRaceSkill
     | Defend
     | Run
     | Swap
