@@ -139,7 +139,7 @@ def test_allocation_is_checked() -> None:
 def test_dev_packs_all_start_and_stay_out_of_the_player_start() -> None:
     lib = library()
     packs = lib.dev_starters.packs
-    assert len(packs) == 28
+    assert len(packs) == 29
     labels = {p.label_zh for p in packs}
     assert labels == {"烈焰", "潮雷", "霜寒", "撼地", "鐵壁", "影刃"} | {
         "鷹眼",
@@ -167,6 +167,7 @@ def test_dev_packs_all_start_and_stay_out_of_the_player_start() -> None:
         "守護靈包",
         "吸引圖騰包",
         "高台圖騰包",
+        "獸變",  # 3J-4：形態池（化形撲擊、野性怒吼、化形回春）
     }
     for pack in packs:
         run = new_dev_run(lib, pack.id, 0)

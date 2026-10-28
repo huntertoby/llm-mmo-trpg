@@ -38,3 +38,6 @@ packs:
   - {id: dev_summon_guardian, label_zh: 守護靈包,   weapon: totem_staff, keywords: [summon, ignite], skills: [skill_summon_guardian_spirit, skill_fire_bolt]}
   - {id: dev_summon_pull,     label_zh: 吸引圖騰包, weapon: totem_staff, keywords: [summon, ignite], skills: [skill_summon_pull_totem, skill_fire_bolt]}
   - {id: dev_summon_plateau,  label_zh: 高台圖騰包, weapon: totem_staff, keywords: [summon, ignite], skills: [skill_summon_plateau_totem, skill_fire_bolt]}
+
+  # 3J-4：形態池（06 6.30「形態池名單」）：起始技能從形態池（化形撲擊、野性怒吼、化形回春）與倒地池各給 1 招
+  - {id: dev_beast,      label_zh: 獸變, weapon: one_handed_sword, keywords: [form, prone]}
