@@ -1,6 +1,6 @@
 # 開發 PM 交接文件
 
-> 給接手的 **開發 PM**（新對話中的 Claude）。最後更新：**2026-10-23**。**只讀本檔就能接手**；需要時再讀 `CLAUDE.md`、`docs/專案計畫.md`（總覽）與本檔指到的計畫檔。
+> 給接手的 **開發 PM**（新對話中的 Claude）。最後更新：**2026-10-28**。**只讀本檔就能接手**；需要時再讀 `CLAUDE.md`、`docs/專案計畫.md`（總覽）與本檔指到的計畫檔。
 > 現況一句話（2026-10-23 第二次交接）：**Phase 4 完成 4-L1～4-L5c，介面完成 3-35～3-38（字型、狀態圖示、戰場效果、區域主題、雲嶺、可燃淡化）；使用者暫停，沒有 agent 在跑**。下一步見 **3.00**。
 
 ---
@@ -50,19 +50,39 @@ Phase 3 各段（`Phase3計畫.md` 節號；報告 `Phase3-*報告.md`）：
 
 ## 3. 下一步
 
-### 3.000 暫停點（2026-10-24 深夜，開發 PM `local_e6fcf372`；最新，優先於 3.00）
+### 3.000 接手第一件事（2026-10-28 第四次交接，最新，優先於下面各節）
 
-**使用者：「做到 3-54b 先停 token 要沒了」**。沒有 agent 在跑；main 已 push。**恢復前不要派新段**，等專案 PM 轉達。
+> 上一任開發 PM：`local_e6fcf372`（2026-10-24 接手，做到 3-54b 暫停；使用者換對話）。**只讀本節就能開始**，細節再看本節指到的檔案。和使用者、各 PM 一律用繁體中文。
 
-- **已完成並 push**：3-47、3-48～3-48h、3-49、3-50／3-50b／3-50c（#62 代價狀態不能淨化）、3-51、3-52／3-52b、3-53／3-53b、3-54a、3-54b（大地＋風小修）、3-55（卡片寫具體屬性）；3I-1～3I-6（含 3I-3b）；3K-1、3K-2／2b／2c；3S-1～3S-3。驗收紀錄：`Phase3計畫.md` 51～65 節、`Phase3I計畫.md` 4.x、`Phase3K計畫.md` 5.x、`Phase3S計畫.md` 檔尾。`LOG_FORMAT` `/77`；存檔 `trpg-run/6`。
-- **恢復順序**：
-  1. **3-54c 種子技能**（`Phase3計畫.md` 64 節）：風 6、毒 6、大地 4、神聖 2（06 6.33）；「清風」用清除表面效果（#63）；**補完毒種子後刪 `poisoned` 的 `start_hidden`、拿掉 3-53 的保守測試標記**（`EXTRA_KEYWORDS`、`short == {"poisoned": 1}`、起始技能剛好 1 招）。
-  2. 3J 形態（`Phase3J計畫.md`）→ 3R 種族（`Phase3R計畫.md`，3R-3a 含 3S-3 成對武器遠側錯開 3px 小修）→ Phase 4（4-L6 起）。
-- **待決（交玩法 PM，恢復時先看）**：
-  - 3-54b：「大地元素」定義（標籤 `earth` 或效果元素 `earth`）；純地形技能在工坊做不出來（工坊不能選標籤）；石膚、震波沒限大地；震波仍要命中；新原語預算初值；`workshop_text.yaml` 新增的震波與擴散格數說明是初稿待改寫。
-  - 3-55：工坊沒有主角手上武器來源（App 沒傳 `heroWeapon`，API 已支援）；無持有者卡片「縮放：武器的屬性」仍泛稱；「手持指定武器」命名。
-- **平衡待辦** B1～B25（本檔 3.3）。
-- **流程經驗**：合併後在 main 跑「除 llm 的全量」（`-m "not llm" --timeout=3000`，兩個 agent 同時跑時可達 20 分）再 push；其他 PM 會在 main 上 commit 並 push，可能把尚未全量檢查的合併一起推出去——合併後盡快跑全量；兩個 agent 同時加技能或遞增 `LOG_FORMAT` 必撞（快照／`skill_icons.json` 取 `--theirs` 再重產；`LOG_FORMAT` 取較大＋1、runner 文件字串都保留、測試字面值一起改）；agent 規格要寫明 `tests/engine` 與 `-m "slow or not slow" tests/cli --timeout=3000`、開工先 fast-forward 到 main、不要建 `node_modules` 連結；刪 worktree 前確認沒有連結；agent 回報後若「waiting on its own background work」用 TaskStop。
+**1. 現況（交接時）**
+- main ＝ origin/main ＝ `030fa5ef`（含本節更新後的 commit），工作區乾淨（只有不明的 `tmp_x`，不是開發 PM 建的，不要動）。**沒有任何 agent 在跑**。使用者在 3-54b 後暫停：「做到 3-54b 先停 token 要沒了」——**恢復前不要派新段**，等專案 PM 轉達。
+- 最後一次全量（除 `llm`）：pytest 7873、vitest 994、mypy、lint-imports、重播全過。`LOG_FORMAT` `/77`；存檔 `trpg-run/6`；內建技能 268＋後續段落新增（以 `content/skills/` 為準）。
+- worktree：`git worktree list` 還有 5 個舊的 locked 登記（`agent-a1403…`、`a423…`、`a57d…`、`a9173…`、`aa62…`，前任遺留，分支已合併或作廢）與 3 個美術 PM 的 worktree（`art-pm-20b75c`、`art-pm-5ea9fb`、`art-style-sample-404539`，**不要刪**）。`.claude/worktrees/` 底下約 38 個資料夾是已刪分支的殘留（檔案被鎖、`git worktree remove` 刪不乾淨），可在沒有 agent 時手動清，刪之前確認裡面的 `client/node_modules` **不是連結**。
+
+**2. 恢復順序**
+1. **3-54c 種子技能**（`Phase3計畫.md` 第 64 節）：風 6、毒 6、大地 4、神聖 2（06 6.33）；「清風」用清除表面效果（#63，不靠風元素、不觸發擴散）；**補完毒種子後刪 `content/skill_keywords.yaml` 中 `poisoned` 的 `start_hidden`，並拿掉 3-53 的保守測試標記**（`EXTRA_KEYWORDS`、`test_pools_24c.py` 的 `short == {"poisoned": 1}`、`test_keyword_start.py` 起始技能剛好 1 招）。
+2. **3J 形態**（`Phase3J計畫.md`）。
+3. **3R 種族與出身**（`Phase3R計畫.md`；3R-3a 含 3S-3 美術小修：成對武器遠側的手槍、斧、錘往前上方錯開約 3px；種族角可用 `paperdollSideGear.drawHornSide`、側面種族部件掛 `SideHooks.race`）。
+4. **Phase 4**（4-L6 起，`Phase4計畫.md`）。
+
+**3. 待玩法 PM 決定（恢復時先問）**
+- 3-54b：「大地元素」定義（現為標籤 `earth` 或效果元素 `earth`）；工坊不能選標籤，純地形技能做不出來；石膚、震波沒限大地；震波仍要命中；石膚、震波、擴散 2 格預算初值；`content/workshop_text.yaml` 新增的震波與擴散格數說明是初稿。
+- 3-55：工坊沒有主角手上武器的來源（App 沒傳 `heroWeapon`，API `/api/workshop/options`、`/api/workshop/check` 已支援 `weapon`）；無持有者卡片「縮放：武器的屬性」仍泛稱；「手持指定武器」命名。
+- 各段驗收紀錄（含已回覆的待決）：`Phase3計畫.md` 51～65 節（含 60b、60c、62b、63b、64.1）、`Phase3I計畫.md` 4.1～4.6、`Phase3K計畫.md` 5.1～5.4、`Phase3S計畫.md` 檔尾。
+
+**4. 平衡待辦**：本檔 3.3 的 B1～B25（使用者：平衡延後，驗收時只判斷並記錄、不調）。
+
+**5. 流程（照做）**
+- **流程改善 A～F**（2026-10-24 使用者同意，細節在本檔 6.2 與 6.5.1）：A 決策影響盤點（寫規格前先盤點受影響的既有功能）；B 行為一致測試（規則句一律要實際跑引擎的表格測試）；C 已寫入設計文件的決定只有使用者能改（PM 之間不在對話裡放寬，玩法 PM 也不能自己改已寫入的規則，要問使用者）；D 排版煙霧檢查（`window.__layoutSmoke`，先 `localStorage.clear()`）；E 一次出事就全面掃描；F 禁止結束不是自己啟動的程序。
+- **派工**：同時最多 2 個 agent；規格寫明 `tests/engine` 與 `-m "slow or not slow" tests/cli --timeout=3000`；agent 開工先 fast-forward 到 main；不准建 `client/node_modules` 連結（`corepack pnpm -C client install --offline --frozen-lockfile`）；agent 回報後若顯示「waiting on its own background work」用 `TaskStop`。
+- **合併**：`git merge --no-ff` 後在 main 跑「除 llm 的全量」（`UV_NO_SYNC=1 uv run pytest -q tests -n 8 -m "not llm" --timeout=3000`，加 ruff、format、mypy、lint-imports、`corepack pnpm -C client build`、vitest、一場重播；約 8～20 分，背景執行），**全過才 push**；背景檢查跑時不要改工作區。兩個 agent 同時加技能或遞增 `LOG_FORMAT` 必撞：`skill_icons.json`（`uv run python -m tests.narrative.icon_fixture`）、CLI 快照（`UPDATE_CLI_SNAPSHOTS=1`）取 `--theirs` 再重產；`LOG_FORMAT` 取較大＋1、`runner.py` 文件字串兩段都保留、測試字面值一起改；改了 API 型別要重產 OpenAPI（`uv run python scripts/export_openapi.py` → `corepack pnpm -C client gen:api`）並修 vitest 夾具。
+- **已知地雷**：
+  - 前端指令一律 `corepack pnpm -C client …`（在 `client` 資料夾內執行 build／vitest）；`node_modules` 壞了用 `corepack pnpm -C client install --offline --frozen-lockfile --force` 從本機快取還原，不要下載。
+  - Windows 路徑：`Path.resolve()` 很慢（內容庫已快取 `bundled_content_dir`）；Git Bash 下用 `/f/...`，PowerShell 與工具參數用 `F:\...`；暫存腳本放 scratchpad 或 `$TEMP`，不要放專案資料夾（會被 ruff 掃到）。
+  - 不要 `taskkill /IM python.exe`、`pkill` 之類；只停自己的 PID。預覽伺服器不要用 8000（使用者）、8001（本機 LLM）——`.claude/launch.json` 有 `trpg-serve-verify`（8011）。
+  - **兩個開發 PM 同時動 main 的教訓**：2026-10-24 交接時前任其實還在執行、直接在主資料夾改檔，差點互相覆蓋。接手先 `git status`、`git worktree list`、`list_sessions` 確認前任是否 idle，有人在動就停手並問專案 PM 由誰做。其他 PM（專案、玩法）也會在 main 上 commit 並 push，可能把你尚未全量檢查的合併一起推出去——合併後盡快跑全量。
+  - 測試偶發：召喚物 HP 斷言在多 agent 搶 CPU 時偶發失敗，單獨重跑會過；`tests/cli/test_output_snapshots.py` 單一測試接近 300 秒，一律加 `--timeout=3000`。
+- **回報**：只在「驗收合併完成（附給使用者的檢查重點）」「卡住」「需要決定」時傳給專案 PM `local_46ffc72c-28dd-48aa-9eb7-f1724ef32432`；規則問題直接問玩法 PM `local_e3a02b51-b04a-41ac-a356-7aef049c8be2`；美術驗收找美術 PM `local_1501da38-7be4-4aad-8915-c16e592f04f3`（分支 `claude/art-pm-5ea9fb`，由開發 PM 併進 main）。
 
 ### 3.00 接手第一件事（2026-10-23 第二次交接，最新，優先於下面各節）
 
