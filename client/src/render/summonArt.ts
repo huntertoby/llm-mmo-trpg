@@ -3,12 +3,12 @@
 // 人形體型直接用紙娃娃（再依款式合成透明度、色調、外光）；其他五種體型在這裡程式繪製，畫到離屏後加深色外框。
 // 任何輸入（含不認得的體型、款式、元素、大小）都畫得出來：不認得的退回人形骷髏，不丟例外。
 import type { Facing } from "../api/types";
-import type { Ctx } from "./artDraw";
+import { TAU, type Ctx } from "./artDraw";
 import type { DollSpec, Gear } from "./appearance";
+import { FORM_AURA_NEUTRAL, drawFormAura, mixColor } from "./inkForm";
+import { dot, ellPts, ink, INK, setShadeDir, shadow, stroke, type Pt } from "./inkStyle";
 import { DOLL_H, DOLL_W, renderFigureCanvas, SUMMON_FOOT_Y, SUMMON_H, SUMMON_W } from "./paperdoll";
 
-const TAU = Math.PI * 2;
-const INK = "#16121a";
 
 /** 後端 `SummonLookView`／前端 `UnitDraw` 的外觀欄位（字串都可能是前端不認得的新值）。 */
 export interface SummonLookDraw {
@@ -79,23 +79,11 @@ export function summonKey(look: ResolvedLook, facing: Facing, ownerKey = ""): st
   return [look.body, look.variant, look.element ?? "", look.size, look.trait ?? "", facing, copy].join("|");
 }
 
-function mix(a: string, b: string, t: number): string {
-  const pa = parseInt(a.slice(1), 16);
-  const pb = parseInt(b.slice(1), 16);
-  const m = (s: number): number => Math.round(((pa >> s) & 255) * (1 - t) + ((pb >> s) & 255) * t);
-  return `#${((m(16) << 16) | (m(8) << 8) | m(0)).toString(16).padStart(6, "0")}`;
-}
+const light = (c: string, t = 0.3): string => mixColor(c, "#ffffff", t);
+const elemColor = (s: ResolvedLook, fallback: string): string => (s.element !== undefined ? KEYWORD_COLOR[s.element] : undefined) ?? fallback;
 
-function fill(ctx: Ctx, c: string | CanvasGradient, path: () => void): void {
-  ctx.fillStyle = c;
-  ctx.beginPath();
-  path();
-  ctx.fill();
-}
-
-function shadow(ctx: Ctx, rx: number, ry = rx * 0.35, y = -1, a = 0.3): void {
-  fill(ctx, `rgba(0,0,0,${a})`, () => ctx.ellipse(0, y, rx, ry, 0, 0, TAU));
-}
+/** 矩形的四個角點（搭配 `sharp: true` 畫石塊、木柱）。 */
+const box = (x0: number, y0: number, x1: number, y1: number): Pt[] => [[x0, y0], [x1, y0], [x1, y1], [x0, y1]];
 
 /** `side`：東 1、西 -1、南 0、北 `null`（背面不畫眼睛）。 */
 type Side = 1 | -1 | 0 | null;
@@ -110,143 +98,96 @@ function sideOf(facing: Facing): Side {
 function eyes(ctx: Ctx, side: Side, y: number, c = "#ffffff", gap = 3): void {
   if (side === null) return;
   const x = side * 2.4;
-  fill(ctx, c, () => {
-    ctx.arc(x - gap, y, 1.6, 0, TAU);
-    ctx.arc(x + gap, y, 1.6, 0, TAU);
-  });
+  dot(ctx, x - gap, y, 1.5, 1.7, c);
+  dot(ctx, x + gap, y, 1.5, 1.7, c);
 }
 
 // ---- 漂浮靈：水滴身體＋元素邊緣＋粒子；底下只有小影子 ----
+const DROP: readonly Pt[] = [[0, -30], [6, -24], [10, -17], [9, -9], [4, -3], [0, -1], [-4, -3], [-9, -9], [-10, -17], [-6, -24]];
+
+function spiritEdge(ctx: Ctx, s: ResolvedLook, c: string): void {
+  if (s.element === "ignite") {
+    for (const [x, h] of [[-5, 9], [0, 12], [5, 8]] as const) {
+      ink(ctx, `sp-flame-${x}`, [[x - 3, -24], [x, -24 - h], [x + 1, -26 - h], [x + 3, -24 - h / 2], [x + 3, -24]], c, { sharp: true, shade: false, w: 0.6 });
+    }
+  } else if (s.element === "frozen") {
+    for (const [x, y, a] of [[-8, -20, -0.6], [8, -20, 0.6], [0, -31, 0]] as const) {
+      const rot = (px: number, py: number): Pt => [x + px * Math.cos(a) - py * Math.sin(a), y + px * Math.sin(a) + py * Math.cos(a)];
+      ink(ctx, `sp-ice-${x}`, [rot(0, -6), rot(2.5, 0), rot(0, 3), rot(-2.5, 0)], light(c, 0.4), { sharp: true, shade: false, w: 0.6 });
+    }
+  } else if (s.element === "charged") {
+    for (const sx of [-1, 1]) {
+      const pts: Pt[] = [[sx * 8, -26], [sx * 12, -21], [sx * 9, -18], [sx * 14, -12]];
+      stroke(ctx, `sp-bolt-i${sx}`, pts, 3, INK);
+      stroke(ctx, `sp-bolt-${sx}`, pts, 1.5, c);
+    }
+  } else if (s.element === "wet") {
+    for (const [x, y] of [[-10, -12], [10, -16], [7, -27]] as const) {
+      ink(ctx, `sp-drop-${x}`, [[x, y - 3], [x + 2.5, y + 1], [x, y + 2], [x - 2.5, y + 1]], c, { shade: false, w: 0.6 });
+    }
+  }
+}
+
 function spirit(ctx: Ctx, s: ResolvedLook, side: Side): void {
-  const c = (s.element !== undefined ? KEYWORD_COLOR[s.element] : undefined) ?? "#c8ccd4";
+  const c = elemColor(s, "#c8ccd4");
   ctx.save();
   ctx.translate(0, -8);
   const g = ctx.createRadialGradient(0, -14, 2, 0, -14, 18);
   g.addColorStop(0, `${c}99`);
   g.addColorStop(1, `${c}00`);
-  fill(ctx, g, () => ctx.arc(0, -14, 18, 0, TAU));
-  const body = (): void => {
-    ctx.moveTo(0, -30);
-    ctx.quadraticCurveTo(11, -18, 9, -9);
-    ctx.quadraticCurveTo(0, 0, -9, -9);
-    ctx.quadraticCurveTo(-11, -18, 0, -30);
-  };
-  fill(ctx, mix(c, "#ffffff", 0.25), body);
-  fill(ctx, mix(c, "#ffffff", 0.7), () => ctx.ellipse(-3, -16, 3, 5, -0.3, 0, TAU));
-  ctx.strokeStyle = c;
-  if (s.element === "ignite") {
-    for (const [x, h] of [[-5, 9], [0, 12], [5, 8]] as const) {
-      fill(ctx, c, () => {
-        ctx.moveTo(x - 3, -24);
-        ctx.quadraticCurveTo(x, -24 - h, x + 1, -26 - h);
-        ctx.quadraticCurveTo(x + 3, -24 - h / 2, x + 3, -24);
-      });
-    }
-  }
-  if (s.element === "frozen") {
-    for (const [x, y, a] of [[-8, -20, -0.6], [8, -20, 0.6], [0, -31, 0]] as const) {
-      ctx.save();
-      ctx.translate(x, y);
-      ctx.rotate(a);
-      fill(ctx, mix(c, "#ffffff", 0.4), () => {
-        ctx.moveTo(0, -6);
-        ctx.lineTo(2.5, 0);
-        ctx.lineTo(0, 3);
-        ctx.lineTo(-2.5, 0);
-        ctx.closePath();
-      });
-      ctx.restore();
-    }
-  }
-  if (s.element === "charged") {
-    ctx.lineWidth = 1.6;
-    for (const sx of [-1, 1]) {
-      ctx.beginPath();
-      ctx.moveTo(sx * 8, -26);
-      ctx.lineTo(sx * 12, -21);
-      ctx.lineTo(sx * 9, -18);
-      ctx.lineTo(sx * 14, -12);
-      ctx.stroke();
-    }
-  }
-  if (s.element === "wet") {
-    for (const [x, y] of [[-10, -12], [10, -16], [7, -27]] as const) {
-      fill(ctx, c, () => {
-        ctx.moveTo(x, y - 3);
-        ctx.quadraticCurveTo(x + 2.5, y + 1, x, y + 2);
-        ctx.quadraticCurveTo(x - 2.5, y + 1, x, y - 3);
-      });
-    }
-  }
+  ctx.fillStyle = g;
+  ctx.beginPath();
+  ctx.arc(0, -14, 18, 0, TAU);
+  ctx.fill();
+  ink(ctx, "sp-body", DROP, mixColor(c, "#ffffff", 0.25), { alpha: 0.9 });
+  ink(ctx, "sp-shine", ellPts(-3, -16, 3, 5, 10), light(c, 0.7), { shade: false, line: false, alpha: 0.8 });
+  spiritEdge(ctx, s, c);
   eyes(ctx, side, -17, "#1d1a22", 2.6);
   ctx.restore();
 }
 
 // ---- 構造體：石像、爆裂傀儡、土牆 ----
 function constructWall(ctx: Ctx): void {
-  fill(ctx, "#6e5a40", () => ctx.roundRect(-15, -24, 30, 23, 2));
-  fill(ctx, "#8c7350", () => ctx.roundRect(-15, -26, 30, 6, 2));
-  ctx.strokeStyle = "#4a3a28";
-  ctx.lineWidth = 1;
+  ink(ctx, "wall-body", box(-15, -24, 15, -1), "#6e5a40", { sharp: true });
+  ink(ctx, "wall-top", box(-15, -26, 15, -20), "#8c7350", { sharp: true });
   for (const [x0, y0, x1, y1] of [[-15, -14, 15, -14], [-5, -20, -5, -14], [6, -14, 6, -2], [-10, -14, -10, -2]] as const) {
-    ctx.beginPath();
-    ctx.moveTo(x0, y0);
-    ctx.lineTo(x1, y1);
-    ctx.stroke();
+    stroke(ctx, `wall-crack-${x0}-${y0}`, [[x0, y0], [x1, y1]], 0.8, "#4a3a28");
   }
 }
 
 function constructBomb(ctx: Ctx, c: string, side: Side): void {
-  for (const sx of [-1, 1]) fill(ctx, "#5a4a3a", () => ctx.roundRect(sx * 4 - 2, -6, 4, 6, 1));
-  fill(ctx, "#6a5a4a", () => ctx.arc(0, -15, 10, 0, TAU));
-  ctx.strokeStyle = c;
-  ctx.lineWidth = 1.6;
+  for (const sx of [-1, 1]) ink(ctx, `bomb-leg-${sx}`, box(sx * 4 - 2, -6, sx * 4 + 2, 0), "#5a4a3a", { sharp: true, w: 0.7 });
+  ink(ctx, "bomb-body", ellPts(0, -15, 10, 10, 14), "#6a5a4a");
+  ctx.save();
   ctx.shadowColor = c;
   ctx.shadowBlur = 4;
-  const cracks: ReadonlyArray<ReadonlyArray<readonly [number, number]>> = [
-    [[-6, -20], [-2, -15], [-5, -10]],
-    [[4, -22], [2, -16], [7, -12]],
-  ];
-  for (const pts of cracks) {
-    ctx.beginPath();
-    pts.forEach(([x, y], i) => (i === 0 ? ctx.moveTo(x, y) : ctx.lineTo(x, y)));
-    ctx.stroke();
-  }
-  ctx.shadowBlur = 0;
-  ctx.strokeStyle = "#3a2a1c";
-  ctx.lineWidth = 1.4;
-  ctx.beginPath();
-  ctx.moveTo(3, -24);
-  ctx.quadraticCurveTo(7, -30, 4, -33);
-  ctx.stroke();
-  fill(ctx, "#ffe14d", () => ctx.arc(4, -34, 2.2, 0, TAU));
-  fill(ctx, c, () => ctx.arc(4, -34, 1.2, 0, TAU));
+  stroke(ctx, "bomb-crack-a", [[-6, -20], [-2, -15], [-5, -10]], 1.6, c);
+  stroke(ctx, "bomb-crack-b", [[4, -22], [2, -16], [7, -12]], 1.6, c);
+  ctx.restore();
+  stroke(ctx, "bomb-fuse", [[3, -24], [7, -30], [4, -33]], 1.3, "#3a2a1c");
+  ink(ctx, "bomb-spark", ellPts(4, -34, 2.2, 2.2, 8), "#ffe14d", { shade: false, w: 0.6 });
+  dot(ctx, 4, -34, 1.1, 1.1, c);
   eyes(ctx, side, -15, c, 3);
 }
 
 function constructGolem(ctx: Ctx, c: string, side: Side): void {
   const st = "#9a968c";
   const sd = "#6c685f";
-  for (const sx of [-1, 1]) fill(ctx, sd, () => ctx.roundRect(sx * 6 - 3.5, -9, 7, 9, 1.5));
-  fill(ctx, st, () => ctx.roundRect(-10, -26, 20, 18, 3));
-  for (const sx of [-1, 1]) fill(ctx, sd, () => ctx.roundRect(sx * 14 - 3.5, -25, 7, 16, 2));
-  fill(ctx, st, () => ctx.roundRect(-6, -36, 12, 10, 2.5));
-  ctx.strokeStyle = sd;
-  ctx.lineWidth = 1;
-  ctx.beginPath();
-  ctx.moveTo(-10, -17);
-  ctx.lineTo(10, -17);
-  ctx.moveTo(0, -26);
-  ctx.lineTo(0, -17);
-  ctx.stroke();
+  for (const sx of [-1, 1]) ink(ctx, `golem-leg-${sx}`, box(sx * 6 - 3.5, -9, sx * 6 + 3.5, 0), sd, { sharp: true, w: 0.7 });
+  ink(ctx, "golem-torso", box(-10, -26, 10, -8), st, { sharp: true });
+  for (const sx of [-1, 1]) ink(ctx, `golem-arm-${sx}`, box(sx * 14 - 3.5, -25, sx * 14 + 3.5, -9), sd, { sharp: true, w: 0.7 });
+  ink(ctx, "golem-head", box(-6, -36, 6, -26), st, { sharp: true });
+  stroke(ctx, "golem-seam-h", [[-10, -17], [10, -17]], 0.7, sd);
+  stroke(ctx, "golem-seam-v", [[0, -26], [0, -17]], 0.7, sd);
+  ctx.save();
   ctx.shadowColor = c;
   ctx.shadowBlur = 4;
   eyes(ctx, side, -31, c, 2.4);
-  ctx.shadowBlur = 0;
+  ctx.restore();
 }
 
 function construct(ctx: Ctx, s: ResolvedLook, side: Side): void {
-  const c = (s.element !== undefined ? KEYWORD_COLOR[s.element] : undefined) ?? "#ffffff";
+  const c = elemColor(s, "#ffffff");
   if (s.variant === "wall") constructWall(ctx);
   else if (s.variant === "bomb") constructBomb(ctx, c, side);
   else constructGolem(ctx, c, side);
@@ -257,63 +198,29 @@ function bird(ctx: Ctx, side: Side): void {
   ctx.translate(0, -22);
   const c = "#8a6a48";
   const d = "#5e4430";
-  fill(ctx, d, () => {
-    ctx.moveTo(-2, -2);
-    ctx.quadraticCurveTo(-12, -14, -20, -8);
-    ctx.quadraticCurveTo(-12, -4, -4, 2);
-  });
-  fill(ctx, d, () => {
-    ctx.moveTo(2, -2);
-    ctx.quadraticCurveTo(10, -16, 18, -12);
-    ctx.quadraticCurveTo(12, -4, 4, 2);
-  });
-  fill(ctx, c, () => ctx.ellipse(0, 0, 8, 4.5, 0, 0, TAU));
-  fill(ctx, "#e6dcc8", () => ctx.ellipse(1, 1.5, 5, 2.4, 0, 0, TAU));
-  fill(ctx, c, () => ctx.arc(8, -2, 3.5, 0, TAU));
-  fill(ctx, "#e8bb48", () => {
-    ctx.moveTo(11, -3);
-    ctx.lineTo(14, -1.5);
-    ctx.lineTo(11, -0.5);
-    ctx.closePath();
-  });
-  fill(ctx, d, () => {
-    ctx.moveTo(-8, 0);
-    ctx.lineTo(-14, -2);
-    ctx.lineTo(-14, 3);
-    ctx.closePath();
-  });
-  if (side !== null) fill(ctx, "#1d1a22", () => ctx.arc(9, -2.6, 0.9, 0, TAU));
-  fill(ctx, KEYWORD_COLOR.marked ?? "#d06aff", () => ctx.arc(8, -9, 1.6, 0, TAU));
+  ink(ctx, "bird-wing-far", [[-2, -2], [-9, -10], [-20, -8], [-12, -4], [-4, 2]], d);
+  ink(ctx, "bird-tail", [[-8, 0], [-14, -2], [-14, 3]], d, { sharp: true, w: 0.7 });
+  ink(ctx, "bird-body", ellPts(0, 0, 8, 4.5, 12), c);
+  ink(ctx, "bird-belly", ellPts(1, 1.5, 5, 2.4, 10), "#e6dcc8", { shade: false, line: false });
+  ink(ctx, "bird-wing-near", [[2, -2], [8, -12], [18, -12], [12, -4], [4, 2]], d);
+  ink(ctx, "bird-head", ellPts(8, -2, 3.5, 3.5, 10), c, { w: 0.7 });
+  ink(ctx, "bird-beak", [[11, -3], [14, -1.5], [11, -0.5]], "#e8bb48", { sharp: true, shade: false, w: 0.6 });
+  if (side !== null) dot(ctx, 9, -2.6, 0.9, 0.9, "#1d1a22");
+  dot(ctx, 8, -9, 1.6, 1.6, KEYWORD_COLOR.marked ?? "#d06aff");
 }
 
 function wolf(ctx: Ctx, side: Side): void {
   const c = "#7a7a82";
   const d = "#55555c";
-  for (const x of [-9, -5, 6, 10]) fill(ctx, x < 0 ? d : c, () => ctx.roundRect(x - 1.6, -10, 3.2, 10, 1.2));
-  fill(ctx, c, () => ctx.ellipse(0, -13, 13, 6, 0, 0, TAU));
-  fill(ctx, "#b8b8be", () => ctx.ellipse(2, -10, 8, 2.5, 0, 0, TAU));
-  fill(ctx, d, () => {
-    ctx.moveTo(-12, -15);
-    ctx.quadraticCurveTo(-20, -20, -22, -12);
-    ctx.quadraticCurveTo(-17, -14, -12, -11);
-  });
-  fill(ctx, c, () => ctx.ellipse(13, -19, 6, 5, -0.3, 0, TAU));
-  fill(ctx, c, () => {
-    ctx.moveTo(16, -20);
-    ctx.lineTo(23, -17);
-    ctx.lineTo(16, -15);
-    ctx.closePath();
-  });
-  for (const x of [10, 14]) {
-    fill(ctx, d, () => {
-      ctx.moveTo(x - 2, -23);
-      ctx.lineTo(x, -28);
-      ctx.lineTo(x + 2, -23);
-      ctx.closePath();
-    });
-  }
-  if (side !== null) fill(ctx, "#ffe14d", () => ctx.arc(16, -20, 1.1, 0, TAU));
-  fill(ctx, "#b83a3a", () => ctx.roundRect(8, -16, 6, 2, 1)); // 戰狼的項圈
+  for (const x of [-9, -5, 6, 10]) ink(ctx, `wolf-leg-${x}`, box(x - 1.6, -10, x + 1.6, 0), x < 0 ? d : c, { sharp: true, w: 0.7 });
+  ink(ctx, "wolf-tail", [[-12, -15], [-20, -20], [-22, -12], [-17, -14], [-12, -11]], d);
+  ink(ctx, "wolf-body", ellPts(0, -13, 13, 6, 14), c);
+  ink(ctx, "wolf-belly", ellPts(2, -10, 8, 2.5, 10), "#b8b8be", { shade: false, line: false });
+  for (const x of [10, 14]) ink(ctx, `wolf-ear-${x}`, [[x - 2, -23], [x, -28], [x + 2, -23]], d, { sharp: true, shade: false, w: 0.7 });
+  ink(ctx, "wolf-head", ellPts(13, -19, 6, 5, 12), c);
+  ink(ctx, "wolf-snout", [[16, -20], [23, -17], [16, -15]], c, { sharp: true, shade: false, w: 0.7 });
+  ink(ctx, "wolf-collar", box(8, -16, 14, -14), "#b83a3a", { sharp: true, shade: false, w: 0.6 });
+  if (side !== null) dot(ctx, 16, -20, 1.1, 1.1, "#ffe14d");
 }
 
 function beast(ctx: Ctx, s: ResolvedLook, side: Side): void {
@@ -326,122 +233,89 @@ function beast(ctx: Ctx, s: ResolvedLook, side: Side): void {
 
 // ---- 植物：藤蔓貼地、捲曲＋刺＋葉 ----
 function plant(ctx: Ctx): void {
-  ctx.lineCap = "round";
   for (const [a, len] of [[-2.6, 16], [-1.9, 18], [-1.2, 15], [-0.5, 17], [0.2, 14], [-3.2, 13]] as const) {
-    ctx.strokeStyle = "#3f6a2a";
-    ctx.lineWidth = 3;
-    ctx.beginPath();
-    ctx.moveTo(0, -3);
     const x = Math.cos(a) * len;
     const y = -3 + Math.sin(a) * len * 0.55 - 6;
-    ctx.quadraticCurveTo(x * 0.5, y - 8, x, y);
-    ctx.stroke();
-    fill(ctx, "#5f9a3c", () => ctx.ellipse(x, y, 3.2, 1.8, a, 0, TAU));
-    fill(ctx, "#d0c8a0", () => {
-      ctx.moveTo(x * 0.6, y * 0.7 - 3);
-      ctx.lineTo(x * 0.6 + 2, y * 0.7 - 6);
-      ctx.lineTo(x * 0.6 + 3, y * 0.7 - 3);
-      ctx.closePath();
-    });
+    const stem: Pt[] = [[0, -3], [x * 0.5, y - 8], [x, y]];
+    stroke(ctx, `vine-stem-i${a}`, stem, 4, INK);
+    stroke(ctx, `vine-stem-${a}`, stem, 2.6, "#3f6a2a");
+    const leaf = ellPts(0, 0, 3.2, 1.8, 10).map(([px, py]): Pt => [x + px * Math.cos(a) - py * Math.sin(a), y + px * Math.sin(a) + py * Math.cos(a)]);
+    ink(ctx, `vine-leaf-${a}`, leaf, "#5f9a3c", { shade: false, w: 0.6 });
+    ink(ctx, `vine-thorn-${a}`, [[x * 0.6, y * 0.7 - 3], [x * 0.6 + 2, y * 0.7 - 6], [x * 0.6 + 3, y * 0.7 - 3]], "#d0c8a0", { sharp: true, shade: false, w: 0.5 });
   }
-  ctx.lineCap = "butt";
-  fill(ctx, "#2f5020", () => ctx.ellipse(0, -4, 6, 3, 0, 0, TAU));
+  ink(ctx, "vine-base", ellPts(0, -4, 6, 3, 10), "#2f5020");
 }
 
 // ---- 圖騰：柱子＋頂端符號 ----
-function totem(ctx: Ctx, s: ResolvedLook, side: Side): void {
-  const c = (s.element !== undefined ? KEYWORD_COLOR[s.element] : undefined) ?? "#ffffff";
-  if (s.trait === "aura") {
-    ctx.strokeStyle = `${c}aa`;
-    ctx.lineWidth = 1.4;
-    ctx.setLineDash([3, 2]);
-    ctx.beginPath();
-    ctx.ellipse(0, -1, 20, 6, 0, 0, TAU);
-    ctx.stroke();
-    ctx.setLineDash([]);
-  }
-  const plateau = s.variant === "plateau";
-  const wood = plateau ? "#9a968c" : "#8a5a32";
-  const wd = plateau ? "#6c685f" : "#5e3b1f";
-  fill(ctx, wood, () => ctx.roundRect(-4.5, -34, 9, 34, 2));
-  for (const y of [-27, -16]) {
-    fill(ctx, wd, () => ctx.rect(-4.5, y, 9, 2));
-    if (side !== null) {
-      fill(ctx, INK, () => {
-        ctx.rect(-2.6, y - 4, 1.8, 1.8);
-        ctx.rect(0.8, y - 4, 1.8, 1.8);
-      });
-    }
-  }
+function totemTop(ctx: Ctx, s: ResolvedLook, c: string): void {
   if (s.variant === "war") {
-    fill(ctx, "#5e3b1f", () => ctx.rect(-0.8, -46, 1.6, 13));
-    fill(ctx, "#c03030", () => {
-      ctx.moveTo(0.8, -46);
-      ctx.lineTo(12, -43);
-      ctx.lineTo(0.8, -39);
-      ctx.closePath();
-    });
-    fill(ctx, c, () => ctx.arc(0, -36, 2.4, 0, TAU));
+    ink(ctx, "totem-pole", box(-0.8, -46, 0.8, -33), "#5e3b1f", { sharp: true, shade: false, w: 0.5 });
+    ink(ctx, "totem-flag", [[0.8, -46], [12, -43], [0.8, -39]], "#c03030", { sharp: true, w: 0.7 });
+    dot(ctx, 0, -36, 2.4, 2.4, c);
   } else if (s.variant === "pull") {
-    fill(ctx, "#5a3f80", () => ctx.arc(0, -39, 7, 0, TAU));
-    ctx.strokeStyle = "#d06aff";
-    ctx.lineWidth = 1.5;
-    ctx.beginPath();
-    for (let t = 0; t < 4 * Math.PI; t += 0.2) {
-      const r = 6 - t * 0.45;
-      ctx.lineTo(Math.cos(t) * r, -39 + Math.sin(t) * r);
-    }
-    ctx.stroke();
+    ink(ctx, "totem-orb", ellPts(0, -39, 7, 7, 14), "#5a3f80");
+    const spiral: Pt[] = [];
+    for (let t = 0; t < 4 * Math.PI; t += 0.5) spiral.push([Math.cos(t) * (6 - t * 0.45), -39 + Math.sin(t) * (6 - t * 0.45)]);
+    stroke(ctx, "totem-swirl", spiral, 1.2, "#d06aff");
   } else {
-    fill(ctx, "#b8b4aa", () => {
-      ctx.moveTo(-9, -36);
-      ctx.lineTo(9, -36);
-      ctx.lineTo(6, -41);
-      ctx.lineTo(-6, -41);
-      ctx.closePath();
-    });
-    fill(ctx, c, () => {
-      ctx.moveTo(0, -47);
-      ctx.lineTo(4, -43);
-      ctx.lineTo(-4, -43);
-      ctx.closePath();
-    });
+    ink(ctx, "totem-slab", [[-9, -36], [9, -36], [6, -41], [-6, -41]], "#b8b4aa", { sharp: true });
+    ink(ctx, "totem-gem", [[0, -47], [4, -43], [-4, -43]], c, { sharp: true, shade: false, w: 0.7 });
   }
 }
 
-/** 地面影子的橢圓參數 `[rx, ry, 透明度]`；人形與植物（自己貼地）沒有。飛行的鷹隼影子留在地上、身體抬高。 */
-function groundShadow(look: ResolvedLook): readonly [number, number, number] | null {
+function totem(ctx: Ctx, s: ResolvedLook, side: Side): void {
+  const c = elemColor(s, "#ffffff");
+  const plateau = s.variant === "plateau";
+  const wood = plateau ? "#9a968c" : "#8a5a32";
+  const wd = plateau ? "#6c685f" : "#5e3b1f";
+  ink(ctx, "totem-body", box(-4.5, -34, 4.5, 0), wood, { sharp: true });
+  for (const y of [-27, -16]) {
+    ink(ctx, `totem-band-${y}`, box(-4.5, y, 4.5, y + 2), wd, { sharp: true, shade: false, w: 0.6 });
+    if (side !== null) {
+      dot(ctx, -1.7, y - 3, 0.9, 0.9, INK);
+      dot(ctx, 1.7, y - 3, 0.9, 0.9, INK);
+    }
+  }
+  totemTop(ctx, s, c);
+}
+
+/** 地面影子的半寬；人形（自己有影子）沒有。飛行的鷹隼影子留在地上、身體抬高。 */
+function groundShadow(look: ResolvedLook): number | null {
   switch (look.body) {
     case "spirit":
-      return [8, 3, 0.25];
+      return 7;
     case "construct":
-      return look.variant === "wall" ? [15, 4, 0.3] : look.variant === "bomb" ? [9, 3.15, 0.3] : [13, 4.55, 0.3];
+      return look.variant === "wall" ? 14 : look.variant === "bomb" ? 8 : 12;
     case "beast":
-      return look.variant === "bird" ? [7, 2.5, 0.22] : [15, 4, 0.3];
+      return look.variant === "bird" ? 6 : 14;
     case "totem":
-      return [8, 2.8, 0.3];
+      return 8;
+    case "plant":
+      return 16;
     default:
       return null;
   }
 }
 
 /**
- * 地面影子與水精的水窪（Phase 3-33h2）：畫在**不加外框**的那一層（透明度 0.22～0.3、不描邊），
- * 才不會被 8 方向深色外框描成一塊實心黑橢圓。腳底中心為原點。
+ * 地面影子、水精的水窪與圖騰光環（C 畫風）：影子是一排短斜線（`shadow()`），水窪與光環不描黑框；腳底中心為原點。
  */
 export function drawSummonGround(ctx: Ctx, look: ResolvedLook): void {
-  const sh = groundShadow(look);
-  if (sh !== null) shadow(ctx, sh[0], sh[1], -1, sh[2]);
-  if (look.body === "spirit" && look.trait === "puddle") fill(ctx, "rgba(74,168,255,0.45)", () => ctx.ellipse(0, -1, 13, 4, 0, 0, TAU));
-  if (look.body === "plant") fill(ctx, "rgba(40,70,30,0.35)", () => ctx.ellipse(0, -2, 18, 6, 0, 0, TAU)); // 藤蔓底影：不加外框，透明度 0.35
+  const rx = groundShadow(look);
+  if (rx !== null) shadow(ctx, rx);
+  if (look.body === "spirit" && look.trait === "puddle") {
+    ink(ctx, "puddle", ellPts(0, -1, 13, 4, 18), "#4aa8ff", { alpha: 0.45, shade: false, w: 0.5 });
+  }
+  if (look.body === "totem" && look.trait === "aura") drawFormAura(ctx, elemColor(look, FORM_AURA_NEUTRAL), 20);
 }
 
 /**
- * 把「非人形」體型畫到 `ctx`（腳底中心為原點，往上是負；未套大小與外框）。
+ * 把「非人形」體型畫到 `ctx`（腳底中心為原點，往上是負；未套大小）。
  * 人形請用 `humanoidSpec` ＋ 紙娃娃；對人形呼叫時什麼都不畫。**不含地面影子**（見 `drawSummonGround`）。
  */
 export function drawSummonBody(ctx: Ctx, look: ResolvedLook, facing: Facing): void {
   const side = sideOf(facing);
+  setShadeDir(side === 0 ? 1 : -1);
   switch (look.body) {
     case "spirit":
       spirit(ctx, look, side);
@@ -543,36 +417,27 @@ function humanoidCanvas(look: ResolvedLook, facing: Facing, spec: DollSpec, dpr:
   return out;
 }
 
+/** 非人形召喚物的貼圖：地面影子＋身體（C 畫風：墨線取代黑色剪影外框；藤蔓整體半透明 0.9）。 */
 function bodyCanvas(look: ResolvedLook, facing: Facing, dpr: number): HTMLCanvasElement | null {
   const size = SIZE_SCALE[look.size];
   const off = makeCanvas(dpr);
   const o = off.getContext("2d");
-  if (o === null) return null;
-  o.scale(dpr, dpr);
-  o.translate(SUMMON_W / 2, SUMMON_FOOT_Y);
-  o.scale(size, size);
-  drawSummonBody(o, look, facing);
-  const sil = makeCanvas(dpr);
-  const sc = sil.getContext("2d");
   const out = makeCanvas(dpr);
   const ctx = out.getContext("2d");
-  if (sc === null || ctx === null) return null;
-  sc.drawImage(off, 0, 0);
-  sc.globalCompositeOperation = "source-in";
-  sc.fillStyle = INK;
-  sc.fillRect(0, 0, sil.width, sil.height);
-  const k = 1.3 * size * dpr;
-  ctx.save();
-  ctx.scale(dpr, dpr);
-  ctx.translate(SUMMON_W / 2, SUMMON_FOOT_Y);
-  ctx.scale(size, size);
-  drawSummonGround(ctx, look); // 影子在外框那層之外：透明、不描邊
-  ctx.restore();
+  if (o === null || ctx === null) return null;
+  for (const c of [o, ctx]) {
+    c.scale(dpr, dpr);
+    c.translate(SUMMON_W / 2, SUMMON_FOOT_Y);
+    c.scale(size, size);
+  }
+  drawSummonBody(o, look, facing);
+  drawSummonGround(ctx, look);
+  ctx.setTransform(1, 0, 0, 1, 0, 0);
   ctx.globalAlpha = look.body === "plant" ? 0.9 : 1;
-  for (const [ox, oy] of [[-1, 0], [1, 0], [0, -1], [0, 1], [-1, -1], [1, -1], [-1, 1], [1, 1]] as const) ctx.drawImage(sil, ox * k, oy * k);
   ctx.drawImage(off, 0, 0);
   return out;
 }
+
 
 /**
  * 產生召喚物貼圖用的離屏 canvas（人形與紙娃娃同尺寸 DOLL_W×DOLL_H；其他體型 SUMMON_W×SUMMON_H，腳底在 (W/2, FOOT_Y)）。

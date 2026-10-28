@@ -198,6 +198,10 @@ describe("體型：縮放與頭頂狀態列上移", () => {
     expect(rise("")).toBe(0);
   });
 
+  it("樹人的最高點 top 比 3J-5 原值（56.5）高 3，狀態列與葉冠留出空隙（美術 PM 小修）", () => {
+    expect(FORM_ARTS.treant!.top).toBeCloseTo(59.5, 6);
+  });
+
   it("貼圖快取鍵含畫法、主色、元素、朝向、姿勢", () => {
     const keys = new Set([
       formKey("bear", "#111111", null, "east", false),
