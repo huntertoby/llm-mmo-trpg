@@ -36,7 +36,17 @@
 
 ## 驗收指令
 
-（結果見最終回覆與下方補充）
+| 指令 | 結果 |
+|---|---|
+| `pytest -n 8 tests/engine tests/content tests/narrative` | 只有 `test_summons_e1`（十個關鍵字假設）失敗，已修；該檔重跑通過 |
+| `pytest -n 6 tests/skillgen tests/llm tests/sim` | 2218 passed、1 skipped |
+| `pytest -n 4 tests/roguelite tests/api` | 468 passed |
+| `-m "slow or not slow" tests/cli --timeout=3000` | 快照／預算測試分批跑通過；`llm_propose_mock` 快照因關鍵字清單變 12 個而重產；`cli_output_hashes.json` 重產 |
+| `corepack pnpm -C client test` / `build` | 111 files、1066 tests passed／建置通過 |
+| `ruff check`、`ruff format --check`、`mypy` | 通過 |
+| 重播 | `trpg battle replay`：122 個動作、332 個事件，最終狀態一致 |
+
+**卡住的點**：第一次把 engine＋content＋skillgen＋roguelite＋api＋sim＋llm 合在一個 `pytest -n 8` 時，xdist 出現 `node down: Not properly terminated` 與 INTERNALERROR。原因有兩個：(1) 跑測試時我同時改檔造成 xdist 收集錯亂；(2) 真正的問題是隨機組合器被要求做關鍵字 `form` 時白試 300 次（候選產生器、開局測試會挑到所有關鍵字），耗時超過單測 300 秒被殺。解法：`KeywordDef.composable: false`（形態設 false），組合器立刻 `ComposeError`；之後分批重跑全過。沒有跑 `scripts/check.py` 與 `lint-imports`、`tests/sim` 的慢速全量。
 
 ## 待 PM 決定
 
