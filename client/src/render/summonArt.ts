@@ -5,7 +5,7 @@
 import type { Facing } from "../api/types";
 import type { Ctx } from "./artDraw";
 import type { DollSpec, Gear } from "./appearance";
-import { DOLL_FOOT_Y, DOLL_H, DOLL_W, renderFigureCanvas } from "./paperdoll";
+import { DOLL_H, DOLL_W, renderFigureCanvas, SUMMON_FOOT_Y, SUMMON_H, SUMMON_W } from "./paperdoll";
 
 const TAU = Math.PI * 2;
 const INK = "#16121a";
@@ -505,10 +505,11 @@ const HUMANOID_STYLE: Readonly<Record<string, HumanoidStyle>> = {
   afterimage: { alpha: 0.5, tint: "#8fc8ff", glow: "#8fc8ff" },
 };
 
-function makeCanvas(dpr: number): HTMLCanvasElement {
+/** 人形召喚物用紙娃娃的畫布大小（DOLL_*，C 骨架）；其他體型沿用舊的 64×64（SUMMON_*）。 */
+function makeCanvas(dpr: number, humanoid = false): HTMLCanvasElement {
   const c = document.createElement("canvas");
-  c.width = DOLL_W * dpr;
-  c.height = DOLL_H * dpr;
+  c.width = (humanoid ? DOLL_W : SUMMON_W) * dpr;
+  c.height = (humanoid ? DOLL_H : SUMMON_H) * dpr;
   return c;
 }
 
@@ -517,13 +518,13 @@ function humanoidCanvas(look: ResolvedLook, facing: Facing, spec: DollSpec, dpr:
   if (fig === null) return null;
   const style = HUMANOID_STYLE[look.variant];
   if (style === undefined) return fig;
-  const out = makeCanvas(dpr);
+  const out = makeCanvas(dpr, true);
   const ctx = out.getContext("2d");
   if (ctx === null) return null;
   let src: HTMLCanvasElement = fig;
   if (style.tint !== undefined) {
     // 色調只蓋在身體上（source-atop 不會染到透明處）
-    const tinted = makeCanvas(dpr);
+    const tinted = makeCanvas(dpr, true);
     const t = tinted.getContext("2d");
     if (t !== null) {
       t.drawImage(fig, 0, 0);
@@ -548,7 +549,7 @@ function bodyCanvas(look: ResolvedLook, facing: Facing, dpr: number): HTMLCanvas
   const o = off.getContext("2d");
   if (o === null) return null;
   o.scale(dpr, dpr);
-  o.translate(DOLL_W / 2, DOLL_FOOT_Y);
+  o.translate(SUMMON_W / 2, SUMMON_FOOT_Y);
   o.scale(size, size);
   drawSummonBody(o, look, facing);
   const sil = makeCanvas(dpr);
@@ -563,7 +564,7 @@ function bodyCanvas(look: ResolvedLook, facing: Facing, dpr: number): HTMLCanvas
   const k = 1.3 * size * dpr;
   ctx.save();
   ctx.scale(dpr, dpr);
-  ctx.translate(DOLL_W / 2, DOLL_FOOT_Y);
+  ctx.translate(SUMMON_W / 2, SUMMON_FOOT_Y);
   ctx.scale(size, size);
   drawSummonGround(ctx, look); // 影子在外框那層之外：透明、不描邊
   ctx.restore();
@@ -574,7 +575,7 @@ function bodyCanvas(look: ResolvedLook, facing: Facing, dpr: number): HTMLCanvas
 }
 
 /**
- * 產生召喚物貼圖用的離屏 canvas（與紙娃娃同尺寸、同腳底位置：DOLL_W×DOLL_H，腳底在 (DOLL_W/2, DOLL_FOOT_Y)）。
+ * 產生召喚物貼圖用的離屏 canvas（人形與紙娃娃同尺寸 DOLL_W×DOLL_H；其他體型 SUMMON_W×SUMMON_H，腳底在 (W/2, FOOT_Y)）。
  * 人形用 `humanoid`（已解析好的紙娃娃規格）；沒有 DOM 時回傳 `null`。
  */
 export function renderSummonCanvas(look: ResolvedLook, facing: Facing, humanoid: DollSpec | null, dpr: number): HTMLCanvasElement | null {

@@ -28,6 +28,8 @@ export interface Look {
   trim?: string;
   skull?: boolean;
   eyes?: string;
+  /** 體型（C 畫風骨架縮放；3R 種族欄位接上前只有骨架支援）：stout 矮壯、tall 高瘦；不認得的值當作普通。 */
+  build?: "stout" | "tall";
 }
 
 export type GearSlot = "head" | "body" | "hands" | "feet" | "cloak" | "main_hand" | "off_hand";

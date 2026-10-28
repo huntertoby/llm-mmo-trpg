@@ -137,7 +137,7 @@ describe("真側面：武器（3S-3）", () => {
         }
       }
     }
-  });
+  }, 60000); // C 畫法每個部件描很多次線，mock ctx 記錄呼叫較慢
 
   it("成對武器：副手那把畫在遠側，顏色比主手暗", () => {
     const sword: GearItem = { kind: "sword", material: "steel" };
