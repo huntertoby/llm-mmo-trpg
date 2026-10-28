@@ -26,7 +26,7 @@ from collections.abc import Sequence
 from dataclasses import dataclass, replace
 from fractions import Fraction
 
-from trpg.content.library import ContentLibrary, skill_reference_problems
+from trpg.content.library import ContentLibrary, gear_reference_problems, skill_reference_problems
 from trpg.content.skill_rules import (
     EffectPattern,
     ShapePattern,
@@ -43,9 +43,10 @@ from trpg.content.skills import (
     EffectSpec,
     SkillDef,
     rarity_rank,
+    skill_elements,
 )
 from trpg.shared.types import Attribute
-from trpg.skillgen.budget import BudgetError, BudgetReport, skill_budget
+from trpg.skillgen.budget import BudgetError, BudgetReport, skill_budget, zone_cell_count
 from trpg.skillgen.mechanics import affect_set, resolved_affects
 from trpg.skillgen.scaling import attr_names_zh, scaling_basis_zh
 
@@ -346,6 +347,8 @@ def _move_segment_violations(skill: SkillDef, library: ContentLibrary) -> list[V
 
 def _reference_violations(skill: SkillDef, library: ContentLibrary) -> list[Violation]:
     problems = skill_reference_problems(skill, library.ruleset, library.skills)
+    # 限定武器與「手持某種武器」條件（3I-5）：引用的裝備存在、武器大類符合 weapon_req
+    problems += gear_reference_problems(skill, library.weapons, library.offhands)
     if skill.skeleton not in library.skeletons:
         problems.append(f"skeleton：沒有骨架資料檔 {skill.skeleton!r}")
     return [Violation(skill.id, "reference", p) for p in problems]
@@ -614,6 +617,8 @@ def _match_primitives(skill: SkillDef, match: SkillMatch) -> bool:
 
 
 def _match_effects(skill: SkillDef, match: SkillMatch, library: ContentLibrary) -> bool:
+    if match.elements_any is not None and not skill_elements(skill) & set(match.elements_any):
+        return False
     if match.effects_any is not None and not any(
         _effect_matches(library, e, p) for e in skill.effects for p in match.effects_any
     ):
@@ -764,8 +769,9 @@ EFFECT_PARAM_EXCLUSIONS: tuple[str, ...] = (
     "stun_single_long_cooldown",
     "no_repeated_control_group",
     "no_damage_with_ally_heal",
+    "terrain_needs_earth",
 )
-"""互斥規則裡，由「效果的對象或狀態」決定會不會違規的幾條（``skill_exclusions.yaml`` 的 id）。"""
+"""互斥規則裡，由「效果的對象、狀態或元素」決定會不會違規的幾條（``skill_exclusions.yaml``）。"""
 EFFECT_PARAM_RULES: tuple[str, ...] = (
     *(f"exclusion.{rule}" for rule in EFFECT_PARAM_EXCLUSIONS),
     "skeleton.forbidden_affects",
@@ -960,6 +966,26 @@ class RarityNeed:
     minimum: str
 
 
+_TERRAIN_PRIMITIVES: tuple[str, ...] = ("raise_terrain", "lower_terrain")
+"""升降地形原語（Phase 3-54b：只有大地能用；影響格數越大稀有度要求越高）。"""
+
+
+def _terrain_area_needs(skill: SkillDef, library: ContentLibrary) -> list[RarityNeed]:
+    """升降地形的影響格數對應的最低稀有度（``terrain_area_rarity``，Phase 3-54b，06 6.33）。
+    形狀沒有固定格數（連鎖）時略過（形狀自己有稀有度要求）。"""
+    tiers = library.budget.terrain_area_rarity
+    if not tiers or not any(e.type in _TERRAIN_PRIMITIVES for e in skill.effects):
+        return []
+    try:
+        cells = zone_cell_count(skill, library)
+    except BudgetError:
+        return []
+    minimum = next((t.rarity for t in reversed(tiers) if cells >= t.min_cells), None)
+    if minimum is None:
+        return []
+    return [RarityNeed("terrain_area", f"升降地形影響 {cells} 格", minimum)]
+
+
 def rarity_requirements(skill: SkillDef, library: ContentLibrary) -> list[RarityNeed]:
     """技能用到的每個形狀、骨架、觸發時機、原語、狀態、條件與失手反噬的最低稀有度（依出現順序，
     不去重）。驗證器的 ``rarity.*`` 與技能工坊的「最低稀有度」共用（Phase 3F-1）。"""
@@ -1000,6 +1026,7 @@ def rarity_requirements(skill: SkillDef, library: ContentLibrary) -> list[Rarity
     needs += [
         RarityNeed("condition", f"條件 {c.type}", conditions[c.type].min_rarity) for c in cond_specs
     ]
+    needs += _terrain_area_needs(skill, library)
     follow = skill.followup_skill()
     if (
         follow is not None and skill.followup is not None

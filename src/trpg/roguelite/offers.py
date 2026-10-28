@@ -22,6 +22,7 @@ from __future__ import annotations
 from collections.abc import Sequence
 
 from trpg.content.battle import WeaponDef
+from trpg.content.equipment import Loadout, loadout_held, resolve_loadout
 from trpg.content.library import ContentLibrary
 from trpg.content.skills import SkillDef, skill_slot_problems
 from trpg.roguelite.errors import ChoiceError
@@ -40,6 +41,13 @@ from trpg.skillgen.candidates import (
 __all__ = ["candidate_request", "equip_problems", "make_offer", "skill_defs", "take_candidate"]
 
 
+def _hero_loadout(library: ContentLibrary, run: RunState) -> Loadout:
+    """主角這一輪的裝備（測試模式挑的裝備優先；與 ``progress.run_loadout`` 同一個規則）。"""
+    if run.test_equipment:
+        return resolve_loadout(run.test_equipment, library.items, library.affixes)
+    return library.loadout_of(run.hero)
+
+
 def candidate_request(library: ContentLibrary, run: RunState) -> CandidateRequest:
     """第 ``run.offers_made`` 組候選的產生器輸入（見模組說明）。"""
     held = skill_defs(library, run, run.hero.skills)
@@ -52,6 +60,7 @@ def candidate_request(library: ContentLibrary, run: RunState) -> CandidateReques
         behavior=dict(run.behavior),
         hero_attributes=dict(run.hero.attributes),  # 新技能跟主屬性（Phase 3H-3）
         weapon_attrs=weapon_scaling_attrs(weapon),  # 武器技看手上武器（Phase 3H-7）
+        held=loadout_held(weapon, _hero_loadout(library, run)),  # 招牌技與武器親和（3I-5）
         # 進化前的技能也排除（Phase 3-26b：進化後原技能不再出現在候選）
         exclude=frozenset(
             (*run.hero.skills, *run.bench, *(r.base_id for r in run.evolutions.values()))

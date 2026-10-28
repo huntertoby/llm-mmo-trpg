@@ -34,6 +34,7 @@
 | `skeletons/` | 12 種技能骨架（一檔一個，檔名 = id）；2E-3 起啟用 11 種（只剩召喚 `summon` 為 `enabled: false`） | Phase 2B-2 |
 | `units/` | 單位範本（一檔一個，檔名 = id；1C 加入盜賊盾衛 `bandit_shieldbearer`；2C-3 加入標準隊友 `sim_companion_*` 與分階標準敵人 `std_enemy_t1`～`t5`，標籤 `sim`） | Phase 1A、1B、1C、2C-3 |
 | `maps/` | 地圖（一檔一張，檔名 = id；格式見 `docs/phases/Phase1計畫.md` 5.2，1B 加入 `objects`、`surfaces`、`objective`、`weather`、`encounter`、`events`）；圖例 `#` 慣例對應牆壁；必填 `archetype`（8 種地圖類型加 `test`）；10 張非測試地圖：`bridge_chasm`、`lava_crossing`（吊橋深淵類型）、`oil_depot`、`swamp`、`ruined_fort`、`cliff_outpost`（廢墟高台類型）、`dark_forest`、`narrow_halls`、`open_plain`、`frozen_lake`；用 `trpg map list` 查看 | Phase 1A、1B、1C、2C-3 |
+| `item_gen.yaml` | 物品產生器與物品預算：稀有度權重、全身預算曲線、部位與詞條比例、詞條單位價與固定點數、稀有度的條數與類別、武器屬性偏好（`docs/design/08-裝備.md` 8.22.1） | Phase 3K-1 |
 
 ## 未來的子資料夾規劃
 

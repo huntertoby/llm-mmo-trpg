@@ -8,12 +8,13 @@
 from __future__ import annotations
 
 from collections.abc import Callable, Iterable, Mapping
+from contextvars import ContextVar
 from dataclasses import dataclass
 from typing import Any, Literal
 
 from pydantic import BaseModel, ConfigDict
 
-from trpg.content.battle import Dice, WeaponDef
+from trpg.content.battle import Dice, WeaponDef, weapon_attr_examples_zh
 from trpg.content.keyword_derive import KeywordGrade, keyword_grades, skill_facts
 from trpg.content.library import ContentLibrary, Ruleset
 from trpg.content.rule_changes import RuleChangeDef, rule_change_sentence
@@ -33,6 +34,7 @@ from trpg.content.skills import (
     VariantWhen,
     condition_text,
     default_affects,
+    is_wind_skill,
     on_hit_carrier,
 )
 from trpg.content.stacks import StackDef
@@ -48,7 +50,7 @@ from trpg.narrative.summon_info import (
     summon_info,
     summon_innate_lines,
 )
-from trpg.shared.types import Attribute, Surface, rune_name
+from trpg.shared.types import Attribute, Element, Surface, rune_name
 from trpg.skillgen.budget import self_status_allowance_permille
 from trpg.skillgen.keywords import (
     SkillKeywords,
@@ -93,6 +95,7 @@ __all__ = [
     "skill_shape_text",
     "variant_change_text",
     "variant_condition_text",
+    "weapon_only_text",
 ]
 
 _AFFECTS = {
@@ -176,12 +179,20 @@ WEAPON_ATTR_LABEL = "武器屬性"
 """武器技（看手上武器的屬性，Phase 3H-6）在效果句裡的縮放屬性簡稱。"""
 
 
+_CARD_WEAPON: ContextVar[WeaponDef | None] = ContextVar("card_weapon", default=None)
+"""正在組的技能卡的持有者武器（3-55）：效果句裡武器技的縮放屬性、對抗屬性寫手上武器實際的屬性，
+而不是武器大類的預設（例如匕首持有者寫「敏捷／力量（取較高）」而不是「力量」）。"""
+
+
 def scaling_label(skill: SkillDef, lib: ContentLibrary | None = None) -> str:
     """縮放屬性的簡稱：單屬性為「智力」，雙屬性為「力量／智力」（Phase 2H-2）。武器技看手上武器
     （3H-6）：給了 ``lib`` 時寫實際的屬性名——所需武器大類的主屬性（例「力量」），帶心智第二屬性
     時接在後面（「力量／智力」，3I-3；玩法 PM 2026-10-24：武器技所有數值都看手上武器，不加例外）；
     沒有 ``lib`` 時寫「武器屬性」。"""
     if skill.category == "weapon":
+        held = _CARD_WEAPON.get()
+        if held is not None:  # 3-55：有持有者就寫那把武器實際的屬性（已含第二屬性與取平均）
+            return held.skill_scaling_names_zh(skill.secondary_scaling_attr)
         if lib is None:
             return WEAPON_ATTR_LABEL
         names = [lib.skill_scaling.weapon_class_attr(skill.weapon_req).display_name]
@@ -195,11 +206,15 @@ def scaling_label(skill: SkillDef, lib: ContentLibrary | None = None) -> str:
 
 
 def contest_label(skill: SkillDef, lib: ContentLibrary | None = None) -> str:
-    """對抗判定（擊倒、位移、狀態抵抗）的屬性簡稱：武器技只用武器的主屬性（第二屬性不參與對抗，
-    :meth:`SkillDef.contest_attr`），其他同 :func:`scaling_label`。"""
-    if skill.category == "weapon" and lib is not None:
-        return lib.skill_scaling.weapon_class_attr(skill.weapon_req).display_name
-    return scaling_label(skill, lib)
+    """對抗判定（擊倒、位移、狀態抵抗）的屬性簡稱。攻方的值和命中、傷害同一個（3I-3b，玩法 PM
+    2026-10-24）：單屬性同 :func:`scaling_label`；雙屬性寫「力量／智力（取平均）」，和算法句一致。
+    守方仍和攻方的單一主屬性比（:meth:`SkillDef.contest_attr`）。"""
+    label = scaling_label(skill, lib)
+    if skill.secondary_scaling_attr is None or (
+        skill.category == "weapon" and _CARD_WEAPON.get() is not None
+    ):  # 有持有者時 scaling_label 已寫出取平均
+        return label
+    return f"{label}（取平均）"
 
 
 def scaling_detail(skill: SkillDef, weapon: WeaponDef | None = None) -> str:
@@ -259,6 +274,33 @@ def scaling_text(spec: EffectSpec) -> str | None:
     )
 
 
+_WIND_TOUCHING = ("enemies", "all", "tiles")
+"""會吹到影響格（元素擴散）的傷害對象（同引擎的 ``TOUCHING_AFFECTS``）。"""
+
+
+def _names(items: Iterable[str]) -> str:
+    return "、".join(items)
+
+
+def wind_spread_text(lib: ContentLibrary, spec: EffectSpec) -> str | None:
+    """元素擴散（Phase 3-54a，06 6.33）的一句話：``element: wind`` 的傷害效果才有。"""
+    if spec.type != "damage" or spec.element is not Element.WIND:
+        return None
+    if (spec.affects or "enemies") not in _WIND_TOUCHING:
+        return None
+    wind, rules = lib.ruleset.core.wind, lib.ruleset
+    surfaces = _names(rules.surface_def(s).name_zh for s in wind.spread_surfaces)
+    zones = _names(e.display_name for e in wind.spread_zone_elements)
+    reach = spec.spread or wind.spread_distance
+    return f"風會讓範圍內的{surfaces}表面、以及{zones}區域往風向擴大 {reach} 格"
+
+
+def wind_collision_text(lib: ContentLibrary) -> str:
+    """風壓撞擊（Phase 3-54a）：風元素技能的推擊撞擊傷害加成。"""
+    bonus = lib.ruleset.core.wind.collision_permille - 1000
+    return f"風壓：撞擊傷害 +{bonus / 10:g}%"
+
+
 def _damage(lib: ContentLibrary, skill: SkillDef, spec: EffectSpec) -> str:
     head, extras = _damage_parts(lib, skill, spec)
     return head + "".join(f"，{e}" for e in extras)
@@ -289,6 +331,9 @@ def _damage_parts(lib: ContentLibrary, skill: SkillDef, spec: EffectSpec) -> tup
     scale = scaling_text(spec)
     if scale is not None:
         extras.append(scale)
+    spread = wind_spread_text(lib, spec)
+    if spread is not None:
+        extras.append(spread)
     if spec.on_kill:
         kill = "、".join(_on_kill_text(lib, skill, sub) for sub in spec.on_kill)
         extras.append(f"若這一招讓敵人倒下：{kill}")
@@ -309,15 +354,25 @@ def _heal(lib: ContentLibrary, skill: SkillDef, spec: EffectSpec) -> str:
     return f"治療 {_dice(spec.dice)}＋{scaling_label(skill, lib)}加成"
 
 
-def _push_pull(_lib: ContentLibrary, _skill: SkillDef, spec: EffectSpec) -> str:
+def _push_pull(lib: ContentLibrary, skill: SkillDef, spec: EffectSpec) -> str:
     text = f"{'推開' if spec.type == 'push' else '拉近'} {spec.distance} 格"
+    notes: list[str] = []
     if spec.collision_dice is not None:
-        text += f"（撞擊傷害 {_dice(spec.collision_dice)}）"
+        notes.append(f"撞擊傷害 {_dice(spec.collision_dice)}")
+    if spec.type == "push" and is_wind_skill(skill):
+        notes.append(wind_collision_text(lib))
+    if notes:
+        text += f"（{'；'.join(notes)}）"
     return text
 
 
 def _knock_prone(lib: ContentLibrary, skill: SkillDef, _spec: EffectSpec) -> str:
     return f"擊倒（{contest_label(skill, lib)}對抗）"
+
+
+def _shockwave(_lib: ContentLibrary, _skill: SkillDef, _spec: EffectSpec) -> str:
+    """震波（Phase 3-54b）。"""
+    return "震波：直線上的單位直接倒地（不擲對抗；會飛的單位不受影響）"
 
 
 def _teleport(_lib: ContentLibrary, _skill: SkillDef, _spec: EffectSpec) -> str:
@@ -541,6 +596,15 @@ def _create_surface(lib: ContentLibrary, _skill: SkillDef, spec: EffectSpec) -> 
     return f"生成「{lib.ruleset.surface_def(spec.surface).name_zh}」表面{turns}"
 
 
+def _blow_surface(lib: ContentLibrary, _skill: SkillDef, spec: EffectSpec) -> str:
+    """吹送（Phase 3-54a）。"""
+    names = _names(lib.ruleset.surface_def(s).name_zh for s in lib.ruleset.core.wind.blow_surfaces)
+    return (
+        f"把範圍內的表面（{names}）整片往風向吹走 {spec.distance} 格"
+        "（遇到牆、擋路的物件或較高的地形就停下；推進深淵或岩漿的部分會消失）"
+    )
+
+
 def _create_obstacle(lib: ContentLibrary, _skill: SkillDef, spec: EffectSpec) -> str:
     assert spec.object is not None
     turns = f"，{spec.duration} 回合後消失" if spec.duration else ""
@@ -615,7 +679,11 @@ def _stack(lib: ContentLibrary, skill: SkillDef, spec: EffectSpec) -> str:
         return text + (_overload_text(lib, stack) if stack.overload is not None else "")
     assert spec.per_stack_permille is not None
     need = f"（至少 {skill.cost.stacks} 層才能施放）" if skill.cost.stacks else ""
-    return f"消耗全部「{stack.name_zh}」，每層使本技能傷害 +{spec.per_stack_permille / 10:g}%{need}"
+    consumer = stack.consumer
+    what = "傷害" if consumer is None else consumer.boost_names()
+    return (
+        f"消耗全部「{stack.name_zh}」，每層使本技能{what} +{spec.per_stack_permille / 10:g}%{need}"
+    )
 
 
 def _consume_status(lib: ContentLibrary, skill: SkillDef, spec: EffectSpec) -> str:
@@ -790,6 +858,7 @@ _EFFECT_TEXT: dict[str, _EffectText] = {
     "push": _push_pull,
     "pull": _push_pull,
     "knock_prone": _knock_prone,
+    "shockwave": _shockwave,
     "teleport": _teleport,
     "dash": _dash,
     "leap": _leap,
@@ -801,6 +870,7 @@ _EFFECT_TEXT: dict[str, _EffectText] = {
     "swap_any": _swap_any,
     "apply_status": _apply_status,
     "create_surface": _create_surface,
+    "blow_surface": _blow_surface,
     "create_obstacle": _create_obstacle,
     "destroy_object": _destroy_object,
     "inscribe": _inscribe,
@@ -922,7 +992,23 @@ def effect_summary(
         text = _effect_core(library, skill, spec) + suffix
     if spec.condition is not None:
         text += f"，若{condition_summary(library, spec.condition)}"
+        text += _affinity_attr_text(library, skill, spec.condition)
     return text
+
+
+def _affinity_attr_text(library: ContentLibrary, skill: SkillDef, condition: ConditionSpec) -> str:
+    """武器親和效果（``wielding_weapon``，3I-5）那一行補上那把武器看的屬性（3-55）：武器技的命中與傷害
+    看手上武器，所以寫「（這把武器吃力量與智力（取平均））」；不是武器技、或條件是副手時為空。"""
+    if (
+        skill.category != "weapon"
+        or condition.type != "wielding_weapon"
+        or condition.weapon is None
+    ):
+        return ""
+    weapon = library.weapons.get(condition.weapon)
+    if weapon is None:
+        return ""
+    return f"，這把武器吃{weapon.skill_scaling_names_zh(skill.secondary_scaling_attr)}"
 
 
 def condition_summary(library: ContentLibrary, condition: ConditionSpec) -> str:
@@ -934,7 +1020,17 @@ def condition_summary(library: ContentLibrary, condition: ConditionSpec) -> str:
         surface_name=lambda surface: rules.surface_def(surface).name_zh,
         tag_name=rules.skill_tags.name,
         tag_runes=rules.skill_tags.rune_names(),
+        weapon_name=lambda wid: rules.gear_names.get(wid, wid),
     )
+
+
+def weapon_only_text(library: ContentLibrary, skill: SkillDef) -> str | None:
+    """專屬招牌技的限定（Phase 3I-5）：「限定手持：鞭」；不限定的技能為 ``None``。沒手持時
+    不能裝備、也不能施放。"""
+    if not skill.weapon_only:
+        return None
+    names = library.ruleset.gear_names
+    return "限定手持：" + "、".join(names.get(w, w) for w in skill.weapon_only)
 
 
 # ---------------------------------------------------------------------------
@@ -1068,11 +1164,14 @@ def cost_parts(library: ContentLibrary, skill: SkillDef, *, with_ap: bool = True
         # 3-50b：持續寫成「到你下個回合結束」（有效回合 ＝ duration − 1）
         parts.append(
             f"代價：施放後自己{name}，{self_status_until(cost.self_status.duration)}"
-            f"（換 {percent:g}% 預算）"
+            f"（換 {percent:g}% 預算；代價狀態，無法淨化）"  # 玩法決定 #62
         )
     if cost.overdraft:
         percent = library.budget.allowance.overdraft_permille / 10
-        parts.append(f"代價：施放後自己下一個回合少 {cost.overdraft} AP（換 {percent:g}% 預算）")
+        parts.append(
+            f"代價：施放後自己下一個回合少 {cost.overdraft} AP"
+            f"（換 {percent:g}% 預算；代價狀態，無法淨化）"
+        )
     if cost.cooldown:
         parts.append(f"冷卻 {cost.cooldown} 回合")
     if cost.uses_per_battle:
@@ -1270,6 +1369,7 @@ def skill_stacks(library: ContentLibrary, skill: SkillDef) -> tuple[SkillStackRe
         except KeyError:
             continue
         found.setdefault((spec.stack, role), SkillStackRef(id=spec.stack, name_zh=name, role=role))
+    # 自動消耗的層數（專注）不在每張卡上標示，只在名詞說明與 HUD 寫（玩法 PM 2026-10-24）
     return tuple(found.values())
 
 
@@ -1290,6 +1390,8 @@ class SkillCard(BaseModel):
     kind: str
     category: str
     weapon_req: str
+    weapon_only: str | None = None
+    """專屬招牌技的限定（Phase 3I-5），例如「限定手持：鞭」；不限定的技能為 ``None``。"""
     scaling: str
     ap_cost: int | None
     cost: tuple[str, ...]
@@ -1408,6 +1510,16 @@ def skill_card(
 ) -> SkillCard:
     """``skill`` 的卡片內容；``mastery_active`` 見 :func:`mastery_text`；``owner`` 見
     :class:`CardOwner`（召喚物資訊與傷害算法的「目前」值；省略時為 1 級基準值與純算式）。"""
+    token = _CARD_WEAPON.set(None if owner is None else owner.weapon)
+    try:
+        return _build_card(library, skill, mastery_active, owner)
+    finally:
+        _CARD_WEAPON.reset(token)
+
+
+def _build_card(
+    library: ContentLibrary, skill: SkillDef, mastery_active: bool | None, owner: CardOwner | None
+) -> SkillCard:
     return SkillCard(
         id=skill.id,
         name_zh=skill.name_zh,
@@ -1418,6 +1530,7 @@ def skill_card(
         kind=KIND_TEXT[skill.kind],
         category=CATEGORY_TEXT[skill.category],
         weapon_req=WEAPON_REQ_TEXT[skill.weapon_req],
+        weapon_only=weapon_only_text(library, skill),
         scaling=scaling_detail(skill, None if owner is None else owner.weapon),
         ap_cost=skill_ap(library, skill),
         cost=tuple(cost_parts(library, skill, with_ap=skill_ap(library, skill) is not None)),
@@ -1462,6 +1575,7 @@ def skill_card(
             library.ruleset.core,
             None if owner is None else owner.weapon,
             None if owner is None else owner.attr_get,
+            weapon_examples=weapon_attr_examples_zh(library.weapons.values(), skill.weapon_req),
         ),
         stacks=skill_stacks(library, skill),
     )

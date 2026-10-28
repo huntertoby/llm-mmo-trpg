@@ -43,6 +43,7 @@ from trpg.content.skills import (
     SelfStatusCost,
     ShapeSpec,
     SkillDef,
+    is_wind_skill,
     on_hit_carrier,
 )
 from trpg.content.summons import SummonDef, summon_dpr
@@ -281,6 +282,11 @@ def _variance_factor(
         ratio = 1 + Fraction(effect.lifesteal_permille * value, _PERMILLE * _PERMILLE)
         factor *= ratio
         notes.append(f"吸血 {effect.lifesteal_permille / 10:g}% ×{_fmt(ratio)}")
+    if effect.spread is not None:  # 元素擴散 2 格較貴（3-54b）
+        permille = library.budget.wind_spread_permille[effect.spread - 1]
+        if permille != _PERMILLE:
+            factor *= Fraction(permille, _PERMILLE)
+            notes.append(f"擴散 {effect.spread} 格 ×{permille / _PERMILLE:g}")
     overload = _overload_ratio(skill, library)
     if overload != 1:
         factor *= overload
@@ -327,6 +333,33 @@ def _overload_stack_cost(
     )
 
 
+def _per_distance_points(
+    skill: SkillDef, effect: EffectSpec, primitive: PrimitiveDef, library: ContentLibrary
+) -> tuple[Fraction, str]:
+    """``per_distance``：base_points × 距離，加上撞擊骰與風壓撞擊（3-54a）的點數。"""
+    assert primitive.base_points is not None
+    distance = effect.distance or 1
+    points = Fraction(primitive.base_points * distance)
+    note = f"{primitive.base_points}×{distance} 格"
+    if effect.collision_dice is not None:
+        extra = effect.collision_dice.count * library.budget.collision_die_points
+        points += extra
+        note += f" ＋ 撞擊 {effect.collision_dice}（{extra} 點）"
+    if primitive.id == "push" and is_wind_skill(skill):
+        bonus = _wind_collision_points(effect, library)
+        points += bonus
+        note += f" ＋ 風壓撞擊（{_fmt(bonus)} 點）"
+    return points, note
+
+
+def _wind_collision_points(effect: EffectSpec, library: ContentLibrary) -> Fraction:
+    """風壓撞擊（Phase 3-54a，06 6.33）：風元素技能的推擊，撞擊骰（省略為核心規則的撞擊骰）每顆
+    ``collision_die_points`` × 倍率多出的部分（1500‰ → ×0.5）。"""
+    dice = effect.collision_dice or library.ruleset.core.collision_damage_dice
+    extra = library.ruleset.core.wind.collision_permille - _PERMILLE
+    return Fraction(dice.count * library.budget.collision_die_points * extra, _PERMILLE)
+
+
 def _plain_base_points(  # noqa: PLR0911
     skill: SkillDef, effect: EffectSpec, primitive: PrimitiveDef, library: ContentLibrary
 ) -> tuple[Fraction, str]:
@@ -339,15 +372,7 @@ def _plain_base_points(  # noqa: PLR0911
         assert primitive.base_points is not None
         return Fraction(primitive.base_points), "固定"
     if basis == "per_distance":
-        assert primitive.base_points is not None
-        distance = effect.distance or 1
-        points = Fraction(primitive.base_points * distance)
-        note = f"{primitive.base_points}×{distance} 格"
-        if effect.collision_dice is not None:
-            extra = effect.collision_dice.count * library.budget.collision_die_points
-            points += extra
-            note += f" ＋ 撞擊 {effect.collision_dice}（{extra} 點）"
-        return points, note
+        return _per_distance_points(skill, effect, primitive, library)
     if basis == "per_amount":
         assert primitive.base_points is not None
         amount = effect.amount or 1
@@ -971,8 +996,9 @@ def _on_miss_budget(skill: SkillDef, library: ContentLibrary, index: int) -> Eff
 def _consume_stack_points(
     skill: SkillDef, effect: EffectSpec, library: ContentLibrary
 ) -> tuple[Fraction, str]:
-    """``consume_stack`` 的加成點數：同技能傷害效果（含形狀與對象倍率）× 期望消耗層數 ×
-    ``per_stack_permille``；期望消耗＝層數上限 × ``consume_stack_expected_permille``。"""
+    """``consume_stack`` 的加成點數：同技能被加成的效果（傷害；層數的 ``consumer.boosts`` 還可以含
+    治療、護盾；含形狀與對象倍率）× 期望消耗層數 × ``per_stack_permille``；期望消耗＝層數上限 ×
+    ``consume_stack_expected_permille``。"""
     rules, budget = library.ruleset, library.budget
     if effect.stack is None or effect.per_stack_permille is None:
         raise BudgetError("consume_stack 缺少 stack 或 per_stack_permille")
@@ -980,11 +1006,13 @@ def _consume_stack_points(
         rules.stack_def(effect.stack).max * budget.consume_stack_expected_permille, _PERMILLE
     )
     primitives = rules.primitives.by_id()
+    stack = rules.stack_def(effect.stack)
+    consumer = stack.consumer
     damage = Fraction(0)
     for other in skill.effects:
-        if other.type == "damage":
-            base, _ = _base_points(skill, other, primitives["damage"], library)
-            damage += base * _shape_multiplier(skill, other, primitives["damage"], library)
+        if other.type == "damage" if consumer is None else consumer.boosts_effect(other):
+            base, _ = _base_points(skill, other, primitives[other.type], library)
+            damage += base * _shape_multiplier(skill, other, primitives[other.type], library)
     bonus = damage * expected * Fraction(effect.per_stack_permille, _PERMILLE)
     return bonus, f"傷害 {_fmt(damage)} × 期望 {_fmt(expected)} 層 × {effect.per_stack_permille}‰"
 

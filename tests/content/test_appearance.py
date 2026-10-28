@@ -163,6 +163,9 @@ def test_keywords_come_from_affixes() -> None:
     assert derive_keywords(pick("affix_kw_shock_area")) == ("charged",)
     assert derive_keywords(pick("affix_attack_lightning")) == ("charged",)
     assert derive_keywords(pick("affix_attack_mark")) == ("marked",)
+    # 毒元素普攻附加（3-53b）對應中毒的外觀圖樣
+    assert derive_keywords(pick("affix_attack_poison")) == ("poisoned",)
+    assert derive_keywords(pick("affix_weapon_poison")) == ("poisoned",)
     # 依詞條順序、去重、最多 2 個
     ids = ("affix_kw_prone_damage", "affix_kw_burn_duration", "affix_kw_shock_area")
     assert derive_keywords(pick(*ids)) == ("prone", "ignite")

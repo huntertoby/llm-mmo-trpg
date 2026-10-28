@@ -92,7 +92,7 @@ def test_interaction_table_covers_plan(library: ContentLibrary) -> None:
         ("element", Element.HOLY, "surface", Surface.POISON),
         ("element", Element.HOLY, "surface", Surface.DARKNESS),
         ("element", Element.WIND, "surface", Surface.FIRE),
-        ("element", Element.WIND, "surface", Surface.POISON),
+        # 「風吹散毒」在 3-54a 移除（06 6.33：風吹到毒改為往風向擴散，由 trpg.engine.wind 結算）
         ("element", Element.WIND, "object", "pushable"),
         ("element", Element.WIND, "unit", None),
         ("element", Element.EARTH, "object", "over_chasm"),

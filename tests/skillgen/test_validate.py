@@ -444,6 +444,7 @@ def test_beneficial_flags_in_content() -> None:
         "soul_link",
         # 3D-8c
         "overwatch",
+        "stoneskin",  # 3-54b
     }
     assert surfaces == {"holy"}
 

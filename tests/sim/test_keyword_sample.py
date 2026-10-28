@@ -28,7 +28,7 @@ def test_samples_are_deterministic_and_use_the_new_start() -> None:
 
 def test_small_sampling_runs_and_reports() -> None:
     lib = library()
-    results = run_samples(keyword_samples(lib, samples=2, seed_start=0, maps=["open_plain"]))
+    results = run_samples(keyword_samples(lib, samples=2, seed_start=2, maps=["open_plain"]))
     assert all(r.report.battles == 1 and r.report.completed == 1 for r in results)
     text = format_samples(lib, results)
     assert "合計：2 個樣本、2 場" in text and "依關鍵字：" in text

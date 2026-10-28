@@ -289,6 +289,21 @@ const EFFECT: Record<string, readonly [string, Draw]> = {
     },
   ],
   knock_prone: ["#e0c49a", (c) => (STATUS["prone"] as readonly [string, Draw])[1](c)],
+  // 震波（3-54b）：倒地的人＋地面的震紋
+  shockwave: [
+    "#e0c49a",
+    (c) => {
+      (STATUS["prone"] as readonly [string, Draw])[1](c);
+      c.beginPath();
+      c.moveTo(-10, 11);
+      c.lineTo(-6, 9);
+      c.lineTo(-2, 11);
+      c.lineTo(2, 9);
+      c.lineTo(6, 11);
+      c.lineTo(10, 9);
+      c.stroke();
+    },
+  ],
   teleport: [
     "#d8b8ff",
     (c) => {
@@ -345,6 +360,14 @@ const EFFECT: Record<string, readonly [string, Draw]> = {
   ],
   apply_status: ["#ffffff", (c) => ring(c, 0, 0, 7)],
   create_surface: ["#ffffff", (c) => surfaceGlyph(c, null)],
+  // 吹送（3-54a）：表面＋往右的風
+  blow_surface: [
+    "#cfe8ff",
+    (c) => {
+      surfaceGlyph(c, null);
+      arrow(c, -9, -7, 8, -7, 3.5);
+    },
+  ],
   destroy_object: [
     "#e0c49a",
     (c) => {
@@ -739,6 +762,12 @@ const COND: Readonly<Record<string, Draw>> = {
     person(c, -3, 1, 0.9);
     c.fillRect(4, -8, 3, 16);
     arrow(c, -9, -7, -4, -7, 3);
+  },
+  // 手持某種武器時（3I-5）：一把直立的劍（劍身、護手、握柄）
+  wielding_weapon: (c) => {
+    c.fillRect(-1.5, -9, 3, 12);
+    c.fillRect(-5, 3, 10, 2.5);
+    c.fillRect(-1.5, 5.5, 3, 4);
   },
 };
 

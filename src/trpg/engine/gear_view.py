@@ -13,7 +13,13 @@ from pydantic import BaseModel, ConfigDict
 
 from trpg.content.equipment import CostAffix, StatAffix
 from trpg.content.skills import condition_text
-from trpg.engine.gear_state import BonusStat, GearAffix, GearBonus, GearState
+from trpg.engine.gear_state import (
+    BASE_BONUS_PREFIX,
+    BonusStat,
+    GearAffix,
+    GearBonus,
+    GearState,
+)
 from trpg.engine.state import UnitState
 from trpg.shared.types import Attribute, Element
 
@@ -141,6 +147,15 @@ def _bonus_entries(gear: GearState, bonus: GearBonus) -> Iterable[GearAffix]:
     return (e for e in gear.affixes if e.affix.id == bonus.affix_id)
 
 
+def _bonus_sources(gear: GearState, bonus: GearBonus) -> list[str]:
+    """一筆加值的來源文字；普通物品的基礎加成（3K-1）寫成「物品名：基礎加成」。"""
+    if bonus.affix_id.startswith(BASE_BONUS_PREFIX):
+        item_id = bonus.affix_id.removeprefix(BASE_BONUS_PREFIX)
+        name = next((i.name_zh for i in gear.items if i.item_id == item_id), item_id)
+        return [f"{name}：基礎加成"]
+    return [_source_text(gear, e) for e in _bonus_entries(gear, bonus)]
+
+
 def _bonus_line(
     gear: GearState, stat: BonusStat, cond: str | None, negate: bool, bonuses: list[GearBonus]
 ) -> GearTotalView:
@@ -151,9 +166,7 @@ def _bonus_line(
     note = "來自裝備"
     if condition is not None:
         note += f"；條件成立時才生效：{condition}"
-    sources = tuple(
-        dict.fromkeys(_source_text(gear, e) for b in bonuses for e in _bonus_entries(gear, b))
-    )
+    sources = tuple(dict.fromkeys(s for b in bonuses for s in _bonus_sources(gear, b)))
     return GearTotalView(
         key=f"{stat}:{cond or ''}:{int(negate)}",
         label_zh=label,

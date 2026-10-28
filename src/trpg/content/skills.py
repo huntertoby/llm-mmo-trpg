@@ -54,6 +54,7 @@ __all__ = [
     "AFFECTS_VALUES",
     "BACKLASH_TYPES",
     "BASIC_ACTIONS",
+    "BLOW_SURFACE",
     "CASTER_CONDITIONS",
     "CHANGE_TARGETS",
     "CHARGE_THROUGH",
@@ -136,6 +137,8 @@ __all__ = [
     "VARIANT_CONDITIONS",
     "VARIANT_TARGET_CONDITIONS",
     "WEAPON_CLASSES",
+    "WIELDING_EFFECT_ONLY",
+    "WIELDING_WEAPON",
     "ZONE",
     "ZONE_CASTER_SHAPES",
     "ZONE_EFFECT_TYPES",
@@ -181,10 +184,13 @@ __all__ = [
     "condition_text",
     "default_affects",
     "granted_skill_problems",
+    "held_gear",
+    "is_wind_skill",
     "legendary_cores",
     "on_hit_carrier",
     "param_required_for",
     "rarity_rank",
+    "skill_elements",
     "skill_problems",
     "skill_slot_problems",
     "true_only_params",
@@ -255,8 +261,9 @@ REQUIRED_CONDITIONS: tuple[str, ...] = (
     "self_concealed",
     "on_own_rune",
     "target_collided",
+    "wielding_weapon",
 )
-"""引擎實作的 15 種條件（``trpg.engine.skills.conditions``），資料檔必須全部定義。"""
+"""引擎實作的 16 種條件（``trpg.engine.skills.conditions``），資料檔必須全部定義。"""
 
 type Targeting = Literal[
     "self", "unit", "tile", "direction", "none", "object_tile", "unit_tile", "unit_pair"
@@ -614,6 +621,7 @@ class PrimitiveParam(ContentModel):
         "count",
         "landing",
         "scope",
+        "weapon",
     ]
     required: bool = False
     show_when: dict[str, str] | None = None
@@ -857,10 +865,13 @@ class ConditionSpec(ContentModel):
     篩選（Phase 3-23）。"""
     element: Element | None = None
     """``on_own_rune`` 專用（Phase 3-23）：符文元素篩選（省略＝任何符文）。"""
+    weapon: str | None = Field(default=None, pattern=ID_PATTERN)
+    """``wielding_weapon`` 專用（Phase 3I-5，6.10 #50）：要手持的武器或副手 ID
+    （``weapons.yaml``、``offhands.yaml``）。"""
 
     def param_values(self) -> dict[str, Any]:
         """已填寫的參數（依名稱排序）。"""
-        names = ("element", "permille", "status", "surface", "tag")
+        names = ("element", "permille", "status", "surface", "tag", "weapon")
         return {n: getattr(self, n) for n in names if getattr(self, n) is not None}
 
 
@@ -897,6 +908,7 @@ def condition_text(
     surface_name: Callable[[Surface], str] = lambda surface: surface.value,
     tag_name: Callable[[str], str] = _unknown_tag,
     tag_runes: Mapping[str, str] | None = None,
+    weapon_name: Callable[[str], str] = str,
 ) -> str:
     """條件的一句話（繁體中文），例如「目標血量低於 40%」。"""
     kind = condition.type
@@ -914,6 +926,10 @@ def condition_text(
     plain = _PLAIN_CONDITION_TEXT.get(kind)
     if plain is None and kind == "on_own_rune":
         plain = _rune_condition_text(condition, tag_runes)
+    if plain is None and kind == "wielding_weapon" and condition.weapon is not None:
+        plain = f"手持{weapon_name(condition.weapon)}時"  # 3I-5
+    if plain is None and kind == "wielding_weapon":
+        plain = "手持指定的武器時"  # 3-55：沒帶武器 ID 時也不露出英文代號
     return plain or kind
 
 
@@ -1068,6 +1084,10 @@ class EffectSpec(ContentModel):
     lifesteal_permille: int | None = None
     """``damage`` 專用（Phase 3D-8a，6.18 A）：吸血——施放者回復「這個效果實際造成的傷害（扣掉護盾
     吸收）」的 n‰（無條件捨去，不超過最大 HP）。只有技能自己的傷害效果可以用。"""
+    spread: int | None = Field(default=None, ge=1, le=2)
+    """``damage`` 專用（Phase 3-54b，06 6.33）：風元素傷害的元素擴散格數（1 或 2；省略＝
+    ``core.wind.spread_distance``，預設 1）。只有 ``element: wind`` 的技能自己的傷害效果可以填；
+    2 格的預算較貴（``wind_spread_permille``）。"""
     split_heal: bool | None = None
     """``damage`` 專用（Phase 3D-8a，6.18 B）：聖光雙效——必須搭配 ``affects: all``；敵方依一般命中
     判定受到傷害、友方（含施放者）不擲命中而改為治療同樣的骰值（骰一次）。只能用在 ``aura``、
@@ -1535,6 +1555,8 @@ INSCRIBE = "inscribe"
 DETONATE_RUNES = "detonate_runes"
 """Phase 3-23 的消耗型原語 ID（6.25）：引爆影響格內施放者自己的符文，每格對該格單位一次小傷害。"""
 RUNE_BOTH_MESSAGE = "不能同時刻下符文又引爆符文（要靠兩件東西搭配，不是單一被動或單一裝備自己完成）"
+BLOW_SURFACE = "blow_surface"
+"""Phase 3-54a 的吹送原語 ID（06 6.33，#56）：把影響格上的表面整片往風向平移 ``distance`` 格。"""
 SACRIFICE_SUMMON = "sacrifice_summon"
 """Phase 3-24c 的獻祭召喚物原語 ID（6.27.2）：移除自己的一個召喚物，在它的位置爆炸或治療。"""
 ZONE = "zone"
@@ -1881,6 +1903,14 @@ SELF_ONLY_CHANGES: frozenset[str] = frozenset(
 )
 """在選目標之前就要決定的修正：條件只能看持有者自己（``self_hp_below``）或省略。"""
 
+WIELDING_WEAPON = "wielding_weapon"
+"""武器親和條件（Phase 3I-5）。"""
+WIELDING_EFFECT_ONLY = (
+    "「手持某種武器時」只能寫在效果上（沒拿那種武器時技能照常可用，只是少那個加成）；"
+    "想限定武器才能用，請改用限定武器"
+)
+"""``wielding_weapon`` 寫在技能條件上時的訊息（schema 與工坊事前停用共用）。"""
+
 SELF_CONDITIONS: frozenset[str] = frozenset({"self_hp_below"})
 CASTER_CONDITIONS: frozenset[str] = frozenset(
     {
@@ -1890,10 +1920,12 @@ CASTER_CONDITIONS: frozenset[str] = frozenset(
         "first_round",
         "cast_tag_this_turn",
         "self_concealed",
+        "wielding_weapon",
     }
 )
-"""只看施放者的條件（Phase 3D-1）：技能層級的判斷不需要影響範圍內有對象。選目標之前就要決定的
-修正規則改變（:data:`SELF_ONLY_CHANGES`）仍只允許 :data:`SELF_CONDITIONS`（``self_hp_below``）。"""
+"""只看施放者的條件（Phase 3D-1；``wielding_weapon`` 為 3I-5）：技能層級的判斷不需要影響範圍內
+有對象。選目標之前就要決定的修正規則改變（:data:`SELF_ONLY_CHANGES`）仍只允許
+:data:`SELF_CONDITIONS`（``self_hp_below``）。"""
 
 ON_HIT_PRIMITIVES: tuple[str, ...] = (
     "damage",
@@ -2311,6 +2343,10 @@ class SkillDef(ContentModel):
     skeleton: str
     category: SkillCategory
     weapon_req: WeaponReq
+    weapon_only: tuple[str, ...] = ()
+    """限定武器（Phase 3I-5，6.10 #50 專屬招牌技）：非空時，只有主手武器或副手的 ID 在這份清單裡
+    （``weapons.yaml``、``offhands.yaml``）才能裝備、施放這個技能；空 ＝ 不限（照 ``weapon_req``）。
+    與 ``weapon_req`` 並存：兩者都要符合。只有火器、盾、成對武器、鞭的招牌技使用。"""
     ap_cost: int | None = None
     scaling_attr: Attribute
     secondary_scaling_attr: Attribute | None = None
@@ -2424,6 +2460,7 @@ class SkillDef(ContentModel):
         self._check_reaction_and_stance()
         self._check_trap_and_stacks()
         self._check_scaling_and_mastery()
+        self._check_gear_limits()
         allowed = ("melee", "ranged") if self.category == "weapon" else ("focus", "any")
         if self.weapon_req not in allowed:
             name = "武器技" if self.category == "weapon" else "法術技"
@@ -3094,6 +3131,17 @@ class SkillDef(ContentModel):
                 except ValueError as exc:
                     raise ValueError(f"modifiers[{rule_index}].change.on_hit_{exc}") from None
 
+    def _check_gear_limits(self) -> None:
+        """武器親和與限定武器的結構（3I-5，6.10 #50）：``wielding_weapon`` 只能寫在效果上（沒拿
+        那種武器時技能照常可用，只是少一個加成；寫在技能條件上就變成不能施放）；限定武器不重複。"""
+        gated = [self.condition]
+        if self.followup is not None:
+            gated.append(self.followup.condition)
+        if any(c is not None and c.type == WIELDING_WEAPON for c in gated):
+            raise ValueError(f"condition：{WIELDING_EFFECT_ONLY}")
+        if len(set(self.weapon_only)) != len(self.weapon_only):
+            raise ValueError("weapon_only 不可重複")
+
     def _check_scaling_and_mastery(self) -> None:
         """雙屬性縮放與專精加成的結構（2H-2；稀有度門檻是跨檔案檢查）。"""
         if self.secondary_scaling_attr == self.scaling_attr:
@@ -3169,14 +3217,20 @@ class SkillDef(ContentModel):
             and effect.scaling is None
             and effect.lifesteal_permille is None
             and effect.split_heal is None
+            and effect.spread is None
         ):
             return
         if effect.type != "damage":
-            raise ValueError(f"{where}：只有 damage 使用 explode、scaling、lifesteal、split_heal")
+            raise ValueError(
+                f"{where}：只有 damage 使用 explode、scaling、lifesteal、split_heal、spread"
+            )
         if not top:
             raise ValueError(
-                f"{where}：explode、scaling、lifesteal、split_heal 只能用在技能自己的傷害效果"
+                f"{where}：explode、scaling、lifesteal、split_heal、spread "
+                "只能用在技能自己的傷害效果"
             )
+        if effect.spread is not None and effect.element is not Element.WIND:
+            raise ValueError(f"{where}：spread（擴散格數）只有風元素（element: wind）的傷害能填")
         if effect.split_heal is not None:
             self._check_split_heal(where, effect)
 
@@ -3317,16 +3371,30 @@ class SkillDef(ContentModel):
         return get(self.scaling_attr)
 
     def contest_attr(self, weapon: WeaponDef | None = None) -> Attribute:
-        """對抗判定（擊倒、位移、狀態抵抗）和目標比的單一屬性；武器技為手上武器的主屬性。"""
+        """對抗判定（擊倒、位移、狀態抵抗）守方被比的單一屬性；武器技為手上武器的主屬性。攻方的值是
+        :meth:`scaling_value`（雙屬性為平均，3I-3b）。"""
         if self.category == "weapon" and weapon is not None:
             return weapon.scaling_attr
         return self.scaling_attr
+
+    def _formula_names_zh(self, weapon: WeaponDef | None) -> str:
+        """算法句裡的屬性名（3-55）。武器技看手上武器（3H-6）：有武器寫實際的屬性名（雙屬性寫取較高
+        ／取平均；3I-3 的心智第二屬性再取平均），沒有武器寫「武器屬性」（卡片另列由武器資料產生的
+        例子）；其他技能寫自己的縮放屬性。"""
+        second = self.secondary_scaling_attr
+        if self.category != "weapon":
+            names = self.scaling_attr.display_name
+            return names if second is None else f"{names}／{second.display_name}（取平均）"
+        if weapon is not None:
+            return weapon.skill_scaling_names_zh(second)
+        return "武器屬性" if second is None else f"武器屬性與{second.display_name}（取平均）"
 
     def formula_lines_zh(
         self,
         core: CoreRules,
         weapon: WeaponDef | None = None,
         get: Callable[[Attribute], int] | None = None,
+        weapon_examples: str = "",
     ) -> tuple[str, ...]:
         """傷害、治療、護盾的算法（3-41c，08 8.11）：「傷害算法：骰值＋智力 × 0.5（目前 +6.5）」。
 
@@ -3334,14 +3402,7 @@ class SkillDef(ContentModel):
         屬性乘普攻倍率（效果的倍率、等級與修正規則另算，見效果句）。倍率取自 ``rules/core.yaml``，
         ``weapon`` 與 ``get`` 都省略時不附武器骰與目前加成。"""
         types = {e.type for e in self.effects}
-        if self.category == "weapon":  # 武器技看手上武器的屬性（3H-6）；沒有指定武器時寫泛稱
-            names = "武器的屬性" if weapon is None else weapon.scaling_names_zh()
-            if self.secondary_scaling_attr is not None:  # 3I-3：武器屬性值與心智屬性值取平均
-                names += f"與{self.secondary_scaling_attr.display_name}（取平均）"
-        else:
-            names = self.scaling_attr.display_name
-            if self.secondary_scaling_attr is not None:
-                names += f"／{self.secondary_scaling_attr.display_name}（取平均）"
+        names = self._formula_names_zh(weapon)
         now = None if get is None else self.scaling_value(get, weapon)
 
         def line(label: str, base: str, permille: int) -> str:
@@ -3357,6 +3418,8 @@ class SkillDef(ContentModel):
                 if weapon is not None:
                     base += f" {weapon.dice}" + (f"＋{weapon.flat}" if weapon.flat else "")
                 out.append(line("傷害", base, core.basic_attack_attr_multiplier_permille))
+                if weapon is None and weapon_examples:  # 3-55：沒有主角時列例子
+                    out.append(f"武器屬性看手上的武器：{weapon_examples}")
         for kind, label in (("heal", "治療"), ("shield", "護盾")):
             if kind in types:
                 out.append(line(label, "骰值", core.spell_attr_multiplier_permille))
@@ -3565,7 +3628,7 @@ def _effect_problems(
     ):
         allowed = "、".join(primitive.allowed_shapes)
         problems.append(f"{where}：{primitive.id} 只能搭配形狀 {allowed}，收到 {skill.shape.type}")
-    problems += _stack_effect_problems(where, effect, affects, refs)
+    problems += _stack_effect_problems(skill, where, effect, affects, refs)
     problems += _consume_status_problems(skill, index, effect, refs)
     problems += _zone_problems(skill, index, effect, refs)
     problems += _gamble_problems(skill, index, effect, refs)
@@ -3691,9 +3754,28 @@ def _consume_status_problems(
     return problems
 
 
-def _stack_effect_problems(where: str, effect: EffectSpec, affects: str, refs: _Refs) -> list[str]:
+def _consumer_problems(skill: SkillDef, where: str, stack: StackDef) -> list[str]:
+    """``consume_stack`` 的消耗規則（Phase 3-52，``stacks.yaml`` 的 ``consumer``）：技能要有被加成
+    的效果（傷害、治療、護盾），並滿足 ``requires_any`` 的其中一項。"""
+    consumer = stack.consumer
+    if consumer is None:
+        return []
+    problems: list[str] = []
+    no_boost, unmet = consumer.gaps(skill)
+    if no_boost:
+        problems.append(
+            f"{where}.stack：消耗層數 {stack.id} 的技能至少要有{consumer.boost_names()}其中一種效果"
+        )
+    if unmet:
+        problems.append(f"{where}.stack：層數 {stack.id} 只有符合條件的技能可以消耗（見層數說明）")
+    return problems
+
+
+def _stack_effect_problems(
+    skill: SkillDef, where: str, effect: EffectSpec, affects: str, refs: _Refs
+) -> list[str]:
     """層數原語的跨檔案檢查：層數的 ``owner`` 決定對象（``self`` 型只能對施放者自己、``target`` 型
-    只能對敵方），累積量不超過上限。"""
+    只能對敵方），累積量不超過上限；消耗還要符合層數的消耗規則。"""
     if effect.type not in (ADD_STACK, CONSUME_STACK) or refs.stacks is None:
         return []
     stack = refs.stacks.get(effect.stack or "")
@@ -3708,6 +3790,8 @@ def _stack_effect_problems(where: str, effect: EffectSpec, affects: str, refs: _
         )
     if effect.type == ADD_STACK and effect.amount is not None and effect.amount > stack.max:
         problems.append(f"{where}.amount：超過層數 {stack.id} 的上限 {stack.max}")
+    if effect.type == CONSUME_STACK:
+        problems += _consumer_problems(skill, where, stack)
     return problems
 
 
@@ -3933,17 +4017,63 @@ def on_hit_carrier(skill: SkillDef, effects: tuple[EffectSpec, ...]) -> SkillDef
     return skill.model_copy(update={"effects": effects})
 
 
+def skill_elements(skill: SkillDef) -> frozenset[Element]:
+    """技能的元素（Phase 3-54b，06 6.33「只有大地能升降地形」用）：標籤裡的元素名稱（隨機組合器
+    的主題元素、手寫技能的主題標籤），加上所有層級的效果自己寫的元素（傷害、定時炸彈、刻印、
+    召喚物爆炸……）；物理不算（物理是沒有元素）。"""
+    found = {Element(t) for t in skill.tags if t in _ELEMENT_VALUES}
+    for effect in skill.iter_effects(include_followup=True):
+        if effect.element is not None:
+            found.add(effect.element)
+    found.discard(Element.PHYSICAL)
+    return frozenset(found)
+
+
+_ELEMENT_VALUES = frozenset(e.value for e in Element)
+
+
+def is_wind_skill(skill: SkillDef) -> bool:
+    """風元素的技能（Phase 3-54a，06 6.33）：頂層有 ``element: wind`` 的傷害效果。
+
+    風壓撞擊（推擊的撞擊傷害加成）用這個判斷；只看技能資料（卡片、預算與實戰同源），武器詞條或
+    修正規則在戰鬥中加上的風元素不算。"""
+    return any(e.type == "damage" and e.element is Element.WIND for e in skill.effects)
+
+
 # ---------------------------------------------------------------------------
 # 單位與技能
 # ---------------------------------------------------------------------------
 
 
-def weapon_problem(skill: SkillDef, weapon_class: str) -> str | None:
-    """技能的 ``weapon_req`` 與武器分類不相容時的原因。"""
-    if skill.weapon_req in ("any", weapon_class):
-        return None
-    need, have = _REQ_NAMES[skill.weapon_req], _REQ_NAMES[weapon_class]
-    return f"技能「{skill.name_zh}」需要{need}，但單位的武器是{have}"
+def weapon_problem(
+    skill: SkillDef,
+    weapon_class: str,
+    held: Mapping[str, str] | None = None,
+    *,
+    names: Mapping[str, str] | None = None,
+) -> str | None:
+    """技能的 ``weapon_req`` 與武器分類不相容、或不是限定武器（``weapon_only``，3I-5）時的原因。
+
+    ``held``：單位手上的主手武器與副手（ID → 中文名，見 :func:`held_gear`）；技能有 ``weapon_only``
+    而沒給 ``held`` 一律視為不符。``names``：ID → 中文名，只用來把限定武器寫成中文。"""
+    if skill.weapon_req not in ("any", weapon_class):
+        need, have = _REQ_NAMES[skill.weapon_req], _REQ_NAMES[weapon_class]
+        return f"技能「{skill.name_zh}」需要{need}，但單位的武器是{have}"
+    if skill.weapon_only and not (held and set(skill.weapon_only) & set(held)):
+        lookup = names or {}
+        need_text = "、".join(lookup.get(w, w) for w in skill.weapon_only)
+        have_text = "、".join(sorted(held.values())) if held else "空手"
+        return f"技能「{skill.name_zh}」限定手持{need_text}，但單位手上是{have_text}"
+    return None
+
+
+def held_gear(weapon: Any, offhand: Any = None) -> dict[str, str]:
+    """單位手上的主手武器與副手（ID → 中文名），給 :func:`weapon_problem` 與 ``wielding_weapon``
+    條件用；``weapon``／``offhand`` 是有 ``id``、``name_zh`` 的定義（副手可為 ``None``）。"""
+    held = {weapon.id: weapon.name_zh}
+    if offhand is not None:
+        held[offhand.id] = offhand.name_zh
+    return held
 
 
 _REQ_NAMES = {"melee": "近戰武器", "ranged": "遠程武器", "focus": "法器", "any": "任何武器"}

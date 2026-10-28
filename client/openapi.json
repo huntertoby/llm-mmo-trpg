@@ -1319,6 +1319,12 @@
                   },
                   {
                     "$ref": "#/components/schemas/LoadoutChoice"
+                  },
+                  {
+                    "$ref": "#/components/schemas/GearPickChoice"
+                  },
+                  {
+                    "$ref": "#/components/schemas/EquipChoice"
                   }
                 ],
                 "discriminator": {
@@ -1332,7 +1338,9 @@
                     "respec": "#/components/schemas/RespecChoice",
                     "respec_attributes": "#/components/schemas/RespecAttributesChoice",
                     "allocate": "#/components/schemas/AllocateChoice",
-                    "loadout": "#/components/schemas/LoadoutChoice"
+                    "loadout": "#/components/schemas/LoadoutChoice",
+                    "gear_pick": "#/components/schemas/GearPickChoice",
+                    "equip": "#/components/schemas/EquipChoice"
                   }
                 },
                 "title": "Choice"
@@ -1476,13 +1484,13 @@
           "workshop"
         ],
         "summary": "Post Check",
-        "description": "是否合法、違反的規則、預算明細、最低稀有度與技能卡片。",
+        "description": "是否合法、違反的規則、預算明細、最低稀有度與技能卡片（帶 ``weapon`` 時卡片寫實際屬性）。",
         "operationId": "post_check_api_workshop_check_post",
         "requestBody": {
           "content": {
             "application/json": {
               "schema": {
-                "$ref": "#/components/schemas/WorkshopSkillRequest"
+                "$ref": "#/components/schemas/WorkshopCheckRequest"
               }
             }
           },
@@ -4228,6 +4236,38 @@
         "title": "EndTurn",
         "description": "結束回合。"
       },
+      "EquipChoice": {
+        "properties": {
+          "kind": {
+            "type": "string",
+            "const": "equip",
+            "title": "Kind",
+            "default": "equip"
+          },
+          "item_id": {
+            "type": "string",
+            "title": "Item Id"
+          },
+          "slot": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Slot"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "item_id"
+        ],
+        "title": "EquipChoice",
+        "description": "營火換裝（Phase 3K-2）：把背包裡的 ``item_id`` 換上；``slot`` 省略時依物品種類決定（戒指有\n兩個欄位時，先放空的、都有裝備時換掉較弱的）。換下的進背包。不推進節點。"
+      },
       "EquipmentSlotView": {
         "properties": {
           "slot": {
@@ -4891,6 +4931,59 @@
         "title": "GearAffixPick",
         "description": "自訂物品上的一條詞條：白名單 id ＋ 數值（詞條沒有數值範圍時不填）。"
       },
+      "GearCandidateOut": {
+        "properties": {
+          "item": {
+            "$ref": "#/components/schemas/GearItemInfo"
+          },
+          "slot": {
+            "type": "string",
+            "title": "Slot"
+          },
+          "slot_zh": {
+            "type": "string",
+            "title": "Slot Zh"
+          },
+          "current": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/GearItemInfo"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "notes_zh": {
+            "items": {
+              "type": "string"
+            },
+            "type": "array",
+            "title": "Notes Zh",
+            "default": []
+          },
+          "weapon_swap_zh": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Weapon Swap Zh"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "item",
+          "slot",
+          "slot_zh"
+        ],
+        "title": "GearCandidateOut",
+        "description": "一件可以換上的裝備（戰後三選一的候選、背包裡的裝備；Phase 3K-2）：物品卡、換上會放進的欄位，\n以及和該欄位目前裝備的比較（目前的物品卡與兩邊的預算分數、換上的連帶效果）。"
+      },
       "GearCatalog": {
         "properties": {
           "slots": {
@@ -5255,6 +5348,61 @@
               "rarity": "common",
               "keywords": []
             }
+          },
+          "rarity": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Rarity"
+          },
+          "rarity_zh": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Rarity Zh"
+          },
+          "item_level": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Item Level"
+          },
+          "base_bonus_zh": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Base Bonus Zh"
+          },
+          "points": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Points"
           }
         },
         "additionalProperties": false,
@@ -5285,6 +5433,29 @@
         ],
         "title": "GearItemLine"
       },
+      "GearOfferOut": {
+        "properties": {
+          "after_battle": {
+            "type": "integer",
+            "title": "After Battle"
+          },
+          "candidates": {
+            "items": {
+              "$ref": "#/components/schemas/GearCandidateOut"
+            },
+            "type": "array",
+            "title": "Candidates"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "after_battle",
+          "candidates"
+        ],
+        "title": "GearOfferOut",
+        "description": "戰後裝備三選一（節點 ``gear_offer``）。"
+      },
       "GearOffhandInfo": {
         "properties": {
           "id": {
@@ -5312,6 +5483,31 @@
         ],
         "title": "GearOffhandInfo",
         "description": "副手種類（Phase 3I-2，``offhands.yaml``）：手動組副手時的選單。"
+      },
+      "GearPickChoice": {
+        "properties": {
+          "kind": {
+            "type": "string",
+            "const": "gear_pick",
+            "title": "Kind",
+            "default": "gear_pick"
+          },
+          "pick": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Pick"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "title": "GearPickChoice",
+        "description": "戰後裝備三選一：``pick`` 為候選索引（``None`` ＝ 跳過）。"
       },
       "GearSkillView": {
         "properties": {
@@ -5834,6 +6030,36 @@
         "title": "HeroCards",
         "description": "戰鬥中主角的技能卡（3-41c）：附施放者當下的實際值（傷害算法的「目前」加成、召喚物資訊）。\n只列有算式或召喚物的技能；技能列把它蓋在 ``/api/skills/{id}`` 的基本卡片上。"
       },
+      "HeroGearSlotOut": {
+        "properties": {
+          "slot": {
+            "type": "string",
+            "title": "Slot"
+          },
+          "slot_zh": {
+            "type": "string",
+            "title": "Slot Zh"
+          },
+          "item": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/GearItemInfo"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "slot",
+          "slot_zh"
+        ],
+        "title": "HeroGearSlotOut",
+        "description": "主角一個裝備欄位目前的裝備（9 個欄位都列；空著 ``item`` 為 ``None``）。"
+      },
       "HeroOut": {
         "properties": {
           "build_id": {
@@ -6046,6 +6272,22 @@
             },
             "type": "array",
             "title": "Evolutions",
+            "default": []
+          },
+          "equipment": {
+            "items": {
+              "$ref": "#/components/schemas/HeroGearSlotOut"
+            },
+            "type": "array",
+            "title": "Equipment",
+            "default": []
+          },
+          "backpack": {
+            "items": {
+              "$ref": "#/components/schemas/GearCandidateOut"
+            },
+            "type": "array",
+            "title": "Backpack",
             "default": []
           }
         },
@@ -7013,6 +7255,7 @@
             "type": "string",
             "enum": [
               "battle",
+              "gear_offer",
               "level_up",
               "campfire",
               "ended"
@@ -7105,6 +7348,16 @@
               }
             ],
             "title": "Victory"
+          },
+          "gear": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/GearOfferOut"
+              },
+              {
+                "type": "null"
+              }
+            ]
           }
         },
         "additionalProperties": false,
@@ -7113,7 +7366,7 @@
           "kind"
         ],
         "title": "NodeOut",
-        "description": "目前節點：``battle``（``battle_index``）、``level_up``（``level``、``points``、\n``offer``）、``campfire``（``after_battle``、``rerolls_left``、重骰後的 ``offer``）、\n``ended``（``victory``）。"
+        "description": "目前節點：``battle``（``battle_index``）、``gear_offer``（``gear``，Phase 3K-2）、\n``level_up``（``level``、``points``、\n``offer``）、``campfire``（``after_battle``、``rerolls_left``、重骰後的 ``offer``）、\n``ended``（``victory``）。"
       },
       "ObjectView": {
         "properties": {
@@ -8592,6 +8845,7 @@
             "type": "string",
             "enum": [
               "battle",
+              "gear_offer",
               "level_up",
               "campfire",
               "ended"
@@ -8840,6 +9094,17 @@
           "weapon_req": {
             "type": "string",
             "title": "Weapon Req"
+          },
+          "weapon_only": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Weapon Only"
           },
           "scaling": {
             "type": "string",
@@ -9974,6 +10239,11 @@
             "type": "array",
             "title": "Charge Tiles",
             "default": []
+          },
+          "cost_status": {
+            "type": "boolean",
+            "title": "Cost Status",
+            "default": false
           }
         },
         "additionalProperties": false,
@@ -11940,6 +12210,30 @@
         "title": "WorkshopCheck",
         "description": ":class:`~trpg.skillgen.draft_check.DraftCheck` ＋ 技能卡片（完整且通過 schema 時才有）。"
       },
+      "WorkshopCheckRequest": {
+        "properties": {
+          "skill": {
+            "additionalProperties": true,
+            "type": "object",
+            "title": "Skill"
+          },
+          "weapon": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Weapon"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "title": "WorkshopCheckRequest",
+        "description": "檢查（Phase 3-55）：和選項一樣可帶 ``weapon``（主角目前手上武器的 ID）；有值且大類和技能的\n武器需求相符時，卡片的算法寫那把武器實際的屬性，否則列由武器資料產生的例子。"
+      },
       "WorkshopExport": {
         "properties": {
           "yaml": {
@@ -12083,19 +12377,6 @@
         ],
         "title": "WorkshopRandomRequest",
         "description": "隨機組合器（``trpg skills random`` 同一個函式）：同種子同參數結果一致。"
-      },
-      "WorkshopSkillRequest": {
-        "properties": {
-          "skill": {
-            "additionalProperties": true,
-            "type": "object",
-            "title": "Skill"
-          }
-        },
-        "additionalProperties": false,
-        "type": "object",
-        "title": "WorkshopSkillRequest",
-        "description": "組到一半（或完整）的技能。"
       },
       "XY": {
         "prefixItems": [

@@ -1,0 +1,24 @@
+# 層數擴充示範技能（Phase 3-52，06 6.32；數值為初值，未經模擬）：消耗連擊點，每層傷害 +20%。
+id: skill_combo_finisher
+schema_version: 1
+name_zh: 連擊終結
+tier: 1
+rank: 1
+rarity: rare
+kind: active
+skeleton: builder_finisher
+category: weapon
+weapon_req: melee
+ap_cost: 2
+scaling_attr: str
+shape: {type: single, range: weapon}
+effects:
+  - {type: damage, multiplier_permille: 1300}
+  - {type: consume_stack, stack: combo_point, per_stack_permille: 200, affects: self}
+condition: null
+cost: {stamina: 10, cooldown: 2}
+tags: [physical, melee, finisher]
+narrative:
+  concept: 把累積的節奏全部灌進最後一擊
+  cast_flavor: 你踏步前傾，把前面所有的出手匯成一記重斬
+provenance: {origin: builtin, owner_id: null, created_by: null, parents: [], bound: true, tradeable: false}

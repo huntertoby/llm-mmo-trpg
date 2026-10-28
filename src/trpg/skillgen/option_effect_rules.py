@@ -38,6 +38,7 @@ __all__ = [
     "cooldown_requirement",
     "effect_fixes",
     "sensible_affects",
+    "stack_unavailable_reason",
     "with_param_blocks",
 ]
 
@@ -45,6 +46,7 @@ PAIR_RULES: frozenset[str] = frozenset(
     {
         "exclusion.no_repeated_control_group",
         "exclusion.no_damage_with_ally_heal",
+        "exclusion.terrain_needs_earth",
         "stance.status",
     }
 )
@@ -126,6 +128,9 @@ _FIXED_REASON: dict[str, str] = {
     ),
     "exclusion.no_damage_with_ally_heal": (
         "同一招不能同時有對敵人的傷害和對友方的治療：改選別的對象，或先移除另一邊的效果"
+    ),
+    "exclusion.terrain_needs_earth": (
+        "隆起、下陷地形只能搭配大地元素：先加入一個大地元素的效果（例如大地傷害），再選這個"
     ),
     "passive.affects": "這個被動作用在持有者自己，效果的對象只能是自己",
     "stance.misuse": "姿態狀態只能由姿態技能施加：回到「基本設定」把種類改成姿態，或改選別的狀態",
@@ -257,6 +262,9 @@ def _checked_choice(
         params[params.index(status)] = _mark_statuses(
             status, marked_affects, primitive, base=base, probe=probe, context=context, shape=shape
         )
+    stack = _param(choice, "stack") if primitive.id == "consume_stack" else None
+    if stack is not None:  # 這招不能消耗的層數事前停用（3-52b）
+        params[params.index(stack)] = _mark_stacks(stack, base=base, probe=probe, context=context)
     updated = choice.model_copy(update={"params": tuple(params)})
     if marked_affects is None or status is not None or "unavailable_zh" in choice.info:
         return updated
@@ -297,6 +305,49 @@ def _legal_default(spec: FieldSpec, primitive: PrimitiveDef, shape: str) -> Fiel
         if value in legal:
             return spec.model_copy(update={"default": value, "required": required})
     return spec.model_copy(update={"required": required})
+
+
+def stack_unavailable_reason(skill: SkillDef, stack_id: str, library: ContentLibrary) -> str | None:
+    """``skill`` 不能消耗層數 ``stack_id`` 的白話原因（含怎麼改）；可以消耗為 ``None``。
+
+    與驗證器 **同源**：呼叫的是驗證器用的 :meth:`~trpg.content.stacks.ConsumerSpec.gaps`；
+    草稿還沒有標籤（工坊不讓玩家選標籤）時，標籤條件先視為符合。"""
+    stack = library.ruleset.stacks.by_id().get(stack_id)
+    if stack is None or stack.consumer is None:
+        return None
+    consumer = stack.consumer
+    no_boost, unmet = consumer.gaps(skill, tags_known=bool(skill.tags))
+    if no_boost:
+        if consumer.heal_self_only:
+            need = "傷害效果，或對象是自己的治療效果"
+        else:
+            need = "、".join(
+                {"damage": "傷害", "heal": "治療", "shield": "護盾"}[b] for b in consumer.boosts
+            )
+            need += "效果（任一種）" if len(consumer.boosts) > 1 else "效果"
+        return f"「{stack.name_zh}」只加成{consumer.boost_names()}：先加入{need}，再選這個層數"
+    if unmet:
+        names = "或".join(consumer.requirement_names(library.ruleset))
+        return f"「{stack.name_zh}」只有{names}的技能才能消耗：加入符合的效果，或改選別的層數"
+    return None
+
+
+def _mark_stacks(
+    spec: FieldSpec, *, base: dict[str, Any], probe: EffectProbe, context: list[dict[str, Any]]
+) -> FieldSpec:
+    """消耗層數的選單：這招（草稿已有的效果）不能消耗的層數標上 ``unavailable_zh``。"""
+    by_id = probe.library.ruleset.stacks.by_id()
+    marked: list[Choice] = []
+    for item in spec.choices:
+        stack = by_id.get(str(item.value))
+        reason = None
+        if stack is not None:
+            owner = "self" if stack.owner == "self" else "enemies"
+            skill = probe.skill([*context, {**base, "stack": item.value, "affects": owner}])
+            if skill is not None:
+                reason = stack_unavailable_reason(skill, stack.id, probe.library)
+        marked.append(_with_info(item, reason))
+    return spec.model_copy(update={"choices": tuple(marked)})
 
 
 def _mark_statuses(
@@ -351,6 +402,10 @@ def effect_fixes(
     shape = _shape_type(draft)
     out: list[EffectFix] = []
     for index, effect in enumerate(effects):
+        stack_fix = _stack_fix(index, effect, library)
+        if stack_fix is not None:  # 層數的對象由層數決定（3-52）
+            out.extend(stack_fix)
+            continue
         primitive = by_id.get(str(effect.get("type")))
         choice = next((c for c in choices if c.value == effect.get("type")), None)
         affects = None if choice is None else _param(choice, "affects")
@@ -378,6 +433,25 @@ def effect_fixes(
         if found:
             out.append(EffectFix(index=index, value=wanted, reason_zh=found))
     return tuple(out)
+
+
+def _stack_fix(
+    index: int, effect: Mapping[str, Any], library: ContentLibrary
+) -> list[EffectFix] | None:
+    """累積／消耗層數的效果：對象由層數決定（累積在你身上 → 自己，疊在敵人身上 → 敵方；3-52）。
+    不是層數效果回傳 ``None``（走一般流程）；對象已經對的回傳空串列。"""
+    if effect.get("type") not in ("add_stack", "consume_stack"):
+        return None
+    stack = library.ruleset.stacks.by_id().get(str(effect.get("stack")))
+    if stack is None:
+        return []
+    wanted = "self" if stack.owner == "self" else "enemies"
+    if effect.get("affects") == wanted:
+        return []
+    where = "累積在你身上" if stack.owner == "self" else "疊在敵人身上"
+    return [
+        EffectFix(index=index, value=wanted, reason_zh=f"「{stack.name_zh}」{where}，對象自動決定")
+    ]
 
 
 def _first_legal(

@@ -17,11 +17,13 @@
 from __future__ import annotations
 
 from collections import Counter
-from collections.abc import Callable, Sequence
+from collections.abc import Callable, Mapping, Sequence
 from dataclasses import dataclass, field
 from fractions import Fraction
+from typing import Any
 
 from trpg.content.battle import UnitTemplate
+from trpg.content.keyword_derive import skill_condition_specs
 from trpg.content.library import ContentLibrary, Ruleset
 from trpg.content.skills import SkillDef
 from trpg.engine import (
@@ -112,11 +114,40 @@ class FuzzReport:
 # ---------------------------------------------------------------------------
 
 
+def _gear_override(library: ContentLibrary, skill: SkillDef) -> dict[str, Any]:
+    """限定武器的技能（3I-5）與有「手持某種武器」條件的技能：施放者拿那種武器或副手（武器改
+    範本的 ``weapon``，副手穿上對應的副手物品），讓限定技能裝得上、親和加成也被走到。"""
+    wanted = [*skill.weapon_only]
+    wanted += [
+        c.weapon
+        for c in skill_condition_specs(skill)
+        if c.type == "wielding_weapon" and c.weapon is not None
+    ]
+    if not wanted:
+        return {}
+    weapon = next((w for w in wanted if w in library.weapons), None)
+    offhand = next((w for w in wanted if w in library.offhands), None)
+    data: dict[str, Any] = {}
+    if weapon is not None:
+        data["weapon"] = weapon
+    if offhand is not None:
+        item = next(i for i in sorted(library.items) if library.items[i].offhand == offhand)
+        data["equipment"] = {"off_hand": item}
+    return data
+
+
 def _unit_template(
-    library: ContentLibrary, base: str, *, skills: tuple[str, ...], reactions: bool, mana: int
+    library: ContentLibrary,
+    base: str,
+    *,
+    skills: tuple[str, ...],
+    reactions: bool,
+    mana: int,
+    gear: Mapping[str, Any] | None = None,
 ) -> UnitTemplate:
     data = library.unit(base).model_dump()
     data.update(skills=list(skills), max_mana=mana)
+    data.update(gear or {})
     if not reactions:
         data["reactions"] = []
     return UnitTemplate.model_validate(data)
@@ -131,7 +162,13 @@ def _ruleset_with(library: ContentLibrary, skill: SkillDef) -> Ruleset:
 def _spawn(
     library: ContentLibrary, template: UnitTemplate, team: Team, pos: tuple[int, int] | None
 ) -> UnitSpawn:
-    return UnitSpawn(template=template, weapon=library.weapon_of(template), team=team, position=pos)
+    return UnitSpawn(
+        template=template,
+        weapon=library.weapon_of(template),
+        team=team,
+        position=pos,
+        equipment=library.loadout_of(template),
+    )
 
 
 def _enemy_positions(distance: int) -> list[tuple[int, int]]:
@@ -147,7 +184,12 @@ _FAR_FOE = (3, 0)
 def _arena_state(library: ContentLibrary, skill: SkillDef, distance: int) -> BattleState:
     """施放者拿到回合與滿 AP 的戰場：施放者、1 名友方、2 名敵方。"""
     caster = _unit_template(
-        library, _BASE_UNIT[skill.weapon_req], skills=(skill.id,), reactions=False, mana=_MANA
+        library,
+        _BASE_UNIT[skill.weapon_req],
+        skills=(skill.id,),
+        reactions=False,
+        mana=_MANA,
+        gear=_gear_override(library, skill),
     )
     ally = _unit_template(library, "hero_archer", skills=(), reactions=False, mana=0)
     foe = _unit_template(library, "bandit", skills=(), reactions=False, mana=0)
@@ -322,7 +364,12 @@ def battle_setup(
     與同階標準敵人。
     """
     caster = _unit_template(
-        library, _BASE_UNIT[skill.weapon_req], skills=(skill.id,), reactions=True, mana=_MANA
+        library,
+        _BASE_UNIT[skill.weapon_req],
+        skills=(skill.id,),
+        reactions=True,
+        mana=_MANA,
+        gear=_gear_override(library, skill),
     )
     friend = library.unit(ally)
     foes = tuple(library.unit(e) for e in enemies)

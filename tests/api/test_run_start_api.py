@@ -36,7 +36,10 @@ def test_start_options_list_every_weapon_and_keyword(
     assert [w["id"] for w in options["weapons"]] == sorted(
         w for w, d in library.weapons.items() if not d.summon_only
     )
-    assert [k["id"] for k in options["keywords"]] == list(library.keywords.ids())
+    assert [k["id"] for k in options["keywords"]] == list(library.keywords.start_ids())
+    # 3-53b：中毒暫時不在開局選單，但仍是關鍵字
+    assert "poisoned" not in [k["id"] for k in options["keywords"]]
+    assert "poisoned" in library.keywords.ids()
     assert options["keyword_count"] == 2
     sword = next(w for w in options["weapons"] if w["id"] == "one_handed_sword")
     assert sword["weapon_class"] == "melee" and sword["hp"] > 0
@@ -48,7 +51,7 @@ def test_preview_matches_the_created_run(client: TestClient, library: ContentLib
     body = {"weapon": "lightning_staff", "seed": 5, "keywords": []}
     first = _ok(client.post("/api/runs/start-preview", json=body))
     by_kw = {o["keyword"]["id"]: o for o in first["options"]}
-    assert len(by_kw) == len(library.keywords.ids())
+    assert set(by_kw) == set(library.keywords.start_ids())
     assert not any(o["selected"] for o in first["options"])
     pick_a = by_kw["wet"]["skill"]["id"]
     second = _ok(client.post("/api/runs/start-preview", json={**body, "keywords": ["wet"]}))

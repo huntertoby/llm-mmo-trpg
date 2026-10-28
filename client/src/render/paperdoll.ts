@@ -25,6 +25,8 @@ import {
   mix,
 } from "./paperdollGear";
 import { drawFigureSide } from "./paperdollSide";
+import { dark } from "./paperdollSideGear";
+import { sideWeaponPose } from "./paperdollSideWeapon";
 
 /** 離屏畫布的虛擬大小與腳底位置（虛擬像素）。 */
 export const DOLL_W = 64;
@@ -551,12 +553,20 @@ function drawShield(ctx: Ctx, it: GearItem, c: string, d: string): void {
 }
 
 /** 一件手持物（主手或副手）；`mirror`：左右鏡像（成對武器的副手，兩把向外張開）。 */
-function drawWeapon(ctx: Ctx, it: GearItem | undefined, x: number, front: boolean, mirror = false): void {
+function drawWeapon(ctx: Ctx, it: GearItem | undefined, x: number, front: boolean, mirror = false, far = false, side = false): void {
   if (it === undefined) return;
-  const [c, d] = itemColors(it);
+  let [c, d] = itemColors(it);
   ctx.save();
   ctx.translate(x, -9.5);
   if (mirror) ctx.scale(-1, 1);
+  if (side) {
+    // 真側面（3S-3）：套這個 kind 的側面握法（抵銷形狀內部的旋轉，再轉到指定角度）；遠側那把變暗
+    const pose = sideWeaponPose(it, far);
+    front = pose.front;
+    ctx.translate(pose.dx, pose.dy);
+    ctx.rotate(pose.angle - pose.inner);
+    if (pose.shade > 0) [c, d] = [dark(c, pose.shade), dark(d, pose.shade)];
+  }
   switch (it.kind) {
     case "sword":
     case "greatsword":
@@ -674,7 +684,7 @@ function drawFigureSideView(ctx: Ctx, spec: DollSpec, facing: Facing): void {
   if (facing === "west") ctx.scale(-1, 1);
   drawFigureSide(ctx, spec, {
     colors: itemColors,
-    weapon: (it, x) => drawWeapon(ctx, it, x, true),
+    weapon: (it, x, far = false) => drawWeapon(ctx, it, x, true, false, far, true),
   });
   ctx.restore();
 }
@@ -779,4 +789,9 @@ export function renderFigureCanvas(spec: DollSpec, facing: Facing, downed: boole
   for (const [ox, oy] of [[-1, 0], [1, 0], [0, -1], [0, 1], [-1, -1], [1, -1], [-1, 1], [1, 1]] as const) ctx.drawImage(sil, ox * k, oy * k);
   ctx.drawImage(off, 0, 0);
   return out;
+}
+
+/** 單獨畫一件側面手持物（面向右；x ＝ 手的位置；`far` ＝ 成對武器的副手）。測試與預覽用。 */
+export function drawWeaponSide(ctx: Ctx, it: GearItem, x: number, far = false): void {
+  drawWeapon(ctx, it, x, true, false, far, true);
 }

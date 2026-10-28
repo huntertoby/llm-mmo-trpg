@@ -36,6 +36,7 @@ from trpg.content.skills import (
     SkillDef,
     default_affects,
 )
+from trpg.content.stacks import auto_consumed
 from trpg.engine import modifiers
 from trpg.engine.actions import UseSkill
 from trpg.engine.context import Ctx
@@ -108,6 +109,7 @@ from trpg.engine.skills.targeting import (
 from trpg.engine.skills.variance import overload_bonus, scale_bonus
 from trpg.engine.stacks import consume_stacks
 from trpg.engine.state import BattleState, UnitState
+from trpg.engine.wind import spread_wind
 from trpg.shared.types import Element, Pos, UnitId
 
 _OWN_CHECK = (SWAP, SWAP_ANY, TELEPORT_TARGET, ZONE, REVEAL, DETONATE_RUNES)
@@ -162,6 +164,12 @@ class Cast:
         """消耗施放者層數得到的傷害加成（‰，所有目標共用；``consume_stack`` 的結果）。"""
         self.target_bonus: dict[str, int] = {}
         """消耗目標層數得到的傷害加成（‰），單位 ID → 加成。"""
+        self.heal_bonus = 0
+        """消耗施放者層數得到的治療加成（‰；層數的 ``consumer.boosts`` 含 ``heal``；3-52）。"""
+        self.heal_self_only = False
+        """治療加成只算治療施放者自己的效果（層數的 ``consumer.heal_self_only``；3-52b）。"""
+        self.shield_bonus = 0
+        """消耗施放者層數得到的護盾加成（‰；``boosts`` 含 ``shield``，Phase 3-52）。"""
         self.use = modifiers.skill_use(skill)
         self.cooldown_delta = 0
         """修正規則的命中後冷卻修正（≤ 0；命中判定當下決定，全部效果結算後套用）。"""
@@ -368,6 +376,7 @@ class Cast:
             if effect.type == "damage":
                 if effect.affects in TOUCHING_AFFECTS:
                     self.touch_untouched_tiles(spec, start)
+                    self.spread_wind(spec)
                 if spec.lifesteal_permille is not None:
                     self.lifesteal(spec.lifesteal_permille, start)
                 if spec.on_kill:
@@ -645,15 +654,34 @@ class Cast:
                 continue
             spec = self.skill.effects[effect.spec_index]
             assert spec.stack is not None and spec.per_stack_permille is not None
-            if rules.stack_def(spec.stack).owner == "self":
+            definition = rules.stack_def(spec.stack)
+            if definition.owner == "self":
                 spent = consume_stacks(self.ctx, self.caster, spec.stack, source_id=self.caster.id)
-                self.caster_bonus += spent * spec.per_stack_permille
+                bonus = spent * spec.per_stack_permille
+                boosts = ("damage",) if definition.consumer is None else definition.consumer.boosts
+                if "damage" in boosts:
+                    self.caster_bonus += bonus
+                if "heal" in boosts:
+                    self.heal_bonus += bonus
+                    if definition.consumer is not None and definition.consumer.heal_self_only:
+                        self.heal_self_only = True
+                if "shield" in boosts:
+                    self.shield_bonus += bonus
                 continue
             for unit in self.targets(effect.affects, spec.condition):
                 spent = consume_stacks(self.ctx, unit, spec.stack, source_id=self.caster.id)
                 self.target_bonus[unit.id] = (
                     self.target_bonus.get(unit.id, 0) + spent * spec.per_stack_permille
                 )
+        self.auto_consume_stacks()
+
+    def auto_consume_stacks(self) -> None:
+        """自動消耗（3-52b，專注）：施放者的主動技能造成傷害時，吃掉全部該層數、每層加成傷害；
+        不造成傷害的技能不吃（層數留給下一個傷害技能）。"""
+        for stack in auto_consumed(self.skill, self.ctx.rules.stacks.stacks):
+            assert stack.auto_consume is not None
+            spent = consume_stacks(self.ctx, self.caster, stack.id, source_id=self.caster.id)
+            self.caster_bonus += spent * stack.auto_consume.per_stack_permille
 
     def react_to_hits(self) -> None:
         """全部效果結算之後：每個被命中的單位（依單位 ID）各自可以用 ``hit_by_*`` 反應技反應。"""
@@ -779,6 +807,15 @@ class Cast:
         if remaining:
             execute(self.ctx, remaining)
 
+    def spread_wind(self, spec: EffectSpec) -> None:
+        """元素擴散（Phase 3-54a，06 6.33）：``element: wind`` 的傷害效果吹到影響格的表面與區域時，
+        往風向擴大（:func:`trpg.engine.wind.spread_wind`；只看效果自己寫的元素）。"""
+        if spec.element is not Element.WIND:
+            return
+        tiles = [xy for xy in self.area.tiles if self.tile_holds(spec.condition, xy)]
+        caster = self.caster
+        spread_wind(self.ctx, self.area, caster.xy, tiles, caster.id, distance=spec.spread)
+
     def spell_scaled(self) -> int:
         """治療與護盾的屬性加成（‰）：有效縮放屬性 × ``spell_attr_multiplier_permille``。"""
         attr = skill_scaling_value(self.ctx.rules, self.caster, self.skill)
@@ -788,12 +825,20 @@ class Cast:
         """技能等級的效果倍率（‰；Phase 3-26a，傷害由 ``damage_parameters`` 處理）。"""
         return level_multiplier(self.ctx.rules, self.caster, self.skill)
 
-    def heal_multiplier(self) -> int:
-        """施放者的治療量倍率（‰；修正規則 ``heal_permille``，3-24b1；再乘技能等級的倍率）。"""
+    def heal_multiplier(self, *, self_heal: bool = False) -> int:
+        """施放者的治療量倍率（‰；修正規則 ``heal_permille``，3-24b1；再乘技能等級的倍率與消耗
+        層數的治療加成；加成只算治療自己時，``self_heal``（效果的對象是 ``self``）才加，3-52b）。"""
         base = PERMILLE
         if self.modified:
             base = modifiers.heal_permille(self.ctx.state, self.caster, self.use)
-        return base * self.level_permille() // PERMILLE
+        bonus = self.heal_bonus
+        if self.heal_self_only and not self_heal:
+            bonus = 0
+        return base * self.level_permille() // PERMILLE * (PERMILLE + bonus) // PERMILLE
+
+    def shield_multiplier(self) -> int:
+        """護盾量倍率（‰）：技能等級的倍率，再乘消耗層數的加成（Phase 3-52）。"""
+        return self.level_permille() * (PERMILLE + self.shield_bonus) // PERMILLE
 
     def knock_down(self, unit: UnitState) -> list[EffectBase]:
         """對 ``unit`` 擲擊倒的對抗判定（技能的縮放屬性 vs 目標同屬性），成功才倒地。"""

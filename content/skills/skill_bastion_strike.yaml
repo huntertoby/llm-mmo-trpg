@@ -1,0 +1,44 @@
+# 3I-5 武器親和／招牌技示範（數值為初值，未經模擬）
+id: skill_bastion_strike
+schema_version: 1
+name_zh: 堡壘突擊
+tier: 1
+rank: 1
+rarity: rare
+kind: active
+skeleton: strike
+category: weapon
+weapon_req: melee
+weapon_only:
+- round_shield
+- tower_shield
+ap_cost: 2
+scaling_attr: str
+shape:
+  type: single
+  range: weapon
+effects:
+- type: damage
+  multiplier_permille: 1450
+- type: apply_status
+  status: guarded
+  duration: 2
+  affects: self
+condition: null
+cost:
+  stamina: 8
+  cooldown: 3
+tags:
+- physical
+- melee
+- defense
+narrative:
+  concept: 持盾的人才打得出的攻守一體
+  cast_flavor: 你護著盾邊壓上去，每一擊都沒有露出破綻
+provenance:
+  origin: builtin
+  owner_id: null
+  created_by: null
+  parents: []
+  bound: true
+  tradeable: false

@@ -114,7 +114,13 @@ def build_glossary(library: ContentLibrary) -> Glossary:
             _entry(r.id, r.name_zh, r.description_zh) for r in rules.reactions.reactions
         ),
         stacks=tuple(
-            _entry(k.id, k.name_zh, k.description_zh, (k.owner,), stack_rules(k, library))
+            _entry(
+                k.id,
+                k.name_zh,
+                k.description_zh,
+                (k.owner, *(("auto_consume",) if k.auto_consume is not None else ())),
+                stack_rules(k, library),
+            )
             for k in rules.stacks.stacks
         ),
         elements=tuple(

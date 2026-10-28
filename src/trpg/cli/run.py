@@ -19,6 +19,7 @@ from pathlib import Path
 from typing import TextIO
 
 from trpg.content.library import ContentLibrary
+from trpg.content.slots import SLOT_ZH
 from trpg.roguelite import (
     ChoiceError,
     RunError,
@@ -35,7 +36,13 @@ from trpg.roguelite import (
 from trpg.roguelite.offers import skill_defs
 from trpg.roguelite.save import default_save_dir
 from trpg.roguelite.start import default_start
-from trpg.roguelite.state import BattleNode, BattleRecord, CampfireNode, LevelUpNode
+from trpg.roguelite.state import (
+    BattleNode,
+    BattleRecord,
+    CampfireNode,
+    GearOfferNode,
+    LevelUpNode,
+)
 from trpg.shared.rng import MASK64
 from trpg.shared.types import Attribute
 
@@ -53,7 +60,13 @@ __all__ = [
 
 type WithLibrary = Callable[[Callable[[ContentLibrary], int]], int]
 
-_NODE_TEXT = {"battle": "戰鬥", "level_up": "升級", "campfire": "營火", "ended": "結束"}
+_NODE_TEXT = {
+    "battle": "戰鬥",
+    "gear_offer": "裝備三選一",
+    "level_up": "升級",
+    "campfire": "營火",
+    "ended": "結束",
+}
 
 
 def parse_attrs(text: str) -> dict[Attribute, int]:
@@ -348,6 +361,9 @@ def _print_summary(library: ContentLibrary, run: RunState, out: TextIO) -> None:
     _print_header(library, run, out)
     print(f"  {_resources(library, run)}；目前：{_NODE_TEXT[run.node.kind]}", file=out)
     print("  技能：" + "、".join(_skill_name(library, run, s) for s in run.hero.skills), file=out)
+    if run.equipment:
+        gear = "、".join(f"{SLOT_ZH[s]}={i.name_zh}" for s, i in run.equipment.items())
+        print(f"  裝備：{gear}；背包 {len(run.backpack)} 件", file=out)
     if run.bench:
         print("  備用：" + "、".join(_skill_name(library, run, s) for s in run.bench), file=out)
     if run.skill_points:
@@ -376,6 +392,8 @@ def _print_node(library: ContentLibrary, before: RunState, after: RunState, out:
     if isinstance(node, BattleNode):
         level = f"；等級 {after.level} 經驗 {after.xp}" if after.history[-1].won else ""
         print(f"  {_record_text(library, after.history[-1])}{level}", file=out)
+    elif isinstance(node, GearOfferNode):
+        print(f"    {_gear_text(node, before, after)}", file=out)
     elif isinstance(node, LevelUpNode):
         gained = [
             f"{a.display_name}+{after.hero.attributes[a] - before.hero.attributes[a]}"
@@ -408,6 +426,15 @@ def _print_node(library: ContentLibrary, before: RunState, after: RunState, out:
             f"源力 {after.source}",
             file=out,
         )
+
+
+def _gear_text(node: GearOfferNode, before: RunState, after: RunState) -> str:
+    """戰後裝備三選一的一行（Phase 3K-2）：候選與 AI 的選擇。"""
+    names = "、".join(i.name_zh for i in node.candidates)
+    worn = {i.id for i in before.equipment.values()}
+    picked = [i for i in after.equipment.values() if i.id not in worn]
+    head = f"裝備三選一（第 {node.after_battle} 場後）：{names}"
+    return f"{head} → 換上「{picked[0].name_zh}」" if picked else f"{head} → 跳過"
 
 
 _BRANCH_TEXT = {"deepen": "加深", "bridge": "橋接", "count": "數量"}

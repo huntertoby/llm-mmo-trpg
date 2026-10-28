@@ -21,6 +21,7 @@ _DISPLACE = frozenset(
         "pull",
         "teleport",
         "knock_prone",
+        "shockwave",
         "dash",
         "leap",
         "swap",

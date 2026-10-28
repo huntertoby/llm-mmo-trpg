@@ -154,6 +154,16 @@ class GearItemInfo(_ApiModel):
     legendary: bool = False
     affixes: tuple[GearItemLine, ...] = ()
     appearance: AppearanceView = AppearanceView()
+    rarity: str | None = None
+    """稀有度（common、uncommon、rare、epic、legendary；舊的測試物品多半沒標）。"""
+    rarity_zh: str | None = None
+    item_level: int | None = None
+    """物品等級（Phase 3K-1；產生器產生的物品才有）。"""
+    base_bonus_zh: str | None = None
+    """普通物品的基礎加成說明（Phase 3K-2，08 8.22.1 第 5 點）：「基礎加成：傷害 +4%」「基礎加成：
+    防禦值 +2%」；沒有基礎加成時為 ``None``。"""
+    points: float | None = None
+    """預算分數：詞條點數＋基礎加成（3K-1 的物品預算；AI 代打與卡片比較用）。"""
 
 
 class GearCatalog(_ApiModel):

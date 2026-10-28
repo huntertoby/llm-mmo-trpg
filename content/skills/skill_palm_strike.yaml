@@ -1,0 +1,24 @@
+# 層數擴充示範技能（Phase 3-52，06 6.32；數值為初值，未經模擬）：累積氣。
+id: skill_palm_strike
+schema_version: 1
+name_zh: 震掌
+tier: 1
+rank: 1
+rarity: rare
+kind: active
+skeleton: builder_finisher
+category: weapon
+weapon_req: melee
+ap_cost: 1
+scaling_attr: str
+shape: {type: single, range: weapon}
+effects:
+  - {type: damage, multiplier_permille: 700}
+  - {type: add_stack, stack: ki, amount: 1, affects: self}
+condition: null
+cost: {stamina: 6}
+tags: [physical, melee, martial, builder]
+narrative:
+  concept: 一掌拍出，真氣回流
+  cast_flavor: 你沉肩墜肘，一掌拍實，掌勁在體內轉了一圈
+provenance: {origin: builtin, owner_id: null, created_by: null, parents: [], bound: true, tradeable: false}

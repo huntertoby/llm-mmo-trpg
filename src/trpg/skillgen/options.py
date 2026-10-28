@@ -61,6 +61,7 @@ from trpg.skillgen.option_followup import (
     followup_notes,
     followup_visible,
 )
+from trpg.skillgen.option_gear import AFFINITY_PRIMITIVES, weapon_only_field
 from trpg.skillgen.option_models import (
     STEP_IDS,
     Choice,
@@ -447,6 +448,7 @@ def _basics_step(draft: Draft, library: ContentLibrary, skeleton: SkeletonDef) -
         ),
         _category_field(skeleton),
         _scaling_field(draft, library),
+        weapon_only_field(draft, library),
         FieldSpec(
             field="tier",
             name_zh="階級",
@@ -608,6 +610,32 @@ def _primitive_usable(primitive: PrimitiveDef, draft: Draft, shape: str) -> bool
     return True
 
 
+def _affinity_fields(
+    primitive: PrimitiveDef, draft: Draft, library: ContentLibrary
+) -> tuple[FieldSpec, ...]:
+    """效果的條件欄位（只影響這個效果；3I-5 起列出，06 6.10 #50）。含「手持武器」（武器親和）：
+    效果只在手持指定武器時生效，沒拿時技能照常可用、只是少這個效果。只有幾種常用原語列出。"""
+    if primitive.id not in AFFINITY_PRIMITIVES:
+        return ()
+    weapon_req = draft.get("weapon_req")
+    conditions = library.ruleset.conditions.conditions
+    return (
+        FieldSpec(
+            field="condition",
+            name_zh="效果條件",
+            description_zh=(
+                "填了之後，這個效果只在條件成立時才生效（其他效果不受影響，條件讓這個效果的點數"
+                "打折）。選「手持指定武器」就是武器親和：沒拿那種武器時技能照常可用，只是少這個效果"
+            ),
+            type="choice",
+            choices=tuple(
+                condition_choice(c, library, weapon_req=weapon_req, effect_level=True)
+                for c in conditions
+            ),
+        ),
+    )
+
+
 def _primitive_choice(
     primitive: PrimitiveDef,
     skeleton: SkeletonDef,
@@ -631,6 +659,7 @@ def _primitive_choice(
             nested_field(primitive, f, ctx, library) if f.type == "effects" else f
             for f in primitive_param_fields(primitive, ctx)
         ),
+        *_affinity_fields(primitive, draft, library),
     )
     return Choice(
         value=primitive.id,
@@ -1011,7 +1040,7 @@ def _modifier_step(draft: Draft, library: ContentLibrary) -> StepOptions:
                 field="condition",
                 name_zh="條件",
                 type="choice",
-                choices=tuple(condition_choice(c, library) for c in conditions),
+                choices=tuple(condition_choice(c, library, effect_level=True) for c in conditions),
             ),
         ),
     )

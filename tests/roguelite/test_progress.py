@@ -23,6 +23,8 @@ from trpg.roguelite.state import (
     BattleNode,
     CampfireNode,
     EndedNode,
+    GearOfferNode,
+    GearPickChoice,
     LeaveChoice,
     LevelUpChoice,
     LevelUpNode,
@@ -71,7 +73,9 @@ def test_won_battle_writes_back_hp_mana_and_source_plus_reward() -> None:
     assert result.winner is Team.ALLY
     hero = result.ally(battle.hero_id)
     assert hero is not None
-    after = finish_battle(lib, run, battle.state, len(battle.steps))
+    gear = finish_battle(lib, run, battle.state, len(battle.steps))
+    assert isinstance(gear.node, GearOfferNode)  # 先裝備三選一（3K-2），再升級
+    after = apply_choice(lib, gear, GearPickChoice(pick=None))
     # 贏了之後升到 2 級：目前 HP 同步增加等級帶來的最大 HP（Phase 3-7）
     level_gain = lib.ruleset.core.level_hp_bonus(run.hero.max_hp, after.level)
     assert after.level == 2 and level_gain > 0

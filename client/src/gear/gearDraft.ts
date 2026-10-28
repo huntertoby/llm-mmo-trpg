@@ -238,7 +238,9 @@ export function toEquipment(selection: Selection, catalog: GearCatalog): Record<
 
 /** 物品的詞條摘要（列表每一列用）。 */
 export function itemSummary(item: GearItemInfo): string {
-  return item.affixes.map((a) => a.text_zh).join("；");
+  // 普通物品沒有詞條時寫基礎加成（Phase 3K-2，08 8.22.1 第 5 點）
+  const base = item.base_bonus_zh == null ? [] : [item.base_bonus_zh];
+  return [...base, ...item.affixes.map((a) => a.text_zh)].join("；");
 }
 
 /** 自訂物品的詞條摘要。 */

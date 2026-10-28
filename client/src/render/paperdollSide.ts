@@ -5,6 +5,7 @@
 import { roundRect as rr, TAU, type Ctx } from "./artDraw";
 import type { DollSpec, GearItem, Look } from "./appearance";
 import { bootHeight, fill, mix } from "./paperdollGear";
+import type { SideRaceLayer } from "./paperdollSideWeapon";
 import { dark, drawCloakSide, drawHeadgearSide, drawOffhandSide } from "./paperdollSideGear";
 
 /** 側面時身體的寬度（正面為 15）。 */
@@ -172,7 +173,9 @@ function drawHairSide(ctx: Ctx, look: Look, head: GearItem | undefined): void {
 export interface SideHooks {
   colors: ItemColors;
   /** 畫一件手持物（x ＝ 手的 x；原點 y 在 -9.5；不鏡像）。 */
-  weapon: (it: GearItem | undefined, x: number) => void;
+  weapon: (it: GearItem | undefined, x: number, far?: boolean) => void;
+  /** 種族部件的側面繪製（3R-3 實作；3S-3 只留介面，沒有就不畫）。位置規則見 `SIDE_RACE_ANCHORS`。 */
+  race?: (layer: SideRaceLayer) => void;
 }
 
 /** 畫一個側面小人（面向右）。 */
@@ -186,7 +189,8 @@ export function drawFigureSide(ctx: Ctx, spec: DollSpec, h: SideHooks): void {
   // 成對武器（主手副手同一種武器）與拳套：副手那把畫在身後露出來
   const offItem = gear.off_hand ?? (gear.main_hand?.kind === "fist" ? gear.main_hand : undefined);
   if (gear.cloak !== undefined) drawCloakSide(ctx, h.colors(gear.cloak));
-  if (offItem !== undefined && !offIsShield && !offHeld) h.weapon(offItem, farArmX + 3);
+  h.race?.("behind");
+  if (offItem !== undefined && !offIsShield && !offHeld) h.weapon(offItem, farArmX + 3, true);
   drawLegs(ctx, look, gear.feet, h.colors);
   drawArm(ctx, gear.body, look, gear.hands, h.colors, farArmX, 0.1, false);
   drawTorso(ctx, gear.body, look, h.colors);
@@ -194,8 +198,10 @@ export function drawFigureSide(ctx: Ctx, spec: DollSpec, h: SideHooks): void {
   if (gear.off_hand?.kind === "tome") drawOffhandSide(ctx, gear.off_hand, h.colors(gear.off_hand));
   else if (gear.off_hand !== undefined && offHeld) h.weapon(gear.off_hand, farArmX + 5);
   drawHeadSide(ctx, look);
+  h.race?.("face");
   drawHairSide(ctx, look, gear.head);
   drawHeadgearSide(ctx, gear.head, gear.head !== undefined ? h.colors(gear.head) : undefined);
+  h.race?.("head");
   const hand = drawArm(ctx, gear.body, look, gear.hands, h.colors, nearArmX, ARM_SWING, true);
   h.weapon(gear.main_hand, hand.x);
 }

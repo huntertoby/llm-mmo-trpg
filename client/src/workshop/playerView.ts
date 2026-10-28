@@ -42,3 +42,16 @@ export function fieldShown(spec: FieldSpec, container: Json, base: string, dev: 
   const when = spec.show_when ?? {};
   return Object.entries(when).every(([key, want]) => String(getPath(container, joinPath(base, key)) ?? "") === want);
 }
+
+/** 選項分組（3-52：層數依「累積在你身上」「疊在敵人身上」分組）：後端用 `info.group_zh` 標示，
+ * 沒有分組名的選項（一般欄位）都在同一組、不顯示組名；組的順序照第一次出現。 */
+export function groupChoices(choices: readonly Choice[]): [string | null, Choice[]][] {
+  const groups: [string | null, Choice[]][] = [];
+  for (const c of choices) {
+    const label = typeof c.info["group_zh"] === "string" ? c.info["group_zh"] : null;
+    const found = groups.find((g) => g[0] === label);
+    if (found === undefined) groups.push([label, [c]]);
+    else found[1].push(c);
+  }
+  return groups;
+}

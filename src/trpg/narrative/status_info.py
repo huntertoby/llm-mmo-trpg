@@ -16,7 +16,13 @@ from trpg.content.stacks import StackDef
 from trpg.engine.ids import CONCEALED, DEFENDING, PRONE
 from trpg.shared.types import Attribute
 
-__all__ = ["CONTROL_GROUP_TEXT", "stack_rules", "status_rules"]
+__all__ = [
+    "BOOST_TEXT",
+    "CONTROL_GROUP_TEXT",
+    "stack_gain_text",
+    "stack_rules",
+    "status_rules",
+]
 
 CONTROL_GROUP_TEXT = {"movement": "移動類", "mental": "心智類", "hard": "硬控"}
 """控制類別（``control_group``）的中文名。"""
@@ -56,6 +62,7 @@ NEUTRAL_PERMILLE = 1000
 _PERMILLE_FIELDS = (
     ("damage_dealt_permille", "自己造成的攻擊傷害"),
     ("damage_taken_permille", "受到的骰值傷害（不含墜落、致命地形等百分比傷害）"),
+    ("physical_taken_permille", "受到的物理骰值傷害"),
     ("healing_received_permille", "受到的治療"),
     ("move_permille", "回合開始時的移動點數（無條件捨去）"),
 )
@@ -87,6 +94,8 @@ def _modifier_lines(status: StatusDef, core: CoreRules) -> list[str]:
         permille: int = getattr(status, field)
         if permille != NEUTRAL_PERMILLE:
             lines.append(f"{label} {_times(permille)}")
+    if status.move_delta:
+        lines.append(f"回合開始時的移動點數 {status.move_delta:+d}（最低 0）")
     if (attr := _attr_bonus_line(status)) is not None:
         lines.append(attr)
     if status.attack_bonus:
@@ -140,9 +149,58 @@ def status_rules(status: StatusDef, library: ContentLibrary) -> tuple[str, ...]:
     return tuple(lines)
 
 
+BOOST_TEXT = {"damage": "傷害", "heal": "治療", "shield": "護盾"}
+"""層數消耗時加成的效果種類（``consumer.boosts``）的中文名。"""
+
+_GAIN_WHEN = {
+    "weapon_skill_hit": "你的武器技命中時",
+    "basic_attack_hit": "你的普攻命中時",
+    "damaged": "你受到傷害時",
+    "kill": "你擊倒敵人時",
+    "summon_downed": "你的召喚物倒下時",
+    "heal_or_holy_cast": "你施放治療或神聖技能時",
+    "turn_end_still": "你的回合結束且這回合沒有移動時",
+}
+
+
+def stack_gain_text(stack: StackDef) -> str:
+    """層數自動累積的白話說明（Phase 3-52，06 6.32）；沒有自動累積規則時為空字串。"""
+    parts: list[str] = []
+    for rule in stack.gain:
+        if rule.when == "element_hit":
+            assert rule.element is not None
+            when = f"你的{rule.element.display_name}傷害命中時"
+        else:
+            when = _GAIN_WHEN[rule.when]
+        parts.append(f"{when} +{rule.amount} 層")
+    if not parts:
+        return ""
+    where = "疊在被命中的敵人身上" if stack.owner == "target" else "累積在你身上"
+    return f"{where}：{'；'.join(parts)}（只有帶著消耗它的技能才會自動累積）"
+
+
+def _consumer_line(stack: StackDef, library: ContentLibrary) -> str:
+    consumer = stack.consumer
+    if consumer is None:
+        return ""
+    line = f"消耗：技能每層提高{consumer.boost_names()}"
+    if consumer.requires_any:
+        line += f"（限{'、'.join(consumer.requirement_names(library.ruleset))}的技能）"
+    if stack.auto_consume is not None:
+        per = stack.auto_consume.per_stack_permille / 10
+        line += f"；你下一個造成傷害的主動技能會自動消耗全部層數，每層傷害 +{per:g}%"
+    return line
+
+
 def stack_rules(stack: StackDef, library: ContentLibrary) -> tuple[str, ...]:
     """層數的規則句（清單 5.5～5.7）：上限依來源、清空時機、超載。"""
     lines = [f"上限依來源（技能卡與裝備詞條各自寫明；最多 {stack.max} 層）"]
+    gain = stack_gain_text(stack)
+    if gain:
+        lines.append(gain)
+    consumer = _consumer_line(stack, library)
+    if consumer:
+        lines.append(consumer)
     if stack.expires_after_rounds is not None:
         lines.append(f"{stack.expires_after_rounds} 輪沒有再累積就清空")
     overload = stack.overload

@@ -70,7 +70,7 @@ def test_battle_log_and_replay(tmp_path: Path, capsys: pytest.CaptureFixture[str
     )
     assert code == 0 and log.is_file() and str(log) in out
     data = json.loads(log.read_text(encoding="utf-8"))
-    assert data["format"] == "trpg-battle-log/69"
+    assert data["format"] == "trpg-battle-log/77"
     assert data["seed"] == 7 and data["actions"] and data["events"]
     assert data["events"][0]["type"] == "battle_started"
 

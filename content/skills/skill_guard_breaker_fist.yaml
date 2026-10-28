@@ -1,0 +1,43 @@
+# 3I-5 武器親和／招牌技示範（數值為初值，未經模擬）
+id: skill_guard_breaker_fist
+schema_version: 1
+name_zh: 碎防拳
+tier: 1
+rank: 1
+rarity: rare
+kind: active
+skeleton: strike
+category: weapon
+weapon_req: melee
+ap_cost: 2
+scaling_attr: str
+shape:
+  type: single
+  range: weapon
+effects:
+- type: damage
+  multiplier_permille: 1300
+- type: apply_status
+  status: vulnerable
+  duration: 2
+  condition:
+    type: wielding_weapon
+    weapon: fist
+condition: null
+cost:
+  stamina: 8
+  cooldown: 3
+tags:
+- physical
+- melee
+- debuff
+narrative:
+  concept: 拳套的重擊震鬆了對手的防禦
+  cast_flavor: 鐵拳砸在護甲接縫上，對手的架勢頓時鬆動
+provenance:
+  origin: builtin
+  owner_id: null
+  created_by: null
+  parents: []
+  bound: true
+  tradeable: false

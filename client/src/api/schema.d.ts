@@ -607,7 +607,7 @@ export interface paths {
         put?: never;
         /**
          * Post Check
-         * @description 是否合法、違反的規則、預算明細、最低稀有度與技能卡片。
+         * @description 是否合法、違反的規則、預算明細、最低稀有度與技能卡片（帶 ``weapon`` 時卡片寫實際屬性）。
          */
         post: operations["post_check_api_workshop_check_post"];
         delete?: never;
@@ -1739,6 +1739,22 @@ export interface components {
             type: "end_turn";
         };
         /**
+         * EquipChoice
+         * @description 營火換裝（Phase 3K-2）：把背包裡的 ``item_id`` 換上；``slot`` 省略時依物品種類決定（戒指有
+         *     兩個欄位時，先放空的、都有裝備時換掉較弱的）。換下的進背包。不推進節點。
+         */
+        EquipChoice: {
+            /**
+             * @description discriminator enum property added by openapi-typescript
+             * @enum {string}
+             */
+            kind: "equip";
+            /** Item Id */
+            item_id: string;
+            /** Slot */
+            slot?: string | null;
+        };
+        /**
          * EquipmentSlotView
          * @description 一個裝備欄位（Phase 3G-G1，唯讀）：欄位、物品名與詞條文字。
          */
@@ -2035,6 +2051,26 @@ export interface components {
             value?: number | null;
         };
         /**
+         * GearCandidateOut
+         * @description 一件可以換上的裝備（戰後三選一的候選、背包裡的裝備；Phase 3K-2）：物品卡、換上會放進的欄位，
+         *     以及和該欄位目前裝備的比較（目前的物品卡與兩邊的預算分數、換上的連帶效果）。
+         */
+        GearCandidateOut: {
+            item: components["schemas"]["GearItemInfo"];
+            /** Slot */
+            slot: string;
+            /** Slot Zh */
+            slot_zh: string;
+            current?: components["schemas"]["GearItemInfo"] | null;
+            /**
+             * Notes Zh
+             * @default []
+             */
+            notes_zh: string[];
+            /** Weapon Swap Zh */
+            weapon_swap_zh?: string | null;
+        };
+        /**
          * GearCatalog
          * @description 測試介面的選單：欄位、測試物品、詞條白名單、武器。
          */
@@ -2189,6 +2225,16 @@ export interface components {
              *     }
              */
             appearance: components["schemas"]["AppearanceView"];
+            /** Rarity */
+            rarity?: string | null;
+            /** Rarity Zh */
+            rarity_zh?: string | null;
+            /** Item Level */
+            item_level?: number | null;
+            /** Base Bonus Zh */
+            base_bonus_zh?: string | null;
+            /** Points */
+            points?: number | null;
         };
         /** GearItemLine */
         GearItemLine: {
@@ -2196,6 +2242,16 @@ export interface components {
             affix_id: string;
             /** Text Zh */
             text_zh: string;
+        };
+        /**
+         * GearOfferOut
+         * @description 戰後裝備三選一（節點 ``gear_offer``）。
+         */
+        GearOfferOut: {
+            /** After Battle */
+            after_battle: number;
+            /** Candidates */
+            candidates: components["schemas"]["GearCandidateOut"][];
         };
         /**
          * GearOffhandInfo
@@ -2211,6 +2267,19 @@ export interface components {
              * @default []
              */
             traits_zh: string[];
+        };
+        /**
+         * GearPickChoice
+         * @description 戰後裝備三選一：``pick`` 為候選索引（``None`` ＝ 跳過）。
+         */
+        GearPickChoice: {
+            /**
+             * @description discriminator enum property added by openapi-typescript
+             * @enum {string}
+             */
+            kind: "gear_pick";
+            /** Pick */
+            pick?: number | null;
         };
         /**
          * GearSkillView
@@ -2438,6 +2507,17 @@ export interface components {
                 [key: string]: components["schemas"]["SkillCard"];
             };
         };
+        /**
+         * HeroGearSlotOut
+         * @description 主角一個裝備欄位目前的裝備（9 個欄位都列；空著 ``item`` 為 ``None``）。
+         */
+        HeroGearSlotOut: {
+            /** Slot */
+            slot: string;
+            /** Slot Zh */
+            slot_zh: string;
+            item?: components["schemas"]["GearItemInfo"] | null;
+        };
         /** HeroOut */
         HeroOut: {
             /** Build Id */
@@ -2555,6 +2635,16 @@ export interface components {
              * @default []
              */
             evolutions: components["schemas"]["EvolutionChoiceOut"][];
+            /**
+             * Equipment
+             * @default []
+             */
+            equipment: components["schemas"]["HeroGearSlotOut"][];
+            /**
+             * Backpack
+             * @default []
+             */
+            backpack: components["schemas"]["GearCandidateOut"][];
         };
         /**
          * HistoryStepOut
@@ -2959,7 +3049,8 @@ export interface components {
         };
         /**
          * NodeOut
-         * @description 目前節點：``battle``（``battle_index``）、``level_up``（``level``、``points``、
+         * @description 目前節點：``battle``（``battle_index``）、``gear_offer``（``gear``，Phase 3K-2）、
+         *     ``level_up``（``level``、``points``、
          *     ``offer``）、``campfire``（``after_battle``、``rerolls_left``、重骰後的 ``offer``）、
          *     ``ended``（``victory``）。
          */
@@ -2968,7 +3059,7 @@ export interface components {
              * Kind
              * @enum {string}
              */
-            kind: "battle" | "level_up" | "campfire" | "ended";
+            kind: "battle" | "gear_offer" | "level_up" | "campfire" | "ended";
             /** Battle Index */
             battle_index?: number | null;
             /** Boss */
@@ -2984,6 +3075,7 @@ export interface components {
             offer?: components["schemas"]["OfferOut"] | null;
             /** Victory */
             victory?: boolean | null;
+            gear?: components["schemas"]["GearOfferOut"] | null;
         };
         /** ObjectView */
         ObjectView: {
@@ -3601,7 +3693,7 @@ export interface components {
              * Node
              * @enum {string}
              */
-            node: "battle" | "level_up" | "campfire" | "ended";
+            node: "battle" | "gear_offer" | "level_up" | "campfire" | "ended";
             /** In Battle */
             in_battle: boolean;
             /** Victory */
@@ -3731,6 +3823,8 @@ export interface components {
             category: string;
             /** Weapon Req */
             weapon_req: string;
+            /** Weapon Only */
+            weapon_only?: string | null;
             /** Scaling */
             scaling: string;
             /** Ap Cost */
@@ -4177,6 +4271,11 @@ export interface components {
              * @default []
              */
             charge_tiles: components["schemas"]["Pos"][];
+            /**
+             * Cost Status
+             * @default false
+             */
+            cost_status: boolean;
         };
         Step: components["schemas"]["Move"] | components["schemas"]["Attack"] | components["schemas"]["UseSkill-Output"] | components["schemas"]["Defend"] | components["schemas"]["Run"] | components["schemas"]["Swap"] | components["schemas"]["Aim"] | components["schemas"]["Vault"] | components["schemas"]["Shove"] | components["schemas"]["Trip"] | components["schemas"]["Interact"] | components["schemas"]["Reload"] | components["schemas"]["ActivateCharge"] | components["schemas"]["EndStance"] | components["schemas"]["SetReactionMode"] | components["schemas"]["SetSummonMode"] | components["schemas"]["CommandSummon"] | components["schemas"]["InfuseSkill"] | components["schemas"]["EndTurn"] | components["schemas"]["Decision"];
         /** @enum {string} */
@@ -4916,6 +5015,19 @@ export interface components {
              */
             keyword_hints: components["schemas"]["KeywordHint"][];
         };
+        /**
+         * WorkshopCheckRequest
+         * @description 檢查（Phase 3-55）：和選項一樣可帶 ``weapon``（主角目前手上武器的 ID）；有值且大類和技能的
+         *     武器需求相符時，卡片的算法寫那把武器實際的屬性，否則列由武器資料產生的例子。
+         */
+        WorkshopCheckRequest: {
+            /** Skill */
+            skill?: {
+                [key: string]: unknown;
+            };
+            /** Weapon */
+            weapon?: string | null;
+        };
         /** WorkshopExport */
         WorkshopExport: {
             /** Yaml */
@@ -4976,16 +5088,6 @@ export interface components {
             rarity?: components["schemas"]["SkillRarity"] | null;
             /** Skeleton */
             skeleton?: string | null;
-        };
-        /**
-         * WorkshopSkillRequest
-         * @description 組到一半（或完整）的技能。
-         */
-        WorkshopSkillRequest: {
-            /** Skill */
-            skill?: {
-                [key: string]: unknown;
-            };
         };
         XY: [
             number,
@@ -5853,7 +5955,7 @@ export interface operations {
         };
         requestBody: {
             content: {
-                "application/json": components["schemas"]["LevelUpChoice"] | components["schemas"]["RerollChoice"] | components["schemas"]["PickChoice"] | components["schemas"]["LeaveChoice"] | components["schemas"]["SpendChoice"] | components["schemas"]["RespecChoice"] | components["schemas"]["RespecAttributesChoice"] | components["schemas"]["AllocateChoice"] | components["schemas"]["LoadoutChoice"];
+                "application/json": components["schemas"]["LevelUpChoice"] | components["schemas"]["RerollChoice"] | components["schemas"]["PickChoice"] | components["schemas"]["LeaveChoice"] | components["schemas"]["SpendChoice"] | components["schemas"]["RespecChoice"] | components["schemas"]["RespecAttributesChoice"] | components["schemas"]["AllocateChoice"] | components["schemas"]["LoadoutChoice"] | components["schemas"]["GearPickChoice"] | components["schemas"]["EquipChoice"];
             };
         };
         responses: {
@@ -5970,7 +6072,7 @@ export interface operations {
         };
         requestBody: {
             content: {
-                "application/json": components["schemas"]["WorkshopSkillRequest"];
+                "application/json": components["schemas"]["WorkshopCheckRequest"];
             };
         };
         responses: {

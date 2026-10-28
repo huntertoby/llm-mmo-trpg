@@ -97,6 +97,13 @@ inscribe_duration_permille: [600, 800, 1000, 1200, 1400]
 # 3-50b 護盾持續時間：shield 的點數 ＝ 骰子平均 × 第 n 項（‰；n ＝ duration 2、3 回合，省略 ＝ 2 回合 ＝ 1000‰）。初值，未經模擬。
 shield_duration_permille: [1000, 1300]
 detonate_runes_permille: 700
+# 3-54b 大範圍越貴越稀有（06 6.33，#58）：升降地形（raise_terrain、lower_terrain）的影響格數（形狀 cell_count）≥ min_cells 時，
+# 技能的稀有度至少要 rarity（依 min_cells 由小到大，取符合的最高一項）：4～6 格最低稀有、7 格以上最低史詩。
+terrain_area_rarity:
+  - {min_cells: 4, rarity: rare}
+  - {min_cells: 7, rarity: epic}
+# 3-54b 風元素傷害的元素擴散格數（spread）：擴散 n 格時（n ＝ 1、2；省略 ＝ 1），傷害效果的點數 × 第 n 項（‰）。初值，未經模擬。
+wind_spread_permille: [1000, 1150]
 # 3-24c 獻祭召喚物（初值，未經模擬）：點數 ＝ 骰子平均 × sacrifice_summon_permille ÷ 1000（需要先有召喚物、且召喚物會消失的折扣）。
 sacrifice_summon_permille: 800
 reveal_base_points: 2

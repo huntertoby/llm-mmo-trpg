@@ -38,6 +38,7 @@ primitives:
       scaling: {llm_hint: "傷害會隨某種情況逐步增加，並有上限。", type: scaling, description_zh: "依情況縮放（Phase 3D-7b）：by／per_step_permille／cap_permille 三個欄位；每一步傷害 +n‰（無條件捨去）、cap_permille 必填且不超過 core.scale_cap_max_permille；by 可為 missing_hp_10pct（施放者每少 10% 最大 HP）、distance（與目標每距 1 格）、enemies_adjacent_target（目標相鄰的敵方數）、enemies_adjacent_self（施放者相鄰的敵方數）"}
       lifesteal_permille: {llm_hint: "施放者依造成的傷害比例回復生命。", type: int, min: 1, max: 500, description_zh: "吸血（Phase 3D-8a）：施放者回復這個效果對敵人實際造成的傷害（扣掉護盾吸收，含溢出）× n‰（無條件捨去，不超過最大 HP）；用 heal 事件、原因 lifesteal；只有技能自己的傷害效果可以用；預算：傷害點數 × (1 ＋ n‰ × lifesteal_value_permille)"}
       on_kill: {llm_hint: "這個傷害讓敵人倒下時，施放者額外獲得的效果。", type: effects, description_zh: "技能內的擊殺時效果（Phase 3D-8b）：這個傷害效果讓敵人倒下時才結算的 1–2 個效果，對象一律是施放者。可用類型：refund_ap（返還 amount 點 AP，1–2，用專用效果、不受改寫規則限制）、refund_cooldown（本技能冷卻歸零，技能必須有 cost.cooldown）、heal、shield、apply_status（一般原語）。同一個傷害效果讓一個以上的敵人倒下只結算一次；施放者自己在結算中倒下則不結算。只有主動技能自己的傷害效果可以用。預算：on_kill 各效果的點數 × on_kill_expected_permille（預估擊殺率）"}
+      spread: {llm_hint: "風元素傷害把範圍內的火、冰、毒往風向擴大的格數（1 或 2；省略為 1）。", type: int, show_when: {element: wind}, min: 1, max: 2, description_zh: "元素擴散格數（Phase 3-54b）：只有風元素（element: wind）的技能自己的傷害效果可以填；風吹到的火、冰、毒表面與火、冰、毒、雷區域往風向擴大 1 或 2 格（省略＝core.yaml 的 wind.spread_distance，預設 1）；預算：傷害點數 × wind_spread_permille（2 格較貴）"}
       split_heal: {llm_hint: "對敵人造成傷害的同時，用同樣的數值治療友方。", type: bool, true_only: true, allowed_skeletons: [aura, area], description_zh: "聖光雙效（Phase 3D-8a）：必須搭配 affects: all、主動法術技、aura 或 area 骨架，不可與 lifesteal、explode、scaling 並用。敵方依一般命中判定受到傷害、友方（含自己）不擲命中而治療同樣的骰值（骰一次，治療量 ＝ 骰值 ＋ 縮放屬性 × 0.5，受治療倍率影響）；預算傷害與治療兩邊都計；只能填 true"}
   - id: heal
     name_zh: 治療
@@ -106,6 +107,18 @@ primitives:
     min_rarity: rare
     budget_basis: fixed
     base_points: 3
+  - id: shockwave
+    name_zh: 震波
+    llm_hint: "讓直線上的單位直接倒地；會飛的單位不受影響。"
+    description_zh: 影響格（只能是直線形狀）上的對象單位直接倒地：不擲對抗，已經倒地的略過；帶 flying 標籤（會飛）的單位不受影響。對象可選敵方、友方或雙方（敵方需命中）。只能用在主動技能。預算：固定 base_points（形狀倍率另算；初值，未經模擬）。
+    player_description: "讓直線範圍內的單位直接倒地，不用對抗；會飛的單位不受影響。"
+    category: structural
+    harmful: true
+    min_rarity: rare
+    active_only: true
+    allowed_shapes: [line]
+    budget_basis: fixed
+    base_points: 4
   - id: teleport
     name_zh: 傳送
     llm_hint: "讓施放者瞬間移動到選定的位置。"
@@ -326,7 +339,7 @@ primitives:
   - id: consume_stack
     name_zh: 消耗層數
     llm_hint: "消耗目標身上累積的層數，每一層都轉成額外的威力。"
-    description_zh: 消耗全部該層數（self 型從施放者、target 型從每個被命中的目標）；同一技能的傷害效果依消耗的層數 × per_stack_permille 加成（200 ＝ 每層 +20%）。沒有層數也可施放（加成 0）。預算以期望消耗＝上限的一半估算加成點數。
+    description_zh: 消耗全部該層數（self 型從施放者、target 型從每個被命中的目標）；同一技能被加成的效果（預設是傷害；層數的 consumer.boosts 可以加上治療、護盾，見 stacks.yaml）依消耗的層數 × per_stack_permille 加成（200 ＝ 每層 +20%）。沒有層數也可施放（加成 0）。預算以期望消耗＝上限的一半估算加成點數。
     player_description: "消耗全部層數，讓同一技能的傷害依層數增加。"
     category: structural
     harmful: true
@@ -728,3 +741,20 @@ primitives:
       dice: {llm_hint: "爆炸傷害的骰子。", type: dice, required: true, description_zh: 爆炸的傷害骰或治療骰}
       radius: {llm_hint: "爆炸波及的半徑。", type: int, required: true, min: 0, max: 2, description_zh: 結算半徑（曼哈頓距離，0 只波及召喚物所在的格子）}
       element: {llm_hint: "爆炸的元素。", type: element, description_zh: 填了＝爆炸（傷害敵人）；省略＝治療範圍內的友方}
+
+  # --- Phase 3-54a：風的吹送（docs/design/06-技能.md 6.33，#56；點數為初值，未經模擬）---
+  - id: blow_surface
+    name_zh: 吹送
+    llm_hint: "用風把範圍內的地面表面（火、毒、冰、水、油、煙霧）整片往風向吹走幾格。"
+    description_zh: 把影響格上可吹送的表面（rules/core.yaml 的 wind.blow_surfaces：火、毒、冰、水、油、煙霧）整片往風向平移 distance 格（2～3），保留剩餘回合與建立者。風向：方向型形狀為形狀的方向；中心格型為「施放者 → 中心格」的主要軸向；以施放者為中心的形狀為「施放者 → 該格」的主要軸向（往外吹）。表面一格一格前進，遇到地圖外、牆壁、blocks_move 物件、比目前高的格子就停在前一格；單位不阻擋；推進致命地形（深淵、岩漿；上面不能有表面）的表面走到那一格就消失。原格的表面移除；落點先查互動表（同產生表面，例如水熄滅火），帶元素的表面落在物件上照常觸及。多片落在同一格時，風向最前面的先放。只能用在主動技能、只作用在格子。預算：base_points × 距離。
+    player_description: "用風把範圍內的地面表面（火、毒、冰、水、油、煙霧）整片往風向吹走幾格；撞到牆或擋路的東西就停下。"
+    category: structural
+    harmful: false
+    min_rarity: rare
+    active_only: true
+    budget_basis: per_distance
+    base_points: 1
+    acts_on: tile
+    forbid_affects: [self, enemies, allies, all]   # 吹送只作用在格子
+    params:
+      distance: {llm_hint: "表面被吹走的格數。", type: int, required: true, min: 2, max: 3, description_zh: 表面往風向平移的格數}

@@ -1,0 +1,43 @@
+# 3I-5 武器親和／招牌技示範（數值為初值，未經模擬）
+id: skill_trick_shot
+schema_version: 1
+name_zh: 花式射擊
+tier: 1
+rank: 1
+rarity: rare
+kind: active
+skeleton: strike
+category: weapon
+weapon_req: ranged
+ap_cost: 2
+scaling_attr: dex
+shape:
+  type: single
+  range: weapon
+effects:
+- type: damage
+  multiplier_permille: 1550
+- type: apply_status
+  status: marked
+  duration: 2
+  condition:
+    type: wielding_weapon
+    weapon: pistol
+condition: null
+cost:
+  stamina: 8
+  cooldown: 3
+tags:
+- physical
+- ranged
+- mark
+narrative:
+  concept: 一發漂亮的射擊替隊友標出目標
+  cast_flavor: 子彈擦過對手的帽簷，在他身上留下一個鮮明的靶心
+provenance:
+  origin: builtin
+  owner_id: null
+  created_by: null
+  parents: []
+  bound: true
+  tradeable: false

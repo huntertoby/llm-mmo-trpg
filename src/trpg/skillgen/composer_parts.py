@@ -218,6 +218,7 @@ def effect_knobs(
         "hurl_object": (("dice", dice, weight),),
         "detonate_runes": (("dice", dice, weight),),
         "push": (("distance", tuple(structure.push_pull_distances), 1),),
+        "blow_surface": (("distance", tuple(structure.blow_distances), 1),),
         "pull": (("distance", tuple(structure.push_pull_distances), 1),),
         "sacrifice_summon": (("dice", dice, structure.knob_weight_core),),
         "inscribe": (("duration", (1, 2, 3, 4, 5), structure.knob_weight_core),),
@@ -606,7 +607,9 @@ def _trap_setup(ctx: Ctx) -> None:
 def _stack_effect(ctx: Ctx) -> None:
     """蓄力與終結：一個 ``add_stack``（累積）或 ``consume_stack``（消耗），層數 ID 依資料表抽。"""
     rules = ctx.rules.builder
-    stacks = sorted(ctx.library.ruleset.stacks.stacks, key=lambda s: s.id)
+    stacks = sorted(
+        (s for s in ctx.library.ruleset.stacks.stacks if s.composer), key=lambda s: s.id
+    )
     if not stacks:
         raise Retry
     stack = ctx.rng.choice(stacks)
@@ -638,8 +641,59 @@ def build_effects(ctx: Ctx, core: list[str]) -> None:
         if not pool:
             break
         _make_effect(ctx, ctx.rng.choice(pool), core=False, beneficial_only=False)
+    _blow_secondary(ctx)
+    _shockwave_secondary(ctx)
     _dash_first(ctx)
     _gamble_last(ctx)
+
+
+_BLOW_SKELETONS = ("area",)
+
+
+def _blow_secondary(ctx: Ctx) -> None:
+    """吹送（Phase 3-54a）：範圍骨架（稀有以上、附帶效果與效果數都還有空位）以
+    ``structure.blow_surface_permille`` 的機率加上一個吹送附帶效果。用 ``composer.blow`` 的獨立
+    串流抽，沒抽中的種子得到與加入吹送之前完全相同的技能。"""
+    if ctx.skeleton.id not in _BLOW_SKELETONS or not _skeleton_allows(
+        ctx, "blow_surface", core=False
+    ):
+        return
+    if rarity_rank(ctx.primitive("blow_surface").min_rarity) > ctx.rank:
+        return
+    secondaries = len(ctx.effects) - ctx.core_count
+    room = ctx.library.budget.rarity[ctx.rarity].max_effects - len(ctx.effects)
+    if room <= 0 or secondaries >= ctx.skeleton.secondary.max_count:
+        return
+    if not ctx.rng.fork("composer.blow").chance_permille(ctx.rules.structure.blow_surface_permille):
+        return
+    ctx.add_knobbed({"type": "blow_surface"})
+
+
+_SHOCKWAVE_SKELETONS = ("area",)
+
+
+def _shockwave_secondary(ctx: Ctx) -> None:
+    """震波（Phase 3-54b，06 6.33）：大地主題、直線形狀的範圍骨架（稀有以上、附帶效果與效果數都還有
+    空位）以 ``structure.shockwave_permille`` 的機率加上一個震波附帶效果。用 ``composer.shockwave``
+    的獨立串流抽，沒抽中的種子得到與加入震波之前完全相同的技能。"""
+    if (
+        ctx.skeleton.id not in _SHOCKWAVE_SKELETONS
+        or ctx.theme is not Element.EARTH
+        or ctx.shape != "line"
+        or not _skeleton_allows(ctx, "shockwave", core=False)
+    ):
+        return
+    if rarity_rank(ctx.primitive("shockwave").min_rarity) > ctx.rank:
+        return
+    secondaries = len(ctx.effects) - ctx.core_count
+    room = ctx.library.budget.rarity[ctx.rarity].max_effects - len(ctx.effects)
+    if room <= 0 or secondaries >= ctx.skeleton.secondary.max_count:
+        return
+    if not ctx.rng.fork("composer.shockwave").chance_permille(
+        ctx.rules.structure.shockwave_permille
+    ):
+        return
+    ctx.add_knobbed({"type": "shockwave"})
 
 
 def _dash_first(ctx: Ctx) -> None:
@@ -863,6 +917,8 @@ _HAND_WRITTEN_PRIMITIVES = frozenset(
         "shadowstep",
         "grant_skill",
         "detonate_runes",
+        "blow_surface",  # 3-54a：只由 _blow_secondary 的獨立串流加入（既有種子不變）
+        "shockwave",  # 3-54b：只由 _shockwave_secondary 的獨立串流加入
     }
 )
 """只給手寫技能的結構型原語（Phase 3C-5a 的場景物件原語：需要地圖上有對應的物件；3D-2 的
@@ -875,6 +931,23 @@ def _composable(ctx: Ctx, name: str) -> bool:
     """組合器可以使用的原語：改寫規則型（Phase 3C-4a 的 ``grant_ap`` 等）與場景物件原語
     （3C-5a）只給手寫技能。"""
     return ctx.primitive(name).category != "rule_rewrite" and name not in _HAND_WRITTEN_PRIMITIVES
+
+
+def _theme_allows(ctx: Ctx, name: str) -> bool:
+    """主題元素是否允許原語 ``name``：互斥規則表裡「帶這個原語就必須有某些元素」的規則（3-54b：
+    升降地形限大地）。組合器的技能以主題元素為標籤，所以只看主題。"""
+    for rule in ctx.library.exclusions.rules:
+        when, need = rule.when, rule.require
+        if (
+            when is not None
+            and need is not None
+            and when.primitives_any is not None
+            and name in when.primitives_any
+            and need.elements_any is not None
+            and ctx.theme not in need.elements_any
+        ):
+            return False
+    return True
 
 
 def _skeleton_allows(ctx: Ctx, name: str, *, core: bool) -> bool:
@@ -896,6 +969,7 @@ def _usable_primitives(
         if _skeleton_allows(ctx, name, core=core)
         and _composable(ctx, name)
         and rarity_rank(ctx.primitive(name).min_rarity) <= ctx.rank
+        and _theme_allows(ctx, name)
         and (name != "apply_status" or _has_status(ctx, beneficial))
     ]
 

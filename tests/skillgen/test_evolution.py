@@ -169,4 +169,13 @@ def test_evolution_content_schema_rejects_bad_templates() -> None:
         EvolutionTable(templates=(template, template))
     lib = library()
     assert {t.branch for t in lib.evolution.templates} == {"deepen", "bridge"}
-    assert set(lib.evolution.grafts) <= set(lib.keywords.ids())
+    # 3-53b：每個關鍵字都有嫁接（中毒也有橋接）
+    # （召喚走自己的進化路徑，沒有嫁接）
+    assert set(lib.evolution.grafts) == set(lib.keywords.ids()) - {"summon"}
+
+
+def test_bridge_can_graft_poison() -> None:
+    usage = _usage(target_keywords={"poisoned": 3}, partner_makes={"poisoned": 3})
+    _, bridge = _options(FIRE_BOLT, usage)
+    assert bridge.keyword == "poisoned" and "poisoned" in _exclusive(bridge.skill)
+    assert not bridge.fallback

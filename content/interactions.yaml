@@ -110,13 +110,8 @@ rules:
     target: surface
     surface: fire
     then: [{op: spread_surface, surface: fire}]
-  - id: wind_disperses_poison
-    description_zh: 風吹散毒
-    trigger: element
-    element: wind
-    target: surface
-    surface: poison
-    then: [{op: set_surface, surface: none}]
+  # 「風吹散毒」（wind_disperses_poison）在 Phase 3-54a 移除：06 6.33（#56）改為風吹到毒會往風向擴散
+  # （元素擴散，rules/core.yaml 的 wind.spread_surfaces；由 trpg.engine.wind 結算，不經互動表）。
   - id: wind_disperses_smoke
     description_zh: 風吹散煙霧（聖光不會，只有風；Phase 3-11）
     trigger: element

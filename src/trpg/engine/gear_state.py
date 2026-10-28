@@ -20,7 +20,10 @@ from trpg.content.battle import OffhandDef
 from trpg.content.equipment import AffixDef
 from trpg.content.skills import ConditionSpec
 
-__all__ = ["BonusStat", "GearAffix", "GearBonus", "GearItem", "GearState"]
+__all__ = ["BASE_BONUS_PREFIX", "BonusStat", "GearAffix", "GearBonus", "GearItem", "GearState"]
+
+BASE_BONUS_PREFIX = "base:"
+"""普通物品基礎加成（Phase 3K-1）在 :class:`GearBonus` 的 ``affix_id`` 前綴（後面接物品 id）。"""
 
 type BonusStat = Literal[
     "hit",

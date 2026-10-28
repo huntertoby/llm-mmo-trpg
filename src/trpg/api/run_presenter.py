@@ -5,12 +5,16 @@ from __future__ import annotations
 from collections.abc import Mapping
 
 from trpg.api.attribute_text import attribute_affects
+from trpg.api.gear import item_info
 from trpg.api.run_schemas import (
     AllocationPreviewOut,
     AttributePerkOut,
     BattlePlanOut,
     EvolutionChoiceOut,
     EvolutionOptionOut,
+    GearCandidateOut,
+    GearOfferOut,
+    HeroGearSlotOut,
     HeroOut,
     NodeOut,
     OfferOut,
@@ -20,11 +24,14 @@ from trpg.api.run_schemas import (
     SkillGrowthOut,
 )
 from trpg.api.runs import RunSession
+from trpg.content.equipment import ItemDef
 from trpg.content.library import ContentLibrary
 from trpg.content.skills import SkillDef
+from trpg.content.slots import SLOT_ZH, SLOTS
 from trpg.narrative.skill_levels import skill_level_info
 from trpg.narrative.skills import CardOwner, KeywordRef, SkillCard, skill_card
 from trpg.roguelite import RunSave, RunState
+from trpg.roguelite.gear import current_item, equip_notes, target_slot, weapon_swap_prompt
 from trpg.roguelite.growth import (
     crosses_evolution,
     evolution_choices,
@@ -39,6 +46,7 @@ from trpg.roguelite.state import (
     BattleNode,
     CampfireNode,
     EndedNode,
+    GearOfferNode,
     LevelUpNode,
     SkillOffer,
 )
@@ -152,10 +160,35 @@ def _offer(library: ContentLibrary, run: RunState, offer: SkillOffer | None) -> 
     )
 
 
+def _candidate(library: ContentLibrary, run: RunState, item: ItemDef) -> GearCandidateOut:
+    """戰後候選或背包裡的一件裝備：放進的欄位、該欄位目前的裝備與換上的連帶效果。"""
+    slot = target_slot(library, run, item)
+    current = current_item(library, run, slot)
+    return GearCandidateOut(
+        item=item_info(library, item),
+        slot=slot,
+        slot_zh=SLOT_ZH[slot],
+        current=None if current is None else item_info(library, current),
+        notes_zh=tuple(equip_notes(library, run, item, slot)),
+        weapon_swap_zh=weapon_swap_prompt(
+            library, run, item, slot, hero_effective_attributes(library, run)
+        ),
+    )
+
+
+def _gear_offer(library: ContentLibrary, run: RunState, node: GearOfferNode) -> GearOfferOut:
+    return GearOfferOut(
+        after_battle=node.after_battle,
+        candidates=tuple(_candidate(library, run, i) for i in node.candidates),
+    )
+
+
 def _node(library: ContentLibrary, run: RunState) -> NodeOut:
     node = run.node
     if isinstance(node, BattleNode):
         return NodeOut(kind="battle", battle_index=node.index, boss=run.plan_of(node.index).boss)
+    if isinstance(node, GearOfferNode):
+        return NodeOut(kind="gear_offer", gear=_gear_offer(library, run, node))
     if isinstance(node, LevelUpNode):
         return NodeOut(
             kind="level_up",
@@ -250,6 +283,17 @@ def _hero(library: ContentLibrary, run: RunState) -> HeroOut:
             _card(library, run, s, owned=True) for s in skill_defs(library, run, run.bench)
         ),
         evolutions=_evolutions(library, run),
+        equipment=tuple(
+            HeroGearSlotOut(
+                slot=slot,
+                slot_zh=SLOT_ZH[slot],
+                item=None
+                if (held := current_item(library, run, slot)) is None
+                else item_info(library, held),
+            )
+            for slot in SLOTS
+        ),
+        backpack=tuple(_candidate(library, run, i) for i in run.backpack),
     )
 
 

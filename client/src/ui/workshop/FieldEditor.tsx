@@ -19,7 +19,7 @@ import {
   setPath,
   type Json,
 } from "../../workshop/draft";
-import { descOf, fieldShown, hiddenCount, shownChoices } from "../../workshop/playerView";
+import { descOf, fieldShown, groupChoices, hiddenCount, shownChoices } from "../../workshop/playerView";
 import { rarityName } from "../../workshop/state";
 import { OptionGlyph } from "../SkillIconView";
 import { Hint } from "../Hint";
@@ -229,11 +229,18 @@ function ChoiceField({ spec, container, base, onChange }: FieldProps) {
           <option value="" disabled>
             請選擇……
           </option>
-          {spec.choices.map((c) => (
-            <option key={String(c.value)} value={String(c.value)} disabled={blockedReason(c, chosen) !== null}>
-              {blockedReason(c, chosen) !== null ? `${c.name_zh}（不能選：${blockedReason(c, chosen)}）` : c.name_zh}
-            </option>
-          ))}
+          {groupChoices(spec.choices).map(([label, items]) => {
+            const options = items.map((c) => (
+              <option key={String(c.value)} value={String(c.value)} disabled={blockedReason(c, chosen) !== null}>
+                {blockedReason(c, chosen) !== null ? `${c.name_zh}（不能選：${blockedReason(c, chosen)}）` : c.name_zh}
+              </option>
+            ));
+            return label === null ? options : (
+              <optgroup key={label} label={label}>
+                {options}
+              </optgroup>
+            );
+          })}
         </select>
       )}
       {!card && chosen !== undefined && descOf(chosen) !== "" && (
@@ -276,14 +283,19 @@ function MultiChoiceField({ spec, container, base, onChange }: FieldProps) {
     <div className="ws-field">
       <Label spec={spec} />
       <div className="ws-chips">
-        {spec.choices.map((c) => (
-          <Hint key={String(c.value)} text={descOf(c)}>
-            <label className={`ws-chip${value.includes(String(c.value)) ? " selected" : ""}`}>
-              <input type="checkbox" checked={value.includes(String(c.value))} onChange={() => toggle(String(c.value))} />
-              {c.name_zh}
-            </label>
-          </Hint>
-        ))}
+        {spec.choices.map((c) => {
+          const picked = value.includes(String(c.value));
+          // 事前停用（3I-5）：驗證器會擋的選項不能勾；已勾的不停用，讓玩家看得到自己選了什麼
+          const reason = picked ? null : unavailableReason(c);
+          return (
+            <Hint key={String(c.value)} text={reason !== null ? `不能選：${reason}` : descOf(c)}>
+              <label className={`ws-chip${picked ? " selected" : ""}${reason !== null ? " unavailable" : ""}`}>
+                <input type="checkbox" checked={picked} disabled={reason !== null} onChange={() => toggle(String(c.value))} />
+                {c.name_zh}
+              </label>
+            </Hint>
+          );
+        })}
       </div>
     </div>
   );

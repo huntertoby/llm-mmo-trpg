@@ -39,7 +39,7 @@ from typing import TYPE_CHECKING
 
 from trpg.content.equipment import AttackAffix, ChargeAffix, TriggerAffix
 from trpg.content.skills import SkillDef
-from trpg.engine import modifiers
+from trpg.engine import modifiers, stack_gain
 from trpg.engine.events import (
     AttackRolled,
     Collided,
@@ -216,9 +216,13 @@ def observe(ctx: Ctx, event: EventBase) -> None:
     if isinstance(event, UnitDowned):
         ctx.downed.append(event.unit_id)  # ally_downed 反應：等效果佇列清空後（settle）才處理
         _on_summon_downed(ctx, event)
+        stack_gain.collect_downed(ctx, event)
         return
     if isinstance(event, AttackRolled):
         _on_attacked_charge(ctx, event)
+        stack_gain.collect_attack(ctx, event)
+    elif isinstance(event, DamageDealt):
+        stack_gain.collect_damage(ctx, event)
     index = _index(ctx)
     if not index.any:
         return
@@ -435,6 +439,7 @@ def _on_enter_surface(ctx: Ctx, index: PassiveIndex, event: UnitMoved) -> None:
 def collect_cast(ctx: Ctx, caster: UnitState, skill: SkillDef) -> None:
     """``on_cast_tag``：持有者施放的技能（含修正規則加上的標籤）帶有 ``trigger.tag``，在該技能
     結算之後。被動觸發與陷阱觸發的效果不算施放，不會呼叫這裡。"""
+    stack_gain.collect_cast(ctx, caster, skill)  # 聖能：施放治療或神聖技能（3-52）
     index = _index(ctx)
     if not index.any:
         return
@@ -470,6 +475,7 @@ def collect_turn_start(ctx: Ctx, unit: UnitState) -> None:
 
 def collect_turn_end(ctx: Ctx, unit: UnitState) -> None:
     """``on_turn_end``：回合結束，在狀態倒數之前。"""
+    stack_gain.collect_turn_end(ctx, unit)  # 專注：這回合沒有移動（3-52）
     _collect_own(ctx, unit, "on_turn_end")
 
 
@@ -522,7 +528,9 @@ def settle(ctx: Ctx) -> None:
             batch = sorted(ctx.fired, key=lambda f: (f.seq, f.owner_id, f.skill_id))
             ctx.fired = []
             for fired in batch:
-                if fired.event.startswith(GEAR_PREFIX):
+                if fired.event.startswith(stack_gain.STACK_GAIN_PREFIX):
+                    stack_gain.resolve(ctx, fired)
+                elif fired.event.startswith(GEAR_PREFIX):
                     _resolve_gear(ctx, fired)
                 elif fired.event.startswith(_MODIFIER_PREFIX):
                     _resolve_on_hit(ctx, fired)

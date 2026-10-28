@@ -3580,3 +3580,116 @@ button.selected {
 .skill-card-formula {
   color: var(--muted);
 }
+
+/* 戰後裝備三選一與背包（Phase 3K-2）：卡片沿用升級候選卡（.run-offer-card）的外框 */
+.gear-card {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  padding: 8px;
+  background: #14141c;
+  border: 1px solid var(--panel-border);
+  border-radius: 4px;
+}
+
+.gear-card-head {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.gear-card-head .gear-icon {
+  margin: 0;
+  flex: none;
+}
+
+.gear-card-title {
+  font-weight: 700;
+}
+
+.gear-card-lines {
+  margin: 0;
+  padding-left: 18px;
+}
+
+.gear-card-note {
+  color: #e0b060;
+}
+
+.gear-card-compare {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  padding-top: 6px;
+  border-top: 1px dashed var(--panel-border);
+}
+
+.gear-card-current {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.gear-card-current .gear-icon {
+  margin: 0;
+}
+
+.gear-card-compare.tone-up .gear-card-score {
+  color: #7fd08a;
+}
+
+.gear-card-compare.tone-down .gear-card-score {
+  color: #e0b060;
+}
+
+.gear-rarity-badge {
+  font-size: 12px;
+  font-weight: 400;
+}
+
+.gear-rarity-uncommon .gear-rarity-badge {
+  color: #7fd08a;
+}
+
+.gear-rarity-rare .gear-rarity-badge {
+  color: #6fb4ff;
+}
+
+.gear-rarity-epic .gear-rarity-badge {
+  color: #c58cff;
+}
+
+.gear-rarity-legendary {
+  border-color: #ffb938;
+  box-shadow: 0 0 6px rgba(255, 185, 56, 0.45);
+}
+
+.gear-rarity-legendary .gear-card-title,
+.gear-rarity-legendary .gear-rarity-badge {
+  color: #ffb938;
+}
+
+.run-gear .gear-row {
+  gap: 4px;
+}
+
+/* 換主手武器的確認（3K-2b）：排在按鈕列的位置，不是彈出層 */
+.weapon-swap-confirm {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  padding: 8px;
+  border: 1px solid #e0b060;
+  border-radius: 4px;
+  background: #1c1a14;
+}
+
+.weapon-swap-text {
+  margin: 0;
+  color: #e0b060;
+}
+
+.weapon-swap-buttons {
+  display: flex;
+  gap: 8px;
+}

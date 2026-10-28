@@ -1,0 +1,42 @@
+# 3I-5 武器親和／招牌技示範（數值為初值，未經模擬）
+id: skill_akimbo_burst
+schema_version: 1
+name_zh: 雙槍連射
+tier: 1
+rank: 1
+rarity: rare
+kind: active
+skeleton: combo
+category: weapon
+weapon_req: ranged
+ap_cost: 2
+scaling_attr: dex
+shape:
+  type: single
+  range: weapon
+effects:
+- type: damage
+  multiplier_permille: 1150
+- type: damage
+  condition:
+    type: wielding_weapon
+    weapon: dual_pistol
+  multiplier_permille: 1000
+condition: null
+cost:
+  stamina: 8
+  cooldown: 2
+tags:
+- physical
+- ranged
+- combo
+narrative:
+  concept: 兩把槍交替開火
+  cast_flavor: 左右兩把槍交替噴出火舌
+provenance:
+  origin: builtin
+  owner_id: null
+  created_by: null
+  parents: []
+  bound: true
+  tradeable: false

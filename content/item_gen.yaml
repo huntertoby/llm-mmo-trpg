@@ -1,0 +1,115 @@
+# 物品產生器與物品預算（Phase 3K-1；docs/design/08-裝備.md 8.22、8.22.1、8.21.2、8.21.6；07 7.1）。
+# 數值都是初值，未經模擬。schema：src/trpg/content/item_budget.py；產生器：src/trpg/content/item_gen.py。
+#
+# 稀有度不加強度（08 8.5）：同物品等級、同部位的預算與稀有度無關，稀有度只決定詞條條數與種類。
+
+# 稀有度權重（07 7.1，使用者 2026-10-24：「稀有度照建議修正」）。傳說第一版不產生，從現有傳說測試物品
+# （items.yaml 的 legendary: true）挑同部位的，沒有就降為史詩（08 8.22.1 第 7 點）。
+rarity_weights: {common: 40, uncommon: 25, rare: 20, epic: 13, legendary: 2}
+
+# 全身預算（8.22、8.22.1 第 1 點）：表列等級之間線性內插、無條件捨去；最後一段之後沿用最後一段的斜率。
+total_budget:
+  - {level: 1, total: 100}
+  - {level: 5, total: 200}
+  - {level: 10, total: 350}
+
+# 部位比例（‰，8.22 表；戒指每枚 4%）與詞條比例（‰，8.22.1 第 3 點：產生器只分配詞條部分）。
+slot_permille: {weapon: 300, body: 200, offhand: 100, head: 80, hands: 80, feet: 80, neck: 80, ring: 40}
+affix_permille: {weapon: 400, body: 400, offhand: 400, head: 500, hands: 500, feet: 500, neck: 1000, ring: 1000}
+
+min_fill_permille: 700       # 詞條點數至少是詞條預算的 70%（8.22.1 第 6 點）
+min_affix_points: 2          # 每條至少 2 點（8.22.1 第 4 點）
+
+# 數值類的單位價（8.21.2 表、8.22.1 第 4 點）：每 per 單位 points 點（‰ 的數值 per 也是 ‰）。
+stat_prices:
+  attribute: {points: 3, per: 1}        # 屬性 +1 ＝ 3
+  max_hp: {points: 3, per: 4}           # 最大 HP +4 ＝ 3
+  element_resist: {points: 3, per: 50}  # 單一元素抗性 +5% ＝ 3
+  defense: {points: 3, per: 20}         # 防禦值 +2% ＝ 3
+  move: {points: 12, per: 1}            # 移動 +1 ＝ 12
+
+# 條件數值＝數值點數 × 條件成立率（8.22.1 第 4 點）。
+conditional_prices:
+  hit: {points: 8, per: 1}              # 命中 +1 ＝ 8
+  defense: {points: 3, per: 20}         # 防禦值 +2% ＝ 3
+  damage: {points: 3, per: 20}          # 傷害 +2% ＝ 3（設計沒有單位價；借用第 5 點「武器每 3 點＝傷害 +2%」，待 PM 決定）
+condition_rates_permille: {common: 600, occasional: 350, rare: 200}
+# 每條條件數值詞條的成立率等級（設計只給三個等級，沒有逐條分類；以下是實作者的初值，待 PM 決定）。
+conditional_rates:
+  affix_cond_height_hit: occasional         # 站在高處
+  affix_cond_still_defense: common          # 本回合沒有移動
+  affix_cond_low_hp_damage: rare            # HP 低於 50%
+  affix_trait_longgun_still_crit: common    # 火槍站定
+
+# 其他類別每條固定點數（8.22.1 第 4 點）。
+category_points: {keyword: 8, attack: 10, weapon_trait: 8, trigger: 12, charge: 12, action: 20, reaction: 15, rule: 40}
+weapon_element_points: 15    # 武器元素詞條（8.21.2.4 #52）
+trigger_limit_permille: 700  # 觸發有每回合／每輪上限的打 0.7 折（目前所有裝備觸發都有上限）
+
+# 代價型＝正面點數 − 負面點數，淨值至少 cost_min_points（8.22.1 第 4 點）。
+# 設計只給了移動、命中、防禦值的單位價；傷害與受到的傷害比照防禦值，冷卻比照命中，
+# 回合開始失去 HP 每點 3：實作者的初值，待 PM 決定。
+cost_prices:
+  damage_permille: {points: 3, per: 20}
+  damage_taken_permille: {points: 3, per: 20}
+  defense_permille: {points: 3, per: 20}
+  move: {points: 12, per: 1}
+  hit: {points: 8, per: 1}
+  cooldown_delta: {points: 8, per: 1}
+  turn_start_hp_loss: {points: 3, per: 1}
+cost_min_points: 4
+
+# 普通沒有詞條時，詞條部分換成基礎加成（8.22.1 第 5 點）：每 points 點 ＝ permille‰
+# （武器是傷害、其他部位是防禦值；無條件捨去）。
+base_bonus: {points: 3, permille: 20}
+
+# 整件物品的基礎份額（3K-2c，08 8.22 的「基礎：詞條」比例；只用在「預算分數」比較，不進預算檢查）：
+# 基礎份額池 ＝ 部位預算 − 詞條預算（主手、身體、副手 60：40，頭、手、腳 50：50，項鍊、戒指 0：100）。
+# 同部位不同底材照基礎數值比例分配：池 × 底材基礎數值 ÷ 參考基礎數值。
+# 武器基礎數值＝骰平均＋固定傷害，乘打擊數；參考 4500‰＝1d8 平均（單手劍拿整個池）。
+# 身體防具的基礎防禦照 08 8.12 表（以外觀造型 id 對應），參考＝皮甲 3。
+# 頭、手、腳與副手沒有底材差異，拿整個池。沒有物品等級的物品（初始裝備）用 fallback_level。
+base_strength:   # 同部位底材都拿整個基礎池；雙手／成對武器另加副手池（08 8.11、8.12，玩法 PM）
+  fallback_level: 1
+
+# 稀有度 → 詞條條數與可用類別（08 8.7 與 8.21.6；8.21.6 優先）。required：要不要「1 條 build 詞條」
+# （稀有起 1 條技能強化；身體、頭、手、腳改成 1 條條件數值或防守型觸發，見 required_picks）。
+# 技能強化只透過 required 出現、每件最多 1 條（「含 1 條技能強化」照字面當成恰好 1 條，待 PM 確認），
+# 所以 categories 不列 keyword。
+# 第 9～11 類（動作、反應、改變規則）第一季不掉落；充能、代價型不在稀有度表裡，先不產生（待 PM 決定）。
+rarities:
+  common: {min_affixes: 0, max_affixes: 1, categories: [stat]}
+  uncommon: {min_affixes: 1, max_affixes: 2, categories: [stat, conditional]}
+  rare:
+    min_affixes: 2
+    max_affixes: 3
+    categories: [stat, conditional, trigger, attack, weapon_trait]
+    required: true
+  epic:
+    min_affixes: 3
+    max_affixes: 3
+    categories: [stat, conditional, trigger, attack, weapon_trait]
+    required: true
+
+# 「1 條 build 詞條」依部位：主手、副手、飾品是技能強化；身體、頭、手、腳是條件數值或防守型觸發
+# （8.21.6 末段，#37）。預算放不下時照「每條至少 2 點」下修（8.22）。
+required_picks:
+  weapon: {categories: [keyword]}
+  offhand: {categories: [keyword]}
+  neck: {categories: [keyword]}
+  ring: {categories: [keyword]}
+  body: {categories: [conditional], affixes: [affix_trig_thorns_burn]}
+  head: {categories: [conditional], affixes: [affix_trig_thorns_burn]}
+  hands: {categories: [conditional], affixes: [affix_trig_thorns_burn]}
+  feet: {categories: [conditional], affixes: [affix_trig_thorns_burn]}
+
+# 武器與副手上的屬性詞條機率偏好（3K-1 規格，玩法 PM 2026-10-24；副手比照武器於 3K-2）：抽到屬性詞條時，
+# 該武器（副手）的縮放屬性合計佔 preferred‰（雙屬性兩個平分），其餘屬性平分剩下的。只是偏好，不是限制。
+weapon_attribute_preference_permille: 500
+
+# 產生器在亂數嘗試都沒達到 70% 時，改用「每步挑點數最高」的確定性方法；仍不行就報錯。
+max_attempts: 30
+
+# 戰後裝備三選一（3K-2，07 7.1）：候選件數（部位不重複）與某一件穿不上時最多重抽幾次。
+offer_size: 3
+offer_attempts: 8

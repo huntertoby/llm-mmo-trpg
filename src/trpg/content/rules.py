@@ -44,6 +44,7 @@ __all__ = [
     "SummonGrowth",
     "SummonInfusion",
     "SummonTrait",
+    "WindRules",
     "compute_hit_thresholds",
 ]
 
@@ -276,6 +277,36 @@ class SummonTrait(ContentModel):
         return self
 
 
+class WindRules(ContentModel):
+    """風元素的專屬機制（Phase 3-54a，``docs/design/06-技能.md`` 6.33，#56）。
+
+    - ``blow_surfaces``：吹送（``blow_surface`` 原語）能整片平移的表面。
+    - ``spread_surfaces``／``spread_zone_elements``：風元素的技能傷害吹到這些表面、或帶這些元素的
+      區域時，往風向擴大 ``spread_distance`` 格（元素擴散）。
+    - ``collision_permille``：風元素的技能推擊造成的撞擊傷害倍率（風壓撞擊；1500 ＝ +50%）。
+
+    預設值與 ``core.yaml`` 相同（舊紀錄沒有此欄位）。
+    """
+
+    blow_surfaces: tuple[Surface, ...] = (
+        Surface.FIRE,
+        Surface.POISON,
+        Surface.ICE,
+        Surface.WATER,
+        Surface.OIL,
+        Surface.SMOKE,
+    )
+    spread_surfaces: tuple[Surface, ...] = (Surface.FIRE, Surface.ICE, Surface.POISON)
+    spread_zone_elements: tuple[Element, ...] = (
+        Element.FIRE,
+        Element.ICE,
+        Element.POISON,
+        Element.LIGHTNING,
+    )
+    spread_distance: int = Field(default=1, ge=1, le=2)
+    collision_permille: int = Field(default=1500, ge=1000)
+
+
 class CoreRules(ContentModel):
     """``content/rules/core.yaml``：所有可調整的戰鬥規則數值。
 
@@ -356,6 +387,8 @@ class CoreRules(ContentModel):
     屬性；技能的 ``collision_dice`` 可取代。舊紀錄沒有此欄位。"""
     consume_status_max_scale: int = Field(default=3, ge=1)
     """``consume_status`` 的 ``scale`` 倍率上限（Phase 3C-3b；舊紀錄沒有此欄位）。"""
+    wind: WindRules = Field(default_factory=WindRules)
+    """風元素的專屬機制（Phase 3-54a；吹送、元素擴散、風壓撞擊）。"""
     topple_length: int = Field(default=2, ge=1, le=4)
     """推倒（Phase 3C-5a）：``topplable`` 物件倒下時，從物件的下一格起壓住的格數。"""
     topple_damage_dice: Dice = Field(default_factory=lambda: Dice(count=2, sides=6))

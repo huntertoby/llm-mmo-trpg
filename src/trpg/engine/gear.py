@@ -11,6 +11,9 @@
    - 第 1 類數值、第 8 類代價型的移動 → ``merged``（:func:`geared_template` 併進單位總屬性；
      移動與單一元素抗性在這裡套硬上限）。
    - 第 2 類條件數值、第 8 類代價型的其他數值 → ``bonuses``（戰鬥中查詢）。
+   - 普通物品的基礎加成（``ItemDef.base_bonus_permille``，Phase 3K-1，08 8.22.1 第 5 點）→
+     ``bonuses``：武器是傷害 ‰、其他部位是防禦值 ‰；``affix_id`` 寫成 ``base:<物品 id>``
+     （:data:`BASE_BONUS_PREFIX`）。
 
 2. 戰鬥中的查詢（**先遞減、再套上限**）：
 
@@ -52,7 +55,14 @@ from trpg.content.library import Ruleset
 from trpg.content.skills import ConditionSpec
 from trpg.content.slots import SLOT_INDEX
 from trpg.engine.events import GearHpLost
-from trpg.engine.gear_state import BonusStat, GearAffix, GearBonus, GearItem, GearState
+from trpg.engine.gear_state import (
+    BASE_BONUS_PREFIX,
+    BonusStat,
+    GearAffix,
+    GearBonus,
+    GearItem,
+    GearState,
+)
 from trpg.engine.ids import CONCEALED
 from trpg.engine.skills.conditions import Subject, condition_met
 from trpg.engine.state import BattleState, UnitState
@@ -62,6 +72,7 @@ if TYPE_CHECKING:
     from trpg.engine.context import Ctx
 
 __all__ = [
+    "BASE_BONUS_PREFIX",
     "EMPTY_GEAR",
     "build_gear",
     "cap_ap_gain",
@@ -210,6 +221,7 @@ def build_gear(loadout: Loadout, rules: EquipmentRules) -> GearState:
                     merged["move"] = merged.get("move", 0) + total
                 elif total:
                     bonuses.append(GearBonus(affix_id, part.stat, total))
+    bonuses += _base_bonuses(loadout)
     uncapped = tuple(sorted((k, v) for k, v in merged.items() if v))
     if "move" in merged:
         merged["move"] = cap_move_bonus(rules, merged["move"])
@@ -226,6 +238,20 @@ def build_gear(loadout: Loadout, rules: EquipmentRules) -> GearState:
         cooldown_min=rules.caps.cooldown_min,
         offhand=offhand,
     )
+
+
+def _base_bonuses(loadout: Loadout) -> list[GearBonus]:
+    """普通物品的基礎加成（3K-1）：武器 → 傷害 ‰、其他部位 → 防禦值 ‰；依欄位固定順序。"""
+    found: list[GearBonus] = []
+    for entry in loadout.items:
+        amount = entry.item.base_bonus_permille
+        if amount <= 0:
+            continue
+        stat: BonusStat = (
+            "damage_permille" if entry.item.slot_type == "weapon" else "defense_permille"
+        )
+        found.append(GearBonus(f"{BASE_BONUS_PREFIX}{entry.item.id}", stat, amount))
+    return found
 
 
 def gear_skill_ids(gear: GearState) -> tuple[str, ...]:

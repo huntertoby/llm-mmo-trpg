@@ -103,6 +103,12 @@ class StructureRules(ContentModel):
     knob_weight_other: int = Field(ge=1)
     push_pull_distances: tuple[int, ...] = Field(min_length=1)
     """推拉距離旋鈕的階梯。"""
+    blow_distances: tuple[int, ...] = (2, 3)
+    """吹送距離旋鈕的階梯（Phase 3-54a）。"""
+    blow_surface_permille: int = Field(default=0, ge=0, le=1000)
+    """範圍骨架加上吹送附帶效果的機率（Phase 3-54a；獨立的亂數串流，沒抽中的種子結果不變）。"""
+    shockwave_permille: int = Field(default=0, ge=0, le=1000)
+    """大地主題、直線形狀的範圍骨架加上震波附帶效果的機率（Phase 3-54b；獨立的亂數串流）。"""
     displace_second_core_permille: int = _PERMILLE
     combo_double_damage_permille: int = _PERMILLE
     control_buff_permille: int = _PERMILLE
@@ -130,6 +136,9 @@ class ConditionRules(ContentModel):
     """低權重的額外目標型條件（Phase 3-24c）：已經抽到目標型條件時，以 ``extra_permille`` 的機率改成
     從這裡抽（用 ``rng.fork`` 的獨立串流，沒有抽到的種子得到與加入之前完全相同的技能）。"""
     extra_permille: int = 0
+    affinity_permille: int = 0
+    """武器親和（Phase 3I-5）：給了主角手上的裝備時，附帶效果上的常見條件換成「手持某種武器時」的
+    機率（‰；:func:`trpg.skillgen.affinity.grant_affinity`，用技能 ID 決定的確定性抽籤）。"""
     self_conditions: tuple[str, ...] = ("self_hp_below",)
     """施放者條件（只看施放者，Phase 3C-6b 加入連段條件）；技能層級的條件不需要影響範圍內有對象。"""
     target_hp_below: IntRange

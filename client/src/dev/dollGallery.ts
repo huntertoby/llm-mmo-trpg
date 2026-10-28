@@ -97,3 +97,17 @@ for (const f of ["east", "west"] as const) section(`⑥ 側面・頭部裝備（
 const CAPE: GearItem = { kind: "cape", material: "cloth", color: "#7a2a3a" };
 const OFFS: Array<[string, GearItem]> = [["圓盾", { kind: "shield_round", material: "iron" }], ["塔盾", { kind: "shield_kite", form: "tower", material: "steel" }], ["鳶盾", { kind: "shield_kite", material: "steel" }], ["法書", { kind: "tome", material: "leather" }], ["法器珠", { kind: "orb", form: "ball", element: "ice", material: "silver" }]];
 section("⑥ 側面・盾、書、珠、披風", [...OFFS.map(([n, it]) => figureOf(withGear({ off_hand: it }), "east", n)), figureOf(withGear({ cloak: CAPE }), "east", "披風"), figureOf(withGear({ cloak: CAPE, off_hand: OFFS[1]![1], head: HEADS[1]! }), "east", "披風＋塔盾＋角盔"), figureOf(withGear({ cloak: CAPE, off_hand: OFFS[0]![1], head: HEADS[4]! }), "west", "披風＋圓盾＋巫師帽（西）")]);
+
+// ⑦ 真側面・武器（Phase 3S-3）：每種 kind × 形制朝東；長柄、劍不蓋臉、槍口朝面向方向；成對武器（副手畫在遠側、較暗）；朝西幾個
+const W = (kind: string, form?: string, extra: Partial<GearItem> = {}): GearItem => ({ kind, form, material: kind === "bow" || kind === "staff" ? "wood" : "steel", ...extra });
+const wlabel = (w: GearItem): string => `${w.kind}${w.form !== undefined ? `・${w.form}` : ""}`;
+const MELEE: GearItem[] = [W("sword"), W("sword", "arcane"), W("sword", "arcane", { element: "fire" }), W("greatsword"), W("dagger"), W("axe"), W("hammer", "mace"), W("hammer", "flail"), W("hammer", "warhammer"), W("scythe"), W("fist", "knuckle"), W("fist", "katar"), W("fist", "claw")];
+const POLES: GearItem[] = [W("spear"), W("spear", "halberd"), W("spear", "trident"), W("staff"), W("staff", "totem"), W("staff", "scepter"), W("whip", "chain"), W("whip", "bladed"), W("bow"), W("crossbow", "light"), W("crossbow", "heavy"), W("crossbow", "repeater")];
+const GUNS: GearItem[] = [W("longgun", "flintlock"), W("longgun", "hunting"), W("longgun", "sniper"), W("pistol", "flintlock"), W("pistol", "revolver"), W("pistol", "derringer"), W("shotgun", "blunderbuss"), W("shotgun", "double"), W("shotgun", "pump")];
+const solo = (ws: GearItem[], f: Facing): HTMLElement[] => ws.map((w) => figureOf(withGear({ main_hand: w, off_hand: undefined }), f, wlabel(w)));
+section("⑦ 側面・武器（近戰、拳套）", solo(MELEE, "east"));
+section("⑦ 側面・武器（長柄、鞭、弓、弩）", solo(POLES, "east"));
+section("⑦ 側面・武器（槍：槍口朝面向方向）", solo(GUNS, "east"));
+const PAIRS: GearItem[] = [W("dagger"), W("sword"), W("pistol", "revolver"), W("axe"), W("whip", "chain")];
+section("⑦ 側面・成對武器（副手畫在遠側、較暗）", [...PAIRS.map((w) => figureOf(withGear({ main_hand: w, off_hand: w }), "east", `${wlabel(w)}×2`)), figureOf(withGear({ main_hand: W("dagger"), off_hand: W("dagger") }), "west", "dagger×2（西）")]);
+section("⑦ 側面・武器（朝西）", solo([W("sword"), W("greatsword"), W("staff"), W("spear"), W("longgun", "sniper"), W("pistol", "revolver"), W("bow")], "west"));

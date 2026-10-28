@@ -95,6 +95,7 @@ from trpg.engine.events import (
     SummonExpired,
     SummonModeSet,
     SummonPulled,
+    SurfaceBlown,
     SurfaceChanged,
     SurfaceEntered,
     TerrainChanged,
@@ -124,6 +125,7 @@ from trpg.engine.events import (
     WallToppled,
     WeaponReloaded,
     ZoneCreated,
+    ZoneExpanded,
     ZoneExpired,
     ZoneMoved,
     ZoneTriggered,
@@ -245,6 +247,19 @@ class _View:
     state: BattleState
     name: dict[str, str]
     statuses: dict[str, str]
+
+
+def _skill_name(v: _View, skill_id: str) -> str:
+    """技能名稱。裝備的規則改變詞條（``skill_gear_<詞條>``，Phase 3G-G3b）沒有技能定義：以詞條名稱
+    代替（3K-2 起戰後會拿到傳說裝備，不能因此在描述事件時找不到技能）。"""
+    try:
+        return v.state.ruleset.skill_def(skill_id).name_zh
+    except KeyError:
+        for unit in v.state.units_sorted():
+            for entry in unit.gear.active_affixes("rule"):
+                if skill_id == f"skill_gear_{entry.affix.id.removeprefix('affix_')}":
+                    return entry.affix.name_zh
+        return skill_id
 
 
 type _Handler = Callable[[Any, _View], str | None]
@@ -375,6 +390,7 @@ _FIZZLE_TEXT = {
     "followup_no_target": "  第二段沒有合法的目標：第二段不結算",
     "followup_not_triggered": "  沒有達成條件（擊殺或命中）：第二段不結算",
     "followup_declined": "  放棄了第二段",
+    "shockwave_flying": "  震波打不到會飛的單位",
     "inscribe_needs_tiles": "  符文只能刻在影響的格子上（這招的刻印對象不是格子），沒有刻下",
 }
 
@@ -592,7 +608,7 @@ def _trigger_limit(e: TriggerLimitReached, v: _View) -> str:
 def _cooldown(e: SkillCooldownChanged, v: _View) -> str | None:
     if e.remaining > 0:
         return None
-    return f"  {v.name[e.unit_id]} 的「{v.state.ruleset.skill_def(e.skill_id).name_zh}」冷卻結束"
+    return f"  {v.name[e.unit_id]} 的「{_skill_name(v, e.skill_id)}」冷卻結束"
 
 
 @_handles(DamageDealt)
@@ -843,7 +859,7 @@ def _followup_cancelled(e: FollowupCancelled, v: _View) -> str:
 
 @_handles(SkillActivated)
 def _skill_activated(e: SkillActivated, v: _View) -> str:
-    skill = v.state.ruleset.skill_def(e.skill_id).name_zh
+    skill = _skill_name(v, e.skill_id)
     when = (
         "本場剩餘時間有效"
         if e.expires_round is None
@@ -854,7 +870,7 @@ def _skill_activated(e: SkillActivated, v: _View) -> str:
 
 @_handles(SkillGranted)
 def _skill_granted(e: SkillGranted, v: _View) -> str:
-    skill = v.state.ruleset.skill_def(e.skill_id).name_zh
+    skill = _skill_name(v, e.skill_id)
     who = v.name[e.unit_id]
     if e.refreshed:
         return f"  ✦ {who} 的暫時技能「{skill}」刷新為 {e.duration} 輪"
@@ -863,13 +879,13 @@ def _skill_granted(e: SkillGranted, v: _View) -> str:
 
 @_handles(SkillGrantExpired)
 def _skill_grant_expired(e: SkillGrantExpired, v: _View) -> str:
-    skill = v.state.ruleset.skill_def(e.skill_id).name_zh
+    skill = _skill_name(v, e.skill_id)
     return f"  {v.name[e.unit_id]} 暫時獲得的技能「{skill}」期滿消失了"
 
 
 @_handles(GambleRolled)
 def _gamble_rolled(e: GambleRolled, v: _View) -> str:
-    skill = v.state.ruleset.skill_def(e.skill_id).name_zh
+    skill = _skill_name(v, e.skill_id)
     result = "成功" if e.success else "失敗"
     return (
         f"  ✦ {v.name[e.unit_id]} 賭上了「{skill}」：d1000={e.roll}"
@@ -879,7 +895,7 @@ def _gamble_rolled(e: GambleRolled, v: _View) -> str:
 
 @_handles(BacklashTriggered)
 def _backlash_triggered(e: BacklashTriggered, v: _View) -> str:
-    skill = v.state.ruleset.skill_def(e.skill_id).name_zh
+    skill = _skill_name(v, e.skill_id)
     return f"  ✦ {v.name[e.unit_id]} 的「{skill}」失手了，遭到反噬"
 
 
@@ -927,13 +943,13 @@ def _overload_triggered(e: OverloadTriggered, v: _View) -> str:
 
 @_handles(ActivationExpired)
 def _activation_expired(e: ActivationExpired, v: _View) -> str:
-    skill = v.state.ruleset.skill_def(e.skill_id).name_zh
+    skill = _skill_name(v, e.skill_id)
     return f"  {v.name[e.unit_id]} 的傳說「{skill}」時間到了，不再生效"
 
 
 @_handles(RuleChangeTriggered)
 def _rule_change_triggered(e: RuleChangeTriggered, v: _View) -> str:
-    skill = v.state.ruleset.skill_def(e.skill_id).name_zh
+    skill = _skill_name(v, e.skill_id)
     who = v.name[e.unit_id]
     if e.kind == "element_heals_allies":
         return f"    ✦ {who} 的「{skill}」：{e.amount} 點傷害改為治療 {v.name[e.other_id or '']}"
@@ -953,7 +969,7 @@ def _death_cheated(e: DeathCheated, v: _View) -> str:
 
 @_handles(TrapPlaced)
 def _trap_placed(e: TrapPlaced, v: _View) -> str:
-    skill = v.state.ruleset.skill_def(e.skill_id).name_zh
+    skill = _skill_name(v, e.skill_id)
     when = (
         f"敵人踩上時觸發，{e.rounds} 輪後消失" if e.trigger == "enter" else f"{e.rounds} 輪後引爆"
     )
@@ -962,20 +978,20 @@ def _trap_placed(e: TrapPlaced, v: _View) -> str:
 
 @_handles(TrapTriggered)
 def _trap_triggered(e: TrapTriggered, v: _View) -> str:
-    skill = v.state.ruleset.skill_def(e.skill_id).name_zh
+    skill = _skill_name(v, e.skill_id)
     who = f"{v.name[e.unit_id]} 踩中了" if e.unit_id is not None else "引爆了"
     return f"  ！{who} {xy_text(e.pos)} 的陷阱「{skill}」（{v.name[e.owner_id]} 設置）"
 
 
 @_handles(TrapRevealed)
 def _trap_revealed(e: TrapRevealed, v: _View) -> str:
-    skill = v.state.ruleset.skill_def(e.skill_id).name_zh
+    skill = _skill_name(v, e.skill_id)
     return f"  {v.name[e.unit_id]} 揭露了 {xy_text(e.pos)} 的敵方陷阱「{skill}」"
 
 
 @_handles(TrapExpired)
 def _trap_expired(e: TrapExpired, v: _View) -> str:
-    skill = v.state.ruleset.skill_def(e.skill_id).name_zh
+    skill = _skill_name(v, e.skill_id)
     why = "放置者離場" if e.reason == "source_lost" else "沒人踩到，時間到"
     return f"  {v.name[e.owner_id]} 在 {xy_text(e.pos)} 的陷阱「{skill}」消失了（{why}）"
 
@@ -1062,7 +1078,7 @@ def _shot_pierced(e: ShotPierced, v: _View) -> str:
         f"{object_name(v.state, oid)} {xy_text(p)}"
         for oid, p in zip(e.objects, e.object_tiles, strict=True)
     )
-    text = f"  ➤ 「{v.state.ruleset.skill_def(e.skill_id).name_zh}」穿過了 {objects}"
+    text = f"  ➤ 「{_skill_name(v, e.skill_id)}」穿過了 {objects}"
     if e.behind:
         names = "、".join(v.name[u] for u in e.behind)
         text += f"，後方 {names} 只受 {e.behind_permille // 10}% 傷害"
@@ -1087,6 +1103,17 @@ def _surface_changed(e: SurfaceChanged, v: _View) -> str:
     if e.before is Surface.NONE:
         return f"  {xy_text(e.pos)} 出現了{after}"
     return f"  {xy_text(e.pos)} 的{before}變成了{after}"
+
+
+@_handles(SurfaceBlown)
+def _surface_blown(e: SurfaceBlown, v: _View) -> str:
+    """吹送（Phase 3-54a）。"""
+    name = surface_name(v.state, e.surface)
+    if e.lost:
+        return f"  ≋ {xy_text(e.from_pos)} 的{name}被風吹進 {xy_text(e.to_pos)}，消失了"
+    if e.from_pos == e.to_pos:
+        return f"  ≋ {xy_text(e.from_pos)} 的{name}被風吹動，但被擋住留在原地"
+    return f"  ≋ {xy_text(e.from_pos)} 的{name}被風吹到 {xy_text(e.to_pos)}"
 
 
 @_handles(TerrainChanged)
@@ -1286,7 +1313,7 @@ def zone_anchor_text(anchor: str, direction: str | None, speed: int) -> str:
 
 @_handles(ZoneCreated)
 def _zone_created(e: ZoneCreated, v: _View) -> str:
-    skill = v.state.ruleset.skill_def(e.skill_id).name_zh
+    skill = _skill_name(v, e.skill_id)
     owner = v.name.get(e.owner_id, e.owner_id)
     where = cells_text(e.cells)
     anchor = zone_anchor_text(e.anchor, e.direction, e.speed)
@@ -1298,14 +1325,21 @@ def _zone_created(e: ZoneCreated, v: _View) -> str:
 
 @_handles(ZoneMoved)
 def _zone_moved(e: ZoneMoved, v: _View) -> str:
-    skill = v.state.ruleset.skill_def(e.skill_id).name_zh
+    skill = _skill_name(v, e.skill_id)
     direction = DIRECTION_TEXT.get(e.direction, e.direction)
     return f"  「{skill}」區域向{direction}前進：{cells_text(e.cells)}"
 
 
+@_handles(ZoneExpanded)
+def _zone_expanded(e: ZoneExpanded, v: _View) -> str:
+    """元素擴散（Phase 3-54a）。"""
+    skill = _skill_name(v, e.skill_id)
+    return f"  ≋ 風讓「{skill}」區域擴大到 {cells_text(e.added)}"
+
+
 @_handles(ZoneTriggered)
 def _zone_triggered(e: ZoneTriggered, v: _View) -> str:
-    skill = v.state.ruleset.skill_def(e.skill_id).name_zh
+    skill = _skill_name(v, e.skill_id)
     unit = v.name.get(e.unit_id, e.unit_id)
     if e.cause == "enter":
         return f"  ◇ {unit} 進入「{skill}」區域（深度 {e.trigger_depth}）"
@@ -1322,7 +1356,7 @@ _ZONE_EXPIRY_TEXT = {
 
 @_handles(ZoneExpired)
 def _zone_expired(e: ZoneExpired, v: _View) -> str:
-    skill = v.state.ruleset.skill_def(e.skill_id).name_zh
+    skill = _skill_name(v, e.skill_id)
     owner = v.name.get(e.owner_id, e.owner_id)
     return f"  {_ZONE_EXPIRY_TEXT[e.reason]}：{owner} 的「{skill}」區域消失了"
 
@@ -1418,7 +1452,7 @@ def _reaction_mode_set(e: ReactionModeSet, v: _View) -> str:
 @_handles(AttackIntercepted)
 def _intercepted(e: AttackIntercepted, v: _View) -> str:
     name = v.name
-    skill = "" if e.skill_id is None else f"「{v.state.ruleset.skill_def(e.skill_id).name_zh}」"
+    skill = "" if e.skill_id is None else f"「{_skill_name(v, e.skill_id)}」"
     if e.guard:
         return (
             f"  🛡 {name[e.guardian_id]} 守護 {name[e.target_id]}：{name[e.attacker_id]} 的"

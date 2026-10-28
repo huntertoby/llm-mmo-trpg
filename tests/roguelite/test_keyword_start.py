@@ -45,7 +45,11 @@ def test_starter_pools_use_exclusive_rules_and_have_three_each() -> None:
     pools = starter_pools(lib)
     assert set(pools) == set(lib.keywords.ids())
     for keyword, ids in pools.items():
-        assert len(ids) >= 3, keyword
+        if keyword == "poisoned":
+            # 3-53：中毒池只有 1 招起始技能（荊棘牆），等 3-54c 毒種子技能補；補齊後刪掉例外。
+            assert len(ids) == 1, keyword
+        else:
+            assert len(ids) >= 3, keyword
         assert all(is_starter_skill(lib.skills[i]) for i in ids)
     assert "skill_cleave" not in pools["prone"]  # 近戰武器技只靠通用規則利用倒地
 
@@ -83,7 +87,8 @@ def test_every_keyword_pool_gives_a_starter_for_some_weapon() -> None:
             if skill is None:
                 continue
             reachable[keyword] += 1
-            assert weapon_problem(skill, weapon_class) is None
+            held = {weapon: lib.weapons[weapon].name_zh}
+            assert weapon_problem(skill, weapon_class, held) is None  # 含限定武器（3I-5）
             assert is_starter_skill(skill)
             if skill.id in lib.skills:
                 assert skill.id in pools[keyword]
@@ -205,6 +210,13 @@ def test_default_start_is_deterministic_and_valid() -> None:
     assert len(seen) > 3
 
 
+def test_start_hidden_poison_is_never_drawn_but_stays_a_keyword() -> None:
+    lib = library()
+    assert "poisoned" in lib.keywords.ids() and "poisoned" not in lib.keywords.start_ids()
+    for seed in range(40):
+        assert "poisoned" not in default_start(lib, seed)[1]
+
+
 def test_behavior_counts_the_heros_actions() -> None:
     hero, other = UnitId("u1"), UnitId("u2")
     steps: list[Step] = [
@@ -232,8 +244,8 @@ def test_a_keyword_run_plays_and_records_behavior_and_offer_tags() -> None:
     offer = leveled.node.offer
     assert [t.kind for t in offer.tags] == ["deepen", "bridge", "new"]
     assert offer.tags[0].keywords[0] in ("prone", "collision")
-    # 存檔來回一致（trpg-run/5）
+    # 存檔來回一致（trpg-run/6）
     again = loads_save(dumps_save(RunSave(run_id="k", run=leveled))).run
     assert again == leveled
     raw = json.loads(dumps_save(RunSave(run_id="k", run=leveled)))
-    assert raw["format"] == "trpg-run/5" and raw["run"]["start"]["weapon"] == "one_handed_sword"
+    assert raw["format"] == "trpg-run/6" and raw["run"]["start"]["weapon"] == "one_handed_sword"

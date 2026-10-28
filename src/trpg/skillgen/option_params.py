@@ -16,6 +16,8 @@ from pydantic.fields import FieldInfo
 from trpg.content.library import ContentLibrary
 from trpg.content.skills import (
     SCALE_BY_VALUES,
+    WIELDING_EFFECT_ONLY,
+    WIELDING_WEAPON,
     ConditionDef,
     PrimitiveDef,
     PrimitiveParam,
@@ -23,6 +25,7 @@ from trpg.content.skills import (
     ShapeDef,
 )
 from trpg.shared.types import Surface
+from trpg.skillgen.option_gear import gear_choices
 from trpg.skillgen.option_models import Choice, FieldSpec, FieldType
 
 __all__ = [
@@ -54,6 +57,7 @@ _SHAPE_PARAM_TEXT: dict[str, tuple[str, str]] = {
 }
 
 PARAM_TEXT: dict[str, str] = {
+    "weapon": "武器",
     "amount": "數量",
     "anchor": "區域錨點",
     "chance_permille": "成功率（‰）",
@@ -91,6 +95,7 @@ PARAM_TEXT: dict[str, str] = {
     "speed": "速度（格）",
     "splash": "濺射距離",
     "split_heal": "聖光雙效",
+    "spread": "元素擴散格數",
     "stack": "層數",
     "status": "狀態",
     "surface": "表面",
@@ -234,6 +239,27 @@ def _keyword_name(library: ContentLibrary, keyword: str) -> str:
     return next((k.name_zh for k in library.keywords.keywords if k.id == keyword), keyword)
 
 
+STACK_GROUP_ZH = {"self": "累積在你身上", "target": "疊在敵人身上"}
+"""層數選單的分組名（3-52）：層數在誰身上由層數決定，對象自動跟著選（不能選錯）。"""
+
+
+def stack_choices(library: ContentLibrary) -> tuple[Choice, ...]:
+    """層數的選單（3-52）：依「累積在你身上」「疊在敵人身上」分組（自己的在前，組內維持資料表順序），
+    ``info.group_zh`` 是分組名、``info.owner`` 是 ``self``／``target``。"""
+    stacks = sorted(
+        enumerate(library.ruleset.stacks.stacks), key=lambda p: (p[1].owner != "self", p[0])
+    )
+    return tuple(
+        Choice(
+            value=k.id,
+            name_zh=k.name_zh,
+            description_zh=k.description_zh,
+            info={"owner": k.owner, "group_zh": STACK_GROUP_ZH[k.owner]},
+        )
+        for _, k in stacks
+    )
+
+
 def _ref_choices(kind: str, library: ContentLibrary) -> tuple[Choice, ...]:
     if kind in _LITERAL_CHOICES:
         return tuple(
@@ -248,10 +274,7 @@ def _ref_choices(kind: str, library: ContentLibrary) -> tuple[Choice, ...]:
         "object": lambda: tuple(
             Choice(value=o.id, name_zh=o.name_zh) for o in rules.objects.objects
         ),
-        "stack": lambda: tuple(
-            Choice(value=k.id, name_zh=k.name_zh, description_zh=k.description_zh)
-            for k in rules.stacks.stacks
-        ),
+        "stack": lambda: stack_choices(library),
         "summon": lambda: tuple(
             Choice(value=s.id, name_zh=s.template.name_zh) for s in rules.summons.summons
         ),
@@ -426,9 +449,10 @@ def primitive_param_fields(primitive: PrimitiveDef, ctx: ParamContext) -> tuple[
 
 
 def condition_param_fields(
-    condition: ConditionDef, library: ContentLibrary
+    condition: ConditionDef, library: ContentLibrary, weapon_req: object = None
 ) -> tuple[FieldSpec, ...]:
-    """條件的參數（``skill_conditions.yaml`` 的 ``params``）。"""
+    """條件的參數（``skill_conditions.yaml`` 的 ``params``）。``weapon_req``：技能的武器需求，
+    ``weapon`` 型參數用它事前停用大類不符的武器（3I-5）。"""
     out: list[FieldSpec] = []
     for name, spec in condition.params.items():
         base: dict[str, Any] = {
@@ -444,16 +468,29 @@ def condition_param_fields(
         elif spec.type == "surface":
             choices = _surface_choices(library, beneficial_only=False)
             out.append(FieldSpec(**base, type="choice", choices=choices))
+        elif spec.type == "weapon":
+            out.append(FieldSpec(**base, type="choice", choices=gear_choices(library, weapon_req)))
         else:
             out.append(FieldSpec(**base, type="text"))
     return tuple(out)
 
 
-def condition_choice(condition: ConditionDef, library: ContentLibrary) -> Choice:
+def condition_choice(
+    condition: ConditionDef,
+    library: ContentLibrary,
+    *,
+    weapon_req: object = None,
+    effect_level: bool = False,
+) -> Choice:
+    """條件選項。``effect_level``：這個選單是效果（或修正規則）的條件；技能層級的條件選單不能選
+    「手持武器」（只能寫在效果上，和 schema 同一個訊息）。"""
+    info: dict[str, object] = {"min_rarity": condition.min_rarity, "harshness": condition.harshness}
+    if condition.id == WIELDING_WEAPON and not effect_level:
+        info["unavailable_zh"] = WIELDING_EFFECT_ONLY
     return Choice(
         value=condition.id,
         name_zh=condition.name_zh,
         description_zh=condition.description_zh,
-        params=condition_param_fields(condition, library),
-        info={"min_rarity": condition.min_rarity, "harshness": condition.harshness},
+        params=condition_param_fields(condition, library, weapon_req),
+        info=info,
     )

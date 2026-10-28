@@ -33,6 +33,9 @@ structure:
   knob_weight_core: 6                 # 核心效果的旋鈕權重
   knob_weight_other: 1
   push_pull_distances: [1, 2]
+  blow_distances: [2, 3]              # 吹送（3-54a）距離旋鈕的階梯
+  blow_surface_permille: 80           # 範圍骨架（稀有以上）加上吹送附帶效果的機率（3-54a；獨立亂數串流，沒抽中的種子不變）
+  shockwave_permille: 250             # 大地主題＋直線形狀的範圍骨架（稀有以上）加上震波附帶效果的機率（3-54b；獨立亂數串流）
   displace_second_core_permille: 250  # 位移骨架有第二個核心原語
   combo_double_damage_permille: 500   # 連段有第二段傷害
   control_buff_permille: 250          # 控場核心狀態為自我增益
@@ -55,6 +58,9 @@ condition:
   # 低權重的額外目標型條件（3-24c；獨立的亂數串流，沒有被抽中的種子結果不變）：撞擊的真實利用者
   extra_conditions: [target_collided]
   extra_permille: 60
+  # 武器親和（3I-5，初值）：給了主角手上的裝備時，組好的技能的附帶效果上的常見條件有這個機率換成「手持
+  # 某種武器時」（預算不變；獨立於組合的亂數串流，沒給手上裝備時結果完全相同）
+  affinity_permille: 400
   target_hp_below: {min: 200, max: 600}   # ‰
   self_hp_below: {min: 300, max: 700}
 

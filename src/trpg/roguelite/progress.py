@@ -15,7 +15,6 @@ import hashlib
 from collections import Counter
 from collections.abc import Mapping, Sequence
 
-from trpg.content.equipment import Loadout, resolve_loadout
 from trpg.content.library import ContentLibrary
 from trpg.engine.actions import MANAGEMENT_ACTION_TYPES, Step
 from trpg.engine.gear import build_gear, geared_template
@@ -24,6 +23,7 @@ from trpg.engine.setup import BattleSetup, UnitSpawn, build_setup
 from trpg.engine.state import BattleState, state_to_json
 from trpg.roguelite.attributes import allocate_attributes, merge_spent, respec_attributes
 from trpg.roguelite.errors import ChoiceError, NodeConflictError
+from trpg.roguelite.gear import equip, gear_offer_node, run_loadout, take_gear
 from trpg.roguelite.growth import battle_levels, respec, set_loadout, spend_points
 from trpg.roguelite.offers import make_offer, take_candidate
 from trpg.roguelite.start import allocation_problems, apply_allocation
@@ -34,6 +34,9 @@ from trpg.roguelite.state import (
     CampfireNode,
     Choice,
     EndedNode,
+    EquipChoice,
+    GearOfferNode,
+    GearPickChoice,
     LeaveChoice,
     LevelUpChoice,
     LevelUpNode,
@@ -62,20 +65,19 @@ __all__ = [
     "run_loadout",
 ]
 
-_NODE_TEXT = {"battle": "戰鬥", "level_up": "升級", "campfire": "營火", "ended": "一輪已結束"}
+_NODE_TEXT = {
+    "battle": "戰鬥",
+    "gear_offer": "裝備三選一",
+    "level_up": "升級",
+    "campfire": "營火",
+    "ended": "一輪已結束",
+}
 
 
 def _battle_node(run: RunState) -> BattleNode:
     if not isinstance(run.node, BattleNode):
         raise NodeConflictError(f"目前不是戰鬥（{_NODE_TEXT[run.node.kind]}）")
     return run.node
-
-
-def run_loadout(library: ContentLibrary, run: RunState) -> Loadout:
-    """主角這一輪的裝備：測試模式挑了裝備（``test_equipment``）就用它，否則取範本的裝備。"""
-    if run.test_equipment:
-        return resolve_loadout(run.test_equipment, library.items, library.affixes)
-    return library.loadout_of(run.hero)
 
 
 def hero_effective_attributes(library: ContentLibrary, run: RunState) -> dict[Attribute, int]:
@@ -258,6 +260,10 @@ def finish_battle(
             "skill_usage": usage,
         }
     )
+    if not plan.boss:  # 一般戰鬥打贏：先裝備三選一，再升級（07 7.1）；Boss 戰後一輪結束，不給
+        gear = gear_offer_node(library, finished, node.index)
+        if gear is not None:
+            return finished.model_copy(update={"node": gear})
     return next_node(library, finished)
 
 
@@ -312,6 +318,12 @@ def apply_choice(library: ContentLibrary, run: RunState, choice: Choice) -> RunS
         return _manage_skills(library, run, choice)
     if isinstance(choice, RespecAttributesChoice | AllocateChoice):
         return _manage_attributes(library, run, choice)
+    if isinstance(choice, EquipChoice):
+        return _equip_from_backpack(library, run, choice)
+    if isinstance(node, GearOfferNode):
+        if not isinstance(choice, GearPickChoice):
+            raise NodeConflictError("目前在裝備三選一，請送出 gear_pick（pick 為空 ＝ 跳過）")
+        return next_node(library, take_gear(library, run, node, choice.pick))
     if isinstance(node, LevelUpNode):
         if not isinstance(choice, LevelUpChoice):
             raise NodeConflictError("目前在升級，請送出升級選擇（level_up）")
@@ -330,6 +342,16 @@ def apply_choice(library: ContentLibrary, run: RunState, choice: Choice) -> RunS
     if isinstance(node, CampfireNode):
         return _campfire(library, run, node, choice)
     raise NodeConflictError(f"目前是{_NODE_TEXT[node.kind]}，沒有可以選擇的東西")
+
+
+def _equip_from_backpack(library: ContentLibrary, run: RunState, choice: EquipChoice) -> RunState:
+    """營火換裝（Phase 3K-2）：把背包裡的裝備換上，換下的進背包；不推進節點。"""
+    if not isinstance(run.node, CampfireNode):
+        raise NodeConflictError(f"換裝只能在營火（目前是{_NODE_TEXT[run.node.kind]}）")
+    held = next((i for i in run.backpack if i.id == choice.item_id), None)
+    if held is None:
+        raise ChoiceError(f"背包裡沒有這件裝備：{choice.item_id}")
+    return equip(library, run, held, choice.slot, from_backpack=True)
 
 
 def _manage_skills(

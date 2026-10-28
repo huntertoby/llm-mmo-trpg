@@ -2,12 +2,15 @@
 
 存檔是一個 JSON 物件：
 
-- ``format``：:data:`SAVE_FORMAT`（``trpg-run/5``）。讀檔時必須相同，否則拒絕。
+- ``format``：:data:`SAVE_FORMAT`（``trpg-run/6``）。讀檔時必須是它或 :data:`COMPATIBLE_FORMATS`
+  （``trpg-run/5``：Phase 3K-2 只新增有預設值的欄位與一種新節點，所以 ``/5`` 的存檔照常讀入，
+  之後寫出為 ``/6``），否則拒絕。
   Phase 3-22 起每場戰鬥的安排多了勝利條件 ``objective``（``/2``）；Phase 3-24b2 起開局改成「武器 ＋
   關鍵字」（``run.start``，``build_id`` 可為空）、多了行為紀錄 ``run.behavior`` 與候選標示
   ``offer.tags``（``/3``）；Phase 3-26a 起多了技能成長 ``run.skill_points``、``run.skill_levels``、
   ``run.bench``（``/4``）；Phase 3-26b 起多了用法統計 ``run.skill_usage`` 與分歧進化
-  ``run.evolutions``（``/5``）。舊存檔明確拒絕並提示開新一輪。
+  ``run.evolutions``（``/5``）；Phase 3K-2 起多了戰後裝備 ``run.equipment``、``run.backpack`` 與節點
+  ``gear_offer``（``/6``）。更舊的存檔明確拒絕並提示開新一輪。
 - ``engine``：寫入時引擎的戰鬥紀錄格式（``LOG_FORMAT``）。只有 **戰鬥進行中** 的存檔需要重播；
   此時版本不同就拒絕（舊版引擎的步驟不保證能在新版重播出同樣結果）。戰鬥之間的存檔不受影響。
 - ``run_id``：一輪的 ID（檔名 ``run-<run_id>.json``）。
@@ -39,6 +42,7 @@ from trpg.roguelite.errors import SaveFormatError
 from trpg.roguelite.state import BattleNode, RunState
 
 __all__ = [
+    "COMPATIBLE_FORMATS",
     "OLD_FORMATS",
     "RUN_ID_PATTERN",
     "SAVE_DIR_ENV",
@@ -54,7 +58,9 @@ __all__ = [
     "write_save",
 ]
 
-SAVE_FORMAT = "trpg-run/5"
+SAVE_FORMAT = "trpg-run/6"
+COMPATIBLE_FORMATS = ("trpg-run/5",)
+"""仍可讀入的舊格式（新增的欄位都有預設值，讀入後視為目前格式）。"""
 OLD_FORMATS = ("trpg-run/1", "trpg-run/2", "trpg-run/3", "trpg-run/4")
 """已知的舊存檔格式（讀檔時提示開新一輪）。"""
 RUN_ID_PATTERN = r"^[A-Za-z0-9_-]{1,64}$"
@@ -106,11 +112,11 @@ def loads_save(text: str) -> RunSave:
     except json.JSONDecodeError as exc:
         raise SaveFormatError(f"存檔不是有效的 JSON：{exc}") from exc
     found = raw.get("format") if isinstance(raw, dict) else None
-    if found != SAVE_FORMAT:
+    if found != SAVE_FORMAT and found not in COMPATIBLE_FORMATS:
         hint = "（舊版存檔無法讀取，請開新一輪）" if found in OLD_FORMATS else ""
         raise SaveFormatError(f"存檔格式必須是 {SAVE_FORMAT}，收到 {found!r}{hint}")
     try:
-        save = RunSave.model_validate(raw)
+        save = RunSave.model_validate({**raw, "format": SAVE_FORMAT})
     except ValidationError as exc:
         raise SaveFormatError(f"存檔內容不合法：{exc.error_count()} 個錯誤：{exc}") from exc
     if save.battle is not None:

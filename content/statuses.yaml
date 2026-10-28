@@ -270,6 +270,19 @@ statuses:
     beneficial: true
     budget_points: 4
     damage_taken_permille: 700
+  # Phase 3-54b（06 6.33 大地，#58）：受到的物理骰值傷害 −30%，回合開始時的移動點數 −1（最低 0）。數值放這裡。
+  - id: stoneskin
+    polarity: buff
+    name_zh: 石膚
+    description_zh: 皮膚像岩石一樣堅硬，但行動變得笨重。
+    duration: 2
+    expires: turn_end
+    stacking: refresh
+    beneficial: true
+    budget_points: 3
+    min_rarity: rare
+    physical_taken_permille: 700
+    move_delta: -1
   - id: empowered
     polarity: buff
     name_zh: 激昂

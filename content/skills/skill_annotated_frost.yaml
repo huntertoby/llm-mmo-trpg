@@ -1,0 +1,44 @@
+# 3I-5 武器親和／招牌技示範（數值為初值，未經模擬）
+id: skill_annotated_frost
+schema_version: 1
+name_zh: 批註寒霜
+tier: 1
+rank: 1
+rarity: rare
+kind: active
+skeleton: combo
+category: spell
+weapon_req: any
+ap_cost: 2
+scaling_attr: int
+shape:
+  type: single
+  range: 5
+effects:
+- type: damage
+  element: ice
+  dice: 3d8
+- type: apply_status
+  status: slow
+  duration: 1
+  condition:
+    type: wielding_weapon
+    weapon: tome
+condition: null
+cost:
+  mana: 6
+  cooldown: 4
+tags:
+- ice
+- spell
+- control
+narrative:
+  concept: 法書記載的寒霜咒讓人寸步難行
+  cast_flavor: 書頁一翻，冰霜順著咒文爬上對手的小腿
+provenance:
+  origin: builtin
+  owner_id: null
+  created_by: null
+  parents: []
+  bound: true
+  tradeable: false

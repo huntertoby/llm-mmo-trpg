@@ -25,6 +25,7 @@ from trpg.narrative.skills import (
     skill_shape_text,
     variant_change_text,
     variant_condition_text,
+    weapon_only_text,
 )
 from trpg.shared.types import Attribute
 
@@ -150,6 +151,9 @@ def cmd_skills_show(
         f"  縮放屬性 {scaling_detail(skill, _unit_weapon(library, unit_id))}",
         file=out,
     )
+    limited = weapon_only_text(library, skill)
+    if limited is not None:  # 專屬招牌技（3I-5）
+        print(f"  {limited}（沒拿就不能裝備、不能施放）", file=out)
     if skill.mastery is not None:
         text = mastery_text(skill, active=active, weapon=_unit_weapon(library, unit_id))
         print(f"  專精加成 {text}", file=out)
