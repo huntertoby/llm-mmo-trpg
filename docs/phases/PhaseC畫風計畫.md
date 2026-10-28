@@ -28,3 +28,11 @@
 ## C-3｜召喚物 17 種（sonnet；約 1 段，可能再拆；C-2 後；使用者 2026-10-29：「摔落A 換」）
 
 照需求第 6 節：17 種的規則照 `docs/art/召喚物外觀.md`（體型 × 元素 × 大小 × 特徵），輪廓沿用 `summonArt.ts`，改用 `ink()` 畫；拿掉黑色剪影外框；光環與影子同需求第 1、5 節；新 `trait` 不認得時退回預設。人形召喚物用紙娃娃，C-1、C-2 做完自動換。檢查清單「召喚物」全部打勾；截圖 `summon-gallery`。細節在 C-2 驗收後寫。
+
+## C-2 拆段（2026-10-29 開發 PM；kind 清單以 `content/equipment/appearance.yaml` 為準）
+
+### C-2a｜其餘防具與副手（sonnet；約 0.6 段）
+身體 `mail`、`coat`（含形制）；頭 `hat`（含寬帽等形制）、`circlet`、`cap`，以及 `helmet` 的其他形制（大頭盔、角盔等）；手 `cloth_gloves`、`leather_gloves`、`gauntlets`、`bracers`（C-1a 只改了手的顏色，要畫出造型）；腳 `shoes`、`iron_boots`；副手 `kite_shield`（含塔盾等形制）、`tome`、`orb`（側面畫在身體後面、書要重新定位不被身體遮掉；盾正面圓面、側面一條邊、背面木色＋皮帶）。沿用現行輪廓，改用 `ink()`／`stroke()`，顏色照 `itemColors()`。檢查清單「裝備與武器」中防具與盾的項目打勾；`gear-all` 全組合自測不報錯。驗收同 C-1a，截圖 `C-2a-*`。報告 `PhaseC-2a報告.md`。
+
+### C-2b｜其餘武器＋成對武器＋清舊程式（sonnet；約 0.6 段；C-2a 後）
+武器 `greatsword`、`hammer`、`spear`、`crossbow`、`longgun`、`shotgun`、`pistol`、`dual_pistol`、`fist`、`scythe`、`whip`、`dual_dagger`，`sword` 的 `arcane`（魔導劍）與其他未換的形制，`staff` 未換的形制（權杖、圖騰杖、魔杖等）；成對武器正面（副手＝鏡像、畫面右手）、側面（遠側手 (5.6,−27)、身體後、往前上錯開約 3px）、背面（兩把都在身體後）；需求第 4 節的 #34。最後刪除 C-1a／C-1b 報告列出的舊畫圖函式（`drawWeapon` 被武器小圖示使用的分支除外）。檢查清單「裝備與武器」全部打勾。報告 `PhaseC-2b報告.md`。
