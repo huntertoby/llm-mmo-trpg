@@ -63,7 +63,8 @@ Phase 3 各段（`Phase3計畫.md` 節號；報告 `Phase3-*報告.md`）：
 1. **3-54c 種子技能**（`Phase3計畫.md` 第 64 節）：風 6、毒 6、大地 4、神聖 2（06 6.33）；「清風」用清除表面效果（#63，不靠風元素、不觸發擴散）；**補完毒種子後刪 `content/skill_keywords.yaml` 中 `poisoned` 的 `start_hidden`，並拿掉 3-53 的保守測試標記**（`EXTRA_KEYWORDS`、`test_pools_24c.py` 的 `short == {"poisoned": 1}`、`test_keyword_start.py` 起始技能剛好 1 招）。
 2. **3J 形態**（`Phase3J計畫.md`）。
 3. **3R 種族與出身**（`Phase3R計畫.md`；**2026-10-29 使用者「外觀先等」：3R-3a／b 種族外觀（含成對武器錯開小修）與 3J-5 先不做，等 C 手繪墨線畫風定案〔美術 PM `claude/art-pm-fcab45`〕再用新畫風做**；3R-3a 含 3S-3 美術小修：成對武器遠側的手槍、斧、錘往前上方錯開約 3px；種族角可用 `paperdollSideGear.drawHornSide`、側面種族部件掛 `SideHooks.race`）。
-4. **Phase 4**（4-L6 起，`Phase4計畫.md`）。
+4. **Phase C 紙娃娃 C 畫風**（`PhaseC畫風計畫.md`，2026-10-29 排入）：C-1a、C-1b、C-2 要在 3J-5 與 3R-3a／b 之前；可和 3J、3R 的規則段平行。
+5. **Phase 4**（4-L6 起，`Phase4計畫.md`）。
 
 **3. 待玩法 PM 決定（恢復時先問）**
 - 3-54b：「大地元素」定義（現為標籤 `earth` 或效果元素 `earth`）；工坊不能選標籤，純地形技能做不出來；石膚、震波沒限大地；震波仍要命中；石膚、震波、擴散 2 格預算初值；`content/workshop_text.yaml` 新增的震波與擴散格數說明是初稿。
