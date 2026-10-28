@@ -179,7 +179,8 @@ window.StoryDoll = (() => {
     const metal = colorOf(it.material === "wood" ? null : it, MAT.steel);
     ctx.save(); ctx.translate(hx, hy);
     // 正面武器豎起；側面往前上斜（劍、斧、匕首）或直立（法杖、弓）
-    const tilt = F ? 0 : 0.75;
+    // 正面匕首往外斜 0.5 rad，刀身落在身體外（C-1b 驗收：板甲上看不到）
+    const tilt = F ? (it.kind === "dagger" ? -0.5 : 0) : 0.75;
     switch (it.kind) {
       case "sword": case "dagger": {
         const L = it.kind === "sword" ? 21 : 10;
@@ -190,6 +191,7 @@ window.StoryDoll = (() => {
       }
       case "axe": {
         ctx.rotate(tilt * 0.8);
+        if (F) ctx.scale(-1, 1); // 正面大刃朝外，不蓋到臉（C-1b 驗收）
         ink(ctx, `${key}-haft`, [[-0.8, 9], [0.8, 9], [0.8, -24], [-0.8, -24]], MAT.wood, { shade: false, w: 0.6 });
         ink(ctx, `${key}-head`, [[0.6, -23], [7.6, -27], [9.4, -20.6], [7.6, -14], [0.6, -18]], metal, { w: 0.8 });
         ink(ctx, `${key}-head2`, [[-0.6, -22.4], [-4.6, -24.4], [-5.2, -20.4], [-4.6, -16.6], [-0.6, -18.6]], metal, { w: 0.7 });
