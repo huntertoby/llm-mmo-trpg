@@ -4,6 +4,7 @@
 // 規則不動：`look`、裝備欄位、主手副手左右、成對武器、倒地；不認得的值退回預設，不出錯。
 import type { Ctx } from "./artDraw";
 import type { DollSpec, GearItem, Look } from "./appearance";
+import { drawInkHeadgear, drawInkShieldFront, drawInkShieldSide, drawInkWeapon } from "./inkGear";
 import { dot, ellPts, ink, INK, setShadeDir, shadow, stroke, type Pt } from "./inkStyle";
 
 export type InkView = "front" | "back" | "side";
@@ -256,7 +257,18 @@ function spreadOf(spec: DollSpec): number {
   return spec.gear.main_hand?.kind === "dagger" && offItemOf(spec)?.kind === "dagger" ? 2 : 0;
 }
 
-function legacyHeld(t: Ctxt, it: GearItem, x: number, y: number, o: { front: boolean; mirror: boolean; far: boolean; side: boolean }): void {
+/** 手持物：樣張畫過的走 C 畫法（inkGear.ts），其餘退回現行畫法。`inkOpt` ＝ C 畫法專用的 key 與鏡像（背面主手鏡像、副手不鏡像）。 */
+function legacyHeld(
+  t: Ctxt,
+  it: GearItem,
+  x: number,
+  y: number,
+  o: { front: boolean; mirror: boolean; far: boolean; side: boolean },
+  inkOpt?: { key: string; mirror: boolean },
+): void {
+  if (!o.side && drawInkShieldFront(t.ctx, it, x, y, t.hooks.colors)) return;
+  const k = inkOpt ?? { key: o.side ? (o.far ? "off-s" : "main-s") : o.mirror ? "off" : "main", mirror: o.mirror };
+  if (drawInkWeapon(t.ctx, it, k.key, x, y, { mirror: k.mirror, side: o.side, far: o.far }, t.hooks.colors)) return;
   const scale = heldNotMirrored(it) ? SHIELD_SCALE : WEAPON_SCALE;
   t.hooks.weapon(it, x, y, { ...o, scale });
 }
@@ -268,7 +280,8 @@ function drawWoodShieldBack(t: Ctxt): void {
 
 function drawHeadgear(t: Ctxt, view: InkView): void {
   const it = t.spec.gear.head;
-  if (it !== undefined) t.hooks.headgear(it, view);
+  if (it === undefined || drawInkHeadgear(t.ctx, it, view, t.hooks.colors)) return;
+  t.hooks.headgear(it, view);
 }
 
 // ============================== 組合 ==============================
@@ -308,8 +321,8 @@ function drawBack(t: Ctxt): void {
     fn();
     ctx.restore();
   };
-  if (gear.main_hand !== undefined) screen(() => legacyHeld(t, gear.main_hand!, -HAND_FRONT[0] + spread, HAND_FRONT[1], { front: false, mirror: false, far: false, side: false }));
-  if (off !== undefined && !isShield(off)) screen(() => legacyHeld(t, off, HAND_FRONT[0] - spread, HAND_FRONT[1], { front: false, mirror: !heldNotMirrored(off), far: false, side: false }));
+  if (gear.main_hand !== undefined) screen(() => legacyHeld(t, gear.main_hand!, -HAND_FRONT[0] + spread, HAND_FRONT[1], { front: false, mirror: false, far: false, side: false }, { key: "main-b", mirror: true }));
+  if (off !== undefined && !isShield(off)) screen(() => legacyHeld(t, off, HAND_FRONT[0] - spread, HAND_FRONT[1], { front: false, mirror: !heldNotMirrored(off), far: false, side: false }, { key: "off-b", mirror: false }));
   drawLegs(t, "back");
   drawBody(t, "back");
   drawArmFront(t, -1);
@@ -333,12 +346,14 @@ function drawSide(t: Ctxt): void {
     legacyHeld(t, off, HAND_SIDE_FAR[0], HAND_SIDE_FAR[1], { front: true, mirror: false, far: true, side: true });
     dot(ctx, HAND_SIDE_FAR[0], HAND_SIDE_FAR[1], 1.7, 1.7, darken(t.skin, 0.2));
   }
-  drawLegs(t, "side");
-  drawBody(t, "side");
-  if (off !== undefined && heldNotMirrored(off)) {
+  // 書、法球（非武器、非盾的副手物品）也畫在身體後面（美術 PM：照 storyDoll.js）；盾留在身體前面
+  if (off !== undefined && !isShield(off) && heldNotMirrored(off)) {
     if (off.kind === "orb") legacyHeld(t, off, HAND_SIDE_FAR[0], HAND_SIDE_FAR[1], { front: true, mirror: false, far: false, side: true });
     else t.hooks.offhandSide(off);
   }
+  drawLegs(t, "side");
+  drawBody(t, "side");
+  if (off !== undefined && isShield(off) && !drawInkShieldSide(ctx, off, t.hooks.colors)) t.hooks.offhandSide(off);
   drawHead(t, "side");
   drawHeadgear(t, "side");
   ink(ctx, "arm-s", [[-1.4, -31.5], [1.4, -31.8], [5, -25], [2.6, -23.6]], armColor(t));

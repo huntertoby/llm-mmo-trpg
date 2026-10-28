@@ -53,18 +53,6 @@ export function itemColors(item: GearItem): [string, string] {
 
 type View = "front" | "back";
 
-function drawHood(ctx: Ctx, c: string, d: string, view: View): void {
-  ctx.fillStyle = c;
-  ctx.beginPath();
-  ctx.arc(0, -29.5, 10, Math.PI * 0.85, Math.PI * 2.15);
-  ctx.lineTo(9, -22);
-  ctx.lineTo(-9, -22);
-  ctx.closePath();
-  if (view !== "back") ctx.ellipse(0, -28, 6.5, 6, 0, 0, TAU); // 正面挖出臉的洞（evenodd）
-  ctx.fill("evenodd");
-  fill(ctx, d, () => ctx.rect(-9, -23, 18, 1.5));
-}
-
 function drawHelmet(ctx: Ctx, it: GearItem, c: string, d: string, view: View): void {
   fill(ctx, c, () => {
     ctx.beginPath();
@@ -109,23 +97,9 @@ function drawHeadgear(ctx: Ctx, it: GearItem | undefined, view: View): void {
   if (it === undefined) return;
   const [c, d] = itemColors(it);
   switch (it.kind) {
-    case "hood":
-      drawHood(ctx, c, d, view);
-      break;
     case "helmet":
     case "horned_helm":
       drawHelmet(ctx, it, c, d, view);
-      break;
-    case "wizard_hat":
-      fill(ctx, c, () => {
-        ctx.beginPath();
-        ctx.moveTo(-8, -34);
-        ctx.lineTo(3, -50);
-        ctx.lineTo(8, -34);
-        ctx.closePath();
-      });
-      fill(ctx, d, () => ctx.ellipse(0, -34, 12, 3, 0, 0, TAU));
-      fill(ctx, it.trim ?? "#e8bb48", () => ctx.rect(-7, -36.5, 14, 1.8));
       break;
     case "bandana":
       drawBandana(ctx, c, d, view);

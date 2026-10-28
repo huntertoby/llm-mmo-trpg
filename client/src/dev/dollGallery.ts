@@ -111,3 +111,24 @@ section("⑦ 側面・武器（槍：槍口朝面向方向）", solo(GUNS, "east
 const PAIRS: GearItem[] = [W("dagger"), W("sword"), W("pistol", "revolver"), W("axe"), W("whip", "chain")];
 section("⑦ 側面・成對武器（副手畫在遠側、較暗）", [...PAIRS.map((w) => figureOf(withGear({ main_hand: w, off_hand: w }), "east", `${wlabel(w)}×2`)), figureOf(withGear({ main_hand: W("dagger"), off_hand: W("dagger") }), "west", "dagger×2（西）")]);
 section("⑦ 側面・武器（朝西）", solo([W("sword"), W("greatsword"), W("staff"), W("spear"), W("longgun", "sniper"), W("pistol", "revolver"), W("bow")], "west"));
+
+// ⑧ C 畫風・樣張畫過的裝備與武器（Phase C-1b）：頭、手持物、圓盾，各四朝向；對照 docs/art/story.png
+const C_HEADS: GearItem[] = [{ kind: "helmet", material: "steel" }, { kind: "hood", material: "cloth", color: "#5a4a7a" }, { kind: "wizard_hat", material: "cloth", color: "#2c4f8a" }];
+const C_WEAPONS: GearItem[] = [W("sword"), W("dagger"), W("axe"), W("staff"), W("staff", "long", { element: "fire" }), W("bow")];
+const C_SHIELD: GearItem = { kind: "shield_round", material: "wood", color: "#2f5fae" };
+const C_SETS: Array<[string, DollSpec["gear"]]> = [
+  ["騎士", { head: C_HEADS[0]!, body: { kind: "plate", material: "steel" }, main_hand: W("sword"), off_hand: C_SHIELD }],
+  ["法師", { head: C_HEADS[2]!, body: { kind: "robe", color: "#5a3a8a" }, main_hand: W("staff", "long", { element: "ice" }) }],
+  ["弓手", { head: C_HEADS[1]!, body: { kind: "leather", material: "leather" }, main_hand: W("bow"), cloak: { kind: "cape", color: "#2f6a4a" } }],
+  ["斧手", { body: { kind: "shirt", color: "#b8a888" }, main_hand: W("axe"), off_hand: W("axe") }],
+];
+section("⑧ C-1b・四方向（整套）", C_SETS.flatMap(([n, g]) => FACINGS.map((f) => figureOf(withGear({ ...g, ...(g.off_hand === undefined ? { off_hand: undefined } : {}) }), f, `${n}・${f}`))));
+for (const f of FACINGS) {
+  section(`⑧ C-1b・頭部裝備（${f}）`, C_HEADS.map((h) => figureOf(withGear({ head: h }), f, h.kind)));
+  section(`⑧ C-1b・武器與圓盾（${f}）`, [
+    ...C_WEAPONS.map((w) => figureOf(withGear({ main_hand: w, off_hand: undefined }), f, wlabel(w))),
+    figureOf(withGear({ main_hand: W("sword"), off_hand: C_SHIELD }), f, "sword＋圓盾"),
+    figureOf(withGear({ main_hand: W("dagger"), off_hand: W("dagger") }), f, "dagger×2"),
+    figureOf(withGear({ main_hand: W("axe"), off_hand: W("axe") }), f, "axe×2"),
+  ]);
+}
