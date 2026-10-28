@@ -722,7 +722,7 @@ export interface paths {
 export type webhooks = Record<string, never>;
 export interface components {
     schemas: {
-        Action: components["schemas"]["Move"] | components["schemas"]["Attack"] | components["schemas"]["UseSkill-Output"] | components["schemas"]["Defend"] | components["schemas"]["Run"] | components["schemas"]["Swap"] | components["schemas"]["Aim"] | components["schemas"]["Vault"] | components["schemas"]["Shove"] | components["schemas"]["Trip"] | components["schemas"]["Interact"] | components["schemas"]["Reload"] | components["schemas"]["ActivateCharge"] | components["schemas"]["EndStance"] | components["schemas"]["SetReactionMode"] | components["schemas"]["SetSummonMode"] | components["schemas"]["CommandSummon"] | components["schemas"]["InfuseSkill"] | components["schemas"]["EndTurn"];
+        Action: components["schemas"]["Move"] | components["schemas"]["Attack"] | components["schemas"]["UseSkill-Output"] | components["schemas"]["UseRaceSkill"] | components["schemas"]["Defend"] | components["schemas"]["Run"] | components["schemas"]["Swap"] | components["schemas"]["Aim"] | components["schemas"]["Vault"] | components["schemas"]["Shove"] | components["schemas"]["Trip"] | components["schemas"]["Interact"] | components["schemas"]["Reload"] | components["schemas"]["ActivateCharge"] | components["schemas"]["EndStance"] | components["schemas"]["SetReactionMode"] | components["schemas"]["SetSummonMode"] | components["schemas"]["CommandSummon"] | components["schemas"]["InfuseSkill"] | components["schemas"]["EndTurn"];
         /**
          * ActivateCharge
          * @description 啟動裝備的充能詞條（Phase 3G-G3a，第 7 類）：花 ``cost_stacks`` 層與 ``cost_ap`` AP，結算詞條
@@ -1550,6 +1550,8 @@ export interface components {
              * @default false
              */
             test_mode: boolean;
+            /** Race */
+            race?: string | null;
             /** Test Equipment */
             test_equipment?: {
                 [key: string]: string;
@@ -3528,6 +3530,48 @@ export interface components {
             ward: string;
         };
         /**
+         * RaceView
+         * @description 單位的種族（Phase 3R-2，``content/races.yaml``）：種族技與環境被動的卡片資料。
+         *
+         *     種族技的次數與 AP 是即時的（``skill_uses_left``）；選取方式由合法動作 ``use_race_skill`` 的
+         *     欄位決定（前端依 ``skill_shape`` 選格子或單位）。
+         */
+        RaceView: {
+            /** Id */
+            id: string;
+            /** Name Zh */
+            name_zh: string;
+            /** Skill Id */
+            skill_id: string;
+            /** Skill Name Zh */
+            skill_name_zh: string;
+            /** Skill Description Zh */
+            skill_description_zh: string;
+            /** Skill Ap */
+            skill_ap: number;
+            /** Skill Uses Max */
+            skill_uses_max: number;
+            /** Skill Uses Left */
+            skill_uses_left: number;
+            /** Skill Shape */
+            skill_shape: string;
+            /** Skill Range */
+            skill_range: number;
+            /** Skill Size */
+            skill_size?: number | null;
+            /**
+             * Skill Choices
+             * @default []
+             */
+            skill_choices: string[];
+            /** Passive Name Zh */
+            passive_name_zh: string;
+            /** Passive Description Zh */
+            passive_description_zh: string;
+            /** Passive Active */
+            passive_active: boolean;
+        };
+        /**
          * ReactionRuleView
          * @description 單位身上的一條反應規則（玩家可以用 ``set_reaction_mode`` 切換 ``mode``）。
          */
@@ -4351,7 +4395,7 @@ export interface components {
              */
             cost_status: boolean;
         };
-        Step: components["schemas"]["Move"] | components["schemas"]["Attack"] | components["schemas"]["UseSkill-Output"] | components["schemas"]["Defend"] | components["schemas"]["Run"] | components["schemas"]["Swap"] | components["schemas"]["Aim"] | components["schemas"]["Vault"] | components["schemas"]["Shove"] | components["schemas"]["Trip"] | components["schemas"]["Interact"] | components["schemas"]["Reload"] | components["schemas"]["ActivateCharge"] | components["schemas"]["EndStance"] | components["schemas"]["SetReactionMode"] | components["schemas"]["SetSummonMode"] | components["schemas"]["CommandSummon"] | components["schemas"]["InfuseSkill"] | components["schemas"]["EndTurn"] | components["schemas"]["Decision"];
+        Step: components["schemas"]["Move"] | components["schemas"]["Attack"] | components["schemas"]["UseSkill-Output"] | components["schemas"]["UseRaceSkill"] | components["schemas"]["Defend"] | components["schemas"]["Run"] | components["schemas"]["Swap"] | components["schemas"]["Aim"] | components["schemas"]["Vault"] | components["schemas"]["Shove"] | components["schemas"]["Trip"] | components["schemas"]["Interact"] | components["schemas"]["Reload"] | components["schemas"]["ActivateCharge"] | components["schemas"]["EndStance"] | components["schemas"]["SetReactionMode"] | components["schemas"]["SetSummonMode"] | components["schemas"]["CommandSummon"] | components["schemas"]["InfuseSkill"] | components["schemas"]["EndTurn"] | components["schemas"]["Decision"];
         /** @enum {string} */
         StepId: "skeleton" | "basics" | "shape" | "effects" | "followup" | "condition" | "cost" | "rarity" | "variants";
         /**
@@ -4824,6 +4868,7 @@ export interface components {
              * @default []
              */
             form_cooldowns: components["schemas"]["FormCooldownView"][];
+            race?: components["schemas"]["RaceView"] | null;
         };
         /** UpcomingEventOut */
         UpcomingEventOut: {
@@ -4846,6 +4891,37 @@ export interface components {
              * @enum {string}
              */
             kind: "use_environment";
+        };
+        /**
+         * UseRaceSkill
+         * @description 使用種族技（Phase 3R-2，``docs/design/07-角色成長.md`` 7.7）：種族技由單位的種族決定
+         *     （``content/races.yaml``），所以不帶技能 ID；1 AP、每場限用 1～2 次、不佔技能欄。依種族技的
+         *     形狀只允許對應的欄位：
+         *
+         *     - ``self``：都不給（過充另外要 ``choice``：``stamina`` 或 ``mana``）；
+         *     - ``ground_tile``（狐火誘餌）、``square3``（潮息）：``target_pos``；
+         *     - ``cone``（龍息震退）：``direction``；
+         *     - ``single``（拋錨）：``target_id``；
+         *     - ``object_then_tile``（蠻力投擲）：``target_object_id`` 與 ``target_pos``（落點）。
+         *
+         *     是否合法由 :func:`trpg.engine.race_skills.race_skill_problem` 判斷。
+         */
+        UseRaceSkill: {
+            /** Unit Id */
+            unit_id: string;
+            /**
+             * @description discriminator enum property added by openapi-typescript
+             * @enum {string}
+             */
+            type: "use_race_skill";
+            /** Target Id */
+            target_id?: string | null;
+            /** Target Object Id */
+            target_object_id?: string | null;
+            target_pos?: components["schemas"]["Pos"] | null;
+            direction?: components["schemas"]["Direction"] | null;
+            /** Choice */
+            choice?: ("stamina" | "mana") | null;
         };
         /**
          * UseSkill
@@ -5445,7 +5521,7 @@ export interface operations {
         };
         requestBody: {
             content: {
-                "application/json": components["schemas"]["Move"] | components["schemas"]["Attack"] | components["schemas"]["UseSkill-Input"] | components["schemas"]["Defend"] | components["schemas"]["Run"] | components["schemas"]["Swap"] | components["schemas"]["Aim"] | components["schemas"]["Vault"] | components["schemas"]["Shove"] | components["schemas"]["Trip"] | components["schemas"]["Interact"] | components["schemas"]["Reload"] | components["schemas"]["ActivateCharge"] | components["schemas"]["EndStance"] | components["schemas"]["SetReactionMode"] | components["schemas"]["SetSummonMode"] | components["schemas"]["CommandSummon"] | components["schemas"]["InfuseSkill"] | components["schemas"]["EndTurn"];
+                "application/json": components["schemas"]["Move"] | components["schemas"]["Attack"] | components["schemas"]["UseSkill-Input"] | components["schemas"]["UseRaceSkill"] | components["schemas"]["Defend"] | components["schemas"]["Run"] | components["schemas"]["Swap"] | components["schemas"]["Aim"] | components["schemas"]["Vault"] | components["schemas"]["Shove"] | components["schemas"]["Trip"] | components["schemas"]["Interact"] | components["schemas"]["Reload"] | components["schemas"]["ActivateCharge"] | components["schemas"]["EndStance"] | components["schemas"]["SetReactionMode"] | components["schemas"]["SetSummonMode"] | components["schemas"]["CommandSummon"] | components["schemas"]["InfuseSkill"] | components["schemas"]["EndTurn"];
             };
         };
         responses: {
@@ -5515,7 +5591,7 @@ export interface operations {
         };
         requestBody: {
             content: {
-                "application/json": components["schemas"]["Move"] | components["schemas"]["Attack"] | components["schemas"]["UseSkill-Input"] | components["schemas"]["Defend"] | components["schemas"]["Run"] | components["schemas"]["Swap"] | components["schemas"]["Aim"] | components["schemas"]["Vault"] | components["schemas"]["Shove"] | components["schemas"]["Trip"] | components["schemas"]["Interact"] | components["schemas"]["Reload"] | components["schemas"]["ActivateCharge"] | components["schemas"]["EndStance"] | components["schemas"]["SetReactionMode"] | components["schemas"]["SetSummonMode"] | components["schemas"]["CommandSummon"] | components["schemas"]["InfuseSkill"] | components["schemas"]["EndTurn"];
+                "application/json": components["schemas"]["Move"] | components["schemas"]["Attack"] | components["schemas"]["UseSkill-Input"] | components["schemas"]["UseRaceSkill"] | components["schemas"]["Defend"] | components["schemas"]["Run"] | components["schemas"]["Swap"] | components["schemas"]["Aim"] | components["schemas"]["Vault"] | components["schemas"]["Shove"] | components["schemas"]["Trip"] | components["schemas"]["Interact"] | components["schemas"]["Reload"] | components["schemas"]["ActivateCharge"] | components["schemas"]["EndStance"] | components["schemas"]["SetReactionMode"] | components["schemas"]["SetSummonMode"] | components["schemas"]["CommandSummon"] | components["schemas"]["InfuseSkill"] | components["schemas"]["EndTurn"];
             };
         };
         responses: {

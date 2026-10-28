@@ -27,6 +27,7 @@ __all__ = [
     "BattleSetup",
     "BattleSetupError",
     "UnitSpawn",
+    "assign_races",
     "build_setup",
     "deploy_allies",
     "deployment_tiles",
@@ -144,6 +145,27 @@ def build_setup(
         objective=objective,
         spawn_templates=dict(sorted(templates.items())),
     )
+
+
+def assign_races(setup: BattleSetup, team: Team, races: Sequence[str | None]) -> BattleSetup:
+    """依序為 ``team`` 的單位指定種族（Phase 3R-2；``None`` 或空字串＝不指定，沿用範本）。
+
+    種族必須在規則包的 ``races`` 裡；多於單位數時拋出 :class:`BattleSetupError`。範本被複製，
+    內容庫裡的範本不變。"""
+    members = [i for i, spawn in enumerate(setup.units) if spawn.team is team]
+    if len(races) > len(members):
+        raise BattleSetupError(f"種族指定過多：{team.display_name}只有 {len(members)} 個單位")
+    units = list(setup.units)
+    for index, race in zip(members, races, strict=False):
+        if not race:
+            continue
+        try:
+            setup.ruleset.race_def(race)
+        except KeyError:
+            raise BattleSetupError(f"未知的種族：{race}") from None
+        template = units[index].template.model_copy(update={"race": race})
+        units[index] = units[index].model_copy(update={"template": template})
+    return setup.model_copy(update={"units": tuple(units)})
 
 
 def deployment_tiles(setup: BattleSetup) -> list[tuple[int, int]]:

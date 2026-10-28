@@ -40,12 +40,13 @@ from trpg.engine.events import (
     UnitMoved,
 )
 from trpg.engine.forms import leave_form
-from trpg.engine.ids import BOSS_TAG, CONCEALED, IMMOVABLE, SHIELDED
+from trpg.engine.ids import BOSS_TAG, CONCEALED, IMMOVABLE, PRONE, RACE_STONEWALL, SHIELDED
 from trpg.engine.lifecycle import down_unit, escape_unit
 from trpg.engine.rules.combat import PERMILLE, PPM, element_modifier_ppm
 from trpg.engine.rules.facing import facing_between
 from trpg.engine.rules.geometry import XY
 from trpg.engine.rules.movement import is_deadly, is_flying, is_standable
+from trpg.engine.rules.race import slip_immune
 from trpg.engine.rules.statuses import (
     boss_converted_status,
     damage_dealt_permille,
@@ -581,7 +582,7 @@ def enter_surface(ctx: Ctx, unit: UnitState) -> list[EventBase]:
         ctx.emit(SurfaceEntered, unit_id=unit.id, pos=unit.pos, surface=surface)
     ]
     check = definition.on_enter.check
-    if check is not None:
+    if check is not None and not slip_immune(ctx.rules, unit, surface):  # 矮人、鱗族不滑倒（3R-2）
         roll = ctx.check_d20()
         modifier = ability_modifier(ctx, effective_attribute(ctx.rules, unit, check.attr))
         total = roll + modifier
@@ -621,6 +622,16 @@ def _move_unit(ctx: Ctx, effect: EffectBase) -> list[EventBase]:
     return arrive(ctx, unit, (dx, dy), effect.mode, effect.cost)
 
 
+def _status_blocked(ctx: Ctx, unit: UnitState, status_id: str) -> str | None:
+    """這個狀態施加不上去的原因：被揭露不能再隱蔽（``revealed``）、穩若磐石擊不倒（``stonewall``，
+    Phase 3R-2）。"""
+    if status_id == PRONE and unit.has_status(RACE_STONEWALL):
+        return "stonewall"
+    if status_id == CONCEALED and prevents_concealment(ctx.rules, unit):
+        return "revealed"
+    return None
+
+
 def apply_status(ctx: Ctx, effect: ApplyStatusEffect) -> list[EventBase]:
     """施加狀態（重複施加時刷新持續時間，不疊加）。"""
     unit = ctx.state.units.get(effect.target_id)
@@ -631,10 +642,9 @@ def apply_status(ctx: Ctx, effect: ApplyStatusEffect) -> list[EventBase]:
     duration = effect.duration
     if duration is None:
         duration = ctx.rules.status_def(status_id).duration  # 轉換後持續時間沿用原效果
-    if status_id == CONCEALED and prevents_concealment(ctx.rules, unit):  # 被揭露：不能再隱蔽
-        return [
-            ctx.emit(EffectFizzled, effect_kind="apply_status", pos=unit.pos, reason="revealed")
-        ]
+    blocked = _status_blocked(ctx, unit, status_id)
+    if blocked is not None:
+        return [ctx.emit(EffectFizzled, effect_kind="apply_status", pos=unit.pos, reason=blocked)]
     converted = status_id if effect.self_paid else boss_converted_status(ctx.rules, unit, status_id)
     if converted != status_id:  # Boss 硬控轉換：所有來源一致（技能路徑已先轉換，這裡不會再轉）
         events.append(

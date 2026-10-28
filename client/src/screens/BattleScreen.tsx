@@ -122,6 +122,7 @@ import { OrdersPanel } from "../ui/OrdersPanel";
 import { ReactionPanel } from "../ui/ReactionPanel";
 import { Legend } from "../ui/Legend";
 import { legendEntries } from "../battle/legend";
+import { raceModes } from "../battle/race";
 import { SkillBar } from "../ui/SkillBar";
 import { useSkillReasons } from "../ui/useSkillReasons";
 import { blockedMessage, withReasons } from "../battle/skillReasons";
@@ -281,12 +282,14 @@ export function BattleScreen({ initial, onExit, exitLabel, runMode }: Props) {
     () => withPushReasons(basicModes(response.legal_actions, hero?.charges ?? []), response.interact_options, view),
     [response.legal_actions, response.interact_options, view, hero?.charges],
   );
+  const raceModeList = useMemo(() => raceModes(hero, response.legal_actions), [hero, response.legal_actions]);
   const modes = useMemo(() => {
     const map = new Map<string, ActionMode>();
     for (const m of basic) if (m.blockedReason === undefined) map.set(m.key, m);
+    for (const m of raceModeList) if (m.blockedReason === undefined) map.set(m.key, m); // 種族技（3R-2）
     for (const b of buttons) if (b.disabledReason === null) map.set(`skill:${b.skillId}`, skillMode(b));
     return map;
-  }, [basic, buttons]);
+  }, [basic, buttons, raceModeList]);
   // 複製技能（copy_skill）暫停：第二段選取，伺服器給的 copy_options 當成一個模式（點目標即送出）。
   // 複合技能第二段（「動作 → 位移」「擊殺 → 接下一段」，Phase 3F-4b）的暫停也走同一套：伺服器給的
   // followup_options 當成模式，滑過預覽、點目標送出；下面的 `copying` 代表「暫停中為第二段選目標」。
@@ -1169,6 +1172,8 @@ export function BattleScreen({ initial, onExit, exitLabel, runMode }: Props) {
         </div>
         <SkillBar
           basic={basic.filter((m) => TRAY_KINDS.includes(m.kind))}
+          race={hero?.race ?? null}
+          raceModes={raceModeList}
           buttons={buttons}
           cards={cards}
           levels={hero?.skill_levels}

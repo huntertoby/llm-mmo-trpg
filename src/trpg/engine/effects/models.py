@@ -312,6 +312,10 @@ class PushEffect(EffectBase):
     extra_collisions: int = Field(default=0, ge=0)
     """推完之後額外結算的撞擊次數（修正規則把距離加到超過 ``max_displace_distance`` 的部分，
     就算沒有撞到東西也算；Phase 3C-3a）。"""
+    pull: bool = False
+    """拉扯（Phase 3R-2）：獸人「沉穩重心」只減「推」的距離，拉與傳送不減。"""
+    harmless: bool = False
+    """被擋住時只停下、不算撞擊（種族技的龍息震退與拋錨：不加傷害，Phase 3R-2）。"""
 
     def sort_target(self) -> str:
         return self.target_id or self.object_id or ""

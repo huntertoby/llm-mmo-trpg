@@ -3,7 +3,8 @@
 from __future__ import annotations
 
 from trpg.engine.ids import BLOCKS_SIGHT_TAG
-from trpg.engine.state import BattleState
+from trpg.engine.rules.race import sight_range_for
+from trpg.engine.state import BattleState, UnitState
 from trpg.shared.types import Surface
 
 __all__ = [
@@ -69,11 +70,10 @@ def bresenham(a: XY, b: XY) -> list[XY]:
     return cells
 
 
-def sight_range(state: BattleState) -> int:
-    """視線距離（曼哈頓）：``base_sight_range`` × 天氣倍率（濃霧減半）。"""
-    base = state.ruleset.core.base_sight_range
-    permille = 1000 if state.weather is None else state.weather.sight_range_permille
-    return base * permille // 1000
+def sight_range(state: BattleState, viewer: UnitState | None = None) -> int:
+    """視線距離（曼哈頓）：``base_sight_range`` × 天氣倍率（濃霧減半）。給了 ``viewer`` 時再套用
+    種族的環境被動（人類的明視、精靈的林間視野，見 :mod:`trpg.engine.rules.race`）。"""
+    return sight_range_for(state, viewer)
 
 
 def blocks_sight_at(state: BattleState, xy: XY) -> bool:
@@ -118,7 +118,9 @@ def _line_clear(
     return not any(_blocks_line(state, cell, limit, lob, walls) for cell in bresenham(a, b)[1:-1])
 
 
-def has_line_of_sight(state: BattleState, a: XY, b: XY, *, lob: int = 0) -> bool:
+def has_line_of_sight(
+    state: BattleState, a: XY, b: XY, *, lob: int = 0, viewer: UnitState | None = None
+) -> bool:
     """``a`` 與 ``b`` 之間的視線（對稱：``has_line_of_sight(a, b) == has_line_of_sight(b, a)``）。
 
     - 距離超過 :func:`sight_range`（濃霧）時看不到。
@@ -128,8 +130,9 @@ def has_line_of_sight(state: BattleState, a: XY, b: XY, *, lob: int = 0) -> bool
       物件帶 ``blocks_sight``、表面 ``blocks_sight``（黑暗）。
     - ``lob``（拋射，Phase 3-24a1，弓）：可越過這麼多層高的障礙（高度差與物件；牆壁與黑暗不行）。
       有 ``lob`` 時不再對稱——只看攻擊方向（``a`` 是射擊者）。
+    - ``viewer``（Phase 3R-2）：看的人；種族被動讓他的視線距離改變（只影響距離，不影響遮擋）。
     """
-    if manhattan(a, b) > sight_range(state):
+    if manhattan(a, b) > sight_range(state, viewer):
         return False
     limit = max(state.tile(*a).height, state.tile(*b).height) + 1
     walls = _sight_walls(state)

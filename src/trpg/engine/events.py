@@ -78,6 +78,7 @@ __all__ = [
     "ObjectToppled",
     "OverloadTriggered",
     "PushResisted",
+    "RaceSkillUsed",
     "ReactionDeclined",
     "ReactionModeSet",
     "ReactionTriggered",
@@ -331,6 +332,24 @@ class UnitVaulted(EventBase):
     kind: Literal["climb", "jump"]
     from_pos: Pos
     to_pos: Pos
+
+
+class RaceSkillUsed(EventBase):
+    """使用種族技（Phase 3R-2）：``skill_id`` 是種族技 ID（``races.yaml``）。
+
+    選取欄位依種族技的形狀填入（沒用到的為 ``None``），``uses_left`` 是本場剩餘次數。
+    之後是效果自己的事件（推擊、表面、狀態……）。"""
+
+    type: Literal["race_skill_used"] = "race_skill_used"
+    unit_id: UnitId
+    race_id: str
+    skill_id: str
+    target_id: UnitId | None = None
+    target_object_id: ObjectId | None = None
+    target_pos: Pos | None = None
+    direction: Literal["north", "east", "south", "west"] | None = None
+    choice: Literal["stamina", "mana"] | None = None
+    uses_left: int
 
 
 class GuardSet(EventBase):
@@ -877,13 +896,15 @@ class ManeuverRolled(EventBase):
 
 
 class PushResisted(EventBase):
-    """``steadfast`` 使推擊距離減少；``immovable``（石像，Phase 3-33e2a）使推擊完全無效。"""
+    """``steadfast`` 使推擊距離減少；``immovable``（石像，Phase 3-33e2a）使推擊完全無效；
+    ``race_stonewall``（矮人種族技）使推擊完全無效、``race_heavy``（獸人環境被動）在危險地形旁
+    少推 1 格（Phase 3R-2）。"""
 
     type: Literal["push_resisted"] = "push_resisted"
     unit_id: UnitId
     requested: int
     distance: int
-    reason: Literal["steadfast", "immovable"] = "steadfast"
+    reason: Literal["steadfast", "immovable", "race_stonewall", "race_heavy"] = "steadfast"
 
 
 class ReactionTriggered(EventBase):
@@ -1379,11 +1400,12 @@ class UnitSummoned(EventBase):
 
 
 type SummonExpiryReason = Literal[
-    "expired", "owner_gone", "limit", "sacrificed", "detonated", "toppled"
+    "expired", "owner_gone", "limit", "sacrificed", "detonated", "toppled", "decoy_hit"
 ]
 """召喚物消失的原因：``expired`` 到期、``owner_gone`` 召喚者倒下或撤離、``limit`` 超過同時存在的
 上限（最舊的消失）、``sacrificed`` 被召喚者獻祭（``sacrifice_summon``，Phase 3-24c）、
-``detonated`` 自爆（爆裂傀儡，Phase 3-33e2a）、``toppled`` 土牆被推倒。"""
+``detonated`` 自爆（爆裂傀儡，Phase 3-33e2a）、``toppled`` 土牆被推倒、``decoy_hit`` 狐火誘餌
+攔下了一次單體攻擊（Phase 3R-2）。"""
 
 
 class SummonExpired(EventBase):
@@ -1795,6 +1817,7 @@ type Event = Annotated[
     | UnitStoodUp
     | UnitRan
     | UnitVaulted
+    | RaceSkillUsed
     | GuardSet
     | UnitAimed
     | WeaponReloaded

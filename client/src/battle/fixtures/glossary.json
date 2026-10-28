@@ -1154,6 +1154,42 @@
     "prevents_move": false
    },
    "rules_zh": []
+  },
+  {
+   "id": "race_adapt",
+   "name_zh": "應變",
+   "description_zh": "人類種族技。到自己的下回合開始前，移動不觸發藉機攻擊。",
+   "tags": [
+    "beneficial"
+   ],
+   "status_look": {
+    "polarity": "neutral",
+    "control_group": null,
+    "dot_element": null,
+    "skip_turn": false,
+    "removed_by_element": [],
+    "absorbs_damage": false,
+    "prevents_move": false
+   },
+   "rules_zh": []
+  },
+  {
+   "id": "race_stonewall",
+   "name_zh": "穩若磐石",
+   "description_zh": "矮人種族技。不會被推、拉、擊倒（持續到自己下一個回合結束）。",
+   "tags": [
+    "beneficial"
+   ],
+   "status_look": {
+    "polarity": "neutral",
+    "control_group": null,
+    "dot_element": null,
+    "skip_turn": false,
+    "removed_by_element": [],
+    "absorbs_damage": false,
+    "prevents_move": false
+   },
+   "rules_zh": []
   }
  ],
  "stacks": [

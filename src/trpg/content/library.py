@@ -73,7 +73,7 @@ from trpg.content.keyword_derive import (
 )
 from trpg.content.loader import default_content_dir, load_content_file
 from trpg.content.maps import MapDef, SpawnUnitsEvent, check_map
-from trpg.content.races import OriginTable, RaceTable, race_reference_problems
+from trpg.content.races import OriginTable, RaceDef, RaceTable, race_reference_problems
 from trpg.content.regions import RegionTable, sanitize_map_theme
 from trpg.content.roguelite import RunRules, roguelite_problems
 from trpg.content.rule_changes import RuleChangeDef, RuleChangeTable
@@ -188,6 +188,9 @@ class Ruleset(ContentModel):
     """形態（Phase 3J-1a，``content/forms.yaml``）：嵌入規則包，重播不依賴資料檔。"""
     rule_changes: RuleChangeTable = RuleChangeTable()
     """規則改變（Phase 3D-6，``content/rule_changes.yaml``）：嵌入規則包，重播不依賴資料檔。"""
+    races: RaceTable | None = None
+    """可玩種族（Phase 3R-2，``content/races.yaml``）：種族技與環境被動，嵌入規則包，重播不依賴資料
+    檔；沒有這個檔案時為 ``None``（單位帶 ``race`` 會在載入時報錯）。"""
     equipment: EquipmentRules = EquipmentRules()
     """裝備的遞減權重與硬上限（Phase 3G-G1，``content/rules/equipment.yaml``）。"""
     keywords: KeywordTable = KeywordTable.model_construct(keywords=())
@@ -206,6 +209,7 @@ class Ruleset(ContentModel):
     _rule_change_index: dict[str, RuleChangeDef] = PrivateAttr(default_factory=dict)
     _summon_index: dict[str, SummonDef] = PrivateAttr(default_factory=dict)
     _form_index: dict[str, FormDef] = PrivateAttr(default_factory=dict)
+    _race_index: dict[str, RaceDef] = PrivateAttr(default_factory=dict)
     _skill_index: dict[str, SkillDef] = PrivateAttr(default_factory=dict)
     _shape_index: dict[str, ShapeDef] = PrivateAttr(default_factory=dict)
     _primitive_index: dict[str, PrimitiveDef] = PrivateAttr(default_factory=dict)
@@ -230,6 +234,7 @@ class Ruleset(ContentModel):
         self._stack_index = self.stacks.by_id()
         self._summon_index = self.summons.by_id()
         self._form_index = self.forms.by_id()
+        self._race_index = {} if self.races is None else self.races.by_id()
         self._rule_change_index = self.rule_changes.by_id()
         self._modifier_ids = frozenset(s.id for s in self.skills.skills if s.is_modifier)
 
@@ -417,6 +422,11 @@ class Ruleset(ContentModel):
         """技能定義；找不到時拋出 ``KeyError``。"""
         index: dict[str, SkillDef] = self.__pydantic_private__["_skill_index"]  # type: ignore[index]
         return index[skill_id]
+
+    def race_def(self, race_id: str) -> RaceDef:
+        """種族定義（Phase 3R-2）；沒有種族資料或找不到時拋出 ``KeyError``。"""
+        index: dict[str, RaceDef] = self.__pydantic_private__["_race_index"]  # type: ignore[index]
+        return index[race_id]
 
     def summon_def(self, summon_id: str) -> SummonDef:
         """召喚物範本；找不到時拋出 ``KeyError``。"""
@@ -638,6 +648,15 @@ def load_library(  # noqa: PLR0915
     item_table = load("items.yaml", ItemTable)
     appearance = load("equipment/appearance.yaml", AppearanceTable)
     item_gen = load("item_gen.yaml", ItemGenRules)
+    regions = load("regions.yaml", RegionTable) if (root / "regions.yaml").exists() else None
+    races, origins = _load_races(
+        root,
+        load,
+        regions,
+        shapes=shapes.by_id(),
+        weather=weather.by_id(),
+        terrain=terrain.by_id(),
+    )
     try:
         ruleset = Ruleset(
             core=core,
@@ -657,6 +676,7 @@ def load_library(  # noqa: PLR0915
             summons=summons,
             forms=forms,
             rule_changes=rule_changes,
+            races=races,
             equipment=equipment_rules,
             keywords=keywords,
             skill_growth=skill_growth,
@@ -742,11 +762,8 @@ def load_library(  # noqa: PLR0915
         if problems:
             raise ContentError(root / "maps" / f"{map_id}.yaml", "；".join(problems))
 
-    regions = load("regions.yaml", RegionTable) if (root / "regions.yaml").exists() else None
     map_warnings = _apply_map_themes(maps, regions)
-    races, origins = _load_races(
-        root, load, regions, shapes=shapes.by_id(), weather=weather_map, terrain=terrain_map
-    )
+    _check_unit_races(root, {**units, **{b.id: b.hero for b in builds.builds}}, races)
 
     problems = roguelite_problems(roguelite, maps, units, core.tier_budget)
     if problems:
@@ -800,6 +817,17 @@ def load_library(  # noqa: PLR0915
         map_warnings=tuple(map_warnings),
         files=files,
     )
+
+
+def _check_unit_races(
+    root: Path, units: Mapping[str, UnitTemplate], races: RaceTable | None
+) -> None:
+    """單位範本的 ``race`` 必須是 ``races.yaml`` 裡的種族（Phase 3R-2）。"""
+    race_ids = set() if races is None else set(races.by_id())
+    for unit_id in sorted(units):
+        race = units[unit_id].race
+        if race is not None and race not in race_ids:
+            raise ContentError(root / "units", f"單位 {unit_id}：未知的種族 {race}")
 
 
 def _load_races(

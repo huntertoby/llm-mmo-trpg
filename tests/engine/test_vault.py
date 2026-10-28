@@ -322,6 +322,7 @@ def test_basic_actions_stay_within_the_limit_of_ten() -> None:
         "infuse_skill",
         "reload",
         "activate_charge",
+        "use_race_skill",  # 種族技（3R-2）：不佔技能欄也不算基本動作
     }
     assert {"move", "attack", "run", "defend", "swap", "aim", "vault"} <= basic
     assert len(basic) <= 10

@@ -17,7 +17,9 @@ __all__ = [
     "BLEED",
     "BLOCKS_SIGHT_TAG",
     "BOSS_TAG",
+    "BURNING",
     "CONCEALED",
+    "DECOY_TAG",
     "DEFENDING",
     "ELITE_TAG",
     "ENTANGLED",
@@ -26,6 +28,8 @@ __all__ = [
     "OVERDRAWN",
     "PENETRABLE",
     "PRONE",
+    "RACE_ADAPT",
+    "RACE_STONEWALL",
     "REVEALED",
     "SHIELDED",
     "STEADFAST",
@@ -39,6 +43,8 @@ ARMOR_BROKEN = "armor_broken"
 """武器 ``armor_break`` 施加的狀態（``defense_break``，Phase 3-24a1）。"""
 BLEED = "bleed"
 """形態天生武器 ``bleed`` 施加的狀態（狼人，3J-1b）。"""
+BURNING = "burning"
+"""燃燒（火焰表面的進入與回合開始效果施加）。"""
 CONCEALED = "concealed"
 """隱匿。"""
 ENTANGLED = "entangled"
@@ -47,6 +53,10 @@ DEFENDING = "defending"
 """防禦姿態。"""
 PRONE = "prone"
 """倒地。"""
+RACE_ADAPT = "race_adapt"
+"""人類種族技「應變」（Phase 3R-2）：到自己的下回合開始前，移動不觸發藉機攻擊。"""
+RACE_STONEWALL = "race_stonewall"
+"""矮人種族技「穩若磐石」（Phase 3R-2）：不會被推、拉、擊倒。"""
 REVEALED = "revealed"
 """``reveal`` 施加的狀態（``prevents_concealment``）。"""
 OVERDRAWN = "overdrawn"
@@ -58,6 +68,8 @@ SHIELDED = "shielded"
 
 BLOCKS_SIGHT_TAG = "blocks_sight"
 """擋視線的單位標籤（土牆召喚物，Phase 3-33e2a）：所在的格子像 ``blocks_sight`` 物件一樣擋視線。"""
+DECOY_TAG = "decoy"
+"""狐火誘餌的單位標籤（Phase 3R-2）：敵人的下一次單體攻擊命中時由它攔下，攔下後消失。"""
 BOSS_TAG = "boss"
 """首領單位的標籤。"""
 ELITE_TAG = "elite"

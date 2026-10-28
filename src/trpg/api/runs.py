@@ -37,6 +37,7 @@ from trpg.roguelite import (
     write_save,
 )
 from trpg.roguelite.errors import NodeConflictError
+from trpg.roguelite.start import with_race
 from trpg.roguelite.state import (
     AllocateChoice,
     BattleNode,
@@ -148,6 +149,7 @@ class RunStore:
         build: str | None = None,
         test_mode: bool = False,
         test_equipment: dict[str, str] | None = None,
+        race: str | None = None,
     ) -> RunSession:
         """開新一輪（Phase 3-24b2）：``weapon`` ＋ ``keywords``、``dev_pack`` 或 ``build`` 擇一。"""
         if build is not None:
@@ -165,6 +167,7 @@ class RunStore:
                 test_mode=test_mode,
                 test_equipment=test_equipment,
             )
+        run = with_race(self.library, run, race)  # 種族（Phase 3R-2）
         with self._lock:
             run_id = self._new_id()
             while run_id in self._runs:  # pragma: no cover - 機率極低

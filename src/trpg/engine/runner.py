@@ -38,8 +38,13 @@ __all__ = [
     "run_battle",
 ]
 
-LOG_FORMAT = "trpg-battle-log/82"
-"""``/82``（Phase 3J-4b）：效果多了 ``form_bonus_permille``（在形態中時傷害或治療整體乘 1000＋n‰），
+LOG_FORMAT = "trpg-battle-log/83"
+"""``/83``（Phase 3R-2）：種族技與環境被動——單位範本與單位狀態多了 ``race``，規則包多了 ``races``
+（``content/races.yaml``），戰鬥狀態多了 ``map_tags``（地圖標籤 ``forest``），新動作
+``use_race_skill``、新事件 ``race_skill_used``、``push_resisted`` 與 ``summon_expired`` 的新原因，
+推擊效果多了 ``pull``／``harmless``，新狀態 ``race_adapt``／``race_stonewall`` 與誘餌召喚物範本；
+規則包與狀態因此不同，``/82`` 的紀錄無法重播。
+``/82``（Phase 3J-4b）：效果多了 ``form_bonus_permille``（在形態中時傷害或治療整體乘 1000＋n‰），
 化形撲擊、野性怒吼、化形回春改用它（不再多一筆條件效果），規則包的技能與原語表因此不同；
 ``/81`` 的紀錄無法重播。
 ``/81``（Phase 3J-3）：形態身分——條件多了 ``in_form``（施放者在形態中，可限定物理／心智；

@@ -51,7 +51,8 @@ from trpg.engine.gear_reactions import (
     redirect_affix,
     spend_reaction,
 )
-from trpg.engine.ids import CONCEALED
+from trpg.engine.ids import CONCEALED, DECOY_TAG, RACE_ADAPT
+from trpg.engine.lifecycle import dismiss_summon
 from trpg.engine.results import Pending
 from trpg.engine.rules.combat import ForcedOutcome, attack_problem, roll_attack
 from trpg.engine.rules.facing import face_toward
@@ -361,6 +362,30 @@ def hit_reactions(ctx: Ctx, attacker: UnitState, target: UnitState, *, melee: bo
         perform_unit_attack(ctx, target, attacker, primary=False, reaction=True)
 
 
+def _decoy_intercept(
+    ctx: Ctx, attacker: UnitState, target: UnitState, seq: int, skill_id: str | None
+) -> UnitState | None:
+    """狐族「狐火誘餌」（Phase 3R-2）：``target`` 的陣營有誘餌時，敵人這次已命中的單體攻擊由誘餌
+    攔下（依單位 ID，第一個）；誘餌隨即消失（原因 ``decoy_hit``），攻擊的後續效果落空。直接攻擊
+    誘餌本身不攔。"""
+    if target.has_tag(DECOY_TAG):
+        return None
+    for decoy in ctx.state.units_sorted():
+        if not decoy.alive or not decoy.has_tag(DECOY_TAG) or decoy.team is not target.team:
+            continue
+        ctx.emit(
+            AttackIntercepted,
+            guardian_id=decoy.id,
+            attacker_id=attacker.id,
+            target_id=target.id,
+            skill_id=skill_id,
+        )
+        redirect_fired(ctx, seq, target.id, decoy.id)
+        dismiss_summon(ctx, decoy, "decoy_hit")
+        return decoy
+    return None
+
+
 def _guard_transfer(
     ctx: Ctx, attacker: UnitState, target: UnitState, seq: int, skill_id: str | None
 ) -> UnitState | None:
@@ -395,6 +420,9 @@ def try_intercept(
     """
     if attacker.team is target.team:
         return None
+    decoy = _decoy_intercept(ctx, attacker, target, seq, skill_id)
+    if decoy is not None:
+        return decoy
     guarded = _guard_transfer(ctx, attacker, target, seq, skill_id)
     if guarded is not None:
         return guarded
@@ -729,6 +757,8 @@ def opportunity_attacks(ctx: Ctx, mover: UnitState, from_xy: XY, to_xy: XY) -> N
     藉機攻擊的範圍是武器的 ``reach``（Phase 3-24a1，矛為 2）：``mover`` 從 ``reach`` 格內走到
     ``reach`` 格外時才觸發（``reach`` 為 1 時就是離開相鄰格）；反應技仍然只看相鄰。"""
     state = ctx.state
+    if mover.has_status(RACE_ADAPT):  # 人類的應變：本回合移動不觸發藉機攻擊（Phase 3R-2）
+        return
     for reactor in state.living_units():
         if not mover.alive:
             return

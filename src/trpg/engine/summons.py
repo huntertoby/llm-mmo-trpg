@@ -578,7 +578,11 @@ def _pull_nearest_enemy(ctx: Ctx, totem: UnitState, radius: int) -> None:
         ctx.emit(SummonPulled, unit_id=totem.id, target_id=enemy.id, from_pos=enemy.pos)
         execute(
             ctx,
-            [PushEffect(source_id=totem.id, target_id=enemy.id, direction=step, distance=1)],
+            [
+                PushEffect(
+                    source_id=totem.id, target_id=enemy.id, direction=step, distance=1, pull=True
+                )
+            ],
         )
         return
 

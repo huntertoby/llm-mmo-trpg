@@ -32,7 +32,9 @@ from trpg.engine.delayed import charge_infos
 from trpg.engine.gear_state import GearAffix, GearState
 from trpg.engine.gear_view import GearTotalView, gear_totals
 from trpg.engine.infusion import infusion_options
+from trpg.engine.race_skills import race_skill_of, race_uses_left
 from trpg.engine.rules.forms import held_weapon
+from trpg.engine.rules.race import passive_active
 from trpg.engine.rules.statuses import effective_attribute
 from trpg.engine.skills.revive import revivable
 from trpg.engine.state import (
@@ -63,6 +65,7 @@ __all__ = [
     "InfusionOptionView",
     "ObjectView",
     "PendingView",
+    "RaceView",
     "ReactionRuleView",
     "RuneView",
     "StatusView",
@@ -297,6 +300,35 @@ class InfusionOptionView(_ViewModel):
     effect_zh: str
 
 
+class RaceView(_ViewModel):
+    """單位的種族（Phase 3R-2，``content/races.yaml``）：種族技與環境被動的卡片資料。
+
+    種族技的次數與 AP 是即時的（``skill_uses_left``）；選取方式由合法動作 ``use_race_skill`` 的
+    欄位決定（前端依 ``skill_shape`` 選格子或單位）。"""
+
+    id: str
+    name_zh: str
+    skill_id: str
+    skill_name_zh: str
+    skill_description_zh: str
+    skill_ap: int
+    skill_uses_max: int
+    skill_uses_left: int
+    skill_shape: str
+    """種族技的形狀 ID（``self``、``ground_tile``、``square3``、``cone``、``single``、
+    ``object_then_tile``）。"""
+    skill_range: int
+    """選取射程（形狀沒有射程時 0）。"""
+    skill_size: int | None = None
+    """錐形的深度。"""
+    skill_choices: tuple[str, ...] = ()
+    """過充：可擇一的資源（``stamina``／``mana``）；其他種族技為空。"""
+    passive_name_zh: str
+    passive_description_zh: str
+    passive_active: bool
+    """環境被動此刻有沒有作用（天氣型、地圖型看目前戰場；其餘恆為真）。"""
+
+
 class UnitView(_ViewModel):
     id: UnitId
     template_id: str
@@ -408,6 +440,8 @@ class UnitView(_ViewModel):
     （紙娃娃與武器技用），普攻改用的天生武器見 ``form.natural_weapon_zh``。"""
     form_cooldowns: tuple[FormCooldownView, ...] = ()
     """冷卻中的形態與剩餘回合（Phase 3J-1a；依形態 ID）。"""
+    race: RaceView | None = None
+    """種族（Phase 3R-2）：種族技與環境被動；沒有種族為 ``None``。"""
 
 
 class TrapView(_ViewModel):
@@ -909,6 +943,7 @@ def _unit_view(state: BattleState, unit: UnitState, team: Team) -> UnitView:
             )
             for form_id, left in sorted(unit.form_cooldowns.items())
         ),
+        race=_race_view(state, unit),
         gear_skills=_gear_skill_views(state, unit) if unit.team is team else (),
         granted_skills=(
             tuple(
@@ -922,6 +957,32 @@ def _unit_view(state: BattleState, unit: UnitState, team: Team) -> UnitView:
             if unit.team is team
             else ()
         ),
+    )
+
+
+def _race_view(state: BattleState, unit: UnitState) -> RaceView | None:
+    skill = race_skill_of(state, unit)
+    if skill is None or unit.race is None:
+        return None
+    race = state.ruleset.race_def(unit.race)
+    reach = skill.shape.range
+    effect = skill.effects[0]
+    return RaceView(
+        id=race.id,
+        name_zh=race.name_zh,
+        skill_id=skill.id,
+        skill_name_zh=skill.name_zh,
+        skill_description_zh=skill.description_zh,
+        skill_ap=skill.ap_cost,
+        skill_uses_max=skill.uses_per_battle,
+        skill_uses_left=race_uses_left(unit, skill),
+        skill_shape=skill.shape.type,
+        skill_range=reach if isinstance(reach, int) else 0,
+        skill_size=skill.shape.size,
+        skill_choices=tuple(effect.resources or ()),
+        passive_name_zh=race.passive.name_zh,
+        passive_description_zh=race.passive.description_zh,
+        passive_active=passive_active(state, unit),
     )
 
 

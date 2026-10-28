@@ -36,7 +36,7 @@ def _can_hit_from(state: BattleState, unit: UnitState, xy: XY, enemy: UnitState)
         diff = abs(state.tile(*xy).height - state.tile(*enemy.xy).height)
         if diff > state.ruleset.core.melee_height_limit:
             return False
-    return has_line_of_sight(state, xy, enemy.xy, lob=unit.weapon.lob)
+    return has_line_of_sight(state, xy, enemy.xy, lob=unit.weapon.lob, viewer=unit)
 
 
 def _pick_target(unit: UnitState, targets: list[UnitState]) -> UnitState:

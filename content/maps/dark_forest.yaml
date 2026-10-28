@@ -5,6 +5,7 @@ id: dark_forest
 name_zh: 竹林
 region: cloud_ridge  # 雲嶺（3-37b）：只換外觀，機制不動
 archetype: forest
+tags: [forest]  # 森林地圖（Phase 3R-2；精靈的環境被動「林間視野」看這個標籤）
 size: [10, 10]
 heights: |
   0000000000

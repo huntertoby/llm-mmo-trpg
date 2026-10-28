@@ -63,6 +63,7 @@ from trpg.engine.events import (
     ObjectToppled,
     OverloadTriggered,
     PushResisted,
+    RaceSkillUsed,
     ReactionDeclined,
     ReactionModeSet,
     ReactionsGranted,
@@ -394,6 +395,7 @@ _FIZZLE_TEXT = {
     "followup_not_triggered": "  沒有達成條件（擊殺或命中）：第二段不結算",
     "followup_declined": "  放棄了第二段",
     "shockwave_flying": "  震波打不到會飛的單位",
+    "stonewall": "  穩若磐石：擊不倒",
     "inscribe_needs_tiles": "  符文只能刻在影響的格子上（這招的刻印對象不是格子），沒有刻下",
 }
 
@@ -442,6 +444,23 @@ def _guard_set(e: GuardSet, v: _View) -> str:
 @_handles(UnitAimed)
 def _aimed(e: UnitAimed, v: _View) -> str:
     return f"  {v.name[e.unit_id]} 瞄準（下一次攻擊命中 +{e.bonus}）"
+
+
+_RESOURCE_ZH = {"stamina": "耐力", "mana": "法力"}
+
+
+@_handles(RaceSkillUsed)
+def _race_skill_used(e: RaceSkillUsed, v: _View) -> str:
+    skill = v.state.ruleset.race_def(e.race_id).skill
+    detail = ""
+    if e.target_id is not None:
+        detail = f"，對象 {v.name.get(e.target_id, e.target_id)}"
+    elif e.choice is not None:
+        detail = f"，回復{_RESOURCE_ZH[e.choice]}"
+    return (
+        f"  {v.name[e.unit_id]} 發動種族技「{skill.name_zh}」（AP {skill.ap_cost}，"
+        f"本場還能用 {e.uses_left} 次）{detail}"
+    )
 
 
 @_handles(WeaponReloaded)
@@ -1312,6 +1331,7 @@ _SUMMON_EXPIRY_TEXT = {
     "sacrificed": "被獻祭",
     "detonated": "自爆了",
     "toppled": "被推倒了",
+    "decoy_hit": "攔下了一次攻擊",
 }
 
 
@@ -1475,6 +1495,10 @@ def _maneuver(e: ManeuverRolled, v: _View) -> str:
 def _push_resisted(e: PushResisted, v: _View) -> str:
     if e.reason == "immovable":
         return f"  {v.name[e.unit_id]} 紋風不動：不會被推動、拉扯或傳送"
+    if e.reason == "race_stonewall":
+        return f"  {v.name[e.unit_id]} 穩若磐石：不會被推動或拉扯"
+    if e.reason == "race_heavy":
+        return f"  {v.name[e.unit_id]} 沉穩重心：推擊距離 {e.requested} → {e.distance}"
     return f"  {v.name[e.unit_id]} 穩如泰山：推擊距離 {e.requested} → {e.distance}"
 
 

@@ -32,6 +32,7 @@ from trpg.engine.actions import (
     BASIC_ACTION_TYPES,
     CHARGE_ACTION_TYPES,
     MANAGEMENT_ACTION_TYPES,
+    RACE_ACTION_TYPES,
     SUMMON_ACTION_TYPES,
     WEAPON_ACTION_TYPES,
     Action,
@@ -625,6 +626,7 @@ def test_basic_action_cap_stays_at_ten_and_reload_is_a_weapon_action() -> None:
         *CHARGE_ACTION_TYPES,
         *MANAGEMENT_ACTION_TYPES,
         *SUMMON_ACTION_TYPES,
+        *RACE_ACTION_TYPES,
         "use_skill",
     }
     assert types == classified

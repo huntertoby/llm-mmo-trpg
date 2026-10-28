@@ -6,6 +6,7 @@
 
 from __future__ import annotations
 
+import re
 from collections import deque
 from typing import Annotated, Literal
 
@@ -238,6 +239,9 @@ class MapDef(ContentModel):
     :func:`trpg.content.regions.sanitize_map_theme` 在載入時丟棄並警告。"""
     look: dict[str, str] = Field(default_factory=dict)
     """單張地圖的外觀覆寫（鍵與值見 ``regions.yaml`` 的 ``look_keys``；載入後已併入區域預設）。"""
+    tags: tuple[str, ...] = ()
+    """地圖標籤（Phase 3R-2，內容資料）：目前只有 ``forest``（森林地圖；精靈的環境被動「林間視野」
+    看這個標籤）。新增地圖不改程式；不重複。"""
     source_wells: tuple[tuple[int, int], ...] = ()
     """源泉格（Phase 3C-4a）：我方單位進入時 +1 源力（不超過上限），源泉消失。不可與物件、
     起始區重疊，不可重複。"""
@@ -297,6 +301,9 @@ class MapDef(ContentModel):
             raise ValueError(f"size 必須在 {_MIN_SIZE}–{_MAX_SIZE} 之間，收到 {list(self.size)}")
         problems = self._grid_problems()
         problems += self._zone_problems()
+        bad_tags = [t for t in self.tags if not re.fullmatch(ID_PATTERN, t)]
+        if bad_tags or len(set(self.tags)) != len(self.tags):
+            problems.append(f"tags 必須是不重複的 ID：{list(self.tags)}")
         if problems:
             raise ValueError("；".join(problems))
         return self

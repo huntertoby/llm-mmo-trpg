@@ -488,6 +488,9 @@ class UnitState:
     """下一次擲命中的攻擊的命中加值（Phase 3J-1a，形態的進入獎勵；用掉或離開形態時歸零）。"""
     next_attack_crit: int = 0
     """下一次擲命中的攻擊的暴擊範圍加值（同上）。"""
+    race: str | None = None
+    """可玩種族（Phase 3R-2，``content/races.yaml``）：由範本帶入、戰鬥中不變；種族技的每場次數記在
+    ``skill_uses``（鍵為種族技 ID），環境被動由 :mod:`trpg.engine.race_passives` 查詢。"""
 
     @property
     def alive(self) -> bool:
@@ -607,6 +610,7 @@ class UnitState:
             form_cooldowns=dict(self.form_cooldowns),
             next_attack_hit=self.next_attack_hit,
             next_attack_crit=self.next_attack_crit,
+            race=self.race,
         )
 
 
@@ -657,6 +661,8 @@ class BattleState:
     """區域主題（Phase 3-37a；只影響外觀，不進結算）。"""
     look: tuple[tuple[str, str], ...] = ()
     """外觀覆寫（鍵排序；Phase 3-37a；只影響外觀）。"""
+    map_tags: tuple[str, ...] = ()
+    """地圖標籤（Phase 3R-2，例如 ``forest``；種族的環境被動「林間視野」讀取）。"""
 
     # ------------------------------------------------------------------
     # 複製
@@ -702,6 +708,7 @@ class BattleState:
             next_rune_id=self.next_rune_id,
             region=self.region,
             look=self.look,
+            map_tags=self.map_tags,
         )
 
     # ------------------------------------------------------------------

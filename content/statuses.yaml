@@ -453,3 +453,19 @@ statuses:
     min_rarity: rare
     budget_points: 6
     attack_element: holy
+  # --- 種族技（Phase 3R-2，content/races.yaml；只能由種族技施加，沒有 budget_points；polarity 用 neutral，不能被奪取或驅散）---
+  - id: race_adapt
+    polarity: neutral
+    name_zh: 應變
+    description_zh: 人類種族技。到自己的下回合開始前，移動不觸發藉機攻擊。
+    expires: own_turn_start
+    stacking: refresh
+    beneficial: true
+  - id: race_stonewall
+    polarity: neutral
+    name_zh: 穩若磐石
+    description_zh: 矮人種族技。不會被推、拉、擊倒（持續到自己下一個回合結束）。
+    duration: 2
+    expires: turn_end
+    stacking: refresh
+    beneficial: true

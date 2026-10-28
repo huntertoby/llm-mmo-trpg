@@ -359,3 +359,22 @@ def test_hero_exposes_the_attribute_perks_generated_from_the_data(
         assert (by_attr[attr]["now_zh"] is None) == (tier == 0)
         assert by_attr[attr]["next_at"] == perks.base + perks.step * (tier + 1)
     assert all(p["per_tier_zh"].endswith("／階") and "{n}" not in p["per_tier_zh"] for p in shown)
+
+
+def test_a_run_can_start_with_a_race_and_the_battle_view_shows_it(runs_client: TestClient) -> None:
+    """種族（Phase 3R-2）：`race` 隨一輪保存，戰鬥視圖的主角帶 `race`（種族技、次數、被動）。"""
+    run = _create(runs_client, race="elf")
+    assert _runs(runs_client).get(run["run_id"]).run.hero.race == "elf"
+    started = _ok(runs_client.post(f"/api/runs/{run['run_id']}/battle"))["battle"]
+    units = started["view"]["units"]
+    hero = next(u for u in units if u["id"] == started["hero_id"])
+    assert hero["race"]["id"] == "elf"
+    assert hero["race"]["skill_name_zh"] == "林隱"
+    assert hero["race"]["skill_uses_left"] == hero["race"]["skill_uses_max"] == 2
+    assert hero["race"]["passive_name_zh"] == "林間視野"
+    assert all(u["race"] is None for u in units if u["team"] == "enemy")
+
+
+def test_a_run_rejects_unknown_races(runs_client: TestClient) -> None:
+    reply = runs_client.post("/api/runs", json={**START, "seed": SEED, "race": "elfin"})
+    assert reply.status_code == 422 and "未知的種族" in reply.text

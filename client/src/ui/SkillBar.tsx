@@ -2,7 +2,8 @@
 // 被動、反應、姿態、修正以小圖示放在同一列最右側，點開看卡片（可施放的姿態點了照樣選取）。
 // 灰掉原因、滑過看卡片、選取提示照舊；卡片用共用的浮動卡規則（`useFloatCard`，Phase 3-30）：貼齊按鈕上方，滑過約 150ms 顯示，
 // 離開有 250ms 寬限可滑進卡片，點卡片釘住，Esc／點外面關閉。
-import type { SkillCard } from "../api/types";
+import type { RaceView, SkillCard } from "../api/types";
+import { passiveLine, raceCardLines, raceUsesText } from "../battle/race";
 import { minorGlyph, splitSkills } from "../battle/skillTray";
 import type { ActionMode, SkillButton } from "../battle/targeting";
 import { gearSkillBadge } from "../battle/gearSkills";
@@ -17,6 +18,9 @@ import { Hint } from "./Hint";
 interface Props {
   /** 基本動作的模式（防禦除外，防禦在右下角）。 */
   basic: readonly ActionMode[];
+  /** 主角的種族與種族技的模式（Phase 3R-2；不佔技能欄，另列一組按鈕；沒有種族時省略）。 */
+  race?: RaceView | null;
+  raceModes?: readonly ActionMode[];
   buttons: readonly SkillButton[];
   cards: Readonly<Record<string, SkillCard | undefined>>;
   /** 主角的技能等級（技能 ID → 等級，只列 2 級以上的；Phase 3-26a）：按鈕上顯示「Lv.N」。 */
@@ -105,6 +109,56 @@ function SkillSlot({
   );
 }
 
+/** 種族技按鈕（Phase 3R-2）：浮動卡列出說明、花費與次數、選取方式與環境被動；灰掉時卡片第一行說原因。 */
+function RaceSlot({
+  m,
+  race,
+  selected,
+  enabled,
+  onPick,
+  onBlocked,
+}: {
+  m: ActionMode;
+  race: RaceView;
+  selected: boolean;
+  enabled: boolean;
+  onPick(m: ActionMode): void;
+  onBlocked?(reason: string): void;
+}) {
+  const f = useFloatCard({ pinOn: "touch" });
+  const reason = m.blockedReason;
+  return (
+    <div className="skill-slot race-slot" {...f.triggerProps}>
+      <button
+        type="button"
+        className={`skill-button race-button${selected ? " selected" : ""}${reason !== undefined ? " blocked" : ""}`}
+        disabled={!enabled}
+        aria-disabled={reason !== undefined ? true : undefined}
+        onClick={() => (reason === undefined ? onPick(m) : onBlocked?.(reason))}
+      >
+        <span className="skill-button-text">
+          <span className="skill-name">{m.label}</span>
+          <span className="skill-cost">{raceUsesText(race)}</span>
+        </span>
+      </button>
+      {f.open && (
+        <FloatCard float={f} className="skill-card-float race-card">
+          <div className="section-title">
+            {race.name_zh}・{race.skill_name_zh}
+          </div>
+          {reason !== undefined && <div className="skill-card-reason">現在不能用：{reason}</div>}
+          {raceCardLines(race).map((line) => (
+            <div key={line} className="small">
+              {line}
+            </div>
+          ))}
+          <div className="small muted">{passiveLine(race)}</div>
+        </FloatCard>
+      )}
+    </div>
+  );
+}
+
 /** 被動、反應、姿態的小圖示：可施放的姿態點了選取，其他點一下釘住卡片。 */
 function MiniSlot({
   b,
@@ -174,7 +228,24 @@ export function SkillBar(props: Props) {
               onBlocked={props.onBlocked}
             />
           ))}
-          {basic.length === 0 && main.length === 0 && <span className="muted small">（沒有可用的動作）</span>}
+          {props.race != null && (props.raceModes ?? []).length > 0 && (
+            <div className="race-group" aria-label="種族技">
+              {(props.raceModes ?? []).map((m) => (
+                <RaceSlot
+                  key={m.key}
+                  m={m}
+                  race={props.race as RaceView}
+                  selected={selectedKey === m.key}
+                  enabled={enabled}
+                  onPick={props.onPickMode}
+                  onBlocked={props.onBlockedMode}
+                />
+              ))}
+            </div>
+          )}
+          {basic.length === 0 && main.length === 0 && (props.raceModes ?? []).length === 0 && (
+            <span className="muted small">（沒有可用的動作）</span>
+          )}
         </div>
         {minor.length > 0 && (
           <div className="skill-minor" aria-label="被動、反應與姿態">

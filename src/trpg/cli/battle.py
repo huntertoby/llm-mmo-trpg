@@ -35,7 +35,7 @@ from trpg.engine.environment import telegraph
 from trpg.engine.events import EVENT_LIST_ADAPTER, EventBase, RoundStarted, UnitMoved
 from trpg.engine.results import ResolveResult
 from trpg.engine.runner import LOG_FORMAT, BattleLog, replay, run_battle
-from trpg.engine.setup import BattleSetupError, build_setup, deploy_allies
+from trpg.engine.setup import BattleSetupError, assign_races, build_setup, deploy_allies
 from trpg.engine.state import BattleState, state_to_json
 from trpg.narrative.events import describe_event
 from trpg.shared.types import Team, UnitId
@@ -182,6 +182,8 @@ def cmd_battle(
     deploy: list[tuple[int, int]] | None = None,
     ally_commander: str | None = None,
     enemy_commander: str | None = None,
+    ally_races: list[str] | None = None,
+    enemy_races: list[str] | None = None,
 ) -> int:
     default_allies, default_enemies = default_lineup(library, map_id)
     if ally_builds:
@@ -204,12 +206,14 @@ def cmd_battle(
         weather=weather,
         objective=chosen,
     )
-    if deploy:
-        try:
+    try:
+        setup = assign_races(setup, Team.ALLY, ally_races or [])  # 種族（Phase 3R-2）
+        setup = assign_races(setup, Team.ENEMY, enemy_races or [])
+        if deploy:
             setup = deploy_allies(setup, deploy)
-        except BattleSetupError as exc:
-            print(f"錯誤：{exc}", file=sys.stderr)
-            return 2
+    except BattleSetupError as exc:
+        print(f"錯誤：{exc}", file=sys.stderr)
+        return 2
     policy: Policy = UtilityAI(library.ai_profiles) if ai == "utility" else choose_action
     if ally_commander is not None or enemy_commander is not None:
         if ai != "utility":

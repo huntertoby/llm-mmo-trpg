@@ -47,6 +47,7 @@ from trpg.engine.actions import (
     Shove,
     Swap,
     Trip,
+    UseRaceSkill,
     UseSkill,
     Vault,
 )
@@ -93,6 +94,7 @@ from trpg.engine.gear_charge import find_charge
 from trpg.engine.ids import BOSS_TAG
 from trpg.engine.maneuvers import contest_chance
 from trpg.engine.pierce import pierce_trace
+from trpg.engine.race_skills import race_skill_of
 from trpg.engine.results import ResolveResult
 from trpg.engine.rules.combat import (
     PERMILLE,
@@ -1432,6 +1434,9 @@ def _basic_ap_cost(state: BattleState, action: Action, default: int | None) -> i
     }
     if isinstance(action, Reload):
         return state.units[action.unit_id].weapon.reload_ap
+    if isinstance(action, UseRaceSkill):  # 種族技固定花 1 AP（Phase 3R-2）
+        race_skill = race_skill_of(state, state.units[action.unit_id])
+        return default if race_skill is None else race_skill.ap_cost
     if isinstance(action, ActivateCharge):
         affix = find_charge(state.units[action.unit_id], action.affix_id)
         return None if affix is None else affix.cost_ap

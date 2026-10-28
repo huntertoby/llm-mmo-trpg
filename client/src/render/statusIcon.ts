@@ -268,6 +268,17 @@ export const GLYPH: Readonly<Record<string, Glyph>> = {
     line(c, [[7, -10], [7, -4]]);
     line(c, [[4, -7], [10, -7]]);
   },
+  race_adapt: (c) => {
+    line(c, [[-9, 0], [7, 0]]); // 人類種族技「應變」（3R-2）：向前的箭頭（不被藉機攻擊）
+    line(c, [[2, -6], [8, 0], [2, 6]]);
+    line(c, [[-9, -6], [-4, -6]]);
+    line(c, [[-9, 6], [-4, 6]]);
+  },
+  race_stonewall: (c) => {
+    shield(c); // 矮人種族技「穩若磐石」（3R-2）：盾＋底下的岩塊（不被推、拉、擊倒）
+    line(c, [[-6, 8], [6, 8]]);
+    line(c, [[-3, 5], [3, 5]]);
+  },
   rallied: (c) => {
     line(c, [[-6, 10], [-6, -9]]); // 戰旗
     c.beginPath();

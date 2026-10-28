@@ -45,6 +45,7 @@ from trpg.engine.actions import (
     Step,
     Swap,
     Trip,
+    UseRaceSkill,
     UseSkill,
     Vault,
 )
@@ -93,6 +94,7 @@ __all__ = [
     "Telegraph",
     "Trip",
     "UnitSpawn",
+    "UseRaceSkill",
     "UseSkill",
     "Vault",
     "battle_result",
