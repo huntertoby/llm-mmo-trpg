@@ -274,13 +274,12 @@ statuses:
   - id: stoneskin
     polarity: buff
     name_zh: 石膚
-    description_zh: 皮膚像岩石一樣堅硬，但行動變得笨重。
+    description_zh: 皮膚像岩石一樣堅硬，但行動變得笨重。只有大地元素的技能能施加。
     duration: 2
     expires: turn_end
     stacking: refresh
     beneficial: true
     budget_points: 3
-    min_rarity: rare
     physical_taken_permille: 700
     move_delta: -1
   - id: empowered

@@ -849,6 +849,8 @@ def build_proposal_models(
         "category": (sk["category"].annotation, ...),
         "weapon_req": (sk["weapon_req"].annotation, ...),
         "scaling_attr": (sk["scaling_attr"].annotation, ...),
+        # 技能元素（3-54d）：選填；隆起、下陷、石膚、震波只有 earth 的技能能用（同一條互斥規則）
+        "element": (sk["element"].annotation, None),
         "cost_penalty": (
             _penalty_type(penalty_choices(library, rarity)),
             Field(default=None, description=_PENALTY_DOC),
@@ -975,6 +977,7 @@ _SUPPORTED_SKILL_KEYS = frozenset(
         "weapon_req",
         "ap_cost",
         "scaling_attr",
+        "element",
         "shape",
         "effects",
         "condition",

@@ -1,5 +1,5 @@
 // 即時檢查面板：預算條、違反的規則、最低稀有度、技能卡片預覽。
-import type { BudgetLine, KeywordHint, WorkshopCheck } from "../../api/types";
+import type { BudgetLine, KeywordHint, WorkshopCheck, WorkshopWeapon } from "../../api/types";
 import { noKeywords } from "../keywords";
 import { budgetView, checkHeadline, missingStepNames, rarityName } from "../../workshop/state";
 import { KeywordLine } from "../KeywordLine";
@@ -140,7 +140,41 @@ function BudgetBar({ check }: { check: WorkshopCheck }) {
   );
 }
 
-export function CheckPanel({ check, pending, dev = false }: { check: WorkshopCheck | null; pending: boolean; dev?: boolean }) {
+/** 預覽武器下拉（06 6.10）：只影響卡片預覽與檢查（武器技的屬性寫那把武器的），不改技能本身。 */
+export interface PreviewWeapon {
+  weapons: readonly WorkshopWeapon[];
+  /** 選到的武器 ID；空字串＝不指定（列例子）。 */
+  value: string;
+  onChange(id: string): void;
+}
+
+function PreviewWeaponSelect({ preview }: { preview: PreviewWeapon }) {
+  return (
+    <label className="ws-preview-weapon small">
+      預覽武器：
+      <select value={preview.value} onChange={(e) => preview.onChange(e.target.value)} aria-label="預覽武器">
+        <option value="">不指定（列例子）</option>
+        {preview.weapons.map((w) => (
+          <option key={w.id} value={w.id}>
+            {w.name_zh}（{w.class_zh}）
+          </option>
+        ))}
+      </select>
+    </label>
+  );
+}
+
+export function CheckPanel({
+  check,
+  pending,
+  dev = false,
+  preview,
+}: {
+  check: WorkshopCheck | null;
+  pending: boolean;
+  dev?: boolean;
+  preview?: PreviewWeapon;
+}) {
   const head = checkHeadline(check);
   const missing = check !== null && !check.complete ? missingStepNames(check) : [];
   const chosenRarity = check?.skill != null && typeof check.skill["rarity"] === "string" ? check.skill["rarity"] : null;
@@ -150,6 +184,7 @@ export function CheckPanel({ check, pending, dev = false }: { check: WorkshopChe
         即時檢查
         {pending && <span className="muted small">（更新中……）</span>}
       </div>
+      {preview !== undefined && <PreviewWeaponSelect preview={preview} />}
       {check?.icon != null && (
         <div className="ws-icon-preview">
           <div className="section-title">技能圖示（每完成一步，多一個部件）</div>

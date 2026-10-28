@@ -1,0 +1,25 @@
+# 大地種子（Phase 3-54d，06 6.33 #64；數值為初值，未經模擬）：身前一條直線的地面掀成波浪，敵人受大地傷害並倒地（製造「倒地」）。
+id: skill_quake_wave
+schema_version: 1
+name_zh: 震地波
+tier: 1
+rank: 1
+rarity: rare
+kind: active
+skeleton: area
+category: spell
+weapon_req: any
+ap_cost: 2
+scaling_attr: int
+shape: {type: line, size: 4}
+effects:
+  - {type: damage, dice: 1d8, element: earth}
+  - {type: shockwave}
+condition: null
+cost: {mana: 8, cooldown: 3}
+tags: [earth, spell, area]
+element: earth
+narrative:
+  concept: 腳下的大地像水面一樣掀起波浪，一路撞翻前方所有站著的人
+  cast_flavor: 你重重踏地，地面隆隆起伏，一道震波貼著地表向前碾過，站不穩的人一個個摔倒
+provenance: {origin: builtin, owner_id: null, created_by: null, parents: [], bound: true, tradeable: false}

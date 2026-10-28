@@ -831,7 +831,7 @@
   {
    "id": "stoneskin",
    "name_zh": "石膚",
-   "description_zh": "皮膚像岩石一樣堅硬，但行動變得笨重。",
+   "description_zh": "皮膚像岩石一樣堅硬，但行動變得笨重。只有大地元素的技能能施加。",
    "tags": [
     "beneficial"
    ],

@@ -1,0 +1,28 @@
+# 大地種子（Phase 3-54d，06 6.33 #64；數值為初值，未經模擬）：近戰一擊砸碎岩石般的重擊；目標倒地時再加一半傷害（利用「倒地」，可接在震地波後面）。
+id: skill_rock_smash
+schema_version: 1
+name_zh: 碎岩擊
+tier: 1
+rank: 1
+rarity: rare
+kind: active
+skeleton: combo
+category: weapon
+weapon_req: melee
+ap_cost: 2
+scaling_attr: str
+shape: {type: single, range: weapon}
+effects:
+  - {type: damage, multiplier_permille: 1200, element: earth}
+  - type: damage
+    multiplier_permille: 600
+    element: earth
+    condition: {type: target_has_status, status: prone}
+condition: null
+cost: {stamina: 8, cooldown: 2}
+tags: [earth, melee, combo]
+element: earth
+narrative:
+  concept: 把武器當成鑿岩的重錘，倒在地上的人躲不開第二下
+  cast_flavor: 你雙手掄起武器朝地面一砸，碎石四濺；若對手已經倒地，這一擊結結實實地壓了下去
+provenance: {origin: builtin, owner_id: null, created_by: null, parents: [], bound: true, tradeable: false}

@@ -29,6 +29,7 @@ __all__ = [
     "WorkshopRandom",
     "WorkshopRandomRequest",
     "WorkshopSkillRequest",
+    "WorkshopWeapon",
 ]
 
 
@@ -52,6 +53,17 @@ class WorkshopOptionsRequest(WorkshopSkillRequest):
 class WorkshopCheckRequest(WorkshopOptionsRequest):
     """檢查（Phase 3-55）：和選項一樣可帶 ``weapon``（主角目前手上武器的 ID）；有值且大類和技能的
     武器需求相符時，卡片的算法寫那把武器實際的屬性，否則列由武器資料產生的例子。"""
+
+
+class WorkshopWeapon(_ApiModel):
+    """預覽武器下拉的一個選項（Phase 3-54d，06 6.10）：玩家手上會出現的武器（不含召喚物專用）。"""
+
+    id: str
+    name_zh: str
+    weapon_class: str
+    """``melee``／``ranged``／``focus``。"""
+    class_zh: str
+    """武器大類的中文（近戰武器、遠程武器、法器）。"""
 
 
 class WorkshopExportRequest(WorkshopSkillRequest):

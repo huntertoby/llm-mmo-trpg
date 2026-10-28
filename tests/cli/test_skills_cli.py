@@ -111,7 +111,7 @@ def test_skills_show_displays_dual_scaling_and_mastery(
 ) -> None:
     """Phase 2H-2：雙屬性顯示各 50%；專精顯示加成內容，指定單位時標示是否生效。"""
     _, out, _ = _run(["skills", "show", "skill_arcane_blade"], capsys)
-    assert "縮放屬性 武器的屬性＋智力（取平均）" in out
+    assert "縮放屬性 手上武器的屬性＋智力（取平均）" in out
     assert "武器傷害 ×2.4（雷電）" in out
     _, out, _ = _run(["skills", "show", "skill_shatter_blast"], capsys)
     assert "專精加成 施放距離 +1（智力為最高屬性時生效）" in out

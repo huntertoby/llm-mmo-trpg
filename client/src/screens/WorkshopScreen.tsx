@@ -1,8 +1,8 @@
 // 技能工坊：一步步組技能 → 即時檢查 → 隨機一個／匯出 YAML／裝上試玩。
 import { useCallback, useEffect, useReducer, useState } from "react";
 import { api } from "../api/client";
-import type { BattleResponse, Choice } from "../api/types";
-import { CheckPanel } from "../ui/workshop/CheckPanel";
+import type { BattleResponse, Choice, WorkshopWeapon } from "../api/types";
+import { CheckPanel, type PreviewWeapon } from "../ui/workshop/CheckPanel";
 import { ErrorBanner } from "../ui/ErrorBanner";
 import { StepView } from "../ui/workshop/StepView";
 import { GearScreen } from "./GearScreen";
@@ -27,7 +27,10 @@ interface Props {
   store?: KeyValueStore | null;
   /** 開發者模式（網址 `?dev=1`）：顯示種子、可匯出不合法的技能；預設是玩家模式。 */
   dev?: boolean;
-  /** 主角目前手上武器的 ID（有主角的情境才傳，Phase 3-48b）；沒有時縮放屬性維持「依手上武器而定」。 */
+  /**
+   * 主角目前手上武器的 ID（有主角的情境才傳，Phase 3-48b）；「預覽武器」下拉的預設值：從一輪開工坊時
+   * 預設主角的主手武器，從首頁開時沒有這個 prop、預設「不指定（列例子）」（3-54d）。
+   */
   heroWeapon?: string;
 }
 
@@ -66,7 +69,26 @@ export function WorkshopScreen(props: Props) {
   return <SkillWorkshop {...props} dev={dev} onGear={() => choose("gear")} />;
 }
 
-function SkillWorkshop({ onHome, onStartBattle, onGear, store, dev = false, heroWeapon }: Props & { onGear(): void }) {
+function SkillWorkshop({ onHome, onStartBattle, onGear, store, dev = false, heroWeapon: defaultWeapon }: Props & { onGear(): void }) {
+  // 預覽武器：只影響選項與檢查（卡片）的 weapon 參數，不寫進技能草稿
+  const [previewWeapon, setPreviewWeapon] = useState<string>(defaultWeapon ?? "");
+  const [weapons, setWeapons] = useState<readonly WorkshopWeapon[]>([]);
+  const heroWeapon = previewWeapon === "" ? undefined : previewWeapon;
+  useEffect(() => {
+    let cancelled = false;
+    api
+      .workshopWeapons()
+      .then((list) => {
+        if (!cancelled) setWeapons(list);
+      })
+      .catch(() => {
+        // 清單載不到時下拉只剩「不指定」，不影響工坊其他功能
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, []);
+  const preview: PreviewWeapon = { weapons, value: previewWeapon, onChange: setPreviewWeapon };
   const storage = store === undefined ? browserStore() : store;
   const [state, dispatch] = useReducer(editorReducer, undefined, () => {
     const saved = loadSaved(storage);
@@ -182,7 +204,7 @@ function SkillWorkshop({ onHome, onStartBattle, onGear, store, dev = false, hero
           {dev && <YamlPanel draft={draft} onDraft={setDraft} />}
         </div>
         <div className="ws-col ws-col-side">
-          <CheckPanel check={state.check} pending={checking} dev={dev} />
+          <CheckPanel check={state.check} pending={checking} dev={dev} preview={preview} />
           <TryoutPanel dev={dev} check={state.check} pending={checking} prefs={prefs} onPrefs={setPrefs} onStart={onStartBattle} />
           <ExportPanel draft={draft} check={state.check} dev={dev} pending={checking} />
         </div>

@@ -17,7 +17,7 @@ from typing import Any
 from trpg.content.battle import StatusDef
 from trpg.content.composer_rules import ComposerRules, DiceRules, DurationRules, LadderRange
 from trpg.content.library import ContentLibrary
-from trpg.content.skill_rules import SkeletonDef
+from trpg.content.skill_rules import SkeletonDef, SkillMatch
 from trpg.content.skills import (
     LEGACY_REACTION_EVENTS,
     PrimitiveDef,
@@ -346,6 +346,8 @@ def _status_candidates(ctx: Ctx, beneficial: bool) -> list[StatusDef]:
             continue
         if rarity_rank(status.min_rarity) > ctx.rank or status.stance:
             continue  # 姿態狀態只有姿態技能（build_stance_effects）會施加
+        if not _theme_allows(ctx, status.id, status=True):
+            continue  # 石膚只有大地主題（3-54d）
         if status.control_group == "hard" and ctx.shape != "single":
             continue
         if status.control_group is not None and status.control_group in ctx.control_groups:
@@ -934,16 +936,25 @@ def _composable(ctx: Ctx, name: str) -> bool:
     return ctx.primitive(name).category != "rule_rewrite" and name not in _HAND_WRITTEN_PRIMITIVES
 
 
-def _theme_allows(ctx: Ctx, name: str) -> bool:
-    """主題元素是否允許原語 ``name``：互斥規則表裡「帶這個原語就必須有某些元素」的規則（3-54b：
-    升降地形限大地）。組合器的技能以主題元素為標籤，所以只看主題。"""
+def _match_names(match: SkillMatch, field: str) -> set[str]:
+    """比對（含 ``any_of`` 的子比對）裡 ``primitives_any`` 或 ``statuses`` 列的名稱。"""
+    names = set(getattr(match, field) or ())
+    for sub in match.any_of or ():
+        names |= _match_names(sub, field)
+    return names
+
+
+def _theme_allows(ctx: Ctx, name: str, *, status: bool = False) -> bool:
+    """主題元素是否允許原語（或 ``status=True`` 時的狀態）``name``：互斥規則表裡「帶這個原語或
+    狀態就必須有某些元素」的規則（3-54b／3-54d：升降地形、震波、石膚限大地）。組合器的技能以主題
+    元素為標籤，所以只看主題。"""
+    field = "statuses" if status else "primitives_any"
     for rule in ctx.library.exclusions.rules:
         when, need = rule.when, rule.require
         if (
             when is not None
             and need is not None
-            and when.primitives_any is not None
-            and name in when.primitives_any
+            and name in _match_names(when, field)
             and need.elements_any is not None
             and ctx.theme not in need.elements_any
         ):

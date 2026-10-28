@@ -27,11 +27,12 @@ from trpg.api.workshop_schemas import (
     WorkshopOptionsRequest,
     WorkshopRandom,
     WorkshopRandomRequest,
+    WorkshopWeapon,
 )
 from trpg.content.library import ContentLibrary
 from trpg.narrative.keyword_hints import draft_keyword_hints
 from trpg.narrative.skill_icon import icon_of
-from trpg.narrative.skills import CardOwner, draft_card_keywords, skill_card
+from trpg.narrative.skills import WEAPON_REQ_TEXT, CardOwner, draft_card_keywords, skill_card
 from trpg.skillgen.draft import build_skill
 from trpg.skillgen.draft_check import check_draft
 from trpg.skillgen.option_models import DraftOptions
@@ -95,6 +96,22 @@ def get_arena(request: Request) -> WorkshopArena:
     return WorkshopArena(
         default_map=rules.map, max_rounds=rules.max_rounds, maps=maps, opponents=opponents
     )
+
+
+@router.get("/weapons")
+def get_weapons(request: Request) -> list[WorkshopWeapon]:
+    """預覽武器下拉的選項（3-54d）：全部玩家用的武器（不含召喚物專用），依資料檔順序。"""
+    library = store_of(request).library
+    return [
+        WorkshopWeapon(
+            id=w.id,
+            name_zh=w.name_zh,
+            weapon_class=w.weapon_class,
+            class_zh=WEAPON_REQ_TEXT[w.weapon_class],
+        )
+        for w in library.weapons.values()
+        if not w.summon_only
+    ]
 
 
 @router.post("/options")

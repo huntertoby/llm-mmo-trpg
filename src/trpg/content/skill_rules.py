@@ -593,8 +593,10 @@ class SkillMatch(ContentModel):
     effects_all: tuple[EffectPattern, ...] | None = None
     repeated_control_group: bool | None = None
     elements_any: tuple[Element, ...] | None = None
-    """技能的元素（:func:`~trpg.content.skills.skill_elements`：標籤與效果自己寫的元素）有其中任一個
-    （Phase 3-54b：只有大地能升降地形）。"""
+    """技能的元素（:func:`~trpg.content.skills.skill_elements`：技能元素欄，沒填時沿用標籤的元素）是
+    其中之一（Phase 3-54b／3-54d：只有大地技能能升降地形、施加石膚、震波）。"""
+    any_of: tuple[SkillMatch, ...] | None = None
+    """子比對任一個符合就算符合（Phase 3-54d：一條規則涵蓋「原語 A 或狀態 B」）。"""
 
 
 class ExclusionRule(ContentModel):

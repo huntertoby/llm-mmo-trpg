@@ -635,6 +635,8 @@ def _match_effects(skill: SkillDef, match: SkillMatch, library: ContentLibrary) 
 
 def _matches(skill: SkillDef, match: SkillMatch, library: ContentLibrary) -> bool:
     """技能是否符合 ``match``（有填的欄位全部成立；空的比對永遠符合）。"""
+    if match.any_of is not None and not any(_matches(skill, m, library) for m in match.any_of):
+        return False
     return (
         _match_shape_cost(skill, match)
         and _match_primitives(skill, match)

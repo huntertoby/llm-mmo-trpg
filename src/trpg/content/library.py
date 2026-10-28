@@ -1061,6 +1061,8 @@ def _match_problems(match: SkillMatch | None, ruleset: Ruleset) -> list[str]:
     refs = [*(match.primitives_any or ()), *(match.primitives_all or ())]
     refs += [e.type for e in [*(match.effects_any or ()), *(match.effects_all or ())] if e.type]
     problems += [f"未知的原語 {r!r}" for r in refs if r not in primitive_ids]
+    for sub in match.any_of or ():
+        problems += _match_problems(sub, ruleset)
     return problems
 
 
