@@ -128,13 +128,13 @@ async function statusScene(): Promise<void> {
 
 async function battleScene(): Promise<void> {
   const mk = (form: boolean): UnitView[] => [
-    unit(HERO, "ally", 1, 2, { template_id: "hero_fighter", name_zh: "戰士", facing: "east", form: form ? formView("form_bear") : null }),
-    unit("unit_0002", "ally", 0, 3, { template_id: "hero_archer", name_zh: "弓手", facing: "east" }),
-    unit("unit_0003", "enemy", 3, 2, { template_id: "t", name_zh: "敵人", facing: "west" }),
-    unit("unit_0004", "enemy", 4, 3, { template_id: "t", name_zh: "敵人", facing: "west" }),
+    unit(HERO, "ally", 1, 1, { template_id: "hero_fighter", name_zh: "戰士", facing: "east", form: form ? formView("form_bear") : null }),
+    unit("unit_0002", "ally", 0, 2, { template_id: "hero_archer", name_zh: "弓手", facing: "east" }),
+    unit("unit_0003", "enemy", 3, 1, { template_id: "t", name_zh: "敵人", facing: "west" }),
+    unit("unit_0004", "enemy", 4, 2, { template_id: "t", name_zh: "敵人", facing: "west" }),
   ];
-  await scene("實戰：變身前", "battle", baseView(COLS, 5, flat(5), mk(false)), [], 2);
-  await scene("實戰：變身後（熊）", "battle", baseView(COLS, 5, flat(5), mk(true)), [], 2);
+  await scene("實戰：變身前", "battle", baseView(COLS, 3, flat(3), mk(false)), [], 2);
+  await scene("實戰：變身後（熊）", "battle", baseView(COLS, 3, flat(3), mk(true)), [], 2);
 }
 
 for (const f of ["south", "north", "east", "west"] as const) await facingScene(f);
