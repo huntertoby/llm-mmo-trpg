@@ -16,6 +16,7 @@ import { TIME_BOMB } from "../battle/bombs";
 import { statusTile, tileCanvas } from "./skillIcon";
 import { bodyEffects, bodyOver, bodyUnder, CONCEALED, CONCEALED_ALPHA, effectsKey, hasOverEffect, hasUnderEffect, ROW_ICON, statusIconCanvas, statusIconKey, statusRowLayout, type BodyEffects } from "./statusIcon";
 import { fontEpoch } from "./fontLoad";
+import { AURA_H, AURA_W, FORM_FOOT_Y, FORM_H, FORM_W, formArtOf, formAuraColor, formAuraRadius, formHeroColor, formRowRise } from "./inkForm";
 import { hasNoRing, humanoidSpec, resolveSummonLook, type ResolvedLook } from "./summonArt";
 import { SUMMON_BADGE_FONT, SUMMON_BADGE_RADIUS, downedLook, infusedBadge, pulseAlpha, statusBadges, summonBadgeOffset, type DownedLook, type InfusedBadge, type StatusBadge } from "./unitLook";
 
@@ -134,11 +135,55 @@ function summonHumanoidSpec(u: UnitDraw, look: ResolvedLook): DollSpec {
   return humanoidSpec(look, skeleton, owner);
 }
 
+/** 形態外觀（3J-5）：單位有形態、而且認得外觀 id 時回傳畫法 id、主角主色與元素；否則 `null`（形態不認得時仍畫原角色紙娃娃）。 */
+function formArtOfUnit(u: UnitDraw, spec: DollSpec): { id: string; hero: string; element: string | null } | null {
+  if (u.form == null || u.summon) return null;
+  const f = formArtOf(u.form.look);
+  if (f === null) return null;
+  return { id: f.id, hero: formHeroColor(spec.gear.body?.color, spec.gear.cloak?.color), element: u.form.element };
+}
+
+/** 形態的小人：形態貼圖取代紙娃娃（同樣的腳底錨點與縮放基準）；貼圖畫不出來時回傳 `null`。 */
+function formDoll(art: ArtTextures, u: UnitDraw, look: DownedLook, feet: number, form: { id: string; hero: string; element: string | null }): Sprite | null {
+  const texture = art.form(form.id, form.hero, form.element, u.facing, u.downed);
+  if (texture === null) return null;
+  const sprite = new Sprite(texture);
+  const k = (T / 52) * DOLL_SCALE;
+  sprite.anchor.set(0.5, FORM_FOOT_Y / FORM_H);
+  sprite.width = FORM_W * k;
+  sprite.height = FORM_H * k;
+  sprite.position.set(0, feet);
+  sprite.alpha = look.dollAlpha * (u.statusIds?.includes(CONCEALED) === true ? CONCEALED_ALPHA : 1);
+  if (look.grayscale) {
+    const gray = new ColorMatrixFilter();
+    gray.desaturate();
+    sprite.filters = [gray];
+  }
+  return sprite;
+}
+
+/** 腳下的形態光環（手繪虛線橢圓＋18% 填色）：元素色、無元素 #9a86ff；不認得的形態也畫。 */
+function formAuraSprite(art: ArtTextures, u: UnitDraw, feet: number): Sprite | null {
+  if (u.form == null || u.summon) return null;
+  const tex = art.formAura(formAuraColor(u.form.element), formAuraRadius(u.form.look, DOLL_SCALE));
+  if (tex === null) return null;
+  const k = T / 52;
+  const s = new Sprite(tex);
+  s.anchor.set(0.5);
+  s.width = AURA_W * k;
+  s.height = AURA_H * k;
+  s.position.set(0, feet);
+  return s;
+}
+
 function doll(art: ArtTextures, u: UnitDraw, look: DownedLook, feet: number, r: number): Sprite | Graphics {
   const sl = summonLookOf(u);
+  const spec = resolveDoll({ template: u.template, team: u.team, summon: u.summon, totem: u.totem, dollLook: u.dollLook, weaponId: u.weaponId, weaponClass: u.weaponClass, equipment: u.equipment, attackElement: u.attackElement });
+  const form = formArtOfUnit(u, spec);
+  const formSprite = form === null ? null : formDoll(art, u, look, feet, form);
+  if (formSprite !== null) return formSprite;
   // 倒地的人形召喚物沿用紙娃娃的躺下姿勢；其他體型（圖騰、構造體、植物…）不躺下
   const useSummonArt = sl !== null && !(u.downed && sl.body === "humanoid");
-  const spec = resolveDoll({ template: u.template, team: u.team, summon: u.summon, totem: u.totem, dollLook: u.dollLook, weaponId: u.weaponId, weaponClass: u.weaponClass, equipment: u.equipment, attackElement: u.attackElement });
   const texture = useSummonArt ? art.summon(sl, u.facing, sl.body === "humanoid" ? summonHumanoidSpec(u, sl) : null) : art.figure(spec, u.facing, u.downed);
   if (texture === null) return new Graphics().circle(0, 0, r).fill(u.fill); // 無法產生貼圖：退回色塊
   const sprite = new Sprite(texture);
@@ -245,7 +290,7 @@ function statusRow(u: UnitDraw): Container | null {
   const items = statusRowLayout(ids, infused ? 2 : 3, ROW_ICON);
   if (items.length === 0) return null;
   const row = new Container();
-  row.position.set(infused ? ROW_INFUSED_SHIFT : 0, ROW_Y);
+  row.position.set(infused ? ROW_INFUSED_SHIFT : 0, ROW_Y - (u.form != null && !u.summon ? formRowRise(u.form.look, T, DOLL_SCALE) : 0));
   for (const item of items) {
     if (item.kind === "icon") {
       const tex = rowIconTexture(item.id);
@@ -292,6 +337,8 @@ export function buildUnitSprite(art: ArtTextures, pulses: Pulses, u: UnitDraw): 
   }
   if (!u.downed && !noRing) c.addChild(new Graphics().poly(ringArrow(u.facing, 0, cy, rx, ry, 5)).fill(0xffffff).stroke({ width: 1, color: 0x000000 }));
   if (u.active) c.addChild(dashedEllipse(cy, rx + 6, ry + 4, HIGHLIGHT.active));
+  const aura = formAuraSprite(art, u, cy);
+  if (aura !== null) c.addChild(aura);
   const effects = u.downed ? null : bodyEffects(u.statusIds ?? []);
   if (effects !== null && hasUnderEffect(effects)) {
     const under = effectSprite("under", effects, feet);

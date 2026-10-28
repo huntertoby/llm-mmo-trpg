@@ -60,14 +60,14 @@ function drawLegs(t: Ctxt, view: InkView): void {
       ink(ctx, `leg-${sx}`, [[sx * 0.8, -15], [sx * 4.6, -15], [sx * 4.4, -6], [sx * 1, -6]], pants);
       ink(ctx, `boot-${sx}`, [[sx * 0.6, by], [sx * 4.8, by], [sx * toeF, -0.8], [sx * 0.4, -0.4]], boot);
     }
-    drawFootDetail(ctx, gear.feet, view, hooks.colors);
+    drawFootDetail(ctx, gear.feet, view, hooks.colors, heavy);
     return;
   }
   ink(ctx, "leg-far", [[-3, -15], [0.6, -15], [-0.6, -6], [-3.8, -6]], darken(pants, 0.25));
   ink(ctx, "boot-far", [[-4.2, by], [-0.4, by], [1, -0.6], [-4.4, -0.4]], darken(boot, 0.25));
   ink(ctx, "leg-near", [[-0.6, -15], [3.2, -15], [3.8, -6], [0.6, -6]], pants);
   ink(ctx, "boot-near", [[0.4, by], [4, by], [toeS, -0.8], [0.4, -0.4]], boot);
-  drawFootDetail(ctx, gear.feet, view, hooks.colors);
+  drawFootDetail(ctx, gear.feet, view, hooks.colors, heavy);
 }
 
 // ============================== 身體 ==============================

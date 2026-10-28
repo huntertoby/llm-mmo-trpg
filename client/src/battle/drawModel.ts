@@ -74,6 +74,13 @@ export interface ObjectDraw {
   hpRatio: number | null;
 }
 
+export interface FormDraw {
+  /** 形態外觀 id（`FormView.look`）。 */
+  look: string;
+  /** 進入時選的元素；沒有為 `null`。 */
+  element: string | null;
+}
+
 export interface UnitDraw {
   id: string;
   x: number;
@@ -117,6 +124,8 @@ export interface UnitDraw {
   attackElement?: string | null;
   /** 召喚物外觀（Phase 3-33h1）：沒有時（一般單位、舊資料）為 `null`，召喚物退回人形骷髏。 */
   summonLook?: SummonLookDraw | null;
+  /** 目前的形態（Phase 3J-5，`UnitView.form`）：單位改畫形態外觀＋腳下光環；沒有形態為 `null`。 */
+  form?: FormDraw | null;
   /** 殘影分身複製的對象（召喚者）的紙娃娃輸入（Phase 3-33h1）；其他單位為 `undefined`。 */
   copyOf?: DollInput | undefined;
   /** 身上穿的裝備（Phase 3G-G5b，紙娃娃依各欄位外觀畫）；舊資料沒有時視為沒穿。 */
@@ -286,6 +295,7 @@ export function buildDrawModel(
       weaponClass: u.weapon_class,
       attackElement: u.attack_element ?? null,
       summonLook: u.summon_look ?? null,
+      form: u.form != null ? { look: u.form.look, element: u.form.element ?? null } : null,
       copyOf: copyTarget(view, u),
       equipment: (u.equipment ?? []).map((e) => ({ slot: e.slot, appearance: e.appearance })),
     }))
