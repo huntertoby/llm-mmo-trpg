@@ -95,3 +95,9 @@
 5. 橋接嫁接：`skill_evolution.yaml` 加形態的嫁接。
 6. 3J-1b 的 10 招測試技能 `skill_form_*` 照玩法 PM 決定（06 6.30 實作細節：法術類別、`weapon_req` 不限、沉默看形態類別）確認無誤。
 7. 驗收照 4.1 第 9 點；報告 `Phase3J-3報告.md`。
+
+### 4.9 3J-5、C-3、3J-2 驗收（2026-10-29，開發 PM）
+- **3J-5**（報告 `Phase3J-5報告.md`，`inkForm.ts`）：10 種形態 C 畫法、主色、手繪光環、元素色、退回規則；美術 PM 驗收通過（`docs/art/3J-5檢查.md`）：不補正面背面、龍巨人封頂 1.3；樹人 top 上移 3px 併入 C-3。
+- **C-3**（報告 `PhaseC-3報告.md`）：17 種召喚物 C 畫法；美術 PM 驗收通過（`docs/art/C-3檢查.md`），**C 畫風全部完成**。
+- **3J-2**（報告 `Phase3J-2報告.md`）：`StatusInstance.direction`、`start_directed_charge`；龍 `natural_weapon.charge`；取消（倒下、暈眩、冰凍、離開形態 `form_left`）；預告格；`EffectSpec.attr_permille`；`LOG_FORMAT` `/80`。玩法 PM 回覆（06 6.30 實作細節 10，`797b6b8a`）：每目標擲命中、反應普攻不蓄力、付不起維持費不噴、吐息不另計預算 → 都照實作。**AI 蓄力中不換形態 → 下一段（3J-4）**。
+- 合併後全量（除 llm）：pytest 8258、vitest 1067、mypy、lint-imports、build、重播（open_plain 種子 11，`build_form_tester_2`）全過。
