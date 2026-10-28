@@ -249,7 +249,7 @@ export const FORM_ARTS: Readonly<Record<string, FormArt>> = {
   giant: { zh: "巨人", size: 1.45, top: 47.6, draw: drawGiant },
   avatar: { zh: "元素化身", size: 1.2, top: 49.6, draw: drawAvatar },
   shadow: { zh: "暗影形態", size: 1.2, top: 45.5, draw: drawShadow },
-  treant: { zh: "樹人", size: 1.3, top: 56.5, draw: drawTreant },
+  treant: { zh: "樹人", size: 1.3, top: 59.5, draw: drawTreant },
 };
 
 /** 形態外觀 id（`FormView.look`，內容檔 `forms.yaml` 的 `look`）→ 畫法 id。 */
