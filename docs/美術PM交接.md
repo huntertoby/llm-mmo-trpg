@@ -37,6 +37,7 @@
    3. 看前端的方法（都不用動正式程式）：
       - **開發樣張頁**（最常用）：`.claude/launch.json` 的 `client-main-dev` 會用主資料夾的 client 開 vite（5181），用無頭 Chrome 拍 `http://localhost:5181/<頁>.html`：`doll-gallery`（紙娃娃四方向、側面頭部裝備⑥、武器⑦）、`status-gallery`（狀態圖示）、`fx-gallery`（戰場效果）、`region-gallery`（雲嶺）。
       - **實戰**：`api-8012`（`trpg serve` 開在 8012）＋`client-live-5182`（vite 設定在 `docs/art/sample/tools/vite.artpm-live.mjs`，/api 轉 8012），用內建瀏覽器開 5182。**不要用 8000（使用者）、8001（本機 LLM）**，也不要關掉不是自己啟動的程序（CLAUDE.md 守則 13）。`.claude/launch.json` 不在 git 裡，換對話後照上面兩個名字重建。
+      - **C 畫風戰場大小**（10-29 起）：`client-check-5183`（`node <主資料夾>/client/node_modules/vite/bin/vite.js --config <worktree>/docs/art/sample/tools/vite.artpm-check.mjs`）＋無頭 Chrome 拍 `http://127.0.0.1:5183/@fs/<worktree>/docs/art/sample/tools/c-field.html`（測試範本 × 4 朝向，1 倍與 3 倍）。
       - **動畫**：網址加 `?anim=0.1`（所有動畫慢 10 倍），內建瀏覽器每張截圖約 1 秒也拍得到途中畫面；播放列另有「極慢」。
       - 主資料夾的 main 偶爾已合併但還沒 push；需要時直接讀 `F:/PythonProject/LLM-MMO-TRPG/` 底下的檔案（只讀）。
    4. 驗收結果寫成 `docs/art/<段落>檢查.md`：結論、要改的清單、實作者問題的決定。commit 後回給開發 PM。
@@ -78,7 +79,7 @@
 
 | 項目 | 何時 | 說明 |
 |---|---|---|
-| C 畫風 C-1／C-2 驗收（形態、種族也改用 C 畫） | 開發做完後 | 照 `C畫風移植需求.md` 檢查清單；7 種形態樣張可視需要補畫 |
+| C 畫風 C-1b／C-2／C-3 驗收（C-1a 已通過，`C-1a檢查.md`；形態、種族也改用 C 畫） | 開發做完後 | 照 `C畫風移植需求.md` 檢查清單；7 種形態樣張可視需要補畫 |
 | 3R-3a、3R-3b 種族外觀驗收 | 開發 PM 做完後（規格 `docs/phases/Phase3R計畫.md`；3R-3a 另含成對武器遠側往前上錯開約 3px 的小修） | 照 `種族與側面移植需求.md` 檢查清單；直接用真側面掛鉤 `SideHooks.race` |
 | 形態 10 種：待移植、再驗收 | 3J 做完後（規格 `docs/phases/Phase3J計畫.md`） | 照 `形態外觀.md` 定稿方向 |
 | 魔導劍 | 已在 3I 實作（`client/src/render/arcaneBlade.test.ts`）；側面版在 3S-3 截圖看過 OK | 正面、背面與裝備圖示還沒正式驗收：開 `doll-gallery` 看一眼，照 `魔導劍.md` 檢查清單 |
