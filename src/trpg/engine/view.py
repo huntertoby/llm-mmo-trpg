@@ -186,6 +186,14 @@ class FormView(_ViewModel):
     """維持費與冷卻的一句話。"""
 
 
+class FormCooldownView(_ViewModel):
+    """冷卻中的形態（Phase 3J-1a）：離開後該形態冷卻，自己的回合開始時 −1。"""
+
+    form_id: str
+    name_zh: str
+    remaining: int
+
+
 class GrantedSkillView(_ViewModel):
     """暫時獲得的技能（Phase 3D-8c，``grant_skill``）：技能與剩餘輪數（在持有者每個回合結束時 −1，
     歸零消失）。只有自己陣營的單位會列出。"""
@@ -398,8 +406,8 @@ class UnitView(_ViewModel):
     form: FormView | None = None
     """目前的形態（Phase 3J-1a）；不在形態中為 ``None``。形態中 ``weapon_*`` 欄位仍是手上的武器
     （紙娃娃與武器技用），普攻改用的天生武器見 ``form.natural_weapon_zh``。"""
-    form_cooldowns: dict[str, int] = {}
-    """冷卻中的形態（形態 ID → 剩餘回合；Phase 3J-1a）。"""
+    form_cooldowns: tuple[FormCooldownView, ...] = ()
+    """冷卻中的形態與剩餘回合（Phase 3J-1a；依形態 ID）。"""
 
 
 class TrapView(_ViewModel):
@@ -895,7 +903,12 @@ def _unit_view(state: BattleState, unit: UnitState, team: Team) -> UnitView:
         gear_totals=_gear_totals(state, unit),
         charges=_charge_views(state, unit),
         form=_form_view(state, unit),
-        form_cooldowns=dict(sorted(unit.form_cooldowns.items())),
+        form_cooldowns=tuple(
+            FormCooldownView(
+                form_id=form_id, name_zh=state.ruleset.form_def(form_id).name_zh, remaining=left
+            )
+            for form_id, left in sorted(unit.form_cooldowns.items())
+        ),
         gear_skills=_gear_skill_views(state, unit) if unit.team is team else (),
         granted_skills=(
             tuple(

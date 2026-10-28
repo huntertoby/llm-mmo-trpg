@@ -1974,6 +1974,50 @@ export interface components {
             direction?: components["schemas"]["Direction"] | null;
         };
         /**
+         * FormCooldownView
+         * @description 冷卻中的形態（Phase 3J-1a）：離開後該形態冷卻，自己的回合開始時 −1。
+         */
+        FormCooldownView: {
+            /** Form Id */
+            form_id: string;
+            /** Name Zh */
+            name_zh: string;
+            /** Remaining */
+            remaining: number;
+        };
+        /**
+         * FormView
+         * @description 單位目前的形態（Phase 3J-1a，6.30；HUD 只做文字顯示，外觀在 3J-5）。文字全部由
+         *     ``content/forms.yaml`` 產生。
+         */
+        FormView: {
+            /** Form Id */
+            form_id: string;
+            /** Name Zh */
+            name_zh: string;
+            /**
+             * Category
+             * @enum {string}
+             */
+            category: "physical" | "mental";
+            /** Look */
+            look: string;
+            /** Element */
+            element?: string | null;
+            /** Natural Weapon Zh */
+            natural_weapon_zh: string;
+            /**
+             * Effects Zh
+             * @default []
+             */
+            effects_zh: string[];
+            /**
+             * Upkeep Zh
+             * @default
+             */
+            upkeep_zh: string;
+        };
+        /**
          * GambleBranchOut
          * @description 賭注一個分支的預覽（Phase 3D-7a）：``kind`` 為 ``win``／``lose``，``permille`` 是這個分支
          *     發生的機率（命中之後）。``multiplier_permille`` 是本次傷害的倍率；``targets`` 是強制這個分支時
@@ -4768,6 +4812,12 @@ export interface components {
              * @default []
              */
             charges: components["schemas"]["ChargeView"][];
+            form?: components["schemas"]["FormView"] | null;
+            /**
+             * Form Cooldowns
+             * @default []
+             */
+            form_cooldowns: components["schemas"]["FormCooldownView"][];
         };
         /** UpcomingEventOut */
         UpcomingEventOut: {
@@ -4835,6 +4885,7 @@ export interface components {
             /** Infusion */
             infusion?: string | null;
             copy_cast?: components["schemas"]["UseSkill-Input"] | null;
+            form_element?: components["schemas"]["Element"] | null;
             followup_target?: components["schemas"]["FollowupTarget"] | null;
         };
         /**
@@ -4881,6 +4932,7 @@ export interface components {
             /** Infusion */
             infusion?: string | null;
             copy_cast?: components["schemas"]["UseSkill-Output"] | null;
+            form_element?: components["schemas"]["Element"] | null;
             followup_target?: components["schemas"]["FollowupTarget"] | null;
         };
         /** ValidationError */

@@ -42,6 +42,23 @@ function statusText(s: StatusView, skills?: SkillNames): string {
   return `${statusName(s.status_id)}${amount}${left}${s.cost_status ? COST_STATUS_NOTE : ""}`;
 }
 
+/** 形態（Phase 3J-1a）：目前形態、天生武器、形態效果、維持費，與冷卻中的形態（只有文字，外觀在 3J-5）。 */
+export function formRows(unit: UnitView): [string, ReactNode][] {
+  const rows: [string, ReactNode][] = [];
+  const form = unit.form;
+  if (form != null) {
+    rows.push(["形態", form.name_zh]);
+    rows.push(["　天生武器", <RuleText key="natural" text={form.natural_weapon_zh} />]);
+    if (form.effects_zh.length > 0) rows.push(["　效果", form.effects_zh.join("、")]);
+    if (form.upkeep_zh !== "") rows.push(["　維持", form.upkeep_zh]);
+  }
+  const cooling = unit.form_cooldowns ?? [];
+  if (cooling.length > 0) {
+    rows.push(["形態冷卻", cooling.map((c) => `${c.name_zh} ${c.remaining} 回合`).join("、")]);
+  }
+  return rows;
+}
+
 export function UnitInfo({ unit, names, heroId, skills, cards, view }: Props) {
   if (unit === null) {
     return <div className="panel unit-info muted">滑過或點選單位以查看資訊</div>;
@@ -75,6 +92,7 @@ export function UnitInfo({ unit, names, heroId, skills, cards, view }: Props) {
   if (infusion !== null) rows.push(["灌注", infusion]);
   if (unit.summon_mode != null) rows.push(["模式", modeText(unit, names)]);
   if (unit.totem_radius !== null) rows.push(["光環", `${unit.totem_radius} 格內的友方在圖騰行動時獲得增益`]);
+  rows.push(...formRows(unit));
   return (
     <div className="panel unit-info">
       <div className="unit-title">

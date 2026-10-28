@@ -4732,6 +4732,94 @@
         "title": "FollowupTarget",
         "description": "複合技能動作段的選取（Phase 3F-3a）：依動作段形狀的 ``targeting`` 給對應欄位——\n``direction``（直線、錐形）、``target_id``／``target_object_id``（單體）；以落點為中心的形狀\n（十字、方陣、環）都不給（``target_pos`` 省略時為落點，給了也必須是落點）。"
       },
+      "FormCooldownView": {
+        "properties": {
+          "form_id": {
+            "type": "string",
+            "title": "Form Id"
+          },
+          "name_zh": {
+            "type": "string",
+            "title": "Name Zh"
+          },
+          "remaining": {
+            "type": "integer",
+            "title": "Remaining"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "form_id",
+          "name_zh",
+          "remaining"
+        ],
+        "title": "FormCooldownView",
+        "description": "冷卻中的形態（Phase 3J-1a）：離開後該形態冷卻，自己的回合開始時 −1。"
+      },
+      "FormView": {
+        "properties": {
+          "form_id": {
+            "type": "string",
+            "title": "Form Id"
+          },
+          "name_zh": {
+            "type": "string",
+            "title": "Name Zh"
+          },
+          "category": {
+            "type": "string",
+            "enum": [
+              "physical",
+              "mental"
+            ],
+            "title": "Category"
+          },
+          "look": {
+            "type": "string",
+            "title": "Look"
+          },
+          "element": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Element"
+          },
+          "natural_weapon_zh": {
+            "type": "string",
+            "title": "Natural Weapon Zh"
+          },
+          "effects_zh": {
+            "items": {
+              "type": "string"
+            },
+            "type": "array",
+            "title": "Effects Zh",
+            "default": []
+          },
+          "upkeep_zh": {
+            "type": "string",
+            "title": "Upkeep Zh",
+            "default": ""
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "form_id",
+          "name_zh",
+          "category",
+          "look",
+          "natural_weapon_zh"
+        ],
+        "title": "FormView",
+        "description": "單位目前的形態（Phase 3J-1a，6.30；HUD 只做文字顯示，外觀在 3J-5）。文字全部由\n``content/forms.yaml`` 產生。"
+      },
       "GambleBranchOut": {
         "properties": {
           "kind": {
@@ -11570,6 +11658,24 @@
             "type": "array",
             "title": "Charges",
             "default": []
+          },
+          "form": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/FormView"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "form_cooldowns": {
+            "items": {
+              "$ref": "#/components/schemas/FormCooldownView"
+            },
+            "type": "array",
+            "title": "Form Cooldowns",
+            "default": []
           }
         },
         "additionalProperties": false,
@@ -11747,6 +11853,16 @@
               }
             ]
           },
+          "form_element": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/Element"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
           "followup_target": {
             "anyOf": [
               {
@@ -11851,6 +11967,16 @@
             "anyOf": [
               {
                 "$ref": "#/components/schemas/UseSkill-Output"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "form_element": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/Element"
               },
               {
                 "type": "null"

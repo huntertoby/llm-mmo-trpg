@@ -56,6 +56,8 @@ from trpg.engine.rules.statuses import (
 )
 from trpg.engine.runner import replay
 from trpg.engine.state import state_from_json, state_to_json
+from trpg.engine.view import project_for
+from trpg.narrative.events import describe_event
 from trpg.narrative.skills import CardOwner, skill_card
 from trpg.shared.errors import IllegalActionError
 from trpg.shared.types import Element, Team
@@ -462,3 +464,20 @@ def test_the_ai_enters_a_form_when_it_has_nothing_better_and_never_cancels() -> 
     assert not any(
         isinstance(s.action, UseSkill) and s.action.skill_id in (*FORM_SKILLS, FURY) for s in ranked
     )
+
+
+def test_unit_view_shows_the_form_the_hand_weapon_and_form_cooldowns() -> None:
+    state = scene()
+    hand = state.units[U1].weapon
+    entered = enter(resolve(enter(state, CAT), EndStance(unit_id=U1)).state, BEAR)
+    view = next(u for u in project_for(entered, Team.ALLY).units if u.id == U1)
+    assert view.form is not None
+    assert (view.form.form_id, view.form.name_zh, view.form.look) == ("bear", "熊", "form_bear")
+    assert view.form.natural_weapon_zh.startswith("熊爪 1d8 近戰")
+    assert "目前 +" in view.form.natural_weapon_zh
+    assert view.form.effects_zh == ("最大 HP +15%", "防禦 +10%", "移動 −1")
+    assert view.form.upkeep_zh.startswith("每回合開始 −5 耐力")
+    assert view.weapon_id == hand.id  # 紙娃娃仍是手上的武器
+    assert [(c.form_id, c.name_zh, c.remaining) for c in view.form_cooldowns] == [("cat", "貓", 2)]
+    log = [describe_event(e, entered) for e in resolve(entered, EndStance(unit_id=U1)).events]
+    assert any(t is not None and "熊形態取消了" in t for t in log)

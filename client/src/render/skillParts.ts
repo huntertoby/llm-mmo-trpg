@@ -368,6 +368,15 @@ const EFFECT: Record<string, readonly [string, Draw]> = {
       arrow(c, -9, -7, 8, -7, 3.5);
     },
   ],
+  // 進入形態（3J-1a）：人形變身（人形＋往右的箭頭＋星）
+  enter_form: [
+    "#c9a0ff",
+    (c) => {
+      person(c, -6, 0, 0.8);
+      arrow(c, -1, 0, 6, 0, 3);
+      dot(c, 8, 0, 2);
+    },
+  ],
   // 清除表面（3-54c）：表面加一條劃掉的斜線
   clear_surface: [
     "#cfe8ff",

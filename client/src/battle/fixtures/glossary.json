@@ -1972,6 +1972,16 @@
    ],
    "status_look": null,
    "rules_zh": []
+  },
+  {
+   "id": "enter_form",
+   "name_zh": "進入形態",
+   "description_zh": "化身為一種形態：普攻改用天生武器，獲得形態效果與進入獎勵；每回合要付維持費，持續到取消。",
+   "tags": [
+    "structural"
+   ],
+   "status_look": null,
+   "rules_zh": []
   }
  ],
  "conditions": [

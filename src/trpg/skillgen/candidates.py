@@ -352,6 +352,8 @@ def _general_pool(library: ContentLibrary, tier: int) -> tuple[SkillDef, ...]:
         skill = library.skills[skill_id]
         if skill.tier != tier or skill.rarity == "legendary":
             continue
+        if skill.form_id is not None:  # 形態技能（3J-1a 只為測試）：身分與技能池在 3J-3
+            continue
         if not derive_keywords(skill, library.keywords).all():
             found.append(skill)
     return tuple(found)
