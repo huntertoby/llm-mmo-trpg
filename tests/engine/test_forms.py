@@ -217,7 +217,7 @@ def _next_own_turn(state: BattleState) -> tuple[BattleState, list[object]]:
 
 @pytest.mark.parametrize(
     ("skill_id", "resource", "amount"),
-    [(BEAR, "stamina", 5), (WEREWOLF, "stamina", 5), (ROC, "mana", 3), (ELEMENTAL, "mana", 3)],
+    [(BEAR, "stamina", 8), (WEREWOLF, "stamina", 8), (ROC, "mana", 3), (ELEMENTAL, "mana", 3)],
 )
 def test_upkeep_is_paid_at_each_turn_start(skill_id: str, resource: str, amount: int) -> None:
     state = enter(scene(), skill_id)
@@ -477,7 +477,7 @@ def test_unit_view_shows_the_form_the_hand_weapon_and_form_cooldowns() -> None:
     assert view.form.natural_weapon_zh.startswith("熊爪 1d8 近戰")
     assert "目前 +" in view.form.natural_weapon_zh
     assert view.form.effects_zh == ("最大 HP +15%", "防禦 +10%", "移動 −1")
-    assert view.form.upkeep_zh.startswith("每回合開始 −5 耐力")
+    assert view.form.upkeep_zh.startswith("每回合開始 −8 耐力")
     assert view.weapon_id == hand.id  # 紙娃娃仍是手上的武器
     assert [(c.form_id, c.name_zh, c.remaining) for c in view.form_cooldowns] == [("cat", "貓", 2)]
     log = [describe_event(e, entered) for e in resolve(entered, EndStance(unit_id=U1)).events]
