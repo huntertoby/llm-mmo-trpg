@@ -22,7 +22,6 @@ _UNCOVERED: dict[str, dict[str, str]] = {
         "armor_broken": "只由斧的 armor_break 武器參數施加（3-24a1），沒有技能施加",
         "entangled": "只由鞭的 entangle 武器參數施加（3I-1），沒有技能施加",
         "rallied": "只由戰意圖騰的光環施加（3-33e1），沒有技能施加",
-        "stoneskin": "石膚（3-54b）：石膚術預算組不出來（3-54d 待決）；由測試技能覆蓋",
         "overdrawn": "只由 cost.overdraft 施加（3-50，竭力一擊），不是效果原語",
     },
     "stack": {},
@@ -87,6 +86,9 @@ _POOL_ONLY = frozenset(
         # 3-54d：大地種子（震地波製造倒地、碎岩擊利用倒地；由池給出）
         "skill_quake_wave",
         "skill_rock_smash",
+        # 3-54e：石膚術、大地崩陷（由池給出）
+        "skill_stoneskin_ward",
+        "skill_earth_collapse",
         # 3I-6：臨時附魔的示範技能（由池給出）
         "skill_fire_enchant",
         "skill_holy_weapon",

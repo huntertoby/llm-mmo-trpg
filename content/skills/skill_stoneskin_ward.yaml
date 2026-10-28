@@ -1,0 +1,25 @@
+# 大地種子（Phase 3-54e，06 6.33 #64、#65；數值為初值，未經模擬）：替自己或一名友方披上石膚，並附一個小護盾（石膚 3 點＋護盾骰補到預算 70～100%）。
+id: skill_stoneskin_ward
+schema_version: 1
+name_zh: 石膚術
+tier: 1
+rank: 1
+rarity: common
+kind: active
+skeleton: aura
+category: spell
+weapon_req: focus
+ap_cost: 1
+scaling_attr: wis
+shape: {type: single, range: 3}
+effects:
+  - {type: apply_status, status: stoneskin, duration: 2, affects: allies}
+  - {type: shield, dice: 1d6, affects: allies}
+condition: null
+cost: {mana: 4, cooldown: 2}
+tags: [earth, spell, buff, shield]
+element: earth
+narrative:
+  concept: 讓皮膚泛起岩石的質地，擋得住刀劍，也讓人走得慢些
+  cast_flavor: 你的手掌按上對方的肩頭，灰褐的紋理順著皮膚蔓延開來，凝成一層厚實的石殼
+provenance: {origin: builtin, owner_id: null, created_by: null, parents: [], bound: true, tradeable: false}

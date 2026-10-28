@@ -9,12 +9,11 @@ kind: active
 skeleton: control
 category: spell
 weapon_req: focus
-ap_cost: 1
+ap_cost: 2
 scaling_attr: int
 shape: {type: cross, range: 4}
 effects:
   - {type: lower_terrain}
-  - {type: apply_status, status: slow, duration: 1, affects: enemies}
 condition: null
 cost: {mana: 4, cooldown: 2}
 tags: [earth, spell, terrain]
