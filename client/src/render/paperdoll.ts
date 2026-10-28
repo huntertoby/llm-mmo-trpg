@@ -573,7 +573,7 @@ export function drawFigure(ctx: Ctx, spec: DollSpec, facing: Facing, ground = tr
 }
 
 /** 倒地時橫躺的位置（旋轉前的平移量）。 */
-const DOWNED_DX = 20;
+const DOWNED_DX = 27;
 const DOWNED_DY = 11;
 
 /** 倒地姿勢：整個小人橫躺（頭朝右），腳底仍在原點附近。 */
