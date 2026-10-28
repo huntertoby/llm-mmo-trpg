@@ -101,3 +101,16 @@
 - **C-3**（報告 `PhaseC-3報告.md`）：17 種召喚物 C 畫法；美術 PM 驗收通過（`docs/art/C-3檢查.md`），**C 畫風全部完成**。
 - **3J-2**（報告 `Phase3J-2報告.md`）：`StatusInstance.direction`、`start_directed_charge`；龍 `natural_weapon.charge`；取消（倒下、暈眩、冰凍、離開形態 `form_left`）；預告格；`EffectSpec.attr_permille`；`LOG_FORMAT` `/80`。玩法 PM 回覆（06 6.30 實作細節 10，`797b6b8a`）：每目標擲命中、反應普攻不蓄力、付不起維持費不噴、吐息不另計預算 → 都照實作。**AI 蓄力中不換形態 → 下一段（3J-4）**。
 - 合併後全量（除 llm）：pytest 8258、vitest 1067、mypy、lint-imports、build、重播（open_plain 種子 11，`build_form_tester_2`）全過。
+
+### 4.10 3J-3 驗收（2026-10-29，開發 PM）
+- 報告 `Phase3J-3報告.md`。第 12 個關鍵字 `form`（製造 `enter_form`、利用 `in_form` 與化形專精）；條件 `in_form`（`form_category`）；化形專精 `skill_form_mastery`（修正 `form_upkeep_permille`、`form_entry_permille`、套用對象 `weapon_skills`，85.7%）；`KeywordDef.composable`（形態 false，組合器不組）；`start_hidden: true`＋池測試暫時標記；技能 297。與 3J-2 撞 `LOG_FORMAT` → **`/81`**。合併後全量（除 llm）：pytest 8303、vitest 1067、mypy、lint-imports、build、重播（`build_form_mastery`）全過。
+- 待決：化形專精預算初值、×1.5 不放大隱蔽回合數、武器技 −20% 不含普攻與藉機攻擊 → 接受（平衡 B 類）；組合器不產生形態技能 → 玩法 PM 同意。
+
+### 4.11 3J-4｜形態內容與形態池（sonnet；約 0.6 段；玩法 PM 名單 06 6.30「形態池名單」`790fff73`）
+1. 10 招 `skill_form_*` 改成正式的「化身為〇」（名稱、敘事、階級：1 階熊、貓、巨鵰、狼人；2 階惡魔、巨人、元素化身、暗影形態、樹人、龍）；照 06 6.30 實作細節（法術類別、`weapon_req` 不限、費用只有 1 AP 加維持費）。進通用／形態池照關鍵字規則；開發起始包與靶場可試。
+2. 主動利用者 4 招（條件 `in_form`，照 06 6.30 名單）：化形撲擊（1 階）、野性怒吼（1 階）、化形回春（1 階）、解形爆發（2 階，先解除形態〔照常冷卻、算代價折抵〕再對周圍 1 格造成較高傷害；**現有原語做不到「解除形態」就先不做，寫進報告**）。數值照預算 70～100%。
+3. 形態池補齊後：刪 `form` 的 `start_hidden`、拿掉 3J-3 的暫時測試標記（`EXTRA_KEYWORDS`、`short == {"form": 0}`、roguelite 兩處例外），改成和其他池一樣的檢查。
+4. **AI 蓄力中不換形態**（3J-2 待決）：龍蓄力中，AI 不選其他形態的進入、不取消形態。表格測試。
+5. 模擬只量：`trpg sim keywords` 或同等小樣本，形態池的 build 能跑完（摘要寫進報告，不調數值）。
+6. 行為一致測試：4 招利用者的卡片數字＝實戰（在形態中／不在形態中）；10 招進入技能的卡片＝實戰。
+7. 驗收照 4.1 第 9 點；報告 `Phase3J-4報告.md`。
