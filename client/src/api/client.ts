@@ -35,6 +35,7 @@ import type {
   WorkshopArena,
   WorkshopCheck,
   WorkshopExport,
+  WorkshopWeapon,
   WorkshopRandom,
   WorkshopRandomRequest,
 } from "./types";
@@ -122,6 +123,7 @@ export const api = {
   /** 技能工坊（Phase 3F-1）：skill 是組到一半（或完整）的技能定義。 */
   workshopArena: () => request<WorkshopArena>("GET", "/workshop/arena"),
   /** `weapon`（選填）：主角目前手上武器的 ID，武器技的縮放屬性會顯示手上武器（Phase 3-48b）。 */
+  workshopWeapons: () => request<WorkshopWeapon[]>("GET", "/workshop/weapons"),
   workshopOptions: (skill: Record<string, unknown>, weapon?: string) =>
     request<DraftOptions>("POST", "/workshop/options", weapon === undefined ? { skill } : { skill, weapon }),
   workshopCheck: (skill: Record<string, unknown>, weapon?: string) =>

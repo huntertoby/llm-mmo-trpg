@@ -1436,6 +1436,32 @@
         }
       }
     },
+    "/api/workshop/weapons": {
+      "get": {
+        "tags": [
+          "workshop"
+        ],
+        "summary": "Get Weapons",
+        "description": "預覽武器下拉的選項（3-54d）：全部玩家用的武器（不含召喚物專用），依資料檔順序。",
+        "operationId": "get_weapons_api_workshop_weapons_get",
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "items": {
+                    "$ref": "#/components/schemas/WorkshopWeapon"
+                  },
+                  "type": "array",
+                  "title": "Response Get Weapons Api Workshop Weapons Get"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
     "/api/workshop/options": {
       "post": {
         "tags": [
@@ -9208,6 +9234,28 @@
             "type": "array",
             "title": "Tags"
           },
+          "element": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Element"
+          },
+          "element_id": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Element Id"
+          },
           "concept": {
             "type": "string",
             "title": "Concept"
@@ -12377,6 +12425,36 @@
         ],
         "title": "WorkshopRandomRequest",
         "description": "隨機組合器（``trpg skills random`` 同一個函式）：同種子同參數結果一致。"
+      },
+      "WorkshopWeapon": {
+        "properties": {
+          "id": {
+            "type": "string",
+            "title": "Id"
+          },
+          "name_zh": {
+            "type": "string",
+            "title": "Name Zh"
+          },
+          "weapon_class": {
+            "type": "string",
+            "title": "Weapon Class"
+          },
+          "class_zh": {
+            "type": "string",
+            "title": "Class Zh"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "id",
+          "name_zh",
+          "weapon_class",
+          "class_zh"
+        ],
+        "title": "WorkshopWeapon",
+        "description": "預覽武器下拉的一個選項（Phase 3-54d，06 6.10）：玩家手上會出現的武器（不含召喚物專用）。"
       },
       "XY": {
         "prefixItems": [

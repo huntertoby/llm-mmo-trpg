@@ -117,6 +117,10 @@ _OWN_CHECK = (SWAP, SWAP_ANY, TELEPORT_TARGET, ZONE, REVEAL, DETONATE_RUNES)
 敵人；引爆符文（Phase 3-23）也自動命中。"""
 
 
+_NO_ALLY_ROLL = "shockwave"
+"""震波（Phase 3-54d，06 6.33 #64）：對敵方先擲命中，對友方（``affects: all`` 也一樣）不擲命中。"""
+
+
 class Cast:
     """一次施放的工作狀態（命中結果、格擋倍率與影響範圍）。
 
@@ -215,7 +219,9 @@ class Cast:
         rolling = [e for e in self.effects if e.type not in _OWN_CHECK]  # 位移他人自己擲抵抗
         if any(e.affects in ("enemies", "all") for e in rolling):
             rolled += self.enemies
-        if any(e.affects == "all" and not self._splits(e) for e in rolling):
+        if any(
+            e.affects == "all" and not self._splits(e) and e.type != _NO_ALLY_ROLL for e in rolling
+        ):
             rolled += [u for u in self.allies if u is not self.caster]  # 敵我不分也不打到自己
         for unit in sorted(rolled, key=lambda u: u.id):
             self.roll_one(unit)

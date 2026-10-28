@@ -220,9 +220,9 @@ def contest_label(skill: SkillDef, lib: ContentLibrary | None = None) -> str:
 
 def scaling_detail(skill: SkillDef, weapon: WeaponDef | None = None) -> str:
     """縮放屬性的完整說明：雙屬性為「力量 50%＋智力 50%」。武器技（3H-6）看手上武器：有武器時寫
-    武器的屬性（例「敏捷／力量（取較高）」），沒有時寫「武器的屬性」。"""
+    武器的屬性（例「敏捷／力量（取較高）」），沒有時寫「手上武器的屬性」。"""
     if skill.category == "weapon":
-        base = "武器的屬性" if weapon is None else weapon.scaling_names_zh()
+        base = "手上武器的屬性" if weapon is None else weapon.scaling_names_zh()
         if skill.secondary_scaling_attr is None:
             return base
         return f"{base}＋{skill.secondary_scaling_attr.display_name}（取平均）"

@@ -73,6 +73,7 @@ export type ArenaOpponents = Schemas["ArenaOpponents"];
 export type WorkshopRandom = Schemas["WorkshopRandom"];
 export type WorkshopRandomRequest = Schemas["WorkshopRandomRequest"];
 export type WorkshopExport = Schemas["WorkshopExport"];
+export type WorkshopWeapon = Schemas["WorkshopWeapon"];
 export type SkillRarity = Schemas["SkillRarity"];
 export type Glossary = Schemas["Glossary"];
 export type GlossaryEntry = Schemas["GlossaryEntry"];

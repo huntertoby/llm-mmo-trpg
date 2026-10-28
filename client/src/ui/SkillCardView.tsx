@@ -90,6 +90,11 @@ export function SkillCardView({ card, compact = false, activeVariantId = null, h
             {line}
           </div>
         ))}
+      {!compact && card.element != null && (
+        <div className="small" data-testid="skill-element" data-element={card.element_id ?? undefined}>
+          技能元素：{card.element}
+        </div>
+      )}
       {!compact && <div className="small muted">縮放：{card.scaling}</div>}
       {card.mastery !== null && !compact && <div className="small">專精：{card.mastery}</div>}
       {card.concept !== "" && !compact && !hideConcept && <div className="small muted">{card.concept}</div>}

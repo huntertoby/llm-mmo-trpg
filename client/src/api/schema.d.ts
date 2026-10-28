@@ -576,6 +576,26 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/workshop/weapons": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Get Weapons
+         * @description 預覽武器下拉的選項（3-54d）：全部玩家用的武器（不含召喚物專用），依資料檔順序。
+         */
+        get: operations["get_weapons_api_workshop_weapons_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/workshop/options": {
         parameters: {
             query?: never;
@@ -3849,6 +3869,10 @@ export interface components {
             mastery: string | null;
             /** Tags */
             tags: string[];
+            /** Element */
+            element?: string | null;
+            /** Element Id */
+            element_id?: string | null;
             /** Concept */
             concept: string;
             /** Cast Flavor */
@@ -5089,6 +5113,20 @@ export interface components {
             /** Skeleton */
             skeleton?: string | null;
         };
+        /**
+         * WorkshopWeapon
+         * @description 預覽武器下拉的一個選項（Phase 3-54d，06 6.10）：玩家手上會出現的武器（不含召喚物專用）。
+         */
+        WorkshopWeapon: {
+            /** Id */
+            id: string;
+            /** Name Zh */
+            name_zh: string;
+            /** Weapon Class */
+            weapon_class: string;
+            /** Class Zh */
+            class_zh: string;
+        };
         XY: [
             number,
             number
@@ -6026,6 +6064,26 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["WorkshopArena"];
+                };
+            };
+        };
+    };
+    get_weapons_api_workshop_weapons_get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["WorkshopWeapon"][];
                 };
             };
         };

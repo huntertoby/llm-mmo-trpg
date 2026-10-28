@@ -33,7 +33,8 @@ def test_every_builtin_skill_scales_with_an_allowed_attribute(skill: SkillDef) -
 
 
 def test_the_builtin_table_covers_every_skill() -> None:
-    assert len(BUILTIN) == 268  # 225 ＋ 3I-5 的 29 招武器親和與招牌技 ＋ 3-52 的 14 招層數示範技能
+    # 268 ＝ 225 ＋ 3I-5 的 29 招親和與招牌技 ＋ 3-52 的 14 招層數示範；3-54d 加大地種子 2 招
+    assert len(BUILTIN) == 270
     sources = {LIB.scaling_basis(s).source for s in BUILTIN if s.category == "spell"}
     assert sources == {"effect", "tags", "override", "body"}
 

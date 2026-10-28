@@ -3693,3 +3693,16 @@ button.selected {
   display: flex;
   gap: 8px;
 }
+
+.ws-preview-weapon {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  flex-wrap: wrap;
+  margin-bottom: 6px;
+}
+
+.ws-preview-weapon select {
+  min-width: 0;
+  max-width: 100%;
+}

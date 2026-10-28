@@ -2386,7 +2386,8 @@ class SkillDef(ContentModel):
     都是 ``mastery``）；只有修正型被動可以填。檢查在 :func:`skill_slot_problems`。"""
     tags: tuple[str, ...] = ()
     element: Element | None = None
-    """技能元素（主題元素，Phase 3-54d，06 6.33「大地元素的判定與限制」）：填了就以它為準，不論有沒有
+    """技能元素（主題元素，Phase 3-54d，06 6.33「大地元素的判定與限制」）：填了就以它為準，不論有沒
+    有
     傷害效果（可以做出沒有傷害、只有隆起或下陷的大地技能）；省略時沿用 ``tags`` 裡的元素名稱
     （手寫技能的主題標籤、組合器的主題元素）。見 :func:`skill_elements`。"""
     narrative: NarrativeDef = Field(default_factory=NarrativeDef)
@@ -4031,7 +4032,8 @@ def on_hit_carrier(skill: SkillDef, effects: tuple[EffectSpec, ...]) -> SkillDef
 
 
 def skill_elements(skill: SkillDef) -> frozenset[Element]:
-    """技能的元素（Phase 3-54d，06 6.33「大地元素的判定與限制」）：技能元素欄（``element``）有填就是它；
+    """技能的元素（Phase 3-54d，06 6.33「大地元素的判定與限制」）：技能元素欄（``element``）有填就是
+    它；
     沒填時沿用 ``tags`` 裡的元素名稱（組合器的主題元素、手寫技能的主題標籤），有多個元素標籤時取
     **第一個非物理的**（保守：只算一個元素）。物理不算（物理是沒有元素）。**效果自己寫的元素不算**：
     一段大地傷害不會讓技能變成大地技能。"""

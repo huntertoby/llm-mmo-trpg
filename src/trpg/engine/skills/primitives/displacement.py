@@ -162,11 +162,26 @@ SHOCKWAVE = "shockwave"
 """震波原語 ID（Phase 3-54b，06 6.33，#58）。"""
 
 
+def _shockwave_targets(cast: Cast, effect: ResolvedEffect, spec: EffectSpec) -> list[UnitState]:
+    """震波的對象（Phase 3-54d）：敵方要先命中（未命中的不倒地）；友方不擲命中、一律受影響
+    （``affects: all`` 時不含施放者自己）。依單位 ID 排序。"""
+    chosen: list[UnitState] = []
+    if effect.affects in ("enemies", "all"):
+        chosen += [u for u in cast.enemies if cast.is_hit(u)]
+    if effect.affects == "allies":
+        chosen += list(cast.allies)
+    elif effect.affects == "all":
+        chosen += [u for u in cast.allies if u is not cast.caster]
+    alive = (u for u in chosen if u.alive and cast.holds(spec.condition, Subject(u, u.xy)))
+    return sorted(alive, key=lambda u: u.id)
+
+
 def shockwave(cast: Cast, effect: ResolvedEffect, spec: EffectSpec) -> list[EffectBase]:
-    """震波（Phase 3-54b）：影響格（直線）上的對象單位直接倒地，不擲對抗；帶 ``flying`` 標籤
-    （會飛）的單位不受影響（``effect_fizzled``，原因 ``shockwave_flying``）；已經倒地的略過。"""
+    """震波（Phase 3-54b／3-54d）：影響格（直線）上的對象單位倒地，不擲對抗；敵方先擲命中（未命中
+    不倒地），友方不擲命中；帶 ``flying`` 標籤（會飛）的單位不受影響（``effect_fizzled``，原因
+    ``shockwave_flying``）；已經倒地的略過。"""
     batch: list[EffectBase] = []
-    for unit in cast.targets(effect.affects, spec.condition):
+    for unit in _shockwave_targets(cast, effect, spec):
         if unit.has_status(PRONE):
             continue
         if is_flying(unit):
