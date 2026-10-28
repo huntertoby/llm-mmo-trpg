@@ -77,7 +77,7 @@ window.StoryDoll = (() => {
   // 正面：從腰側往畫面右邊伸出；側面：往身後（西）伸出。畫在身體之前（身體會蓋住根部）。
   function tail(ctx, look, view) {
     const k = look.tail; if (!k) return;
-    const s = view === "front" ? 1 : -1;
+    const s = view === "side" ? -1 : 1;
     const P = (pts) => pts.map(([x, y]) => [x * s, y]);
     if (k === "fox") {
       const c = look.tailColor ?? look.hairColor ?? "#d8762a";
@@ -105,7 +105,7 @@ window.StoryDoll = (() => {
     const { look, gear } = unit, pants = look.pants ?? "#3c3c52", boot = colorOf(gear.feet, "#6a4224");
     const heavy = gear.body?.kind === "plate";
     const greave = heavy ? MAT.steel : boot;
-    if (view === "front") {
+    if (view !== "side") {
       for (const sx of [-1, 1]) {
         ink(ctx, `leg-${sx}`, [[sx * 0.8, -15], [sx * 4.6, -15], [sx * 4.4, -6], [sx * 1, -6]], heavy ? MAT.iron : pants);
         ink(ctx, `boot-${sx}`, [[sx * 0.6, heavy ? -9 : -7], [sx * 4.8, heavy ? -9 : -7], [sx * 5.6, -0.8], [sx * 0.4, -0.4]], greave);
@@ -125,13 +125,15 @@ window.StoryDoll = (() => {
     front: [[-7, -33], [7, -33], [6, -23], [10, -1.6], [0, -0.6], [-10, -1.6], [-6, -23]],
     side: [[-4, -33], [3.4, -33], [5, -27], [4, -22], [7.4, -1.6], [-1, -0.8], [-7.6, -1.6], [-4.2, -22]],
   };
+  TORSO.back = TORSO.front; ROBE.back = ROBE.front;
   function body(ctx, unit, view) {
-    const it = unit.gear.body, kind = it?.kind ?? "shirt", F = view === "front";
+    const it = unit.gear.body, kind = it?.kind ?? "shirt", F = view !== "side", BK = view === "back";
     const c = colorOf(it, "#4f7fbf");
     if (kind === "robe") {
       ink(ctx, `robe-${view}`, ROBE[view], c);
       const trim = it.trim ?? MAT.gold;
-      if (F) {
+      if (BK) stroke(ctx, "robe-hem-b", [[-9.6, -3.2], [0, -2.2], [9.6, -3.2]], 1.2, trim);
+      else if (F) {
         stroke(ctx, "robe-mid", [[0, -31], [0, -1.4]], 1.4, trim); stroke(ctx, "robe-mid2", [[0, -31], [0, -1.4]], 0.4);
         stroke(ctx, "robe-hem", [[-9.6, -3.2], [0, -2.2], [9.6, -3.2]], 1.2, trim);
       } else {
@@ -142,8 +144,8 @@ window.StoryDoll = (() => {
     }
     ink(ctx, `torso-${view}`, TORSO[view], kind === "plate" ? MAT.steel : kind === "mail" ? MAT.iron : c);
     if (kind === "leather") {
-      stroke(ctx, `stitch-${view}`, F ? [[-3.6, -31], [-2.4, -24]] : [[0.6, -31], [1.6, -24]], 0.4);
-      if (F) stroke(ctx, "stitch2", [[3.6, -31], [2.4, -24]], 0.4);
+      if (!BK) stroke(ctx, `stitch-${view}`, F ? [[-3.6, -31], [-2.4, -24]] : [[0.6, -31], [1.6, -24]], 0.4);
+      if (F && !BK) stroke(ctx, "stitch2", [[3.6, -31], [2.4, -24]], 0.4);
     }
     if (kind === "plate") {
       if (F) {
@@ -154,17 +156,17 @@ window.StoryDoll = (() => {
         ink(ctx, "pauldron-s", ellPts(-0.4, -31.4, 3.8, 2.9, 12), MAT.steel, { w: 0.7 });
       }
     }
-    if (kind === "shirt" && F) stroke(ctx, "collar", [[-2.4, -33], [0, -30.4], [2.4, -33]], 0.5);
+    if (kind === "shirt" && F && !BK) stroke(ctx, "collar", [[-2.4, -33], [0, -30.4], [2.4, -33]], 0.5);
     // 腰帶
     const bx = F ? 6.2 : 4.3;
     stroke(ctx, `belt-${view}`, [[F ? -bx : -4.2, -23], [bx, -23]], 1.7, INK);
     stroke(ctx, `belt2-${view}`, [[F ? -bx : -4.2, -23], [bx, -23]], 0.9, "#6b4426");
-    if (F) { ctx.fillStyle = MAT.gold; ctx.fillRect(-1.2, -24.3, 2.4, 2.6); stroke(ctx, "buckle", [[-1.2, -24.3], [1.2, -24.3], [1.2, -21.7], [-1.2, -21.7], [-1.2, -24.3]], 0.4); }
+    if (F && !BK) { ctx.fillStyle = MAT.gold; ctx.fillRect(-1.2, -24.3, 2.4, 2.6); stroke(ctx, "buckle", [[-1.2, -24.3], [1.2, -24.3], [1.2, -21.7], [-1.2, -21.7], [-1.2, -24.3]], 0.4); }
   }
   function cloak(ctx, unit, view) {
     const it = unit.gear.cloak; if (!it) return;
     const c = colorOf(it, "#a83030");
-    if (view === "front") ink(ctx, "cloak-f", [[-8, -33], [8, -33], [11, -8], [5, -6], [0, -7.5], [-5, -6], [-11, -8]], c);
+    if (view !== "side") ink(ctx, `cloak-${view}`, [[-8, -33], [8, -33], [11, -8], [5, -6], [0, -7.5], [-5, -6], [-11, -8]], c);
     else ink(ctx, "cloak-s", [[-3, -33], [1, -33], [-4, -9], [-10, -6.5], [-13, -9], [-8, -22]], c);
   }
 
@@ -172,7 +174,7 @@ window.StoryDoll = (() => {
   // 主手：正面在畫面左手 (-9,-23.2)；側面在近側手 (4.6,-24)。
   function weapon(ctx, it, key, view, hand) {
     if (!it) return;
-    const [hx, hy] = hand, F = view === "front";
+    const [hx, hy] = hand, F = view !== "side";
     const metal = colorOf(it.material === "wood" ? null : it, MAT.steel);
     ctx.save(); ctx.translate(hx, hy);
     // 正面武器豎起；側面往前上斜（劍、斧、匕首）或直立（法杖、弓）
@@ -228,8 +230,8 @@ window.StoryDoll = (() => {
       if (behind) return;
       ctx.save(); ctx.scale(-1, 1); weapon(ctx, it, "off", view, [-9, -23.2]); ctx.restore();
     } else if (behind) {
-      weapon(ctx, it, "off-s", view, [2.6, -27]);
-      dot(ctx, 2.6, -27, 1.7, 1.7, dark(SKIN_LINE({}), 0.2));
+      weapon(ctx, it, "off-s", view, [5.6, -27]);
+      dot(ctx, 5.6, -27, 1.7, 1.7, dark(SKIN_LINE({}), 0.2));
     }
   }
 
@@ -243,7 +245,7 @@ window.StoryDoll = (() => {
   }
   function ears(ctx, look, view, stage) {
     const k = look.ears; if (!k) return;
-    const c = look.skin ?? "#eab48a", F = view === "front";
+    const c = look.skin ?? "#eab48a", F = view !== "side";
     if (k === "pointed" && stage === "under") {
       if (F) for (const sx of [-1, 1]) ink(ctx, `ear-p-${sx}`, [[sx * 8, -44], [sx * 15.6, -48.6], [sx * 9, -39.6]], c, { w: 0.7 });
     }
@@ -296,7 +298,7 @@ window.StoryDoll = (() => {
   }
   function horns(ctx, look, view) {
     const k = look.horns; if (!k) return;
-    const c = look.hornColor ?? "#e8d8b8", F = view === "front";
+    const c = look.hornColor ?? "#e8d8b8", F = view !== "side";
     const one = (key, s, far) => {
       const P = (pts) => pts.map(([x, y]) => [x * s, y]);
       const col = far ? dark(c, 0.25) : c;
@@ -311,19 +313,20 @@ window.StoryDoll = (() => {
   const COVERS = { helmet: { top: true, side: true }, hood: { top: true, side: true }, wizard_hat: { top: true } };
   function headgear(ctx, it, view) {
     if (!it) return;
-    const F = view === "front", c = colorOf(it, "#7a5a3a");
+    const F = view !== "side", BK = view === "back", c = colorOf(it, "#7a5a3a");
     if (it.kind === "helmet") {
       const m = colorOf(it, MAT.steel);
       if (F) {
         ink(ctx, "helm", [[-10, -42], [-9.6, -49], [-4.6, -53.6], [4.6, -53.6], [9.6, -49], [10, -42], [10.4, -40], [-10.4, -40]], m);
         stroke(ctx, "helm-band", [[-10, -44.6], [10, -44.6]], 0.6);
-        ink(ctx, "helm-nose", [[-0.9, -45], [0.9, -45], [0.7, -38.6], [-0.7, -38.6]], m, { shade: false, w: 0.5 });
+        if (!BK) ink(ctx, "helm-nose", [[-0.9, -45], [0.9, -45], [0.7, -38.6], [-0.7, -38.6]], m, { shade: false, w: 0.5 });
       } else {
         ink(ctx, "helm-s", [[-9.8, -36], [-10, -47], [-4.6, -53.6], [3.6, -53.4], [8.8, -48.6], [9.6, -44], [6, -44.4], [2, -43], [0.4, -38.6], [-4, -36.4]], m);
         stroke(ctx, "helm-band-s", [[-9.8, -44.4], [9.4, -44.6]], 0.6);
       }
     } else if (it.kind === "hood") {
-      if (F) ink(ctx, "hood", [[-11, -36], [-11.4, -48], [-5, -55], [5, -55], [11.4, -48], [11, -36], [7.6, -36.6], [8.4, -45], [0, -48], [-8.4, -45], [-7.6, -36.6]], c);
+      if (BK) ink(ctx, "hood-b", [[-11, -36], [-11.4, -48], [-5, -55], [5, -55], [11.4, -48], [11, -36], [6, -33], [-6, -33]], c);
+      else if (F) ink(ctx, "hood", [[-11, -36], [-11.4, -48], [-5, -55], [5, -55], [11.4, -48], [11, -36], [7.6, -36.6], [8.4, -45], [0, -48], [-8.4, -45], [-7.6, -36.6]], c);
       else ink(ctx, "hood-s", [[-11, -33], [-11.4, -46], [-5, -55], [4, -54.4], [9.6, -48.6], [9.4, -45], [4, -46.6], [0.6, -42], [-1.6, -36], [-6, -33.4]], c);
     } else if (it.kind === "wizard_hat") {
       if (F) {
@@ -344,8 +347,37 @@ window.StoryDoll = (() => {
     ink(ctx, `arm-${sx}`, sx < 0 ? [[-7, -31.5], [-4.8, -31], [-7.4, -22.5], [-9.8, -23.5]] : [[7, -31.5], [4.8, -31], [7.4, -22.5], [9.8, -23.5]], c);
   }
   function hand(ctx, look, x, y, key) { ink(ctx, key, ellPts(x, y, 1.8, 1.8, 10), look.skin ?? "#eab48a", { shade: false, w: 0.6 }); }
+  // 背面（朝北）：左右對調（主手在畫面右），看不到臉；披風、尾巴蓋在身體上，武器在身體後面
+  function drawBack(ctx, unit) {
+    const look = unit.look ?? {}, gear = unit.gear ?? {}, V = "back";
+    const cover = COVERS[gear.head?.kind] ?? (gear.head ? { top: true } : {});
+    ctx.scale(-1, 1);
+    weapon(ctx, gear.main_hand, "main-b", V, [-9, -23.2]);
+    const off = gear.off_hand, shield = off && off.kind.startsWith("shield");
+    if (off && !shield) { ctx.save(); ctx.scale(-1, 1); weapon(ctx, off, "off-b", V, [-9, -23.2]); ctx.restore(); }
+    legs(ctx, unit, V);
+    body(ctx, unit, V);
+    armFront(ctx, unit, -1); armFront(ctx, unit, 1);
+    hand(ctx, look, -9, -23.2, "hand-bl"); hand(ctx, look, 9, -23.2, "hand-br");
+    cloak(ctx, unit, V);
+    tail(ctx, look, V);
+    if (shield) {
+      ink(ctx, "shield-b", ellPts(8.6, -21, 6.6, 7, 20), MAT.wood, { w: 1 });
+      stroke(ctx, "shield-strap", [[5, -24], [12.2, -18]], 1.2, "#5a3a1e");
+    }
+    if (!cover.side) ears(ctx, look, V, "under");
+    ink(ctx, "head-b", ellPts(0, -42, 9.2, 8.6), look.skin ?? "#eab48a", { w: 1 });
+    if (look.hair && look.hair !== "none") { // 背面：帽子只蓋頭頂，後腦頭髮照畫
+      const c = look.hairColor ?? "#6a3a1e";
+      ink(ctx, "hair-b", look.hair === "long" ? [[-9.8, -44], [-6, -51.8], [6, -51.8], [9.8, -44], [9.6, -30], [0, -28.6], [-9.6, -30]] : [[-9.6, -42], [-6, -51.8], [6, -51.8], [9.6, -42], [8, -36], [0, -34.4], [-8, -36]], c);
+    }
+    if (!cover.top) ears(ctx, look, V, "top");
+    headgear(ctx, gear.head, V);
+    horns(ctx, look, V);
+  }
   function draw(ctx, unit, view) {
     const look = unit.look ?? {}, gear = unit.gear ?? {}, F = view === "front";
+    if (view === "back") { SHADE = -1; ctx.save(); if (look.build === "stout") ctx.scale(1.12, 0.88); else if (look.build === "tall") ctx.scale(0.96, 1.1); shadow(ctx); drawBack(ctx, unit); ctx.restore(); return; }
     SHADE = F ? 1 : -1;
     ctx.save();
     if (look.build === "stout") ctx.scale(1.12, 0.88); else if (look.build === "tall") ctx.scale(0.96, 1.1);
