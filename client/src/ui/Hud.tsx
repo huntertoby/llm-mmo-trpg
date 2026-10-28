@@ -18,6 +18,7 @@ import { zoneLine, zoneNextText, zonesOf } from "../battle/zones";
 import { Hint } from "./Hint";
 import { StackTip } from "./StackTip";
 import { actionCardText } from "../battle/actionInfo";
+import { passiveLine, raceHudText } from "../battle/race";
 
 interface Props {
   view: BattleView;
@@ -86,6 +87,8 @@ export function compactHudText(view: BattleView, hero: UnitView): string {
     `腳下 ${surfaceUnder(view, hero)}`,
   ];
   if (stacks.length > 0) parts.push(`層數 ${stacks.map(([k, n]) => `${stackName(k)}×${n}`).join("、")}`);
+  const race = raceHudText(hero);
+  if (race !== null) parts.push(race);
   return parts.join("｜");
 }
 
@@ -158,6 +161,19 @@ export function Hud({ view, hero, skills, cards, compact = false }: Props) {
           </span>
         </Hint>
       </div>
+      {hero.race != null && (
+        <div className="hud-line hud-race" aria-label="種族">
+          <span className="muted">種族：</span>
+          <Hint text={passiveLine(hero.race)}>
+            <span className="has-hint">{hero.race.name_zh}</span>
+          </Hint>
+          <span className="muted small">
+            {" "}
+            ・{hero.race.skill_name_zh}剩 {hero.race.skill_uses_left}／{hero.race.skill_uses_max} 次・被動「{hero.race.passive_name_zh}」
+            {hero.race.passive_active ? "（目前有作用）" : ""}
+          </span>
+        </div>
+      )}
       <div className="hud-line">
         <span className="muted">腳下表面：</span>
         <SurfaceUnder view={view} hero={hero} />

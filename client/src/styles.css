@@ -549,6 +549,18 @@ button.selected {
   flex: 0 0 auto;
 }
 
+/* 種族技（Phase 3R-2）：不佔技能欄，另列一組；用金色邊框和一般技能區分 */
+.race-group {
+  display: flex;
+  gap: 4px;
+  padding-left: 4px;
+  border-left: 2px solid #c9a24a;
+}
+
+.skill-button.race-button {
+  border-color: #c9a24a;
+}
+
 .skill-button {
   min-width: 78px;
   max-width: 190px;

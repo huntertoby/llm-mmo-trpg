@@ -763,7 +763,7 @@ def load_library(  # noqa: PLR0915
             raise ContentError(root / "maps" / f"{map_id}.yaml", "；".join(problems))
 
     map_warnings = _apply_map_themes(maps, regions)
-    _check_unit_races(root, units, races)
+    _check_unit_races(root, {**units, **{b.id: b.hero for b in builds.builds}}, races)
 
     problems = roguelite_problems(roguelite, maps, units, core.tier_budget)
     if problems:

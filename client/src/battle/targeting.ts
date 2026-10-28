@@ -67,6 +67,7 @@ export type ModeKind =
   | "vault"
   | "reload"
   | "charge"
+  | "race"
   | "end_stance"
   | "stand";
 
@@ -115,12 +116,12 @@ function addPair(t: TargetSet, kind: PairKind, first: string, second: string, ac
 }
 
 /** 兩段選取的動作登記到它的第 1 段與第 2 段；不是兩段選取時回傳 `false`。 */
-function addTwoStage(t: TargetSet, action: Extract<Action, { type: "use_skill" }>): boolean {
+function addTwoStage(t: TargetSet, action: Extract<Action, { type: "use_skill" | "use_race_skill" }>): boolean {
   if (action.target_object_id != null && action.target_pos != null) {
     addPair(t, "hurl", action.target_object_id, posKey(action.target_pos), action); // 投擲物件：物件 → 落點
     return true;
   }
-  if (action.target_id != null && action.second_target_id != null) {
+  if (action.type === "use_skill" && action.target_id != null && action.second_target_id != null) {
     // 任意兩者互換：伺服器每組只列一次，兩個方向都登記，玩家先點哪一個都行
     addPair(t, "swap", action.target_id, action.second_target_id, action);
     addPair(t, "swap", action.second_target_id, action.target_id, action);
@@ -137,13 +138,14 @@ function addTwoStage(t: TargetSet, action: Extract<Action, { type: "use_skill" }
 function addTarget(t: TargetSet, action: Action): void {
   switch (action.type) {
     case "use_skill":
+    case "use_race_skill": // 種族技（Phase 3R-2）的選取欄位和技能相同（過充的 choice 由模式分開）
     case "attack": {
-      if (action.type === "use_skill" && addTwoStage(t, action)) return;
+      if (action.type !== "attack" && addTwoStage(t, action)) return;
       if (action.target_id != null) setOnce(t.units, action.target_id, action);
       else if (action.target_object_id != null) setOnce(t.objects, action.target_object_id, action);
-      else if (action.type === "use_skill" && action.target_pos != null)
+      else if (action.type !== "attack" && action.target_pos != null)
         setOnce(t.tiles, posKey(action.target_pos), action);
-      else if (action.type === "use_skill" && action.direction != null)
+      else if (action.type !== "attack" && action.direction != null)
         setOnce(t.directions, action.direction, action);
       else t.self ??= action;
       return;
@@ -325,6 +327,8 @@ function modeKindOf(a: Action): ModeKind | null {
       return "reload";
     case "activate_charge":
       return CHARGE_KIND;
+    case "use_race_skill":
+      return "race";
     case "interact":
       return a.mode === "shove_aside" ? "shove_aside" : "interact";
     case "move":

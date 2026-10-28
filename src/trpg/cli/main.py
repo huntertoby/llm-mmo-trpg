@@ -222,6 +222,12 @@ def build_parser() -> argparse.ArgumentParser:  # noqa: PLR0915
         default=None,
         help="部署：我方單位依序的起始位置，例如 0,6;1,7（必須在起始區內）",
     )
+    battle.add_argument(
+        "--ally-race",
+        default=None,
+        help="我方依序的種族（content/races.yaml 的 ID，以逗號分隔；空白＝不指定），例如 orc,,elf",
+    )
+    battle.add_argument("--enemy-race", default=None, help="敵方依序的種族（格式同 --ally-race）")
     battle.add_argument("--log-json", type=Path, default=None, help="輸出動作列表與事件 JSON")
     _add_commander_args(battle)
     battle_commands = battle.add_subparsers(dest="battle_command", metavar="<subcommand>")
@@ -579,8 +585,15 @@ def _battle(args: argparse.Namespace) -> int:  # noqa: PLR0911
             deploy=deploy,
             ally_commander=args.ally_commander,
             enemy_commander=args.enemy_commander,
+            ally_races=_races(args.ally_race),
+            enemy_races=_races(args.enemy_race),
         )
     )
+
+
+def _races(text: str | None) -> list[str] | None:
+    """``orc,,elf`` → ``["orc", "", "elf"]``（空白＝不指定；省略＝``None``）。"""
+    return None if text is None else [part.strip() for part in text.split(",")]
 
 
 def _sim_maps(args: argparse.Namespace) -> int:

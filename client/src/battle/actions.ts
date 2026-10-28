@@ -92,6 +92,25 @@ export function actionLabel(
       if (action.mode === "shove_aside")
         return `撥開：${objectLabel(view, action.object_id)}（往${action.side === "right" ? "右" : "左"}）`;
       return `推動：${objectLabel(view, action.object_id)}`;
+    case "use_race_skill": {
+      const race = view.units.find((u) => u.id === action.unit_id)?.race;
+      const name = race?.skill_name_zh ?? "種族技";
+      const detail =
+        action.target_id != null
+          ? names.label(action.target_id)
+          : action.target_object_id != null
+            ? objectLabel(view, action.target_object_id)
+            : action.target_pos != null
+              ? posText(action.target_pos)
+              : action.direction != null
+                ? `向${DIRECTIONS[action.direction] ?? action.direction}`
+                : (action.choice ?? null) !== null
+                  ? action.choice === "mana"
+                    ? "法力"
+                    : "耐力"
+                  : "";
+      return detail === "" ? `種族技：${name}` : `種族技：${name} → ${detail}`;
+    }
     case "end_stance":
       return "結束姿態";
     case "set_reaction_mode":

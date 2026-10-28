@@ -299,6 +299,9 @@
                     "$ref": "#/components/schemas/UseSkill-Input"
                   },
                   {
+                    "$ref": "#/components/schemas/UseRaceSkill"
+                  },
+                  {
                     "$ref": "#/components/schemas/Defend"
                   },
                   {
@@ -353,6 +356,7 @@
                     "move": "#/components/schemas/Move",
                     "attack": "#/components/schemas/Attack",
                     "use_skill": "#/components/schemas/UseSkill-Input",
+                    "use_race_skill": "#/components/schemas/UseRaceSkill",
                     "defend": "#/components/schemas/Defend",
                     "run": "#/components/schemas/Run",
                     "swap": "#/components/schemas/Swap",
@@ -486,6 +490,9 @@
                     "$ref": "#/components/schemas/UseSkill-Input"
                   },
                   {
+                    "$ref": "#/components/schemas/UseRaceSkill"
+                  },
+                  {
                     "$ref": "#/components/schemas/Defend"
                   },
                   {
@@ -540,6 +547,7 @@
                     "move": "#/components/schemas/Move",
                     "attack": "#/components/schemas/Attack",
                     "use_skill": "#/components/schemas/UseSkill-Input",
+                    "use_race_skill": "#/components/schemas/UseRaceSkill",
                     "defend": "#/components/schemas/Defend",
                     "run": "#/components/schemas/Run",
                     "swap": "#/components/schemas/Swap",
@@ -1709,6 +1717,9 @@
             "$ref": "#/components/schemas/UseSkill-Output"
           },
           {
+            "$ref": "#/components/schemas/UseRaceSkill"
+          },
+          {
             "$ref": "#/components/schemas/Defend"
           },
           {
@@ -1777,6 +1788,7 @@
             "shove": "#/components/schemas/Shove",
             "swap": "#/components/schemas/Swap",
             "trip": "#/components/schemas/Trip",
+            "use_race_skill": "#/components/schemas/UseRaceSkill",
             "use_skill": "#/components/schemas/UseSkill-Output",
             "vault": "#/components/schemas/Vault"
           }
@@ -8491,6 +8503,100 @@
         "title": "Protect",
         "description": "保護指定友方。"
       },
+      "RaceView": {
+        "properties": {
+          "id": {
+            "type": "string",
+            "title": "Id"
+          },
+          "name_zh": {
+            "type": "string",
+            "title": "Name Zh"
+          },
+          "skill_id": {
+            "type": "string",
+            "title": "Skill Id"
+          },
+          "skill_name_zh": {
+            "type": "string",
+            "title": "Skill Name Zh"
+          },
+          "skill_description_zh": {
+            "type": "string",
+            "title": "Skill Description Zh"
+          },
+          "skill_ap": {
+            "type": "integer",
+            "title": "Skill Ap"
+          },
+          "skill_uses_max": {
+            "type": "integer",
+            "title": "Skill Uses Max"
+          },
+          "skill_uses_left": {
+            "type": "integer",
+            "title": "Skill Uses Left"
+          },
+          "skill_shape": {
+            "type": "string",
+            "title": "Skill Shape"
+          },
+          "skill_range": {
+            "type": "integer",
+            "title": "Skill Range"
+          },
+          "skill_size": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Skill Size"
+          },
+          "skill_choices": {
+            "items": {
+              "type": "string"
+            },
+            "type": "array",
+            "title": "Skill Choices",
+            "default": []
+          },
+          "passive_name_zh": {
+            "type": "string",
+            "title": "Passive Name Zh"
+          },
+          "passive_description_zh": {
+            "type": "string",
+            "title": "Passive Description Zh"
+          },
+          "passive_active": {
+            "type": "boolean",
+            "title": "Passive Active"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "id",
+          "name_zh",
+          "skill_id",
+          "skill_name_zh",
+          "skill_description_zh",
+          "skill_ap",
+          "skill_uses_max",
+          "skill_uses_left",
+          "skill_shape",
+          "skill_range",
+          "passive_name_zh",
+          "passive_description_zh",
+          "passive_active"
+        ],
+        "title": "RaceView",
+        "description": "單位的種族（Phase 3R-2，``content/races.yaml``）：種族技與環境被動的卡片資料。\n\n種族技的次數與 AP 是即時的（``skill_uses_left``）；選取方式由合法動作 ``use_race_skill`` 的\n欄位決定（前端依 ``skill_shape`` 選格子或單位）。"
+      },
       "ReactionRuleView": {
         "properties": {
           "reaction": {
@@ -10425,6 +10531,9 @@
             "$ref": "#/components/schemas/UseSkill-Output"
           },
           {
+            "$ref": "#/components/schemas/UseRaceSkill"
+          },
+          {
             "$ref": "#/components/schemas/Defend"
           },
           {
@@ -10497,6 +10606,7 @@
             "shove": "#/components/schemas/Shove",
             "swap": "#/components/schemas/Swap",
             "trip": "#/components/schemas/Trip",
+            "use_race_skill": "#/components/schemas/UseRaceSkill",
             "use_skill": "#/components/schemas/UseSkill-Output",
             "vault": "#/components/schemas/Vault"
           }
@@ -11697,6 +11807,16 @@
             "type": "array",
             "title": "Form Cooldowns",
             "default": []
+          },
+          "race": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/RaceView"
+              },
+              {
+                "type": "null"
+              }
+            ]
           }
         },
         "additionalProperties": false,
@@ -11783,6 +11903,84 @@
         "type": "object",
         "title": "UseEnvironment",
         "description": "優先利用環境（爆炸、推落、表面）。"
+      },
+      "UseRaceSkill": {
+        "properties": {
+          "unit_id": {
+            "type": "string",
+            "title": "Unit Id"
+          },
+          "type": {
+            "type": "string",
+            "const": "use_race_skill",
+            "title": "Type",
+            "default": "use_race_skill"
+          },
+          "target_id": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Target Id"
+          },
+          "target_object_id": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Target Object Id"
+          },
+          "target_pos": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/Pos"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "direction": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/Direction"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "choice": {
+            "anyOf": [
+              {
+                "type": "string",
+                "enum": [
+                  "stamina",
+                  "mana"
+                ]
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Choice"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "unit_id"
+        ],
+        "title": "UseRaceSkill",
+        "description": "使用種族技（Phase 3R-2，``docs/design/07-角色成長.md`` 7.7）：種族技由單位的種族決定\n（``content/races.yaml``），所以不帶技能 ID；1 AP、每場限用 1～2 次、不佔技能欄。依種族技的\n形狀只允許對應的欄位：\n\n- ``self``：都不給（過充另外要 ``choice``：``stamina`` 或 ``mana``）；\n- ``ground_tile``（狐火誘餌）、``square3``（潮息）：``target_pos``；\n- ``cone``（龍息震退）：``direction``；\n- ``single``（拋錨）：``target_id``；\n- ``object_then_tile``（蠻力投擲）：``target_object_id`` 與 ``target_pos``（落點）。\n\n是否合法由 :func:`trpg.engine.race_skills.race_skill_problem` 判斷。"
       },
       "UseSkill-Input": {
         "properties": {

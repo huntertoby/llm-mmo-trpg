@@ -62,6 +62,7 @@ __all__ = [
     "starter_pools",
     "starting_skill",
     "top_attribute",
+    "with_race",
 ]
 
 
@@ -516,6 +517,24 @@ def new_dev_run(
         dev_pack=pack.id,
         skills=pack.skills,
     )
+
+
+def with_race(library: ContentLibrary, run: RunState, race: str | None) -> RunState:
+    """為主角指定種族（Phase 3R-2；開局選種族的流程是 3R-3，這裡讓 CLI 與測試先能指定）。
+
+    ``None`` 不改；未知的種族拋出 :class:`ChoiceError`。種族存在 ``run.hero.race``，隨存檔保存。"""
+    if race is None:
+        return run
+    try:
+        library.ruleset.race_def(race)
+    except KeyError:
+        known = (
+            ", ".join(sorted(r.id for r in library.ruleset.races.races))
+            if (library.ruleset.races is not None)
+            else "（沒有種族資料）"
+        )
+        raise ChoiceError(f"未知的種族：{race}（可用：{known}）") from None
+    return run.model_copy(update={"hero": run.hero.model_copy(update={"race": race})})
 
 
 def default_start(library: ContentLibrary, seed: int) -> tuple[str, tuple[str, ...]]:

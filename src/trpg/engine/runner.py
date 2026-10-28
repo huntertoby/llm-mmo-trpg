@@ -38,8 +38,13 @@ __all__ = [
     "run_battle",
 ]
 
-LOG_FORMAT = "trpg-battle-log/81"
-"""``/81``（Phase 3J-3）：形態身分——條件多了 ``in_form``（施放者在形態中，可限定物理／心智；
+LOG_FORMAT = "trpg-battle-log/82"
+"""``/82``（Phase 3R-2）：種族技與環境被動——單位範本與單位狀態多了 ``race``，規則包多了 ``races``
+（``content/races.yaml``），戰鬥狀態多了 ``map_tags``（地圖標籤 ``forest``），新動作
+``use_race_skill``、新事件 ``race_skill_used``、``push_resisted`` 與 ``summon_expired`` 的新原因，
+推擊效果多了 ``pull``／``harmless``，新狀態 ``race_adapt``／``race_stonewall`` 與誘餌召喚物範本；
+規則包與狀態因此不同，``/81`` 的紀錄無法重播。
+``/81``（Phase 3J-3）：形態身分——條件多了 ``in_form``（施放者在形態中，可限定物理／心智；
 ``form_category``），修正規則多了 ``form_upkeep_permille``（形態維持費）、``form_entry_permille``
 （形態進入獎勵的數值）與套用對象 ``weapon_skills``（武器技），形態狀態多了 ``entry_permille``，
 新技能化形專精（互斥組 ``mastery``）；規則包的條件與技能表因此不同，``/80`` 的紀錄無法重播。
