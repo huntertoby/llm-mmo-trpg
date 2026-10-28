@@ -229,7 +229,9 @@ def test_structural_primitive_points() -> None:
     assert points({"type": "knock_prone"}) == 3
     assert points({"type": "destroy_object"}) == 2
     assert points({"type": "create_obstacle", "object": "earth_wall"}) == 3
-    assert points({"type": "raise_terrain"}) == points({"type": "lower_terrain"}) == 2
+    assert (
+        points({"type": "raise_terrain"}) == points({"type": "lower_terrain"}) == 7
+    )  # 3-54e：2 → 7
     assert points({"type": "heal", "dice": "2d6"}) == 7
     # 形狀倍率套用在對象為 tiles 的效果；teleport（self）與 affects: self 一律 1.0
     ground = {"type": "ground_tile", "range": 4}

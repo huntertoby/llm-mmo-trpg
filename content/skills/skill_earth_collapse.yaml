@@ -1,0 +1,24 @@
+# 大地種子（Phase 3-54e，06 6.33 #64、#65；數值為初值，未經模擬）：3×3 範圍的地面下陷一層，純地形、沒有傷害；可以挖坑讓單位墜落，製造「高處」。
+id: skill_earth_collapse
+schema_version: 1
+name_zh: 大地崩陷
+tier: 1
+rank: 1
+rarity: epic
+kind: active
+skeleton: control
+category: spell
+weapon_req: focus
+ap_cost: 2
+scaling_attr: int
+shape: {type: square3, range: 4}
+effects:
+  - {type: lower_terrain, amount: 1, affects: tiles}
+condition: null
+cost: {mana: 8, cooldown: 2}
+tags: [earth, spell, terrain]
+element: earth
+narrative:
+  concept: 一大片地面悄無聲息地塌下去，原本平坦的戰場多出一個深坑
+  cast_flavor: 你雙手向下一壓，大地發出沉悶的呻吟，一整片土地驟然下陷，站在上面的人失去了立足之處
+provenance: {origin: builtin, owner_id: null, created_by: null, parents: [], bound: true, tradeable: false}

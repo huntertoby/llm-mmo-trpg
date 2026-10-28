@@ -9,12 +9,11 @@ kind: active
 skeleton: control
 category: weapon
 weapon_req: ranged
-ap_cost: 1
+ap_cost: 2
 scaling_attr: dex
 shape: {type: cross, range: 4}
 effects:
   - {type: raise_terrain}
-  - {type: apply_status, status: slow, duration: 1, affects: enemies}
 condition: null
 cost: {stamina: 8, cooldown: 2}
 tags: [earth, ranged, terrain, height]
