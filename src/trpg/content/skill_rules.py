@@ -119,9 +119,10 @@ MODIFIER_USE_KEYS: tuple[str, ...] = (
     "interact",
     "all_attacks",
     "all_skills",
+    "weapon_skills",
     "skill_tag",
 )
-"""``modifier.uses`` 的鍵：基本動作、所有攻擊、所有技能，與「每個符合的技能標籤」。"""
+"""``modifier.uses`` 的鍵：基本動作、所有攻擊、所有技能、武器技（3J-3）與每個符合的技能標籤。"""
 
 
 class ModifierPoints(ContentModel):
@@ -160,6 +161,10 @@ class ModifierPoints(ContentModel):
     """召喚物持續每 +1 輪的價值（Phase 3-33f1）。"""
     summon_damage_per_100: int = Field(default=0, ge=0)
     """召喚物傷害加成每 +100‰ 的價值（Phase 3-33f1）。"""
+    form_upkeep_per_100: int = Field(default=0, ge=0)
+    """形態維持費每減少 100‰ 的價值（Phase 3J-3，化形專精；每次使用的價值）。"""
+    form_entry_per_100: int = Field(default=0, ge=0)
+    """形態進入獎勵的數值每增加 100‰ 的價值（Phase 3J-3，化形專精）。"""
     allow_self_target: int = Field(default=0, ge=0)
     """治療、護盾、增益類技能也包含自己（Phase 3D-3；每次使用的價值）。``shape_to`` 沒有列在這裡：
     依 ``skill_shapes.yaml`` 的形狀倍率差 × 基準武器傷害計算。"""

@@ -241,7 +241,8 @@ class FormState:
     - ``hand_gear``：進入前的裝備狀態（形態中主手的普攻詞條與武器特性強化詞條不生效，離開時換回）；
     - ``max_hp_delta``：進入時最大 HP 的加減量（離開時減回）；
     - ``skill_id``：進入用的技能（紀錄與顯示用）；
-    - ``entered_round``：進入的輪數（進入獎勵的「本回合」效果用，例：巨人的撞擊傷害 +50%）。
+    - ``entered_round``：進入的輪數（進入獎勵的「本回合」效果用，例：巨人的撞擊傷害 +50%）；
+    - ``entry_permille``：進入獎勵的數值倍率（‰；化形專精 1500，一般 1000；進入時快照）。
     """
 
     form_id: str
@@ -251,6 +252,7 @@ class FormState:
     max_hp_delta: int = 0
     skill_id: str | None = None
     entered_round: int = 0
+    entry_permille: int = 1000
 
 
 @dataclass(slots=True, frozen=True)

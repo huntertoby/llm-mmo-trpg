@@ -67,6 +67,8 @@ VALID_CHANGES: dict[str, dict[str, Any]] = {
     "summon_limit_delta": rule({"skill_tags": ["summon"]}, {"summon_limit_delta": -1}),
     "summon_duration_delta": rule({"skill_tags": ["summon"]}, {"summon_duration_delta": 2}),
     "summon_damage_permille": rule({"skill_tags": ["summon"]}, {"summon_damage_permille": 500}),
+    "form_upkeep_permille": rule(SKILLS, {"form_upkeep_permille": -500}),
+    "form_entry_permille": rule(SKILLS, {"form_entry_permille": 500}),
 }
 
 

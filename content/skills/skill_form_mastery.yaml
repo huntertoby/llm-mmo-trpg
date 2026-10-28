@@ -1,0 +1,32 @@
+# 化形專精——形態專精（取捨型修正型被動，Phase 3J-3，06 6.30「主玩變身的身分」；數值為初值，未經模擬）：
+# 形態維持費減半（無條件捨去）、形態進入獎勵的數值 ×1.5（無條件捨去）；代價：手上武器的武器技傷害 −20%
+# （普攻不受影響：形態中的普攻用天生武器，形態外的普攻也不扣）。
+# 與普攻精通、群召、精英召喚互斥（exclusive_group: mastery，裝備時由 skill_slot_problems 擋）。
+id: skill_form_mastery
+schema_version: 1
+name_zh: 化形專精
+tier: 1
+rank: 1
+rarity: epic
+kind: modifier
+skeleton: modifier
+category: spell
+weapon_req: any
+ap_cost: null
+scaling_attr: wil
+shape: {type: self}
+effects: []
+modifiers:
+  - applies_to: {all_skills: true}
+    change: {form_upkeep_permille: -500}
+  - applies_to: {all_skills: true}
+    change: {form_entry_permille: 500}
+  - applies_to: {weapon_skills: true}
+    change: {damage_permille: -200}
+condition: null
+exclusive_group: mastery
+tags: [passive, modifier]
+narrative:
+  concept: 與其練武，不如練到人與獸的界線模糊
+  cast_flavor: 你的呼吸與野獸的呼吸疊在一起，變身不再費力
+provenance: {origin: builtin, owner_id: null, created_by: null, parents: [], bound: true, tradeable: false}

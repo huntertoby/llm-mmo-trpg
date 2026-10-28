@@ -72,6 +72,7 @@ overrides:
   - {skill: skill_mountain_mover, attrs: [str], reason_zh: 移山之力是力量傳說（位移改造），不看元素}
   - {skill: skill_summon_elite, attrs: [wil], reason_zh: 召喚物強化修正技能，跟著召喚走意志}
   - {skill: skill_summon_swarm, attrs: [wil], reason_zh: 召喚物強化修正技能，跟著召喚走意志}
+  - {skill: skill_form_mastery, attrs: [wil], reason_zh: 化形專精是形態強化修正技能（縮放屬性只是顯示提示），跟著變身走意志}
   # 3J-1a：測試用形態技能的縮放屬性只是顯示提示（天生武器的屬性看 forms.yaml）；身體類以外的兩招照天生武器的屬性
   - {skill: skill_form_roc, attrs: [wis], reason_zh: 化身為巨鵰的天生武器（鳥喙）看感知}
   - {skill: skill_form_elemental, attrs: [int], reason_zh: 化身為元素化身的天生武器（元素彈）看智力}

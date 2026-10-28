@@ -109,7 +109,7 @@ def form_collision_permille(state: BattleState, unit: UnitState) -> int:
         return PERMILLE
     if unit.form.entered_round != state.round:
         return PERMILLE
-    return PERMILLE + form.entry.collision_permille
+    return PERMILLE + form.entry.collision_permille * unit.form.entry_permille // PERMILLE
 
 
 def is_spell_for_silence(rules: Ruleset, skill: SkillDef) -> bool:

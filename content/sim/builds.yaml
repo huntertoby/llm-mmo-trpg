@@ -828,6 +828,24 @@ builds:
       max_mana: 30
       skills: [skill_form_bear, skill_form_cat, skill_form_roc, skill_form_elemental, skill_form_werewolf]
 
+  # Phase 3J-3：化形專精（06 6.30）的對照組（不列入矩陣與隨機抽選）；專精＋三種形態
+  - id: build_form_mastery
+    name_zh: 化形專精
+    reference: true
+    theme_zh: 3J-3 化形專精（06 6.30）：維持費減半、進入獎勵 ×1.5，代價是手上武器的武器技傷害 −20%；搭配熊、貓、龍三種形態輪替。
+    hero:
+      id: build_form_mastery
+      name_zh: 化形專精
+      attributes: {str: 14, dex: 12, con: 14, int: 12, wis: 12, wil: 12}
+      max_hp: 44
+      speed: 5
+      armor_bonus: 1
+      weapon: one_handed_sword
+      resist: {physical: 50}
+      tags: [hero, sim]
+      max_mana: 30
+      skills: [skill_form_mastery, skill_form_bear, skill_form_cat, skill_form_dragon]
+
   # Phase 3J-1b：形態測試的第二組（其餘 5 種形態；一組最多 6 個主動技能欄位）。正式形態技能在 3J-4
   - id: build_form_tester_2
     name_zh: 形態測試二

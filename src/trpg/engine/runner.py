@@ -38,8 +38,12 @@ __all__ = [
     "run_battle",
 ]
 
-LOG_FORMAT = "trpg-battle-log/79"
-"""``/79``（Phase 3J-1b）：形態天生武器特性與其餘 5 種形態——形態資料多了 ``traits``（打幾下、推擊、
+LOG_FORMAT = "trpg-battle-log/80"
+"""``/80``（Phase 3J-3）：形態身分——條件多了 ``in_form``（施放者在形態中，可限定物理／心智；
+``form_category``），修正規則多了 ``form_upkeep_permille``（形態維持費）、``form_entry_permille``
+（形態進入獎勵的數值）與套用對象 ``weapon_skills``（武器技），形態狀態多了 ``entry_permille``，
+新技能化形專精（互斥組 ``mastery``）；規則包的條件與技能表因此不同，``/79`` 的紀錄無法重播。
+``/79``（Phase 3J-1b）：形態天生武器特性與其餘 5 種形態——形態資料多了 ``traits``（打幾下、推擊、
 觸及、流血、背刺暴擊）與進入獎勵 ``collision_permille``，形態狀態多了 ``entered_round``；
 「下一次攻擊」的進入獎勵改成整次攻擊（所有命中擲骰）用完才失效，心智形態的進入技能才算法術（沉默擋得住），規則包的
 技能與形態表因此不同；``/78`` 的紀錄無法重播。

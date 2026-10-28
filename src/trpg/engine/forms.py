@@ -11,7 +11,10 @@
   清掉「下一次攻擊」的獎勵、該形態冷卻 ``forms.yaml`` 的 ``cooldown`` 回合，發出 ``form_left``。
   原因見 :data:`~trpg.engine.events.FormLeaveReason`。
 - **維持費**（:func:`pay_upkeep`）：自己的回合開始時扣耐力（物理）或法力（心智）；不夠付就自動
-  解除（``upkeep``）。
+  解除（``upkeep``）。化形專精（3J-3）把維持費依 ``form_upkeep_permille`` 打折（無條件捨去）。
+- **進入獎勵倍率**：化形專精的 ``form_entry_permille`` 在進入時結算成倍率
+  （``FormState.entry_permille``），護盾、治療、下一次攻擊命中／暴擊、本回合移動、撞擊加成、範圍傷害與相鄰治療的數值都乘上它
+  （各自無條件捨去）；隱蔽的回合數不放大。
 - **冷卻**（:func:`tick_form_cooldowns`）：自己的回合開始時每個形態的冷卻 −1（同技能冷卻）。
 
 移動加減在回合開始計算移動點數時套用（同狀態的 ``move_delta``），進入或離開當回合不重算。
@@ -40,6 +43,7 @@ from trpg.engine.events import (
 )
 from trpg.engine.gear_state import GearState
 from trpg.engine.ids import CONCEALED
+from trpg.engine.modifiers import form_entry_permille, form_upkeep_permille
 from trpg.engine.rules.forms import form_heal_permille
 from trpg.engine.rules.geometry import manhattan
 from trpg.engine.rules.statuses import effective_attribute, stance_status_ids
@@ -83,6 +87,7 @@ def enter_form(
     if unit.form is not None:
         leave_form(ctx, unit, "switched")
     chosen = (element or form.element_choices[0]) if form.element_choices else None
+    scale = PERMILLE + form_entry_permille(ctx.state, unit)  # 化形專精：進入獎勵 ×1.5（3J-3）
     permille = form.effects.max_hp_permille  # 加減的量無條件捨去（−10% 的 999 是 −99）
     delta = unit.max_hp * abs(permille) // PERMILLE * (1 if permille >= 0 else -1)
     unit.form = FormState(
@@ -93,6 +98,7 @@ def enter_form(
         max_hp_delta=delta,
         skill_id=skill_id,
         entered_round=ctx.state.round,
+        entry_permille=scale,
     )
     unit.weapon = form.natural_weapon.weapon_def(form.id, chosen)
     unit.gear = _strip_hand_affixes(unit.gear)
@@ -107,19 +113,20 @@ def enter_form(
         max_hp=unit.max_hp,
         hp=unit.hp,
     )
-    return _entry_effects(ctx, unit, form.entry, chosen)
+    return _entry_effects(ctx, unit, form.entry, chosen, scale)
 
 
 def _entry_effects(
-    ctx: Ctx, unit: UnitState, entry: FormEntry, chosen: Element | None
+    ctx: Ctx, unit: UnitState, entry: FormEntry, chosen: Element | None, scale: int
 ) -> list[EffectBase]:
-    """進入獎勵：命中／暴擊與本回合移動直接寫進單位；其餘回傳效果（依固定順序）。"""
-    unit.next_attack_hit = max(unit.next_attack_hit, entry.next_attack_hit)
-    unit.next_attack_crit = max(unit.next_attack_crit, entry.next_attack_crit)
-    unit.move_points += entry.move
+    """進入獎勵：命中／暴擊與本回合移動直接寫進單位；其餘回傳效果（依固定順序）。``scale``：
+    進入獎勵的數值倍率（‰；一般 1000，化形專精 1500）。"""
+    unit.next_attack_hit = max(unit.next_attack_hit, entry.next_attack_hit * scale // PERMILLE)
+    unit.next_attack_crit = max(unit.next_attack_crit, entry.next_attack_crit * scale // PERMILLE)
+    unit.move_points += entry.move * scale // PERMILLE
     effects: list[EffectBase] = []
     if entry.shield_max_hp_permille is not None:
-        amount = unit.max_hp * entry.shield_max_hp_permille // PERMILLE
+        amount = unit.max_hp * entry.shield_max_hp_permille // PERMILLE * scale // PERMILLE
         if amount > 0:
             effects.append(
                 ShieldEffect(
@@ -130,7 +137,7 @@ def _entry_effects(
                 )
             )
     if entry.heal_max_hp_permille is not None:
-        amount = unit.max_hp * entry.heal_max_hp_permille // PERMILLE
+        amount = unit.max_hp * entry.heal_max_hp_permille // PERMILLE * scale // PERMILLE
         if amount > 0:
             effects.append(HealEffect(target_id=unit.id, source_id=unit.id, flat=amount))
     if entry.conceal is not None:
@@ -139,13 +146,13 @@ def _entry_effects(
                 target_id=unit.id, source_id=unit.id, status_id=CONCEALED, duration=entry.conceal
             )
         )
-    effects += _burst_effects(ctx, unit, entry, chosen)
-    effects += _heal_adjacent_effects(ctx, unit, entry)
+    effects += _burst_effects(ctx, unit, entry, chosen, scale)
+    effects += _heal_adjacent_effects(ctx, unit, entry, scale)
     return effects
 
 
 def _burst_effects(
-    ctx: Ctx, unit: UnitState, entry: FormEntry, chosen: Element | None
+    ctx: Ctx, unit: UnitState, entry: FormEntry, chosen: Element | None, scale: int
 ) -> list[EffectBase]:
     burst = entry.burst
     if burst is None:
@@ -153,7 +160,13 @@ def _burst_effects(
     element = chosen if burst.element == CHOSEN else burst.element
     assert isinstance(element, Element)
     return [
-        DamageEffect(target_id=other.id, source_id=unit.id, element=element, dice=burst.dice)
+        DamageEffect(
+            target_id=other.id,
+            source_id=unit.id,
+            element=element,
+            dice=burst.dice,
+            multiplier_permille=scale,
+        )
         for other in ctx.state.units_sorted()
         if other.alive
         and other.team is not unit.team
@@ -161,12 +174,14 @@ def _burst_effects(
     ]
 
 
-def _heal_adjacent_effects(ctx: Ctx, unit: UnitState, entry: FormEntry) -> list[EffectBase]:
+def _heal_adjacent_effects(
+    ctx: Ctx, unit: UnitState, entry: FormEntry, scale: int
+) -> list[EffectBase]:
     heal = entry.heal_adjacent
     if heal is None:
         return []
     attr = effective_attribute(ctx.rules, unit, heal.attr)
-    multiplier = PERMILLE + form_heal_permille(ctx.rules, unit)
+    multiplier = (PERMILLE + form_heal_permille(ctx.rules, unit)) * scale // PERMILLE
     return [
         HealEffect(
             target_id=other.id,
@@ -234,6 +249,7 @@ def pay_upkeep(ctx: Ctx, unit: UnitState) -> bool:
         return False
     form = ctx.rules.form_def(unit.form.form_id)
     resource, amount = ctx.rules.forms.upkeep(form)
+    amount = amount * (PERMILLE + form_upkeep_permille(ctx.state, unit)) // PERMILLE  # 化形專精
     have = unit.stamina if resource == "stamina" else unit.mana
     if have < amount:
         leave_form(ctx, unit, "upkeep")
